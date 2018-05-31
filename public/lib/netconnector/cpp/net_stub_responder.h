@@ -2,14 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_NETCONNECTOR_CPP_NET_STUB_RESPONDER_H_
+#define LIB_NETCONNECTOR_CPP_NET_STUB_RESPONDER_H_
 
 #include <memory>
 #include <unordered_set>
 
 #include <netconnector/cpp/fidl.h>
 
-#include "lib/app/cpp/application_context.h"
+#include "lib/app/cpp/startup_context.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
 #include "lib/svc/cpp/service_namespace.h"
@@ -24,11 +25,11 @@ class NetStubResponder {
   // Constructor. |actual| must outlive this.
   NetStubResponder(const fidl::InterfacePtr<TInterface>& actual,
                    const std::string& service_name,
-                   component::ApplicationContext* application_context)
+                   component::StartupContext* startup_context)
       : actual_(actual) {
     FXL_DCHECK(actual_);
     FXL_DCHECK(!service_name.empty());
-    FXL_DCHECK(application_context);
+    FXL_DCHECK(startup_context);
 
     service_namespace_.AddServiceForName(
         [this](zx::channel channel) {
@@ -38,7 +39,7 @@ class NetStubResponder {
         service_name);
 
     netconnector::NetConnectorPtr connector =
-        application_context
+        startup_context
             ->ConnectToEnvironmentService<netconnector::NetConnector>();
 
     fidl::InterfaceHandle<component::ServiceProvider> handle;
@@ -61,3 +62,5 @@ class NetStubResponder {
 };
 
 }  // namespace netconnector
+
+#endif  // LIB_NETCONNECTOR_CPP_NET_STUB_RESPONDER_H_

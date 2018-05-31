@@ -10,7 +10,7 @@
 #include <component/cpp/fidl.h>
 #include <fuchsia/ui/views_v1/cpp/fidl.h>
 #include "garnet/bin/ui/view_manager/view_registry.h"
-#include "lib/app/cpp/application_context.h"
+#include "lib/app/cpp/startup_context.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fxl/macros.h"
 
@@ -25,10 +25,11 @@ class ViewManagerApp {
   ~ViewManagerApp();
 
  private:
-  std::unique_ptr<component::ApplicationContext> application_context_;
+  std::unique_ptr<component::StartupContext> startup_context_;
 
   std::unique_ptr<ViewRegistry> registry_;
-  fidl::BindingSet<::fuchsia::ui::views_v1::ViewManager, std::unique_ptr<ViewManagerImpl>>
+  fidl::BindingSet<::fuchsia::ui::views_v1::ViewManager,
+                   std::unique_ptr<ViewManagerImpl>>
       view_manager_bindings_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ViewManagerApp);

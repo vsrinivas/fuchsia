@@ -4,8 +4,8 @@
 
 #include "garnet/bin/media/media_player/demux/http_reader.h"
 
-#include <network/cpp/fidl.h>
 #include <lib/async/default.h>
+#include <network/cpp/fidl.h>
 
 #include "garnet/bin/network/net_errors.h"
 #include "lib/app/cpp/connect.h"
@@ -27,17 +27,15 @@ constexpr uint32_t kStatusNotFound = 404u;
 
 // static
 std::shared_ptr<HttpReader> HttpReader::Create(
-    component::ApplicationContext* application_context,
-    const std::string& url) {
-  return std::make_shared<HttpReader>(application_context, url);
+    component::StartupContext* startup_context, const std::string& url) {
+  return std::make_shared<HttpReader>(startup_context, url);
 }
 
-HttpReader::HttpReader(component::ApplicationContext* application_context,
+HttpReader::HttpReader(component::StartupContext* startup_context,
                        const std::string& url)
     : url_(url) {
   network::NetworkServicePtr network_service =
-      application_context
-          ->ConnectToEnvironmentService<network::NetworkService>();
+      startup_context->ConnectToEnvironmentService<network::NetworkService>();
 
   network_service->CreateURLLoader(url_loader_.NewRequest());
 
@@ -91,9 +89,7 @@ void HttpReader::Describe(DescribeCallback callback) {
   ready_.When([this, callback]() { callback(result_, size_, can_seek_); });
 }
 
-void HttpReader::ReadAt(size_t position,
-                        uint8_t* buffer,
-                        size_t bytes_to_read,
+void HttpReader::ReadAt(size_t position, uint8_t* buffer, size_t bytes_to_read,
                         ReadAtCallback callback) {
   ready_.When([this, position, buffer, bytes_to_read, callback]() {
     if (result_ != Result::kOk) {

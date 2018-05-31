@@ -7,12 +7,12 @@
 
 #include <string>
 
-#include <network/cpp/fidl.h>
 #include <lib/async/cpp/wait.h>
+#include <network/cpp/fidl.h>
 
 #include "garnet/bin/media/media_player/demux/reader.h"
 #include "garnet/bin/media/media_player/util/incident.h"
-#include "lib/app/cpp/application_context.h"
+#include "lib/app/cpp/startup_context.h"
 
 namespace media_player {
 
@@ -20,10 +20,9 @@ namespace media_player {
 class HttpReader : public Reader {
  public:
   static std::shared_ptr<HttpReader> Create(
-      component::ApplicationContext* application_context,
-      const std::string& url);
+      component::StartupContext* startup_context, const std::string& url);
 
-  HttpReader(component::ApplicationContext* application_context,
+  HttpReader(component::StartupContext* startup_context,
              const std::string& url);
 
   ~HttpReader() override;
@@ -31,9 +30,7 @@ class HttpReader : public Reader {
   // Reader implementation.
   void Describe(DescribeCallback callback) override;
 
-  void ReadAt(size_t position,
-              uint8_t* buffer,
-              size_t bytes_to_read,
+  void ReadAt(size_t position, uint8_t* buffer, size_t bytes_to_read,
               ReadAtCallback callback) override;
 
  private:

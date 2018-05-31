@@ -6,13 +6,12 @@
 
 #include <test_runner/cpp/fidl.h>
 
-#include "lib/app/cpp/application_context.h"
+#include "lib/app/cpp/startup_context.h"
 #include "lib/fidl/cpp/synchronous_interface_ptr.h"
 
 namespace test_runner {
 
-void ReportResult(std::string identity,
-                  component::ApplicationContext* context,
+void ReportResult(std::string identity, component::StartupContext* context,
                   std::vector<TestResultPtr> results) {
   if (!context->has_environment_services()) {
     return;

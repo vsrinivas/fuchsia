@@ -9,7 +9,7 @@
 #include <lib/zx/process.h>
 #include <zircon/processargs.h>
 
-#include "lib/app/cpp/application_context.h"
+#include "lib/app/cpp/startup_context.h"
 #include "lib/svc/cpp/services.h"
 
 namespace echo2 {
@@ -17,7 +17,7 @@ namespace echo2 {
 class EchoClientApp {
  public:
   EchoClientApp()
-      : context_(component::ApplicationContext::CreateFromStartupInfo()) {}
+      : context_(component::StartupContext::CreateFromStartupInfo()) {}
 
   echo2::EchoPtr& echo() { return echo_; }
 
@@ -36,7 +36,7 @@ class EchoClientApp {
   EchoClientApp(const EchoClientApp&) = delete;
   EchoClientApp& operator=(const EchoClientApp&) = delete;
 
-  std::unique_ptr<component::ApplicationContext> context_;
+  std::unique_ptr<component::StartupContext> context_;
   component::Services echo_provider_;
   component::ComponentControllerPtr controller_;
   echo2::EchoPtr echo_;

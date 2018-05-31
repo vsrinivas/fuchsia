@@ -12,7 +12,7 @@
 namespace guest_runner {
 
 GuestRunner::GuestRunner()
-    : context_(component::ApplicationContext::CreateFromStartupInfo()) {
+    : context_(component::StartupContext::CreateFromStartupInfo()) {
   context_->environment()->GetApplicationLauncher(launcher_.NewRequest());
   context_->outgoing().AddPublicService<component::Runner>(
       [this](fidl::InterfaceRequest<component::Runner> request) {

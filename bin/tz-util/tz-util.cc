@@ -6,13 +6,13 @@
 
 #include <zircon/syscalls.h>
 
-#include "lib/app/cpp/application_context.h"
+#include <time_zone/cpp/fidl.h>
 #include "lib/app/cpp/environment_services.h"
+#include "lib/app/cpp/startup_context.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/log_settings_command_line.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/string_number_conversions.h"
-#include <time_zone/cpp/fidl.h>
 
 static constexpr char kGetOffsetCmd[] = "get_offset_minutes";
 static constexpr char kSetTimezoneIdCmd[] = "set_timezone_id";
@@ -20,9 +20,7 @@ static constexpr char kGetTimezoneIdCmd[] = "get_timezone_id";
 
 class TzUtil {
  public:
-  TzUtil() {
-    component::ConnectToEnvironmentService(timezone_.NewRequest());
-  }
+  TzUtil() { component::ConnectToEnvironmentService(timezone_.NewRequest()); }
 
   void Run(fxl::CommandLine command_line) {
     if (command_line.HasOption("help")) {

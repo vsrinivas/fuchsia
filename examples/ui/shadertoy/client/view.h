@@ -5,10 +5,10 @@
 #ifndef GARNET_EXAMPLES_UI_SHADERTOY_CLIENT_VIEW_H_
 #define GARNET_EXAMPLES_UI_SHADERTOY_CLIENT_VIEW_H_
 
-#include <lib/async-loop/cpp/loop.h>
 #include <fuchsia/examples/shadertoy/cpp/fidl.h>
+#include <lib/async-loop/cpp/loop.h>
 
-#include "lib/app/cpp/application_context.h"
+#include "lib/app/cpp/startup_context.h"
 #include "lib/fxl/macros.h"
 #include "lib/ui/scenic/client/resources.h"
 #include "lib/ui/view_framework/base_view.h"
@@ -17,9 +17,10 @@ namespace shadertoy_client {
 
 class View : public mozart::BaseView {
  public:
-  View(async::Loop* loop, component::ApplicationContext* application_context,
+  View(async::Loop* loop, component::StartupContext* startup_context,
        ::fuchsia::ui::views_v1::ViewManagerPtr view_manager,
-       fidl::InterfaceRequest<::fuchsia::ui::views_v1_token::ViewOwner> view_owner_request);
+       fidl::InterfaceRequest<::fuchsia::ui::views_v1_token::ViewOwner>
+           view_owner_request);
 
   ~View() override;
 
@@ -28,9 +29,10 @@ class View : public mozart::BaseView {
 
  private:
   // |BaseView|.
-  void OnSceneInvalidated(fuchsia::images::PresentationInfo presentation_info) override;
+  void OnSceneInvalidated(
+      fuchsia::images::PresentationInfo presentation_info) override;
 
-  component::ApplicationContext* const application_context_;
+  component::StartupContext* const startup_context_;
   async::Loop* const loop_;
 
   fuchsia::examples::shadertoy::ShadertoyFactoryPtr shadertoy_factory_;

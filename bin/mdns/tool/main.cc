@@ -18,10 +18,10 @@ int main(int argc, const char** argv) {
 
   async::Loop loop(&kAsyncLoopConfigMakeDefault);
 
-  std::unique_ptr<component::ApplicationContext> application_context =
-      component::ApplicationContext::CreateFromStartupInfo();
+  std::unique_ptr<component::StartupContext> startup_context =
+      component::StartupContext::CreateFromStartupInfo();
 
-  mdns::MdnsImpl impl(application_context.get(), &params, [&loop]() {
+  mdns::MdnsImpl impl(startup_context.get(), &params, [&loop]() {
     async::PostTask(loop.async(), [&loop]() { loop.Quit(); });
   });
 

@@ -12,8 +12,8 @@
 
 #include "garnet/bin/auth/store/auth_db_file_impl.h"
 #include "gtest/gtest.h"
-#include "lib/app/cpp/application_context.h"
 #include "lib/app/cpp/connect.h"
+#include "lib/app/cpp/startup_context.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/files/file.h"
@@ -58,8 +58,7 @@ class GoogleTokenManagerApp : auth::AuthenticationContextProvider {
                         const std::string& refresh_token)
       : user_profile_id_(user_profile_id),
         refresh_token_(refresh_token),
-        application_context_(
-            component::ApplicationContext::CreateFromStartupInfo()),
+        startup_context_(component::StartupContext::CreateFromStartupInfo()),
         auth_context_provider_binding_(this) {}
 
   ~GoogleTokenManagerApp() {}
@@ -91,8 +90,8 @@ class GoogleTokenManagerApp : auth::AuthenticationContextProvider {
       stream << "--verbose=" << fxl::GetVlogVerbosity();
       launch_info.arguments.push_back(stream.str());
     }
-    application_context_->launcher()->CreateApplication(
-        std::move(launch_info), controller_.NewRequest());
+    startup_context_->launcher()->CreateApplication(std::move(launch_info),
+                                                    controller_.NewRequest());
     controller_.set_error_handler([] {
       FXL_LOG(ERROR) << "Error in connecting to TokenManagerFactory service.";
     });
@@ -178,7 +177,7 @@ class GoogleTokenManagerApp : auth::AuthenticationContextProvider {
 
   const std::string user_profile_id_;
   const std::string refresh_token_;
-  std::unique_ptr<component::ApplicationContext> application_context_;
+  std::unique_ptr<component::StartupContext> startup_context_;
   component::ComponentControllerPtr controller_;
 
   fidl::Binding<auth::AuthenticationContextProvider>

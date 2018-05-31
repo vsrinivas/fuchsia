@@ -36,7 +36,7 @@ zx_status_t TtsSpeaker::Speak(fidl::StringPtr words,
 }
 
 zx_status_t TtsSpeaker::Init(
-    const std::unique_ptr<component::ApplicationContext>& application_context) {
+    const std::unique_ptr<component::StartupContext>& startup_context) {
   zx_status_t res;
 
   if (wakeup_event_.is_valid()) {
@@ -60,9 +60,9 @@ zx_status_t TtsSpeaker::Init(
     return res;
   }
 
-  FXL_DCHECK(application_context != nullptr);
+  FXL_DCHECK(startup_context != nullptr);
   auto audio_server =
-      application_context->ConnectToEnvironmentService<media::AudioServer>();
+      startup_context->ConnectToEnvironmentService<media::AudioServer>();
 
   audio_server->CreateRendererV2(audio_renderer_.NewRequest());
 
@@ -174,9 +174,7 @@ void TtsSpeaker::UpdateRdPtr(uint64_t new_pos) {
   }
 }
 
-int TtsSpeaker::ProduceAudioCbk(const cst_wave* wave,
-                                int start,
-                                int sz,
+int TtsSpeaker::ProduceAudioCbk(const cst_wave* wave, int start, int sz,
                                 int last) {
   if (abort_playback_.load()) {
     return CST_AUDIO_STREAM_STOP;

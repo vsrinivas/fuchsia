@@ -5,8 +5,8 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <network/cpp/fidl.h>
 
-#include "lib/app/cpp/application_context.h"
 #include "lib/app/cpp/connect.h"
+#include "lib/app/cpp/startup_context.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
 
@@ -72,8 +72,8 @@ class ResponsePrinter {
 class WGetApp {
  public:
   WGetApp(async::Loop* loop)
-    : loop_(loop),
-      context_(component::ApplicationContext::CreateFromStartupInfo()) {
+      : loop_(loop),
+        context_(component::StartupContext::CreateFromStartupInfo()) {
     network_service_ =
         context_->ConnectToEnvironmentService<network::NetworkService>();
     FXL_DCHECK(network_service_);
@@ -107,7 +107,7 @@ class WGetApp {
 
  private:
   async::Loop* const loop_;
-  std::unique_ptr<component::ApplicationContext> context_;
+  std::unique_ptr<component::StartupContext> context_;
 
   network::NetworkServicePtr network_service_;
   network::URLLoaderPtr url_loader_;

@@ -39,7 +39,7 @@ using auth::AuthProviderStatus;
 using auth::Status;
 
 TokenManagerImpl::TokenManagerImpl(
-    component::ApplicationContext* app_context,
+    component::StartupContext* app_context,
     std::unique_ptr<store::AuthDb> auth_db,
     fidl::VectorPtr<AuthProviderConfig> auth_provider_configs,
     fidl::InterfaceHandle<auth::AuthenticationContextProvider>

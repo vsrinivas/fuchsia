@@ -6,14 +6,14 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/zx/channel.h>
 
-#include "lib/app/cpp/application_context.h"
+#include "lib/app/cpp/startup_context.h"
 
 namespace echo2 {
 
 class EchoServerApp : public Echo {
  public:
   EchoServerApp()
-      : context_(component::ApplicationContext::CreateFromStartupInfo()) {
+      : context_(component::StartupContext::CreateFromStartupInfo()) {
     context_->outgoing().AddPublicService<Echo>(
         [this](fidl::InterfaceRequest<Echo> request) {
           bindings_.AddBinding(this, std::move(request));
@@ -31,7 +31,7 @@ class EchoServerApp : public Echo {
   EchoServerApp(const EchoServerApp&) = delete;
   EchoServerApp& operator=(const EchoServerApp&) = delete;
 
-  std::unique_ptr<component::ApplicationContext> context_;
+  std::unique_ptr<component::StartupContext> context_;
   fidl::BindingSet<Echo> bindings_;
 };
 

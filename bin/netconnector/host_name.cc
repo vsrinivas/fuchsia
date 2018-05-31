@@ -7,11 +7,11 @@
 #include <limits.h>
 #include <unistd.h>
 
+#include <netstack/cpp/fidl.h>
 #include "garnet/bin/netconnector/socket_address.h"
-#include "lib/app/cpp/application_context.h"
+#include "lib/app/cpp/startup_context.h"
 #include "lib/fxl/files/unique_fd.h"
 #include "lib/fxl/logging.h"
-#include <netstack/cpp/fidl.h>
 
 namespace netconnector {
 namespace {
@@ -32,13 +32,13 @@ class NetstackClient {
 
  private:
   NetstackClient()
-      : context_(component::ApplicationContext::CreateFromStartupInfo()) {
+      : context_(component::StartupContext::CreateFromStartupInfo()) {
     FXL_DCHECK(context_);
     netstack_ = context_->ConnectToEnvironmentService<netstack::Netstack>();
     FXL_DCHECK(netstack_);
   }
 
-  std::unique_ptr<component::ApplicationContext> context_;
+  std::unique_ptr<component::StartupContext> context_;
   netstack::NetstackPtr netstack_;
 };
 
@@ -69,9 +69,7 @@ IpAddress GetHostAddress() {
 
 }  // namespace
 
-bool NetworkIsReady() {
-  return GetHostAddress().is_valid();
-}
+bool NetworkIsReady() { return GetHostAddress().is_valid(); }
 
 // TODO: this should probably be an asynchronous interface.
 std::string GetHostName() {

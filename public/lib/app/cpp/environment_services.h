@@ -16,7 +16,7 @@ namespace component {
 
 // These helper functions help connect to environment services through the
 // application's static environment. Multi-tenanted applications should connect
-// via the appropriate ApplicationContext instance.
+// via the appropriate StartupContext instance.
 
 // These routines are safe to call from any thread.
 

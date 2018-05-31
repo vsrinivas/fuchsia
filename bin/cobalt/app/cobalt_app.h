@@ -18,7 +18,7 @@
 #include "garnet/bin/cobalt/app/cobalt_encoder_factory_impl.h"
 #include "garnet/bin/cobalt/app/cobalt_encoder_impl.h"
 #include "garnet/bin/cobalt/app/timer_manager.h"
-#include "lib/app/cpp/application_context.h"
+#include "lib/app/cpp/startup_context.h"
 #include "third_party/cobalt/encoder/client_secret.h"
 #include "third_party/cobalt/encoder/send_retryer.h"
 #include "third_party/cobalt/encoder/shipping_dispatcher.h"
@@ -36,7 +36,7 @@ class CobaltApp {
 
   encoder::SystemData system_data_;
 
-  std::unique_ptr<component::ApplicationContext> context_;
+  std::unique_ptr<component::StartupContext> context_;
 
   encoder::ShufflerClient shuffler_client_;
   encoder::send_retryer::SendRetryer send_retryer_;

@@ -10,11 +10,11 @@
 #include <vector>
 
 #include <fuchsia/ui/input/cpp/fidl.h>
-#include <presentation/cpp/fidl.h>
 #include <fuchsia/ui/views_v1/cpp/fidl.h>
+#include <presentation/cpp/fidl.h>
 #include "garnet/bin/ui/input_reader/input_reader.h"
 #include "garnet/bin/ui/root_presenter/presentation.h"
-#include "lib/app/cpp/application_context.h"
+#include "lib/app/cpp/startup_context.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/macros.h"
@@ -45,7 +45,8 @@ class App : public presentation::Presenter,
 
  private:
   // |Presenter|:
-  void Present(fidl::InterfaceHandle<::fuchsia::ui::views_v1_token::ViewOwner> view_owner,
+  void Present(fidl::InterfaceHandle<::fuchsia::ui::views_v1_token::ViewOwner>
+                   view_owner,
                fidl::InterfaceRequest<presentation::Presentation>
                    presentation_request) override;
 
@@ -65,7 +66,7 @@ class App : public presentation::Presenter,
   void SwitchToNextPresentation();
   void SwitchToPreviousPresentation();
 
-  std::unique_ptr<component::ApplicationContext> application_context_;
+  std::unique_ptr<component::StartupContext> startup_context_;
   fidl::BindingSet<presentation::Presenter> presenter_bindings_;
   fidl::BindingSet<fuchsia::ui::input::InputDeviceRegistry>
       input_receiver_bindings_;

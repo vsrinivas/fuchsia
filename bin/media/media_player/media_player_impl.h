@@ -14,7 +14,7 @@
 #include "garnet/bin/media/media_player/player/player.h"
 #include "garnet/bin/media/media_player/render/fidl_audio_renderer.h"
 #include "garnet/bin/media/media_player/render/fidl_video_renderer.h"
-#include "lib/app/cpp/application_context.h"
+#include "lib/app/cpp/startup_context.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fxl/functional/closure.h"
 #include "lib/media/timeline/timeline.h"
@@ -27,11 +27,10 @@ class MediaPlayerImpl : public MediaPlayer {
  public:
   static std::unique_ptr<MediaPlayerImpl> Create(
       fidl::InterfaceRequest<MediaPlayer> request,
-      component::ApplicationContext* application_context,
-      fxl::Closure quit_callback);
+      component::StartupContext* startup_context, fxl::Closure quit_callback);
 
   MediaPlayerImpl(fidl::InterfaceRequest<MediaPlayer> request,
-                  component::ApplicationContext* application_context,
+                  component::StartupContext* startup_context,
                   fxl::Closure quit_callback);
 
   ~MediaPlayerImpl() override;
@@ -52,9 +51,10 @@ class MediaPlayerImpl : public MediaPlayer {
 
   void SetGain(float gain) override;
 
-  void CreateView(fidl::InterfaceHandle<::fuchsia::ui::views_v1::ViewManager> view_manager,
-                  fidl::InterfaceRequest<::fuchsia::ui::views_v1_token::ViewOwner>
-                      view_owner_request) override;
+  void CreateView(
+      fidl::InterfaceHandle<::fuchsia::ui::views_v1::ViewManager> view_manager,
+      fidl::InterfaceRequest<::fuchsia::ui::views_v1_token::ViewOwner>
+          view_owner_request) override;
 
   void SetAudioRenderer(
       fidl::InterfaceHandle<media::AudioRenderer2> audio_renderer) override;
@@ -117,7 +117,7 @@ class MediaPlayerImpl : public MediaPlayer {
   void UpdateStatus();
 
   async_t* async_;
-  component::ApplicationContext* application_context_;
+  component::StartupContext* startup_context_;
   fxl::Closure quit_callback_;
   fidl::BindingSet<MediaPlayer> bindings_;
   Player player_;

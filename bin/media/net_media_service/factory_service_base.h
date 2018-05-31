@@ -15,7 +15,7 @@
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 
-#include "lib/app/cpp/application_context.h"
+#include "lib/app/cpp/startup_context.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/synchronization/thread_annotations.h"
@@ -52,8 +52,7 @@ class FactoryServiceBase {
     virtual ~Product() {}
 
    protected:
-    Product(Interface* impl,
-            fidl::InterfaceRequest<Interface> request,
+    Product(Interface* impl, fidl::InterfaceRequest<Interface> request,
             Factory* owner)
         : ProductBase(owner), binding_(impl, std::move(request)) {
       FXL_DCHECK(impl);
@@ -147,23 +146,22 @@ class FactoryServiceBase {
     fidl::BindingSet<Interface> bindings_;
   };
 
-  FactoryServiceBase(
-      std::unique_ptr<component::ApplicationContext> application_context)
-      : application_context_(std::move(application_context)),
+  FactoryServiceBase(std::unique_ptr<component::StartupContext> startup_context)
+      : startup_context_(std::move(startup_context)),
         async_(async_get_default()) {}
 
   virtual ~FactoryServiceBase() {}
 
   // Gets the application context.
-  component::ApplicationContext* application_context() {
-    return application_context_.get();
+  component::StartupContext* startup_context() {
+    return startup_context_.get();
   }
 
   // Connects to a service registered with the application environment.
   template <typename Interface>
   fidl::InterfacePtr<Interface> ConnectToEnvironmentService(
       const std::string& interface_name = Interface::Name_) {
-    return application_context_->ConnectToEnvironmentService<Interface>(
+    return startup_context_->ConnectToEnvironmentService<Interface>(
         interface_name);
   }
 
@@ -190,7 +188,7 @@ class FactoryServiceBase {
   virtual void OnLastProductRemoved() {}
 
  private:
-  std::unique_ptr<component::ApplicationContext> application_context_;
+  std::unique_ptr<component::StartupContext> startup_context_;
   async_t* async_;
   mutable std::mutex mutex_;
   std::unordered_set<std::shared_ptr<ProductBase>> products_

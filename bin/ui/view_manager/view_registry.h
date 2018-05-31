@@ -20,7 +20,7 @@
 #include "garnet/bin/ui/view_manager/view_state.h"
 #include "garnet/bin/ui/view_manager/view_stub.h"
 #include "garnet/bin/ui/view_manager/view_tree_state.h"
-#include "lib/app/cpp/application_context.h"
+#include "lib/app/cpp/startup_context.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/weak_ptr.h"
 #include "lib/ui/scenic/client/session.h"
@@ -31,7 +31,7 @@ namespace view_manager {
 // All ViewState objects are owned by the registry.
 class ViewRegistry : public ViewInspector, public InputOwner {
  public:
-  explicit ViewRegistry(component::ApplicationContext* application_context);
+  explicit ViewRegistry(component::StartupContext* startup_context);
   ~ViewRegistry() override;
 
   // VIEW MANAGER REQUESTS
@@ -231,7 +231,7 @@ class ViewRegistry : public ViewInspector, public InputOwner {
             IsViewTreeStateRegisteredDebug(container_state->AsViewTreeState()));
   }
 
-  component::ApplicationContext* application_context_;
+  component::StartupContext* startup_context_;
   fuchsia::ui::scenic::ScenicPtr scenic_;
   scenic_lib::Session session_;
 

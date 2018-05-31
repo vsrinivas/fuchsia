@@ -4,8 +4,6 @@
 
 source_set("cpp") {
   sources = [
-    "application_context.cc",
-    "application_context.h",
     "connect.h",
     "environment_services.cc",
     "environment_services.h",
@@ -13,6 +11,8 @@ source_set("cpp") {
     "outgoing.h",
     "service_provider_impl.cc",
     "service_provider_impl.h",
+    "startup_context.cc",
+    "startup_context.h",
   ]
 
   public_deps = [

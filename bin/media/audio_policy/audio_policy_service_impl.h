@@ -10,7 +10,7 @@
 #include <audio_policy/cpp/fidl.h>
 
 #include "garnet/bin/media/util/fidl_publisher.h"
-#include "lib/app/cpp/application_context.h"
+#include "lib/app/cpp/startup_context.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fxl/macros.h"
 
@@ -19,7 +19,7 @@ namespace audio_policy {
 class AudioPolicyServiceImpl : public AudioPolicy {
  public:
   AudioPolicyServiceImpl(
-      std::unique_ptr<component::ApplicationContext> application_context);
+      std::unique_ptr<component::StartupContext> startup_context);
   ~AudioPolicyServiceImpl() override;
 
   // AudioPolicy implementation.
@@ -61,7 +61,7 @@ class AudioPolicyServiceImpl : public AudioPolicy {
     return system_audio_muted_ ? media::kMutedGain : system_audio_gain_db_;
   }
 
-  std::unique_ptr<component::ApplicationContext> application_context_;
+  std::unique_ptr<component::StartupContext> startup_context_;
   fidl::BindingSet<AudioPolicy> bindings_;
   float system_audio_gain_db_ = kDefaultSystemAudioGainDb;
   bool system_audio_muted_ = kDefaultSystemMuted;

@@ -38,25 +38,23 @@ static const char* kDumpEntry = "dump";
 // static
 std::unique_ptr<MediaPlayerImpl> MediaPlayerImpl::Create(
     fidl::InterfaceRequest<MediaPlayer> request,
-    component::ApplicationContext* application_context,
-    fxl::Closure quit_callback) {
-  return std::make_unique<MediaPlayerImpl>(std::move(request),
-                                           application_context, quit_callback);
+    component::StartupContext* startup_context, fxl::Closure quit_callback) {
+  return std::make_unique<MediaPlayerImpl>(std::move(request), startup_context,
+                                           quit_callback);
 }
 
-MediaPlayerImpl::MediaPlayerImpl(
-    fidl::InterfaceRequest<MediaPlayer> request,
-    component::ApplicationContext* application_context,
-    fxl::Closure quit_callback)
+MediaPlayerImpl::MediaPlayerImpl(fidl::InterfaceRequest<MediaPlayer> request,
+                                 component::StartupContext* startup_context,
+                                 fxl::Closure quit_callback)
     : async_(async_get_default()),
-      application_context_(application_context),
+      startup_context_(startup_context),
       quit_callback_(quit_callback),
       player_(async_) {
   FXL_DCHECK(request);
-  FXL_DCHECK(application_context_);
+  FXL_DCHECK(startup_context_);
   FXL_DCHECK(quit_callback_);
 
-  application_context_->outgoing().debug_dir()->AddEntry(
+  startup_context_->outgoing().debug_dir()->AddEntry(
       kDumpEntry,
       fbl::AdoptRef(new fs::BufferedPseudoFile([this](fbl::String* out) {
         std::ostringstream os;
@@ -140,8 +138,7 @@ void MediaPlayerImpl::MaybeCreateRenderer(StreamType::Medium medium) {
     case StreamType::Medium::kAudio:
       if (!audio_renderer_) {
         auto audio_server =
-            application_context_
-                ->ConnectToEnvironmentService<media::AudioServer>();
+            startup_context_->ConnectToEnvironmentService<media::AudioServer>();
         media::AudioRenderer2Ptr audio_renderer;
         audio_server->CreateRendererV2(audio_renderer.NewRequest());
         audio_renderer_ = FidlAudioRenderer::Create(std::move(audio_renderer));
@@ -379,7 +376,7 @@ void MediaPlayerImpl::SetTimelineFunction(float rate, int64_t reference_time,
 }
 
 void MediaPlayerImpl::SetHttpSource(fidl::StringPtr http_url) {
-  BeginSetReader(HttpReader::Create(application_context_, http_url));
+  BeginSetReader(HttpReader::Create(startup_context_, http_url));
 }
 
 void MediaPlayerImpl::SetFileSource(zx::channel file_channel) {
@@ -464,7 +461,8 @@ void MediaPlayerImpl::SetGain(float gain) {
 
 void MediaPlayerImpl::CreateView(
     fidl::InterfaceHandle<::fuchsia::ui::views_v1::ViewManager> view_manager,
-    fidl::InterfaceRequest<::fuchsia::ui::views_v1_token::ViewOwner> view_owner_request) {
+    fidl::InterfaceRequest<::fuchsia::ui::views_v1_token::ViewOwner>
+        view_owner_request) {
   MaybeCreateRenderer(StreamType::Medium::kVideo);
   if (!video_renderer_) {
     return;

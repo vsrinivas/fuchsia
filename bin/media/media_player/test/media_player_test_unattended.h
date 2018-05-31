@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_BIN_MEDIA_MEDIA_PLAYER_TEST_MEDIA_PLAYER_TEST_UNATTENDED_H_
+#define GARNET_BIN_MEDIA_MEDIA_PLAYER_TEST_MEDIA_PLAYER_TEST_UNATTENDED_H_
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/task.h>
@@ -10,8 +11,8 @@
 
 #include "garnet/bin/media/media_player/test/fake_audio_renderer.h"
 #include "garnet/bin/media/media_player/test/fake_wav_reader.h"
-#include "lib/app/cpp/application_context.h"
 #include "lib/app/cpp/connect.h"
+#include "lib/app/cpp/startup_context.h"
 #include "lib/fidl/cpp/optional.h"
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/logging.h"
@@ -25,7 +26,7 @@ class MediaPlayerTestUnattended {
   MediaPlayerTestUnattended(std::function<void(int)> quit_callback);
 
  private:
-  std::unique_ptr<component::ApplicationContext> application_context_;
+  std::unique_ptr<component::StartupContext> startup_context_;
   std::function<void(int)> quit_callback_;
   FakeWavReader fake_reader_;
   FakeAudioRenderer fake_audio_renderer_;
@@ -34,3 +35,5 @@ class MediaPlayerTestUnattended {
 
 }  // namespace test
 }  // namespace media_player
+
+#endif  // GARNET_BIN_MEDIA_MEDIA_PLAYER_TEST_MEDIA_PLAYER_TEST_UNATTENDED_H_

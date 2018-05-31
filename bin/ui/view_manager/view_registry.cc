@@ -110,9 +110,9 @@ bool Equals(const ::fuchsia::ui::views_v1::ViewPropertiesPtr& a,
 
 }  // namespace
 
-ViewRegistry::ViewRegistry(component::ApplicationContext* application_context)
-    : application_context_(application_context),
-      scenic_(application_context_
+ViewRegistry::ViewRegistry(component::StartupContext* startup_context)
+    : startup_context_(startup_context),
+      scenic_(startup_context_
                   ->ConnectToEnvironmentService<fuchsia::ui::scenic::Scenic>()),
       session_(scenic_.get()),
       weak_factory_(this) {
@@ -136,7 +136,7 @@ void ViewRegistry::GetScenic(
     fidl::InterfaceRequest<fuchsia::ui::scenic::Scenic> scenic_request) {
   // TODO(jeffbrown): We should have a better way to duplicate the
   // SceneManager connection without going back out through the environment.
-  application_context_->ConnectToEnvironmentService(std::move(scenic_request));
+  startup_context_->ConnectToEnvironmentService(std::move(scenic_request));
 }
 
 // CREATE / DESTROY VIEWS
@@ -850,7 +850,7 @@ void ViewRegistry::GetImeService(
   if (provider) {
     component::ConnectToService(provider, std::move(ime_service));
   } else {
-    application_context_->ConnectToEnvironmentService(std::move(ime_service));
+    startup_context_->ConnectToEnvironmentService(std::move(ime_service));
   }
 }
 

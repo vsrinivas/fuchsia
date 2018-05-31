@@ -7,7 +7,7 @@
 
 #include <lib/async-loop/cpp/loop.h>
 
-#include "lib/app/cpp/application_context.h"
+#include "lib/app/cpp/startup_context.h"
 #include "lib/fxl/macros.h"
 #include "lib/ui/sketchy/client/canvas.h"
 #include "lib/ui/sketchy/client/resources.h"
@@ -21,14 +21,16 @@ using namespace sketchy_lib;
 // clear the canvas.
 class View final : public mozart::BaseView {
  public:
-  View(async::Loop* loop, component::ApplicationContext* application_context,
+  View(async::Loop* loop, component::StartupContext* startup_context,
        ::fuchsia::ui::views_v1::ViewManagerPtr view_manager,
-       fidl::InterfaceRequest<::fuchsia::ui::views_v1_token::ViewOwner> view_owner_request);
+       fidl::InterfaceRequest<::fuchsia::ui::views_v1_token::ViewOwner>
+           view_owner_request);
 
   ~View() override = default;
 
   // mozart::BaseView.
-  void OnPropertiesChanged(::fuchsia::ui::views_v1::ViewProperties old_properties) override;
+  void OnPropertiesChanged(
+      ::fuchsia::ui::views_v1::ViewProperties old_properties) override;
   bool OnInputEvent(fuchsia::ui::input::InputEvent event) override;
 
  private:

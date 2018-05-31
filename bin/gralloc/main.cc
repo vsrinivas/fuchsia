@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <memory>
 #include <lib/async-loop/cpp/loop.h>
+#include <memory>
 
-#include "lib/app/cpp/application_context.h"
-#include "lib/fxl/logging.h"
 #include <fuchsia/gralloc/cpp/fidl.h>
+#include "lib/app/cpp/startup_context.h"
+#include "lib/fxl/logging.h"
 
 class GrallocImpl : public fuchsia::gralloc::Gralloc {
  public:
@@ -27,8 +27,8 @@ class GrallocImpl : public fuchsia::gralloc::Gralloc {
 
 int main(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigMakeDefault);
-  std::unique_ptr<component::ApplicationContext> app_context(
-      component::ApplicationContext::CreateFromStartupInfo());
+  std::unique_ptr<component::StartupContext> app_context(
+      component::StartupContext::CreateFromStartupInfo());
 
   GrallocImpl grallocator;
 

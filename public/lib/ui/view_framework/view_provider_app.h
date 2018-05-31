@@ -7,7 +7,7 @@
 
 #include <memory>
 
-#include "lib/app/cpp/application_context.h"
+#include "lib/app/cpp/startup_context.h"
 #include "lib/fxl/macros.h"
 #include "lib/ui/view_framework/view_provider_service.h"
 
@@ -22,7 +22,7 @@ class ViewProviderApp {
   ~ViewProviderApp();
 
  private:
-  std::unique_ptr<component::ApplicationContext> application_context_;
+  std::unique_ptr<component::StartupContext> startup_context_;
   ViewProviderService service_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ViewProviderApp);

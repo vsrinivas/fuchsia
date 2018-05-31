@@ -2,13 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_BIN_MDNS_SERVICE_FIDL_INTERFACE_MONITOR_H_
+#define GARNET_BIN_MDNS_SERVICE_FIDL_INTERFACE_MONITOR_H_
 
 #include <memory>
 
-#include "garnet/bin/mdns/service/interface_monitor.h"
-#include "lib/app/cpp/application_context.h"
 #include <netstack/cpp/fidl.h>
+#include "garnet/bin/mdns/service/interface_monitor.h"
+#include "lib/app/cpp/startup_context.h"
 
 namespace mdns {
 
@@ -17,9 +18,9 @@ class FidlInterfaceMonitor : public netstack::NotificationListener,
                              public InterfaceMonitor {
  public:
   static std::unique_ptr<InterfaceMonitor> Create(
-      component::ApplicationContext* application_context);
+      component::StartupContext* startup_context);
 
-  FidlInterfaceMonitor(component::ApplicationContext* application_context);
+  FidlInterfaceMonitor(component::StartupContext* startup_context);
 
   ~FidlInterfaceMonitor();
 
@@ -41,3 +42,5 @@ class FidlInterfaceMonitor : public netstack::NotificationListener,
 };
 
 }  // namespace mdns
+
+#endif  // GARNET_BIN_MDNS_SERVICE_FIDL_INTERFACE_MONITOR_H_

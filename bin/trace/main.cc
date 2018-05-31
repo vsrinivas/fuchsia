@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/async/cpp/task.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async/cpp/task.h>
 
 #include "garnet/bin/trace/app.h"
 #include "lib/fxl/command_line.h"
@@ -15,7 +15,7 @@ int main(int argc, const char** argv) {
     return 1;
 
   async::Loop loop(&kAsyncLoopConfigMakeDefault);
-  auto context = component::ApplicationContext::CreateFromStartupInfo();
+  auto context = component::StartupContext::CreateFromStartupInfo();
 
   tracing::App app(context.get());
   int32_t return_code = 0;

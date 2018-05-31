@@ -12,7 +12,7 @@
 #include <component/cpp/fidl.h>
 #include <fs/managed-vfs.h>
 #include "garnet/bin/sysmgr/delegating_loader.h"
-#include "lib/app/cpp/application_context.h"
+#include "lib/app/cpp/startup_context.h"
 #include "lib/fxl/macros.h"
 #include "lib/svc/cpp/service_namespace.h"
 #include "lib/svc/cpp/services.h"
@@ -42,7 +42,7 @@ class App {
   void RegisterAppLoaders(Config::ServiceMap app_loaders);
   void LaunchApplication(component::LaunchInfo launch_info);
 
-  std::unique_ptr<component::ApplicationContext> application_context_;
+  std::unique_ptr<component::StartupContext> startup_context_;
 
   // Keep track of all services, indexed by url.
   std::map<std::string, component::Services> services_;

@@ -49,8 +49,9 @@ int64_t rand_less_than(int64_t limit) {
 MediaPlayerTestView::MediaPlayerTestView(
     std::function<void(int)> quit_callback,
     ::fuchsia::ui::views_v1::ViewManagerPtr view_manager,
-    fidl::InterfaceRequest<::fuchsia::ui::views_v1_token::ViewOwner> view_owner_request,
-    component::ApplicationContext* application_context,
+    fidl::InterfaceRequest<::fuchsia::ui::views_v1_token::ViewOwner>
+        view_owner_request,
+    component::StartupContext* startup_context,
     const MediaPlayerTestParams& params)
     : mozart::BaseView(std::move(view_manager), std::move(view_owner_request),
                        "Media Player"),
@@ -86,8 +87,7 @@ MediaPlayerTestView::MediaPlayerTestView(
   pixel_aspect_ratio_.height = 1;
 
   // Create a player from all that stuff.
-  media_player_ =
-      application_context->ConnectToEnvironmentService<MediaPlayer>();
+  media_player_ = startup_context->ConnectToEnvironmentService<MediaPlayer>();
 
   media_player_.events().StatusChanged = [this](MediaPlayerStatus status) {
     HandleStatusChanged(status);
@@ -95,7 +95,8 @@ MediaPlayerTestView::MediaPlayerTestView(
 
   ::fuchsia::ui::views_v1_token::ViewOwnerPtr video_view_owner;
   media_player_->CreateView(
-      application_context->ConnectToEnvironmentService<::fuchsia::ui::views_v1::ViewManager>()
+      startup_context
+          ->ConnectToEnvironmentService<::fuchsia::ui::views_v1::ViewManager>()
           .Unbind(),
       video_view_owner.NewRequest());
 
@@ -280,8 +281,8 @@ void MediaPlayerTestView::OnSceneInvalidated(
   }
 }
 
-void MediaPlayerTestView::OnChildAttached(uint32_t child_key,
-                                          ::fuchsia::ui::views_v1::ViewInfo child_view_info) {
+void MediaPlayerTestView::OnChildAttached(
+    uint32_t child_key, ::fuchsia::ui::views_v1::ViewInfo child_view_info) {
   FXL_DCHECK(child_key == kVideoChildKey);
 
   parent_node().AddChild(*video_host_node_);

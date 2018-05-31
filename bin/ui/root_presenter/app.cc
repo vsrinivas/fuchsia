@@ -15,19 +15,18 @@
 namespace root_presenter {
 
 App::App(const fxl::CommandLine& command_line)
-    : application_context_(
-          component::ApplicationContext::CreateFromStartupInfo()),
+    : startup_context_(component::StartupContext::CreateFromStartupInfo()),
       input_reader_(this) {
-  FXL_DCHECK(application_context_);
+  FXL_DCHECK(startup_context_);
 
   input_reader_.Start();
 
-  application_context_->outgoing().AddPublicService<presentation::Presenter>(
+  startup_context_->outgoing().AddPublicService<presentation::Presenter>(
       [this](fidl::InterfaceRequest<presentation::Presenter> request) {
         presenter_bindings_.AddBinding(this, std::move(request));
       });
 
-  application_context_->outgoing()
+  startup_context_->outgoing()
       .AddPublicService<fuchsia::ui::input::InputDeviceRegistry>(
           [this](fidl::InterfaceRequest<fuchsia::ui::input::InputDeviceRegistry>
                      request) {
@@ -38,7 +37,8 @@ App::App(const fxl::CommandLine& command_line)
 App::~App() {}
 
 void App::Present(
-    fidl::InterfaceHandle<::fuchsia::ui::views_v1_token::ViewOwner> view_owner_handle,
+    fidl::InterfaceHandle<::fuchsia::ui::views_v1_token::ViewOwner>
+        view_owner_handle,
     fidl::InterfaceRequest<presentation::Presentation> presentation_request) {
   InitializeServices();
 
@@ -187,8 +187,7 @@ void App::OnReport(mozart::InputDeviceImpl* input_device,
 
 void App::InitializeServices() {
   if (!view_manager_) {
-    application_context_->ConnectToEnvironmentService(
-        view_manager_.NewRequest());
+    startup_context_->ConnectToEnvironmentService(view_manager_.NewRequest());
     view_manager_.set_error_handler([this] {
       FXL_LOG(ERROR) << "ViewManager died, destroying view trees.";
       Reset();

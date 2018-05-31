@@ -4,29 +4,33 @@
 
 #include "garnet/examples/ui/shadertoy/service/app.h"
 
-#include "lib/app/cpp/application_context.h"
+#include "lib/app/cpp/startup_context.h"
 #include "lib/escher/vk/vulkan_device_queues.h"
 #include "lib/escher/vk/vulkan_instance.h"
 
 namespace shadertoy {
 
-App::App(async::Loop* loop, component::ApplicationContext* app_context,
+App::App(async::Loop* loop, component::StartupContext* app_context,
          escher::Escher* escher)
     : escher_(escher),
       renderer_(escher, kDefaultImageFormat),
       compiler_(loop, escher, renderer_.render_pass(),
                 renderer_.descriptor_set_layout()) {
-  app_context->outgoing().AddPublicService<fuchsia::examples::shadertoy::ShadertoyFactory>(
-      [this](fidl::InterfaceRequest<fuchsia::examples::shadertoy::ShadertoyFactory> request) {
-        FXL_LOG(INFO) << "Accepting connection to ShadertoyFactory";
-        factory_bindings_.AddBinding(this, std::move(request));
-      });
+  app_context->outgoing()
+      .AddPublicService<fuchsia::examples::shadertoy::ShadertoyFactory>(
+          [this](fidl::InterfaceRequest<
+                 fuchsia::examples::shadertoy::ShadertoyFactory>
+                     request) {
+            FXL_LOG(INFO) << "Accepting connection to ShadertoyFactory";
+            factory_bindings_.AddBinding(this, std::move(request));
+          });
 }
 
 App::~App() = default;
 
 void App::NewImagePipeShadertoy(
-    ::fidl::InterfaceRequest<fuchsia::examples::shadertoy::Shadertoy> toy_request,
+    ::fidl::InterfaceRequest<fuchsia::examples::shadertoy::Shadertoy>
+        toy_request,
     ::fidl::InterfaceHandle<fuchsia::images::ImagePipe> image_pipe) {
   shadertoy_bindings_.AddBinding(
       std::make_unique<ShadertoyImpl>(
@@ -35,8 +39,10 @@ void App::NewImagePipeShadertoy(
 }
 
 void App::NewViewShadertoy(
-    ::fidl::InterfaceRequest<fuchsia::examples::shadertoy::Shadertoy> toy_request,
-    ::fidl::InterfaceRequest<::fuchsia::ui::views_v1_token::ViewOwner> view_owner_request,
+    ::fidl::InterfaceRequest<fuchsia::examples::shadertoy::Shadertoy>
+        toy_request,
+    ::fidl::InterfaceRequest<::fuchsia::ui::views_v1_token::ViewOwner>
+        view_owner_request,
     bool handle_input_events) {
   shadertoy_bindings_.AddBinding(
       std::make_unique<ShadertoyImpl>(ShadertoyState::NewForView(

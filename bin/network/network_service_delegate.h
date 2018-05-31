@@ -7,8 +7,8 @@
 
 #include <memory>
 
-#include "lib/app/cpp/application_context.h"
 #include "garnet/bin/network/network_service_impl.h"
+#include "lib/app/cpp/startup_context.h"
 
 namespace network {
 
@@ -18,7 +18,7 @@ class NetworkServiceDelegate {
   ~NetworkServiceDelegate();
 
  private:
-  std::unique_ptr<component::ApplicationContext> context_;
+  std::unique_ptr<component::StartupContext> context_;
   network::NetworkServiceImpl network_provider_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(NetworkServiceDelegate);

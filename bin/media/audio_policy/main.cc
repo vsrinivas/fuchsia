@@ -5,13 +5,13 @@
 #include <lib/async-loop/cpp/loop.h>
 
 #include "garnet/bin/media/audio_policy/audio_policy_service_impl.h"
-#include "lib/app/cpp/application_context.h"
+#include "lib/app/cpp/startup_context.h"
 
 int main(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigMakeDefault);
 
   audio_policy::AudioPolicyServiceImpl impl(
-      component::ApplicationContext::CreateFromStartupInfo());
+      component::StartupContext::CreateFromStartupInfo());
 
   loop.Run();
   return 0;

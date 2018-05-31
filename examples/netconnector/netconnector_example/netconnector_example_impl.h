@@ -2,12 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_EXAMPLES_NETCONNECTOR_NETCONNECTOR_EXAMPLE_NETCONNECTOR_EXAMPLE_IMPL_H_
+#define GARNET_EXAMPLES_NETCONNECTOR_NETCONNECTOR_EXAMPLE_NETCONNECTOR_EXAMPLE_IMPL_H_
 
 #include <lib/zx/channel.h>
 
 #include "garnet/examples/netconnector/netconnector_example/netconnector_example_params.h"
-#include "lib/app/cpp/application_context.h"
+#include "lib/app/cpp/startup_context.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
@@ -28,7 +29,7 @@ class NetConnectorExampleImpl {
   void HandleReceivedMessage(std::vector<uint8_t> message);
 
   fxl::Closure quit_callback_;
-  std::unique_ptr<component::ApplicationContext> application_context_;
+  std::unique_ptr<component::StartupContext> startup_context_;
   netconnector::MessageRelay message_relay_;
   std::vector<std::string>::const_iterator conversation_iter_;
 
@@ -36,3 +37,5 @@ class NetConnectorExampleImpl {
 };
 
 }  // namespace examples
+
+#endif  // GARNET_EXAMPLES_NETCONNECTOR_NETCONNECTOR_EXAMPLE_NETCONNECTOR_EXAMPLE_IMPL_H_

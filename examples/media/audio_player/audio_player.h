@@ -9,7 +9,7 @@
 #include <media_player/cpp/fidl.h>
 
 #include "garnet/examples/media/audio_player/audio_player_params.h"
-#include "lib/app/cpp/application_context.h"
+#include "lib/app/cpp/startup_context.h"
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
 #include "lib/media/timeline/timeline_function.h"

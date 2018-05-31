@@ -9,12 +9,12 @@
 #include <thread>
 
 #include <fbl/vmo_mapper.h>
+#include <lib/async-loop/cpp/loop.h>
 #include <media/cpp/fidl.h>
 #include <tts/cpp/fidl.h>
-#include <lib/async-loop/cpp/loop.h>
 #include <zircon/types.h>
 
-#include "lib/app/cpp/application_context.h"
+#include "lib/app/cpp/startup_context.h"
 #include "lib/fidl/cpp/string.h"
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/logging.h"
@@ -28,8 +28,8 @@ class TtsSpeaker : public std::enable_shared_from_this<TtsSpeaker> {
   TtsSpeaker(async_t* master_async);
   ~TtsSpeaker() = default;
 
-  zx_status_t Init(const std::unique_ptr<component::ApplicationContext>&
-                       application_context);
+  zx_status_t Init(
+      const std::unique_ptr<component::StartupContext>& startup_context);
 
   zx_status_t Speak(fidl::StringPtr words,
                     const fxl::Closure& speak_complete_cbk);

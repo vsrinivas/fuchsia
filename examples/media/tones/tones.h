@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_EXAMPLES_MEDIA_TONES_TONES_H_
+#define GARNET_EXAMPLES_MEDIA_TONES_TONES_H_
 
 #include <list>
 #include <map>
@@ -11,7 +12,7 @@
 #include <media/cpp/fidl.h>
 
 #include "garnet/examples/media/tones/tone_generator.h"
-#include "lib/app/cpp/application_context.h"
+#include "lib/app/cpp/startup_context.h"
 #include "lib/fsl/tasks/fd_waiter.h"
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
@@ -82,3 +83,5 @@ class Tones {
 };
 
 }  // namespace examples
+
+#endif  // GARNET_EXAMPLES_MEDIA_TONES_TONES_H_

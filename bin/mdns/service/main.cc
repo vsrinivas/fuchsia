@@ -5,15 +5,15 @@
 #include <lib/async-loop/cpp/loop.h>
 
 #include "garnet/bin/mdns/service/mdns_service_impl.h"
-#include "lib/app/cpp/application_context.h"
+#include "lib/app/cpp/startup_context.h"
 
 int main(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigMakeDefault);
 
-  std::unique_ptr<component::ApplicationContext> application_context =
-      component::ApplicationContext::CreateFromStartupInfo();
+  std::unique_ptr<component::StartupContext> startup_context =
+      component::StartupContext::CreateFromStartupInfo();
 
-  mdns::MdnsServiceImpl impl(application_context.get());
+  mdns::MdnsServiceImpl impl(startup_context.get());
 
   loop.Run();
   return 0;

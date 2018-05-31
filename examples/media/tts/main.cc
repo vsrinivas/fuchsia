@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <tts/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/task.h>
+#include <tts/cpp/fidl.h>
 
-#include "lib/app/cpp/application_context.h"
 #include "lib/app/cpp/connect.h"
+#include "lib/app/cpp/startup_context.h"
 #include "lib/fidl/cpp/synchronous_interface_ptr.h"
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/logging.h"
@@ -27,7 +27,7 @@ class TtsClient {
 TtsClient::TtsClient(fxl::Closure quit_callback)
     : quit_callback_(quit_callback) {
   FXL_DCHECK(quit_callback_);
-  auto app_ctx = component::ApplicationContext::CreateFromStartupInfo();
+  auto app_ctx = component::StartupContext::CreateFromStartupInfo();
   tts_service_ = app_ctx->ConnectToEnvironmentService<tts::TtsService>();
   tts_service_.set_error_handler([this]() {
     printf("Connection error when trying to talk to the TtsService\n");

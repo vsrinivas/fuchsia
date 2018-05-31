@@ -5,7 +5,7 @@
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 
-#include "lib/app/cpp/application_context.h"
+#include "lib/app/cpp/startup_context.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/log_settings_command_line.h"
 #include "lib/ui/scenic/client/session.h"
@@ -30,7 +30,7 @@ class App {
   // Called upon exit to free up the session and everything associated with it.
   void ReleaseSessionResources();
 
-  std::unique_ptr<component::ApplicationContext> application_context_;
+  std::unique_ptr<component::StartupContext> startup_context_;
   async::Loop* const loop_;
 
   fuchsia::ui::scenic::ScenicPtr scenic_;
@@ -38,18 +38,18 @@ class App {
 };
 
 App::App(async::Loop* loop)
-    : application_context_(
-          component::ApplicationContext::CreateFromStartupInfo()),
+    : startup_context_(component::StartupContext::CreateFromStartupInfo()),
       loop_(loop) {
   // Connect to the SceneManager service.
-  scenic_ =
-      application_context_->ConnectToEnvironmentService<fuchsia::ui::scenic::Scenic>();
+  scenic_ = startup_context_
+                ->ConnectToEnvironmentService<fuchsia::ui::scenic::Scenic>();
   scenic_.set_error_handler([this] {
     FXL_LOG(INFO) << "Lost connection to Scenic service.";
     loop_->Quit();
   });
-  scenic_->GetDisplayInfo(
-      [this](fuchsia::ui::gfx::DisplayInfo display_info) { Init(std::move(display_info)); });
+  scenic_->GetDisplayInfo([this](fuchsia::ui::gfx::DisplayInfo display_info) {
+    Init(std::move(display_info));
+  });
 }
 
 void App::Init(fuchsia::ui::gfx::DisplayInfo display_info) {
@@ -64,10 +64,8 @@ void App::Init(fuchsia::ui::gfx::DisplayInfo display_info) {
 
   // Wait kSessionDuration seconds, and close the session.
   constexpr zx::duration kSessionDuration = zx::sec(40);
-    async::PostDelayedTask(
-      loop_->async(),
-      [this] { ReleaseSessionResources(); },
-      kSessionDuration);
+  async::PostDelayedTask(loop_->async(), [this] { ReleaseSessionResources(); },
+                         kSessionDuration);
 
   Update(zx_clock_get(ZX_CLOCK_MONOTONIC));
 }
@@ -96,11 +94,11 @@ int main(int argc, const char** argv) {
   async::Loop loop;
   hello_spaces::App app(&loop);
   async::PostDelayedTask(loop.async(),
-      [&loop] {
-        FXL_LOG(INFO) << "Quitting.";
-        loop.Quit();
-      },
-      zx::sec(50));
+                         [&loop] {
+                           FXL_LOG(INFO) << "Quitting.";
+                           loop.Quit();
+                         },
+                         zx::sec(50));
   loop.Run();
   return 0;
 }

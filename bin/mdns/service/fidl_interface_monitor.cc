@@ -11,16 +11,16 @@ namespace mdns {
 
 // static
 std::unique_ptr<InterfaceMonitor> FidlInterfaceMonitor::Create(
-    component::ApplicationContext* application_context) {
+    component::StartupContext* startup_context) {
   return std::unique_ptr<InterfaceMonitor>(
-      new FidlInterfaceMonitor(application_context));
+      new FidlInterfaceMonitor(startup_context));
 }
 
 FidlInterfaceMonitor::FidlInterfaceMonitor(
-    component::ApplicationContext* application_context)
+    component::StartupContext* startup_context)
     : binding_(this) {
   netstack_ =
-      application_context->ConnectToEnvironmentService<netstack::Netstack>();
+      startup_context->ConnectToEnvironmentService<netstack::Netstack>();
 
   fidl::InterfaceHandle<netstack::NotificationListener> listener_handle;
 

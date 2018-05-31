@@ -26,10 +26,10 @@ static const std::string kStatusFileDir = "/data/app_local/audio_policy";
 }  // namespace
 
 AudioPolicyServiceImpl::AudioPolicyServiceImpl(
-    std::unique_ptr<component::ApplicationContext> application_context)
-    : application_context_(std::move(application_context)),
+    std::unique_ptr<component::StartupContext> startup_context)
+    : startup_context_(std::move(startup_context)),
       initialize_attempts_remaining_(kInitializeAttempts) {
-  application_context_->outgoing().AddPublicService<AudioPolicy>(
+  startup_context_->outgoing().AddPublicService<AudioPolicy>(
       [this](fidl::InterfaceRequest<AudioPolicy> request) {
         bindings_.AddBinding(this, std::move(request));
       });
@@ -163,7 +163,7 @@ void AudioPolicyServiceImpl::EnsureAudioService() {
   }
 
   audio_service_ =
-      application_context_->ConnectToEnvironmentService<media::AudioServer>();
+      startup_context_->ConnectToEnvironmentService<media::AudioServer>();
 
   audio_service_.set_error_handler([this]() {
     audio_service_.set_error_handler(nullptr);

@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_BIN_NETCONNECTOR_NETCONNECTOR_IMPL_H_
+#define GARNET_BIN_NETCONNECTOR_NETCONNECTOR_IMPL_H_
 
 #include <memory>
 #include <string>
@@ -21,7 +22,7 @@
 #include "garnet/bin/netconnector/requestor_agent.h"
 #include "garnet/bin/netconnector/responding_service_host.h"
 #include "garnet/bin/netconnector/service_agent.h"
-#include "lib/app/cpp/application_context.h"
+#include "lib/app/cpp/startup_context.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
@@ -81,7 +82,7 @@ class NetConnectorImpl : public NetConnector {
 
   NetConnectorParams* params_;
   fxl::Closure quit_callback_;
-  std::unique_ptr<component::ApplicationContext> application_context_;
+  std::unique_ptr<component::StartupContext> startup_context_;
   std::string host_name_;
   fidl::BindingSet<NetConnector> bindings_;
   Listener listener_;
@@ -103,3 +104,5 @@ class NetConnectorImpl : public NetConnector {
 };
 
 }  // namespace netconnector
+
+#endif  // GARNET_BIN_NETCONNECTOR_NETCONNECTOR_IMPL_H_

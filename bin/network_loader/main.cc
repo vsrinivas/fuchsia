@@ -7,12 +7,12 @@
 
 #include <unordered_map>
 
+#include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
-#include <lib/async-loop/cpp/loop.h>
 #include <zx/time.h>
 
-#include "lib/app/cpp/application_context.h"
+#include "lib/app/cpp/startup_context.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fidl/cpp/optional.h"
 #include "lib/fxl/functional/closure.h"
@@ -125,7 +125,7 @@ class RetryingLoader {
 class NetworkLoader : public component::Loader {
  public:
   NetworkLoader()
-      : context_(component::ApplicationContext::CreateFromStartupInfo()) {
+      : context_(component::StartupContext::CreateFromStartupInfo()) {
     context_->outgoing().AddPublicService<component::Loader>(
         [this](fidl::InterfaceRequest<component::Loader> request) {
           bindings_.AddBinding(this, std::move(request));
@@ -148,7 +148,7 @@ class NetworkLoader : public component::Loader {
   }
 
  private:
-  std::unique_ptr<component::ApplicationContext> context_;
+  std::unique_ptr<component::StartupContext> context_;
   fidl::BindingSet<component::Loader> bindings_;
 
   network::NetworkServicePtr net_;

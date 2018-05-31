@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "lib/app/cpp/application_context.h"
+#include "lib/app/cpp/startup_context.h"
 
 #include <fdio/util.h>
 #include <lib/async/default.h>
@@ -21,8 +21,8 @@ constexpr char kServiceRootPath[] = "/svc";
 
 }  // namespace
 
-ApplicationContext::ApplicationContext(zx::channel service_root,
-                                       zx::channel directory_request) {
+StartupContext::StartupContext(zx::channel service_root,
+                               zx::channel directory_request) {
   incoming_services_.Bind(std::move(service_root));
   outgoing_.Serve(std::move(directory_request));
 
@@ -30,10 +30,9 @@ ApplicationContext::ApplicationContext(zx::channel service_root,
   incoming_services_.ConnectToService(launcher_.NewRequest());
 }
 
-ApplicationContext::~ApplicationContext() = default;
+StartupContext::~StartupContext() = default;
 
-std::unique_ptr<ApplicationContext>
-ApplicationContext::CreateFromStartupInfo() {
+std::unique_ptr<StartupContext> StartupContext::CreateFromStartupInfo() {
   auto startup_info = CreateFromStartupInfoNotChecked();
   FXL_CHECK(startup_info->environment().get() != nullptr)
       << "The Environment is null. If this is expected, use "
@@ -41,14 +40,14 @@ ApplicationContext::CreateFromStartupInfo() {
   return startup_info;
 }
 
-std::unique_ptr<ApplicationContext>
-ApplicationContext::CreateFromStartupInfoNotChecked() {
+std::unique_ptr<StartupContext>
+StartupContext::CreateFromStartupInfoNotChecked() {
   zx_handle_t directory_request = zx_get_startup_handle(PA_DIRECTORY_REQUEST);
-  return std::make_unique<ApplicationContext>(
+  return std::make_unique<StartupContext>(
       subtle::CreateStaticServiceRootHandle(), zx::channel(directory_request));
 }
 
-std::unique_ptr<ApplicationContext> ApplicationContext::CreateFrom(
+std::unique_ptr<StartupContext> StartupContext::CreateFrom(
     StartupInfo startup_info) {
   FlatNamespace& flat = startup_info.flat_namespace;
   if (flat.paths->size() != flat.directories->size())
@@ -62,12 +61,12 @@ std::unique_ptr<ApplicationContext> ApplicationContext::CreateFrom(
     }
   }
 
-  return std::make_unique<ApplicationContext>(
+  return std::make_unique<StartupContext>(
       std::move(service_root),
       std::move(startup_info.launch_info.directory_request));
 }
 
-void ApplicationContext::ConnectToEnvironmentService(
+void StartupContext::ConnectToEnvironmentService(
     const std::string& interface_name, zx::channel channel) {
   return incoming_services().ConnectToService(std::move(channel),
                                               interface_name);

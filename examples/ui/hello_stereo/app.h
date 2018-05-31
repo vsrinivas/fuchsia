@@ -7,7 +7,7 @@
 
 #include <lib/async-loop/cpp/loop.h>
 
-#include "lib/app/cpp/application_context.h"
+#include "lib/app/cpp/startup_context.h"
 #include "lib/ui/scenic/client/resources.h"
 #include "lib/ui/scenic/client/session.h"
 
@@ -30,7 +30,7 @@ class App {
 
   void ReleaseSessionResources();
 
-  std::unique_ptr<component::ApplicationContext> application_context_;
+  std::unique_ptr<component::StartupContext> startup_context_;
   async::Loop* const loop_;
   fuchsia::ui::scenic::ScenicPtr scenic_;
 

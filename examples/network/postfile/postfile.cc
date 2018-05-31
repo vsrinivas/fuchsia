@@ -6,12 +6,12 @@
 
 #include <cstdio>
 
-#include <network/cpp/fidl.h>
-#include <lib/async/default.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async/default.h>
+#include <network/cpp/fidl.h>
 
-#include "lib/app/cpp/application_context.h"
 #include "lib/app/cpp/connect.h"
+#include "lib/app/cpp/startup_context.h"
 #include "lib/fsl/socket/files.h"
 #include "lib/fxl/files/file.h"
 #include "lib/fxl/files/file_descriptor.h"
@@ -74,7 +74,7 @@ class PostFileApp {
  public:
   PostFileApp(async::Loop* loop)
       : loop_(loop),
-        context_(component::ApplicationContext::CreateFromStartupInfo()) {
+        context_(component::StartupContext::CreateFromStartupInfo()) {
     network_service_ =
         context_->ConnectToEnvironmentService<network::NetworkService>();
   }
@@ -138,7 +138,7 @@ class PostFileApp {
 
  private:
   async::Loop* const loop_;
-  std::unique_ptr<component::ApplicationContext> context_;
+  std::unique_ptr<component::StartupContext> context_;
   network::NetworkServicePtr network_service_;
   network::URLLoaderPtr url_loader_;
 };

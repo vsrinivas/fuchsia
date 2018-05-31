@@ -11,19 +11,19 @@
 #include <fbl/limits.h>
 #include <fbl/unique_ptr.h>
 #include <fbl/vmo_mapper.h>
-#include <media/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 #include <lib/zx/time.h>
 #include <lib/zx/vmar.h>
 #include <lib/zx/vmo.h>
+#include <media/cpp/fidl.h>
 #include <zircon/compiler.h>
 #include <zircon/errors.h>
 #include <zircon/types.h>
 
-#include "lib/app/cpp/application_context.h"
 #include "lib/app/cpp/connect.h"
+#include "lib/app/cpp/startup_context.h"
 #include "lib/fsl/tasks/fd_waiter.h"
 #include "lib/fxl/functional/closure.h"
 #include "lib/media/timeline/timeline_function.h"
@@ -86,8 +86,7 @@ class FxProcessor {
   void Startup(media::AudioServerPtr audio_server);
 
  private:
-  using EffectFn = void (FxProcessor::*)(int16_t* src,
-                                         int16_t* dst,
+  using EffectFn = void (FxProcessor::*)(int16_t* src, int16_t* dst,
                                          uint32_t frames);
 
   static inline float Norm(int16_t value) {
@@ -108,14 +107,9 @@ class FxProcessor {
   void ProcessInput();
   void ProduceOutputPackets(::media::AudioPacket* out_pkt1,
                             ::media::AudioPacket* out_pkt2);
-  void ApplyEffect(int16_t* src,
-                   uint32_t src_offset,
-                   uint32_t src_rb_size,
-                   int16_t* dst,
-                   uint32_t dst_offset,
-                   uint32_t dst_rb_size,
-                   uint32_t frames,
-                   EffectFn effect);
+  void ApplyEffect(int16_t* src, uint32_t src_offset, uint32_t src_rb_size,
+                   int16_t* dst, uint32_t dst_offset, uint32_t dst_rb_size,
+                   uint32_t frames, EffectFn effect);
 
   void CopyInputEffect(int16_t* src, int16_t* dst, uint32_t frames);
   void PreampInputEffect(int16_t* src, int16_t* dst, uint32_t frames);
@@ -128,11 +122,9 @@ class FxProcessor {
     HandleKeystroke(status, event);
   };
 
-  void UpdateReverb(bool enabled,
-                    int32_t depth_delta = 0,
+  void UpdateReverb(bool enabled, int32_t depth_delta = 0,
                     float gain_delta = 0.0f);
-  void UpdateFuzz(bool enabled,
-                  float gain_delta = 0.0f,
+  void UpdateFuzz(bool enabled, float gain_delta = 0.0f,
                   float mix_delta = 0.0f);
   void UpdatePreampGain(float delta);
 
@@ -572,14 +564,10 @@ void FxProcessor::ProduceOutputPackets(::media::AudioPacket* out_pkt1,
   output_buf_wp_ += todo;
 }
 
-void FxProcessor::ApplyEffect(int16_t* src,
-                              uint32_t src_offset,
-                              uint32_t src_rb_size,
-                              int16_t* dst,
-                              uint32_t dst_offset,
-                              uint32_t dst_rb_size,
-                              uint32_t frames,
-                              EffectFn effect) {
+void FxProcessor::ApplyEffect(int16_t* src, uint32_t src_offset,
+                              uint32_t src_rb_size, int16_t* dst,
+                              uint32_t dst_offset, uint32_t dst_rb_size,
+                              uint32_t frames, EffectFn effect) {
   while (frames) {
     ZX_DEBUG_ASSERT(src_offset < src_rb_size);
     ZX_DEBUG_ASSERT(dst_offset < dst_rb_size);
@@ -605,8 +593,7 @@ void FxProcessor::CopyInputEffect(int16_t* src, int16_t* dst, uint32_t frames) {
   ::memcpy(dst, src, frames * sizeof(*dst) * NUM_CHANNELS);
 }
 
-void FxProcessor::PreampInputEffect(int16_t* src,
-                                    int16_t* dst,
+void FxProcessor::PreampInputEffect(int16_t* src, int16_t* dst,
                                     uint32_t frames) {
   for (uint32_t i = 0; i < frames * NUM_CHANNELS; ++i) {
     int32_t tmp = src[i];
@@ -656,8 +643,7 @@ void FxProcessor::MixedFuzzEffect(int16_t* src, int16_t* dst, uint32_t frames) {
   }
 }
 
-void FxProcessor::UpdateReverb(bool enabled,
-                               int32_t depth_delta,
+void FxProcessor::UpdateReverb(bool enabled, int32_t depth_delta,
                                float gain_delta) {
   reverb_enabled_ = enabled;
 
@@ -744,11 +730,11 @@ int main(int argc, char** argv) {
 
   async::Loop loop(&kAsyncLoopConfigMakeDefault);
 
-  std::unique_ptr<component::ApplicationContext> application_context =
-      component::ApplicationContext::CreateFromStartupInfo();
+  std::unique_ptr<component::StartupContext> startup_context =
+      component::StartupContext::CreateFromStartupInfo();
 
   media::AudioServerPtr audio_server =
-      application_context->ConnectToEnvironmentService<media::AudioServer>();
+      startup_context->ConnectToEnvironmentService<media::AudioServer>();
 
   FxProcessor fx(fbl::move(input), [&loop]() {
     async::PostTask(loop.async(), [&loop]() { loop.Quit(); });

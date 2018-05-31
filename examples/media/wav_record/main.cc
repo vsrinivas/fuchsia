@@ -7,7 +7,7 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/task.h>
 
-#include "lib/app/cpp/application_context.h"
+#include "lib/app/cpp/startup_context.h"
 #include "lib/fxl/command_line.h"
 
 #include "garnet/examples/media/wav_record/wav_recorder.h"
@@ -15,12 +15,11 @@
 int main(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigMakeDefault);
 
-  auto application_context =
-      component::ApplicationContext::CreateFromStartupInfo();
+  auto startup_context = component::StartupContext::CreateFromStartupInfo();
   examples::WavRecorder wav_recorder(
       fxl::CommandLineFromArgcArgv(argc, argv),
       [&loop]() { async::PostTask(loop.async(), [&loop]() { loop.Quit(); }); });
-  wav_recorder.Run(application_context.get());
+  wav_recorder.Run(startup_context.get());
   loop.Run();
 
   return 0;

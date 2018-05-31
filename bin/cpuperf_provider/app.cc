@@ -24,8 +24,7 @@ namespace {
 
 // If only fxl string/number conversions supported 0x.
 
-bool ParseNumber(const char* name,
-                 const fxl::StringView& arg,
+bool ParseNumber(const char* name, const fxl::StringView& arg,
                  uint64_t* value) {
   if (arg.size() > 2 && arg[0] == '0' && (arg[1] == 'x' || arg[1] == 'X')) {
     if (!fxl::StringToNumberWithError<uint64_t>(arg.substr(2), value,
@@ -45,8 +44,7 @@ bool ParseNumber(const char* name,
 }  // namespace
 
 App::App(const fxl::CommandLine& command_line)
-    : application_context_(
-          component::ApplicationContext::CreateFromStartupInfo()) {
+    : startup_context_(component::StartupContext::CreateFromStartupInfo()) {
   if (command_line.HasOption("help")) {
     PrintHelp();
     exit(EXIT_SUCCESS);

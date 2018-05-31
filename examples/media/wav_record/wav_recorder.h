@@ -2,12 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_EXAMPLES_MEDIA_WAV_RECORD_WAV_RECORDER_H_
+#define GARNET_EXAMPLES_MEDIA_WAV_RECORD_WAV_RECORDER_H_
 
 #include <media/cpp/fidl.h>
 
 #include "garnet/lib/media/wav_writer/wav_writer.h"
-#include "lib/app/cpp/application_context.h"
+#include "lib/app/cpp/startup_context.h"
 #include "lib/fsl/tasks/fd_waiter.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/functional/closure.h"
@@ -18,13 +19,12 @@ namespace examples {
 class WavRecorder {
  public:
   WavRecorder(fxl::CommandLine cmd_line, fxl::Closure quit_callback)
-      : cmd_line_(std::move(cmd_line)),
-        quit_callback_(quit_callback) {
+      : cmd_line_(std::move(cmd_line)), quit_callback_(quit_callback) {
     FXL_DCHECK(quit_callback_);
   }
 
   ~WavRecorder();
-  void Run(component::ApplicationContext* app_context);
+  void Run(component::StartupContext* app_context);
 
  private:
   void Usage();
@@ -60,3 +60,5 @@ class WavRecorder {
 };
 
 }  // namespace examples
+
+#endif  // GARNET_EXAMPLES_MEDIA_WAV_RECORD_WAV_RECORDER_H_

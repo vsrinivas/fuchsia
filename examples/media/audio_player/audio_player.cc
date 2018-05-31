@@ -7,9 +7,9 @@
 #include <iomanip>
 
 #include <fcntl.h>
-#include <media/cpp/fidl.h>
 #include <lib/async-loop/loop.h>
 #include <lib/async/default.h>
+#include <media/cpp/fidl.h>
 
 #include "garnet/examples/media/audio_player/audio_player_params.h"
 #include "lib/app/cpp/connect.h"
@@ -32,18 +32,16 @@ AudioPlayer::AudioPlayer(const AudioPlayerParams& params,
   FXL_DCHECK(params.is_valid());
   FXL_DCHECK(quit_callback_);
 
-  auto application_context =
-      component::ApplicationContext::CreateFromStartupInfo();
+  auto startup_context = component::StartupContext::CreateFromStartupInfo();
 
-  media_player_ =
-      application_context->ConnectToEnvironmentService<MediaPlayer>();
+  media_player_ = startup_context->ConnectToEnvironmentService<MediaPlayer>();
   media_player_.events().StatusChanged = [this](MediaPlayerStatus status) {
     HandleStatusChanged(status);
   };
 
   if (!params.service_name().empty()) {
     auto net_media_service =
-        application_context->ConnectToEnvironmentService<NetMediaService>();
+        startup_context->ConnectToEnvironmentService<NetMediaService>();
 
     fidl::InterfaceHandle<MediaPlayer> media_player_handle;
     media_player_->AddBinding(media_player_handle.NewRequest());

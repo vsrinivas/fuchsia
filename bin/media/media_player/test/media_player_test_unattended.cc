@@ -12,8 +12,8 @@
 
 #include "garnet/bin/media/media_player/test/fake_audio_renderer.h"
 #include "garnet/bin/media/media_player/test/fake_wav_reader.h"
-#include "lib/app/cpp/application_context.h"
 #include "lib/app/cpp/connect.h"
+#include "lib/app/cpp/startup_context.h"
 #include "lib/fidl/cpp/optional.h"
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/logging.h"
@@ -24,15 +24,13 @@ namespace test {
 
 MediaPlayerTestUnattended::MediaPlayerTestUnattended(
     std::function<void(int)> quit_callback)
-    : application_context_(
-          component::ApplicationContext::CreateFromStartupInfo()),
+    : startup_context_(component::StartupContext::CreateFromStartupInfo()),
       quit_callback_(quit_callback) {
   FXL_DCHECK(quit_callback_);
   std::cerr << "MediaPlayerTest starting\n";
 
   std::cerr << "creating player\n";
-  media_player_ =
-      application_context_->ConnectToEnvironmentService<MediaPlayer>();
+  media_player_ = startup_context_->ConnectToEnvironmentService<MediaPlayer>();
   media_player_.events().StatusChanged = [this](MediaPlayerStatus status) {
     if (status.end_of_stream) {
       FXL_LOG(INFO) << "MediaPlayerTest "

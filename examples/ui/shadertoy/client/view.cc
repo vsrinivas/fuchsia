@@ -27,18 +27,17 @@ constexpr uint32_t kShapeWidth = 384;
 constexpr uint32_t kShapeHeight = 288;
 }  // namespace
 
-View::View(async::Loop* loop,
-           component::ApplicationContext* application_context,
+View::View(async::Loop* loop, component::StartupContext* startup_context,
            ::fuchsia::ui::views_v1::ViewManagerPtr view_manager,
            fidl::InterfaceRequest<::fuchsia::ui::views_v1_token::ViewOwner>
                view_owner_request)
     : BaseView(std::move(view_manager), std::move(view_owner_request),
                "Shadertoy Example"),
-      application_context_(application_context),
+      startup_context_(startup_context),
       loop_(loop),
       // TODO: we don't need to keep this around once we have used it to
       // create a Shadertoy.  What is the best way to achieve this?
-      shadertoy_factory_(application_context_->ConnectToEnvironmentService<
+      shadertoy_factory_(startup_context_->ConnectToEnvironmentService<
                          fuchsia::examples::shadertoy::ShadertoyFactory>()),
       start_time_(zx_clock_get(ZX_CLOCK_MONOTONIC)) {
   shadertoy_factory_.set_error_handler([this] {

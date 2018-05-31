@@ -2,11 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_EXAMPLES_MEDIA_SIMPLE_SINE_SIMPLE_SINE_H_
+#define GARNET_EXAMPLES_MEDIA_SIMPLE_SINE_SIMPLE_SINE_H_
 
 #include <fbl/vmo_mapper.h>
 #include <media/cpp/fidl.h>
-#include "lib/app/cpp/application_context.h"
+#include "lib/app/cpp/startup_context.h"
 #include "lib/fxl/functional/closure.h"
 
 namespace examples {
@@ -17,10 +18,10 @@ class MediaApp {
 
   void set_float(bool enable_float) { use_float_ = enable_float; }
 
-  void Run(component::ApplicationContext* app_context);
+  void Run(component::StartupContext* app_context);
 
  private:
-  void AcquireRenderer(component::ApplicationContext* app_context);
+  void AcquireRenderer(component::StartupContext* app_context);
   void SetMediaType();
 
   zx_status_t CreateMemoryMapping();
@@ -47,3 +48,5 @@ class MediaApp {
 };
 
 }  // namespace examples
+
+#endif  // GARNET_EXAMPLES_MEDIA_SIMPLE_SINE_SIMPLE_SINE_H_

@@ -5,7 +5,7 @@
 #include <lib/async-loop/cpp/loop.h>
 
 #include "garnet/bin/timezone/timezone.h"
-#include "lib/app/cpp/application_context.h"
+#include "lib/app/cpp/startup_context.h"
 #include "lib/fxl/logging.h"
 
 namespace time_zone {
@@ -13,7 +13,7 @@ namespace time_zone {
 class MainService {
  public:
   MainService()
-      : app_context_(component::ApplicationContext::CreateFromStartupInfo()) {
+      : app_context_(component::StartupContext::CreateFromStartupInfo()) {
     app_context_->outgoing().AddPublicService<Timezone>(
         [this](fidl::InterfaceRequest<Timezone> request) {
           timezone_.AddBinding(std::move(request));
@@ -21,7 +21,7 @@ class MainService {
   }
 
  private:
-  std::unique_ptr<component::ApplicationContext> app_context_;
+  std::unique_ptr<component::StartupContext> app_context_;
   TimezoneImpl timezone_;
 };
 

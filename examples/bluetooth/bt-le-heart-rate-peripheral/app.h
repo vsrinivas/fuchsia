@@ -10,7 +10,7 @@
 
 #include <bluetooth_gatt/cpp/fidl.h>
 #include <bluetooth_low_energy/cpp/fidl.h>
-#include <lib/app/cpp/application_context.h>
+#include <lib/app/cpp/startup_context.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/string.h>
 
@@ -37,7 +37,7 @@ class App final : public bluetooth_low_energy::PeripheralDelegate {
   void OnCentralDisconnected(fidl::StringPtr device_id) override;
 
   // Application
-  std::unique_ptr<component::ApplicationContext> context_;
+  std::unique_ptr<component::StartupContext> context_;
 
   // GATT
   Service service_;

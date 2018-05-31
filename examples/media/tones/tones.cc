@@ -9,10 +9,10 @@
 #include <limits>
 
 #include <fbl/auto_call.h>
-#include <media/cpp/fidl.h>
 #include <lib/async-loop/loop.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
+#include <media/cpp/fidl.h>
 
 #include "garnet/examples/media/tones/midi_keyboard.h"
 #include "lib/fxl/logging.h"
@@ -100,11 +100,10 @@ static const std::map<int, float> notes_by_key_ = {
 Tones::Tones(bool interactive, fxl::Closure quit_callback)
     : interactive_(interactive), quit_callback_(quit_callback) {
   // Connect to the audio service and get a renderer.
-  auto application_context =
-      component::ApplicationContext::CreateFromStartupInfo();
+  auto startup_context = component::StartupContext::CreateFromStartupInfo();
 
   media::AudioServerPtr audio_server =
-      application_context->ConnectToEnvironmentService<media::AudioServer>();
+      startup_context->ConnectToEnvironmentService<media::AudioServer>();
 
   audio_server->CreateRendererV2(audio_renderer_.NewRequest());
 

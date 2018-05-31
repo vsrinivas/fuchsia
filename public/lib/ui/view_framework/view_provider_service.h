@@ -9,7 +9,7 @@
 #include <vector>
 
 #include <fuchsia/ui/views_v1/cpp/fidl.h>
-#include "lib/app/cpp/application_context.h"
+#include "lib/app/cpp/startup_context.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fxl/macros.h"
 #include "lib/ui/view_framework/base_view.h"
@@ -18,9 +18,10 @@ namespace mozart {
 
 // Parameters for creating a view.
 struct ViewContext {
-  component::ApplicationContext* application_context;
+  component::StartupContext* startup_context;
   ::fuchsia::ui::views_v1::ViewManagerPtr view_manager;
-  fidl::InterfaceRequest<::fuchsia::ui::views_v1_token::ViewOwner> view_owner_request;
+  fidl::InterfaceRequest<::fuchsia::ui::views_v1_token::ViewOwner>
+      view_owner_request;
   fidl::InterfaceRequest<component::ServiceProvider> outgoing_services;
 };
 
@@ -36,18 +37,19 @@ using ViewFactory =
 // This is only intended to be used for simple example programs.
 class ViewProviderService : public ::fuchsia::ui::views_v1::ViewProvider {
  public:
-  explicit ViewProviderService(
-      component::ApplicationContext* application_context, ViewFactory factory);
+  explicit ViewProviderService(component::StartupContext* startup_context,
+                               ViewFactory factory);
   ~ViewProviderService();
 
   // |ViewProvider|
   void CreateView(
-      fidl::InterfaceRequest<::fuchsia::ui::views_v1_token::ViewOwner> view_owner_request,
+      fidl::InterfaceRequest<::fuchsia::ui::views_v1_token::ViewOwner>
+          view_owner_request,
       fidl::InterfaceRequest<component::ServiceProvider> view_services)
       override;
 
  private:
-  component::ApplicationContext* application_context_;
+  component::StartupContext* startup_context_;
   ViewFactory view_factory_;
 
   fidl::BindingSet<ViewProvider> bindings_;

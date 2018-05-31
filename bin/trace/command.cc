@@ -8,17 +8,13 @@
 
 namespace tracing {
 
-Command::Command(component::ApplicationContext* context) : context_(context) {}
+Command::Command(component::StartupContext* context) : context_(context) {}
 
 Command::~Command() = default;
 
-component::ApplicationContext* Command::context() {
-  return context_;
-}
+component::StartupContext* Command::context() { return context_; }
 
-component::ApplicationContext* Command::context() const {
-  return context_;
-}
+component::StartupContext* Command::context() const { return context_; }
 
 std::ostream& Command::out() {
   // Returning std::cerr on purpose. std::cout is redirected and consumed
@@ -45,7 +41,7 @@ void Command::Done(int32_t return_code) {
 }
 
 CommandWithTraceController::CommandWithTraceController(
-    component::ApplicationContext* context)
+    component::StartupContext* context)
     : Command(context),
       trace_controller_(
           context->ConnectToEnvironmentService<TraceController>()) {

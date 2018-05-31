@@ -15,7 +15,7 @@
 
 #include "garnet/lib/machina/virtio_device.h"
 #include "garnet/lib/machina/virtio_queue_waiter.h"
-#include "lib/app/cpp/application_context.h"
+#include "lib/app/cpp/startup_context.h"
 #include "lib/fidl/cpp/binding_set.h"
 
 namespace machina {
@@ -28,7 +28,7 @@ class VirtioVsock
       public fuchsia::guest::SocketEndpoint,
       public fuchsia::guest::SocketAcceptor {
  public:
-  VirtioVsock(component::ApplicationContext* context, const PhysMem&,
+  VirtioVsock(component::StartupContext* context, const PhysMem&,
               async_t* async);
 
   uint32_t guest_cid() const;

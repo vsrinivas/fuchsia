@@ -4,12 +4,12 @@
 
 #include "garnet/lib/ui/scenic/scenic.h"
 
-#include "lib/app/cpp/application_context.h"
+#include "lib/app/cpp/startup_context.h"
 #include "lib/fxl/functional/make_copyable.h"
 
 namespace scenic {
 
-Scenic::Scenic(component::ApplicationContext* app_context,
+Scenic::Scenic(component::StartupContext* app_context,
                fit::closure quit_callback)
     : app_context_(app_context), quit_callback_(std::move(quit_callback)) {
   FXL_DCHECK(app_context_);

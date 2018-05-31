@@ -24,7 +24,7 @@ zx_status_t VirtioVsock::Stream<F>::WaitOnQueue() {
   return waiter_.Begin();
 }
 
-VirtioVsock::VirtioVsock(component::ApplicationContext* context,
+VirtioVsock::VirtioVsock(component::StartupContext* context,
                          const PhysMem& phys_mem, async_t* async)
     : VirtioDeviceBase(phys_mem),
       async_(async),

@@ -41,18 +41,18 @@ namespace hello_scenic {
 static constexpr uint64_t kBillion = 1000000000;
 
 App::App(async::Loop* loop)
-    : application_context_(
-          component::ApplicationContext::CreateFromStartupInfo()),
+    : startup_context_(component::StartupContext::CreateFromStartupInfo()),
       loop_(loop) {
   // Connect to the SceneManager service.
-  scenic_ =
-      application_context_->ConnectToEnvironmentService<fuchsia::ui::scenic::Scenic>();
+  scenic_ = startup_context_
+                ->ConnectToEnvironmentService<fuchsia::ui::scenic::Scenic>();
   scenic_.set_error_handler([this] {
     FXL_LOG(INFO) << "Lost connection to Scenic service.";
     loop_->Quit();
   });
-  scenic_->GetDisplayInfo(
-      [this](fuchsia::ui::gfx::DisplayInfo display_info) { Init(std::move(display_info)); });
+  scenic_->GetDisplayInfo([this](fuchsia::ui::gfx::DisplayInfo display_info) {
+    Init(std::move(display_info));
+  });
 }
 
 void App::InitCheckerboardMaterial(Material* uninitialized_material) {

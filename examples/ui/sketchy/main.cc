@@ -20,8 +20,8 @@ int main(int argc, const char** argv) {
 
   mozart::ViewProviderApp app([&loop](mozart::ViewContext view_context) {
     return std::make_unique<sketchy_example::View>(
-        &loop,
-        view_context.application_context, std::move(view_context.view_manager),
+        &loop, view_context.startup_context,
+        std::move(view_context.view_manager),
         std::move(view_context.view_owner_request));
   });
 

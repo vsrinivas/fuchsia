@@ -12,7 +12,7 @@
 #include <trace-provider/provider.h>
 
 #include "garnet/bin/media/media_player/media_player_impl.h"
-#include "lib/app/cpp/application_context.h"
+#include "lib/app/cpp/startup_context.h"
 #include "lib/svc/cpp/services.h"
 
 const std::string kIsolateUrl = "media_player";
@@ -48,16 +48,16 @@ int main(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigMakeDefault);
   trace::TraceProvider trace_provider(loop.async());
 
-  std::unique_ptr<component::ApplicationContext> application_context =
-      component::ApplicationContext::CreateFromStartupInfo();
+  std::unique_ptr<component::StartupContext> startup_context =
+      component::StartupContext::CreateFromStartupInfo();
 
   if (transient) {
     std::unique_ptr<media_player::MediaPlayerImpl> player;
-    application_context->outgoing().AddPublicService<media_player::MediaPlayer>(
-        [application_context = application_context.get(), &player,
+    startup_context->outgoing().AddPublicService<media_player::MediaPlayer>(
+        [startup_context = startup_context.get(), &player,
          &loop](fidl::InterfaceRequest<media_player::MediaPlayer> request) {
           player = media_player::MediaPlayerImpl::Create(
-              std::move(request), application_context, [&loop]() {
+              std::move(request), startup_context, [&loop]() {
                 async::PostTask(loop.async(), [&loop]() { loop.Quit(); });
               });
         });
@@ -65,10 +65,10 @@ int main(int argc, const char** argv) {
     loop.Run();
   } else {
     component::ApplicationLauncherPtr launcher;
-    application_context->environment()->GetApplicationLauncher(
+    startup_context->environment()->GetApplicationLauncher(
         launcher.NewRequest());
 
-    application_context->outgoing().AddPublicService<media_player::MediaPlayer>(
+    startup_context->outgoing().AddPublicService<media_player::MediaPlayer>(
         [&launcher](fidl::InterfaceRequest<media_player::MediaPlayer> request) {
           ConnectToIsolate<media_player::MediaPlayer>(std::move(request),
                                                       launcher.get());

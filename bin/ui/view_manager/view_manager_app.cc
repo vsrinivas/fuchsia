@@ -10,18 +10,19 @@
 namespace view_manager {
 
 ViewManagerApp::ViewManagerApp()
-    : application_context_(
-          component::ApplicationContext::CreateFromStartupInfo()) {
-  FXL_DCHECK(application_context_);
+    : startup_context_(component::StartupContext::CreateFromStartupInfo()) {
+  FXL_DCHECK(startup_context_);
 
-  registry_.reset(new ViewRegistry(application_context_.get()));
+  registry_.reset(new ViewRegistry(startup_context_.get()));
 
-  application_context_->outgoing().AddPublicService<::fuchsia::ui::views_v1::ViewManager>(
-      [this](fidl::InterfaceRequest<::fuchsia::ui::views_v1::ViewManager> request) {
-        view_manager_bindings_.AddBinding(
-            std::make_unique<ViewManagerImpl>(registry_.get()),
-            std::move(request));
-      });
+  startup_context_->outgoing()
+      .AddPublicService<::fuchsia::ui::views_v1::ViewManager>(
+          [this](fidl::InterfaceRequest<::fuchsia::ui::views_v1::ViewManager>
+                     request) {
+            view_manager_bindings_.AddBinding(
+                std::make_unique<ViewManagerImpl>(registry_.get()),
+                std::move(request));
+          });
 }
 
 ViewManagerApp::~ViewManagerApp() {}

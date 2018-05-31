@@ -13,11 +13,11 @@
 #include <iostream>
 
 #include "garnet/bin/test_runner/run_integration_tests/test_runner_config.h"
-#include "lib/test_runner/cpp/test_runner.h"
+#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/strings/split_string.h"
 #include "lib/fxl/strings/string_printf.h"
-#include "lib/fsl/tasks/message_loop.h"
+#include "lib/test_runner/cpp/test_runner.h"
 
 namespace test_runner {
 namespace {
@@ -26,8 +26,7 @@ class TestRunObserverImpl : public test_runner::TestRunObserver {
  public:
   TestRunObserverImpl(const std::string& test_id) : test_id_(test_id) {}
 
-  void SendMessage(const std::string& test_id,
-                   const std::string& operation,
+  void SendMessage(const std::string& test_id, const std::string& operation,
                    const std::string& msg) override {
     FXL_CHECK(test_id == test_id_);
   }
@@ -45,7 +44,7 @@ class TestRunObserverImpl : public test_runner::TestRunObserver {
   bool success_;
 };
 
-bool RunTest(std::shared_ptr<component::ApplicationContext> app_context,
+bool RunTest(std::shared_ptr<component::StartupContext> app_context,
              const std::string& url, const std::vector<std::string>& args) {
   uint64_t random_number;
   size_t random_size;
@@ -96,8 +95,8 @@ int RunIntegrationTestsMain(int argc, char** argv) {
 
   TestRunnerConfig config(test_file);
 
-  std::shared_ptr<component::ApplicationContext> app_context =
-      component::ApplicationContext::CreateFromStartupInfo();
+  std::shared_ptr<component::StartupContext> app_context =
+      component::StartupContext::CreateFromStartupInfo();
 
   std::vector<std::string> test_names = settings.positional_args();
   if (test_names.empty()) {

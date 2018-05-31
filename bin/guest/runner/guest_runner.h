@@ -7,7 +7,7 @@
 
 #include <component/cpp/fidl.h>
 
-#include "lib/app/cpp/application_context.h"
+#include "lib/app/cpp/startup_context.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fxl/macros.h"
 
@@ -26,7 +26,7 @@ class GuestRunner : public component::Runner {
                           controller) override;
 
   component::ApplicationLauncherSyncPtr launcher_;
-  std::unique_ptr<component::ApplicationContext> context_;
+  std::unique_ptr<component::StartupContext> context_;
   fidl::BindingSet<component::Runner> bindings_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(GuestRunner);

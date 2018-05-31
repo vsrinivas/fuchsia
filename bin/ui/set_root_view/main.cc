@@ -5,9 +5,9 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/zx/channel.h>
 
-#include <presentation/cpp/fidl.h>
 #include <fuchsia/ui/views_v1/cpp/fidl.h>
-#include "lib/app/cpp/application_context.h"
+#include <presentation/cpp/fidl.h>
+#include "lib/app/cpp/startup_context.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/log_settings_command_line.h"
 #include "lib/fxl/logging.h"
@@ -38,8 +38,7 @@ int main(int argc, const char** argv) {
   }
 
   async::Loop loop(&kAsyncLoopConfigMakeDefault);
-  auto application_context_ =
-      component::ApplicationContext::CreateFromStartupInfo();
+  auto startup_context_ = component::StartupContext::CreateFromStartupInfo();
 
   // Launch application.
   component::Services services;
@@ -49,8 +48,8 @@ int main(int argc, const char** argv) {
     launch_info.arguments.push_back(positional_args[i]);
   launch_info.directory_request = services.NewRequest();
   component::ComponentControllerPtr controller;
-  application_context_->launcher()->CreateApplication(std::move(launch_info),
-                                                      controller.NewRequest());
+  startup_context_->launcher()->CreateApplication(std::move(launch_info),
+                                                  controller.NewRequest());
   controller.set_error_handler([&loop] {
     FXL_LOG(INFO) << "Launched application terminated.";
     loop.Quit();
@@ -63,8 +62,8 @@ int main(int argc, const char** argv) {
   view_provider->CreateView(view_owner.NewRequest(), nullptr);
 
   // Ask the presenter to display it.
-  auto presenter = application_context_
-                       ->ConnectToEnvironmentService<presentation::Presenter>();
+  auto presenter =
+      startup_context_->ConnectToEnvironmentService<presentation::Presenter>();
   presenter->Present(std::move(view_owner), nullptr);
 
   // Done!

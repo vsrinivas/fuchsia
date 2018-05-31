@@ -8,7 +8,7 @@ namespace sketchy_service {
 
 App::App(async::Loop* loop, escher::Escher* escher)
     : loop_(loop),
-      context_(component::ApplicationContext::CreateFromStartupInfo()),
+      context_(component::StartupContext::CreateFromStartupInfo()),
       scenic_(
           context_->ConnectToEnvironmentService<fuchsia::ui::scenic::Scenic>()),
       session_(std::make_unique<scenic_lib::Session>(scenic_.get())),

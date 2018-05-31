@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_BIN_MEDIA_MEDIA_PLAYER_TEST_MEDIA_PLAYER_TEST_VIEW_H_
+#define GARNET_BIN_MEDIA_MEDIA_PLAYER_TEST_MEDIA_PLAYER_TEST_VIEW_H_
 
 #include <memory>
 #include <queue>
@@ -12,7 +13,7 @@
 #include <media_player/cpp/fidl.h>
 
 #include "garnet/bin/media/media_player/test/media_player_test_params.h"
-#include "lib/app/cpp/application_context.h"
+#include "lib/app/cpp/startup_context.h"
 #include "lib/fxl/macros.h"
 #include "lib/media/timeline/timeline_function.h"
 #include "lib/ui/view_framework/base_view.h"
@@ -25,8 +26,9 @@ class MediaPlayerTestView : public mozart::BaseView {
   MediaPlayerTestView(
       std::function<void(int)> quit_callback,
       ::fuchsia::ui::views_v1::ViewManagerPtr view_manager,
-      fidl::InterfaceRequest<::fuchsia::ui::views_v1_token::ViewOwner> view_owner_request,
-      component::ApplicationContext* application_context,
+      fidl::InterfaceRequest<::fuchsia::ui::views_v1_token::ViewOwner>
+          view_owner_request,
+      component::StartupContext* startup_context,
       const MediaPlayerTestParams& params);
 
   ~MediaPlayerTestView() override;
@@ -35,10 +37,13 @@ class MediaPlayerTestView : public mozart::BaseView {
   enum class State { kPaused, kPlaying, kEnded };
 
   // |BaseView|:
-  void OnPropertiesChanged(::fuchsia::ui::views_v1::ViewProperties old_properties) override;
-  void OnSceneInvalidated(fuchsia::images::PresentationInfo presentation_info) override;
-  void OnChildAttached(uint32_t child_key,
-                       ::fuchsia::ui::views_v1::ViewInfo child_view_info) override;
+  void OnPropertiesChanged(
+      ::fuchsia::ui::views_v1::ViewProperties old_properties) override;
+  void OnSceneInvalidated(
+      fuchsia::images::PresentationInfo presentation_info) override;
+  void OnChildAttached(
+      uint32_t child_key,
+      ::fuchsia::ui::views_v1::ViewInfo child_view_info) override;
   void OnChildUnavailable(uint32_t child_key) override;
   bool OnInputEvent(fuchsia::ui::input::InputEvent event) override;
 
@@ -95,3 +100,5 @@ class MediaPlayerTestView : public mozart::BaseView {
 
 }  // namespace test
 }  // namespace media_player
+
+#endif  // GARNET_BIN_MEDIA_MEDIA_PLAYER_TEST_MEDIA_PLAYER_TEST_VIEW_H_

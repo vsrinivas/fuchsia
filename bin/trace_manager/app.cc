@@ -9,7 +9,7 @@
 namespace tracing {
 
 TraceManagerApp::TraceManagerApp(const Config& config)
-    : context_(component::ApplicationContext::CreateFromStartupInfo()),
+    : context_(component::StartupContext::CreateFromStartupInfo()),
       trace_manager_(context_.get(), config) {
   context_->outgoing().AddPublicService<fuchsia::tracelink::Registry>(
       [this](fidl::InterfaceRequest<fuchsia::tracelink::Registry> request) {

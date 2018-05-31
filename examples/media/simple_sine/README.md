@@ -48,7 +48,7 @@ Below is a more detailed account of the steps taken, and why each is necessary.
 
 ##### Open FIDL interfaces
 
-With the provided ApplicationContext, we obtain an interface pointer to
+With the provided StartupContext, we obtain an interface pointer to
 AudioServer, and use that to obtain interface pointers to AudioRenderer2. At
 that point we no longer need our AudioServer interface and can allow it to go
 out of scope (and hence be automatically closed).

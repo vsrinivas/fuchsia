@@ -6,12 +6,12 @@
 #define LIB_ICU_DATA_CPP_ICU_DATA_H_
 
 namespace component {
-class ApplicationContext;
+class StartupContext;
 }
 
 namespace icu_data {
 
-bool Initialize(component::ApplicationContext* context);
+bool Initialize(component::StartupContext* context);
 bool Release();
 
 }  // namespace icu_data

@@ -11,11 +11,11 @@
 namespace tts {
 
 TtsServiceImpl::TtsServiceImpl(
-    std::unique_ptr<component::ApplicationContext> application_context)
-    : application_context_(std::move(application_context)) {
-  FXL_DCHECK(application_context_);
+    std::unique_ptr<component::StartupContext> startup_context)
+    : startup_context_(std::move(startup_context)) {
+  FXL_DCHECK(startup_context_);
 
-  application_context_->outgoing().AddPublicService<TtsService>(
+  startup_context_->outgoing().AddPublicService<TtsService>(
       [this](fidl::InterfaceRequest<TtsService> request) {
         clients_.insert(new Client(this, std::move(request)));
       });
@@ -25,9 +25,7 @@ TtsServiceImpl::TtsServiceImpl(
   FXL_DCHECK(async_);
 }
 
-TtsServiceImpl::~TtsServiceImpl() {
-  FXL_DCHECK(clients_.size() == 0);
-}
+TtsServiceImpl::~TtsServiceImpl() { FXL_DCHECK(clients_.size() == 0); }
 
 zx_status_t TtsServiceImpl::Init() {
   int res = flite_init();
@@ -60,13 +58,12 @@ void TtsServiceImpl::Client::Shutdown() {
   owner_->clients_.erase(owner_->clients_.find(this));
 }
 
-void TtsServiceImpl::Client::Say(fidl::StringPtr words,
-                                 uint64_t token,
+void TtsServiceImpl::Client::Say(fidl::StringPtr words, uint64_t token,
                                  SayCallback cbk) {
   auto cleanup = fbl::MakeAutoCall([this] { Shutdown(); });
   auto speaker = std::make_shared<TtsSpeaker>(owner_->async_);
 
-  if (speaker->Init(owner_->application_context_) != ZX_OK) {
+  if (speaker->Init(owner_->startup_context_) != ZX_OK) {
     return;
   }
 
@@ -88,9 +85,7 @@ void TtsServiceImpl::Client::Say(fidl::StringPtr words,
 }
 
 void TtsServiceImpl::Client::OnSpeakComplete(
-    std::shared_ptr<TtsSpeaker> speaker,
-    uint64_t token,
-    SayCallback cbk) {
+    std::shared_ptr<TtsSpeaker> speaker, uint64_t token, SayCallback cbk) {
   auto iter = active_speakers_.find(speaker);
 
   if (iter == active_speakers_.end()) {

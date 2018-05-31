@@ -36,18 +36,18 @@ namespace hello_stereo {
 static constexpr float kEdgeLength = 900;
 
 App::App(async::Loop* loop)
-    : application_context_(
-          component::ApplicationContext::CreateFromStartupInfo()),
+    : startup_context_(component::StartupContext::CreateFromStartupInfo()),
       loop_(loop) {
   // Connect to the SceneManager service.
-  scenic_ =
-      application_context_->ConnectToEnvironmentService<fuchsia::ui::scenic::Scenic>();
+  scenic_ = startup_context_
+                ->ConnectToEnvironmentService<fuchsia::ui::scenic::Scenic>();
   scenic_.set_error_handler([this] {
     FXL_LOG(INFO) << "Lost connection to Scenic service.";
     loop_->Quit();
   });
-  scenic_->GetDisplayInfo(
-      [this](fuchsia::ui::gfx::DisplayInfo display_info) { Init(std::move(display_info)); });
+  scenic_->GetDisplayInfo([this](fuchsia::ui::gfx::DisplayInfo display_info) {
+    Init(std::move(display_info));
+  });
 }
 
 void App::CreateExampleScene(float display_width, float display_height) {
@@ -141,10 +141,8 @@ void App::Init(fuchsia::ui::gfx::DisplayInfo display_info) {
 
   // Wait kSessionDuration seconds, and close the session.
   constexpr zx::duration kSessionDuration = zx::sec(40);
-  async::PostDelayedTask(
-      loop_->async(),
-      [this] { ReleaseSessionResources(); },
-      kSessionDuration);
+  async::PostDelayedTask(loop_->async(), [this] { ReleaseSessionResources(); },
+                         kSessionDuration);
 
   // Set up initial scene.
   const float display_width = static_cast<float>(display_info.width_in_px);

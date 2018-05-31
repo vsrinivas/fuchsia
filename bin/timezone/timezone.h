@@ -2,16 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_BIN_TIMEZONE_TIMEZONE_H_
+#define GARNET_BIN_TIMEZONE_TIMEZONE_H_
 
 #include <vector>
 
-#include "lib/fidl/cpp/binding_set.h"
 #include <time_zone/cpp/fidl.h>
+#include "lib/fidl/cpp/binding_set.h"
 #include "third_party/icu/source/common/unicode/strenum.h"
 
 namespace component {
-class ApplicationContext;
+class StartupContext;
 }
 
 namespace time_zone {
@@ -30,8 +31,7 @@ class TimezoneImpl : public Timezone {
 
   // |Timezone|:
   void GetTimezoneOffsetMinutes(
-      int64_t milliseconds,
-      GetTimezoneOffsetMinutesCallback callback) override;
+      int64_t milliseconds, GetTimezoneOffsetMinutesCallback callback) override;
   void SetTimezone(fidl::StringPtr timezone_id,
                    SetTimezoneCallback callback) override;
   void GetTimezoneId(GetTimezoneIdCallback callback) override;
@@ -59,3 +59,5 @@ class TimezoneImpl : public Timezone {
 };
 
 }  // namespace time_zone
+
+#endif  // GARNET_BIN_TIMEZONE_TIMEZONE_H_

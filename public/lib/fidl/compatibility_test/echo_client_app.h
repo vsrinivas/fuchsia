@@ -14,7 +14,7 @@
 #include <memory>
 #include <string>
 
-#include "lib/app/cpp/application_context.h"
+#include "lib/app/cpp/startup_context.h"
 #include "lib/svc/cpp/services.h"
 
 namespace fidl {
@@ -33,7 +33,7 @@ class EchoClientApp {
   EchoClientApp(const EchoClientApp&) = delete;
   EchoClientApp& operator=(const EchoClientApp&) = delete;
 
-  std::unique_ptr<component::ApplicationContext> context_;
+  std::unique_ptr<component::StartupContext> context_;
   component::Services echo_provider_;
   component::ComponentControllerPtr controller_;
   EchoPtr echo_;

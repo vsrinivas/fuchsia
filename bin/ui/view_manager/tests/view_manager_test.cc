@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 #include "gtest/gtest.h"
-#include "lib/app/cpp/application_context.h"
 #include "lib/app/cpp/connect.h"
+#include "lib/app/cpp/startup_context.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fxl/time/time_delta.h"
 #include "lib/fxl/time/time_point.h"
@@ -15,7 +15,7 @@
 #include "lib/ui/tests/mocks/mock_view_tree_listener.h"
 #include "lib/ui/tests/test_with_message_loop.h"
 
-extern std::unique_ptr<component::ApplicationContext> g_application_context;
+extern std::unique_ptr<component::StartupContext> g_startup_context;
 
 namespace view_manager {
 namespace test {
@@ -23,8 +23,8 @@ namespace test {
 class ViewManagerTest : public ::testing::Test {
  protected:
   static void SetUpTestCase() {
-    view_manager_ = g_application_context
-                        ->ConnectToEnvironmentService<::fuchsia::ui::views_v1::ViewManager>();
+    view_manager_ = g_startup_context->ConnectToEnvironmentService<
+        ::fuchsia::ui::views_v1::ViewManager>();
   }
 
   static ::fuchsia::ui::views_v1::ViewManagerPtr view_manager_;
@@ -54,7 +54,8 @@ TEST_F(ViewManagerTest, CreateAView) {
   // Call View::GetToken. Check that you get the callback.
   int view_token_callback_invokecount = 0;
   auto view_token_callback =
-      [&view_token_callback_invokecount](::fuchsia::ui::views_v1_token::ViewTokenPtr token) {
+      [&view_token_callback_invokecount](
+          ::fuchsia::ui::views_v1_token::ViewTokenPtr token) {
         view_token_callback_invokecount++;
       };
 
@@ -70,8 +71,9 @@ TEST_F(ViewManagerTest, CreateAChildView) {
   // Create and bind a mock view listener for a parent view
   ::fuchsia::ui::views_v1::ViewListenerPtr parent_view_listener;
   mozart::test::MockViewListener parent_mock_view_listener;
-  fidl::Binding<::fuchsia::ui::views_v1::ViewListener> child_view_listener_binding(
-      &parent_mock_view_listener, parent_view_listener.NewRequest());
+  fidl::Binding<::fuchsia::ui::views_v1::ViewListener>
+      child_view_listener_binding(&parent_mock_view_listener,
+                                  parent_view_listener.NewRequest());
 
   // Create a parent view
   ::fuchsia::ui::views_v1::ViewPtr parent_view;
@@ -86,8 +88,9 @@ TEST_F(ViewManagerTest, CreateAChildView) {
   // Create and bind a mock view listener for a child view
   ::fuchsia::ui::views_v1::ViewListenerPtr child_view_listener;
   mozart::test::MockViewListener child_mock_view_listener;
-  fidl::Binding<::fuchsia::ui::views_v1::ViewListener> parent_view_listener_binding(
-      &child_mock_view_listener, child_view_listener.NewRequest());
+  fidl::Binding<::fuchsia::ui::views_v1::ViewListener>
+      parent_view_listener_binding(&child_mock_view_listener,
+                                   child_view_listener.NewRequest());
 
   // Create a child view
   ::fuchsia::ui::views_v1::ViewPtr child_view;
@@ -109,7 +112,8 @@ TEST_F(ViewManagerTest, CreateAChildView) {
   // Call View::GetToken. Check that you get the callback.
   int view_token_callback_invokecount = 0;
   auto view_token_callback =
-      [&view_token_callback_invokecount](::fuchsia::ui::views_v1_token::ViewTokenPtr token) {
+      [&view_token_callback_invokecount](
+          ::fuchsia::ui::views_v1_token::ViewTokenPtr token) {
         view_token_callback_invokecount++;
       };
 
@@ -136,8 +140,9 @@ TEST_F(ViewManagerTest, SetChildProperties) {
   ::fuchsia::ui::views_v1::ViewTreePtr tree;
   ::fuchsia::ui::views_v1::ViewTreeListenerPtr tree_listener;
   mozart::test::MockViewTreeListener mock_tree_view_listener;
-  fidl::Binding<::fuchsia::ui::views_v1::ViewTreeListener> tree_listener_binding(
-      &mock_tree_view_listener, tree_listener.NewRequest());
+  fidl::Binding<::fuchsia::ui::views_v1::ViewTreeListener>
+      tree_listener_binding(&mock_tree_view_listener,
+                            tree_listener.NewRequest());
   view_manager_->CreateViewTree(tree.NewRequest(), std::move(tree_listener),
                                 "test_view_tree");
 
@@ -154,8 +159,9 @@ TEST_F(ViewManagerTest, SetChildProperties) {
   // Create and bind a mock view listener for a parent view
   ::fuchsia::ui::views_v1::ViewListenerPtr parent_view_listener;
   mozart::test::MockViewListener parent_mock_view_listener;
-  fidl::Binding<::fuchsia::ui::views_v1::ViewListener> child_view_listener_binding(
-      &parent_mock_view_listener, parent_view_listener.NewRequest());
+  fidl::Binding<::fuchsia::ui::views_v1::ViewListener>
+      child_view_listener_binding(&parent_mock_view_listener,
+                                  parent_view_listener.NewRequest());
 
   // Create a parent view
   ::fuchsia::ui::views_v1::ViewPtr parent_view;
@@ -168,9 +174,11 @@ TEST_F(ViewManagerTest, SetChildProperties) {
   tree_container->AddChild(parent_key, std::move(parent_view_owner));
 
   auto parent_view_properties = ::fuchsia::ui::views_v1::ViewProperties::New();
-  parent_view_properties->display_metrics = ::fuchsia::ui::views_v1::DisplayMetrics::New();
+  parent_view_properties->display_metrics =
+      ::fuchsia::ui::views_v1::DisplayMetrics::New();
   parent_view_properties->display_metrics->device_pixel_ratio = 1.0;
-  parent_view_properties->view_layout = ::fuchsia::ui::views_v1::ViewLayout::New();
+  parent_view_properties->view_layout =
+      ::fuchsia::ui::views_v1::ViewLayout::New();
   parent_view_properties->view_layout->size = fuchsia::math::Size::New();
   parent_view_properties->view_layout->size->width = parent_view_width;
   parent_view_properties->view_layout->size->height = parent_view_height;
@@ -193,8 +201,9 @@ TEST_F(ViewManagerTest, SetChildProperties) {
                   invalidation->properties->view_layout->size->height);
         invalidation_count++;
       });
-  fidl::Binding<::fuchsia::ui::views_v1::ViewListener> parent_view_listener_binding(
-      &child_mock_view_listener, child_view_listener.NewRequest());
+  fidl::Binding<::fuchsia::ui::views_v1::ViewListener>
+      parent_view_listener_binding(&child_mock_view_listener,
+                                   child_view_listener.NewRequest());
 
   // Create a child view
   ::fuchsia::ui::views_v1::ViewPtr child_view;
@@ -208,7 +217,8 @@ TEST_F(ViewManagerTest, SetChildProperties) {
 
   auto view_properties = ::fuchsia::ui::views_v1::ViewProperties::New();
   view_properties->view_layout = ::fuchsia::ui::views_v1::ViewLayout::New();
-  view_properties->display_metrics = ::fuchsia::ui::views_v1::DisplayMetrics::New();
+  view_properties->display_metrics =
+      ::fuchsia::ui::views_v1::DisplayMetrics::New();
   view_properties->display_metrics->device_pixel_ratio = 1.0;
   view_properties->view_layout->size = fuchsia::math::Size::New();
   view_properties->view_layout->size->width = child_view_width;

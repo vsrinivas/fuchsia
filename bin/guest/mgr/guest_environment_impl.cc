@@ -9,8 +9,7 @@
 namespace guestmgr {
 
 GuestEnvironmentImpl::GuestEnvironmentImpl(
-    uint32_t id, const std::string& label,
-    component::ApplicationContext* context,
+    uint32_t id, const std::string& label, component::StartupContext* context,
     fidl::InterfaceRequest<fuchsia::guest::GuestEnvironment> request)
     : id_(id),
       label_(label),

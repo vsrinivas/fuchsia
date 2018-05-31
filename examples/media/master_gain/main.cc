@@ -5,12 +5,12 @@
 #include <iomanip>
 #include <iostream>
 
-#include <media/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/task.h>
+#include <media/cpp/fidl.h>
 
-#include "lib/app/cpp/application_context.h"
 #include "lib/app/cpp/connect.h"
+#include "lib/app/cpp/startup_context.h"
 #include "lib/fxl/command_line.h"
 
 void usage(const char* prog_name) {
@@ -41,11 +41,10 @@ int main(int argc, const char** argv) {
 
   async::Loop loop(&kAsyncLoopConfigMakeDefault);
 
-  auto application_context =
-      component::ApplicationContext::CreateFromStartupInfo();
+  auto startup_context = component::StartupContext::CreateFromStartupInfo();
 
   auto audio_server =
-      application_context->ConnectToEnvironmentService<media::AudioServer>();
+      startup_context->ConnectToEnvironmentService<media::AudioServer>();
 
   if (set_gain) {
     audio_server->SetMasterGain(gain_target);

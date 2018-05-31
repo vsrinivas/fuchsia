@@ -11,7 +11,7 @@
 namespace tracing {
 
 Command::Info ListCategories::Describe() {
-  return Command::Info{[](component::ApplicationContext* context) {
+  return Command::Info{[](component::StartupContext* context) {
                          return std::make_unique<ListCategories>(context);
                        },
                        "list-categories",
@@ -19,7 +19,7 @@ Command::Info ListCategories::Describe() {
                        {}};
 }
 
-ListCategories::ListCategories(component::ApplicationContext* context)
+ListCategories::ListCategories(component::StartupContext* context)
     : CommandWithTraceController(context) {}
 
 void ListCategories::Start(const fxl::CommandLine& command_line) {

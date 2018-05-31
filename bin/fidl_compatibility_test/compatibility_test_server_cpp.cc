@@ -9,7 +9,7 @@
 #include <string>
 
 #include "garnet/public/lib/fidl/compatibility_test/echo_client_app.h"
-#include "lib/app/cpp/application_context.h"
+#include "lib/app/cpp/startup_context.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fidl/cpp/interface_request.h"
 
@@ -20,7 +20,7 @@ namespace compatibility {
 class EchoServerApp : public Echo {
  public:
   EchoServerApp()
-      : context_(component::ApplicationContext::CreateFromStartupInfo()) {
+      : context_(component::StartupContext::CreateFromStartupInfo()) {
     context_->outgoing().AddPublicService<Echo>(
         [this](fidl::InterfaceRequest<Echo> request) {
           bindings_.AddBinding(
@@ -52,7 +52,7 @@ class EchoServerApp : public Echo {
   EchoServerApp(const EchoServerApp&) = delete;
   EchoServerApp& operator=(const EchoServerApp&) = delete;
 
-  std::unique_ptr<component::ApplicationContext> context_;
+  std::unique_ptr<component::StartupContext> context_;
   fidl::BindingSet<Echo> bindings_;
 };
 

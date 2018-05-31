@@ -15,8 +15,8 @@
 #include "garnet/bin/auth/token_manager/token_manager_factory_impl.h"
 #include "garnet/bin/auth/token_manager/token_manager_impl.h"
 #include "gtest/gtest.h"
-#include "lib/app/cpp/application_context.h"
 #include "lib/app/cpp/connect.h"
+#include "lib/app/cpp/startup_context.h"
 #include "lib/callback/capture.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fidl/cpp/synchronous_interface_ptr.h"
@@ -49,8 +49,7 @@ class DevTokenManagerAppTest : public gtest::TestWithMessageLoop,
                                auth::AuthenticationContextProvider {
  public:
   DevTokenManagerAppTest()
-      : application_context_(
-            component::ApplicationContext::CreateFromStartupInfo()),
+      : startup_context_(component::StartupContext::CreateFromStartupInfo()),
         auth_context_provider_binding_(this) {}
 
   ~DevTokenManagerAppTest() {}
@@ -67,8 +66,8 @@ class DevTokenManagerAppTest : public gtest::TestWithMessageLoop,
       stream << "--verbose=" << fxl::GetVlogVerbosity();
       launch_info.arguments.push_back(stream.str());
     }
-    application_context_->launcher()->CreateApplication(
-        std::move(launch_info), controller_.NewRequest());
+    startup_context_->launcher()->CreateApplication(std::move(launch_info),
+                                                    controller_.NewRequest());
     controller_.set_error_handler([] {
       FXL_LOG(ERROR) << "Error in connecting to TokenManagerFactory service.";
     });
@@ -102,7 +101,7 @@ class DevTokenManagerAppTest : public gtest::TestWithMessageLoop,
   }
 
  private:
-  std::unique_ptr<component::ApplicationContext> application_context_;
+  std::unique_ptr<component::StartupContext> startup_context_;
   component::ComponentControllerPtr controller_;
 
  protected:
@@ -358,8 +357,7 @@ int main(int argc, char** argv) {
 
   {
     async::Loop loop(&kAsyncLoopConfigMakeDefault);
-    auto context =
-        component::ApplicationContext::CreateFromStartupInfoNotChecked();
+    auto context = component::StartupContext::CreateFromStartupInfoNotChecked();
     test_runner::ReportResult(argv[0], context.get(), listener.GetResults());
   }
 

@@ -10,9 +10,9 @@
 namespace media_player {
 
 NetMediaServiceImpl::NetMediaServiceImpl(
-    std::unique_ptr<component::ApplicationContext> application_context)
-    : FactoryServiceBase(std::move(application_context)) {
-  this->application_context()->outgoing().AddPublicService<NetMediaService>(
+    std::unique_ptr<component::StartupContext> startup_context)
+    : FactoryServiceBase(std::move(startup_context)) {
+  this->startup_context()->outgoing().AddPublicService<NetMediaService>(
       [this](fidl::InterfaceRequest<NetMediaService> request) {
         bindings_.AddBinding(this, std::move(request));
       });
@@ -28,8 +28,7 @@ void NetMediaServiceImpl::PublishMediaPlayer(
 }
 
 void NetMediaServiceImpl::CreateMediaPlayerProxy(
-    fidl::StringPtr device_name,
-    fidl::StringPtr service_name,
+    fidl::StringPtr device_name, fidl::StringPtr service_name,
     fidl::InterfaceRequest<MediaPlayer> media_player_request) {
   AddProduct(MediaPlayerNetProxy::Create(
       device_name, service_name, std::move(media_player_request), this));

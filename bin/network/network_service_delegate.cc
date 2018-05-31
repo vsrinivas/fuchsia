@@ -7,13 +7,13 @@
 namespace network {
 
 NetworkServiceDelegate::NetworkServiceDelegate(async_t* dispatcher)
-    : context_(component::ApplicationContext::CreateFromStartupInfo()),
+    : context_(component::StartupContext::CreateFromStartupInfo()),
       network_provider_(dispatcher) {
   FXL_DCHECK(dispatcher),
-  context_->outgoing().AddPublicService<NetworkService>(
-      [this](fidl::InterfaceRequest<NetworkService> request) {
-        network_provider_.AddBinding(std::move(request));
-      });
+      context_->outgoing().AddPublicService<NetworkService>(
+          [this](fidl::InterfaceRequest<NetworkService> request) {
+            network_provider_.AddBinding(std::move(request));
+          });
 }
 
 NetworkServiceDelegate::~NetworkServiceDelegate() {}

@@ -43,7 +43,7 @@ class Record : public CommandWithTraceController {
 
   static Info Describe();
 
-  explicit Record(component::ApplicationContext* context);
+  explicit Record(component::StartupContext* context);
 
  protected:
   void Start(const fxl::CommandLine& command_line) override;

@@ -11,17 +11,16 @@
 #include "garnet/bin/mdns/service/host_name.h"
 #include "garnet/bin/mdns/service/mdns_fidl_util.h"
 #include "garnet/bin/mdns/service/mdns_names.h"
-#include "lib/app/cpp/application_context.h"
+#include "lib/app/cpp/startup_context.h"
 #include "lib/fsl/types/type_converters.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/type_converter.h"
 
 namespace mdns {
 
-MdnsServiceImpl::MdnsServiceImpl(
-    component::ApplicationContext* application_context)
-    : application_context_(application_context) {
-  application_context_->outgoing().AddPublicService<MdnsService>(
+MdnsServiceImpl::MdnsServiceImpl(component::StartupContext* startup_context)
+    : startup_context_(startup_context) {
+  startup_context_->outgoing().AddPublicService<MdnsService>(
       [this](fidl::InterfaceRequest<MdnsService> request) {
         bindings_.AddBinding(this, std::move(request));
       });
@@ -39,8 +38,7 @@ void MdnsServiceImpl::Start() {
     return;
   }
 
-  mdns_.Start(FidlInterfaceMonitor::Create(application_context_),
-              GetHostName());
+  mdns_.Start(FidlInterfaceMonitor::Create(startup_context_), GetHostName());
 }
 
 void MdnsServiceImpl::ResolveHostName(fidl::StringPtr host_name,
@@ -80,9 +78,7 @@ void MdnsServiceImpl::SubscribeToService(
 }
 
 void MdnsServiceImpl::PublishServiceInstance(
-    fidl::StringPtr service_name,
-    fidl::StringPtr instance_name,
-    uint16_t port,
+    fidl::StringPtr service_name, fidl::StringPtr instance_name, uint16_t port,
     fidl::VectorPtr<fidl::StringPtr> text,
     PublishServiceInstanceCallback callback) {
   if (!MdnsNames::IsValidServiceName(service_name)) {
@@ -133,8 +129,7 @@ void MdnsServiceImpl::UnpublishServiceInstance(fidl::StringPtr service_name,
 }
 
 void MdnsServiceImpl::AddResponder(
-    fidl::StringPtr service_name,
-    fidl::StringPtr instance_name,
+    fidl::StringPtr service_name, fidl::StringPtr instance_name,
     fidl::InterfaceHandle<MdnsResponder> responder_handle) {
   FXL_DCHECK(responder_handle);
 
@@ -211,9 +206,7 @@ void MdnsServiceImpl::ReannounceInstance(fidl::StringPtr service_name,
   iter->second->Reannounce();
 }
 
-void MdnsServiceImpl::SetVerbose(bool value) {
-  mdns_.SetVerbose(value);
-}
+void MdnsServiceImpl::SetVerbose(bool value) { mdns_.SetVerbose(value); }
 
 MdnsServiceImpl::Subscriber::Subscriber(
     fidl::InterfaceRequest<MdnsServiceSubscription> request,
@@ -240,10 +233,8 @@ MdnsServiceImpl::Subscriber::Subscriber(
 MdnsServiceImpl::Subscriber::~Subscriber() {}
 
 void MdnsServiceImpl::Subscriber::InstanceDiscovered(
-    const std::string& service,
-    const std::string& instance,
-    const SocketAddress& v4_address,
-    const SocketAddress& v6_address,
+    const std::string& service, const std::string& instance,
+    const SocketAddress& v4_address, const SocketAddress& v6_address,
     const std::vector<std::string>& text) {
   instances_by_name_.emplace(
       instance, MdnsFidlUtil::CreateServiceInstance(
@@ -251,10 +242,8 @@ void MdnsServiceImpl::Subscriber::InstanceDiscovered(
 }
 
 void MdnsServiceImpl::Subscriber::InstanceChanged(
-    const std::string& service,
-    const std::string& instance,
-    const SocketAddress& v4_address,
-    const SocketAddress& v6_address,
+    const std::string& service, const std::string& instance,
+    const SocketAddress& v4_address, const SocketAddress& v6_address,
     const std::vector<std::string>& text) {
   auto iter = instances_by_name_.find(instance);
   if (iter != instances_by_name_.end()) {
@@ -278,8 +267,7 @@ void MdnsServiceImpl::Subscriber::GetInstances(uint64_t version_last_seen,
 }
 
 MdnsServiceImpl::SimplePublisher::SimplePublisher(
-    IpPort port,
-    fidl::VectorPtr<fidl::StringPtr> text,
+    IpPort port, fidl::VectorPtr<fidl::StringPtr> text,
     PublishServiceInstanceCallback callback)
     : port_(port),
       text_(fxl::To<std::vector<std::string>>(text)),
@@ -290,15 +278,13 @@ void MdnsServiceImpl::SimplePublisher::ReportSuccess(bool success) {
 }
 
 void MdnsServiceImpl::SimplePublisher::GetPublication(
-    bool query,
-    const std::string& subtype,
+    bool query, const std::string& subtype,
     const std::function<void(std::unique_ptr<Mdns::Publication>)>& callback) {
   callback(Mdns::Publication::Create(port_, text_));
 }
 
 MdnsServiceImpl::ResponderPublisher::ResponderPublisher(
-    MdnsResponderPtr responder,
-    const fxl::Closure& deleter)
+    MdnsResponderPtr responder, const fxl::Closure& deleter)
     : responder_(std::move(responder)) {
   FXL_DCHECK(responder_);
 
@@ -315,8 +301,7 @@ void MdnsServiceImpl::ResponderPublisher::ReportSuccess(bool success) {
 }
 
 void MdnsServiceImpl::ResponderPublisher::GetPublication(
-    bool query,
-    const std::string& subtype,
+    bool query, const std::string& subtype,
     const std::function<void(std::unique_ptr<Mdns::Publication>)>& callback) {
   FXL_DCHECK(responder_);
   responder_->GetPublication(query, subtype,

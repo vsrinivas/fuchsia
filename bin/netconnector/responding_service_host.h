@@ -8,7 +8,7 @@
 #include <unordered_map>
 
 #include <component/cpp/fidl.h>
-#include "lib/app/cpp/application_context.h"
+#include "lib/app/cpp/startup_context.h"
 #include "lib/fxl/macros.h"
 #include "lib/svc/cpp/service_namespace.h"
 #include "lib/svc/cpp/services.h"

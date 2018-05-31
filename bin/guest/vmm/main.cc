@@ -13,10 +13,10 @@
 #include <ios>
 #include <vector>
 
-#include <lib/async-loop/cpp/loop.h>
 #include <fbl/string_buffer.h>
 #include <fbl/unique_fd.h>
 #include <fbl/unique_ptr.h>
+#include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/task.h>
 #include <trace-provider/provider.h>
 #include <zircon/process.h>
@@ -45,7 +45,7 @@
 #include "garnet/lib/machina/virtio_net.h"
 #include "garnet/lib/machina/virtio_vsock.h"
 #include "garnet/public/lib/fxl/files/file.h"
-#include "lib/app/cpp/application_context.h"
+#include "lib/app/cpp/startup_context.h"
 
 #if __aarch64__
 #include "garnet/lib/machina/arch/arm64/pl031.h"
@@ -155,7 +155,7 @@ static zx_status_t setup_zircon_framebuffer(
 }
 
 static zx_status_t setup_scenic_framebuffer(
-    component::ApplicationContext* application_context, machina::VirtioGpu* gpu,
+    component::StartupContext* startup_context, machina::VirtioGpu* gpu,
     machina::InputDispatcher* input_dispatcher,
     machina::GuestControllerImpl* guest_controller,
     fbl::unique_ptr<machina::GpuScanout>* scanout) {
@@ -167,8 +167,8 @@ static zx_status_t setup_scenic_framebuffer(
     return ZX_ERR_NO_RESOURCES;
   }
   fbl::unique_ptr<ScenicScanout> scenic_scanout;
-  zx_status_t status = ScenicScanout::Create(application_context,
-                                             input_dispatcher, &scenic_scanout);
+  zx_status_t status =
+      ScenicScanout::Create(startup_context, input_dispatcher, &scenic_scanout);
   if (status != ZX_OK) {
     return status;
   }
@@ -193,8 +193,8 @@ static zx_status_t read_guest_cfg(const char* cfg_path, int argc, char** argv,
 int main(int argc, char** argv) {
   async::Loop loop(&kAsyncLoopConfigMakeDefault);
   trace::TraceProvider trace_provider(loop.async());
-  std::unique_ptr<component::ApplicationContext> application_context =
-      component::ApplicationContext::CreateFromStartupInfo();
+  std::unique_ptr<component::StartupContext> startup_context =
+      component::StartupContext::CreateFromStartupInfo();
 
   GuestConfig cfg;
   zx_status_t status =
@@ -210,7 +210,7 @@ int main(int argc, char** argv) {
   }
 
   // Instantiate the controller service.
-  machina::GuestControllerImpl guest_controller(application_context.get(),
+  machina::GuestControllerImpl guest_controller(startup_context.get(),
                                                 guest.phys_mem());
 
 #if __x86_64__
@@ -464,7 +464,7 @@ int main(int argc, char** argv) {
     } else {
       // Expose a view that can be composited by mozart. Input events will be
       // injected by the view events.
-      status = setup_scenic_framebuffer(application_context.get(), &gpu,
+      status = setup_scenic_framebuffer(startup_context.get(), &gpu,
                                         &input_dispatcher, &guest_controller,
                                         &gpu_scanout);
       if (status != ZX_OK) {
@@ -498,7 +498,7 @@ int main(int argc, char** argv) {
   }
 
   // Setup vsock device.
-  machina::VirtioVsock vsock(application_context.get(), guest.phys_mem(),
+  machina::VirtioVsock vsock(startup_context.get(), guest.phys_mem(),
                              guest.device_async());
   status = bus.Connect(vsock.pci_device());
   if (status != ZX_OK) {

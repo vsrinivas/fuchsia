@@ -5,10 +5,10 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/zx/channel.h>
 
-#include <presentation/cpp/fidl.h>
 #include <fuchsia/ui/views_v1/cpp/fidl.h>
+#include <presentation/cpp/fidl.h>
 #include "garnet/bin/ui/root_presenter/renderer_params.h"
-#include "lib/app/cpp/application_context.h"
+#include "lib/app/cpp/startup_context.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/log_settings_command_line.h"
 #include "lib/fxl/logging.h"
@@ -45,12 +45,11 @@ int main(int argc, const char** argv) {
   }
 
   async::Loop loop(&kAsyncLoopConfigMakeDefault);
-  auto application_context_ =
-      component::ApplicationContext::CreateFromStartupInfo();
+  auto startup_context_ = component::StartupContext::CreateFromStartupInfo();
 
   // Ask the presenter to change renderer params.
-  auto presenter = application_context_
-                       ->ConnectToEnvironmentService<presentation::Presenter>();
+  auto presenter =
+      startup_context_->ConnectToEnvironmentService<presentation::Presenter>();
   presenter->HACK_SetRendererParams(clipping_enabled,
                                     std::move(renderer_params));
 

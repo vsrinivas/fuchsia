@@ -21,11 +21,9 @@ static const std::vector<std::string> kConversation = {
 }  // namespace
 
 NetConnectorExampleImpl::NetConnectorExampleImpl(
-    NetConnectorExampleParams* params,
-    fxl::Closure quit_callback)
+    NetConnectorExampleParams* params, fxl::Closure quit_callback)
     : quit_callback_(quit_callback),
-      application_context_(
-          component::ApplicationContext::CreateFromStartupInfo()) {
+      startup_context_(component::StartupContext::CreateFromStartupInfo()) {
   // The MessageRelay makes using the channel easier. Hook up its callbacks.
   message_relay_.SetMessageReceivedCallback(
       [this](std::vector<uint8_t> message) { HandleReceivedMessage(message); });
@@ -51,7 +49,7 @@ NetConnectorExampleImpl::NetConnectorExampleImpl(
   if (params->request_device_name().empty()) {
     // Params say we should be responding. Register the responding service.
     FXL_LOG(INFO) << "Running as responder";
-    application_context_->outgoing_services()->AddServiceForName(
+    startup_context_->outgoing_services()->AddServiceForName(
         [this](zx::channel channel) {
           message_relay_.SetChannel(std::move(channel));
         },
@@ -61,12 +59,11 @@ NetConnectorExampleImpl::NetConnectorExampleImpl(
       // Register our provider with netconnector.
       FXL_LOG(INFO) << "Registering provider";
       netconnector::NetConnectorPtr connector =
-          application_context_
+          startup_context_
               ->ConnectToEnvironmentService<netconnector::NetConnector>();
 
       fidl::InterfaceHandle<component::ServiceProvider> handle;
-      application_context_->outgoing_services()->AddBinding(
-          handle.NewRequest());
+      startup_context_->outgoing_services()->AddBinding(handle.NewRequest());
 
       FXL_DCHECK(handle);
 
@@ -77,7 +74,7 @@ NetConnectorExampleImpl::NetConnectorExampleImpl(
     // Params say we should be a requestor.
     FXL_LOG(INFO) << "Running as requestor";
     netconnector::NetConnectorPtr connector =
-        application_context_
+        startup_context_
             ->ConnectToEnvironmentService<netconnector::NetConnector>();
 
     // Create a pair of channels.

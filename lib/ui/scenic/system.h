@@ -15,7 +15,7 @@
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 
 namespace component {
-class ApplicationContext;
+class StartupContext;
 }  // namespace component
 
 namespace scenic {
@@ -27,17 +27,17 @@ class Session;
 // exposing the system's host (typically a Scenic, except for testing).
 class SystemContext final {
  public:
-  explicit SystemContext(component::ApplicationContext* app_context,
+  explicit SystemContext(component::StartupContext* app_context,
                          fit::closure quit_callback);
   SystemContext(SystemContext&& context);
 
-  component::ApplicationContext* app_context() const { return app_context_; }
+  component::StartupContext* app_context() const { return app_context_; }
 
   // Calls quit on the associated message loop.
   void Quit() { quit_callback_(); }
 
  private:
-  component::ApplicationContext* const app_context_;
+  component::StartupContext* const app_context_;
   fit::closure quit_callback_;
 };
 

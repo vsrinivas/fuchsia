@@ -7,42 +7,43 @@
 #include <semaphore.h>
 
 #include <fuchsia/ui/views_v1/cpp/fidl.h>
+#include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
-#include <lib/async-loop/cpp/loop.h>
 
 // static
-zx_status_t ScenicScanout::Create(
-    component::ApplicationContext* application_context,
-    machina::InputDispatcher* input_dispatcher,
-    fbl::unique_ptr<ScenicScanout>* out) {
-  *out = fbl::make_unique<ScenicScanout>(application_context, input_dispatcher);
+zx_status_t ScenicScanout::Create(component::StartupContext* startup_context,
+                                  machina::InputDispatcher* input_dispatcher,
+                                  fbl::unique_ptr<ScenicScanout>* out) {
+  *out = fbl::make_unique<ScenicScanout>(startup_context, input_dispatcher);
   return ZX_OK;
 }
 
-ScenicScanout::ScenicScanout(component::ApplicationContext* application_context,
+ScenicScanout::ScenicScanout(component::StartupContext* startup_context,
                              machina::InputDispatcher* input_dispatcher)
-    : input_dispatcher_(input_dispatcher),
-      application_context_(application_context) {
+    : input_dispatcher_(input_dispatcher), startup_context_(startup_context) {
   // The actual framebuffer can't be created until we've connected to the
   // mozart service.
   SetReady(false);
 
-  application_context_->outgoing().AddPublicService<::fuchsia::ui::views_v1::ViewProvider>(
-      [this](fidl::InterfaceRequest<::fuchsia::ui::views_v1::ViewProvider> request) {
-        bindings_.AddBinding(this, std::move(request));
-      });
+  startup_context_->outgoing()
+      .AddPublicService<::fuchsia::ui::views_v1::ViewProvider>(
+          [this](fidl::InterfaceRequest<::fuchsia::ui::views_v1::ViewProvider>
+                     request) {
+            bindings_.AddBinding(this, std::move(request));
+          });
 }
 
 void ScenicScanout::CreateView(
-    fidl::InterfaceRequest<::fuchsia::ui::views_v1_token::ViewOwner> view_owner_request,
+    fidl::InterfaceRequest<::fuchsia::ui::views_v1_token::ViewOwner>
+        view_owner_request,
     fidl::InterfaceRequest<component::ServiceProvider> view_services) {
   if (view_) {
     FXL_LOG(ERROR) << "CreateView called when a view already exists";
     return;
   }
   auto view_manager =
-      application_context_
+      startup_context_
           ->ConnectToEnvironmentService<::fuchsia::ui::views_v1::ViewManager>();
   view_ = fbl::make_unique<GuestView>(this, input_dispatcher_,
                                       fbl::move(view_manager),
@@ -60,7 +61,8 @@ void ScenicScanout::InvalidateRegion(const machina::GpuRect& rect) {
 GuestView::GuestView(
     machina::GpuScanout* scanout, machina::InputDispatcher* input_dispatcher,
     ::fuchsia::ui::views_v1::ViewManagerPtr view_manager,
-    fidl::InterfaceRequest<::fuchsia::ui::views_v1_token::ViewOwner> view_owner_request)
+    fidl::InterfaceRequest<::fuchsia::ui::views_v1_token::ViewOwner>
+        view_owner_request)
     : BaseView(std::move(view_manager), std::move(view_owner_request), "Guest"),
       background_node_(session()),
       material_(session()),
@@ -84,7 +86,8 @@ GuestView::GuestView(
 
 GuestView::~GuestView() = default;
 
-void GuestView::OnSceneInvalidated(fuchsia::images::PresentationInfo presentation_info) {
+void GuestView::OnSceneInvalidated(
+    fuchsia::images::PresentationInfo presentation_info) {
   if (!has_logical_size()) {
     return;
   }

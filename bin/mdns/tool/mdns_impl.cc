@@ -19,16 +19,14 @@
 
 namespace mdns {
 
-MdnsImpl::MdnsImpl(component::ApplicationContext* application_context,
-                   MdnsParams* params,
-                   fxl::Closure quit_callback)
+MdnsImpl::MdnsImpl(component::StartupContext* startup_context,
+                   MdnsParams* params, fxl::Closure quit_callback)
     : quit_callback_(quit_callback), binding_(this) {
-  FXL_DCHECK(application_context);
+  FXL_DCHECK(startup_context);
   FXL_DCHECK(params);
   FXL_DCHECK(quit_callback_);
 
-  mdns_service_ =
-      application_context->ConnectToEnvironmentService<MdnsService>();
+  mdns_service_ = startup_context->ConnectToEnvironmentService<MdnsService>();
 
   mdns_service_.set_error_handler([this]() {
     mdns_service_.set_error_handler(nullptr);
@@ -134,8 +132,7 @@ void MdnsImpl::Subscribe(const std::string& service_name) {
 }
 
 void MdnsImpl::Publish(const std::string& service_name,
-                       const std::string& instance_name,
-                       uint16_t port,
+                       const std::string& instance_name, uint16_t port,
                        const std::vector<std::string>& text) {
   std::cout << "publishing instance " << instance_name << " of service "
             << service_name << "\n";
@@ -157,8 +154,7 @@ void MdnsImpl::Unpublish(const std::string& service_name,
 }
 
 void MdnsImpl::Respond(const std::string& service_name,
-                       const std::string& instance_name,
-                       uint16_t port,
+                       const std::string& instance_name, uint16_t port,
                        const std::vector<std::string>& announce,
                        const std::vector<std::string>& text) {
   std::cout << "responding as instance " << instance_name << " of service "
@@ -214,8 +210,7 @@ void MdnsImpl::UpdateStatus(MdnsResult result) {
   quit_callback_();
 }
 
-void MdnsImpl::GetPublication(bool query,
-                              fidl::StringPtr subtype,
+void MdnsImpl::GetPublication(bool query, fidl::StringPtr subtype,
                               GetPublicationCallback callback) {
   std::cout << (query ? "query" : "initial publication");
   if (subtype) {

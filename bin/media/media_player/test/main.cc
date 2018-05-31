@@ -33,7 +33,7 @@ int main(int argc, const char** argv) {
           return std::make_unique<media_player::test::MediaPlayerTestView>(
               quit_callback, std::move(view_context.view_manager),
               std::move(view_context.view_owner_request),
-              view_context.application_context, params);
+              view_context.startup_context, params);
         });
 
     loop.Run();

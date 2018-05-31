@@ -10,7 +10,7 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/task.h>
 
-#include "lib/app/cpp/application_context.h"
+#include "lib/app/cpp/startup_context.h"
 #include "lib/fidl/cpp/optional.h"
 #include "lib/fsl/tasks/fd_waiter.h"
 #include "lib/fxl/command_line.h"
@@ -56,8 +56,7 @@ std::ostream& operator<<(std::ostream& os, const AudioPolicyStatus& value) {
 class VolApp {
  public:
   VolApp(int argc, const char** argv, fxl::Closure quit_callback)
-      : application_context_(
-            component::ApplicationContext::CreateFromStartupInfo()),
+      : startup_context_(component::StartupContext::CreateFromStartupInfo()),
         quit_callback_(quit_callback) {
     FXL_DCHECK(quit_callback);
 
@@ -98,7 +97,7 @@ class VolApp {
     }
 
     audio_policy_service_ =
-        application_context_
+        startup_context_
             ->ConnectToEnvironmentService<audio_policy::AudioPolicy>();
     audio_policy_service_.set_error_handler([this]() {
       std::cout << "System error: audio policy service failure";
@@ -226,7 +225,7 @@ class VolApp {
     WaitForKeystroke();
   }
 
-  std::unique_ptr<component::ApplicationContext> application_context_;
+  std::unique_ptr<component::StartupContext> startup_context_;
   fxl::Closure quit_callback_;
   audio_policy::AudioPolicyPtr audio_policy_service_;
   bool interactive_ = true;

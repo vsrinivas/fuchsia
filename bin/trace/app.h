@@ -17,7 +17,7 @@ namespace tracing {
 
 class App : public Command {
  public:
-  App(component::ApplicationContext* context);
+  App(component::StartupContext* context);
   ~App();
 
  protected:

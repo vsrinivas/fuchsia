@@ -24,11 +24,10 @@ constexpr char kDefaultLabel[] = "sys";
 constexpr char kConfigDir[] = "/system/data/sysmgr/";
 
 App::App()
-    : application_context_(
-          component::ApplicationContext::CreateFromStartupInfo()),
+    : startup_context_(component::StartupContext::CreateFromStartupInfo()),
       vfs_(async_get_default()),
       svc_root_(fbl::AdoptRef(new fs::PseudoDir())) {
-  FXL_DCHECK(application_context_);
+  FXL_DCHECK(startup_context_);
 
   Config config;
   char buf[PATH_MAX];
@@ -57,7 +56,7 @@ App::App()
   }
 
   // Set up environment for the programs we will run.
-  application_context_->environment()->CreateNestedEnvironment(
+  startup_context_->environment()->CreateNestedEnvironment(
       OpenAsDirectory(), env_.NewRequest(), env_controller_.NewRequest(),
       kDefaultLabel);
   env_->GetApplicationLauncher(env_launcher_.NewRequest());
@@ -161,7 +160,7 @@ void App::RegisterSingleton(std::string service_name,
 void App::RegisterAppLoaders(Config::ServiceMap app_loaders) {
   app_loader_ = std::make_unique<DelegatingLoader>(
       std::move(app_loaders), env_launcher_.get(),
-      application_context_->ConnectToEnvironmentService<component::Loader>());
+      startup_context_->ConnectToEnvironmentService<component::Loader>());
 
   auto child = fbl::AdoptRef(new fs::Service([this](zx::channel channel) {
     app_loader_bindings_.AddBinding(

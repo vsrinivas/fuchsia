@@ -2,51 +2,47 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_BIN_MDNS_SERVICE_MDNS_SERVICE_IMPL_H_
+#define GARNET_BIN_MDNS_SERVICE_MDNS_SERVICE_IMPL_H_
 
 #include <unordered_map>
 
+#include <mdns/cpp/fidl.h>
 #include "garnet/bin/mdns/service/mdns.h"
 #include "garnet/bin/media/util/fidl_publisher.h"
-#include "lib/app/cpp/application_context.h"
+#include "lib/app/cpp/startup_context.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fxl/macros.h"
-#include <mdns/cpp/fidl.h>
 
 namespace mdns {
 
 class MdnsServiceImpl : public MdnsService {
  public:
-  MdnsServiceImpl(component::ApplicationContext* application_context);
+  MdnsServiceImpl(component::StartupContext* startup_context);
 
   ~MdnsServiceImpl() override;
 
   // MdnsService implementation.
-  void ResolveHostName(fidl::StringPtr host_name,
-                       uint32_t timeout_ms,
+  void ResolveHostName(fidl::StringPtr host_name, uint32_t timeout_ms,
                        ResolveHostNameCallback callback) override;
 
   void SubscribeToService(fidl::StringPtr service_name,
                           fidl::InterfaceRequest<MdnsServiceSubscription>
                               subscription_request) override;
 
-  void PublishServiceInstance(
-      fidl::StringPtr service_name,
-      fidl::StringPtr instance_name,
-      uint16_t port,
-      fidl::VectorPtr<fidl::StringPtr> text,
-      PublishServiceInstanceCallback callback) override;
+  void PublishServiceInstance(fidl::StringPtr service_name,
+                              fidl::StringPtr instance_name, uint16_t port,
+                              fidl::VectorPtr<fidl::StringPtr> text,
+                              PublishServiceInstanceCallback callback) override;
 
   void UnpublishServiceInstance(fidl::StringPtr service_name,
                                 fidl::StringPtr instance_name) override;
 
   void AddResponder(
-      fidl::StringPtr service_name,
-      fidl::StringPtr instance_name,
+      fidl::StringPtr service_name, fidl::StringPtr instance_name,
       fidl::InterfaceHandle<MdnsResponder> responder_handle) override;
 
-  void SetSubtypes(fidl::StringPtr service_name,
-                   fidl::StringPtr instance_name,
+  void SetSubtypes(fidl::StringPtr service_name, fidl::StringPtr instance_name,
                    fidl::VectorPtr<fidl::StringPtr> subtypes) override;
 
   void ReannounceInstance(fidl::StringPtr service_name,
@@ -95,8 +91,7 @@ class MdnsServiceImpl : public MdnsService {
   // Publisher for PublishServiceInstance.
   class SimplePublisher : public Mdns::Publisher {
    public:
-    SimplePublisher(IpPort port,
-                    fidl::VectorPtr<fidl::StringPtr> text,
+    SimplePublisher(IpPort port, fidl::VectorPtr<fidl::StringPtr> text,
                     PublishServiceInstanceCallback callback);
 
    private:
@@ -104,8 +99,7 @@ class MdnsServiceImpl : public MdnsService {
     void ReportSuccess(bool success) override;
 
     void GetPublication(
-        bool query,
-        const std::string& subtype,
+        bool query, const std::string& subtype,
         const std::function<void(std::unique_ptr<Mdns::Publication>)>& callback)
         override;
 
@@ -125,8 +119,7 @@ class MdnsServiceImpl : public MdnsService {
     void ReportSuccess(bool success) override;
 
     void GetPublication(
-        bool query,
-        const std::string& subtype,
+        bool query, const std::string& subtype,
         const std::function<void(std::unique_ptr<Mdns::Publication>)>& callback)
         override;
 
@@ -138,7 +131,7 @@ class MdnsServiceImpl : public MdnsService {
   // Starts the service.
   void Start();
 
-  component::ApplicationContext* application_context_;
+  component::StartupContext* startup_context_;
   fidl::BindingSet<MdnsService> bindings_;
   mdns::Mdns mdns_;
   size_t next_subscriber_id_ = 0;
@@ -150,3 +143,5 @@ class MdnsServiceImpl : public MdnsService {
 };
 
 }  // namespace mdns
+
+#endif  // GARNET_BIN_MDNS_SERVICE_MDNS_SERVICE_IMPL_H_

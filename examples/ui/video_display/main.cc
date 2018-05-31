@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-
 #include <lib/async-loop/cpp/loop.h>
 #include <presentation/cpp/fidl.h>
 #include <trace-provider/provider.h>
@@ -22,13 +21,13 @@ int main(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigMakeDefault);
   trace::TraceProvider trace_provider(loop.async());
 
-  mozart::ViewProviderApp app([&loop, use_fake_camera](
-                                  mozart::ViewContext view_context) {
-    return std::make_unique<video_display::View>(
-        &loop,
-        view_context.application_context, std::move(view_context.view_manager),
-        std::move(view_context.view_owner_request), use_fake_camera);
-  });
+  mozart::ViewProviderApp app(
+      [&loop, use_fake_camera](mozart::ViewContext view_context) {
+        return std::make_unique<video_display::View>(
+            &loop, view_context.startup_context,
+            std::move(view_context.view_manager),
+            std::move(view_context.view_owner_request), use_fake_camera);
+      });
 
   loop.Run();
   return 0;
