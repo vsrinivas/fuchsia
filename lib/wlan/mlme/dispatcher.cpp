@@ -143,7 +143,7 @@ zx_status_t Dispatcher::HandleCtrlPacket(fbl::unique_ptr<Packet> packet) {
             errorf("short ps poll frame len=%zu\n", ps_poll.take()->len());
             return ZX_OK;
         }
-        return mlme_->HandleFrame(ps_poll, *rxinfo);
+        return mlme_->HandleFrame(ps_poll);
     }
     default:
         debugf("rxed unfiltered control subtype 0x%02x\n", fc->subtype());
@@ -169,7 +169,7 @@ zx_status_t Dispatcher::HandleDataPacket(fbl::unique_ptr<Packet> packet) {
         // Fall-through
     case DataSubtype::kQosnull: {
         DataFrame<NilHeader> null_frame(data_frame.take());
-        return mlme_->HandleFrame(null_frame, *rxinfo);
+        return mlme_->HandleFrame(null_frame);
     }
     case DataSubtype::kDataSubtype:
         // Fall-through
@@ -185,7 +185,7 @@ zx_status_t Dispatcher::HandleDataPacket(fbl::unique_ptr<Packet> packet) {
         errorf("short data packet len=%zu\n", llc.take()->len());
         return ZX_ERR_IO;
     }
-    return mlme_->HandleFrame(llc, *rxinfo);
+    return mlme_->HandleFrame(llc);
 }
 
 zx_status_t Dispatcher::HandleMgmtPacket(fbl::unique_ptr<Packet> packet) {
@@ -217,7 +217,7 @@ zx_status_t Dispatcher::HandleMgmtPacket(fbl::unique_ptr<Packet> packet) {
             errorf("beacon packet too small (len=%zd)\n", frame.take()->len());
             return ZX_ERR_IO;
         }
-        return mlme_->HandleFrame(frame, *rxinfo);
+        return mlme_->HandleFrame(frame);
     }
     case ManagementSubtype::kProbeResponse: {
         MgmtFrame<ProbeResponse> frame(mgmt_frame.take());
@@ -225,7 +225,7 @@ zx_status_t Dispatcher::HandleMgmtPacket(fbl::unique_ptr<Packet> packet) {
             errorf("probe response packet too small (len=%zd)\n", frame.take()->len());
             return ZX_ERR_IO;
         }
-        return mlme_->HandleFrame(frame, *rxinfo);
+        return mlme_->HandleFrame(frame);
     }
     case ManagementSubtype::kProbeRequest: {
         MgmtFrame<ProbeRequest> frame(mgmt_frame.take());
@@ -233,7 +233,7 @@ zx_status_t Dispatcher::HandleMgmtPacket(fbl::unique_ptr<Packet> packet) {
             errorf("probe request packet too small (len=%zd)\n", frame.take()->len());
             return ZX_ERR_IO;
         }
-        return mlme_->HandleFrame(frame, *rxinfo);
+        return mlme_->HandleFrame(frame);
     }
     case ManagementSubtype::kAuthentication: {
         MgmtFrame<Authentication> frame(mgmt_frame.take());
@@ -241,7 +241,7 @@ zx_status_t Dispatcher::HandleMgmtPacket(fbl::unique_ptr<Packet> packet) {
             errorf("authentication packet too small (len=%zd)\n", frame.take()->len());
             return ZX_ERR_IO;
         }
-        return mlme_->HandleFrame(frame, *rxinfo);
+        return mlme_->HandleFrame(frame);
     }
     case ManagementSubtype::kDeauthentication: {
         MgmtFrame<Deauthentication> frame(mgmt_frame.take());
@@ -249,7 +249,7 @@ zx_status_t Dispatcher::HandleMgmtPacket(fbl::unique_ptr<Packet> packet) {
             errorf("deauthentication packet too small (len=%zd)\n", frame.take()->len());
             return ZX_ERR_IO;
         }
-        return mlme_->HandleFrame(frame, *rxinfo);
+        return mlme_->HandleFrame(frame);
     }
     case ManagementSubtype::kAssociationRequest: {
         MgmtFrame<AssociationRequest> frame(mgmt_frame.take());
@@ -257,7 +257,7 @@ zx_status_t Dispatcher::HandleMgmtPacket(fbl::unique_ptr<Packet> packet) {
             errorf("assocation request packet too small (len=%zd)\n", frame.take()->len());
             return ZX_ERR_IO;
         }
-        return mlme_->HandleFrame(frame, *rxinfo);
+        return mlme_->HandleFrame(frame);
     }
     case ManagementSubtype::kAssociationResponse: {
         MgmtFrame<AssociationResponse> frame(mgmt_frame.take());
@@ -265,7 +265,7 @@ zx_status_t Dispatcher::HandleMgmtPacket(fbl::unique_ptr<Packet> packet) {
             errorf("assocation response packet too small (len=%zd)\n", frame.take()->len());
             return ZX_ERR_IO;
         }
-        return mlme_->HandleFrame(frame, *rxinfo);
+        return mlme_->HandleFrame(frame);
     }
     case ManagementSubtype::kDisassociation: {
         MgmtFrame<Disassociation> frame(mgmt_frame.take());
@@ -273,7 +273,7 @@ zx_status_t Dispatcher::HandleMgmtPacket(fbl::unique_ptr<Packet> packet) {
             errorf("disassociation packet too small (len=%zd)\n", frame.take()->len());
             return ZX_ERR_IO;
         }
-        return mlme_->HandleFrame(frame, *rxinfo);
+        return mlme_->HandleFrame(frame);
     }
     case ManagementSubtype::kAction: {
         MgmtFrame<ActionFrame> frame(mgmt_frame.take());
@@ -322,7 +322,7 @@ zx_status_t Dispatcher::HandleActionPacket(MgmtFrame<ActionFrame> action_frame,
         // TODO(porce): Support AddBar. Work with lower mac.
         // TODO(porce): Make this conditional depending on the hardware capability.
 
-        return mlme_->HandleFrame(addbar, *rxinfo);
+        return mlme_->HandleFrame(addbar);
     }
     case action::BaAction::kAddBaResponse: {
         MgmtFrame<AddBaResponseFrame> addba_resp(ba_frame.take());
@@ -330,7 +330,7 @@ zx_status_t Dispatcher::HandleActionPacket(MgmtFrame<ActionFrame> action_frame,
             errorf("addba_resp packet too small (len=%zd)\n", addba_resp.take()->len());
             return ZX_ERR_IO;
         }
-        return mlme_->HandleFrame(addba_resp, *rxinfo);
+        return mlme_->HandleFrame(addba_resp);
     }
     case action::BaAction::kDelBa:
     // fall-through

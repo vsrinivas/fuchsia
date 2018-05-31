@@ -72,10 +72,8 @@ class InfraBss : public BssInterface, public FrameHandler, public RemoteClient::
     zx_status_t HandleEthFrame(const EthFrame& frame) override;
     zx_status_t HandleDataFrame(const DataFrameHeader& hdr) override;
     zx_status_t HandleMgmtFrame(const MgmtFrameHeader& hdr) override;
-    zx_status_t HandleAuthentication(const MgmtFrame<Authentication>& frame,
-                                     const wlan_rx_info_t& rxinfo) override;
-    zx_status_t HandlePsPollFrame(const CtrlFrame<PsPollFrame>& frame,
-                                  const wlan_rx_info_t& rxinfo) override;
+    zx_status_t HandleAuthentication(const MgmtFrame<Authentication>& frame) override;
+    zx_status_t HandlePsPollFrame(const CtrlFrame<PsPollFrame>& frame) override;
 
     // RemoteClient::Listener implementation
     zx_status_t HandleClientDeauth(const common::MacAddr& client) override;

@@ -155,8 +155,7 @@ zx_status_t InfraBss::HandleEthFrame(const EthFrame& frame) {
     return SendDataFrame(fbl::move(out_frame));
 }
 
-zx_status_t InfraBss::HandleAuthentication(const MgmtFrame<Authentication>& frame,
-                                           const wlan_rx_info_t& rxinfo) {
+zx_status_t InfraBss::HandleAuthentication(const MgmtFrame<Authentication>& frame) {
     // If the client is already known, there is no work to be done here.
     auto& client_addr = frame.hdr()->addr2;
     if (clients_.Has(client_addr)) { return ZX_OK; }
@@ -185,8 +184,7 @@ zx_status_t InfraBss::HandleAuthentication(const MgmtFrame<Authentication>& fram
     return ZX_OK;
 }
 
-zx_status_t InfraBss::HandlePsPollFrame(const CtrlFrame<PsPollFrame>& frame,
-                                        const wlan_rx_info_t& rxinfo) {
+zx_status_t InfraBss::HandlePsPollFrame(const CtrlFrame<PsPollFrame>& frame) {
     auto& client_addr = frame.hdr()->ta;
     if (frame.hdr()->bssid != bssid_) { return ZX_ERR_STOP; }
     if (clients_.GetClientAid(client_addr) != frame.hdr()->aid) { return ZX_ERR_STOP; }

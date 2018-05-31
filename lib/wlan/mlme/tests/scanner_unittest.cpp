@@ -212,10 +212,11 @@ TEST_F(ScannerTest, ScanResponse) {
 
     auto buffer = GetBuffer(sizeof(kBeacon));
     auto packet = fbl::make_unique<Packet>(fbl::move(buffer), sizeof(kBeacon));
+    packet->CopyCtrlFrom(info);
     memcpy(packet->mut_field<uint8_t*>(0), kBeacon, sizeof(kBeacon));
     auto beacon = MgmtFrame<Beacon>(fbl::move(packet));
 
-    EXPECT_EQ(ZX_OK, scanner_.HandleBeacon(beacon, info));
+    EXPECT_EQ(ZX_OK, scanner_.HandleBeacon(beacon));
     mock_dev_.SetTime(zx::time(1));
     EXPECT_EQ(ZX_OK, scanner_.HandleTimeout());
 

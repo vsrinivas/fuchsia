@@ -370,11 +370,11 @@ zx_status_t Station::HandleMgmtFrame(const MgmtFrameHeader& hdr) {
 }
 
 // TODO(hahnr): Support ProbeResponses.
-zx_status_t Station::HandleBeacon(const MgmtFrame<Beacon>& frame, const wlan_rx_info_t& rxinfo) {
+zx_status_t Station::HandleBeacon(const MgmtFrame<Beacon>& frame) {
     debugfn();
     ZX_DEBUG_ASSERT(bss_ != nullptr);
 
-    avg_rssi_dbm_.add(rxinfo.rssi_dbm);
+    avg_rssi_dbm_.add(frame.rx_info()->rssi_dbm);
 
     // TODO(tkilbourn): update any other info (like rolling average of rssi)
     last_seen_ = timer_->Now();
@@ -414,8 +414,7 @@ done_iter:
     return ZX_OK;
 }
 
-zx_status_t Station::HandleAuthentication(const MgmtFrame<Authentication>& frame,
-                                          const wlan_rx_info_t& rxinfo) {
+zx_status_t Station::HandleAuthentication(const MgmtFrame<Authentication>& frame) {
     debugfn();
 
     if (state_ != WlanState::kUnauthenticated) {
@@ -457,8 +456,7 @@ zx_status_t Station::HandleAuthentication(const MgmtFrame<Authentication>& frame
     return ZX_OK;
 }
 
-zx_status_t Station::HandleDeauthentication(const MgmtFrame<Deauthentication>& frame,
-                                            const wlan_rx_info_t& rxinfo) {
+zx_status_t Station::HandleDeauthentication(const MgmtFrame<Deauthentication>& frame) {
     debugfn();
 
     if (state_ != WlanState::kAssociated && state_ != WlanState::kAuthenticated) {
@@ -477,8 +475,7 @@ zx_status_t Station::HandleDeauthentication(const MgmtFrame<Deauthentication>& f
                                          static_cast<wlan_mlme::ReasonCode>(deauth->reason_code));
 }
 
-zx_status_t Station::HandleAssociationResponse(const MgmtFrame<AssociationResponse>& frame,
-                                               const wlan_rx_info_t& rxinfo) {
+zx_status_t Station::HandleAssociationResponse(const MgmtFrame<AssociationResponse>& frame) {
     debugfn();
 
     if (state_ != WlanState::kAuthenticated) {
@@ -507,8 +504,8 @@ zx_status_t Station::HandleAssociationResponse(const MgmtFrame<AssociationRespon
     signal_report_timeout_ = deadline_after_bcn_period(kSignalReportBcnCountTimeout);
     timer_->SetTimer(signal_report_timeout_);
     avg_rssi_dbm_.reset();
-    avg_rssi_dbm_.add(rxinfo.rssi_dbm);
-    service::SendSignalReportIndication(device_, common::dBm(rxinfo.rssi_dbm));
+    avg_rssi_dbm_.add(frame.rx_info()->rssi_dbm);
+    service::SendSignalReportIndication(device_, common::dBm(frame.rx_info()->rssi_dbm));
 
     // Open port if user connected to an open network.
     if (bss_->rsn.is_null()) {
@@ -530,8 +527,7 @@ zx_status_t Station::HandleAssociationResponse(const MgmtFrame<AssociationRespon
     return ZX_OK;
 }
 
-zx_status_t Station::HandleDisassociation(const MgmtFrame<Disassociation>& frame,
-                                          const wlan_rx_info_t& rxinfo) {
+zx_status_t Station::HandleDisassociation(const MgmtFrame<Disassociation>& frame) {
     debugfn();
 
     if (state_ != WlanState::kAssociated) {
@@ -554,8 +550,7 @@ zx_status_t Station::HandleDisassociation(const MgmtFrame<Disassociation>& frame
     return service::SendDisassociateIndication(device_, bssid, disassoc->reason_code);
 }
 
-zx_status_t Station::HandleAddBaRequestFrame(const MgmtFrame<AddBaRequestFrame>& rx_frame,
-                                             const wlan_rx_info_t& rxinfo) {
+zx_status_t Station::HandleAddBaRequestFrame(const MgmtFrame<AddBaRequestFrame>& rx_frame) {
     debugfn();
 
     auto addbar = rx_frame.body();
@@ -612,8 +607,7 @@ zx_status_t Station::HandleAddBaRequestFrame(const MgmtFrame<AddBaRequestFrame>&
     return ZX_OK;
 }
 
-zx_status_t Station::HandleAddBaResponseFrame(const MgmtFrame<AddBaResponseFrame>& rx_frame,
-                                              const wlan_rx_info& rxinfo) {
+zx_status_t Station::HandleAddBaResponseFrame(const MgmtFrame<AddBaResponseFrame>& rx_frame) {
     debugfn();
 
     auto addba_resp = rx_frame.body();
@@ -633,14 +627,13 @@ zx_status_t Station::HandleDataFrame(const DataFrameHeader& hdr) {
     return ZX_OK;
 }
 
-zx_status_t Station::HandleNullDataFrame(const DataFrame<NilHeader>& frame,
-                                         const wlan_rx_info_t& rxinfo) {
+zx_status_t Station::HandleNullDataFrame(const DataFrame<NilHeader>& frame) {
     debugfn();
     ZX_DEBUG_ASSERT(bssid() != nullptr);
     ZX_DEBUG_ASSERT(state_ == WlanState::kAssociated);
 
     // Take signal strength into account.
-    avg_rssi_dbm_.add(rxinfo.rssi_dbm);
+    avg_rssi_dbm_.add(frame.rx_info()->rssi_dbm);
 
     // Some AP's such as Netgear Routers send periodic NULL data frames to test whether a client
     // timed out. The client must respond with a NULL data frame itself to not get
@@ -649,8 +642,7 @@ zx_status_t Station::HandleNullDataFrame(const DataFrame<NilHeader>& frame,
     return ZX_OK;
 }
 
-zx_status_t Station::HandleDataFrame(const DataFrame<LlcHeader>& frame,
-                                     const wlan_rx_info_t& rxinfo) {
+zx_status_t Station::HandleDataFrame(const DataFrame<LlcHeader>& frame) {
     debugfn();
     if (kFinspectEnabled) { DumpDataFrame(frame); }
 
@@ -676,7 +668,7 @@ zx_status_t Station::HandleDataFrame(const DataFrame<LlcHeader>& frame,
     }
 
     // Take signal strength into account.
-    avg_rssi_dbm_.add(rxinfo.rssi_dbm);
+    avg_rssi_dbm_.add(frame.rx_info()->rssi_dbm);
 
     auto hdr = frame.hdr();
     auto llc = frame.body();
@@ -735,8 +727,7 @@ zx_status_t Station::HandleLlcFrame(const LlcHeader& llc_frame, size_t llc_frame
     return status;
 }
 
-zx_status_t Station::HandleAmsduFrame(const DataFrame<LlcHeader>& frame,
-                                      const wlan_rx_info_t& rxinfo) {
+zx_status_t Station::HandleAmsduFrame(const DataFrame<LlcHeader>& frame) {
     debugfn();
 
     ZX_DEBUG_ASSERT(frame.hdr()->fc.subtype() >= DataSubtype::kQosdata);

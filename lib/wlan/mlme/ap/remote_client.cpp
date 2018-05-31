@@ -34,8 +34,7 @@ void DeauthenticatingState::OnEnter() {
 
 DeauthenticatedState::DeauthenticatedState(RemoteClient* client) : BaseState(client) {}
 
-zx_status_t DeauthenticatedState::HandleAuthentication(const MgmtFrame<Authentication>& frame,
-                                                       const wlan_rx_info_t& rxinfo) {
+zx_status_t DeauthenticatedState::HandleAuthentication(const MgmtFrame<Authentication>& frame) {
     debugfn();
     ZX_DEBUG_ASSERT(frame.hdr()->addr2 == client_->addr());
 
@@ -102,8 +101,7 @@ void AuthenticatedState::HandleTimeout() {
     if (client_->IsDeadlineExceeded(auth_timeout_)) { MoveToState<DeauthenticatingState>(); }
 }
 
-zx_status_t AuthenticatedState::HandleAuthentication(const MgmtFrame<Authentication>& frame,
-                                                     const wlan_rx_info_t& rxinfo) {
+zx_status_t AuthenticatedState::HandleAuthentication(const MgmtFrame<Authentication>& frame) {
     debugbss(
         "[client] [%s] received Authentication request while being "
         "authenticated\n",
@@ -112,16 +110,15 @@ zx_status_t AuthenticatedState::HandleAuthentication(const MgmtFrame<Authenticat
     return ZX_ERR_STOP;
 }
 
-zx_status_t AuthenticatedState::HandleDeauthentication(const MgmtFrame<Deauthentication>& frame,
-                                                       const wlan_rx_info_t& rxinfo) {
+zx_status_t AuthenticatedState::HandleDeauthentication(const MgmtFrame<Deauthentication>& frame) {
     debugbss("[client] [%s] received Deauthentication: %hu\n", client_->addr().ToString().c_str(),
              frame.body()->reason_code);
     MoveToState<DeauthenticatingState>();
     return ZX_ERR_STOP;
 }
 
-zx_status_t AuthenticatedState::HandleAssociationRequest(const MgmtFrame<AssociationRequest>& frame,
-                                                         const wlan_rx_info_t& rxinfo) {
+zx_status_t AuthenticatedState::HandleAssociationRequest(
+    const MgmtFrame<AssociationRequest>& frame) {
     // Received request which we've been waiting for. Timer can get canceled.
     client_->CancelTimer();
     auth_timeout_ = zx::time();
@@ -173,8 +170,7 @@ void AssociatingState::OnEnter() {
 AssociatedState::AssociatedState(RemoteClient* client, uint16_t aid)
     : BaseState(client), aid_(aid) {}
 
-zx_status_t AssociatedState::HandleAuthentication(const MgmtFrame<Authentication>& frame,
-                                                  const wlan_rx_info_t& rxinfo) {
+zx_status_t AssociatedState::HandleAuthentication(const MgmtFrame<Authentication>& frame) {
     debugbss("[client] [%s] received Authentication request while being associated\n",
              client_->addr().ToString().c_str());
     // Client believes it is not yet authenticated. Thus, there is no need to send
@@ -185,8 +181,7 @@ zx_status_t AssociatedState::HandleAuthentication(const MgmtFrame<Authentication
     return ZX_ERR_STOP;
 }
 
-zx_status_t AssociatedState::HandleAssociationRequest(const MgmtFrame<AssociationRequest>& frame,
-                                                      const wlan_rx_info_t& rxinfo) {
+zx_status_t AssociatedState::HandleAssociationRequest(const MgmtFrame<AssociationRequest>& frame) {
     debugfn();
     ZX_DEBUG_ASSERT(frame.hdr()->addr2 == client_->addr());
     debugbss("[client] [%s] received Assocation Request while being associated\n",
@@ -246,8 +241,7 @@ zx_status_t AssociatedState::HandleEthFrame(const EthFrame& frame) {
     return client_->bss()->SendDataFrame(fbl::move(out_frame));
 }
 
-zx_status_t AssociatedState::HandleDeauthentication(const MgmtFrame<Deauthentication>& frame,
-                                                    const wlan_rx_info_t& rxinfo) {
+zx_status_t AssociatedState::HandleDeauthentication(const MgmtFrame<Deauthentication>& frame) {
     debugbss("[client] [%s] received Deauthentication: %hu\n", client_->addr().ToString().c_str(),
              frame.body()->reason_code);
     req_deauth_ = false;
@@ -255,8 +249,7 @@ zx_status_t AssociatedState::HandleDeauthentication(const MgmtFrame<Deauthentica
     return ZX_ERR_STOP;
 }
 
-zx_status_t AssociatedState::HandleDisassociation(const MgmtFrame<Disassociation>& frame,
-                                                  const wlan_rx_info_t& rxinfo) {
+zx_status_t AssociatedState::HandleDisassociation(const MgmtFrame<Disassociation>& frame) {
     debugbss("[client] [%s] received Disassociation request: %u\n",
              client_->addr().ToString().c_str(), frame.body()->reason_code);
     MoveToState<AuthenticatedState>();
@@ -268,8 +261,7 @@ zx_status_t AssociatedState::HandleCtrlFrame(const FrameControl& fc) {
     return ZX_OK;
 }
 
-zx_status_t AssociatedState::HandlePsPollFrame(const CtrlFrame<PsPollFrame>& frame,
-                                               const wlan_rx_info_t& rxinfo) {
+zx_status_t AssociatedState::HandlePsPollFrame(const CtrlFrame<PsPollFrame>& frame) {
     debugbss("[client] [%s] client requested BU\n", client_->addr().ToString().c_str());
 
     if (client_->HasBufferedFrames()) { return SendNextBu(); }
@@ -331,12 +323,11 @@ zx_status_t AssociatedState::HandleDataFrame(const DataFrameHeader& hdr) {
     return ZX_OK;
 }
 
-zx_status_t AssociatedState::HandleDataFrame(const DataFrame<LlcHeader>& frame,
-                                             const wlan_rx_info_t& rxinfo) {
+zx_status_t AssociatedState::HandleDataFrame(const DataFrame<LlcHeader>& frame) {
     // Filter unsupported Data frame types.
     switch (frame.hdr()->fc.subtype()) {
     case DataSubtype::kDataSubtype:
-        // Fall-through
+    // Fall-through
     case DataSubtype::kQosdata:  // For data frames within BlockAck session.
         break;
     default:
@@ -545,14 +536,12 @@ zx_status_t AssociatedState::SendNextBu() {
     return client_->bss()->SendDataFrame(fbl::move(data_packet));
 }
 
-zx_status_t AssociatedState::HandleAddBaRequestFrame(const MgmtFrame<AddBaRequestFrame>& frame,
-                                                     const wlan_rx_info_t& rxinfo) {
+zx_status_t AssociatedState::HandleAddBaRequestFrame(const MgmtFrame<AddBaRequestFrame>& frame) {
     debugfn();
     return client_->SendAddBaResponse(frame);
 }
 
-zx_status_t AssociatedState::HandleAddBaResponseFrame(const MgmtFrame<AddBaResponseFrame>& frame,
-                                                      const wlan_rx_info_t& rxinfo) {
+zx_status_t AssociatedState::HandleAddBaResponseFrame(const MgmtFrame<AddBaResponseFrame>& frame) {
     debugfn();
     // TODO(porce): Keep the result of negotiation.
     return ZX_OK;
@@ -620,8 +609,7 @@ zx_status_t RemoteClient::HandleMgmtFrame(const MgmtFrameHeader& hdr) {
     return ZX_OK;
 }
 
-zx_status_t RemoteClient::HandlePsPollFrame(const CtrlFrame<PsPollFrame>& frame,
-                                            const wlan_rx_info_t& rxinfo) {
+zx_status_t RemoteClient::HandlePsPollFrame(const CtrlFrame<PsPollFrame>& frame) {
     ZX_DEBUG_ASSERT(frame.hdr()->ta == addr_);
     if (frame.hdr()->ta != addr_) { return ZX_ERR_STOP; }
 
@@ -928,8 +916,7 @@ zx_status_t RemoteClient::SendAddBaResponse(const MgmtFrame<AddBaRequestFrame>& 
     return ZX_OK;
 }
 
-zx_status_t RemoteClient::HandleAddBaRequestFrame(const MgmtFrame<AddBaRequestFrame>& rx_frame,
-                                                  const wlan_rx_info_t& rxinfo) {
+zx_status_t RemoteClient::HandleAddBaRequestFrame(const MgmtFrame<AddBaRequestFrame>& rx_frame) {
     debugfn();
     debugbss("[Ap] rxed addbar request from %s\n", addr_.ToString().c_str());
 
@@ -942,8 +929,7 @@ zx_status_t RemoteClient::HandleAddBaRequestFrame(const MgmtFrame<AddBaRequestFr
     return ZX_OK;
 }
 
-zx_status_t RemoteClient::HandleAddBaResponseFrame(const MgmtFrame<AddBaResponseFrame>& rx_frame,
-                                                   const wlan_rx_info& rxinfo) {
+zx_status_t RemoteClient::HandleAddBaResponseFrame(const MgmtFrame<AddBaResponseFrame>& rx_frame) {
     debugfn();
     ZX_DEBUG_ASSERT(rx_frame.hdr()->addr2 == addr_);
     ZX_DEBUG_ASSERT(rx_frame.hdr()->fc.subtype() == ManagementSubtype::kAction);

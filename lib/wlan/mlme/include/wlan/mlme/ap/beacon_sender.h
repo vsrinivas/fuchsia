@@ -25,8 +25,7 @@ class BeaconSender : public FrameHandler {
     void Start(BssInterface* bss, const PsCfg& ps_cfg, const wlan_mlme::StartRequest& req);
     void Stop();
     zx_status_t UpdateBeacon(const PsCfg& ps_cfg);
-    zx_status_t HandleProbeRequest(const MgmtFrame<ProbeRequest>& frame,
-                                   const wlan_rx_info_t& rxinfo) override;
+    zx_status_t HandleProbeRequest(const MgmtFrame<ProbeRequest>& frame) override;
 
    private:
     zx_status_t SendProbeResponse(const MgmtFrame<ProbeRequest>& frame);

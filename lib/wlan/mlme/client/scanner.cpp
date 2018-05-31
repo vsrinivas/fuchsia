@@ -152,16 +152,15 @@ void Scanner::RemoveStaleBss() {
         [now](fbl::RefPtr<Bss> bss) -> bool { return (bss->ts_refreshed() + kBssExpiry >= now); });
 }
 
-zx_status_t Scanner::HandleBeacon(const MgmtFrame<Beacon>& frame, const wlan_rx_info_t& rxinfo) {
+zx_status_t Scanner::HandleBeacon(const MgmtFrame<Beacon>& frame) {
     debugfn();
     ZX_DEBUG_ASSERT(IsRunning());
 
     common::MacAddr bssid(frame.hdr()->addr3);
-    return ProcessBeacon(bssid, *frame.body(), frame.len() - frame.hdr()->len(), rxinfo);
+    return ProcessBeacon(bssid, *frame.body(), frame.len() - frame.hdr()->len(), *frame.rx_info());
 }
 
-zx_status_t Scanner::HandleProbeResponse(const MgmtFrame<ProbeResponse>& frame,
-                                         const wlan_rx_info_t& rxinfo) {
+zx_status_t Scanner::HandleProbeResponse(const MgmtFrame<ProbeResponse>& frame) {
     debugfn();
     ZX_DEBUG_ASSERT(IsRunning());
 
@@ -169,7 +168,7 @@ zx_status_t Scanner::HandleProbeResponse(const MgmtFrame<ProbeResponse>& frame,
     // ProbeResponse holds the same fields as a Beacon with the only difference in their IEs.
     // Thus, we can safely convert a ProbeResponse to a Beacon.
     auto bcn = reinterpret_cast<const Beacon*>(frame.body());
-    return ProcessBeacon(bssid, *bcn, frame.len() - frame.hdr()->len(), rxinfo);
+    return ProcessBeacon(bssid, *bcn, frame.len() - frame.hdr()->len(), *frame.rx_info());
 }
 
 zx_status_t Scanner::ProcessBeacon(const common::MacAddr& bssid, const Beacon& bcn,

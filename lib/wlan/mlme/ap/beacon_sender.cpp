@@ -59,8 +59,7 @@ bool BeaconSender::IsStarted() {
     return bss_ != nullptr;
 }
 
-zx_status_t BeaconSender::HandleProbeRequest(const MgmtFrame<ProbeRequest>& frame,
-                                             const wlan_rx_info_t& rxinfo) {
+zx_status_t BeaconSender::HandleProbeRequest(const MgmtFrame<ProbeRequest>& frame) {
     auto probereq = frame.body();
     size_t elt_len = frame.body_len() - sizeof(ProbeRequest);
     ElementReader reader(probereq->elements, elt_len);
