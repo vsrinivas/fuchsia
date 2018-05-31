@@ -487,6 +487,22 @@ impl {{ $interface.Name }}{{ $method.CamelName }}Responder {
 		&self.control_handle
 	}
 
+	pub fn send_or_shutdown(&self,
+		{{- range $param := $method.Response -}}
+		mut {{ $param.Name -}}: {{ $param.BorrowedType -}},
+		{{- end -}}
+	) -> Result<(), fidl::Error> {
+		let r = self.send(
+			{{- range $index, $param := $method.Response -}}
+			{{ $param.Name -}},
+			{{- end -}}
+		);
+		if r.is_err() {
+			self.control_handle().shutdown();
+		}
+		r
+	}
+
 	pub fn send(&self,
 		{{- range $param := $method.Response -}}
 		mut {{ $param.Name -}}: {{ $param.BorrowedType -}},
