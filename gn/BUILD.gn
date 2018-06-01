@@ -18,9 +18,13 @@ group("default") {
   deps = [
     ":host_tests",
     ":packages",
-    "//build/images",
-    "//build/images:updates",
   ]
+  if (package_targets != []) {
+    deps += [
+      "//build/images",
+      "//build/images:updates",
+    ]
+  }
 }
 
 # Instantiate the packages synthesized from the build argument.
