@@ -23,9 +23,6 @@ __BEGIN_CDECLS
 // argument.
 #define FDIO_SPAWN_CLONE_JOB ((uint32_t)0x0001u)
 
-// Remove |FDIO_SPAWN_SHARE_JOB| in favor of |FDIO_SPAWN_CLONE_JOB|.
-#define FDIO_SPAWN_SHARE_JOB ((uint32_t)0x0001u)
-
 // Provides the spawned process with the shared library loader used by this
 // process.
 //
