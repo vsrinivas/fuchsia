@@ -22,7 +22,8 @@ namespace modular {
 // environment services are delegated to the parent environment.
 class Scope {
  public:
-  Scope(const fuchsia::sys::EnvironmentPtr& parent_env, const std::string& label);
+  Scope(const fuchsia::sys::EnvironmentPtr& parent_env,
+        const std::string& label);
 
   Scope(const Scope* parent_scope, const std::string& label);
 
@@ -34,7 +35,7 @@ class Scope {
     service_provider_bridge_.AddService(handler, service_name);
   }
 
-  fuchsia::sys::ApplicationLauncher* GetLauncher();
+  fuchsia::sys::Launcher* GetLauncher();
 
   const fuchsia::sys::EnvironmentPtr& environment() const { return env_; }
 
@@ -44,7 +45,7 @@ class Scope {
 
   fuchsia::sys::ServiceProviderBridge service_provider_bridge_;
   fuchsia::sys::EnvironmentPtr env_;
-  fuchsia::sys::ApplicationLauncherPtr env_launcher_;
+  fuchsia::sys::LauncherPtr env_launcher_;
   fuchsia::sys::EnvironmentControllerPtr env_controller_;
 };
 

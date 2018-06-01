@@ -45,8 +45,9 @@ fuchsia::modular::AgentControllerPtr StartStoryInfoAgent(
                                     agent_services.NewRequest(),
                                     controller.NewRequest());
 
-  auto initializer = fuchsia::sys::ConnectToService<maxwell::StoryInfoInitializer>(
-      agent_services.get());
+  auto initializer =
+      fuchsia::sys::ConnectToService<maxwell::StoryInfoInitializer>(
+          agent_services.get());
   initializer->Initialize(std::move(story_provider), std::move(focus_provider),
                           std::move(visible_stories_provider));
 
@@ -166,7 +167,7 @@ fuchsia::sys::Services UserIntelligenceProviderImpl::StartTrustedApp(
   fuchsia::sys::LaunchInfo launch_info;
   launch_info.url = url;
   launch_info.directory_request = services.NewRequest();
-  context_->launcher()->CreateApplication(std::move(launch_info), NULL);
+  context_->launcher()->CreateComponent(std::move(launch_info), NULL);
   return services;
 }
 

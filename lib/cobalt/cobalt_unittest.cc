@@ -218,9 +218,9 @@ class CobaltTest : public gtest::TestWithMessageLoop {
         [this](fidl::InterfaceRequest<fuchsia::sys::Environment> request) {
           app_environment_request_ = std::move(request);
         });
-    service_provider.AddService<fuchsia::sys::ApplicationLauncher>(
-        [this](fidl::InterfaceRequest<fuchsia::sys::ApplicationLauncher> request) {
-          app_launcher_request_ = std::move(request);
+    service_provider.AddService<fuchsia::sys::Launcher>(
+        [this](fidl::InterfaceRequest<fuchsia::sys::Launcher> request) {
+          launcher_request_ = std::move(request);
         });
     return std::make_unique<fuchsia::sys::StartupContext>(
         service_provider.OpenAsDirectory(), zx::channel());
@@ -231,7 +231,7 @@ class CobaltTest : public gtest::TestWithMessageLoop {
   std::unique_ptr<FakeCobaltEncoderImpl> cobalt_encoder_;
   std::unique_ptr<fuchsia::sys::StartupContext> context_;
   fidl::BindingSet<CobaltEncoderFactory> factory_bindings_;
-  fidl::InterfaceRequest<fuchsia::sys::ApplicationLauncher> app_launcher_request_;
+  fidl::InterfaceRequest<fuchsia::sys::Launcher> launcher_request_;
   fidl::InterfaceRequest<fuchsia::sys::Environment> app_environment_request_;
   FXL_DISALLOW_COPY_AND_ASSIGN(CobaltTest);
 };

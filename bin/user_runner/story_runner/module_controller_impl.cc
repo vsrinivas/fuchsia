@@ -40,14 +40,14 @@ std::string HashModuleUrl(const std::string& module_url) {
 
 ModuleControllerImpl::ModuleControllerImpl(
     StoryControllerImpl* const story_controller_impl,
-    fuchsia::sys::ApplicationLauncher* const application_launcher,
-    AppConfig module_config,
+    fuchsia::sys::Launcher* const launcher, AppConfig module_config,
     const ModuleData* const module_data,
     fuchsia::sys::ServiceListPtr service_list,
-    fidl::InterfaceRequest<fuchsia::ui::views_v1::ViewProvider> view_provider_request)
+    fidl::InterfaceRequest<fuchsia::ui::views_v1::ViewProvider>
+        view_provider_request)
     : story_controller_impl_(story_controller_impl),
       app_client_(
-          application_launcher, CloneStruct(module_config),
+          launcher, CloneStruct(module_config),
           std::string(kAppStoragePath) + HashModuleUrl(module_config.url),
           std::move(service_list)),
       module_data_(module_data) {

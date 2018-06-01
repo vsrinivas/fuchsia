@@ -8,8 +8,8 @@
 #include <memory>
 #include <string>
 
-#include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/modular/cpp/fidl.h>
+#include <fuchsia/sys/cpp/fidl.h>
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fidl/cpp/interface_request.h"
 #include "lib/fsl/tasks/message_loop.h"
@@ -39,8 +39,7 @@ namespace modular {
 // be inline. It can be used on its own too.
 class AppClientBase : public AsyncHolderBase {
  public:
-  AppClientBase(fuchsia::sys::ApplicationLauncher* launcher,
-                AppConfig config,
+  AppClientBase(fuchsia::sys::Launcher* launcher, AppConfig config,
                 std::string data_origin = "",
                 fuchsia::sys::ServiceListPtr additional_services = nullptr);
   virtual ~AppClientBase();
@@ -75,13 +74,10 @@ class AppClientBase : public AsyncHolderBase {
 template <class Service>
 class AppClient : public AppClientBase {
  public:
-  AppClient(fuchsia::sys::ApplicationLauncher* const launcher,
-            AppConfig config,
+  AppClient(fuchsia::sys::Launcher* const launcher, AppConfig config,
             std::string data_origin = "",
             fuchsia::sys::ServiceListPtr additional_services = nullptr)
-      : AppClientBase(launcher,
-                      std::move(config),
-                      std::move(data_origin),
+      : AppClientBase(launcher, std::move(config), std::move(data_origin),
                       std::move(additional_services)) {
     services().ConnectToService(service_.NewRequest());
   }

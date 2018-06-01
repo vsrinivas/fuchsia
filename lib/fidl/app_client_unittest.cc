@@ -8,7 +8,7 @@
 #include <modular_test/cpp/fidl.h>
 #include "gtest/gtest.h"
 #include "lib/gtest/test_with_message_loop.h"
-#include "peridot/lib/testing/fake_application_launcher.h"
+#include "peridot/lib/testing/fake_launcher.h"
 
 namespace fuchsia {
 namespace modular {
@@ -54,7 +54,7 @@ class AppClientTest : public gtest::TestWithMessageLoop {};
 
 TEST_F(AppClientTest, BaseRun_Success) {
   bool callback_called = false;
-  FakeApplicationLauncher launcher;
+  FakeLauncher launcher;
   launcher.RegisterApplication(
       kTestUrl,
       [&callback_called](
@@ -69,7 +69,7 @@ TEST_F(AppClientTest, BaseRun_Success) {
 }
 
 TEST_F(AppClientTest, BaseTerminate_Success) {
-  FakeApplicationLauncher launcher;
+  FakeLauncher launcher;
   TestComponentController controller;
   bool callback_called = false;
   launcher.RegisterApplication(
@@ -101,7 +101,7 @@ TEST_F(AppClientTest, BaseTerminate_Success) {
 
 TEST_F(AppClientTest, Run_Success) {
   bool callback_called = false;
-  FakeApplicationLauncher launcher;
+  FakeLauncher launcher;
   launcher.RegisterApplication(
       kTestUrl,
       [&callback_called](
@@ -118,13 +118,14 @@ TEST_F(AppClientTest, Run_Success) {
 }
 
 TEST_F(AppClientTest, RunWithParams_Success) {
-  fuchsia::sys::ServiceListPtr additional_services = fuchsia::sys::ServiceList::New();
+  fuchsia::sys::ServiceListPtr additional_services =
+      fuchsia::sys::ServiceList::New();
   additional_services->names.push_back(kServiceName);
   // We just need |provider_request| to stay around till the end of this test.
   auto provider_request = additional_services->provider.NewRequest();
 
   bool callback_called = false;
-  FakeApplicationLauncher launcher;
+  FakeLauncher launcher;
   launcher.RegisterApplication(
       kTestUrl,
       [&callback_called](

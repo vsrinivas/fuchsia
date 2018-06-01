@@ -58,7 +58,7 @@ class LedgerEndToEndTest : public gtest::TestWithMessageLoop {
     for (auto& additional_arg : additional_args) {
       launch_info.arguments.push_back(additional_arg);
     }
-    startup_context()->launcher()->CreateApplication(
+    startup_context()->launcher()->CreateComponent(
         std::move(launch_info), ledger_controller_.NewRequest());
 
     ledger_controller_.set_error_handler([this] {

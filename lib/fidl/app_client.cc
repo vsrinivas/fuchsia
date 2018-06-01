@@ -44,9 +44,8 @@ zx::channel CloneChannel(int fd) {
 
 }  // namespace
 
-AppClientBase::AppClientBase(fuchsia::sys::ApplicationLauncher* const launcher,
-                             AppConfig config,
-                             std::string data_origin,
+AppClientBase::AppClientBase(fuchsia::sys::Launcher* const launcher,
+                             AppConfig config, std::string data_origin,
                              fuchsia::sys::ServiceListPtr additional_services)
     : AsyncHolderBase(config.url) {
   fuchsia::sys::LaunchInfo launch_info;
@@ -83,7 +82,7 @@ AppClientBase::AppClientBase(fuchsia::sys::ApplicationLauncher* const launcher,
   if (additional_services) {
     launch_info.additional_services = std::move(additional_services);
   }
-  launcher->CreateApplication(std::move(launch_info), app_.NewRequest());
+  launcher->CreateComponent(std::move(launch_info), app_.NewRequest());
 }
 
 AppClientBase::~AppClientBase() = default;

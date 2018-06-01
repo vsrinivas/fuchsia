@@ -7,8 +7,8 @@
 #include <fs/service.h>
 #include <fs/synchronous-vfs.h>
 
-#include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/modular/cpp/fidl.h>
+#include <fuchsia/sys/cpp/fidl.h>
 #include <modular_auth/cpp/fidl.h>
 #include "gtest/gtest.h"
 #include "lib/agent/cpp/agent_impl.h"
@@ -25,7 +25,7 @@
 #include "peridot/lib/fidl/array_to_string.h"
 #include "peridot/lib/ledger_client/page_id.h"
 #include "peridot/lib/testing/fake_agent_runner_storage.h"
-#include "peridot/lib/testing/fake_application_launcher.h"
+#include "peridot/lib/testing/fake_launcher.h"
 #include "peridot/lib/testing/mock_base.h"
 #include "peridot/lib/testing/test_with_ledger.h"
 
@@ -64,7 +64,7 @@ class EntityProviderRunnerTest : public TestWithLedger, EntityProviderLauncher {
 
  protected:
   AgentRunner* agent_runner() { return agent_runner_.get(); }
-  FakeApplicationLauncher* launcher() { return &launcher_; }
+  FakeLauncher* launcher() { return &launcher_; }
   EntityProviderRunner* entity_provider_runner() {
     return entity_provider_runner_.get();
   }
@@ -82,7 +82,7 @@ class EntityProviderRunnerTest : public TestWithLedger, EntityProviderLauncher {
                                            std::move(agent_controller_request));
   }
 
-  FakeApplicationLauncher launcher_;
+  FakeLauncher launcher_;
 
   files::ScopedTempDir mq_data_dir_;
   std::unique_ptr<MessageQueueManager> mqm_;
@@ -125,7 +125,7 @@ class MyEntityProvider : AgentImpl::Delegate,
     auto additional_services =
         launch_info_.additional_services->provider.Bind();
     fuchsia::sys::ConnectToService(additional_services.get(),
-                                agent_context_.NewRequest());
+                                   agent_context_.NewRequest());
     ComponentContextPtr component_context;
     agent_context_->GetComponentContext(component_context.NewRequest());
     component_context->GetEntityResolver(entity_resolver_.NewRequest());
@@ -163,8 +163,7 @@ class MyEntityProvider : AgentImpl::Delegate,
   }
 
   // |EntityProvider|
-  void GetData(fidl::StringPtr cookie,
-               fidl::StringPtr type,
+  void GetData(fidl::StringPtr cookie, fidl::StringPtr type,
                GetDataCallback callback) override {
     callback(type.get() + ":MyData");
   }

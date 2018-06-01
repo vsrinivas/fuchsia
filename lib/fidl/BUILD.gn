@@ -165,7 +165,7 @@ source_set("app_client_unittest") {
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/gtest",
-    "//peridot/lib/testing:fake_application_launcher",
+    "//peridot/lib/testing:fake_launcher",
     "//third_party/googletest:gtest",
   ]
 }

@@ -22,15 +22,15 @@ fuchsia::sys::Services AgentLauncher::StartAgent(
                                         agent_env.NewRequest(), NULL,
                                         kEnvironmentLabel);
 
-  fuchsia::sys::ApplicationLauncherPtr agent_launcher;
-  agent_env->GetApplicationLauncher(agent_launcher.NewRequest());
+  fuchsia::sys::LauncherPtr agent_launcher;
+  agent_env->GetLauncher(agent_launcher.NewRequest());
 
   fuchsia::sys::LaunchInfo launch_info;
   launch_info.url = url;
   fuchsia::sys::Services services;
   launch_info.directory_request = services.NewRequest();
   FXL_LOG(INFO) << "Starting Maxwell agent " << url;
-  agent_launcher->CreateApplication(std::move(launch_info), NULL);
+  agent_launcher->CreateComponent(std::move(launch_info), NULL);
   return services;
 }
 

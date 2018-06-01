@@ -36,8 +36,8 @@ ledger::Status GetLedger(fxl::Closure quit_callback,
   launch_info.arguments.push_back("--no_minfs_wait");
   launch_info.arguments.push_back("--no_statistics_reporting_for_testing");
 
-  context->launcher()->CreateApplication(std::move(launch_info),
-                                         controller->NewRequest());
+  context->launcher()->CreateComponent(std::move(launch_info),
+                                       controller->NewRequest());
   child_services.ConnectToService(repository_factory.NewRequest());
   ledger_internal::LedgerRepositoryPtr repository;
 

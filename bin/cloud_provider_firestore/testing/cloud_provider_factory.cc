@@ -67,7 +67,7 @@ void CloudProviderFactory::Init() {
   fuchsia::sys::LaunchInfo launch_info;
   launch_info.url = kAppUrl;
   launch_info.directory_request = child_services.NewRequest();
-  startup_context_->launcher()->CreateApplication(
+  startup_context_->launcher()->CreateComponent(
       std::move(launch_info), cloud_provider_controller_.NewRequest());
   child_services.ConnectToService(cloud_provider_factory_.NewRequest());
 }

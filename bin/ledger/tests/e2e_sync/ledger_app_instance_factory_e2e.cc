@@ -100,8 +100,8 @@ LedgerAppInstanceFactoryImpl::NewLedgerAppInstance() {
   launch_info.arguments.push_back("--no_minfs_wait");
   launch_info.arguments.push_back("--no_statistics_reporting_for_testing");
 
-  startup_context_->launcher()->CreateApplication(std::move(launch_info),
-                                                  controller.NewRequest());
+  startup_context_->launcher()->CreateComponent(std::move(launch_info),
+                                                controller.NewRequest());
   child_services.ConnectToService(repository_factory.NewRequest());
 
   auto result = std::make_unique<LedgerAppInstanceImpl>(

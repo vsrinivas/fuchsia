@@ -36,12 +36,11 @@ std::string HashAgentUrl(const std::string& agent_url) {
 class AgentContextImpl::InitializeCall : public Operation<> {
  public:
   InitializeCall(AgentContextImpl* const agent_context_impl,
-                 fuchsia::sys::ApplicationLauncher* const app_launcher,
-                 AppConfig agent_config)
+                 fuchsia::sys::Launcher* const launcher, AppConfig agent_config)
       : Operation("AgentContextImpl::InitializeCall", [] {},
                   agent_context_impl->url_),
         agent_context_impl_(agent_context_impl),
-        app_launcher_(app_launcher),
+        launcher_(launcher),
         agent_config_(std::move(agent_config)) {}
 
  private:
@@ -74,7 +73,7 @@ class AgentContextImpl::InitializeCall : public Operation<> {
     agent_context_impl_->service_provider_impl_.AddBinding(
         service_list->provider.NewRequest());
     agent_context_impl_->app_client_ = std::make_unique<AppClient<Lifecycle>>(
-        app_launcher_, std::move(agent_config_),
+        launcher_, std::move(agent_config_),
         std::string(kAppStoragePath) + HashAgentUrl(agent_context_impl_->url_),
         std::move(service_list));
 
@@ -106,7 +105,7 @@ class AgentContextImpl::InitializeCall : public Operation<> {
   }
 
   AgentContextImpl* const agent_context_impl_;
-  fuchsia::sys::ApplicationLauncher* const app_launcher_;
+  fuchsia::sys::Launcher* const launcher_;
   AppConfig agent_config_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(InitializeCall);
@@ -184,7 +183,7 @@ AgentContextImpl::AgentContextImpl(const AgentContextInfo& info,
         agent_context_bindings_.AddBinding(this, std::move(request));
       });
   operation_queue_.Add(
-      new InitializeCall(this, info.app_launcher, std::move(agent_config)));
+      new InitializeCall(this, info.launcher, std::move(agent_config)));
 }
 
 AgentContextImpl::~AgentContextImpl() = default;

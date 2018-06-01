@@ -19,9 +19,9 @@ Scope::Scope(const Scope* const parent_scope, const std::string& label) {
   InitScope(parent_scope->environment(), label);
 }
 
-fuchsia::sys::ApplicationLauncher* Scope::GetLauncher() {
+fuchsia::sys::Launcher* Scope::GetLauncher() {
   if (!env_launcher_) {
-    env_->GetApplicationLauncher(env_launcher_.NewRequest());
+    env_->GetLauncher(env_launcher_.NewRequest());
   }
   return env_launcher_.get();
 }

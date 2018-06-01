@@ -7,8 +7,8 @@
 #include <fs/service.h>
 #include <fs/synchronous-vfs.h>
 
-#include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/modular/cpp/fidl.h>
+#include <fuchsia/sys/cpp/fidl.h>
 #include <modular_auth/cpp/fidl.h>
 #include "gtest/gtest.h"
 #include "lib/app/cpp/service_provider_impl.h"
@@ -22,7 +22,7 @@
 #include "peridot/lib/fidl/array_to_string.h"
 #include "peridot/lib/ledger_client/page_id.h"
 #include "peridot/lib/testing/fake_agent_runner_storage.h"
-#include "peridot/lib/testing/fake_application_launcher.h"
+#include "peridot/lib/testing/fake_launcher.h"
 #include "peridot/lib/testing/mock_base.h"
 #include "peridot/lib/testing/test_with_ledger.h"
 
@@ -60,10 +60,10 @@ class AgentRunnerTest : public TestWithLedger {
 
  protected:
   AgentRunner* agent_runner() { return agent_runner_.get(); }
-  FakeApplicationLauncher* launcher() { return &launcher_; }
+  FakeLauncher* launcher() { return &launcher_; }
 
  private:
-  FakeApplicationLauncher launcher_;
+  FakeLauncher launcher_;
 
   files::ScopedTempDir mq_data_dir_;
   std::unique_ptr<MessageQueueManager> mqm_;
@@ -108,8 +108,9 @@ class MyDummyAgent : Agent,
   void Wait(WaitCallback callback) override { ++counts["Wait"]; }
 
   // |Agent|
-  void Connect(fidl::StringPtr /*requestor_url*/,
-               fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> /*services*/)
+  void Connect(
+      fidl::StringPtr /*requestor_url*/,
+      fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> /*services*/)
       override {
     ++counts["Connect"];
   }

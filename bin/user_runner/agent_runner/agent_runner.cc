@@ -26,14 +26,14 @@ namespace modular {
 constexpr zx::duration kTeardownTimeout = zx::sec(3);
 
 AgentRunner::AgentRunner(
-    fuchsia::sys::ApplicationLauncher* const application_launcher,
+    fuchsia::sys::Launcher* const launcher,
     MessageQueueManager* const message_queue_manager,
     ledger_internal::LedgerRepository* const ledger_repository,
     AgentRunnerStorage* const agent_runner_storage,
     modular_auth::TokenProviderFactory* const token_provider_factory,
     UserIntelligenceProvider* const user_intelligence_provider,
     EntityProviderRunner* const entity_provider_runner)
-    : application_launcher_(application_launcher),
+    : launcher_(launcher),
       message_queue_manager_(message_queue_manager),
       ledger_repository_(ledger_repository),
       agent_runner_storage_(agent_runner_storage),
@@ -117,8 +117,7 @@ void AgentRunner::RunAgent(const std::string& agent_url) {
   ComponentContextInfo component_info = {message_queue_manager_, this,
                                          ledger_repository_,
                                          entity_provider_runner_};
-  AgentContextInfo info = {component_info, application_launcher_,
-                           token_provider_factory_,
+  AgentContextInfo info = {component_info, launcher_, token_provider_factory_,
                            user_intelligence_provider_};
   AppConfig agent_config;
   agent_config.url = agent_url;
@@ -140,8 +139,7 @@ void AgentRunner::RunAgent(const std::string& agent_url) {
 }
 
 void AgentRunner::ConnectToAgent(
-    const std::string& requestor_url,
-    const std::string& agent_url,
+    const std::string& requestor_url, const std::string& agent_url,
     fidl::InterfaceRequest<fuchsia::sys::ServiceProvider>
         incoming_services_request,
     fidl::InterfaceRequest<AgentController> agent_controller_request) {
@@ -327,8 +325,7 @@ void AgentRunner::DeleteAlarmTask(const std::string& agent_url,
 }
 
 void AgentRunner::ScheduleMessageQueueDeletionTask(
-    const std::string& agent_url,
-    const std::string& task_id,
+    const std::string& agent_url, const std::string& task_id,
     const std::string& queue_token) {
   auto found_it = watched_queues_.find(agent_url);
   if (found_it != watched_queues_.end()) {
@@ -367,8 +364,7 @@ void AgentRunner::ScheduleMessageQueueDeletionTask(
 }
 
 void AgentRunner::ScheduleMessageQueueNewMessageTask(
-    const std::string& agent_url,
-    const std::string& task_id,
+    const std::string& agent_url, const std::string& task_id,
     const std::string& queue_name) {
   auto found_it = watched_queues_.find(agent_url);
   if (found_it != watched_queues_.end()) {

@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "peridot/lib/testing/fake_application_launcher.h"
+#include "peridot/lib/testing/fake_launcher.h"
 
 namespace fuchsia {
 namespace modular {
 namespace testing {
 
-void FakeApplicationLauncher::CreateApplication(
+void FakeLauncher::CreateComponent(
     fuchsia::sys::LaunchInfo launch_info,
     fidl::InterfaceRequest<fuchsia::sys::ComponentController> controller) {
   auto it = connectors_.find(launch_info.url);
@@ -17,9 +17,8 @@ void FakeApplicationLauncher::CreateApplication(
   }
 }
 
-void FakeApplicationLauncher::RegisterApplication(
-    std::string url,
-    ApplicationConnectorFn connector) {
+void FakeLauncher::RegisterApplication(std::string url,
+                                       ApplicationConnectorFn connector) {
   connectors_[url] = connector;
 }
 

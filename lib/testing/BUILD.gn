@@ -116,12 +116,12 @@ source_set("test_with_ledger") {
   ]
 }
 
-source_set("fake_application_launcher") {
+source_set("fake_launcher") {
   testonly = true
 
   sources = [
-    "fake_application_launcher.cc",
-    "fake_application_launcher.h",
+    "fake_launcher.cc",
+    "fake_launcher.h",
   ]
 
   deps = [

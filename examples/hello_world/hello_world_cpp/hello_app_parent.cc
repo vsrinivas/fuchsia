@@ -32,8 +32,8 @@ class HelloAppParent {
       }
     }
     launch_info.directory_request = child_services_.NewRequest();
-    context->launcher()->CreateApplication(std::move(launch_info),
-                                           child_.NewRequest());
+    context->launcher()->CreateComponent(std::move(launch_info),
+                                         child_.NewRequest());
 
     child_services_.ConnectToService(hello_.NewRequest());
 

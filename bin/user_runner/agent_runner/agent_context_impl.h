@@ -7,8 +7,8 @@
 
 #include <string>
 
-#include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/modular/cpp/fidl.h>
+#include <fuchsia/sys/cpp/fidl.h>
 #include <modular_auth/cpp/fidl.h>
 #include "lib/app/cpp/service_provider_impl.h"
 #include "lib/async/cpp/operation.h"
@@ -26,7 +26,7 @@ class AgentRunner;
 // The parameters of agent context that do not vary by instance.
 struct AgentContextInfo {
   const ComponentContextInfo component_context_info;
-  fuchsia::sys::ApplicationLauncher* const app_launcher;
+  fuchsia::sys::Launcher* const launcher;
   modular_auth::TokenProviderFactory* const token_provider_factory;
   UserIntelligenceProvider* const user_intelligence_provider;
 };

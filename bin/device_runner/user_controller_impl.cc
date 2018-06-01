@@ -17,14 +17,13 @@ namespace fuchsia {
 namespace modular {
 
 UserControllerImpl::UserControllerImpl(
-    fuchsia::sys::ApplicationLauncher* const application_launcher,
-    AppConfig user_runner,
-    AppConfig user_shell,
-    AppConfig story_shell,
+    fuchsia::sys::Launcher* const launcher, AppConfig user_runner,
+    AppConfig user_shell, AppConfig story_shell,
     fidl::InterfaceHandle<modular_auth::TokenProviderFactory>
         token_provider_factory,
     modular_auth::AccountPtr account,
-    fidl::InterfaceRequest<fuchsia::ui::views_v1_token::ViewOwner> view_owner_request,
+    fidl::InterfaceRequest<fuchsia::ui::views_v1_token::ViewOwner>
+        view_owner_request,
     fidl::InterfaceHandle<fuchsia::sys::ServiceProvider> device_shell_services,
     fidl::InterfaceRequest<UserController> user_controller_request,
     DoneCallback done)
@@ -53,7 +52,7 @@ UserControllerImpl::UserControllerImpl(
 
   // 1. Launch UserRunner in the current environment.
   user_runner_app_ = std::make_unique<AppClient<Lifecycle>>(
-      application_launcher, std::move(user_runner), data_origin);
+      launcher, std::move(user_runner), data_origin);
 
   // 2. Initialize the UserRunner service.
   user_runner_app_->services().ConnectToService(user_runner_.NewRequest());

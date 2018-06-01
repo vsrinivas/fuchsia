@@ -37,7 +37,7 @@ void ValidationTestsLauncher::Run(const std::vector<std::string>& arguments,
     launch_info.arguments.push_back(argument);
   }
 
-  startup_context_->launcher()->CreateApplication(
+  startup_context_->launcher()->CreateComponent(
       std::move(launch_info), validation_tests_controller_.NewRequest());
 
   validation_tests_controller_->Wait(

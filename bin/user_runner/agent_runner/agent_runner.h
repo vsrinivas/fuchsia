@@ -10,8 +10,8 @@
 #include <memory>
 #include <string>
 
-#include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/modular/cpp/fidl.h>
+#include <fuchsia/sys/cpp/fidl.h>
 #include <ledger/cpp/fidl.h>
 #include <ledger_internal/cpp/fidl.h>
 #include <modular_auth/cpp/fidl.h>
@@ -37,7 +37,7 @@ class MessageQueueManager;
 // manages the life time of a running agent.
 class AgentRunner : AgentProvider, AgentRunnerStorage::NotificationDelegate {
  public:
-  AgentRunner(fuchsia::sys::ApplicationLauncher* application_launcher,
+  AgentRunner(fuchsia::sys::Launcher* launcher,
               MessageQueueManager* message_queue_manager,
               ledger_internal::LedgerRepository* ledger_repository,
               AgentRunnerStorage* agent_runner_storage,
@@ -55,8 +55,7 @@ class AgentRunner : AgentProvider, AgentRunnerStorage::NotificationDelegate {
   // Connects to an agent (and starts it up if it doesn't exist) through
   // |Agent.Connect|. Called using ComponentContext.
   void ConnectToAgent(
-      const std::string& requestor_url,
-      const std::string& agent_url,
+      const std::string& requestor_url, const std::string& agent_url,
       fidl::InterfaceRequest<fuchsia::sys::ServiceProvider>
           incoming_services_request,
       fidl::InterfaceRequest<AgentController> agent_controller_request);
@@ -125,8 +124,7 @@ class AgentRunner : AgentProvider, AgentRunnerStorage::NotificationDelegate {
 
   // For triggers based on alarms.
   void ScheduleAlarmTask(const std::string& agent_url,
-                         const std::string& task_id,
-                         uint32_t alarm_in_seconds,
+                         const std::string& task_id, uint32_t alarm_in_seconds,
                          bool is_new_request);
   void DeleteAlarmTask(const std::string& agent_url,
                        const std::string& task_id);
@@ -194,7 +192,7 @@ class AgentRunner : AgentProvider, AgentRunnerStorage::NotificationDelegate {
   std::map<std::string, std::pair<std::string, std::string>>
       task_by_ledger_key_;
 
-  fuchsia::sys::ApplicationLauncher* const application_launcher_;
+  fuchsia::sys::Launcher* const launcher_;
   MessageQueueManager* const message_queue_manager_;
   ledger_internal::LedgerRepository* const ledger_repository_;
   // |agent_runner_storage_| must outlive this class.

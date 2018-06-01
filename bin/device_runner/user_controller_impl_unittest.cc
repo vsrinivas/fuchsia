@@ -8,7 +8,7 @@
 #include "gtest/gtest.h"
 #include "lib/gtest/test_with_message_loop.h"
 #include "peridot/lib/fidl/clone.h"
-#include "peridot/lib/testing/fake_application_launcher.h"
+#include "peridot/lib/testing/fake_launcher.h"
 
 namespace fuchsia {
 namespace modular {
@@ -18,7 +18,7 @@ namespace {
 class UserControllerImplTest : public gtest::TestWithMessageLoop {};
 
 TEST_F(UserControllerImplTest, StartUserRunner) {
-  FakeApplicationLauncher launcher;
+  FakeLauncher launcher;
   std::string url = "test_url_string";
   AppConfig app_config;
   app_config.url = url;
