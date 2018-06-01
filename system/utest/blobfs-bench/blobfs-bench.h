@@ -4,67 +4,69 @@
 
 #pragma once
 
-constexpr size_t B = (1);
-constexpr size_t KB = (1 << 10);
-constexpr size_t MB = (1 << 20);
+#include <fbl/unique_ptr.h>
+#include <limits.h>
+#include <stdlib.h>
+#include <zircon/types.h>
 
-typedef enum {
-    DEFAULT, // forward (default) order
-    REVERSE, // reverse order
-    RANDOM, // random order
-    FIRST, // first 100
-    LAST, // last 100
-    ORDER_COUNT, // number of order options
-} traversal_order_t;
+enum class TraversalOrder : int {
+    kDefault, // forward (default) order
+    kReverse, // reverse order
+    kRandom,  // random order
+    kFirst,   // first 100
+    kLast,    // last 100
+    kCount,   // number of order options
+};
 
-typedef enum {
-    CREATE, // create blob
-    TRUNCATE, // truncate blob
-    WRITE, // write data to blob
-    OPEN, // open fd to blob
-    READ, // read data from blob
-    CLOSE, // close blob fd
-    UNLINK, // unlink blob
-    NAME_COUNT // number of name options
-} test_name_t;
+enum class TestName : int {
+    kCreate,   // create blob
+    kTruncate, // truncate blob
+    kWrite,    // write data to blob
+    kOpen,     // open fd to blob
+    kRead,     // read data from blob
+    kClose,    // close blob fd
+    kUnlink,   // unlink blob
+    kCount,    // number of name options
+};
 
 // An in-memory representation of a blob.
-typedef struct blob_info {
+struct BlobInfo {
     char path[PATH_MAX];
     fbl::unique_ptr<char[]> merkle;
     size_t size_merkle;
     fbl::unique_ptr<char[]> data;
     size_t size_data;
-} blob_info_t;
+};
 
 class TestData {
 public:
-    TestData(size_t blob_size, size_t blob_count, traversal_order_t order);
+    TestData(size_t blob_size, size_t blob_count, TraversalOrder order);
     ~TestData();
-    bool run_tests();
+    bool RunTests();
+
 private:
     // setup
-    void generate_order();
-    size_t get_max_count();
-    void get_name_str(test_name_t name, char* name_str);
-    void get_order_str(char* order_str);
-    void print_order();
+    void GenerateOrder();
+    size_t GetMaxCount();
+    void GetNameStr(TestName name, char* name_str);
+    void GetOrderStr(char* order_str);
+    void PrintOrder();
 
     // reporting
-    inline void sample_end(zx_time_t start, test_name_t name, size_t index);
-    bool report_test(test_name_t name);
+    inline void SampleEnd(zx_time_t start, TestName name, size_t index);
+    bool ReportTest(TestName name);
 
     // tests
-    bool create_blobs();
-    bool read_blobs();
-    bool unlink_blobs();
-    bool sync();
+    bool CreateBlobs();
+    bool ReadBlobs();
+    bool UnlinkBlobs();
+    bool Sync();
 
     // state
-    size_t blob_size;
-    size_t blob_count;
-    traversal_order_t order;
-    size_t* indices;
-    zx_time_t** samples;
-    char** paths;
+    size_t* indices_;
+    zx_time_t** samples_;
+    char** paths_;
+    size_t blob_size_;
+    size_t blob_count_;
+    TraversalOrder order_;
 };
