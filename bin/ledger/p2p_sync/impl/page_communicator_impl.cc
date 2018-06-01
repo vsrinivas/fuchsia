@@ -183,8 +183,15 @@ void PageCommunicatorImpl::OnNewRequest(fxl::StringView source,
       }
       // Device |source| disconnected, thus will not answer any request. We thus
       // mark all pending requests to |source| to be finished.
+      std::vector<PendingObjectRequestHolder*> requests;
+      requests.reserve(pending_object_requests_.size());
       for (auto& object_request : pending_object_requests_) {
-        object_request.second.Complete(source, nullptr);
+        // We cannot call Complete here because it deletes the object, making
+        // the iterator used in this for loop invalid.
+        requests.push_back(&object_request.second);
+      }
+      for (PendingObjectRequestHolder* const request : requests) {
+        request->Complete(source, nullptr);
       }
       break;
     }

@@ -130,6 +130,20 @@ void BuildWatchStartBuffer(flatbuffers::FlatBufferBuilder* buffer,
   buffer->Finish(message);
 }
 
+void BuildWatchStopBuffer(flatbuffers::FlatBufferBuilder* buffer,
+                          fxl::StringView namespace_id,
+                          fxl::StringView page_id) {
+  flatbuffers::Offset<NamespacePageId> namespace_page_id =
+      CreateNamespacePageId(*buffer,
+                            convert::ToFlatBufferVector(buffer, namespace_id),
+                            convert::ToFlatBufferVector(buffer, page_id));
+  flatbuffers::Offset<Request> request = CreateRequest(
+      *buffer, namespace_page_id, RequestMessage_WatchStopRequest);
+  flatbuffers::Offset<Message> message =
+      CreateMessage(*buffer, MessageUnion_Request, request.Union());
+  buffer->Finish(message);
+}
+
 void BuildObjectRequestBuffer(
     flatbuffers::FlatBufferBuilder* buffer, fxl::StringView namespace_id,
     fxl::StringView page_id,
@@ -622,6 +636,76 @@ TEST_F(PageCommunicatorImplTest, CommitUpdate) {
   // Verify we don't crash on response from storage
   storage_2.commits_from_sync_[0].second(storage::Status::OK);
   RunLoopUntilIdle();
+}
+
+TEST_F(PageCommunicatorImplTest, GetObjectDisconnect) {
+  FakeDeviceMesh mesh;
+  FakePageStorage storage(dispatcher(), "page");
+  PageCommunicatorImpl page_communicator(&storage, &storage, "ledger", "page",
+                                         &mesh);
+  page_communicator.Start();
+
+  flatbuffers::FlatBufferBuilder buffer;
+  BuildWatchStartBuffer(&buffer, "ledger", "page");
+  const Message* new_device_message = GetMessage(buffer.GetBufferPointer());
+  page_communicator.OnNewRequest(
+      "device2", static_cast<const Request*>(new_device_message->message()));
+
+  bool called1, called2, called3, called4;
+  storage::Status status1, status2, status3, status4;
+  storage::ChangeSource source1, source2, source3, source4;
+  std::unique_ptr<storage::DataSource::DataChunk> data1, data2, data3, data4;
+  page_communicator.GetObject(
+      storage::ObjectIdentifier{0, 0, "foo1"},
+      callback::Capture(callback::SetWhenCalled(&called1), &status1, &source1,
+                        &data1));
+  page_communicator.GetObject(
+      storage::ObjectIdentifier{0, 0, "foo2"},
+      callback::Capture(callback::SetWhenCalled(&called2), &status2, &source2,
+                        &data2));
+  page_communicator.GetObject(
+      storage::ObjectIdentifier{0, 0, "foo3"},
+      callback::Capture(callback::SetWhenCalled(&called3), &status3, &source3,
+                        &data3));
+  page_communicator.GetObject(
+      storage::ObjectIdentifier{0, 0, "foo4"},
+      callback::Capture(callback::SetWhenCalled(&called4), &status4, &source4,
+                        &data4));
+  RunLoopUntilIdle();
+  EXPECT_FALSE(called1);
+  EXPECT_FALSE(called2);
+  EXPECT_FALSE(called3);
+  EXPECT_FALSE(called4);
+  EXPECT_EQ(4u, mesh.messages_.size());
+
+  flatbuffers::FlatBufferBuilder stop_buffer;
+  BuildWatchStopBuffer(&stop_buffer, "ledger", "page");
+  const Message* watch_stop_message =
+      GetMessage(stop_buffer.GetBufferPointer());
+  page_communicator.OnNewRequest(
+      "device2", static_cast<const Request*>(watch_stop_message->message()));
+  RunLoopUntilIdle();
+
+  // All requests are terminated with a not found status.
+  EXPECT_TRUE(called1);
+  EXPECT_EQ(storage::Status::NOT_FOUND, status1);
+  EXPECT_EQ(storage::ChangeSource::P2P, source1);
+  EXPECT_FALSE(data1);
+
+  EXPECT_TRUE(called2);
+  EXPECT_EQ(storage::Status::NOT_FOUND, status2);
+  EXPECT_EQ(storage::ChangeSource::P2P, source2);
+  EXPECT_FALSE(data2);
+
+  EXPECT_TRUE(called3);
+  EXPECT_EQ(storage::Status::NOT_FOUND, status3);
+  EXPECT_EQ(storage::ChangeSource::P2P, source3);
+  EXPECT_FALSE(data3);
+
+  EXPECT_TRUE(called4);
+  EXPECT_EQ(storage::Status::NOT_FOUND, status4);
+  EXPECT_EQ(storage::ChangeSource::P2P, source4);
+  EXPECT_FALSE(data4);
 }
 
 }  // namespace
