@@ -389,7 +389,7 @@ int iochk(int argc, char** argv) {
         return -1;
     }
 
-    if (info.max_transfer_size && info.max_transfer_size < block_size) {
+    if (info.max_transfer_size < block_size) {
         fprintf(stderr, "error: block-size is larger than max transfer size (%d)\n",
                 info.max_transfer_size);
         return -1;

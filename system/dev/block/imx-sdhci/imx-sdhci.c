@@ -1165,7 +1165,7 @@ static zx_status_t imx_sdhci_bind(void* ctx, zx_device_t* parent) {
     if (status != ZX_OK) {
         SDHCI_ERROR("Could not allocate DMA buffer. Falling to PIO Mode\n");
         dev->dma_mode = false;
-        dev->info.max_transfer_size = 0;
+        dev->info.max_transfer_size = BLOCK_MAX_TRANSFER_UNBOUNDED;
     } else {
         SDHCI_ERROR("0x%lx %p\n", io_buffer_phys(&dev->iobuf), io_buffer_virt(&dev->iobuf));
         dev->descs = io_buffer_virt(&dev->iobuf);
@@ -1178,7 +1178,7 @@ static zx_status_t imx_sdhci_bind(void* ctx, zx_device_t* parent) {
 #else
         SDHCI_ERROR("DMA Mode Disabled. Using PIO Mode\n");
         dev->dma_mode = false;
-        dev->info.max_transfer_size = 0;
+        dev->info.max_transfer_size = BLOCK_MAX_TRANSFER_UNBOUNDED;
 #endif
 
     // Disable all interrupts

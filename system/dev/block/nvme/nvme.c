@@ -1038,7 +1038,7 @@ static zx_status_t nvme_init(nvme_device_t* nvme) {
 
     nvme->info.block_count = ni->NSSZ;
     nvme->info.block_size = 1 << NVME_LBAFMT_LBADS(fmt);
-    nvme->info.max_transfer_size = 0xFFFFFFFF;
+    nvme->info.max_transfer_size = BLOCK_MAX_TRANSFER_UNBOUNDED;
 
     if (NVME_LBAFMT_MS(fmt)) {
         zxlogf(ERROR, "nvme: cannot handle LBA format with metadata\n");

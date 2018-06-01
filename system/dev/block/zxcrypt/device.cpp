@@ -208,7 +208,7 @@ zx_status_t Device::DdkIoctl(uint32_t op, const void* in, size_t in_len, void* o
     case IOCTL_BLOCK_GET_INFO: {
         block_info_t* mod = static_cast<block_info_t*>(out);
         mod->block_count -= info_->reserved_blocks;
-        if (mod->max_transfer_size == 0 || mod->max_transfer_size > kMaxTransferSize) {
+        if (mod->max_transfer_size > kMaxTransferSize) {
             mod->max_transfer_size = kMaxTransferSize;
         }
         break;
