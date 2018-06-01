@@ -912,6 +912,7 @@ static zx_status_t ath10k_ce_init_dest_ring(struct ath10k* ar,
 static zx_status_t
 ath10k_ce_alloc_src_ring(struct ath10k* ar, unsigned int ce_id,
                          const struct ce_attr* attr, struct ath10k_ce_ring** src_ring_ptr) {
+    struct ath10k_pci* ar_pci = ath10k_pci_priv(ar);
     *src_ring_ptr = NULL;
     uint32_t nentries = attr->src_nentries;
 
@@ -933,7 +934,8 @@ ath10k_ce_alloc_src_ring(struct ath10k* ar, unsigned int ce_id,
     // Legacy platforms that do not support cache
     // coherent DMA are unsupported
     size_t buf_sz = nentries * sizeof(struct ce_desc);
-    zx_status_t ret = io_buffer_init(&src_ring->iobuf, buf_sz, IO_BUFFER_RW | IO_BUFFER_CONTIG);
+    zx_status_t ret = io_buffer_init(&src_ring->iobuf, ar_pci->btih, buf_sz,
+                                     IO_BUFFER_RW | IO_BUFFER_CONTIG);
     if (ret != ZX_OK) {
         free(src_ring);
         return ZX_ERR_NO_MEMORY;
@@ -950,6 +952,7 @@ ath10k_ce_alloc_src_ring(struct ath10k* ar, unsigned int ce_id,
 static zx_status_t
 ath10k_ce_alloc_dest_ring(struct ath10k* ar, unsigned int ce_id,
                           const struct ce_attr* attr, struct ath10k_ce_ring** dest_ring_ptr) {
+    struct ath10k_pci* ar_pci = ath10k_pci_priv(ar);
     *dest_ring_ptr = NULL;
     uint32_t nentries;
 
@@ -971,7 +974,8 @@ ath10k_ce_alloc_dest_ring(struct ath10k* ar, unsigned int ce_id,
     // Legacy platforms that do not support cache
     // coherent DMA are unsupported
     size_t buf_sz = nentries * sizeof(struct ce_desc);
-    zx_status_t ret = io_buffer_init(&dest_ring->iobuf, buf_sz, IO_BUFFER_RW | IO_BUFFER_CONTIG);
+    zx_status_t ret = io_buffer_init(&dest_ring->iobuf, ar_pci->btih, buf_sz,
+                                     IO_BUFFER_RW | IO_BUFFER_CONTIG);
     if (ret != ZX_OK) {
         free(dest_ring);
         return ZX_ERR_NO_MEMORY;
@@ -1137,7 +1141,7 @@ void ath10k_ce_dump_registers(struct ath10k* ar,
             crash_data->ce_crash_data[id] = ce;
         }
 
-        ath10k_err("[%02d]: 0x%08x %3u %3u %3u %3u", id,
+        ath10k_err("[%02d]: 0x%08x %3u %3u %3u %3u\n", id,
                    ce.base_addr, ce.src_wr_idx, ce.src_r_idx, ce.dst_wr_idx, ce.dst_r_idx);
     }
 

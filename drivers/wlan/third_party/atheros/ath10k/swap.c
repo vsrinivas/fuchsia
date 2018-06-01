@@ -26,6 +26,7 @@
 
 #include "core.h"
 #include "bmi.h"
+#include "hif.h"
 #include "debug.h"
 
 static zx_status_t ath10k_swap_code_seg_fill(struct ath10k* ar,
@@ -105,6 +106,7 @@ ath10k_swap_code_seg_alloc(struct ath10k* ar, size_t swap_bin_len) {
     struct ath10k_swap_code_seg_info* seg_info;
     void* virt_addr;
     zx_paddr_t paddr;
+    zx_status_t ret;
 
     swap_bin_len = ROUNDUP(swap_bin_len, 2);
     if (swap_bin_len > ATH10K_SWAP_CODE_SEG_BIN_LEN_MAX) {
@@ -118,11 +120,17 @@ ath10k_swap_code_seg_alloc(struct ath10k* ar, size_t swap_bin_len) {
         return NULL;
     }
 
-    zx_status_t ret = io_buffer_init(&seg_info->handles[0], swap_bin_len,
-                                     IO_BUFFER_RW | IO_BUFFER_CONTIG);
+    zx_handle_t bti_handle;
+    ret = ath10k_hif_get_bti_handle(ar, &bti_handle);
+    if (ret != ZX_OK) {
+        ath10k_err("unable to retrieve BTI handle\n");
+        goto err_free_seg_info;
+    }
+    ret = io_buffer_init(&seg_info->handles[0], bti_handle, swap_bin_len,
+                         IO_BUFFER_RW | IO_BUFFER_CONTIG);
     if (ret != ZX_OK) {
         ath10k_err("failed to allocate dma memory\n");
-        return NULL;
+        goto err_free_seg_info;
     }
 
     paddr = io_buffer_phys(&seg_info->handles[0]);
@@ -137,6 +145,10 @@ ath10k_swap_code_seg_alloc(struct ath10k* ar, size_t swap_bin_len) {
     seg_info->paddr[0] = paddr;
 
     return seg_info;
+
+err_free_seg_info:
+    free(seg_info);
+    return NULL;
 }
 
 zx_status_t ath10k_swap_code_seg_configure(struct ath10k* ar,

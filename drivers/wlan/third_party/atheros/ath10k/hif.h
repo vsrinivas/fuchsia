@@ -18,7 +18,6 @@
 #ifndef _HIF_H_
 #define _HIF_H_
 
-#include <linux/kernel.h>
 #include "core.h"
 #include "debug.h"
 
@@ -41,6 +40,10 @@ struct ath10k_hif_ops {
 
     zx_status_t (*diag_write)(struct ath10k* ar, uint32_t address, const void* data,
                               int nbytes);
+
+    /* Retrieve a bus transaction initiator handle */
+    zx_status_t (*get_bti_handle)(struct ath10k* ar, zx_handle_t* bti_handle);
+
     /*
      * API to handle HIF-specific BMI message exchanges, this API is
      * synchronous and only allowed to be called from a context that
@@ -113,6 +116,14 @@ static inline zx_status_t ath10k_hif_diag_write(struct ath10k* ar, uint32_t addr
     }
 
     return ar->hif.ops->diag_write(ar, address, data, nbytes);
+}
+
+static inline zx_status_t ath10k_hif_get_bti_handle(struct ath10k* ar, zx_handle_t* bti_handle) {
+    if (!ar->hif.ops->get_bti_handle) {
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+
+    return ar->hif.ops->get_bti_handle(ar, bti_handle);
 }
 
 static inline zx_status_t ath10k_hif_exchange_bmi_msg(struct ath10k* ar,

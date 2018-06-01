@@ -18,8 +18,9 @@
 #ifndef _PCI_H_
 #define _PCI_H_
 
+#include <ddk/protocol/pci.h>
+
 #include "hw.h"
-#if 0 // NEEDS PORTING
 #include "ce.h"
 #include "ahb.h"
 
@@ -162,14 +163,23 @@ enum ath10k_pci_irq_mode {
 };
 
 struct ath10k_pci {
-    struct pci_dev* pdev;
-    struct device* dev;
+    pci_protocol_t pdev;
+    zx_device_t* dev;
+
+    /* Bus transaction initiator (for DMA) */
+    zx_handle_t btih;
+
     struct ath10k* ar;
-    void __iomem* mem;
-    size_t mem_len;
+
+    /* PCI BAR mapping */
+    void* mem;
+    uint64_t mem_len;
+    zx_handle_t mem_handle;
 
     /* Operating interrupt mode */
     enum ath10k_pci_irq_mode oper_irq_mode;
+
+    zx_handle_t irq_handle;
 
     struct ath10k_pci_pipe pipe_info[CE_COUNT_MAX];
 
@@ -181,7 +191,6 @@ struct ath10k_pci {
 
     /* Map CE id to ce_state */
     struct ath10k_ce_pipe ce_states[CE_COUNT_MAX];
-    struct timer_list rx_post_retry;
 
     /* Due to HW quirks it is recommended to disable ASPM during device
      * bootup. To do that the original PCI-E Link Control is stored before
@@ -200,6 +209,7 @@ struct ath10k_pci {
      */
     unsigned long ps_wake_refcount;
 
+#if 0 // NEEDS PORTING
     /* Waking up takes some time (up to 2ms in some cases) so it can be bad
      * for latency. To mitigate this the device isn't immediately allowed
      * to sleep after all references are undone - instead there's a grace
@@ -209,6 +219,7 @@ struct ath10k_pci {
      * Also see comments on ATH10K_PCI_SLEEP_GRACE_PERIOD_MSEC.
      */
     struct timer_list ps_timer;
+#endif // NEEDS PORTING
 
     /* MMIO registers are used to communicate with the device. With
      * intensive traffic accessing powersave register would be a bit
@@ -237,11 +248,13 @@ struct ath10k_pci {
      */
     zx_status_t (*targ_cpu_to_ce_addr)(struct ath10k* ar, uint32_t addr, uint32_t* ce_addr);
 
+#if 0 // NEEDS PORTING
     /* Keep this entry in the last, memory for struct ath10k_ahb is
      * allocated (ahb support enabled case) in the continuation of
      * this struct.
      */
     struct ath10k_ahb ahb[0];
+#endif // NEEDS PORTING
 };
 
 static inline struct ath10k_pci* ath10k_pci_priv(struct ath10k* ar) {
@@ -287,8 +300,6 @@ uint16_t ath10k_pci_hif_get_free_queue_number(struct ath10k* ar, uint8_t pipe);
 void ath10k_pci_hif_power_down(struct ath10k* ar);
 zx_status_t ath10k_pci_alloc_pipes(struct ath10k* ar);
 void ath10k_pci_free_pipes(struct ath10k* ar);
-void ath10k_pci_free_pipes(struct ath10k* ar);
-void ath10k_pci_rx_replenish_retry(unsigned long ptr);
 void ath10k_pci_ce_deinit(struct ath10k* ar);
 void ath10k_pci_init_napi(struct ath10k* ar);
 zx_status_t ath10k_pci_init_pipes(struct ath10k* ar);
@@ -309,5 +320,4 @@ void ath10k_pci_release_resource(struct ath10k* ar);
  */
 #define ATH10K_PCI_SLEEP_GRACE_PERIOD_MSEC 60
 
-#endif // NEEDS PORTING
 #endif /* _PCI_H_ */
