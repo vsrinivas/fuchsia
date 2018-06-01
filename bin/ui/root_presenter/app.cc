@@ -10,6 +10,7 @@
 #include "lib/app/cpp/connect.h"
 #include "lib/fidl/cpp/clone.h"
 #include "lib/fxl/logging.h"
+#include "lib/fxl/functional/make_copyable.h"
 #include "lib/ui/input/cpp/formatting.h"
 
 namespace root_presenter {
@@ -82,8 +83,9 @@ void App::Present(
       };
 
   presentation->Present(view_owner_handle.Bind(),
-                        std::move(presentation_request), yield_callback,
-                        shutdown_callback);
+                        std::move(presentation_request),
+                        fxl::MakeCopyable(std::move(yield_callback)),
+                        fxl::MakeCopyable(std::move(shutdown_callback)));
 
   for (auto& it : devices_by_id_) {
     presentation->OnDeviceAdded(it.second.get());

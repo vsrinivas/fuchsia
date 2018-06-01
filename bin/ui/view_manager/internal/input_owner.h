@@ -7,6 +7,7 @@
 
 #include <fuchsia/ui/input/cpp/fidl.h>
 #include <fuchsia/ui/views_v1_token/cpp/fidl.h>
+#include <lib/fit/function.h>
 
 namespace view_manager {
 
@@ -15,7 +16,7 @@ class InputDispatcherImpl;
 
 class InputOwner {
  public:
-  using OnEventDelivered = std::function<void(bool handled)>;
+  using OnEventDelivered = fit::function<void(bool handled)>;
 
   virtual ~InputOwner() {}
 

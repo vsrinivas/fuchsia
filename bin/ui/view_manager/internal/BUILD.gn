@@ -12,5 +12,6 @@ source_set("internal") {
     "//garnet/public/lib/ui/input/fidl",
     "//garnet/public/lib/ui/views/cpp",
     "//garnet/public/lib/ui/views/fidl:v1",
+    "//zircon/public/lib/fit",
   ]
 }

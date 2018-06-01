@@ -11,6 +11,7 @@
 #include <thread>
 
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/fit/function.h>
 #include <vulkan/vulkan.hpp>
 
 #include "garnet/examples/ui/shadertoy/service/pipeline.h"
@@ -40,7 +41,7 @@ class Compiler final {
   };
 
   // Callback that is used to asynchronously notify clients of the result.
-  using ResultCallback = std::function<void(Result)>;
+  using ResultCallback = fit::function<void(Result)>;
 
   // Compile GLSL source code on a background thread, and post a task to invoke
   // ResultCallback on the main thread.

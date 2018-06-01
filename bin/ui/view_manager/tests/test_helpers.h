@@ -7,12 +7,12 @@
 
 #include <utility>
 
-#include "lib/fxl/functional/closure.h"
+#include <lib/fit/function.h>
 
 namespace test {
 
 template <typename T>
-void Capture(const fxl::Closure& quit, T* out, T value) {
+void Capture(fit::closure quit, T* out, T value) {
   *out = std::move(value);
   quit();
 }

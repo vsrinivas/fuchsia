@@ -10,6 +10,7 @@
 
 #include <fuchsia/math/cpp/fidl.h>
 #include <fuchsia/ui/input/cpp/fidl.h>
+#include <lib/fit/function.h>
 #include <presentation/cpp/fidl.h>
 #include <fuchsia/ui/views_v1/cpp/fidl.h>
 
@@ -67,9 +68,9 @@ class Presentation : private ::fuchsia::ui::views_v1::ViewTreeListener,
                      private presentation::Presentation {
  public:
   // Callback when the presentation yields to the next/previous one.
-  using YieldCallback = std::function<void(bool yield_to_next)>;
+  using YieldCallback = fit::function<void(bool yield_to_next)>;
   // Callback when the presentation is shut down.
-  using ShutdownCallback = std::function<void()>;
+  using ShutdownCallback = fit::closure;
 
   Presentation(::fuchsia::ui::views_v1::ViewManager* view_manager,
                fuchsia::ui::scenic::Scenic* scenic,

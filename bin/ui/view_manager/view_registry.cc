@@ -739,6 +739,7 @@ void ViewRegistry::HitTest(
   session_.HitTestDeviceRay(
       (float[3]){ray_origin.x, ray_origin.y, ray_origin.z},
       (float[3]){ray_direction.x, ray_direction.y, ray_direction.z},
+      fxl::MakeCopyable(
       [this, callback = std::move(callback), ray_origin,
        ray_direction](fidl::VectorPtr<fuchsia::ui::gfx::Hit> hits) {
         auto view_hits = fidl::VectorPtr<ViewHit>::New(0);
@@ -753,12 +754,12 @@ void ViewRegistry::HitTest(
           }
         }
         callback(std::move(view_hits));
-      });
+      }));
 }
 
 void ViewRegistry::ResolveFocusChain(
     ::fuchsia::ui::views_v1::ViewTreeToken view_tree_token,
-    const ResolveFocusChainCallback& callback) {
+    ResolveFocusChainCallback callback) {
   FXL_VLOG(1) << "ResolveFocusChain: view_tree_token=" << view_tree_token;
 
   auto it = view_trees_by_token_.find(view_tree_token.value);
@@ -771,7 +772,7 @@ void ViewRegistry::ResolveFocusChain(
 
 void ViewRegistry::ActivateFocusChain(
     ::fuchsia::ui::views_v1_token::ViewToken view_token,
-    const ActivateFocusChainCallback& callback) {
+    ActivateFocusChainCallback callback) {
   FXL_VLOG(1) << "ActivateFocusChain: view_token=" << view_token;
 
   ViewState* view = FindView(view_token.value);
@@ -788,7 +789,7 @@ void ViewRegistry::ActivateFocusChain(
 }
 
 void ViewRegistry::HasFocus(::fuchsia::ui::views_v1_token::ViewToken view_token,
-                            const HasFocusCallback& callback) {
+                            HasFocusCallback callback) {
   FXL_VLOG(1) << "HasFocus: view_token=" << view_token;
   ViewState* view = FindView(view_token.value);
   if (!view) {
@@ -930,10 +931,10 @@ void ViewRegistry::DeliverEvent(
     return;
   }
 
-  it->second->DeliverEvent(std::move(event), [callback](bool handled) {
+  it->second->DeliverEvent(std::move(event), fxl::MakeCopyable([callback = std::move(callback)](bool handled) {
     if (callback)
       callback(handled);
-  });
+  }));
 }
 
 void ViewRegistry::CreateInputConnection(

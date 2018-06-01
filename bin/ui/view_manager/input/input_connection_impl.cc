@@ -43,7 +43,7 @@ void InputConnectionImpl::DeliverEvent(fuchsia::ui::input::InputEvent event,
     InjectInput(std::move(event_clone));
   }
 
-  event_listener_->OnEvent(std::move(event), callback);
+  event_listener_->OnEvent(std::move(event), fxl::MakeCopyable(std::move(callback)));
 }
 
 void InputConnectionImpl::SetEventListener(

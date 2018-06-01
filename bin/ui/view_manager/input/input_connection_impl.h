@@ -7,6 +7,8 @@
 
 #include <fuchsia/ui/input/cpp/fidl.h>
 #include <fuchsia/ui/views_v1/cpp/fidl.h>
+#include <lib/fit/function.h>
+
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fidl/cpp/interface_request.h"
 #include "lib/fxl/macros.h"
@@ -16,7 +18,7 @@ namespace view_manager {
 class ViewInspector;
 class InputOwner;
 
-using OnEventDelivered = std::function<void(bool handled)>;
+using OnEventDelivered = fit::function<void(bool handled)>;
 
 // InputConnection implementation.
 // Binds incoming requests to the relevant view token.

@@ -5,13 +5,13 @@
 #ifndef GARNET_BIN_UI_VIEW_MANAGER_INTERNAL_VIEW_INSPECTOR_H_
 #define GARNET_BIN_UI_VIEW_MANAGER_INTERNAL_VIEW_INSPECTOR_H_
 
-#include <functional>
 #include <vector>
 
 #include <fuchsia/math/cpp/fidl.h>
 #include <fuchsia/ui/input/cpp/fidl.h>
 #include <fuchsia/ui/views_v1/cpp/fidl.h>
 #include <fuchsia/ui/views_v1_token/cpp/fidl.h>
+#include <lib/fit/function.h>
 
 namespace view_manager {
 class InputConnectionImpl;
@@ -52,13 +52,13 @@ struct ViewHit {
 // on the contents of views and view trees.
 class ViewInspector {
  public:
-  using HitTestCallback = std::function<void(fidl::VectorPtr<ViewHit>)>;
+  using HitTestCallback = fit::function<void(fidl::VectorPtr<ViewHit>)>;
   using ResolveFocusChainCallback =
-      std::function<void(std::unique_ptr<FocusChain>)>;
+      fit::function<void(std::unique_ptr<FocusChain>)>;
   using ActivateFocusChainCallback =
-      std::function<void(std::unique_ptr<FocusChain>)>;
-  using HasFocusCallback = std::function<void(bool)>;
-  using OnEventDelivered = std::function<void(bool handled)>;
+      fit::function<void(std::unique_ptr<FocusChain>)>;
+  using HasFocusCallback = fit::function<void(bool)>;
+  using OnEventDelivered = fit::function<void(bool handled)>;
 
   virtual ~ViewInspector() {}
 
@@ -73,7 +73,7 @@ class ViewInspector {
   // this view tree.
   virtual void ResolveFocusChain(
       ::fuchsia::ui::views_v1::ViewTreeToken view_tree_token,
-      const ResolveFocusChainCallback& callback) = 0;
+      ResolveFocusChainCallback callback) = 0;
 
   // TODO(jpoichet) Move this
   // Set the current input focus to the provided |view_token|.
@@ -81,11 +81,11 @@ class ViewInspector {
   // on touch down events. This logic should be moved in the future
   virtual void ActivateFocusChain(
       ::fuchsia::ui::views_v1_token::ViewToken view_token,
-      const ActivateFocusChainCallback& callback) = 0;
+      ActivateFocusChainCallback callback) = 0;
 
   // Returns whether view has focus
   virtual void HasFocus(::fuchsia::ui::views_v1_token::ViewToken view_token,
-                        const HasFocusCallback& callback) = 0;
+                        HasFocusCallback callback) = 0;
 
   // Retrieve the SoftKeyboardContainer that is the closest to the ViewToken
   // in the associated ViewTree
