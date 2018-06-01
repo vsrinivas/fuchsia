@@ -21,7 +21,7 @@ See [https://fuchsia.googlesource.com/pm#signature]
 
 ## runtime
 
-The runtime file specifies if execution of the application in the package
+The runtime file specifies if execution of the component in the package
 should be delegated to another process.
 
 The runtime file is a JSON object with the following schema:
@@ -38,9 +38,9 @@ The runtime file is a JSON object with the following schema:
 }
 ```
 
-The `runner` property names another application (or a package that contains
-one) to which execution is to be delegated. The target application must expose
-the [`ApplicationRunner`][application-runner] service.
+The `runner` property names another component (or a package that contains
+one) to which execution is to be delegated. The target component must expose
+the [`Runner`][runner] service.
 
 ## Component Manifest
 
@@ -105,21 +105,21 @@ The sandbox property is a JSON object with the following schema:
 ```
 
 The `dev` array contains a list of well-known device directories that are
-provided to the application. For example, if the string `class/input` appears in
-the `dev` array, then `/dev/class/input` will appear in the namespaces of applications
+provided to the component. For example, if the string `class/input` appears in
+the `dev` array, then `/dev/class/input` will appear in the namespaces of components
 loaded from the package. To whitelist access to a `misc` device, such as
 `/dev/misc/sysinfo`, add the string `misc` to the `dev` array. Unfortunately,
 whitelisting access to individual `misc` devices is not possible currently.
 
 The `system` array contains a list of well-known paths within the system package
-that are provided to the application. For example, if the string `bin` appears
+that are provided to the component. For example, if the string `bin` appears
 in the `system` array, then `/system/bin` will appear in the namespaces of
-applications loaded from the package.
+components loaded from the package.
 
 The `pkgfs` array contains a list of well-known paths within the pkgfs tree
-that are provided to the application. For example, if the string `packages`
+that are provided to the component. For example, if the string `packages`
 appears in the `pkgfs` array, then `/pkgfs/packages` will appear in the
-namespaces of applications loaded from the package, providing access to all
+namespaces of components loaded from the package, providing access to all
 packages fully cached on the system.
 
 The `features` array contains a list of well-known features that the package
@@ -160,4 +160,4 @@ The set of currently known features are as follows:
 See [sandboxing.md](sandboxing.md) for more information about sandboxing.
 
 
-[application-runner]: https://fuchsia.googlesource.com/garnet/+/master/public/lib/app/fidl/application_runner.fidl
+[runner]: https://fuchsia.googlesource.com/garnet/+/master/public/lib/app/fidl/runner.fidl

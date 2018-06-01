@@ -31,13 +31,13 @@ In our current implementation, a process runs in a sandbox if its binary is
 contained in an archive (i.e., a [FAR](../glossary.md#FAR)). As the package manager
 evolves, these details are likely to change.
 
-An application run from an archive is given access to two namespaces by default:
+An component run from an archive is given access to two namespaces by default:
 
  * `/svc`, which is a bundle of services from the environment in which the
-   application runs.
- * `/pkg`, which is a read-only view of the archive containing the application.
+   component runs.
+ * `/pkg`, which is a read-only view of the archive containing the component.
 
-A typical application will interact with a number of services from `/svc` in
+A typical component will interact with a number of services from `/svc` in
 order to play some useful role in the system.
 
 The `far` command-line tool can be used to inspect packages installed on the

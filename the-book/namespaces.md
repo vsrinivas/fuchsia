@@ -196,7 +196,7 @@ components running on Fuchsia.
 The precise contents and organization of a component's namespace varies
 greatly depending on the component's role, type, identity, scope,
 relation to other components, and rights. See [sandboxing.md] for information
-about how namespaces are used to create sandboxes for applications.
+about how namespaces are used to create sandboxes for components.
 
 _For more information about the namespace your component can expect to
 receive from its environment, please consult the documentation related to
@@ -209,7 +209,7 @@ There are some typical objects which a component namespace might contain:
 - Read-only executables and assets from the component's package.
 - Private local persistent storage.
 - Private temporary storage.
-- Services offered to the component by the system, the application framework,
+- Services offered to the component by the system, the component framework,
   or by the client which started it.
 - Device nodes (for drivers and privileged components).
 

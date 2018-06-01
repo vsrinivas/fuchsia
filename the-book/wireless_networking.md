@@ -60,7 +60,7 @@ networking state. It communicates with a Soft MAC driver to manage the hardware.
 The Fuchsia Wireless Network Service implements the IEEE 802.11 SME functions
 and holds state about all the wireless networks that are available in the
 current environment. It is the interface to the hardware (via the drivers) used
-by applications like System UI.
+by components like System UI.
 
 ## Relation to the Ethernet stack
 

@@ -212,19 +212,19 @@ enabled](#enabling-graphics). The currently selected tab is highlighted in
 yellow at the top of the screen. You can switch to the next tab using Alt-Tab on
 the keyboard.
 
-- Tab zero is the console and displays the boot and application log.
+- Tab zero is the console and displays the boot and component log.
 - Tabs 1, 2 and 3 contain shells.
-- Tabs 4 and higher contain applications you've launched.
+- Tabs 4 and higher contain components you've launched.
 
 Note: to select tabs, you may need to enter "console mode". See the next section for details.
 
-### Launch a graphical application
+### Launch a graphical component
 
 QEMU does not support Vulkan and therefore cannot run our graphics stack.
 
-Most graphical applications in Fuchsia use the
+Most graphical components in Fuchsia use the
 [Mozart](https://fuchsia.googlesource.com/garnet/+/master/bin/ui/) system compositor. You can launch
-such applications, commonly found in `/system/apps`, like this:
+such components, commonly found in `/system/apps`, like this:
 
 ```
 launch spinning_square_view
@@ -271,4 +271,4 @@ You may wish to peruse the [testing FAQ](development/workflows/testing_faq.md).
 * [Fuchsia documentation](/README.md) hub
 * Working with Zircon - [copying files, network booting, log viewing, and
 more](https://fuchsia.googlesource.com/zircon/+/master/docs/getting_started.md#Copying-files-to-and-from-Zircon)
-* [Information on the system bootstrap application](https://fuchsia.googlesource.com/garnet/+/master/bin/sysmgr/).
+* [Information on the system bootstrap component](https://fuchsia.googlesource.com/garnet/+/master/bin/sysmgr/).

@@ -29,8 +29,8 @@ messages, and make proposals to give suggestions to the user.
 
 #### **AppMgr**
 
-The Application Manager (AppMgr) is responsible for launching applications and
-managing the namespaces in which those applications run. It is the first process
+The Application Manager (AppMgr) is responsible for launching components and
+managing the namespaces in which those components run. It is the first process
 started in the `fuchsia` job by the [DevMgr](#DevMgr).
 
 #### **Armadillo**
@@ -215,7 +215,7 @@ Fuchsia's standard C library (libc) is based on Musl Libc.
 #### **Namespace**
 
 A namespace is the composite hierarchy of files, directories, sockets, [service](#Service)s,
-and other named objects which are offered to application components by their
+and other named objects which are offered to components by their
 [environment](#Environment).
 - [Fuchsia Namespace Spec](the-book/namespaces.md)
 
