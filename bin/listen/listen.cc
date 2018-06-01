@@ -135,7 +135,7 @@ class Service {
 
     zx_status_t status =
         fdio_spawn_etc(job_.get(),
-                       FDIO_SPAWN_SHARE_JOB | FDIO_SPAWN_CLONE_LDSVC |
+                       FDIO_SPAWN_CLONE_JOB | FDIO_SPAWN_CLONE_LDSVC |
                            FDIO_SPAWN_CLONE_NAMESPACE,
                        argv_[0], argv_, nullptr, kActionCount, actions,
                        process.reset_and_get_address(), err_msg);
