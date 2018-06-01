@@ -41,7 +41,7 @@ static inline bool get_bit(uint32_t x, uint32_t mask) {
 #define AML_SD_EMMC_DEFAULT_CLK_SRC          0          //24MHz
 #define AML_SD_EMMC_DEFAULT_CLK_DIV          60         //Defaults to 400KHz
 #define AML_SD_EMMC_DEFAULT_CLK_CORE_PHASE   3
-#define AML_SD_EMMC_MAX_TUNING_TRIES         4
+#define AML_SD_EMMC_MAX_TUNING_TRIES         7
 #define AML_SD_EMMC_ADJ_DELAY_TEST_ATTEMPTS  10
 
 #define AML_SD_EMMC_SRAM_MEMORY_BASE         0x200

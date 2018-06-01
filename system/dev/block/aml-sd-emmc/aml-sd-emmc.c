@@ -338,7 +338,10 @@ static zx_status_t aml_sd_emmc_perform_tuning(void* ctx) {
             clk_val = regs->sd_emmc_clock;
             clk_div = get_bits(clk_val, AML_SD_EMMC_CLOCK_CFG_DIV_MASK,
                                AML_SD_EMMC_CLOCK_CFG_DIV_LOC);
-            clk_div++;
+            clk_div += 2;
+            if (clk_div > (AML_SD_EMMC_CLOCK_CFG_DIV_MASK >> AML_SD_EMMC_CLOCK_CFG_DIV_LOC)) {
+                clk_div = AML_SD_EMMC_CLOCK_CFG_DIV_MASK >> AML_SD_EMMC_CLOCK_CFG_DIV_LOC;
+            }
             update_bits(&clk_val, AML_SD_EMMC_CLOCK_CFG_DIV_MASK, AML_SD_EMMC_CLOCK_CFG_DIV_LOC,
                         clk_div);
             regs->sd_emmc_clock = clk_val;
