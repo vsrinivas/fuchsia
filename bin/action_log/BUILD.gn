@@ -2,19 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
+import("//peridot/build/executable_package.gni")
 
-package("action_log") {
-  deps = [
-    ":bin",
-  ]
-
-  binary = "action_log"
-}
-
-executable("bin") {
-  output_name = "action_log"
-
+executable_package("action_log") {
   sources = [
     "action_log_data.cc",
     "action_log_data.h",

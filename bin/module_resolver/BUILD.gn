@@ -2,25 +2,15 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
+import("//peridot/build/executable_package.gni")
 
-package("module_resolver") {
-  deps = [
-    ":bin",
-  ]
-
-  binary = "module_resolver"
-
+executable_package("module_resolver") {
   meta = [
     {
-      path = rebase_path("meta/module_resolver.cmx")
+      path = "meta/module_resolver.cmx"
       dest = "module_resolver.cmx"
     },
   ]
-}
-
-executable("bin") {
-  output_name = "module_resolver"
 
   sources = [
     "module_resolver_main.cc",

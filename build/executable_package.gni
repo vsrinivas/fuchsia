@@ -24,6 +24,9 @@ template("executable_package") {
   package(target_name) {
     forward_variables_from(invoker, [
                              "testonly",
+                             "meta",
+                             "tests",
+                             "resources",
                              ])
     deps = [
       ":${binary_rule}",

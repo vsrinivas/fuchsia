@@ -2,26 +2,15 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
+import("//peridot/build/executable_package.gni")
 
-package("suggestion_engine") {
-  deps = [
-    ":bin",
-  ]
-
+executable_package("suggestion_engine") {
   resources = [
     {
-      path = rebase_path(
-              "//peridot/bin/suggestion_engine/resources/mod_pairs.json")
+      path = "resources/mod_pairs.json"
       dest = "ranking_data/mod_pairs.json"
     },
   ]
-
-  binary = "suggestion_engine"
-}
-
-executable("bin") {
-  output_name = "suggestion_engine"
 
   sources = [
     "suggestion_engine_main.cc",

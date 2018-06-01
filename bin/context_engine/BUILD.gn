@@ -2,19 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
+import("//peridot/build/executable_package.gni")
 
-package("context_engine") {
-  deps = [
-    ":bin",
-  ]
-
-  binary = "context_engine"
-}
-
-executable("bin") {
-  output_name = "context_engine"
-
+executable_package("context_engine") {
   sources = [
     "context_engine_main.cc",
   ]
