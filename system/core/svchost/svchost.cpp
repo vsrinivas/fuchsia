@@ -102,13 +102,17 @@ static constexpr const char* deprecated_services[] = {
     "amber.Control",
     "cobalt.CobaltEncoderFactory",
     "fuchsia.sys.Launcher",
+    "fuchsia.netstack.Netstack",
     "fuchsia.sys.Environment",
     "device_settings.DeviceSettingsManager",
     "logger.Log",
     "logger.LogSink",
     "media.AudioServer",
     "media_player.MediaPlayer",
+    // fdio name for Netstack. Will be removed with the new interfaces defined
+    // in NET-863.
     "net.Netstack",
+    // Deprecated name for Netstack. Will be removed as part of FIDL-200.
     "netstack.Netstack",
     "power_manager.PowerManager",
     "wlan_service.Wlan",
