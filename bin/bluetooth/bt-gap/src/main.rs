@@ -20,6 +20,7 @@ extern crate fuchsia_vfs_watcher as vfs_watcher;
 extern crate fuchsia_zircon as zx;
 #[macro_use]
 extern crate log;
+extern crate slab;
 
 extern crate futures;
 extern crate parking_lot;

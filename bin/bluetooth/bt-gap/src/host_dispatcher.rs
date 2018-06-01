@@ -3,10 +3,12 @@
 // found in the LICENSE file.
 
 use async;
+use async::TimeoutExt;
 use bt;
 use bt::util::clone_host_info;
 use failure::Error;
 use fidl;
+use fidl::encoding2::OutOfLine;
 use fidl_fuchsia_bluetooth;
 use fidl_fuchsia_bluetooth_control::{ControlControlHandle, PairingDelegateProxy};
 use fidl_fuchsia_bluetooth_control::AdapterInfo;
@@ -18,6 +20,7 @@ use futures::future::Either::{Left, Right};
 use futures::future::ok as fok;
 use host_device::{self, HostDevice};
 use parking_lot::RwLock;
+use slab::Slab;
 use std::collections::HashMap;
 use std::fs::File;
 use std::io;
@@ -25,6 +28,9 @@ use std::path::PathBuf;
 use std::sync::{Arc, Weak};
 use util;
 use vfs_watcher;
+use zx::Duration;
+
+pub static HOST_INIT_TIMEOUT: u64 = 5; // Seconds
 
 static BT_HOST_DIR: &'static str = "/dev/class/bt-host";
 static DEFAULT_NAME: &'static str = "fuchsia";
@@ -56,14 +62,19 @@ impl Drop for DiscoverableRequestToken {
 }
 
 pub struct HostDispatcher {
-    active_id: Option<String>,
     host_devices: HashMap<String, Arc<RwLock<HostDevice>>>,
+    active_id: Option<String>,
+
+    // GAP state
     name: String,
     discovery: Option<Weak<DiscoveryRequestToken>>,
     discoverable: Option<Weak<DiscoverableRequestToken>>,
 
     pub pairing_delegate: Option<PairingDelegateProxy>,
     pub events: Option<ControlControlHandle>,
+
+    // Pending requests to obtain a Host.
+    host_requests: Slab<task::Waker>,
 }
 
 impl HostDispatcher {
@@ -76,47 +87,47 @@ impl HostDispatcher {
             discoverable: None,
             pairing_delegate: None,
             events: None,
+            host_requests: Slab::new(),
         }
     }
 
-    pub fn set_name(
-        &mut self, name: Option<String>
-    ) -> impl Future<Item = fidl_fuchsia_bluetooth::Status, Error = fidl::Error> {
-        match name {
-            Some(name) => self.name = name,
-            None => self.name = DEFAULT_NAME.to_string(),
+    pub fn set_name(hd: Arc<RwLock<HostDispatcher>>, name: Option<String>)
+        -> impl Future<Item = fidl_fuchsia_bluetooth::Status, Error = fidl::Error> {
+        hd.write().name = match name {
+            Some(name) => name,
+            None => DEFAULT_NAME.to_string(),
         };
-        match self.get_active_id() {
-            Some(ref id) => {
-                let adap = self.host_devices.get(id).unwrap();
-                let adap = adap.write();
-                Left(adap.set_name(self.name.clone()))
-            }
-            None => Right(fok(bt_fidl_status!(
-                BluetoothNotAvailable,
-                "No Adapter found"
-            ))),
-        }
+        HostDispatcher::get_active_adapter(hd.clone()).and_then(move |adapter| match adapter {
+            Some(adapter) => Left(adapter.write().set_name(hd.read().name.clone())),
+            None => Right(fok(
+                bt_fidl_status!(BluetoothNotAvailable, "No Adapter found"),
+            )),
+        })
     }
 
     /// Return the active id. If the ID is current not set,
     /// this fn will make the first ID in it's host_devices active
     fn get_active_id(&mut self) -> Option<String> {
-        if self.active_id.is_none() {
-            for key in self.host_devices.keys() {
-                self.active_id = Some(key.clone());
-                break;
+        match self.active_id {
+            None => {
+                let id = match self.host_devices.keys().next() {
+                    None => {
+                        return None;
+                    }
+                    Some(id) => id.clone(),
+                };
+                self.set_active_id(Some(id));
+                self.active_id.clone()
             }
+            ref id => id.clone(),
         }
-        self.active_id.clone()
     }
 
-    pub fn start_discovery(
-        hd: &Arc<RwLock<HostDispatcher>>
-    ) -> impl Future<
-        Item = (fidl_fuchsia_bluetooth::Status, Option<Arc<DiscoveryRequestToken>>),
-        Error = fidl::Error,
-    > {
+    pub fn start_discovery(hd: Arc<RwLock<HostDispatcher>>)
+        -> impl Future<
+            Item = (fidl_fuchsia_bluetooth::Status, Option<Arc<DiscoveryRequestToken>>),
+            Error = fidl::Error,
+        > {
         let strong_current_token = match hd.read().discovery {
             Some(ref token) => token.upgrade(),
             None => None,
@@ -124,42 +135,35 @@ impl HostDispatcher {
         if let Some(token) = strong_current_token {
             return Left(fok((bt_fidl_status!(), Some(Arc::clone(&token)))));
         }
-        let id = hd.write().get_active_id();
-        match id {
-            Some(ref id) => {
-                let hdr = hd.read();
-                let adap = hdr.host_devices.get(id).unwrap();
-                let weak_adap = Arc::downgrade(&adap);
-                let hdref = Arc::clone(&hd);
-                let mut adap = adap.write();
-                Right(
-                    adap.start_discovery()
-                        .and_then(move |resp| match resp.error {
+
+        Right(HostDispatcher::get_active_adapter(hd.clone()).and_then(
+            move |adapter| match adapter {
+                Some(adapter) => {
+                    let weak_adapter = Arc::downgrade(&adapter);
+                    Right(adapter.write().start_discovery().and_then(move |resp| {
+                        match resp.error {
                             Some(_) => fok((resp, None)),
                             None => {
-                                let token = Arc::new(DiscoveryRequestToken { adap: weak_adap });
-                                hdref.write().discovery = Some(Arc::downgrade(&token));
+                                let token = Arc::new(DiscoveryRequestToken { adap: weak_adapter });
+                                hd.write().discovery = Some(Arc::downgrade(&token));
                                 fok((resp, Some(token)))
                             }
-                        }),
-                )
-            }
-            None => Left(fok((
-                bt_fidl_status!(BluetoothNotAvailable, "No Adapter found"),
-                None,
-            ))),
-        }
+                        }
+                    }))
+                }
+                None => Left(fok((
+                    bt_fidl_status!(BluetoothNotAvailable, "No Adapter found"),
+                    None,
+                ))),
+            },
+        ))
     }
 
-    pub fn set_discoverable(
-        hd: &Arc<RwLock<HostDispatcher>>
-    ) -> impl Future<
-        Item = (
-            fidl_fuchsia_bluetooth::Status,
-            Option<Arc<DiscoverableRequestToken>>,
-        ),
-        Error = fidl::Error,
-    > {
+    pub fn set_discoverable(hd: Arc<RwLock<HostDispatcher>>)
+        -> impl Future<
+            Item = (fidl_fuchsia_bluetooth::Status, Option<Arc<DiscoverableRequestToken>>),
+            Error = fidl::Error,
+        > {
         let strong_current_token = match hd.read().discoverable {
             Some(ref token) => token.upgrade(),
             None => None,
@@ -168,109 +172,185 @@ impl HostDispatcher {
             return Left(fok((bt_fidl_status!(), Some(Arc::clone(&token)))));
         }
 
-        let id = hd.write().get_active_id();
-        match id {
-            Some(ref id) => {
-                let hdr = hd.read();
-                let adap = hdr.host_devices.get(id).unwrap();
-                let weak_adap = Arc::downgrade(&adap);
-                let hdref = Arc::clone(&hd);
-                let mut adap = adap.write();
-                Right(
-                    adap.set_discoverable(true)
-                        .and_then(move |resp| match resp.error {
-                            Some(_) => fok((resp, None)),
-                            None => {
-                                let token = Arc::new(DiscoverableRequestToken { adap: weak_adap });
-                                hdref.write().discoverable = Some(Arc::downgrade(&token));
-                                fok((resp, Some(token)))
+        Right(HostDispatcher::get_active_adapter(hd.clone()).and_then(
+            move |adapter| match adapter {
+                Some(adapter) => {
+                    let weak_adapter = Arc::downgrade(&adapter);
+                    Right(adapter.write().set_discoverable(true).and_then(
+                        move |resp| {
+                            match resp.error {
+                                Some(_) => fok((resp, None)),
+                                None => {
+                                    let token =
+                                        Arc::new(DiscoverableRequestToken { adap: weak_adapter });
+                                    hd.write().discoverable = Some(Arc::downgrade(&token));
+                                    fok((resp, Some(token)))
+                                }
                             }
-                        }),
-                )
-            }
-            None => Left(fok((
-                bt_fidl_status!(BluetoothNotAvailable, "No Adapter found"),
-                None,
-            ))),
-        }
+                        },
+                    ))
+                }
+                None => Left(fok((
+                    bt_fidl_status!(BluetoothNotAvailable, "No Adapter found"),
+                    None,
+                ))),
+            },
+        ))
     }
 
     pub fn set_active_adapter(&mut self, adapter_id: String) -> fidl_fuchsia_bluetooth::Status {
-        if self.host_devices.contains_key(&adapter_id) {
-            // Close the prior adapter
-            if let Some(ref id) = self.active_id {
-                let _ = self.host_devices[id].write().close();
+        if let Some(ref id) = self.active_id {
+            if *id == adapter_id {
+                return bt_fidl_status!(Already, "Adapter already active");
             }
-            self.active_id = Some(adapter_id);
-            return bt_fidl_status!();
+
+            // Shut down the previously active host.
+            let _ = self.host_devices[id].write().close();
         }
 
-        bt_fidl_status!(BadState, "Attempting to activate an unknown adapter")
+        if self.host_devices.contains_key(&adapter_id) {
+            self.set_active_id(Some(adapter_id));
+            bt_fidl_status!()
+        } else {
+            bt_fidl_status!(NotFound, "Attempting to activate an unknown adapter")
+        }
     }
 
     pub fn get_active_adapter_info(&mut self) -> Option<AdapterInfo> {
         match self.get_active_id() {
             Some(ref id) => {
                 // Id must always be valid
-                let adap = self.host_devices.get(id).unwrap().read();
-                Some(util::clone_host_info(adap.get_info()))
+                let host = self.host_devices.get(id).unwrap().read();
+                Some(util::clone_host_info(host.get_info()))
             }
             None => None,
         }
     }
 
-    pub fn get_active_adapter(hd: Arc<RwLock<HostDispatcher>>) -> impl Future<Item = Option<Arc<RwLock<HostDevice>>>, Error = fidl::Error> {
-        OnAdaptersFound(hd.clone()).and_then(move |_adapters| {
-            let mut whd = hd.write();
-            fok(match whd.get_active_id() {
-                Some(id) => Some(hd.read().host_devices.get(&id).unwrap().clone()),
+    pub fn get_active_adapter(hd: Arc<RwLock<HostDispatcher>>)
+        -> impl Future<Item = Option<Arc<RwLock<HostDevice>>>, Error = fidl::Error> {
+        OnAdaptersFound::new(hd.clone()).and_then(|hd| {
+            let mut hd = hd.write();
+            fok(match hd.get_active_id() {
+                Some(ref id) => Some(hd.host_devices.get(id).unwrap().clone()),
                 None => None,
             })
         })
     }
 
-    pub fn get_adapters(hd: &mut Arc<RwLock<HostDispatcher>>) -> impl Future<Item = Vec<AdapterInfo>, Error = fidl::Error> {
-        OnAdaptersFound(hd.clone())
+    pub fn get_adapters(hd: &mut Arc<RwLock<HostDispatcher>>)
+        -> impl Future<Item = Vec<AdapterInfo>, Error = fidl::Error> {
+        OnAdaptersFound::new(hd.clone()).and_then(|hd| {
+            let mut result = vec![];
+            for host in hd.read().host_devices.values() {
+                let host = host.read();
+                result.push(util::clone_host_info(host.get_info()));
+            }
+            fok(result)
+        })
     }
 
+    // Resolves all pending OnAdapterFuture's. Called when we leave the init period (by seeing the
+    // first host device or when the init timer expires).
+    fn resolve_host_requests(&mut self) {
+        for waker in &self.host_requests {
+            waker.1.wake();
+        }
+    }
+
+    fn add_host(&mut self, id: String, host: Arc<RwLock<HostDevice>>) {
+        self.host_devices.insert(id, host);
+    }
+
+    // Updates the active adapter and sends a FIDL event.
+    fn set_active_id(&mut self, id: Option<String>) {
+        info!("New active adapter: {:?}", id);
+        self.active_id = id;
+        if let Some(ref events) = self.events.clone() {
+            let _res = events.send_on_active_adapter_changed(
+                self.get_active_adapter_info().as_mut().map(OutOfLine),
+            );
+        }
+    }
 }
 
 /// A future that completes when at least one adapter is available.
 #[must_use = "futures do nothing unless polled"]
-pub struct OnAdaptersFound(Arc<RwLock<HostDispatcher>>);
+struct OnAdaptersFound {
+    hd: Arc<RwLock<HostDispatcher>>,
+    waker_key: Option<usize>,
+}
+
+impl OnAdaptersFound {
+    // Constructs an OnAdaptersFound that completes at the latest after HOST_INIT_TIMEOUT seconds.
+    fn new(hd: Arc<RwLock<HostDispatcher>>)
+        -> impl Future<Item = Arc<RwLock<HostDispatcher>>, Error = fidl::Error> {
+        OnAdaptersFound {
+            hd: hd.clone(),
+            waker_key: None,
+        }.on_timeout(
+            Duration::from_seconds(HOST_INIT_TIMEOUT).after_now(),
+            move || {
+                {
+                    let mut hd = hd.write();
+                    if hd.host_devices.len() == 0 {
+                        info!("No bt-host devices found");
+                        hd.resolve_host_requests();
+                    }
+                }
+                Ok(hd)
+            },
+        )
+            .unwrap()
+            .err_into()
+    }
+
+    fn remove_waker(&mut self) {
+        if let Some(key) = self.waker_key {
+            self.hd.write().host_requests.remove(key);
+        }
+        self.waker_key = None;
+    }
+}
+
+impl Drop for OnAdaptersFound {
+    fn drop(&mut self) {
+        self.remove_waker()
+    }
+}
 
 impl Future for OnAdaptersFound {
-    type Item = Vec<AdapterInfo>;
+    type Item = Arc<RwLock<HostDispatcher>>;
     type Error = fidl::Error;
-    fn poll(&mut self, _: &mut task::Context) -> Poll<Self::Item, Self::Error> {
-        if self.0.read().host_devices.len() < 1 {
-            return Ok(Async::Pending);
+
+    fn poll(&mut self, ctx: &mut task::Context) -> Poll<Self::Item, Self::Error> {
+        if self.hd.read().host_devices.len() == 0 {
+            if self.waker_key.is_none() {
+                self.waker_key = Some(self.hd.write().host_requests.insert(ctx.waker().clone()));
+            }
+            Ok(Async::Pending)
+        } else {
+            self.remove_waker();
+            Ok(Async::Ready(self.hd.clone()))
         }
-        let mut host_devices = vec![];
-        for adapter in self.0.read().host_devices.values() {
-            let adapter = adapter.read();
-            host_devices.push(util::clone_host_info(adapter.get_info()));
-        }
-        Ok(Async::Ready(host_devices))
     }
 }
 
 
 /// Adds an adapter to the host dispatcher. Called by the watch_hosts device
 /// watcher
-fn add_adapter(
-    hd: Arc<RwLock<HostDispatcher>>, host_path: PathBuf
-) -> impl Future<Item = (), Error = Error> {
-    trace!("Adding Adapter: {:?}", host_path);
+fn add_adapter(hd: Arc<RwLock<HostDispatcher>>, host_path: PathBuf)
+    -> impl Future<Item = (), Error = Error> {
+    info!("Adding Adapter: {:?}", host_path);
     File::open(host_path)
         .into_future()
         .err_into()
         .and_then(|host| {
             let handle = bt::host::open_host_channel(&host).unwrap();
             let host = HostProxy::new(async::Channel::from_channel(handle.into()).unwrap());
-            host.get_info()
-                .map_err(|e| e.into())
-                .map(|info| (host, info))
+            host.get_info().map_err(|e| e.into()).map(
+                |info| (host, info),
+            )
         })
         .and_then(move |(host, adapter_info)| {
             // Set the adapter as connectable
@@ -284,28 +364,26 @@ fn add_adapter(
         .and_then(move |(host, adapter_info)| {
             // Add to the adapters
             let id = adapter_info.identifier.clone();
-            let host_device = Arc::new(RwLock::new(HostDevice::new(
-                host,
-                adapter_info,
-            )));
-            hd.write().host_devices.insert(id, host_device.clone());
+            let host_device = Arc::new(RwLock::new(HostDevice::new(host, adapter_info)));
+            hd.write().add_host(id, host_device.clone());
             fok((hd.clone(), host_device))
         })
         .and_then(|(hd, host_device)| {
             if let Some(ref events) = hd.read().events {
-                let _res = events
-                    .send_on_adapter_updated(&mut clone_host_info(host_device.read().get_info()));
+                let _res = events.send_on_adapter_updated(
+                    &mut clone_host_info(host_device.read().get_info()),
+                );
             }
             info!("Host added: {:?}", host_device.read().get_info().identifier);
+            hd.write().resolve_host_requests();
             host_device::run(hd.clone(), host_device.clone())
                 .err_into()
                 .map(|_| ())
         })
 }
 
-pub fn rm_adapter(
-    _hd: Arc<RwLock<HostDispatcher>>, host_path: PathBuf
-) -> impl Future<Item = (), Error = Error> {
+pub fn rm_adapter(_hd: Arc<RwLock<HostDispatcher>>, host_path: PathBuf)
+    -> impl Future<Item = (), Error = Error> {
     info!("Host removed: {:?}", host_path);
     // TODO:(NET-852)
     fok(())
@@ -326,7 +404,8 @@ pub fn watch_hosts(hd: Arc<RwLock<HostDispatcher>>) -> impl Future<Item = (), Er
                     ));
 
                     match msg.event {
-                        vfs_watcher::WatchEvent::EXISTING | vfs_watcher::WatchEvent::ADD_FILE => {
+                        vfs_watcher::WatchEvent::EXISTING |
+                        vfs_watcher::WatchEvent::ADD_FILE => {
                             info!("Adding device from {:?}", path);
                             Left(Left(add_adapter(hd.clone(), path).map_err(|e| {
                                 io::Error::new(io::ErrorKind::Other, e.to_string())

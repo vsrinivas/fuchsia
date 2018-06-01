@@ -12,10 +12,6 @@ use futures::prelude::*;
 use host_dispatcher::*;
 use parking_lot::RwLock;
 use std::sync::Arc;
-use zx::Duration;
-use async::TimeoutExt;
-
-pub static TIMEOUT: u64 = 3; // Seconds
 
 struct ControlServiceState {
     host: Arc<RwLock<HostDispatcher>>,
@@ -57,8 +53,7 @@ pub fn make_control_service(
         },
         set_name: |state, name, res| {
             let wstate = state.write();
-            let mut hd = wstate.host.write();
-            hd.set_name(name)
+            HostDispatcher::set_name(wstate.host.clone(), name)
                 .and_then(move |mut resp| res.send(&mut resp))
                 .recover(|e| eprintln!("error sending response: {:?}", e))
         },
@@ -76,10 +71,6 @@ pub fn make_control_service(
             let wstate = state.write();
             let mut hd = wstate.host.clone();
             HostDispatcher::get_adapters(&mut hd)
-                .on_timeout(Duration::from_seconds(TIMEOUT).after_now(), || {
-                    eprintln!("Timed out waiting for adapters");
-                    Ok(vec![])
-                }).unwrap()
                 .and_then(move |mut resp| res.send(Some(&mut resp.iter_mut())))
                 .recover(|e| eprintln!("error sending response: {:?}", e))
         },
@@ -93,9 +84,9 @@ pub fn make_control_service(
         },
         request_discovery: |state, discover, res| {
             let fut = if discover {
-                let stateref = Arc::clone(&state);
+                let stateref = state.clone();
                 Left(
-                    HostDispatcher::start_discovery(&state.read().host).and_then(
+                    HostDispatcher::start_discovery(state.read().host.clone()).and_then(
                         move |(mut resp, token)| {
                             stateref.write().discovery_token = token;
                             res.send(&mut resp).into_future()
@@ -110,9 +101,9 @@ pub fn make_control_service(
         },
         set_discoverable: |state, discoverable, res| {
             let fut = if discoverable {
-                let stateref = Arc::clone(&state);
+                let stateref = state.clone();
                 Left(
-                    HostDispatcher::set_discoverable(&state.read().host).and_then(
+                    HostDispatcher::set_discoverable(state.read().host.clone()).and_then(
                         move |(mut resp, token)| {
                             stateref.write().discoverable_token = token;
                             res.send(&mut resp).into_future()
