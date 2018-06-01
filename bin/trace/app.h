@@ -5,7 +5,6 @@
 #ifndef GARNET_BIN_TRACE_APP_H_
 #define GARNET_BIN_TRACE_APP_H_
 
-#include <functional>
 #include <map>
 #include <memory>
 #include <string>

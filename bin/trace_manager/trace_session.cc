@@ -14,7 +14,7 @@ namespace tracing {
 
 TraceSession::TraceSession(zx::socket destination,
                            fidl::VectorPtr<fidl::StringPtr> categories,
-                           size_t trace_buffer_size, fxl::Closure abort_handler)
+                           size_t trace_buffer_size, fit::closure abort_handler)
     : destination_(std::move(destination)),
       categories_(std::move(categories)),
       trace_buffer_size_(trace_buffer_size),
@@ -27,7 +27,7 @@ TraceSession::~TraceSession() {
   destination_.reset();
 }
 
-void TraceSession::WaitForProvidersToStart(fxl::Closure callback,
+void TraceSession::WaitForProvidersToStart(fit::closure callback,
                                            zx::duration timeout) {
   start_callback_ = std::move(callback);
   session_start_timeout_.PostDelayed(async_get_default(), timeout);
@@ -67,7 +67,7 @@ void TraceSession::RemoveDeadProvider(TraceProviderBundle* bundle) {
   FinishProvider(bundle);
 }
 
-void TraceSession::Stop(fxl::Closure done_callback, zx::duration timeout) {
+void TraceSession::Stop(fit::closure done_callback, zx::duration timeout) {
   if (!(state_ == State::kReady || state_ == State::kStarted))
     return;
 

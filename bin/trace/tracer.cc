@@ -35,8 +35,8 @@ Tracer::~Tracer() {
 void Tracer::Start(TraceOptions options,
                    RecordConsumer record_consumer,
                    ErrorHandler error_handler,
-                   fxl::Closure start_callback,
-                   fxl::Closure done_callback) {
+                   fit::closure start_callback,
+                   fit::closure done_callback) {
   FXL_DCHECK(state_ == State::kStopped);
 
   state_ = State::kStarted;

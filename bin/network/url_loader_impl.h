@@ -7,7 +7,7 @@
 
 #include <network/cpp/fidl.h>
 
-#include "lib/fxl/functional/closure.h"
+#include <lib/fit/function.h>
 #include "lib/fidl/cpp/binding.h"
 #include "lib/url/gurl.h"
 
@@ -20,7 +20,7 @@ class URLLoaderImpl : public URLLoader {
    public:
     virtual ~Coordinator() {}
     virtual void RequestNetworkSlot(
-        std::function<void(fxl::Closure)> slot_request) = 0;
+        fit::function<void(fit::closure)> slot_request) = 0;
   };
 
   URLLoaderImpl(Coordinator* coordinator);

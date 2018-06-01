@@ -5,16 +5,15 @@
 #ifndef GARNET_BIN_TRACE_TRACER_H_
 #define GARNET_BIN_TRACE_TRACER_H_
 
-#include <functional>
 #include <string>
 #include <vector>
 
 #include <tracing/cpp/fidl.h>
 #include <lib/async/cpp/wait.h>
+#include <lib/fit/function.h>
 #include <lib/zx/socket.h>
 #include <trace-reader/reader.h>
 
-#include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
 
 namespace tracing {
@@ -34,8 +33,8 @@ class Tracer {
   void Start(TraceOptions options,
              RecordConsumer record_consumer,
              ErrorHandler error_handler,
-             fxl::Closure start_callback,
-             fxl::Closure done_callback);
+             fit::closure start_callback,
+             fit::closure done_callback);
 
   // Stops the trace.
   // Does nothing if not started or if already stopping.
@@ -57,8 +56,8 @@ class Tracer {
   enum class State { kStopped, kStarted, kStopping };
 
   State state_ = State::kStopped;
-  fxl::Closure start_callback_;
-  fxl::Closure done_callback_;
+  fit::closure start_callback_;
+  fit::closure done_callback_;
   zx::socket socket_;
   async_t* async_;
   async::WaitMethod<Tracer, &Tracer::OnHandleReady> wait_;

@@ -12,7 +12,6 @@
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
 
-#include <functional>
 #include <string>
 
 #include <client.h>

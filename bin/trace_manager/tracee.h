@@ -6,16 +6,15 @@
 #define GARNET_BIN_TRACE_MANAGER_TRACEE_H_
 
 #include <lib/async/cpp/wait.h>
+#include <lib/fit/function.h>
 #include <lib/zx/socket.h>
 #include <lib/zx/vmo.h>
 
-#include <functional>
 #include <iosfwd>
 
 #include "garnet/bin/trace_manager/trace_provider_bundle.h"
 #include "lib/fidl/cpp/string.h"
 #include "lib/fidl/cpp/vector.h"
-#include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/weak_ptr.h"
 
@@ -53,8 +52,8 @@ class Tracee {
   bool operator==(TraceProviderBundle* bundle) const;
   bool Start(size_t buffer_size,
              fidl::VectorPtr<fidl::StringPtr> categories,
-             fxl::Closure started_callback,
-             fxl::Closure stopped_callback);
+             fit::closure started_callback,
+             fit::closure stopped_callback);
   void Stop();
   TransferStatus TransferRecords(const zx::socket& socket) const;
 
@@ -78,8 +77,8 @@ class Tracee {
   zx::vmo buffer_vmo_;
   size_t buffer_vmo_size_ = 0u;
   zx::eventpair fence_;
-  fxl::Closure started_callback_;
-  fxl::Closure stopped_callback_;
+  fit::closure started_callback_;
+  fit::closure stopped_callback_;
   async_t* async_ = nullptr;
   async::WaitMethod<Tracee, &Tracee::OnHandleReady> wait_;
   bool buffer_overflow_ = false;

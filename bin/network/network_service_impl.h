@@ -10,12 +10,12 @@
 
 #include <network/cpp/fidl.h>
 #include <lib/async/dispatcher.h>
+#include <lib/fit/function.h>
 #include <lib/zx/channel.h>
 
 #include "garnet/bin/network/url_loader_impl.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fidl/cpp/interface_request.h"
-#include "lib/fxl/functional/closure.h"
 
 namespace network {
 
@@ -37,7 +37,7 @@ class NetworkServiceImpl : public NetworkService,
 
   // URLLoaderImpl::Coordinator:
   void RequestNetworkSlot(
-      std::function<void(fxl::Closure)> slot_request) override;
+      fit::function<void(fit::closure)> slot_request) override;
 
   void OnSlotReturned();
 
@@ -45,7 +45,7 @@ class NetworkServiceImpl : public NetworkService,
   size_t available_slots_;
   fidl::BindingSet<NetworkService> bindings_;
   std::list<UrlLoaderContainer> loaders_;
-  std::queue<std::function<void(fxl::Closure)>> slot_requests_;
+  std::queue<fit::function<void(fit::closure)>> slot_requests_;
 };
 
 }  // namespace network

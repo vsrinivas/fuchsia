@@ -28,7 +28,6 @@
 // runner environment, without teardown; useful for testing modules, which may
 // not need to tear down device_runner.
 
-#include <functional>
 #include <string>
 #include <vector>
 
@@ -39,6 +38,7 @@
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/task.h>
+#include <lib/fit/function.h>
 #include <lib/zx/time.h>
 #include <test_runner/cpp/fidl.h>
 
@@ -233,7 +233,7 @@ int main() {
     auto* runner = server.AcceptConnection();
     async::PostTask(
         loop.async(),
-        std::bind(&test_runner::TestRunnerConnection::Start, runner));
+        fit::bind_member(runner, &test_runner::TestRunnerConnection::Start));
     loop.Run();
   }
   return 0;

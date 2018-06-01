@@ -67,7 +67,7 @@ void TtsServiceImpl::Client::Say(fidl::StringPtr words, uint64_t token,
     return;
   }
 
-  fxl::Closure on_speak_complete = [this, speaker, token,
+  fit::closure on_speak_complete = [this, speaker, token,
                                     say_callback = std::move(cbk)]() {
     OnSpeakComplete(std::move(speaker), token, std::move(say_callback));
   };

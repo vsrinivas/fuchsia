@@ -25,7 +25,7 @@ TtsSpeaker::TtsSpeaker(async_t* async)
 }
 
 zx_status_t TtsSpeaker::Speak(fidl::StringPtr words,
-                              const fxl::Closure& speak_complete_cbk) {
+                              fit::closure speak_complete_cbk) {
   words_ = std::move(words);
   speak_complete_cbk_ = std::move(speak_complete_cbk);
 
@@ -139,10 +139,10 @@ void TtsSpeaker::SendPendingAudio() {
 
     if (eos && (todo == bytes_to_send)) {
       audio_renderer_->SendPacket(
-          std::move(pkt),
+          std::move(pkt), fxl::MakeCopyable(
           [speak_complete_cbk = std::move(speak_complete_cbk_)]() {
             speak_complete_cbk();
-          });
+          }));
     } else if (todo == bytes_till_low_water) {
       audio_renderer_->SendPacket(
           std::move(pkt), [thiz = shared_from_this(), new_rd_pos = tx_ptr_]() {

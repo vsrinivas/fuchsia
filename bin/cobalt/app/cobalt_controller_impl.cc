@@ -14,10 +14,10 @@ CobaltControllerImpl::CobaltControllerImpl(
 
 void CobaltControllerImpl::RequestSendSoon(RequestSendSoonCallback callback) {
   // callback_adapter invokes |callback| on the main thread.
-  std::function<void(bool)> callback_adapter = [this, callback](bool success) {
+  auto callback_adapter = [this, callback](bool success) {
     async::PostTask(async_, [callback, success]() { callback(success); });
   };
-  shipping_dispatcher_->RequestSendSoon(callback_adapter);
+  shipping_dispatcher_->RequestSendSoon(std::move(callback_adapter));
 }
 
 void CobaltControllerImpl::BlockUntilEmpty(uint32_t max_wait_seconds,

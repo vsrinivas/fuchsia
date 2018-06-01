@@ -5,17 +5,16 @@
 #ifndef GARNET_BIN_TRACE_COMMAND_H_
 #define GARNET_BIN_TRACE_COMMAND_H_
 
-#include <functional>
 #include <iosfwd>
 #include <map>
 #include <memory>
 #include <string>
 
+#include <lib/fit/function.h>
 #include <tracing/cpp/fidl.h>
 
 #include "lib/app/cpp/startup_context.h"
 #include "lib/fxl/command_line.h"
-#include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
 
 namespace tracing {
@@ -24,10 +23,10 @@ class Command {
  public:
   // OnDoneCallback is the callback type invoked when a command finished
   // running. It takes as argument the return code to exit the process with.
-  using OnDoneCallback = std::function<void(int32_t)>;
+  using OnDoneCallback = fit::function<void(int32_t)>;
   struct Info {
     using CommandFactory =
-        std::function<std::unique_ptr<Command>(fuchsia::sys::StartupContext*)>;
+        fit::function<std::unique_ptr<Command>(fuchsia::sys::StartupContext*)>;
 
     CommandFactory factory;
     std::string name;

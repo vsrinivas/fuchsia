@@ -13,4 +13,8 @@ executable("server") {
     "//garnet/public/lib/test_runner/cpp",
     "//garnet/public/lib/test_runner/fidl",
   ]
+
+  public_deps = [
+    "//zircon/public/lib/fit",
+  ]
 }

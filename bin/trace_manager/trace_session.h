@@ -5,13 +5,13 @@
 #ifndef GARNET_BIN_TRACE_MANAGER_TRACE_SESSION_H_
 #define GARNET_BIN_TRACE_MANAGER_TRACE_SESSION_H_
 
-#include <functional>
 #include <iosfwd>
 #include <list>
 #include <vector>
 
 #include <fuchsia/tracelink/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
+#include <lib/fit/function.h>
 #include <lib/zx/socket.h>
 #include <lib/zx/time.h>
 #include <lib/zx/vmo.h>
@@ -20,7 +20,6 @@
 #include "garnet/bin/trace_manager/tracee.h"
 #include "lib/fidl/cpp/string.h"
 #include "lib/fidl/cpp/vector.h"
-#include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/ref_counted.h"
 #include "lib/fxl/memory/ref_ptr.h"
@@ -41,14 +40,14 @@ class TraceSession : public fxl::RefCountedThreadSafe<TraceSession> {
   // unrecoverable errors that render the session dead.
   explicit TraceSession(zx::socket destination,
                         fidl::VectorPtr<fidl::StringPtr> categories,
-                        size_t trace_buffer_size, fxl::Closure abort_handler);
+                        size_t trace_buffer_size, fit::closure abort_handler);
   // Frees all allocated resources and closes the outgoing
   // connection.
   ~TraceSession();
 
   // Invokes |callback| when all providers in this session have acknowledged
   // the start request, or after |timeout| has elapsed.
-  void WaitForProvidersToStart(fxl::Closure callback, zx::duration timeout);
+  void WaitForProvidersToStart(fit::closure callback, zx::duration timeout);
 
   // Starts |provider| and adds it to this session.
   void AddProvider(TraceProviderBundle* provider);
@@ -59,7 +58,7 @@ class TraceSession : public fxl::RefCountedThreadSafe<TraceSession> {
   //
   // If stopping providers takes longer than |timeout|, we forcefully
   // shutdown operations and invoke |done_callback|.
-  void Stop(fxl::Closure done_callback, zx::duration timeout);
+  void Stop(fit::closure done_callback, zx::duration timeout);
 
  private:
   enum class State { kReady, kStarted, kStopping, kStopped };
@@ -89,9 +88,9 @@ class TraceSession : public fxl::RefCountedThreadSafe<TraceSession> {
       session_start_timeout_{this};
   async::TaskMethod<TraceSession, &TraceSession::SessionFinalizeTimeout>
       session_finalize_timeout_{this};
-  fxl::Closure start_callback_;
-  fxl::Closure done_callback_;
-  fxl::Closure abort_handler_;
+  fit::closure start_callback_;
+  fit::closure done_callback_;
+  fit::closure abort_handler_;
 
   fxl::WeakPtrFactory<TraceSession> weak_ptr_factory_;
   FXL_DISALLOW_COPY_AND_ASSIGN(TraceSession);

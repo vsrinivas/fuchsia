@@ -55,22 +55,22 @@ class NetworkServiceImpl::UrlLoaderContainer
     async::PostTask(io_loop_.async(), [this] { StartOnIOThread(); });
   }
 
-  void set_on_done(fxl::Closure on_done) { on_done_ = std::move(on_done); }
+  void set_on_done(fit::closure on_done) { on_done_ = std::move(on_done); }
 
  private:
   // URLLoaderImpl::Coordinator:
   void RequestNetworkSlot(
-      std::function<void(fxl::Closure)> slot_request) override {
+      fit::function<void(fit::closure)> slot_request) override {
     // On IO Thread.
     async::PostTask(main_dispatcher_,
-        [ weak_this = weak_ptr_, slot_request = std::move(slot_request) ] {
+        [ weak_this = weak_ptr_, slot_request = std::move(slot_request) ]() mutable {
           // On Main Thread.
           if (!weak_this)
             return;
 
           weak_this->top_coordinator_->RequestNetworkSlot([
             weak_this, slot_request = std::move(slot_request)
-          ](fxl::Closure on_inactive) {
+          ](fit::closure on_inactive) mutable {
             if (!weak_this) {
               on_inactive();
               return;
@@ -134,8 +134,8 @@ class NetworkServiceImpl::UrlLoaderContainer
 
   // These variables can only be accessed on the main thread.
   URLLoaderImpl::Coordinator* top_coordinator_;
-  fxl::Closure on_inactive_;
-  fxl::Closure on_done_;
+  fit::closure on_inactive_;
+  fit::closure on_done_;
   bool stopped_ = true;
   bool joined_ = false;
 
@@ -189,7 +189,7 @@ void NetworkServiceImpl::CreateWebSocket(zx::channel socket) {
 }
 
 void NetworkServiceImpl::RequestNetworkSlot(
-    std::function<void(fxl::Closure)> slot_request) {
+    fit::function<void(fit::closure)> slot_request) {
   if (available_slots_ == 0) {
     slot_requests_.push(std::move(slot_request));
     return;

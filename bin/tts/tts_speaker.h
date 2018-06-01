@@ -10,13 +10,13 @@
 
 #include <fbl/vmo_mapper.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/fit/function.h>
 #include <media/cpp/fidl.h>
 #include <tts/cpp/fidl.h>
 #include <zircon/types.h>
 
 #include "lib/app/cpp/startup_context.h"
 #include "lib/fidl/cpp/string.h"
-#include "lib/fxl/functional/closure.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/synchronization/thread_annotations.h"
 #include "third_party/flite/include/flite_fuchsia.h"
@@ -32,7 +32,7 @@ class TtsSpeaker : public std::enable_shared_from_this<TtsSpeaker> {
       const std::unique_ptr<fuchsia::sys::StartupContext>& startup_context);
 
   zx_status_t Speak(fidl::StringPtr words,
-                    const fxl::Closure& speak_complete_cbk);
+                    fit::closure speak_complete_cbk);
   void Shutdown();
 
  private:
@@ -81,7 +81,7 @@ class TtsSpeaker : public std::enable_shared_from_this<TtsSpeaker> {
   zx::event wakeup_event_;
 
   fidl::StringPtr words_;
-  fxl::Closure speak_complete_cbk_;
+  fit::closure speak_complete_cbk_;
   std::atomic<bool> abort_playback_;
   std::atomic<bool> synthesis_complete_;
 

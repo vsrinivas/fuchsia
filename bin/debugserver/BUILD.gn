@@ -35,6 +35,10 @@ executable("bin") {
     "//zircon/public/lib/zx",
   ]
 
+  public_deps = [
+    "//zircon/public/lib/fit",
+  ]
+
   libs = [
     "zircon",
   ]

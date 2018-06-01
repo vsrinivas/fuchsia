@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <functional>
+#include <lib/fit/function.h>
 
 #include "lib/fxl/macros.h"
 #include "lib/fxl/strings/string_view.h"
@@ -28,83 +28,83 @@ class CommandHandler final {
   // If this method returns false, then |callback| will never be called. If this
   // returns true, |callback| is guaranteed to be called exactly once.
   // |callback| can be called before HandleCommand returns.
-  using ResponseCallback = std::function<void(const fxl::StringView& rsp)>;
+  using ResponseCallback = fit::function<void(const fxl::StringView& rsp)>;
   bool HandleCommand(const fxl::StringView& packet,
-                     const ResponseCallback& callback);
+                     ResponseCallback callback);
 
  private:
   // Command handlers for each "letter" packet. We use underscores in the method
   // names to clearly delineate lowercase letters.
-  bool HandleQuestionMark(const ResponseCallback& callback);
+  bool HandleQuestionMark(ResponseCallback callback);
   bool Handle_c(const fxl::StringView& packet,
-                const ResponseCallback& callback);
+                ResponseCallback callback);
   bool Handle_C(const fxl::StringView& packet,
-                const ResponseCallback& callback);
+                ResponseCallback callback);
   bool Handle_D(const fxl::StringView& packet,
-                const ResponseCallback& callback);
-  bool Handle_g(const ResponseCallback& callback);
+                ResponseCallback callback);
+  bool Handle_g(ResponseCallback callback);
   bool Handle_G(const fxl::StringView& packet,
-                const ResponseCallback& callback);
+                ResponseCallback callback);
   bool Handle_H(const fxl::StringView& packet,
-                const ResponseCallback& callback);
+                ResponseCallback callback);
   bool Handle_m(const fxl::StringView& packet,
-                const ResponseCallback& callback);
+                ResponseCallback callback);
   bool Handle_M(const fxl::StringView& packet,
-                const ResponseCallback& callback);
+                ResponseCallback callback);
   bool Handle_q(const fxl::StringView& prefix,
                 const fxl::StringView& params,
-                const ResponseCallback& callback);
+                ResponseCallback callback);
   bool Handle_Q(const fxl::StringView& prefix,
                 const fxl::StringView& params,
-                const ResponseCallback& callback);
+                ResponseCallback callback);
   bool Handle_T(const fxl::StringView& packet,
-                const ResponseCallback& callback);
+                ResponseCallback callback);
   bool Handle_v(const fxl::StringView& packet,
-                const ResponseCallback& callback);
+                ResponseCallback callback);
   bool Handle_zZ(bool insert,
                  const fxl::StringView& packet,
-                 const ResponseCallback& callback);
+                 ResponseCallback callback);
 
   // q/Q packets:
   // qAttached
   bool HandleQueryAttached(const fxl::StringView& params,
-                           const ResponseCallback& callback);
+                           ResponseCallback callback);
   // qC
   bool HandleQueryCurrentThreadId(const fxl::StringView& params,
-                                  const ResponseCallback& callback);
+                                  ResponseCallback callback);
   // qRcmd
   bool HandleQueryRcmd(const fxl::StringView& command,
-                       const ResponseCallback& callback);
+                       ResponseCallback callback);
   // qSupported
   bool HandleQuerySupported(const fxl::StringView& params,
-                            const ResponseCallback& callback);
+                            ResponseCallback callback);
   // qfThreadInfo and qsThreadInfo
-  bool HandleQueryThreadInfo(bool is_first, const ResponseCallback& callback);
+  bool HandleQueryThreadInfo(bool is_first, ResponseCallback callback);
   // qXfer
   bool HandleQueryXfer(const fxl::StringView& params,
-                       const ResponseCallback& callback);
+                       ResponseCallback callback);
   // QNonStop
   bool HandleSetNonStop(const fxl::StringView& params,
-                        const ResponseCallback& callback);
+                        ResponseCallback callback);
 
   // v packets:
   bool Handle_vAttach(const fxl::StringView& packet,
-                      const ResponseCallback& callback);
+                      ResponseCallback callback);
   bool Handle_vCont(const fxl::StringView& packet,
-                    const ResponseCallback& callback);
+                    ResponseCallback callback);
   bool Handle_vKill(const fxl::StringView& packet,
-                    const ResponseCallback& callback);
+                    ResponseCallback callback);
   bool Handle_vRun(const fxl::StringView& packet,
-                   const ResponseCallback& callback);
+                   ResponseCallback callback);
 
   // Breakpoints
   bool InsertSoftwareBreakpoint(uintptr_t addr,
                                 size_t kind,
                                 const fxl::StringView& optional_params,
-                                const ResponseCallback& callback);
+                                ResponseCallback callback);
   bool RemoveSoftwareBreakpoint(uintptr_t addr,
                                 size_t kind,
-                                const ResponseCallback& callback);
+                                ResponseCallback callback);
 
   // The root Server instance that owns us.
   RspServer* server_;  // weak

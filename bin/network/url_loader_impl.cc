@@ -31,7 +31,7 @@ URLLoaderImpl::~URLLoaderImpl() {}
 void URLLoaderImpl::Start(URLRequest request, Callback callback) {
   callback_ = std::move(callback);
   coordinator_->RequestNetworkSlot(fxl::MakeCopyable(
-      [ this, request = std::move(request) ](fxl::Closure on_inactive) mutable {
+      [ this, request = std::move(request) ](fit::closure on_inactive) mutable {
         StartInternal(std::move(request));
         on_inactive();
       }));

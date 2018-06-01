@@ -15,7 +15,6 @@
 #include "lib/app/cpp/startup_context.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fidl/cpp/optional.h"
-#include "lib/fxl/functional/closure.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/memory/weak_ptr.h"
 #include "lib/fxl/time/time_delta.h"
@@ -45,7 +44,7 @@ class RetryingLoader {
                        });
   }
 
-  void SetDeleter(const fxl::Closure& fn) { deleter_ = fn; }
+  void SetDeleter(fit::closure fn) { deleter_ = std::move(fn); }
 
  private:
   // Need to create a new request each time because a URLRequest's body can
@@ -113,7 +112,7 @@ class RetryingLoader {
   const network::URLLoaderPtr url_loader_;
   const std::string url_;
   const fuchsia::sys::Loader::LoadComponentCallback callback_;
-  fxl::Closure deleter_;
+  fit::closure deleter_;
   // Tries before an error is printed. No errors will be printed afterwards
   // either.
   int quiet_tries_;

@@ -72,8 +72,8 @@ bool Tracee::operator==(TraceProviderBundle* bundle) const {
 
 bool Tracee::Start(size_t buffer_size,
                    fidl::VectorPtr<fidl::StringPtr> categories,
-                   fxl::Closure started_callback,
-                   fxl::Closure stopped_callback) {
+                   fit::closure started_callback,
+                   fit::closure stopped_callback) {
   FXL_DCHECK(state_ == State::kReady);
   FXL_DCHECK(!buffer_vmo_);
   FXL_DCHECK(started_callback);
@@ -168,7 +168,7 @@ void Tracee::OnHandleReady(async_t* async,
     // The provider should only be signalling us when it has finished startup.
     if (state_ == State::kStartPending) {
       TransitionToState(State::kStarted);
-      fxl::Closure started_callback = std::move(started_callback_);
+      fit::closure started_callback = std::move(started_callback_);
       FXL_DCHECK(started_callback);
       started_callback();
     } else {
@@ -198,7 +198,7 @@ void Tracee::OnHandleReady(async_t* async,
     wait_.set_object(ZX_HANDLE_INVALID);
     async_ = nullptr;
     TransitionToState(State::kStopped);
-    fxl::Closure stopped_callback = std::move(stopped_callback_);
+    fit::closure stopped_callback = std::move(stopped_callback_);
     FXL_DCHECK(stopped_callback);
     stopped_callback();
     return;
