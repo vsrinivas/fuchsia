@@ -22,7 +22,6 @@ package("dhcpd") {
 }
 
 package("dhcpd-tests") {
-  deprecated_system_image = true
   testonly = true
 
   deps = [

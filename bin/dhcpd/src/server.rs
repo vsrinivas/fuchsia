@@ -30,6 +30,14 @@ impl Server {
         }
     }
 
+    fn dispatch(&mut self, msg: Message) -> Option<Message> {
+        match msg.get_dhcp_type() {
+            Some(MessageType::DHCPDISCOVER) => self.handle_discover(msg),
+            Some(MessageType::DHCPREQUEST) => self.handle_request(msg),
+            _ => None,
+        }
+    }
+
     fn handle_discover(&mut self, disc: Message) -> Option<Message> {
         let offered_ip = self.get_addr(&disc)?;
         let mut offer = build_offer(disc, &self.config);
@@ -375,6 +383,10 @@ mod tests {
         let mut disc = Message::new();
         disc.xid = 42;
         disc.chaddr = [0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF];
+        disc.options.push(ConfigOption {
+            code: OptionCode::DhcpMessageType,
+            value: vec![MessageType::DHCPDISCOVER as u8],
+        });
         disc
     }
 
@@ -456,11 +468,11 @@ mod tests {
     }
 
     #[test]
-    fn test_handle_discover_returns_correct_response() {
+    fn test_dispatch_with_discover_returns_correct_response() {
         let disc = new_test_discover();
 
         let mut server = new_test_server();
-        let got = server.handle_discover(disc).unwrap();
+        let got = server.dispatch(disc).unwrap();
 
         let want = new_test_offer();
 
@@ -468,11 +480,11 @@ mod tests {
     }
 
     #[test]
-    fn test_handle_discover_updates_server_state() {
+    fn test_dispatch_with_discover_updates_server_state() {
         let disc = new_test_discover();
         let mac_addr = disc.chaddr;
         let mut server = new_test_server();
-        let got = server.handle_discover(disc).unwrap();
+        let got = server.dispatch(disc).unwrap();
 
         assert_eq!(server.pool.available_addrs.len(), 0);
         assert_eq!(server.pool.allocated_addrs.len(), 1);
@@ -482,14 +494,14 @@ mod tests {
     }
 
     #[test]
-    fn test_handle_discover_with_client_binding_returns_bound_addr() {
+    fn test_dispatch_with_discover_client_binding_returns_bound_addr() {
         let disc = new_test_discover();
         let mut server = new_test_server();
         let mut client_config = CachedConfig::new();
         client_config.client_addr = Ipv4Addr::new(192, 168, 1, 42);
         server.cache.insert(disc.chaddr, client_config);
 
-        let got = server.handle_discover(disc).unwrap();
+        let got = server.dispatch(disc).unwrap();
 
         let mut want = new_test_offer();
         want.yiaddr = Ipv4Addr::new(192, 168, 1, 42);
@@ -498,7 +510,7 @@ mod tests {
     }
 
     #[test]
-    fn test_handle_discover_with_expired_client_binding_returns_available_old_addr() {
+    fn test_dispatch_with_discover_expired_client_binding_returns_available_old_addr() {
         let disc = new_test_discover();
         let mut server = new_test_server();
         let mut client_config = CachedConfig::new();
@@ -510,7 +522,7 @@ mod tests {
             .available_addrs
             .insert(Ipv4Addr::new(192, 168, 1, 42));
 
-        let got = server.handle_discover(disc).unwrap();
+        let got = server.dispatch(disc).unwrap();
 
         let mut want = new_test_offer();
         want.yiaddr = Ipv4Addr::new(192, 168, 1, 42);
@@ -519,7 +531,7 @@ mod tests {
     }
 
     #[test]
-    fn test_handle_discover_with_unavailable_expired_client_binding_returns_new_addr() {
+    fn test_dispatch_with_discover_unavailable_expired_client_binding_returns_new_addr() {
         let disc = new_test_discover();
         let mut server = new_test_server();
         let mut client_config = CachedConfig::new();
@@ -535,7 +547,7 @@ mod tests {
             .allocated_addrs
             .insert(Ipv4Addr::new(192, 168, 1, 42));
 
-        let got = server.handle_discover(disc).unwrap();
+        let got = server.dispatch(disc).unwrap();
 
         let mut want = new_test_offer();
         want.yiaddr = Ipv4Addr::new(192, 168, 1, 2);
@@ -544,7 +556,7 @@ mod tests {
     }
 
     #[test]
-    fn test_handle_discover_with_available_requested_addr_returns_requested_addr() {
+    fn test_dispatch_with_discover_available_requested_addr_returns_requested_addr() {
         let mut disc = new_test_discover();
         disc.options.push(ConfigOption {
             code: OptionCode::RequestedIpAddr,
@@ -560,7 +572,7 @@ mod tests {
             .pool
             .available_addrs
             .insert(Ipv4Addr::new(192, 168, 1, 3));
-        let got = server.handle_discover(disc).unwrap();
+        let got = server.dispatch(disc).unwrap();
 
         let mut want = new_test_offer();
         want.yiaddr = Ipv4Addr::new(192, 168, 1, 3);
@@ -568,7 +580,7 @@ mod tests {
     }
 
     #[test]
-    fn test_handle_discover_with_unavailable_requested_addr_returns_next_addr() {
+    fn test_dispatch_with_discover_unavailable_requested_addr_returns_next_addr() {
         let mut disc = new_test_discover();
         disc.options.push(ConfigOption {
             code: OptionCode::RequestedIpAddr,
@@ -588,7 +600,7 @@ mod tests {
             .pool
             .allocated_addrs
             .insert(Ipv4Addr::new(192, 168, 1, 42));
-        let got = server.handle_discover(disc).unwrap();
+        let got = server.dispatch(disc).unwrap();
 
         let mut want = new_test_offer();
         want.yiaddr = Ipv4Addr::new(192, 168, 1, 2);
@@ -596,7 +608,7 @@ mod tests {
     }
 
     #[test]
-    fn test_handle_selecting_request_with_valid_selecting_request_returns_ack() {
+    fn test_dispatch_with_selecting_request_valid_selecting_request_returns_ack() {
         let req = new_test_request();
 
         let mut server = new_test_server();
@@ -610,24 +622,24 @@ mod tests {
             },
         );
         server.pool.allocate_addr(requested_ip_addr);
-        let got = server.handle_request(req).unwrap();
+        let got = server.dispatch(req).unwrap();
 
         let mut want = new_test_ack();
         assert_eq!(got, want);
     }
 
     #[test]
-    fn test_handle_selecting_request_with_no_address_allocation_to_client_returns_none() {
+    fn test_dispatch_with_selecting_request_no_address_allocation_to_client_returns_none() {
         let req = new_test_request();
 
         let mut server = new_test_server();
-        let got = server.handle_request(req);
+        let got = server.dispatch(req);
 
         assert!(got.is_none());
     }
 
     #[test]
-    fn test_handle_selecting_request_with_wrong_server_id_returns_none() {
+    fn test_dispatch_with_selecting_request_wrong_server_id_returns_none() {
         let req = new_test_request();
 
         let mut server = new_test_server();
@@ -642,13 +654,13 @@ mod tests {
         );
         server.pool.allocate_addr(requested_ip_addr);
         server.config.server_ip = Ipv4Addr::new(1, 2, 3, 4);
-        let got = server.handle_request(req);
+        let got = server.dispatch(req);
 
         assert!(got.is_none());
     }
 
     #[test]
-    fn test_handle_selecting_request_with_valid_selecting_request_maintains_server_invariants() {
+    fn test_dispatch_with_selecting_request_valid_selecting_request_maintains_server_invariants() {
         let req = new_test_request();
 
         let mut server = new_test_server();
@@ -662,25 +674,25 @@ mod tests {
             },
         );
         server.pool.allocate_addr(requested_ip_addr);
-        let _ = server.handle_request(req.clone()).unwrap();
+        let _ = server.dispatch(req.clone()).unwrap();
 
         assert!(server.cache.contains_key(&req.chaddr));
         assert!(server.pool.addr_is_allocated(requested_ip_addr));
     }
 
     #[test]
-    fn test_handle_selecting_request_with_no_address_allocation_maintains_server_invariants() {
+    fn test_dispatch_with_selecting_request_no_address_allocation_maintains_server_invariants() {
         let req = new_test_request();
 
         let mut server = new_test_server();
-        let _ = server.handle_request(req.clone());
+        let _ = server.dispatch(req.clone());
 
         assert!(!server.cache.contains_key(&req.chaddr));
         assert!(!server.pool.addr_is_allocated(Ipv4Addr::new(192, 168, 1, 2)));
     }
 
     #[test]
-    fn test_handle_init_reboot_request_with_correct_address_returns_ack() {
+    fn test_dispatch_with_init_boot_request_correct_address_returns_ack() {
         let mut req = new_test_request();
         req.options.remove(2);
         let requested_ip_addr = get_requested_ip_addr(&req).unwrap();
@@ -695,14 +707,14 @@ mod tests {
             },
         );
         server.pool.allocate_addr(requested_ip_addr);
-        let got = server.handle_request(req).unwrap();
+        let got = server.dispatch(req).unwrap();
 
         let want = new_test_ack();
         assert_eq!(got, want);
     }
 
     #[test]
-    fn test_handle_init_reboot_request_with_incorrect_address_returns_nak() {
+    fn test_dispatch_with_init_boot_request_incorrect_address_returns_nak() {
         let mut req = new_test_request();
         req.options.remove(0);
         req.options.remove(1);
@@ -722,25 +734,25 @@ mod tests {
             },
         );
         server.pool.allocate_addr(assigned_ip);
-        let got = server.handle_request(req).unwrap();
+        let got = server.dispatch(req).unwrap();
 
         let want = new_test_nak();
         assert_eq!(got, want);
     }
 
     #[test]
-    fn test_handle_init_reboot_request_with_unknown_client_returns_none() {
+    fn test_dispatch_with_init_boot_request_unknown_client_returns_none() {
         let mut req = new_test_request();
         req.options.remove(2);
 
         let mut server = new_test_server();
-        let got = server.handle_request(req);
+        let got = server.dispatch(req);
 
         assert!(got.is_none());
     }
 
     #[test]
-    fn test_handle_init_reboot_request_with_client_on_wrong_subnet_returns_nak() {
+    fn test_dispatch_with_init_boot_request_client_on_wrong_subnet_returns_nak() {
         let mut req = new_test_request();
         req.options.remove(0);
         req.options.remove(1);
@@ -750,14 +762,14 @@ mod tests {
         });
 
         let mut server = new_test_server();
-        let got = server.handle_request(req).unwrap();
+        let got = server.dispatch(req).unwrap();
 
         let want = new_test_nak();
         assert_eq!(got, want);
     }
 
     #[test]
-    fn test_handle_renewing_request_with_valid_request_returns_ack() {
+    fn test_dispatch_with_renewing_request_valid_request_returns_ack() {
         let mut req = new_test_request();
         req.options.remove(0);
         req.options.remove(1);
@@ -774,7 +786,7 @@ mod tests {
             },
         );
         server.pool.allocate_addr(client_ip);
-        let got = server.handle_request(req).unwrap();
+        let got = server.dispatch(req).unwrap();
 
         let mut want = new_test_ack();
         want.ciaddr = client_ip;
@@ -782,7 +794,7 @@ mod tests {
     }
 
     #[test]
-    fn test_handle_renewing_request_with_unknown_client_returns_none() {
+    fn test_dispatch_with_renewing_request_unknown_client_returns_none() {
         let mut req = new_test_request();
         req.options.remove(0);
         req.options.remove(1);
@@ -790,7 +802,7 @@ mod tests {
         req.ciaddr = client_ip;
 
         let mut server = new_test_server();
-        let got = server.handle_request(req);
+        let got = server.dispatch(req);
 
         assert!(got.is_none());
     }

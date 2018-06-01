@@ -170,6 +170,17 @@ impl Message {
         }
         None
     }
+
+    /// Returns the value's DHCP `MessageType` or `None` if unassigned.
+    pub fn get_dhcp_type(&self) -> Option<MessageType> {
+        let dhcp_type_option = self.get_config_option(OptionCode::DhcpMessageType)?;
+        let maybe_dhcp_type_value = dhcp_type_option.value.get(0)?;
+        let dhcp_type = MessageType::from(*maybe_dhcp_type_value);
+        if dhcp_type == MessageType::Unknown {
+            return None;
+        }
+        Some(dhcp_type)
+    }
 }
 
 /// A DHCP protocol op-code as defined in RFC 2131.
@@ -215,26 +226,18 @@ pub struct ConfigOption {
 
 impl ConfigOption {
     fn from_buffer(buf: &[u8]) -> Option<ConfigOption> {
-        if buf.len() <= 0 {
-            return None;
-        }
-        let raw_code = buf[0];
-        let code = OptionCode::option_code_from_u8(raw_code)?;
+        let raw_code = buf.get(0)?;
+        let code = OptionCode::option_code_from_u8(*raw_code)?;
         let len: usize = match buf.get(1) {
             Some(l) => *l as usize,
-            None => 0,
+            None => return Some(ConfigOption { code: code, value: vec![] }),
         };
-        let mut value = Vec::new();
-        let mut i: usize = 2;
-        while i < len + 2 {
-            let v = match buf.get(i) {
-                Some(val) => *val,
-                None => return None,
-            };
-            value.push(v);
-            i += 1;
-        }
-        if len != value.len() {
+        let mut value = Vec::with_capacity(len);
+        let val_offset = 2;
+        let actual_len = buf.len() - val_offset;
+        if len > 0 && len == actual_len {
+            value.extend_from_slice(&buf[val_offset..]);
+        } else if len > 0 {
             return None;
         }
         let opt = ConfigOption { code, value };
@@ -290,6 +293,7 @@ impl OptionCode {
 /// defined in section 9.4 of RFC 1533.
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum MessageType {
+    Unknown = 0, // Not specified by RFC; used for From implementation.
     DHCPDISCOVER = 1,
     DHCPOFFER = 2,
     DHCPREQUEST = 3,
@@ -297,6 +301,27 @@ pub enum MessageType {
     DHCPACK = 5,
     DHCPNAK = 6,
     DHCPRELEASE = 7,
+}
+
+impl From<u8> for MessageType {
+    /// Creates a `MessageType` value from a `u8`.
+    ///
+    /// The mapping of `u8` value to `MessageType` reflects the mapping defined in
+    /// RFC 1533 with on exception: `u8` values outside of the RFC defined mappings
+    /// will return a `MessageType::Unknown`. The client should treat this value
+    /// as an error case.
+    fn from(num: u8) -> Self {
+        match num {
+            1 => MessageType::DHCPDISCOVER,
+            2 => MessageType::DHCPOFFER,
+            3 => MessageType::DHCPREQUEST,
+            4 => MessageType::DHCPDECLINE,
+            5 => MessageType::DHCPACK,
+            6 => MessageType::DHCPNAK,
+            7 => MessageType::DHCPRELEASE,
+            _ => MessageType::Unknown,
+        }
+    }
 }
 
 // Returns an Ipv4Addr when given a byte buffer in network order whose len >= start + 4.
@@ -553,5 +578,45 @@ mod tests {
             Some(opt) => assert!(false), // test failure
             None => assert!(true),       // test success
         }
+    }
+
+    #[test]
+    fn test_get_dhcp_type_with_dhcp_type_option_returns_value() {
+        let mut msg = Message::new();
+        msg.options.push(ConfigOption {
+            code: OptionCode::DhcpMessageType,
+            value: vec![MessageType::DHCPDISCOVER as u8],
+        });
+
+        let got = msg.get_dhcp_type().unwrap();
+
+        let want = MessageType::DHCPDISCOVER;
+        assert_eq!(got, want);
+    }
+
+    #[test]
+    fn test_get_dhcp_type_without_dhcp_type_option_returns_none() {
+        let mut msg = Message::new();
+        msg.options.push(ConfigOption {
+            code: OptionCode::DhcpMessageType,
+            value: vec![],
+        });
+
+        let got = msg.get_dhcp_type();
+
+        assert!(got.is_none());
+    }
+
+    #[test]
+    fn test_get_dhcp_type_with_invalid_dhcp_type_value_returns_none() {
+        let mut msg = Message::new();
+        msg.options.push(ConfigOption {
+            code: OptionCode::DhcpMessageType,
+            value: vec![224, 223, 222],
+        });
+
+        let got = msg.get_dhcp_type();
+
+        assert!(got.is_none());
     }
 }
