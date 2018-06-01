@@ -8,7 +8,7 @@ use futures::prelude::*;
 use futures::{future, stream};
 use std::sync::Arc;
 use wlan;
-use wlan_service::{self, DeviceServiceEvent, DeviceServiceProxyInterface};
+use wlan_service::{self, DeviceWatcherEvent, DeviceServiceProxyInterface};
 use zx;
 
 #[derive(Debug)]
@@ -21,29 +21,29 @@ where
 }
 
 pub fn handle_event<Proxy>(
-    listener: &Arc<Listener<Proxy>>, evt: DeviceServiceEvent,
+    listener: &Arc<Listener<Proxy>>, evt: DeviceWatcherEvent,
 ) -> impl Future<Item = (), Error = fidl::Error>
 where Proxy: DeviceServiceProxyInterface,
 {
     println!("wlancfg got event: {:?}", evt);
     match evt {
-        DeviceServiceEvent::OnPhyAdded { id } => on_phy_added(
-            listener, id,
+        DeviceWatcherEvent::OnPhyAdded { phy_id } => on_phy_added(
+            listener, phy_id,
             ).map_err(|e| e.never_into())
             .left_future()
             .left_future(),
-        DeviceServiceEvent::OnPhyRemoved { id } => on_phy_removed(
-            listener, id,
+        DeviceWatcherEvent::OnPhyRemoved { phy_id } => on_phy_removed(
+            listener, phy_id,
             ).map_err(|e| e.never_into())
             .right_future()
             .left_future(),
-        DeviceServiceEvent::OnIfaceAdded { id } => on_iface_added(
-            listener, id,
+        DeviceWatcherEvent::OnIfaceAdded { iface_id } => on_iface_added(
+            listener, iface_id,
             ).map_err(|e| e.never_into())
             .left_future()
             .right_future(),
-        DeviceServiceEvent::OnIfaceRemoved { id } => on_iface_removed(
-            listener, id,
+        DeviceWatcherEvent::OnIfaceRemoved { iface_id } => on_iface_removed(
+            listener, iface_id,
             ).map_err(|e| e.never_into())
             .right_future()
             .right_future(),

@@ -31,6 +31,7 @@ mod device;
 mod logger;
 mod service;
 mod station;
+mod watchable_map;
 
 use component::server::ServicesServer;
 use failure::{Error, ResultExt};

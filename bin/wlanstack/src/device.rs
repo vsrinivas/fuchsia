@@ -10,11 +10,11 @@ use futures::{future, stream};
 use futures::channel::mpsc;
 use parking_lot::Mutex;
 use vfs_watcher;
+use watchable_map::{MapWatcher, WatchableMap, WatcherResult};
 use wlan;
 use wlan_dev;
 use zx;
 
-use std::collections::HashMap;
 use std::fs::File;
 use std::path::Path;
 use std::str::FromStr;
@@ -49,7 +49,7 @@ fn open_iface_device<P: AsRef<Path>>(path: P) -> Result<(async::Channel, wlan_de
 }
 
 /// Called by the `DeviceManager` in response to device events.
-pub trait EventListener: Send {
+pub trait EventListener: Send + Sync {
     /// Called when a phy device is added. On error, the listener is removed from the
     /// `DeviceManager`.
     fn on_phy_added(&self, id: u16) -> Result<(), Error>;
@@ -69,34 +69,57 @@ pub trait EventListener: Send {
 
 pub type DevMgrRef = Arc<Mutex<DeviceManager>>;
 
+struct PhyWatcher(Arc<EventListener>);
+impl MapWatcher<u16> for PhyWatcher {
+    fn on_add_key(&self, key: &u16) -> WatcherResult {
+        handle_notification_error("on_phy_added", self.0.on_phy_added(*key))
+    }
+    fn on_remove_key(&self, key: &u16) -> WatcherResult {
+        handle_notification_error("on_phy_removed", self.0.on_phy_removed(*key))
+    }
+}
+
+struct IfaceWatcher(Arc<EventListener>);
+impl MapWatcher<u16> for IfaceWatcher {
+    fn on_add_key(&self, key: &u16) -> WatcherResult {
+        handle_notification_error("on_iface_added", self.0.on_iface_added(*key))
+    }
+    fn on_remove_key(&self, key: &u16) -> WatcherResult {
+        handle_notification_error("on_iface_removed", self.0.on_iface_removed(*key))
+    }
+}
+
+fn handle_notification_error(event_name: &str, r: Result<(), Error>) -> WatcherResult {
+    match r {
+        Ok(()) => WatcherResult::KeepWatching,
+        Err(e) => {
+            eprintln!("Failed to notify a watcher of {} event: {}", event_name, e);
+            WatcherResult::StopWatching
+        }
+    }
+}
+
 /// Manages the wlan devices used by the wlanstack.
 pub struct DeviceManager {
-    phys: HashMap<u16, PhyDevice>,
-    ifaces: HashMap<u16, IfaceDevice>,
-    listeners: Vec<Box<EventListener>>,
+    phys: WatchableMap<u16, PhyDevice, PhyWatcher>,
+    ifaces: WatchableMap<u16, IfaceDevice, IfaceWatcher>,
 }
 
 impl DeviceManager {
     /// Create a new `DeviceManager`.
     pub fn new() -> Self {
         DeviceManager {
-            phys: HashMap::new(),
-            ifaces: HashMap::new(),
-            listeners: Vec::new(),
+            phys: WatchableMap::new(),
+            ifaces: WatchableMap::new(),
         }
     }
 
     fn add_phy(&mut self, phy: PhyDevice) {
-        let id = phy.id;
         self.phys.insert(phy.id, phy);
-        self.listeners
-            .retain(|listener| listener.on_phy_added(id).is_ok());
     }
 
     fn rm_phy(&mut self, id: u16) {
         self.phys.remove(&id);
-        self.listeners
-            .retain(|listener| listener.on_phy_removed(id).is_ok());
     }
 
     fn add_iface(&mut self, id: u16, channel: async::Channel, device: wlan_dev::Device) {
@@ -111,14 +134,10 @@ impl DeviceManager {
             client_sme_server: Some(sender),
             _dev: device,
         });
-        self.listeners
-            .retain(|listener| listener.on_iface_added(id).is_ok());
     }
 
     fn rm_iface(&mut self, id: u16) {
         self.ifaces.remove(&id);
-        self.listeners
-            .retain(|listener| listener.on_iface_removed(id).is_ok());
     }
 
     /// Retrieves information about all the phy devices managed by this `DeviceManager`.
@@ -126,8 +145,8 @@ impl DeviceManager {
     // now we just return the whole PhyInfo for each device.
     pub fn list_phys(&self) -> impl Stream<Item = wlan::PhyInfo, Error = ()> {
         self.phys
-            .values()
-            .map(|phy| {
+            .iter()
+            .map(|(_, phy)| {
                 let phy_id = phy.id;
                 let phy_path = phy.dev.path().to_string_lossy().into_owned();
                 // For now we query each device for every call to `list_phys`. We will need to
@@ -205,13 +224,9 @@ impl DeviceManager {
 
     /// Adds an `EventListener`. The event methods will be called for each existing object tracked
     /// by this device manager.
-    pub fn add_listener(&mut self, listener: Box<EventListener>) {
-        if self.phys
-            .values()
-            .all(|phy| listener.on_phy_added(phy.id).is_ok())
-        {
-            self.listeners.push(listener);
-        }
+    pub fn add_listener(&mut self, listener: Arc<EventListener>) {
+        self.phys.add_watcher(PhyWatcher(listener.clone()));
+        self.ifaces.add_watcher(IfaceWatcher(listener));
     }
 
     pub fn get_client_sme(&mut self, iface_id: u16) -> Option<ClientSmeServer> {

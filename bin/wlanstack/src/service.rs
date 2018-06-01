@@ -7,9 +7,11 @@ use device::{self, DevMgrRef};
 use failure::Error;
 use fidl;
 use fidl::encoding2::OutOfLine;
+use fidl::endpoints2::RequestStream;
 use futures::future::{self, FutureResult};
 use futures::{Future, FutureExt, Never, StreamExt};
-use wlan_service::{self, DeviceService, DeviceServiceControlHandle, DeviceServiceImpl};
+use std::sync::Arc;
+use wlan_service::{self, DeviceService, DeviceServiceImpl, DeviceWatcherControlHandle};
 use zx;
 
 fn catch_and_log_err<F>(ctx: &'static str, f: F) -> FutureResult<(), Never>
@@ -29,11 +31,7 @@ pub fn device_service(
 
     DeviceServiceImpl {
         state: devmgr,
-        on_open: |state, control_handle| {
-            debug!("on_open");
-            state.lock().add_listener(Box::new(control_handle));
-            future::ok(())
-        },
+        on_open: |_, _| future::ok(()),
 
         list_phys: |state, c| {
             debug!("list_phys");
@@ -111,7 +109,13 @@ pub fn device_service(
                 c.control_handle().shutdown();
             }
             future::ok(())
-        }
+        },
+
+        watch_devices: |state, watcher, _c| catch_and_log_err("watch_devices", || {
+            let control_handle = watcher.into_stream()?.control_handle();
+            state.lock().add_listener(Arc::new(control_handle));
+            Ok(())
+        }),
 
     }.serve(channel)
         .recover(|e| eprintln!("error running wlan device service: {:?}", e))
@@ -128,7 +132,7 @@ fn connect_client_sme(server: Option<super::device::ClientSmeServer>, channel: z
     Ok(())
 }
 
-impl device::EventListener for DeviceServiceControlHandle {
+impl device::EventListener for DeviceWatcherControlHandle {
     fn on_phy_added(&self, id: u16) -> Result<(), Error> {
         self.send_on_phy_added(id).map_err(Into::into)
     }

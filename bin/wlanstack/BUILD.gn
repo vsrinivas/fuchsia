@@ -46,3 +46,19 @@ package("wlanstack2") {
     },
   ]
 }
+
+package("wlanstack2-tests") {
+  deprecated_system_image = true
+  testonly = true
+
+  deps = [
+    ":bin"
+  ]
+
+  tests = [
+    {
+      name = "wlanstack2_bin_test_rustc"
+      dest =  "wlanstack2_bin_test_rustc"
+    }
+  ]
+}

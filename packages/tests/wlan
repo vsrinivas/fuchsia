@@ -1,6 +1,7 @@
 {
     "packages": {
         "wlanstack_test": "//garnet/go/src/wlan:wlanstack_test",
-        "wlan_tests": "//garnet/lib/wlan/mlme/tests:wlan_tests"
+        "wlan_tests": "//garnet/lib/wlan/mlme/tests:wlan_tests",
+        "wlanstack2_tests": "//garnet/bin/wlanstack:wlanstack2-tests"
     }
 }

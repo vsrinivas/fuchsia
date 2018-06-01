@@ -32,9 +32,10 @@ fn main() -> Result<(), Error> {
     let wlan_svc = app::client::connect_to_service::<DeviceServiceMarker>()
         .context("failed to connect to device service")?;
 
-    let event_stream = wlan_svc.take_event_stream();
+    let (watcher_proxy, watcher_server_end) = fidl::endpoints2::create_endpoints()?;
+    wlan_svc.watch_devices(watcher_server_end)?;
     let listener = device::Listener::new(wlan_svc, cfg);
-    let fut = event_stream
+    let fut = watcher_proxy.take_event_stream()
         .for_each(move |evt| device::handle_event(&listener, evt))
         .err_into();
 
