@@ -28,6 +28,7 @@ std::string Describe(const AddBaResponseFrame& resp);
 std::string Describe(const wlan_rx_info_t& rxinfo);
 std::string Describe(Packet::Peer peer);
 std::string Describe(const Packet& packet);
+std::string Describe(const AmsduSubframe& s);
 
 std::string DescribeSuppressed(const Packet& p);
 }  // namespace debug
