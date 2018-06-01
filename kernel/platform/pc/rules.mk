@@ -38,6 +38,7 @@ MODULE_DEPS += \
     kernel/lib/pow2_range_allocator \
     kernel/lib/smbios \
     kernel/lib/version \
+    kernel/lib/zbi \
     kernel/dev/interrupt \
     kernel/dev/pcie \
 

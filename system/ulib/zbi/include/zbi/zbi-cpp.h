@@ -41,6 +41,12 @@ class Zbi {
                                   payload);
     }
 
+    const uint8_t* Base() const { return base_; };
+    size_t Length() const {
+        const zbi_header_t* hdr = reinterpret_cast<const zbi_header_t*>(base_);
+        return hdr->length + sizeof(*hdr);
+    }
+
   private:
     uint8_t* base_;
     size_t capacity_;
