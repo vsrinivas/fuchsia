@@ -43,12 +43,12 @@ int main(int argc, const char** argv) {
   launch_info.out = CloneFileDescriptor(STDOUT_FILENO);
   launch_info.err = CloneFileDescriptor(STDERR_FILENO);
 
-  // Connect to the ApplicationLauncher service through our static environment.
-  fuchsia::sys::ApplicationLauncherSyncPtr launcher;
+  // Connect to the Launcher service through our static environment.
+  fuchsia::sys::LauncherSyncPtr launcher;
   fuchsia::sys::ConnectToEnvironmentService(launcher.NewRequest());
 
   fuchsia::sys::ComponentControllerSyncPtr controller;
-  launcher->CreateApplication(std::move(launch_info), controller.NewRequest());
+  launcher->CreateComponent(std::move(launch_info), controller.NewRequest());
 
   int32_t return_code;
   if (!controller->Wait(&return_code)) {

@@ -66,21 +66,21 @@ struct ServiceList {
   ServiceProvider provider;
 };
 
-// An interface for creating application instances.
+// An interface for creating component instances.
 //
-// Typically obtained via |Environment.GetApplicationLauncher|.
+// Typically obtained via |Environment.GetLauncher|.
 [Discoverable]
-interface ApplicationLauncher {
-  // Creates a new instance of the application described by |launch_info|.
+interface Launcher {
+  // Creates a new instance of the component described by |launch_info|.
   //
-  // The application instance is created in the |Environment|
-  // associated with this |ApplicationLauncher|. When creating the application,
-  // the environment requests the environment services for this application from
+  // The component instance is created in the |Environment|
+  // associated with this |Launcher|. When creating the component,
+  // the environment requests the environment services for this component from
   // its |EnvironmentHost|.
   //
   // The |controller| can be used to control the lifecycle of the created
-  // application instance. If an |ComponentController|'s interface is
-  // requested, the application instance is killed when the interface is closed.
-  1: CreateApplication(LaunchInfo launch_info,
-                      request<ComponentController>? controller);
+  // component instance. If an |ComponentController|'s interface is
+  // requested, the component instance is killed when the interface is closed.
+  1: CreateComponent(LaunchInfo launch_info,
+                     request<ComponentController>? controller);
 };

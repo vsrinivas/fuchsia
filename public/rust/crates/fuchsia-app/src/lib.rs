@@ -20,8 +20,8 @@ extern crate fidl_fuchsia_sys;
 
 use fidl_fuchsia_sys::{
     ComponentControllerProxy,
-    ApplicationLauncherMarker,
-    ApplicationLauncherProxy,
+    LauncherMarker,
+    LauncherProxy,
     LaunchInfo,
 };
 #[allow(unused_imports)]
@@ -52,15 +52,15 @@ pub mod client {
 
     /// Launcher launches Fuchsia applications.
     pub struct Launcher {
-        app_launcher: ApplicationLauncherProxy,
+        launcher: LauncherProxy,
     }
 
     impl Launcher {
         #[inline]
         /// Create a new application launcher.
         pub fn new() -> Result<Self, Error> {
-            let app_launcher = connect_to_service::<ApplicationLauncherMarker>()?;
-            Ok(Launcher { app_launcher })
+            let launcher = connect_to_service::<LauncherMarker>()?;
+            Ok(Launcher { launcher })
         }
 
         /// Launch an application at the specified URL.
@@ -85,8 +85,8 @@ pub mod client {
             };
 
 
-            self.app_launcher
-                .create_application(&mut launch_info, Some(controller_server_end.into()))
+            self.launcher
+                .create_component(&mut launch_info, Some(controller_server_end.into()))
                 .context("Failed to start a new Fuchsia application.")?;
 
             let controller = async::Channel::from_channel(controller)?;

@@ -9,8 +9,8 @@
 #include <memory>
 #include <vector>
 
-#include <fuchsia/sys/cpp/fidl.h>
 #include <fs/managed-vfs.h>
+#include <fuchsia/sys/cpp/fidl.h>
 #include "garnet/bin/sysmgr/delegating_loader.h"
 #include "lib/app/cpp/startup_context.h"
 #include "lib/fxl/macros.h"
@@ -50,7 +50,7 @@ class App {
   // Nested environment within which the apps started by sysmgr will run.
   fuchsia::sys::EnvironmentPtr env_;
   fuchsia::sys::EnvironmentControllerPtr env_controller_;
-  fuchsia::sys::ApplicationLauncherPtr env_launcher_;
+  fuchsia::sys::LauncherPtr env_launcher_;
 
   fs::ManagedVfs vfs_;
   fbl::RefPtr<fs::PseudoDir> svc_root_;

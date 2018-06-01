@@ -173,14 +173,13 @@ TestRunContext::TestRunContext(
       });
 
   // 2. Launch the test command.
-  fuchsia::sys::ApplicationLauncherPtr launcher;
-  child_env_scope_->environment()->GetApplicationLauncher(
-      launcher.NewRequest());
+  fuchsia::sys::LauncherPtr launcher;
+  child_env_scope_->environment()->GetLauncher(launcher.NewRequest());
 
   fuchsia::sys::LaunchInfo info;
   info.url = url;
   info.arguments = fxl::To<fidl::VectorPtr<fidl::StringPtr>>(args);
-  launcher->CreateApplication(std::move(info), child_controller_.NewRequest());
+  launcher->CreateComponent(std::move(info), child_controller_.NewRequest());
 
   // If the child app closes, the test is reported as a failure.
   child_controller_.set_error_handler([this] {

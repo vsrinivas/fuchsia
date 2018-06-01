@@ -74,7 +74,7 @@ int main(int argc, char** argv) {
   auto run_sysmgr = [&root_realm, &sysmgr] {
     fuchsia::sys::LaunchInfo launch_info;
     launch_info.url = "sysmgr";
-    root_realm.CreateApplication(std::move(launch_info), sysmgr.NewRequest());
+    root_realm.CreateComponent(std::move(launch_info), sysmgr.NewRequest());
   };
 
   async::PostTask(loop.async(), [&run_sysmgr, &sysmgr] {

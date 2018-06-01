@@ -13,7 +13,7 @@ namespace guest_runner {
 
 GuestRunner::GuestRunner()
     : context_(fuchsia::sys::StartupContext::CreateFromStartupInfo()) {
-  context_->environment()->GetApplicationLauncher(launcher_.NewRequest());
+  context_->environment()->GetLauncher(launcher_.NewRequest());
   context_->outgoing().AddPublicService<fuchsia::sys::Runner>(
       [this](fidl::InterfaceRequest<fuchsia::sys::Runner> request) {
         bindings_.AddBinding(this, std::move(request));
@@ -46,7 +46,7 @@ void GuestRunner::StartComponent(
   launch_info.directory_request =
       std::move(startup_info.launch_info.directory_request);
 
-  launcher_->CreateApplication(std::move(launch_info), std::move(controller));
+  launcher_->CreateComponent(std::move(launch_info), std::move(controller));
 }
 
 }  // namespace guest_runner

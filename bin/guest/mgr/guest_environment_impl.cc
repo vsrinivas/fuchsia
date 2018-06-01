@@ -9,7 +9,8 @@
 namespace guestmgr {
 
 GuestEnvironmentImpl::GuestEnvironmentImpl(
-    uint32_t id, const std::string& label, fuchsia::sys::StartupContext* context,
+    uint32_t id, const std::string& label,
+    fuchsia::sys::StartupContext* context,
     fidl::InterfaceRequest<fuchsia::guest::GuestEnvironment> request)
     : id_(id),
       label_(label),
@@ -42,8 +43,8 @@ void GuestEnvironmentImpl::LaunchGuest(
   guest_launch_info.arguments = std::move(launch_info.vmm_args);
   guest_launch_info.directory_request = guest_services.NewRequest();
   guest_launch_info.flat_namespace = std::move(launch_info.flat_namespace);
-  app_launcher_->CreateApplication(std::move(guest_launch_info),
-                                   guest_component_controller.NewRequest());
+  launcher_->CreateComponent(std::move(guest_launch_info),
+                             guest_component_controller.NewRequest());
 
   // Setup Socket Endpoint
   uint32_t cid = next_guest_cid_++;
@@ -109,7 +110,7 @@ void GuestEnvironmentImpl::CreateEnvironment(const std::string& label) {
   context_->environment()->CreateNestedEnvironment(
       service_provider_bridge_.OpenAsDirectory(), env_.NewRequest(),
       env_controller_.NewRequest(), label);
-  env_->GetApplicationLauncher(app_launcher_.NewRequest());
+  env_->GetLauncher(launcher_.NewRequest());
   zx::channel h1, h2;
   if (zx::channel::create(0, &h1, &h2) < 0) {
     return;

@@ -301,8 +301,8 @@ void CobaltTestApp::Connect(uint32_t schedule_interval_seconds,
     stream << "--verbose=" << fxl::GetVlogVerbosity();
     launch_info.arguments.push_back(stream.str());
   }
-  context_->launcher()->CreateApplication(std::move(launch_info),
-                                          controller_.NewRequest());
+  context_->launcher()->CreateComponent(std::move(launch_info),
+                                        controller_.NewRequest());
   controller_.set_error_handler([] {
     FXL_LOG(ERROR) << "Connection error from CobaltTestApp to CobaltClient.";
   });

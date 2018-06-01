@@ -21,7 +21,7 @@ namespace sys {
 class Realm;
 
 class Namespace : public Environment,
-                  public ApplicationLauncher,
+                  public Launcher,
                   public fxl::RefCountedThreadSafe<Namespace> {
  public:
   ServiceProviderBridge& services() { return services_; }
@@ -36,16 +36,15 @@ class Namespace : public Environment,
       fidl::InterfaceRequest<EnvironmentController> controller,
       fidl::StringPtr label) override;
 
-  void GetApplicationLauncher(
-      fidl::InterfaceRequest<ApplicationLauncher> launcher) override;
+  void GetLauncher(fidl::InterfaceRequest<Launcher> launcher) override;
 
   void GetServices(fidl::InterfaceRequest<ServiceProvider> services) override;
 
   void GetDirectory(zx::channel directory_request) override;
 
-  // ApplicationLauncher implementation:
+  // Launcher implementation:
 
-  void CreateApplication(
+  void CreateComponent(
       LaunchInfo launch_info,
       fidl::InterfaceRequest<ComponentController> controller) override;
 
@@ -58,7 +57,7 @@ class Namespace : public Environment,
   ~Namespace() override;
 
   fidl::BindingSet<Environment> environment_bindings_;
-  fidl::BindingSet<ApplicationLauncher> launcher_bindings_;
+  fidl::BindingSet<Launcher> launcher_bindings_;
 
   ServiceProviderBridge services_;
 

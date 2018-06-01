@@ -55,7 +55,7 @@ interface Runner {
   // information is up to the component runner.
   //
   // The |controller| interface request typically originates from the
-  // |ApplicationLauncher.CreateApplication| message that caused this
+  // |Launcher.CreateComponent| message that caused this
   // component to be started.
   1: StartComponent(Package package,
                     StartupInfo startup_info,

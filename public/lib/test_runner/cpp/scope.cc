@@ -18,9 +18,9 @@ Scope::Scope(const fuchsia::sys::EnvironmentPtr& parent_env,
       env_controller_.NewRequest(), label);
 }
 
-fuchsia::sys::ApplicationLauncher* Scope::GetLauncher() {
+fuchsia::sys::Launcher* Scope::GetLauncher() {
   if (!env_launcher_) {
-    env_->GetApplicationLauncher(env_launcher_.NewRequest());
+    env_->GetLauncher(env_launcher_.NewRequest());
   }
   return env_launcher_.get();
 }

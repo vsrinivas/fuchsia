@@ -28,8 +28,8 @@ Namespace::Namespace(fxl::RefPtr<Namespace> parent, Realm* realm,
       [this](fidl::InterfaceRequest<Environment> request) {
         environment_bindings_.AddBinding(this, std::move(request));
       });
-  services_.AddService<ApplicationLauncher>(
-      [this](fidl::InterfaceRequest<ApplicationLauncher> request) {
+  services_.AddService<Launcher>(
+      [this](fidl::InterfaceRequest<Launcher> request) {
         launcher_bindings_.AddBinding(this, std::move(request));
       });
   services_.AddService<fuchsia::process::Launcher>(
@@ -64,8 +64,7 @@ void Namespace::CreateNestedEnvironment(
                           std::move(controller), label);
 }
 
-void Namespace::GetApplicationLauncher(
-    fidl::InterfaceRequest<ApplicationLauncher> launcher) {
+void Namespace::GetLauncher(fidl::InterfaceRequest<Launcher> launcher) {
   launcher_bindings_.AddBinding(this, std::move(launcher));
 }
 
@@ -77,10 +76,10 @@ void Namespace::GetDirectory(zx::channel directory_request) {
   services_.ServeDirectory(std::move(directory_request));
 }
 
-void Namespace::CreateApplication(
+void Namespace::CreateComponent(
     LaunchInfo launch_info,
     fidl::InterfaceRequest<ComponentController> controller) {
-  realm_->CreateApplication(std::move(launch_info), std::move(controller));
+  realm_->CreateComponent(std::move(launch_info), std::move(controller));
 }
 
 }  // namespace sys

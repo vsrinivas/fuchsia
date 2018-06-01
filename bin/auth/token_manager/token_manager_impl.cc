@@ -64,8 +64,8 @@ TokenManagerImpl::TokenManagerImpl(
     launch_info.directory_request = services.NewRequest();
 
     fuchsia::sys::ComponentControllerPtr controller;
-    app_context->launcher()->CreateApplication(std::move(launch_info),
-                                               controller.NewRequest());
+    app_context->launcher()->CreateComponent(std::move(launch_info),
+                                             controller.NewRequest());
     controller.set_error_handler(
         [this, url = config.url,
          auth_provider_type = config.auth_provider_type] {

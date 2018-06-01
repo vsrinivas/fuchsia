@@ -392,8 +392,8 @@ void Record::LaunchApp() {
       fxl::To<fidl::VectorPtr<fidl::StringPtr>>(options_.args);
 
   out() << "Launching " << launch_info.url << std::endl;
-  context()->launcher()->CreateApplication(std::move(launch_info),
-                                           component_controller_.NewRequest());
+  context()->launcher()->CreateComponent(std::move(launch_info),
+                                         component_controller_.NewRequest());
   component_controller_.set_error_handler([this] {
     out() << "Application terminated" << std::endl;
     if (!options_.decouple)

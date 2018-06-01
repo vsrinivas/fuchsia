@@ -66,8 +66,8 @@ class DevTokenManagerAppTest : public gtest::TestWithMessageLoop,
       stream << "--verbose=" << fxl::GetVlogVerbosity();
       launch_info.arguments.push_back(stream.str());
     }
-    startup_context_->launcher()->CreateApplication(std::move(launch_info),
-                                                    controller_.NewRequest());
+    startup_context_->launcher()->CreateComponent(std::move(launch_info),
+                                                  controller_.NewRequest());
     controller_.set_error_handler([] {
       FXL_LOG(ERROR) << "Error in connecting to TokenManagerFactory service.";
     });
@@ -357,7 +357,8 @@ int main(int argc, char** argv) {
 
   {
     async::Loop loop(&kAsyncLoopConfigMakeDefault);
-    auto context = fuchsia::sys::StartupContext::CreateFromStartupInfoNotChecked();
+    auto context =
+        fuchsia::sys::StartupContext::CreateFromStartupInfoNotChecked();
     test_runner::ReportResult(argv[0], context.get(), listener.GetResults());
   }
 

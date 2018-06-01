@@ -61,7 +61,7 @@ class StartupContext {
   // its environment.
   //
   // May be null if the component does not have access to its environment.
-  const ApplicationLauncherPtr& launcher() const { return launcher_; }
+  const LauncherPtr& launcher() const { return launcher_; }
 
   const Services& incoming_services() const { return incoming_services_; }
   const Outgoing& outgoing() const { return outgoing_; }
@@ -100,7 +100,7 @@ class StartupContext {
   Outgoing outgoing_;
 
   EnvironmentPtr environment_;
-  ApplicationLauncherPtr launcher_;
+  LauncherPtr launcher_;
 };
 
 }  // namespace sys

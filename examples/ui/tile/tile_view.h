@@ -81,7 +81,7 @@ class TileView : public mozart::BaseView, public presentation::Presenter {
   fuchsia::sys::EnvironmentPtr env_;
   fuchsia::sys::EnvironmentControllerPtr env_controller_;
   fuchsia::sys::ServiceProviderBridge service_provider_bridge_;
-  fuchsia::sys::ApplicationLauncherPtr env_launcher_;
+  fuchsia::sys::LauncherPtr env_launcher_;
 
   // Context inherited when TileView is launched.
   fuchsia::sys::StartupContext* startup_context_;

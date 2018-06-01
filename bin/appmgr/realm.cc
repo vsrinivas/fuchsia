@@ -290,7 +290,7 @@ void Realm::CreateNestedJob(
   }
 }
 
-void Realm::CreateApplication(
+void Realm::CreateComponent(
     LaunchInfo launch_info,
     fidl::InterfaceRequest<ComponentController> controller) {
   if (launch_info.url.get().empty()) {
@@ -325,20 +325,20 @@ void Realm::CreateApplication(
             LaunchType type = Classify(package->data->vmo, &runner);
             switch (type) {
               case LaunchType::kProcess:
-                CreateApplicationWithProcess(
+                CreateComponentWithProcess(
                     std::move(package), std::move(launch_info),
                     std::move(controller), std::move(ns));
                 break;
               case LaunchType::kArchive:
-                CreateApplicationFromPackage(
+                CreateComponentFromPackage(
                     std::move(package), std::move(launch_info),
                     std::move(controller), std::move(ns));
                 break;
             }
           } else if (package->directory) {
-            CreateApplicationFromPackage(std::move(package),
-                                         std::move(launch_info),
-                                         std::move(controller), std::move(ns));
+            CreateComponentFromPackage(std::move(package),
+                                       std::move(launch_info),
+                                       std::move(controller), std::move(ns));
           }
         }
       }));
@@ -400,7 +400,7 @@ void Realm::AddBinding(fidl::InterfaceRequest<Environment> environment) {
   default_namespace_->AddBinding(std::move(environment));
 }
 
-void Realm::CreateApplicationWithProcess(
+void Realm::CreateComponentWithProcess(
     PackagePtr package, LaunchInfo launch_info,
     fidl::InterfaceRequest<ComponentController> controller,
     fxl::RefPtr<Namespace> ns) {
@@ -445,7 +445,7 @@ void Realm::CreateApplicationWithProcess(
   }
 }
 
-void Realm::CreateApplicationFromPackage(
+void Realm::CreateComponentFromPackage(
     PackagePtr package, LaunchInfo launch_info,
     fidl::InterfaceRequest<ComponentController> controller,
     fxl::RefPtr<Namespace> ns) {
@@ -589,8 +589,8 @@ RunnerHolder* Realm::GetOrCreateRunner(const std::string& runner) {
     LaunchInfo runner_launch_info;
     runner_launch_info.url = runner;
     runner_launch_info.directory_request = runner_services.NewRequest();
-    CreateApplication(std::move(runner_launch_info),
-                      runner_controller.NewRequest());
+    CreateComponent(std::move(runner_launch_info),
+                    runner_controller.NewRequest());
 
     runner_controller.set_error_handler(
         [this, runner] { runners_.erase(runner); });

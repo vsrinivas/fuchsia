@@ -21,7 +21,7 @@ const std::string kIsolateArgument = "--transient";
 // Connects to the requested service in a media_player isolate.
 template <typename Interface>
 void ConnectToIsolate(fidl::InterfaceRequest<Interface> request,
-                      fuchsia::sys::ApplicationLauncher* launcher) {
+                      fuchsia::sys::Launcher* launcher) {
   fuchsia::sys::LaunchInfo launch_info;
   launch_info.url = kIsolateUrl;
   launch_info.arguments.push_back(kIsolateArgument);
@@ -29,7 +29,7 @@ void ConnectToIsolate(fidl::InterfaceRequest<Interface> request,
   launch_info.directory_request = services.NewRequest();
 
   fuchsia::sys::ComponentControllerPtr controller;
-  launcher->CreateApplication(std::move(launch_info), controller.NewRequest());
+  launcher->CreateComponent(std::move(launch_info), controller.NewRequest());
 
   services.ConnectToService(std::move(request), Interface::Name_);
 
@@ -64,9 +64,8 @@ int main(int argc, const char** argv) {
 
     loop.Run();
   } else {
-    fuchsia::sys::ApplicationLauncherPtr launcher;
-    startup_context->environment()->GetApplicationLauncher(
-        launcher.NewRequest());
+    fuchsia::sys::LauncherPtr launcher;
+    startup_context->environment()->GetLauncher(launcher.NewRequest());
 
     startup_context->outgoing().AddPublicService<media_player::MediaPlayer>(
         [&launcher](fidl::InterfaceRequest<media_player::MediaPlayer> request) {

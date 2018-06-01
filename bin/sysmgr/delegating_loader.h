@@ -21,7 +21,7 @@ namespace sysmgr {
 class DelegatingLoader : public fuchsia::sys::Loader {
  public:
   explicit DelegatingLoader(Config::ServiceMap delegates,
-                            fuchsia::sys::ApplicationLauncher* delegate_launcher,
+                            fuchsia::sys::Launcher* delegate_launcher,
                             fuchsia::sys::LoaderPtr fallback);
   ~DelegatingLoader() override;
 
@@ -42,7 +42,7 @@ class DelegatingLoader : public fuchsia::sys::Loader {
   // sysmgr app implementation.
   std::unordered_map<std::string, LoaderRecord> delegate_instances_;
 
-  fuchsia::sys::ApplicationLauncher* delegate_launcher_;
+  fuchsia::sys::Launcher* delegate_launcher_;
   fuchsia::sys::LoaderPtr fallback_;
 
   // indexed by scheme. LoaderRecord instances are owned by

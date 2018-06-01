@@ -90,8 +90,8 @@ class GoogleTokenManagerApp : auth::AuthenticationContextProvider {
       stream << "--verbose=" << fxl::GetVlogVerbosity();
       launch_info.arguments.push_back(stream.str());
     }
-    startup_context_->launcher()->CreateApplication(std::move(launch_info),
-                                                    controller_.NewRequest());
+    startup_context_->launcher()->CreateComponent(std::move(launch_info),
+                                                  controller_.NewRequest());
     controller_.set_error_handler([] {
       FXL_LOG(ERROR) << "Error in connecting to TokenManagerFactory service.";
     });

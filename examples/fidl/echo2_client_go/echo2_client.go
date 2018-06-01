@@ -49,9 +49,9 @@ func (a *echoClientApp) startApplication(serverURL string) (li *sys.ComponentCon
 		}
 	}()
 
-	err = a.ctx.Launcher.CreateApplication(launchInfo, cr)
+	err = a.ctx.Launcher.CreateComponent(launchInfo, cr)
 	if err != nil {
-		return nil, fmt.Errorf("CreateApplication failed: %v", err)
+		return nil, fmt.Errorf("CreateComponent failed: %v", err)
 	}
 	return cp, nil
 }

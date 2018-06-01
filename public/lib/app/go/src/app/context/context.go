@@ -25,7 +25,7 @@ type Context struct {
 
 	Environment     *sys.EnvironmentInterface
 	OutgoingService *svcns.Namespace
-	Launcher        *sys.ApplicationLauncherInterface
+	Launcher        *sys.LauncherInterface
 	appServices     zx.Handle
 	services        bindings.BindingSet
 }
@@ -67,7 +67,7 @@ func New(serviceRoot, directoryRequest, appServices zx.Handle) *Context {
 	c.Environment = p
 	c.ConnectToEnvService(r)
 
-	r2, p2, err := sys.NewApplicationLauncherInterfaceRequest()
+	r2, p2, err := sys.NewLauncherInterfaceRequest()
 	if err != nil {
 		panic(err.Error())
 	}

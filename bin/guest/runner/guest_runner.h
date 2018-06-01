@@ -20,12 +20,12 @@ class GuestRunner : public fuchsia::sys::Runner {
 
  private:
   // |fuchsia::sys::Runner|
-  void StartComponent(fuchsia::sys::Package application,
-                      fuchsia::sys::StartupInfo startup_info,
-                      ::fidl::InterfaceRequest<fuchsia::sys::ComponentController>
-                          controller) override;
+  void StartComponent(
+      fuchsia::sys::Package application, fuchsia::sys::StartupInfo startup_info,
+      ::fidl::InterfaceRequest<fuchsia::sys::ComponentController> controller)
+      override;
 
-  fuchsia::sys::ApplicationLauncherSyncPtr launcher_;
+  fuchsia::sys::LauncherSyncPtr launcher_;
   std::unique_ptr<fuchsia::sys::StartupContext> context_;
   fidl::BindingSet<fuchsia::sys::Runner> bindings_;
 

@@ -49,8 +49,8 @@ void TileView::ConnectViews() {
     launch_info.directory_request = services.NewRequest();
 
     // |env_launcher_| launches the app with our nested environment.
-    env_launcher_->CreateApplication(std::move(launch_info),
-                                     controller.NewRequest());
+    env_launcher_->CreateComponent(std::move(launch_info),
+                                   controller.NewRequest());
 
     // Get the view provider back from the launched app.
     auto view_provider =
@@ -69,7 +69,7 @@ void TileView::CreateNestedEnvironment() {
   startup_context_->environment()->CreateNestedEnvironment(
       service_provider_bridge_.OpenAsDirectory(), env_.NewRequest(),
       env_controller_.NewRequest(), "tile");
-  env_->GetApplicationLauncher(env_launcher_.NewRequest());
+  env_->GetLauncher(env_launcher_.NewRequest());
 
   // Add a binding for the presenter service
   service_provider_bridge_.AddService<presentation::Presenter>(

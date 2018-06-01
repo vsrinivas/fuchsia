@@ -14,7 +14,7 @@ namespace netconnector {
 RespondingServiceHost::RespondingServiceHost(
     const fuchsia::sys::EnvironmentPtr& environment) {
   FXL_DCHECK(environment);
-  environment->GetApplicationLauncher(launcher_.NewRequest());
+  environment->GetLauncher(launcher_.NewRequest());
 }
 
 RespondingServiceHost::~RespondingServiceHost() {}
@@ -45,8 +45,8 @@ void RespondingServiceHost::RegisterSingleton(
           dup_launch_info.directory_request = services.NewRequest();
 
           fuchsia::sys::ComponentControllerPtr controller;
-          launcher_->CreateApplication(std::move(dup_launch_info),
-                                       controller.NewRequest());
+          launcher_->CreateComponent(std::move(dup_launch_info),
+                                     controller.NewRequest());
 
           controller.set_error_handler([this, service_name] {
             FXL_LOG(INFO) << "Service " << service_name

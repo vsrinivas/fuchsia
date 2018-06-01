@@ -59,7 +59,7 @@ App::App()
   startup_context_->environment()->CreateNestedEnvironment(
       OpenAsDirectory(), env_.NewRequest(), env_controller_.NewRequest(),
       kDefaultLabel);
-  env_->GetApplicationLauncher(env_launcher_.NewRequest());
+  env_->GetLauncher(env_launcher_.NewRequest());
 
   // Register services.
   for (auto& pair : config.TakeServices())
@@ -138,8 +138,8 @@ void App::RegisterSingleton(std::string service_name,
           dup_launch_info.url = launch_info->url;
           fidl::Clone(launch_info->arguments, &dup_launch_info.arguments);
           dup_launch_info.directory_request = services.NewRequest();
-          env_launcher_->CreateApplication(std::move(dup_launch_info),
-                                           controller.NewRequest());
+          env_launcher_->CreateComponent(std::move(dup_launch_info),
+                                         controller.NewRequest());
           controller.set_error_handler(
               [this, url = launch_info->url, &controller] {
                 FXL_LOG(ERROR) << "Singleton " << url << " died";
@@ -173,7 +173,7 @@ void App::RegisterAppLoaders(Config::ServiceMap app_loaders) {
 
 void App::LaunchApplication(fuchsia::sys::LaunchInfo launch_info) {
   FXL_VLOG(1) << "Launching application " << launch_info.url;
-  env_launcher_->CreateApplication(std::move(launch_info), nullptr);
+  env_launcher_->CreateComponent(std::move(launch_info), nullptr);
 }
 
 }  // namespace sysmgr

@@ -21,7 +21,8 @@ namespace test_runner {
 // environment services are delegated to the parent environment.
 class Scope {
  public:
-  Scope(const fuchsia::sys::EnvironmentPtr& parent_env, const std::string& label);
+  Scope(const fuchsia::sys::EnvironmentPtr& parent_env,
+        const std::string& label);
 
   template <typename Interface>
   void AddService(
@@ -31,14 +32,14 @@ class Scope {
     service_provider_bridge_.AddService(handler, service_name);
   }
 
-  fuchsia::sys::ApplicationLauncher* GetLauncher();
+  fuchsia::sys::Launcher* GetLauncher();
 
   fuchsia::sys::EnvironmentPtr& environment() { return env_; }
 
  private:
   fuchsia::sys::ServiceProviderBridge service_provider_bridge_;
   fuchsia::sys::EnvironmentPtr env_;
-  fuchsia::sys::ApplicationLauncherPtr env_launcher_;
+  fuchsia::sys::LauncherPtr env_launcher_;
   fuchsia::sys::EnvironmentControllerPtr env_controller_;
 };
 

@@ -22,7 +22,7 @@ class IcuUnitTestBase : public mojo::test::ApplicationTestBase {
     mojo::test::ApplicationTestBase::SetUp();
 
     mojo::ApplicationConnectorPtr application_connector;
-    shell()->CreateApplicationConnector(mojo::GetProxy(&application_connector));
+    shell()->CreateComponentConnector(mojo::GetProxy(&application_connector));
     bool icu_success = icu_data::Initialize(application_connector.get());
     FXL_DCHECK(icu_success);
   }
@@ -31,6 +31,7 @@ class IcuUnitTestBase : public mojo::test::ApplicationTestBase {
     bool icu_success = icu_data::Release();
     FXL_DCHECK(icu_success);
   }
+
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(IcuUnitTestBase);
 };

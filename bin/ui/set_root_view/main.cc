@@ -48,8 +48,8 @@ int main(int argc, const char** argv) {
     launch_info.arguments.push_back(positional_args[i]);
   launch_info.directory_request = services.NewRequest();
   fuchsia::sys::ComponentControllerPtr controller;
-  startup_context_->launcher()->CreateApplication(std::move(launch_info),
-                                                  controller.NewRequest());
+  startup_context_->launcher()->CreateComponent(std::move(launch_info),
+                                                controller.NewRequest());
   controller.set_error_handler([&loop] {
     FXL_LOG(INFO) << "Launched application terminated.";
     loop.Quit();

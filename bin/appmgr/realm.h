@@ -47,9 +47,8 @@ class Realm {
                        fidl::InterfaceRequest<EnvironmentController> controller,
                        fidl::StringPtr label);
 
-  void CreateApplication(
-      LaunchInfo launch_info,
-      fidl::InterfaceRequest<ComponentController> controller);
+  void CreateComponent(LaunchInfo launch_info,
+                       fidl::InterfaceRequest<ComponentController> controller);
 
   // Removes the child realm from this realm and returns the owning
   // reference to the child's controller. The caller of this function typically
@@ -74,11 +73,11 @@ class Realm {
 
   RunnerHolder* GetOrCreateRunner(const std::string& runner);
 
-  void CreateApplicationWithProcess(
+  void CreateComponentWithProcess(
       PackagePtr package, LaunchInfo launch_info,
       fidl::InterfaceRequest<ComponentController> controller,
       fxl::RefPtr<Namespace> ns);
-  void CreateApplicationFromPackage(
+  void CreateComponentFromPackage(
       PackagePtr package, LaunchInfo launch_info,
       fidl::InterfaceRequest<ComponentController> controller,
       fxl::RefPtr<Namespace> ns);

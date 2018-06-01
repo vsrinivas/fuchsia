@@ -122,7 +122,7 @@ void TraceManager::LaunchConfiguredProviders() {
     fuchsia::sys::LaunchInfo launch_info;
     launch_info.url = pair.second->url;
     fidl::Clone(pair.second->arguments, &launch_info.arguments);
-    context_->launcher()->CreateApplication(std::move(launch_info), nullptr);
+    context_->launcher()->CreateComponent(std::move(launch_info), nullptr);
   }
 }
 

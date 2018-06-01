@@ -36,7 +36,8 @@ class RespondingServiceHost {
   }
 
   // Adds a binding to the service provider.
-  void AddBinding(fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> request) {
+  void AddBinding(
+      fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> request) {
     service_namespace_.AddBinding(std::move(request));
   }
 
@@ -59,7 +60,7 @@ class RespondingServiceHost {
   std::unordered_map<std::string, ServicesHolder> service_providers_by_name_;
 
   fuchsia::sys::ServiceNamespace service_namespace_;
-  fuchsia::sys::ApplicationLauncherPtr launcher_;
+  fuchsia::sys::LauncherPtr launcher_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(RespondingServiceHost);
 };
