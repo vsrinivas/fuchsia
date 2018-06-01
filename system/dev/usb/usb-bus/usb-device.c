@@ -16,6 +16,8 @@
 #include "usb-interface.h"
 #include "util.h"
 
+#define MAX(a, b) (((a) > (b)) ? (a) : (b))
+
 // By default we create devices for the interfaces on the first configuration.
 // This table allows us to specify a different configuration for certain devices
 // based on their VID and PID.
@@ -209,23 +211,28 @@ static zx_status_t usb_device_ioctl(void* ctx, uint32_t op, const void* in_buf, 
         return ZX_OK;
     }
     case IOCTL_USB_GET_STRING_DESC: {
-        if (in_len != sizeof(int)) return ZX_ERR_INVALID_ARGS;
-        if (out_len == 0) return 0;
-        int id = *((int *)in_buf);
-        char string[MAX_USB_STRING_LEN];
-        zx_status_t result = usb_device_get_string_descriptor(dev, id,
-                                                              string, sizeof(string));
-        if (result < 0) return result;
-        size_t length = strlen(string) + 1;
-        if (length > out_len) {
-            // truncate the string
-            memcpy(out_buf, string, out_len - 1);
-            ((char *)out_buf)[out_len - 1] = 0;
-            length = out_len;
-        } else {
-            memcpy(out_buf, string, length);
+        if (in_len != sizeof(usb_ioctl_get_string_desc_req_t)) return ZX_ERR_INVALID_ARGS;
+        if (out_len < sizeof(usb_ioctl_get_string_desc_resp_t)) return ZX_ERR_INVALID_ARGS;
+
+        const usb_ioctl_get_string_desc_req_t* req =
+            (const usb_ioctl_get_string_desc_req_t*)(in_buf);
+        usb_ioctl_get_string_desc_resp_t* resp = (usb_ioctl_get_string_desc_resp_t*)(out_buf);
+        resp->lang_id = req->lang_id;
+
+        const size_t max_space = out_len - sizeof(*resp);
+        size_t encoded_len = max_space;
+
+        memset(out_buf, 0, out_len);
+        zx_status_t result = usb_device_get_string_descriptor(dev, req->desc_id, &resp->lang_id,
+                                                              resp->data, &encoded_len);
+        if (result < 0) {
+            return result;
         }
-        *out_actual = length;
+
+        ZX_DEBUG_ASSERT(encoded_len <= UINT16_MAX);
+        resp->data_len = (uint16_t)(encoded_len);
+
+        *out_actual = MAX(out_len, sizeof(*resp) + encoded_len);
         return ZX_OK;
     }
     case IOCTL_USB_SET_INTERFACE: {
@@ -289,6 +296,7 @@ static void usb_device_release(void* ctx) {
         }
         free(dev->config_descs);
     }
+    free((void*)dev->lang_ids);
     free(dev->interface_statuses);
     free(dev);
 }

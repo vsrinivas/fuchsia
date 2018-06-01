@@ -34,6 +34,9 @@ typedef struct usb_protocol_ops {
     zx_status_t (*get_descriptor_list)(void* ctx, void** out_descriptors, size_t* out_length);
     zx_status_t (*get_additional_descriptor_list)(void* ctx, void** out_descriptors,
                                                   size_t* out_length);
+    zx_status_t (*get_string_descriptor)(void* ctx,
+                                         uint8_t desc_id, uint16_t* inout_lang_id,
+                                         uint8_t* buf, size_t* inout_buflen);
     zx_status_t (*claim_interface)(void* ctx, usb_interface_descriptor_t* intf, size_t length);
     zx_status_t (*cancel_all)(void* ctx, uint8_t ep_address);
 } usb_protocol_ops_t;
@@ -146,6 +149,24 @@ static inline zx_status_t usb_get_additional_descriptor_list(const usb_protocol_
                                                              void** out_descriptors,
                                                              size_t* out_length) {
     return usb->ops->get_additional_descriptor_list(usb->ctx, out_descriptors, out_length);
+}
+
+// Fetch the descriptor using the provided descriptor ID and language ID.  If
+// the language ID requested is not available, the first entry of the language
+// ID table will be used instead and be provided in the updated version of the
+// parameter.
+//
+// The string will be encoded using UTF-8, and will be truncated to fit the
+// space provided by the buflen parameter.  buflen will be updated to indicate
+// the amount of space needed to hold the actual UTF-8 encoded string lenth, and
+// may be larger than the original value passed.  Embedded nulls may be present
+// in the string, and the result may not be null terminated if the string
+// occupies the entire provided buffer.
+//
+static inline zx_status_t usb_get_string_descriptor(const usb_protocol_t* usb,
+                                                    uint8_t desc_id, uint16_t* inout_lang_id,
+                                                    uint8_t* buf, size_t* inout_buflen) {
+    return usb->ops->get_string_descriptor(usb->ctx, desc_id, inout_lang_id, buf, inout_buflen);
 }
 
 // marks the interface as claimed and appends the interface descriptor to the

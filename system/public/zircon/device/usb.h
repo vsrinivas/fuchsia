@@ -13,6 +13,20 @@
 
 __BEGIN_CDECLS
 
+// maximum length of a USB string after conversion to UTF8
+#define MAX_USB_STRING_LEN  ((((UINT8_MAX - sizeof(usb_descriptor_header_t)) / sizeof(uint16_t)) * 3) + 1)
+
+typedef struct usb_ioctl_get_string_desc_req {
+    uint16_t lang_id;
+    uint8_t desc_id;
+} __PACKED usb_ioctl_get_string_desc_req_t;
+
+typedef struct usb_ioctl_get_string_desc_resp {
+    uint16_t lang_id;
+    uint16_t data_len;
+    uint8_t data[];
+} __PACKED usb_ioctl_get_string_desc_resp_t;
+
 // Device type for top-level USB device
 #define USB_DEVICE_TYPE_DEVICE          1
 // Device type for an interface in a USB composite device
@@ -55,8 +69,32 @@ __BEGIN_CDECLS
 #define IOCTL_USB_GET_DESCRIPTORS       IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_USB, 6)
 
 // fetches a string descriptor from the USB device
-// string index is passed via in_buf
-// call with in_len = sizeof(int) and out_len = size of buffer to receive string (256 recommended)
+//
+// in_buf should be a usb_ioctl_get_string_desc_req_t
+// ++ in_buf.lang_id : The language ID of the string descriptor to fetch.  If no
+//                     matching language ID is present in the device's language
+//                     ID table, the first entry of the language ID table will
+//                     be substituted.
+// ++ in_buf.desc_id : The ID of the string descriptor to fetch, or 0 to fetch
+//                     the language table instead.
+//
+// out_but should be large enough to hold a usb_ioctl_get_string_desc_resp_t,
+// along with the actual payload.
+// ++ out_buf.lang_id  : The actual language ID of the string fetched, or 0 for
+//                       the language ID table.
+// ++ out_buf.data_len : The number of byte which *would be required* to hold
+//                       the payload, in bytes.  Note, this value may be larger
+//                       than the space for payload supplied by the user.
+// ++ out_buf.data     : As much of the payload will fit within the supplied
+//                       buffer.  Strings will be encoded using UTF-8, and are
+//                       *not* guaranteed to be null terminated.
+//
+// The worst case size for the payload of a language ID table should be 252
+// bytes, meaning that a 256 byte buffer should always be enough to hold any
+// language ID table.
+//
+// The worst case size for a UTF-8 encoded string descriptor payload should be
+// 378 bytes (126 UTF-16 code units with a worst case expansion factor of 3)
 #define IOCTL_USB_GET_STRING_DESC       IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_USB, 7)
 
 // selects an alternate setting for an interface on a USB device
@@ -94,7 +132,8 @@ IOCTL_WRAPPER_INOUT(ioctl_usb_get_config_desc_size, IOCTL_USB_GET_CONFIG_DESC_SI
 IOCTL_WRAPPER_IN_VAROUT(ioctl_usb_get_config_desc, IOCTL_USB_GET_CONFIG_DESC, int, void);
 IOCTL_WRAPPER_OUT(ioctl_usb_get_descriptors_size, IOCTL_USB_GET_DESCRIPTORS_SIZE, int);
 IOCTL_WRAPPER_VAROUT(ioctl_usb_get_descriptors, IOCTL_USB_GET_DESCRIPTORS, void);
-IOCTL_WRAPPER_IN_VAROUT(ioctl_usb_get_string_desc, IOCTL_USB_GET_STRING_DESC, int, void);
+IOCTL_WRAPPER_IN_VAROUT(ioctl_usb_get_string_desc, IOCTL_USB_GET_STRING_DESC,
+                        usb_ioctl_get_string_desc_req_t, usb_ioctl_get_string_desc_resp_t);
 
 static inline ssize_t ioctl_usb_set_interface(int fd, int interface_number, int alt_setting) {
     int args[2] = { interface_number, alt_setting };

@@ -14,6 +14,7 @@
 #include <unistd.h>
 #include <limits.h>
 
+#include <zircon/assert.h>
 #include <zircon/hw/usb.h>
 #include <zircon/hw/usb-hid.h>
 #include <zircon/device/usb.h>
@@ -21,9 +22,34 @@
 
 #define DEV_USB "/dev/class/usb"
 
-static void get_string_desc(int fd, int index, char* buf, int buflen) {
-    buf[0] = 0;
-    ioctl_usb_get_string_desc(fd, &index, buf, buflen);
+#define MIN(a, b) (((a) < (b)) ? (a) : (b))
+
+typedef struct max_usb_string_resp {
+    uint8_t hdr[sizeof(usb_ioctl_get_string_desc_resp_t)];
+    char str[MAX_USB_STRING_LEN];
+} __PACKED max_usb_string_resp_t;
+
+static void get_string_desc(int fd, uint8_t desc_id, max_usb_string_resp_t* resp) {
+    ZX_DEBUG_ASSERT(resp != NULL);
+
+    if (desc_id) {
+        // Default to asking for US english.
+        usb_ioctl_get_string_desc_req_t req = { .lang_id = 0x0409, .desc_id = desc_id };
+
+        zx_status_t res = ioctl_usb_get_string_desc(fd, &req,
+                                                    (usb_ioctl_get_string_desc_resp_t*)(resp),
+                                                    sizeof(*resp));
+        if (res >= 0) {
+            const usb_ioctl_get_string_desc_resp_t* hdr =
+                (const usb_ioctl_get_string_desc_resp_t*)(resp->hdr);
+            size_t term_pos = MIN(sizeof(resp->str) - 1, hdr->data_len);
+            resp->str[term_pos] = 0;
+        } else {
+            snprintf(resp->str, sizeof(resp->str), "<err %d>", res);
+        }
+    } else {
+        snprintf(resp->str, sizeof(resp->str), "<none>");
+    }
 }
 
 static const char* usb_speeds[] = {
@@ -37,10 +63,8 @@ static const char* usb_speeds[] = {
 static int do_list_device(int fd, int configuration, bool verbose, const char* devname, int depth,
                           int max_depth) {
     usb_device_descriptor_t device_desc;
-    char manufacturer[256];
-    char product[256];
-    manufacturer[0] = 0;
-    product[0] = 0;
+    max_usb_string_resp_t manufacturer;
+    max_usb_string_resp_t product;
     ssize_t ret = 0;
 
     int device_type;
@@ -66,17 +90,17 @@ static int do_list_device(int fd, int configuration, bool verbose, const char* d
         return ret;
     }
 
-    get_string_desc(fd, device_desc.iManufacturer, manufacturer, sizeof(manufacturer));
-    get_string_desc(fd, device_desc.iProduct, product, sizeof(product));
+    get_string_desc(fd, device_desc.iManufacturer, &manufacturer);
+    get_string_desc(fd, device_desc.iProduct, &product);
 
     int left_pad = depth * 4;
     int right_pad = (max_depth - depth) * 4;
     printf("%*s%3s  %*s%04X:%04X  %-5s  %s %s\n", left_pad, "", devname, right_pad, "",
            le16toh(device_desc.idVendor), le16toh(device_desc.idProduct), usb_speeds[speed],
-           manufacturer, product);
+           manufacturer.str, product.str);
 
     if (verbose) {
-        char string_buf[256];
+        max_usb_string_resp_t string_buf;
 
         // print device descriptor
         printf("Device Descriptor:\n");
@@ -92,10 +116,10 @@ static int do_list_device(int fd, int configuration, bool verbose, const char* d
         printf("  idProduct                       0x%04X\n", le16toh(device_desc.idProduct));
         printf("  bcdDevice                       %x.%x\n", le16toh(device_desc.bcdDevice) >> 8,
                                                             le16toh(device_desc.bcdDevice) & 0xFF);
-        printf("  iManufacturer                   %d %s\n", device_desc.iManufacturer, manufacturer);
-        printf("  iProduct                        %d %s\n", device_desc.iProduct, product);
-        get_string_desc(fd, device_desc.iSerialNumber, string_buf, sizeof(string_buf));
-        printf("  iSerialNumber                   %d %s\n", device_desc.iSerialNumber, string_buf);
+        printf("  iManufacturer                   %d %s\n", device_desc.iManufacturer, manufacturer.str);
+        printf("  iProduct                        %d %s\n", device_desc.iProduct, product.str);
+        get_string_desc(fd, device_desc.iSerialNumber, &string_buf);
+        printf("  iSerialNumber                   %d %s\n", device_desc.iSerialNumber, string_buf.str);
         printf("  bNumConfigurations              %d\n", device_desc.bNumConfigurations);
 
         if (configuration == -1) {
@@ -132,8 +156,8 @@ static int do_list_device(int fd, int configuration, bool verbose, const char* d
         printf("    wTotalLength                  %d\n", le16toh(config_desc->wTotalLength));
         printf("    bNumInterfaces                %d\n", config_desc->bNumInterfaces);
         printf("    bConfigurationValue           %d\n", config_desc->bConfigurationValue);
-        get_string_desc(fd, config_desc->iConfiguration, string_buf, sizeof(string_buf));
-        printf("    iConfiguration                %d %s\n", config_desc->iConfiguration, string_buf);
+        get_string_desc(fd, config_desc->iConfiguration, &string_buf);
+        printf("    iConfiguration                %d %s\n", config_desc->iConfiguration, string_buf.str);
         printf("    bmAttributes                  0x%02X\n", config_desc->bmAttributes);
         printf("    bMaxPower                     %d\n", config_desc->bMaxPower);
 
@@ -155,8 +179,8 @@ static int do_list_device(int fd, int configuration, bool verbose, const char* d
                 printf("      bInterfaceClass             %d\n", desc->bInterfaceClass);
                 printf("      bInterfaceSubClass          %d\n", desc->bInterfaceSubClass);
                 printf("      bInterfaceProtocol          %d\n", desc->bInterfaceProtocol);
-                get_string_desc(fd, desc->iInterface, string_buf, sizeof(string_buf));
-                printf("      iInterface                  %d %s\n", desc->iInterface, string_buf);
+                get_string_desc(fd, desc->iInterface, &string_buf);
+                printf("      iInterface                  %d %s\n", desc->iInterface, string_buf.str);
             } else if (header->bDescriptorType == USB_DT_ENDPOINT) {
                 usb_endpoint_descriptor_t* desc = (usb_endpoint_descriptor_t *)header;
                 printf("      Endpoint Descriptor:\n");

@@ -412,6 +412,14 @@ static zx_status_t usb_interface_get_additional_descriptor_list(void* ctx, void*
     return ZX_OK;
 }
 
+zx_status_t usb_interface_get_string_descriptor(void* ctx,
+                                                uint8_t desc_id, uint16_t* inout_lang_id,
+                                                uint8_t* buf, size_t* inout_buflen) {
+    usb_interface_t* intf = ctx;
+    return usb_device_get_string_descriptor(intf->device,
+                                            desc_id, inout_lang_id, buf, inout_buflen);
+}
+
 static zx_status_t usb_interface_claim_device_interface(void* ctx,
                                                         usb_interface_descriptor_t* claim_intf,
                                                         size_t claim_length) {
@@ -458,6 +466,7 @@ static usb_protocol_ops_t _usb_protocol = {
     .get_device_descriptor = usb_interface_get_device_descriptor,
     .get_descriptor_list = usb_interface_get_descriptor_list,
     .get_additional_descriptor_list = usb_interface_get_additional_descriptor_list,
+    .get_string_descriptor = usb_interface_get_string_descriptor,
     .claim_interface = usb_interface_claim_device_interface,
     .cancel_all = usb_interface_cancel_all,
 };

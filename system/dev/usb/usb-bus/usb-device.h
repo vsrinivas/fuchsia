@@ -11,6 +11,7 @@
 #include <ddk/protocol/usb-hub.h>
 
 #include <threads.h>
+#include <stdatomic.h>
 
 typedef enum {
     // The interface has not been claimed and no device has been created for it.
@@ -44,6 +45,9 @@ typedef struct usb_device {
     usb_device_descriptor_t device_desc;
     usb_configuration_descriptor_t** config_descs;
     int current_config_index;
+
+    atomic_bool langids_fetched;
+    atomic_uintptr_t lang_ids;
 
     mtx_t interface_mutex;
     // Array storing whether interfaces from 0 to bNumInterfaces-1
