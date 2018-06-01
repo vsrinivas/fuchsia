@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <endian.h>
 #include <fbl/algorithm.h>
 #include <fbl/type_support.h>
 #include <lib/zx/time.h>
@@ -649,26 +650,31 @@ struct AmsduSubframeHeader {
     // Note this is the same as the IEEE 802.3 frame format.
     common::MacAddr da;
     common::MacAddr sa;
-    uint16_t msdu_len;
+    uint16_t msdu_len_be;  // Stored in network byte order. Use accessors.
+
+    uint16_t msdu_len() const { return be16toh(msdu_len_be); }
+
+    void set_msdu_len(uint16_t msdu_len) { msdu_len_be = htobe16(msdu_len); }
 } __PACKED;
 
 // IEEE Std 802.11-2016, 9.3.2.2.3
 // Non-DMG stations do not transmit in this form.
 struct AmsduSubframeHeaderShort {
-    uint16_t msdu_len;
+    uint16_t msdu_len_be;
 } __PACKED;
 
 struct AmsduSubframe {
     AmsduSubframeHeader hdr;
     uint8_t msdu[];
-    // uint8_t padding[];
+    // msdu[] is followed by conditional zero-padding for alignment of the amsdu subframe by 4
+    // bytes.
 
     const LlcHeader* get_msdu() const { return reinterpret_cast<const LlcHeader*>(msdu); }
 
     size_t PaddingLen(bool is_last_subframe) const {
-        return (is_last_subframe) ? 0 : (fbl::round_up(hdr.msdu_len, 4u) - hdr.msdu_len);
+        size_t base_len = sizeof(AmsduSubframeHeader) + hdr.msdu_len();
+        return (is_last_subframe) ? 0 : (fbl::round_up(base_len, 4u) - base_len);
     }
-
 } __PACKED;
 
 // RFC 1042

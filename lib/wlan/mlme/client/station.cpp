@@ -764,7 +764,7 @@ zx_status_t Station::HandleAmsduFrame(const DataFrame<LlcHeader>& frame) {
             return ZX_ERR_STOP;
         }
         offset += sizeof(AmsduSubframeHeader);
-        auto msdu_len = subframe->hdr.msdu_len;
+        auto msdu_len = subframe->hdr.msdu_len();
 
         // Note: msdu_len == 0 is valid
 
