@@ -6,6 +6,7 @@
         "maxwell_agents": "//peridot:maxwell_agents",
         "module_resolver": "//peridot/bin/module_resolver",
         "module_package_indexer": "//peridot/bin/module_resolver/module_package_indexer",
+        "story_info": "//peridot/bin/acquirers/story_info",
         "suggestion_engine": "//peridot/bin/suggestion_engine"
     }
 }

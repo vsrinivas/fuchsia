@@ -16,10 +16,11 @@
 
 namespace maxwell {
 
+namespace {
+
 constexpr char kMIDashboardUrl[] = "mi_dashboard";
 constexpr char kUsageLogUrl[] = "usage_log";
-
-namespace {
+constexpr char kStoryInfoAgentUrl[] = "story_info";
 
 constexpr fuchsia::modular::RateLimitedRetry::Threshold kKronkRetryLimit = {
     3, fxl::TimeDelta::FromSeconds(45)};
@@ -41,7 +42,7 @@ fuchsia::modular::AgentControllerPtr StartStoryInfoAgent(
         visible_stories_provider) {
   fuchsia::sys::ServiceProviderPtr agent_services;
   fuchsia::modular::AgentControllerPtr controller;
-  component_context->ConnectToAgent("acquirers/story_info_main",
+  component_context->ConnectToAgent(kStoryInfoAgentUrl,
                                     agent_services.NewRequest(),
                                     controller.NewRequest());
 

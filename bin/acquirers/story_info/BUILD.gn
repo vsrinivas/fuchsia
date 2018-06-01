@@ -3,10 +3,9 @@
 # found in the LICENSE file.
 
 import("//build/fidl/fidl.gni")
+import("//peridot/build/executable_package.gni")
 
-executable("story_info") {
-  output_name = "acquirers/story_info_main"
-
+executable_package("story_info") {
   sources = [
     "link_watcher_impl.cc",
     "link_watcher_impl.h",
