@@ -15,6 +15,7 @@
 
 import("//build/config/fuchsia/rules.gni")
 import("//build/package.gni")
+import("//garnet/tools/cipd.gni")
 
 driver_module("ath10k_driver") {
   output_name = "ath10k"
@@ -36,6 +37,45 @@ driver_module("ath10k_driver") {
   configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
 }
 
+if (internal_access) {
+  all_fw_files = [
+    "QCA4019/hw1.0/board-2.bin",
+    "QCA4019/hw1.0/firmware-5.bin",
+    "QCA6174/hw2.1/board-2.bin",
+    "QCA6174/hw2.1/board.bin",
+    "QCA6174/hw2.1/firmware-5.bin",
+    "QCA6174/hw3.0/board-2.bin",
+    "QCA6174/hw3.0/board.bin",
+    "QCA6174/hw3.0/firmware-4.bin",
+    "QCA6174/hw3.0/firmware-6.bin",
+    "QCA9377/hw1.0/board-2.bin",
+    "QCA9377/hw1.0/board.bin",
+    "QCA9377/hw1.0/firmware-5.bin",
+    "QCA9887/hw1.0/board.bin",
+    "QCA9887/hw1.0/firmware-5.bin",
+    "QCA9888/hw2.0/board-2.bin",
+    "QCA9888/hw2.0/firmware-5.bin",
+    "QCA988X/hw2.0/board.bin",
+    "QCA988X/hw2.0/firmware-4.bin",
+    "QCA988X/hw2.0/firmware-5.bin",
+    "QCA9984/hw1.0/board-2.bin",
+    "QCA9984/hw1.0/firmware-5.bin",
+    "QCA99X0/hw2.0/board.bin",
+    "QCA99X0/hw2.0/firmware-5.bin",
+  ]
+
+  foreach(fw_file, all_fw_files) {
+    copy("ath10k-firmware-copy-" + fw_file) {
+      sources = [
+        "firmware/" + fw_file
+      ]
+      outputs = [
+        "$root_out_dir/firmware/ath10k/" + fw_file
+      ]
+    }
+  }
+}
+
 package("ath10k") {
   deprecated_system_image = true
 
@@ -46,6 +86,25 @@ package("ath10k") {
   drivers = [ {
         name = "ath10k.so"
       } ]
+
+  if (internal_access) {
+    libraries = []
+
+    foreach(fw_file, all_fw_files) {
+      deps += [
+        # The copy step has to be in the shared-library toolchain to use the
+        # expected output directory, since we treat firmware blobs as if they
+        # were libraries which always use the shared-library toolchain to build.
+        ":ath10k-firmware-copy-" + fw_file + "($shlib_toolchain)",
+      ]
+
+      libraries += [
+        {
+          name = "firmware/ath10k/" + fw_file
+        }
+      ]
+    }
+  }
 }
 
 executable("sparse_array_tests") {
