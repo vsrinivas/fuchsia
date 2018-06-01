@@ -11,6 +11,41 @@ config("internal") {
   ]
 }
 
+# All peridot tests that can run as test binaries in a package, and are not
+# associated with the package of a binary already anyway.
+package("peridot_tests") {
+  testonly = true
+
+  deps = [
+    ":maxwell_unittests",
+    ":modular_unittests",
+    "//peridot/lib:peridot_lib_unittests",
+    "//peridot/public/lib:peridot_public_lib_unittests",
+    "//peridot/tests/maxwell_integration",
+  ]
+
+  tests = [
+    {
+      name = "context_engine_test"
+    },
+    {
+      name = "maxwell_unittests"
+    },
+    {
+      name = "modular_unittests"
+    },
+    {
+      name = "peridot_lib_unittests"
+    },
+    {
+      name = "peridot_public_lib_unittests"
+    },
+    {
+      name = "suggestion_engine_test"
+    },
+  ]
+}
+
 executable("maxwell_unittests") {
   testonly = true
 
@@ -22,30 +57,8 @@ executable("maxwell_unittests") {
   ]
 }
 
-package("maxwell_tests") {
+executable("modular_unittests") {
   testonly = true
-
-  deps = [
-    ":maxwell_unittests",
-    "//peridot/tests/maxwell_integration",
-  ]
-
-  tests = [
-    {
-      name = "maxwell_unittests"
-    },
-    {
-      name = "context_engine_test"
-    },
-    {
-      name = "suggestion_engine_test"
-    },
-  ]
-}
-
-executable("modular_unittests_bin") {
-  testonly = true
-  output_name = "modular_unittests"
 
   deps = [
     "//peridot/bin/agents/clipboard:unittests",
@@ -55,48 +68,6 @@ executable("modular_unittests_bin") {
     "//peridot/bin/user_runner/puppet_master:unittests",
     "//peridot/bin/user_runner/story_runner:unittests",
     "//peridot/examples/counter_cpp:unittests",
-    "//peridot/public/lib:unittests",
-    "//peridot/public/lib/async/cpp:unittests",
     "//third_party/googletest:gtest_main",
-  ]
-}
-
-executable("future_unittests_bin") {
-  testonly = true
-  output_name = "future_unittests"
-
-  deps = [
-    "//third_party/googletest:gtest_main",
-    "//peridot/public/lib/async/cpp:unittests",
-  ]
-}
-
-package("modular_unittests") {
-  testonly = true
-  deprecated_system_image = true
-
-  deps = [
-    ":modular_unittests_bin",
-  ]
-
-  tests = [
-    {
-      name = "modular_unittests"
-    },
-  ]
-}
-
-package("future_unittests") {
-  testonly = true
-  deprecated_system_image = true
-
-  deps = [
-    ":future_unittests_bin",
-  ]
-
-  tests = [
-    {
-      name = "future_unittests"
-    },
   ]
 }

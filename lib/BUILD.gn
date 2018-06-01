@@ -4,9 +4,8 @@
 
 import("//build/package.gni")
 
-executable("unittests") {
+executable("peridot_lib_unittests") {
   testonly = true
-  output_name = "peridot_lib_unittests"
 
   deps = [
     "//third_party/googletest:gtest_main",
@@ -20,20 +19,5 @@ executable("unittests") {
     "//peridot/lib/scoped_tmpfs:unittests",
     "//peridot/lib/socket:unittests",
     "//peridot/lib/util:unittests",
-  ]
-}
-
-package("peridot_lib_tests") {
-  testonly = true
-  deprecated_system_image = true
-
-  deps = [
-    ":unittests",
-  ]
-
-  tests = [
-    {
-      name = "peridot_lib_unittests"
-    },
   ]
 }

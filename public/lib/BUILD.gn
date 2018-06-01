@@ -16,12 +16,13 @@ group("just_fidl") {
   ]
 }
 
-group("unittests") {
+executable("peridot_public_lib_unittests") {
   testonly = true
 
   deps = [
     "async/cpp:unittests",
     "entity/cpp:unittests",
+    "//third_party/googletest:gtest_main",
   ]
 }
 

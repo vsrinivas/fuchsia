@@ -34,7 +34,6 @@
         "link_passing_test_module3": "//peridot/tests/link_passing:link_passing_test_module3",
         "link_update_test_user_shell": "//peridot/tests/link_update:link_update_test_user_shell",
         "modular_tests": "//peridot/tests:modular_tests",
-        "modular_unittests": "//peridot:modular_unittests",
         "parent_child_test_child_module": "//peridot/tests/parent_child:parent_child_test_child_module",
         "parent_child_test_parent_module": "//peridot/tests/parent_child:parent_child_test_parent_module",
         "queue_persistence_test_agent": "//peridot/tests/queue_persistence:queue_persistence_test_agent",
