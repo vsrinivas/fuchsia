@@ -28,6 +28,9 @@ namespace {
 // The name of the file containing stdout and stderr of each test.
 constexpr char kOutputFileName[] = "stdout-and-stderr.txt";
 
+// The name of the file containing the syslog.
+constexpr char kSyslogFileName[] = "syslog.txt";
+
 // Ignore test directories where the last component is this.
 constexpr char kIgnoreDirName[] = "helper";
 
@@ -237,7 +240,6 @@ int main(int argc, char** argv) {
 
     // Start Log Listener.
     fbl::unique_ptr<runtests::LogExporter> log_exporter_ptr;
-    fbl::String syslog_path;
     if (output_dir != nullptr) {
         int error = runtests::MkDirAll(output_dir);
         if (error) {
@@ -246,9 +248,9 @@ int main(int argc, char** argv) {
             return -1;
         }
 
-        syslog_path = runtests::JoinPath(output_dir, "syslogs");
         runtests::ExporterLaunchError exporter_error;
-        log_exporter_ptr = runtests::LaunchLogExporter(syslog_path, &exporter_error);
+        log_exporter_ptr = runtests::LaunchLogExporter(
+            runtests::JoinPath(output_dir, kSyslogFileName), &exporter_error);
         // Don't fail if logger service is not available because it is only
         // available in garnet layer and above.
         if (!log_exporter_ptr && exporter_error != runtests::CONNECT_TO_LOGGER_SERVICE) {
@@ -322,7 +324,7 @@ int main(int argc, char** argv) {
             return -1;
         }
         const int error = runtests::WriteSummaryJSON(results, kOutputFileName,
-                                                     syslog_path, summary_json);
+                                                     kSyslogFileName, summary_json);
         if (error) {
             printf("Error: Failed to write JSON summary: %s\n", strerror(error));
             return -1;
