@@ -99,10 +99,6 @@ zx_status_t xdc_queue_transfer(xdc_t* xdc, usb_request_t* req, bool in) {
 
     mtx_lock(&xdc->lock);
 
-    // Make sure we're recently checked the device state registers.
-    xdc_update_state_locked(xdc);
-    xdc_update_endpoint_state_locked(xdc, ep);
-
     if (!xdc->configured || ep->state == XDC_EP_STATE_DEAD) {
         mtx_unlock(&xdc->lock);
         return ZX_ERR_IO_NOT_PRESENT;
@@ -193,7 +189,7 @@ zx_status_t xdc_restart_transfer_ring_locked(xdc_t* xdc, xdc_endpoint_t* ep) {
     return ZX_OK;
 }
 
-void xdc_handle_transfer_event_locked(xdc_t* xdc, xhci_trb_t* trb) {
+void xdc_handle_transfer_event_locked(xdc_t* xdc, xdc_poll_state_t* poll_state, xhci_trb_t* trb) {
     uint32_t control = XHCI_READ32(&trb->control);
     uint32_t status = XHCI_READ32(&trb->status);
     uint32_t ep_dev_ctx_idx = READ_FIELD(control, TRB_ENDPOINT_ID_START, TRB_ENDPOINT_ID_BITS);
@@ -227,7 +223,7 @@ void xdc_handle_transfer_event_locked(xdc_t* xdc, xhci_trb_t* trb) {
     // it's possible we missed the halt register being set if the halt was cleared fast enough.
     if (error) {
         if (ep->state == XDC_EP_STATE_RUNNING) {
-             xdc_endpoint_set_halt_locked(xdc, ep);
+             xdc_endpoint_set_halt_locked(xdc, poll_state, ep);
         }
         ep->got_err_event = true;
         // We're going to requeue the transfer when we restart the transfer ring,
@@ -289,5 +285,5 @@ void xdc_handle_transfer_event_locked(xdc_t* xdc, xhci_trb_t* trb) {
     // Save the request to be completed later out of the lock.
     req->response.status = ZX_OK;
     req->response.actual = length;
-    list_add_tail(&ep->completed_reqs, &req->node);
+    list_add_tail(&poll_state->completed_reqs, &req->node);
 }

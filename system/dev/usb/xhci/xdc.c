@@ -34,9 +34,6 @@
 // The maximum duration to transition from connected to configured state.
 #define TRANSITION_CONFIGURED_THRESHOLD ZX_SEC(5)
 
-// TODO(jocelyndang): tweak this.
-#define POLL_INTERVAL ZX_MSEC(100)
-
 #define OUT_EP_ADDR            0x01
 #define IN_EP_ADDR             0x81
 
@@ -125,7 +122,6 @@ static zx_status_t xdc_endpoint_ctx_init(xdc_t* xdc, uint32_t ep_idx) {
     xdc_endpoint_t* ep = &xdc->eps[ep_idx];
     list_initialize(&ep->queued_reqs);
     list_initialize(&ep->pending_reqs);
-    list_initialize(&ep->completed_reqs);
     ep->direction = ep_idx == IN_EP_IDX ? USB_DIR_IN : USB_DIR_OUT;
     snprintf(ep->name, MAX_EP_DEBUG_NAME_LEN, ep_idx == IN_EP_IDX ? "IN" : "OUT");
     ep->state = XDC_EP_STATE_RUNNING;
@@ -520,9 +516,6 @@ static void xdc_shutdown(xdc_t* xdc) {
         ep->state = XDC_EP_STATE_DEAD;
 
         usb_request_t* req;
-        while ((req = list_remove_tail_type(&ep->completed_reqs, usb_request_t, node)) != NULL) {
-            usb_request_complete(req, req->response.status, req->response.actual);
-        }
         while ((req = list_remove_tail_type(&ep->pending_reqs, usb_request_t, node)) != NULL) {
             usb_request_complete(req, ZX_ERR_IO_NOT_PRESENT, 0);
         }
@@ -750,15 +743,15 @@ static zx_protocol_device_t xdc_proto = {
     .release = xdc_release,
 };
 
-static void xdc_handle_port_status_change(xdc_t* xdc) {
+static void xdc_handle_port_status_change(xdc_t* xdc, xdc_poll_state_t* poll_state) {
     uint32_t dcportsc = XHCI_READ32(&xdc->debug_cap_regs->dcportsc);
 
     if (dcportsc & DCPORTSC_CSC) {
-        xdc->connected = dcportsc & DCPORTSC_CCS;
-        if (xdc->connected) {
-            xdc->last_conn = zx_clock_get(ZX_CLOCK_MONOTONIC);
+        poll_state->connected = dcportsc & DCPORTSC_CCS;
+        if (poll_state->connected) {
+            poll_state->last_conn = zx_clock_get(ZX_CLOCK_MONOTONIC);
         }
-        zxlogf(TRACE, "Port: Connect Status Change, connected: %d\n", xdc->connected != 0);
+        zxlogf(TRACE, "Port: Connect Status Change, connected: %d\n", poll_state->connected != 0);
     }
     if (dcportsc & DCPORTSC_PRC) {
         zxlogf(TRACE, "Port: Port Reset complete\n");
@@ -774,7 +767,7 @@ static void xdc_handle_port_status_change(xdc_t* xdc) {
     XHCI_WRITE32(&xdc->debug_cap_regs->dcportsc, dcportsc);
 }
 
-static void xdc_handle_events_locked(xdc_t* xdc) __TA_REQUIRES(xdc->lock) {
+static void xdc_handle_events(xdc_t* xdc, xdc_poll_state_t* poll_state) {
     xhci_event_ring_t* er = &xdc->event_ring;
 
     // process all TRBs with cycle bit matching our CCS
@@ -782,10 +775,12 @@ static void xdc_handle_events_locked(xdc_t* xdc) __TA_REQUIRES(xdc->lock) {
         uint32_t type = trb_get_type(er->current);
         switch (type) {
         case TRB_EVENT_PORT_STATUS_CHANGE:
-            xdc_handle_port_status_change(xdc);
+            xdc_handle_port_status_change(xdc, poll_state);
             break;
         case TRB_EVENT_TRANSFER:
-            xdc_handle_transfer_event_locked(xdc, er->current);
+            mtx_lock(&xdc->lock);
+            xdc_handle_transfer_event_locked(xdc, poll_state, er->current);
+            mtx_unlock(&xdc->lock);
             break;
         default:
             zxlogf(ERROR, "xdc_handle_events: unhandled event type %d\n", type);
@@ -801,11 +796,12 @@ static void xdc_handle_events_locked(xdc_t* xdc) __TA_REQUIRES(xdc->lock) {
     xdc_update_erdp(xdc);
 }
 
-void xdc_update_state_locked(xdc_t* xdc) {
+// Returns whether we just entered the Configured state.
+bool xdc_update_state(xdc_t* xdc, xdc_poll_state_t* poll_state) {
     uint32_t dcst = XHCI_GET_BITS32(&xdc->debug_cap_regs->dcst, DCST_ER_NOT_EMPTY_START,
                                     DCST_ER_NOT_EMPTY_BITS);
     if (dcst) {
-        xdc_handle_events_locked(xdc);
+        xdc_handle_events(xdc, poll_state);
     }
 
     uint32_t dcctrl = XHCI_READ32(&xdc->debug_cap_regs->dcctrl);
@@ -815,17 +811,28 @@ void xdc_update_state_locked(xdc_t* xdc) {
         // Need to clear the bit to re-enable the DCDB.
         // TODO(jocelyndang): check if we need to update the transfer ring as per 7.6.4.4.
         XHCI_WRITE32(&xdc->debug_cap_regs->dcctrl, dcctrl);
+        poll_state->configured = false;
+
+        mtx_lock(&xdc->lock);
         xdc->configured = false;
+        mtx_unlock(&xdc->lock);
     }
 
+    bool entered_configured = false;
     // Just entered the Configured state.
-    if (!xdc->configured && (dcctrl & DCCTRL_DCR)) {
+    if (!poll_state->configured && (dcctrl & DCCTRL_DCR)) {
         uint32_t port = XHCI_GET_BITS32(&xdc->debug_cap_regs->dcst, DCST_PORT_NUM_START,
                                         DCST_PORT_NUM_BITS);
         if (port == 0) {
             zxlogf(ERROR, "xdc could not get port number\n");
         } else {
+            entered_configured = true;
+            poll_state->configured = true;
+
+            mtx_lock(&xdc->lock);
             xdc->configured = true;
+            mtx_unlock(&xdc->lock);
+
             zxlogf(INFO, "xdc configured on port: %u\n", port);
         }
     }
@@ -833,8 +840,8 @@ void xdc_update_state_locked(xdc_t* xdc) {
     // If it takes too long to enter the configured state, we should toggle the
     // DCE bit to retry the Debug Device enumeration process. See last paragraph of
     // 7.6.4.1 of XHCI spec.
-    if (xdc->connected && !xdc->configured) {
-        zx_duration_t waited_ns = zx_clock_get(ZX_CLOCK_MONOTONIC) - xdc->last_conn;
+    if (poll_state->connected && !poll_state->configured) {
+        zx_duration_t waited_ns = zx_clock_get(ZX_CLOCK_MONOTONIC) - poll_state->last_conn;
 
         if (waited_ns > TRANSITION_CONFIGURED_THRESHOLD) {
             zxlogf(ERROR, "xdc failed to enter configured state, toggling DCE\n");
@@ -842,12 +849,17 @@ void xdc_update_state_locked(xdc_t* xdc) {
             XHCI_WRITE32(&xdc->debug_cap_regs->dcctrl, DCCTRL_LSE | DCCTRL_DCE);
 
             // We won't get the disconnect event from disabling DCE, so update it now.
-            xdc->connected = false;
+            poll_state->connected = false;
         }
     }
+    return entered_configured;
 }
 
-void xdc_endpoint_set_halt_locked(xdc_t* xdc, xdc_endpoint_t* ep) __TA_REQUIRES(xdc->lock) {
+void xdc_endpoint_set_halt_locked(xdc_t* xdc, xdc_poll_state_t* poll_state, xdc_endpoint_t* ep)
+                                  __TA_REQUIRES(xdc->lock) {
+    bool* halt_state = ep->direction == USB_DIR_OUT ? &poll_state->halt_out : &poll_state->halt_in;
+    *halt_state = true;
+
     switch (ep->state) {
     case XDC_EP_STATE_DEAD:
         return;
@@ -868,8 +880,11 @@ void xdc_endpoint_set_halt_locked(xdc_t* xdc, xdc_endpoint_t* ep) __TA_REQUIRES(
     }
 }
 
-static void xdc_endpoint_clear_halt_locked(xdc_t* xdc,
+static void xdc_endpoint_clear_halt_locked(xdc_t* xdc, xdc_poll_state_t* poll_state,
                                            xdc_endpoint_t* ep) __TA_REQUIRES(xdc->lock) {
+    bool* halt_state = ep->direction == USB_DIR_OUT ? &poll_state->halt_out : &poll_state->halt_in;
+    *halt_state = false;
+
     switch (ep->state) {
     case XDC_EP_STATE_DEAD:
     case XDC_EP_STATE_RUNNING:
@@ -902,45 +917,49 @@ static void xdc_endpoint_clear_halt_locked(xdc_t* xdc,
     }
 }
 
-void xdc_update_endpoint_state_locked(xdc_t* xdc, xdc_endpoint_t* ep) {
+void xdc_update_endpoint_state(xdc_t* xdc, xdc_poll_state_t* poll_state, xdc_endpoint_t* ep) {
     uint32_t dcctrl = XHCI_READ32(&xdc->debug_cap_regs->dcctrl);
     if (!(dcctrl & DCCTRL_DCR)) {
         // Halt bits are irrelevant when the debug capability isn't in Run Mode.
         return;
     }
+    bool halt_state = ep->direction == USB_DIR_OUT ? poll_state->halt_out : poll_state->halt_in;
+
     uint32_t bit = ep->direction == USB_DIR_OUT ? DCCTRL_HOT : DCCTRL_HIT;
-    if (dcctrl & bit) {
-        xdc_endpoint_set_halt_locked(xdc, ep);
-    } else {
-        xdc_endpoint_clear_halt_locked(xdc, ep);
+    if (halt_state == !!(dcctrl & bit)) {
+        // Nothing has changed.
+        return;
     }
+
+    mtx_lock(&xdc->lock);
+    if (dcctrl & bit) {
+        xdc_endpoint_set_halt_locked(xdc, poll_state, ep);
+    } else {
+        xdc_endpoint_clear_halt_locked(xdc, poll_state, ep);
+    }
+    mtx_unlock(&xdc->lock);
 }
 
 zx_status_t xdc_poll(xdc_t* xdc) {
+    xdc_poll_state_t poll_state;
+    list_initialize(&poll_state.completed_reqs);
+
     for (;;) {
         if (atomic_load(&xdc->suspended)) {
             zxlogf(INFO, "suspending xdc, exiting poll loop");
             break;
         }
 
-        list_node_t completed[NUM_EPS];
+        bool entered_configured = xdc_update_state(xdc, &poll_state);
 
-        mtx_lock(&xdc->lock);
-        bool was_configured = xdc->configured;
-        xdc_update_state_locked(xdc);
-        bool configured = xdc->configured;
-
-        // Copy the endpoint's completed requests (if any) and check if it has halted or recovered.
+        // Check if any EP has halted or recovered.
         for (int i = 0; i < NUM_EPS; i++) {
             xdc_endpoint_t* ep = &xdc->eps[i];
-            list_initialize(&completed[i]);
-            list_move(&ep->completed_reqs, &completed[i]);
-            xdc_update_endpoint_state_locked(xdc, ep);
+            xdc_update_endpoint_state(xdc, &poll_state, ep);
         }
-        mtx_unlock(&xdc->lock);
 
         // If we just entered the configured state, we should schedule the read requests.
-        if (!was_configured && configured) {
+        if (entered_configured) {
             mtx_lock(&xdc->read_lock);
             usb_request_t* req;
             while ((req = list_remove_tail_type(&xdc->free_read_reqs,
@@ -957,13 +976,10 @@ zx_status_t xdc_poll(xdc_t* xdc) {
         // Call complete callbacks out of the lock.
         // TODO(jocelyndang): might want a separate thread for this.
         usb_request_t* req;
-        for (int i = 0; i < NUM_EPS; i++) {
-            while ((req = list_remove_head_type(&completed[i], usb_request_t, node)) != NULL) {
-                usb_request_complete(req, req->response.status, req->response.actual);
-            }
+        while ((req = list_remove_head_type(&poll_state.completed_reqs,
+                                            usb_request_t, node)) != NULL) {
+            usb_request_complete(req, req->response.status, req->response.actual);
         }
-
-        zx_nanosleep(zx_deadline_after(POLL_INTERVAL));
     }
     return ZX_OK;
 }

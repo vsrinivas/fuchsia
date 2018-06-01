@@ -39,7 +39,6 @@ typedef struct {
     list_node_t queued_reqs;     // requests waiting to be processed
     usb_request_t* current_req;  // request currently being processed
     list_node_t pending_reqs;    // processed requests waiting for completion, including current_req
-    list_node_t completed_reqs;  // requests that need their complete_cb called
     xhci_transfer_state_t transfer_state;  // transfer state for current_req
     uint8_t direction;  // USB_DIR_OUT or USB_DIR_IN
 
@@ -74,6 +73,26 @@ typedef struct {
     size_t bytes_received;
 } xdc_packet_state_t;
 
+// This is used by the xdc_poll thread to monitors changes in the debug capability register state,
+// and handle completed requests.
+// TODO(jocelyndang): move this and all poll thread related functions into a single file.
+typedef struct {
+    // Whether a Root Hub Port is connected to a Debug Host and assigned to the Debug Capability.
+    bool connected;
+    // The last connection time in nanoseconds, with respect to the monotonic clock.
+    zx_time_t last_conn;
+
+    // Whether the Debug Device is in the Configured state.
+    // Changes to this are also copied to the xdc struct configured mmember.
+    bool configured;
+
+    bool halt_in;
+    bool halt_out;
+
+    // Requests that need their complete_cb called.
+    list_node_t completed_reqs;
+} xdc_poll_state_t;
+
 typedef struct {
     zx_device_t* zxdev;
 
@@ -94,21 +113,16 @@ typedef struct {
     xdc_context_data_t* context_data;
     xdc_str_descs_t* str_descs;
 
-    xdc_endpoint_t eps[NUM_EPS];
-
     thrd_t start_thread;
-
-    // Whether a Root Hub Port is connected to a Debug Host and assigned to the Debug Capability.
-    bool connected;
-    // The last connection time in nanoseconds, with respect to the monotonic clock.
-    zx_time_t last_conn;
-
-    // Whether the Debug Device is in the Configured state.
-    bool configured;
 
     // Whether to suspend all activity.
     atomic_bool suspended;
 
+    xdc_endpoint_t eps[NUM_EPS];
+    // Whether the Debug Device is in the Configured state.
+    bool configured;
+    // Needs to be acquired before accessing the eps and configured members.
+    // TODO(jocelyndang): make these separate locks?
     mtx_t lock;
 
     bool writable;
@@ -126,6 +140,5 @@ typedef struct {
 // TODO(jocelyndang): we should get our own handles rather than borrowing them from XHCI.
 zx_status_t xdc_bind(zx_device_t* parent, zx_handle_t bti_handle, void* mmio);
 
-void xdc_update_state_locked(xdc_t* xdc) __TA_REQUIRES(xdc->lock);
-void xdc_update_endpoint_state_locked(xdc_t* xdc, xdc_endpoint_t* ep) __TA_REQUIRES(xdc->lock);
-void xdc_endpoint_set_halt_locked(xdc_t* xdc, xdc_endpoint_t* ep) __TA_REQUIRES(xdc->lock);
+void xdc_endpoint_set_halt_locked(xdc_t* xdc, xdc_poll_state_t* poll_state, xdc_endpoint_t* ep)
+                                  __TA_REQUIRES(xdc->lock);
