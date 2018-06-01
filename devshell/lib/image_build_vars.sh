@@ -13,12 +13,13 @@ fx-machine-types() {
   echo "  zedboot - ramboot zedboot into zedboot"
   echo "  efi     - pave an EFI device (e.g. acer,nuc)"
   echo "  cros    - pave a cros device (e.g. pixelbook,chromebook)"
+  echo "  arm     - pave an ARM device (e.g. vim2)"
   echo "Machine type aliases:"
   echo "  acer"
   echo "  nuc"
   echo "  pixel"
   echo "  vboot"
-	echo
+  echo
   echo "Note: currently efi,cros,acer,nuc,pixel and vboot all have the exact"
   echo "same behavior and target specific differences occur client side."
 }
