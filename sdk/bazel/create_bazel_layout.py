@@ -41,7 +41,8 @@ def remove_dashes(name):
 class CppBuilder(Builder):
 
     def __init__(self, output, overlay, debug):
-        super(CppBuilder, self).__init__(domains=['cpp', 'exe', 'fidl'])
+        super(CppBuilder, self).__init__(
+            domains=['cpp', 'exe', 'fidl', 'image'])
         self.output = output
         self.is_overlay = overlay
         self.is_debug = debug
@@ -187,6 +188,7 @@ class CppBuilder(Builder):
 
     def install_fidl_atom(self, atom): pass
 
+    def install_image_atom(self, atom): pass
 
 
 def main():
