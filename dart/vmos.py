@@ -84,7 +84,7 @@ def Main():
   args = parser.parse_args()
 
   vmos = FxSSH(args.address, ['vmos', args.pid])
-  sizes = ParseVmos(vmos, ['dart', 'flutter', 'jemalloc', 'magma', 'sanitiz'])
+  sizes = ParseVmos(vmos, ['dart', 'flutter', 'jemalloc', 'magma', 'Scudo'])
   for k, v in sizes.iteritems():
     print k + ", " + BytesToHuman(v)
 
