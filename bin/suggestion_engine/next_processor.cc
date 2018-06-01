@@ -142,8 +142,11 @@ void NextProcessor::NotifyOfResults(const NextListenerPtr& listener,
   fidl::VectorPtr<Suggestion> window;
   // Prefer to return an array of size 0 vs. null
   window.resize(0);
-  for (size_t i = 0; i < max_results && i < suggestion_vector.size(); i++) {
-    window.push_back(CreateSuggestion(*suggestion_vector[i]));
+  for (size_t i = 0;
+       window->size() < max_results && i < suggestion_vector.size(); i++) {
+    if (!suggestion_vector[i]->hidden) {
+      window.push_back(CreateSuggestion(*suggestion_vector[i]));
+    }
   }
 
   listener->OnNextResults(std::move(window));

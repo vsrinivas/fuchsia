@@ -243,12 +243,6 @@ void SuggestionEngineImpl::RegisterRankingFeatures() {
       std::move(interrupt_ranker));
   next_processor_.SetInterruptionDecisionPolicy(std::move(decision_policy));
 
-  // Set up active filters
-  std::vector<std::unique_ptr<SuggestionActiveFilter>> active_filters;
-  active_filters.push_back(std::make_unique<RankedActiveFilter>(
-      ranking_features["dead_story_rf"]));
-  next_processor_.SetActiveFilters(std::move(active_filters));
-
   // Set up passive filters
   std::vector<std::unique_ptr<SuggestionPassiveFilter>> passive_filters;
   passive_filters.push_back(std::make_unique<ConjugateRankedPassiveFilter>(

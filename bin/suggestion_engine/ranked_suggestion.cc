@@ -12,6 +12,7 @@ std::unique_ptr<RankedSuggestion> RankedSuggestion::New(
   std::unique_ptr<RankedSuggestion> ranked_suggestion =
       std::make_unique<RankedSuggestion>();
   ranked_suggestion->prototype = prototype;
+  ranked_suggestion->hidden = false;
   return ranked_suggestion;
 }
 

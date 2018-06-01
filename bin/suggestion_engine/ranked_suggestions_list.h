@@ -6,6 +6,7 @@
 #define PERIDOT_BIN_SUGGESTION_ENGINE_RANKED_SUGGESTIONS_LIST_H_
 
 #include <functional>
+#include <queue>
 #include <vector>
 
 #include <fuchsia/modular/cpp/fidl.h>
@@ -64,9 +65,6 @@ class RankedSuggestionsList {
   void DoStableSort();
   void Rank(const UserInput& query = UserInput());
 
-  bool dirty_{false};
-  bool should_refresh_{false};
-
   // The sorted vector of RankedSuggestions, sorted by
   // |ranking_function_|. The vector is re-sorted whenever its
   // contents are modified or when |ranking_function_| is updated.
@@ -74,12 +72,6 @@ class RankedSuggestionsList {
   // when requested?  I think I would lean toward the latter, since ranking
   // may be expensive.
   std::vector<std::unique_ptr<RankedSuggestion>> suggestions_;
-
-  // Suggestions that have arrived but haven't been ranked yet.
-  std::vector<std::unique_ptr<RankedSuggestion>> pending_suggestions_;
-
-  // A list to store the filtered suggestions by passive filters
-  std::vector<std::unique_ptr<RankedSuggestion>> hidden_suggestions_;
 
   std::unique_ptr<Ranker> ranker_;
 
