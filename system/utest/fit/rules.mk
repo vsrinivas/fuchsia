@@ -5,6 +5,7 @@
 LOCAL_DIR := $(GET_LOCAL_DIR)
 
 fit_tests := \
+    $(LOCAL_DIR)/defer_tests.cpp \
     $(LOCAL_DIR)/function_tests.cpp \
     $(LOCAL_DIR)/main.c \
 
