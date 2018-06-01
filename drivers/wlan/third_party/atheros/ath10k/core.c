@@ -2444,7 +2444,6 @@ zx_status_t ath10k_core_create(struct ath10k** ar_ptr, size_t priv_size,
         return ZX_ERR_NO_MEMORY;
     }
 
-    ar->ath_common.priv = ar;
     ar->zxdev = dev;
     ar->hw_rev = hw_rev;
     ar->hif.ops = hif_ops;
