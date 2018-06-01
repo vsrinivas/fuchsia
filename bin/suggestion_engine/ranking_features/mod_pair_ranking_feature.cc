@@ -63,6 +63,7 @@ double ModPairRankingFeature::ComputeFeatureInternal(
       case Action::Tag::kCustomAction:
       case Action::Tag::kFocusStory:
       case Action::Tag::kSetLinkValueAction:
+      case Action::Tag::kUpdateModule:
       case Action::Tag::kQueryAction:
       case Action::Tag::Invalid:
         continue;

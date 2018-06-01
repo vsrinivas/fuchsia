@@ -314,6 +314,10 @@ void SuggestionEngineImpl::ExecuteActions(
         PerformSetLinkValueAction(action, override_story_id);
         break;
       }
+      case Action::Tag::kUpdateModule: {
+        PerformUpdateModuleAction(&action, override_story_id);
+        break;
+      }
       case Action::Tag::kCustomAction: {
         PerformCustomAction(&action);
         break;
@@ -432,6 +436,59 @@ void SuggestionEngineImpl::PerformAddModuleAction(
   story_controller->AddModule(add_module.surface_parent_module_path.Clone(),
                               module_name, std::move(intent),
                               fidl::MakeOptional(add_module.surface_relation));
+}
+
+void SuggestionEngineImpl::PerformUpdateModuleAction(
+    Action* const action, const std::string& story_id) {
+  if (!story_provider_) {
+    FXL_LOG(WARNING) << "Unable to set entity; no story provider";
+    return;
+  }
+
+  fuchsia::modular::StoryControllerPtr story_controller;
+  story_provider_->GetController(story_id, story_controller.NewRequest());
+  story_controller->GetModules(fxl::MakeCopyable(
+      [this, story_controller = std::move(story_controller),
+       module_name = std::move(action->update_module().module_name),
+       parameters = std::move(action->update_module().parameters)
+      ](fidl::VectorPtr<ModuleData> module_datas) {
+        for (const auto& module_data : *module_datas) {
+          if (module_data.module_path != module_name) {
+            continue;
+          }
+          for (auto& parameter : *parameters) {
+            for (auto& entry : *module_data.parameter_map.entries) {
+              if (entry.name != parameter.name) {
+                continue;
+              }
+              LinkPtr link;
+              story_controller->GetLink(
+                entry.link_path.module_path.Clone(),
+                std::move(entry.link_path.link_name),
+                link.NewRequest());
+              switch (parameter.data.Which()) {
+                case IntentParameterData::Tag::kEntityReference: {
+                  link->SetEntity(parameter.data.entity_reference());
+                  break;
+                }
+                case IntentParameterData::Tag::kJson: {
+                  link->UpdateObject(nullptr, parameter.data.json());
+                  break;
+                }
+                case IntentParameterData::Tag::kEntityType:
+                case IntentParameterData::Tag::kLinkName:
+                case IntentParameterData::Tag::kLinkPath:
+                case IntentParameterData::Tag::Invalid: {
+                  FXL_LOG(WARNING) << "UpdateModule action with unsupported "
+                                   << "parameter data tag #"
+                                   << (uint32_t)parameter.data.Which();
+                  break;
+                }
+              }
+            }
+          }
+        }
+      }));
 }
 
 void SuggestionEngineImpl::PerformCustomAction(Action* action) {

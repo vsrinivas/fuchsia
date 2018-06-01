@@ -184,6 +184,9 @@ class SuggestionEngineImpl : public ContextListener,
   void PerformSetLinkValueAction(const Action& action,
                                  const std::string& override_story_id);
 
+  void PerformUpdateModuleAction(Action* const action,
+                                 const std::string& override_story_id);
+
   void PerformQueryAction(const Action& action);
 
   void PerformCustomAction(Action* action);

@@ -63,6 +63,7 @@ interface ProposalListener {
 union Action {
   FocusStory focus_story;
   AddModule add_module;
+  UpdateModule update_module;
   SetLinkValueAction set_link_value_action;
   CustomAction custom_action;
   QueryAction query_action;
@@ -114,6 +115,14 @@ struct SetLinkValueAction {
   // The bytes that will be written to the link.
   // If empty, unsets the link value.
   string? value;
+};
+
+struct UpdateModule {
+  vector<string> module_name;
+
+  // For every entry |p| in |parameters|, update the value of the link
+  // backing |p.name| to that specified in |p.data|.
+  vector<IntentParameter> parameters;
 };
 
 // An action that calls back to the proposal publisher to be performed.
