@@ -47,18 +47,6 @@ package("system_updater") {
       path = rebase_path("images")
       dest = "images"
     },
-    {
-      path = rebase_path("packages")
-      dest = "packages"
-    },
-    {
-      path = rebase_path("efi")
-      dest = "efi"
-    },
-    {
-      path = rebase_path("kernc")
-      dest = "kernc"
-    }
   ]
   meta = [
     {

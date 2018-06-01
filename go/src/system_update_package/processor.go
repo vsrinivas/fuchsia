@@ -119,7 +119,7 @@ func fetchPackage(p *Package, amber *amber.ControlInterface) error {
 	return nil
 }
 
-func WriteImgs(imgs []string) error {
+func WriteImgs(imgs []string, imgsPath string) error {
 	for _, img := range imgs {
 		var c *exec.Cmd
 		switch img {
@@ -131,7 +131,7 @@ func WriteImgs(imgs []string) error {
 			return fmt.Errorf("unrecognized image %q", img)
 		}
 
-		err := writeImg(c, filepath.Join("/pkg", "data", img))
+		err := writeImg(c, filepath.Join(imgsPath, img))
 		if err != nil {
 			return err
 		}

@@ -16,7 +16,9 @@ func main() {
 	log.SetPrefix("system_updater: ")
 	log.SetFlags(log.Ltime)
 
-	pFile, err := os.Open(filepath.Join("/pkg", "data", "packages"))
+	dataPath := filepath.Join("/pkgfs", "packages", "update", "0")
+
+	pFile, err := os.Open(filepath.Join(dataPath, "packages"))
 	if err != nil {
 		log.Fatalf("error opening packages data file! %s", err)
 	}
@@ -43,7 +45,7 @@ func main() {
 		log.Fatalf("failed getting packages: %s", err)
 	}
 
-	if err := system_update_package.WriteImgs(imgs); err != nil {
+	if err := system_update_package.WriteImgs(imgs, dataPath); err != nil {
 		log.Fatalf("error writing image file: %s", err)
 	}
 

@@ -20,8 +20,8 @@ import (
 	"fuchsia.googlesource.com/merkle"
 )
 
-const updaterDir = "/pkgfs/packages/system_updater"
-const updaterBin = "bin/app"
+var updaterDir = filepath.Join("/pkgfs", "packages", "update")
+var updaterBin = filepath.Join("bin", "app")
 
 type SystemUpdateMonitor struct {
 	halt     uint32
@@ -104,7 +104,7 @@ func (upMon *SystemUpdateMonitor) Start() {
 			return
 		}
 
-		updatePkg := &pkg.Package{Name: fmt.Sprintf("/system_updater/%d", 0)}
+		updatePkg := &pkg.Package{Name: fmt.Sprintf("/update/%d", 0)}
 		if err = fetchPackage(updatePkg, amber); err != nil {
 			log.Printf("sys_upd_mon: unable to fetch package update: %s", err)
 			continue
