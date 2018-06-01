@@ -42,14 +42,35 @@ The `runner` property names another application (or a package that contains
 one) to which execution is to be delegated. The target application must expose
 the [`ApplicationRunner`][application-runner] service.
 
-## sandbox
+## Component Manifest
 
-The sandbox file controls the environment in which the contents of the package
-execute. Specifically, the file controls which directories the package can
-access during execution. Currently, whitelisting access to individual files is
-not supported.
+A Component Manifest (.cmx) is a JSON file with the file extension .cmx
+located in the package’s meta directory with information about the component.
 
-The sandbox file is a JSON object with the following schema:
+If the package name for your component is `sysmgr`, your component manifest
+must be `sysmgr.cmx`.
+
+Currently, the component manifest supports declaring sandboxing metadata.
+
+```
+{
+    "program": {
+        "binary": "bin/app"
+    },
+    "sandbox": {
+        "system": [ "data/sysmgr" ]
+    }
+}
+```
+
+### sandbox
+
+The sandbox property in the component manifest controls the environment in
+which the component executes. Specifically, the property controls
+which directories the component can access during execution. Currently,
+whitelisting access to individual files is not supported (CP-52).
+
+The sandbox property is a JSON object with the following schema:
 
 ```
 {
