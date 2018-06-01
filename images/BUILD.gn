@@ -154,47 +154,29 @@ action("system_package_key_check") {
 }
 
 # The pkgsvr index is a manifest mapping `package_name/package_version` to
-# the merkleroot of the package's meta.far file.  The amber index is the
-# same thing, but naming each meta.far file instead of its merkleroot.
-# TODO(mcgrathr): Make amber-publish take pkgsvr_index directly and
-# find the meta.far in its own blob repo.
+# the merkleroot of the package's meta.far file.
 pkgsvr_index = "$target_out_dir/pkgsvr_index"
-amber_index = "$target_out_dir/amber_index"
 
-foreach(index,
-        [
-          {
-            name = "pkgsvr_index"
-            visibility = [ ":system_image.manifest" ]
-            args = [ "--contents" ]
-          },
-          {
-            name = "amber_index"
-            visibility = [ ":amber_publish_index" ]
-            args = [ "--absolute" ]
-          },
-        ]) {
-  action(index.name) {
-    visibility = index.visibility
-    testonly = true
+action("pkgsvr_index") {
+  visibility = [ ":system_image.manifest", ":update_packages.manifest" ]
+  testonly = true
 
-    script = "manifest.py"
-    args = index.args
-    outputs = [
-      "$target_out_dir/$target_name",
-    ]
-    args += [ "--output=" + rebase_path(outputs[0], root_build_dir) ]
-    sources = []
-    deps = []
-    foreach(pkg_label, package_targets) {
-      # Find the response file written by package().
-      pkg_target_name = get_label_info(pkg_label, "name")
-      pkg_target_out_dir = get_label_info(pkg_label, "target_out_dir")
-      pkg_rspfile = "$pkg_target_out_dir/${pkg_target_name}.${index.name}.rsp"
-      deps += [ "${pkg_label}.${index.name}.rsp" ]
-      sources += [ pkg_rspfile ]
-      args += [ "@" + rebase_path(pkg_rspfile, root_build_dir) ]
-    }
+  script = "manifest.py"
+  args = [ "--contents" ]
+  outputs = [
+    "$target_out_dir/$target_name",
+  ]
+  args += [ "--output=" + rebase_path(outputs[0], root_build_dir) ]
+  sources = []
+  deps = []
+  foreach(pkg_label, package_targets) {
+    # Find the response file written by package().
+    pkg_target_name = get_label_info(pkg_label, "name")
+    pkg_target_out_dir = get_label_info(pkg_label, "target_out_dir")
+    pkg_rspfile = "$pkg_target_out_dir/${pkg_target_name}.pkgsvr_index.rsp"
+    deps += [ "${pkg_label}.pkgsvr_index.rsp" ]
+    sources += [ pkg_rspfile ]
+    args += [ "@" + rebase_path(pkg_rspfile, root_build_dir) ]
   }
 }
 
@@ -769,6 +751,160 @@ write_file("$root_build_dir/image_paths.sh", image_paths)
 ### Amber updates.
 ###
 
+# update_packages.manifest contains the same entries as the pkgsvr_index but
+# additionally includes the system_image package.
+action("update_packages.manifest") {
+  visibility = [ ":update.manifest" ]
+  testonly = true
+
+  script = "manifest.py"
+  outputs = [ "$target_out_dir/$target_name" ]
+  args = [
+    "--contents",
+    "--output",
+    rebase_path(outputs[0], root_build_dir),
+  ]
+  deps = []
+  sources = []
+
+  deps += [ ":system_image.meta" ]
+  args += [ "--entry=system_image/0=" + rebase_path("$target_out_dir/system_image.meta/meta.far.merkle", root_build_dir)]
+
+  foreach(pkg_label, package_targets) {
+    # Find the response file written by package().
+    pkg_target_name = get_label_info(pkg_label, "name")
+    pkg_target_out_dir = get_label_info(pkg_label, "target_out_dir")
+    pkg_rspfile = "$pkg_target_out_dir/${pkg_target_name}.pkgsvr_index.rsp"
+    deps += [ "${pkg_label}.pkgsvr_index.rsp" ]
+    sources += [ pkg_rspfile ]
+    args += [ "@" + rebase_path(pkg_rspfile, root_build_dir) ]
+  }
+}
+
+# The update package manifest contains the pkgsvr_index and the target system kernel images.
+action("update.manifest") {
+  visibility = [ ":*" ]
+  testonly = true
+
+  script = "manifest.py"
+
+  outputs = [ "$target_out_dir/$target_name" ]
+
+  args = [ "--output=" + rebase_path(outputs[0], root_build_dir) ]
+  sources = []
+  deps = []
+
+  # Add the meta/package JSON file that makes this the "update" package.
+  json = "update_package.json"
+  sources += [ json ]
+  args += [ "--entry=meta/package=" + rebase_path(json, root_build_dir) ]
+
+  update_package_manifest_label = ":update_packages.manifest"
+  update_package_manifests = get_target_outputs(update_package_manifest_label)
+  update_package_manifest = update_package_manifests[0]
+
+  deps += [ update_package_manifest_label ]
+  args += [ "--entry=packages=" + rebase_path(update_package_manifest, root_build_dir) ]
+
+  # TODO(raggi): reconcile what kernel images should be included, instead of
+  # simply including all of them.
+
+  if (target_cpu != "arm64") {
+    efi_label = ":local.esp.blk"
+    deps += [ efi_label ]
+    efi_image = get_target_outputs(efi_label)
+    args += [ "--entry=efi=" + rebase_path(efi_image[0], root_build_dir) ]
+  }
+
+  # TODO(raggi): include ZBI as well here once it is ready.
+
+  vboot_label = ":zircon.vboot"
+  deps += [ vboot_label ]
+  vboot_image = get_target_outputs(vboot_label)
+  args += [ "--entry=kernc=" + rebase_path(vboot_image[0], root_build_dir) ]
+}
+
+pm_build_package("update.meta") {
+  visibility = [ ":*" ]
+  testonly = true
+  manifest = ":update.manifest"
+}
+
+# XXX(raggi): The following manifests retain the "meta/" files, resulting in
+# them being added as blobs, which they should not be. A likely better solution
+# here is to teach pm_build_package to produce either a blob manifest or a
+# manifest.py --contents compatible response file that excludes these files.
+
+action("update.sources.manifest") {
+  visibility = [ ":*" ]
+  testonly = true
+  script = "manifest.py"
+  deps = [ ":update.manifest" ]
+  outputs = [ "$target_out_dir/update.sources.manifest" ]
+  update_manifests = get_target_outputs(deps[0])
+  args = [
+    "--sources",
+    "--output=" + rebase_path(outputs[0], root_build_dir),
+    "--manifest=" + rebase_path(update_manifests[0])
+  ]
+}
+
+zircon_tool_action("update.blobs.manifest") {
+  testonly = true
+  visibility = [ ":amber_publish_blobs" ]
+  tool = "merkleroot"
+  deps = [
+    ":update.sources.manifest",
+  ]
+  outputs = [
+    "$target_out_dir/$target_name",
+  ]
+  inputs = get_target_outputs(deps[0])
+  args = [
+    "-m",
+    rebase_path(outputs[0]),
+    "@" + rebase_path(inputs[0]),
+  ]
+}
+
+# The amber index is the pkgsvr index, but naming each meta.far file instead of
+# its merkleroot. Additionally the amber_index has the system package itself,
+# and the system update package.
+amber_index = "$target_out_dir/amber_index"
+
+action("amber_index") {
+  visibility = [ ":amber_publish_index" ]
+  testonly = true
+
+  script = "manifest.py"
+  args = [ "--absolute" ]
+  outputs = [
+    "$target_out_dir/$target_name",
+  ]
+  args += [ "--output=" + rebase_path(outputs[0], root_build_dir) ]
+  sources = []
+  deps = []
+  foreach(pkg_label, package_targets) {
+    # Find the response file written by package().
+    pkg_target_name = get_label_info(pkg_label, "name")
+    pkg_target_out_dir = get_label_info(pkg_label, "target_out_dir")
+    pkg_rspfile = "$pkg_target_out_dir/${pkg_target_name}.amber_index.rsp"
+    deps += [ "${pkg_label}.amber_index.rsp" ]
+    sources += [ pkg_rspfile ]
+    args += [ "@" + rebase_path(pkg_rspfile, root_build_dir) ]
+  }
+
+  system_image_meta_dir = get_label_info(":system_image.meta", "target_out_dir") + "/system_image.meta"
+  system_image_meta_far = system_image_meta_dir + "/meta.far"
+  args += [ "--entry", "system_image/0=" + rebase_path(system_image_meta_far, root_build_dir) ]
+  deps += [ ":system_image.meta" ]
+
+  update_meta_dir = get_label_info(":update.meta", "target_out_dir") + "/update.meta"
+  update_meta_far = update_meta_dir + "/meta.far"
+  args += [ "--entry", "update/0=" + rebase_path(update_meta_far, root_build_dir) ]
+  deps += [ ":update.meta" ]
+}
+
 # The blob.manifest that drives blob.blk is just a flat list of files.
 # blob_merkleroot.manifest is a manifest file of "HEXDIGITS=FILENAME"
 # lines.  Note that this repeats all the same merkleroot computations
@@ -807,8 +943,12 @@ action("amber_publish_blobs") {
   ]
   deps = [
     ":blob_merkleroot.manifest",
+    ":update.blobs.manifest",
   ]
-  inputs = get_target_outputs(deps[0])
+  inputs = []
+  foreach(dep, deps) {
+    inputs += get_target_outputs(dep)
+  }
   script = "manifest.py"
   args = [
     "--copytree",
