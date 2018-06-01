@@ -56,7 +56,7 @@ class InterfaceHandle {
     return *this;
   }
 
-  // Implicit conversion from nullptr to an |InterfaceHandle| without an invalid
+  // Implicit conversion from nullptr to an |InterfaceHandle| without a valid
   // |channel|.
   InterfaceHandle(std::nullptr_t) {}
 
