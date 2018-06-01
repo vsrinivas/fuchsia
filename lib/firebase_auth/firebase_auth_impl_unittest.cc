@@ -23,10 +23,9 @@ class FirebaseAuthImplTest : public gtest::TestWithMessageLoop {
   FirebaseAuthImplTest()
       : token_provider_(message_loop_.async()),
         token_provider_binding_(&token_provider_),
-        firebase_auth_(message_loop_.async(),
-                       "api_key",
+        firebase_auth_(message_loop_.async(), "api_key",
                        token_provider_binding_.NewBinding().Bind(),
-                       InitBackoff()) {}
+                       InitBackoff(), /*max_retries=*/1) {}
   ~FirebaseAuthImplTest() override {}
 
  protected:
@@ -124,6 +123,53 @@ TEST_F(FirebaseAuthImplTest, GetFirebaseUserIdRetryOnError) {
   EXPECT_EQ(AuthStatus::OK, auth_status);
   EXPECT_EQ("some id", firebase_id);
   EXPECT_EQ(1, backoff_->get_next_count);
+  EXPECT_EQ(1, backoff_->reset_count);
+}
+
+TEST_F(FirebaseAuthImplTest, GetFirebaseUserIdMaxRetry) {
+  token_provider_.Set("this is a token", "some id", "me@example.com");
+
+  AuthStatus auth_status;
+  token_provider_.error_to_return.status = modular_auth::Status::NETWORK_ERROR;
+  backoff_->SetOnGetNext(MakeQuitTask());
+  bool called = false;
+  firebase_auth_.GetFirebaseUserId(
+      [this, &called, &auth_status](auto status, auto id) {
+        called = true;
+        auth_status = status;
+        message_loop_.PostQuitTask();
+      });
+  EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_FALSE(called);
+  EXPECT_EQ(1, backoff_->get_next_count);
+  EXPECT_EQ(0, backoff_->reset_count);
+
+  // Exceeding the maximum number of retriable errors returns an error.
+  token_provider_.error_to_return.status = modular_auth::Status::INTERNAL_ERROR;
+  EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_TRUE(called);
+  EXPECT_EQ(AuthStatus::ERROR, auth_status);
+  EXPECT_EQ(1, backoff_->get_next_count);
+  EXPECT_EQ(1, backoff_->reset_count);
+}
+
+TEST_F(FirebaseAuthImplTest, GetFirebaseUserIdNonRetriableError) {
+  token_provider_.Set("this is a token", "some id", "me@example.com");
+
+  AuthStatus auth_status;
+  token_provider_.error_to_return.status = modular_auth::Status::BAD_REQUEST;
+  backoff_->SetOnGetNext(MakeQuitTask());
+  bool called = false;
+  firebase_auth_.GetFirebaseUserId(
+      [this, &called, &auth_status](auto status, auto id) {
+        called = true;
+        auth_status = status;
+        message_loop_.PostQuitTask();
+      });
+  EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_TRUE(called);
+  EXPECT_EQ(AuthStatus::ERROR, auth_status);
+  EXPECT_EQ(0, backoff_->get_next_count);
   EXPECT_EQ(1, backoff_->reset_count);
 }
 

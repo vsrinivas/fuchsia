@@ -10,9 +10,10 @@
 #include <string>
 
 #include <lib/async/dispatcher.h>
-
 #include <modular_auth/cpp/fidl.h>
+
 #include "lib/backoff/backoff.h"
+#include "lib/callback/cancellable.h"
 #include "lib/callback/scoped_task_runner.h"
 #include "peridot/lib/firebase_auth/firebase_auth.h"
 
@@ -31,10 +32,12 @@ namespace firebase_auth {
 // callbacks with status TOKEN_PROVIDER_DISCONNECTED when this happens.
 class FirebaseAuthImpl : public FirebaseAuth {
  public:
-  FirebaseAuthImpl(async_t* async,
-                   std::string api_key,
+  FirebaseAuthImpl(async_t* async, std::string api_key,
                    modular_auth::TokenProviderPtr token_provider,
                    std::unique_ptr<backoff::Backoff> backoff);
+  FirebaseAuthImpl(async_t* async, std::string api_key,
+                   modular_auth::TokenProviderPtr token_provider,
+                   std::unique_ptr<backoff::Backoff> backoff, int max_retries);
 
   // FirebaseAuth:
   void set_error_handler(fxl::Closure on_error) override;
@@ -49,13 +52,17 @@ class FirebaseAuthImpl : public FirebaseAuth {
 
  private:
   // Retrieves the Firebase token from the token provider, transparently
-  // retrying the request until success.
-  void GetToken(std::function<void(firebase_auth::AuthStatus,
-                                   modular_auth::FirebaseTokenPtr)> callback);
+  // retrying the request up to |max_retries| times in case of non-fatal
+  // errors.
+  void GetToken(int max_retries,
+                std::function<void(firebase_auth::AuthStatus,
+                                   modular_auth::FirebaseTokenPtr)>
+                    callback);
 
   const std::string api_key_;
   modular_auth::TokenProviderPtr token_provider_;
   const std::unique_ptr<backoff::Backoff> backoff_;
+  const int max_retries_;
 
   // Must be the last member field.
   callback::ScopedTaskRunner task_runner_;
