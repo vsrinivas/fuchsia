@@ -26,6 +26,9 @@ var ErrNoUpdateContent = errors.New("amber/source: update content not available"
 // Source provides a way to get information about a package update and a way
 // to get that update.
 type Source interface {
+	// A unique identifier that distinquishes this source from others.
+	Id() string
+
 	// AvailableUpdates takes a list of packages and returns update metadata
 	// for any updates available for those packages.
 	AvailableUpdates(pkg []*pkg.Package) (map[pkg.Package]pkg.Package, error)

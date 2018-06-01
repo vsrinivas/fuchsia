@@ -35,6 +35,10 @@ func NewSourceKeeper(src source.Source) *SourceKeeper {
 	}
 }
 
+func (k *SourceKeeper) Id() string {
+	return k.src.Id()
+}
+
 func (k *SourceKeeper) AvailableUpdates(pkgs []*pkg.Package) (map[pkg.Package]pkg.Package, error) {
 	k.mu.Lock()
 	defer k.mu.Unlock()

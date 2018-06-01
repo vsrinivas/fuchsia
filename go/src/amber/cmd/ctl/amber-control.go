@@ -53,7 +53,7 @@ Commands
 
 var (
 	fs         = flag.NewFlagSet("default", flag.ExitOnError)
-	pkgName    = fs.String("n", "", "Name of a package")
+	name       = fs.String("n", "", "Name of a source or package")
 	pkgVersion = fs.String("v", "", "Version of a package")
 	srcUrl     = fs.String("s", "", "The location of a package source")
 	rateLimit  = fs.Uint64("l", 0, "Maximum number of requests allowable in a time period.")
@@ -94,6 +94,12 @@ func connect(ctx *context.Context) (*amber.ControlInterface, amber.ControlInterf
 }
 
 func addSource(a *amber.ControlInterface) error {
+	name := strings.TrimSpace(*name)
+	if len(name) == 0 {
+		fmt.Println("No source id provided")
+		return os.ErrInvalid
+	}
+
 	srcUrl := strings.TrimSpace(*srcUrl)
 	if len(srcUrl) == 0 {
 		fmt.Println("No repository URL provided")
@@ -115,6 +121,7 @@ func addSource(a *amber.ControlInterface) error {
 	}
 
 	added, err := a.AddSrc(amber.SourceConfig{
+		Id:         name,
 		RepoUrl:    srcUrl,
 		RateLimit:  *rateLimit,
 		RatePeriod: int32(*period),
@@ -149,8 +156,8 @@ func main() {
 	case "get_up":
 		// the amber daemon wants package names that start with "/", if not present
 		// add this as a prefix
-		if strings.Index(*pkgName, "/") != 0 {
-			*pkgName = fmt.Sprintf("/%s", *pkgName)
+		if strings.Index(*name, "/") != 0 {
+			*name = fmt.Sprintf("/%s", *name)
 		}
 		if *pkgVersion == "" {
 			*pkgVersion = "0"
@@ -158,9 +165,9 @@ func main() {
 		// combine name and 'version' here, because the FIDL interface is talking
 		// about an amber version as opposed to human version. the human version is
 		// part of the package name
-		*pkgName = fmt.Sprintf("%s/%s", *pkgName, *pkgVersion)
+		*name = fmt.Sprintf("%s/%s", *name, *pkgVersion)
 		if *noWait {
-			blobID, err := proxy.GetUpdate(*pkgName, nil, merkle)
+			blobID, err := proxy.GetUpdate(*name, nil, merkle)
 			if err == nil {
 				fmt.Printf("Wrote update to blob %s\n", *blobID)
 			} else {
@@ -168,7 +175,7 @@ func main() {
 			}
 		} else {
 			for i := 0; i < 3; i++ {
-				err := getUpdateComplete(proxy, pkgName, merkle)
+				err := getUpdateComplete(proxy, name, merkle)
 				if err == nil {
 					break
 				}

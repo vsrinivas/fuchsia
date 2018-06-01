@@ -13,6 +13,9 @@ struct KeyConfig {
 };
 
 struct SourceConfig {
+  // A unique identifier that distinquishes this source from others.
+  string id;
+
   // The canonical URL for the TUF repository.
   string repoUrl;
 

@@ -30,12 +30,17 @@ func randSeq(n int) string {
 
 type testSrc struct {
 	mu         sync.Mutex
+	id         string
 	UpdateReqs map[string]int
 	getReqs    map[pkg.Package]*struct{}
 	interval   time.Duration
 	pkgs       map[string]struct{}
 	replyDelay time.Duration
 	limit      uint64
+}
+
+func (t *testSrc) Id() string {
+	return t.id
 }
 
 func (t *testSrc) AvailableUpdates(pkgs []*pkg.Package) (map[pkg.Package]pkg.Package, error) {
@@ -178,20 +183,25 @@ func TestGetRequest(t *testing.T) {
 	pkgs[emailPkg.Name] = struct{}{}
 	pkgs[videoPkg.Name] = struct{}{}
 	srcRateLimit := time.Millisecond * 1
-	tSrc := testSrc{UpdateReqs: make(map[string]int),
-		getReqs:  make(map[pkg.Package]*struct{}),
-		interval: srcRateLimit,
-		pkgs:     pkgs,
-		limit:    1}
+	tSrc := testSrc{
+		id:         "src",
+		UpdateReqs: make(map[string]int),
+		getReqs:    make(map[pkg.Package]*struct{}),
+		interval:   srcRateLimit,
+		pkgs:       pkgs,
+		limit:      1}
 
 	pkgs = make(map[string]struct{})
 	pkgs[videoPkg.Name] = struct{}{}
 	pkgs[srchPkg.Name] = struct{}{}
-	tSrc2 := testSrc{UpdateReqs: make(map[string]int),
-		getReqs:  make(map[pkg.Package]*struct{}),
-		interval: srcRateLimit,
-		pkgs:     pkgs,
-		limit:    1}
+	tSrc2 := testSrc{
+		id:         "src2",
+		UpdateReqs: make(map[string]int),
+		getReqs:    make(map[pkg.Package]*struct{}),
+		interval:   srcRateLimit,
+		pkgs:       pkgs,
+		limit:      1,
+	}
 	sources := []source.Source{&tSrc, &tSrc2}
 
 	tickers := []testTicker{}
@@ -227,11 +237,14 @@ func TestGetRequest(t *testing.T) {
 
 func TestRateLimit(t *testing.T) {
 	srcRateLimit := 20 * time.Millisecond
-	tSrc := testSrc{UpdateReqs: make(map[string]int),
-		getReqs:  make(map[pkg.Package]*struct{}),
-		interval: srcRateLimit,
-		pkgs:     make(map[string]struct{}),
-		limit:    1}
+	tSrc := testSrc{
+		id:         "src",
+		UpdateReqs: make(map[string]int),
+		getReqs:    make(map[pkg.Package]*struct{}),
+		interval:   srcRateLimit,
+		pkgs:       make(map[string]struct{}),
+		limit:      1,
+	}
 	wrapped := NewSourceKeeper(&tSrc)
 	dummy := []*pkg.Package{&pkg.Package{Name: "None", Version: "aaaaaa"}}
 
@@ -265,20 +278,26 @@ func TestRequestCollapse(t *testing.T) {
 	pkgs[videoPkg.Name] = struct{}{}
 	srcRateLimit := time.Millisecond
 	replyDelay := 20 * time.Millisecond
-	tSrc := testSrc{UpdateReqs: make(map[string]int),
-		getReqs:  make(map[pkg.Package]*struct{}),
-		interval: srcRateLimit,
-		pkgs:     pkgs,
-		limit:    1}
+	tSrc := testSrc{
+		id:         "src",
+		UpdateReqs: make(map[string]int),
+		getReqs:    make(map[pkg.Package]*struct{}),
+		interval:   srcRateLimit,
+		pkgs:       pkgs,
+		limit:      1,
+	}
 
 	pkgs = make(map[string]struct{})
 	pkgs[videoPkg.Name] = struct{}{}
 	pkgs[srchPkg.Name] = struct{}{}
-	tSrc2 := testSrc{UpdateReqs: make(map[string]int),
-		getReqs:  make(map[pkg.Package]*struct{}),
-		interval: srcRateLimit,
-		pkgs:     pkgs,
-		limit:    1}
+	tSrc2 := testSrc{
+		id:         "src2",
+		UpdateReqs: make(map[string]int),
+		getReqs:    make(map[pkg.Package]*struct{}),
+		interval:   srcRateLimit,
+		pkgs:       pkgs,
+		limit:      1,
+	}
 	sources := []source.Source{&tSrc, &tSrc2}
 	testSrcs := []*testSrc{&tSrc, &tSrc2}
 
@@ -345,20 +364,26 @@ func createTestSrcs() []*testSrc {
 	pkgs := make(map[string]struct{})
 	pkgs["email"] = struct{}{}
 	pkgs["video"] = struct{}{}
-	tSrc := testSrc{UpdateReqs: make(map[string]int),
-		getReqs:  make(map[pkg.Package]*struct{}),
-		interval: time.Millisecond * 3,
-		pkgs:     pkgs,
-		limit:    1}
+	tSrc := testSrc{
+		id:         "src",
+		UpdateReqs: make(map[string]int),
+		getReqs:    make(map[pkg.Package]*struct{}),
+		interval:   time.Millisecond * 3,
+		pkgs:       pkgs,
+		limit:      1,
+	}
 
 	pkgs = make(map[string]struct{})
 	pkgs["video"] = struct{}{}
 	pkgs["search"] = struct{}{}
-	tSrc2 := testSrc{UpdateReqs: make(map[string]int),
-		getReqs:  make(map[pkg.Package]*struct{}),
-		interval: time.Millisecond * 5,
-		pkgs:     pkgs,
-		limit:    1}
+	tSrc2 := testSrc{
+		id:         "src2",
+		UpdateReqs: make(map[string]int),
+		getReqs:    make(map[pkg.Package]*struct{}),
+		interval:   time.Millisecond * 5,
+		pkgs:       pkgs,
+		limit:      1,
+	}
 	return []*testSrc{&tSrc, &tSrc2}
 }
 

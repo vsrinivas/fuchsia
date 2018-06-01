@@ -41,7 +41,7 @@ const CheckInterval = 5 * time.Minute
 type Daemon struct {
 	srcMons  []*SourceMonitor
 	muSrcs   sync.Mutex
-	srcs     []source.Source
+	srcs     map[string]source.Source
 	pkgs     *pkg.PackageSet
 	runCount sync.WaitGroup
 	// takes an update Package, an original Package and a Source to get the
@@ -64,6 +64,7 @@ func NewDaemon(r *pkg.PackageSet, f func(*GetResult, *pkg.PackageSet) error,
 	d := &Daemon{pkgs: r,
 		runCount:  sync.WaitGroup{},
 		srcMons:   []*SourceMonitor{},
+		srcs:      make(map[string]source.Source),
 		processor: f,
 		repos:     []BlobRepo{},
 		muInProg:  sync.Mutex{},
@@ -84,8 +85,16 @@ func NewDaemon(r *pkg.PackageSet, f func(*GetResult, *pkg.PackageSet) error,
 func (d *Daemon) addSrc(s source.Source) {
 	d.muSrcs.Lock()
 	defer d.muSrcs.Unlock()
-	s = NewSourceKeeper(s)
-	d.srcs = append(d.srcs, s)
+
+	id := s.Id()
+
+	if _, ok := d.srcs[id]; ok {
+		log.Printf("overwriting source: %s", id)
+	}
+
+	d.srcs[id] = NewSourceKeeper(s)
+
+	log.Printf("added source: %s", id)
 }
 
 // AddSource is called to add a Source that can be used to get updates. When the
@@ -104,7 +113,7 @@ func (d *Daemon) AddSource(s source.Source) {
 func (d *Daemon) AddTUFSource(store string, cfg *amber.SourceConfig) error {
 	src, err := source.NewTUFSource(store, cfg)
 	if err != nil {
-		log.Printf("failed to create TUF source: %v: %s", cfg.RepoUrl, err)
+		log.Printf("failed to create TUF source: %v: %s", cfg.Id, err)
 		return err
 	}
 
@@ -308,14 +317,20 @@ func (d *Daemon) getUpdates(rec *upRec) map[pkg.Package]*GetResult {
 	fetchRecs := []*pkgSrcPair{}
 
 	d.muSrcs.Lock()
-	srcs := make([]source.Source, len(d.srcs))
-	copy(srcs, d.srcs)
+	srcs := make(map[string]source.Source)
+	for key, value := range d.srcs {
+		srcs[key] = value
+	}
 	d.muSrcs.Unlock()
 
 	unfoundPkgs := rec.pkgs
 	// TODO thread-safe access for sources?
-	for i := 0; i < len(srcs) && len(unfoundPkgs) > 0; i++ {
-		updates, err := srcs[i].AvailableUpdates(unfoundPkgs)
+	for _, src := range srcs {
+		if len(unfoundPkgs) == 0 {
+			break
+		}
+
+		updates, err := src.AvailableUpdates(unfoundPkgs)
 		if len(updates) == 0 || err != nil {
 			if err == ErrRateExceeded {
 				log.Printf("daemon: source rate limit exceeded\n")
@@ -329,7 +344,7 @@ func (d *Daemon) getUpdates(rec *upRec) map[pkg.Package]*GetResult {
 
 		pkgsToSrc := pkgSrcPair{
 			pkgs: make(map[pkg.Package]pkg.Package),
-			src:  srcs[i],
+			src:  src,
 		}
 		fetchRecs = append(fetchRecs, &pkgsToSrc)
 
@@ -396,9 +411,12 @@ func cleanupFiles(files []*os.File) {
 func (d *Daemon) RemoveSource(src source.Source) error {
 	d.muSrcs.Lock()
 	defer d.muSrcs.Unlock()
-	for i, m := range d.srcs {
+
+	id := src.Id()
+
+	if m, ok := d.srcs[id]; ok {
 		if m.Equals(src) {
-			d.srcs = append(d.srcs[:i], d.srcs[i+1:]...)
+			delete(d.srcs, id)
 			return nil
 		}
 	}
