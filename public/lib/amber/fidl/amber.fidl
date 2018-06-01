@@ -19,6 +19,9 @@ struct SourceConfig {
   // The canonical URL for the TUF repository.
   string repoUrl;
 
+  // Optionally download package blobs from this repository. If not specified,
+  // blobs will be fetched from `$repoUrl/blobs`.
+  string blobRepoUrl = "";
 
   // The rate limit indicates the number of requests per rateReriod, expressed
   // in milliseconds. A limit or period of zero means there is no limit.

@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"log"
 	"net/url"
 	"os"
@@ -63,7 +64,7 @@ type Daemon struct {
 
 // NewDaemon creates a Daemon with the given SourceSet
 func NewDaemon(store string, r *pkg.PackageSet, f func(*GetResult, *pkg.PackageSet) error,
-	s []source.Source) *Daemon {
+	s []source.Source) (*Daemon, error) {
 	d := &Daemon{
 		store:     store,
 		pkgs:      r,
@@ -84,7 +85,42 @@ func NewDaemon(store string, r *pkg.PackageSet, f func(*GetResult, *pkg.PackageS
 		mon.Run()
 		d.runCount.Done()
 	}()
-	return d
+
+	// Ignore if the directory doesn't exist
+	if err := d.LoadSources(store); err != nil && !os.IsNotExist(err) {
+		return nil, err
+	}
+
+	return d, nil
+}
+
+// LoadSources install source configs from a directory.  The directory
+// structure looks like:
+//
+//     $dir/source1/config.json
+//     $dir/source2/config.json
+//     ...
+func (d *Daemon) LoadSources(dir string) error {
+	files, err := ioutil.ReadDir(dir)
+	if err != nil {
+		return err
+	}
+
+	for _, file := range files {
+		p := path.Join(dir, file.Name(), "config.json")
+		log.Printf("loading source config %s\n", p)
+
+		cfg, err := source.LoadTUFSourceConfig(p)
+		if err != nil {
+			return err
+		}
+
+		if err := d.AddTUFSource(cfg); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func (d *Daemon) addSrc(s source.Source) {
@@ -102,19 +138,9 @@ func (d *Daemon) addSrc(s source.Source) {
 	log.Printf("added source: %s", id)
 }
 
-// AddSource is called to add a Source that can be used to get updates. When the
-// Source is added, the Daemon will start polling it at the interval from
-// Source.GetInterval()
-func (d *Daemon) AddSource(s source.Source) {
-	d.addSrc(s)
-
-	// after the source is added, let the monitor(s) know so they can decide if they
-	// want to look again for updates
-	for _, m := range d.srcMons {
-		m.SourcesAdded()
-	}
-}
-
+// AddTUFSource is called to add a Source that can be used to get updates. When
+// the TUFSource is added, the Daemon will start polling it at the interval
+// from TUFSource.GetInterval()
 func (d *Daemon) AddTUFSource(cfg *amber.SourceConfig) error {
 	// Make sure the id is safe to be written to disk.
 	store := path.Join(d.store, url.PathEscape(cfg.Id))
@@ -125,9 +151,52 @@ func (d *Daemon) AddTUFSource(cfg *amber.SourceConfig) error {
 		return err
 	}
 
-	d.AddSource(src)
+	// Save the config.
+	if err := d.saveSource(src); err != nil {
+		return nil
+	}
 
-	log.Printf("added TUF source: %v", cfg.RepoUrl)
+	// Add the source's blob repo. If not specified, assume the blobs are
+	// found under $RepoURL/blobs.
+	blobRepoUrl := cfg.BlobRepoUrl
+	if blobRepoUrl == "" {
+		blobRepoUrl = path.Join(cfg.RepoUrl, "blobs")
+	}
+
+	blobRepo := BlobRepo{
+		Address:  cfg.BlobRepoUrl,
+		Interval: time.Second * 5,
+	}
+
+	if err := d.AddBlobRepo(blobRepo); err != nil {
+		return err
+	}
+
+	// If we made it to this point, we're ready to actually add the source.
+	d.addSrc(src)
+
+	// after the source is added, let the monitor(s) know so they can decide if they
+	// want to look again for updates
+	for _, m := range d.srcMons {
+		m.SourcesAdded()
+	}
+
+	log.Printf("added TUF source %s %v\n", cfg.Id, cfg.RepoUrl)
+
+	return nil
+}
+
+// Save the source config to the directory `${d.store}/${src.Id()}/config.json`.
+func (d *Daemon) saveSource(src source.Source) error {
+	// Ignore errors if the data dir already exists
+	dir := path.Join(d.store, url.PathEscape(src.Id()))
+	os.MkdirAll(dir, os.ModePerm)
+
+	p := path.Join(dir, "config.json")
+	if err := src.Save(p); err != nil {
+		log.Printf("failed to save TUF config: %v: %s", src.Id(), err)
+		return err
+	}
 
 	return nil
 }
@@ -140,10 +209,19 @@ func (d *Daemon) blobRepos() []BlobRepo {
 	return c
 }
 
-func (d *Daemon) AddBlobRepo(br BlobRepo) {
+func (d *Daemon) AddBlobRepo(br BlobRepo) error {
+	if _, err := url.ParseRequestURI(br.Address); err != nil {
+		log.Printf("Provided URL %q is not valid", br.Address)
+		return err
+	}
+
 	d.muRepos.Lock()
 	d.repos = append(d.repos, br)
 	d.muRepos.Unlock()
+
+	log.Printf("added blob repo: %v\n", br.Address)
+
+	return nil
 }
 
 // GetBlob is a blocking call which tries to get all requested blobs

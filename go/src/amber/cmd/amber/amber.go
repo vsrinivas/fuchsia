@@ -13,7 +13,6 @@ import (
 	"hash"
 	"io"
 	"log"
-	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -28,19 +27,16 @@ import (
 
 	"app/context"
 	"syscall/zx"
-
-	tuf_data "github.com/flynn/go-tuf/data"
 )
 
-const lhIP = "http://127.0.0.1"
-const port = 8083
+const (
+	defaultSourceDir = "/pkg/data/sources"
+)
 
 var (
 	// TODO(jmatt) replace hard-coded values with something better/more flexible
 	usage      = "usage: amber [-k=<path>] [-s=<path>] [-u=<url>]"
-	store      = flag.String("s", "/data/amber/tuf", "The path to the local file store")
-	addr       = flag.String("u", fmt.Sprintf("%s:%d", lhIP, port), "The URL (including port if not using port 80)  of the update server.")
-	keys       = flag.String("k", "/pkg/data/keys", "Path to use to initialize the client's keys. This is only needed the first time the command is run.")
+	store      = flag.String("s", "/data/amber/store", "The path to the local file store")
 	delay      = flag.Duration("d", 0*time.Second, "Set a delay before Amber does its work")
 	autoUpdate = flag.Bool("a", false, "Automatically update and restart the system as updates become available")
 
@@ -61,21 +57,34 @@ func main() {
 	flag.Parse()
 	time.Sleep(*delay)
 
-	srvUrl, err := url.Parse(*addr)
+	// The source dir is where we store our database of sources. Because we
+	// don't currently have a mechanism to run "post-install" scripts,
+	// we'll use the existence of the data dir to signify if we need to
+	// load in the default sources.
+	storeExists, err := exists(*store)
 	if err != nil {
-		log.Fatalf("bad address for update server %s", err)
+		log.Fatal(err)
 	}
 
-	keys, err := source.LoadKeys(*keys)
-	if err != nil {
-		log.Fatalf("loading root keys failed %s", err)
-	}
-
-	d, err := startupDaemon(srvUrl, *store, keys)
+	d, err := startupDaemon(*store)
 	if err != nil {
 		log.Fatalf("failed to start daemon: %s", err)
 	}
 	defer d.CancelAll()
+
+	// Now that the daemon is up and running, we can register all of the
+	// system configured sources.
+	//
+	// TODO(etryzelaar): Since these sources are only installed once,
+	// there's currently no way to upgrade them. PKG-82 is tracking coming
+	// up with a plan to address this.
+	if !storeExists {
+		log.Printf("initializing store: %s", *store)
+
+		if err := d.LoadSources(defaultSourceDir); err != nil {
+			log.Fatalf("failed to register default sources: %s", err)
+		}
+	}
 
 	supMon := daemon.NewSystemUpdateMonitor(d, *autoUpdate)
 	go func(s *daemon.SystemUpdateMonitor) {
@@ -98,38 +107,17 @@ func startFIDLSvr(d *daemon.Daemon, s *daemon.SystemUpdateMonitor) {
 	cxt.Serve()
 }
 
-func startupDaemon(srvURL *url.URL, store string, keys []*tuf_data.Key) (*daemon.Daemon, error) {
-
+func startupDaemon(store string) (*daemon.Daemon, error) {
 	reqSet := newPackageSet([]string{"/pkg/bin/app"})
 
-	checker := daemon.NewDaemon(store, reqSet, daemon.ProcessPackage, []source.Source{})
-
-	// TODO(etryzelaar) temporary workaround until we transition to loading
-	// from a config file.
-	keycfgs := make([]amber_fidl.KeyConfig, len(keys))
-	for i, key := range keys {
-		keycfgs[i] = amber_fidl.KeyConfig{
-			Type:  key.Type,
-			Value: hex.EncodeToString(key.Value.Public),
-		}
-	}
-
-	cfg := amber_fidl.SourceConfig{
-		RepoUrl:    srvURL.String(),
-		RootKeys:   keycfgs,
-		RatePeriod: 0,
-		RateLimit:  0,
-	}
-	if err := checker.AddTUFSource(&cfg); err != nil {
+	d, err := daemon.NewDaemon(store, reqSet, daemon.ProcessPackage, []source.Source{})
+	if err != nil {
 		return nil, err
 	}
 
-	blobURL := *srvURL
-	blobURL.Path = filepath.Join(blobURL.Path, "blobs")
-	checker.AddBlobRepo(daemon.BlobRepo{Address: blobURL.String(), Interval: time.Second * 5})
-
 	log.Println("monitoring for updates")
-	return checker, nil
+
+	return d, err
 }
 
 func newPackageSet(files []string) *pkg.PackageSet {
@@ -211,4 +199,17 @@ func readExtraFlags() {
 		}
 		file.Close()
 	}
+}
+
+// Check if a path exists.
+func exists(path string) (bool, error) {
+	if _, err := os.Stat(path); err != nil {
+		if os.IsNotExist(err) {
+			return false, nil
+		} else {
+			return false, err
+		}
+	}
+
+	return true, nil
 }

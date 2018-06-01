@@ -37,6 +37,7 @@ Commands
 
     add_src   - add a source to the list we can use
         -s: location of the package source
+        -b: location of the blob source
         -k: the hex string of the public ED25519 key for the source
         -l: requests per period that can be made to the source (0 for unlimited)
         -p: length of time (in milliseconds) over which the limit passed to
@@ -56,6 +57,7 @@ var (
 	name       = fs.String("n", "", "Name of a source or package")
 	pkgVersion = fs.String("v", "", "Version of a package")
 	srcUrl     = fs.String("s", "", "The location of a package source")
+	blobUrl    = fs.String("b", "", "The location of the blob source")
 	rateLimit  = fs.Uint64("l", 0, "Maximum number of requests allowable in a time period.")
 	srcKey     = fs.String("k", "", "Root key for the source, this can be either the key itself or a http[s]:// or file:// URL to the key")
 	blobID     = fs.String("i", "", "Content ID of the blob")
@@ -110,6 +112,14 @@ func addSource(a *amber.ControlInterface) error {
 		return err
 	}
 
+	blobUrl := strings.TrimSpace(*blobUrl)
+	if blobUrl != "" {
+		if _, err := url.ParseRequestURI(blobUrl); err != nil {
+			fmt.Printf("Provided URL %q is not valid\n", blobUrl)
+			return err
+		}
+	}
+
 	srcKey := strings.TrimSpace(*srcKey)
 	if len(srcKey) == 0 {
 		fmt.Println("No repository key provided")
@@ -121,10 +131,11 @@ func addSource(a *amber.ControlInterface) error {
 	}
 
 	added, err := a.AddSrc(amber.SourceConfig{
-		Id:         name,
-		RepoUrl:    srcUrl,
-		RateLimit:  *rateLimit,
-		RatePeriod: int32(*period),
+		Id:          name,
+		RepoUrl:     srcUrl,
+		BlobRepoUrl: blobUrl,
+		RateLimit:   *rateLimit,
+		RatePeriod:  int32(*period),
 		RootKeys: []amber.KeyConfig{
 			amber.KeyConfig{
 				Type:  "ed25519",

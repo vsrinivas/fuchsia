@@ -22,6 +22,7 @@ import (
 
 	tuf "github.com/flynn/go-tuf/client"
 	tuf_data "github.com/flynn/go-tuf/data"
+
 	"github.com/flynn/go-tuf/verify"
 )
 
@@ -62,9 +63,28 @@ func LoadKeys(path string) ([]*tuf_data.Key, error) {
 	return keys, err
 }
 
+func LoadTUFSourceConfig(path string) (*amber.SourceConfig, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+
+	var cfg amber.SourceConfig
+	if err := json.NewDecoder(f).Decode(&cfg); err != nil {
+		return nil, err
+	}
+
+	return &cfg, nil
+}
+
 func NewTUFSource(store string, cfg *amber.SourceConfig) (*TUFSource, error) {
 	if store == "" {
-		return nil, fmt.Errorf("store cannot be empty")
+		return nil, fmt.Errorf("tuf store path cannot be empty")
+	}
+
+	if cfg.Id == "" {
+		return nil, fmt.Errorf("tuf source id cannot be empty")
 	}
 
 	if _, err := url.ParseRequestURI(cfg.RepoUrl); err != nil {
@@ -253,6 +273,43 @@ func (f *TUFSource) Equals(o Source) bool {
 	default:
 		return false
 	}
+}
+
+func (s *TUFSource) Save(p string) error {
+	// We want to atomically write the config, so we'll first write it to a
+	// temp file, then do an atomic rename to overwrite the target.
+
+	dir, filename := path.Split(p)
+	f, err := ioutil.TempFile(dir, filename)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	// Make sure to clean up the temp file if there's an error.
+	defer func() {
+		if err != nil {
+			os.Remove(f.Name())
+		}
+	}()
+
+	// Encode the cfg as a pretty printed json.
+	encoder := json.NewEncoder(f)
+	encoder.SetIndent("", "    ")
+
+	if err = encoder.Encode(s.Config); err != nil {
+		return err
+	}
+
+	if err = f.Close(); err != nil {
+		return err
+	}
+
+	if err = os.Rename(f.Name(), p); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func newTUFClient(url string, path string) (*tuf.Client, tuf.LocalStore, error) {

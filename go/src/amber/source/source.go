@@ -48,4 +48,6 @@ type Source interface {
 
 	// Equals should return true if the provide Source is the same as the receiver.
 	Equals(s Source) bool
+
+	Save(path string) error
 }

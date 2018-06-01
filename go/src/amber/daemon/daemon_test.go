@@ -91,6 +91,10 @@ func (t *testSrc) CheckLimit() uint64 {
 	return t.limit
 }
 
+func (t *testSrc) Save(p string) error {
+	return nil
+}
+
 type testTicker struct {
 	i    time.Duration
 	last time.Time
@@ -157,7 +161,10 @@ func TestDaemon(t *testing.T) {
 	}
 	defer os.RemoveAll(store)
 
-	d := NewDaemon(store, pkgSet, processPackage, sources)
+	d, err := NewDaemon(store, pkgSet, processPackage, sources)
+	if err != nil {
+		t.Error(err)
+	}
 
 	tickerGroup.Wait()
 	// protect against improper test rewrites
@@ -230,7 +237,10 @@ func TestGetRequest(t *testing.T) {
 	}
 	defer os.RemoveAll(store)
 
-	d := NewDaemon(store, pkg.NewPackageSet(), processPackage, sources)
+	d, err := NewDaemon(store, pkg.NewPackageSet(), processPackage, sources)
+	if err != nil {
+		t.Error(err)
+	}
 
 	tickerGroup.Wait()
 
@@ -340,7 +350,10 @@ func TestRequestCollapse(t *testing.T) {
 	}
 	defer os.RemoveAll(store)
 
-	d := NewDaemon(store, pkg.NewPackageSet(), processPackage, sources)
+	d, err := NewDaemon(store, pkg.NewPackageSet(), processPackage, sources)
+	if err != nil {
+		t.Error(err)
+	}
 
 	tickerGroup.Wait()
 
