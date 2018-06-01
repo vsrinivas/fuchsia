@@ -35,7 +35,6 @@ source_set("story_runner") {
   ]
 
   public_deps = [
-    ":story_storage_xdr",
     "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/fidl/cpp",
     "//garnet/public/lib/fsl",
@@ -74,6 +73,7 @@ source_set("story_runner") {
   deps = [
     ":session_storage",
     ":session_storage_xdr",
+    ":story_storage",
     "//peridot/lib/fidl:clone",
     "//peridot/public/lib:fidl",
   ]

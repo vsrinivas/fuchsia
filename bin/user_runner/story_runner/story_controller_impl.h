@@ -41,16 +41,15 @@ class ChainImpl;
 class ModuleControllerImpl;
 class ModuleContextImpl;
 class StoryProviderImpl;
+class StoryStorage;
 
 // The story runner, which holds all the links and runs all the modules as well
-// as the story shell. It also implements the fuchsia::modular::StoryController
-// service to give clients control over the story.
-class StoryControllerImpl : PageClient,
-                            fuchsia::modular::StoryController,
+// as the story shell. It also implements the StoryController service to give
+// clients control over the story.
+class StoryControllerImpl : fuchsia::modular::StoryController,
                             fuchsia::modular::StoryContext {
  public:
-  StoryControllerImpl(fidl::StringPtr story_id, LedgerClient* ledger_client,
-                      LedgerPageId story_page_id,
+  StoryControllerImpl(fidl::StringPtr story_id, StoryStorage* story_storage,
                       StoryProviderImpl* story_provider_impl);
   ~StoryControllerImpl() override;
 
@@ -154,10 +153,7 @@ class StoryControllerImpl : PageClient,
  private:
   class ModuleWatcherImpl;
 
-  // |PageClient|
-  void OnPageChange(const std::string& key, const std::string& value) override;
-
-  // |fuchsia::modular::StoryController|
+  // |StoryController|
   void GetInfo(GetInfoCallback callback) override;
   void Start(fidl::InterfaceRequest<fuchsia::ui::views_v1_token::ViewOwner>
                  request) override;
@@ -190,6 +186,10 @@ class StoryControllerImpl : PageClient,
   void StartStoryShell(
       fidl::InterfaceRequest<fuchsia::ui::views_v1_token::ViewOwner> request);
 
+  // Called whenever |story_storage_| sees an updated ModuleData from another
+  // device.
+  void OnModuleDataUpdated(fuchsia::modular::ModuleData module_data);
+
   // Misc internal helpers.
   void SetState(fuchsia::modular::StoryState new_state);
   void DisposeLink(LinkImpl* link);
@@ -210,8 +210,7 @@ class StoryControllerImpl : PageClient,
 
   StoryProviderImpl* const story_provider_impl_;
 
-  LedgerClient* const ledger_client_;
-  const LedgerPageId story_page_id_;
+  StoryStorage* const story_storage_;
 
   // The scope in which the modules within this story run.
   Scope story_scope_;
@@ -251,6 +250,21 @@ class StoryControllerImpl : PageClient,
   // The first ingredient of a story: Modules. For each Module in the Story,
   // there is one Connection to it.
   struct Connection {
+    // NOTE: |module_data| is a cached copy of what is stored in
+    // |story_storage_|, the source of truth. It is updated in two
+    // places:
+    //
+    // 1) In LaunchModuleCall (used by LaunchModuleInShellCall) in the case
+    // that either a) the module isn't running yet or b) ModuleData.intent
+    // differs from what is cached.
+    //
+    // 2) Indirectly from OnModuleDataUpdated(), which is called when another
+    // device updates the Module by calling LaunchModuleInShellCall. However,
+    // this only happens if the Module is EXTERNAL (it was not explicitly added
+    // by another Module).
+    //
+    // TODO(thatguy): we should ensure that the local cached copy is always
+    // up to date no matter what.
     fuchsia::modular::ModuleDataPtr module_data;
     std::unique_ptr<ModuleContextImpl> module_context_impl;
     std::unique_ptr<ModuleControllerImpl> module_controller_impl;
@@ -288,7 +302,6 @@ class StoryControllerImpl : PageClient,
 
   // Operations implemented here.
   class AddIntentCall;
-  class BlockingModuleDataWriteCall;
   class ConnectLinkCall;
   class DefocusCall;
   class DeleteCall;
@@ -297,19 +310,13 @@ class StoryControllerImpl : PageClient,
   class KillModuleCall;
   class LaunchModuleCall;
   class LaunchModuleInShellCall;
-  class LedgerNotificationCall;
+  class OnModuleDataUpdatedCall;
   class ResolveModulesCall;
   class ResolveParameterCall;
   class StartCall;
   class StartContainerInShellCall;
   class StopCall;
   class StopModuleCall;
-
-  // A blocking module data write call blocks while waiting for some
-  // notifications, which are received by the StoryControllerImpl instance.
-  std::vector<
-      std::pair<fuchsia::modular::ModuleData, BlockingModuleDataWriteCall*>>
-      blocked_operations_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(StoryControllerImpl);
 };

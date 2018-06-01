@@ -8,9 +8,6 @@
 #include <utility>
 #include <vector>
 
-#include <fuchsia/modular/cpp/fidl.h>
-#include <fuchsia/modular/internal/cpp/fidl.h>
-#include <fuchsia/ui/views_v1/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 #include <lib/zx/time.h>
@@ -26,13 +23,12 @@
 #include "peridot/bin/user_runner/presentation_provider.h"
 #include "peridot/bin/user_runner/story_runner/link_impl.h"
 #include "peridot/bin/user_runner/story_runner/session_storage.h"
-#include "peridot/bin/user_runner/story_runner/session_storage_xdr.h"
 #include "peridot/bin/user_runner/story_runner/story_controller_impl.h"
+#include "peridot/bin/user_runner/story_runner/story_storage.h"
 #include "peridot/lib/common/names.h"
 #include "peridot/lib/common/teardown.h"
 #include "peridot/lib/fidl/array_to_string.h"
 #include "peridot/lib/fidl/clone.h"
-#include "peridot/lib/fidl/json_xdr.h"
 #include "peridot/lib/fidl/proxy.h"
 #include "peridot/lib/ledger_client/operations.h"
 #include "peridot/lib/ledger_client/page_id.h"
@@ -78,9 +74,11 @@ class StoryProviderImpl::CreateStoryCall : public Operation<fidl::StringPtr> {
                                               fuchsia::ledger::PageId page_id) {
           story_id_ = story_id;
           story_page_id_ = page_id;
+          // TODO(thatguy): Remove the ability of CreateStory() to add a module.
+          storage_ = std::make_unique<StoryStorage>(
+              session_storage_->ledger_client(), story_page_id_);
           controller_ = std::make_unique<StoryControllerImpl>(
-              story_id_, session_storage_->ledger_client(), story_page_id_,
-              story_provider_impl_);
+              story_id_, storage_.get(), story_provider_impl_);
           if (intent_.action.handler) {
             controller_->AddModule({} /* parent_module_path */, kRootModuleName,
                                    std::move(intent_),
@@ -101,6 +99,7 @@ class StoryProviderImpl::CreateStoryCall : public Operation<fidl::StringPtr> {
   fidl::VectorPtr<fuchsia::modular::StoryInfoExtraEntry> extra_info_;
   const zx_time_t start_time_;
 
+  std::unique_ptr<StoryStorage> storage_;
   std::unique_ptr<StoryControllerImpl> controller_;
 
   fuchsia::ledger::PageId story_page_id_;
@@ -213,9 +212,10 @@ class StoryProviderImpl::GetControllerCall : public Operation<> {
             return;
           }
           struct StoryControllerImplContainer container;
+          container.storage = std::make_unique<StoryStorage>(
+              session_storage_->ledger_client(), *story_data->story_page_id);
           container.impl = std::make_unique<StoryControllerImpl>(
-              story_id_, session_storage_->ledger_client(),
-              *story_data->story_page_id, story_provider_impl_);
+              story_id_, container.storage.get(), story_provider_impl_);
           container.impl->Connect(std::move(request_));
           container.current_info = CloneOptional(story_data->story_info);
           story_provider_impl_->story_controller_impls_.emplace(

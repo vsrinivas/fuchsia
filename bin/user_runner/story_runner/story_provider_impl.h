@@ -32,10 +32,12 @@
 #include "peridot/lib/ledger_client/types.h"
 
 namespace modular {
+
 class PresentationProvider;
 class Resolver;
 class SessionStorage;
 class StoryControllerImpl;
+class StoryStorage;
 
 class StoryProviderImpl : fuchsia::modular::StoryProvider,
                           fuchsia::modular::FocusWatcher {
@@ -221,6 +223,7 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider,
   // provider watchers when only the story state changes.
   struct StoryControllerImplContainer {
     std::unique_ptr<StoryControllerImpl> impl;
+    std::unique_ptr<StoryStorage> storage;
     fuchsia::modular::StoryInfoPtr current_info;
   };
   std::map<std::string, StoryControllerImplContainer> story_controller_impls_;
