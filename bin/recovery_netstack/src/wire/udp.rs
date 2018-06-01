@@ -2,19 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+//! Parsing and serialization of UDP packets.
+
 #[cfg(test)]
 use std::fmt::{self, Debug, Formatter};
 use std::num::NonZeroU16;
-use std::ops::RangeBounds;
+use std::ops::{Range, RangeBounds};
 
-use byteorder::{BigEndian, ByteOrder};
+use byteorder::{ByteOrder, NetworkEndian};
 use zerocopy::{AsBytes, ByteSlice, FromBytes, LayoutVerified, Unaligned};
 
 use error::ParseError;
 use ip::{Ip, IpAddr, IpProto};
 use wire::util::{extract_slice_range, fits_in_u16, fits_in_u32, Checksum};
-
-const HEADER_SIZE: usize = 8;
 
 // Header has the same memory layout (thanks to repr(C, packed)) as a UDP
 // header. Thus, we can simply reinterpret the bytes of the UDP header as a
@@ -32,8 +32,8 @@ const HEADER_SIZE: usize = 8;
 //   - We are not guaranteed that the local platform has the same endianness as
 //     network byte order (big endian), so simply treating a sequence of bytes
 //     as a u16 or other multi-byte number would not necessarily be correct.
-//     Instead, we use the BigEndian type and its reader and writer methods to
-//     correctly access these fields.
+//     Instead, we use the NetworkEndian type and its reader and writer methods
+//     to correctly access these fields.
 #[repr(C, packed)]
 struct Header {
     src_port: [u8; 2],
@@ -54,27 +54,27 @@ unsafe impl Unaligned for Header {}
 
 impl Header {
     fn src_port(&self) -> u16 {
-        BigEndian::read_u16(&self.src_port)
+        NetworkEndian::read_u16(&self.src_port)
     }
 
     fn set_src_port(&mut self, src_port: u16) {
-        BigEndian::write_u16(&mut self.src_port, src_port);
+        NetworkEndian::write_u16(&mut self.src_port, src_port);
     }
 
     fn dst_port(&self) -> u16 {
-        BigEndian::read_u16(&self.dst_port)
+        NetworkEndian::read_u16(&self.dst_port)
     }
 
     fn set_dst_port(&mut self, dst_port: u16) {
-        BigEndian::write_u16(&mut self.dst_port, dst_port);
+        NetworkEndian::write_u16(&mut self.dst_port, dst_port);
     }
 
     fn length(&self) -> u16 {
-        BigEndian::read_u16(&self.length)
+        NetworkEndian::read_u16(&self.length)
     }
 
     fn checksum(&self) -> u16 {
-        BigEndian::read_u16(&self.checksum)
+        NetworkEndian::read_u16(&self.checksum)
     }
 }
 
@@ -83,6 +83,9 @@ impl Header {
 /// A `UdpPacket` shares its underlying memory with the byte slice it was parsed
 /// from or serialized to, meaning that no copying or extra allocation is
 /// necessary.
+///
+/// A `UdpPacket` - whether parsed using `parse` or created using `create` -
+/// maintains the invariant that the checksum is always valid.
 pub struct UdpPacket<B> {
     header: LayoutVerified<B, Header>,
     body: B,
@@ -133,7 +136,7 @@ impl<B: ByteSlice> UdpPacket<B> {
             let target = if packet.header.checksum == [0xFF, 0xFF] {
                 0
             } else {
-                BigEndian::read_u16(&packet.header.checksum)
+                NetworkEndian::read_u16(&packet.header.checksum)
             };
             if packet
                 .compute_checksum(src_ip, dst_ip)
@@ -158,25 +161,24 @@ impl<B: ByteSlice> UdpPacket<B> {
         c.add_bytes(src_ip.bytes());
         c.add_bytes(dst_ip.bytes());
         if A::Version::VERSION.is_v4() {
-            c.add_bytes(&[0]);
-            c.add_bytes(&[IpProto::Udp as u8]);
+            c.add_bytes(&[0, IpProto::Udp as u8]);
             c.add_bytes(&self.header.length);
         } else {
-            let len = self.header.bytes().len() + self.body.len();
+            let len = self.total_packet_length();
+            // For IPv6, the "UDP length" field in the pseudo-header is 32 bits.
             if !fits_in_u32(len) {
                 return None;
             }
             let mut len_bytes = [0; 4];
-            BigEndian::write_u32(&mut len_bytes, len as u32);
+            NetworkEndian::write_u32(&mut len_bytes, len as u32);
             c.add_bytes(&len_bytes);
-            c.add_bytes(&[0; 3]);
-            c.add_bytes(&[IpProto::Udp as u8]);
+            c.add_bytes(&[0, 0, 0, IpProto::Udp as u8]);
         }
         c.add_bytes(&self.header.src_port);
         c.add_bytes(&self.header.dst_port);
         c.add_bytes(&self.header.length);
         c.add_bytes(&self.body);
-        Some(c.sum())
+        Some(c.checksum())
     }
 
     /// The packet body.
@@ -208,6 +210,12 @@ impl<B: ByteSlice> UdpPacket<B> {
     pub fn checksummed(&self) -> bool {
         self.header.checksum() != 0
     }
+
+    // The size of the packet as calculated from the header and body. This is
+    // not the same as the length field in the header.
+    fn total_packet_length(&self) -> usize {
+        self.header.bytes().len() + self.body.len()
+    }
 }
 
 // NOTE(joshlf): In order to ensure that the checksum is always valid, we don't
@@ -223,15 +231,16 @@ impl<'a> UdpPacket<&'a mut [u8]> {
     /// storage, initializing all header fields and calculating the checksum. It
     /// treats the range identified by `body` as being the frame body. It uses
     /// the last bytes of `header` before the body to store the header, and
-    /// returns the number of remaining prefix bytes to the caller for use in
-    /// adding other headers.
+    /// returns the range of bytes consumed by the new packet. This range can be
+    /// used to indicate the range for encapsulation in another packet.
     ///
     /// # Examples
     ///
     /// ```rust
     /// let mut buffer = [0u8; 1024];
     /// (&mut buffer[512..]).copy_from_slice(body);
-    /// let frame = UdpPacket::create(&mut buffer, 512.., src_ip, dst_ip, src_port, dst_port);
+    /// let (_, range) = UdpPacket::create(&mut buffer[..], 512.., src_ip, dst_ip, src_port, dst_port);
+    /// send_ipv4_packet(dst_ip, &mut buffer[..], range);
     /// ```
     ///
     /// # Panics
@@ -245,20 +254,23 @@ impl<'a> UdpPacket<&'a mut [u8]> {
     pub fn create<R: RangeBounds<usize>, A: IpAddr>(
         buffer: &'a mut [u8], body: R, src_ip: A, dst_ip: A, src_port: Option<NonZeroU16>,
         dst_port: NonZeroU16,
-    ) -> (UdpPacket<&'a mut [u8]>, usize) {
+    ) -> (UdpPacket<&'a mut [u8]>, Range<usize>) {
         // See for details: https://en.wikipedia.org/wiki/User_Datagram_Protocol#Packet_structure
 
         let (header, body, _) =
             extract_slice_range(buffer, body).expect("body range is out of bounds of buffer");
-        let (prefix, header) = LayoutVerified::<_, Header>::new_unaligned_from_suffix(header)
-            .expect("too few bytes for UDP header");
+        // SECURITY: Use _zeroed constructor to ensure we zero memory to prevent
+        // leaking information from packets previously stored in this buffer.
+        let (prefix, header) = LayoutVerified::<_, Header>::new_unaligned_from_suffix_zeroed(
+            header,
+        ).expect("too few bytes for UDP header");
         let mut packet = UdpPacket { header, body };
 
         packet
             .header
             .set_src_port(src_port.map(|port| port.get()).unwrap_or(0));
         packet.header.set_dst_port(dst_port.get());
-        let total_len = HEADER_LEN + packet.body.len();
+        let total_len = packet.total_packet_length();
         let len_field = if fits_in_u16(total_len) {
             total_len as u16
         } else if A::Version::VERSION.is_v6() {
@@ -273,7 +285,7 @@ impl<'a> UdpPacket<&'a mut [u8]> {
                 total_len
             );
         };
-        BigEndian::write_u16(&mut packet.header.length, len_field);
+        NetworkEndian::write_u16(&mut packet.header.length, len_field);
 
         // This ignores the checksum field in the header, so it's fine that we
         // haven't set it yet, and so it could be filled with arbitrary bytes.
@@ -281,7 +293,7 @@ impl<'a> UdpPacket<&'a mut [u8]> {
             "total UDP packet length of {} bytes overflow 32-bit length field of pseudo-header",
             total_len
         ));
-        BigEndian::write_u16(
+        NetworkEndian::write_u16(
             &mut packet.header.checksum,
             if c == 0 {
                 // When computing the checksum, a checksum of 0 is sent as 0xFFFF.
@@ -290,7 +302,7 @@ impl<'a> UdpPacket<&'a mut [u8]> {
                 c
             },
         );
-        (packet, prefix.len())
+        (packet, prefix.len()..(prefix.len() + total_len))
     }
 }
 
@@ -304,7 +316,10 @@ impl<B> Debug for UdpPacket<B> {
 
 #[cfg(test)]
 mod tests {
+    use device::ethernet::EtherType;
     use ip::{Ipv4Addr, Ipv6Addr};
+    use wire::ethernet::EthernetFrame;
+    use wire::ipv4::Ipv4Packet;
 
     use super::*;
 
@@ -317,20 +332,50 @@ mod tests {
     ]);
 
     #[test]
+    fn test_parse_full() {
+        use wire::testdata::dns_request::*;
+
+        let frame = EthernetFrame::parse(ETHERNET_FRAME_BYTES).unwrap();
+        assert_eq!(frame.src_mac(), ETHERNET_SRC_MAC);
+        assert_eq!(frame.dst_mac(), ETHERNET_DST_MAC);
+        assert_eq!(frame.ethertype(), Some(Ok(EtherType::Ipv4)));
+
+        let packet = Ipv4Packet::parse(frame.body()).unwrap();
+        assert_eq!(packet.proto(), Ok(IpProto::Udp));
+        assert_eq!(packet.dscp(), IP_DSCP);
+        assert_eq!(packet.ecn(), IP_ECN);
+        assert_eq!(packet.df_flag(), IP_DONT_FRAGMENT);
+        assert_eq!(packet.mf_flag(), IP_MORE_FRAGMENTS);
+        assert_eq!(packet.fragment_offset(), IP_FRAGMENT_OFFSET);
+        assert_eq!(packet.id(), IP_ID);
+        assert_eq!(packet.ttl(), IP_TTL);
+        assert_eq!(packet.src_ip(), IP_SRC_IP);
+        assert_eq!(packet.dst_ip(), IP_DST_IP);
+
+        let packet = UdpPacket::parse(packet.body(), packet.src_ip(), packet.dst_ip()).unwrap();
+        assert_eq!(
+            packet.src_port().map(|p| p.get()).unwrap_or(0),
+            UDP_SRC_PORT
+        );
+        assert_eq!(packet.dst_port().get(), UDP_DST_PORT);
+        assert_eq!(packet.body(), UDP_BODY);
+    }
+
+    #[test]
     fn test_parse() {
         // source port of 0 (meaning none) is allowed, as is a missing checksum
         let buf = [0, 0, 1, 2, 0, 8, 0, 0];
         let packet = UdpPacket::parse(&buf[..], TEST_SRC_IPV4, TEST_DST_IPV4).unwrap();
         assert!(packet.src_port().is_none());
-        assert_eq!(packet.dst_port().get(), BigEndian::read_u16(&[1, 2]));
+        assert_eq!(packet.dst_port().get(), NetworkEndian::read_u16(&[1, 2]));
         assert!(!packet.checksummed());
         assert!(packet.body().is_empty());
 
         // length of 0 is allowed in IPv6
-        let buf = [0, 0, 1, 2, 0, 0, 0xFF, 0xE4];
+        let buf = [0, 0, 1, 2, 0, 0, 0xFD, 0xD3];
         let packet = UdpPacket::parse(&buf[..], TEST_SRC_IPV6, TEST_DST_IPV6).unwrap();
         assert!(packet.src_port().is_none());
-        assert_eq!(packet.dst_port().get(), BigEndian::read_u16(&[1, 2]));
+        assert_eq!(packet.dst_port().get(), NetworkEndian::read_u16(&[1, 2]));
         assert!(packet.checksummed());
         assert!(packet.body().is_empty());
     }
@@ -339,7 +384,7 @@ mod tests {
     fn test_create() {
         let mut buf = [0; 8];
         {
-            let (packet, prefix_len) = UdpPacket::create(
+            let (packet, range) = UdpPacket::create(
                 &mut buf,
                 8..,
                 TEST_SRC_IPV4,
@@ -347,12 +392,37 @@ mod tests {
                 NonZeroU16::new(1),
                 NonZeroU16::new(2).unwrap(),
             );
-            assert_eq!(prefix_len, 0);
+            assert_eq!(range, 0..8);
             assert_eq!(packet.src_port().unwrap().get(), 1);
             assert_eq!(packet.dst_port().get(), 2);
             assert!(packet.checksummed());
         }
-        assert_eq!(buf, [0, 1, 0, 2, 0, 8, 222, 216]);
+        assert_eq!(buf, [0, 1, 0, 2, 0, 8, 239, 199]);
+    }
+
+    #[test]
+    fn test_create_zeroes() {
+        // Test that UdpPacket::create properly zeroes memory before serializing
+        // the header.
+        let mut buf_0 = [0; 8];
+        UdpPacket::create(
+            &mut buf_0[..],
+            8..,
+            TEST_SRC_IPV4,
+            TEST_DST_IPV4,
+            NonZeroU16::new(1),
+            NonZeroU16::new(2).unwrap(),
+        );
+        let mut buf_1 = [0xFF; 8];
+        UdpPacket::create(
+            &mut buf_1[..],
+            8..,
+            TEST_SRC_IPV4,
+            TEST_DST_IPV4,
+            NonZeroU16::new(1),
+            NonZeroU16::new(2).unwrap(),
+        );
+        assert_eq!(buf_0, buf_1);
     }
 
     #[test]
@@ -399,17 +469,17 @@ mod tests {
             ParseError::Checksum,
         );
 
-        // Total length of 2^32 or greater is disallowed in IPv6. If we created
-        // a 4 gigabyte buffer, this test would take a very long time to run.
-        // Instead, we allocate enough space for the header (which may actually
-        // be read before the length check fails), and then /very unsafely/
-        // pretend that it's 2^32 bytes long.
-        let buf = vec![0, 0, 1, 2, 0, 0, 0xFF, 0xE4];
-        let buf = unsafe { ::std::slice::from_raw_parts(buf.as_ptr(), 1 << 32) };
-        assert_eq!(
-            UdpPacket::parse(&buf[..], TEST_SRC_IPV6, TEST_DST_IPV6).unwrap_err(),
-            ParseError::Format
-        );
+        // 2^32 overflows on 32-bit platforms
+        #[cfg(target_pointer_width = "64")]
+        {
+            // total length of 2^32 or greater is disallowed in IPv6
+            let mut buf = vec![0u8; 1 << 32];
+            (&mut buf[..8]).copy_from_slice(&[0, 0, 1, 2, 0, 0, 0xFF, 0xE4]);
+            assert_eq!(
+                UdpPacket::parse(&buf[..], TEST_SRC_IPV6, TEST_DST_IPV6).unwrap_err(),
+                ParseError::Format
+            );
+        }
     }
 
     #[test]
@@ -442,14 +512,10 @@ mod tests {
 
     #[test]
     #[should_panic]
+    #[cfg(target_pointer_width = "64")] // 2^32 overflows on 32-bit platforms
     fn test_create_fail_packet_too_long_ipv6() {
-        // Total length of 2^32 or greater is disallowed in IPv6. If we created
-        // a 4 gigabyte buffer, this test would take a very long time to run.
-        // Instead, we allocate enough space for the header (which may actually
-        // be written before the length check fails), and then /very unsafely/
-        // pretend that it's 2^32 bytes long.
-        let mut buf = vec![0, 0, 0, 0, 0, 0, 0, 0];
-        let mut buf = unsafe { ::std::slice::from_raw_parts_mut(buf.as_mut_ptr(), 1 << 32) };
+        // total length of 2^32 or greater is disallowed in IPv6
+        let mut buf = vec![0u8; 1 << 32];
         UdpPacket::create(
             &mut buf,
             8..,

@@ -4,7 +4,7 @@
 
 use std::fmt::{Debug, Display};
 
-use byteorder::{BigEndian, ByteOrder};
+use byteorder::{ByteOrder, NetworkEndian};
 
 /// An IP protocol version.
 #[allow(missing_docs)]
@@ -52,7 +52,7 @@ mod sealed {
 /// `Ip` encapsulates the details of a version of the IP protocol. It includes
 /// the `IpVersion` enum (`VERSION`) and address type (`Addr`). It is
 /// implemented by `Ipv4` and `Ipv6`.
-pub trait Ip: self::sealed::Sealed {
+pub trait Ip: Sized + self::sealed::Sealed {
     /// The IP version.
     ///
     /// `V4` for IPv4 and `V6` for IPv6.
@@ -73,7 +73,7 @@ pub trait Ip: self::sealed::Sealed {
     /// The address type for this IP version.
     ///
     /// `Ipv4Addr` for IPv4 and `Ipv6Addr` for IPv6.
-    type Addr: IpAddr;
+    type Addr: IpAddr<Version = Self>;
 }
 
 /// IPv4.
@@ -113,7 +113,7 @@ impl Ip for Ipv6 {
 /// An IPv4 or IPv6 address.
 pub trait IpAddr
 where
-    Self: Eq + Copy + Display + self::sealed::Sealed,
+    Self: Sized + Eq + Copy + Display + self::sealed::Sealed,
 {
     /// The number of bytes in an address of this type.
     ///
@@ -123,7 +123,7 @@ where
     /// The IP version type of this address.
     ///
     /// `Ipv4` for `Ipv4Addr` and `Ipv6` for `Ipv6Addr`.
-    type Version: Ip;
+    type Version: Ip<Addr = Self>;
 
     /// Get the underlying bytes of the address.
     fn bytes(&self) -> &[u8];
@@ -162,9 +162,9 @@ impl IpAddr for Ipv4Addr {
             Ipv4Addr([0; 4])
         } else {
             let mask = <u32>::max_value() << (32 - bits);
-            let masked = BigEndian::read_u32(&self.0) & mask;
+            let masked = NetworkEndian::read_u32(&self.0) & mask;
             let mut ret = Ipv4Addr::default();
-            BigEndian::write_u32(&mut ret.0, masked);
+            NetworkEndian::write_u32(&mut ret.0, masked);
             ret
         }
     }
@@ -214,9 +214,9 @@ impl IpAddr for Ipv6Addr {
             Ipv6Addr([0; 16])
         } else {
             let mask = <u128>::max_value() << (128 - bits);
-            let masked = BigEndian::read_u128(&self.0) & mask;
+            let masked = NetworkEndian::read_u128(&self.0) & mask;
             let mut ret = Ipv6Addr::default();
-            BigEndian::write_u128(&mut ret.0, masked);
+            NetworkEndian::write_u128(&mut ret.0, masked);
             ret
         }
     }
@@ -229,7 +229,7 @@ impl IpAddr for Ipv6Addr {
 impl Display for Ipv6Addr {
     fn fmt(&self, f: &mut ::std::fmt::Formatter) -> Result<(), ::std::fmt::Error> {
         // TODO(joshlf): Replace longest run of zeros with ::.
-        let to_u16 = |idx| BigEndian::read_u16(&self.0[idx..idx + 2]);
+        let to_u16 = |idx| NetworkEndian::read_u16(&self.0[idx..idx + 2]);
         write!(
             f,
             "{:04x}:{:04x}:{:04x}:{:04x}:{:04x}:{:04x}:{:04x}:{:04x}",

@@ -2,18 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-//! Custom error types for the netstack
+//! Custom error types for the netstack.
 
-/// Top-level Error type the netstack
+/// Top-level error type the netstack.
 #[derive(Fail, Debug)]
-pub enum NetworkError {
+pub enum NetstackError {
     #[fail(display = "{}", _0)]
-    /// Errors related to Packet Parsing
+    /// Errors related to packet parsing.
     Parse(#[cause] ParseError),
-    // Add Error types here as we add more to the stack
+    // Add error types here as we add more to the stack
 }
 
-/// Error type for packet parsing
+/// Error type for packet parsing.
 #[derive(Fail, Debug, PartialEq)]
 #[allow(missing_docs)]
 pub enum ParseError {

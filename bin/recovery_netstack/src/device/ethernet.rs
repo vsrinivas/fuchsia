@@ -54,9 +54,29 @@ impl Mac {
 
 /// An EtherType number.
 #[allow(missing_docs)]
+#[derive(Eq, PartialEq, Debug)]
 #[repr(u16)]
 pub enum EtherType {
-    Ipv4 = 0x0800,
-    Arp = 0x0806,
-    Ipv6 = 0x86DD,
+    Ipv4 = EtherType::IPV4,
+    Arp = EtherType::ARP,
+    Ipv6 = EtherType::IPV6,
+}
+
+impl EtherType {
+    const IPV4: u16 = 0x0800;
+    const ARP: u16 = 0x0806;
+    const IPV6: u16 = 0x86DD;
+
+    /// Construct an `EtherType` from a `u16`.
+    ///
+    /// `from_u16` returns the `EtherType` with the numerical value `u`, or
+    /// `None` if the value is unrecognized.
+    pub fn from_u16(u: u16) -> Option<EtherType> {
+        match u {
+            Self::IPV4 => Some(EtherType::Ipv4),
+            Self::ARP => Some(EtherType::Arp),
+            Self::IPV6 => Some(EtherType::Ipv6),
+            _ => None,
+        }
+    }
 }

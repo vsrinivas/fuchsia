@@ -19,12 +19,17 @@
 extern crate byteorder;
 #[macro_use]
 extern crate failure;
+#[cfg(test)]
+extern crate rand;
 extern crate zerocopy;
 
 // mark all modules as public so that deny(missing_docs) will be more powerful
 pub mod device;
 pub mod error;
 pub mod ip;
+#[cfg(test)]
+pub mod testutil;
+pub mod transport;
 pub mod wire;
 
 fn main() {}

@@ -2,9 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use std::ops::RangeBounds;
+//! Parsing and serialization of Ethernet frames.
 
-use byteorder::{BigEndian, ByteOrder};
+use std::ops::{Range, RangeBounds};
+
+use byteorder::{ByteOrder, NetworkEndian};
 use zerocopy::{AsBytes, ByteSlice, FromBytes, LayoutVerified, Unaligned};
 
 use device::ethernet::{EtherType, Mac};
@@ -28,8 +30,8 @@ use wire::util::extract_slice_range;
 //   - We are not guaranteed that the local platform has the same endianness as
 //     network byte order (big endian), so simply treating a sequence of bytes
 //     as a u16 or other multi-byte number would not necessarily be correct.
-//     Instead, we use the BigEndian type and its reader and writer methods to
-//     correctly access these fields.
+//     Instead, we use the NetworkEndian type and its reader and writer methods
+//     to correctly access these fields.
 #[repr(C, packed)]
 struct HeaderPrefix {
     dst_mac: [u8; 6],
@@ -97,7 +99,7 @@ impl<B: ByteSlice> EthernetFrame<B> {
         // Identifier (TPID). A TPID of TPID_8021Q implies an 802.1Q tag, a TPID
         // of TPID_8021AD implies an 802.1ad tag, and anything else implies that
         // there is no tag - it's a normal ethertype field.
-        let ethertype_or_tpid = BigEndian::read_u16(&rest);
+        let ethertype_or_tpid = NetworkEndian::read_u16(&rest);
         let (tag, ethertype, body) = match ethertype_or_tpid {
             self::TPID_8021Q | self::TPID_8021AD => {
                 let (tag, rest) =
@@ -120,12 +122,13 @@ impl<B: ByteSlice> EthernetFrame<B> {
             body,
         };
 
-        let et = frame.ethertype();
+        let et = NetworkEndian::read_u16(&*frame.ethertype);
         if (et > 1500 && et < 1536) || (et <= 1500 && et as usize != frame.body.len()) {
             // EtherType values between 1500 and 1536 are disallowed, and values
-            // of 1500 and below are used to indicate the body size.
+            // of 1500 and below are used to indicate the body length.
             return Err(ParseError::Format);
         }
+
         Ok(frame)
     }
 
@@ -144,9 +147,32 @@ impl<B: ByteSlice> EthernetFrame<B> {
         Mac::new(self.hdr_prefix.dst_mac)
     }
 
-    /// The numerical EtherType code.
-    pub fn ethertype(&self) -> u16 {
-        BigEndian::read_u16(&self.ethertype[..])
+    /// The EtherType.
+    ///
+    /// `ethertype` returns the `EtherType` from the Ethernet header. However:
+    /// - Some values of the EtherType header field are used to indicate the
+    ///   length of the frame's body. In this case, `ethertype` returns `None`.
+    /// - If the EtherType number is unrecognized, then `ethertype` returns
+    ///   `Ok(Err(x))` where `x` is the numerical EtherType number.
+    pub fn ethertype(&self) -> Option<Result<EtherType, u16>> {
+        let et = NetworkEndian::read_u16(&self.ethertype[..]);
+        if et <= 1500 {
+            return None;
+        }
+        // values in (1500, 1536) are illegal, and shouldn't make it through
+        // parse
+        debug_assert!(et >= 1536);
+        Some(EtherType::from_u16(et).ok_or(et))
+    }
+
+    // Total frame length including header prefix, tag, EtherType, and body.
+    // This is not the same as the length as optionally encoded in the
+    // EtherType.
+    fn total_frame_len(&self) -> usize {
+        self.hdr_prefix.bytes().len()
+            + self.tag.as_ref().map(|t| t.bytes().len()).unwrap_or(0)
+            + self.ethertype.bytes().len()
+            + self.body.len()
     }
 }
 
@@ -156,16 +182,16 @@ impl<'a> EthernetFrame<&'a mut [u8]> {
     /// `create` creates an `EthernetFrame` which uses the provided `buffer` for
     /// its storage, initializing all header fields. It treats the range
     /// identified by `body` as being the frame body. It uses the last bytes of
-    /// `buffer` before the body to store the header, and returns the number of
-    /// remaining prefix bytes to the caller for use in adding other headers.
+    /// `buffer` before the body to store the header, and returns the range of
+    /// bytes consumed by the new frame. This range can be used to indicate the
+    /// range for encapsulation in another packet.
     ///
     /// # Examples
     ///
     /// ```rust
     /// let mut buffer = [0u8; 1024];
     /// (&mut buffer[512..]).copy_from_slice(body);
-    /// let (frame, prefix_bytes) =
-    ///     EthernetFrame::create(&mut buffer, 512.., src_mac, dst_mac, ethertype);
+    /// let (frame, range) = EthernetFrame::create(&mut buffer[..], 512.., src_mac, dst_mac, ethertype);
     /// ```
     ///
     /// # Panics
@@ -180,20 +206,23 @@ impl<'a> EthernetFrame<&'a mut [u8]> {
     /// enough by providing a body of at least `MIN_BODY_LEN` bytes.
     pub fn create<R: RangeBounds<usize>>(
         buffer: &'a mut [u8], body: R, src_mac: Mac, dst_mac: Mac, ethertype: EtherType,
-    ) -> (EthernetFrame<&'a mut [u8]>, usize) {
+    ) -> (EthernetFrame<&'a mut [u8]>, Range<usize>) {
         // NOTE: EtherType values of 1500 and below are used to indicate the
         // length of the body in bytes. We don't need to validate this because
         // the EtherType enum has no variants with values in that range.
 
+        // SECURITY: Use _zeroed constructors to ensure we zero memory to
+        // prevent leaking information from packets previously stored in this
+        // buffer.
         let (header, body, _) =
             extract_slice_range(buffer, body).expect("body range is out of bounds of buffer");
         let (mut frame, prefix_len) = {
-            let (prefix, ethertype) = LayoutVerified::<_, [u8; 2]>::new_unaligned_from_suffix(
-                header,
-            ).expect("too few bytes for Ethernet header");
-            let (prefix, hdr_prefix) = LayoutVerified::<_, HeaderPrefix>::new_unaligned_from_suffix(
-                prefix,
-            ).expect("too few bytes for Ethernet header");
+            let (prefix, ethertype) =
+                LayoutVerified::<_, [u8; 2]>::new_unaligned_from_suffix_zeroed(header)
+                    .expect("too few bytes for Ethernet header");
+            let (prefix, hdr_prefix) =
+                LayoutVerified::<_, HeaderPrefix>::new_unaligned_from_suffix_zeroed(prefix)
+                    .expect("too few bytes for Ethernet header");
             (
                 EthernetFrame {
                     hdr_prefix,
@@ -205,8 +234,7 @@ impl<'a> EthernetFrame<&'a mut [u8]> {
             )
         };
 
-        let total_len =
-            frame.hdr_prefix.bytes().len() + frame.ethertype.bytes().len() + frame.body.len();
+        let total_len = frame.total_frame_len();
         if total_len < 60 {
             panic!(
                 "total frame size of {} bytes is below minimum frame size of 60",
@@ -216,8 +244,8 @@ impl<'a> EthernetFrame<&'a mut [u8]> {
 
         frame.hdr_prefix.src_mac = src_mac.bytes();
         frame.hdr_prefix.dst_mac = dst_mac.bytes();
-        BigEndian::write_u16(&mut frame.ethertype[..], ethertype as u16);
-        (frame, prefix_len)
+        NetworkEndian::write_u16(&mut frame.ethertype[..], ethertype as u16);
+        (frame, prefix_len..(prefix_len + total_len))
     }
 }
 
@@ -225,12 +253,17 @@ impl<'a> EthernetFrame<&'a mut [u8]> {
 mod tests {
     use super::*;
 
-    // return a test buffer with values 0..60
+    const DEFAULT_DST_MAC: Mac = Mac::new([0, 1, 2, 3, 4, 5]);
+    const DEFAULT_SRC_MAC: Mac = Mac::new([6, 7, 8, 9, 10, 11]);
+
+    // Return a test buffer with values 0..60 except for the EtherType field,
+    // which is EtherType::Arp.
     fn new_buf() -> [u8; 60] {
         let mut buf = [0u8; 60];
         for i in 0..60 {
             buf[i] = i as u8;
         }
+        NetworkEndian::write_u16(&mut buf[12..14], EtherType::Arp as u16);
         buf
     }
 
@@ -238,12 +271,10 @@ mod tests {
     fn test_parse() {
         let buf = new_buf();
         let frame = EthernetFrame::parse(&buf[..]).unwrap();
-        assert_eq!(frame.hdr_prefix.dst_mac, [0, 1, 2, 3, 4, 5]);
-        assert_eq!(frame.hdr_prefix.src_mac, [6, 7, 8, 9, 10, 11]);
+        assert_eq!(frame.hdr_prefix.dst_mac, DEFAULT_DST_MAC.bytes());
+        assert_eq!(frame.hdr_prefix.src_mac, DEFAULT_SRC_MAC.bytes());
         assert!(frame.tag.is_none());
-        // help out with type inference
-        let ethertype: &[u8; 2] = &frame.ethertype;
-        assert_eq!(ethertype, &[12, 13]);
+        assert_eq!(frame.ethertype(), Some(Ok(EtherType::Arp)));
         assert_eq!(frame.body, &buf[14..]);
 
         // For both of the TPIDs that imply the existence of a tag, make sure
@@ -253,54 +284,87 @@ mod tests {
             let mut buf = new_buf();
 
             const TPID_OFFSET: usize = 12;
-            BigEndian::write_u16(&mut buf[TPID_OFFSET..], *tpid);
+            NetworkEndian::write_u16(&mut buf[TPID_OFFSET..], *tpid);
+            // write a valid EtherType
+            NetworkEndian::write_u16(&mut buf[TPID_OFFSET + 4..], EtherType::Arp as u16);
 
             let frame = EthernetFrame::parse(&buf[..]).unwrap();
-            assert_eq!(frame.hdr_prefix.dst_mac, [0, 1, 2, 3, 4, 5]);
-            assert_eq!(frame.hdr_prefix.src_mac, [6, 7, 8, 9, 10, 11]);
+            assert_eq!(frame.hdr_prefix.dst_mac, DEFAULT_DST_MAC.bytes());
+            assert_eq!(frame.hdr_prefix.src_mac, DEFAULT_SRC_MAC.bytes());
+            assert_eq!(frame.ethertype(), Some(Ok(EtherType::Arp)));
 
             // help out with type inference
             let tag: &[u8; 4] = &frame.tag.unwrap();
-            let got_tag = BigEndian::read_u32(tag);
+            let got_tag = NetworkEndian::read_u32(tag);
             let want_tag =
                 (*tpid as u32) << 16 | ((TPID_OFFSET as u32 + 2) << 8) | (TPID_OFFSET as u32 + 3);
             assert_eq!(got_tag, want_tag);
-            // help out with type inference
-            let ethertype: &[u8; 2] = &frame.ethertype;
-            assert_eq!(ethertype, &[16, 17]);
             assert_eq!(frame.body, &buf[18..]);
         }
     }
 
     #[test]
-    fn test_ethertype_body_len() {
-        // ethertypes of 1500 and below must match the body length
+    fn test_ethertype() {
+        // EtherTypes of 1500 and below must match the body length
         let mut buf = [0u8; 1014];
         // an incorrect length results in error
-        BigEndian::write_u16(&mut buf[12..], 1001);
+        NetworkEndian::write_u16(&mut buf[12..], 1001);
         assert!(EthernetFrame::parse(&buf[..]).is_err());
+
         // a correct length results in success
-        BigEndian::write_u16(&mut buf[12..], 1000);
-        assert!(EthernetFrame::parse(&buf[..]).is_ok());
+        NetworkEndian::write_u16(&mut buf[12..], 1000);
+        let frame = EthernetFrame::parse(&buf[..]).unwrap();
+        // there's no EtherType available
+        assert_eq!(frame.ethertype(), None);
+
+        // an unrecognized EtherType is returned numerically
+        let mut buf = [0u8; 1014];
+        NetworkEndian::write_u16(&mut buf[12..], 1536);
+        let frame = EthernetFrame::parse(&buf[..]).unwrap();
+        assert_eq!(frame.ethertype(), Some(Err(1536)));
     }
 
     #[test]
     fn test_create() {
         let mut buf = new_buf();
         {
-            let (_, prefix_len) = EthernetFrame::create(
+            let (_, range) = EthernetFrame::create(
                 &mut buf,
                 (MAX_HEADER_LEN - 4)..,
-                Mac::new([0, 1, 2, 3, 4, 5]),
-                Mac::new([6, 7, 8, 9, 10, 11]),
+                DEFAULT_DST_MAC,
+                DEFAULT_SRC_MAC,
                 EtherType::Arp,
             );
-            assert_eq!(prefix_len, 0);
+            assert_eq!(range, 0..60);
         }
         assert_eq!(
             &buf[..MAX_HEADER_LEN - 4],
             [6, 7, 8, 9, 10, 11, 0, 1, 2, 3, 4, 5, 0x08, 0x06]
         );
+    }
+
+    #[test]
+    fn test_create_zeroes() {
+        // Test that EthernetFrame::create properly zeroes memory before
+        // serializing the header.
+        let mut buf_0 = [0; 60];
+        EthernetFrame::create(
+            &mut buf_0[..],
+            14..,
+            DEFAULT_SRC_MAC,
+            DEFAULT_DST_MAC,
+            EtherType::Arp,
+        );
+        let mut buf_1 = [0; 60];
+        (&mut buf_1[..14]).copy_from_slice(&[0xFF; 14]);
+        EthernetFrame::create(
+            &mut buf_1[..],
+            14..,
+            DEFAULT_SRC_MAC,
+            DEFAULT_DST_MAC,
+            EtherType::Arp,
+        );
+        assert_eq!(&buf_0[..], &buf_1[..]);
     }
 
     #[test]
@@ -311,17 +375,17 @@ mod tests {
 
         // an ethertype of 1500 should be validated as the length of the body
         let mut buf = [0u8; 60];
-        BigEndian::write_u16(&mut buf[12..], 1500);
+        NetworkEndian::write_u16(&mut buf[12..], 1500);
         assert!(EthernetFrame::parse(&buf[..]).is_err());
 
-        // an ethertype of 1501 is illegal
+        // an ethertype of 1501 is illegal because it's in the range [1501, 1535]
         let mut buf = [0u8; 60];
-        BigEndian::write_u16(&mut buf[12..], 1501);
+        NetworkEndian::write_u16(&mut buf[12..], 1501);
         assert!(EthernetFrame::parse(&buf[..]).is_err());
 
         // an ethertype of 1535 is illegal
         let mut buf = [0u8; 60];
-        BigEndian::write_u16(&mut buf[12..], 1535);
+        NetworkEndian::write_u16(&mut buf[12..], 1535);
         assert!(EthernetFrame::parse(&buf[..]).is_err());
     }
 

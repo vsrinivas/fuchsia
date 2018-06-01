@@ -14,8 +14,12 @@
 //! caller does not need to worry about it. Any necessary conversions are
 //! performed under the hood.
 
-mod ethernet;
-mod udp;
+pub mod ethernet;
+pub mod ipv4;
+pub mod tcp;
+#[cfg(test)]
+mod testdata;
+pub mod udp;
 mod util;
 
 pub use self::ethernet::*;

@@ -1,0 +1,637 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+//! Parsing and serialization of IP packets.
+
+#[cfg(test)]
+use std::fmt::{self, Debug, Formatter};
+use std::ops::{Range, RangeBounds};
+
+use byteorder::{ByteOrder, NetworkEndian};
+use zerocopy::{AsBytes, ByteSlice, FromBytes, LayoutVerified, Unaligned};
+
+use error::ParseError;
+use ip::{IpProto, Ipv4Addr, Ipv4Option};
+use wire::util::{extract_slice_range, Checksum, Options};
+
+use self::options::Ipv4OptionImpl;
+
+const HEADER_PREFIX_SIZE: usize = 20;
+
+// HeaderPrefix has the same memory layout (thanks to repr(C, packed)) as an
+// IPv4 header prefix. Thus, we can simply reinterpret the bytes of the IPv4
+// header prefix as a HeaderPrefix and then safely access its fields. Note the
+// following caveats:
+// - We cannot make any guarantees about the alignment of an instance of this
+//   struct in memory or of any of its fields. This is true both because
+//   repr(packed) removes the padding that would be used to ensure the alignment
+//   of individual fields, but also because we are given no guarantees about
+//   where within a given memory buffer a particular packet (and thus its
+//   header) will be located.
+// - Individual fields are all either u8 or [u8; N] rather than u16, u32, etc.
+//   This is for two reasons:
+//   - u16 and larger have larger-than-1 alignments, which are forbidden as
+//     described above
+//   - We are not guaranteed that the local platform has the same endianness as
+//     network byte order (big endian), so simply treating a sequence of bytes
+//     as a u16 or other multi-byte number would not necessarily be correct.
+//     Instead, we use the NetworkEndian type and its reader and writer methods
+//     to correctly access these fields.
+#[derive(Default)]
+#[repr(C, packed)]
+struct HeaderPrefix {
+    version_ihl: u8,
+    dscp_ecn: u8,
+    total_len: [u8; 2],
+    id: [u8; 2],
+    flags_frag_off: [u8; 2],
+    ttl: u8,
+    proto: u8,
+    hdr_checksum: [u8; 2],
+    src_ip: [u8; 4],
+    dst_ip: [u8; 4],
+}
+
+/// The maximum length of an IPv4 header in bytes.
+///
+/// When calling `Ipv4PacketBuilder::build`, provide at least `MAX_HEADER_LEN`
+/// bytes for the header in order to guarantee that `build` will not panic.
+pub const MAX_HEADER_LEN: usize = 60;
+
+unsafe impl FromBytes for HeaderPrefix {}
+unsafe impl AsBytes for HeaderPrefix {}
+unsafe impl Unaligned for HeaderPrefix {}
+
+impl HeaderPrefix {
+    fn version(&self) -> u8 {
+        self.version_ihl >> 4
+    }
+
+    fn ihl(&self) -> u8 {
+        self.version_ihl & 0xF
+    }
+
+    fn total_length(&self) -> u16 {
+        NetworkEndian::read_u16(&self.total_len)
+    }
+
+    fn hdr_checksum(&self) -> u16 {
+        NetworkEndian::read_u16(&self.hdr_checksum)
+    }
+}
+
+/// An IPv4 packet.
+///
+/// An `Ipv4Packet` shares its underlying memory with the byte slice it was
+/// parsed from or serialized to, meaning that no copying or extra allocation is
+/// necessary.
+///
+/// An `Ipv4Packet` - whether parsed using `parse` or created using
+/// `Ipv4PacketBuilder` - maintains the invariant that the checksum is always
+/// valid.
+pub struct Ipv4Packet<B> {
+    hdr_prefix: LayoutVerified<B, HeaderPrefix>,
+    options: Options<B, Ipv4OptionImpl>,
+    body: B,
+}
+
+impl<B: ByteSlice> Ipv4Packet<B> {
+    /// Parse an IPv4 packet.
+    ///
+    /// `parse` parses `bytes` as an IPv4 packet and validates the checksum.
+    pub fn parse(bytes: B) -> Result<Ipv4Packet<B>, ParseError> {
+        // See for details: https://en.wikipedia.org/wiki/IPv4#Header
+
+        let total_len = bytes.len();
+        let (hdr_prefix, rest) =
+            LayoutVerified::<B, HeaderPrefix>::new_from_prefix(bytes).ok_or(ParseError::Format)?;
+        let hdr_bytes = (hdr_prefix.ihl() * 4) as usize;
+        if hdr_bytes > total_len || hdr_bytes < hdr_prefix.bytes().len() {
+            return Err(ParseError::Format);
+        }
+        let (options, body) = rest.split_at(hdr_bytes - HEADER_PREFIX_SIZE);
+        let options = Options::parse(options).map_err(|_| ParseError::Format)?;
+        let packet = Ipv4Packet {
+            hdr_prefix,
+            options,
+            body,
+        };
+        if packet.hdr_prefix.version() != 4 {
+            return Err(ParseError::Format);
+        }
+        if packet.compute_header_checksum() != packet.hdr_prefix.hdr_checksum() {
+            return Err(ParseError::Checksum);
+        }
+        if packet.hdr_prefix.total_length() as usize != total_len {
+            // we don't yet support IPv4 fragmentation
+            return Err(ParseError::NotSupported);
+        }
+
+        Ok(packet)
+    }
+
+    /// Iterate over the IPv4 header options.
+    pub fn iter_options<'a>(&'a self) -> impl 'a + Iterator<Item = Ipv4Option> {
+        self.options.iter()
+    }
+
+    // Compute the header checksum, skipping the checksum field itself.
+    fn compute_header_checksum(&self) -> u16 {
+        let mut c = Checksum::new();
+        // the header checksum is at bytes 10 and 11
+        c.add_bytes(&self.hdr_prefix.bytes()[..10]);
+        c.add_bytes(&self.hdr_prefix.bytes()[12..]);
+        c.add_bytes(self.options.bytes());
+        c.checksum()
+    }
+
+    /// The packet body.
+    pub fn body(&self) -> &[u8] {
+        &self.body
+    }
+
+    /// The Differentiated Services Code Point (DSCP).
+    pub fn dscp(&self) -> u8 {
+        self.hdr_prefix.dscp_ecn >> 2
+    }
+
+    /// The Explicit Congestion Notification (ECN).
+    pub fn ecn(&self) -> u8 {
+        self.hdr_prefix.dscp_ecn & 3
+    }
+
+    /// The identification.
+    pub fn id(&self) -> u16 {
+        NetworkEndian::read_u16(&self.hdr_prefix.id)
+    }
+
+    /// The Don't Fragment (DF) flag.
+    pub fn df_flag(&self) -> bool {
+        // the flags are the top 3 bits, so we need to shift by an extra 5 bits
+        self.hdr_prefix.flags_frag_off[0] & (1 << (5 + DF_FLAG_OFFSET)) > 0
+    }
+
+    /// The More Fragments (MF) flag.
+    pub fn mf_flag(&self) -> bool {
+        // the flags are the top 3 bits, so we need to shift by an extra 5 bits
+        self.hdr_prefix.flags_frag_off[0] & (1 << (5 + MF_FLAG_OFFSET)) > 0
+    }
+
+    /// The fragment offset.
+    pub fn fragment_offset(&self) -> u16 {
+        ((u16::from(self.hdr_prefix.flags_frag_off[0] & 0x1F)) << 8)
+            | u16::from(self.hdr_prefix.flags_frag_off[1])
+    }
+
+    /// The Time To Live (TTL).
+    pub fn ttl(&self) -> u8 {
+        self.hdr_prefix.ttl
+    }
+
+    /// The IP Protocol.
+    ///
+    /// `proto` returns the `IpProto` from the protocol field. If the protocol
+    /// number is unrecognized, the `Err` value returned contains the numerical
+    /// protocol number.
+    pub fn proto(&self) -> Result<IpProto, u8> {
+        IpProto::from_u8(self.hdr_prefix.proto).ok_or(self.hdr_prefix.proto)
+    }
+
+    /// The source IP address.
+    pub fn src_ip(&self) -> Ipv4Addr {
+        Ipv4Addr::new(self.hdr_prefix.src_ip)
+    }
+
+    /// The destination IP address.
+    pub fn dst_ip(&self) -> Ipv4Addr {
+        Ipv4Addr::new(self.hdr_prefix.dst_ip)
+    }
+
+    // The size of the packet as calculated from the header prefix, options, and
+    // body. This is not the same as the total length field in the header.
+    fn total_packet_length(&self) -> usize {
+        self.hdr_prefix.bytes().len() + self.options.bytes().len() + self.body.len()
+    }
+}
+
+impl<'a> Ipv4Packet<&'a mut [u8]> {
+    /// Set the Time To Live (TTL).
+    ///
+    /// Set the TTL and update the header checksum accordingly.
+    pub fn set_ttl(&mut self, ttl: u8) {
+        // See the Checksum::update documentation for why we need to provide two
+        // bytes which are at an even byte offset from the beginning of the
+        // header.
+        let old_bytes = [self.hdr_prefix.ttl, self.hdr_prefix.proto];
+        let new_bytes = [ttl, self.hdr_prefix.proto];
+        let checksum = Checksum::update(self.hdr_prefix.hdr_checksum(), &old_bytes, &new_bytes);
+        NetworkEndian::write_u16(&mut self.hdr_prefix.hdr_checksum, checksum);
+        self.hdr_prefix.ttl = ttl;
+    }
+}
+
+/// A builder for IPv4 packets.
+pub struct Ipv4PacketBuilder {
+    dscp: u8,
+    ecn: u8,
+    id: u16,
+    flags: u8,
+    frag_off: u16,
+    ttl: u8,
+    proto: u8,
+    src_ip: Ipv4Addr,
+    dst_ip: Ipv4Addr,
+}
+
+impl Ipv4PacketBuilder {
+    /// Create a new `Ipv4PacketBuilder`.
+    ///
+    /// Create a new builder for IPv4 packets.
+    pub fn new(src_ip: Ipv4Addr, dst_ip: Ipv4Addr, ttl: u8, proto: IpProto) -> Ipv4PacketBuilder {
+        Ipv4PacketBuilder {
+            dscp: 0,
+            ecn: 0,
+            id: 0,
+            flags: 0,
+            frag_off: 0,
+            ttl,
+            proto: proto as u8,
+            src_ip,
+            dst_ip,
+        }
+    }
+
+    /// Set the Differentiated Services Code Point (DSCP).
+    ///
+    /// # Panics
+    ///
+    /// `dscp` panics if `dscp` is greater than 2^6 - 1.
+    pub fn dscp(&mut self, dscp: u8) {
+        assert!(dscp <= 1 << 6, "invalid DCSP: {}", dscp);
+        self.dscp = dscp;
+    }
+
+    /// Set the Explicit Congestion Notification (ECN).
+    ///
+    /// # Panics
+    ///
+    /// `ecn` panics if `ecn` is greater than 3.
+    pub fn ecn(&mut self, ecn: u8) {
+        assert!(ecn <= 3, "invalid ECN: {}", ecn);
+        self.ecn = ecn;
+    }
+
+    /// Set the identification.
+    pub fn id(&mut self, id: u16) {
+        self.id = id;
+    }
+
+    /// Set the Don't Fragment (DF) flag.
+    pub fn df_flag(&mut self, df: bool) {
+        if df {
+            self.flags |= 1 << DF_FLAG_OFFSET;
+        } else {
+            self.flags &= !(1 << DF_FLAG_OFFSET);
+        }
+    }
+
+    /// Set the More Fragments (MF) flag.
+    pub fn mf_flag(&mut self, mf: bool) {
+        if mf {
+            self.flags |= 1 << MF_FLAG_OFFSET;
+        } else {
+            self.flags &= !(1 << MF_FLAG_OFFSET);
+        }
+    }
+
+    /// Set the fragment offset.
+    ///
+    /// # Panics
+    ///
+    /// `fragment_offset` panics if `fragment_offset` is greater than 2^13 - 1.
+    pub fn fragment_offset(&mut self, fragment_offset: u16) {
+        assert!(
+            fragment_offset < 1 << 13,
+            "invalid fragment offset: {}",
+            fragment_offset
+        );
+        self.frag_off = fragment_offset;
+    }
+
+    /// Serialize an IPv4 packet in an existing buffer.
+    ///
+    /// `build` creates an `Ipv4Packet` which uses the provided `buffer` for its
+    /// storage, initializing all header fields from the present configuration.
+    /// It treats the range identified by `body` as being the packet body. It
+    /// uses the last bytes of `buffer` before the body to store the header, and
+    /// returns the range of bytes consumed by the new packet. This range can be
+    /// used to indicate the range for encapsulation in another packet.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// let mut buffer = [0u8; 1024];
+    /// (&mut buffer[512..]).copy_from_slice(body);
+    /// let builder = Ipv4PacketBuilder::new(src_ip, dst_ip, ttl, proto);
+    /// let (_, range) = builder.build(&mut buffer[..], 512..);
+    /// send_ipv4_frame(device, &mut buffer[..], range);
+    /// ```
+    ///
+    /// # Panics
+    ///
+    /// `build` panics if there is insufficient room preceding the body to store
+    /// the IPv4 header, or if `body` is not in range of `buffer`. The caller
+    /// can guarantee that there will be enough room by providing at least
+    /// `MAX_HEADER_LEN` pre-body bytes.
+    pub fn build<'a, R: RangeBounds<usize>>(
+        self, buffer: &'a mut [u8], body: R,
+    ) -> (Ipv4Packet<&'a mut [u8]>, Range<usize>) {
+        let (header, body, _) =
+            extract_slice_range(buffer, body).expect("body range is out of bounds of buffer");
+        // create a 0-byte slice for the options since we don't support
+        // serializing options yet (NET-955)
+        let (options, body) = body.split_at_mut(0);
+        // SECURITY: Use _zeroed constructor to ensure we zero memory to prevent
+        // leaking information from packets previously stored in this buffer.
+        let (prefix, hdr_prefix) =
+            LayoutVerified::<_, HeaderPrefix>::new_unaligned_from_suffix_zeroed(header)
+                .expect("too few bytes for IPv4 header");
+        let options =
+            Options::parse(options).expect("parsing an empty options slice should not fail");
+        let mut packet = Ipv4Packet {
+            hdr_prefix,
+            options,
+            body,
+        };
+
+        packet.hdr_prefix.version_ihl = (4u8 << 4) | 5;
+        packet.hdr_prefix.dscp_ecn = (self.dscp << 2) | self.ecn;
+        let total_len = packet.total_packet_length();
+        if total_len > 1 << 16 {
+            panic!(
+                "packet length of {} exceeds maximum of {}",
+                total_len,
+                1 << 16
+            );
+        }
+        NetworkEndian::write_u16(&mut packet.hdr_prefix.total_len, total_len as u16);
+        NetworkEndian::write_u16(&mut packet.hdr_prefix.id, self.id);
+        NetworkEndian::write_u16(
+            &mut packet.hdr_prefix.flags_frag_off,
+            ((self.flags as u16) << 13) | self.frag_off,
+        );
+        packet.hdr_prefix.ttl = self.ttl;
+        packet.hdr_prefix.proto = self.proto;
+        packet.hdr_prefix.src_ip = self.src_ip.ipv4_bytes();
+        packet.hdr_prefix.dst_ip = self.dst_ip.ipv4_bytes();
+        let checksum = packet.compute_header_checksum();
+        NetworkEndian::write_u16(&mut packet.hdr_prefix.hdr_checksum, checksum);
+
+        (packet, prefix.len()..(prefix.len() + total_len))
+    }
+}
+
+// bit positions into the flags bits
+const DF_FLAG_OFFSET: u32 = 1;
+const MF_FLAG_OFFSET: u32 = 0;
+
+mod options {
+    use ip::{Ipv4Option, Ipv4OptionData};
+    use wire::util::OptionImpl;
+
+    const OPTION_KIND_EOL: u8 = 0;
+    const OPTION_KIND_NOP: u8 = 1;
+
+    pub struct Ipv4OptionImpl;
+
+    impl OptionImpl for Ipv4OptionImpl {
+        type Output = Ipv4Option;
+        type Error = ();
+
+        fn parse(kind: u8, data: &[u8]) -> Result<Option<Ipv4Option>, ()> {
+            let copied = kind & (1 << 7) > 0;
+            match kind {
+                self::OPTION_KIND_EOL | self::OPTION_KIND_NOP => {
+                    unreachable!("wire::util::Options promises to handle EOL and NOP")
+                }
+                kind => if data.len() > 38 {
+                    Err(())
+                } else {
+                    let len = data.len();
+                    let mut d = [0u8; 38];
+                    (&mut d[..len]).copy_from_slice(data);
+                    Ok(Some(Ipv4Option {
+                        copied,
+                        data: Ipv4OptionData::Unrecognized {
+                            kind,
+                            len: len as u8,
+                            data: d,
+                        },
+                    }))
+                },
+            }
+        }
+    }
+}
+
+// needed by Result::unwrap_err in the tests below
+#[cfg(test)]
+impl<B> Debug for Ipv4Packet<B> {
+    fn fmt(&self, fmt: &mut Formatter) -> fmt::Result {
+        write!(fmt, "Ipv4Packet")
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use device::ethernet::EtherType;
+    use wire::ethernet::EthernetFrame;
+
+    const DEFAULT_SRC_IP: Ipv4Addr = Ipv4Addr::new([1, 2, 3, 4]);
+    const DEFAULT_DST_IP: Ipv4Addr = Ipv4Addr::new([5, 6, 7, 8]);
+
+    #[test]
+    fn test_parse_full_tcp() {
+        use wire::testdata::tls_client_hello::*;
+
+        let frame = EthernetFrame::parse(ETHERNET_FRAME_BYTES).unwrap();
+        assert_eq!(frame.src_mac(), ETHERNET_SRC_MAC);
+        assert_eq!(frame.dst_mac(), ETHERNET_DST_MAC);
+        assert_eq!(frame.ethertype(), Some(Ok(EtherType::Ipv4)));
+
+        let packet = Ipv4Packet::parse(frame.body()).unwrap();
+        assert_eq!(packet.proto(), Ok(IpProto::Tcp));
+        assert_eq!(packet.dscp(), IP_DSCP);
+        assert_eq!(packet.ecn(), IP_ECN);
+        assert_eq!(packet.df_flag(), IP_DONT_FRAGMENT);
+        assert_eq!(packet.mf_flag(), IP_MORE_FRAGMENTS);
+        assert_eq!(packet.fragment_offset(), IP_FRAGMENT_OFFSET);
+        assert_eq!(packet.id(), IP_ID);
+        assert_eq!(packet.ttl(), IP_TTL);
+        assert_eq!(packet.src_ip(), IP_SRC_IP);
+        assert_eq!(packet.dst_ip(), IP_DST_IP);
+    }
+
+    #[test]
+    fn test_parse_full_udp() {
+        use wire::testdata::dns_request::*;
+
+        let frame = EthernetFrame::parse(ETHERNET_FRAME_BYTES).unwrap();
+        assert_eq!(frame.src_mac(), ETHERNET_SRC_MAC);
+        assert_eq!(frame.dst_mac(), ETHERNET_DST_MAC);
+        assert_eq!(frame.ethertype(), Some(Ok(EtherType::Ipv4)));
+
+        let packet = Ipv4Packet::parse(frame.body()).unwrap();
+        assert_eq!(packet.proto(), Ok(IpProto::Udp));
+        assert_eq!(packet.dscp(), IP_DSCP);
+        assert_eq!(packet.ecn(), IP_ECN);
+        assert_eq!(packet.df_flag(), IP_DONT_FRAGMENT);
+        assert_eq!(packet.mf_flag(), IP_MORE_FRAGMENTS);
+        assert_eq!(packet.fragment_offset(), IP_FRAGMENT_OFFSET);
+        assert_eq!(packet.id(), IP_ID);
+        assert_eq!(packet.ttl(), IP_TTL);
+        assert_eq!(packet.src_ip(), IP_SRC_IP);
+        assert_eq!(packet.dst_ip(), IP_DST_IP);
+    }
+
+    fn hdr_prefix_to_bytes(hdr_prefix: HeaderPrefix) -> [u8; 20] {
+        let mut bytes = [0; 20];
+        {
+            let mut lv = LayoutVerified::new_unaligned(&mut bytes[..]).unwrap();
+            *lv = hdr_prefix;
+        }
+        bytes
+    }
+
+    // Return a new HeaderPrefix with reasonable defaults, including a valid
+    // header checksum.
+    fn new_hdr_prefix() -> HeaderPrefix {
+        let mut hdr_prefix = HeaderPrefix::default();
+        hdr_prefix.version_ihl = (4 << 4) | 5;
+        NetworkEndian::write_u16(&mut hdr_prefix.total_len[..], 20);
+        NetworkEndian::write_u16(&mut hdr_prefix.id[..], 0x0102);
+        hdr_prefix.ttl = 0x03;
+        hdr_prefix.proto = IpProto::Tcp as u8;
+        hdr_prefix.src_ip = DEFAULT_SRC_IP.ipv4_bytes();
+        hdr_prefix.dst_ip = DEFAULT_DST_IP.ipv4_bytes();
+        hdr_prefix.hdr_checksum = [0xa6, 0xcf];
+        hdr_prefix
+    }
+
+    #[test]
+    fn test_parse() {
+        let bytes = hdr_prefix_to_bytes(new_hdr_prefix());
+        let packet = Ipv4Packet::parse(&bytes[..]).unwrap();
+        assert_eq!(packet.id(), 0x0102);
+        assert_eq!(packet.ttl(), 0x03);
+        assert_eq!(packet.proto(), Ok(IpProto::Tcp));
+        assert_eq!(packet.src_ip(), DEFAULT_SRC_IP);
+        assert_eq!(packet.dst_ip(), DEFAULT_DST_IP);
+        assert_eq!(packet.body(), []);
+    }
+
+    #[test]
+    fn test_parse_error() {
+        // Set the version to 5. The version must be 4.
+        let mut hdr_prefix = new_hdr_prefix();
+        hdr_prefix.version_ihl = (5 << 4) | 5;
+        assert_eq!(
+            Ipv4Packet::parse(&hdr_prefix_to_bytes(hdr_prefix)[..],).unwrap_err(),
+            ParseError::Format
+        );
+
+        // Set the IHL to 4, implying a header length of 16. This is smaller
+        // than the minimum of 20.
+        let mut hdr_prefix = new_hdr_prefix();
+        hdr_prefix.version_ihl = (4 << 4) | 4;
+        assert_eq!(
+            Ipv4Packet::parse(&hdr_prefix_to_bytes(hdr_prefix)[..],).unwrap_err(),
+            ParseError::Format
+        );
+
+        // Set the IHL to 6, implying a header length of 24. This is larger than
+        // the actual packet length of 20.
+        let mut hdr_prefix = new_hdr_prefix();
+        hdr_prefix.version_ihl = (4 << 4) | 6;
+        assert_eq!(
+            Ipv4Packet::parse(&hdr_prefix_to_bytes(hdr_prefix)[..],).unwrap_err(),
+            ParseError::Format
+        );
+    }
+
+    // Return a stock Ipv4PacketBuilder with reasonable default values.
+    fn new_builder() -> Ipv4PacketBuilder {
+        Ipv4PacketBuilder::new(DEFAULT_DST_IP, DEFAULT_DST_IP, 64, IpProto::Tcp)
+    }
+
+    #[test]
+    fn test_build() {
+        let mut buf = [0; 30];
+        let mut builder = new_builder();
+        builder.dscp(0x12);
+        builder.ecn(3);
+        builder.id(0x0405);
+        builder.df_flag(true);
+        builder.mf_flag(true);
+        builder.fragment_offset(0x0607);
+        {
+            // set the body
+            (&mut buf[20..]).copy_from_slice(&[0, 1, 2, 3, 3, 4, 5, 7, 8, 9]);
+            let (packet, _) = builder.build(&mut buf[..], 20..);
+            // assert that we get the values we set in the builder
+            assert_eq!(packet.dscp(), 0x12);
+            assert_eq!(packet.ecn(), 3);
+            assert_eq!(packet.id(), 0x0405);
+            assert!(packet.df_flag());
+            assert!(packet.mf_flag());
+            assert_eq!(packet.fragment_offset(), 0x0607);
+        }
+
+        // assert that we get the literal bytes we expected
+        assert_eq!(
+            buf,
+            [
+                69, 75, 0, 30, 4, 5, 102, 7, 64, 6, 248, 103, 5, 6, 7, 8, 5, 6, 7, 8, 0, 1, 2, 3,
+                3, 4, 5, 7, 8, 9
+            ],
+        );
+        let packet = Ipv4Packet::parse(&buf[..]).unwrap();
+        // assert that when we parse those bytes, we get the values we set in
+        // the builder
+        assert_eq!(packet.dscp(), 0x12);
+        assert_eq!(packet.ecn(), 3);
+        assert_eq!(packet.id(), 0x0405);
+        assert!(packet.df_flag());
+        assert!(packet.mf_flag());
+        assert_eq!(packet.fragment_offset(), 0x0607);
+    }
+
+    #[test]
+    fn test_build_zeroes() {
+        // Test that Ipv4PacketBuilder::build properly zeroes memory before
+        // serializing the header.
+        let mut buf_0 = [0; 20];
+        new_builder().build(&mut buf_0[..], 20..);
+        let mut buf_1 = [0xFF; 20];
+        new_builder().build(&mut buf_1[..], 20..);
+        assert_eq!(buf_0, buf_1);
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_build_panic_body_range() {
+        // Test that a body range which is out of bounds of the buffer is
+        // rejected.
+        new_builder().build(&mut [0; 20], ..21);
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_build_panic_insufficient_header_space() {
+        // Test that a body range which doesn't leave enough room for the header
+        // is rejected.
+        new_builder().build(&mut [0; 20], ..);
+    }
+}
