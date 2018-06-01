@@ -8,6 +8,8 @@
 #include <memory>
 #include <vector>
 
+#include <lib/fit/function.h>
+
 #include "garnet/bin/media/media_player/demux/reader.h"
 #include "garnet/bin/media/media_player/framework/metadata.h"
 #include "garnet/bin/media/media_player/framework/models/async_node.h"
@@ -21,8 +23,8 @@ namespace media_player {
 // produce one or more output streams.
 class Demux : public AsyncNode {
  public:
-  using SeekCallback = std::function<void()>;
-  using StatusCallback = std::function<void(
+  using SeekCallback = fit::closure;
+  using StatusCallback = fit::function<void(
       const std::unique_ptr<Metadata>& metadata,
       const std::string& problem_type, const std::string& problem_details)>;
 
@@ -50,7 +52,7 @@ class Demux : public AsyncNode {
 
   // Calls the callback when the initial streams and metadata have
   // established.
-  virtual void WhenInitialized(std::function<void(Result)> callback) = 0;
+  virtual void WhenInitialized(fit::function<void(Result)> callback) = 0;
 
   // Gets the stream collection. This method should not be called until the
   // WhenInitialized callback has been called.

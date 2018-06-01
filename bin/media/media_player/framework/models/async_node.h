@@ -70,7 +70,7 @@ class AsyncNode : public Node<AsyncNodeStage> {
   //
   // This method will be called on the graph's thread.
   virtual void FlushInput(bool hold_frame, size_t input_index,
-                          fxl::Closure callback) {
+                          fit::closure callback) {
     FXL_CHECK(false) << "FlushInput not implemented.";
   }
 
@@ -108,7 +108,7 @@ class AsyncNode : public Node<AsyncNodeStage> {
   // converse it not true.
   //
   // This method will be called on the graph's thread.
-  virtual void FlushOutput(size_t output_index, fxl::Closure callback) {
+  virtual void FlushOutput(size_t output_index, fit::closure callback) {
     FXL_CHECK(false) << "FlushOutput not implemented.";
   }
 

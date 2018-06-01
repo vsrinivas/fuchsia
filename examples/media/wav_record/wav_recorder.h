@@ -5,21 +5,21 @@
 #ifndef GARNET_EXAMPLES_MEDIA_WAV_RECORD_WAV_RECORDER_H_
 #define GARNET_EXAMPLES_MEDIA_WAV_RECORD_WAV_RECORDER_H_
 
+#include <lib/fit/function.h>
 #include <media/cpp/fidl.h>
 
 #include "garnet/lib/media/wav_writer/wav_writer.h"
 #include "lib/app/cpp/startup_context.h"
 #include "lib/fsl/tasks/fd_waiter.h"
 #include "lib/fxl/command_line.h"
-#include "lib/fxl/functional/closure.h"
 #include "lib/fxl/logging.h"
 
 namespace examples {
 
 class WavRecorder {
  public:
-  WavRecorder(fxl::CommandLine cmd_line, fxl::Closure quit_callback)
-      : cmd_line_(std::move(cmd_line)), quit_callback_(quit_callback) {
+  WavRecorder(fxl::CommandLine cmd_line, fit::closure quit_callback)
+      : cmd_line_(std::move(cmd_line)), quit_callback_(std::move(quit_callback)) {
     FXL_DCHECK(quit_callback_);
   }
 
@@ -40,7 +40,7 @@ class WavRecorder {
   media::audio::WavWriter<> wav_writer_;
 
   fxl::CommandLine cmd_line_;
-  fxl::Closure quit_callback_;
+  fit::closure quit_callback_;
   const char* filename_ = "";
   bool verbose_ = false;
   bool loopback_ = false;

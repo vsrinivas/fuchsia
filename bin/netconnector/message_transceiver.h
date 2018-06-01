@@ -8,6 +8,7 @@
 #include <vector>
 
 #include <lib/async/dispatcher.h>
+#include <lib/fit/function.h>
 #include <lib/zx/channel.h>
 
 #include "lib/fsl/tasks/fd_waiter.h"
@@ -120,7 +121,7 @@ class MessageTransceiver {
 
   // Queues up a task that calls |SendPacket| to be run when the socket is
   // ready.
-  void PostSendTask(std::function<void()> task);
+  void PostSendTask(fit::closure task);
 
   // Waits (using |fd_send_waiter_|) for the socket to be ready to send if there
   // are send tasks pending.
@@ -187,7 +188,7 @@ class MessageTransceiver {
   // empty. The only exception to this is in the code that actually does the
   // sending (the waiter callback, |SendPacket| and the send tasks).
   fsl::FDWaiter fd_send_waiter_;
-  std::queue<std::function<void()>> send_tasks_;
+  std::queue<fit::closure> send_tasks_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(MessageTransceiver);
 };

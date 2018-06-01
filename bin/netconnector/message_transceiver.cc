@@ -104,9 +104,9 @@ void MessageTransceiver::SendVersionPacket() {
   });
 }
 
-void MessageTransceiver::PostSendTask(std::function<void()> task) {
+void MessageTransceiver::PostSendTask(fit::closure task) {
   FXL_DCHECK(socket_fd_.is_valid()) << "PostSendTask with invalid socket.";
-  send_tasks_.push(task);
+  send_tasks_.push(std::move(task));
   if (send_tasks_.size() == 1) {
     MaybeWaitToSend();
   }
@@ -120,7 +120,7 @@ void MessageTransceiver::MaybeWaitToSend() {
   if (!fd_send_waiter_.Wait(
           [this](zx_status_t status, uint32_t events) {
             FXL_DCHECK(!send_tasks_.empty());
-            auto task = send_tasks_.front();
+            auto task = std::move(send_tasks_.front());
             send_tasks_.pop();
             task();
           },
@@ -128,7 +128,7 @@ void MessageTransceiver::MaybeWaitToSend() {
     // Wait failed because the fd is no longer valid. We need to clear
     // |send_tasks_| before we proceeed, because a non-empty send_tasks_
     // implies the need to cancel the wait.
-    std::queue<std::function<void()>> doomed;
+    std::queue<fit::closure> doomed;
     send_tasks_.swap(doomed);
     CloseConnection();
   }
@@ -400,7 +400,7 @@ std::string MessageTransceiver::ParsePayloadString() {
 void MessageTransceiver::CancelWaiters() {
   if (!send_tasks_.empty()) {
     fd_send_waiter_.Cancel();
-    std::queue<std::function<void()>> doomed;
+    std::queue<fit::closure> doomed;
     send_tasks_.swap(doomed);
   }
 

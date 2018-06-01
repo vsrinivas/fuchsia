@@ -15,10 +15,10 @@ void GenericNode::Dump(std::ostream& os) const {
   generic_stage_.load()->Dump(os);
 }
 
-void GenericNode::PostTask(const fxl::Closure& task) {
+void GenericNode::PostTask(fit::closure task) {
   Stage* generic_stage = generic_stage_;
   if (generic_stage) {
-    generic_stage->PostTask(task);
+    generic_stage->PostTask(std::move(task));
   }
 }
 

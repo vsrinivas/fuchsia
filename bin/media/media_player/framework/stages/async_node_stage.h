@@ -40,9 +40,9 @@ class AsyncNodeStageImpl : public AsyncNodeStage, public StageImpl {
   void UnprepareOutput(size_t output_index) override;
 
   void FlushInput(size_t input_index, bool hold_frame,
-                  fxl::Closure callback) override;
+                  fit::closure callback) override;
 
-  void FlushOutput(size_t output_index, fxl::Closure callback) override;
+  void FlushOutput(size_t output_index, fit::closure callback) override;
 
  protected:
   // StageImpl implementation.
@@ -52,7 +52,7 @@ class AsyncNodeStageImpl : public AsyncNodeStage, public StageImpl {
 
  private:
   // AsyncNodeStage implementation.
-  void PostTask(const fxl::Closure& task) override;
+  void PostTask(fit::closure task) override;
 
   void Dump(std::ostream& os) const override;
 

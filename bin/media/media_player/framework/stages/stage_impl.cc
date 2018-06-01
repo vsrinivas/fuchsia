@@ -63,8 +63,8 @@ void StageImpl::UpdateUntilDone() {
   }
 }
 
-void StageImpl::Acquire(const fxl::Closure& callback) {
-  PostTask([this, callback]() {
+void StageImpl::Acquire(fit::closure callback) {
+  PostTask([this, callback = std::move(callback)]() {
     {
       std::lock_guard<std::mutex> locker(tasks_mutex_);
       tasks_suspended_ = true;
@@ -95,12 +95,12 @@ void StageImpl::SetAsync(async_t* async) {
   async_ = async;
 }
 
-void StageImpl::PostTask(const fxl::Closure& task) {
+void StageImpl::PostTask(fit::closure task) {
   FXL_DCHECK(task);
 
   {
     std::lock_guard<std::mutex> locker(tasks_mutex_);
-    tasks_.push(task);
+    tasks_.push(std::move(task));
     if (tasks_.size() != 1 || tasks_suspended_) {
       // Don't need to run tasks, either because there were already tasks in
       // the queue or because task execution is suspended.
@@ -114,17 +114,17 @@ void StageImpl::PostTask(const fxl::Closure& task) {
   });
 }
 
-void StageImpl::PostShutdownTask(fxl::Closure task) {
+void StageImpl::PostShutdownTask(fit::closure task) {
   FXL_DCHECK(async_);
   async::PostTask(async_,
-                  [shared_this = shared_from_this(), task]() { task(); });
+                  [shared_this = shared_from_this(), task = std::move(task)]() { task(); });
 }
 
 void StageImpl::RunTasks() {
   tasks_mutex_.lock();
 
   while (!tasks_.empty() && !tasks_suspended_) {
-    fxl::Closure& task = tasks_.front();
+    fit::closure task = std::move(tasks_.front());
     tasks_mutex_.unlock();
     task();
     // The closure may be keeping objects alive. Destroy it here so those

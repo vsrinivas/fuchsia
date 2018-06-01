@@ -6,6 +6,7 @@
 
 #include <mutex>
 
+#include <lib/fit/function.h>
 #include <media/cpp/fidl.h>
 
 #include "garnet/bin/media/util/fidl_publisher.h"
@@ -20,9 +21,9 @@ class TimelineControlPoint : public MediaTimelineControlPoint,
                              public TimelineConsumer {
  public:
   using ProgramRangeSetCallback =
-      std::function<void(uint64_t, int64_t, int64_t)>;
-  using PrimeRequestedCallback = std::function<void(PrimeCallback)>;
-  using ProgressStartedCallback = std::function<void()>;
+      fit::function<void(uint64_t, int64_t, int64_t)>;
+  using PrimeRequestedCallback = fit::function<void(PrimeCallback)>;
+  using ProgressStartedCallback = fit::closure;
 
   TimelineControlPoint();
 
@@ -39,17 +40,17 @@ class TimelineControlPoint : public MediaTimelineControlPoint,
 
   // Sets a callback to be called when priming is requested.
   void SetProgramRangeSetCallback(ProgramRangeSetCallback callback) {
-    program_range_set_callback_ = callback;
+    program_range_set_callback_ = std::move(callback);
   }
 
   // Sets a callback to be called when priming is requested.
   void SetPrimeRequestedCallback(PrimeRequestedCallback callback) {
-    prime_requested_callback_ = callback;
+    prime_requested_callback_ = std::move(callback);
   }
 
   // Sets a callback to be called when priming is requested.
   void SetProgressStartedCallback(ProgressStartedCallback callback) {
-    progress_started_callback_ = callback;
+    progress_started_callback_ = std::move(callback);
   }
 
   // Determines if presentation time is progressing or a pending change will

@@ -89,12 +89,15 @@ HttpReader::HttpReader(fuchsia::sys::StartupContext* startup_context,
 HttpReader::~HttpReader() {}
 
 void HttpReader::Describe(DescribeCallback callback) {
-  ready_.When([this, callback]() { callback(result_, size_, can_seek_); });
+  ready_.When([this, callback = std::move(callback)]() {
+    callback(result_, size_, can_seek_);
+  });
 }
 
 void HttpReader::ReadAt(size_t position, uint8_t* buffer, size_t bytes_to_read,
                         ReadAtCallback callback) {
-  ready_.When([this, position, buffer, bytes_to_read, callback]() {
+  ready_.When([this, position, buffer, bytes_to_read,
+               callback = std::move(callback)]() mutable {
     if (result_ != Result::kOk) {
       callback(result_, 0);
       return;
@@ -115,7 +118,7 @@ void HttpReader::ReadAt(size_t position, uint8_t* buffer, size_t bytes_to_read,
     }
 
     read_at_bytes_remaining_ = read_at_bytes_to_read_;
-    read_at_callback_ = callback;
+    read_at_callback_ = std::move(callback);
 
     if (!socket_ || socket_position_ != read_at_position_) {
       socket_.reset();

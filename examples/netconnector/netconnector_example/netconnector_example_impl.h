@@ -5,12 +5,12 @@
 #ifndef GARNET_EXAMPLES_NETCONNECTOR_NETCONNECTOR_EXAMPLE_NETCONNECTOR_EXAMPLE_IMPL_H_
 #define GARNET_EXAMPLES_NETCONNECTOR_NETCONNECTOR_EXAMPLE_NETCONNECTOR_EXAMPLE_IMPL_H_
 
+#include <lib/fit/function.h>
 #include <lib/zx/channel.h>
 
 #include "garnet/examples/netconnector/netconnector_example/netconnector_example_params.h"
 #include "lib/app/cpp/startup_context.h"
 #include "lib/fidl/cpp/binding_set.h"
-#include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
 #include "lib/netconnector/cpp/message_relay.h"
 
@@ -19,7 +19,7 @@ namespace examples {
 class NetConnectorExampleImpl {
  public:
   NetConnectorExampleImpl(NetConnectorExampleParams* params,
-                          fxl::Closure quit_callback);
+                          fit::closure quit_callback);
 
   ~NetConnectorExampleImpl();
 
@@ -28,7 +28,7 @@ class NetConnectorExampleImpl {
 
   void HandleReceivedMessage(std::vector<uint8_t> message);
 
-  fxl::Closure quit_callback_;
+  fit::closure quit_callback_;
   std::unique_ptr<fuchsia::sys::StartupContext> startup_context_;
   netconnector::MessageRelay message_relay_;
   std::vector<std::string>::const_iterator conversation_iter_;

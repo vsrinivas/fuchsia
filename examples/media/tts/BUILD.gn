@@ -11,5 +11,6 @@ executable("tts") {
     "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/tts/fidl",
+    "//zircon/public/lib/fit",
   ]
 }

@@ -56,9 +56,9 @@ class AudioServerImpl : public AudioServer {
   void ScheduleFlushCleanup(fbl::unique_ptr<PendingFlushToken> token);
 
   // Schedule a closure to run on the server's main message loop.
-  void ScheduleMainThreadTask(const fxl::Closure& task) {
+  void ScheduleMainThreadTask(fit::closure task) {
     FXL_DCHECK(async_);
-    async::PostTask(async_, task);
+    async::PostTask(async_, std::move(task));
   }
 
   // Accessor for our encapsulated device manager.

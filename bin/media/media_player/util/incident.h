@@ -5,9 +5,10 @@
 #ifndef GARNET_BIN_MEDIA_MEDIA_PLAYER_UTIL_INCIDENT_H_
 #define GARNET_BIN_MEDIA_MEDIA_PLAYER_UTIL_INCIDENT_H_
 
-#include <functional>
 #include <mutex>
 #include <vector>
+
+#include <lib/fit/function.h>
 
 #include "lib/fxl/synchronization/thread_annotations.h"
 
@@ -18,7 +19,7 @@
 // Incident is not a thread-safe class and has no ability to make a thread wait
 // or to execute code on a particular thread.
 //
-// Incidents rely heavily on std::function, so they shouldn't be used in
+// Incidents rely heavily on fit::function, so they shouldn't be used in
 // enormous numbers.
 //
 // An Incident can be in one of two states: initial state or occurred state.
@@ -55,11 +56,11 @@ class Incident {
   // until this Incident occurs or is reset. If this Incident has occurred when
   // this method is called, the consequence is executed immediately and no copy
   // of the consequence is held.
-  void When(const std::function<void()>& consequence) {
+  void When(fit::closure consequence) {
     if (occurred_) {
       consequence();
     } else {
-      consequences_.push_back(consequence);
+      consequences_.push_back(std::move(consequence));
     }
   }
 
@@ -76,7 +77,7 @@ class Incident {
 
  private:
   bool occurred_ = false;
-  std::vector<std::function<void()>> consequences_;
+  std::vector<fit::closure> consequences_;
 };
 
 // Like Incident, but threadsafe.
@@ -104,11 +105,11 @@ class ThreadsafeIncident {
   // consequence is called. It's therefore possible for this ThreadsafeIncident
   // to be reset between the time the decision is made to run the consequence
   // and when the consequence is actually run.
-  void When(const std::function<void()>& consequence) {
+  void When(fit::closure consequence) {
     {
       std::lock_guard<std::mutex> locker(mutex_);
       if (!occurred_) {
-        consequences_.push_back(consequence);
+        consequences_.push_back(std::move(consequence));
         return;
       }
     }
@@ -132,7 +133,7 @@ class ThreadsafeIncident {
  private:
   mutable std::mutex mutex_;
   bool occurred_ FXL_GUARDED_BY(mutex_) = false;
-  std::vector<std::function<void()>> consequences_ FXL_GUARDED_BY(mutex_);
+  std::vector<fit::closure> consequences_ FXL_GUARDED_BY(mutex_);
 };
 
 #endif  // GARNET_BIN_MEDIA_MEDIA_PLAYER_UTIL_INCIDENT_H_

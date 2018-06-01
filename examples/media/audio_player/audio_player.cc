@@ -9,6 +9,7 @@
 #include <fcntl.h>
 #include <lib/async-loop/loop.h>
 #include <lib/async/default.h>
+#include <lib/fit/function.h>
 #include <media/cpp/fidl.h>
 
 #include "garnet/examples/media/audio_player/audio_player_params.h"
@@ -27,8 +28,8 @@ using media_player::NetMediaService;
 namespace examples {
 
 AudioPlayer::AudioPlayer(const AudioPlayerParams& params,
-                         fxl::Closure quit_callback)
-    : quit_callback_(quit_callback), quit_when_done_(!params.stay()) {
+                         fit::closure quit_callback)
+    : quit_callback_(std::move(quit_callback)), quit_when_done_(!params.stay()) {
   FXL_DCHECK(params.is_valid());
   FXL_DCHECK(quit_callback_);
 

@@ -7,18 +7,20 @@
 
 #include "garnet/bin/media/media_player/player/sink_segment.h"
 
+#include <lib/fit/function.h>
+
 namespace media_player {
 
 // A sink segment for testing the player.
 class FakeSinkSegment : public SinkSegment {
  public:
   static std::unique_ptr<FakeSinkSegment> Create(
-      std::function<void(FakeSinkSegment*)> destroy_callback) {
-    return std::make_unique<FakeSinkSegment>(destroy_callback);
+      fit::function<void(FakeSinkSegment*)> destroy_callback) {
+    return std::make_unique<FakeSinkSegment>(std::move(destroy_callback));
   }
 
-  FakeSinkSegment(std::function<void(FakeSinkSegment*)> destroy_callback)
-      : destroy_callback_(destroy_callback) {
+  FakeSinkSegment(fit::function<void(FakeSinkSegment*)> destroy_callback)
+      : destroy_callback_(std::move(destroy_callback)) {
     FXL_DCHECK(destroy_callback_);
   }
 
@@ -34,7 +36,7 @@ class FakeSinkSegment : public SinkSegment {
     connect_called_ = true;
     connect_call_param_type_ = &type;
     connect_call_param_output_ = output;
-    connect_call_param_callback_ = callback;
+    connect_call_param_callback_ = std::move(callback);
   }
 
   void Disconnect() override { disconnect_called_ = true; }
@@ -45,16 +47,16 @@ class FakeSinkSegment : public SinkSegment {
 
   void Unprepare() override { unprepare_called_ = true; }
 
-  void Prime(fxl::Closure callback) override {
+  void Prime(fit::closure callback) override {
     prime_called_ = true;
-    prime_call_param_callback_ = callback;
+    prime_call_param_callback_ = std::move(callback);
   }
 
   void SetTimelineFunction(media::TimelineFunction timeline_function,
-                           fxl::Closure callback) override {
+                           fit::closure callback) override {
     set_timeline_function_called_ = true;
     set_timeline_function_call_param_timeline_function_ = timeline_function;
-    set_timeline_function_call_param_callback_ = callback;
+    set_timeline_function_call_param_callback_ = std::move(callback);
   }
 
   void SetProgramRange(uint64_t program, int64_t min_pts,
@@ -85,7 +87,7 @@ class FakeSinkSegment : public SinkSegment {
 
  public:
   // Instrumentation for test.
-  std::function<void(FakeSinkSegment*)> destroy_callback_;
+  fit::function<void(FakeSinkSegment*)> destroy_callback_;
 
   bool did_provision_called_ = false;
   bool will_deprovision_called_ = false;
@@ -104,11 +106,11 @@ class FakeSinkSegment : public SinkSegment {
   bool unprepare_called_ = false;
 
   bool prime_called_ = false;
-  fxl::Closure prime_call_param_callback_;
+  fit::closure prime_call_param_callback_;
 
   bool set_timeline_function_called_ = false;
   media::TimelineFunction set_timeline_function_call_param_timeline_function_;
-  fxl::Closure set_timeline_function_call_param_callback_;
+  fit::closure set_timeline_function_call_param_callback_;
 
   bool set_program_range_called_ = false;
   uint64_t set_program_range_call_param_program_;

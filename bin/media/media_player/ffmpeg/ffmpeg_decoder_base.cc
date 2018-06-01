@@ -43,7 +43,7 @@ void FfmpegDecoderBase::GetConfiguration(size_t* input_count,
 }
 
 void FfmpegDecoderBase::FlushInput(bool hold_frame, size_t input_index,
-                                   fxl::Closure callback) {
+                                   fit::closure callback) {
   FXL_DCHECK(input_index == 0);
   FXL_DCHECK(callback);
 
@@ -53,13 +53,13 @@ void FfmpegDecoderBase::FlushInput(bool hold_frame, size_t input_index,
 }
 
 void FfmpegDecoderBase::FlushOutput(size_t output_index,
-                                    fxl::Closure callback) {
+                                    fit::closure callback) {
   FXL_DCHECK(output_index == 0);
   FXL_DCHECK(callback);
 
   flushing_ = true;
 
-  async::PostTask(worker_loop_.async(), [this, callback] {
+  async::PostTask(worker_loop_.async(), [this, callback = std::move(callback)] {
     FXL_DCHECK(av_codec_context_);
     avcodec_flush_buffers(av_codec_context_.get());
     next_pts_ = Packet::kUnknownPts;

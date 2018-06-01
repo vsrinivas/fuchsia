@@ -37,7 +37,7 @@ class FidlVideoRenderer
   void Dump(std::ostream& os) const override;
 
   void FlushInput(bool hold_frame, size_t input_index,
-                  fxl::Closure callback) override;
+                  fit::closure callback) override;
 
   void PutInputPacket(PacketPtr packet, size_t input_index) override;
 
@@ -48,7 +48,7 @@ class FidlVideoRenderer
 
   void SetStreamType(const StreamType& stream_type) override;
 
-  void Prime(fxl::Closure callback) override;
+  void Prime(fit::closure callback) override;
 
   fuchsia::math::Size video_size() const override;
 
@@ -56,7 +56,7 @@ class FidlVideoRenderer
 
   // Registers a callback that's called when the values returned by |video_size|
   // or |pixel_aspect_ratio| change.
-  void SetGeometryUpdateCallback(fxl::Closure callback);
+  void SetGeometryUpdateCallback(fit::closure callback);
 
   // Creates a view.
   void CreateView(
@@ -121,8 +121,8 @@ class FidlVideoRenderer
   int64_t pts_ns_ = Packet::kUnknownPts;
   VideoConverter converter_;
   std::unordered_map<View*, std::unique_ptr<View>> views_;
-  fxl::Closure prime_callback_;
-  fxl::Closure geometry_update_callback_;
+  fit::closure prime_callback_;
+  fit::closure geometry_update_callback_;
 
   PacketTimingTracker arrivals_;
   PacketTimingTracker draws_;

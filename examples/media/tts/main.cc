@@ -4,28 +4,28 @@
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/task.h>
+#include <lib/fit/function.h>
 #include <tts/cpp/fidl.h>
 
 #include "lib/app/cpp/connect.h"
 #include "lib/app/cpp/startup_context.h"
 #include "lib/fidl/cpp/synchronous_interface_ptr.h"
-#include "lib/fxl/functional/closure.h"
 #include "lib/fxl/logging.h"
 
 namespace {
 
 class TtsClient {
  public:
-  TtsClient(fxl::Closure quit_callback);
+  TtsClient(fit::closure quit_callback);
   void Say(std::string words);
 
  private:
-  fxl::Closure quit_callback_;
+  fit::closure quit_callback_;
   tts::TtsServicePtr tts_service_;
 };
 
-TtsClient::TtsClient(fxl::Closure quit_callback)
-    : quit_callback_(quit_callback) {
+TtsClient::TtsClient(fit::closure quit_callback)
+    : quit_callback_(std::move(quit_callback)) {
   FXL_DCHECK(quit_callback_);
   auto app_ctx = fuchsia::sys::StartupContext::CreateFromStartupInfo();
   tts_service_ = app_ctx->ConnectToEnvironmentService<tts::TtsService>();

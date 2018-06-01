@@ -7,6 +7,8 @@
 
 #include <memory>
 
+#include <lib/fit/function.h>
+
 #include "lib/fxl/logging.h"
 
 namespace media_player {
@@ -70,14 +72,14 @@ class CallbackJoiner : public std::enable_shared_from_this<CallbackJoiner> {
 
   // Calls Spawn and returns a new callback, which calls Complete. THIS METHOD
   // WILL ONLY WORK IF THERE IS ALREADY A SHARED POINTER TO THIS OBJECT.
-  std::function<void()> NewCallback();
+  fit::closure NewCallback();
 
   // Specifies a callback to be called when all child operations have completed.
   // If no child operations are currently pending, the callback is called
   // immediately. If child operations are pending, the callback is copied. The
   // copy called later (and reset) when all child operations have completed.
   // Only one callback at a time can be registered with WhenJoined.
-  void WhenJoined(const std::function<void()>& join_callback);
+  void WhenJoined(fit::closure join_callback);
 
   // Cancels a callback registered with WhenJoined if it hasn't run yet. The
   // return value indicates whether a callback was cancelled.
@@ -85,7 +87,7 @@ class CallbackJoiner : public std::enable_shared_from_this<CallbackJoiner> {
 
  private:
   size_t counter_ = 0;
-  std::function<void()> join_callback_;
+  fit::closure join_callback_;
 };
 
 }  // namespace media_player

@@ -15,9 +15,9 @@ Renderer::Renderer() { ClearPendingTimelineFunction(); }
 
 Renderer::~Renderer() {}
 
-void Renderer::Provision(async_t* async, fxl::Closure update_callback) {
+void Renderer::Provision(async_t* async, fit::closure update_callback) {
   async_ = async;
-  update_callback_ = update_callback;
+  update_callback_ = std::move(update_callback);
 }
 
 void Renderer::Deprovision() {
@@ -51,7 +51,7 @@ void Renderer::SetProgramRange(uint64_t program, int64_t min_pts,
 }
 
 void Renderer::SetTimelineFunction(media::TimelineFunction timeline_function,
-                                   fxl::Closure callback) {
+                                   fit::closure callback) {
   FXL_DCHECK(timeline_function.subject_time() != media::kUnspecifiedTime);
   FXL_DCHECK(timeline_function.reference_time() != media::kUnspecifiedTime);
   FXL_DCHECK(timeline_function.reference_delta() != 0);
@@ -63,7 +63,7 @@ void Renderer::SetTimelineFunction(media::TimelineFunction timeline_function,
 
   // Queue up the new pending change.
   pending_timeline_function_ = timeline_function;
-  set_timeline_function_callback_ = callback;
+  set_timeline_function_callback_ = std::move(callback);
 
   if (!was_progressing && Progressing()) {
     OnProgressStarted();
@@ -130,8 +130,7 @@ void Renderer::ClearPendingTimelineFunction() {
       media::kUnspecifiedTime, media::kUnspecifiedTime, 0, 1);
 
   if (set_timeline_function_callback_) {
-    fxl::Closure callback = set_timeline_function_callback_;
-    set_timeline_function_callback_ = nullptr;
+    fit::closure callback = std::move(set_timeline_function_callback_);
     callback();
   }
 }

@@ -14,6 +14,7 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
+#include <lib/fit/function.h>
 #include <lib/zx/time.h>
 #include <lib/zx/vmar.h>
 #include <lib/zx/vmo.h>
@@ -25,7 +26,6 @@
 #include "lib/app/cpp/connect.h"
 #include "lib/app/cpp/startup_context.h"
 #include "lib/fsl/tasks/fd_waiter.h"
-#include "lib/fxl/functional/closure.h"
 #include "lib/media/timeline/timeline_function.h"
 
 #include "garnet/lib/media/wav_writer/wav_writer.h"
@@ -78,8 +78,8 @@ using audio::utils::AudioInput;
 
 class FxProcessor {
  public:
-  FxProcessor(fbl::unique_ptr<AudioInput> input, fxl::Closure quit_callback)
-      : input_(fbl::move(input)), quit_callback_(quit_callback) {
+  FxProcessor(fbl::unique_ptr<AudioInput> input, fit::closure quit_callback)
+      : input_(fbl::move(input)), quit_callback_(std::move(quit_callback)) {
     FXL_DCHECK(quit_callback_);
   }
 
@@ -150,7 +150,7 @@ class FxProcessor {
   uint16_t preamp_gain_fixed_;
 
   fbl::unique_ptr<AudioInput> input_;
-  fxl::Closure quit_callback_;
+  fit::closure quit_callback_;
   uint32_t input_buffer_frames_ = 0;
   media::AudioRenderer2Ptr audio_renderer_;
   media::TimelineFunction clock_mono_to_input_wr_ptr_;

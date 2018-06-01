@@ -32,9 +32,9 @@ class DemuxSourceSegment : public SourceSegment {
 
   const Metadata* metadata() const override { return metadata_.get(); }
 
-  void Flush(bool hold_frame, fxl::Closure callback) override;
+  void Flush(bool hold_frame, fit::closure callback) override;
 
-  void Seek(int64_t position, fxl::Closure callback) override;
+  void Seek(int64_t position, fit::closure callback) override;
 
   NodeRef source_node() const override { return demux_node_; }
 

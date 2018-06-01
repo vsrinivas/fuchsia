@@ -25,7 +25,7 @@ Listener::~Listener() {
 
 void Listener::Start(
     IpPort port,
-    std::function<void(fxl::UniqueFD)> new_connection_callback) {
+    fit::function<void(fxl::UniqueFD)> new_connection_callback) {
   FXL_DCHECK(!socket_fd_.is_valid()) << "Started when already listening";
 
   socket_fd_ = fxl::UniqueFD(socket(AF_INET, SOCK_STREAM, 0));
@@ -53,7 +53,7 @@ void Listener::Start(
     return;
   }
 
-  new_connection_callback_ = new_connection_callback;
+  new_connection_callback_ = std::move(new_connection_callback);
 
   worker_thread_ = std::thread([this]() { Worker(); });
 }

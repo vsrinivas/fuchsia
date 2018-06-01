@@ -5,12 +5,12 @@
 #ifndef GARNET_EXAMPLES_MEDIA_AUDIO_PLAYER_AUDIO_PLAYER_H_
 #define GARNET_EXAMPLES_MEDIA_AUDIO_PLAYER_AUDIO_PLAYER_H_
 
+#include <lib/fit/function.h>
 #include <media/cpp/fidl.h>
 #include <media_player/cpp/fidl.h>
 
 #include "garnet/examples/media/audio_player/audio_player_params.h"
 #include "lib/app/cpp/startup_context.h"
-#include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
 #include "lib/media/timeline/timeline_function.h"
 
@@ -18,7 +18,7 @@ namespace examples {
 
 class AudioPlayer {
  public:
-  AudioPlayer(const AudioPlayerParams& params, fxl::Closure quit_callback);
+  AudioPlayer(const AudioPlayerParams& params, fit::closure quit_callback);
 
   ~AudioPlayer();
 
@@ -26,7 +26,7 @@ class AudioPlayer {
   // Handles a status update from the player.
   void HandleStatusChanged(const media_player::MediaPlayerStatus& status);
 
-  fxl::Closure quit_callback_;
+  fit::closure quit_callback_;
   media_player::MediaPlayerPtr media_player_;
   bool metadata_shown_ = false;
   bool problem_shown_ = false;

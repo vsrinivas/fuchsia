@@ -8,6 +8,7 @@
 #include <unordered_map>
 
 #include <lib/async/default.h>
+#include <lib/fit/function.h>
 #include <media/cpp/fidl.h>
 
 #include "garnet/bin/media/media_player/demux/reader.h"
@@ -16,7 +17,6 @@
 #include "garnet/bin/media/media_player/render/fidl_video_renderer.h"
 #include "lib/app/cpp/startup_context.h"
 #include "lib/fidl/cpp/binding_set.h"
-#include "lib/fxl/functional/closure.h"
 #include "lib/media/timeline/timeline.h"
 #include "lib/media/timeline/timeline_function.h"
 
@@ -27,11 +27,11 @@ class MediaPlayerImpl : public MediaPlayer {
  public:
   static std::unique_ptr<MediaPlayerImpl> Create(
       fidl::InterfaceRequest<MediaPlayer> request,
-      fuchsia::sys::StartupContext* startup_context, fxl::Closure quit_callback);
+      fuchsia::sys::StartupContext* startup_context, fit::closure quit_callback);
 
   MediaPlayerImpl(fidl::InterfaceRequest<MediaPlayer> request,
                   fuchsia::sys::StartupContext* startup_context,
-                  fxl::Closure quit_callback);
+                  fit::closure quit_callback);
 
   ~MediaPlayerImpl() override;
 
@@ -88,10 +88,6 @@ class MediaPlayerImpl : public MediaPlayer {
   // Creates sinks as needed and connects enabled streams.
   void ConnectSinks();
 
-  // Prepares a stream.
-  void PrepareStream(size_t index, const media::MediaType& input_media_type,
-                     const std::function<void()>& callback);
-
   // Takes action based on current state.
   void Update();
 
@@ -108,7 +104,7 @@ class MediaPlayerImpl : public MediaPlayer {
 
   // Sets the timeline function.
   void SetTimelineFunction(float rate, int64_t reference_time,
-                           fxl::Closure callback);
+                           fit::closure callback);
 
   // Sends status updates to clients.
   void SendStatusUpdates();
@@ -118,7 +114,7 @@ class MediaPlayerImpl : public MediaPlayer {
 
   async_t* async_;
   fuchsia::sys::StartupContext* startup_context_;
-  fxl::Closure quit_callback_;
+  fit::closure quit_callback_;
   fidl::BindingSet<MediaPlayer> bindings_;
   Player player_;
 

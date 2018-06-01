@@ -8,6 +8,7 @@
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/task.h>
+#include <lib/fit/function.h>
 #include <media/cpp/fidl.h>
 
 #include "garnet/bin/media/media_player/test/fake_audio_renderer.h"
@@ -15,7 +16,6 @@
 #include "lib/app/cpp/connect.h"
 #include "lib/app/cpp/startup_context.h"
 #include "lib/fidl/cpp/optional.h"
-#include "lib/fxl/functional/closure.h"
 #include "lib/fxl/logging.h"
 #include "lib/media/timeline/timeline_rate.h"
 
@@ -23,9 +23,9 @@ namespace media_player {
 namespace test {
 
 MediaPlayerTestUnattended::MediaPlayerTestUnattended(
-    std::function<void(int)> quit_callback)
+    fit::function<void(int)> quit_callback)
     : startup_context_(fuchsia::sys::StartupContext::CreateFromStartupInfo()),
-      quit_callback_(quit_callback) {
+      quit_callback_(std::move(quit_callback)) {
   FXL_DCHECK(quit_callback_);
   std::cerr << "MediaPlayerTest starting\n";
 

@@ -107,6 +107,10 @@ executable("audio_server") {
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
   ]
+
+  public_deps = [
+    "//zircon/public/lib/fit",
+  ]
 }
 
 test("tests") {

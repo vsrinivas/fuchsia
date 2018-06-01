@@ -30,6 +30,10 @@ source_set("demux") {
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/net/oldhttp/fidl",
   ]
+
+  public_deps = [
+    "//zircon/public/lib/fit",
+  ]
 }
 
 test("tests") {

@@ -23,7 +23,7 @@ class FakeAudioRenderer : public Renderer {
 
   // Renderer implementation.
   void FlushInput(bool hold_frame, size_t input_index,
-                  fxl::Closure callback) override {
+                  fit::closure callback) override {
     FXL_DCHECK(input_index == 0);
     FXL_DCHECK(callback);
     callback();
@@ -46,10 +46,10 @@ class FakeAudioRenderer : public Renderer {
     stream_type_ = stream_type.Clone();
   }
 
-  void Prime(fxl::Closure callback) override { callback(); }
+  void Prime(fit::closure callback) override { callback(); }
 
   void SetTimelineFunction(media::TimelineFunction timeline_function,
-                           fxl::Closure callback) override {
+                           fit::closure callback) override {
     callback();
   }
 

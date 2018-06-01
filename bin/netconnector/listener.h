@@ -8,6 +8,7 @@
 #include <thread>
 
 #include <lib/async/dispatcher.h>
+#include <lib/fit/function.h>
 
 #include "garnet/bin/netconnector/ip_port.h"
 #include "lib/fxl/files/unique_fd.h"
@@ -28,7 +29,7 @@ class Listener {
   // Starts listening on |port|. |new_connection_callback| is called when a new
   // connection is requested.
   void Start(IpPort port,
-             std::function<void(fxl::UniqueFD)> new_connection_callback);
+             fit::function<void(fxl::UniqueFD)> new_connection_callback);
 
   // Stops the listener.
   void Stop();
@@ -39,7 +40,7 @@ class Listener {
   void Worker();
 
   async_t* async_;
-  std::function<void(fxl::UniqueFD)> new_connection_callback_;
+  fit::function<void(fxl::UniqueFD)> new_connection_callback_;
   fxl::UniqueFD socket_fd_;
   std::thread worker_thread_;
 

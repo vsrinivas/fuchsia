@@ -7,18 +7,20 @@
 
 #include "garnet/bin/media/media_player/player/source_segment.h"
 
+#include <lib/fit/function.h>
+
 namespace media_player {
 
 // A source segment for testing the player.
 class FakeSourceSegment : public SourceSegment {
  public:
   static std::unique_ptr<FakeSourceSegment> Create(
-      std::function<void(FakeSourceSegment*)> destroy_callback) {
-    return std::make_unique<FakeSourceSegment>(destroy_callback);
+      fit::function<void(FakeSourceSegment*)> destroy_callback) {
+    return std::make_unique<FakeSourceSegment>(std::move(destroy_callback));
   }
 
-  FakeSourceSegment(std::function<void(FakeSourceSegment*)> destroy_callback)
-      : destroy_callback_(destroy_callback) {
+  FakeSourceSegment(fit::function<void(FakeSourceSegment*)> destroy_callback)
+      : destroy_callback_(std::move(destroy_callback)) {
     FXL_DCHECK(destroy_callback_);
   }
 
@@ -31,16 +33,16 @@ class FakeSourceSegment : public SourceSegment {
 
   const Metadata* metadata() const override { return metadata_; }
 
-  void Flush(bool hold_frame, fxl::Closure callback) override {
+  void Flush(bool hold_frame, fit::closure callback) override {
     flush_called_ = true;
     flush_call_param_hold_frame_ = hold_frame;
     callback();
   }
 
-  void Seek(int64_t position, fxl::Closure callback) override {
+  void Seek(int64_t position, fit::closure callback) override {
     seek_called_ = true;
     seek_call_param_position_ = position;
-    seek_call_param_callback_ = callback;
+    seek_call_param_callback_ = std::move(callback);
   }
 
   NodeRef source_node() const override { return NodeRef(); }
@@ -74,7 +76,7 @@ class FakeSourceSegment : public SourceSegment {
 
  public:
   // Instrumentation for test.
-  std::function<void(FakeSourceSegment*)> destroy_callback_;
+  fit::function<void(FakeSourceSegment*)> destroy_callback_;
 
   bool did_provision_called_ = false;
   bool will_deprovision_called_ = false;
@@ -86,7 +88,7 @@ class FakeSourceSegment : public SourceSegment {
 
   bool seek_called_ = false;
   int64_t seek_call_param_position_;
-  fxl::Closure seek_call_param_callback_;
+  fit::closure seek_call_param_callback_;
 };
 
 }  // namespace media_player

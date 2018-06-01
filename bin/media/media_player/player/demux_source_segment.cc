@@ -76,14 +76,14 @@ void DemuxSourceSegment::BuildGraph() {
   }
 }
 
-void DemuxSourceSegment::Flush(bool hold_frame, fxl::Closure callback) {
+void DemuxSourceSegment::Flush(bool hold_frame, fit::closure callback) {
   FXL_DCHECK(demux_initialized_.occurred());
-  graph().FlushAllOutputs(demux_node_, hold_frame, callback);
+  graph().FlushAllOutputs(demux_node_, hold_frame, std::move(callback));
 }
 
-void DemuxSourceSegment::Seek(int64_t position, fxl::Closure callback) {
+void DemuxSourceSegment::Seek(int64_t position, fit::closure callback) {
   FXL_DCHECK(demux_initialized_.occurred());
-  demux_->Seek(position, callback);
+  demux_->Seek(position, std::move(callback));
 }
 
 }  // namespace media_player

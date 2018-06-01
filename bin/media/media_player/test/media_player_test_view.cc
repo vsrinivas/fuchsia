@@ -47,7 +47,7 @@ int64_t rand_less_than(int64_t limit) {
 }  // namespace
 
 MediaPlayerTestView::MediaPlayerTestView(
-    std::function<void(int)> quit_callback,
+    fit::function<void(int)> quit_callback,
     ::fuchsia::ui::views_v1::ViewManagerPtr view_manager,
     fidl::InterfaceRequest<::fuchsia::ui::views_v1_token::ViewOwner>
         view_owner_request,
@@ -55,12 +55,12 @@ MediaPlayerTestView::MediaPlayerTestView(
     const MediaPlayerTestParams& params)
     : mozart::BaseView(std::move(view_manager), std::move(view_owner_request),
                        "Media Player"),
-      quit_callback_(quit_callback),
+      quit_callback_(std::move(quit_callback)),
       params_(params),
       background_node_(session()),
       progress_bar_node_(session()),
       progress_bar_slider_node_(session()) {
-  FXL_DCHECK(quit_callback);
+  FXL_DCHECK(quit_callback_);
   FXL_DCHECK(params_.is_valid());
   FXL_DCHECK(!params_.urls().empty());
 

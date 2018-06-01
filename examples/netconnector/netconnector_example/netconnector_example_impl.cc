@@ -21,8 +21,8 @@ static const std::vector<std::string> kConversation = {
 }  // namespace
 
 NetConnectorExampleImpl::NetConnectorExampleImpl(
-    NetConnectorExampleParams* params, fxl::Closure quit_callback)
-    : quit_callback_(quit_callback),
+    NetConnectorExampleParams* params, fit::closure quit_callback)
+    : quit_callback_(std::move(quit_callback)),
       startup_context_(fuchsia::sys::StartupContext::CreateFromStartupInfo()) {
   // The MessageRelay makes using the channel easier. Hook up its callbacks.
   message_relay_.SetMessageReceivedCallback(

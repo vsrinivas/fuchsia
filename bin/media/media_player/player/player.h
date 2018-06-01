@@ -30,8 +30,8 @@ class Player {
   // Sets the callback to be called when the status of the player is updated.
   // This callback notifies of changes to end_of_stream(), metadata() and/or
   // problem().
-  void SetUpdateCallback(fxl::Closure update_callback) {
-    update_callback_ = update_callback;
+  void SetUpdateCallback(fit::closure update_callback) {
+    update_callback_ = std::move(update_callback);
   }
 
   // Sets the current source segment. |source_segment| may be null, indicating
@@ -39,7 +39,7 @@ class Player {
   // of streams supplied by the segment have been connected and prepared to the
   // extent possible. |callback| may be null.
   void SetSourceSegment(std::unique_ptr<SourceSegment> source_segment,
-                        fxl::Closure callback);
+                        fit::closure callback);
 
   // Sets the current sink segment for the specified medium. |sink_segment| may
   // be null, indicating there is no sink segment for the specified medium.
@@ -76,15 +76,15 @@ class Player {
 
   // Prepares the graph for playback by satisfying initial renderer demand.
   // |callback| will never be called synchronously.
-  void Prime(fxl::Closure callback);
+  void Prime(fit::closure callback);
 
   // Flushes packets from the graph. |callback| will never be called
   // synchronously.
-  void Flush(bool hold_frame, fxl::Closure callback);
+  void Flush(bool hold_frame, fit::closure callback);
 
   // Sets the timeline function. |callback| will never be called synchronously.
   void SetTimelineFunction(media::TimelineFunction timeline_function,
-                           fxl::Closure callback);
+                           fit::closure callback);
 
   const media::TimelineFunction& timeline_function() {
     return timeline_function_;
@@ -95,7 +95,7 @@ class Player {
 
   // Seeks to the specified position. |callback| will never be called
   // synchronously.
-  void Seek(int64_t position, fxl::Closure callback);
+  void Seek(int64_t position, fit::closure callback);
 
   // Indicates whether the player has reached end of stream.
   bool end_of_stream() const;
@@ -171,8 +171,8 @@ class Player {
 
   Graph graph_;
   async_t* async_;
-  fxl::Closure update_callback_;
-  fxl::Closure set_source_segment_callback_;
+  fit::closure update_callback_;
+  fit::closure set_source_segment_callback_;
   size_t set_source_segment_countdown_;
   std::unique_ptr<SourceSegment> source_segment_;
   std::vector<Stream> streams_;

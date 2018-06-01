@@ -9,12 +9,12 @@
 #include <audio_policy/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/task.h>
+#include <lib/fit/function.h>
 
 #include "lib/app/cpp/startup_context.h"
 #include "lib/fidl/cpp/optional.h"
 #include "lib/fsl/tasks/fd_waiter.h"
 #include "lib/fxl/command_line.h"
-#include "lib/fxl/functional/closure.h"
 #include "lib/media/audio/perceived_level.h"
 
 using audio_policy::AudioPolicyStatus;
@@ -55,10 +55,10 @@ std::ostream& operator<<(std::ostream& os, const AudioPolicyStatus& value) {
 
 class VolApp {
  public:
-  VolApp(int argc, const char** argv, fxl::Closure quit_callback)
+  VolApp(int argc, const char** argv, fit::closure quit_callback)
       : startup_context_(fuchsia::sys::StartupContext::CreateFromStartupInfo()),
-        quit_callback_(quit_callback) {
-    FXL_DCHECK(quit_callback);
+        quit_callback_(std::move(quit_callback)) {
+    FXL_DCHECK(quit_callback_);
 
     fxl::CommandLine command_line = fxl::CommandLineFromArgcArgv(argc, argv);
 
@@ -226,7 +226,7 @@ class VolApp {
   }
 
   std::unique_ptr<fuchsia::sys::StartupContext> startup_context_;
-  fxl::Closure quit_callback_;
+  fit::closure quit_callback_;
   audio_policy::AudioPolicyPtr audio_policy_service_;
   bool interactive_ = true;
   bool mute_ = false;

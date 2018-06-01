@@ -9,6 +9,7 @@
 #include <queue>
 
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/fit/function.h>
 #include <media/cpp/fidl.h>
 #include <media_player/cpp/fidl.h>
 
@@ -24,7 +25,7 @@ namespace test {
 class MediaPlayerTestView : public mozart::BaseView {
  public:
   MediaPlayerTestView(
-      std::function<void(int)> quit_callback,
+      fit::function<void(int)> quit_callback,
       ::fuchsia::ui::views_v1::ViewManagerPtr view_manager,
       fidl::InterfaceRequest<::fuchsia::ui::views_v1_token::ViewOwner>
           view_owner_request,
@@ -71,7 +72,7 @@ class MediaPlayerTestView : public mozart::BaseView {
   // Seeks to a new position and sets |seek_interval_end_|.
   void StartNewSeekInterval();
 
-  std::function<void(int)> quit_callback_;
+  fit::function<void(int)> quit_callback_;
   const MediaPlayerTestParams& params_;
   size_t current_url_index_ = 0;
 

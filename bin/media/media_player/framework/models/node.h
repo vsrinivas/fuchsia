@@ -7,11 +7,12 @@
 
 #include <atomic>
 
+#include <lib/fit/function.h>
+
 #include "garnet/bin/media/media_player/framework/models/stage.h"
 #include "garnet/bin/media/media_player/framework/packet.h"
 #include "garnet/bin/media/media_player/framework/payload_allocator.h"
 #include "garnet/bin/media/media_player/framework/refs.h"
-#include "lib/fxl/functional/closure.h"
 
 namespace media_player {
 
@@ -34,7 +35,7 @@ class GenericNode {
  protected:
   // Posts a task to run as soon as possible. A task posted with this method is
   // run exclusive of any other such tasks.
-  void PostTask(const fxl::Closure& task);
+  void PostTask(fit::closure task);
 
  private:
   std::atomic<Stage*> generic_stage_;

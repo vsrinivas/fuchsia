@@ -7,6 +7,7 @@
 #include <lib/async/default.h>
 
 #include "garnet/bin/media/media_player/fidl/fidl_type_conversions.h"
+#include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
 #include "lib/media/timeline/timeline.h"
 #include "lib/media/timeline/timeline_rate.h"
@@ -100,7 +101,7 @@ void FidlAudioRenderer::Dump(std::ostream& os) const {
 }
 
 void FidlAudioRenderer::FlushInput(bool hold_frame_not_used, size_t input_index,
-                                   fxl::Closure callback) {
+                                   fit::closure callback) {
   FXL_DCHECK(async_get_default() == async());
   FXL_DCHECK(input_index == 0);
   FXL_DCHECK(callback);
@@ -108,11 +109,11 @@ void FidlAudioRenderer::FlushInput(bool hold_frame_not_used, size_t input_index,
   flushed_ = true;
   SetEndOfStreamPts(media::kUnspecifiedTime);
 
-  audio_renderer_->Flush([this, callback]() {
+  audio_renderer_->Flush(fxl::MakeCopyable([this, callback = std::move(callback)]() {
     last_supplied_pts_ns_ = 0;
     last_departed_pts_ns_ = media::kUnspecifiedTime;
     callback();
-  });
+  }));
 }
 
 void FidlAudioRenderer::PutInputPacket(PacketPtr packet, size_t input_index) {
@@ -232,7 +233,7 @@ void FidlAudioRenderer::SetStreamType(const StreamType& stream_type) {
   bytes_per_frame_ = stream_type.audio()->bytes_per_frame();
 }
 
-void FidlAudioRenderer::Prime(fxl::Closure callback) {
+void FidlAudioRenderer::Prime(fit::closure callback) {
   FXL_DCHECK(async_get_default() == async());
 
   if (prime_callback_) {
@@ -248,12 +249,12 @@ void FidlAudioRenderer::Prime(fxl::Closure callback) {
     return;
   }
 
-  prime_callback_ = callback;
+  prime_callback_ = std::move(callback);
   SignalCurrentDemand();
 }
 
 void FidlAudioRenderer::SetTimelineFunction(
-    media::TimelineFunction timeline_function, fxl::Closure callback) {
+    media::TimelineFunction timeline_function, fit::closure callback) {
   FXL_DCHECK(async_get_default() == async());
   // AudioRenderer2 only supports 0/1 (paused) or 1/1 (normal playback rate).
   // TODO(dalesat): Remove this DCHECK when AudioRenderer2 supports other rates,
@@ -262,7 +263,7 @@ void FidlAudioRenderer::SetTimelineFunction(
              (timeline_function.subject_delta() == 1 &&
               timeline_function.reference_delta() == 1));
 
-  Renderer::SetTimelineFunction(timeline_function, callback);
+  Renderer::SetTimelineFunction(timeline_function, std::move(callback));
 
   if (timeline_function.subject_delta() == 0) {
     audio_renderer_->PauseNoReply();

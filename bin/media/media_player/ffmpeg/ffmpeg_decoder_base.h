@@ -37,9 +37,9 @@ class FfmpegDecoderBase : public Decoder {
   void GetConfiguration(size_t* input_count, size_t* output_count) override;
 
   void FlushInput(bool hold_frame, size_t input_index,
-                  fxl::Closure callback) override;
+                  fit::closure callback) override;
 
-  void FlushOutput(size_t output_index, fxl::Closure callback) override;
+  void FlushOutput(size_t output_index, fit::closure callback) override;
 
   std::shared_ptr<PayloadAllocator> allocator_for_input(
       size_t input_index) override;

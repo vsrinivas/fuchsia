@@ -36,10 +36,10 @@ class RendererSinkSegment : public SinkSegment {
 
   void Unprepare() override;
 
-  void Prime(fxl::Closure callback) override;
+  void Prime(fit::closure callback) override;
 
   void SetTimelineFunction(media::TimelineFunction timeline_function,
-                           fxl::Closure callback) override;
+                           fit::closure callback) override;
 
   void SetProgramRange(uint64_t program, int64_t min_pts,
                        int64_t max_pts) override;

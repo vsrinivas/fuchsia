@@ -211,20 +211,20 @@ bool AsyncNodeStageImpl::MaybeTakePacketForOutput(const Output& output,
 }
 
 void AsyncNodeStageImpl::FlushInput(size_t input_index, bool hold_frame,
-                                    fxl::Closure callback) {
+                                    fit::closure callback) {
   FXL_DCHECK(input_index < inputs_.size());
 
   inputs_[input_index].Flush();
 
   node_->FlushInput(hold_frame, input_index,
-                    [this, callback]() { PostTask(callback); });
+                    [this, callback = std::move(callback)]() mutable { PostTask(std::move(callback)); });
 }
 
 void AsyncNodeStageImpl::FlushOutput(size_t output_index,
-                                     fxl::Closure callback) {
+                                     fit::closure callback) {
   FXL_DCHECK(output_index < outputs_.size());
 
-  node_->FlushOutput(output_index, [this, output_index, callback]() {
+  node_->FlushOutput(output_index, [this, output_index, callback = std::move(callback)]() mutable {
     {
       std::lock_guard<std::mutex> locker(packets_per_output_mutex_);
       auto& packets = packets_per_output_[output_index];
@@ -233,13 +233,13 @@ void AsyncNodeStageImpl::FlushOutput(size_t output_index,
       }
     }
 
-    PostTask(callback);
+    PostTask(std::move(callback));
   });
 }
 
-void AsyncNodeStageImpl::PostTask(const fxl::Closure& task) {
+void AsyncNodeStageImpl::PostTask(fit::closure task) {
   // This method runs on an arbitrary thread.
-  StageImpl::PostTask(task);
+  StageImpl::PostTask(std::move(task));
 }
 
 void AsyncNodeStageImpl::RequestInputPacket(size_t input_index) {

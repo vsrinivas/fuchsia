@@ -9,6 +9,7 @@
 #include <fs/pseudo-file.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
+#include <lib/fit/function.h>
 #include <media/cpp/fidl.h>
 #include <media_player/cpp/fidl.h>
 
@@ -38,17 +39,17 @@ static const char* kDumpEntry = "dump";
 // static
 std::unique_ptr<MediaPlayerImpl> MediaPlayerImpl::Create(
     fidl::InterfaceRequest<MediaPlayer> request,
-    fuchsia::sys::StartupContext* startup_context, fxl::Closure quit_callback) {
+    fuchsia::sys::StartupContext* startup_context, fit::closure quit_callback) {
   return std::make_unique<MediaPlayerImpl>(std::move(request), startup_context,
-                                           quit_callback);
+                                           std::move(quit_callback));
 }
 
 MediaPlayerImpl::MediaPlayerImpl(fidl::InterfaceRequest<MediaPlayer> request,
                                  fuchsia::sys::StartupContext* startup_context,
-                                 fxl::Closure quit_callback)
+                                 fit::closure quit_callback)
     : async_(async_get_default()),
       startup_context_(startup_context),
-      quit_callback_(quit_callback),
+      quit_callback_(std::move(quit_callback)),
       player_(async_) {
   FXL_DCHECK(request);
   FXL_DCHECK(startup_context_);
@@ -366,11 +367,11 @@ void MediaPlayerImpl::Update() {
 }
 
 void MediaPlayerImpl::SetTimelineFunction(float rate, int64_t reference_time,
-                                          fxl::Closure callback) {
+                                          fit::closure callback) {
   player_.SetTimelineFunction(
       media::TimelineFunction(transform_subject_time_, reference_time,
                               media::TimelineRate(rate)),
-      callback);
+      std::move(callback));
   transform_subject_time_ = media::kUnspecifiedTime;
   SendStatusUpdates();
 }

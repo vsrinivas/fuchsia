@@ -31,7 +31,7 @@ constexpr size_t kNumPacketsToSend =
 
 namespace examples {
 
-MediaApp::MediaApp(fxl::Closure quit_callback) : quit_callback_(quit_callback) {
+MediaApp::MediaApp(fit::closure quit_callback) : quit_callback_(std::move(quit_callback)) {
   FXL_DCHECK(quit_callback_);
 }
 

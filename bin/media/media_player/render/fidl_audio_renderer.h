@@ -38,7 +38,7 @@ class FidlAudioRenderer
   void Dump(std::ostream& os) const override;
 
   void FlushInput(bool hold_frame, size_t input_index,
-                  fxl::Closure callback) override;
+                  fit::closure callback) override;
 
   std::shared_ptr<PayloadAllocator> allocator_for_input(
       size_t input_index) override {
@@ -55,10 +55,10 @@ class FidlAudioRenderer
 
   void SetStreamType(const StreamType& stream_type) override;
 
-  void Prime(fxl::Closure callback) override;
+  void Prime(fit::closure callback) override;
 
   void SetTimelineFunction(media::TimelineFunction timeline_function,
-                           fxl::Closure callback) override;
+                           fit::closure callback) override;
 
   void SetGain(float gain) override;
 
@@ -94,7 +94,7 @@ class FidlAudioRenderer
   media::TimelineRate pts_rate_;
   int64_t last_supplied_pts_ns_ = 0;
   int64_t last_departed_pts_ns_ = 0;
-  fxl::Closure prime_callback_;
+  fit::closure prime_callback_;
   uint32_t bytes_per_frame_;
   bool flushed_ = true;
   int64_t min_lead_time_ns_ = ZX_MSEC(100);

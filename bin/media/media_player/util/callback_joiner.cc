@@ -19,14 +19,12 @@ void CallbackJoiner::Complete() {
   FXL_DCHECK(counter_ != 0);
   --counter_;
   if (counter_ == 0 && join_callback_) {
-    std::function<void()> join_callback;
-    join_callback = join_callback_;
-    join_callback_ = nullptr;
+    fit::closure join_callback = std::move(join_callback_);
     join_callback();
   }
 }
 
-std::function<void()> CallbackJoiner::NewCallback() {
+fit::closure CallbackJoiner::NewCallback() {
   Spawn();
   std::shared_ptr<CallbackJoiner> this_ptr = shared_from_this();
   FXL_DCHECK(!this_ptr.unique());
@@ -36,13 +34,13 @@ std::function<void()> CallbackJoiner::NewCallback() {
   };
 }
 
-void CallbackJoiner::WhenJoined(const std::function<void()>& join_callback) {
+void CallbackJoiner::WhenJoined(fit::closure join_callback) {
   FXL_DCHECK(join_callback);
   FXL_DCHECK(!join_callback_);
   if (counter_ == 0) {
     join_callback();
   } else {
-    join_callback_ = join_callback;
+    join_callback_ = std::move(join_callback);
   }
 }
 

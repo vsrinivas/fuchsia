@@ -16,10 +16,10 @@ void Incident::Occur() {
   occurred_ = true;
 
   // Swap out consequences_ in case one of the callbacks deletes this.
-  std::vector<std::function<void()>> consequences;
+  std::vector<fit::closure> consequences;
   consequences_.swap(consequences);
 
-  for (const std::function<void()>& consequence : consequences) {
+  for (auto& consequence : consequences) {
     consequence();
   }
 }
@@ -29,7 +29,7 @@ ThreadsafeIncident::ThreadsafeIncident() {}
 ThreadsafeIncident::~ThreadsafeIncident() {}
 
 void ThreadsafeIncident::Occur() {
-  std::vector<std::function<void()>> consequences;
+  std::vector<fit::closure> consequences;
 
   {
     std::lock_guard<std::mutex> locker(mutex_);
@@ -42,7 +42,7 @@ void ThreadsafeIncident::Occur() {
     consequences_.swap(consequences);
   }
 
-  for (const std::function<void()>& consequence : consequences) {
+  for (auto& consequence : consequences) {
     consequence();
   }
 }

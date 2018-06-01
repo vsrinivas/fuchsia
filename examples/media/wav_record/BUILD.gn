@@ -16,5 +16,6 @@ executable("wav_record") {
         "//garnet/public/lib/fsl",
         "//garnet/public/lib/media/audio",
         "//garnet/public/lib/media/fidl",
+        "//zircon/public/lib/fit",
       ]
 }

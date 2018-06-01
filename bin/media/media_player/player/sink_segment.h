@@ -5,6 +5,8 @@
 #ifndef GARNET_BIN_MEDIA_MEDIA_PLAYER_PLAYER_SINK_SEGMENT_H_
 #define GARNET_BIN_MEDIA_MEDIA_PLAYER_PLAYER_SINK_SEGMENT_H_
 
+#include <lib/fit/function.h>
+
 #include "garnet/bin/media/media_player/framework/graph.h"
 #include "garnet/bin/media/media_player/framework/result.h"
 #include "garnet/bin/media/media_player/framework/types/stream_type.h"
@@ -20,7 +22,7 @@ namespace media_player {
 // notify of changes to the value returned by end_of_stream().
 class SinkSegment : public Segment {
  public:
-  using ConnectCallback = std::function<void(Result)>;
+  using ConnectCallback = fit::function<void(Result)>;
 
   SinkSegment();
 
@@ -49,11 +51,11 @@ class SinkSegment : public Segment {
 
   // Prepares the sink segment for playback by satisfying initial renderer
   // demand.
-  virtual void Prime(fxl::Closure callback) = 0;
+  virtual void Prime(fit::closure callback) = 0;
 
   // Sets the timeline function.
   virtual void SetTimelineFunction(media::TimelineFunction timeline_function,
-                                   fxl::Closure callback) = 0;
+                                   fit::closure callback) = 0;
 
   // Sets a program range for this sink segment.
   virtual void SetProgramRange(uint64_t program, int64_t min_pts,

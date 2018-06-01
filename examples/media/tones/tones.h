@@ -9,12 +9,12 @@
 #include <map>
 
 #include <fbl/vmo_mapper.h>
+#include <lib/fit/function.h>
 #include <media/cpp/fidl.h>
 
 #include "garnet/examples/media/tones/tone_generator.h"
 #include "lib/app/cpp/startup_context.h"
 #include "lib/fsl/tasks/fd_waiter.h"
-#include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
 
 namespace examples {
@@ -23,7 +23,7 @@ class MidiKeyboard;
 
 class Tones {
  public:
-  Tones(bool interactive, fxl::Closure quit_callback);
+  Tones(bool interactive, fit::closure quit_callback);
 
   ~Tones();
 
@@ -67,7 +67,7 @@ class Tones {
   }
 
   bool interactive_;
-  fxl::Closure quit_callback_;
+  fit::closure quit_callback_;
   fsl::FDWaiter fd_waiter_;
   media::AudioRenderer2Ptr audio_renderer_;
   std::map<int64_t, float> frequencies_by_pts_;

@@ -8,10 +8,10 @@
 #include <media/cpp/fidl.h>
 #include <media_player/cpp/fidl.h>
 #include <lib/async/dispatcher.h>
+#include <lib/fit/function.h>
 
 #include "garnet/bin/media/media_player/framework/graph.h"
 #include "garnet/bin/media/media_player/framework/metadata.h"
-#include "lib/fxl/functional/closure.h"
 #include "lib/fxl/logging.h"
 
 namespace media_player {
@@ -35,7 +35,7 @@ class Segment {
   // changes. The update callback is used to notify of changes to the value
   // returned by problem(). Subclasses of Segment may use this callback to
   // signal additional changes.
-  void Provision(Graph* graph, async_t* async, fxl::Closure update_callback);
+  void Provision(Graph* graph, async_t* async, fit::closure update_callback);
 
   // Revokes the graph, task runner and update callback provided in a previous
   // call to |Provision|.
@@ -79,7 +79,7 @@ class Segment {
  private:
   Graph* graph_ = nullptr;
   async_t* async_ = nullptr;
-  fxl::Closure update_callback_;
+  fit::closure update_callback_;
   ProblemPtr problem_;
 };
 

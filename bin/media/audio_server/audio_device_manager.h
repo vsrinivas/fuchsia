@@ -8,6 +8,7 @@
 
 #include <fbl/intrusive_double_list.h>
 #include <fbl/ref_ptr.h>
+#include <lib/fit/function.h>
 #include <media/cpp/fidl.h>
 
 #include "garnet/bin/media/audio_server/audio_device.h"
@@ -15,7 +16,6 @@
 #include "garnet/bin/media/audio_server/audio_output.h"
 #include "garnet/bin/media/audio_server/audio_plug_detector.h"
 #include "garnet/bin/media/audio_server/fwd_decls.h"
-#include "lib/fxl/functional/closure.h"
 
 namespace media {
 namespace audio {
@@ -73,7 +73,7 @@ class AudioDeviceManager {
   void RemoveCapturer(AudioCapturerImpl* capturer);
 
   // Schedule a closure to run on our encapsulating server's main message loop.
-  void ScheduleMainThreadTask(const fxl::Closure& task);
+  void ScheduleMainThreadTask(fit::closure task);
 
   // Attempt to initialize an output and add it to the set of active outputs.
   MediaResult AddDevice(const fbl::RefPtr<AudioDevice>& device);

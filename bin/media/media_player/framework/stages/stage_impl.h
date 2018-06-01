@@ -10,6 +10,7 @@
 #include <queue>
 
 #include <lib/async/dispatcher.h>
+#include <lib/fit/function.h>
 
 #include "garnet/bin/media/media_player/framework/models/node.h"
 #include "garnet/bin/media/media_player/framework/models/stage.h"
@@ -17,7 +18,6 @@
 #include "garnet/bin/media/media_player/framework/payload_allocator.h"
 #include "garnet/bin/media/media_player/framework/stages/input.h"
 #include "garnet/bin/media/media_player/framework/stages/output.h"
-#include "lib/fxl/functional/closure.h"
 #include "lib/fxl/synchronization/thread_annotations.h"
 
 namespace media_player {
@@ -79,7 +79,7 @@ class StageImpl : public std::enable_shared_from_this<StageImpl> {
   // input's need for a packet. The callback is provided in case the node
   // has additional flushing business that can't be completed synchronously.
   virtual void FlushInput(size_t index, bool hold_frame,
-                          fxl::Closure callback) = 0;
+                          fit::closure callback) = 0;
 
   // Flushes an output. The callback is used to indicate that the flush
   // operation is complete. It must be called on the graph's thread and may be
@@ -88,7 +88,7 @@ class StageImpl : public std::enable_shared_from_this<StageImpl> {
   //
   // The output in question must not produce any packets after this method is
   // called and before the need for a packet is signalled.
-  virtual void FlushOutput(size_t index, fxl::Closure callback) = 0;
+  virtual void FlushOutput(size_t index, fit::closure callback) = 0;
 
   // Gets the generic node.
   virtual GenericNode* GetGenericNode() const = 0;
@@ -105,7 +105,7 @@ class StageImpl : public std::enable_shared_from_this<StageImpl> {
 
   // Acquires the stage, preventing posted tasks from running until the stage
   // is released. |callback| is called when the stage is acquired.
-  void Acquire(const fxl::Closure& callback);
+  void Acquire(fit::closure callback);
 
   // Releases the stage previously acquired via |Acquire|.
   void Release();
@@ -113,14 +113,14 @@ class StageImpl : public std::enable_shared_from_this<StageImpl> {
   // Sets an |async_t| for running tasks .
   void SetAsync(async_t* async);
 
-  void PostTask(const fxl::Closure& task);
+  void PostTask(fit::closure task);
 
  protected:
   // Updates packet supply and demand.
   virtual void Update() = 0;
 
   // Post a task that will run even if the stage has been shut down.
-  void PostShutdownTask(fxl::Closure task);
+  void PostShutdownTask(fit::closure task);
 
  private:
   // Runs tasks in the task queue. This method is always called from
@@ -146,7 +146,7 @@ class StageImpl : public std::enable_shared_from_this<StageImpl> {
 
   mutable std::mutex tasks_mutex_;
   // Pending tasks. Only |RunTasks| may pop from this queue.
-  std::queue<fxl::Closure> tasks_ FXL_GUARDED_BY(tasks_mutex_);
+  std::queue<fit::closure> tasks_ FXL_GUARDED_BY(tasks_mutex_);
   // Set to true to suspend task execution.
   bool tasks_suspended_ FXL_GUARDED_BY(tasks_mutex_) = false;
 };

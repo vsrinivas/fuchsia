@@ -8,6 +8,7 @@
 
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
+#include <lib/fit/function.h>
 #include <zx/time.h>
 
 #include "garnet/bin/netconnector/device_service_provider.h"
@@ -26,9 +27,9 @@ const std::string NetConnectorImpl::kFuchsiaServiceName = "_fuchsia._tcp.";
 const std::string NetConnectorImpl::kLocalDeviceName = "local";
 
 NetConnectorImpl::NetConnectorImpl(NetConnectorParams* params,
-                                   fxl::Closure quit_callback)
+                                   fit::closure quit_callback)
     : params_(params),
-      quit_callback_(quit_callback),
+      quit_callback_(std::move(quit_callback)),
       startup_context_(fuchsia::sys::StartupContext::CreateFromStartupInfo()),
       // TODO(dalesat): Create a new RespondingServiceHost per user.
       // Requestors should provide user credentials allowing a ServiceAgent

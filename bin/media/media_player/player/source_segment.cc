@@ -16,10 +16,10 @@ SourceSegment::~SourceSegment() {}
 
 void SourceSegment::Provision(Graph* graph,
                               async_t* async,
-                              fxl::Closure updateCallback,
+                              fit::closure updateCallback,
                               StreamUpdateCallback stream_update_callback) {
-  stream_update_callback_ = stream_update_callback;
-  Segment::Provision(graph, async, updateCallback);
+  stream_update_callback_ = std::move(stream_update_callback);
+  Segment::Provision(graph, async, std::move(updateCallback));
 }
 
 void SourceSegment::Deprovision() {

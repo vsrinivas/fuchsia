@@ -36,7 +36,9 @@ FidlReader::FidlReader(fidl::InterfaceHandle<SeekingReader> seeking_reader)
 FidlReader::~FidlReader() {}
 
 void FidlReader::Describe(DescribeCallback callback) {
-  ready_.When([this, callback]() { callback(result_, size_, can_seek_); });
+  ready_.When([this, callback = std::move(callback)]() {
+    callback(result_, size_, can_seek_);
+  });
 }
 
 void FidlReader::ReadAt(size_t position,
@@ -52,7 +54,7 @@ void FidlReader::ReadAt(size_t position,
   read_at_position_ = position;
   read_at_buffer_ = buffer;
   read_at_bytes_to_read_ = bytes_to_read;
-  read_at_callback_ = callback;
+  read_at_callback_ = std::move(callback);
 
   // ReadAt may be called on non-fidl threads, so we use the runner.
   async::PostTask(

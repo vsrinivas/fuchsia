@@ -7,6 +7,8 @@
 
 #include "garnet/bin/media/media_player/demux/demux.h"
 
+#include <lib/fit/function.h>
+
 namespace media_player {
 namespace test {
 
@@ -28,17 +30,17 @@ class FakeDemux : public Demux {
     *output_count = streams_.size();
   }
 
-  void FlushOutput(size_t output_index, fxl::Closure callback) override {
+  void FlushOutput(size_t output_index, fit::closure callback) override {
     callback();
   }
 
   void RequestOutputPacket() override {}
 
   void SetStatusCallback(StatusCallback callback) override {
-    status_callback_ = callback;
+    status_callback_ = std::move(callback);
   }
 
-  void WhenInitialized(std::function<void(Result)> callback) override {
+  void WhenInitialized(fit::function<void(Result)> callback) override {
     callback(Result::kOk);
   }
 

@@ -35,7 +35,7 @@ class FfmpegDemuxImpl : public FfmpegDemux {
   // Demux implementation.
   void SetStatusCallback(StatusCallback callback) override;
 
-  void WhenInitialized(std::function<void(Result)> callback) override;
+  void WhenInitialized(fit::function<void(Result)> callback) override;
 
   const std::vector<std::unique_ptr<DemuxStream>>& streams() const override;
 
@@ -48,7 +48,7 @@ class FfmpegDemuxImpl : public FfmpegDemux {
 
   void GetConfiguration(size_t* input_count, size_t* output_count) override;
 
-  void FlushOutput(size_t output_index, fxl::Closure callback) override;
+  void FlushOutput(size_t output_index, fit::closure callback) override;
 
   void RequestOutputPacket() override;
 
@@ -175,11 +175,11 @@ FfmpegDemuxImpl::~FfmpegDemuxImpl() {
 }
 
 void FfmpegDemuxImpl::SetStatusCallback(StatusCallback callback) {
-  status_callback_ = callback;
+  status_callback_ = std::move(callback);
 }
 
-void FfmpegDemuxImpl::WhenInitialized(std::function<void(Result)> callback) {
-  init_complete_.When([this, callback]() { callback(result_); });
+void FfmpegDemuxImpl::WhenInitialized(fit::function<void(Result)> callback) {
+  init_complete_.When([this, callback = std::move(callback)]() { callback(result_); });
 }
 
 const std::vector<std::unique_ptr<Demux::DemuxStream>>&
@@ -189,8 +189,8 @@ FfmpegDemuxImpl::streams() const {
 
 void FfmpegDemuxImpl::Seek(int64_t position, SeekCallback callback) {
   std::lock_guard<std::mutex> locker(mutex_);
-  seek_position_ = position;
-  seek_callback_ = callback;
+  seek_position_ = std::move(position);
+  seek_callback_ = std::move(callback);
   condition_variable_.notify_all();
 }
 
@@ -220,7 +220,7 @@ void FfmpegDemuxImpl::GetConfiguration(size_t* input_count,
   *output_count = streams_.size();
 }
 
-void FfmpegDemuxImpl::FlushOutput(size_t output_index, fxl::Closure callback) {
+void FfmpegDemuxImpl::FlushOutput(size_t output_index, fit::closure callback) {
   callback();
 }
 
@@ -308,7 +308,7 @@ void FfmpegDemuxImpl::Worker() {
       }
 
       next_stream_to_end_ = -1;
-      async::PostTask(async_, [seek_callback]() { seek_callback(); });
+      async::PostTask(async_, std::move(seek_callback));
     }
 
     if (packet_requested) {

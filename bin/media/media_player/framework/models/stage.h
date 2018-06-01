@@ -5,7 +5,7 @@
 #ifndef GARNET_BIN_MEDIA_MEDIA_PLAYER_FRAMEWORK_MODELS_STAGE_H_
 #define GARNET_BIN_MEDIA_MEDIA_PLAYER_FRAMEWORK_MODELS_STAGE_H_
 
-#include "lib/fxl/functional/closure.h"
+#include <lib/fit/function.h>
 
 namespace media_player {
 
@@ -16,7 +16,7 @@ class Stage {
 
   // Posts a task to run as soon as possible. A Task posted with this method is
   // run exclusive of any other such tasks.
-  virtual void PostTask(const fxl::Closure& task) = 0;
+  virtual void PostTask(fit::closure task) = 0;
 
   virtual void Dump(std::ostream& os) const {}
 };

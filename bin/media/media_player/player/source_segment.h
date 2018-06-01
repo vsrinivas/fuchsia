@@ -6,10 +6,10 @@
 #define GARNET_BIN_MEDIA_MEDIA_PLAYER_PLAYER_SOURCE_SEGMENT_H_
 
 #include <lib/async/dispatcher.h>
+#include <lib/fit/function.h>
 
 #include "garnet/bin/media/media_player/framework/graph.h"
 #include "garnet/bin/media/media_player/player/segment.h"
-#include "lib/fxl/functional/closure.h"
 
 namespace media_player {
 
@@ -22,7 +22,7 @@ namespace media_player {
 // concerned with metadata.
 class SourceSegment : public Segment {
  public:
-  using StreamUpdateCallback = std::function<
+  using StreamUpdateCallback = fit::function<
       void(size_t index, const StreamType* type, OutputRef output, bool more)>;
 
   SourceSegment();
@@ -34,7 +34,7 @@ class SourceSegment : public Segment {
   // the last of which should have a |more| value of false.
   void Provision(Graph* graph,
                  async_t* async,
-                 fxl::Closure updateCallback,
+                 fit::closure updateCallback,
                  StreamUpdateCallback stream_update_callback);
 
   // Revokes the graph, task runner and callbacks provided in a previous call to
@@ -46,10 +46,10 @@ class SourceSegment : public Segment {
   virtual const Metadata* metadata() const = 0;
 
   // Flushes the source.
-  virtual void Flush(bool hold_frame, fxl::Closure callback) = 0;
+  virtual void Flush(bool hold_frame, fit::closure callback) = 0;
 
   // Seeks to the specified position.
-  virtual void Seek(int64_t position, fxl::Closure callback) = 0;
+  virtual void Seek(int64_t position, fit::closure callback) = 0;
 
   // Test only.
   // Returns a reference to the source node.

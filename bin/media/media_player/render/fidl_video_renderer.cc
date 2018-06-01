@@ -78,7 +78,7 @@ void FidlVideoRenderer::Dump(std::ostream& os) const {
 }
 
 void FidlVideoRenderer::FlushInput(bool hold_frame, size_t input_index,
-                                   fxl::Closure callback) {
+                                   fit::closure callback) {
   FXL_DCHECK(input_index == 0);
   FXL_DCHECK(callback);
 
@@ -172,7 +172,7 @@ void FidlVideoRenderer::SetStreamType(const StreamType& stream_type) {
   converter_.SetStreamType(stream_type.Clone());
 }
 
-void FidlVideoRenderer::Prime(fxl::Closure callback) {
+void FidlVideoRenderer::Prime(fit::closure callback) {
   flushed_ = false;
 
   if (packet_queue_.size() >= kPacketDemand || end_of_stream_pending()) {
@@ -180,7 +180,7 @@ void FidlVideoRenderer::Prime(fxl::Closure callback) {
     return;
   }
 
-  prime_callback_ = callback;
+  prime_callback_ = std::move(callback);
   stage()->RequestInputPacket();
 }
 
@@ -192,8 +192,8 @@ fuchsia::math::Size FidlVideoRenderer::pixel_aspect_ratio() const {
   return converter_.GetPixelAspectRatio();
 }
 
-void FidlVideoRenderer::SetGeometryUpdateCallback(fxl::Closure callback) {
-  geometry_update_callback_ = callback;
+void FidlVideoRenderer::SetGeometryUpdateCallback(fit::closure callback) {
+  geometry_update_callback_ = std::move(callback);
 }
 
 void FidlVideoRenderer::CreateView(

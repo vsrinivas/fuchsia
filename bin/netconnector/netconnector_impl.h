@@ -11,6 +11,7 @@
 #include <vector>
 
 #include <fuchsia/sys/cpp/fidl.h>
+#include <lib/fit/function.h>
 #include <mdns/cpp/fidl.h>
 #include <netconnector/cpp/fidl.h>
 
@@ -24,7 +25,6 @@
 #include "garnet/bin/netconnector/service_agent.h"
 #include "lib/app/cpp/startup_context.h"
 #include "lib/fidl/cpp/binding_set.h"
-#include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
 #include "lib/mdns/cpp/service_subscriber.h"
 
@@ -32,7 +32,7 @@ namespace netconnector {
 
 class NetConnectorImpl : public NetConnector {
  public:
-  NetConnectorImpl(NetConnectorParams* params, fxl::Closure quit_callback);
+  NetConnectorImpl(NetConnectorParams* params, fit::closure quit_callback);
 
   ~NetConnectorImpl() override;
 
@@ -81,7 +81,7 @@ class NetConnectorImpl : public NetConnector {
   void AddServiceAgent(std::unique_ptr<ServiceAgent> service_agent);
 
   NetConnectorParams* params_;
-  fxl::Closure quit_callback_;
+  fit::closure quit_callback_;
   std::unique_ptr<fuchsia::sys::StartupContext> startup_context_;
   std::string host_name_;
   fidl::BindingSet<NetConnector> bindings_;

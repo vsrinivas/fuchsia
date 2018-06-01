@@ -24,7 +24,7 @@ class Renderer : public AsyncNode {
   // should be called to notify of changes in the value returned by
   // end_of_stream(). Subclasses of Renderer may use this callback to signal
   // additional changes.
-  void Provision(async_t* async, fxl::Closure update_callback);
+  void Provision(async_t* async, fit::closure update_callback);
 
   // Revokes the task runner and update callback provided in a previous call to
   // |Provision|.
@@ -44,11 +44,11 @@ class Renderer : public AsyncNode {
   virtual void SetStreamType(const StreamType& stream_type) = 0;
 
   // Prepares renderer for playback by satisfying initial demand.
-  virtual void Prime(fxl::Closure callback) = 0;
+  virtual void Prime(fit::closure callback) = 0;
 
   // Sets the timeline function.
   virtual void SetTimelineFunction(media::TimelineFunction timeline_function,
-                                   fxl::Closure callback);
+                                   fit::closure callback);
 
   // Sets a program range for this renderer.
   virtual void SetProgramRange(uint64_t program, int64_t min_pts,
@@ -131,12 +131,12 @@ class Renderer : public AsyncNode {
   }
 
   async_t* async_;
-  fxl::Closure update_callback_;
+  fit::closure update_callback_;
   media::TimelineFunction current_timeline_function_;
   media::TimelineFunction pending_timeline_function_;
   int64_t end_of_stream_pts_ = media::kUnspecifiedTime;
   bool end_of_stream_published_ = false;
-  fxl::Closure set_timeline_function_callback_;
+  fit::closure set_timeline_function_callback_;
   int64_t program_0_min_pts_ = std::numeric_limits<int64_t>::min();
   int64_t program_0_max_pts_ = std::numeric_limits<int64_t>::max();
 };

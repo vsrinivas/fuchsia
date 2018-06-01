@@ -7,10 +7,11 @@
 
 #include <list>
 
+#include <lib/fit/function.h>
+
 #include "garnet/bin/media/media_player/framework/refs.h"
 #include "garnet/bin/media/media_player/framework/stages/async_node_stage.h"
 #include "garnet/bin/media/media_player/framework/stages/stage_impl.h"
-#include "lib/fxl/functional/closure.h"
 
 namespace media_player {
 
@@ -146,19 +147,19 @@ class Graph {
   // indicates whether a video renderer should hold and display the newest
   // frame. |callback| is called when all flushes are complete.
   void FlushOutput(const OutputRef& output, bool hold_frame,
-                   fxl::Closure callback);
+                   fit::closure callback);
 
   // Flushes the node and the subgraph downstream of it. |hold_frame|
   // indicates whether a video renderer should hold and display the newest
   // frame. |callback| is called when all flushes are complete.
-  void FlushAllOutputs(NodeRef node, bool hold_frame, fxl::Closure callback);
+  void FlushAllOutputs(NodeRef node, bool hold_frame, fit::closure callback);
 
   // Executes |task| after having acquired |nodes|. No update or other
   // task will touch any of the nodes while |task| is executing.
-  void PostTask(const fxl::Closure& task, std::initializer_list<NodeRef> nodes);
+  void PostTask(fit::closure task, std::initializer_list<NodeRef> nodes);
 
  private:
-  using Visitor = std::function<void(Input* input, Output* output)>;
+  using Visitor = fit::function<void(Input* input, Output* output)>;
 
   // Adds a stage to the graph.
   NodeRef AddStage(std::shared_ptr<StageImpl> stage);
@@ -167,7 +168,7 @@ class Graph {
   // and calls |callback| when all flush operations are complete. |backlog| is
   // empty when this method returns.
   void FlushOutputs(std::queue<Output*>* backlog, bool hold_frame,
-                    fxl::Closure callback);
+                    fit::closure callback);
 
   // Prepares the input and the subgraph upstream of it.
   void PrepareInput(Input* input);
@@ -178,7 +179,7 @@ class Graph {
   // Flushes the output and the subgraph downstream of it. |hold_frame|
   // indicates whether a video renderer should hold and display the newest
   // frame. |callback| is used to signal completion.
-  void FlushOutput(Output* output, bool hold_frame, fxl::Closure callback);
+  void FlushOutput(Output* output, bool hold_frame, fit::closure callback);
 
   // Visits |input| and all inputs upstream of it (breadth first), calling
   // |visitor| for each connected input.
