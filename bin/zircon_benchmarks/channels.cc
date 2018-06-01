@@ -6,7 +6,6 @@
 #include <vector>
 
 #include <benchmark/benchmark.h>
-#include <launchpad/launchpad.h>
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
 

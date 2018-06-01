@@ -7,7 +7,7 @@
 #include <vector>
 
 #include <lib/async-loop/cpp/loop.h>
-#include <launchpad/launchpad.h>
+#include <fdio/spawn.h>
 #include <zircon/process.h>
 #include <zircon/processargs.h>
 #include <zircon/syscalls.h>
@@ -124,19 +124,22 @@ class ThreadOrProcess {
               uint32_t handle_count,
               MultiProc multiproc) {
     if (multiproc == MultiProcess) {
-      const char* args[] = {HELPER_PATH, "--subprocess", func_name};
-      launchpad_t* lp;
-      launchpad_create(0, "test-process", &lp);
-      launchpad_load_from_file(lp, args[0]);
-      launchpad_set_args(lp, countof(args), args);
-      launchpad_clone(lp, LP_CLONE_ALL);
-      uint32_t handle_types[handle_count];
-      for (uint32_t i = 0; i < handle_count; ++i)
-        handle_types[i] = PA_HND(PA_USER0, i);
-      launchpad_add_handles(lp, handle_count, handles, handle_types);
-      const char* errmsg;
-      if (launchpad_go(lp, &subprocess_, &errmsg) != ZX_OK)
-        FXL_LOG(FATAL) << "Subprocess launch failed: " << errmsg;
+      const char* args[] = {HELPER_PATH, "--subprocess", func_name, nullptr};
+      fdio_spawn_action_t actions[handle_count + 1];
+      for (uint32_t i = 0; i < handle_count; ++i) {
+        actions[i].action = FDIO_SPAWN_ACTION_ADD_HANDLE;
+        actions[i].h.id = PA_HND(PA_USER0, i);
+        actions[i].h.handle = handles[i];
+      }
+      actions[handle_count].action = FDIO_SPAWN_ACTION_SET_NAME;
+      actions[handle_count].name.data = "test-process";
+
+      char err_msg[FDIO_SPAWN_ERR_MSG_MAX_LENGTH];
+      if (fdio_spawn_etc(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL, HELPER_PATH,
+                         args, nullptr, handle_count + 1, actions, &subprocess_,
+                         err_msg) != ZX_OK) {
+        FXL_LOG(FATAL) << "Subprocess launch failed: " << err_msg;
+      }
     } else {
       std::vector<zx_handle_t> handle_vector(handles, handles + handle_count);
       thread_ = std::thread(GetThreadFunc(func_name), handle_vector);

@@ -54,8 +54,8 @@ source_set("lib") {
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//third_party/gflags",
-    "//zircon/public/lib/launchpad",
     "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fdio",
     "//zircon/public/lib/zx",
     ":fidl_interface",
   ]
