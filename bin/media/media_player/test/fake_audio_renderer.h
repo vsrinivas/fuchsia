@@ -9,12 +9,15 @@
 #include <queue>
 #include <vector>
 
+#include <lib/async/dispatcher.h>
 #include <media/cpp/fidl.h>
 
 #include "lib/fidl/cpp/binding.h"
+#include "lib/media/timeline/timeline_function.h"
 #include "lib/media/transport/mapped_shared_buffer.h"
 
 namespace media_player {
+namespace test {
 
 // Implements AudioRenderer2 for testing.
 class FakeAudioRenderer : public media::AudioRenderer2 {
@@ -98,28 +101,47 @@ class FakeAudioRenderer : public media::AudioRenderer2 {
   void GetMinLeadTime(GetMinLeadTimeCallback callback) override;
 
  private:
+  // Converts a pts in |pts_rate_| units to ns.
+  int64_t to_ns(int64_t pts) {
+    return pts * (media::TimelineRate::NsPerSecond / pts_rate_);
+  }
+
+  // Converts a pts in ns to |pts_rate_| units.
+  int64_t from_ns(int64_t pts) {
+    return pts * (pts_rate_ / media::TimelineRate::NsPerSecond);
+  }
+
+  // Determines if we care currently playing.
+  bool progressing() { return timeline_function_.invertable(); }
+
+  // Schedules the retirement of the oldest queued packet if there are any
+  // packets and if we're playing.
+  void MaybeScheduleRetirement();
+
+  async_t* async_;
   fidl::Binding<media::AudioRenderer2> binding_;
 
   media::AudioPcmFormat format_;
   media::MappedSharedBuffer mapped_buffer_;
-  uint32_t tick_per_second_numerator_ = 1'000'000'000;
-  uint32_t tick_per_second_denominator_ = 1;
   float threshold_seconds_ = 0.0f;
   float gain_ = 1.0f;
   bool mute_ = false;
   uint32_t gain_mute_flags_ = 0;
-  const int64_t min_lead_time_ns_ = 100'000'000;
-  bool playing_ = false;
+  const int64_t min_lead_time_ns_ = ZX_MSEC(100);
+  media::TimelineRate pts_rate_ = media::TimelineRate::NsPerSecond;
+  media::TimelineFunction timeline_function_;
+  int64_t restart_media_time_ = media::kNoTimestamp;
 
   bool dump_packets_ = false;
   std::vector<PacketInfo> expected_packets_info_;
   std::vector<PacketInfo>::iterator expected_packets_info_iter_;
 
-  std::queue<SendPacketCallback> packet_callback_queue_;
+  std::queue<std::pair<media::AudioPacket, SendPacketCallback>> packet_queue_;
 
   bool expected_ = true;
 };
 
+}  // namespace test
 }  // namespace media_player
 
 #endif  // GARNET_BIN_MEDIA_MEDIA_PLAYER_TEST_FAKE_AUDIO_RENDERER_H_

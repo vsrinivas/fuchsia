@@ -8,10 +8,14 @@
 #include <iostream>
 #include <limits>
 
+#include <lib/async/cpp/task.h>
+#include <lib/async/default.h>
+
 #include "lib/fxl/logging.h"
 #include "lib/media/timeline/timeline.h"
 
 namespace media_player {
+namespace test {
 
 namespace {
 
@@ -28,7 +32,8 @@ static uint64_t Hash(const void* data, size_t data_size) {
 
 }  // namespace
 
-FakeAudioRenderer::FakeAudioRenderer() : binding_(this) {}
+FakeAudioRenderer::FakeAudioRenderer()
+    : async_(async_get_default()), binding_(this) {}
 
 FakeAudioRenderer::~FakeAudioRenderer() {}
 
@@ -47,8 +52,8 @@ void FakeAudioRenderer::SetPayloadBuffer(::zx::vmo payload_buffer) {
 
 void FakeAudioRenderer::SetPtsUnits(uint32_t tick_per_second_numerator,
                                     uint32_t tick_per_second_denominator) {
-  tick_per_second_numerator_ = tick_per_second_numerator;
-  tick_per_second_denominator_ = tick_per_second_denominator;
+  pts_rate_ = media::TimelineRate(tick_per_second_numerator,
+                                  tick_per_second_denominator);
 }
 
 void FakeAudioRenderer::SetPtsContinuityThreshold(float threshold_seconds) {
@@ -87,10 +92,10 @@ void FakeAudioRenderer::SendPacket(media::AudioPacket packet,
     ++expected_packets_info_iter_;
   }
 
-  if (playing_) {
-    callback();
-  } else {
-    packet_callback_queue_.push(callback);
+  packet_queue_.push(std::make_pair(packet, callback));
+
+  if (packet_queue_.size() == 1) {
+    MaybeScheduleRetirement();
   }
 }
 
@@ -99,9 +104,9 @@ void FakeAudioRenderer::SendPacketNoReply(media::AudioPacket packet) {
 }
 
 void FakeAudioRenderer::Flush(FlushCallback callback) {
-  while (!packet_callback_queue_.empty()) {
-    packet_callback_queue_.front()();
-    packet_callback_queue_.pop();
+  while (!packet_queue_.empty()) {
+    packet_queue_.front().second();
+    packet_queue_.pop();
   }
 
   callback();
@@ -113,13 +118,26 @@ void FakeAudioRenderer::FlushNoReply() {
 
 void FakeAudioRenderer::Play(int64_t reference_time, int64_t media_time,
                              PlayCallback callback) {
-  playing_ = true;
-  callback(0, 0);
-
-  while (!packet_callback_queue_.empty()) {
-    packet_callback_queue_.front()();
-    packet_callback_queue_.pop();
+  if (reference_time == media::kNoTimestamp) {
+    reference_time = media::Timeline::local_now();
   }
+
+  if (media_time == media::kNoTimestamp) {
+    if (restart_media_time_ != media::kNoTimestamp) {
+      media_time = restart_media_time_;
+    } else if (packet_queue_.empty()) {
+      media_time = 0;
+    } else {
+      media_time = to_ns(packet_queue_.front().first.timestamp);
+    }
+  }
+
+  callback(reference_time, media_time);
+
+  timeline_function_ =
+      media::TimelineFunction(media_time, reference_time, 1, 1);
+
+  MaybeScheduleRetirement();
 }
 
 void FakeAudioRenderer::PlayNoReply(int64_t reference_time,
@@ -129,8 +147,11 @@ void FakeAudioRenderer::PlayNoReply(int64_t reference_time,
 }
 
 void FakeAudioRenderer::Pause(PauseCallback callback) {
-  playing_ = false;
-  callback(0, 0);
+  int64_t reference_time = media::Timeline::local_now();
+  int64_t media_time = timeline_function_(reference_time);
+  timeline_function_ =
+      media::TimelineFunction(media_time, reference_time, 0, 1);
+  callback(reference_time, media_time);
 }
 
 void FakeAudioRenderer::PauseNoReply() {
@@ -165,4 +186,33 @@ void FakeAudioRenderer::GetMinLeadTime(GetMinLeadTimeCallback callback) {
   callback(min_lead_time_ns_);
 }
 
+void FakeAudioRenderer::MaybeScheduleRetirement() {
+  if (!progressing() || packet_queue_.empty()) {
+    return;
+  }
+
+  int64_t reference_time = timeline_function_.ApplyInverse(
+      to_ns(packet_queue_.front().first.timestamp));
+
+  async::PostTaskForTime(
+      async_,
+      [this]() {
+        if (!progressing() || packet_queue_.empty()) {
+          return;
+        }
+
+        int64_t reference_time = timeline_function_.ApplyInverse(
+            to_ns(packet_queue_.front().first.timestamp));
+
+        if (reference_time <= media::Timeline::local_now()) {
+          packet_queue_.front().second();
+          packet_queue_.pop();
+        }
+
+        MaybeScheduleRetirement();
+      },
+      zx::time(reference_time));
+}
+
+}  // namespace test
 }  // namespace media_player
