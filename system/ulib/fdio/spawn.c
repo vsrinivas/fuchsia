@@ -24,9 +24,7 @@
 #define FDIO_SPAWN_LAUNCH_HANDLE_JOB ((size_t)1u)
 #define FDIO_SPAWN_LAUNCH_HANDLE_COUNT ((size_t)2u)
 
-#define FDIO_SPAWN_LAUNCH_REPLY_HANDLE_PROCESS ((size_t)0u)
-#define FDIO_SPAWN_LAUNCH_REPLY_HANDLE_ROOT_VMAR ((size_t)1u)
-#define FDIO_SPAWN_LAUNCH_REPLY_HANDLE_COUNT ((size_t)2u)
+#define FDIO_SPAWN_LAUNCH_REPLY_HANDLE_COUNT ((size_t)1u)
 
 // Even though FDIO_MAX_HANDLES is 3, the clone and transfer operations can only
 // ever generate 2 handles.
@@ -130,6 +128,7 @@ static zx_status_t send_handles(zx_handle_t launcher, size_t handle_capacity,
 
     zx_status_t status = ZX_OK;
     size_t h = 0;
+    size_t a = 0;
 
     if ((flags & FDIO_SPAWN_CLONE_JOB) != 0) {
         handle_infos[h].handle = FIDL_HANDLE_PRESENT;
@@ -174,29 +173,29 @@ static zx_status_t send_handles(zx_handle_t launcher, size_t handle_capacity,
         }
     }
 
-    for (size_t i = 0; i < action_count; ++i) {
+    for ( ; a < action_count; ++a) {
         zx_handle_t fdio_handles[FDIO_MAX_HANDLES];
         uint32_t fdio_types[FDIO_MAX_HANDLES];
 
-        switch (actions[i].action) {
+        switch (actions[a].action) {
         case FDIO_SPAWN_ACTION_CLONE_FD:
-            status = fdio_clone_fd(actions[i].fd.local_fd, actions[i].fd.target_fd, fdio_handles, fdio_types);
+            status = fdio_clone_fd(actions[a].fd.local_fd, actions[a].fd.target_fd, fdio_handles, fdio_types);
             if (status < ZX_OK) {
-                report_error(err_msg, "failed to clone fd %d (action index %zu): %d", actions[i].fd.local_fd, i, status);
+                report_error(err_msg, "failed to clone fd %d (action index %zu): %d", actions[a].fd.local_fd, a, status);
                 goto cleanup;
             }
             break;
         case FDIO_SPAWN_ACTION_TRANSFER_FD:
-            status = fdio_transfer_fd(actions[i].fd.local_fd, actions[i].fd.target_fd, fdio_handles, fdio_types);
+            status = fdio_transfer_fd(actions[a].fd.local_fd, actions[a].fd.target_fd, fdio_handles, fdio_types);
             if (status < ZX_OK) {
-                report_error(err_msg, "failed to transfer fd %d (action index %zu): %d", actions[i].fd.local_fd, i, status);
+                report_error(err_msg, "failed to transfer fd %d (action index %zu): %d", actions[a].fd.local_fd, a, status);
                 goto cleanup;
             }
             break;
         case FDIO_SPAWN_ACTION_ADD_HANDLE:
             handle_infos[h].handle = FIDL_HANDLE_PRESENT;
-            handle_infos[h].id = actions[i].h.id;
-            handles[h++] = actions[i].h.handle;
+            handle_infos[h].id = actions[a].h.id;
+            handles[h++] = actions[a].h.handle;
             continue;
         default:
             continue;
@@ -226,6 +225,21 @@ static zx_status_t send_handles(zx_handle_t launcher, size_t handle_capacity,
 cleanup:
     for (size_t i = 0; i < h; ++i) {
         zx_handle_close(handles[i]);
+    }
+
+    // If |a| is less than |action_count|, that means we encountered an error
+    // before we processed all the actions. We need to iterate through the rest
+    // of the table and close the file descriptors and handles that we're
+    // supposed to consume.
+    for (size_t i = a; i < action_count; ++i) {
+        switch (actions[i].action) {
+        case FDIO_SPAWN_ACTION_TRANSFER_FD:
+            close(actions[i].fd.local_fd);
+            break;
+        case FDIO_SPAWN_ACTION_ADD_HANDLE:
+            zx_handle_close(actions[i].h.handle);
+            break;
+        }
     }
 
     return status;
@@ -501,16 +515,15 @@ zx_status_t fdio_spawn_etc(zx_handle_t job,
             uint8_t err_msg[FDIO_SPAWN_ERR_MSG_MAX_LENGTH];
         } reply;
 
-        zx_handle_t reply_handles[FDIO_SPAWN_LAUNCH_REPLY_HANDLE_COUNT];
+        zx_handle_t process = ZX_HANDLE_INVALID;
 
         memset(&reply, 0, sizeof(reply));
-        memset(reply_handles, 0, sizeof(reply_handles));
 
         zx_channel_call_args_t args;
         args.wr_bytes = &msg;
         args.wr_handles = msg_handles;
         args.rd_bytes = &reply;
-        args.rd_handles = reply_handles;
+        args.rd_handles = &process;
         args.wr_num_bytes = msg_len;
         args.wr_num_handles = FDIO_SPAWN_LAUNCH_HANDLE_COUNT;
         args.rd_num_bytes = sizeof(reply);
@@ -534,9 +547,19 @@ zx_status_t fdio_spawn_etc(zx_handle_t job,
         status = reply.rsp.result.status;
 
         if (status == ZX_OK) {
+            // The launcher claimed to succeed but didn't actually give us a
+            // process handle. Something is wrong with the launcher.
+            if (process == ZX_HANDLE_INVALID) {
+                status = ZX_ERR_BAD_HANDLE;
+                report_error(err_msg, "failed receive process handle");
+                // This jump skips over closing the process handle, but that's
+                // fine because we didn't receive a process handle.
+                goto cleanup;
+            }
+
             if (process_out) {
-                *process_out = reply_handles[FDIO_SPAWN_LAUNCH_REPLY_HANDLE_PROCESS];
-                reply_handles[FDIO_SPAWN_LAUNCH_REPLY_HANDLE_PROCESS] = ZX_HANDLE_INVALID;
+                *process_out = process;
+                process = ZX_HANDLE_INVALID;
             }
         } else {
             if (err_msg) {
@@ -548,24 +571,23 @@ zx_status_t fdio_spawn_etc(zx_handle_t job,
             }
         }
 
-        if (reply_handles[FDIO_SPAWN_LAUNCH_REPLY_HANDLE_PROCESS] != ZX_HANDLE_INVALID)
-            zx_handle_close(reply_handles[FDIO_SPAWN_LAUNCH_REPLY_HANDLE_PROCESS]);
-
-        if (reply_handles[FDIO_SPAWN_LAUNCH_REPLY_HANDLE_ROOT_VMAR] != ZX_HANDLE_INVALID)
-            zx_handle_close(reply_handles[FDIO_SPAWN_LAUNCH_REPLY_HANDLE_ROOT_VMAR]);
+        if (process != ZX_HANDLE_INVALID)
+            zx_handle_close(process);
     }
 
 cleanup:
-    for (size_t i = 0; i < action_count; ++i) {
-        switch (actions[i].action) {
-        case FDIO_SPAWN_ACTION_ADD_NS_ENTRY:
-            zx_handle_close(actions[i].ns.handle);
-            break;
-        case FDIO_SPAWN_ACTION_ADD_HANDLE:
-            zx_handle_close(actions[i].h.handle);
-            break;
-        default:
-            break;
+    if (actions) {
+        for (size_t i = 0; i < action_count; ++i) {
+            switch (actions[i].action) {
+            case FDIO_SPAWN_ACTION_ADD_NS_ENTRY:
+                zx_handle_close(actions[i].ns.handle);
+                break;
+            case FDIO_SPAWN_ACTION_ADD_HANDLE:
+                zx_handle_close(actions[i].h.handle);
+                break;
+            default:
+                break;
+            }
         }
     }
 

@@ -5,8 +5,11 @@
 #include <unittest/unittest.h>
 
 #include <fcntl.h>
+#include <fdio/io.h>
 #include <fdio/spawn.h>
 #include <fdio/util.h>
+#include <lib/zx/channel.h>
+#include <lib/zx/job.h>
 #include <lib/zx/process.h>
 #include <lib/zx/socket.h>
 #include <stdlib.h>
@@ -15,6 +18,19 @@
 #include <zircon/processargs.h>
 
 static constexpr char kSpawnChild[] = "/boot/bin/spawn-child";
+
+static bool has_fd(int fd) {
+    zx_handle_t handles[FDIO_MAX_HANDLES];
+    uint32_t ids[FDIO_MAX_HANDLES];
+    zx_status_t status = fdio_clone_fd(fd, fd + 50, handles, ids);
+    if (status > 0) {
+        size_t n = static_cast<size_t>(status);
+        for (size_t i = 0; i < n; ++i)
+            zx_handle_close(handles[i]);
+        return true;
+    }
+    return false;
+}
 
 static int64_t join(const zx::process& process) {
     zx_status_t status = process.wait_one(ZX_TASK_TERMINATED, zx::time::infinite(), nullptr);
@@ -214,7 +230,7 @@ static bool spawn_environ_test(void) {
     END_TEST;
 }
 
-static bool spawn_actions_test(void) {
+static bool spawn_actions_fd_test(void) {
     BEGIN_TEST;
 
     zx_status_t status;
@@ -246,9 +262,14 @@ static bool spawn_actions_test(void) {
     }
 
     {
+        zx_handle_t socket = ZX_HANDLE_INVALID;
+        uint32_t type;
+        int fd = fdio_pipe_half(&socket, &type);
+        ASSERT_GE(fd, 0);
+
         fdio_spawn_action_t action;
         action.action = FDIO_SPAWN_ACTION_CLONE_FD;
-        action.fd.local_fd = 1;
+        action.fd.local_fd = fd;
         action.fd.target_fd = 21;
 
         const char* argv[] = {kSpawnChild, "--action", "clone-fd", nullptr};
@@ -257,6 +278,271 @@ static bool spawn_actions_test(void) {
                                 process.reset_and_get_address(), nullptr);
         ASSERT_EQ(ZX_OK, status);
         EXPECT_EQ(71, join(process));
+        EXPECT_TRUE(has_fd(fd));
+        close(fd);
+        zx_handle_close(socket);
+    }
+
+    {
+        zx::socket socket;
+        uint32_t type;
+        int fd = fdio_pipe_half(socket.reset_and_get_address(), &type);
+        ASSERT_GE(fd, 0);
+
+        fdio_spawn_action_t action;
+        action.action = FDIO_SPAWN_ACTION_TRANSFER_FD;
+        action.fd.local_fd = fd;
+        action.fd.target_fd = 21;
+
+        const char* argv[] = {kSpawnChild, "--action", "transfer-fd", nullptr};
+        status = fdio_spawn_etc(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL,
+                                kSpawnChild, argv, nullptr, 1, &action,
+                                process.reset_and_get_address(), nullptr);
+        ASSERT_EQ(ZX_OK, status);
+        EXPECT_EQ(72, join(process));
+        EXPECT_FALSE(has_fd(fd));
+    }
+
+    {
+        zx::socket socket;
+        uint32_t type;
+        int fd = fdio_pipe_half(socket.reset_and_get_address(), &type);
+        ASSERT_GE(fd, 0);
+
+        fdio_spawn_action_t actions[2];
+        actions[0].action = FDIO_SPAWN_ACTION_CLONE_FD;
+        actions[0].fd.local_fd = fd;
+        actions[0].fd.target_fd = 21;
+        actions[1].action = FDIO_SPAWN_ACTION_TRANSFER_FD;
+        actions[1].fd.local_fd = fd;
+        actions[1].fd.target_fd = 22;
+
+        const char* argv[] = {kSpawnChild, "--action", "clone-and-transfer-fd", nullptr};
+        status = fdio_spawn_etc(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL,
+                                kSpawnChild, argv, nullptr, 2, actions,
+                                process.reset_and_get_address(), nullptr);
+        ASSERT_EQ(ZX_OK, status);
+        EXPECT_EQ(73, join(process));
+        EXPECT_FALSE(has_fd(fd));
+    }
+
+    END_TEST;
+}
+
+static bool spawn_actions_ns_test(void) {
+    BEGIN_TEST;
+
+    zx_status_t status;
+    zx::process process;
+
+    {
+        zx::channel h1, h2;
+        ASSERT_EQ(ZX_OK, zx::channel::create(0, &h1, &h2));
+
+        fdio_spawn_action_t action;
+        action.action = FDIO_SPAWN_ACTION_ADD_NS_ENTRY;
+        action.ns.prefix = "/foo/bar/baz";
+        action.ns.handle = h1.release();
+
+        const char* argv[] = {kSpawnChild, "--action", "ns-entry", nullptr};
+        status = fdio_spawn_etc(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL,
+                                kSpawnChild, argv, nullptr, 1, &action,
+                                process.reset_and_get_address(), nullptr);
+        ASSERT_EQ(ZX_OK, status);
+        EXPECT_EQ(74, join(process));
+    }
+
+    END_TEST;
+}
+
+static bool spawn_actions_h_test(void) {
+    BEGIN_TEST;
+
+    zx_status_t status;
+    zx::process process;
+
+    {
+        zx::channel h1, h2;
+        ASSERT_EQ(ZX_OK, zx::channel::create(0, &h1, &h2));
+
+        fdio_spawn_action_t action;
+        action.action = FDIO_SPAWN_ACTION_ADD_HANDLE;
+        action.h.id = PA_USER0;
+        action.h.handle = h1.release();
+
+        const char* argv[] = {kSpawnChild, "--action", "add-handle", nullptr};
+        status = fdio_spawn_etc(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL,
+                                kSpawnChild, argv, nullptr, 1, &action,
+                                process.reset_and_get_address(), nullptr);
+        ASSERT_EQ(ZX_OK, status);
+        EXPECT_EQ(75, join(process));
+    }
+
+    END_TEST;
+}
+
+static bool spawn_actions_name_test(void) {
+    BEGIN_TEST;
+
+    zx_status_t status;
+    zx::process process;
+
+    {
+        fdio_spawn_action_t actions[2];
+        actions[0].action = FDIO_SPAWN_ACTION_SET_NAME;
+        actions[0].name.data = "proc-name-0";
+        actions[1].action = FDIO_SPAWN_ACTION_SET_NAME;
+        actions[1].name.data = "proc-name-1";
+
+        const char* argv[] = {kSpawnChild, nullptr};
+        status = fdio_spawn_etc(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL,
+                                kSpawnChild, argv, nullptr, 2, actions,
+                                process.reset_and_get_address(), nullptr);
+        ASSERT_EQ(ZX_OK, status);
+        EXPECT_EQ(43, join(process));
+        char name[ZX_MAX_NAME_LEN];
+        ASSERT_EQ(ZX_OK, process.get_property(ZX_PROP_NAME, name, sizeof(name)));
+        EXPECT_EQ(0, strcmp(name, "proc-name-1"));
+    }
+
+    END_TEST;
+}
+
+static bool spawn_errors_test(void) {
+    BEGIN_TEST;
+
+    zx_status_t status;
+    zx::process process;
+    char err_msg[FDIO_SPAWN_ERR_MSG_MAX_LENGTH];
+    const char* argv[] = {kSpawnChild, nullptr};
+
+    ASSERT_EQ(ZX_ERR_INVALID_ARGS,
+              fdio_spawn(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL, nullptr,
+                         argv, process.reset_and_get_address()));
+
+    ASSERT_EQ(ZX_ERR_INVALID_ARGS,
+              fdio_spawn(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL, kSpawnChild,
+                         nullptr, process.reset_and_get_address()));
+
+    ASSERT_EQ(ZX_ERR_INVALID_ARGS,
+              fdio_spawn_etc(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL, kSpawnChild,
+                             argv, nullptr, 1, nullptr, process.reset_and_get_address(), nullptr));
+
+    {
+        fdio_spawn_action_t action;
+        action.action = FDIO_SPAWN_ACTION_ADD_NS_ENTRY;
+        action.ns.prefix = "/foo/bar/baz";
+        action.ns.handle = ZX_HANDLE_INVALID;
+
+        ASSERT_EQ(ZX_ERR_INVALID_ARGS,
+                fdio_spawn_etc(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL, kSpawnChild,
+                               argv, nullptr, 1, &action, process.reset_and_get_address(), nullptr));
+    }
+
+    {
+        fdio_spawn_action_t action;
+        action.action = FDIO_SPAWN_ACTION_ADD_HANDLE;
+        action.h.id = PA_USER0;
+        action.h.handle = ZX_HANDLE_INVALID;
+
+        ASSERT_EQ(ZX_ERR_INVALID_ARGS,
+                fdio_spawn_etc(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL, kSpawnChild,
+                               argv, nullptr, 1, &action, process.reset_and_get_address(), nullptr));
+    }
+
+    {
+        fdio_spawn_action_t action;
+        action.action = FDIO_SPAWN_ACTION_SET_NAME;
+        action.name.data = nullptr;
+
+        ASSERT_EQ(ZX_ERR_INVALID_ARGS,
+                fdio_spawn_etc(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL, kSpawnChild,
+                               argv, nullptr, 1, &action, process.reset_and_get_address(), nullptr));
+    }
+
+    {
+        const char* empty_argv[] = {nullptr};
+        ASSERT_EQ(ZX_ERR_INVALID_ARGS,
+                  fdio_spawn(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL, kSpawnChild,
+                             empty_argv, process.reset_and_get_address()));
+    }
+
+    ASSERT_EQ(ZX_ERR_IO,
+              fdio_spawn_etc(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL, "/bogus/path",
+                             argv, nullptr, 0, nullptr, process.reset_and_get_address(), err_msg));
+    EXPECT_TRUE(strstr(err_msg, "/bogus/path") != nullptr);
+
+    {
+        zx::job job;
+        ASSERT_EQ(ZX_OK, zx::job::default_job().duplicate(0, &job));
+        ASSERT_EQ(ZX_ERR_ACCESS_DENIED,
+                  fdio_spawn(job.get(), FDIO_SPAWN_CLONE_ALL, kSpawnChild,
+                             argv, process.reset_and_get_address()));
+    }
+
+    {
+        ASSERT_EQ(30, dup2(0, 30));
+        ASSERT_EQ(0, close(0));
+        status = fdio_spawn(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL,
+                            kSpawnChild, argv, process.reset_and_get_address());
+        ASSERT_EQ(ZX_OK, status);
+        EXPECT_EQ(43, join(process));
+        ASSERT_EQ(0, dup2(30, 0));
+        ASSERT_EQ(0, close(30));
+    }
+
+    {
+        zx::channel h1, h2;
+        ASSERT_EQ(ZX_OK, zx::channel::create(0, &h1, &h2));
+
+        ASSERT_EQ(30, dup2(0, 30));
+        ASSERT_EQ(0, close(0));
+        fdio_t* io = fdio_service_create(h1.release());
+        ASSERT_EQ(0, fdio_bind_to_fd(io, 0, 0));
+        status = fdio_spawn(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL,
+                            kSpawnChild, argv, process.reset_and_get_address());
+        ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, status);
+        ASSERT_EQ(0, close(0));
+        ASSERT_EQ(0, dup2(30, 0));
+        ASSERT_EQ(0, close(30));
+    }
+
+    {
+        zx::channel h1, h2;
+        ASSERT_EQ(ZX_OK, zx::channel::create(0, &h1, &h2));
+
+        fdio_t* io = fdio_service_create(h1.release());
+        int fd = fdio_bind_to_fd(io, -1, 0);
+        ASSERT_GE(fd, 3);
+
+        fdio_spawn_action_t action;
+        action.action = FDIO_SPAWN_ACTION_CLONE_FD;
+        action.fd.local_fd = fd;
+        action.fd.target_fd = 21;
+
+        status = fdio_spawn_etc(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL,
+                                kSpawnChild, argv, nullptr, 1, &action, process.reset_and_get_address(), nullptr);
+        ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, status);
+        ASSERT_EQ(0, close(fd));
+    }
+
+    {
+        zx::channel h1, h2;
+        ASSERT_EQ(ZX_OK, zx::channel::create(0, &h1, &h2));
+
+        fdio_t* io = fdio_service_create(h1.release());
+        int fd = fdio_bind_to_fd(io, -1, 0);
+        ASSERT_GE(fd, 3);
+
+        fdio_spawn_action_t action;
+        action.action = FDIO_SPAWN_ACTION_TRANSFER_FD;
+        action.fd.local_fd = fd;
+        action.fd.target_fd = 21;
+
+        status = fdio_spawn_etc(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL,
+                                kSpawnChild, argv, nullptr, 1, &action, process.reset_and_get_address(), nullptr);
+        ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, status);
+        ASSERT_EQ(-1, close(fd));
     }
 
     END_TEST;
@@ -267,7 +553,11 @@ RUN_TEST(spawn_control_test)
 RUN_TEST(spawn_invalid_args_test)
 RUN_TEST(spawn_flags_test)
 RUN_TEST(spawn_environ_test)
-RUN_TEST(spawn_actions_test)
+RUN_TEST(spawn_actions_fd_test)
+RUN_TEST(spawn_actions_ns_test)
+RUN_TEST(spawn_actions_h_test)
+RUN_TEST(spawn_actions_name_test)
+RUN_TEST(spawn_errors_test)
 END_TEST_CASE(spawn_tests)
 
 int main(int argc, char** argv) {
