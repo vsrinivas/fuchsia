@@ -5,14 +5,9 @@
 #ifndef GARNET_BIN_APPMGR_ROOT_LOADER_H_
 #define GARNET_BIN_APPMGR_ROOT_LOADER_H_
 
-#include <functional>
-#include <string>
-#include <tuple>
-#include <vector>
-
+#include <fuchsia/sys/cpp/fidl.h>
 #include <lib/zx/vmo.h>
 
-#include <fuchsia/sys/cpp/fidl.h>
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fxl/macros.h"
 

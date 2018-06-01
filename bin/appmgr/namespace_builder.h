@@ -6,6 +6,7 @@
 #define GARNET_BIN_APPMGR_NAMESPACE_BUILDER_H_
 
 #include <fdio/namespace.h>
+#include <lib/fit/function.h>
 #include <lib/zx/channel.h>
 
 #include <vector>
@@ -30,7 +31,7 @@ class NamespaceBuilder {
   void AddServices(zx::channel services);
 
   // A factory function that returns a new directory that /hub points to.
-  using HubDirectoryFactory = std::function<zx::channel()>;
+  using HubDirectoryFactory = fit::function<zx::channel()>;
   void AddSandbox(const SandboxMetadata& sandbox,
                   const HubDirectoryFactory& hub_directory_factory);
 

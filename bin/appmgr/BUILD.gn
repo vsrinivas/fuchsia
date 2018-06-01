@@ -51,6 +51,7 @@ source_set("lib") {
     "//third_party/rapidjson",
     "//zircon/public/fidl/process",
     "//zircon/public/lib/fs",
+    "//zircon/public/lib/fit",
     "//zircon/public/lib/launchpad",
     "//zircon/public/lib/loader-service",
     "//zircon/public/lib/zx",

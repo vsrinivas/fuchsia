@@ -6,8 +6,9 @@
 
 #include <utility>
 
+#include <lib/fit/function.h>
+
 #include "garnet/bin/appmgr/realm.h"
-#include "lib/fxl/functional/closure.h"
 
 namespace fuchsia {
 namespace sys {
@@ -38,7 +39,7 @@ void EnvironmentControllerImpl::Kill(KillCallback callback) {
 }
 
 void EnvironmentControllerImpl::Detach() {
-  binding_.set_error_handler(fxl::Closure());
+  binding_.set_error_handler(nullptr);
 }
 
 }  // namespace sys

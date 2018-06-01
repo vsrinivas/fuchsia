@@ -9,6 +9,7 @@
 #include <fs/pseudo-file.h>
 #include <fs/remote-dir.h>
 #include <lib/async/default.h>
+#include <lib/fit/function.h>
 
 #include <cinttypes>
 #include <utility>
@@ -16,7 +17,6 @@
 #include "garnet/bin/appmgr/namespace.h"
 #include "garnet/bin/appmgr/realm.h"
 #include "lib/fsl/handles/object_info.h"
-#include "lib/fxl/functional/closure.h"
 
 namespace fuchsia {
 namespace sys {
@@ -87,7 +87,7 @@ HubInfo ComponentControllerImpl::HubInfo() {
 void ComponentControllerImpl::Kill() { process_.kill(); }
 
 void ComponentControllerImpl::Detach() {
-  binding_.set_error_handler(fxl::Closure());
+  binding_.set_error_handler(nullptr);
 }
 
 bool ComponentControllerImpl::SendReturnCodeIfTerminated() {
