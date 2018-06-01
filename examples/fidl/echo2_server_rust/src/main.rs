@@ -14,23 +14,20 @@ use component::server::ServicesServer;
 use failure::{Error, ResultExt};
 use futures::future;
 use futures::prelude::*;
-use fidl::endpoints2::ServiceMarker;
-use fidl_echo2::{Echo, EchoMarker, EchoImpl};
+use fidl::endpoints2::{ServiceMarker, RequestStream};
+use fidl_echo2::{EchoMarker, EchoRequest, EchoRequestStream};
 
 fn spawn_echo_server(chan: async::Channel) {
-    async::spawn(EchoImpl {
-        state: (),
-        on_open: |_,_| future::ok(()),
-        echo_string: |_, s, res| {
-            println!("Received echo request for string {:?}", s);
-            res.send(s.as_ref().map(|s| &**s))
+    async::spawn(EchoRequestStream::from_channel(chan)
+        .for_each(|EchoRequest::EchoString { value, responder }| {
+            println!("Received echo request for string {:?}", value);
+            responder.send(value.as_ref().map(|s| &**s))
                .into_future()
                .map(|_| println!("echo response sent successfully"))
                .recover(|e| eprintln!("error sending response: {:?}", e))
-       }
-    }
-    .serve(chan)
-    .recover(|e| eprintln!("error running echo server: {:?}", e)))
+        })
+        .map(|_| ())
+        .recover(|e| eprintln!("error running echo server: {:?}", e)))
 }
 
 fn main() -> Result<(), Error> {

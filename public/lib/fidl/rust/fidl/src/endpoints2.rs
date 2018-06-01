@@ -16,6 +16,9 @@ pub trait ServiceMarker: Sized {
     /// Queries made against the proxy are sent to the paired `ServerEnd`.
     type Proxy: Proxy;
 
+    /// The type of the stream of requests coming into a server.
+    type RequestStream: RequestStream;
+
     /// The name of the service (to be used for service lookup and discovery).
     const NAME: &'static str;
 }
@@ -23,6 +26,19 @@ pub trait ServiceMarker: Sized {
 /// A type which allows querying a remote FIDL server over a channel.
 pub trait Proxy: Sized {
     /// Create a proxy over the given channel.
+    fn from_channel(inner: async::Channel) -> Self;
+}
+
+/// A stream of requests coming into a FIDL server over a channel.
+pub trait RequestStream: Sized {
+    /// A type that can be used to send events and shut down the request stream.
+    type ControlHandle;
+
+    /// Returns a copy of the `ControlHandle` for the given stream.
+    /// This handle can be used to send events and shut down the request stream.
+    fn control_handle(&self) -> Self::ControlHandle;
+
+    /// Create a request stream from the given channel.
     fn from_channel(inner: async::Channel) -> Self;
 }
 
@@ -108,6 +124,26 @@ impl<T> ServerEnd<T> {
     /// Extract the inner channel.
     pub fn into_channel(self) -> zx::Channel {
         self.inner
+    }
+
+    /// Create a stream of requests off of the channel.
+    pub fn into_stream(self) -> Result<T::RequestStream, Error>
+        where T: ServiceMarker,
+    {
+        Ok(T::RequestStream::from_channel(
+            async::Channel::from_channel(self.inner)
+                .map_err(Error::AsyncChannel)?))
+    }
+
+    /// Create a stream of requests and an event-sending handle
+    /// from the channel.
+    pub fn into_stream_and_control_handle(self)
+        -> Result<(T::RequestStream, <T::RequestStream as RequestStream>::ControlHandle), Error>
+        where T: ServiceMarker,
+    {
+        let stream = self.into_stream()?;
+        let control_handle = stream.control_handle();
+        Ok((stream, control_handle))
     }
 }
 
