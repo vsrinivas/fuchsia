@@ -30,7 +30,9 @@ template("fidl_dart") {
     library_name = invoker.name
   }
   root_dir = "$target_gen_dir/${library_name}_package"
-  bindings_file = "$root_dir/lib/fidl.dart"
+  bindings_dir = "$root_dir/lib"
+  bindings_file = "$bindings_dir/fidl.dart"
+  async_bindings_file = "$bindings_dir/fidl_async.dart"
 
   fidl_target_gen_dir = get_label_info(":bogus($fidl_toolchain)", "target_gen_dir")
   json_representation = "$fidl_target_gen_dir/$target_name.fidl.json"
@@ -48,13 +50,14 @@ template("fidl_dart") {
 
     outputs = [
       bindings_file,
+      async_bindings_file,
     ]
 
     args = [
       "--json",
       rebase_path(json_representation, root_build_dir),
       "--output-base",
-      rebase_path(bindings_file, root_build_dir),
+      rebase_path(bindings_dir, root_build_dir),
       "--include-base",
       rebase_path(root_gen_dir, root_build_dir),
       "--generators",
@@ -107,6 +110,7 @@ template("fidl_dart") {
 
     sources = [
       bindings_file,
+      async_bindings_file,
     ]
 
     deps = [
