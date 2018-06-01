@@ -61,7 +61,7 @@ KCOUNTER(thread_resume_count, "kernel.thread.resume");
 static struct list_node thread_list = LIST_INITIAL_VALUE(thread_list);
 
 // master thread spinlock
-spin_lock_t thread_lock = SPIN_LOCK_INITIAL_VALUE;
+spin_lock_t thread_lock __CPU_ALIGN_EXCLUSIVE = SPIN_LOCK_INITIAL_VALUE;
 
 // local routines
 static void thread_exit_locked(thread_t* current_thread, int retcode) __NO_RETURN;

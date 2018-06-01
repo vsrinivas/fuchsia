@@ -31,7 +31,7 @@
 #define LOCAL_TRACE 0
 
 // a global state structure, aligned on cpu cache line to minimize aliasing
-struct mp_state mp __CPU_ALIGN;
+struct mp_state mp __CPU_ALIGN_EXCLUSIVE;
 
 // Helpers used for implementing mp_sync
 struct mp_sync_context;

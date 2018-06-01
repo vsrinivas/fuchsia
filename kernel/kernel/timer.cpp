@@ -22,6 +22,7 @@
 #include <debug.h>
 #include <err.h>
 #include <inttypes.h>
+#include <kernel/align.h>
 #include <kernel/mp.h>
 #include <kernel/percpu.h>
 #include <kernel/spinlock.h>
@@ -37,7 +38,7 @@
 
 #define LOCAL_TRACE 0
 
-static spin_lock_t timer_lock;
+static spin_lock_t timer_lock __CPU_ALIGN_EXCLUSIVE = SPIN_LOCK_INITIAL_VALUE;
 
 void timer_init(timer_t* timer) {
     *timer = (timer_t)TIMER_INITIAL_VALUE(*timer);
@@ -478,7 +479,6 @@ void timer_thaw_percpu(void) {
 }
 
 void timer_queue_init(void) {
-    timer_lock = SPIN_LOCK_INITIAL_VALUE;
     for (uint i = 0; i < SMP_MAX_CPUS; i++) {
         list_initialize(&percpu[i].timer_queue);
     }
