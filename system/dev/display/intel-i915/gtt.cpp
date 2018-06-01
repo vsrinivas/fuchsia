@@ -194,6 +194,10 @@ zx_status_t GttRegion::PopulateRegion(zx_handle_t vmo, uint64_t page_offset,
 }
 
 void GttRegion::ClearRegion(bool close_vmo) {
+    if (!region_) {
+        return;
+    }
+
     uint32_t pte_idx = static_cast<uint32_t>(region_->base / PAGE_SIZE);
     uint64_t pte = gen_pte_encode(gtt_->scratch_buffer_paddr_, false);
     auto mmio_space = gtt_->controller_->mmio_space();
