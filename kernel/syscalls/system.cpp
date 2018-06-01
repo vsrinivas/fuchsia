@@ -246,7 +246,7 @@ zx_status_t sys_system_mexec(zx_handle_t kernel_vmo, zx_handle_t bootimage_vmo) 
 
     // Allow the platform to patch the bootdata with any platform specific
     // sections before mexecing.
-    result = platform_mexec_patch_bootdata(bootimage_buffer, new_bootimage_len);
+    result = platform_mexec_patch_zbi(bootimage_buffer, new_bootimage_len);
     if (result != ZX_OK) {
         printf("mexec: could not patch bootdata\n");
         return result;

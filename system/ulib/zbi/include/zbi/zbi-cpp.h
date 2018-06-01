@@ -41,6 +41,13 @@ class Zbi {
                                   payload);
     }
 
+    zbi_result_t CreateSection(const uint32_t length, const uint32_t type,
+                               const uint32_t extra, const uint32_t flags,
+                               void** payload) {
+      return zbi_create_section(base_, capacity_, length, type, extra, flags,
+                                payload);
+    }
+
     const uint8_t* Base() const { return base_; };
     size_t Length() const {
         const zbi_header_t* hdr = reinterpret_cast<const zbi_header_t*>(base_);

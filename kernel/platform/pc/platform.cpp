@@ -492,7 +492,7 @@ static void e820_entry_walk(uint64_t base, uint64_t size, bool is_mem, void* voi
 
 // Give the platform an opportunity to append any platform specific bootdata
 // sections.
-zx_status_t platform_mexec_patch_bootdata(uint8_t* bootdata, const size_t len) {
+zx_status_t platform_mexec_patch_zbi(uint8_t* bootdata, const size_t len) {
     uint8_t e820buf[sizeof(e820entry_t) * 32];
 
     e820_walk_ctx ctx;

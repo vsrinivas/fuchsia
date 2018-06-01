@@ -611,7 +611,7 @@ size_t platform_recover_crashlog(size_t len, void* cookie,
     return hdr.length;
 }
 
-zx_status_t platform_mexec_patch_bootdata(uint8_t* zbi, const size_t len) {
+zx_status_t platform_mexec_patch_zbi(uint8_t* zbi, const size_t len) {
     size_t offset = 0;
 
     // copy certain boot items provided by the bootloader or boot shim

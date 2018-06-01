@@ -76,4 +76,13 @@ zbi_result_t zbi_append_section(void* base, const size_t capacity,
                                 const uint32_t section_length,
                                 const uint32_t type, const uint32_t extra,
                                 const uint32_t flags, const void* payload);
+
+
+// Create a new ZBI section and returns a pointer to the payload.
+zbi_result_t zbi_create_section(void* base, const size_t capacity,
+                                const uint32_t section_length,
+                                const uint32_t type, const uint32_t extra,
+                                const uint32_t flags, void** payload);
+
+
 __END_CDECLS

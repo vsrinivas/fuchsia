@@ -41,10 +41,10 @@ zx_status_t bootdata_append_section(uint8_t* bootdata_buf, const size_t buflen,
 // Save the crashlog for propagation to the next kernel.
 void mexec_stash_crashlog(fbl::RefPtr<VmObject> vmo);
 
-/* Allow the platform to patch the bootdata structure with any platform specific
+/* Allow the platform to patch the zbi structure with any platform specific
  * data that might be necessary for the kernel that mexec is chain-loading.
  */
-zx_status_t platform_mexec_patch_bootdata(uint8_t* bootdata, const size_t len);
+zx_status_t platform_mexec_patch_zbi(uint8_t* bootdata, const size_t len);
 
 /* Ask the platform to mexec into the next kernel.
  */

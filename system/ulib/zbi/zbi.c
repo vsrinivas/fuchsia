@@ -81,6 +81,23 @@ zbi_result_t zbi_append_section(void* base, const size_t capacity,
                                 const uint32_t section_length,
                                 const uint32_t type, const uint32_t extra,
                                 const uint32_t flags, const void* payload) {
+
+    uint8_t* new_section;
+    zbi_result_t result = zbi_create_section(base, capacity, section_length,
+                                             type, extra, flags,
+                                             (void**)&new_section);
+
+    if (result != ZBI_RESULT_OK) return result;
+
+    // Copy in the payload.
+    memcpy(new_section, payload, section_length);
+    return ZBI_RESULT_OK;
+}
+
+zbi_result_t zbi_create_section(void* base, const size_t capacity,
+                                const uint32_t section_length,
+                                const uint32_t type, const uint32_t extra,
+                                const uint32_t flags, void** payload) {
     // Required arguments.
     if (!base || !payload) return ZBI_RESULT_ERROR;
 
@@ -123,9 +140,8 @@ zbi_result_t zbi_append_section(void* base, const size_t capacity,
 
     write_head += sizeof(new_header);
 
-    // Copy in the payload.
-    memcpy(write_head, payload, section_length);
-    write_head += section_length;
+    // Set the result.
+    *payload = write_head;
 
     // Patch up the container header.
     hdr->length = ZBI_ALIGN(hdr->length) + sizeof(zbi_header_t) + section_length;
