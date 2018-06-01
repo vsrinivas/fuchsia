@@ -7,6 +7,8 @@
 
 #include <string>
 
+#include "third_party/rapidjson/rapidjson/document.h"
+
 namespace component {
 
 class RuntimeMetadata {
@@ -15,6 +17,7 @@ class RuntimeMetadata {
   ~RuntimeMetadata();
 
   bool Parse(const std::string& data);
+  bool Parse(const rapidjson::Value& runtime_value);
 
   const std::string& runner() const { return runner_; }
 

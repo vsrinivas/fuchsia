@@ -15,15 +15,17 @@ RuntimeMetadata::RuntimeMetadata() = default;
 RuntimeMetadata::~RuntimeMetadata() = default;
 
 bool RuntimeMetadata::Parse(const std::string& data) {
-  runner_.clear();
-
   rapidjson::Document document;
   document.Parse(data);
   if (!document.IsObject())
     return false;
+  return Parse(document);
+}
 
-  auto runner = document.FindMember(kRunner);
-  if (runner == document.MemberEnd() || !runner->value.IsString()) {
+bool RuntimeMetadata::Parse(const rapidjson::Value& runtime_value) {
+  runner_.clear();
+  auto runner = runtime_value.FindMember(kRunner);
+  if (runner == runtime_value.MemberEnd() || !runner->value.IsString()) {
     return false;
   }
   runner_ = runner->value.GetString();
