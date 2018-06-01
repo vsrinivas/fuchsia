@@ -66,7 +66,12 @@ func main() {
 		log.Fatalf("loading root keys failed %s", err)
 	}
 
-	d := startupDaemon(srvUrl, *store, keys)
+	d, err := startupDaemon(srvUrl, *store, keys)
+	if err != nil {
+		log.Fatalf("failed to start daemon: %s", err)
+	}
+	defer d.CancelAll()
+
 	if *autoUpdate {
 		go func() {
 			supMon := daemon.NewSystemUpdateMonitor(d)
@@ -76,8 +81,6 @@ func main() {
 	}
 
 	startFIDLSvr(d)
-
-	defer d.CancelAll()
 
 	//block forever
 	select {}
@@ -92,20 +95,38 @@ func startFIDLSvr(d *daemon.Daemon) {
 	cxt.Serve()
 }
 
-func startupDaemon(srvURL *url.URL, store string, keys []*tuf_data.Key) *daemon.Daemon {
+func startupDaemon(srvURL *url.URL, store string, keys []*tuf_data.Key) (*daemon.Daemon, error) {
 
 	reqSet := newPackageSet([]string{"/pkg/bin/app"})
 
-	tufSrc := source.NewTUFSource(srvURL.String(), store, keys, 0, 0)
+	checker := daemon.NewDaemon(reqSet, daemon.ProcessPackage, []source.Source{})
 
-	checker := daemon.NewDaemon(reqSet, daemon.ProcessPackage, []source.Source{tufSrc})
+	// TODO(etryzelaar) temporary workaround until we transition to loading
+	// from a config file.
+	keycfgs := make([]amber_fidl.KeyConfig, len(keys))
+	for i, key := range keys {
+		keycfgs[i] = amber_fidl.KeyConfig{
+			Type:  key.Type,
+			Value: hex.EncodeToString(key.Value.Public),
+		}
+	}
+
+	cfg := amber_fidl.SourceConfig{
+		RepoUrl:    srvURL.String(),
+		RootKeys:   keycfgs,
+		RatePeriod: 0,
+		RateLimit:  0,
+	}
+	if err := checker.AddTUFSource(store, &cfg); err != nil {
+		return nil, err
+	}
 
 	blobURL := *srvURL
 	blobURL.Path = filepath.Join(blobURL.Path, "blobs")
 	checker.AddBlobRepo(daemon.BlobRepo{Address: blobURL.String(), Interval: time.Second * 5})
 
 	log.Println("monitoring for updates")
-	return checker
+	return checker, nil
 }
 
 func newPackageSet(files []string) *pkg.PackageSet {

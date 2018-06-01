@@ -5,12 +5,10 @@
 package ipcserver
 
 import (
-	"encoding/hex"
 	"fmt"
 	"io/ioutil"
 	"strings"
 	"sync"
-	"time"
 
 	"fidl/amber"
 	"fidl/bindings"
@@ -18,11 +16,8 @@ import (
 	"amber/daemon"
 	"amber/lg"
 	"amber/pkg"
-	"amber/source"
 
 	"syscall/zx"
-
-	tuf_data "github.com/flynn/go-tuf/data"
 )
 
 type ControlSrvr struct {
@@ -60,32 +55,14 @@ func (c *ControlSrvr) DoTest(in int32) (out string, err error) {
 }
 
 func (c *ControlSrvr) AddSrc(cfg amber.SourceConfig) (bool, error) {
-	keys := make([]*tuf_data.Key, len(cfg.RootKeys))
-
-	for i, key := range cfg.RootKeys {
-		if key.Type != "ed25519" {
-			return false, fmt.Errorf("Unsupported key type %s", key.Type)
-		}
-
-		keyHex, err := hex.DecodeString(key.Value)
-		if err != nil {
-			return false, err
-		}
-
-		keys[i] = &tuf_data.Key{
-			Type:  key.Type,
-			Value: tuf_data.KeyValue{tuf_data.HexBytes(keyHex)},
-		}
-	}
-
 	dir, err := ioutil.TempDir("", "amber")
 	if err != nil {
 		return false, err
 	}
 
-	tufSource := source.NewTUFSource(cfg.RepoUrl, dir, keys,
-		time.Millisecond*time.Duration(cfg.RatePeriod), cfg.RateLimit)
-	c.daemon.AddSource(tufSource)
+	if err := c.daemon.AddTUFSource(dir, &cfg); err != nil {
+		return false, err
+	}
 
 	return true, nil
 }

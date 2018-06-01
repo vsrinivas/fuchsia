@@ -17,6 +17,8 @@ import (
 
 	"amber/pkg"
 	"amber/source"
+
+	"fidl/amber"
 )
 
 var DstUpdate = "/pkgfs/install/pkg"
@@ -91,11 +93,26 @@ func (d *Daemon) addSrc(s source.Source) {
 // Source.GetInterval()
 func (d *Daemon) AddSource(s source.Source) {
 	d.addSrc(s)
+
 	// after the source is added, let the monitor(s) know so they can decide if they
 	// want to look again for updates
 	for _, m := range d.srcMons {
 		m.SourcesAdded()
 	}
+}
+
+func (d *Daemon) AddTUFSource(store string, cfg *amber.SourceConfig) error {
+	src, err := source.NewTUFSource(store, cfg)
+	if err != nil {
+		log.Printf("failed to create TUF source: %v: %s", cfg.RepoUrl, err)
+		return err
+	}
+
+	d.AddSource(src)
+
+	log.Printf("added TUF source: %v", cfg.RepoUrl)
+
+	return nil
 }
 
 func (d *Daemon) blobRepos() []BlobRepo {

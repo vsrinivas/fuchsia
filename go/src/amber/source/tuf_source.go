@@ -5,15 +5,19 @@
 package source
 
 import (
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"net/url"
 	"os"
 	"time"
 
 	"amber/lg"
 	"amber/pkg"
+
+	"fidl/amber"
 
 	tuf "github.com/flynn/go-tuf/client"
 	tuf_data "github.com/flynn/go-tuf/data"
@@ -23,18 +27,14 @@ import (
 // ErrTufSrcNoHash is returned if the TUF entry doesn't have a SHA512 hash
 var ErrTufSrcNoHash = errors.New("tufsource: hash missing or wrong type")
 
-type Config struct {
-	URL       string
-	LocalPath string
-	Keys      []*tuf_data.Key
-}
-
 // TUFSource wraps a TUF Client into the Source interface
 type TUFSource struct {
-	Client   *tuf.Client
-	Interval time.Duration
-	Limit    uint64
-	Config   *Config
+	Client     *tuf.Client
+	RatePeriod time.Duration
+	RateLimit  uint64
+	Store      string
+	Keys       []*tuf_data.Key
+	Config     *amber.SourceConfig
 }
 
 type merkle struct {
@@ -61,21 +61,46 @@ func LoadKeys(path string) ([]*tuf_data.Key, error) {
 	return keys, err
 }
 
-func NewTUFSource(url string, path string, keys []*tuf_data.Key, interval time.Duration,
-	limit uint64) *TUFSource {
-	c := Config{
-		URL:       url,
-		LocalPath: path,
-		Keys:      keys,
+func NewTUFSource(store string, cfg *amber.SourceConfig) (*TUFSource, error) {
+	if store == "" {
+		return nil, fmt.Errorf("store cannot be empty")
+	}
+
+	if _, err := url.ParseRequestURI(cfg.RepoUrl); err != nil {
+		return nil, err
+	}
+
+	if len(cfg.RootKeys) == 0 {
+		return nil, fmt.Errorf("no root keys provided")
+	}
+
+	keys := make([]*tuf_data.Key, len(cfg.RootKeys))
+
+	for i, key := range cfg.RootKeys {
+		if key.Type != "ed25519" {
+			return nil, fmt.Errorf("unsupported key type %s", key.Type)
+		}
+
+		keyHex, err := hex.DecodeString(key.Value)
+		if err != nil {
+			return nil, fmt.Errorf("invalid key value: %s", err)
+		}
+
+		keys[i] = &tuf_data.Key{
+			Type:  key.Type,
+			Value: tuf_data.KeyValue{tuf_data.HexBytes(keyHex)},
+		}
 	}
 
 	src := TUFSource{
-		Interval: interval,
-		Limit:    limit,
-		Config:   &c,
+		RatePeriod: time.Millisecond * time.Duration(cfg.RatePeriod),
+		RateLimit:  cfg.RateLimit,
+		Store:      store,
+		Keys:       keys,
+		Config:     cfg,
 	}
 
-	return &src
+	return &src, nil
 }
 
 func (f *TUFSource) initSrc() error {
@@ -83,7 +108,7 @@ func (f *TUFSource) initSrc() error {
 		return nil
 	}
 
-	client, store, err := newTUFClient(f.Config.URL, f.Config.LocalPath)
+	client, store, err := newTUFClient(f.Config.RepoUrl, f.Store)
 
 	if err != nil {
 		return err
@@ -95,7 +120,7 @@ func (f *TUFSource) initSrc() error {
 	}
 
 	if needs {
-		err := client.Init(f.Config.Keys, len(f.Config.Keys))
+		err := client.Init(f.Keys, len(f.Keys))
 		if err != nil {
 			return fmt.Errorf("TUF init failed: %s", err)
 		}
@@ -204,11 +229,11 @@ func (f *TUFSource) FetchPkg(pkg *pkg.Package) (*os.File, error) {
 func (f *TUFSource) CheckInterval() time.Duration {
 	// TODO(jmatt) figure out how to establish a real value from the
 	// Client we wrap
-	return f.Interval
+	return f.RatePeriod
 }
 
 func (f *TUFSource) CheckLimit() uint64 {
-	return f.Limit
+	return f.RateLimit
 }
 
 // Equals returns true if the Source passed in is a pointer to this instance
