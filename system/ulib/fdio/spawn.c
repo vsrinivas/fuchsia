@@ -131,7 +131,7 @@ static zx_status_t send_handles(zx_handle_t launcher, size_t handle_capacity,
     zx_status_t status = ZX_OK;
     size_t h = 0;
 
-    if ((flags & FDIO_SPAWN_SHARE_JOB) != 0) {
+    if ((flags & FDIO_SPAWN_CLONE_JOB) != 0) {
         handle_infos[h].handle = FIDL_HANDLE_PRESENT;
         handle_infos[h].id = PA_JOB_DEFAULT;
         status = zx_handle_duplicate(job, ZX_RIGHT_SAME_RIGHTS, &handles[h++]);
@@ -376,7 +376,7 @@ zx_status_t fdio_spawn_etc(zx_handle_t job,
         goto cleanup;
     }
 
-    if ((flags & FDIO_SPAWN_SHARE_JOB) != 0)
+    if ((flags & FDIO_SPAWN_CLONE_JOB) != 0)
         ++handle_capacity;
 
     if ((flags & FDIO_SPAWN_CLONE_LDSVC) != 0)

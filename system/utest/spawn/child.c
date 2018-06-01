@@ -24,7 +24,7 @@ static int check_flags(uint32_t flags, int success) {
     // always add it into the flags.
     flags |= FDIO_SPAWN_CLONE_LDSVC;
 
-    bool should_have_job = (flags & FDIO_SPAWN_SHARE_JOB) != 0;
+    bool should_have_job = (flags & FDIO_SPAWN_CLONE_JOB) != 0;
     bool has_job = zx_job_default() != ZX_HANDLE_INVALID;
     if (has_job != should_have_job)
         return -1;
@@ -76,7 +76,7 @@ int main(int argc, char** argv) {
         if (!strcmp(flags, "none"))
             return check_flags(0, 51);
         if (!strcmp(flags, "job"))
-            return check_flags(FDIO_SPAWN_SHARE_JOB, 52);
+            return check_flags(FDIO_SPAWN_CLONE_JOB, 52);
         if (!strcmp(flags, "namespace"))
             return check_flags(FDIO_SPAWN_CLONE_NAMESPACE, 53);
         if (!strcmp(flags, "stdio"))

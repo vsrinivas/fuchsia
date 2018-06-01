@@ -19,7 +19,11 @@ __BEGIN_CDECLS
 
 // Provides the spawned process with the job in which the process was created.
 //
-// The job is passed as |PA_JOB_DEFAULT|.
+// The spawned process receives the job using the |PA_JOB_DEFAULT| process
+// argument.
+#define FDIO_SPAWN_CLONE_JOB ((uint32_t)0x0001u)
+
+// Remove |FDIO_SPAWN_SHARE_JOB| in favor of |FDIO_SPAWN_CLONE_JOB|.
 #define FDIO_SPAWN_SHARE_JOB ((uint32_t)0x0001u)
 
 // Provides the spawned process with the shared library loader used by this
@@ -86,10 +90,16 @@ zx_status_t fdio_spawn(zx_handle_t job,
 // If |FDIO_SPAWN_CLONE_NAMESPACE| is specified via |flags|, the namespace entry
 // is added to the cloned namespace from the calling process.
 //
+// The given handle will be closed regardless of whether the |fdio_spawn_etc|
+// call succeeds.
+//
 // Uses the |ns| entry in the |fdio_spawn_action_t| union.
 #define FDIO_SPAWN_ACTION_ADD_NS_ENTRY ((uint32_t)0x0003u)
 
 // Add the given handle to the process arguments of the spawned process.
+//
+// The given handle will be closed regardless of whether the |fdio_spawn_etc|
+// call succeeds.
 //
 // Uses the |h| entry in the |fdio_spawn_action_t| union.
 #define FDIO_SPAWN_ACTION_ADD_HANDLE ((uint32_t)0x0004u)

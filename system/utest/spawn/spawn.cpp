@@ -111,7 +111,7 @@ static bool spawn_flags_test(void) {
 
     {
         const char* argv[] = {kSpawnChild, "--flags", "job", nullptr};
-        status = fdio_spawn(ZX_HANDLE_INVALID, FDIO_SPAWN_SHARE_JOB | FDIO_SPAWN_CLONE_LDSVC,
+        status = fdio_spawn(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_JOB | FDIO_SPAWN_CLONE_LDSVC,
                             kSpawnChild, argv, process.reset_and_get_address());
         ASSERT_EQ(ZX_OK, status);
         EXPECT_EQ(52, join(process));
