@@ -5,6 +5,7 @@
 package main
 
 import (
+	"bufio"
 	"crypto/sha512"
 	"encoding/hex"
 	"flag"
@@ -15,6 +16,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"amber/daemon"
@@ -51,9 +53,12 @@ func main() {
 		flag.CommandLine.PrintDefaults()
 	}
 
-	flag.Parse()
 	log.SetPrefix("amber: ")
 	log.SetFlags(log.Ltime)
+
+	readExtraFlags()
+
+	flag.Parse()
 	time.Sleep(*delay)
 
 	srvUrl, err := url.Parse(*addr)
@@ -160,4 +165,50 @@ func digest(name string, hash hash.Hash) ([]byte, error) {
 		return nil, e
 	}
 	return hash.Sum(nil), nil
+}
+
+var flagsDir = filepath.Join("/system", "data", "amber", "flags")
+
+func readExtraFlags() {
+	d, err := os.Open(flagsDir)
+	if err != nil {
+		if !os.IsNotExist(err) {
+			log.Println("unexpected error reading %q: %s", flagsDir, err)
+		}
+		return
+	}
+	defer d.Close()
+
+	files, err := d.Readdir(0)
+	if err != nil {
+		log.Printf("error listing flags directory %s", err)
+		return
+	}
+	for _, f := range files {
+		if f.IsDir() || f.Size() == 0 {
+			continue
+		}
+
+		fPath := filepath.Join(d.Name(), f.Name())
+		file, err := os.Open(fPath)
+		if err != nil {
+			log.Printf("flags file %q could not be opened: %s", fPath, err)
+			continue
+		}
+		r := bufio.NewReader(file)
+		for {
+			line, err := r.ReadString('\n')
+			if err != nil && err != io.EOF {
+				log.Printf("flags file %q had read error: %s", fPath, err)
+				break
+			}
+
+			line = strings.TrimSpace(line)
+			os.Args = append(os.Args, line)
+			if err == io.EOF {
+				break
+			}
+		}
+		file.Close()
+	}
 }
