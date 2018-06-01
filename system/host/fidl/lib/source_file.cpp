@@ -31,24 +31,26 @@ SourceFile::SourceFile(std::string filename, std::string data)
 SourceFile::~SourceFile() = default;
 
 StringView SourceFile::LineContaining(StringView view, Position* position_out) const {
-    auto ptr_order = [](const char* left, const char* right) {
-        return std::less_equal<const char*>()(left, right);
-    };
+    auto ptr_less_equal = std::less_equal<const char*>();
 
-    assert(ptr_order(data().data(), view.data()) && "The view is not part of this SourceFile");
-    assert(ptr_order(view.data() + view.size(), data().data() + data().size()) &&
+    assert(ptr_less_equal(data().data(), view.data()) && "The view is not part of this SourceFile");
+    assert(ptr_less_equal(view.data() + view.size(), data().data() + data().size()) &&
            "The view is not part of this SourceFile");
 
-    auto is_in_line = [&view, &ptr_order](const StringView& current) {
-        return ptr_order(view.data() + view.size(), current.data() + current.size());
+    // We are looking from the end of the file backwards (hence
+    // crbegin and crend), looking for the the first line (hence
+    // upper_bound) to start at or before before the token in
+    // question.
+    auto is_in_line = [&ptr_less_equal](const StringView& left, const StringView& right) {
+        return ptr_less_equal(right.data(), left.data());
     };
-
-    auto line = std::find_if(lines_.cbegin(), lines_.cend(), is_in_line);
-    assert(line != lines_.cend());
+    auto line = std::upper_bound(lines_.crbegin(), lines_.crend(), view, is_in_line);
+    assert(line != lines_.crend());
 
     if (position_out != nullptr) {
-        // Humans number lines from 1.
-        int line_number = (line - lines_.cbegin()) + 1;
+        // Humans number lines from 1. Calculating this from the end
+        // accounts for this.
+        int line_number = lines_.crend() - line;
         // But columns from 0!
         int column_number = view.data() - line->data();
         *position_out = {line_number, column_number};

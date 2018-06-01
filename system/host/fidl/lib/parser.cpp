@@ -93,6 +93,14 @@ decltype(nullptr) Parser::Fail() {
             --squiggle_size;
         }
         squiggle += std::string(squiggle_size, '~');
+        // Some tokens (like string literals) can span multiple
+        // lines. Truncate the string to just one line at most. The
+        // containing line contains a newline, so drop it when
+        // comparing sizes.
+        size_t line_size = surrounding_line.size() - 1;
+        if (squiggle.size() > line_size) {
+            squiggle.resize(line_size);
+        }
 
         std::string error = "found unexpected token in file ";
         error += token_location.source_file().filename();
