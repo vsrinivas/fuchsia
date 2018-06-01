@@ -61,7 +61,7 @@ available command line tools for testing/debugging.
 ### Testing
 
 The `bluetooth_tests` package contains Bluetooth test binaries. This package is
-defined in the [top level BUILD file](BUILD.gn).
+defined in the [tests BUILD file](tests/BUILD.gn).
 
 Host subsystem tests are compiled into a single [GoogleTest](https://github.com/google/googletest) binary,
 which gets installed at `/system/test/bluetooth_unittests`.
@@ -69,7 +69,7 @@ which gets installed at `/system/test/bluetooth_unittests`.
 To run all tests:
 
 ```
-$ /system/test/bluetooth_unittests
+$ /system/test/bt-host-unittests
 ```
 
 Use the `--gtest_filter`
