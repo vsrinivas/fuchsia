@@ -7,6 +7,8 @@
 #include <wlan/mlme/mlme.h>
 
 #include <fbl/ref_ptr.h>
+
+#include <fuchsia/wlan/stats/cpp/fidl.h>
 #include <wlan/protocol/mac.h>
 #include <zircon/types.h>
 
@@ -30,6 +32,7 @@ class ClientMlme : public Mlme {
     zx_status_t HandleTimeout(const ObjectId id) override;
     // MLME-JOIN.request will initialize a Station and starts the association flow.
     zx_status_t HandleMlmeJoinReq(const ::fuchsia::wlan::mlme::JoinRequest& msg) override;
+    ::fuchsia::wlan::stats::ClientMlmeStats GetClientMlmeStats() const override final;
 
     bool IsStaValid() const;
 

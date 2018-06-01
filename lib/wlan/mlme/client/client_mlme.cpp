@@ -110,4 +110,8 @@ zx_status_t ClientMlme::PostChannelChange() {
     return ZX_OK;
 }
 
+wlan_stats::ClientMlmeStats ClientMlme::GetClientMlmeStats() const {
+    return sta_->stats();
+}
+
 }  // namespace wlan

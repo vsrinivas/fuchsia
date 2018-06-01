@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 library fuchsia.wlan.mlme;
+using fuchsia.wlan.stats;
 
 // Custom primitives for communicating between the wlan service and the MLME drivers.
 // The primitives defined here are not part of the official 802.11 MLME SAP interface specification,
@@ -48,6 +49,18 @@ struct DeviceQueryConfirm {
     array<uint8>:6 mac_addr;
     MacRole role;
     vector<BandCapabilities> bands;
+};
+
+// STATS_QUERY.response
+
+union MlmeStats {
+  fuchsia.wlan.stats.ClientMlmeStats client_mlme_stats;
+  fuchsia.wlan.stats.ApMlmeStats ap_mlme_stats;
+};
+
+struct StatsQueryResponse {
+    fuchsia.wlan.stats.DispatcherStats dispatcher_stats;
+    MlmeStats mlme_stats;
 };
 
 // Method ordinals are defined in wlan_mlme.fidl to prevent error prone overlaps with official

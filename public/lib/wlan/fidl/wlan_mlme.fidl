@@ -513,4 +513,7 @@ interface MLME {
 
     0x1003: DeviceQueryReq(DeviceQueryRequest req);
     0x1004: -> DeviceQueryConf(DeviceQueryConfirm resp);
+
+    0x1005: StatsQueryReq();
+    0x1006: -> StatsQueryResp(StatsQueryResponse resp);
 };

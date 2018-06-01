@@ -11,7 +11,7 @@
 #include <wlan/mlme/sequence.h>
 
 #include <fuchsia/wlan/mlme/cpp/fidl.h>
-#include <fuchsia/wlan/stats/c/fidl.h>
+#include <fuchsia/wlan/stats/cpp/fidl.h>
 
 #include <fbl/unique_ptr.h>
 #include <wlan/common/macaddr.h>
@@ -109,6 +109,8 @@ class Station : public FrameHandler {
 
     const Timer& timer() const { return *timer_; }
 
+    const ::fuchsia::wlan::stats::ClientMlmeStats& stats();
+
    private:
     zx_status_t SendAddBaRequestFrame();
 
@@ -144,7 +146,7 @@ class Station : public FrameHandler {
     eapol::PortState controlled_port_ = eapol::PortState::kBlocked;
 
     wlan_channel_t join_chan_;
-    common::WlanStats<common::ClientMlmeStats, fuchsia_wlan_stats_ClientMlmeStats> stats_;
+    common::WlanStats<common::ClientMlmeStats, ::fuchsia::wlan::stats::ClientMlmeStats> stats_;
 };
 
 }  // namespace wlan

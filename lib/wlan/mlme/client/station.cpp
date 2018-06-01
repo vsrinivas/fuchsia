@@ -1383,4 +1383,8 @@ uint8_t Station::GetTid() {
 uint8_t Station::GetTid(const EthFrame& frame) {
     return GetTid();
 }
+
+const wlan_stats::ClientMlmeStats& Station::stats() {
+  return std::move(stats_.ToFidl());
+}
 }  // namespace wlan

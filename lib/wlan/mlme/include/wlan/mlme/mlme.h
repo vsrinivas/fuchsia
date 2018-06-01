@@ -4,10 +4,10 @@
 
 #pragma once
 
+#include <fuchsia/wlan/stats/cpp/fidl.h>
+#include <wlan/common/bitfield.h>
 #include <wlan/mlme/frame_handler.h>
 #include <wlan/mlme/mac_frame.h>
-
-#include <wlan/common/bitfield.h>
 #include <wlan/protocol/mac.h>
 #include <zircon/types.h>
 
@@ -55,6 +55,7 @@ class Mlme : public FrameHandler {
     virtual zx_status_t HandleTimeout(const ObjectId id) = 0;
     // Called when the hardware reports an indication such as Pre-TBTT.
     virtual void HwIndication(uint32_t ind) {};
+    virtual ::fuchsia::wlan::stats::ClientMlmeStats GetClientMlmeStats() const { return ::fuchsia::wlan::stats::ClientMlmeStats{}; }
 };
 
 }  // namespace wlan

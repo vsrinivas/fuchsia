@@ -30,4 +30,8 @@ struct ClientMlmeStats {
   PacketCounter mgmt_frame;
 };
 
+struct ApMlmeStats {
+  PacketCounter not_used;
+};
+
 // LINT.ThenChange(//garnet/lib/wlan/common/include/wlan/common/stats.h)
