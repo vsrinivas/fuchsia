@@ -43,30 +43,6 @@ package("maxwell_tests") {
   ]
 }
 
-# This target allows building just the Modular files. It's intended to be
-# used as the build target before calling push-package.py to perform an
-# incremental update on the device. See
-# https://fuchsia.googlesource.com/scripts/+/HEAD/README.md for instructions.
-group("modular_all") {
-  testonly = true
-
-  deps = [
-    ":future_unittests",
-    ":modular_unittests",
-    "bin/device_runner",
-    "bin/device_runner:dev_device_shell",
-    "bin/device_runner_monitor",
-    "bin/user_runner",
-    "bin/user_runner:dev_user_shell",
-    "bin/user_runner/story_runner:dev_story_shell",
-    "examples:modular_examples",
-    "examples/simple:simple_agent",
-    "examples/simple:simple_module_bin",
-    "tests:modular_tests",
-    "tests/benchmark:modular_benchmarks",
-  ]
-}
-
 executable("modular_unittests_bin") {
   testonly = true
   output_name = "modular_unittests"
