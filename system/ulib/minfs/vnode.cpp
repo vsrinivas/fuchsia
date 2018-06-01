@@ -306,7 +306,7 @@ zx_status_t VnodeMinfs::AllocateIndirect(WritebackWork* wb, blk_t index, Indirec
     // allocate new indirect block
     zx_status_t status;
     blk_t bno;
-    if ((status = fs_->BlockNew(wb, 0, &bno)) != ZX_OK) {
+    if ((status = fs_->BlockNew(wb, &bno)) != ZX_OK) {
         return status;
     }
 
@@ -339,7 +339,7 @@ zx_status_t VnodeMinfs::BlockOpDirect(WritebackWork* wb, DirectArgs* params) {
                 ZX_DEBUG_ASSERT(wb != nullptr);
                 if (bno == 0) {
                     zx_status_t status;
-                    if ((status = fs_->BlockNew(wb, 0, &bno)) != ZX_OK) {
+                    if ((status = fs_->BlockNew(wb, &bno)) != ZX_OK) {
                         return status;
                     }
                     inode_.block_count++;

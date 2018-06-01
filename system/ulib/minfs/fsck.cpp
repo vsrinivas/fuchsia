@@ -67,13 +67,13 @@ private:
 };
 
 zx_status_t MinfsChecker::GetInode(minfs_inode_t* inode, ino_t ino) {
-    if (ino >= fs_->info_.inode_count) {
+    if (ino >= fs_->Info().inode_count) {
         FS_TRACE_ERROR("check: ino %u out of range (>=%u)\n",
-              ino, fs_->info_.inode_count);
+              ino, fs_->Info().inode_count);
         return ZX_ERR_OUT_OF_RANGE;
     }
 
-    fs_->inodes_.Load(ino, inode);
+    fs_->inodes_->Load(ino, inode);
     if ((inode->magic != kMinfsMagicFile) && (inode->magic != kMinfsMagicDir)) {
         FS_TRACE_ERROR("check: ino %u has bad magic %#x\n", ino, inode->magic);
         return ZX_ERR_IO_DATA_INTEGRITY;
@@ -280,10 +280,10 @@ const char* MinfsChecker::CheckDataBlock(blk_t bno) {
     if (bno == 0) {
         return "reserved bno";
     }
-    if (bno >= fs_->info_.block_count) {
+    if (bno >= fs_->Info().block_count) {
         return "out of range";
     }
-    if (!fs_->block_allocator_.map_.Get(bno, bno + 1)) {
+    if (!fs_->block_allocator_->map_.Get(bno, bno + 1)) {
         return "not allocated";
     }
     if (checked_blocks_.Get(bno, bno + 1)) {
@@ -396,7 +396,7 @@ zx_status_t MinfsChecker::CheckFile(minfs_inode_t* inode, ino_t ino) {
 
 void MinfsChecker::CheckReserved() {
     // Check reserved inode '0'.
-    if (fs_->inode_allocator_.map_.Get(0, 1)) {
+    if (fs_->inodes_->inode_allocator_->map_.Get(0, 1)) {
         checked_inodes_.Set(0, 1);
         alloc_inodes_++;
     } else {
@@ -405,7 +405,7 @@ void MinfsChecker::CheckReserved() {
     }
 
     // Check reserved data block '0'.
-    if (fs_->block_allocator_.map_.Get(0, 1)) {
+    if (fs_->block_allocator_->map_.Get(0, 1)) {
         checked_blocks_.Set(0, 1);
         alloc_blocks_++;
     } else {
@@ -441,7 +441,7 @@ zx_status_t MinfsChecker::CheckInode(ino_t ino, ino_t parent, bool dot_or_dotdot
     checked_inodes_.Set(ino, ino + 1);
     alloc_inodes_++;
 
-    if (!fs_->inode_allocator_.map_.Get(ino, ino + 1)) {
+    if (!fs_->inodes_->inode_allocator_->map_.Get(ino, ino + 1)) {
        FS_TRACE_WARN("check: ino#%u: not marked in-use\n", ino);
         conforming_ = false;
     }
@@ -470,8 +470,8 @@ zx_status_t MinfsChecker::CheckInode(ino_t ino, ino_t parent, bool dot_or_dotdot
 zx_status_t MinfsChecker::CheckForUnusedBlocks() const {
     unsigned missing = 0;
 
-    for (unsigned n = 0; n < fs_->info_.block_count; n++) {
-        if (fs_->block_allocator_.map_.Get(n, n + 1)) {
+    for (unsigned n = 0; n < fs_->Info().block_count; n++) {
+        if (fs_->block_allocator_->map_.Get(n, n + 1)) {
             if (!checked_blocks_.Get(n, n + 1)) {
                 missing++;
             }
@@ -487,8 +487,8 @@ zx_status_t MinfsChecker::CheckForUnusedBlocks() const {
 
 zx_status_t MinfsChecker::CheckForUnusedInodes() const {
     unsigned missing = 0;
-    for (unsigned n = 0; n < fs_->info_.inode_count; n++) {
-        if (fs_->inode_allocator_.map_.Get(n, n + 1)) {
+    for (unsigned n = 0; n < fs_->Info().inode_count; n++) {
+        if (fs_->inodes_->inode_allocator_->map_.Get(n, n + 1)) {
             if (!checked_inodes_.Get(n, n + 1)) {
                 missing++;
             }
@@ -504,7 +504,7 @@ zx_status_t MinfsChecker::CheckForUnusedInodes() const {
 
 zx_status_t MinfsChecker::CheckLinkCounts() const {
     unsigned error = 0;
-    for (uint32_t n = 0; n < fs_->info_.inode_count; n++) {
+    for (uint32_t n = 0; n < fs_->Info().inode_count; n++) {
         if (links_[n] != 0) {
             error += 1;
             FS_TRACE_ERROR("check: inode#%u has incorrect link count %u\n", n + 1, links_[n]);
@@ -521,13 +521,15 @@ zx_status_t MinfsChecker::CheckLinkCounts() const {
 
 zx_status_t MinfsChecker::CheckAllocatedCounts() const {
     zx_status_t status = ZX_OK;
-    if (alloc_blocks_ != fs_->info_.alloc_block_count) {
-        FS_TRACE_ERROR("check: incorrect allocated block count %u (should be %u)\n", fs_->info_.alloc_block_count, alloc_blocks_);
+    if (alloc_blocks_ != fs_->Info().alloc_block_count) {
+        FS_TRACE_ERROR("check: incorrect allocated block count %u (should be %u)\n",
+                       fs_->Info().alloc_block_count, alloc_blocks_);
         status = ZX_ERR_BAD_STATE;
     }
 
-    if (alloc_inodes_ != fs_->info_.alloc_inode_count) {
-        FS_TRACE_ERROR("check: incorrect allocated inode count %u (should be %u)\n", fs_->info_.alloc_inode_count, alloc_inodes_);
+    if (alloc_inodes_ != fs_->Info().alloc_inode_count) {
+        FS_TRACE_ERROR("check: incorrect allocated inode count %u (should be %u)\n",
+                       fs_->Info().alloc_inode_count, alloc_inodes_);
         status = ZX_ERR_BAD_STATE;
     }
 

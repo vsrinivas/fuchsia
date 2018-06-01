@@ -40,6 +40,7 @@
 
 #include "allocator.h"
 #include "inode-manager.h"
+#include "superblock.h"
 
 #ifdef __Fuchsia__
 #include "metrics.h"
@@ -88,6 +89,40 @@ class VnodeMinfs;
 
 using SyncCallback = fs::Vnode::SyncCallback;
 
+#ifndef __Fuchsia__
+// Store start block + length for all extents. These may differ from info block for
+// sparse files.
+class BlockOffsets {
+public:
+    BlockOffsets(const Bcache* bc, const Superblock* sb);
+
+    blk_t IbmStartBlock() const { return ibm_start_block_; }
+    blk_t IbmBlockCount() const { return ibm_block_count_; }
+
+    blk_t AbmStartBlock() const { return abm_start_block_; }
+    blk_t AbmBlockCount() const { return abm_block_count_; }
+
+    blk_t InoStartBlock() const { return ino_start_block_; }
+    blk_t InoBlockCount() const { return ino_block_count_; }
+
+    blk_t DatStartBlock() const { return dat_start_block_; }
+    blk_t DatBlockCount() const { return dat_block_count_; }
+
+private:
+    blk_t ibm_start_block_;
+    blk_t ibm_block_count_;
+
+    blk_t abm_start_block_;
+    blk_t abm_block_count_;
+
+    blk_t ino_start_block_;
+    blk_t ino_block_count_;
+
+    blk_t dat_start_block_;
+    blk_t dat_block_count_;
+};
+#endif
+
 class Minfs :
 #ifdef __Fuchsia__
     public fs::ManagedVfs,
@@ -116,7 +151,7 @@ public:
     void VnodeRelease(VnodeMinfs* vn) __TA_EXCLUDES(hash_lock_);
 
     // Allocate a new data block.
-    zx_status_t BlockNew(WriteTxn* txn, blk_t hint, blk_t* out_bno);
+    zx_status_t BlockNew(WriteTxn* txn, blk_t* out_bno);
 
     // Free a data block.
     void BlockFree(WriteTxn* txn, blk_t bno);
@@ -127,17 +162,17 @@ public:
     // Writes back an inode into the inode table on persistent storage.
     // Does not modify inode bitmap.
     void InodeUpdate(WriteTxn* txn, ino_t ino, const minfs_inode_t* inode) {
-        inodes_.Update(txn, ino, inode);
+        inodes_->Update(txn, ino, inode);
     }
 
     // Reads an inode from the inode table into memory.
     void InodeLoad(ino_t ino, minfs_inode_t* out) const {
-        inodes_.Load(ino, out);
+        inodes_->Load(ino, out);
     }
 
     void ValidateBno(blk_t bno) const {
         ZX_DEBUG_ASSERT(bno != 0);
-        ZX_DEBUG_ASSERT(bno < info_.block_count);
+        ZX_DEBUG_ASSERT(bno < Info().block_count);
     }
 
     zx_status_t CreateWork(fbl::unique_ptr<WritebackWork>* out);
@@ -198,7 +233,7 @@ public:
 
     // Return an immutable reference to a copy of the internal info.
     const minfs_info_t& Info() const {
-        return info_;
+        return sb_->Info();
     }
 
     // TODO(rvargas): Make private.
@@ -209,7 +244,17 @@ private:
     friend class MinfsChecker;
     using HashTable = fbl::HashTable<ino_t, VnodeMinfs*>;
 
-    Minfs(fbl::unique_ptr<Bcache> bc_, const minfs_info_t* info_);
+#ifdef __Fuchsia__
+    Minfs(fbl::unique_ptr<Bcache> bc, fbl::unique_ptr<Superblock> sb,
+          fbl::unique_ptr<Allocator> block_allocator,
+          fbl::unique_ptr<InodeManager> inodes,
+          fbl::unique_ptr<WritebackBuffer> writeback,
+          uint64_t fs_id);
+#else
+    Minfs(fbl::unique_ptr<Bcache> bc, fbl::unique_ptr<Superblock> sb,
+          fbl::unique_ptr<Allocator> block_allocator,
+          fbl::unique_ptr<InodeManager> inodes, BlockOffsets offsets);
+#endif
 
     // Find a free inode, allocate it in the inode bitmap, and write it back to disk
     zx_status_t InoNew(WriteTxn* txn, const minfs_inode_t* inode, ino_t* out_ino);
@@ -217,30 +262,18 @@ private:
     // Enqueues an update to the super block.
     void WriteInfo(WriteTxn* txn);
 
-    // Increase the number of inodes. Returns the new number in |inodes|.
-    zx_status_t AddInodes(WriteTxn* txn, size_t* inodes);
-
-    // Increase the number of blocks. Returns the new number in |blocks|.
-    zx_status_t AddBlocks(WriteTxn* txn, size_t* blocks);
-
     // Creates an unique identifier for this instance. This is to be called only during
     // "construction".
-    zx_status_t CreateFsId();
+    static zx_status_t CreateFsId(uint64_t* out);
 
 #ifndef __Fuchsia__
     zx_status_t ReadBlk(blk_t bno, blk_t start, blk_t soft_max, blk_t hard_max, void* data);
 #endif
 
-    Allocator block_allocator_;
-    Allocator inode_allocator_;
-    InodeManager inodes_;
-
     // Global information about the filesystem.
-    minfs_info_t info_{};
-#ifdef __Fuchsia__
-    fbl::unique_ptr<fs::MappedVmo> info_vmo_{};
-    vmoid_t info_vmoid_{};
-#endif
+    fbl::unique_ptr<Superblock> sb_;
+    fbl::unique_ptr<Allocator> block_allocator_;
+    fbl::unique_ptr<InodeManager> inodes_;
 
     // Vnodes exist in the hash table as long as one or more reference exists;
     // when the Vnode is deleted, it is immediately removed from the map.
@@ -258,17 +291,7 @@ private:
 #else
     // Store start block + length for all extents. These may differ from info block for
     // sparse files.
-    blk_t ibm_start_block_;
-    blk_t ibm_block_count_;
-
-    blk_t abm_start_block_;
-    blk_t abm_block_count_;
-
-    blk_t ino_start_block_;
-    blk_t ino_block_count_;
-
-    blk_t dat_start_block_;
-    blk_t dat_block_count_;
+    BlockOffsets offsets_;
 #endif
 };
 

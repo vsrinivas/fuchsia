@@ -22,16 +22,29 @@ namespace minfs {
 // InodeManager is responsible for owning the persistent storage for inodes.
 //
 // It can be used to Load and Update inodes on storage.
+// Additionally, it is responsible for allocating and freeing inodes.
 class InodeManager {
 public:
-    // The default constructor does not produce a valid InodeManager.
-    // Initialize must be called before using any other methods.
-    InodeManager();
-    ~InodeManager();
+    InodeManager() = delete;
     DISALLOW_COPY_ASSIGN_AND_MOVE(InodeManager);
-    zx_status_t Initialize(Bcache* bc, ReadTxn* txn, blk_t start_block, size_t inodes);
+    ~InodeManager();
 
-    // Persiste the inode to storage.
+    static zx_status_t Create(Bcache* bc, Superblock* sb, ReadTxn* txn,
+                              AllocatorMetadata metadata,
+                              blk_t start_block, size_t inodes,
+                              fbl::unique_ptr<InodeManager>* out);
+
+    // Allocate a new inode.
+    zx_status_t Allocate(WriteTxn* txn, size_t* out_index) {
+        return inode_allocator_->Allocate(txn, out_index);
+    }
+
+    // Free an inode.
+    void Free(WriteTxn* txn, size_t index) {
+        inode_allocator_->Free(txn, index);
+    }
+
+    // Persist the inode to storage.
     void Update(WriteTxn* txn, ino_t ino, const minfs_inode_t* inode);
 
     // Load the inode from storage.
@@ -44,11 +57,15 @@ public:
     zx_status_t Grow(size_t inodes);
 
 private:
+    friend class MinfsChecker;
+
+    InodeManager(Bcache* bc, blk_t start_block);
+
+    Bcache* bc_;
     blk_t start_block_;
+    fbl::unique_ptr<Allocator> inode_allocator_;
 #ifdef __Fuchsia__
     fbl::unique_ptr<fs::MappedVmo> inode_table_{};
-#else
-    Bcache* bc_;
 #endif
 };
 
