@@ -97,6 +97,12 @@ section](README.md#benchmarks-using-sync).
     * `backlog_many_small_entries.tspec`: many small entries
     * `backlog_small_entry_updates.tspec`: small entry, but a long commit
       history
+    * `disk_space_synced_entries.tspec`: how much disk space does ledger take on a
+    writer and a reader device, when several entries have been written (in one
+    commit) on one device and then downloaded on another?
+    * `disk_space_synced_updates.tspec`: how much disk space does ledger take on a
+    writer and a reader device, when several commits with updates has been made on
+    one device and then downloaded on another?
 * __Convergence__: Several devices make concurrent changes to the page. How long does
   it take for all devices to see each other changes?
     * `convergence.tspec`: two devices

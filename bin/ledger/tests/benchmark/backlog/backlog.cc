@@ -207,11 +207,14 @@ void BacklogBenchmark::CheckStatusAndGetMore(
       (status != ledger::Status::PARTIAL_RESULT)) {
     QuitOnError([this] { loop_->Quit(); }, status, "PageSnapshot::GetEntries");
   }
+
   if (status == ledger::Status::OK) {
     TRACE_ASYNC_END("benchmark", "get all entries", 0);
     FXL_DCHECK(entries_left == 0);
     FXL_DCHECK(!next_token);
     ShutDown();
+    RecordDirectorySize("writer_directory_size", writer_tmp_dir_.path());
+    RecordDirectorySize("reader_directory_size", reader_tmp_dir_.path());
     return;
   }
   FXL_DCHECK(next_token);
@@ -245,23 +248,20 @@ void BacklogBenchmark::GetEntriesStep(std::unique_ptr<ledger::Token> token,
   }
 }
 
+void BacklogBenchmark::RecordDirectorySize(const std::string& event_name,
+                                           const std::string& path) {
+  uint64_t tmp_dir_size = 0;
+  FXL_CHECK(ledger::GetDirectoryContentSize(path, &tmp_dir_size));
+  TRACE_COUNTER("benchmark", event_name.c_str(), 0, "directory_size",
+                TA_UINT64(tmp_dir_size));
+}
+
 void BacklogBenchmark::ShutDown() {
   writer_controller_->Kill();
   writer_controller_.WaitForResponseUntil(zx::deadline_after(zx::sec(5)));
   reader_controller_->Kill();
   reader_controller_.WaitForResponseUntil(zx::deadline_after(zx::sec(5)));
   loop_->Quit();
-
-  uint64_t tmp_dir_size = 0;
-  // TODO(mariagl): Use trace event to record this information.
-  FXL_CHECK(
-      ledger::GetDirectoryContentSize(writer_tmp_dir_.path(), &tmp_dir_size));
-  FXL_LOG(INFO) << "Writer directory (" << writer_tmp_dir_.path()
-                << ") size: " << tmp_dir_size;
-  FXL_CHECK(
-      ledger::GetDirectoryContentSize(reader_tmp_dir_.path(), &tmp_dir_size));
-  FXL_LOG(INFO) << "Reader directory (" << reader_tmp_dir_.path()
-                << ") size: " << tmp_dir_size;
 }
 
 }  // namespace benchmark

@@ -1,0 +1,23 @@
+{
+  "test_suite_name": "fuchsia.ledger",
+  "app": "ledger_benchmark_backlog",
+  "args": ["--unique-key-count=1", "--value-size=100", "--commit-count=50", "--refs=on"],
+  "categories": ["benchmark", "ledger"],
+  "duration": 60,
+  "measure": [
+    {
+      "type": "argument_value",
+      "event_name": "writer_directory_size",
+      "event_category": "benchmark",
+      "argument_name": "directory_size",
+      "argument_unit": "B"
+    },
+    {
+      "type": "argument_value",
+      "event_name": "reader_directory_size",
+      "event_category": "benchmark",
+      "argument_name": "directory_size",
+      "argument_unit": "B"
+    }
+  ]
+}

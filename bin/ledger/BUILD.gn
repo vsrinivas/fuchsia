@@ -196,6 +196,18 @@ package("ledger_tests") {
 
     {
       path = rebase_path(
+              "//peridot/bin/ledger/tests/benchmark/backlog/disk_space_synced_updates.tspec")
+      dest = "ledger/benchmark/disk_space_synced_updates.tspec"
+    },
+
+    {
+      path = rebase_path(
+              "//peridot/bin/ledger/tests/benchmark/backlog/disk_space_synced_entries.tspec")
+      dest = "ledger/benchmark/disk_space_synced_entries.tspec"
+    },
+
+    {
+      path = rebase_path(
               "//peridot/bin/ledger/tests/benchmark/disk_space/updates.tspec")
       dest = "ledger/benchmark/disk_space_updates.tspec"
     },
