@@ -4,7 +4,6 @@
         "context_engine": "//peridot/bin/context_engine",
         "clipboard_agent": "//peridot/bin/agents/clipboard:clipboard_agent",
         "maxwell": "//peridot/bin/maxwell",
-        "maxwell_agents": "//peridot:maxwell_agents",
         "module_resolver": "//peridot/bin/module_resolver",
         "module_package_indexer": "//peridot/bin/module_resolver/module_package_indexer",
         "story_info": "//peridot/bin/acquirers/story_info",

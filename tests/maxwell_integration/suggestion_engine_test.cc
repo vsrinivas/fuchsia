@@ -11,7 +11,6 @@
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/svc/cpp/services.h"
 #include "peridot/bin/acquirers/mock/mock_gps.h"
-#include "peridot/bin/agents/ideas.h"
 #include "peridot/lib/rapidjson/rapidjson.h"
 #include "peridot/lib/testing/story_provider_mock.h"
 #include "peridot/lib/testing/wait_until_idle.h"
@@ -19,8 +18,6 @@
 #include "peridot/tests/maxwell_integration/test_suggestion_listener.h"
 #include "third_party/rapidjson/rapidjson/document.h"
 #include "third_party/rapidjson/rapidjson/pointer.h"
-
-constexpr char maxwell::agents::IdeasAgent::kIdeaId[];
 
 using fuchsia::modular::StoryProviderMock;
 
@@ -593,53 +590,6 @@ TEST_F(ResultCountTest, MultiRemove) {
   EXPECT_EQ(3, suggestion_count());
 }
 
-/* TODO(jwnichols): Re-enable these two tests when this functionality returns
-   to the suggestion engine.
-
-// The ideas agent only publishes a single proposal ID, so each new idea is a
-// duplicate suggestion. Test that given two such ideas (via two GPS locations),
-// only the latest is kept.
-TEST_F(NextTest, Dedup) {
-  acquirers::MockGps gps(context_engine());
-  StartContextAgent("agents/carmen_sandiego");
-  StartSuggestionAgent("agents/ideas");
-
-  StartListening(10);
-  gps.Publish(90, 0);
-  WaitUntilIdle();
-  EXPECT_EQ(1, suggestion_count());
-  const Suggestion* suggestion = GetOnlySuggestion();
-  const std::string uuid1 = suggestion->uuid;
-  const std::string headline1 = suggestion->display->headline;
-  gps.Publish(-90, 0);
-  WaitUntilIdle();
-  EXPECT_EQ(1, suggestion_count());
-  suggestion = GetOnlySuggestion();
-  EXPECT_NE(headline1, suggestion->display->headline);
-  WaitUntilIdle();
-  EnsureDebugMatches();
-}
-
-// Tests two different agents proposing with the same ID (expect distinct
-// proposals). One agent is the agents/ideas process while the other is the test
-// itself (maxwell_test).
-TEST_F(NextTest, NamespacingPerAgent) {
-  acquirers::MockGps gps(context_engine());
-  StartContextAgent("agents/carmen_sandiego");
-  StartSuggestionAgent("agents/ideas");
-  Proposinator conflictinator(suggestion_engine());
-
-  StartListening(10);
-  gps.Publish(90, 0);
-  // Spoof the idea agent's proposal ID (well, not really spoofing since they
-  // are namespaced by component).
-  conflictinator.Propose(agents::IdeasAgent::kIdeaId);
-  WaitUntilIdle();
-  EXPECT_EQ(2, suggestion_count());
-  EnsureDebugMatches();
-}
-*/
-
 // Tests the removal of earlier suggestions, ensuring that suggestion engine can
 // handle the case where an agent requests the removal of suggestions in a non-
 // LIFO ordering. This exercises some internal shuffling, especially when
@@ -1142,66 +1092,6 @@ TEST_F(SuggestionFilteringTest, Baseline_FilterDoesntMatch) {
   WaitUntilIdle();
   EXPECT_EQ(1, suggestion_count());
 }
-
-/* TODO(jwnichols): Re-enable these two tests when this functionality returns
-   to the suggestion engine.
-
-TEST_F(SuggestionFilteringTest, FilterOnPropose) {
-  // If a Story already exists, then Proposals that want to create
-  // that same story are filtered when they are proposed.
-  Proposinator p(suggestion_engine());
-  StartListening(10);
-
-  // First notify watchers of the StoryProvider that this story
-  // already exists.
-  auto story_info = fuchsia::modular::StoryInfo::New();
-  story_info->url = "foo://bar";
-  story_info->id = "";
-  story_info->extra.mark_non_null();
-  story_provider()->NotifyStoryChanged(std::move(story_info),
-                                       fuchsia::modular::StoryState::INITIAL);
-
-  auto create_story = CreateStory::New();
-  create_story->module_id = "foo://bar";
-  auto action = Action::New();
-  action->set_create_story(std::move(create_story));
-  fidl::VectorPtr<ActionPtr> actions;
-  actions.push_back(std::move(action));
-  p.Propose("1", std::move(actions));
-  p.Propose("2");
-  WaitUntilIdle();
-  EXPECT_EQ(1, suggestion_count());
-}
-
-TEST_F(SuggestionFilteringTest, ChangeFiltered) {
-  Proposinator p(suggestion_engine());
-  StartListening(10);
-
-  auto story_info = fuchsia::modular::StoryInfo::New();
-  story_info->url = "foo://bar";
-  story_info->id = "";
-  story_info->extra.mark_non_null();
-  story_provider()->NotifyStoryChanged(std::move(story_info),
-                                       fuchsia::modular::StoryState::INITIAL);
-
-  for (int i = 0; i < 2; i++) {
-    auto create_story = CreateStory::New();
-    create_story->module_id = "foo://bar";
-    auto action = Action::New();
-    action->set_create_story(std::move(create_story));
-    fidl::VectorPtr<ActionPtr> actions;
-    actions.push_back(std::move(action));
-
-    p.Propose("1", std::move(actions));
-  }
-
-  // historically crashed by now
-  p.Propose("2");
-
-  WaitUntilIdle();
-  EXPECT_EQ(1, suggestion_count());
-}
-*/
 
 TEST_F(InterruptionTest, SingleInterruption) {
   Proposinator p(suggestion_engine());

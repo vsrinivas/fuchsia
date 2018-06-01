@@ -11,34 +11,6 @@ config("internal") {
   ]
 }
 
-package("maxwell_agents") {
-  testonly = true
-  deprecated_system_image = true
-
-  deps = [
-    "//peridot/bin/acquirers",
-    "//peridot/bin/agents",
-    "//peridot/bin/agents:carmen_sandiego",
-    "//peridot/bin/agents:ideas",
-  ]
-
-  binaries = [
-    {
-      name = "agents/carmen_sandiego"
-    },
-    {
-      name = "agents/ideas"
-    },
-    {
-      name = "agents/basic_text_listener"
-      dest = "agents/maxwell_btl"
-    },
-    {
-      name = "agents/maxwell_entity_selector"
-    },
-  ]
-}
-
 executable("maxwell_unittests") {
   testonly = true
 

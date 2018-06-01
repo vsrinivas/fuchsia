@@ -44,8 +44,6 @@ executable("suggestion_engine_test") {
     "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/test_runner/cpp:gtest_main",
     "//peridot/bin/acquirers/mock:gps",
-    "//peridot/bin/agents:carmen_sandiego",
-    "//peridot/bin/agents:ideas",
     "//peridot/lib/rapidjson",
     "//peridot/lib/testing:story_provider_mock",
     "//peridot/lib/testing:wait_until_idle",
