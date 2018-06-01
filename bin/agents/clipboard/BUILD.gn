@@ -2,6 +2,20 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//peridot/build/executable_package.gni")
+
+executable_package("clipboard_agent") {
+  sources = [
+    "clipboard_agent.cc",
+  ]
+
+  deps = [
+    ":clipboard_sources",
+    "//peridot/lib/ledger_client:page_client",
+    "//peridot/public/lib/app_driver/cpp:agent_driver",
+  ]
+}
+
 source_set("clipboard_sources") {
   sources = [
     "clipboard_impl.cc",
@@ -17,20 +31,6 @@ source_set("clipboard_sources") {
     "//peridot/lib/ledger_client:page_client",
     "//peridot/public/lib:fidl",
     "//peridot/public/lib/async/cpp:operation",
-  ]
-}
-
-executable("clipboard") {
-  output_name = "agents/clipboard"
-
-  sources = [
-    "clipboard_agent.cc",
-  ]
-
-  deps = [
-    ":clipboard_sources",
-    "//peridot/lib/ledger_client:page_client",
-    "//peridot/public/lib/app_driver/cpp:agent_driver",
   ]
 }
 

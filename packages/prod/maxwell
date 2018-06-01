@@ -2,6 +2,7 @@
     "packages": {
         "action_log": "//peridot/bin/action_log",
         "context_engine": "//peridot/bin/context_engine",
+        "clipboard_agent": "//peridot/bin/agents/clipboard:clipboard_agent",
         "maxwell": "//peridot/bin/maxwell",
         "maxwell_agents": "//peridot:maxwell_agents",
         "module_resolver": "//peridot/bin/module_resolver",

@@ -8,7 +8,7 @@
 namespace {
 
 // The url of the clipboard agent under test.
-constexpr char kClipboardAgentUrl[] = "file:///system/bin/agents/clipboard";
+constexpr char kClipboardAgentUrl[] = "clipboard_agent";
 
 }  // namespace
 

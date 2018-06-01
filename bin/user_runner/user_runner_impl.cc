@@ -70,7 +70,7 @@ constexpr char kUserShellComponentNamespace[] = "user-shell-namespace";
 constexpr char kUserShellLinkName[] = "user-shell-link";
 constexpr char kLedgerDashboardUrl[] = "ledger_dashboard";
 constexpr char kLedgerDashboardEnvLabel[] = "ledger-dashboard";
-constexpr char kClipboardAgentUrl[] = "file:///system/bin/agents/clipboard";
+constexpr char kClipboardAgentUrl[] = "clipboard_agent";
 
 cloud_provider_firebase::Config GetLedgerFirebaseConfig() {
   cloud_provider_firebase::Config firebase_config;
