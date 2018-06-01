@@ -5,7 +5,7 @@
 #ifndef PERIDOT_BIN_CLOUD_PROVIDER_FIREBASE_TESTING_SERVER_FAKE_CLOUD_NETWORK_SERVICE_H_
 #define PERIDOT_BIN_CLOUD_PROVIDER_FIREBASE_TESTING_SERVER_FAKE_CLOUD_NETWORK_SERVICE_H_
 
-#include <netstack/cpp/fidl.h>
+#include <fuchsia/netstack/cpp/fidl.h>
 #include <network/cpp/fidl.h>
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fxl/macros.h"
