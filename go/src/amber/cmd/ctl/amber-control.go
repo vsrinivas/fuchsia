@@ -94,32 +94,34 @@ func connect(ctx *context.Context) (*amber.ControlInterface, amber.ControlInterf
 }
 
 func addSource(a *amber.ControlInterface) error {
-	if len(strings.TrimSpace(*srcUrl)) == 0 {
+	srcUrl := strings.TrimSpace(*srcUrl)
+	if len(srcUrl) == 0 {
 		fmt.Println("No repository URL provided")
 		return os.ErrInvalid
 	}
-	if _, err := url.ParseRequestURI(*srcUrl); err != nil {
-		fmt.Printf("Provided URL %q is not valid\n", *srcUrl)
+	if _, err := url.ParseRequestURI(srcUrl); err != nil {
+		fmt.Printf("Provided URL %q is not valid\n", srcUrl)
 		return err
 	}
 
-	if len(strings.TrimSpace(*srcKey)) == 0 {
+	srcKey := strings.TrimSpace(*srcKey)
+	if len(srcKey) == 0 {
 		fmt.Println("No repository key provided")
 		return os.ErrInvalid
 	}
-	if _, err := hex.DecodeString(*srcKey); err != nil {
-		fmt.Printf("Provided repository key %q contains invalid characters\n", *srcKey)
+	if _, err := hex.DecodeString(srcKey); err != nil {
+		fmt.Printf("Provided repository key %q contains invalid characters\n", srcKey)
 		return os.ErrInvalid
 	}
 
 	added, err := a.AddSrc(amber.SourceConfig{
-		RepoUrl:    *srcUrl,
+		RepoUrl:    srcUrl,
 		RateLimit:  *rateLimit,
 		RatePeriod: int32(*period),
 		RootKeys: []amber.KeyConfig{
 			amber.KeyConfig{
 				Type:  "ed25519",
-				Value: *srcKey,
+				Value: srcKey,
 			},
 		},
 	})
