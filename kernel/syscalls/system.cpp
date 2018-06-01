@@ -15,7 +15,7 @@
 #include <vm/physmap.h>
 #include <vm/pmm.h>
 #include <vm/vm_aspace.h>
-#include <zircon/boot/bootdata.h>
+#include <zircon/boot/image.h>
 #include <zircon/compiler.h>
 #include <zircon/syscalls/resource.h>
 #include <zircon/syscalls/system.h>
@@ -158,16 +158,16 @@ static inline bool intervals_intersect(const void* start1, const size_t len1,
 static zx_status_t bootdata_append_section(uint8_t* bootdata_buf, size_t buflen,
                                            uint32_t section_length, uint32_t type,
                                            uint32_t extra, uint32_t flags, uint8_t** section) {
-    bootdata_t* hdr = (bootdata_t*)bootdata_buf;
+    zbi_header_t* hdr = (zbi_header_t*)bootdata_buf;
 
-    if ((hdr->type != BOOTDATA_CONTAINER) ||
-        (hdr->extra != BOOTDATA_MAGIC)) {
+    if ((hdr->type != ZBI_TYPE_CONTAINER) ||
+        (hdr->extra != ZBI_CONTAINER_MAGIC)) {
         // This buffer does not point to a bootimage.
         return ZX_ERR_WRONG_TYPE;
     }
 
-    size_t total_len = hdr->length + sizeof(bootdata_t);
-    size_t new_section_length = BOOTDATA_ALIGN(section_length) + sizeof(bootdata_t);
+    size_t total_len = hdr->length + sizeof(zbi_header_t);
+    size_t new_section_length = ZBI_ALIGN(section_length) + sizeof(zbi_header_t);
 
     // Make sure there's enough buffer space after the bootdata container to
     // append the new section.
@@ -178,17 +178,17 @@ static zx_status_t bootdata_append_section(uint8_t* bootdata_buf, size_t buflen,
     // Seek to the end of the bootimage.
     bootdata_buf += total_len;
 
-    bootdata_t* new_hdr = (bootdata_t*)bootdata_buf;
+    zbi_header_t* new_hdr = (zbi_header_t*)bootdata_buf;
     new_hdr->type = type;
     new_hdr->length = section_length;
     new_hdr->extra = extra;
-    new_hdr->flags = flags | BOOTDATA_FLAG_V2;
+    new_hdr->flags = flags | ZBI_FLAG_VERSION;
     new_hdr->reserved0 = 0;
     new_hdr->reserved1 = 0;
-    new_hdr->magic = BOOTITEM_MAGIC;
-    new_hdr->crc32 = BOOTITEM_NO_CRC32;
+    new_hdr->magic = ZBI_ITEM_MAGIC;
+    new_hdr->crc32 = ZBI_ITEM_NO_CRC32;
 
-    bootdata_buf += sizeof(bootdata_t);
+    bootdata_buf += sizeof(zbi_header_t);
     *section = bootdata_buf;
     hdr->length += (uint32_t)new_section_length;
     return ZX_OK;
@@ -230,9 +230,9 @@ zx_status_t sys_system_mexec(zx_handle_t kernel_vmo, zx_handle_t bootimage_vmo) 
     // for kernels that are bootdata based (eg, x86-64), the location
     // to find the entrypoint depends on the bootdata format
     paddr_t entry64_addr = (get_kernel_base_phys() +
-                            sizeof(bootdata_t) + // BOOTDATA_CONTAINER header
-                            sizeof(bootdata_t) + // BOOTDATA_KERNEL header
-                            offsetof(bootdata_kernel_t, entry64));
+                            sizeof(zbi_header_t) + // ZBI_TYPE_CONTAINER header
+                            sizeof(zbi_header_t) + // ZBI_TYPE_KERNEL header
+                            offsetof(zbi_kernel_t, entry));
 
     paddr_t new_bootimage_addr;
     uint8_t* bootimage_buffer;
@@ -257,7 +257,7 @@ zx_status_t sys_system_mexec(zx_handle_t kernel_vmo, zx_handle_t bootimage_vmo) 
         uint8_t* bootdata_section;
         result = bootdata_append_section(bootimage_buffer, new_bootimage_len,
                                          static_cast<uint32_t>(crashlog_len),
-                                         BOOTDATA_LAST_CRASHLOG, 0, 0, &bootdata_section);
+                                         ZBI_TYPE_CRASHLOG, 0, 0, &bootdata_section);
         if (result != ZX_OK) {
             printf("mexec: could not append crashlog\n");
             return result;

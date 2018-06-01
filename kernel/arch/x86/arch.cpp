@@ -43,7 +43,7 @@
 void* _multiboot_info;
 
 /* save a pointer to the bootdata, if present */
-void* _bootdata_base;
+void* _zbi_base;
 
 void arch_early_init(void) {
     x86_mmu_early_init();

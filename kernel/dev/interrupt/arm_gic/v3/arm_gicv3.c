@@ -33,7 +33,7 @@
 
 #include <arch/arch_ops.h>
 
-// values read from bootdata
+// values read from zbi
 static vaddr_t arm_gicv3_gic_base = 0;
 static uint64_t arm_gicv3_gicd_offset = 0;
 static uint64_t arm_gicv3_gicr_offset = 0;

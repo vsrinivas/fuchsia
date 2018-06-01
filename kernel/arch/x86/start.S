@@ -276,8 +276,8 @@ FUNCTION_LABEL(_start)
 
     move_fixups_and_zero_bss
 
-    // _bootdata_base is in bss, so now it's safe to set it.
-    mov %ebx, PHYS(_bootdata_base)
+    // _zbi_base is in bss, so now it's safe to set it.
+    mov %ebx, PHYS(_zbi_base)
 
     /* give the boot allocator a chance to compute the physical address of the kernel */
     call boot_alloc_init

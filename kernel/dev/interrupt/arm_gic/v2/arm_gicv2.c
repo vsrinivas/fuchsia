@@ -39,7 +39,7 @@
 static spin_lock_t gicd_lock;
 #define GICD_LOCK_FLAGS SPIN_LOCK_FLAG_INTERRUPTS
 
-// values read from bootdata
+// values read from zbi
 vaddr_t arm_gicv2_gic_base = 0;
 uint64_t arm_gicv2_gicd_offset = 0;
 uint64_t arm_gicv2_gicc_offset = 0;

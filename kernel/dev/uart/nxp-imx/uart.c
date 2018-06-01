@@ -59,7 +59,7 @@
 #define RXBUF_SIZE 32
 
 
-// values read from bootdata
+// values read from zbi
 static bool initialized = false;
 static vaddr_t uart_base = 0;
 static uint32_t uart_irq = 0;
