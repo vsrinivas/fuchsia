@@ -6,7 +6,6 @@ package ipcserver
 
 import (
 	"fmt"
-	"io/ioutil"
 	"strings"
 	"sync"
 
@@ -55,12 +54,7 @@ func (c *ControlSrvr) DoTest(in int32) (out string, err error) {
 }
 
 func (c *ControlSrvr) AddSrc(cfg amber.SourceConfig) (bool, error) {
-	dir, err := ioutil.TempDir("", "amber")
-	if err != nil {
-		return false, err
-	}
-
-	if err := c.daemon.AddTUFSource(dir, &cfg); err != nil {
+	if err := c.daemon.AddTUFSource(&cfg); err != nil {
 		return false, err
 	}
 

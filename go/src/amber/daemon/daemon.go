@@ -9,7 +9,9 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"net/url"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -39,6 +41,7 @@ const CheckInterval = 5 * time.Minute
 // Execution contexts sharing a single Daemon instance should mediate access
 // to all calls into the Daemon.
 type Daemon struct {
+	store    string
 	srcMons  []*SourceMonitor
 	muSrcs   sync.Mutex
 	srcs     map[string]source.Source
@@ -59,9 +62,11 @@ type Daemon struct {
 }
 
 // NewDaemon creates a Daemon with the given SourceSet
-func NewDaemon(r *pkg.PackageSet, f func(*GetResult, *pkg.PackageSet) error,
+func NewDaemon(store string, r *pkg.PackageSet, f func(*GetResult, *pkg.PackageSet) error,
 	s []source.Source) *Daemon {
-	d := &Daemon{pkgs: r,
+	d := &Daemon{
+		store:     store,
+		pkgs:      r,
 		runCount:  sync.WaitGroup{},
 		srcMons:   []*SourceMonitor{},
 		srcs:      make(map[string]source.Source),
@@ -110,7 +115,10 @@ func (d *Daemon) AddSource(s source.Source) {
 	}
 }
 
-func (d *Daemon) AddTUFSource(store string, cfg *amber.SourceConfig) error {
+func (d *Daemon) AddTUFSource(cfg *amber.SourceConfig) error {
+	// Make sure the id is safe to be written to disk.
+	store := path.Join(d.store, url.PathEscape(cfg.Id))
+
 	src, err := source.NewTUFSource(store, cfg)
 	if err != nil {
 		log.Printf("failed to create TUF source: %v: %s", cfg.Id, err)

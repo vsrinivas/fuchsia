@@ -12,6 +12,7 @@ import (
 	"io/ioutil"
 	"net/url"
 	"os"
+	"path"
 	"time"
 
 	"amber/lg"
@@ -108,7 +109,11 @@ func (f *TUFSource) initSrc() error {
 		return nil
 	}
 
-	client, store, err := newTUFClient(f.Config.RepoUrl, f.Store)
+	// We might have multiple things in the store directory, so put tuf in
+	// it's own directory.
+	tufStore := path.Join(f.Store, "tuf")
+
+	client, store, err := newTUFClient(f.Config.RepoUrl, tufStore)
 
 	if err != nil {
 		return err

@@ -6,6 +6,7 @@ package daemon
 
 import (
 	"fmt"
+	"io/ioutil"
 	"math/rand"
 	"os"
 	"sync"
@@ -149,7 +150,14 @@ func TestDaemon(t *testing.T) {
 		src.interval = 1 * time.Nanosecond
 		sources = append(sources, src)
 	}
-	d := NewDaemon(pkgSet, processPackage, sources)
+
+	store, err := ioutil.TempDir("", "")
+	if err != nil {
+		t.Error(err)
+	}
+	defer os.RemoveAll(store)
+
+	d := NewDaemon(store, pkgSet, processPackage, sources)
 
 	tickerGroup.Wait()
 	// protect against improper test rewrites
@@ -216,7 +224,14 @@ func TestGetRequest(t *testing.T) {
 
 	tickerGroup.Add(1)
 
-	d := NewDaemon(pkg.NewPackageSet(), processPackage, sources)
+	store, err := ioutil.TempDir("", "")
+	if err != nil {
+		t.Error(err)
+	}
+	defer os.RemoveAll(store)
+
+	d := NewDaemon(store, pkg.NewPackageSet(), processPackage, sources)
+
 	tickerGroup.Wait()
 
 	pkgSet := pkg.NewPackageSet()
@@ -318,7 +333,14 @@ func TestRequestCollapse(t *testing.T) {
 		// simultaneously
 		src.replyDelay = replyDelay
 	}
-	d := NewDaemon(pkg.NewPackageSet(), processPackage, sources)
+
+	store, err := ioutil.TempDir("", "")
+	if err != nil {
+		t.Error(err)
+	}
+	defer os.RemoveAll(store)
+
+	d := NewDaemon(store, pkg.NewPackageSet(), processPackage, sources)
 
 	tickerGroup.Wait()
 

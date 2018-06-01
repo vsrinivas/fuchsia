@@ -99,7 +99,7 @@ func startupDaemon(srvURL *url.URL, store string, keys []*tuf_data.Key) (*daemon
 
 	reqSet := newPackageSet([]string{"/pkg/bin/app"})
 
-	checker := daemon.NewDaemon(reqSet, daemon.ProcessPackage, []source.Source{})
+	checker := daemon.NewDaemon(store, reqSet, daemon.ProcessPackage, []source.Source{})
 
 	// TODO(etryzelaar) temporary workaround until we transition to loading
 	// from a config file.
@@ -117,7 +117,7 @@ func startupDaemon(srvURL *url.URL, store string, keys []*tuf_data.Key) (*daemon
 		RatePeriod: 0,
 		RateLimit:  0,
 	}
-	if err := checker.AddTUFSource(store, &cfg); err != nil {
+	if err := checker.AddTUFSource(&cfg); err != nil {
 		return nil, err
 	}
 
