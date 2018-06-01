@@ -13,8 +13,10 @@
 #include "garnet/bin/netconnector/ip_port.h"
 #include "lib/fxl/logging.h"
 
+namespace fuchsia {
 namespace netstack {
 class SocketAddress;
+}
 }
 
 namespace netconnector {
@@ -63,7 +65,7 @@ class SocketAddress {
   explicit SocketAddress(const sockaddr_storage& addr);
 
   // Creates a socket address from a SocketAddress struct.
-  explicit SocketAddress(const netstack::SocketAddress* addr);
+  explicit SocketAddress(const fuchsia::netstack::SocketAddress* addr);
 
   bool is_valid() const { return family() != AF_UNSPEC; }
 

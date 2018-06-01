@@ -20,9 +20,9 @@ FidlInterfaceMonitor::FidlInterfaceMonitor(
     fuchsia::sys::StartupContext* startup_context)
     : binding_(this) {
   netstack_ =
-      startup_context->ConnectToEnvironmentService<netstack::Netstack>();
+      startup_context->ConnectToEnvironmentService<fuchsia::netstack::Netstack>();
 
-  fidl::InterfaceHandle<netstack::NotificationListener> listener_handle;
+  fidl::InterfaceHandle<fuchsia::netstack::NotificationListener> listener_handle;
 
   binding_.Bind(listener_handle.NewRequest());
   binding_.set_error_handler([this]() {
@@ -34,7 +34,7 @@ FidlInterfaceMonitor::FidlInterfaceMonitor(
   netstack_->RegisterListener(std::move(listener_handle));
 
   netstack_->GetInterfaces(
-      [this](fidl::VectorPtr<netstack::NetInterface> interfaces) {
+      [this](fidl::VectorPtr<fuchsia::netstack::NetInterface> interfaces) {
         OnInterfacesChanged(std::move(interfaces));
       });
 }
@@ -57,14 +57,14 @@ FidlInterfaceMonitor::GetInterfaces() {
 }
 
 void FidlInterfaceMonitor::OnInterfacesChanged(
-    fidl::VectorPtr<netstack::NetInterface> interfaces) {
+    fidl::VectorPtr<fuchsia::netstack::NetInterface> interfaces) {
   bool link_change = false;
 
   for (const auto& if_info : *interfaces) {
     IpAddress address = MdnsFidlUtil::IpAddressFrom(&if_info.addr);
 
     if (!address.is_valid() || address.is_loopback() ||
-        (if_info.flags & netstack::NetInterfaceFlagUp) == 0) {
+        (if_info.flags & fuchsia::netstack::NetInterfaceFlagUp) == 0) {
       if (interfaces_.size() > if_info.id &&
           interfaces_[if_info.id] != nullptr) {
         // Interface went away.

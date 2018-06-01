@@ -89,8 +89,8 @@ void MdnsImpl::Resolve(const std::string& host_name, uint32_t timeout_seconds) {
   std::cout << "resolving " << host_name << "\n";
   mdns_service_->ResolveHostName(
       host_name, timeout_seconds * 1000,
-      [this](netstack::SocketAddressPtr v4Address,
-             netstack::SocketAddressPtr v6Address) {
+      [this](fuchsia::netstack::SocketAddressPtr v4Address,
+             fuchsia::netstack::SocketAddressPtr v6Address) {
         if (v4Address) {
           std::cout << "IPv4 address: " << *v4Address << "\n";
         }

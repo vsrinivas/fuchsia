@@ -4,13 +4,15 @@
 
 library mdns;
 
+using fuchsia.netstack;
+
 // mDNS service interface.
 [Discoverable]
 interface MdnsService {
   // Gets the addresses for the specified host name. |host_name| may not end in
   // a '.'.
   1: ResolveHostName(string host_name, uint32 timeout_ms) ->
-    (netstack.SocketAddress? v4_address, netstack.SocketAddress? v6_address);
+    (fuchsia.netstack.SocketAddress? v4_address, fuchsia.netstack.SocketAddress? v6_address);
 
   // Subscribes to a service. The subscription lasts until |subscription| is
   // unbound. |service_name| must end in '._tcp.' or '._udp.'.
@@ -96,8 +98,8 @@ interface MdnsServiceSubscription {
 struct MdnsServiceInstance {
   string service_name;
   string instance_name;
-  netstack.SocketAddress? v4_address;
-  netstack.SocketAddress? v6_address;
+  fuchsia.netstack.SocketAddress? v4_address;
+  fuchsia.netstack.SocketAddress? v6_address;
   vector<string>? text;
 };
 

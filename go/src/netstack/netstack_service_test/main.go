@@ -16,7 +16,7 @@ import (
 	"app/context"
 	"fidl/bindings"
 
-	"fidl/netstack"
+	"fidl/fuchsia/netstack"
 )
 
 type testApp struct {

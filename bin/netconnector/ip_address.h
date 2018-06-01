@@ -8,8 +8,10 @@
 
 #include "lib/fxl/logging.h"
 
+namespace fuchsia {
 namespace netstack {
 class NetAddress;
+}
 }
 
 namespace netconnector {
@@ -58,7 +60,7 @@ class IpAddress {
   explicit IpAddress(const sockaddr* addr);
 
   // Creates an address from a NetAddress struct.
-  explicit IpAddress(const netstack::NetAddress* addr);
+  explicit IpAddress(const fuchsia::netstack::NetAddress* addr);
 
   bool is_valid() const { return family_ != AF_UNSPEC; }
 

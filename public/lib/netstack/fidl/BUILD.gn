@@ -5,7 +5,7 @@
 import("//build/fidl/fidl.gni")
 
 fidl("fidl") {
-  name = "netstack"
+  name = "fuchsia.netstack"
 
   sdk_category = "partner"
 

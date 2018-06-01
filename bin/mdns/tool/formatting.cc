@@ -55,12 +55,12 @@ std::ostream& operator<<(std::ostream& os, const MdnsServiceInstance& value) {
 }
 
 std::ostream& operator<<(std::ostream& os,
-                         const netstack::SocketAddress& value) {
-  if (value.addr.family == netstack::NetAddressFamily::UNSPECIFIED) {
+                         const fuchsia::netstack::SocketAddress& value) {
+  if (value.addr.family == fuchsia::netstack::NetAddressFamily::UNSPECIFIED) {
     return os << "<unspecified>";
   }
 
-  if (value.addr.family == netstack::NetAddressFamily::IPV4) {
+  if (value.addr.family == fuchsia::netstack::NetAddressFamily::IPV4) {
     const uint8_t* bytes =
         reinterpret_cast<const uint8_t*>(value.addr.ipv4->addr.data());
     os << static_cast<int>(bytes[0]) << '.' << static_cast<int>(bytes[1]) << '.'

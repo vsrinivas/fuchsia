@@ -15,7 +15,7 @@ import (
 	"netstack/link/eth"
 	"syscall/zx"
 
-	nsfidl "fidl/netstack"
+	nsfidl "fidl/fuchsia/netstack"
 
 	"github.com/google/netstack/tcpip"
 	"github.com/google/netstack/tcpip/network/ipv4"

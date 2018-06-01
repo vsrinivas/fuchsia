@@ -10,7 +10,7 @@ extern crate serde_derive;
 extern crate serde_json;
 extern crate fidl;
 extern crate fidl_device_settings;
-extern crate fidl_netstack;
+extern crate fidl_fuchsia_netstack as netstack;
 extern crate fuchsia_app as app;
 extern crate fuchsia_async as async;
 extern crate fuchsia_zircon as zx;
@@ -18,7 +18,7 @@ extern crate futures;
 
 use failure::{Error, ResultExt};
 use fidl_device_settings::{DeviceSettingsManagerMarker};
-use fidl_netstack::{NetstackMarker, NetInterface, NetstackEvent, INTERFACE_FEATURE_SYNTH, INTERFACE_FEATURE_LOOPBACK};
+use netstack::{NetstackMarker, NetInterface, NetstackEvent, INTERFACE_FEATURE_SYNTH, INTERFACE_FEATURE_LOOPBACK};
 use std::fs;
 use std::io::Read;
 use futures::{future, FutureExt, StreamExt};

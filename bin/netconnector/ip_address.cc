@@ -10,7 +10,7 @@
 #include <sys/socket.h>
 
 #include "garnet/bin/netconnector/ip_address.h"
-#include <netstack/cpp/fidl.h>
+#include <fuchsia/netstack/cpp/fidl.h>
 
 namespace netconnector {
 
@@ -123,14 +123,14 @@ IpAddress::IpAddress(const sockaddr* addr) {
   }
 }
 
-IpAddress::IpAddress(const netstack::NetAddress* addr) {
+IpAddress::IpAddress(const fuchsia::netstack::NetAddress* addr) {
   FXL_DCHECK(addr != nullptr);
   switch (addr->family) {
-    case netstack::NetAddressFamily::IPV4:
+    case fuchsia::netstack::NetAddressFamily::IPV4:
       family_ = AF_INET;
       memcpy(&v4_, addr->ipv4->addr.data(), 4);
       break;
-    case netstack::NetAddressFamily::IPV6:
+    case fuchsia::netstack::NetAddressFamily::IPV6:
       family_ = AF_INET6;
       memcpy(&v6_, addr->ipv6->addr.data(), 16);
       break;

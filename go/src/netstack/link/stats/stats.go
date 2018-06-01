@@ -14,7 +14,7 @@ import (
 	"log"
 	"time"
 
-	nsfidl "fidl/netstack"
+	nsfidl "fidl/fuchsia/netstack"
 	"netstack/netiface"
 
 	"github.com/google/netstack/tcpip"

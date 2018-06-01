@@ -28,19 +28,19 @@ class MdnsFidlUtil {
       const SocketAddress& v6_address,
       const std::vector<std::string>& text);
 
-  static netstack::SocketAddressPtr CreateSocketAddressIPv4(
+  static fuchsia::netstack::SocketAddressPtr CreateSocketAddressIPv4(
       const IpAddress& ip_address);
 
-  static netstack::SocketAddressPtr CreateSocketAddressIPv6(
+  static fuchsia::netstack::SocketAddressPtr CreateSocketAddressIPv6(
       const IpAddress& ip_address);
 
-  static netstack::SocketAddressPtr CreateSocketAddressIPv4(
+  static fuchsia::netstack::SocketAddressPtr CreateSocketAddressIPv4(
       const SocketAddress& socket_address);
 
-  static netstack::SocketAddressPtr CreateSocketAddressIPv6(
+  static fuchsia::netstack::SocketAddressPtr CreateSocketAddressIPv6(
       const SocketAddress& socket_address);
 
-  static IpAddress IpAddressFrom(const netstack::NetAddress* addr);
+  static IpAddress IpAddressFrom(const fuchsia::netstack::NetAddress* addr);
 
   static std::unique_ptr<Mdns::Publication> Convert(
       const MdnsPublicationPtr& publication_ptr);

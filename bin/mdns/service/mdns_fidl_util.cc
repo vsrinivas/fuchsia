@@ -59,7 +59,7 @@ void MdnsFidlUtil::UpdateServiceInstance(
 }
 
 // static
-netstack::SocketAddressPtr MdnsFidlUtil::CreateSocketAddressIPv4(
+fuchsia::netstack::SocketAddressPtr MdnsFidlUtil::CreateSocketAddressIPv4(
     const IpAddress& ip_address) {
   if (!ip_address) {
     return nullptr;
@@ -67,9 +67,9 @@ netstack::SocketAddressPtr MdnsFidlUtil::CreateSocketAddressIPv4(
 
   FXL_DCHECK(ip_address.is_v4());
 
-  netstack::SocketAddressPtr result = netstack::SocketAddress::New();
-  result->addr.family = netstack::NetAddressFamily::IPV4;
-  result->addr.ipv4 = netstack::Ipv4Address::New();
+  fuchsia::netstack::SocketAddressPtr result = fuchsia::netstack::SocketAddress::New();
+  result->addr.family = fuchsia::netstack::NetAddressFamily::IPV4;
+  result->addr.ipv4 = fuchsia::netstack::Ipv4Address::New();
 
   FXL_DCHECK(result->addr.ipv4->addr.count() == ip_address.byte_count());
   std::memcpy(result->addr.ipv4->addr.mutable_data(), ip_address.as_bytes(),
@@ -79,7 +79,7 @@ netstack::SocketAddressPtr MdnsFidlUtil::CreateSocketAddressIPv4(
 }
 
 // static
-netstack::SocketAddressPtr MdnsFidlUtil::CreateSocketAddressIPv6(
+fuchsia::netstack::SocketAddressPtr MdnsFidlUtil::CreateSocketAddressIPv6(
     const IpAddress& ip_address) {
   if (!ip_address) {
     return nullptr;
@@ -87,9 +87,9 @@ netstack::SocketAddressPtr MdnsFidlUtil::CreateSocketAddressIPv6(
 
   FXL_DCHECK(ip_address.is_v6());
 
-  netstack::SocketAddressPtr result = netstack::SocketAddress::New();
-  result->addr.family = netstack::NetAddressFamily::IPV6;
-  result->addr.ipv6 = netstack::Ipv6Address::New();
+  fuchsia::netstack::SocketAddressPtr result = fuchsia::netstack::SocketAddress::New();
+  result->addr.family = fuchsia::netstack::NetAddressFamily::IPV6;
+  result->addr.ipv6 = fuchsia::netstack::Ipv6Address::New();
 
   FXL_DCHECK(result->addr.ipv6->addr.count() == ip_address.byte_count());
   std::memcpy(result->addr.ipv6->addr.mutable_data(), ip_address.as_bytes(),
@@ -99,7 +99,7 @@ netstack::SocketAddressPtr MdnsFidlUtil::CreateSocketAddressIPv6(
 }
 
 // static
-netstack::SocketAddressPtr MdnsFidlUtil::CreateSocketAddressIPv4(
+fuchsia::netstack::SocketAddressPtr MdnsFidlUtil::CreateSocketAddressIPv4(
     const SocketAddress& socket_address) {
   if (!socket_address) {
     return nullptr;
@@ -107,7 +107,7 @@ netstack::SocketAddressPtr MdnsFidlUtil::CreateSocketAddressIPv4(
 
   FXL_DCHECK(socket_address.is_v4());
 
-  netstack::SocketAddressPtr result =
+  fuchsia::netstack::SocketAddressPtr result =
       CreateSocketAddressIPv4(socket_address.address());
 
   result->port = socket_address.port().as_uint16_t();
@@ -116,7 +116,7 @@ netstack::SocketAddressPtr MdnsFidlUtil::CreateSocketAddressIPv4(
 }
 
 // static
-netstack::SocketAddressPtr MdnsFidlUtil::CreateSocketAddressIPv6(
+fuchsia::netstack::SocketAddressPtr MdnsFidlUtil::CreateSocketAddressIPv6(
     const SocketAddress& socket_address) {
   if (!socket_address) {
     return nullptr;
@@ -124,7 +124,7 @@ netstack::SocketAddressPtr MdnsFidlUtil::CreateSocketAddressIPv6(
 
   FXL_DCHECK(socket_address.is_v6());
 
-  netstack::SocketAddressPtr result =
+  fuchsia::netstack::SocketAddressPtr result =
       CreateSocketAddressIPv6(socket_address.address());
 
   result->port = socket_address.port().as_uint16_t();
@@ -133,17 +133,17 @@ netstack::SocketAddressPtr MdnsFidlUtil::CreateSocketAddressIPv6(
 }
 
 // static
-IpAddress MdnsFidlUtil::IpAddressFrom(const netstack::NetAddress* addr) {
+IpAddress MdnsFidlUtil::IpAddressFrom(const fuchsia::netstack::NetAddress* addr) {
   FXL_DCHECK(addr != nullptr);
   switch (addr->family) {
-    case netstack::NetAddressFamily::IPV4:
+    case fuchsia::netstack::NetAddressFamily::IPV4:
       if (!addr->ipv4) {
         return IpAddress();
       }
 
       FXL_DCHECK(addr->ipv4->addr.count() == sizeof(in_addr));
       return IpAddress(*reinterpret_cast<const in_addr*>(addr->ipv4->addr.data()));
-    case netstack::NetAddressFamily::IPV6:
+    case fuchsia::netstack::NetAddressFamily::IPV6:
       if (!addr->ipv6) {
         return IpAddress();
       }
