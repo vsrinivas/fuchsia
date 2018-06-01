@@ -188,7 +188,8 @@ void x86_xsetbv(uint32_t reg, uint64_t val);
 struct x86_xsave_legacy_area {
     uint16_t fcw;  /* FPU control word. */
     uint16_t fsw;  /* FPU status word. */
-    uint8_t ftw;   /* FPU tag word. */
+    uint8_t ftw;   /* Abridged FPU tag word (not the same as the FTW register, see
+                    * Intel manual sec 10.5.1.1: "x87 State". */
     uint8_t reserved;
     uint16_t fop;  /* FPU opcode. */
     uint64_t fip;  /* FPU instruction pointer. */
