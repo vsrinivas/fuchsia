@@ -254,6 +254,11 @@ class TestApp : public fuchsia::modular::testing::ComponentBase<
       fidl::VectorPtr<fuchsia::modular::StoryInfo> stories) {
     if (stories->empty()) {
       get_story_info_.Pass();
+    } else {
+      FXL_LOG(ERROR) << "StoryProvider.GetStoryInfo() " << stories->size();
+      for (const auto& item : stories.get()) {
+        FXL_LOG(INFO) << item.id;
+      }
     }
 
     TestStory1();

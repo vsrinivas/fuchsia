@@ -2,32 +2,15 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
+import("//peridot/build/executable_package.gni")
 
-package("user_runner") {
-  deprecated_system_image = true
-
-  deps = [
-    ":user_runner_bin",
-  ]
-
-  binaries = [
+executable_package("user_runner") {
+  meta = [
     {
-      name = "user_runner"
+      path = "meta/user_runner.cmx"
+      dest = "user_runner.cmx"
     },
   ]
-}
-
-package("dev_user_shell") {
-  deps = [
-    ":dev_user_shell_bin",
-  ]
-
-  binary = "dev_user_shell"
-}
-
-executable("user_runner_bin") {
-  output_name = "user_runner"
 
   sources = [
     "device_map_impl.cc",
@@ -89,9 +72,7 @@ executable("user_runner_bin") {
   ]
 }
 
-executable("dev_user_shell_bin") {
-  output_name = "dev_user_shell"
-
+executable_package("dev_user_shell") {
   sources = [
     "dev_user_shell.cc",
   ]

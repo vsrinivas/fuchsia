@@ -2,27 +2,10 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
-
+import("//peridot/build/executable_package.gni")
 import("//third_party/flatbuffers/flatbuffer.gni")
 
-package("device_runner_monitor") {
-  deprecated_system_image = true
-
-  deps = [
-    ":bin",
-  ]
-
-  binaries = [
-    {
-      name = "device_runner_monitor"
-    },
-  ]
-}
-
-executable("bin") {
-  output_name = "device_runner_monitor"
-
+executable_package("device_runner_monitor") {
   sources = [
     "device_runner_monitor.cc",
   ]

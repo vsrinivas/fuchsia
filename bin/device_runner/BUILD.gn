@@ -3,30 +3,8 @@
 # found in the LICENSE file.
 
 import("//build/package.gni")
-
+import("//peridot/build/executable_package.gni")
 import("//third_party/flatbuffers/flatbuffer.gni")
-
-package("device_runner") {
-  deprecated_system_image = true
-
-  deps = [
-    ":device_runner_bin",
-  ]
-
-  binaries = [
-    {
-      name = "device_runner"
-    },
-  ]
-}
-
-package("dev_device_shell") {
-  deps = [
-    ":dev_device_shell_bin",
-  ]
-
-  binary = "dev_device_shell"
-}
 
 flatbuffer("users") {
   sources = [
@@ -34,8 +12,13 @@ flatbuffer("users") {
   ]
 }
 
-executable("device_runner_bin") {
-  output_name = "device_runner"
+executable_package("device_runner") {
+  meta = [
+    {
+      path = "meta/device_runner.cmx"
+      dest = "device_runner.cmx"
+    },
+  ]
 
   sources = [
     "device_runner.cc",
@@ -98,9 +81,7 @@ source_set("lib") {
   ]
 }
 
-executable("dev_device_shell_bin") {
-  output_name = "dev_device_shell"
-
+executable_package("dev_device_shell") {
   sources = [
     "dev_device_shell.cc",
   ]
