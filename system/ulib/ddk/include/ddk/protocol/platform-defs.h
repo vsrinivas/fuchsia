@@ -93,9 +93,12 @@ __BEGIN_CDECLS;
 // NXP
 #define PDEV_VID_NXP                9
 #define PDEV_PID_IMX8MEVK           1
+#define PDEV_PID_PCF8563            2
 
 #define PDEV_DID_IMX_GPIO           1
 #define PDEV_DID_IMX_DISPLAY        2
 #define PDEV_DID_IMX_SDHCI          3
+
+#define PDEV_DID_PCF8563_RTC        1
 
 __END_CDECLS;

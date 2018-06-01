@@ -349,6 +349,7 @@ static zx_status_t intel_rtc_bind(void* ctx, zx_device_t* parent) {
         .version = DEVICE_ADD_ARGS_VERSION,
         .name = "rtc",
         .ops = &intel_rtc_device_proto,
+        .proto_id = ZX_PROTOCOL_RTC
     };
 
     zx_device_t* dev;

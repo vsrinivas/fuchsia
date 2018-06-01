@@ -21,7 +21,7 @@ int usage(const char* cmd) {
 }
 
 int open_rtc(int mode) {
-    int rtc_fd = open("/dev/sys/acpi/rtc/rtc", mode);
+    int rtc_fd = open("/dev/class/rtc/000", mode);
     if (rtc_fd < 0) {
         printf("Can not open RTC device\n");
     }
@@ -61,10 +61,12 @@ int set_rtc(const char* time) {
         &rtc.minutes,
         &rtc.seconds);
     if (n != 6) {
+        printf("Bad time format.\n");
         return -1;
     }
     int rtc_fd = open_rtc(O_WRONLY);
     if (rtc_fd < 0) {
+        printf("Can not open RTC device\n");
         return -1;
     }
     ssize_t written = ioctl_rtc_set(rtc_fd, &rtc);
@@ -79,8 +81,14 @@ int main(int argc, char** argv) {
     };
     for (int opt; (opt = getopt_long(argc, argv, "", opts, NULL)) != -1;) {
         switch (opt) {
-        case 's':
-            return set_rtc(optarg);
+        case 's': {
+            int err = set_rtc(optarg);
+            if (err) {
+                printf("Set RTC failed.\n");
+                usage(cmd);
+            }
+            return err;
+        }
         default:
             return usage(cmd);
         }
@@ -88,5 +96,8 @@ int main(int argc, char** argv) {
     if (argc != 1) {
         return usage(cmd);
     }
-    return print_rtc();
+    int err = print_rtc();
+    if (err) {
+        usage(cmd);
+    }
 }

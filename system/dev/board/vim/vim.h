@@ -75,3 +75,6 @@ zx_status_t vim_video_init(vim_bus_t* bus);
 
 // vim-led2472g.c
 zx_status_t vim_led2472g_init(vim_bus_t* bus);
+
+// vim-rtc.c
+zx_status_t vim_rtc_init(vim_bus_t* bus);
