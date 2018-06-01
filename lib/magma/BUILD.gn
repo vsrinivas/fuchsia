@@ -5,169 +5,17 @@
 import("//build/package.gni")
 import("//garnet/lib/magma/gnbuild/magma.gni")
 
-if (have_prebuilt_libvulkan_arm) {
-  libvulkan_gen_path = "$target_gen_dir/libvulkan"
-}
-
-# This target is not built but ensures that the packages don't reference
-# driver directories that are invalid for the current platform.
-group("platform_driver_nodeps") {
-  testonly = true
-  assert_no_deps = []
-  if (!build_intel_gen) {
-    assert_no_deps += [ "//third_party/mesa/*" ]
-  }
-  if (build_libvulkan_arm_mali == []) {
-    assert_no_deps += [ "//third_party/arm-mali-bifrost/*" ]
-  }
-  deps = [
-    ":magma",
-    "tests:magma-test",
-    "tests:magma-test-build-only",
-  ]
-}
-
-icd_list = []
-if (build_intel_gen) {
-  icd_list += [
-    {
-      name = "libvulkan_intel"
-    },
-  ]
-}
-
-if (build_libvulkan_arm_mali != []) {
-  foreach(entry, build_libvulkan_arm_mali) {
-    icd_list += [
-      {
-        name = get_label_info(entry, "name")
-      },
-    ]
-  }
-} else if (have_prebuilt_libvulkan_arm) {
-  icd_list += [
-    {
-      name = "libvulkan_arm"
-      library_path = "$libvulkan_gen_path/libvulkan_arm.so"
-    },
-  ]
-}
-
-foreach(entry, icd_list) {
-  icd_name = entry.name
-  filename = "$target_gen_dir/vulkan/icd.d/$icd_name.json"
-  icd_data = []
-  icd_data = [
-    "{",
-    "\"file_format_version\": \"1.0.0\",",
-    "\"ICD\": {",
-    "\"library_path\": \"$icd_name.so\",",
-    "\"api_version\": \"1.0.68\"",
-    "}",
-    "}",
-  ]
-  write_file(filename, icd_data)
-}
-
-package("magma") {
+# TODO(MA-416): should libmagma be a source set?
+package("libmagma") {
   deprecated_system_image = true
-  if (magma_enable_developer_build) {
-    testonly = true
-  }
-
   deps = [
-    ":libmagma",
+    "//garnet/lib/magma/src/libmagma",
   ]
   libraries = [
     {
       name = "libmagma.so"
     },
   ]
-
-  resources = []
-  drivers = []
-
-  if (have_libvulkan) {
-    deps += [ ":libvulkan" ]
-  }
-
-  if (build_intel_gen) {
-    if (magma_enable_developer_build) {
-      deps += [ "$msd_intel_gen_build_root:msd_intel_test" ]
-      drivers += [
-        {
-          name = "libmsd_intel_test.so"
-        },
-      ]
-    } else {
-      deps += [ "$msd_intel_gen_build_root:msd_intel" ]
-      drivers += [
-        {
-          name = "libmsd_intel.so"
-        },
-      ]
-    }
-  }
-
-  if (build_msd_arm_mali) {
-    if (magma_enable_developer_build) {
-      deps += [ "//garnet/drivers/gpu/msd-arm-mali:msd_arm_test" ]
-      drivers += [
-        {
-          name = "libmsd_arm_test.so"
-        },
-      ]
-    } else {
-      deps += [ "//garnet/drivers/gpu/msd-arm-mali:msd_arm" ]
-      drivers += [
-        {
-          name = "libmsd_arm.so"
-        },
-      ]
-    }
-  }
-
-  if (build_msd_vsl_gc) {
-    if (magma_enable_developer_build) {
-      deps += [ "//garnet/drivers/gpu/msd-vsl-gc:msd_vsl_test" ]
-      drivers += [
-        {
-          name = "libmsd_vsl_test.so"
-        },
-      ]
-    } else {
-      deps += [ "//garnet/drivers/gpu/msd-vsl-gc:msd_vsl" ]
-      drivers += [
-        {
-          name = "libmsd_vsl.so"
-        },
-      ]
-    }
-  }
-
-  foreach(entry, icd_list) {
-    icd_name = entry.name
-    resources += [
-      {
-        path = rebase_path("$target_gen_dir/vulkan/icd.d/$icd_name.json")
-        dest = "vulkan/icd.d/$icd_name.json"
-      },
-    ]
-    if (defined(entry.library_path)) {
-      libraries += [
-        {
-          source = entry.library_path
-          name = "$icd_name.so"
-        },
-      ]
-    } else {
-      libraries += [
-        {
-          name = "$icd_name.so"
-        },
-      ]
-    }
-  }
 }
 
 package("magma-tools") {
@@ -208,41 +56,6 @@ config("magma_src_include_config") {
 # This config allows inclusion of headers via relative paths from tests
 config("magma_tests_include_config") {
   include_dirs = [ "tests" ]
-}
-
-group("libmagma") {
-  public_deps = [
-    "src/libmagma",
-  ]
-}
-
-if (build_intel_gen) {
-  group("libvulkan") {
-    public_deps = [
-      "$mesa_build_root:magma_vulkan",
-    ]
-  }
-} else if (build_libvulkan_arm_mali != []) {
-  group("libvulkan") {
-    public_deps = build_libvulkan_arm_mali
-  }
-} else if (have_prebuilt_libvulkan_arm) {
-  config("libvulkan_config") {
-    libs = [ "vulkan_arm" ]
-    lib_dirs = [ libvulkan_gen_path ]
-  }
-  copy("libvulkan") {
-    public_configs = [ ":libvulkan_config" ]
-    sources = [
-      prebuilt_libvulkan_arm_path,
-    ]
-    outputs = [
-      "$libvulkan_gen_path/libvulkan_arm.so",
-    ]
-    deps = [
-      "//third_party/zlib",
-    ]
-  }
 }
 
 group("tools") {

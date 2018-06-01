@@ -3,6 +3,9 @@
         "garnet/packages/prod/sbase"
     ],
     "packages": {
-        "magma-test": "//garnet/lib/magma/tests:magma-test"
+        "magma-tests": "//garnet/lib/magma/tests:tests",
+        "vulkan-tests": "//garnet/lib/magma/tests:vulkan-tests",
+        "magma-intel-gen-tests": "//garnet/lib/magma/gnbuild/magma-intel-gen:tests",
+        "magma-arm-mali-tests": "//garnet/lib/magma/gnbuild/magma-arm-mali:tests"
     }
 }

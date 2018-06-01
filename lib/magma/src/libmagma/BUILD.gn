@@ -5,8 +5,6 @@
 import("//garnet/lib/magma/gnbuild/magma.gni")
 
 shared_library("libmagma") {
-  visibility = [ "$magma_build_root:libmagma" ]
-
   output_name = "magma"
 
   public_deps = [

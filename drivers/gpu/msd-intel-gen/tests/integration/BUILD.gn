@@ -22,7 +22,7 @@ executable("msd_intel_gen_integration_tests") {
   ]
 
   public_deps = [
-    "$magma_build_root:libmagma",
+    "$magma_build_root/src/libmagma",
     "$magma_build_root/include:magma_abi",
     "$magma_build_root/src/magma_util",
     "//third_party/googletest:gtest",

@@ -4,8 +4,9 @@
 
 import("//garnet/lib/magma/gnbuild/magma.gni")
 
-executable("magma_unit_tests") {
+executable("unit_tests") {
   testonly = true
+  output_name = "magma_unit_tests"
 
   sources = [
     "main.cc",
