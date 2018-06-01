@@ -283,14 +283,21 @@ void IntelDspStream::ProcessClientRbDeactivate(const dispatcher::Channel* channe
 
 zx_status_t IntelDspStream::OnActivateLocked() {
     // FIXME(yky) Hardcode supported formats.
+    audio_stream_format_range_t fmt;
+    fmt.sample_formats = AUDIO_SAMPLE_FORMAT_16BIT;
+    fmt.min_frames_per_second =
+    fmt.max_frames_per_second = 48000;
+    fmt.min_channels =
+    fmt.max_channels = 2;
+    fmt.flags = ASF_RANGE_FLAG_FPS_48000_FAMILY;
+
     fbl::Vector<audio_proto::FormatRange> supported_formats;
-    zx_status_t res = MakeFormatRangeList(SampleCaps(IHDA_PCM_SIZE_16BITS | IHDA_PCM_RATE_48000,
-                                                     IHDA_PCM_FORMAT_PCM),
-                                          2,
-                                          &supported_formats);
-    if (res != ZX_OK) {
-        return res;
+    fbl::AllocChecker ac;
+    supported_formats.push_back(fmt, &ac);
+    if (!ac.check()) {
+        return ZX_ERR_NO_MEMORY;
     }
+
     SetSupportedFormatsLocked(fbl::move(supported_formats));
     return ZX_OK;
 }
@@ -329,17 +336,20 @@ zx_status_t IntelDspStream::FinishChangeStreamFormatLocked(uint16_t encoded_fmt)
 
 void IntelDspStream::OnGetGainLocked(audio_proto::GetGainResp* out_resp) {
     LOG(TRACE, "OnGetGainLocked\n");
+    IntelHDAStreamBase::OnGetGainLocked(out_resp);
 }
 
 void IntelDspStream::OnSetGainLocked(const audio_proto::SetGainReq& req,
                                      audio_proto::SetGainResp* out_resp) {
     LOG(TRACE, "OnSetGainLocked\n");
+    IntelHDAStreamBase::OnSetGainLocked(req, out_resp);
 }
 
 void IntelDspStream::OnPlugDetectLocked(dispatcher::Channel* response_channel,
                                         const audio_proto::PlugDetectReq& req,
                                         audio_proto::PlugDetectResp* out_resp) {
     LOG(TRACE, "OnPlugDetectLocked\n");
+    IntelHDAStreamBase::OnPlugDetectLocked(response_channel, req, out_resp);
 }
 
 }  // namespace intel_hda
