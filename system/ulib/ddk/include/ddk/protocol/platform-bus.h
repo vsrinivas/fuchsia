@@ -16,11 +16,13 @@ typedef struct {
     // length of MMIO region in bytes
     // does not need to be page aligned
     size_t      length;
+    zx_handle_t resource;
 } pbus_mmio_t;
 
 typedef struct {
     uint32_t    irq;
     uint32_t    mode;   // ZX_INTERRUPT_MODE_* flags
+    zx_handle_t resource;
 } pbus_irq_t;
 
 typedef struct {

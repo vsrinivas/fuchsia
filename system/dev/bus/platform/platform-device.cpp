@@ -11,9 +11,27 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <zircon/syscalls/resource.h>
 
 #include "platform-bus.h"
 #include "platform-proxy.h"
+
+// An overview of platform-device and platform proxy.
+//
+// Both this file and platform-proxy.c implement the platform device protocol.
+// At this time, this protocol provides the following methods:
+//     map_mmio
+//     map_interrupt
+//     get_bti
+//     get_device_info
+// The implementation in this file corresponds to the protocol for drivers that
+// exist within the platform bus process. The implementation of the protocol
+// in platform-proxy is for drivers that live in their own devhost and perform
+// RPC calls to the platform bus over a channel. In that case, RPC calls are
+// handled by platform_dev_rxrpc and then handled by relevant pdev_rpc_* functions.
+// Any resource handles passed back to the proxy are then used to create/map mmio
+// and irq objects within the proxy process. This ensures if the proxy driver dies
+// we will release their address space resources back to the kernel if necessary.
 
 static zx_status_t platform_dev_map_mmio(void* ctx, uint32_t index, uint32_t cache_policy,
                                          void** vaddr, size_t* size, zx_paddr_t* out_paddr,
@@ -114,6 +132,7 @@ static zx_status_t platform_dev_get_device_info(void* ctx, pdev_device_info_t* o
     out_info->clk_count = dev->clk_count;
     out_info->bti_count = dev->bti_count;
     out_info->metadata_count = dev->metadata_count;
+    memcpy(out_info->name, dev->name, sizeof(out_info->name));
 
     return ZX_OK;
 }
@@ -125,37 +144,62 @@ static platform_device_protocol_ops_t platform_dev_proto_ops = {
     .get_device_info = platform_dev_get_device_info,
 };
 
-static zx_status_t pdev_rpc_get_mmio(platform_dev_t* dev, uint32_t index, zx_off_t* out_offset,
-                                     size_t *out_length, zx_paddr_t* out_paddr, zx_handle_t* out_handle,
+// Create a resource and pass it back to the proxy along with necessary metadata
+// to create/map the VMO in the driver process.
+static zx_status_t pdev_rpc_get_mmio(platform_dev_t* dev,
+                                     uint32_t index,
+                                     zx_paddr_t* out_paddr,
+                                     size_t *out_length,
+                                     zx_handle_t* out_handle,
                                      uint32_t* out_handle_count) {
     if (index >= dev->mmio_count) {
         return ZX_ERR_INVALID_ARGS;
     }
 
     pbus_mmio_t* mmio = &dev->mmios[index];
-    zx_paddr_t vmo_base = ROUNDDOWN(mmio->base, PAGE_SIZE);
-    size_t vmo_size = ROUNDUP(mmio->base + mmio->length - vmo_base, PAGE_SIZE);
-    zx_status_t status = zx_vmo_create_physical(dev->bus->resource, vmo_base, vmo_size,
-                                                out_handle);
+    zx_handle_t handle;
+    char rsrc_name[ZX_MAX_NAME_LEN];
+    snprintf(rsrc_name, ZX_MAX_NAME_LEN-1, "%s.pbus[%u]", dev->name, index);
+    zx_status_t status = zx_resource_create(dev->bus->resource, ZX_RSRC_KIND_MMIO, mmio->base,
+                                            mmio->length, rsrc_name, sizeof(rsrc_name), &handle);
     if (status != ZX_OK) {
-        zxlogf(ERROR, "pdev_rpc_get_mmio: zx_vmo_create_physical failed %d\n", status);
+        zxlogf(ERROR, "%s: pdev_rpc_get_mmio: zx_resource_create failed: %d\n", dev->name, status);
         return status;
     }
-    *out_offset = mmio->base - vmo_base;
+
+    *out_paddr = mmio->base;
     *out_length = mmio->length;
-    *out_paddr = vmo_base;
     *out_handle_count = 1;
+    *out_handle = handle;
     return ZX_OK;
 }
 
-static zx_status_t pdev_rpc_get_interrupt(platform_dev_t* dev, uint32_t index,
-                                          uint32_t flags,
-                                          zx_handle_t* out_handle, uint32_t* out_handle_count) {
+// Create a resource and pass it back to the proxy along with necessary metadata
+// to create the IRQ in the driver process.
+static zx_status_t pdev_rpc_get_interrupt(platform_dev_t* dev,
+                                          uint32_t index,
+                                          uint32_t* out_irq,
+                                          zx_handle_t* out_handle,
+                                          uint32_t* out_handle_count) {
 
-    zx_status_t status = platform_dev_map_interrupt(dev, index, flags, out_handle);
-    if (status == ZX_OK) {
-        *out_handle_count = 1;
+    if (index > dev->irq_count) {
+        return ZX_ERR_INVALID_ARGS;
     }
+
+    zx_handle_t handle;
+    pbus_irq_t* irq = &dev->irqs[index];
+    uint32_t options = ZX_RSRC_KIND_IRQ | ZX_RSRC_FLAG_EXCLUSIVE;
+    char rsrc_name[ZX_MAX_NAME_LEN];
+    snprintf(rsrc_name, ZX_MAX_NAME_LEN-1, "%s.pbus[%u]", dev->name, index);
+    zx_status_t status = zx_resource_create(dev->bus->resource, options, irq->irq, 1, rsrc_name,
+                                            sizeof(rsrc_name), &handle);
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    *out_irq = irq->irq;
+    *out_handle_count = 1;
+    *out_handle = handle;
     return status;
 }
 
@@ -416,17 +460,18 @@ static zx_status_t platform_dev_rxrpc(void* ctx, zx_handle_t channel) {
 
     switch (req->op) {
     case PDEV_GET_MMIO:
-        resp.status = pdev_rpc_get_mmio(dev, req->index, &resp.mmio.offset, &resp.mmio.length,
-                                        &resp.mmio.paddr, &handle, &handle_count);
+        resp.status = pdev_rpc_get_mmio(dev, req->index, &resp.mmio.paddr, &resp.mmio.length,
+                                        &handle, &handle_count);
         break;
     case PDEV_GET_INTERRUPT:
-        resp.status = pdev_rpc_get_interrupt(dev, req->index, req->flags, &handle, &handle_count);
+        resp.status = pdev_rpc_get_interrupt(dev, req->index, &resp.irq, &handle,
+                                             &handle_count);
         break;
     case PDEV_GET_BTI:
         resp.status = pdev_rpc_get_bti(dev, req->index, &handle, &handle_count);
         break;
     case PDEV_GET_DEVICE_INFO:
-         resp.status = platform_dev_get_device_info(dev, &resp.info);
+        resp.status = platform_dev_get_device_info(dev, &resp.info);
         break;
     case PDEV_UMS_SET_MODE:
         resp.status = pdev_rpc_ums_set_mode(dev, req->usb_mode);

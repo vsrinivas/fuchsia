@@ -30,6 +30,7 @@ typedef struct {
     uint32_t bti_count;
     uint32_t metadata_count;
     uint32_t reserved[8];
+    char name[ZX_MAX_NAME_LEN];
 } pdev_device_info_t;
 
 typedef struct {

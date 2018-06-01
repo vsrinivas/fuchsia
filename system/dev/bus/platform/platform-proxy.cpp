@@ -12,17 +12,31 @@
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
+#include <ddk/protocol/platform-bus.h>
 #include <ddk/protocol/platform-device.h>
 #include <ddk/protocol/clk.h>
 #include <ddk/protocol/usb-mode-switch.h>
 
 #include "platform-proxy.h"
 
+// The implementation of the platform bus protocol in this file is for use by
+// drivers that exist in a proxy devhost and communicate with the platform bus
+// over an RPC channel.
+//
+// More information can be found at the top of platform-device.c.
+
 typedef struct {
     zx_device_t* zxdev;
     zx_handle_t rpc_channel;
+    pbus_mmio_t* mmios;
+    uint32_t mmio_count;
+    pbus_irq_t* irqs;
+    uint32_t irq_count;
+    char name[ZX_MAX_NAME_LEN];
 } platform_proxy_t;
 
+// Performs RPC to the upper devhost containing the platform bus instance from this
+// proxy devhost.
 static zx_status_t platform_dev_rpc(platform_proxy_t* proxy, pdev_req_t* req, uint32_t req_length,
                                     pdev_resp_t* resp, uint32_t resp_length,
                                     zx_handle_t* in_handles, uint32_t in_handle_count,
@@ -45,12 +59,12 @@ static zx_status_t platform_dev_rpc(platform_proxy_t* proxy, pdev_req_t* req, ui
     if (status != ZX_OK) {
         return status;
     } else if (resp_size < sizeof(*resp)) {
-        zxlogf(ERROR, "platform_dev_rpc resp_size too short: %u\n", resp_size);
+        zxlogf(ERROR, "%s: platform_dev_rpc resp_size too short: %u\n", proxy->name, resp_size);
         status = ZX_ERR_INTERNAL;
         goto fail;
     } else if (handle_count != out_handle_count) {
-        zxlogf(ERROR, "platform_dev_rpc handle count %u expected %u\n", handle_count,
-                out_handle_count);
+        zxlogf(ERROR, "%s: platform_dev_rpc handle count %u expected %u\n", proxy->name,
+               handle_count, out_handle_count);
         status = ZX_ERR_INTERNAL;
         goto fail;
     }
@@ -422,28 +436,33 @@ static zx_status_t platform_dev_map_mmio(void* ctx, uint32_t index, uint32_t cac
                                          void** vaddr, size_t* size, zx_paddr_t* out_paddr,
                                          zx_handle_t* out_handle) {
     platform_proxy_t* proxy = static_cast<platform_proxy_t*>(ctx);
-    pdev_req_t req = {};
-    req.op = PDEV_GET_MMIO;
-    req.index = index;
-    pdev_resp_t resp;
+    if (index > proxy->mmio_count) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    pbus_mmio_t* mmio = &proxy->mmios[index];
+    zx_paddr_t vmo_base = ROUNDDOWN(mmio->base, PAGE_SIZE);
+    size_t vmo_size = ROUNDUP(mmio->base + mmio->length - vmo_base, PAGE_SIZE);
     zx_handle_t vmo_handle;
 
-    zx_status_t status = platform_dev_rpc(proxy, &req, sizeof(req), &resp, sizeof(resp),
-                                          nullptr, 0, &vmo_handle, 1, nullptr);
+    zx_status_t status = zx_vmo_create_physical(mmio->resource, vmo_base, vmo_size,
+                                                &vmo_handle);
     if (status != ZX_OK) {
+        zxlogf(ERROR, "%s %s: creating vmo failed %d\n", proxy->name, __FUNCTION__, status);
         return status;
     }
 
-    size_t vmo_size;
-    status = zx_vmo_get_size(vmo_handle, &vmo_size);
+    char name[32];
+    snprintf(name, sizeof(name), "%s mmio %u", proxy->name, index);
+    status = zx_object_set_property(vmo_handle, ZX_PROP_NAME, name, sizeof(name));
     if (status != ZX_OK) {
-        zxlogf(ERROR, "platform_dev_map_mmio: zx_vmo_get_size failed %d\n", status);
+        zxlogf(ERROR, "%s %s: setting vmo name failed %d\n", proxy->name, __FUNCTION__, status);
         goto fail;
     }
 
     status = zx_vmo_set_cache_policy(vmo_handle, cache_policy);
     if (status != ZX_OK) {
-        zxlogf(ERROR, "platform_dev_map_mmio: zx_vmo_set_cache_policy failed %d\n", status);
+        zxlogf(ERROR, "%s %s: setting cache policy failed %d\n", proxy->name, __FUNCTION__,status);
         goto fail;
     }
 
@@ -452,16 +471,13 @@ static zx_status_t platform_dev_map_mmio(void* ctx, uint32_t index, uint32_t cac
                          ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE | ZX_VM_FLAG_MAP_RANGE,
                          &virt);
     if (status != ZX_OK) {
-        zxlogf(ERROR, "platform_dev_map_mmio: zx_vmar_map failed %d\n", status);
+        zxlogf(ERROR, "%s %s: mapping vmar failed %d\n", proxy->name, __FUNCTION__, status);
         goto fail;
     }
 
-    *size = resp.mmio.length;
+    *size = mmio->length;
+    *vaddr = (void *)(virt + (mmio->base - vmo_base));
     *out_handle = vmo_handle;
-    if (out_paddr) {
-        *out_paddr = resp.mmio.paddr;
-    }
-    *vaddr = (void *)(virt + resp.mmio.offset);
     return ZX_OK;
 
 fail:
@@ -472,14 +488,20 @@ fail:
 static zx_status_t platform_dev_map_interrupt(void* ctx, uint32_t index,
                                               uint32_t flags, zx_handle_t* out_handle) {
     platform_proxy_t* proxy = static_cast<platform_proxy_t*>(ctx);
-    pdev_req_t req = {};
-    req.op = PDEV_GET_INTERRUPT;
-    req.index = index;
-    req.flags = flags;
-    pdev_resp_t resp;
+    if (index > proxy->irq_count) {
+        return ZX_ERR_INVALID_ARGS;
+    }
 
-    return platform_dev_rpc(proxy, &req, sizeof(req), &resp, sizeof(resp),
-                            nullptr, 0, out_handle, 1, nullptr);
+    pbus_irq_t* irq = &proxy->irqs[index];
+    zx_handle_t handle;
+    zx_status_t status = zx_interrupt_create(irq->resource, irq->irq, flags, &handle);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "%s %s: creating interrupt failed: %d\n", proxy->name, __FUNCTION__, status);
+        return status;
+    }
+
+    *out_handle = handle;
+    return ZX_OK;
 }
 
 static zx_status_t platform_dev_get_bti(void* ctx, uint32_t index, zx_handle_t* out_handle) {
@@ -589,6 +611,50 @@ static zx_protocol_device_t platform_dev_proto = {
     .message = nullptr,
 };
 
+// A helper function for platform_proxy_create to fetch a given MMIO's resource and metadata
+// from the platform bus so they can be used to allocate VMOs as needed later.
+static zx_status_t proxy_rpc_get_mmio(void* ctx, uint32_t index, pbus_mmio_t* mmio) {
+    platform_proxy_t* proxy = static_cast<platform_proxy_t*>(ctx);
+    pdev_req_t req = {};
+    pdev_resp_t resp;
+    zx_handle_t rsrc_handle;
+
+    req.op = PDEV_GET_MMIO;
+    req.index = index;
+    zx_status_t status = platform_dev_rpc(proxy, &req, sizeof(req), &resp, sizeof(resp),
+                                          NULL, 0, &rsrc_handle, 1, NULL);
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    mmio->base = resp.mmio.paddr;
+    mmio->length = resp.mmio.length;
+    mmio->resource = rsrc_handle;
+    return ZX_OK;
+}
+
+// A helper function for platform_proxy_create to fetch a given irq's resource
+// from the platform bus so they can be used to create an interrupt handle later.
+static zx_status_t proxy_rpc_get_irq(void* ctx, uint32_t index, pbus_irq_t* irq) {
+    platform_proxy_t* proxy = static_cast<platform_proxy_t*>(ctx);
+    pdev_req_t req = {};
+    pdev_resp_t resp;
+    zx_handle_t rsrc_handle;
+
+    req.op = PDEV_GET_INTERRUPT;
+    req.index = index;
+    zx_status_t status = platform_dev_rpc(proxy, &req, sizeof(req), &resp, sizeof(resp),
+                                          NULL, 0, &rsrc_handle, 1, NULL);
+    if (status != ZX_OK) {
+        return status;
+    }
+
+
+    irq->irq = resp.irq;
+    irq->resource = rsrc_handle;
+    return ZX_OK;
+}
+
 zx_status_t platform_proxy_create(void* ctx, zx_device_t* parent, const char* name,
                                   const char* args, zx_handle_t rpc_channel) {
     platform_proxy_t* proxy = static_cast<platform_proxy_t*>(calloc(1, sizeof(platform_proxy_t)));
@@ -607,9 +673,62 @@ zx_status_t platform_proxy_create(void* ctx, zx_device_t* parent, const char* na
 
     zx_status_t status = device_add(parent, &add_args, &proxy->zxdev);
     if (status != ZX_OK) {
-        zx_handle_close(rpc_channel);
-        free(proxy);
+        goto fail;
     }
 
+    pdev_device_info_t info;
+    status = platform_dev_get_device_info(proxy, &info);
+    if (status != ZX_OK) {
+        goto fail;
+    }
+
+    // Request mmio/irq metadata and resource handles from the platform. If
+    // this driver dies/exits they will be freed back to the address space
+    // allocators when handles are reaped in process teardown.
+    proxy->mmio_count = info.mmio_count;
+    proxy->irq_count = info.irq_count;
+    memcpy(proxy->name, info.name, sizeof(proxy->name));
+
+    if (proxy->mmio_count) {
+        proxy->mmios = static_cast<pbus_mmio_t*>(malloc(sizeof(pbus_mmio_t) * proxy->mmio_count));
+        if (!proxy->mmios) {
+            goto fail;
+        }
+
+        for (uint32_t i = 0; i < proxy->mmio_count; i++) {
+            pbus_mmio_t* mmio = &proxy->mmios[i];
+            status = proxy_rpc_get_mmio(proxy, i, mmio);
+            if (status != ZX_OK) {
+                goto fail;
+            }
+            zxlogf(SPEW, "%s: received MMIO %u (base %#lx length %#lx handle %#x)\n",
+                    proxy->name, i, mmio->base, mmio->length, mmio->resource);
+        }
+    }
+
+    if (proxy->irq_count) {
+        proxy->irqs = static_cast<pbus_irq_t*>(malloc(sizeof(pbus_irq_t) * proxy->irq_count));
+        if (!proxy->irqs) {
+            goto fail;
+        }
+
+        for (uint32_t i = 0; i < proxy->irq_count; i++) {
+            pbus_irq_t* irq = &proxy->irqs[i];
+            status = proxy_rpc_get_irq(proxy, i, irq);
+            if (status != ZX_OK) {
+                goto fail;
+            }
+            zxlogf(SPEW, "%s: received IRQ %u (irq %#x handle %#x)\n",
+                    proxy->name, i, irq->irq, irq->resource);
+        }
+    }
+
+    return ZX_OK;
+
+fail:
+    zx_handle_close(rpc_channel);
+    free(proxy->mmios);
+    free(proxy->irqs);
+    free(proxy);
     return status;
 }
