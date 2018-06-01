@@ -48,6 +48,23 @@ ProcessImpl* SystemImpl::ProcessImplFromKoid(uint64_t koid) const {
   return nullptr;
 }
 
+void SystemImpl::NotifyDidCreateProcess(Process* process) {
+  for (auto& observer : observers())
+    observer.GlobalDidCreateProcess(process);
+}
+
+void SystemImpl::NotifyWillDestroyProcess(Process* process) {
+  for (auto& observer : observers())
+    observer.GlobalWillDestroyProcess(process);
+}
+
+std::vector<TargetImpl*> SystemImpl::GetTargetImpls() const {
+  std::vector<TargetImpl*> result;
+  for (const auto& t : targets_)
+    result.push_back(t.get());
+  return result;
+}
+
 std::vector<Target*> SystemImpl::GetTargets() const {
   std::vector<Target*> result;
   result.reserve(targets_.size());

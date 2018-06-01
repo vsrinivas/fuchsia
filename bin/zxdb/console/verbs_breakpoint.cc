@@ -70,7 +70,6 @@ Err CreateOrEditBreakpoint(ConsoleContext* context, const Command& cmd,
     Err err = ParseBreakpointLocation(cmd.args()[0], &settings);
     if (err.has_error())
       return err;
-    settings.location_type = BreakpointSettings::LocationType::kAddress;
   } else {
     return Err(ErrType::kInput,
                "Expecting only one arg for the location.\n"

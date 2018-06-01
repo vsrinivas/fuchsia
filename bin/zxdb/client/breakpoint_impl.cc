@@ -5,10 +5,14 @@
 #include "garnet/bin/zxdb/client/breakpoint_impl.h"
 
 #include <inttypes.h>
+#include <algorithm>
 
 #include "garnet/bin/zxdb/client/err.h"
 #include "garnet/bin/zxdb/client/process.h"
+#include "garnet/bin/zxdb/client/remote_api.h"
 #include "garnet/bin/zxdb/client/session.h"
+#include "garnet/bin/zxdb/client/symbols/loaded_module_symbols.h"
+#include "garnet/bin/zxdb/client/symbols/process_symbols.h"
 #include "garnet/bin/zxdb/client/system.h"
 #include "garnet/bin/zxdb/client/target.h"
 #include "garnet/bin/zxdb/client/thread.h"
@@ -21,13 +25,11 @@ namespace {
 uint32_t next_breakpoint_id = 1;
 
 Err ValidateSettings(const BreakpointSettings& settings) {
-  // Validate scope.
   switch (settings.scope) {
     case BreakpointSettings::Scope::kSystem:
-      // TODO(brettw) implement this.
-      return Err(
-          "System scopes aren't supported since only address breakpoints"
-          " are supported now.");
+      if (settings.scope_thread || settings.scope_target)
+        return Err("System scopes can't take a thread or target.");
+      break;
     case BreakpointSettings::Scope::kTarget:
       if (!settings.scope_target)
         return Err(ErrType::kClientApi, "Target scopes require a target.");
@@ -58,19 +60,34 @@ debug_ipc::Stop SettingsStopToIpcStop(BreakpointSettings::StopMode mode) {
 
 }  // namespace
 
+struct BreakpointImpl::ProcessRecord {
+  // Set when we're registered as an observer for this process.
+  bool observing = false;
+
+  // All resolved locations stored in sorted order.
+  std::vector<uint64_t> addresses;
+};
+
 BreakpointImpl::BreakpointImpl(Session* session)
-    : Breakpoint(session), weak_factory_(this) {}
+    : Breakpoint(session), weak_factory_(this) {
+  session->system().AddObserver(this);
+}
 
 BreakpointImpl::~BreakpointImpl() {
   if (backend_id_ && settings_.enabled && settings_.scope_target &&
       settings_.scope_target->GetProcess()) {
     // Breakpoint was installed and the process still exists.
     settings_.enabled = false;
-    SendBreakpointRemove(settings_.scope_target->GetProcess(),
-                         std::function<void(const Err&)>());
+    SendBackendRemove(std::function<void(const Err&)>());
   }
 
-  StopObserving();
+  session()->system().RemoveObserver(this);
+  for (auto& pair : procs_) {
+    if (pair.second.observing) {
+      pair.first->RemoveObserver(this);
+      pair.second.observing = false;
+    }
+  }
 }
 
 BreakpointSettings BreakpointImpl::GetSettings() const { return settings_; }
@@ -84,21 +101,16 @@ void BreakpointImpl::SetSettings(const BreakpointSettings& settings,
     return;
   }
 
-  // It's cleaner to always unregister for existing notifications and
-  // re-register for the new ones.
-  StopObserving();
   settings_ = settings;
-  StartObserving();
 
-  // SendBackendUpdate() will issue the callback in the future.
-  err = SendBackendUpdate(callback);
-  if (err.has_error()) {
-    debug_ipc::MessageLoop::Current()->PostTask(
-        [callback, err]() { callback(err); });
+  for (Target* target : session()->system().GetTargets()) {
+    Process* process = target->GetProcess();
+    if (process && CouldApplyToProcess(process))
+      RegisterProcess(process);
   }
-}
 
-int BreakpointImpl::GetHitCount() const { return hit_count_; }
+  SyncBackend(std::move(callback));
+}
 
 void BreakpointImpl::WillDestroyThread(Process* process, Thread* thread) {
   if (settings_.scope_thread == thread) {
@@ -107,183 +119,237 @@ void BreakpointImpl::WillDestroyThread(Process* process, Thread* thread) {
     // will preserve its state without us having to maintain some "defunct
     // thread" association. The user can associate it with a new thread and
     // re-enable as desired.
-    StopObserving();
     settings_.scope = BreakpointSettings::Scope::kTarget;
     settings_.scope_target = process->GetTarget();
     settings_.scope_thread = nullptr;
     settings_.enabled = false;
-    StartObserving();
   }
 }
 
-void BreakpointImpl::DidCreateProcess(Target* target, Process* process) {
-  // Register observer for thread changes.
-  process->AddObserver(this);
+void BreakpointImpl::DidLoadModuleSymbols(Process* process,
+                                          LoadedModuleSymbols* module) {
+  // Should only get this notification for relevant processes.
+  FXL_DCHECK(CouldApplyToProcess(process));
+
+  // Resolve addresses.
+  if (settings_.location_type == BreakpointSettings::LocationType::kSymbol) {
+    std::vector<uint64_t> new_addrs =
+        module->AddressesForFunction(settings_.location_symbol);
+    if (new_addrs.empty())
+      return;
+
+    // Merge in the new address(s).
+    ProcessRecord& record = procs_[process];
+    record.addresses.insert(record.addresses.end(), new_addrs.begin(),
+                            new_addrs.end());
+    std::sort(record.addresses.begin(), record.addresses.end());
+  } else if (settings_.location_type ==
+             BreakpointSettings::LocationType::kLine) {
+    printf("TODO(brettw) implement line-based breakpoints.\n");
+    return;
+  }
+
+  // If we get here, something has changed.
+  SyncBackend();
 }
 
-void BreakpointImpl::DidDestroyProcess(Target* target, DestroyReason reason,
-                                       int exit_code) {
-  // When the process exits, disable breakpoints that are address-based since
-  // the addresses will normally change when a process is loaded.
-  // TODO(brettw) when we have symbolic breakpoints, exclude them from this
-  // behavior.
-  if (settings_.location_address)
-    settings_.enabled = false;
-  backend_id_ = 0;
+void BreakpointImpl::WillUnloadModuleSymbols(Process* process,
+                                             LoadedModuleSymbols* module) {
+  // TODO(brettw) need to get the address range of this module and then
+  // remove all breakpoints in that range.
 }
 
 void BreakpointImpl::WillDestroyTarget(Target* target) {
   if (target == settings_.scope_target) {
+    // By the time the target is destroyed, the process should be gone, and
+    // all registrations for breakpoints.
+    FXL_DCHECK(!HasLocations());
+
     // As with threads going away, when the target goes away for a
     // target-scoped breakpoint, convert to a disabled system-wide breakpoint.
-    StopObserving();
     settings_.scope = BreakpointSettings::Scope::kSystem;
     settings_.scope_target = nullptr;
     settings_.scope_thread = nullptr;
     settings_.enabled = false;
-    StartObserving();
   }
 }
 
-Err BreakpointImpl::SendBackendUpdate(
-    std::function<void(const Err&)> callback) {
-  if (!settings_.scope_target)
-    return Err("TODO(brettw) need to support non-target breakpoints.");
-  Process* process = settings_.scope_target->GetProcess();
-  // TODO(brettw) does this need to be deleted???
-  if (!process)
-    return Err();  // Process not running, don't try to set any breakpoints.
+void BreakpointImpl::GlobalDidCreateProcess(Process* process) {
+  if (CouldApplyToProcess(process)) {
+    if (RegisterProcess(process))
+      SyncBackend();
+  }
+}
 
-  if (!backend_id_) {
-    if (!settings_.enabled) {
-      // The breakpoint isn't enabled and there's no backend breakpoint to
-      // clear, don't need to do anything.
+void BreakpointImpl::GlobalWillDestroyProcess(Process* process) {
+  auto found = procs_.find(process);
+  if (found == procs_.end())
+    return;
+
+  if (found->second.observing)
+    process->RemoveObserver(this);
+
+  // Only need to update the backend if there was an address associated with
+  // this process.
+  bool send_update = !found->second.addresses.empty();
+
+  // When the process exits, disable breakpoints that are address-based since
+  // the addresses will normally change when a process is loaded.
+  if (settings_.location_type == BreakpointSettings::LocationType::kAddress) {
+    // Should only have one process for address-based breakpoints.
+    FXL_DCHECK(procs_.size() == 1u);
+    FXL_DCHECK(process->GetTarget() == settings_.scope_target);
+    settings_.enabled = false;
+  }
+
+  procs_.erase(found);
+
+  // Needs to be done after the ProcessRecord is removed.
+  if (send_update)
+    SyncBackend();
+}
+
+void BreakpointImpl::SyncBackend(std::function<void(const Err&)> callback) {
+  bool has_locations = HasLocations();
+
+  if (backend_id_ && !has_locations) {
+    SendBackendRemove(std::move(callback));
+  } else if (has_locations) {
+    SendBackendAddOrChange(std::move(callback));
+  } else {
+    // Backend doesn't know about it and we don't require anything.
+    if (callback) {
       debug_ipc::MessageLoop::Current()->PostTask(
           [callback]() { callback(Err()); });
-      return Err();
     }
+  }
+}
 
-    // Assign a new ID.
+void BreakpointImpl::SendBackendAddOrChange(
+    std::function<void(const Err&)> callback) {
+  if (!backend_id_) {
     backend_id_ = next_breakpoint_id;
     next_breakpoint_id++;
-  } else {
-    // Backend breakpoint exists.
-    if (!settings_.enabled) {
-      // Disable the backend breakpoint.
-      SendBreakpointRemove(process, std::move(callback));
-      return Err();
-    }
   }
-
-  // New or changed breakpoint.
-  SendAddOrChange(process, callback);
-  return Err();
-}
-
-void BreakpointImpl::StopObserving() {
-  if (is_system_observer_) {
-    session()->system().RemoveObserver(this);
-    is_system_observer_ = false;
-  }
-  if (is_target_observer_) {
-    settings_.scope_target->RemoveObserver(this);
-    is_target_observer_ = false;
-  }
-  if (is_process_observer_) {
-    // We should be unregistered when the process is going away.
-    settings_.scope_target->GetProcess()->RemoveObserver(this);
-    is_process_observer_ = false;
-  }
-}
-
-void BreakpointImpl::StartObserving() {
-  // Nothing should be registered (call StopObserving first).
-  FXL_DCHECK(!is_system_observer_ && !is_target_observer_ &&
-             !is_process_observer_);
-
-  // Always watch the system.
-  session()->system().AddObserver(this);
-  is_system_observer_ = true;
-
-  if (settings_.scope == BreakpointSettings::Scope::kTarget ||
-      settings_.scope == BreakpointSettings::Scope::kThread) {
-    settings_.scope_target->AddObserver(this);
-    is_target_observer_ = true;
-  }
-  if (settings_.scope == BreakpointSettings::Scope::kThread) {
-    settings_.scope_thread->GetProcess()->AddObserver(this);
-    is_process_observer_ = true;
-  }
-}
-
-void BreakpointImpl::SendAddOrChange(Process* process,
-                                     std::function<void(const Err&)> callback) {
-  FXL_DCHECK(backend_id_);        // ID should have been assigned by the caller.
-  FXL_DCHECK(settings_.enabled);  // Shouldn't add or change disabled ones.
 
   debug_ipc::AddOrChangeBreakpointRequest request;
   request.breakpoint.breakpoint_id = backend_id_;
   request.breakpoint.stop = SettingsStopToIpcStop(settings_.stop_mode);
 
-  request.breakpoint.locations.resize(1);
-  request.breakpoint.locations[0].process_koid = process->GetKoid();
-  request.breakpoint.locations[0].thread_koid =
-      settings_.scope_thread ? settings_.scope_thread->GetKoid() : 0;
-  request.breakpoint.locations[0].address = settings_.location_address;
+  for (const auto& proc : procs_) {
+    for (uint64_t addr : proc.second.addresses) {
+      debug_ipc::ProcessBreakpointSettings addition;
+      addition.process_koid = proc.first->GetKoid();
 
-  session()
-      ->Send<debug_ipc::AddOrChangeBreakpointRequest,
-             debug_ipc::AddOrChangeBreakpointReply>(request, [
-        callback, breakpoint = weak_factory_.GetWeakPtr()
-      ](const Err& err, debug_ipc::AddOrChangeBreakpointReply reply) {
-        // Be sure to issue the callback even if the breakpoint no longer
-        // exists.
-        if (err.has_error()) {
-          // Transport error. We don't actually know what state the agent is in
-          // since it never got the message. In general this means things were
-          // disconnected and the agent no longer exists, so mark the breakpoint
-          // disabled.
-          if (breakpoint)
-            breakpoint->settings_.enabled = false;
-          if (callback)
-            callback(err);
-        } else if (reply.status != 0) {
-          // Backend error. The protocol specifies that errors adding or
-          // changing
-          // will result in any existing breakpoints with that ID being removed.
-          // So mark the breakpoint disabled but keep the settings to the user
-          // can fix the problem from the current state if desired.
-          if (breakpoint)
-            breakpoint->settings_.enabled = false;
-          if (callback)
-            callback(Err(ErrType::kGeneral, "Breakpoint set error."));
-        } else {
-          // Success.
-          if (callback)
-            callback(Err());
-        }
-      });
+      if (settings_.scope == BreakpointSettings::Scope::kThread)
+        addition.thread_koid = settings_.scope_thread->GetKoid();
+
+      addition.address = addr;
+      request.breakpoint.locations.push_back(addition);
+    }
+  }
+
+  if (settings_.scope == BreakpointSettings::Scope::kThread)
+    FXL_DCHECK(request.breakpoint.locations.size() == 1u);
+
+  session()->remote_api()->AddOrChangeBreakpoint(request, [
+    callback, breakpoint = weak_factory_.GetWeakPtr()
+  ](const Err& err, debug_ipc::AddOrChangeBreakpointReply reply) {
+    // Be sure to issue the callback even if the breakpoint no longer
+    // exists.
+    if (err.has_error()) {
+      // Transport error. We don't actually know what state the agent is in
+      // since it never got the message. In general this means things were
+      // disconnected and the agent no longer exists, so mark the breakpoint
+      // disabled.
+      if (breakpoint)
+        breakpoint->settings_.enabled = false;
+      if (callback)
+        callback(err);
+    } else if (reply.status != 0) {
+      // Backend error. The protocol specifies that errors adding or
+      // changing will result in any existing breakpoints with that ID
+      // being removed. So mark the breakpoint disabled but keep the
+      // settings to the user can fix the problem from the current state if
+      // desired.
+      if (breakpoint)
+        breakpoint->settings_.enabled = false;
+      if (callback)
+        callback(Err(ErrType::kGeneral, "Breakpoint set error."));
+    } else {
+      // Success.
+      if (callback)
+        callback(Err());
+    }
+  });
 }
 
-void BreakpointImpl::SendBreakpointRemove(
-    Process* process, std::function<void(const Err&)> callback) {
-  FXL_DCHECK(!settings_.enabled);  // Caller should have disabled already.
+void BreakpointImpl::SendBackendRemove(
+    std::function<void(const Err&)> callback) {
   FXL_DCHECK(backend_id_);
 
   debug_ipc::RemoveBreakpointRequest request;
   request.breakpoint_id = backend_id_;
 
-  session()
-      ->Send<debug_ipc::RemoveBreakpointRequest,
-             debug_ipc::RemoveBreakpointReply>(
-          request,
-          [callback](const Err& err, debug_ipc::RemoveBreakpointReply reply) {
-            if (callback)
-              callback(Err());
-          });
+  session()->remote_api()->RemoveBreakpoint(
+      request,
+      [callback](const Err& err, debug_ipc::RemoveBreakpointReply reply) {
+        if (callback)
+          callback(err);
+      });
 
   // Indicate the backend breakpoint is gone.
   backend_id_ = 0;
+}
+
+bool BreakpointImpl::CouldApplyToProcess(Process* process) const {
+  // When applied to all processes, we need all notifications.
+  if (settings_.scope == BreakpointSettings::Scope::kSystem)
+    return true;
+
+  // Target- and thread-specific breakpoints only watch their process.
+  return settings_.scope_target == process->GetTarget();
+}
+
+bool BreakpointImpl::HasLocations() const {
+  if (!settings_.enabled)
+    return false;
+
+  for (const auto& proc : procs_) {
+    if (!proc.second.addresses.empty())
+      return true;
+  }
+  return false;
+}
+
+bool BreakpointImpl::RegisterProcess(Process* process) {
+  bool changed = false;
+
+  if (!procs_[process].observing) {
+    procs_[process].observing = true;
+    process->AddObserver(this);
+  }
+
+  // Resolve addresses.
+  ProcessSymbols* symbols = process->GetSymbols();
+  if (settings_.location_type == BreakpointSettings::LocationType::kSymbol) {
+    std::vector<uint64_t> new_addrs =
+        symbols->GetAddressesForFunction(settings_.location_symbol);
+
+    // The ProcessRecord stores sorted addresses (this ensures the comparison
+    // below is valid).
+    std::sort(new_addrs.begin(), new_addrs.end());
+
+    ProcessRecord& record = procs_[process];
+    if (record.addresses != new_addrs) {
+      record.addresses = std::move(new_addrs);
+      changed = true;
+    }
+  } else if (settings_.location_type ==
+             BreakpointSettings::LocationType::kLine) {
+    printf("TODO(brettw) implement line-based breakpoints.\n");
+  }
+  return changed;
 }
 
 }  // namespace zxdb

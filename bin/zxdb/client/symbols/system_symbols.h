@@ -13,7 +13,7 @@
 
 namespace zxdb {
 
-class ModuleSymbolsImpl;
+class ModuleSymbols;
 
 // Tracks a global view of all ModuleSymbols objects. Since each object is
 // independent of load address, we can share these between processes that
@@ -29,10 +29,10 @@ class SystemSymbols {
   class ModuleRef : public fxl::RefCountedThreadSafe<ModuleRef> {
    public:
     ModuleRef(SystemSymbols* system_symbols,
-              std::unique_ptr<ModuleSymbolsImpl> module_symbols);
+              std::unique_ptr<ModuleSymbols> module_symbols);
 
-    ModuleSymbolsImpl* module_symbols() { return module_symbols_.get(); }
-    const ModuleSymbolsImpl* module_symbols() const {
+    ModuleSymbols* module_symbols() { return module_symbols_.get(); }
+    const ModuleSymbols* module_symbols() const {
       return module_symbols_.get();
     }
 
@@ -47,7 +47,7 @@ class SystemSymbols {
     // May be null to indicate teh SystemSymbols object is deleted.
     SystemSymbols* system_symbols_;
 
-    std::unique_ptr<ModuleSymbolsImpl> module_symbols_;
+    std::unique_ptr<ModuleSymbols> module_symbols_;
   };
 
   SystemSymbols();
@@ -61,6 +61,14 @@ class SystemSymbols {
   // Explicitly inserts an ID mapping. Used for unit tests.
   void AddBuildIDToFileMapping(const std::string& build_id,
                                const std::string& file);
+
+  // Injects a ModuleSymbols object for the given build ID. Used for testing.
+  // Normally the test would provide a dummy implementation for ModuleSymbols.
+  // Ownership of the symbols will be transferred to the returned refcounted
+  // ModuleRef. As long as this is alive, the build id -> module mapping will
+  // remain in the SystemSymbols object.
+  fxl::RefPtr<ModuleRef> InjectModuleForTesting(
+      const std::string& build_id, std::unique_ptr<ModuleSymbols> module);
 
   // Retrieves the symbols for the module with the given build ID. If the
   // module's symbols have already been loaded, just puts an owning reference

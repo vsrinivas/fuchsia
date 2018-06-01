@@ -32,9 +32,6 @@ class Breakpoint : public ClientObject {
   virtual void SetSettings(const BreakpointSettings& settings,
                            std::function<void(const Err&)> callback) = 0;
 
-  // Returns the number of times this breakpoint has been hit.
-  virtual int GetHitCount() const = 0;
-
  protected:
   fxl::ObserverList<BreakpointObserver>& observers() { return observers_; }
 

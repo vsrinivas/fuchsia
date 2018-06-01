@@ -12,6 +12,8 @@ static_library("helper") {
     "message_loop.h",
     "stream_buffer.cc",
     "stream_buffer.h",
+    "test_stream_buffer.cc",
+    "test_stream_buffer.h",
   ]
 
   public_deps = [

@@ -300,13 +300,26 @@ std::string DescribeBreakpoint(const ConsoleContext* context,
   std::string scope = BreakpointScopeToString(context, settings);
   std::string stop = BreakpointStopToString(settings.stop_mode);
   const char* enabled = BreakpointEnabledToString(settings.enabled);
-  std::string location =
-      fxl::StringPrintf("0x%" PRIx64, settings.location_address);
+  std::string location = DescribeBreakpointLocation(settings);
 
-  return fxl::StringPrintf("Breakpoint %d on %s, %s, stop=%s, hit=%d, @ %s",
+  return fxl::StringPrintf("Breakpoint %d on %s, %s, stop=%s, @ %s",
                            context->IdForBreakpoint(breakpoint), scope.c_str(),
-                           enabled, stop.c_str(), breakpoint->GetHitCount(),
-                           location.c_str());
+                           enabled, stop.c_str(), location.c_str());
+}
+
+std::string DescribeBreakpointLocation(const BreakpointSettings& settings) {
+  switch (settings.location_type) {
+    case BreakpointSettings::LocationType::kNone:
+      return "<no location>";
+    case BreakpointSettings::LocationType::kLine:
+      return DescribeFileLine(settings.location_line);
+    case BreakpointSettings::LocationType::kSymbol:
+      return settings.location_symbol;
+    case BreakpointSettings::LocationType::kAddress:
+      return fxl::StringPrintf("0x%" PRIx64, settings.location_address);
+  }
+  FXL_NOTREACHED();
+  return std::string();
 }
 
 std::string DescribeLocation(const Location& loc) {
@@ -314,9 +327,12 @@ std::string DescribeLocation(const Location& loc) {
     return "<invalid address>";
   if (!loc.has_symbols())
     return fxl::StringPrintf("0x%" PRIx64, loc.address());
-  return fxl::StringPrintf("0x%" PRIx64 " @ %s:%d", loc.address(),
-                           loc.file_line().GetFileNamePart().c_str(),
-                           loc.file_line().line());
+  return fxl::StringPrintf("0x%" PRIx64 " @ %s", loc.address(),
+                           DescribeFileLine(loc.file_line()).c_str());
+}
+
+std::string DescribeFileLine(const FileLine& file_line) {
+  return fxl::StringPrintf("%s:%d", file_line.file().c_str(), file_line.line());
 }
 
 void FormatColumns(const std::vector<ColSpec>& spec,

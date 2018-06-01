@@ -28,6 +28,11 @@ class TargetImpl : public Target {
   // a real copy, because any process information is not cloned.
   std::unique_ptr<TargetImpl> Clone(SystemImpl* system);
 
+  // Tests can use these functions to create and destroy targets for mocking
+  // purposes without making any IPC.
+  void CreateProcessForTesting(uint64_t koid, const std::string& process_name);
+  void DestroyProcessForTesting();
+
   // Target implementation:
   State GetState() const override;
   Process* GetProcess() const override;

@@ -15,6 +15,7 @@
 
 #include "garnet/bin/zxdb/client/arch_info.h"
 #include "garnet/bin/zxdb/client/process_impl.h"
+#include "garnet/bin/zxdb/client/remote_api_impl.h"
 #include "garnet/bin/zxdb/client/thread_impl.h"
 #include "garnet/lib/debug_ipc/helper/buffered_fd.h"
 #include "garnet/lib/debug_ipc/helper/stream_buffer.h"
@@ -267,7 +268,13 @@ Err Session::PendingConnection::DoConnectBackgroundThread() {
 
 // Session ---------------------------------------------------------------------
 
-Session::Session() : system_(this), weak_factory_(this) {}
+Session::Session()
+    : remote_api_(std::make_unique<RemoteAPIImpl>(this)),
+      system_(this),
+      weak_factory_(this) {}
+
+Session::Session(std::unique_ptr<RemoteAPI> remote_api)
+    : remote_api_(std::move(remote_api)), system_(this), weak_factory_(this) {}
 
 Session::Session(debug_ipc::StreamBuffer* stream)
     : stream_(stream), system_(this), weak_factory_(this) {}

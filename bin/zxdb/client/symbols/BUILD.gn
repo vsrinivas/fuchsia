@@ -57,6 +57,19 @@ static_library("symbols") {
   ]
 }
 
+static_library("test_support") {
+  testonly = true
+
+  sources = [
+    "mock_module_symbols.cc",
+    "mock_module_symbols.h",
+  ]
+
+  deps = [
+    ":symbols",
+  ]
+}
+
 source_set("tests") {
   testonly = true
 
@@ -71,6 +84,7 @@ source_set("tests") {
 
   deps = [
     ":symbols",
+    ":test_support",
     "//third_party/googletest:gtest",
     "//third_party/llvm/lib/DebugInfo",
   ]

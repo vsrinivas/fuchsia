@@ -259,7 +259,7 @@ void ListBreakpoints(ConsoleContext* context) {
     row.push_back(BreakpointScopeToString(context, settings));
     row.push_back(BreakpointStopToString(settings.stop_mode));
     row.push_back(BreakpointEnabledToString(settings.enabled));
-    row.push_back(fxl::StringPrintf("0x%" PRIx64, settings.location_address));
+    row.push_back(DescribeBreakpointLocation(settings));
   }
 
   OutputBuffer out;

@@ -97,8 +97,8 @@ class ConsoleContext : public ProcessObserver,
 
   // TargetObserver implementation:
   void DidCreateProcess(Target* target, Process* process) override;
-  void DidDestroyProcess(Target* target, DestroyReason reason,
-                         int exit_code) override;
+  void WillDestroyProcess(Target* target, Process* process,
+                          DestroyReason reason, int exit_code) override;
 
   // ProcessObserver implementation:
   void DidCreateThread(Process* process, Thread* thread) override;

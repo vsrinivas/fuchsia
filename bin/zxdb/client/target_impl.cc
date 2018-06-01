@@ -30,6 +30,17 @@ std::unique_ptr<TargetImpl> TargetImpl::Clone(SystemImpl* system) {
   return result;
 }
 
+void TargetImpl::CreateProcessForTesting(uint64_t koid,
+                                         const std::string& process_name) {
+  FXL_DCHECK(state_ == State::kNone);
+  state_ = State::kStarting;
+  OnLaunchOrAttachReply(Callback(), Err(), koid, 0, process_name);
+}
+
+void TargetImpl::DestroyProcessForTesting() {
+  OnKillOrDetachReply(Err(), 0, Callback());
+}
+
 Target::State TargetImpl::GetState() const { return state_; }
 
 Process* TargetImpl::GetProcess() const { return process_.get(); }
@@ -129,13 +140,16 @@ void TargetImpl::Detach(Callback callback) {
 
 void TargetImpl::OnProcessExiting(int return_code) {
   FXL_DCHECK(state_ == State::kRunning);
-
   state_ = State::kNone;
-  process_.reset();
+
+  system_->NotifyWillDestroyProcess(process_.get());
   for (auto& observer : observers()) {
-    observer.DidDestroyProcess(this, TargetObserver::DestroyReason::kExit,
-                               return_code);
+    observer.WillDestroyProcess(this, process_.get(),
+                                TargetObserver::DestroyReason::kExit,
+                                return_code);
   }
+
+  process_.reset();
 }
 
 // static
@@ -184,6 +198,7 @@ void TargetImpl::OnLaunchOrAttachReply(Callback callback, const Err& err,
     callback(GetWeakPtr(), issue_err);
 
   if (state_ == State::kRunning) {
+    system_->NotifyDidCreateProcess(process_.get());
     for (auto& observer : observers())
       observer.DidCreateProcess(this, process_.get());
   }
@@ -205,10 +220,14 @@ void TargetImpl::OnKillOrDetachReply(const Err& err, uint32_t status,
   } else {
     // Successfully detached.
     state_ = State::kNone;
-    process_.reset();
+    system_->NotifyWillDestroyProcess(process_.get());
+
+    // Keep the process alive for the observer call, but remove it from the
+    // target as per the observer specification.
+    std::unique_ptr<ProcessImpl> doomed_process = std::move(process_);
     for (auto& observer : observers()) {
-      observer.DidDestroyProcess(this, TargetObserver::DestroyReason::kDetach,
-                                 0);
+      observer.WillDestroyProcess(this, doomed_process.get(),
+                                  TargetObserver::DestroyReason::kDetach, 0);
     }
   }
 

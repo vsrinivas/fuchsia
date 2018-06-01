@@ -45,7 +45,7 @@ std::string GetIdFilePath() {
 
 SystemSymbols::ModuleRef::ModuleRef(
     SystemSymbols* system_symbols,
-    std::unique_ptr<ModuleSymbolsImpl> module_symbols)
+    std::unique_ptr<ModuleSymbols> module_symbols)
     : system_symbols_(system_symbols),
       module_symbols_(std::move(module_symbols)) {}
 
@@ -105,6 +105,17 @@ bool SystemSymbols::LoadBuildIDFile(std::string* msg) {
 void SystemSymbols::AddBuildIDToFileMapping(const std::string& build_id,
                                             const std::string& file) {
   build_id_to_file_[build_id] = file;
+}
+
+fxl::RefPtr<SystemSymbols::ModuleRef> SystemSymbols::InjectModuleForTesting(
+    const std::string& build_id, std::unique_ptr<ModuleSymbols> module) {
+  // Can't inject a module that already exists.
+  FXL_DCHECK(modules_.find(build_id) == modules_.end());
+
+  fxl::RefPtr<ModuleRef> result =
+      fxl::MakeRefCounted<ModuleRef>(this, std::move(module));
+  modules_[build_id] = result.get();
+  return result;
 }
 
 Err SystemSymbols::GetModule(const std::string& name_for_msg,

@@ -28,6 +28,12 @@ class SystemImpl : public System {
 
   SystemSymbols& symbols() { return symbols_; }
 
+  // Broadcasts the global process notifications.
+  void NotifyDidCreateProcess(Process* process);
+  void NotifyWillDestroyProcess(Process* process);
+
+  std::vector<TargetImpl*> GetTargetImpls() const;
+
   // System implementation:
   std::vector<Target*> GetTargets() const override;
   std::vector<Breakpoint*> GetBreakpoints() const override;

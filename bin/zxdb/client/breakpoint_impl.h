@@ -4,6 +4,8 @@
 
 #pragma once
 
+#include <map>
+
 #include "garnet/bin/zxdb/client/breakpoint.h"
 #include "garnet/bin/zxdb/client/process_observer.h"
 #include "garnet/bin/zxdb/client/system_observer.h"
@@ -14,55 +16,57 @@ namespace zxdb {
 
 class BreakpointImpl : public Breakpoint,
                        public ProcessObserver,
-                       public TargetObserver,
                        public SystemObserver {
  public:
-  BreakpointImpl(Session* session);
+  explicit BreakpointImpl(Session* session);
   ~BreakpointImpl() override;
 
   // Breakpoint implementation:
   BreakpointSettings GetSettings() const override;
   void SetSettings(const BreakpointSettings& settings,
                    std::function<void(const Err&)> callback) override;
-  int GetHitCount() const override;
 
  private:
-  // On failure, returns the error and doesn't do anything with the callback.
-  // On success, schedules the callback to run.
-  Err SendBackendUpdate(std::function<void(const Err&)> callback);
-
-  // Attaches and detaches from the events that this object observes.
-  void StopObserving();
-  void StartObserving();
+  struct ProcessRecord;
 
   // ProcessObserver.
   void WillDestroyThread(Process* process, Thread* thread) override;
-
-  // TargetObserver.
-  void DidCreateProcess(Target* target, Process* process) override;
-  void DidDestroyProcess(Target* target, DestroyReason reason,
-                         int exit_code) override;
+  void DidLoadModuleSymbols(Process* process,
+                            LoadedModuleSymbols* module) override;
+  void WillUnloadModuleSymbols(Process* process,
+                               LoadedModuleSymbols* module) override;
 
   // SystemObserver.
   void WillDestroyTarget(Target* target) override;
+  void GlobalDidCreateProcess(Process* process) override;
+  void GlobalWillDestroyProcess(Process* process) override;
 
-  void SendAddOrChange(Process* process,
-                       std::function<void(const Err&)> callback);
-  void SendBreakpointRemove(Process* process,
-                            std::function<void(const Err&)> callback);
+  void SyncBackend(std::function<void(const Err&)> callback =
+                       std::function<void(const Err&)>());
+  void SendBackendAddOrChange(std::function<void(const Err&)> callback);
+  void SendBackendRemove(std::function<void(const Err&)> callback);
+
+  // Returns true if the breakpoint could possibly apply to the given process
+  // (if things like symbols aren't found, it still may not necessarily apply).
+  bool CouldApplyToProcess(Process* process) const;
+
+  // Returns true if there are any enabled breakpoint locations that the
+  // backend needs to know about.
+  bool HasLocations() const;
+
+  // Given a process which is new or might apply to us for the first time,
+  // Returns true if any addresses were resolved.
+  bool RegisterProcess(Process* process);
 
   BreakpointSettings settings_;
 
-  // TODO(brettw) this assumes exactly one backend breakpoint in one process.
-  // A symbolic breakpoitn can have multiple locations and be in multiple
-  // processes. 0 means no current backend breakpoint.
+  // Every process which this breakpoint can apply to is in this map, even if
+  // there are no addresses assocaited with it.
+  std::map<Process*, ProcessRecord> procs_;
+
+  // ID used to refer to this in the backend. 0 means no current backend
+  // breakpoint.
   uint32_t backend_id_ = 0;
-
-  int hit_count_ = 0;
-
-  bool is_system_observer_ = false;
-  bool is_target_observer_ = false;
-  bool is_process_observer_ = false;
 
   fxl::WeakPtrFactory<BreakpointImpl> weak_factory_;
 

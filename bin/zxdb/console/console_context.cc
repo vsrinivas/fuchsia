@@ -295,8 +295,8 @@ void ConsoleContext::DidCreateProcess(Target* target, Process* process) {
   record->next_thread_id = 1;
 }
 
-void ConsoleContext::DidDestroyProcess(Target* target, DestroyReason reason,
-                                       int exit_code) {
+void ConsoleContext::WillDestroyProcess(Target* target, Process* process,
+                                        DestroyReason reason, int exit_code) {
   TargetRecord* record = GetTargetRecord(target);
   if (!record) {
     FXL_NOTREACHED();

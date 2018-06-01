@@ -37,6 +37,10 @@ static_library("client") {
     "process.cc",
     "process_impl.cc",
     "process_impl.h",
+    "remote_api.cc",
+    "remote_api.h",
+    "remote_api_impl.cc",
+    "remote_api_impl.h",
     "session.cc",
     "system.cc",
     "system_impl.cc",
@@ -82,12 +86,14 @@ static_library("common") {
 source_set("tests") {
   testonly = true
   sources = [
+    "breakpoint_impl_unittest.cc",
     "disassembler_unittest.cc",
     "memory_dump_unittest.cc",
   ]
 
   deps = [
     ":client",
+    "symbols:test_support",
     "symbols:tests",
     "//third_party/googletest:gtest",
   ]

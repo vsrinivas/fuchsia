@@ -67,7 +67,9 @@ std::string DescribeFrame(const Frame* frame, int id);
 std::string DescribeBreakpoint(const ConsoleContext* context,
                                const Breakpoint* breakpoint);
 
+std::string DescribeBreakpointLocation(const BreakpointSettings& settings);
 std::string DescribeLocation(const Location& loc);
+std::string DescribeFileLine(const FileLine& file_line);
 
 enum class Align { kLeft, kRight };
 

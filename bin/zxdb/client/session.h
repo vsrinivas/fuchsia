@@ -31,6 +31,8 @@ namespace zxdb {
 
 class ArchInfo;
 class ProcessImpl;
+class RemoteAPI;
+class RemoteAPIImpl;
 class ThreadImpl;
 
 // The session object manages the connection with the remote debug agent.
@@ -40,11 +42,18 @@ class Session {
   // the callback associated with a Connect() call is issued.
   Session();
 
+  // Creates a session using a custom RemoteAPI implementation. Use for tests
+  // to mock out sending IPC messages.
+  explicit Session(std::unique_ptr<RemoteAPI> remote_api);
+
   // Creates with a previously-allocated connection. The pointer must outlive
   // this class. In this mode, the stream can not be disconnected.
   explicit Session(debug_ipc::StreamBuffer* stream);
 
   ~Session();
+
+  // The RempteAPI for sending messages to the debug_agent.
+  RemoteAPI* remote_api() { return remote_api_.get(); }
 
   // Notification that data is available to be read on the StreamBuffer.
   void OnStreamReadable();
@@ -69,6 +78,15 @@ class Session {
   // Access to the singleton corresponding to the debugged system.
   System& system() { return system_; }
 
+  // Provide access to the underlying system implementation. This is needed
+  // for some client tests, but should not be used outside of the client
+  // directory.
+  //
+  // TODO(brettw) probably this class needs to be separated into Session and
+  // SessionImpl and which one of those you have controls which System object
+  // you can get.
+  SystemImpl& system_impl() { return system_; }
+
   // Architecture of the attached system. Will be "kUnknown" when not
   // connected.
   debug_ipc::Arch arch() const { return arch_; }
@@ -92,6 +110,7 @@ class Session {
  private:
   class PendingConnection;
   friend PendingConnection;
+  friend RemoteAPIImpl;
 
   // Nonspecific callback type. Implemented by SessionDispatchCallback (with
   // the type-specific parameter pre-bound). The uint32_t is the transaction
@@ -119,6 +138,8 @@ class Session {
   // This could be null when the connection_storage_ isn't when we're waiting
   // for the initial connection.
   debug_ipc::StreamBuffer* stream_ = nullptr;
+
+  std::unique_ptr<RemoteAPI> remote_api_;
 
   // When using non-persistent connections (no connection passed in via the
   // constructor), this will hold the underlying OS connection that is used
