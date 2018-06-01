@@ -695,6 +695,12 @@ zx_status_t Station::HandleDataFrame(const DataFrame<LlcHeader>& frame) {
     // PS-POLL if there are more buffered unicast frames.
     if (hdr->fc.more_data() && hdr->addr1.IsUcast()) { SendPsPoll(); }
 
+    if (frame.hdr()->fc.subtype() == DataSubtype::kQosdata &&
+        hdr->qos_ctrl()->amsdu_present() == 1) {
+        // TODO(porce): Adopt FrameHandler 2.0
+        return HandleAmsduFrame(frame);
+    }
+
     ZX_DEBUG_ASSERT(frame.body_len() >= sizeof(LlcHeader));
     if (frame.body_len() < sizeof(LlcHeader)) {
         errorf("Inbound LLC frame too short (%zu bytes). Drop.", frame.body_len());
@@ -706,6 +712,11 @@ zx_status_t Station::HandleDataFrame(const DataFrame<LlcHeader>& frame) {
 zx_status_t Station::HandleLlcFrame(const LlcHeader& llc_frame, size_t llc_frame_len,
                                     const common::MacAddr& dest, const common::MacAddr& src) {
     auto llc_payload_len = llc_frame_len - sizeof(LlcHeader);
+
+    finspect("Inbound LLC frame: len %zu\n", llc_frame_len);
+    finspect("  llc hdr: %s\n", debug::Describe(llc_frame).c_str());
+    auto payload = reinterpret_cast<const uint8_t*>(&llc_frame) + sizeof(LlcHeader);
+    finspect("  llc payload: %s\n", debug::HexDump(payload, llc_payload_len).c_str());
 
     // Prepare a packet
     const size_t eth_len = llc_payload_len + sizeof(EthernetII);
@@ -728,6 +739,7 @@ zx_status_t Station::HandleLlcFrame(const LlcHeader& llc_frame, size_t llc_frame
 }
 
 zx_status_t Station::HandleAmsduFrame(const DataFrame<LlcHeader>& frame) {
+    // TODO(porce): Define A-MSDU or MSDU signature, and avoid forceful conversion.
     debugfn();
 
     ZX_DEBUG_ASSERT(frame.hdr()->fc.subtype() >= DataSubtype::kQosdata);
@@ -745,15 +757,15 @@ zx_status_t Station::HandleAmsduFrame(const DataFrame<LlcHeader>& frame) {
         return ZX_ERR_STOP;
     }
 
+    // LLC frame should be interpreted as A-MSDU
     auto amsdu = reinterpret_cast<const uint8_t*>(frame.body());
 
-    size_t offset = 0;        // Tracks up to which point of byte stream is parsed.
-    size_t offset_prev = -1;  // For debugging. Catch buggy situation
+    finspect("Inbound AMSDU: len %zu\n", amsdu_len);
+
+    size_t offset = 0;  // Tracks up to which point of byte stream is parsed.
 
     while (offset < amsdu_len) {
-        ZX_DEBUG_ASSERT(offset > offset_prev);  // Otherwise infinite loop
-        offset_prev = offset;
-
+        size_t offset_prev = offset;
         auto subframe = reinterpret_cast<const AmsduSubframe*>(amsdu + offset);
 
         if (!(offset + sizeof(AmsduSubframeHeader) <= amsdu_len)) {
@@ -763,6 +775,13 @@ zx_status_t Station::HandleAmsduFrame(const DataFrame<LlcHeader>& frame) {
                 amsdu_len, offset, offset_prev, sizeof(AmsduSubframeHeader));
             return ZX_ERR_STOP;
         }
+
+        finspect("amsdu subframe: %s\n", debug::Describe(*subframe).c_str());
+        finspect(
+            "amsdu subframe dump: %s\n",
+            debug::HexDump(reinterpret_cast<const uint8_t*>(subframe), sizeof(AmsduSubframeHeader))
+                .c_str());
+
         offset += sizeof(AmsduSubframeHeader);
         auto msdu_len = subframe->hdr.msdu_len();
 
@@ -785,6 +804,8 @@ zx_status_t Station::HandleAmsduFrame(const DataFrame<LlcHeader>& frame) {
         // Skip by zero-padding
         bool is_last_subframe = (offset == amsdu_len);
         offset += subframe->PaddingLen(is_last_subframe);
+
+        ZX_DEBUG_ASSERT(offset > offset_prev);  // Otherwise infinite loop
     }
 
     return ZX_OK;
@@ -1132,6 +1153,7 @@ zx_status_t Station::PostChannelChange() {
 }
 
 void Station::DumpDataFrame(const DataFrame<LlcHeader>& frame) {
+    // TODO(porce): Should change the API signature to MSDU
     const common::MacAddr& mymac = device_->GetState()->address();
 
     auto hdr = frame.hdr();
@@ -1147,13 +1169,11 @@ void Station::DumpDataFrame(const DataFrame<LlcHeader>& frame) {
 
     if (!is_interesting) { return; }
 
-    size_t payload_len = frame.body_len() - sizeof(LlcHeader);
-    auto llc = frame.body();
+    auto msdu = reinterpret_cast<const uint8_t*>(frame.body());
 
     finspect("Inbound data frame: len %zu\n", frame.len());
     finspect("  wlan hdr: %s\n", debug::Describe(*hdr).c_str());
-    finspect("  llc  hdr: %s\n", debug::Describe(*llc).c_str());
-    finspect("  payload : %s\n", debug::HexDump(llc->payload, payload_len).c_str());
+    finspect("  msdu    : %s\n", debug::HexDump(msdu, frame.body_len()).c_str());
 }
 
 zx_status_t Station::SetPowerManagementMode(bool ps_mode) {
