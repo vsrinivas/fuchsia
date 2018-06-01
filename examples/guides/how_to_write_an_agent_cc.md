@@ -130,7 +130,7 @@ interface(s) it provides.
 ```c++
 int main(int /*argc*/, const char** /*argv*/) {
   fsl::MessageLoop loop;
-  auto context = component::StartupContext::CreateFromStartupInfo();
+  auto context = fuchsia::sys::StartupContext::CreateFromStartupInfo();
   fuchsia::modular::AgentDriver<simple_agent::SimpleAgent> driver(
       context.get(), [&loop] { loop.QuitNow(); });
   loop.Run();

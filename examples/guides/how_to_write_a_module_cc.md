@@ -108,7 +108,7 @@ message_receiver_ = std::make_unique<modular::MessageReceiverClient>(
 ```c++
 int main(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigMakeDefault);
-  auto context = component::StartupContext::CreateFromStartupInfo();
+  auto context = fuchsia::sys::StartupContext::CreateFromStartupInfo();
   modular::ModuleDriver<simple::SimpleModule> driver(context.get(),
                                                      [&loop] { loop.Quit(); });
   loop.Run();
