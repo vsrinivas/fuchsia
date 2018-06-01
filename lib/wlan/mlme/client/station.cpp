@@ -1282,7 +1282,7 @@ bool Station::IsAmsduRxReady() const {
     // QoS field in MPDU header, and the use of A-MSDU frame is optional in flight-time,
     // setting "A-MSDU Supported" both in ADDBA Request and Response is deemed to be most
     // interoperable way.
-    return false;
+    return true;
 }
 
 HtCapabilities Station::BuildHtCapabilities() const {
