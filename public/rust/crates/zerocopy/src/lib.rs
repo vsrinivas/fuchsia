@@ -2,8 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![no_std]
+#![cfg_attr(not(test), no_std)]
 
+#[cfg(test)]
+extern crate core;
+
+use core::fmt::{self, Debug, Display, Formatter};
 use core::marker::PhantomData;
 use core::mem;
 use core::ops::{Deref, DerefMut};
@@ -174,6 +178,27 @@ where
         Some((LayoutVerified(bytes, PhantomData), rest))
     }
 
+    /// Construct a new `LayoutVerified` from the suffix of a byte slice.
+    ///
+    /// `new_from_suffix` verifies that `bytes.len() >= size_of::<T>()` and that
+    /// the last `size_of::<T>()` bytes of `bytes` are aligned to
+    /// `align_of::<T>()`. It consumes the last `size_of::<T>()` bytes from
+    /// `bytes` to construct a `LayoutVerified`, and returns the preceding bytes
+    /// to the caller. If either the length or alignment checks fail, it returns
+    /// `None`.
+    #[inline]
+    pub fn new_from_suffix(bytes: B) -> Option<(LayoutVerified<B, T>, B)> {
+        let bytes_len = bytes.len();
+        if bytes_len < mem::size_of::<T>() {
+            return None;
+        }
+        let (prefix, bytes) = bytes.split_at(bytes_len - mem::size_of::<T>());
+        if !aligned_to(bytes.deref(), mem::align_of::<T>()) {
+            return None;
+        }
+        Some((LayoutVerified(bytes, PhantomData), prefix))
+    }
+
     #[inline]
     pub fn bytes(&self) -> &[u8] {
         &self.0
@@ -214,6 +239,23 @@ where
         let (bytes, rest) = bytes.split_at(mem::size_of::<T>());
         Some((LayoutVerified(bytes, PhantomData), rest))
     }
+
+    /// Construct a new `LayoutVerified` from the suffix of a byte slice for a
+    /// type with no alignment requirement.
+    ///
+    /// `new_unaligned_from_suffix` verifies that `bytes.len() >=
+    /// size_of::<T>()`. It consumes the last `size_of::<T>()` bytes from
+    /// `bytes` to construct a `LayoutVerified`, and returns the preceding bytes
+    /// to the caller. If the length check fails, it returns `None`.
+    #[inline]
+    pub fn new_unaligned_from_suffix(bytes: B) -> Option<(LayoutVerified<B, T>, B)> {
+        let bytes_len = bytes.len();
+        if bytes_len < mem::size_of::<T>() {
+            return None;
+        }
+        let (prefix, bytes) = bytes.split_at(bytes_len - mem::size_of::<T>());
+        Some((LayoutVerified(bytes, PhantomData), prefix))
+    }
 }
 
 fn aligned_to(bytes: &[u8], align: usize) -> bool {
@@ -249,8 +291,32 @@ where
     }
 }
 
+impl<T, B> Display for LayoutVerified<B, T>
+where
+    B: ByteSlice,
+    T: FromBytes + Display,
+{
+    fn fmt(&self, fmt: &mut Formatter) -> fmt::Result {
+        let inner: &T = self;
+        inner.fmt(fmt)
+    }
+}
+
+impl<T, B> Debug for LayoutVerified<B, T>
+where
+    B: ByteSlice,
+    T: FromBytes + Debug,
+{
+    fn fmt(&self, fmt: &mut Formatter) -> fmt::Result {
+        let inner: &T = self;
+        fmt.debug_tuple("LayoutVerified").field(&inner).finish()
+    }
+}
+
 mod sealed {
     pub trait Sealed {}
+    impl<'a> Sealed for &'a [u8] {}
+    impl<'a> Sealed for &'a mut [u8] {}
 }
 
 // ByteSlice abstract over &[u8] and &mut [u8]. We rely on various behaviors of
@@ -270,8 +336,6 @@ pub unsafe trait ByteSlice: Deref<Target = [u8]> + Sized + self::sealed::Sealed 
     fn split_at(self, mid: usize) -> (Self, Self);
 }
 
-impl<'a> self::sealed::Sealed for &'a [u8] {}
-impl<'a> self::sealed::Sealed for &'a mut [u8] {}
 unsafe impl<'a> ByteSlice for &'a [u8] {
     fn as_ptr(&self) -> *const u8 {
         <[u8]>::as_ptr(&self)
@@ -367,49 +431,83 @@ mod tests {
 
     #[test]
     fn test_new() {
-        // test that a properly-aligned, properly-sized buffer works for new and
-        // new_from_preifx, and that new_prefix returns an empty slice
+        // test that a properly-aligned, properly-sized buffer works for new,
+        // new_from_preifx, and new_from_suffix, and that new_from_prefix and
+        // new_from_suffix return empty slices
 
         // a buffer with an alignment of 8
         let mut buf = AlignedBuffer::<u64, [u8; 8]>::default();
         // buf.buf should be aligned to 8, so this should always succeed
         test_new_helper(LayoutVerified::<_, u64>::new(&mut buf.buf[..]).unwrap());
         buf.clear_buf();
-        let (lv, rest) = LayoutVerified::<_, u64>::new_from_prefix(&mut buf.buf[..]).unwrap();
-        assert!(rest.is_empty());
+        {
+            // in a block so that lv and rest don't live too long
+            let (lv, rest) = LayoutVerified::<_, u64>::new_from_prefix(&mut buf.buf[..]).unwrap();
+            assert!(rest.is_empty());
+            test_new_helper(lv);
+        }
+        buf.clear_buf();
+        let (lv, prefix) = LayoutVerified::<_, u64>::new_from_suffix(&mut buf.buf[..]).unwrap();
+        assert!(prefix.is_empty());
         test_new_helper(lv);
 
-        // test that an unaligned, properly-sized buffer works for new_unaligned
-        // and new_unaligned_from_prefix, and that new_unaligned_from_prefix
-        // returns an empty slice
+        // test that an unaligned, properly-sized buffer works for
+        // new_unaligned, new_unaligned_from_prefix, and
+        // new_unaligned_from_suffix, and that new_unaligned_from_prefix
+        // new_unaligned_from_suffix return empty slices
 
         let mut buf = [0u8; 8];
         test_new_helper_unaligned(
             LayoutVerified::<_, [u8; 8]>::new_unaligned(&mut buf[..]).unwrap(),
         );
         buf = [0u8; 8];
-        let (lv, rest) =
-            LayoutVerified::<_, [u8; 8]>::new_unaligned_from_prefix(&mut buf[..]).unwrap();
-        assert!(rest.is_empty());
+        {
+            // in a block so that lv and rest don't live too long
+            let (lv, rest) =
+                LayoutVerified::<_, [u8; 8]>::new_unaligned_from_prefix(&mut buf[..]).unwrap();
+            assert!(rest.is_empty());
+            test_new_helper_unaligned(lv);
+        }
+        buf = [0u8; 8];
+        let (lv, prefix) =
+            LayoutVerified::<_, [u8; 8]>::new_unaligned_from_suffix(&mut buf[..]).unwrap();
+        assert!(prefix.is_empty());
         test_new_helper_unaligned(lv);
 
         // test that a properly-aligned, overly-sized buffer works for
-        // new_from_prefix, and that it returns the remainder of the slice
+        // new_from_prefix and new_from_suffix, and that they return the
+        // remainder and prefix of the slice respectively
 
         let mut buf = AlignedBuffer::<u64, [u8; 16]>::default();
+        {
+            // in a block so that lv and rest don't live too long
+            // buf.buf should be aligned to 8, so this should always succeed
+            let (lv, rest) = LayoutVerified::<_, u64>::new_from_prefix(&mut buf.buf[..]).unwrap();
+            assert_eq!(rest.len(), 8);
+            test_new_helper(lv);
+        }
+        buf.clear_buf();
         // buf.buf should be aligned to 8, so this should always succeed
-        let (lv, rest) = LayoutVerified::<_, u64>::new_from_prefix(&mut buf.buf[..]).unwrap();
-        assert_eq!(rest.len(), 8);
+        let (lv, prefix) = LayoutVerified::<_, u64>::new_from_suffix(&mut buf.buf[..]).unwrap();
+        assert_eq!(prefix.len(), 8);
         test_new_helper(lv);
 
         // test than an unaligned, overly-sized buffer works for
-        // new_unaligned_from_prefix, and that it returns the remainder of the
-        // slice
+        // new_unaligned_from_prefix and new_unaligned_from_suffix, and that
+        // they return the remainder and prefix of the slice respectively
 
         let mut buf = [0u8; 16];
-        let (lv, rest) =
-            LayoutVerified::<_, [u8; 8]>::new_unaligned_from_prefix(&mut buf[..]).unwrap();
-        assert_eq!(rest.len(), 8);
+        {
+            // in a block so that lv and rest don't live too long
+            let (lv, rest) =
+                LayoutVerified::<_, [u8; 8]>::new_unaligned_from_prefix(&mut buf[..]).unwrap();
+            assert_eq!(rest.len(), 8);
+            test_new_helper_unaligned(lv);
+        }
+        buf = [0u8; 16];
+        let (lv, prefix) =
+            LayoutVerified::<_, [u8; 8]>::new_unaligned_from_suffix(&mut buf[..]).unwrap();
+        assert_eq!(prefix.len(), 8);
         test_new_helper_unaligned(lv);
     }
 
@@ -431,7 +529,9 @@ mod tests {
         assert!(LayoutVerified::<_, u64>::new(&buf.buf[..]).is_none());
         assert!(LayoutVerified::<_, [u8; 8]>::new_unaligned(&buf.buf[..]).is_none());
         assert!(LayoutVerified::<_, u64>::new_from_prefix(&buf.buf[..]).is_none());
+        assert!(LayoutVerified::<_, u64>::new_from_suffix(&buf.buf[..]).is_none());
         assert!(LayoutVerified::<_, [u8; 8]>::new_unaligned_from_prefix(&buf.buf[..]).is_none());
+        assert!(LayoutVerified::<_, [u8; 8]>::new_unaligned_from_suffix(&buf.buf[..]).is_none());
 
         // fail because the alignment is insufficient
 
@@ -441,5 +541,16 @@ mod tests {
         // should succeed) but an alignment of only 4, which is insufficient
         assert!(LayoutVerified::<_, u64>::new(&buf.buf[4..]).is_none());
         assert!(LayoutVerified::<_, u64>::new_from_prefix(&buf.buf[4..]).is_none());
+        // slicing from 4 should be unnecessary because new_from_suffix uses the
+        // suffix of the slice
+        assert!(LayoutVerified::<_, u64>::new_from_suffix(&buf.buf[..]).is_none());
+    }
+
+    #[test]
+    fn test_display_debug() {
+        let buf = AlignedBuffer::<u64, [u8; 8]>::default();
+        let lv = LayoutVerified::<_, u64>::new(&buf.buf[..]).unwrap();
+        assert_eq!(format!("{}", lv), "0");
+        assert_eq!(format!("{:?}", lv), "LayoutVerified(0)");
     }
 }
