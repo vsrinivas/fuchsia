@@ -13,6 +13,7 @@
 #include "garnet/bin/mdns/service/mdns_names.h"
 #include "lib/app/cpp/startup_context.h"
 #include "lib/fsl/types/type_converters.h"
+#include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/type_converter.h"
 
@@ -210,9 +211,9 @@ void MdnsServiceImpl::SetVerbose(bool value) { mdns_.SetVerbose(value); }
 
 MdnsServiceImpl::Subscriber::Subscriber(
     fidl::InterfaceRequest<MdnsServiceSubscription> request,
-    const fxl::Closure& deleter)
+    fit::closure deleter)
     : binding_(this, std::move(request)) {
-  binding_.set_error_handler([this, deleter]() {
+  binding_.set_error_handler([this, deleter = std::move(deleter)]() {
     binding_.set_error_handler(nullptr);
     deleter();
   });
@@ -279,16 +280,16 @@ void MdnsServiceImpl::SimplePublisher::ReportSuccess(bool success) {
 
 void MdnsServiceImpl::SimplePublisher::GetPublication(
     bool query, const std::string& subtype,
-    const std::function<void(std::unique_ptr<Mdns::Publication>)>& callback) {
+    fit::function<void(std::unique_ptr<Mdns::Publication>)> callback) {
   callback(Mdns::Publication::Create(port_, text_));
 }
 
 MdnsServiceImpl::ResponderPublisher::ResponderPublisher(
-    MdnsResponderPtr responder, const fxl::Closure& deleter)
+    MdnsResponderPtr responder, fit::closure deleter)
     : responder_(std::move(responder)) {
   FXL_DCHECK(responder_);
 
-  responder_.set_error_handler([this, deleter]() {
+  responder_.set_error_handler([this, deleter = std::move(deleter)]() {
     responder_.set_error_handler(nullptr);
     deleter();
   });
@@ -302,12 +303,12 @@ void MdnsServiceImpl::ResponderPublisher::ReportSuccess(bool success) {
 
 void MdnsServiceImpl::ResponderPublisher::GetPublication(
     bool query, const std::string& subtype,
-    const std::function<void(std::unique_ptr<Mdns::Publication>)>& callback) {
+    fit::function<void(std::unique_ptr<Mdns::Publication>)> callback) {
   FXL_DCHECK(responder_);
   responder_->GetPublication(query, subtype,
-                             [callback](MdnsPublicationPtr publication_ptr) {
+                             fxl::MakeCopyable([callback = std::move(callback)](MdnsPublicationPtr publication_ptr) {
                                callback(MdnsFidlUtil::Convert(publication_ptr));
-                             });
+                             }));
 }
 
 }  // namespace mdns

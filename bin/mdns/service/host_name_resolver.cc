@@ -14,12 +14,12 @@ HostNameResolver::HostNameResolver(
     MdnsAgent::Host* host,
     const std::string& host_name,
     fxl::TimePoint timeout,
-    const Mdns::ResolveHostNameCallback& callback)
+    Mdns::ResolveHostNameCallback callback)
     : MdnsAgent(host),
       host_name_(host_name),
       host_full_name_(MdnsNames::LocalHostFullName(host_name)),
       timeout_(timeout),
-      callback_(callback) {
+      callback_(std::move(callback)) {
   FXL_DCHECK(callback_);
 }
 

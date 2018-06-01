@@ -6,15 +6,17 @@
 
 #include "garnet/bin/mdns/service/prober.h"
 
+#include <lib/fit/function.h>
+
 namespace mdns {
 
 // Probes for host name conflicts prior to invoking |AddressResponder|.
 class AddressProber : public Prober {
  public:
-  using CompletionCallback = std::function<void(bool)>;
+  using CompletionCallback = fit::function<void(bool)>;
 
   // Creates an |AddressProber|.
-  AddressProber(MdnsAgent::Host* host, const CompletionCallback& callback);
+  AddressProber(MdnsAgent::Host* host, CompletionCallback callback);
 
   ~AddressProber() override;
 

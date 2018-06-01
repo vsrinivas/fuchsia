@@ -53,7 +53,7 @@ MdnsInterfaceTransceiver::MdnsInterfaceTransceiver(IpAddress address,
 
 MdnsInterfaceTransceiver::~MdnsInterfaceTransceiver() {}
 
-bool MdnsInterfaceTransceiver::Start(const InboundMessageCallback& callback) {
+bool MdnsInterfaceTransceiver::Start(InboundMessageCallback callback) {
   FXL_DCHECK(callback);
   FXL_DCHECK(!socket_fd_.is_valid()) << "Start called when already started.";
 
@@ -76,7 +76,7 @@ bool MdnsInterfaceTransceiver::Start(const InboundMessageCallback& callback) {
     return false;
   }
 
-  inbound_message_callback_ = callback;
+  inbound_message_callback_ = std::move(callback);
 
   WaitForInbound();
   return true;

@@ -13,8 +13,8 @@ InstanceProber::InstanceProber(MdnsAgent::Host* host,
                                const std::string& service_name,
                                const std::string& instance_name,
                                IpPort port,
-                               const CompletionCallback& callback)
-    : Prober(host, DnsType::kSrv, callback),
+                               CompletionCallback callback)
+    : Prober(host, DnsType::kSrv, std::move(callback)),
       instance_full_name_(
           MdnsNames::LocalInstanceFullName(instance_name, service_name)),
       port_(port) {}

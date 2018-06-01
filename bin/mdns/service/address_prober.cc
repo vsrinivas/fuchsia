@@ -9,8 +9,8 @@
 namespace mdns {
 
 AddressProber::AddressProber(MdnsAgent::Host* host,
-                             const CompletionCallback& callback)
-    : Prober(host, DnsType::kA, callback) {}
+                             CompletionCallback callback)
+    : Prober(host, DnsType::kA, std::move(callback)) {}
 
 AddressProber::~AddressProber() {}
 

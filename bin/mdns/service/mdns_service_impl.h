@@ -7,7 +7,9 @@
 
 #include <unordered_map>
 
+#include <lib/fit/function.h>
 #include <mdns/cpp/fidl.h>
+
 #include "garnet/bin/mdns/service/mdns.h"
 #include "garnet/bin/media/util/fidl_publisher.h"
 #include "lib/app/cpp/startup_context.h"
@@ -54,7 +56,7 @@ class MdnsServiceImpl : public MdnsService {
   class Subscriber : public Mdns::Subscriber, public MdnsServiceSubscription {
    public:
     Subscriber(fidl::InterfaceRequest<MdnsServiceSubscription> request,
-               const fxl::Closure& deleter);
+               fit::closure deleter);
 
     ~Subscriber() override;
 
@@ -100,7 +102,7 @@ class MdnsServiceImpl : public MdnsService {
 
     void GetPublication(
         bool query, const std::string& subtype,
-        const std::function<void(std::unique_ptr<Mdns::Publication>)>& callback)
+        fit::function<void(std::unique_ptr<Mdns::Publication>)> callback)
         override;
 
     IpPort port_;
@@ -113,14 +115,14 @@ class MdnsServiceImpl : public MdnsService {
   // Publisher for AddResponder.
   class ResponderPublisher : public Mdns::Publisher {
    public:
-    ResponderPublisher(MdnsResponderPtr responder, const fxl::Closure& deleter);
+    ResponderPublisher(MdnsResponderPtr responder, fit::closure deleter);
 
     // Mdns::Publisher implementation.
     void ReportSuccess(bool success) override;
 
     void GetPublication(
         bool query, const std::string& subtype,
-        const std::function<void(std::unique_ptr<Mdns::Publication>)>& callback)
+        fit::function<void(std::unique_ptr<Mdns::Publication>)> callback)
         override;
 
     MdnsResponderPtr responder_;

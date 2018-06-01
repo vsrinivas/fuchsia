@@ -8,8 +8,9 @@
 #include <string>
 #include <vector>
 
+#include <lib/fit/function.h>
+
 #include "garnet/bin/mdns/service/ip_address.h"
-#include "lib/fxl/functional/closure.h"
 
 namespace mdns {
 
@@ -28,7 +29,7 @@ class InterfaceMonitor {
   virtual ~InterfaceMonitor() {}
 
   // Registers a callback to be called when a link change occurs.
-  virtual void RegisterLinkChangeCallback(const fxl::Closure& callback) = 0;
+  virtual void RegisterLinkChangeCallback(fit::closure callback) = 0;
 
   // Returns the current collection of viable interfaces.
   virtual const std::vector<std::unique_ptr<InterfaceDescriptor>>&

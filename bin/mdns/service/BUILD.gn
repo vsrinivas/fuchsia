@@ -93,6 +93,10 @@ source_set("lib") {
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/netstack/fidl",
   ]
+
+  public_deps = [
+    "//zircon/public/lib/fit",
+  ]
 }
 
 package("service") {

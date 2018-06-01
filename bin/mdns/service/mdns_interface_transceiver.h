@@ -7,6 +7,8 @@
 #include <memory>
 #include <vector>
 
+#include <lib/fit/function.h>
+
 #include "garnet/bin/mdns/service/dns_message.h"
 #include "garnet/bin/mdns/service/ip_address.h"
 #include "garnet/bin/mdns/service/reply_address.h"
@@ -24,7 +26,7 @@ class MdnsInterfaceTransceiver {
  public:
   // Callback to deliver inbound messages with reply address.
   using InboundMessageCallback =
-      std::function<void(std::unique_ptr<DnsMessage>, const ReplyAddress&)>;
+      fit::function<void(std::unique_ptr<DnsMessage>, const ReplyAddress&)>;
 
   // Creates the variant of |MdnsInterfaceTransceiver| appropriate for the
   // address family specified in |address|. |name| is the name of the interface,
@@ -39,7 +41,7 @@ class MdnsInterfaceTransceiver {
   const IpAddress& address() const { return address_; }
 
   // Starts the interface transceiver.
-  bool Start(const InboundMessageCallback& callback);
+  bool Start(InboundMessageCallback callback);
 
   // Stops the interface transceiver.
   void Stop();

@@ -7,6 +7,7 @@
 #include <memory>
 #include <vector>
 
+#include <lib/fit/function.h>
 #include <netinet/in.h>
 
 #include "garnet/bin/mdns/service/interface_monitor.h"
@@ -18,9 +19,9 @@ namespace mdns {
 // Sends and receives mDNS messages on any number of interfaces.
 class MdnsTransceiver {
  public:
-  using LinkChangeCallback = std::function<void()>;
+  using LinkChangeCallback = fit::closure;
   using InboundMessageCallback =
-      std::function<void(std::unique_ptr<DnsMessage>, const ReplyAddress&)>;
+      fit::function<void(std::unique_ptr<DnsMessage>, const ReplyAddress&)>;
 
   MdnsTransceiver();
 
@@ -34,8 +35,8 @@ class MdnsTransceiver {
 
   // Starts the transceiver.
   void Start(std::unique_ptr<InterfaceMonitor> interface_monitor,
-             const fxl::Closure& link_change_callback,
-             const InboundMessageCallback& inbound_message_callback);
+             fit::closure link_change_callback,
+             InboundMessageCallback inbound_message_callback);
 
   // Stops the transceiver.
   void Stop();

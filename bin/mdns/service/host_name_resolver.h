@@ -21,7 +21,7 @@ class HostNameResolver : public MdnsAgent {
   HostNameResolver(MdnsAgent::Host* host,
                    const std::string& host_name,
                    fxl::TimePoint timeout,
-                   const Mdns::ResolveHostNameCallback& callback);
+                   Mdns::ResolveHostNameCallback callback);
 
   ~HostNameResolver() override;
 

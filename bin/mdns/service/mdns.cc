@@ -132,7 +132,7 @@ void Mdns::ResolveHostName(const std::string& host_name,
   FXL_DCHECK(callback);
 
   AddAgent(
-      std::make_shared<HostNameResolver>(this, host_name, timeout, callback));
+      std::make_shared<HostNameResolver>(this, host_name, timeout, std::move(callback)));
 }
 
 void Mdns::SubscribeToService(const std::string& service_name,
@@ -231,9 +231,9 @@ void Mdns::OnHostNameConflict() {
 }
 
 void Mdns::PostTaskForTime(MdnsAgent* agent,
-                           fxl::Closure task,
+                           fit::closure task,
                            fxl::TimePoint target_time) {
-  task_queue_.emplace(agent, task, target_time);
+  task_queue_.emplace(agent, std::move(task), target_time);
   PostTask();
 }
 
@@ -302,7 +302,7 @@ void Mdns::RemoveAgent(const MdnsAgent* agent,
 
   while (!temp.empty()) {
     if (temp.top().agent_ != agent) {
-      task_queue_.emplace(temp.top().agent_, temp.top().task_,
+      task_queue_.emplace(temp.top().agent_, std::move(temp.top().task_),
                           temp.top().time_);
     }
 
@@ -433,7 +433,7 @@ void Mdns::PostTask() {
         fxl::TimePoint now = fxl::TimePoint::Now();
 
         while (!task_queue_.empty() && task_queue_.top().time_ <= now) {
-          fxl::Closure task = task_queue_.top().task_;
+          fit::closure task = std::move(task_queue_.top().task_);
           task_queue_.pop();
           task();
         }

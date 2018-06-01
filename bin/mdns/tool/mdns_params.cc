@@ -4,6 +4,7 @@
 
 #include "garnet/bin/mdns/tool/mdns_params.h"
 
+#include <functional>
 #include <iostream>
 
 #include "lib/fxl/logging.h"

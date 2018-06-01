@@ -25,7 +25,7 @@ class FidlInterfaceMonitor : public fuchsia::netstack::NotificationListener,
   ~FidlInterfaceMonitor();
 
   // InterfaceMonitor implementation.
-  void RegisterLinkChangeCallback(const fxl::Closure& callback) override;
+  void RegisterLinkChangeCallback(fit::closure callback) override;
 
   const std::vector<std::unique_ptr<InterfaceDescriptor>>& GetInterfaces()
       override;
@@ -37,7 +37,7 @@ class FidlInterfaceMonitor : public fuchsia::netstack::NotificationListener,
 
   fuchsia::netstack::NetstackPtr netstack_;
   fidl::Binding<fuchsia::netstack::NotificationListener> binding_;
-  fxl::Closure link_change_callback_;
+  fit::closure link_change_callback_;
   std::vector<std::unique_ptr<InterfaceDescriptor>> interfaces_;
 };
 

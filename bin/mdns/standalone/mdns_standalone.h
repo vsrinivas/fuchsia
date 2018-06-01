@@ -42,7 +42,7 @@ class MdnsStandalone : public Mdns::Subscriber, public Mdns::Publisher {
   void GetPublication(
       bool query,
       const std::string& subtype,
-      const std::function<void(std::unique_ptr<Mdns::Publication>)>& callback)
+      fit::function<void(std::unique_ptr<Mdns::Publication>)> callback)
       override;
 
   mdns::Mdns mdns_;

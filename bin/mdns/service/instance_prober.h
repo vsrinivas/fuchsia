@@ -6,19 +6,21 @@
 
 #include "garnet/bin/mdns/service/prober.h"
 
+#include <lib/fit/function.h>
+
 namespace mdns {
 
 // Probes for SRV record conflicts prior to invoking |InstanceResponder|.
 class InstanceProber : public Prober {
  public:
-  using CompletionCallback = std::function<void(bool)>;
+  using CompletionCallback = fit::function<void(bool)>;
 
   // Creates a |InstanceProber|.
   InstanceProber(MdnsAgent::Host* host,
                  const std::string& service_name,
                  const std::string& instance_name,
                  IpPort port,
-                 const CompletionCallback& callback);
+                 CompletionCallback callback);
 
   ~InstanceProber() override;
 

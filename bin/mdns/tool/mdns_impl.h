@@ -5,13 +5,13 @@
 #ifndef GARNET_BIN_MDNS_TOOL_MDNS_IMPL_H_
 #define GARNET_BIN_MDNS_TOOL_MDNS_IMPL_H_
 
+#include <lib/fit/function.h>
 #include <lib/zx/channel.h>
 #include <mdns/cpp/fidl.h>
 
 #include "garnet/bin/mdns/tool/mdns_params.h"
 #include "lib/app/cpp/startup_context.h"
 #include "lib/fsl/tasks/fd_waiter.h"
-#include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
 #include "lib/mdns/cpp/service_subscriber.h"
 
@@ -20,7 +20,7 @@ namespace mdns {
 class MdnsImpl : public MdnsResponder {
  public:
   MdnsImpl(fuchsia::sys::StartupContext* startup_context, MdnsParams* params,
-           fxl::Closure quit_callback);
+           fit::closure quit_callback);
 
   ~MdnsImpl() override;
 
@@ -51,7 +51,7 @@ class MdnsImpl : public MdnsResponder {
   void GetPublication(bool query, fidl::StringPtr subtype,
                       GetPublicationCallback callback) override;
 
-  fxl::Closure quit_callback_;
+  fit::closure quit_callback_;
   MdnsServicePtr mdns_service_;
   ServiceSubscriber subscriber_;
   fidl::Binding<MdnsResponder> binding_;

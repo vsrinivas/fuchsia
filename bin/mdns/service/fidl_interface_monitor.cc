@@ -47,8 +47,8 @@ FidlInterfaceMonitor::~FidlInterfaceMonitor() {
 }
 
 void FidlInterfaceMonitor::RegisterLinkChangeCallback(
-    const fxl::Closure& callback) {
-  link_change_callback_ = callback;
+    fit::closure callback) {
+  link_change_callback_ = std::move(callback);
 }
 
 const std::vector<std::unique_ptr<InterfaceDescriptor>>&
