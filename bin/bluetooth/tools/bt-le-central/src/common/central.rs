@@ -8,8 +8,9 @@
 use async;
 
 use bt::error::Error as BTError;
-use common::gatt::{create_client_pair, start_gatt_loop};
+use common::gatt::start_gatt_loop;
 use failure::Error;
+use fidl::endpoints2;
 use fidl_ble::{CentralDelegate, CentralDelegateImpl, CentralProxy, RemoteDevice};
 use futures::future;
 use futures::future::Either::{Left, Right};
@@ -103,7 +104,7 @@ pub fn make_central_delegate(state: CentralStatePtr, channel: async::Channel)
 // GATT REPL if this succeeds.
 fn connect_peripheral(state: CentralStatePtr, mut id: String)
     -> impl Future<Item = (), Error = Error> {
-    let (proxy, server) = match create_client_pair() {
+    let (proxy, server) = match endpoints2::create_endpoints() {
         Err(_) => {
             return Left(future::err(
                 BTError::new("Failed to create Client pair").into(),

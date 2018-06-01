@@ -150,3 +150,14 @@ impl<T: ServiceMarker> ::std::fmt::Debug for ServerEnd<T> {
 impl<T> zx::HandleBased for ServerEnd<T> {}
 
 handle_based_codable![ClientEnd :- <T,>, ServerEnd :- <T,>,];
+
+/// Create a server endpoint and a client proxy connected to it by a channel.
+///
+/// Useful for sending channel handles to calls that take arguments
+/// of type `request<SomeInterface>`
+pub fn create_endpoints<T: ServiceMarker>() -> Result<(T::Proxy, ServerEnd<T>), Error> {
+    let (client, server) = zx::Channel::create().map_err(Error::ChannelPairCreate)?;
+    let proxy = ClientEnd::<T>::new(client).into_proxy()?;
+    let server_end = ServerEnd::new(server);
+    Ok((proxy, server_end))
+}

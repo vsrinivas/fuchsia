@@ -8,9 +8,9 @@ use async;
 use bt::error::Error as BTError;
 use common::gatt_types::Service;
 use failure::Error;
-use fidl::endpoints2::ServerEnd;
-use fidl_gatt::{Characteristic as FidlCharacteristic, ClientMarker, ClientProxy,
-                RemoteServiceEvent, RemoteServiceMarker, RemoteServiceProxy, ServiceInfo};
+use fidl::endpoints2;
+use fidl_gatt::{Characteristic as FidlCharacteristic, ClientProxy,
+                RemoteServiceEvent, RemoteServiceProxy, ServiceInfo};
 use futures::{Future, FutureExt, Never, Stream, StreamExt, future};
 use futures::channel::mpsc::channel;
 use futures::future::Either::{Left, Right};
@@ -21,7 +21,6 @@ use std::io::{self, Read, Write};
 use std::string::String;
 use std::sync::Arc;
 use std::thread;
-use zx;
 
 macro_rules! left_ok {
     () => (Left(future::ok(())))
@@ -251,26 +250,6 @@ fn do_list(args: Vec<&str>, client: GattClientPtr) -> FutureResult<(), Error> {
     future::ok(())
 }
 
-fn create_remote_service_pair()
-    -> Result<(RemoteServiceProxy, ServerEnd<RemoteServiceMarker>), Error>
-{
-    let (chan_local, chan_remote) = zx::Channel::create()?;
-    let local = async::Channel::from_channel(chan_local)?;
-    let server_end = ServerEnd::<RemoteServiceMarker>::new(chan_remote);
-    let proxy = RemoteServiceProxy::new(local);
-
-    Ok((proxy, server_end))
-}
-
-pub fn create_client_pair() -> Result<(ClientProxy, ServerEnd<ClientMarker>), Error> {
-    let (chan_local, chan_remote) = zx::Channel::create()?;
-    let local = async::Channel::from_channel(chan_local)?;
-    let server_end = ServerEnd::<ClientMarker>::new(chan_remote);
-    let proxy = ClientProxy::new(local);
-
-    Ok((proxy, server_end))
-}
-
 fn do_connect(args: Vec<&str>, client: GattClientPtr) -> impl Future<Item = (), Error = Error> {
     if args.len() != 1 {
         println!("usage: connect <index>");
@@ -294,7 +273,7 @@ fn do_connect(args: Vec<&str>, client: GattClientPtr) -> impl Future<Item = (), 
     };
 
     // Initialize the remote service proxy.
-    match create_remote_service_pair() {
+    match endpoints2::create_endpoints() {
         Err(e) => Left(future::err(e.into())),
         Ok((proxy, server)) => {
             // First close the connection to the currently active service.

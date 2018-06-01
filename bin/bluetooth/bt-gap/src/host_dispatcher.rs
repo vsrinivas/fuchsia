@@ -8,11 +8,11 @@ use bt;
 use bt::util::clone_adapter_info;
 use failure::Error;
 use fidl;
-use fidl::endpoints2::{Proxy, ServerEnd};
+use fidl::endpoints2;
 use fidl_bluetooth;
 use fidl_bluetooth_control::{ControlControlHandle, PairingDelegateProxy};
 use fidl_bluetooth_control::AdapterInfo;
-use fidl_bluetooth_host::{AdapterMarker, AdapterProxy, HostProxy};
+use fidl_bluetooth_host::HostProxy;
 use futures::{Poll, task, Async, Future, FutureExt};
 use futures::IntoFuture;
 use futures::StreamExt;
@@ -26,12 +26,9 @@ use std::path::PathBuf;
 use std::sync::{Arc, Weak};
 use util;
 use vfs_watcher;
-use zx;
 
 static BT_HOST_DIR: &'static str = "/dev/class/bt-host";
 static DEFAULT_NAME: &'static str = "fuchsia";
-
-type HostAdapterPtr = ServerEnd<AdapterMarker>;
 
 pub struct DiscoveryRequestToken {
     adap: Weak<RwLock<HostDevice>>,
@@ -278,10 +275,7 @@ fn add_adapter(
         })
         .and_then(move |(host, adapter_info)| {
             // Setup the delegates for proxying calls through the bt-host
-            let (host_local, host_remote) = zx::Channel::create().unwrap();
-            let host_adapter =
-                AdapterProxy::from_channel(async::Channel::from_channel(host_local).unwrap());
-            let host_req = HostAdapterPtr::new(host_remote);
+            let (host_adapter, host_req) = endpoints2::create_endpoints().unwrap();
             let _ = host.request_adapter(host_req);
 
             // Set the adapter as connectable

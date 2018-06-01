@@ -121,14 +121,12 @@ fn do_connect(args: &[String], central: &CentralProxy) -> impl Future<Item = (),
         return Left(future::err(BTError::new("invalid input").into()));
     }
 
-    let (_, remote) = match zx::Channel::create() {
+    let (_, server_end) = match fidl::endpoints2::create_endpoints() {
         Err(e) => {
             return Left(future::err(e.into()));
         }
         Ok(x) => x,
     };
-
-    let server_end = fidl::endpoints2::ServerEnd::<fidl_gatt::ClientMarker>::new(remote);
 
     Right(
         central

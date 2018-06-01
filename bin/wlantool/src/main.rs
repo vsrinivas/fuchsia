@@ -22,7 +22,7 @@ extern crate structopt;
 
 use component::client::connect_to_service;
 use failure::{Error, Fail, ResultExt};
-use fidl::endpoints2::{ClientEnd, ServerEnd, ServiceMarker};
+use fidl::endpoints2;
 use fidl_sme::ScanTransactionEvent;
 use futures::prelude::*;
 use structopt::StructOpt;
@@ -113,7 +113,7 @@ fn do_client(cmd: opts::ClientCmd, wlan_svc: WlanSvc) -> impl Future<Item = (), 
     match cmd {
         opts::ClientCmd::Scan { iface_id } => get_client_sme(wlan_svc, iface_id)
             .and_then(|sme| {
-                let (local, remote) = create_endpoints()?;
+                let (local, remote) = endpoints2::create_endpoints()?;
                 let mut req = fidl_sme::ScanRequest {
                     timeout: 10
                 };
@@ -158,8 +158,9 @@ fn handle_scan_transaction(scan_txn: fidl_sme::ScanTransactionProxy)
 fn get_client_sme(wlan_svc: WlanSvc, iface_id: u16)
     -> impl Future<Item = fidl_sme::ClientSmeProxy, Error = Error>
 {
-    create_endpoints()
+    endpoints2::create_endpoints()
         .into_future()
+        .map_err(|e| e.into())
         .and_then(move |(proxy, remote)| {
             wlan_svc.get_client_sme(iface_id, remote)
                 .map_err(|e| e.context("error sending GetClientSme request").into())
@@ -172,10 +173,3 @@ fn get_client_sme(wlan_svc: WlanSvc, iface_id: u16)
                 })
         })
 }
-
-// This should probably be in endpoints2
-fn create_endpoints<T: ServiceMarker>() -> Result<(T::Proxy, ServerEnd<T>), Error> {
-    let (client, server) = zx::Channel::create()?;
-    Ok((ClientEnd::<T>::new(client).into_proxy()?, ServerEnd::new(server)))
-}
-
