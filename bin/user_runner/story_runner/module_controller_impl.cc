@@ -47,8 +47,7 @@ ModuleControllerImpl::ModuleControllerImpl(
     fidl::InterfaceRequest<fuchsia::ui::views_v1::ViewProvider> view_provider_request)
     : story_controller_impl_(story_controller_impl),
       app_client_(
-          application_launcher,
-          CloneStruct(module_config),
+          application_launcher, CloneStruct(module_config),
           std::string(kAppStoragePath) + HashModuleUrl(module_config.url),
           std::move(service_list)),
       module_data_(module_data) {

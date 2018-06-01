@@ -16,18 +16,18 @@ namespace modular {
 namespace {
 
 // Returns pair<true, ..> if key found, else <false, nullptr>.
-std::pair<bool, const fuchsia::modular::CreateChainPropertyInfo*> GetProperty(
-    const fuchsia::modular::CreateChainInfo& chain_info,
+std::pair<bool, const fuchsia::modular::CreateModuleParameterInfo*> GetProperty(
+    const fuchsia::modular::CreateModuleParameterMapInfo& map_info,
     const std::string& key) {
-  for (auto& it : *chain_info.property_info) {
+  for (auto& it : *map_info.property_info) {
     if (it.key == key) {
       return std::make_pair<bool,
-                            const fuchsia::modular::CreateChainPropertyInfo*>(
+                            const fuchsia::modular::CreateModuleParameterInfo*>(
           true, &it.value);
     }
   }
 
-  return std::make_pair<bool, fuchsia::modular::CreateChainPropertyInfo*>(
+  return std::make_pair<bool, fuchsia::modular::CreateModuleParameterInfo*>(
       false, nullptr);
 }
 
@@ -167,9 +167,7 @@ class TestManifestSource : public fuchsia::modular::ModuleManifestSource {
   RemovedEntryFn remove;
 
  private:
-  void Watch(async_t* async,
-             IdleFn idle_fn,
-             NewEntryFn new_fn,
+  void Watch(async_t* async, IdleFn idle_fn, NewEntryFn new_fn,
              RemovedEntryFn removed_fn) override {
     idle = std::move(idle_fn);
     add = std::move(new_fn);
@@ -409,10 +407,10 @@ TEST_F(LocalModuleResolverTest, SimpleParameterTypes) {
   auto& res = results()->at(0);
   EXPECT_EQ("module2", res.module_id);
 
-  // Verify that |create_chain_info| is set up correctly.
-  EXPECT_EQ(1lu, res.create_chain_info.property_info->size());
-  ASSERT_TRUE(GetProperty(res.create_chain_info, "start").first);
-  auto start = GetProperty(res.create_chain_info, "start").second;
+  // Verify that |create_parameter_map_info| is set up correctly.
+  EXPECT_EQ(1lu, res.create_parameter_map_info.property_info->size());
+  ASSERT_TRUE(GetProperty(res.create_parameter_map_info, "start").first);
+  auto start = GetProperty(res.create_parameter_map_info, "start").second;
   ASSERT_TRUE(start->is_create_link());
   EXPECT_EQ(fuchsia::modular::EntityReferenceToJson(location_entity),
             start->create_link().initial_data);
@@ -483,17 +481,18 @@ TEST_F(LocalModuleResolverTest, SimpleJsonParameters) {
   auto& res = results()->at(0);
   EXPECT_EQ("module1", res.module_id);
 
-  // Verify that |create_chain_info| is set up correctly.
-  EXPECT_EQ(2lu, res.create_chain_info.property_info->size());
-  ASSERT_TRUE(GetProperty(res.create_chain_info, "start").first);
-  auto start = GetProperty(res.create_chain_info, "start").second;
+  // Verify that |create_parameter_map_info| is set up correctly.
+  EXPECT_EQ(2lu, res.create_parameter_map_info.property_info->size());
+  ASSERT_TRUE(GetProperty(res.create_parameter_map_info, "start").first);
+  auto start = GetProperty(res.create_parameter_map_info, "start").second;
   ASSERT_TRUE(start->is_create_link());
   EXPECT_EQ(startJson, start->create_link().initial_data);
   // TODO(thatguy): Populate |allowed_types| correctly.
   EXPECT_FALSE(start->create_link().allowed_types);
 
-  ASSERT_TRUE(GetProperty(res.create_chain_info, "destination").first);
-  auto destination = GetProperty(res.create_chain_info, "destination").second;
+  ASSERT_TRUE(GetProperty(res.create_parameter_map_info, "destination").first);
+  auto destination =
+      GetProperty(res.create_parameter_map_info, "destination").second;
   ASSERT_TRUE(destination->is_create_link());
   EXPECT_EQ(destinationJson, destination->create_link().initial_data);
   // TODO(thatguy): Populate |allowed_types| correctly.
@@ -542,10 +541,10 @@ TEST_F(LocalModuleResolverTest, LinkInfoParameterType) {
   auto& res = results()->at(0);
   EXPECT_EQ("module1", res.module_id);
 
-  // Verify that |create_chain_info| is set up correctly.
-  EXPECT_EQ(1lu, res.create_chain_info.property_info->size());
-  ASSERT_TRUE(GetProperty(res.create_chain_info, "start").first);
-  auto start = GetProperty(res.create_chain_info, "start").second;
+  // Verify that |create_parameter_map_info| is set up correctly.
+  EXPECT_EQ(1lu, res.create_parameter_map_info.property_info->size());
+  ASSERT_TRUE(GetProperty(res.create_parameter_map_info, "start").first);
+  auto start = GetProperty(res.create_parameter_map_info, "start").second;
   ASSERT_TRUE(start->is_link_path());
   EXPECT_EQ("a", start->link_path().module_path->at(0));
   EXPECT_EQ("b", start->link_path().module_path->at(1));
@@ -769,11 +768,11 @@ TEST_F(LocalModuleResolverTest, QueryWithoutActionAndMultipleParameters) {
   ASSERT_EQ(1lu, results()->size());
   auto& result = results()->at(0);
 
-  EXPECT_EQ(GetProperty(result.create_chain_info, "start")
+  EXPECT_EQ(GetProperty(result.create_parameter_map_info, "start")
                 .second->create_link()
                 .initial_data,
             fuchsia::modular::EntityReferenceToJson(start_entity));
-  EXPECT_EQ(GetProperty(result.create_chain_info, "end")
+  EXPECT_EQ(GetProperty(result.create_parameter_map_info, "end")
                 .second->create_link()
                 .initial_data,
             fuchsia::modular::EntityReferenceToJson(end_entity));
@@ -822,22 +821,22 @@ TEST_F(LocalModuleResolverTest, QueryWithoutActionAndTwoParametersOfSameType) {
 
   for (const auto& result : *results()) {
     bool start_mapped_to_start =
-        GetProperty(result.create_chain_info, "start")
+        GetProperty(result.create_parameter_map_info, "start")
             .second->create_link()
             .initial_data ==
         fuchsia::modular::EntityReferenceToJson(start_entity);
     bool start_mapped_to_end =
-        GetProperty(result.create_chain_info, "start")
+        GetProperty(result.create_parameter_map_info, "start")
             .second->create_link()
             .initial_data ==
         fuchsia::modular::EntityReferenceToJson(end_entity);
     bool end_mapped_to_end =
-        GetProperty(result.create_chain_info, "end")
+        GetProperty(result.create_parameter_map_info, "end")
             .second->create_link()
             .initial_data ==
         fuchsia::modular::EntityReferenceToJson(end_entity);
     bool end_mapped_to_start =
-        GetProperty(result.create_chain_info, "end")
+        GetProperty(result.create_parameter_map_info, "end")
             .second->create_link()
             .initial_data ==
         fuchsia::modular::EntityReferenceToJson(start_entity);

@@ -19,10 +19,13 @@ ChainImpl::ChainImpl(const fidl::VectorPtr<fidl::StringPtr>& path,
 
 ChainImpl::~ChainImpl() = default;
 
-LinkPathPtr ChainImpl::GetLinkPathForParameterName(const fidl::StringPtr& name) {
-  auto it = std::find_if(
-      parameter_map_.entries->begin(), parameter_map_.entries->end(),
-      [&name](const ModuleParameterMapEntry& data) { return data.name == name; });
+LinkPathPtr ChainImpl::GetLinkPathForParameterName(
+    const fidl::StringPtr& name) {
+  auto it = std::find_if(parameter_map_.entries->begin(),
+                         parameter_map_.entries->end(),
+                         [&name](const ModuleParameterMapEntry& data) {
+                           return data.name == name;
+                         });
 
   if (it == parameter_map_.entries->end()) {
     return nullptr;

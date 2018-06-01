@@ -176,16 +176,15 @@ class ModuleResolverApp : ContextListener {
     fidl::VectorPtr<fuchsia::modular::IntentParameter> parameters;
     fidl::VectorPtr<fidl::StringPtr> parent_mod_path;
 
-    for (const fuchsia::modular::ChainEntry& chain_entry :
-         *module_result.create_chain_info.property_info) {
+    for (const fuchsia::modular::CreateModuleParameterMapEntry& entry :
+         *module_result.create_parameter_map_info.property_info) {
       fuchsia::modular::IntentParameter parameter;
-      parameter.name = chain_entry.key;
+      parameter.name = entry.key;
       fuchsia::modular::IntentParameterData parameter_data;
-      const fuchsia::modular::CreateChainPropertyInfo& create_chain_info =
-          chain_entry.value;
-      if (create_chain_info.is_link_path()) {
+      const auto& create_param_info = entry.value;
+      if (create_param_info.is_link_path()) {
         fuchsia::modular::LinkPath link_path;
-        fidl::Clone(create_chain_info.link_path(), &link_path);
+        fidl::Clone(create_param_info.link_path(), &link_path);
         parameter_data.set_link_path(std::move(link_path));
         if (!parent_mod_path) {
           // TODO(thatguy): Mod parent-child relationships are critical for the
@@ -201,9 +200,9 @@ class ModuleResolverApp : ContextListener {
           // MS-1473
           parent_mod_path = parameter_data.link_path().module_path.Clone();
         }
-      } else if (create_chain_info.is_create_link()) {
+      } else if (create_param_info.is_create_link()) {
         parameter_data.set_entity_reference(
-            create_chain_info.create_link().initial_data);
+            create_param_info.create_link().initial_data);
       }
       parameter.data = std::move(parameter_data);
       parameters.push_back(std::move(parameter));

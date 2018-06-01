@@ -421,20 +421,21 @@ class StoryControllerImpl::ConnectLinkCall : public Operation<> {
   FXL_DISALLOW_COPY_AND_ASSIGN(ConnectLinkCall);
 };
 
-// Populates a ModuleParameterMap struct from a CreateChainInfo struct. May
-// create new Links for any CreateChainInfo.property_info if
+// Populates a ModuleParameterMap struct from a CreateModuleParameterMapInfo
+// struct. May create new Links for any
+// CreateModuleParameterMapInfo.property_info if
 // property_info[i].is_create_link_info().
 class StoryControllerImpl::InitializeChainCall
     : public Operation<ModuleParameterMapPtr> {
  public:
   InitializeChainCall(StoryControllerImpl* const story_controller_impl,
                       fidl::VectorPtr<fidl::StringPtr> module_path,
-                      CreateChainInfoPtr create_chain_info,
+                      CreateModuleParameterMapInfoPtr create_parameter_map_info,
                       ResultCall result_call)
       : Operation("InitializeChainCall", std::move(result_call)),
         story_controller_impl_(story_controller_impl),
         module_path_(std::move(module_path)),
-        create_chain_info_(std::move(create_chain_info)) {}
+        create_parameter_map_info_(std::move(create_parameter_map_info)) {}
 
  private:
   void Run() override {
@@ -443,15 +444,15 @@ class StoryControllerImpl::InitializeChainCall
     result_ = ModuleParameterMap::New();
     result_->entries.resize(0);
 
-    if (!create_chain_info_) {
+    if (!create_parameter_map_info_) {
       return;
     }
 
-    // For each property in |create_chain_info_|, either:
+    // For each property in |create_parameter_map_info_|, either:
     // a) Copy the |link_path| to |result_| directly or
     // b) Create & populate a new Link and add the correct mapping to
     // |result_|.
-    for (auto& entry : *create_chain_info_->property_info) {
+    for (auto& entry : *create_parameter_map_info_->property_info) {
       const auto& key = entry.key;
       const auto& info = entry.value;
 
@@ -488,7 +489,7 @@ class StoryControllerImpl::InitializeChainCall
 
   StoryControllerImpl* const story_controller_impl_;
   const fidl::VectorPtr<fidl::StringPtr> module_path_;
-  const CreateChainInfoPtr create_chain_info_;
+  const CreateModuleParameterMapInfoPtr create_parameter_map_info_;
 
   OperationQueue operation_queue_;
 
@@ -1116,8 +1117,9 @@ class StoryControllerImpl::AddIntentCall : public Operation<StartModuleStatus> {
 
     // Add the resulting module to story state.
     const auto& module_result = result->modules->at(0);
-    create_chain_info_ = CreateChainInfo::New();
-    fidl::Clone(module_result.create_chain_info, create_chain_info_.get());
+    create_parameter_map_info_ = CreateModuleParameterMapInfo::New();
+    fidl::Clone(module_result.create_parameter_map_info,
+                create_parameter_map_info_.get());
 
     module_data_ = ModuleData::New();
     module_data_->module_url = module_result.module_id;
@@ -1133,7 +1135,7 @@ class StoryControllerImpl::AddIntentCall : public Operation<StartModuleStatus> {
     // which belongs in |module_data_|.
     operation_queue_.Add(new InitializeChainCall(
         story_controller_impl_, fidl::Clone(module_data_->module_path),
-        std::move(create_chain_info_),
+        std::move(create_parameter_map_info_),
         [this, flow](ModuleParameterMapPtr parameter_map) {
           WriteModuleData(flow, std::move(parameter_map));
         }));
@@ -1193,7 +1195,7 @@ class StoryControllerImpl::AddIntentCall : public Operation<StartModuleStatus> {
 
   // Returned to us from the resolver, and cached here so that InitializeChain()
   // has access to it.
-  CreateChainInfoPtr create_chain_info_;
+  CreateModuleParameterMapInfoPtr create_parameter_map_info_;
 
   // Created by AddModuleFromResult, and ultimately written to story state.
   ModuleDataPtr module_data_;

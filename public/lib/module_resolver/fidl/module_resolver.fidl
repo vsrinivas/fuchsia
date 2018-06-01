@@ -105,7 +105,7 @@ struct ModuleResolverResult {
   // The Module's manifest file (see docs/manifests/module.md)
   ModuleManifest? manifest;
 
-  CreateChainInfo create_chain_info;
+  CreateModuleParameterMapInfo create_parameter_map_info;
 
   ResolutionDebugInfo? debug_info;
 };

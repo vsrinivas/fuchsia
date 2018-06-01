@@ -15,14 +15,15 @@ void XdrLinkPath(XdrContext* const xdr, LinkPath* const data) {
 }
 
 void XdrModuleParameterMapEntry(XdrContext* const xdr,
-                                 ModuleParameterMapEntry* const data) {
+                                ModuleParameterMapEntry* const data) {
   // NOTE: the JSON field naming doesn't match the FIDL struct naming because
   // the field names in FIDL were changed.
   xdr->Field("key", &data->name);
   xdr->Field("link_path", &data->link_path, XdrLinkPath);
 }
 
-void XdrModuleParameterMap(XdrContext* const xdr, ModuleParameterMap* const data) {
+void XdrModuleParameterMap(XdrContext* const xdr,
+                           ModuleParameterMap* const data) {
   // NOTE: the JSON field naming doesn't match the FIDL struct naming because
   // the field names in FIDL were changed.
   xdr->Field("key_to_link_map", &data->entries, XdrModuleParameterMapEntry);

@@ -406,7 +406,8 @@ class LocalModuleResolver::FindModulesCall
       const fuchsia::modular::ResolverQuery& query,
       fuchsia::modular::ModuleResolverResult* result,
       std::map<std::string, std::string> parameter_mapping = {}) {
-    auto& create_chain_info = result->create_chain_info;  // For convenience.
+    auto& create_param_map_info =
+        result->create_parameter_map_info;  // For convenience.
     for (const auto& query_parameter : *query.parameter_constraints) {
       const auto& parameter = query_parameter.constraint;
       fidl::StringPtr name = query_parameter.key;
@@ -421,32 +422,32 @@ class LocalModuleResolver::FindModulesCall
             parameter.entity_reference());
         // TODO(thatguy): set |create_link->allowed_types|.
         // TODO(thatguy): set |create_link->permissions|.
-        fuchsia::modular::CreateChainPropertyInfo property_info;
+        fuchsia::modular::CreateModuleParameterInfo property_info;
         property_info.set_create_link(std::move(create_link));
-        fuchsia::modular::ChainEntry chain_entry;
-        chain_entry.key = name;
-        chain_entry.value = std::move(property_info);
-        create_chain_info.property_info.push_back(std::move(chain_entry));
+        fuchsia::modular::CreateModuleParameterMapEntry entry;
+        entry.key = name;
+        entry.value = std::move(property_info);
+        create_param_map_info.property_info.push_back(std::move(entry));
       } else if (parameter.is_link_info()) {
-        fuchsia::modular::CreateChainPropertyInfo property_info;
+        fuchsia::modular::CreateModuleParameterInfo property_info;
         fuchsia::modular::LinkPath link_path;
         parameter.link_info().path.Clone(&link_path);
         property_info.set_link_path(std::move(link_path));
-        fuchsia::modular::ChainEntry chain_entry;
-        chain_entry.key = name;
-        chain_entry.value = std::move(property_info);
-        create_chain_info.property_info.push_back(std::move(chain_entry));
+        fuchsia::modular::CreateModuleParameterMapEntry entry;
+        entry.key = name;
+        entry.value = std::move(property_info);
+        create_param_map_info.property_info.push_back(std::move(entry));
       } else if (parameter.is_json()) {
         fuchsia::modular::CreateLinkInfo create_link;
         create_link.initial_data = parameter.json();
         // TODO(thatguy): set |create_link->allowed_types|.
         // TODO(thatguy): set |create_link->permissions|.
-        fuchsia::modular::CreateChainPropertyInfo property_info;
+        fuchsia::modular::CreateModuleParameterInfo property_info;
         property_info.set_create_link(std::move(create_link));
-        fuchsia::modular::ChainEntry chain_entry;
-        chain_entry.key = name;
-        chain_entry.value = std::move(property_info);
-        create_chain_info.property_info.push_back(std::move(chain_entry));
+        fuchsia::modular::CreateModuleParameterMapEntry entry;
+        entry.key = name;
+        entry.value = std::move(property_info);
+        create_param_map_info.property_info.push_back(std::move(entry));
       }
       // There's nothing to copy over from 'entity_types', since it only
       // specifies parameter constraint information, and no actual content.

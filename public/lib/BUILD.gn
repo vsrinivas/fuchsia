@@ -20,8 +20,8 @@ group("unittests") {
   testonly = true
 
   deps = [
-    "entity/cpp:unittests",
     "async/cpp:unittests",
+    "entity/cpp:unittests",
   ]
 }
 
@@ -50,7 +50,6 @@ fidl("fidl") {
     "context/fidl/metadata.fidl",
     "context/fidl/value.fidl",
     "context/fidl/value_type.fidl",
-    "intent/fidl/intent.fidl",
     "device/fidl/device_runner_monitor.fidl",
     "device/fidl/device_shell.fidl",
     "device/fidl/user_provider.fidl",
@@ -58,6 +57,7 @@ fidl("fidl") {
     "entity/fidl/entity_provider.fidl",
     "entity/fidl/entity_reference_factory.fidl",
     "entity/fidl/entity_resolver.fidl",
+    "intent/fidl/intent.fidl",
     "lifecycle/fidl/lifecycle.fidl",
     "module/fidl/link_path.fidl",
     "module/fidl/module.fidl",
@@ -67,8 +67,8 @@ fidl("fidl") {
     "module/fidl/module_manifest.fidl",
     "module/fidl/module_state.fidl",
     "module_resolver/fidl/module_resolver.fidl",
-    "story/fidl/create_chain.fidl",
     "story/fidl/create_link.fidl",
+    "story/fidl/create_module_parameter_map.fidl",
     "story/fidl/link.fidl",
     "story/fidl/puppet_master.fidl",
     "story/fidl/session_watcher.fidl",

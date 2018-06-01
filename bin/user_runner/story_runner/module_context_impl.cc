@@ -48,32 +48,28 @@ void ModuleContextImpl::GetLink(fidl::StringPtr name,
 }
 
 void ModuleContextImpl::EmbedModule(
-    fidl::StringPtr name,
-    Intent intent,
+    fidl::StringPtr name, Intent intent,
     fidl::InterfaceRequest<ModuleController> module_controller,
     fidl::InterfaceRequest<fuchsia::ui::views_v1_token::ViewOwner> view_owner,
     EmbedModuleCallback callback) {
   story_controller_impl_->EmbedModule(
       module_data_->module_path, name, fidl::MakeOptional(std::move(intent)),
-      std::move(module_controller),
-      std::move(view_owner), ModuleSource::INTERNAL, callback);
+      std::move(module_controller), std::move(view_owner),
+      ModuleSource::INTERNAL, callback);
 }
 
 void ModuleContextImpl::StartModule(
-    fidl::StringPtr name,
-    Intent intent,
+    fidl::StringPtr name, Intent intent,
     fidl::InterfaceRequest<ModuleController> module_controller,
-    SurfaceRelationPtr surface_relation,
-    StartModuleCallback callback) {
+    SurfaceRelationPtr surface_relation, StartModuleCallback callback) {
   story_controller_impl_->StartModule(
       module_data_->module_path, name, fidl::MakeOptional(std::move(intent)),
-      std::move(module_controller),
-      std::move(surface_relation), ModuleSource::INTERNAL, callback);
+      std::move(module_controller), std::move(surface_relation),
+      ModuleSource::INTERNAL, callback);
 }
 
 void ModuleContextImpl::StartContainerInShell(
-    fidl::StringPtr name,
-    SurfaceRelation parent_relation,
+    fidl::StringPtr name, SurfaceRelation parent_relation,
     fidl::VectorPtr<ContainerLayout> layout,
     fidl::VectorPtr<ContainerRelationEntry> relationships,
     fidl::VectorPtr<ContainerNode> nodes) {
