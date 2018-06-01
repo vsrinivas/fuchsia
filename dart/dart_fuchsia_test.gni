@@ -86,6 +86,7 @@ template("dart_fuchsia_test") {
                            [
                              "disable_analysis",
                              "sandbox",
+                             "meta",
                            ])
     source_dir = test_source_dir
 
@@ -119,5 +120,9 @@ template("dart_fuchsia_test") {
       generated_test_main,
       test_helper,
     ]
+    meta = []
+    if (defined(invoker.meta)) {
+      meta += invoker.meta
+    }
   }
 }
