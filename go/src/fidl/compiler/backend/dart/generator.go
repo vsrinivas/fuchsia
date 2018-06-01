@@ -37,6 +37,10 @@ func (_ FidlGenerator) GenerateFidl(fidl types.Root, config *types.Config) error
 	template.Must(tmpls.Parse(templates.Struct))
 	template.Must(tmpls.Parse(templates.Union))
 
-	libraryPath := config.OutputBase
-	return writeFile(libraryPath, "GenerateLibraryFile", tmpls, tree)
+	err := writeFile(config.OutputBase+"/fidl.dart", "GenerateLibraryFile", tmpls, tree)
+	if err != nil {
+		return err
+	}
+
+	return writeFile(config.OutputBase+"/fidl_async.dart", "GenerateAsyncFile", tmpls, tree)
 }

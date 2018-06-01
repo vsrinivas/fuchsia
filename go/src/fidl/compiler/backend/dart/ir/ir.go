@@ -15,6 +15,7 @@ import (
 
 type Type struct {
 	Decl          string
+	SyncDecl      string
 	Nullable      bool
 	declType      types.DeclType
 	typedDataDecl string
@@ -81,30 +82,35 @@ type Interface struct {
 }
 
 type Method struct {
-	Ordinal      types.Ordinal
-	OrdinalName  string
-	Name         string
-	HasRequest   bool
-	Request      []Parameter
-	RequestSize  int
-	HasResponse  bool
-	Response     []Parameter
-	ResponseSize int
-	CallbackType string
-	TypeSymbol   string
-	TypeExpr     string
+	Ordinal            types.Ordinal
+	OrdinalName        string
+	Name               string
+	HasRequest         bool
+	Request            []Parameter
+	RequestSize        int
+	HasResponse        bool
+	Response           []Parameter
+	ResponseSize       int
+	AsyncResponseClass string
+	AsyncResponseType  string
+	CallbackType       string
+	TypeSymbol         string
+	TypeExpr           string
 }
 
 type Parameter struct {
 	Type     Type
 	Name     string
 	Offset   int
+	Convert  string
 	typeExpr string
 }
 
 type Import struct {
-	Url       string
-	LocalName string
+	Url            string
+	LocalName      string
+	AsyncUrl       string
+	AsyncLocalName string
 }
 
 type Root struct {
@@ -122,6 +128,7 @@ type Root struct {
 // back but also make the code generator smarter about escaping
 // reserved words to avoid style violations in various contexts.
 var reservedWords = map[string]bool{
+	// "Error":      true,
 	"abstract":   true,
 	"as":         true,
 	"assert":     true,
@@ -426,6 +433,9 @@ func (c *compiler) compileType(val types.Type) Type {
 			r.Decl = t.typedDataDecl
 		} else {
 			r.Decl = fmt.Sprintf("List<%s>", t.Decl)
+			if t.SyncDecl != "" {
+				r.SyncDecl = fmt.Sprintf("List<%s>", t.SyncDecl)
+			}
 		}
 		elementStr := fmt.Sprintf("element: %s", t.typeExpr)
 		elementCountStr := fmt.Sprintf("elementCount: %s", formatInt(val.ElementCount))
@@ -436,6 +446,9 @@ func (c *compiler) compileType(val types.Type) Type {
 			r.Decl = t.typedDataDecl
 		} else {
 			r.Decl = fmt.Sprintf("List<%s>", t.Decl)
+			if t.SyncDecl != "" {
+				r.SyncDecl = fmt.Sprintf("List<%s>", t.SyncDecl)
+			}
 		}
 		elementStr := fmt.Sprintf("element: %s", t.typeExpr)
 		maybeElementCountStr := fmt.Sprintf("maybeElementCount: %s", formatInt(val.ElementCount))
@@ -460,8 +473,14 @@ func (c *compiler) compileType(val types.Type) Type {
 		r.typeExpr = fmt.Sprintf("const $fidl.%sType(nullable: %s)",
 			r.Decl, formatBool(val.Nullable))
 	case types.RequestType:
-		t := c.compileUpperCamelCompoundIdentifier(types.ParseCompoundIdentifier(val.RequestSubtype), "")
+		compound := types.ParseCompoundIdentifier(val.RequestSubtype)
+		t := c.compileUpperCamelCompoundIdentifier(compound, "")
 		r.Decl = fmt.Sprintf("$fidl.InterfaceRequest<%s>", t)
+		if c.inExternalLibrary(compound) {
+			r.SyncDecl = fmt.Sprintf("$fidl.InterfaceRequest<sync$%s>", t)
+		} else {
+			r.SyncDecl = fmt.Sprintf("$fidl.InterfaceRequest<$sync.%s>", t)
+		}
 		r.typeExpr = fmt.Sprintf("const $fidl.InterfaceRequestType<%s>(nullable: %s)",
 			t, formatBool(val.Nullable))
 	case types.PrimitiveType:
@@ -469,7 +488,8 @@ func (c *compiler) compileType(val types.Type) Type {
 		r.typedDataDecl = typedDataDecl[val.PrimitiveSubtype]
 		r.typeExpr = typeExprForPrimitiveSubtype(val.PrimitiveSubtype)
 	case types.IdentifierType:
-		t := c.compileUpperCamelCompoundIdentifier(types.ParseCompoundIdentifier(val.Identifier), "")
+		compound := types.ParseCompoundIdentifier(val.Identifier)
+		t := c.compileUpperCamelCompoundIdentifier(compound, "")
 		declType, ok := (*c.decls)[val.Identifier]
 		if !ok {
 			log.Fatal("Unknown identifier: ", val.Identifier)
@@ -484,6 +504,12 @@ func (c *compiler) compileType(val types.Type) Type {
 			fallthrough
 		case types.UnionDeclType:
 			r.Decl = t
+			if c.inExternalLibrary(compound) {
+				r.SyncDecl = fmt.Sprintf("sync$%s", t)
+
+			} else {
+				r.SyncDecl = fmt.Sprintf("$sync.%s", t)
+			}
 			r.typeExpr = c.typeSymbolForCompoundIdentifier(types.ParseCompoundIdentifier(val.Identifier))
 			if val.Nullable {
 				r.typeExpr = fmt.Sprintf("const $fidl.PointerType<%s>(element: %s)",
@@ -491,6 +517,12 @@ func (c *compiler) compileType(val types.Type) Type {
 			}
 		case types.InterfaceDeclType:
 			r.Decl = fmt.Sprintf("$fidl.InterfaceHandle<%s>", t)
+			if c.inExternalLibrary(compound) {
+				r.SyncDecl = fmt.Sprintf("$fidl.InterfaceHandle<sync$%s>", t)
+
+			} else {
+				r.SyncDecl = fmt.Sprintf("$fidl.InterfaceHandle<$sync.%s>", t)
+			}
 			r.typeExpr = fmt.Sprintf("const $fidl.InterfaceHandleType<%s>(nullable: %s)",
 				t, formatBool(val.Nullable))
 		default:
@@ -539,11 +571,19 @@ func (c *compiler) compileParameterArray(val []types.Parameter) []Parameter {
 		t := c.compileType(v.Type)
 		typeStr := fmt.Sprintf("type: %s", t.typeExpr)
 		offsetStr := fmt.Sprintf("offset: %v", v.Offset)
+		name := c.compileLowerCamelIdentifier(v.Name)
+		convert := ""
+		if t.declType == types.InterfaceDeclType {
+			convert = "_convertInterfaceHandle"
+		} else if v.Type.Kind == types.RequestType {
+			convert = "_convertInterfaceRequest"
+		}
 		p := Parameter{
-			t,
-			c.compileLowerCamelIdentifier(v.Name),
-			v.Offset,
-			fmt.Sprintf("const $fidl.MemberType<%s>(%s, %s)", t.Decl, typeStr, offsetStr),
+			Type:     t,
+			Name:     name,
+			Offset:   v.Offset,
+			Convert:  convert,
+			typeExpr: fmt.Sprintf("const $fidl.MemberType<%s>(%s, %s)", t.Decl, typeStr, offsetStr),
 		}
 		r = append(r, p)
 	}
@@ -571,6 +611,25 @@ func (c *compiler) compileInterface(val types.Interface) Interface {
 		name := c.compileLowerCamelIdentifier(v.Name)
 		request := c.compileParameterArray(v.Request)
 		response := c.compileParameterArray(v.Response)
+		asyncResponseClass := ""
+		if len(response) > 1 {
+			asyncResponseClass = fmt.Sprintf("_%s$%s$Response", r.Name, v.Name)
+		}
+		asyncResponseType := ""
+		if v.HasResponse {
+			if len(response) == 0 {
+				asyncResponseType = "Null"
+			} else if len(response) == 1 {
+				responseType := response[0].Type
+				if responseType.SyncDecl != "" {
+					asyncResponseType = responseType.SyncDecl
+				} else {
+					asyncResponseType = responseType.Decl
+				}
+			} else {
+				asyncResponseType = asyncResponseClass
+			}
+		}
 		m := Method{
 			v.Ordinal,
 			fmt.Sprintf("_k%s_%s_Ordinal", r.Name, v.Name),
@@ -581,6 +640,8 @@ func (c *compiler) compileInterface(val types.Interface) Interface {
 			v.HasResponse,
 			response,
 			v.ResponseSize,
+			asyncResponseClass,
+			asyncResponseType,
 			fmt.Sprintf("%s%sCallback", r.Name, v.Name),
 			fmt.Sprintf("_k%s_%s_Type", r.Name, v.Name),
 			typeExprForMethod(request, response),
@@ -702,8 +763,9 @@ func Compile(r types.Root) Root {
 		}
 		library := types.ParseLibraryName(l.Name)
 		root.Imports = append(root.Imports, Import{
-			fmt.Sprintf("package:fidl_%s/fidl.dart", formatLibraryName(library)),
-			libraryPrefix(library),
+			Url:       fmt.Sprintf("package:fidl_%s/fidl.dart", formatLibraryName(library)),
+			LocalName: libraryPrefix(library),
+			AsyncUrl:  fmt.Sprintf("package:fidl_%s/fidl_async.dart", formatLibraryName(library)),
 		})
 	}
 
