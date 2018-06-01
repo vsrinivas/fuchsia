@@ -7,6 +7,7 @@
 #include <GLFW/glfw3.h>
 
 #include "garnet/examples/escher/common/demo.h"
+#include "lib/escher/util/trace_macros.h"
 #include "lib/fxl/logging.h"
 
 static DemoHarness* g_harness = nullptr;
@@ -22,11 +23,8 @@ static void DemoGlfwErrorCallback(int err_code, const char* err_desc) {
                    << std::endl;
 }
 
-static void DemoGlfwKeyCallback(GLFWwindow* window,
-                                int key,
-                                int scancode,
-                                int action,
-                                int mods) {
+static void DemoGlfwKeyCallback(GLFWwindow* window, int key, int scancode,
+                                int action, int mods) {
   auto demo = g_harness->GetRunningDemo();
   if (!demo)
     return;
@@ -90,8 +88,7 @@ static void DemoGlfwKeyCallback(GLFWwindow* window,
   }
 }
 
-static void DemoGlfwCursorPosCallback(GLFWwindow* window,
-                                      double x_pos,
+static void DemoGlfwCursorPosCallback(GLFWwindow* window, double x_pos,
                                       double y_pos) {
   g_x_pos = x_pos;
   g_y_pos = y_pos;
@@ -106,10 +103,8 @@ static void DemoGlfwCursorPosCallback(GLFWwindow* window,
   }
 }
 
-static void DemoGlfwMouseButtonCallback(GLFWwindow* window,
-                                        int button,
-                                        int action,
-                                        int mods) {
+static void DemoGlfwMouseButtonCallback(GLFWwindow* window, int button,
+                                        int action, int mods) {
   if (button != GLFW_MOUSE_BUTTON_1) {
     // We only handle the primary mouse button.
     return;
@@ -194,7 +189,10 @@ void DemoHarnessLinux::Run(Demo* demo) {
   demo_ = demo;
 
   while (!this->ShouldQuit()) {
-    demo->DrawFrame();
+    {
+      TRACE_DURATION("gfx", "escher::DemoHarness::DrawFrame");
+      demo->DrawFrame();
+    }
     glfwPollEvents();
   }
   device().waitIdle();

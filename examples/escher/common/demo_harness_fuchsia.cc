@@ -9,6 +9,7 @@
 #include <zx/time.h>
 
 #include "garnet/examples/escher/common/demo.h"
+#include "lib/escher/util/trace_macros.h"
 
 // When running on Fuchsia, New() instantiates a DemoHarnessFuchsia.
 std::unique_ptr<DemoHarness> DemoHarness::New(
@@ -67,7 +68,10 @@ void DemoHarnessFuchsia::RenderFrameOrQuit() {
     loop_->Quit();
     device().waitIdle();
   } else {
-    demo_->DrawFrame();
+    {
+      TRACE_DURATION("gfx", "escher::DemoHarness::DrawFrame");
+      demo_->DrawFrame();
+    }
     async::PostDelayedTask(loop_->async(),
                            [this] { this->RenderFrameOrQuit(); }, zx::msec(1));
   }

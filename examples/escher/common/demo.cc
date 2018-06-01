@@ -22,12 +22,34 @@ bool Demo::HandleKeyPress(std::string key) {
       return false;
     } else if (key == "RETURN") {
       return false;
-    } else {
-      // Illegal value.
-      FXL_LOG(ERROR) << "Cannot handle key value: " << key;
-      FXL_CHECK(false);
-      return false;
+    }
+    // Illegal value.
+    FXL_LOG(ERROR) << "Cannot handle key value: " << key;
+    FXL_CHECK(false);
+    return false;
+  } else {
+    char key_char = key[0];
+    switch (key_char) {
+      case 'T':
+        ToggleTracing();
+        return true;
+      default:
+        return false;
     }
   }
-  return false;
+}
+
+void Demo::ToggleTracing() {
+#ifdef __fuchsia__
+  // On Fuchsia, use system-wide tracing in the usual way.
+  FXL_LOG(INFO) << "ToggleTracing() only supported for Escher-Linux.";
+#else
+  if (tracer_) {
+    tracer_.reset();
+    FXL_LOG(INFO) << "Tracing disabled.";
+  } else {
+    tracer_ = std::make_unique<escher::Tracer>();
+    FXL_LOG(INFO) << "Tracing enabled.";
+  }
+#endif
 }

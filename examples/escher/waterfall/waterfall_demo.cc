@@ -32,14 +32,10 @@ static constexpr size_t kOffscreenBenchmarkFrameCount = 1000;
 WaterfallDemo::WaterfallDemo(DemoHarness* harness, int argc, char** argv)
     : Demo(harness),
       renderer_(escher::PaperRenderer::New(escher())),
-      shadow_renderer_(
-          escher::ShadowMapRenderer::New(escher(),
-                                         renderer_->model_data(),
-                                         renderer_->model_renderer())),
-      moment_shadow_renderer_(
-          escher::MomentShadowMapRenderer::New(escher(),
-                                               renderer_->model_data(),
-                                               renderer_->model_renderer())),
+      shadow_renderer_(escher::ShadowMapRenderer::New(
+          escher(), renderer_->model_data(), renderer_->model_renderer())),
+      moment_shadow_renderer_(escher::MomentShadowMapRenderer::New(
+          escher(), renderer_->model_data(), renderer_->model_renderer())),
       swapchain_helper_(harness->GetVulkanSwapchain(),
                         escher()->vulkan_context().device,
                         escher()->vulkan_context().queue) {
@@ -156,6 +152,9 @@ bool WaterfallDemo::HandleKeyPress(std::string key) {
       case 'D':
         show_debug_info_ = !show_debug_info_;
         return true;
+      case 'M':
+        stop_time_ = !stop_time_;
+        return true;
       case 'P':
         profile_one_frame_ = true;
         return true;
@@ -163,9 +162,6 @@ bool WaterfallDemo::HandleKeyPress(std::string key) {
         sort_by_pipeline_ = !sort_by_pipeline_;
         FXL_LOG(INFO) << "Sort object by pipeline: "
                       << (sort_by_pipeline_ ? "true" : "false");
-        return true;
-      case 'T':
-        stop_time_ = !stop_time_;
         return true;
       case '1':
         current_scene_ = 0;

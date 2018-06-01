@@ -280,6 +280,8 @@ source_set("escher") {
     "util/stack_allocator.h",
     "util/stopwatch.h",
     "util/trace_macros.h",
+    "util/tracer.cc",
+    "util/tracer.h",
     "vk/buffer.cc",
     "vk/buffer.h",
     "vk/buffer_factory.cc",
@@ -330,6 +332,20 @@ source_set("escher") {
       "flib/fence_set_listener.h",
       "flib/release_fence_signaller.cc",
       "flib/release_fence_signaller.h",
+      "util/fuchsia_utils.cc",
+      "util/fuchsia_utils.h",
+    ]
+    public_deps += [
+      "//garnet/public/lib/images/fidl",
+      "//zircon/public/lib/fit",
+    ]
+    deps += [ "//zircon/public/lib/trace" ]
+  }
+
+  if (is_linux) {
+    sources += [
+      "util/impl/trace_macros_impl.cc",
+      "util/impl/trace_macros_impl.h",
     ]
   }
 
@@ -342,18 +358,6 @@ source_set("escher") {
     ":glm_config",
     ":thread_safety_warning",
   ]
-
-  if (is_fuchsia) {
-    public_deps += [
-      "//garnet/public/lib/images/fidl",
-      "//zircon/public/lib/fit",
-    ]
-    deps += [ "//zircon/public/lib/trace" ]
-    sources += [
-      "util/fuchsia_utils.cc",
-      "util/fuchsia_utils.h",
-    ]
-  }
 }
 
 group("unittests") {
