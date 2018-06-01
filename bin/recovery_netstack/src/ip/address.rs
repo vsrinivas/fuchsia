@@ -7,6 +7,7 @@ use std::fmt::{Debug, Display};
 use byteorder::{BigEndian, ByteOrder};
 
 /// An IP protocol version.
+#[allow(missing_docs)]
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
 pub enum IpVersion {
     V4,
@@ -14,11 +15,24 @@ pub enum IpVersion {
 }
 
 impl IpVersion {
+    /// The number for this IP protocol version.
+    ///
+    /// 4 for `V4` and 6 for `V6`.
     pub fn version_number(&self) -> u8 {
         match self {
             IpVersion::V4 => 4,
             IpVersion::V6 => 6,
         }
+    }
+
+    /// Is this IPv4?
+    pub fn is_v4(&self) -> bool {
+        *self == IpVersion::V4
+    }
+
+    /// Is this IPv6?
+    pub fn is_v6(&self) -> bool {
+        *self == IpVersion::V6
     }
 }
 
@@ -26,6 +40,11 @@ mod sealed {
     // Ensure that only Ipv4 and Ipv6 can implement IpVersion and that only
     // Ipv4Addr and Ipv6Addr can implement IpAddr.
     pub trait Sealed {}
+
+    impl Sealed for super::Ipv4 {}
+    impl Sealed for super::Ipv6 {}
+    impl Sealed for super::Ipv4Addr {}
+    impl Sealed for super::Ipv6Addr {}
 }
 
 /// An trait for IP protocol versions.
@@ -74,8 +93,6 @@ impl Ip for Ipv4 {
     type Addr = Ipv4Addr;
 }
 
-impl self::sealed::Sealed for Ipv4 {}
-
 /// IPv6.
 ///
 /// `Ipv6` implements `Ip` for IPv6.
@@ -84,15 +101,14 @@ pub struct Ipv6;
 
 impl Ip for Ipv6 {
     const VERSION: IpVersion = IpVersion::V6;
-    const LOOPBACK_ADDRESS: Ipv6Addr = Ipv6Addr::new([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]);
+    const LOOPBACK_ADDRESS: Ipv6Addr =
+        Ipv6Addr::new([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]);
     const LOOPBACK_SUBNET: Subnet<Ipv6Addr> = Subnet {
         network: Ipv6Addr::new([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]),
         prefix: 128,
     };
     type Addr = Ipv6Addr;
 }
-
-impl self::sealed::Sealed for Ipv6 {}
 
 /// An IPv4 or IPv6 address.
 pub trait IpAddr
@@ -128,6 +144,7 @@ impl Ipv4Addr {
         Ipv4Addr(bytes)
     }
 
+    /// Get the bytes of the IPv4 address.
     pub const fn ipv4_bytes(&self) -> [u8; 4] {
         self.0
     }
@@ -157,8 +174,6 @@ impl IpAddr for Ipv4Addr {
     }
 }
 
-impl self::sealed::Sealed for Ipv4Addr {}
-
 impl Display for Ipv4Addr {
     fn fmt(&self, f: &mut ::std::fmt::Formatter) -> Result<(), ::std::fmt::Error> {
         write!(f, "{}.{}.{}.{}", self.0[0], self.0[1], self.0[2], self.0[3])
@@ -181,6 +196,7 @@ impl Ipv6Addr {
         Ipv6Addr(bytes)
     }
 
+    /// Get the bytes of the IPv6 address.
     pub const fn ipv6_bytes(&self) -> [u8; 16] {
         self.0
     }
@@ -209,8 +225,6 @@ impl IpAddr for Ipv6Addr {
         &self.0
     }
 }
-
-impl self::sealed::Sealed for Ipv6Addr {}
 
 impl Display for Ipv6Addr {
     fn fmt(&self, f: &mut ::std::fmt::Formatter) -> Result<(), ::std::fmt::Error> {
