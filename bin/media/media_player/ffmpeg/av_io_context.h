@@ -12,7 +12,7 @@
 #include "lib/fxl/logging.h"
 #include "lib/fxl/synchronization/thread_annotations.h"
 extern "C" {
-#include "third_party/ffmpeg/libavformat/avio.h"
+#include "libavformat/avio.h"
 }
 
 namespace media_player {

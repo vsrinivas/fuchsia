@@ -31,6 +31,10 @@ source_set("ffmpeg") {
     "lpcm_util.h",
   ]
 
+  public_deps = [
+    ":prebuilt_ffmpeg",
+  ]
+
   deps = [
     "//garnet/bin/media/media_player/decode",
     "//garnet/bin/media/media_player/demux",
@@ -40,7 +44,6 @@ source_set("ffmpeg") {
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/media/fidl",
     "//garnet/public/lib/media/timeline",
-    "//third_party/ffmpeg",
     "//zircon/public/lib/trace",
   ]
 
@@ -51,6 +54,42 @@ source_set("ffmpeg") {
     "FF_API_GET_BUFFER=0",
     "FF_API_CONVERGENCE_DURATION=0",
   ]
+}
 
-  include_dirs = [ "//third_party/ffmpeg" ]
+group("prebuilt_ffmpeg") {
+  deps = [
+    ":prebuilt_ffmpeg_copy",
+  ]
+
+  public_configs = [ ":prebuilt_ffmpeg_config" ]
+}
+
+config("prebuilt_ffmpeg_config") {
+  visibility = [ ":prebuilt_ffmpeg" ]
+
+  prebuilt_ffmpeg_base = "prebuilt/${target_cpu}/"
+  if (target_cpu == "x64") {
+    ffmpeg_config = "max"
+  } else {
+    ffmpeg_config = "default"
+  }
+
+  include_dirs = [
+    prebuilt_ffmpeg_base,
+    prebuilt_ffmpeg_base + "/fuchsia/config/" + ffmpeg_config + "/" +
+        target_cpu,
+  ]
+
+  ldflags = [ "${target_cpu}-shared/libffmpeg.so" ]
+}
+
+copy("prebuilt_ffmpeg_copy") {
+  visibility = [ ":prebuilt_ffmpeg" ]
+
+  sources = [
+    "prebuilt/$target_cpu/libffmpeg.so",
+  ]
+  outputs = [
+    "$root_out_dir/${target_cpu}-shared/libffmpeg.so",
+  ]
 }

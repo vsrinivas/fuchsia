@@ -9,7 +9,7 @@
 
 #include "garnet/bin/media/media_player/framework/types/video_stream_type.h"
 extern "C" {
-#include "third_party/ffmpeg/libavformat/avformat.h"
+#include "libavformat/avformat.h"
 }
 
 namespace media_player {

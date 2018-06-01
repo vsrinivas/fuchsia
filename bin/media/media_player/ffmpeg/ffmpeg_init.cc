@@ -5,7 +5,7 @@
 #include "garnet/bin/media/media_player/ffmpeg/ffmpeg_init.h"
 
 extern "C" {
-#include "third_party/ffmpeg/libavformat/avformat.h"
+#include "libavformat/avformat.h"
 }
 
 namespace media_player {

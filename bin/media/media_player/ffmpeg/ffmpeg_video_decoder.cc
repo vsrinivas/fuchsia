@@ -11,7 +11,7 @@
 #include "lib/media/timeline/timeline.h"
 #include "lib/media/timeline/timeline_rate.h"
 extern "C" {
-#include "third_party/ffmpeg/libavutil/imgutils.h"
+#include "libavutil/imgutils.h"
 }
 
 namespace media_player {

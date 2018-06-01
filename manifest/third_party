@@ -88,11 +88,6 @@
              remote="https://fuchsia.googlesource.com/third_party/expat"
              gerrithost="https://fuchsia-review.googlesource.com"
              revision="66a4adc042f17bd113d3d940bcff46ec17c15f61"/>
-    <project name="third_party/ffmpeg"
-             path="third_party/ffmpeg"
-             remote="https://fuchsia.googlesource.com/third_party/ffmpeg"
-             gerrithost="https://fuchsia-review.googlesource.com"
-             revision="10baac319a85fb21540779d72c8aa2329222b12a"/>
     <project name="third_party/flatbuffers"
              path="third_party/flatbuffers"
              remote="https://fuchsia.googlesource.com/third_party/flatbuffers"

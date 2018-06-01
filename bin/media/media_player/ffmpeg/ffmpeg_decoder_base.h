@@ -14,7 +14,7 @@
 #include "garnet/bin/media/media_player/ffmpeg/av_frame.h"
 #include "garnet/bin/media/media_player/ffmpeg/av_packet.h"
 extern "C" {
-#include "third_party/ffmpeg/libavcodec/avcodec.h"
+#include "libavcodec/avcodec.h"
 }
 
 namespace media_player {

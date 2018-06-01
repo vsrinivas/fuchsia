@@ -10,7 +10,7 @@
 #include "garnet/bin/media/media_player/ffmpeg/ffmpeg_init.h"
 #include "lib/fxl/logging.h"
 extern "C" {
-#include "third_party/ffmpeg/libavformat/avio.h"
+#include "libavformat/avio.h"
 }
 
 namespace media_player {

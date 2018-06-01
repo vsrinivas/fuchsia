@@ -6,8 +6,8 @@
 #define GARNET_BIN_MEDIA_MEDIA_PLAYER_FFMPEG_AV_PACKET_H_
 
 extern "C" {
-#include "third_party/ffmpeg/libavcodec/avcodec.h"
-#include "third_party/ffmpeg/libavformat/avformat.h"
+#include "libavcodec/avcodec.h"
+#include "libavformat/avformat.h"
 }
 
 namespace media_player {

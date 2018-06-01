@@ -6,7 +6,7 @@
 #define GARNET_BIN_MEDIA_MEDIA_PLAYER_FFMPEG_AV_FRAME_H_
 
 extern "C" {
-#include "third_party/ffmpeg/libavutil/frame.h"
+#include "libavutil/frame.h"
 }
 
 namespace media_player {

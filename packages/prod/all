@@ -17,7 +17,6 @@
         "garnet/packages/prod/dhcpd",
         "garnet/packages/prod/drivers",
         "garnet/packages/prod/far",
-        "garnet/packages/prod/ffmpeg",
         "garnet/packages/prod/fonts",
         "garnet/packages/prod/fortune",
         "garnet/packages/prod/gralloc",
