@@ -15,6 +15,7 @@
 #include <vm/physmap.h>
 #include <vm/pmm.h>
 #include <vm/vm_aspace.h>
+#include <zbi/zbi-cpp.h>
 #include <zircon/boot/image.h>
 #include <zircon/compiler.h>
 #include <zircon/syscalls/resource.h>
@@ -255,12 +256,15 @@ zx_status_t sys_system_mexec(zx_handle_t kernel_vmo, zx_handle_t bootimage_vmo) 
     if (stashed_crashlog && stashed_crashlog->size() <= UINT32_MAX) {
         size_t crashlog_len = stashed_crashlog->size();
         uint8_t* bootdata_section;
-        result = bootdata_append_section(bootimage_buffer, new_bootimage_len,
-                                         static_cast<uint32_t>(crashlog_len),
-                                         ZBI_TYPE_CRASHLOG, 0, 0, &bootdata_section);
-        if (result != ZX_OK) {
+        zbi::Zbi image(bootimage_buffer, new_bootimage_len);
+
+        zbi_result_t res = image.CreateSection(static_cast<uint32_t>(crashlog_len),
+                                               ZBI_TYPE_CRASHLOG, 0, 0,
+                                               reinterpret_cast<void**>(&bootdata_section));
+
+        if (res != ZBI_RESULT_OK) {
             printf("mexec: could not append crashlog\n");
-            return result;
+            return ZX_ERR_INTERNAL;
         }
 
         result = stashed_crashlog->Read(bootdata_section, 0, crashlog_len);
