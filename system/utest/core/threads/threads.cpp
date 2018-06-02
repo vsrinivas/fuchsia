@@ -1151,6 +1151,9 @@ static bool test_writing_fp_register_state() {
     END_TEST;
 }
 
+// TODO(brettw) ZX-2203 this causes a kernel panic on newer x64 systems that
+// use compressed xsave info.
+#if !defined(__x86_64__)
 static bool test_writing_vector_register_state() {
     BEGIN_TEST;
 
@@ -1168,6 +1171,7 @@ static bool test_writing_vector_register_state() {
 
     END_TEST;
 }
+#endif
 
 #if defined(__x86_64__)
 
@@ -1350,7 +1354,13 @@ RUN_TEST(test_reading_vector_register_state)
 
 RUN_TEST(test_writing_general_register_state)
 RUN_TEST(test_writing_fp_register_state)
+
+// TODO(brettw) ZX-2203 this causes a kernel panic on newer x64 systems that
+// use compressed xsave info.
+#if !defined(__x86_64__)
 RUN_TEST(test_writing_vector_register_state)
+#endif
+
 RUN_TEST(test_noncanonical_rip_address)
 RUN_TEST(test_writing_arm_flags_register)
 END_TEST_CASE(threads_tests)
