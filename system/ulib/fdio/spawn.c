@@ -32,19 +32,31 @@
 
 // The fdio_spawn_action_t is replicated in various ffi interfaces, including
 // the rust and golang standard libraries.
-static_assert(sizeof(fdio_spawn_action_t) == 24
-              && offsetof(fdio_spawn_action_t, action) == 0
-              && offsetof(fdio_spawn_action_t, fd) == 8
-              && offsetof(fdio_spawn_action_t, fd.local_fd) == 8
-              && offsetof(fdio_spawn_action_t, fd.target_fd) == 12
-              && offsetof(fdio_spawn_action_t, ns) == 8
-              && offsetof(fdio_spawn_action_t, ns.prefix) == 8
-              && offsetof(fdio_spawn_action_t, ns.handle) == 16
-              && offsetof(fdio_spawn_action_t, h) == 8
-              && offsetof(fdio_spawn_action_t, h.id) == 8
-              && offsetof(fdio_spawn_action_t, h.handle) == 12
-              && offsetof(fdio_spawn_action_t, name) == 8
-              && offsetof(fdio_spawn_action_t, name.data) == 8,
+static_assert(sizeof(fdio_spawn_action_t) == 24,
+              "fdio_spawn_action_t must have a stable ABI");
+static_assert(offsetof(fdio_spawn_action_t, action) == 0,
+              "fdio_spawn_action_t must have a stable ABI");
+static_assert(offsetof(fdio_spawn_action_t, fd) == 8,
+              "fdio_spawn_action_t must have a stable ABI");
+static_assert(offsetof(fdio_spawn_action_t, fd.local_fd) == 8,
+              "fdio_spawn_action_t must have a stable ABI");
+static_assert(offsetof(fdio_spawn_action_t, fd.target_fd) == 12,
+              "fdio_spawn_action_t must have a stable ABI");
+static_assert(offsetof(fdio_spawn_action_t, ns) == 8,
+              "fdio_spawn_action_t must have a stable ABI");
+static_assert(offsetof(fdio_spawn_action_t, ns.prefix) == 8,
+              "fdio_spawn_action_t must have a stable ABI");
+static_assert(offsetof(fdio_spawn_action_t, ns.handle) == 16,
+              "fdio_spawn_action_t must have a stable ABI");
+static_assert(offsetof(fdio_spawn_action_t, h) == 8,
+              "fdio_spawn_action_t must have a stable ABI");
+static_assert(offsetof(fdio_spawn_action_t, h.id) == 8,
+              "fdio_spawn_action_t must have a stable ABI");
+static_assert(offsetof(fdio_spawn_action_t, h.handle) == 12,
+              "fdio_spawn_action_t must have a stable ABI");
+static_assert(offsetof(fdio_spawn_action_t, name) == 8,
+              "fdio_spawn_action_t must have a stable ABI");
+static_assert(offsetof(fdio_spawn_action_t, name.data) == 8,
               "fdio_spawn_action_t must have a stable ABI");
 
 static zx_status_t load_path(const char* path, zx_handle_t* vmo) {
