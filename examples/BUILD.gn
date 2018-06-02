@@ -11,7 +11,7 @@ package("modular_examples") {
     "counter_cpp",
     "hello_world",
     "simple:simple_agent",
-    "simple:simple_module",
+    "simple:simple_module_bin",
     "swap_cpp",
     "todo_cpp",
   ]
