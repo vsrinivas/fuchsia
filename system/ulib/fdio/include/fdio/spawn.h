@@ -73,8 +73,8 @@ zx_status_t fdio_spawn(zx_handle_t job,
 // Transfer local descriptor |local_fd| into |target_fd| in the spawned process.
 //
 // This action will fail if |local_fd| is not a valid |local_fd|, if |local_fd|
-// has been duplicated, if |local_fd| in use in an io operation, or if
-// |local_fd| does not suppose this operation.
+// has been duplicated, if |local_fd| is being used in an io operation, or if
+// |local_fd| does not support this operation.
 //
 // From the point of view of the calling process, the |local_fd| will appear to
 // have been closed, regardless of whether the |fdio_spawn_etc| call succeeds.
@@ -156,9 +156,9 @@ struct fdio_spawn_action {
 
 // Spawn a process in the given job.
 //
-// The binary for the process is loaded from the given |path| and passed |argc|
-// and |argv|. The aspects of this process' environment indicated by |clone| are
-// shared with the process.
+// The binary for the process is loaded from the given |path| and passed |argv|.
+// The aspects of this process' environment indicated by |clone| are shared with
+// the process.
 //
 // The spawned process is also given |environ| as its environment and the given
 // |actions| are applied when creating the process.
@@ -190,6 +190,6 @@ zx_status_t fdio_spawn_etc(zx_handle_t job,
                            size_t action_count,
                            const fdio_spawn_action_t* actions,
                            zx_handle_t* process_out,
-                           char* err_msg_out);
+                           char err_msg_out[FDIO_SPAWN_ERR_MSG_MAX_LENGTH]);
 
 __END_CDECLS

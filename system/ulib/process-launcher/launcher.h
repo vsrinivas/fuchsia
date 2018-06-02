@@ -8,6 +8,7 @@
 #include <fbl/string.h>
 #include <fbl/unique_ptr.h>
 #include <fbl/vector.h>
+#include <launchpad/launchpad.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/fidl/cpp/message_buffer.h>
 #include <lib/zx/channel.h>
@@ -37,11 +38,13 @@ private:
     zx_status_t ReadAndDispatchMessage(fidl::MessageBuffer* buffer);
 
     zx_status_t Launch(fidl::MessageBuffer* buffer, fidl::Message message);
+    zx_status_t CreateWithoutStarting(fidl::MessageBuffer* buffer, fidl::Message message);
     zx_status_t AddArgs(fidl::Message message);
     zx_status_t AddEnvirons(fidl::Message message);
     zx_status_t AddNames(fidl::Message message);
     zx_status_t AddHandles(fidl::Message message);
 
+    void PrepareLaunchpad(const fidl::Message& message, launchpad_t** lp);
     void NotifyError(zx_status_t error);
     void Reset();
 

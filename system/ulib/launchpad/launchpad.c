@@ -1032,51 +1032,62 @@ size_t launchpad_set_stack_size(launchpad_t* lp, size_t new_size) {
     return old_size;
 }
 
-static zx_status_t prepare_start(launchpad_t* lp, const char* thread_name,
-                                 zx_handle_t to_child,
-                                 zx_handle_t* thread, uintptr_t* sp) {
+static zx_status_t prepare_start(launchpad_t* lp, launchpad_start_data_t* result) {
     if (lp->entry == 0)
         return lp_error(lp, ZX_ERR_BAD_STATE, "prepare start bad state");
 
-    zx_status_t status = zx_thread_create(lp_proc(lp), thread_name,
-                                          strlen(thread_name), 0, thread);
-    if (status < 0) {
-        return lp_error(lp, status, "cannot create initial thread");
-    } else {
-        // Pass the thread handle down to the child.  The handle we pass
-        // will be consumed by message_write.  So we need a duplicate to
-        // pass to zx_process_start later.
-        zx_handle_t thread_copy;
-        status = zx_handle_duplicate(*thread, ZX_RIGHT_SAME_RIGHTS, &thread_copy);
-        if (status < 0) {
-            zx_handle_close(*thread);
-            return lp_error(lp, status, "cannot duplicate thread handle");
-        }
-        status = launchpad_add_handle(lp, thread_copy, PA_THREAD_SELF);
-        if (status != ZX_OK) {
-            zx_handle_close(*thread);
-            return lp_error(lp, status, "cannot add thread self handle");
-        }
+    zx_status_t status = ZX_OK;
+    zx_handle_t to_child = ZX_HANDLE_INVALID;
+    zx_handle_t bootstrap = ZX_HANDLE_INVALID;
+    zx_handle_t process = ZX_HANDLE_INVALID;
+    zx_handle_t root_vmar = ZX_HANDLE_INVALID;
+    zx_handle_t thread = ZX_HANDLE_INVALID;
+    void *msg = NULL;
+
+    status = zx_channel_create(0, &to_child, &bootstrap);
+    if (status != ZX_OK)
+        return lp_error(lp, status, "start: cannot create channel");
+
+    const char* thread_name = "initial-thread";
+    status = zx_thread_create(lp_proc(lp), thread_name, strlen(thread_name), 0, &thread);
+    if (status != ZX_OK) {
+        lp_error(lp, status, "cannot create initial thread");
+        goto cleanup;
+    }
+
+    // Pass the thread handle down to the child.  The handle we pass
+    // will be consumed by message_write.  So we need a duplicate to
+    // pass to zx_process_start later.
+    zx_handle_t thread_copy;
+    status = zx_handle_duplicate(thread, ZX_RIGHT_SAME_RIGHTS, &thread_copy);
+    if (status != ZX_OK) {
+        lp_error(lp, status, "cannot duplicate thread handle");
+        goto cleanup;
+    }
+
+    status = launchpad_add_handle(lp, thread_copy, PA_THREAD_SELF);
+    if (status != ZX_OK) {
+        lp_error(lp, status, "cannot add thread self handle");
+        goto cleanup;
     }
 
     bool sent_loader_message = lp->loader_message;
     if (lp->loader_message) {
-        status = send_loader_message(lp, *thread, to_child);
+        status = send_loader_message(lp, thread, to_child);
         if (status != ZX_OK) {
-            zx_handle_close(*thread);
-            return lp_error(lp, status, "failed to send loader message");
+            lp_error(lp, status, "failed to send loader message");
+            goto cleanup;
         }
     }
 
     bool allocate_stack = !lp->set_stack_size || lp->stack_size > 0;
 
-    void *msg = NULL;
     size_t size;
 
     if (build_message(lp, lp->handle_count + (allocate_stack ? 1 : 0),
                       &msg, &size, true) != ZX_OK) {
-        zx_handle_close(*thread);
-        return lp_error(lp, ZX_ERR_NO_MEMORY, "out of memory assembling procargs message");
+        lp_error(lp, ZX_ERR_NO_MEMORY, "out of memory assembling procargs message");
+        goto cleanup;
     }
     zx_proc_args_t* header = msg;
     uint32_t* next_handle = mempcpy((uint8_t*)msg + header->handle_info_off,
@@ -1113,22 +1124,19 @@ static zx_status_t prepare_start(launchpad_t* lp, const char* thread_name,
         // large size for the message (presumably arguments and
         // environment strings that are unreasonably large).
         if (stack_size > 0 && size > stack_size / 2) {
-            free(msg);
-            zx_handle_close(*thread);
-            return lp_error(lp, ZX_ERR_BUFFER_TOO_SMALL,
-                            "procargs message is too large");
+            lp_error(lp, ZX_ERR_BUFFER_TOO_SMALL, "procargs message is too large");
+            goto cleanup;
         }
     }
 
-    *sp = 0;
+    zx_vaddr_t sp = 0;
     if (stack_size > 0) {
         // Allocate the initial thread's stack.
         zx_handle_t stack_vmo;
         zx_status_t status = zx_vmo_create(stack_size, 0, &stack_vmo);
         if (status != ZX_OK) {
-            free(msg);
-            zx_handle_close(*thread);
-            return lp_error(lp, status, "cannot create stack vmo");
+            lp_error(lp, status, "cannot create stack vmo");
+            goto cleanup;
         }
         zx_object_set_property(stack_vmo, ZX_PROP_NAME,
                                stack_vmo_name, strlen(stack_vmo_name));
@@ -1138,7 +1146,7 @@ static zx_status_t prepare_start(launchpad_t* lp, const char* thread_name,
                               &stack_base);
         if (status == ZX_OK) {
             ZX_DEBUG_ASSERT(stack_size % PAGE_SIZE == 0);
-            *sp = compute_initial_stack_pointer(stack_base, stack_size);
+            sp = compute_initial_stack_pointer(stack_base, stack_size);
             // Pass the stack VMO to the process.  Our protocol with the
             // new process is that we warrant that this is the VMO from
             // which the initial stack is mapped and that we've exactly
@@ -1154,9 +1162,8 @@ static zx_status_t prepare_start(launchpad_t* lp, const char* thread_name,
         }
         if (status != ZX_OK) {
             zx_handle_close(stack_vmo);
-            zx_handle_close(*thread);
-            free(msg);
-            return lp_error(lp, status, "cannot map stack vmo");
+            lp_error(lp, status, "cannot map stack vmo");
+            goto cleanup;
         }
     }
 
@@ -1164,31 +1171,71 @@ static zx_status_t prepare_start(launchpad_t* lp, const char* thread_name,
         // We're done doing mappings, so clear out the reservation VMAR.
         status = zx_vmar_destroy(lp->reserve_vmar);
         if (status != ZX_OK) {
-            return lp_error(lp, status, "\
+            lp_error(lp, status, "\
 zx_vmar_destroy failed on low address space reservation VMAR");
+            goto cleanup;
         }
         status = zx_handle_close(lp->reserve_vmar);
         if (status != ZX_OK) {
-            return lp_error(lp, status, "\
+            lp_error(lp, status, "\
 zx_handle_close failed on low address space reservation VMAR");
+            goto cleanup;
         }
         lp->reserve_vmar = ZX_HANDLE_INVALID;
     }
 
-    status = zx_channel_write(to_child, 0, msg, size,
-                              lp->handles, lp->handle_count);
-    free(msg);
-    if (status == ZX_OK) {
-        // message_write consumed all the handles.
-        for (size_t i = 0; i < lp->handle_count; ++i)
-            lp->handles[i] = ZX_HANDLE_INVALID;
-        lp->handle_count = 0;
-    } else {
-        zx_handle_close(*thread);
-        return lp_error(lp, status, "failed to write procargs message");
+    // The process handle in lp->handles[0] will be consumed by message_write.
+    // So we'll need a duplicate to do process operations later.
+    status = zx_handle_duplicate(lp_proc(lp), ZX_RIGHT_SAME_RIGHTS, &process);
+    if (status != ZX_OK) {
+        lp_error(lp, status, "cannot duplicate process handle");
+        goto cleanup;
     }
 
+    // The root_vmar handle in lp->handles[0] will be consumed by message_write.
+    // So we'll need a duplicate to do process operations later.
+    status = zx_handle_duplicate(lp_vmar(lp), ZX_RIGHT_SAME_RIGHTS, &root_vmar);
+    if (status != ZX_OK) {
+        lp_error(lp, status, "cannot duplicate root vmar handle");
+        goto cleanup;
+    }
+
+    status = zx_channel_write(to_child, 0, msg, size, lp->handles, lp->handle_count);
+    if (status != ZX_OK) {
+        lp_error(lp, status, "failed to write procargs message");
+        goto cleanup;
+    }
+
+    // message_write consumed all the handles.
+    for (size_t i = 0; i < lp->handle_count; ++i)
+        lp->handles[i] = ZX_HANDLE_INVALID;
+    lp->handle_count = 0;
+
+    zx_handle_close(to_child);
+    free(msg);
+
+    result->process = process;
+    result->root_vmar = root_vmar;
+    result->thread = thread;
+    result->entry = lp->entry;
+    result->sp = sp;
+    result->bootstrap = bootstrap;
+    result->vdso_base = lp->vdso_base;
     return ZX_OK;
+
+cleanup:
+    if (to_child != ZX_HANDLE_INVALID)
+       zx_handle_close(to_child);
+    if (bootstrap != ZX_HANDLE_INVALID)
+       zx_handle_close(bootstrap);
+    if (process != ZX_HANDLE_INVALID)
+       zx_handle_close(process);
+    if (root_vmar != ZX_HANDLE_INVALID)
+       zx_handle_close(root_vmar);
+    if (thread != ZX_HANDLE_INVALID)
+       zx_handle_close(thread);
+    free(msg);
+    return lp->error;
 }
 
 // Start the process running.  If the send_loader_message flag is
@@ -1208,44 +1255,24 @@ static zx_status_t launchpad_start(launchpad_t* lp, zx_handle_t* process_out) {
     if (lp->error)
         return lp->error;
 
-    // The proc handle in lp->handles[0] will be consumed by message_write.
-    // So we'll need a duplicate to do process operations later.
-    zx_handle_t proc;
-    zx_status_t status = zx_handle_duplicate(lp_proc(lp), ZX_RIGHT_SAME_RIGHTS, &proc);
-    if (status < 0)
-        return lp_error(lp, status, "start: cannot duplicate process handle");
+    launchpad_start_data_t data;
+    zx_status_t status = prepare_start(lp, &data);
+    if (status != ZX_OK)
+        return status;
 
-    zx_handle_t channelh[2];
-    status = zx_channel_create(0, channelh, channelh + 1);
+    status = zx_process_start(data.process, data.thread, data.entry, data.sp,
+                              data.bootstrap, data.vdso_base);
+
+    zx_handle_close(data.thread);
+    zx_handle_close(data.root_vmar);
+
     if (status != ZX_OK) {
-        zx_handle_close(proc);
-        return lp_error(lp, status, "start: cannot create channel");
-    }
-    zx_handle_t to_child = channelh[0];
-    zx_handle_t child_bootstrap = channelh[1];
-
-    zx_handle_t thread;
-    uintptr_t sp = 0u;
-    status = prepare_start(lp, "initial-thread", to_child, &thread, &sp);
-    zx_handle_close(to_child);
-    if (status != ZX_OK) {
-        lp_error(lp, status, "start: prepare_start() failed");
-        zx_handle_close(child_bootstrap);
-    } else {
-        status = zx_process_start(proc, thread, lp->entry, sp,
-                                  child_bootstrap, lp->vdso_base);
-        if (status != ZX_OK)
-            lp_error(lp, status, "start: zx_process_start() failed");
-        zx_handle_close(thread);
-    }
-    // child_bootstrap has been consumed by this point.
-    if (status == ZX_OK) {
-        *process_out = proc;
-        return ZX_OK;
+        zx_handle_close(data.process);
+        return lp_error(lp, status, "zx_process_start() failed");
     }
 
-    zx_handle_close(proc);
-    return status;
+    *process_out = data.process;
+    return ZX_OK;
 }
 
 zx_status_t launchpad_go(launchpad_t* lp, zx_handle_t* proc, const char** errmsg) {
@@ -1260,6 +1287,16 @@ zx_status_t launchpad_go(launchpad_t* lp, zx_handle_t* proc, const char** errmsg
             zx_handle_close(h);
         }
     }
+    launchpad_destroy(lp);
+    return status;
+}
+
+zx_status_t launchpad_ready_set(launchpad_t* lp,
+                                launchpad_start_data_t* data,
+                                const char** errmsg) {
+    zx_status_t status = prepare_start(lp, data);
+    if (errmsg)
+        *errmsg = lp->errmsg;
     launchpad_destroy(lp);
     return status;
 }

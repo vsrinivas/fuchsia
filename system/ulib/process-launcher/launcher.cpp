@@ -7,7 +7,6 @@
 #include <fbl/string.h>
 #include <fbl/vector.h>
 #include <fuchsia/process/c/fidl.h>
-#include <launchpad/launchpad.h>
 #include <lib/fidl/cpp/message_buffer.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/job.h>
@@ -90,6 +89,8 @@ zx_status_t LauncherImpl::ReadAndDispatchMessage(fidl::MessageBuffer* buffer) {
     switch (message.ordinal()) {
     case fuchsia_process_LauncherLaunchOrdinal:
         return Launch(buffer, fbl::move(message));
+    case fuchsia_process_LauncherCreateWithoutStartingOrdinal:
+        return CreateWithoutStarting(buffer, fbl::move(message));
     case fuchsia_process_LauncherAddArgsOrdinal:
         return AddArgs(fbl::move(message));
     case fuchsia_process_LauncherAddEnvironsOrdinal:
@@ -112,40 +113,11 @@ zx_status_t LauncherImpl::Launch(fidl::MessageBuffer* buffer, fidl::Message mess
         return status;
     }
 
-    fuchsia_process_LaunchInfo* info = message.GetPayloadAs<fuchsia_process_LaunchInfo>();
-
     zx_txid_t txid = message.txid();
     uint32_t ordinal = message.ordinal();
 
-    // Grab an owning reference to the job because launchpad does not take
-    // ownership of the job. We need to close the handle ourselves.
-    zx::job job(info->job);
-    fbl::String name = GetString(info->name);
-
-    fbl::Vector<const char*> args, environs, nametable;
-    PushCStrs(args_, &args);
-    PushCStrs(environs_, &environs);
-    PushCStrs(nametable_, &nametable);
-    environs.push_back(nullptr);
-
-    launchpad_t* lp;
-    launchpad_create_with_jobs(job.get(), ZX_HANDLE_INVALID, name.c_str(), &lp);
-
-    if (!ldsvc_) {
-        launchpad_abort(lp, ZX_ERR_INVALID_ARGS, "need ldsvc to load PT_INTERP");
-    }
-
-    // There's a subtle issue at this point. The problem is that launchpad will
-    // make a synchronous call into the loader service to read the PT_INTERP,
-    // but this handle was provided by our client, which means our client can
-    // hang the launcher.
-    zx::channel old_ldsvc(launchpad_use_loader_service(lp, ldsvc_.release()));
-
-    launchpad_load_from_vmo(lp, info->executable);
-    launchpad_set_args(lp, static_cast<int>(args.size()), args.get());
-    launchpad_set_environ(lp, environs.get());
-    launchpad_set_nametable(lp, nametable.size(), nametable.get());
-    launchpad_add_handles(lp, ids_.size(), reinterpret_cast<zx_handle_t*>(handles_.get()), ids_.get());
+    launchpad_t* lp = nullptr;
+    PrepareLaunchpad(message, &lp);
 
     fidl::Builder builder = buffer->CreateBuilder();
     fidl_message_header_t* header = builder.New<fidl_message_header_t>();
@@ -169,6 +141,57 @@ zx_status_t LauncherImpl::Launch(fidl::MessageBuffer* buffer, fidl::Message mess
     status = message.Encode(&fuchsia_process_LauncherLaunchResponseTable, &error_msg);
     if (status != ZX_OK) {
         fprintf(stderr, "launcher: error: Launch: %s\n", error_msg);
+        return status;
+    }
+    return message.Write(channel_.get(), 0);
+}
+
+zx_status_t LauncherImpl::CreateWithoutStarting(fidl::MessageBuffer* buffer, fidl::Message message) {
+    const char* error_msg = nullptr;
+    zx_status_t status = message.Decode(&fuchsia_process_LauncherCreateWithoutStartingRequestTable, &error_msg);
+    if (status != ZX_OK) {
+        fprintf(stderr, "launcher: error: CreateWithoutStarting: %s\n", error_msg);
+        return status;
+    }
+
+    zx_txid_t txid = message.txid();
+    uint32_t ordinal = message.ordinal();
+
+    launchpad_t* lp = nullptr;
+    PrepareLaunchpad(message, &lp);
+
+    fidl::Builder builder = buffer->CreateBuilder();
+    fidl_message_header_t* header = builder.New<fidl_message_header_t>();
+    header->txid = txid;
+    header->ordinal = ordinal;
+    fuchsia_process_CreateWithoutStartingResult* result = builder.New<fuchsia_process_CreateWithoutStartingResult>();
+
+    launchpad_start_data_t data;
+    status = launchpad_ready_set(lp, &data, &error_msg);
+
+    result->status = status;
+    if (status == ZX_OK) {
+        result->data = builder.New<fuchsia_process_ProcessStartData>();
+        result->data->process = data.process;
+        result->data->root_vmar = data.root_vmar;
+        result->data->thread = data.thread;
+        result->data->entry = data.entry;
+        result->data->sp = data.sp;
+        result->data->bootstrap = data.bootstrap;
+        result->data->vdso_base = data.vdso_base;
+    } else if (error_msg) {
+        uint32_t len = static_cast<uint32_t>(strlen(error_msg));
+        result->error_message.size = len;
+        result->error_message.data = builder.NewArray<char>(len);
+        strncpy(result->error_message.data, error_msg, len);
+    }
+
+    message.set_bytes(builder.Finalize());
+    Reset();
+
+    status = message.Encode(&fuchsia_process_LauncherCreateWithoutStartingResponseTable, &error_msg);
+    if (status != ZX_OK) {
+        fprintf(stderr, "launcher: error: CreateWithoutStarting: %s\n", error_msg);
         return status;
     }
     return message.Write(channel_.get(), 0);
@@ -234,13 +257,40 @@ zx_status_t LauncherImpl::AddHandles(fidl::Message message) {
     return ZX_OK;
 }
 
-void LauncherImpl::Reset() {
-    args_.reset();
-    environs_.reset();
-    nametable_.reset();
-    ids_.reset();
-    handles_.reset();
-    ldsvc_.reset();
+void LauncherImpl::PrepareLaunchpad(const fidl::Message& message, launchpad_t** lp_out) {
+    fuchsia_process_LaunchInfo* info = message.GetPayloadAs<fuchsia_process_LaunchInfo>();
+
+    // Grab an owning reference to the job because launchpad does not take
+    // ownership of the job. We need to close the handle ourselves.
+    zx::job job(info->job);
+    fbl::String name = GetString(info->name);
+
+    fbl::Vector<const char*> args, environs, nametable;
+    PushCStrs(args_, &args);
+    PushCStrs(environs_, &environs);
+    PushCStrs(nametable_, &nametable);
+    environs.push_back(nullptr);
+
+    launchpad_t* lp = nullptr;
+    launchpad_create_with_jobs(job.get(), ZX_HANDLE_INVALID, name.c_str(), &lp);
+
+    if (!ldsvc_) {
+        launchpad_abort(lp, ZX_ERR_INVALID_ARGS, "need ldsvc to load PT_INTERP");
+    }
+
+    // There's a subtle issue at this point. The problem is that launchpad will
+    // make a synchronous call into the loader service to read the PT_INTERP,
+    // but this handle was provided by our client, which means our client can
+    // hang the launcher.
+    zx::channel old_ldsvc(launchpad_use_loader_service(lp, ldsvc_.release()));
+
+    launchpad_load_from_vmo(lp, info->executable);
+    launchpad_set_args(lp, static_cast<int>(args.size()), args.get());
+    launchpad_set_environ(lp, environs.get());
+    launchpad_set_nametable(lp, nametable.size(), nametable.get());
+    launchpad_add_handles(lp, ids_.size(), reinterpret_cast<zx_handle_t*>(handles_.get()), ids_.get());
+
+    *lp_out = lp;
 }
 
 void LauncherImpl::NotifyError(zx_status_t error) {
@@ -249,6 +299,15 @@ void LauncherImpl::NotifyError(zx_status_t error) {
     if (error_handler_)
         error_handler_(error);
     // We might be deleted now.
+}
+
+void LauncherImpl::Reset() {
+    args_.reset();
+    environs_.reset();
+    nametable_.reset();
+    ids_.reset();
+    handles_.reset();
+    ldsvc_.reset();
 }
 
 } // namespace launcher
