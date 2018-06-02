@@ -8,6 +8,7 @@
 #include <ddk/usb-request.h>
 #include <driver/usb.h>
 #include <fbl/unique_ptr.h>
+#include <lib/fit/function.h>
 #include <lib/zx/time.h>
 #include <wlan/async/dispatcher.h>
 #include <wlan/protocol/mac.h>
@@ -18,7 +19,6 @@
 #include <array>
 #include <cstddef>
 #include <cstdint>
-#include <functional>
 #include <map>
 #include <mutex>
 #include <thread>

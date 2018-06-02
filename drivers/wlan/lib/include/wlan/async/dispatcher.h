@@ -4,12 +4,13 @@
 
 #pragma once
 
-#include <functional>
+#include <mutex>
+
 #include <lib/async/cpp/task.h>
 #include <lib/async/dispatcher.h>
 #include <lib/async/task.h>
 #include <lib/fidl/cpp/thread_safe_binding_set.h>
-#include <mutex>
+#include <lib/fit/function.h>
 #include <zx/channel.h>
 #include <zx/time.h>
 
@@ -39,7 +40,7 @@ class Dispatcher {
     //
     // If |InitiateShutdown| has been already called previously,
     // then it returns immediately, and |ready_callback| is ignored.
-    void InitiateShutdown(std::function<void()> ready_callback) {
+    void InitiateShutdown(fit::closure ready_callback) {
         {
             std::lock_guard<std::mutex> guard(lock_);
             if (shutdown_initiated_) {
