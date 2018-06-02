@@ -51,6 +51,8 @@ typedef struct xdc_instance {
     uint32_t stream_id;
     bool dead;
     xdc_packet_state_t cur_read_packet;
+    // Where we've read up to, in the first request of the completed reads list.
+    size_t cur_req_read_offset;
     list_node_t completed_reads;
     // Needs to be acquired before accessing the stream_id, dead or read members.
     mtx_t lock;
@@ -353,11 +355,6 @@ static zx_status_t xdc_read_instance(void* ctx, void* buf, size_t count,
                                      zx_off_t off, size_t* actual) {
     xdc_instance_t* inst = ctx;
 
-    // TODO(jocelyndang): allow smaller buffers that might partially read a request.
-    if (count < MAX_REQ_SIZE) {
-        return ZX_ERR_BUFFER_TOO_SMALL;
-    }
-
     mtx_lock(&inst->lock);
 
     if (inst->dead) {
@@ -376,26 +373,51 @@ static zx_status_t xdc_read_instance(void* ctx, void* buf, size_t count,
         return ZX_ERR_SHOULD_WAIT;
     }
 
-    usb_request_t* req = list_remove_head_type(&inst->completed_reads, usb_request_t, node);
+    list_node_t done_reqs = LIST_INITIAL_VALUE(done_reqs);
 
-    bool new_packet;
-    zx_status_t status = xdc_update_packet_state(&inst->cur_read_packet, req, &new_packet);
-    if (status != ZX_OK) {
-        mtx_unlock(&inst->lock);
-        return ZX_ERR_BAD_STATE;
+    size_t copied = 0;
+    usb_request_t* req;
+    // Copy up to the requested amount, or until we have no completed read buffers left.
+    while ((copied < count) &&
+           (req = list_peek_head_type(&inst->completed_reads, usb_request_t, node)) != NULL) {
+        if (inst->cur_req_read_offset == 0) {
+            bool is_new_packet;
+            zx_status_t status = xdc_update_packet_state(&inst->cur_read_packet,
+                                                         req, &is_new_packet);
+            if (status != ZX_OK) {
+                mtx_unlock(&inst->lock);
+                return ZX_ERR_BAD_STATE;
+            }
+            if (is_new_packet) {
+                // Skip over the header, which contains internal metadata like stream id.
+                inst->cur_req_read_offset += sizeof(xdc_packet_header_t);
+            }
+        }
+        size_t req_bytes_left = req->response.actual - inst->cur_req_read_offset;
+        size_t to_copy = MIN(count - copied, req_bytes_left);
+        size_t bytes_copied = usb_request_copyfrom(req, buf + copied,
+                                                   to_copy, inst->cur_req_read_offset);
+
+        copied += bytes_copied;
+        inst->cur_req_read_offset += bytes_copied;
+
+        // Finished copying all the available bytes from this usb request buffer.
+        if (inst->cur_req_read_offset >= req->response.actual) {
+            list_remove_head(&inst->completed_reads);
+            list_add_tail(&done_reqs, &req->node);
+
+            inst->cur_req_read_offset = 0;
+        }
     }
-    size_t offset = new_packet ? sizeof(xdc_packet_header_t) : 0;
-    // TODO(jocelyndang): if the count requested is greater than req->response.actual,
-    // we should continue processing the next request in the completed_reads list.
-    size_t to_copy = req->response.actual - offset;
-    size_t copied = usb_request_copyfrom(req, buf, to_copy, offset);
-    xdc_update_instance_read_signal_locked(inst);
 
+    xdc_update_instance_read_signal_locked(inst);
     mtx_unlock(&inst->lock);
 
     xdc_t* xdc = inst->parent;
     mtx_lock(&xdc->read_lock);
-    xdc_queue_read_locked(xdc, req);
+    while ((req = list_remove_tail_type(&done_reqs, usb_request_t, node)) != NULL) {
+        xdc_queue_read_locked(xdc, req);
+    }
     mtx_unlock(&xdc->read_lock);
 
     *actual = copied;
