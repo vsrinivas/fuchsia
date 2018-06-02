@@ -8,7 +8,7 @@ package("bt-tools") {
   deprecated_system_image = true
 
   deps = [
-    "bt-cli",
+    "bt-cli:bin",
     "bt-fake-hci",
     "bt-hci-tool",
     "bt-intel-tool",
