@@ -46,11 +46,20 @@ class CppBuilder(Builder):
         self.output = output
         self.is_overlay = overlay
         self.is_debug = debug
+        self.tools = []
         if self.is_debug:
             workspace_filename = os.path.join(self.output, 'WORKSPACE')
             self.make_dir(workspace_filename)
             open(workspace_filename,"w+")
 
+    def finalize(self):
+        self.write_tools_build_file()
+
+    def write_tools_build_file(self):
+        path = os.path.join(self.output, 'tools', 'BUILD')
+        with open(path,'w') as build_file:
+            template = Template(filename=os.path.join(SCRIPT_DIR, 'tools.mako'))
+            build_file.write(template.render(data=self.tools))
 
     def install_cpp_atom(self, atom):
         '''Installs an atom from the "cpp" domain.'''
@@ -185,6 +194,7 @@ class CppBuilder(Builder):
         shutil.copyfile(file.source, destination)
         st = os.stat(destination)
         os.chmod(destination, st.st_mode | stat.S_IXUSR | stat.S_IXGRP)
+        self.tools.append(atom.id.name)
 
 
 def main():
