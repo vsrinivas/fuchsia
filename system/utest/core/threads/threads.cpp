@@ -1008,6 +1008,9 @@ static bool test_reading_fp_register_state() {
     END_TEST;
 }
 
+// TODO(brettw) ZX-2203 this causes a kernel panic on newer x64 systems that
+// use compressed xsave info.
+#if !defined(__x86_64__)
 static bool test_reading_vector_register_state() {
     BEGIN_TEST;
 
@@ -1025,6 +1028,7 @@ static bool test_reading_vector_register_state() {
 
     END_TEST;
 }
+#endif
 
 // Procedure:
 //  1. Call Init() which will start a thread and suspend it.
@@ -1337,7 +1341,13 @@ RUN_TEST(test_suspend_single_wait_async_signal_delivery)
 RUN_TEST(test_suspend_repeating_wait_async_signal_delivery)
 RUN_TEST(test_reading_general_register_state)
 RUN_TEST(test_reading_fp_register_state)
+
+// TODO(brettw) ZX-2203 this causes a kernel panic on newer x64 systems that
+// use compressed xsave info.
+#if !defined(__x86_64__)
 RUN_TEST(test_reading_vector_register_state)
+#endif
+
 RUN_TEST(test_writing_general_register_state)
 RUN_TEST(test_writing_fp_register_state)
 RUN_TEST(test_writing_vector_register_state)
