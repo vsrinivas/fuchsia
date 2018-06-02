@@ -45,14 +45,14 @@ class GattServerServer : public GattServerBase<bluetooth_gatt::Server> {
   void OnReadRequest(::btlib::gatt::IdType service_id,
                      ::btlib::gatt::IdType id,
                      uint16_t offset,
-                     const ::btlib::gatt::ReadResponder& responder);
+                     ::btlib::gatt::ReadResponder responder);
 
   // Called when a remote device issues a write request to one of our services.
   void OnWriteRequest(::btlib::gatt::IdType service_id,
                       ::btlib::gatt::IdType id,
                       uint16_t offset,
                       const ::btlib::common::ByteBuffer& value,
-                      const ::btlib::gatt::WriteResponder& responder);
+                      ::btlib::gatt::WriteResponder responder);
 
   // Called when a remote device has configured notifications or indications on
   // a local characteristic.

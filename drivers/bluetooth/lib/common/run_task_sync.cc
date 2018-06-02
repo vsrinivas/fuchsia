@@ -15,7 +15,7 @@
 namespace btlib {
 namespace common {
 
-void RunTaskSync(const fxl::Closure& callback, async_t* dispatcher) {
+void RunTaskSync(fit::closure callback, async_t* dispatcher) {
   FXL_DCHECK(callback);
 
   // TODO(armansito) This check is risky. async_get_default() could return
@@ -30,7 +30,7 @@ void RunTaskSync(const fxl::Closure& callback, async_t* dispatcher) {
   std::condition_variable cv;
   bool done = false;
 
-  async::PostTask(dispatcher, [callback, &mtx, &cv, &done] {
+  async::PostTask(dispatcher, [callback = std::move(callback), &mtx, &cv, &done] {
     callback();
 
     {

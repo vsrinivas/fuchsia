@@ -18,7 +18,7 @@ void SetPageScanEnabled(bool enabled, fxl::RefPtr<hci::Transport> hci,
   FXL_DCHECK(cb);
   auto read_enable = hci::CommandPacket::New(hci::kReadScanEnable);
   auto finish_enable_cb = [enabled, dispatcher, hci, finish_cb = std::move(cb)](
-                              auto, const hci::EventPacket& event) {
+                              auto, const hci::EventPacket& event) mutable {
     auto status = event.ToStatus();
     if (!status) {
       FXL_LOG(WARNING)
@@ -45,7 +45,7 @@ void SetPageScanEnabled(bool enabled, fxl::RefPtr<hci::Transport> hci,
             auto, const hci::EventPacket& event) { cb(event.ToStatus()); });
   };
   hci->command_channel()->SendCommand(std::move(read_enable), dispatcher,
-                                      finish_enable_cb);
+                                      std::move(finish_enable_cb));
 }
 
 }  // namespace
@@ -123,7 +123,7 @@ void BrEdrConnectionManager::SetConnectable(bool connectable,
 
   WritePageScanSettings(
       hci::kPageScanR1Interval, hci::kPageScanR1Window, use_interlaced_scan_,
-      [self, cb = std::move(status_cb)](const auto& status) {
+      [self, cb = std::move(status_cb)](const auto& status) mutable {
         if (!status) {
           FXL_LOG(WARNING) << "gap: BrEdrConnectionManager: Writing Page Scan "
                               "Settings Failed: "
@@ -162,7 +162,7 @@ void BrEdrConnectionManager::WritePageScanSettings(uint16_t interval,
 
   hci_cmd_runner_->QueueCommand(
       std::move(write_activity),
-      [self, cb, interval, window](const hci::EventPacket& event) {
+      [self, cb = cb.share(), interval, window](const hci::EventPacket& event) {
         if (!self) {
           cb(hci::Status(common::HostError::kFailed));
           return;
@@ -183,7 +183,7 @@ void BrEdrConnectionManager::WritePageScanSettings(uint16_t interval,
 
   hci_cmd_runner_->QueueCommand(
       std::move(write_type),
-      [self, cb, interlaced](const hci::EventPacket& event) {
+      [self, cb = cb.share(), interlaced](const hci::EventPacket& event) {
         if (!self) {
           cb(hci::Status(common::HostError::kFailed));
           return;
@@ -193,7 +193,7 @@ void BrEdrConnectionManager::WritePageScanSettings(uint16_t interval,
         FXL_VLOG(2) << "gap: BrEdrConnectionManager: page scan type updated";
       });
 
-  hci_cmd_runner_->RunCommands(cb);
+  hci_cmd_runner_->RunCommands(std::move(cb));
 }
 
 void BrEdrConnectionManager::OnConnectionRequest(

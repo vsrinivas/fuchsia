@@ -85,8 +85,8 @@ CommandChannel::~CommandChannel() {
   acl_channel_wait_.Cancel();
 }
 
-void CommandChannel::SetEventCallback(const EventCallback& callback) {
-  event_callback_ = callback;
+void CommandChannel::SetEventCallback(EventCallback callback) {
+  event_callback_ = std::move(callback);
 }
 
 void CommandChannel::SendCommand(
@@ -108,18 +108,18 @@ void CommandChannel::SendCommand(
 
 void CommandChannel::SendCommandSync(
     const ::btlib::common::PacketView<::btlib::hci::CommandHeader>& command,
-    const EventCallback& callback) {
+    EventCallback callback) {
   bool received = false;
-  auto previous_cb = event_callback_;
+  auto previous_cb = std::move(event_callback_);
 
-  auto cb = [this, &received, callback](const auto& event_packet) {
+  auto cb = [this, &received, callback = std::move(callback)](const auto& event_packet) {
     if (callback) {
       callback(event_packet);
     }
     received = true;
   };
 
-  SetEventCallback(cb);
+  SetEventCallback(std::move(cb));
   SendCommand(command);
 
   zx_status_t status = ZX_OK;
@@ -143,7 +143,7 @@ void CommandChannel::SendCommandSync(
     }
   }
 
-  SetEventCallback(previous_cb);
+  SetEventCallback(std::move(previous_cb));
 
   if (status != ZX_OK) {
     std::cerr << "CommandChannel: error waiting for event "

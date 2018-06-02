@@ -119,8 +119,8 @@ class LowEnergyDiscoverySession final {
   // the cached results from the most recent scan period. If a filter was
   // assigned earlier, then the callback will only receive results that match
   // the filter.
-  using DeviceFoundCallback = std::function<void(const RemoteDevice& device)>;
-  void SetResultCallback(const DeviceFoundCallback& callback);
+  using DeviceFoundCallback = fit::function<void(const RemoteDevice& device)>;
+  void SetResultCallback(DeviceFoundCallback callback);
 
   // Sets a callback to get notified when the session becomes inactive due to an
   // internal error.

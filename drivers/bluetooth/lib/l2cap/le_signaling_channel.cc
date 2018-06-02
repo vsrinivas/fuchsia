@@ -87,7 +87,10 @@ void LESignalingChannel::OnConnParamUpdateReceived(
              common::BufferView(&rsp, sizeof(rsp)));
 
   if (!reject && dispatcher_) {
-    async::PostTask(dispatcher_, std::bind(conn_param_update_cb_, params));
+    async::PostTask(dispatcher_, [cb = conn_param_update_cb_.share(),
+                                  params = std::move(params)]() mutable {
+      cb(std::move(params));
+    });
   }
 }
 

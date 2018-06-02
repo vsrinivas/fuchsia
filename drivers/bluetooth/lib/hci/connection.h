@@ -4,10 +4,11 @@
 
 #pragma once
 
+#include <lib/fit/function.h>
+
 #include "garnet/drivers/bluetooth/lib/common/device_address.h"
 #include "garnet/drivers/bluetooth/lib/hci/connection_parameters.h"
 #include "garnet/drivers/bluetooth/lib/hci/hci.h"
-#include "lib/fxl/functional/closure.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/ref_ptr.h"

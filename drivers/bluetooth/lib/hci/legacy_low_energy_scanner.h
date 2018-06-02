@@ -41,7 +41,7 @@ class LegacyLowEnergyScanner : public LowEnergyScanner {
                  bool filter_duplicates,
                  LEScanFilterPolicy filter_policy,
                  int64_t period_ms,
-                 const ScanStatusCallback& callback) override;
+                 ScanStatusCallback callback) override;
   bool StopScan() override;
 
   // Used by tests to directly end a scan period without relying on a timeout.

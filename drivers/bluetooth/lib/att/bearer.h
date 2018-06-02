@@ -9,6 +9,7 @@
 #include <unordered_map>
 
 #include <lib/async/cpp/task.h>
+#include <lib/fit/function.h>
 
 #include "garnet/drivers/bluetooth/lib/att/att.h"
 #include "garnet/drivers/bluetooth/lib/att/packet.h"
@@ -22,7 +23,6 @@
 #include "garnet/drivers/bluetooth/lib/l2cap/sdu.h"
 
 #include "lib/fxl/functional/cancelable_callback.h"
-#include "lib/fxl/functional/closure.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/ref_counted.h"
@@ -80,9 +80,9 @@ class Bearer final : public fxl::RefCountedThreadSafe<Bearer> {
 
   // Sets a callback to be invoked invoked when the underlying channel has
   // closed. |callback| should disconnect the underlying logical link.
-  void set_closed_callback(const fxl::Closure& callback) {
+  void set_closed_callback(fit::closure callback) {
     FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
-    closed_cb_ = callback;
+    closed_cb_ = std::move(callback);
   }
 
   // Closes the channel. This should be called when a protocol transaction
@@ -110,11 +110,11 @@ class Bearer final : public fxl::RefCountedThreadSafe<Bearer> {
   //
   // Returns false if |pdu| is empty, exceeds the current MTU, or does not
   // correspond to a request or indication.
-  using TransactionCallback = std::function<void(const PacketReader& packet)>;
-  using ErrorCallback = std::function<void(Status, Handle attr_in_error)>;
+  using TransactionCallback = fit::function<void(const PacketReader& packet)>;
+  using ErrorCallback = fit::function<void(Status, Handle attr_in_error)>;
   bool StartTransaction(common::ByteBufferPtr pdu,
-                        const TransactionCallback& callback,
-                        const ErrorCallback& error_callback);
+                        TransactionCallback callback,
+                        ErrorCallback error_callback);
 
   // Sends |pdu| without initiating a transaction. Used for command and
   // notification PDUs which do not have flow control.
@@ -136,13 +136,13 @@ class Bearer final : public fxl::RefCountedThreadSafe<Bearer> {
   using TransactionId = size_t;
   static constexpr TransactionId kInvalidTransactionId = 0u;
   using Handler =
-      std::function<void(TransactionId tid, const PacketReader& packet)>;
+      fit::function<void(TransactionId tid, const PacketReader& packet)>;
 
   // Handler: called when |pdu| does not need flow control. This will be
   // called for commands and notifications.
   using HandlerId = size_t;
   static constexpr HandlerId kInvalidHandlerId = 0u;
-  HandlerId RegisterHandler(OpCode opcode, const Handler& handler);
+  HandlerId RegisterHandler(OpCode opcode, Handler handler);
 
   // Unregisters a handler. |id| cannot be zero.
   void UnregisterHandler(HandlerId id);
@@ -231,8 +231,8 @@ class Bearer final : public fxl::RefCountedThreadSafe<Bearer> {
   };
 
   bool SendInternal(common::ByteBufferPtr pdu,
-                    const TransactionCallback& callback,
-                    const ErrorCallback& error_callback);
+                    TransactionCallback callback,
+                    ErrorCallback error_callback);
 
   // Shuts down the link.
   void ShutDownInternal(bool due_to_timeout);
@@ -288,7 +288,7 @@ class Bearer final : public fxl::RefCountedThreadSafe<Bearer> {
   fxl::CancelableClosure chan_closed_cb_;
 
   // Channel closed callback assigned to us via set_closed_callback().
-  fxl::Closure closed_cb_;
+  fit::closure closed_cb_;
 
   // The state of outgoing ATT requests and indications
   TransactionQueue request_queue_;

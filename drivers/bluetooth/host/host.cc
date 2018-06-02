@@ -61,7 +61,7 @@ bool Host::Initialize(InitCallback callback) {
   };
 
   FXL_VLOG(1) << "bt-host: initializing GAP";
-  return gap_->Initialize(gap_init_callback, [] {
+  return gap_->Initialize(std::move(gap_init_callback), [] {
     FXL_VLOG(1) << "bt-host: HCI transport has closed";
   });
 }

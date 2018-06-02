@@ -134,7 +134,7 @@ class GATT : public fbl::RefCounted<GATT> {
   // Otherwise, it will run on an internal thread and the client is responsible
   // for synchronization.
   using RemoteServiceWatcher =
-      std::function<void(const std::string& peer_id,
+      fit::function<void(const std::string& peer_id,
                          fbl::RefPtr<RemoteService> service)>;
   virtual void RegisterRemoteServiceWatcher(RemoteServiceWatcher watcher,
                                             async_t* dispatcher = nullptr) = 0;

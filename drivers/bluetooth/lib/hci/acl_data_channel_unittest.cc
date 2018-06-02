@@ -603,7 +603,7 @@ TEST_F(HCI_ACLDataChannelTest, ReceiveData) {
     else
       FXL_NOTREACHED();
   };
-  set_data_received_callback(data_rx_cb);
+  set_data_received_callback(std::move(data_rx_cb));
 
   // Malformed packet: smaller than the ACL header.
   auto invalid0 = common::CreateStaticByteBuffer(0x01, 0x00, 0x00);

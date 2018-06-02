@@ -45,26 +45,26 @@ void TestController::QueueCommandTransaction(CommandTransaction transaction) {
   cmd_transactions_.push(std::move(transaction));
 }
 
-void TestController::SetDataCallback(const DataCallback& callback,
+void TestController::SetDataCallback(DataCallback callback,
                                      async_t* dispatcher) {
   FXL_DCHECK(callback);
   FXL_DCHECK(dispatcher);
   FXL_DCHECK(!data_callback_);
   FXL_DCHECK(!data_dispatcher_);
 
-  data_callback_ = callback;
+  data_callback_ = std::move(callback);
   data_dispatcher_ = dispatcher;
 }
 
 void TestController::SetTransactionCallback(
-    const fxl::Closure& callback,
+    fit::closure callback,
     async_t* dispatcher) {
   FXL_DCHECK(callback);
   FXL_DCHECK(dispatcher);
   FXL_DCHECK(!transaction_callback_);
   FXL_DCHECK(!transaction_dispatcher_);
 
-  transaction_callback_ = callback;
+  transaction_callback_ = std::move(callback);
   transaction_dispatcher_ = dispatcher;
 }
 
@@ -86,7 +86,7 @@ void TestController::OnCommandPacketReceived(
 
   cmd_transactions_.pop();
   if (transaction_callback_)
-    async::PostTask(transaction_dispatcher_, transaction_callback_);
+    async::PostTask(transaction_dispatcher_, transaction_callback_.share());
 }
 
 void TestController::OnACLDataPacketReceived(
@@ -97,7 +97,7 @@ void TestController::OnACLDataPacketReceived(
   common::DynamicByteBuffer packet_copy(acl_data_packet);
   async::PostTask(data_dispatcher_,
                   [packet_copy = std::move(packet_copy),
-                   cb = data_callback_]() mutable { cb(packet_copy); });
+                   cb = data_callback_.share()]() mutable { cb(packet_copy); });
 }
 
 }  // namespace testing

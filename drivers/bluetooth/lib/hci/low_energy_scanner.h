@@ -139,14 +139,14 @@ class LowEnergyScanner {
     // Called when the scan was terminated due to a call to StopScan().
     kStopped,
   };
-  using ScanStatusCallback = std::function<void(ScanStatus)>;
+  using ScanStatusCallback = fit::function<void(ScanStatus)>;
   virtual bool StartScan(bool active,
                          uint16_t scan_interval,
                          uint16_t scan_window,
                          bool filter_duplicates,
                          LEScanFilterPolicy filter_policy,
                          int64_t period_ms,
-                         const ScanStatusCallback& callback) = 0;
+                         ScanStatusCallback callback) = 0;
 
   // Stops a previously started device scan. Returns false if a scan is not in
   // progress. Otherwise, cancels any in progress scan procedure and returns

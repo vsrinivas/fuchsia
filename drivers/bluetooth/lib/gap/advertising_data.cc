@@ -35,7 +35,7 @@ namespace gap {
 
 namespace {
 
-using UuidFunction = std::function<void(const common::UUID&)>;
+using UuidFunction = fit::function<void(const common::UUID&)>;
 
 bool ParseUuids(const common::BufferView& data,
                 size_t uuid_size,

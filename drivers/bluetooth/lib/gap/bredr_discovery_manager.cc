@@ -209,7 +209,7 @@ void BrEdrDiscoveryManager::RequestDiscoverable(DiscoverableCallback callback) {
   FXL_LOG(INFO) << "gap: BrEdrDiscoveryManager: RequestDiscoverable";
 
   auto self = weak_ptr_factory_.GetWeakPtr();
-  auto status_cb = [self, cb = std::move(callback)](const auto& status) {
+  auto status_cb = [self, cb = callback.share()](const auto& status) {
     cb(status, (status ? self->AddDiscoverableSession() : nullptr));
   };
 

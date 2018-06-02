@@ -8,12 +8,12 @@
 #include <string>
 
 #include <lib/async/dispatcher.h>
+#include <lib/fit/function.h>
 
 #include "garnet/drivers/bluetooth/lib/gap/adapter_state.h"
 #include "garnet/drivers/bluetooth/lib/gap/remote_device_cache.h"
 #include "garnet/drivers/bluetooth/lib/gatt/gatt.h"
 #include "garnet/drivers/bluetooth/lib/l2cap/l2cap.h"
-#include "lib/fxl/functional/closure.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/weak_ptr.h"
@@ -72,9 +72,9 @@ class Adapter final {
   // device disappeared or the transport channels were closed for an unknown
   // reason). The implementation is responsible for cleaning up this adapter by
   // calling ShutDown().
-  using InitializeCallback = std::function<void(bool success)>;
-  bool Initialize(const InitializeCallback& callback,
-                  const fxl::Closure& transport_closed_callback);
+  using InitializeCallback = fit::function<void(bool success)>;
+  bool Initialize(InitializeCallback callback,
+                  fit::closure transport_closed_callback);
 
   // Shuts down this Adapter. Invokes |callback| when shut down has completed.
   // TODO(armansito): This needs to do several things to potentially preserve
@@ -140,15 +140,15 @@ class Adapter final {
  private:
   // Second step of the initialization sequence. Called by Initialize() when the
   // first batch of HCI commands have been sent.
-  void InitializeStep2(const InitializeCallback& callback);
+  void InitializeStep2(InitializeCallback callback);
 
   // Third step of the initialization sequence. Called by InitializeStep2() when
   // the second batch of HCI commands have been sent.
-  void InitializeStep3(const InitializeCallback& callback);
+  void InitializeStep3(InitializeCallback callback);
 
   // Fourth step of the initialization sequence. Called by InitializeStep3()
   // when the third batch of HCI commands have been sent.
-  void InitializeStep4(const InitializeCallback& callback);
+  void InitializeStep4(InitializeCallback callback);
 
   // Builds and returns the HCI event mask based on our supported host side
   // features and controller capabilities. This is used to mask events that we
@@ -174,7 +174,7 @@ class Adapter final {
   fxl::RefPtr<hci::Transport> hci_;
 
   // Callback invoked to notify clients when the underlying transport is closed.
-  fxl::Closure transport_closed_cb_;
+  fit::closure transport_closed_cb_;
 
   // Parameters relevant to the initialization sequence.
   // TODO(armansito): The Initialize()/ShutDown() pattern has become common

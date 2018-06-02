@@ -67,7 +67,7 @@ LowEnergyAdvertisingManager::~LowEnergyAdvertisingManager() {
 void LowEnergyAdvertisingManager::StartAdvertising(
     const AdvertisingData& data,
     const AdvertisingData& scan_rsp,
-    const ConnectionCallback& connect_callback,
+    ConnectionCallback connect_callback,
     uint32_t interval_ms,
     bool anonymous,
     AdvertisingStatusCallback status_callback) {
@@ -86,7 +86,7 @@ void LowEnergyAdvertisingManager::StartAdvertising(
 
   hci::LowEnergyAdvertiser::ConnectionCallback adv_conn_cb;
   if (connect_callback) {
-    adv_conn_cb = [self, id = ad_ptr->id(), connect_callback](auto link) {
+    adv_conn_cb = [self, id = ad_ptr->id(), connect_callback = std::move(connect_callback)](auto link) {
       FXL_VLOG(1)
           << "gap: LowEnergyAdvertisingManager: received new connection.";
       if (!self)
@@ -125,7 +125,7 @@ void LowEnergyAdvertisingManager::StartAdvertising(
 
   // Call StartAdvertising, with the callback
   advertiser_->StartAdvertising(address, *data_block, *scan_rsp_block,
-                                adv_conn_cb, interval_ms, anonymous,
+                                std::move(adv_conn_cb), interval_ms, anonymous,
                                 std::move(status_cb));
 }
 

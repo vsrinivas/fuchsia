@@ -4,7 +4,6 @@
 
 #pragma once
 
-#include <functional>
 #include <memory>
 
 #include <lib/fit/function.h>
@@ -50,11 +49,11 @@ class LowEnergyAdvertiser {
   // be called before any calls to |connect_callback|.
   using AdvertisingStatusCallback =
       fit::function<void(uint32_t interval_ms, Status status)>;
-  using ConnectionCallback = std::function<void(ConnectionPtr link)>;
+  using ConnectionCallback = fit::function<void(ConnectionPtr link)>;
   virtual void StartAdvertising(const common::DeviceAddress& address,
                                 const common::ByteBuffer& data,
                                 const common::ByteBuffer& scan_rsp,
-                                const ConnectionCallback& connect_callback,
+                                ConnectionCallback connect_callback,
                                 uint32_t interval_ms,
                                 bool anonymous,
                                 AdvertisingStatusCallback callback) = 0;

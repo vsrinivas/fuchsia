@@ -30,7 +30,7 @@ class LegacyLowEnergyAdvertiser final : public LowEnergyAdvertiser {
   void StartAdvertising(const common::DeviceAddress& address,
                         const common::ByteBuffer& data,
                         const common::ByteBuffer& scan_rsp,
-                        const ConnectionCallback& connect_callback,
+                        ConnectionCallback connect_callback,
                         uint32_t interval_ms,
                         bool anonymous,
                         AdvertisingStatusCallback callback) override;

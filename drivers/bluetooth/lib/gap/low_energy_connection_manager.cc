@@ -363,13 +363,13 @@ LowEnergyConnectionManager::RegisterRemoteInitiatedLink(
 }
 
 void LowEnergyConnectionManager::SetConnectionParametersCallbackForTesting(
-    const ConnectionParametersCallback& callback) {
-  test_conn_params_cb_ = callback;
+    ConnectionParametersCallback callback) {
+  test_conn_params_cb_ = std::move(callback);
 }
 
 void LowEnergyConnectionManager::SetDisconnectCallbackForTesting(
-    const DisconnectCallback& callback) {
-  test_disconn_cb_ = callback;
+    DisconnectCallback callback) {
+  test_disconn_cb_ = std::move(callback);
 }
 
 void LowEnergyConnectionManager::ReleaseReference(

@@ -18,7 +18,6 @@
 
 #include "garnet/drivers/bluetooth/lib/hci/connection.h"
 #include "garnet/drivers/bluetooth/lib/l2cap/sdu.h"
-#include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/synchronization/thread_checker.h"
 
@@ -65,7 +64,7 @@ class Channel : public fbl::RefCounted<Channel> {
   // Callback invoked when a new SDU is received on this channel. Any previously
   // buffered SDUs will be sent to |rx_cb| right away, provided that |rx_cb| is
   // not empty and the underlying logical link is active.
-  using RxCallback = std::function<void(const SDU& sdu)>;
+  using RxCallback = fit::function<void(const SDU& sdu)>;
 
   // Activates this channel assigning |dispatcher| to execute |rx_callback| and
   // |closed_callback|.

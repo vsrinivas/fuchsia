@@ -5,7 +5,6 @@
 #ifndef GARNET_DRIVERS_BLUETOOTH_LIB_HCI_ACL_DATA_CHANNEL_H_
 #define GARNET_DRIVERS_BLUETOOTH_LIB_HCI_ACL_DATA_CHANNEL_H_
 
-#include <functional>
 #include <list>
 #include <mutex>
 #include <queue>
@@ -99,7 +98,7 @@ class ACLDataChannel final {
   // The ownership of the |data_packet| is passed to the callback implementation
   // as a rvalue reference..
   using DataReceivedCallback =
-      std::function<void(ACLDataPacketPtr data_packet)>;
+      fit::function<void(ACLDataPacketPtr data_packet)>;
 
   // Assigns a handler callback for received ACL data packets. |rx_callback|
   // will be posted on |dispatcher|.

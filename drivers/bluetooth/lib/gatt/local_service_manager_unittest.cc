@@ -49,8 +49,8 @@ IdType RegisterService(LocalServiceManager* mgr,
                        ReadHandler read_handler = NopReadHandler,
                        WriteHandler write_handler = NopWriteHandler,
                        ClientConfigCallback ccc_callback = NopCCCallback) {
-  return mgr->RegisterService(std::move(service), read_handler, write_handler,
-                              ccc_callback);
+  return mgr->RegisterService(std::move(service), std::move(read_handler), std::move(write_handler),
+                              std::move(ccc_callback));
 }
 
 TEST(GATT_LocalServiceManagerTest, EmptyService) {
@@ -455,9 +455,9 @@ TEST(GATT_LocalServiceManagerTest, ReadCharacteristicNoReadPermission) {
                                        kReadReqs, kWriteReqs, kUpdateReqs));
 
   bool called = false;
-  auto read_cb = [&called](auto, auto, auto, auto&) { called = true; };
+  auto read_cb = [&called](auto, auto, auto, auto) { called = true; };
 
-  EXPECT_NE(0u, RegisterService(&mgr, std::move(service), read_cb));
+  EXPECT_NE(0u, RegisterService(&mgr, std::move(service), std::move(read_cb)));
 
   auto* attr = mgr.database()->FindAttribute(kFirstChrcValueHandle);
   ASSERT_TRUE(attr);
@@ -468,7 +468,7 @@ TEST(GATT_LocalServiceManagerTest, ReadCharacteristicNoReadPermission) {
     result_called = true;
   };
 
-  EXPECT_FALSE(attr->ReadAsync(kTestDeviceId, 0, result_cb));
+  EXPECT_FALSE(attr->ReadAsync(kTestDeviceId, 0, std::move(result_cb)));
   EXPECT_FALSE(called);
   EXPECT_FALSE(result_called);
 }
@@ -487,9 +487,9 @@ TEST(GATT_LocalServiceManagerTest, ReadCharacteristicNoReadProperty) {
       kChrcId, kChrcType16, 0, 0, kReadReqs, kWriteReqs, kUpdateReqs));
 
   bool called = false;
-  auto read_cb = [&called](auto, auto, auto, auto&) { called = true; };
+  auto read_cb = [&called](auto, auto, auto, auto) { called = true; };
 
-  EXPECT_NE(0u, RegisterService(&mgr, std::move(service), read_cb));
+  EXPECT_NE(0u, RegisterService(&mgr, std::move(service), std::move(read_cb)));
 
   auto* attr = mgr.database()->FindAttribute(kFirstChrcValueHandle);
   ASSERT_TRUE(attr);
@@ -498,7 +498,7 @@ TEST(GATT_LocalServiceManagerTest, ReadCharacteristicNoReadProperty) {
   att::ErrorCode ecode = att::ErrorCode::kNoError;
   auto result_cb = [&ecode](auto code, const auto&) { ecode = code; };
 
-  EXPECT_TRUE(attr->ReadAsync(kTestDeviceId, 0, result_cb));
+  EXPECT_TRUE(attr->ReadAsync(kTestDeviceId, 0, std::move(result_cb)));
 
   // The error should be handled internally and not reach |read_cb|.
   EXPECT_FALSE(called);
@@ -524,7 +524,7 @@ TEST(GATT_LocalServiceManagerTest, ReadCharacteristic) {
   bool called = false;
   IdType svc_id;
   auto read_cb = [&](auto cb_svc_id, auto id, auto offset,
-                     const auto& responder) {
+                     auto responder) {
     called = true;
     EXPECT_EQ(svc_id, cb_svc_id);
     EXPECT_EQ(kChrcId, id);
@@ -532,7 +532,7 @@ TEST(GATT_LocalServiceManagerTest, ReadCharacteristic) {
     responder(att::ErrorCode::kNoError, kTestValue);
   };
 
-  svc_id = RegisterService(&mgr, std::move(service), read_cb);
+  svc_id = RegisterService(&mgr, std::move(service), std::move(read_cb));
   ASSERT_NE(0u, svc_id);
 
   auto* attr = mgr.database()->FindAttribute(kFirstChrcValueHandle);
@@ -545,7 +545,7 @@ TEST(GATT_LocalServiceManagerTest, ReadCharacteristic) {
     EXPECT_TRUE(common::ContainersEqual(kTestValue, value));
   };
 
-  EXPECT_TRUE(attr->ReadAsync(kTestDeviceId, kOffset, result_cb));
+  EXPECT_TRUE(attr->ReadAsync(kTestDeviceId, kOffset, std::move(result_cb)));
 
   EXPECT_TRUE(called);
   EXPECT_EQ(att::ErrorCode::kNoError, ecode);
@@ -564,10 +564,10 @@ TEST(GATT_LocalServiceManagerTest, WriteCharacteristicNoWritePermission) {
                                        0, kReadReqs, kWriteReqs, kUpdateReqs));
 
   bool called = false;
-  auto write_cb = [&called](auto, auto, auto, auto&, auto&) { called = true; };
+  auto write_cb = [&called](auto, auto, auto, auto&, auto) { called = true; };
 
   EXPECT_NE(
-      0u, RegisterService(&mgr, std::move(service), NopReadHandler, write_cb));
+      0u, RegisterService(&mgr, std::move(service), NopReadHandler, std::move(write_cb)));
 
   auto* attr = mgr.database()->FindAttribute(kFirstChrcValueHandle);
   ASSERT_TRUE(attr);
@@ -576,7 +576,7 @@ TEST(GATT_LocalServiceManagerTest, WriteCharacteristicNoWritePermission) {
   bool result_called = false;
   auto result_cb = [&result_called](auto) { result_called = true; };
 
-  EXPECT_FALSE(attr->WriteAsync(kTestDeviceId, 0, kTestValue, result_cb));
+  EXPECT_FALSE(attr->WriteAsync(kTestDeviceId, 0, kTestValue, std::move(result_cb)));
   EXPECT_FALSE(called);
   EXPECT_FALSE(result_called);
 }
@@ -595,10 +595,10 @@ TEST(GATT_LocalServiceManagerTest, WriteCharacteristicNoWriteProperty) {
       kChrcId, kChrcType16, 0, 0, kReadReqs, kWriteReqs, kUpdateReqs));
 
   bool called = false;
-  auto write_cb = [&called](auto, auto, auto, auto&, auto&) { called = true; };
+  auto write_cb = [&called](auto, auto, auto, auto&, auto) { called = true; };
 
   EXPECT_NE(
-      0u, RegisterService(&mgr, std::move(service), NopReadHandler, write_cb));
+      0u, RegisterService(&mgr, std::move(service), NopReadHandler, std::move(write_cb)));
 
   auto* attr = mgr.database()->FindAttribute(kFirstChrcValueHandle);
   ASSERT_TRUE(attr);
@@ -607,7 +607,7 @@ TEST(GATT_LocalServiceManagerTest, WriteCharacteristicNoWriteProperty) {
   att::ErrorCode ecode = att::ErrorCode::kNoError;
   auto result_cb = [&ecode](auto code) { ecode = code; };
 
-  EXPECT_TRUE(attr->WriteAsync(kTestDeviceId, 0, kTestValue, result_cb));
+  EXPECT_TRUE(attr->WriteAsync(kTestDeviceId, 0, kTestValue, std::move(result_cb)));
 
   // The error should be handled internally and not reach |write_cb|.
   EXPECT_FALSE(called);
@@ -633,7 +633,7 @@ TEST(GATT_LocalServiceManagerTest, WriteCharacteristic) {
   bool called = false;
   IdType svc_id;
   auto write_cb = [&](auto cb_svc_id, auto id, auto offset, const auto& value,
-                      const auto& responder) {
+                      auto responder) {
     called = true;
     EXPECT_EQ(svc_id, cb_svc_id);
     EXPECT_EQ(kChrcId, id);
@@ -642,7 +642,7 @@ TEST(GATT_LocalServiceManagerTest, WriteCharacteristic) {
     responder(att::ErrorCode::kNoError);
   };
 
-  svc_id = RegisterService(&mgr, std::move(service), NopReadHandler, write_cb);
+  svc_id = RegisterService(&mgr, std::move(service), NopReadHandler, std::move(write_cb));
   ASSERT_NE(0u, svc_id);
 
   auto* attr = mgr.database()->FindAttribute(kFirstChrcValueHandle);
@@ -652,7 +652,7 @@ TEST(GATT_LocalServiceManagerTest, WriteCharacteristic) {
   att::ErrorCode ecode = att::ErrorCode::kUnlikelyError;
   auto result_cb = [&ecode](auto code) { ecode = code; };
 
-  EXPECT_TRUE(attr->WriteAsync(kTestDeviceId, kOffset, kTestValue, result_cb));
+  EXPECT_TRUE(attr->WriteAsync(kTestDeviceId, kOffset, kTestValue, std::move(result_cb)));
 
   EXPECT_TRUE(called);
   EXPECT_EQ(att::ErrorCode::kNoError, ecode);
@@ -674,9 +674,9 @@ TEST(GATT_LocalServiceManagerTest, ReadDescriptorNoReadPermission) {
   service->AddCharacteristic(std::move(chrc));
 
   bool called = false;
-  auto read_cb = [&called](auto, auto, auto, auto&) { called = true; };
+  auto read_cb = [&called](auto, auto, auto, auto) { called = true; };
 
-  EXPECT_NE(0u, RegisterService(&mgr, std::move(service), read_cb));
+  EXPECT_NE(0u, RegisterService(&mgr, std::move(service), std::move(read_cb)));
 
   auto* attr = mgr.database()->FindAttribute(kFirstDescrHandle);
   ASSERT_TRUE(attr);
@@ -687,7 +687,7 @@ TEST(GATT_LocalServiceManagerTest, ReadDescriptorNoReadPermission) {
     result_called = true;
   };
 
-  EXPECT_FALSE(attr->ReadAsync(kTestDeviceId, 0, result_cb));
+  EXPECT_FALSE(attr->ReadAsync(kTestDeviceId, 0, std::move(result_cb)));
   EXPECT_FALSE(called);
   EXPECT_FALSE(result_called);
 }
@@ -723,7 +723,7 @@ TEST(GATT_LocalServiceManagerTest, ReadDescriptor) {
     responder(att::ErrorCode::kNoError, kTestValue);
   };
 
-  svc_id = RegisterService(&mgr, std::move(service), read_cb);
+  svc_id = RegisterService(&mgr, std::move(service), std::move(read_cb));
   ASSERT_NE(0u, svc_id);
 
   auto* attr = mgr.database()->FindAttribute(kFirstDescrHandle);
@@ -736,7 +736,7 @@ TEST(GATT_LocalServiceManagerTest, ReadDescriptor) {
     EXPECT_TRUE(common::ContainersEqual(kTestValue, value));
   };
 
-  EXPECT_TRUE(attr->ReadAsync(kTestDeviceId, kOffset, result_cb));
+  EXPECT_TRUE(attr->ReadAsync(kTestDeviceId, kOffset, std::move(result_cb)));
 
   EXPECT_TRUE(called);
   EXPECT_EQ(att::ErrorCode::kNoError, ecode);
@@ -759,7 +759,7 @@ TEST(GATT_LocalServiceManagerTest, WriteDescriptorNoWritePermission) {
   service->AddCharacteristic(std::move(chrc));
 
   bool called = false;
-  auto write_cb = [&called](auto, auto, auto, auto&, auto&) { called = true; };
+  auto write_cb = [&called](auto, auto, auto, auto&, auto) { called = true; };
 
   EXPECT_NE(
       0u, RegisterService(&mgr, std::move(service), NopReadHandler, write_cb));

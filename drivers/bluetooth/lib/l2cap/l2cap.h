@@ -36,7 +36,7 @@ class L2CAP : public fbl::RefCounted<L2CAP> {
   using ChannelCallback = fit::function<void(fbl::RefPtr<Channel>)>;
   using LEConnectionParameterUpdateCallback =
       internal::LESignalingChannel::ConnectionParameterUpdateCallback;
-  using LinkErrorCallback = std::function<void()>;  // copyable
+  using LinkErrorCallback = fit::closure;
 
   // Constructs an uninitialized L2CAP object that can be used in production.
   // This spawns a thread on which L2CAP tasks will be scheduled (using

@@ -11,6 +11,7 @@
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
 #include <lib/async/default.h>
+#include <lib/fit/function.h>
 #include <lib/zx/channel.h>
 
 #include "garnet/drivers/bluetooth/lib/common/device_address.h"
@@ -20,7 +21,6 @@
 #include "garnet/drivers/bluetooth/lib/l2cap/l2cap_defs.h"
 #include "garnet/drivers/bluetooth/lib/testing/fake_controller_base.h"
 #include "lib/fxl/functional/cancelable_callback.h"
-#include "lib/fxl/functional/closure.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
 
@@ -140,27 +140,27 @@ class FakeController : public FakeControllerBase,
   void AddDevice(std::unique_ptr<FakeDevice> device);
 
   // Sets a callback to be invoked when the scan state changes.
-  using ScanStateCallback = std::function<void(bool enabled)>;
-  void SetScanStateCallback(const ScanStateCallback& callback,
+  using ScanStateCallback = fit::function<void(bool enabled)>;
+  void SetScanStateCallback(ScanStateCallback callback,
                             async_t* dispatcher);
 
   // Sets a callback to be invoked when the LE Advertising state changes.
-  void SetAdvertisingStateCallback(const fxl::Closure& callback,
+  void SetAdvertisingStateCallback(fit::closure callback,
                                    async_t* dispatcher);
 
   // Sets a callback to be invoked on connection events.
-  using ConnectionStateCallback = std::function<
+  using ConnectionStateCallback = fit::function<
       void(const common::DeviceAddress&, bool connected, bool canceled)>;
-  void SetConnectionStateCallback(const ConnectionStateCallback& callback,
+  void SetConnectionStateCallback(ConnectionStateCallback callback,
                                   async_t* dispatcher);
 
   // Sets a callback to be invoked when LE connection parameters are updated for
   // a fake device.
   using LEConnectionParametersCallback =
-      std::function<void(const common::DeviceAddress&,
+      fit::function<void(const common::DeviceAddress&,
                          const hci::LEConnectionParameters&)>;
   void SetLEConnectionParametersCallback(
-      const LEConnectionParametersCallback& callback,
+      LEConnectionParametersCallback callback,
       async_t* dispatcher);
 
   // Sends a HCI event with the given parameters.
@@ -311,7 +311,7 @@ class FakeController : public FakeControllerBase,
   ScanStateCallback scan_state_cb_;
   async_t* scan_state_cb_dispatcher_;
 
-  fxl::Closure advertising_state_cb_;
+  fit::closure advertising_state_cb_;
   async_t* advertising_state_cb_dispatcher_;
 
   ConnectionStateCallback conn_state_cb_;

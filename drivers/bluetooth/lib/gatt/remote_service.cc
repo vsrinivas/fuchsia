@@ -92,7 +92,7 @@ void RemoteService::ShutDown() {
   }
 }
 
-bool RemoteService::AddRemovedHandler(fxl::Closure handler,
+bool RemoteService::AddRemovedHandler(fit::closure handler,
                                       async_t* dispatcher) {
   std::lock_guard<std::mutex> lock(mtx_);
 

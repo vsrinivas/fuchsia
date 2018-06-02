@@ -8,6 +8,8 @@
 #include "hci.h"
 #include "transport.h"
 
+#include "lib/fxl/functional/make_copyable.h"
+
 namespace btlib {
 namespace hci {
 
@@ -28,12 +30,12 @@ SequentialCommandRunner::~SequentialCommandRunner() {
 
 void SequentialCommandRunner::QueueCommand(
     std::unique_ptr<CommandPacket> command_packet,
-    const CommandCompleteCallback& callback) {
+    CommandCompleteCallback callback) {
   FXL_DCHECK(!status_callback_);
   FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
   FXL_DCHECK(sizeof(CommandHeader) <= command_packet->view().size());
 
-  command_queue_.push(std::make_pair(std::move(command_packet), callback));
+  command_queue_.push(std::make_pair(std::move(command_packet), std::move(callback)));
 }
 
 void SequentialCommandRunner::RunCommands(StatusCallback status_callback) {
@@ -76,9 +78,9 @@ void SequentialCommandRunner::RunNextQueuedCommand() {
   auto next = std::move(command_queue_.front());
   command_queue_.pop();
 
-  command_callback_.Reset(
-      [this, cmd_cb = next.second](CommandChannel::TransactionId,
-                                   const EventPacket& event_packet) {
+  command_callback_.Reset(fxl::MakeCopyable(
+      [this, cmd_cb = std::move(next.second)](CommandChannel::TransactionId,
+                                   const EventPacket& event_packet) mutable {
         auto status = event_packet.ToStatus();
         if (!status) {
           NotifyStatusAndReset(status);
@@ -103,7 +105,7 @@ void SequentialCommandRunner::RunNextQueuedCommand() {
           // To prevent that we push the current sequence number and |cmd_cb|
           // itself onto the stack.
           uint64_t prev_seq_no = sequence_number_;
-          auto cb = cmd_cb;
+          auto cb = std::move(cmd_cb);
           cb(event_packet);
 
           // The sequence could have been cancelled by |cmd_cb| (and a new
@@ -114,7 +116,7 @@ void SequentialCommandRunner::RunNextQueuedCommand() {
         }
 
         RunNextQueuedCommand();
-      });
+      }));
 
   if (!transport_->command_channel()->SendCommand(
           std::move(next.first), dispatcher_, command_callback_.callback())) {

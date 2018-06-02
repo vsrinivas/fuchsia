@@ -594,7 +594,7 @@ TEST_F(GAP_LowEnergyDiscoveryManagerTest, StartDiscoveryWithFilters) {
       };
   sessions.push_back(StartDiscoverySession());
   sessions[0]->filter()->SetGeneralDiscoveryFlags();
-  sessions[0]->SetResultCallback(result_cb);
+  sessions[0]->SetResultCallback(std::move(result_cb));
 
   // Session 1 is interested in performing limited discovery.
   std::unordered_set<common::DeviceAddress> devices_session1;
@@ -604,7 +604,7 @@ TEST_F(GAP_LowEnergyDiscoveryManagerTest, StartDiscoveryWithFilters) {
   sessions.push_back(StartDiscoverySession());
   sessions[1]->filter()->set_flags(
       static_cast<uint8_t>(AdvFlag::kLELimitedDiscoverableMode));
-  sessions[1]->SetResultCallback(result_cb);
+  sessions[1]->SetResultCallback(std::move(result_cb));
 
   // Session 2 is interested in devices with UUID 0x180d.
   std::unordered_set<common::DeviceAddress> devices_session2;
@@ -615,7 +615,7 @@ TEST_F(GAP_LowEnergyDiscoveryManagerTest, StartDiscoveryWithFilters) {
 
   uint16_t uuid = 0x180d;
   sessions[2]->filter()->set_service_uuids({common::UUID(uuid)});
-  sessions[2]->SetResultCallback(result_cb);
+  sessions[2]->SetResultCallback(std::move(result_cb));
 
   // Session 3 is interested in devices whose names contain "Device".
   std::unordered_set<common::DeviceAddress> devices_session3;
@@ -624,7 +624,7 @@ TEST_F(GAP_LowEnergyDiscoveryManagerTest, StartDiscoveryWithFilters) {
   };
   sessions.push_back(StartDiscoverySession());
   sessions[3]->filter()->set_name_substring("Device");
-  sessions[3]->SetResultCallback(result_cb);
+  sessions[3]->SetResultCallback(std::move(result_cb));
 
   // Session 4 is interested in non-connectable devices.
   std::unordered_set<common::DeviceAddress> devices_session4;
@@ -633,7 +633,7 @@ TEST_F(GAP_LowEnergyDiscoveryManagerTest, StartDiscoveryWithFilters) {
   };
   sessions.push_back(StartDiscoverySession());
   sessions[4]->filter()->set_connectable(false);
-  sessions[4]->SetResultCallback(result_cb);
+  sessions[4]->SetResultCallback(std::move(result_cb));
 
   RunUntilIdle();
 
@@ -691,7 +691,7 @@ TEST_F(GAP_LowEnergyDiscoveryManagerTest,
       };
   sessions.push_back(StartDiscoverySession());
   sessions[0]->filter()->SetGeneralDiscoveryFlags();
-  sessions[0]->SetResultCallback(result_cb);
+  sessions[0]->SetResultCallback(std::move(result_cb));
 
   RunUntilIdle();
   ASSERT_EQ(3u, devices_session0.size());
@@ -704,7 +704,7 @@ TEST_F(GAP_LowEnergyDiscoveryManagerTest,
   sessions.push_back(StartDiscoverySession());
   sessions[1]->filter()->set_flags(
       static_cast<uint8_t>(AdvFlag::kLELimitedDiscoverableMode));
-  sessions[1]->SetResultCallback(result_cb);
+  sessions[1]->SetResultCallback(std::move(result_cb));
 
   // Session 2 is interested in devices with UUID 0x180d.
   std::unordered_set<common::DeviceAddress> devices_session2;
@@ -715,7 +715,7 @@ TEST_F(GAP_LowEnergyDiscoveryManagerTest,
 
   uint16_t uuid = 0x180d;
   sessions[2]->filter()->set_service_uuids({common::UUID(uuid)});
-  sessions[2]->SetResultCallback(result_cb);
+  sessions[2]->SetResultCallback(std::move(result_cb));
 
   // Session 3 is interested in devices whose names contain "Device".
   std::unordered_set<common::DeviceAddress> devices_session3;
@@ -724,7 +724,7 @@ TEST_F(GAP_LowEnergyDiscoveryManagerTest,
   };
   sessions.push_back(StartDiscoverySession());
   sessions[3]->filter()->set_name_substring("Device");
-  sessions[3]->SetResultCallback(result_cb);
+  sessions[3]->SetResultCallback(std::move(result_cb));
 
   // Session 4 is interested in non-connectable devices.
   std::unordered_set<common::DeviceAddress> devices_session4;
@@ -733,7 +733,7 @@ TEST_F(GAP_LowEnergyDiscoveryManagerTest,
   };
   sessions.push_back(StartDiscoverySession());
   sessions[4]->filter()->set_connectable(false);
-  sessions[4]->SetResultCallback(result_cb);
+  sessions[4]->SetResultCallback(std::move(result_cb));
 
   EXPECT_EQ(5u, sessions.size());
 

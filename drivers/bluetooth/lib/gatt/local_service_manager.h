@@ -24,10 +24,10 @@ namespace gatt {
 //   - |responder|: Should be called to respond to the read request with a
 //                  characteristic or descriptor value, or an ATT error code.
 using ReadResponder = att::Attribute::ReadResultCallback;
-using ReadHandler = std::function<void(IdType service_id,
+using ReadHandler = fit::function<void(IdType service_id,
                                        IdType id,
                                        uint16_t offset,
-                                       const ReadResponder& responder)>;
+                                       ReadResponder responder)>;
 
 // Called to write the value of a dynamic characteristic or characteristic
 // descriptor.
@@ -40,15 +40,15 @@ using ReadHandler = std::function<void(IdType service_id,
 //                  if the client has initiated a "Write Without Response"
 //                  procedure, in which case a response is not required.
 using WriteResponder = att::Attribute::WriteResultCallback;
-using WriteHandler = std::function<void(IdType service_id,
+using WriteHandler = fit::function<void(IdType service_id,
                                         IdType id,
                                         uint16_t offset,
                                         const common::ByteBuffer& value,
-                                        const WriteResponder& responder)>;
+                                        WriteResponder responder)>;
 
 // Called when the peer device with the given |peer_id| has enabled or disabled
 // notifications/indications on the characteristic with id |chrc_id|.
-using ClientConfigCallback = std::function<void(IdType service_id,
+using ClientConfigCallback = fit::function<void(IdType service_id,
                                                 IdType chrc_id,
                                                 const std::string& peer_id,
                                                 bool notify,
@@ -56,7 +56,7 @@ using ClientConfigCallback = std::function<void(IdType service_id,
 
 // Called with the ID and range of attributes handles spanned (inclusive) by a
 // service that was added or removed.
-using ServiceChangedCallback = std::function<void(IdType service_id,
+using ServiceChangedCallback = fit::function<void(IdType service_id,
                                                   att::Handle start,
                                                   att::Handle end)>;
 

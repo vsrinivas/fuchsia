@@ -58,7 +58,7 @@ void ChannelManager::RegisterLE(
 
   auto* ll = RegisterInternal(handle, hci::Connection::LinkType::kLE, role);
   ll->set_error_callback(std::move(link_error_cb), dispatcher);
-  ll->le_signaling_channel()->set_conn_param_update_callback(conn_param_cb,
+  ll->le_signaling_channel()->set_conn_param_update_callback(std::move(conn_param_cb),
                                                              dispatcher);
 }
 

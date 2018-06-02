@@ -4,11 +4,11 @@
 
 #pragma once
 
-#include <functional>
 #include <map>
 
+#include <lib/fit/function.h>
+
 #include "lib/fxl/command_line.h"
-#include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
 
 namespace bluetooth_tools {
@@ -28,7 +28,7 @@ class CommandDispatcher final {
   // previously registered. |out_cmd_found| will be set to false if no comand
   // handler for this command was registered, true otherwise.
   bool ExecuteCommand(const std::vector<std::string>& argv,
-                      const fxl::Closure& complete_cb, bool* out_cmd_found);
+                      fit::closure complete_cb, bool* out_cmd_found);
 
   // Prints the names of all commands and their descriptions.
   void DescribeAllCommands() const;
@@ -41,15 +41,15 @@ class CommandDispatcher final {
   //
   // Once a command has been executed, |complete_cb| should be called to mark
   // completion the of the command.
-  using CommandHandler = std::function<bool(
-      const fxl::CommandLine& command_line, const fxl::Closure& complete_cb)>;
+  using CommandHandler = fit::function<bool(
+      const fxl::CommandLine& command_line, fit::closure complete_cb)>;
 
   // Registers a handler to be executed for the command |command_name|.
   // |description| is the string that describes the command (to be displayed by
   // DescribedAllCommands()).
   void RegisterHandler(const std::string& command_name,
                        const std::string& description,
-                       const CommandHandler& handler);
+                       CommandHandler handler);
 
   // Returns a list of currently registered command names that start with
   // |prefix|.
@@ -59,7 +59,7 @@ class CommandDispatcher final {
  private:
   struct CommandHandlerData {
     CommandHandlerData(const std::string& description,
-                       const CommandHandler& handler);
+                       CommandHandler handler);
     CommandHandlerData() = default;
 
     std::string description;

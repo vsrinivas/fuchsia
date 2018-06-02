@@ -134,7 +134,7 @@ void LegacyLowEnergyAdvertiser::StartAdvertising(
     const common::DeviceAddress& address,
     const common::ByteBuffer& data,
     const common::ByteBuffer& scan_rsp,
-    const ConnectionCallback& connect_callback,
+    ConnectionCallback connect_callback,
     uint32_t interval_ms,
     bool anonymous,
     AdvertisingStatusCallback callback) {
@@ -227,7 +227,7 @@ void LegacyLowEnergyAdvertiser::StartAdvertising(
 
   hci_cmd_runner_->RunCommands([this, address, interval_slices,
                                 callback = std::move(callback),
-                                connect_callback](Status status) mutable {
+                                connect_callback = std::move(connect_callback)](Status status) mutable {
     FXL_DCHECK(starting_);
     starting_ = false;
 
@@ -237,7 +237,7 @@ void LegacyLowEnergyAdvertiser::StartAdvertising(
     uint16_t interval;
     if (status) {
       advertised_ = address;
-      connect_callback_ = connect_callback;
+      connect_callback_ = std::move(connect_callback);
       interval = TimeslicesToMilliseconds(interval_slices);
     } else {
       // Clear out the advertising data if it partially succeeded.

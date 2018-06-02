@@ -32,6 +32,7 @@ static_library("att") {
     ":definitions",
     "//garnet/drivers/bluetooth/lib/l2cap",
     "//garnet/public/lib/fxl",
+    "//zircon/public/lib/fit",
   ]
 
   deps = [

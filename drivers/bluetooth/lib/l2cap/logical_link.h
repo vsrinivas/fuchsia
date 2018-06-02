@@ -10,6 +10,7 @@
 #include <unordered_map>
 
 #include <lib/async/dispatcher.h>
+#include <lib/fit/function.h>
 #include <zircon/compiler.h>
 
 #include "garnet/drivers/bluetooth/lib/hci/acl_data_packet.h"
@@ -20,7 +21,6 @@
 #include "garnet/drivers/bluetooth/lib/l2cap/fragmenter.h"
 #include "garnet/drivers/bluetooth/lib/l2cap/l2cap_defs.h"
 #include "garnet/drivers/bluetooth/lib/l2cap/recombiner.h"
-#include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/synchronization/thread_checker.h"
 

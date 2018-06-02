@@ -95,7 +95,7 @@ class Transport final : public fxl::RefCountedThreadSafe<Transport> {
   // packet processing is no longer guaranteed to work. It is the responsibility
   // of the callback implementation to clean up this Transport instance by
   // calling ShutDown() and/or deleting it.
-  void SetTransportClosedCallback(const fxl::Closure& callback,
+  void SetTransportClosedCallback(fit::closure callback,
                                   async_t* dispatcher);
 
  private:
@@ -146,7 +146,7 @@ class Transport final : public fxl::RefCountedThreadSafe<Transport> {
 
   // Callback invoked when the transport is closed (due to a channel error) and
   // its dispatcher.
-  fxl::Closure closed_cb_;
+  fit::closure closed_cb_;
   async_t* closed_cb_dispatcher_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(Transport);

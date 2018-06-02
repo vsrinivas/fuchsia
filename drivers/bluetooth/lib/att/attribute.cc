@@ -49,28 +49,28 @@ void Attribute::SetValue(const common::ByteBuffer& value) {
 
 bool Attribute::ReadAsync(const std::string& peer_id,
                           uint16_t offset,
-                          const ReadResultCallback& result_callback) const {
+                          ReadResultCallback result_callback) const {
   if (!is_initialized() || !read_handler_)
     return false;
 
   if (!read_reqs_.allowed())
     return false;
 
-  read_handler_(peer_id, handle_, offset, result_callback);
+  read_handler_(peer_id, handle_, offset, std::move(result_callback));
   return true;
 }
 
 bool Attribute::WriteAsync(const std::string& peer_id,
                            uint16_t offset,
                            const common::ByteBuffer& value,
-                           const WriteResultCallback& result_callback) const {
+                           WriteResultCallback result_callback) const {
   if (!is_initialized() || !write_handler_)
     return false;
 
   if (!write_reqs_.allowed())
     return false;
 
-  write_handler_(peer_id, handle_, offset, std::move(value), result_callback);
+  write_handler_(peer_id, handle_, offset, std::move(value), std::move(result_callback));
   return true;
 }
 

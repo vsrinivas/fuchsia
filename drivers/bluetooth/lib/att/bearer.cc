@@ -128,8 +128,8 @@ Bearer::PendingTransaction::PendingTransaction(OpCode opcode,
                                                ErrorCallback error_callback,
                                                common::ByteBufferPtr pdu)
     : opcode(opcode),
-      callback(callback),
-      error_callback(error_callback),
+      callback(std::move(callback)),
+      error_callback(std::move(error_callback)),
       pdu(std::move(pdu)) {
   FXL_DCHECK(this->callback);
   FXL_DCHECK(this->error_callback);
@@ -270,13 +270,13 @@ void Bearer::ShutDownInternal(bool due_to_timeout) {
 }
 
 bool Bearer::StartTransaction(common::ByteBufferPtr pdu,
-                              const TransactionCallback& callback,
-                              const ErrorCallback& error_callback) {
+                              TransactionCallback callback,
+                              ErrorCallback error_callback) {
   FXL_DCHECK(pdu);
   FXL_DCHECK(callback);
   FXL_DCHECK(error_callback);
 
-  return SendInternal(std::move(pdu), callback, error_callback);
+  return SendInternal(std::move(pdu), std::move(callback), std::move(error_callback));
 }
 
 bool Bearer::SendWithoutResponse(common::ByteBufferPtr pdu) {
@@ -285,8 +285,8 @@ bool Bearer::SendWithoutResponse(common::ByteBufferPtr pdu) {
 }
 
 bool Bearer::SendInternal(common::ByteBufferPtr pdu,
-                          const TransactionCallback& callback,
-                          const ErrorCallback& error_callback) {
+                          TransactionCallback callback,
+                          ErrorCallback error_callback) {
   FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
   if (!is_open()) {
     FXL_VLOG(2) << "att: Bearer closed";
@@ -332,14 +332,14 @@ bool Bearer::SendInternal(common::ByteBufferPtr pdu,
   }
 
   tq->Enqueue(std::make_unique<PendingTransaction>(
-      reader.opcode(), callback, error_callback, std::move(pdu)));
+      reader.opcode(), std::move(callback), std::move(error_callback), std::move(pdu)));
   TryStartNextTransaction(tq);
 
   return true;
 }
 
 Bearer::HandlerId Bearer::RegisterHandler(OpCode opcode,
-                                          const Handler& handler) {
+                                          Handler handler) {
   FXL_DCHECK(handler);
 
   if (!is_open())
@@ -358,7 +358,7 @@ Bearer::HandlerId Bearer::RegisterHandler(OpCode opcode,
   auto res = handler_id_map_.emplace(id, opcode);
   FXL_CHECK(res.second) << "att: Handler ID got reused (id: " << id << ")";
 
-  handlers_[opcode] = handler;
+  handlers_[opcode] = std::move(handler);
 
   return id;
 }

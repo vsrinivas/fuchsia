@@ -20,11 +20,11 @@ using common::HostError;
 
 LowEnergyConnector::PendingRequest::PendingRequest(
     const common::DeviceAddress& peer_address,
-    const StatusCallback& status_callback)
+    StatusCallback status_callback)
     : canceled(false),
       timed_out(false),
       peer_address(peer_address),
-      status_callback(status_callback) {}
+      status_callback(std::move(status_callback)) {}
 
 LowEnergyConnector::LowEnergyConnector(fxl::RefPtr<Transport> hci,
                                        async_t* dispatcher,
@@ -60,7 +60,7 @@ bool LowEnergyConnector::CreateConnection(
     uint16_t scan_interval,
     uint16_t scan_window,
     const LEPreferredConnectionParameters& initial_parameters,
-    const StatusCallback& status_callback,
+    StatusCallback status_callback,
     int64_t timeout_ms) {
   FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
   FXL_DCHECK(status_callback);
@@ -71,7 +71,7 @@ bool LowEnergyConnector::CreateConnection(
     return false;
 
   FXL_DCHECK(!request_timeout_task_.is_pending());
-  pending_request_ = PendingRequest(peer_address, status_callback);
+  pending_request_ = PendingRequest(peer_address, std::move(status_callback));
 
   auto request = CommandPacket::New(kLECreateConnection,
                                     sizeof(LECreateConnectionCommandParams));

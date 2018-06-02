@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <functional>
+#include <lib/fit/function.h>
 
 #include "garnet/drivers/bluetooth/lib/att/att.h"
 #include "garnet/drivers/bluetooth/lib/att/bearer.h"
@@ -48,7 +48,7 @@ class Client {
   // |status| will be set to an error if the MTU exchange fails. The |mtu|
   // parameter will be set to 0 and the underlying bearer's MTU will remain
   // unmodified.
-  using MTUCallback = std::function<void(att::Status status, uint16_t mtu)>;
+  using MTUCallback = fit::function<void(att::Status status, uint16_t mtu)>;
   virtual void ExchangeMTU(MTUCallback callback) = 0;
 
   // Performs the "Discover All Primary Services" procedure defined in
@@ -61,13 +61,13 @@ class Client {
   // ATT transactions, it is possible for |status_callback| to be called with an
   // error even if some services have been discovered. It is up to the client
   // to clear any cached state in this case.
-  using ServiceCallback = std::function<void(const ServiceData&)>;
+  using ServiceCallback = fit::function<void(const ServiceData&)>;
   virtual void DiscoverPrimaryServices(ServiceCallback svc_callback,
                                        att::StatusCallback status_callback) = 0;
 
   // Performs the "Discover All Characteristics of a Service" procedure defined
   // in v5.0, Vol 3, Part G, 4.6.1.
-  using CharacteristicCallback = std::function<void(const CharacteristicData&)>;
+  using CharacteristicCallback = fit::function<void(const CharacteristicData&)>;
   virtual void DiscoverCharacteristics(att::Handle range_start,
                                        att::Handle range_end,
                                        CharacteristicCallback chrc_callback,
@@ -75,7 +75,7 @@ class Client {
 
   // Performs the "Discover All Characteristic Descriptors" procedure defined in
   // Vol 3, Part G, 4.7.1.
-  using DescriptorCallback = std::function<void(const DescriptorData&)>;
+  using DescriptorCallback = fit::function<void(const DescriptorData&)>;
   virtual void DiscoverDescriptors(att::Handle range_start,
                                    att::Handle range_end,
                                    DescriptorCallback desc_callback,
@@ -88,7 +88,7 @@ class Client {
   // Reports the status of the procedure and the resulting value in |callback|.
   // Returns an empty buffer if the status is an error.
   using ReadCallback =
-      std::function<void(att::Status, const common::ByteBuffer&)>;
+      fit::function<void(att::Status, const common::ByteBuffer&)>;
   virtual void ReadRequest(att::Handle handle, ReadCallback callback) = 0;
 
   // Sends an ATT Write Request with the requested attribute |handle| and
@@ -105,7 +105,7 @@ class Client {
   // Assigns a callback that will be called when a notification or indication
   // PDU is received.
   using NotificationCallback =
-      std::function<void(bool indication,
+      fit::function<void(bool indication,
                          att::Handle handle,
                          const common::ByteBuffer& value)>;
   virtual void SetNotificationHandler(NotificationCallback handler) = 0;

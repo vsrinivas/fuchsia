@@ -53,9 +53,9 @@ class Client;
 // MUST call ShutDown() on the GATT thread to ensure safe clean up.
 class RemoteCharacteristic final {
  public:
-  using ValueCallback = std::function<void(const common::ByteBuffer&)>;
+  using ValueCallback = fit::function<void(const common::ByteBuffer&)>;
   using NotifyStatusCallback =
-      std::function<void(att::Status, IdType handler_id)>;
+      fit::function<void(att::Status, IdType handler_id)>;
 
   // Represents a "Characteristic Descriptor" (Vol 3, Part G, 3.3.3).
   class Descriptor final {

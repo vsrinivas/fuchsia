@@ -17,7 +17,7 @@ namespace internal {
 class LESignalingChannel : public SignalingChannel {
  public:
   using ConnectionParameterUpdateCallback =
-      std::function<void(const hci::LEPreferredConnectionParameters& params)>;
+      fit::function<void(const hci::LEPreferredConnectionParameters& params)>;
 
   LESignalingChannel(fbl::RefPtr<Channel> chan, hci::Connection::Role role);
   ~LESignalingChannel() override = default;

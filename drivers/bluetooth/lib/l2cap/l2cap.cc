@@ -48,7 +48,7 @@ class Impl final : public L2CAP, public common::TaskDomain<Impl, L2CAP> {
                    LinkErrorCallback link_error_callback,
                    async_t* dispatcher) override {
     PostMessage([this, handle, role, lec = std::move(link_error_callback),
-                 dispatcher] {
+                 dispatcher]() mutable {
       if (chanmgr_) {
         chanmgr_->RegisterACL(handle, role, std::move(lec), dispatcher);
       }
@@ -61,7 +61,7 @@ class Impl final : public L2CAP, public common::TaskDomain<Impl, L2CAP> {
                   LinkErrorCallback link_error_callback,
                   async_t* dispatcher) override {
     PostMessage([this, handle, role, cpc = std::move(conn_param_callback),
-                 lec = std::move(link_error_callback), dispatcher] {
+                 lec = std::move(link_error_callback), dispatcher]() mutable {
       if (chanmgr_) {
         chanmgr_->RegisterLE(handle, role, std::move(cpc), std::move(lec),
                              dispatcher);

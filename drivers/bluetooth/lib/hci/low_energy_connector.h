@@ -49,7 +49,7 @@ class LowEnergyConnector {
   //   - |delegate|: The delegate that will be notified when a new logical link
   //     is established due to an incoming request (remote initiated).
   using IncomingConnectionDelegate =
-      std::function<void(ConnectionPtr connection)>;
+      fit::function<void(ConnectionPtr connection)>;
   LowEnergyConnector(fxl::RefPtr<Transport> hci,
                      async_t* dispatcher,
                      IncomingConnectionDelegate delegate);
@@ -74,7 +74,7 @@ class LowEnergyConnector {
   // |timeout_ms| specifies a time period after which the request will time out.
   // When a request to create connection times out, |status_callback| will be
   // called with a null |link| and a |status| with error Host::Error::kTimedOut.
-  using StatusCallback = std::function<void(Status status, ConnectionPtr link)>;
+  using StatusCallback = fit::function<void(Status status, ConnectionPtr link)>;
   bool CreateConnection(
       LEOwnAddressType own_address_type,
       bool use_whitelist,
@@ -82,7 +82,7 @@ class LowEnergyConnector {
       uint16_t scan_interval,
       uint16_t scan_window,
       const LEPreferredConnectionParameters& initial_parameters,
-      const StatusCallback& status_callback,
+      StatusCallback status_callback,
       int64_t timeout_ms);
 
   // Cancels the currently pending connection attempt.
@@ -99,7 +99,7 @@ class LowEnergyConnector {
   struct PendingRequest {
     PendingRequest() = default;
     PendingRequest(const common::DeviceAddress& peer_address,
-                   const StatusCallback& status_callback);
+                   StatusCallback status_callback);
 
     bool canceled;
     bool timed_out;

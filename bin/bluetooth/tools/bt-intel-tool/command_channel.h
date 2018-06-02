@@ -8,6 +8,7 @@
 #include <fbl/unique_fd.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/zx/channel.h>
+#include <lib/fit/function.h>
 #include <zircon/types.h>
 
 #include "garnet/drivers/bluetooth/lib/hci/control_packets.h"
@@ -28,8 +29,8 @@ class CommandChannel {
   // Sets the event callback to be called when an HCI Event arrives on the
   // channel.
   using EventCallback =
-      std::function<void(const ::btlib::hci::EventPacket& event_packet)>;
-  void SetEventCallback(const EventCallback& callback);
+      fit::function<void(const ::btlib::hci::EventPacket& event_packet)>;
+  void SetEventCallback(EventCallback callback);
 
   // Sends the command in |command| to the controller. The channel must
   // be Ready when this is called.
@@ -41,7 +42,7 @@ class CommandChannel {
   // returns.
   void SendCommandSync(
       const ::btlib::common::PacketView<::btlib::hci::CommandHeader>& command,
-      const EventCallback& callback);
+      EventCallback callback);
 
  private:
   // Common read handler implemntation

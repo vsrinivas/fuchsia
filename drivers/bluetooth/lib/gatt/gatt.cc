@@ -272,7 +272,7 @@ class Impl final : public GATT, common::TaskDomain<Impl, GATT> {
       }
 
       // NOTE: this makes a copy of |watcher_|.
-      async::PostTask(dispatcher_, [peer_id, watcher = watcher_,
+      async::PostTask(dispatcher_, [peer_id, watcher = watcher_.share(),
                                     svc = std::move(svc)]() mutable {
         watcher(peer_id, std::move(svc));
       });

@@ -29,7 +29,8 @@ void FakeClient::ExchangeMTU(MTUCallback callback) {
 
 void FakeClient::DiscoverPrimaryServices(ServiceCallback svc_callback,
                                          StatusCallback status_callback) {
-  async::PostTask(dispatcher_, [this, svc_callback, status_callback] {
+  async::PostTask(dispatcher_, [this, svc_callback = std::move(svc_callback),
+                                status_callback = std::move(status_callback)] {
     for (const auto& svc : services_) {
       svc_callback(svc);
     }
@@ -45,8 +46,9 @@ void FakeClient::DiscoverCharacteristics(att::Handle range_start,
   last_chrc_discovery_end_handle_ = range_end;
   chrc_discovery_count_++;
 
-  async::PostTask(dispatcher_, [this, range_start, range_end, chrc_callback,
-                                status_callback] {
+  async::PostTask(dispatcher_, [this, range_start, range_end,
+                                chrc_callback = std::move(chrc_callback),
+                                status_callback = std::move(status_callback)] {
     for (const auto& chrc : chrcs_) {
       if (chrc.handle >= range_start && chrc.handle <= range_end) {
         chrc_callback(chrc);
@@ -71,7 +73,8 @@ void FakeClient::DiscoverDescriptors(att::Handle range_start,
   }
 
   async::PostTask(dispatcher_, [this, status, range_start, range_end,
-                                desc_callback, status_callback] {
+                                desc_callback = std::move(desc_callback),
+                                status_callback = std::move(status_callback)] {
     for (const auto& desc : descs_) {
       if (desc.handle >= range_start && desc.handle <= range_end) {
         desc_callback(desc);

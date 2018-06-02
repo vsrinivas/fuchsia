@@ -25,7 +25,7 @@ void ReportNotifyStatus(att::Status status, IdType id,
 }
 
 void NotifyValue(const common::ByteBuffer& value,
-                 const RemoteCharacteristic::ValueCallback& callback,
+                 RemoteCharacteristic::ValueCallback callback,
                  async_t* dispatcher) {
   if (!dispatcher) {
     callback(value);
@@ -36,7 +36,7 @@ void NotifyValue(const common::ByteBuffer& value,
   if (buffer) {
     value.Copy(buffer.get());
     async::PostTask(dispatcher,
-                    [callback, val = std::move(buffer)] { callback(*val); });
+                    [callback = std::move(callback), val = std::move(buffer)] { callback(*val); });
   } else {
     FXL_VLOG(1) << "gatt: out of memory!";
   }
@@ -295,9 +295,9 @@ void RemoteCharacteristic::HandleNotification(const common::ByteBuffer& value) {
   FXL_DCHECK(client_);
   FXL_DCHECK(!shut_down_);
 
-  for (const auto& iter : notify_handlers_) {
-    const auto& handler = iter.second;
-    NotifyValue(value, handler.callback, handler.dispatcher);
+  for (auto& iter : notify_handlers_) {
+    auto& handler = iter.second;
+    NotifyValue(value, handler.callback.share(), handler.dispatcher);
   }
 }
 

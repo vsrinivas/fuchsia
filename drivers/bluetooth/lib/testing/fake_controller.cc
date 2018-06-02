@@ -189,42 +189,42 @@ void FakeController::AddDevice(std::unique_ptr<FakeDevice> device) {
 }
 
 void FakeController::SetScanStateCallback(
-    const ScanStateCallback& callback,
+    ScanStateCallback callback,
     async_t* dispatcher) {
   FXL_DCHECK(callback);
   FXL_DCHECK(dispatcher);
 
-  scan_state_cb_ = callback;
+  scan_state_cb_ = std::move(callback);
   scan_state_cb_dispatcher_ = dispatcher;
 }
 
 void FakeController::SetAdvertisingStateCallback(
-    const fxl::Closure& callback,
+    fit::closure callback,
     async_t* dispatcher) {
   FXL_DCHECK(callback);
   FXL_DCHECK(dispatcher);
 
-  advertising_state_cb_ = callback;
+  advertising_state_cb_ = std::move(callback);
   advertising_state_cb_dispatcher_ = dispatcher;
 }
 
 void FakeController::SetConnectionStateCallback(
-    const ConnectionStateCallback& callback,
+    ConnectionStateCallback callback,
     async_t* dispatcher) {
   FXL_DCHECK(callback);
   FXL_DCHECK(dispatcher);
 
-  conn_state_cb_ = callback;
+  conn_state_cb_ = std::move(callback);
   conn_state_cb_dispatcher_ = dispatcher;
 }
 
 void FakeController::SetLEConnectionParametersCallback(
-    const LEConnectionParametersCallback& callback,
+    LEConnectionParametersCallback callback,
     async_t* dispatcher) {
   FXL_DCHECK(callback);
   FXL_DCHECK(dispatcher);
 
-  le_conn_params_cb_ = callback;
+  le_conn_params_cb_ = std::move(callback);
   le_conn_params_cb_dispatcher_ = dispatcher;
 }
 
@@ -536,7 +536,7 @@ void FakeController::NotifyAdvertisingState() {
   }
 
   FXL_DCHECK(advertising_state_cb_dispatcher_);
-  async::PostTask(advertising_state_cb_dispatcher_, advertising_state_cb_);
+  async::PostTask(advertising_state_cb_dispatcher_, advertising_state_cb_.share());
 }
 
 void FakeController::NotifyConnectionState(const common::DeviceAddress& addr,
@@ -547,7 +547,7 @@ void FakeController::NotifyConnectionState(const common::DeviceAddress& addr,
 
   FXL_DCHECK(conn_state_cb_dispatcher_);
   async::PostTask(conn_state_cb_dispatcher_, [
-    addr, connected, canceled, cb = conn_state_cb_
+    addr, connected, canceled, cb = conn_state_cb_.share()
   ] { cb(addr, connected, canceled); });
 }
 
@@ -559,7 +559,7 @@ void FakeController::NotifyLEConnectionParameters(
 
   FXL_DCHECK(le_conn_params_cb_dispatcher_);
   async::PostTask(le_conn_params_cb_dispatcher_,
-      [addr, params, cb = le_conn_params_cb_] { cb(addr, params); });
+      [addr, params, cb = le_conn_params_cb_.share()] { cb(addr, params); });
 }
 
 void FakeController::OnLECreateConnectionCommandReceived(
@@ -1112,7 +1112,7 @@ void FakeController::OnCommandPacketReceived(
       if (scan_state_cb_) {
         FXL_DCHECK(scan_state_cb_dispatcher_);
         async::PostTask(scan_state_cb_dispatcher_, [
-          cb = scan_state_cb_, enabled = le_scan_state_.enabled
+          cb = scan_state_cb_.share(), enabled = le_scan_state_.enabled
         ] { cb(enabled); });
       }
 

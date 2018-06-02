@@ -68,13 +68,13 @@ class FakeClient final : public Client {
   size_t desc_discovery_count() const { return desc_discovery_count_; }
 
   // Sets a callback which will run when ReadRequest gets called.
-  using ReadRequestCallback = std::function<void(att::Handle, ReadCallback)>;
+  using ReadRequestCallback = fit::function<void(att::Handle, ReadCallback)>;
   void set_read_request_callback(ReadRequestCallback callback) {
     read_request_callback_ = std::move(callback);
   }
 
   // Sets a callback which will run when WriteRequest gets called.
-  using WriteRequestCallback = std::function<
+  using WriteRequestCallback = fit::function<
       void(att::Handle, const common::ByteBuffer&, att::StatusCallback)>;
   void set_write_request_callback(WriteRequestCallback callback) {
     write_request_callback_ = std::move(callback);

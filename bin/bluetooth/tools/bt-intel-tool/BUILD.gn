@@ -20,4 +20,8 @@ executable("bt-intel-tool") {
     "//garnet/drivers/bluetooth/lib/gap",
     "//garnet/drivers/bluetooth/lib/hci",
   ]
+
+  public_deps = [
+    "//zircon/public/lib/fit",
+  ]
 }

@@ -96,10 +96,9 @@ void CommandChannel::TransactionData::Complete(
   callback_ = nullptr;
 }
 
-CommandChannel::EventCallback CommandChannel::TransactionData::MakeCallback()
-    const {
+CommandChannel::EventCallback CommandChannel::TransactionData::MakeCallback() {
   return
-      [id = id_, cb = callback_](const EventPacket& event) { cb(id, event); };
+      [id = id_, cb = callback_.share()](const EventPacket& event) { cb(id, event); };
 }
 
 CommandChannel::CommandChannel(Transport* transport,
@@ -416,7 +415,7 @@ CommandChannel::EventHandlerId CommandChannel::NewEventHandler(
   data.is_le_meta_subevent = is_le_meta;
 
   FXL_DCHECK(event_handler_id_map_.find(id) == event_handler_id_map_.end());
-  event_handler_id_map_[id] = data;
+  event_handler_id_map_[id] = std::move(data);
 
   return id;
 }
@@ -512,7 +511,7 @@ void CommandChannel::NotifyEventHandler(std::unique_ptr<EventPacket> event) {
     auto& handler = handler_iter->second;
     FXL_DCHECK(handler.event_code == event_code);
 
-    callback = handler.event_callback;
+    callback = handler.event_callback.share();
     dispatcher = handler.dispatcher;
 
     auto expired_it = expiring_event_handler_ids_.find(iter->second);
@@ -529,7 +528,7 @@ void CommandChannel::NotifyEventHandler(std::unique_ptr<EventPacket> event) {
 
   // Post the event on the requested dispatcher.
   async::PostTask(dispatcher,
-      [event = std::move(event), callback]() mutable { callback(*event); });
+      [event = std::move(event), callback = std::move(callback)]() mutable { callback(*event); });
 }
 
 void CommandChannel::OnChannelReady(

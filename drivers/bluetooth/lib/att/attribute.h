@@ -7,6 +7,8 @@
 #include <memory>
 #include <vector>
 
+#include <lib/fit/function.h>
+
 #include "garnet/drivers/bluetooth/lib/att/att.h"
 #include "garnet/drivers/bluetooth/lib/common/byte_buffer.h"
 #include "garnet/drivers/bluetooth/lib/common/uuid.h"
@@ -110,41 +112,41 @@ class Attribute final {
   // handler must call the provided the |result_callback| to signal the end of
   // the operation.
   using ReadResultCallback =
-      std::function<void(ErrorCode status, const common::ByteBuffer& value)>;
+      fit::function<void(ErrorCode status, const common::ByteBuffer& value)>;
   using ReadHandler =
-      std::function<void(const std::string& peer_id,
+      fit::function<void(const std::string& peer_id,
                          Handle handle,
                          uint16_t offset,
-                         const ReadResultCallback& result_callback)>;
-  void set_read_handler(const ReadHandler& read_handler) {
-    read_handler_ = read_handler;
+                         ReadResultCallback result_callback)>;
+  void set_read_handler(ReadHandler read_handler) {
+    read_handler_ = std::move(read_handler);
   }
 
   // An "ATT Write Command" will trigger WriteHandler with
   // a null |result_callback|
-  using WriteResultCallback = std::function<void(ErrorCode status)>;
+  using WriteResultCallback = fit::function<void(ErrorCode status)>;
   using WriteHandler =
-      std::function<void(const std::string& peer_id,
+      fit::function<void(const std::string& peer_id,
                          Handle handle,
                          uint16_t offset,
                          const common::ByteBuffer& value,
-                         const WriteResultCallback& result_callback)>;
-  void set_write_handler(const WriteHandler& write_handler) {
-    write_handler_ = write_handler;
+                         WriteResultCallback result_callback)>;
+  void set_write_handler(WriteHandler write_handler) {
+    write_handler_ = std::move(write_handler);
   }
 
   // Initiates an asynchronous read of the attribute value. Returns false if
   // this attribute is not dynamic.
   bool ReadAsync(const std::string& peer_id,
                  uint16_t offset,
-                 const ReadResultCallback& result_callback) const;
+                 ReadResultCallback result_callback) const;
 
   // Initiates an asynchronous write of the attribute value. Returns false if
   // this attribute is not dynamic.
   bool WriteAsync(const std::string& peer_id,
                   uint16_t offset,
                   const common::ByteBuffer& value,
-                  const WriteResultCallback& result_callback) const;
+                  WriteResultCallback result_callback) const;
 
  private:
   // Only an AttributeGrouping can construct this.

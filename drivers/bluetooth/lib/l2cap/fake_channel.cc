@@ -30,14 +30,14 @@ void FakeChannel::Receive(const common::ByteBuffer& data) {
 
   auto pdu = fragmenter_.BuildBasicFrame(id(), data);
   async::PostTask(dispatcher_,
-                  [cb = rx_cb_, pdu = std::move(pdu)] { cb(pdu); });
+                  [cb = rx_cb_.share(), pdu = std::move(pdu)] { cb(pdu); });
 }
 
-void FakeChannel::SetSendCallback(const SendCallback& callback,
+void FakeChannel::SetSendCallback(SendCallback callback,
                                   async_t* dispatcher) {
   FXL_DCHECK(static_cast<bool>(callback) == static_cast<bool>(dispatcher));
 
-  send_cb_ = callback;
+  send_cb_ = std::move(callback);
   send_dispatcher_ = dispatcher;
 }
 
@@ -67,7 +67,7 @@ bool FakeChannel::Activate(RxCallback rx_callback,
 
   dispatcher_ = dispatcher;
   closed_cb_ = std::move(closed_callback);
-  rx_cb_ = rx_callback;
+  rx_cb_ = std::move(rx_callback);
 
   return true;
 }
@@ -82,7 +82,7 @@ void FakeChannel::SignalLinkError() {
   link_error_ = true;
 
   if (link_err_cb_) {
-    async::PostTask(link_err_dispatcher_, link_err_cb_);
+    async::PostTask(link_err_dispatcher_, link_err_cb_.share());
   }
 }
 
@@ -101,7 +101,7 @@ bool FakeChannel::Send(std::unique_ptr<const common::ByteBuffer> sdu) {
   FXL_DCHECK(send_dispatcher_);
   async::PostTask(
       send_dispatcher_,
-      [cb = send_cb_, sdu = std::move(sdu)]() mutable { cb(std::move(sdu)); });
+      [cb = send_cb_.share(), sdu = std::move(sdu)]() mutable { cb(std::move(sdu)); });
 
   return true;
 }

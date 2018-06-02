@@ -64,7 +64,7 @@ class GATT_ClientTest : public l2cap::testing::FakeChannelTest {
                                Client::DescriptorCallback desc_callback,
                                att::Handle range_start = 0x0001,
                                att::Handle range_end = 0xFFFF) {
-    async::PostTask(dispatcher(), [=] {
+    async::PostTask(dispatcher(), [=, desc_callback = std::move(desc_callback)]() mutable {
       client()->DiscoverDescriptors(
           range_start, range_end, std::move(desc_callback),
           [out_status](att::Status val) { *out_status = val; });

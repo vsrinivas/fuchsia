@@ -4,10 +4,10 @@
 
 #pragma once
 
-#include <functional>
 #include <memory>
 
 #include <ddk/protocol/bt-hci.h>
+#include <lib/fit/function.h>
 #include <zircon/types.h>
 
 #include "garnet/drivers/bluetooth/host/gatt_host.h"
@@ -48,7 +48,7 @@ class HostServer;
 class Host final : public fxl::RefCountedThreadSafe<Host> {
  public:
   // Initializes the system and reports the status in |success|.
-  using InitCallback = std::function<void(bool success)>;
+  using InitCallback = fit::function<void(bool success)>;
   bool Initialize(InitCallback callback);
 
   // Shuts down all systems.

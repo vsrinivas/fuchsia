@@ -26,8 +26,8 @@ class TestSignalingChannel : public SignalingChannel {
   }
   ~TestSignalingChannel() override = default;
 
-  using PacketCallback = std::function<void(const SignalingPacket& packet)>;
-  void set_packet_callback(const PacketCallback& cb) { packet_cb_ = cb; }
+  using PacketCallback = fit::function<void(const SignalingPacket& packet)>;
+  void set_packet_callback(PacketCallback cb) { packet_cb_ = std::move(cb); }
 
  private:
   // SignalingChannel override

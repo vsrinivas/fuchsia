@@ -59,8 +59,8 @@ Adapter::~Adapter() {
     ShutDown();
 }
 
-bool Adapter::Initialize(const InitializeCallback& callback,
-                         const fxl::Closure& transport_closed_cb) {
+bool Adapter::Initialize(InitializeCallback callback,
+                         fit::closure transport_closed_cb) {
   FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
   FXL_DCHECK(callback);
   FXL_DCHECK(transport_closed_cb);
@@ -77,7 +77,7 @@ bool Adapter::Initialize(const InitializeCallback& callback,
   FXL_DCHECK(init_seq_runner_->IsReady());
   FXL_DCHECK(!init_seq_runner_->HasQueuedCommands());
 
-  transport_closed_cb_ = transport_closed_cb;
+  transport_closed_cb_ = std::move(transport_closed_cb);
 
   // Start by resetting the controller to a clean state and then send
   // informational parameter commands that are not specific to LE or BR/EDR. The
@@ -128,7 +128,7 @@ bool Adapter::Initialize(const InitializeCallback& callback,
         state_.controller_address_ = params->bd_addr;
       });
 
-  init_seq_runner_->RunCommands([callback, this](hci::Status status) {
+  init_seq_runner_->RunCommands([callback = std::move(callback), this](hci::Status status) mutable {
     if (!status) {
       FXL_LOG(ERROR)
           << "gap: Adapter: Failed to obtain initial controller information: "
@@ -138,7 +138,7 @@ bool Adapter::Initialize(const InitializeCallback& callback,
       return;
     }
 
-    InitializeStep2(callback);
+    InitializeStep2(std::move(callback));
   });
 
   return true;
@@ -191,7 +191,7 @@ void Adapter::SetLocalName(std::string name, hci::StatusCallback callback) {
       });
 }
 
-void Adapter::InitializeStep2(const InitializeCallback& callback) {
+void Adapter::InitializeStep2(InitializeCallback callback) {
   FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
   FXL_DCHECK(IsInitializing());
 
@@ -308,7 +308,7 @@ void Adapter::InitializeStep2(const InitializeCallback& callback) {
         });
   }
 
-  init_seq_runner_->RunCommands([callback, this](hci::Status status) {
+  init_seq_runner_->RunCommands([callback = std::move(callback), this](hci::Status status) mutable {
     if (!status) {
       FXL_LOG(ERROR) << "gap: Adapter: Failed to obtain initial controller "
                         "information (step 2): "
@@ -318,11 +318,11 @@ void Adapter::InitializeStep2(const InitializeCallback& callback) {
       return;
     }
 
-    InitializeStep3(callback);
+    InitializeStep3(std::move(callback));
   });
 }
 
-void Adapter::InitializeStep3(const InitializeCallback& callback) {
+void Adapter::InitializeStep3(InitializeCallback callback) {
   FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
   FXL_DCHECK(IsInitializing());
 
@@ -409,7 +409,7 @@ void Adapter::InitializeStep3(const InitializeCallback& callback) {
         });
   }
 
-  init_seq_runner_->RunCommands([callback, this](hci::Status status) {
+  init_seq_runner_->RunCommands([callback = std::move(callback), this](hci::Status status) mutable {
     if (!status) {
       FXL_LOG(ERROR) << "gap: Adapter: Failed to obtain initial controller "
                         "information (step 3): "
@@ -419,11 +419,11 @@ void Adapter::InitializeStep3(const InitializeCallback& callback) {
       return;
     }
 
-    InitializeStep4(callback);
+    InitializeStep4(std::move(callback));
   });
 }
 
-void Adapter::InitializeStep4(const InitializeCallback& callback) {
+void Adapter::InitializeStep4(InitializeCallback callback) {
   FXL_DCHECK(IsInitializing());
 
   // Initialize the scan manager based on current feature support.

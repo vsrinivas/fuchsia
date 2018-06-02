@@ -87,8 +87,8 @@ class FakeControllerTest : public TestBase {
   // InitializeACLDataChannel() must be called once and its data rx handler must
   // not be overridden by tests for |callback| to work.
   void set_data_received_callback(
-      const hci::ACLDataChannel::DataReceivedCallback& callback) {
-    data_received_callback_ = callback;
+       hci::ACLDataChannel::DataReceivedCallback callback) {
+    data_received_callback_ = std::move(callback);
   }
 
   fxl::RefPtr<hci::Transport> transport() const { return transport_; }

@@ -19,8 +19,8 @@ namespace {
 att::Handle InsertCharacteristicAttributes(
     att::AttributeGrouping* grouping,
     const Characteristic& chrc,
-    const att::Attribute::ReadHandler& read_handler,
-    const att::Attribute::WriteHandler& write_handler) {
+    att::Attribute::ReadHandler read_handler,
+    att::Attribute::WriteHandler write_handler) {
   FXL_DCHECK(grouping);
   FXL_DCHECK(!grouping->complete());
   FXL_DCHECK(read_handler);
@@ -38,8 +38,8 @@ att::Handle InsertCharacteristicAttributes(
       chrc.type(), chrc.read_permissions(), chrc.write_permissions());
   FXL_DCHECK(value_attr);
 
-  value_attr->set_read_handler(read_handler);
-  value_attr->set_write_handler(write_handler);
+  value_attr->set_read_handler(std::move(read_handler));
+  value_attr->set_write_handler(std::move(write_handler));
 
   size_t uuid_size = chrc.type().CompactSize(false /* allow_32bit */);
   FXL_DCHECK(uuid_size == 2 || uuid_size == 16);
@@ -66,8 +66,8 @@ void InsertDescriptorAttribute(
     const common::UUID& type,
     const att::AccessRequirements& read_reqs,
     const att::AccessRequirements& write_reqs,
-    const att::Attribute::ReadHandler& read_handler,
-    const att::Attribute::WriteHandler& write_handler) {
+    att::Attribute::ReadHandler read_handler,
+    att::Attribute::WriteHandler write_handler) {
   FXL_DCHECK(grouping);
   FXL_DCHECK(!grouping->complete());
   FXL_DCHECK(read_handler);
@@ -77,8 +77,8 @@ void InsertDescriptorAttribute(
   auto* attr = grouping->AddAttribute(type, read_reqs, write_reqs);
   FXL_DCHECK(attr);
 
-  attr->set_read_handler(read_handler);
-  attr->set_write_handler(write_handler);
+  attr->set_read_handler(std::move(read_handler));
+  attr->set_write_handler(std::move(write_handler));
 }
 
 // Returns false if the given service hierarchy contains repeating identifiers.
@@ -325,7 +325,7 @@ class LocalServiceManager::ServiceData final {
 
     auto read_handler = [self, id, props](const auto& peer_id,
                                           att::Handle handle, uint16_t offset,
-                                          const auto& result_cb) {
+                                          auto result_cb) {
       if (!self) {
         result_cb(att::ErrorCode::kUnlikelyError, common::BufferView());
         return;
@@ -339,13 +339,13 @@ class LocalServiceManager::ServiceData final {
         return;
       }
 
-      self->read_handler_(self->id_, id, offset, result_cb);
+      self->read_handler_(self->id_, id, offset, std::move(result_cb));
     };
 
     auto write_handler = [self, id, props](const auto& peer_id,
                                            att::Handle handle, uint16_t offset,
                                            const auto& value,
-                                           const auto& result_cb) {
+                                           auto result_cb) {
       if (!self) {
         if (result_cb)
           result_cb(att::ErrorCode::kUnlikelyError);
@@ -363,11 +363,11 @@ class LocalServiceManager::ServiceData final {
       if (!result_cb && !(props & Property::kWriteWithoutResponse))
         return;
 
-      self->write_handler_(self->id_, id, offset, value, result_cb);
+      self->write_handler_(self->id_, id, offset, value, std::move(result_cb));
     };
 
     att::Handle chrc_handle = InsertCharacteristicAttributes(
-        grouping, *chrc, read_handler, write_handler);
+        grouping, *chrc, std::move(read_handler), std::move(write_handler));
 
     if (props & Property::kNotify || props & Property::kIndicate) {
       AddCCCDescriptor(grouping, *chrc, chrc_handle);
@@ -404,19 +404,19 @@ class LocalServiceManager::ServiceData final {
     auto self = weak_ptr_factory_.GetWeakPtr();
     auto read_handler = [self, id = desc->id()](
                             const auto& peer_id, att::Handle handle,
-                            uint16_t offset, const auto& result_cb) {
+                            uint16_t offset, auto result_cb) {
       if (!self) {
         result_cb(att::ErrorCode::kUnlikelyError, common::BufferView());
         return;
       }
 
-      self->read_handler_(self->id_, id, offset, result_cb);
+      self->read_handler_(self->id_, id, offset, std::move(result_cb));
     };
 
     auto write_handler = [self, id = desc->id()](
                              const auto& peer_id, att::Handle handle,
                              uint16_t offset, const auto& value,
-                             const auto& result_cb) {
+                             auto result_cb) {
       // Descriptors cannot be written using the "write without response"
       // procedure.
       if (!result_cb)
@@ -427,12 +427,12 @@ class LocalServiceManager::ServiceData final {
         return;
       }
 
-      self->write_handler_(self->id_, id, offset, value, result_cb);
+      self->write_handler_(self->id_, id, offset, value, std::move(result_cb));
     };
 
     InsertDescriptorAttribute(grouping, desc->type(), desc->read_permissions(),
-                              desc->write_permissions(), read_handler,
-                              write_handler);
+                              desc->write_permissions(), std::move(read_handler),
+                              std::move(write_handler));
   }
 
   void AddCCCDescriptor(att::AttributeGrouping* grouping,
@@ -450,32 +450,32 @@ class LocalServiceManager::ServiceData final {
 
     auto read_handler = [self, id, chrc_handle](
                             const auto& peer_id, att::Handle handle,
-                            uint16_t offset, const auto& result_cb) {
+                            uint16_t offset, auto result_cb) {
       if (!self) {
         result_cb(att::ErrorCode::kUnlikelyError, common::BufferView());
         return;
       }
 
-      self->OnReadCCC(id, peer_id, chrc_handle, offset, result_cb);
+      self->OnReadCCC(id, peer_id, chrc_handle, offset, std::move(result_cb));
     };
 
     auto write_handler = [self, id, chrc_handle, props = chrc.properties()](
                              const auto& peer_id, att::Handle handle,
                              uint16_t offset, const auto& value,
-                             const auto& result_cb) {
+                             auto result_cb) {
       if (!self) {
         result_cb(att::ErrorCode::kUnlikelyError);
         return;
       }
 
       self->OnWriteCCC(id, props, peer_id, chrc_handle, offset, value,
-                       result_cb);
+                       std::move(result_cb));
     };
 
     // The write permission is determined by the service.
     InsertDescriptorAttribute(grouping, types::kClientCharacteristicConfig,
                               read_reqs, chrc.update_permissions(),
-                              read_handler, write_handler);
+                              std::move(read_handler), std::move(write_handler));
   }
 
   IdType id_;

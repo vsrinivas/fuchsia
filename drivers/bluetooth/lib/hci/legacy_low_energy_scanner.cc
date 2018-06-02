@@ -64,7 +64,7 @@ bool LegacyLowEnergyScanner::StartScan(bool active,
                                        bool filter_duplicates,
                                        LEScanFilterPolicy filter_policy,
                                        int64_t period_ms,
-                                       const ScanStatusCallback& callback) {
+                                       ScanStatusCallback callback) {
   FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
   FXL_DCHECK(callback);
   FXL_DCHECK(period_ms == kPeriodInfinite || period_ms > 0);
@@ -88,7 +88,7 @@ bool LegacyLowEnergyScanner::StartScan(bool active,
 
   set_state(State::kInitiating);
   active_scanning_ = active;
-  scan_cb_ = callback;
+  scan_cb_ = std::move(callback);
 
   // HCI_LE_Set_Scan_Parameters
   auto command = CommandPacket::New(kLESetScanParameters,
@@ -121,9 +121,7 @@ bool LegacyLowEnergyScanner::StartScan(bool active,
     FXL_DCHECK(state() == State::kInitiating);
 
     if (!status) {
-      auto cb = scan_cb_;
-
-      scan_cb_ = nullptr;
+      auto cb = std::move(scan_cb_);
       set_state(State::kIdle);
 
       FXL_LOG(ERROR) << "gap: LegacyLowEnergyScanner: failed to start scan: "
@@ -220,9 +218,7 @@ void LegacyLowEnergyScanner::StopScanInternal(bool stopped) {
       // ScanStatus::kFailed instead.
     }
 
-    auto cb = scan_cb_;
-
-    scan_cb_ = nullptr;
+    auto cb = std::move(scan_cb_);
     set_state(State::kIdle);
 
     cb(!status ? ScanStatus::kFailed

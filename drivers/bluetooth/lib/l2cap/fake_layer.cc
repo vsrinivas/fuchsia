@@ -31,7 +31,7 @@ void FakeLayer::TriggerLEConnectionParameterUpdate(
 
   LinkData& link_data = iter->second;
   async::PostTask(link_data.dispatcher,
-                  [params, cb = link_data.le_conn_param_cb] { cb(params); });
+                  [params, cb = link_data.le_conn_param_cb.share()] { cb(params); });
 }
 
 void FakeLayer::RegisterACL(hci::ConnectionHandle handle,
@@ -92,9 +92,9 @@ void FakeLayer::OpenFixedChannel(hci::ConnectionHandle handle,
     return;
   }
 
-  const auto& link = iter->second;
+  auto& link = iter->second;
   auto chan = fbl::AdoptRef(new FakeChannel(id, handle, iter->second.type));
-  chan->SetLinkErrorCallback(link.link_error_cb, link.dispatcher);
+  chan->SetLinkErrorCallback(link.link_error_cb.share(), link.dispatcher);
 
   async::PostTask(dispatcher, [chan, cb = std::move(callback)] { cb(chan); });
 

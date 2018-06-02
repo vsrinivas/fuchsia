@@ -110,7 +110,7 @@ std::string FirmwareVariantToString(uint8_t fw_variant) {
 
 bool HandleReadVersion(CommandChannel* cmd_channel,
                        const fxl::CommandLine& cmd_line,
-                       const fxl::Closure& complete_cb) {
+                       const fit::closure& complete_cb) {
   if (cmd_line.positional_args().size()) {
     std::cout << "  Usage: read-version [--verbose]" << std::endl;
     return false;
@@ -161,7 +161,7 @@ bool HandleReadVersion(CommandChannel* cmd_channel,
 
 bool HandleReadBootParams(CommandChannel* cmd_channel,
                           const fxl::CommandLine& cmd_line,
-                          const fxl::Closure& complete_cb) {
+                          fit::closure complete_cb) {
   if (cmd_line.positional_args().size() || cmd_line.options().size()) {
     std::cout << "  Usage: read-boot-params" << std::endl;
     return false;
@@ -202,7 +202,7 @@ bool HandleReadBootParams(CommandChannel* cmd_channel,
 }
 
 bool HandleReset(CommandChannel* cmd_channel, const fxl::CommandLine& cmd_line,
-                 const fxl::Closure& complete_cb) {
+                 fit::closure complete_cb) {
   if (cmd_line.positional_args().size() || cmd_line.options().size()) {
     std::cout << "  Usage: reset" << std::endl;
     return false;
@@ -235,7 +235,7 @@ bool HandleReset(CommandChannel* cmd_channel, const fxl::CommandLine& cmd_line,
 
 bool HandleLoadBseq(CommandChannel* cmd_channel,
                     const fxl::CommandLine& cmd_line,
-                    const fxl::Closure& complete_cb) {
+                    fit::closure complete_cb) {
   if (cmd_line.positional_args().size() != 1) {
     std::cout << "  Usage: load-bseq [--verbose] <filename>" << std::endl;
     return false;
@@ -260,7 +260,7 @@ bool HandleLoadBseq(CommandChannel* cmd_channel,
 
 bool HandleLoadSecure(CommandChannel* cmd_channel,
                       const fxl::CommandLine& cmd_line,
-                      const fxl::Closure& complete_cb) {
+                      fit::closure complete_cb) {
   if (cmd_line.positional_args().size() != 1) {
     std::cout << "  Usage: load-sfi [--verbose] <filename>" << std::endl;
     return false;

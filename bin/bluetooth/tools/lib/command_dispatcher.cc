@@ -12,11 +12,11 @@
 namespace bluetooth_tools {
 
 CommandDispatcher::CommandHandlerData::CommandHandlerData(
-    const std::string& description, const CommandHandler& handler)
-    : description(description), handler(handler) {}
+    const std::string& description, CommandHandler handler)
+    : description(description), handler(std::move(handler)) {}
 
 bool CommandDispatcher::ExecuteCommand(const std::vector<std::string>& argv,
-                                       const fxl::Closure& complete_cb,
+                                       fit::closure complete_cb,
                                        bool* out_cmd_found) {
   FXL_DCHECK(out_cmd_found);
 
@@ -34,7 +34,7 @@ bool CommandDispatcher::ExecuteCommand(const std::vector<std::string>& argv,
   *out_cmd_found = true;
 
   auto cl = fxl::CommandLineFromIterators(argv.begin(), argv.end());
-  return iter->second.handler(cl, complete_cb);
+  return iter->second.handler(cl, std::move(complete_cb));
 }
 
 void CommandDispatcher::DescribeAllCommands() const {
@@ -46,12 +46,12 @@ void CommandDispatcher::DescribeAllCommands() const {
 
 void CommandDispatcher::RegisterHandler(const std::string& name,
                                         const std::string& description,
-                                        const CommandHandler& handler) {
+                                        CommandHandler handler) {
   FXL_DCHECK(!name.empty());
   FXL_DCHECK(!description.empty());
   FXL_DCHECK(handler_map_.find(name) == handler_map_.end());
 
-  handler_map_[name] = CommandHandlerData(description, handler);
+  handler_map_[name] = CommandHandlerData(description, std::move(handler));
 }
 
 std::vector<std::string> CommandDispatcher::GetCommandsThatMatch(

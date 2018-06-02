@@ -37,13 +37,13 @@ constexpr uint8_t LowerBits(const OpCode opcode) {
 class TestCallbackObject
     : public fxl::RefCountedThreadSafe<TestCallbackObject> {
  public:
-  explicit TestCallbackObject(const fxl::Closure& deletion_callback)
-      : deletion_cb_(deletion_callback) {}
+  explicit TestCallbackObject(fit::closure deletion_callback)
+      : deletion_cb_(std::move(deletion_callback)) {}
 
   virtual ~TestCallbackObject() { deletion_cb_(); }
 
  private:
-  fxl::Closure deletion_cb_;
+  fit::closure deletion_cb_;
 };
 
 class CommandChannelTest : public TestingBase {
@@ -956,7 +956,7 @@ TEST_F(HCI_CommandChannelTest, AsynchronousCommandChaining) {
       if (cb_count < 2) {
         // Add the second command when the first one completes.
         auto packet = CommandPacket::New(kReset);
-        id2 = cmd_channel->SendCommand(std::move(packet), dispatcher, cb,
+        id2 = cmd_channel->SendCommand(std::move(packet), dispatcher, cb.share(),
                                        kTestEventCode0);
       }
     }
@@ -965,7 +965,7 @@ TEST_F(HCI_CommandChannelTest, AsynchronousCommandChaining) {
 
   auto packet = CommandPacket::New(kReset);
   id1 = cmd_channel()->SendCommand(
-      std::move(packet), dispatcher(), cb, kTestEventCode0);
+      std::move(packet), dispatcher(), cb.share(), kTestEventCode0);
 
   RunUntilIdle();
 

@@ -27,8 +27,8 @@ LowEnergyDiscoverySession::~LowEnergyDiscoverySession() {
 }
 
 void LowEnergyDiscoverySession::SetResultCallback(
-    const DeviceFoundCallback& callback) {
-  device_found_callback_ = callback;
+    DeviceFoundCallback callback) {
+  device_found_callback_ = std::move(callback);
   if (!manager_)
     return;
   for (const auto& cached_device_id : manager_->cached_scan_results()) {

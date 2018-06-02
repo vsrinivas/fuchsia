@@ -4,9 +4,8 @@
 
 #pragma once
 
-#include <functional>
-
 #include <fbl/ref_ptr.h>
+#include <lib/fit/function.h>
 
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fxl/macros.h"
@@ -33,7 +32,7 @@ class Server {
  public:
   virtual ~Server() = default;
 
-  virtual void set_error_handler(std::function<void()> handler) = 0;
+  virtual void set_error_handler(fit::closure handler) = 0;
 };
 
 // ServerBase is a common base implementation for FIDL interface servers.
@@ -52,7 +51,7 @@ class ServerBase : public Server, public Interface {
 
   ~ServerBase() override = default;
 
-  void set_error_handler(std::function<void()> handler) override {
+  void set_error_handler(fit::closure handler) override {
     binding_.set_error_handler(std::move(handler));
   }
 

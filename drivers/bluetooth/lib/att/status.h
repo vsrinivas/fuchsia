@@ -4,6 +4,8 @@
 
 #pragma once
 
+#include <lib/fit/function.h>
+
 #include "garnet/drivers/bluetooth/lib/att/att.h"
 #include "garnet/drivers/bluetooth/lib/common/status.h"
 
@@ -22,7 +24,7 @@ namespace att {
 using Status = common::Status<ErrorCode>;
 
 // Copyable callback for reporting a Status.
-using StatusCallback = std::function<void(att::Status)>;
+using StatusCallback = fit::function<void(att::Status)>;
 
 }  // namespace att
 }  // namespace btlib

@@ -4,6 +4,8 @@
 
 #pragma once
 
+#include <lib/fit/function.h>
+
 #include "garnet/drivers/bluetooth/lib/common/status.h"
 #include "garnet/drivers/bluetooth/lib/hci/hci_constants.h"
 
@@ -43,7 +45,7 @@ class Status : public common::Status<StatusCode> {
   explicit Status(hci::StatusCode proto_code);
 };
 
-using StatusCallback = std::function<void(const Status& status)>;
+using StatusCallback = fit::function<void(const Status& status)>;
 
 }  // namespace hci
 }  // namespace btlib

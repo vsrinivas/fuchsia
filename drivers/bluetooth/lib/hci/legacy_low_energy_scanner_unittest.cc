@@ -66,10 +66,10 @@ class LegacyLowEnergyScannerTest : public TestingBase,
     TestingBase::TearDown();
   }
 
-  using DeviceFoundCallback = std::function<void(const LowEnergyScanResult&,
+  using DeviceFoundCallback = fit::function<void(const LowEnergyScanResult&,
                                                  const common::ByteBuffer&)>;
-  void set_device_found_callback(const DeviceFoundCallback& cb) {
-    device_found_cb_ = cb;
+  void set_device_found_callback(DeviceFoundCallback cb) {
+    device_found_cb_ = std::move(cb);
   }
 
   // LowEnergyScanner::Observer overrides:

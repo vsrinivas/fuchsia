@@ -5,8 +5,7 @@
 #pragma once
 
 #include <lib/async/dispatcher.h>
-
-#include "lib/fxl/functional/closure.h"
+#include <lib/fit/function.h>
 
 namespace btlib {
 namespace common {
@@ -18,7 +17,7 @@ namespace common {
 //
 // NOTE: This should generally be avoided. This is primarily intended for
 // synchronous setup/shutdown sequences and unit tests.
-void RunTaskSync(const fxl::Closure& callback, async_t* dispatcher);
+void RunTaskSync(fit::closure callback, async_t* dispatcher);
 
 }  // namespace common
 }  // namespace btlib

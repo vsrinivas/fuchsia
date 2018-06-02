@@ -58,7 +58,7 @@ void LowEnergyCentralServer::GetPeripherals(
 
 void LowEnergyCentralServer::GetPeripheral(
     ::fidl::StringPtr identifier,
-     GetPeripheralCallback callback) {
+    GetPeripheralCallback callback) {
   // TODO:
   FXL_NOTIMPLEMENTED();
 }

@@ -439,7 +439,7 @@ void ACLDataChannel::OnChannelReady(
     FXL_DCHECK(rx_dispatcher_);
 
     async::PostTask(rx_dispatcher_,
-                    [cb = rx_callback_, packet = std::move(packet)]() mutable {
+                    [cb = rx_callback_.share(), packet = std::move(packet)]() mutable {
                       cb(std::move(packet));
                     });
   }

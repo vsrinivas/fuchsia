@@ -60,7 +60,7 @@ class FakeLowEnergyAdvertiser final : public hci::LowEnergyAdvertiser {
   void StartAdvertising(const common::DeviceAddress& address,
                         const common::ByteBuffer& data,
                         const common::ByteBuffer& scan_rsp,
-                        const ConnectionCallback& connect_callback,
+                        ConnectionCallback connect_callback,
                         uint32_t interval_ms,
                         bool anonymous,
                         AdvertisingStatusCallback callback) override {
@@ -80,7 +80,7 @@ class FakeLowEnergyAdvertiser final : public hci::LowEnergyAdvertiser {
     AdvertisementStatus new_status;
     AdvertisingData::FromBytes(data, &new_status.data);
     AdvertisingData::FromBytes(scan_rsp, &new_status.scan_rsp);
-    new_status.connect_cb = connect_callback;
+    new_status.connect_cb = std::move(connect_callback);
     new_status.interval_ms = interval_ms;
     new_status.anonymous = anonymous;
     ads_->emplace(address, std::move(new_status));
@@ -97,7 +97,7 @@ class FakeLowEnergyAdvertiser final : public hci::LowEnergyAdvertiser {
     // ones.
     // TODO(jamuraa): make this send it to the correct callback once we can
     // determine which one that is.
-    ConnectionCallback cb = ads_->begin()->second.connect_cb;
+    const auto& cb = ads_->begin()->second.connect_cb;
     if (cb) {
       cb(std::move(link));
     }

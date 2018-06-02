@@ -43,10 +43,10 @@ class SequentialCommandRunner final {
   // completion event to the command sequence. Cannot be called once
   // RunCommands() has been called.
   using CommandCompleteCallback =
-      std::function<void(const EventPacket& command_complete)>;
+      fit::function<void(const EventPacket& command_complete)>;
   void QueueCommand(
       std::unique_ptr<CommandPacket> command_packet,
-      const CommandCompleteCallback& callback = CommandCompleteCallback());
+      CommandCompleteCallback callback = CommandCompleteCallback());
 
   // Runs all the queued commands. Once this is called no new commands can be
   // queued. This method will return before queued commands have been run.

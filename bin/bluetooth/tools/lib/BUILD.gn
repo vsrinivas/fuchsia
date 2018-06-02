@@ -11,4 +11,8 @@ source_set("lib") {
   deps = [
     "//garnet/public/lib/fxl",
   ]
+
+  public_deps = [
+    "//zircon/public/lib/fit",
+  ]
 }

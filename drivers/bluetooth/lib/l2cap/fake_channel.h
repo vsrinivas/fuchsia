@@ -35,8 +35,8 @@ class FakeChannel : public Channel {
 
   // Sets a delegate to notify when a frame was sent over the channel.
   using SendCallback =
-      std::function<void(std::unique_ptr<const common::ByteBuffer>)>;
-  void SetSendCallback(const SendCallback& callback, async_t* dispatcher);
+      fit::function<void(std::unique_ptr<const common::ByteBuffer>)>;
+  void SetSendCallback(SendCallback callback, async_t* dispatcher);
 
   // Sets a callback to emulate the result of "SignalLinkError()". In
   // production, this callback is invoked by the link. This will be internally

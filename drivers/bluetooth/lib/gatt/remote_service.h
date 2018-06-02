@@ -21,7 +21,7 @@ namespace gatt {
 
 // Callback type invoked to notify when GATT services get discovered.
 class RemoteService;
-using RemoteServiceWatcher = std::function<void(fbl::RefPtr<RemoteService>)>;
+using RemoteServiceWatcher = fit::function<void(fbl::RefPtr<RemoteService>)>;
 
 using ServiceList = std::vector<fbl::RefPtr<RemoteService>>;
 using ServiceListCallback = fit::function<void(att::Status, ServiceList)>;
@@ -60,7 +60,7 @@ class RemoteService : public fbl::RefCounted<RemoteService> {
   // Adds a handler which will be called when this service gets removed.
   // Returns false if the service was already shut down. |callback| will be
   // posted on |dispatcher|.
-  bool AddRemovedHandler(fxl::Closure handler, async_t* dispatcher = nullptr);
+  bool AddRemovedHandler(fit::closure handler, async_t* dispatcher = nullptr);
 
   // Returns true if all contents of this service have been discovered. This can
   // only be called on the GATT thread and is primarily intended for unit tests.
@@ -81,7 +81,7 @@ class RemoteService : public fbl::RefCounted<RemoteService> {
   //
   // NOTE: Providing a |dispatcher| results in a copy of the resulting value.
   using ReadValueCallback =
-      std::function<void(att::Status, const common::ByteBuffer&)>;
+      fit::function<void(att::Status, const common::ByteBuffer&)>;
   void ReadCharacteristic(IdType id,
                           ReadValueCallback callback,
                           async_t* dispatcher = nullptr);
@@ -140,7 +140,7 @@ class RemoteService : public fbl::RefCounted<RemoteService> {
     async_t* dispatcher;
   };
 
-  using PendingClosure = PendingCallback<fxl::Closure>;
+  using PendingClosure = PendingCallback<fit::closure>;
   using PendingCharacteristicCallback = PendingCallback<CharacteristicCallback>;
 
   // A RemoteService can only be constructed by a RemoteServiceManager.

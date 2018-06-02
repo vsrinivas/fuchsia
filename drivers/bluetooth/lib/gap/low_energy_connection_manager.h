@@ -11,6 +11,7 @@
 #include <vector>
 
 #include <lib/async/dispatcher.h>
+#include <lib/fit/function.h>
 
 #include "garnet/drivers/bluetooth/lib/gap/gap.h"
 #include "garnet/drivers/bluetooth/lib/gatt/gatt.h"
@@ -19,7 +20,6 @@
 #include "garnet/drivers/bluetooth/lib/hci/low_energy_connector.h"
 #include "garnet/drivers/bluetooth/lib/l2cap/l2cap.h"
 
-#include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/ref_ptr.h"
 #include "lib/fxl/memory/weak_ptr.h"
@@ -54,8 +54,8 @@ class LowEnergyConnectionRef final {
   bool active() const { return active_; }
 
   // Sets a callback to be called when the underlying connection is closed.
-  void set_closed_callback(const fxl::Closure& callback) {
-    closed_cb_ = callback;
+  void set_closed_callback(fit::closure callback) {
+    closed_cb_ = std::move(callback);
   }
 
   const std::string& device_identifier() const { return device_id_; }
@@ -77,7 +77,7 @@ class LowEnergyConnectionRef final {
   std::string device_id_;
   hci::ConnectionHandle handle_;
   fxl::WeakPtr<LowEnergyConnectionManager> manager_;
-  fxl::Closure closed_cb_;
+  fit::closure closed_cb_;
   fxl::ThreadChecker thread_checker_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(LowEnergyConnectionRef);
@@ -140,9 +140,9 @@ class LowEnergyConnectionManager final {
   // callbacks there.
 
   // Called when the connection parameters on a link have been updated.
-  using ConnectionParametersCallback = std::function<void(const RemoteDevice&)>;
+  using ConnectionParametersCallback = fit::function<void(const RemoteDevice&)>;
   void SetConnectionParametersCallbackForTesting(
-      const ConnectionParametersCallback& callback);
+       ConnectionParametersCallback callback);
 
   // Called when a link with the given handle gets disconnected. This event is
   // guaranteed to be called before invalidating connection references.
@@ -151,8 +151,8 @@ class LowEnergyConnectionManager final {
   // NOTE: This is intended ONLY for unit tests. Clients should watch for
   // disconnection events using LowEnergyConnectionRef::set_closed_callback()
   // instead. DO NOT use outside of tests.
-  using DisconnectCallback = std::function<void(hci::ConnectionHandle)>;
-  void SetDisconnectCallbackForTesting(const DisconnectCallback& callback);
+  using DisconnectCallback = fit::function<void(hci::ConnectionHandle)>;
+  void SetDisconnectCallbackForTesting(DisconnectCallback callback);
 
   // Sets the timeout interval to be used on future connect requests. The
   // default value is kLECreateConnecionTimeoutMs.
@@ -184,7 +184,7 @@ class LowEnergyConnectionManager final {
 
     // Notifies all elements in |callbacks| with |status| and the result of
     // |func|.
-    using RefFunc = std::function<LowEnergyConnectionRefPtr()>;
+    using RefFunc = fit::function<LowEnergyConnectionRefPtr()>;
     void NotifyCallbacks(hci::Status status, const RefFunc& func);
 
     const common::DeviceAddress& address() const { return address_; }

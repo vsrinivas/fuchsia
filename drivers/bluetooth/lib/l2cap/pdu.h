@@ -50,7 +50,7 @@ class PDU final {
     //
     // TODO(armansito): Allow jumping to an offset. With that we can remove
     // PDU::Copy() and PDU::ViewFirstFragment().
-    using ReadFunc = std::function<void(const common::ByteBuffer& data)>;
+    using ReadFunc = fit::function<void(const common::ByteBuffer& data)>;
     bool ReadNext(size_t size, const ReadFunc& func);
 
    private:

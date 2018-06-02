@@ -91,14 +91,14 @@ bool Transport::InitializeACLDataChannel(
 }
 
 void Transport::SetTransportClosedCallback(
-    const fxl::Closure& callback,
+    fit::closure callback,
     async_t* dispatcher) {
   FXL_DCHECK(callback);
   FXL_DCHECK(dispatcher);
   FXL_DCHECK(!closed_cb_);
   FXL_DCHECK(!closed_cb_dispatcher_);
 
-  closed_cb_ = callback;
+  closed_cb_ = std::move(callback);
   closed_cb_dispatcher_ = dispatcher;
 }
 
@@ -187,7 +187,7 @@ void Transport::NotifyClosedCallback() {
 
   FXL_LOG(INFO) << "hci: Transport: HCI channel(s) were closed";
   if (closed_cb_)
-    async::PostTask(closed_cb_dispatcher_, closed_cb_);
+    async::PostTask(closed_cb_dispatcher_, closed_cb_.share());
 }
 
 }  // namespace hci

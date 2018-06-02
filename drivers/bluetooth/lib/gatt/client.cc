@@ -35,7 +35,7 @@ bool ProcessDescriptorDiscoveryResponse(
     att::Handle range_start,
     att::Handle range_end,
     BufferView entries,
-    const Client::DescriptorCallback& desc_callback,
+    Client::DescriptorCallback desc_callback,
     att::Handle* out_last_handle) {
   FXL_DCHECK(out_last_handle);
 
@@ -150,7 +150,7 @@ class Impl final : public Client {
     auto params = writer.mutable_payload<att::ExchangeMTURequestParams>();
     params->client_rx_mtu = htole16(att_->preferred_mtu());
 
-    auto rsp_cb = BindCallback([this, mtu_cb](const att::PacketReader& rsp) {
+    auto rsp_cb = BindCallback([this, mtu_cb = mtu_cb.share()](const att::PacketReader& rsp) {
       FXL_DCHECK(rsp.opcode() == att::kExchangeMTUResponse);
 
       if (rsp.payload_size() != sizeof(att::ExchangeMTUResponseParams)) {
@@ -174,7 +174,7 @@ class Impl final : public Client {
     });
 
     auto error_cb = BindErrorCallback(
-        [this, mtu_cb](att::Status status, att::Handle handle) {
+        [this, mtu_cb = mtu_cb.share()](att::Status status, att::Handle handle) {
           // "If the Error Response is sent by the server with the Error Code
           // set to Request Not Supported, [...] the default MTU shall be used
           // (Vol 3, Part G, 4.3.1)"
@@ -191,7 +191,7 @@ class Impl final : public Client {
           mtu_cb(status, 0);
         });
 
-    att_->StartTransaction(std::move(pdu), rsp_cb, error_cb);
+    att_->StartTransaction(std::move(pdu), std::move(rsp_cb), std::move(error_cb));
   }
 
   void DiscoverPrimaryServices(ServiceCallback svc_callback,
@@ -219,7 +219,7 @@ class Impl final : public Client {
     params->type = htole16(types::kPrimaryService16);
 
     auto rsp_cb = BindCallback([this, svc_cb = std::move(svc_callback),
-                                res_cb = status_callback](
+                                res_cb = status_callback.share()](
                                    const att::PacketReader& rsp) mutable {
       FXL_DCHECK(rsp.opcode() == att::kReadByGroupTypeResponse);
 
@@ -298,7 +298,7 @@ class Impl final : public Client {
     });
 
     auto error_cb =
-        BindErrorCallback([this, res_cb = status_callback](att::Status status,
+        BindErrorCallback([this, res_cb = status_callback.share()](att::Status status,
                                                            att::Handle handle) {
           // An Error Response code of "Attribute Not Found" indicates the end
           // of the procedure (v5.0, Vol 3, Part G, 4.4.1).
@@ -311,7 +311,7 @@ class Impl final : public Client {
           res_cb(status);
         });
 
-    att_->StartTransaction(std::move(pdu), rsp_cb, error_cb);
+    att_->StartTransaction(std::move(pdu), std::move(rsp_cb), std::move(error_cb));
   }
 
   void DiscoverCharacteristics(att::Handle range_start,
@@ -341,7 +341,7 @@ class Impl final : public Client {
 
     auto rsp_cb = BindCallback(
         [this, range_start, range_end, chrc_cb = std::move(chrc_callback),
-         res_cb = status_callback](const att::PacketReader& rsp) mutable {
+         res_cb = status_callback.share()](const att::PacketReader& rsp) mutable {
           FXL_DCHECK(rsp.opcode() == att::kReadByTypeResponse);
 
           if (rsp.payload_size() < sizeof(att::ReadByTypeResponseParams)) {
@@ -451,7 +451,7 @@ class Impl final : public Client {
         });
 
     auto error_cb =
-        BindErrorCallback([this, res_cb = status_callback](att::Status status,
+        BindErrorCallback([this, res_cb = status_callback.share()](att::Status status,
                                                            att::Handle handle) {
           // An Error Response code of "Attribute Not Found" indicates the end
           // of the procedure (v5.0, Vol 3, Part G, 4.6.1).
@@ -464,7 +464,7 @@ class Impl final : public Client {
           res_cb(status);
         });
 
-    att_->StartTransaction(std::move(pdu), rsp_cb, error_cb);
+    att_->StartTransaction(std::move(pdu), std::move(rsp_cb), std::move(error_cb));
   }
 
   void DiscoverDescriptors(att::Handle range_start,
@@ -488,7 +488,7 @@ class Impl final : public Client {
 
     auto rsp_cb = BindCallback([this, range_start, range_end,
                                 desc_cb = std::move(desc_callback),
-                                res_cb = status_callback](
+                                res_cb = status_callback.share()](
                                    const att::PacketReader& rsp) mutable {
       FXL_DCHECK(rsp.opcode() == att::kFindInformationResponse);
 
@@ -508,11 +508,11 @@ class Impl final : public Client {
       switch (rsp_params.format) {
         case att::UUIDType::k16Bit:
           result = ProcessDescriptorDiscoveryResponse<att::UUIDType::k16Bit>(
-              range_start, range_end, entries, desc_cb, &last_handle);
+              range_start, range_end, entries, desc_cb.share(), &last_handle);
           break;
         case att::UUIDType::k128Bit:
           result = ProcessDescriptorDiscoveryResponse<att::UUIDType::k128Bit>(
-              range_start, range_end, entries, desc_cb, &last_handle);
+              range_start, range_end, entries, desc_cb.share(), &last_handle);
           break;
         default:
           FXL_VLOG(1) << "gatt: invalid information data format";
@@ -538,7 +538,7 @@ class Impl final : public Client {
     });
 
     auto error_cb =
-        BindErrorCallback([this, res_cb = status_callback](att::Status status,
+        BindErrorCallback([this, res_cb = status_callback.share()](att::Status status,
                                                            att::Handle handle) {
           // An Error Response code of "Attribute Not Found" indicates the end
           // of the procedure (v5.0, Vol 3, Part G, 4.7.1).
@@ -551,7 +551,7 @@ class Impl final : public Client {
           res_cb(status);
         });
 
-    att_->StartTransaction(std::move(pdu), rsp_cb, error_cb);
+    att_->StartTransaction(std::move(pdu), std::move(rsp_cb), std::move(error_cb));
   }
 
   void ReadRequest(att::Handle handle, ReadCallback callback) override {
@@ -565,19 +565,19 @@ class Impl final : public Client {
     auto params = writer.mutable_payload<att::ReadRequestParams>();
     params->handle = htole16(handle);
 
-    auto rsp_cb = BindCallback([this, callback](const att::PacketReader& rsp) {
+    auto rsp_cb = BindCallback([this, callback = callback.share()](const att::PacketReader& rsp) {
       FXL_DCHECK(rsp.opcode() == att::kReadResponse);
       callback(att::Status(), rsp.payload_data());
     });
 
     auto error_cb = BindErrorCallback(
-        [this, callback](att::Status status, att::Handle handle) {
+        [this, callback = callback.share()](att::Status status, att::Handle handle) {
           FXL_VLOG(1) << "gatt: Read request failed: " << status.ToString()
                       << ", handle: " << handle;
           callback(status, BufferView());
         });
 
-    if (!att_->StartTransaction(std::move(pdu), rsp_cb, error_cb)) {
+    if (!att_->StartTransaction(std::move(pdu), std::move(rsp_cb), std::move(error_cb))) {
       callback(att::Status(HostError::kPacketMalformed), BufferView());
     }
   }
@@ -606,7 +606,7 @@ class Impl final : public Client {
         writer.mutable_payload_data().mutable_view(sizeof(att::Handle));
     value.Copy(&value_view);
 
-    auto rsp_cb = BindCallback([this, callback](const att::PacketReader& rsp) {
+    auto rsp_cb = BindCallback([this, callback = callback.share()](const att::PacketReader& rsp) {
       FXL_DCHECK(rsp.opcode() == att::kWriteResponse);
 
       if (rsp.payload_size()) {
@@ -619,13 +619,13 @@ class Impl final : public Client {
     });
 
     auto error_cb = BindErrorCallback(
-        [this, callback](att::Status status, att::Handle handle) {
+        [this, callback = callback.share()](att::Status status, att::Handle handle) {
           FXL_VLOG(1) << "gatt: Write request failed: " << status.ToString()
                       << ", handle: " << handle;
           callback(status);
         });
 
-    if (!att_->StartTransaction(std::move(pdu), rsp_cb, error_cb)) {
+    if (!att_->StartTransaction(std::move(pdu), std::move(rsp_cb), std::move(error_cb))) {
       callback(att::Status(HostError::kPacketMalformed));
     }
   }
@@ -638,7 +638,7 @@ class Impl final : public Client {
   // still alive.
   att::Bearer::TransactionCallback BindCallback(
       att::Bearer::TransactionCallback callback) {
-    return [self = weak_ptr_factory_.GetWeakPtr(), callback](const auto& rsp) {
+    return [self = weak_ptr_factory_.GetWeakPtr(), callback = std::move(callback)](const auto& rsp) {
       if (self) {
         callback(rsp);
       }
@@ -649,7 +649,7 @@ class Impl final : public Client {
   // alive.
   att::Bearer::ErrorCallback BindErrorCallback(
       att::Bearer::ErrorCallback callback) {
-    return [self = weak_ptr_factory_.GetWeakPtr(), callback](
+    return [self = weak_ptr_factory_.GetWeakPtr(), callback = std::move(callback)](
                att::Status status, att::Handle handle) {
       if (self) {
         callback(status, handle);

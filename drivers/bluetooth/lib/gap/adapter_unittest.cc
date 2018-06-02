@@ -50,8 +50,8 @@ class AdapterTest : public TestingBase {
     TestingBase::TearDown();
   }
 
-  void InitializeAdapter(const Adapter::InitializeCallback& callback) {
-    adapter_->Initialize(callback, [this] {
+  void InitializeAdapter(Adapter::InitializeCallback callback) {
+    adapter_->Initialize(std::move(callback), [this] {
       transport_closed_called_ = true;
     });
   }
@@ -79,7 +79,7 @@ TEST_F(GAP_AdapterTest, InitializeFailureNoFeaturesSupported) {
   };
 
   // The controller supports nothing.
-  InitializeAdapter(init_cb);
+  InitializeAdapter(std::move(init_cb));
   RunUntilIdle();
 
   EXPECT_FALSE(success);
@@ -101,7 +101,7 @@ TEST_F(GAP_AdapterTest, InitializeFailureNoBufferInfo) {
       static_cast<uint64_t>(hci::LMPFeature::kLESupported);
   test_device()->set_settings(settings);
 
-  InitializeAdapter(init_cb);
+  InitializeAdapter(std::move(init_cb));
   RunUntilIdle();
 
   EXPECT_FALSE(success);
@@ -126,7 +126,7 @@ TEST_F(GAP_AdapterTest, InitializeSuccess) {
   settings.le_total_num_acl_data_packets = 1;
   test_device()->set_settings(settings);
 
-  InitializeAdapter(init_cb);
+  InitializeAdapter(std::move(init_cb));
   RunUntilIdle();
 
   EXPECT_TRUE(success);
@@ -150,7 +150,7 @@ TEST_F(GAP_AdapterTest, InitializeFailureHCICommandError) {
   test_device()->SetDefaultResponseStatus(hci::kLEReadLocalSupportedFeatures,
                                           hci::StatusCode::kHardwareFailure);
 
-  InitializeAdapter(init_cb);
+  InitializeAdapter(std::move(init_cb));
   RunUntilIdle();
 
   EXPECT_FALSE(success);
@@ -171,7 +171,7 @@ TEST_F(GAP_AdapterTest, TransportClosedCallback) {
   settings.ApplyLEOnlyDefaults();
   test_device()->set_settings(settings);
 
-  InitializeAdapter(init_cb);
+  InitializeAdapter(std::move(init_cb));
   RunUntilIdle();
 
   EXPECT_TRUE(success);
@@ -204,7 +204,7 @@ TEST_F(GAP_AdapterTest, SetNameError) {
   test_device()->SetDefaultResponseStatus(hci::kWriteLocalName,
                                           hci::StatusCode::kHardwareFailure);
 
-  InitializeAdapter(init_cb);
+  InitializeAdapter(std::move(init_cb));
   RunUntilIdle();
 
   EXPECT_TRUE(success);
@@ -234,7 +234,7 @@ TEST_F(GAP_AdapterTest, SetNameSuccess) {
   settings.ApplyDualModeDefaults();
   test_device()->set_settings(settings);
 
-  InitializeAdapter(init_cb);
+  InitializeAdapter(std::move(init_cb));
   RunUntilIdle();
 
   EXPECT_TRUE(success);

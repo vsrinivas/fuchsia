@@ -21,34 +21,28 @@
 
 using namespace bluetooth;
 
-using std::placeholders::_1;
-using std::placeholders::_2;
-
 namespace hcitool {
 namespace {
-
-void StatusFilterCallback(fxl::Closure complete_cb,
-                          ::btlib::hci::CommandChannel::CommandCallback& cb,
-                          ::btlib::hci::CommandChannel::TransactionId id,
-                          const ::btlib::hci::EventPacket& event) {
-  if (event.event_code() == ::btlib::hci::kCommandStatusEventCode) {
-    auto status = event.ToStatus();
-    std::cout << "  Command Status: " << status.ToString() << " (id=" << id
-              << ")" << std::endl;
-    if (status != ::btlib::hci::StatusCode::kSuccess) complete_cb();
-    return;
-  }
-  cb(id, event);
-}
 
 ::btlib::hci::CommandChannel::TransactionId SendCommand(
     const CommandData* cmd_data,
     std::unique_ptr<::btlib::hci::CommandPacket> packet,
-    const ::btlib::hci::CommandChannel::CommandCallback& cb,
-    const fxl::Closure& complete_cb) {
+    ::btlib::hci::CommandChannel::CommandCallback cb,
+    fit::closure complete_cb) {
   return cmd_data->cmd_channel()->SendCommand(
       std::move(packet), cmd_data->dispatcher(),
-      std::bind(&StatusFilterCallback, complete_cb, cb, _1, _2));
+      [complete_cb = std::move(complete_cb), cb = std::move(cb)](
+          ::btlib::hci::CommandChannel::TransactionId id,
+          const ::btlib::hci::EventPacket& event) {
+        if (event.event_code() == ::btlib::hci::kCommandStatusEventCode) {
+          auto status = event.ToStatus();
+          std::cout << "  Command Status: " << status.ToString() << " (id=" << id
+                    << ")" << std::endl;
+          if (status != ::btlib::hci::StatusCode::kSuccess) complete_cb();
+          return;
+        }
+        cb(id, event);
+      });
 }
 
 void LogCommandResult(::btlib::hci::StatusCode status,
@@ -61,15 +55,15 @@ void LogCommandResult(::btlib::hci::StatusCode status,
 ::btlib::hci::CommandChannel::TransactionId SendCompleteCommand(
     const CommandData* cmd_data,
     std::unique_ptr<::btlib::hci::CommandPacket> packet,
-    const fxl::Closure& complete_cb) {
-  auto cb = [complete_cb](::btlib::hci::CommandChannel::TransactionId id,
+    fit::closure complete_cb) {
+  auto cb = [complete_cb = complete_cb.share()](::btlib::hci::CommandChannel::TransactionId id,
                           const ::btlib::hci::EventPacket& event) {
     auto return_params =
         event.return_params<::btlib::hci::SimpleReturnParams>();
     LogCommandResult(return_params->status, id);
     complete_cb();
   };
-  return SendCommand(cmd_data, std::move(packet), cb, complete_cb);
+  return SendCommand(cmd_data, std::move(packet), std::move(cb), std::move(complete_cb));
 }
 
 // TODO(armansito): Move this to a library header as it will be useful
@@ -211,13 +205,13 @@ void DisplayInquiryResult(const ::btlib::hci::InquiryResult& result) {
 
 bool HandleVersionInfo(const CommandData* cmd_data,
                        const fxl::CommandLine& cmd_line,
-                       const fxl::Closure& complete_cb) {
+                       fit::closure complete_cb) {
   if (cmd_line.positional_args().size() || cmd_line.options().size()) {
     std::cout << "  Usage: version-info" << std::endl;
     return false;
   }
 
-  auto cb = [complete_cb](::btlib::hci::CommandChannel::TransactionId id,
+  auto cb = [complete_cb = complete_cb.share()](::btlib::hci::CommandChannel::TransactionId id,
                           const ::btlib::hci::EventPacket& event) {
     auto params =
         event.return_params<::btlib::hci::ReadLocalVersionInfoReturnParams>();
@@ -241,7 +235,7 @@ bool HandleVersionInfo(const CommandData* cmd_data,
 
   auto packet =
       ::btlib::hci::CommandPacket::New(::btlib::hci::kReadLocalVersionInfo);
-  auto id = SendCommand(cmd_data, std::move(packet), cb, complete_cb);
+  auto id = SendCommand(cmd_data, std::move(packet), std::move(cb), std::move(complete_cb));
 
   std::cout << "  Sent HCI_Read_Local_Version_Information (id=" << id << ")"
             << std::endl;
@@ -249,14 +243,14 @@ bool HandleVersionInfo(const CommandData* cmd_data,
 }
 
 bool HandleReset(const CommandData* cmd_data, const fxl::CommandLine& cmd_line,
-                 const fxl::Closure& complete_cb) {
+                 fit::closure complete_cb) {
   if (cmd_line.positional_args().size() || cmd_line.options().size()) {
     std::cout << "  Usage: reset" << std::endl;
     return false;
   }
 
   auto packet = ::btlib::hci::CommandPacket::New(::btlib::hci::kReset);
-  auto id = SendCompleteCommand(cmd_data, std::move(packet), complete_cb);
+  auto id = SendCompleteCommand(cmd_data, std::move(packet), std::move(complete_cb));
 
   std::cout << "  Sent HCI_Reset (id=" << id << ")" << std::endl;
 
@@ -265,13 +259,13 @@ bool HandleReset(const CommandData* cmd_data, const fxl::CommandLine& cmd_line,
 
 bool HandleReadBDADDR(const CommandData* cmd_data,
                       const fxl::CommandLine& cmd_line,
-                      const fxl::Closure& complete_cb) {
+                      fit::closure complete_cb) {
   if (cmd_line.positional_args().size() || cmd_line.options().size()) {
     std::cout << "  Usage: read-bdaddr" << std::endl;
     return false;
   }
 
-  auto cb = [complete_cb](::btlib::hci::CommandChannel::TransactionId id,
+  auto cb = [complete_cb = complete_cb.share()](::btlib::hci::CommandChannel::TransactionId id,
                           const ::btlib::hci::EventPacket& event) {
     auto return_params =
         event.return_params<::btlib::hci::ReadBDADDRReturnParams>();
@@ -287,7 +281,7 @@ bool HandleReadBDADDR(const CommandData* cmd_data,
   };
 
   auto packet = ::btlib::hci::CommandPacket::New(::btlib::hci::kReadBDADDR);
-  auto id = SendCommand(cmd_data, std::move(packet), cb, complete_cb);
+  auto id = SendCommand(cmd_data, std::move(packet), std::move(cb), std::move(complete_cb));
 
   std::cout << "  Sent HCI_Read_BDADDR (id=" << id << ")" << std::endl;
 
@@ -296,13 +290,13 @@ bool HandleReadBDADDR(const CommandData* cmd_data,
 
 bool HandleReadLocalName(const CommandData* cmd_data,
                          const fxl::CommandLine& cmd_line,
-                         const fxl::Closure& complete_cb) {
+                         fit::closure complete_cb) {
   if (cmd_line.positional_args().size() || cmd_line.options().size()) {
     std::cout << "  Usage: read-local-name" << std::endl;
     return false;
   }
 
-  auto cb = [complete_cb](::btlib::hci::CommandChannel::TransactionId id,
+  auto cb = [complete_cb = complete_cb.share()](::btlib::hci::CommandChannel::TransactionId id,
                           const ::btlib::hci::EventPacket& event) {
     auto return_params =
         event.return_params<::btlib::hci::ReadLocalNameReturnParams>();
@@ -318,7 +312,7 @@ bool HandleReadLocalName(const CommandData* cmd_data,
   };
 
   auto packet = ::btlib::hci::CommandPacket::New(::btlib::hci::kReadLocalName);
-  auto id = SendCommand(cmd_data, std::move(packet), cb, complete_cb);
+  auto id = SendCommand(cmd_data, std::move(packet), std::move(cb), std::move(complete_cb));
   std::cout << "  Sent HCI_Read_Local_Name (id=" << id << ")" << std::endl;
 
   return true;
@@ -326,7 +320,7 @@ bool HandleReadLocalName(const CommandData* cmd_data,
 
 bool HandleWriteLocalName(const CommandData* cmd_data,
                           const fxl::CommandLine& cmd_line,
-                          const fxl::Closure& complete_cb) {
+                          fit::closure complete_cb) {
   if (cmd_line.positional_args().size() != 1 || cmd_line.options().size()) {
     std::cout << "  Usage: write-local-name <name>" << std::endl;
     return false;
@@ -340,7 +334,7 @@ bool HandleWriteLocalName(const CommandData* cmd_data,
                   ->local_name,
               name.c_str());
 
-  auto id = SendCompleteCommand(cmd_data, std::move(packet), complete_cb);
+  auto id = SendCompleteCommand(cmd_data, std::move(packet), std::move(complete_cb));
   std::cout << "  Sent HCI_Write_Local_Name (id=" << id << ")" << std::endl;
 
   return true;
@@ -348,7 +342,7 @@ bool HandleWriteLocalName(const CommandData* cmd_data,
 
 bool HandleSetEventMask(const CommandData* cmd_data,
                         const fxl::CommandLine& cmd_line,
-                        const fxl::Closure& complete_cb) {
+                        fit::closure complete_cb) {
   if (cmd_line.positional_args().size() != 1 || cmd_line.options().size()) {
     std::cout << "  Usage: set-event-mask [hex]" << std::endl;
     return false;
@@ -373,7 +367,7 @@ bool HandleSetEventMask(const CommandData* cmd_data,
       ->mutable_payload<::btlib::hci::SetEventMaskCommandParams>()
       ->event_mask = htole64(mask);
 
-  auto id = SendCompleteCommand(cmd_data, std::move(packet), complete_cb);
+  auto id = SendCompleteCommand(cmd_data, std::move(packet), std::move(complete_cb));
 
   std::cout << "  Sent HCI_Set_Event_Mask("
             << fxl::NumberToString(mask, fxl::Base::k16) << ") (id=" << id
@@ -383,7 +377,7 @@ bool HandleSetEventMask(const CommandData* cmd_data,
 
 bool HandleLESetAdvEnable(const CommandData* cmd_data,
                           const fxl::CommandLine& cmd_line,
-                          const fxl::Closure& complete_cb) {
+                          fit::closure complete_cb) {
   if (cmd_line.positional_args().size() != 1 || cmd_line.options().size()) {
     std::cout << "  Usage: set-adv-enable [enable|disable]" << std::endl;
     return false;
@@ -410,7 +404,7 @@ bool HandleLESetAdvEnable(const CommandData* cmd_data,
       ->mutable_payload<::btlib::hci::LESetAdvertisingEnableCommandParams>()
       ->advertising_enable = value;
 
-  auto id = SendCompleteCommand(cmd_data, std::move(packet), complete_cb);
+  auto id = SendCompleteCommand(cmd_data, std::move(packet), std::move(complete_cb));
 
   std::cout << "  Sent HCI_LE_Set_Advertising_Enable (id=" << id << ")"
             << std::endl;
@@ -419,7 +413,7 @@ bool HandleLESetAdvEnable(const CommandData* cmd_data,
 
 bool HandleLESetAdvParams(const CommandData* cmd_data,
                           const fxl::CommandLine& cmd_line,
-                          const fxl::Closure& complete_cb) {
+                          fit::closure complete_cb) {
   if (cmd_line.positional_args().size()) {
     std::cout << "  Usage: set-adv-params [--help|--type]" << std::endl;
     return false;
@@ -478,7 +472,7 @@ bool HandleLESetAdvParams(const CommandData* cmd_data,
   params->adv_channel_map = ::btlib::hci::kLEAdvertisingChannelAll;
   params->adv_filter_policy = ::btlib::hci::LEAdvFilterPolicy::kAllowAll;
 
-  auto id = SendCompleteCommand(cmd_data, std::move(packet), complete_cb);
+  auto id = SendCompleteCommand(cmd_data, std::move(packet), std::move(complete_cb));
 
   std::cout << "  Sent HCI_LE_Set_Advertising_Parameters (id=" << id << ")"
             << std::endl;
@@ -488,7 +482,7 @@ bool HandleLESetAdvParams(const CommandData* cmd_data,
 
 bool HandleLESetAdvData(const CommandData* cmd_data,
                         const fxl::CommandLine& cmd_line,
-                        const fxl::Closure& complete_cb) {
+                        fit::closure complete_cb) {
   if (cmd_line.positional_args().size()) {
     std::cout << "  Usage: set-adv-data [--help|--name]" << std::endl;
     return false;
@@ -532,7 +526,7 @@ bool HandleLESetAdvData(const CommandData* cmd_data,
         ->adv_data_length = 0;
   }
 
-  auto id = SendCompleteCommand(cmd_data, std::move(packet), complete_cb);
+  auto id = SendCompleteCommand(cmd_data, std::move(packet), std::move(complete_cb));
 
   std::cout << "  Sent HCI_LE_Set_Advertising_Data (id=" << id << ")"
             << std::endl;
@@ -542,7 +536,7 @@ bool HandleLESetAdvData(const CommandData* cmd_data,
 
 bool HandleLESetScanParams(const CommandData* cmd_data,
                            const fxl::CommandLine& cmd_line,
-                           const fxl::Closure& complete_cb) {
+                           fit::closure complete_cb) {
   if (cmd_line.positional_args().size()) {
     std::cout << "  Usage: set-scan-params [--help|--type]" << std::endl;
     return false;
@@ -585,7 +579,7 @@ bool HandleLESetScanParams(const CommandData* cmd_data,
   params->own_address_type = ::btlib::hci::LEOwnAddressType::kPublic;
   params->filter_policy = ::btlib::hci::LEScanFilterPolicy::kNoWhiteList;
 
-  auto id = SendCompleteCommand(cmd_data, std::move(packet), complete_cb);
+  auto id = SendCompleteCommand(cmd_data, std::move(packet), std::move(complete_cb));
 
   std::cout << "  Sent HCI_LE_Set_Scan_Parameters (id=" << id << ")"
             << std::endl;
@@ -594,7 +588,7 @@ bool HandleLESetScanParams(const CommandData* cmd_data,
 }
 
 bool HandleLEScan(const CommandData* cmd_data, const fxl::CommandLine& cmd_line,
-                  const fxl::Closure& complete_cb) {
+                  fit::closure complete_cb) {
   if (cmd_line.positional_args().size()) {
     std::cout << "  Usage: set-scan-params "
                  "[--help|--timeout=<t>|--no-dedup|--name-filter]"
@@ -677,15 +671,16 @@ bool HandleLEScan(const CommandData* cmd_data, const fxl::CommandLine& cmd_line,
       ::btlib::hci::kLEAdvertisingReportSubeventCode, le_adv_report_cb,
       cmd_data->dispatcher());
 
-  auto cleanup_cb = [complete_cb, event_handler_id,
+  fit::closure cleanup_cb = [complete_cb = complete_cb.share(), event_handler_id,
                      cmd_channel = cmd_data->cmd_channel()] {
     cmd_channel->RemoveEventHandler(event_handler_id);
     complete_cb();
   };
 
   // The callback invoked after scanning is stopped.
-  auto final_cb = [cleanup_cb](::btlib::hci::CommandChannel::TransactionId id,
-                               const ::btlib::hci::EventPacket& event) {
+  auto final_cb = [cleanup_cb = cleanup_cb.share()](
+                      ::btlib::hci::CommandChannel::TransactionId id,
+                      const ::btlib::hci::EventPacket& event) {
     auto return_params =
         event.return_params<::btlib::hci::SimpleReturnParams>();
     LogCommandResult(return_params->status, id);
@@ -693,7 +688,8 @@ bool HandleLEScan(const CommandData* cmd_data, const fxl::CommandLine& cmd_line,
   };
 
   // Delayed task that stops scanning.
-  auto scan_disable_cb = [cleanup_cb, final_cb, cmd_data] {
+  auto scan_disable_cb = [cleanup_cb = cleanup_cb.share(),
+                          final_cb = std::move(final_cb), cmd_data]() mutable {
     auto packet = ::btlib::hci::CommandPacket::New(
         ::btlib::hci::kLESetScanEnable, kPayloadSize);
     auto params =
@@ -702,16 +698,17 @@ bool HandleLEScan(const CommandData* cmd_data, const fxl::CommandLine& cmd_line,
     params->scanning_enabled = ::btlib::hci::GenericEnableParam::kDisable;
     params->filter_duplicates = ::btlib::hci::GenericEnableParam::kDisable;
 
-    auto id = SendCommand(cmd_data, std::move(packet), final_cb, cleanup_cb);
+    auto id = SendCommand(cmd_data, std::move(packet), std::move(final_cb), std::move(cleanup_cb));
 
     std::cout << "  Sent HCI_LE_Set_Scan_Enable (disabled) (id=" << id << ")"
               << std::endl;
   };
 
-  auto cb = [scan_disable_cb, cleanup_cb, timeout,
-             dispatcher = cmd_data->dispatcher()](
+  auto cb = [scan_disable_cb = std::move(scan_disable_cb),
+             cleanup_cb = cleanup_cb.share(), timeout,
+             dispatcher = cmd_data->dispatcher()] (
                 ::btlib::hci::CommandChannel::TransactionId id,
-                const ::btlib::hci::EventPacket& event) {
+                const ::btlib::hci::EventPacket& event) mutable {
     auto return_params =
         event.return_params<::btlib::hci::SimpleReturnParams>();
     LogCommandResult(return_params->status, id);
@@ -719,11 +716,11 @@ bool HandleLEScan(const CommandData* cmd_data, const fxl::CommandLine& cmd_line,
       cleanup_cb();
       return;
     }
-    async::PostDelayedTask(dispatcher, scan_disable_cb,
+    async::PostDelayedTask(dispatcher, std::move(scan_disable_cb),
                            zx::duration(timeout.ToNanoseconds()));
   };
 
-  auto id = SendCommand(cmd_data, std::move(packet), cb, complete_cb);
+  auto id = SendCommand(cmd_data, std::move(packet), std::move(cb), std::move(complete_cb));
 
   std::cout << "  Sent HCI_LE_Set_Scan_Enable (enabled) (id=" << id << ")"
             << std::endl;
@@ -732,7 +729,7 @@ bool HandleLEScan(const CommandData* cmd_data, const fxl::CommandLine& cmd_line,
 }
 
 bool HandleBRScan(const CommandData* cmd_data, const fxl::CommandLine& cmd_line,
-                  const fxl::Closure& complete_cb) {
+                  fit::closure complete_cb) {
   if (cmd_line.positional_args().size()) {
     std::cout << "  Usage: scan "
                  "[--help|--timeout=<t>|--filter=<prefix>|--max-responses=<n>]"
@@ -804,7 +801,7 @@ bool HandleBRScan(const CommandData* cmd_data, const fxl::CommandLine& cmd_line,
 
   auto event_handler_ids = std::make_shared<
       std::vector<btlib::hci::CommandChannel::EventHandlerId>>();
-  auto cleanup_cb = [complete_cb, event_handler_ids,
+  fit::closure cleanup_cb = [complete_cb = std::move(complete_cb), event_handler_ids,
                      cmd_channel = cmd_data->cmd_channel()] {
     for (const auto& handler_id : *event_handler_ids) {
       cmd_channel->RemoveEventHandler(handler_id);
@@ -830,12 +827,12 @@ bool HandleBRScan(const CommandData* cmd_data, const fxl::CommandLine& cmd_line,
   };
 
   event_handler_ids->push_back(cmd_data->cmd_channel()->AddEventHandler(
-      ::btlib::hci::kInquiryResultEventCode, inquiry_result_cb,
+      ::btlib::hci::kInquiryResultEventCode, std::move(inquiry_result_cb),
       cmd_data->dispatcher()));
 
   // The callback invoked for an Inquiry Complete response.
   auto inquiry_complete_cb =
-      [cleanup_cb](const ::btlib::hci::EventPacket& event) {
+      [cleanup_cb = cleanup_cb.share()](const ::btlib::hci::EventPacket& event) mutable {
         auto params =
             event.view().payload<::btlib::hci::InquiryCompleteEventParams>();
         std::cout << fxl::StringPrintf("  Inquiry Complete - status: 0x%02x\n",
@@ -844,21 +841,22 @@ bool HandleBRScan(const CommandData* cmd_data, const fxl::CommandLine& cmd_line,
       };
 
   event_handler_ids->push_back(cmd_data->cmd_channel()->AddEventHandler(
-      ::btlib::hci::kInquiryCompleteEventCode, inquiry_complete_cb,
+      ::btlib::hci::kInquiryCompleteEventCode, std::move(inquiry_complete_cb),
       cmd_data->dispatcher()));
 
   // Delayed task that stops scanning.
-  auto inquiry_cancel_cb = [cleanup_cb, cmd_data] {
+  auto inquiry_cancel_cb = [cleanup_cb = cleanup_cb.share(), cmd_data]() mutable {
     auto packet =
         ::btlib::hci::CommandPacket::New(::btlib::hci::kInquiryCancel, 0);
-    auto id = SendCompleteCommand(cmd_data, std::move(packet), cleanup_cb);
+    auto id = SendCompleteCommand(cmd_data, std::move(packet), std::move(cleanup_cb));
     std::cout << "  Sent HCI_Inquiry_Cancel (id=" << id << ")" << std::endl;
   };
 
-  auto cb = [inquiry_cancel_cb, cleanup_cb, timeout,
+  auto cb = [inquiry_cancel_cb = std::move(inquiry_cancel_cb),
+             cleanup_cb = cleanup_cb.share(), timeout,
              dispatcher = cmd_data->dispatcher()](
                 ::btlib::hci::CommandChannel::TransactionId id,
-                const ::btlib::hci::EventPacket& event) {
+                const ::btlib::hci::EventPacket& event) mutable {
     auto return_params =
         event.view().payload<::btlib::hci::CommandStatusEventParams>();
     LogCommandResult(return_params.status, id, "Command Status");
@@ -866,14 +864,14 @@ bool HandleBRScan(const CommandData* cmd_data, const fxl::CommandLine& cmd_line,
       cleanup_cb();
       return;
     }
-    async::PostDelayedTask(dispatcher, inquiry_cancel_cb, timeout);
+    async::PostDelayedTask(dispatcher, std::move(inquiry_cancel_cb), timeout);
   };
 
   // Inquiry sends a Command Status, and then we wait for the Inquiry Complete,
   // or the timer to run out, for a long time. Count this as "complete" when the
   // Status comes in.
   auto id = cmd_data->cmd_channel()->SendCommand(
-      std::move(packet), cmd_data->dispatcher(), cb,
+      std::move(packet), cmd_data->dispatcher(), std::move(cb),
       ::btlib::hci::kCommandStatusEventCode);
   std::cout << "  Sent HCI_Inquiry (id=" << id << ")" << std::endl;
 
@@ -882,7 +880,7 @@ bool HandleBRScan(const CommandData* cmd_data, const fxl::CommandLine& cmd_line,
 
 bool HandleWritePageScanActivity(const CommandData* cmd_data,
                                  const fxl::CommandLine& cmd_line,
-                                 const fxl::Closure& complete_cb) {
+                                 fit::closure complete_cb) {
   if (cmd_line.positional_args().size()) {
     std::cout << "  Usage: write-page-scan-activity [--help\n"
                  "                                   |--interval=<interval>\n"
@@ -976,7 +974,7 @@ bool HandleWritePageScanActivity(const CommandData* cmd_data,
   params->page_scan_interval = page_scan_interval;
   params->page_scan_window = page_scan_window;
 
-  auto id = SendCompleteCommand(cmd_data, std::move(packet), complete_cb);
+  auto id = SendCompleteCommand(cmd_data, std::move(packet), std::move(complete_cb));
 
   std::cout << "  Sent HCI_Write_Page_Scan_Activity (id=" << id << ")"
             << std::endl;
@@ -986,13 +984,14 @@ bool HandleWritePageScanActivity(const CommandData* cmd_data,
 
 bool HandleReadPageScanActivity(const CommandData* cmd_data,
                                 const fxl::CommandLine& cmd_line,
-                                const fxl::Closure& complete_cb) {
+                                fit::closure complete_cb) {
   if (cmd_line.positional_args().size() || cmd_line.options().size()) {
     std::cout << "  Usage: read-page-scan-activity" << std::endl;
     return false;
   }
 
-  auto cb = [complete_cb](::btlib::hci::CommandChannel::TransactionId id,
+  auto cb = [complete_cb = complete_cb.share()](
+                          ::btlib::hci::CommandChannel::TransactionId id,
                           const ::btlib::hci::EventPacket& event) {
     auto return_params =
         event.return_params<::btlib::hci::ReadPageScanActivityReturnParams>();
@@ -1011,7 +1010,7 @@ bool HandleReadPageScanActivity(const CommandData* cmd_data,
 
   auto packet =
       ::btlib::hci::CommandPacket::New(::btlib::hci::kReadPageScanActivity);
-  auto id = SendCommand(cmd_data, std::move(packet), cb, complete_cb);
+  auto id = SendCommand(cmd_data, std::move(packet), std::move(cb), std::move(complete_cb));
   std::cout << "  Sent HCI_Read_Page_Scan_Activity (id=" << id << ")"
             << std::endl;
 
@@ -1020,7 +1019,7 @@ bool HandleReadPageScanActivity(const CommandData* cmd_data,
 
 bool HandleWritePageScanType(const CommandData* cmd_data,
                              const fxl::CommandLine& cmd_line,
-                             const fxl::Closure& complete_cb) {
+                             fit::closure complete_cb) {
   if (cmd_line.positional_args().size()) {
     std::cout
         << "  Usage: write-page-scan-type [--help|--standard|--interlaced]"
@@ -1058,7 +1057,7 @@ bool HandleWritePageScanType(const CommandData* cmd_data,
       ->mutable_payload<::btlib::hci::WritePageScanTypeCommandParams>()
       ->page_scan_type = page_scan_type;
 
-  auto id = SendCompleteCommand(cmd_data, std::move(packet), complete_cb);
+  auto id = SendCompleteCommand(cmd_data, std::move(packet), std::move(complete_cb));
 
   std::cout << "  Sent HCI_Write_Page_Scan_Type (id=" << id << ")" << std::endl;
 
@@ -1067,13 +1066,14 @@ bool HandleWritePageScanType(const CommandData* cmd_data,
 
 bool HandleReadPageScanType(const CommandData* cmd_data,
                             const fxl::CommandLine& cmd_line,
-                            const fxl::Closure& complete_cb) {
+                            fit::closure complete_cb) {
   if (cmd_line.positional_args().size() || cmd_line.options().size()) {
     std::cout << "  Usage: read-page-scan-type" << std::endl;
     return false;
   }
 
-  auto cb = [complete_cb](::btlib::hci::CommandChannel::TransactionId id,
+  auto cb = [complete_cb = complete_cb.share()](
+                          ::btlib::hci::CommandChannel::TransactionId id,
                           const ::btlib::hci::EventPacket& event) {
     auto return_params =
         event.return_params<::btlib::hci::ReadPageScanTypeReturnParams>();
@@ -1098,7 +1098,7 @@ bool HandleReadPageScanType(const CommandData* cmd_data,
 
   auto packet =
       ::btlib::hci::CommandPacket::New(::btlib::hci::kReadPageScanType);
-  auto id = SendCommand(cmd_data, std::move(packet), cb, complete_cb);
+  auto id = SendCommand(cmd_data, std::move(packet), std::move(cb), std::move(complete_cb));
   std::cout << "  Sent HCI_Read_Page_Scan_Type (id=" << id << ")" << std::endl;
 
   return true;
@@ -1106,7 +1106,7 @@ bool HandleReadPageScanType(const CommandData* cmd_data,
 
 bool HandleWriteScanEnable(const CommandData* cmd_data,
                            const fxl::CommandLine& cmd_line,
-                           const fxl::Closure& complete_cb) {
+                           fit::closure complete_cb) {
   if (cmd_line.positional_args().size() > 2) {
     std::cout << "  Usage: write-scan-enable [--help] [page] [inquiry]"
               << std::endl;
@@ -1147,7 +1147,7 @@ bool HandleWriteScanEnable(const CommandData* cmd_data,
       ->mutable_payload<::btlib::hci::WriteScanEnableCommandParams>()
       ->scan_enable = scan_enable;
 
-  auto id = SendCompleteCommand(cmd_data, std::move(packet), complete_cb);
+  auto id = SendCompleteCommand(cmd_data, std::move(packet), std::move(complete_cb));
 
   std::cout << "  Sent HCI_Write_Scan_Enable (id=" << id << ")" << std::endl;
 
@@ -1156,13 +1156,14 @@ bool HandleWriteScanEnable(const CommandData* cmd_data,
 
 bool HandleReadScanEnable(const CommandData* cmd_data,
                           const fxl::CommandLine& cmd_line,
-                          const fxl::Closure& complete_cb) {
+                          fit::closure complete_cb) {
   if (cmd_line.positional_args().size() || cmd_line.options().size()) {
     std::cout << "  Usage: read-scan-enable" << std::endl;
     return false;
   }
 
-  auto cb = [complete_cb](::btlib::hci::CommandChannel::TransactionId id,
+  auto cb = [complete_cb = complete_cb.share()](
+                          ::btlib::hci::CommandChannel::TransactionId id,
                           const ::btlib::hci::EventPacket& event) {
     auto return_params =
         event.return_params<::btlib::hci::ReadScanEnableReturnParams>();
@@ -1190,7 +1191,7 @@ bool HandleReadScanEnable(const CommandData* cmd_data,
   };
 
   auto packet = ::btlib::hci::CommandPacket::New(::btlib::hci::kReadScanEnable);
-  auto id = SendCommand(cmd_data, std::move(packet), cb, complete_cb);
+  auto id = SendCommand(cmd_data, std::move(packet), std::move(cb), std::move(complete_cb));
   std::cout << "  Sent HCI_Read_Scan_Enable (id=" << id << ")" << std::endl;
 
   return true;

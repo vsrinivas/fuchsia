@@ -6,7 +6,6 @@
 #define GARNET_DRIVERS_BLUETOOTH_LIB_HCI_COMMAND_CHANNEL_H_
 
 #include <atomic>
-#include <functional>
 #include <list>
 #include <memory>
 #include <mutex>
@@ -104,7 +103,7 @@ class CommandChannel final {
   // See Bluetooth Core Spec v5.0, Volume 2, Part E, Section 4.4 "Command Flow
   // Control" for more information about the HCI command flow control.
   using CommandCallback =
-      std::function<void(TransactionId id, const EventPacket& event)>;
+      fit::function<void(TransactionId id, const EventPacket& event)>;
   TransactionId SendCommand(
       std::unique_ptr<CommandPacket> command_packet,
       async_t* dispatcher,
@@ -117,7 +116,7 @@ class CommandChannel final {
 
   // Callback invoked to report generic HCI events excluding CommandComplete and
   // CommandStatus events.
-  using EventCallback = std::function<void(const EventPacket& event_packet)>;
+  using EventCallback = fit::function<void(const EventPacket& event_packet)>;
 
   // Registers an event handler for HCI events that match |event_code|. Incoming
   // HCI event packets that are not associated with a pending command sequence
@@ -193,7 +192,7 @@ class CommandChannel final {
     void Complete(std::unique_ptr<EventPacket> event);
 
     // Makes an EventCallback that calls the callback correctly.
-    EventCallback MakeCallback() const;
+    EventCallback MakeCallback();
 
     async_t* dispatcher() const { return dispatcher_; }
     EventCode complete_event_code() const { return complete_event_code_; }
