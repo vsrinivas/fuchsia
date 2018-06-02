@@ -10,9 +10,9 @@
 #include <string>
 #include <vector>
 
-#include "garnet/bin/network/http_client.h"
-#include "garnet/bin/network/net_adapters.h"
-#include "garnet/bin/network/net_errors.h"
+#include "garnet/bin/http/http_client.h"
+#include "garnet/bin/http/net_adapters.h"
+#include "garnet/bin/http/net_errors.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
 #include "lib/url/gurl.h"

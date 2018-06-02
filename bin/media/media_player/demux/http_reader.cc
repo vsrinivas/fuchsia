@@ -7,7 +7,7 @@
 #include <lib/async/default.h>
 #include <network/cpp/fidl.h>
 
-#include "garnet/bin/network/net_errors.h"
+#include "garnet/bin/http/net_errors.h"
 #include "lib/app/cpp/connect.h"
 #include "lib/fxl/logging.h"
 

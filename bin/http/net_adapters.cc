@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/network/net_adapters.h"
-#include "garnet/bin/network/net_errors.h"
+#include "garnet/bin/http/net_adapters.h"
+#include "garnet/bin/http/net_errors.h"
 
 namespace network {
 

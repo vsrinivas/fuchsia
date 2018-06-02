@@ -3,6 +3,6 @@
         "garnet/packages/prod/netstack"
     ],
     "packages": {
-        "network": "//garnet/bin/network"
+        "network": "//garnet/bin/http"
     }
 }

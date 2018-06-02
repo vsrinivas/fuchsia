@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_NETWORK_NET_ERRORS_H_
-#define GARNET_BIN_NETWORK_NET_ERRORS_H_
+#ifndef GARNET_BIN_HTTP_NET_ERRORS_H_
+#define GARNET_BIN_HTTP_NET_ERRORS_H_
 
 #include <string>
 
@@ -14,7 +14,7 @@ enum Error {
   OK = 0,
 
 #define NET_ERROR(label, value) NETWORK_ERR_##label = value,
-#include "garnet/bin/network/net_error_list.h"
+#include "garnet/bin/http/net_error_list.h"
 #undef NET_ERROR
 };
 
@@ -26,4 +26,4 @@ std::string ErrorToShortString(int error);
 
 }  // namespace network
 
-#endif  // GARNET_BIN_NETWORK_NET_ERRORS_H_
+#endif  // GARNET_BIN_HTTP_NET_ERRORS_H_

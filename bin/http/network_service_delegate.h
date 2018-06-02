@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_NETWORK_NETWORK_SERVICE_DELEGATE_H_
-#define GARNET_BIN_NETWORK_NETWORK_SERVICE_DELEGATE_H_
+#ifndef GARNET_BIN_HTTP_NETWORK_SERVICE_DELEGATE_H_
+#define GARNET_BIN_HTTP_NETWORK_SERVICE_DELEGATE_H_
 
 #include <memory>
 
-#include "garnet/bin/network/network_service_impl.h"
+#include "garnet/bin/http/network_service_impl.h"
 #include "lib/app/cpp/startup_context.h"
 
 namespace network {
@@ -26,4 +26,4 @@ class NetworkServiceDelegate {
 
 }  // namespace network
 
-#endif  // GARNET_BIN_NETWORK_NETWORK_SERVICE_DELEGATE_H_
+#endif  // GARNET_BIN_HTTP_NETWORK_SERVICE_DELEGATE_H_

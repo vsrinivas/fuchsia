@@ -1,15 +1,15 @@
 # Network
 
 This repository contains the interface and implementation of FIDL
-Network Service.
+HTTP Service.
 
      +-----------+           +-----------+
      | FIDL app  |           | POSIX app |
      +------+----+           +-----+-----+
             |                      |
     +-------v----------------+     |
-    |  FIDL network service  |     |
-    | (//garnet/bin/network) |     |
+    |  FIDL http service     |     |
+    | (//garnet/bin/http)    |     |
     +-------+----------------+     |
             |                      |
       +-----v----------------------v---+

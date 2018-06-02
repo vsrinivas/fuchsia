@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_NETWORK_NETWORK_SERVICE_IMPL_H_
-#define GARNET_BIN_NETWORK_NETWORK_SERVICE_IMPL_H_
+#ifndef GARNET_BIN_HTTP_NETWORK_SERVICE_IMPL_H_
+#define GARNET_BIN_HTTP_NETWORK_SERVICE_IMPL_H_
 
 #include <list>
 #include <queue>
@@ -13,7 +13,7 @@
 #include <lib/fit/function.h>
 #include <lib/zx/channel.h>
 
-#include "garnet/bin/network/url_loader_impl.h"
+#include "garnet/bin/http/url_loader_impl.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fidl/cpp/interface_request.h"
 
@@ -50,4 +50,4 @@ class NetworkServiceImpl : public NetworkService,
 
 }  // namespace network
 
-#endif  // GARNET_BIN_NETWORK_NETWORK_SERVICE_IMPL_H_
+#endif  // GARNET_BIN_HTTP_NETWORK_SERVICE_IMPL_H_

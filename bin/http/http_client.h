@@ -2,15 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_NETWORK_HTTP_CLIENT_H_
-#define GARNET_BIN_NETWORK_HTTP_CLIENT_H_
+#ifndef GARNET_BIN_HTTP_HTTP_CLIENT_H_
+#define GARNET_BIN_HTTP_HTTP_CLIENT_H_
 
 #include <zircon/status.h>
 
 #include <set>
 
-#include "garnet/bin/network/net_errors.h"
-#include "garnet/bin/network/upload_element_reader.h"
+#include "garnet/bin/http/net_errors.h"
+#include "garnet/bin/http/upload_element_reader.h"
 #include "lib/fsl/vmo/sized_vmo.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/ascii.h"
@@ -608,4 +608,4 @@ void asio::detail::throw_exception(const Exception& e) {
 }
 #endif
 
-#endif  // GARNET_BIN_NETWORK_HTTP_CLIENT_H_
+#endif  // GARNET_BIN_HTTP_HTTP_CLIENT_H_

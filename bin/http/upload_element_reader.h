@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_NETWORK_UPLOAD_ELEMENT_READER_H_
-#define GARNET_BIN_NETWORK_UPLOAD_ELEMENT_READER_H_
+#ifndef GARNET_BIN_HTTP_UPLOAD_ELEMENT_READER_H_
+#define GARNET_BIN_HTTP_UPLOAD_ELEMENT_READER_H_
 
 #include <array>
 #include <limits>
@@ -70,4 +70,4 @@ class VmoUploadElementReader : public UploadElementReader {
 
 }  // namespace network
 
-#endif  // GARNET_BIN_NETWORK_UPLOAD_ELEMENT_READER_H_
+#endif  // GARNET_BIN_HTTP_UPLOAD_ELEMENT_READER_H_

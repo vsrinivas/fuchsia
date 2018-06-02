@@ -10,10 +10,10 @@
 #include <lib/async/cpp/task.h>
 #include <lib/async-loop/cpp/loop.h>
 
-#include "garnet/bin/network/net_adapters.h"
-#include "garnet/bin/network/net_errors.h"
-#include "garnet/bin/network/network_service_impl.h"
-#include "garnet/bin/network/url_loader_impl.h"
+#include "garnet/bin/http/net_adapters.h"
+#include "garnet/bin/http/net_errors.h"
+#include "garnet/bin/http/network_service_impl.h"
+#include "garnet/bin/http/url_loader_impl.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/memory/ref_ptr.h"
 #include "lib/fxl/memory/weak_ptr.h"
