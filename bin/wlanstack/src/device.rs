@@ -3,49 +3,29 @@
 // found in the LICENSE file.
 
 use async;
+use device_watch;
 use failure::Error;
-use fidl_mlme;
 use futures::prelude::*;
 use futures::{future, stream};
 use futures::channel::mpsc;
 use parking_lot::Mutex;
-use vfs_watcher;
 use watchable_map::{MapWatcher, WatchableMap, WatcherResult};
 use wlan;
 use wlan_dev;
 use zx;
 
-use std::fs::File;
-use std::path::Path;
-use std::str::FromStr;
 use std::sync::Arc;
-use std::{thread, time};
 
 struct PhyDevice {
-    id: u16,
     proxy: wlan::PhyProxy,
-    dev: wlan_dev::Device,
-}
-
-impl PhyDevice {
-    fn new<P: AsRef<Path>>(id: u16, path: P) -> Result<Self, zx::Status> {
-        let dev = wlan_dev::Device::new(path)?;
-        let proxy = wlan_dev::connect_wlan_phy(&dev)?;
-        Ok(PhyDevice { id, proxy, dev })
-    }
+    device: wlan_dev::Device,
 }
 
 pub type ClientSmeServer = mpsc::UnboundedSender<async::Channel>;
 
 struct IfaceDevice {
     client_sme_server: Option<ClientSmeServer>,
-    _dev: wlan_dev::Device,
-}
-
-fn open_iface_device<P: AsRef<Path>>(path: P) -> Result<(async::Channel, wlan_dev::Device), zx::Status> {
-    let dev = wlan_dev::Device::new(path)?;
-    let channel = wlan_dev::connect_wlan_iface(&dev)?;
-    Ok((channel, dev))
+    _device: wlan_dev::Device,
 }
 
 /// Called by the `DeviceManager` in response to device events.
@@ -114,26 +94,28 @@ impl DeviceManager {
         }
     }
 
-    fn add_phy(&mut self, phy: PhyDevice) {
-        self.phys.insert(phy.id, phy);
+    fn add_phy(&mut self, id: u16, phy: PhyDevice) {
+
+        self.phys.insert(id, phy);
     }
 
     fn rm_phy(&mut self, id: u16) {
         self.phys.remove(&id);
     }
 
-    fn add_iface(&mut self, id: u16, channel: async::Channel, device: wlan_dev::Device) {
-        let proxy = fidl_mlme::MlmeProxy::new(channel);
+    fn add_iface(&mut self, new_iface: device_watch::NewIfaceDevice)
+        -> impl Future<Item = (), Error = Never>
+    {
         // TODO(gbonik): move this code outside of DeviceManager
         let (sender, receiver) = mpsc::unbounded();
         // TODO(gbonik): check the role of the interface instead of assuming it is a station
-        async::spawn(super::station::serve_client_sme(proxy, receiver).recover::<Never, _>(|e| {
-            eprintln!("Error serving client station: {:?}", e);
-        }));
-        self.ifaces.insert(id, IfaceDevice {
+        self.ifaces.insert(new_iface.id, IfaceDevice {
             client_sme_server: Some(sender),
-            _dev: device,
+            _device: new_iface.device,
         });
+        super::station::serve_client_sme(new_iface.proxy, receiver).recover::<Never, _>(|e| {
+            eprintln!("Error serving client station: {:?}", e);
+        })
     }
 
     fn rm_iface(&mut self, id: u16) {
@@ -146,9 +128,9 @@ impl DeviceManager {
     pub fn list_phys(&self) -> impl Stream<Item = wlan::PhyInfo, Error = ()> {
         self.phys
             .iter()
-            .map(|(_, phy)| {
-                let phy_id = phy.id;
-                let phy_path = phy.dev.path().to_string_lossy().into_owned();
+            .map(|(phy_id, phy)| {
+                let phy_id = *phy_id;
+                let phy_path = phy.device.path().to_string_lossy().into_owned();
                 // For now we query each device for every call to `list_phys`. We will need to
                 // decide how to handle queries for static vs dynamic data, caching response, etc.
                 phy.proxy.query().map_err(|_| ()).map(move |response| {
@@ -166,8 +148,7 @@ impl DeviceManager {
             Some(p) => p,
             None => return future::err(zx::Status::NOT_FOUND).left_future(),
         };
-        let phy_id = phy.id;
-        let phy_path = phy.dev.path().to_string_lossy().into_owned();
+        let phy_path = phy.device.path().to_string_lossy().into_owned();
         phy.proxy
             .query()
             .map_err(|_| zx::Status::INTERNAL)
@@ -176,7 +157,7 @@ impl DeviceManager {
                     .into_future()
                     .map(move |()| {
                         let mut info = response.info;
-                        info.id = phy_id;
+                        info.id = id;
                         info.dev_path = Some(phy_path);
                         info
                     })
@@ -234,100 +215,50 @@ impl DeviceManager {
     }
 }
 
-fn new_watcher<P, OnAdd, OnRm>(
-    path: P, devmgr: DevMgrRef, on_add: OnAdd, on_rm: OnRm,
-) -> impl Future<Item = (), Error = Error>
-where
-    OnAdd: Fn(DevMgrRef, &Path),
-    OnRm: Fn(DevMgrRef, &Path),
-    P: AsRef<Path>,
+pub fn serve_phys(devmgr: DevMgrRef)
+    -> Result<impl Future<Item = (), Error = Error>, Error>
 {
-    File::open(&path)
-        .into_future()
+    Ok(device_watch::watch_phy_devices()?
         .err_into()
-        .and_then(|dev| vfs_watcher::Watcher::new(&dev).map_err(Into::into))
-        .and_then(|watcher| {
-            watcher
-                .for_each(move |msg| {
-                    let full_path = path.as_ref().join(msg.filename);
-                    match msg.event {
-                        vfs_watcher::WatchEvent::EXISTING | vfs_watcher::WatchEvent::ADD_FILE => {
-                            on_add(devmgr.clone(), &full_path);
-                        }
-                        vfs_watcher::WatchEvent::REMOVE_FILE => {
-                            on_rm(devmgr.clone(), &full_path);
-                        }
-                        vfs_watcher::WatchEvent::IDLE => debug!("device watcher idle"),
-                        e => warn!("unknown watch event: {:?}", e),
-                    }
-                    Ok(())
+        .chain(stream::once(Err(format_err!("phy watcher stream unexpectedly finished"))))
+        .for_each_concurrent(move |new_phy| {
+            println!("new phy #{}: {}", new_phy.id, new_phy.device.path().to_string_lossy());
+            let id = new_phy.id;
+            let event_stream = new_phy.proxy.take_event_stream();
+            devmgr.lock().add_phy(id, PhyDevice {
+                proxy: new_phy.proxy,
+                device: new_phy.device,
+            });
+            let devmgr = devmgr.clone();
+            event_stream
+                .for_each(|_| Ok(()))
+                .then(move |r| {
+                    println!("phy removed: {}", id);
+                    devmgr.lock().rm_phy(id);
+                    r.map(|_| ()).map_err(|e| e.into())
                 })
-                .map(|_s| ())
-                .err_into()
         })
+        .map(|_| ()))
 }
 
-/// Creates a `futures::Stream` that adds phy devices to the `DeviceManager` as they appear at the
-/// given path.
-pub fn new_phy_watcher<P: AsRef<Path>>(
-    path: P, devmgr: DevMgrRef,
-) -> impl Future<Item = (), Error = Error> {
-    new_watcher(
-        path,
-        devmgr,
-        |devmgr, path| {
-            info!("found phy at {}", path.to_string_lossy());
-            // The path was constructed in the new_watcher closure, so filename should not be
-            // empty. The file_name comes from devmgr and is an integer, so from_str should not
-            // fail.
-            let id = u16::from_str(&path.file_name().unwrap().to_string_lossy()).unwrap();
-            // This could fail if the device were to go away in between our receiving the watcher
-            // message and here. TODO(tkilbourn): handle this case more cleanly.
-            let phy = PhyDevice::new(id, path).expect("Failed to open phy device");
-            devmgr.lock().add_phy(phy);
-        },
-        |devmgr, path| {
-            info!("removing phy at {}", path.to_string_lossy());
-            // The path was constructed in the new_watcher closure, so filename should not be
-            // empty. The file_name comes from devmgr and is an integer, so from_str should not
-            // fail.
-            let id = u16::from_str(&path.file_name().unwrap().to_string_lossy()).unwrap();
-            devmgr.lock().rm_phy(id);
-        },
-    )
-}
-
-/// Creates a `futures::Stream` that adds iface devices to the `DeviceManager` as they appear at
-/// the given path.
-/// TODO(tkilbourn): add the iface to `DeviceManager`
-pub fn new_iface_watcher<P: AsRef<Path>>(
-    path: P, devmgr: DevMgrRef,
-) -> impl Future<Item = (), Error = Error> {
-    new_watcher(
-        path,
-        devmgr,
-        |devmgr, path| {
-            info!("found iface at {}", path.to_string_lossy());
-            let id = u16::from_str(&path.file_name().unwrap().to_string_lossy()).unwrap();
-
-            // Temporarily delay opening the iface since only one service may open a channel to a
-            // device at a time. If the legacy wlantack is running, it should take priority. For
-            // development of wlanstack2, kill the wlanstack process first to let wlanstack2 take
-            // over.
-            debug!("sleeping 100ms...");
-            let open_delay = time::Duration::from_millis(100);
-            thread::sleep(open_delay);
-
-            match open_iface_device(path) {
-                Ok((channel, dev)) => devmgr.lock().add_iface(id, channel, dev),
-                Err(zx::Status::ALREADY_BOUND) => info!("iface already open, deferring"),
-                Err(e) => error!("could not open iface: {:?}", e),
-            }
-        },
-        |devmgr, path| {
-            info!("removing iface at {}", path.to_string_lossy());
-            let id = u16::from_str(&path.file_name().unwrap().to_string_lossy()).unwrap();
-            devmgr.lock().rm_iface(id);
-        },
-    )
+pub fn serve_ifaces(devmgr: DevMgrRef)
+    -> Result<impl Future<Item = (), Error = Error>, Error>
+{
+    Ok(device_watch::watch_iface_devices()?
+        .err_into()
+        .chain(stream::once(Err(format_err!("iface watcher stream unexpectedly finished"))))
+        .for_each_concurrent(move |new_iface| {
+            println!("new iface #{}: {}", new_iface.id, new_iface.device.path().to_string_lossy());
+            let id = new_iface.id;
+            let devmgr_ref = devmgr.clone();
+            let mut devmgr = devmgr.lock();
+            devmgr.add_iface(new_iface)
+                .then(move |r| {
+                    println!("iface removed: {}", id);
+                    devmgr_ref.lock().rm_iface(id);
+                    r
+                })
+                .map_err(|e| e.never_into())
+        })
+        .map(|_| ()))
 }

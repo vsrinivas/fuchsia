@@ -12,7 +12,7 @@ use fidl_mlme::MlmeProxy;
 use fidl_sme::{self, ClientSme, ScanTransaction};
 use std::sync::{Arc, Mutex};
 use failure;
-use futures::{future, prelude::*};
+use futures::{future, prelude::*, stream};
 use futures::channel::mpsc;
 use async;
 use zx;
@@ -26,36 +26,54 @@ impl client::Tokens for ClientTokens {
 type Client = client::ClientSme<ClientTokens>;
 
 pub fn serve_client_sme(proxy: MlmeProxy, new_fidl_clients: mpsc::UnboundedReceiver<async::Channel>)
-    -> impl Future<Item = (), Error = ::fidl::Error>
+    -> impl Future<Item = (), Error = failure::Error>
 {
     let (client, mlme_stream, user_stream) = Client::new();
     let client_arc = Arc::new(Mutex::new(client));
-
     // A future that handles MLME interactions
-    let station_server = serve_station(proxy, client_arc.clone(), mlme_stream);
+    let mlme_sme_fut = serve_mlme_sme(proxy, client_arc.clone(), mlme_stream);
     // A future that forwards user events from the station to connected FIDL clients
-    let user_stream_server = serve_user_stream(user_stream)
-        // Map 'Never' to 'fidl::Error'
-        .map_err(|_| panic!("'Never' should never happen"));
-    // A future that handles requests from FIDL clients
-    let wlan_server = new_fidl_clients.for_each_concurrent(move |channel| {
-        new_client_service(client_arc.clone(), channel).recover(
-            |e| eprintln!("Error handling a FIDL request from user: {:?}", e)
-        )
-    }).map_err(|e| e.never_into());
-    station_server.join3(user_stream_server, wlan_server).map(|_| ())
+    let sme_fidl_fut = serve_client_sme_fidl(client_arc, new_fidl_clients, user_stream)
+        .map(|x| x.never_into::<()>());
+    mlme_sme_fut.select(sme_fidl_fut)
+        .map(|_| ())
+        .map_err(|e| e.either(|(x, _)| x.context("MLME<->SME future").into(),
+                              |(x, _)| x.context("SME<->FIDL future").into()))
 }
 
-fn serve_station<S: Station>(proxy: MlmeProxy, station: Arc<Mutex<S>>, mlme_stream: MlmeStream)
-     -> impl Future<Item = (), Error = ::fidl::Error>
+fn serve_client_sme_fidl(client_arc: Arc<Mutex<Client>>,
+                         new_fidl_clients: mpsc::UnboundedReceiver<async::Channel>,
+                         user_stream: client::UserStream<ClientTokens>)
+    -> impl Future<Item = Never, Error = failure::Error>
 {
-    let event_handler = proxy.take_event_stream().for_each(move |e| {
+    let sme_to_fidl = serve_user_stream(user_stream)
+        // Map 'Never' to 'fidl::Error'
+        .map_err(|e| e.never_into())
+        .and_then(|()| Err(format_err!("SME->FIDL future unexpectedly finished")));
+    // A future that handles requests from FIDL clients
+    let fidl_to_sme = new_fidl_clients
+        .map_err(|e| e.never_into())
+        .chain(stream::once(Err(format_err!("new FIDL client stream unexpectedly ended"))))
+        .for_each_concurrent(move |channel| {
+            new_client_service(client_arc.clone(), channel).recover(
+                |e| eprintln!("Error handling a FIDL request from user: {:?}", e)
+            )
+        })
+        .and_then(|_| Err(format_err!("FIDL->SME future unexpectedly finished")));
+    sme_to_fidl.join(fidl_to_sme).map(|x: (Never, Never)| x.0)
+}
+
+// The returned future successfully terminates when MLME closes the channel
+fn serve_mlme_sme<S: Station>(proxy: MlmeProxy, station: Arc<Mutex<S>>, mlme_stream: MlmeStream)
+     -> impl Future<Item = (), Error = failure::Error>
+{
+    let sme_to_mlme_fut = proxy.take_event_stream().for_each(move |e| {
         station.lock().unwrap().on_mlme_event(e);
         Ok(())
-    });
-    let mlme_sender = mlme_stream
+    }).map(|_| ()).err_into::<failure::Error>();
+    let mlme_to_sme_fut = mlme_stream
         // Map 'Never' to 'fidl::Error'
-        .map_err(|_| panic!("'Never' should never happen"))
+        .map_err(|e| e.never_into())
         .for_each(move |e| {
             match e {
                 MlmeRequest::Scan(mut req) => proxy.scan_req(&mut req),
@@ -64,8 +82,24 @@ fn serve_station<S: Station>(proxy: MlmeProxy, station: Arc<Mutex<S>>, mlme_stre
                 MlmeRequest::Associate(mut req) => proxy.associate_req(&mut req),
                 MlmeRequest::Deauthenticate(mut req) => proxy.deauthenticate_req(&mut req),
             }
+        })
+        .then(|r| match r {
+            Ok(_) => Err(format_err!("SME->MLME sender future unexpectedly finished")),
+            Err(fidl::Error::ClientWrite(status)) => {
+                if status == zx::Status::PEER_CLOSED {
+                    // Don't treat closed channel as error; terminate the future peacefully instead
+                    Ok(())
+                } else {
+                    Err(fidl::Error::ClientWrite(status).into())
+                }
+            }
+            Err(other) => Err(other.into()),
         });
-    event_handler.join(mlme_sender).map(|_| ())
+    // Select, not join: terminate as soon as one of the futures terminates
+    sme_to_mlme_fut.select(mlme_to_sme_fut)
+        .map(|_| ())
+        .map_err(|e| e.either(|(x, _)| x.context("MLME->SME").into(),
+                              |(x, _)| x.context("SME->MLME").into()))
 }
 
 fn new_client_service(client_arc: Arc<Mutex<Client>>, channel: async::Channel)
