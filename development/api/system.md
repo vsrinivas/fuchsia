@@ -104,11 +104,11 @@ always consume the handle or never consume, with the following exceptions:
  * If the function does not take an `options` parameter, the function may avoid
    consuming handles if/when it returns `ZX_ERR_SHOULD_WAIT`.
 
+### Buffers with Data, Count/Size, and/or Actual
+
 Always accompany arrays or buffers with a count or size (of type `size_t`),
 including strings. If the buffer is written by the function, the function must
 have an out parameter that returns the count or size of the data written.
-
-### Buffers with Data, Count/Size, and/or Actual
 
 For read and write style operations, the pointer(s) to the buffer(s) are
 followed by the buffer count(s) or size(s), and if a short read or write is
