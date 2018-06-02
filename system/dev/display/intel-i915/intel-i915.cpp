@@ -174,6 +174,8 @@ void Controller::HandleHotplug(registers::Ddi ddi, bool long_pulse) {
         if (device) { // Existing device was unplugged
             LOG_INFO("Display %ld unplugged\n", device->id());
             display_removed = device->id();
+            // Make sure the display's resources get freed before reallocating the pipe buffers
+            device.reset();
         } else { // New device was plugged in
             fbl::unique_ptr<DisplayDevice> device = InitDisplay(ddi);
             if (!device) {
@@ -185,6 +187,8 @@ void Controller::HandleHotplug(registers::Ddi ddi, bool long_pulse) {
                 }
             }
         }
+
+        ReallocatePipeBuffers(true);
     }
     if (dc_cb() && (display_added != INVALID_DISPLAY_ID || display_removed != INVALID_DISPLAY_ID)) {
         dc_cb()->on_displays_changed(dc_cb_ctx_,
@@ -352,6 +356,22 @@ bool Controller::BringUpDisplayEngine(bool resume) {
 
     for (unsigned i = 0; i < registers::kPipeCount; i++) {
         ResetPipe(registers::kPipes[i]);
+
+        registers::PipeRegs pipe_regs(registers::kPipes[i]);
+
+        // Disable the cursor watermark
+        for (int wm_num = 0; wm_num < 8; wm_num++) {
+            auto wm = pipe_regs.PlaneWatermark(0, wm_num).FromValue(0);
+            wm.WriteTo(mmio_space());
+        }
+
+        // Disable the primary plane watermarks and reset their buffer allocation
+        for (unsigned plane_num = 0; plane_num < registers::kPrimaryPlaneCount; plane_num++) {
+            for (int wm_num = 0; wm_num < 8; wm_num++) {
+                auto wm = pipe_regs.PlaneWatermark(plane_num + 1, wm_num).FromValue(0);
+                wm.WriteTo(mmio_space());
+            }
+        }
     }
 
     for (unsigned i = 0; i < registers::kTransCount; i++) {
@@ -365,8 +385,6 @@ bool Controller::BringUpDisplayEngine(bool resume) {
     for (unsigned i = 0; i < registers::kDpllCount; i++) {
         dplls_[i].use_count = 0;
     }
-
-    AllocDisplayBuffers();
 
     return true;
 }
@@ -386,6 +404,12 @@ void Controller::ResetPipe(registers::Pipe pipe) {
     if (pipe != registers::PIPE_C) {
         pipe_regs.PipeScalerCtrl(1).ReadFrom(mmio_space()).set_enable(0).WriteTo(mmio_space());
         pipe_regs.PipeScalerWinSize(1).ReadFrom(mmio_space()).WriteTo(mmio_space());
+    }
+
+    ZX_DEBUG_ASSERT(mtx_trylock(&display_lock_) == thrd_busy);
+    for (unsigned plane_num = 0; plane_num < registers::kPrimaryPlaneCount; plane_num++) {
+        plane_buffers_[pipe][plane_num].start = registers::PlaneBufCfg::kBufferCount;
+        plane_buffers_[pipe][plane_num].minimum = 0;
     }
 }
 
@@ -490,50 +514,6 @@ registers::Dpll Controller::SelectDpll(bool is_edp, bool is_hdmi, uint32_t rate)
     return res;
 }
 
-void Controller::AllocDisplayBuffers() {
-    // Do display buffer alloc and watermark programming with fixed allocation from
-    // intel docs. This allows the display to work but prevents power management.
-    // TODO(ZX-1413): Calculate these dynamically based on what's enabled.
-    for (unsigned pipe_num = 0; pipe_num < registers::kPipeCount; pipe_num++) {
-        registers::Pipe pipe = registers::kPipes[pipe_num];
-        registers::PipeRegs pipe_regs(pipe);
-
-        // Don't give the cursor anything
-        pipe_regs.PlaneBufCfg(0).FromValue(0).WriteTo(mmio_space());
-        for (int wm_num = 0; wm_num < 8; wm_num++) {
-            auto wm = pipe_regs.PlaneWatermark(0, wm_num).FromValue(0);
-            wm.WriteTo(mmio_space());
-        }
-
-        // Split evenly between all regular planes across all DDIs
-        constexpr uint32_t kPerDdi = 891 / registers::kDdiCount;
-        constexpr uint32_t kPerPlane = kPerDdi / registers::kPrimaryPlaneCount;
-        for (unsigned plane_num = 0; plane_num < registers::kPrimaryPlaneCount; plane_num++) {
-            auto buf_cfg = pipe_regs.PlaneBufCfg(plane_num + 1).FromValue(0);
-            buf_cfg.set_buffer_start(kPerDdi * pipe + (kPerPlane * plane_num));
-            buf_cfg.set_buffer_end(kPerDdi * pipe  + (kPerPlane * (plane_num + 1)) - 1);
-            buf_cfg.WriteTo(mmio_space());
-
-            auto wm0 = pipe_regs.PlaneWatermark(plane_num + 1, 0).FromValue(0);
-            wm0.set_enable(1);
-            wm0.set_lines(2);
-            wm0.set_blocks(kPerPlane);
-            wm0.WriteTo(mmio_space());
-
-            for (int wm_num = 1; wm_num < 8; wm_num++) {
-                auto wm = pipe_regs.PlaneWatermark(plane_num + 1, wm_num).FromValue(0);
-                wm.WriteTo(mmio_space());
-            }
-
-            // Write so double-buffered regs are updated
-            auto base = pipe_regs.PlaneSurface(plane_num).ReadFrom(mmio_space());
-            base.WriteTo(mmio_space());
-        }
-    }
-    // TODO(ZX-1413): Wait for vblank instead of sleeping
-    zx_nanosleep(zx_deadline_after(ZX_MSEC(33)));
-}
-
 fbl::unique_ptr<DisplayDevice> Controller::InitDisplay(registers::Ddi ddi) {
     registers::Pipe pipe;
     if (!pipe_in_use(display_devices_, registers::PIPE_A)) {
@@ -580,6 +560,8 @@ void Controller::InitDisplays() {
     if (display_devices_.size() == 0) {
         LOG_INFO("No displays detected\n");
     }
+
+    ReallocatePipeBuffers(false);
 }
 
 zx_status_t Controller::AddDisplay(fbl::unique_ptr<DisplayDevice>&& display) {
@@ -702,9 +684,364 @@ void Controller::ReleaseImage(image_t* image) {
     }
 }
 
+bool Controller::GetLayer(registers::Pipe pipe, uint32_t plane,
+                          const display_config_t** configs, uint32_t display_count,
+                          const layer_t** layer_out) {
+    DisplayDevice* disp = nullptr;
+    for (auto& d : display_devices_) {
+        if (d->pipe() == pipe) {
+            disp = d.get();
+            break;
+        }
+    }
+    if (disp == nullptr) {
+        return false;
+    }
+
+    for (unsigned i = 0; i < display_count; i++) {
+        const display_config_t* config = configs[i];
+        if (config->display_id != disp->id()) {
+            continue;
+        }
+        for (unsigned j = 0; j < config->layer_count; j++) {
+            if (config->layers[j]->z_index == plane) {
+                *layer_out = config->layers[j];
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+bool Controller::CalculateMinimumAllocations(const display_config_t** display_configs,
+                                             uint32_t display_count,
+                                             uint16_t min_allocs[registers::kPipeCount]
+                                                                [registers::kPrimaryPlaneCount]) {
+    ZX_ASSERT(display_count < registers::kPipeCount);
+    // This fn ignores layers after kPrimaryPlaneCount. Displays with too many layers already
+    // failed in ::CheckConfiguration, so it doesn't matter if we incorrectly say they pass here.
+
+    bool success = true;
+    for (unsigned pipe_num = 0; pipe_num < registers::kPipeCount; pipe_num++) {
+        registers::Pipe pipe = registers::kPipes[pipe_num];
+        uint32_t total = 0;
+
+        for (unsigned plane_num = 0; plane_num < registers::kPrimaryPlaneCount; plane_num++) {
+            const layer_t* layer;
+            if (!GetLayer(pipe, plane_num, display_configs, display_count, &layer)) {
+                min_allocs[pipe_num][plane_num] = 0;
+                continue;
+            }
+            ZX_ASSERT(layer->type == LAYER_PRIMARY);
+            const primary_layer_t* primary = &layer->cfg.primary;
+
+            if (primary->image.type == IMAGE_TYPE_SIMPLE
+                    || primary->image.type == IMAGE_TYPE_X_TILED) {
+                min_allocs[pipe_num][plane_num] = 8;
+            } else {
+                uint32_t plane_source_width;
+                uint32_t min_scan_lines;
+                uint32_t bytes_per_pixel = ZX_PIXEL_FORMAT_BYTES(primary->image.pixel_format);
+                if (primary->transform_mode == FRAME_TRANSFORM_IDENTITY
+                        || primary->transform_mode == FRAME_TRANSFORM_ROT_180) {
+                    plane_source_width = primary->src_frame.width;
+                    min_scan_lines = 8;
+                } else {
+                    plane_source_width = primary->src_frame.height;
+                    min_scan_lines = 32 / bytes_per_pixel;
+                }
+                min_allocs[pipe_num][plane_num] = static_cast<uint16_t>(
+                        ((fbl::round_up(4u * plane_source_width * bytes_per_pixel, 512u) / 512u) *
+                        (min_scan_lines / 4)) + 3);
+                if (min_allocs[pipe_num][plane_num] < 8) {
+                    min_allocs[pipe_num][plane_num] = 8;
+                }
+
+            }
+            total += min_allocs[pipe_num][plane_num];
+        }
+
+        ZX_ASSERT(pipe_buffers_[pipe_num].end >= pipe_buffers_[pipe_num].start);
+        if (total > static_cast<uint16_t>(
+                pipe_buffers_[pipe_num].end - pipe_buffers_[pipe_num].start)) {
+            min_allocs[pipe_num][0] = UINT16_MAX;
+            success = false;
+        }
+    }
+
+    return success;
+}
+
+void Controller::UpdateAllocations(const uint16_t min_allocs[registers::kPipeCount]
+                                                            [registers::kPrimaryPlaneCount],
+                                   const uint64_t data_rate[registers::kPipeCount]
+                                                           [registers::kPrimaryPlaneCount]) {
+    uint16_t allocs[registers::kPipeCount][registers::kPrimaryPlaneCount];
+
+    for (unsigned pipe_num = 0; pipe_num < registers::kPipeCount; pipe_num++) {
+        uint64_t total_data_rate = 0;
+        for (unsigned plane_num = 0; plane_num < registers::kPrimaryPlaneCount; plane_num++) {
+            total_data_rate += data_rate[pipe_num][plane_num];
+        }
+        if (total_data_rate == 0) {
+            for (unsigned plane_num = 0; plane_num < registers::kPrimaryPlaneCount; plane_num++) {
+                allocs[pipe_num][plane_num] = 0;
+            }
+            continue;
+        }
+
+        // Allocate buffers based on the percentage of the total pixel bandwidth they take. If
+        // that percentage isn't enough for a plane, give that plane its minimum allocation and
+        // then try again.
+        double buffers_per_pipe = pipe_buffers_[pipe_num].end - pipe_buffers_[pipe_num].start;
+        bool forced_alloc[registers::kPrimaryPlaneCount] = {};
+        bool done = false;
+        while (!done) {
+            for (unsigned plane_num = 0; plane_num < registers::kPrimaryPlaneCount; plane_num++) {
+                if (forced_alloc[plane_num]) {
+                    continue;
+                }
+
+                double blocks = buffers_per_pipe *
+                        static_cast<double>(data_rate[pipe_num][plane_num]) /
+                        static_cast<double>(total_data_rate);
+                allocs[pipe_num][plane_num] = static_cast<uint16_t>(blocks);
+            }
+
+            done = true;
+
+            for (unsigned plane_num = 0; plane_num < registers::kPrimaryPlaneCount; plane_num++) {
+                if (allocs[pipe_num][plane_num] < min_allocs[pipe_num][plane_num]) {
+                    done = false;
+                    allocs[pipe_num][plane_num] = min_allocs[pipe_num][plane_num];
+                    forced_alloc[plane_num] = true;
+                    total_data_rate -= data_rate[pipe_num][plane_num];
+                    buffers_per_pipe -= allocs[pipe_num][plane_num];
+                }
+            }
+        }
+    }
+
+    // Do the actual allocation, using the buffers that are asigned to each pipe.
+    for (unsigned pipe_num = 0; pipe_num < registers::kPipeCount; pipe_num++) {
+        uint16_t start = pipe_buffers_[pipe_num].start;
+        for (unsigned plane_num = 0; plane_num < registers::kPrimaryPlaneCount; plane_num++) {
+            auto cur = &plane_buffers_[pipe_num][plane_num];
+            cur->minimum = min_allocs[pipe_num][plane_num];
+
+            if (allocs[pipe_num][plane_num] == 0) {
+                cur->start = registers::PlaneBufCfg::kBufferCount;
+                cur->end = static_cast<uint16_t>(cur->start + 1);
+            } else {
+                cur->start = start;
+                cur->end = static_cast<uint16_t>(start + allocs[pipe_num][plane_num]);
+            }
+            start = static_cast<uint16_t>(start + allocs[pipe_num][plane_num]);
+
+            registers::Pipe pipe = registers::kPipes[pipe_num];
+            registers::PipeRegs pipe_regs(pipe);
+
+            // These are latched on the surface address register, so we don't yet need to
+            // worry about overlaps when updating planes during a pipe allocation.
+            auto buf_cfg = pipe_regs.PlaneBufCfg(plane_num + 1).FromValue(0);
+            buf_cfg.set_buffer_start(cur->start);
+            buf_cfg.set_buffer_end(cur->end - 1);
+            buf_cfg.WriteTo(mmio_space());
+
+            // TODO(stevensd): Real watermark programming
+            auto wm0 = pipe_regs.PlaneWatermark(plane_num + 1, 0).FromValue(0);
+            wm0.set_enable(cur->start != registers::PlaneBufCfg::kBufferCount);
+            wm0.set_blocks(cur->end - cur->start);
+            wm0.WriteTo(mmio_space());
+        }
+    }
+}
+
+bool Controller::ReallocatePlaneBuffers(const display_config_t** display_configs,
+                                        uint32_t display_count) {
+    uint16_t min_allocs[registers::kPipeCount][registers::kPrimaryPlaneCount];
+    if (!CalculateMinimumAllocations(display_configs, display_count, min_allocs)) {
+        return false;
+    }
+
+    // Calculate the data rates and store the minimum allocations
+    uint64_t data_rate[registers::kPipeCount][registers::kPrimaryPlaneCount];
+    for (unsigned pipe_num = 0; pipe_num < registers::kPipeCount; pipe_num++) {
+        registers::Pipe pipe = registers::kPipes[pipe_num];
+        for (unsigned plane_num = 0; plane_num < registers::kPrimaryPlaneCount; plane_num++) {
+            const layer_t* layer;
+            if (!GetLayer(pipe, plane_num, display_configs, display_count, &layer)) {
+                data_rate[pipe_num][plane_num] = 0;
+            } else {
+                ZX_ASSERT(layer->type == LAYER_PRIMARY);
+                const primary_layer_t* primary = &layer->cfg.primary;
+
+                data_rate[pipe_num][plane_num] = primary->src_frame.width *
+                        primary->src_frame.height *
+                        ZX_PIXEL_FORMAT_BYTES(primary->image.pixel_format);
+            }
+        }
+    }
+
+    // It's not necessary to flush the buffer changes since the pipe allocs didn't change
+    UpdateAllocations(min_allocs, data_rate);
+    return true;
+}
+
+void Controller::ReallocatePipeBuffers(bool is_hotplug) {
+    if (display_devices_.size() == 0) {
+        // We'll reallocate things when there's actually a display
+        return;
+    }
+
+    // TODO(stevensd): Separate pipe allocation for displays being connected
+    bool realloc_fail = false;
+    uint16_t buffers_per_pipe = static_cast<uint16_t>(registers::PlaneBufCfg::kBufferCount /
+        fbl::min(display_devices_.size(), static_cast<size_t>(registers::kPipeCount)));
+
+    // Approximate the data rate based on how many buffers are allocated to each plane. This
+    // can be slightly off, but that'll be fixed on the next page flip.
+    uint16_t min_allocs[registers::kPipeCount][registers::kPrimaryPlaneCount];
+    uint64_t data_rate[registers::kPipeCount][registers::kPrimaryPlaneCount];
+    for (unsigned pipe_num = 0; pipe_num < registers::kPipeCount; pipe_num++) {
+        uint16_t pipe_total = 0;
+        for (unsigned plane_num = 0; plane_num < registers::kPrimaryPlaneCount; plane_num++) {
+            auto alloc = &plane_buffers_[pipe_num][plane_num];
+            data_rate[pipe_num][plane_num] = alloc->start == registers::PlaneBufCfg::kBufferCount ?
+                    0 : alloc->end - alloc->start;
+            min_allocs[pipe_num][plane_num] = alloc->minimum;
+            pipe_total = static_cast<uint16_t>(pipe_total + alloc->minimum);
+        }
+        if (pipe_total > buffers_per_pipe) {
+            realloc_fail = true;
+        }
+    }
+
+    // If we can't reallocate anything, disable all the planes and wait for a page flip due
+    // to the client handling the hotplug. This will cause the displays to flash, but bad
+    // hotplugs like this should be uncommon. This shouldn't happen with the virtcon, since
+    // its buffer requirements are really low, so waiting for a flip is okay.
+    if (realloc_fail) {
+        ZX_DEBUG_ASSERT(is_hotplug);
+
+        LOG_INFO("Cannot reallocate buffers for hot plug\n");
+        for (unsigned pipe_num = 0; pipe_num < registers::kPipeCount; pipe_num++) {
+            registers::Pipe pipe = registers::kPipes[pipe_num];
+            registers::PipeRegs pipe_regs(pipe);
+            for (unsigned plane_num = 0; plane_num < registers::kPrimaryPlaneCount; plane_num++) {
+                 pipe_regs.PlaneControl(plane_num).ReadFrom(mmio_space())
+                        .set_plane_enable(0).WriteTo(mmio_space());
+                 pipe_regs.PlaneSurface(plane_num).ReadFrom(mmio_space()).WriteTo(mmio_space());
+            }
+        }
+        return;
+    }
+
+    // Allocate buffers to each pipe, but save the old one for use later.
+    pipe_buffer_allocation_t active_allocation[registers::kPipeCount];
+    memcpy(active_allocation, pipe_buffers_, sizeof(active_allocation));
+    int active_pipes = 0;
+    for (unsigned pipe_num = 0; pipe_num < registers::kPipeCount; pipe_num++) {
+        bool found = false;
+        for (auto& display : display_devices_) {
+            if (display->pipe() == pipe_num) {
+                found = true;
+                break;
+            }
+        }
+        if (found) {
+            pipe_buffers_[pipe_num].start = static_cast<uint16_t>(buffers_per_pipe * active_pipes);
+            pipe_buffers_[pipe_num].end = static_cast<uint16_t>(
+                    pipe_buffers_[pipe_num].start + buffers_per_pipe);
+            active_pipes++;
+        } else {
+            pipe_buffers_[pipe_num].start = pipe_buffers_[pipe_num].end = 0;
+        }
+        LOG_SPEW("Pipe %d buffers: [%d, %d)\n", pipe_num,
+                 pipe_buffers_[pipe_num].start, pipe_buffers_[pipe_num].end);
+    }
+
+    UpdateAllocations(min_allocs, data_rate);
+
+    // If it's not a hotplug, we weren't using anything before so we don't need to
+    // worry about allocations overlapping.
+    if (!is_hotplug) {
+        return;
+    }
+
+    // Given that the order of the allocations is fixed, an allocation X_i is contained completely
+    // within its old allocation if {new len of allocations preceding X_i} >= {start of old X_i} and
+    // {new len of allocations preceding X_i + new len of X_i} <= {end of old X_i}. For any i,
+    // if condition 1 holds, either condition 2 is true and we're done, or condition 2 doesn't
+    // and condition 1 holds for i + 1. Since condition 1 holds for i == 0 and because condition
+    // 2 holds for the last allocation (since the allocation is valid), it is guaranteed that
+    // at least one allocation is entirely within its old allocation. The remaining buffers
+    // are guaranteed to be re-allocatable recursively in the same manner. Therefore the loop will
+    // make progress every iteration.
+    bool done = false;
+    while (!done) {
+        done = true;
+        for (unsigned pipe_num = 0; pipe_num < registers::kPipeCount; pipe_num++) {
+            auto active_alloc = active_allocation + pipe_num;
+            auto goal_alloc = pipe_buffers_ + pipe_num;
+
+            if (active_alloc->start == goal_alloc->start &&
+                    active_alloc->end == goal_alloc->end) {
+                continue;
+            }
+
+            // Look through all the other active pipe allocations for overlap
+            bool overlap = false;
+            if (goal_alloc->start != goal_alloc->end) {
+                for (unsigned other_pipe = 0; other_pipe < registers::kPipeCount; other_pipe++) {
+                    if (other_pipe == pipe_num) {
+                        continue;
+                    }
+
+                    auto other_active = active_allocation + other_pipe;
+                    if (other_active->start == other_active->end) {
+                        continue;
+                    }
+
+                    if ((other_active->start <= goal_alloc->start
+                                && goal_alloc->start < other_active->end)
+                            || (other_active->start <= goal_alloc->end
+                                && goal_alloc->end < other_active->end)) {
+                        overlap = true;
+                        break;
+                    }
+                }
+            }
+
+            if (!overlap) {
+                // Flush the pipe allocation, wait for it to be active, and update
+                // what is current active.
+                registers::PipeRegs pipe_regs(registers::kPipes[pipe_num]);
+                for (unsigned j = 0; j < registers::kPrimaryPlaneCount; j++) {
+                    pipe_regs.PlaneSurface(j).ReadFrom(mmio_space()).WriteTo(mmio_space());
+                }
+
+                // TODO(stevensd): Wait for vsync instead of sleeping
+                // TODO(stevesnd): Parallelize/reduce the number of vsyncs we wait for
+                zx_nanosleep(zx_deadline_after(ZX_MSEC(33)));
+
+                *active_alloc = *goal_alloc;
+            } else {
+                done = false;
+            }
+        }
+    }
+}
+
 void Controller::CheckConfiguration(const display_config_t** display_config,
                                     uint32_t** layer_cfg_result, uint32_t display_count) {
+    if (display_count > registers::kPipeCount) {
+        // TODO(stevensd): Surface this to higher layers
+        ZX_ASSERT(false);
+    }
+
     fbl::AutoLock lock(&display_lock_);
+
     for (unsigned i = 0; i < display_count; i++) {
         auto* config = display_config[i];
         if (config->layer_count > 3) {
@@ -730,6 +1067,35 @@ void Controller::CheckConfiguration(const display_config_t** display_config,
             }
         }
     }
+
+    // CalculateMinimumAllocations ignores layers after kPrimaryPlaneCount. That's fine, since
+    // that case already fails from an earlier check.
+    uint16_t arr[registers::kPipeCount][registers::kPrimaryPlaneCount];
+    if (!CalculateMinimumAllocations(display_config, display_count, arr)) {
+        // Find any displays whose allocation fails and set the return code. Overwrite
+        // any previous errors, since they get solved by the merge.
+        for (unsigned pipe_num = 0; pipe_num < registers::kPipeCount; pipe_num++) {
+            if (arr[pipe_num][0] != UINT16_MAX) {
+                continue;
+            }
+            for (auto& display : display_devices_) {
+                if (display->pipe() != pipe_num) {
+                    continue;
+                }
+
+                for (unsigned i = 0; i < display_count; i++) {
+                    if (display_config[i]->display_id != display->id()) {
+                        continue;
+                    }
+                    layer_cfg_result[i][0] = CLIENT_MERGE_BASE;
+                    for (unsigned j = 1; j < display_config[i]->layer_count; j++) {
+                        layer_cfg_result[i][j] = CLIENT_MERGE_SRC;
+                    }
+                    break;
+                }
+            }
+        }
+    }
 }
 
 void Controller::ApplyConfiguration(const display_config_t** display_config,
@@ -739,6 +1105,13 @@ void Controller::ApplyConfiguration(const display_config_t** display_config,
 
     {
         fbl::AutoLock lock(&display_lock_);
+
+        // If we reallocated the pipe allocations since things were validated, then this
+        // can fail. In that case, just wait for the client to respond to the hotplug event.
+        if (!ReallocatePlaneBuffers(display_config, display_count)) {
+            return;
+        }
+
         for (auto& display : display_devices_) {
             const display_config_t* config = nullptr;
             for (unsigned i = 0; i < display_count; i++) {
@@ -971,6 +1344,7 @@ zx_status_t Controller::DdkSuspend(uint32_t hint) {
 }
 
 zx_status_t Controller::DdkResume(uint32_t hint) {
+    fbl::AutoLock lock(&display_lock_);
     BringUpDisplayEngine(true);
 
     registers::PanelPowerDivisor::Get().FromValue(pp_divisor_val_).WriteTo(mmio_space_.get());
@@ -985,7 +1359,6 @@ zx_status_t Controller::DdkResume(uint32_t hint) {
             .set_ddi_a_lane_capability_control(ddi_a_lane_capability_control_)
             .WriteTo(mmio_space_.get());
 
-    fbl::AutoLock lock(&display_lock_);
     for (auto& disp : display_devices_) {
         if (!disp->Resume()) {
             LOG_ERROR("Failed to resume display\n");
@@ -993,6 +1366,8 @@ zx_status_t Controller::DdkResume(uint32_t hint) {
     }
 
     interrupts_.Resume();
+
+    ReallocatePipeBuffers(false);
 
     return ZX_OK;
 }

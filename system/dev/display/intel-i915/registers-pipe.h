@@ -144,6 +144,7 @@ public:
 class PlaneBufCfg : public hwreg::RegisterBase<PlaneBufCfg, uint32_t> {
 public:
     static constexpr uint32_t kBaseAddr = 0x7017c;
+    static constexpr uint32_t kBufferCount = 892;
 
     DEF_FIELD(25, 16, buffer_end);
     DEF_FIELD(9, 0, buffer_start);

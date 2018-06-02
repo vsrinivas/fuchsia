@@ -124,6 +124,10 @@ struct ConfigResult {
 interface Controller {
   // Event fired when displays are added or removed. This event will be fired
   // when the callback is registered if there are any connected displays.
+  //
+  // A display change always invalidates the current configuration. When a
+  // client receives this event, they must either apply a new configuration
+  // or revalidate and reapply their current configuration.
   1: -> DisplaysChanged(vector<Info> added, vector<uint64> removed);
 
   // Imports a VMO backed image. If tiling is not typeSimple, it is up to
