@@ -8,9 +8,11 @@ import (
 	"amber/ipcserver"
 	"app/context"
 	"encoding/hex"
+	"encoding/json"
 	"fidl/amber"
 	"flag"
 	"fmt"
+	"log"
 	"net/url"
 	"os"
 	"strings"
@@ -36,6 +38,7 @@ Commands
         -i: content ID of the blob
 
     add_src   - add a source to the list we can use
+        -f: path to a source config file
         -s: location of the package source
         -b: location of the blob source
         -k: the hex string of the public ED25519 key for the source
@@ -54,6 +57,7 @@ Commands
 
 var (
 	fs         = flag.NewFlagSet("default", flag.ExitOnError)
+	pkgFile    = fs.String("f", "", "Path to a source config file")
 	name       = fs.String("n", "", "Name of a source or package")
 	pkgVersion = fs.String("v", "", "Version of a package")
 	srcUrl     = fs.String("s", "", "The location of a package source")
@@ -96,53 +100,69 @@ func connect(ctx *context.Context) (*amber.ControlInterface, amber.ControlInterf
 }
 
 func addSource(a *amber.ControlInterface) error {
-	name := strings.TrimSpace(*name)
-	if len(name) == 0 {
-		fmt.Println("No source id provided")
-		return os.ErrInvalid
-	}
+	var cfg amber.SourceConfig
 
-	srcUrl := strings.TrimSpace(*srcUrl)
-	if len(srcUrl) == 0 {
-		fmt.Println("No repository URL provided")
-		return os.ErrInvalid
-	}
-	if _, err := url.ParseRequestURI(srcUrl); err != nil {
-		fmt.Printf("Provided URL %q is not valid\n", srcUrl)
-		return err
-	}
+	if len(*pkgFile) == 0 {
+		name := strings.TrimSpace(*name)
+		if len(name) == 0 {
+			fmt.Println("No source id provided")
+			return os.ErrInvalid
+		}
 
-	blobUrl := strings.TrimSpace(*blobUrl)
-	if blobUrl != "" {
-		if _, err := url.ParseRequestURI(blobUrl); err != nil {
-			fmt.Printf("Provided URL %q is not valid\n", blobUrl)
+		srcUrl := strings.TrimSpace(*srcUrl)
+		if len(srcUrl) == 0 {
+			fmt.Println("No repository URL provided")
+			return os.ErrInvalid
+		}
+		if _, err := url.ParseRequestURI(srcUrl); err != nil {
+			fmt.Printf("Provided URL %q is not valid\n", srcUrl)
 			return err
+		}
+
+		blobUrl := strings.TrimSpace(*blobUrl)
+		if blobUrl != "" {
+			if _, err := url.ParseRequestURI(blobUrl); err != nil {
+				fmt.Printf("Provided URL %q is not valid\n", blobUrl)
+				return err
+			}
+		}
+
+		srcKey := strings.TrimSpace(*srcKey)
+		if len(srcKey) == 0 {
+			fmt.Println("No repository key provided")
+			return os.ErrInvalid
+		}
+		if _, err := hex.DecodeString(srcKey); err != nil {
+			fmt.Printf("Provided repository key %q contains invalid characters\n", srcKey)
+			return os.ErrInvalid
+		}
+
+		cfg = amber.SourceConfig{
+			Id:          name,
+			RepoUrl:     srcUrl,
+			BlobRepoUrl: blobUrl,
+			RateLimit:   *rateLimit,
+			RatePeriod:  int32(*period),
+			RootKeys: []amber.KeyConfig{
+				amber.KeyConfig{
+					Type:  "ed25519",
+					Value: srcKey,
+				},
+			},
+		}
+	} else {
+		f, err := os.Open(*pkgFile)
+		if err != nil {
+			log.Fatalf("failed to open file: %v", err)
+		}
+		defer f.Close()
+
+		if err := json.NewDecoder(f).Decode(&cfg); err != nil {
+			log.Fatalf("failed to parse source config: %v", err)
 		}
 	}
 
-	srcKey := strings.TrimSpace(*srcKey)
-	if len(srcKey) == 0 {
-		fmt.Println("No repository key provided")
-		return os.ErrInvalid
-	}
-	if _, err := hex.DecodeString(srcKey); err != nil {
-		fmt.Printf("Provided repository key %q contains invalid characters\n", srcKey)
-		return os.ErrInvalid
-	}
-
-	added, err := a.AddSrc(amber.SourceConfig{
-		Id:          name,
-		RepoUrl:     srcUrl,
-		BlobRepoUrl: blobUrl,
-		RateLimit:   *rateLimit,
-		RatePeriod:  int32(*period),
-		RootKeys: []amber.KeyConfig{
-			amber.KeyConfig{
-				Type:  "ed25519",
-				Value: srcKey,
-			},
-		},
-	})
+	added, err := a.AddSrc(cfg)
 	if !added {
 		fmt.Println("Call succeeded, but source not added")
 		return fmt.Errorf("Request arguments properly formatted, but possibly otherwise invalid")
