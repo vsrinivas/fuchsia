@@ -5,7 +5,7 @@
 import("//garnet/public/lib/fidl/build/fidl/fidl.gni")
 
 fidl("fidl") {
-  name = "network"
+  name = "fuchsia.net.http"
 
   sources = [
     "client.fidl",
