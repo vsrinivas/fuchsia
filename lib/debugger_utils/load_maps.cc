@@ -81,7 +81,7 @@ bool LoadMapTable::ReadLogListenerOutput(const std::string& file) {
       continue;
 
     // If this is a new boot, start over.
-    if (strstr(line, "welcome to lk/MP")) {
+    if (strstr(line, "welcome to Zircon")) {
       FXL_VLOG(1) << "Restarting reading of load maps, machine rebooted";
       map_data.clear();
       Clear();
