@@ -139,6 +139,9 @@ class StoryControllerImpl : PageClient, StoryController, StoryContext {
                  fidl::StringPtr module_name, Intent intent,
                  SurfaceRelationPtr surface_relation) override;
 
+  // Called by ModuleContextImpl.
+  void Active();
+
  private:
   class ModuleWatcherImpl;
 

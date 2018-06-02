@@ -7,6 +7,7 @@
         "chain_test_module": "//peridot/tests/chain:chain_test_module",
         "chain_test_user_shell": "//peridot/tests/chain:chain_test_user_shell",
         "clipboard_test_module": "//peridot/tests/clipboard:clipboard_test_module",
+        "common_active_module": "//peridot/tests/common:common_active_module",
         "common_module_index": "//peridot/tests/common:common_module_index",
         "common_null_module": "//peridot/tests/common:common_null_module",
         "component_context_test_module": "//peridot/tests/component_context:component_context_test_module",

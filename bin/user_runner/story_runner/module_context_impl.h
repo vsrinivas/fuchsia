@@ -79,6 +79,8 @@ class ModuleContextImpl : ModuleContext {
   void GetStoryId(GetStoryIdCallback callback) override;
   // |ModuleContext|
   void RequestFocus() override;
+  // |ModuleContext|
+  void Active() override;
 
   // Identifies the module by its path, holds the URL of the running module, and
   // the link it was started with.

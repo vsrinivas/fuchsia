@@ -96,6 +96,9 @@ class StoryProviderImpl : StoryProvider, FocusWatcher {
   // Called by StoryControllerImpl.
   void NotifyStoryStateChange(fidl::StringPtr story_id, StoryState story_state);
 
+  // Called by StoryControllerImpl.
+  void Active(const fidl::StringPtr& story_id);
+
   // Called by StoryControllerImpl. Sends request to UserShell through
   // PresentationProvider.
   void GetPresentation(
@@ -131,6 +134,9 @@ class StoryProviderImpl : StoryProvider, FocusWatcher {
 
   // |StoryProvider|
   void Watch(fidl::InterfaceHandle<StoryProviderWatcher> watcher) override;
+
+  // |StoryProvider|
+  void WatchActivity(fidl::InterfaceHandle<StoryActivityWatcher> watcher) override;
 
   // |StoryProvider|
   void Duplicate(fidl::InterfaceRequest<StoryProvider> request) override;
@@ -186,6 +192,7 @@ class StoryProviderImpl : StoryProvider, FocusWatcher {
   ProxySet proxies_;
 
   fidl::InterfacePtrSet<StoryProviderWatcher> watchers_;
+  fidl::InterfacePtrSet<StoryActivityWatcher> activity_watchers_;
 
   // The story controllers of the currently active stories, indexed by their
   // story IDs.

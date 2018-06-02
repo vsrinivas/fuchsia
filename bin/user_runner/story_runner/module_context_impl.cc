@@ -111,5 +111,9 @@ void ModuleContextImpl::RequestFocus() {
   story_controller_impl_->RequestStoryFocus();
 }
 
+void ModuleContextImpl::Active() {
+  story_controller_impl_->Active();
+}
+
 }  // namespace modular
 }  // namespace fuchsia

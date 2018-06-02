@@ -440,6 +440,12 @@ void StoryProviderImpl::Watch(
 }
 
 // |StoryProvider|
+void StoryProviderImpl::WatchActivity(
+    fidl::InterfaceHandle<StoryActivityWatcher> watcher) {
+  activity_watchers_.AddInterfacePtr(watcher.Bind());
+}
+
+// |StoryProvider|
 void StoryProviderImpl::Duplicate(
     fidl::InterfaceRequest<StoryProvider> request) {
   Connect(std::move(request));
@@ -699,6 +705,12 @@ void StoryProviderImpl::WatchVisualState(
     fidl::InterfaceHandle<StoryVisualStateWatcher> watcher) {
   presentation_provider_->WatchVisualState(std::move(story_id),
                                            std::move(watcher));
+}
+
+void StoryProviderImpl::Active(const fidl::StringPtr& story_id) {
+  for (const auto& i : activity_watchers_.ptrs()) {
+    (*i)->OnStoryActivity(story_id);
+  }
 }
 
 }  // namespace modular

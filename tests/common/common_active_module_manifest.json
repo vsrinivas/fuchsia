@@ -1,0 +1,5 @@
+{
+  "binary": "common_active_module",
+  "suggestion_headline": "Active module",
+  "action": "com.google.fuchsia.common.active"
+}

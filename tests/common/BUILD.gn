@@ -9,6 +9,7 @@ group("common") {
   testonly = true
 
   public_deps = [
+    ":common_active_module_bin",
     ":common_null_module_bin",
   ]
 }
@@ -55,8 +56,51 @@ package("common_null_module") {
   ]
 }
 
+executable("common_active_module_bin") {
+  testonly = true
+
+  output_name = "common_active_module"
+
+  sources = [
+    "common_active_module.cc",
+  ]
+
+  deps = [
+    ":defs",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/ui/views/fidl:v1",
+    "//peridot/lib/testing",
+    "//peridot/public/lib:fidl",
+    "//peridot/public/lib/app_driver/cpp:module_driver",
+  ]
+}
+
+verify_module_manifest("common_active_module_manifest_verified") {
+  module_manifest = "common_active_module_manifest.json"
+  original_target_name = "common_active_module_manifest.json"
+}
+
+package("common_active_module") {
+  testonly = true
+
+  deps = [
+    ":common_active_module_bin",
+    ":common_active_module_manifest_verified",
+  ]
+
+  binary = "common_active_module"
+
+  meta = [
+    {
+       path = "common_active_module_manifest.json"
+       dest = "module.json"
+    },
+  ]
+}
+
 initial_module_packages("common_module_index") {
   packages = [
+    "common_active_module",
     "common_null_module",
   ]
 }

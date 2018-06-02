@@ -1835,5 +1835,9 @@ void StoryControllerImpl::WatchVisualState(
   story_provider_impl_->WatchVisualState(story_id_, std::move(watcher));
 }
 
+void StoryControllerImpl::Active() {
+  story_provider_impl_->Active(story_id_);
+}
+
 }  // namespace modular
 }  // namespace fuchsia

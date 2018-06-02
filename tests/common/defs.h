@@ -13,6 +13,13 @@ constexpr char kCommonNullAction[] = "com.google.fuchsia.common.null";
 constexpr char kCommonNullModuleStarted[] = "common_null_module_started";
 constexpr char kCommonNullModuleStopped[] = "common_null_module_stopped";
 
+constexpr char kCommonActiveModule[] = "common_active_module";
+constexpr char kCommonActiveAction[] = "com.google.fuchsia.common.active";
+
+constexpr char kCommonActiveModuleStarted[] = "common_active_module_started";
+constexpr char kCommonActiveModuleOngoing[] = "common_active_module_ongoing";
+constexpr char kCommonActiveModuleStopped[] = "common_active_module_stopped";
+
 }  // namespace
 
 #endif  // PERIDOT_TESTS_COMMON_DEFS_H_

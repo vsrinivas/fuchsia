@@ -6,8 +6,6 @@ library fuchsia.modular;
 
 // This interface is exposed to all Module instances in a story. It allows to
 // create Link instances and run more Module instances.
-//
-// Next ordinal: 13
 [Discoverable]
 interface ModuleContext {
   // Gets a Link instance with the given name.
@@ -62,7 +60,7 @@ interface ModuleContext {
   // Gets the ComponentContext instance associated with this Module instance.
   // This ComponentContext instance is unique to this particular Module
   // instance.
-  7: GetComponentContext(request<ComponentContext> context_request);
+  7: GetComponentContext(request<ComponentContext> @request);
 
   // Gets the IntelligenceServices service vendor associated with this Module
   // instance.
@@ -75,6 +73,15 @@ interface ModuleContext {
   // Requests that the current story and module gain focus. It's up to the story
   // shell and user shell to honor that request.
   10: RequestFocus();
+
+  // EXPERIMENTAL. Declares that activity is ongoing in this module. This
+  // information is forwarded to the user shell (cf.
+  // StoryProvider.WatchActivity() and StoryProviderWatcher), which may use it
+  // and the frequency at which it receives these calls to determine to keep the
+  // story of this module in focus. The module should call this method regularly
+  // while activity is ongoing. Once the activity ceases, the module should just
+  // not issue calls anymore. See StoryProviderWatcher for more motivation.
+  11: Active();
 };
 
 // Communicates the status of an Intent to a Module.

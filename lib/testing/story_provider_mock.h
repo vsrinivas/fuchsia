@@ -56,6 +56,12 @@ class StoryProviderMock : public StoryProvider {
   }
 
   // |StoryProvider|
+  void WatchActivity(fidl::InterfaceHandle<fuchsia::modular::StoryActivityWatcher>
+                     watcher) override {
+    activity_watchers_.AddInterfacePtr(watcher.Bind());
+  }
+
+  // |StoryProvider|
   void DeleteStory(fidl::StringPtr story_id,
                    DeleteStoryCallback callback) override {
     callback();
@@ -101,6 +107,7 @@ class StoryProviderMock : public StoryProvider {
   fuchsia::modular::StoryControllerMock controller_mock_;
   fidl::BindingSet<fuchsia::modular::StoryController> binding_set_;
   fidl::InterfacePtrSet<fuchsia::modular::StoryProviderWatcher> watchers_;
+  fidl::InterfacePtrSet<fuchsia::modular::StoryActivityWatcher> activity_watchers_;
 };
 
 }  // namespace modular
