@@ -83,7 +83,7 @@ class ServiceProviderImpl : public ServiceProvider {
   void AddService(InterfaceRequestHandler<Interface> handler,
                   const std::string& service_name = Interface::Name_) {
     AddServiceForName(
-        [handler](zx::channel channel) {
+        [handler = std::move(handler)](zx::channel channel) {
           handler(fidl::InterfaceRequest<Interface>(std::move(channel)));
         },
         service_name);
