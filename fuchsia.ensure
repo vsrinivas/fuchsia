@@ -40,7 +40,7 @@ fuchsia/go/${platform} git_revision:b8bd7d94a2ae6c80ab8b6ed5900d3eeba8a777c3
 
 # Rust
 @Subdir rust
-fuchsia/rust/${platform} git_revision:8a28d94ea1b6c19b7e1d41ef9b33ccb73951f654
+fuchsia/rust/${platform} git_revision:4ecf12bf0eb8386626ccdb5f721a7183ccc4eba6
 
 # Swift
 @Subdir swift
