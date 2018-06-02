@@ -1,0 +1,38 @@
+// Copyright 2015 The Chromium Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.net.oldhttp;
+
+struct URLResponse {
+  // If the response resulted in a network level error, this field will be set.
+  HttpError? error;
+
+  // The response body.
+  URLBody? body;
+
+  // The final URL of the response, after redirects have been followed.
+  string? url;
+
+  // The HTTP status code. 0 if not applicable.
+  uint32 status_code;
+
+  // The HTTP status line.
+  string? status_line;
+
+  // The HTTP response headers.
+  vector<HttpHeader>? headers;
+
+  // The MIME type of the response body.
+  string? mime_type;
+
+  // The character set of the response body.
+  string? charset;
+
+  // These fields are set to non-NULL if this response corresponds to a
+  // redirect.  Call the |FollowRedirect| method on the URLLoader instance to
+  // follow this redirect.
+  string? redirect_method;
+  string? redirect_url;
+  string? redirect_referrer;
+};
