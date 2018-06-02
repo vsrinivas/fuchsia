@@ -41,8 +41,8 @@ def remove_dashes(name):
 class CppBuilder(Builder):
 
     def __init__(self, output, overlay, debug):
-        super(CppBuilder, self).__init__(
-            domains=['cpp', 'exe', 'fidl', 'image'])
+        super(CppBuilder, self).__init__(domains=['cpp', 'exe'],
+                                         ignored_domains=['fidl', 'images'])
         self.output = output
         self.is_overlay = overlay
         self.is_debug = debug
@@ -185,10 +185,6 @@ class CppBuilder(Builder):
         shutil.copyfile(file.source, destination)
         st = os.stat(destination)
         os.chmod(destination, st.st_mode | stat.S_IXUSR | stat.S_IXGRP)
-
-    def install_fidl_atom(self, atom): pass
-
-    def install_image_atom(self, atom): pass
 
 
 def main():

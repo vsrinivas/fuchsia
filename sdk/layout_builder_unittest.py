@@ -19,6 +19,7 @@ def _atom(domain, name):
           'name': name,
         },
         'gn-label': '//foo/bar:blah',
+        'category': 'public',
         'package-deps': [],
         'deps': [],
         'files': [],
@@ -46,6 +47,17 @@ class LayoutBuilderTests(unittest.TestCase):
         self.assertFalse(_process_manifest_data(manifest, builder))
         builder.prepare.assert_not_called()
         builder.finalize.assert_not_called()
+
+    @patch('layout_builder.Builder')
+    def test_different_domains_ignored(self, builder):
+        builder.domains = ['cpp']
+        builder.ignored_domains = ['exe']
+        builder.install_exe_atom = MagicMock()
+        manifest = _manifest([_atom('exe', 'foo')])
+        self.assertTrue(_process_manifest_data(manifest, builder))
+        self.assertTrue(builder.prepare.called)
+        builder.install_exe_atom.assert_not_called()
+        self.assertTrue(builder.finalize.called)
 
     @patch('layout_builder.Builder')
     def test_install_one(self, builder):

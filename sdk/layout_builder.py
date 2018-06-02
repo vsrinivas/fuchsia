@@ -30,13 +30,15 @@ class Builder(object):
     '''Processes atoms found in a manifest.
 
     Domains that this builder handles are set via the `domains` constructor
-    argument.
+    argument. Domains that are not supported should be added to the
+    `ignored_domains` constructor argument.
     In order to process atoms for a domain "foo", a builder needs to define a
     `install_foo_atom` method that accepts a single Atom as an argument.
     '''
 
-    def __init__(self, domains=[]):
+    def __init__(self, domains=[], ignored_domains=[]):
         self.domains = domains
+        self.ignored_domains = ignored_domains
         self.metadata = None
 
     def prepare(self):
@@ -74,20 +76,21 @@ def _process_manifest_data(manifest, builder):
     builder.metadata = Metadata(manifest['meta'])
 
     # Verify that the manifest only contains supported domains.
-    if builder.domains:
-        extra_domains = set(filter(lambda d: d not in builder.domains,
-                                   [a.id.domain for a in atoms]))
-        if extra_domains:
-            print('The following domains are not currently supported: %s' %
-                  ', '.join(extra_domains))
-            return False
+    extra_domains = set(filter(lambda d: d not in builder.domains,
+                               [a.id.domain for a in atoms]))
+    extra_domains = extra_domains - set(builder.ignored_domains)
+    if extra_domains:
+        print('The following domains are not currently supported: %s' %
+              ', '.join(extra_domains))
+        return False
 
     builder.prepare()
 
     # Pass the various atoms through the builder.
     for atom in atoms:
         domain = atom.id.domain
-        getattr(builder, 'install_%s_atom' % domain)(atom)
+        if domain in builder.domains:
+            getattr(builder, 'install_%s_atom' % domain)(atom)
 
     # Wrap things up.
     builder.finalize()
