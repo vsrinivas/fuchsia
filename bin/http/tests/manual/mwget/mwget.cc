@@ -5,7 +5,7 @@
 #include <stdlib.h>
 
 #include <lib/async-loop/cpp/loop.h>
-#include <network/cpp/fidl.h>
+#include <fuchsia/net/oldhttp/cpp/fidl.h>
 
 #include "lib/app/cpp/connect.h"
 #include "lib/app/cpp/startup_context.h"
@@ -14,13 +14,15 @@
 
 namespace examples {
 
+namespace http = ::fuchsia::net::oldhttp;
+
 // ResponseConsumer consumes the response silently.
 class ResponseConsumer {
  public:
   ResponseConsumer(int id) : id_(id) {}
   ResponseConsumer() = delete;
 
-  void Run(network::URLResponse response) const {
+  void Run(http::URLResponse response) const {
     if (response.error) {
       printf("#%d: Got error: %d (%s)\n", id_, response.error->code,
              response.error->description.get().c_str());
@@ -61,10 +63,10 @@ class MWGetApp {
   MWGetApp(async::Loop* loop)
       : context_(fuchsia::sys::StartupContext::CreateFromStartupInfo()),
         loop_(loop) {
-    network_service_ =
-        context_->ConnectToEnvironmentService<network::NetworkService>();
+    http_service_ =
+        context_->ConnectToEnvironmentService<http::HttpService>();
     FXL_DCHECK(loop);
-    FXL_DCHECK(network_service_);
+    FXL_DCHECK(http_service_);
   }
 
   bool Start(const std::vector<std::string>& args) {
@@ -85,15 +87,15 @@ class MWGetApp {
 
     num_done_ = 0;
     for (int i = 0; i < num_loaders_; i++) {
-      network_service_->CreateURLLoader(url_loader_[i].NewRequest());
+      http_service_->CreateURLLoader(url_loader_[i].NewRequest());
 
-      network::URLRequest request;
+      http::URLRequest request;
       request.url = url;
       request.method = "GET";
       request.auto_follow_redirects = true;
 
       url_loader_[i]->Start(std::move(request),
-                            [this, i](network::URLResponse response) {
+                            [this, i](http::URLResponse response) {
                               ResponseConsumer consumer(i);
                               consumer.Run(std::move(response));
                               ++num_done_;
@@ -111,8 +113,8 @@ class MWGetApp {
   std::unique_ptr<fuchsia::sys::StartupContext> context_;
 
   async::Loop* const loop_;
-  network::NetworkServicePtr network_service_;
-  network::URLLoaderPtr url_loader_[MAX_LOADERS];
+  http::HttpServicePtr http_service_;
+  http::URLLoaderPtr url_loader_[MAX_LOADERS];
   int num_loaders_;
   int num_done_;
 };

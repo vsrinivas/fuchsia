@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <fuchsia/sys/cpp/fidl.h>
-#include <network/cpp/fidl.h>
+#include <fuchsia/net/oldhttp/cpp/fidl.h>
 
 #include <unordered_map>
 
@@ -21,9 +21,11 @@
 
 namespace {
 
+namespace http = ::fuchsia::net::oldhttp;
+
 class RetryingLoader {
  public:
-  RetryingLoader(network::URLLoaderPtr url_loader, const std::string& url,
+  RetryingLoader(http::URLLoaderPtr url_loader, const std::string& url,
                  const fuchsia::sys::Loader::LoadComponentCallback& callback)
       : url_loader_(std::move(url_loader)),
         url_(url),
@@ -37,7 +39,7 @@ class RetryingLoader {
   void Attempt() {
     url_loader_->Start(NewRequest(),
                        [weak_this = weak_ptr_factory_.GetWeakPtr()](
-                           const network::URLResponse& response) {
+                           const http::URLResponse& response) {
                          if (weak_this) {
                            weak_this->ProcessResponse(response);
                          }
@@ -49,16 +51,16 @@ class RetryingLoader {
  private:
   // Need to create a new request each time because a URLRequest's body can
   // potentially contain a VMO handle and so can't be cloned.
-  network::URLRequest NewRequest() const {
-    network::URLRequest request;
+  http::URLRequest NewRequest() const {
+    http::URLRequest request;
     request.method = "GET";
     request.url = url_;
     request.auto_follow_redirects = true;
-    request.response_body_mode = network::ResponseBodyMode::SIZED_BUFFER;
+    request.response_body_mode = http::ResponseBodyMode::SIZED_BUFFER;
     return request;
   }
 
-  void ProcessResponse(const network::URLResponse& response) {
+  void ProcessResponse(const http::URLResponse& response) {
     if (response.status_code == 200) {
       auto package = fuchsia::sys::Package::New();
       package->data =
@@ -75,7 +77,7 @@ class RetryingLoader {
     }
   }
 
-  void Retry(const network::URLResponse& response) {
+  void Retry(const http::URLResponse& response) {
     async::PostDelayedTask(async_get_default(),
                            [weak_this = weak_ptr_factory_.GetWeakPtr()] {
                              if (weak_this) {
@@ -109,7 +111,7 @@ class RetryingLoader {
     deleter_();
   }
 
-  const network::URLLoaderPtr url_loader_;
+  const http::URLLoaderPtr url_loader_;
   const std::string url_;
   const fuchsia::sys::Loader::LoadComponentCallback callback_;
   fit::closure deleter_;
@@ -130,13 +132,13 @@ class NetworkLoader : public fuchsia::sys::Loader {
           bindings_.AddBinding(this, std::move(request));
         });
 
-    context_->ConnectToEnvironmentService(net_.NewRequest());
+    context_->ConnectToEnvironmentService(http_.NewRequest());
   }
 
   void LoadComponent(fidl::StringPtr url,
                      LoadComponentCallback callback) override {
-    network::URLLoaderPtr loader;
-    net_->CreateURLLoader(loader.NewRequest());
+    http::URLLoaderPtr loader;
+    http_->CreateURLLoader(loader.NewRequest());
 
     auto retrying_loader =
         std::make_unique<RetryingLoader>(std::move(loader), url, callback);
@@ -150,7 +152,7 @@ class NetworkLoader : public fuchsia::sys::Loader {
   std::unique_ptr<fuchsia::sys::StartupContext> context_;
   fidl::BindingSet<fuchsia::sys::Loader> bindings_;
 
-  network::NetworkServicePtr net_;
+  http::HttpServicePtr http_;
   std::unordered_map<RetryingLoader*, std::unique_ptr<RetryingLoader>> loaders_;
 };
 
