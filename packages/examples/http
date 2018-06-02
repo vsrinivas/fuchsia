@@ -3,6 +3,8 @@
         "garnet/packages/prod/network"
     ],
     "packages": {
+        "deprecated-wget": "//garnet/examples/http/wget:deprecated-wget",
+        "deprecated-wget-rs": "//garnet/examples/http/wget-rs:deprecated-wget-rs",
         "postfile": "//garnet/examples/http/postfile",
         "wget": "//garnet/examples/http/wget",
         "wget-rs": "//garnet/examples/http/wget-rs"

@@ -20,7 +20,7 @@ executable("bin") {
   ]
 }
 
-package("wget") {
+package("deprecated-wget") {
   deprecated_system_image = true
 
   deps = [
@@ -30,4 +30,12 @@ package("wget") {
   binaries = [ {
         name = "wget"
       } ]
+}
+
+package("wget") {
+  deps = [
+    ":bin",
+  ]
+
+  binary = "wget"
 }

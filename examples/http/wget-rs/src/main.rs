@@ -10,13 +10,13 @@ extern crate fuchsia_app as component;
 extern crate fuchsia_async as async;
 extern crate fuchsia_zircon as zx;
 extern crate futures;
-extern crate fidl_network as netsvc;
+extern crate fidl_fuchsia_net_oldhttp as http;
 
 use failure::{Error, ResultExt};
 use futures::prelude::*;
 use futures::io::AllowStdIo;
 
-fn print_headers(resp: &netsvc::UrlResponse) {
+fn print_headers(resp: &http::UrlResponse) {
     println!(">>> Headers <<<");
     if let Some(status) = &resp.status_line {
         println!("  {}", status);
@@ -54,28 +54,28 @@ fn main_res() -> Result<(), Error> {
     let mut exec = async::Executor::new()?;
 
     // Connect to the network service
-    let net = component::client::connect_to_service::<netsvc::NetworkServiceMarker>()?;
+    let net = component::client::connect_to_service::<http::HttpServiceMarker>()?;
 
     // Create a UrlLoader instance
     let (s, p) = zx::Channel::create().context("failed to create zx channel")?;
     let proxy = async::Channel::from_channel(p).context("failed to make async channel")?;
 
-    let loader_server = fidl::endpoints2::ServerEnd::<netsvc::UrlLoaderMarker>::new(s);
+    let loader_server = fidl::endpoints2::ServerEnd::<http::UrlLoaderMarker>::new(s);
     net.create_url_loader(loader_server)?;
 
     // Send the UrlRequest to fetch the webpage
-    let mut req = netsvc::UrlRequest {
+    let mut req = http::UrlRequest {
         url: url,
         method: String::from("GET"),
         headers: None,
         body: None,
         response_body_buffer_size: 0,
         auto_follow_redirects: true,
-        cache_mode: netsvc::CacheMode::Default,
-        response_body_mode: netsvc::ResponseBodyMode::Stream,
+        cache_mode: http::CacheMode::Default,
+        response_body_mode: http::ResponseBodyMode::Stream,
     };
 
-	let loader_proxy = netsvc::UrlLoaderProxy::new(proxy);
+	let loader_proxy = http::UrlLoaderProxy::new(proxy);
     let fut = loader_proxy.start(&mut req).err_into().and_then(|resp| {
         if let Some(e) = resp.error {
             let code = e.code;
@@ -87,13 +87,13 @@ fn main_res() -> Result<(), Error> {
         print_headers(&resp);
 
         match resp.body.map(|x| *x) {
-            Some(netsvc::UrlBody::Stream(s)) => {
+            Some(http::UrlBody::Stream(s)) => {
                 Some(async::Socket::from_socket(s)
                         .into_future()
                         .err_into())
             }
-            Some(netsvc::UrlBody::Buffer(_)) |
-            Some(netsvc::UrlBody::SizedBuffer(_)) |
+            Some(http::UrlBody::Buffer(_)) |
+            Some(http::UrlBody::SizedBuffer(_)) |
             None =>  None,
         }
     }).and_then(|socket_opt| {

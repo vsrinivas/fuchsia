@@ -11,7 +11,7 @@ rustc_binary("bin") {
   deps = [
     "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/lib/mem/fidl:fidl-rustc",
-    "//garnet/public/lib/network/fidl:fidl-rustc",
+    "//garnet/public/lib/net/oldhttp/fidl:fidl-rustc",
     "//garnet/public/rust/crates/fuchsia-app",
     "//garnet/public/rust/crates/fuchsia-async",
     "//garnet/public/rust/crates/fuchsia-zircon",
@@ -21,6 +21,14 @@ rustc_binary("bin") {
 }
 
 package("wget-rs") {
+  deps = [
+    ":bin",
+  ]
+
+  binary = "rust_crates/wget_rs"
+}
+
+package("deprecated-wget-rs") {
   deprecated_system_image = true
 
   deps = [
