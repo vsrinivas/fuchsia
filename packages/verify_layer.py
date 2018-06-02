@@ -23,8 +23,6 @@ ROOT_CANONICAL_PACKAGES = [
 # Standard names for packages in a layer.
 CANONICAL_PACKAGES = [
     'all',
-    # TODO(pylaligand): remove me.
-    'dev',
 ]
 
 # Directories which do not require aggregation.
