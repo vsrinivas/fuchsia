@@ -9,6 +9,9 @@ declare_args() {
   # Sets a custom base directory for `rustc` and `cargo`.
   # This can be used to test custom Rust toolchains.
   rustc_prefix = "//buildtools/${host_platform}/rust/bin"
+
+  # Sets the default LTO type for rustc bulids.
+  rust_lto = "unset"
 }
 
 template("rustc_third_party_artifact") {
@@ -117,6 +120,25 @@ template("rustc_artifact") {
   } else {
     opt_level = "z"
   }
+
+  if (type == "bin") {
+    if (defined(invoker.with_lto)) {
+      with_lto = invoker.with_lto
+    } else if (rust_lto != "unset") {
+      with_lto = rust_lto
+    } else if (is_debug) {
+      with_lto = "none"
+    } else {
+      # TODO(tkilbourn): turn this on after gathering more data on impact to build
+      # speed.
+      with_lto = "none"
+    }
+  } else {
+    with_lto = "none"
+  }
+  assert(
+      with_lto == "none" || with_lto == "thin" || with_lto == "fat",
+      "with_lto was neither none, thin, or fat")
 
   # Determine the prefix and extension for the output file based on the crate type
   if (type == "bin") {
@@ -237,6 +259,9 @@ template("rustc_artifact") {
       "--version",
       version,
     ]
+    if (with_lto != "none") {
+      args += [ "--lto", with_lto ]
+    }
     if (with_unit_tests) {
       args += [ "--with-unit-tests" ]
     }

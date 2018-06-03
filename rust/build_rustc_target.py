@@ -64,6 +64,10 @@ def main():
                         help="Optimization level",
                         required=True,
                         choices=["0", "1", "2", "3", "s", "z"])
+    parser.add_argument("--lto",
+                        help="Use LTO",
+                        required=False,
+                        choices=["thin", "fat"])
     parser.add_argument("--output-file",
                         help="Path at which the output file should be stored",
                         required=True)
@@ -135,6 +139,9 @@ def main():
         "-Lnative=%s" % args.shared_libs_root,
         "--color=always",
     ]
+
+    if args.lto:
+        call_args += ["-Clto=%s" % args.lto]
 
     third_party_json = json.load(open(args.third_party_deps_data))
     search_paths = third_party_json["deps_folders"] + [ args.first_party_crate_root ]
