@@ -82,8 +82,7 @@ class ListenerContainer : public socket::SocketWriter::Client {
   }
 
   // socket::SocketWriter::Client
-  void GetNext(size_t offset,
-               size_t max_size,
+  void GetNext(size_t offset, size_t max_size,
                std::function<void(fxl::StringView)> callback) override {
     size_t to_remove = offset - current_offset_;
     while (to_remove > 0) {
@@ -180,8 +179,7 @@ std::string BuildPathRepresentation(FirebaseServer::PathView path) {
 }
 
 std::string BuildEvent(fxl::StringView event_name,
-                       FirebaseServer::PathView path,
-                       rapidjson::Value* value,
+                       FirebaseServer::PathView path, rapidjson::Value* value,
                        Filter* filter) {
   return fxl::Concatenate({"event: ", event_name, "\ndata: {\"path\":\"",
                            BuildPathRepresentation(path),
@@ -258,8 +256,7 @@ bool IsTimestamp(const rapidjson::Value& value) {
 // Recurse through |value| and replace the following json object:
 // { ".sv": "timestamp" } by the given |timestamp| or the current time if
 // timestamp == MIN_INT64
-void FillTimestamp(rapidjson::Value* value,
-                   rapidjson::Document* document,
+void FillTimestamp(rapidjson::Value* value, rapidjson::Document* document,
                    int64_t timestamp = std::numeric_limits<int64_t>::min()) {
   if (!value->IsObject()) {
     return;
@@ -306,13 +303,10 @@ class FirebaseServer::Listeners {
   Listeners() {}
   ~Listeners() {}
 
-  void AddListener(PathView path,
-                   std::unique_ptr<Filter> filter,
-                   zx::socket socket,
-                   rapidjson::Value* initial_value);
+  void AddListener(PathView path, std::unique_ptr<Filter> filter,
+                   zx::socket socket, rapidjson::Value* initial_value);
 
-  void SendEvent(const std::string& event_name,
-                 PathView path,
+  void SendEvent(const std::string& event_name, PathView path,
                  rapidjson::Value* value);
 
  private:

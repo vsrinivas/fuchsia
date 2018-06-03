@@ -75,8 +75,7 @@ FirebaseImpl::WatchData::WatchData() {}
 FirebaseImpl::WatchData::~WatchData() {}
 
 FirebaseImpl::FirebaseImpl(network_wrapper::NetworkWrapper* network_wrapper,
-                           const std::string& db_id,
-                           const std::string& prefix)
+                           const std::string& db_id, const std::string& prefix)
     : network_wrapper_(network_wrapper), api_url_(BuildApiUrl(db_id, prefix)) {
   FXL_DCHECK(network_wrapper_);
 }
@@ -84,8 +83,7 @@ FirebaseImpl::FirebaseImpl(network_wrapper::NetworkWrapper* network_wrapper,
 FirebaseImpl::~FirebaseImpl() {}
 
 void FirebaseImpl::Get(
-    const std::string& key,
-    const std::vector<std::string>& query_params,
+    const std::string& key, const std::vector<std::string>& query_params,
     std::function<void(Status status, const rapidjson::Value& value)>
         callback) {
   auto request_callback = [callback = std::move(callback)](
@@ -187,15 +185,14 @@ std::string FirebaseImpl::BuildRequestUrl(
 }
 
 void FirebaseImpl::Request(
-    const std::string& url,
-    const std::string& method,
+    const std::string& url, const std::string& method,
     const std::string& message,
     const std::function<void(Status status, std::string response)>& callback) {
-  requests_.emplace(network_wrapper_->Request(
-      MakeRequest(url, method, message),
-      [this, callback](http::URLResponse response) {
-        OnResponse(callback, std::move(response));
-      }));
+  requests_.emplace(
+      network_wrapper_->Request(MakeRequest(url, method, message),
+                                [this, callback](http::URLResponse response) {
+                                  OnResponse(callback, std::move(response));
+                                }));
 }
 
 void FirebaseImpl::OnResponse(
@@ -272,8 +269,7 @@ void FirebaseImpl::OnStreamComplete(WatchClient* watch_client) {
   watch_data_.erase(watch_client);
 }
 
-void FirebaseImpl::OnStreamEvent(WatchClient* watch_client,
-                                 Status /*status*/,
+void FirebaseImpl::OnStreamEvent(WatchClient* watch_client, Status /*status*/,
                                  const std::string& event,
                                  const std::string& payload) {
   if (event == "put" || event == "patch") {

@@ -27,9 +27,8 @@ namespace http = ::fuchsia::net::oldhttp;
 
 namespace {
 
-http::HttpHeaderPtr GetHeader(
-    const fidl::VectorPtr<http::HttpHeader>& headers,
-    const std::string& header_name) {
+http::HttpHeaderPtr GetHeader(const fidl::VectorPtr<http::HttpHeader>& headers,
+                              const std::string& header_name) {
   for (const auto& header : *headers) {
     if (header.name == header_name) {
       auto result = http::HttpHeader::New();
@@ -48,8 +47,7 @@ class CloudStorageImplTest : public gtest::TestWithMessageLoop {
   ~CloudStorageImplTest() override {}
 
  protected:
-  void SetResponse(const std::string& body,
-                   int64_t content_length,
+  void SetResponse(const std::string& body, int64_t content_length,
                    uint32_t status_code) {
     http::URLResponse server_response;
     server_response.body = http::URLBody::New();

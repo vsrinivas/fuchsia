@@ -95,8 +95,7 @@ class ServiceAccountTokenProviderTest : public gtest::TestWithMessageLoop {
     return std::string(string_buffer.GetString(), string_buffer.GetSize());
   }
 
-  http::URLResponse GetResponse(http::HttpErrorPtr error,
-                                uint32_t status,
+  http::URLResponse GetResponse(http::HttpErrorPtr error, uint32_t status,
                                 std::string body) {
     http::URLResponse response;
     response.error = std::move(error);
@@ -110,8 +109,7 @@ class ServiceAccountTokenProviderTest : public gtest::TestWithMessageLoop {
     return response;
   }
 
-  bool GetToken(std::string api_key,
-                modular_auth::FirebaseTokenPtr* token,
+  bool GetToken(std::string api_key, modular_auth::FirebaseTokenPtr* token,
                 modular_auth::AuthErr* error) {
     token_provider_.GetFirebaseAuthToken(
         api_key, callback::Capture([this] { message_loop_.PostQuitTask(); },

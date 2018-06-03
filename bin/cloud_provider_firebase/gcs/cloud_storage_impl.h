@@ -27,14 +27,12 @@ class CloudStorageImpl : public CloudStorage {
   ~CloudStorageImpl() override;
 
   // CloudStorage implementation.
-  void UploadObject(std::string auth_token,
-                    const std::string& key,
+  void UploadObject(std::string auth_token, const std::string& key,
                     fsl::SizedVmo data,
                     std::function<void(Status)> callback) override;
 
   void DownloadObject(
-      std::string auth_token,
-      const std::string& key,
+      std::string auth_token, const std::string& key,
       std::function<void(Status status, uint64_t size, zx::socket data)>
           callback) override;
 
@@ -43,18 +41,21 @@ class CloudStorageImpl : public CloudStorage {
 
   std::string GetUploadUrl(fxl::StringView key);
 
-  void Request(std::function<::fuchsia::net::oldhttp::URLRequest()> request_factory,
-               std::function<void(Status status, ::fuchsia::net::oldhttp::URLResponse response)>
-                   callback);
-  void OnResponse(std::function<void(Status status,
-                                     ::fuchsia::net::oldhttp::URLResponse response)> callback,
-                  ::fuchsia::net::oldhttp::URLResponse response);
+  void Request(
+      std::function<::fuchsia::net::oldhttp::URLRequest()> request_factory,
+      std::function<void(Status status,
+                         ::fuchsia::net::oldhttp::URLResponse response)>
+          callback);
+  void OnResponse(
+      std::function<void(Status status,
+                         ::fuchsia::net::oldhttp::URLResponse response)>
+          callback,
+      ::fuchsia::net::oldhttp::URLResponse response);
 
   void OnDownloadResponseReceived(
       std::function<void(Status status, uint64_t size, zx::socket data)>
           callback,
-      Status status,
-      ::fuchsia::net::oldhttp::URLResponse response);
+      Status status, ::fuchsia::net::oldhttp::URLResponse response);
 
   network_wrapper::NetworkWrapper* const network_wrapper_;
   const std::string url_prefix_;

@@ -126,8 +126,7 @@ struct ServiceAccountTokenProvider::CachedToken {
 };
 
 ServiceAccountTokenProvider::ServiceAccountTokenProvider(
-    network_wrapper::NetworkWrapper* network_wrapper,
-    std::string user_id)
+    network_wrapper::NetworkWrapper* network_wrapper, std::string user_id)
     : network_wrapper_(network_wrapper), user_id_(std::move(user_id)) {}
 
 ServiceAccountTokenProvider::~ServiceAccountTokenProvider() {
@@ -193,8 +192,7 @@ void ServiceAccountTokenProvider::GetIdToken(GetIdTokenCallback callback) {
 }
 
 void ServiceAccountTokenProvider::GetFirebaseAuthToken(
-    fidl::StringPtr firebase_api_key,
-    GetFirebaseAuthTokenCallback callback) {
+    fidl::StringPtr firebase_api_key, GetFirebaseAuthTokenCallback callback) {
   // A request is in progress to get a token. Registers the callback that will
   // be called when the request ends.
   if (!in_progress_callbacks_[firebase_api_key].empty()) {
@@ -230,8 +228,8 @@ void ServiceAccountTokenProvider::GetFirebaseAuthToken(
        custom_token = std::move(custom_token)] {
         return GetIdentityRequest(firebase_api_key, custom_token);
       },
-      [this, firebase_api_key =
-                 firebase_api_key.get()](http::URLResponse response) {
+      [this,
+       firebase_api_key = firebase_api_key.get()](http::URLResponse response) {
         HandleIdentityResponse(firebase_api_key, std::move(response));
       }));
 }
@@ -320,8 +318,7 @@ modular_auth::FirebaseTokenPtr ServiceAccountTokenProvider::GetFirebaseToken(
 }
 
 http::URLRequest ServiceAccountTokenProvider::GetIdentityRequest(
-    const std::string& api_key,
-    const std::string& custom_token) {
+    const std::string& api_key, const std::string& custom_token) {
   http::URLRequest request;
   request.url =
       "https://www.googleapis.com/identitytoolkit/v3/relyingparty/"
@@ -372,8 +369,7 @@ std::string ServiceAccountTokenProvider::GetIdentityRequestBody(
 }
 
 void ServiceAccountTokenProvider::HandleIdentityResponse(
-    const std::string& api_key,
-    http::URLResponse response) {
+    const std::string& api_key, http::URLResponse response) {
   if (response.error) {
     ResolveCallbacks(api_key, nullptr,
                      GetError(modular_auth::Status::NETWORK_ERROR,
@@ -429,8 +425,7 @@ void ServiceAccountTokenProvider::HandleIdentityResponse(
 }
 
 void ServiceAccountTokenProvider::ResolveCallbacks(
-    const std::string& api_key,
-    modular_auth::FirebaseTokenPtr token,
+    const std::string& api_key, modular_auth::FirebaseTokenPtr token,
     modular_auth::AuthErr error) {
   auto callbacks = std::move(in_progress_callbacks_[api_key]);
   in_progress_callbacks_[api_key].clear();

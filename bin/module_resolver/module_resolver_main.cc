@@ -55,8 +55,7 @@ class ModuleResolverApp : ContextListener {
               async_get_default(),
               [context]() {
                 http::HttpServicePtr http_service;
-                context->ConnectToEnvironmentService(
-                    http_service.NewRequest());
+                context->ConnectToEnvironmentService(http_service.NewRequest());
                 return http_service;
               },
               "cloud-mods", "" /* prefix */));

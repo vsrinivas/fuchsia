@@ -23,9 +23,11 @@ class GcsServer : public Server {
 
  private:
   void HandleGet(::fuchsia::net::oldhttp::URLRequest request,
-                 std::function<void(::fuchsia::net::oldhttp::URLResponse)> callback) override;
+                 std::function<void(::fuchsia::net::oldhttp::URLResponse)>
+                     callback) override;
   void HandlePost(::fuchsia::net::oldhttp::URLRequest request,
-                  std::function<void(::fuchsia::net::oldhttp::URLResponse)> callback) override;
+                  std::function<void(::fuchsia::net::oldhttp::URLResponse)>
+                      callback) override;
 
   std::map<std::string, std::string> data_;
 };

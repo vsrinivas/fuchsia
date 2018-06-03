@@ -6,8 +6,8 @@
 
 #include <utility>
 
-#include <lib/async/cpp/task.h>
 #include <fuchsia/net/oldhttp/cpp/fidl.h>
+#include <lib/async/cpp/task.h>
 
 #include "lib/backoff/exponential_backoff.h"
 #include "lib/fsl/tasks/message_loop.h"

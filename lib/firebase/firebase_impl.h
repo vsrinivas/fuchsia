@@ -33,17 +33,14 @@ class FirebaseImpl : public Firebase {
   // leading or trailing slash. (possible with slashes inside) If empty,
   // requests will be made against root of the database.
   FirebaseImpl(network_wrapper::NetworkWrapper* network_wrapper,
-               const std::string& db_id,
-               const std::string& prefix);
+               const std::string& db_id, const std::string& prefix);
   ~FirebaseImpl() override;
 
   // Firebase:
-  void Get(const std::string& key,
-           const std::vector<std::string>& query_params,
+  void Get(const std::string& key, const std::vector<std::string>& query_params,
            std::function<void(Status status, const rapidjson::Value& value)>
                callback) override;
-  void Put(const std::string& key,
-           const std::vector<std::string>& query_params,
+  void Put(const std::string& key, const std::vector<std::string>& query_params,
            const std::string& data,
            std::function<void(Status status)> callback) override;
   void Patch(const std::string& key,
@@ -68,8 +65,7 @@ class FirebaseImpl : public Firebase {
       const std::vector<std::string>& query_params) const;
 
   void Request(
-      const std::string& url,
-      const std::string& method,
+      const std::string& url, const std::string& method,
       const std::string& message,
       const std::function<void(Status status, std::string response)>& callback);
 
@@ -77,17 +73,15 @@ class FirebaseImpl : public Firebase {
       const std::function<void(Status status, std::string response)>& callback,
       ::fuchsia::net::oldhttp::URLResponse response);
 
-  void OnStream(WatchClient* watch_client, ::fuchsia::net::oldhttp::URLResponse response);
+  void OnStream(WatchClient* watch_client,
+                ::fuchsia::net::oldhttp::URLResponse response);
 
   void OnStreamComplete(WatchClient* watch_client);
 
-  void OnStreamEvent(WatchClient* watch_client,
-                     Status status,
-                     const std::string& event,
-                     const std::string& payload);
+  void OnStreamEvent(WatchClient* watch_client, Status status,
+                     const std::string& event, const std::string& payload);
 
-  void HandleMalformedEvent(WatchClient* watch_client,
-                            const std::string& event,
+  void HandleMalformedEvent(WatchClient* watch_client, const std::string& event,
                             const std::string& payload,
                             const char error_description[]);
 

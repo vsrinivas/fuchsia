@@ -54,9 +54,8 @@ void Server::Serve(http::URLRequest request,
   FXL_NOTREACHED();
 }
 
-void Server::HandleGet(
-    http::URLRequest request,
-    const std::function<void(http::URLResponse)> callback) {
+void Server::HandleGet(http::URLRequest request,
+                       const std::function<void(http::URLResponse)> callback) {
   callback(BuildResponse(request.url, ResponseCode::kUnauthorized,
                          "Unauthorized method"));
 }
@@ -75,24 +74,20 @@ void Server::HandlePatch(
                          "Unauthorized method"));
 }
 
-void Server::HandlePost(
-    http::URLRequest request,
-    const std::function<void(http::URLResponse)> callback) {
+void Server::HandlePost(http::URLRequest request,
+                        const std::function<void(http::URLResponse)> callback) {
   callback(BuildResponse(request.url, ResponseCode::kUnauthorized,
                          "Unauthorized method"));
 }
 
-void Server::HandlePut(
-    http::URLRequest request,
-    const std::function<void(http::URLResponse)> callback) {
+void Server::HandlePut(http::URLRequest request,
+                       const std::function<void(http::URLResponse)> callback) {
   callback(BuildResponse(request.url, ResponseCode::kUnauthorized,
                          "Unauthorized method"));
 }
 
 http::URLResponse Server::BuildResponse(
-    const std::string& url,
-    ResponseCode code,
-    zx::socket body,
+    const std::string& url, ResponseCode code, zx::socket body,
     const std::map<std::string, std::string>& headers) {
   http::URLResponse response;
   response.url = url;
@@ -124,8 +119,7 @@ http::URLResponse Server::BuildResponse(
 }
 
 http::URLResponse Server::BuildResponse(const std::string& url,
-                                        ResponseCode code,
-                                        std::string body) {
+                                        ResponseCode code, std::string body) {
   socket::SocketPair sockets;
   auto* writer = new socket::StringSocketWriter();
   writer->Start(body, std::move(sockets.socket2));

@@ -29,8 +29,7 @@ namespace http = ::fuchsia::net::oldhttp;
 
 class FirebaseModuleManifestSource::Watcher : public firebase::WatchClient {
  public:
-  Watcher(async_t* async,
-          ModuleManifestSource::IdleFn idle_fn,
+  Watcher(async_t* async, ModuleManifestSource::IdleFn idle_fn,
           ModuleManifestSource::NewEntryFn new_fn,
           ModuleManifestSource::RemovedEntryFn removed_fn,
           fxl::WeakPtr<FirebaseModuleManifestSource> owner)
@@ -148,13 +147,11 @@ class FirebaseModuleManifestSource::Watcher : public firebase::WatchClient {
 FirebaseModuleManifestSource::FirebaseModuleManifestSource(
     async_t* async,
     std::function<http::HttpServicePtr()> network_service_factory,
-    std::string db_id,
-    std::string prefix)
+    std::string db_id, std::string prefix)
     : db_id_(db_id),
       prefix_(prefix),
       network_wrapper_(new network_wrapper::NetworkWrapperImpl(
-          async,
-          std::make_unique<backoff::ExponentialBackoff>(),
+          async, std::make_unique<backoff::ExponentialBackoff>(),
           std::move(network_service_factory))),
       client_(
           new firebase::FirebaseImpl(network_wrapper_.get(), db_id, prefix)),
@@ -166,8 +163,7 @@ FirebaseModuleManifestSource::~FirebaseModuleManifestSource() {
   }
 }
 
-void FirebaseModuleManifestSource::Watch(async_t* async,
-                                         IdleFn idle_fn,
+void FirebaseModuleManifestSource::Watch(async_t* async, IdleFn idle_fn,
                                          NewEntryFn new_fn,
                                          RemovedEntryFn removed_fn) {
   auto watcher = std::make_unique<Watcher>(

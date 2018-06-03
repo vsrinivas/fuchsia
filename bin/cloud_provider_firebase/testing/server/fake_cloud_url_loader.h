@@ -22,7 +22,8 @@ class FakeCloudURLLoader : public ::fuchsia::net::oldhttp::URLLoader {
   ~FakeCloudURLLoader() override;
 
   // URLLoader
-  void Start(::fuchsia::net::oldhttp::URLRequest request, StartCallback callback) override;
+  void Start(::fuchsia::net::oldhttp::URLRequest request,
+             StartCallback callback) override;
   void FollowRedirect(FollowRedirectCallback callback) override;
   void QueryStatus(QueryStatusCallback callback) override;
 

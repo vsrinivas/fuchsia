@@ -19,28 +19,31 @@ class Server {
   virtual ~Server();
 
   // Serves the given request.
-  void Serve(::fuchsia::net::oldhttp::URLRequest request,
-             std::function<void(::fuchsia::net::oldhttp::URLResponse)> callback);
+  void Serve(
+      ::fuchsia::net::oldhttp::URLRequest request,
+      std::function<void(::fuchsia::net::oldhttp::URLResponse)> callback);
 
  protected:
   enum class ResponseCode { kOk = 200, kUnauthorized = 401, kNotFound = 404 };
 
-  virtual void HandleGet(::fuchsia::net::oldhttp::URLRequest request,
-                         std::function<void(::fuchsia::net::oldhttp::URLResponse)> callback);
+  virtual void HandleGet(
+      ::fuchsia::net::oldhttp::URLRequest request,
+      std::function<void(::fuchsia::net::oldhttp::URLResponse)> callback);
   virtual void HandleGetStream(
       ::fuchsia::net::oldhttp::URLRequest request,
       std::function<void(::fuchsia::net::oldhttp::URLResponse)> callback);
-  virtual void HandlePatch(::fuchsia::net::oldhttp::URLRequest request,
-                           std::function<void(::fuchsia::net::oldhttp::URLResponse)> callback);
-  virtual void HandlePost(::fuchsia::net::oldhttp::URLRequest request,
-                          std::function<void(::fuchsia::net::oldhttp::URLResponse)> callback);
-  virtual void HandlePut(::fuchsia::net::oldhttp::URLRequest request,
-                         std::function<void(::fuchsia::net::oldhttp::URLResponse)> callback);
+  virtual void HandlePatch(
+      ::fuchsia::net::oldhttp::URLRequest request,
+      std::function<void(::fuchsia::net::oldhttp::URLResponse)> callback);
+  virtual void HandlePost(
+      ::fuchsia::net::oldhttp::URLRequest request,
+      std::function<void(::fuchsia::net::oldhttp::URLResponse)> callback);
+  virtual void HandlePut(
+      ::fuchsia::net::oldhttp::URLRequest request,
+      std::function<void(::fuchsia::net::oldhttp::URLResponse)> callback);
 
   ::fuchsia::net::oldhttp::URLResponse BuildResponse(
-      const std::string& url,
-      ResponseCode code,
-      zx::socket body,
+      const std::string& url, ResponseCode code, zx::socket body,
       const std::map<std::string, std::string>& headers);
 
   ::fuchsia::net::oldhttp::URLResponse BuildResponse(const std::string& url,

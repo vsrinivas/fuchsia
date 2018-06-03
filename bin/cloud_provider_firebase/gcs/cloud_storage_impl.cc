@@ -38,9 +38,8 @@ constexpr fxl::StringView kApiEndpoint =
     "https://firebasestorage.googleapis.com/v0/b/";
 constexpr fxl::StringView kBucketNameSuffix = ".appspot.com";
 
-http::HttpHeaderPtr GetHeader(
-    const fidl::VectorPtr<http::HttpHeader>& headers,
-    const std::string& header_name) {
+http::HttpHeaderPtr GetHeader(const fidl::VectorPtr<http::HttpHeader>& headers,
+                              const std::string& header_name) {
   for (const auto& header : *headers) {
     if (fxl::EqualsCaseInsensitiveASCII(header.name.get(), header_name)) {
       auto result = http::HttpHeader::New();
@@ -59,8 +58,7 @@ http::HttpHeader MakeAuthorizationHeader(const std::string& auth_token) {
 }
 
 void RunUploadObjectCallback(std::function<void(Status)> callback,
-                             Status status,
-                             http::URLResponse response) {
+                             Status status, http::URLResponse response) {
   // A precondition failure means the object already exist.
   if (response.status_code == 412) {
     callback(Status::OBJECT_ALREADY_EXISTS);
@@ -79,23 +77,20 @@ std::string GetUrlPrefix(const std::string& firebase_id,
 
 CloudStorageImpl::CloudStorageImpl(
     network_wrapper::NetworkWrapper* network_wrapper,
-    const std::string& firebase_id,
-    const std::string& cloud_prefix)
+    const std::string& firebase_id, const std::string& cloud_prefix)
     : network_wrapper_(network_wrapper),
       url_prefix_(GetUrlPrefix(firebase_id, cloud_prefix)) {}
 
 CloudStorageImpl::~CloudStorageImpl() {}
 
 void CloudStorageImpl::UploadObject(std::string auth_token,
-                                    const std::string& key,
-                                    fsl::SizedVmo data,
+                                    const std::string& key, fsl::SizedVmo data,
                                     std::function<void(Status)> callback) {
   std::string url = GetUploadUrl(key);
 
-  auto request_factory = fxl::MakeCopyable([
-    auth_token = std::move(auth_token), url = std::move(url),
-    data = std::move(data)
-  ] {
+  auto request_factory = fxl::MakeCopyable([auth_token = std::move(auth_token),
+                                            url = std::move(url),
+                                            data = std::move(data)] {
     http::URLRequest request;
     request.url = url;
     request.method = "POST";
@@ -124,37 +119,35 @@ void CloudStorageImpl::UploadObject(std::string auth_token,
     return request;
   });
 
-  Request(
-      std::move(request_factory), [callback = std::move(callback)](
-                                      Status status,
-                                      http::URLResponse response) mutable {
-        RunUploadObjectCallback(std::move(callback), status,
-                                std::move(response));
-      });
+  Request(std::move(request_factory), [callback = std::move(callback)](
+                                          Status status,
+                                          http::URLResponse response) mutable {
+    RunUploadObjectCallback(std::move(callback), status, std::move(response));
+  });
 }
 
 void CloudStorageImpl::DownloadObject(
-    std::string auth_token,
-    const std::string& key,
+    std::string auth_token, const std::string& key,
     std::function<void(Status status, uint64_t size, zx::socket data)>
         callback) {
   std::string url = GetDownloadUrl(key);
 
-  Request([ auth_token = std::move(auth_token), url = std::move(url) ] {
-    http::URLRequest request;
-    request.url = url;
-    request.method = "GET";
-    request.auto_follow_redirects = true;
-    if (!auth_token.empty()) {
-      request.headers.push_back(MakeAuthorizationHeader(auth_token));
-    }
-    return request;
-  },
-          [ this, callback = std::move(callback) ](
-              Status status, http::URLResponse response) mutable {
-            OnDownloadResponseReceived(std::move(callback), status,
-                                       std::move(response));
-          });
+  Request(
+      [auth_token = std::move(auth_token), url = std::move(url)] {
+        http::URLRequest request;
+        request.url = url;
+        request.method = "GET";
+        request.auto_follow_redirects = true;
+        if (!auth_token.empty()) {
+          request.headers.push_back(MakeAuthorizationHeader(auth_token));
+        }
+        return request;
+      },
+      [this, callback = std::move(callback)](
+          Status status, http::URLResponse response) mutable {
+        OnDownloadResponseReceived(std::move(callback), status,
+                                   std::move(response));
+      });
 }
 
 std::string CloudStorageImpl::GetDownloadUrl(fxl::StringView key) {
@@ -169,13 +162,12 @@ std::string CloudStorageImpl::GetUploadUrl(fxl::StringView key) {
 
 void CloudStorageImpl::Request(
     std::function<http::URLRequest()> request_factory,
-    std::function<void(Status status, http::URLResponse response)>
-        callback) {
-  requests_.emplace(network_wrapper_->Request(std::move(request_factory), [
-    this, callback = std::move(callback)
-  ](http::URLResponse response) mutable {
-    OnResponse(std::move(callback), std::move(response));
-  }));
+    std::function<void(Status status, http::URLResponse response)> callback) {
+  requests_.emplace(network_wrapper_->Request(
+      std::move(request_factory), [this, callback = std::move(callback)](
+                                      http::URLResponse response) mutable {
+        OnResponse(std::move(callback), std::move(response));
+      }));
 }
 
 void CloudStorageImpl::OnResponse(
@@ -204,8 +196,7 @@ void CloudStorageImpl::OnResponse(
 void CloudStorageImpl::OnDownloadResponseReceived(
     const std::function<void(Status status, uint64_t size, zx::socket data)>
         callback,
-    Status status,
-    http::URLResponse response) {
+    Status status, http::URLResponse response) {
   if (status != Status::OK) {
     callback(status, 0u, zx::socket());
     return;
