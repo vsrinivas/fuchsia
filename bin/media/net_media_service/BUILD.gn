@@ -42,7 +42,6 @@ executable("bin") {
     "//garnet/public/lib/media/timeline",
     "//garnet/public/lib/netconnector/cpp",
     "//garnet/public/lib/netconnector/fidl",
-    "//garnet/public/lib/network/fidl",
     "//garnet/public/lib/url",
   ]
 }

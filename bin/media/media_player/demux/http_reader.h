@@ -8,7 +8,7 @@
 #include <string>
 
 #include <lib/async/cpp/wait.h>
-#include <network/cpp/fidl.h>
+#include <fuchsia/net/oldhttp/cpp/fidl.h>
 
 #include "garnet/bin/media/media_player/demux/reader.h"
 #include "garnet/bin/media/media_player/util/incident.h"
@@ -50,7 +50,7 @@ class HttpReader : public Reader {
   void LoadAndReadFromSocket();
 
   std::string url_;
-  network::URLLoaderPtr url_loader_;
+  ::fuchsia::net::oldhttp::URLLoaderPtr url_loader_;
   Result result_ = Result::kOk;
   uint64_t size_ = kUnknownSize;
   bool can_seek_ = false;
