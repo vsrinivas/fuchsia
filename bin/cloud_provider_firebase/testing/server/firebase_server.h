@@ -10,7 +10,7 @@
 
 #include <rapidjson/document.h>
 
-#include <network/cpp/fidl.h>
+#include <fuchsia/net/oldhttp/cpp/fidl.h>
 #include "lib/url/gurl.h"
 #include "peridot/bin/cloud_provider_firebase/testing/server/server.h"
 #include "peridot/lib/convert/collection_view.h"
@@ -38,15 +38,15 @@ class FirebaseServer : public Server {
   class Listeners;
 
   // Server implementation.
-  void HandleGet(network::URLRequest request,
-                 std::function<void(network::URLResponse)> callback) override;
-  void HandlePatch(network::URLRequest request,
-                   std::function<void(network::URLResponse)> callback) override;
-  void HandlePut(network::URLRequest request,
-                 std::function<void(network::URLResponse)> callback) override;
+  void HandleGet(::fuchsia::net::oldhttp::URLRequest request,
+                 std::function<void(::fuchsia::net::oldhttp::URLResponse)> callback) override;
+  void HandlePatch(::fuchsia::net::oldhttp::URLRequest request,
+                   std::function<void(::fuchsia::net::oldhttp::URLResponse)> callback) override;
+  void HandlePut(::fuchsia::net::oldhttp::URLRequest request,
+                 std::function<void(::fuchsia::net::oldhttp::URLResponse)> callback) override;
   void HandleGetStream(
-      network::URLRequest request,
-      std::function<void(network::URLResponse)> callback) override;
+      ::fuchsia::net::oldhttp::URLRequest request,
+      std::function<void(::fuchsia::net::oldhttp::URLResponse)> callback) override;
 
   // Returns the serialized json string pointed by |url|.
   std::string GetSerializedValueForURL(const url::GURL& url);

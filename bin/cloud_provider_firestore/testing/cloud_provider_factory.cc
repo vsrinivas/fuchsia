@@ -7,7 +7,7 @@
 #include <utility>
 
 #include <lib/async/cpp/task.h>
-#include <network/cpp/fidl.h>
+#include <fuchsia/net/oldhttp/cpp/fidl.h>
 
 #include "lib/backoff/exponential_backoff.h"
 #include "lib/fsl/tasks/message_loop.h"
@@ -16,6 +16,9 @@
 #include "lib/svc/cpp/services.h"
 
 namespace cloud_provider_firestore {
+
+namespace http = ::fuchsia::net::oldhttp;
+
 namespace {
 constexpr char kAppUrl[] = "cloud_provider_firestore";
 }  // namespace
@@ -31,7 +34,7 @@ class CloudProviderFactory::TokenProviderContainer {
             async, std::make_unique<backoff::ExponentialBackoff>(),
             [this] {
               return startup_context_
-                  ->ConnectToEnvironmentService<network::NetworkService>();
+                  ->ConnectToEnvironmentService<http::HttpService>();
             }),
         token_provider_(&network_wrapper_, fxl::GenerateUUID()),
         binding_(&token_provider_, std::move(request)) {

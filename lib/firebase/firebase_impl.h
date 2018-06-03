@@ -75,9 +75,9 @@ class FirebaseImpl : public Firebase {
 
   void OnResponse(
       const std::function<void(Status status, std::string response)>& callback,
-      network::URLResponse response);
+      ::fuchsia::net::oldhttp::URLResponse response);
 
-  void OnStream(WatchClient* watch_client, network::URLResponse response);
+  void OnStream(WatchClient* watch_client, ::fuchsia::net::oldhttp::URLResponse response);
 
   void OnStreamComplete(WatchClient* watch_client);
 

@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 #include <fuchsia/modular/cpp/fidl.h>
+#include <fuchsia/net/oldhttp/cpp/fidl.h>
 #include <lib/async/default.h>
-#include <network/cpp/fidl.h>
 
 #include "lib/app/cpp/connect.h"
 #include "lib/app/cpp/startup_context.h"
@@ -23,6 +23,8 @@
 namespace fuchsia {
 namespace modular {
 namespace {
+
+namespace http = ::fuchsia::net::oldhttp;
 
 constexpr char kContextListenerEntitiesKey[] = "entities";
 
@@ -52,10 +54,10 @@ class ModuleResolverApp : ContextListener {
           std::make_unique<fuchsia::modular::FirebaseModuleManifestSource>(
               async_get_default(),
               [context]() {
-                network::NetworkServicePtr network_service;
+                http::HttpServicePtr http_service;
                 context->ConnectToEnvironmentService(
-                    network_service.NewRequest());
-                return network_service;
+                    http_service.NewRequest());
+                return http_service;
               },
               "cloud-mods", "" /* prefix */));
     }

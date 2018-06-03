@@ -8,7 +8,7 @@
 #include <functional>
 #include <map>
 
-#include <network/cpp/fidl.h>
+#include <fuchsia/net/oldhttp/cpp/fidl.h>
 #include "peridot/bin/cloud_provider_firebase/testing/server/server.h"
 
 namespace ledger {
@@ -22,10 +22,10 @@ class GcsServer : public Server {
   ~GcsServer() override;
 
  private:
-  void HandleGet(network::URLRequest request,
-                 std::function<void(network::URLResponse)> callback) override;
-  void HandlePost(network::URLRequest request,
-                  std::function<void(network::URLResponse)> callback) override;
+  void HandleGet(::fuchsia::net::oldhttp::URLRequest request,
+                 std::function<void(::fuchsia::net::oldhttp::URLResponse)> callback) override;
+  void HandlePost(::fuchsia::net::oldhttp::URLRequest request,
+                  std::function<void(::fuchsia::net::oldhttp::URLResponse)> callback) override;
 
   std::map<std::string, std::string> data_;
 };

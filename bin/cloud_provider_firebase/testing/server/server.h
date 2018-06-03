@@ -7,7 +7,7 @@
 
 #include <map>
 
-#include <network/cpp/fidl.h>
+#include <fuchsia/net/oldhttp/cpp/fidl.h>
 #include "lib/fxl/macros.h"
 
 namespace ledger {
@@ -19,33 +19,33 @@ class Server {
   virtual ~Server();
 
   // Serves the given request.
-  void Serve(network::URLRequest request,
-             std::function<void(network::URLResponse)> callback);
+  void Serve(::fuchsia::net::oldhttp::URLRequest request,
+             std::function<void(::fuchsia::net::oldhttp::URLResponse)> callback);
 
  protected:
   enum class ResponseCode { kOk = 200, kUnauthorized = 401, kNotFound = 404 };
 
-  virtual void HandleGet(network::URLRequest request,
-                         std::function<void(network::URLResponse)> callback);
+  virtual void HandleGet(::fuchsia::net::oldhttp::URLRequest request,
+                         std::function<void(::fuchsia::net::oldhttp::URLResponse)> callback);
   virtual void HandleGetStream(
-      network::URLRequest request,
-      std::function<void(network::URLResponse)> callback);
-  virtual void HandlePatch(network::URLRequest request,
-                           std::function<void(network::URLResponse)> callback);
-  virtual void HandlePost(network::URLRequest request,
-                          std::function<void(network::URLResponse)> callback);
-  virtual void HandlePut(network::URLRequest request,
-                         std::function<void(network::URLResponse)> callback);
+      ::fuchsia::net::oldhttp::URLRequest request,
+      std::function<void(::fuchsia::net::oldhttp::URLResponse)> callback);
+  virtual void HandlePatch(::fuchsia::net::oldhttp::URLRequest request,
+                           std::function<void(::fuchsia::net::oldhttp::URLResponse)> callback);
+  virtual void HandlePost(::fuchsia::net::oldhttp::URLRequest request,
+                          std::function<void(::fuchsia::net::oldhttp::URLResponse)> callback);
+  virtual void HandlePut(::fuchsia::net::oldhttp::URLRequest request,
+                         std::function<void(::fuchsia::net::oldhttp::URLResponse)> callback);
 
-  network::URLResponse BuildResponse(
+  ::fuchsia::net::oldhttp::URLResponse BuildResponse(
       const std::string& url,
       ResponseCode code,
       zx::socket body,
       const std::map<std::string, std::string>& headers);
 
-  network::URLResponse BuildResponse(const std::string& url,
-                                     ResponseCode code,
-                                     std::string body);
+  ::fuchsia::net::oldhttp::URLResponse BuildResponse(const std::string& url,
+                                                     ResponseCode code,
+                                                     std::string body);
 
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(Server);

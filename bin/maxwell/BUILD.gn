@@ -68,7 +68,7 @@ source_set("user_intelligence_provider") {
     ":config",
     ":intelligence_services",
     "//garnet/public/lib/bluetooth/fidl",
-    "//garnet/public/lib/network/fidl",
+    "//garnet/public/lib/net/oldhttp/fidl",
     "//peridot/bin/acquirers/story_info:initializer",
     "//peridot/lib/util:rate_limited_retry",
     "//peridot/public/lib:fidl",

@@ -43,18 +43,18 @@ class CloudStorageImpl : public CloudStorage {
 
   std::string GetUploadUrl(fxl::StringView key);
 
-  void Request(std::function<network::URLRequest()> request_factory,
-               std::function<void(Status status, network::URLResponse response)>
+  void Request(std::function<::fuchsia::net::oldhttp::URLRequest()> request_factory,
+               std::function<void(Status status, ::fuchsia::net::oldhttp::URLResponse response)>
                    callback);
   void OnResponse(std::function<void(Status status,
-                                     network::URLResponse response)> callback,
-                  network::URLResponse response);
+                                     ::fuchsia::net::oldhttp::URLResponse response)> callback,
+                  ::fuchsia::net::oldhttp::URLResponse response);
 
   void OnDownloadResponseReceived(
       std::function<void(Status status, uint64_t size, zx::socket data)>
           callback,
       Status status,
-      network::URLResponse response);
+      ::fuchsia::net::oldhttp::URLResponse response);
 
   network_wrapper::NetworkWrapper* const network_wrapper_;
   const std::string url_prefix_;

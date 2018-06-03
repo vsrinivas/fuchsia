@@ -8,7 +8,7 @@
 #include <string>
 #include <utility>
 
-#include <network/cpp/fidl.h>
+#include <fuchsia/net/oldhttp/cpp/fidl.h>
 #include "gtest/gtest.h"
 #include "lib/callback/capture.h"
 #include "lib/fsl/socket/strings.h"
@@ -22,14 +22,17 @@
 #include "lib/network_wrapper/fake_network_wrapper.h"
 
 namespace gcs {
+
+namespace http = ::fuchsia::net::oldhttp;
+
 namespace {
 
-network::HttpHeaderPtr GetHeader(
-    const fidl::VectorPtr<network::HttpHeader>& headers,
+http::HttpHeaderPtr GetHeader(
+    const fidl::VectorPtr<http::HttpHeader>& headers,
     const std::string& header_name) {
   for (const auto& header : *headers) {
     if (header.name == header_name) {
-      auto result = network::HttpHeader::New();
+      auto result = http::HttpHeader::New();
       fidl::Clone(header, result.get());
       return result;
     }
@@ -48,12 +51,12 @@ class CloudStorageImplTest : public gtest::TestWithMessageLoop {
   void SetResponse(const std::string& body,
                    int64_t content_length,
                    uint32_t status_code) {
-    network::URLResponse server_response;
-    server_response.body = network::URLBody::New();
+    http::URLResponse server_response;
+    server_response.body = http::URLBody::New();
     server_response.body->set_stream(fsl::WriteStringToSocket(body));
     server_response.status_code = status_code;
 
-    network::HttpHeader content_length_header;
+    http::HttpHeader content_length_header;
     content_length_header.name = "content-length";
     content_length_header.value = fxl::NumberToString(content_length);
 
@@ -99,7 +102,7 @@ TEST_F(CloudStorageImplTest, TestUpload) {
       fake_network_wrapper_.GetRequest()->body->sized_buffer(), &sent_content));
   EXPECT_EQ(content, sent_content);
 
-  network::HttpHeaderPtr content_length_header =
+  http::HttpHeaderPtr content_length_header =
       GetHeader(fake_network_wrapper_.GetRequest()->headers, "content-length");
   EXPECT_TRUE(content_length_header);
   unsigned content_length;
@@ -119,7 +122,7 @@ TEST_F(CloudStorageImplTest, TestUploadAuth) {
                     callback::Capture(MakeQuitTask(), &status));
   ASSERT_FALSE(RunLoopWithTimeout());
 
-  network::HttpHeaderPtr authorization_header =
+  http::HttpHeaderPtr authorization_header =
       GetHeader(fake_network_wrapper_.GetRequest()->headers, "authorization");
   EXPECT_TRUE(authorization_header);
   EXPECT_EQ("Bearer this-is-a-token", authorization_header->value);
@@ -174,7 +177,7 @@ TEST_F(CloudStorageImplTest, TestDownloadAuth) {
                       callback::Capture(MakeQuitTask(), &status, &size, &data));
   ASSERT_FALSE(RunLoopWithTimeout());
 
-  network::HttpHeaderPtr authorization_header =
+  http::HttpHeaderPtr authorization_header =
       GetHeader(fake_network_wrapper_.GetRequest()->headers, "authorization");
   EXPECT_TRUE(authorization_header);
   EXPECT_EQ("Bearer this-is-a-token", authorization_header->value);

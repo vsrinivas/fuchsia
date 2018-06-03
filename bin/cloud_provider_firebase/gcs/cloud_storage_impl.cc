@@ -27,6 +27,8 @@
 
 namespace gcs {
 
+namespace http = ::fuchsia::net::oldhttp;
+
 namespace {
 
 const char kAuthorizationHeader[] = "authorization";
@@ -36,12 +38,12 @@ constexpr fxl::StringView kApiEndpoint =
     "https://firebasestorage.googleapis.com/v0/b/";
 constexpr fxl::StringView kBucketNameSuffix = ".appspot.com";
 
-network::HttpHeaderPtr GetHeader(
-    const fidl::VectorPtr<network::HttpHeader>& headers,
+http::HttpHeaderPtr GetHeader(
+    const fidl::VectorPtr<http::HttpHeader>& headers,
     const std::string& header_name) {
   for (const auto& header : *headers) {
     if (fxl::EqualsCaseInsensitiveASCII(header.name.get(), header_name)) {
-      auto result = network::HttpHeader::New();
+      auto result = http::HttpHeader::New();
       fidl::Clone(header, result.get());
       return result;
     }
@@ -49,8 +51,8 @@ network::HttpHeaderPtr GetHeader(
   return nullptr;
 }
 
-network::HttpHeader MakeAuthorizationHeader(const std::string& auth_token) {
-  network::HttpHeader authorization_header;
+http::HttpHeader MakeAuthorizationHeader(const std::string& auth_token) {
+  http::HttpHeader authorization_header;
   authorization_header.name = kAuthorizationHeader;
   authorization_header.value = "Bearer " + auth_token;
   return authorization_header;
@@ -58,7 +60,7 @@ network::HttpHeader MakeAuthorizationHeader(const std::string& auth_token) {
 
 void RunUploadObjectCallback(std::function<void(Status)> callback,
                              Status status,
-                             network::URLResponse response) {
+                             http::URLResponse response) {
   // A precondition failure means the object already exist.
   if (response.status_code == 412) {
     callback(Status::OBJECT_ALREADY_EXISTS);
@@ -94,7 +96,7 @@ void CloudStorageImpl::UploadObject(std::string auth_token,
     auth_token = std::move(auth_token), url = std::move(url),
     data = std::move(data)
   ] {
-    network::URLRequest request;
+    http::URLRequest request;
     request.url = url;
     request.method = "POST";
     request.auto_follow_redirects = true;
@@ -105,7 +107,7 @@ void CloudStorageImpl::UploadObject(std::string auth_token,
     }
 
     // Content-Length header.
-    network::HttpHeader content_length_header;
+    http::HttpHeader content_length_header;
     content_length_header.name = kContentLengthHeader;
     content_length_header.value = fxl::NumberToString(data.size());
     request.headers.push_back(std::move(content_length_header));
@@ -115,9 +117,9 @@ void CloudStorageImpl::UploadObject(std::string auth_token,
         data.Duplicate(ZX_RIGHTS_BASIC | ZX_RIGHT_READ, &duplicated_data);
     if (status != ZX_OK) {
       FXL_LOG(WARNING) << "Unable to duplicate a vmo. Status: " << status;
-      return network::URLRequest();
+      return http::URLRequest();
     }
-    request.body = network::URLBody::New();
+    request.body = http::URLBody::New();
     request.body->set_sized_buffer(std::move(duplicated_data).ToTransport());
     return request;
   });
@@ -125,7 +127,7 @@ void CloudStorageImpl::UploadObject(std::string auth_token,
   Request(
       std::move(request_factory), [callback = std::move(callback)](
                                       Status status,
-                                      network::URLResponse response) mutable {
+                                      http::URLResponse response) mutable {
         RunUploadObjectCallback(std::move(callback), status,
                                 std::move(response));
       });
@@ -139,7 +141,7 @@ void CloudStorageImpl::DownloadObject(
   std::string url = GetDownloadUrl(key);
 
   Request([ auth_token = std::move(auth_token), url = std::move(url) ] {
-    network::URLRequest request;
+    http::URLRequest request;
     request.url = url;
     request.method = "GET";
     request.auto_follow_redirects = true;
@@ -149,7 +151,7 @@ void CloudStorageImpl::DownloadObject(
     return request;
   },
           [ this, callback = std::move(callback) ](
-              Status status, network::URLResponse response) mutable {
+              Status status, http::URLResponse response) mutable {
             OnDownloadResponseReceived(std::move(callback), status,
                                        std::move(response));
           });
@@ -166,19 +168,19 @@ std::string CloudStorageImpl::GetUploadUrl(fxl::StringView key) {
 }
 
 void CloudStorageImpl::Request(
-    std::function<network::URLRequest()> request_factory,
-    std::function<void(Status status, network::URLResponse response)>
+    std::function<http::URLRequest()> request_factory,
+    std::function<void(Status status, http::URLResponse response)>
         callback) {
   requests_.emplace(network_wrapper_->Request(std::move(request_factory), [
     this, callback = std::move(callback)
-  ](network::URLResponse response) mutable {
+  ](http::URLResponse response) mutable {
     OnResponse(std::move(callback), std::move(response));
   }));
 }
 
 void CloudStorageImpl::OnResponse(
-    std::function<void(Status status, network::URLResponse response)> callback,
-    network::URLResponse response) {
+    std::function<void(Status status, http::URLResponse response)> callback,
+    http::URLResponse response) {
   if (response.error) {
     FXL_LOG(ERROR) << response.url << " error " << response.error->description;
     callback(Status::NETWORK_ERROR, std::move(response));
@@ -203,13 +205,13 @@ void CloudStorageImpl::OnDownloadResponseReceived(
     const std::function<void(Status status, uint64_t size, zx::socket data)>
         callback,
     Status status,
-    network::URLResponse response) {
+    http::URLResponse response) {
   if (status != Status::OK) {
     callback(status, 0u, zx::socket());
     return;
   }
 
-  network::HttpHeaderPtr size_header =
+  http::HttpHeaderPtr size_header =
       GetHeader(response.headers, kContentLengthHeader);
   if (!size_header) {
     callback(Status::PARSE_ERROR, 0u, zx::socket());
@@ -223,7 +225,7 @@ void CloudStorageImpl::OnDownloadResponseReceived(
     return;
   }
 
-  network::URLBodyPtr body = std::move(response.body);
+  http::URLBodyPtr body = std::move(response.body);
   FXL_DCHECK(body->is_stream());
   callback(Status::OK, expected_file_size, std::move(body->stream()));
 }

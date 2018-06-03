@@ -19,6 +19,9 @@
 #include "lib/network_wrapper/fake_network_wrapper.h"
 
 namespace service_account {
+
+namespace http = ::fuchsia::net::oldhttp;
+
 namespace {
 
 constexpr fxl::StringView kTestConfig =
@@ -92,17 +95,17 @@ class ServiceAccountTokenProviderTest : public gtest::TestWithMessageLoop {
     return std::string(string_buffer.GetString(), string_buffer.GetSize());
   }
 
-  network::URLResponse GetResponse(network::NetworkErrorPtr error,
-                                   uint32_t status,
-                                   std::string body) {
-    network::URLResponse response;
+  http::URLResponse GetResponse(http::HttpErrorPtr error,
+                                uint32_t status,
+                                std::string body) {
+    http::URLResponse response;
     response.error = std::move(error);
     response.status_code = status;
     fsl::SizedVmo buffer;
     if (!fsl::VmoFromString(body, &buffer)) {
       ADD_FAILURE() << "Unable to convert string to Vmo.";
     }
-    response.body = network::URLBody::New();
+    response.body = http::URLBody::New();
     response.body->set_sized_buffer(std::move(buffer).ToTransport());
     return response;
   }
@@ -191,7 +194,7 @@ TEST_F(ServiceAccountTokenProviderTest, IncorrectCredentials) {
 TEST_F(ServiceAccountTokenProviderTest, NetworkError) {
   ASSERT_TRUE(token_provider_.LoadCredentials(GetConfigFile(kTestConfig)));
 
-  auto network_error = network::NetworkError::New();
+  auto network_error = http::HttpError::New();
   network_error->description = "Error";
 
   network_wrapper_.SetResponse(GetResponse(std::move(network_error), 0, ""));

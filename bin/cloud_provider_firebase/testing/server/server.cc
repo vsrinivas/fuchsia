@@ -10,12 +10,14 @@
 
 namespace ledger {
 
+namespace http = ::fuchsia::net::oldhttp;
+
 Server::Server() {}
 
 Server::~Server() {}
 
-void Server::Serve(network::URLRequest request,
-                   const std::function<void(network::URLResponse)> callback) {
+void Server::Serve(http::URLRequest request,
+                   const std::function<void(http::URLResponse)> callback) {
   FXL_DCHECK(!request.body || request.body->is_sized_buffer());
 
   if (request.method == "GET") {
@@ -53,46 +55,46 @@ void Server::Serve(network::URLRequest request,
 }
 
 void Server::HandleGet(
-    network::URLRequest request,
-    const std::function<void(network::URLResponse)> callback) {
+    http::URLRequest request,
+    const std::function<void(http::URLResponse)> callback) {
   callback(BuildResponse(request.url, ResponseCode::kUnauthorized,
                          "Unauthorized method"));
 }
 
 void Server::HandleGetStream(
-    network::URLRequest request,
-    const std::function<void(network::URLResponse)> callback) {
+    http::URLRequest request,
+    const std::function<void(http::URLResponse)> callback) {
   callback(BuildResponse(request.url, ResponseCode::kUnauthorized,
                          "Unauthorized method"));
 }
 
 void Server::HandlePatch(
-    network::URLRequest request,
-    const std::function<void(network::URLResponse)> callback) {
+    http::URLRequest request,
+    const std::function<void(http::URLResponse)> callback) {
   callback(BuildResponse(request.url, ResponseCode::kUnauthorized,
                          "Unauthorized method"));
 }
 
 void Server::HandlePost(
-    network::URLRequest request,
-    const std::function<void(network::URLResponse)> callback) {
+    http::URLRequest request,
+    const std::function<void(http::URLResponse)> callback) {
   callback(BuildResponse(request.url, ResponseCode::kUnauthorized,
                          "Unauthorized method"));
 }
 
 void Server::HandlePut(
-    network::URLRequest request,
-    const std::function<void(network::URLResponse)> callback) {
+    http::URLRequest request,
+    const std::function<void(http::URLResponse)> callback) {
   callback(BuildResponse(request.url, ResponseCode::kUnauthorized,
                          "Unauthorized method"));
 }
 
-network::URLResponse Server::BuildResponse(
+http::URLResponse Server::BuildResponse(
     const std::string& url,
     ResponseCode code,
     zx::socket body,
     const std::map<std::string, std::string>& headers) {
-  network::URLResponse response;
+  http::URLResponse response;
   response.url = url;
   response.status_code = static_cast<uint32_t>(code);
   switch (code) {
@@ -109,21 +111,21 @@ network::URLResponse Server::BuildResponse(
       FXL_NOTREACHED();
   }
   for (const auto& pair : headers) {
-    network::HttpHeader header;
+    http::HttpHeader header;
     header.name = pair.first;
     header.value = pair.second;
     response.headers.push_back(std::move(header));
   }
   if (body) {
-    response.body = network::URLBody::New();
+    response.body = http::URLBody::New();
     response.body->set_stream(std::move(body));
   }
   return response;
 }
 
-network::URLResponse Server::BuildResponse(const std::string& url,
-                                           ResponseCode code,
-                                           std::string body) {
+http::URLResponse Server::BuildResponse(const std::string& url,
+                                        ResponseCode code,
+                                        std::string body) {
   socket::SocketPair sockets;
   auto* writer = new socket::StringSocketWriter();
   writer->Start(body, std::move(sockets.socket2));

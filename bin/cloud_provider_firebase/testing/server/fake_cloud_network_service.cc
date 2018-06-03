@@ -8,25 +8,19 @@
 
 namespace ledger {
 
+namespace http = ::fuchsia::net::oldhttp;
+
 FakeCloudNetworkService::FakeCloudNetworkService() {}
 
 FakeCloudNetworkService::~FakeCloudNetworkService() {}
 
 void FakeCloudNetworkService::CreateURLLoader(
-    ::fidl::InterfaceRequest<network::URLLoader> loader) {
+    ::fidl::InterfaceRequest<http::URLLoader> loader) {
   loader_bindings_.AddBinding(&url_loader_, std::move(loader));
 }
 
-void FakeCloudNetworkService::GetCookieStore(zx::channel /*cookie_store*/) {
-  FXL_NOTIMPLEMENTED();
-}
-
-void FakeCloudNetworkService::CreateWebSocket(zx::channel /*socket*/) {
-  FXL_NOTIMPLEMENTED();
-}
-
 void FakeCloudNetworkService::AddBinding(
-    fidl::InterfaceRequest<network::NetworkService> request) {
+    fidl::InterfaceRequest<http::HttpService> request) {
   bindings_.AddBinding(this, std::move(request));
 }
 

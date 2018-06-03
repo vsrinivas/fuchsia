@@ -8,7 +8,6 @@
 #include <cobalt/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <maxwell/cpp/fidl.h>
-#include <network/cpp/fidl.h>
 #include "lib/app/cpp/connect.h"
 #include "lib/fxl/files/file.h"
 #include "lib/fxl/functional/make_copyable.h"

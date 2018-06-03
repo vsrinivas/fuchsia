@@ -9,6 +9,8 @@
 
 namespace ledger {
 
+namespace http = ::fuchsia::net::oldhttp;
+
 namespace {
 constexpr fxl::StringView kFirebaseHosts = ".firebaseio.com";
 constexpr fxl::StringView kGcsPrefix =
@@ -33,7 +35,7 @@ FakeCloudURLLoader::FakeCloudURLLoader() {}
 
 FakeCloudURLLoader::~FakeCloudURLLoader() {}
 
-void FakeCloudURLLoader::Start(network::URLRequest request,
+void FakeCloudURLLoader::Start(http::URLRequest request,
                                StartCallback callback) {
   url::GURL url(request.url);
   FXL_DCHECK(url.is_valid());

@@ -7,7 +7,7 @@
 
 #include <map>
 
-#include <network/cpp/fidl.h>
+#include <fuchsia/net/oldhttp/cpp/fidl.h>
 #include "lib/fxl/macros.h"
 #include "peridot/bin/cloud_provider_firebase/testing/server/firebase_server.h"
 #include "peridot/bin/cloud_provider_firebase/testing/server/gcs_server.h"
@@ -16,13 +16,13 @@ namespace ledger {
 
 // Implementation of |URLLoader| that simulate Firebase and GCS
 // servers.
-class FakeCloudURLLoader : public network::URLLoader {
+class FakeCloudURLLoader : public ::fuchsia::net::oldhttp::URLLoader {
  public:
   FakeCloudURLLoader();
   ~FakeCloudURLLoader() override;
 
   // URLLoader
-  void Start(network::URLRequest request, StartCallback callback) override;
+  void Start(::fuchsia::net::oldhttp::URLRequest request, StartCallback callback) override;
   void FollowRedirect(FollowRedirectCallback callback) override;
   void QueryStatus(QueryStatusCallback callback) override;
 

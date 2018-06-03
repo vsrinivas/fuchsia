@@ -13,13 +13,15 @@
 
 namespace ledger {
 
+namespace http = ::fuchsia::net::oldhttp;
+
 GcsServer::GcsServer() {}
 
 GcsServer::~GcsServer() {}
 
 void GcsServer::HandleGet(
-    network::URLRequest request,
-    const std::function<void(network::URLResponse)> callback) {
+    http::URLRequest request,
+    const std::function<void(http::URLResponse)> callback) {
   url::GURL url(request.url);
 
   auto path = url.path();
@@ -33,8 +35,8 @@ void GcsServer::HandleGet(
 }
 
 void GcsServer::HandlePost(
-    network::URLRequest request,
-    const std::function<void(network::URLResponse)> callback) {
+    http::URLRequest request,
+    const std::function<void(http::URLResponse)> callback) {
   url::GURL url(request.url);
 
   auto path = url.path();

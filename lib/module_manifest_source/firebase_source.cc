@@ -25,6 +25,8 @@
 namespace fuchsia {
 namespace modular {
 
+namespace http = ::fuchsia::net::oldhttp;
+
 class FirebaseModuleManifestSource::Watcher : public firebase::WatchClient {
  public:
   Watcher(async_t* async,
@@ -145,7 +147,7 @@ class FirebaseModuleManifestSource::Watcher : public firebase::WatchClient {
 
 FirebaseModuleManifestSource::FirebaseModuleManifestSource(
     async_t* async,
-    std::function<network::NetworkServicePtr()> network_service_factory,
+    std::function<http::HttpServicePtr()> network_service_factory,
     std::string db_id,
     std::string prefix)
     : db_id_(db_id),

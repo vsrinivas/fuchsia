@@ -27,6 +27,8 @@
 
 namespace service_account {
 
+namespace http = ::fuchsia::net::oldhttp;
+
 namespace {
 const char kServiceAccountConfigurationSchema[] = R"({
   "type": "object",
@@ -229,7 +231,7 @@ void ServiceAccountTokenProvider::GetFirebaseAuthToken(
         return GetIdentityRequest(firebase_api_key, custom_token);
       },
       [this, firebase_api_key =
-                 firebase_api_key.get()](network::URLResponse response) {
+                 firebase_api_key.get()](http::URLResponse response) {
         HandleIdentityResponse(firebase_api_key, std::move(response));
       }));
 }
@@ -317,26 +319,26 @@ modular_auth::FirebaseTokenPtr ServiceAccountTokenProvider::GetFirebaseToken(
   return token;
 }
 
-network::URLRequest ServiceAccountTokenProvider::GetIdentityRequest(
+http::URLRequest ServiceAccountTokenProvider::GetIdentityRequest(
     const std::string& api_key,
     const std::string& custom_token) {
-  network::URLRequest request;
+  http::URLRequest request;
   request.url =
       "https://www.googleapis.com/identitytoolkit/v3/relyingparty/"
       "verifyCustomToken?key=" +
       api_key;
   request.method = "POST";
   request.auto_follow_redirects = true;
-  request.response_body_mode = network::ResponseBodyMode::SIZED_BUFFER;
+  request.response_body_mode = http::ResponseBodyMode::SIZED_BUFFER;
 
   // content-type header.
-  network::HttpHeader content_type_header;
+  http::HttpHeader content_type_header;
   content_type_header.name = "content-type";
   content_type_header.value = "application/json";
   request.headers.push_back(std::move(content_type_header));
 
   // set accept header
-  network::HttpHeader accept_header;
+  http::HttpHeader accept_header;
   accept_header.name = "accept";
   accept_header.value = "application/json";
   request.headers.push_back(std::move(accept_header));
@@ -345,7 +347,7 @@ network::URLRequest ServiceAccountTokenProvider::GetIdentityRequest(
   bool result = fsl::VmoFromString(GetIdentityRequestBody(custom_token), &data);
   FXL_DCHECK(result);
 
-  request.body = network::URLBody::New();
+  request.body = http::URLBody::New();
   request.body->set_sized_buffer(std::move(data).ToTransport());
 
   return request;
@@ -371,7 +373,7 @@ std::string ServiceAccountTokenProvider::GetIdentityRequestBody(
 
 void ServiceAccountTokenProvider::HandleIdentityResponse(
     const std::string& api_key,
-    network::URLResponse response) {
+    http::URLResponse response) {
   if (response.error) {
     ResolveCallbacks(api_key, nullptr,
                      GetError(modular_auth::Status::NETWORK_ERROR,

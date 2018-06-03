@@ -27,6 +27,8 @@
 
 namespace ledger {
 
+namespace http = ::fuchsia::net::oldhttp;
+
 namespace {
 constexpr fxl::StringView kAuth = "auth";
 constexpr fxl::StringView kOrderBy = "orderBy";
@@ -365,16 +367,16 @@ FirebaseServer::FirebaseServer() : listeners_(std::make_unique<Listeners>()) {
 FirebaseServer::~FirebaseServer() {}
 
 void FirebaseServer::HandleGet(
-    network::URLRequest request,
-    const std::function<void(network::URLResponse)> callback) {
+    http::URLRequest request,
+    const std::function<void(http::URLResponse)> callback) {
   url::GURL url(request.url);
   callback(BuildResponse(request.url, Server::ResponseCode::kOk,
                          GetSerializedValueForURL(url)));
 }
 
 void FirebaseServer::HandleGetStream(
-    network::URLRequest request,
-    const std::function<void(network::URLResponse)> callback) {
+    http::URLRequest request,
+    const std::function<void(http::URLResponse)> callback) {
   url::GURL url(request.url);
   auto path = GetPath(url);
   socket::SocketPair sockets;
@@ -385,8 +387,8 @@ void FirebaseServer::HandleGetStream(
 }
 
 void FirebaseServer::HandlePatch(
-    network::URLRequest request,
-    const std::function<void(network::URLResponse)> callback) {
+    http::URLRequest request,
+    const std::function<void(http::URLResponse)> callback) {
   std::string body;
   if (!fsl::StringFromVmo(request.body->sized_buffer(), &body)) {
     FXL_NOTREACHED();
@@ -424,8 +426,8 @@ void FirebaseServer::HandlePatch(
 }
 
 void FirebaseServer::HandlePut(
-    network::URLRequest request,
-    const std::function<void(network::URLResponse)> callback) {
+    http::URLRequest request,
+    const std::function<void(http::URLResponse)> callback) {
   std::string body;
   if (!fsl::StringFromVmo(request.body->sized_buffer(), &body)) {
     FXL_NOTREACHED();

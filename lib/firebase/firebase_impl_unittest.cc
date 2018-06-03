@@ -10,7 +10,6 @@
 #include <lib/async/cpp/task.h>
 #include <rapidjson/document.h>
 
-#include <network/cpp/fidl.h>
 #include "gtest/gtest.h"
 #include "lib/fsl/socket/strings.h"
 #include "lib/fsl/tasks/message_loop.h"

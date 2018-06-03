@@ -17,12 +17,14 @@
 
 namespace firebase {
 
+namespace http = ::fuchsia::net::oldhttp;
+
 namespace {
 
-std::function<network::URLRequest()> MakeRequest(const std::string& url,
-                                                 const std::string& method,
-                                                 const std::string& message,
-                                                 bool stream_request = false) {
+std::function<http::URLRequest()> MakeRequest(const std::string& url,
+                                              const std::string& method,
+                                              const std::string& message,
+                                              bool stream_request = false) {
   fsl::SizedVmo body;
   if (!message.empty()) {
     if (!fsl::VmoFromString(message, &body)) {
@@ -33,7 +35,7 @@ std::function<network::URLRequest()> MakeRequest(const std::string& url,
 
   return fxl::MakeCopyable([url, method, body = std::move(body),
                             stream_request]() {
-    network::URLRequest request;
+    http::URLRequest request;
     request.url = url;
     request.method = method;
     request.auto_follow_redirects = true;
@@ -43,13 +45,13 @@ std::function<network::URLRequest()> MakeRequest(const std::string& url,
           body.Duplicate(ZX_RIGHTS_BASIC | ZX_RIGHT_READ, &duplicated_body);
       if (status != ZX_OK) {
         FXL_LOG(WARNING) << "Unable to duplicate a vmo. Status: " << status;
-        return network::URLRequest();
+        return http::URLRequest();
       }
-      request.body = network::URLBody::New();
+      request.body = http::URLBody::New();
       request.body->set_sized_buffer(std::move(duplicated_body).ToTransport());
     }
     if (stream_request) {
-      network::HttpHeader accept_header;
+      http::HttpHeader accept_header;
       accept_header.name = "Accept";
       accept_header.value = "text/event-stream";
       request.headers.push_back(std::move(accept_header));
@@ -147,7 +149,7 @@ void FirebaseImpl::Watch(const std::string& key,
   watch_data_[watch_client] = std::make_unique<WatchData>();
   watch_data_[watch_client]->request.Reset(network_wrapper_->Request(
       MakeRequest(BuildRequestUrl(key, query_params), "GET", "", true),
-      [this, watch_client](network::URLResponse response) {
+      [this, watch_client](http::URLResponse response) {
         OnStream(watch_client, std::move(response));
       }));
 }
@@ -191,14 +193,14 @@ void FirebaseImpl::Request(
     const std::function<void(Status status, std::string response)>& callback) {
   requests_.emplace(network_wrapper_->Request(
       MakeRequest(url, method, message),
-      [this, callback](network::URLResponse response) {
+      [this, callback](http::URLResponse response) {
         OnResponse(callback, std::move(response));
       }));
 }
 
 void FirebaseImpl::OnResponse(
     const std::function<void(Status status, std::string response)>& callback,
-    network::URLResponse response) {
+    http::URLResponse response) {
   if (response.error) {
     FXL_LOG(ERROR) << response.url << " error " << response.error->description;
     callback(Status::NETWORK_ERROR, "");
@@ -228,7 +230,7 @@ void FirebaseImpl::OnResponse(
 }
 
 void FirebaseImpl::OnStream(WatchClient* watch_client,
-                            network::URLResponse response) {
+                            http::URLResponse response) {
   if (response.error) {
     FXL_LOG(ERROR) << response.url << " error " << response.error->description;
     watch_client->OnConnectionError();

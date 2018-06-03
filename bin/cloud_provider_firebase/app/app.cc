@@ -17,6 +17,8 @@
 namespace cloud_provider_firebase {
 namespace {
 
+namespace http = ::fuchsia::net::oldhttp;
+
 class App : public fuchsia::modular::Lifecycle {
  public:
   App()
@@ -26,7 +28,7 @@ class App : public fuchsia::modular::Lifecycle {
             loop_.async(), std::make_unique<backoff::ExponentialBackoff>(),
             [this] {
               return startup_context_
-                  ->ConnectToEnvironmentService<network::NetworkService>();
+                  ->ConnectToEnvironmentService<http::HttpService>();
             }),
         factory_impl_(loop_.async(), &network_wrapper_) {
     FXL_DCHECK(startup_context_);

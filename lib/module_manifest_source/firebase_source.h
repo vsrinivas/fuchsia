@@ -10,7 +10,7 @@
 #include <string>
 #include <vector>
 
-#include <network/cpp/fidl.h>
+#include <fuchsia/net/oldhttp/cpp/fidl.h>
 #include "lib/fxl/memory/weak_ptr.h"
 #include "peridot/lib/module_manifest_source/module_manifest_source.h"
 
@@ -37,7 +37,7 @@ class FirebaseModuleManifestSource : public ModuleManifestSource {
  public:
   FirebaseModuleManifestSource(
       async_t* async,
-      std::function<network::NetworkServicePtr()> network_service_factory,
+      std::function<::fuchsia::net::oldhttp::HttpServicePtr()> network_service_factory,
       std::string db_id,
       std::string prefix);
   ~FirebaseModuleManifestSource() override;
