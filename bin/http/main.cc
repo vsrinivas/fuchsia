@@ -5,7 +5,6 @@
 #include <lib/async-loop/cpp/loop.h>
 
 #include "garnet/bin/http/http_service_delegate.h"
-#include "garnet/bin/http/network_service_delegate.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/log_settings_command_line.h"
 
@@ -15,10 +14,7 @@ int main(int argc, const char** argv) {
     return 1;
 
   async::Loop loop(&kAsyncLoopConfigMakeDefault);
-  // New implementation using public/net/oldhttp
   http::HttpServiceDelegate delegate2(loop.async());
-  // Legacy implementation using public/network
-  network::NetworkServiceDelegate delegate(loop.async());
   loop.Run();
   return 0;
 }

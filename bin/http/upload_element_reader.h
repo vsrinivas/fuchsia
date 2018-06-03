@@ -12,7 +12,7 @@
 #include <lib/zx/socket.h>
 #include <lib/zx/vmo.h>
 
-namespace network {
+namespace http {
 
 class UploadElementReader {
  public:
@@ -68,6 +68,6 @@ class VmoUploadElementReader : public UploadElementReader {
   std::array<char, BUFSIZE> buf_;
 };
 
-}  // namespace network
+}  // namespace http
 
 #endif  // GARNET_BIN_HTTP_UPLOAD_ELEMENT_READER_H_

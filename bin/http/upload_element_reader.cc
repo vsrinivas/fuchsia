@@ -8,7 +8,7 @@
 
 #include "lib/fxl/logging.h"
 
-namespace network {
+namespace http {
 
 UploadElementReader::UploadElementReader() : err_(ZX_OK) {}
 UploadElementReader::~UploadElementReader() = default;
@@ -95,4 +95,4 @@ bool VmoUploadElementReader::ReadAvailable(std::ostream* os) {
   }
 }
 
-}  // namespace network
+}  // namespace http

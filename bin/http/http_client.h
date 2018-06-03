@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_HTTP_HTTP_CLIENT_H_
-#define GARNET_BIN_HTTP_HTTP_CLIENT_H_
+#ifndef GARNET_BIN_HTTP_HTTP_NEW_CLIENT_H_
+#define GARNET_BIN_HTTP_HTTP_NEW_CLIENT_H_
 
 #include <zircon/status.h>
 
 #include <set>
 
-#include "garnet/bin/http/net_errors.h"
+#include "garnet/bin/http/http_errors.h"
 #include "garnet/bin/http/upload_element_reader.h"
 #include "lib/fsl/vmo/sized_vmo.h"
 #include "lib/fxl/logging.h"
@@ -20,7 +20,7 @@
 
 using asio::ip::tcp;
 
-namespace network {
+namespace http {
 
 typedef asio::ssl::stream<tcp::socket> ssl_socket_t;
 typedef tcp::socket nonssl_socket_t;
@@ -47,7 +47,7 @@ class URLLoaderImpl::HTTPClient {
       const std::string& path,
       const std::string& method,
       const std::map<std::string, std::string>& extra_headers,
-      std::unique_ptr<UploadElementReader> request_body_reader);
+      std::unique_ptr<http::UploadElementReader> request_body_reader);
   void Start(const std::string& server, const std::string& port);
 
  private:
@@ -74,7 +74,7 @@ class URLLoaderImpl::HTTPClient {
   void OnStreamBody(const asio::error_code& err);
   void OnBufferBody(const asio::error_code& err);
 
-  void SendResponse(URLResponse response);
+  void SendResponse(::fuchsia::net::oldhttp::URLResponse response);
   void SendError(int error_code);
 
  public:
@@ -87,7 +87,7 @@ class URLLoaderImpl::HTTPClient {
   tcp::resolver resolver_;
   T socket_;
   asio::streambuf request_header_buf_;
-  std::unique_ptr<UploadElementReader> request_body_reader_;
+  std::unique_ptr<http::UploadElementReader> request_body_reader_;
   asio::streambuf request_body_buf_;
   std::ostream request_body_stream_;
   asio::streambuf response_buf_;
@@ -95,7 +95,7 @@ class URLLoaderImpl::HTTPClient {
   std::string http_version_;
   std::string status_message_;
 
-  URLResponse response_;             // used for buffered responses
+  ::fuchsia::net::oldhttp::URLResponse response_;  // used for buffered responses
   zx::socket response_body_stream_;  // used for streamed responses (default)
 };
 
@@ -148,7 +148,7 @@ zx_status_t URLLoaderImpl::HTTPClient<T>::CreateRequest(
     const std::string& path,
     const std::string& method,
     const std::map<std::string, std::string>& extra_headers,
-    std::unique_ptr<UploadElementReader> request_body_reader) {
+    std::unique_ptr<http::UploadElementReader> request_body_reader) {
   if (!IsMethodAllowed(method)) {
     FXL_VLOG(1) << "Method " << method << " is not allowed";
     return ZX_ERR_INVALID_ARGS;
@@ -178,7 +178,7 @@ zx_status_t URLLoaderImpl::HTTPClient<T>::CreateRequest(
     if (request_body_reader_->err() != ZX_OK) {
       return request_body_reader_->err();
     }
-    if (content_length != UploadElementReader::kUnknownSize) {
+    if (content_length != http::UploadElementReader::kUnknownSize) {
       request_header_stream << "Content-Length: " << content_length << "\r\n";
     }
   }
@@ -226,7 +226,7 @@ void URLLoaderImpl::HTTPClient<ssl_socket_t>::OnResolve(
                                   std::placeholders::_1));
   } else {
     FXL_VLOG(1) << "Resolve(SSL): " << err.message();
-    SendError(network::NETWORK_ERR_NAME_NOT_RESOLVED);
+    SendError(HTTP_ERR_NAME_NOT_RESOLVED);
   }
 }
 
@@ -240,7 +240,7 @@ void URLLoaderImpl::HTTPClient<nonssl_socket_t>::OnResolve(
                                   std::placeholders::_1));
   } else {
     FXL_VLOG(1) << "Resolve(NonSSL): " << err.message();
-    SendError(network::NETWORK_ERR_NAME_NOT_RESOLVED);
+    SendError(HTTP_ERR_NAME_NOT_RESOLVED);
   }
 }
 
@@ -269,7 +269,7 @@ void URLLoaderImpl::HTTPClient<ssl_socket_t>::OnConnect(
                                       this, std::placeholders::_1));
   } else {
     FXL_VLOG(1) << "Connect(SSL): " << err.message();
-    SendError(network::NETWORK_ERR_CONNECTION_FAILED);
+    SendError(HTTP_ERR_CONNECTION_FAILED);
   }
 }
 
@@ -283,7 +283,7 @@ void URLLoaderImpl::HTTPClient<nonssl_socket_t>::OnConnect(
                   std::placeholders::_1, std::placeholders::_2));
   } else {
     FXL_VLOG(1) << "Connect(NonSSL): " << err.message();
-    SendError(network::NETWORK_ERR_CONNECTION_FAILED);
+    SendError(HTTP_ERR_CONNECTION_FAILED);
   }
 }
 
@@ -295,7 +295,7 @@ void URLLoaderImpl::HTTPClient<T>::OnHandShake(const asio::error_code& err) {
                                 std::placeholders::_1, std::placeholders::_2));
   } else {
     FXL_VLOG(1) << "HandShake: " << err.message();
-    SendError(network::NETWORK_ERR_SSL_HANDSHAKE_NOT_COMPLETED);
+    SendError(HTTP_ERR_SSL_HANDSHAKE_NOT_COMPLETED);
   }
 }
 
@@ -317,7 +317,7 @@ void URLLoaderImpl::HTTPClient<T>::OnWriteRequestHeaders(
   } else {
     FXL_VLOG(1) << "WriteRequestHeaders: " << err.message();
     // TODO(toshik): better error code?
-    SendError(network::NETWORK_ERR_FAILED);
+    SendError(HTTP_ERR_FAILED);
   }
 }
 
@@ -330,7 +330,7 @@ void URLLoaderImpl::HTTPClient<T>::WriteRequestBody() {
                       std::bind(&HTTPClient<T>::OnWriteRequestBody, this,
                                 std::placeholders::_1, std::placeholders::_2));
   } else if (request_body_reader_ && request_body_reader_->err() != ZX_OK) {
-    SendError(network::NETWORK_ERR_FAILED);
+    SendError(HTTP_ERR_FAILED);
   } else {
     // TODO(toshik): The response_ streambuf will automatically grow
     // The growth may be limited by passing a maximum size to the
@@ -351,7 +351,7 @@ void URLLoaderImpl::HTTPClient<T>::OnWriteRequestBody(
   } else {
     FXL_VLOG(1) << "WriteRequestBody: " << err.message();
     // TODO(toshik): better error code?
-    SendError(network::NETWORK_ERR_FAILED);
+    SendError(HTTP_ERR_FAILED);
   }
 }
 
@@ -366,7 +366,7 @@ void URLLoaderImpl::HTTPClient<T>::OnReadStatusLine(
     std::getline(response_stream, status_message_);
     if (!response_stream || http_version_.substr(0, 5) != "HTTP/") {
       FXL_VLOG(1) << "ReadStatusLine: Invalid response\n";
-      SendError(network::NETWORK_ERR_INVALID_RESPONSE);
+      SendError(HTTP_ERR_INVALID_RESPONSE);
       return;
     }
     // TODO(toshik): we don't treat any status code as an NETWORK_ERR for now
@@ -451,11 +451,11 @@ zx_status_t URLLoaderImpl::HTTPClient<T>::SendBufferedBody() {
       done += todo;
     } while (done < size);
 
-    if (loader_->response_body_mode_ == ResponseBodyMode::BUFFER) {
+    if (loader_->response_body_mode_ == ::fuchsia::net::oldhttp::ResponseBodyMode::BUFFER) {
       response_.body->set_buffer(std::move(vmo));
     } else {
       FXL_DCHECK(loader_->response_body_mode_ ==
-                 ResponseBodyMode::SIZED_BUFFER);
+                 ::fuchsia::net::oldhttp::ResponseBodyMode::SIZED_BUFFER);
       response_.body->set_sized_buffer(
           fsl::SizedVmo(std::move(vmo), size).ToTransport());
     }
@@ -488,7 +488,8 @@ void URLLoaderImpl::HTTPClient<T>::OnReadHeaders(const asio::error_code& err) {
       redirect_location_.clear();
 
       while (std::getline(response_stream, header) && header != "\r") {
-        HttpHeaderPtr hdr = HttpHeader::New();
+        ::fuchsia::net::oldhttp::HttpHeaderPtr hdr =
+            ::fuchsia::net::oldhttp::HttpHeader::New();
         std::string name, value;
         ParseHeaderField(header, &name, &value);
         if (name == "Location") {
@@ -497,14 +498,14 @@ void URLLoaderImpl::HTTPClient<T>::OnReadHeaders(const asio::error_code& err) {
         }
       }
     } else {
-      URLResponse response;
+      ::fuchsia::net::oldhttp::URLResponse response;
       response.status_code = status_code_;
       response.status_line =
           http_version_ + " " + std::to_string(status_code_) + status_message_;
       response.url = loader_->current_url_.spec();
 
       while (std::getline(response_stream, header) && header != "\r") {
-        HttpHeader hdr;
+        ::fuchsia::net::oldhttp::HttpHeader hdr;
         std::string name, value;
         ParseHeaderField(header, &name, &value);
         hdr.name = std::move(name);
@@ -512,19 +513,19 @@ void URLLoaderImpl::HTTPClient<T>::OnReadHeaders(const asio::error_code& err) {
         response.headers.push_back(std::move(hdr));
       }
 
-      response.body = std::make_unique<network::URLBody>();
+      response.body = std::make_unique<::fuchsia::net::oldhttp::URLBody>();
 
       switch (loader_->response_body_mode_) {
-        case ResponseBodyMode::BUFFER:
-        case ResponseBodyMode::SIZED_BUFFER:
+        case ::fuchsia::net::oldhttp::ResponseBodyMode::BUFFER:
+        case ::fuchsia::net::oldhttp::ResponseBodyMode::SIZED_BUFFER:
           response_ = std::move(response);
 
           asio::async_read(socket_, response_buf_,
                            std::bind(&HTTPClient<T>::OnBufferBody, this,
                                      std::placeholders::_1));
           break;
-        case ResponseBodyMode::STREAM:
-        case ResponseBodyMode::BUFFER_OR_STREAM:
+        case ::fuchsia::net::oldhttp::ResponseBodyMode::STREAM:
+        case ::fuchsia::net::oldhttp::ResponseBodyMode::BUFFER_OR_STREAM:
           zx::socket consumer;
           zx::socket producer;
           zx_status_t status = zx::socket::create(0u, &producer, &consumer);
@@ -563,7 +564,7 @@ void URLLoaderImpl::HTTPClient<T>::OnBufferBody(const asio::error_code& err) {
     // Content-Length header).
     FXL_VLOG(1) << "OnBufferBody: " << err.message() << " (" << err << ")";
     // TODO(somebody who knows asio/network errors): real translation
-    SendError(network::NETWORK_ERR_FAILED);
+    SendError(HTTP_ERR_FAILED);
   } else {
     SendBufferedBody();
     loader_->SendResponse(std::move(response_));
@@ -585,7 +586,8 @@ void URLLoaderImpl::HTTPClient<T>::OnStreamBody(const asio::error_code& err) {
 }
 
 template <typename T>
-void URLLoaderImpl::HTTPClient<T>::SendResponse(URLResponse response) {
+void URLLoaderImpl::HTTPClient<T>::SendResponse(
+        ::fuchsia::net::oldhttp::URLResponse response) {
   loader_->SendResponse(std::move(response));
 }
 
@@ -594,7 +596,7 @@ void URLLoaderImpl::HTTPClient<T>::SendError(int error_code) {
   loader_->SendError(error_code);
 }
 
-}  // namespace network
+}  // namespace http
 
 #if defined(ASIO_NO_EXCEPTIONS)
 // If C++ exception is disabled, ASIO calls this function instead of throwing
@@ -608,4 +610,4 @@ void asio::detail::throw_exception(const Exception& e) {
 }
 #endif
 
-#endif  // GARNET_BIN_HTTP_HTTP_CLIENT_H_
+#endif  // GARNET_BIN_HTTP_HTTP_NEW_CLIENT_H_

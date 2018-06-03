@@ -10,8 +10,6 @@
 #include <lib/async/cpp/task.h>
 #include <lib/async-loop/cpp/loop.h>
 
-#include "garnet/bin/http/net_adapters.h"
-#include "garnet/bin/http/net_errors.h"
 #include "garnet/bin/http/http_service_impl.h"
 #include "garnet/bin/http/http_url_loader_impl.h"
 #include "lib/fxl/logging.h"

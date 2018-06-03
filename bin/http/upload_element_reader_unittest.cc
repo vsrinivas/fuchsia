@@ -11,7 +11,7 @@
 
 #include <gtest/gtest.h>
 
-namespace network {
+namespace http {
 
 namespace {
 
@@ -53,4 +53,4 @@ TEST(VmoUploadElementReader, BiggerData) {
 
 }  // namespace
 
-}  // namespace network
+}  // namespace http

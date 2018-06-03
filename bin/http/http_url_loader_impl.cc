@@ -10,7 +10,7 @@
 #include <string>
 #include <vector>
 
-#include "garnet/bin/http/http_new_client.h"
+#include "garnet/bin/http/http_client.h"
 #include "garnet/bin/http/http_adapters.h"
 #include "garnet/bin/http/http_errors.h"
 #include "lib/fxl/functional/make_copyable.h"
@@ -75,7 +75,7 @@ void URLLoaderImpl::StartInternal(oldhttp::URLRequest request) {
   std::string url_str = request.url;
   std::string method = request.method;
   std::map<std::string, std::string> extra_headers;
-  std::unique_ptr<network::UploadElementReader> request_body_reader;
+  std::unique_ptr<http::UploadElementReader> request_body_reader;
 
   if (request.headers) {
     for (size_t i = 0; i < request.headers->size(); ++i)
@@ -86,14 +86,14 @@ void URLLoaderImpl::StartInternal(oldhttp::URLRequest request) {
   if (request.body) {
     // TODO(kulakowski) Implement responses into a shared_buffer
     if (request.body->is_stream()) {
-      request_body_reader = std::make_unique<network::SocketUploadElementReader>(
+      request_body_reader = std::make_unique<http::SocketUploadElementReader>(
           std::move(request.body->stream()));
     } else if (request.body->is_buffer()) {
-      request_body_reader = std::make_unique<network::VmoUploadElementReader>(
+      request_body_reader = std::make_unique<http::VmoUploadElementReader>(
           std::move(request.body->buffer()));
     } else {
       FXL_DCHECK(request.body->is_sized_buffer());
-      request_body_reader = std::make_unique<network::VmoUploadElementReader>(
+      request_body_reader = std::make_unique<http::VmoUploadElementReader>(
           std::move(request.body->sized_buffer().vmo),
           request.body->sized_buffer().size);
     }

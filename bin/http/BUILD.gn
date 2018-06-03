@@ -6,15 +6,9 @@ import("//build/package.gni")
 
 source_set("errors") {
   sources = [
-    # New implementation using public/net/oldhttp
     "http_error_list.h",
     "http_errors.cc",
     "http_errors.h",
-
-    # Legacy implementation using public/network
-    "net_error_list.h",
-    "net_errors.cc",
-    "net_errors.h",
   ]
 
   deps = [
@@ -27,36 +21,22 @@ source_set("lib") {
   defines = [ "NETWORK_SERVICE_USE_HTTPS" ]
 
   sources = [
-    "upload_element_reader.cc",
-    "upload_element_reader.h",
-
-    # New implementation using public/net/oldhttp
     "http_adapters.cc",
     "http_adapters.h",
-    "http_new_client.h",
+    "http_client.h",
     "http_service_delegate.cc",
     "http_service_delegate.h",
     "http_service_impl.cc",
     "http_service_impl.h",
     "http_url_loader_impl.cc",
     "http_url_loader_impl.h",
-
-    # Legacy implementation using public/network
-    "http_client.h",
-    "net_adapters.cc",
-    "net_adapters.h",
-    "network_service_delegate.cc",
-    "network_service_delegate.h",
-    "network_service_impl.cc",
-    "network_service_impl.h",
-    "url_loader_impl.cc",
-    "url_loader_impl.h",
+    "upload_element_reader.cc",
+    "upload_element_reader.h",
   ]
 
   deps = [
     "//garnet/public/lib/net/oldhttp/fidl",
     "//garnet/public/lib/netstack/fidl",
-    "//garnet/public/lib/network/fidl",
     "//garnet/public/lib/url",
     "//third_party/asio",
     "//third_party/boringssl:boringssl",
