@@ -42,6 +42,7 @@ func NewArena() (*Arena, error) {
 	if err != nil {
 		return nil, fmt.Errorf("eth: cannot allocate I/O VMO: %v", err)
 	}
+	iovmo.Handle().SetProperty(zx.PropName, []byte("eth-arena"))
 
 	iobuf, err := zx.VMARRoot.Map(0, iovmo, 0, iosize, zx.VMFlagPermRead|zx.VMFlagPermWrite)
 	if err != nil {
