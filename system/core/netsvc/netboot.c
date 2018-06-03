@@ -82,6 +82,7 @@ zx_status_t nbfilecontainer_init(size_t size, nbfilecontainer_t* target) {
                "retcode = %d\n", size, st);
         return st;
     }
+    zx_object_set_property(target->data, ZX_PROP_NAME, "netboot", 7);
 
     uintptr_t buffer;
     st = zx_vmar_map(zx_vmar_root_self(), 0, target->data, 0, size,

@@ -99,6 +99,7 @@ static zx_status_t alloc_paver_buffer(file_info_t* file_info, size_t size) {
         printf("netsvc: unable to allocate buffer VMO\n");
         return status;
     }
+    zx_object_set_property(file_info->paver.buffer_handle, ZX_PROP_NAME, "paver", 5);
     uintptr_t buffer;
     status = zx_vmar_map(zx_vmar_root_self(), 0, file_info->paver.buffer_handle, 0, size,
                          ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE, &buffer);

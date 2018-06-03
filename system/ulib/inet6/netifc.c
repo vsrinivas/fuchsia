@@ -309,6 +309,7 @@ static zx_status_t netifc_open_cb(int dirfd, int event, const char* fn, void* co
         if ((status = zx_vmo_create(iosize, 0, &iovmo)) < 0) {
             goto fail_close_fd;
         }
+        zx_object_set_property(iovmo, ZX_PROP_NAME, "eth-buffers", 11);
         if ((status = zx_vmar_map(zx_vmar_root_self(), 0, iovmo, 0, iosize,
                                   ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE,
                                   (uintptr_t*)&iobuf)) < 0) {
