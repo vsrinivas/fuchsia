@@ -10,6 +10,8 @@
 
 namespace cobalt {
 
+namespace http = ::fuchsia::net::oldhttp;
+
 using clearcut::ClearcutUploader;
 using config::ClientConfig;
 using encoder::ClearcutV1ShippingManager;
@@ -48,7 +50,7 @@ CobaltApp::CobaltApp(async_t* async, std::chrono::seconds schedule_interval,
           async, std::make_unique<backoff::ExponentialBackoff>(),
           [this] {
             return context_
-                ->ConnectToEnvironmentService<network::NetworkService>();
+                ->ConnectToEnvironmentService<http::HttpService>();
           }),
       timer_manager_(async),
       controller_impl_(new CobaltControllerImpl(async, &shipping_dispatcher_)) {

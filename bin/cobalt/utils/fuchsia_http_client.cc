@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/net/oldhttp/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/cpp/time.h>
 #include <lib/async/default.h>
-#include <network/cpp/fidl.h>
 
 #include "garnet/bin/cobalt/utils/fuchsia_http_client.h"
 #include "lib/fsl/socket/socket_drainer.h"
@@ -15,6 +15,8 @@
 
 namespace cobalt {
 namespace utils {
+
+namespace http = ::fuchsia::net::oldhttp;
 
 using clearcut::HTTPClient;
 using clearcut::HTTPRequest;
@@ -108,11 +110,11 @@ std::future<StatusOr<HTTPResponse>> FuchsiaHTTPClient::Post(
   async::PostTask(async_, [this, req = network_request] {
     req->network_wrapper_cancel = network_wrapper_->Request(
         [req]() {
-          network::URLRequest fx_request;
+          http::URLRequest fx_request;
           fx_request.url = req->request.url;
           fx_request.method = "POST";
           fx_request.auto_follow_redirects = true;
-          fx_request.body = network::URLBody::New();
+          fx_request.body = http::URLBody::New();
 
           fsl::SizedVmo data;
           auto result = fsl::VmoFromString(req->request.body, &data);
@@ -120,14 +122,14 @@ std::future<StatusOr<HTTPResponse>> FuchsiaHTTPClient::Post(
 
           fx_request.body->set_sized_buffer(std::move(data).ToTransport());
           for (const auto& header : req->request.headers) {
-            network::HttpHeader hdr;
+            http::HttpHeader hdr;
             hdr.name = header.first;
             hdr.value = header.second;
             fx_request.headers.push_back(std::move(hdr));
           }
           return fx_request;
         },
-        [this, req](network::URLResponse fx_response) {
+        [this, req](http::URLResponse fx_response) {
           FXL_DCHECK(req->deadline_task);
           req->deadline_task->Cancel();
           req->deadline_task.reset(nullptr);

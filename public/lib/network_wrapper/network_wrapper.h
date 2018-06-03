@@ -5,7 +5,7 @@
 #ifndef LIB_NETWORK_WRAPPER_NETWORK_WRAPPER_H_
 #define LIB_NETWORK_WRAPPER_NETWORK_WRAPPER_H_
 
-#include <network/cpp/fidl.h>
+#include <fuchsia/net/oldhttp/cpp/fidl.h>
 #include "lib/callback/cancellable.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/ref_ptr.h"
@@ -22,8 +22,8 @@ class NetworkWrapper {
 
   // Starts a url network request.
   virtual fxl::RefPtr<callback::Cancellable> Request(
-      std::function<network::URLRequest()> request_factory,
-      std::function<void(network::URLResponse)> callback) = 0;
+      std::function<::fuchsia::net::oldhttp::URLRequest()> request_factory,
+      std::function<void(::fuchsia::net::oldhttp::URLResponse)> callback) = 0;
 
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(NetworkWrapper);

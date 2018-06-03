@@ -14,13 +14,15 @@
 
 namespace network_wrapper {
 
+namespace http = ::fuchsia::net::oldhttp;
+
 const uint32_t kMaxRedirectCount = 32;
 const int32_t kTooManyRedirectErrorCode = -310;
 const int32_t kInvalidResponseErrorCode = -320;
 
 class NetworkWrapperImpl::RunningRequest {
  public:
-  explicit RunningRequest(std::function<network::URLRequest()> request_factory)
+  explicit RunningRequest(std::function<http::URLRequest()> request_factory)
       : request_factory_(std::move(request_factory)), redirect_count_(0u) {}
 
   void Cancel() {
@@ -29,18 +31,18 @@ class NetworkWrapperImpl::RunningRequest {
   }
 
   // Set the network service to use. This will start (or restart) the request.
-  void SetNetworkService(network::NetworkService* network_service) {
-    network_service_ = network_service;
-    if (network_service) {
+  void SetHttpService(http::HttpService* http_service) {
+    http_service_ = http_service;
+    if (http_service) {
       // Restart the request, as any fidl callback is now pending forever.
       Start();
     }
   }
 
-  void set_callback(std::function<void(network::URLResponse)> callback) {
+  void set_callback(std::function<void(http::URLResponse)> callback) {
     // Once this class calls its callback, it must notify its container.
     callback_ = [this, callback = std::move(callback)](
-                    network::URLResponse response) mutable {
+                    http::URLResponse response) mutable {
       FXL_DCHECK(on_empty_callback_);
       if (destruction_sentinel_.DestructedWhile(
               [callback = std::move(callback), &response] {
@@ -62,7 +64,7 @@ class NetworkWrapperImpl::RunningRequest {
     url_loader_.Unbind();
 
     // If no network service has been set, bail out and wait to be called again.
-    if (!network_service_)
+    if (!http_service_)
       return;
 
     auto request = request_factory_();
@@ -71,14 +73,14 @@ class NetworkWrapperImpl::RunningRequest {
     if (!next_url_.empty())
       request.url = next_url_;
 
-    network_service_->CreateURLLoader(url_loader_.NewRequest());
+    http_service_->CreateURLLoader(url_loader_.NewRequest());
 
     const std::string& url = request.url;
     const std::string& method = request.method;
     url_loader_->Start(
         std::move(request),
         TRACE_CALLBACK(
-            callback::ToStdFunction([this](network::URLResponse response) {
+            callback::ToStdFunction([this](http::URLResponse response) {
               url_loader_.Unbind();
 
               if (response.error) {
@@ -108,7 +110,7 @@ class NetworkWrapperImpl::RunningRequest {
     });
   }
 
-  void HandleRedirect(network::URLResponse response) {
+  void HandleRedirect(http::URLResponse response) {
     // Follow the redirect if a Location header is found.
     for (const auto& header : *response.headers) {
       if (fxl::EqualsCaseInsensitiveASCII(header.name.get(), "location")) {
@@ -132,36 +134,36 @@ class NetworkWrapperImpl::RunningRequest {
     // variables afterwards.
   }
 
-  network::URLResponse NewErrorResponse(int32_t code, std::string reason) {
-    network::URLResponse response;
-    response.error = network::NetworkError::New();
+  http::URLResponse NewErrorResponse(int32_t code, std::string reason) {
+    http::URLResponse response;
+    response.error = http::HttpError::New();
     response.error->code = code;
     response.error->description = reason;
     return response;
   }
 
-  std::function<network::URLRequest()> request_factory_;
-  std::function<void(network::URLResponse)> callback_;
+  std::function<http::URLRequest()> request_factory_;
+  std::function<void(http::URLResponse)> callback_;
   fxl::Closure on_empty_callback_;
   std::string next_url_;
   uint32_t redirect_count_;
-  network::NetworkService* network_service_;
-  network::URLLoaderPtr url_loader_;
+  http::HttpService* http_service_;
+  http::URLLoaderPtr url_loader_;
   callback::DestructionSentinel destruction_sentinel_;
 };
 
 NetworkWrapperImpl::NetworkWrapperImpl(
     async_t* async, std::unique_ptr<backoff::Backoff> backoff,
-    std::function<network::NetworkServicePtr()> network_service_factory)
+    std::function<http::HttpServicePtr()> http_service_factory)
     : backoff_(std::move(backoff)),
-      network_service_factory_(std::move(network_service_factory)),
+      http_service_factory_(std::move(http_service_factory)),
       task_runner_(async) {}
 
 NetworkWrapperImpl::~NetworkWrapperImpl() {}
 
 fxl::RefPtr<callback::Cancellable> NetworkWrapperImpl::Request(
-    std::function<network::URLRequest()> request_factory,
-    std::function<void(network::URLResponse)> callback) {
+    std::function<http::URLRequest()> request_factory,
+    std::function<void(http::URLResponse)> callback) {
   RunningRequest& request =
       running_requests_.emplace(std::move(request_factory));
 
@@ -171,40 +173,40 @@ fxl::RefPtr<callback::Cancellable> NetworkWrapperImpl::Request(
   request.set_callback(cancellable->WrapCallback(TRACE_CALLBACK(
       std::move(callback), "network_wrapper", "network_request")));
   if (!in_backoff_) {
-    request.SetNetworkService(GetNetworkService());
+    request.SetHttpService(GetHttpService());
   }
 
   return cancellable;
 }
 
-network::NetworkService* NetworkWrapperImpl::GetNetworkService() {
-  if (!network_service_) {
-    network_service_ = network_service_factory_();
-    network_service_.set_error_handler([this]() {
+http::HttpService* NetworkWrapperImpl::GetHttpService() {
+  if (!http_service_) {
+    http_service_ = http_service_factory_();
+    http_service_.set_error_handler([this]() {
       FXL_LOG(WARNING) << "Network service crashed or not configured "
                        << "in environment, trying to reconnect.";
       FXL_DCHECK(!in_backoff_);
       in_backoff_ = true;
       for (auto& request : running_requests_) {
-        request.SetNetworkService(nullptr);
+        request.SetHttpService(nullptr);
       }
-      network_service_.Unbind();
-      task_runner_.PostDelayedTask([this] { RetryGetNetworkService(); },
+      http_service_.Unbind();
+      task_runner_.PostDelayedTask([this] { RetryGetHttpService(); },
                                    backoff_->GetNext());
     });
   }
 
-  return network_service_.get();
+  return http_service_.get();
 }
 
-void NetworkWrapperImpl::RetryGetNetworkService() {
+void NetworkWrapperImpl::RetryGetHttpService() {
   in_backoff_ = false;
   if (running_requests_.empty()) {
     return;
   }
-  network::NetworkService* network_service = GetNetworkService();
+  http::HttpService* http_service = GetHttpService();
   for (auto& request : running_requests_) {
-    request.SetNetworkService(network_service);
+    request.SetHttpService(http_service);
   }
 }
 

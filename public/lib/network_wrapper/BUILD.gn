@@ -13,7 +13,7 @@ source_set("network_wrapper") {
     "//garnet/public/lib/backoff",
     "//garnet/public/lib/callback",
     "//garnet/public/lib/fxl",
-    "//garnet/public/lib/network/fidl",
+    "//garnet/public/lib/net/oldhttp/fidl",
     "//zircon/public/lib/zx",
   ]
 }
