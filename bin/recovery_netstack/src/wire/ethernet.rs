@@ -7,7 +7,7 @@ use std::ops::RangeBounds;
 use byteorder::{BigEndian, ByteOrder};
 use zerocopy::{AsBytes, ByteSlice, FromBytes, LayoutVerified, Unaligned};
 
-use device::ethernet::{EtherType, MAC};
+use device::ethernet::{EtherType, Mac};
 use wire::util::extract_slice_range;
 use wire::{Err, ParseErr};
 
@@ -134,13 +134,13 @@ impl<B: ByteSlice> EthernetFrame<B> {
     }
 
     /// The source MAC address.
-    pub fn src_mac(&self) -> MAC {
-        MAC::new(self.hdr_prefix.src_mac)
+    pub fn src_mac(&self) -> Mac {
+        Mac::new(self.hdr_prefix.src_mac)
     }
 
     /// The destination MAC address.
-    pub fn dst_mac(&self) -> MAC {
-        MAC::new(self.hdr_prefix.dst_mac)
+    pub fn dst_mac(&self) -> Mac {
+        Mac::new(self.hdr_prefix.dst_mac)
     }
 
     /// The numerical EtherType code.
@@ -178,7 +178,7 @@ impl<'a> EthernetFrame<&'a mut [u8]> {
     /// of 60 bytes. The caller can guarantee that the frame will be large
     /// enough by providing a body of at least `MIN_BODY_LEN` bytes.
     pub fn create<R: RangeBounds<usize>>(
-        buffer: &'a mut [u8], body: R, src_mac: MAC, dst_mac: MAC, ethertype: EtherType,
+        buffer: &'a mut [u8], body: R, src_mac: Mac, dst_mac: Mac, ethertype: EtherType,
     ) -> (EthernetFrame<&'a mut [u8]>, usize) {
         // NOTE: EtherType values of 1500 and below are used to indicate the
         // length of the body in bytes. We don't need to validate this because
@@ -290,8 +290,8 @@ mod tests {
             let (_, prefix_len) = EthernetFrame::create(
                 &mut buf,
                 (MAX_HEADER_LEN - 4)..,
-                MAC::new([0, 1, 2, 3, 4, 5]),
-                MAC::new([6, 7, 8, 9, 10, 11]),
+                Mac::new([0, 1, 2, 3, 4, 5]),
+                Mac::new([6, 7, 8, 9, 10, 11]),
                 EtherType::Arp,
             );
             assert_eq!(prefix_len, 0);
@@ -332,8 +332,8 @@ mod tests {
         EthernetFrame::create(
             &mut buf,
             (60 - (MIN_BODY_LEN - 1))..,
-            MAC::new([0, 1, 2, 3, 4, 5]),
-            MAC::new([6, 7, 8, 9, 10, 11]),
+            Mac::new([0, 1, 2, 3, 4, 5]),
+            Mac::new([6, 7, 8, 9, 10, 11]),
             EtherType::Arp,
         );
     }

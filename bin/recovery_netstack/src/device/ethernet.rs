@@ -8,16 +8,16 @@
 ///
 /// The broadcast MAC address, FF:FF:FF:FF:FF:FF, indicates that a frame should
 /// be received by all receivers regardless of their local MAC address.
-pub const BROADCAST_MAC: MAC = MAC([0xFF; 6]);
+pub const BROADCAST_MAC: Mac = Mac([0xFF; 6]);
 
 /// A media access control (MAC) address.
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
-pub struct MAC([u8; 6]);
+pub struct Mac([u8; 6]);
 
-impl MAC {
+impl Mac {
     /// Construct a new MAC address.
-    pub const fn new(bytes: [u8; 6]) -> MAC {
-        MAC(bytes)
+    pub const fn new(bytes: [u8; 6]) -> Mac {
+        Mac(bytes)
     }
 
     /// Get the bytes of the MAC address.
