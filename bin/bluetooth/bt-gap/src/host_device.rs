@@ -11,17 +11,21 @@ use futures::Future;
 use futures::future::ok as fok;
 use host_dispatcher::HostDispatcher;
 use parking_lot::RwLock;
+use std::path::PathBuf;
 use std::sync::Arc;
 use util::clone_host_state;
 
 pub struct HostDevice {
+    pub path: PathBuf,
+
     host: HostProxy,
     info: AdapterInfo,
 }
 
 impl HostDevice {
-    pub fn new(host: HostProxy, info: AdapterInfo) -> Self {
+    pub fn new(path: PathBuf, host: HostProxy, info: AdapterInfo) -> Self {
         HostDevice {
+            path,
             host,
             info,
         }

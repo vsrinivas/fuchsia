@@ -342,29 +342,29 @@ impl Future for OnAdaptersFound {
 fn add_adapter(hd: Arc<RwLock<HostDispatcher>>, host_path: PathBuf)
     -> impl Future<Item = (), Error = Error> {
     info!("Adding Adapter: {:?}", host_path);
-    File::open(host_path)
+    File::open(host_path.clone())
         .into_future()
         .err_into()
-        .and_then(|host| {
+        .and_then(move |host| {
             let handle = bt::host::open_host_channel(&host).unwrap();
             let host = HostProxy::new(async::Channel::from_channel(handle.into()).unwrap());
-            host.get_info().map_err(|e| e.into()).map(
-                |info| (host, info),
-            )
+            host.get_info().map_err(|e| e.into()).map(|info| {
+                (host, info, host_path)
+            })
         })
-        .and_then(move |(host, adapter_info)| {
+        .and_then(move |(host, adapter_info, path)| {
             // Set the adapter as connectable
             host.set_connectable(true)
                 .map_err(|e| {
                     error!("Failed to set host adapter as connectable");
                     e.into()
                 })
-                .map(|_| (host, adapter_info))
+                .map(|_| (host, adapter_info, path))
         })
-        .and_then(move |(host, adapter_info)| {
+        .and_then(move |(host, adapter_info, path)| {
             // Add to the adapters
             let id = adapter_info.identifier.clone();
-            let host_device = Arc::new(RwLock::new(HostDevice::new(host, adapter_info)));
+            let host_device = Arc::new(RwLock::new(HostDevice::new(path, host, adapter_info)));
             hd.write().add_host(id, host_device.clone());
             fok((hd.clone(), host_device))
         })
@@ -382,10 +382,35 @@ fn add_adapter(hd: Arc<RwLock<HostDispatcher>>, host_path: PathBuf)
         })
 }
 
-pub fn rm_adapter(_hd: Arc<RwLock<HostDispatcher>>, host_path: PathBuf)
+pub fn rm_adapter(hd: Arc<RwLock<HostDispatcher>>, host_path: PathBuf)
     -> impl Future<Item = (), Error = Error> {
     info!("Host removed: {:?}", host_path);
-    // TODO:(NET-852)
+
+    let mut hd = hd.write();
+    let active_id = hd.active_id.clone();
+
+    // Get the host IDs that match |host_path|.
+    let ids: Vec<String> = hd.host_devices
+        .iter()
+        .filter(|(_, ref host)| host.read().path == host_path)
+        .map(|(k, _)| k.clone())
+        .collect();
+    for id in &ids {
+        hd.host_devices.remove(id);
+    }
+
+    // Reset the active ID if it got removed.
+    if let Some(active_id) = active_id {
+        if ids.contains(&active_id) {
+            hd.active_id = None;
+        }
+    }
+
+    // Try to assign a new active adapter. This may send an "OnActiveAdapterChanged" event.
+    if hd.active_id.is_none() {
+        let _ = hd.get_active_id();
+    }
+
     fok(())
 }
 
