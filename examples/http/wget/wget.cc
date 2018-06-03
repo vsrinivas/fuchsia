@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/async-loop/cpp/loop.h>
-#include <network/cpp/fidl.h>
+#include <fuchsia/net/oldhttp/cpp/fidl.h>
 
 #include "lib/app/cpp/connect.h"
 #include "lib/app/cpp/startup_context.h"
@@ -14,9 +14,11 @@
 
 namespace examples {
 
+namespace http = ::fuchsia::net::oldhttp;
+
 class ResponsePrinter {
  public:
-  void Run(async::Loop* loop, network::URLResponse response) const {
+  void Run(async::Loop* loop, http::URLResponse response) const {
     if (response.error) {
       printf("Got error: %d (%s)\n", response.error->code,
              response.error->description.get().c_str());
@@ -29,7 +31,7 @@ class ResponsePrinter {
     loop->Quit();  // All done!
   }
 
-  void PrintResponse(const network::URLResponse& response) const {
+  void PrintResponse(const http::URLResponse& response) const {
     printf(">>> Headers <<< \n");
     printf("  %s\n", response.status_line.get().c_str());
     if (response.headers) {
@@ -74,9 +76,9 @@ class WGetApp {
   WGetApp(async::Loop* loop)
       : loop_(loop),
         context_(fuchsia::sys::StartupContext::CreateFromStartupInfo()) {
-    network_service_ =
-        context_->ConnectToEnvironmentService<network::NetworkService>();
-    FXL_DCHECK(network_service_);
+    http_service_ =
+        context_->ConnectToEnvironmentService<http::HttpService>();
+    FXL_DCHECK(http_service_);
   }
 
   bool Start(const std::vector<std::string>& args) {
@@ -90,15 +92,15 @@ class WGetApp {
     }
     printf("Loading: %s\n", url.c_str());
 
-    network_service_->CreateURLLoader(url_loader_.NewRequest());
+    http_service_->CreateURLLoader(url_loader_.NewRequest());
 
-    network::URLRequest request;
+    http::URLRequest request;
     request.url = url;
     request.method = "GET";
     request.auto_follow_redirects = true;
 
     url_loader_->Start(std::move(request),
-                       [this](network::URLResponse response) {
+                       [this](http::URLResponse response) {
                          ResponsePrinter printer;
                          printer.Run(loop_, std::move(response));
                        });
@@ -109,8 +111,8 @@ class WGetApp {
   async::Loop* const loop_;
   std::unique_ptr<fuchsia::sys::StartupContext> context_;
 
-  network::NetworkServicePtr network_service_;
-  network::URLLoaderPtr url_loader_;
+  http::HttpServicePtr http_service_;
+  http::URLLoaderPtr url_loader_;
 };
 
 }  // namespace examples
