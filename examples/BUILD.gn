@@ -8,7 +8,6 @@ package("modular_examples") {
   deprecated_system_image = true
 
   deps = [
-    "counter_cpp",
     "hello_world",
     "simple:simple_agent",
     "simple:simple_module_bin",
@@ -25,15 +24,6 @@ package("modular_examples") {
     },
     {
       name = "rust_crates/hello_world_rust"
-    },
-    {
-      name = "example_module1"
-    },
-    {
-      name = "example_module2"
-    },
-    {
-      name = "example_recipe"
     },
     {
       name = "example_todo_headless"
