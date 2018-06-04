@@ -102,6 +102,10 @@ package("ledger_tests") {
     },
     {
       name = "ledger_integration_tests"
+      
+      # This test is currently flaky; disabling while we fix it.
+      # See LE-473
+      disabled = true
     },
 
     {
