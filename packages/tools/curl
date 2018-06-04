@@ -1,0 +1,5 @@
+{
+    "packages": {
+        "curl": "//third_party/curl"
+    }
+}

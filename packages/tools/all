@@ -1,5 +1,6 @@
 {
     "imports": [
+        "garnet/packages/tools/curl",
         "garnet/packages/tools/iperf",
         "garnet/packages/tools/make-efi",
         "garnet/packages/tools/make-fuchsia-vol",

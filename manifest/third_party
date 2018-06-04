@@ -57,6 +57,11 @@
              remote="https://chromium.googlesource.com/crashpad/crashpad"
              revision="3033802ed4ad78c343b85f3b5b1c22762c66e976"
              gerrithost="https://fuchsia-review.googlesource.com"/>
+    <project name="third_party/curl"
+             path="third_party/curl"
+             remote="https://fuchsia.googlesource.com/third_party/curl"
+             gerrithost="https://fuchsia-review.googlesource.com"
+             revision="8b3d7e5dbce3607c7a735e9cd84b47da991fbbfd"/>
     <project name="third_party/expat"
              path="third_party/expat"
              remote="https://fuchsia.googlesource.com/third_party/expat"
