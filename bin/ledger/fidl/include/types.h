@@ -5,7 +5,7 @@
 #ifndef PERIDOT_BIN_LEDGER_FIDL_INCLUDE_TYPES_H_
 #define PERIDOT_BIN_LEDGER_FIDL_INCLUDE_TYPES_H_
 
-#include <fuchsia/ledger/cloud/firebase/cpp/fidl.h>
+#include <fuchsia/ledger/cloud/cpp/fidl.h>
 
 // More convenient aliases for FIDL types.
 
