@@ -1,25 +1,22 @@
-#!/usr/bin/env python
 # Copyright 2018 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-# Defines a package
-#
-# The package template is used to define a unit of related code and data.
-# A package always has a name (defaulting to the target name)
-#
-# Parameters
-#
-#   name(string, required)
-#       The name of the package
-#
-#   binary (optional)
-#     The path to the the primary binary for the package, relative to
-#     $root_build_dir. The binary will be placed in the assembled package at
-#     "bin/app" and will be executed by default when running the package.
-#
-#   deps(list, required)
-#       The list of targets to be built into this package
+"""
+Defines a Fuchsia package
+
+The package template is used to define a unit of related code and data.
+A package always has a name (defaulting to the target name)
+
+Parameters
+
+  name(string, required)
+      The name of the package
+
+  deps(list, required)
+      The list of targets to be built into this package
+"""
+
 def _fuchsia_package_impl (ctx):
     print("building fuchsia_package %s\n" % ctx.attr.name)
     transitive_runfile_sets = []
