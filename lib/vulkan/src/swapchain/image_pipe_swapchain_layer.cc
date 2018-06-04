@@ -23,6 +23,10 @@
 
 namespace image_pipe_swapchain {
 
+// Useful for testing app performance without external restriction
+// (due to composition, vsync, etc.)
+constexpr bool kSkipPresent = false;
+
 // Zero is a invalid ID in the ImagePipe interface, so offset index by one
 static inline uint32_t ImageIdFromIndex(uint32_t index) { return index + 1; }
 
@@ -487,7 +491,7 @@ VkResult ImagePipeSwapchain::Present(VkQueue queue, uint32_t index,
     return VK_ERROR_SURFACE_LOST_KHR;
   }
 
-  auto acquire_fences = fidl::VectorPtr<zx::event>::New(1);
+  zx::event acquire_fence;
 
   VkSemaphoreGetFuchsiaHandleInfoKHR semaphore_info = {
       .sType = VK_STRUCTURE_TYPE_SEMAPHORE_GET_FUCHSIA_HANDLE_INFO_KHR,
@@ -495,7 +499,7 @@ VkResult ImagePipeSwapchain::Present(VkQueue queue, uint32_t index,
       .semaphore = semaphores_[index],
       .handleType = VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_FUCHSIA_FENCE_BIT_KHR};
   result = pDisp->GetSemaphoreFuchsiaHandleKHR(
-      device_, &semaphore_info, acquire_fences->at(0).reset_and_get_address());
+      device_, &semaphore_info, acquire_fence.reset_and_get_address());
   if (result != VK_SUCCESS) {
     FXL_DLOG(ERROR) << "GetSemaphoreFuchsiaHandleKHR failed with result "
                     << result;
@@ -506,31 +510,37 @@ VkResult ImagePipeSwapchain::Present(VkQueue queue, uint32_t index,
   FXL_DCHECK(iter != acquired_ids_.end());
   acquired_ids_.erase(iter);
 
-  zx::event release_fence;
-  zx_status_t status;
+  if (kSkipPresent) {
+    pending_images_.push_back({std::move(acquire_fence), index});
+  } else {
+    zx::event release_fence;
 
-  status = zx::event::create(0, &release_fence);
-  if (status != ZX_OK)
-    return VK_ERROR_DEVICE_LOST;
+    zx_status_t status = zx::event::create(0, &release_fence);
+    if (status != ZX_OK)
+      return VK_ERROR_DEVICE_LOST;
 
-  zx::event image_release_fence;
-  status = release_fence.duplicate(ZX_RIGHT_SAME_RIGHTS, &image_release_fence);
-  if (status != ZX_OK) {
-    FXL_DLOG(ERROR) << "failed to duplicate release fence, "
-                       "zx::event::duplicate() failed with status "
-                    << status;
-    return VK_ERROR_DEVICE_LOST;
+    zx::event image_release_fence;
+    status = release_fence.duplicate(ZX_RIGHT_SAME_RIGHTS, &image_release_fence);
+    if (status != ZX_OK) {
+      FXL_DLOG(ERROR) << "failed to duplicate release fence, "
+                         "zx::event::duplicate() failed with status "
+                      << status;
+      return VK_ERROR_DEVICE_LOST;
+    }
+
+    pending_images_.push_back({std::move(image_release_fence), index});
+
+    fidl::VectorPtr<zx::event> acquire_fences;
+    acquire_fences.push_back(std::move(acquire_fence));
+
+    fidl::VectorPtr<zx::event> release_fences;
+    release_fences.push_back(std::move(release_fence));
+
+    fuchsia::images::PresentationInfo info;
+    image_pipe_->PresentImage(ImageIdFromIndex(index), 0,
+                              std::move(acquire_fences),
+                              std::move(release_fences), &info);
   }
-
-  pending_images_.push_back({std::move(image_release_fence), index});
-
-  fidl::VectorPtr<zx::event> release_fences;
-  release_fences.push_back(std::move(release_fence));
-
-  fuchsia::images::PresentationInfo info;
-  image_pipe_->PresentImage(ImageIdFromIndex(index), 0,
-                            std::move(acquire_fences),
-                            std::move(release_fences), &info);
 
   return VK_SUCCESS;
 }
