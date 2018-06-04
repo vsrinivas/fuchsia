@@ -5,6 +5,7 @@
 #include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"
 
 #include <fdio/util.h>
+#include <sync/completion.h>
 #include <zircon/processargs.h>
 
 #include "lib/fxl/logging.h"

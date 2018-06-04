@@ -6,7 +6,7 @@
 #define PERIDOT_LIB_SCOPED_TMPFS_SCOPED_TMPFS_H_
 
 #include <lib/async-loop/cpp/loop.h>
-#include <memfs/memfs.h>
+#include <lib/memfs/memfs.h>
 
 #include "lib/fxl/files/unique_fd.h"
 
