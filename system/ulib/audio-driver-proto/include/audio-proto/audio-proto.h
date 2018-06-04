@@ -40,6 +40,14 @@ using PlugDetectResp = audio_stream_cmd_plug_detect_resp_t;
 // AUDIO_STREAM_PLUG_DETECT_NOTIFY
 using PlugDetectNotify = audio_stream_plug_detect_notify_t;
 
+// AUDIO_STREAM_CMD_GET_UNIQUE_ID
+using GetUniqueIdReq = audio_stream_cmd_get_unique_id_req_t;
+using GetUniqueIdResp = audio_stream_cmd_get_unique_id_resp_t;
+
+// AUDIO_STREAM_CMD_GET_STRING
+using GetStringReq = audio_stream_cmd_get_string_req_t;
+using GetStringResp = audio_stream_cmd_get_string_resp_t;
+
 // AUDIO_RB_CMD_GET_FIFO_DEPTH
 using RingBufGetFifoDepthReq  = audio_rb_cmd_get_fifo_depth_req_t;
 using RingBufGetFifoDepthResp = audio_rb_cmd_get_fifo_depth_resp_t;

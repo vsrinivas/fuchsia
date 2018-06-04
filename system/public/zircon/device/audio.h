@@ -27,6 +27,8 @@ typedef enum audio_cmd {
     AUDIO_STREAM_CMD_GET_GAIN       = 0x1002,
     AUDIO_STREAM_CMD_SET_GAIN       = 0x1003,
     AUDIO_STREAM_CMD_PLUG_DETECT    = 0x1004,
+    AUDIO_STREAM_CMD_GET_UNIQUE_ID  = 0x1005,
+    AUDIO_STREAM_CMD_GET_STRING     = 0x1006,
 
     // Async notifications sent on the stream channel.
     AUDIO_STREAM_PLUG_DETECT_NOTIFY = 0x2000,
@@ -104,8 +106,10 @@ static_assert(sizeof(audio_stream_format_range_t) == 16,
 //
 typedef enum audio_set_gain_flags {
     AUDIO_SGF_MUTE_VALID = 0x1,        // Whether or not the mute flag is valid.
-    AUDIO_SGF_GAIN_VALID = 0x2,        // Whether or not the gain float is valid.
-    AUDIO_SGF_MUTE       = 0x80000000, // Whether or not to mute the stream.
+    AUDIO_SGF_AGC_VALID  = 0x2,        // Whether or not the agc flag is valid.
+    AUDIO_SGF_GAIN_VALID = 0x4,        // Whether or not the gain float is valid.
+    AUDIO_SGF_MUTE       = 0x40000000, // Whether or not to mute the stream.
+    AUDIO_SGF_AGC        = 0x80000000, // Whether or not enable AGC for the stream.
 } audio_set_gain_flags_t;
 
 static_assert(sizeof(audio_set_gain_flags_t) == sizeof(uint32_t),
@@ -197,10 +201,12 @@ typedef struct audio_stream_cmd_get_gain_resp {
     // behave as if they have continuous control at all times?
     audio_cmd_hdr_t hdr;
 
-    bool            cur_mute;  // True if the amplifier is currently muted.
-    float           cur_gain;  // The current setting gain of the amplifier in dB
+    bool            cur_mute;  // True if the stream is currently muted.
+    bool            cur_agc;   // True if the stream has AGC currently enabled.
+    float           cur_gain;  // The current setting gain of the stream in dB
 
-    bool            can_mute;  // True if the amplifier is capable of muting
+    bool            can_mute;  // True if the stream is capable of muting
+    bool            can_agc;   // True if the stream has support for AGC
     float           min_gain;  // The minimum valid gain setting, in dB
     float           max_gain;  // The maximum valid gain setting, in dB
     float           gain_step; // The smallest valid gain increment, counted from the minimum gain.
@@ -239,6 +245,7 @@ typedef struct audio_stream_cmd_set_gain_resp {
     // The current gain settings observed immediately after processing the set
     // gain request.
     bool             cur_mute;
+    bool             cur_agc;
     float            cur_gain;
 } audio_stream_cmd_set_gain_resp_t;
 
@@ -271,6 +278,80 @@ typedef struct audio_stream_cmd_plug_detect_resp {
 // value value of the `cmd` field of their header, and
 // AUDIO_INVALID_TRANSACTION_ID for their transaction ID.
 typedef audio_stream_cmd_plug_detect_resp_t audio_stream_plug_detect_notify_t;
+
+// AUDIO_STREAM_CMD_GET_UNIQUE_ID
+//
+// Fetch a globally unique, but persistent ID for the stream.
+//
+// Drivers should make every effort to return as unique an identifier as
+// possible for each stream that they publish.  This ID must not change between
+// boots.  When available, using a globally unique device serial number is
+// strongly encouraged.  Other possible sources of unique-ness include a
+// driver's physical connection path, driver binding information, manufacturer
+// calibration data, and so on.
+//
+// Note: a small number of hardcoded unique ID has been provided for built-in
+// devices.  Platform drivers for systems with hardwired audio devices may use
+// these unique IDs as appropriate to signal which audio streams represent the
+// built-in devices for the system.  Drivers for hot-plugable audio devices
+// should *never* use these identifiers.
+//
+// Even given this, higher level code should *not* depend on these identifiers
+// being perfectly unique, and should be prepared to take steps to de-dupe
+// identifiers when needed.
+typedef struct audio_stream_cmd_get_unique_id_req {
+    audio_cmd_hdr_t  hdr;
+} audio_stream_cmd_get_unique_id_req_t;
+
+typedef struct audio_stream_unique_id {
+    uint8_t data[16];
+} audio_stream_unique_id_t;
+
+#define AUDIO_STREAM_UNIQUE_ID_BUILTIN_SPEAKERS         { .data = { 0x01, 0x00 } }
+#define AUDIO_STREAM_UNIQUE_ID_BUILTIN_HEADPHONE_JACK   { .data = { 0x02, 0x00 } }
+#define AUDIO_STREAM_UNIQUE_ID_BUILTIN_MICROPHONE       { .data = { 0x03, 0x00 } }
+#define AUDIO_STREAM_UNIQUE_ID_BUILTIN_HEADSET_JACK     { .data = { 0x04, 0x00 } }
+
+typedef struct audio_stream_cmd_get_unique_id_resp {
+    audio_cmd_hdr_t          hdr;
+    audio_stream_unique_id_t unique_id;
+} audio_stream_cmd_get_unique_id_resp_t;
+
+// AUDIO_STREAM_CMD_GET_STRING
+//
+// Fetch the specified string from a device's static string table.  Strings
+// returned by the device driver...
+//
+// ++ Must be encoded using UTF8
+// ++ May contain embedded NULLs
+// ++ May not be NULL terminated
+//
+// Drivers are encouraged to NULL terminate all of their strings whenever
+// possible, but are not required to do so if the response buffer is too small.
+//
+typedef enum audio_stream_string_id {
+    AUDIO_STREAM_STR_ID_MANUFACTURER = 0x80000000,
+    AUDIO_STREAM_STR_ID_PRODUCT      = 0x80000001,
+} audio_stream_string_id_t;
+
+static_assert(sizeof(audio_stream_string_id_t) == sizeof(uint32_t),
+              "audio_stream_string_id_t must be 32 bits!");
+
+typedef struct audio_stream_cmd_get_string_req {
+    audio_cmd_hdr_t  hdr;
+    audio_stream_string_id_t id;
+} audio_stream_cmd_get_string_req_t;
+
+typedef struct audio_stream_cmd_get_string_resp {
+    audio_cmd_hdr_t          hdr;
+    zx_status_t              result;
+    audio_stream_string_id_t id;
+    uint32_t                 strlen;
+    uint8_t                  str[256 - sizeof(audio_cmd_hdr_t) - (3 *sizeof(uint32_t))];
+} audio_stream_cmd_get_string_resp_t;
+
+static_assert(sizeof(audio_stream_cmd_get_string_resp_t) == 256,
+              "audio_stream_cmd_get_string_resp_t must be exactly 256 bytes");
 
 // AUDIO_RB_CMD_GET_FIFO_DEPTH
 //
