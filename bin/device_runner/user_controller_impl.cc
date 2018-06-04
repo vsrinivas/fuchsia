@@ -92,7 +92,7 @@ void UserControllerImpl::Logout(LogoutCallback done) {
 
 // |UserContext|
 void UserControllerImpl::GetPresentation(
-    fidl::InterfaceRequest<presentation::Presentation> request) {
+    fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> request) {
   if (device_shell_services_) {
     device_shell_services_->ConnectToService(kPresentationService,
                                              request.TakeChannel());

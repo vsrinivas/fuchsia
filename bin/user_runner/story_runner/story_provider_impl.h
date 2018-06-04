@@ -12,7 +12,7 @@
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/modular/internal/cpp/fidl.h>
 #include <ledger/cpp/fidl.h>
-#include <presentation/cpp/fidl.h>
+#include <fuchsia/ui/policy/cpp/fidl.h>
 #include <fuchsia/ui/views_v1_token/cpp/fidl.h>
 #include "lib/async/cpp/operation.h"
 #include "lib/fidl/cpp/binding_set.h"
@@ -103,7 +103,7 @@ class StoryProviderImpl : StoryProvider, FocusWatcher {
   // PresentationProvider.
   void GetPresentation(
       fidl::StringPtr story_id,
-      fidl::InterfaceRequest<presentation::Presentation> request);
+      fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> request);
   void WatchVisualState(fidl::StringPtr story_id,
                         fidl::InterfaceHandle<StoryVisualStateWatcher> watcher);
 

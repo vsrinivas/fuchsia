@@ -103,7 +103,7 @@ fidl("fidl") {
     "speech/fidl",
     "//garnet/public/lib/images/fidl",
     "//garnet/public/lib/media/fidl",
-    "//garnet/public/lib/ui/presentation/fidl",
+    "//garnet/public/lib/ui/policy/fidl",
   ]
 }
 

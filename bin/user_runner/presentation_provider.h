@@ -6,7 +6,7 @@
 #define PERIDOT_BIN_USER_RUNNER_PRESENTATION_PROVIDER_H_
 
 #include <fuchsia/modular/cpp/fidl.h>
-#include <presentation/cpp/fidl.h>
+#include <fuchsia/ui/policy/cpp/fidl.h>
 #include "lib/fidl/cpp/interface_request.h"
 #include "lib/fxl/macros.h"
 
@@ -22,7 +22,7 @@ class PresentationProvider {
 
   virtual void GetPresentation(
       fidl::StringPtr story_id,
-      fidl::InterfaceRequest<presentation::Presentation> request) = 0;
+      fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> request) = 0;
 
   virtual void WatchVisualState(
       fidl::StringPtr story_id,

@@ -131,7 +131,7 @@ class UserRunnerImpl::PresentationProviderImpl : public PresentationProvider {
   // |PresentationProvider|
   void GetPresentation(
       fidl::StringPtr story_id,
-      fidl::InterfaceRequest<presentation::Presentation> request) override {
+      fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> request) override {
     if (impl_->user_shell_app_) {
       UserShellPresentationProviderPtr provider;
       impl_->user_shell_app_->services().ConnectToService(
@@ -723,7 +723,7 @@ void UserRunnerImpl::GetLink(fidl::InterfaceRequest<Link> request) {
 }
 
 void UserRunnerImpl::GetPresentation(
-    fidl::InterfaceRequest<presentation::Presentation> request) {
+    fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> request) {
   user_context_->GetPresentation(std::move(request));
 }
 

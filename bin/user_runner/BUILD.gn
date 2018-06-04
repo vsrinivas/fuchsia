@@ -29,7 +29,7 @@ executable_package("user_runner") {
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/net/oldhttp/fidl",
-    "//garnet/public/lib/ui/presentation/fidl",
+    "//garnet/public/lib/ui/policy/fidl",
     "//garnet/public/lib/ui/views/fidl:v1",
     "//peridot/bin/cloud_provider_firebase/fidl",
     "//peridot/bin/device_runner/cobalt",
@@ -152,7 +152,7 @@ source_set("presentation_provider") {
   deps = [
     "//garnet/public/lib/fidl/cpp",
     "//garnet/public/lib/fxl",
-    "//garnet/public/lib/ui/presentation/fidl",
+    "//garnet/public/lib/ui/policy/fidl",
     "//peridot/public/lib:fidl",
   ]
 }

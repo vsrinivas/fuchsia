@@ -168,7 +168,7 @@ class StoryControllerImpl : PageClient, StoryController, StoryContext {
 
   // |StoryContext|
   void GetPresentation(
-      fidl::InterfaceRequest<presentation::Presentation> request) override;
+      fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> request) override;
   void WatchVisualState(
       fidl::InterfaceHandle<StoryVisualStateWatcher> watcher) override;
 

@@ -695,7 +695,7 @@ void StoryProviderImpl::GetLinkPeer(
 
 void StoryProviderImpl::GetPresentation(
     fidl::StringPtr story_id,
-    fidl::InterfaceRequest<presentation::Presentation> request) {
+    fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> request) {
   presentation_provider_->GetPresentation(std::move(story_id),
                                           std::move(request));
 }

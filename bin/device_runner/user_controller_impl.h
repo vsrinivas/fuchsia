@@ -10,7 +10,7 @@
 #include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/ui/views_v1_token/cpp/fidl.h>
 #include <modular_auth/cpp/fidl.h>
-#include <presentation/cpp/fidl.h>
+#include <fuchsia/ui/policy/cpp/fidl.h>
 #include "lib/app/cpp/startup_context.h"
 #include "lib/fidl/cpp/array.h"
 #include "lib/fidl/cpp/binding.h"
@@ -66,7 +66,7 @@ class UserControllerImpl : UserController, modular::internal ::UserContext {
 
   // |UserContext|
   void GetPresentation(
-      fidl::InterfaceRequest<presentation::Presentation> request) override;
+      fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> request) override;
 
   std::unique_ptr<Scope> user_runner_scope_;
   std::unique_ptr<AppClient<Lifecycle>> user_runner_app_;

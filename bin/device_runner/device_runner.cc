@@ -15,7 +15,7 @@
 #include <fuchsia/ui/views_v1/cpp/fidl.h>
 #include <fuchsia/ui/views_v1_token/cpp/fidl.h>
 #include <modular_auth/cpp/fidl.h>
-#include <presentation/cpp/fidl.h>
+#include <fuchsia/ui/policy/cpp/fidl.h>
 #include "lib/app/cpp/startup_context.h"
 #include "lib/fidl/cpp/array.h"
 #include "lib/fidl/cpp/binding.h"
@@ -260,10 +260,10 @@ class DeviceRunnerApp : DeviceShellContext,
     // dev_device_shell (which mimics flutter behavior) blocks until it receives
     // the root view request.
     fidl::InterfaceHandle<fuchsia::ui::views_v1_token::ViewOwner> root_view;
-    presentation::PresentationPtr presentation;
+    fuchsia::ui::policy::PresentationPtr presentation;
     device_shell_view_provider->CreateView(root_view.NewRequest(), nullptr);
     if (!settings_.test) {
-      context_->ConnectToEnvironmentService<presentation::Presenter>()->Present(
+      context_->ConnectToEnvironmentService<fuchsia::ui::policy::Presenter>()->Present(
           std::move(root_view), presentation.NewRequest());
     }
 

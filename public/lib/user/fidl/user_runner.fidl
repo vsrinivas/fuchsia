@@ -26,5 +26,5 @@ interface UserContext {
   // See detailed comments in UserShellContext.Logout().
   1: Logout();
 
-  2: GetPresentation(request<presentation.Presentation> presentation);
+  2: GetPresentation(request<fuchsia.ui.policy.Presentation> presentation);
 };

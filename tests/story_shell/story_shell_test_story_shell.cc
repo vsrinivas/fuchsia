@@ -9,7 +9,7 @@
 
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/ui/views_v1_token/cpp/fidl.h>
-#include <presentation/cpp/fidl.h>
+#include <fuchsia/ui/policy/cpp/fidl.h>
 #include "lib/app/cpp/startup_context.h"
 #include "lib/app_driver/cpp/app_driver.h"
 #include "lib/fsl/tasks/message_loop.h"
@@ -103,7 +103,7 @@ class TestApp : public fuchsia::modular::testing::ComponentBase<
       fidl::VectorPtr<fuchsia::modular::ContainerView> /* views */) override {}
 
   fuchsia::modular::StoryContextPtr story_context_;
-  presentation::PresentationPtr presentation_;
+  fuchsia::ui::policy::PresentationPtr presentation_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(TestApp);
 };

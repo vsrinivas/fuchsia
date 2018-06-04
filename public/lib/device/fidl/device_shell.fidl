@@ -44,5 +44,5 @@ interface DeviceShellContext {
 // These params are passed to |DeviceShell.Initialize|.
 struct DeviceShellParams {
   // TODO(jjosh): make this non-optional, if feasible.
-  presentation.Presentation? presentation;
+  fuchsia.ui.policy.Presentation? presentation;
 };

@@ -34,7 +34,7 @@ interface UserShellContext {
   6: GetFocusProvider(request<FocusProvider> @request);
   7: GetIntelligenceServices(request<IntelligenceServices> @request);
   8: GetLink(request<Link> @request);
-  9: GetPresentation(request<presentation.Presentation> @request);
+  9: GetPresentation(request<fuchsia.ui.policy.Presentation> @request);
   10: GetSpeechToText(request<speech.SpeechToText> @request);
   11: GetStoryProvider(request<StoryProvider> @request);
   12: GetSuggestionProvider(request<SuggestionProvider> @request);
@@ -53,7 +53,7 @@ interface UserShellContext {
 interface UserShellPresentationProvider {
   // When a StoryShell calls StoryContext.GetPresentation(), this request
   // arrives here.
-  1: GetPresentation(string story_id, request<presentation.Presentation> @request);
+  1: GetPresentation(string story_id, request<fuchsia.ui.policy.Presentation> @request);
 
   // When a StoryShell calls StoryContext.WatchVisualState(), this request
   // arrives here.

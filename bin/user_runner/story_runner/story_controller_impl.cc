@@ -11,7 +11,7 @@
 #include <fuchsia/modular/internal/cpp/fidl.h>
 #include <fuchsia/ui/views_v1/cpp/fidl.h>
 #include <ledger/cpp/fidl.h>
-#include <presentation/cpp/fidl.h>
+#include <fuchsia/ui/policy/cpp/fidl.h>
 #include "lib/app/cpp/connect.h"
 #include "lib/app/cpp/startup_context.h"
 #include "lib/async/cpp/future.h"
@@ -1826,7 +1826,7 @@ StoryControllerImpl::Connection* StoryControllerImpl::FindAnchor(
 }
 
 void StoryControllerImpl::GetPresentation(
-    fidl::InterfaceRequest<presentation::Presentation> request) {
+    fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> request) {
   story_provider_impl_->GetPresentation(story_id_, std::move(request));
 }
 

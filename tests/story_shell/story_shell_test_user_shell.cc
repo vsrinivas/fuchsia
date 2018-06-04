@@ -11,7 +11,7 @@
 #include <fuchsia/ui/views_v1_token/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
-#include <presentation/cpp/fidl.h>
+#include <fuchsia/ui/policy/cpp/fidl.h>
 
 #include "lib/app/cpp/startup_context.h"
 #include "lib/fidl/cpp/binding.h"
@@ -66,7 +66,7 @@ class TestApp : public fuchsia::modular::testing::ComponentBase<
   // |UserShellPresentationProvider|
   void GetPresentation(
       fidl::StringPtr story_id,
-      fidl::InterfaceRequest<presentation::Presentation> request) override {
+      fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> request) override {
     if (!story1_id_.is_null() && story_id == story1_id_ &&
         !story1_presentation_request_received_) {
       story1_presentation_request_.Pass();
