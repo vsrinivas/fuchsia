@@ -2,13 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_BIN_NETCONNECTOR_NETCONNECTOR_PARAMS_H_
+#define GARNET_BIN_NETCONNECTOR_NETCONNECTOR_PARAMS_H_
 
 #include <string>
 #include <unordered_map>
 
-#include "garnet/bin/netconnector/ip_address.h"
 #include <fuchsia/sys/cpp/fidl.h>
+
+#include "garnet/bin/netconnector/ip_address.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/macros.h"
 
@@ -25,8 +27,7 @@ class NetConnectorParams {
   bool show_devices() const { return show_devices_; }
   bool mdns_verbose() const { return mdns_verbose_; }
 
-  std::unordered_map<std::string, fuchsia::sys::LaunchInfoPtr>
-  MoveServices() {
+  std::unordered_map<std::string, fuchsia::sys::LaunchInfoPtr> MoveServices() {
     return std::move(launch_infos_by_service_name_);
   }
 
@@ -60,3 +61,5 @@ class NetConnectorParams {
 };
 
 }  // namespace netconnector
+
+#endif  // GARNET_BIN_NETCONNECTOR_NETCONNECTOR_PARAMS_H_

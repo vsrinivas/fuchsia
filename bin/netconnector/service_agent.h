@@ -2,13 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_BIN_NETCONNECTOR_SERVICE_AGENT_H_
+#define GARNET_BIN_NETCONNECTOR_SERVICE_AGENT_H_
 
 #include <memory>
 
+#include <netconnector/cpp/fidl.h>
+
 #include "garnet/bin/netconnector/message_transceiver.h"
 #include "lib/fxl/files/unique_fd.h"
-#include <netconnector/cpp/fidl.h>
 
 namespace netconnector {
 
@@ -38,3 +40,5 @@ class ServiceAgent : public MessageTransceiver {
 };
 
 }  // namespace netconnector
+
+#endif  // GARNET_BIN_NETCONNECTOR_SERVICE_AGENT_H_

@@ -4,10 +4,10 @@
 
 #include "garnet/bin/netconnector/host_name.h"
 
+#include <fuchsia/netstack/cpp/fidl.h>
 #include <limits.h>
 #include <unistd.h>
 
-#include <fuchsia/netstack/cpp/fidl.h>
 #include "garnet/bin/netconnector/socket_address.h"
 #include "lib/app/cpp/startup_context.h"
 #include "lib/fxl/files/unique_fd.h"
@@ -24,7 +24,8 @@ class NetstackClient {
       const fuchsia::netstack::Netstack::GetInterfacesCallback& callback) {
     NetstackClient* client = new NetstackClient();
     client->netstack_->GetInterfaces(
-        [client, callback](fidl::VectorPtr<fuchsia::netstack::NetInterface> interfaces) {
+        [client, callback](
+            fidl::VectorPtr<fuchsia::netstack::NetInterface> interfaces) {
           callback(std::move(interfaces));
           delete client;
         });
@@ -34,7 +35,8 @@ class NetstackClient {
   NetstackClient()
       : context_(fuchsia::sys::StartupContext::CreateFromStartupInfo()) {
     FXL_DCHECK(context_);
-    netstack_ = context_->ConnectToEnvironmentService<fuchsia::netstack::Netstack>();
+    netstack_ =
+        context_->ConnectToEnvironmentService<fuchsia::netstack::Netstack>();
     FXL_DCHECK(netstack_);
   }
 
@@ -53,11 +55,13 @@ IpAddress GetHostAddress() {
   NetstackClient::GetInterfaces(
       [](const fidl::VectorPtr<fuchsia::netstack::NetInterface>& interfaces) {
         for (const auto& interface : *interfaces) {
-          if (interface.addr.family == fuchsia::netstack::NetAddressFamily::IPV4) {
+          if (interface.addr.family ==
+              fuchsia::netstack::NetAddressFamily::IPV4) {
             ip_address = IpAddress(&interface.addr);
             break;
           }
-          if (interface.addr.family == fuchsia::netstack::NetAddressFamily::IPV6) {
+          if (interface.addr.family ==
+              fuchsia::netstack::NetAddressFamily::IPV6) {
             ip_address = IpAddress(&interface.addr);
             // Keep looking...v4 is preferred.
           }

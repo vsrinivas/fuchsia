@@ -59,8 +59,10 @@ package("netconnector") {
 
   binary = "netconnector"
 
-  resources = [ {
-        path = rebase_path("netconnector.config")
-        dest = "netconnector.config"
-      } ]
+  resources = [
+    {
+      path = rebase_path("netconnector.config")
+      dest = "netconnector.config"
+    },
+  ]
 }

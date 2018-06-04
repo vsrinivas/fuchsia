@@ -19,13 +19,10 @@ namespace netconnector {
 
 Listener::Listener() : async_(async_get_default()) {}
 
-Listener::~Listener() {
-  Stop();
-}
+Listener::~Listener() { Stop(); }
 
 void Listener::Start(
-    IpPort port,
-    fit::function<void(fxl::UniqueFD)> new_connection_callback) {
+    IpPort port, fit::function<void(fxl::UniqueFD)> new_connection_callback) {
   FXL_DCHECK(!socket_fd_.is_valid()) << "Started when already listening";
 
   socket_fd_ = fxl::UniqueFD(socket(AF_INET, SOCK_STREAM, 0));

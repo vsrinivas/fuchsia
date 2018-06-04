@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_BIN_NETCONNECTOR_IP_ADDRESS_H_
+#define GARNET_BIN_NETCONNECTOR_IP_ADDRESS_H_
 
 #include <arpa/inet.h>
 
@@ -12,7 +13,7 @@ namespace fuchsia {
 namespace netstack {
 class NetAddress;
 }
-}
+}  // namespace fuchsia
 
 namespace netconnector {
 
@@ -41,14 +42,8 @@ class IpAddress {
   explicit IpAddress(const in_addr& addr);
 
   // Creates an IPV6 address from eight address words.
-  IpAddress(uint16_t w0,
-            uint16_t w1,
-            uint16_t w2,
-            uint16_t w3,
-            uint16_t w4,
-            uint16_t w5,
-            uint16_t w6,
-            uint16_t w7);
+  IpAddress(uint16_t w0, uint16_t w1, uint16_t w2, uint16_t w3, uint16_t w4,
+            uint16_t w5, uint16_t w6, uint16_t w7);
 
   // Creates an IPV6 address from two address words (first and last).
   IpAddress(uint16_t w0, uint16_t w7);
@@ -119,3 +114,5 @@ class IpAddress {
 std::ostream& operator<<(std::ostream& os, const IpAddress& value);
 
 }  // namespace netconnector
+
+#endif  // GARNET_BIN_NETCONNECTOR_IP_ADDRESS_H_

@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_BIN_NETCONNECTOR_LISTENER_H_
+#define GARNET_BIN_NETCONNECTOR_LISTENER_H_
 
 #include <memory>
 #include <thread>
@@ -48,3 +49,5 @@ class Listener {
 };
 
 }  // namespace netconnector
+
+#endif  // GARNET_BIN_NETCONNECTOR_LISTENER_H_

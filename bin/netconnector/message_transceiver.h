@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_BIN_NETCONNECTOR_MESSAGE_TRANSCEIVER_H_
+#define GARNET_BIN_NETCONNECTOR_MESSAGE_TRANSCEIVER_H_
 
 #include <queue>
 #include <vector>
@@ -158,11 +159,8 @@ class MessageTransceiver {
   // at least |dest_packet_offset| and less than the sum of |dest_packet_offset|
   // and |dest_size|. |receive_packet_offset_| is also increased to reflect the
   // number of bytes actually copied.
-  bool CopyReceivedBytes(uint8_t** bytes,
-                         size_t* byte_count,
-                         uint8_t* dest,
-                         size_t dest_size,
-                         size_t dest_packet_offset);
+  bool CopyReceivedBytes(uint8_t** bytes, size_t* byte_count, uint8_t* dest,
+                         size_t dest_size, size_t dest_packet_offset);
 
   // Parses a uint32 out of receive_buffer_.
   uint32_t ParsePayloadUint32();
@@ -194,3 +192,5 @@ class MessageTransceiver {
 };
 
 }  // namespace netconnector
+
+#endif  // GARNET_BIN_NETCONNECTOR_MESSAGE_TRANSCEIVER_H_

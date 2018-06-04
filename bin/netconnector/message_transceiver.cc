@@ -35,9 +35,7 @@ MessageTransceiver::MessageTransceiver(fxl::UniqueFD socket_fd)
   WaitToReceive();
 }
 
-MessageTransceiver::~MessageTransceiver() {
-  CancelWaiters();
-}
+MessageTransceiver::~MessageTransceiver() { CancelWaiters(); }
 
 void MessageTransceiver::SetChannel(zx::channel channel) {
   FXL_DCHECK(channel);
@@ -134,8 +132,7 @@ void MessageTransceiver::MaybeWaitToSend() {
   }
 }
 
-void MessageTransceiver::SendPacket(PacketType type,
-                                    const void* payload,
+void MessageTransceiver::SendPacket(PacketType type, const void* payload,
                                     size_t payload_size) {
   FXL_DCHECK(payload_size == 0 || payload != nullptr);
 
@@ -276,10 +273,8 @@ void MessageTransceiver::ParseReceivedBytes(size_t byte_count) {
   }
 }
 
-bool MessageTransceiver::CopyReceivedBytes(uint8_t** bytes,
-                                           size_t* byte_count,
-                                           uint8_t* dest,
-                                           size_t dest_size,
+bool MessageTransceiver::CopyReceivedBytes(uint8_t** bytes, size_t* byte_count,
+                                           uint8_t* dest, size_t dest_size,
                                            size_t dest_packet_offset) {
   FXL_DCHECK(bytes != nullptr);
   FXL_DCHECK(*bytes != nullptr);
@@ -328,7 +323,7 @@ void MessageTransceiver::OnReceivedPacketComplete() {
         return;
       }
 
-      async::PostTask(async_,[this, version = version_]() {
+      async::PostTask(async_, [this, version = version_]() {
         OnVersionReceived(version);
         if (socket_fd_.is_valid() && channel_) {
           // We've postponed setting the channel on the relay until now, because
@@ -359,7 +354,7 @@ void MessageTransceiver::OnReceivedPacketComplete() {
         return;
       }
 
-      async::PostTask(async_,[this, service_name = ParsePayloadString()]() {
+      async::PostTask(async_, [this, service_name = ParsePayloadString()]() {
         OnServiceNameReceived(service_name);
       });
       break;
@@ -372,7 +367,8 @@ void MessageTransceiver::OnReceivedPacketComplete() {
         return;
       }
 
-      async::PostTask(async_,
+      async::PostTask(
+          async_,
           [this, payload = std::move(receive_packet_payload_)]() mutable {
             OnMessageReceived(std::move(payload));
           });

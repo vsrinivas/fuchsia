@@ -56,9 +56,10 @@ class NetConnectorImpl : public NetConnector {
   void ReleaseServiceAgent(ServiceAgent* service_agent);
 
   // NetConnector implementation.
-  void RegisterServiceProvider(fidl::StringPtr name,
-                               fidl::InterfaceHandle<fuchsia::sys::ServiceProvider>
-                                   service_provider) override;
+  void RegisterServiceProvider(
+      fidl::StringPtr name,
+      fidl::InterfaceHandle<fuchsia::sys::ServiceProvider> service_provider)
+      override;
 
   void GetDeviceServiceProvider(
       fidl::StringPtr device_name,

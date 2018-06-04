@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_BIN_NETCONNECTOR_REQUESTOR_AGENT_H_
+#define GARNET_BIN_NETCONNECTOR_REQUESTOR_AGENT_H_
 
 #include <arpa/inet.h>
 
@@ -34,10 +35,8 @@ class RequestorAgent : public MessageTransceiver {
   void OnConnectionClosed() override;
 
  private:
-  RequestorAgent(fxl::UniqueFD socket_fd,
-                 const std::string& service_name,
-                 zx::channel local_channel,
-                 NetConnectorImpl* owner);
+  RequestorAgent(fxl::UniqueFD socket_fd, const std::string& service_name,
+                 zx::channel local_channel, NetConnectorImpl* owner);
 
   std::string service_name_;
   zx::channel local_channel_;
@@ -47,3 +46,5 @@ class RequestorAgent : public MessageTransceiver {
 };
 
 }  // namespace netconnector
+
+#endif  // GARNET_BIN_NETCONNECTOR_REQUESTOR_AGENT_H_
