@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_BIN_MEDIA_AUDIO_SERVER_AUDIO_CAPTURER_IMPL_H_
+#define GARNET_BIN_MEDIA_AUDIO_SERVER_AUDIO_CAPTURER_IMPL_H_
 
 #include <dispatcher-pool/dispatcher-channel.h>
 #include <dispatcher-pool/dispatcher-timer.h>
@@ -10,11 +11,14 @@
 #include <fbl/intrusive_double_list.h>
 #include <fbl/slab_allocator.h>
 #include <fbl/unique_ptr.h>
-
 #include <media/cpp/fidl.h>
+
+#include "garnet/bin/media/audio_server/audio_driver.h"
+#include "garnet/bin/media/audio_server/audio_link.h"
 #include "garnet/bin/media/audio_server/audio_object.h"
 #include "garnet/bin/media/audio_server/mixer/mixer.h"
 #include "garnet/bin/media/audio_server/mixer/output_formatter.h"
+#include "garnet/bin/media/audio_server/utils.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/media/timeline/timeline_function.h"
 #include "lib/media/timeline/timeline_rate.h"
@@ -252,3 +256,5 @@ class AudioCapturerImpl : public AudioObject, public AudioCapturer {
 
 FWD_DECL_STATIC_SLAB_ALLOCATOR(
     ::media::audio::AudioCapturerImpl::PcbAllocatorTraits);
+
+#endif  // GARNET_BIN_MEDIA_AUDIO_SERVER_AUDIO_CAPTURER_IMPL_H_

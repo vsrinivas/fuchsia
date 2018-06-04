@@ -6,6 +6,7 @@
 #define GARNET_BIN_MEDIA_NET_MEDIA_SERVICE_NET_MEDIA_SERVICE_IMPL_H_
 
 #include <media_player/cpp/fidl.h>
+
 #include "garnet/bin/media/net_media_service/factory_service_base.h"
 #include "lib/app/cpp/startup_context.h"
 #include "lib/fidl/cpp/binding_set.h"

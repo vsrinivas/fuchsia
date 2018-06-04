@@ -7,8 +7,8 @@
 
 #include <string>
 
-#include <lib/async/cpp/wait.h>
 #include <fuchsia/net/oldhttp/cpp/fidl.h>
+#include <lib/async/cpp/wait.h>
 
 #include "garnet/bin/media/media_player/demux/reader.h"
 #include "garnet/bin/media/media_player/util/incident.h"

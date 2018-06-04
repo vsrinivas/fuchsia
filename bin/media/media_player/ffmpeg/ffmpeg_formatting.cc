@@ -14,9 +14,7 @@ extern "C" {
 
 namespace media_player {
 
-const char* safe(const char* s) {
-  return s == nullptr ? "<nullptr>" : s;
-}
+const char* safe(const char* s) { return s == nullptr ? "<nullptr>" : s; }
 
 std::ostream& operator<<(std::ostream& os,
                          const struct AVCodecTag* const* value) {

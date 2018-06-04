@@ -19,13 +19,10 @@ class Metadata;
 // TODO(dalesat): Probably needs to be extensible. Consider using map-like.
 class Metadata {
  public:
-  static std::unique_ptr<Metadata> Create(uint64_t duration_ns,
-                                          const std::string& title,
-                                          const std::string& artist,
-                                          const std::string& album,
-                                          const std::string& publisher,
-                                          const std::string& genre,
-                                          const std::string& composer);
+  static std::unique_ptr<Metadata> Create(
+      uint64_t duration_ns, const std::string& title, const std::string& artist,
+      const std::string& album, const std::string& publisher,
+      const std::string& genre, const std::string& composer);
 
   ~Metadata();
 
@@ -49,12 +46,9 @@ class Metadata {
   }
 
  private:
-  Metadata(uint64_t duration_ns,
-           const std::string& title,
-           const std::string& artist,
-           const std::string& album,
-           const std::string& publisher,
-           const std::string& genre,
+  Metadata(uint64_t duration_ns, const std::string& title,
+           const std::string& artist, const std::string& album,
+           const std::string& publisher, const std::string& genre,
            const std::string& composer);
 
   uint64_t duration_ns_;

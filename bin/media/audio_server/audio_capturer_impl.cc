@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "garnet/bin/media/audio_server/audio_capturer_impl.h"
+
 #include <fbl/auto_call.h>
 
 #include "garnet/bin/media/audio_server/audio_server_impl.h"
 #include "lib/fxl/logging.h"
 #include "lib/media/audio/types.h"
-
-#include "garnet/bin/media/audio_server/audio_capturer_impl.h"
 
 // Allow up to (at most) 256 slabs of pending capture buffers.  At 16KB per
 // slab, this means we will deny allocations after 4MB.  If we ever need more

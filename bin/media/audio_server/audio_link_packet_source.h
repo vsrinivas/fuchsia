@@ -2,12 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_BIN_MEDIA_AUDIO_SERVER_AUDIO_LINK_PACKET_SOURCE_H_
+#define GARNET_BIN_MEDIA_AUDIO_SERVER_AUDIO_LINK_PACKET_SOURCE_H_
 
-#include <fbl/ref_ptr.h>
 #include <deque>
 #include <memory>
 #include <mutex>
+
+#include <fbl/ref_ptr.h>
 
 #include "garnet/bin/media/audio_server/audio_link.h"
 #include "garnet/bin/media/audio_server/audio_packet_ref.h"
@@ -89,3 +91,5 @@ class AudioLinkPacketSource : public AudioLink {
 
 }  // namespace audio
 }  // namespace media
+
+#endif  // GARNET_BIN_MEDIA_AUDIO_SERVER_AUDIO_LINK_PACKET_SOURCE_H_

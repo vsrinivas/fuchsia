@@ -9,9 +9,7 @@
 
 namespace media_player {
 
-FakeWavReader::FakeWavReader() : binding_(this) {
-  WriteHeader();
-}
+FakeWavReader::FakeWavReader() : binding_(this) { WriteHeader(); }
 
 void FakeWavReader::WriteHeader() {
   header_.clear();

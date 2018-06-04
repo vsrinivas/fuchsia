@@ -2,8 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <audio-proto-utils/format-utils.h>
 #include <map>
+
+#include <audio-proto-utils/format-utils.h>
 
 #include "garnet/bin/media/audio_server/driver_utils.h"
 #include "lib/fxl/logging.h"

@@ -25,9 +25,7 @@ class FileReader : public Reader {
   // Reader implementation.
   void Describe(DescribeCallback callback) override;
 
-  void ReadAt(size_t position,
-              uint8_t* buffer,
-              size_t bytes_to_read,
+  void ReadAt(size_t position, uint8_t* buffer, size_t bytes_to_read,
               ReadAtCallback callback) override;
 
  private:

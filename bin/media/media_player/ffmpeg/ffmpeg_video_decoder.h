@@ -24,8 +24,7 @@ class FfmpegVideoDecoder : public FfmpegDecoderBase {
   // FfmpegDecoderBase overrides.
   void OnNewInputPacket(const PacketPtr& packet) override;
 
-  int BuildAVFrame(const AVCodecContext& av_codec_context,
-                   AVFrame* av_frame,
+  int BuildAVFrame(const AVCodecContext& av_codec_context, AVFrame* av_frame,
                    PayloadAllocator* allocator) override;
 
   PacketPtr CreateOutputPacket(

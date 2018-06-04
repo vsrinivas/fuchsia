@@ -53,10 +53,10 @@ executable("tests") {
     "test/fake_wav_reader.cc",
     "test/fake_wav_reader.h",
     "test/main.cc",
-    "test/media_player_test_unattended.cc",
-    "test/media_player_test_unattended.h",
     "test/media_player_test_params.cc",
     "test/media_player_test_params.h",
+    "test/media_player_test_unattended.cc",
+    "test/media_player_test_unattended.h",
     "test/media_player_test_view.cc",
     "test/media_player_test_view.h",
   ]

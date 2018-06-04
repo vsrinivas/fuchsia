@@ -7,9 +7,9 @@
 
 #include <vector>
 
-#include <media_player/cpp/fidl.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/zx/socket.h>
+#include <media_player/cpp/fidl.h>
 
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fxl/logging.h"

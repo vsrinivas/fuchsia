@@ -49,15 +49,13 @@ class StreamType {
   static const char kVideoEncodingVp9[];
 
   static std::unique_ptr<StreamType> Create(
-      Medium medium,
-      const std::string& encoding,
+      Medium medium, const std::string& encoding,
       std::unique_ptr<Bytes> encoding_parameters) {
     return std::unique_ptr<StreamType>(
         new StreamType(medium, encoding, std::move(encoding_parameters)));
   }
 
-  StreamType(Medium medium,
-             const std::string& encoding,
+  StreamType(Medium medium, const std::string& encoding,
              std::unique_ptr<Bytes> encoding_parameters);
 
   virtual ~StreamType();
@@ -105,8 +103,7 @@ class SubpictureStreamTypeSet;
 class StreamTypeSet {
  public:
   static std::unique_ptr<StreamTypeSet> Create(
-      StreamType::Medium medium,
-      const std::vector<std::string>& encodings) {
+      StreamType::Medium medium, const std::vector<std::string>& encodings) {
     return std::unique_ptr<StreamTypeSet>(new StreamTypeSet(medium, encodings));
   }
 

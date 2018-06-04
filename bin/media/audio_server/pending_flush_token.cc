@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "garnet/bin/media/audio_server/pending_flush_token.h"
+
 #include "garnet/bin/media/audio_server/audio_server_impl.h"
 #include "lib/fxl/logging.h"
 

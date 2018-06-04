@@ -42,9 +42,10 @@ class MediaPlayerNetProxy
 
   void SetGain(float gain) override;
 
-  void CreateView(fidl::InterfaceHandle<::fuchsia::ui::views_v1::ViewManager> view_manager,
-                  fidl::InterfaceRequest<::fuchsia::ui::views_v1_token::ViewOwner>
-                      view_owner_request) override;
+  void CreateView(
+      fidl::InterfaceHandle<::fuchsia::ui::views_v1::ViewManager> view_manager,
+      fidl::InterfaceRequest<::fuchsia::ui::views_v1_token::ViewOwner>
+          view_owner_request) override;
 
   void SetAudioRenderer(
       fidl::InterfaceHandle<media::AudioRenderer2> audio_renderer) override;

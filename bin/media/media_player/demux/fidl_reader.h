@@ -8,10 +8,10 @@
 #include <atomic>
 #include <memory>
 
-#include <media_player/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/zx/socket.h>
+#include <media_player/cpp/fidl.h>
 
 #include "garnet/bin/media/media_player/demux/reader.h"
 #include "garnet/bin/media/media_player/util/incident.h"
@@ -33,9 +33,7 @@ class FidlReader : public Reader,
   // Reader implementation.
   void Describe(DescribeCallback callback) override;
 
-  void ReadAt(size_t position,
-              uint8_t* buffer,
-              size_t bytes_to_read,
+  void ReadAt(size_t position, uint8_t* buffer, size_t bytes_to_read,
               ReadAtCallback callback) override;
 
  private:

@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_BIN_MEDIA_AUDIO_SERVER_THROTTLE_OUTPUT_H_
+#define GARNET_BIN_MEDIA_AUDIO_SERVER_THROTTLE_OUTPUT_H_
 
 #include "garnet/bin/media/audio_server/standard_output_base.h"
 
@@ -31,3 +32,5 @@ class ThrottleOutput : public StandardOutputBase {
 
 }  // namespace audio
 }  // namespace media
+
+#endif  // GARNET_BIN_MEDIA_AUDIO_SERVER_THROTTLE_OUTPUT_H_

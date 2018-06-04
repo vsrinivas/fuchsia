@@ -21,10 +21,10 @@ source_set("demux") {
   ]
 
   deps = [
+    "//garnet/bin/http:errors",
     "//garnet/bin/media/media_player/fidl",
     "//garnet/bin/media/media_player/framework",
     "//garnet/bin/media/media_player/util",
-    "//garnet/bin/http:errors",
     "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",

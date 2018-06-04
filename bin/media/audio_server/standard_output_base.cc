@@ -4,9 +4,10 @@
 
 #include "garnet/bin/media/audio_server/standard_output_base.h"
 
+#include <limits>
+
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
-#include <limits>
 
 #include "garnet/bin/media/audio_server/audio_link.h"
 #include "garnet/bin/media/audio_server/audio_renderer_format_info.h"

@@ -2,14 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_BIN_MEDIA_AUDIO_SERVER_AUDIO_SERVER_IMPL_H_
+#define GARNET_BIN_MEDIA_AUDIO_SERVER_AUDIO_SERVER_IMPL_H_
+
+#include <mutex>
 
 #include <fbl/intrusive_double_list.h>
 #include <fbl/unique_ptr.h>
-#include <media/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
-
-#include <mutex>
+#include <media/cpp/fidl.h>
 
 #include "garnet/bin/media/audio_server/audio_device_manager.h"
 #include "garnet/bin/media/audio_server/audio_packet_ref.h"
@@ -93,3 +94,5 @@ class AudioServerImpl : public AudioServer {
 
 }  // namespace audio
 }  // namespace media
+
+#endif  // GARNET_BIN_MEDIA_AUDIO_SERVER_AUDIO_SERVER_IMPL_H_

@@ -111,8 +111,7 @@ void FakeAudioRenderer::FlushNoReply() {
   Flush([]() {});
 }
 
-void FakeAudioRenderer::Play(int64_t reference_time,
-                             int64_t media_time,
+void FakeAudioRenderer::Play(int64_t reference_time, int64_t media_time,
                              PlayCallback callback) {
   playing_ = true;
   callback(0, 0);
@@ -138,9 +137,7 @@ void FakeAudioRenderer::PauseNoReply() {
   Pause([](int64_t reference_time, int64_t media_time) {});
 }
 
-void FakeAudioRenderer::SetGainMute(float gain,
-                                    bool mute,
-                                    uint32_t flags,
+void FakeAudioRenderer::SetGainMute(float gain, bool mute, uint32_t flags,
                                     SetGainMuteCallback callback) {
   gain_ = gain;
   mute_ = mute;
@@ -148,8 +145,7 @@ void FakeAudioRenderer::SetGainMute(float gain,
   callback(gain, mute);
 }
 
-void FakeAudioRenderer::SetGainMuteNoReply(float gain,
-                                           bool mute,
+void FakeAudioRenderer::SetGainMuteNoReply(float gain, bool mute,
                                            uint32_t flags) {
   SetGainMute(gain, mute, flags, [](float gain, bool mute) {});
 }

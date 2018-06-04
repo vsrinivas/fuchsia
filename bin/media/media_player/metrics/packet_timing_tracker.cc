@@ -15,10 +15,8 @@ PacketTimingTracker::PacketTimingTracker(bool count_late_samples)
 
 PacketTimingTracker::~PacketTimingTracker() {}
 
-void PacketTimingTracker::AddSample(int64_t now,
-                                    int64_t presentation_time,
-                                    int64_t packet_pts_ns,
-                                    bool progressing) {
+void PacketTimingTracker::AddSample(int64_t now, int64_t presentation_time,
+                                    int64_t packet_pts_ns, bool progressing) {
   if (!progressing) {
     ++not_progressing_count_;
   } else if (packet_pts_ns == Packet::kUnknownPts) {

@@ -15,8 +15,7 @@ namespace media_player {
 class SubpictureStreamType : public StreamType {
  public:
   static std::unique_ptr<StreamType> Create(
-      const std::string& encoding,
-      std::unique_ptr<Bytes> encoding_parameters) {
+      const std::string& encoding, std::unique_ptr<Bytes> encoding_parameters) {
     return std::unique_ptr<StreamType>(
         new SubpictureStreamType(encoding, std::move(encoding_parameters)));
   }

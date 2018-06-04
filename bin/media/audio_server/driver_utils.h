@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_BIN_MEDIA_AUDIO_SERVER_DRIVER_UTILS_H_
+#define GARNET_BIN_MEDIA_AUDIO_SERVER_DRIVER_UTILS_H_
 
 #include <media/cpp/fidl.h>
 #include <zircon/device/audio.h>
@@ -25,3 +26,5 @@ bool DriverSampleFormatToAudioSampleFormat(
 
 }  // namespace driver_utils
 }  // namespace media
+
+#endif  // GARNET_BIN_MEDIA_AUDIO_SERVER_DRIVER_UTILS_H_

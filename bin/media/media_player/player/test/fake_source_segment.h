@@ -5,9 +5,9 @@
 #ifndef GARNET_BIN_MEDIA_MEDIA_PLAYER_PLAYER_TEST_FAKE_SOURCE_SEGMENT_H_
 #define GARNET_BIN_MEDIA_MEDIA_PLAYER_PLAYER_TEST_FAKE_SOURCE_SEGMENT_H_
 
-#include "garnet/bin/media/media_player/player/source_segment.h"
-
 #include <lib/fit/function.h>
+
+#include "garnet/bin/media/media_player/player/source_segment.h"
 
 namespace media_player {
 
@@ -63,10 +63,8 @@ class FakeSourceSegment : public SourceSegment {
 
   bool TEST_provisioned() { return provisioned(); }
 
-  void TEST_OnStreamUpdated(size_t index,
-                            const StreamType& type,
-                            OutputRef output,
-                            bool more) {
+  void TEST_OnStreamUpdated(size_t index, const StreamType& type,
+                            OutputRef output, bool more) {
     OnStreamUpdated(index, type, output, more);
   }
 

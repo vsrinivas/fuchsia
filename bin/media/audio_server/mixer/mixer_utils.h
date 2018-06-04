@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_BIN_MEDIA_AUDIO_SERVER_MIXER_MIXER_UTILS_H_
+#define GARNET_BIN_MEDIA_AUDIO_SERVER_MIXER_MIXER_UTILS_H_
 
 #include <cmath>
 #include <limits>
@@ -170,3 +171,5 @@ class DstMixer<ScaleType, DoAccumulate,
 }  // namespace mixer
 }  // namespace audio
 }  // namespace media
+
+#endif  // GARNET_BIN_MEDIA_AUDIO_SERVER_MIXER_MIXER_UTILS_H_

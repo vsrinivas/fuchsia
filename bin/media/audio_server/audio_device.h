@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_BIN_MEDIA_AUDIO_SERVER_AUDIO_DEVICE_H_
+#define GARNET_BIN_MEDIA_AUDIO_SERVER_AUDIO_DEVICE_H_
 
 #include <deque>
 #include <memory>
@@ -230,3 +231,5 @@ class AudioDevice : public AudioObject {
 
 }  // namespace audio
 }  // namespace media
+
+#endif  // GARNET_BIN_MEDIA_AUDIO_SERVER_AUDIO_DEVICE_H_

@@ -6,8 +6,8 @@
 
 #include <vector>
 
-#include <netconnector/cpp/fidl.h>
 #include <lib/zx/channel.h>
+#include <netconnector/cpp/fidl.h>
 
 #include "lib/fidl/cpp/clone.h"
 #include "lib/fxl/logging.h"
@@ -107,7 +107,8 @@ void MediaPlayerNetProxy::SetGain(float gain) {
 
 void MediaPlayerNetProxy::CreateView(
     fidl::InterfaceHandle<::fuchsia::ui::views_v1::ViewManager> view_manager,
-    fidl::InterfaceRequest<::fuchsia::ui::views_v1_token::ViewOwner> view_owner_request) {
+    fidl::InterfaceRequest<::fuchsia::ui::views_v1_token::ViewOwner>
+        view_owner_request) {
   FXL_LOG(ERROR) << "CreateView called on MediaPlayer proxy - not supported.";
   UnbindAndReleaseFromOwner();
 }

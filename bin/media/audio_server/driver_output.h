@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_BIN_MEDIA_AUDIO_SERVER_DRIVER_OUTPUT_H_
+#define GARNET_BIN_MEDIA_AUDIO_SERVER_DRIVER_OUTPUT_H_
 
 #include <dispatcher-pool/dispatcher-channel.h>
 #include <lib/zx/channel.h>
@@ -80,3 +81,5 @@ class DriverOutput : public StandardOutputBase {
 
 }  // namespace audio
 }  // namespace media
+
+#endif  // GARNET_BIN_MEDIA_AUDIO_SERVER_DRIVER_OUTPUT_H_

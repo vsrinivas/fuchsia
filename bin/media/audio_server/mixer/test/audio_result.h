@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_BIN_MEDIA_AUDIO_SERVER_MIXER_TEST_AUDIO_RESULT_H_
+#define GARNET_BIN_MEDIA_AUDIO_SERVER_MIXER_TEST_AUDIO_RESULT_H_
 
 #include <cmath>
 #include "garnet/bin/media/audio_server/constants.h"
@@ -389,3 +390,5 @@ class AudioResult {
     2018-03-21  Initial frequency response / sinad tests: 1kHz, 40Hz, 12kHz.
     2018-03-20  Initial source/output noise floor tests: 8- & 16-bit, 1kHz.
 */
+
+#endif  // GARNET_BIN_MEDIA_AUDIO_SERVER_MIXER_TEST_AUDIO_RESULT_H_

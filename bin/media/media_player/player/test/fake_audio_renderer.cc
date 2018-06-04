@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "garnet/bin/media/media_player/player/test/fake_audio_renderer.h"
+
 #include "garnet/bin/media/media_player/framework/types/audio_stream_type.h"
 
 namespace media_player {

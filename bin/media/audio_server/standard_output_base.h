@@ -2,11 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_BIN_MEDIA_AUDIO_SERVER_STANDARD_OUTPUT_BASE_H_
+#define GARNET_BIN_MEDIA_AUDIO_SERVER_STANDARD_OUTPUT_BASE_H_
 
 #include <dispatcher-pool/dispatcher-timer.h>
-
 #include <media/cpp/fidl.h>
+
 #include "garnet/bin/media/audio_server/audio_link.h"
 #include "garnet/bin/media/audio_server/audio_link_packet_source.h"
 #include "garnet/bin/media/audio_server/audio_output.h"
@@ -156,3 +157,5 @@ class StandardOutputBase : public AudioOutput {
 
 }  // namespace audio
 }  // namespace media
+
+#endif  // GARNET_BIN_MEDIA_AUDIO_SERVER_STANDARD_OUTPUT_BASE_H_

@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_BIN_MEDIA_AUDIO_SERVER_TIMELINE_CONTROL_POINT_H_
+#define GARNET_BIN_MEDIA_AUDIO_SERVER_TIMELINE_CONTROL_POINT_H_
 
 #include <mutex>
 
@@ -139,3 +140,5 @@ class TimelineControlPoint : public MediaTimelineControlPoint,
 };
 
 }  // namespace media
+
+#endif  // GARNET_BIN_MEDIA_AUDIO_SERVER_TIMELINE_CONTROL_POINT_H_

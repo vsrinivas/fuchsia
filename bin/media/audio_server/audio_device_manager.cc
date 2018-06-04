@@ -4,8 +4,9 @@
 
 #include "garnet/bin/media/audio_server/audio_device_manager.h"
 
-#include <fbl/algorithm.h>
 #include <string>
+
+#include <fbl/algorithm.h>
 
 #include "garnet/bin/media/audio_server/audio_capturer_impl.h"
 #include "garnet/bin/media/audio_server/audio_link.h"

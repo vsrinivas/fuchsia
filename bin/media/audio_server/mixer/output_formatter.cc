@@ -4,9 +4,10 @@
 
 #include "garnet/bin/media/audio_server/mixer/output_formatter.h"
 
-#include <fbl/algorithm.h>
 #include <limits>
 #include <type_traits>
+
+#include <fbl/algorithm.h>
 
 #include "garnet/bin/media/audio_server/constants.h"
 #include "lib/fidl/cpp/clone.h"

@@ -9,12 +9,8 @@
 
 namespace media_player {
 
-Packet::Packet(int64_t pts,
-               media::TimelineRate pts_rate,
-               bool keyframe,
-               bool end_of_stream,
-               size_t size,
-               void* payload)
+Packet::Packet(int64_t pts, media::TimelineRate pts_rate, bool keyframe,
+               bool end_of_stream, size_t size, void* payload)
     : pts_(pts),
       pts_rate_(pts_rate),
       keyframe_(keyframe),
@@ -38,9 +34,7 @@ int64_t Packet::GetPts(media::TimelineRate pts_rate) {
                             pts_rate, pts_rate_.Inverse(), false));
 }
 
-uint64_t Packet::GetLabel() {
-  return 0;
-}
+uint64_t Packet::GetLabel() { return 0; }
 
 void Packet::SetPtsRate(media::TimelineRate pts_rate) {
   if (pts_rate == pts_rate_) {
@@ -53,12 +47,8 @@ void Packet::SetPtsRate(media::TimelineRate pts_rate) {
 
 class PacketImpl : public Packet {
  public:
-  PacketImpl(int64_t pts,
-             media::TimelineRate pts_rate,
-             bool keyframe,
-             bool end_of_stream,
-             size_t size,
-             void* payload,
+  PacketImpl(int64_t pts, media::TimelineRate pts_rate, bool keyframe,
+             bool end_of_stream, size_t size, void* payload,
              std::shared_ptr<PayloadAllocator> allocator)
       : Packet(pts, pts_rate, keyframe, end_of_stream, size, payload),
         allocator_(allocator) {}
@@ -77,11 +67,8 @@ class PacketImpl : public Packet {
 };
 
 // static
-PacketPtr Packet::Create(int64_t pts,
-                         media::TimelineRate pts_rate,
-                         bool keyframe,
-                         bool end_of_stream,
-                         size_t size,
+PacketPtr Packet::Create(int64_t pts, media::TimelineRate pts_rate,
+                         bool keyframe, bool end_of_stream, size_t size,
                          void* payload,
                          std::shared_ptr<PayloadAllocator> allocator) {
   FXL_DCHECK(payload == nullptr || allocator != nullptr);
@@ -90,12 +77,9 @@ PacketPtr Packet::Create(int64_t pts,
 }
 
 // static
-PacketPtr Packet::CreateNoAllocator(int64_t pts,
-                                    media::TimelineRate pts_rate,
-                                    bool keyframe,
-                                    bool end_of_stream,
-                                    size_t size,
-                                    void* payload) {
+PacketPtr Packet::CreateNoAllocator(int64_t pts, media::TimelineRate pts_rate,
+                                    bool keyframe, bool end_of_stream,
+                                    size_t size, void* payload) {
   return std::make_shared<PacketImpl>(pts, pts_rate, keyframe, end_of_stream,
                                       size, payload, nullptr);
 }

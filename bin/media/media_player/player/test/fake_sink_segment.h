@@ -5,9 +5,9 @@
 #ifndef GARNET_BIN_MEDIA_MEDIA_PLAYER_PLAYER_TEST_FAKE_SINK_SEGMENT_H_
 #define GARNET_BIN_MEDIA_MEDIA_PLAYER_PLAYER_TEST_FAKE_SINK_SEGMENT_H_
 
-#include "garnet/bin/media/media_player/player/sink_segment.h"
-
 #include <lib/fit/function.h>
+
+#include "garnet/bin/media/media_player/player/sink_segment.h"
 
 namespace media_player {
 

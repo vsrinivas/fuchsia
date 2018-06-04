@@ -2,9 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_BIN_MEDIA_AUDIO_SERVER_MIXER_LINEAR_SAMPLER_H_
+#define GARNET_BIN_MEDIA_AUDIO_SERVER_MIXER_LINEAR_SAMPLER_H_
 
 #include <media/cpp/fidl.h>
+
 #include "garnet/bin/media/audio_server/mixer/mixer.h"
 
 namespace media {
@@ -24,3 +26,5 @@ class LinearSampler : public Mixer {
 }  // namespace mixer
 }  // namespace audio
 }  // namespace media
+
+#endif  // GARNET_BIN_MEDIA_AUDIO_SERVER_MIXER_LINEAR_SAMPLER_H_

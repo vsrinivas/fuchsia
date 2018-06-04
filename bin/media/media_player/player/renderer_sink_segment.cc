@@ -104,14 +104,12 @@ void RendererSinkSegment::Prime(fit::closure callback) {
 }
 
 void RendererSinkSegment::SetTimelineFunction(
-    media::TimelineFunction timeline_function,
-    fit::closure callback) {
+    media::TimelineFunction timeline_function, fit::closure callback) {
   FXL_DCHECK(renderer_);
   renderer_->SetTimelineFunction(timeline_function, std::move(callback));
 }
 
-void RendererSinkSegment::SetProgramRange(uint64_t program,
-                                          int64_t min_pts,
+void RendererSinkSegment::SetProgramRange(uint64_t program, int64_t min_pts,
                                           int64_t max_pts) {
   FXL_DCHECK(renderer_);
   renderer_->SetProgramRange(program, min_pts, max_pts);

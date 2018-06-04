@@ -5,9 +5,9 @@
 #ifndef GARNET_BIN_MEDIA_MEDIA_PLAYER_FRAMEWORK_PAYLOAD_ALLOCATOR_H_
 #define GARNET_BIN_MEDIA_MEDIA_PLAYER_FRAMEWORK_PAYLOAD_ALLOCATOR_H_
 
-#include <stddef.h>
-
 #include <memory>
+
+#include <stddef.h>
 
 namespace media_player {
 

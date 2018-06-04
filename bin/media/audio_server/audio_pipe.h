@@ -2,11 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_BIN_MEDIA_AUDIO_SERVER_AUDIO_PIPE_H_
+#define GARNET_BIN_MEDIA_AUDIO_SERVER_AUDIO_PIPE_H_
 
 #include <memory>
 
 #include <media/cpp/fidl.h>
+
 #include "garnet/bin/media/audio_server/audio_packet_ref.h"
 #include "garnet/bin/media/audio_server/fwd_decls.h"
 #include "lib/media/transport/media_packet_consumer_base.h"
@@ -67,3 +69,5 @@ class AudioPipe : public MediaPacketConsumerBase {
 
 }  // namespace audio
 }  // namespace media
+
+#endif  // GARNET_BIN_MEDIA_AUDIO_SERVER_AUDIO_PIPE_H_

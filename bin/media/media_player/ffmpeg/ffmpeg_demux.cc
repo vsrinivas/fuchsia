@@ -179,7 +179,8 @@ void FfmpegDemuxImpl::SetStatusCallback(StatusCallback callback) {
 }
 
 void FfmpegDemuxImpl::WhenInitialized(fit::function<void(Result)> callback) {
-  init_complete_.When([this, callback = std::move(callback)]() { callback(result_); });
+  init_complete_.When(
+      [this, callback = std::move(callback)]() { callback(result_); });
 }
 
 const std::vector<std::unique_ptr<Demux::DemuxStream>>&

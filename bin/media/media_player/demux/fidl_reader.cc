@@ -7,9 +7,9 @@
 #include <limits>
 #include <string>
 
-#include <media/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
+#include <media/cpp/fidl.h>
 
 #include "garnet/bin/media/media_player/fidl/fidl_type_conversions.h"
 #include "lib/fxl/logging.h"
@@ -41,9 +41,7 @@ void FidlReader::Describe(DescribeCallback callback) {
   });
 }
 
-void FidlReader::ReadAt(size_t position,
-                        uint8_t* buffer,
-                        size_t bytes_to_read,
+void FidlReader::ReadAt(size_t position, uint8_t* buffer, size_t bytes_to_read,
                         ReadAtCallback callback) {
   FXL_DCHECK(buffer);
   FXL_DCHECK(bytes_to_read);

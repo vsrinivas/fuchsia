@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_BIN_MEDIA_AUDIO_SERVER_AUDIO_LINK_H_
+#define GARNET_BIN_MEDIA_AUDIO_SERVER_AUDIO_LINK_H_
 
 #include <fbl/ref_ptr.h>
 
@@ -72,3 +73,5 @@ class AudioLink {
 
 }  // namespace audio
 }  // namespace media
+
+#endif  // GARNET_BIN_MEDIA_AUDIO_SERVER_AUDIO_LINK_H_

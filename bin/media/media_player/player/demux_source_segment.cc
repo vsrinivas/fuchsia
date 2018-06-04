@@ -4,8 +4,8 @@
 
 #include "garnet/bin/media/media_player/player/demux_source_segment.h"
 
-#include <media/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
+#include <media/cpp/fidl.h>
 
 #include "garnet/bin/media/media_player/util/safe_clone.h"
 #include "lib/fxl/logging.h"

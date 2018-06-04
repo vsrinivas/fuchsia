@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "garnet/bin/media/audio_server/audio_link_ring_buffer_source.h"
+
 #include "garnet/bin/media/audio_server/audio_device.h"
 
 namespace media {

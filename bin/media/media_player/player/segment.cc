@@ -14,8 +14,7 @@ Segment::Segment() {}
 
 Segment::~Segment() {}
 
-void Segment::Provision(Graph* graph,
-                        async_t* async,
+void Segment::Provision(Graph* graph, async_t* async,
                         fit::closure update_callback) {
   graph_ = graph;
   async_ = async;

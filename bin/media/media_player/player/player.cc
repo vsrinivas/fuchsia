@@ -106,14 +106,17 @@ void Player::Prime(fit::closure callback) {
     }
   }
 
-  callback_joiner->WhenJoined(
-      [this, callback = std::move(callback)]() mutable { async::PostTask(async_, std::move(callback)); });
+  callback_joiner->WhenJoined([this, callback = std::move(callback)]() mutable {
+    async::PostTask(async_, std::move(callback));
+  });
 }
 
 void Player::Flush(bool hold_frame, fit::closure callback) {
   if (source_segment_) {
-    source_segment_->Flush(
-        hold_frame, [this, callback = std::move(callback)]() mutable { async::PostTask(async_, std::move(callback)); });
+    source_segment_->Flush(hold_frame,
+                           [this, callback = std::move(callback)]() mutable {
+                             async::PostTask(async_, std::move(callback));
+                           });
   } else {
     async::PostTask(async_, std::move(callback));
   }
@@ -145,8 +148,9 @@ void Player::SetTimelineFunction(media::TimelineFunction timeline_function,
     }
   }
 
-  callback_joiner->WhenJoined(
-      [this, callback = std::move(callback)]() mutable { async::PostTask(async_, std::move(callback)); });
+  callback_joiner->WhenJoined([this, callback = std::move(callback)]() mutable {
+    async::PostTask(async_, std::move(callback));
+  });
 }
 
 void Player::SetProgramRange(uint64_t program, int64_t min_pts,
@@ -160,8 +164,10 @@ void Player::SetProgramRange(uint64_t program, int64_t min_pts,
 
 void Player::Seek(int64_t position, fit::closure callback) {
   if (source_segment_) {
-    source_segment_->Seek(
-        position, [this, callback = std::move(callback)]() mutable { async::PostTask(async_, std::move(callback)); });
+    source_segment_->Seek(position,
+                          [this, callback = std::move(callback)]() mutable {
+                            async::PostTask(async_, std::move(callback));
+                          });
   } else {
     async::PostTask(async_, std::move(callback));
   }

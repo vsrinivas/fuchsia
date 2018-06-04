@@ -72,8 +72,7 @@ std::unique_ptr<MediaPlayerInMessage> MediaPlayerInMessage::SetGainRequest(
 
 // static
 std::unique_ptr<MediaPlayerOutMessage> MediaPlayerOutMessage::TimeCheckResponse(
-    int64_t requestor_time,
-    int64_t responder_time) {
+    int64_t requestor_time, int64_t responder_time) {
   std::unique_ptr<MediaPlayerOutMessage> message =
       std::make_unique<MediaPlayerOutMessage>();
   message->type_ = MediaPlayerOutMessageType::kTimeCheckResponse;

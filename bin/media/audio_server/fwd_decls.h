@@ -2,11 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_BIN_MEDIA_AUDIO_SERVER_FWD_DECLS_H_
+#define GARNET_BIN_MEDIA_AUDIO_SERVER_FWD_DECLS_H_
 
-#include <fbl/ref_ptr.h>
 #include <memory>
 #include <set>
+
+#include <fbl/ref_ptr.h>
 
 namespace media {
 namespace audio {
@@ -24,3 +26,5 @@ using AudioLinkSet = std::set<AudioLinkPtr, std::owner_less<AudioLinkPtr>>;
 
 }  // namespace audio
 }  // namespace media
+
+#endif  // GARNET_BIN_MEDIA_AUDIO_SERVER_FWD_DECLS_H_

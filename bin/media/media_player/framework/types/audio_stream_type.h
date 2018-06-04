@@ -27,10 +27,8 @@ class AudioStreamType : public StreamType {
   };
 
   static std::unique_ptr<StreamType> Create(
-      const std::string& encoding,
-      std::unique_ptr<Bytes> encoding_parameters,
-      SampleFormat sample_format,
-      uint32_t channels,
+      const std::string& encoding, std::unique_ptr<Bytes> encoding_parameters,
+      SampleFormat sample_format, uint32_t channels,
       uint32_t frames_per_second) {
     return std::unique_ptr<StreamType>(
         new AudioStreamType(encoding, std::move(encoding_parameters),
@@ -39,8 +37,7 @@ class AudioStreamType : public StreamType {
 
   AudioStreamType(const std::string& encoding,
                   std::unique_ptr<Bytes> encoding_parameters,
-                  SampleFormat sample_format,
-                  uint32_t channels,
+                  SampleFormat sample_format, uint32_t channels,
                   uint32_t frames_per_second);
 
   AudioStreamType(const AudioStreamType& other);
@@ -85,8 +82,7 @@ class AudioStreamTypeSet : public StreamTypeSet {
  public:
   static std::unique_ptr<StreamTypeSet> Create(
       const std::vector<std::string>& encodings,
-      AudioStreamType::SampleFormat sample_format,
-      Range<uint32_t> channels,
+      AudioStreamType::SampleFormat sample_format, Range<uint32_t> channels,
       Range<uint32_t> frames_per_second) {
     return std::unique_ptr<StreamTypeSet>(new AudioStreamTypeSet(
         encodings, sample_format, channels, frames_per_second));

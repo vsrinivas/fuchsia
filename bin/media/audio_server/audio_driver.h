@@ -2,7 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_BIN_MEDIA_AUDIO_SERVER_AUDIO_DRIVER_H_
+#define GARNET_BIN_MEDIA_AUDIO_SERVER_AUDIO_DRIVER_H_
+
+#include <mutex>
+#include <string>
 
 #include <dispatcher-pool/dispatcher-channel.h>
 #include <dispatcher-pool/dispatcher-timer.h>
@@ -11,9 +15,6 @@
 #include <lib/zx/channel.h>
 #include <lib/zx/vmo.h>
 #include <zircon/device/audio.h>
-
-#include <mutex>
-#include <string>
 
 #include "garnet/bin/media/audio_server/audio_device.h"
 #include "garnet/bin/media/audio_server/driver_ring_buffer.h"
@@ -234,3 +235,5 @@ class AudioDriver {
 
 }  // namespace audio
 }  // namespace media
+
+#endif  // GARNET_BIN_MEDIA_AUDIO_SERVER_AUDIO_DRIVER_H_

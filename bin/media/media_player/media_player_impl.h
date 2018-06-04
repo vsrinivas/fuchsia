@@ -27,7 +27,8 @@ class MediaPlayerImpl : public MediaPlayer {
  public:
   static std::unique_ptr<MediaPlayerImpl> Create(
       fidl::InterfaceRequest<MediaPlayer> request,
-      fuchsia::sys::StartupContext* startup_context, fit::closure quit_callback);
+      fuchsia::sys::StartupContext* startup_context,
+      fit::closure quit_callback);
 
   MediaPlayerImpl(fidl::InterfaceRequest<MediaPlayer> request,
                   fuchsia::sys::StartupContext* startup_context,

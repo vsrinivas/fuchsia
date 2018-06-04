@@ -9,6 +9,7 @@
 
 #include <fuchsia/math/cpp/fidl.h>
 #include <media/cpp/fidl.h>
+
 #include "garnet/bin/media/media_player/framework/types/video_stream_type.h"
 
 namespace media_player {
@@ -30,22 +31,16 @@ class VideoConverter {
   fuchsia::math::Size GetPixelAspectRatio() const;
 
   // Converts the frame in the payload into the provided RGBA buffer.
-  void ConvertFrame(uint8_t* rgba_buffer,
-                    uint32_t view_width,
-                    uint32_t view_height,
-                    void* payload,
-                    uint64_t payload_size);
+  void ConvertFrame(uint8_t* rgba_buffer, uint32_t view_width,
+                    uint32_t view_height, void* payload, uint64_t payload_size);
 
  private:
   // Builds the YUV-RGBA colorspace table.
   void BuildColorspaceTable();
 
   // Converts one line.
-  void ConvertLine(uint32_t* dest_pixel,
-                   uint8_t* y_pixel,
-                   uint8_t* u_pixel,
-                   uint8_t* v_pixel,
-                   uint32_t width);
+  void ConvertLine(uint32_t* dest_pixel, uint8_t* y_pixel, uint8_t* u_pixel,
+                   uint8_t* v_pixel, uint32_t width);
 
   std::unique_ptr<StreamType> stream_type_;
   const VideoStreamType* video_stream_type_ = nullptr;

@@ -9,8 +9,8 @@
 
 #include <endian.h>
 #include <lib/zx/channel.h>
-
 #include <media/cpp/fidl.h>
+
 #include "garnet/bin/media/net_media_service/media_player_messages.h"
 #include "lib/fxl/macros.h"
 #include "lib/netconnector/cpp/message_relay.h"
@@ -23,8 +23,7 @@ class MediaPlayerNetStub
     : public std::enable_shared_from_this<MediaPlayerNetStub> {
  public:
   MediaPlayerNetStub(
-      const fidl::InterfacePtr<MediaPlayer>& player,
-      zx::channel channel,
+      const fidl::InterfacePtr<MediaPlayer>& player, zx::channel channel,
       netconnector::NetStubResponder<MediaPlayer, MediaPlayerNetStub>*
           responder);
 

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_MEDIA_MEDIA_PLAYER_TEST_FAKE_RENDERER_H_
-#define GARNET_BIN_MEDIA_MEDIA_PLAYER_TEST_FAKE_RENDERER_H_
+#ifndef GARNET_BIN_MEDIA_MEDIA_PLAYER_TEST_FAKE_AUDIO_RENDERER_H_
+#define GARNET_BIN_MEDIA_MEDIA_PLAYER_TEST_FAKE_AUDIO_RENDERER_H_
 
 #include <memory>
 #include <queue>
@@ -75,8 +75,7 @@ class FakeAudioRenderer : public media::AudioRenderer2 {
 
   void FlushNoReply() override;
 
-  void Play(int64_t reference_time,
-            int64_t media_time,
+  void Play(int64_t reference_time, int64_t media_time,
             PlayCallback callback) override;
 
   void PlayNoReply(int64_t reference_time, int64_t media_time) override;
@@ -85,9 +84,7 @@ class FakeAudioRenderer : public media::AudioRenderer2 {
 
   void PauseNoReply() override;
 
-  void SetGainMute(float gain,
-                   bool mute,
-                   uint32_t flags,
+  void SetGainMute(float gain, bool mute, uint32_t flags,
                    SetGainMuteCallback callback) override;
 
   void SetGainMuteNoReply(float gain, bool mute, uint32_t flags) override;
@@ -125,4 +122,4 @@ class FakeAudioRenderer : public media::AudioRenderer2 {
 
 }  // namespace media_player
 
-#endif  // GARNET_BIN_MEDIA_MEDIA_PLAYER_TEST_FAKE_RENDERER_H_
+#endif  // GARNET_BIN_MEDIA_MEDIA_PLAYER_TEST_FAKE_AUDIO_RENDERER_H_

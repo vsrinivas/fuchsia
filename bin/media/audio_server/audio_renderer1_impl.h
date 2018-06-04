@@ -2,13 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_BIN_MEDIA_AUDIO_SERVER_AUDIO_RENDERER1_IMPL_H_
+#define GARNET_BIN_MEDIA_AUDIO_SERVER_AUDIO_RENDERER1_IMPL_H_
 
-#include <fbl/ref_ptr.h>
 #include <deque>
 #include <set>
 
+#include <fbl/ref_ptr.h>
 #include <media/cpp/fidl.h>
+
 #include "garnet/bin/media/audio_server/audio_link_packet_source.h"
 #include "garnet/bin/media/audio_server/audio_object.h"
 #include "garnet/bin/media/audio_server/audio_packet_ref.h"
@@ -88,3 +90,5 @@ class AudioRenderer1Impl : public AudioRendererImpl,
 
 }  // namespace audio
 }  // namespace media
+
+#endif  // GARNET_BIN_MEDIA_AUDIO_SERVER_AUDIO_RENDERER1_IMPL_H_

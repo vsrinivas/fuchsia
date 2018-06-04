@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_BIN_MEDIA_AUDIO_SERVER_MIXER_TEST_FREQUENCY_SET_H_
+#define GARNET_BIN_MEDIA_AUDIO_SERVER_MIXER_TEST_FREQUENCY_SET_H_
 
 #include <fbl/algorithm.h>
 #include <zircon/types.h>
@@ -92,3 +93,5 @@ class FrequencySet {
 }  // namespace test
 }  // namespace audio
 }  // namespace media
+
+#endif  // GARNET_BIN_MEDIA_AUDIO_SERVER_MIXER_TEST_FREQUENCY_SET_H_

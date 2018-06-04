@@ -32,23 +32,17 @@ class Packet {
 
   // Creates a packet. If size is 0, payload must be nullptr and vice-versa.
   // If payload is not nullptr, an allocator must be provided.
-  static PacketPtr Create(int64_t pts,
-                          media::TimelineRate pts_rate,
-                          bool keyframe,
-                          bool end_of_stream,
-                          size_t size,
+  static PacketPtr Create(int64_t pts, media::TimelineRate pts_rate,
+                          bool keyframe, bool end_of_stream, size_t size,
                           void* payload,
                           std::shared_ptr<PayloadAllocator> allocator);
 
   // Creates a packet. If size is 0, payload must be nullptr and vice-versa.
   // No allocator is provided, and the payload will not be released when the
   // packet is released.
-  static PacketPtr CreateNoAllocator(int64_t pts,
-                                     media::TimelineRate pts_rate,
-                                     bool keyframe,
-                                     bool end_of_stream,
-                                     size_t size,
-                                     void* payload);
+  static PacketPtr CreateNoAllocator(int64_t pts, media::TimelineRate pts_rate,
+                                     bool keyframe, bool end_of_stream,
+                                     size_t size, void* payload);
 
   // Creates an end-of-stream packet with no payload.
   static PacketPtr CreateEndOfStream(int64_t pts, media::TimelineRate pts_rate);
@@ -103,12 +97,8 @@ class Packet {
   virtual uint64_t GetLabel();
 
  protected:
-  Packet(int64_t pts,
-         media::TimelineRate pts_rate,
-         bool keyframe,
-         bool end_of_stream,
-         size_t size,
-         void* payload);
+  Packet(int64_t pts, media::TimelineRate pts_rate, bool keyframe,
+         bool end_of_stream, size_t size, void* payload);
 
  private:
   int64_t pts_;

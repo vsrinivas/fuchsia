@@ -44,9 +44,7 @@ void FileReader::Describe(DescribeCallback callback) {
   callback(result_, size_, true);
 }
 
-void FileReader::ReadAt(size_t position,
-                        uint8_t* buffer,
-                        size_t bytes_to_read,
+void FileReader::ReadAt(size_t position, uint8_t* buffer, size_t bytes_to_read,
                         ReadAtCallback callback) {
   FXL_DCHECK(position < size_);
 

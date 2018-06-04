@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_BIN_MEDIA_AUDIO_SERVER_DRIVER_RING_BUFFER_H_
+#define GARNET_BIN_MEDIA_AUDIO_SERVER_DRIVER_RING_BUFFER_H_
 
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
@@ -39,3 +40,5 @@ class DriverRingBuffer : public fbl::RefCounted<DriverRingBuffer> {
 
 }  // namespace audio
 }  // namespace media
+
+#endif  // GARNET_BIN_MEDIA_AUDIO_SERVER_DRIVER_RING_BUFFER_H_

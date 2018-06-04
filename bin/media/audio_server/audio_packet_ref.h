@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_BIN_MEDIA_AUDIO_SERVER_AUDIO_PACKET_REF_H_
+#define GARNET_BIN_MEDIA_AUDIO_SERVER_AUDIO_PACKET_REF_H_
 
 #include <fbl/intrusive_double_list.h>
 #include <fbl/ref_counted.h>
@@ -81,3 +82,5 @@ class AudioPacketRef
 
 }  // namespace audio
 }  // namespace media
+
+#endif  // GARNET_BIN_MEDIA_AUDIO_SERVER_AUDIO_PACKET_REF_H_

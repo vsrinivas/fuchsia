@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_BIN_MEDIA_AUDIO_SERVER_AUDIO_OBJECT_H_
+#define GARNET_BIN_MEDIA_AUDIO_SERVER_AUDIO_OBJECT_H_
 
 #include <fbl/auto_lock.h>
 #include <fbl/intrusive_double_list.h>
@@ -126,3 +127,5 @@ class AudioObject : public fbl::RefCounted<AudioObject> {
 
 }  // namespace audio
 }  // namespace media
+
+#endif  // GARNET_BIN_MEDIA_AUDIO_SERVER_AUDIO_OBJECT_H_

@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_BIN_MEDIA_AUDIO_SERVER_MIXER_TEST_MIXER_TESTS_SHARED_H_
+#define GARNET_BIN_MEDIA_AUDIO_SERVER_MIXER_TEST_MIXER_TESTS_SHARED_H_
 
 #include "garnet/bin/media/audio_server/gain.h"
 #include "garnet/bin/media/audio_server/mixer/mixer.h"
@@ -58,3 +59,5 @@ void DoMix(MixerPtr mixer, const void* src_buf, int32_t* accum_buf,
 }  // namespace test
 }  // namespace audio
 }  // namespace media
+
+#endif  // GARNET_BIN_MEDIA_AUDIO_SERVER_MIXER_TEST_MIXER_TESTS_SHARED_H_

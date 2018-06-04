@@ -21,9 +21,7 @@ uint8_t ByteForPosition(size_t position) {
                               (position >> 24));
 }
 
-void ExpectRegion(SparseByteBuffer* under_test,
-                  size_t position,
-                  size_t size,
+void ExpectRegion(SparseByteBuffer* under_test, size_t position, size_t size,
                   SparseByteBuffer::Region region) {
   EXPECT_NE(under_test->null_region(), region);
   EXPECT_EQ(position, region.position());
@@ -39,9 +37,7 @@ void ExpectNullHole(SparseByteBuffer* under_test, SparseByteBuffer::Hole hole) {
   EXPECT_EQ(under_test->null_hole(), hole);
 }
 
-void ExpectHole(SparseByteBuffer* under_test,
-                size_t position,
-                size_t size,
+void ExpectHole(SparseByteBuffer* under_test, size_t position, size_t size,
                 SparseByteBuffer::Hole hole) {
   EXPECT_NE(under_test->null_hole(), hole);
   EXPECT_EQ(position, hole.position());

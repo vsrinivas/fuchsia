@@ -217,14 +217,17 @@ void AsyncNodeStageImpl::FlushInput(size_t input_index, bool hold_frame,
   inputs_[input_index].Flush();
 
   node_->FlushInput(hold_frame, input_index,
-                    [this, callback = std::move(callback)]() mutable { PostTask(std::move(callback)); });
+                    [this, callback = std::move(callback)]() mutable {
+                      PostTask(std::move(callback));
+                    });
 }
 
 void AsyncNodeStageImpl::FlushOutput(size_t output_index,
                                      fit::closure callback) {
   FXL_DCHECK(output_index < outputs_.size());
 
-  node_->FlushOutput(output_index, [this, output_index, callback = std::move(callback)]() mutable {
+  node_->FlushOutput(output_index, [this, output_index,
+                                    callback = std::move(callback)]() mutable {
     {
       std::lock_guard<std::mutex> locker(packets_per_output_mutex_);
       auto& packets = packets_per_output_[output_index];

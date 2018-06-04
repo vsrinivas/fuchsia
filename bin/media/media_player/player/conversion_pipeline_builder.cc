@@ -97,9 +97,7 @@ const std::unique_ptr<StreamTypeSet>* FindBestLpcm(
 AddResult AddTransformsForCompressedAudio(
     const AudioStreamType& in_type,
     const std::vector<std::unique_ptr<StreamTypeSet>>& out_type_sets,
-    Graph* graph,
-    OutputRef* output,
-    std::unique_ptr<StreamType>* out_type) {
+    Graph* graph, OutputRef* output, std::unique_ptr<StreamType>* out_type) {
   FXL_DCHECK(out_type);
   FXL_DCHECK(graph);
 
@@ -150,9 +148,7 @@ AddResult AddTransformsForCompressedAudio(
 AddResult AddTransformsForCompressedVideo(
     const VideoStreamType& in_type,
     const std::vector<std::unique_ptr<StreamTypeSet>>& out_type_sets,
-    Graph* graph,
-    OutputRef* output,
-    std::unique_ptr<StreamType>* out_type) {
+    Graph* graph, OutputRef* output, std::unique_ptr<StreamType>* out_type) {
   FXL_DCHECK(out_type);
   FXL_DCHECK(graph);
 
@@ -179,8 +175,7 @@ AddResult AddTransformsForCompressedVideo(
 // output type. Otherwise, *out_type is set to nullptr.
 AddResult AddTransformsForLpcm(const AudioStreamType& in_type,
                                const AudioStreamTypeSet& out_type_set,
-                               Graph* graph,
-                               OutputRef* output,
+                               Graph* graph, OutputRef* output,
                                std::unique_ptr<StreamType>* out_type) {
   FXL_DCHECK(graph);
   FXL_DCHECK(out_type);
@@ -227,9 +222,7 @@ AddResult AddTransformsForLpcm(const AudioStreamType& in_type,
 AddResult AddTransformsForLpcm(
     const AudioStreamType& in_type,
     const std::vector<std::unique_ptr<StreamTypeSet>>& out_type_sets,
-    Graph* graph,
-    OutputRef* output,
-    std::unique_ptr<StreamType>* out_type) {
+    Graph* graph, OutputRef* output, std::unique_ptr<StreamType>* out_type) {
   FXL_DCHECK(graph);
   FXL_DCHECK(out_type);
 
@@ -255,9 +248,7 @@ AddResult AddTransformsForLpcm(
 AddResult AddTransforms(
     const StreamType& in_type,
     const std::vector<std::unique_ptr<StreamTypeSet>>& out_type_sets,
-    Graph* graph,
-    OutputRef* output,
-    std::unique_ptr<StreamType>* out_type) {
+    Graph* graph, OutputRef* output, std::unique_ptr<StreamType>* out_type) {
   FXL_DCHECK(graph);
   FXL_DCHECK(out_type);
 
@@ -291,9 +282,7 @@ AddResult AddTransforms(
 bool BuildConversionPipeline(
     const StreamType& in_type,
     const std::vector<std::unique_ptr<StreamTypeSet>>& out_type_sets,
-    Graph* graph,
-    OutputRef* output,
-    std::unique_ptr<StreamType>* out_type) {
+    Graph* graph, OutputRef* output, std::unique_ptr<StreamType>* out_type) {
   FXL_DCHECK(graph);
   FXL_DCHECK(output);
   FXL_DCHECK(out_type);

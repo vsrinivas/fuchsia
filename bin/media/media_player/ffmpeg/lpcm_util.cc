@@ -21,9 +21,7 @@ class LpcmUtilImpl : public LpcmUtil {
 
   void Mix(const void* in, void* out, size_t frame_count) const override;
 
-  void Interleave(const void* in,
-                  size_t in_byte_count,
-                  void* out,
+  void Interleave(const void* in, size_t in_byte_count, void* out,
                   size_t frame_count) const override;
 
  private:
@@ -92,8 +90,7 @@ void LpcmUtilImpl<int32_t>::Silence(void* buffer, size_t frame_count) const {
 }
 
 template <typename T>
-void LpcmUtilImpl<T>::Copy(const void* in,
-                           void* out,
+void LpcmUtilImpl<T>::Copy(const void* in, void* out,
                            size_t frame_count) const {
   std::memcpy(out, in, stream_type_.min_buffer_size(frame_count));
 }
@@ -111,8 +108,7 @@ void LpcmUtilImpl<T>::Mix(const void* in, void* out, size_t frame_count) const {
 }
 
 template <>
-void LpcmUtilImpl<uint8_t>::Mix(const void* in,
-                                void* out,
+void LpcmUtilImpl<uint8_t>::Mix(const void* in, void* out,
                                 size_t frame_count) const {
   const uint8_t* in_sample = reinterpret_cast<const uint8_t*>(in);
   uint8_t* out_sample = reinterpret_cast<uint8_t*>(out);
@@ -126,10 +122,8 @@ void LpcmUtilImpl<uint8_t>::Mix(const void* in,
 }
 
 template <typename T>
-void LpcmUtilImpl<T>::Interleave(const void* in,
-                                 size_t in_byte_count,
-                                 void* out,
-                                 size_t frame_count) const {
+void LpcmUtilImpl<T>::Interleave(const void* in, size_t in_byte_count,
+                                 void* out, size_t frame_count) const {
   FXL_DCHECK(in);
   FXL_DCHECK(in_byte_count);
   FXL_DCHECK(out);

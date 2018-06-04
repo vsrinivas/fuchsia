@@ -18,9 +18,7 @@ class PacketTimingTracker {
 
   // Adds a sample to the tracker. If |packet_pts_ns| is |Packet::kUnknownPts|,
   // the sample is counted as a 'no packet' case.
-  void AddSample(int64_t now,
-                 int64_t presentation_time,
-                 int64_t packet_pts_ns,
+  void AddSample(int64_t now, int64_t presentation_time, int64_t packet_pts_ns,
                  bool progressing);
 
   // Resets the tracker to its initial state.

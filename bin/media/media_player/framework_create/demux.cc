@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "garnet/bin/media/media_player/demux/demux.h"
+
 #include "garnet/bin/media/media_player/ffmpeg/ffmpeg_demux.h"
 
 namespace media_player {

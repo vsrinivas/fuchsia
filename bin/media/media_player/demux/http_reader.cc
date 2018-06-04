@@ -4,8 +4,8 @@
 
 #include "garnet/bin/media/media_player/demux/http_reader.h"
 
-#include <lib/async/default.h>
 #include <fuchsia/net/oldhttp/cpp/fidl.h>
+#include <lib/async/default.h>
 
 #include "garnet/bin/http/http_errors.h"
 #include "lib/app/cpp/connect.h"
@@ -47,43 +47,39 @@ HttpReader::HttpReader(fuchsia::sys::StartupContext* startup_context,
   url_request.method = "HEAD";
   url_request.auto_follow_redirects = true;
 
-  url_loader_->Start(
-      std::move(url_request), [this](http::URLResponse response) {
-        if (response.error) {
-          FXL_LOG(ERROR) << "HEAD response error " << response.error->code
-                         << " "
-                         << (response.error->description
-                                 ? response.error->description
-                                 : "<no description>");
-          result_ =
-              response.error->code == ::http::HTTP_ERR_NAME_NOT_RESOLVED
-                  ? Result::kNotFound
-                  : Result::kUnknownError;
-          ready_.Occur();
-          return;
-        }
+  url_loader_->Start(std::move(url_request), [this](
+                                                 http::URLResponse response) {
+    if (response.error) {
+      FXL_LOG(ERROR) << "HEAD response error " << response.error->code << " "
+                     << (response.error->description
+                             ? response.error->description
+                             : "<no description>");
+      result_ = response.error->code == ::http::HTTP_ERR_NAME_NOT_RESOLVED
+                    ? Result::kNotFound
+                    : Result::kUnknownError;
+      ready_.Occur();
+      return;
+    }
 
-        if (response.status_code != kStatusOk) {
-          FXL_LOG(ERROR) << "HEAD response status code "
-                         << response.status_code;
-          result_ = response.status_code == kStatusNotFound
-                        ? Result::kNotFound
-                        : Result::kUnknownError;
-          ready_.Occur();
-          return;
-        }
+    if (response.status_code != kStatusOk) {
+      FXL_LOG(ERROR) << "HEAD response status code " << response.status_code;
+      result_ = response.status_code == kStatusNotFound ? Result::kNotFound
+                                                        : Result::kUnknownError;
+      ready_.Occur();
+      return;
+    }
 
-        for (const http::HttpHeader& header : *response.headers) {
-          if (header.name == kContentLengthHeaderName) {
-            size_ = std::stoull(header.value);
-          } else if (header.name == kAcceptRangesHeaderName &&
-                     header.value == kAcceptRangesHeaderBytesValue) {
-            can_seek_ = true;
-          }
-        }
+    for (const http::HttpHeader& header : *response.headers) {
+      if (header.name == kContentLengthHeaderName) {
+        size_ = std::stoull(header.value);
+      } else if (header.name == kAcceptRangesHeaderName &&
+                 header.value == kAcceptRangesHeaderBytesValue) {
+        can_seek_ = true;
+      }
+    }
 
-        ready_.Occur();
-      });
+    ready_.Occur();
+  });
 }
 
 HttpReader::~HttpReader() {}

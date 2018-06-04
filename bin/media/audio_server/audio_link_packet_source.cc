@@ -100,7 +100,8 @@ void AudioLinkPacketSource::CopyPendingQueue(
   FXL_DCHECK(this != other.get());
 
   std::lock_guard<std::mutex> source_locker(other->pending_mutex_);
-  if (other->pending_packet_queue_.empty()) return;
+  if (other->pending_packet_queue_.empty())
+    return;
 
   std::lock_guard<std::mutex> locker(pending_mutex_);
   FXL_DCHECK(pending_packet_queue_.empty());

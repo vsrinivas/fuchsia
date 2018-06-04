@@ -34,8 +34,7 @@ const char StreamType::kVideoEncodingVp3[] = "vp3";
 const char StreamType::kVideoEncodingVp8[] = "vp8";
 const char StreamType::kVideoEncodingVp9[] = "vp9";
 
-StreamType::StreamType(Medium medium,
-                       const std::string& encoding,
+StreamType::StreamType(Medium medium, const std::string& encoding,
                        std::unique_ptr<Bytes> encoding_parameters)
     : medium_(medium),
       encoding_(encoding),

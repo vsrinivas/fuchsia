@@ -35,9 +35,7 @@ void ReaderCache::Describe(DescribeCallback callback) {
   });
 }
 
-void ReaderCache::ReadAt(size_t position,
-                         uint8_t* buffer,
-                         size_t bytes_to_read,
+void ReaderCache::ReadAt(size_t position, uint8_t* buffer, size_t bytes_to_read,
                          ReadAtCallback callback) {
   FXL_DCHECK(buffer);
   FXL_DCHECK(bytes_to_read > 0);
@@ -48,14 +46,11 @@ void ReaderCache::ReadAt(size_t position,
       [this]() { store_.SetReadAtRequest(&read_at_request_); });
 }
 
-ReaderCache::ReadAtRequest::ReadAtRequest() {
-  in_progress_ = false;
-}
+ReaderCache::ReadAtRequest::ReadAtRequest() { in_progress_ = false; }
 
 ReaderCache::ReadAtRequest::~ReadAtRequest() {}
 
-void ReaderCache::ReadAtRequest::Start(size_t position,
-                                       uint8_t* buffer,
+void ReaderCache::ReadAtRequest::Start(size_t position, uint8_t* buffer,
                                        size_t bytes_to_read,
                                        ReadAtCallback callback) {
   FXL_DCHECK(!in_progress_) << "concurrent calls to ReadAt are not allowed";

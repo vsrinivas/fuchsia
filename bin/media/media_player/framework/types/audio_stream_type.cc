@@ -11,11 +11,9 @@ namespace media_player {
 
 AudioStreamType::AudioStreamType(const std::string& encoding,
                                  std::unique_ptr<Bytes> encoding_parameters,
-                                 SampleFormat sample_format,
-                                 uint32_t channels,
+                                 SampleFormat sample_format, uint32_t channels,
                                  uint32_t frames_per_second)
-    : StreamType(StreamType::Medium::kAudio,
-                 encoding,
+    : StreamType(StreamType::Medium::kAudio, encoding,
                  std::move(encoding_parameters)),
       sample_format_(sample_format),
       channels_(channels),
@@ -23,17 +21,13 @@ AudioStreamType::AudioStreamType(const std::string& encoding,
       sample_size_(SampleSizeFromFormat(sample_format)) {}
 
 AudioStreamType::AudioStreamType(const AudioStreamType& other)
-    : AudioStreamType(other.encoding(),
-                      SafeClone(other.encoding_parameters()),
-                      other.sample_format(),
-                      other.channels(),
+    : AudioStreamType(other.encoding(), SafeClone(other.encoding_parameters()),
+                      other.sample_format(), other.channels(),
                       other.frames_per_second()) {}
 
 AudioStreamType::~AudioStreamType() {}
 
-const AudioStreamType* AudioStreamType::audio() const {
-  return this;
-}
+const AudioStreamType* AudioStreamType::audio() const { return this; }
 
 // static
 uint32_t AudioStreamType::SampleSizeFromFormat(SampleFormat sample_format) {
@@ -63,8 +57,7 @@ std::unique_ptr<StreamType> AudioStreamType::Clone() const {
 
 AudioStreamTypeSet::AudioStreamTypeSet(
     const std::vector<std::string>& encodings,
-    AudioStreamType::SampleFormat sample_format,
-    Range<uint32_t> channels,
+    AudioStreamType::SampleFormat sample_format, Range<uint32_t> channels,
     Range<uint32_t> frames_per_second)
     : StreamTypeSet(StreamType::Medium::kAudio, encodings),
       sample_format_(sample_format),
@@ -73,9 +66,7 @@ AudioStreamTypeSet::AudioStreamTypeSet(
 
 AudioStreamTypeSet::~AudioStreamTypeSet() {}
 
-const AudioStreamTypeSet* AudioStreamTypeSet::audio() const {
-  return this;
-}
+const AudioStreamTypeSet* AudioStreamTypeSet::audio() const { return this; }
 
 std::unique_ptr<StreamTypeSet> AudioStreamTypeSet::Clone() const {
   return Create(encodings(), sample_format(), channels(), frames_per_second());

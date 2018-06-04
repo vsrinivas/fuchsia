@@ -2,15 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_BIN_MEDIA_AUDIO_SERVER_UTILS_H_
+#define GARNET_BIN_MEDIA_AUDIO_SERVER_UTILS_H_
 
-#include <stdint.h>
-#include <zircon/device/audio.h>
-#include <zircon/types.h>
 #include <atomic>
 #include <vector>
 
 #include <media/cpp/fidl.h>
+#include <stdint.h>
+#include <zircon/device/audio.h>
+#include <zircon/types.h>
+
 #include "garnet/bin/media/audio_server/constants.h"
 
 namespace media {
@@ -59,3 +61,5 @@ zx_status_t SelectBestFormat(
 
 }  // namespace audio
 }  // namespace media
+
+#endif  // GARNET_BIN_MEDIA_AUDIO_SERVER_UTILS_H_

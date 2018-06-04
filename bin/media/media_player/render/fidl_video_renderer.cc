@@ -198,7 +198,8 @@ void FidlVideoRenderer::SetGeometryUpdateCallback(fit::closure callback) {
 
 void FidlVideoRenderer::CreateView(
     fidl::InterfacePtr<::fuchsia::ui::views_v1::ViewManager> view_manager,
-    fidl::InterfaceRequest<::fuchsia::ui::views_v1_token::ViewOwner> view_owner_request) {
+    fidl::InterfaceRequest<::fuchsia::ui::views_v1_token::ViewOwner>
+        view_owner_request) {
   auto view =
       std::make_unique<View>(std::move(view_manager),
                              std::move(view_owner_request), shared_from_this());
@@ -296,7 +297,8 @@ void FidlVideoRenderer::OnSceneInvalidated(int64_t reference_time) {
 
 FidlVideoRenderer::View::View(
     ::fuchsia::ui::views_v1::ViewManagerPtr view_manager,
-    fidl::InterfaceRequest<::fuchsia::ui::views_v1_token::ViewOwner> view_owner_request,
+    fidl::InterfaceRequest<::fuchsia::ui::views_v1_token::ViewOwner>
+        view_owner_request,
     std::shared_ptr<FidlVideoRenderer> renderer)
     : mozart::BaseView(std::move(view_manager), std::move(view_owner_request),
                        "Video Renderer"),

@@ -245,9 +245,8 @@ TypeConverter<media::MediaTypeMedium, media_player::StreamType::Medium>::
   abort();
 }
 
-media::AudioSampleFormat
-TypeConverter<media::AudioSampleFormat,
-              media_player::AudioStreamType::SampleFormat>::
+media::AudioSampleFormat TypeConverter<
+    media::AudioSampleFormat, media_player::AudioStreamType::SampleFormat>::
     Convert(media_player::AudioStreamType::SampleFormat sample_format) {
   switch (sample_format) {
     case media_player::AudioStreamType::SampleFormat::kNone:
@@ -488,9 +487,8 @@ TypeConverter<std::unique_ptr<media_player::StreamType>,
   return nullptr;
 }
 
-media::MediaTypeSet
-TypeConverter<media::MediaTypeSet,
-              std::unique_ptr<media_player::StreamTypeSet>>::
+media::MediaTypeSet TypeConverter<
+    media::MediaTypeSet, std::unique_ptr<media_player::StreamTypeSet>>::
     Convert(const std::unique_ptr<media_player::StreamTypeSet>& input) {
   FXL_DCHECK(KnownEncodingsMatch());
 

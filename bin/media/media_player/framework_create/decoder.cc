@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "garnet/bin/media/media_player/decode/decoder.h"
+
 #include "garnet/bin/media/media_player/ffmpeg/ffmpeg_decoder.h"
 
 namespace media_player {

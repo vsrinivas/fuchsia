@@ -9,9 +9,7 @@
 
 namespace media_player {
 
-RateTracker::RateTracker() {
-  Reset();
-}
+RateTracker::RateTracker() { Reset(); }
 
 RateTracker::~RateTracker() {}
 

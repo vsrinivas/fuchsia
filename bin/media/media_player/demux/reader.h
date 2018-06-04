@@ -33,9 +33,7 @@ class Reader {
   // Reads the specified number of bytes into the buffer from the specified
   // position and returns a result and the number of bytes read via the
   // callback.
-  virtual void ReadAt(size_t position,
-                      uint8_t* buffer,
-                      size_t bytes_to_read,
+  virtual void ReadAt(size_t position, uint8_t* buffer, size_t bytes_to_read,
                       ReadAtCallback callback) = 0;
 };
 

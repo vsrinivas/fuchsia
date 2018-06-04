@@ -8,9 +8,7 @@
 
 namespace media_player {
 
-VideoConverter::VideoConverter() {
-  BuildColorspaceTable();
-}
+VideoConverter::VideoConverter() { BuildColorspaceTable(); }
 
 VideoConverter::~VideoConverter() {}
 
@@ -102,10 +100,8 @@ fuchsia::math::Size VideoConverter::GetPixelAspectRatio() const {
   return pixel_aspect_ratio;
 }
 
-void VideoConverter::ConvertFrame(uint8_t* rgba_buffer,
-                                  uint32_t view_width,
-                                  uint32_t view_height,
-                                  void* payload,
+void VideoConverter::ConvertFrame(uint8_t* rgba_buffer, uint32_t view_width,
+                                  uint32_t view_height, void* payload,
                                   uint64_t payload_size) {
   TRACE_DURATION("motown", "ConvertFrame");
   FXL_DCHECK(rgba_buffer != nullptr);
@@ -160,10 +156,8 @@ void VideoConverter::ConvertFrame(uint8_t* rgba_buffer,
   }
 }
 
-void VideoConverter::ConvertLine(uint32_t* dest_pixel,
-                                 uint8_t* y_pixel,
-                                 uint8_t* u_pixel,
-                                 uint8_t* v_pixel,
+void VideoConverter::ConvertLine(uint32_t* dest_pixel, uint8_t* y_pixel,
+                                 uint8_t* u_pixel, uint8_t* v_pixel,
                                  uint32_t width) {
   for (uint32_t pixel = 0; pixel < width; ++pixel) {
     *dest_pixel =

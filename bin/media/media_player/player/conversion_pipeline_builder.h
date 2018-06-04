@@ -18,9 +18,7 @@ namespace media_player {
 bool BuildConversionPipeline(
     const StreamType& in_type,
     const std::vector<std::unique_ptr<StreamTypeSet>>& out_type_sets,
-    Graph* graph,
-    OutputRef* output,
-    std::unique_ptr<StreamType>* out_type);
+    Graph* graph, OutputRef* output, std::unique_ptr<StreamType>* out_type);
 
 }  // namespace media_player
 

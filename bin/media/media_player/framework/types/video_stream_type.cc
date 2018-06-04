@@ -82,21 +82,14 @@ uint32_t VideoStreamType::PixelFormatInfo::BytesPerRow(uint32_t plane,
   return bytes_per_element_for_plane(plane) * ColumnCount(plane, width);
 }
 
-VideoStreamType::VideoStreamType(const std::string& encoding,
-                                 std::unique_ptr<Bytes> encoding_parameters,
-                                 VideoProfile profile,
-                                 PixelFormat pixel_format,
-                                 ColorSpace color_space,
-                                 uint32_t width,
-                                 uint32_t height,
-                                 uint32_t coded_width,
-                                 uint32_t coded_height,
-                                 uint32_t pixel_aspect_ratio_width,
-                                 uint32_t pixel_aspect_ratio_height,
-                                 const std::vector<uint32_t> line_stride,
-                                 const std::vector<uint32_t> plane_offset)
-    : StreamType(StreamType::Medium::kVideo,
-                 encoding,
+VideoStreamType::VideoStreamType(
+    const std::string& encoding, std::unique_ptr<Bytes> encoding_parameters,
+    VideoProfile profile, PixelFormat pixel_format, ColorSpace color_space,
+    uint32_t width, uint32_t height, uint32_t coded_width,
+    uint32_t coded_height, uint32_t pixel_aspect_ratio_width,
+    uint32_t pixel_aspect_ratio_height, const std::vector<uint32_t> line_stride,
+    const std::vector<uint32_t> plane_offset)
+    : StreamType(StreamType::Medium::kVideo, encoding,
                  std::move(encoding_parameters)),
       profile_(profile),
       pixel_format_(pixel_format),
@@ -113,9 +106,7 @@ VideoStreamType::VideoStreamType(const std::string& encoding,
 
 VideoStreamType::~VideoStreamType() {}
 
-const VideoStreamType* VideoStreamType::video() const {
-  return this;
-}
+const VideoStreamType* VideoStreamType::video() const { return this; }
 
 std::unique_ptr<StreamType> VideoStreamType::Clone() const {
   return Create(encoding(), SafeClone(encoding_parameters()), profile(),
@@ -125,8 +116,7 @@ std::unique_ptr<StreamType> VideoStreamType::Clone() const {
 }
 
 VideoStreamTypeSet::VideoStreamTypeSet(
-    const std::vector<std::string>& encodings,
-    Range<uint32_t> width,
+    const std::vector<std::string>& encodings, Range<uint32_t> width,
     Range<uint32_t> height)
     : StreamTypeSet(StreamType::Medium::kVideo, encodings),
       width_(width),
@@ -134,9 +124,7 @@ VideoStreamTypeSet::VideoStreamTypeSet(
 
 VideoStreamTypeSet::~VideoStreamTypeSet() {}
 
-const VideoStreamTypeSet* VideoStreamTypeSet::video() const {
-  return this;
-}
+const VideoStreamTypeSet* VideoStreamTypeSet::video() const { return this; }
 
 std::unique_ptr<StreamTypeSet> VideoStreamTypeSet::Clone() const {
   return Create(encodings(), width(), height());

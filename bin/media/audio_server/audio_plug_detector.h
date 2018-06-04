@@ -2,15 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_BIN_MEDIA_AUDIO_SERVER_AUDIO_PLUG_DETECTOR_H_
+#define GARNET_BIN_MEDIA_AUDIO_SERVER_AUDIO_PLUG_DETECTOR_H_
 
 #include <fbl/macros.h>
 #include <fbl/mutex.h>
+#include <media/cpp/fidl.h>
 #include <zircon/compiler.h>
 #include <zircon/device/vfs.h>
 #include <zircon/types.h>
 
-#include <media/cpp/fidl.h>
 #include "lib/fsl/io/device_watcher.h"
 #include "lib/fxl/files/unique_fd.h"
 
@@ -35,3 +36,5 @@ class AudioPlugDetector {
 
 }  // namespace audio
 }  // namespace media
+
+#endif  // GARNET_BIN_MEDIA_AUDIO_SERVER_AUDIO_PLUG_DETECTOR_H_

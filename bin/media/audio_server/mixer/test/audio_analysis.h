@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_BIN_MEDIA_AUDIO_SERVER_MIXER_TEST_AUDIO_ANALYSIS_H_
+#define GARNET_BIN_MEDIA_AUDIO_SERVER_MIXER_TEST_AUDIO_ANALYSIS_H_
 
 #include <zircon/types.h>
 #include <cmath>
@@ -74,3 +75,5 @@ void MeasureAudioFreq(T* audio, uint32_t buf_size, uint32_t freq,
 }  // namespace test
 }  // namespace audio
 }  // namespace media
+
+#endif  // GARNET_BIN_MEDIA_AUDIO_SERVER_MIXER_TEST_AUDIO_ANALYSIS_H_

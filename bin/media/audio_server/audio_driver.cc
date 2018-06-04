@@ -114,7 +114,8 @@ void AudioDriver::SnapshotRingBuffer(RingBufferSnapshot* snapshot) const {
 AudioMediaTypeDetailsPtr AudioDriver::GetSourceFormat() const {
   std::lock_guard<std::mutex> lock(configured_format_lock_);
 
-  if (!configured_format_) return nullptr;
+  if (!configured_format_)
+    return nullptr;
 
   AudioMediaTypeDetailsPtr result;
   fidl::Clone(configured_format_, &result);

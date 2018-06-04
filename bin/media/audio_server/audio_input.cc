@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "garnet/bin/media/audio_server/audio_input.h"
+
 #include "garnet/bin/media/audio_server/audio_device_manager.h"
 
 namespace media {

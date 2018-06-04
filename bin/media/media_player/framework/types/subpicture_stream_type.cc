@@ -9,10 +9,8 @@
 namespace media_player {
 
 SubpictureStreamType::SubpictureStreamType(
-    const std::string& encoding,
-    std::unique_ptr<Bytes> encoding_parameters)
-    : StreamType(StreamType::Medium::kSubpicture,
-                 encoding,
+    const std::string& encoding, std::unique_ptr<Bytes> encoding_parameters)
+    : StreamType(StreamType::Medium::kSubpicture, encoding,
                  std::move(encoding_parameters)) {}
 
 SubpictureStreamType::~SubpictureStreamType() {}

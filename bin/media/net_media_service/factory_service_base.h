@@ -146,7 +146,8 @@ class FactoryServiceBase {
     fidl::BindingSet<Interface> bindings_;
   };
 
-  FactoryServiceBase(std::unique_ptr<fuchsia::sys::StartupContext> startup_context)
+  FactoryServiceBase(
+      std::unique_ptr<fuchsia::sys::StartupContext> startup_context)
       : startup_context_(std::move(startup_context)),
         async_(async_get_default()) {}
 

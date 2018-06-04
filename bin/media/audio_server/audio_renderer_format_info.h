@@ -2,12 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_BIN_MEDIA_AUDIO_SERVER_AUDIO_RENDERER_FORMAT_INFO_H_
+#define GARNET_BIN_MEDIA_AUDIO_SERVER_AUDIO_RENDERER_FORMAT_INFO_H_
 
 #include <fbl/ref_counted.h>
+#include <media/cpp/fidl.h>
 #include <stdint.h>
 
-#include <media/cpp/fidl.h>
 #include "garnet/bin/media/audio_server/fwd_decls.h"
 #include "lib/media/timeline/timeline_rate.h"
 
@@ -40,3 +41,5 @@ class AudioRendererFormatInfo
 
 }  // namespace audio
 }  // namespace media
+
+#endif  // GARNET_BIN_MEDIA_AUDIO_SERVER_AUDIO_RENDERER_FORMAT_INFO_H_

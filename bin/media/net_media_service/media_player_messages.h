@@ -8,6 +8,7 @@
 #include <memory>
 
 #include <media_player/cpp/fidl.h>
+
 #include "garnet/bin/media/net_media_service/serialization.h"
 
 namespace media_player {
@@ -93,8 +94,7 @@ struct MediaPlayerInMessage {
 // by the proxy.
 struct MediaPlayerOutMessage {
   static std::unique_ptr<MediaPlayerOutMessage> TimeCheckResponse(
-      int64_t requestor_time,
-      int64_t responder_time);
+      int64_t requestor_time, int64_t responder_time);
   static std::unique_ptr<MediaPlayerOutMessage> StatusNotification(
       MediaPlayerStatusPtr status);
 

@@ -22,8 +22,8 @@ namespace media_player {
 // concerned with metadata.
 class SourceSegment : public Segment {
  public:
-  using StreamUpdateCallback = fit::function<
-      void(size_t index, const StreamType* type, OutputRef output, bool more)>;
+  using StreamUpdateCallback = fit::function<void(
+      size_t index, const StreamType* type, OutputRef output, bool more)>;
 
   SourceSegment();
 
@@ -32,9 +32,7 @@ class SourceSegment : public Segment {
   // Provides the graph, async and callbacks for this source segment.
   // The player expects stream updates shortly after this method is called,
   // the last of which should have a |more| value of false.
-  void Provision(Graph* graph,
-                 async_t* async,
-                 fit::closure updateCallback,
+  void Provision(Graph* graph, async_t* async, fit::closure updateCallback,
                  StreamUpdateCallback stream_update_callback);
 
   // Revokes the graph, task runner and callbacks provided in a previous call to
@@ -57,9 +55,7 @@ class SourceSegment : public Segment {
 
  protected:
   // Called by subclasses when a stream is updated.
-  void OnStreamUpdated(size_t index,
-                       const StreamType& type,
-                       OutputRef output,
+  void OnStreamUpdated(size_t index, const StreamType& type, OutputRef output,
                        bool more);
 
   // Called by subclasses when a stream is removed.

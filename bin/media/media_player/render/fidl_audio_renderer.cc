@@ -7,12 +7,11 @@
 #include <lib/async/default.h>
 
 #include "garnet/bin/media/media_player/fidl/fidl_type_conversions.h"
+#include "garnet/bin/media/media_player/framework/formatting.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
 #include "lib/media/timeline/timeline.h"
 #include "lib/media/timeline/timeline_rate.h"
-
-#include "garnet/bin/media/media_player/framework/formatting.h"
 
 namespace media_player {
 namespace {
@@ -109,11 +108,12 @@ void FidlAudioRenderer::FlushInput(bool hold_frame_not_used, size_t input_index,
   flushed_ = true;
   SetEndOfStreamPts(media::kUnspecifiedTime);
 
-  audio_renderer_->Flush(fxl::MakeCopyable([this, callback = std::move(callback)]() {
-    last_supplied_pts_ns_ = 0;
-    last_departed_pts_ns_ = media::kUnspecifiedTime;
-    callback();
-  }));
+  audio_renderer_->Flush(
+      fxl::MakeCopyable([this, callback = std::move(callback)]() {
+        last_supplied_pts_ns_ = 0;
+        last_departed_pts_ns_ = media::kUnspecifiedTime;
+        callback();
+      }));
 }
 
 void FidlAudioRenderer::PutInputPacket(PacketPtr packet, size_t input_index) {
