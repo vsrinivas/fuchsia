@@ -30,7 +30,7 @@ import (
 )
 
 const (
-	defaultSourceDir = "/pkg/data/sources"
+	defaultSourceDir = "/system/data/amber/sources"
 )
 
 var (

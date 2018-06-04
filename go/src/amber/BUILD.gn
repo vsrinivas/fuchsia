@@ -91,10 +91,6 @@ package("amber") {
 
   resources = [
     {
-      path = rebase_path("etc/sources/localhost/config.json")
-      dest = "sources/localhost/config.json"
-    },
-    {
       path = rebase_path("keys/root_sig.json")
       dest = "keys"
     },
@@ -232,6 +228,10 @@ package("config") {
     {
       dest = "sysmgr/amber.config"
       path = rebase_path("startup.config")
+    },
+    {
+      dest = "amber/sources/localhost/config.json"
+      path = rebase_path("etc/sources/localhost/config.json")
     },
   ]
 }
