@@ -26,14 +26,7 @@ public:
         return *this;
     }
 
-    zx_status_t unpin() {
-        zx_status_t status = zx_pmt_unpin(get());
-        if (status != ZX_OK) {
-            return status;
-        }
-        zx_handle_t invld_handle __UNUSED = release();
-        return ZX_OK;
-    }
+    zx_status_t unpin() { return zx_pmt_unpin(release()); }
 };
 
 using unowned_pmt = const unowned<pmt>;

@@ -599,7 +599,7 @@ syscall bti_release_quarantine
     returns (zx_status_t);
 
 syscall pmt_unpin
-    (handle: zx_handle_t handle_release)
+    (handle: zx_handle_t handle_release_always)
     returns (zx_status_t);
 
 # DDK Syscalls: Misc Info

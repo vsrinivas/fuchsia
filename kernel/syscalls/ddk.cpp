@@ -394,18 +394,16 @@ zx_status_t sys_bti_release_quarantine(zx_handle_t bti) {
 zx_status_t sys_pmt_unpin(zx_handle_t pmt) {
     auto up = ProcessDispatcher::GetCurrent();
 
-    fbl::RefPtr<PinnedMemoryTokenDispatcher> pmt_dispatcher;
-    zx_status_t status = up->GetDispatcher(pmt, &pmt_dispatcher);
-    if (status != ZX_OK) {
-        return status;
-    }
+    HandleOwner handle = up->RemoveHandle(pmt);
+    if (!handle)
+        return ZX_ERR_BAD_HANDLE;
+    fbl::RefPtr<Dispatcher> dispatcher = handle->dispatcher();
+    auto pmt_dispatcher = DownCastDispatcher<PinnedMemoryTokenDispatcher>(&dispatcher);
+    if (!pmt_dispatcher)
+        return ZX_ERR_WRONG_TYPE;
 
     pmt_dispatcher->MarkUnpinned();
 
-    HandleOwner handle(up->RemoveHandle(pmt));
-    if (!handle) {
-        return ZX_ERR_BAD_HANDLE;
-    }
     return ZX_OK;
 }
 

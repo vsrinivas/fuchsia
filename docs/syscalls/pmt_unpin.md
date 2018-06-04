@@ -17,8 +17,8 @@ zx_status_t zx_pmt_unpin(zx_handle_t pmt);
 **pmt_unpin**() unpins pages that were previously pinned by **bti_pin**(),
 and revokes the access that was granted by the pin call.
 
-On success, this syscall consumes the handle *pmt*.  It is invalid to use
-*pmt* afterwards, including to call **handle_close**() on it.
+Always consumes the handle *pmt*. It is invalid to use *pmt* afterwards,
+including to call **handle_close**() on it.
 
 ## RETURN VALUE
 
