@@ -6,8 +6,8 @@
 
 #include <lib/async/default.h>
 #include <lib/zx/channel.h>
-
 #include <netconnector/cpp/fidl.h>
+
 #include "garnet/examples/netconnector/netconnector_example/netconnector_example_params.h"
 #include "lib/fxl/logging.h"
 
