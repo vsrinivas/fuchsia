@@ -122,11 +122,7 @@ zx_status_t VnodeFile::GetVmo(int flags, zx_handle_t* out) {
             return status;
         }
 
-        if ((status = zx_handle_replace(*out, rights, out)) != ZX_OK) {
-            zx_handle_close(*out);
-            return status;
-        }
-        return ZX_OK;
+        return zx_handle_replace(*out, rights, out);
     }
 
     return zx_handle_duplicate(vmo_, rights, out);

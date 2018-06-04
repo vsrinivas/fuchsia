@@ -151,7 +151,6 @@ static zx_status_t vmofile_misc(fdio_t* io, uint32_t op, int64_t off, uint32_t m
         // Only return this clone with the requested rights
         zx_handle_t out;
         if ((status = zx_handle_replace(h, rights, &out)) != ZX_OK) {
-            zx_handle_close(h);
             return status;
         }
         return out;

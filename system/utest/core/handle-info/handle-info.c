@@ -10,6 +10,24 @@
 #include <zircon/syscalls/object.h>
 #include <unittest/unittest.h>
 
+static bool handle_replace_test(void) {
+    BEGIN_TEST;
+
+    zx_handle_t event = ZX_HANDLE_INVALID;
+    ASSERT_EQ(ZX_OK, zx_event_create(0u, &event), "");
+
+    zx_handle_t replaced = ZX_HANDLE_INVALID;
+    ASSERT_EQ(ZX_OK, zx_handle_replace(event, ZX_RIGHTS_BASIC, &replaced), "");
+    ASSERT_EQ(ZX_ERR_BAD_HANDLE, zx_handle_close(event), "");
+
+    zx_handle_t failed = ZX_HANDLE_INVALID;
+    ASSERT_EQ(ZX_ERR_INVALID_ARGS, zx_handle_replace(replaced, ZX_RIGHT_SIGNAL, &failed), "");
+    ASSERT_EQ(ZX_ERR_BAD_HANDLE, zx_handle_close(replaced), "");
+    ASSERT_EQ(ZX_HANDLE_INVALID, failed, "");
+
+    END_TEST;
+}
+
 static bool handle_info_test(void) {
     BEGIN_TEST;
 
@@ -113,12 +131,12 @@ static bool handle_rights_test(void) {
 
     zx_handle_t event;
     ASSERT_EQ(zx_event_create(0u, &event), 0, "");
-    zx_handle_t duped_ro;
-    zx_status_t status = zx_handle_duplicate(event, ZX_RIGHT_READ, &duped_ro);
-    ASSERT_EQ(status, ZX_OK, "");
+    zx_handle_t duped_ro, duped_ro2;
+    ASSERT_EQ(zx_handle_duplicate(event, ZX_RIGHT_READ, &duped_ro), ZX_OK, "");
+    ASSERT_EQ(zx_handle_duplicate(event, ZX_RIGHT_READ, &duped_ro2), ZX_OK, "");
 
     zx_info_handle_basic_t info = {};
-    status = zx_object_get_info(duped_ro, ZX_INFO_HANDLE_BASIC, &info, sizeof(info), NULL, NULL);
+    zx_status_t status = zx_object_get_info(duped_ro, ZX_INFO_HANDLE_BASIC, &info, sizeof(info), NULL, NULL);
     ASSERT_EQ(status, ZX_OK, "handle should be valid");
 
     ASSERT_EQ(info.rights, ZX_RIGHT_READ, "wrong set of rights");
@@ -132,19 +150,22 @@ static bool handle_rights_test(void) {
 
     ASSERT_EQ(zx_handle_replace(duped_ro, ZX_RIGHT_EXECUTE | ZX_RIGHT_READ, &h), ZX_ERR_INVALID_ARGS,
               "cannot upgrade rights");
+    // duped_ro1 should now be invalid.
+    ASSERT_EQ(zx_handle_close(duped_ro), ZX_ERR_BAD_HANDLE, "replaced handle should be invalid on failure");
 
-    status = zx_handle_replace(duped_ro, ZX_RIGHT_SAME_RIGHTS, &h);
+    status = zx_handle_replace(duped_ro2, ZX_RIGHT_SAME_RIGHTS, &h);
     ASSERT_EQ(status, ZX_OK, "should be able to replace handle");
-    // duped_ro should now be invalid.
+    // duped_ro2 should now be invalid.
 
     ASSERT_EQ(zx_handle_close(event), ZX_OK, "failed to close original handle");
-    ASSERT_EQ(zx_handle_close(duped_ro), ZX_ERR_BAD_HANDLE, "replaced handle should be invalid");
+    ASSERT_EQ(zx_handle_close(duped_ro2), ZX_ERR_BAD_HANDLE, "replaced handle should be invalid on success");
     ASSERT_EQ(zx_handle_close(h), ZX_OK, "failed to close replacement handle");
 
     END_TEST;
 }
 
 BEGIN_TEST_CASE(handle_info_tests)
+RUN_TEST(handle_replace_test)
 RUN_TEST(handle_info_test)
 RUN_TEST(handle_related_koid_test)
 RUN_TEST(handle_rights_test)

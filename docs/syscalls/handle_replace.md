@@ -15,8 +15,9 @@ zx_status_t zx_handle_replace(zx_handle_t handle, zx_rights_t rights, zx_handle_
 ## DESCRIPTION
 
 **handle_replace**() creates a replacement for *handle*, referring to
-the same underlying object, with new access rights *rights*. On success,
-*handle* is invalidated.
+the same underlying object, with new access rights *rights*.
+
+*handle* is always invalidated.
 
 If *rights* is **ZX_RIGHT_SAME_RIGHTS**, the replacement handle will
 have the same rights as the original handle. Otherwise, *rights* must be

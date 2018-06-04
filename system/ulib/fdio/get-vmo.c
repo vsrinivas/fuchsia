@@ -125,9 +125,6 @@ static zx_status_t copy_file_vmo(fdio_t* io, zx_handle_t* out_vmo) {
             ZX_RIGHTS_BASIC | ZX_RIGHTS_PROPERTY |
             ZX_RIGHT_READ | ZX_RIGHT_EXECUTE | ZX_RIGHT_MAP,
             out_vmo);
-        if (status != ZX_OK) {
-            zx_handle_close(vmo);
-        }
     }
     return status;
 }

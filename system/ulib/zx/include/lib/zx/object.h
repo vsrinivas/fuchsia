@@ -106,8 +106,7 @@ public:
         zx_status_t status = zx_handle_replace(value_, rights, &h);
         // We store ZX_HANDLE_INVALID to value_ before calling reset on result
         // in case result == this.
-        if (status == ZX_OK)
-            value_ = ZX_HANDLE_INVALID;
+        value_ = ZX_HANDLE_INVALID;
         result->reset(h);
         return status;
     }

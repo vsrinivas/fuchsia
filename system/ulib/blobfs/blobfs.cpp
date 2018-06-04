@@ -435,7 +435,6 @@ zx_status_t VnodeBlob::CloneVmo(zx_rights_t rights, zx_handle_t* out) {
     }
 
     if ((status = zx_handle_replace(clone, rights, out)) != ZX_OK) {
-        zx_handle_close(clone);
         return status;
     }
 

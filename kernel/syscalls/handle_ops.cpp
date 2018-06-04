@@ -51,15 +51,17 @@ static zx_status_t handle_dup_replace(
         if (rights == ZX_RIGHT_SAME_RIGHTS) {
             rights = source->rights();
         } else if ((source->rights() & rights) != rights) {
+            if (is_replace)
+                up->RemoveHandleLocked(handle_value);
             return ZX_ERR_INVALID_ARGS;
         }
 
         zx_status_t status = out->dup(source, rights);
-        if (status != ZX_OK)
-            return status;
 
         if (is_replace)
             up->RemoveHandleLocked(handle_value);
+
+        return status;
     }
 
     return ZX_OK;

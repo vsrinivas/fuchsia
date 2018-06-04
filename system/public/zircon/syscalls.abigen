@@ -112,7 +112,7 @@ syscall handle_duplicate
     returns (zx_status_t, out: zx_handle_t handle_acquire);
 
 syscall handle_replace
-    (handle: zx_handle_t handle_release, rights: zx_rights_t)
+    (handle: zx_handle_t handle_release_always, rights: zx_rights_t)
     returns (zx_status_t, out: zx_handle_t handle_acquire);
 
 # Generic object operations
