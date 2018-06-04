@@ -5,12 +5,12 @@
 #pragma once
 
 #include <fbl/macros.h>
-#include <fbl/vmar_manager.h>
+#include <lib/vmo-utils/vmar_manager.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/ref_counted.h>
 #include <lib/zx/vmo.h>
 
-namespace fbl {
+namespace vmo_utils {
 
 class VmoMapper {
 public:
@@ -35,7 +35,7 @@ public:
     //                created VMO.
     zx_status_t CreateAndMap(uint64_t size,
                              uint32_t map_flags,
-                             RefPtr<VmarManager> vmar_manager = nullptr,
+                             fbl::RefPtr<VmarManager> vmar_manager = nullptr,
                              zx::vmo* vmo_out = nullptr,
                              zx_rights_t vmo_rights = ZX_RIGHT_SAME_RIGHTS,
                              uint32_t cache_policy = 0);
@@ -54,7 +54,7 @@ public:
                     uint64_t offset,
                     uint64_t size,
                     uint32_t map_flags,
-                    RefPtr<VmarManager> vmar_manager = nullptr);
+                    fbl::RefPtr<VmarManager> vmar_manager = nullptr);
 
     // Unmap the VMO from whichever VMAR it was mapped into.
     void Unmap();
@@ -66,22 +66,22 @@ public:
     DISALLOW_COPY_ASSIGN_AND_MOVE(VmoMapper);
 
 private:
-    zx_status_t CheckReadyToMap(const RefPtr<VmarManager>& vmar_manager);
+    zx_status_t CheckReadyToMap(const fbl::RefPtr<VmarManager>& vmar_manager);
     zx_status_t InternalMap(const zx::vmo& vmo,
                             uint64_t offset,
                             uint64_t size,
                             uint32_t map_flags,
-                            RefPtr<VmarManager> vmar_manager);
+                            fbl::RefPtr<VmarManager> vmar_manager);
 
-    RefPtr<VmarManager> vmar_manager_;
+    fbl::RefPtr<VmarManager> vmar_manager_;
     void* start_ = nullptr;
     uint64_t size_ = 0;
 };
 
 class RefCountedVmoMapper : public VmoMapper,
-                            public RefCounted<VmoMapper> {
+                            public fbl::RefCounted<VmoMapper> {
 public:
     RefCountedVmoMapper() = default;
 };
 
-}  // namespace fbl
+}  // namespace vmo_utils

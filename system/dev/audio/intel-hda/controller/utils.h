@@ -12,7 +12,7 @@
 #include <lib/zx/vmo.h>
 #include <fbl/macros.h>
 #include <fbl/ref_ptr.h>
-#include <fbl/vmar_manager.h>
+#include <lib/vmo-utils/vmar_manager.h>
 
 #include <dispatcher-pool/dispatcher-channel.h>
 
@@ -41,9 +41,11 @@ class DriverVmars {
   public:
     static zx_status_t Initialize();
     static void Shutdown();
-    static const fbl::RefPtr<fbl::VmarManager>& registers() { return registers_; }
+    static const fbl::RefPtr<vmo_utils::VmarManager>& registers() {
+        return registers_;
+    }
   private:
-    static fbl::RefPtr<fbl::VmarManager> registers_;
+    static fbl::RefPtr<vmo_utils::VmarManager> registers_;
 };
 
 struct StreamFormat {

@@ -9,7 +9,7 @@
 #include <fbl/ref_ptr.h>
 #include <lib/zx/vmar.h>
 
-namespace fbl {
+namespace vmo_utils {
 
 // VmarManager
 //
@@ -22,8 +22,8 @@ namespace fbl {
 // COMPACT sub-vmar in order to hold a number of VMO mappings while minimizing
 // page table fragmentation..
 //
-// See fbl::VmoMapper.
-class VmarManager : public RefCounted<VmarManager> {
+// See vmo_utils::VmoMapper.
+class VmarManager : public fbl::RefCounted<VmarManager> {
 public:
     // Create a new VmarManager (creating the underlying VMAR object in the
     // process)
@@ -31,8 +31,8 @@ public:
     // size   : the size of the VMAR region to create.
     // parent : the parent of this VMAR, or nullptr to use the root VMAR.
     // flags  : creation flags to pass to vmar_allocate
-    static RefPtr<VmarManager> Create(size_t size,
-                                      RefPtr<VmarManager> parent = nullptr,
+    static fbl::RefPtr<VmarManager> Create(size_t size,
+                                      fbl::RefPtr<VmarManager> parent = nullptr,
                                       uint32_t flags = ZX_VM_FLAG_COMPACT |
                                                        ZX_VM_FLAG_CAN_MAP_READ |
                                                        ZX_VM_FLAG_CAN_MAP_WRITE);
@@ -40,10 +40,10 @@ public:
     const zx::vmar& vmar() const { return vmar_; }
     void* start() const { return start_; }
     uint64_t size() const { return size_; }
-    const RefPtr<VmarManager>& parent() const { return  parent_; }
+    const fbl::RefPtr<VmarManager>& parent() const { return  parent_; }
 
 private:
-    friend class RefPtr<VmarManager>;
+    friend class fbl::RefPtr<VmarManager>;
 
     VmarManager() = default;
     ~VmarManager() {
@@ -58,7 +58,7 @@ private:
     zx::vmar vmar_;
     void* start_ = nullptr;
     uint64_t size_ = 0;
-    RefPtr<VmarManager> parent_;
+    fbl::RefPtr<VmarManager> parent_;
 };
 
-}  // namespace fbl
+}  // namespace vmo_utils

@@ -3,14 +3,14 @@
 // found in the LICENSE file.
 
 #include <fbl/auto_call.h>
-#include <fbl/vmo_mapper.h>
+#include <lib/vmo-utils/vmo_mapper.h>
 #include <zircon/assert.h>
 
-namespace fbl {
+namespace vmo_utils {
 
 zx_status_t VmoMapper::CreateAndMap(uint64_t size,
                                     uint32_t map_flags,
-                                    RefPtr<VmarManager> vmar_manager,
+                                    fbl::RefPtr<VmarManager> vmar_manager,
                                     zx::vmo* vmo_out,
                                     zx_rights_t vmo_rights,
                                     uint32_t cache_policy) {
@@ -60,7 +60,7 @@ zx_status_t VmoMapper::Map(const zx::vmo& vmo,
                            uint64_t offset,
                            uint64_t size,
                            uint32_t map_flags,
-                           RefPtr<VmarManager> vmar_manager) {
+                           fbl::RefPtr<VmarManager> vmar_manager) {
     zx_status_t res;
 
     if (!vmo.is_valid()) {
@@ -107,7 +107,7 @@ void VmoMapper::Unmap() {
     size_ = 0;
 }
 
-zx_status_t VmoMapper::CheckReadyToMap(const RefPtr<VmarManager>& vmar_manager) {
+zx_status_t VmoMapper::CheckReadyToMap(const fbl::RefPtr<VmarManager>& vmar_manager) {
     if (start_ != nullptr) {
         return ZX_ERR_BAD_STATE;
     }
@@ -123,7 +123,7 @@ zx_status_t VmoMapper::InternalMap(const zx::vmo& vmo,
                                    uint64_t offset,
                                    uint64_t size,
                                    uint32_t map_flags,
-                                   RefPtr<VmarManager> vmar_manager) {
+                                   fbl::RefPtr<VmarManager> vmar_manager) {
     ZX_DEBUG_ASSERT(vmo.is_valid());
     ZX_DEBUG_ASSERT(start_ == nullptr);
     ZX_DEBUG_ASSERT(size_ == 0);
@@ -146,4 +146,4 @@ zx_status_t VmoMapper::InternalMap(const zx::vmo& vmo,
     return ZX_OK;
 }
 
-} // namespace fbl
+} // namespace vmo_utils

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fbl/vmar_manager.h>
-#include <fbl/vmo_mapper.h>
+#include <lib/vmo-utils/vmar_manager.h>
+#include <lib/vmo-utils/vmo_mapper.h>
 #include <unittest/unittest.h>
 #include <zircon/rights.h>
 
@@ -15,8 +15,8 @@ static constexpr size_t kVmoTestSize = 512 << 10;       // 512KB
 static volatile uint32_t g_access_check_var;
 template <typename T>
 using RefPtr = fbl::RefPtr<T>;
-using VmarManager = fbl::VmarManager;
-using VmoMapper = fbl::VmoMapper;
+using VmarManager = vmo_utils::VmarManager;
+using VmoMapper = vmo_utils::VmoMapper;
 
 enum class AccessType { Rd, Wr };
 
@@ -340,3 +340,8 @@ RUN_NAMED_TEST("vmo_map_root", vmo_map_root_test)
 RUN_NAMED_TEST("vmo_map_sub_vmar", vmo_map_sub_vmar_test)
 RUN_NAMED_TEST("vmo_map_sub_sub_vmar", vmo_map_sub_sub_vmar_test)
 END_TEST_CASE(vmo_mapper_vmar_manager_tests)
+
+int main(int argc, char** argv) {
+    return unittest_run_all_tests(argc, argv) ? 0 : -1;
+}
+

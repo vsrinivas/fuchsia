@@ -6,31 +6,23 @@ LOCAL_DIR := $(GET_LOCAL_DIR)
 
 MODULE := $(LOCAL_DIR)
 
-MODULE_TYPE := driver
+MODULE_TYPE := usertest
 
-MODULE_SRCS := \
-    $(LOCAL_DIR)/binding.c \
-    $(LOCAL_DIR)/aml-dwmac.cpp \
-    $(LOCAL_DIR)/aml-dwmac-debug.cpp \
-    $(LOCAL_DIR)/pinned-buffer.cpp
+MODULE_SRCS += \
+    $(LOCAL_DIR)/vmo_vmar_tests.cpp \
 
-
-MODULE_HEADER_DEPS := \
-    system/dev/lib/amlogic
+MODULE_NAME := vmo-utils-test
 
 MODULE_STATIC_LIBS := \
-    system/ulib/ddk \
-    system/ulib/ddktl \
     system/ulib/zxcpp \
     system/ulib/fbl \
     system/ulib/vmo-utils \
     system/ulib/zx \
-    system/ulib/pretty \
 
 MODULE_LIBS := \
-    system/ulib/driver \
+    system/ulib/c \
+    system/ulib/fdio \
+    system/ulib/unittest \
     system/ulib/zircon \
-    system/ulib/c
 
 include make/module.mk
-

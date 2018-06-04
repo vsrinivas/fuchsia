@@ -10,8 +10,6 @@
 #include <fbl/type_support.h>
 
 #include <fbl/ref_ptr.h>
-#include <fbl/vmar_manager.h>
-#include <fbl/vmo_mapper.h>
 #include <hw/reg.h>
 #include <pretty/hexdump.h>
 #include <zircon/compiler.h>

@@ -3,19 +3,19 @@
 // found in the LICENSE file.
 
 #include <fbl/alloc_checker.h>
-#include <fbl/vmar_manager.h>
+#include <lib/vmo-utils/vmar_manager.h>
 
-namespace fbl {
+namespace vmo_utils {
 
-RefPtr<VmarManager> VmarManager::Create(size_t size,
-                                        RefPtr<VmarManager> parent,
+fbl::RefPtr<VmarManager> VmarManager::Create(size_t size,
+                                        fbl::RefPtr<VmarManager> parent,
                                         uint32_t flags) {
     if (!size || (parent && !parent->vmar().is_valid())) {
         return nullptr;
     }
 
-    AllocChecker ac;
-    RefPtr<VmarManager> ret = fbl::AdoptRef(new (&ac) VmarManager());
+    fbl::AllocChecker ac;
+    fbl::RefPtr<VmarManager> ret = fbl::AdoptRef(new (&ac) VmarManager());
 
     if (!ac.check()) {
         return nullptr;
@@ -37,4 +37,4 @@ RefPtr<VmarManager> VmarManager::Create(size_t size,
     return ret;
 }
 
-} // namespace fbl
+} // namespace vmo_utils

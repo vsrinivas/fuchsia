@@ -35,6 +35,7 @@ MODULE_STATIC_LIBS := \
     system/ulib/fbl \
     system/ulib/pretty \
     system/ulib/sync \
+    system/ulib/vmo-utils \
     system/ulib/zx \
     system/ulib/zxcpp \
 
