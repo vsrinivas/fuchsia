@@ -13,6 +13,7 @@ group("ui") {
     "shadertoy/client",
     "shadertoy/service",
     "shapes",
+    "shapes_a11y",
     "sketchy",
     "spinning_square",
     "tile",
@@ -102,6 +103,14 @@ package("shapes_view") {
   ]
 
   binary = "shapes_view"
+}
+
+package("shapes_a11y_view") {
+  deps = [
+    "shapes_a11y",
+  ]
+
+  binary = "shapes_a11y_view"
 }
 
 package("sketchy_client") {

@@ -231,6 +231,12 @@ class ViewRegistry : public ViewInspector, public InputOwner {
             IsViewTreeStateRegisteredDebug(container_state->AsViewTreeState()));
   }
 
+  // A11Y CLIENTS
+
+  // Calls a view's accessibility service if it exists.
+  void A11yNotifyViewSelected(
+      ::fuchsia::ui::views_v1_token::ViewToken view_token);
+
   fuchsia::sys::StartupContext* startup_context_;
   fuchsia::ui::scenic::ScenicPtr scenic_;
   scenic_lib::Session session_;

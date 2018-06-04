@@ -43,6 +43,7 @@ source_set("lib") {
     "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/fidl/cpp",
     "//garnet/public/lib/fxl",
+    "//garnet/public/lib/ui/a11y/fidl",
     "//garnet/public/lib/ui/geometry/cpp",
     "//garnet/public/lib/ui/gfx/fidl",
     "//garnet/public/lib/ui/input/cpp",

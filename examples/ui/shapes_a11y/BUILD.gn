@@ -1,0 +1,27 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+executable("shapes_a11y") {
+  output_name = "shapes_a11y_view"
+
+  sources = [
+    "a11y_client_app.h",
+    "main.cc",
+    "shapes_a11y_view.cc",
+    "shapes_a11y_view.h",
+  ]
+
+  deps = [
+    "//garnet/public/lib/app/cpp",
+    "//garnet/public/lib/fidl/cpp",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/ui/a11y/fidl",
+    "//garnet/public/lib/ui/gfx/fidl",
+    "//garnet/public/lib/ui/scenic:client",
+    "//garnet/public/lib/ui/view_framework:view_provider",
+    "//garnet/public/lib/ui/views/fidl:v1",
+    "//zircon/public/lib/trace-provider",
+  ]
+}
