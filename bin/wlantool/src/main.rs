@@ -164,8 +164,8 @@ fn get_client_sme(wlan_svc: WlanSvc, iface_id: u16)
         .and_then(move |(proxy, remote)| {
             wlan_svc.get_client_sme(iface_id, remote)
                 .map_err(|e| e.context("error sending GetClientSme request").into())
-                .and_then(move |ok| {
-                    if ok {
+                .and_then(move |status| {
+                    if status == zx::sys::ZX_OK {
                         Ok(proxy)
                     } else {
                         Err(format_err!("Invalid interface id {}", iface_id))

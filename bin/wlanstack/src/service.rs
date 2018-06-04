@@ -3,121 +3,179 @@
 // found in the LICENSE file.
 
 use async;
-use device::{self, DevMgrRef};
-use failure::Error;
-use fidl;
+use device::{PhyDevice, PhyMap, IfaceDevice, IfaceMap};
+use failure;
 use fidl::encoding2::OutOfLine;
-use futures::future::{self, FutureResult};
-use futures::{Future, FutureExt, Never};
-use watcher_service::WatcherService;
-use wlan_service::{self, DeviceService, DeviceServiceImpl};
+use fidl::endpoints2::RequestStream;
+use futures::channel::mpsc::UnboundedReceiver;
+use futures::{future, Future, FutureExt, Never, stream};
+use futures::prelude::*;
+use station;
+use std::sync::Arc;
+use watchable_map::MapEvent;
+use watcher_service;
+use wlan_service::{self, DeviceServiceRequest};
+use wlan;
 use zx;
 
-fn catch_and_log_err<F>(ctx: &'static str, f: F) -> FutureResult<(), Never>
-where
-    F: FnOnce() -> Result<(), fidl::Error>,
+many_futures!(ServiceFut,
+ [ListPhys, QueryPhy, CreateIface, GetClientSme, WatchDevices]);
+
+pub fn device_service<S>(phys: Arc<PhyMap>, ifaces: Arc<IfaceMap>,
+                         phy_events: UnboundedReceiver<MapEvent<u16, PhyDevice>>,
+                         iface_events: UnboundedReceiver<MapEvent<u16, IfaceDevice>>,
+                         new_clients: S)
+    -> impl Future<Item = Never, Error = failure::Error>
+    where S: Stream<Item = async::Channel, Error = Never>
 {
-    let res = f();
-    if let Err(e) = res {
-        eprintln!("Error running wlanstack fidl handler {}: {:?}", ctx, e);
-    }
-    future::ok(())
+    let (watcher_service, watcher_fut) = watcher_service::serve_watchers(
+        phys.clone(), ifaces.clone(), phy_events, iface_events);
+    let server = new_clients
+        .map_err(|e| e.never_into())
+        .chain(stream::once(Err(format_err!("new client stream in device_service ended unexpectedly"))))
+        .for_each_concurrent(move |channel| {
+            serve_channel(phys.clone(), ifaces.clone(), watcher_service.clone(), channel)
+                .map_err(|e| e.never_into())
+        })
+        .and_then(|_| Err(format_err!("device_service server future exited unexpectedly")));
+    server.join(watcher_fut)
+        .map(|x: (Never, Never)| x.0)
 }
 
-pub fn device_service(
-    devmgr: DevMgrRef, channel: async::Channel,
-    watcher_service: WatcherService<device::PhyDevice, device::IfaceDevice>,
-) -> impl Future<Item = (), Error = Never> {
-
-    DeviceServiceImpl {
-        state: devmgr,
-        on_open: |_, _| future::ok(()),
-
-        list_phys: |state, c| {
-            debug!("list_phys");
-            let list = state.lock().list_phys();
-            c.send_or_shutdown(&mut wlan_service::ListPhysResponse { phys: list })
-                .unwrap_or_else(|e| eprintln!("list_phys: Failed to send response: {}", e));
-            future::ok(())
-        },
-
-        query_phy: |state, req, c| {
-            debug!("query_phy req: {:?}", req);
-            state.lock().query_phy(req.phy_id).then(move |res| {
-                catch_and_log_err("query_phy", || match res {
-                    Ok(info) => c.send(
-                        zx::Status::OK.into_raw(),
-                        Some(OutOfLine(&mut wlan_service::QueryPhyResponse { info })),
-                    ),
-                    Err(e) => c.send(e.into_raw(), None),
-                })
-            })
-        },
-
-        list_ifaces: |_, c| {
-            catch_and_log_err("list_ifaces", || {
-                debug!("list_ifaces (stub)");
-                c.send(&mut wlan_service::ListIfacesResponse { ifaces: vec![] })
-            })
-        },
-
-        create_iface: |state, req, c| {
-            debug!("create_iface req: {:?}", req);
-            state
-                .lock()
-                .create_iface(req.phy_id, req.role)
-                .then(move |res| {
-                    catch_and_log_err("create_iface", || match res {
-                        Ok(id) => c.send(
-                            zx::Status::OK.into_raw(),
-                            Some(OutOfLine(&mut wlan_service::CreateIfaceResponse { iface_id: id })),
-                        ),
-                        Err(e) => {
-                            error!("could not create iface: {:?}", e);
-                            c.send(e.into_raw(), None)
-                        }
+fn serve_channel(phys: Arc<PhyMap>, ifaces: Arc<IfaceMap>,
+                 watcher_service: watcher_service::WatcherService<PhyDevice, IfaceDevice>,
+                 channel: async::Channel)
+    -> impl Future<Item = (), Error = Never>
+{
+    // Note that errors from responder.send() are propagated intentionally.
+    // If we fail to send a response, the only way to recover is to stop serving the client
+    // and close the channel. Otherwise, the client would be left hanging forever.
+    wlan_service::DeviceServiceRequestStream::from_channel(channel)
+        .for_each_concurrent(move |request| match request {
+            DeviceServiceRequest::ListPhys{ responder } => ServiceFut::ListPhys({
+                responder.send(&mut list_phys(&phys)).into_future()
+            }),
+            DeviceServiceRequest::QueryPhy { req, responder } => ServiceFut::QueryPhy({
+                query_phy(&phys, req.phy_id)
+                    .map_err(|e| e.never_into())
+                    .and_then(move |(status, mut r)| {
+                        responder.send(status.into_raw(), r.as_mut().map(OutOfLine))
                     })
-                })
-        },
-
-        destroy_iface: |state, req, c| {
-            debug!("destroy_iface req: {:?}", req);
-            state
-                .lock()
-                .destroy_iface(req.phy_id, req.iface_id)
-                .then(move |res| {
-                    catch_and_log_err("destroy_iface", || match res {
-                        Ok(()) => c.send(zx::Status::OK.into_raw()),
-                        Err(e) => c.send(e.into_raw()),
+            }),
+            DeviceServiceRequest::ListIfaces { responder: _ } => unimplemented!(),
+            DeviceServiceRequest::CreateIface { req, responder } => ServiceFut::CreateIface({
+                create_iface(&phys, req)
+                    .map_err(|e| e.never_into())
+                    .and_then(move |(status, mut r)| {
+                        responder.send(status.into_raw(), r.as_mut().map(OutOfLine))
                     })
-                })
-        },
+            }),
+            DeviceServiceRequest::DestroyIface{ req: _, responder: _ } => unimplemented!(),
+            DeviceServiceRequest::GetClientSme{ iface_id, sme, responder } => ServiceFut::GetClientSme({
+                let status = get_client_sme(&ifaces, iface_id, sme);
+                responder.send(status.into_raw()).into_future()
+            }),
+            DeviceServiceRequest::WatchDevices{ watcher, control_handle: _ } => ServiceFut::WatchDevices({
+                watcher_service.add_watcher(watcher)
+                    .unwrap_or_else(|e| eprintln!("error registering a device watcher: {}", e));
+                future::ok(())
+            })
+        })
+        .map(|_| ())
+        .recover(|e| eprintln!("error serving a DeviceService client: {}", e))
+}
 
-        get_client_sme: |state, iface_id, server_end, c| {
-            let server = state.lock().get_client_sme(iface_id);
-            if let Err(e) = connect_client_sme(server, server_end, &c) {
-                eprintln!("get_client_sme: unexpected error: {:?}", e);
-                c.control_handle().shutdown();
+fn list_phys(phys: &Arc<PhyMap>) -> wlan_service::ListPhysResponse {
+    let list = phys
+        .get_snapshot()
+        .iter()
+        .map(|(phy_id, phy)| {
+            wlan_service::PhyListItem {
+                phy_id: *phy_id,
+                path: phy.device.path().to_string_lossy().into_owned(),
             }
-            future::ok(())
-        },
-
-        watch_devices: move |_, watcher, _c| catch_and_log_err("watch_devices", || {
-            watcher_service.add_watcher(watcher)
-        }),
-
-    }.serve(channel)
-        .recover(|e| eprintln!("error running wlan device service: {:?}", e))
+        })
+        .collect();
+    wlan_service::ListPhysResponse { phys: list }
 }
 
-fn connect_client_sme(server: Option<super::device::ClientSmeServer>,
-                      endpoint: super::station::ClientSmeEndpoint,
-                      c: &wlan_service::DeviceServiceGetClientSmeResponder)
-    -> Result<(), Error>
+fn query_phy(phys: &Arc<PhyMap>, id: u16)
+    -> impl Future<Item = (zx::Status, Option<wlan_service::QueryPhyResponse>), Error = Never>
 {
-    if let Some(ref s) = &server {
-        s.unbounded_send(endpoint)?;
-    }
-    c.send(server.is_some())?;
-    Ok(())
+    let phy = phys.get(&id)
+        .map(|phy| (phy.device.path().to_string_lossy().into_owned(), phy.proxy.clone()))
+        .ok_or(zx::Status::NOT_FOUND);
+    phy.into_future()
+        .and_then(move |(path, proxy)| {
+            proxy.query()
+                .map_err(move |e| {
+                    eprintln!("Error sending 'Query' request to phy #{}: {}", id, e);
+                    zx::Status::INTERNAL
+                })
+                .and_then(move |query_result| {
+                    zx::Status::ok(query_result.status)
+                        .map(|()| {
+                            let mut info = query_result.info;
+                            info.id = id;
+                            info.dev_path = Some(path);
+                            info
+                        })
+                })
+        })
+        .then(|r| match r {
+            Ok(phy_info) => {
+                let resp = wlan_service::QueryPhyResponse { info: phy_info };
+                Ok((zx::Status::OK, Some(resp)))
+            },
+            Err(status) => Ok((status, None)),
+        })
 }
+
+fn create_iface(phys: &Arc<PhyMap>, req: wlan_service::CreateIfaceRequest)
+    -> impl Future<Item = (zx::Status, Option<wlan_service::CreateIfaceResponse>),
+                   Error = Never>
+{
+    phys.get(&req.phy_id)
+        .map(|phy| phy.proxy.clone())
+        .ok_or(zx::Status::NOT_FOUND)
+        .into_future()
+        .and_then(move |proxy| {
+            let mut phy_req = wlan::CreateIfaceRequest { role: req.role };
+            proxy.create_iface(&mut phy_req)
+                .map_err(move |e| {
+                    eprintln!("Error sending 'CreateIface' request to phy #{}: {}", req.phy_id, e);
+                    zx::Status::INTERNAL
+                })
+                .and_then(|r| zx::Status::ok(r.status).map(move |()| r.info))
+        })
+        .then(|r| match r {
+            Ok(info) => {
+                // TODO(gbonik): this is not the ID that we want to return
+                let resp = wlan_service::CreateIfaceResponse { iface_id: info.id };
+                Ok((zx::Status::OK, Some(resp)))
+            },
+            Err(status) => Ok((status, None)),
+        })
+}
+
+fn get_client_sme(ifaces: &Arc<IfaceMap>, iface_id: u16,
+                  endpoint: station::ClientSmeEndpoint)
+    -> zx::Status
+{
+    let iface = ifaces.get(&iface_id);
+    let server = match iface {
+        None => return zx::Status::NOT_FOUND,
+        Some(ref iface) => match iface.client_sme_server {
+            None => return zx::Status::NOT_SUPPORTED,
+            Some(ref server) => server
+        }
+    };
+    match server.unbounded_send(endpoint) {
+        Ok(()) => zx::Status::OK,
+        Err(e) => {
+            eprintln!("error sending an endpoint to the SME server future: {}", e);
+            zx::Status::INTERNAL
+        }
+    }
+}
+

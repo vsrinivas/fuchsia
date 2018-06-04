@@ -17,7 +17,7 @@ extern crate fidl_fuchsia_wlan_device as wlan;
 extern crate fidl_fuchsia_wlan_device_service as wlan_service;
 extern crate fidl_fuchsia_wlan_sme as fidl_sme;
 extern crate fuchsia_app as component;
-extern crate fuchsia_async as async;
+#[macro_use] extern crate fuchsia_async as async;
 extern crate fuchsia_vfs_watcher as vfs_watcher;
 extern crate fuchsia_wlan_dev as wlan_dev;
 extern crate fuchsia_zircon as zx;
@@ -39,11 +39,13 @@ mod watchable_map;
 mod watcher_service;
 
 use component::server::ServicesServer;
+use device::{PhyDevice, PhyMap, IfaceDevice, IfaceMap};
 use failure::{Error, ResultExt};
 use fidl::endpoints2::ServiceMarker;
 use futures::prelude::*;
-use parking_lot::Mutex;
+use futures::channel::mpsc::{self, UnboundedReceiver};
 use std::sync::Arc;
+use watchable_map::MapEvent;
 use wlan_service::DeviceServiceMarker;
 
 const MAX_LOG_LEVEL: log::LevelFilter = log::LevelFilter::Info;
@@ -63,23 +65,32 @@ fn main() -> Result<(), Error> {
     let phys = Arc::new(phys);
     let ifaces = Arc::new(ifaces);
 
-    let devmgr = Arc::new(Mutex::new(device::DeviceManager::new(phys.clone(), ifaces.clone())));
-
-    let phy_server = device::serve_phys(devmgr.clone())?
+    let phy_server = device::serve_phys(phys.clone())?
         .and_then(|()| Err(format_err!("Phy server exited unexpectedly")));
-    let iface_server = device::serve_ifaces(devmgr.clone())?
+    let iface_server = device::serve_ifaces(ifaces.clone())?
         .and_then(|()| Err(format_err!("Iface server exited unexpectedly")));
+    let services_server = serve_fidl(phys, ifaces, phy_events, iface_events)?
+        .map(|x| x.never_into());
 
-    let (watcher_service, watcher_fut) = watcher_service::serve_watchers(
-        phys, ifaces, phy_events, iface_events);
+    exec.run_singlethreaded(services_server.join3(phy_server, iface_server))
+        .map(|((), (), ())| ())
+}
 
-    let services_server = ServicesServer::new()
+fn serve_fidl(phys: Arc<PhyMap>, ifaces: Arc<IfaceMap>,
+              phy_events: UnboundedReceiver<MapEvent<u16, PhyDevice>>,
+              iface_events: UnboundedReceiver<MapEvent<u16, IfaceDevice>>)
+    -> Result<impl Future<Item = Never, Error = Error>, Error>
+{
+    let (sender, receiver) = mpsc::unbounded();
+    let fdio_server = ServicesServer::new()
         .add_service((DeviceServiceMarker::NAME, move |channel| {
-            async::spawn(service::device_service(devmgr.clone(), channel, watcher_service.clone()))
+            sender.unbounded_send(channel).expect("Failed to send a new client to the server future");
         }))
         .start()
-        .context("error configuring device service")?;
-
-    exec.run_singlethreaded(services_server.join4(phy_server, iface_server, watcher_fut))
-        .map(|_: ((), Never, Never, Never)| ())
+        .context("error configuring device service")?
+        .and_then(|()| Err(format_err!("fdio server future exited unexpectedly")))
+        .map_err(|e| e.context("fdio server terminated with error").into());
+    let device_service = service::device_service(phys, ifaces, phy_events, iface_events, receiver);
+    Ok(fdio_server.join(device_service)
+        .map(|x: (Never, Never)| x.0))
 }
