@@ -86,5 +86,6 @@ DDK_PROTOCOL_DEF(CANVAS,         'pCAN', "canvas", PF_NOPUB)
 // Protocol definition at garnet/magma/src/magma_util/platform/zircon/zircon_platform_ioctl.h
 DDK_PROTOCOL_DEF(GPU,            'pGPU', "gpu", 0)
 DDK_PROTOCOL_DEF(RTC,            'pRTC', "rtc", 0)
+DDK_PROTOCOL_DEF(TEE,            'pTEE', "tee", 0)
 #undef DDK_PROTOCOL_DEF
 #endif
