@@ -12,6 +12,7 @@ use parking_lot::Mutex;
 use watchable_map::{MapWatcher, WatchableMap, WatcherResult};
 use wlan;
 use wlan_dev;
+use wlan_service;
 use zx;
 
 use std::sync::Arc;
@@ -123,24 +124,16 @@ impl DeviceManager {
     }
 
     /// Retrieves information about all the phy devices managed by this `DeviceManager`.
-    // TODO(tkilbourn): this should return a simplified view of the Phy compared to query_phy. For
-    // now we just return the whole PhyInfo for each device.
-    pub fn list_phys(&self) -> impl Stream<Item = wlan::PhyInfo, Error = ()> {
+    pub fn list_phys(&self) -> Vec<wlan_service::PhyListItem> {
         self.phys
             .iter()
             .map(|(phy_id, phy)| {
-                let phy_id = *phy_id;
-                let phy_path = phy.device.path().to_string_lossy().into_owned();
-                // For now we query each device for every call to `list_phys`. We will need to
-                // decide how to handle queries for static vs dynamic data, caching response, etc.
-                phy.proxy.query().map_err(|_| ()).map(move |response| {
-                    let mut info = response.info;
-                    info.id = phy_id;
-                    info.dev_path = Some(phy_path);
-                    info
-                })
+                wlan_service::PhyListItem {
+                    phy_id: *phy_id,
+                    path: phy.device.path().to_string_lossy().into_owned(),
+                }
             })
-            .collect::<stream::FuturesUnordered<_>>()
+            .collect()
     }
 
     pub fn query_phy(&self, id: u16) -> impl Future<Item = wlan::PhyInfo, Error = zx::Status> {

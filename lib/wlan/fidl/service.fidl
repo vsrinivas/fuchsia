@@ -7,8 +7,13 @@ library fuchsia.wlan.device.service;
 using fuchsia.wlan.device;
 using fuchsia.wlan.sme;
 
+struct PhyListItem {
+    uint16 phy_id;
+    string path;
+};
+
 struct ListPhysResponse {
-    vector<fuchsia.wlan.device.PhyInfo> phys;
+    vector<PhyListItem> phys;
 };
 
 struct QueryPhyRequest {

@@ -9,7 +9,7 @@ use fidl;
 use fidl::encoding2::OutOfLine;
 use fidl::endpoints2::RequestStream;
 use futures::future::{self, FutureResult};
-use futures::{Future, FutureExt, Never, StreamExt};
+use futures::{Future, FutureExt, Never};
 use std::sync::Arc;
 use wlan_service::{self, DeviceService, DeviceServiceImpl, DeviceWatcherControlHandle};
 use zx;
@@ -35,19 +35,10 @@ pub fn device_service(
 
         list_phys: |state, c| {
             debug!("list_phys");
-            state
-                .lock()
-                .list_phys()
-                .collect()
-                .then(move |phys| match phys {
-                    Ok(p) => catch_and_log_err("list_phys", || {
-                        c.send(&mut wlan_service::ListPhysResponse { phys: p })
-                    }),
-                    Err(e) => {
-                        error!("could not query phys: {:?}", e);
-                        future::ok(())
-                    }
-                })
+            let list = state.lock().list_phys();
+            c.send_or_shutdown(&mut wlan_service::ListPhysResponse { phys: list })
+                .unwrap_or_else(|e| eprintln!("list_phys: Failed to send response: {}", e));
+            future::ok(())
         },
 
         query_phy: |state, req, c| {
