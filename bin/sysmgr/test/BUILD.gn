@@ -1,0 +1,30 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+
+copy("ls_svc_test") {
+  sources = [
+    "ls_svc_test",
+  ]
+
+  outputs = [
+    "$root_out_dir/ls_svc_test",
+  ]
+}
+
+package("sysmgr_tests") {
+  testonly = true
+  deprecated_system_image = true
+
+  deps = [
+    ":ls_svc_test",
+  ]
+
+  tests = [
+    {
+      name = "ls_svc_test"
+    },
+  ]
+}

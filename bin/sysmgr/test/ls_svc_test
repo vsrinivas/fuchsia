@@ -1,0 +1,27 @@
+#!/boot/bin/sh
+
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# This script runs `ls /svc` and looks for default services. It then attempts
+# to ensure we can run `ls /svc` again, as we would expect.
+
+ls_svc_output="$(ls /svc)"
+grep__output="$(echo $ls_svc_output | grep logger)"
+if [ -z "$grep__output" ];
+then
+    echo "FAIL, expected logger output on ls /svc, but was:"
+    echo $ls_svc_output
+    exit 1
+fi
+
+ls_svc_output_2="$(ls /svc)"
+if [ $? -ne 0 ];
+then
+    echo "FAIL, expected ls /svc to be able to run multiple times"
+    exit 1
+fi
+
+echo "PASS"
+exit 0

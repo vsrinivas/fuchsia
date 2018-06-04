@@ -1,0 +1,5 @@
+{
+    "packages": {
+        "sysmgr_tests": "//garnet/bin/sysmgr/test:sysmgr_tests"
+    }
+}
