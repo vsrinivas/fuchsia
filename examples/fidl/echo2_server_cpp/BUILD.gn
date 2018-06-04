@@ -4,6 +4,19 @@
 
 import("//build/package.gni")
 
+source_set("lib") {
+  sources = [
+    "echo2_server_app.cc",
+    "echo2_server_app.h",
+  ]
+
+  public_deps = [
+    "//garnet/examples/fidl/services:echo2",
+    "//garnet/public/lib/app/cpp",
+    "//garnet/public/lib/fidl/cpp",
+  ]
+}
+
 executable("bin") {
   output_name = "echo2_server_cpp"
 
@@ -12,9 +25,7 @@ executable("bin") {
   ]
 
   deps = [
-    "//garnet/examples/fidl/services:echo2",
-    "//garnet/public/lib/app/cpp",
-    "//garnet/public/lib/fidl/cpp",
+    ":lib",
     "//zircon/public/lib/async-default",
     "//zircon/public/lib/async-loop-cpp",
   ]
@@ -26,4 +37,33 @@ package("echo2_server_cpp") {
   ]
 
   binary = "echo2_server_cpp"
+}
+
+executable("echo2_server_cpp_unittests") {
+  testonly = true
+
+  sources = [
+    "echo2_server_app_unittest.cc",
+  ]
+
+  deps = [
+    ":lib",
+    "//garnet/public/lib/fxl/test:gtest_main",
+    "//garnet/public/lib/gtest",
+  ]
+}
+
+package("echo2_server_cpp_tests") {
+  testonly = true
+  deprecated_system_image = true
+
+  deps = [
+    ":echo2_server_cpp_unittests",
+  ]
+
+  tests = [
+    {
+       name = "echo2_server_cpp_unittests"
+    }
+  ]
 }
