@@ -52,11 +52,10 @@ void MessageRelayBase::CloseChannel() {
   OnChannelClosed();
 }
 
-void MessageRelayBase::ReadChannelMessages(
-    async_t* async,
-    async::WaitBase* wait,
-    zx_status_t status,
-    const zx_packet_signal_t* signal) {
+void MessageRelayBase::ReadChannelMessages(async_t* async,
+                                           async::WaitBase* wait,
+                                           zx_status_t status,
+                                           const zx_packet_signal_t* signal) {
   while (channel_) {
     uint32_t actual_byte_count;
     uint32_t actual_handle_count;
@@ -108,11 +107,10 @@ void MessageRelayBase::ReadChannelMessages(
   }
 }
 
-void MessageRelayBase::WriteChannelMessages(
-    async_t* async,
-    async::WaitBase* wait,
-    zx_status_t status,
-    const zx_packet_signal_t* signal) {
+void MessageRelayBase::WriteChannelMessages(async_t* async,
+                                            async::WaitBase* wait,
+                                            zx_status_t status,
+                                            const zx_packet_signal_t* signal) {
   if (!channel_) {
     return;
   }
