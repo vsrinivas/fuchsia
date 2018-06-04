@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use async;
 use device_watch;
 use failure::Error;
 use futures::prelude::*;
@@ -22,7 +21,7 @@ struct PhyDevice {
     device: wlan_dev::Device,
 }
 
-pub type ClientSmeServer = mpsc::UnboundedSender<async::Channel>;
+pub type ClientSmeServer = mpsc::UnboundedSender<super::station::ClientSmeEndpoint>;
 
 struct IfaceDevice {
     client_sme_server: Option<ClientSmeServer>,

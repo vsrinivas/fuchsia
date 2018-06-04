@@ -95,7 +95,7 @@ pub fn device_service(
 
         get_client_sme: |state, iface_id, server_end, c| {
             let server = state.lock().get_client_sme(iface_id);
-            if let Err(e) = connect_client_sme(server, server_end.into_channel(), &c) {
+            if let Err(e) = connect_client_sme(server, server_end, &c) {
                 eprintln!("get_client_sme: unexpected error: {:?}", e);
                 c.control_handle().shutdown();
             }
@@ -112,12 +112,13 @@ pub fn device_service(
         .recover(|e| eprintln!("error running wlan device service: {:?}", e))
 }
 
-fn connect_client_sme(server: Option<super::device::ClientSmeServer>, channel: zx::Channel,
+fn connect_client_sme(server: Option<super::device::ClientSmeServer>,
+                      endpoint: super::station::ClientSmeEndpoint,
                       c: &wlan_service::DeviceServiceGetClientSmeResponder)
     -> Result<(), Error>
 {
     if let Some(ref s) = &server {
-        s.unbounded_send(async::Channel::from_channel(channel)?)?;
+        s.unbounded_send(endpoint)?;
     }
     c.send(server.is_some())?;
     Ok(())
