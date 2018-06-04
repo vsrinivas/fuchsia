@@ -21,7 +21,7 @@
 
 ### amber_repository_dir
  Directory containing files named by their merkleroot content IDs in
- ASCII hex.  The //build/image:amber_publish_blobs target populates
+ ASCII hex.  The [//build/image](https://fuchsia.googlesource.com/build/+/master/image):amber_publish_blobs target populates
  this with copies of build products, but never removes old files.
 
 **Default value for `target_cpu = "arm64"`:** "//out/arm64/amber-files"
@@ -181,9 +181,9 @@ No values for `target_cpu = "x64"`.
 
 **Default value:** [[]](https://fuchsia.googlesource.com/build/+/master/gn/packages.gni#8)
 
-**Current value for `target_cpu = "arm64"`:** [["garnet/packages/buildbot"]](/arm64/args.gn#2)
+**Current value for `target_cpu = "arm64"`:** ["garnet/packages/buildbot"]
 
-**Current value for `target_cpu = "x64"`:** [["garnet/packages/buildbot"]](/x64/args.gn#2)
+**Current value for `target_cpu = "x64"`:** ["garnet/packages/buildbot"]
 
 
 ### fvm_image_size
@@ -228,7 +228,7 @@ No values for `target_cpu = "x64"`.
  of the build do not get copied here.  This directory is only for
  things that are generally useful for testing or debugging or
  whatnot outside of the GN build itself.  These are only installed
- by an explicit install_host_tools() rule (see //build/host.gni).
+ by an explicit install_host_tools() rule (see [//build/host.gni](https://fuchsia.googlesource.com/build/+/master/host.gni)).
 
 **Default value for `target_cpu = "arm64"`:** "//out/arm64/tools"
 
@@ -514,7 +514,7 @@ No values for `target_cpu = "arm64"`.
 ### select_variant_canonical
  *This should never be set as a build argument.*
  It exists only to be set in `toolchain_args`.
- See //build/toolchain/clang_toolchain.gni for details.
+ See [//build/toolchain/clang_toolchain.gni](https://fuchsia.googlesource.com/build/+/master/toolchain/clang_toolchain.gni) for details.
 
 **Default value:** []
 
@@ -547,7 +547,7 @@ No values for `target_cpu = "arm64"`.
  Synthesized packages can't express dependencies on other packages.
 
  Each element of this list is a scope that is very much like the body of
- a package() template invocation (see //build/package.gni).  That scope
+ a package() template invocation (see [//build/package.gni](https://fuchsia.googlesource.com/build/+/master/package.gni)).  That scope
  must set `name` to the string naming the package, as would be the name
  in the package() target written in a GN file.  This must be unique
  among all package names.
@@ -568,9 +568,9 @@ No values for `target_cpu = "arm64"`.
 
 **Default value:** ""
 
-**Current value for `target_cpu = "arm64"`:** ["arm64"](/arm64/args.gn#1)
+**Current value for `target_cpu = "arm64"`:** "arm64"
 
-**Current value for `target_cpu = "x64"`:** ["x64"](/x64/args.gn#1)
+**Current value for `target_cpu = "x64"`:** "x64"
 
 
 ### target_os
@@ -587,9 +587,7 @@ No values for `target_cpu = "arm64"`.
 ### thinlto_cache_dir
  ThinLTO cache directory path.
 
-**Default value for `target_cpu = "arm64"`:** "thinlto-cache"
-
-**Default value for `target_cpu = "x64"`:** "host_x64/thinlto-cache"
+**Default value:** "host_x64/thinlto-cache"
 
 
 ### thinlto_jobs
@@ -610,7 +608,7 @@ No values for `target_cpu = "arm64"`.
 ### toolchain_variant
  *This should never be set as a build argument.*
  It exists only to be set in `toolchain_args`.
- See //build/toolchain/clang_toolchain.gni for details.
+ See [//build/toolchain/clang_toolchain.gni](https://fuchsia.googlesource.com/build/+/master/toolchain/clang_toolchain.gni) for details.
  This variable is a scope giving details about the current toolchain:
      toolchain_variant.base
          [label] The "base" toolchain for this variant, *often the
