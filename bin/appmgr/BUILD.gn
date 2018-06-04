@@ -50,8 +50,8 @@ source_set("lib") {
     "//garnet/public/lib/svc/cpp",
     "//third_party/rapidjson",
     "//zircon/public/fidl/process",
-    "//zircon/public/lib/fs",
     "//zircon/public/lib/fit",
+    "//zircon/public/lib/fs",
     "//zircon/public/lib/launchpad",
     "//zircon/public/lib/loader-service",
     "//zircon/public/lib/zx",
@@ -104,7 +104,7 @@ package("appmgr") {
   ]
 }
 
-package("appmgr_tests") {
+package("appmgr_unittests") {
   testonly = true
   deprecated_system_image = true
 
@@ -114,6 +114,20 @@ package("appmgr_tests") {
   tests = [
     {
       name = "appmgr_unittests"
+    },
+  ]
+}
+
+package("appmgr_integrationtests") {
+  testonly = true
+  deprecated_system_image = true
+
+  deps = [
+    "integration_tests:tests",
+  ]
+  tests = [
+    {
+      name = "appmgr_integration_tests"
     },
   ]
 }

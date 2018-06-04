@@ -3,6 +3,7 @@
         "garnet/packages/prod/runtime"
     ],
     "packages": {
-        "appmgr_tests": "//garnet/bin/appmgr:appmgr_tests"
+        "appmgr_unittests": "//garnet/bin/appmgr:appmgr_unittests",
+        "appmgr_integrationtests": "//garnet/bin/appmgr:appmgr_integrationtests"
     }
 }
