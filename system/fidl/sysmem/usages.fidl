@@ -1,0 +1,43 @@
+// Copyright 2018 The Chromium Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.sysmem;
+
+// Describes how a client will access the contents of a buffer.
+// TODO(ZX-2260): change struct to table
+struct BufferUsage {
+    uint32 cpu;
+    uint32 vulkan;
+    uint32 display;
+    uint32 video;
+};
+
+// Flags for "cpu" usage.
+// The "often" variants prefer cacheable memory.
+const uint32 cpuUsageRead       = 1;
+const uint32 cpuUsageReadOften  = 2;
+const uint32 cpuUsageWrite      = 4;
+const uint32 cpuUsageWriteOften = 8;
+
+// Flags for "vulkan" usage.
+// Based on https://www.khronos.org/registry/vulkan/specs/1.1-extensions/man/html/VkImageUsageFlagBits.html
+const uint32 vulkanUsageTransferSrc           = 0x0001;
+const uint32 vulkanUsageTransferDst           = 0x0002;
+const uint32 vulkanUsageSampled               = 0x0004;
+const uint32 vulkanUsageStorage               = 0x0008;
+const uint32 vulkanUsageColorAttachment       = 0x0010;
+const uint32 vulkanUsageStencilAttachment     = 0x0020;
+const uint32 vulkanUsageTransientAttachment   = 0x0040;
+const uint32 vulkanUsageInputAttachment       = 0x0080;
+
+// Flags for "display" usage.
+const uint32 displayUsageLayer = 1;
+const uint32 displayUsageCursor = 2;
+
+// Flags for "video" usage.
+// TODO(ZX-2259): Add more specific HwDecoder flags if needed.
+const uint32 videoUsageHwDecoder = 1;
+const uint32 videoUsageHwEncoder = 2;
+const uint32 videoUsageHwProtected = 4;
+

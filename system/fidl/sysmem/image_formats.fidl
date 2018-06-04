@@ -1,0 +1,86 @@
+// Copyright 2018 The Chromium Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.sysmem;
+
+// Describes how an image is represented.
+// TODO(ZX-2260): change struct to table
+struct ImageFormat {
+    // Row width in pixels.
+    uint32 width;
+
+    // Number of rows.
+    uint32 height;
+
+    // Number of layers within a multi-layered image.
+    // Defaults to 1 if not specified.
+    uint32 layers;
+
+    // Stride in bytes per row.
+    // Only meaningful for linear buffer formats.
+    uint64 bytesPerRow;
+
+    // Pixel format.
+    PixelFormat pixelFormat;
+
+    // Color space.
+    ColorSpace colorSpace;
+};
+
+// Describes constraints for allocating images of some desired form.
+// TODO(ZX-2260): change struct to table
+struct ImageSpec {
+    // Minimum width in pixels.
+    uint32 minWidth;
+
+    // Minimum height in pixels.
+    uint32 minHeight;
+
+    // Number of layers within a multi-layered image.
+    // Defaults to 1 if not specified.
+    uint32 layers = 1;
+
+    // Pixel format.
+    PixelFormat pixelFormat;
+
+    // Color space.
+    ColorSpace colorSpace;
+
+    // TODO(ZX-2270): Add tiling formats.
+};
+
+// Describes how the pixels within an image are represented.
+// Simple formats need only a type.
+// Parametric pixel formats may require additional properties.
+// TODO(ZX-2260): change struct to table
+struct PixelFormat {
+    PixelFormatType type;
+};
+
+// TODO(ZX-2270): add more formats.
+// The ordering of the channels in the format name reflects how
+// the actual layout of the channel.
+enum PixelFormatType {
+    r8g8b8a8 = 1;
+};
+
+// Describes how the pixels within an image are meant to be presented.
+// Simple color spaces need only a type.
+// Parametric color spaces may require additional properties.
+// TODO(ZX-2260): change struct to table
+struct ColorSpace {
+    ColorSpaceType type;
+};
+
+enum ColorSpaceType {
+    srgb = 1;
+    rec601_ntsc = 2;
+    rec601_ntsc_full_range = 3;
+    rec601_pal = 4;
+    rec601_pal_full_range = 5;
+    rec709 = 6;
+    rec2020 = 7;
+    rec2100 = 8;
+};
+

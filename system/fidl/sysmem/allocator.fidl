@@ -1,0 +1,97 @@
+// Copyright 2018 The Chromium Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.sysmem;
+
+// Allocates system memory buffers.
+[Discoverable]
+interface Allocator {
+    // Allocates a collection of buffers on behalf of a single client.
+    //
+    // |bufferCount| indicates how many buffers to allocate, between 1 and 64.
+    // |spec| describes constraints for allocating buffers of some
+    // desired form.
+    // |usage| describes how the client intends to access the buffers.
+    // |collection| provides access to the allocated buffers.
+    //
+    // Returns |ZX_OK| if successful.
+    // Returns |ZX_ERR_NO_MEMORY| if the request is valid but cannot be
+    // fulfilled due to resource exhaustion.
+    // Returns |ZX_ERR_ACCESS_DENIED| if the caller is not permitted to
+    // obtain the buffers it requested.
+    // Returns |ZX_ERR_INVALID_ARGS| if the request is malformed.
+    // Returns |ZX_ERR_NOT_SUPPORTED| if request is valid but cannot be
+    // satisfied, perhaps due to hardware limitations.
+    1: AllocateCollection(uint32 bufferCount,
+                          BufferSpec spec,
+                          BufferUsage usage,
+                          request<BufferCollection> collection) ->
+                         (status @status);
+
+    // Allocates a collection of buffers which will be shared among one
+    // or more clients.  This operation occurs in two phases (which may
+    // happen concurrently).
+    //
+    // |bufferCount| indicates how many buffers to allocate, between 1 and 64.
+    // |spec| describes constraints for allocating buffers of some
+    // desired form.
+    // |token_peer| is one endpoint of an eventpair which forms an association
+    // between this request and calls to |BindSharedCollection()|.
+    //
+    // In the first phase, one client acts as a coordinator.  The coordinator
+    // creates an event pair and designates one endpoint as the *token* and
+    // the other endpoint as the *token peer*. The coordinator then calls
+    // |AllocateSharedCollection()|, passing the buffer request and the token
+    // peer’s handle.  It also sends a token to each client which requires
+    // access to the buffer, duplicating the token’s handle if necessary.
+    //
+    // In the second phase, each client which received a token calls
+    // |BindSharedCollection()|, passing their usages and the token.
+    // As the buffer manager handles each request, it retrieves the token’s
+    // kernel object id (KOID) and adds it to a list to be matched up with
+    // token peers from prior or subsequent calls to
+    // |AllocateSharedCollection()|.  Once matched, the token is closed
+    // and the client’s corresponding usages are associated with the
+    // token peer.
+    //
+    // This method returns once all tokens corresponding to the |token_peer|
+    // are closed and the allocation completes successfully, or an error
+    // occurs.
+    //
+    // Returns |ZX_OK| once all of the collection’s tokens have been
+    // closed and buffer allocation has completed successfully.
+    // Returns |ZX_ERR_ACCESS_DENIED| if the caller is not permitted to
+    // obtain the buffers it requested.
+    // Returns |ZX_ERR_INVALID_ARGS| if the request is malformed.
+    // Returns |ZX_ERR_NOT_SUPPORTED| if request is valid but cannot be
+    // satisfied, perhaps due to hardware limitations.
+    2: AllocateSharedCollection(uint32 bufferCount,
+                                BufferSpec spec,
+                                handle<eventpair> token_peer) ->
+                               (status @status);
+
+    // Enlists a client into a shared collection of buffers, taking into
+    // account how the client intends to use the buffers.
+    //
+    // |usage| describes how the client intends to access the buffers.
+    // |token| is the other endpoint of an eventpair passed to
+    // |AllocateSharedCollection()|.
+    // |collection| provides access to the allocated buffers.
+    //
+    // This method returns once all other tokens for the collection are
+    // closed and the allocation completes successfully, or an error occurs.
+    //
+    // Returns |ZX_OK| once all of the collection’s tokens have been closed
+    // and buffer allocation has completed successfully.
+    // Returns |ZX_ERR_ACCESS_DENIED| if the caller is not permitted to
+    // obtain the buffers it requested.
+    // Returns |ZX_ERR_INVALID_ARGS| if the request is malformed.
+    // Returns |ZX_ERR_NOT_SUPPORTED| if request is valid but cannot be
+    // satisfied, perhaps due to hardware limitations.
+    3: BindSharedCollection(BufferUsage usage,
+                            handle<eventpair> token,
+                            request<BufferCollection> collection) ->
+                           (status @status);
+};
+

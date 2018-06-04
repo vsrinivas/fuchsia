@@ -1,0 +1,18 @@
+// Copyright 2018 The Chromium Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.sysmem;
+
+// Describes how the contents of buffers are represented.
+// Buffers of each type are described by their own tables.
+union BufferFormat {
+    ImageFormat image;
+};
+
+// Describes constraints for allocating buffers of some desired form.
+// Buffers of each type are described by their own tables.
+union BufferSpec {
+    ImageSpec image;
+};
+
