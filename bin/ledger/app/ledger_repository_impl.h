@@ -77,11 +77,11 @@ class LedgerRepositoryImpl : public ledger_internal::LedgerRepository,
   encryption::EncryptionServiceFactoryImpl encryption_service_factory_;
   std::unique_ptr<SyncWatcherSet> watchers_;
   std::unique_ptr<sync_coordinator::UserSync> user_sync_;
+  std::unique_ptr<PageEvictionManager> page_eviction_manager_;
   callback::AutoCleanableMap<std::string, LedgerManager,
                              convert::StringViewComparator>
       ledger_managers_;
   fidl::BindingSet<ledger_internal::LedgerRepository> bindings_;
-  std::unique_ptr<PageEvictionManager> page_eviction_manager_;
   fxl::Closure on_empty_callback_;
 
   fidl::BindingSet<ledger_internal::LedgerRepositoryDebug>
