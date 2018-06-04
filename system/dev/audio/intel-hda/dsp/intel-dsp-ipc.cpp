@@ -196,6 +196,7 @@ void IntelDspIpc::ProcessIpcNotification(const IpcMessage& notif) {
     switch (notif.notif_type()) {
     case NotificationType::FW_READY:
         LOG(INFO, "firmware ready\n");
+        completion_signal(&fw_ready_completion_);
         break;
     case NotificationType::RESOURCE_EVENT: {
         ResourceEventData data;

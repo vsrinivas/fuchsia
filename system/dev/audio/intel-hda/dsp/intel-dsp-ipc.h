@@ -52,6 +52,9 @@ public:
 
     void SetLogPrefix(const char* new_prefix);
 
+    zx_status_t WaitForFirmwareReady(zx_time_t timeout) {
+        return completion_wait(&fw_ready_completion_, timeout);
+    }
     void Shutdown();
 
     // Library & Module Management IPC
@@ -93,6 +96,9 @@ private:
 
     // A reference to the owning DSP
     IntelAudioDsp& dsp_;
+
+    // Used to wait for firmware ready
+    completion_t fw_ready_completion_;
 };
 
 }  // namespace intel_hda

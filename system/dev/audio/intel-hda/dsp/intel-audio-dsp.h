@@ -11,7 +11,6 @@
 #include <fbl/mutex.h>
 #include <lib/vmo-utils/vmo_mapper.h>
 
-#include <sync/completion.h>
 #include <limits.h>
 #include <stdint.h>
 #include <string.h>
