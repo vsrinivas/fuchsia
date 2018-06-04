@@ -57,8 +57,7 @@ void MediaPacketProducerBase::Reset() {
 }
 
 void MediaPacketProducerBase::FlushConsumer(
-    bool hold_frame,
-    const MediaPacketConsumer::FlushCallback& callback) {
+    bool hold_frame, const MediaPacketConsumer::FlushCallback& callback) {
   FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
   FXL_DCHECK(consumer_.is_bound());
 
@@ -87,15 +86,11 @@ void MediaPacketProducerBase::ReleasePayloadBuffer(void* buffer) {
   allocator_.ReleaseRegion(buffer);
 }
 
-void MediaPacketProducerBase::ProducePacket(
-    void* payload,
-    size_t size,
-    int64_t pts,
-    TimelineRate pts_rate,
-    bool keyframe,
-    bool end_of_stream,
-    MediaTypePtr revised_media_type,
-    ProducePacketCallback callback) {
+void MediaPacketProducerBase::ProducePacket(void* payload, size_t size,
+                                            int64_t pts, TimelineRate pts_rate,
+                                            bool keyframe, bool end_of_stream,
+                                            MediaTypePtr revised_media_type,
+                                            ProducePacketCallback callback) {
   FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
   FXL_DCHECK(size == 0 || payload != nullptr);
 
@@ -137,20 +132,21 @@ void MediaPacketProducerBase::ProducePacket(
 
   consumer_->SupplyPacket(
       std::move(media_packet),
-      fxl::MakeCopyable([this, callback = std::move(callback)](MediaPacketDemandPtr demand) {
-        FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
+      fxl::MakeCopyable(
+          [this, callback = std::move(callback)](MediaPacketDemandPtr demand) {
+            FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
 
-        {
-          std::lock_guard<std::mutex> locker(mutex_);
-          --packets_outstanding_;
-        }
+            {
+              std::lock_guard<std::mutex> locker(mutex_);
+              --packets_outstanding_;
+            }
 
-        if (demand) {
-          UpdateDemand(*demand);
-        }
+            if (demand) {
+              UpdateDemand(*demand);
+            }
 
-        callback();
-      }));
+            callback();
+          }));
 }
 
 bool MediaPacketProducerBase::ShouldProducePacket(

@@ -49,8 +49,8 @@ fidl("media_codec") {
   sdk_category = "partner"
 
   sources = [
+    "codec.fidl",
     "codec_common.fidl",
     "codec_factory.fidl",
-    "codec.fidl",
   ]
 }

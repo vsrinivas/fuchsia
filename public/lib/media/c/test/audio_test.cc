@@ -2,28 +2,25 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <zircon/syscalls.h>
 #include <iostream>
 #include <vector>
 
-#include "gtest/gtest.h"
+#include <zircon/syscalls.h>
 
 #include "garnet/public/lib/media/c/audio.h"
+#include "gtest/gtest.h"
 
 extern "C" {
 fuchsia_audio_manager* audio_manager_create();
 void audio_manager_free(fuchsia_audio_manager* manager);
 int audio_manager_get_output_devices(
-    fuchsia_audio_manager* manager,
-    fuchsia_audio_device_description* desc_buff,
+    fuchsia_audio_manager* manager, fuchsia_audio_device_description* desc_buff,
     int num_device_descriptions);
 int audio_manager_get_output_device_default_parameters(
-    fuchsia_audio_manager* manager,
-    char* device_id,
+    fuchsia_audio_manager* manager, char* device_id,
     fuchsia_audio_parameters* params_out);
 int audio_manager_create_output_stream(
-    fuchsia_audio_manager* manager,
-    char* device_id,
+    fuchsia_audio_manager* manager, char* device_id,
     fuchsia_audio_parameters* stream_params,
     fuchsia_audio_output_stream** stream_out);
 int audio_output_stream_free(fuchsia_audio_output_stream* stream);
@@ -32,8 +29,7 @@ int audio_output_stream_get_min_delay(fuchsia_audio_output_stream* stream,
 int audio_output_stream_set_gain(fuchsia_audio_output_stream* stream,
                                  float db_gain);
 int audio_output_stream_write(fuchsia_audio_output_stream* stream,
-                              float* sample_buffer,
-                              int num_samples,
+                              float* sample_buffer, int num_samples,
                               zx_time_t pres_time);
 }
 
@@ -53,7 +49,7 @@ constexpr int WRITE_BUFFER_NUM_SAMPLES = 16 * 3 * 5 * 7;  // Mods w/num_channels
 // that the API provided at least some value, instead of leaving the variable in
 // its potentially uninitialized state..
 constexpr zx_duration_t INVALID_MIN_DELAY =
-  std::numeric_limits<zx_duration_t>::max();
+    std::numeric_limits<zx_duration_t>::max();
 
 //
 // Utility functions

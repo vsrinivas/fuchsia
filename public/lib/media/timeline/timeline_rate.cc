@@ -84,11 +84,8 @@ template void ReduceRatio<uint32_t>(uint32_t* numerator, uint32_t* denominator);
 // Scales a uint64_t value by the ratio of two uint32_t values. If round_up is
 // true, the result is rounded up rather than down. overflow is set to indicate
 // overflow.
-uint64_t ScaleUInt64(uint64_t value,
-                     uint32_t subject_delta,
-                     uint32_t reference_delta,
-                     bool round_up,
-                     bool* overflow) {
+uint64_t ScaleUInt64(uint64_t value, uint32_t subject_delta,
+                     uint32_t reference_delta, bool round_up, bool* overflow) {
   FXL_DCHECK(reference_delta != 0u);
   FXL_DCHECK(overflow != nullptr);
 
@@ -153,13 +150,10 @@ void TimelineRate::Reduce(uint32_t* subject_delta, uint32_t* reference_delta) {
 }
 
 // static
-void TimelineRate::Product(uint32_t a_subject_delta,
-                           uint32_t a_reference_delta,
-                           uint32_t b_subject_delta,
-                           uint32_t b_reference_delta,
+void TimelineRate::Product(uint32_t a_subject_delta, uint32_t a_reference_delta,
+                           uint32_t b_subject_delta, uint32_t b_reference_delta,
                            uint32_t* product_subject_delta,
-                           uint32_t* product_reference_delta,
-                           bool exact) {
+                           uint32_t* product_reference_delta, bool exact) {
   FXL_DCHECK(a_reference_delta != 0);
   FXL_DCHECK(b_reference_delta != 0);
   FXL_DCHECK(product_subject_delta != nullptr);
@@ -197,8 +191,7 @@ void TimelineRate::Product(uint32_t a_subject_delta,
 }
 
 // static
-int64_t TimelineRate::Scale(int64_t value,
-                            uint32_t subject_delta,
+int64_t TimelineRate::Scale(int64_t value, uint32_t subject_delta,
                             uint32_t reference_delta) {
   static constexpr uint64_t abs_of_min_int64 =
       static_cast<uint64_t>(std::numeric_limits<int64_t>::max()) + 1;

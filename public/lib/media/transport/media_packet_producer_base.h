@@ -55,12 +55,8 @@ class MediaPacketProducerBase {
   void ReleasePayloadBuffer(void* buffer);
 
   // Produces a packet and supplies it to the consumer.
-  void ProducePacket(void* payload,
-                     size_t size,
-                     int64_t pts,
-                     TimelineRate pts_rate,
-                     bool keyframe,
-                     bool end_of_stream,
+  void ProducePacket(void* payload, size_t size, int64_t pts,
+                     TimelineRate pts_rate, bool keyframe, bool end_of_stream,
                      MediaTypePtr revised_media_type,
                      ProducePacketCallback callback);
 

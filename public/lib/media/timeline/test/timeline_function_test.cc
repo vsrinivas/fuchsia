@@ -11,10 +11,8 @@ namespace {
 
 // Verifies that the given TimelineFunction instantiated with the given
 // arguments has the expected properties.
-void VerifyBasics(const TimelineFunction& under_test,
-                  int64_t subject_time,
-                  int64_t reference_time,
-                  uint32_t subject_delta,
+void VerifyBasics(const TimelineFunction& under_test, int64_t subject_time,
+                  int64_t reference_time, uint32_t subject_delta,
                   uint32_t reference_delta) {
   TimelineRate::Reduce(&subject_delta, &reference_delta);
   EXPECT_EQ(reference_time, under_test.reference_time());
@@ -27,10 +25,8 @@ void VerifyBasics(const TimelineFunction& under_test,
 
 // Verifies that a TimelineFunction instantiated in three different ways with
 // the given arguments has the expected properties.
-void VerifyBasics(int64_t subject_time,
-                  int64_t reference_time,
-                  uint32_t subject_delta,
-                  uint32_t reference_delta) {
+void VerifyBasics(int64_t subject_time, int64_t reference_time,
+                  uint32_t subject_delta, uint32_t reference_delta) {
   TimelineFunction under_test_1(subject_time, reference_time, subject_delta,
                                 reference_delta);
   VerifyBasics(under_test_1, subject_time, reference_time, subject_delta,
@@ -64,10 +60,8 @@ void VerifyBasics(int64_t subject_time,
 
 // Verifies that the inverse of a TimelineFunction instantiated in three
 // different ways with the given arguments has the expected properties.
-void VerifyInverse(int64_t subject_time,
-                   int64_t reference_time,
-                   uint32_t subject_delta,
-                   uint32_t reference_delta) {
+void VerifyInverse(int64_t subject_time, int64_t reference_time,
+                   uint32_t subject_delta, uint32_t reference_delta) {
   TimelineFunction under_test_1(subject_time, reference_time, subject_delta,
                                 reference_delta);
   VerifyBasics(under_test_1.Inverse(), reference_time, subject_time,
@@ -84,12 +78,9 @@ void VerifyInverse(int64_t subject_time,
 
 // Verifies that TimelineFunction::Apply, in its various forms, works as
 // expected for the given arguments.
-void VerifyApply(int64_t subject_time,
-                 int64_t reference_time,
-                 uint32_t subject_delta,
-                 uint32_t reference_delta,
-                 int64_t reference_input,
-                 int64_t expected_result) {
+void VerifyApply(int64_t subject_time, int64_t reference_time,
+                 uint32_t subject_delta, uint32_t reference_delta,
+                 int64_t reference_input, int64_t expected_result) {
   // Verify the static method.
   EXPECT_EQ(expected_result,
             TimelineFunction::Apply(
@@ -107,12 +98,9 @@ void VerifyApply(int64_t subject_time,
 
 // Verifies that TimelineFunction::ApplyInverse, in its various forms, works
 // as expected for the given arguments.
-void VerifyApplyInverse(int64_t subject_time,
-                        int64_t reference_time,
-                        uint32_t subject_delta,
-                        uint32_t reference_delta,
-                        int64_t subject_input,
-                        int64_t expected_result) {
+void VerifyApplyInverse(int64_t subject_time, int64_t reference_time,
+                        uint32_t subject_delta, uint32_t reference_delta,
+                        int64_t subject_input, int64_t expected_result) {
   // Verify the static method.
   EXPECT_EQ(expected_result,
             TimelineFunction::ApplyInverse(
@@ -127,10 +115,8 @@ void VerifyApplyInverse(int64_t subject_time,
 
 // Verifies that TimelineFunction::Compose works as expected with the given
 // inputs.
-void VerifyCompose(const TimelineFunction& a,
-                   const TimelineFunction& b,
-                   bool exact,
-                   const TimelineFunction& expected_result) {
+void VerifyCompose(const TimelineFunction& a, const TimelineFunction& b,
+                   bool exact, const TimelineFunction& expected_result) {
   // Verify the static method.
   EXPECT_EQ(expected_result, TimelineFunction::Compose(a, b, exact));
 }

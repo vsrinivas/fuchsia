@@ -5,7 +5,8 @@
 // Refer to the accompanying README.md file for detailed API documentation
 // (functions, structs and constants).
 
-#pragma once
+#ifndef LIB_MEDIA_C_AUDIO_H_
+#define LIB_MEDIA_C_AUDIO_H_
 
 #include <stdint.h>
 #include <zircon/types.h>
@@ -52,13 +53,11 @@ MEDIA_CLIENT_EXPORT int fuchsia_audio_manager_get_output_devices(
 
 MEDIA_CLIENT_EXPORT int
 fuchsia_audio_manager_get_output_device_default_parameters(
-    fuchsia_audio_manager* audio_manager,
-    char* device_id,
+    fuchsia_audio_manager* audio_manager, char* device_id,
     fuchsia_audio_parameters* params_out);
 
 MEDIA_CLIENT_EXPORT int fuchsia_audio_manager_create_output_stream(
-    fuchsia_audio_manager* audio_manager,
-    char* device_id,
+    fuchsia_audio_manager* audio_manager, char* device_id,
     fuchsia_audio_parameters* stream_params,
     fuchsia_audio_output_stream** stream_out);
 
@@ -66,17 +65,15 @@ MEDIA_CLIENT_EXPORT int fuchsia_audio_output_stream_free(
     fuchsia_audio_output_stream* stream);
 
 MEDIA_CLIENT_EXPORT int fuchsia_audio_output_stream_get_min_delay(
-    fuchsia_audio_output_stream* stream,
-    zx_duration_t* delay_nsec_out);
+    fuchsia_audio_output_stream* stream, zx_duration_t* delay_nsec_out);
 
 MEDIA_CLIENT_EXPORT int fuchsia_audio_output_stream_set_gain(
-    fuchsia_audio_output_stream* stream,
-    float db_gain);
+    fuchsia_audio_output_stream* stream, float db_gain);
 
 MEDIA_CLIENT_EXPORT int fuchsia_audio_output_stream_write(
-    fuchsia_audio_output_stream* stream,
-    float* sample_buffer,
-    int num_samples,
+    fuchsia_audio_output_stream* stream, float* sample_buffer, int num_samples,
     zx_time_t pres_time);
 
 __END_CDECLS
+
+#endif  // LIB_MEDIA_C_AUDIO_H_

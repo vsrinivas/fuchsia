@@ -6,9 +6,9 @@
 
 #include <lib/zx/vmar.h>
 #include <lib/zx/vmo.h>
+#include <media/cpp/fidl.h>
 #include <zircon/types.h>
 
-#include <media/cpp/fidl.h>
 #include "lib/fxl/logging.h"
 #include "lib/media/transport/fifo_allocator.h"
 
@@ -16,9 +16,7 @@ namespace media {
 
 MappedSharedBuffer::MappedSharedBuffer() {}
 
-MappedSharedBuffer::~MappedSharedBuffer() {
-  Reset();
-}
+MappedSharedBuffer::~MappedSharedBuffer() { Reset(); }
 
 zx_status_t MappedSharedBuffer::InitNew(uint64_t size, uint32_t map_flags) {
   FXL_DCHECK(size > 0);
@@ -80,9 +78,7 @@ zx_status_t MappedSharedBuffer::InitInternal(zx::vmo vmo, uint32_t map_flags) {
   return ZX_OK;
 }
 
-bool MappedSharedBuffer::initialized() const {
-  return buffer_ptr_ != nullptr;
-}
+bool MappedSharedBuffer::initialized() const { return buffer_ptr_ != nullptr; }
 
 void MappedSharedBuffer::Reset() {
   if (buffer_ptr_ != nullptr) {
@@ -97,9 +93,7 @@ void MappedSharedBuffer::Reset() {
   vmo_.reset();
 }
 
-uint64_t MappedSharedBuffer::size() const {
-  return size_;
-}
+uint64_t MappedSharedBuffer::size() const { return size_; }
 
 zx::vmo MappedSharedBuffer::GetDuplicateVmo(zx_rights_t rights) const {
   FXL_DCHECK(initialized());

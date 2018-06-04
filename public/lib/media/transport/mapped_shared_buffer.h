@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_MEDIA_TRANSPORT_MAPPED_SHARED_BUFFER_H_
+#define LIB_MEDIA_TRANSPORT_MAPPED_SHARED_BUFFER_H_
 
 #include <memory>
 
@@ -74,3 +75,5 @@ class MappedSharedBuffer {
 };
 
 }  // namespace media
+
+#endif  // LIB_MEDIA_TRANSPORT_MAPPED_SHARED_BUFFER_H_

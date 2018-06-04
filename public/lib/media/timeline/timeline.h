@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_MEDIA_TIMELINE_TIMELINE_H_
+#define LIB_MEDIA_TIMELINE_TIMELINE_H_
 
 #include "lib/fxl/time/time_delta.h"
 #include "lib/fxl/time/time_point.h"
@@ -54,3 +55,5 @@ class Timeline {
 };
 
 }  // namespace media
+
+#endif  // LIB_MEDIA_TIMELINE_TIMELINE_H_

@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_MEDIA_TRANSPORT_MEDIA_PACKET_CONSUMER_BASE_H_
+#define LIB_MEDIA_TRANSPORT_MEDIA_PACKET_CONSUMER_BASE_H_
 
 #include <atomic>
 
@@ -39,9 +40,7 @@ class MediaPacketConsumerBase : public MediaPacketConsumer {
     uint64_t label() { return label_; }
 
    private:
-    SuppliedPacket(uint64_t label,
-                   MediaPacket packet,
-                   void* payload,
+    SuppliedPacket(uint64_t label, MediaPacket packet, void* payload,
                    SupplyPacketCallback callback,
                    std::shared_ptr<SuppliedPacketCounter> counter);
 
@@ -205,3 +204,5 @@ class MediaPacketConsumerBase : public MediaPacketConsumer {
 };
 
 }  // namespace media
+
+#endif  // LIB_MEDIA_TRANSPORT_MEDIA_PACKET_CONSUMER_BASE_H_

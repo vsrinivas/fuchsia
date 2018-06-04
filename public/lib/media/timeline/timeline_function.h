@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_MEDIA_TIMELINE_TIMELINE_FUNCTION_H_
+#define LIB_MEDIA_TIMELINE_TIMELINE_FUNCTION_H_
 
 #include <media/cpp/fidl.h>
 #include "lib/fxl/logging.h"
@@ -22,15 +23,13 @@ namespace media {
 class TimelineFunction {
  public:
   // Applies a timeline function.
-  static int64_t Apply(int64_t subject_time,
-                       int64_t reference_time,
+  static int64_t Apply(int64_t subject_time, int64_t reference_time,
                        TimelineRate rate,  // subject_delta / reference_delta
                        int64_t reference_input);
 
   // Applies the inverse of a timeline function.
   static int64_t ApplyInverse(
-      int64_t subject_time,
-      int64_t reference_time,
+      int64_t subject_time, int64_t reference_time,
       TimelineRate rate,  // subject_delta / reference_delta
       int64_t subject_input) {
     FXL_DCHECK(rate.reference_delta() != 0u);
@@ -45,16 +44,13 @@ class TimelineFunction {
 
   TimelineFunction() : subject_time_(0), reference_time_(0) {}
 
-  TimelineFunction(int64_t subject_time,
-                   int64_t reference_time,
-                   uint32_t subject_delta,
-                   uint32_t reference_delta)
+  TimelineFunction(int64_t subject_time, int64_t reference_time,
+                   uint32_t subject_delta, uint32_t reference_delta)
       : subject_time_(subject_time),
         reference_time_(reference_time),
         rate_(subject_delta, reference_delta) {}
 
-  TimelineFunction(int64_t subject_time,
-                   int64_t reference_time,
+  TimelineFunction(int64_t subject_time, int64_t reference_time,
                    TimelineRate rate)
       : subject_time_(subject_time),
         reference_time_(reference_time),
@@ -130,3 +126,5 @@ inline TimelineFunction operator*(const TimelineFunction& bc,
 }
 
 }  // namespace media
+
+#endif  // LIB_MEDIA_TIMELINE_TIMELINE_FUNCTION_H_

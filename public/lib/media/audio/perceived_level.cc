@@ -7,8 +7,9 @@
 #include <algorithm>
 #include <cmath>
 
-#include "lib/fxl/logging.h"
 #include <media/cpp/fidl.h>
+
+#include "lib/fxl/logging.h"
 
 namespace media {
 namespace {

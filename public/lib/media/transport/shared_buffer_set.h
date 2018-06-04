@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_MEDIA_TRANSPORT_SHARED_BUFFER_SET_H_
+#define LIB_MEDIA_TRANSPORT_SHARED_BUFFER_SET_H_
 
 #include <limits>
 #include <map>
@@ -68,10 +69,8 @@ class SharedBufferSet {
   // buffer id assigned to the buffer and a vmo to the buffer via
   // |buffer_id_out| and |out_vmo|. |vmo_rights| specifies the rights for
   // |out_vmo|.
-  zx_status_t CreateNewBuffer(uint64_t size,
-                              uint32_t* buffer_id_out,
-                              zx_rights_t vmo_rights,
-                              zx::vmo* out_vmo);
+  zx_status_t CreateNewBuffer(uint64_t size, uint32_t* buffer_id_out,
+                              zx_rights_t vmo_rights, zx::vmo* out_vmo);
 
   // Removes a buffer.
   void RemoveBuffer(uint32_t buffer_id);
@@ -103,3 +102,5 @@ class SharedBufferSet {
 };
 
 }  // namespace media
+
+#endif  // LIB_MEDIA_TRANSPORT_SHARED_BUFFER_SET_H_

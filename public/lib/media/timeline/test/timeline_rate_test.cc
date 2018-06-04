@@ -24,8 +24,7 @@ uint32_t gcd(uint32_t a, uint32_t b) {
 // subject_delta * common_factor / reference_delta * common_factor is reduced
 // to subject_delta / reference_delta. subject_delta and reference_delta need
 // to be relatively prime for this to work.
-void VerifyReduce(uint32_t subject_delta,
-                  uint32_t reference_delta,
+void VerifyReduce(uint32_t subject_delta, uint32_t reference_delta,
                   uint32_t common_factor) {
   // Make sure subject_delta and reference_delta are relatively prime.
   EXPECT_EQ(1u, gcd(subject_delta, reference_delta));
@@ -47,10 +46,8 @@ void VerifyReduce(uint32_t subject_delta,
 // Verifies the TimelineRate::Scale methods by scaling value by subject_delta
 // /
 // reference_delta and verifying the result.
-void VerifyScale(int64_t value,
-                 uint32_t subject_delta,
-                 uint32_t reference_delta,
-                 int64_t result) {
+void VerifyScale(int64_t value, uint32_t subject_delta,
+                 uint32_t reference_delta, int64_t result) {
   // Test the instance method.
   EXPECT_EQ(result, TimelineRate(subject_delta, reference_delta).Scale(value));
 
@@ -67,13 +64,10 @@ void VerifyScale(int64_t value,
 
 // Verifies the TimelineRate::Product methods by multiplying the given a and b
 // rates and checking the result against the expected rate.
-void VerifyProduct(uint32_t a_subject_delta,
-                   uint32_t a_reference_delta,
-                   uint32_t b_subject_delta,
-                   uint32_t b_reference_delta,
+void VerifyProduct(uint32_t a_subject_delta, uint32_t a_reference_delta,
+                   uint32_t b_subject_delta, uint32_t b_reference_delta,
                    uint32_t expected_subject_delta,
-                   uint32_t expected_reference_delta,
-                   bool exact) {
+                   uint32_t expected_reference_delta, bool exact) {
   // Test the first static method.
   uint32_t actual_subject_delta;
   uint32_t actual_reference_delta;

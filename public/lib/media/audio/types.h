@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_MEDIA_AUDIO_TYPES_H_
+#define LIB_MEDIA_AUDIO_TYPES_H_
 
 #include <cstdint>
 
@@ -47,3 +48,5 @@ MediaType CreateLpcmMediaType(AudioSampleFormat sample_format,
                               uint32_t frames_per_second);
 
 }  // namespace media
+
+#endif  // LIB_MEDIA_AUDIO_TYPES_H_

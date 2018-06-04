@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_MEDIA_TRANSPORT_FIFO_ALLOCATOR_H_
+#define LIB_MEDIA_TRANSPORT_FIFO_ALLOCATOR_H_
 
 #include <cstdint>
 #include <limits>
@@ -141,3 +142,5 @@ class FifoAllocator {
 };
 
 }  // namespace media
+
+#endif  // LIB_MEDIA_TRANSPORT_FIFO_ALLOCATOR_H_

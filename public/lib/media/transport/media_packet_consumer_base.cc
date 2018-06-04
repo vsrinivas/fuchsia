@@ -268,9 +268,7 @@ void MediaPacketConsumerBase::SetPacketPtsRate(MediaPacket* packet) {
 }
 
 MediaPacketConsumerBase::SuppliedPacket::SuppliedPacket(
-    uint64_t label,
-    MediaPacket packet,
-    void* payload,
+    uint64_t label, MediaPacket packet, void* payload,
     SupplyPacketCallback callback,
     std::shared_ptr<SuppliedPacketCounter> counter)
     : label_(label),

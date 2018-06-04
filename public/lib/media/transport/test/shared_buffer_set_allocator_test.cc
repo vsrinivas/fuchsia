@@ -28,8 +28,7 @@ void VerifyNoBufferUpdate(SharedBufferSetAllocator* under_test) {
   EXPECT_FALSE(under_test->PollForBufferUpdate(&buffer_id, &vmo));
 }
 
-void* AllocateRegion(SharedBufferSetAllocator* under_test,
-                     uint64_t size,
+void* AllocateRegion(SharedBufferSetAllocator* under_test, uint64_t size,
                      uint32_t* new_buffer_id_out) {
   // Do an allocation.
   void* region = under_test->AllocateRegion(size);
@@ -46,8 +45,7 @@ void* AllocateRegion(SharedBufferSetAllocator* under_test,
   return region;
 }
 
-void* AllocateRegion(SharedBufferSetAllocator* under_test,
-                     uint64_t size,
+void* AllocateRegion(SharedBufferSetAllocator* under_test, uint64_t size,
                      uint32_t expected_existing_buffer) {
   // Do an allocation.
   void* region = under_test->AllocateRegion(size);

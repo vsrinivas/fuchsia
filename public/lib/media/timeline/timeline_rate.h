@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_MEDIA_TIMELINE_TIMELINE_RATE_H_
+#define LIB_MEDIA_TIMELINE_TIMELINE_RATE_H_
 
 #include <stdint.h>
 
@@ -34,24 +35,19 @@ class TimelineRate {
 
   // Produces the product of the rates. If exact is true, DCHECKs on loss of
   // precision.
-  static void Product(uint32_t a_subject_delta,
-                      uint32_t a_reference_delta,
-                      uint32_t b_subject_delta,
-                      uint32_t b_reference_delta,
+  static void Product(uint32_t a_subject_delta, uint32_t a_reference_delta,
+                      uint32_t b_subject_delta, uint32_t b_reference_delta,
                       uint32_t* product_subject_delta,
-                      uint32_t* product_reference_delta,
-                      bool exact = true);
+                      uint32_t* product_reference_delta, bool exact = true);
 
   // Produces the product of the rates and the int64_t as an int64_t. Returns
   // kOverflow on overflow.
-  static int64_t Scale(int64_t value,
-                       uint32_t subject_delta,
+  static int64_t Scale(int64_t value, uint32_t subject_delta,
                        uint32_t reference_delta);
 
   // Returns the product of the rates. If exact is true, DCHECKs on loss of
   // precision.
-  static TimelineRate Product(TimelineRate a,
-                              TimelineRate b,
+  static TimelineRate Product(TimelineRate a, TimelineRate b,
                               bool exact = true) {
     uint32_t result_subject_delta;
     uint32_t result_reference_delta;
@@ -133,9 +129,7 @@ inline bool operator==(TimelineRate a, TimelineRate b) {
 }
 
 // Tests two rates for inequality.
-inline bool operator!=(TimelineRate a, TimelineRate b) {
-  return !(a == b);
-}
+inline bool operator!=(TimelineRate a, TimelineRate b) { return !(a == b); }
 
 // Returns the ratio of the two rates. DCHECKs on loss of precision.
 inline TimelineRate operator/(TimelineRate a, TimelineRate b) {
@@ -149,15 +143,11 @@ inline TimelineRate operator*(TimelineRate a, TimelineRate b) {
 
 // Returns the product of the rate and the int64_t. Returns kOverflow on
 // overflow.
-inline int64_t operator*(TimelineRate a, int64_t b) {
-  return a.Scale(b);
-}
+inline int64_t operator*(TimelineRate a, int64_t b) { return a.Scale(b); }
 
 // Returns the product of the rate and the int64_t. Returns kOverflow on
 // overflow.
-inline int64_t operator*(int64_t a, TimelineRate b) {
-  return b.Scale(a);
-}
+inline int64_t operator*(int64_t a, TimelineRate b) { return b.Scale(a); }
 
 // Returns the the int64_t divided by the rate. Returns kOverflow on
 // overflow.
@@ -166,3 +156,5 @@ inline int64_t operator/(int64_t a, TimelineRate b) {
 }
 
 }  // namespace media
+
+#endif  // LIB_MEDIA_TIMELINE_TIMELINE_RATE_H_

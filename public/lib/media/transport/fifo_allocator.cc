@@ -186,8 +186,7 @@ void FifoAllocator::insert_before(Region* region, Region* before_this) {
   }
 }
 
-FifoAllocator::Region* FifoAllocator::get_free(bool allocated,
-                                               uint64_t size,
+FifoAllocator::Region* FifoAllocator::get_free(bool allocated, uint64_t size,
                                                uint64_t offset) {
   FXL_DCHECK(size <= size_);
   FXL_DCHECK(offset <= size_ - size);

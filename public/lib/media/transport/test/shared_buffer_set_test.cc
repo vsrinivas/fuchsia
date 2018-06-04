@@ -15,8 +15,7 @@ uint32_t CreateNewBuffer(SharedBufferSet* under_test, uint64_t size) {
   uint32_t buffer_id;
   zx::vmo vmo;
   zx_status_t status = under_test->CreateNewBuffer(
-      size, &buffer_id, ZX_RIGHTS_BASIC | ZX_RIGHTS_IO | ZX_RIGHT_MAP,
-      &vmo);
+      size, &buffer_id, ZX_RIGHTS_BASIC | ZX_RIGHTS_IO | ZX_RIGHT_MAP, &vmo);
   EXPECT_EQ(ZX_OK, status);
   return buffer_id;
 }
@@ -29,8 +28,7 @@ void AddBuffer(SharedBufferSet* under_test, uint64_t size, uint32_t buffer_id) {
   EXPECT_EQ(ZX_OK, status);
 }
 
-void VerifyBuffer(const SharedBufferSet& under_test,
-                  uint32_t buffer_id,
+void VerifyBuffer(const SharedBufferSet& under_test, uint32_t buffer_id,
                   uint64_t size) {
   uint8_t* base = reinterpret_cast<uint8_t*>(
       under_test.PtrFromLocator(SharedBufferSet::Locator(buffer_id, 0)));
