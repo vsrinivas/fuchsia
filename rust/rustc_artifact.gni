@@ -220,9 +220,19 @@ template("rustc_artifact") {
 
     out_info_path = "${target_out_dir}/${target_name}_info.json"
 
+    # We want to force a recompile of the Rust world whenever Rust toolchain
+    # changes since artifacts from an older version of the toolchain may or
+    # may not be compatible with newer ones.
+    # To achieve this, we insert a synthetic argument to the script invocation.
+    cipd_version = read_file(
+            "//buildtools/${host_platform}/rust/.versions/rust.cipd_version",
+            "json")
+
     args = [
       "--rustc",
       rebase_path("$rustc_prefix/rustc"),
+      "--cipd-version",
+      cipd_version.instance_id,
       "--crate-root",
       rebase_path(root_file),
       "--cargo-toml-dir",

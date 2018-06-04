@@ -41,6 +41,9 @@ def main():
     parser.add_argument("--rustc",
                         help="Path to rustc",
                         required=True)
+    parser.add_argument("--cipd-version",
+                        help="CIPD version of Rust toolchain",
+                        required=False)
     parser.add_argument("--crate-root",
                         help="Path to source directory",
                         required=True)
