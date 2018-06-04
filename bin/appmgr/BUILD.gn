@@ -8,8 +8,6 @@ source_set("lib") {
   visibility = [ ":*" ]
 
   sources = [
-    "appmgr.cc",
-    "appmgr.h",
     "cmx_metadata.cc",
     "cmx_metadata.h",
     "component_controller_impl.cc",
@@ -64,10 +62,30 @@ source_set("lib") {
   defines = [ "_ALL_SOURCE=1" ]
 }
 
+source_set("appmgr_for_test") {
+  testonly = true
+
+  sources = [
+    "appmgr.cc",
+    "appmgr.h",
+  ]
+
+  public_deps = [
+    ":lib",
+    "//garnet/public/lib/app/cpp",
+    "//garnet/public/lib/app/fidl",
+    "//garnet/public/lib/fxl",
+    "//zircon/public/lib/fs",
+    "//zircon/public/lib/zx",
+  ]
+}
+
 executable("bin") {
   output_name = "appmgr"
 
   sources = [
+    "appmgr.cc",
+    "appmgr.h",
     "main.cc",
   ]
 
@@ -93,6 +111,7 @@ executable("tests") {
   ]
 
   deps = [
+    ":appmgr_for_test",
     ":lib",
     "//garnet/public/lib/fxl/test:gtest_main",
     "//garnet/public/lib/gtest",

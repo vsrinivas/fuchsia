@@ -58,6 +58,11 @@ Appmgr::Appmgr(async_t* async, AppmgrArgs args)
     launch_info.arguments.reset(sysmgr_args_);
     root_realm_->CreateComponent(std::move(launch_info), sysmgr_.NewRequest());
   };
+
+  if (!args.retry_sysmgr_crash) {
+    run_sysmgr();
+    return;
+  }
   async::PostTask(async, [this, &run_sysmgr] {
     run_sysmgr();
     sysmgr_.set_error_handler(run_sysmgr);

@@ -21,6 +21,7 @@ struct AppmgrArgs {
   std::string sysmgr_url;
   fidl::VectorPtr<fidl::StringPtr> sysmgr_args;
   bool run_virtual_console;
+  bool retry_sysmgr_crash;
 };
 
 class Appmgr {

@@ -20,7 +20,8 @@ TEST(Appmgr, RunUntilIdle) {
   AppmgrArgs args{.pa_directory_request = ZX_HANDLE_INVALID,
                   .sysmgr_url = "sysmgr",
                   .sysmgr_args = {},
-                  .run_virtual_console = false};
+                  .run_virtual_console = false,
+                  .retry_sysmgr_crash = false};
   Appmgr appmgr(loop.async(), std::move(args));
   EXPECT_FALSE(loop.RunUntilIdle());
 }

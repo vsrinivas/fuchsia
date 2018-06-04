@@ -7,9 +7,9 @@
 #include <zircon/process.h>
 #include <zircon/processargs.h>
 
-#include <lib/fdio/util.h>
 #include <fs/managed-vfs.h>
 #include <lib/async/default.h>
+#include <lib/fdio/util.h>
 #include "lib/app/cpp/connect.h"
 #include "lib/fidl/cpp/clone.h"
 #include "lib/fxl/functional/make_copyable.h"
@@ -44,11 +44,6 @@ App::App(Config config)
   // Launch startup applications.
   for (auto& launch_info : config.TakeApps())
     LaunchApplication(std::move(*launch_info));
-
-  // TODO(abarth): Remove this hard-coded mention of netstack once netstack is
-  // fully converted to using service namespaces.
-  LaunchNetstack();
-  LaunchWlanstack();
 }
 
 App::~App() {}

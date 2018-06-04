@@ -18,7 +18,8 @@ int main(int argc, char** argv) {
   fuchsia::sys::AppmgrArgs args{.pa_directory_request = std::move(request),
                                 .sysmgr_url = "sysmgr",
                                 .sysmgr_args = {},
-                                .run_virtual_console = true};
+                                .run_virtual_console = true,
+                                .retry_sysmgr_crash = true};
   fuchsia::sys::Appmgr appmgr(loop.async(), std::move(args));
 
   loop.Run();
