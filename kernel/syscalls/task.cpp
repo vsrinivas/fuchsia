@@ -395,29 +395,28 @@ zx_status_t sys_process_start(zx_handle_t process_handle, zx_handle_t thread_han
     // get process dispatcher
     fbl::RefPtr<ProcessDispatcher> process;
     zx_status_t status = get_process(up, process_handle, &process);
-    if (status != ZX_OK)
+    if (status != ZX_OK) {
+        up->RemoveHandle(arg_handle_value);
         return status;
+    }
 
     // get thread_dispatcher
     fbl::RefPtr<ThreadDispatcher> thread;
     status = up->GetDispatcherWithRights(thread_handle, ZX_RIGHT_WRITE, &thread);
-    if (status != ZX_OK)
+    if (status != ZX_OK) {
+        up->RemoveHandle(arg_handle_value);
         return status;
+    }
+
+    HandleOwner arg_handle = up->RemoveHandle(arg_handle_value);
 
     // test that the thread belongs to the starting process
     if (thread->process() != process.get())
         return ZX_ERR_ACCESS_DENIED;
-
-    HandleOwner arg_handle;
-    {
-        fbl::AutoLock lock(up->handle_table_lock());
-        auto handle = up->GetHandleLocked(arg_handle_value);
-        if (!handle)
-            return ZX_ERR_BAD_HANDLE;
-        if (!handle->HasRights(ZX_RIGHT_TRANSFER))
-            return ZX_ERR_ACCESS_DENIED;
-        arg_handle = up->RemoveHandleLocked(arg_handle_value);
-    }
+    if (!arg_handle)
+        return ZX_ERR_BAD_HANDLE;
+    if (!arg_handle->HasRights(ZX_RIGHT_TRANSFER))
+        return ZX_ERR_ACCESS_DENIED;
 
     auto arg_nhv = process->MapHandleToValue(arg_handle);
     process->AddHandle(fbl::move(arg_handle));
@@ -425,9 +424,8 @@ zx_status_t sys_process_start(zx_handle_t process_handle, zx_handle_t thread_han
     status = thread->Start(pc, sp, static_cast<uintptr_t>(arg_nhv),
                            arg2, /* initial_thread */ true);
     if (status != ZX_OK) {
-        // Put back the |arg_handle| into the calling process.
-        auto handle = process->RemoveHandle(arg_nhv);
-        up->AddHandle(fbl::move(handle));
+        // Remove |arg_handle| from the process that failed to start.
+        process->RemoveHandle(arg_nhv);
         return status;
     }
 

@@ -1230,6 +1230,7 @@ static zx_status_t launchpad_start(launchpad_t* lp, zx_handle_t* process_out) {
     zx_handle_close(to_child);
     if (status != ZX_OK) {
         lp_error(lp, status, "start: prepare_start() failed");
+        zx_handle_close(child_bootstrap);
     } else {
         status = zx_process_start(proc, thread, lp->entry, sp,
                                   child_bootstrap, lp->vdso_base);
@@ -1237,14 +1238,13 @@ static zx_status_t launchpad_start(launchpad_t* lp, zx_handle_t* process_out) {
             lp_error(lp, status, "start: zx_process_start() failed");
         zx_handle_close(thread);
     }
-    // process_start consumed child_bootstrap if successful.
+    // child_bootstrap has been consumed by this point.
     if (status == ZX_OK) {
         *process_out = proc;
         return ZX_OK;
     }
 
     zx_handle_close(proc);
-    zx_handle_close(child_bootstrap);
     return status;
 }
 

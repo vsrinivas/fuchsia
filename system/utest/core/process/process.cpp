@@ -62,11 +62,10 @@ bool process_start_fail() {
     ASSERT_EQ(zx_thread_create(process, "test", 4u, 0, &other_thread), ZX_OK);
 
     // Test that calling process_start() again for an existing process fails in a
-    // reasonable way. Also test that the transfered object is back into this process.
+    // reasonable way. Also test that the transfered object is closed.
     EXPECT_EQ(zx_process_start(process, other_thread, 0, 0, event2, 0), ZX_ERR_BAD_STATE);
-    EXPECT_EQ(zx_object_signal(event2, 0u, ZX_EVENT_SIGNALED), ZX_OK);
+    EXPECT_EQ(zx_object_signal(event2, 0u, ZX_EVENT_SIGNALED), ZX_ERR_BAD_HANDLE);
 
-    zx_handle_close(event2);
     zx_handle_close(process);
     zx_handle_close(thread);
     zx_handle_close(other_thread);

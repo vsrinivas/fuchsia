@@ -275,7 +275,7 @@ syscall process_create
 
 syscall process_start
     (handle: zx_handle_t, thread: zx_handle_t, entry: zx_vaddr_t,
-    stack: zx_vaddr_t, arg1: zx_handle_t handle_release, arg2: uintptr_t)
+    stack: zx_vaddr_t, arg1: zx_handle_t handle_release_always, arg2: uintptr_t)
     returns (zx_status_t);
 
 syscall process_read_memory

@@ -78,6 +78,7 @@ zx_status_t start_mini_process_etc(zx_handle_t process, zx_handle_t thread,
         // Don't map the VDSO, so the only thing the mini-process can do is busy-loop.
         // The handle sent to the process is just the caller's handle.
         status = zx_process_start(process, thread, stack_base, sp, transferred_handle, 0);
+        transferred_handle = ZX_HANDLE_INVALID;
 
     } else {
         // Complex mode ////////////////////////////////////////////////////////////
@@ -123,14 +124,15 @@ zx_status_t start_mini_process_etc(zx_handle_t process, zx_handle_t thread,
         status = write_ctx_message(chn[0], vdso_base, transferred_handle);
         if (status != ZX_OK)
             goto exit;
+        // TODO(ZX-2204): Make this write unconditional after zx_channel_write always consumes handles.
+        transferred_handle = ZX_HANDLE_INVALID;
 
         uintptr_t channel_read = (uintptr_t)get_syscall_addr(&zx_channel_read, vdso_base);
 
         status = zx_process_start(process, thread, stack_base, sp, chn[1], channel_read);
+        chn[1] = ZX_HANDLE_INVALID;
         if (status != ZX_OK)
             goto exit;
-
-        chn[1] = ZX_HANDLE_INVALID;
 
         uint32_t observed;
         status = zx_object_wait_one(chn[0],
@@ -155,6 +157,8 @@ zx_status_t start_mini_process_etc(zx_handle_t process, zx_handle_t thread,
     }
 
 exit:
+    if (transferred_handle != ZX_HANDLE_INVALID)
+        zx_handle_close(transferred_handle);
     if (stack_vmo != ZX_HANDLE_INVALID)
         zx_handle_close(stack_vmo);
     if (chn[0] != ZX_HANDLE_INVALID)
@@ -215,7 +219,7 @@ zx_status_t start_mini_process(zx_handle_t job, zx_handle_t transferred_handle,
         goto exit;
 
     status = start_mini_process_etc(*process, *thread, vmar, transferred_handle, &channel);
-    // On success the transferred_handle gets consumed.
+    transferred_handle = ZX_HANDLE_INVALID; // The transferred_handle gets consumed.
 exit:
     if (status != ZX_OK) {
         if (transferred_handle != ZX_HANDLE_INVALID)

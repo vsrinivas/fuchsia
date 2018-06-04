@@ -30,12 +30,7 @@ zx_status_t process::create(const job& job, const char* name, uint32_t name_len,
 zx_status_t process::start(const thread& thread_handle, uintptr_t entry,
                            uintptr_t stack, handle arg_handle,
                            uintptr_t arg2) const {
-    zx_handle_t arg_h = arg_handle.release();
-    zx_status_t result =
-        zx_process_start(get(), thread_handle.get(), entry, stack, arg_h, arg2);
-    if (result < 0)
-        zx_handle_close(arg_h);
-    return result;
+    return zx_process_start(get(), thread_handle.get(), entry, stack, arg_handle.release(), arg2);
 }
 
 } // namespace zx
