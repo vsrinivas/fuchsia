@@ -10,10 +10,10 @@
 #include <memory>
 #include <string>
 
+#include <fuchsia/ledger/internal/cpp/fidl.h>
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <ledger/cpp/fidl.h>
-#include <ledger_internal/cpp/fidl.h>
 #include <modular_auth/cpp/fidl.h>
 #include "lib/async/cpp/operation.h"
 #include "lib/fidl/cpp/binding.h"
@@ -39,7 +39,7 @@ class AgentRunner : AgentProvider, AgentRunnerStorage::NotificationDelegate {
  public:
   AgentRunner(fuchsia::sys::Launcher* launcher,
               MessageQueueManager* message_queue_manager,
-              ledger_internal::LedgerRepository* ledger_repository,
+              fuchsia::ledger::internal::LedgerRepository* ledger_repository,
               AgentRunnerStorage* agent_runner_storage,
               modular_auth::TokenProviderFactory* token_provider_factory,
               UserIntelligenceProvider* user_intelligence_provider,
@@ -194,7 +194,7 @@ class AgentRunner : AgentProvider, AgentRunnerStorage::NotificationDelegate {
 
   fuchsia::sys::Launcher* const launcher_;
   MessageQueueManager* const message_queue_manager_;
-  ledger_internal::LedgerRepository* const ledger_repository_;
+  fuchsia::ledger::internal::LedgerRepository* const ledger_repository_;
   // |agent_runner_storage_| must outlive this class.
   AgentRunnerStorage* const agent_runner_storage_;
   modular_auth::TokenProviderFactory* const token_provider_factory_;

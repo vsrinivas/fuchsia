@@ -22,6 +22,7 @@ executable("app") {
     "//peridot/bin/ledger/cobalt",
     "//peridot/bin/ledger/environment",
     "//peridot/bin/ledger/fidl",
+    "//peridot/bin/ledger/fidl/include",
     "//peridot/bin/ledger/p2p_sync/impl",
     "//peridot/bin/ledger/storage/impl:lib",
     "//peridot/bin/ledger/storage/public",

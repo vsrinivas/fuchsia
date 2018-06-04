@@ -7,8 +7,8 @@
 
 #include <string>
 
+#include <fuchsia/ledger/internal/cpp/fidl.h>
 #include <fuchsia/modular/cpp/fidl.h>
-#include <ledger_internal/cpp/fidl.h>
 #include "lib/fidl/cpp/interface_request.h"
 #include "lib/fidl/cpp/string.h"
 #include "lib/fxl/macros.h"
@@ -24,7 +24,7 @@ class AgentRunner;
 struct ComponentContextInfo {
   MessageQueueManager* const message_queue_manager;
   AgentRunner* const agent_runner;
-  ledger_internal::LedgerRepository* const ledger_repository;
+  fuchsia::ledger::internal::LedgerRepository* const ledger_repository;
   EntityProviderRunner* const entity_provider_runner;
 };
 
@@ -91,7 +91,7 @@ class ComponentContextImpl : public ComponentContext {
 
   MessageQueueManager* const message_queue_manager_;
   AgentRunner* const agent_runner_;
-  ledger_internal::LedgerRepository* const ledger_repository_;
+  fuchsia::ledger::internal::LedgerRepository* const ledger_repository_;
   EntityProviderRunner* const entity_provider_runner_;
 
   const std::string component_namespace_;

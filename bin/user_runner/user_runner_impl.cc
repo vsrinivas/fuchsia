@@ -8,10 +8,10 @@
 #include <string>
 
 #include <fuchsia/ledger/cloud/firebase/cpp/fidl.h>
+#include <fuchsia/ledger/internal/cpp/fidl.h>
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/ui/views_v1/cpp/fidl.h>
 #include <ledger/cpp/fidl.h>
-#include <ledger_internal/cpp/fidl.h>
 #include "lib/app/cpp/connect.h"
 #include "lib/fxl/files/directory.h"
 #include "lib/fxl/functional/make_copyable.h"
@@ -228,9 +228,10 @@ void UserRunnerImpl::InitializeLedger() {
     ledger_service_provider_.AddBinding(service_list->provider.NewRequest());
   }
 
-  ledger_app_ = std::make_unique<AppClient<ledger_internal::LedgerController>>(
-      user_scope_->GetLauncher(), std::move(ledger_config), "/data/LEDGER",
-      std::move(service_list));
+  ledger_app_ =
+      std::make_unique<AppClient<fuchsia::ledger::internal::LedgerController>>(
+          user_scope_->GetLauncher(), std::move(ledger_config), "/data/LEDGER",
+          std::move(service_list));
   ledger_app_->SetAppErrorHandler([this] {
     FXL_LOG(ERROR) << "Ledger seems to have crashed unexpectedly." << std::endl
                    << "CALLING Logout() DUE TO UNRECOVERABLE LEDGER ERROR.";
@@ -293,8 +294,10 @@ void UserRunnerImpl::InitializeLedgerDashboard() {
       user_scope_->environment(), std::string(kLedgerDashboardEnvLabel));
   AtEnd(Reset(&ledger_dashboard_scope_));
 
-  ledger_dashboard_scope_->AddService<ledger_internal::LedgerRepositoryDebug>(
-      [this](fidl::InterfaceRequest<ledger_internal::LedgerRepositoryDebug>
+  ledger_dashboard_scope_->AddService<
+      fuchsia::ledger::internal::LedgerRepositoryDebug>(
+      [this](fidl::InterfaceRequest<
+             fuchsia::ledger::internal::LedgerRepositoryDebug>
                  request) {
         if (ledger_repository_) {
           ledger_repository_->GetLedgerRepositoryDebug(

@@ -169,9 +169,11 @@ class UserRunnerImpl : modular::internal::UserRunner,
   modular::internal::UserContextPtr user_context_;
   std::unique_ptr<AppClient<Lifecycle>> cloud_provider_app_;
   fuchsia::ledger::cloud::firebase::FactoryPtr cloud_provider_factory_;
-  std::unique_ptr<AppClient<ledger_internal::LedgerController>> ledger_app_;
-  ledger_internal::LedgerRepositoryFactoryPtr ledger_repository_factory_;
-  ledger_internal::LedgerRepositoryPtr ledger_repository_;
+  std::unique_ptr<AppClient<fuchsia::ledger::internal::LedgerController>>
+      ledger_app_;
+  fuchsia::ledger::internal::LedgerRepositoryFactoryPtr
+      ledger_repository_factory_;
+  fuchsia::ledger::internal::LedgerRepositoryPtr ledger_repository_;
   std::unique_ptr<LedgerClient> ledger_client_;
   // Provides services to the Ledger
   fuchsia::sys::ServiceProviderImpl ledger_service_provider_;

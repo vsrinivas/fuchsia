@@ -15,6 +15,7 @@
 #include "lib/fxl/logging.h"
 #include "peridot/bin/ledger/app/constants.h"
 #include "peridot/bin/ledger/app/page_utils.h"
+#include "peridot/bin/ledger/fidl/include/types.h"
 #include "peridot/bin/ledger/p2p_sync/public/page_communicator.h"
 #include "peridot/bin/ledger/storage/public/page_storage.h"
 

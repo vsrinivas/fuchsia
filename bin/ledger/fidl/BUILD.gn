@@ -5,7 +5,7 @@
 import("//build/fidl/fidl.gni")
 
 fidl("fidl") {
-  name = "ledger_internal"
+  name = "fuchsia.ledger.internal"
 
   sources = [
     "debug.fidl",

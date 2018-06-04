@@ -10,7 +10,7 @@
 #include <memory>
 #include <type_traits>
 
-#include <ledger_internal/cpp/fidl.h>
+#include <fuchsia/ledger/internal/cpp/fidl.h>
 #include "lib/callback/auto_cleanable.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fxl/macros.h"

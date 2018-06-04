@@ -4,9 +4,9 @@
 
 #include <string.h>
 
+#include <fuchsia/ledger/internal/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <ledger/cpp/fidl.h>
-#include <ledger_internal/cpp/fidl.h>
 #include "gtest/gtest.h"
 #include "lib/app/cpp/startup_context.h"
 #include "lib/callback/capture.h"
@@ -18,6 +18,7 @@
 #include "lib/fxl/files/scoped_temp_dir.h"
 #include "lib/gtest/test_with_message_loop.h"
 #include "lib/svc/cpp/services.h"
+#include "peridot/bin/ledger/fidl/include/types.h"
 #include "peridot/bin/ledger/testing/cloud_provider/fake_cloud_provider.h"
 #include "peridot/bin/ledger/testing/cloud_provider/types.h"
 #include "peridot/bin/ledger/testing/e2e/e2e_test.h"

@@ -9,7 +9,7 @@
 #include <string>
 
 #include <fuchsia/ledger/cloud/cpp/fidl.h>
-#include <ledger_internal/cpp/fidl.h>
+#include <fuchsia/ledger/internal/cpp/fidl.h>
 #include <modular_auth/cpp/fidl.h>
 #include <netconnector/cpp/fidl.h>
 #include "lib/callback/auto_cleanable.h"

@@ -7,8 +7,8 @@
 
 #include <string>
 
+#include <fuchsia/ledger/internal/cpp/fidl.h>
 #include <ledger/cpp/fidl.h>
-#include <ledger_internal/cpp/fidl.h>
 #include "lib/app/cpp/startup_context.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fxl/files/scoped_temp_dir.h"
@@ -26,7 +26,7 @@ class LedgerRepositoryForTesting {
   LedgerRepositoryForTesting();
   ~LedgerRepositoryForTesting();
 
-  ledger_internal::LedgerRepository* ledger_repository();
+  fuchsia::ledger::internal::LedgerRepository* ledger_repository();
 
   // Terminates the ledger repository app.
   void Terminate(std::function<void()> done);
@@ -34,10 +34,10 @@ class LedgerRepositoryForTesting {
  private:
   std::unique_ptr<fuchsia::sys::StartupContext> startup_context_;
   files::ScopedTempDir tmp_dir_;
-  std::unique_ptr<AppClient<ledger_internal::LedgerController>>
+  std::unique_ptr<AppClient<fuchsia::ledger::internal::LedgerController>>
       ledger_app_client_;
-  ledger_internal::LedgerRepositoryFactoryPtr ledger_repo_factory_;
-  ledger_internal::LedgerRepositoryPtr ledger_repo_;
+  fuchsia::ledger::internal::LedgerRepositoryFactoryPtr ledger_repo_factory_;
+  fuchsia::ledger::internal::LedgerRepositoryPtr ledger_repo_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(LedgerRepositoryForTesting);
 };

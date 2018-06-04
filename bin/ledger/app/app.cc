@@ -8,7 +8,7 @@
 #include <memory>
 #include <utility>
 
-#include <ledger_internal/cpp/fidl.h>
+#include <fuchsia/ledger/internal/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <trace-provider/provider.h>
 #include <zircon/device/vfs.h>
@@ -24,6 +24,7 @@
 #include "peridot/bin/ledger/app/ledger_repository_factory_impl.h"
 #include "peridot/bin/ledger/cobalt/cobalt.h"
 #include "peridot/bin/ledger/environment/environment.h"
+#include "peridot/bin/ledger/fidl/include/types.h"
 #include "peridot/bin/ledger/p2p_sync/impl/user_communicator_factory_impl.h"
 
 namespace ledger {

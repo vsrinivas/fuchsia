@@ -270,7 +270,7 @@ LedgerClient::LedgerClient(::ledger::LedgerPtr ledger)
 }
 
 LedgerClient::LedgerClient(
-    ledger_internal::LedgerRepository* const ledger_repository,
+    fuchsia::ledger::internal::LedgerRepository* const ledger_repository,
     const std::string& name, std::function<void()> error)
     : ledger_name_(name) {
   ledger_repository->Duplicate(
@@ -305,7 +305,7 @@ LedgerClient::LedgerClient(
 }
 
 LedgerClient::LedgerClient(
-    ledger_internal::LedgerRepository* const ledger_repository,
+    fuchsia::ledger::internal::LedgerRepository* const ledger_repository,
     const std::string& name)
     : ledger_name_(name) {
   ledger_repository->Duplicate(

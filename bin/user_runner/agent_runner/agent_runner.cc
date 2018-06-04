@@ -28,7 +28,7 @@ constexpr zx::duration kTeardownTimeout = zx::sec(3);
 AgentRunner::AgentRunner(
     fuchsia::sys::Launcher* const launcher,
     MessageQueueManager* const message_queue_manager,
-    ledger_internal::LedgerRepository* const ledger_repository,
+    fuchsia::ledger::internal::LedgerRepository* const ledger_repository,
     AgentRunnerStorage* const agent_runner_storage,
     modular_auth::TokenProviderFactory* const token_provider_factory,
     UserIntelligenceProvider* const user_intelligence_provider,

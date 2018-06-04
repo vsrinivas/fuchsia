@@ -14,7 +14,7 @@
 #include <lib/async/cpp/task.h>
 #include <lib/fit/function.h>
 
-#include <ledger_internal/cpp/fidl.h>
+#include <fuchsia/ledger/internal/cpp/fidl.h>
 #include "lib/app/cpp/connect.h"
 #include "lib/fsl/vmo/strings.h"
 #include "lib/fxl/functional/make_copyable.h"

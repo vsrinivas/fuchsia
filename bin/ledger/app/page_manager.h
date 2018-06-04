@@ -8,7 +8,7 @@
 #include <memory>
 #include <vector>
 
-#include <ledger_internal/cpp/fidl.h>
+#include <fuchsia/ledger/internal/cpp/fidl.h>
 #include "lib/callback/auto_cleanable.h"
 #include "lib/callback/scoped_task_runner.h"
 #include "lib/fidl/cpp/binding_set.h"
@@ -20,6 +20,7 @@
 #include "peridot/bin/ledger/app/page_snapshot_impl.h"
 #include "peridot/bin/ledger/app/sync_watcher_set.h"
 #include "peridot/bin/ledger/environment/environment.h"
+#include "peridot/bin/ledger/fidl/include/types.h"
 #include "peridot/bin/ledger/fidl_helpers/bound_interface.h"
 #include "peridot/bin/ledger/storage/public/page_storage.h"
 #include "peridot/bin/ledger/storage/public/page_sync_delegate.h"

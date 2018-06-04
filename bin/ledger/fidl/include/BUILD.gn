@@ -10,6 +10,7 @@ source_set("include") {
   ]
 
   public_deps = [
+    "//peridot/bin/ledger/fidl",
     "//peridot/public/lib/cloud_provider/fidl",
   ]
 }

@@ -8,8 +8,8 @@
 #include <utility>
 #include <vector>
 
+#include <fuchsia/ledger/internal/cpp/fidl.h>
 #include <ledger/cpp/fidl.h>
-#include <ledger_internal/cpp/fidl.h>
 #include <lib/zx/time.h>
 
 #include "gtest/gtest.h"

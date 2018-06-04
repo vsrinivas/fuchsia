@@ -24,7 +24,7 @@ LedgerRepositoryForTesting::LedgerRepositoryForTesting()
 
   auto& launcher = startup_context_->launcher();
   ledger_app_client_ =
-      std::make_unique<AppClient<ledger_internal::LedgerController>>(
+      std::make_unique<AppClient<fuchsia::ledger::internal::LedgerController>>(
           launcher.get(), std::move(ledger_config));
 
   ledger_app_client_->services().ConnectToService(
@@ -33,7 +33,7 @@ LedgerRepositoryForTesting::LedgerRepositoryForTesting()
 
 LedgerRepositoryForTesting::~LedgerRepositoryForTesting() = default;
 
-ledger_internal::LedgerRepository*
+fuchsia::ledger::internal::LedgerRepository*
 LedgerRepositoryForTesting::ledger_repository() {
   if (!ledger_repo_) {
     ledger_repo_factory_->GetRepository(

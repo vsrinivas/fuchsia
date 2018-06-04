@@ -9,8 +9,8 @@
 #include <memory>
 #include <vector>
 
+#include <fuchsia/ledger/internal/cpp/fidl.h>
 #include <ledger/cpp/fidl.h>
-#include <ledger_internal/cpp/fidl.h>
 #include "lib/async/cpp/operation.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fidl/cpp/interface_ptr.h"
@@ -28,9 +28,8 @@ class PageClient;
 // their page and key prefix.
 class LedgerClient : ::ledger::ConflictResolverFactory {
  public:
-  LedgerClient(ledger_internal::LedgerRepository* ledger_repository,
-               const std::string& name,
-               std::function<void()> error);
+  LedgerClient(fuchsia::ledger::internal::LedgerRepository* ledger_repository,
+               const std::string& name, std::function<void()> error);
   LedgerClient(::ledger::LedgerPtr ledger);
   ~LedgerClient() override;
 
@@ -57,7 +56,7 @@ class LedgerClient : ::ledger::ConflictResolverFactory {
 
  private:
   // Supports GetLedgerClientPeer().
-  LedgerClient(ledger_internal::LedgerRepository* ledger_repository,
+  LedgerClient(fuchsia::ledger::internal::LedgerRepository* ledger_repository,
                const std::string& name);
 
   friend class PageClient;
@@ -84,7 +83,7 @@ class LedgerClient : ::ledger::ConflictResolverFactory {
   void ClearConflictResolver(const LedgerPageId& page_id);
 
   // Supports GetLedgerClientPeer().
-  ledger_internal::LedgerRepositoryPtr ledger_repository_;
+  fuchsia::ledger::internal::LedgerRepositoryPtr ledger_repository_;
   const std::string ledger_name_;
 
   // The ledger this is a client of.
