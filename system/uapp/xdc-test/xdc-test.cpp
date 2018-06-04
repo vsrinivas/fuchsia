@@ -13,12 +13,17 @@
 #include <fcntl.h>
 #include <stdio.h>
 #include <string.h>
+#include <sys/stat.h>
 #include <unistd.h>
 
 static const char* const DEV_XDC_DIR = "/dev/class/usb-dbc";
 
 static constexpr uint32_t BUFFER_SIZE = 10 * 1024;
 static constexpr uint32_t DEFAULT_STREAM_ID = 1;
+
+typedef struct {
+    off_t file_size;
+} file_header_t;
 
 static void usage(const char* prog_name) {
     printf("usage:\n");
@@ -60,27 +65,48 @@ static zx_status_t configure_xdc_device(const uint32_t stream_id, fbl::unique_fd
     return ZX_ERR_NOT_FOUND;
 }
 
-// Writes the contents of the specified file to the xdc device.
-static zx_status_t send_file(const char* filename, fbl::unique_fd& xdc_fd) {
-    fbl::unique_fd fd(open(filename, O_RDONLY));
-    if (!fd) {
-        printf("Failed to open \"%s\": %s\n", filename, strerror(errno));
-        return ZX_ERR_NOT_FILE;
+// Writes the file header to the xdc device and also stores it in out_file_header.
+static zx_status_t write_file_header(fbl::unique_fd& file_fd, fbl::unique_fd& xdc_fd,
+                                     file_header_t* out_file_header) {
+    struct stat s;
+    if (fstat(file_fd.get(), &s) < 0) {
+        fprintf(stderr, "could not get size of file, err: %s\n", strerror(errno));
+        return ZX_ERR_IO;
     }
+    file_header_t file_header = { .file_size = s.st_size };
+    unsigned char* buf = reinterpret_cast<unsigned char*>(&file_header);
+    ssize_t res = write(xdc_fd.get(), buf, sizeof(file_header));
+    if (sizeof(res) != sizeof(file_header)) {
+        fprintf(stderr, "Fatal write err: %s\n", strerror(errno));
+        return ZX_ERR_IO;
+    }
+    ZX_DEBUG_ASSERT(out_file_header != nullptr);
+    memcpy(out_file_header, &file_header, sizeof(file_header));
+    return ZX_OK;
+}
+
+// Reads from the src_fd and writes to the dest_fd until src_len bytes has been written,
+// or a fatal error occurs while reading or writing.
+static zx_status_t transfer(fbl::unique_fd& src_fd, off_t src_len, fbl::unique_fd& dest_fd) {
+    printf("Transferring file of size %lld bytes.\n", src_len);
 
     fbl::unique_ptr<unsigned char*[]> buf(new unsigned char*[BUFFER_SIZE]);
     ssize_t res;
-    while ((res = read(fd.get(), buf.get(), BUFFER_SIZE)) != 0) {
+    off_t total_read = 0;
+    while ((total_read < src_len) &&
+           ((res = read(src_fd.get(), buf.get(), BUFFER_SIZE)) != 0)) {
         if (res < 0) {
-            printf("Fatal read error: %d\n", errno);
+            fprintf(stderr, "Fatal read error: %s\n", strerror(errno));
             return ZX_ERR_IO;
         }
+        total_read += res;
+
         ssize_t buf_len = res;
         ssize_t total_written = 0;
         while (total_written < buf_len) {
-            ssize_t res = write(xdc_fd.get(), buf.get() + total_written, buf_len - total_written);
+            ssize_t res = write(dest_fd.get(), buf.get() + total_written, buf_len - total_written);
             if (res < 0) {
-                printf("Fatal write err: %d\n", errno);
+                fprintf(stderr, "Fatal write err: %s\n", strerror(errno));
                 return ZX_ERR_IO;
             }
             total_written += res;
@@ -128,7 +154,18 @@ int main(int argc, char** argv) {
     if (status != ZX_OK) {
         return -1;
     }
-    status = send_file(filename, xdc_fd);
+
+    int file_flags = O_RDONLY;
+    fbl::unique_fd file_fd(open(filename, file_flags));
+    if (!file_fd) {
+        fprintf(stderr, "Failed to open \"%s\", err %s\n", filename, strerror(errno));
+        return -1;
+    }
+    file_header_t file_header;
+    if (write_file_header(file_fd, xdc_fd, &file_header) != ZX_OK) {
+        return -1;
+    }
+    status = transfer(file_fd, file_header.file_size, xdc_fd);
     if (status != ZX_OK) {
         return -1;
     }
