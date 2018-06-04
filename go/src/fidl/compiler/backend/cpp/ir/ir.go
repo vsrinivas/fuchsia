@@ -113,10 +113,11 @@ type Parameter struct {
 }
 
 type Root struct {
-	PrimaryHeader string
-	Headers       []string
-	Library       types.LibraryIdentifier
-	Decls         []Decl
+	PrimaryHeader   string
+	Headers         []string
+	Library         types.LibraryIdentifier
+	LibraryReversed types.LibraryIdentifier
+	Decls           []Decl
 }
 
 func (c *Const) ForwardDeclaration(tmpls *template.Template, wr io.Writer) error {
@@ -647,6 +648,14 @@ func Compile(r types.Root) Root {
 	}
 
 	root.Library = library
+	libraryReversed := make(types.LibraryIdentifier, len(library))
+	for i, j := 0, len(library)-1; i < len(library); i, j = i+1, j-1 {
+		libraryReversed[i] = library[j]
+	}
+	for i, identifier := range library {
+		libraryReversed[len(libraryReversed)-i-1] = identifier
+	}
+	root.LibraryReversed = libraryReversed
 
 	decls := map[types.EncodedCompoundIdentifier]Decl{}
 

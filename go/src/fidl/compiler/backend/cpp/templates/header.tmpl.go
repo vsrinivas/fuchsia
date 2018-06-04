@@ -26,8 +26,8 @@ namespace {{ . }} {
 {{ end }}
 
 {{- define "GenerateHeaderPostamble" -}}
-{{- range .Library }}
-}
+{{- range .LibraryReversed }}
+}  // namespace {{ . }}
 {{- end }}
 {{ end }}
 

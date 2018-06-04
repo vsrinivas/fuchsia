@@ -22,8 +22,8 @@ namespace {{ . }} {
 {{ end }}
 
 {{- define "GenerateImplementationPostamble" -}}
-{{- range .Library }}
-}
+{{- range .LibraryReversed }}
+}  // namespace {{ . }}
 {{- end }}
 {{ end }}
 `
