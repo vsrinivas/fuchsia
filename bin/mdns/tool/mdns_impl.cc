@@ -7,9 +7,9 @@
 #include <iostream>
 #include <unordered_set>
 
+#include <fuchsia/mdns/cpp/fidl.h>
 #include <lib/async-loop/loop.h>
 #include <lib/async/default.h>
-#include <mdns/cpp/fidl.h>
 
 #include "garnet/bin/mdns/tool/formatting.h"
 #include "garnet/bin/mdns/tool/mdns_params.h"
@@ -26,7 +26,9 @@ MdnsImpl::MdnsImpl(fuchsia::sys::StartupContext* startup_context,
   FXL_DCHECK(params);
   FXL_DCHECK(quit_callback_);
 
-  mdns_service_ = startup_context->ConnectToEnvironmentService<MdnsService>();
+  mdns_service_ =
+      startup_context
+          ->ConnectToEnvironmentService<fuchsia::mdns::MdnsService>();
 
   mdns_service_.set_error_handler([this]() {
     mdns_service_.set_error_handler(nullptr);
@@ -112,11 +114,12 @@ void MdnsImpl::Resolve(const std::string& host_name, uint32_t timeout_seconds) {
 void MdnsImpl::Subscribe(const std::string& service_name) {
   std::cout << "subscribing to service " << service_name << "\n";
   std::cout << "press escape key to quit\n";
-  MdnsServiceSubscriptionPtr subscription;
+  fuchsia::mdns::MdnsServiceSubscriptionPtr subscription;
   mdns_service_->SubscribeToService(service_name, subscription.NewRequest());
   subscriber_.Init(
-      std::move(subscription), [this](const mdns::MdnsServiceInstance* from,
-                                      const mdns::MdnsServiceInstance* to) {
+      std::move(subscription),
+      [this](const fuchsia::mdns::MdnsServiceInstance* from,
+             const fuchsia::mdns::MdnsServiceInstance* to) {
         if (from == nullptr) {
           FXL_DCHECK(to != nullptr);
           std::cout << "added:\n" << indent << begl << *to << outdent << "\n";
@@ -139,7 +142,7 @@ void MdnsImpl::Publish(const std::string& service_name,
   mdns_service_->PublishServiceInstance(
       service_name, instance_name, port,
       fxl::To<fidl::VectorPtr<fidl::StringPtr>>(text),
-      [this](MdnsResult result) {
+      [this](fuchsia::mdns::MdnsResult result) {
         UpdateStatus(result);
         quit_callback_();
       });
@@ -160,7 +163,7 @@ void MdnsImpl::Respond(const std::string& service_name,
   std::cout << "responding as instance " << instance_name << " of service "
             << service_name << "\n";
   std::cout << "press escape key to quit\n";
-  fidl::InterfaceHandle<MdnsResponder> responder_handle;
+  fidl::InterfaceHandle<fuchsia::mdns::MdnsResponder> responder_handle;
 
   binding_.Bind(responder_handle.NewRequest());
   binding_.set_error_handler([this]() {
@@ -185,21 +188,21 @@ void MdnsImpl::Respond(const std::string& service_name,
   WaitForKeystroke();
 }
 
-void MdnsImpl::UpdateStatus(MdnsResult result) {
+void MdnsImpl::UpdateStatus(fuchsia::mdns::MdnsResult result) {
   switch (result) {
-    case MdnsResult::OK:
+    case fuchsia::mdns::MdnsResult::OK:
       std::cout << "instance successfully published\n";
       return;
-    case MdnsResult::INVALID_SERVICE_NAME:
+    case fuchsia::mdns::MdnsResult::INVALID_SERVICE_NAME:
       std::cout << "ERROR: service name is invalid\n";
       break;
-    case MdnsResult::INVALID_INSTANCE_NAME:
+    case fuchsia::mdns::MdnsResult::INVALID_INSTANCE_NAME:
       std::cout << "ERROR: instance name is invalid\n";
       break;
-    case MdnsResult::ALREADY_PUBLISHED_LOCALLY:
+    case fuchsia::mdns::MdnsResult::ALREADY_PUBLISHED_LOCALLY:
       std::cout << "ERROR: instance was already published by this host\n";
       break;
-    case MdnsResult::ALREADY_PUBLISHED_ON_SUBNET:
+    case fuchsia::mdns::MdnsResult::ALREADY_PUBLISHED_ON_SUBNET:
       std::cout << "ERROR: instance was already published by another "
                    "host on the subnet\n";
       break;
@@ -219,7 +222,7 @@ void MdnsImpl::GetPublication(bool query, fidl::StringPtr subtype,
 
   std::cout << "\n";
 
-  auto publication = MdnsPublication::New();
+  auto publication = fuchsia::mdns::MdnsPublication::New();
   publication->port = publication_port_;
   publication->text =
       fxl::To<fidl::VectorPtr<fidl::StringPtr>>(publication_text_);

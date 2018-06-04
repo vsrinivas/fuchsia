@@ -5,8 +5,8 @@
 #ifndef LIB_MDNS_CPP_SERVICE_SUBSCRIBER_H_
 #define LIB_MDNS_CPP_SERVICE_SUBSCRIBER_H_
 
+#include <fuchsia/mdns/cpp/fidl.h>
 #include <lib/fit/function.h>
-#include <mdns/cpp/fidl.h>
 
 #include "lib/fxl/macros.h"
 
@@ -20,8 +20,9 @@ class ServiceSubscriber {
   // describing the new service. When a service is lost, the callback is called
   // with a null |to| value and |from| value describing the lost service. When
   // a service changes, |from| is the old description, and |to| is the new one.
-  using UpdateCallback = fit::function<void(const MdnsServiceInstance* from,
-                                            const MdnsServiceInstance* to)>;
+  using UpdateCallback =
+      fit::function<void(const fuchsia::mdns::MdnsServiceInstance* from,
+                         const fuchsia::mdns::MdnsServiceInstance* to)>;
 
   ServiceSubscriber();
 
@@ -29,33 +30,35 @@ class ServiceSubscriber {
 
   // Initializes the subscriber with the specified subscription. The callback
   // is optional.
-  void Init(MdnsServiceSubscriptionPtr subscription, UpdateCallback callback);
+  void Init(fuchsia::mdns::MdnsServiceSubscriptionPtr subscription,
+            UpdateCallback callback);
 
   // Returns this subscriber to its initial state, releasing the callback and
   // returning the unique subscription. The subscription can be ignored, in
   // which case it will be closed.
-  MdnsServiceSubscriptionPtr Reset();
+  fuchsia::mdns::MdnsServiceSubscriptionPtr Reset();
 
   // Returns the current set of service instances.
-  const fidl::VectorPtr<MdnsServiceInstance>& instances() const {
+  const fidl::VectorPtr<fuchsia::mdns::MdnsServiceInstance>& instances() const {
     return instances_;
   }
 
   // Returns the subscription.
-  const MdnsServiceSubscriptionPtr& subscription() const {
+  const fuchsia::mdns::MdnsServiceSubscriptionPtr& subscription() const {
     return subscription_;
   }
 
  private:
   void HandleInstanceUpdates(
-      uint64_t version = kInitialInstances,
-      fidl::VectorPtr<MdnsServiceInstance> instances = nullptr);
+      uint64_t version = fuchsia::mdns::kInitialInstances,
+      fidl::VectorPtr<fuchsia::mdns::MdnsServiceInstance> instances = nullptr);
 
-  void IssueCallbacks(const fidl::VectorPtr<MdnsServiceInstance>& instances);
+  void IssueCallbacks(
+      const fidl::VectorPtr<fuchsia::mdns::MdnsServiceInstance>& instances);
 
-  MdnsServiceSubscriptionPtr subscription_;
+  fuchsia::mdns::MdnsServiceSubscriptionPtr subscription_;
   UpdateCallback callback_;
-  fidl::VectorPtr<MdnsServiceInstance> instances_;
+  fidl::VectorPtr<fuchsia::mdns::MdnsServiceInstance> instances_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ServiceSubscriber);
 };

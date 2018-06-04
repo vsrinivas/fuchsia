@@ -5,8 +5,9 @@
 #ifndef GARNET_BIN_MDNS_SERVICE_MDNS_FIDL_UTIL_H_
 #define GARNET_BIN_MDNS_SERVICE_MDNS_FIDL_UTIL_H_
 
-#include <mdns/cpp/fidl.h>
+#include <fuchsia/mdns/cpp/fidl.h>
 
+#include <fuchsia/mdns/cpp/fidl.h>
 #include "garnet/bin/mdns/service/mdns.h"
 #include "garnet/bin/mdns/service/socket_address.h"
 
@@ -17,13 +18,13 @@ class MdnsFidlUtil {
  public:
   static const std::string kFuchsiaServiceName;
 
-  static MdnsServiceInstancePtr CreateServiceInstance(
+  static fuchsia::mdns::MdnsServiceInstancePtr CreateServiceInstance(
       const std::string& service_name, const std::string& instance_name,
       const SocketAddress& v4_address, const SocketAddress& v6_address,
       const std::vector<std::string>& text);
 
   static void UpdateServiceInstance(
-      const MdnsServiceInstancePtr& service_instance,
+      const fuchsia::mdns::MdnsServiceInstancePtr& service_instance,
       const SocketAddress& v4_address, const SocketAddress& v6_address,
       const std::vector<std::string>& text);
 
@@ -42,7 +43,7 @@ class MdnsFidlUtil {
   static IpAddress IpAddressFrom(const fuchsia::netstack::NetAddress* addr);
 
   static std::unique_ptr<Mdns::Publication> Convert(
-      const MdnsPublicationPtr& publication_ptr);
+      const fuchsia::mdns::MdnsPublicationPtr& publication_ptr);
 };
 
 }  // namespace mdns

@@ -8,8 +8,9 @@
 #include <iomanip>
 #include <iostream>
 
+#include <fuchsia/mdns/cpp/fidl.h>
 #include <fuchsia/netstack/cpp/fidl.h>
-#include <mdns/cpp/fidl.h>
+#include <fuchsia/mdns/cpp/fidl.h>
 
 namespace mdns {
 
@@ -31,7 +32,8 @@ std::ostream& operator<<(std::ostream& os, const fidl::VectorPtr<T>& value) {
   return os;
 }
 
-std::ostream& operator<<(std::ostream& os, const MdnsServiceInstance& value);
+std::ostream& operator<<(std::ostream& os,
+                         const fuchsia::mdns::MdnsServiceInstance& value);
 std::ostream& operator<<(std::ostream& os,
                          const fuchsia::netstack::SocketAddress& value);
 

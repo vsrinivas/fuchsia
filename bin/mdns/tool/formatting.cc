@@ -35,7 +35,8 @@ std::ostream& outdent(std::ostream& os) {
   return os;
 }
 
-std::ostream& operator<<(std::ostream& os, const MdnsServiceInstance& value) {
+std::ostream& operator<<(std::ostream& os,
+                         const fuchsia::mdns::MdnsServiceInstance& value) {
   os << value.service_name << " " << value.instance_name;
   os << indent;
 

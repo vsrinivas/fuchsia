@@ -12,21 +12,23 @@ ServiceSubscriber::ServiceSubscriber() {}
 
 ServiceSubscriber::~ServiceSubscriber() { Reset(); }
 
-void ServiceSubscriber::Init(MdnsServiceSubscriptionPtr subscription,
-                             UpdateCallback callback) {
+void ServiceSubscriber::Init(
+    fuchsia::mdns::MdnsServiceSubscriptionPtr subscription,
+    UpdateCallback callback) {
   subscription_ = std::move(subscription);
   callback_ = std::move(callback);
   HandleInstanceUpdates();
 }
 
-MdnsServiceSubscriptionPtr ServiceSubscriber::Reset() {
+fuchsia::mdns::MdnsServiceSubscriptionPtr ServiceSubscriber::Reset() {
   callback_ = nullptr;
   instances_.reset();
   return std::move(subscription_);
 }
 
 void ServiceSubscriber::HandleInstanceUpdates(
-    uint64_t version, fidl::VectorPtr<MdnsServiceInstance> instances) {
+    uint64_t version,
+    fidl::VectorPtr<fuchsia::mdns::MdnsServiceInstance> instances) {
   FXL_DCHECK(subscription_);
 
   if (instances) {
@@ -39,13 +41,14 @@ void ServiceSubscriber::HandleInstanceUpdates(
 
   subscription_->GetInstances(
       version,
-      [this](uint64_t version, fidl::VectorPtr<MdnsServiceInstance> instances) {
+      [this](uint64_t version,
+             fidl::VectorPtr<fuchsia::mdns::MdnsServiceInstance> instances) {
         HandleInstanceUpdates(version, std::move(instances));
       });
 }
 
 void ServiceSubscriber::IssueCallbacks(
-    const fidl::VectorPtr<MdnsServiceInstance>& instances) {
+    const fidl::VectorPtr<fuchsia::mdns::MdnsServiceInstance>& instances) {
   // For each instance in the update, see if it represents a new instance or
   // a change with respect to an old instance.
   for (auto& new_instance : *instances) {

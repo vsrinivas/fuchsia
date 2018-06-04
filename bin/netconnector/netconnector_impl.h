@@ -10,9 +10,9 @@
 #include <unordered_map>
 #include <vector>
 
+#include <fuchsia/mdns/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/fit/function.h>
-#include <mdns/cpp/fidl.h>
 #include <netconnector/cpp/fidl.h>
 
 #include "garnet/bin/media/util/fidl_publisher.h"
@@ -96,7 +96,7 @@ class NetConnectorImpl : public NetConnector {
   std::unordered_map<ServiceAgent*, std::unique_ptr<ServiceAgent>>
       service_agents_;
 
-  mdns::MdnsServicePtr mdns_service_;
+  fuchsia::mdns::MdnsServicePtr mdns_service_;
   mdns::ServiceSubscriber mdns_subscriber_;
 
   media::FidlPublisher<GetKnownDeviceNamesCallback> device_names_publisher_;

@@ -14,11 +14,12 @@ namespace mdns {
 const std::string MdnsFidlUtil::kFuchsiaServiceName = "_fuchsia._tcp.";
 
 // static
-MdnsServiceInstancePtr MdnsFidlUtil::CreateServiceInstance(
+fuchsia::mdns::MdnsServiceInstancePtr MdnsFidlUtil::CreateServiceInstance(
     const std::string& service_name, const std::string& instance_name,
     const SocketAddress& v4_address, const SocketAddress& v6_address,
     const std::vector<std::string>& text) {
-  MdnsServiceInstancePtr service_instance = MdnsServiceInstance::New();
+  fuchsia::mdns::MdnsServiceInstancePtr service_instance =
+      fuchsia::mdns::MdnsServiceInstance::New();
 
   service_instance->service_name = service_name;
   service_instance->instance_name = instance_name;
@@ -37,7 +38,7 @@ MdnsServiceInstancePtr MdnsFidlUtil::CreateServiceInstance(
 
 // static
 void MdnsFidlUtil::UpdateServiceInstance(
-    const MdnsServiceInstancePtr& service_instance,
+    const fuchsia::mdns::MdnsServiceInstancePtr& service_instance,
     const SocketAddress& v4_address, const SocketAddress& v6_address,
     const std::vector<std::string>& text) {
   service_instance->text = fxl::To<fidl::VectorPtr<fidl::StringPtr>>(text);
@@ -159,7 +160,7 @@ IpAddress MdnsFidlUtil::IpAddressFrom(
 
 // static
 std::unique_ptr<Mdns::Publication> MdnsFidlUtil::Convert(
-    const MdnsPublicationPtr& publication_ptr) {
+    const fuchsia::mdns::MdnsPublicationPtr& publication_ptr) {
   if (!publication_ptr) {
     return nullptr;
   }

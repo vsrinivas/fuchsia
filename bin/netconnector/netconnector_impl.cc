@@ -43,8 +43,9 @@ NetConnectorImpl::NetConnectorImpl(NetConnectorParams* params,
     // Start the listener.
     NetConnectorSyncPtr net_connector;
     startup_context_->ConnectToEnvironmentService(net_connector.NewRequest());
-    mdns::MdnsServicePtr mdns_service =
-        startup_context_->ConnectToEnvironmentService<mdns::MdnsService>();
+    fuchsia::mdns::MdnsServicePtr mdns_service =
+        startup_context_
+            ->ConnectToEnvironmentService<fuchsia::mdns::MdnsService>();
 
     if (params_->mdns_verbose()) {
       mdns_service->SetVerbose(true);
@@ -110,29 +111,31 @@ void NetConnectorImpl::StartListener() {
   });
 
   mdns_service_ =
-      startup_context_->ConnectToEnvironmentService<mdns::MdnsService>();
+      startup_context_
+          ->ConnectToEnvironmentService<fuchsia::mdns::MdnsService>();
 
   host_name_ = GetHostName();
 
   mdns_service_->PublishServiceInstance(
       kFuchsiaServiceName, host_name_, kPort.as_uint16_t(),
-      fidl::VectorPtr<fidl::StringPtr>(), [this](mdns::MdnsResult result) {
+      fidl::VectorPtr<fidl::StringPtr>(),
+      [this](fuchsia::mdns::MdnsResult result) {
         switch (result) {
-          case mdns::MdnsResult::OK:
+          case fuchsia::mdns::MdnsResult::OK:
             break;
-          case mdns::MdnsResult::INVALID_SERVICE_NAME:
+          case fuchsia::mdns::MdnsResult::INVALID_SERVICE_NAME:
             FXL_LOG(ERROR) << "mDNS service rejected service name "
                            << kFuchsiaServiceName << ".";
             break;
-          case mdns::MdnsResult::INVALID_INSTANCE_NAME:
+          case fuchsia::mdns::MdnsResult::INVALID_INSTANCE_NAME:
             FXL_LOG(ERROR) << "mDNS service rejected instance name "
                            << host_name_ << ".";
             break;
-          case mdns::MdnsResult::ALREADY_PUBLISHED_LOCALLY:
+          case fuchsia::mdns::MdnsResult::ALREADY_PUBLISHED_LOCALLY:
             FXL_LOG(ERROR) << "mDNS service is already publishing a "
                            << kFuchsiaServiceName << " service instance.";
             break;
-          case mdns::MdnsResult::ALREADY_PUBLISHED_ON_SUBNET:
+          case fuchsia::mdns::MdnsResult::ALREADY_PUBLISHED_ON_SUBNET:
             FXL_LOG(ERROR) << "Another device is already publishing a "
                            << kFuchsiaServiceName
                            << " service instance for this host's name ("
@@ -141,13 +144,14 @@ void NetConnectorImpl::StartListener() {
         }
       });
 
-  mdns::MdnsServiceSubscriptionPtr subscription;
+  fuchsia::mdns::MdnsServiceSubscriptionPtr subscription;
   mdns_service_->SubscribeToService(kFuchsiaServiceName,
                                     subscription.NewRequest());
 
   mdns_subscriber_.Init(
-      std::move(subscription), [this](const mdns::MdnsServiceInstance* from,
-                                      const mdns::MdnsServiceInstance* to) {
+      std::move(subscription),
+      [this](const fuchsia::mdns::MdnsServiceInstance* from,
+             const fuchsia::mdns::MdnsServiceInstance* to) {
         if (from == nullptr && to != nullptr) {
           if (to->v4_address) {
             std::cerr << "netconnector: Device '" << to->instance_name

@@ -5,7 +5,7 @@
 import("//build/fidl/fidl.gni")
 
 fidl("fidl") {
-  name = "mdns"
+  name = "fuchsia.mdns"
   cpp_legacy_callbacks = true
 
   sources = [

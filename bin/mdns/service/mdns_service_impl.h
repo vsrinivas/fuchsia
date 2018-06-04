@@ -7,8 +7,8 @@
 
 #include <unordered_map>
 
+#include <fuchsia/mdns/cpp/fidl.h>
 #include <lib/fit/function.h>
-#include <mdns/cpp/fidl.h>
 
 #include "garnet/bin/mdns/service/mdns.h"
 #include "garnet/bin/media/util/fidl_publisher.h"
@@ -18,7 +18,7 @@
 
 namespace mdns {
 
-class MdnsServiceImpl : public MdnsService {
+class MdnsServiceImpl : public fuchsia::mdns::MdnsService {
  public:
   MdnsServiceImpl(fuchsia::sys::StartupContext* startup_context);
 
@@ -28,9 +28,10 @@ class MdnsServiceImpl : public MdnsService {
   void ResolveHostName(fidl::StringPtr host_name, uint32_t timeout_ms,
                        ResolveHostNameCallback callback) override;
 
-  void SubscribeToService(fidl::StringPtr service_name,
-                          fidl::InterfaceRequest<MdnsServiceSubscription>
-                              subscription_request) override;
+  void SubscribeToService(
+      fidl::StringPtr service_name,
+      fidl::InterfaceRequest<fuchsia::mdns::MdnsServiceSubscription>
+          subscription_request) override;
 
   void PublishServiceInstance(fidl::StringPtr service_name,
                               fidl::StringPtr instance_name, uint16_t port,
@@ -40,9 +41,9 @@ class MdnsServiceImpl : public MdnsService {
   void UnpublishServiceInstance(fidl::StringPtr service_name,
                                 fidl::StringPtr instance_name) override;
 
-  void AddResponder(
-      fidl::StringPtr service_name, fidl::StringPtr instance_name,
-      fidl::InterfaceHandle<MdnsResponder> responder_handle) override;
+  void AddResponder(fidl::StringPtr service_name, fidl::StringPtr instance_name,
+                    fidl::InterfaceHandle<fuchsia::mdns::MdnsResponder>
+                        responder_handle) override;
 
   void SetSubtypes(fidl::StringPtr service_name, fidl::StringPtr instance_name,
                    fidl::VectorPtr<fidl::StringPtr> subtypes) override;
@@ -53,10 +54,12 @@ class MdnsServiceImpl : public MdnsService {
   void SetVerbose(bool value) override;
 
  private:
-  class Subscriber : public Mdns::Subscriber, public MdnsServiceSubscription {
+  class Subscriber : public Mdns::Subscriber,
+                     public fuchsia::mdns::MdnsServiceSubscription {
    public:
-    Subscriber(fidl::InterfaceRequest<MdnsServiceSubscription> request,
-               fit::closure deleter);
+    Subscriber(
+        fidl::InterfaceRequest<fuchsia::mdns::MdnsServiceSubscription> request,
+        fit::closure deleter);
 
     ~Subscriber() override;
 
@@ -83,9 +86,10 @@ class MdnsServiceImpl : public MdnsService {
                       GetInstancesCallback callback) override;
 
    private:
-    fidl::Binding<MdnsServiceSubscription> binding_;
+    fidl::Binding<fuchsia::mdns::MdnsServiceSubscription> binding_;
     media::FidlPublisher<GetInstancesCallback> instances_publisher_;
-    std::unordered_map<std::string, MdnsServiceInstancePtr> instances_by_name_;
+    std::unordered_map<std::string, fuchsia::mdns::MdnsServiceInstancePtr>
+        instances_by_name_;
 
     FXL_DISALLOW_COPY_AND_ASSIGN(Subscriber);
   };
@@ -114,7 +118,8 @@ class MdnsServiceImpl : public MdnsService {
   // Publisher for AddResponder.
   class ResponderPublisher : public Mdns::Publisher {
    public:
-    ResponderPublisher(MdnsResponderPtr responder, fit::closure deleter);
+    ResponderPublisher(fuchsia::mdns::MdnsResponderPtr responder,
+                       fit::closure deleter);
 
     // Mdns::Publisher implementation.
     void ReportSuccess(bool success) override;
@@ -123,7 +128,7 @@ class MdnsServiceImpl : public MdnsService {
                         fit::function<void(std::unique_ptr<Mdns::Publication>)>
                             callback) override;
 
-    MdnsResponderPtr responder_;
+    fuchsia::mdns::MdnsResponderPtr responder_;
 
     FXL_DISALLOW_COPY_AND_ASSIGN(ResponderPublisher);
   };
@@ -132,7 +137,7 @@ class MdnsServiceImpl : public MdnsService {
   void Start();
 
   fuchsia::sys::StartupContext* startup_context_;
-  fidl::BindingSet<MdnsService> bindings_;
+  fidl::BindingSet<fuchsia::mdns::MdnsService> bindings_;
   mdns::Mdns mdns_;
   size_t next_subscriber_id_ = 0;
   std::unordered_map<size_t, std::unique_ptr<Subscriber>> subscribers_by_id_;
