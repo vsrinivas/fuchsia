@@ -6,6 +6,7 @@
 #define PERIDOT_BIN_LEDGER_FIDL_INCLUDE_TYPES_H_
 
 #include <fuchsia/ledger/cloud/cpp/fidl.h>
+#include <fuchsia/ledger/cpp/fidl.h>
 #include <fuchsia/ledger/internal/cpp/fidl.h>
 
 // More convenient aliases for FIDL types.
@@ -24,6 +25,48 @@ using PageCloudWatcher = fuchsia::ledger::cloud::PageCloudWatcher;
 using PageCloudWatcherPtr = fuchsia::ledger::cloud::PageCloudWatcherPtr;
 using Status = fuchsia::ledger::cloud::Status;
 }  // namespace cloud_provider
+
+namespace ledger {
+using BytesOrReference = fuchsia::ledger::BytesOrReference;
+using BytesOrReferencePtr = fuchsia::ledger::BytesOrReferencePtr;
+using ConflictResolutionWaitStatus =
+    fuchsia::ledger::ConflictResolutionWaitStatus;
+using ConflictResolver = fuchsia::ledger::ConflictResolver;
+using ConflictResolverFactory = fuchsia::ledger::ConflictResolverFactory;
+using ConflictResolverFactoryPtr = fuchsia::ledger::ConflictResolverFactoryPtr;
+using ConflictResolverPtr = fuchsia::ledger::ConflictResolverPtr;
+using DiffEntry = fuchsia::ledger::DiffEntry;
+using Entry = fuchsia::ledger::Entry;
+using InlinedEntry = fuchsia::ledger::InlinedEntry;
+using Ledger = fuchsia::ledger::Ledger;
+using LedgerPtr = fuchsia::ledger::LedgerPtr;
+using MergePolicy = fuchsia::ledger::MergePolicy;
+using MergeResultProvider = fuchsia::ledger::MergeResultProvider;
+using MergeResultProviderPtr = fuchsia::ledger::MergeResultProviderPtr;
+using MergedValue = fuchsia::ledger::MergedValue;
+using Page = fuchsia::ledger::Page;
+using PageChange = fuchsia::ledger::PageChange;
+using PageChangePtr = fuchsia::ledger::PageChangePtr;
+using PageId = fuchsia::ledger::PageId;
+using PageIdPtr = fuchsia::ledger::PageIdPtr;
+using PagePtr = fuchsia::ledger::PagePtr;
+using PageSnapshot = fuchsia::ledger::PageSnapshot;
+using PageSnapshotPtr = fuchsia::ledger::PageSnapshotPtr;
+using PageWatcher = fuchsia::ledger::PageWatcher;
+using PageWatcherPtr = fuchsia::ledger::PageWatcherPtr;
+using Priority = fuchsia::ledger::Priority;
+using Reference = fuchsia::ledger::Reference;
+using ReferencePtr = fuchsia::ledger::ReferencePtr;
+using ResultState = fuchsia::ledger::ResultState;
+using Status = fuchsia::ledger::Status;
+using SyncState = fuchsia::ledger::SyncState;
+using SyncWatcher = fuchsia::ledger::SyncWatcher;
+using SyncWatcherPtr = fuchsia::ledger::SyncWatcherPtr;
+using Token = fuchsia::ledger::Token;
+using Value = fuchsia::ledger::Value;
+using ValuePtr = fuchsia::ledger::ValuePtr;
+using ValueSource = fuchsia::ledger::ValueSource;
+}  // namespace ledger
 
 namespace ledger_internal {
 using Commit = fuchsia::ledger::internal::Commit;

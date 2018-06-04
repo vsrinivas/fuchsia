@@ -5,12 +5,13 @@
 #ifndef PERIDOT_BIN_LEDGER_TESTS_BENCHMARK_GET_PAGE_GET_PAGE_H_
 #define PERIDOT_BIN_LEDGER_TESTS_BENCHMARK_GET_PAGE_GET_PAGE_H_
 
-#include <ledger/cpp/fidl.h>
+#include <vector>
+
 #include <lib/async-loop/cpp/loop.h>
 
-#include <vector>
 #include "lib/app/cpp/startup_context.h"
 #include "lib/fxl/files/scoped_temp_dir.h"
+#include "peridot/bin/ledger/fidl/include/types.h"
 #include "peridot/bin/ledger/testing/data_generator.h"
 
 namespace test {

@@ -7,7 +7,7 @@
 #include <functional>
 #include <utility>
 
-#include <ledger/cpp/fidl.h>
+#include <fuchsia/ledger/cpp/fidl.h>
 #include "lib/async/cpp/operation.h"
 #include "lib/fsl/vmo/strings.h"
 #include "peridot/lib/fidl/array_to_string.h"
@@ -51,9 +51,10 @@ constexpr XdrFilterType<AgentRunnerStorage::TriggerInfo> XdrTriggerInfo[] = {
 
 class AgentRunnerStorageImpl::InitializeCall : public Operation<> {
  public:
-  InitializeCall(NotificationDelegate* const delegate,
-                 std::shared_ptr<::ledger::PageSnapshotPtr> const snapshot,
-                 std::function<void()> done)
+  InitializeCall(
+      NotificationDelegate* const delegate,
+      std::shared_ptr<fuchsia::ledger::PageSnapshotPtr> const snapshot,
+      std::function<void()> done)
       : Operation("AgentRunnerStorageImpl::InitializeCall", std::move(done)),
         delegate_(delegate),
         snapshot_(snapshot) {}
@@ -63,8 +64,8 @@ class AgentRunnerStorageImpl::InitializeCall : public Operation<> {
     FlowToken flow{this};
 
     GetEntries((*snapshot_).get(), &entries_,
-               [this, flow](::ledger::Status status) {
-                 if (status != ::ledger::Status::OK) {
+               [this, flow](fuchsia::ledger::Status status) {
+                 if (status != fuchsia::ledger::Status::OK) {
                    FXL_LOG(ERROR) << trace_name() << " "
                                   << "GetEntries() " << status;
                    return;
@@ -99,8 +100,8 @@ class AgentRunnerStorageImpl::InitializeCall : public Operation<> {
   }
 
   NotificationDelegate* const delegate_;
-  std::shared_ptr<::ledger::PageSnapshotPtr> snapshot_;
-  std::vector<::ledger::Entry> entries_;
+  std::shared_ptr<fuchsia::ledger::PageSnapshotPtr> snapshot_;
+  std::vector<fuchsia::ledger::Entry> entries_;
   FXL_DISALLOW_COPY_AND_ASSIGN(InitializeCall);
 };
 
@@ -122,9 +123,9 @@ class AgentRunnerStorageImpl::WriteTaskCall : public Operation<bool> {
     XdrWrite(&value, &data_, XdrTriggerInfo);
 
     storage_->page()->PutWithPriority(
-        to_array(key), to_array(value), ::ledger::Priority::EAGER,
-        [this, key, flow](::ledger::Status status) {
-          if (status != ::ledger::Status::OK) {
+        to_array(key), to_array(value), fuchsia::ledger::Priority::EAGER,
+        [this, key, flow](fuchsia::ledger::Status status) {
+          if (status != fuchsia::ledger::Status::OK) {
             FXL_LOG(ERROR) << trace_name() << " " << key << " "
                            << "Page.PutWithPriority() " << status;
             return;
@@ -157,12 +158,12 @@ class AgentRunnerStorageImpl::DeleteTaskCall : public Operation<bool> {
 
     std::string key = MakeTriggerKey(agent_url_, task_id_);
     storage_->page()->Delete(
-        to_array(key), [this, key, flow](::ledger::Status status) {
-          // ::ledger::Status::INVALID_TOKEN is okay because we might have
-          // gotten a request to delete a token which does not exist. This is
-          // okay.
-          if (status != ::ledger::Status::OK &&
-              status != ::ledger::Status::INVALID_TOKEN) {
+        to_array(key), [this, key, flow](fuchsia::ledger::Status status) {
+          // fuchsia::ledger::Status::INVALID_TOKEN is okay because we might
+          // have gotten a request to delete a token which does not exist. This
+          // is okay.
+          if (status != fuchsia::ledger::Status::OK &&
+              status != fuchsia::ledger::Status::INVALID_TOKEN) {
             FXL_LOG(ERROR) << trace_name() << " " << key << " "
                            << "Page.Delete() " << status;
             return;
@@ -180,7 +181,7 @@ class AgentRunnerStorageImpl::DeleteTaskCall : public Operation<bool> {
 };
 
 AgentRunnerStorageImpl::AgentRunnerStorageImpl(LedgerClient* ledger_client,
-                                               ::ledger::PageId page_id)
+                                               fuchsia::ledger::PageId page_id)
     : PageClient("AgentRunnerStorageImpl", ledger_client, std::move(page_id)),
       delegate_(nullptr) {}
 

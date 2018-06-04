@@ -10,5 +10,5 @@ struct StoryData {
 
   // Page id on the user's ledger which stores story information. It
   // might be NULL until the story is being started.
-  ledger.PageId? story_page_id;
+  fuchsia.ledger.PageId? story_page_id;
 };

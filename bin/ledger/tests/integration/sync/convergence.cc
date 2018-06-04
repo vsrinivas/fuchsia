@@ -7,7 +7,6 @@
 #include <lib/zx/time.h>
 #include <trace/event.h>
 
-#include <ledger/cpp/fidl.h>
 #include "lib/callback/auto_cleanable.h"
 #include "lib/callback/capture.h"
 #include "lib/callback/waiter.h"

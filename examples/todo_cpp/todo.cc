@@ -49,38 +49,40 @@ Key MakeKey() {
   return ToArray(fxl::StringPrintf("%120ld-%u", time(nullptr), rand()));
 }
 
-std::function<void(ledger::Status)> HandleResponse(fit::closure quit_callback,
-                                                   std::string description) {
-  return [description, &quit_callback](ledger::Status status) {
-    if (status != ledger::Status::OK) {
+std::function<void(fuchsia::ledger::Status)> HandleResponse(
+    fit::closure quit_callback, std::string description) {
+  return [description, &quit_callback](fuchsia::ledger::Status status) {
+    if (status != fuchsia::ledger::Status::OK) {
       FXL_LOG(ERROR) << description << " failed";
       quit_callback();
     }
   };
 }
 
-void GetEntries(
-    ledger::PageSnapshotPtr snapshot, std::vector<ledger::Entry> entries,
-    std::unique_ptr<ledger::Token> token,
-    std::function<void(ledger::Status, std::vector<ledger::Entry>)> callback) {
-  ledger::PageSnapshot* snapshot_ptr = snapshot.get();
+void GetEntries(fuchsia::ledger::PageSnapshotPtr snapshot,
+                std::vector<fuchsia::ledger::Entry> entries,
+                std::unique_ptr<fuchsia::ledger::Token> token,
+                std::function<void(fuchsia::ledger::Status,
+                                   std::vector<fuchsia::ledger::Entry>)>
+                    callback) {
+  fuchsia::ledger::PageSnapshot* snapshot_ptr = snapshot.get();
   snapshot_ptr->GetEntries(
       fidl::VectorPtr<uint8_t>::New(0), std::move(token),
       fxl::MakeCopyable(
           [snapshot = std::move(snapshot), entries = std::move(entries),
-           callback = std::move(callback)](ledger::Status status,
+           callback = std::move(callback)](fuchsia::ledger::Status status,
                                            auto new_entries,
                                            auto next_token) mutable {
-            if (status != ledger::Status::OK &&
-                status != ledger::Status::PARTIAL_RESULT) {
+            if (status != fuchsia::ledger::Status::OK &&
+                status != fuchsia::ledger::Status::PARTIAL_RESULT) {
               callback(status, {});
               return;
             }
             for (size_t i = 0; i < new_entries->size(); ++i) {
               entries.push_back(std::move(new_entries->at(i)));
             }
-            if (status == ledger::Status::OK) {
-              callback(ledger::Status::OK, std::move(entries));
+            if (status == fuchsia::ledger::Status::OK) {
+              callback(fuchsia::ledger::Status::OK, std::move(entries));
               return;
             }
             GetEntries(std::move(snapshot), std::move(entries),
@@ -88,9 +90,10 @@ void GetEntries(
           }));
 }
 
-void GetEntries(
-    ledger::PageSnapshotPtr snapshot,
-    std::function<void(ledger::Status, std::vector<ledger::Entry>)> callback) {
+void GetEntries(fuchsia::ledger::PageSnapshotPtr snapshot,
+                std::function<void(fuchsia::ledger::Status,
+                                   std::vector<fuchsia::ledger::Entry>)>
+                    callback) {
   GetEntries(std::move(snapshot), {}, nullptr, std::move(callback));
 }
 
@@ -113,7 +116,7 @@ TodoApp::TodoApp(async::Loop* loop)
       page_.NewRequest(),
       HandleResponse([this] { loop_->Quit(); }, "GetRootPage"));
 
-  ledger::PageSnapshotPtr snapshot;
+  fuchsia::ledger::PageSnapshotPtr snapshot;
   page_->GetSnapshot(snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
                      page_watcher_binding_.NewBinding(),
                      HandleResponse([this] { loop_->Quit(); }, "Watch"));
@@ -124,24 +127,25 @@ TodoApp::TodoApp(async::Loop* loop)
 
 void TodoApp::Terminate() { loop_->Quit(); }
 
-void TodoApp::OnChange(ledger::PageChange /*page_change*/,
-                       ledger::ResultState result_state,
+void TodoApp::OnChange(fuchsia::ledger::PageChange /*page_change*/,
+                       fuchsia::ledger::ResultState result_state,
                        OnChangeCallback callback) {
-  if (result_state != ledger::ResultState::PARTIAL_STARTED &&
-      result_state != ledger::ResultState::COMPLETED) {
+  if (result_state != fuchsia::ledger::ResultState::PARTIAL_STARTED &&
+      result_state != fuchsia::ledger::ResultState::COMPLETED) {
     // Only request the entries list once, on the first OnChange call.
     callback(nullptr);
     return;
   }
 
-  ledger::PageSnapshotPtr snapshot;
+  fuchsia::ledger::PageSnapshotPtr snapshot;
   callback(snapshot.NewRequest());
   List(std::move(snapshot));
 }
 
-void TodoApp::List(ledger::PageSnapshotPtr snapshot) {
-  GetEntries(std::move(snapshot), [this](ledger::Status status, auto entries) {
-    if (status != ledger::Status::OK) {
+void TodoApp::List(fuchsia::ledger::PageSnapshotPtr snapshot) {
+  GetEntries(std::move(snapshot), [this](fuchsia::ledger::Status status,
+                                         auto entries) {
+    if (status != fuchsia::ledger::Status::OK) {
       FXL_LOG(ERROR) << "GetEntries failed";
       loop_->Quit();
       return;
@@ -157,17 +161,16 @@ void TodoApp::List(ledger::PageSnapshotPtr snapshot) {
 }
 
 void TodoApp::GetKeys(std::function<void(fidl::VectorPtr<Key>)> callback) {
-  ledger::PageSnapshotPtr snapshot;
+  fuchsia::ledger::PageSnapshotPtr snapshot;
   page_->GetSnapshot(snapshot.NewRequest(), nullptr, nullptr,
                      HandleResponse([this] { loop_->Quit(); }, "GetSnapshot"));
 
-  ledger::PageSnapshot* snapshot_ptr = snapshot.get();
+  fuchsia::ledger::PageSnapshot* snapshot_ptr = snapshot.get();
   snapshot_ptr->GetKeys(
       fidl::VectorPtr<uint8_t>::New(0), nullptr,
       fxl::MakeCopyable([snapshot = std::move(snapshot), callback](
-                            ledger::Status status, auto keys, auto next_token) {
-        callback(std::move(keys));
-      }));
+                            fuchsia::ledger::Status status, auto keys,
+                            auto next_token) { callback(std::move(keys)); }));
 }
 
 void TodoApp::AddNew() {

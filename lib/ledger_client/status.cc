@@ -6,43 +6,43 @@
 
 #include <string>
 
-#include <ledger/cpp/fidl.h>
+#include <fuchsia/ledger/cpp/fidl.h>
 #include "lib/fxl/logging.h"
 
 namespace fuchsia {
 namespace modular {
 
-std::string LedgerStatusToString(::ledger::Status status) {
+std::string LedgerStatusToString(fuchsia::ledger::Status status) {
   switch (status) {
-    case ::ledger::Status::OK:
+    case fuchsia::ledger::Status::OK:
       return "OK";
-    case ::ledger::Status::PARTIAL_RESULT:
+    case fuchsia::ledger::Status::PARTIAL_RESULT:
       return "PARTIAL_RESULT";
-    case ::ledger::Status::INVALID_TOKEN:
+    case fuchsia::ledger::Status::INVALID_TOKEN:
       return "INVALID_TOKEN";
-    case ::ledger::Status::INVALID_ARGUMENT:
+    case fuchsia::ledger::Status::INVALID_ARGUMENT:
       return "INVALID_ARGUMENT";
-    case ::ledger::Status::PAGE_NOT_FOUND:
+    case fuchsia::ledger::Status::PAGE_NOT_FOUND:
       return "PAGE_NOT_FOUND";
-    case ::ledger::Status::KEY_NOT_FOUND:
+    case fuchsia::ledger::Status::KEY_NOT_FOUND:
       return "KEY_NOT_FOUND";
-    case ::ledger::Status::REFERENCE_NOT_FOUND:
+    case fuchsia::ledger::Status::REFERENCE_NOT_FOUND:
       return "REFERENCE_NOT_FOUND";
-    case ::ledger::Status::NEEDS_FETCH:
+    case fuchsia::ledger::Status::NEEDS_FETCH:
       return "NEEDS_FETCH";
-    case ::ledger::Status::IO_ERROR:
+    case fuchsia::ledger::Status::IO_ERROR:
       return "IO_ERROR";
-    case ::ledger::Status::NETWORK_ERROR:
+    case fuchsia::ledger::Status::NETWORK_ERROR:
       return "NETWORK_ERROR";
-    case ::ledger::Status::TRANSACTION_ALREADY_IN_PROGRESS:
+    case fuchsia::ledger::Status::TRANSACTION_ALREADY_IN_PROGRESS:
       return "TRANSACTION_ALREADY_IN_PROGRESS";
-    case ::ledger::Status::NO_TRANSACTION_IN_PROGRESS:
+    case fuchsia::ledger::Status::NO_TRANSACTION_IN_PROGRESS:
       return "NO_TRANSACTION_IN_PROGRESS";
-    case ::ledger::Status::INTERNAL_ERROR:
+    case fuchsia::ledger::Status::INTERNAL_ERROR:
       return "INTERNAL_ERROR";
-    case ::ledger::Status::VALUE_TOO_LARGE:
+    case fuchsia::ledger::Status::VALUE_TOO_LARGE:
       return "VALUE_TOO_LARGE";
-    case ::ledger::Status::UNKNOWN_ERROR:
+    case fuchsia::ledger::Status::UNKNOWN_ERROR:
       return "UNKNOWN_ERROR";
   }
 };

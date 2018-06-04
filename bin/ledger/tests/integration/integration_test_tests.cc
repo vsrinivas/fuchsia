@@ -5,12 +5,12 @@
 #include <utility>
 #include <vector>
 
-#include <ledger/cpp/fidl.h>
 #include "gtest/gtest.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/strings/string_printf.h"
+#include "peridot/bin/ledger/fidl/include/types.h"
 #include "peridot/bin/ledger/tests/integration/integration_test.h"
 #include "peridot/bin/ledger/tests/integration/test_utils.h"
 #include "peridot/lib/convert/convert.h"

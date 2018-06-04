@@ -5,7 +5,7 @@
 #ifndef PERIDOT_BIN_USER_RUNNER_AGENT_RUNNER_AGENT_RUNNER_STORAGE_IMPL_H_
 #define PERIDOT_BIN_USER_RUNNER_AGENT_RUNNER_AGENT_RUNNER_STORAGE_IMPL_H_
 
-#include <ledger/cpp/fidl.h>
+#include <fuchsia/ledger/cpp/fidl.h>
 #include "lib/async/cpp/operation.h"
 #include "lib/fxl/macros.h"
 #include "peridot/bin/user_runner/agent_runner/agent_runner_storage.h"
@@ -20,7 +20,7 @@ namespace modular {
 class AgentRunnerStorageImpl : public AgentRunnerStorage, PageClient {
  public:
   explicit AgentRunnerStorageImpl(LedgerClient* ledger_client,
-                                  ::ledger::PageId page_id);
+                                  fuchsia::ledger::PageId page_id);
   ~AgentRunnerStorageImpl() override;
 
  private:

@@ -6,7 +6,7 @@
 #define PERIDOT_BIN_LEDGER_APP_LEDGER_REPOSITORY_IMPL_H_
 
 #include <fuchsia/ledger/internal/cpp/fidl.h>
-#include <ledger/cpp/fidl.h>
+
 #include <modular_auth/cpp/fidl.h>
 #include "lib/callback/auto_cleanable.h"
 #include "lib/fidl/cpp/binding_set.h"

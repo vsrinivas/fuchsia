@@ -8,10 +8,10 @@
 #include <string>
 
 #include <fuchsia/ledger/cloud/firebase/cpp/fidl.h>
+#include <fuchsia/ledger/cpp/fidl.h>
 #include <fuchsia/ledger/internal/cpp/fidl.h>
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/ui/views_v1/cpp/fidl.h>
-#include <ledger/cpp/fidl.h>
 #include "lib/app/cpp/connect.h"
 #include "lib/fxl/files/directory.h"
 #include "lib/fxl/functional/make_copyable.h"
@@ -264,8 +264,8 @@ void UserRunnerImpl::InitializeLedger() {
   // client is configured to.
   ledger_repository_factory_->GetRepository(
       "/data", std::move(cloud_provider), ledger_repository_.NewRequest(),
-      [this](::ledger::Status status) {
-        if (status != ::ledger::Status::OK) {
+      [this](fuchsia::ledger::Status status) {
+        if (status != fuchsia::ledger::Status::OK) {
           FXL_LOG(ERROR)
               << "LedgerRepositoryFactory.GetRepository() failed: "
               << LedgerStatusToString(status) << std::endl
@@ -301,8 +301,8 @@ void UserRunnerImpl::InitializeLedgerDashboard() {
                  request) {
         if (ledger_repository_) {
           ledger_repository_->GetLedgerRepositoryDebug(
-              std::move(request), [](::ledger::Status status) {
-                if (status != ::ledger::Status::OK) {
+              std::move(request), [](fuchsia::ledger::Status status) {
+                if (status != fuchsia::ledger::Status::OK) {
                   FXL_LOG(ERROR)
                       << "LedgerRepository.GetLedgerRepositoryDebug() failed: "
                       << LedgerStatusToString(status);
@@ -331,9 +331,9 @@ void UserRunnerImpl::InitializeDeviceMap() {
   device_name_ = LoadDeviceName(GetAccountId(account_));
   const std::string device_profile = LoadDeviceProfile();
 
-  device_map_impl_ =
-      std::make_unique<DeviceMapImpl>(device_name_, device_id, device_profile,
-                                      ledger_client_.get(), ::ledger::PageId());
+  device_map_impl_ = std::make_unique<DeviceMapImpl>(
+      device_name_, device_id, device_profile, ledger_client_.get(),
+      fuchsia::ledger::PageId());
   user_scope_->AddService<DeviceMap>(
       [this](fidl::InterfaceRequest<DeviceMap> request) {
         // device_map_impl_ may be reset before user_scope_.
@@ -553,7 +553,7 @@ void UserRunnerImpl::InitializeMaxwellAndModular(
   // outlive the stories which contain modules that are connected to those
   // agents.
   session_storage_.reset(
-      new SessionStorage(ledger_client_.get(), ::ledger::PageId()));
+      new SessionStorage(ledger_client_.get(), fuchsia::ledger::PageId()));
   AtEnd(Reset(&session_storage_));
   story_provider_impl_.reset(new StoryProviderImpl(
       user_scope_.get(), device_map_impl_->current_device_id(),
@@ -574,9 +574,9 @@ void UserRunnerImpl::InitializeMaxwellAndModular(
   AtEnd(Reset(&story_command_executor_));
   AtEnd(Reset(&puppet_master_impl_));
 
-  focus_handler_ =
-      std::make_unique<FocusHandler>(device_map_impl_->current_device_id(),
-                                     ledger_client_.get(), ::ledger::PageId());
+  focus_handler_ = std::make_unique<FocusHandler>(
+      device_map_impl_->current_device_id(), ledger_client_.get(),
+      fuchsia::ledger::PageId());
   focus_handler_->AddProviderBinding(std::move(focus_provider_request_maxwell));
   focus_handler_->AddProviderBinding(
       std::move(focus_provider_request_story_provider));
@@ -720,8 +720,9 @@ void UserRunnerImpl::GetLink(fidl::InterfaceRequest<Link> request) {
   LinkPath link_path;
   link_path.module_path.resize(0);
   link_path.link_name = kUserShellLinkName;
-  user_shell_link_ = std::make_unique<LinkImpl>(
-      ledger_client_.get(), ::ledger::PageId(), std::move(link_path), nullptr);
+  user_shell_link_ = std::make_unique<LinkImpl>(ledger_client_.get(),
+                                                fuchsia::ledger::PageId(),
+                                                std::move(link_path), nullptr);
   user_shell_link_->Connect(std::move(request));
 }
 

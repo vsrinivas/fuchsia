@@ -7,8 +7,8 @@
 
 #include <functional>
 
-#include <ledger/cpp/fidl.h>
 #include "lib/fxl/macros.h"
+#include "peridot/bin/ledger/fidl/include/types.h"
 #include "peridot/bin/ledger/storage/public/page_storage.h"
 
 namespace ledger {

@@ -5,7 +5,6 @@
 #include <utility>
 #include <vector>
 
-#include <ledger/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 
@@ -18,6 +17,7 @@
 #include "lib/fxl/time/time_delta.h"
 #include "peridot/bin/ledger/app/constants.h"
 #include "peridot/bin/ledger/app/fidl/serialization_size.h"
+#include "peridot/bin/ledger/fidl/include/types.h"
 #include "peridot/bin/ledger/tests/integration/integration_test.h"
 #include "peridot/bin/ledger/tests/integration/test_utils.h"
 #include "peridot/lib/convert/convert.h"

@@ -35,7 +35,7 @@ fidl::StringPtr StoryIdFromLedgerKey(fidl::StringPtr key) {
 }
 
 OperationBase* MakeGetStoryDataCall(
-    ::ledger::Page* const page, fidl::StringPtr story_id,
+    fuchsia::ledger::Page* const page, fidl::StringPtr story_id,
     std::function<void(modular::internal ::StoryDataPtr)> result_call) {
   return new ReadDataCall<modular::internal ::StoryData>(
       page, StoryIdToLedgerKey(story_id), true /* not_found_is_ok */,
@@ -43,7 +43,8 @@ OperationBase* MakeGetStoryDataCall(
 };
 
 OperationBase* MakeWriteStoryDataCall(
-    ::ledger::Page* const page, modular::internal ::StoryDataPtr story_data,
+    fuchsia::ledger::Page* const page,
+    modular::internal ::StoryDataPtr story_data,
     std::function<void()> result_call) {
   return new WriteDataCall<modular::internal ::StoryData>(
       page, StoryIdToLedgerKey(story_data->story_info.id), XdrStoryData,
@@ -51,10 +52,10 @@ OperationBase* MakeWriteStoryDataCall(
 };
 
 class CreateStoryCall
-    : public LedgerOperation<fidl::StringPtr, ::ledger::PageId> {
+    : public LedgerOperation<fidl::StringPtr, fuchsia::ledger::PageId> {
  public:
-  CreateStoryCall(::ledger::Ledger* const ledger,
-                  ::ledger::Page* const root_page,
+  CreateStoryCall(fuchsia::ledger::Ledger* const ledger,
+                  fuchsia::ledger::Page* const root_page,
                   fidl::VectorPtr<StoryInfoExtraEntry> extra_info,
                   ResultCall result_call)
       : LedgerOperation("SessionStorage::CreateStoryCall", ledger, root_page,
@@ -66,8 +67,8 @@ class CreateStoryCall
     FlowToken flow{this, &story_id_, &story_page_id_};
 
     ledger()->GetPage(nullptr, story_page_.NewRequest(),
-                      Protect([this, flow](::ledger::Status status) {
-                        if (status != ::ledger::Status::OK) {
+                      Protect([this, flow](fuchsia::ledger::Status status) {
+                        if (status != fuchsia::ledger::Status::OK) {
                           FXL_LOG(ERROR) << trace_name() << " "
                                          << "Ledger.GetPage() " << status;
                           return;
@@ -78,7 +79,7 @@ class CreateStoryCall
   }
 
   void Cont1(FlowToken flow) {
-    story_page_->GetId([this, flow](::ledger::PageId id) {
+    story_page_->GetId([this, flow](fuchsia::ledger::PageId id) {
       story_page_id_ = std::move(id);
       Cont2(flow);
     });
@@ -104,10 +105,10 @@ class CreateStoryCall
 
   fidl::VectorPtr<StoryInfoExtraEntry> extra_info_;
 
-  ::ledger::PagePtr story_page_;
+  fuchsia::ledger::PagePtr story_page_;
   modular::internal ::StoryDataPtr story_data_;
 
-  ::ledger::PageId story_page_id_;
+  fuchsia::ledger::PageId story_page_id_;
   fidl::StringPtr story_id_;  // This is the result of the Operation.
 
   // Sub operations run in this queue.
@@ -118,9 +119,9 @@ class CreateStoryCall
 
 }  // namespace
 
-FuturePtr<fidl::StringPtr, ::ledger::PageId> SessionStorage::CreateStory(
+FuturePtr<fidl::StringPtr, fuchsia::ledger::PageId> SessionStorage::CreateStory(
     fidl::VectorPtr<StoryInfoExtraEntry> extra_info) {
-  auto ret = Future<fidl::StringPtr, ::ledger::PageId>::Create();
+  auto ret = Future<fidl::StringPtr, fuchsia::ledger::PageId>::Create();
   operation_queue_.Add(new CreateStoryCall(ledger_client_->ledger(), page(),
                                            std::move(extra_info), ret->Completer()));
   return ret;
@@ -131,10 +132,10 @@ FuturePtr<> SessionStorage::DeleteStory(fidl::StringPtr story_id) {
   auto done = on_run->AsyncMap([this, story_id] {
     auto deleted = Future<>::Create();
     page()->Delete(to_array(StoryIdToLedgerKey(story_id)),
-                   [this, deleted](::ledger::Status status) {
+                   [this, deleted](fuchsia::ledger::Status status) {
                      // Deleting a key that doesn't exist is OK, not
                      // KEY_NOT_FOUND.
-                     if (status != ::ledger::Status::OK) {
+                     if (status != fuchsia::ledger::Status::OK) {
                        FXL_LOG(ERROR)
                            << "SessionStorage: Page.Delete() " << status;
                      }
@@ -154,7 +155,7 @@ namespace {
 class MutateStoryDataCall : public Operation<> {
  public:
   MutateStoryDataCall(
-      ::ledger::Page* const page, fidl::StringPtr story_id,
+      fuchsia::ledger::Page* const page, fidl::StringPtr story_id,
       std::function<bool(modular::internal ::StoryData* story_data)> mutate,
       ResultCall result_call)
       : Operation("SessionStorage::MutateStoryDataCall",
@@ -184,7 +185,7 @@ class MutateStoryDataCall : public Operation<> {
         }));
   }
 
-  ::ledger::Page* const page_;  // not owned
+  fuchsia::ledger::Page* const page_;  // not owned
   const fidl::StringPtr story_id_;
   std::function<bool(modular::internal ::StoryData* story_data)> mutate_;
 

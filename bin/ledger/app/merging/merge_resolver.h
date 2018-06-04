@@ -7,7 +7,6 @@
 
 #include <vector>
 
-#include <ledger/cpp/fidl.h>
 #include "lib/backoff/backoff.h"
 #include "lib/callback/scoped_task_runner.h"
 #include "lib/fxl/functional/closure.h"
@@ -15,6 +14,7 @@
 #include "lib/fxl/memory/weak_ptr.h"
 #include "peridot/bin/ledger/coroutine/coroutine.h"
 #include "peridot/bin/ledger/environment/environment.h"
+#include "peridot/bin/ledger/fidl/include/types.h"
 #include "peridot/bin/ledger/storage/public/page_storage.h"
 
 namespace ledger {

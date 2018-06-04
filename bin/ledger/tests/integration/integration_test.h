@@ -11,10 +11,10 @@
 #include <trace-provider/provider.h>
 
 #include <fuchsia/ledger/internal/cpp/fidl.h>
-#include <ledger/cpp/fidl.h>
 #include "gtest/gtest.h"
 #include "lib/fxl/macros.h"
 #include "lib/gtest/test_with_message_loop.h"
+#include "peridot/bin/ledger/fidl/include/types.h"
 #include "peridot/bin/ledger/testing/ledger_app_instance_factory.h"
 
 namespace test {

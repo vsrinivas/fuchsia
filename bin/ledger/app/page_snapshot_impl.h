@@ -7,7 +7,7 @@
 
 #include <memory>
 
-#include <ledger/cpp/fidl.h>
+#include "peridot/bin/ledger/fidl/include/types.h"
 #include "peridot/bin/ledger/storage/public/commit.h"
 #include "peridot/bin/ledger/storage/public/page_storage.h"
 

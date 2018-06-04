@@ -202,37 +202,40 @@ class RecipeApp : public fuchsia::modular::ViewApp {
     // 1. Get the module's ledger.
     module_context_->GetComponentContext(component_context_.NewRequest());
     component_context_->GetLedger(
-        module_ledger_.NewRequest(), [this](ledger::Status status) {
-          FXL_CHECK(status == ledger::Status::OK);
+        module_ledger_.NewRequest(), [this](fuchsia::ledger::Status status) {
+          FXL_CHECK(status == fuchsia::ledger::Status::OK);
           // 2. Get the root page of the ledger.
           module_ledger_->GetRootPage(
-              module_root_page_.NewRequest(), [this](ledger::Status status) {
-                FXL_CHECK(status == ledger::Status::OK);
+              module_root_page_.NewRequest(),
+              [this](fuchsia::ledger::Status status) {
+                FXL_CHECK(status == fuchsia::ledger::Status::OK);
                 // 3. Get a snapshot of the root page.
                 module_root_page_->GetSnapshot(
                     page_snapshot_.NewRequest(),
                     fidl::VectorPtr<uint8_t>::New(0), nullptr,
-                    [this](ledger::Status status) {
-                      FXL_CHECK(status == ledger::Status::OK);
+                    [this](fuchsia::ledger::Status status) {
+                      FXL_CHECK(status == fuchsia::ledger::Status::OK);
                       // 4. Read the counter from the root page.
                       page_snapshot_->Get(
                           to_array(kLedgerCounterKey),
-                          [this](ledger::Status status,
+                          [this](fuchsia::ledger::Status status,
                                  fuchsia::mem::BufferPtr value) {
                             // 5. If counter doesn't exist, initialize.
                             // Otherwise, increment.
-                            if (status == ledger::Status::KEY_NOT_FOUND) {
+                            if (status ==
+                                fuchsia::ledger::Status::KEY_NOT_FOUND) {
                               FXL_LOG(INFO) << "No counter in root page. "
                                                "Initializing to 1.";
                               fidl::VectorPtr<uint8_t> data;
                               data.push_back(1);
                               module_root_page_->Put(
                                   to_array(kLedgerCounterKey), std::move(data),
-                                  [](ledger::Status status) {
-                                    FXL_CHECK(status == ledger::Status::OK);
+                                  [](fuchsia::ledger::Status status) {
+                                    FXL_CHECK(status ==
+                                              fuchsia::ledger::Status::OK);
                                   });
                             } else {
-                              FXL_CHECK(status == ledger::Status::OK);
+                              FXL_CHECK(status == fuchsia::ledger::Status::OK);
                               std::string counter_data;
                               bool conversion =
                                   fsl::StringFromVmo(*value, &counter_data);
@@ -245,8 +248,9 @@ class RecipeApp : public fuchsia::modular::ViewApp {
                               module_root_page_->Put(
                                   to_array(kLedgerCounterKey),
                                   to_array(counter_data),
-                                  [](ledger::Status status) {
-                                    FXL_CHECK(status == ledger::Status::OK);
+                                  [](fuchsia::ledger::Status status) {
+                                    FXL_CHECK(status ==
+                                              fuchsia::ledger::Status::OK);
                                   });
                             }
                           });
@@ -278,9 +282,9 @@ class RecipeApp : public fuchsia::modular::ViewApp {
   // The following ledger interfaces are stored here to make life-time
   // management easier when chaining together lambda callbacks.
   fuchsia::modular::ComponentContextPtr component_context_;
-  ledger::LedgerPtr module_ledger_;
-  ledger::PagePtr module_root_page_;
-  ledger::PageSnapshotPtr page_snapshot_;
+  fuchsia::ledger::LedgerPtr module_ledger_;
+  fuchsia::ledger::PagePtr module_root_page_;
+  fuchsia::ledger::PageSnapshotPtr page_snapshot_;
 
   fuchsia::modular::ModuleControllerPtr module1_;
   fuchsia::modular::LinkPtr module1_link_;

@@ -44,7 +44,7 @@ ComponentContextPtr ComponentContextImpl::NewBinding() {
 }
 
 void ComponentContextImpl::GetLedger(
-    fidl::InterfaceRequest<::ledger::Ledger> request,
+    fidl::InterfaceRequest<fuchsia::ledger::Ledger> request,
     GetLedgerCallback result) {
   ledger_repository_->GetLedger(to_array(component_url_), std::move(request),
                                 result);

@@ -11,7 +11,8 @@ library fuchsia.modular;
 interface ComponentContext {
   // Gets the Ledger associated with this component. This ledger instance is
   // unique to this component (nb. not the component instance) under this user.
-  1: GetLedger(request<ledger.Ledger> @request) -> (ledger.Status @status);
+  1: GetLedger(request<fuchsia.ledger.Ledger> @request)
+      -> (fuchsia.ledger.Status @status);
 
   // Used to start a new agent in the user scope and connect to it.
   2: ConnectToAgent(string url, request<fuchsia.sys.ServiceProvider> incoming_services,

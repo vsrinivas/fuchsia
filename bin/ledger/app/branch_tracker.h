@@ -7,7 +7,6 @@
 
 #include <memory>
 
-#include <ledger/cpp/fidl.h>
 #include "lib/callback/auto_cleanable.h"
 #include "lib/fxl/memory/weak_ptr.h"
 #include "peridot/bin/ledger/app/page_snapshot_impl.h"

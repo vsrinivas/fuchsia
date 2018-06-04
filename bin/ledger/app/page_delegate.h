@@ -10,7 +10,6 @@
 #include <string>
 #include <vector>
 
-#include <ledger/cpp/fidl.h>
 #include "lib/callback/operation_serializer.h"
 #include "lib/fidl/cpp/interface_ptr_set.h"
 #include "lib/fxl/macros.h"

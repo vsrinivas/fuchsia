@@ -18,10 +18,10 @@ class ClipboardAgent {
     agent_host->agent_context()->GetComponentContext(
         component_context.NewRequest());
 
-    ::ledger::LedgerPtr ledger;
+    fuchsia::ledger::LedgerPtr ledger;
     component_context->GetLedger(
-        ledger.NewRequest(), [](::ledger::Status status) {
-          if (status != ::ledger::Status::OK) {
+        ledger.NewRequest(), [](fuchsia::ledger::Status status) {
+          if (status != fuchsia::ledger::Status::OK) {
             FXL_LOG(ERROR) << "Could not connect to Ledger.";
           }
         });

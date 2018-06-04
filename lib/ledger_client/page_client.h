@@ -8,7 +8,7 @@
 #include <array>
 #include <string>
 
-#include <ledger/cpp/fidl.h>
+#include <fuchsia/ledger/cpp/fidl.h>
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fidl/cpp/interface_request.h"
 #include "lib/fxl/macros.h"
@@ -22,7 +22,7 @@ class LedgerClient;
 // A helper class that holds on to a page snapshot through a shared
 // pointer, hands out shared pointers to it, can replace the snapshot
 // by a new one, and registers a connection error handler on it. It
-// essentially wraps ::ledger::PageSnapshot.
+// essentially wraps fuchsia::ledger::PageSnapshot.
 //
 // This is used by classes that hold onto a PageSnapshot and update it
 // in return calls from PageWatcher notifications, and use Operation
@@ -44,7 +44,7 @@ class LedgerClient;
 // The same behavior as with a shared_ptr could be accomplished with
 // a duplicate PageSnapshotPtr for each Operation instance that needs
 // one, but PageSnapshot doesn't have a duplicate method.
-class PageClient : ::ledger::PageWatcher {
+class PageClient : fuchsia::ledger::PageWatcher {
  public:
   // |context| is used as a string prefix on log messages.  |ledger_client| is
   // used to retrieve a handle to the page specified in |page_id|, and to
@@ -76,13 +76,13 @@ class PageClient : ::ledger::PageWatcher {
   // when the read is executed). Since all modular page clients have read and
   // write operations where this invariant is desired, they all use fresh page
   // snapshots.
-  std::shared_ptr<::ledger::PageSnapshotPtr> page_snapshot() {
+  std::shared_ptr<fuchsia::ledger::PageSnapshotPtr> page_snapshot() {
     return page_snapshot_;
   }
 
-  const ::ledger::PageId& page_id() const { return page_id_; }
+  const fuchsia::ledger::PageId& page_id() const { return page_id_; }
   const std::string& prefix() const { return prefix_; }
-  ::ledger::Page* page() { return page_; }
+  fuchsia::ledger::Page* page() { return page_; }
 
   // Computed by implementations of OnPageConflict() in derived classes.
   enum ConflictResolution { LEFT, RIGHT, MERGE };
@@ -129,27 +129,28 @@ class PageClient : ::ledger::PageWatcher {
   virtual void OnPageConflict(Conflict* conflict);
 
   // Replaces the previous page snapshot with a newly requested one.
-  fidl::InterfaceRequest<::ledger::PageSnapshot> NewRequest();
+  fidl::InterfaceRequest<fuchsia::ledger::PageSnapshot> NewRequest();
 
   // Possibly replaces the previous page snapshot with a new one
   // requested through the result callback of a PageWatcher, depending
   // on the continuation code of the watcher notification.
-  fidl::InterfaceRequest<::ledger::PageSnapshot> MaybeUpdateSnapshot(
-      ::ledger::ResultState result_state);
+  fidl::InterfaceRequest<fuchsia::ledger::PageSnapshot> MaybeUpdateSnapshot(
+      fuchsia::ledger::ResultState result_state);
 
   // |PageWatcher|
-  void OnChange(::ledger::PageChange page, ::ledger::ResultState result_state,
+  void OnChange(fuchsia::ledger::PageChange page,
+                fuchsia::ledger::ResultState result_state,
                 OnChangeCallback callback) override;
 
-  fidl::Binding<::ledger::PageWatcher> binding_;
+  fidl::Binding<fuchsia::ledger::PageWatcher> binding_;
   const std::string context_;
 
   LedgerClient* const ledger_client_;
-  const ::ledger::PageId page_id_;
-  ::ledger::Page* const page_;
+  const fuchsia::ledger::PageId page_id_;
+  fuchsia::ledger::Page* const page_;
   const std::string prefix_;
 
-  std::shared_ptr<::ledger::PageSnapshotPtr> page_snapshot_;
+  std::shared_ptr<fuchsia::ledger::PageSnapshotPtr> page_snapshot_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(PageClient);
 };
@@ -160,9 +161,9 @@ class PageClient : ::ledger::PageWatcher {
 // The FIDL pointer backing |snapshot| must have the same life time as
 // |entries|, so that callbacks are cancelled when |entries| are deleted before
 // |callback| is invoked.
-void GetEntries(::ledger::PageSnapshot* snapshot,
-                std::vector<::ledger::Entry>* entries,
-                std::function<void(::ledger::Status)> callback);
+void GetEntries(fuchsia::ledger::PageSnapshot* snapshot,
+                std::vector<fuchsia::ledger::Entry>* entries,
+                std::function<void(fuchsia::ledger::Status)> callback);
 
 }  // namespace modular
 }  // namespace fuchsia

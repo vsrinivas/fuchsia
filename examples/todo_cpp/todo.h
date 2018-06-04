@@ -7,8 +7,8 @@
 
 #include <random>
 
+#include <fuchsia/ledger/cpp/fidl.h>
 #include <fuchsia/modular/cpp/fidl.h>
-#include <ledger/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include "lib/app/cpp/startup_context.h"
 #include "lib/fidl/cpp/binding.h"
@@ -20,20 +20,21 @@ namespace todo {
 
 using Key = fidl::VectorPtr<uint8_t>;
 
-class TodoApp : public ledger::PageWatcher, fuchsia::modular::Lifecycle {
+class TodoApp : public fuchsia::ledger::PageWatcher,
+                fuchsia::modular::Lifecycle {
  public:
   TodoApp(async::Loop* loop);
 
-  // ledger::PageWatcher:
-  void OnChange(ledger::PageChange page_change,
-                ledger::ResultState result_state,
+  // fuchsia::ledger::PageWatcher:
+  void OnChange(fuchsia::ledger::PageChange page_change,
+                fuchsia::ledger::ResultState result_state,
                 OnChangeCallback callback) override;
 
  private:
   // |modular.Lifecycle|
   void Terminate() override;
 
-  void List(ledger::PageSnapshotPtr snapshot);
+  void List(fuchsia::ledger::PageSnapshotPtr snapshot);
 
   void GetKeys(std::function<void(fidl::VectorPtr<Key>)> callback);
 
@@ -51,9 +52,9 @@ class TodoApp : public ledger::PageWatcher, fuchsia::modular::Lifecycle {
   std::unique_ptr<fuchsia::sys::StartupContext> context_;
   fidl::InterfacePtr<fuchsia::modular::ModuleContext> module_context_;
   fuchsia::modular::ComponentContextPtr component_context_;
-  ledger::LedgerPtr ledger_;
-  fidl::Binding<ledger::PageWatcher> page_watcher_binding_;
-  ledger::PagePtr page_;
+  fuchsia::ledger::LedgerPtr ledger_;
+  fidl::Binding<fuchsia::ledger::PageWatcher> page_watcher_binding_;
+  fuchsia::ledger::PagePtr page_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(TodoApp);
 };

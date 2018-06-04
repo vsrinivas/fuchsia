@@ -38,8 +38,8 @@ LedgerRepositoryForTesting::ledger_repository() {
   if (!ledger_repo_) {
     ledger_repo_factory_->GetRepository(
         tmp_dir_.path(), nullptr, ledger_repo_.NewRequest(),
-        [this](::ledger::Status status) {
-          FXL_CHECK(status == ::ledger::Status::OK);
+        [this](fuchsia::ledger::Status status) {
+          FXL_CHECK(status == fuchsia::ledger::Status::OK);
         });
   }
 

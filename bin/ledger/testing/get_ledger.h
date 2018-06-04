@@ -9,7 +9,7 @@
 #include <string>
 
 #include <fuchsia/ledger/cloud/cpp/fidl.h>
-#include <ledger/cpp/fidl.h>
+
 #include <lib/async-loop/cpp/loop.h>
 #include <modular_auth/cpp/fidl.h>
 

@@ -8,8 +8,8 @@
 #include <string>
 #include <vector>
 
-#include <ledger/cpp/fidl.h>
 #include "lib/fsl/vmo/sized_vmo.h"
+#include "peridot/bin/ledger/fidl/include/types.h"
 
 namespace test {
 namespace integration {

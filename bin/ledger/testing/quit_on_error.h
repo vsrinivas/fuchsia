@@ -8,10 +8,9 @@
 #include <functional>
 #include <string>
 
-#include <ledger/cpp/fidl.h>
-
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/strings/string_view.h"
+#include "peridot/bin/ledger/fidl/include/types.h"
 
 namespace test {
 namespace benchmark {

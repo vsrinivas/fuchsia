@@ -4,8 +4,6 @@
 
 #include <utility>
 
-#include "peridot/bin/ledger/testing/ledger_app_instance_factory.h"
-
 #include <fuchsia/ledger/cloud/firebase/cpp/fidl.h>
 
 #include "gtest/gtest.h"
@@ -18,6 +16,7 @@
 #include "peridot/bin/ledger/fidl/include/types.h"
 #include "peridot/bin/ledger/fidl_helpers/bound_interface_set.h"
 #include "peridot/bin/ledger/testing/cloud_provider_firebase_factory.h"
+#include "peridot/bin/ledger/testing/ledger_app_instance_factory.h"
 #include "peridot/lib/convert/convert.h"
 #include "peridot/lib/firebase_auth/testing/fake_token_provider.h"
 

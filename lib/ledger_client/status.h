@@ -7,12 +7,12 @@
 
 #include <string>
 
-#include <ledger/cpp/fidl.h>
+#include <fuchsia/ledger/cpp/fidl.h>
 
 namespace fuchsia {
 namespace modular {
 
-std::string LedgerStatusToString(::ledger::Status status);
+std::string LedgerStatusToString(fuchsia::ledger::Status status);
 
 }  // namespace modular
 }  // namespace fuchsia

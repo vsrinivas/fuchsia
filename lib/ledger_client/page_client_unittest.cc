@@ -95,20 +95,20 @@ class PageClientTest : public TestWithLedger {
     return ptr;
   }
 
-  ::ledger::PagePtr CreatePagePtr(const std::string& page_id) {
-    ::ledger::PagePtr page;
+  fuchsia::ledger::PagePtr CreatePagePtr(const std::string& page_id) {
+    fuchsia::ledger::PagePtr page;
     ledger_client()->ledger()->GetPage(
-        std::make_unique<::ledger::PageId>(MakePageId(page_id)),
-        page.NewRequest(), [](::ledger::Status status) {
-          ASSERT_EQ(::ledger::Status::OK, status);
+        std::make_unique<fuchsia::ledger::PageId>(MakePageId(page_id)),
+        page.NewRequest(), [](fuchsia::ledger::Status status) {
+          ASSERT_EQ(fuchsia::ledger::Status::OK, status);
         });
     return page;
   }
 
   // Factory for a ledger callback function that just logs errors.
-  std::function<void(::ledger::Status)> log(std::string context) {
-    return [context](::ledger::Status status) {
-      EXPECT_EQ(::ledger::Status::OK, status) << context;
+  std::function<void(fuchsia::ledger::Status)> log(std::string context) {
+    return [context](fuchsia::ledger::Status status) {
+      EXPECT_EQ(fuchsia::ledger::Status::OK, status) << context;
     };
   }
 
@@ -203,24 +203,25 @@ TEST_F(PageClientTest, ConflictWrite) {
 
   bool finished{};
 
-  page2->StartTransaction([&](::ledger::Status status) {
-    EXPECT_EQ(::ledger::Status::OK, status);
+  page2->StartTransaction([&](fuchsia::ledger::Status status) {
+    EXPECT_EQ(fuchsia::ledger::Status::OK, status);
     page2->Put(to_array("key"), to_array("value2"),
-               [&](::ledger::Status status) {
-                 EXPECT_EQ(::ledger::Status::OK, status);
-                 page1->StartTransaction([&](::ledger::Status status) {
-                   EXPECT_EQ(::ledger::Status::OK, status);
-                   page1->Put(to_array("key"), to_array("value1"),
-                              [&](::ledger::Status status) {
-                                EXPECT_EQ(::ledger::Status::OK, status);
-                                page2->Commit([&](::ledger::Status status) {
-                                  EXPECT_EQ(::ledger::Status::OK, status);
-                                  page1->Commit([&](::ledger::Status status) {
-                                    EXPECT_EQ(::ledger::Status::OK, status);
-                                    finished = true;
-                                  });
-                                });
-                              });
+               [&](fuchsia::ledger::Status status) {
+                 EXPECT_EQ(fuchsia::ledger::Status::OK, status);
+                 page1->StartTransaction([&](fuchsia::ledger::Status status) {
+                   EXPECT_EQ(fuchsia::ledger::Status::OK, status);
+                   page1->Put(
+                       to_array("key"), to_array("value1"),
+                       [&](fuchsia::ledger::Status status) {
+                         EXPECT_EQ(fuchsia::ledger::Status::OK, status);
+                         page2->Commit([&](fuchsia::ledger::Status status) {
+                           EXPECT_EQ(fuchsia::ledger::Status::OK, status);
+                           page1->Commit([&](fuchsia::ledger::Status status) {
+                             EXPECT_EQ(fuchsia::ledger::Status::OK, status);
+                             finished = true;
+                           });
+                         });
+                       });
                  });
                });
   });
@@ -250,24 +251,25 @@ TEST_F(PageClientTest, ConflictPrefixWrite) {
   auto page2 = CreatePagePtr("page");
 
   bool finished{};
-  page2->StartTransaction([&](::ledger::Status status) {
-    EXPECT_EQ(::ledger::Status::OK, status);
+  page2->StartTransaction([&](fuchsia::ledger::Status status) {
+    EXPECT_EQ(fuchsia::ledger::Status::OK, status);
     page2->Put(to_array("a/key"), to_array("value2"),
-               [&](::ledger::Status status) {
-                 EXPECT_EQ(::ledger::Status::OK, status);
-                 page1->StartTransaction([&](::ledger::Status status) {
-                   EXPECT_EQ(::ledger::Status::OK, status);
-                   page1->Put(to_array("a/key"), to_array("value1"),
-                              [&](::ledger::Status status) {
-                                EXPECT_EQ(::ledger::Status::OK, status);
-                                page2->Commit([&](::ledger::Status status) {
-                                  EXPECT_EQ(::ledger::Status::OK, status);
-                                  page1->Commit([&](::ledger::Status status) {
-                                    EXPECT_EQ(::ledger::Status::OK, status);
-                                    finished = true;
-                                  });
-                                });
-                              });
+               [&](fuchsia::ledger::Status status) {
+                 EXPECT_EQ(fuchsia::ledger::Status::OK, status);
+                 page1->StartTransaction([&](fuchsia::ledger::Status status) {
+                   EXPECT_EQ(fuchsia::ledger::Status::OK, status);
+                   page1->Put(
+                       to_array("a/key"), to_array("value1"),
+                       [&](fuchsia::ledger::Status status) {
+                         EXPECT_EQ(fuchsia::ledger::Status::OK, status);
+                         page2->Commit([&](fuchsia::ledger::Status status) {
+                           EXPECT_EQ(fuchsia::ledger::Status::OK, status);
+                           page1->Commit([&](fuchsia::ledger::Status status) {
+                             EXPECT_EQ(fuchsia::ledger::Status::OK, status);
+                             finished = true;
+                           });
+                         });
+                       });
                  });
                });
   });
@@ -297,22 +299,23 @@ TEST_F(PageClientTest, ConcurrentConflictWrite) {
   auto page2 = CreatePagePtr("page");
 
   bool finished{};
-  page2->StartTransaction([&](::ledger::Status status) {
-    EXPECT_EQ(::ledger::Status::OK, status);
+  page2->StartTransaction([&](fuchsia::ledger::Status status) {
+    EXPECT_EQ(fuchsia::ledger::Status::OK, status);
     page2->Put(to_array("key2"), to_array("value2"), log("Put 2 key2"));
     page2->Put(
-        to_array("key"), to_array("value2"), [&](::ledger::Status status) {
-          EXPECT_EQ(::ledger::Status::OK, status);
-          page1->StartTransaction([&](::ledger::Status status) {
-            EXPECT_EQ(::ledger::Status::OK, status);
+        to_array("key"), to_array("value2"),
+        [&](fuchsia::ledger::Status status) {
+          EXPECT_EQ(fuchsia::ledger::Status::OK, status);
+          page1->StartTransaction([&](fuchsia::ledger::Status status) {
+            EXPECT_EQ(fuchsia::ledger::Status::OK, status);
             page1->Put(to_array("key1"), to_array("value1"), log("Put 1 key1"));
             page1->Put(to_array("key"), to_array("value1"),
-                       [&](::ledger::Status status) {
-                         EXPECT_EQ(::ledger::Status::OK, status);
-                         page2->Commit([&](::ledger::Status status) {
-                           EXPECT_EQ(::ledger::Status::OK, status);
-                           page1->Commit([&](::ledger::Status status) {
-                             EXPECT_EQ(::ledger::Status::OK, status);
+                       [&](fuchsia::ledger::Status status) {
+                         EXPECT_EQ(fuchsia::ledger::Status::OK, status);
+                         page2->Commit([&](fuchsia::ledger::Status status) {
+                           EXPECT_EQ(fuchsia::ledger::Status::OK, status);
+                           page1->Commit([&](fuchsia::ledger::Status status) {
+                             EXPECT_EQ(fuchsia::ledger::Status::OK, status);
                              finished = true;
                            });
                          });

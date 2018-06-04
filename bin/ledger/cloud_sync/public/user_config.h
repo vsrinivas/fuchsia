@@ -11,7 +11,6 @@
 #include <fuchsia/ledger/cloud/cpp/fidl.h>
 
 #include "peridot/bin/ledger/fidl/include/types.h"
-
 #include "peridot/bin/ledger/filesystem/detached_path.h"
 
 namespace cloud_sync {

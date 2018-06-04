@@ -60,7 +60,7 @@ class SessionStorage : public PageClient {
   // Creates a new story and returns a tuple of (story id, story ledger page
   // id) on completion. |extra_info| may be null. If set, populates
   // StoryData.story_info.extra with the entries given.
-  FuturePtr<fidl::StringPtr, ::ledger::PageId> CreateStory(
+  FuturePtr<fidl::StringPtr, fuchsia::ledger::PageId> CreateStory(
       fidl::VectorPtr<StoryInfoExtraEntry> extra_info);
 
   // Deletes the |story_id| from the list of known stories and completes the

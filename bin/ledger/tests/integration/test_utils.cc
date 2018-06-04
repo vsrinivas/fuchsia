@@ -9,7 +9,6 @@
 #include <vector>
 
 #include <fuchsia/ledger/internal/cpp/fidl.h>
-#include <ledger/cpp/fidl.h>
 #include <lib/zx/time.h>
 
 #include "gtest/gtest.h"
@@ -18,6 +17,7 @@
 #include "lib/fxl/files/scoped_temp_dir.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/time/time_delta.h"
+#include "peridot/bin/ledger/fidl/include/types.h"
 #include "peridot/lib/convert/convert.h"
 
 namespace test {

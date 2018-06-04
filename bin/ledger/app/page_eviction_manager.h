@@ -5,12 +5,12 @@
 #ifndef PERIDOT_BIN_LEDGER_APP_PAGE_EVICTION_MANAGER_H_
 #define PERIDOT_BIN_LEDGER_APP_PAGE_EVICTION_MANAGER_H_
 
-#include <ledger/cpp/fidl.h>
 #include <map>
 #include <string>
 
 #include "lib/fxl/macros.h"
 #include "lib/fxl/strings/string_view.h"
+#include "peridot/bin/ledger/fidl/include/types.h"
 #include "peridot/bin/ledger/storage/public/types.h"
 
 namespace ledger {

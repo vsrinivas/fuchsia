@@ -10,7 +10,6 @@
 
 #include <fuchsia/ledger/cloud/cpp/fidl.h>
 #include <fuchsia/ledger/internal/cpp/fidl.h>
-#include <ledger/cpp/fidl.h>
 
 #include "lib/fxl/files/scoped_temp_dir.h"
 #include "lib/fxl/macros.h"

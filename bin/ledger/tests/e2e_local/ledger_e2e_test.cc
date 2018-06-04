@@ -6,7 +6,7 @@
 
 #include <fuchsia/ledger/internal/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
-#include <ledger/cpp/fidl.h>
+
 #include "gtest/gtest.h"
 #include "lib/app/cpp/startup_context.h"
 #include "lib/callback/capture.h"

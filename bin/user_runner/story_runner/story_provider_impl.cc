@@ -76,7 +76,7 @@ class StoryProviderImpl::CreateStoryCall : public Operation<fidl::StringPtr> {
     // 3) If we got an initial module, add it.
     session_storage_->CreateStory(std::move(extra_info_))
         ->WeakThen(GetWeakPtr(), [this, flow](fidl::StringPtr story_id,
-                                              ::ledger::PageId page_id) {
+                                              fuchsia::ledger::PageId page_id) {
           story_id_ = story_id;
           story_page_id_ = page_id;
           controller_ = std::make_unique<StoryControllerImpl>(
@@ -104,7 +104,7 @@ class StoryProviderImpl::CreateStoryCall : public Operation<fidl::StringPtr> {
 
   std::unique_ptr<StoryControllerImpl> controller_;
 
-  ::ledger::PageId story_page_id_;
+  fuchsia::ledger::PageId story_page_id_;
   fidl::StringPtr story_id_;  // This is the result of the Operation.
 
   // Sub operations run in this queue.
