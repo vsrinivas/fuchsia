@@ -5,7 +5,7 @@
 import("//build/fidl/fidl.gni")
 
 fidl("fidl") {
-  name = "presentation"
+  name = "fuchsia.ui.policy"
 
   sdk_category = "partner"
 

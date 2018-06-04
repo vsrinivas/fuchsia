@@ -6,7 +6,7 @@
 #include <lib/zx/channel.h>
 
 #include <fuchsia/ui/views_v1/cpp/fidl.h>
-#include <presentation/cpp/fidl.h>
+#include <fuchsia/ui/policy/cpp/fidl.h>
 #include "lib/app/cpp/startup_context.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/log_settings_command_line.h"
@@ -63,7 +63,7 @@ int main(int argc, const char** argv) {
 
   // Ask the presenter to display it.
   auto presenter =
-      startup_context_->ConnectToEnvironmentService<presentation::Presenter>();
+      startup_context_->ConnectToEnvironmentService<fuchsia::ui::policy::Presenter>();
   presenter->Present(std::move(view_owner), nullptr);
 
   // Done!

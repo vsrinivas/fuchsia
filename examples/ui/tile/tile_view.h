@@ -10,7 +10,7 @@
 
 #include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/ui/views_v1/cpp/fidl.h>
-#include <presentation/cpp/fidl.h>
+#include <fuchsia/ui/policy/cpp/fidl.h>
 #include "garnet/examples/ui/tile/tile_params.h"
 #include "lib/app/cpp/startup_context.h"
 #include "lib/fidl/cpp/binding_set.h"
@@ -21,7 +21,7 @@
 
 namespace examples {
 
-class TileView : public mozart::BaseView, public presentation::Presenter {
+class TileView : public mozart::BaseView, public fuchsia::ui::policy::Presenter {
  public:
   TileView(::fuchsia::ui::views_v1::ViewManagerPtr view_manager,
            fidl::InterfaceRequest<::fuchsia::ui::views_v1_token::ViewOwner>
@@ -59,7 +59,7 @@ class TileView : public mozart::BaseView, public presentation::Presenter {
   void Present(
       fidl::InterfaceHandle<::fuchsia::ui::views_v1_token::ViewOwner>
           view_owner,
-      fidl::InterfaceRequest<presentation::Presentation> presentation) override;
+      fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> presentation) override;
   void HACK_SetRendererParams(
       bool enable_clipping,
       ::fidl::VectorPtr<fuchsia::ui::gfx::RendererParam> params) override{};
@@ -98,7 +98,7 @@ class TileView : public mozart::BaseView, public presentation::Presenter {
   // Map from keys to |ViewData|
   std::map<uint32_t, std::unique_ptr<ViewData>> views_;
 
-  fidl::BindingSet<presentation::Presenter> presenter_bindings_;
+  fidl::BindingSet<fuchsia::ui::policy::Presenter> presenter_bindings_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(TileView);
 };

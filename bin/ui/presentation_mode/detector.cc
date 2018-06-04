@@ -19,7 +19,7 @@ Detector::Detector(size_t history_size)
   FXL_CHECK(history_size > 0);
 }
 
-std::pair<bool, presentation::PresentationMode> Detector::Update(
+std::pair<bool, fuchsia::ui::policy::PresentationMode> Detector::Update(
     const fuchsia::ui::input::SensorDescriptor& sensor,
     fuchsia::ui::input::InputReport event) {
   FXL_CHECK(sensor.type == fuchsia::ui::input::SensorType::ACCELEROMETER);
@@ -41,21 +41,21 @@ std::pair<bool, presentation::PresentationMode> Detector::Update(
   AccelerometerData base_avg = base_accelerometer_->Average();
   AccelerometerData lid_avg = lid_accelerometer_->Average();
 
-  std::pair<bool, presentation::PresentationMode> result;
+  std::pair<bool, fuchsia::ui::policy::PresentationMode> result;
   result.first = false;
 
   if (base_avg[2] > kZPosLimit && lid_avg[2] < kZNegLimit) {
     result.first = true;
-    result.second = presentation::PresentationMode::CLOSED;
+    result.second = fuchsia::ui::policy::PresentationMode::CLOSED;
   } else if (base_avg[2] > kZPosLimit && lid_avg[1] > kYPosLimit) {
     result.first = true;
-    result.second = presentation::PresentationMode::LAPTOP;
+    result.second = fuchsia::ui::policy::PresentationMode::LAPTOP;
   } else if (base_avg[2] < kZNegLimit && lid_avg[2] > kZPosLimit) {
     result.first = true;
-    result.second = presentation::PresentationMode::TABLET;
+    result.second = fuchsia::ui::policy::PresentationMode::TABLET;
   } else if (base_avg[1] > kYPosLimit && lid_avg[1] < kYNegLimit) {
     result.first = true;
-    result.second = presentation::PresentationMode::TENT;
+    result.second = fuchsia::ui::policy::PresentationMode::TENT;
   }
 
   if (result.first)

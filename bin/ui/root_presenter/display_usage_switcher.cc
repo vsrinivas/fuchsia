@@ -15,25 +15,25 @@ namespace {
 const uint32_t kGlobalShortcutKeyCodePoint = 61;  // '=' key
 const uint32_t kGlobalShortcutKeyHidUsage = 46;   // '=' key
 
-static const std::array<presentation::DisplayUsage, 5> kDisplayUsages = {
-    presentation::DisplayUsage::kHandheld, presentation::DisplayUsage::kClose,
-    presentation::DisplayUsage::kNear, presentation::DisplayUsage::kMidrange,
-    presentation::DisplayUsage::kFar};
+static const std::array<fuchsia::ui::policy::DisplayUsage, 5> kDisplayUsages = {
+    fuchsia::ui::policy::DisplayUsage::kHandheld, fuchsia::ui::policy::DisplayUsage::kClose,
+    fuchsia::ui::policy::DisplayUsage::kNear, fuchsia::ui::policy::DisplayUsage::kMidrange,
+    fuchsia::ui::policy::DisplayUsage::kFar};
 }  // namespace
 
-std::string GetDisplayUsageAsString(presentation::DisplayUsage usage) {
+std::string GetDisplayUsageAsString(fuchsia::ui::policy::DisplayUsage usage) {
   switch (usage) {
-    case presentation::DisplayUsage::kUnknown:
+    case fuchsia::ui::policy::DisplayUsage::kUnknown:
       return "kUnknown";
-    case presentation::DisplayUsage::kHandheld:
+    case fuchsia::ui::policy::DisplayUsage::kHandheld:
       return "kHandheld";
-    case presentation::DisplayUsage::kClose:
+    case fuchsia::ui::policy::DisplayUsage::kClose:
       return "kClose";
-    case presentation::DisplayUsage::kNear:
+    case fuchsia::ui::policy::DisplayUsage::kNear:
       return "kNear";
-    case presentation::DisplayUsage::kMidrange:
+    case fuchsia::ui::policy::DisplayUsage::kMidrange:
       return "kMidrange";
-    case presentation::DisplayUsage::kFar:
+    case fuchsia::ui::policy::DisplayUsage::kFar:
       return "kFar";
   }
 }

@@ -6,7 +6,7 @@
 #define GARNET_BIN_UI_ROOT_PRESENTER_DISPLAY_USAGE_SWITCHER_H_
 
 #include <fuchsia/ui/input/cpp/fidl.h>
-#include <presentation/cpp/fidl.h>
+#include <fuchsia/ui/policy/cpp/fidl.h>
 #include "lib/fxl/macros.h"
 #include "lib/ui/scenic/client/resources.h"
 
@@ -16,7 +16,7 @@ namespace root_presenter {
 
 class Presentation;
 
-std::string GetDisplayUsageAsString(presentation::DisplayUsage usage);
+std::string GetDisplayUsageAsString(fuchsia::ui::policy::DisplayUsage usage);
 
 // This class hooks into Presenter to provide the following behavior: when
 // Alt-Equals is pressed, the current display usage is toggled.

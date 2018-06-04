@@ -22,8 +22,8 @@ App::App(const fxl::CommandLine& command_line)
 
   input_reader_.Start();
 
-  startup_context_->outgoing().AddPublicService<presentation::Presenter>(
-      [this](fidl::InterfaceRequest<presentation::Presenter> request) {
+  startup_context_->outgoing().AddPublicService<fuchsia::ui::policy::Presenter>(
+      [this](fidl::InterfaceRequest<fuchsia::ui::policy::Presenter> request) {
         presenter_bindings_.AddBinding(this, std::move(request));
       });
 
@@ -40,7 +40,7 @@ App::~App() {}
 void App::Present(
     fidl::InterfaceHandle<::fuchsia::ui::views_v1_token::ViewOwner>
         view_owner_handle,
-    fidl::InterfaceRequest<presentation::Presentation> presentation_request) {
+    fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> presentation_request) {
   InitializeServices();
 
   auto presentation = std::make_unique<Presentation>(

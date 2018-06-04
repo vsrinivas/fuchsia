@@ -112,7 +112,7 @@ Presentation::~Presentation() {}
 
 void Presentation::Present(
     ::fuchsia::ui::views_v1_token::ViewOwnerPtr view_owner,
-    fidl::InterfaceRequest<presentation::Presentation> presentation_request,
+    fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> presentation_request,
     YieldCallback yield_callback, ShutdownCallback shutdown_callback) {
   FXL_DCHECK(view_owner);
   FXL_DCHECK(!display_model_initialized_);
@@ -133,7 +133,7 @@ void Presentation::Present(
 
 void Presentation::CreateViewTree(
     ::fuchsia::ui::views_v1_token::ViewOwnerPtr view_owner,
-    fidl::InterfaceRequest<presentation::Presentation> presentation_request,
+    fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> presentation_request,
     fuchsia::ui::gfx::DisplayInfo display_info) {
   if (presentation_request) {
     presentation_binding_.Bind(std::move(presentation_request));
@@ -318,8 +318,8 @@ bool Presentation::SetDisplaySizeInMmWithoutApplyingChanges(float width_in_mm,
   return true;
 }
 
-void Presentation::SetDisplayUsage(presentation::DisplayUsage usage) {
-  presentation::DisplayUsage old_usage =
+void Presentation::SetDisplayUsage(fuchsia::ui::policy::DisplayUsage usage) {
+  fuchsia::ui::policy::DisplayUsage old_usage =
       display_model_simulated_.environment_info().usage;
   SetDisplayUsageWithoutApplyingChanges(usage);
   if (display_model_simulated_.environment_info().usage == old_usage) {
@@ -337,9 +337,9 @@ void Presentation::SetDisplayUsage(presentation::DisplayUsage usage) {
 }
 
 void Presentation::SetDisplayUsageWithoutApplyingChanges(
-    presentation::DisplayUsage usage) {
+    fuchsia::ui::policy::DisplayUsage usage) {
   display_model_simulated_.environment_info().usage =
-      (usage == presentation::DisplayUsage::kUnknown)
+      (usage == fuchsia::ui::policy::DisplayUsage::kUnknown)
           ? display_model_actual_.environment_info().usage
           : usage;
 }
@@ -471,9 +471,9 @@ void Presentation::OnReport(uint32_t device_id,
 
 void Presentation::CaptureKeyboardEventHACK(
     fuchsia::ui::input::KeyboardEvent event_to_capture,
-    fidl::InterfaceHandle<presentation::KeyboardCaptureListenerHACK>
+    fidl::InterfaceHandle<fuchsia::ui::policy::KeyboardCaptureListenerHACK>
         listener_handle) {
-  presentation::KeyboardCaptureListenerHACKPtr listener;
+  fuchsia::ui::policy::KeyboardCaptureListenerHACKPtr listener;
   listener.Bind(std::move(listener_handle));
   // Auto-remove listeners if the interface closes.
   listener.set_error_handler([this, listener = listener.get()] {
@@ -491,9 +491,9 @@ void Presentation::CaptureKeyboardEventHACK(
 }
 
 void Presentation::CapturePointerEventsHACK(
-    fidl::InterfaceHandle<presentation::PointerCaptureListenerHACK>
+    fidl::InterfaceHandle<fuchsia::ui::policy::PointerCaptureListenerHACK>
         listener_handle) {
-  presentation::PointerCaptureListenerHACKPtr listener;
+  fuchsia::ui::policy::PointerCaptureListenerHACKPtr listener;
   listener.Bind(std::move(listener_handle));
   // Auto-remove listeners if the interface closes.
   listener.set_error_handler([this, listener = listener.get()] {
@@ -514,7 +514,7 @@ void Presentation::GetPresentationMode(GetPresentationModeCallback callback) {
 }
 
 void Presentation::SetPresentationModeListener(
-    fidl::InterfaceHandle<presentation::PresentationModeListener> listener) {
+    fidl::InterfaceHandle<fuchsia::ui::policy::PresentationModeListener> listener) {
   if (presentation_mode_listener_) {
     FXL_LOG(ERROR) << "Cannot listen to presentation mode; already listening.";
     return;
@@ -639,7 +639,7 @@ void Presentation::OnSensorEvent(uint32_t device_id,
   if (presentation_mode_listener_) {
     const fuchsia::ui::input::SensorDescriptor* sensor_descriptor =
         device_states_by_id_[device_id].first->descriptor()->sensor.get();
-    std::pair<bool, presentation::PresentationMode> update =
+    std::pair<bool, fuchsia::ui::policy::PresentationMode> update =
         presentation_mode_detector_->Update(*sensor_descriptor,
                                             std::move(event));
     if (update.first && update.second != presentation_mode_) {

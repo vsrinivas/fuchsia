@@ -11,7 +11,7 @@
 #include <fuchsia/math/cpp/fidl.h>
 #include <fuchsia/ui/input/cpp/fidl.h>
 #include <lib/fit/function.h>
-#include <presentation/cpp/fidl.h>
+#include <fuchsia/ui/policy/cpp/fidl.h>
 #include <fuchsia/ui/views_v1/cpp/fidl.h>
 
 #include "garnet/bin/ui/presentation_mode/detector.h"
@@ -65,7 +65,7 @@ namespace root_presenter {
 class Presentation : private ::fuchsia::ui::views_v1::ViewTreeListener,
                      private ::fuchsia::ui::views_v1::ViewListener,
                      private ::fuchsia::ui::views_v1::ViewContainerListener,
-                     private presentation::Presentation {
+                     private fuchsia::ui::policy::Presentation {
  public:
   // Callback when the presentation yields to the next/previous one.
   using YieldCallback = fit::function<void(bool yield_to_next)>;
@@ -84,7 +84,7 @@ class Presentation : private ::fuchsia::ui::views_v1::ViewTreeListener,
   // presentation.
   void Present(
       ::fuchsia::ui::views_v1_token::ViewOwnerPtr view_owner,
-      fidl::InterfaceRequest<presentation::Presentation> presentation_request,
+      fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> presentation_request,
       YieldCallback yield_callback, ShutdownCallback shutdown_callback);
 
   void OnReport(uint32_t device_id, fuchsia::ui::input::InputReport report);
@@ -136,9 +136,9 @@ class Presentation : private ::fuchsia::ui::views_v1::ViewTreeListener,
   void InitializeDisplayModel(fuchsia::ui::gfx::DisplayInfo display_info);
 
   // |Presentation|
-  void SetDisplayUsage(presentation::DisplayUsage usage) override;
+  void SetDisplayUsage(fuchsia::ui::policy::DisplayUsage usage) override;
 
-  void SetDisplayUsageWithoutApplyingChanges(presentation::DisplayUsage usage_);
+  void SetDisplayUsageWithoutApplyingChanges(fuchsia::ui::policy::DisplayUsage usage_);
 
   // |Presentation|
   void SetDisplaySizeInMm(float width_in_mm, float height_in_mm) override;
@@ -156,12 +156,12 @@ class Presentation : private ::fuchsia::ui::views_v1::ViewTreeListener,
   // |Presentation|
   void CaptureKeyboardEventHACK(
       fuchsia::ui::input::KeyboardEvent event_to_capture,
-      fidl::InterfaceHandle<presentation::KeyboardCaptureListenerHACK> listener)
+      fidl::InterfaceHandle<fuchsia::ui::policy::KeyboardCaptureListenerHACK> listener)
       override;
 
   // |Presentation|
   void CapturePointerEventsHACK(
-      fidl::InterfaceHandle<presentation::PointerCaptureListenerHACK> listener)
+      fidl::InterfaceHandle<fuchsia::ui::policy::PointerCaptureListenerHACK> listener)
       override;
 
   // |Presentation|
@@ -169,12 +169,12 @@ class Presentation : private ::fuchsia::ui::views_v1::ViewTreeListener,
 
   // |Presentation|
   void SetPresentationModeListener(
-      fidl::InterfaceHandle<presentation::PresentationModeListener> listener)
+      fidl::InterfaceHandle<fuchsia::ui::policy::PresentationModeListener> listener)
       override;
 
   void CreateViewTree(
       ::fuchsia::ui::views_v1_token::ViewOwnerPtr view_owner,
-      fidl::InterfaceRequest<presentation::Presentation> presentation_request,
+      fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> presentation_request,
       fuchsia::ui::gfx::DisplayInfo display_info);
 
   // Returns true if the event was consumed and the scene is to be invalidated.
@@ -234,7 +234,7 @@ class Presentation : private ::fuchsia::ui::views_v1::ViewTreeListener,
 
   fuchsia::math::PointF mouse_coordinates_;
 
-  fidl::Binding<presentation::Presentation> presentation_binding_;
+  fidl::Binding<fuchsia::ui::policy::Presentation> presentation_binding_;
   fidl::Binding<::fuchsia::ui::views_v1::ViewTreeListener> tree_listener_binding_;
   fidl::Binding<::fuchsia::ui::views_v1::ViewContainerListener>
       tree_container_listener_binding_;
@@ -280,20 +280,20 @@ class Presentation : private ::fuchsia::ui::views_v1::ViewTreeListener,
   // event happens.
   struct KeyboardCaptureItem {
     fuchsia::ui::input::KeyboardEvent event;
-    presentation::KeyboardCaptureListenerHACKPtr listener;
+    fuchsia::ui::policy::KeyboardCaptureListenerHACKPtr listener;
   };
   std::vector<KeyboardCaptureItem> captured_keybindings_;
 
   // A registry of listeners who want to be notified when pointer event happens.
   struct PointerCaptureItem {
-    presentation::PointerCaptureListenerHACKPtr listener;
+    fuchsia::ui::policy::PointerCaptureListenerHACKPtr listener;
   };
   std::vector<PointerCaptureItem> captured_pointerbindings_;
 
   // Listener for changes in presentation mode.
-  presentation::PresentationModeListenerPtr presentation_mode_listener_;
+  fuchsia::ui::policy::PresentationModeListenerPtr presentation_mode_listener_;
   // Presentation mode, based on last N measurements
-  presentation::PresentationMode presentation_mode_;
+  fuchsia::ui::policy::PresentationMode presentation_mode_;
   std::unique_ptr<presentation_mode::Detector> presentation_mode_detector_;
 
   fxl::WeakPtrFactory<Presentation> weak_factory_;

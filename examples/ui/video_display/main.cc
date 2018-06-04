@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/async-loop/cpp/loop.h>
-#include <presentation/cpp/fidl.h>
+#include <fuchsia/ui/policy/cpp/fidl.h>
 #include <trace-provider/provider.h>
 
 #include "garnet/examples/ui/video_display/view.h"

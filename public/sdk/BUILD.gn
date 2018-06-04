@@ -61,7 +61,7 @@ sdk("garnet") {
     "//garnet/public/lib/ui/geometry/fidl:fidl_sdk($fidl_toolchain)",
     "//garnet/public/lib/ui/gfx/fidl:fidl_sdk($fidl_toolchain)",
     "//garnet/public/lib/ui/input/fidl:fidl_sdk($fidl_toolchain)",
-    "//garnet/public/lib/ui/presentation/fidl:fidl_sdk($fidl_toolchain)",
+    "//garnet/public/lib/ui/policy/fidl:fidl_sdk($fidl_toolchain)",
     "//garnet/public/lib/ui/scenic/fidl:fidl_sdk($fidl_toolchain)",
     "//garnet/public/lib/ui/views/fidl:v1_sdk($fidl_toolchain)",
     "//garnet/public/lib/ui/views/fidl:v2_sdk($fidl_toolchain)",

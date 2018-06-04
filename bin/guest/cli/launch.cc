@@ -6,7 +6,7 @@
 
 #include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/guest/cpp/fidl.h>
-#include <presentation/cpp/fidl.h>
+#include <fuchsia/ui/policy/cpp/fidl.h>
 #include <fuchsia/ui/views_v1/cpp/fidl.h>
 
 #include "garnet/bin/guest/cli/serial.h"
@@ -41,7 +41,7 @@ void handle_launch(int argc, const char* argv[]) {
   view_provider->CreateView(view_owner.NewRequest(), nullptr);
 
   // Ask the presenter to display it.
-  presentation::PresenterSyncPtr presenter;
+  fuchsia::ui::policy::PresenterSyncPtr presenter;
   fuchsia::sys::ConnectToEnvironmentService(presenter.NewRequest());
   presenter->Present(std::move(view_owner), nullptr);
 

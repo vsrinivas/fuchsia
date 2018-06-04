@@ -11,7 +11,7 @@
 
 #include <fuchsia/ui/input/cpp/fidl.h>
 #include <fuchsia/ui/views_v1/cpp/fidl.h>
-#include <presentation/cpp/fidl.h>
+#include <fuchsia/ui/policy/cpp/fidl.h>
 #include "garnet/bin/ui/input_reader/input_reader.h"
 #include "garnet/bin/ui/root_presenter/presentation.h"
 #include "lib/app/cpp/startup_context.h"
@@ -25,13 +25,13 @@ namespace root_presenter {
 
 class Presentation;
 
-// The presenter provides a |presentation::Presenter| service which displays
+// The presenter provides a |fuchsia::ui::policy::Presenter| service which displays
 // UI by attaching the provided view to the root of a new view tree
 // associated with a new renderer.
 //
 // Any number of view trees can be created, although multi-display support
 // and input routing is not fully supported (TODO).
-class App : public presentation::Presenter,
+class App : public fuchsia::ui::policy::Presenter,
             public fuchsia::ui::input::InputDeviceRegistry,
             public mozart::InputDeviceImpl::Listener {
  public:
@@ -47,7 +47,7 @@ class App : public presentation::Presenter,
   // |Presenter|:
   void Present(fidl::InterfaceHandle<::fuchsia::ui::views_v1_token::ViewOwner>
                    view_owner,
-               fidl::InterfaceRequest<presentation::Presentation>
+               fidl::InterfaceRequest<fuchsia::ui::policy::Presentation>
                    presentation_request) override;
 
   void HACK_SetRendererParams(
@@ -67,7 +67,7 @@ class App : public presentation::Presenter,
   void SwitchToPreviousPresentation();
 
   std::unique_ptr<fuchsia::sys::StartupContext> startup_context_;
-  fidl::BindingSet<presentation::Presenter> presenter_bindings_;
+  fidl::BindingSet<fuchsia::ui::policy::Presenter> presenter_bindings_;
   fidl::BindingSet<fuchsia::ui::input::InputDeviceRegistry>
       input_receiver_bindings_;
   mozart::InputReader input_reader_;

@@ -9,7 +9,7 @@
 
 #include "garnet/bin/ui/root_presenter/displays/display_metrics.h"
 
-#include <presentation/cpp/fidl.h>
+#include <fuchsia/ui/policy/cpp/fidl.h>
 #include "lib/fxl/macros.h"
 
 namespace root_presenter {
@@ -50,7 +50,7 @@ class DisplayModel {
   struct EnvironmentInfo {
     // The intended usage of the display.
     // Value is |kUnknown| if unknown.
-    presentation::DisplayUsage usage = presentation::DisplayUsage::kUnknown;
+    fuchsia::ui::policy::DisplayUsage usage = fuchsia::ui::policy::DisplayUsage::kUnknown;
 
     // The nominal apparent viewing distance in millimeters.
     // Value is 0.0 if unknown.

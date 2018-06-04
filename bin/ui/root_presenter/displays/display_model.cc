@@ -38,20 +38,20 @@ constexpr float kDefaultPixelVisualAngleDegrees = 0.0213;
 constexpr float kIdealPipVisualAngleDegrees = 0.0255;
 
 constexpr float GetDefaultViewingDistanceInMm(
-    presentation::DisplayUsage usage) {
+    fuchsia::ui::policy::DisplayUsage usage) {
   switch (usage) {
-    case presentation::DisplayUsage::kHandheld:
+    case fuchsia::ui::policy::DisplayUsage::kHandheld:
       return 360.f;
-    case presentation::DisplayUsage::kClose:
+    case fuchsia::ui::policy::DisplayUsage::kClose:
       return 500.f;
-    case presentation::DisplayUsage::kNear:
+    case fuchsia::ui::policy::DisplayUsage::kNear:
       return 720.f;
-    case presentation::DisplayUsage::kMidrange:
+    case fuchsia::ui::policy::DisplayUsage::kMidrange:
       return 1200.f;
-    case presentation::DisplayUsage::kFar:
+    case fuchsia::ui::policy::DisplayUsage::kFar:
       return 3000.f;
     default:
-    case presentation::DisplayUsage::kUnknown:
+    case fuchsia::ui::policy::DisplayUsage::kUnknown:
       return 0.f;
   }
 }

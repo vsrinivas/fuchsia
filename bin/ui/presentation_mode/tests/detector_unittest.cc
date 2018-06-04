@@ -82,14 +82,14 @@ TEST(Closed, Detector) {
   Detector detector(/*history*/ 2);
 
   fuchsia::ui::input::InputReport base_report = CreateVector(0, 0, kMaxVal);
-  std::pair<bool, presentation::PresentationMode> result =
+  std::pair<bool, fuchsia::ui::policy::PresentationMode> result =
       detector.Update(kBaseSensor, std::move(base_report));
   EXPECT_FALSE(result.first);
 
   fuchsia::ui::input::InputReport lid_report = CreateVector(0, 0, kMinVal);
   result = detector.Update(kLidSensor, std::move(lid_report));
   EXPECT_TRUE(result.first);
-  EXPECT_EQ(result.second, presentation::PresentationMode::CLOSED);
+  EXPECT_EQ(result.second, fuchsia::ui::policy::PresentationMode::CLOSED);
 
   fuchsia::ui::input::InputReport base_shift = CreateVector(0, 0, kMinVal);
   result = detector.Update(kBaseSensor, std::move(base_shift));
@@ -100,14 +100,14 @@ TEST(Laptop, Detector) {
   Detector detector(/*history*/ 2);
 
   fuchsia::ui::input::InputReport base_report = CreateVector(0, 0, kMaxVal);
-  std::pair<bool, presentation::PresentationMode> result =
+  std::pair<bool, fuchsia::ui::policy::PresentationMode> result =
       detector.Update(kBaseSensor, std::move(base_report));
   EXPECT_FALSE(result.first);
 
   fuchsia::ui::input::InputReport lid_report = CreateVector(0, kMaxVal, 0);
   result = detector.Update(kLidSensor, std::move(lid_report));
   EXPECT_TRUE(result.first);
-  EXPECT_EQ(result.second, presentation::PresentationMode::LAPTOP);
+  EXPECT_EQ(result.second, fuchsia::ui::policy::PresentationMode::LAPTOP);
 
   fuchsia::ui::input::InputReport base_shift = CreateVector(0, 0, kMinVal);
   result = detector.Update(kBaseSensor, std::move(base_shift));
@@ -118,14 +118,14 @@ TEST(Tablet, Detector) {
   Detector detector(/*history*/ 2);
 
   fuchsia::ui::input::InputReport base_report = CreateVector(0, 0, kMinVal);
-  std::pair<bool, presentation::PresentationMode> result =
+  std::pair<bool, fuchsia::ui::policy::PresentationMode> result =
       detector.Update(kBaseSensor, std::move(base_report));
   EXPECT_FALSE(result.first);
 
   fuchsia::ui::input::InputReport lid_report = CreateVector(0, 0, kMaxVal);
   result = detector.Update(kLidSensor, std::move(lid_report));
   EXPECT_TRUE(result.first);
-  EXPECT_EQ(result.second, presentation::PresentationMode::TABLET);
+  EXPECT_EQ(result.second, fuchsia::ui::policy::PresentationMode::TABLET);
 
   fuchsia::ui::input::InputReport base_shift = CreateVector(0, 0, kMaxVal);
   result = detector.Update(kBaseSensor, std::move(base_shift));
@@ -136,14 +136,14 @@ TEST(Tent, Detector) {
   Detector detector(/*history*/ 2);
 
   fuchsia::ui::input::InputReport base_report = CreateVector(0, kMaxVal, 0);
-  std::pair<bool, presentation::PresentationMode> result =
+  std::pair<bool, fuchsia::ui::policy::PresentationMode> result =
       detector.Update(kBaseSensor, std::move(base_report));
   EXPECT_FALSE(result.first);
 
   fuchsia::ui::input::InputReport lid_report = CreateVector(0, kMinVal, 0);
   result = detector.Update(kLidSensor, std::move(lid_report));
   EXPECT_TRUE(result.first);
-  EXPECT_EQ(result.second, presentation::PresentationMode::TENT);
+  EXPECT_EQ(result.second, fuchsia::ui::policy::PresentationMode::TENT);
 
   fuchsia::ui::input::InputReport base_shift = CreateVector(0, kMinVal, 0);
   result = detector.Update(kBaseSensor, std::move(base_shift));

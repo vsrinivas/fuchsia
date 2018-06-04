@@ -28,7 +28,6 @@ executable("video_display") {
     "//garnet/public/lib/fidl/cpp",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/media/timeline:timeline",
-    "//garnet/public/lib/ui/presentation/fidl",
     "//garnet/public/lib/ui/scenic:client",
     "//garnet/public/lib/ui/scenic:fidl_helpers",
     "//garnet/public/lib/ui/scenic/fidl",

@@ -19,7 +19,7 @@ executable("tile") {
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/svc/cpp",
     "//garnet/public/lib/ui/gfx/fidl",
-    "//garnet/public/lib/ui/presentation/fidl",
+    "//garnet/public/lib/ui/policy/fidl",
     "//garnet/public/lib/ui/view_framework:view_provider",
     "//garnet/public/lib/ui/views/cpp",
     "//garnet/public/lib/ui/views/fidl:v1",
