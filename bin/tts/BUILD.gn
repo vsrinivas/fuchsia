@@ -20,6 +20,7 @@ executable("bin") {
     "//garnet/public/lib/tts/fidl",
     "//third_party/flite",
     "//zircon/public/lib/zx",
+    "//zircon/public/lib/vmo-utils",
   ]
 }
 

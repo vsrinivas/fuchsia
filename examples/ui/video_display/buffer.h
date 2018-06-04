@@ -6,7 +6,7 @@
 
 #include <stdint.h>
 
-#include <fbl/vmo_mapper.h>
+#include <lib/vmo-utils/vmo_mapper.h>
 #include <lib/fsl/tasks/message_loop.h>
 #include <zircon/status.h>
 #include <zx/event.h>
@@ -17,7 +17,7 @@ namespace video_display {
 // Encapsulates a part of a VMO.
 // A Buffer represents one frame, mapping it into memory to allow the process to
 // write into it. Buffer also keeps track of the locked state of the memory.
-class Buffer : public fbl::VmoMapper {
+class Buffer : public vmo_utils::VmoMapper {
  protected:
   enum class BufferState { kInvalid = 0, kAvailable, kReadLocked };
 

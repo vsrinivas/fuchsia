@@ -5,7 +5,7 @@
 #ifndef GARNET_EXAMPLES_MEDIA_SIMPLE_SINE_SYNC_SIMPLE_SINE_SYNC_H_
 #define GARNET_EXAMPLES_MEDIA_SIMPLE_SINE_SYNC_SIMPLE_SINE_SYNC_H_
 
-#include <fbl/vmo_mapper.h>
+#include <lib/vmo-utils/vmo_mapper.h>
 #include <media/cpp/fidl.h>
 
 namespace examples {
@@ -43,7 +43,7 @@ class MediaApp {
 
   media::AudioRenderer2SyncPtr audio_renderer_;
 
-  fbl::VmoMapper payload_buffer_;
+  vmo_utils::VmoMapper payload_buffer_;
   size_t sample_size_;
   size_t payload_size_;
   size_t total_mapping_size_;

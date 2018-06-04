@@ -241,7 +241,7 @@ void AudioRenderer2Impl::SetPayloadBuffer(zx::vmo payload_buffer) {
   // Map this into a sub-vmar instead of defaulting to the root
   // once teisenbe@ provides guidance on the best-practice for doing this.
   zx_status_t res;
-  payload_buffer_ = fbl::AdoptRef(new fbl::RefCountedVmoMapper());
+  payload_buffer_ = fbl::AdoptRef(new vmo_utils::RefCountedVmoMapper());
   res = payload_buffer_->Map(payload_buffer, 0, 0, ZX_VM_FLAG_PERM_READ);
   if (res != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to map payload buffer (res = " << res << ")";
@@ -660,7 +660,7 @@ void AudioRenderer2Impl::ReportNewMinClockLeadTime() {
 }
 
 AudioRenderer2Impl::AudioPacketRefV2::AudioPacketRefV2(
-    fbl::RefPtr<fbl::RefCountedVmoMapper> vmo_ref,
+    fbl::RefPtr<vmo_utils::RefCountedVmoMapper> vmo_ref,
     AudioRenderer2::SendPacketCallback callback, AudioPacket packet,
     AudioServerImpl* server, uint32_t frac_frame_len, int64_t start_pts)
     : AudioPacketRef(server, frac_frame_len, start_pts),

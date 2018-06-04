@@ -7,12 +7,12 @@
 #include <fbl/auto_call.h>
 #include <fbl/limits.h>
 #include <fbl/unique_ptr.h>
-#include <fbl/vmo_mapper.h>
 #include <inttypes.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 #include <lib/fit/function.h>
+#include <lib/vmo-utils/vmo_mapper.h>
 #include <lib/zx/time.h>
 #include <lib/zx/vmar.h>
 #include <lib/zx/vmo.h>
@@ -127,7 +127,7 @@ class FxProcessor {
                   float mix_delta = 0.0f);
   void UpdatePreampGain(float delta);
 
-  fbl::VmoMapper output_buf_;
+  vmo_utils::VmoMapper output_buf_;
   size_t output_buf_sz_ = 0;
   uint32_t output_buf_frames_ = 0;
   uint64_t output_buf_wp_ = 0;

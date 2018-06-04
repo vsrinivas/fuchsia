@@ -20,5 +20,6 @@ executable("tones") {
     "//garnet/public/lib/media/timeline",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fit",
+    "//zircon/public/lib/vmo-utils",
   ]
 }

@@ -6,7 +6,7 @@
 #define GARNET_BIN_MEDIA_AUDIO_SERVER_AUDIO_RENDERER2_IMPL_H_
 
 #include <fbl/unique_ptr.h>
-#include <fbl/vmo_mapper.h>
+#include <lib/vmo-utils/vmo_mapper.h>
 #include <media/cpp/fidl.h>
 
 #include "garnet/bin/media/audio_server/audio_object.h"
@@ -82,7 +82,7 @@ class AudioRenderer2Impl : public AudioRendererImpl, public AudioRenderer2 {
 
     uint32_t flags() final { return packet_.flags; }
 
-    AudioPacketRefV2(fbl::RefPtr<fbl::RefCountedVmoMapper> vmo_ref,
+    AudioPacketRefV2(fbl::RefPtr<vmo_utils::RefCountedVmoMapper> vmo_ref,
                      AudioRenderer2::SendPacketCallback callback,
                      AudioPacket packet, AudioServerImpl* server,
                      uint32_t frac_frame_len, int64_t start_pts);
@@ -90,7 +90,7 @@ class AudioRenderer2Impl : public AudioRendererImpl, public AudioRenderer2 {
    protected:
     bool NeedsCleanup() final { return callback_ != nullptr; }
 
-    fbl::RefPtr<fbl::RefCountedVmoMapper> vmo_ref_;
+    fbl::RefPtr<vmo_utils::RefCountedVmoMapper> vmo_ref_;
     AudioRenderer2::SendPacketCallback callback_;
     AudioPacket packet_;
   };
@@ -139,7 +139,7 @@ class AudioRenderer2Impl : public AudioRendererImpl, public AudioRenderer2 {
       gain_control_bindings_;
   bool is_shutdown_ = false;
   bool gain_events_enabled_ = false;
-  fbl::RefPtr<fbl::RefCountedVmoMapper> payload_buffer_;
+  fbl::RefPtr<vmo_utils::RefCountedVmoMapper> payload_buffer_;
   bool config_validated_ = false;
 
   // PTS interpolation state.

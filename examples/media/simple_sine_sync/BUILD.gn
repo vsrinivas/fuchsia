@@ -14,5 +14,6 @@ executable("simple_sine_sync") {
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/media/fidl",
     "//garnet/public/lib/media/transport",
+    "//zircon/public/lib/vmo-utils",
   ]
 }

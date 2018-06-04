@@ -8,8 +8,8 @@
 #include <mutex>
 #include <thread>
 
-#include <fbl/vmo_mapper.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/vmo-utils/vmo_mapper.h>
 #include <lib/fit/function.h>
 #include <media/cpp/fidl.h>
 #include <tts/cpp/fidl.h>
@@ -72,7 +72,7 @@ class TtsSpeaker : public std::enable_shared_from_this<TtsSpeaker> {
   async_t* master_async_;
 
   media::AudioRenderer2Ptr audio_renderer_;
-  fbl::VmoMapper shared_buf_;
+  vmo_utils::VmoMapper shared_buf_;
 
   std::mutex ring_buffer_lock_;
   uint64_t wr_ptr_ FXL_GUARDED_BY(ring_buffer_lock_) = 0;

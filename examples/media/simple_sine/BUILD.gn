@@ -14,5 +14,6 @@ executable("simple_sine") {
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/media/fidl",
+    "//zircon/public/lib/vmo-utils",
   ]
 }
