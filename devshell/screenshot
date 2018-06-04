@@ -1,0 +1,41 @@
+#!/bin/bash
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+### Takes a screenshot and copies it to the host.
+
+## usage: fx screenshot [host_path]
+##
+## This command invokes Fuchsia's screencap tool to create a screenshot.
+## If `host_path` is provided, the screenshot is written to this path.
+## Otherwise it is written to the host's stdout.
+##
+## Example usage:
+##
+##   fx screenshot
+##   fx screenshot /tmp/screenshot.ppm
+
+set -e
+
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/lib/vars.sh
+fx-config-read
+
+if [[ "$#" -ge 2 ]]; then
+  fx-command-help
+  exit 1
+fi
+
+case $1 in
+  -h|--help)
+  fx-command-help
+  exit 0
+  ;;
+esac
+
+if [[ "$#" -eq 1 ]]; then
+  OUT=$1
+  fx-command-run shell "screencap ${SRC}" > "${OUT}"
+else
+  fx-command-run shell "screencap ${SRC}"
+fi
