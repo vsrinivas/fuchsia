@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_BIN_MDNS_SERVICE_PROBER_H_
+#define GARNET_BIN_MDNS_SERVICE_PROBER_H_
 
 #include <memory>
 #include <string>
@@ -36,9 +37,7 @@ class Prober : public MdnsAgent {
 
   // Creates a |Prober|. |type| is the resource type for which we're probing.
   // Use |kA| for address types (A and AAAA).
-  Prober(MdnsAgent::Host* host,
-         DnsType type,
-         CompletionCallback callback);
+  Prober(MdnsAgent::Host* host, DnsType type, CompletionCallback callback);
 
   ~Prober() override;
 
@@ -76,3 +75,5 @@ class Prober : public MdnsAgent {
 };
 
 }  // namespace mdns
+
+#endif  // GARNET_BIN_MDNS_SERVICE_PROBER_H_

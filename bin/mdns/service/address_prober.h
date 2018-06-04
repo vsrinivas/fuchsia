@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_BIN_MDNS_SERVICE_ADDRESS_PROBER_H_
+#define GARNET_BIN_MDNS_SERVICE_ADDRESS_PROBER_H_
 
 #include "garnet/bin/mdns/service/prober.h"
 
@@ -28,3 +29,5 @@ class AddressProber : public Prober {
 };
 
 }  // namespace mdns
+
+#endif  // GARNET_BIN_MDNS_SERVICE_ADDRESS_PROBER_H_

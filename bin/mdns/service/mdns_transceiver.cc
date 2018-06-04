@@ -23,10 +23,9 @@ void MdnsTransceiver::EnableInterface(const std::string& name,
   enabled_interfaces_.emplace_back(name, family);
 }
 
-void MdnsTransceiver::Start(
-    std::unique_ptr<InterfaceMonitor> interface_monitor,
-    LinkChangeCallback link_change_callback,
-    InboundMessageCallback inbound_message_callback) {
+void MdnsTransceiver::Start(std::unique_ptr<InterfaceMonitor> interface_monitor,
+                            LinkChangeCallback link_change_callback,
+                            InboundMessageCallback inbound_message_callback) {
   FXL_DCHECK(interface_monitor);
   FXL_DCHECK(link_change_callback);
   FXL_DCHECK(inbound_message_callback);
@@ -181,8 +180,7 @@ void MdnsTransceiver::OnLinkChange() {
 }  // namespace mdns
 
 bool MdnsTransceiver::AddInterfaceTransceiver(
-    size_t index,
-    const InterfaceDescriptor& interface_descr) {
+    size_t index, const InterfaceDescriptor& interface_descr) {
   FXL_DCHECK(GetInterfaceTransceiver(index) == nullptr);
 
   auto interface_transceiver = MdnsInterfaceTransceiver::Create(
@@ -206,8 +204,7 @@ bool MdnsTransceiver::AddInterfaceTransceiver(
 }
 
 void MdnsTransceiver::ReplaceInterfaceTransceiver(
-    size_t index,
-    const InterfaceDescriptor& interface_descr) {
+    size_t index, const InterfaceDescriptor& interface_descr) {
   auto interface_transceiver = GetInterfaceTransceiver(index);
   FXL_DCHECK(interface_transceiver);
 

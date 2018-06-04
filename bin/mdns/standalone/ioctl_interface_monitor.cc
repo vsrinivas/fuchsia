@@ -5,10 +5,9 @@
 #include "garnet/bin/mdns/standalone/ioctl_interface_monitor.h"
 
 #include <errno.h>
-#include <sys/socket.h>
-
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
+#include <sys/socket.h>
 #include <zx/time.h>
 
 #include "garnet/bin/mdns/service/ip_address.h"
@@ -37,8 +36,7 @@ IoctlInterfaceMonitor::IoctlInterfaceMonitor()
 
 IoctlInterfaceMonitor::~IoctlInterfaceMonitor() {}
 
-void IoctlInterfaceMonitor::RegisterLinkChangeCallback(
-    fit::closure callback) {
+void IoctlInterfaceMonitor::RegisterLinkChangeCallback(fit::closure callback) {
   link_change_callback_ = std::move(callback);
 }
 
@@ -66,7 +64,8 @@ bool IoctlInterfaceMonitor::CheckInterfaces() {
   }
 
   netc_get_if_info_t if_infos;
-  const ssize_t size = ioctl_netc_get_num_ifs(socket_fd.get(), &if_infos.n_info);
+  const ssize_t size =
+      ioctl_netc_get_num_ifs(socket_fd.get(), &if_infos.n_info);
   if (size < 0 || if_infos.n_info == 0) {
     return true;
   }

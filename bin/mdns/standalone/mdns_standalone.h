@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_BIN_MDNS_STANDALONE_MDNS_STANDALONE_H_
+#define GARNET_BIN_MDNS_STANDALONE_MDNS_STANDALONE_H_
 
 #include "garnet/bin/mdns/service/mdns.h"
 #include "lib/fxl/macros.h"
@@ -25,8 +26,7 @@ class MdnsStandalone : public Mdns::Subscriber, public Mdns::Publisher {
                           const SocketAddress& v6_address,
                           const std::vector<std::string>& text) override;
 
-  void InstanceChanged(const std::string& service,
-                       const std::string& instance,
+  void InstanceChanged(const std::string& service, const std::string& instance,
                        const SocketAddress& v4_address,
                        const SocketAddress& v6_address,
                        const std::vector<std::string>& text) override;
@@ -39,11 +39,9 @@ class MdnsStandalone : public Mdns::Subscriber, public Mdns::Publisher {
   // Mdns::Publisher implementation:
   void ReportSuccess(bool success) override;
 
-  void GetPublication(
-      bool query,
-      const std::string& subtype,
-      fit::function<void(std::unique_ptr<Mdns::Publication>)> callback)
-      override;
+  void GetPublication(bool query, const std::string& subtype,
+                      fit::function<void(std::unique_ptr<Mdns::Publication>)>
+                          callback) override;
 
   mdns::Mdns mdns_;
 
@@ -51,3 +49,5 @@ class MdnsStandalone : public Mdns::Subscriber, public Mdns::Publisher {
 };
 
 }  // namespace mdns
+
+#endif  // GARNET_BIN_MDNS_STANDALONE_MDNS_STANDALONE_H_

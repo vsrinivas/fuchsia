@@ -19,10 +19,11 @@ std::unique_ptr<InterfaceMonitor> FidlInterfaceMonitor::Create(
 FidlInterfaceMonitor::FidlInterfaceMonitor(
     fuchsia::sys::StartupContext* startup_context)
     : binding_(this) {
-  netstack_ =
-      startup_context->ConnectToEnvironmentService<fuchsia::netstack::Netstack>();
+  netstack_ = startup_context
+                  ->ConnectToEnvironmentService<fuchsia::netstack::Netstack>();
 
-  fidl::InterfaceHandle<fuchsia::netstack::NotificationListener> listener_handle;
+  fidl::InterfaceHandle<fuchsia::netstack::NotificationListener>
+      listener_handle;
 
   binding_.Bind(listener_handle.NewRequest());
   binding_.set_error_handler([this]() {
@@ -46,8 +47,7 @@ FidlInterfaceMonitor::~FidlInterfaceMonitor() {
   }
 }
 
-void FidlInterfaceMonitor::RegisterLinkChangeCallback(
-    fit::closure callback) {
+void FidlInterfaceMonitor::RegisterLinkChangeCallback(fit::closure callback) {
   link_change_callback_ = std::move(callback);
 }
 

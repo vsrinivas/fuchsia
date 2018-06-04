@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_BIN_MDNS_SERVICE_HOST_NAME_RESOLVER_H_
+#define GARNET_BIN_MDNS_SERVICE_HOST_NAME_RESOLVER_H_
 
 #include <memory>
 #include <string>
@@ -18,8 +19,7 @@ namespace mdns {
 class HostNameResolver : public MdnsAgent {
  public:
   // Creates a |HostNameResolver|.
-  HostNameResolver(MdnsAgent::Host* host,
-                   const std::string& host_name,
+  HostNameResolver(MdnsAgent::Host* host, const std::string& host_name,
                    fxl::TimePoint timeout,
                    Mdns::ResolveHostNameCallback callback);
 
@@ -45,3 +45,5 @@ class HostNameResolver : public MdnsAgent {
 };
 
 }  // namespace mdns
+
+#endif  // GARNET_BIN_MDNS_SERVICE_HOST_NAME_RESOLVER_H_

@@ -15,9 +15,7 @@ namespace mdns {
 constexpr fxl::TimeDelta Prober::kMaxProbeInterval =
     fxl::TimeDelta::FromMilliseconds(250);
 
-Prober::Prober(MdnsAgent::Host* host,
-               DnsType type,
-               CompletionCallback callback)
+Prober::Prober(MdnsAgent::Host* host, DnsType type, CompletionCallback callback)
     : MdnsAgent(host), type_(type), callback_(std::move(callback)) {
   FXL_DCHECK(callback_);
 }

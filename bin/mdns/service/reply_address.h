@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_BIN_MDNS_SERVICE_REPLY_ADDRESS_H_
+#define GARNET_BIN_MDNS_SERVICE_REPLY_ADDRESS_H_
 
 #include <ostream>
 
@@ -45,3 +46,5 @@ class ReplyAddress {
 std::ostream& operator<<(std::ostream& os, const ReplyAddress& value);
 
 }  // namespace mdns
+
+#endif  // GARNET_BIN_MDNS_SERVICE_REPLY_ADDRESS_H_

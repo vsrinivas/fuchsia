@@ -4,15 +4,14 @@
 
 #include "garnet/bin/mdns/service/mdns_interface_transceiver.h"
 
-#include <arpa/inet.h>
-#include <errno.h>
-#include <poll.h>
-#include <sys/socket.h>
-
 #include <iostream>
 
+#include <arpa/inet.h>
+#include <errno.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
+#include <poll.h>
+#include <sys/socket.h>
 
 #include "garnet/bin/mdns/service/dns_formatting.h"
 #include "garnet/bin/mdns/service/dns_reading.h"

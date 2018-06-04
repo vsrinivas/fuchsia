@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_BIN_MDNS_SERVICE_DNS_FORMATTING_H_
+#define GARNET_BIN_MDNS_SERVICE_DNS_FORMATTING_H_
 
 #include <iomanip>
 #include <iostream>
@@ -49,3 +50,5 @@ std::ostream& operator<<(std::ostream& os, const DnsResource& value);
 std::ostream& operator<<(std::ostream& os, const DnsMessage& value);
 
 }  // namespace mdns
+
+#endif  // GARNET_BIN_MDNS_SERVICE_DNS_FORMATTING_H_

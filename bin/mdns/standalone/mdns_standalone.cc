@@ -114,8 +114,7 @@ void MdnsStandalone::ReportSuccess(bool success) {
 }
 
 void MdnsStandalone::GetPublication(
-    bool query,
-    const std::string& subtype,
+    bool query, const std::string& subtype,
     fit::function<void(std::unique_ptr<Mdns::Publication>)> callback) {
   FXL_DCHECK(callback);
   callback(Mdns::Publication::Create(IpPort::From_uint16_t(6666),

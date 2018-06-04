@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_BIN_MDNS_SERVICE_MDNS_NAMES_H_
+#define GARNET_BIN_MDNS_SERVICE_MDNS_NAMES_H_
 
 #include <string>
 
@@ -24,8 +25,7 @@ struct MdnsNames {
   // For example, produces "_bar._sub_foo._tcp.local." from "_foo._tcp." and
   // subtype "_bar.". The simple service name and subtype must both end in ".".
   static std::string LocalServiceSubtypeFullName(
-      const std::string& service_name,
-      const std::string& subtype);
+      const std::string& service_name, const std::string& subtype);
 
   // Constructs a local service instance name from a simple instance name and
   // a simple service name. For example, produces "myfoo._foo._tcp.local." from
@@ -60,3 +60,5 @@ struct MdnsNames {
 };
 
 }  // namespace mdns
+
+#endif  // GARNET_BIN_MDNS_SERVICE_MDNS_NAMES_H_

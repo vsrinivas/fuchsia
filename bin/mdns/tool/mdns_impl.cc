@@ -9,8 +9,8 @@
 
 #include <lib/async-loop/loop.h>
 #include <lib/async/default.h>
-
 #include <mdns/cpp/fidl.h>
+
 #include "garnet/bin/mdns/tool/formatting.h"
 #include "garnet/bin/mdns/tool/mdns_params.h"
 #include "lib/fsl/types/type_converters.h"

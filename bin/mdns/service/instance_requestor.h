@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_BIN_MDNS_SERVICE_INSTANCE_REQUESTOR_H_
+#define GARNET_BIN_MDNS_SERVICE_INSTANCE_REQUESTOR_H_
 
 #include <memory>
 #include <string>
@@ -74,8 +75,7 @@ class InstanceRequestor : public MdnsAgent {
                           InstanceInfo* instance_info);
 
   void ReceiveAResource(const DnsResource& resource,
-                        MdnsResourceSection section,
-                        TargetInfo* target_info);
+                        MdnsResourceSection section, TargetInfo* target_info);
 
   void ReceiveAaaaResource(const DnsResource& resource,
                            MdnsResourceSection section,
@@ -93,3 +93,5 @@ class InstanceRequestor : public MdnsAgent {
 };
 
 }  // namespace mdns
+
+#endif  // GARNET_BIN_MDNS_SERVICE_INSTANCE_REQUESTOR_H_

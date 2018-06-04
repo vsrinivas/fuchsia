@@ -2,11 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_BIN_MDNS_SERVICE_MDNS_FIDL_UTIL_H_
+#define GARNET_BIN_MDNS_SERVICE_MDNS_FIDL_UTIL_H_
+
+#include <mdns/cpp/fidl.h>
 
 #include "garnet/bin/mdns/service/mdns.h"
 #include "garnet/bin/mdns/service/socket_address.h"
-#include <mdns/cpp/fidl.h>
 
 namespace mdns {
 
@@ -16,16 +18,13 @@ class MdnsFidlUtil {
   static const std::string kFuchsiaServiceName;
 
   static MdnsServiceInstancePtr CreateServiceInstance(
-      const std::string& service_name,
-      const std::string& instance_name,
-      const SocketAddress& v4_address,
-      const SocketAddress& v6_address,
+      const std::string& service_name, const std::string& instance_name,
+      const SocketAddress& v4_address, const SocketAddress& v6_address,
       const std::vector<std::string>& text);
 
   static void UpdateServiceInstance(
       const MdnsServiceInstancePtr& service_instance,
-      const SocketAddress& v4_address,
-      const SocketAddress& v6_address,
+      const SocketAddress& v4_address, const SocketAddress& v6_address,
       const std::vector<std::string>& text);
 
   static fuchsia::netstack::SocketAddressPtr CreateSocketAddressIPv4(
@@ -47,3 +46,5 @@ class MdnsFidlUtil {
 };
 
 }  // namespace mdns
+
+#endif  // GARNET_BIN_MDNS_SERVICE_MDNS_FIDL_UTIL_H_

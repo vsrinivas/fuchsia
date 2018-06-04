@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_BIN_MDNS_SERVICE_INSTANCE_RESPONDER_H_
+#define GARNET_BIN_MDNS_SERVICE_INSTANCE_RESPONDER_H_
 
 #include <memory>
 #include <string>
@@ -20,8 +21,7 @@ class InstanceResponder : public MdnsAgent {
  public:
   // Creates an |InstanceResponder|. The publisher is consulted to determine
   // how queries are handled.
-  InstanceResponder(MdnsAgent::Host* host,
-                    const std::string& service_name,
+  InstanceResponder(MdnsAgent::Host* host, const std::string& service_name,
                     const std::string& instance_name,
                     Mdns::Publisher* publisher);
 
@@ -57,8 +57,7 @@ class InstanceResponder : public MdnsAgent {
 
   // Gets an |Mdns::Publication| from |mdns_responder_| and, if not null, sends
   // it. An empty |subtype| indicates no subtype.
-  void GetAndSendPublication(bool query,
-                             const std::string& subtype = "",
+  void GetAndSendPublication(bool query, const std::string& subtype = "",
                              const ReplyAddress& reply_address =
                                  MdnsAddresses::kV4MulticastReply) const;
 
@@ -88,3 +87,5 @@ class InstanceResponder : public MdnsAgent {
 };
 
 }  // namespace mdns
+
+#endif  // GARNET_BIN_MDNS_SERVICE_INSTANCE_RESPONDER_H_

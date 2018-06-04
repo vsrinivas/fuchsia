@@ -43,8 +43,7 @@ std::string Concatenate(std::initializer_list<std::string> strings) {
 // Otherwise leaves |*index_in_out| unchanged and returns false. This function
 // is useful for scanning strings from right to left where |*index_in_out| is
 // initially |name.size()|.
-bool MatchRight(const std::string& name,
-                const std::string& right,
+bool MatchRight(const std::string& name, const std::string& right,
                 size_t* index_in_out) {
   FXL_DCHECK(index_in_out);
   size_t index = *index_in_out;
@@ -82,8 +81,7 @@ std::string MdnsNames::LocalServiceFullName(const std::string& service_name) {
 
 // static
 std::string MdnsNames::LocalServiceSubtypeFullName(
-    const std::string& service_name,
-    const std::string& subtype) {
+    const std::string& service_name, const std::string& subtype) {
   FXL_DCHECK(IsValidServiceName(service_name));
   FXL_DCHECK(IsValidOtherName(subtype));
 

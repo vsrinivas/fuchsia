@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_BIN_MDNS_SERVICE_MDNS_INTERFACE_TRANSCEIVER_V6_H_
+#define GARNET_BIN_MDNS_SERVICE_MDNS_INTERFACE_TRANSCEIVER_V6_H_
 
 #include "garnet/bin/mdns/service/mdns_interface_transceiver.h"
 
@@ -21,16 +22,16 @@ class MdnsInterfaceTransceiverV6 : public MdnsInterfaceTransceiver {
   int SetOptionMulticastTtl() override;
   int SetOptionFamilySpecific() override;
   int Bind() override;
-  int SendTo(const void* buffer,
-             size_t size,
+  int SendTo(const void* buffer, size_t size,
              const SocketAddress& address) override;
 
  private:
-  MdnsInterfaceTransceiverV6(IpAddress address,
-                             const std::string& name,
+  MdnsInterfaceTransceiverV6(IpAddress address, const std::string& name,
                              uint32_t index);
 
   friend class MdnsInterfaceTransceiver;  // For constructor.
 };
 
 }  // namespace mdns
+
+#endif  // GARNET_BIN_MDNS_SERVICE_MDNS_INTERFACE_TRANSCEIVER_V6_H_

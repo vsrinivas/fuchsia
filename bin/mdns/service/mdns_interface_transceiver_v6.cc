@@ -105,8 +105,7 @@ int MdnsInterfaceTransceiverV6::Bind() {
   return result;
 }
 
-int MdnsInterfaceTransceiverV6::SendTo(const void* buffer,
-                                       size_t size,
+int MdnsInterfaceTransceiverV6::SendTo(const void* buffer, size_t size,
                                        const SocketAddress& address) {
   if (address == MdnsAddresses::kV4Multicast) {
     return sendto(socket_fd().get(), buffer, size, 0,

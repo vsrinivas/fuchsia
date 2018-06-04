@@ -8,15 +8,12 @@
 
 namespace mdns {
 
-AddressProber::AddressProber(MdnsAgent::Host* host,
-                             CompletionCallback callback)
+AddressProber::AddressProber(MdnsAgent::Host* host, CompletionCallback callback)
     : Prober(host, DnsType::kA, std::move(callback)) {}
 
 AddressProber::~AddressProber() {}
 
-const std::string& AddressProber::ResourceName() {
-  return host_full_name();
-}
+const std::string& AddressProber::ResourceName() { return host_full_name(); }
 
 void AddressProber::SendProposedResources(MdnsResourceSection section) {
   SendAddresses(section);

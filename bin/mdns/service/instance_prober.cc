@@ -11,8 +11,7 @@ namespace mdns {
 
 InstanceProber::InstanceProber(MdnsAgent::Host* host,
                                const std::string& service_name,
-                               const std::string& instance_name,
-                               IpPort port,
+                               const std::string& instance_name, IpPort port,
                                CompletionCallback callback)
     : Prober(host, DnsType::kSrv, std::move(callback)),
       instance_full_name_(

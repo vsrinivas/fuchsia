@@ -113,25 +113,24 @@ void InstanceResponder::SendAnnouncement() {
 }
 
 void InstanceResponder::GetAndSendPublication(
-    bool query,
-    const std::string& subtype,
+    bool query, const std::string& subtype,
     const ReplyAddress& reply_address) const {
   if (publisher_ == nullptr) {
     return;
   }
 
-  publisher_->GetPublication(query, subtype, [
-    this, subtype, reply_address = reply_address
-  ](std::unique_ptr<Mdns::Publication> publication) {
-    if (publication) {
-      SendPublication(*publication, subtype, reply_address);
-    }
-  });
+  publisher_->GetPublication(
+      query, subtype,
+      [this, subtype, reply_address = reply_address](
+          std::unique_ptr<Mdns::Publication> publication) {
+        if (publication) {
+          SendPublication(*publication, subtype, reply_address);
+        }
+      });
 }
 
 void InstanceResponder::SendPublication(
-    const Mdns::Publication& publication,
-    const std::string& subtype,
+    const Mdns::Publication& publication, const std::string& subtype,
     const ReplyAddress& reply_address) const {
   if (!subtype.empty()) {
     SendSubtypePtrRecord(subtype, publication.ptr_ttl_seconds, reply_address);
@@ -160,8 +159,7 @@ void InstanceResponder::SendPublication(
 }
 
 void InstanceResponder::SendSubtypePtrRecord(
-    const std::string& subtype,
-    uint32_t ttl,
+    const std::string& subtype, uint32_t ttl,
     const ReplyAddress& reply_address) const {
   FXL_DCHECK(!subtype.empty());
 

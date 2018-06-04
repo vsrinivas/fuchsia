@@ -305,10 +305,12 @@ void MdnsServiceImpl::ResponderPublisher::GetPublication(
     bool query, const std::string& subtype,
     fit::function<void(std::unique_ptr<Mdns::Publication>)> callback) {
   FXL_DCHECK(responder_);
-  responder_->GetPublication(query, subtype,
-                             fxl::MakeCopyable([callback = std::move(callback)](MdnsPublicationPtr publication_ptr) {
-                               callback(MdnsFidlUtil::Convert(publication_ptr));
-                             }));
+  responder_->GetPublication(
+      query, subtype,
+      fxl::MakeCopyable(
+          [callback = std::move(callback)](MdnsPublicationPtr publication_ptr) {
+            callback(MdnsFidlUtil::Convert(publication_ptr));
+          }));
 }
 
 }  // namespace mdns

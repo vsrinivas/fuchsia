@@ -100,10 +100,9 @@ class MdnsServiceImpl : public MdnsService {
     // Mdns::Publisher implementation.
     void ReportSuccess(bool success) override;
 
-    void GetPublication(
-        bool query, const std::string& subtype,
-        fit::function<void(std::unique_ptr<Mdns::Publication>)> callback)
-        override;
+    void GetPublication(bool query, const std::string& subtype,
+                        fit::function<void(std::unique_ptr<Mdns::Publication>)>
+                            callback) override;
 
     IpPort port_;
     std::vector<std::string> text_;
@@ -120,10 +119,9 @@ class MdnsServiceImpl : public MdnsService {
     // Mdns::Publisher implementation.
     void ReportSuccess(bool success) override;
 
-    void GetPublication(
-        bool query, const std::string& subtype,
-        fit::function<void(std::unique_ptr<Mdns::Publication>)> callback)
-        override;
+    void GetPublication(bool query, const std::string& subtype,
+                        fit::function<void(std::unique_ptr<Mdns::Publication>)>
+                            callback) override;
 
     MdnsResponderPtr responder_;
 

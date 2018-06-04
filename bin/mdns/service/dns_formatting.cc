@@ -2,10 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "garnet/bin/mdns/service/dns_formatting.h"
+
 #include <iomanip>
 #include <iostream>
 
-#include "garnet/bin/mdns/service/dns_formatting.h"
 #include "garnet/bin/mdns/service/dns_message.h"
 
 namespace mdns {

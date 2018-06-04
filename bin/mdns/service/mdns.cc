@@ -34,9 +34,7 @@ void Mdns::EnableInterface(const std::string& name, sa_family_t family) {
   transceiver_.EnableInterface(name, family);
 }
 
-void Mdns::SetVerbose(bool verbose) {
-  verbose_ = verbose;
-}
+void Mdns::SetVerbose(bool verbose) { verbose_ = verbose; }
 
 void Mdns::Start(std::unique_ptr<InterfaceMonitor> interface_monitor,
                  const std::string& host_name) {
@@ -125,14 +123,13 @@ void Mdns::Stop() {
   state_ = State::kNotStarted;
 }
 
-void Mdns::ResolveHostName(const std::string& host_name,
-                           fxl::TimePoint timeout,
+void Mdns::ResolveHostName(const std::string& host_name, fxl::TimePoint timeout,
                            ResolveHostNameCallback callback) {
   FXL_DCHECK(MdnsNames::IsValidHostName(host_name));
   FXL_DCHECK(callback);
 
-  AddAgent(
-      std::make_shared<HostNameResolver>(this, host_name, timeout, std::move(callback)));
+  AddAgent(std::make_shared<HostNameResolver>(this, host_name, timeout,
+                                              std::move(callback)));
 }
 
 void Mdns::SubscribeToService(const std::string& service_name,
@@ -169,9 +166,7 @@ bool Mdns::PublishServiceInstance(const std::string& service_name,
                                       IpPort::From_uint16_t(0), agent);
 }
 
-void Mdns::LogTraffic() {
-  transceiver_.LogTraffic();
-}
+void Mdns::LogTraffic() { transceiver_.LogTraffic(); }
 
 void Mdns::StartAddressProbe(const std::string& host_name) {
   state_ = State::kAddressProbeInProgress;
@@ -230,8 +225,7 @@ void Mdns::OnHostNameConflict() {
   StartAddressProbe(os.str());
 }
 
-void Mdns::PostTaskForTime(MdnsAgent* agent,
-                           fit::closure task,
+void Mdns::PostTaskForTime(MdnsAgent* agent, fit::closure task,
                            fxl::TimePoint target_time) {
   task_queue_.emplace(agent, std::move(task), target_time);
   PostTask();
@@ -330,10 +324,8 @@ void Mdns::AddAgent(std::shared_ptr<MdnsAgent> agent) {
 }
 
 bool Mdns::ProbeAndAddInstanceResponder(
-    const std::string& service_name,
-    const std::string& instance_name,
-    IpPort port,
-    std::shared_ptr<InstanceResponder> agent) {
+    const std::string& service_name, const std::string& instance_name,
+    IpPort port, std::shared_ptr<InstanceResponder> agent) {
   FXL_DCHECK(MdnsNames::IsValidServiceName(service_name));
   FXL_DCHECK(MdnsNames::IsValidInstanceName(instance_name));
 
@@ -452,8 +444,7 @@ void Mdns::PostTask() {
 
 // static
 std::unique_ptr<Mdns::Publication> Mdns::Publication::Create(
-    IpPort port,
-    const std::vector<std::string>& text) {
+    IpPort port, const std::vector<std::string>& text) {
   auto publication = new Publication();
   publication->port_ = port;
   publication->text_ = text;
@@ -462,9 +453,7 @@ std::unique_ptr<Mdns::Publication> Mdns::Publication::Create(
 
 ///////////////////////////////////////////////////////////////////////////////
 
-Mdns::Subscriber::~Subscriber() {
-  Unsubscribe();
-}
+Mdns::Subscriber::~Subscriber() { Unsubscribe(); }
 
 void Mdns::Subscriber::Connect(
     std::shared_ptr<InstanceRequestor> instance_requestor) {
@@ -481,9 +470,7 @@ void Mdns::Subscriber::Unsubscribe() {
 
 ///////////////////////////////////////////////////////////////////////////////
 
-Mdns::Publisher::~Publisher() {
-  Unpublish();
-}
+Mdns::Publisher::~Publisher() { Unpublish(); }
 
 void Mdns::Publisher::SetSubtypes(std::vector<std::string> subtypes) {
   if (instance_responder_) {

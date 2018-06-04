@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_BIN_MDNS_SERVICE_MDNS_H_
+#define GARNET_BIN_MDNS_SERVICE_MDNS_H_
 
 #include <memory>
 #include <queue>
@@ -114,8 +115,7 @@ class Mdns : public MdnsAgent::Host {
     // empty. If the publication provided by the callback is null, no
     // announcement or response is transmitted.
     virtual void GetPublication(
-        bool query,
-        const std::string& subtype,
+        bool query, const std::string& subtype,
         fit::function<void(std::unique_ptr<Publication>)> callback) = 0;
 
    protected:
@@ -129,10 +129,9 @@ class Mdns : public MdnsAgent::Host {
     friend class Mdns;
   };
 
-  using ResolveHostNameCallback =
-      fit::function<void(const std::string& host_name,
-                         const IpAddress& v4_address,
-                         const IpAddress& v6_address)>;
+  using ResolveHostNameCallback = fit::function<void(
+      const std::string& host_name, const IpAddress& v4_address,
+      const IpAddress& v6_address)>;
 
   Mdns();
 
@@ -159,8 +158,7 @@ class Mdns : public MdnsAgent::Host {
   std::string host_name() { return host_name_; }
 
   // Resolves |host_name| to one or two |IpAddress|es.
-  void ResolveHostName(const std::string& host_name,
-                       fxl::TimePoint timeout,
+  void ResolveHostName(const std::string& host_name, fxl::TimePoint timeout,
                        ResolveHostNameCallback callback);
 
   // Subscribes to the specified service. The subscription is cancelled when
@@ -230,8 +228,7 @@ class Mdns : public MdnsAgent::Host {
   void OnHostNameConflict();
 
   // MdnsAgent::Host implementation.
-  void PostTaskForTime(MdnsAgent* agent,
-                       fit::closure task,
+  void PostTaskForTime(MdnsAgent* agent, fit::closure task,
                        fxl::TimePoint target_time) override;
 
   void SendQuestion(std::shared_ptr<DnsQuestion> question) override;
@@ -307,3 +304,5 @@ class Mdns : public MdnsAgent::Host {
 };
 
 }  // namespace mdns
+
+#endif  // GARNET_BIN_MDNS_SERVICE_MDNS_H_

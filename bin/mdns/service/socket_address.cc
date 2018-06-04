@@ -13,14 +13,9 @@ namespace mdns {
 // static
 const SocketAddress SocketAddress::kInvalid;
 
-SocketAddress::SocketAddress() {
-  std::memset(&v6_, 0, sizeof(v6_));
-}
+SocketAddress::SocketAddress() { std::memset(&v6_, 0, sizeof(v6_)); }
 
-SocketAddress::SocketAddress(uint8_t b0,
-                             uint8_t b1,
-                             uint8_t b2,
-                             uint8_t b3,
+SocketAddress::SocketAddress(uint8_t b0, uint8_t b1, uint8_t b2, uint8_t b3,
                              IpPort port) {
   std::memset(&v4_, 0, sizeof(v4_));
   v4_.sin_family = AF_INET;
@@ -44,14 +39,8 @@ SocketAddress::SocketAddress(const sockaddr_in& addr) {
   v4_ = addr;
 }
 
-SocketAddress::SocketAddress(uint16_t w0,
-                             uint16_t w1,
-                             uint16_t w2,
-                             uint16_t w3,
-                             uint16_t w4,
-                             uint16_t w5,
-                             uint16_t w6,
-                             uint16_t w7,
+SocketAddress::SocketAddress(uint16_t w0, uint16_t w1, uint16_t w2, uint16_t w3,
+                             uint16_t w4, uint16_t w5, uint16_t w6, uint16_t w7,
                              IpPort port) {
   std::memset(&v6_, 0, sizeof(v6_));
   v6_.sin6_family = AF_INET6;

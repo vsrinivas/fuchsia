@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_BIN_MDNS_SERVICE_INTERFACE_MONITOR_H_
+#define GARNET_BIN_MDNS_SERVICE_INTERFACE_MONITOR_H_
 
 #include <memory>
 #include <string>
@@ -40,3 +41,5 @@ class InterfaceMonitor {
 };
 
 }  // namespace mdns
+
+#endif  // GARNET_BIN_MDNS_SERVICE_INTERFACE_MONITOR_H_

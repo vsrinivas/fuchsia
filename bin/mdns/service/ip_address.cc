@@ -2,15 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "garnet/bin/mdns/service/ip_address.h"
+
 #include <sstream>
 
 #include <arpa/inet.h>
 #include <endian.h>
+#include <fuchsia/netstack/cpp/fidl.h>
 #include <netdb.h>
 #include <sys/socket.h>
-
-#include "garnet/bin/mdns/service/ip_address.h"
-#include <fuchsia/netstack/cpp/fidl.h>
 
 namespace mdns {
 
@@ -79,14 +79,8 @@ IpAddress::IpAddress(const in_addr& addr) {
   v4_ = addr;
 }
 
-IpAddress::IpAddress(uint16_t w0,
-                     uint16_t w1,
-                     uint16_t w2,
-                     uint16_t w3,
-                     uint16_t w4,
-                     uint16_t w5,
-                     uint16_t w6,
-                     uint16_t w7) {
+IpAddress::IpAddress(uint16_t w0, uint16_t w1, uint16_t w2, uint16_t w3,
+                     uint16_t w4, uint16_t w5, uint16_t w6, uint16_t w7) {
   family_ = AF_INET;
   uint16_t* words = v6_.s6_addr16;
   words[0] = htobe16(w0);

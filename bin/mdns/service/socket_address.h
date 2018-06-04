@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_BIN_MDNS_SERVICE_SOCKET_ADDRESS_H_
+#define GARNET_BIN_MDNS_SERVICE_SOCKET_ADDRESS_H_
 
 #include <ostream>
 
@@ -33,15 +34,8 @@ class SocketAddress {
   explicit SocketAddress(const sockaddr_in& addr);
 
   // Creates an IPV6 socket address from eight address words and an IpPort.
-  SocketAddress(uint16_t w0,
-                uint16_t w1,
-                uint16_t w2,
-                uint16_t w3,
-                uint16_t w4,
-                uint16_t w5,
-                uint16_t w6,
-                uint16_t w7,
-                IpPort port);
+  SocketAddress(uint16_t w0, uint16_t w1, uint16_t w2, uint16_t w3, uint16_t w4,
+                uint16_t w5, uint16_t w6, uint16_t w7, IpPort port);
 
   // Creates an IPV6 socket address from two address words and an IpPort.
   SocketAddress(uint16_t w0, uint16_t w7, IpPort port);
@@ -111,3 +105,5 @@ class SocketAddress {
 std::ostream& operator<<(std::ostream& os, const SocketAddress& value);
 
 }  // namespace mdns
+
+#endif  // GARNET_BIN_MDNS_SERVICE_SOCKET_ADDRESS_H_

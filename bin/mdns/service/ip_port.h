@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_BIN_MDNS_SERVICE_IP_PORT_H_
+#define GARNET_BIN_MDNS_SERVICE_IP_PORT_H_
 
 #include <ostream>
 
@@ -80,3 +81,5 @@ class IpPort {
 std::ostream& operator<<(std::ostream& os, IpPort value);
 
 }  // namespace mdns
+
+#endif  // GARNET_BIN_MDNS_SERVICE_IP_PORT_H_

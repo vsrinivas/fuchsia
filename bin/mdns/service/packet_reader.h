@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_BIN_MDNS_SERVICE_PACKET_READER_H_
+#define GARNET_BIN_MDNS_SERVICE_PACKET_READER_H_
 
 #include <vector>
 
@@ -72,3 +73,5 @@ class PacketReader {
 };
 
 }  // namespace mdns
+
+#endif  // GARNET_BIN_MDNS_SERVICE_PACKET_READER_H_
