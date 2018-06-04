@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "garnet/examples/media/simple_sine/simple_sine.h"
+
 #include "lib/fxl/logging.h"
 
 namespace {
@@ -31,7 +32,8 @@ constexpr size_t kNumPacketsToSend =
 
 namespace examples {
 
-MediaApp::MediaApp(fit::closure quit_callback) : quit_callback_(std::move(quit_callback)) {
+MediaApp::MediaApp(fit::closure quit_callback)
+    : quit_callback_(std::move(quit_callback)) {
   FXL_DCHECK(quit_callback_);
 }
 

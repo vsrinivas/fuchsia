@@ -29,7 +29,8 @@ namespace examples {
 
 AudioPlayer::AudioPlayer(const AudioPlayerParams& params,
                          fit::closure quit_callback)
-    : quit_callback_(std::move(quit_callback)), quit_when_done_(!params.stay()) {
+    : quit_callback_(std::move(quit_callback)),
+      quit_when_done_(!params.stay()) {
   FXL_DCHECK(params.is_valid());
   FXL_DCHECK(quit_callback_);
 

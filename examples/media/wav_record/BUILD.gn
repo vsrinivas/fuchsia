@@ -3,19 +3,18 @@
 #found in the LICENSE file.
 
 executable("wav_record") {
-  sources =
-      [
-        "main.cc",
-        "wav_recorder.cc",
-        "wav_recorder.h",
-      ]
+  sources = [
+    "main.cc",
+    "wav_recorder.cc",
+    "wav_recorder.h",
+  ]
 
-      deps = [
-        "//garnet/lib/media/wav_writer",
-        "//garnet/public/lib/app/cpp",
-        "//garnet/public/lib/fsl",
-        "//garnet/public/lib/media/audio",
-        "//garnet/public/lib/media/fidl",
-        "//zircon/public/lib/fit",
-      ]
+  deps = [
+    "//garnet/lib/media/wav_writer",
+    "//garnet/public/lib/app/cpp",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/media/audio",
+    "//garnet/public/lib/media/fidl",
+    "//zircon/public/lib/fit",
+  ]
 }

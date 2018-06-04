@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SERVICES_MEDIA_FRAMEWORK_TONE_GENERATOR_H_
-#define SERVICES_MEDIA_FRAMEWORK_TONE_GENERATOR_H_
+#ifndef GARNET_EXAMPLES_MEDIA_TONES_TONE_GENERATOR_H_
+#define GARNET_EXAMPLES_MEDIA_TONES_TONE_GENERATOR_H_
 
 namespace examples {
 
@@ -15,9 +15,7 @@ class ToneGenerator {
   // |decay| specifies the factor by which volume should be reduced in one
   // second. A |decay| value of 0.0 produces a constant tone. A |decay| value
   // of 0.9 reducees the volume 90% (to 10%) in one second.
-  ToneGenerator(uint32_t frames_per_second,
-                float frequency,
-                float volume,
+  ToneGenerator(uint32_t frames_per_second, float frequency, float volume,
                 float decay);
 
   // Mixes |frame_count| samples into |dest|, summing the first sample into
@@ -39,4 +37,4 @@ class ToneGenerator {
 
 }  // namespace examples
 
-#endif  // SERVICES_MEDIA_FRAMEWORK_TONE_GENERATOR_H_
+#endif  // GARNET_EXAMPLES_MEDIA_TONES_TONE_GENERATOR_H_

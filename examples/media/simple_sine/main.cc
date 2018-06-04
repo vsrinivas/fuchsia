@@ -4,6 +4,7 @@
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/task.h>
+
 #include "garnet/examples/media/simple_sine/simple_sine.h"
 #include "lib/app/cpp/startup_context.h"
 #include "lib/fxl/command_line.h"

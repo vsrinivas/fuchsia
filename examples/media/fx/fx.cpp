@@ -2,15 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <inttypes.h>
-#include <stdio.h>
-
 #include <audio-utils/audio-input.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
 #include <fbl/limits.h>
 #include <fbl/unique_ptr.h>
 #include <fbl/vmo_mapper.h>
+#include <inttypes.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
@@ -19,6 +17,7 @@
 #include <lib/zx/vmar.h>
 #include <lib/zx/vmo.h>
 #include <media/cpp/fidl.h>
+#include <stdio.h>
 #include <zircon/compiler.h>
 #include <zircon/errors.h>
 #include <zircon/types.h>

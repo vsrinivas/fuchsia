@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_EXAMPLES_MEDIA_AUDIO_PLAYER_AUDIO_PLAYER_PARAMS_H_
+#define GARNET_EXAMPLES_MEDIA_AUDIO_PLAYER_AUDIO_PLAYER_PARAMS_H_
 
 #include <string>
 
@@ -36,3 +37,5 @@ class AudioPlayerParams {
 };
 
 }  // namespace examples
+
+#endif  // GARNET_EXAMPLES_MEDIA_AUDIO_PLAYER_AUDIO_PLAYER_PARAMS_H_

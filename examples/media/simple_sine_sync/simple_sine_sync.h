@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_EXAMPLES_MEDIA_SIMPLE_SINE_SYNC_SIMPLE_SINE_SYNC_H_
+#define GARNET_EXAMPLES_MEDIA_SIMPLE_SINE_SYNC_SIMPLE_SINE_SYNC_H_
 
 #include <fbl/vmo_mapper.h>
-
 #include <media/cpp/fidl.h>
 
 namespace examples {
@@ -58,3 +58,5 @@ class MediaApp {
 };
 
 }  // namespace examples
+
+#endif  // GARNET_EXAMPLES_MEDIA_SIMPLE_SINE_SYNC_SIMPLE_SINE_SYNC_H_

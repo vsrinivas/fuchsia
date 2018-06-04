@@ -4,6 +4,8 @@
 
 #include "garnet/examples/media/tones/midi_keyboard.h"
 
+#include <iostream>
+
 #include <dirent.h>
 #include <fbl/auto_call.h>
 #include <fcntl.h>
@@ -11,7 +13,6 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <zircon/device/midi.h>
-#include <iostream>
 
 #include "garnet/examples/media/tones/midi.h"
 #include "garnet/examples/media/tones/tones.h"
@@ -80,7 +81,7 @@ void MidiKeyboard::HandleEvent() {
   waiting_ = false;
 
   while (true) {
-    uint8_t event[3] = { 0 };
+    uint8_t event[3] = {0};
     int evt_size = ::read(dev_.get(), event, sizeof(event));
 
     if (evt_size < 0) {
@@ -116,8 +117,8 @@ void MidiKeyboard::HandleEvent() {
     if ((cmd == MIDI_NOTE_ON) || (cmd == MIDI_NOTE_OFF)) {
       // By default, MIDI event sources map the value 60 to middle C.
       static constexpr int kOffsetMiddleC = 60;
-      int note = static_cast<int>(event[1] & MIDI_NOTE_NUMBER_MASK)
-               - kOffsetMiddleC;
+      int note =
+          static_cast<int>(event[1] & MIDI_NOTE_NUMBER_MASK) - kOffsetMiddleC;
       int velocity = static_cast<int>(event[2] & MIDI_NOTE_VELOCITY_MASK);
       bool note_on = (cmd == MIDI_NOTE_ON) && (velocity != 0);
 

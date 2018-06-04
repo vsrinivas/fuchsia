@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_EXAMPLES_MEDIA_TONES_MIDI_KEYBOARD_H_
+#define GARNET_EXAMPLES_MEDIA_TONES_MIDI_KEYBOARD_H_
 
 #include <memory>
 
@@ -35,3 +36,5 @@ class MidiKeyboard {
 };
 
 }  // namespace examples
+
+#endif  // GARNET_EXAMPLES_MEDIA_TONES_MIDI_KEYBOARD_H_

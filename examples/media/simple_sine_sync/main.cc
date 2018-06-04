@@ -4,10 +4,9 @@
 
 #include <iostream>
 
+#include "garnet/examples/media/simple_sine_sync/simple_sine_sync.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/strings/string_number_conversions.h"
-
-#include "garnet/examples/media/simple_sine_sync/simple_sine_sync.h"
 
 namespace {
 

@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_EXAMPLES_MEDIA_TONES_MIDI_H_
+#define GARNET_EXAMPLES_MEDIA_TONES_MIDI_H_
 
 // clang-format off
 
@@ -42,3 +43,5 @@
 #define MIDI_REF_INDEX              69
 
 // clang-format on
+
+#endif  // GARNET_EXAMPLES_MEDIA_TONES_MIDI_H_

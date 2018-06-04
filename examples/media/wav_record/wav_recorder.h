@@ -19,7 +19,8 @@ namespace examples {
 class WavRecorder {
  public:
   WavRecorder(fxl::CommandLine cmd_line, fit::closure quit_callback)
-      : cmd_line_(std::move(cmd_line)), quit_callback_(std::move(quit_callback)) {
+      : cmd_line_(std::move(cmd_line)),
+        quit_callback_(std::move(quit_callback)) {
     FXL_DCHECK(quit_callback_);
   }
 
