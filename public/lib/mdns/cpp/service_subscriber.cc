@@ -10,9 +10,7 @@ namespace mdns {
 
 ServiceSubscriber::ServiceSubscriber() {}
 
-ServiceSubscriber::~ServiceSubscriber() {
-  Reset();
-}
+ServiceSubscriber::~ServiceSubscriber() { Reset(); }
 
 void ServiceSubscriber::Init(MdnsServiceSubscriptionPtr subscription,
                              UpdateCallback callback) {
@@ -28,8 +26,7 @@ MdnsServiceSubscriptionPtr ServiceSubscriber::Reset() {
 }
 
 void ServiceSubscriber::HandleInstanceUpdates(
-    uint64_t version,
-    fidl::VectorPtr<MdnsServiceInstance> instances) {
+    uint64_t version, fidl::VectorPtr<MdnsServiceInstance> instances) {
   FXL_DCHECK(subscription_);
 
   if (instances) {

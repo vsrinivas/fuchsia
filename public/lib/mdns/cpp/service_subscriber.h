@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_MDNS_CPP_SERVICE_SUBSCRIBER_H_
+#define LIB_MDNS_CPP_SERVICE_SUBSCRIBER_H_
 
 #include <lib/fit/function.h>
 #include <mdns/cpp/fidl.h>
@@ -19,8 +20,8 @@ class ServiceSubscriber {
   // describing the new service. When a service is lost, the callback is called
   // with a null |to| value and |from| value describing the lost service. When
   // a service changes, |from| is the old description, and |to| is the new one.
-  using UpdateCallback =
-      fit::function<void(const MdnsServiceInstance* from, const MdnsServiceInstance* to)>;
+  using UpdateCallback = fit::function<void(const MdnsServiceInstance* from,
+                                            const MdnsServiceInstance* to)>;
 
   ServiceSubscriber();
 
@@ -28,8 +29,7 @@ class ServiceSubscriber {
 
   // Initializes the subscriber with the specified subscription. The callback
   // is optional.
-  void Init(MdnsServiceSubscriptionPtr subscription,
-            UpdateCallback callback);
+  void Init(MdnsServiceSubscriptionPtr subscription, UpdateCallback callback);
 
   // Returns this subscriber to its initial state, releasing the callback and
   // returning the unique subscription. The subscription can be ignored, in
@@ -61,3 +61,5 @@ class ServiceSubscriber {
 };
 
 }  // namespace mdns
+
+#endif  // LIB_MDNS_CPP_SERVICE_SUBSCRIBER_H_
