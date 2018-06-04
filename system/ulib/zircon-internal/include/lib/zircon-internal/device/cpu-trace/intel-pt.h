@@ -199,7 +199,17 @@ typedef uint32_t zx_itrace_buffer_descriptor_t;
 typedef struct {
     // One of IPT_MODE_{CPUS,THREADS}.
     uint32_t mode;
+    // The number of traces to create.
+    // In CPU mode this must be zx_system_get_num_cpus().
+    // In THREAD mode this is the maximum number of threads for which traces
+    // will be collected. Buffer space is allocated on demand, but the
+    // underlying data structure has a maximum. The value can be at most
+    // IPT_MAX_NUM_TRACES.
+    uint32_t num_traces;
 } ioctl_insntrace_trace_config_t;
+
+// The maximum value for |ioctl_ipt_trace_config_t.num_traces|.
+#define IPT_MAX_NUM_TRACES 64
 
 // must be called prior to START, allocate buffers of the specified size
 // Input: ioctl_insntrace_trace_config_t
@@ -277,7 +287,7 @@ typedef struct {
     // N.B. This is the offset in the buffer where tracing stopped (treating
     // all buffers as one large one). If using a circular buffer then all of
     // the buffer may contain data, there's no current way to know if tracing
-    // wrapped.
+    // wrapped without scanning records.
     uint64_t capture_end;
 } ioctl_insntrace_buffer_info_t;
 

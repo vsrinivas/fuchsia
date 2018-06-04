@@ -6,16 +6,21 @@
 
 #ifdef __x86_64__ // entire file
 
+#include <assert.h>
 #include <inttypes.h>
 
 #include "lib/mtrace.h"
 #include "trace.h"
 
+#include <object/process_dispatcher.h>
 #include <lib/zircon-internal/mtrace.h>
+#include <lib/zircon-internal/device/cpu-trace/intel-pt.h>
 
 #include "arch/x86/proc_trace.h"
 
 #define LOCAL_TRACE 0
+
+static_assert(IPT_MAX_NUM_TRACES >= SMP_MAX_CPUS, "");
 
 zx_status_t mtrace_insntrace_control(uint32_t action, uint32_t options,
                                      user_inout_ptr<void> arg, size_t size) {
@@ -26,18 +31,22 @@ zx_status_t mtrace_insntrace_control(uint32_t action, uint32_t options,
     case MTRACE_INSNTRACE_ALLOC_TRACE: {
         if (options != 0)
             return ZX_ERR_INVALID_ARGS;
-        uint32_t mode;
-        if (size != sizeof(mode))
+        ioctl_insntrace_trace_config_t config;
+        if (size != sizeof(config))
             return ZX_ERR_INVALID_ARGS;
-        zx_status_t status = arg.reinterpret<uint32_t>().copy_from_user(&mode);
+        zx_status_t status = arg.reinterpret<ioctl_insntrace_trace_config_t>().copy_from_user(&config);
         if (status != ZX_OK)
             return status;
-        TRACEF("action %u, mode 0x%x\n", action, mode);
-        switch (mode) {
+        TRACEF("action %u, mode %u, num traces %u\n", action, config.mode, config.num_traces);
+        if (config.num_traces > IPT_MAX_NUM_TRACES)
+            return ZX_ERR_INVALID_ARGS;
+        switch (config.mode) {
         case IPT_MODE_CPUS:
-            return x86_ipt_alloc_trace(IPT_TRACE_CPUS);
+            if (config.num_traces != arch_max_num_cpus())
+                return ZX_ERR_INVALID_ARGS;
+            return x86_ipt_alloc_trace(IPT_TRACE_CPUS, config.num_traces);
         case IPT_MODE_THREADS:
-            return x86_ipt_alloc_trace(IPT_TRACE_THREADS);
+            return x86_ipt_alloc_trace(IPT_TRACE_THREADS, config.num_traces);
         default:
             return ZX_ERR_INVALID_ARGS;
         }

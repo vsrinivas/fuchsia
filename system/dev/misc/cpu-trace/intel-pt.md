@@ -164,23 +164,22 @@ Returns zero on success or a negative error code.
 
 Here's a sketch of typical usage when tracing in cpu mode.
 
-1) *ioctl_ipt_alloc_trace()*
+1) *ioctl_ipt_alloc_trace(IPT_MODE_CPUS, num_cpus)*
 2) allocate buffers for each cpu
 3) *ioctl_ipt_start()*
 4) launch program one wishes to trace
 5) *ioctl_ipt_stop()*
 6) fetch buffer data for each cpu
-7) fetch handles for each vmo in each buffer
-8) *ioctl_ipt_free_trace()*
+7) fetch handles for each vmo in each buffer, and save data
+8) *ioctl_ipt_free_trace()* [this will free each buffer as well]
 9) post-process
-10) free buffers
 
 ## Notes
 
 - We currently only support Table of Physical Addresses mode so that
 we can also support stop-on-full behavior in addition to wrap-around.
 
-- Each cpu has the same size trace buffer.
+- Each cpu/thread has the same size trace buffer.
 
 - While it's possible to allocate and configure buffers outside of the driver,
 this is not done so that we have control over their contents. ToPA buffers

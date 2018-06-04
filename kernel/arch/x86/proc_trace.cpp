@@ -9,7 +9,7 @@
 // this will all get rewritten. Until such time, the goal here is KISS.
 // This file contains the lower part of Intel Processor Trace support that must
 // be done in the kernel (so that we can read/write msrs).
-// The userspace driver is in system/udev/intel-pt/intel-pt.c.
+// The userspace driver is in system/dev/misc/cpu-trace/intel-pt.c.
 //
 // We currently only support Table of Physical Addresses mode:
 // it supports discontiguous buffers and supports stop-on-full behavior
@@ -106,6 +106,10 @@ static bool active TA_GUARDED(ipt_lock) = false;
 
 static ipt_trace_mode_t trace_mode TA_GUARDED(ipt_lock) = IPT_TRACE_CPUS;
 
+// In cpu mode this arch_max_num_cpus.
+// In thread mode this is provided by the user.
+static uint32_t ipt_num_traces TA_GUARDED(ipt_lock);
+
 void x86_processor_trace_init(void) {
     if (!x86_feature_test(X86_FEATURE_PT)) {
         return;
@@ -167,10 +171,16 @@ static void x86_ipt_set_mode_task(void* raw_context) TA_NO_THREAD_SAFETY_ANALYSI
     x86_set_extended_register_pt_state(new_mode == IPT_TRACE_THREADS);
 }
 
-zx_status_t x86_ipt_alloc_trace(ipt_trace_mode_t mode) {
+zx_status_t x86_ipt_alloc_trace(ipt_trace_mode_t mode, uint32_t num_traces) {
     AutoLock al(&ipt_lock);
 
     DEBUG_ASSERT(mode == IPT_TRACE_CPUS || mode == IPT_TRACE_THREADS);
+    if (mode == IPT_TRACE_CPUS) {
+        if (num_traces != arch_max_num_cpus())
+            return ZX_ERR_INVALID_ARGS;
+    } else {
+        return ZX_ERR_NOT_SUPPORTED;
+    }
 
     if (!supports_pt)
         return ZX_ERR_NOT_SUPPORTED;
@@ -186,22 +196,17 @@ zx_status_t x86_ipt_alloc_trace(ipt_trace_mode_t mode) {
     if (trace_mode == IPT_TRACE_THREADS && mode == IPT_TRACE_CPUS)
         return ZX_ERR_NOT_SUPPORTED;
 
-    if (mode == IPT_TRACE_CPUS) {
-        uint32_t num_cpus = arch_max_num_cpus();
-        ipt_trace_state =
-            reinterpret_cast<ipt_trace_state_t*>(calloc(num_cpus,
-                                                        sizeof(*ipt_trace_state)));
-        if (!ipt_trace_state)
-            return ZX_ERR_NO_MEMORY;
-    } else {
-        // TODO(dje): support for IPT_TRACE_THREADS
-        return ZX_ERR_NOT_SUPPORTED;
-    }
+    ipt_trace_state =
+        reinterpret_cast<ipt_trace_state_t*>(calloc(num_traces,
+                                                    sizeof(*ipt_trace_state)));
+    if (!ipt_trace_state)
+        return ZX_ERR_NO_MEMORY;
 
     mp_sync_exec(MP_IPI_TARGET_ALL, 0, x86_ipt_set_mode_task,
                  reinterpret_cast<void*>(static_cast<uintptr_t>(mode)));
 
     trace_mode = mode;
+    ipt_num_traces = num_traces;
     return ZX_OK;
 }
 
@@ -266,8 +271,8 @@ zx_status_t x86_ipt_start() {
     TRACEF("Starting processor trace, kernel cr3: 0x%" PRIxPTR "\n",
            kernel_cr3);
 
-    if (LOCAL_TRACE) {
-        uint32_t num_cpus = arch_max_num_cpus();
+    if (LOCAL_TRACE && trace_mode == IPT_TRACE_CPUS) {
+        uint32_t num_cpus = ipt_num_traces;
         for (uint32_t cpu = 0; cpu < num_cpus; ++cpu) {
             TRACEF("Cpu %u: ctl 0x%" PRIx64 ", status 0x%" PRIx64 ", base 0x%" PRIx64 ", mask 0x%" PRIx64 "\n",
                    cpu, ipt_trace_state[cpu].ctl, ipt_trace_state[cpu].status,
@@ -288,7 +293,10 @@ zx_status_t x86_ipt_start() {
            model_info->display_family, model_info->display_model,
            model_info->stepping);
 
-    mp_sync_exec(MP_IPI_TARGET_ALL, 0, x86_ipt_start_cpu_task, ipt_trace_state);
+    if (trace_mode == IPT_TRACE_CPUS) {
+        mp_sync_exec(MP_IPI_TARGET_ALL, 0, x86_ipt_start_cpu_task, ipt_trace_state);
+    }
+
     return ZX_OK;
 }
 
@@ -339,12 +347,15 @@ zx_status_t x86_ipt_stop() {
 
     TRACEF("Stopping processor trace\n");
 
-    mp_sync_exec(MP_IPI_TARGET_ALL, 0, x86_ipt_stop_cpu_task, ipt_trace_state);
+    if (trace_mode == IPT_TRACE_CPUS) {
+        mp_sync_exec(MP_IPI_TARGET_ALL, 0, x86_ipt_stop_cpu_task, ipt_trace_state);
+    }
+
     ktrace(TAG_IPT_STOP, 0, 0, 0, 0);
     active = false;
 
-    if (LOCAL_TRACE) {
-        uint32_t num_cpus = arch_max_num_cpus();
+    if (LOCAL_TRACE && trace_mode == IPT_TRACE_CPUS) {
+        uint32_t num_cpus = ipt_num_traces;
         for (uint32_t cpu = 0; cpu < num_cpus; ++cpu) {
             TRACEF("Cpu %u: ctl 0x%" PRIx64 ", status 0x%" PRIx64 ", base 0x%" PRIx64 ", mask 0x%" PRIx64 "\n",
                    cpu, ipt_trace_state[cpu].ctl, ipt_trace_state[cpu].status,
@@ -362,14 +373,11 @@ zx_status_t x86_ipt_stage_trace_data(zx_itrace_buffer_descriptor_t descriptor,
 
     if (!supports_pt)
         return ZX_ERR_NOT_SUPPORTED;
-    if (trace_mode == IPT_TRACE_THREADS)
-        return ZX_ERR_BAD_STATE;
-    if (active)
+    if (trace_mode == IPT_TRACE_CPUS && active)
         return ZX_ERR_BAD_STATE;
     if (!ipt_trace_state)
         return ZX_ERR_BAD_STATE;
-    uint32_t num_cpus = arch_max_num_cpus();
-    if (descriptor >= num_cpus)
+    if (descriptor >= ipt_num_traces)
         return ZX_ERR_INVALID_ARGS;
 
     ipt_trace_state[descriptor].ctl = regs->ctl;
@@ -389,14 +397,11 @@ zx_status_t x86_ipt_get_trace_data(zx_itrace_buffer_descriptor_t descriptor,
 
     if (!supports_pt)
         return ZX_ERR_NOT_SUPPORTED;
-    if (trace_mode == IPT_TRACE_THREADS)
-        return ZX_ERR_BAD_STATE;
-    if (active)
+    if (trace_mode == IPT_TRACE_CPUS && active)
         return ZX_ERR_BAD_STATE;
     if (!ipt_trace_state)
         return ZX_ERR_BAD_STATE;
-    uint32_t num_cpus = arch_max_num_cpus();
-    if (descriptor >= num_cpus)
+    if (descriptor >= ipt_num_traces)
         return ZX_ERR_INVALID_ARGS;
 
     regs->ctl = ipt_trace_state[descriptor].ctl;

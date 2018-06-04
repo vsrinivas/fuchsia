@@ -26,7 +26,7 @@ typedef enum {
     IPT_TRACE_THREADS
 } ipt_trace_mode_t;
 
-zx_status_t x86_ipt_alloc_trace(ipt_trace_mode_t mode);
+zx_status_t x86_ipt_alloc_trace(ipt_trace_mode_t mode, uint32_t num_traces);
 
 zx_status_t x86_ipt_free_trace();
 
