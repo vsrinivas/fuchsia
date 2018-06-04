@@ -72,10 +72,19 @@ template("rustc_artifact") {
   }
 
   if (defined(invoker.name)) {
-    name = invoker.name
+    package_name = invoker.name
   } else {
-    name = target_name
+    package_name = target_name
   }
+
+  crate_name = exec_script(
+      "//build/rust/package_name_to_crate_name.py",
+      [
+        "--package-name",
+        package_name,
+      ],
+      "trim string"
+  )
 
   if (defined(invoker.version)) {
     version = invoker.version
@@ -131,9 +140,9 @@ template("rustc_artifact") {
   third_party_build = "//third_party/rust-crates/rustc_deps:build-third-party"
   third_party_deps_data = "${root_out_dir}/rust_third_party/deps_data.json"
   first_party_crate_root = "${root_out_dir}/rust_crates"
-  output_file = "${first_party_crate_root}/${prefix}${name}${extension}"
-  output_depfile = "${first_party_crate_root}/${prefix}${name}.d"
-  test_output_file = "${root_out_dir}/${name}_${invoker.type}_test_rustc"
+  output_file = "${first_party_crate_root}/${prefix}${crate_name}${extension}"
+  output_depfile = "${first_party_crate_root}/${prefix}${crate_name}.d"
+  test_output_file = "${root_out_dir}/${crate_name}_${invoker.type}_test_rustc"
 
   build_target_name = "${target_name}_build"
   group_deps += [ ":${build_target_name}" ]
@@ -199,7 +208,9 @@ template("rustc_artifact") {
       "--crate-type",
       type,
       "--crate-name",
-      name,
+      crate_name,
+      "--package-name",
+      package_name,
       "--opt-level",
       opt_level,
       "--depfile",
@@ -269,7 +280,7 @@ template("rustc_artifact") {
         output_file,
       ]
       outputs = [
-        "${root_out_dir}/${prefix}${name}${extension}",
+        "${root_out_dir}/${prefix}${crate_name}${extension}",
       ]
     }
   }
@@ -295,8 +306,10 @@ template("rustc_artifact") {
       rebase_path(cargo_toml_dir),
       "--source-root",
       root_file,
+      "--package-name",
+      package_name,
       "--crate-name",
-      name,
+      crate_name,
       "--crate-type",
       type,
       "--version",

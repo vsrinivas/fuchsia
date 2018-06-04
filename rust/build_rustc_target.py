@@ -51,6 +51,9 @@ def main():
                         help="Type of crate to build",
                         required=True,
                         choices=["bin", "rlib", "staticlib", "proc-macro"])
+    parser.add_argument("--package-name",
+                        help="Name of package to build",
+                        required=True)
     parser.add_argument("--crate-name",
                         help="Name of crate to build",
                         required=True)
@@ -193,6 +196,7 @@ def main():
     with open(args.out_info, "w") as file:
         file.write(json.dumps({
             "crate_name": args.crate_name,
+            "package_name": args.package_name,
             "third_party": False,
             "cargo_toml_dir": args.cargo_toml_dir,
             "lib_path": args.output_file,

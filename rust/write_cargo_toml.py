@@ -19,7 +19,7 @@ CARGO_TOML_CONTENTS = '''\
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 [package]
-name = "%(crate_name)s"
+name = "%(package_name)s"
 version = "%(version)s"
 license = "BSD-3-Clause"
 authors = ["rust-fuchsia@fuchsia.com"]
@@ -36,6 +36,9 @@ def cur_year():
 
 def main():
     parser = argparse.ArgumentParser("Writes a Cargo.toml for a Rust crate")
+    parser.add_argument("--package-name",
+                        help="Name of the package",
+                        required=True)
     parser.add_argument("--crate-name",
                         help="Name of the crate",
                         required=True)
@@ -75,13 +78,14 @@ def main():
                 crate_data = third_party_json["crates"][crate]
                 deps[crate] = crate_data["cargo_dependency_toml"]
             else:
-                deps[dep_data["crate_name"]] = {
+                deps[dep_data["package_name"]] = {
                     "path": dep_data["cargo_toml_dir"],
                     "version": dep_data["version"],
                 }
 
     with open(cargo_toml_path, "w") as file:
         file.write(CARGO_TOML_CONTENTS % {
+            "package_name": args.package_name,
             "crate_name": args.crate_name,
             "version": args.version,
             "deps": deps,
