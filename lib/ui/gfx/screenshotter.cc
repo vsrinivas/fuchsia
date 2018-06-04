@@ -34,6 +34,7 @@ void Screenshotter::OnCommandBufferDone(
 
   constexpr uint32_t kBytesPerPixel = 4u;
   std::vector<uint8_t> imgvec;
+  const size_t kImgVecElementSize = sizeof(decltype(imgvec)::value_type);
   imgvec.resize(kBytesPerPixel * width * height);
 
   const uint8_t* row = image->memory()->mapped_ptr();
@@ -41,13 +42,14 @@ void Screenshotter::OnCommandBufferDone(
   row += sr_layout.offset;
   if (width == sr_layout.rowPitch) {
     uint32_t num_bytes = width * height * kBytesPerPixel;
-    FXL_DCHECK(num_bytes <= imgvec.size());
+    FXL_DCHECK(num_bytes <= kImgVecElementSize * imgvec.size());
     memcpy(imgvec.data(), row, num_bytes);
   } else {
     uint8_t* imgvec_ptr = imgvec.data();
     for (uint32_t y = 0; y < height; y++) {
       uint32_t num_bytes = width * kBytesPerPixel;
-      FXL_DCHECK(num_bytes <= &imgvec.back() - imgvec_ptr);
+      FXL_DCHECK(num_bytes <=
+                 kImgVecElementSize * (1 + &imgvec.back() - imgvec_ptr));
       memcpy(imgvec_ptr, row, num_bytes);
       row += sr_layout.rowPitch;
       imgvec_ptr += num_bytes;
