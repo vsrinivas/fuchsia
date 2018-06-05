@@ -196,9 +196,12 @@ void usage(void) {
             "             (ignored with --tftp)\n"
             "  -n         only boot device with this nodename\n"
             "  -w <sz>    tftp window size (default=%d, ignored with --netboot)\n"
-            "  --fvm <file>   use the supplied file as a sparse FVM image (up to 4 times)\n"
-            "  --efi <file>   use the supplied file as an EFI image\n"
-            "  --kernc <file> use the supplied file as a KERN-C CrOS image\n"
+            "  --fvm <file>     use the supplied file as a sparse FVM image (up to 4 times)\n"
+            "  --efi <file>     use the supplied file as an EFI image\n"
+            "  --kernc <file>   use the supplied file as a KERN-C CrOS image\n"
+            "  --zircona <file> use the supplied file as a ZIRCON-A ZBI\n"
+            "  --zirconb <file> use the supplied file as a ZIRCON-B ZBI\n"
+            "  --zirconr <file> use the supplied file as a ZIRCON-R ZBI\n"
             "  --netboot    use the netboot protocol\n"
             "  --tftp       use the tftp protocol (default)\n"
             "  --nocolor    disable ANSI color (false)\n",
@@ -282,6 +285,9 @@ int main(int argc, char** argv) {
     int num_fvms = 0;
     const char* efi_image = NULL;
     const char* kernc_image = NULL;
+    const char* zircona_image = NULL;
+    const char* zirconb_image = NULL;
+    const char* zirconr_image = NULL;
     const char* fvm_images[MAX_FVM_IMAGES] = {NULL, NULL, NULL, NULL};
     const char* kernel_fn = NULL;
     const char* ramdisk_fn = NULL;
@@ -333,6 +339,30 @@ int main(int argc, char** argv) {
                 return -1;
             }
             kernc_image = argv[1];
+        } else if (!strcmp(argv[1], "--zircona")) {
+            argc--;
+            argv++;
+            if (argc <= 1) {
+                fprintf(stderr, "'--zircona' option requires an argument (ZIRCON-A image)\n");
+                return -1;
+            }
+            zircona_image = argv[1];
+        } else if (!strcmp(argv[1], "--zirconb")) {
+            argc--;
+            argv++;
+            if (argc <= 1) {
+                fprintf(stderr, "'--zirconb' option requires an argument (ZIRCON-B image)\n");
+                return -1;
+            }
+            zirconb_image = argv[1];
+        } else if (!strcmp(argv[1], "--zirconr")) {
+            argc--;
+            argv++;
+            if (argc <= 1) {
+                fprintf(stderr, "'--zirconr' option requires an argument (ZIRCON-R image)\n");
+                return -1;
+            }
+            zirconr_image = argv[1];
         } else if (!strcmp(argv[1], "-1")) {
             once = 1;
         } else if (!strcmp(argv[1], "-b")) {
@@ -426,7 +456,8 @@ int main(int argc, char** argv) {
         argc--;
         argv++;
     }
-    if (!kernel_fn && !efi_image && !kernc_image && !fvm_images[0]) {
+    if (!kernel_fn && !efi_image && !kernc_image && !zircona_image && !zirconb_image &&
+        !zirconr_image && !fvm_images[0]) {
         usage();
     }
     if (!nodename) {
@@ -542,19 +573,31 @@ int main(int argc, char** argv) {
                               use_filename_prefix ? NB_RAMDISK_FILENAME : "ramdisk.bin");
             }
         }
-        for(size_t i = 0; i < num_fvms; i++) {
-          if (status == 0 && fvm_images[i]) {
-              status = xfer(&ra, fvm_images[i], use_filename_prefix ? NB_FVM_FILENAME
-                            : NB_FVM_HOST_FILENAME);
-          }
+        for (size_t i = 0; i < num_fvms; i++) {
+            if (status == 0 && fvm_images[i]) {
+                status = xfer(&ra, fvm_images[i],
+                              use_filename_prefix ? NB_FVM_FILENAME : NB_FVM_HOST_FILENAME);
+            }
         }
         if (status == 0 && efi_image) {
-            status = xfer(&ra, efi_image, use_filename_prefix ? NB_EFI_FILENAME
-                          : NB_EFI_HOST_FILENAME);
+            status = xfer(&ra, efi_image,
+                          use_filename_prefix ? NB_EFI_FILENAME : NB_EFI_HOST_FILENAME);
         }
         if (status == 0 && kernc_image) {
-            status = xfer(&ra, kernc_image, use_filename_prefix ? NB_KERNC_FILENAME
-                          : NB_KERNC_HOST_FILENAME);
+            status = xfer(&ra, kernc_image,
+                          use_filename_prefix ? NB_KERNC_FILENAME : NB_KERNC_HOST_FILENAME);
+        }
+        if (status == 0 && zircona_image) {
+            status = xfer(&ra, zircona_image,
+                          use_filename_prefix ? NB_ZIRCONA_FILENAME : NB_ZIRCONA_HOST_FILENAME);
+        }
+        if (status == 0 && zirconb_image) {
+            status = xfer(&ra, zirconb_image,
+                          use_filename_prefix ? NB_ZIRCONB_FILENAME : NB_ZIRCONB_HOST_FILENAME);
+        }
+        if (status == 0 && zirconr_image) {
+            status = xfer(&ra, zirconr_image,
+                          use_filename_prefix ? NB_ZIRCONR_FILENAME : NB_ZIRCONR_HOST_FILENAME);
         }
         if (status == 0 && kernel_fn) {
             status = xfer(&ra, kernel_fn, use_filename_prefix ? NB_KERNEL_FILENAME : "kernel.bin");

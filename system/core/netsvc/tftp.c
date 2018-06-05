@@ -223,6 +223,18 @@ static tftp_status paver_open_write(const char* filename, size_t size, file_info
         printf("netsvc: Running KERN-C Paver\n");
         const char* args[] = {bin, "install-kernc"};
         launchpad_set_args(lp, 2, args);
+    } else if (!strcmp(filename + NB_IMAGE_PREFIX_LEN, NB_ZIRCONA_HOST_FILENAME)) {
+        printf("netsvc: Running ZIRCON-A Paver\n");
+        const char* args[] = {bin, "install-zircona"};
+        launchpad_set_args(lp, 2, args);
+    } else if (!strcmp(filename + NB_IMAGE_PREFIX_LEN, NB_ZIRCONB_HOST_FILENAME)) {
+        printf("netsvc: Running ZIRCON-B Paver\n");
+        const char* args[] = {bin, "install-zirconb"};
+        launchpad_set_args(lp, 2, args);
+    } else if (!strcmp(filename + NB_IMAGE_PREFIX_LEN, NB_ZIRCONR_HOST_FILENAME)) {
+        printf("netsvc: Running ZIRCON-R Paver\n");
+        const char* args[] = {bin, "install-zirconr"};
+        launchpad_set_args(lp, 2, args);
     } else {
         fprintf(stderr, "netsvc: Unknown Paver\n");
         return TFTP_ERR_IO;
