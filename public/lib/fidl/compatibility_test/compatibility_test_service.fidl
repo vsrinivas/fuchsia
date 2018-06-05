@@ -360,12 +360,18 @@ struct Struct {
   structs structs;
   unions unions;
   bool b;
-  // Non-null means the recipient should act as a proxy for the other server.
-  // Null means just echo it back.
-  string? forward_to_server;
 };
 
 [Discoverable]
 interface Echo {
-  1: EchoStruct(Struct value) -> (Struct value);
+  // If |forward_to_server| is empty, just returns |value|.
+  // If |forward_to_server| is not empty, it is treated as the URL of a server
+  // which implements this interface. The server that recieves the non-empty
+  // |forward_to_server| arg acts as a proxy for that other server.
+  1: EchoStruct(Struct value, string forward_to_server) -> (Struct value);
+
+  // Same as the above, but the server should use the event to return the
+  // response, rather than a return value.
+  2: EchoStructNoRetVal(Struct value, string forward_to_server);
+  3: -> EchoEvent(Struct value);
 };
