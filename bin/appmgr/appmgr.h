@@ -18,7 +18,8 @@ namespace sys {
 
 class Appmgr {
  public:
-  Appmgr(async_t* async, zx_handle_t pa_directory_request);
+  Appmgr(async_t* async, zx_handle_t pa_directory_request,
+         std::string sysmgr_url, fidl::VectorPtr<fidl::StringPtr> sysmgr_args);
   ~Appmgr();
 
  private:
@@ -31,6 +32,8 @@ class Appmgr {
   fbl::RefPtr<fs::PseudoDir> publish_dir_;
 
   ComponentControllerPtr sysmgr_;
+  std::string sysmgr_url_;
+  fidl::VectorPtr<fidl::StringPtr> sysmgr_args_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(Appmgr);
 };

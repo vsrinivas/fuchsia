@@ -17,7 +17,7 @@ namespace {
 
 TEST(Appmgr, RunUntilIdle) {
   async::Loop loop(&kAsyncLoopConfigMakeDefault);
-  Appmgr appmgr(loop.async(), ZX_HANDLE_INVALID);
+  Appmgr appmgr(loop.async(), ZX_HANDLE_INVALID, "sysmgr", {});
   EXPECT_FALSE(loop.RunUntilIdle());
 }
 

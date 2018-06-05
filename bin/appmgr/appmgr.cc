@@ -10,11 +10,15 @@ namespace {
 constexpr char kRootLabel[] = "app";
 }  // namespace
 
-Appmgr::Appmgr(async_t* async, zx_handle_t pa_directory_request)
+Appmgr::Appmgr(async_t* async, zx_handle_t pa_directory_request,
+               std::string sysmgr_url,
+               fidl::VectorPtr<fidl::StringPtr> sysmgr_args)
     : loader_vfs_(async),
       loader_dir_(fbl::AdoptRef(new fs::PseudoDir())),
       publish_vfs_(async),
-      publish_dir_(fbl::AdoptRef(new fs::PseudoDir())) {
+      publish_dir_(fbl::AdoptRef(new fs::PseudoDir())),
+      sysmgr_url_(std::move(sysmgr_url)),
+      sysmgr_args_(std::move(sysmgr_args)) {
   // 1. Serve loader.
   loader_dir_->AddEntry(
       Loader::Name_, fbl::AdoptRef(new fs::Service([this](zx::channel channel) {
@@ -50,7 +54,8 @@ Appmgr::Appmgr(async_t* async, zx_handle_t pa_directory_request)
   // 3. Run sysmgr
   auto run_sysmgr = [this] {
     LaunchInfo launch_info;
-    launch_info.url = "sysmgr";
+    launch_info.url = sysmgr_url_;
+    launch_info.arguments.reset(sysmgr_args_);
     root_realm_->CreateComponent(std::move(launch_info), sysmgr_.NewRequest());
   };
   async::PostTask(async, [this, &run_sysmgr] {

@@ -15,7 +15,7 @@ int main(int argc, char** argv) {
   async::Loop loop(&kAsyncLoopConfigMakeDefault);
   auto request = zx_get_startup_handle(PA_DIRECTORY_REQUEST);
 
-  fuchsia::sys::Appmgr appmgr(loop.async(), std::move(request));
+  fuchsia::sys::Appmgr appmgr(loop.async(), std::move(request), "sysmgr", {});
 
   loop.Run();
   return 0;
