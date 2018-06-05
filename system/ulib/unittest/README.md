@@ -6,6 +6,9 @@ used by system/utest.
 N.B. This library cannot use fdio since system/utest/core uses it
 and system/utest/core cannot use fdio. See system/utest/core/README.md.
 
+**If you want your unit tests to print to standard out, you must link your
+test executable to system/ulib/fdio!**
+
 ## Rules for parsing argv
 
 Unittest has a set of options that it recognizes.
