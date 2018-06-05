@@ -120,6 +120,7 @@ DispatchStoryCommandExecutor::DispatchStoryCommandExecutor(
       command_runners_(std::move(command_runners)),
       story_command_tag_strings_{
           {StoryCommand::Tag::kAddMod, "StoryCommand::AddMod"},
+          {StoryCommand::Tag::kUpdateMod, "StoryCommand::UpdateMod"},
           {StoryCommand::Tag::kRemoveMod, "StoryCommand::RemoveMod"},
           {StoryCommand::Tag::kSetLinkValue, "StoryCommand::SetLinkValue"},
           {StoryCommand::Tag::kSetFocusState, "StoryCommand::SetFocusState"}} {}

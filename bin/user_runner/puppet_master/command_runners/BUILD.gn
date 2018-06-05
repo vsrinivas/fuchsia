@@ -45,3 +45,28 @@ source_set("set_link_value_command_runner_unittest") {
     "//garnet/public/lib/gtest",
   ]
 }
+
+source_set("update_mod_command_runner") {
+  sources = [
+    "update_mod_command_runner.cc",
+    "update_mod_command_runner.h",
+  ]
+
+  deps = [
+    ":command_runner",
+    "//garnet/public/lib/fxl",
+  ]
+}
+
+source_set("update_mod_command_runner_unittest") {
+  testonly = true
+
+  sources = [
+    "update_mod_command_runner_unittest.cc",
+  ]
+
+  deps = [
+    ":update_mod_command_runner",
+    "//garnet/public/lib/gtest",
+  ]
+}
