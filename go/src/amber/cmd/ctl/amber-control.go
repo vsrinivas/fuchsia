@@ -173,6 +173,25 @@ func addSource(a *amber.ControlInterface) error {
 	return err
 }
 
+func listSources(a *amber.ControlInterface) error {
+	srcs, err := a.ListSrcs()
+	if err != nil {
+		fmt.Printf("failed to list sources: %s\n", err)
+		return err
+	}
+
+	for _, src := range srcs {
+		encoder := json.NewEncoder(os.Stdout)
+		encoder.SetIndent("", "    ")
+		if err := encoder.Encode(src); err != nil {
+			fmt.Printf("failed to encode source into json: %s\n", err)
+			return err
+		}
+	}
+
+	return nil
+}
+
 func main() {
 	if len(os.Args) < 2 {
 		fmt.Printf("Error: no command provided\n%s", usage)
@@ -225,7 +244,9 @@ func main() {
 	case "rm_src":
 		fmt.Printf("%q not yet supported\n", os.Args[1])
 	case "list_srcs":
-		fmt.Printf("%q not yet supported\n", os.Args[1])
+		if err := listSources(proxy); err != nil {
+			os.Exit(1)
+		}
 	case "check":
 		fmt.Printf("%q not yet supported\n", os.Args[1])
 	case "test":

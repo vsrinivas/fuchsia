@@ -13,6 +13,8 @@ import (
 
 	"amber/pkg"
 	"amber/source"
+
+	"fidl/amber"
 )
 
 // SourceKeeper wraps a Source and performs admission control for operations on
@@ -37,6 +39,10 @@ func NewSourceKeeper(src source.Source) *SourceKeeper {
 
 func (k *SourceKeeper) Id() string {
 	return k.src.Id()
+}
+
+func (k *SourceKeeper) GetConfig() *amber.SourceConfig {
+	return k.src.GetConfig()
 }
 
 func (k *SourceKeeper) AvailableUpdates(pkgs []*pkg.Package) (map[pkg.Package]pkg.Package, error) {

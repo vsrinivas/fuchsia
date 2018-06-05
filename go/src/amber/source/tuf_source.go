@@ -163,6 +163,10 @@ func (f *TUFSource) Id() string {
 	return f.Config.Id
 }
 
+func (f *TUFSource) GetConfig() *amber.SourceConfig {
+	return f.Config
+}
+
 // AvailableUpdates takes a list of Packages and returns a map from those Packages
 // to any available update Package
 func (f *TUFSource) AvailableUpdates(pkgs []*pkg.Package) (map[pkg.Package]pkg.Package, error) {

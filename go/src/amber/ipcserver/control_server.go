@@ -80,7 +80,13 @@ func (c *ControlSrvr) Check() (bool, error) {
 }
 
 func (c *ControlSrvr) ListSrcs() ([]amber.SourceConfig, error) {
-	return []amber.SourceConfig{}, nil
+	m := c.daemon.GetSources()
+	v := make([]amber.SourceConfig, 0, len(m))
+	for _, src := range m {
+		v = append(v, *src.GetConfig())
+	}
+
+	return v, nil
 }
 
 func (c *ControlSrvr) getAndWaitForUpdate(name string, version, merkle *string, ch *zx.Channel) {

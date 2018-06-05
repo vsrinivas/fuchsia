@@ -15,6 +15,8 @@ import (
 
 	"amber/pkg"
 	"amber/source"
+
+	"fidl/amber"
 )
 
 var letters = []rune("1234567890abcdef")
@@ -42,6 +44,10 @@ type testSrc struct {
 
 func (t *testSrc) Id() string {
 	return t.id
+}
+
+func (t *testSrc) GetConfig() *amber.SourceConfig {
+	return nil
 }
 
 func (t *testSrc) AvailableUpdates(pkgs []*pkg.Package) (map[pkg.Package]pkg.Package, error) {

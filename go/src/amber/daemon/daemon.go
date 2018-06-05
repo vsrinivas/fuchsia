@@ -388,12 +388,7 @@ func (d *Daemon) GetUpdates(pkgs *pkg.PackageSet) map[pkg.Package]*GetResult {
 func (d *Daemon) getUpdates(rec *upRec) map[pkg.Package]*GetResult {
 	fetchRecs := []*pkgSrcPair{}
 
-	d.muSrcs.Lock()
-	srcs := make(map[string]source.Source)
-	for key, value := range d.srcs {
-		srcs[key] = value
-	}
-	d.muSrcs.Unlock()
+	srcs := d.GetSources()
 
 	unfoundPkgs := rec.pkgs
 	// TODO thread-safe access for sources?
@@ -494,6 +489,18 @@ func (d *Daemon) RemoveSource(src source.Source) error {
 	}
 
 	return ErrSrcNotFound
+}
+
+func (d *Daemon) GetSources() map[string]source.Source {
+	d.muSrcs.Lock()
+	defer d.muSrcs.Unlock()
+
+	srcs := make(map[string]source.Source)
+	for key, value := range d.srcs {
+		srcs[key] = value
+	}
+
+	return srcs
 }
 
 // CancelAll stops all update retrieval operations, blocking until any

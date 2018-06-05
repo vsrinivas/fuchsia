@@ -10,6 +10,8 @@ import (
 	"time"
 
 	"amber/pkg"
+
+	"fidl/amber"
 )
 
 // ErrNoUpdate is returned if no update is available
@@ -28,6 +30,9 @@ var ErrNoUpdateContent = errors.New("amber/source: update content not available"
 type Source interface {
 	// A unique identifier that distinquishes this source from others.
 	Id() string
+
+	// The config definition for this source.
+	GetConfig() *amber.SourceConfig
 
 	// AvailableUpdates takes a list of packages and returns update metadata
 	// for any updates available for those packages.
