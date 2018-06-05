@@ -304,7 +304,8 @@ class StoryControllerImpl::KillModuleCall : public Operation<> {
     // the parent module to defocus it first. TODO(mesch): Why not always
     // defocus?
 
-    auto future = Future<>::Create();
+    auto future =
+        Future<>::Create("StoryControllerImpl.KillModuleCall.Run.future");
     if (story_controller_impl_->story_shell_ &&
         module_data_->module_source ==
             fuchsia::modular::ModuleSource::EXTERNAL) {
@@ -630,14 +631,16 @@ class StoryControllerImpl::StopCall : public Operation<> {
     // Tear down all connections with a fuchsia::modular::ModuleController
     // first, then the links between them.
     for (auto& connection : story_controller_impl_->connections_) {
-      auto did_teardown = Future<>::Create();
+      auto did_teardown =
+          Future<>::Create("StoryControllerImpl.StopCall.Run.did_teardown");
       connection.module_controller_impl->Teardown(did_teardown->Completer());
       did_teardowns.emplace_back(did_teardown);
     }
 
-    Future<>::Wait(did_teardowns)
+    Future<>::Wait("StoryControllerImpl.StopCall.Run.Wait", did_teardowns)
         ->AsyncMap([this] {
-          auto did_teardown = Future<>::Create();
+          auto did_teardown = Future<>::Create(
+              "StoryControllerImpl.StopCall.Run.did_teardown2");
           // If StopCall runs on a story that's not running, there is no story
           // shell.
           if (story_controller_impl_->story_shell_) {
@@ -665,12 +668,14 @@ class StoryControllerImpl::StopCall : public Operation<> {
           // last write request to finish, which is done with the Sync() request
           // below.
           for (auto& link : story_controller_impl_->links_) {
-            auto did_sync_link = Future<>::Create();
+            auto did_sync_link = Future<>::Create(
+                "StoryControllerImpl.StopCall.Run.did_sync_link");
             link->Sync(did_sync_link->Completer());
             did_sync_links.emplace_back(did_sync_link);
           }
 
-          return Future<>::Wait(did_sync_links);
+          return Future<>::Wait("StoryControllerImpl.StopCall.Run.Wait2",
+                                did_sync_links);
         })
         ->Then([this] {
           // Clear the remaining links and connections in case there are some
@@ -714,7 +719,8 @@ class StoryControllerImpl::StopModuleCall : public Operation<> {
     // why.
 
     // Read the module data.
-    auto did_read_data = Future<fuchsia::modular::ModuleDataPtr>::Create();
+    auto did_read_data = Future<fuchsia::modular::ModuleDataPtr>::Create(
+        "StoryControllerImpl.StopModuleCall.Run.did_read_data");
     operation_queue_.Add(new ReadDataCall<fuchsia::modular::ModuleData>(
         story_controller_impl_->page(), MakeModuleKey(module_path_),
         false /* not_found_is_ok */, XdrModuleData,
@@ -727,7 +733,8 @@ class StoryControllerImpl::StopModuleCall : public Operation<> {
           // If the module is already marked as stopped, there's no need to
           // update the module's data.
           if (module_data_->module_stopped) {
-            return Future<>::CreateCompleted();
+            return Future<>::CreateCompleted(
+                "StoryControllerImpl.StopModuleCall.Run.CreateCompleted");
           }
 
           // Write the module data back, with module_stopped = true, which is a
@@ -739,14 +746,16 @@ class StoryControllerImpl::StopModuleCall : public Operation<> {
           // TODO(alhaad: This call may never continue if the data we're writing
           // to the ledger is the same as the data already in there as that will
           // not trigger an OnPageChange().
-          auto did_write_data = Future<>::Create();
+          auto did_write_data = Future<>::Create(
+              "StoryControllerImpl.StopModuleCall.Run.did_write_data");
           operation_queue_.Add(new BlockingModuleDataWriteCall(
               story_controller_impl_, std::move(key),
               CloneOptional(module_data_), did_write_data->Completer()));
           return did_write_data;
         })
         ->AsyncMap([this] {
-          auto did_kill_module = Future<>::Create();
+          auto did_kill_module = Future<>::Create(
+              "StoryControllerImpl.StopModuleCall.Run.did_kill_module");
           operation_queue_.Add(new KillModuleCall(
               story_controller_impl_, std::move(module_data_),
               did_kill_module->Completer()));
@@ -1034,7 +1043,9 @@ class StoryControllerImpl::ResolveModulesCall
         }
 
         auto did_resolve_parameter =
-            Future<fuchsia::modular::ResolverParameterConstraintPtr>::Create();
+            Future<fuchsia::modular::ResolverParameterConstraintPtr>::Create(
+                "StoryControllerImpl.ResolveModulesCall.Run.did_resolve_"
+                "parameter");
         operation_queue_.Add(new ResolveParameterCall(
             story_controller_impl_, std::move(link_path),
             did_resolve_parameter->Completer()));
@@ -1073,10 +1084,13 @@ class StoryControllerImpl::ResolveModulesCall
       }
     }
 
-    Future<>::Wait(did_create_constraints)
+    Future<>::Wait("StoryControllerImpl.ResolveModulesCall.Run.Wait",
+                   did_create_constraints)
         ->AsyncMap([this, flow] {
           auto did_find_modules =
-              Future<fuchsia::modular::FindModulesResult>::Create();
+              Future<fuchsia::modular::FindModulesResult>::Create(
+                  "StoryControllerImpl.ResolveModulesCall.Run.did_find_"
+                  "modules");
           story_controller_impl_->story_provider_impl_->module_resolver()
               ->FindModules(std::move(*resolver_query_), nullptr,
                             did_find_modules->Completer());
@@ -1277,8 +1291,8 @@ class StoryControllerImpl::StartContainerInShellCall : public Operation<> {
     did_add_intents.reserve(nodes_->size());
 
     for (size_t i = 0; i < nodes_->size(); ++i) {
-      auto did_add_intent =
-          Future<fuchsia::modular::StartModuleStatus>::Create();
+      auto did_add_intent = Future<fuchsia::modular::StartModuleStatus>::Create(
+          "StoryControllerImpl.StartContainerInShellCall.Run.did_add_intent");
       auto intent = fuchsia::modular::Intent::New();
       nodes_->at(i)->intent.Clone(intent.get());
       operation_queue_.Add(new AddIntentCall(
@@ -1294,7 +1308,9 @@ class StoryControllerImpl::StartContainerInShellCall : public Operation<> {
       did_add_intents.emplace_back(did_add_intent);
     }
 
-    Future<fuchsia::modular::StartModuleStatus>::Wait(did_add_intents)
+    Future<fuchsia::modular::StartModuleStatus>::Wait(
+        "StoryControllerImpl.StartContainerInShellCall.Run.Wait",
+        did_add_intents)
         ->Then([this, flow] {
           if (!story_controller_impl_->story_shell_) {
             return;

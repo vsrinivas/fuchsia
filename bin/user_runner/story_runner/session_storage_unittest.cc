@@ -148,6 +148,7 @@ TEST_F(SessionStorageTest, CreateMultipleAndDeleteOne) {
   auto future_story2 = storage->CreateStory(nullptr);
 
   auto wait = Future<fidl::StringPtr, fuchsia::ledger::PageId>::Wait(
+      "SessionStorageTest.CreateMultipleAndDeleteOne.wait",
       {future_story1, future_story2});
 
   bool done{};

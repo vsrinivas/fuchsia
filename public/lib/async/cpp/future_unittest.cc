@@ -91,20 +91,20 @@ class FutureTest : public ::testing::Test {
 namespace {
 
 TEST_F(FutureTest, Create) {
-  auto f = Future<>::Create();
+  auto f = Future<>::Create(__PRETTY_FUNCTION__);
 
   EXPECT_NE(f.get(), nullptr);
 }
 
 TEST_F(FutureTest, CompleteAndGet) {
-  auto f = Future<int>::Create();
+  auto f = Future<int>::Create(__PRETTY_FUNCTION__);
 
   f->Complete(10);
   ASSERT_EQ(get(f), std::tuple<int>(10));
 }
 
 TEST_F(FutureTest, ThenWith0Argument) {
-  auto f = Future<>::Create();
+  auto f = Future<>::Create(__PRETTY_FUNCTION__);
 
   AsyncExpectations async_expectations;
 
@@ -117,7 +117,7 @@ TEST_F(FutureTest, ThenWith0Argument) {
 }
 
 TEST_F(FutureTest, ThenWith1Argument) {
-  auto f = Future<int>::Create();
+  auto f = Future<int>::Create(__PRETTY_FUNCTION__);
 
   AsyncExpectations async_expectations;
 
@@ -132,7 +132,7 @@ TEST_F(FutureTest, ThenWith1Argument) {
 }
 
 TEST_F(FutureTest, ThenWith2Argument) {
-  auto f = Future<int, float>::Create();
+  auto f = Future<int, float>::Create(__PRETTY_FUNCTION__);
 
   AsyncExpectations async_expectations;
 
@@ -148,7 +148,7 @@ TEST_F(FutureTest, ThenWith2Argument) {
 }
 
 TEST_F(FutureTest, CompleteBeforeThen) {
-  auto f = Future<int>::Create();
+  auto f = Future<int>::Create(__PRETTY_FUNCTION__);
 
   f->Complete(10);
 
@@ -164,7 +164,7 @@ TEST_F(FutureTest, CompleteBeforeThen) {
 
 TEST_F(FutureTest, ThenCorrectlyMoves) {
   std::shared_ptr<int> p(new int(10));
-  auto f = Future<std::shared_ptr<int>>::Create();
+  auto f = Future<std::shared_ptr<int>>::Create(__PRETTY_FUNCTION__);
 
   AsyncExpectations async_expectations;
 
@@ -183,7 +183,7 @@ TEST_F(FutureTest, ThenCorrectlyMoves) {
 
 TEST_F(FutureTest, ConstThen) {
   std::shared_ptr<int> p(new int(10));
-  auto f = Future<std::shared_ptr<int>>::Create();
+  auto f = Future<std::shared_ptr<int>>::Create(__PRETTY_FUNCTION__);
 
   AsyncExpectations async_expectations;
 
@@ -209,7 +209,7 @@ TEST_F(FutureTest, ConstThen) {
 }
 
 TEST_F(FutureTest, ConstThenAfterComplete) {
-  auto f = Future<int>::Create();
+  auto f = Future<int>::Create(__PRETTY_FUNCTION__);
 
   AsyncExpectations async_expectations;
 
@@ -234,7 +234,7 @@ TEST_F(FutureTest, ConstThenAfterComplete) {
 
 TEST_F(FutureTest, ConstThenAfterThen) {
   std::shared_ptr<int> p(new int(10));
-  auto f = Future<std::shared_ptr<int>>::Create();
+  auto f = Future<std::shared_ptr<int>>::Create(__PRETTY_FUNCTION__);
 
   AsyncExpectations async_expectations;
 
@@ -275,7 +275,8 @@ TEST_F(FutureTest, WeakThen) {
 
   // This time we expect all three to run because we haven't invalidated any
   // WeakPtrs.
-  auto f = Future<>::Create();
+  auto f =
+      Future<>::Create(std::string(__PRETTY_FUNCTION__) + std::string("1"));
   f->Then([&] { async_expectations.Signal(); })
       ->WeakThen(factory.GetWeakPtr(), [&] { async_expectations.Signal(); })
       ->Then([&] { async_expectations.Signal(); });
@@ -286,7 +287,7 @@ TEST_F(FutureTest, WeakThen) {
   // But this time we'll invalidate WeakPtrs in the first Then(). Only the first
   // Then() will run.
   async_expectations.Reset();
-  f = Future<>::Create();
+  f = Future<>::Create(std::string(__PRETTY_FUNCTION__) + std::string("2"));
   f->Then([&] {
      async_expectations.Signal();
      factory.InvalidateWeakPtrs();
@@ -304,13 +305,14 @@ TEST_F(FutureTest, WeakConstThen) {
   fxl::WeakPtrFactory<int> factory(&data);
   AsyncExpectations async_expectations;
 
-  auto f = Future<>::Create();
+  auto f =
+      Future<>::Create(std::string(__PRETTY_FUNCTION__) + std::string("1"));
   f->WeakConstThen(factory.GetWeakPtr(), [&] { async_expectations.Signal(); });
   f->Complete();
   EXPECT_EQ(1, async_expectations.count());
 
   async_expectations.Reset();
-  f = Future<>::Create();
+  f = Future<>::Create(std::string(__PRETTY_FUNCTION__) + std::string("2"));
   f->WeakConstThen(factory.GetWeakPtr(), [&] { async_expectations.Signal(); });
   factory.InvalidateWeakPtrs();
   f->Complete();
@@ -322,7 +324,8 @@ TEST_F(FutureTest, WeakMap) {
   int data = 0;
   fxl::WeakPtrFactory<int> factory(&data);
 
-  auto f = Future<int>::Create();
+  auto f =
+      Future<int>::Create(std::string(__PRETTY_FUNCTION__) + std::string("1"));
 
   // First let everything run.
   AsyncExpectations async_expectations;
@@ -341,7 +344,7 @@ TEST_F(FutureTest, WeakMap) {
   EXPECT_EQ(3, async_expectations.count());
 
   // Now invalidate it.
-  f = Future<int>::Create();
+  f = Future<int>::Create(std::string(__PRETTY_FUNCTION__) + std::string("2"));
   async_expectations.Reset();
   f->Map([&](int i) {
      async_expectations.Signal();
@@ -364,7 +367,8 @@ TEST_F(FutureTest, WeakAsyncMap) {
   int data = 0;
   fxl::WeakPtrFactory<int> factory(&data);
 
-  auto f = Future<int>::Create();
+  auto f =
+      Future<int>::Create(std::string(__PRETTY_FUNCTION__) + std::string("1"));
 
   // First let everything run.
   AsyncExpectations async_expectations;
@@ -375,7 +379,9 @@ TEST_F(FutureTest, WeakAsyncMap) {
       ->WeakAsyncMap(factory.GetWeakPtr(),
                      [&](int i) {
                        async_expectations.Signal();
-                       return Future<int>::CreateCompleted(10);
+                       return Future<int>::CreateCompleted(
+                           std::string(__PRETTY_FUNCTION__) + std::string("2"),
+                           10);
                      })
       ->Then([&](int i) { async_expectations.Signal(); });
 
@@ -383,7 +389,7 @@ TEST_F(FutureTest, WeakAsyncMap) {
   EXPECT_EQ(3, async_expectations.count());
 
   // Now invalidate it.
-  f = Future<int>::Create();
+  f = Future<int>::Create(std::string(__PRETTY_FUNCTION__) + std::string("3"));
   async_expectations.Reset();
   f->Map([&](int i) {
      async_expectations.Signal();
@@ -393,7 +399,9 @@ TEST_F(FutureTest, WeakAsyncMap) {
       ->WeakAsyncMap(factory.GetWeakPtr(),
                      [&](int i) {
                        async_expectations.Signal();
-                       return Future<int>::CreateCompleted(10);
+                       return Future<int>::CreateCompleted(
+                           std::string(__PRETTY_FUNCTION__) + std::string("4"),
+                           10);
                      })
       ->Then([&](int i) { async_expectations.Signal(); });
 
@@ -402,7 +410,7 @@ TEST_F(FutureTest, WeakAsyncMap) {
 }
 
 TEST_F(FutureTest, CreateCompleted) {
-  auto f = Future<>::CreateCompleted();
+  auto f = Future<>::CreateCompleted(__PRETTY_FUNCTION__);
 
   AsyncExpectations async_expectations;
 
@@ -414,13 +422,18 @@ TEST_F(FutureTest, CreateCompleted) {
 }
 
 TEST_F(FutureTest, Wait) {
-  auto f1 = Future<int>::Create();
-  auto f2 = Future<int>::Create();
-  auto f3 = Future<int>::Create();
+  auto f1 =
+      Future<int>::Create(std::string(__PRETTY_FUNCTION__) + std::string("1"));
+  auto f2 =
+      Future<int>::Create(std::string(__PRETTY_FUNCTION__) + std::string("2"));
+  auto f3 =
+      Future<int>::Create(std::string(__PRETTY_FUNCTION__) + std::string("3"));
 
   AsyncExpectations async_expectations;
 
-  auto f = Future<int>::Wait(std::vector<FuturePtr<int>>{f1, f2, f3});
+  auto f =
+      Future<int>::Wait(std::string(__PRETTY_FUNCTION__) + std::string("4"),
+                        std::vector<FuturePtr<int>>{f1, f2, f3});
   f->Then([&] {
     // Note: f1, f2 and f3's Complete()d values are ignored by Wait(); the
     // result is a Future<>, not a future<std::vector<int>>. There's a TODO in
@@ -438,7 +451,8 @@ TEST_F(FutureTest, Wait) {
 }
 
 TEST_F(FutureTest, WaitOnZeroFutures) {
-  auto f = Future<int>::Wait(std::vector<FuturePtr<int>>{});
+  auto f =
+      Future<int>::Wait(__PRETTY_FUNCTION__, std::vector<FuturePtr<int>>{});
 
   AsyncExpectations async_expectations;
 
@@ -448,7 +462,7 @@ TEST_F(FutureTest, WaitOnZeroFutures) {
 }
 
 TEST_F(FutureTest, Completer) {
-  auto f = Future<int>::Create();
+  auto f = Future<int>::Create(__PRETTY_FUNCTION__);
 
   auto completer = f->Completer();
   completer(5);
@@ -464,7 +478,8 @@ TEST_F(FutureTest, Completer) {
 }
 
 TEST_F(FutureTest, AsyncMap) {
-  auto future = Future<int>::Create();
+  auto future =
+      Future<int>::Create(std::string(__PRETTY_FUNCTION__) + std::string("1"));
 
   AsyncExpectations async_expectations;
 
@@ -473,7 +488,8 @@ TEST_F(FutureTest, AsyncMap) {
         EXPECT_EQ(i, 10);
         async_expectations.Signal();
 
-        auto f = Future<std::string>::Create();
+        auto f = Future<std::string>::Create(std::string(__PRETTY_FUNCTION__) +
+                                             std::string("2"));
         f->Complete(std::to_string(i * 2));
         return f;
       })
@@ -481,7 +497,8 @@ TEST_F(FutureTest, AsyncMap) {
         EXPECT_EQ(s, "20");
         async_expectations.Signal();
 
-        auto f = Future<int>::Create();
+        auto f = Future<int>::Create(std::string(__PRETTY_FUNCTION__) +
+                                     std::string("3"));
         f->Complete(std::stoi(s));
         return f;
       })
@@ -496,7 +513,7 @@ TEST_F(FutureTest, AsyncMap) {
 }
 
 TEST_F(FutureTest, Map) {
-  auto f = Future<int>::Create();
+  auto f = Future<int>::Create(__PRETTY_FUNCTION__);
 
   AsyncExpectations async_expectations;
 
@@ -523,9 +540,7 @@ TEST_F(FutureTest, Map) {
 }
 
 TEST_F(FutureTest, trace_name) {
-  auto f = Future<>::Create();
-
-  f->set_trace_name("test");
+  auto f = Future<>::Create("test");
   EXPECT_EQ(f->trace_name(), "test");
 }
 

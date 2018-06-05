@@ -204,7 +204,8 @@ ContextValueWriterImpl::ContextValueWriterImpl(
       writer_(writer),
       parent_id_(parent_id),
       type_(type),
-      value_id_(Future<ContextRepository::Id>::Create()),
+      value_id_(Future<ContextRepository::Id>::Create(
+          "ContextValueWriterImpl.value_id_")),
       weak_factory_(this) {
   binding_.set_error_handler(
       [this] { writer_->DestroyContextValueWriter(this); });

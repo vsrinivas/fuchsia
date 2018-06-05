@@ -228,8 +228,10 @@ class Future : public fxl::RefCountedThreadSafe<Future<Result...>> {
   using result_tuple_type = std::tuple<Result...>;
 
   // Creates a FuturePtr<Result...>.
-  static FuturePtr<Result...> Create() {
-    return fxl::AdoptRef(new Future<Result...>);
+  static FuturePtr<Result...> Create(std::string trace_name) {
+    auto f = fxl::AdoptRef(new Future<Result...>);
+    f->trace_name_ = std::move(trace_name);
+    return f;
   }
 
   // Creates a FuturePtr<Result...> that's already completed. For example:
@@ -239,8 +241,9 @@ class Future : public fxl::RefCountedThreadSafe<Future<Result...>> {
   //     // this lambda executes immediately
   //     assert(i == 5);
   //   });
-  static FuturePtr<Result...> CreateCompleted(Result&&... result) {
-    auto f = Create();
+  static FuturePtr<Result...> CreateCompleted(std::string trace_name,
+                                              Result&&... result) {
+    auto f = Create(std::move(trace_name));
     f->Complete(std::forward<Result>(result)...);
     return f;
   }
@@ -258,26 +261,23 @@ class Future : public fxl::RefCountedThreadSafe<Future<Result...>> {
   //
   // This is similar to Promise.All() in JavaScript, or Join() in Rust.
   // TODO: Return a FuturePtr<std::vector<Result>> instead of FuturePtr<>.
-  static FuturePtr<> Wait(const std::vector<FuturePtr<Result...>>& futures) {
+  static FuturePtr<> Wait(std::string trace_name,
+                          const std::vector<FuturePtr<Result...>>& futures) {
     if (futures.size() == 0) {
-      return Future<>::CreateCompleted();
+      return Future<>::CreateCompleted(trace_name + "(Completed)");
     }
 
-    FuturePtr<> subfuture = Future<>::Create();
+    FuturePtr<> subfuture = Future<>::Create(trace_name + "(WillWait)");
 
     auto pending_futures = std::make_shared<size_t>(futures.size());
 
-    std::string trace_name;
     for (auto future : futures) {
-      trace_name += "[" + future->trace_name() + "]";
-
       future->AddConstCallback([subfuture, pending_futures](const Result&...) {
         if (--(*pending_futures) == 0) {
           subfuture->Complete();
         }
       });
     }
-    subfuture->set_trace_name("(Wait" + trace_name + ")");
 
     return subfuture;
   }
@@ -326,8 +326,7 @@ class Future : public fxl::RefCountedThreadSafe<Future<Result...>> {
             typename = typename std::enable_if_t<
                 is_convertible_v<std::result_of_t<Callback(Result...)>, void>>>
   FuturePtr<> Then(Callback callback) {
-    FuturePtr<> subfuture = Future<>::Create();
-    subfuture->set_trace_name(trace_name_ + "(Then)");
+    FuturePtr<> subfuture = Future<>::Create(trace_name_ + "(Then)");
     SetCallback([trace_name = trace_name_, subfuture,
                  callback = std::move(callback)](Result&&... result) {
       callback(std::forward<Result>(result)...);
@@ -344,8 +343,7 @@ class Future : public fxl::RefCountedThreadSafe<Future<Result...>> {
             typename = typename std::enable_if_t<
                 is_convertible_v<std::result_of_t<Callback(Result...)>, void>>>
   FuturePtr<> WeakThen(fxl::WeakPtr<T> weak_ptr, Callback callback) {
-    FuturePtr<> subfuture = Future<>::Create();
-    subfuture->set_trace_name(trace_name_ + "(WeakThen)");
+    FuturePtr<> subfuture = Future<>::Create(trace_name_ + "(WeakThen)");
     SetCallback([weak_ptr, trace_name = trace_name_, subfuture,
                  callback = std::move(callback)](Result&&... result) {
       if (!weak_ptr)
@@ -362,8 +360,7 @@ class Future : public fxl::RefCountedThreadSafe<Future<Result...>> {
   // * multiple callbacks can be attached,
   // * |const_callback| is called _before_ the Then() callback.
   FuturePtr<> ConstThen(std::function<void(const Result&...)> const_callback) {
-    FuturePtr<> subfuture = Future<>::Create();
-    subfuture->set_trace_name(trace_name_ + "(ConstThen)");
+    FuturePtr<> subfuture = Future<>::Create(trace_name_ + "(ConstThen)");
     AddConstCallback(
         [trace_name = trace_name_, subfuture,
          const_callback = std::move(const_callback)](const Result&... result) {
@@ -378,8 +375,7 @@ class Future : public fxl::RefCountedThreadSafe<Future<Result...>> {
   FuturePtr<> WeakConstThen(
       fxl::WeakPtr<T> weak_ptr,
       std::function<void(const Result&...)> const_callback) {
-    FuturePtr<> subfuture = Future<>::Create();
-    subfuture->set_trace_name(trace_name_ + "(WeakConstThen)");
+    FuturePtr<> subfuture = Future<>::Create(trace_name_ + "(WeakConstThen)");
     AddConstCallback(
         [weak_ptr, trace_name = trace_name_, subfuture,
          const_callback = std::move(const_callback)](const Result&... result) {
@@ -421,8 +417,8 @@ class Future : public fxl::RefCountedThreadSafe<Future<Result...>> {
             typename = typename std::enable_if_t<
                 is_convertible_v<FuturePtr<MapResult>, AsyncMapResult>>>
   AsyncMapResult AsyncMap(Callback callback) {
-    AsyncMapResult subfuture = AsyncMapResult::element_type::Create();
-    subfuture->set_trace_name(trace_name_ + "(AsyncMap)");
+    AsyncMapResult subfuture =
+        AsyncMapResult::element_type::Create(trace_name_ + "(AsyncMap)");
 
     SetCallback([trace_name = trace_name_, subfuture,
                  callback = std::move(callback)](Result&&... result) {
@@ -444,8 +440,8 @@ class Future : public fxl::RefCountedThreadSafe<Future<Result...>> {
             typename = typename std::enable_if_t<
                 is_convertible_v<FuturePtr<MapResult>, AsyncMapResult>>>
   AsyncMapResult WeakAsyncMap(fxl::WeakPtr<T> weak_ptr, Callback callback) {
-    AsyncMapResult subfuture = AsyncMapResult::element_type::Create();
-    subfuture->set_trace_name(trace_name_ + "(WeakAsyncMap)");
+    AsyncMapResult subfuture =
+        AsyncMapResult::element_type::Create(trace_name_ + "(WeakAsyncMap)");
 
     SetCallback([weak_ptr, trace_name = trace_name_, subfuture,
                  callback = std::move(callback)](Result&&... result) {
@@ -468,8 +464,8 @@ class Future : public fxl::RefCountedThreadSafe<Future<Result...>> {
   template <typename Callback,
             typename MapResult = std::result_of_t<Callback(Result...)>>
   FuturePtr<MapResult> Map(Callback callback) {
-    FuturePtr<MapResult> subfuture = Future<MapResult>::Create();
-    subfuture->set_trace_name(trace_name_ + "(Map)");
+    FuturePtr<MapResult> subfuture =
+        Future<MapResult>::Create(trace_name_ + "(Map)");
     SetCallback([trace_name = trace_name_, subfuture,
                  callback = std::move(callback)](Result&&... result) {
       MapResult&& callback_result = callback(std::forward<Result>(result)...);
@@ -481,8 +477,8 @@ class Future : public fxl::RefCountedThreadSafe<Future<Result...>> {
   template <typename Callback, typename T,
             typename MapResult = std::result_of_t<Callback(Result...)>>
   FuturePtr<MapResult> WeakMap(fxl::WeakPtr<T> weak_ptr, Callback callback) {
-    FuturePtr<MapResult> subfuture = Future<MapResult>::Create();
-    subfuture->set_trace_name(trace_name_ + "(WeakMap)");
+    FuturePtr<MapResult> subfuture =
+        Future<MapResult>::Create(trace_name_ + "(WeakMap)");
     SetCallback([weak_ptr, trace_name = trace_name_, subfuture,
                  callback = std::move(callback)](Result&&... result) {
       if (!weak_ptr)
@@ -492,10 +488,6 @@ class Future : public fxl::RefCountedThreadSafe<Future<Result...>> {
     });
     return subfuture;
   }
-
-  // Useful in log messages and performance traces.
-  void set_trace_name(const std::string& s) { trace_name_ = s; }
-  void set_trace_name(std::string&& s) { trace_name_ = s; }
 
   const std::string& trace_name() const { return trace_name_; }
 

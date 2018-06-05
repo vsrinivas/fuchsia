@@ -17,8 +17,7 @@ namespace {
 class RunStoryCommandCall : public Operation<fuchsia::modular::ExecuteResult> {
  public:
   RunStoryCommandCall(const char* const command_name,
-                      CommandRunner* const runner,
-                      fidl::StringPtr story_id,
+                      CommandRunner* const runner, fidl::StringPtr story_id,
                       fuchsia::modular::StoryCommand command, ResultCall done)
       : Operation(command_name, std::move(done), ""),
         story_id_(std::move(story_id)),
@@ -61,7 +60,6 @@ class DispatchStoryCommandExecutor::ExecuteStoryCommandsCall
 
     // Keep track of the number of commands we need to run. When they are all
     // done, we complete this operation.
-    auto future = Future<fuchsia::modular::ExecuteResult>::Create();
     std::vector<FuturePtr<fuchsia::modular::ExecuteResult>>
         did_execute_commands;
     did_execute_commands.reserve(commands_.size());
@@ -85,7 +83,9 @@ class DispatchStoryCommandExecutor::ExecuteStoryCommandsCall
       // on |queue_| will not run.
 
       auto did_execute_command =
-          Future<fuchsia::modular::ExecuteResult>::Create();
+          Future<fuchsia::modular::ExecuteResult>::Create(
+              "DispatchStoryCommandExecutor.ExecuteStoryCommandsCall.Run.did_"
+              "execute_command");
       queue_.Add(new RunStoryCommandCall(tag_string, command_runner, story_id_,
                                          std::move(command),
                                          did_execute_command->Completer()));
@@ -100,7 +100,9 @@ class DispatchStoryCommandExecutor::ExecuteStoryCommandsCall
       did_execute_commands.emplace_back(did_execute_command);
     }
 
-    Future<fuchsia::modular::ExecuteResult>::Wait(did_execute_commands)
+    Future<fuchsia::modular::ExecuteResult>::Wait(
+        "DispatchStoryCommandExecutor.ExecuteStoryCommandsCall.Run.Wait",
+        did_execute_commands)
         ->Then([this] {
           fuchsia::modular::ExecuteResult result;
           result.status = fuchsia::modular::ExecuteStatus::OK;

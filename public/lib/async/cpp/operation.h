@@ -423,10 +423,7 @@ class FutureOperation : public Operation<Args...> {
                   FuturePtr<Args...> done, ResultCall result_call)
       : Operation<Args...>(trace_name, std::move(result_call)),
         on_run_(on_run),
-        done_(done) {
-    on_run->set_trace_name(std::string(trace_name) + "(on_run)");
-    done->set_trace_name(std::string(trace_name) + "(done)");
-  }
+        done_(done) {}
 
  private:
   // |OperationBase|
@@ -460,10 +457,11 @@ class FutureOperation : public Operation<Args...> {
 template <typename... ResultArgs, typename... FutureArgs>
 OperationBase* WrapFutureAsOperation(
     FuturePtr<> on_run, FuturePtr<FutureArgs...> done,
-    std::function<void(ResultArgs...)> result_call,
-    const char* const trace_name = "") {
-  return new FutureOperation<ResultArgs...>(
-      trace_name, std::move(on_run), std::move(done), std::move(result_call));
+    std::function<void(ResultArgs...)> result_call, std::string trace_name) {
+  // TODO(apang): Standardize on char* vs std::string for trace_name argument.
+  return new FutureOperation<ResultArgs...>(trace_name.c_str(),
+                                            std::move(on_run), std::move(done),
+                                            std::move(result_call));
 }
 
 // An operation which immediately calls its result callback. This is useful for

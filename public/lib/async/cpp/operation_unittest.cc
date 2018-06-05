@@ -342,7 +342,7 @@ TEST_F(OperationTest, WrapFutureAsOperation_WithResult) {
   bool op_did_start{};
   bool op_did_finish{};
 
-  auto on_run = Future<>::Create();
+  auto on_run = Future<>::Create(__PRETTY_FUNCTION__);
   auto done = on_run->Map([&]() -> int {
     EXPECT_FALSE(op_did_finish);
     op_did_start = true;
@@ -350,11 +350,12 @@ TEST_F(OperationTest, WrapFutureAsOperation_WithResult) {
   });
 
   OperationCollection container;
-  container.Add(WrapFutureAsOperation(on_run, done,
-                                      std::function<void(int)>([&](int result) {
-                                        EXPECT_EQ(10, result);
-                                        op_did_finish = true;
-                                      })));
+  container.Add(WrapFutureAsOperation(
+      on_run, done, std::function<void(int)>([&](int result) {
+        EXPECT_EQ(10, result);
+        op_did_finish = true;
+      }),
+      std::string(__PRETTY_FUNCTION__) + std::string("Operation")));
 
   RunLoopUntilIdle();
   EXPECT_TRUE(op_did_start);
@@ -366,7 +367,7 @@ TEST_F(OperationTest, WrapFutureAsOperation_WithoutResult) {
   bool op_did_start{};
   bool op_did_finish{};
 
-  auto on_run = Future<>::Create();
+  auto on_run = Future<>::Create(__PRETTY_FUNCTION__);
   auto done = on_run->Then([&] {
     EXPECT_FALSE(op_did_finish);
     op_did_start = true;
@@ -374,7 +375,8 @@ TEST_F(OperationTest, WrapFutureAsOperation_WithoutResult) {
 
   OperationCollection container;
   container.Add(WrapFutureAsOperation(
-      on_run, done, std::function<void()>([&] { op_did_finish = true; })));
+      on_run, done, std::function<void()>([&] { op_did_finish = true; }),
+      std::string(__PRETTY_FUNCTION__) + std::string("Operation")));
 
   RunLoopUntilIdle();
   EXPECT_TRUE(op_did_start);

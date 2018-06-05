@@ -122,7 +122,8 @@ class CreateStoryCall
 
 FuturePtr<fidl::StringPtr, fuchsia::ledger::PageId> SessionStorage::CreateStory(
     fidl::VectorPtr<fuchsia::modular::StoryInfoExtraEntry> extra_info) {
-  auto ret = Future<fidl::StringPtr, fuchsia::ledger::PageId>::Create();
+  auto ret = Future<fidl::StringPtr, fuchsia::ledger::PageId>::Create(
+      "SessionStorage.CreateStory.ret");
   operation_queue_.Add(new CreateStoryCall(ledger_client_->ledger(), page(),
                                            std::move(extra_info),
                                            ret->Completer()));
@@ -130,9 +131,9 @@ FuturePtr<fidl::StringPtr, fuchsia::ledger::PageId> SessionStorage::CreateStory(
 }
 
 FuturePtr<> SessionStorage::DeleteStory(fidl::StringPtr story_id) {
-  auto on_run = Future<>::Create();
+  auto on_run = Future<>::Create("SessionStorage.DeleteStory.on_run");
   auto done = on_run->AsyncMap([this, story_id] {
-    auto deleted = Future<>::Create();
+    auto deleted = Future<>::Create("SessionStorage.DeleteStory.deleted");
     page()->Delete(to_array(StoryIdToLedgerKey(story_id)),
                    [this, deleted](fuchsia::ledger::Status status) {
                      // Deleting a key that doesn't exist is OK, not
@@ -146,7 +147,7 @@ FuturePtr<> SessionStorage::DeleteStory(fidl::StringPtr story_id) {
 
     return deleted;
   });
-  auto ret = Future<>::Create();
+  auto ret = Future<>::Create("SessionStorage.DeleteStory.ret");
   operation_queue_.Add(WrapFutureAsOperation(on_run, done, ret->Completer(),
                                              "SessionStorage::DeleteStory"));
   return ret;
@@ -210,7 +211,7 @@ FuturePtr<> SessionStorage::UpdateLastFocusedTimestamp(fidl::StringPtr story_id,
     return true;
   };
 
-  auto ret = Future<>::Create();
+  auto ret = Future<>::Create("SessionStorage.UpdateLastFocusedTimestamp.ret");
   operation_queue_.Add(
       new MutateStoryDataCall(page(), story_id, mutate, ret->Completer()));
   return ret;
@@ -218,7 +219,8 @@ FuturePtr<> SessionStorage::UpdateLastFocusedTimestamp(fidl::StringPtr story_id,
 
 FuturePtr<fuchsia::modular::internal::StoryDataPtr>
 SessionStorage::GetStoryData(fidl::StringPtr story_id) {
-  auto ret = Future<fuchsia::modular::internal::StoryDataPtr>::Create();
+  auto ret = Future<fuchsia::modular::internal::StoryDataPtr>::Create(
+      "SessionStorage.GetStoryData.ret");
   operation_queue_.Add(
       MakeGetStoryDataCall(page(), story_id, ret->Completer()));
   return ret;
@@ -228,7 +230,8 @@ SessionStorage::GetStoryData(fidl::StringPtr story_id) {
 FuturePtr<fidl::VectorPtr<fuchsia::modular::internal::StoryData>>
 SessionStorage::GetAllStoryData() {
   auto ret =
-      Future<fidl::VectorPtr<fuchsia::modular::internal::StoryData>>::Create();
+      Future<fidl::VectorPtr<fuchsia::modular::internal::StoryData>>::Create(
+          "SessionStorage.GetAllStoryData.ret");
   operation_queue_.Add(
       new ReadAllDataCall<fuchsia::modular::internal::StoryData>(
           page(), kStoryKeyPrefix, XdrStoryData, ret->Completer()));

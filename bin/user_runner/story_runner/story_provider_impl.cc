@@ -545,7 +545,7 @@ void StoryProviderImpl::DeleteStory(fidl::StringPtr story_id,
 // |fuchsia::modular::StoryProvider|
 void StoryProviderImpl::GetStoryInfo(fidl::StringPtr story_id,
                                      GetStoryInfoCallback callback) {
-  auto on_run = Future<>::Create();
+  auto on_run = Future<>::Create("StoryProviderImpl.GetStoryInfo.on_run");
   auto done =
       on_run
           ->AsyncMap([this, story_id] {
@@ -593,7 +593,7 @@ void StoryProviderImpl::GetController(
 
 // |fuchsia::modular::StoryProvider|
 void StoryProviderImpl::PreviousStories(PreviousStoriesCallback callback) {
-  auto on_run = Future<>::Create();
+  auto on_run = Future<>::Create("StoryProviderImpl.PreviousStories.on_run");
   auto done =
       on_run->AsyncMap([this] { return session_storage_->GetAllStoryData(); })
           ->Map([](fidl::VectorPtr<fuchsia::modular::internal::StoryData>
@@ -674,7 +674,7 @@ void StoryProviderImpl::OnFocusChange(fuchsia::modular::FocusInfoPtr info) {
 
   // Last focus time is recorded in the ledger, and story provider watchers
   // are notified through watching SessionStorage.
-  auto on_run = Future<>::Create();
+  auto on_run = Future<>::Create("StoryProviderImpl.OnFocusChange.on_run");
   // TODO(thatguy): WeakThen() here is an attempt to fix a non-determinstic
   // crash that appeared to be happening in the Then() lambda.
   auto done = on_run->WeakThen(weak_factory_.GetWeakPtr(),
