@@ -104,3 +104,38 @@ if (use_goma) {
   ]
 }
 write_file("$root_build_dir/fx.config", _fx_config_lines)
+
+# Generates breakpad symbol data for unstripped binaries.
+#
+# This symbol data is consumed by infrastructure tools and uploaded to Crash
+# servers to enable crash reporting.  These files are uniquely important for
+# release builds and this step may take a few minutes to complete, so it is
+# not recommended that this be included in the default build.
+action("breakpad_symbols") {
+  testonly = true
+  script = "//buildtools/${host_platform}/dump_breakpad_symbols"
+
+  deps = [
+    "//build/images:ids.txt",
+  ]
+
+  inputs = [ "//buildtools/${host_platform}/dump_syms/dump_syms" ]
+  sources = ["$root_out_dir/ids.txt"]
+
+  # This action generates a single xxx.sym file for each binary in the ids file.
+  # These symbol files are not used as the input to another build step, so we
+  # don't list them as outputs. The summary file is all we need for infra to
+  # find and upload the symbol files.
+  outputs = [
+     "$root_out_dir/breakpad_symbols/symbol_file_mappings.json",
+  ]
+
+  depfile = "${outputs[0]}.d"
+
+  args = [
+    "-out-dir", rebase_path("$root_out_dir/breakpad_symbols"),
+    "-dump-syms-path", rebase_path("//buildtools/${host_platform}/dump_syms/dump_syms"),
+    "-summary-file", rebase_path(outputs[0], root_build_dir),
+    "-depfile", rebase_path(depfile, root_build_dir)
+  ] + rebase_path(sources, root_build_dir)
+}
