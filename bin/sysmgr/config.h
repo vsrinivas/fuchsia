@@ -24,6 +24,10 @@ class Config {
   using AppVector = std::vector<fuchsia::sys::LaunchInfoPtr>;
 
   Config();
+
+  Config(Config&& other);
+  Config& operator=(Config&& other);
+
   ~Config();
 
   bool ReadFrom(const std::string& config_file);

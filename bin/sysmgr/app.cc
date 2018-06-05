@@ -2,9 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <dirent.h>
-#include <sys/types.h>
-
 #include "garnet/bin/sysmgr/app.h"
 
 #include <zircon/process.h>
@@ -21,39 +18,12 @@
 namespace sysmgr {
 
 constexpr char kDefaultLabel[] = "sys";
-constexpr char kConfigDir[] = "/system/data/sysmgr/";
 
-App::App()
+App::App(Config config)
     : startup_context_(fuchsia::sys::StartupContext::CreateFromStartupInfo()),
       vfs_(async_get_default()),
       svc_root_(fbl::AdoptRef(new fs::PseudoDir())) {
   FXL_DCHECK(startup_context_);
-
-  Config config;
-  char buf[PATH_MAX];
-  if (strlcpy(buf, kConfigDir, PATH_MAX) >= PATH_MAX) {
-    FXL_LOG(ERROR) << "Config directory path too long";
-  } else {
-    const size_t dir_len = strlen(buf);
-    DIR* cfg_dir = opendir(kConfigDir);
-    if (cfg_dir != NULL) {
-      for (dirent* cfg = readdir(cfg_dir); cfg != NULL;
-           cfg = readdir(cfg_dir)) {
-        if (strcmp(".", cfg->d_name) == 0 || strcmp("..", cfg->d_name) == 0) {
-          continue;
-        }
-        if (strlcat(buf, cfg->d_name, PATH_MAX) >= PATH_MAX) {
-          FXL_LOG(WARNING) << "Could not read config file, path too long";
-          continue;
-        }
-        config.ReadFrom(buf);
-        buf[dir_len] = '\0';
-      }
-      closedir(cfg_dir);
-    } else {
-      FXL_LOG(WARNING) << "Could not open config directory" << kConfigDir;
-    }
-  }
 
   // Set up environment for the programs we will run.
   startup_context_->environment()->CreateNestedEnvironment(

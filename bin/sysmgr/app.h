@@ -27,7 +27,7 @@ namespace sysmgr {
 // of the environment.
 class App {
  public:
-  App();
+  explicit App(Config config);
   ~App();
 
  private:

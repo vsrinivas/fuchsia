@@ -38,8 +38,7 @@ fuchsia::sys::LaunchInfoPtr GetLaunchInfo(
 }
 
 bool ParseServiceMap(const rapidjson::Document& document,
-                     const std::string& key,
-                     Config::ServiceMap* services) {
+                     const std::string& key, Config::ServiceMap* services) {
   auto it = document.FindMember(key);
   if (it != document.MemberEnd()) {
     const auto& value = it->value;
@@ -61,6 +60,10 @@ bool ParseServiceMap(const rapidjson::Document& document,
 }  // namespace
 
 Config::Config() = default;
+
+Config::Config(Config&& other) = default;
+
+Config& Config::operator=(Config&& other) = default;
 
 Config::~Config() = default;
 
