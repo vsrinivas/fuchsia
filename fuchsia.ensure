@@ -23,6 +23,9 @@ infra/tools/gn/${platform} gn_version:549249
 # Breakpad
 fuchsia/tools/breakpad/${os=linux}-${arch} git_revision:9eac2058b70615519b2c4d8c6bdbfca1bd079e39
 
+# dump_breakpad_symbols
+fuchsia/tools/dump_breakpad_symbols/${os=linux}-${arch} git_revision:ceab742028fe55c4e111dc44051929fd1dfc96bc
+
 # godepfile
 fuchsia/tools/godepfile/${platform} git_revision:6922d7833617841e853a0be52a285f6cd07a0a10
 
