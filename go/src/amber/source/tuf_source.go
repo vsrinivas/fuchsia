@@ -70,22 +70,9 @@ func NewTUFSource(store string, cfg *amber.SourceConfig) (*TUFSource, error) {
 		return nil, fmt.Errorf("no root keys provided")
 	}
 
-	keys := make([]*tuf_data.Key, len(cfg.RootKeys))
-
-	for i, key := range cfg.RootKeys {
-		if key.Type != "ed25519" {
-			return nil, fmt.Errorf("unsupported key type %s", key.Type)
-		}
-
-		keyHex, err := hex.DecodeString(key.Value)
-		if err != nil {
-			return nil, fmt.Errorf("invalid key value: %s", err)
-		}
-
-		keys[i] = &tuf_data.Key{
-			Type:  key.Type,
-			Value: tuf_data.KeyValue{tuf_data.HexBytes(keyHex)},
-		}
+	keys, err := newTUFKeys(cfg.RootKeys)
+	if err != nil {
+		return nil, err
 	}
 
 	src := TUFSource{
@@ -141,6 +128,28 @@ func (f *TUFSource) initSrc() error {
 
 	f.client = client
 	return nil
+}
+
+func newTUFKeys(cfg []amber.KeyConfig) ([]*tuf_data.Key, error) {
+	keys := make([]*tuf_data.Key, len(cfg))
+
+	for i, key := range cfg {
+		if key.Type != "ed25519" {
+			return nil, fmt.Errorf("unsupported key type %s", key.Type)
+		}
+
+		keyHex, err := hex.DecodeString(key.Value)
+		if err != nil {
+			return nil, fmt.Errorf("invalid key value: %s", err)
+		}
+
+		keys[i] = &tuf_data.Key{
+			Type:  key.Type,
+			Value: tuf_data.KeyValue{tuf_data.HexBytes(keyHex)},
+		}
+	}
+
+	return keys, nil
 }
 
 func (f *TUFSource) Id() string {
