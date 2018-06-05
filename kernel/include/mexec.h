@@ -32,12 +32,6 @@ typedef void (*mexec_asm_func)(uint64_t arg0, uint64_t arg1, uint64_t arg2,
                                uint64_t aux, memmov_ops_t* ops,
                                void* new_kernel_addr);
 
-// Appends a section to the end of a given bootdata image.
-zx_status_t bootdata_append_section(uint8_t* bootdata_buf, const size_t buflen,
-                                    const uint8_t* section, const uint32_t section_length,
-                                    const uint32_t type, const uint32_t extra,
-                                    const uint32_t flags);
-
 // Save the crashlog for propagation to the next kernel.
 void mexec_stash_crashlog(fbl::RefPtr<VmObject> vmo);
 

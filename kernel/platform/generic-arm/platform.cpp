@@ -616,12 +616,16 @@ zx_status_t platform_mexec_patch_zbi(uint8_t* zbi, const size_t len) {
 
     // copy certain boot items provided by the bootloader or boot shim
     // to the mexec zbi
+    zbi::Zbi image(zbi, len);
     while (offset < mexec_zbi_length) {
         zbi_header_t* item = reinterpret_cast<zbi_header_t*>(mexec_zbi + offset);
-        zx_status_t status;
-        status = bootdata_append_section(zbi, len, reinterpret_cast<uint8_t*>(item + 1),
-                                         item->length, item->type, item->extra, item->flags);
-        if (status != ZX_OK) return status;
+
+        zbi_result_t status;
+        status = image.AppendSection(item->length, item->type, item->extra,
+                                     item->flags,
+                                     reinterpret_cast<uint8_t*>(item + 1));
+
+        if (status != ZBI_RESULT_OK) return ZX_ERR_INTERNAL;
 
         offset += ZBI_ALIGN(sizeof(zbi_header_t) + item->length);
     }

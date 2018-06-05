@@ -513,89 +513,95 @@ zx_status_t platform_mexec_patch_zbi(uint8_t* bootdata, const size_t len) {
         return ctx.ret;
     }
 
+    zbi::Zbi image(bootdata, len);
+    zbi_result_t result;
+
+    const uint32_t kNoZbiFlags = 0;
+    const uint32_t kNoZbiExtra = 0;
+
     uint32_t section_length = (uint32_t)(sizeof(e820buf) - ctx.len);
+    result = image.AppendSection(section_length, ZBI_TYPE_E820_TABLE,
+                                 kNoZbiExtra, kNoZbiFlags, e820buf);
 
-    ret = bootdata_append_section(bootdata, len, e820buf, section_length,
-                                  ZBI_TYPE_E820_TABLE, 0, 0);
-
-    if (ret != ZX_OK) {
-        printf("mexec: Failed to append e820 map to bootdata. len = %lu, "
-               "section length = %u, retcode = %d\n",
-               len, section_length,
-               ret);
-        return ret;
+    if (result != ZBI_RESULT_OK) {
+        printf("mexec: Failed to append e820 map to zbi. len = %lu, section "
+               "length = %u, retcode = %u\n", len, section_length, result);
+        return ZX_ERR_INTERNAL;
     }
 
     // Append information about the framebuffer to the bootdata
     if (bootloader.fb.base) {
-        ret = bootdata_append_section(bootdata, len, (uint8_t*)&bootloader.fb,
-                                      sizeof(bootloader.fb), ZBI_TYPE_FRAMEBUFFER, 0, 0);
-        if (ret != ZX_OK) {
-            printf("mexec: Failed to append framebuffer data to bootdata. len = %lu, "
-                   "section length = %lu, retcode = %d\n",
-                   len,
-                   sizeof(bootloader.fb), ret);
-            return ret;
+        result = image.AppendSection(sizeof(bootloader.fb),
+                                     ZBI_TYPE_FRAMEBUFFER, kNoZbiExtra,
+                                     kNoZbiFlags,(uint8_t*)&bootloader.fb);
+        if (result != ZBI_RESULT_OK) {
+            printf("mexec: Failed to append framebuffer data to bootdata. "
+                   "len = %lu, section length = %lu, retcode = %u\n", len,
+                   sizeof(bootloader.fb), result);
+            return ZX_ERR_INTERNAL;
         }
     }
 
     if (bootloader.efi_system_table) {
-        ret = bootdata_append_section(bootdata, len, (uint8_t*)&bootloader.efi_system_table,
-                                      sizeof(bootloader.efi_system_table),
-                                      ZBI_TYPE_EFI_SYSTEM_TABLE, 0, 0);
-        if (ret != ZX_OK) {
-            printf("mexec: Failed to append efi sys table data to bootdata. len = %lu, "
-                   "section length = %lu, retcode = %d\n",
-                   len,
-                   sizeof(bootloader.efi_system_table), ret);
-            return ret;
+        result = image.AppendSection(sizeof(bootloader.efi_system_table),
+                                     ZBI_TYPE_EFI_SYSTEM_TABLE, kNoZbiExtra,
+                                     kNoZbiFlags,
+                                     (uint8_t*)&bootloader.efi_system_table);
+        if (result != ZBI_RESULT_OK) {
+            printf("mexec: Failed to append efi sys table data to bootdata. "
+                   "len = %lu, section length = %lu, retcode = %u\n", len,
+                   sizeof(bootloader.efi_system_table), result);
+            return ZX_ERR_INTERNAL;
         }
     }
 
     if (bootloader.acpi_rsdp) {
-        ret = bootdata_append_section(bootdata, len, (uint8_t*)&bootloader.acpi_rsdp,
-                                      sizeof(bootloader.acpi_rsdp), ZBI_TYPE_ACPI_RSDP, 0, 0);
-        if (ret != ZX_OK) {
-            printf("mexec: Failed to append acpi rsdp data to bootdata. len = %lu, "
-                   "section length = %lu, retcode = %d\n",
-                   len,
-                   sizeof(bootloader.acpi_rsdp), ret);
-            return ret;
+        result = image.AppendSection(sizeof(bootloader.acpi_rsdp),
+                                     ZBI_TYPE_ACPI_RSDP, kNoZbiExtra,
+                                     kNoZbiFlags,
+                                     (uint8_t*)&bootloader.acpi_rsdp);
+        if (result != ZBI_RESULT_OK) {
+            printf("mexec: Failed to append acpi rsdp data to bootdata. "
+                   "len = %lu, section length = %lu, retcode = %u\n", len,
+                   sizeof(bootloader.acpi_rsdp), result);
+            return ZX_ERR_INTERNAL;
         }
     }
 
     if (bootloader.smbios) {
-        ret = bootdata_append_section(bootdata, len, (uint8_t*)&bootloader.smbios,
-                                      sizeof(bootloader.smbios), ZBI_TYPE_SMBIOS, 0, 0);
-        if (ret != ZX_OK) {
-            printf("mexec: Failed to append smbios data to bootdata. len = %lu, "
-                   "section length = %lu, retcode = %d\n", len,
-                   sizeof(bootloader.smbios), ret);
-            return ret;
+        result = image.AppendSection(sizeof(bootloader.smbios), ZBI_TYPE_SMBIOS,
+                                     kNoZbiExtra, kNoZbiFlags,
+                                     (uint8_t*)&bootloader.smbios);
+        if (result != ZBI_RESULT_OK) {
+            printf("mexec: Failed to append smbios data to bootdata. len = %lu,"
+                   " section length = %lu, retcode = %u\n", len,
+                   sizeof(bootloader.smbios), result);
+            return ZX_ERR_INTERNAL;
         }
     }
 
     if (bootloader.uart.type != ZBI_UART_NONE) {
-        ret = bootdata_append_section(bootdata, len, (uint8_t*)&bootloader.uart,
-                                      sizeof(bootloader.uart), ZBI_TYPE_DEBUG_UART, 0, 0);
-        if (ret != ZX_OK) {
+        result = image.AppendSection(sizeof(bootloader.uart),
+                                     ZBI_TYPE_DEBUG_UART, kNoZbiExtra,
+                                     kNoZbiFlags, (uint8_t*)&bootloader.uart);
+        if (result != ZBI_RESULT_OK) {
             printf("mexec: Failed to append uart data to bootdata. len = %lu, "
-                   "section length = %lu, retcode = %d\n",
-                   len,
-                   sizeof(bootloader.uart), ret);
-            return ret;
+                   "section length = %lu, retcode = %u\n", len,
+                   sizeof(bootloader.uart), result);
+            return ZX_ERR_INTERNAL;
         }
     }
 
     if (bootloader.nvram.base) {
-        ret = bootdata_append_section(bootdata, len, (uint8_t*)&bootloader.nvram,
-                                      sizeof(bootloader.nvram), ZBI_TYPE_NVRAM_DEPRECATED, 0, 0);
-        if (ret != ZX_OK) {
+        result = image.AppendSection(sizeof(bootloader.nvram),
+                                     ZBI_TYPE_NVRAM, kNoZbiExtra,
+                                     kNoZbiFlags, (uint8_t*)&bootloader.nvram);
+
+        if (result != ZBI_RESULT_OK) {
             printf("mexec: Failed to append nvram data to bootdata. len = %lu, "
-                   "section length = %lu, retcode = %d\n",
-                   len,
-                   sizeof(bootloader.nvram), ret);
-            return ret;
+                   "section length = %lu, retcode = %u\n", len,
+                   sizeof(bootloader.nvram), result);
+            return ZX_ERR_INTERNAL;
         }
     }
 
