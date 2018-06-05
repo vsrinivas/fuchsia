@@ -5,11 +5,10 @@
 #pragma once
 
 #include <ddk/device.h>
-#include <wlantap/cpp/fidl.h>
+#include <fuchsia/wlan/tap/cpp/fidl.h>
 #include <wlan/protocol/mac.h>
 
 namespace wlan {
-namespace wlantap {
 
 class WlantapMac {
   public:
@@ -24,7 +23,7 @@ class WlantapMac {
     };
 
     virtual void Rx(const std::vector<uint8_t>& data,
-                    const ::wlantap::WlanRxInfo& rx_info) = 0;
+                    const ::fuchsia::wlan::tap::WlanRxInfo& rx_info) = 0;
     virtual void Status(uint32_t status) = 0;
 
     virtual void RemoveDevice() = 0;
@@ -34,10 +33,9 @@ class WlantapMac {
 
 zx_status_t CreateWlantapMac(zx_device_t* parent_phy,
                              const ::fuchsia::wlan::device::CreateIfaceRequest& request,
-                             const ::wlantap::WlantapPhyConfig* phy_config,
+                             const ::fuchsia::wlan::tap::WlantapPhyConfig* phy_config,
                              uint16_t id,
                              WlantapMac::Listener* listener,
                              WlantapMac** ret);
 
-} // namespace wlantap
 } // namespace wlan

@@ -13,7 +13,7 @@ extern crate fuchsia_zircon as zx;
 extern crate wlantap_client;
 extern crate fidl_fuchsia_wlan_device as wlan_device;
 extern crate fidl_wlan_service;
-extern crate fidl_wlantap;
+extern crate fidl_fuchsia_wlan_tap as wlantap;
 extern crate futures;
 
 use futures::prelude::*;
@@ -49,9 +49,9 @@ fn create_2_4_ghz_band_info() -> wlan_device::BandInfo {
     }
 }
 
-fn create_wlantap_config() -> fidl_wlantap::WlantapPhyConfig {
+fn create_wlantap_config() -> wlantap::WlantapPhyConfig {
     use wlan_device::SupportedPhy;
-    fidl_wlantap::WlantapPhyConfig {
+    wlantap::WlantapPhyConfig {
         phy_info: wlan_device::PhyInfo{
             id: 0,
             dev_path: None,
@@ -89,7 +89,7 @@ impl State {
 }
 
 fn send_beacon(frame_buf: &mut Vec<u8>, channel: &wlan_device::Channel, bss_id: &[u8; 6],
-               ssid: &str, proxy: &fidl_wlantap::WlantapPhyProxy)
+               ssid: &str, proxy: &wlantap::WlantapPhyProxy)
     -> Result<(), failure::Error>
 {
     frame_buf.clear();
@@ -116,7 +116,7 @@ fn send_beacon(frame_buf: &mut Vec<u8>, channel: &wlan_device::Channel, bss_id: 
         .supported_rates(&[0x82, 0x84, 0x8b, 0x0c, 0x12, 0x96, 0x18, 0x24])?
         .dsss_parameter_set(channel.primary)?;
 
-    let rx_info = &mut fidl_wlantap::WlanRxInfo {
+    let rx_info = &mut wlantap::WlanRxInfo {
         rx_flags: 0,
         valid_fields: 0,
         phy: 0,
@@ -144,7 +144,7 @@ fn main() -> Result<(), failure::Error> {
         let state = state.clone();
         proxy.take_event_stream().for_each(move |event| {
             match event {
-                fidl_wlantap::WlantapPhyEvent::SetChannel{ args } => {
+                wlantap::WlantapPhyEvent::SetChannel{ args } => {
                     let mut state = state.lock().unwrap();
                     state.current_channel = args.chan;
                     println!("setting channel to {:?}", state.current_channel);
@@ -214,14 +214,14 @@ mod tests {
 
     fn scan(exec: &mut async::Executor,
             wlan_service: &fidl_wlan_service::WlanProxy,
-            phy: &fidl_wlantap::WlantapPhyProxy,
+            phy: &wlantap::WlantapPhyProxy,
             helper: &mut test_utils::TestHelper) -> fidl_wlan_service::ScanResult {
         let mut wlanstack_retry = test_utils::RetryWithBackoff::new(1.seconds());
         loop {
             let scan_result = helper.run(exec, 10.seconds(), "receive a scan response",
                |event| {
                    match event {
-                       fidl_wlantap::WlantapPhyEvent::SetChannel { args } => {
+                       wlantap::WlantapPhyEvent::SetChannel { args } => {
                            println!("set channel to {:?}", args.chan);
                            if args.chan.primary == 1 {
                                send_beacon(&mut vec![], &args.chan, &BSS_FOO, SSID_FOO, &phy)

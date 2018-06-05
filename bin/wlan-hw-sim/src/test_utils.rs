@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use async::{self, TimeoutExt};
-use fidl_wlantap;
+use wlantap;
 use futures::prelude::*;
 use futures::channel::mpsc;
 use std::sync::Arc;
@@ -11,16 +11,16 @@ use wlantap_client::Wlantap;
 use zx::{self, prelude::*};
 use futures::task::Context;
 
-type EventStream = fidl_wlantap::WlantapPhyEventStream;
+type EventStream = wlantap::WlantapPhyEventStream;
 
 pub struct TestHelper {
     _wlantap: Wlantap,
-    proxy: Arc<fidl_wlantap::WlantapPhyProxy>,
+    proxy: Arc<wlantap::WlantapPhyProxy>,
     event_stream: Option<EventStream>,
 }
 
 struct TestHelperFuture<F: Future, H>
-    where H: FnMut(fidl_wlantap::WlantapPhyEvent) -> ()
+    where H: FnMut(wlantap::WlantapPhyEvent) -> ()
 {
     event_stream: Option<EventStream>,
     event_handler: H,
@@ -28,7 +28,7 @@ struct TestHelperFuture<F: Future, H>
 }
 
 impl<F: Future, H> Future for TestHelperFuture<F, H>
-    where H: FnMut(fidl_wlantap::WlantapPhyEvent) -> ()
+    where H: FnMut(wlantap::WlantapPhyEvent) -> ()
 {
     type Item = (F::Item, EventStream);
     type Error = (F::Error, EventStream);
@@ -54,7 +54,7 @@ impl<F: Future, H> Future for TestHelperFuture<F, H>
 
 impl TestHelper {
     pub fn begin_test(exec: &mut async::Executor,
-                      config: fidl_wlantap::WlantapPhyConfig) -> Self {
+                      config: wlantap::WlantapPhyConfig) -> Self {
         let wlantap = Wlantap::open().expect("Failed to open wlantapctl");
         let proxy = wlantap.create_phy(config).expect("Failed to create wlantap PHY");
         let event_stream = Some(proxy.take_event_stream());
@@ -72,7 +72,7 @@ impl TestHelper {
         self.run(exec, 2.seconds(), "receive a WlanmacStart event",
             move |event| {
                 match event {
-                    fidl_wlantap::WlantapPhyEvent::WlanmacStart{ .. } => {
+                    wlantap::WlantapPhyEvent::WlanmacStart{ .. } => {
                         sender.try_send(()).unwrap();
                     },
                     _ => {}
@@ -82,14 +82,14 @@ impl TestHelper {
         ).unwrap();
     }
 
-    pub fn proxy(&self) -> Arc<fidl_wlantap::WlantapPhyProxy> {
+    pub fn proxy(&self) -> Arc<wlantap::WlantapPhyProxy> {
         self.proxy.clone()
     }
 
     pub fn run<F: Future, H>(&mut self, exec: &mut async::Executor, timeout: zx::Duration,
                              context: &str, event_handler: H, future: F)
         -> Result<F::Item, F::Error>
-        where H: FnMut(fidl_wlantap::WlantapPhyEvent) -> ()
+        where H: FnMut(wlantap::WlantapPhyEvent) -> ()
     {
         let res = exec.run_singlethreaded(
             TestHelperFuture{

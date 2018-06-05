@@ -8,7 +8,7 @@ extern crate byteorder;
 extern crate failure;
 #[macro_use] extern crate fdio;
 extern crate fidl;
-extern crate fidl_wlantap;
+extern crate fidl_fuchsia_wlan_tap as wlantap;
 extern crate fuchsia_async as async;
 extern crate fuchsia_zircon as zx;
 extern crate futures;
@@ -35,8 +35,8 @@ impl Wlantap {
         })
     }
 
-    pub fn create_phy(&self, mut config: fidl_wlantap::WlantapPhyConfig)
-        -> Result<fidl_wlantap::WlantapPhyProxy, Error>
+    pub fn create_phy(&self, mut config: wlantap::WlantapPhyConfig)
+        -> Result<wlantap::WlantapPhyProxy, Error>
     {
         let (encoded_config, handles) = (&mut vec![], &mut vec![]);
         Encoder::encode(encoded_config, handles, &mut config)?;
@@ -59,7 +59,7 @@ impl Wlantap {
         }
         // Release ownership of the remote handle
         mem::forget(remote);
-        Ok(fidl_wlantap::WlantapPhyProxy::new(async::Channel::from_channel(local)?))
+        Ok(wlantap::WlantapPhyProxy::new(async::Channel::from_channel(local)?))
     }
 
 }

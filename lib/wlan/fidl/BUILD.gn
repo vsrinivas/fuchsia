@@ -35,7 +35,7 @@ fidl("service") {
 }
 
 fidl("wlantap") {
-  name = "wlantap"
+  name = "fuchsia.wlan.tap"
 
   sources = [
     "wlantap.fidl"

@@ -5,16 +5,15 @@
 #pragma once
 
 #include <ddk/device.h>
-#include <wlantap/cpp/fidl.h>
+#include <fuchsia/wlan/tap/cpp/fidl.h>
 #include <zx/channel.h>
 #include <lib/async/dispatcher.h>
 #include <wlan/protocol/wlantap.h>
 
 namespace wlan {
-namespace wlantap {
 
 zx_status_t CreatePhy(zx_device_t* wlantapctl, zx::channel user_channel,
-                      std::unique_ptr<::wlantap::WlantapPhyConfig> ioctl_in, async_t* loop);
+                      std::unique_ptr<::fuchsia::wlan::tap::WlantapPhyConfig> ioctl_in,
+                      async_t* loop);
 
-} // namespace wlantap
 } // namespace wlan

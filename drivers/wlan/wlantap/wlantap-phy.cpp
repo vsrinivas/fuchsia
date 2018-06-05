@@ -9,14 +9,14 @@
 #include <ddk/debug.h>
 #include <fuchsia/wlan/device/cpp/fidl.h>
 #include <fuchsia/wlan/device/c/fidl.h>
-#include <wlantap/c/fidl.h>
+#include <fuchsia/wlan/tap/c/fidl.h>
 #include <wlan/async/dispatcher.h>
 #include <wlan/protocol/ioctl.h>
 #include <wlan/protocol/phy.h>
 
 namespace wlan {
-namespace wlantap {
 
+namespace wlantap = ::fuchsia::wlan::tap;
 namespace wlan_device = ::fuchsia::wlan::device;
 
 namespace {
@@ -81,7 +81,7 @@ struct EventSender {
     }
 
     void SendSetChannelEvent(uint16_t wlanmac_id, wlan_channel_t* channel) {
-        ::wlantap::SetChannelArgs args = {
+        wlantap::SetChannelArgs args = {
             .wlanmac_id = wlanmac_id,
             .chan = {
                     .primary = channel->primary,
@@ -93,7 +93,7 @@ struct EventSender {
     }
 
     void SendConfigureBssEvent(uint16_t wlanmac_id, wlan_bss_config_t* config) {
-        ::wlantap::ConfigureBssArgs args = {
+        wlantap::ConfigureBssArgs args = {
             .wlanmac_id = wlanmac_id,
             .config = {
                     .bss_type = config->bss_type,
@@ -120,18 +120,18 @@ struct EventSender {
     }
 
     void SendWlanmacStartEvent(uint16_t wlanmac_id) {
-        ::wlantap::WlanmacStartArgs args = { .wlanmac_id = wlanmac_id };
+        wlantap::WlanmacStartArgs args = { .wlanmac_id = wlanmac_id };
         Send(EventOrdinal::WlanmacStart, &args);
     }
 
 private:
     enum class EventOrdinal : uint32_t {
-        Tx = wlantap_WlantapPhyTxOrdinal,
-        SetChannel = wlantap_WlantapPhySetChannelOrdinal,
-        ConfigureBss = wlantap_WlantapPhyConfigureBssOrdinal,
+        Tx = fuchsia_wlan_tap_WlantapPhyTxOrdinal,
+        SetChannel = fuchsia_wlan_tap_WlantapPhySetChannelOrdinal,
+        ConfigureBss = fuchsia_wlan_tap_WlantapPhyConfigureBssOrdinal,
         // TODO: ConfigureBeacon
-        SetKey = wlantap_WlantapPhySetKeyOrdinal,
-        WlanmacStart = wlantap_WlantapPhyWlanmacStartOrdinal
+        SetKey = fuchsia_wlan_tap_WlantapPhySetKeyOrdinal,
+        WlanmacStart = fuchsia_wlan_tap_WlantapPhyWlanmacStartOrdinal
     };
 
     template<typename T>
@@ -143,7 +143,7 @@ private:
         }
     }
 
-    static void ConvertTxInfo(const wlan_tx_info_t& in, ::wlantap::WlanTxInfo* out) {
+    static void ConvertTxInfo(const wlan_tx_info_t& in, wlantap::WlanTxInfo* out) {
         out->tx_flags = in.tx_flags;
         out->valid_fields = in.valid_fields;
         out->phy = in.phy;
@@ -155,8 +155,8 @@ private:
     fidl::Encoder encoder_;
     const zx::channel& channel_;
     // Messages that require memory allocation
-    ::wlantap::TxArgs tx_args_;
-    ::wlantap::SetKeyArgs set_key_args_;
+    wlantap::TxArgs tx_args_;
+    wlantap::SetKeyArgs set_key_args_;
 };
 
 template<typename T, size_t MAX_COUNT>
@@ -205,9 +205,9 @@ class DevicePool {
 
 constexpr size_t kMaxMacDevices = 4;
 
-struct WlantapPhy : wlan_device::Phy, ::wlantap::WlantapPhy, WlantapMac::Listener {
+struct WlantapPhy : wlan_device::Phy, wlantap::WlantapPhy, WlantapMac::Listener {
     WlantapPhy(zx_device_t* device, zx::channel user_channel,
-               std::unique_ptr<::wlantap::WlantapPhyConfig> phy_config,
+               std::unique_ptr<wlantap::WlantapPhyConfig> phy_config,
                async_t* loop)
       : phy_config_(std::move(phy_config)),
         phy_dispatcher_(loop),
@@ -317,7 +317,7 @@ struct WlantapPhy : wlan_device::Phy, ::wlantap::WlantapPhy, WlantapMac::Listene
     // wlantap::WlantapPhy impl
 
     virtual void Rx(uint16_t wlanmac_id, ::fidl::VectorPtr<uint8_t> data,
-                    ::wlantap::WlanRxInfo info) override {
+                    wlantap::WlanRxInfo info) override {
         std::lock_guard<std::mutex> guard(wlanmac_lock_);
         if (WlantapMac* wlanmac = wlanmac_devices_.Get(wlanmac_id)) {
             wlanmac->Rx(data, info);
@@ -366,9 +366,9 @@ struct WlantapPhy : wlan_device::Phy, ::wlantap::WlantapPhy, WlantapMac::Listene
     }
 
     zx_device_t* device_;
-    const std::unique_ptr<const ::wlantap::WlantapPhyConfig> phy_config_;
+    const std::unique_ptr<const wlantap::WlantapPhyConfig> phy_config_;
     wlan::async::Dispatcher<wlan_device::Phy> phy_dispatcher_;
-    fidl::Binding<::wlantap::WlantapPhy> user_channel_binding_;
+    fidl::Binding<wlantap::WlantapPhy> user_channel_binding_;
     std::mutex wlanmac_lock_;
     DevicePool<WlantapMac, kMaxMacDevices> wlanmac_devices_ __TA_GUARDED(wlanmac_lock_);
     std::mutex event_sender_lock_;
@@ -378,7 +378,7 @@ struct WlantapPhy : wlan_device::Phy, ::wlantap::WlantapPhy, WlantapMac::Listene
 } // namespace
 
 zx_status_t CreatePhy(zx_device_t* wlantapctl, zx::channel user_channel,
-                      std::unique_ptr<::wlantap::WlantapPhyConfig> config, async_t* loop) {
+                      std::unique_ptr<wlantap::WlantapPhyConfig> config, async_t* loop) {
     auto phy = std::make_unique<WlantapPhy>(wlantapctl, std::move(user_channel), std::move(config),
                                             loop);
     static zx_protocol_device_t device_ops = {
@@ -406,5 +406,4 @@ zx_status_t CreatePhy(zx_device_t* wlantapctl, zx::channel user_channel,
     return ZX_OK;
 }
 
-} // namespace wlantap
 } // namespace wlan

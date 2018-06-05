@@ -11,8 +11,8 @@
 #include <wlan/wlanmac-ifc-proxy.h>
 
 namespace wlan {
-namespace wlantap {
 
+namespace wlantap = ::fuchsia::wlan::tap;
 namespace wlan_device = ::fuchsia::wlan::device;
 
 namespace {
@@ -105,7 +105,7 @@ void ConvertBandInfo(const wlan_device::BandInfo& in, wlan_band_info_t* out) {
 
 struct WlantapMacImpl : WlantapMac {
     WlantapMacImpl(zx_device_t* phy_device, uint16_t id, wlan_device::MacRole role,
-                   const ::wlantap::WlantapPhyConfig* phy_config, Listener* listener)
+                   const wlantap::WlantapPhyConfig* phy_config, Listener* listener)
         : id_(id), role_(role), phy_config_(phy_config), listener_(listener)
     { }
 
@@ -218,7 +218,7 @@ struct WlantapMacImpl : WlantapMac {
     // WlantapMac impl
 
     virtual void Rx(const std::vector<uint8_t>& data,
-                    const ::wlantap::WlanRxInfo& rx_info) override {
+                    const wlantap::WlanRxInfo& rx_info) override {
         std::lock_guard<std::mutex> guard(lock_);
         if (ifc_) {
             wlan_rx_info_t converted_info = {
@@ -260,7 +260,7 @@ struct WlantapMacImpl : WlantapMac {
     wlan_device::MacRole role_;
     std::mutex lock_;
     WlanmacIfcProxy ifc_ __TA_GUARDED(lock_);
-    const ::wlantap::WlantapPhyConfig* phy_config_;
+    const wlantap::WlantapPhyConfig* phy_config_;
     Listener* listener_;
 };
 
@@ -269,7 +269,7 @@ struct WlantapMacImpl : WlantapMac {
 
 zx_status_t CreateWlantapMac(zx_device_t* parent_phy,
                              const wlan_device::CreateIfaceRequest& request,
-                             const ::wlantap::WlantapPhyConfig* phy_config,
+                             const wlantap::WlantapPhyConfig* phy_config,
                              uint16_t id, WlantapMac::Listener* listener, WlantapMac** ret) {
     char name[ZX_MAX_NAME_LEN + 1];
     snprintf(name, sizeof(name), "%s-mac%u", device_get_name(parent_phy), id);
@@ -308,5 +308,4 @@ zx_status_t CreateWlantapMac(zx_device_t* parent_phy,
     return ZX_OK;
 }
 
-} // namespace wlantap
 } // namespace wlan
