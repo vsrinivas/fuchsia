@@ -39,7 +39,7 @@ class CppBuilder(Builder):
 
     def __init__(self, output, overlay, debug):
         super(CppBuilder, self).__init__(domains=['cpp', 'exe'],
-                                         ignored_domains=['fidl', 'images'])
+                                         ignored_domains=['fidl', 'image'])
         self.output = output
         self.is_overlay = overlay
         self.is_debug = debug
@@ -51,8 +51,9 @@ class CppBuilder(Builder):
         shutil.copyfile(package_bzl_src, package_bzl_dest)
         open(os.path.join(self.output, 'build_defs', 'BUILD'),'w+')
 
-
-        shutil.copytree(os.path.join(SCRIPT_DIR, 'examples'), os.path.join(self.output, 'examples'))
+        if not overlay:
+            shutil.copytree(os.path.join(SCRIPT_DIR, 'examples'),
+                            os.path.join(self.output, 'examples'))
 
         if self.is_debug:
             workspace_filename = os.path.join(self.output, 'WORKSPACE')
