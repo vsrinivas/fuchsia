@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 extern crate fidl;
-extern crate fidl_echo2;
+extern crate fidl_fidl_examples_echo;
 extern crate failure;
 extern crate fuchsia_app as component;
 extern crate fuchsia_async as async;
@@ -15,7 +15,7 @@ extern crate structopt;
 use component::client::Launcher;
 use failure::{Error, ResultExt};
 use futures::prelude::*;
-use fidl_echo2::EchoMarker;
+use fidl_fidl_examples_echo::EchoMarker;
 use structopt::StructOpt;
 
 fn main() -> Result<(), Error> {

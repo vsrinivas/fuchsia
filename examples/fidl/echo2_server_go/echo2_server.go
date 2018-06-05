@@ -12,7 +12,7 @@ import (
 
 	"syscall/zx"
 
-	"fidl/echo2"
+	echo2 "fidl/fidl/examples/echo"
 )
 
 type echoImpl struct{}

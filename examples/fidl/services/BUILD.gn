@@ -5,6 +5,8 @@
 import("//build/fidl/fidl.gni")
 
 fidl("echo2") {
+  name = "fidl.examples.echo"
+
   sources = [
     "echo2.fidl",
   ]

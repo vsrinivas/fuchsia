@@ -11,7 +11,7 @@ import (
 	"app/context"
 	"svc/services"
 
-	"fidl/echo2"
+	echo2 "fidl/fidl/examples/echo"
 	"fidl/fuchsia/sys"
 )
 

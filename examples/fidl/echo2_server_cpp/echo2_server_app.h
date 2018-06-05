@@ -5,13 +5,13 @@
 #ifndef GARNET_EXAMPLES_FIDL_ECHO2_SERVER_CPP_ECHO2_SERVER_APP_H_
 #define GARNET_EXAMPLES_FIDL_ECHO2_SERVER_CPP_ECHO2_SERVER_APP_H_
 
-#include <echo2/cpp/fidl.h>
+#include <fidl/examples/echo/cpp/fidl.h>
 
 #include "lib/app/cpp/startup_context.h"
 
 namespace echo2 {
 
-class EchoServerApp : public Echo {
+class EchoServerApp : public fidl::examples::echo::Echo {
  public:
   EchoServerApp();
   virtual void EchoString(fidl::StringPtr value, EchoStringCallback callback);

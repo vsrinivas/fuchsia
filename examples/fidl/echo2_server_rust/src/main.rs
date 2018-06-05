@@ -8,14 +8,14 @@ extern crate fuchsia_app as component;
 extern crate fuchsia_async as async;
 extern crate fuchsia_zircon as zx;
 extern crate futures;
-extern crate fidl_echo2;
+extern crate fidl_fidl_examples_echo;
 
 use component::server::ServicesServer;
 use failure::{Error, ResultExt};
 use futures::future;
 use futures::prelude::*;
 use fidl::endpoints2::{ServiceMarker, RequestStream};
-use fidl_echo2::{EchoMarker, EchoRequest, EchoRequestStream};
+use fidl_fidl_examples_echo::{EchoMarker, EchoRequest, EchoRequestStream};
 
 fn spawn_echo_server(chan: async::Channel) {
     async::spawn(EchoRequestStream::from_channel(chan)
