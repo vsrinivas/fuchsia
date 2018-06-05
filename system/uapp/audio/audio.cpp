@@ -6,6 +6,7 @@
 #include <audio-utils/audio-input.h>
 #include <audio-utils/audio-output.h>
 #include <audio-proto-utils/format-utils.h>
+#include <ctype.h>
 #include <zircon/types.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
@@ -36,6 +37,7 @@ enum class Command {
     INFO,
     MUTE,
     UNMUTE,
+    AGC,
     GAIN,
     PLUG_MONITOR,
     TONE,
@@ -59,7 +61,9 @@ void usage(const char* prog_name) {
     printf("\nValid command are\n");
     printf("info   : Fetches capability and status info for the specified stream\n");
     printf("mute   : Mute the specified stream\n");
-    printf("unmute : Mute the specified stream\n");
+    printf("unmute : Unmute the specified stream\n");
+    printf("agc    : Params : (on|off)\n");
+    printf("         Enable or disable AGC for the specified input stream.\n");
     printf("gain   : Params : <db_gain>\n");
     printf("         Set the gain of the stream to the specified level\n");
     printf("pmon   : Params : [<duration>]\n"
@@ -146,10 +150,64 @@ void dump_format_range(size_t ndx, const audio_stream_format_range_t& range) {
     }
 }
 
+static void FixupStringRequest(audio_stream_cmd_get_string_resp_t* resp, zx_status_t res) {
+    if (res != ZX_OK) {
+        snprintf(reinterpret_cast<char*>(resp->str), sizeof(resp->str), "<err %d>", res);
+        return;
+    }
+
+    if (resp->strlen > sizeof(resp->str)) {
+        snprintf(reinterpret_cast<char*>(resp->str), sizeof(resp->str),
+                 "<bad strllen %u>", resp->strlen);
+        return;
+    }
+
+    // We are going to display this string using ASCII, but it is encoded using
+    // UTF8.  Go over the string and replace unprintable characters with
+    // something else.  Also replace embedded nulls with a space.  Finally,
+    // ensure that the string is null terminated.
+    uint32_t len = fbl::min<uint32_t>(sizeof(resp->str) - 1, resp->strlen);
+    uint32_t i;
+    for (i = 0; i < len; ++i) {
+        if (resp->str[i] == 0) {
+            resp->str[i] = ' ';
+        } else if (!isprint(resp->str[i])) {
+            resp->str[i] = '?';
+        }
+
+    }
+
+    resp->str[i] = 0;
+}
+
 zx_status_t dump_stream_info(const audio::utils::AudioDeviceStream& stream) {
     zx_status_t res;
     printf("Info for audio %s at \"%s\"\n",
             stream.input() ? "input" : "output", stream.name());
+
+    // Grab and display some of the interesting properties of the device,
+    // including its unique ID, its manufacturer name, and its product name.
+    audio_stream_cmd_get_unique_id_resp_t uid_resp;
+    res = stream.GetUniqueId(&uid_resp);
+    if (res != ZX_OK) {
+        printf("Failed to fetch unique ID! (res %d)\n", res);
+        return res;
+    }
+
+    const auto& uid = uid_resp.unique_id.data;
+    static_assert(sizeof(uid) == 16, "Unique ID is not 16 bytes long!\n");
+    printf("  Unique ID    : %02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x\n",
+            uid[0], uid[1], uid[2], uid[3], uid[4], uid[5], uid[6], uid[7],
+            uid[8], uid[9], uid[10], uid[11], uid[12], uid[13], uid[14], uid[15]);
+
+    audio_stream_cmd_get_string_resp_t str_resp;
+    res = stream.GetString(AUDIO_STREAM_STR_ID_MANUFACTURER, &str_resp);
+    FixupStringRequest(&str_resp, res);
+    printf("  Manufacturer : %s\n", str_resp.str);
+
+    res = stream.GetString(AUDIO_STREAM_STR_ID_PRODUCT, &str_resp);
+    FixupStringRequest(&str_resp, res);
+    printf("  Product      : %s\n", str_resp.str);
 
     // Fetch and print the current gain settings for this audio stream.
     audio_stream_cmd_get_gain_resp gain_state;
@@ -159,8 +217,10 @@ zx_status_t dump_stream_info(const audio::utils::AudioDeviceStream& stream) {
         return res;
     }
 
-    printf("  Current Gain : %.2f dB (%smuted)\n",
-            gain_state.cur_gain, gain_state.cur_mute ? "" : "un");
+    printf("  Current Gain : %.2f dB (%smuted%s)\n",
+            gain_state.cur_gain,
+            gain_state.cur_mute ? "" : "un",
+            gain_state.can_agc ? (gain_state.cur_agc ? ", AGC on" : ", AGC off") : "");
     printf("  Gain Caps    : ");
     if ((gain_state.min_gain == gain_state.max_gain) && (gain_state.min_gain == 0.0f)) {
         printf("fixed 0 dB gain");
@@ -171,7 +231,8 @@ zx_status_t dump_stream_info(const audio::utils::AudioDeviceStream& stream) {
         printf("gain range [%.2f, %.2f] in %.2f dB steps",
                 gain_state.min_gain, gain_state.max_gain, gain_state.gain_step);
     }
-    printf("; %s mute\n", gain_state.can_mute ? "can" : "cannot");
+    printf("; %s mute", gain_state.can_mute ? "can" : "cannot");
+    printf("; %s AGC\n", gain_state.can_agc ? "can" : "cannot");
 
     // Fetch and print the current pluged/unplugged state for this audio stream.
     audio_stream_cmd_plug_detect_resp plug_state;
@@ -182,6 +243,7 @@ zx_status_t dump_stream_info(const audio::utils::AudioDeviceStream& stream) {
     }
 
     printf("  Plug State   : %splugged\n", plug_state.flags & AUDIO_PDNF_PLUGGED ? "" : "un");
+    printf("  Plug Time    : %lu\n", plug_state.plug_state_time);
     printf("  PD Caps      : %s\n", (plug_state.flags & AUDIO_PDNF_HARDWIRED)
                                     ? "hardwired"
                                     : ((plug_state.flags & AUDIO_PDNF_CAN_NOTIFY)
@@ -235,6 +297,7 @@ int main(int argc, const char** argv) {
         { "info",   Command::INFO,          false, false },
         { "mute",   Command::MUTE,          false, false },
         { "unmute", Command::UNMUTE,        false, false },
+        { "agc",    Command::AGC,           false, true  },
         { "gain",   Command::GAIN,          false, false },
         { "pmon",   Command::PLUG_MONITOR,  false, false },
         { "tone",   Command::TONE,          true,  false },
@@ -325,6 +388,7 @@ int main(int argc, const char** argv) {
     float duration;
     const char* wav_filename = nullptr;
     float target_gain = -100.0;
+    bool enb_agc = false;
 
     // Parse any additional arguments
     switch (cmd) {
@@ -332,6 +396,20 @@ int main(int argc, const char** argv) {
         if (arg >= argc) return -1;
         if (sscanf(argv[arg], "%f", &target_gain) != 1) {
             printf("Failed to parse gain \"%s\"\n", argv[arg]);
+            return -1;
+        }
+        arg++;
+        break;
+
+    case Command::AGC:
+        if (arg >= argc) return -1;
+        if (strcasecmp(argv[arg], "on") == 0) {
+            enb_agc = true;
+        } else
+        if (strcasecmp(argv[arg], "off") == 0) {
+            enb_agc = false;
+        } else {
+            printf("Failed to parse agc setting \"%s\"\n", argv[arg]);
             return -1;
         }
         arg++;
@@ -422,6 +500,7 @@ int main(int argc, const char** argv) {
     case Command::MUTE:         return stream->SetMute(true);
     case Command::UNMUTE:       return stream->SetMute(false);
     case Command::GAIN:         return stream->SetGain(target_gain);
+    case Command::AGC:          return stream->SetAgc(enb_agc);
     case Command::PLUG_MONITOR: return stream->PlugMonitor(duration);
 
     case Command::TONE: {
