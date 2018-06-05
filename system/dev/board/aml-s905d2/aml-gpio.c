@@ -6,10 +6,8 @@
 #include <ddk/device.h>
 #include <ddk/protocol/platform-bus.h>
 #include <ddk/protocol/platform-defs.h>
-
 #include <soc/aml-s905d2/s905d2-gpio.h>
 #include <soc/aml-s905d2/s905d2-hw.h>
-
 #include <limits.h>
 
 #include "aml.h"

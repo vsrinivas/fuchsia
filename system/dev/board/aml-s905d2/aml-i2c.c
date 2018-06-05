@@ -7,7 +7,6 @@
 #include <ddk/protocol/platform-defs.h>
 #include <soc/aml-s912/s912-gpio.h>
 #include <soc/aml-s912/s912-hw.h>
-
 #include <limits.h>
 
 #include "aml.h"

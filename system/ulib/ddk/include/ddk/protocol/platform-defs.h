@@ -23,6 +23,7 @@ __BEGIN_CDECLS;
 #define PDEV_DID_DW_PCIE            10  // Designware PCIe
 #define PDEV_DID_LED2472G           11  // RPi Sense Hat LED2472G
 #define PDEV_DID_GPU_VSL_GC         12  // Verisilicon GC series GPU
+#define PDEV_DID_ARM_MALI_INIT      13  // ARM MALI GPU (Zircon)
 
 // QEMU emulator
 #define PDEV_VID_QEMU               1

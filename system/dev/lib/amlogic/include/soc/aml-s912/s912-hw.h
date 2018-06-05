@@ -284,3 +284,9 @@
 #define S912_EMMC_CMD_FN        1
 #define S912_EMMC_DS            S912_GPIOBOOT(15)
 #define S912_EMMC_DS_FN         1
+
+// Reset register offsets
+#define S912_RESET0_MASK              0x110
+#define S912_RESET2_MASK              0x112
+#define S912_RESET0_LEVEL             0x120
+#define S912_RESET2_LEVEL             0x122

@@ -43,7 +43,7 @@ zx_status_t vim_gpio_init(vim_bus_t* bus);
 zx_status_t vim_i2c_init(vim_bus_t* bus);
 
 // vim-mali.c
-zx_status_t vim_mali_init(vim_bus_t* bus);
+zx_status_t vim_mali_init(vim_bus_t* bus, uint32_t bti_index);
 
 // vim-uart.c
 zx_status_t vim_uart_init(vim_bus_t* bus);
