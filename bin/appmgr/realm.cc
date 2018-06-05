@@ -47,7 +47,6 @@ constexpr char kAppPath[] = "bin/app";
 constexpr char kAppArv0[] = "/pkg/bin/app";
 constexpr char kLegacyFlatExportedDirPath[] = "meta/legacy_flat_exported_dir";
 constexpr char kRuntimePath[] = "meta/runtime";
-constexpr char kSandboxPath[] = "meta/sandbox";
 
 enum class LaunchType {
   kProcess,
@@ -430,7 +429,6 @@ void Realm::CreateComponentFromPackage(
         std::make_unique<archive::FileSystem>(std::move(package->data->vmo));
     pkg = pkg_fs->OpenAsDirectory();
     pkg_fs->GetFileAsString(cmx_path, &cmx_data);
-    pkg_fs->GetFileAsString(kSandboxPath, &sandbox_data);
     if (!pkg_fs->GetFileAsString(kRuntimePath, &runtime_data))
       app_data = pkg_fs->GetFileAsVMO(kAppPath);
     exported_dir_layout = pkg_fs->IsFile(kLegacyFlatExportedDirPath)
@@ -442,7 +440,6 @@ void Realm::CreateComponentFromPackage(
     if (!cmx_path.empty()) {
       files::ReadFileToStringAt(fd.get(), cmx_path, &cmx_data);
     }
-    files::ReadFileToStringAt(fd.get(), kSandboxPath, &sandbox_data);
     if (!files::ReadFileToStringAt(fd.get(), kRuntimePath, &runtime_data))
       VmoFromFilenameAt(fd.get(), kAppPath, &app_data);
     exported_dir_layout = files::IsFileAt(fd.get(), kLegacyFlatExportedDirPath)
@@ -464,20 +461,13 @@ void Realm::CreateComponentFromPackage(
   builder.AddPackage(std::move(pkg));
   builder.AddServices(std::move(svc));
 
-  // If meta/*.cmx exists, read sandbox data from it, instead of meta/sandbox.
-  // TODO(CP-37): Remove meta/sandbox once completely migrated.
-  if (!sandbox_data.empty() || !cmx_data.empty()) {
+  // If meta/*.cmx exists, read sandbox data from it.
+  if (!cmx_data.empty()) {
     SandboxMetadata sandbox;
 
     CmxMetadata cmx;
     if (!cmx_data.empty()) {
       sandbox.Parse(cmx.ParseSandboxMetadata(cmx_data));
-    } else {
-      if (!sandbox.Parse(sandbox_data)) {
-        FXL_LOG(ERROR) << "Failed to parse sandbox metadata for "
-                       << launch_info.url;
-        return;
-      }
     }
 
     // If an app has the "shell" feature, then we use the libraries from the

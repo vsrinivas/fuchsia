@@ -12,39 +12,34 @@ namespace fuchsia {
 namespace sys {
 namespace {
 
-TEST(SandboxMetadata, Parse) {
-  SandboxMetadata sandbox;
-  EXPECT_FALSE(sandbox.Parse(""));
-  EXPECT_TRUE(sandbox.Parse("{}"));
-
-  EXPECT_TRUE(sandbox.Parse(R"JSON({ "dev": [ "class/input" ]})JSON"));
-  EXPECT_EQ(1u, sandbox.dev().size());
-  EXPECT_EQ(0u, sandbox.features().size());
-  EXPECT_EQ("class/input", sandbox.dev()[0]);
-
-  EXPECT_TRUE(sandbox.Parse(R"JSON({ "features": [ "vulkan" ]})JSON"));
-  EXPECT_EQ(0u, sandbox.dev().size());
-  EXPECT_EQ(1u, sandbox.features().size());
-  EXPECT_EQ("vulkan", sandbox.features()[0]);
-
-  EXPECT_TRUE(sandbox.HasFeature("vulkan"));
-  EXPECT_FALSE(sandbox.HasFeature("banana"));
-}
-
 TEST(SandboxMetadata, ParseRapidJson) {
-  rapidjson::Document document;
-  document.SetObject();
-  rapidjson::Document::AllocatorType& allocator = document.GetAllocator();
-  rapidjson::Value array(rapidjson::kArrayType);
-  array.PushBack("class/input", allocator);
-  document.AddMember("dev", array, allocator);
+  rapidjson::Document dev_document;
+  dev_document.SetObject();
+  rapidjson::Document::AllocatorType& dev_allocator =
+      dev_document.GetAllocator();
+  rapidjson::Value dev_array(rapidjson::kArrayType);
+  dev_array.PushBack("class/input", dev_allocator);
+  dev_document.AddMember("dev", dev_array, dev_allocator);
+  SandboxMetadata dev_sandbox;
+  EXPECT_TRUE(dev_sandbox.Parse(dev_document));
+  EXPECT_EQ(1u, dev_sandbox.dev().size());
+  EXPECT_EQ(0u, dev_sandbox.features().size());
+  EXPECT_EQ("class/input", dev_sandbox.dev()[0]);
 
-  SandboxMetadata sandbox;
-
-  EXPECT_TRUE(sandbox.Parse(document));
-  EXPECT_EQ(1u, sandbox.dev().size());
-  EXPECT_EQ(0u, sandbox.features().size());
-  EXPECT_EQ("class/input", sandbox.dev()[0]);
+  rapidjson::Document feat_document;
+  feat_document.SetObject();
+  rapidjson::Document::AllocatorType& feat_allocator =
+      feat_document.GetAllocator();
+  rapidjson::Value feat_array(rapidjson::kArrayType);
+  feat_array.PushBack("vulkan", feat_allocator);
+  feat_document.AddMember("features", feat_array, feat_allocator);
+  SandboxMetadata feat_sandbox;
+  EXPECT_TRUE(feat_sandbox.Parse(feat_document));
+  EXPECT_EQ(0u, feat_sandbox.dev().size());
+  EXPECT_EQ(1u, feat_sandbox.features().size());
+  EXPECT_EQ("vulkan", feat_sandbox.features()[0]);
+  EXPECT_TRUE(feat_sandbox.HasFeature("vulkan"));
+  EXPECT_FALSE(feat_sandbox.HasFeature("banana"));
 }
 
 }  // namespace

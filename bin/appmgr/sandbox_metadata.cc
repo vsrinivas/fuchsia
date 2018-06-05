@@ -35,14 +35,6 @@ SandboxMetadata::SandboxMetadata() = default;
 
 SandboxMetadata::~SandboxMetadata() = default;
 
-bool SandboxMetadata::Parse(const std::string& data) {
-  rapidjson::Document document;
-  document.Parse(data);
-  if (!document.IsObject())
-    return false;
-  return Parse(document);
-}
-
 bool SandboxMetadata::Parse(const rapidjson::Value& sandbox_value) {
   dev_.clear();
   features_.clear();
