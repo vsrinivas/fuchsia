@@ -14,7 +14,7 @@ fidl("fidl") {
 }
 
 fidl("sme") {
-  name = "wlan_sme"
+  name = "fuchsia.wlan.sme"
 
   sources = [
     "sme.fidl"
