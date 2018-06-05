@@ -587,7 +587,7 @@ generate_fvm("fvm.data.sparse.blk") {
   deps = [
     ":data.blk",
   ]
-  args = fvm_sparse_args + [ "--data" ]
+  args = fvm_sparse_args + [ "--zxcrypt", "--data" ]
 }
 images += [
   {
