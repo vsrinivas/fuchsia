@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/package.gni")
+
 source_set("agent_runner") {
   sources = [
     "agent_context_impl.cc",
@@ -37,7 +39,7 @@ source_set("agent_runner") {
   ]
 }
 
-source_set("unittests") {
+executable("agent_runner_unittest") {
   testonly = true
 
   sources = [
@@ -61,8 +63,22 @@ source_set("unittests") {
     "//peridot/lib/testing:test_with_ledger",
     "//peridot/public/lib:fidl",
     "//peridot/public/lib/auth/fidl",
-    "//third_party/googletest:gtest",
+    "//third_party/googletest:gtest_main",
     "//zircon/public/lib/trace",
+  ]
+}
+
+package("agent_runner_unittests") {
+  testonly = true
+
+  deps = [
+    ":agent_runner_unittest"
+  ]
+
+  tests = [
+    {
+      name = "agent_runner_unittest"
+    }
   ]
 }
 

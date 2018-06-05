@@ -18,7 +18,6 @@ package("peridot_tests") {
 
   deps = [
     ":maxwell_unittests",
-    ":modular_unittests",
     "//peridot/lib:peridot_lib_unittests",
     "//peridot/public/lib:peridot_public_lib_unittests",
     "//peridot/tests/maxwell_integration",
@@ -30,9 +29,6 @@ package("peridot_tests") {
     },
     {
       name = "maxwell_unittests"
-    },
-    {
-      name = "modular_unittests"
     },
     {
       name = "peridot_lib_unittests"
@@ -54,19 +50,5 @@ executable("maxwell_unittests") {
     "//peridot/bin/context_engine:unittests",
     "//peridot/bin/module_resolver:unittests",
     "//peridot/bin/suggestion_engine:unittests",
-  ]
-}
-
-executable("modular_unittests") {
-  testonly = true
-
-  deps = [
-    "//peridot/bin/agents/clipboard:unittests",
-    "//peridot/bin/device_runner:unittests",
-    "//peridot/bin/user_runner/agent_runner:unittests",
-    "//peridot/bin/user_runner/entity_provider_runner:unittests",
-    "//peridot/bin/user_runner/puppet_master:unittests",
-    "//peridot/bin/user_runner/story_runner:unittests",
-    "//third_party/googletest:gtest_main",
   ]
 }

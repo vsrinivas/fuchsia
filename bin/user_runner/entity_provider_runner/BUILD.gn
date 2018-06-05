@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/package.gni")
+
 source_set("entity_provider_runner") {
   sources = [
     "entity_provider_controller.cc",
@@ -24,7 +26,21 @@ source_set("entity_provider_runner") {
   ]
 }
 
-source_set("unittests") {
+package("entity_provider_runner_unittests") {
+  testonly = true
+
+  deps = [
+    ":entity_provider_runner_unittest"
+  ]
+
+  tests = [
+    {
+      name = "entity_provider_runner_unittest"
+    }
+  ]
+}
+
+executable("entity_provider_runner_unittest") {
   testonly = true
 
   sources = [
@@ -47,7 +63,8 @@ source_set("unittests") {
     "//peridot/public/lib:fidl",
     "//peridot/public/lib/agent/cpp",
     "//peridot/public/lib/auth/fidl",
-    "//third_party/googletest:gtest",
+    "//third_party/googletest:gtest_main",
     "//zircon/public/lib/trace",
   ]
 }
+

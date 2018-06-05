@@ -34,9 +34,7 @@ source_set("clipboard_sources") {
   ]
 }
 
-source_set("unittests") {
-  output_name = "clipboard_unittests"
-
+executable("clipboard_impl_unittest") {
   testonly = true
 
   sources = [
@@ -48,6 +46,20 @@ source_set("unittests") {
     "//garnet/public/lib/gtest",
     "//peridot/lib/testing:test_with_ledger",
     "//peridot/public/lib:fidl",
-    "//third_party/googletest:gtest",
+    "//third_party/googletest:gtest_main",
+  ]
+}
+
+package("clipboard_unittests") {
+  testonly = true
+
+  deps = [
+    ":clipboard_impl_unittest",
+  ]
+
+  tests = [
+    {
+      name = "clipboard_impl_unittest"
+    },
   ]
 }

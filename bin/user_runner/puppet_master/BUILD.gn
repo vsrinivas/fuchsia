@@ -2,13 +2,24 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-group("unittests") {
+import("//build/package.gni")
+
+package("puppet_master_unittests") {
   testonly = true
 
   deps = [
     ":puppet_master_impl_unittest",
     ":dispatch_story_command_executor_unittest",
     "//peridot/bin/user_runner/puppet_master/command_runners:unittests",
+  ]
+
+  tests = [
+    {
+      name = "dispatch_story_command_executor_unittest"
+    },
+    {
+      name = "puppet_master_impl_unittest"
+    },
   ]
 }
 
@@ -30,7 +41,7 @@ source_set("puppet_master_impl") {
   ]
 }
 
-source_set("puppet_master_impl_unittest") {
+executable("puppet_master_impl_unittest") {
   testonly = true
 
   sources = [
@@ -42,7 +53,7 @@ source_set("puppet_master_impl_unittest") {
     ":story_command_executor",
     "//garnet/public/lib/gtest",
     "//peridot/public/lib:fidl",
-    "//third_party/googletest:gtest",
+    "//third_party/googletest:gtest_main",
   ]
 }
 
@@ -72,7 +83,7 @@ source_set("dispatch_story_command_executor") {
   ]
 }
 
-source_set("dispatch_story_command_executor_unittest") {
+executable("dispatch_story_command_executor_unittest") {
   testonly = true
 
   sources = [
@@ -83,7 +94,7 @@ source_set("dispatch_story_command_executor_unittest") {
     ":dispatch_story_command_executor",
     "//garnet/public/lib/gtest",
     "//peridot/public/lib:fidl",
-    "//third_party/googletest:gtest",
+    "//third_party/googletest:gtest_main",
   ]
 }
 

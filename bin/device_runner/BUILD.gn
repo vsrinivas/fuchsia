@@ -48,6 +48,20 @@ executable_package("device_runner") {
   ]
 }
 
+package("device_runner_unittests") {
+  testonly = true
+
+  deps = [
+    ":user_controller_impl_unittest",
+  ]
+
+  tests = [
+    {
+      name = "user_controller_impl_unittest"
+    },
+  ]
+}
+
 source_set("lib") {
   sources = [
     "user_controller_impl.cc",
@@ -98,7 +112,7 @@ executable_package("dev_device_shell") {
   ]
 }
 
-source_set("unittests") {
+executable("user_controller_impl_unittest") {
   testonly = true
 
   sources = [
@@ -113,7 +127,7 @@ source_set("unittests") {
     "//garnet/public/lib/gtest",
     "//peridot/lib/fidl:clone",
     "//peridot/lib/testing:fake_launcher",
-    "//third_party/googletest:gtest",
+    "//third_party/googletest:gtest_main",
   ]
 }
 
