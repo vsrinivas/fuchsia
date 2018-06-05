@@ -1,0 +1,142 @@
+#!/usr/bin/env python
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+### Generates documentation for a Rust target
+
+import argparse
+import os
+import platform
+import subprocess
+import sys
+
+ROOT_PATH = os.path.abspath(__file__ + "/../../..")
+CONFIG_PATH = os.path.join(ROOT_PATH, ".config")
+
+# Runs the given command and returns its return code and output.
+def run_command(args, env, cwd):
+    job = subprocess.Popen(args, env=env, cwd=cwd, stdout=subprocess.PIPE,
+                           stderr=subprocess.PIPE)
+    stdout, stderr = job.communicate()
+    return (job.returncode, stdout, stderr)
+
+def main():
+    parser = argparse.ArgumentParser("Compiles all third-party Rust crates")
+    parser.add_argument("gn_target",
+                        nargs=1,
+                        help="GN target to generate a symlink for. \
+                              Use the absolute path to the target \
+                              (relative to $FUCHSIA_DIR). \
+                              For example: //garnet/bin/foo/bar:baz. \
+                              Alternatively, this can be a path to a \
+                              Cargo.toml file of a package for which to \
+                              generate docs.")
+    parser.add_argument("--target",
+                        help="Target triple for which this crate is being compiled",
+                        default="x86_64-unknown-fuchsia")
+    parser.add_argument("--no-deps",
+                        action="store_true",
+                        help="Disable building of docs for dependencies")
+    parser.add_argument("--open",
+                        action="store_true",
+                        help="Open the generated documentation")
+
+    args = parser.parse_args()
+
+    out_dir = ""
+    with open(CONFIG_PATH, "r") as config:
+        for line in config.readlines():
+            if line.startswith("FUCHSIA_BUILD_DIR="):
+                segments = line.split("=")
+                assert(len(segments) == 2)
+                out_dir = segments[1].strip().strip("'")
+    if out_dir == "":
+        print "Invalid fuchsia/.config: no FUCHSIA_BUILD_DIR entry found"
+
+    gn_target = args.gn_target[0]
+    if gn_target.endswith("Cargo.toml"):
+        manifest_path = os.path.abspath(gn_target)
+    else:
+        gn_target = gn_target.lstrip("/")
+        gn_target_parts = gn_target.split(":", 1)
+        if len(gn_target_parts) == 1:
+            # Turn foo/bar into foo/bar/bar
+            path = os.path.join(gn_target, os.path.basename(gn_target))
+        elif len(gn_target_parts) == 2:
+            # Turn foo/bar:baz into foo/bar/baz
+            path = gn_target.replace(":", os.sep)
+        else:
+            print "Invalid gn_target: explected at most one colon."
+            return 1
+        manifest_path = os.path.join(ROOT_PATH, out_dir, "gen", path, "Cargo.toml")
+
+    env = os.environ.copy()
+
+    host_platform = "%s-%s" % (
+        platform.system().lower().replace("darwin", "mac"),
+        {
+            "x86_64": "x64",
+            "aarch64": "arm64",
+        }[platform.machine()],
+    )
+
+    # run cargo from third_party/rust-crtaes/rustc_deps which has an appropriate .cargo/config
+    cwd = os.path.join(ROOT_PATH, "third_party", "rust-crates", "rustc_deps")
+    buildtools_dir = os.path.join(ROOT_PATH, "buildtools", host_platform)
+    clang_prefix = os.path.join(buildtools_dir, "clang", "bin")
+    cmake_dir = os.path.join(buildtools_dir, "cmake", "bin")
+    cargo = os.path.join(buildtools_dir, "rust", "bin", "cargo")
+    rustc = os.path.join(buildtools_dir, "rust", "bin", "rustc")
+    rustdoc = os.path.join(buildtools_dir, "rust", "bin", "rustdoc")
+
+    shared_libs_root = os.path.join(ROOT_PATH, out_dir)
+    sysroot = os.path.join(ROOT_PATH, out_dir, "sdks", "zircon_sysroot", "sysroot")
+
+    clang_c_compiler = os.path.join(clang_prefix, "clang")
+
+    env["CARGO_TARGET_LINKER"] = clang_c_compiler
+    env["CARGO_TARGET_X86_64_APPLE_DARWIN_LINKER"] = clang_c_compiler
+    env["CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_LINKER"] = clang_c_compiler
+    env["CARGO_TARGET_%s_LINKER" % args.target.replace("-", "_").upper()] = clang_c_compiler
+    if "fuchsia" in args.target:
+        env["CARGO_TARGET_%s_RUSTFLAGS" % args.target.replace("-", "_").upper()] = (
+            "-Clink-arg=--target=" + args.target +
+            " -Clink-arg=--sysroot=" + sysroot +
+            " -Lnative=" + shared_libs_root
+        )
+    else:
+        env["CARGO_TARGET_%s_RUSTFLAGS" % args.target.replace("-", "_").upper()] = (
+            "-Clink-arg=--target=" + args.target
+        )
+    env["RUSTC"] = rustc
+    env["RUSTDOC"] = rustdoc
+    env["RUST_BACKTRACE"] = "1"
+    env["CC"] = clang_c_compiler
+    if "fuchsia" in args.target:
+        env["CFLAGS"] = "--sysroot=%s -L %s" % (sysroot, shared_libs_root)
+    env["CXX"] = os.path.join(clang_prefix, "clang++")
+    env["AR"] = os.path.join(clang_prefix, "llvm-ar")
+    env["RANLIB"] = os.path.join(clang_prefix, "llvm-ranlib")
+    env["PATH"] = "%s:%s" % (env["PATH"], cmake_dir)
+
+    call_args = [
+        cargo,
+        "doc",
+        "--manifest-path=%s" % manifest_path,
+        "--color=always",
+        "--target=%s" % args.target,
+    ]
+
+    if args.no_deps:
+        call_args.append("--no-deps")
+
+    if args.open:
+        call_args.append("--open")
+
+    retcode, stdout, stderr = run_command(call_args, env, cwd)
+    print(stdout + stderr)
+    return retcode
+
+if __name__ == '__main__':
+    sys.exit(main())
