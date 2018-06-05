@@ -18,6 +18,12 @@ namespace audio {
 namespace intel_hda {
 namespace codecs {
 
+RealtekStream::RealtekStream(const StreamProperties& props)
+    : IntelHDAStreamBase(props.stream_id, props.is_input),
+      props_(props) {
+  SetPersistentUniqueId(props.uid);
+}
+
 zx_status_t RealtekStream::DisableConverterLocked(bool force_all) {
     const Command DISABLE_CONVERTER_VERBS[] = {
         { props_.conv_nid, SET_AMPLIFIER_GAIN_MUTE(true, 0, is_input(), !is_input()) },
@@ -401,6 +407,33 @@ void RealtekStream::OnPlugDetectLocked(dispatcher::Channel* response_channel,
         IntelHDAStreamBase::OnPlugDetectLocked(response_channel, req, out_resp);
         return;
     }
+}
+
+void RealtekStream::OnGetStringLocked(const audio_proto::GetStringReq& req,
+                                      audio_proto::GetStringResp* out_resp) {
+    ZX_DEBUG_ASSERT(out_resp);
+    const char* requested_string = nullptr;
+
+    switch (req.id) {
+        case AUDIO_STREAM_STR_ID_MANUFACTURER:
+            requested_string = props_.mfr_name;
+            break;
+
+        case AUDIO_STREAM_STR_ID_PRODUCT:
+            requested_string = props_.product_name;
+            break;
+
+        default:
+            IntelHDAStreamBase::OnGetStringLocked(req, out_resp);
+            return;
+    }
+
+    int res = snprintf(reinterpret_cast<char*>(out_resp->str), sizeof(out_resp->str), "%s",
+                       requested_string ? requested_string : "<unassigned>");
+    ZX_DEBUG_ASSERT(res >= 0);
+    out_resp->result = ZX_OK;
+    out_resp->strlen = fbl::min<uint32_t>(res, sizeof(out_resp->str) - 1);
+    out_resp->id = req.id;
 }
 
 zx_status_t RealtekStream::UpdateSetupProgressLocked(uint32_t stage) {

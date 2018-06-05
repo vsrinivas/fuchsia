@@ -5,6 +5,7 @@
 #pragma once
 
 #include <intel-hda/utils/codec-commands.h>
+#include <zircon/device/audio.h>
 
 namespace audio {
 namespace intel_hda {
@@ -23,6 +24,10 @@ struct StreamProperties {
     bool     is_input;
     float    default_conv_gain;
     float    default_pc_gain;
+
+    audio_stream_unique_id_t uid;
+    const char* mfr_name = nullptr;       // String literals only!
+    const char* product_name = nullptr;   // String literals only!
 };
 
 }  // namespace codecs

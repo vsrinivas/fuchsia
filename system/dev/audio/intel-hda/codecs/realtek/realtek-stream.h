@@ -22,9 +22,7 @@ namespace codecs {
 
 class RealtekStream : public IntelHDAStreamBase {
 public:
-    RealtekStream(const StreamProperties& props)
-        : IntelHDAStreamBase(props.stream_id, props.is_input),
-          props_(props) { }
+    RealtekStream(const StreamProperties& props);
 
 protected:
     friend class fbl::RefPtr<RealtekStream>;
@@ -51,6 +49,8 @@ protected:
     void OnPlugDetectLocked(dispatcher::Channel* response_channel,
                             const audio_proto::PlugDetectReq& req,
                             audio_proto::PlugDetectResp* out_resp) __TA_REQUIRES(obj_lock()) final;
+    void OnGetStringLocked(const audio_proto::GetStringReq& req,
+                           audio_proto::GetStringResp* out_resp) __TA_REQUIRES(obj_lock()) final;
 
 private:
     struct Command {

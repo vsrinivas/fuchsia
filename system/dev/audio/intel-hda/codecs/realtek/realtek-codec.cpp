@@ -223,6 +223,9 @@ zx_status_t RealtekCodec::SetupAcer12() {
           .is_input          = false,
           .default_conv_gain = DEFAULT_HEADPHONE_GAIN,
           .default_pc_gain   = 0.0f,
+          .uid               = AUDIO_STREAM_UNIQUE_ID_BUILTIN_HEADPHONE_JACK,
+          .mfr_name          = "Acer",
+          .product_name      = "Headphone Jack",
         },
 
         // Speakers
@@ -233,6 +236,9 @@ zx_status_t RealtekCodec::SetupAcer12() {
           .is_input          = false,
           .default_conv_gain = DEFAULT_SPEAKER_GAIN,
           .default_pc_gain   = 0.0f,
+          .uid               = AUDIO_STREAM_UNIQUE_ID_BUILTIN_SPEAKERS,
+          .mfr_name          = "Acer",
+          .product_name      = "Built-in Speakers",
         },
 
         // Builtin Mic
@@ -243,6 +249,9 @@ zx_status_t RealtekCodec::SetupAcer12() {
           .is_input          = true,
           .default_conv_gain = 0.0f,
           .default_pc_gain   = 20.0f,
+          .uid               = AUDIO_STREAM_UNIQUE_ID_BUILTIN_MICROPHONE,
+          .mfr_name          = "Acer",
+          .product_name      = "Built-in Microphone",
         },
     };
 
@@ -304,6 +313,9 @@ zx_status_t RealtekCodec::SetupIntelNUC() {
           .is_input          = false,
           .default_conv_gain = DEFAULT_HEADPHONE_GAIN,
           .default_pc_gain   = 0.0f,
+          .uid               = AUDIO_STREAM_UNIQUE_ID_BUILTIN_HEADPHONE_JACK,
+          .mfr_name          = "Intel",
+          .product_name      = "Headphone Jack",
         },
 
         // Headset Mic
@@ -314,6 +326,9 @@ zx_status_t RealtekCodec::SetupIntelNUC() {
           .is_input          = true,
           .default_conv_gain = 0.0f,
           .default_pc_gain   = 36.0f,
+          .uid               = AUDIO_STREAM_UNIQUE_ID_BUILTIN_HEADSET_JACK,
+          .mfr_name          = "Intel",
+          .product_name      = "Headset Jack",
         },
     };
 
