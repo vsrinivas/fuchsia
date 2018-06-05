@@ -102,7 +102,7 @@ package("ledger_tests") {
     },
     {
       name = "ledger_integration_tests"
-      
+
       # This test is currently flaky; disabling while we fix it.
       # See LE-473
       disabled = true
@@ -247,6 +247,12 @@ package("ledger_tests") {
 
     {
       path = rebase_path(
+              "//peridot/bin/ledger/tests/benchmark/put/put_big_entry.tspec")
+      dest = "ledger/benchmark/put_big_entry.tspec"
+    },
+
+    {
+      path = rebase_path(
               "//peridot/bin/ledger/tests/benchmark/put/put_as_reference.tspec")
       dest = "ledger/benchmark/put_as_reference.tspec"
     },
@@ -270,6 +276,12 @@ package("ledger_tests") {
 
     {
       path = rebase_path(
+              "//peridot/bin/ledger/tests/benchmark/update_entry/update_big_entry.tspec")
+      dest = "ledger/benchmark/update_big_entry.tspec"
+    },
+
+    {
+      path = rebase_path(
               "//peridot/bin/ledger/tests/benchmark/update_entry/update_entry_transactions.tspec")
       dest = "ledger/benchmark/update_entry_transactions.tspec"
     },
@@ -282,8 +294,8 @@ package("ledger_tests") {
 
     {
       path = rebase_path(
-              "//peridot/bin/ledger/tests/benchmark/fetch/fetch_partial.tspec")
-      dest = "ledger/benchmark/fetch_partial.tspec"
+              "//peridot/bin/ledger/tests/benchmark/fetch/fetch_partial_big_entry.tspec")
+      dest = "ledger/benchmark/fetch_partial_big_entry.tspec"
     },
 
     {
@@ -294,8 +306,14 @@ package("ledger_tests") {
 
     {
       path = rebase_path(
-              "//peridot/bin/ledger/tests/benchmark/delete_entry/delete_entry_transaction.tspec")
-      dest = "ledger/benchmark/delete_entry_transaction.tspec"
+              "//peridot/bin/ledger/tests/benchmark/delete_entry/delete_entry_transactions.tspec")
+      dest = "ledger/benchmark/delete_entry_transactions.tspec"
+    },
+
+    {
+      path = rebase_path(
+              "//peridot/bin/ledger/tests/benchmark/delete_entry/delete_big_entry.tspec")
+      dest = "ledger/benchmark/delete_big_entry.tspec"
     },
   ]
 }

@@ -34,7 +34,7 @@ constexpr fxl::StringView kServerIdFlag = "server-id";
 constexpr fxl::StringView kRefsOnFlag = "on";
 constexpr fxl::StringView kRefsOffFlag = "off";
 
-constexpr size_t kKeySize = 64;
+constexpr size_t kKeySize = 100;
 const std::string kUserDirectory = "/backlog_user";
 
 void PrintUsage(const char* executable_name) {

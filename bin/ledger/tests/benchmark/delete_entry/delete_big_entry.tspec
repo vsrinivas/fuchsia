@@ -1,13 +1,14 @@
 {
   "test_suite_name": "fuchsia.ledger",
-  "app": "ledger_benchmark_update_entry",
-  "args": ["--entry-count=100", "--transaction-size=0", "--value-size=1000"],
+  "app": "ledger_benchmark_delete_entry",
+  "args": ["--entry-count=100", "--key-size=100", "--value-size=20000",
+           "--transaction-size=0"],
   "categories": ["benchmark", "ledger"],
-  "duration": 60,
+  "duration": 180,
   "measure": [
     {
       "type": "duration",
-      "event_name": "put",
+      "event_name": "delete_entry",
       "event_category": "benchmark",
       "split_samples_at": [1]
     }

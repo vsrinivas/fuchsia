@@ -30,6 +30,34 @@ trace record --categories=benchmark,ledger ledger_benchmark_put \
 That would generate a trace result file (default: `/data/trace.json`), which can
 be analysed manually or using special tools.
 
+### Benchmark parameters
+
+\*.tspec files specify the parameters with which benchmark apps are run. You can
+override these by passing the "--append-args" argument to the `trace record`
+tool.
+Commonly used among all the ledger benchmarks are the following parameters:
+
+* `entry-count` for the number of entries to perform operations on
+* `unique-key-count` if the number of operations and the number of entries
+  differ (i.e. some entries are overwritten), this denotes the number of unique
+  entries in the page
+* `key-size` for the size of the key (in bytes)
+* `value-size` for the size of the value (in bytes)
+* `refs` with the values `on` or `off` for the reference strategy: if set to
+  `on`, entries will be put using `CreateReference`/`PutAsReference`, otherwise
+  they will be treated as inline entries.
+* `commit-count` for the number of commits made to the page
+* `transaction-size` for the number of operations in a single transaction
+* `server-id` for an ID of a cloud instance used for synchronisation (see
+  below).
+
+Unless the name of the benchmark suggest otherwise, default values are:
+* `100` entries
+* key size `100`
+* value size `1000`
+Benchmarks under `sync` and `convergence` use smaller number of entries and
+smaller value size.
+
 ### Benchmarks using sync
 Some benchmarks exercise sync. To run these, pass the ID of a correctly
 [configured] Firebase instance to the benchmark binary. For example:
@@ -59,17 +87,20 @@ page.
 * __Put__: How long does it take to write data to a page? And how long before the
   client will receive a [PageWatcher notification] about its own change?
     * `put.tspec`: basic case
+    * `put_big_entry.tspec`: writing big entries to the page
     * `put_as_reference.tspec`: entries are put as references (CreateReference +
       PutReference)
     * `transaction.tspec`: changes are made in a transaction
 * __Update entry__: How long does it take to update an existing value in Ledger
   (make several Put operations with the same key, but different values)?
     * `update_entry.tspec`: basic case
+    * `update_big_entry.tspec`: put an entry of big size, then update its value
     * `update_entry_transactions.tspec`: changes are grouped in transactions
 * __Delete entry__: How long does it take to delete an entry from a page?
     * `delete_entry.tspec`: each entry is deleted separately (outside of a
       transaction)
-    * `delete_entry_transaction.tspec`: deletions are grouped in transactions
+    * `delete_big_entry.tspec`: same as above, but for big entries
+    * `delete_entry_transactions.tspec`: deletions are grouped in transactions
     * `disk_space_cleared_page.tspec`: how much space does ledger take after the
       page was cleared out (all the entries deleted in one transaction)?
 * __Disk space__: How much disk space does ledger use to store pages, objects
@@ -109,7 +140,8 @@ section](README.md#benchmarks-using-sync).
     * `multidevice_convergence`: several devices
 * __Fetch__: How long does it take to fetch a [lazy value]?
     * `fetch.tspec`: basic case
-    * `fetch_partial.tspec`: using FetchPartial (fetch in several parts)
+    * `fetch_partial_big_entry.tspec`: using FetchPartial (fetch in several
+    parts) on a big entry
 * __Sync__: When one device makes changes to the page, how long does it take for
   another one to receive these changes?
     * `sync.tspec`: basic case

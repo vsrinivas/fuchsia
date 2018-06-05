@@ -1,9 +1,9 @@
 {
   "test_suite_name": "fuchsia.ledger",
   "app": "ledger_benchmark_update_entry",
-  "args": ["--entry-count=100", "--transaction-size=0", "--value-size=1000"],
+  "args": ["--entry-count=100", "--transaction-size=0", "--value-size=20000"],
   "categories": ["benchmark", "ledger"],
-  "duration": 60,
+  "duration": 180,
   "measure": [
     {
       "type": "duration",

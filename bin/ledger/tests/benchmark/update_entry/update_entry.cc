@@ -25,14 +25,15 @@ namespace {
 
 constexpr fxl::StringView kStoragePath = "/data/benchmark/ledger/update_entry";
 constexpr fxl::StringView kEntryCountFlag = "entry-count";
+constexpr fxl::StringView kValueSizeFlag = "value-size";
 constexpr fxl::StringView kTransactionSizeFlag = "transaction-size";
 
-const int kKeySize = 64;
-const int kValueSize = 128;
+const int kKeySize = 100;
 
 void PrintUsage(const char* executable_name) {
   std::cout << "Usage: " << executable_name << " --" << kEntryCountFlag
-            << "=<int> --" << kTransactionSizeFlag << "=<int>" << std::endl;
+            << "=<int> --" << kValueSizeFlag << "=<int> --"
+            << kTransactionSizeFlag << "=<int>" << std::endl;
 }
 
 }  // namespace
@@ -41,17 +42,19 @@ namespace test {
 namespace benchmark {
 
 UpdateEntryBenchmark::UpdateEntryBenchmark(async::Loop* loop, int entry_count,
-                                           int transaction_size)
+                                           int value_size, int transaction_size)
     : loop_(loop),
       tmp_dir_(kStoragePath),
       startup_context_(fuchsia::sys::StartupContext::CreateFromStartupInfo()),
       entry_count_(entry_count),
       transaction_size_(transaction_size),
       key_size_(kKeySize),
-      value_size_(kValueSize) {
+      value_size_(value_size) {
   FXL_DCHECK(loop_);
-  FXL_DCHECK(entry_count > 0);
-  FXL_DCHECK(transaction_size >= 0);
+  FXL_DCHECK(entry_count_ > 0);
+  FXL_DCHECK(value_size_ > 0);
+  FXL_DCHECK(key_size_ > 0);
+  FXL_DCHECK(transaction_size_ >= 0);
 }
 
 void UpdateEntryBenchmark::Run() {
@@ -165,12 +168,18 @@ int main(int argc, const char** argv) {
 
   std::string entry_count_str;
   size_t entry_count;
+  std::string value_size_str;
+  int value_size;
   std::string transaction_size_str;
   int transaction_size;
   if (!command_line.GetOptionValue(kEntryCountFlag.ToString(),
                                    &entry_count_str) ||
       !fxl::StringToNumberWithError(entry_count_str, &entry_count) ||
       entry_count <= 0 ||
+      !command_line.GetOptionValue(kValueSizeFlag.ToString(),
+                                   &value_size_str) ||
+      !fxl::StringToNumberWithError(value_size_str, &value_size) ||
+      value_size <= 0 ||
       !command_line.GetOptionValue(kTransactionSizeFlag.ToString(),
                                    &transaction_size_str) ||
       !fxl::StringToNumberWithError(transaction_size_str, &transaction_size) ||
@@ -180,7 +189,7 @@ int main(int argc, const char** argv) {
   }
 
   async::Loop loop(&kAsyncLoopConfigMakeDefault);
-  test::benchmark::UpdateEntryBenchmark app(&loop, entry_count,
+  test::benchmark::UpdateEntryBenchmark app(&loop, entry_count, value_size,
                                             transaction_size);
   return test::benchmark::RunWithTracing(&loop, [&app] { app.Run(); });
 }

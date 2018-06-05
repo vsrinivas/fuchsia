@@ -23,12 +23,13 @@ namespace benchmark {
 //
 // Parameters:
 //   --entry-count=<int> the number of entries to be put
+//   --value-size=<int> the size of the value for each entry
 //   --transaction-size=<int> the size of a single transaction in number of put
 //     operations. If equal to 0, every put operation will be executed
 //     individually (implicit transaction).
 class UpdateEntryBenchmark {
  public:
-  UpdateEntryBenchmark(async::Loop* loop, int entry_count,
+  UpdateEntryBenchmark(async::Loop* loop, int entry_count, int value_size,
                        int transaction_size);
 
   void Run();
