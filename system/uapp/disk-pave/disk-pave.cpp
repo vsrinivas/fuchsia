@@ -25,6 +25,9 @@ void PrintUsage() {
     ERROR("  install-fvm     : Install a sparse FVM to the device\n");
     ERROR("  install-efi     : Install an EFI partition to the device\n");
     ERROR("  install-kernc   : Install a KERN-C CrOS partition to the device\n");
+    ERROR("  install-zircona : Install a ZIRCON-A partition to the device\n");
+    ERROR("  install-zirconb : Install a ZIRCON-B partition to the device\n");
+    ERROR("  install-zirconr : Install a ZIRCON-R partition to the device\n");
     ERROR("  wipe            : Clean up the install disk\n");
     ERROR("Options:\n");
     ERROR("  --file <file>: Read from FILE instead of stdin\n");
@@ -49,6 +52,12 @@ bool ParseFlags(int argc, char** argv, Flags* flags) {
         flags->cmd = Command::kInstallEfi;
     } else if (!strcmp(argv[0], "install-kernc")) {
         flags->cmd = Command::kInstallKernc;
+    } else if (!strcmp(argv[0], "install-zircona")) {
+        flags->cmd = Command::kInstallZirconA;
+    } else if (!strcmp(argv[0], "install-zirconb")) {
+        flags->cmd = Command::kInstallZirconB;
+    } else if (!strcmp(argv[0], "install-zirconr")) {
+        flags->cmd = Command::kInstallZirconR;
     } else if (!strcmp(argv[0], "install-fvm")) {
         flags->cmd = Command::kInstallFvm;
     } else if (!strcmp(argv[0], "wipe")) {

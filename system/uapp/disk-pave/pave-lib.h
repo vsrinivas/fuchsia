@@ -17,6 +17,9 @@ enum class Command {
     kUnknown,
     kInstallEfi,
     kInstallKernc,
+    kInstallZirconA,
+    kInstallZirconB,
+    kInstallZirconR,
     kInstallFvm,
     kWipe,
 };

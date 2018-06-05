@@ -49,10 +49,16 @@ fbl::unique_ptr<T> WrapUnique(T* ptr) {
 
 fbl::unique_ptr<DevicePartitioner> DevicePartitioner::Create() {
     fbl::unique_ptr<DevicePartitioner> device_partitioner;
+#if defined(__x86_64__)
     if ((CrosDevicePartitioner::Initialize(&device_partitioner) == ZX_OK) ||
         (EfiDevicePartitioner::Initialize(&device_partitioner) == ZX_OK)) {
         return fbl::move(device_partitioner);
     }
+#elif defined(__aarch64__)
+    if (FixedDevicePartitioner::Initialize(&device_partitioner) == ZX_OK) {
+        return fbl::move(device_partitioner);
+    }
+#endif
     return nullptr;
 }
 
@@ -723,6 +729,62 @@ zx_status_t CrosDevicePartitioner::WipePartitions(const fbl::Vector<Partition>& 
         return false;
     };
     return gpt_->WipePartitions(filter);
+}
+
+/*====================================================*
+ *                    NON-GPT                         *
+ *====================================================*/
+
+zx_status_t FixedDevicePartitioner::Initialize(fbl::unique_ptr<DevicePartitioner>* partitioner) {
+    LOG("Successfully intitialized FixedDevicePartitioner Device Partitioner\n");
+    *partitioner = fbl::move(WrapUnique(new FixedDevicePartitioner));
+    return ZX_OK;
+}
+
+zx_status_t FixedDevicePartitioner::FindPartition(Partition partition_type,
+                                                    fbl::unique_fd* out_fd) const {
+    uint8_t type[GPT_GUID_LEN];
+
+    switch (partition_type) {
+    case Partition::kZirconA: {
+        const uint8_t zircon_a_type[GPT_GUID_LEN] = GUID_ZIRCON_A_VALUE;
+        memcpy(type, zircon_a_type, GPT_GUID_LEN);
+        break;
+    }
+    case Partition::kZirconB: {
+        const uint8_t zircon_b_type[GPT_GUID_LEN] = GUID_ZIRCON_B_VALUE;
+        memcpy(type, zircon_b_type, GPT_GUID_LEN);
+        break;
+    }
+    case Partition::kZirconR: {
+        const uint8_t zircon_r_type[GPT_GUID_LEN] = GUID_ZIRCON_R_VALUE;
+        memcpy(type, zircon_r_type, GPT_GUID_LEN);
+        break;
+    }
+    case Partition::kFuchsiaVolumeManager: {
+        const uint8_t fvm_type[GPT_GUID_LEN] = GUID_FVM_VALUE;
+        memcpy(type, fvm_type, GPT_GUID_LEN);
+        break;
+    }
+    default:
+        ERROR("partition_type is invalid!\n");
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+
+    out_fd->reset(open_partition(nullptr, type, ZX_SEC(5), nullptr));
+    if (!out_fd) {
+        return ZX_ERR_NOT_FOUND;
+    }
+    return ZX_OK;
+}
+
+zx_status_t FixedDevicePartitioner::GetBlockInfo(const fbl::unique_fd& block_fd,
+                                                   block_info_t* block_info) const {
+    ssize_t r;
+    if ((r = ioctl_block_get_info(block_fd.get(), block_info) < 0)) {
+        return ZX_ERR_IO;
+    }
+    return ZX_OK;
 }
 
 } // namespace paver

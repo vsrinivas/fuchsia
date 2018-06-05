@@ -734,6 +734,33 @@ zx_status_t RealMain(Flags flags) {
         return PartitionPave(fbl::move(device_partitioner), fbl::move(flags.payload_fd),
                              Partition::kKernelC, flags.arch);
 
+    case Command::kInstallZirconA:
+        // TODO(ZX-2220): At some point x64 devices will want to pave A/B/R partitions as well.
+        if (flags.arch == Arch::X64 && !flags.force) {
+            LOG("SKIPPING ZIRCON-A install on x64 device, pass --force if desired.\n");
+            Drain(fbl::move(flags.payload_fd));
+            return ZX_OK;
+        }
+        return PartitionPave(fbl::move(device_partitioner), fbl::move(flags.payload_fd),
+                             Partition::kZirconA, flags.arch);
+
+    case Command::kInstallZirconB:
+        if (flags.arch == Arch::X64 && !flags.force) {
+            LOG("SKIPPING ZIRCON-B install on x64 device, pass --force if desired.\n");
+            Drain(fbl::move(flags.payload_fd));
+            return ZX_OK;
+        }
+        return PartitionPave(fbl::move(device_partitioner), fbl::move(flags.payload_fd),
+                             Partition::kZirconB, flags.arch);
+
+    case Command::kInstallZirconR:
+        if (flags.arch == Arch::X64 && !flags.force) {
+            LOG("SKIPPING ZIRCON-R install on x64 device, pass --force if desired.\n");
+            Drain(fbl::move(flags.payload_fd));
+            return ZX_OK;
+        }
+        return PartitionPave(fbl::move(device_partitioner), fbl::move(flags.payload_fd),
+                             Partition::kZirconR, flags.arch);
     case Command::kInstallFvm:
         return FvmPave(fbl::move(device_partitioner), fbl::move(flags.payload_fd));
 

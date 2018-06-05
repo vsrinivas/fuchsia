@@ -19,6 +19,9 @@ namespace paver {
 enum class Partition {
     kKernelC,
     kEfi,
+    kZirconA,
+    kZirconB,
+    kZirconR,
     kFuchsiaVolumeManager,
     // The following are only valid for WipePartition.
     kInstallType,
@@ -173,6 +176,35 @@ private:
         : gpt_(fbl::move(gpt)) {}
 
     fbl::unique_ptr<GptDevicePartitioner> gpt_;
+};
+
+// DevicePartitioner implementation for devices which have fixed partition maps (e.g. ARM
+// devices). It will not attempt to write a partition map of any kind to the device.
+// Assumes standardized partition layout structure (e.g. ZIRCON-A, ZIRCON-B,
+// ZIRCON-R).
+class FixedDevicePartitioner : public DevicePartitioner {
+public:
+    static zx_status_t Initialize(fbl::unique_ptr<DevicePartitioner>* partitioner);
+
+    bool IsCros() const override { return false; }
+
+    zx_status_t AddPartition(Partition partition_type, fbl::unique_fd* out_fd) override {
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+
+    zx_status_t FindPartition(Partition partition_type, fbl::unique_fd* out_fd) const override;
+
+    zx_status_t FinalizePartition(Partition unused) override { return ZX_OK; }
+
+    zx_status_t WipePartitions(const fbl::Vector<Partition>& partitions) override {
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+
+    zx_status_t GetBlockInfo(const fbl::unique_fd& block_fd,
+                             block_info_t* block_info) const override;
+
+private:
+    FixedDevicePartitioner() {}
 };
 
 } // namespace paver
