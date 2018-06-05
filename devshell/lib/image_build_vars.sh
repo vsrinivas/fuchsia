@@ -23,4 +23,5 @@ fx-machine-types() {
   echo "same behavior and target specific differences occur client side."
 }
 
-source "${FUCHSIA_BUILD_DIR}"/{,zedboot_}image_paths.sh
+source "${FUCHSIA_BUILD_DIR}"/image_paths.sh
+source "${FUCHSIA_BUILD_DIR}"/zedboot_image_paths.sh
