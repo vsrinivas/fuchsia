@@ -9,7 +9,7 @@
 
 #include "garnet/lib/media/client/audio_output_device.h"
 
-#include <media/cpp/fidl.h>
+#include <fuchsia/media/cpp/fidl.h>
 #include "lib/media/c/audio.h"
 
 namespace media_client {
@@ -36,14 +36,15 @@ class AudioOutputStream {
   bool GetDelays();
 
   void PullFromClientBuffer(float* client_buffer, int num_samples);
-  media::MediaPacket CreateMediaPacket(zx_time_t pts, size_t payload_offset,
-                                       size_t payload_size);
-  bool SendMediaPacket(media::MediaPacket packet);
+  fuchsia::media::MediaPacket CreateMediaPacket(zx_time_t pts,
+                                                size_t payload_offset,
+                                                size_t payload_size);
+  bool SendMediaPacket(fuchsia::media::MediaPacket packet);
 
-  media::AudioRendererSyncPtr audio_renderer_;
-  media::MediaRendererSyncPtr media_renderer_;
-  media::MediaPacketConsumerSyncPtr packet_consumer_;
-  media::MediaTimelineControlPointSyncPtr timeline_control_point_;
+  fuchsia::media::AudioRendererSyncPtr audio_renderer_;
+  fuchsia::media::MediaRendererSyncPtr media_renderer_;
+  fuchsia::media::MediaPacketConsumerSyncPtr packet_consumer_;
+  fuchsia::media::MediaTimelineControlPointSyncPtr timeline_control_point_;
 
   zx::vmo vmo_;
   int total_mapping_samples_ = 0;

@@ -7,7 +7,7 @@
 
 #include <memory>
 
-#include <media/cpp/fidl.h>
+#include <fuchsia/media/cpp/fidl.h>
 
 #include "garnet/bin/media/audio_server/constants.h"
 #include "garnet/bin/media/audio_server/gain.h"
@@ -54,9 +54,10 @@ class Mixer {
   // For optimum system performance across changing conditions, callers should
   // take care when directly specifying a resampler type, if they do so at all.
   // The default should be allowed whenever possible.
-  static MixerPtr Select(const AudioMediaTypeDetails& src_format,
-                         const AudioMediaTypeDetails& dst_format,
-                         Resampler resampler_type = Resampler::Default);
+  static MixerPtr Select(
+      const fuchsia::media::AudioMediaTypeDetails& src_format,
+      const fuchsia::media::AudioMediaTypeDetails& dst_format,
+      Resampler resampler_type = Resampler::Default);
 
   //
   // Mix

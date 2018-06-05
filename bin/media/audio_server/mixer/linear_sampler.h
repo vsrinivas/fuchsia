@@ -5,7 +5,7 @@
 #ifndef GARNET_BIN_MEDIA_AUDIO_SERVER_MIXER_LINEAR_SAMPLER_H_
 #define GARNET_BIN_MEDIA_AUDIO_SERVER_MIXER_LINEAR_SAMPLER_H_
 
-#include <media/cpp/fidl.h>
+#include <fuchsia/media/cpp/fidl.h>
 
 #include "garnet/bin/media/audio_server/mixer/mixer.h"
 
@@ -15,8 +15,9 @@ namespace mixer {
 
 class LinearSampler : public Mixer {
  public:
-  static MixerPtr Select(const AudioMediaTypeDetails& src_format,
-                         const AudioMediaTypeDetails& dst_format);
+  static MixerPtr Select(
+      const fuchsia::media::AudioMediaTypeDetails& src_format,
+      const fuchsia::media::AudioMediaTypeDetails& dst_format);
 
  protected:
   LinearSampler(uint32_t pos_filter_width, uint32_t neg_filter_width)

@@ -74,8 +74,8 @@ class Renderer : public AsyncNode {
   // cause it to progress.
   bool Progressing();
 
-  // Sets the PTS at which end of stream will occur. Passing
-  // media::kUnspecifiedTime indicates that end-of-stream PTS isn't known.
+  // Sets the PTS at which end of stream will occur. Passing kUnspecifiedTime
+  // indicates that end-of-stream PTS isn't known.
   void SetEndOfStreamPts(int64_t end_of_stream_pts);
 
   // Checks for timeline transitions or end-of-stream. |reference_time| is the
@@ -97,7 +97,7 @@ class Renderer : public AsyncNode {
 
   // Indicates whether the end of stream packet has been encountered.
   bool end_of_stream_pending() const {
-    return end_of_stream_pts_ != media::kUnspecifiedTime;
+    return end_of_stream_pts_ != fuchsia::media::kUnspecifiedTime;
   }
 
   // PTS at which end-of-stream is to occur or |kUnspecifiedTime| if an end-
@@ -127,14 +127,14 @@ class Renderer : public AsyncNode {
   // Determines if an unrealized timeline function is currently pending.
   bool TimelineFunctionPending() {
     return pending_timeline_function_.reference_time() !=
-           media::kUnspecifiedTime;
+           fuchsia::media::kUnspecifiedTime;
   }
 
   async_t* async_;
   fit::closure update_callback_;
   media::TimelineFunction current_timeline_function_;
   media::TimelineFunction pending_timeline_function_;
-  int64_t end_of_stream_pts_ = media::kUnspecifiedTime;
+  int64_t end_of_stream_pts_ = fuchsia::media::kUnspecifiedTime;
   bool end_of_stream_published_ = false;
   fit::closure set_timeline_function_callback_;
   int64_t program_0_min_pts_ = std::numeric_limits<int64_t>::min();

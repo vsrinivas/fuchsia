@@ -32,18 +32,18 @@ double MeasureSourceNoiseFloor(double* sinad_db) {
   double amplitude, expected_amplitude;
 
   if (std::is_same<T, uint8_t>::value) {
-    mixer = SelectMixer(AudioSampleFormat::UNSIGNED_8, 1, 48000, 1, 48000,
-                        Resampler::SampleAndHold);
+    mixer = SelectMixer(fuchsia::media::AudioSampleFormat::UNSIGNED_8, 1, 48000,
+                        1, 48000, Resampler::SampleAndHold);
     amplitude = std::numeric_limits<int8_t>::max();
     expected_amplitude = amplitude * (1 << (kAudioPipelineWidth - 8));
   } else if (std::is_same<T, int16_t>::value) {
-    mixer = SelectMixer(AudioSampleFormat::SIGNED_16, 1, 48000, 1, 48000,
-                        Resampler::SampleAndHold);
+    mixer = SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_16, 1, 48000,
+                        1, 48000, Resampler::SampleAndHold);
     amplitude = std::numeric_limits<int16_t>::max();
     expected_amplitude = amplitude * (1 << (kAudioPipelineWidth - 16));
   } else if (std::is_same<T, float>::value) {
-    mixer = SelectMixer(AudioSampleFormat::FLOAT, 1, 48000, 1, 48000,
-                        Resampler::SampleAndHold);
+    mixer = SelectMixer(fuchsia::media::AudioSampleFormat::FLOAT, 1, 48000, 1,
+                        48000, Resampler::SampleAndHold);
     amplitude = 1.0;
     expected_amplitude = amplitude * (1 << (kAudioPipelineWidth - 1));
   } else {
@@ -135,15 +135,18 @@ double MeasureOutputNoiseFloor(double* sinad_db) {
   // For float, 7FFF equates to less than 1.0, so adjust by (32768/32767).
 
   if (std::is_same<T, uint8_t>::value) {
-    output_formatter = SelectOutputFormatter(AudioSampleFormat::UNSIGNED_8, 1);
+    output_formatter =
+        SelectOutputFormatter(fuchsia::media::AudioSampleFormat::UNSIGNED_8, 1);
     expected_amplitude = std::numeric_limits<int8_t>::max();
     amplitude = expected_amplitude * (1 << (kAudioPipelineWidth - 8));
   } else if (std::is_same<T, int16_t>::value) {
-    output_formatter = SelectOutputFormatter(AudioSampleFormat::SIGNED_16, 1);
+    output_formatter =
+        SelectOutputFormatter(fuchsia::media::AudioSampleFormat::SIGNED_16, 1);
     expected_amplitude = std::numeric_limits<int16_t>::max();
     amplitude = expected_amplitude * (1 << (kAudioPipelineWidth - 16));
   } else if (std::is_same<T, float>::value) {
-    output_formatter = SelectOutputFormatter(AudioSampleFormat::FLOAT, 1);
+    output_formatter =
+        SelectOutputFormatter(fuchsia::media::AudioSampleFormat::FLOAT, 1);
     expected_amplitude = 1.0;
     amplitude = expected_amplitude * (1 << (kAudioPipelineWidth - 1));
   } else {
@@ -334,8 +337,8 @@ void EvaluateSinadResults(double* sinad_results, const double* sinad_limits) {
 // SRC). We articulate this with source buffer length equal to dest length.
 void TestUnitySampleRatio(Resampler sampler_type, double* freq_resp_results,
                           double* sinad_results) {
-  MixerPtr mixer =
-      SelectMixer(AudioSampleFormat::FLOAT, 1, 48000, 1, 48000, sampler_type);
+  MixerPtr mixer = SelectMixer(fuchsia::media::AudioSampleFormat::FLOAT, 1,
+                               48000, 1, 48000, sampler_type);
 
   MeasureFreqRespSinad(std::move(mixer), kFreqTestBufSize, freq_resp_results,
                        sinad_results);
@@ -345,8 +348,8 @@ void TestUnitySampleRatio(Resampler sampler_type, double* freq_resp_results,
 // by specifying a source buffer twice the length of the destination buffer.
 void TestDownSampleRatio1(Resampler sampler_type, double* freq_resp_results,
                           double* sinad_results) {
-  MixerPtr mixer =
-      SelectMixer(AudioSampleFormat::FLOAT, 1, 96000, 1, 48000, sampler_type);
+  MixerPtr mixer = SelectMixer(fuchsia::media::AudioSampleFormat::FLOAT, 1,
+                               96000, 1, 48000, sampler_type);
 
   MeasureFreqRespSinad(std::move(mixer),
                        round(kFreqTestBufSize * 96000.0 / 48000.0),
@@ -357,8 +360,8 @@ void TestDownSampleRatio1(Resampler sampler_type, double* freq_resp_results,
 // by specifying a source buffer longer than destination buffer by that ratio.
 void TestDownSampleRatio2(Resampler sampler_type, double* freq_resp_results,
                           double* sinad_results) {
-  MixerPtr mixer =
-      SelectMixer(AudioSampleFormat::FLOAT, 1, 88200, 1, 48000, sampler_type);
+  MixerPtr mixer = SelectMixer(fuchsia::media::AudioSampleFormat::FLOAT, 1,
+                               88200, 1, 48000, sampler_type);
 
   MeasureFreqRespSinad(std::move(mixer),
                        round(kFreqTestBufSize * 88200.0 / 48000.0),
@@ -369,8 +372,8 @@ void TestDownSampleRatio2(Resampler sampler_type, double* freq_resp_results,
 // by specifying a source buffer shorter than destination buffer by that ratio.
 void TestUpSampleRatio1(Resampler sampler_type, double* freq_resp_results,
                         double* sinad_results) {
-  MixerPtr mixer =
-      SelectMixer(AudioSampleFormat::FLOAT, 1, 44100, 1, 48000, sampler_type);
+  MixerPtr mixer = SelectMixer(fuchsia::media::AudioSampleFormat::FLOAT, 1,
+                               44100, 1, 48000, sampler_type);
 
   MeasureFreqRespSinad(std::move(mixer),
                        round(kFreqTestBufSize * 44100.0 / 48000.0),
@@ -381,8 +384,8 @@ void TestUpSampleRatio1(Resampler sampler_type, double* freq_resp_results,
 // by specifying a source buffer at half the length of the destination buffer.
 void TestUpSampleRatio2(Resampler sampler_type, double* freq_resp_results,
                         double* sinad_results) {
-  MixerPtr mixer =
-      SelectMixer(AudioSampleFormat::FLOAT, 1, 24000, 1, 48000, sampler_type);
+  MixerPtr mixer = SelectMixer(fuchsia::media::AudioSampleFormat::FLOAT, 1,
+                               24000, 1, 48000, sampler_type);
 
   MeasureFreqRespSinad(std::move(mixer),
                        round(kFreqTestBufSize * 24000.0 / 48000.0),
@@ -392,8 +395,8 @@ void TestUpSampleRatio2(Resampler sampler_type, double* freq_resp_results,
 // For the given resampler, target micro-sampling -- with a 47999:48000 ratio.
 void TestMicroSampleRatio(Resampler sampler_type, double* freq_resp_results,
                           double* sinad_results) {
-  MixerPtr mixer =
-      SelectMixer(AudioSampleFormat::FLOAT, 1, 47999, 1, 48000, sampler_type);
+  MixerPtr mixer = SelectMixer(fuchsia::media::AudioSampleFormat::FLOAT, 1,
+                               47999, 1, 48000, sampler_type);
 
   MeasureFreqRespSinad(std::move(mixer),
                        round(kFreqTestBufSize * 47999.0 / 48000.0),

@@ -28,14 +28,16 @@ constexpr float kInitialCaptureGain = 0.0;
 AtomicGenerationId AudioCapturerImpl::PendingCaptureBuffer::sequence_generator;
 
 fbl::RefPtr<AudioCapturerImpl> AudioCapturerImpl::Create(
-    fidl::InterfaceRequest<AudioCapturer> audio_capturer_request,
+    fidl::InterfaceRequest<fuchsia::media::AudioCapturer>
+        audio_capturer_request,
     AudioServerImpl* owner, bool loopback) {
   return fbl::AdoptRef(new AudioCapturerImpl(std::move(audio_capturer_request),
                                              owner, loopback));
 }
 
 AudioCapturerImpl::AudioCapturerImpl(
-    fidl::InterfaceRequest<AudioCapturer> audio_capturer_request,
+    fidl::InterfaceRequest<fuchsia::media::AudioCapturer>
+        audio_capturer_request,
     AudioServerImpl* owner, bool loopback)
     : AudioObject(Type::Capturer),
       binding_(this, std::move(audio_capturer_request)),
@@ -54,8 +56,8 @@ AudioCapturerImpl::AudioCapturerImpl(
 
   // TODO(johngro) : Initialize this with the native configuration of the source
   // we are initally bound to.
-  format_ = AudioMediaTypeDetails::New();
-  UpdateFormat(media::AudioSampleFormat::SIGNED_16, 1, 8000);
+  format_ = fuchsia::media::AudioMediaTypeDetails::New();
+  UpdateFormat(fuchsia::media::AudioSampleFormat::SIGNED_16, 1, 8000);
 }
 
 AudioCapturerImpl::~AudioCapturerImpl() {
@@ -65,7 +67,8 @@ AudioCapturerImpl::~AudioCapturerImpl() {
   FXL_DCHECK(payload_buf_size_ == 0);
 }
 
-void AudioCapturerImpl::SetInitialFormat(AudioMediaTypeDetails format) {
+void AudioCapturerImpl::SetInitialFormat(
+    fuchsia::media::AudioMediaTypeDetails format) {
   UpdateFormat(format.sample_format, format.channels, format.frames_per_second);
 }
 
@@ -142,14 +145,14 @@ zx_status_t AudioCapturerImpl::InitializeSourceLink(const AudioLinkPtr& link) {
 }
 
 void AudioCapturerImpl::GetMediaType(GetMediaTypeCallback cbk) {
-  MediaType ret;
-  ret.medium = MediaTypeMedium::AUDIO;
-  ret.encoding = kAudioEncodingLpcm;
+  fuchsia::media::MediaType ret;
+  ret.medium = fuchsia::media::MediaTypeMedium::AUDIO;
+  ret.encoding = fuchsia::media::kAudioEncodingLpcm;
   ret.details.set_audio(*format_);
   cbk(std::move(ret));
 }
 
-void AudioCapturerImpl::SetMediaType(MediaType media_type) {
+void AudioCapturerImpl::SetMediaType(fuchsia::media::MediaType media_type) {
   // If something goes wrong, hang up the phone and shutdown.
   auto cleanup = fbl::MakeAutoCall([this]() { Shutdown(); });
 
@@ -164,8 +167,8 @@ void AudioCapturerImpl::SetMediaType(MediaType media_type) {
   }
 
   // The specified media type needs to be audio LPCM
-  if ((media_type.medium != MediaTypeMedium::AUDIO) ||
-      (media_type.encoding != kAudioEncodingLpcm) ||
+  if ((media_type.medium != fuchsia::media::MediaTypeMedium::AUDIO) ||
+      (media_type.encoding != fuchsia::media::kAudioEncodingLpcm) ||
       !media_type.details.is_audio()) {
     FXL_LOG(ERROR) << "Bad media type!";
     return;
@@ -173,27 +176,29 @@ void AudioCapturerImpl::SetMediaType(MediaType media_type) {
 
   // Sanity check the details of the mode request.
   const auto& details = media_type.details.audio();
-  if ((details.channels < media::kMinLpcmChannelCount) ||
-      (details.channels > media::kMaxLpcmChannelCount)) {
+  if ((details.channels < fuchsia::media::kMinLpcmChannelCount) ||
+      (details.channels > fuchsia::media::kMaxLpcmChannelCount)) {
     FXL_LOG(ERROR) << "Bad channel count, " << details.channels
-                   << " is not in the range [" << media::kMinLpcmChannelCount
-                   << ", " << media::kMaxLpcmChannelCount << "]";
+                   << " is not in the range ["
+                   << fuchsia::media::kMinLpcmChannelCount << ", "
+                   << fuchsia::media::kMaxLpcmChannelCount << "]";
     return;
   }
 
-  if ((details.frames_per_second < media::kMinLpcmFramesPerSecond) ||
-      (details.frames_per_second > media::kMaxLpcmFramesPerSecond)) {
+  if ((details.frames_per_second < fuchsia::media::kMinLpcmFramesPerSecond) ||
+      (details.frames_per_second > fuchsia::media::kMaxLpcmFramesPerSecond)) {
     FXL_LOG(ERROR) << "Bad frame rate, " << details.frames_per_second
-                   << " is not in the range [" << media::kMinLpcmFramesPerSecond
-                   << ", " << media::kMaxLpcmFramesPerSecond << "]";
+                   << " is not in the range ["
+                   << fuchsia::media::kMinLpcmFramesPerSecond << ", "
+                   << fuchsia::media::kMaxLpcmFramesPerSecond << "]";
     return;
   }
 
   switch (details.sample_format) {
-    case AudioSampleFormat::UNSIGNED_8:
-    case AudioSampleFormat::SIGNED_16:
-    case AudioSampleFormat::SIGNED_24_IN_32:
-    case AudioSampleFormat::FLOAT:
+    case fuchsia::media::AudioSampleFormat::UNSIGNED_8:
+    case fuchsia::media::AudioSampleFormat::SIGNED_16:
+    case fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32:
+    case fuchsia::media::AudioSampleFormat::FLOAT:
       break;
 
     default:
@@ -453,7 +458,7 @@ void AudioCapturerImpl::Flush() {
   }
 
   if (!finished.is_empty()) {
-    finished.back().flags |= kFlagEos;
+    finished.back().flags |= fuchsia::media::kFlagEos;
     FinishBuffers(finished);
   }
 }
@@ -615,7 +620,7 @@ zx_status_t AudioCapturerImpl::Process() {
         // produce is guaranteed to be discontinuous relative to the previous
         // one (if any).
         if (!frames_to_clock_mono_.invertable()) {
-          p.flags |= kFlagDiscontinuous;
+          p.flags |= fuchsia::media::kFlagDiscontinuous;
         }
 
         // If we are still running, there should be no way that our shared
@@ -744,7 +749,7 @@ zx_status_t AudioCapturerImpl::Process() {
           FXL_DCHECK(p.filled_frames <= p.num_frames);
 
           // Assign a timestamp if one has not already been assigned.
-          if (p.capture_timestamp == kNoTimestamp) {
+          if (p.capture_timestamp == fuchsia::media::kNoTimestamp) {
             FXL_DCHECK(frames_to_clock_mono_.invertable());
             p.capture_timestamp = frames_to_clock_mono_.Apply(frame_count_);
           }
@@ -1153,7 +1158,7 @@ void AudioCapturerImpl::DoStopAsyncCapture() {
     }
 
     if (!finished_capture_buffers_.is_empty()) {
-      finished_capture_buffers_.back().flags |= kFlagEos;
+      finished_capture_buffers_.back().flags |= fuchsia::media::kFlagEos;
     }
   }
 
@@ -1246,12 +1251,12 @@ void AudioCapturerImpl::FinishAsyncStopThunk() {
   if (!finished.is_empty()) {
     FinishBuffers(std::move(finished));
   } else {
-    MediaPacket pkt;
+    fuchsia::media::MediaPacket pkt;
 
-    pkt.pts = kNoTimestamp;
+    pkt.pts = fuchsia::media::kNoTimestamp;
     pkt.pts_rate_ticks = format_->frames_per_second;
     pkt.pts_rate_seconds = 1u;
-    pkt.flags = kFlagEos;
+    pkt.flags = fuchsia::media::kFlagEos;
     pkt.payload_buffer_id = 0u;
     pkt.payload_offset = 0u;
     pkt.payload_size = 0u;
@@ -1294,7 +1299,7 @@ void AudioCapturerImpl::FinishBuffers(const PcbList& finished_buffers) {
       continue;
     }
 
-    MediaPacket pkt;
+    fuchsia::media::MediaPacket pkt;
 
     pkt.pts = finished_buffer.capture_timestamp;
     pkt.pts_rate_ticks = format_->frames_per_second;
@@ -1312,9 +1317,9 @@ void AudioCapturerImpl::FinishBuffers(const PcbList& finished_buffers) {
   }
 }
 
-void AudioCapturerImpl::UpdateFormat(media::AudioSampleFormat sample_format,
-                                     uint32_t channels,
-                                     uint32_t frames_per_second) {
+void AudioCapturerImpl::UpdateFormat(
+    fuchsia::media::AudioSampleFormat sample_format, uint32_t channels,
+    uint32_t frames_per_second) {
   // Record our new format.
   FXL_DCHECK(state_.load() == State::WaitingForVmo);
   format_->sample_format = sample_format;
@@ -1367,7 +1372,7 @@ zx_status_t AudioCapturerImpl::ChooseMixer(
 
   // Get the driver's currently configured format.  If it does not have one, we
   // cannot set up the mixer.
-  AudioMediaTypeDetailsPtr source_format;
+  fuchsia::media::AudioMediaTypeDetailsPtr source_format;
   source_format = device->driver()->GetSourceFormat();
   if (!source_format) {
     FXL_LOG(INFO)

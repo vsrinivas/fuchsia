@@ -23,38 +23,40 @@ namespace audio {
 // TODO(johngro): If there is ever a better way to do this type of static-table
 // initialization using fidl generated structs, we should switch to it.
 static const struct {
-  AudioSampleFormat sample_format;
+  fuchsia::media::AudioSampleFormat sample_format;
   uint32_t min_channels;
   uint32_t max_channels;
   uint32_t min_frames_per_second;
   uint32_t max_frames_per_second;
 } kSupportedAudioTypeSets[] = {
     {
-        .sample_format = AudioSampleFormat::UNSIGNED_8,
-        .min_channels = media::kMinLpcmChannelCount,
-        .max_channels = media::kMaxLpcmChannelCount,
-        .min_frames_per_second = media::kMinLpcmFramesPerSecond,
-        .max_frames_per_second = media::kMaxLpcmFramesPerSecond,
+        .sample_format = fuchsia::media::AudioSampleFormat::UNSIGNED_8,
+        .min_channels = fuchsia::media::kMinLpcmChannelCount,
+        .max_channels = fuchsia::media::kMaxLpcmChannelCount,
+        .min_frames_per_second = fuchsia::media::kMinLpcmFramesPerSecond,
+        .max_frames_per_second = fuchsia::media::kMaxLpcmFramesPerSecond,
     },
     {
-        .sample_format = AudioSampleFormat::SIGNED_16,
-        .min_channels = media::kMinLpcmChannelCount,
-        .max_channels = media::kMaxLpcmChannelCount,
-        .min_frames_per_second = media::kMinLpcmFramesPerSecond,
-        .max_frames_per_second = media::kMaxLpcmFramesPerSecond,
+        .sample_format = fuchsia::media::AudioSampleFormat::SIGNED_16,
+        .min_channels = fuchsia::media::kMinLpcmChannelCount,
+        .max_channels = fuchsia::media::kMaxLpcmChannelCount,
+        .min_frames_per_second = fuchsia::media::kMinLpcmFramesPerSecond,
+        .max_frames_per_second = fuchsia::media::kMaxLpcmFramesPerSecond,
     },
     {
-        .sample_format = AudioSampleFormat::FLOAT,
-        .min_channels = media::kMinLpcmChannelCount,
-        .max_channels = media::kMaxLpcmChannelCount,
-        .min_frames_per_second = media::kMinLpcmFramesPerSecond,
-        .max_frames_per_second = media::kMaxLpcmFramesPerSecond,
+        .sample_format = fuchsia::media::AudioSampleFormat::FLOAT,
+        .min_channels = fuchsia::media::kMinLpcmChannelCount,
+        .max_channels = fuchsia::media::kMaxLpcmChannelCount,
+        .min_frames_per_second = fuchsia::media::kMinLpcmFramesPerSecond,
+        .max_frames_per_second = fuchsia::media::kMaxLpcmFramesPerSecond,
     },
 };
 
 AudioRenderer1Impl::AudioRenderer1Impl(
-    fidl::InterfaceRequest<AudioRenderer> audio_renderer_request,
-    fidl::InterfaceRequest<MediaRenderer> media_renderer_request,
+    fidl::InterfaceRequest<fuchsia::media::AudioRenderer>
+        audio_renderer_request,
+    fidl::InterfaceRequest<fuchsia::media::MediaRenderer>
+        media_renderer_request,
     AudioServerImpl* owner)
     : owner_(owner),
       audio_renderer_binding_(this, std::move(audio_renderer_request)),
@@ -102,8 +104,10 @@ AudioRenderer1Impl::~AudioRenderer1Impl() {
 }
 
 fbl::RefPtr<AudioRenderer1Impl> AudioRenderer1Impl::Create(
-    fidl::InterfaceRequest<AudioRenderer> audio_renderer_request,
-    fidl::InterfaceRequest<MediaRenderer> media_renderer_request,
+    fidl::InterfaceRequest<fuchsia::media::AudioRenderer>
+        audio_renderer_request,
+    fidl::InterfaceRequest<fuchsia::media::MediaRenderer>
+        media_renderer_request,
     AudioServerImpl* owner) {
   return fbl::AdoptRef(new AudioRenderer1Impl(std::move(audio_renderer_request),
                                               std::move(media_renderer_request),
@@ -153,13 +157,13 @@ void AudioRenderer1Impl::GetSupportedMediaTypes(
   cbk(SupportedMediaTypes());
 }
 
-void AudioRenderer1Impl::SetMediaType(MediaType media_type) {
+void AudioRenderer1Impl::SetMediaType(fuchsia::media::MediaType media_type) {
   // Check the requested configuration.
-  if ((media_type.medium != MediaTypeMedium::AUDIO) ||
-      (media_type.encoding != kAudioEncodingLpcm) ||
+  if ((media_type.medium != fuchsia::media::MediaTypeMedium::AUDIO) ||
+      (media_type.encoding != fuchsia::media::kAudioEncodingLpcm) ||
       (!media_type.details.is_audio())) {
     FXL_LOG(ERROR) << "Unsupported configuration requested in "
-                   << "AudioRenderer::SetMediaType.  "
+                   << "fuchsia::media::AudioRenderer::SetMediaType.  "
                    << "Media type must be LPCM audio.";
     Shutdown();
     return;
@@ -183,7 +187,7 @@ void AudioRenderer1Impl::SetMediaType(MediaType media_type) {
 
   if (i >= arraysize(kSupportedAudioTypeSets)) {
     FXL_LOG(ERROR) << "Unsupported LPCM configuration requested in "
-                   << "AudioRenderer::SetMediaType.  "
+                   << "fuchsia::media::AudioRenderer::SetMediaType.  "
                    << "(format = " << cfg.sample_format
                    << ", channels = " << static_cast<uint32_t>(cfg.channels)
                    << ", frames_per_second = " << cfg.frames_per_second << ")";
@@ -244,7 +248,8 @@ void AudioRenderer1Impl::SetMediaType(MediaType media_type) {
 }
 
 void AudioRenderer1Impl::GetPacketConsumer(
-    fidl::InterfaceRequest<MediaPacketConsumer> consumer_request) {
+    fidl::InterfaceRequest<fuchsia::media::MediaPacketConsumer>
+        consumer_request) {
   // Bind our pipe to the interface request.
   if (pipe_.is_bound()) {
     pipe_.Reset();
@@ -254,12 +259,12 @@ void AudioRenderer1Impl::GetPacketConsumer(
 }
 
 void AudioRenderer1Impl::GetTimelineControlPoint(
-    fidl::InterfaceRequest<MediaTimelineControlPoint> req) {
+    fidl::InterfaceRequest<fuchsia::media::MediaTimelineControlPoint> req) {
   timeline_control_point_.Bind(std::move(req));
 }
 
 void AudioRenderer1Impl::SetGain(float db_gain) {
-  if (db_gain > kMaxGain) {
+  if (db_gain > fuchsia::media::kMaxGain) {
     FXL_LOG(ERROR) << "Gain value too large (" << db_gain
                    << ") for audio renderer.";
     Shutdown();
@@ -344,7 +349,7 @@ void AudioRenderer1Impl::OnPacketReceived(fbl::RefPtr<AudioPacketRef> packet) {
     }
   }
 
-  if (packet->flags() & kFlagEos) {
+  if (packet->flags() & fuchsia::media::kFlagEos) {
     timeline_control_point_.SetEndOfStreamPts(
         (packet->end_pts() >> kPtsFractionalBits) /
         format_info_->frames_per_ns());
@@ -352,7 +357,7 @@ void AudioRenderer1Impl::OnPacketReceived(fbl::RefPtr<AudioPacketRef> packet) {
 }
 
 bool AudioRenderer1Impl::OnFlushRequested(
-    MediaPacketConsumer::FlushCallback cbk) {
+    fuchsia::media::MediaPacketConsumer::FlushCallback cbk) {
   fbl::RefPtr<PendingFlushToken> flush_token =
       PendingFlushToken::Create(owner_, cbk);
 
@@ -370,7 +375,8 @@ bool AudioRenderer1Impl::OnFlushRequested(
   return true;
 }
 
-fidl::VectorPtr<MediaTypeSet> AudioRenderer1Impl::SupportedMediaTypes() {
+fidl::VectorPtr<fuchsia::media::MediaTypeSet>
+AudioRenderer1Impl::SupportedMediaTypes() {
   // Build a minimal descriptor
   //
   // TODO(johngro): one day, we need to make this description much more rich and
@@ -383,17 +389,17 @@ fidl::VectorPtr<MediaTypeSet> AudioRenderer1Impl::SupportedMediaTypes() {
   // message, but the nature of the structures generated by the C++ bindings
   // make this difficult.  For now, we just create a trivial descriptor entierly
   // by hand.
-  fidl::VectorPtr<MediaTypeSet> supported_media_types(
+  fidl::VectorPtr<fuchsia::media::MediaTypeSet> supported_media_types(
       arraysize(kSupportedAudioTypeSets));
 
   for (size_t i = 0; i < supported_media_types->size(); ++i) {
-    MediaTypeSet& mts = supported_media_types->at(i);
+    fuchsia::media::MediaTypeSet& mts = supported_media_types->at(i);
 
-    mts.medium = MediaTypeMedium::AUDIO;
-    mts.encodings.push_back(kAudioEncodingLpcm);
+    mts.medium = fuchsia::media::MediaTypeMedium::AUDIO;
+    mts.encodings.push_back(fuchsia::media::kAudioEncodingLpcm);
 
     const auto& s = kSupportedAudioTypeSets[i];
-    AudioMediaTypeSetDetails audio_detail;
+    fuchsia::media::AudioMediaTypeSetDetails audio_detail;
     audio_detail.sample_format = s.sample_format;
     audio_detail.min_channels = s.min_channels;
     audio_detail.max_channels = s.max_channels;

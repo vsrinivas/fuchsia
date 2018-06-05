@@ -41,7 +41,7 @@ MediaPacketConsumerBase::~MediaPacketConsumerBase() {
 }
 
 void MediaPacketConsumerBase::Bind(
-    fidl::InterfaceRequest<MediaPacketConsumer> request) {
+    fidl::InterfaceRequest<fuchsia::media::MediaPacketConsumer> request) {
   FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
   binding_.Bind(std::move(request));
   binding_.set_error_handler([this]() { Reset(); });
@@ -49,7 +49,7 @@ void MediaPacketConsumerBase::Bind(
 }
 
 void MediaPacketConsumerBase::Bind(
-    fidl::InterfaceHandle<MediaPacketConsumer>* handle) {
+    fidl::InterfaceHandle<fuchsia::media::MediaPacketConsumer>* handle) {
   FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
   binding_.Bind(handle->NewRequest());
   binding_.set_error_handler([this]() { Reset(); });
@@ -94,7 +94,7 @@ void MediaPacketConsumerBase::Reset() {
   }
 
   demand_.min_packets_outstanding = 0;
-  demand_.min_pts = kNoTimestamp;
+  demand_.min_pts = fuchsia::media::kNoTimestamp;
 
   get_demand_update_callback_ = nullptr;
 
@@ -141,7 +141,8 @@ void MediaPacketConsumerBase::PullDemandUpdate(
     // that the client doesn't know what it's doing.
     FXL_DLOG(WARNING) << "PullDemandUpdate was called when another "
                          "PullDemandUpdate call was pending";
-    get_demand_update_callback_(std::make_unique<MediaPacketDemand>(demand_));
+    get_demand_update_callback_(
+        std::make_unique<fuchsia::media::MediaPacketDemand>(demand_));
   }
 
   get_demand_update_callback_ = callback;
@@ -163,8 +164,8 @@ void MediaPacketConsumerBase::RemovePayloadBuffer(uint32_t payload_buffer_id) {
   counter_->buffer_set().RemoveBuffer(payload_buffer_id);
 }
 
-void MediaPacketConsumerBase::SupplyPacket(MediaPacket media_packet,
-                                           SupplyPacketCallback callback) {
+void MediaPacketConsumerBase::SupplyPacket(
+    fuchsia::media::MediaPacket media_packet, SupplyPacketCallback callback) {
   FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
 
   if (media_packet.revised_media_type && !accept_revised_media_type_) {
@@ -195,7 +196,8 @@ void MediaPacketConsumerBase::SupplyPacket(MediaPacket media_packet,
       label, std::move(media_packet), payload, callback, counter_)));
 }
 
-void MediaPacketConsumerBase::SupplyPacketNoReply(MediaPacket media_packet) {
+void MediaPacketConsumerBase::SupplyPacketNoReply(
+    fuchsia::media::MediaPacket media_packet) {
   SupplyPacket(std::move(media_packet), SupplyPacketCallback());
 }
 
@@ -203,7 +205,7 @@ void MediaPacketConsumerBase::Flush(bool hold_frame, FlushCallback callback) {
   FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
 
   demand_.min_packets_outstanding = 0;
-  demand_.min_pts = kNoTimestamp;
+  demand_.min_pts = fuchsia::media::kNoTimestamp;
 
   flush_pending_ = true;
 
@@ -224,12 +226,13 @@ void MediaPacketConsumerBase::MaybeCompletePullDemandUpdate() {
   }
 
   demand_update_required_ = false;
-  get_demand_update_callback_(std::make_unique<MediaPacketDemand>(demand_));
+  get_demand_update_callback_(
+      std::make_unique<fuchsia::media::MediaPacketDemand>(demand_));
   get_demand_update_callback_ = nullptr;
 }
 
-MediaPacketDemandPtr MediaPacketConsumerBase::GetDemandForPacketDeparture(
-    uint64_t label) {
+fuchsia::media::MediaPacketDemandPtr
+MediaPacketConsumerBase::GetDemandForPacketDeparture(uint64_t label) {
   FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
 
   // Note that we're returning a packet so that MaybeCompletePullDemandUpdate
@@ -244,10 +247,11 @@ MediaPacketDemandPtr MediaPacketConsumerBase::GetDemandForPacketDeparture(
   }
 
   demand_update_required_ = false;
-  return std::make_unique<MediaPacketDemand>(demand_);
+  return std::make_unique<fuchsia::media::MediaPacketDemand>(demand_);
 }
 
-void MediaPacketConsumerBase::SetPacketPtsRate(MediaPacket* packet) {
+void MediaPacketConsumerBase::SetPacketPtsRate(
+    fuchsia::media::MediaPacket* packet) {
   if (pts_rate_ == TimelineRate::Zero) {
     return;
   }
@@ -268,7 +272,7 @@ void MediaPacketConsumerBase::SetPacketPtsRate(MediaPacket* packet) {
 }
 
 MediaPacketConsumerBase::SuppliedPacket::SuppliedPacket(
-    uint64_t label, MediaPacket packet, void* payload,
+    uint64_t label, fuchsia::media::MediaPacket packet, void* payload,
     SupplyPacketCallback callback,
     std::shared_ptr<SuppliedPacketCounter> counter)
     : label_(label),

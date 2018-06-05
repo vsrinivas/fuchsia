@@ -7,10 +7,10 @@
 #include <sstream>
 
 #include <fs/pseudo-file.h>
+#include <fuchsia/media/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 #include <lib/fit/function.h>
-#include <media/cpp/fidl.h>
 #include <media_player/cpp/fidl.h>
 
 #include "garnet/bin/media/media_player/demux/fidl_reader.h"
@@ -98,7 +98,7 @@ MediaPlayerImpl::MediaPlayerImpl(fidl::InterfaceRequest<MediaPlayer> request,
           os << newl << "transitioning to:   " << ToString(target_state_);
         }
 
-        if (target_position_ != media::kUnspecifiedTime) {
+        if (target_position_ != fuchsia::media::kUnspecifiedTime) {
           os << newl << "pending seek to:    " << AsNs(target_position_);
         }
 
@@ -139,8 +139,9 @@ void MediaPlayerImpl::MaybeCreateRenderer(StreamType::Medium medium) {
     case StreamType::Medium::kAudio:
       if (!audio_renderer_) {
         auto audio_server =
-            startup_context_->ConnectToEnvironmentService<media::AudioServer>();
-        media::AudioRenderer2Ptr audio_renderer;
+            startup_context_
+                ->ConnectToEnvironmentService<fuchsia::media::AudioServer>();
+        fuchsia::media::AudioRenderer2Ptr audio_renderer;
         audio_server->CreateRendererV2(audio_renderer.NewRequest());
         audio_renderer_ = FidlAudioRenderer::Create(std::move(audio_renderer));
         if (gain_ != 1.0f) {
@@ -221,7 +222,7 @@ void MediaPlayerImpl::Update() {
 
         // Presentation time is not progressing, and the pipeline is clear of
         // packets.
-        if (target_position_ != media::kUnspecifiedTime) {
+        if (target_position_ != fuchsia::media::kUnspecifiedTime) {
           // We want to seek. Enter |kWaiting| state until the operation is
           // complete.
           state_ = State::kWaiting;
@@ -232,7 +233,7 @@ void MediaPlayerImpl::Update() {
           // seeking the source, we'll notice that and do those things
           // again.
           int64_t target_position = target_position_;
-          target_position_ = media::kUnspecifiedTime;
+          target_position_ = fuchsia::media::kUnspecifiedTime;
 
           // |program_range_min_pts_| will be delivered in the
           // |SetProgramRange| call, ensuring that the renderers discard
@@ -245,8 +246,9 @@ void MediaPlayerImpl::Update() {
               0.0f, media::Timeline::local_now(), [this, target_position]() {
                 if (target_position_ == target_position) {
                   // We've had a rendundant seek request. Ignore it.
-                  target_position_ = media::kUnspecifiedTime;
-                } else if (target_position_ != media::kUnspecifiedTime) {
+                  target_position_ = fuchsia::media::kUnspecifiedTime;
+                } else if (target_position_ !=
+                           fuchsia::media::kUnspecifiedTime) {
                   // We've had a seek request to a new position. Refrain from
                   // seeking the source and re-enter this sequence.
                   state_ = State::kFlushed;
@@ -274,7 +276,8 @@ void MediaPlayerImpl::Update() {
           // when the operation is complete.
           state_ = State::kWaiting;
           waiting_reason_ = "for priming to complete";
-          player_.SetProgramRange(0, program_range_min_pts_, media::kMaxTime);
+          player_.SetProgramRange(0, program_range_min_pts_,
+                                  fuchsia::media::kMaxTime);
 
           player_.Prime([this]() {
             state_ = State::kPrimed;
@@ -372,7 +375,7 @@ void MediaPlayerImpl::SetTimelineFunction(float rate, int64_t reference_time,
       media::TimelineFunction(transform_subject_time_, reference_time,
                               media::TimelineRate(rate)),
       std::move(callback));
-  transform_subject_time_ = media::kUnspecifiedTime;
+  transform_subject_time_ = fuchsia::media::kUnspecifiedTime;
   SendStatusUpdates();
 }
 
@@ -474,7 +477,7 @@ void MediaPlayerImpl::CreateView(
 }
 
 void MediaPlayerImpl::SetAudioRenderer(
-    fidl::InterfaceHandle<media::AudioRenderer2> audio_renderer) {
+    fidl::InterfaceHandle<fuchsia::media::AudioRenderer2> audio_renderer) {
   if (audio_renderer_) {
     return;
   }

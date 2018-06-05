@@ -114,19 +114,19 @@ void AudioPerformance::ProfileMixer(uint32_t num_input_chans,
                                     Resampler sampler_type,
                                     uint32_t source_rate,
                                     Gain::AScale gain_scale, bool accumulate) {
-  AudioSampleFormat sample_format;
+  fuchsia::media::AudioSampleFormat sample_format;
   double amplitude;
   char format;
   if (std::is_same<SampleType, uint8_t>::value) {
-    sample_format = AudioSampleFormat::UNSIGNED_8;
+    sample_format = fuchsia::media::AudioSampleFormat::UNSIGNED_8;
     amplitude = std::numeric_limits<int8_t>::max();
     format = 'u';
   } else if (std::is_same<SampleType, int16_t>::value) {
-    sample_format = AudioSampleFormat::SIGNED_16;
+    sample_format = fuchsia::media::AudioSampleFormat::SIGNED_16;
     amplitude = std::numeric_limits<int16_t>::max();
     format = 'i';
   } else if (std::is_same<SampleType, float>::value) {
-    sample_format = AudioSampleFormat::FLOAT;
+    sample_format = fuchsia::media::AudioSampleFormat::FLOAT;
     amplitude = 1.0;
     format = 'f';
   } else {

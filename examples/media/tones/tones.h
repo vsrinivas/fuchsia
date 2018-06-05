@@ -8,9 +8,9 @@
 #include <list>
 #include <map>
 
+#include <fuchsia/media/cpp/fidl.h>
 #include <lib/fit/function.h>
 #include <lib/vmo-utils/vmo_mapper.h>
-#include <media/cpp/fidl.h>
 
 #include "garnet/examples/media/tones/tone_generator.h"
 #include "lib/app/cpp/startup_context.h"
@@ -70,7 +70,7 @@ class Tones {
   bool interactive_;
   fit::closure quit_callback_;
   fsl::FDWaiter fd_waiter_;
-  media::AudioRenderer2Ptr audio_renderer_;
+  fuchsia::media::AudioRenderer2Ptr audio_renderer_;
   std::map<int64_t, float> frequencies_by_pts_;
   std::list<ToneGenerator> tone_generators_;
   int64_t pts_ = 0;

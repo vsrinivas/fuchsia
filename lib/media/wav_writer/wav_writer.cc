@@ -126,7 +126,8 @@ constexpr const uint32_t kWavHeaderOverhead =
 // cursor is positioned immediately after the headers, at the correct location
 // to write any audio samples we are given.
 // This private function assumes the given file_desc is valid.
-zx_status_t WriteNewHeader(int file_desc, AudioSampleFormat sample_format,
+zx_status_t WriteNewHeader(int file_desc,
+                           fuchsia::media::AudioSampleFormat sample_format,
                            uint32_t channel_count, uint32_t frame_rate,
                            uint16_t bits_per_sample) {
   if (channel_count > std::numeric_limits<uint16_t>::max()) {
@@ -142,13 +143,14 @@ zx_status_t WriteNewHeader(int file_desc, AudioSampleFormat sample_format,
     return ZX_ERR_IO;
   }
 
-  if (sample_format == AudioSampleFormat::FLOAT) {
+  if (sample_format == fuchsia::media::AudioSampleFormat::FLOAT) {
     FXL_DCHECK(bits_per_sample == 32);
   }
 
   WavHeader wave_header;
   wave_header.format =
-      (sample_format == AudioSampleFormat::FLOAT) ? FORMAT_FLOAT : FORMAT_LPCM;
+      (sample_format == fuchsia::media::AudioSampleFormat::FLOAT) ? FORMAT_FLOAT
+                                                                  : FORMAT_LPCM;
   wave_header.channel_count = channel_count;
   wave_header.frame_rate = frame_rate;
   wave_header.frame_size = (bits_per_sample >> 3) * channel_count;
@@ -227,10 +229,10 @@ fbl::atomic<uint32_t> WavWriter<true>::instance_count_(0u);
 // TODO(mpuryear): leverage utility code elsewhere for bytes-per-sample lookup,
 // for either FIDL-defined sample types and/or driver defined sample packings.
 template <bool enabled>
-bool WavWriter<enabled>::Initialize(const char* const file_name,
-                                    AudioSampleFormat sample_format,
-                                    uint32_t channel_count, uint32_t frame_rate,
-                                    uint32_t bits_per_sample) {
+bool WavWriter<enabled>::Initialize(
+    const char* const file_name,
+    fuchsia::media::AudioSampleFormat sample_format, uint32_t channel_count,
+    uint32_t frame_rate, uint32_t bits_per_sample) {
   // Open our output file.
   uint32_t instance_count = instance_count_.fetch_add(1);
   if (file_name == nullptr || strlen(file_name) == 0) {

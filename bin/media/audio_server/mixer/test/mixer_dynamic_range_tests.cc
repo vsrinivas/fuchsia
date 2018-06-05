@@ -19,8 +19,8 @@ constexpr double kFullScaleAccumAmplitude = 1 << (kAudioPipelineWidth - 1);
 // Ideal accompanying noise is ideal noise floor, minus the reduction in gain.
 void MeasureSummaryDynamicRange(Gain::AScale scale, double* level_db,
                                 double* sinad_db) {
-  MixerPtr mixer = SelectMixer(AudioSampleFormat::FLOAT, 1, 48000, 1, 48000,
-                               Resampler::SampleAndHold);
+  MixerPtr mixer = SelectMixer(fuchsia::media::AudioSampleFormat::FLOAT, 1,
+                               48000, 1, 48000, Resampler::SampleAndHold);
 
   std::vector<float> source(kFreqTestBufSize);
   std::vector<int32_t> accum(kFreqTestBufSize);
@@ -115,8 +115,8 @@ TEST(DynamicRange, 60Down) {
 
 // Test our mix level and noise floor, when rechannelizing mono into stereo.
 TEST(DynamicRange, MonoToStereo) {
-  MixerPtr mixer = SelectMixer(AudioSampleFormat::FLOAT, 1, 48000, 2, 48000,
-                               Resampler::SampleAndHold);
+  MixerPtr mixer = SelectMixer(fuchsia::media::AudioSampleFormat::FLOAT, 1,
+                               48000, 2, 48000, Resampler::SampleAndHold);
 
   std::vector<float> source(kFreqTestBufSize);
   std::vector<int32_t> accum(kFreqTestBufSize * 2);
@@ -158,8 +158,8 @@ TEST(DynamicRange, MonoToStereo) {
 
 // Test our mix level and noise floor, when rechannelizing stereo into mono.
 TEST(DynamicRange, StereoToMono) {
-  MixerPtr mixer = SelectMixer(AudioSampleFormat::FLOAT, 2, 48000, 1, 48000,
-                               Resampler::SampleAndHold);
+  MixerPtr mixer = SelectMixer(fuchsia::media::AudioSampleFormat::FLOAT, 2,
+                               48000, 1, 48000, Resampler::SampleAndHold);
 
   std::vector<float> mono(kFreqTestBufSize);
   std::vector<float> source(kFreqTestBufSize * 2);
@@ -234,18 +234,18 @@ void MeasureMixFloor(double* level_mix_db, double* sinad_mix_db) {
   double amplitude, expected_amplitude;
 
   if (std::is_same<T, uint8_t>::value) {
-    mixer = SelectMixer(AudioSampleFormat::UNSIGNED_8, 1, 48000, 1, 48000,
-                        Resampler::SampleAndHold);
+    mixer = SelectMixer(fuchsia::media::AudioSampleFormat::UNSIGNED_8, 1, 48000,
+                        1, 48000, Resampler::SampleAndHold);
     amplitude = std::numeric_limits<int8_t>::max();
     expected_amplitude = amplitude * (1 << (kAudioPipelineWidth - 8));
   } else if (std::is_same<T, int16_t>::value) {
-    mixer = SelectMixer(AudioSampleFormat::SIGNED_16, 1, 48000, 1, 48000,
-                        Resampler::SampleAndHold);
+    mixer = SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_16, 1, 48000,
+                        1, 48000, Resampler::SampleAndHold);
     amplitude = std::numeric_limits<int16_t>::max();
     expected_amplitude = amplitude * (1 << (kAudioPipelineWidth - 16));
   } else {
-    mixer = SelectMixer(AudioSampleFormat::FLOAT, 1, 48000, 1, 48000,
-                        Resampler::SampleAndHold);
+    mixer = SelectMixer(fuchsia::media::AudioSampleFormat::FLOAT, 1, 48000, 1,
+                        48000, Resampler::SampleAndHold);
     amplitude = kFullScaleFloatInputAmplitude;
     expected_amplitude = kFullScaleAccumAmplitude;
   }

@@ -13,8 +13,6 @@
 #include "lib/fxl/logging.h"
 #include "lib/media/timeline/timeline.h"
 
-using media::Timeline;
-
 namespace media_player {
 
 // static
@@ -114,7 +112,7 @@ void MediaPlayerNetProxy::CreateView(
 }
 
 void MediaPlayerNetProxy::SetAudioRenderer(
-    fidl::InterfaceHandle<media::AudioRenderer2> audio_renderer) {
+    fidl::InterfaceHandle<fuchsia::media::AudioRenderer2> audio_renderer) {
   FXL_LOG(ERROR)
       << "SetAudioRenderer called on MediaPlayer proxy - not supported.";
   UnbindAndReleaseFromOwner();
@@ -130,7 +128,7 @@ void MediaPlayerNetProxy::AddBinding(
 
 void MediaPlayerNetProxy::SendTimeCheckMessage() {
   message_relay_.SendMessage(Serializer::Serialize(
-      MediaPlayerInMessage::TimeCheckRequest(Timeline::local_now())));
+      MediaPlayerInMessage::TimeCheckRequest(media::Timeline::local_now())));
 }
 
 void MediaPlayerNetProxy::HandleReceivedMessage(
@@ -158,7 +156,7 @@ void MediaPlayerNetProxy::HandleReceivedMessage(
       // calculate the average of two values with (a + b) / 2. We use
       // a + (b - a) / 2, because it's less likely to overflow.
       int64_t local_then = message->time_check_response_->requestor_time_ +
-                           (Timeline::local_now() -
+                           (media::Timeline::local_now() -
                             message->time_check_response_->requestor_time_) /
                                2;
 

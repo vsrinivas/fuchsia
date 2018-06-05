@@ -6,7 +6,7 @@
 #define GARNET_BIN_MEDIA_AUDIO_SERVER_STANDARD_OUTPUT_BASE_H_
 
 #include <dispatcher-pool/dispatcher-timer.h>
-#include <media/cpp/fidl.h>
+#include <fuchsia/media/cpp/fidl.h>
 
 #include "garnet/bin/media/audio_server/audio_link.h"
 #include "garnet/bin/media/audio_server/audio_link_packet_source.h"
@@ -73,7 +73,7 @@ class StandardOutputBase : public AudioOutput {
 
   explicit StandardOutputBase(AudioDeviceManager* manager);
 
-  MediaResult Init() override;
+  fuchsia::media::MediaResult Init() override;
 
   void Process() FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token());
 

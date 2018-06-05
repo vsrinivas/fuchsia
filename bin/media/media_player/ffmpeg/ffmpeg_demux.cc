@@ -6,9 +6,9 @@
 #include <map>
 #include <thread>
 
+#include <fuchsia/media/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
-#include <media/cpp/fidl.h>
 #include <media_player/cpp/fidl.h>
 
 #include "garnet/bin/media/media_player/ffmpeg/av_codec_context.h"

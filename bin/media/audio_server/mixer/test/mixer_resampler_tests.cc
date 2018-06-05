@@ -40,8 +40,8 @@ using Resampler = media::audio::Mixer::Resampler;
 TEST(Resampling, Position_Basic_Point) {
   uint32_t frac_step_size = Mixer::FRAC_ONE;
   bool mix_result;
-  MixerPtr mixer = SelectMixer(AudioSampleFormat::SIGNED_16, 1, 24000, 1, 24000,
-                               Resampler::SampleAndHold);
+  MixerPtr mixer = SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_16, 1,
+                               24000, 1, 24000, Resampler::SampleAndHold);
 
   //
   // Check: source supply exceeds destination demand.
@@ -92,8 +92,8 @@ TEST(Resampling, Position_Basic_Linear) {
   uint32_t frac_step_size = Mixer::FRAC_ONE;
   bool mix_result;
 
-  MixerPtr mixer = SelectMixer(AudioSampleFormat::SIGNED_16, 1, 48000, 1, 48000,
-                               Resampler::LinearInterpolation);
+  MixerPtr mixer = SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_16, 1,
+                               48000, 1, 48000, Resampler::LinearInterpolation);
 
   //
   // Check: source supply equals destination demand.
@@ -164,8 +164,8 @@ TEST(Resampling, Position_Basic_Linear) {
 TEST(Resampling, Position_Fractional_Point) {
   uint32_t frac_step_size = Mixer::FRAC_ONE;
   bool mix_result;
-  MixerPtr mixer = SelectMixer(AudioSampleFormat::SIGNED_16, 1, 44100, 1, 44100,
-                               Resampler::SampleAndHold);
+  MixerPtr mixer = SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_16, 1,
+                               44100, 1, 44100, Resampler::SampleAndHold);
 
   //
   // Check: source supply exceeds destination demand
@@ -215,8 +215,8 @@ TEST(Resampling, Position_Fractional_Point) {
 TEST(Resampling, Position_Fractional_Linear) {
   uint32_t frac_step_size = Mixer::FRAC_ONE;
   bool mix_result;
-  MixerPtr mixer = SelectMixer(AudioSampleFormat::SIGNED_16, 1, 48000, 1, 48000,
-                               Resampler::LinearInterpolation);
+  MixerPtr mixer = SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_16, 1,
+                               48000, 1, 48000, Resampler::LinearInterpolation);
 
   //
   // Check: Source supply exceeds destination demand
@@ -265,8 +265,8 @@ TEST(Resampling, Position_Fractional_Linear) {
 }
 
 void TestPositionModulo(Resampler sampler_type) {
-  MixerPtr mixer =
-      SelectMixer(AudioSampleFormat::FLOAT, 1, 32000, 1, 48000, sampler_type);
+  MixerPtr mixer = SelectMixer(fuchsia::media::AudioSampleFormat::FLOAT, 1,
+                               32000, 1, 48000, sampler_type);
 
   int16_t source[] = {0, 1, 2};
   uint32_t frac_step_size = (Mixer::FRAC_ONE * 2) / 3;
@@ -314,9 +314,9 @@ TEST(Resampling, Position_Modulo_Linear) {
 void TestInterpolation(uint32_t source_frames_per_second,
                        uint32_t dest_frames_per_second) {
   bool mix_result;
-  MixerPtr mixer =
-      SelectMixer(AudioSampleFormat::FLOAT, 1, source_frames_per_second, 1,
-                  dest_frames_per_second, Resampler::LinearInterpolation);
+  MixerPtr mixer = SelectMixer(
+      fuchsia::media::AudioSampleFormat::FLOAT, 1, source_frames_per_second, 1,
+      dest_frames_per_second, Resampler::LinearInterpolation);
 
   // These values should lead to [-1,1,0,0] in the accumulator.
   float source[] = {-1.0f / (1 << (kAudioPipelineWidth - 1)),
@@ -454,8 +454,8 @@ TEST(Resampling, Interpolation_Rate_Max_Error) {
 
 // Verify PointSampler filter widths.
 TEST(Resampling, FilterWidth_Point) {
-  MixerPtr mixer = SelectMixer(AudioSampleFormat::UNSIGNED_8, 1, 48000, 1,
-                               48000, Resampler::SampleAndHold);
+  MixerPtr mixer = SelectMixer(fuchsia::media::AudioSampleFormat::UNSIGNED_8, 1,
+                               48000, 1, 48000, Resampler::SampleAndHold);
 
   EXPECT_EQ(mixer->pos_filter_width(), 0u);
   EXPECT_EQ(mixer->neg_filter_width(), Mixer::FRAC_ONE - 1);
@@ -468,8 +468,8 @@ TEST(Resampling, FilterWidth_Point) {
 
 // Verify LinearSampler filter widths.
 TEST(Resampling, FilterWidth_Linear) {
-  MixerPtr mixer = SelectMixer(AudioSampleFormat::FLOAT, 1, 44100, 1, 48000,
-                               Resampler::LinearInterpolation);
+  MixerPtr mixer = SelectMixer(fuchsia::media::AudioSampleFormat::FLOAT, 1,
+                               44100, 1, 48000, Resampler::LinearInterpolation);
 
   EXPECT_EQ(mixer->pos_filter_width(), Mixer::FRAC_ONE - 1);
   EXPECT_EQ(mixer->neg_filter_width(), Mixer::FRAC_ONE - 1);
@@ -484,8 +484,8 @@ TEST(Resampling, FilterWidth_Linear) {
 // Earlier test (Position_Fractional_Linear) already validates
 // that LinearSampler correctly caches edge values, so just validate Reset.
 TEST(Resampling, Reset_Linear) {
-  MixerPtr mixer = SelectMixer(AudioSampleFormat::SIGNED_16, 1, 48000, 1, 48000,
-                               Resampler::LinearInterpolation);
+  MixerPtr mixer = SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_16, 1,
+                               48000, 1, 48000, Resampler::LinearInterpolation);
 
   // When src_offset ends on fractional val, it caches that sample for next mix
   // Source (offset 0.5 of 3) has 2.5. Destination (offset 2 of 4) wants 2.

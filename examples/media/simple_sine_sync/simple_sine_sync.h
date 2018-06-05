@@ -5,8 +5,8 @@
 #ifndef GARNET_EXAMPLES_MEDIA_SIMPLE_SINE_SYNC_SIMPLE_SINE_SYNC_H_
 #define GARNET_EXAMPLES_MEDIA_SIMPLE_SINE_SYNC_SIMPLE_SINE_SYNC_H_
 
+#include <fuchsia/media/cpp/fidl.h>
 #include <lib/vmo-utils/vmo_mapper.h>
-#include <media/cpp/fidl.h>
 
 namespace examples {
 
@@ -36,12 +36,12 @@ class MediaApp {
 
   bool RefillBuffer();
 
-  media::AudioPacket CreateAudioPacket(size_t payload_num);
-  bool SendAudioPacket(media::AudioPacket packet);
+  fuchsia::media::AudioPacket CreateAudioPacket(size_t payload_num);
+  bool SendAudioPacket(fuchsia::media::AudioPacket packet);
 
   void WaitForPackets(size_t num_packets);
 
-  media::AudioRenderer2SyncPtr audio_renderer_;
+  fuchsia::media::AudioRenderer2SyncPtr audio_renderer_;
 
   vmo_utils::VmoMapper payload_buffer_;
   size_t sample_size_;

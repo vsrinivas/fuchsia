@@ -370,14 +370,16 @@ bool NxNPointSamplerImpl<SType>::Mix(
 // Templates used to expand all of the different combinations of the possible
 // PointSampler Mixer configurations.
 template <size_t DChCount, typename SType, size_t SChCount>
-static inline MixerPtr SelectPSM(const AudioMediaTypeDetails& src_format,
-                                 const AudioMediaTypeDetails& dst_format) {
+static inline MixerPtr SelectPSM(
+    const fuchsia::media::AudioMediaTypeDetails& src_format,
+    const fuchsia::media::AudioMediaTypeDetails& dst_format) {
   return MixerPtr(new PointSamplerImpl<DChCount, SType, SChCount>());
 }
 
 template <size_t DChCount, typename SType>
-static inline MixerPtr SelectPSM(const AudioMediaTypeDetails& src_format,
-                                 const AudioMediaTypeDetails& dst_format) {
+static inline MixerPtr SelectPSM(
+    const fuchsia::media::AudioMediaTypeDetails& src_format,
+    const fuchsia::media::AudioMediaTypeDetails& dst_format) {
   switch (src_format.channels) {
     case 1:
       return SelectPSM<DChCount, SType, 1>(src_format, dst_format);
@@ -389,35 +391,38 @@ static inline MixerPtr SelectPSM(const AudioMediaTypeDetails& src_format,
 }
 
 template <size_t DChCount>
-static inline MixerPtr SelectPSM(const AudioMediaTypeDetails& src_format,
-                                 const AudioMediaTypeDetails& dst_format) {
+static inline MixerPtr SelectPSM(
+    const fuchsia::media::AudioMediaTypeDetails& src_format,
+    const fuchsia::media::AudioMediaTypeDetails& dst_format) {
   switch (src_format.sample_format) {
-    case AudioSampleFormat::UNSIGNED_8:
+    case fuchsia::media::AudioSampleFormat::UNSIGNED_8:
       return SelectPSM<DChCount, uint8_t>(src_format, dst_format);
-    case AudioSampleFormat::SIGNED_16:
+    case fuchsia::media::AudioSampleFormat::SIGNED_16:
       return SelectPSM<DChCount, int16_t>(src_format, dst_format);
-    case AudioSampleFormat::FLOAT:
+    case fuchsia::media::AudioSampleFormat::FLOAT:
       return SelectPSM<DChCount, float>(src_format, dst_format);
     default:
       return nullptr;
   }
 }
 
-static inline MixerPtr SelectNxNPSM(const AudioMediaTypeDetails& src_format) {
+static inline MixerPtr SelectNxNPSM(
+    const fuchsia::media::AudioMediaTypeDetails& src_format) {
   switch (src_format.sample_format) {
-    case AudioSampleFormat::UNSIGNED_8:
+    case fuchsia::media::AudioSampleFormat::UNSIGNED_8:
       return MixerPtr(new NxNPointSamplerImpl<uint8_t>(src_format.channels));
-    case AudioSampleFormat::SIGNED_16:
+    case fuchsia::media::AudioSampleFormat::SIGNED_16:
       return MixerPtr(new NxNPointSamplerImpl<int16_t>(src_format.channels));
-    case AudioSampleFormat::FLOAT:
+    case fuchsia::media::AudioSampleFormat::FLOAT:
       return MixerPtr(new NxNPointSamplerImpl<float>(src_format.channels));
     default:
       return nullptr;
   }
 }
 
-MixerPtr PointSampler::Select(const AudioMediaTypeDetails& src_format,
-                              const AudioMediaTypeDetails& dst_format) {
+MixerPtr PointSampler::Select(
+    const fuchsia::media::AudioMediaTypeDetails& src_format,
+    const fuchsia::media::AudioMediaTypeDetails& dst_format) {
   if (src_format.channels == dst_format.channels && src_format.channels > 2) {
     return SelectNxNPSM(src_format);
   }

@@ -7,7 +7,7 @@
 #include <algorithm>
 #include <cmath>
 
-#include <media/cpp/fidl.h>
+#include <fuchsia/media/cpp/fidl.h>
 
 #include "lib/fxl/logging.h"
 
@@ -35,7 +35,7 @@ float PerceivedLevel::GainToLevel(float gain) {
 // static
 float PerceivedLevel::LevelToGain(float level) {
   if (level <= 0.0f) {
-    return kMutedGain;
+    return fuchsia::media::kMutedGain;
   }
 
   if (level >= 1.0f) {
@@ -65,7 +65,7 @@ float PerceivedLevel::LevelToGain(int level, int max_level) {
   FXL_DCHECK(max_level > 0);
 
   if (level <= 0) {
-    return kMutedGain;
+    return fuchsia::media::kMutedGain;
   }
 
   if (level >= max_level) {

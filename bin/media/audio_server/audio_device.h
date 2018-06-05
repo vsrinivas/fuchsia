@@ -64,7 +64,8 @@ class AudioDevice : public AudioObject {
   //
   // TODO(johngro) : Remove this once device driver format selection is under
   // control of the policy manager layer instead of here.
-  virtual void NotifyDestFormatPreference(const AudioMediaTypeDetailsPtr& fmt)
+  virtual void NotifyDestFormatPreference(
+      const fuchsia::media::AudioMediaTypeDetailsPtr& fmt)
       FXL_LOCKS_EXCLUDED(mix_domain_->token()) {}
 
   // GetSourceFormatPreference
@@ -77,7 +78,7 @@ class AudioDevice : public AudioObject {
   // what formats they support, and to influence what their capturers can be
   // bound to or not.  "Preference" of an audio device is not a concept which
   // belongs in the mixer.
-  virtual AudioMediaTypeDetailsPtr GetSourceFormatPreference() {
+  virtual fuchsia::media::AudioMediaTypeDetailsPtr GetSourceFormatPreference() {
     return nullptr;
   }
 
@@ -98,7 +99,7 @@ class AudioDevice : public AudioObject {
   // locks are being held at this point.  Derived classes should allocate their
   // hardware resources and initialize any internal state.  Return
   // MediaResult::OK if everything is good and the output is ready to do work.
-  virtual MediaResult Init();
+  virtual fuchsia::media::MediaResult Init();
 
   // Cleanup
   //
@@ -212,7 +213,7 @@ class AudioDevice : public AudioObject {
   // Gives derived classes a chance to set up hardware, then sets up the
   // machinery needed for scheduling processing tasks and schedules the first
   // processing callback immediately in order to get the process running.
-  MediaResult Startup();
+  fuchsia::media::MediaResult Startup();
 
   // Called from the AudioDeviceManager on the main message loop
   // thread.  Makes certain that the process of shutdown has started,

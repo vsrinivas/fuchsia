@@ -7,10 +7,10 @@
 #include <iomanip>
 
 #include <fcntl.h>
+#include <fuchsia/media/cpp/fidl.h>
 #include <lib/async-loop/loop.h>
 #include <lib/async/default.h>
 #include <lib/fit/function.h>
-#include <media/cpp/fidl.h>
 
 #include "garnet/examples/media/audio_player/audio_player_params.h"
 #include "lib/app/cpp/connect.h"

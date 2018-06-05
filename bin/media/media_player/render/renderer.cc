@@ -52,8 +52,10 @@ void Renderer::SetProgramRange(uint64_t program, int64_t min_pts,
 
 void Renderer::SetTimelineFunction(media::TimelineFunction timeline_function,
                                    fit::closure callback) {
-  FXL_DCHECK(timeline_function.subject_time() != media::kUnspecifiedTime);
-  FXL_DCHECK(timeline_function.reference_time() != media::kUnspecifiedTime);
+  FXL_DCHECK(timeline_function.subject_time() !=
+             fuchsia::media::kUnspecifiedTime);
+  FXL_DCHECK(timeline_function.reference_time() !=
+             fuchsia::media::kUnspecifiedTime);
   FXL_DCHECK(timeline_function.reference_delta() != 0);
 
   bool was_progressing = Progressing();
@@ -73,7 +75,7 @@ void Renderer::SetTimelineFunction(media::TimelineFunction timeline_function,
 }
 
 bool Renderer::end_of_stream() const {
-  return end_of_stream_pts_ != media::kUnspecifiedTime &&
+  return end_of_stream_pts_ != fuchsia::media::kUnspecifiedTime &&
          current_timeline_function_(media::Timeline::local_now()) >=
              end_of_stream_pts_;
 }
@@ -127,7 +129,7 @@ void Renderer::ApplyPendingChanges(int64_t reference_time) {
 
 void Renderer::ClearPendingTimelineFunction() {
   pending_timeline_function_ = media::TimelineFunction(
-      media::kUnspecifiedTime, media::kUnspecifiedTime, 0, 1);
+      fuchsia::media::kUnspecifiedTime, fuchsia::media::kUnspecifiedTime, 0, 1);
 
   if (set_timeline_function_callback_) {
     fit::closure callback = std::move(set_timeline_function_callback_);

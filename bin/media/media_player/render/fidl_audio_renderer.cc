@@ -22,11 +22,12 @@ constexpr int64_t kWarnThresholdNs = ZX_MSEC(500);
 
 // static
 std::shared_ptr<FidlAudioRenderer> FidlAudioRenderer::Create(
-    media::AudioRenderer2Ptr audio_renderer) {
+    fuchsia::media::AudioRenderer2Ptr audio_renderer) {
   return std::make_shared<FidlAudioRenderer>(std::move(audio_renderer));
 }
 
-FidlAudioRenderer::FidlAudioRenderer(media::AudioRenderer2Ptr audio_renderer)
+FidlAudioRenderer::FidlAudioRenderer(
+    fuchsia::media::AudioRenderer2Ptr audio_renderer)
     : audio_renderer_(std::move(audio_renderer)),
       allocator_(0),
       arrivals_(true),
@@ -52,19 +53,25 @@ FidlAudioRenderer::FidlAudioRenderer(media::AudioRenderer2Ptr audio_renderer)
   supported_stream_types_.push_back(AudioStreamTypeSet::Create(
       {StreamType::kAudioEncodingLpcm},
       AudioStreamType::SampleFormat::kUnsigned8,
-      Range<uint32_t>(media::kMinChannelCount, media::kMaxChannelCount),
-      Range<uint32_t>(media::kMinFramesPerSecond, media::kMaxFramesPerSecond)));
+      Range<uint32_t>(fuchsia::media::kMinChannelCount,
+                      fuchsia::media::kMaxChannelCount),
+      Range<uint32_t>(fuchsia::media::kMinFramesPerSecond,
+                      fuchsia::media::kMaxFramesPerSecond)));
 
   supported_stream_types_.push_back(AudioStreamTypeSet::Create(
       {StreamType::kAudioEncodingLpcm},
       AudioStreamType::SampleFormat::kSigned16,
-      Range<uint32_t>(media::kMinChannelCount, media::kMaxChannelCount),
-      Range<uint32_t>(media::kMinFramesPerSecond, media::kMaxFramesPerSecond)));
+      Range<uint32_t>(fuchsia::media::kMinChannelCount,
+                      fuchsia::media::kMaxChannelCount),
+      Range<uint32_t>(fuchsia::media::kMinFramesPerSecond,
+                      fuchsia::media::kMaxFramesPerSecond)));
 
   supported_stream_types_.push_back(AudioStreamTypeSet::Create(
       {StreamType::kAudioEncodingLpcm}, AudioStreamType::SampleFormat::kFloat,
-      Range<uint32_t>(media::kMinChannelCount, media::kMaxChannelCount),
-      Range<uint32_t>(media::kMinFramesPerSecond, media::kMaxFramesPerSecond)));
+      Range<uint32_t>(fuchsia::media::kMinChannelCount,
+                      fuchsia::media::kMaxChannelCount),
+      Range<uint32_t>(fuchsia::media::kMinFramesPerSecond,
+                      fuchsia::media::kMaxFramesPerSecond)));
 }
 
 FidlAudioRenderer::~FidlAudioRenderer() {
@@ -106,12 +113,12 @@ void FidlAudioRenderer::FlushInput(bool hold_frame_not_used, size_t input_index,
   FXL_DCHECK(callback);
 
   flushed_ = true;
-  SetEndOfStreamPts(media::kUnspecifiedTime);
+  SetEndOfStreamPts(fuchsia::media::kUnspecifiedTime);
 
   audio_renderer_->Flush(
       fxl::MakeCopyable([this, callback = std::move(callback)]() {
         last_supplied_pts_ns_ = 0;
-        last_departed_pts_ns_ = media::kUnspecifiedTime;
+        last_departed_pts_ns_ = fuchsia::media::kUnspecifiedTime;
         callback();
       }));
 }
@@ -139,7 +146,7 @@ void FidlAudioRenderer::PutInputPacket(PacketPtr packet, size_t input_index) {
                       Progressing());
 
   last_supplied_pts_ns_ = end_pts_ns;
-  if (last_departed_pts_ns_ == media::kUnspecifiedTime) {
+  if (last_departed_pts_ns_ == fuchsia::media::kUnspecifiedTime) {
     last_departed_pts_ns_ = start_pts_ns;
   }
 
@@ -162,7 +169,7 @@ void FidlAudioRenderer::PutInputPacket(PacketPtr packet, size_t input_index) {
     packet.reset();
     UpdateTimeline(media::Timeline::local_now());
   } else {
-    media::AudioPacket audioPacket;
+    fuchsia::media::AudioPacket audioPacket;
     audioPacket.timestamp = start_pts;
     audioPacket.payload_size = packet->size();
 
@@ -202,9 +209,9 @@ void FidlAudioRenderer::SetStreamType(const StreamType& stream_type) {
   FXL_DCHECK(async_get_default() == async());
   FXL_DCHECK(stream_type.audio());
 
-  media::AudioPcmFormat format;
-  format.sample_format =
-      fxl::To<media::AudioSampleFormat>(stream_type.audio()->sample_format());
+  fuchsia::media::AudioPcmFormat format;
+  format.sample_format = fxl::To<fuchsia::media::AudioSampleFormat>(
+      stream_type.audio()->sample_format());
   format.channels = stream_type.audio()->channels();
   format.frames_per_second = stream_type.audio()->frames_per_second();
 
@@ -319,7 +326,7 @@ bool FidlAudioRenderer::NeedMorePackets() {
 
   if (presentation_time_ns + min_lead_time_ns_ > last_supplied_pts_ns_) {
     // We need more packets to meet lead time commitments.
-    if (last_departed_pts_ns_ != media::kUnspecifiedTime &&
+    if (last_departed_pts_ns_ != fuchsia::media::kUnspecifiedTime &&
         last_supplied_pts_ns_ - last_departed_pts_ns_ > kWarnThresholdNs) {
       FXL_LOG(WARNING) << "Audio renderer holding too much content:";
       FXL_LOG(WARNING) << "    total content "

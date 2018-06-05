@@ -111,13 +111,13 @@ void AudioDriver::SnapshotRingBuffer(RingBufferSnapshot* snapshot) const {
   snapshot->gen_id = ring_buffer_state_gen_.get();
 }
 
-AudioMediaTypeDetailsPtr AudioDriver::GetSourceFormat() const {
+fuchsia::media::AudioMediaTypeDetailsPtr AudioDriver::GetSourceFormat() const {
   std::lock_guard<std::mutex> lock(configured_format_lock_);
 
   if (!configured_format_)
     return nullptr;
 
-  AudioMediaTypeDetailsPtr result;
+  fuchsia::media::AudioMediaTypeDetailsPtr result;
   fidl::Clone(configured_format_, &result);
   return result;
 }
@@ -161,7 +161,8 @@ zx_status_t AudioDriver::GetSupportedFormats() {
 }
 
 zx_status_t AudioDriver::Configure(uint32_t frames_per_second,
-                                   uint32_t channels, AudioSampleFormat fmt,
+                                   uint32_t channels,
+                                   fuchsia::media::AudioSampleFormat fmt,
                                    zx_duration_t min_ring_buffer_duration) {
   // TODO(johngro) : Figure out a better way to assert this!
   OBTAIN_EXECUTION_DOMAIN_TOKEN(token, owner_->mix_domain_);
@@ -230,7 +231,7 @@ zx_status_t AudioDriver::Configure(uint32_t frames_per_second,
 
   {
     std::lock_guard<std::mutex> lock(configured_format_lock_);
-    configured_format_ = AudioMediaTypeDetails::New();
+    configured_format_ = fuchsia::media::AudioMediaTypeDetails::New();
     configured_format_->sample_format = fmt;
     configured_format_->channels = channels;
     configured_format_->frames_per_second = frames_per_second;

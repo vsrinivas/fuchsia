@@ -15,7 +15,7 @@ namespace audio {
 zx_status_t SelectBestFormat(
     const std::vector<audio_stream_format_range_t>& fmts,
     uint32_t* frames_per_second_inout, uint32_t* channels_inout,
-    AudioSampleFormat* sample_format_inout) {
+    fuchsia::media::AudioSampleFormat* sample_format_inout) {
   if ((frames_per_second_inout == nullptr) || (channels_inout == nullptr) ||
       (sample_format_inout == nullptr)) {
     return ZX_ERR_INVALID_ARGS;

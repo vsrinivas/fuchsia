@@ -2,16 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-library media;
-
-// Timing controller for a media graph.
-interface MediaTimelineController {
-  // Associates a control point with the controller.
-  1: AddControlPoint(MediaTimelineControlPoint control_point);
-
-  // Gets a timeline control point interface for the controller.
-  2: GetControlPoint(request<MediaTimelineControlPoint> control_point);
-};
+library fuchsia.media;
 
 // Media graph component controlled by a MediaTimelineController.
 interface MediaTimelineControlPoint {

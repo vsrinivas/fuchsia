@@ -7,6 +7,7 @@
 #include <fbl/auto_call.h>
 #include <fbl/limits.h>
 #include <fbl/unique_ptr.h>
+#include <fuchsia/media/cpp/fidl.h>
 #include <inttypes.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/task.h>
@@ -16,7 +17,6 @@
 #include <lib/zx/time.h>
 #include <lib/zx/vmar.h>
 #include <lib/zx/vmo.h>
-#include <media/cpp/fidl.h>
 #include <stdio.h>
 #include <zircon/compiler.h>
 #include <zircon/errors.h>
@@ -82,7 +82,7 @@ class FxProcessor {
     FXL_DCHECK(quit_callback_);
   }
 
-  void Startup(media::AudioServerPtr audio_server);
+  void Startup(fuchsia::media::AudioServerPtr audio_server);
 
  private:
   using EffectFn = void (FxProcessor::*)(int16_t* src, int16_t* dst,
@@ -104,8 +104,8 @@ class FxProcessor {
   void HandleKeystroke(zx_status_t status, uint32_t events);
   void Shutdown(const char* reason = "unknown");
   void ProcessInput();
-  void ProduceOutputPackets(::media::AudioPacket* out_pkt1,
-                            ::media::AudioPacket* out_pkt2);
+  void ProduceOutputPackets(fuchsia::media::AudioPacket* out_pkt1,
+                            fuchsia::media::AudioPacket* out_pkt2);
   void ApplyEffect(int16_t* src, uint32_t src_offset, uint32_t src_rb_size,
                    int16_t* dst, uint32_t dst_offset, uint32_t dst_rb_size,
                    uint32_t frames, EffectFn effect);
@@ -151,7 +151,7 @@ class FxProcessor {
   fbl::unique_ptr<AudioInput> input_;
   fit::closure quit_callback_;
   uint32_t input_buffer_frames_ = 0;
-  media::AudioRenderer2Ptr audio_renderer_;
+  fuchsia::media::AudioRenderer2Ptr audio_renderer_;
   media::TimelineFunction clock_mono_to_input_wr_ptr_;
   fsl::FDWaiter keystroke_waiter_;
   media::audio::WavWriter<kWavWriterEnabled> wav_writer_;
@@ -160,7 +160,7 @@ class FxProcessor {
   bool lead_time_frames_known_ = false;
 };
 
-void FxProcessor::Startup(media::AudioServerPtr audio_server) {
+void FxProcessor::Startup(fuchsia::media::AudioServerPtr audio_server) {
   auto cleanup = fbl::MakeAutoCall([this] { Shutdown("Startup failure"); });
 
   zx_thread_set_priority(24 /* HIGH_PRIORITY in LK */);
@@ -174,7 +174,7 @@ void FxProcessor::Startup(media::AudioServerPtr audio_server) {
   input_buffer_frames_ = input_->ring_buffer_bytes() / input_->frame_sz();
 
   if (!wav_writer_.Initialize(
-          "/tmp/fx.wav", media::AudioSampleFormat::SIGNED_16,
+          "/tmp/fx.wav", fuchsia::media::AudioSampleFormat::SIGNED_16,
           input_->channel_cnt(), input_->frame_rate(), 16)) {
     printf("Unable to initialize WAV file for recording.\n");
     return;
@@ -183,12 +183,13 @@ void FxProcessor::Startup(media::AudioServerPtr audio_server) {
   // Create a renderer.  Setup connection error handlers.
   audio_server->CreateRendererV2(audio_renderer_.NewRequest());
 
-  audio_renderer_.set_error_handler(
-      [this]() { Shutdown("AudioRenderer connection closed"); });
+  audio_renderer_.set_error_handler([this]() {
+    Shutdown("fuchsia::media::AudioRenderer connection closed");
+  });
 
   // Set the format.
-  media::AudioPcmFormat format;
-  format.sample_format = media::AudioSampleFormat::SIGNED_16;
+  fuchsia::media::AudioPcmFormat format;
+  format.sample_format = fuchsia::media::AudioSampleFormat::SIGNED_16;
   format.channels = input_->channel_cnt();
   format.frames_per_second = input_->frame_rate();
   audio_renderer_->SetPcmFormat(std::move(format));
@@ -442,7 +443,7 @@ void FxProcessor::Shutdown(const char* reason) {
 }
 
 void FxProcessor::ProcessInput() {
-  media::AudioPacket pkt1, pkt2;
+  fuchsia::media::AudioPacket pkt1, pkt2;
 
   pkt1.payload_size = 0;
   pkt2.payload_size = 0;
@@ -481,8 +482,8 @@ void FxProcessor::ProcessInput() {
                          zx::nsec(PROCESS_CHUNK_TIME));
 }
 
-void FxProcessor::ProduceOutputPackets(::media::AudioPacket* out_pkt1,
-                                       ::media::AudioPacket* out_pkt2) {
+void FxProcessor::ProduceOutputPackets(fuchsia::media::AudioPacket* out_pkt1,
+                                       fuchsia::media::AudioPacket* out_pkt2) {
   // Figure out how much input data we have to process.
   zx_time_t now = zx_clock_get(ZX_CLOCK_MONOTONIC);
   int64_t input_wp = clock_mono_to_input_wr_ptr_.Apply(now);
@@ -524,7 +525,7 @@ void FxProcessor::ProduceOutputPackets(::media::AudioPacket* out_pkt1,
     out_pkt2->payload_offset = 0;
     out_pkt2->payload_size = (todo - pkt1_frames) * input_->frame_sz();
   } else {
-    out_pkt2->timestamp = ::media::kNoTimestamp;
+    out_pkt2->timestamp = fuchsia::media::kNoTimestamp;
     out_pkt2->payload_offset = 0;
     out_pkt2->payload_size = 0;
   }
@@ -732,8 +733,9 @@ int main(int argc, char** argv) {
   std::unique_ptr<fuchsia::sys::StartupContext> startup_context =
       fuchsia::sys::StartupContext::CreateFromStartupInfo();
 
-  media::AudioServerPtr audio_server =
-      startup_context->ConnectToEnvironmentService<media::AudioServer>();
+  fuchsia::media::AudioServerPtr audio_server =
+      startup_context
+          ->ConnectToEnvironmentService<fuchsia::media::AudioServer>();
 
   FxProcessor fx(fbl::move(input), [&loop]() {
     async::PostTask(loop.async(), [&loop]() { loop.Quit(); });

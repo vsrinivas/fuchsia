@@ -23,30 +23,32 @@ using Resampler = media::audio::Mixer::Resampler;
 //
 // Create PointSampler objects for incoming buffers of type uint8
 TEST(DataFormats, PointSampler_8) {
-  EXPECT_NE(nullptr, SelectMixer(AudioSampleFormat::UNSIGNED_8, 2, 32000, 1,
-                                 16000, Resampler::SampleAndHold));
-  EXPECT_NE(nullptr,
-            SelectMixer(AudioSampleFormat::UNSIGNED_8, 4, 48000, 4, 48000));
+  EXPECT_NE(nullptr, SelectMixer(fuchsia::media::AudioSampleFormat::UNSIGNED_8,
+                                 2, 32000, 1, 16000, Resampler::SampleAndHold));
+  EXPECT_NE(nullptr, SelectMixer(fuchsia::media::AudioSampleFormat::UNSIGNED_8,
+                                 4, 48000, 4, 48000));
 }
 
 // Create PointSampler objects for incoming buffers of type int16
 TEST(DataFormats, PointSampler_16) {
-  EXPECT_NE(nullptr, SelectMixer(AudioSampleFormat::SIGNED_16, 1, 24000, 1,
-                                 24000, Resampler::SampleAndHold));
-  EXPECT_NE(nullptr, SelectMixer(AudioSampleFormat::SIGNED_16, 1, 44100, 2,
-                                 11025, Resampler::Default));
+  EXPECT_NE(nullptr, SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_16,
+                                 1, 24000, 1, 24000, Resampler::SampleAndHold));
+  EXPECT_NE(nullptr, SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_16,
+                                 1, 44100, 2, 11025, Resampler::Default));
 }
 
 // Create PointSampler objects for incoming buffers of type float
 TEST(DataFormats, PointSampler_Float) {
-  EXPECT_NE(nullptr, SelectMixer(AudioSampleFormat::FLOAT, 2, 48000, 2, 16000));
+  EXPECT_NE(nullptr, SelectMixer(fuchsia::media::AudioSampleFormat::FLOAT, 2,
+                                 48000, 2, 16000));
 }
 
 // Create PointSampler objects for other formats of incoming buffers
 // This is not expected to work, as these are not yet implemented
 TEST(DataFormats, PointSampler_Other) {
-  EXPECT_EQ(nullptr, SelectMixer(AudioSampleFormat::SIGNED_24_IN_32, 2, 8000, 1,
-                                 8000, Resampler::SampleAndHold));
+  EXPECT_EQ(nullptr,
+            SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32, 2,
+                        8000, 1, 8000, Resampler::SampleAndHold));
 }
 
 // If the source sample rate is NOT an integer-multiple of the destination rate
@@ -55,54 +57,62 @@ TEST(DataFormats, PointSampler_Other) {
 //
 // Create LinearSampler objects for incoming buffers of type uint8
 TEST(DataFormats, LinearSampler_8) {
-  EXPECT_NE(nullptr, SelectMixer(AudioSampleFormat::UNSIGNED_8, 1, 22050, 2,
-                                 44100, Resampler::LinearInterpolation));
   EXPECT_NE(nullptr,
-            SelectMixer(AudioSampleFormat::UNSIGNED_8, 2, 44100, 1, 48000));
+            SelectMixer(fuchsia::media::AudioSampleFormat::UNSIGNED_8, 1, 22050,
+                        2, 44100, Resampler::LinearInterpolation));
+  EXPECT_NE(nullptr, SelectMixer(fuchsia::media::AudioSampleFormat::UNSIGNED_8,
+                                 2, 44100, 1, 48000));
 }
 
 // Create LinearSampler objects for incoming buffers of type int16
 TEST(DataFormats, LinearSampler_16) {
-  EXPECT_NE(nullptr, SelectMixer(AudioSampleFormat::SIGNED_16, 2, 16000, 2,
-                                 48000, Resampler::LinearInterpolation));
-  EXPECT_NE(nullptr, SelectMixer(AudioSampleFormat::SIGNED_16, 2, 44100, 1,
-                                 48000, Resampler::Default));
   EXPECT_NE(nullptr,
-            SelectMixer(AudioSampleFormat::SIGNED_16, 8, 48000, 8, 44100));
+            SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_16, 2, 16000,
+                        2, 48000, Resampler::LinearInterpolation));
+  EXPECT_NE(nullptr, SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_16,
+                                 2, 44100, 1, 48000, Resampler::Default));
+  EXPECT_NE(nullptr, SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_16,
+                                 8, 48000, 8, 44100));
 }
 
 // Create LinearSampler objects for incoming buffers of type float
 TEST(DataFormats, LinearSampler_Float) {
-  EXPECT_NE(nullptr, SelectMixer(AudioSampleFormat::FLOAT, 2, 48000, 2, 44100));
+  EXPECT_NE(nullptr, SelectMixer(fuchsia::media::AudioSampleFormat::FLOAT, 2,
+                                 48000, 2, 44100));
 }
 
 // Create LinearSampler objects for other formats of incoming buffers
 // This is not expected to work, as these are not yet implemented
 TEST(DataFormats, LinearSampler_Other) {
   EXPECT_EQ(nullptr,
-            SelectMixer(AudioSampleFormat::SIGNED_24_IN_32, 2, 8000, 1, 11025));
+            SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32, 2,
+                        8000, 1, 11025));
 }
 
 // Create OutputFormatter objects for outgoing buffers of type uint8
 TEST(DataFormats, OutputFormatter_8) {
-  EXPECT_NE(nullptr, SelectOutputFormatter(AudioSampleFormat::UNSIGNED_8, 2));
+  EXPECT_NE(nullptr, SelectOutputFormatter(
+                         fuchsia::media::AudioSampleFormat::UNSIGNED_8, 2));
 }
 
 // Create OutputFormatter objects for outgoing buffers of type int16
 TEST(DataFormats, OutputFormatter_16) {
-  EXPECT_NE(nullptr, SelectOutputFormatter(AudioSampleFormat::SIGNED_16, 4));
+  EXPECT_NE(nullptr, SelectOutputFormatter(
+                         fuchsia::media::AudioSampleFormat::SIGNED_16, 4));
 }
 
 // Create OutputFormatter objects for outgoing buffers of type float
 TEST(DataFormats, OutputFormatter_Float) {
-  EXPECT_NE(nullptr, SelectOutputFormatter(AudioSampleFormat::FLOAT, 1));
+  EXPECT_NE(nullptr,
+            SelectOutputFormatter(fuchsia::media::AudioSampleFormat::FLOAT, 1));
 }
 
 // Create OutputFormatter objects for other output formats
 // This is not expected to work, as these are not yet implemented
 TEST(DataFormats, OutputFormatter_Other) {
   EXPECT_EQ(nullptr,
-            SelectOutputFormatter(AudioSampleFormat::SIGNED_24_IN_32, 3));
+            SelectOutputFormatter(
+                fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32, 3));
 }
 
 //
@@ -125,13 +135,13 @@ TEST(PassThru, Source_8) {
                       -0x010000, 0,        0x260000,  -0x130000};
   NormalizeInt24ToPipelineBitwidth(expect, fbl::count_of(expect));
 
-  MixerPtr mixer = SelectMixer(AudioSampleFormat::UNSIGNED_8, 1, 48000, 1,
-                               48000, Resampler::SampleAndHold);
+  MixerPtr mixer = SelectMixer(fuchsia::media::AudioSampleFormat::UNSIGNED_8, 1,
+                               48000, 1, 48000, Resampler::SampleAndHold);
   DoMix(std::move(mixer), source, accum, false, fbl::count_of(accum));
   EXPECT_TRUE(CompareBuffers(accum, expect, fbl::count_of(accum)));
 
-  mixer = SelectMixer(AudioSampleFormat::UNSIGNED_8, 8, 48000, 8, 48000,
-                      Resampler::SampleAndHold);
+  mixer = SelectMixer(fuchsia::media::AudioSampleFormat::UNSIGNED_8, 8, 48000,
+                      8, 48000, Resampler::SampleAndHold);
   DoMix(std::move(mixer), source, accum, false, fbl::count_of(accum) / 8);
   EXPECT_TRUE(CompareBuffers(accum, expect, fbl::count_of(accum)));
 }
@@ -148,15 +158,15 @@ TEST(PassThru, Source_16) {
   NormalizeInt24ToPipelineBitwidth(expect, fbl::count_of(expect));
 
   // Try in 2-channel mode
-  MixerPtr mixer = SelectMixer(AudioSampleFormat::SIGNED_16, 2, 48000, 2, 48000,
-                               Resampler::SampleAndHold);
+  MixerPtr mixer = SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_16, 2,
+                               48000, 2, 48000, Resampler::SampleAndHold);
   DoMix(std::move(mixer), source, accum, false, fbl::count_of(accum) / 2);
   EXPECT_TRUE(CompareBuffers(accum, expect, fbl::count_of(accum)));
 
   ::memset(accum, 0, sizeof(accum));
   // Now try in 4-channel mode
-  mixer = SelectMixer(AudioSampleFormat::SIGNED_16, 4, 48000, 4, 48000,
-                      Resampler::SampleAndHold);
+  mixer = SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_16, 4, 48000, 4,
+                      48000, Resampler::SampleAndHold);
   DoMix(std::move(mixer), source, accum, false, fbl::count_of(accum) / 4);
   EXPECT_TRUE(CompareBuffers(accum, expect, fbl::count_of(accum)));
 }
@@ -174,15 +184,15 @@ TEST(PassThru, Source_Float) {
   NormalizeInt24ToPipelineBitwidth(expect, fbl::count_of(expect));
 
   // Try in 1-channel mode
-  MixerPtr mixer = SelectMixer(AudioSampleFormat::FLOAT, 1, 48000, 1, 48000,
-                               Resampler::SampleAndHold);
+  MixerPtr mixer = SelectMixer(fuchsia::media::AudioSampleFormat::FLOAT, 1,
+                               48000, 1, 48000, Resampler::SampleAndHold);
   DoMix(std::move(mixer), source, accum, false, fbl::count_of(accum));
   EXPECT_TRUE(CompareBuffers(accum, expect, fbl::count_of(accum)));
 
   ::memset(accum, 0, sizeof(accum));
   // Now try in 4-channel mode
-  mixer = SelectMixer(AudioSampleFormat::FLOAT, 4, 48000, 4, 48000,
-                      Resampler::SampleAndHold);
+  mixer = SelectMixer(fuchsia::media::AudioSampleFormat::FLOAT, 4, 48000, 4,
+                      48000, Resampler::SampleAndHold);
   DoMix(std::move(mixer), source, accum, false, fbl::count_of(accum) / 4);
   EXPECT_TRUE(CompareBuffers(accum, expect, fbl::count_of(accum)));
 }
@@ -220,8 +230,8 @@ TEST(PassThru, MonoToStereo) {
                       0x100,     0x100,     0x7FFF00,  0x7FFF00};
   NormalizeInt24ToPipelineBitwidth(expect, fbl::count_of(expect));
 
-  MixerPtr mixer = SelectMixer(AudioSampleFormat::SIGNED_16, 1, 48000, 2, 48000,
-                               Resampler::SampleAndHold);
+  MixerPtr mixer = SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_16, 1,
+                               48000, 2, 48000, Resampler::SampleAndHold);
   DoMix(std::move(mixer), source, accum, false, fbl::count_of(accum) / 2);
   EXPECT_TRUE(CompareBuffers(accum, expect, fbl::count_of(accum)));
 }
@@ -232,8 +242,8 @@ TEST(PassThru, StereoToMono_Cancel) {
                       1,     -1,     -13107, 13107, 3855, -3855};
   int32_t accum[6];
 
-  MixerPtr mixer = SelectMixer(AudioSampleFormat::SIGNED_16, 2, 48000, 1, 48000,
-                               Resampler::SampleAndHold);
+  MixerPtr mixer = SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_16, 2,
+                               48000, 1, 48000, Resampler::SampleAndHold);
 
   DoMix(std::move(mixer), source, accum, false, fbl::count_of(accum));
   EXPECT_TRUE(CompareBufferToVal(accum, 0, fbl::count_of(accum)));
@@ -250,8 +260,8 @@ TEST(PassThru, StereoToMono_Round) {
   int32_t expect[] = {0x177100, -0x6F00, 0x280, -0x15C980, 0x7FFF00, -0x800000};
   NormalizeInt24ToPipelineBitwidth(expect, fbl::count_of(expect));
 
-  MixerPtr mixer = SelectMixer(AudioSampleFormat::SIGNED_16, 2, 48000, 1, 48000,
-                               Resampler::SampleAndHold);
+  MixerPtr mixer = SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_16, 2,
+                               48000, 1, 48000, Resampler::SampleAndHold);
   DoMix(std::move(mixer), source, accum, false, fbl::count_of(accum));
   EXPECT_TRUE(CompareBuffers(accum, expect, fbl::count_of(accum)));
 }
@@ -265,15 +275,15 @@ TEST(PassThru, Accumulate) {
   NormalizeInt24ToPipelineBitwidth(accum, fbl::count_of(accum));
   NormalizeInt24ToPipelineBitwidth(expect, fbl::count_of(expect));
 
-  MixerPtr mixer = SelectMixer(AudioSampleFormat::SIGNED_16, 2, 48000, 2, 48000,
-                               Resampler::SampleAndHold);
+  MixerPtr mixer = SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_16, 2,
+                               48000, 2, 48000, Resampler::SampleAndHold);
   DoMix(std::move(mixer), source, accum, true, fbl::count_of(accum) / 2);
   EXPECT_TRUE(CompareBuffers(accum, expect, fbl::count_of(accum)));
 
   int32_t expect2[] = {-0x10E100, 0x092900, 0x1A8500, -0x223D00};  // =source
   NormalizeInt24ToPipelineBitwidth(expect2, fbl::count_of(expect2));
-  mixer = SelectMixer(AudioSampleFormat::SIGNED_16, 2, 48000, 2, 48000,
-                      Resampler::SampleAndHold);
+  mixer = SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_16, 2, 48000, 2,
+                      48000, Resampler::SampleAndHold);
   DoMix(std::move(mixer), source, accum, false, fbl::count_of(accum) / 2);
   EXPECT_TRUE(CompareBuffers(accum, expect2, fbl::count_of(accum)));
 }
@@ -290,7 +300,7 @@ TEST(PassThru, Output_8) {
   uint8_t expect[] = {0x0, 0x0, 0x3F, 0x80, 0x80, 0xC1, 0xFF, 0xFF, 42};
 
   OutputFormatterPtr output_formatter =
-      SelectOutputFormatter(AudioSampleFormat::UNSIGNED_8, 1);
+      SelectOutputFormatter(fuchsia::media::AudioSampleFormat::UNSIGNED_8, 1);
 
   output_formatter->ProduceOutput(accum, reinterpret_cast<void*>(dest),
                                   fbl::count_of(accum));
@@ -310,7 +320,7 @@ TEST(PassThru, Output_16) {
                       0x4080,  0x7FFF,  0x7FFF,  -42};
 
   OutputFormatterPtr output_formatter =
-      SelectOutputFormatter(AudioSampleFormat::SIGNED_16, 2);
+      SelectOutputFormatter(fuchsia::media::AudioSampleFormat::SIGNED_16, 2);
 
   output_formatter->ProduceOutput(accum, reinterpret_cast<void*>(dest),
                                   fbl::count_of(accum) / 2);
@@ -332,7 +342,7 @@ TEST(PassThru, Output_Float) {
                     4.2f};
 
   audio::OutputFormatterPtr output_formatter =
-      SelectOutputFormatter(AudioSampleFormat::FLOAT, 1);
+      SelectOutputFormatter(fuchsia::media::AudioSampleFormat::FLOAT, 1);
 
   output_formatter->ProduceOutput(accum, reinterpret_cast<void*>(dest),
                                   fbl::count_of(accum));
@@ -345,7 +355,7 @@ TEST(PassThru, Output_8_Silence) {
   // should be overwritten, except for the last value: we only fill(6)
 
   OutputFormatterPtr output_formatter =
-      SelectOutputFormatter(AudioSampleFormat::UNSIGNED_8, 2);
+      SelectOutputFormatter(fuchsia::media::AudioSampleFormat::UNSIGNED_8, 2);
   ASSERT_NE(nullptr, output_formatter);
 
   output_formatter->FillWithSilence(reinterpret_cast<void*>(dest),
@@ -361,7 +371,7 @@ TEST(PassThru, Output_16_Silence) {
   // should be overwritten, except for the last value: we only fill(6)
 
   OutputFormatterPtr output_formatter =
-      SelectOutputFormatter(AudioSampleFormat::SIGNED_16, 3);
+      SelectOutputFormatter(fuchsia::media::AudioSampleFormat::SIGNED_16, 3);
   ASSERT_NE(output_formatter, nullptr);
 
   output_formatter->FillWithSilence(reinterpret_cast<void*>(dest),
@@ -377,7 +387,7 @@ TEST(PassThru, Output_Float_Silence) {
   // should be overwritten, except for the last value: we only fill(6)
 
   audio::OutputFormatterPtr output_formatter =
-      SelectOutputFormatter(AudioSampleFormat::FLOAT, 2);
+      SelectOutputFormatter(fuchsia::media::AudioSampleFormat::FLOAT, 2);
   ASSERT_NE(output_formatter, nullptr);
 
   output_formatter->FillWithSilence(reinterpret_cast<void*>(dest),

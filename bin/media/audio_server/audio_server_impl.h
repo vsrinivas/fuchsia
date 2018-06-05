@@ -9,8 +9,8 @@
 
 #include <fbl/intrusive_double_list.h>
 #include <fbl/unique_ptr.h>
+#include <fuchsia/media/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
-#include <media/cpp/fidl.h>
 
 #include "garnet/bin/media/audio_server/audio_device_manager.h"
 #include "garnet/bin/media/audio_server/audio_packet_ref.h"
@@ -24,7 +24,7 @@
 namespace media {
 namespace audio {
 
-class AudioServerImpl : public AudioServer {
+class AudioServerImpl : public fuchsia::media::AudioServer {
  public:
   AudioServerImpl();
   ~AudioServerImpl() override;
@@ -33,13 +33,14 @@ class AudioServerImpl : public AudioServer {
   // TODO(mpuryear): through the codebase, particularly in examples and headers,
   // change 'audio_renderer' variables to 'audio_renderer_request' (media, etc).
   void CreateRenderer(
-      fidl::InterfaceRequest<AudioRenderer> audio_renderer,
-      fidl::InterfaceRequest<MediaRenderer> media_renderer) final;
-  void CreateRendererV2(
-      fidl::InterfaceRequest<AudioRenderer2> audio_renderer) final;
-  void CreateCapturer(
-      fidl::InterfaceRequest<AudioCapturer> audio_capturer_request,
-      bool loopback) final;
+      fidl::InterfaceRequest<fuchsia::media::AudioRenderer> audio_renderer,
+      fidl::InterfaceRequest<fuchsia::media::MediaRenderer> media_renderer)
+      final;
+  void CreateRendererV2(fidl::InterfaceRequest<fuchsia::media::AudioRenderer2>
+                            audio_renderer) final;
+  void CreateCapturer(fidl::InterfaceRequest<fuchsia::media::AudioCapturer>
+                          audio_capturer_request,
+                      bool loopback) final;
   void SetMasterGain(float db_gain) final;
   void GetMasterGain(GetMasterGainCallback cbk) final;
 
@@ -70,7 +71,7 @@ class AudioServerImpl : public AudioServer {
   void DoPacketCleanup();
 
   fuchsia::sys::Outgoing outgoing_;
-  fidl::BindingSet<AudioServer> bindings_;
+  fidl::BindingSet<fuchsia::media::AudioServer> bindings_;
 
   // A reference to our thread's async object.  Allows us to post events to
   // be handled by our main application thread from things like the output

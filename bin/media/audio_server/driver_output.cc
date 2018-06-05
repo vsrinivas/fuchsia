@@ -24,8 +24,8 @@ namespace audio {
 
 static constexpr uint32_t kDefaultFramesPerSec = 48000;
 static constexpr uint32_t kDefaultChannelCount = 2;
-static constexpr AudioSampleFormat kDefaultAudioFmt =
-    AudioSampleFormat::SIGNED_16;
+static constexpr fuchsia::media::AudioSampleFormat kDefaultAudioFmt =
+    fuchsia::media::AudioSampleFormat::SIGNED_16;
 static constexpr int64_t kDefaultLowWaterNsec = ZX_MSEC(20);
 static constexpr int64_t kDefaultHighWaterNsec = ZX_MSEC(30);
 static constexpr int64_t kDefaultMaxRetentionNsec = ZX_MSEC(60);
@@ -47,11 +47,11 @@ DriverOutput::DriverOutput(AudioDeviceManager* manager,
 
 DriverOutput::~DriverOutput() { wav_writer_.Close(); }
 
-MediaResult DriverOutput::Init() {
+fuchsia::media::MediaResult DriverOutput::Init() {
   FXL_DCHECK(state_ == State::Uninitialized);
 
-  MediaResult init_res = StandardOutputBase::Init();
-  if (init_res != MediaResult::OK) {
+  fuchsia::media::MediaResult init_res = StandardOutputBase::Init();
+  if (init_res != fuchsia::media::MediaResult::OK) {
     return init_res;
   }
 
@@ -59,11 +59,11 @@ MediaResult DriverOutput::Init() {
   if (zx_res != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to initialize driver object (res " << zx_res
                    << ")";
-    return MediaResult::INTERNAL_ERROR;
+    return fuchsia::media::MediaResult::INTERNAL_ERROR;
   }
 
   state_ = State::FormatsUnknown;
-  return MediaResult::OK;
+  return fuchsia::media::MediaResult::OK;
 }
 
 void DriverOutput::OnWakeup() {
@@ -267,7 +267,7 @@ void DriverOutput::OnDriverGetFormatsComplete() {
   // match among the formats supported by the driver.
   uint32_t pref_fps = kDefaultFramesPerSec;
   uint32_t pref_chan = kDefaultChannelCount;
-  AudioSampleFormat pref_fmt = kDefaultAudioFmt;
+  fuchsia::media::AudioSampleFormat pref_fmt = kDefaultAudioFmt;
   zx_duration_t min_rb_duration = kDefaultHighWaterNsec +
                                   kDefaultMaxRetentionNsec +
                                   kDefaultRetentionGapNsec;
@@ -296,7 +296,8 @@ void DriverOutput::OnDriverGetFormatsComplete() {
       static_cast<uint32_t>(retention_frames));
 
   // Select our output formatter
-  AudioMediaTypeDetailsPtr config(AudioMediaTypeDetails::New());
+  fuchsia::media::AudioMediaTypeDetailsPtr config(
+      fuchsia::media::AudioMediaTypeDetails::New());
   config->frames_per_second = pref_fps;
   config->channels = pref_chan;
   config->sample_format = pref_fmt;

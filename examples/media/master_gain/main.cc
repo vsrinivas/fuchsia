@@ -5,9 +5,9 @@
 #include <iomanip>
 #include <iostream>
 
+#include <fuchsia/media/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/task.h>
-#include <media/cpp/fidl.h>
 
 #include "lib/app/cpp/connect.h"
 #include "lib/app/cpp/startup_context.h"
@@ -44,7 +44,8 @@ int main(int argc, const char** argv) {
   auto startup_context = fuchsia::sys::StartupContext::CreateFromStartupInfo();
 
   auto audio_server =
-      startup_context->ConnectToEnvironmentService<media::AudioServer>();
+      startup_context
+          ->ConnectToEnvironmentService<fuchsia::media::AudioServer>();
 
   if (set_gain) {
     audio_server->SetMasterGain(gain_target);

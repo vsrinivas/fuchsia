@@ -8,8 +8,8 @@
 #include <memory>
 
 #include <endian.h>
+#include <fuchsia/media/cpp/fidl.h>
 #include <lib/zx/channel.h>
-#include <media/cpp/fidl.h>
 
 #include "garnet/bin/media/net_media_service/media_player_messages.h"
 #include "lib/fxl/macros.h"

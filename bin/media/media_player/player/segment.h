@@ -5,9 +5,9 @@
 #ifndef GARNET_BIN_MEDIA_MEDIA_PLAYER_PLAYER_SEGMENT_H_
 #define GARNET_BIN_MEDIA_MEDIA_PLAYER_PLAYER_SEGMENT_H_
 
+#include <fuchsia/media/cpp/fidl.h>
 #include <lib/async/dispatcher.h>
 #include <lib/fit/function.h>
-#include <media/cpp/fidl.h>
 #include <media_player/cpp/fidl.h>
 
 #include "garnet/bin/media/media_player/framework/graph.h"

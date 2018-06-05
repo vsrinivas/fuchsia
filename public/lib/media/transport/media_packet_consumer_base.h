@@ -7,7 +7,7 @@
 
 #include <atomic>
 
-#include <media/cpp/fidl.h>
+#include <fuchsia/media/cpp/fidl.h>
 
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fxl/logging.h"
@@ -18,7 +18,7 @@
 namespace media {
 
 // Base class that implements MediaPacketConsumer.
-class MediaPacketConsumerBase : public MediaPacketConsumer {
+class MediaPacketConsumerBase : public fuchsia::media::MediaPacketConsumer {
  private:
   class SuppliedPacketCounter;
 
@@ -34,18 +34,18 @@ class MediaPacketConsumerBase : public MediaPacketConsumer {
    public:
     ~SuppliedPacket();
 
-    const MediaPacket& packet() { return packet_; }
+    const fuchsia::media::MediaPacket& packet() { return packet_; }
     void* payload() { return payload_; }
     uint64_t payload_size() { return packet_.payload_size; }
     uint64_t label() { return label_; }
 
    private:
-    SuppliedPacket(uint64_t label, MediaPacket packet, void* payload,
-                   SupplyPacketCallback callback,
+    SuppliedPacket(uint64_t label, fuchsia::media::MediaPacket packet,
+                   void* payload, SupplyPacketCallback callback,
                    std::shared_ptr<SuppliedPacketCounter> counter);
 
     uint64_t label_;
-    MediaPacket packet_;
+    fuchsia::media::MediaPacket packet_;
     void* payload_;
     SupplyPacketCallback callback_;
     std::shared_ptr<SuppliedPacketCounter> counter_;
@@ -57,10 +57,11 @@ class MediaPacketConsumerBase : public MediaPacketConsumer {
   };
 
   // Binds to this MediaPacketConsumer.
-  void Bind(fidl::InterfaceRequest<MediaPacketConsumer> request);
+  void Bind(
+      fidl::InterfaceRequest<fuchsia::media::MediaPacketConsumer> request);
 
   // Binds to this MediaPacketConsumer.
-  void Bind(fidl::InterfaceHandle<MediaPacketConsumer>* handle);
+  void Bind(fidl::InterfaceHandle<fuchsia::media::MediaPacketConsumer>* handle);
 
   // Determines if the consumer is bound to a channel.
   bool is_bound();
@@ -73,12 +74,12 @@ class MediaPacketConsumerBase : public MediaPacketConsumer {
   // Indicates that revised media type is to be accepted.
   void AcceptRevisedMediaType() { accept_revised_media_type_ = true; }
 
-  const MediaPacketDemand& current_demand() { return demand_; }
+  const fuchsia::media::MediaPacketDemand& current_demand() { return demand_; }
 
   // Sets the demand, which is communicated back to the producer at the first
   // opportunity (in response to PullDemandUpdate or SupplyPacket).
   void SetDemand(uint32_t min_packets_outstanding,
-                 int64_t min_pts = kNoTimestamp);
+                 int64_t min_pts = fuchsia::media::kNoTimestamp);
 
   // Shuts down the consumer.
   void Reset();
@@ -121,9 +122,10 @@ class MediaPacketConsumerBase : public MediaPacketConsumer {
 
   void RemovePayloadBuffer(uint32_t payload_buffer_id) final;
 
-  void SupplyPacket(MediaPacket packet, SupplyPacketCallback callback) final;
+  void SupplyPacket(fuchsia::media::MediaPacket packet,
+                    SupplyPacketCallback callback) final;
 
-  void SupplyPacketNoReply(MediaPacket packet) final;
+  void SupplyPacketNoReply(fuchsia::media::MediaPacket packet) final;
 
   void Flush(bool hold_frame, FlushCallback callback) final;
 
@@ -154,7 +156,7 @@ class MediaPacketConsumerBase : public MediaPacketConsumer {
 
     // Records the departure of a packet and returns the current demand update,
     // if any.
-    MediaPacketDemandPtr OnPacketDeparture(uint64_t label) {
+    fuchsia::media::MediaPacketDemandPtr OnPacketDeparture(uint64_t label) {
       FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
       --packets_outstanding_;
       return (owner_ == nullptr) ? nullptr
@@ -182,15 +184,16 @@ class MediaPacketConsumerBase : public MediaPacketConsumer {
 
   // Returns the demand update, if any, to be included in a SupplyPacket
   // callback.
-  MediaPacketDemandPtr GetDemandForPacketDeparture(uint64_t label);
+  fuchsia::media::MediaPacketDemandPtr GetDemandForPacketDeparture(
+      uint64_t label);
 
   // Sets the PTS rate of the packet to pts_rate_ unless pts_rate_ is zero.
   // Does nothing if pts_rate_ is zero.
-  void SetPacketPtsRate(MediaPacket* packet);
+  void SetPacketPtsRate(fuchsia::media::MediaPacket* packet);
 
-  fidl::Binding<MediaPacketConsumer> binding_;
+  fidl::Binding<fuchsia::media::MediaPacketConsumer> binding_;
   bool accept_revised_media_type_ = false;
-  MediaPacketDemand demand_;
+  fuchsia::media::MediaPacketDemand demand_;
   bool demand_update_required_ = false;
   bool returning_packet_ = false;
   PullDemandUpdateCallback get_demand_update_callback_;

@@ -4,10 +4,10 @@
 
 #include <cmath>
 
+#include <fuchsia/media/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/task.h>
 #include <lib/gtest/test_with_message_loop.h>
-#include <media/cpp/fidl.h>
 
 #include "lib/app/cpp/environment_services.h"
 #include "lib/fidl/cpp/synchronous_interface_ptr.h"
@@ -35,11 +35,11 @@ class AudioServerTest : public gtest::TestWithMessageLoop {
 
   void TearDown() override { EXPECT_FALSE(error_occurred_); }
 
-  AudioServerPtr audio_server_;
-  AudioRendererPtr audio_renderer_;
-  MediaRendererPtr media_renderer_;
-  AudioRenderer2Ptr audio_renderer2_;
-  AudioCapturerPtr audio_capturer_;
+  fuchsia::media::AudioServerPtr audio_server_;
+  fuchsia::media::AudioRendererPtr audio_renderer_;
+  fuchsia::media::MediaRendererPtr media_renderer_;
+  fuchsia::media::AudioRenderer2Ptr audio_renderer2_;
+  fuchsia::media::AudioCapturerPtr audio_capturer_;
 
   bool error_occurred_ = false;
 };
@@ -153,11 +153,11 @@ class AudioServerSyncTest : public gtest::TestWithMessageLoop {
     ASSERT_TRUE(audio_server_);
   }
 
-  AudioServerSyncPtr audio_server_;
-  AudioRendererSyncPtr audio_renderer_;
-  MediaRendererSyncPtr media_renderer_;
-  AudioRenderer2SyncPtr audio_renderer2_;
-  AudioCapturerSyncPtr audio_capturer_;
+  fuchsia::media::AudioServerSyncPtr audio_server_;
+  fuchsia::media::AudioRendererSyncPtr audio_renderer_;
+  fuchsia::media::MediaRendererSyncPtr media_renderer_;
+  fuchsia::media::AudioRenderer2SyncPtr audio_renderer2_;
+  fuchsia::media::AudioCapturerSyncPtr audio_capturer_;
 };
 
 // Test creation and survival of synchronous AudioRenderer and MediaRenderer.

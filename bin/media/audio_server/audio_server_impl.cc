@@ -20,10 +20,12 @@ AudioServerImpl::AudioServerImpl() : device_manager_(this) {
   auto service =
       fbl::AdoptRef(new fs::Service([this](zx::channel ch) -> zx_status_t {
         bindings_.AddBinding(
-            this, fidl::InterfaceRequest<AudioServer>(std::move(ch)));
+            this,
+            fidl::InterfaceRequest<fuchsia::media::AudioServer>(std::move(ch)));
         return ZX_OK;
       }));
-  outgoing_.public_dir()->AddEntry(AudioServer::Name_, std::move(service));
+  outgoing_.public_dir()->AddEntry(fuchsia::media::AudioServer::Name_,
+                                   std::move(service));
 
   // Stash a pointer to our async object.
   async_ = async_get_default();
@@ -44,9 +46,9 @@ AudioServerImpl::AudioServerImpl() : device_manager_(this) {
       async_, []() { zx_thread_set_priority(24 /* HIGH_PRIORITY in LK */); });
 
   // Set up our output manager.
-  MediaResult res = device_manager_.Init();
+  fuchsia::media::MediaResult res = device_manager_.Init();
   // TODO(johngro): Do better at error handling than this weak check.
-  FXL_DCHECK(res == MediaResult::OK);
+  FXL_DCHECK(res == fuchsia::media::MediaResult::OK);
 
   // Wait for 50 mSec before we export our services and start to process client
   // requests.  This will give the device manager layer time to discover the
@@ -73,20 +75,21 @@ void AudioServerImpl::Shutdown() {
 }
 
 void AudioServerImpl::CreateRenderer(
-    fidl::InterfaceRequest<AudioRenderer> audio_renderer,
-    fidl::InterfaceRequest<MediaRenderer> media_renderer) {
+    fidl::InterfaceRequest<fuchsia::media::AudioRenderer> audio_renderer,
+    fidl::InterfaceRequest<fuchsia::media::MediaRenderer> media_renderer) {
   device_manager_.AddRenderer(AudioRenderer1Impl::Create(
       std::move(audio_renderer), std::move(media_renderer), this));
 }
 
 void AudioServerImpl::CreateRendererV2(
-    fidl::InterfaceRequest<AudioRenderer2> audio_renderer) {
+    fidl::InterfaceRequest<fuchsia::media::AudioRenderer2> audio_renderer) {
   device_manager_.AddRenderer(
       AudioRenderer2Impl::Create(std::move(audio_renderer), this));
 }
 
 void AudioServerImpl::CreateCapturer(
-    fidl::InterfaceRequest<AudioCapturer> audio_capturer_request,
+    fidl::InterfaceRequest<fuchsia::media::AudioCapturer>
+        audio_capturer_request,
     bool loopback) {
   device_manager_.AddCapturer(AudioCapturerImpl::Create(
       std::move(audio_capturer_request), this, loopback));

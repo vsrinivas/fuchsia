@@ -12,7 +12,7 @@
 #include "garnet/lib/media/client/audio_output_device.h"
 #include "garnet/lib/media/client/audio_output_manager.h"
 
-#include <media/cpp/fidl.h>
+#include <fuchsia/media/cpp/fidl.h>
 #include "lib/app/cpp/environment_services.h"
 #include "lib/fidl/cpp/synchronous_interface_ptr.h"
 #include "lib/fxl/logging.h"
@@ -58,7 +58,7 @@ bool AudioOutputStream::Initialize(fuchsia_audio_parameters* params,
 };
 
 bool AudioOutputStream::AcquireRenderer() {
-  media::AudioServerSyncPtr audio_server;
+  fuchsia::media::AudioServerSyncPtr audio_server;
   fuchsia::sys::ConnectToEnvironmentService(audio_server.NewRequest());
 
   if (!audio_server->CreateRenderer(audio_renderer_.NewRequest(),
@@ -71,10 +71,12 @@ bool AudioOutputStream::AcquireRenderer() {
 }
 
 bool AudioOutputStream::SetMediaType(int num_channels, int sample_rate) {
-  if ((num_channels < static_cast<int>(media::kMinLpcmChannelCount)) ||
-      (num_channels > static_cast<int>(media::kMaxLpcmChannelCount)) ||
-      (sample_rate < static_cast<int>(media::kMinLpcmFramesPerSecond)) ||
-      (sample_rate > static_cast<int>(media::kMaxLpcmFramesPerSecond))) {
+  if ((num_channels < static_cast<int>(fuchsia::media::kMinLpcmChannelCount)) ||
+      (num_channels > static_cast<int>(fuchsia::media::kMaxLpcmChannelCount)) ||
+      (sample_rate <
+       static_cast<int>(fuchsia::media::kMinLpcmFramesPerSecond)) ||
+      (sample_rate >
+       static_cast<int>(fuchsia::media::kMaxLpcmFramesPerSecond))) {
     FXL_LOG(ERROR) << "Media type (" << num_channels << "-chan, " << sample_rate
                    << " Hz) out of range";
     return false;
@@ -82,14 +84,14 @@ bool AudioOutputStream::SetMediaType(int num_channels, int sample_rate) {
 
   FXL_DCHECK(media_renderer_);
 
-  media::AudioMediaTypeDetails details;
-  details.sample_format = media::AudioSampleFormat::FLOAT;
+  fuchsia::media::AudioMediaTypeDetails details;
+  details.sample_format = fuchsia::media::AudioSampleFormat::FLOAT;
   details.channels = num_channels;
   details.frames_per_second = sample_rate;
 
-  media::MediaType media_type;
-  media_type.medium = media::MediaTypeMedium::AUDIO;
-  media_type.encoding = media::kAudioEncodingLpcm;
+  fuchsia::media::MediaType media_type;
+  media_type.medium = fuchsia::media::MediaTypeMedium::AUDIO;
+  media_type.encoding = fuchsia::media::kAudioEncodingLpcm;
   media_type.details.set_audio(std::move(details));
 
   if (!media_renderer_->SetMediaType(std::move(media_type))) {
@@ -161,10 +163,9 @@ void AudioOutputStream::PullFromClientBuffer(float* client_buffer,
       (current_sample_offset_ + num_samples) % total_mapping_samples_;
 }
 
-media::MediaPacket AudioOutputStream::CreateMediaPacket(zx_time_t pts,
-                                                        size_t payload_offset,
-                                                        size_t payload_size) {
-  media::MediaPacket packet;
+fuchsia::media::MediaPacket AudioOutputStream::CreateMediaPacket(
+    zx_time_t pts, size_t payload_offset, size_t payload_size) {
+  fuchsia::media::MediaPacket packet;
 
   packet.pts_rate_ticks = sample_rate_;
   packet.pts_rate_seconds = 1;
@@ -177,7 +178,7 @@ media::MediaPacket AudioOutputStream::CreateMediaPacket(zx_time_t pts,
   return packet;
 }
 
-bool AudioOutputStream::SendMediaPacket(media::MediaPacket packet) {
+bool AudioOutputStream::SendMediaPacket(fuchsia::media::MediaPacket packet) {
   FXL_DCHECK(packet_consumer_);
 
   return packet_consumer_->SupplyPacketNoReply(std::move(packet));
@@ -199,7 +200,7 @@ int AudioOutputStream::SetGain(float db_gain) {
     return ZX_ERR_CONNECTION_ABORTED;
   }
 
-  if (db_gain > media::kMaxGain) {
+  if (db_gain > fuchsia::media::kMaxGain) {
     return ZX_ERR_OUT_OF_RANGE;
   }
 
@@ -221,9 +222,11 @@ int AudioOutputStream::Write(float* client_buffer, int num_samples,
   FXL_DCHECK(num_samples > 0);
   FXL_DCHECK(num_samples % num_channels_ == 0);
 
-  if (!active_) return ZX_ERR_CONNECTION_ABORTED;
+  if (!active_)
+    return ZX_ERR_CONNECTION_ABORTED;
 
-  if (num_samples > total_mapping_samples_) return ZX_ERR_OUT_OF_RANGE;
+  if (num_samples > total_mapping_samples_)
+    return ZX_ERR_OUT_OF_RANGE;
 
   if (pres_time == FUCHSIA_AUDIO_NO_TIMESTAMP && !received_first_frame_)
     return ZX_ERR_BAD_STATE;
@@ -242,7 +245,7 @@ int AudioOutputStream::Write(float* client_buffer, int num_samples,
 
   // On first packet, establish a timeline starting at given presentation time.
   // Others get kNoTimestamp, indicating 'play without gap after the previous'.
-  zx_time_t subject_time = media::kNoTimestamp;
+  zx_time_t subject_time = fuchsia::media::kNoTimestamp;
   if (!received_first_frame_) {
     subject_time = 0;
     start_time_ = pres_time;
@@ -274,10 +277,10 @@ int AudioOutputStream::Write(float* client_buffer, int num_samples,
 }
 
 bool AudioOutputStream::Start() {
-  media::TimelineConsumerSyncPtr timeline_consumer;
+  fuchsia::media::TimelineConsumerSyncPtr timeline_consumer;
   timeline_control_point_->GetTimelineConsumer(timeline_consumer.NewRequest());
 
-  media::TimelineTransform transform;
+  fuchsia::media::TimelineTransform transform;
   transform.reference_time = start_time_;
   transform.subject_time = 0;
   transform.reference_delta = 1;
@@ -290,12 +293,12 @@ void AudioOutputStream::Stop() {
   received_first_frame_ = false;
   active_ = false;
 
-  media::TimelineConsumerSyncPtr timeline_consumer;
+  fuchsia::media::TimelineConsumerSyncPtr timeline_consumer;
   timeline_control_point_->GetTimelineConsumer(timeline_consumer.NewRequest());
 
-  media::TimelineTransform transform;
-  transform.reference_time = media::kUnspecifiedTime;
-  transform.subject_time = media::kUnspecifiedTime;
+  fuchsia::media::TimelineTransform transform;
+  transform.reference_time = fuchsia::media::kUnspecifiedTime;
+  transform.subject_time = fuchsia::media::kUnspecifiedTime;
   transform.reference_delta = 1;
   transform.subject_delta = 0;
 

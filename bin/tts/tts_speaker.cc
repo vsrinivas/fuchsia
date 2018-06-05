@@ -14,7 +14,8 @@ static constexpr uint32_t kLowWaterMsec = 100;
 
 static constexpr uint32_t kFliteChannelCount = 1;
 static constexpr uint32_t kFliteFrameRate = 16000;
-static constexpr auto kFliteSampleFormat = media::AudioSampleFormat::SIGNED_16;
+static constexpr auto kFliteSampleFormat =
+    fuchsia::media::AudioSampleFormat::SIGNED_16;
 static constexpr uint32_t kFliteBytesPerFrame = 2;
 static constexpr uint32_t kLowWaterBytes =
     (kFliteFrameRate * kLowWaterMsec * kFliteBytesPerFrame) / 1000;
@@ -62,11 +63,12 @@ zx_status_t TtsSpeaker::Init(
 
   FXL_DCHECK(startup_context != nullptr);
   auto audio_server =
-      startup_context->ConnectToEnvironmentService<media::AudioServer>();
+      startup_context
+          ->ConnectToEnvironmentService<fuchsia::media::AudioServer>();
 
   audio_server->CreateRendererV2(audio_renderer_.NewRequest());
 
-  media::AudioPcmFormat format;
+  fuchsia::media::AudioPcmFormat format;
   format.sample_format = kFliteSampleFormat;
   format.channels = kFliteChannelCount;
   format.frames_per_second = kFliteFrameRate;
@@ -126,7 +128,7 @@ void TtsSpeaker::SendPendingAudio() {
       todo = bytes_till_low_water;
     }
 
-    media::AudioPacket pkt;
+    fuchsia::media::AudioPacket pkt;
     pkt.payload_offset = tx_ptr_;
     pkt.payload_size = todo;
 
@@ -139,8 +141,8 @@ void TtsSpeaker::SendPendingAudio() {
 
     if (eos && (todo == bytes_to_send)) {
       audio_renderer_->SendPacket(
-          std::move(pkt), fxl::MakeCopyable(
-          [speak_complete_cbk = std::move(speak_complete_cbk_)]() {
+          std::move(pkt), fxl::MakeCopyable([speak_complete_cbk = std::move(
+                                                 speak_complete_cbk_)]() {
             speak_complete_cbk();
           }));
     } else if (todo == bytes_till_low_water) {
@@ -161,7 +163,8 @@ void TtsSpeaker::SendPendingAudio() {
   }
 
   if (!clock_started_) {
-    audio_renderer_->PlayNoReply(::media::kNoTimestamp, ::media::kNoTimestamp);
+    audio_renderer_->PlayNoReply(fuchsia::media::kNoTimestamp,
+                                 fuchsia::media::kNoTimestamp);
     clock_started_ = true;
   }
 }

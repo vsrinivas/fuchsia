@@ -9,8 +9,8 @@
 #include <queue>
 #include <vector>
 
+#include <fuchsia/media/cpp/fidl.h>
 #include <lib/async/dispatcher.h>
-#include <media/cpp/fidl.h>
 
 #include "lib/fidl/cpp/binding.h"
 #include "lib/media/timeline/timeline_function.h"
@@ -20,7 +20,7 @@ namespace media_player {
 namespace test {
 
 // Implements AudioRenderer2 for testing.
-class FakeAudioRenderer : public media::AudioRenderer2 {
+class FakeAudioRenderer : public fuchsia::media::AudioRenderer2 {
  public:
   class PacketInfo {
    public:
@@ -42,7 +42,7 @@ class FakeAudioRenderer : public media::AudioRenderer2 {
   ~FakeAudioRenderer() override;
 
   // Binds the renderer.
-  void Bind(fidl::InterfaceRequest<media::AudioRenderer2> request);
+  void Bind(fidl::InterfaceRequest<fuchsia::media::AudioRenderer2> request);
 
   // Indicates that the renderer should print out supplied packet info.
   void DumpPackets() { dump_packets_ = true; }
@@ -58,7 +58,7 @@ class FakeAudioRenderer : public media::AudioRenderer2 {
   bool expected() { return expected_; }
 
   // AudioRenderer2 implementation.
-  void SetPcmFormat(media::AudioPcmFormat format) override;
+  void SetPcmFormat(fuchsia::media::AudioPcmFormat format) override;
 
   void SetPayloadBuffer(::zx::vmo payload_buffer) override;
 
@@ -69,10 +69,10 @@ class FakeAudioRenderer : public media::AudioRenderer2 {
 
   void SetReferenceClock(::zx::handle ref_clock) override;
 
-  void SendPacket(media::AudioPacket packet,
+  void SendPacket(fuchsia::media::AudioPacket packet,
                   SendPacketCallback callback) override;
 
-  void SendPacketNoReply(media::AudioPacket packet) override;
+  void SendPacketNoReply(fuchsia::media::AudioPacket packet) override;
 
   void Flush(FlushCallback callback) override;
 
@@ -93,8 +93,8 @@ class FakeAudioRenderer : public media::AudioRenderer2 {
   void SetGainMuteNoReply(float gain, bool mute, uint32_t flags) override;
 
   void DuplicateGainControlInterface(
-      ::fidl::InterfaceRequest<media::AudioRendererGainControl> request)
-      override;
+      ::fidl::InterfaceRequest<fuchsia::media::AudioRendererGainControl>
+          request) override;
 
   void EnableMinLeadTimeEvents(bool enabled) override;
 
@@ -119,9 +119,9 @@ class FakeAudioRenderer : public media::AudioRenderer2 {
   void MaybeScheduleRetirement();
 
   async_t* async_;
-  fidl::Binding<media::AudioRenderer2> binding_;
+  fidl::Binding<fuchsia::media::AudioRenderer2> binding_;
 
-  media::AudioPcmFormat format_;
+  fuchsia::media::AudioPcmFormat format_;
   media::MappedSharedBuffer mapped_buffer_;
   float threshold_seconds_ = 0.0f;
   float gain_ = 1.0f;
@@ -130,13 +130,14 @@ class FakeAudioRenderer : public media::AudioRenderer2 {
   const int64_t min_lead_time_ns_ = ZX_MSEC(100);
   media::TimelineRate pts_rate_ = media::TimelineRate::NsPerSecond;
   media::TimelineFunction timeline_function_;
-  int64_t restart_media_time_ = media::kNoTimestamp;
+  int64_t restart_media_time_ = fuchsia::media::kNoTimestamp;
 
   bool dump_packets_ = false;
   std::vector<PacketInfo> expected_packets_info_;
   std::vector<PacketInfo>::iterator expected_packets_info_iter_;
 
-  std::queue<std::pair<media::AudioPacket, SendPacketCallback>> packet_queue_;
+  std::queue<std::pair<fuchsia::media::AudioPacket, SendPacketCallback>>
+      packet_queue_;
 
   bool expected_ = true;
 };

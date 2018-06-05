@@ -56,21 +56,23 @@ void MediaApp::Run(fuchsia::sys::StartupContext* app_context) {
     SendPacket(CreateAudioPacket(payload_num));
   }
 
-  audio_renderer_->PlayNoReply(media::kNoTimestamp, media::kNoTimestamp);
+  audio_renderer_->PlayNoReply(fuchsia::media::kNoTimestamp,
+                               fuchsia::media::kNoTimestamp);
 }
 
 // Use StartupContext to acquire AudioServerPtr and AudioRenderer2Ptr in
 // turn. Set error handler, in case of channel closure.
 void MediaApp::AcquireRenderer(fuchsia::sys::StartupContext* app_context) {
   // AudioServer is needed only long enough to create the renderer(s).
-  media::AudioServerPtr audio_server =
-      app_context->ConnectToEnvironmentService<media::AudioServer>();
+  fuchsia::media::AudioServerPtr audio_server =
+      app_context->ConnectToEnvironmentService<fuchsia::media::AudioServer>();
 
   // Only one of [AudioRenderer or MediaRenderer] must be kept open for playback
   audio_server->CreateRendererV2(audio_renderer_.NewRequest());
 
   audio_renderer_.set_error_handler([this]() {
-    FXL_LOG(ERROR) << "AudioRenderer connection lost. Quitting.";
+    FXL_LOG(ERROR)
+        << "fuchsia::media::AudioRenderer connection lost. Quitting.";
     Shutdown();
   });
 }
@@ -79,10 +81,11 @@ void MediaApp::AcquireRenderer(fuchsia::sys::StartupContext* app_context) {
 void MediaApp::SetMediaType() {
   FXL_DCHECK(audio_renderer_);
 
-  media::AudioPcmFormat format;
+  fuchsia::media::AudioPcmFormat format;
 
-  format.sample_format = (use_float_ ? media::AudioSampleFormat::FLOAT
-                                     : media::AudioSampleFormat::SIGNED_16);
+  format.sample_format =
+      (use_float_ ? fuchsia::media::AudioSampleFormat::FLOAT
+                  : fuchsia::media::AudioSampleFormat::SIGNED_16);
   format.channels = kNumChannels;
   format.frames_per_second = kRendererFrameRate;
 
@@ -131,8 +134,8 @@ void MediaApp::WriteAudioIntoBuffer() {
 
 // We divided our cross-proc buffer into different zones, called payloads.
 // Create a packet corresponding to this particular payload.
-media::AudioPacket MediaApp::CreateAudioPacket(size_t payload_num) {
-  media::AudioPacket packet;
+fuchsia::media::AudioPacket MediaApp::CreateAudioPacket(size_t payload_num) {
+  fuchsia::media::AudioPacket packet;
   packet.payload_offset = (payload_num * payload_size_) % total_mapping_size_;
   packet.payload_size = payload_size_;
   return packet;
@@ -141,7 +144,7 @@ media::AudioPacket MediaApp::CreateAudioPacket(size_t payload_num) {
 // Submit a packet, incrementing our count of packets sent. When it returns:
 // a. if there are more packets to send, create and send the next packet;
 // b. if all expected packets have completed, begin closing down the system.
-void MediaApp::SendPacket(media::AudioPacket packet) {
+void MediaApp::SendPacket(fuchsia::media::AudioPacket packet) {
   ++num_packets_sent_;
   audio_renderer_->SendPacket(std::move(packet),
                               [this]() { OnSendPacketComplete(); });

@@ -8,7 +8,7 @@
 #include <deque>
 #include <unordered_map>
 
-#include <media/cpp/fidl.h>
+#include <fuchsia/media/cpp/fidl.h>
 
 #include "garnet/bin/media/media_player/metrics/packet_timing_tracker.h"
 #include "garnet/bin/media/media_player/metrics/rate_tracker.h"

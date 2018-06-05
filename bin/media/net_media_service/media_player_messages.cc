@@ -162,7 +162,7 @@ Serializer& operator<<(Serializer& serializer,
 }
 
 Serializer& operator<<(Serializer& serializer,
-                       const media::TimelineTransformPtr& value) {
+                       const fuchsia::media::TimelineTransformPtr& value) {
   FXL_DCHECK(value);
   return serializer << value->reference_time << value->subject_time
                     << value->reference_delta << value->subject_delta;
@@ -324,8 +324,8 @@ Deserializer& operator>>(Deserializer& deserializer,
 }
 
 Deserializer& operator>>(Deserializer& deserializer,
-                         media::TimelineTransformPtr& value) {
-  value = media::TimelineTransform::New();
+                         fuchsia::media::TimelineTransformPtr& value) {
+  value = fuchsia::media::TimelineTransform::New();
   deserializer >> value->reference_time >> value->subject_time >>
       value->reference_delta >> value->subject_delta;
   if (!deserializer.healthy()) {

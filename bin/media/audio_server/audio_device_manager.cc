@@ -26,17 +26,17 @@ AudioDeviceManager::~AudioDeviceManager() {
   FXL_DCHECK(devices_.is_empty());
 }
 
-MediaResult AudioDeviceManager::Init() {
+fuchsia::media::MediaResult AudioDeviceManager::Init() {
   // Step #1: Instantiate and initialize the default throttle output.
   auto throttle_output = ThrottleOutput::Create(this);
   if (throttle_output == nullptr) {
     FXL_LOG(WARNING)
         << "AudioDeviceManager failed to create default throttle output!";
-    return MediaResult::INSUFFICIENT_RESOURCES;
+    return fuchsia::media::MediaResult::INSUFFICIENT_RESOURCES;
   }
 
-  MediaResult res = throttle_output->Startup();
-  if (res != MediaResult::OK) {
+  fuchsia::media::MediaResult res = throttle_output->Startup();
+  if (res != fuchsia::media::MediaResult::OK) {
     FXL_LOG(WARNING)
         << "AudioDeviceManager failed to initalize the throttle output (res "
         << res << ")";
@@ -47,13 +47,13 @@ MediaResult AudioDeviceManager::Init() {
   // Step #2: Being monitoring for plug/unplug events for pluggable audio
   // output devices.
   res = plug_detector_.Start(this);
-  if (res != MediaResult::OK) {
+  if (res != fuchsia::media::MediaResult::OK) {
     FXL_LOG(WARNING) << "AudioDeviceManager failed to start plug detector (res "
                      << res << ")";
     return res;
   }
 
-  return MediaResult::OK;
+  return fuchsia::media::MediaResult::OK;
 }
 
 void AudioDeviceManager::Shutdown() {
@@ -85,7 +85,7 @@ void AudioDeviceManager::Shutdown() {
   throttle_output_ = nullptr;
 }
 
-MediaResult AudioDeviceManager::AddDevice(
+fuchsia::media::MediaResult AudioDeviceManager::AddDevice(
     const fbl::RefPtr<AudioDevice>& device) {
   FXL_DCHECK(device != nullptr);
   FXL_DCHECK(!device->in_object_list());
@@ -97,8 +97,8 @@ MediaResult AudioDeviceManager::AddDevice(
   }
   devices_.push_back(device);
 
-  MediaResult res = device->Startup();
-  if (res != MediaResult::OK) {
+  fuchsia::media::MediaResult res = device->Startup();
+  if (res != fuchsia::media::MediaResult::OK) {
     devices_.erase(*device);
     device->Shutdown();
   }
@@ -146,7 +146,7 @@ void AudioDeviceManager::HandlePlugStateChange(
 }
 
 void AudioDeviceManager::SetMasterGain(float db_gain) {
-  master_gain_ = fbl::clamp(db_gain, kMutedGain, 0.0f);
+  master_gain_ = fbl::clamp(db_gain, fuchsia::media::kMutedGain, 0.0f);
   for (auto& device : devices_) {
     if (device.is_input()) {
       continue;

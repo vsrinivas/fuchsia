@@ -1,7 +1,7 @@
 # Simple Sine Example App
 
 This directory contains an example application that shows, in simplest possible
-implementation, how to play audio via the lowest-layer FIDL interfaces. 
+implementation, how to play audio via the lowest-layer FIDL interfaces.
 
 ### USAGE
 

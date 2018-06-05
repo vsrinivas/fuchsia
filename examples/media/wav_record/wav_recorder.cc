@@ -62,8 +62,8 @@ void WavRecorder::Run(fuchsia::sys::StartupContext* app_context) {
   filename_ = pos_args[0].c_str();
 
   // Connect to the mixer and obtain a capturer
-  media::AudioServerPtr audio_server =
-      app_context->ConnectToEnvironmentService<media::AudioServer>();
+  fuchsia::media::AudioServerPtr audio_server =
+      app_context->ConnectToEnvironmentService<fuchsia::media::AudioServer>();
 
   audio_server->CreateCapturer(capturer_.NewRequest(), loopback_);
   capturer_.set_error_handler([this]() {
@@ -72,7 +72,7 @@ void WavRecorder::Run(fuchsia::sys::StartupContext* app_context) {
   });
 
   // Fetch the initial media type and figure out what we need to do from there.
-  capturer_->GetMediaType([this](media::MediaType type) {
+  capturer_->GetMediaType([this](fuchsia::media::MediaType type) {
     OnDefaultFormatFetched(std::move(type));
   });
 
@@ -90,8 +90,8 @@ void WavRecorder::Usage() {
   printf("  --%s : capture using 'async-mode'\n", kAsyncModeOption.c_str());
   printf("  --%s : use floating-point format\n", kFloatFormatOption.c_str());
   printf("  --%s=<rate> : desired capture frame rate, on the range [%u, %u].\n",
-         kFrameRateOption.c_str(), media::kMinLpcmFramesPerSecond,
-         media::kMaxLpcmFramesPerSecond);
+         kFrameRateOption.c_str(), fuchsia::media::kMinLpcmFramesPerSecond,
+         fuchsia::media::kMaxLpcmFramesPerSecond);
   printf(
       "  --%s=<count> : desired number of channels to capture, on the range "
       "[%u, %u].\n",
@@ -155,7 +155,7 @@ void WavRecorder::SendCaptureJob() {
   capturer_->CaptureAt(
       capture_frame_offset_,
       capture_frames_per_chunk_,
-      [this](media::MediaPacket packet) {
+      [this](fuchsia::media::MediaPacket packet) {
         OnPacketCaptured(std::move(packet));
       });
   // clang-format on
@@ -166,7 +166,7 @@ void WavRecorder::SendCaptureJob() {
   }
 }
 
-void WavRecorder::OnDefaultFormatFetched(media::MediaType type) {
+void WavRecorder::OnDefaultFormatFetched(fuchsia::media::MediaType type) {
   auto cleanup = fbl::MakeAutoCall([this]() { Shutdown(); });
   zx_status_t res;
 
@@ -178,8 +178,8 @@ void WavRecorder::OnDefaultFormatFetched(media::MediaType type) {
   const auto& fmt = type.details.audio();
 
   sample_format_ = cmd_line_.HasOption(kFloatFormatOption)
-                       ? media::AudioSampleFormat::FLOAT
-                       : media::AudioSampleFormat::SIGNED_16;
+                       ? fuchsia::media::AudioSampleFormat::FLOAT
+                       : fuchsia::media::AudioSampleFormat::SIGNED_16;
   channel_count_ = fmt.channels;
   frames_per_second_ = fmt.frames_per_second;
 
@@ -197,10 +197,11 @@ void WavRecorder::OnDefaultFormatFetched(media::MediaType type) {
       return;
     }
 
-    if ((rate < media::kMinLpcmFramesPerSecond) ||
-        (rate > media::kMaxLpcmFramesPerSecond)) {
+    if ((rate < fuchsia::media::kMinLpcmFramesPerSecond) ||
+        (rate > fuchsia::media::kMaxLpcmFramesPerSecond)) {
       printf("Frame rate (%u) must be on the range [%u, %u]\n", rate,
-             media::kMinLpcmFramesPerSecond, media::kMaxLpcmFramesPerSecond);
+             fuchsia::media::kMinLpcmFramesPerSecond,
+             fuchsia::media::kMaxLpcmFramesPerSecond);
       return;
     }
 
@@ -230,8 +231,9 @@ void WavRecorder::OnDefaultFormatFetched(media::MediaType type) {
   }
 
   uint32_t bytes_per_sample =
-      (sample_format_ == media::AudioSampleFormat::FLOAT) ? sizeof(float)
-                                                          : sizeof(int16_t);
+      (sample_format_ == fuchsia::media::AudioSampleFormat::FLOAT)
+          ? sizeof(float)
+          : sizeof(int16_t);
   bytes_per_frame_ = channel_count_ * bytes_per_sample;
   uint32_t bits_per_sample = bytes_per_sample * 8;
 
@@ -276,22 +278,24 @@ void WavRecorder::OnDefaultFormatFetched(media::MediaType type) {
     FXL_DCHECK(payload_buf_frames_);
     FXL_DCHECK(capture_frames_per_chunk_);
     FXL_DCHECK((payload_buf_frames_ % capture_frames_per_chunk_) == 0);
-    capturer_.events().OnPacketCaptured = [this](media::MediaPacket pkt) {
-      OnPacketCaptured(std::move(pkt));
-    };
+    capturer_.events().OnPacketCaptured =
+        [this](fuchsia::media::MediaPacket pkt) {
+          OnPacketCaptured(std::move(pkt));
+        };
     capturer_->StartAsyncCapture(capture_frames_per_chunk_);
   }
 
   printf("Recording %s, %u Hz, %u channel linear PCM from %s into '%s'\n",
-         sample_format_ == media::AudioSampleFormat::FLOAT ? "32-bit float"
-                                                           : "16-bit signed",
+         sample_format_ == fuchsia::media::AudioSampleFormat::FLOAT
+             ? "32-bit float"
+             : "16-bit signed",
          frames_per_second_, channel_count_,
          loopback_ ? "loopback" : "default input", filename_);
 
   cleanup.cancel();
 }
 
-void WavRecorder::OnPacketCaptured(media::MediaPacket pkt) {
+void WavRecorder::OnPacketCaptured(fuchsia::media::MediaPacket pkt) {
   if (verbose_) {
     printf("PACKET [%6lu, %6lu] flags 0x%02x : ts %ld\n", pkt.payload_offset,
            pkt.payload_size, pkt.flags, pkt.pts);
@@ -317,7 +321,7 @@ void WavRecorder::OnPacketCaptured(media::MediaPacket pkt) {
 
   if (!clean_shutdown_ && (capturer_.events().OnPacketCaptured == nullptr)) {
     SendCaptureJob();
-  } else if (pkt.flags & media::kFlagEos) {
+  } else if (pkt.flags & fuchsia::media::kFlagEos) {
     Shutdown();
   }
 }

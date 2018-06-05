@@ -8,7 +8,7 @@
 #include <memory>
 
 #include <fuchsia/math/cpp/fidl.h>
-#include <media/cpp/fidl.h>
+#include <fuchsia/media/cpp/fidl.h>
 
 #include "garnet/bin/media/media_player/framework/types/video_stream_type.h"
 

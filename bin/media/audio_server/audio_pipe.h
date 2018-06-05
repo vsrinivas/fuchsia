@@ -7,7 +7,7 @@
 
 #include <memory>
 
-#include <media/cpp/fidl.h>
+#include <fuchsia/media/cpp/fidl.h>
 
 #include "garnet/bin/media/audio_server/audio_packet_ref.h"
 #include "garnet/bin/media/audio_server/fwd_decls.h"
@@ -43,7 +43,8 @@ class AudioPipe : public MediaPacketConsumerBase {
 
   // Indicates the priming was requested. The pipe is responsible for calling
   // the callback when priming is complete.
-  void PrimeRequested(MediaTimelineControlPoint::PrimeCallback callback);
+  void PrimeRequested(
+      fuchsia::media::MediaTimelineControlPoint::PrimeCallback callback);
 
  protected:
   void OnPacketSupplied(
@@ -58,8 +59,8 @@ class AudioPipe : public MediaPacketConsumerBase {
   AudioRenderer1Impl* owner_;
   AudioServerImpl* server_;
 
-  MediaTimelineControlPoint::PrimeCallback prime_callback_;
-  int64_t min_pts_ = kMinTime;
+  fuchsia::media::MediaTimelineControlPoint::PrimeCallback prime_callback_;
+  int64_t min_pts_ = fuchsia::media::kMinTime;
   bool min_pts_dirty_ = false;
 
   // State used for timestamp interpolation

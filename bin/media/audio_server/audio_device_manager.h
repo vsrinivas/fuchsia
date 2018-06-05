@@ -9,8 +9,8 @@
 
 #include <fbl/intrusive_double_list.h>
 #include <fbl/ref_ptr.h>
+#include <fuchsia/media/cpp/fidl.h>
 #include <lib/fit/function.h>
-#include <media/cpp/fidl.h>
 
 #include "garnet/bin/media/audio_server/audio_device.h"
 #include "garnet/bin/media/audio_server/audio_input.h"
@@ -35,7 +35,7 @@ class AudioDeviceManager {
   // 2) Instantiate all of the built-in audio output devices.
   // 3) Being monitoring for plug/unplug events for pluggable audio output
   //    devices.
-  MediaResult Init();
+  fuchsia::media::MediaResult Init();
 
   // Blocking call.  Called by the service, once, when it is time to shutdown
   // the service implementation.  While this function is blocking, it must never
@@ -77,7 +77,7 @@ class AudioDeviceManager {
   void ScheduleMainThreadTask(fit::closure task);
 
   // Attempt to initialize an output and add it to the set of active outputs.
-  MediaResult AddDevice(const fbl::RefPtr<AudioDevice>& device);
+  fuchsia::media::MediaResult AddDevice(const fbl::RefPtr<AudioDevice>& device);
 
   // Shutdown the specified audio device and remove it from the appropriate set
   // of active devices.

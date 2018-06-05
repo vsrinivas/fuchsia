@@ -8,10 +8,10 @@
 #include <mutex>
 #include <thread>
 
+#include <fuchsia/media/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/vmo-utils/vmo_mapper.h>
 #include <lib/fit/function.h>
-#include <media/cpp/fidl.h>
 #include <tts/cpp/fidl.h>
 #include <zircon/types.h>
 
@@ -31,8 +31,7 @@ class TtsSpeaker : public std::enable_shared_from_this<TtsSpeaker> {
   zx_status_t Init(
       const std::unique_ptr<fuchsia::sys::StartupContext>& startup_context);
 
-  zx_status_t Speak(fidl::StringPtr words,
-                    fit::closure speak_complete_cbk);
+  zx_status_t Speak(fidl::StringPtr words, fit::closure speak_complete_cbk);
   void Shutdown();
 
  private:
@@ -71,7 +70,7 @@ class TtsSpeaker : public std::enable_shared_from_this<TtsSpeaker> {
   async::Loop engine_loop_;
   async_t* master_async_;
 
-  media::AudioRenderer2Ptr audio_renderer_;
+  fuchsia::media::AudioRenderer2Ptr audio_renderer_;
   vmo_utils::VmoMapper shared_buf_;
 
   std::mutex ring_buffer_lock_;

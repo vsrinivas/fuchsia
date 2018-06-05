@@ -306,7 +306,7 @@ void MediaPlayerTestView::HandleStatusChanged(
   if (status.timeline_transform) {
     timeline_function_ = media::TimelineFunction(*status.timeline_transform);
 
-    if (seek_interval_start_ != media::kUnspecifiedTime &&
+    if (seek_interval_start_ != fuchsia::media::kUnspecifiedTime &&
         !in_current_seek_interval_ &&
         timeline_function_.subject_time() == seek_interval_start_) {
       // The seek issued in |StartNewSeekInterval| is now reflected in the
@@ -426,7 +426,7 @@ void MediaPlayerTestView::StartNewSeekInterval() {
     // We have no duration yet. Just start over at the start of the file.
     media_player_->Seek(0);
     media_player_->Play();
-    seek_interval_end_ = media::kUnspecifiedTime;
+    seek_interval_end_ = fuchsia::media::kUnspecifiedTime;
   }
 
   int64_t duration = metadata_->duration;

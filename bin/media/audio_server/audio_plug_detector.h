@@ -7,7 +7,7 @@
 
 #include <fbl/macros.h>
 #include <fbl/mutex.h>
-#include <media/cpp/fidl.h>
+#include <fuchsia/media/cpp/fidl.h>
 #include <zircon/compiler.h>
 #include <zircon/device/vfs.h>
 #include <zircon/types.h>
@@ -25,7 +25,7 @@ class AudioPlugDetector {
   AudioPlugDetector() {}
   ~AudioPlugDetector();
 
-  MediaResult Start(AudioDeviceManager* manager);
+  fuchsia::media::MediaResult Start(AudioDeviceManager* manager);
   void Stop();
 
  private:

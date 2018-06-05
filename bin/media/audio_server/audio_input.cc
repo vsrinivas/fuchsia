@@ -22,18 +22,18 @@ AudioInput::AudioInput(zx::channel channel, AudioDeviceManager* manager)
     : AudioDevice(Type::Input, manager),
       initial_stream_channel_(std::move(channel)) {}
 
-MediaResult AudioInput::Init() {
-  MediaResult init_res = AudioDevice::Init();
-  if (init_res != MediaResult::OK) {
+fuchsia::media::MediaResult AudioInput::Init() {
+  fuchsia::media::MediaResult init_res = AudioDevice::Init();
+  if (init_res != fuchsia::media::MediaResult::OK) {
     return init_res;
   }
 
   if (driver_->Init(fbl::move(initial_stream_channel_)) != ZX_OK) {
-    return MediaResult::INTERNAL_ERROR;
+    return fuchsia::media::MediaResult::INTERNAL_ERROR;
   }
 
   state_ = State::Initialized;
-  return MediaResult::OK;
+  return fuchsia::media::MediaResult::OK;
 }
 
 void AudioInput::OnWakeup() {
@@ -53,7 +53,8 @@ void AudioInput::OnDriverGetFormatsComplete() {
 
   uint32_t pref_fps = 48000;
   uint32_t pref_chan = 1;
-  AudioSampleFormat pref_fmt = AudioSampleFormat::SIGNED_16;
+  fuchsia::media::AudioSampleFormat pref_fmt =
+      fuchsia::media::AudioSampleFormat::SIGNED_16;
 
   zx_status_t res = SelectBestFormat(driver_->format_ranges(), &pref_fps,
                                      &pref_chan, &pref_fmt);

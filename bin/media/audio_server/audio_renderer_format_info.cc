@@ -10,7 +10,8 @@
 namespace media {
 namespace audio {
 
-AudioRendererFormatInfo::AudioRendererFormatInfo(AudioMediaTypeDetails format)
+AudioRendererFormatInfo::AudioRendererFormatInfo(
+    fuchsia::media::AudioMediaTypeDetails format)
     : format_(std::move(format)) {
   // Precompute some useful timing/format stuff.
   //
@@ -24,16 +25,16 @@ AudioRendererFormatInfo::AudioRendererFormatInfo(AudioMediaTypeDetails format)
 
   // Figure out the total number of bytes in a packed frame.
   switch (format_.sample_format) {
-    case AudioSampleFormat::UNSIGNED_8:
+    case fuchsia::media::AudioSampleFormat::UNSIGNED_8:
       bytes_per_frame_ = 1;
       break;
 
-    case AudioSampleFormat::SIGNED_16:
+    case fuchsia::media::AudioSampleFormat::SIGNED_16:
       bytes_per_frame_ = 2;
       break;
 
-    case AudioSampleFormat::SIGNED_24_IN_32:
-    case AudioSampleFormat::FLOAT:
+    case fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32:
+    case fuchsia::media::AudioSampleFormat::FLOAT:
       bytes_per_frame_ = 4;
       break;
 
@@ -52,7 +53,7 @@ AudioRendererFormatInfo::AudioRendererFormatInfo(AudioMediaTypeDetails format)
 
 // static
 fbl::RefPtr<AudioRendererFormatInfo> AudioRendererFormatInfo::Create(
-    AudioMediaTypeDetails format) {
+    fuchsia::media::AudioMediaTypeDetails format) {
   return fbl::AdoptRef(new AudioRendererFormatInfo(std::move(format)));
 }
 

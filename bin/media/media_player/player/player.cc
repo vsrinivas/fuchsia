@@ -127,12 +127,12 @@ void Player::SetTimelineFunction(media::TimelineFunction timeline_function,
   FXL_DCHECK(timeline_function.reference_delta() != 0);
 
   int64_t reference_time = timeline_function.reference_time();
-  if (reference_time == media::kUnspecifiedTime) {
+  if (reference_time == fuchsia::media::kUnspecifiedTime) {
     reference_time = media::Timeline::local_now() + kMinimumLeadTime;
   }
 
   int64_t subject_time = timeline_function.subject_time();
-  if (subject_time == media::kUnspecifiedTime) {
+  if (subject_time == fuchsia::media::kUnspecifiedTime) {
     subject_time = timeline_function_(reference_time);
   }
 

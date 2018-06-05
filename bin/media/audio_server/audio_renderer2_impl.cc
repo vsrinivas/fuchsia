@@ -14,14 +14,16 @@ namespace media {
 namespace audio {
 
 fbl::RefPtr<AudioRenderer2Impl> AudioRenderer2Impl::Create(
-    fidl::InterfaceRequest<AudioRenderer2> audio_renderer_request,
+    fidl::InterfaceRequest<fuchsia::media::AudioRenderer2>
+        audio_renderer_request,
     AudioServerImpl* owner) {
   return fbl::AdoptRef(
       new AudioRenderer2Impl(std::move(audio_renderer_request), owner));
 }
 
 AudioRenderer2Impl::AudioRenderer2Impl(
-    fidl::InterfaceRequest<AudioRenderer2> audio_renderer_request,
+    fidl::InterfaceRequest<fuchsia::media::AudioRenderer2>
+        audio_renderer_request,
     AudioServerImpl* owner)
     : owner_(owner),
       audio_renderer_binding_(this, std::move(audio_renderer_request)),
@@ -147,7 +149,7 @@ void AudioRenderer2Impl::ComputePtsToFracFrames(int64_t first_pts) {
 //
 // AudioRenderer2 Interface
 //
-void AudioRenderer2Impl::SetPcmFormat(AudioPcmFormat format) {
+void AudioRenderer2Impl::SetPcmFormat(fuchsia::media::AudioPcmFormat format) {
   auto cleanup = fbl::MakeAutoCall([this]() { Shutdown(); });
 
   // We cannot change the format while we are currently operational
@@ -158,34 +160,36 @@ void AudioRenderer2Impl::SetPcmFormat(AudioPcmFormat format) {
 
   // Sanity check the requested format
   switch (format.sample_format) {
-    case AudioSampleFormat::UNSIGNED_8:
-    case AudioSampleFormat::SIGNED_16:
-    case AudioSampleFormat::FLOAT:
+    case fuchsia::media::AudioSampleFormat::UNSIGNED_8:
+    case fuchsia::media::AudioSampleFormat::SIGNED_16:
+    case fuchsia::media::AudioSampleFormat::FLOAT:
       break;
 
     // TODO(johngro): Add more sample formats (24 bit, etc..) as the
     // mixer core learns to handle them.
     default:
       FXL_LOG(ERROR) << "Unsupported sample format (" << format.sample_format
-                     << ") in AudioRenderer::SetPcmFormat.";
+                     << ") in fuchsia::media::AudioRenderer::SetPcmFormat.";
       return;
   }
 
-  if ((format.channels < kMinChannelCount) ||
-      (format.channels > kMaxChannelCount)) {
-    FXL_LOG(ERROR)
-        << "Invalid channel count (" << format.channels
-        << ") in AudioRenderer::SetPcmFormat.  Must be on the range ["
-        << kMinChannelCount << ", " << kMaxChannelCount << "]";
+  if ((format.channels < fuchsia::media::kMinChannelCount) ||
+      (format.channels > fuchsia::media::kMaxChannelCount)) {
+    FXL_LOG(ERROR) << "Invalid channel count (" << format.channels
+                   << ") in fuchsia::media::AudioRenderer::SetPcmFormat.  Must "
+                      "be on the range ["
+                   << fuchsia::media::kMinChannelCount << ", "
+                   << fuchsia::media::kMaxChannelCount << "]";
     return;
   }
 
-  if ((format.frames_per_second < kMinFramesPerSecond) ||
-      (format.frames_per_second > kMaxFramesPerSecond)) {
-    FXL_LOG(ERROR)
-        << "Invalid frame rate (" << format.frames_per_second
-        << ") in AudioRenderer::SetPcmFormat.  Must be on the range ["
-        << kMinFramesPerSecond << ", " << kMaxFramesPerSecond << "]";
+  if ((format.frames_per_second < fuchsia::media::kMinFramesPerSecond) ||
+      (format.frames_per_second > fuchsia::media::kMaxFramesPerSecond)) {
+    FXL_LOG(ERROR) << "Invalid frame rate (" << format.frames_per_second
+                   << ") in fuchsia::media::AudioRenderer::SetPcmFormat.  Must "
+                      "be on the range ["
+                   << fuchsia::media::kMinFramesPerSecond << ", "
+                   << fuchsia::media::kMaxFramesPerSecond << "]";
     return;
   }
 
@@ -198,7 +202,7 @@ void AudioRenderer2Impl::SetPcmFormat(AudioPcmFormat format) {
   // TODO(johngro): Look into eliminating most of the format_info class when we
   // finish removing the old audio renderer interface.  At the very least,
   // switch to using the AudioPcmFormat struct instead of AudioMediaTypeDetails
-  AudioMediaTypeDetails cfg;
+  fuchsia::media::AudioMediaTypeDetails cfg;
   cfg.sample_format = format.sample_format;
   cfg.channels = format.channels;
   cfg.frames_per_second = format.frames_per_second;
@@ -318,7 +322,7 @@ void AudioRenderer2Impl::SetReferenceClock(zx::handle ref_clock) {
   FXL_LOG(WARNING) << "Not Implemented : " << __PRETTY_FUNCTION__;
 }
 
-void AudioRenderer2Impl::SendPacket(AudioPacket packet,
+void AudioRenderer2Impl::SendPacket(fuchsia::media::AudioPacket packet,
                                     SendPacketCallback callback) {
   auto cleanup = fbl::MakeAutoCall([this]() { Shutdown(); });
 
@@ -369,14 +373,15 @@ void AudioRenderer2Impl::SendPacket(AudioPacket packet,
   // to frames transformation needs to be computed (this should be needed after
   // startup, and after each flush operation).
   if (!pts_to_frac_frames_valid_) {
-    ComputePtsToFracFrames(
-        (packet.timestamp == kNoTimestamp) ? 0 : packet.timestamp);
+    ComputePtsToFracFrames((packet.timestamp == fuchsia::media::kNoTimestamp)
+                               ? 0
+                               : packet.timestamp);
   }
 
   // Now compute the starting PTS expressed in fractional input frames.  If no
   // explicit PTS was provided, interpolate using the next expected PTS.
   int64_t start_pts;
-  if (packet.timestamp == kNoTimestamp) {
+  if (packet.timestamp == fuchsia::media::kNoTimestamp) {
     start_pts = next_frac_frame_pts_;
   } else {
     // Looks like we have an explicit PTS on this packet.  Boost it into the
@@ -421,7 +426,7 @@ void AudioRenderer2Impl::SendPacket(AudioPacket packet,
   cleanup.cancel();
 }
 
-void AudioRenderer2Impl::SendPacketNoReply(AudioPacket packet) {
+void AudioRenderer2Impl::SendPacketNoReply(fuchsia::media::AudioPacket packet) {
   SendPacket(std::move(packet), nullptr);
 }
 
@@ -470,7 +475,7 @@ void AudioRenderer2Impl::Play(int64_t reference_time, int64_t media_time,
   //
   // TODO(johngro): We need to use our reference clock here, and not just assume
   // clock monotonic is our reference clock.
-  if (reference_time == kNoTimestamp) {
+  if (reference_time == fuchsia::media::kNoTimestamp) {
     // TODO(johngro): How much more than the minimum clock lead time do we want
     // to pad this by?  Also, if/when lead time requirements change, do we want
     // to introduce a discontinuity?
@@ -497,7 +502,7 @@ void AudioRenderer2Impl::Play(int64_t reference_time, int64_t media_time,
   // defined when we transition to our operational mode.  We need to remember to
   // translate back and forth as appropriate.
   int64_t frac_frame_media_time;
-  if (media_time == kNoTimestamp) {
+  if (media_time == fuchsia::media::kNoTimestamp) {
     // Are we resuming from pause?
     if (pause_time_frac_frames_valid_) {
       frac_frame_media_time = pause_time_frac_frames_;
@@ -597,8 +602,8 @@ void AudioRenderer2Impl::SetGainMute(float gain, bool mute, uint32_t flags,
                                      SetGainMuteCallback callback) {
   auto cleanup = fbl::MakeAutoCall([this]() { Shutdown(); });
   bool dirty = false;
-  if ((flags & kGainFlagGainValid) && (db_gain_ != gain)) {
-    if (gain > kMaxGain) {
+  if ((flags & fuchsia::media::kGainFlagGainValid) && (db_gain_ != gain)) {
+    if (gain > fuchsia::media::kMaxGain) {
       FXL_LOG(ERROR) << "Gain value too large (" << gain
                      << ") for audio renderer.";
       return;
@@ -608,13 +613,13 @@ void AudioRenderer2Impl::SetGainMute(float gain, bool mute, uint32_t flags,
     dirty = true;
   }
 
-  if ((flags & kGainFlagMuteValid) && (mute_ != mute)) {
+  if ((flags & fuchsia::media::kGainFlagMuteValid) && (mute_ != mute)) {
     mute_ = mute;
     dirty = true;
   }
 
   if (dirty) {
-    float effective_gain = mute_ ? kMutedGain : db_gain_;
+    float effective_gain = mute_ ? fuchsia::media::kMutedGain : db_gain_;
 
     fbl::AutoLock links_lock(&links_lock_);
     for (const auto& link : dest_links_) {
@@ -638,7 +643,7 @@ void AudioRenderer2Impl::SetGainMuteNoReply(float gain, bool mute,
 }
 
 void AudioRenderer2Impl::DuplicateGainControlInterface(
-    fidl::InterfaceRequest<AudioRendererGainControl> request) {
+    fidl::InterfaceRequest<fuchsia::media::AudioRendererGainControl> request) {
   gain_control_bindings_.AddBinding(GainControlBinding::Create(this),
                                     std::move(request));
 }
@@ -661,8 +666,9 @@ void AudioRenderer2Impl::ReportNewMinClockLeadTime() {
 
 AudioRenderer2Impl::AudioPacketRefV2::AudioPacketRefV2(
     fbl::RefPtr<vmo_utils::RefCountedVmoMapper> vmo_ref,
-    AudioRenderer2::SendPacketCallback callback, AudioPacket packet,
-    AudioServerImpl* server, uint32_t frac_frame_len, int64_t start_pts)
+    fuchsia::media::AudioRenderer2::SendPacketCallback callback,
+    fuchsia::media::AudioPacket packet, AudioServerImpl* server,
+    uint32_t frac_frame_len, int64_t start_pts)
     : AudioPacketRef(server, frac_frame_len, start_pts),
       vmo_ref_(std::move(vmo_ref)),
       callback_(callback),

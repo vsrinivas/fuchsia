@@ -8,8 +8,8 @@
 #include <limits>
 #include <mutex>
 
+#include <fuchsia/media/cpp/fidl.h>
 #include <lib/fit/function.h>
-#include <media/cpp/fidl.h>
 
 #include "lib/fxl/synchronization/thread_annotations.h"
 #include "lib/fxl/synchronization/thread_checker.h"
@@ -32,8 +32,9 @@ class MediaPacketProducerBase {
   void SetFixedBufferSize(uint64_t size);
 
   // Connects to the indicated consumer.
-  void Connect(MediaPacketConsumerPtr consumer,
-               const MediaPacketProducer::ConnectCallback& callback);
+  void Connect(
+      fuchsia::media::MediaPacketConsumerPtr consumer,
+      const fuchsia::media::MediaPacketProducer::ConnectCallback& callback);
 
   // Disconnects from the consumer.
   void Disconnect();
@@ -45,8 +46,9 @@ class MediaPacketProducerBase {
   void Reset();
 
   // Flushes the consumer.
-  void FlushConsumer(bool hold_frame,
-                     const MediaPacketConsumer::FlushCallback& callback);
+  void FlushConsumer(
+      bool hold_frame,
+      const fuchsia::media::MediaPacketConsumer::FlushCallback& callback);
 
   // Allocates a payload buffer of the specified size.
   void* AllocatePayloadBuffer(size_t size);
@@ -57,11 +59,11 @@ class MediaPacketProducerBase {
   // Produces a packet and supplies it to the consumer.
   void ProducePacket(void* payload, size_t size, int64_t pts,
                      TimelineRate pts_rate, bool keyframe, bool end_of_stream,
-                     MediaTypePtr revised_media_type,
+                     fuchsia::media::MediaTypePtr revised_media_type,
                      ProducePacketCallback callback);
 
   // Gets the current demand.
-  const MediaPacketDemand& demand() const { return demand_; }
+  const fuchsia::media::MediaPacketDemand& demand() const { return demand_; }
 
   // Determines whether the consumer is currently demanding a packet. The
   // |additional_packets_outstanding| parameter indicates the number of packets
@@ -87,18 +89,19 @@ class MediaPacketProducerBase {
 
   // Handles a demand update callback or, if called with default parameters,
   // initiates demand update requests.
-  void HandleDemandUpdate(MediaPacketDemandPtr demand = nullptr);
+  void HandleDemandUpdate(
+      fuchsia::media::MediaPacketDemandPtr demand = nullptr);
 
   // Updates demand_ and calls demand_update_callback_ if it's set and demand
   // has changed.
-  void UpdateDemand(const MediaPacketDemand& demand);
+  void UpdateDemand(const fuchsia::media::MediaPacketDemand& demand);
 
   SharedBufferSetAllocator allocator_;
-  MediaPacketConsumerPtr consumer_;
+  fuchsia::media::MediaPacketConsumerPtr consumer_;
   bool flush_in_progress_ = false;
 
   mutable std::mutex mutex_;
-  MediaPacketDemand demand_ FXL_GUARDED_BY(mutex_);
+  fuchsia::media::MediaPacketDemand demand_ FXL_GUARDED_BY(mutex_);
   uint32_t packets_outstanding_ FXL_GUARDED_BY(mutex_);
   int64_t pts_last_produced_ FXL_GUARDED_BY(mutex_) =
       std::numeric_limits<int64_t>::min();

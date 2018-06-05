@@ -5,8 +5,8 @@
 #ifndef GARNET_EXAMPLES_MEDIA_WAV_RECORD_WAV_RECORDER_H_
 #define GARNET_EXAMPLES_MEDIA_WAV_RECORD_WAV_RECORDER_H_
 
+#include <fuchsia/media/cpp/fidl.h>
 #include <lib/fit/function.h>
-#include <media/cpp/fidl.h>
 
 #include "garnet/lib/media/wav_writer/wav_writer.h"
 #include "lib/app/cpp/startup_context.h"
@@ -32,11 +32,11 @@ class WavRecorder {
   void Shutdown();
   bool SetupPayloadBuffer();
   void SendCaptureJob();
-  void OnDefaultFormatFetched(media::MediaType type);
-  void OnPacketCaptured(media::MediaPacket pkt);
+  void OnDefaultFormatFetched(fuchsia::media::MediaType type);
+  void OnPacketCaptured(fuchsia::media::MediaPacket pkt);
   void OnQuit();
 
-  media::AudioCapturerPtr capturer_;
+  fuchsia::media::AudioCapturerPtr capturer_;
   fsl::FDWaiter keystroke_waiter_;
   media::audio::WavWriter<> wav_writer_;
 
@@ -51,7 +51,7 @@ class WavRecorder {
   size_t payload_buf_size_ = 0;
   size_t payload_buf_frames_ = 0;
 
-  media::AudioSampleFormat sample_format_;
+  fuchsia::media::AudioSampleFormat sample_format_;
   uint32_t channel_count_ = 0;
   uint32_t frames_per_second_ = 0;
   uint32_t bytes_per_frame_ = 0;

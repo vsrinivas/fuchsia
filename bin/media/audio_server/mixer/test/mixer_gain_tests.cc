@@ -185,8 +185,8 @@ TEST(Gain, Scaling_Linearity) {
   gain.SetRendererGain(20.0f);
   Gain::AScale stream_scale = gain.GetGainScale(0.0f);
 
-  MixerPtr mixer = SelectMixer(AudioSampleFormat::SIGNED_16, 1, 44100, 1, 44100,
-                               Resampler::SampleAndHold);
+  MixerPtr mixer = SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_16, 1,
+                               44100, 1, 44100, Resampler::SampleAndHold);
   DoMix(std::move(mixer), source, accum, false, fbl::count_of(accum),
         stream_scale);
 
@@ -201,8 +201,8 @@ TEST(Gain, Scaling_Linearity) {
   gain.SetRendererGain(-20.0f);
   stream_scale = gain.GetGainScale(0.0f);
 
-  mixer = SelectMixer(AudioSampleFormat::SIGNED_16, 1, 44100, 1, 44100,
-                      Resampler::SampleAndHold);
+  mixer = SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_16, 1, 44100, 1,
+                      44100, Resampler::SampleAndHold);
   DoMix(std::move(mixer), source, accum, false, fbl::count_of(accum),
         stream_scale);
 
@@ -222,8 +222,8 @@ TEST(Gain, Scaling_Precision) {
   // Before, even slightly below unity reduced all positive vals. Now we round.
   // For this reason, at this gain_scale, resulting audio should be unchanged.
   Gain::AScale gain_scale = AudioResult::kPrevScaleEpsilon + 1;
-  MixerPtr mixer = SelectMixer(AudioSampleFormat::SIGNED_16, 1, 48000, 1, 48000,
-                               Resampler::SampleAndHold);
+  MixerPtr mixer = SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_16, 1,
+                               48000, 1, 48000, Resampler::SampleAndHold);
   DoMix(std::move(mixer), source, accum, false, fbl::count_of(accum),
         gain_scale);
 
@@ -233,8 +233,8 @@ TEST(Gain, Scaling_Precision) {
 
   // This gain is the first (closest-to-unity) to change a full-scale signal.
   gain_scale = AudioResult::kPrevScaleEpsilon;
-  mixer = SelectMixer(AudioSampleFormat::SIGNED_16, 1, 48000, 1, 48000,
-                      Resampler::SampleAndHold);
+  mixer = SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_16, 1, 48000, 1,
+                      48000, Resampler::SampleAndHold);
   DoMix(std::move(mixer), source, accum, false, fbl::count_of(accum),
         gain_scale);
 
@@ -245,8 +245,8 @@ TEST(Gain, Scaling_Precision) {
   // This is lowest gain_scale that produces non-zero from full-scale.
   // Why "+1"? Differences in negative and positive range; see subsequent check.
   gain_scale = AudioResult::kPrevMinScaleNonZero + 1;
-  mixer = SelectMixer(AudioSampleFormat::SIGNED_16, 1, 48000, 1, 48000,
-                      Resampler::SampleAndHold);
+  mixer = SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_16, 1, 48000, 1,
+                      48000, Resampler::SampleAndHold);
   DoMix(std::move(mixer), source, accum, false, fbl::count_of(accum),
         gain_scale);
 
@@ -256,8 +256,8 @@ TEST(Gain, Scaling_Precision) {
   // This 'special' scale straddles boundaries: 32767 is reduced to _just_ less
   // than .5 (and rounds in) while -32768 becomes -.50000 (rounding out to -1).
   gain_scale = AudioResult::kPrevMinScaleNonZero;
-  mixer = SelectMixer(AudioSampleFormat::SIGNED_16, 1, 48000, 1, 48000,
-                      Resampler::SampleAndHold);
+  mixer = SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_16, 1, 48000, 1,
+                      48000, Resampler::SampleAndHold);
   DoMix(std::move(mixer), source, accum, false, fbl::count_of(accum),
         gain_scale);
 
@@ -267,8 +267,8 @@ TEST(Gain, Scaling_Precision) {
   // At this gain, even -32768 is reduced to -.49... thus rounds in to 0.
   // Therefore, nothing should change in the accumulator buffer.
   gain_scale = AudioResult::kPrevMinScaleNonZero - 1;
-  mixer = SelectMixer(AudioSampleFormat::SIGNED_16, 1, 48000, 1, 48000,
-                      Resampler::SampleAndHold);
+  mixer = SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_16, 1, 48000, 1,
+                      48000, Resampler::SampleAndHold);
   DoMix(std::move(mixer), source, accum, true, fbl::count_of(accum),
         gain_scale);
 
@@ -293,14 +293,14 @@ TEST(Gain, Accumulator) {
   NormalizeInt24ToPipelineBitwidth(expect2, fbl::count_of(expect2));
 
   // These values exceed the per-stream range of int16
-  MixerPtr mixer = SelectMixer(AudioSampleFormat::SIGNED_16, 1, 48000, 1, 48000,
-                               Resampler::SampleAndHold);
+  MixerPtr mixer = SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_16, 1,
+                               48000, 1, 48000, Resampler::SampleAndHold);
   DoMix(std::move(mixer), source, accum, true, fbl::count_of(accum));
   EXPECT_TRUE(CompareBuffers(accum, expect, fbl::count_of(accum)));
 
   // these values even exceed uint16
-  mixer = SelectMixer(AudioSampleFormat::SIGNED_16, 2, 48000, 2, 48000,
-                      Resampler::SampleAndHold);
+  mixer = SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_16, 2, 48000, 2,
+                      48000, Resampler::SampleAndHold);
   DoMix(std::move(mixer), source, accum, true, 1);
   EXPECT_TRUE(CompareBuffers(accum, expect2, fbl::count_of(accum)));
 }
@@ -314,8 +314,8 @@ TEST(Gain, Accumulator_Clamp) {
                      std::numeric_limits<int32_t>::min() -
                          (source[1] << (kAudioPipelineWidth - 16)) - 1};
 
-  MixerPtr mixer = SelectMixer(AudioSampleFormat::SIGNED_16, 1, 48000, 1, 48000,
-                               Resampler::SampleAndHold);
+  MixerPtr mixer = SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_16, 1,
+                               48000, 1, 48000, Resampler::SampleAndHold);
   DoMix(std::move(mixer), source, accum, true, fbl::count_of(accum));
 
   // TODO(mpuryear): when MTWN-83 is fixed, expect max and min (not min & max).
@@ -332,16 +332,16 @@ TEST(Gain, Accumulator_Clear) {
   int32_t expect[] = {-32768, 32767};
 
   // We will test both SampleAndHold and LinearInterpolation interpolators.
-  MixerPtr mixer = SelectMixer(AudioSampleFormat::SIGNED_16, 1, 48000, 1, 48000,
-                               Resampler::SampleAndHold);
+  MixerPtr mixer = SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_16, 1,
+                               48000, 1, 48000, Resampler::SampleAndHold);
   // Use the gain guaranteed to silence all signals: Gain::MuteThreshold.
   DoMix(std::move(mixer), source, accum, true, fbl::count_of(accum),
         Gain::MuteThreshold());
   EXPECT_TRUE(CompareBuffers(accum, expect, fbl::count_of(accum)));
 
   // Try with the other sampler.
-  mixer = SelectMixer(AudioSampleFormat::SIGNED_16, 1, 48000, 1, 48000,
-                      Resampler::LinearInterpolation);
+  mixer = SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_16, 1, 48000, 1,
+                      48000, Resampler::LinearInterpolation);
   DoMix(std::move(mixer), source, accum, true, fbl::count_of(accum),
         Gain::MuteThreshold());
   EXPECT_TRUE(CompareBuffers(accum, expect, fbl::count_of(accum)));
@@ -349,15 +349,15 @@ TEST(Gain, Accumulator_Clear) {
   //
   // When accumulate = false, this is overridden: it behaves identically.
   //
-  mixer = SelectMixer(AudioSampleFormat::SIGNED_16, 1, 48000, 1, 48000,
-                      Resampler::SampleAndHold);
+  mixer = SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_16, 1, 48000, 1,
+                      48000, Resampler::SampleAndHold);
   DoMix(std::move(mixer), source, accum, false, fbl::count_of(accum),
         Gain::MuteThreshold());
   EXPECT_TRUE(CompareBuffers(accum, expect, fbl::count_of(accum)));
 
   // Ensure that both samplers behave identically in this regard.
-  mixer = SelectMixer(AudioSampleFormat::SIGNED_16, 1, 48000, 1, 48000,
-                      Resampler::LinearInterpolation);
+  mixer = SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_16, 1, 48000, 1,
+                      48000, Resampler::LinearInterpolation);
   DoMix(std::move(mixer), source, accum, false, fbl::count_of(accum),
         Gain::MuteThreshold());
   EXPECT_TRUE(CompareBuffers(accum, expect, fbl::count_of(accum)));

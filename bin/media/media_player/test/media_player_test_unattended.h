@@ -5,10 +5,10 @@
 #ifndef GARNET_BIN_MEDIA_MEDIA_PLAYER_TEST_MEDIA_PLAYER_TEST_UNATTENDED_H_
 #define GARNET_BIN_MEDIA_MEDIA_PLAYER_TEST_MEDIA_PLAYER_TEST_UNATTENDED_H_
 
+#include <fuchsia/media/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/task.h>
 #include <lib/fit/function.h>
-#include <media/cpp/fidl.h>
 
 #include "garnet/bin/media/media_player/test/fake_audio_renderer.h"
 #include "garnet/bin/media/media_player/test/fake_wav_reader.h"

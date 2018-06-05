@@ -61,7 +61,8 @@ void AudioPipe::UpdateMinPts(int64_t min_pts) {
   }
 }
 
-void AudioPipe::PrimeRequested(MediaTimelineControlPoint::PrimeCallback cbk) {
+void AudioPipe::PrimeRequested(
+    fuchsia::media::MediaTimelineControlPoint::PrimeCallback cbk) {
   if (prime_callback_) {
     // Prime was already requested. Complete the old one and warn.
     FXL_LOG(WARNING) << "multiple prime requests received";
@@ -134,7 +135,7 @@ void AudioPipe::OnPacketSupplied(
 
   // Figure out the starting PTS.
   int64_t start_pts;
-  if (supplied_packet->packet().pts != kNoTimestamp) {
+  if (supplied_packet->packet().pts != fuchsia::media::kNoTimestamp) {
     // The user provided an explicit PTS for this audio.  Transform it into
     // units of fractional frames.
     start_pts = supplied_packet->packet().pts *
@@ -151,7 +152,8 @@ void AudioPipe::OnPacketSupplied(
   next_pts_ = start_pts + pts_delta;
   next_pts_known_ = true;
 
-  bool end_of_stream = supplied_packet->packet().flags & kFlagEos;
+  bool end_of_stream =
+      supplied_packet->packet().flags & fuchsia::media::kFlagEos;
 
   // Send the packet along unless it falls outside the program range.
   if (next_pts_ >= min_pts_) {

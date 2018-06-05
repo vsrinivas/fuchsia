@@ -9,10 +9,10 @@
 #include <limits>
 
 #include <fbl/auto_call.h>
+#include <fuchsia/media/cpp/fidl.h>
 #include <lib/async-loop/loop.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
-#include <media/cpp/fidl.h>
 
 #include "garnet/examples/media/tones/midi_keyboard.h"
 #include "lib/fxl/logging.h"
@@ -77,12 +77,12 @@ void ConvertFloatToSigned16(float* source, int16_t* dest, size_t sample_count) {
   }
 }
 
-static constexpr media::AudioSampleFormat kSampleFormat =
-    media::AudioSampleFormat::SIGNED_16;
+static constexpr fuchsia::media::AudioSampleFormat kSampleFormat =
+    fuchsia::media::AudioSampleFormat::SIGNED_16;
 static constexpr uint32_t kBytesPerFrame = kChannelCount * sizeof(uint16_t);
 #else
-static constexpr media::AudioSampleFormat kSampleFormat =
-    media::AudioSampleFormat::FLOAT;
+static constexpr fuchsia::media::AudioSampleFormat kSampleFormat =
+    fuchsia::media::AudioSampleFormat::FLOAT;
 static constexpr uint32_t kBytesPerFrame = kChannelCount * sizeof(float);
 #endif
 
@@ -102,8 +102,9 @@ Tones::Tones(bool interactive, fit::closure quit_callback)
   // Connect to the audio service and get a renderer.
   auto startup_context = fuchsia::sys::StartupContext::CreateFromStartupInfo();
 
-  media::AudioServerPtr audio_server =
-      startup_context->ConnectToEnvironmentService<media::AudioServer>();
+  fuchsia::media::AudioServerPtr audio_server =
+      startup_context
+          ->ConnectToEnvironmentService<fuchsia::media::AudioServer>();
 
   audio_server->CreateRendererV2(audio_renderer_.NewRequest());
 
@@ -113,7 +114,7 @@ Tones::Tones(bool interactive, fit::closure quit_callback)
   });
 
   // Configure the format of the renderer.
-  media::AudioPcmFormat format;
+  fuchsia::media::AudioPcmFormat format;
   format.sample_format = kSampleFormat;
   format.channels = kChannelCount;
   format.frames_per_second = kFramesPerSecond;
@@ -257,7 +258,8 @@ void Tones::OnMinLeadTimeChanged(int64_t min_lead_time_nsec) {
     }
 
     SendPackets();
-    audio_renderer_->PlayNoReply(media::kNoTimestamp, media::kNoTimestamp);
+    audio_renderer_->PlayNoReply(fuchsia::media::kNoTimestamp,
+                                 fuchsia::media::kNoTimestamp);
     started_ = true;
   } else {
     SendPackets();
@@ -269,7 +271,7 @@ void Tones::OnMinLeadTimeChanged(int64_t min_lead_time_nsec) {
 void Tones::SendPackets() {
   while (!done() && (active_packets_in_flight_ < target_packets_in_flight_)) {
     // Allocate packet and locate its position in the buffer.
-    media::AudioPacket packet;
+    fuchsia::media::AudioPacket packet;
     packet.payload_offset = (pts_ * kBytesPerFrame) % payload_buffer_.size();
     packet.payload_size = kBytesPerBuffer;
 

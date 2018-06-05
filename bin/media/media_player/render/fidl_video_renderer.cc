@@ -98,7 +98,7 @@ void FidlVideoRenderer::FlushInput(bool hold_frame, size_t input_index,
     held_packet_.reset();
   }
 
-  SetEndOfStreamPts(media::kUnspecifiedTime);
+  SetEndOfStreamPts(fuchsia::media::kUnspecifiedTime);
 
   InvalidateViews();
 

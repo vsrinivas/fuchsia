@@ -5,9 +5,9 @@
 #ifndef GARNET_EXAMPLES_MEDIA_SIMPLE_SINE_SIMPLE_SINE_H_
 #define GARNET_EXAMPLES_MEDIA_SIMPLE_SINE_SIMPLE_SINE_H_
 
+#include <fuchsia/media/cpp/fidl.h>
 #include <lib/fit/function.h>
 #include <lib/vmo-utils/vmo_mapper.h>
-#include <media/cpp/fidl.h>
 
 #include "lib/app/cpp/startup_context.h"
 
@@ -28,15 +28,15 @@ class MediaApp {
   zx_status_t CreateMemoryMapping();
   void WriteAudioIntoBuffer();
 
-  media::AudioPacket CreateAudioPacket(size_t packet_num);
-  void SendPacket(media::AudioPacket packet);
+  fuchsia::media::AudioPacket CreateAudioPacket(size_t packet_num);
+  void SendPacket(fuchsia::media::AudioPacket packet);
   void OnSendPacketComplete();
 
   void Shutdown();
 
   fit::closure quit_callback_;
 
-  media::AudioRenderer2Ptr audio_renderer_;
+  fuchsia::media::AudioRenderer2Ptr audio_renderer_;
 
   vmo_utils::VmoMapper payload_buffer_;
   size_t sample_size_;

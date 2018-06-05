@@ -6,8 +6,8 @@
 #define GARNET_BIN_MEDIA_AUDIO_SERVER_AUDIO_RENDERER2_IMPL_H_
 
 #include <fbl/unique_ptr.h>
+#include <fuchsia/media/cpp/fidl.h>
 #include <lib/vmo-utils/vmo_mapper.h>
-#include <media/cpp/fidl.h>
 
 #include "garnet/bin/media/audio_server/audio_object.h"
 #include "garnet/bin/media/audio_server/audio_renderer_impl.h"
@@ -20,10 +20,12 @@ namespace audio {
 
 class AudioServerImpl;
 
-class AudioRenderer2Impl : public AudioRendererImpl, public AudioRenderer2 {
+class AudioRenderer2Impl : public AudioRendererImpl,
+                           public fuchsia::media::AudioRenderer2 {
  public:
   static fbl::RefPtr<AudioRenderer2Impl> Create(
-      fidl::InterfaceRequest<AudioRenderer2> audio_renderer_request,
+      fidl::InterfaceRequest<fuchsia::media::AudioRenderer2>
+          audio_renderer_request,
       AudioServerImpl* owner);
 
   // AudioRendererImpl implementation
@@ -36,14 +38,15 @@ class AudioRenderer2Impl : public AudioRendererImpl, public AudioRenderer2 {
                                        uint32_t* generation) override;
 
   // AudioRenderer2 Interface
-  void SetPcmFormat(AudioPcmFormat format) final;
+  void SetPcmFormat(fuchsia::media::AudioPcmFormat format) final;
   void SetPayloadBuffer(zx::vmo payload_buffer) final;
   void SetPtsUnits(uint32_t tick_per_second_numerator,
                    uint32_t tick_per_second_denominator) final;
   void SetPtsContinuityThreshold(float threshold_seconds) final;
   void SetReferenceClock(zx::handle ref_clock) final;
-  void SendPacket(AudioPacket packet, SendPacketCallback callback) final;
-  void SendPacketNoReply(AudioPacket packet) final;
+  void SendPacket(fuchsia::media::AudioPacket packet,
+                  SendPacketCallback callback) final;
+  void SendPacketNoReply(fuchsia::media::AudioPacket packet) final;
   void Flush(FlushCallback callback) final;
   void FlushNoReply() final;
   void Play(int64_t reference_time, int64_t media_time,
@@ -55,7 +58,8 @@ class AudioRenderer2Impl : public AudioRendererImpl, public AudioRenderer2 {
                    SetGainMuteCallback callback) final;
   void SetGainMuteNoReply(float gain, bool mute, uint32_t flags) final;
   void DuplicateGainControlInterface(
-      fidl::InterfaceRequest<AudioRendererGainControl> request) final;
+      fidl::InterfaceRequest<fuchsia::media::AudioRendererGainControl> request)
+      final;
   void EnableMinLeadTimeEvents(bool enabled) final;
   void GetMinLeadTime(GetMinLeadTimeCallback callback) final;
 
@@ -82,20 +86,21 @@ class AudioRenderer2Impl : public AudioRendererImpl, public AudioRenderer2 {
 
     uint32_t flags() final { return packet_.flags; }
 
-    AudioPacketRefV2(fbl::RefPtr<vmo_utils::RefCountedVmoMapper> vmo_ref,
-                     AudioRenderer2::SendPacketCallback callback,
-                     AudioPacket packet, AudioServerImpl* server,
-                     uint32_t frac_frame_len, int64_t start_pts);
+    AudioPacketRefV2(
+        fbl::RefPtr<vmo_utils::RefCountedVmoMapper> vmo_ref,
+        fuchsia::media::AudioRenderer2::SendPacketCallback callback,
+        fuchsia::media::AudioPacket packet, AudioServerImpl* server,
+        uint32_t frac_frame_len, int64_t start_pts);
 
    protected:
     bool NeedsCleanup() final { return callback_ != nullptr; }
 
     fbl::RefPtr<vmo_utils::RefCountedVmoMapper> vmo_ref_;
-    AudioRenderer2::SendPacketCallback callback_;
-    AudioPacket packet_;
+    fuchsia::media::AudioRenderer2::SendPacketCallback callback_;
+    fuchsia::media::AudioPacket packet_;
   };
 
-  class GainControlBinding : public AudioRendererGainControl {
+  class GainControlBinding : public fuchsia::media::AudioRendererGainControl {
    public:
     static fbl::unique_ptr<GainControlBinding> Create(
         AudioRenderer2Impl* owner) {
@@ -122,9 +127,9 @@ class AudioRenderer2Impl : public AudioRendererImpl, public AudioRenderer2 {
   friend class fbl::RefPtr<AudioRenderer2Impl>;
   friend class GainControlBinding;
 
-  AudioRenderer2Impl(
-      fidl::InterfaceRequest<AudioRenderer2> audio_renderer_request,
-      AudioServerImpl* owner);
+  AudioRenderer2Impl(fidl::InterfaceRequest<fuchsia::media::AudioRenderer2>
+                         audio_renderer_request,
+                     AudioServerImpl* owner);
 
   ~AudioRenderer2Impl() override;
 
@@ -133,8 +138,8 @@ class AudioRenderer2Impl : public AudioRendererImpl, public AudioRenderer2 {
   void ComputePtsToFracFrames(int64_t first_pts);
 
   AudioServerImpl* owner_ = nullptr;
-  fidl::Binding<AudioRenderer2> audio_renderer_binding_;
-  fidl::BindingSet<AudioRendererGainControl,
+  fidl::Binding<fuchsia::media::AudioRenderer2> audio_renderer_binding_;
+  fidl::BindingSet<fuchsia::media::AudioRendererGainControl,
                    fbl::unique_ptr<GainControlBinding>>
       gain_control_bindings_;
   bool is_shutdown_ = false;

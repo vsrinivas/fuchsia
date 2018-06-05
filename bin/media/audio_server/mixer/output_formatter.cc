@@ -97,7 +97,8 @@ class SilenceMaker<
 template <typename DType>
 class OutputFormatterImpl : public OutputFormatter {
  public:
-  explicit OutputFormatterImpl(const AudioMediaTypeDetailsPtr& format)
+  explicit OutputFormatterImpl(
+      const fuchsia::media::AudioMediaTypeDetailsPtr& format)
       : OutputFormatter(format, sizeof(DType)) {}
 
   void ProduceOutput(const int32_t* source, void* dest_void,
@@ -118,8 +119,9 @@ class OutputFormatterImpl : public OutputFormatter {
 };
 
 // Constructor/destructor for the common OutputFormatter base class.
-OutputFormatter::OutputFormatter(const AudioMediaTypeDetailsPtr& format,
-                                 uint32_t bytes_per_sample)
+OutputFormatter::OutputFormatter(
+    const fuchsia::media::AudioMediaTypeDetailsPtr& format,
+    uint32_t bytes_per_sample)
     : channels_(format->channels),
       bytes_per_sample_(bytes_per_sample),
       bytes_per_frame_(bytes_per_sample * format->channels) {
@@ -129,18 +131,18 @@ OutputFormatter::OutputFormatter(const AudioMediaTypeDetailsPtr& format,
 // Selection routine which will instantiate a particular templatized version of
 // the output formatter.
 OutputFormatterPtr OutputFormatter::Select(
-    const AudioMediaTypeDetailsPtr& format) {
+    const fuchsia::media::AudioMediaTypeDetailsPtr& format) {
   FXL_DCHECK(format);
-  FXL_DCHECK(format->sample_format != AudioSampleFormat::ANY);
-  FXL_DCHECK(format->sample_format != AudioSampleFormat::NONE);
+  FXL_DCHECK(format->sample_format != fuchsia::media::AudioSampleFormat::ANY);
+  FXL_DCHECK(format->sample_format != fuchsia::media::AudioSampleFormat::NONE);
   // MTWN-93: Consider eliminating these enums if we don't foresee using them.
 
   switch (format->sample_format) {
-    case AudioSampleFormat::UNSIGNED_8:
+    case fuchsia::media::AudioSampleFormat::UNSIGNED_8:
       return OutputFormatterPtr(new OutputFormatterImpl<uint8_t>(format));
-    case AudioSampleFormat::SIGNED_16:
+    case fuchsia::media::AudioSampleFormat::SIGNED_16:
       return OutputFormatterPtr(new OutputFormatterImpl<int16_t>(format));
-    case AudioSampleFormat::FLOAT:
+    case fuchsia::media::AudioSampleFormat::FLOAT:
       return OutputFormatterPtr(new OutputFormatterImpl<float>(format));
     default:
       FXL_LOG(ERROR) << "Unsupported output format "

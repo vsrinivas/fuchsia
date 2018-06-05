@@ -32,13 +32,15 @@ TimelineFunction TimelineFunction::Compose(const TimelineFunction& bc,
                           TimelineRate::Product(ab.rate(), bc.rate(), exact));
 }
 
-TimelineFunction::TimelineFunction(const TimelineTransform& from)
+TimelineFunction::TimelineFunction(
+    const fuchsia::media::TimelineTransform& from)
     : subject_time_(from.subject_time),
       reference_time_(from.reference_time),
       rate_(TimelineRate(from.subject_delta, from.reference_delta)) {}
 
-TimelineTransform TimelineFunction::ToTimelineTransform() const {
-  TimelineTransform result;
+fuchsia::media::TimelineTransform TimelineFunction::ToTimelineTransform()
+    const {
+  fuchsia::media::TimelineTransform result;
   result.subject_time = subject_time();
   result.reference_time = reference_time();
   result.subject_delta = subject_delta();

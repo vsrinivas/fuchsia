@@ -11,7 +11,7 @@
 #include <fbl/intrusive_double_list.h>
 #include <fbl/slab_allocator.h>
 #include <fbl/unique_ptr.h>
-#include <media/cpp/fidl.h>
+#include <fuchsia/media/cpp/fidl.h>
 
 #include "garnet/bin/media/audio_server/audio_driver.h"
 #include "garnet/bin/media/audio_server/audio_link.h"
@@ -28,14 +28,16 @@ namespace audio {
 
 class AudioServerImpl;
 
-class AudioCapturerImpl : public AudioObject, public AudioCapturer {
+class AudioCapturerImpl : public AudioObject,
+                          public fuchsia::media::AudioCapturer {
  public:
   static fbl::RefPtr<AudioCapturerImpl> Create(
-      fidl::InterfaceRequest<AudioCapturer> audio_capturer_request,
+      fidl::InterfaceRequest<fuchsia::media::AudioCapturer>
+          audio_capturer_request,
       AudioServerImpl* owner, bool loopback);
 
   bool loopback() const { return loopback_; }
-  void SetInitialFormat(AudioMediaTypeDetails format)
+  void SetInitialFormat(fuchsia::media::AudioMediaTypeDetails format)
       FXL_LOCKS_EXCLUDED(mix_domain_->token());
   void Shutdown() FXL_LOCKS_EXCLUDED(mix_domain_->token());
 
@@ -122,7 +124,7 @@ class AudioCapturerImpl : public AudioObject, public AudioCapturer {
     const uint32_t num_frames;
     const CaptureAtCallback cbk;
 
-    int64_t capture_timestamp = kNoTimestamp;
+    int64_t capture_timestamp = fuchsia::media::kNoTimestamp;
     uint32_t flags = 0;
     uint32_t filled_frames = 0;
     const uint32_t sequence_number = sequence_generator.Next();
@@ -145,13 +147,13 @@ class AudioCapturerImpl : public AudioObject, public AudioCapturer {
     uint32_t source_trans_gen_id = kInvalidGenerationId;
   };
 
-  AudioCapturerImpl(
-      fidl::InterfaceRequest<AudioCapturer> audio_capturer_request,
-      AudioServerImpl* owner, bool loopback);
+  AudioCapturerImpl(fidl::InterfaceRequest<fuchsia::media::AudioCapturer>
+                        audio_capturer_request,
+                    AudioServerImpl* owner, bool loopback);
 
   // AudioCapturer FIDL implementation
   void GetMediaType(GetMediaTypeCallback cbk) final;
-  void SetMediaType(MediaType media_type) final;
+  void SetMediaType(fuchsia::media::MediaType media_type) final;
   void SetGain(float gain) final;
   void SetPayloadBuffer(zx::vmo payload_buf_vmo) final;
   void CaptureAt(uint32_t offset_frames, uint32_t num_frames,
@@ -188,21 +190,21 @@ class AudioCapturerImpl : public AudioObject, public AudioCapturer {
       FXL_LOCKS_EXCLUDED(mix_domain_->token());
 
   // Bookkeeping helper.
-  void UpdateFormat(media::AudioSampleFormat sample_format, uint32_t channels,
-                    uint32_t frames_per_second)
+  void UpdateFormat(fuchsia::media::AudioSampleFormat sample_format,
+                    uint32_t channels, uint32_t frames_per_second)
       FXL_LOCKS_EXCLUDED(mix_domain_->token());
 
   // Select a mixer for the link supplied and return true, or return false if
   // one cannot be found.
   zx_status_t ChooseMixer(const std::shared_ptr<AudioLink>& link);
 
-  fidl::Binding<AudioCapturer> binding_;
+  fidl::Binding<fuchsia::media::AudioCapturer> binding_;
   AudioServerImpl* owner_ = nullptr;
   std::atomic<State> state_;
   const bool loopback_;
 
   // Capture format and gain state.
-  AudioMediaTypeDetailsPtr format_;
+  fuchsia::media::AudioMediaTypeDetailsPtr format_;
   uint32_t bytes_per_frame_;
   TimelineRate frames_to_clock_mono_rate_;
   uint32_t max_frames_per_capture_;

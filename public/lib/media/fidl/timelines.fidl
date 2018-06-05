@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-library media;
+library fuchsia.media;
 
 // Used as a placeholder for unspecified time values.
 const int64 kUnspecifiedTime = 0x7fffffffffffffff;

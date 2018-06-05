@@ -8,9 +8,9 @@
 #include <memory>
 #include <queue>
 
+#include <fuchsia/media/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fit/function.h>
-#include <media/cpp/fidl.h>
 #include <media_player/cpp/fidl.h>
 
 #include "garnet/bin/media/media_player/test/media_player_test_params.h"
@@ -92,8 +92,8 @@ class MediaPlayerTestView : public mozart::BaseView {
   bool problem_shown_ = false;
   bool was_at_end_of_stream_ = false;
 
-  int64_t seek_interval_start_ = media::kUnspecifiedTime;
-  int64_t seek_interval_end_ = media::kUnspecifiedTime;
+  int64_t seek_interval_start_ = fuchsia::media::kUnspecifiedTime;
+  int64_t seek_interval_end_ = fuchsia::media::kUnspecifiedTime;
   bool in_current_seek_interval_ = false;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(MediaPlayerTestView);

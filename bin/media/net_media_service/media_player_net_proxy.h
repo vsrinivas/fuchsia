@@ -47,8 +47,8 @@ class MediaPlayerNetProxy
       fidl::InterfaceRequest<::fuchsia::ui::views_v1_token::ViewOwner>
           view_owner_request) override;
 
-  void SetAudioRenderer(
-      fidl::InterfaceHandle<media::AudioRenderer2> audio_renderer) override;
+  void SetAudioRenderer(fidl::InterfaceHandle<fuchsia::media::AudioRenderer2>
+                            audio_renderer) override;
 
   void AddBinding(fidl::InterfaceRequest<MediaPlayer> request) override;
 

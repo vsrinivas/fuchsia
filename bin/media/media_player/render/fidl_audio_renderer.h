@@ -5,8 +5,8 @@
 #ifndef GARNET_BIN_MEDIA_MEDIA_PLAYER_RENDER_FIDL_AUDIO_RENDERER_H_
 #define GARNET_BIN_MEDIA_MEDIA_PLAYER_RENDER_FIDL_AUDIO_RENDERER_H_
 
+#include <fuchsia/media/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
-#include <media/cpp/fidl.h>
 
 #include "garnet/bin/media/media_player/metrics/packet_timing_tracker.h"
 #include "garnet/bin/media/media_player/render/audio_renderer.h"
@@ -26,9 +26,9 @@ class FidlAudioRenderer
       public std::enable_shared_from_this<FidlAudioRenderer> {
  public:
   static std::shared_ptr<FidlAudioRenderer> Create(
-      media::AudioRenderer2Ptr audio_renderer);
+      fuchsia::media::AudioRenderer2Ptr audio_renderer);
 
-  FidlAudioRenderer(media::AudioRenderer2Ptr audio_renderer);
+  FidlAudioRenderer(fuchsia::media::AudioRenderer2Ptr audio_renderer);
 
   ~FidlAudioRenderer() override;
 
@@ -90,7 +90,7 @@ class FidlAudioRenderer
   }
 
   std::vector<std::unique_ptr<StreamTypeSet>> supported_stream_types_;
-  media::AudioRenderer2Ptr audio_renderer_;
+  fuchsia::media::AudioRenderer2Ptr audio_renderer_;
   media::TimelineRate pts_rate_;
   int64_t last_supplied_pts_ns_ = 0;
   int64_t last_departed_pts_ns_ = 0;

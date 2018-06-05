@@ -5,8 +5,8 @@
 #ifndef GARNET_EXAMPLES_MEDIA_AUDIO_PLAYER_AUDIO_PLAYER_H_
 #define GARNET_EXAMPLES_MEDIA_AUDIO_PLAYER_AUDIO_PLAYER_H_
 
+#include <fuchsia/media/cpp/fidl.h>
 #include <lib/fit/function.h>
-#include <media/cpp/fidl.h>
 #include <media_player/cpp/fidl.h>
 
 #include "garnet/examples/media/audio_player/audio_player_params.h"

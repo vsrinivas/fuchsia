@@ -7,7 +7,7 @@
 
 #include <memory>
 
-#include <media/cpp/fidl.h>
+#include <fuchsia/media/cpp/fidl.h>
 
 namespace media {
 namespace audio {
@@ -18,7 +18,7 @@ using OutputFormatterPtr = std::unique_ptr<OutputFormatter>;
 class OutputFormatter {
  public:
   static OutputFormatterPtr Select(
-      const AudioMediaTypeDetailsPtr& output_format);
+      const fuchsia::media::AudioMediaTypeDetailsPtr& output_format);
 
   virtual ~OutputFormatter() = default;
 
@@ -51,16 +51,18 @@ class OutputFormatter {
    */
   virtual void FillWithSilence(void* dest, uint32_t frames) const = 0;
 
-  const AudioMediaTypeDetailsPtr& format() const { return format_; }
+  const fuchsia::media::AudioMediaTypeDetailsPtr& format() const {
+    return format_;
+  }
   uint32_t channels() const { return channels_; }
   uint32_t bytes_per_sample() const { return bytes_per_sample_; }
   uint32_t bytes_per_frame() const { return bytes_per_frame_; }
 
  protected:
-  OutputFormatter(const AudioMediaTypeDetailsPtr& output_format,
+  OutputFormatter(const fuchsia::media::AudioMediaTypeDetailsPtr& output_format,
                   uint32_t bytes_per_sample);
 
-  AudioMediaTypeDetailsPtr format_;
+  fuchsia::media::AudioMediaTypeDetailsPtr format_;
   uint32_t channels_ = 0;
   uint32_t bytes_per_sample_ = 0;
   uint32_t bytes_per_frame_ = 0;

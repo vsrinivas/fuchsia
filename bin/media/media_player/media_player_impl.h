@@ -7,9 +7,9 @@
 
 #include <unordered_map>
 
+#include <fuchsia/media/cpp/fidl.h>
 #include <lib/async/default.h>
 #include <lib/fit/function.h>
-#include <media/cpp/fidl.h>
 
 #include "garnet/bin/media/media_player/demux/reader.h"
 #include "garnet/bin/media/media_player/player/player.h"
@@ -57,8 +57,8 @@ class MediaPlayerImpl : public MediaPlayer {
       fidl::InterfaceRequest<::fuchsia::ui::views_v1_token::ViewOwner>
           view_owner_request) override;
 
-  void SetAudioRenderer(
-      fidl::InterfaceHandle<media::AudioRenderer2> audio_renderer) override;
+  void SetAudioRenderer(fidl::InterfaceHandle<fuchsia::media::AudioRenderer2>
+                            audio_renderer) override;
 
   void AddBinding(fidl::InterfaceRequest<MediaPlayer> request) override;
 
@@ -94,7 +94,8 @@ class MediaPlayerImpl : public MediaPlayer {
 
   // Determines whether we need to flush.
   bool NeedToFlush() const {
-    return setting_reader_ || target_position_ != media::kUnspecifiedTime ||
+    return setting_reader_ ||
+           target_position_ != fuchsia::media::kUnspecifiedTime ||
            target_state_ == State::kFlushed;
   }
 
@@ -132,16 +133,16 @@ class MediaPlayerImpl : public MediaPlayer {
   State target_state_ = State::kFlushed;
 
   // The position we want to seek to (because the client called Seek) or
-  // media::kUnspecifiedTime, which indicates there's no desire to seek.
-  int64_t target_position_ = media::kUnspecifiedTime;
+  // kUnspecifiedTime, which indicates there's no desire to seek.
+  int64_t target_position_ = fuchsia::media::kUnspecifiedTime;
 
   // The subject time to be used for SetTimelineFunction. The value is
-  // media::kUnspecifiedTime if there's no need to seek or the position we want
+  // kUnspecifiedTime if there's no need to seek or the position we want
   // to seek to if there is.
-  int64_t transform_subject_time_ = media::kUnspecifiedTime;
+  int64_t transform_subject_time_ = fuchsia::media::kUnspecifiedTime;
 
   // The minimum program range PTS to be used for SetProgramRange.
-  int64_t program_range_min_pts_ = media::kMinTime;
+  int64_t program_range_min_pts_ = fuchsia::media::kMinTime;
 
   // Whether we need to set the reader, possibly with nothing. When this is
   // true, the state machine will transition to |kIdle|, removing an existing

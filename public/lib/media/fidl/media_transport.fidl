@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-library media;
+library fuchsia.media;
 
 // A special value which may be written into the PTS field in certain
 // circumstances.  For example, depending on the specific scenario,

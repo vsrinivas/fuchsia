@@ -37,7 +37,7 @@ std::ostream& operator<<(std::ostream& os, const AudioPolicyStatus& value) {
 
   os << std::string(level, '=') << "|" << std::string(kLevelMax - level, '-');
 
-  if (value.system_audio_gain_db == kMutedGain) {
+  if (value.system_audio_gain_db == fuchsia::media::kMutedGain) {
     os << " -infinity db";
   } else if (value.system_audio_gain_db == kUnityGain) {
     os << " 0.0 db";
@@ -118,7 +118,8 @@ class VolApp {
 
     HandleStatus();
     audio_policy_service_->GetStatus(
-        kInitialStatus, [this](uint64_t version, AudioPolicyStatus status) {});
+        fuchsia::media::kInitialStatus,
+        [this](uint64_t version, AudioPolicyStatus status) {});
 
     if (interactive_) {
       std::cout << "\ninteractive mode:\n";
@@ -156,7 +157,7 @@ class VolApp {
     return (istream >> *float_out) && istream.eof();
   }
 
-  void HandleStatus(uint64_t version = kInitialStatus,
+  void HandleStatus(uint64_t version = fuchsia::media::kInitialStatus,
                     audio_policy::AudioPolicyStatusPtr status = nullptr) {
     if (status) {
       system_audio_gain_db_ = status->system_audio_gain_db;

@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/media/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/task.h>
 #include <lib/gtest/test_with_message_loop.h>
-#include <media/cpp/fidl.h>
 
 #include "lib/app/cpp/environment_services.h"
 #include "lib/fidl/cpp/synchronous_interface_ptr.h"
@@ -39,15 +39,15 @@ class AudioRenderer2Test : public gtest::TestWithMessageLoop {
   }
   void TearDown() override { EXPECT_FALSE(error_occurred_); }
 
-  AudioServerPtr audio_server_;
-  AudioRenderer2Ptr audio_renderer_;
+  fuchsia::media::AudioServerPtr audio_server_;
+  fuchsia::media::AudioRenderer2Ptr audio_renderer_;
   bool error_occurred_ = false;
 };
 
 // Basic validation of SetPcmFormat() for the asynchronous AudioRenderer2.
 TEST_F(AudioRenderer2Test, SetPcmFormat) {
-  AudioPcmFormat format;
-  format.sample_format = AudioSampleFormat::FLOAT;
+  fuchsia::media::AudioPcmFormat format;
+  format.sample_format = fuchsia::media::AudioSampleFormat::FLOAT;
   format.channels = 2;
   format.frames_per_second = 48000;
   audio_renderer_->SetPcmFormat(std::move(format));
@@ -64,14 +64,14 @@ TEST_F(AudioRenderer2Test, SetPcmFormat) {
 
 // If renderer is not in operational mode, a second SetPcmFormat should succeed.
 TEST_F(AudioRenderer2Test, SetPcmFormat_Double) {
-  AudioPcmFormat format;
-  format.sample_format = AudioSampleFormat::FLOAT;
+  fuchsia::media::AudioPcmFormat format;
+  format.sample_format = fuchsia::media::AudioSampleFormat::FLOAT;
   format.channels = 2;
   format.frames_per_second = 48000;
   audio_renderer_->SetPcmFormat(std::move(format));
 
-  AudioPcmFormat format2;
-  format2.sample_format = AudioSampleFormat::FLOAT;
+  fuchsia::media::AudioPcmFormat format2;
+  format2.sample_format = fuchsia::media::AudioSampleFormat::FLOAT;
   format2.channels = 2;
   format2.frames_per_second = 44100;
   audio_renderer_->SetPcmFormat(std::move(format2));
@@ -103,14 +103,14 @@ class AudioRenderer2SyncTest : public gtest::TestWithMessageLoop {
     ASSERT_TRUE(audio_renderer_);
   }
 
-  AudioServerSyncPtr audio_server_;
-  AudioRenderer2SyncPtr audio_renderer_;
+  fuchsia::media::AudioServerSyncPtr audio_server_;
+  fuchsia::media::AudioRenderer2SyncPtr audio_renderer_;
 };
 
 // Basic validation of SetPcmFormat() for the synchronous AudioRenderer2.
 TEST_F(AudioRenderer2SyncTest, SetPcmFormat) {
-  AudioPcmFormat format;
-  format.sample_format = AudioSampleFormat::FLOAT;
+  fuchsia::media::AudioPcmFormat format;
+  format.sample_format = fuchsia::media::AudioSampleFormat::FLOAT;
   format.channels = 2;
   format.frames_per_second = 48000;
   EXPECT_TRUE(audio_renderer_->SetPcmFormat(std::move(format)));
@@ -122,14 +122,14 @@ TEST_F(AudioRenderer2SyncTest, SetPcmFormat) {
 
 // If renderer is not in operational mode, a second SetPcmFormat should succeed.
 TEST_F(AudioRenderer2SyncTest, SetPcmFormat_Double) {
-  AudioPcmFormat format;
-  format.sample_format = AudioSampleFormat::FLOAT;
+  fuchsia::media::AudioPcmFormat format;
+  format.sample_format = fuchsia::media::AudioSampleFormat::FLOAT;
   format.channels = 2;
   format.frames_per_second = 48000;
   EXPECT_TRUE(audio_renderer_->SetPcmFormat(std::move(format)));
 
-  AudioPcmFormat format2;
-  format2.sample_format = AudioSampleFormat::SIGNED_16;
+  fuchsia::media::AudioPcmFormat format2;
+  format2.sample_format = fuchsia::media::AudioSampleFormat::SIGNED_16;
   format2.channels = 1;
   format2.frames_per_second = 44100;
   EXPECT_TRUE(audio_renderer_->SetPcmFormat(std::move(format2)));

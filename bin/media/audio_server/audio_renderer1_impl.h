@@ -9,7 +9,7 @@
 #include <set>
 
 #include <fbl/ref_ptr.h>
-#include <media/cpp/fidl.h>
+#include <fuchsia/media/cpp/fidl.h>
 
 #include "garnet/bin/media/audio_server/audio_link_packet_source.h"
 #include "garnet/bin/media/audio_server/audio_object.h"
@@ -26,13 +26,15 @@ namespace media {
 namespace audio {
 
 class AudioRenderer1Impl : public AudioRendererImpl,
-                           public AudioRenderer,
-                           public MediaRenderer {
+                           public fuchsia::media::AudioRenderer,
+                           public fuchsia::media::MediaRenderer {
  public:
   ~AudioRenderer1Impl() override;
   static fbl::RefPtr<AudioRenderer1Impl> Create(
-      fidl::InterfaceRequest<AudioRenderer> audio_renderer_request,
-      fidl::InterfaceRequest<MediaRenderer> media_renderer_request,
+      fidl::InterfaceRequest<fuchsia::media::AudioRenderer>
+          audio_renderer_request,
+      fidl::InterfaceRequest<fuchsia::media::MediaRenderer>
+          media_renderer_request,
       AudioServerImpl* owner);
 
   // Shutdown the audio renderer, unlinking it from all outputs, closing
@@ -49,10 +51,11 @@ class AudioRenderer1Impl : public AudioRendererImpl,
  private:
   friend class AudioPipe;
 
-  AudioRenderer1Impl(
-      fidl::InterfaceRequest<AudioRenderer> audio_renderer_request,
-      fidl::InterfaceRequest<MediaRenderer> media_renderer_request,
-      AudioServerImpl* owner);
+  AudioRenderer1Impl(fidl::InterfaceRequest<fuchsia::media::AudioRenderer>
+                         audio_renderer_request,
+                     fidl::InterfaceRequest<fuchsia::media::MediaRenderer>
+                         media_renderer_request,
+                     AudioServerImpl* owner);
 
   // AudioObject overrides.
   zx_status_t InitializeDestLink(const AudioLinkPtr& link) final;
@@ -63,11 +66,13 @@ class AudioRenderer1Impl : public AudioRendererImpl,
 
   // MediaRenderer implementation.
   void GetSupportedMediaTypes(GetSupportedMediaTypesCallback callback) override;
-  void SetMediaType(MediaType media_type) override;
+  void SetMediaType(fuchsia::media::MediaType media_type) override;
   void GetPacketConsumer(
-      fidl::InterfaceRequest<MediaPacketConsumer> consumer_request) override;
-  void GetTimelineControlPoint(fidl::InterfaceRequest<MediaTimelineControlPoint>
-                                   control_point_request) override;
+      fidl::InterfaceRequest<fuchsia::media::MediaPacketConsumer>
+          consumer_request) override;
+  void GetTimelineControlPoint(
+      fidl::InterfaceRequest<fuchsia::media::MediaTimelineControlPoint>
+          control_point_request) override;
 
   // Methods called by our AudioPipe.
   //
@@ -77,12 +82,12 @@ class AudioRenderer1Impl : public AudioRendererImpl,
   // encapsulation so that AudioPipe does not have to know that we are an
   // AudioRenderer1Impl (just that we implement its interface).
   void OnPacketReceived(fbl::RefPtr<AudioPacketRef> packet);
-  bool OnFlushRequested(MediaPacketConsumer::FlushCallback cbk);
-  fidl::VectorPtr<MediaTypeSet> SupportedMediaTypes();
+  bool OnFlushRequested(fuchsia::media::MediaPacketConsumer::FlushCallback cbk);
+  fidl::VectorPtr<fuchsia::media::MediaTypeSet> SupportedMediaTypes();
 
   AudioServerImpl* owner_;
-  fidl::Binding<AudioRenderer> audio_renderer_binding_;
-  fidl::Binding<MediaRenderer> media_renderer_binding_;
+  fidl::Binding<fuchsia::media::AudioRenderer> audio_renderer_binding_;
+  fidl::Binding<fuchsia::media::MediaRenderer> media_renderer_binding_;
   AudioPipe pipe_;
   TimelineControlPoint timeline_control_point_;
   bool is_shutdown_ = false;

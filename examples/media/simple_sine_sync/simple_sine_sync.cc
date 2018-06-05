@@ -4,8 +4,8 @@
 
 #include "garnet/examples/media/simple_sine_sync/simple_sine_sync.h"
 
+#include <fuchsia/media/cpp/fidl.h>
 #include <math.h>
-#include <media/cpp/fidl.h>
 #include <zircon/syscalls.h>
 
 #include "lib/app/cpp/environment_services.h"
@@ -98,8 +98,9 @@ int MediaApp::Run() {
 
   int64_t ref_start_time;
   int64_t media_start_time;
-  audio_renderer_->Play(media::kNoTimestamp, media::kNoTimestamp,
-                        &ref_start_time, &media_start_time);
+  audio_renderer_->Play(fuchsia::media::kNoTimestamp,
+                        fuchsia::media::kNoTimestamp, &ref_start_time,
+                        &media_start_time);
   start_time_known_ = true;
 
   // TODO(johngro): This program is making the assumption that the platform's
@@ -127,9 +128,9 @@ int MediaApp::Run() {
   return 0;
 }
 
-// Connect to the AudioServer and get an AudioRenderer.
+// Connect to the udioServer and get an AudioRenderer.
 bool MediaApp::AcquireRenderer() {
-  media::AudioServerSyncPtr audio_server;
+  fuchsia::media::AudioServerSyncPtr audio_server;
   fuchsia::sys::ConnectToEnvironmentService(audio_server.NewRequest());
   return audio_server->CreateRendererV2(audio_renderer_.NewRequest());
 }
@@ -138,9 +139,10 @@ bool MediaApp::AcquireRenderer() {
 void MediaApp::SetMediaType() {
   FXL_DCHECK(audio_renderer_);
 
-  media::AudioPcmFormat format;
-  format.sample_format = use_float_ ? media::AudioSampleFormat::FLOAT
-                                    : media::AudioSampleFormat::SIGNED_16;
+  fuchsia::media::AudioPcmFormat format;
+  format.sample_format = use_float_
+                             ? fuchsia::media::AudioSampleFormat::FLOAT
+                             : fuchsia::media::AudioSampleFormat::SIGNED_16;
   format.channels = kNumChannels;
   format.frames_per_second = kRendererFrameRate;
 
@@ -186,15 +188,15 @@ void MediaApp::WriteAudioIntoBuffer(void* buffer, size_t num_frames) {
 }
 
 // Create a packet for this payload.
-media::AudioPacket MediaApp::CreateAudioPacket(size_t payload_num) {
-  media::AudioPacket packet;
+fuchsia::media::AudioPacket MediaApp::CreateAudioPacket(size_t payload_num) {
+  fuchsia::media::AudioPacket packet;
   packet.payload_offset = (payload_num % kNumPayloads) * payload_size_;
   packet.payload_size = payload_size_;
   return packet;
 }
 
 // Submit a packet, incrementing our count of packets sent.
-bool MediaApp::SendAudioPacket(media::AudioPacket packet) {
+bool MediaApp::SendAudioPacket(fuchsia::media::AudioPacket packet) {
   if (verbose_) {
     const float delay =
         (start_time_known_

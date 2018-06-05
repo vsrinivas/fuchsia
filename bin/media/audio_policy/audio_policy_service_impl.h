@@ -58,7 +58,8 @@ class AudioPolicyServiceImpl : public AudioPolicy {
   // Returns the effective system audio gain based on |system_audio_gain_db_|
   // and |system_audio_muted_|.
   float effective_system_audio_gain() {
-    return system_audio_muted_ ? media::kMutedGain : system_audio_gain_db_;
+    return system_audio_muted_ ? fuchsia::media::kMutedGain
+                               : system_audio_gain_db_;
   }
 
   std::unique_ptr<fuchsia::sys::StartupContext> startup_context_;
@@ -66,7 +67,7 @@ class AudioPolicyServiceImpl : public AudioPolicy {
   float system_audio_gain_db_ = kDefaultSystemAudioGainDb;
   bool system_audio_muted_ = kDefaultSystemMuted;
   media::FidlPublisher<GetStatusCallback> status_publisher_;
-  media::AudioServerPtr audio_service_;
+  fuchsia::media::AudioServerPtr audio_service_;
   uint32_t initialize_attempts_remaining_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(AudioPolicyServiceImpl);

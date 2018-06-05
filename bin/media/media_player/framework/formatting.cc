@@ -26,13 +26,13 @@ std::ostream& begl(std::ostream& os) {
 
 std::ostream& newl(std::ostream& os) { return os << "\n" << begl; }
 
-// Prints an ns value in 0.124,456,789 format.
+// Prints an ns value in 0.123,456,789 format.
 std::ostream& operator<<(std::ostream& os, AsNs value) {
-  if (value.value_ == media::kUnspecifiedTime) {
+  if (value.value_ == fuchsia::media::kUnspecifiedTime) {
     return os << "<unspecified>";
   }
 
-  if (value.value_ == media::kMaxTime) {
+  if (value.value_ == fuchsia::media::kMaxTime) {
     return os << "<maximum>";
   }
 

@@ -126,7 +126,7 @@ Serializer& operator<<(
 Serializer& operator<<(Serializer& serializer,
                        const MediaPlayerStatusPtr& value);
 Serializer& operator<<(Serializer& serializer,
-                       const media::TimelineTransformPtr& value);
+                       const fuchsia::media::TimelineTransformPtr& value);
 Serializer& operator<<(Serializer& serializer, const MediaMetadataPtr& value);
 Serializer& operator<<(Serializer& serializer, const ProblemPtr& value);
 Serializer& operator<<(Serializer& serializer,
@@ -156,7 +156,7 @@ Deserializer& operator>>(Deserializer& deserializer,
 Deserializer& operator>>(Deserializer& deserializer,
                          MediaPlayerStatusPtr& value);
 Deserializer& operator>>(Deserializer& deserializer,
-                         media::TimelineTransformPtr& value);
+                         fuchsia::media::TimelineTransformPtr& value);
 Deserializer& operator>>(Deserializer& deserializer, MediaMetadataPtr& value);
 Deserializer& operator>>(Deserializer& deserializer, ProblemPtr& value);
 Deserializer& operator>>(Deserializer& deserializer,

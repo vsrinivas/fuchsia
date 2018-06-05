@@ -38,11 +38,11 @@ FakeAudioRenderer::FakeAudioRenderer()
 FakeAudioRenderer::~FakeAudioRenderer() {}
 
 void FakeAudioRenderer::Bind(
-    fidl::InterfaceRequest<media::AudioRenderer2> renderer) {
+    fidl::InterfaceRequest<fuchsia::media::AudioRenderer2> renderer) {
   binding_.Bind(std::move(renderer));
 }
 
-void FakeAudioRenderer::SetPcmFormat(media::AudioPcmFormat format) {
+void FakeAudioRenderer::SetPcmFormat(fuchsia::media::AudioPcmFormat format) {
   format_ = format;
 }
 
@@ -64,7 +64,7 @@ void FakeAudioRenderer::SetReferenceClock(::zx::handle ref_clock) {
   FXL_NOTIMPLEMENTED();
 }
 
-void FakeAudioRenderer::SendPacket(media::AudioPacket packet,
+void FakeAudioRenderer::SendPacket(fuchsia::media::AudioPacket packet,
                                    SendPacketCallback callback) {
   if (dump_packets_) {
     std::cerr << "{ " << packet.timestamp << ", " << packet.payload_size
@@ -99,7 +99,7 @@ void FakeAudioRenderer::SendPacket(media::AudioPacket packet,
   }
 }
 
-void FakeAudioRenderer::SendPacketNoReply(media::AudioPacket packet) {
+void FakeAudioRenderer::SendPacketNoReply(fuchsia::media::AudioPacket packet) {
   SendPacket(std::move(packet), []() {});
 }
 
@@ -118,12 +118,12 @@ void FakeAudioRenderer::FlushNoReply() {
 
 void FakeAudioRenderer::Play(int64_t reference_time, int64_t media_time,
                              PlayCallback callback) {
-  if (reference_time == media::kNoTimestamp) {
+  if (reference_time == fuchsia::media::kNoTimestamp) {
     reference_time = media::Timeline::local_now();
   }
 
-  if (media_time == media::kNoTimestamp) {
-    if (restart_media_time_ != media::kNoTimestamp) {
+  if (media_time == fuchsia::media::kNoTimestamp) {
+    if (restart_media_time_ != fuchsia::media::kNoTimestamp) {
       media_time = restart_media_time_;
     } else if (packet_queue_.empty()) {
       media_time = 0;
@@ -172,7 +172,8 @@ void FakeAudioRenderer::SetGainMuteNoReply(float gain, bool mute,
 }
 
 void FakeAudioRenderer::DuplicateGainControlInterface(
-    ::fidl::InterfaceRequest<media::AudioRendererGainControl> request) {
+    ::fidl::InterfaceRequest<fuchsia::media::AudioRendererGainControl>
+        request) {
   FXL_NOTIMPLEMENTED();
 }
 

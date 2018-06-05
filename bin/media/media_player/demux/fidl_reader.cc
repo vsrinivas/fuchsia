@@ -7,9 +7,9 @@
 #include <limits>
 #include <string>
 
+#include <fuchsia/media/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
-#include <media/cpp/fidl.h>
 
 #include "garnet/bin/media/media_player/fidl/fidl_type_conversions.h"
 #include "lib/fxl/logging.h"
@@ -23,7 +23,7 @@ FidlReader::FidlReader(fidl::InterfaceHandle<SeekingReader> seeking_reader)
   read_in_progress_ = false;
 
   seeking_reader_->Describe(
-      [this](media::MediaResult result, uint64_t size, bool can_seek) {
+      [this](fuchsia::media::MediaResult result, uint64_t size, bool can_seek) {
         result_ = fxl::To<Result>(result);
         if (result_ == Result::kOk) {
           size_ = size;
@@ -93,18 +93,19 @@ void FidlReader::ContinueReadAt() {
       return;
     }
 
-    seeking_reader_->ReadAt(read_at_position_, [this](media::MediaResult result,
-                                                      zx::socket socket) {
-      result_ = fxl::To<Result>(result);
-      if (result_ != Result::kOk) {
-        CompleteReadAt(result_);
-        return;
-      }
+    seeking_reader_->ReadAt(
+        read_at_position_,
+        [this](fuchsia::media::MediaResult result, zx::socket socket) {
+          result_ = fxl::To<Result>(result);
+          if (result_ != Result::kOk) {
+            CompleteReadAt(result_);
+            return;
+          }
 
-      socket_ = std::move(socket);
-      socket_position_ = read_at_position_;
-      ReadFromSocket();
-    });
+          socket_ = std::move(socket);
+          socket_position_ = read_at_position_;
+          ReadFromSocket();
+        });
   });
 }
 

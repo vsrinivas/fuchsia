@@ -5,7 +5,7 @@
 #ifndef LIB_MEDIA_TIMELINE_TIMELINE_FUNCTION_H_
 #define LIB_MEDIA_TIMELINE_TIMELINE_FUNCTION_H_
 
-#include <media/cpp/fidl.h>
+#include <fuchsia/media/cpp/fidl.h>
 #include "lib/fxl/logging.h"
 #include "lib/media/timeline/timeline_rate.h"
 
@@ -59,9 +59,9 @@ class TimelineFunction {
   explicit TimelineFunction(TimelineRate rate)
       : subject_time_(0), reference_time_(0), rate_(rate) {}
 
-  explicit TimelineFunction(const TimelineTransform& from);
+  explicit TimelineFunction(const fuchsia::media::TimelineTransform& from);
 
-  TimelineTransform ToTimelineTransform() const;
+  fuchsia::media::TimelineTransform ToTimelineTransform() const;
 
   // Determines whether this |TimelineFunction| is invertable.
   bool invertable() const { return rate_.invertable(); }

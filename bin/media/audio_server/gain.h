@@ -7,7 +7,7 @@
 
 #include <atomic>
 
-#include <media/cpp/fidl.h>
+#include <fuchsia/media/cpp/fidl.h>
 #include <stdint.h>
 
 #include "garnet/bin/media/audio_server/constants.h"
@@ -41,8 +41,8 @@ class Gain {
       (static_cast<AScale>(1u) << kFractionalScaleBits);
   static constexpr AScale kMaxScale = 0xFD9539A4;  // +24.0 dB: kMaxGain
 
-  static constexpr float kMinGain = media::kMutedGain;
-  static constexpr float kMaxGain = media::kMaxGain;
+  static constexpr float kMinGain = fuchsia::media::kMutedGain;
+  static constexpr float kMaxGain = fuchsia::media::kMaxGain;
 
   // TODO(mpuryear): MTWN-70 Clarify/document/test audio::Gain's thread-safety
   //
