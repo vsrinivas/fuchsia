@@ -37,8 +37,8 @@ func NewSourceKeeper(src source.Source) *SourceKeeper {
 	}
 }
 
-func (k *SourceKeeper) Id() string {
-	return k.src.Id()
+func (k *SourceKeeper) GetId() string {
+	return k.src.GetId()
 }
 
 func (k *SourceKeeper) GetConfig() *amber.SourceConfig {

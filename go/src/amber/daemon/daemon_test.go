@@ -42,7 +42,7 @@ type testSrc struct {
 	limit      uint64
 }
 
-func (t *testSrc) Id() string {
+func (t *testSrc) GetId() string {
 	return t.id
 }
 

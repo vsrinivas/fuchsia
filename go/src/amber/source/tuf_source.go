@@ -152,7 +152,7 @@ func newTUFKeys(cfg []amber.KeyConfig) ([]*tuf_data.Key, error) {
 	return keys, nil
 }
 
-func (f *TUFSource) Id() string {
+func (f *TUFSource) GetId() string {
 	return f.Config.Id
 }
 

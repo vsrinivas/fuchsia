@@ -29,7 +29,7 @@ var ErrNoUpdateContent = errors.New("amber/source: update content not available"
 // to get that update.
 type Source interface {
 	// A unique identifier that distinquishes this source from others.
-	Id() string
+	GetId() string
 
 	// The config definition for this source.
 	GetConfig() *amber.SourceConfig

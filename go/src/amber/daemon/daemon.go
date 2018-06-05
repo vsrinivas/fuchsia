@@ -118,7 +118,7 @@ func (d *Daemon) addSrc(s source.Source) {
 	d.muSrcs.Lock()
 	defer d.muSrcs.Unlock()
 
-	id := s.Id()
+	id := s.GetId()
 
 	if _, ok := d.srcs[id]; ok {
 		log.Printf("overwriting source: %s", id)
@@ -470,7 +470,7 @@ func (d *Daemon) RemoveSource(src source.Source) error {
 	d.muSrcs.Lock()
 	defer d.muSrcs.Unlock()
 
-	id := src.Id()
+	id := src.GetId()
 
 	if m, ok := d.srcs[id]; ok {
 		if m.Equals(src) {
