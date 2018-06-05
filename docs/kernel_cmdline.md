@@ -26,10 +26,10 @@ Randomization.
 ## crashsvc.analyzer=\<path\>
 
 If this option is set, the given analyzer will be used when crashsvc encounters
-an exception. If it is empty, the default (`/boot/bin/crashanalyzer`) will be
-used which logs exception information and a backtrace to the system log. The
-analyzer process is passed two startup handles: the process and thread that
-sustained the exception.
+an exception. If it is empty, the default crash analyzer will be used which
+logs exception information and a backtrace to the system log. The analyzer
+process is passed two startup handles: the process and thread that sustained
+the exception.
 
 ## devmgr\.epoch=\<seconds\>
 

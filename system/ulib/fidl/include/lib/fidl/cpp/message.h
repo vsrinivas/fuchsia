@@ -75,6 +75,12 @@ public:
         return BytePart(bytes_.data() + n, bytes_.capacity() - n, bytes_.actual() - n);
     }
 
+    // The message bytes interpreted as the given type.
+    template <typename T>
+    T* GetBytesAs() const {
+        return reinterpret_cast<T*>(bytes_.data());
+    }
+
     // The message payload that follows the header interpreted as the given type.
     //
     // Valid only if has_header().

@@ -26,6 +26,10 @@ MODULE_SRCS += \
 # can be linked dynamically.  But it doesn't support any means to look
 # up other shared libraries, so everything else must be linked statically.
 
+# We can avoid this dependency if crashsvc connects directly to the analyzer.
+MODULE_FIDL_LIBS := \
+    system/fidl/crash
+
 # ddk is needed only for ddk/device.h
 MODULE_HEADER_DEPS := \
     system/ulib/ddk

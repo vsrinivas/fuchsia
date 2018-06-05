@@ -2,7 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fbl/algorithm.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/crashanalyzer/crashanalyzer.h>
 #include <lib/fdio/util.h>
 #include <lib/process-launcher/launcher.h>
 #include <lib/svc/outgoing.h>
@@ -146,16 +148,18 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    zx_service_provider_instance_t launcher = {
-        .provider = launcher_get_service_provider(),
-        .ctx = nullptr,
+    zx_service_provider_instance_t service_providers[] = {
+        {.provider = launcher_get_service_provider(), .ctx = nullptr},
+        {.provider = crashanalyzer_get_service_provider(), .ctx = nullptr},
     };
 
-    status = provider_load(&launcher, async, outgoing.public_dir());
-    if (status != ZX_OK) {
-        fprintf(stderr, "svchost: error: Failed to load launcher service: %d (%s).\n",
-                status, zx_status_get_string(status));
-        return 1;
+    for (size_t i = 0; i < fbl::count_of(service_providers); ++i) {
+        status = provider_load(&service_providers[i], async, outgoing.public_dir());
+        if (status != ZX_OK) {
+            fprintf(stderr, "svchost: error: Failed to load service provider %zu: %d (%s).\n",
+                    i, status, zx_status_get_string(status));
+            return 1;
+        }
     }
 
     status = publish_tracelink(outgoing.public_dir());
@@ -168,6 +172,10 @@ int main(int argc, char** argv) {
     publish_deprecated_services(outgoing.public_dir());
 
     status = loop.Run();
-    provider_release(&launcher);
+
+    for (size_t i = 0; i < fbl::count_of(service_providers); ++i) {
+        provider_release(&service_providers[i]);
+    }
+
     return status;
 }

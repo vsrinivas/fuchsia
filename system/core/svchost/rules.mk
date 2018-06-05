@@ -12,10 +12,15 @@ MODULE_GROUP := core
 MODULE_SRCS += \
     $(LOCAL_DIR)/svchost.cpp \
 
+MODULE_FIDL_LIBS := \
+    system/fidl/crash
+
 MODULE_STATIC_LIBS := \
+    system/ulib/inspector \
     system/ulib/svc \
     system/ulib/process-launcher \
     system/ulib/fs \
+    system/core/crashanalyzer \
     system/ulib/async \
     system/ulib/async.cpp \
     system/ulib/async-loop.cpp \
@@ -23,10 +28,13 @@ MODULE_STATIC_LIBS := \
     system/ulib/trace \
     system/ulib/fbl \
     system/ulib/fidl \
+    system/ulib/pretty \
     system/ulib/zxcpp \
     system/ulib/zx
 
 MODULE_LIBS := \
+    third_party/ulib/backtrace \
+    third_party/ulib/ngunwind \
     system/ulib/async.default \
     system/ulib/launchpad \
     system/ulib/fdio \

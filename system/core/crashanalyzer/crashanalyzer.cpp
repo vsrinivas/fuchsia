@@ -10,6 +10,13 @@
 #include <string.h>
 #include <threads.h>
 
+#include <fuchsia/crash/c/fidl.h>
+#include <inspector/inspector.h>
+#include <lib/async/cpp/wait.h>
+#include <lib/crashanalyzer/crashanalyzer.h>
+#include <lib/fdio/util.h>
+#include <lib/fidl/cpp/message_buffer.h>
+#include <pretty/hexdump.h>
 #include <zircon/assert.h>
 #include <zircon/crashlogger.h>
 #include <zircon/process.h>
@@ -19,9 +26,6 @@
 #include <zircon/syscalls/exception.h>
 #include <zircon/syscalls/port.h>
 #include <zircon/threads.h>
-#include <lib/fdio/util.h>
-#include <inspector/inspector.h>
-#include <pretty/hexdump.h>
 
 static int verbosity_level = 0;
 
@@ -115,16 +119,16 @@ static const char* excp_type_to_str(uint32_t type) {
 
 // How much memory to dump, in bytes.
 // Space for this is allocated on the stack, so this can't be too large.
-constexpr size_t kMemoryDumpSize = 256;
+static constexpr size_t kMemoryDumpSize = 256;
 
 // Handle of the thread we're dumping.
 // This is used by both the main thread and the self-dumper thread.
 // However there is no need to lock it as the self-dumper thread only runs
 // when the main thread has crashed.
-zx_handle_t crashed_thread = ZX_HANDLE_INVALID;
+static zx_handle_t crashed_thread = ZX_HANDLE_INVALID;
 
 // The exception that |crashed_thread| got.
-uint32_t crashed_thread_excp_type;
+static uint32_t crashed_thread_excp_type;
 
 #if defined(__aarch64__)
 static bool write_general_regs(zx_handle_t thread, void* buf, size_t buf_size) {
@@ -214,7 +218,7 @@ static zx_koid_t get_koid(zx_handle_t handle) {
     return info.koid;
 }
 
-void process_report(zx_handle_t process, zx_handle_t thread, bool use_libunwind) {
+static void process_report(zx_handle_t process, zx_handle_t thread, bool use_libunwind) {
     zx_koid_t pid = get_koid(process);
     zx_koid_t tid = get_koid(thread);
 
@@ -334,12 +338,73 @@ Fail:
     zx_handle_close(process);
 }
 
-int main(int argc, char** argv) {
-    // Whether to use libunwind or not.
-    // If not then we use a simple algorithm that assumes ABI-specific
-    // frame pointers are present.
-    bool use_libunwind = true;
+static zx_status_t handle_message(zx_handle_t channel, fidl::MessageBuffer* buffer) {
+    fidl::Message message = buffer->CreateEmptyMessage();
+    zx_status_t status = message.Read(channel, 0);
+    if (status != ZX_OK)
+        return status;
+    if (!message.has_header())
+        return ZX_ERR_INVALID_ARGS;
+    switch (message.ordinal()) {
+    case fuchsia_crash_AnalyzerAnalyzeOrdinal: {
+        const char* error_msg = nullptr;
+        zx_status_t status = message.Decode(&fuchsia_crash_AnalyzerAnalyzeRequestTable, &error_msg);
+        if (status != ZX_OK) {
+            fprintf(stderr, "crashanalyzer: error: %s\n", error_msg);
+            return status;
+        }
+        auto* request = message.GetBytesAs<fuchsia_crash_AnalyzerAnalyzeRequest>();
 
+        // Whether to use libunwind or not.
+        // If not then we use a simple algorithm that assumes ABI-specific
+        // frame pointers are present.
+        bool use_libunwind = true;
+
+        fuchsia_crash_AnalyzerAnalyzeResponse response;
+        memset(&response, 0, sizeof(response));
+        response.hdr.txid = request->hdr.txid;
+        response.hdr.ordinal = request->hdr.ordinal;
+        status = zx_channel_write(channel, 0, &response, sizeof(response), nullptr, 0);
+
+        process_report(request->process, request->thread, use_libunwind);
+
+        return status;
+    }
+    default:
+        fprintf(stderr, "crashanalyzer: error: Unknown message ordinal: %d\n", message.ordinal());
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+}
+
+static void handle_ready(async_t* async,
+                         async::Wait* wait,
+                         zx_status_t status,
+                         const zx_packet_signal_t* signal) {
+    if (status != ZX_OK)
+        goto done;
+
+    if (signal->observed & ZX_CHANNEL_READABLE) {
+        fidl::MessageBuffer buffer;
+        for (uint64_t i = 0; i < signal->count; i++) {
+            status = handle_message(wait->object(), &buffer);
+            if (status == ZX_ERR_SHOULD_WAIT)
+                break;
+            if (status != ZX_OK)
+                goto done;
+        }
+        status = wait->Begin(async);
+        if (status != ZX_OK)
+            goto done;
+        return;
+    }
+
+    ZX_DEBUG_ASSERT(signal->observed & ZX_CHANNEL_PEER_CLOSED);
+done:
+    zx_handle_close(wait->object());
+    delete wait;
+}
+
+static zx_status_t init(void** out_ctx) {
     inspector_set_verbosity(verbosity_level);
 
     // At debugging level 1 print our dso list (in case we crash in a way
@@ -352,18 +417,48 @@ int main(int argc, char** argv) {
         inspector_dso_free_list(dso_list);
     }
 
-    zx_handle_t process = zx_get_startup_handle(PA_HND(PA_USER0, 0));
-    if (process == ZX_HANDLE_INVALID) {
-        fprintf(stderr, "error: no process in PA_USER0, 0\n");
-        return 1;
+    *out_ctx = nullptr;
+    return ZX_OK;
+}
+
+static zx_status_t connect(void* ctx, async_t* async, const char* service_name,
+                           zx_handle_t request) {
+    if (!strcmp(service_name, "fuchsia.crash.Analyzer")) {
+        auto wait = new async::Wait(request,
+                                    ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED,
+                                    handle_ready);
+        zx_status_t status = wait->Begin(async);
+
+        if (status != ZX_OK) {
+            delete wait;
+            zx_handle_close(request);
+            return status;
+        }
+
+        return ZX_OK;
     }
 
-    zx_handle_t thread = zx_get_startup_handle(PA_HND(PA_USER0, 1));
-    if (thread == ZX_HANDLE_INVALID) {
-        fprintf(stderr, "error: no thread in PA_USER0, 1\n");
-        return 1;
-    }
+    zx_handle_close(request);
+    return ZX_ERR_NOT_SUPPORTED;
+}
 
-    process_report(process, thread, use_libunwind);
-    return 0;
+static constexpr const char* crashanalyzer_services[] = {
+    "fuchsia.crash.Analyzer",
+    nullptr,
+};
+
+static constexpr zx_service_ops_t crashanalyzer_ops = {
+    .init = init,
+    .connect = connect,
+    .release = nullptr,
+};
+
+static constexpr zx_service_provider_t crashanalyzer_service_provider = {
+    .version = SERVICE_PROVIDER_VERSION,
+    .services = crashanalyzer_services,
+    .ops = &crashanalyzer_ops,
+};
+
+const zx_service_provider_t* crashanalyzer_get_service_provider() {
+    return &crashanalyzer_service_provider;
 }

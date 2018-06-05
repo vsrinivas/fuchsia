@@ -13,5 +13,5 @@ interface Analyzer {
     // The behavior of this method varies depending on the implementation, but
     // a typical implementation might print a crash dump to the system log or
     // upload a crash report to a server.
-    1: Analyze(handle<process> process, handle<thread> thread);
+    1: Analyze(handle<process> process, handle<thread> thread) -> ();
 };

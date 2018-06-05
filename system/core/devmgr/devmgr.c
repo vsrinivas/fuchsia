@@ -11,12 +11,14 @@
 #include <threads.h>
 #include <unistd.h>
 
+#include <fuchsia/crash/c/fidl.h>
 #include <launchpad/launchpad.h>
 #include <loader-service/loader-service.h>
 #include <zircon/boot/bootdata.h>
 #include <zircon/dlfcn.h>
 #include <zircon/process.h>
 #include <zircon/processargs.h>
+#include <zircon/status.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/exception.h>
 #include <zircon/syscalls/object.h>
@@ -215,17 +217,15 @@ int analyzer_starter(void* arg) {
             printf("devmgr: analyzer_starter: thread handle duplicate failed: %d\n", status);
             zx_handle_close(handles[0]);
             zx_handle_close(handles[1]);
+            // Shouldn't we resume handles[1] in this case?
             continue;
         }
 
-        const char* analyzer_command = getenv("crashsvc.analyzer");
-        static const char default_analyzer[] = "/boot/bin/crashanalyzer";
-        if (analyzer_command == NULL) {
-            analyzer_command = default_analyzer;
-        }
+        printf("devmgr: analyzer_starter: analyzing exception type 0x%x\n", exception_type);
 
-        for (;;) {
-            printf("devmgr: analyzer_starter: launching for exception type 0x%x\n", exception_type);
+        const char* analyzer_command = getenv("crashsvc.analyzer");
+        if (analyzer_command) {
+            // If we have an analyzer_command, attempt that first.
             const char* argv_crashanalyzer[] = {analyzer_command};
             uint32_t handle_types[] = {PA_HND(PA_USER0, 0), PA_HND(PA_USER0, 1)};
             // The FS_* flags that grant access should be reduced to a minimal
@@ -235,25 +235,67 @@ int analyzer_starter(void* arg) {
                                    NULL, -1, handles, handle_types, countof(handles),
                                    NULL, FS_SVC | FS_DATA);
             if (status == ZX_OK) {
-                break;
+                zx_handle_close(thread_handle);
+                continue;
             }
 
-            printf("devmgr: analyzer_starter: launch failed: %d\n", status);
-            if (strcmp(analyzer_command, default_analyzer) == 0) {
-                // The analyzer to be launched was already our fallback one,
-                // and it still failed. Terminate and bail.
-                status = zx_task_resume(thread_handle, ZX_RESUME_EXCEPTION | ZX_RESUME_TRY_NEXT);
-                if (status != ZX_OK) {
-                    printf("devmgr: analyzer_starter: zx_task_resume: %d\n", status);
-                }
-                break;
-            } else {
-                // The configured analyzer failed to launch, try the default
-                // crashanalyzer as a fallback.
-                analyzer_command = default_analyzer;
-            }
+            printf("devmgr: analyzer_starter: launch failed: %d (%s)\n",
+                   status, zx_status_get_string(status));
+
+            // Fall through to fuchsia.crash.Analyzer.
         }
 
+        zx_handle_t analyzer_request = ZX_HANDLE_INVALID;
+        zx_handle_t analyzer = ZX_HANDLE_INVALID;
+        status = zx_channel_create(0, &analyzer_request, &analyzer);
+        if (status != ZX_OK)
+            goto cleanup;
+        status = fdio_service_connect_at(svchost_outgoing, "public/fuchsia.crash.Analyzer", analyzer_request);
+        analyzer_request = ZX_HANDLE_INVALID;
+        if (status != ZX_OK)
+            goto cleanup;
+        fuchsia_crash_AnalyzerAnalyzeRequest request;
+        fuchsia_crash_AnalyzerAnalyzeResponse response;
+        memset(&request, 0, sizeof(request));
+        memset(&response, 0, sizeof(response));
+        request.hdr.ordinal = fuchsia_crash_AnalyzerAnalyzeOrdinal;
+        request.process = FIDL_HANDLE_PRESENT;
+        request.thread = FIDL_HANDLE_PRESENT;
+        {
+            zx_channel_call_args_t args = {
+                .wr_bytes = &request,
+                .wr_handles = handles,
+                .rd_bytes = &response,
+                .rd_handles = NULL,
+                .wr_num_bytes = sizeof(request),
+                .wr_num_handles = countof(handles),
+                .rd_num_bytes = sizeof(response),
+                .rd_num_handles = 0u,
+            };
+            uint32_t actual_bytes = 0u;
+            uint32_t actual_handles = 0u;
+            status = zx_channel_call(analyzer, 0, ZX_TIME_INFINITE, &args,
+                                    &actual_bytes, &actual_handles, NULL);
+        }
+        // zx_channel_call consumes the handles with these two result codes.
+        if (status == ZX_OK || status == ZX_ERR_CALL_FAILED)
+            memset(handles, 0, sizeof(handles));
+cleanup:
+        if (analyzer)
+            zx_handle_close(analyzer);
+        if (handles[0])
+            zx_handle_close(handles[0]);
+        if (handles[1])
+            zx_handle_close(handles[1]);
+        if (status != ZX_OK) {
+            printf("devmgr: analyzer_starter: failed to analyze crash: %d (%s)\n",
+                    status, zx_status_get_string(status));
+            status = zx_task_resume(thread_handle, ZX_RESUME_EXCEPTION | ZX_RESUME_TRY_NEXT);
+            if (status != ZX_OK) {
+                printf("devmgr: analyzer_starter: zx_task_resume: %d (%s)\n",
+                        status, zx_status_get_string(status));
+            }
+        }
         zx_handle_close(thread_handle);
     }
 }
