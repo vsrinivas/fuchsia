@@ -12,7 +12,7 @@ import (
 	"io/ioutil"
 	"net/url"
 	"os"
-	"path"
+	"path/filepath"
 	"time"
 
 	"amber/lg"
@@ -53,24 +53,9 @@ type IOError struct {
 	error
 }
 
-func LoadTUFSourceConfig(path string) (*amber.SourceConfig, error) {
-	f, err := os.Open(path)
-	if err != nil {
-		return nil, err
-	}
-	defer f.Close()
-
-	var cfg amber.SourceConfig
-	if err := json.NewDecoder(f).Decode(&cfg); err != nil {
-		return nil, err
-	}
-
-	return &cfg, nil
-}
-
 func NewTUFSource(store string, cfg *amber.SourceConfig) (*TUFSource, error) {
 	if store == "" {
-		return nil, fmt.Errorf("tuf store path cannot be empty")
+		return nil, fmt.Errorf("tuf source directory cannot be an empty string")
 	}
 
 	if cfg.Id == "" {
@@ -112,6 +97,21 @@ func NewTUFSource(store string, cfg *amber.SourceConfig) (*TUFSource, error) {
 	return &src, nil
 }
 
+func LoadTUFSourceFromPath(dir string) (*TUFSource, error) {
+	f, err := os.Open(dir)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+
+	var cfg amber.SourceConfig
+	if err := json.NewDecoder(f).Decode(&cfg); err != nil {
+		return nil, err
+	}
+
+	return NewTUFSource(dir, &cfg)
+}
+
 func (f *TUFSource) initSrc() error {
 	if f.client != nil {
 		return nil
@@ -119,7 +119,7 @@ func (f *TUFSource) initSrc() error {
 
 	// We might have multiple things in the store directory, so put tuf in
 	// it's own directory.
-	tufStore := path.Join(f.Store, "tuf")
+	tufStore := filepath.Join(f.Store, "tuf")
 
 	client, store, err := newTUFClient(f.Config.RepoUrl, tufStore)
 
@@ -274,7 +274,7 @@ func (s *TUFSource) Save() error {
 		return err
 	}
 
-	p := path.Join(s.Store, configFileName)
+	p := filepath.Join(s.Store, configFileName)
 
 	// We want to atomically write the config, so we'll first write it to a
 	// temp file, then do an atomic rename to overwrite the target.

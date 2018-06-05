@@ -12,7 +12,6 @@ import (
 	"log"
 	"net/url"
 	"os"
-	"path"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -87,37 +86,29 @@ func NewDaemon(store string, r *pkg.PackageSet, f func(*GetResult, *pkg.PackageS
 	}()
 
 	// Ignore if the directory doesn't exist
-	if err := d.LoadSources(store); err != nil && !os.IsNotExist(err) {
+	if err := d.loadSourcesFromPath(store); err != nil && !os.IsNotExist(err) {
 		return nil, err
 	}
 
 	return d, nil
 }
 
-// LoadSources install source configs from a directory.  The directory
-// structure looks like:
-//
-//     $dir/source1/config.json
-//     $dir/source2/config.json
-//     ...
-func (d *Daemon) LoadSources(dir string) error {
+// loadSourcesFromPath loads sources from a directory, where each source gets
+// it's own directory.  The actual directory structure is source dependent.
+func (d *Daemon) loadSourcesFromPath(dir string) error {
 	files, err := ioutil.ReadDir(dir)
 	if err != nil {
 		return err
 	}
 
-	for _, file := range files {
-		p := path.Join(dir, file.Name(), "config.json")
-		log.Printf("loading source config %s\n", p)
-
-		cfg, err := source.LoadTUFSourceConfig(p)
+	for _, f := range files {
+		p := filepath.Join(dir, f.Name())
+		src, err := source.LoadTUFSourceFromPath(p)
 		if err != nil {
 			return err
 		}
 
-		if err := d.AddTUFSource(cfg); err != nil {
-			return err
-		}
+		d.addSrc(src)
 	}
 
 	return nil
@@ -143,7 +134,7 @@ func (d *Daemon) addSrc(s source.Source) {
 // from TUFSource.GetInterval()
 func (d *Daemon) AddTUFSource(cfg *amber.SourceConfig) error {
 	// Make sure the id is safe to be written to disk.
-	store := path.Join(d.store, url.PathEscape(cfg.Id))
+	store := filepath.Join(d.store, url.PathEscape(cfg.Id))
 
 	src, err := source.NewTUFSource(store, cfg)
 	if err != nil {
@@ -161,7 +152,7 @@ func (d *Daemon) AddTUFSource(cfg *amber.SourceConfig) error {
 	// found under $RepoURL/blobs.
 	blobRepoUrl := cfg.BlobRepoUrl
 	if blobRepoUrl == "" {
-		blobRepoUrl = path.Join(cfg.RepoUrl, "blobs")
+		blobRepoUrl = filepath.Join(cfg.RepoUrl, "blobs")
 	}
 
 	blobRepo := BlobRepo{

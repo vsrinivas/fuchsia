@@ -8,10 +8,12 @@ import (
 	"bufio"
 	"crypto/sha512"
 	"encoding/hex"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"hash"
 	"io"
+	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
@@ -81,7 +83,7 @@ func main() {
 	if !storeExists {
 		log.Printf("initializing store: %s", *store)
 
-		if err := d.LoadSources(defaultSourceDir); err != nil {
+		if err := addDefaultSources(d, defaultSourceDir); err != nil {
 			log.Fatalf("failed to register default sources: %s", err)
 		}
 	}
@@ -96,6 +98,50 @@ func main() {
 
 	//block forever
 	select {}
+}
+
+// LoadSourceConfigs install source configs from a directory.  The directory
+// structure looks like:
+//
+//     $dir/source1/config.json
+//     $dir/source2/config.json
+//     ...
+func addDefaultSources(d *daemon.Daemon, dir string) error {
+	files, err := ioutil.ReadDir(dir)
+	if err != nil {
+		return err
+	}
+
+	for _, file := range files {
+		p := filepath.Join(dir, file.Name(), "config.json")
+		log.Printf("loading source config %s", p)
+
+		cfg, err := loadSourceConfig(p)
+		if err != nil {
+			return err
+		}
+
+		if err := d.AddTUFSource(cfg); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func loadSourceConfig(path string) (*amber_fidl.SourceConfig, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+
+	var cfg amber_fidl.SourceConfig
+	if err := json.NewDecoder(f).Decode(&cfg); err != nil {
+		return nil, err
+	}
+
+	return &cfg, nil
 }
 
 func startFIDLSvr(d *daemon.Daemon, s *daemon.SystemUpdateMonitor) {
