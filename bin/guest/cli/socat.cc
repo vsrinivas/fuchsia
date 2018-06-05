@@ -28,7 +28,7 @@ class SocketAcceptor : public fuchsia::guest::SocketAcceptor {
       return;
     }
     callback(ZX_OK, std::move(h2));
-    console_.Start(std::move(h2));
+    console_.Start(std::move(h1));
   }
 
  private:
