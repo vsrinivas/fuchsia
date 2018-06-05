@@ -55,7 +55,7 @@ func (s *State) String() string {
 
 const (
 	TCPMaxAckWindow  = 65535 + 1500 // Defined as slightly larger than the max TCP data length (65535).
-	TCPMaxZWPDataLen = 1             // Max data length we expect for TCP Zero Window Probe.
+	TCPMaxZWPDataLen = 1            // Max data length we expect for TCP Zero Window Probe.
 )
 
 const (

@@ -73,7 +73,7 @@ type Rule struct {
 type NAT struct {
 	transProto tcpip.TransportProtocolNumber
 	srcNet     *tcpip.Subnet
-	srcAddr    *tcpip.Address
+	newSrcAddr tcpip.Address
 	nic        tcpip.NICID
 }
 
@@ -81,9 +81,10 @@ type NAT struct {
 // to a machine inside the firewall.
 type RDR struct {
 	transProto tcpip.TransportProtocolNumber
-	dstNet     *tcpip.Subnet
-	dstAddr    *tcpip.Address
+	dstAddr    tcpip.Address
 	dstPort    uint16
+	newDstAddr tcpip.Address
+	newDstPort uint16
 	nic        tcpip.NICID
 }
 

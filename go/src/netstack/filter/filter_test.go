@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/google/netstack/tcpip"
+	"github.com/google/netstack/tcpip/buffer"
 	"github.com/google/netstack/tcpip/header"
 )
 
@@ -92,7 +93,6 @@ func TestRun(t *testing.T) {
 	f := New(nil)
 
 	for _, test := range tests {
-		b := test.packet()
 		var err error
 		f.rulesetMain.Lock()
 		f.rulesetMain.v, err = test.ruleset()
@@ -100,7 +100,9 @@ func TestRun(t *testing.T) {
 		if err != nil {
 			t.Fatalf("failed to generate a ruleset: %v", err)
 		}
-		a := f.Run(test.dir, test.netProto, b, nil)
+		b := test.packet()
+		vv := buffer.NewVectorisedView(len(b), []buffer.View{b})
+		a := f.Run(test.dir, test.netProto, &vv)
 		if a != test.want {
 			t.Fatalf("wrong action, want %v, got %v", test.want, a)
 		}

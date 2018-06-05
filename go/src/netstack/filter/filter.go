@@ -10,6 +10,7 @@ import (
 	"sync/atomic"
 
 	"github.com/google/netstack/tcpip"
+	"github.com/google/netstack/tcpip/buffer"
 	"github.com/google/netstack/tcpip/header"
 	"github.com/google/netstack/tcpip/ports"
 )
@@ -53,10 +54,16 @@ func (f *Filter) IsEnabled() bool {
 // Run is the entry point to the packet filter. It should be called from
 // two hook locations in the network stack: one for incoming packets, another
 // for outgoing packets.
-func (f *Filter) Run(dir Direction, netProto tcpip.NetworkProtocolNumber, b, plb []byte) Action {
+func (f *Filter) Run(dir Direction, netProto tcpip.NetworkProtocolNumber, vv *buffer.VectorisedView) Action {
 	if f.enabled.Load().(bool) == false {
 		// The filter is disabled.
 		return Pass
+	}
+
+	b := vv.First()
+	var plb []byte
+	if len(vv.Views()) >= 2 {
+		plb = (vv.Views())[1]
 	}
 
 	// Lock the state maps.
@@ -182,7 +189,7 @@ func (f *Filter) runForICMPv4(dir Direction, srcAddr, dstAddr tcpip.Address, pay
 			// Rewrite srcAddr in the packet.
 			// The original values are saved in origAddr.
 			origAddr = srcAddr
-			srcAddr = *nat.srcAddr
+			srcAddr = nat.newSrcAddr
 			rewritePacketICMPv4(srcAddr, true, b, th)
 		}
 	}
@@ -227,7 +234,6 @@ func (f *Filter) runForUDP(dir Direction, netProto tcpip.NetworkProtocolNumber, 
 		if debugFilter2 {
 			log.Printf("packet filter: udp state found: %v", s)
 		}
-
 		// If NAT or RDR is in effect, rewrite address and port.
 		if s.lanAddr != s.gwyAddr || s.lanPort != s.gwyPort {
 			switch netProto {
@@ -266,12 +272,18 @@ func (f *Filter) runForUDP(dir Direction, netProto tcpip.NetworkProtocolNumber, 
 	switch dir {
 	case Incoming:
 		if rdr = f.matchRDR(header.UDPProtocolNumber, dstAddr, dstPort); rdr != nil {
+			if debugFilter2 {
+				log.Printf("packet filter: RDR rule matched: proto: %d, dstAddr: %s, dstPort: %d, newDstAddr: %s, newDstPort: %d, nic: %d", rdr.transProto, rdr.dstAddr, rdr.dstPort, rdr.newDstAddr, rdr.newDstPort, rdr.nic)
+			}
 			// Rewrite dstAddr and dstPort in the packet.
 			// The original values are saved in origAddr and origPort.
 			origAddr = dstAddr
-			dstAddr = *rdr.dstAddr
+			dstAddr = rdr.newDstAddr
 			origPort = dstPort
-			dstPort = rdr.dstPort
+			dstPort = rdr.newDstPort
+			if debugFilter2 {
+				log.Printf("packet filter: RDR: rewrite orig(%s:%d) with new(%s:%d)", origAddr, origPort, dstAddr, dstPort)
+			}
 			switch netProto {
 			case header.IPv4ProtocolNumber:
 				rewritePacketUDPv4(dstAddr, dstPort, false, b, th)
@@ -281,7 +293,10 @@ func (f *Filter) runForUDP(dir Direction, netProto tcpip.NetworkProtocolNumber, 
 		}
 	case Outgoing:
 		if nat = f.matchNAT(header.UDPProtocolNumber, srcAddr); nat != nil {
-			newAddr = *nat.srcAddr
+			if debugFilter2 {
+				log.Printf("packet filter: NAT rule matched: proto: %d, srcNet: %s(%s), srcAddr: %s, nic: %d", nat.transProto, nat.srcNet.ID(), tcpip.Address(nat.srcNet.Mask()), nat.newSrcAddr, nat.nic)
+			}
+			newAddr = nat.newSrcAddr
 			// Reserve a new port.
 			netProtos := []tcpip.NetworkProtocolNumber{header.IPv4ProtocolNumber, header.IPv6ProtocolNumber}
 			var e *tcpip.Error
@@ -298,6 +313,9 @@ func (f *Filter) runForUDP(dir Direction, netProto tcpip.NetworkProtocolNumber, 
 			srcAddr = newAddr
 			origPort = srcPort
 			srcPort = newPort
+			if debugFilter2 {
+				log.Printf("packet filter: NAT: rewrite orig(%s:%d) with new(%s:%d)", origAddr, origPort, srcAddr, srcPort)
+			}
 			switch netProto {
 			case header.IPv4ProtocolNumber:
 				rewritePacketUDPv4(srcAddr, srcPort, true, b, th)
@@ -403,9 +421,9 @@ func (f *Filter) runForTCP(dir Direction, netProto tcpip.NetworkProtocolNumber, 
 			// Rewrite dstAddr and dstPort in the packet.
 			// The original values are saved in origAddr and origPort.
 			origAddr = dstAddr
-			dstAddr = *rdr.dstAddr
+			dstAddr = rdr.newDstAddr
 			origPort = dstPort
-			dstPort = rdr.dstPort
+			dstPort = rdr.newDstPort
 			switch netProto {
 			case header.IPv4ProtocolNumber:
 				rewritePacketTCPv4(dstAddr, dstPort, false, b, th)
@@ -415,7 +433,7 @@ func (f *Filter) runForTCP(dir Direction, netProto tcpip.NetworkProtocolNumber, 
 		}
 	case Outgoing:
 		if nat = f.matchNAT(header.TCPProtocolNumber, srcAddr); nat != nil {
-			newAddr = *nat.srcAddr
+			newAddr = nat.newSrcAddr
 			// Reserve a new port.
 			netProtos := []tcpip.NetworkProtocolNumber{header.IPv4ProtocolNumber, header.IPv6ProtocolNumber}
 			var e *tcpip.Error
@@ -516,7 +534,7 @@ func (f *Filter) matchRDR(transProto tcpip.TransportProtocolNumber, dstAddr tcpi
 	defer f.rulesetRDR.RUnlock()
 	for _, r := range f.rulesetRDR.v {
 		if r.transProto == transProto &&
-			r.dstNet.Contains(dstAddr) &&
+			r.dstAddr == dstAddr &&
 			r.dstPort == dstPort {
 			return r
 		}
