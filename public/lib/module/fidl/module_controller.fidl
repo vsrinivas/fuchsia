@@ -21,7 +21,11 @@ interface ModuleController {
   // Requests that this module be hidden in the story.
   3: Defocus();
 
-  // Requests the Module instance to stop (see Module.Stop() for how).
+  // Requests the Module instance to stop. The running Module component's
+  // Lifecycle::Terminate() method is called, the instance is shut down and
+  // state within the framework is cleaned up.
+
+  // The result callback is called once the Module's runtime has been torn down.
   4: Stop() -> ();
 };
 

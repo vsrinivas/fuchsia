@@ -638,7 +638,7 @@ class StoryControllerImpl::StopCall : public Operation<> {
           story_controller_impl_->story_shell_app_.reset();
           story_controller_impl_->story_shell_.Unbind();
           if (story_controller_impl_->story_context_binding_.is_bound()) {
-            // Close() dchecks if called while not bound.
+            // Close() checks if called while not bound.
             story_controller_impl_->story_context_binding_.Unbind();
           }
 

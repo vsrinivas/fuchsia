@@ -90,9 +90,18 @@ void ModuleControllerImpl::Teardown(std::function<void()> done) {
   auto cont = [this] {
     SetState(ModuleState::STOPPED);
 
-    // ReleaseModule() must be called before the callbacks, because
-    // StoryControllerImpl::Stop() relies on being called back *after* the
-    // module controller was disposed.
+    // We take ownership of *this from |story_controller_impl_| so that
+    // teardown happens in StoryControllerImpl but *this is still alive when we
+    // call |teardown_done_callbacks_|. One or more of the callbacks may be a
+    // result callback for ModuleController::Stop() and since *this owns the
+    // fidl::Binding for the channel on which the result message will be sent,
+    // it must be alive when the message is posted.
+    // TODO(thatguy,mesch): This point is reachable from two distinct
+    // code-paths: originating from ModuleControllerImpl::Stop() or
+    // StoryControllerImpl::Stop(). It is not clear whether ReleaseModule()
+    // must be called *before* these done callbacks are called, or whether we
+    // can move this call below the loop and have ReleaseModule also delete
+    // *this.
     story_controller_impl_->ReleaseModule(this);
 
     for (auto& done : teardown_done_callbacks_) {
