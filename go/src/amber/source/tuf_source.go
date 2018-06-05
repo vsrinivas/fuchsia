@@ -55,18 +55,6 @@ type IOError struct {
 	error
 }
 
-func LoadKeys(path string) ([]*tuf_data.Key, error) {
-	f, err := os.Open(path)
-	defer f.Close()
-	if err != nil {
-		return nil, err
-	}
-
-	var keys []*tuf_data.Key
-	err = json.NewDecoder(f).Decode(&keys)
-	return keys, err
-}
-
 func LoadTUFSourceConfig(path string) (*amber.SourceConfig, error) {
 	f, err := os.Open(path)
 	if err != nil {
