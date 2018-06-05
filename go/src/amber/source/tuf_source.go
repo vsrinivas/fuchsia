@@ -36,7 +36,7 @@ var ErrTufSrcNoHash = errors.New("tufsource: hash missing or wrong type")
 // TUFSource wraps a TUF Client into the Source interface
 type TUFSource struct {
 	client *tuf.Client
-	Store  string
+	Dir    string
 	keys   []*tuf_data.Key
 	Config *amber.SourceConfig
 }
@@ -53,8 +53,8 @@ type IOError struct {
 	error
 }
 
-func NewTUFSource(store string, cfg *amber.SourceConfig) (*TUFSource, error) {
-	if store == "" {
+func NewTUFSource(dir string, cfg *amber.SourceConfig) (*TUFSource, error) {
+	if dir == "" {
 		return nil, fmt.Errorf("tuf source directory cannot be an empty string")
 	}
 
@@ -76,7 +76,7 @@ func NewTUFSource(store string, cfg *amber.SourceConfig) (*TUFSource, error) {
 	}
 
 	src := TUFSource{
-		Store:  store,
+		Dir:    dir,
 		keys:   keys,
 		Config: cfg,
 	}
@@ -106,7 +106,7 @@ func (f *TUFSource) initSrc() error {
 
 	// We might have multiple things in the store directory, so put tuf in
 	// it's own directory.
-	tufStore := filepath.Join(f.Store, "tuf")
+	tufStore := filepath.Join(f.Dir, "tuf")
 
 	client, store, err := newTUFClient(f.Config.RepoUrl, tufStore)
 
@@ -277,18 +277,17 @@ func (f *TUFSource) Equals(o Source) bool {
 }
 
 func (s *TUFSource) Save() error {
-	// Ignore errors if the data dir already exists
-	err := os.MkdirAll(s.Store, os.ModePerm)
+	err := os.MkdirAll(s.Dir, os.ModePerm)
 	if err != nil {
 		return err
 	}
 
-	p := filepath.Join(s.Store, configFileName)
+	p := filepath.Join(s.Dir, configFileName)
 
 	// We want to atomically write the config, so we'll first write it to a
 	// temp file, then do an atomic rename to overwrite the target.
 
-	f, err := ioutil.TempFile(s.Store, configFileName)
+	f, err := ioutil.TempFile(s.Dir, configFileName)
 	if err != nil {
 		return err
 	}
