@@ -7,7 +7,8 @@
 #include <iostream>
 #include <sstream>
 
-#include <launchpad/launchpad.h>
+#include <fdio/io.h>
+#include <fdio/spawn.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <test_runner/cpp/fidl.h>
 #include <zircon/processargs.h>
@@ -15,6 +16,17 @@
 
 #include "lib/app/cpp/startup_context.h"
 #include "lib/fxl/time/stopwatch.h"
+
+static zx_status_t AddPipe(int target_fd, int* local_fd,
+                           fdio_spawn_action_t* action) {
+  zx_status_t status = fdio_pipe_half(&action->h.handle, &action->h.id);
+  if (status < 0)
+    return status;
+  *local_fd = status;
+  action->action = FDIO_SPAWN_ACTION_ADD_HANDLE;
+  action->h.id = PA_HND(PA_HND_TYPE(action->h.id), target_fd);
+  return ZX_OK;
+}
 
 class Reporter {
  public:
@@ -82,21 +94,29 @@ int main(int argc, char** argv) {
     return 1;
   }
 
-  launchpad_t* launchpad;
-  int stdout_pipe;
-  int stderr_pipe;
-  launchpad_create(0, argv[1], &launchpad);
-  launchpad_load_from_file(launchpad, argv[1]);
-  launchpad_clone(launchpad, LP_CLONE_FDIO_NAMESPACE);
-  launchpad_add_pipe(launchpad, &stdout_pipe, 1);
-  launchpad_add_pipe(launchpad, &stderr_pipe, 2);
-  launchpad_set_args(launchpad, argc - 1, argv + 1);
+  int stdout_pipe = -1;
+  int stderr_pipe = -1;
+  fdio_spawn_action_t actions[2] = {};
+
+  if (AddPipe(STDOUT_FILENO, &stdout_pipe, &actions[0]) != ZX_OK) {
+    reporter.Start();
+    reporter.Finish(true, "Failed to create stdout pipe");
+    return 1;
+  }
+
+  if (AddPipe(STDERR_FILENO, &stderr_pipe, &actions[1]) != ZX_OK) {
+    reporter.Start();
+    reporter.Finish(true, "Failed to create stderr pipe");
+    return 1;
+  }
 
   reporter.Start();
 
-  const char* error;
-  zx_handle_t handle;
-  zx_status_t status = launchpad_go(launchpad, &handle, &error);
+  char error[FDIO_SPAWN_ERR_MSG_MAX_LENGTH];
+  zx_handle_t handle = ZX_HANDLE_INVALID;
+  zx_status_t status = fdio_spawn_etc(
+      ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL & ~FDIO_SPAWN_CLONE_STDIO,
+      argv[1], argv + 1, nullptr, countof(actions), actions, &handle, error);
   if (status < 0) {
     reporter.Finish(true, error);
     return 1;

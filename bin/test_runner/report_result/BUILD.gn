@@ -12,6 +12,6 @@ executable("report_result") {
   deps = [
     "//garnet/public/lib/test_runner/cpp",
     "//garnet/public/lib/test_runner/fidl",
-    "//zircon/public/lib/launchpad",
+    "//zircon/public/lib/fdio",
   ]
 }
