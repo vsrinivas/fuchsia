@@ -8,4 +8,8 @@ source_set("include") {
   sources = [
     "types.h",
   ]
+
+  public_deps = [
+    "//peridot/public/lib/cloud_provider/fidl",
+  ]
 }
