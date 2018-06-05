@@ -50,6 +50,7 @@ var (
 	keySrc       = flag.String("k", fuchsiaBuildDir, "Directory containing the signing keys.")
 	verbose      = flag.Bool("v", false, "Print out more informational messages.")
 	verTime      = flag.Bool("vt", false, "Set repo versioning based on time rather than a monotonic increment")
+	commitStaged = flag.Bool("po", false, "Publish only, commit any staged updates to the update repo.")
 )
 
 func main() {
@@ -69,7 +70,8 @@ func main() {
 	}
 
 	modeCheck := false
-	for _, v := range []bool{*tufFile, *packageSet, *regFile, *blobSet, *manifestFile} {
+	for _, v := range []bool{*tufFile, *packageSet, *regFile, *blobSet, *manifestFile,
+		*commitStaged} {
 		if v {
 			if modeCheck {
 				log.Fatal("Only one mode, -p, -ps, -b, -bs, or -m may be selected")
@@ -82,7 +84,7 @@ func main() {
 		log.Fatal("A mode, -p, -ps, -b, or -m must be selected")
 	}
 
-	if len(filePaths) == 0 {
+	if !*commitStaged && len(filePaths) == 0 {
 		log.Fatal("No file path supplied.")
 	}
 	for _, k := range filePaths {
@@ -180,6 +182,10 @@ func main() {
 				log.Fatalf("Error adding regular file: %s %s\n", path, err)
 				return
 			}
+		}
+	} else if *commitStaged {
+		if err := repo.CommitUpdates(*verTime); err != nil {
+			fmt.Printf("Error committing updates: %s", err)
 		}
 	} else {
 		if len(filePaths) != 1 {
