@@ -322,12 +322,52 @@ static bool zbi_test_append_full(void) {
     END_TEST;
 }
 
+// Test that appending multiple sections to a ZBI works
+static bool zbi_test_append_multi(void) {
+    BEGIN_TEST;
+    uint8_t* reference_zbi = get_test_zbi();
+    ASSERT_NONNULL(reference_zbi);
+    auto cleanup = fbl::MakeAutoCall([reference_zbi]() {
+        free(reference_zbi);
+    });
+
+
+    uint8_t test_zbi[sizeof(test_zbi_t)];
+    zbi_header_t* hdr = reinterpret_cast<zbi_header_t*>(test_zbi);
+
+    // Create an empty container.
+    init_zbi_header(hdr);
+    hdr->type = ZBI_TYPE_CONTAINER;
+    hdr->extra = ZBI_CONTAINER_MAGIC;
+    hdr->length = 0;
+
+    zbi::Zbi image(test_zbi, sizeof(test_zbi));
+
+    ASSERT_EQ(image.Check(nullptr), ZBI_RESULT_OK);
+
+    zbi_result_t result;
+
+    result = image.AppendSection(sizeof(kTestCmdline), ZBI_TYPE_CMDLINE, 0, 0, kTestCmdline);
+    ASSERT_EQ(result, ZBI_RESULT_OK);
+
+    result = image.AppendSection(sizeof(kTestRD), ZBI_TYPE_STORAGE_RAMDISK, 0, 0, kTestRD);
+    ASSERT_EQ(result, ZBI_RESULT_OK);
+
+    result = image.AppendSection(sizeof(kTestBootfs), ZBI_TYPE_STORAGE_BOOTFS, 0, 0, kTestBootfs);
+    ASSERT_EQ(result, ZBI_RESULT_OK);
+
+    ASSERT_EQ(memcmp(reference_zbi, test_zbi, image.Length()), 0);
+
+    END_TEST;
+}
+
 BEGIN_TEST_CASE(zbi_tests)
 RUN_TEST(zbi_test_basic)
 RUN_TEST(zbi_test_bad_container)
 RUN_TEST(zbi_test_truncated)
 RUN_TEST(zbi_test_append)
 RUN_TEST(zbi_test_append_full)
+RUN_TEST(zbi_test_append_multi)
 END_TEST_CASE(zbi_tests)
 
 int main(int argc, char** argv) {

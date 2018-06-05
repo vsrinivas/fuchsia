@@ -138,7 +138,7 @@ zbi_result_t zbi_create_section(void* base, const size_t capacity,
     new_header->magic = ZBI_ITEM_MAGIC;
     new_header->crc32 = ZBI_ITEM_NO_CRC32;
 
-    write_head += sizeof(new_header);
+    write_head += sizeof(*new_header);
 
     // Set the result.
     *payload = write_head;
