@@ -11,9 +11,12 @@
 //     Safe to use at early boot time if necessary or in other situations where
 //     allocation may not be desirable.
 // (2) Trivially Portable
-//     This library's only dependency on zircon is the image.h ZBI header.
-//     Otherwise it should be trivially portable to other environments/
-//     bootloaders as necessary.
+//     This library attempts to limit the number of depedencies on the
+//     environment:
+//      + A C99 compliant compiler
+//      + Support for sized integer types (uint8_t and uint32_t)
+//      + zircon/boot/image.h
+//      + Implementations of memcmp and memcpy
 // (3) Tested
 //     Tests for this library can be found at zircon/system/utest/zbi/*
 
@@ -25,18 +28,18 @@
 
 __BEGIN_CDECLS
 
-typedef uint32_t zbi_result_t;
+typedef enum zbi_result {
+    ZBI_RESULT_OK,
 
-#define ZBI_RESULT_OK             ((zbi_result_t)0)
+    ZBI_RESULT_ERROR,
+    ZBI_RESULT_BAD_TYPE,
+    ZBI_RESULT_BAD_MAGIC,
+    ZBI_RESULT_BAD_VERSION,
+    ZBI_RESULT_BAD_CRC,
+    ZBI_RESULT_ERR_TRUNCATED,
 
-#define ZBI_RESULT_ERROR          ((zbi_result_t)1)
-#define ZBI_RESULT_BAD_TYPE       ((zbi_result_t)2)
-#define ZBI_RESULT_BAD_MAGIC      ((zbi_result_t)3)
-#define ZBI_RESULT_BAD_VERSION    ((zbi_result_t)4)
-#define ZBI_RESULT_BAD_CRC        ((zbi_result_t)5)
-#define ZBI_RESULT_ERR_TRUNCATED  ((zbi_result_t)6)
-
-#define ZBI_RESULT_TOO_BIG        ((zbi_result_t)7)
+    ZBI_RESULT_TOO_BIG,
+} zbi_result_t;
 
 typedef zbi_result_t (*zbi_foreach_cb_t)(zbi_header_t* hdr,
                                          void* payload,
@@ -46,7 +49,7 @@ typedef zbi_result_t (*zbi_foreach_cb_t)(zbi_header_t* hdr,
 // If err is not null and an error is found, err will point to the ZBI entry
 // in which a problem was found the return value will attempt to specify the
 // nature of the error.
-zbi_result_t zbi_check(void* base, zbi_header_t** err);
+zbi_result_t zbi_check(const void* base, zbi_header_t** err);
 
 // Call `cb` with a pointer to the header and payload of each ZBI item
 // excluding the root ZBI_TYPE_CONTAINER.
@@ -58,7 +61,8 @@ zbi_result_t zbi_check(void* base, zbi_header_t** err);
 //
 // cookie will be passed transparently to each cb and is available for the
 // client to pass data back from each of the callbacks.
-zbi_result_t zbi_for_each(void* base, const zbi_foreach_cb_t cb, void* cookie);
+zbi_result_t zbi_for_each(const void* base, const zbi_foreach_cb_t cb,
+                          void* cookie);
 
 // Creates a new ZBI section and appends it to the end of the ZBI pointed to by
 // `base`. Assumes that the buffer at `base` has a length of `capacity` which
@@ -72,17 +76,17 @@ zbi_result_t zbi_for_each(void* base, const zbi_foreach_cb_t cb, void* cookie);
 //
 // CRC computation is not currently supported and setting the ZBI_FLAG_CRC32
 // flag will yield an error.
-zbi_result_t zbi_append_section(void* base, const size_t capacity,
-                                const uint32_t section_length,
-                                const uint32_t type, const uint32_t extra,
-                                const uint32_t flags, const void* payload);
+zbi_result_t zbi_append_section(void* base, size_t capacity,
+                                uint32_t section_length, uint32_t type,
+                                uint32_t extra, uint32_t flags,
+                                const void* payload);
 
 
 // Create a new ZBI section and returns a pointer to the payload.
-zbi_result_t zbi_create_section(void* base, const size_t capacity,
-                                const uint32_t section_length,
-                                const uint32_t type, const uint32_t extra,
-                                const uint32_t flags, void** payload);
+zbi_result_t zbi_create_section(void* base, size_t capacity,
+                                uint32_t section_length, uint32_t type,
+                                uint32_t extra, uint32_t flags,
+                                void** payload);
 
 
 __END_CDECLS

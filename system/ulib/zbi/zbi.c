@@ -25,7 +25,7 @@ static zbi_result_t for_each_check_entry(zbi_header_t* hdr, void* payload,
 }
 
 
-zbi_result_t zbi_check(void* base, zbi_header_t** err) {
+zbi_result_t zbi_check(const void* base, zbi_header_t** err) {
     zbi_result_t res = ZBI_RESULT_OK;
     zbi_header_t* header = (zbi_header_t*)(base);
 
@@ -54,7 +54,8 @@ zbi_result_t zbi_check(void* base, zbi_header_t** err) {
     return res;
 }
 
-zbi_result_t zbi_for_each(void* base, const zbi_foreach_cb_t cb, void* cookie) {
+zbi_result_t zbi_for_each(const void* base, const zbi_foreach_cb_t cb,
+                          void* cookie) {
     zbi_header_t* header = (zbi_header_t*)(base);
 
     // Skip container header.
@@ -78,9 +79,9 @@ zbi_result_t zbi_for_each(void* base, const zbi_foreach_cb_t cb, void* cookie) {
 }
 
 zbi_result_t zbi_append_section(void* base, const size_t capacity,
-                                const uint32_t section_length,
-                                const uint32_t type, const uint32_t extra,
-                                const uint32_t flags, const void* payload) {
+                                uint32_t section_length, uint32_t type,
+                                uint32_t extra, uint32_t flags,
+                                const void* payload) {
 
     uint8_t* new_section;
     zbi_result_t result = zbi_create_section(base, capacity, section_length,
@@ -94,13 +95,10 @@ zbi_result_t zbi_append_section(void* base, const size_t capacity,
     return ZBI_RESULT_OK;
 }
 
-zbi_result_t zbi_create_section(void* base, const size_t capacity,
-                                const uint32_t section_length,
-                                const uint32_t type, const uint32_t extra,
-                                const uint32_t flags, void** payload) {
-    // Required arguments.
-    if (!base || !payload) return ZBI_RESULT_ERROR;
-
+zbi_result_t zbi_create_section(void* base, size_t capacity,
+                                uint32_t section_length, uint32_t type,
+                                uint32_t extra, uint32_t flags,
+                                void** payload) {
     // We don't support CRC computation (yet?)
     if (flags & ZBI_FLAG_CRC32) return ZBI_RESULT_ERROR;
 

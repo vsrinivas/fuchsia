@@ -18,11 +18,11 @@ namespace zbi {
 class Zbi {
   public:
     explicit Zbi(uint8_t* base) : base_(base) {
-        zbi_header_t* hdr = reinterpret_cast<zbi_header_t*>(base);
+        zbi_header_t* hdr = reinterpret_cast<zbi_header_t*>(base_);
         capacity_ = hdr->length + sizeof(*hdr);
     }
 
-    Zbi(uint8_t* base, const size_t capacity)
+    Zbi(uint8_t* base, size_t capacity)
         : base_(base)
         , capacity_(capacity) {}
 
@@ -34,16 +34,14 @@ class Zbi {
         return zbi_for_each(base_, cb, cookie);
     }
 
-    zbi_result_t AppendSection(const uint32_t length, const uint32_t type,
-                               const uint32_t extra, const uint32_t flags,
-                               const void* payload) {
+    zbi_result_t AppendSection(uint32_t length, uint32_t type, uint32_t extra,
+                               uint32_t flags, const void* payload) {
         return zbi_append_section(base_, capacity_, length, type, extra, flags,
                                   payload);
     }
 
-    zbi_result_t CreateSection(const uint32_t length, const uint32_t type,
-                               const uint32_t extra, const uint32_t flags,
-                               void** payload) {
+    zbi_result_t CreateSection(uint32_t length, uint32_t type, uint32_t extra,
+                               uint32_t flags, void** payload) {
       return zbi_create_section(base_, capacity_, length, type, extra, flags,
                                 payload);
     }

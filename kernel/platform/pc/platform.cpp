@@ -139,7 +139,7 @@ zbi_result_t process_zbi_item(zbi_header_t* hdr, void* payload, void* cookie) {
     case ZBI_TYPE_DISCARD:
         break;
     }
-    return 0;
+    return ZBI_RESULT_OK;
 }
 
 static void process_zbi(zbi_header_t* hdr, uintptr_t phys) {
@@ -151,7 +151,7 @@ static void process_zbi(zbi_header_t* hdr, uintptr_t phys) {
     zbi_header_t* bad_hdr;
     zbi_result_t result = image.Check(&bad_hdr);
     if (result != ZBI_RESULT_OK) {
-        printf("zbi: invalid %08x %08x %08x %08x, retcode = %u\n",
+        printf("zbi: invalid %08x %08x %08x %08x, retcode = %d\n",
                bad_hdr->type, bad_hdr->length, bad_hdr->extra, bad_hdr->flags,
                result);
         return;
@@ -161,7 +161,7 @@ static void process_zbi(zbi_header_t* hdr, uintptr_t phys) {
 
     result = image.ForEach(process_zbi_item, nullptr);
     if (result != ZBI_RESULT_OK) {
-        printf("zbi: failed to process bootdata, reason = %u\n", result);
+        printf("zbi: failed to process bootdata, reason = %d\n", result);
         return;
     }
 
@@ -525,7 +525,7 @@ zx_status_t platform_mexec_patch_zbi(uint8_t* bootdata, const size_t len) {
 
     if (result != ZBI_RESULT_OK) {
         printf("mexec: Failed to append e820 map to zbi. len = %lu, section "
-               "length = %u, retcode = %u\n", len, section_length, result);
+               "length = %u, retcode = %d\n", len, section_length, result);
         return ZX_ERR_INTERNAL;
     }
 
@@ -536,7 +536,7 @@ zx_status_t platform_mexec_patch_zbi(uint8_t* bootdata, const size_t len) {
                                      kNoZbiFlags,(uint8_t*)&bootloader.fb);
         if (result != ZBI_RESULT_OK) {
             printf("mexec: Failed to append framebuffer data to bootdata. "
-                   "len = %lu, section length = %lu, retcode = %u\n", len,
+                   "len = %lu, section length = %lu, retcode = %d\n", len,
                    sizeof(bootloader.fb), result);
             return ZX_ERR_INTERNAL;
         }
@@ -549,7 +549,7 @@ zx_status_t platform_mexec_patch_zbi(uint8_t* bootdata, const size_t len) {
                                      (uint8_t*)&bootloader.efi_system_table);
         if (result != ZBI_RESULT_OK) {
             printf("mexec: Failed to append efi sys table data to bootdata. "
-                   "len = %lu, section length = %lu, retcode = %u\n", len,
+                   "len = %lu, section length = %lu, retcode = %d\n", len,
                    sizeof(bootloader.efi_system_table), result);
             return ZX_ERR_INTERNAL;
         }
@@ -562,7 +562,7 @@ zx_status_t platform_mexec_patch_zbi(uint8_t* bootdata, const size_t len) {
                                      (uint8_t*)&bootloader.acpi_rsdp);
         if (result != ZBI_RESULT_OK) {
             printf("mexec: Failed to append acpi rsdp data to bootdata. "
-                   "len = %lu, section length = %lu, retcode = %u\n", len,
+                   "len = %lu, section length = %lu, retcode = %d\n", len,
                    sizeof(bootloader.acpi_rsdp), result);
             return ZX_ERR_INTERNAL;
         }
@@ -574,7 +574,7 @@ zx_status_t platform_mexec_patch_zbi(uint8_t* bootdata, const size_t len) {
                                      (uint8_t*)&bootloader.smbios);
         if (result != ZBI_RESULT_OK) {
             printf("mexec: Failed to append smbios data to bootdata. len = %lu,"
-                   " section length = %lu, retcode = %u\n", len,
+                   " section length = %lu, retcode = %d\n", len,
                    sizeof(bootloader.smbios), result);
             return ZX_ERR_INTERNAL;
         }
@@ -586,7 +586,7 @@ zx_status_t platform_mexec_patch_zbi(uint8_t* bootdata, const size_t len) {
                                      kNoZbiFlags, (uint8_t*)&bootloader.uart);
         if (result != ZBI_RESULT_OK) {
             printf("mexec: Failed to append uart data to bootdata. len = %lu, "
-                   "section length = %lu, retcode = %u\n", len,
+                   "section length = %lu, retcode = %d\n", len, 
                    sizeof(bootloader.uart), result);
             return ZX_ERR_INTERNAL;
         }
@@ -599,7 +599,7 @@ zx_status_t platform_mexec_patch_zbi(uint8_t* bootdata, const size_t len) {
 
         if (result != ZBI_RESULT_OK) {
             printf("mexec: Failed to append nvram data to bootdata. len = %lu, "
-                   "section length = %lu, retcode = %u\n", len,
+                   "section length = %lu, retcode = %d\n", len,
                    sizeof(bootloader.nvram), result);
             return ZX_ERR_INTERNAL;
         }
