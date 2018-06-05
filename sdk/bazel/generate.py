@@ -6,8 +6,8 @@
 import argparse
 import os
 import shutil
+import stat
 import sys
-
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 FUCHSIA_ROOT = os.path.dirname(  # $root
@@ -16,12 +16,9 @@ FUCHSIA_ROOT = os.path.dirname(  # $root
     SCRIPT_DIR)))                # sdk
 
 sys.path += [os.path.join(FUCHSIA_ROOT, "third_party", "mako")]
-sys.path += [os.path.join(FUCHSIA_ROOT, "scripts", "sdk")]
-
-from layout_builder import Builder, process_manifest
 from mako.template import Template
-from os import chmod
-import stat
+sys.path += [os.path.join(FUCHSIA_ROOT, "scripts", "sdk", "common")]
+from layout_builder import Builder, process_manifest
 
 
 class Library(object):

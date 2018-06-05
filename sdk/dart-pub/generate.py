@@ -11,11 +11,14 @@ import sys
 FUCHSIA_ROOT = os.path.dirname(  # $root
     os.path.dirname(             # scripts
     os.path.dirname(             # sdk
-    os.path.abspath(__file__))))
+    os.path.dirname(             # dart-pub
+    os.path.abspath(__file__)))))
+
 sys.path += [os.path.join(FUCHSIA_ROOT, 'third_party', 'pyyaml', 'lib')]
 import yaml
-
+sys.path += [os.path.join(FUCHSIA_ROOT, 'scripts', 'sdk', 'common')]
 from layout_builder import Builder, process_manifest
+
 
 class DartBuilder(Builder):
 

@@ -12,7 +12,8 @@ import sys
 FUCHSIA_ROOT = os.path.dirname(  # $root
     os.path.dirname(             # scripts
     os.path.dirname(             # sdk
-    os.path.abspath(__file__))))
+    os.path.dirname(             # common
+    os.path.abspath(__file__)))))
 
 sys.path += [os.path.join(FUCHSIA_ROOT, 'build', 'sdk')]
 from sdk_common import Atom

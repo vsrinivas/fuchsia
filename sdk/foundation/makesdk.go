@@ -292,7 +292,7 @@ func init() {
 func createLayout(manifest, fuchsiaRoot, outDir string) {
 	for idx, buildDir := range []string{x64BuildDir, armBuildDir} {
 		manifestPath := filepath.Join(fuchsiaRoot, buildDir, "sdk-manifests", manifest)
-		cmd := filepath.Join(fuchsiaRoot, "scripts", "sdk", "create_layout.py")
+		cmd := filepath.Join(fuchsiaRoot, "scripts", "sdk", "foundation", "generate.py")
 		args := []string{"--manifest", manifestPath, "--output", outDir}
 		if idx > 0 {
 			args = append(args, "--overlay")

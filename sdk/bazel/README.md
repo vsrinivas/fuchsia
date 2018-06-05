@@ -1,4 +1,7 @@
-# SDK layout
+Bazel SDK
+=========
+
+# Layout
 
 This document describes the standard layout of a Fuchsia Bazel SDK.
 
