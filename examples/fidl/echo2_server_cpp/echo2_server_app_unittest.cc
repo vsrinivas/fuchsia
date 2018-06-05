@@ -14,19 +14,19 @@ class EchoServerAppTest : public ::gtest::TestWithLoop {
 };
 
 TEST_F(EchoServerAppTest, HelloWorld) {
-    ::fidl::StringPtr message = "bogus";
-    echoServerApp_.EchoString("Hello World!",
-        [&](::fidl::StringPtr retval) { message = retval; });
-    RunLoopUntilIdle();
-    EXPECT_EQ("Hello World!", message);
+  ::fidl::StringPtr message = "bogus";
+  echoServerApp_.EchoString(
+      "Hello World!", [&](::fidl::StringPtr retval) { message = retval; });
+  RunLoopUntilIdle();
+  EXPECT_EQ("Hello World!", message);
 }
 
 TEST_F(EchoServerAppTest, Empty) {
-    ::fidl::StringPtr message = "bogus";
-    echoServerApp_.EchoString("",
-        [&](::fidl::StringPtr retval) { message = retval; });
-    RunLoopUntilIdle();
-    EXPECT_EQ("", message);
+  ::fidl::StringPtr message = "bogus";
+  echoServerApp_.EchoString(
+      "", [&](::fidl::StringPtr retval) { message = retval; });
+  RunLoopUntilIdle();
+  EXPECT_EQ("", message);
 }
 
 }  // namespace testing

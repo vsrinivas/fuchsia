@@ -63,7 +63,7 @@ package("echo2_server_cpp_tests") {
 
   tests = [
     {
-       name = "echo2_server_cpp_unittests"
-    }
+      name = "echo2_server_cpp_unittests"
+    },
   ]
 }

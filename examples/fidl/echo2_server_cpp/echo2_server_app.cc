@@ -12,11 +12,12 @@ EchoServerApp::EchoServerApp()
     : context_(fuchsia::sys::StartupContext::CreateFromStartupInfo()) {
   context_->outgoing().AddPublicService<Echo>(
       [this](fidl::InterfaceRequest<Echo> request) {
-    bindings_.AddBinding(this, std::move(request));
-  });
+        bindings_.AddBinding(this, std::move(request));
+      });
 }
 
-void EchoServerApp::EchoString(fidl::StringPtr value, EchoStringCallback callback) {
+void EchoServerApp::EchoString(fidl::StringPtr value,
+                               EchoStringCallback callback) {
   printf("EchoString: %s\n", value->data());
   callback(std::move(value));
 }
