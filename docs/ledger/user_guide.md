@@ -16,10 +16,10 @@ Follow the instructions in
 [netstack](https://fuchsia.googlesource.com/netstack/+/d24151e74c745358b102f4f33a3c5f4d720ddc52/README.md)
 to ensure that your Fuchsia has Internet access.
 
-Run `wget` to verify that it worked:
+Run `curl` to verify that it worked:
 
 ```
-wget http://example.com
+curl http://example.com
 ```
 
 You should see the HTML content of the `example.com` placeholder page.
