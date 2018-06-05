@@ -23,8 +23,6 @@
 #include <inspector/inspector.h>
 #include <pretty/hexdump.h>
 
-#include "dump-pt.h"
-
 static int verbosity_level = 0;
 
 // If true then s/w breakpoint instructions do not kill the process.
@@ -32,12 +30,6 @@ static int verbosity_level = 0;
 // TODO: The default is on for now for development purposes.
 // Ultimately will want to switch this to off.
 static bool swbreak_backtrace_enabled = true;
-
-#ifdef __x86_64__
-// If true then an attempt is made to dump processor trace data.
-// Requires processor tracing turned on in the kernel.
-static bool pt_dump_enabled = false;
-#endif
 
 // Same as basename, except will not modify |path|.
 // This assumes there are no trailing /s.
@@ -328,12 +320,6 @@ void process_report(zx_handle_t process, zx_handle_t thread, bool use_libunwind)
 
     // TODO(ZX-588): Print a backtrace of all other threads in the process.
 
-#ifdef __x86_64__
-    if (pt_dump_enabled) {
-        try_dump_pt_data();
-    }
-#endif
-
 Fail:
     if (verbosity_level >= 1)
         printf("Done handling thread %" PRIu64 ".%" PRIu64 ".\n", pid, tid);
@@ -353,12 +339,6 @@ int main(int argc, char** argv) {
     // If not then we use a simple algorithm that assumes ABI-specific
     // frame pointers are present.
     bool use_libunwind = true;
-#ifdef __x86_64__
-    const char* crashanalyzer_pt = getenv("crashanalyzer.pt");
-    if (crashanalyzer_pt && strcmp(crashanalyzer_pt, "true") == 0) {
-        pt_dump_enabled = true;
-    }
-#endif
 
     inspector_set_verbosity(verbosity_level);
 

@@ -10,8 +10,7 @@ MODULE_TYPE := userapp
 MODULE_GROUP := core
 
 MODULE_SRCS += \
-    $(LOCAL_DIR)/crashanalyzer.cpp \
-    $(LOCAL_DIR)/dump-pt.cpp \
+    $(LOCAL_DIR)/crashanalyzer.cpp
 
 MODULE_NAME := crashanalyzer
 
@@ -25,7 +24,6 @@ MODULE_STATIC_LIBS := \
 MODULE_LIBS := \
     third_party/ulib/backtrace \
     third_party/ulib/ngunwind \
-    system/ulib/launchpad \
     system/ulib/fdio \
     system/ulib/zircon \
     system/ulib/c
