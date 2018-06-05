@@ -22,7 +22,7 @@ fidl("sme") {
 }
 
 fidl("service") {
-  name = "wlan_device_service"
+  name = "fuchsia.wlan.device.service"
 
   sources = [
     "service.fidl"
