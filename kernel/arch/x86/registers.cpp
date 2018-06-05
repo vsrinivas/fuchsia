@@ -37,10 +37,17 @@
 #define LOCAL_TRACE 0
 
 #define IA32_XSS_MSR 0xDA0
-/* offset in xsave area that components >= 2 start at */
+
+// Offset in xsave area that components >= 2 start at.
 #define XSAVE_EXTENDED_AREA_OFFSET 576
-/* bits 2 through 62 of state vector can optionally be set */
-#define XSAVE_MAX_EXT_COMPONENTS 61
+
+// The first xsave component in the extended (non-legacy) area.
+#define XSAVE_FIRST_EXT_COMPONENT 2
+
+// Number of possible components in the state vector.
+#define XSAVE_MAX_COMPONENTS 63
+
+// Bit in XCOMP_BV field of xsave indicating compacted format.
 #define XSAVE_XCOMP_BV_COMPACT (1ULL << 63)
 
 static void fxsave(void* register_state);
@@ -54,12 +61,17 @@ static void xsaves(void* register_state, uint64_t feature_mask);
 static void read_xsave_state_info(void);
 static void recompute_state_size(void);
 
+// Indexed by component. Components 0 and 1 are the "legacy" floating point and
+// SSE ones. These do not have a size or align64 set in this structure since
+// they are inside the legacy xsave area. Use XSAVE_FIRST_EXT_COMPONENT for
+// the first valid entry.
 static struct {
-    /* Total size of this component in bytes */
+    // Total size of this component in bytes.
     uint32_t size;
-    /* If true, this component must be aligned to a 64-byte boundary */
+
+    // If true, this component must be aligned to a 64-byte boundary.
     bool align64;
-} state_components[XSAVE_MAX_EXT_COMPONENTS];
+} state_components[XSAVE_MAX_COMPONENTS];
 
 /* Supported bits in XCR0 (each corresponds to a state component) */
 static uint64_t xcr0_component_bitmap = 0;
@@ -419,21 +431,20 @@ static void read_xsave_state_info(void) {
     ac.cancel();
 
     /* Read info about the state components */
-    for (uint i = 0; i < XSAVE_MAX_EXT_COMPONENTS; ++i) {
-        uint idx = i + 2;
-        if (!(xcr0_component_bitmap & (1ULL << idx)) &&
-            !(xss_component_bitmap & (1ULL << idx))) {
+    for (int i = XSAVE_FIRST_EXT_COMPONENT; i < XSAVE_MAX_COMPONENTS; ++i) {
+        if (!(xcr0_component_bitmap & (1ULL << i)) &&
+            !(xss_component_bitmap & (1ULL << i))) {
             continue;
         }
-        x86_get_cpuid_subleaf(X86_CPUID_XSAVE, idx, &leaf);
+        x86_get_cpuid_subleaf(X86_CPUID_XSAVE, i, &leaf);
 
         bool align64 = !!(leaf.c & 0x2);
 
         state_components[i].size = leaf.a;
         state_components[i].align64 = align64;
-        LTRACEF("component %u size: %u (xcr0 %d)\n",
-                idx, state_components[i].size,
-                !!(xcr0_component_bitmap & (1ULL << idx)));
+        LTRACEF("component %d size: %u (xcr0 %d)\n",
+                i, state_components[i].size,
+                !!(xcr0_component_bitmap & (1ULL << i)));
 
         if (align64) {
             max_area = ROUNDUP(max_area, 64);
@@ -457,9 +468,8 @@ static void recompute_state_size(void) {
     if (xsaves_supported) {
         new_size = XSAVE_EXTENDED_AREA_OFFSET;
         uint64_t enabled_features = x86_xgetbv(0) | read_msr(IA32_XSS_MSR);
-        for (uint i = 0; i < XSAVE_MAX_EXT_COMPONENTS; ++i) {
-            uint idx = i + 2;
-            if (!(enabled_features & (1ULL << idx))) {
+        for (int i = XSAVE_FIRST_EXT_COMPONENT; i < XSAVE_MAX_COMPONENTS; ++i) {
+            if (!(enabled_features & (1ULL << i))) {
                 continue;
             }
 
@@ -559,7 +569,7 @@ void x86_xsetbv(uint32_t reg, uint64_t val) {
 
 void* x86_get_extended_register_state_component(void* register_state, uint32_t component,
                                                 bool mark_present, uint32_t* size) {
-    if (component >= XSAVE_MAX_EXT_COMPONENTS) {
+    if (component >= XSAVE_MAX_COMPONENTS) {
         *size = 0;
         return nullptr;
     }
@@ -621,7 +631,7 @@ void* x86_get_extended_register_state_component(void* register_state, uint32_t c
 
     // Walk all present components and add up their sizes (optionally aligned up) to get the offset.
     uint32_t offset = XSAVE_EXTENDED_AREA_OFFSET;
-    for (uint32_t i = 2; i < component; i++) {
+    for (uint32_t i = XSAVE_FIRST_EXT_COMPONENT; i < component; i++) {
         if (!(area->xcomp_bv & (1ul << i))) {
             continue;
         }
