@@ -15,12 +15,12 @@ CONFIG_PATH = os.path.join(ROOT_PATH, ".config")
 def main():
     parser = argparse.ArgumentParser(
             "Generate symlinks to Rust Cargo.toml output files")
-    parser.add_argument("--target",
-                        help="Target to generate a symlink for. \
+    parser.add_argument("gn_target",
+                        nargs=1,
+                        help="GN target to generate a symlink for. \
                               Use the absolute path to the target \
                               (relative to $FUCHSIA_DIR). \
-                              For example: //garnet/bin/foo/bar:baz",
-                        required=True)
+                              For example: //garnet/bin/foo/bar:baz")
     parser.add_argument("--output",
                         help="Path to Cargo.toml to generate",
                         required=False)
@@ -42,18 +42,18 @@ def main():
         if out_dir == "":
             print "Invalid fuchsia/.config: no FUCHSIA_BUILD_DIR entry found"
 
-    target = args.target
-    target = target.lstrip("/")
+    gn_target = args.gn_target[0]
+    gn_target = gn_target.lstrip("/")
 
-    target_parts = target.split(":", 1)
-    if len(target_parts) == 1:
+    gn_target_parts = gn_target.split(":", 1)
+    if len(gn_target_parts) == 1:
         # Turn foo/bar into foo/bar/bar
-        path = os.path.join(target, os.path.basename(target))
-    elif len(target_parts) == 2:
+        path = os.path.join(gn_target, os.path.basename(gn_target))
+    elif len(gn_target_parts) == 2:
         # Turn foo/bar:baz into foo/bar/baz
-        path = target.replace(":", os.sep)
+        path = gn_target.replace(":", os.sep)
     else:
-        print "Invalid target: explected at most one colon."
+        print "Invalid gn_target: explected at most one colon."
         return 1
 
     path = os.path.join(ROOT_PATH, out_dir, "gen", path, "Cargo.toml")
@@ -61,7 +61,7 @@ def main():
     if args.output:
         output = args.output
     else:
-        output = os.path.join(ROOT_PATH, target_parts[0], "Cargo.toml")
+        output = os.path.join(ROOT_PATH, gn_target_parts[0], "Cargo.toml")
 
     if os.path.exists(path):
         try:
