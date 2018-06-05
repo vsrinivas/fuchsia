@@ -159,10 +159,9 @@ these languages.
 
 Let's take a look at the server implementation in C++:
 
-[garnet/examples/fidl/echo2_server_cpp/echo2_server.cc](https://fuchsia.googlesource.com/garnet/+/master/examples/fidl/echo2_server_cpp/echo2_server.cc)
+[garnet/examples/fidl/echo2_server_cpp/](https://fuchsia.googlesource.com/garnet/+/master/examples/fidl/echo2_server_cpp/)
 
-This file implements the main function, and an implementation of the `Echo`
-interface.
+Find the implementation of the main function, and that of the `Echo` interface.
 
 To understand how the code works, here's a summary of what happens in the server
 to execute an IPC call.
@@ -298,12 +297,12 @@ component might close, crash, be busy, etc.
 
 Let's take a look at the client implementation in C++:
 
-[garnet/examples/fidl/echo2_client_cpp/echo2_client.cc](https://fuchsia.googlesource.com/garnet/+/master/examples/fidl/echo2_client_cpp/echo2_client.cc)
+[garnet/examples/fidl/echo2_client_cpp/](https://fuchsia.googlesource.com/garnet/+/master/examples/fidl/echo2_client_cpp/)
 
-The structure of the client is the same as the server, with a `main` function
-and an `async::Loop`. The difference is that the client immediately kicks off
-work once everything is initialized. In contrast, the server does no work until
-a connection is accepted.
+The structure of the client is similar to that of the server, with a `main`
+function and an `async::Loop`. The difference is that the client immediately
+kicks off work once everything is initialized. In contrast, the server does no
+work until a connection is accepted.
 
 **Note:** a component can be a client, a server, or both, or many. The
 distinction in this example between Client and Server is purely for
