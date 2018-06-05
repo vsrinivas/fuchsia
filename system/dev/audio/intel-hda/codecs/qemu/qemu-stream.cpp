@@ -11,6 +11,14 @@ namespace intel_hda {
 namespace codecs {
 
 static constexpr uint8_t UNITY_GAIN = 74;
+static const audio_stream_unique_id_t microphone_id = AUDIO_STREAM_UNIQUE_ID_BUILTIN_MICROPHONE;
+static const audio_stream_unique_id_t speaker_id = AUDIO_STREAM_UNIQUE_ID_BUILTIN_SPEAKERS;
+
+QemuStream::QemuStream(uint32_t stream_id, bool is_input, uint16_t converter_nid)
+    : IntelHDAStreamBase(stream_id, is_input),
+      converter_nid_(converter_nid) {
+    SetPersistentUniqueId(is_input ? microphone_id : speaker_id);
+}
 
 zx_status_t QemuStream::DisableConverterLocked(bool force_all) {
     const CodecVerb DISABLE_CONVERTER_VERBS[] = {
@@ -77,6 +85,34 @@ zx_status_t QemuStream::FinishChangeStreamFormatLocked(uint16_t encoded_fmt) {
 
     return RunCmdListLocked(ENABLE_CONVERTER_VERBS, countof(ENABLE_CONVERTER_VERBS));
 }
+
+void QemuStream::OnGetStringLocked(const audio_proto::GetStringReq& req,
+                                   audio_proto::GetStringResp* out_resp) {
+    ZX_DEBUG_ASSERT(out_resp);
+    const char* str = nullptr;
+
+    switch (req.id) {
+        case AUDIO_STREAM_STR_ID_MANUFACTURER:
+            str = "QEMU";
+            break;
+
+        case AUDIO_STREAM_STR_ID_PRODUCT:
+            str = is_input() ? "Builtin Microphone" : "Builtin Speakers";
+            break;
+
+        default:
+            IntelHDAStreamBase::OnGetStringLocked(req, out_resp);
+            return;
+    }
+
+    int res = snprintf(reinterpret_cast<char*>(out_resp->str), sizeof(out_resp->str), "%s",
+                       str ? str : "<unassigned>");
+    ZX_DEBUG_ASSERT(res >= 0);
+    out_resp->result = ZX_OK;
+    out_resp->strlen = fbl::min<uint32_t>(res, sizeof(out_resp->str) - 1);
+    out_resp->id = req.id;
+}
+
 
 }  // namespace codecs
 }  // namespace intel_hda

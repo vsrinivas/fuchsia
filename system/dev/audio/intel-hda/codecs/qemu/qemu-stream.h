@@ -14,9 +14,7 @@ namespace codecs {
 
 class QemuStream : public IntelHDAStreamBase {
 public:
-    QemuStream(uint32_t stream_id, bool is_input, uint16_t converter_nid)
-        : IntelHDAStreamBase(stream_id, is_input),
-          converter_nid_(converter_nid) { }
+    QemuStream(uint32_t stream_id, bool is_input, uint16_t converter_nid);
 
 protected:
     friend class fbl::RefPtr<QemuStream>;
@@ -30,6 +28,8 @@ protected:
         __TA_REQUIRES(obj_lock()) final;
     zx_status_t FinishChangeStreamFormatLocked(uint16_t encoded_fmt)
         __TA_REQUIRES(obj_lock()) final;
+    void OnGetStringLocked(const audio_proto::GetStringReq& req,
+                           audio_proto::GetStringResp* out_resp) __TA_REQUIRES(obj_lock()) final;
 
 private:
     zx_status_t RunCmdListLocked(const CodecVerb* list, size_t count, bool force_all = false)
