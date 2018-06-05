@@ -10,7 +10,7 @@
 #include <wlan/mlme/packet.h>
 #include <zircon/fidl.h>
 
-#include <wlan_mlme/cpp/fidl.h>
+#include <fuchsia/wlan/mlme/cpp/fidl.h>
 
 #include <lib/fidl/cpp/decoder.h>
 #include <lib/fidl/cpp/message.h>
@@ -79,20 +79,20 @@ template <typename T> zx_status_t SerializeServiceMsg(Packet* packet, uint32_t o
 
 namespace service {
 
-zx_status_t SendJoinConfirm(DeviceInterface* device, wlan_mlme::JoinResultCodes result_code);
+zx_status_t SendJoinConfirm(DeviceInterface* device, ::fuchsia::wlan::mlme::JoinResultCodes result_code);
 zx_status_t SendAuthConfirm(DeviceInterface* device, const common::MacAddr& peer_sta,
-                            wlan_mlme::AuthenticateResultCodes code);
+                            ::fuchsia::wlan::mlme::AuthenticateResultCodes code);
 zx_status_t SendDeauthConfirm(DeviceInterface* device, const common::MacAddr& peer_sta);
 zx_status_t SendDeauthIndication(DeviceInterface* device, const common::MacAddr& peer_sta,
-                                 wlan_mlme::ReasonCode code);
-zx_status_t SendAssocConfirm(DeviceInterface* device, wlan_mlme::AssociateResultCodes code,
+                                 ::fuchsia::wlan::mlme::ReasonCode code);
+zx_status_t SendAssocConfirm(DeviceInterface* device, ::fuchsia::wlan::mlme::AssociateResultCodes code,
                              uint16_t aid = 0);
 zx_status_t SendDisassociateIndication(DeviceInterface* device, const common::MacAddr& peer_sta,
                                        uint16_t code);
 
 zx_status_t SendSignalReportIndication(DeviceInterface* device, common::dBm rssi_dbm);
 
-zx_status_t SendEapolConfirm(DeviceInterface* device, wlan_mlme::EapolResultCodes result_code);
+zx_status_t SendEapolConfirm(DeviceInterface* device, ::fuchsia::wlan::mlme::EapolResultCodes result_code);
 zx_status_t SendEapolIndication(DeviceInterface* device, const EapolFrame& eapol,
                                 const common::MacAddr& src, const common::MacAddr& dst);
 }  // namespace service

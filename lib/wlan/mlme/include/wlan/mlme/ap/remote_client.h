@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <wlan_mlme/cpp/fidl.h>
+#include <fuchsia/wlan/mlme/cpp/fidl.h>
 #include <wlan/mlme/ap/bss_interface.h>
 #include <wlan/mlme/ap/remote_client_interface.h>
 #include <wlan/mlme/device_interface.h>
@@ -204,8 +204,8 @@ class AssociatedState : public BaseState {
     zx_status_t HandleDisassociation(const MgmtFrame<Disassociation>& frame) override;
     zx_status_t HandleCtrlFrame(const FrameControl& fc) override;
     zx_status_t HandlePsPollFrame(const CtrlFrame<PsPollFrame>& frame) override;
-    zx_status_t HandleMlmeEapolReq(const wlan_mlme::EapolRequest& req) override;
-    zx_status_t HandleMlmeSetKeysReq(const wlan_mlme::SetKeysRequest& req) override;
+    zx_status_t HandleMlmeEapolReq(const ::fuchsia::wlan::mlme::EapolRequest& req) override;
+    zx_status_t HandleMlmeSetKeysReq(const ::fuchsia::wlan::mlme::SetKeysRequest& req) override;
     zx_status_t HandleAddBaRequestFrame(const MgmtFrame<AddBaRequestFrame>& frame) override;
     zx_status_t HandleAddBaResponseFrame(const MgmtFrame<AddBaResponseFrame>& frame) override;
 

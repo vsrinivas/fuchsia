@@ -12,7 +12,7 @@ import (
 	"bytes"
 	"encoding/hex"
 	"errors"
-	mlme "fidl/wlan_mlme"
+	"fidl/fuchsia/wlan/mlme"
 	"testing"
 	"wlan/eapol"
 	"wlan/eapol/crypto"

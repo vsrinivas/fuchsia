@@ -12,6 +12,8 @@
 namespace wlan {
 namespace common {
 
+namespace wlan_mlme = ::fuchsia::wlan::mlme;
+
 const char* kCbwStr[] = {"CBW20", "CBW40", "CBW40B", "CBW80", "CBW160", "CBW80P80", "CBW_INV"};
 
 const char* kCbwSuffix[] = {

@@ -13,7 +13,7 @@
 #include <wlan/mlme/timer.h>
 #include <wlan/mlme/wlan.h>
 
-#include <wlan_mlme/c/fidl.h>
+#include <fuchsia/wlan/mlme/c/fidl.h>
 #include "lib/fidl/cpp/vector.h"
 
 #include <fbl/unique_ptr.h>
@@ -24,6 +24,8 @@
 #include <utility>
 
 namespace wlan {
+
+namespace wlan_mlme = ::fuchsia::wlan::mlme;
 
 // TODO(NET-500): The way we handle Beacons and ProbeResponses in here is kinda gross. Refactor.
 
@@ -352,7 +354,7 @@ zx_status_t Scanner::SendScanConfirm() {
 
     auto packet = fbl::unique_ptr<Packet>(new Packet(std::move(buffer), buf_len));
     packet->set_peer(Packet::Peer::kService);
-    zx_status_t status = SerializeServiceMsg(packet.get(), wlan_mlme_MLMEScanConfOrdinal, resp_.get());
+    zx_status_t status = SerializeServiceMsg(packet.get(), fuchsia_wlan_mlme_MLMEScanConfOrdinal, resp_.get());
     if (status != ZX_OK) {
         errorf("could not serialize ScanResponse: %d\n", status);
     } else {

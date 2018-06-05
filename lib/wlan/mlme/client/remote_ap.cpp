@@ -13,6 +13,8 @@
 namespace wlan {
 namespace remote_ap {
 
+namespace wlan_mlme = ::fuchsia::wlan::mlme;
+
 // RemoteAp implementation.
 
 RemoteAp::RemoteAp(DeviceInterface* device, fbl::unique_ptr<Timer> timer,

@@ -16,13 +16,15 @@
 #include <wlan/mlme/service.h>
 #include <wlan/mlme/timer.h>
 
-#include <wlan_mlme/c/fidl.h>
+#include <fuchsia/wlan/mlme/c/fidl.h>
 #include <wlan_stats/c/fidl.h>
 
 #include <cstring>
 #include <utility>
 
 namespace wlan {
+
+namespace wlan_mlme = ::fuchsia::wlan::mlme;
 
 // TODO(hahnr): Revisit frame construction to reduce boilerplate code.
 
@@ -50,7 +52,7 @@ void Station::Reset() {
 zx_status_t Station::HandleMlmeMessage(uint32_t ordinal) {
     WLAN_STATS_INC(svc_msg.in);
     // Always allow MLME-JOIN.request.
-    if (ordinal == wlan_mlme_MLMEJoinReqOrdinal) { return ZX_OK; }
+    if (ordinal == fuchsia_wlan_mlme_MLMEJoinReqOrdinal) { return ZX_OK; }
     // Drop other MLME requests if there is no BSSID set yet.
     return (bssid() == nullptr ? ZX_ERR_STOP : ZX_OK);
 }

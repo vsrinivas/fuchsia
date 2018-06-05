@@ -10,6 +10,8 @@
 
 namespace wlan {
 
+namespace wlan_mlme = ::fuchsia::wlan::mlme;
+
 ApMlme::ApMlme(DeviceInterface* device) : device_(device) {}
 
 ApMlme::~ApMlme() {

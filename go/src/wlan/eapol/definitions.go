@@ -5,7 +5,7 @@
 package eapol
 
 import (
-	mlme "fidl/wlan_mlme"
+	"fidl/fuchsia/wlan/mlme"
 	"wlan/wlan/sme"
 
 	"bytes"

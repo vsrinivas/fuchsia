@@ -15,8 +15,6 @@
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
-#include <wlan_mlme/cpp/fidl.h>
-
 #include <cstdint>
 
 namespace wlan {

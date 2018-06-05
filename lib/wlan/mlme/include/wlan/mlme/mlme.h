@@ -7,8 +7,6 @@
 #include <wlan/mlme/frame_handler.h>
 #include <wlan/mlme/mac_frame.h>
 
-#include <wlan_mlme/cpp/fidl.h>
-
 #include <wlan/common/bitfield.h>
 #include <wlan/protocol/mac.h>
 #include <zircon/types.h>

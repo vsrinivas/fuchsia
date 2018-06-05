@@ -12,7 +12,7 @@
 
 extern crate failure;
 extern crate fidl;
-extern crate fidl_wlan_mlme as fidl_mlme;
+extern crate fidl_fuchsia_wlan_mlme as fidl_mlme;
 extern crate fidl_fuchsia_wlan_device as wlan;
 extern crate fidl_fuchsia_wlan_device_service as wlan_service;
 extern crate fidl_wlan_sme as fidl_sme;

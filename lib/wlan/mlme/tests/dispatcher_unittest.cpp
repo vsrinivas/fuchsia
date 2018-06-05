@@ -16,9 +16,12 @@
 #include <gtest/gtest.h>
 #include <lib/fit/function.h>
 
-#include <wlan_mlme/cpp/fidl.h>
+#include <fuchsia/wlan/mlme/cpp/fidl.h>
 
 namespace wlan {
+
+namespace wlan_mlme = ::fuchsia::wlan::mlme;
+
 namespace {
 
 template <typename Frame> using FrameCallback = fit::function<void(const Frame&)>;

@@ -7,7 +7,7 @@
 #include <wlan/mlme/client/bss.h>
 #include <wlan/mlme/frame_handler.h>
 
-#include <wlan_mlme/cpp/fidl.h>
+#include <fuchsia/wlan/mlme/cpp/fidl.h>
 
 #include <fbl/unique_ptr.h>
 #include <lib/zx/time.h>
@@ -33,14 +33,14 @@ class Scanner : public FrameHandler {
         kActive,
     };
 
-    zx_status_t Start(const wlan_mlme::ScanRequest& req);
+    zx_status_t Start(const ::fuchsia::wlan::mlme::ScanRequest& req);
     void Reset();
 
     bool IsRunning() const;
     Type ScanType() const;
     wlan_channel_t ScanChannel() const;
 
-    zx_status_t HandleMlmeScanReq(const wlan_mlme::ScanRequest& req) override;
+    zx_status_t HandleMlmeScanReq(const ::fuchsia::wlan::mlme::ScanRequest& req) override;
     zx_status_t HandleMgmtFrame(const MgmtFrameHeader& hdr) override;
     zx_status_t HandleBeacon(const MgmtFrame<Beacon>& frame) override;
     zx_status_t HandleProbeResponse(const MgmtFrame<ProbeResponse>& frame) override;
@@ -66,8 +66,8 @@ class Scanner : public FrameHandler {
 
     DeviceInterface* device_;
     fbl::unique_ptr<Timer> timer_;
-    wlan_mlme::ScanRequestPtr req_ = nullptr;
-    wlan_mlme::ScanConfirmPtr resp_ = nullptr;
+    ::fuchsia::wlan::mlme::ScanRequestPtr req_ = nullptr;
+    ::fuchsia::wlan::mlme::ScanConfirmPtr resp_ = nullptr;
 
     size_t channel_index_ = 0;
     zx::time channel_start_;

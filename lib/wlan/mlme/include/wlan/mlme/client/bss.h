@@ -10,7 +10,7 @@
 #include <wlan/mlme/mac_frame.h>
 #include <wlan/mlme/macaddr_map.h>
 
-#include <wlan_mlme/cpp/fidl.h>
+#include <fuchsia/wlan/mlme/cpp/fidl.h>
 
 #include <fbl/macros.h>
 #include <fbl/ref_counted.h>
@@ -39,22 +39,22 @@ class Bss : public fbl::RefCounted<Bss> {
     std::string SsidToString() const;
     std::string SupportedRatesToString() const;
 
-    wlan_mlme::BSSTypes GetBssType() const {
+    ::fuchsia::wlan::mlme::BSSTypes GetBssType() const {
         // Note. This is in Beacon / Probe Response frames context.
         // IEEE Std 802.11-2016, 9.4.1.4
         if (cap_.ess() == 0x1 && cap_.ibss() == 0x0) {
-            return wlan_mlme::BSSTypes::INFRASTRUCTURE;
+            return ::fuchsia::wlan::mlme::BSSTypes::INFRASTRUCTURE;
         } else if (cap_.ess() == 0x0 && cap_.ibss() == 0x1) {
-            return wlan_mlme::BSSTypes::INDEPENDENT;
+            return ::fuchsia::wlan::mlme::BSSTypes::INDEPENDENT;
         } else if (cap_.ess() == 0x0 && cap_.ibss() == 0x0) {
-            return wlan_mlme::BSSTypes::MESH;
+            return ::fuchsia::wlan::mlme::BSSTypes::MESH;
         } else {
             // Undefined
-            return wlan_mlme::BSSTypes::ANY_BSS;
+            return ::fuchsia::wlan::mlme::BSSTypes::ANY_BSS;
         }
     }
 
-    wlan_mlme::BSSDescription ToFidl();
+    ::fuchsia::wlan::mlme::BSSDescription ToFidl();
     fidl::StringPtr SsidToFidlString();
     const common::MacAddr& bssid() { return bssid_; }
     zx::time ts_refreshed() { return ts_refreshed_; }

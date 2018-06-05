@@ -6,7 +6,7 @@
 
 #include <wlan/mlme/mac_frame.h>
 
-#include <wlan_mlme/cpp/fidl.h>
+#include <fuchsia/wlan/mlme/cpp/fidl.h>
 
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
@@ -17,10 +17,10 @@
     virtual zx_status_t methodName(args) { return ZX_OK; }
 
 #define WLAN_DECL_FUNC_HANDLE_MLME(methodName, mlmeMsgType) \
-    WLAN_DECL_VIRT_FUNC_HANDLE(methodName, const wlan_mlme::mlmeMsgType&)
+    WLAN_DECL_VIRT_FUNC_HANDLE(methodName, const ::fuchsia::wlan::mlme::mlmeMsgType&)
 
 #define WLAN_DECL_FUNC_INTERNAL_HANDLE_MLME(methodName, mlmeMsgType)                    \
-    zx_status_t HandleMlmeFrameInternal(uint32_t ordinal, const wlan_mlme::mlmeMsgType& msg) { \
+    zx_status_t HandleMlmeFrameInternal(uint32_t ordinal, const ::fuchsia::wlan::mlme::mlmeMsgType& msg) { \
         return methodName(msg);                                                         \
     }
 

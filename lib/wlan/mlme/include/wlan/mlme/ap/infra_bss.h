@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <wlan_mlme/cpp/fidl.h>
+#include <fuchsia/wlan/mlme/cpp/fidl.h>
 #include <wlan/mlme/ap/beacon_sender.h>
 #include <wlan/mlme/ap/bss_client_map.h>
 #include <wlan/mlme/ap/bss_interface.h>
@@ -36,7 +36,7 @@ class InfraBss : public BssInterface, public FrameHandler, public RemoteClient::
     // BssInterface implementation
     const common::MacAddr& bssid() const override;
     uint64_t timestamp() override;
-    void Start(const wlan_mlme::StartRequest& req) override;
+    void Start(const ::fuchsia::wlan::mlme::StartRequest& req) override;
     void Stop() override;
     zx_status_t AssignAid(const common::MacAddr& client, aid_t* out_aid) override;
     zx_status_t ReleaseAid(const common::MacAddr& client) override;
@@ -99,7 +99,7 @@ class InfraBss : public BssInterface, public FrameHandler, public RemoteClient::
     wlan_channel_t chan_;
     // MLME-START.request holds all information required to correctly configure
     // and start a BSS.
-    wlan_mlme::StartRequest start_req_;
+    ::fuchsia::wlan::mlme::StartRequest start_req_;
 };
 
 }  // namespace wlan

@@ -10,7 +10,7 @@
 #include <wlan/mlme/mac_frame.h>
 #include <wlan/mlme/sequence.h>
 
-#include <wlan_mlme/cpp/fidl.h>
+#include <fuchsia/wlan/mlme/cpp/fidl.h>
 #include <wlan_stats/c/fidl.h>
 
 #include <fbl/unique_ptr.h>
@@ -76,12 +76,12 @@ class Station : public FrameHandler {
     zx_status_t SendKeepAliveResponse();
 
     zx_status_t HandleMlmeMessage(uint32_t ordinal) override;
-    zx_status_t HandleMlmeJoinReq(const wlan_mlme::JoinRequest& req) override;
-    zx_status_t HandleMlmeAuthReq(const wlan_mlme::AuthenticateRequest& req) override;
-    zx_status_t HandleMlmeDeauthReq(const wlan_mlme::DeauthenticateRequest& req) override;
-    zx_status_t HandleMlmeAssocReq(const wlan_mlme::AssociateRequest& req) override;
-    zx_status_t HandleMlmeEapolReq(const wlan_mlme::EapolRequest& req) override;
-    zx_status_t HandleMlmeSetKeysReq(const wlan_mlme::SetKeysRequest& req) override;
+    zx_status_t HandleMlmeJoinReq(const ::fuchsia::wlan::mlme::JoinRequest& req) override;
+    zx_status_t HandleMlmeAuthReq(const ::fuchsia::wlan::mlme::AuthenticateRequest& req) override;
+    zx_status_t HandleMlmeDeauthReq(const ::fuchsia::wlan::mlme::DeauthenticateRequest& req) override;
+    zx_status_t HandleMlmeAssocReq(const ::fuchsia::wlan::mlme::AssociateRequest& req) override;
+    zx_status_t HandleMlmeEapolReq(const ::fuchsia::wlan::mlme::EapolRequest& req) override;
+    zx_status_t HandleMlmeSetKeysReq(const ::fuchsia::wlan::mlme::SetKeysRequest& req) override;
 
     zx_status_t HandleDataFrame(const DataFrameHeader& hdr) override;
     zx_status_t HandleBeacon(const MgmtFrame<Beacon>& frame) override;
@@ -128,7 +128,7 @@ class Station : public FrameHandler {
 
     DeviceInterface* device_;
     fbl::unique_ptr<Timer> timer_;
-    wlan_mlme::BSSDescriptionPtr bss_;
+    ::fuchsia::wlan::mlme::BSSDescriptionPtr bss_;
     common::MacAddr bssid_;
     Sequence seq_;
 

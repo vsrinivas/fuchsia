@@ -10,6 +10,8 @@
 
 namespace wlan {
 
+namespace wlan_mlme = ::fuchsia::wlan::mlme;
+
 // TODO(NET-500): This file needs some clean-up.
 
 zx_status_t Bss::ProcessBeacon(const Beacon& beacon, size_t frame_len,

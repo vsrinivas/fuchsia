@@ -5,7 +5,7 @@
 package wlan
 
 import (
-	mlme "fidl/wlan_mlme"
+	"fidl/fuchsia/wlan/mlme"
 	"fmt"
 	"log"
 )

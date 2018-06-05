@@ -5,7 +5,7 @@
 import("//build/fidl/fidl.gni")
 
 fidl("mlme") {
-  name = "wlan_mlme"
+  name = "fuchsia.wlan.mlme"
   sources = [
     "wlan_mlme.fidl",
     "wlan_mlme_ext.fidl",

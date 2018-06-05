@@ -11,11 +11,13 @@
 #include <wlan/mlme/mac_frame.h>
 #include <wlan/mlme/packet.h>
 
-#include <wlan_mlme/cpp/fidl.h>
+#include <fuchsia/wlan/mlme/cpp/fidl.h>
 
 #include <zircon/assert.h>
 
 namespace wlan {
+
+namespace wlan_mlme = ::fuchsia::wlan::mlme;
 
 BeaconSender::BeaconSender(DeviceInterface* device) : device_(device) {}
 

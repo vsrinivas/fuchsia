@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <wlan_mlme/cpp/fidl.h>
+#include <fuchsia/wlan/mlme/cpp/fidl.h>
 #include <wlan/mlme/ap/tim.h>
 #include <wlan/mlme/device_interface.h>
 #include <wlan/mlme/mac_frame.h>
@@ -65,7 +65,7 @@ class BssInterface {
     virtual uint64_t timestamp() = 0;
 
     // Starts the BSS. Beacons will be sent and incoming frames are processed.
-    virtual void Start(const wlan_mlme::StartRequest& req) = 0;
+    virtual void Start(const ::fuchsia::wlan::mlme::StartRequest& req) = 0;
     // Stops the BSS. All incoming frames are dropped and Beacons are not sent
     // anymore.
     virtual void Stop() = 0;

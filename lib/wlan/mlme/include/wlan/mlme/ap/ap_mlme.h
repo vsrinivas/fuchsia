@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <wlan_mlme/cpp/fidl.h>
+#include <fuchsia/wlan/mlme/cpp/fidl.h>
 #include <wlan/mlme/ap/beacon_sender.h>
 #include <wlan/mlme/ap/infra_bss.h>
 #include <wlan/mlme/mlme.h>
@@ -22,8 +22,8 @@ class ApMlme : public Mlme {
     ~ApMlme();
 
     // FrameHandler methods.
-    zx_status_t HandleMlmeStartReq(const wlan_mlme::StartRequest& req) override;
-    zx_status_t HandleMlmeStopReq(const wlan_mlme::StopRequest& req) override;
+    zx_status_t HandleMlmeStartReq(const ::fuchsia::wlan::mlme::StartRequest& req) override;
+    zx_status_t HandleMlmeStopReq(const ::fuchsia::wlan::mlme::StopRequest& req) override;
 
     // Mlme interface methods.
     zx_status_t Init() override;

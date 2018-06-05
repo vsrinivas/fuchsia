@@ -18,12 +18,15 @@
 #include <fbl/ref_ptr.h>
 #include <fbl/unique_ptr.h>
 #include <gtest/gtest.h>
-#include <wlan_mlme/c/fidl.h>
+#include <fuchsia/wlan/mlme/c/fidl.h>
 #include <cstring>
 
-#include <wlan_mlme/cpp/fidl.h>
+#include <fuchsia/wlan/mlme/cpp/fidl.h>
 
 namespace wlan {
+
+namespace wlan_mlme = ::fuchsia::wlan::mlme;
+
 namespace {
 
 const uint8_t kBeacon[] = {
@@ -50,7 +53,7 @@ class ScannerTest : public ::testing::Test {
     zx_status_t Start() { return scanner_.Start(*req_); }
 
     zx_status_t DeserializeScanResponse() {
-        return mock_dev_.GetQueuedServiceMsg(wlan_mlme_MLMEScanConfOrdinal, &resp_);
+        return mock_dev_.GetQueuedServiceMsg(fuchsia_wlan_mlme_MLMEScanConfOrdinal, &resp_);
     }
 
     wlan_mlme::ScanRequestPtr req_;

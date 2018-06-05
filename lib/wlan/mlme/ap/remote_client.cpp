@@ -11,6 +11,8 @@
 
 namespace wlan {
 
+namespace wlan_mlme = ::fuchsia::wlan::mlme;
+
 // BaseState implementation.
 
 template <typename S, typename... Args> void BaseState::MoveToState(Args&&... args) {

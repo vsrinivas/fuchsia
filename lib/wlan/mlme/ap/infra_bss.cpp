@@ -14,6 +14,8 @@
 
 namespace wlan {
 
+namespace wlan_mlme = ::fuchsia::wlan::mlme;
+
 InfraBss::InfraBss(DeviceInterface* device, fbl::unique_ptr<BeaconSender> bcn_sender,
                    const common::MacAddr& bssid)
     : bssid_(bssid), device_(device), bcn_sender_(fbl::move(bcn_sender)) {
