@@ -20,7 +20,6 @@
 
 #include <fuchsia/wlan/mlme/c/fidl.h>
 #include <fuchsia/wlan/mlme/cpp/fidl.h>
-#include <wlan_stats/c/fidl.h>
 
 #include <atomic>
 #include <cinttypes>

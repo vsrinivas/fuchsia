@@ -24,7 +24,7 @@ fidl("service") {
 
 
 fidl("stats") {
-  name = "wlan_stats"
+  name = "fuchsia.wlan.stats"
   sources = [
     "wlan_stats.fidl"
   ]

@@ -5,13 +5,12 @@
 #pragma once
 
 #include <fbl/unique_ptr.h>
+#include <fuchsia/wlan/stats/c/fidl.h>
 #include <wlan/common/stats.h>
 #include <wlan/mlme/mac_frame.h>
 #include <wlan/mlme/mlme.h>
 #include <wlan/protocol/mac.h>
 #include <zircon/types.h>
-
-#include <wlan_stats/c/fidl.h>
 
 namespace wlan {
 
@@ -33,7 +32,7 @@ class Dispatcher {
     zx_status_t PostChannelChange();
     // Called when the hardware reports an indication such as Pre-TBTT.
     void HwIndication(uint32_t ind);
-    common::WlanStats<common::DispatcherStats, wlan_stats_DispatcherStats> stats_;
+    common::WlanStats<common::DispatcherStats, fuchsia_wlan_stats_DispatcherStats> stats_;
 
    private:
     // MAC frame handlers
