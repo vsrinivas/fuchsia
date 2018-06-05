@@ -5,7 +5,7 @@
 import("//build/fidl/fidl.gni")
 
 fidl("fidl") {
-  name = "wlan_device"
+  name = "fuchsia.wlan.device"
 
   sources = [
     "iface.fidl",

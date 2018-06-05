@@ -4,10 +4,10 @@
 
 library wlan_device_service;
 
-using wlan_device;
+using fuchsia.wlan.device;
 
 struct ListPhysResponse {
-    vector<wlan_device.PhyInfo> phys;
+    vector<fuchsia.wlan.device.PhyInfo> phys;
 };
 
 struct QueryPhyRequest {
@@ -15,16 +15,16 @@ struct QueryPhyRequest {
 };
 
 struct QueryPhyResponse {
-    wlan_device.PhyInfo info;
+    fuchsia.wlan.device.PhyInfo info;
 };
 
 struct ListIfacesResponse {
-    vector<wlan_device.IfaceInfo> ifaces;
+    vector<fuchsia.wlan.device.IfaceInfo> ifaces;
 };
 
 struct CreateIfaceRequest {
     uint16 phy_id;
-    wlan_device.MacRole role;
+    fuchsia.wlan.device.MacRole role;
 };
 
 struct CreateIfaceResponse {

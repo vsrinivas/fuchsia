@@ -7,8 +7,8 @@
 
 #include <array>
 #include <ddk/debug.h>
-#include <wlan_device/cpp/fidl.h>
-#include <wlan_device/c/fidl.h>
+#include <fuchsia/wlan/device/cpp/fidl.h>
+#include <fuchsia/wlan/device/c/fidl.h>
 #include <wlantap/c/fidl.h>
 #include <wlan/async/dispatcher.h>
 #include <wlan/protocol/ioctl.h>
@@ -16,6 +16,9 @@
 
 namespace wlan {
 namespace wlantap {
+
+namespace wlan_device = ::fuchsia::wlan::device;
+
 namespace {
 
 template<typename T>

@@ -9,7 +9,6 @@ rustc_library("wlantap-client") {
   version = "0.1.0"
 
   deps = [
-    "//garnet/lib/wlan/fidl:fidl-rustc",
     "//garnet/lib/wlan/fidl:wlantap-rustc",
     "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/rust/crates/fdio",

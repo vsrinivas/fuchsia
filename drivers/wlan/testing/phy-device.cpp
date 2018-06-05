@@ -17,6 +17,8 @@
 namespace wlan {
 namespace testing {
 
+namespace wlan_device = ::fuchsia::wlan::device;
+
 #define DEV(c) static_cast<PhyDevice*>(c)
 static zx_protocol_device_t wlanphy_test_device_ops = {
     .version = DEVICE_OPS_VERSION,

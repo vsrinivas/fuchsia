@@ -9,7 +9,7 @@
 #include <wlan/async/dispatcher.h>
 #include <zircon/types.h>
 
-#include <wlan_device/cpp/fidl.h>
+#include <fuchsia/wlan/device/cpp/fidl.h>
 
 #include <memory>
 #include <mutex>
@@ -20,7 +20,7 @@ namespace testing {
 
 class IfaceDevice;
 
-class PhyDevice : public wlan_device::Phy {
+class PhyDevice : public ::fuchsia::wlan::device::Phy {
    public:
     PhyDevice(zx_device_t* device);
     virtual ~PhyDevice() = default;
@@ -33,9 +33,9 @@ class PhyDevice : public wlan_device::Phy {
                          size_t out_len, size_t* out_actual);
 
     virtual void Query(QueryCallback callback) override;
-    virtual void CreateIface(wlan_device::CreateIfaceRequest req,
+    virtual void CreateIface(::fuchsia::wlan::device::CreateIfaceRequest req,
                              CreateIfaceCallback callback) override;
-    virtual void DestroyIface(wlan_device::DestroyIfaceRequest req,
+    virtual void DestroyIface(::fuchsia::wlan::device::DestroyIfaceRequest req,
                               DestroyIfaceCallback callback) override;
 
    private:
@@ -45,7 +45,7 @@ class PhyDevice : public wlan_device::Phy {
     zx_device_t* parent_;
 
     std::mutex lock_;
-    std::unique_ptr<wlan::async::Dispatcher<wlan_device::Phy>> dispatcher_;
+    std::unique_ptr<wlan::async::Dispatcher<::fuchsia::wlan::device::Phy>> dispatcher_;
     std::unordered_map<uint16_t, IfaceDevice*> ifaces_;
     // Next available Iface id. Must be checked against the map to prevent overwriting an existing
     // IfaceDevice pointer in the map.

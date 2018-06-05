@@ -11,7 +11,7 @@ extern crate fuchsia_app as app;
 extern crate fuchsia_async as async;
 extern crate fuchsia_zircon as zx;
 extern crate wlantap_client;
-extern crate fidl_wlan_device;
+extern crate fidl_fuchsia_wlan_device as wlan_device;
 extern crate fidl_wlan_service;
 extern crate fidl_wlantap;
 extern crate futures;
@@ -26,10 +26,10 @@ mod mac_frames;
 #[cfg(test)]
 mod test_utils;
 
-fn create_2_4_ghz_band_info() -> fidl_wlan_device::BandInfo {
-    fidl_wlan_device::BandInfo{
+fn create_2_4_ghz_band_info() -> wlan_device::BandInfo {
+    wlan_device::BandInfo{
         description: String::from("2.4 GHz"),
-        ht_caps: fidl_wlan_device::HtCapabilities{
+        ht_caps: wlan_device::HtCapabilities{
             ht_capability_info: 0x01fe,
             ampdu_params: 0,
             supported_mcs_set: [
@@ -42,7 +42,7 @@ fn create_2_4_ghz_band_info() -> fidl_wlan_device::BandInfo {
         },
         vht_caps: None,
         basic_rates: vec![2, 4, 11, 22, 12, 18, 24, 36, 48, 72, 96, 108],
-        supported_channels: fidl_wlan_device::ChannelList{
+        supported_channels: wlan_device::ChannelList{
             base_freq: 2407,
             channels: vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]
         }
@@ -50,9 +50,9 @@ fn create_2_4_ghz_band_info() -> fidl_wlan_device::BandInfo {
 }
 
 fn create_wlantap_config() -> fidl_wlantap::WlantapPhyConfig {
-    use fidl_wlan_device::SupportedPhy;
+    use wlan_device::SupportedPhy;
     fidl_wlantap::WlantapPhyConfig {
-        phy_info: fidl_wlan_device::PhyInfo{
+        phy_info: wlan_device::PhyInfo{
             id: 0,
             dev_path: None,
             hw_mac_address: [ 0x67, 0x62, 0x6f, 0x6e, 0x69, 0x6b ],
@@ -60,7 +60,7 @@ fn create_wlantap_config() -> fidl_wlantap::WlantapPhyConfig {
                 SupportedPhy::Dsss, SupportedPhy::Cck, SupportedPhy::Ofdm, SupportedPhy::Ht
             ],
             driver_features: vec![],
-            mac_roles: vec![fidl_wlan_device::MacRole::Client],
+            mac_roles: vec![wlan_device::MacRole::Client],
             caps: vec![],
             bands: vec![
                 create_2_4_ghz_band_info()
@@ -71,14 +71,14 @@ fn create_wlantap_config() -> fidl_wlantap::WlantapPhyConfig {
 }
 
 struct State {
-    current_channel: fidl_wlan_device::Channel,
+    current_channel: wlan_device::Channel,
     frame_buf: Vec<u8>,
 }
 
 impl State {
     fn new() -> Self {
         Self {
-            current_channel: fidl_wlan_device::Channel {
+            current_channel: wlan_device::Channel {
                 primary: 0,
                 cbw: 0,
                 secondary80: 0
@@ -88,7 +88,7 @@ impl State {
     }
 }
 
-fn send_beacon(frame_buf: &mut Vec<u8>, channel: &fidl_wlan_device::Channel, bss_id: &[u8; 6],
+fn send_beacon(frame_buf: &mut Vec<u8>, channel: &wlan_device::Channel, bss_id: &[u8; 6],
                ssid: &str, proxy: &fidl_wlantap::WlantapPhyProxy)
     -> Result<(), failure::Error>
 {
@@ -121,7 +121,7 @@ fn send_beacon(frame_buf: &mut Vec<u8>, channel: &fidl_wlan_device::Channel, bss
         valid_fields: 0,
         phy: 0,
         data_rate: 0,
-        chan: fidl_wlan_device::Channel { // TODO(FIDL-54): use clone()
+        chan: wlan_device::Channel { // TODO(FIDL-54): use clone()
             primary: channel.primary,
             cbw: channel.cbw,
             secondary80: channel.secondary80

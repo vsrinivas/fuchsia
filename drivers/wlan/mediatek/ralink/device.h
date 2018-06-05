@@ -14,7 +14,7 @@
 #include <wlan/protocol/mac.h>
 #include <zircon/compiler.h>
 
-#include <wlan_device/cpp/fidl.h>
+#include <fuchsia/wlan/device/cpp/fidl.h>
 
 #include <array>
 #include <cstddef>
@@ -54,7 +54,7 @@ class WlanmacIfcProxy {
     void* cookie_;
 };
 
-class Device : public wlan_device::Phy {
+class Device : public ::fuchsia::wlan::device::Phy {
    public:
     Device(zx_device_t* device, usb_protocol_t usb, uint8_t bulk_in,
            std::vector<uint8_t>&& bulk_out);
@@ -82,9 +82,9 @@ class Device : public wlan_device::Phy {
     zx_status_t WlanmacSetKey(uint32_t options, wlan_key_config_t* key_config);
 
     virtual void Query(QueryCallback callback) override;
-    virtual void CreateIface(wlan_device::CreateIfaceRequest req,
+    virtual void CreateIface(::fuchsia::wlan::device::CreateIfaceRequest req,
                              CreateIfaceCallback callback) override;
-    virtual void DestroyIface(wlan_device::DestroyIfaceRequest req,
+    virtual void DestroyIface(::fuchsia::wlan::device::DestroyIfaceRequest req,
                               DestroyIfaceCallback callback) override;
 
    private:
@@ -251,7 +251,7 @@ class Device : public wlan_device::Phy {
     std::mutex lock_;
     bool dead_ __TA_GUARDED(lock_) = false;
     fbl::unique_ptr<WlanmacIfcProxy> wlanmac_proxy_ __TA_GUARDED(lock_);
-    wlan::async::Dispatcher<wlan_device::Phy> dispatcher_;
+    wlan::async::Dispatcher<::fuchsia::wlan::device::Phy> dispatcher_;
 
     constexpr static size_t kEepromSize = 0x0100;
     std::array<uint16_t, kEepromSize> eeprom_ = {};

@@ -9,7 +9,7 @@
 
 #[macro_use]
 extern crate fdio;
-extern crate fidl_wlan_device as wlan;
+extern crate fidl_fuchsia_wlan_device as wlan;
 extern crate fuchsia_async as async;
 extern crate fuchsia_zircon as zx;
 

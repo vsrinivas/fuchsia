@@ -79,6 +79,8 @@ int8_t extract_tx_power(int byte_offset, bool is_5ghz, uint16_t eeprom_word) {
 
 namespace ralink {
 
+namespace wlan_device = ::fuchsia::wlan::device;
+
 #define DEV(c) static_cast<Device*>(c)
 static zx_protocol_device_t wlanphy_device_ops = {
     .version = DEVICE_OPS_VERSION,

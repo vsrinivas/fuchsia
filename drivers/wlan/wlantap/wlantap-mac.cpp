@@ -5,13 +5,16 @@
 #include "wlantap-mac.h"
 #include <ddk/debug.h>
 #include <ddk/driver.h>
-#include <wlan_device/cpp/fidl.h>
+#include <fuchsia/wlan/device/cpp/fidl.h>
 #include <lib/fxl/arraysize.h>
 #include <wlan/common/channel.h>
 #include <wlan/wlanmac-ifc-proxy.h>
 
 namespace wlan {
 namespace wlantap {
+
+namespace wlan_device = ::fuchsia::wlan::device;
+
 namespace {
 
 uint16_t ConvertSupportedPhys(const ::fidl::VectorPtr<wlan_device::SupportedPhy>& phys) {

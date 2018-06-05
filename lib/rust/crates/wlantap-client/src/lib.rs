@@ -8,7 +8,6 @@ extern crate byteorder;
 extern crate failure;
 #[macro_use] extern crate fdio;
 extern crate fidl;
-extern crate fidl_wlan_device;
 extern crate fidl_wlantap;
 extern crate fuchsia_async as async;
 extern crate fuchsia_zircon as zx;
