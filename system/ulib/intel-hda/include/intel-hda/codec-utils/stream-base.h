@@ -57,6 +57,9 @@ protected:
     IntelHDAStreamBase(uint32_t id, bool is_input);
     virtual ~IntelHDAStreamBase();
 
+    void SetPersistentUniqueId(const audio_stream_unique_id_t& id)
+        __TA_EXCLUDES(obj_lock_);
+
     // Properties available to subclasses.
     uint8_t dma_stream_tag() const __TA_REQUIRES(obj_lock_) {
         return dma_stream_tag_;
@@ -110,6 +113,9 @@ protected:
                                     const audio_proto::PlugDetectReq& req,
                                     audio_proto::PlugDetectResp* out_resp)
         __TA_REQUIRES(obj_lock_);
+    virtual void  OnGetStringLocked(const audio_proto::GetStringReq& req,
+                                    audio_proto::GetStringResp* out_resp)
+        __TA_REQUIRES(obj_lock_);
 
     // Debug logging
     virtual void PrintDebugPrefix() const;
@@ -155,6 +161,14 @@ private:
                                    bool privileged,
                                    const audio_proto::PlugDetectReq& req)
         __TA_REQUIRES(obj_lock_);
+    zx_status_t DoGetUniqueIdLocked(dispatcher::Channel* channel,
+                                    bool privileged,
+                                    const audio_proto::GetUniqueIdReq& req)
+        __TA_REQUIRES(obj_lock_);
+    zx_status_t DoGetStringLocked(dispatcher::Channel* channel,
+                                  bool privileged,
+                                  const audio_proto::GetStringReq& req)
+        __TA_REQUIRES(obj_lock_);
 
     zx_status_t SetDMAStreamLocked(uint16_t id, uint8_t tag) __TA_REQUIRES(obj_lock_);
     zx_status_t DeviceIoctl(uint32_t op,
@@ -186,6 +200,7 @@ private:
     uint32_t set_format_tid_  __TA_GUARDED(obj_lock_) = AUDIO_INVALID_TRANSACTION_ID;
     uint16_t encoded_fmt_     __TA_GUARDED(obj_lock_);
     uint32_t unsol_tag_count_ __TA_GUARDED(obj_lock_) = 0;
+    audio_stream_unique_id_t persistent_unique_id_;
 
     static zx_status_t EncodeStreamFormat(const audio_proto::StreamSetFmtReq& fmt,
                                           uint16_t* encoded_fmt_out);

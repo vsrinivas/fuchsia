@@ -56,6 +56,11 @@ void IntelHDAStreamBase::PrintDebugPrefix() const {
     printf("[%s] ", dev_name_);
 }
 
+void IntelHDAStreamBase::SetPersistentUniqueId(const audio_stream_unique_id_t& id) {
+    fbl::AutoLock obj_lock(&obj_lock_);
+    persistent_unique_id_ = id;
+}
+
 zx_status_t IntelHDAStreamBase::Activate(fbl::RefPtr<IntelHDACodecDriverBase>&& parent_codec,
                                          const fbl::RefPtr<dispatcher::Channel>& codec_channel) {
     ZX_DEBUG_ASSERT(codec_channel != nullptr);
@@ -580,6 +585,32 @@ zx_status_t IntelHDAStreamBase::DoPlugDetectLocked(dispatcher::Channel* channel,
     return channel->Write(&resp, sizeof(resp));
 }
 
+zx_status_t IntelHDAStreamBase::DoGetUniqueIdLocked(dispatcher::Channel* channel,
+                                                    bool privileged,
+                                                    const audio_proto::GetUniqueIdReq& req) {
+    audio_proto::GetUniqueIdResp resp = { };
+
+    resp.hdr = req.hdr;
+    resp.unique_id = persistent_unique_id_;
+
+    ZX_DEBUG_ASSERT(channel != nullptr);
+    return channel->Write(&resp, sizeof(resp));
+}
+
+zx_status_t IntelHDAStreamBase::DoGetStringLocked(dispatcher::Channel* channel,
+                                                  bool privileged,
+                                                  const audio_proto::GetStringReq& req) {
+    // Fill out the response header, then let the stream implementation fill out
+    // the payload.
+    audio_proto::GetStringResp resp = { };
+    resp.hdr = req.hdr;
+    resp.id = req.id;
+    OnGetStringLocked(req, &resp);
+
+    ZX_DEBUG_ASSERT(channel != nullptr);
+    return channel->Write(&resp, sizeof(resp));
+}
+
 #define HANDLE_REQ(_ioctl, _payload, _handler, _allow_noack)    \
 case _ioctl:                                                    \
     if (req_size != sizeof(req._payload)) {                     \
@@ -593,7 +624,8 @@ case _ioctl:                                                    \
         return ZX_ERR_INVALID_ARGS;                                \
     }                                                           \
     return _handler(channel, privileged, req._payload);
-zx_status_t IntelHDAStreamBase::ProcessClientRequest(dispatcher::Channel* channel, bool privileged) {
+zx_status_t IntelHDAStreamBase::ProcessClientRequest(dispatcher::Channel* channel,
+                                                     bool privileged) {
     ZX_DEBUG_ASSERT(channel != nullptr);
     fbl::AutoLock obj_lock(&obj_lock_);
 
@@ -610,6 +642,8 @@ zx_status_t IntelHDAStreamBase::ProcessClientRequest(dispatcher::Channel* channe
         audio_proto::GetGainReq       get_gain;
         audio_proto::SetGainReq       set_gain;
         audio_proto::PlugDetectReq    plug_detect;
+        audio_proto::GetUniqueIdReq   get_unique_id;
+        audio_proto::GetStringReq     get_string;
         // TODO(johngro) : add more commands here
     } req;
 
@@ -628,11 +662,13 @@ zx_status_t IntelHDAStreamBase::ProcessClientRequest(dispatcher::Channel* channe
     // Strip the NO_ACK flag from the request before selecting the dispatch target.
     auto cmd = static_cast<audio_proto::Cmd>(req.hdr.cmd & ~AUDIO_FLAG_NO_ACK);
     switch (cmd) {
-        HANDLE_REQ(AUDIO_STREAM_CMD_GET_FORMATS, get_formats, DoGetStreamFormatsLocked, false);
-        HANDLE_REQ(AUDIO_STREAM_CMD_SET_FORMAT,  set_format,  DoSetStreamFormatLocked,  false);
-        HANDLE_REQ(AUDIO_STREAM_CMD_GET_GAIN,    get_gain,    DoGetGainLocked,          false);
-        HANDLE_REQ(AUDIO_STREAM_CMD_SET_GAIN,    set_gain,    DoSetGainLocked,          true);
-        HANDLE_REQ(AUDIO_STREAM_CMD_PLUG_DETECT, plug_detect, DoPlugDetectLocked,       true);
+        HANDLE_REQ(AUDIO_STREAM_CMD_GET_FORMATS,   get_formats,   DoGetStreamFormatsLocked, false);
+        HANDLE_REQ(AUDIO_STREAM_CMD_SET_FORMAT,    set_format,    DoSetStreamFormatLocked,  false);
+        HANDLE_REQ(AUDIO_STREAM_CMD_GET_GAIN,      get_gain,      DoGetGainLocked,          false);
+        HANDLE_REQ(AUDIO_STREAM_CMD_SET_GAIN,      set_gain,      DoSetGainLocked,          true);
+        HANDLE_REQ(AUDIO_STREAM_CMD_PLUG_DETECT,   plug_detect,   DoPlugDetectLocked,       true);
+        HANDLE_REQ(AUDIO_STREAM_CMD_GET_UNIQUE_ID, get_unique_id, DoGetUniqueIdLocked,      false);
+        HANDLE_REQ(AUDIO_STREAM_CMD_GET_STRING,    get_string,    DoGetStringLocked,        false);
         default:
             DEBUG_LOG("Unrecognized stream command 0x%04x\n", req.hdr.cmd);
             return ZX_ERR_NOT_SUPPORTED;
@@ -773,9 +809,11 @@ void IntelHDAStreamBase::OnGetGainLocked(audio_proto::GetGainResp* out_resp) {
 
     // By default we claim to have a fixed, un-mute-able gain stage.
     out_resp->cur_mute  = false;
+    out_resp->cur_agc   = false;
     out_resp->cur_gain  = 0.0;
 
     out_resp->can_mute  = false;
+    out_resp->can_agc   = false;
     out_resp->min_gain  = 0.0;
     out_resp->max_gain  = 0.0;
     out_resp->gain_step = 0.0;
@@ -790,11 +828,12 @@ void IntelHDAStreamBase::OnSetGainLocked(const audio_proto::SetGainReq& req,
     }
 
     bool illegal_mute = (req.flags & AUDIO_SGF_MUTE_VALID) && (req.flags & AUDIO_SGF_MUTE);
+    bool illegal_agc  = (req.flags & AUDIO_SGF_AGC_VALID)  && (req.flags & AUDIO_SGF_AGC);
     bool illegal_gain = (req.flags & AUDIO_SGF_GAIN_VALID) && (req.gain != 0.0f);
 
     out_resp->cur_mute = false;
     out_resp->cur_gain = 0.0;
-    out_resp->result   = (illegal_mute || illegal_gain)
+    out_resp->result   = (illegal_mute || illegal_agc || illegal_gain)
                        ? ZX_ERR_INVALID_ARGS
                        : ZX_OK;
 }
@@ -812,6 +851,28 @@ void IntelHDAStreamBase::OnPlugDetectLocked(dispatcher::Channel* response_channe
     out_resp->flags = static_cast<audio_pd_notify_flags_t>(AUDIO_PDNF_HARDWIRED |
                                                             AUDIO_PDNF_PLUGGED);
     out_resp->plug_state_time = parent_codec_->create_time();
+}
+
+void IntelHDAStreamBase::OnGetStringLocked(const audio_proto::GetStringReq& req,
+                                           audio_proto::GetStringResp* out_resp) {
+    ZX_DEBUG_ASSERT(out_resp);
+
+    switch (req.id) {
+        case AUDIO_STREAM_STR_ID_MANUFACTURER:
+        case AUDIO_STREAM_STR_ID_PRODUCT: {
+            int res = snprintf(reinterpret_cast<char*>(out_resp->str),
+                               sizeof(out_resp->str), "<unknown>");
+            ZX_DEBUG_ASSERT(res >= 0);  // there should be no way for snprintf to fail here.
+            out_resp->strlen = fbl::min<uint32_t>(res, sizeof(out_resp->str) - 1);
+            out_resp->result = ZX_OK;
+            break;
+        }
+
+        default:
+            out_resp->strlen = 0;
+            out_resp->result = ZX_ERR_NOT_FOUND;
+            break;
+    }
 }
 
 }  // namespace codecs
