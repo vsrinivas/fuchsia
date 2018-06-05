@@ -5,10 +5,10 @@
 import("//build/package.gni")
 
 executable("bin") {
-  output_name = "wget"
+  output_name = "httpget_cpp"
 
   sources = [
-    "wget.cc",
+    "httpget.cc",
   ]
 
   deps = [
@@ -20,22 +20,10 @@ executable("bin") {
   ]
 }
 
-package("deprecated-wget") {
-  deprecated_system_image = true
-
+package("httpget_cpp") {
   deps = [
     ":bin",
   ]
 
-  binaries = [ {
-        name = "wget"
-      } ]
-}
-
-package("wget") {
-  deps = [
-    ":bin",
-  ]
-
-  binary = "wget"
+  binary = "httpget_cpp"
 }

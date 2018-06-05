@@ -6,7 +6,7 @@ import("//build/rust/rustc_binary.gni")
 import("//build/package.gni")
 
 rustc_binary("bin") {
-  name = "wget_rs"
+  name = "httpget_rust"
 
   deps = [
     "//garnet/public/lib/fidl/rust/fidl",
@@ -20,23 +20,10 @@ rustc_binary("bin") {
   ]
 }
 
-package("wget-rs") {
+package("httpget_rust") {
   deps = [
     ":bin",
   ]
 
-  binary = "rust_crates/wget_rs"
-}
-
-package("deprecated-wget-rs") {
-  deprecated_system_image = true
-
-  deps = [
-    ":bin",
-  ]
-
-  binaries = [ {
-        name = "rust_crates/wget_rs"
-        dest = "wget-rs"
-      } ]
+  binary = "rust_crates/httpget_rust"
 }

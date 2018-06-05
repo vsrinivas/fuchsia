@@ -34,7 +34,7 @@ fn main() {
     }
 }
 
-/// Connects to the network service, sends a url request, and prints the response.
+/// Connects to the http service, sends a url request, and prints the response.
 fn main_res() -> Result<(), Error> {
     let url = match std::env::args().nth(1) {
         Some(url) => {
@@ -53,7 +53,7 @@ fn main_res() -> Result<(), Error> {
     // Set up async executor
     let mut exec = async::Executor::new()?;
 
-    // Connect to the network service
+    // Connect to the http service
     let net = component::client::connect_to_service::<http::HttpServiceMarker>()?;
 
     // Create a UrlLoader instance

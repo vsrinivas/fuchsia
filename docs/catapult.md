@@ -64,7 +64,7 @@ Verify that the dashboard server is reachable from the Fuchsia device:
 
 ```sh
 # on Fuchsia device
-wget http://<ip address>:8080
+curl http://<ip address>:8080
 ```
 
 ## Upload data points
