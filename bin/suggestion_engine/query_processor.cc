@@ -20,13 +20,13 @@ constexpr char kQueryContextKey[] = "/suggestion_engine/current_query";
 
 }  // namespace
 
-QueryProcessor::QueryProcessor(media::AudioServerPtr audio_server,
+QueryProcessor::QueryProcessor(fuchsia::media::AudioServerPtr audio_server,
                                std::shared_ptr<SuggestionDebugImpl> debug)
-    : debug_(debug), media_player_(std::move(audio_server), debug),
+    : debug_(debug),
+      media_player_(std::move(audio_server), debug),
       has_media_response_(false) {
-  media_player_.SetSpeechStatusCallback([this](SpeechStatus status) {
-    NotifySpeechListeners(status);
-  });
+  media_player_.SetSpeechStatusCallback(
+      [this](SpeechStatus status) { NotifySpeechListeners(status); });
 }
 
 QueryProcessor::~QueryProcessor() = default;
@@ -72,15 +72,14 @@ void QueryProcessor::ExecuteQuery(
 
   // Steps 3 - 6
   activity_ = debug_->GetIdleWaiter()->RegisterOngoingActivity();
-  active_query_ = std::make_unique<QueryRunner>(
-      std::move(listener), std::move(input), count);
-  active_query_->SetResponseCallback([this, input](
-      const std::string& handler_url, QueryResponse response) {
-    OnQueryResponse(input, handler_url, std::move(response));
-  });
-  active_query_->SetEndRequestCallback([this, input] {
-    OnQueryEndRequest(input);
-  });
+  active_query_ = std::make_unique<QueryRunner>(std::move(listener),
+                                                std::move(input), count);
+  active_query_->SetResponseCallback(
+      [this, input](const std::string& handler_url, QueryResponse response) {
+        OnQueryResponse(input, handler_url, std::move(response));
+      });
+  active_query_->SetEndRequestCallback(
+      [this, input] { OnQueryEndRequest(input); });
   active_query_->Run(query_handlers_);
 }
 
@@ -122,10 +121,9 @@ void QueryProcessor::AddProposal(const std::string& source_url,
                                  Proposal proposal) {
   suggestions_.RemoveProposal(source_url, proposal.id);
 
-  auto suggestion = CreateSuggestionPrototype(
-      &query_prototypes_, source_url,
-      "" /* Emtpy story_id */,
-      std::move(proposal));
+  auto suggestion =
+      CreateSuggestionPrototype(&query_prototypes_, source_url,
+                                "" /* Emtpy story_id */, std::move(proposal));
   suggestions_.AddSuggestion(std::move(suggestion));
 }
 
@@ -135,8 +133,9 @@ void QueryProcessor::NotifySpeechListeners(SpeechStatus status) {
   }
 }
 
-void QueryProcessor::OnQueryResponse(
-    UserInput input, const std::string& handler_url, QueryResponse response) {
+void QueryProcessor::OnQueryResponse(UserInput input,
+                                     const std::string& handler_url,
+                                     QueryResponse response) {
   // TODO(rosswang): defer selection of "I don't know" responses
   if (!has_media_response_ && response.media_response) {
     has_media_response_ = true;

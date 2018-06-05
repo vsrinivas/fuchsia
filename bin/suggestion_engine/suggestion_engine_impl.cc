@@ -43,7 +43,8 @@ constexpr int kQueryActionMaxResults = 1;
 
 }  // namespace
 
-SuggestionEngineImpl::SuggestionEngineImpl(media::AudioServerPtr audio_server)
+SuggestionEngineImpl::SuggestionEngineImpl(
+    fuchsia::media::AudioServerPtr audio_server)
     : debug_(std::make_shared<SuggestionDebugImpl>()),
       next_processor_(debug_),
       query_processor_(std::move(audio_server), debug_),
@@ -450,8 +451,8 @@ void SuggestionEngineImpl::PerformUpdateModuleAction(
   story_controller->GetModules(fxl::MakeCopyable(
       [this, story_controller = std::move(story_controller),
        module_name = std::move(action->update_module().module_name),
-       parameters = std::move(action->update_module().parameters)
-      ](fidl::VectorPtr<ModuleData> module_datas) {
+       parameters = std::move(action->update_module().parameters)](
+          fidl::VectorPtr<ModuleData> module_datas) {
         for (const auto& module_data : *module_datas) {
           if (module_data.module_path != module_name) {
             continue;
@@ -462,10 +463,9 @@ void SuggestionEngineImpl::PerformUpdateModuleAction(
                 continue;
               }
               LinkPtr link;
-              story_controller->GetLink(
-                entry.link_path.module_path.Clone(),
-                std::move(entry.link_path.link_name),
-                link.NewRequest());
+              story_controller->GetLink(entry.link_path.module_path.Clone(),
+                                        std::move(entry.link_path.link_name),
+                                        link.NewRequest());
               switch (parameter.data.Which()) {
                 case IntentParameterData::Tag::kEntityReference: {
                   link->SetEntity(parameter.data.entity_reference());
@@ -522,7 +522,7 @@ void SuggestionEngineImpl::PerformQueryAction(const Action& action) {
 }
 
 void SuggestionEngineImpl::OnContextUpdate(ContextUpdate update) {
-  for (auto& entry: update.values.take()) {
+  for (auto& entry : update.values.take()) {
     for (const auto& rf_it : ranking_features) {
       if (entry.key == rf_it.first) {  // Update key == rf key
         rf_it.second->UpdateContext(entry.value);

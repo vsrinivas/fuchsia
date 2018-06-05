@@ -18,7 +18,7 @@ class SuggestionEngineApp {
   SuggestionEngineApp(fuchsia::sys::StartupContext* const context) {
     context->ConnectToEnvironmentService(intelligence_services_.NewRequest());
 
-    media::AudioServerPtr audio_server;
+    fuchsia::media::AudioServerPtr audio_server;
     context->ConnectToEnvironmentService(audio_server.NewRequest());
 
     engine_impl_ = std::make_unique<fuchsia::modular::SuggestionEngineImpl>(

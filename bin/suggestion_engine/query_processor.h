@@ -7,8 +7,8 @@
 
 #include <set>
 
+#include <fuchsia/media/cpp/fidl.h>
 #include <fuchsia/modular/cpp/fidl.h>
-#include <media/cpp/fidl.h>
 
 #include "lib/fxl/memory/weak_ptr.h"
 #include "peridot/bin/suggestion_engine/media_player.h"
@@ -27,7 +27,7 @@ class SuggestionEngineImpl;
 // ranking those suggestions, and then providing them to the user.
 class QueryProcessor {
  public:
-  QueryProcessor(media::AudioServerPtr audio_server,
+  QueryProcessor(fuchsia::media::AudioServerPtr audio_server,
                  std::shared_ptr<SuggestionDebugImpl> debug);
   ~QueryProcessor();
 
@@ -38,8 +38,7 @@ class QueryProcessor {
   // future fetching using GetSuggestion(). Each time ExecuteQuery is called,
   // suggestions from the previous query are cleared by calling
   // CleanUpPreviousQuery() internally.
-  void ExecuteQuery(UserInput input,
-                    int count,
+  void ExecuteQuery(UserInput input, int count,
                     fidl::InterfaceHandle<QueryListener> listener);
 
   // Registers a feedback listener for speech status updates.
@@ -78,8 +77,8 @@ class QueryProcessor {
 
   void NotifySpeechListeners(SpeechStatus status);
 
-  void OnQueryResponse(
-      UserInput input, const std::string& handler_url, QueryResponse response);
+  void OnQueryResponse(UserInput input, const std::string& handler_url,
+                       QueryResponse response);
 
   void OnQueryEndRequest(UserInput input);
 

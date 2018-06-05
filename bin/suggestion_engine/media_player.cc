@@ -13,7 +13,7 @@
 namespace fuchsia {
 namespace modular {
 
-MediaPlayer::MediaPlayer(media::AudioServerPtr audio_server,
+MediaPlayer::MediaPlayer(fuchsia::media::AudioServerPtr audio_server,
                          std::shared_ptr<SuggestionDebugImpl> debug)
     : audio_server_(std::move(audio_server)), debug_(debug) {
   audio_server_.set_error_handler([this] {
@@ -40,23 +40,21 @@ void MediaPlayer::PlayMediaResponse(MediaResponsePtr media_response) {
 
   auto activity = debug_->GetIdleWaiter()->RegisterOngoingActivity();
 
-  media::AudioRendererPtr audio_renderer;
+  fuchsia::media::AudioRendererPtr audio_renderer;
   audio_server_->CreateRenderer(audio_renderer.NewRequest(),
                                 media_renderer_.NewRequest());
 
   media_packet_producer_ = media_response->media_packet_producer.Bind();
   media_renderer_->SetMediaType(std::move(media_response->media_type));
-  media::MediaPacketConsumerPtr consumer;
+  fuchsia::media::MediaPacketConsumerPtr consumer;
   media_renderer_->GetPacketConsumer(consumer.NewRequest());
 
-  media_packet_producer_->Connect(
-      std::move(consumer), [this, activity] {
+  media_packet_producer_->Connect(std::move(consumer), [this, activity] {
     OnMediaPacketProducerConnected(activity);
   });
 
-  media_packet_producer_.set_error_handler([this] {
-    speech_status_callback_(SpeechStatus::IDLE);
-  });
+  media_packet_producer_.set_error_handler(
+      [this] { speech_status_callback_(SpeechStatus::IDLE); });
 }
 
 void MediaPlayer::OnMediaPacketProducerConnected(
@@ -69,23 +67,22 @@ void MediaPlayer::OnMediaPacketProducerConnected(
   media_renderer_->GetTimelineControlPoint(time_lord_.NewRequest());
   time_lord_->GetTimelineConsumer(media_timeline_consumer_.NewRequest());
   time_lord_->Prime([this, activity] {
-    media::TimelineTransform tt;
+    fuchsia::media::TimelineTransform tt;
     tt.reference_time =
-        media::Timeline::local_now() + media::Timeline::ns_from_ms(30);
-    tt.subject_time = media::kUnspecifiedTime;
+        ::media::Timeline::local_now() + ::media::Timeline::ns_from_ms(30);
+    tt.subject_time = fuchsia::media::kUnspecifiedTime;
     tt.reference_delta = tt.subject_delta = 1;
 
-    HandleMediaUpdates(media::kInitialStatus, nullptr);
+    HandleMediaUpdates(fuchsia::media::kInitialStatus, nullptr);
 
     media_timeline_consumer_->SetTimelineTransform(
         std::move(tt), [activity](bool completed) {});
   });
 }
 
-
 void MediaPlayer::HandleMediaUpdates(
     uint64_t version,
-    media::MediaTimelineControlPointStatusPtr status) {
+    fuchsia::media::MediaTimelineControlPointStatusPtr status) {
   auto activity = debug_->GetIdleWaiter()->RegisterOngoingActivity();
 
   if (status && status->end_of_stream) {
@@ -93,8 +90,9 @@ void MediaPlayer::HandleMediaUpdates(
   } else {
     time_lord_->GetStatus(
         version,
-        [this, activity](uint64_t next_version,
-                         media::MediaTimelineControlPointStatus next_status) {
+        [this, activity](
+            uint64_t next_version,
+            fuchsia::media::MediaTimelineControlPointStatus next_status) {
           HandleMediaUpdates(next_version,
                              fidl::MakeOptional(std::move(next_status)));
         });

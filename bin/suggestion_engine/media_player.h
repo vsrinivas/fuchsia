@@ -7,8 +7,8 @@
 
 #include <vector>
 
+#include <fuchsia/media/cpp/fidl.h>
 #include <fuchsia/modular/cpp/fidl.h>
-#include <media/cpp/fidl.h>
 
 #include "lib/app/cpp/startup_context.h"
 #include "lib/fidl/cpp/interface_ptr_set.h"
@@ -27,7 +27,7 @@ class MediaPlayer {
   // Instantiates a new MediaPlayer object.
   // |audio_server| is a binding to the audio server that will be used.
   // |debug| is used for debugging and testing purposes. Should be provided.
-  MediaPlayer(media::AudioServerPtr audio_server,
+  MediaPlayer(fuchsia::media::AudioServerPtr audio_server,
               std::shared_ptr<SuggestionDebugImpl> debug);
   ~MediaPlayer();
 
@@ -38,16 +38,17 @@ class MediaPlayer {
   void PlayMediaResponse(MediaResponsePtr media_response);
 
  private:
-  void HandleMediaUpdates(uint64_t version,
-                          media::MediaTimelineControlPointStatusPtr status);
+  void HandleMediaUpdates(
+      uint64_t version,
+      fuchsia::media::MediaTimelineControlPointStatusPtr status);
 
   void OnMediaPacketProducerConnected(util::IdleWaiter::ActivityToken activity);
 
-  media::AudioServerPtr audio_server_;
-  media::MediaRendererPtr media_renderer_;
-  media::MediaPacketProducerPtr media_packet_producer_;
-  media::MediaTimelineControlPointPtr time_lord_;
-  media::TimelineConsumerPtr media_timeline_consumer_;
+  fuchsia::media::AudioServerPtr audio_server_;
+  fuchsia::media::MediaRendererPtr media_renderer_;
+  fuchsia::media::MediaPacketProducerPtr media_packet_producer_;
+  fuchsia::media::MediaTimelineControlPointPtr time_lord_;
+  fuchsia::media::TimelineConsumerPtr media_timeline_consumer_;
   std::shared_ptr<SuggestionDebugImpl> debug_;
   SpeechStatusCallback speech_status_callback_;
 };

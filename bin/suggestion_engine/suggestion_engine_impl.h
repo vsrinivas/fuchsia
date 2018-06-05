@@ -61,7 +61,7 @@ class SuggestionEngineImpl : public ContextListener,
                              public SuggestionEngine,
                              public SuggestionProvider {
  public:
-  SuggestionEngineImpl(media::AudioServerPtr audio_server);
+  SuggestionEngineImpl(fuchsia::media::AudioServerPtr audio_server);
   ~SuggestionEngineImpl();
 
   fxl::WeakPtr<SuggestionDebugImpl> debug();
