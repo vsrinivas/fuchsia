@@ -11,6 +11,7 @@ MODULE_TYPE := driver
 MODULE_SRCS += \
     $(LOCAL_DIR)/binding.c \
     $(LOCAL_DIR)/midi.c \
+    $(LOCAL_DIR)/usb-audio.cpp \
     $(LOCAL_DIR)/usb-audio-control-interface.cpp \
     $(LOCAL_DIR)/usb-audio-descriptors.cpp \
     $(LOCAL_DIR)/usb-audio-device.cpp \
@@ -29,6 +30,7 @@ MODULE_LIBS := \
 MODULE_STATIC_LIBS := \
     system/ulib/audio-driver-proto \
     system/ulib/audio-proto-utils \
+    system/ulib/digest \
     system/ulib/dispatcher-pool \
     system/ulib/ddk \
     system/ulib/ddktl \
@@ -37,5 +39,6 @@ MODULE_STATIC_LIBS := \
     system/ulib/sync \
     system/ulib/zx \
     system/ulib/zxcpp \
+    third_party/ulib/uboringssl \
 
 include make/module.mk

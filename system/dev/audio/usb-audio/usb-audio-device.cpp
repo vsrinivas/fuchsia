@@ -67,6 +67,20 @@ zx_status_t UsbAudioDevice::Bind() {
     usb_get_device_descriptor(&usb_proto_, &usb_dev_desc_);
     snprintf(log_prefix_, sizeof(log_prefix_), "UsbAud %04x:%04x", vid(), pid());
 
+    // Attempt to cache the string descriptors for our manufacturer name,
+    // product name, and serial number.
+    if (usb_dev_desc_.iManufacturer) {
+        mfr_name_ = FetchStringDescriptor(usb_proto_, usb_dev_desc_.iManufacturer);
+    }
+
+    if (usb_dev_desc_.iProduct) {
+        prod_name_ = FetchStringDescriptor(usb_proto_, usb_dev_desc_.iProduct);
+    }
+
+    if (usb_dev_desc_.iSerialNumber) {
+        serial_num_ = FetchStringDescriptor(usb_proto_, usb_dev_desc_.iSerialNumber);
+    }
+
     // Our top level binding script has only claimed audio interfaces with a
     // subclass of control.  Go ahead and claim anything which has a top level
     // class of of "audio"; this is where we will find our Audio and MIDI

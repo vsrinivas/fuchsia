@@ -74,6 +74,8 @@ private:
                    fbl::RefPtr<dispatcher::ExecutionDomain> default_domain);
     virtual ~UsbAudioStream();
 
+    void ComputePersistentUniqueId();
+
     void ReleaseRingBufferLocked() __TA_REQUIRES(lock_);
 
     // Thunks for dispatching stream channel events.
@@ -93,6 +95,10 @@ private:
         __TA_REQUIRES(lock_);
     zx_status_t OnPlugDetectLocked(dispatcher::Channel* channel,
                                    const audio_proto::PlugDetectReq& req) __TA_REQUIRES(lock_);
+    zx_status_t OnGetUniqueIdLocked(dispatcher::Channel* channel,
+                                    const audio_proto::GetUniqueIdReq& req) __TA_REQUIRES(lock_);
+    zx_status_t OnGetStringLocked(dispatcher::Channel* channel,
+                                    const audio_proto::GetStringReq& req) __TA_REQUIRES(lock_);
 
     // Thunks for dispatching ring buffer channel events.
     zx_status_t ProcessRingBufferChannel(dispatcher::Channel* channel);
@@ -116,6 +122,7 @@ private:
     UsbAudioDevice& parent_;
     const fbl::unique_ptr<UsbAudioStreamInterface> ifc_;
     char log_prefix_[LOG_PREFIX_STORAGE] = { 0 };
+    audio_stream_unique_id_t persistent_unique_id_;
 
     fbl::Mutex lock_;
     fbl::Mutex req_lock_ __TA_ACQUIRED_AFTER(lock_);

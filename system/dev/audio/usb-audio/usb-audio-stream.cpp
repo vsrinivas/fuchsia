@@ -4,14 +4,16 @@
 
 #include <audio-proto-utils/format-utils.h>
 #include <ddk/device.h>
+#include <digest/digest.h>
+#include <lib/zx/vmar.h>
+#include <fbl/algorithm.h>
+#include <fbl/auto_call.h>
+#include <fbl/limits.h>
+#include <string.h>
 #include <zircon/device/usb.h>
 #include <zircon/hw/usb-audio.h>
 #include <zircon/process.h>
 #include <zircon/types.h>
-#include <lib/zx/vmar.h>
-#include <fbl/algorithm.h>
-#include <fbl/limits.h>
-#include <string.h>
 
 #include <dispatcher-pool/dispatcher-thread-pool.h>
 
@@ -78,6 +80,8 @@ fbl::RefPtr<UsbAudioStream> UsbAudioStream::Create(UsbAudioDevice* parent,
         return nullptr;
     }
 
+    stream->ComputePersistentUniqueId();
+
     return stream;
 }
 
@@ -131,6 +135,96 @@ zx_status_t UsbAudioStream::Bind() {
     }
 
     return status;
+}
+
+void UsbAudioStream::ComputePersistentUniqueId() {
+    // Do the best that we can to generate a persistent ID unique to this audio
+    // stream by blending information from a number of sources.  In particular,
+    // consume...
+    //
+    // 1) This USB device's top level device descriptor (this contains the
+    //    VID/PID of the device, among other things)
+    // 2) The contents of the descriptor list used to describe the control and
+    //    streaming interfaces present in the device.
+    // 3) The manufacturer, product, and serial number string descriptors (if
+    //    present)
+    // 4) The stream interface ID.
+    //
+    // The goal here is to produce something like a UUID which is as unique to a
+    // specific instance of a specific device as we can make it, but which
+    // should persist across boots even in the presence of driver updates an
+    // such.  Even so, upper levels of code will still need to deal with the sad
+    // reality that some types of devices may end up looking the same between
+    // two different instances.  If/when this becomes an issue, we may need to
+    // pursue other options.  One choice might be to change the way devices are
+    // enumerated in the USB section of the device tree so that their path has
+    // only to do with physical topology, and has no runtime enumeration order
+    // dependencies.  At that point in time, adding the topology into the hash
+    // should do the job, but would imply that the same device plugged into two
+    // different ports will have a different unique ID for the purposes of
+    // saving and restoring driver settings (as it does in some operating
+    // systems today).
+    //
+    uint16_t vid = parent_.desc().idVendor;
+    uint16_t pid = parent_.desc().idProduct;
+    audio_stream_unique_id_t fallback_id { .data = {
+        'U', 'S', 'B', ' ',
+        static_cast<uint8_t>(vid >> 8),
+        static_cast<uint8_t>(vid),
+        static_cast<uint8_t>(pid >> 8),
+        static_cast<uint8_t>(pid),
+        ifc_->iid()
+    }};
+    persistent_unique_id_ = fallback_id;
+
+    digest::Digest sha;
+    zx_status_t res = sha.Init();
+    if (res != ZX_OK) {
+        LOG(WARN, "Failed to initialize digest while computing unique ID.  "
+                  "Falling back on defaults (res %d)\n", res);
+        return;
+    }
+
+    // #1: Top level descriptor.
+    sha.Update(&parent_.desc(), sizeof(parent_.desc()));
+
+    // #2: The descriptor list
+    const auto& desc_list = parent_.desc_list();
+    ZX_DEBUG_ASSERT((desc_list != nullptr) && (desc_list->size() > 0));
+    sha.Update(desc_list->data(), desc_list->size());
+
+    // #3: The various descriptor strings which may exist.
+    const fbl::Array<uint8_t>* desc_strings[] = {
+        &parent_.mfr_name(),
+        &parent_.prod_name(),
+        &parent_.serial_num()
+    };
+    for (const auto str : desc_strings) {
+        if (str->size()) {
+            sha.Update(str->get(), str->size());
+        }
+    }
+
+    // #4: The stream interface's ID.
+    auto iid = ifc_->iid();
+    sha.Update(&iid, sizeof(iid));
+
+    // Finish the SHA and attempt to copy as much of the results to our internal
+    // cached representation as we can.
+    uint8_t digest_out[digest::Digest::kLength];
+    sha.Final();
+    res = sha.CopyTo(digest_out, sizeof(digest_out));
+    if (res != ZX_OK) {
+        LOG(WARN, "Failed to copy digest while computing unique ID.  "
+                  "Falling back on defaults (res %d)\n", res);
+        return;
+    }
+
+    constexpr size_t todo = fbl::min(sizeof(digest_out), sizeof(persistent_unique_id_.data));
+    if (todo < sizeof(persistent_unique_id_.data)) {
+        ::memset(&persistent_unique_id_.data, 0, sizeof(persistent_unique_id_.data));
+    }
+    ::memcpy(persistent_unique_id_.data, digest_out, todo);
 }
 
 void UsbAudioStream::ReleaseRingBufferLocked() {
@@ -232,7 +326,7 @@ case _cmd:                                                        \
         return ZX_ERR_INVALID_ARGS;                               \
     }                                                             \
     return _handler(channel, req._payload, ##__VA_ARGS__);
-zx_status_t UsbAudioStream::ProcessStreamChannel(dispatcher::Channel* channel, bool privileged) {
+zx_status_t UsbAudioStream::ProcessStreamChannel(dispatcher::Channel* channel, bool priv) {
     ZX_DEBUG_ASSERT(channel != nullptr);
     fbl::AutoLock lock(&lock_);
 
@@ -246,6 +340,8 @@ zx_status_t UsbAudioStream::ProcessStreamChannel(dispatcher::Channel* channel, b
         audio_proto::GetGainReq       get_gain;
         audio_proto::SetGainReq       set_gain;
         audio_proto::PlugDetectReq    plug_detect;
+        audio_proto::GetUniqueIdReq   get_unique_id;
+        audio_proto::GetStringReq     get_string;
         // TODO(johngro) : add more commands here
     } req;
 
@@ -264,11 +360,13 @@ zx_status_t UsbAudioStream::ProcessStreamChannel(dispatcher::Channel* channel, b
     // Strip the NO_ACK flag from the request before selecting the dispatch target.
     auto cmd = static_cast<audio_proto::Cmd>(req.hdr.cmd & ~AUDIO_FLAG_NO_ACK);
     switch (cmd) {
-    HREQ(AUDIO_STREAM_CMD_GET_FORMATS, get_formats, OnGetStreamFormatsLocked, false);
-    HREQ(AUDIO_STREAM_CMD_SET_FORMAT,  set_format,  OnSetStreamFormatLocked,  false, privileged);
-    HREQ(AUDIO_STREAM_CMD_GET_GAIN,    get_gain,    OnGetGainLocked,          false);
-    HREQ(AUDIO_STREAM_CMD_SET_GAIN,    set_gain,    OnSetGainLocked,          true);
-    HREQ(AUDIO_STREAM_CMD_PLUG_DETECT, plug_detect, OnPlugDetectLocked,       true);
+    HREQ(AUDIO_STREAM_CMD_GET_FORMATS,   get_formats,   OnGetStreamFormatsLocked, false);
+    HREQ(AUDIO_STREAM_CMD_SET_FORMAT,    set_format,    OnSetStreamFormatLocked,  false, priv);
+    HREQ(AUDIO_STREAM_CMD_GET_GAIN,      get_gain,      OnGetGainLocked,          false);
+    HREQ(AUDIO_STREAM_CMD_SET_GAIN,      set_gain,      OnSetGainLocked,          true);
+    HREQ(AUDIO_STREAM_CMD_PLUG_DETECT,   plug_detect,   OnPlugDetectLocked,       true);
+    HREQ(AUDIO_STREAM_CMD_GET_UNIQUE_ID, get_unique_id, OnGetUniqueIdLocked,      false);
+    HREQ(AUDIO_STREAM_CMD_GET_STRING,    get_string,    OnGetStringLocked,        false);
     default:
         LOG(TRACE, "Unrecognized stream command 0x%04x\n", req.hdr.cmd);
         return ZX_ERR_NOT_SUPPORTED;
@@ -524,6 +622,8 @@ zx_status_t UsbAudioStream::OnGetGainLocked(dispatcher::Channel* channel,
 
     resp.can_mute  = path.has_mute();
     resp.cur_mute  = path.cur_mute();
+    resp.can_agc   = path.has_agc();
+    resp.cur_agc   = path.cur_agc();
     resp.cur_gain  = path.cur_gain();
     resp.min_gain  = path.min_gain();
     resp.max_gain  = path.max_gain();
@@ -543,18 +643,25 @@ zx_status_t UsbAudioStream::OnSetGainLocked(dispatcher::Channel* channel,
     ZX_DEBUG_ASSERT(ifc_->path() != nullptr);
     auto& path = *(ifc_->path());
     bool req_mute = req.flags & AUDIO_SGF_MUTE;
+    bool req_agc  = req.flags & AUDIO_SGF_AGC;
     bool illegal_mute = (req.flags & AUDIO_SGF_MUTE_VALID) && req_mute && !path.has_mute();
+    bool illegal_agc  = (req.flags & AUDIO_SGF_AGC_VALID)  && req_agc  && !path.has_agc();
     bool illegal_gain = (req.flags & AUDIO_SGF_GAIN_VALID) && (req.gain != 0) && !path.has_gain();
 
-    if (illegal_mute || illegal_gain) {
+    if (illegal_mute || illegal_agc || illegal_gain) {
         // If this request is illegal, make no changes but attempt to report the
         // current state of the world.
         resp.cur_mute = path.cur_mute();
+        resp.cur_agc  = path.cur_agc();
         resp.cur_gain = path.cur_gain();
         resp.result = ZX_ERR_INVALID_ARGS;
     } else {
         if (req.flags & AUDIO_SGF_MUTE_VALID) {
             resp.cur_mute = path.SetMute(parent_.usb_proto(), req_mute);
+        }
+
+        if (req.flags & AUDIO_SGF_AGC_VALID) {
+            resp.cur_agc = path.SetAgc(parent_.usb_proto(), req_agc);
         }
 
         if (req.flags & AUDIO_SGF_GAIN_VALID) {
@@ -576,6 +683,51 @@ zx_status_t UsbAudioStream::OnPlugDetectLocked(dispatcher::Channel* channel,
     resp.hdr   = req.hdr;
     resp.flags = static_cast<audio_pd_notify_flags_t>(AUDIO_PDNF_HARDWIRED | AUDIO_PDNF_PLUGGED);
     resp.plug_state_time = create_time_;
+
+    return channel->Write(&resp, sizeof(resp));
+}
+
+zx_status_t UsbAudioStream::OnGetUniqueIdLocked(dispatcher::Channel* channel,
+                                                const audio_proto::GetUniqueIdReq& req) {
+    audio_proto::GetUniqueIdResp resp;
+
+    static_assert(sizeof(resp.unique_id) == sizeof(persistent_unique_id_),
+                  "Unique ID sizes much match!");
+    resp.hdr = req.hdr;
+    resp.unique_id = persistent_unique_id_;
+
+    return channel->Write(&resp, sizeof(resp));
+}
+
+zx_status_t UsbAudioStream::OnGetStringLocked(dispatcher::Channel* channel,
+                                              const audio_proto::GetStringReq& req) {
+    audio_proto::GetStringResp resp;
+    const fbl::Array<uint8_t>* str;
+
+    resp.hdr = req.hdr;
+    resp.id = req.id;
+
+    switch (req.id) {
+        case AUDIO_STREAM_STR_ID_MANUFACTURER: str = &parent_.mfr_name(); break;
+        case AUDIO_STREAM_STR_ID_PRODUCT:      str = &parent_.prod_name(); break;
+        default:                               str = nullptr; break;
+    }
+
+    if (str == nullptr) {
+        resp.result = ZX_ERR_NOT_FOUND;
+        resp.strlen = 0;
+    } else {
+        size_t todo = fbl::min<size_t>(sizeof(resp.str), str->size());
+        ZX_DEBUG_ASSERT(todo <= fbl::numeric_limits<uint32_t>::max());
+
+        ::memset(resp.str, 0, sizeof(resp.str));
+        if (todo) {
+            ::memcpy(resp.str, str->get(), todo);
+        }
+
+        resp.result = ZX_OK;
+        resp.strlen = static_cast<uint32_t>(todo);
+    }
 
     return channel->Write(&resp, sizeof(resp));
 }

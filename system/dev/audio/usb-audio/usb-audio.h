@@ -10,6 +10,10 @@
 #include <zircon/hw/usb.h>
 #include <zircon/hw/usb-audio.h>
 
+#if __cplusplus
+#include <fbl/array.h>
+#endif  // __cplusplus
+
 __BEGIN_CDECLS
 
 zx_status_t usb_midi_sink_create(zx_device_t* device, usb_protocol_t* usb, int index,
@@ -33,6 +37,11 @@ enum class EndpointSyncType : uint8_t {
     Adaptive = USB_ENDPOINT_ADAPTIVE,
     Sync     = USB_ENDPOINT_SYNCHRONOUS,
 };
+
+fbl::Array<uint8_t> FetchStringDescriptor(const usb_protocol_t& usb,
+                                          uint8_t desc_id,
+                                          uint16_t lang_id = 0,
+                                          uint16_t* out_lang_id = nullptr);
 
 }  // namespace usb
 }  // namespace audio
