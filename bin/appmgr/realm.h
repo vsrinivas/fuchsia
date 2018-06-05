@@ -69,6 +69,7 @@ class Realm {
   void CreateShell(const std::string& path);
 
  private:
+  friend class RealmFriendForTests;
   static uint32_t next_numbered_label_;
 
   RunnerHolder* GetOrCreateRunner(const std::string& runner);
