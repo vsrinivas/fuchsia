@@ -13,6 +13,8 @@ MODULE_NAME := install-disk-image
 
 # app main
 MODULE_SRCS := \
+    $(LOCAL_DIR)/device-partitioner.cpp \
+    $(LOCAL_DIR)/pave-lib.cpp \
     $(LOCAL_DIR)/disk-pave.cpp \
 
 MODULE_STATIC_LIBS := \
@@ -23,7 +25,6 @@ MODULE_STATIC_LIBS := \
     system/ulib/fs-management \
     system/ulib/fvm \
     system/ulib/ddk \
-    system/ulib/sync \
     system/ulib/zx \
     system/ulib/fbl \
     system/ulib/digest \
