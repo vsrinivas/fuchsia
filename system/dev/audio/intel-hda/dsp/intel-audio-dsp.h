@@ -111,6 +111,7 @@ private:
     zx_status_t CreateAndStartStreams();
 
     // Debug
+    void DumpRegs();
     void DumpNhlt(const nhlt_table_t* nhlt, size_t length);
     void DumpFirmwareConfig(const TLVHeader* config, size_t length);
     void DumpHardwareConfig(const TLVHeader* config, size_t length);

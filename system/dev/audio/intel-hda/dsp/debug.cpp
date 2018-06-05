@@ -5,6 +5,37 @@
 namespace audio {
 namespace intel_hda {
 
+void IntelAudioDsp::DumpRegs() {
+    LOG(INFO, "ADSP registers\n");
+    LOG(INFO, "ADSPCS   0x%08x\n", REG_RD(&regs()->adspcs));
+    LOG(INFO, "ADSPIC   0x%08x\n", REG_RD(&regs()->adspic));
+    LOG(INFO, "ADSPIS   0x%08x\n", REG_RD(&regs()->adspis));
+    LOG(INFO, "ADSPIC2  0x%08x\n", REG_RD(&regs()->adspic2));
+    LOG(INFO, "ADSPIS2  0x%08x\n", REG_RD(&regs()->adspis2));
+    LOG(INFO, "HIPCT    0x%08x\n", REG_RD(&regs()->hipct));
+    LOG(INFO, "HIPCTE   0x%08x\n", REG_RD(&regs()->hipcte));
+    LOG(INFO, "HIPCI    0x%08x\n", REG_RD(&regs()->hipci));
+    LOG(INFO, "HIPCIE   0x%08x\n", REG_RD(&regs()->hipcie));
+    LOG(INFO, "HIPCCTL  0x%08x\n", REG_RD(&regs()->hipcctl));
+    LOG(INFO, "Code Loader registers\n");
+    LOG(INFO, "CTL_STS  0x%08x\n", REG_RD(&regs()->cldma.stream.ctl_sts.w));
+    LOG(INFO, "CBL      0x%08x\n", REG_RD(&regs()->cldma.stream.cbl));
+    LOG(INFO, "LVI      0x%08x\n", REG_RD(&regs()->cldma.stream.lvi));
+    LOG(INFO, "FIFOD    0x%08x\n", REG_RD(&regs()->cldma.stream.fifod));
+    LOG(INFO, "FMT      0x%08x\n", REG_RD(&regs()->cldma.stream.fmt));
+    LOG(INFO, "BDPL     0x%08x\n", REG_RD(&regs()->cldma.stream.bdpl));
+    LOG(INFO, "BDPU     0x%08x\n", REG_RD(&regs()->cldma.stream.bdpu));
+    LOG(INFO, "SPBFCH   0x%08x\n", REG_RD(&regs()->cldma.spbfch));
+    LOG(INFO, "SPBFCTL  0x%08x\n", REG_RD(&regs()->cldma.spbfctl));
+    LOG(INFO, "SPIB     0x%08x\n", REG_RD(&regs()->cldma.spib));
+    LOG(INFO, "MAXFIFOS 0x%08x\n", REG_RD(&regs()->cldma.maxfifos));
+    LOG(INFO, "Firmware registers\n");
+    LOG(INFO, "FW_STATUS     0x%08x\n", REG_RD(&fw_regs()->fw_status));
+    LOG(INFO, "ERROR_CODE    0x%08x\n", REG_RD(&fw_regs()->error_code));
+    LOG(INFO, "FW_PWR_STATUS 0x%08x\n", REG_RD(&fw_regs()->fw_pwr_status));
+    LOG(INFO, "ROM_INFO      0x%08x\n", REG_RD(&fw_regs()->rom_info));
+}
+
 void IntelAudioDsp::DumpNhlt(const nhlt_table_t* table, size_t length) {
     if (length < sizeof(*table)) {
         LOG(ERROR, "NHLT too small (%zu bytes)\n", length);
