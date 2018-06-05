@@ -31,11 +31,11 @@ var ErrTufSrcNoHash = errors.New("tufsource: hash missing or wrong type")
 
 // TUFSource wraps a TUF Client into the Source interface
 type TUFSource struct {
-	Client     *tuf.Client
-	RatePeriod time.Duration
-	RateLimit  uint64
+	client     *tuf.Client
+	ratePeriod time.Duration
+	rateLimit  uint64
 	Store      string
-	Keys       []*tuf_data.Key
+	keys       []*tuf_data.Key
 	Config     *amber.SourceConfig
 }
 
@@ -114,10 +114,10 @@ func NewTUFSource(store string, cfg *amber.SourceConfig) (*TUFSource, error) {
 	}
 
 	src := TUFSource{
-		RatePeriod: time.Millisecond * time.Duration(cfg.RatePeriod),
-		RateLimit:  cfg.RateLimit,
+		ratePeriod: time.Millisecond * time.Duration(cfg.RatePeriod),
+		rateLimit:  cfg.RateLimit,
 		Store:      store,
-		Keys:       keys,
+		keys:       keys,
 		Config:     cfg,
 	}
 
@@ -125,7 +125,7 @@ func NewTUFSource(store string, cfg *amber.SourceConfig) (*TUFSource, error) {
 }
 
 func (f *TUFSource) initSrc() error {
-	if f.Client != nil {
+	if f.client != nil {
 		return nil
 	}
 
@@ -145,13 +145,13 @@ func (f *TUFSource) initSrc() error {
 	}
 
 	if needs {
-		err := client.Init(f.Keys, len(f.Keys))
+		err := client.Init(f.keys, len(f.keys))
 		if err != nil {
 			return fmt.Errorf("TUF init failed: %s", err)
 		}
 	}
 
-	f.Client = client
+	f.client = client
 	return nil
 }
 
@@ -165,7 +165,7 @@ func (f *TUFSource) AvailableUpdates(pkgs []*pkg.Package) (map[pkg.Package]pkg.P
 	if err := f.initSrc(); err != nil {
 		return nil, fmt.Errorf("tuf_source: source could not be initialized: %s", err)
 	}
-	_, err := f.Client.Update()
+	_, err := f.client.Update()
 	if err != nil && !tuf.IsLatestSnapshot(err) {
 		if _, ok := err.(tuf.ErrDecodeFailed); ok {
 			e := err.(tuf.ErrDecodeFailed)
@@ -179,7 +179,7 @@ func (f *TUFSource) AvailableUpdates(pkgs []*pkg.Package) (map[pkg.Package]pkg.P
 
 	// TODO(jmatt) seems like 'm' should be the same as returned from
 	// Client.Update, but empirically this seems untrue, investigate
-	m, err := f.Client.Targets()
+	m, err := f.client.Targets()
 
 	if err != nil {
 		return nil, err
@@ -240,7 +240,7 @@ func (f *TUFSource) FetchPkg(pkg *pkg.Package) (*os.File, error) {
 		return nil, err
 	}
 
-	err = f.Client.Download(pkg.Name, &delFile{tmp})
+	err = f.client.Download(pkg.Name, &delFile{tmp})
 	if err != nil {
 		return nil, ErrNoUpdateContent
 	}
@@ -258,11 +258,11 @@ func (f *TUFSource) FetchPkg(pkg *pkg.Package) (*os.File, error) {
 func (f *TUFSource) CheckInterval() time.Duration {
 	// TODO(jmatt) figure out how to establish a real value from the
 	// Client we wrap
-	return f.RatePeriod
+	return f.ratePeriod
 }
 
 func (f *TUFSource) CheckLimit() uint64 {
-	return f.RateLimit
+	return f.rateLimit
 }
 
 // Equals returns true if the Source passed in is a pointer to this instance
