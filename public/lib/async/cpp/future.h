@@ -498,7 +498,7 @@ class Future : public fxl::RefCountedThreadSafe<Future<Result...>> {
   void set_trace_name(const std::string& s) { trace_name_ = s; }
   void set_trace_name(std::string&& s) { trace_name_ = s; }
 
-  std::string trace_name() const { return trace_name_; }
+  const std::string& trace_name() const { return trace_name_; }
 
  private:
   Future() = default;
