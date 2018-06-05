@@ -32,6 +32,13 @@ debug_ipc::ThreadRecord::State ThreadStateToEnum(uint32_t state) {
       {ZX_THREAD_STATE_DYING, debug_ipc::ThreadRecord::State::kDying},
       {ZX_THREAD_STATE_DEAD, debug_ipc::ThreadRecord::State::kDead}};
 
+// TODO(ZX-1843): This #ifdef is temporary to handle the transition.
+// It can be deleted once the new version of zircon rolls out that has
+// this macro.
+#ifdef ZX_THREAD_STATE_BASIC
+  state = ZX_THREAD_STATE_BASIC(state);
+#endif
+
   for (const Mapping& mapping : mappings) {
     if (mapping.int_state == state)
       return mapping.enum_state;
