@@ -4,6 +4,7 @@
 
 #include <memory>
 
+#include "peridot/bin/user_runner/puppet_master/command_runners/set_link_value_command_runner.h"
 #include "peridot/bin/user_runner/puppet_master/dispatch_story_command_executor.h"
 #include "peridot/bin/user_runner/puppet_master/make_production_impl.h"
 
@@ -14,10 +15,10 @@ class PuppetMasterImpl;
 
 std::unique_ptr<StoryCommandExecutor> MakeProductionStoryCommandExecutor(
     DispatchStoryCommandExecutor::OperationContainerAccessor factory) {
-  std::map<StoryCommand::Tag,
-           std::unique_ptr<DispatchStoryCommandExecutor::CommandRunner>>
-      command_runners;
+  std::map<StoryCommand::Tag, std::unique_ptr<CommandRunner>> command_runners;
   // TODO(thatguy): Add all required command runners.
+  command_runners.emplace(StoryCommand::Tag::kSetLinkValue,
+                          new SetLinkValueCommandRunner());
 
   auto executor = std::make_unique<DispatchStoryCommandExecutor>(
       std::move(factory), std::move(command_runners));

@@ -18,7 +18,7 @@ namespace {
 class RunStoryCommandCall : public Operation<ExecuteResult> {
  public:
   RunStoryCommandCall(const char* const command_name,
-                      DispatchStoryCommandExecutor::CommandRunner* const runner,
+                      CommandRunner* const runner,
                       fidl::StringPtr story_id, StoryCommand command,
                       ResultCall done)
       : Operation(command_name, std::move(done), ""),
@@ -35,7 +35,7 @@ class RunStoryCommandCall : public Operation<ExecuteResult> {
 
   const fidl::StringPtr story_id_;
   StoryCommand command_;
-  DispatchStoryCommandExecutor::CommandRunner* runner_;
+  CommandRunner* runner_;
 };
 
 }  // namespace
@@ -140,8 +140,6 @@ void DispatchStoryCommandExecutor::ExecuteCommands(
   container->Add(new ExecuteStoryCommandsCall(
       this, std::move(story_id), std::move(commands), std::move(done)));
 }
-
-DispatchStoryCommandExecutor::CommandRunner::~CommandRunner() = default;
 
 }  // namespace modular
 }  // namespace fuchsia

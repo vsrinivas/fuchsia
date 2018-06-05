@@ -1,0 +1,47 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+group("unittests") {
+  testonly = true
+
+  deps = [
+    ":set_link_value_command_runner_unittest",
+  ]
+}
+
+source_set("command_runner") {
+  sources = [
+    "command_runner.h",
+    "command_runner.cc",
+  ]
+
+  public_deps = [
+    "//peridot/public/lib:fidl",
+  ]
+}
+
+source_set("set_link_value_command_runner") {
+  sources = [
+    "set_link_value_command_runner.cc",
+    "set_link_value_command_runner.h",
+  ]
+
+  deps = [
+    ":command_runner",
+    "//garnet/public/lib/fxl",
+  ]
+}
+
+source_set("set_link_value_command_runner_unittest") {
+  testonly = true
+
+  sources = [
+    "set_link_value_command_runner_unittest.cc",
+  ]
+
+  deps = [
+    ":set_link_value_command_runner",
+    "//garnet/public/lib/gtest",
+  ]
+}

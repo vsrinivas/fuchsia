@@ -8,6 +8,7 @@ group("unittests") {
   deps = [
     ":puppet_master_impl_unittest",
     ":dispatch_story_command_executor_unittest",
+    "//peridot/bin/user_runner/puppet_master/command_runners:unittests",
   ]
 }
 
@@ -64,6 +65,7 @@ source_set("dispatch_story_command_executor") {
 
   public_deps = [
     ":story_command_executor",
+    "//peridot/bin/user_runner/puppet_master/command_runners:command_runner",
     "//peridot/public/lib:fidl",
     "//peridot/public/lib/async/cpp:future",
     "//peridot/public/lib/async/cpp:operation",
@@ -94,5 +96,6 @@ source_set("make_production_impl") {
   deps = [
     ":puppet_master_impl",
     ":dispatch_story_command_executor",
+    "//peridot/bin/user_runner/puppet_master/command_runners:set_link_value_command_runner",
   ]
 }

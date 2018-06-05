@@ -18,7 +18,7 @@ namespace fuchsia {
 namespace modular {
 namespace {
 
-class TestCommandRunner : public DispatchStoryCommandExecutor::CommandRunner {
+class TestCommandRunner : public CommandRunner {
  public:
   using ExecuteFunc =
       std::function<ExecuteStatus(fidl::StringPtr, StoryCommand)>;
@@ -65,9 +65,7 @@ class DispatchStoryCommandExecutorTest : public gtest::TestWithLoop {
   }
 
   std::unique_ptr<StoryCommandExecutor> executor_;
-  std::map<StoryCommand::Tag,
-           std::unique_ptr<DispatchStoryCommandExecutor::CommandRunner>>
-      command_runners_;
+  std::map<StoryCommand::Tag, std::unique_ptr<CommandRunner>> command_runners_;
 };
 
 TEST_F(DispatchStoryCommandExecutorTest, InvalidStory) {

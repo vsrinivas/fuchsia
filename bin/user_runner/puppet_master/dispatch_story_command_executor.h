@@ -5,6 +5,7 @@
 #pragma once
 
 #include "lib/fidl/cpp/string.h"
+#include "peridot/bin/user_runner/puppet_master/command_runners/command_runner.h"
 #include "peridot/bin/user_runner/puppet_master/story_command_executor.h"
 
 namespace fuchsia {
@@ -17,7 +18,6 @@ class OperationContainer;
 // StoryCommand.
 class DispatchStoryCommandExecutor : public StoryCommandExecutor {
  public:
-  class CommandRunner;
   // Returns an OperationContainer* for a given |story_id|, or nullptr if
   // |story_id| is invalid. OperationContainer instances must outlive the time
   // between a call to ExecuteCommands(story_id, ...) until its |done| callback
@@ -45,14 +45,6 @@ class DispatchStoryCommandExecutor : public StoryCommandExecutor {
 
   // Lookup table from StoryCommand union tag to a human-readable string.
   const std::map<StoryCommand::Tag, const char*> story_command_tag_strings_;
-};
-
-class DispatchStoryCommandExecutor::CommandRunner {
- public:
-  virtual ~CommandRunner();
-
-  virtual void Execute(fidl::StringPtr story_id, StoryCommand command,
-                       std::function<void(ExecuteResult)> done) = 0;
 };
 
 }  // namespace modular
