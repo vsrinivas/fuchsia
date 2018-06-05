@@ -17,10 +17,11 @@ import (
 	"syscall/zx/zxwait"
 	"time"
 
+	"netstack/dns"
+
 	"app/context"
 	"fidl/fuchsia/devicesettings"
 
-	"github.com/google/netstack/dns"
 	"github.com/google/netstack/tcpip"
 	"github.com/google/netstack/tcpip/buffer"
 	"github.com/google/netstack/tcpip/header"
