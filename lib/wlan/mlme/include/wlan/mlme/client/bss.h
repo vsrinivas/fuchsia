@@ -99,7 +99,11 @@ class Bss : public fbl::RefCounted<Bss> {
     uint8_t ssid_[SsidElement::kMaxLen]{0};
     size_t ssid_len_{0};
     std::vector<uint8_t> supported_rates_{0};
-    uint8_t dsss_param_set_chan_;  // TODO(porce): Clarify where this information is to be used
+
+    // Conditionally present. See IEEE Std 802.11-2016, 9.3.3.3 Table 9-27
+    bool has_dsss_param_set_chan_ = false;
+    uint8_t dsss_param_set_chan_;
+
     std::string country_{""};
     std::unique_ptr<uint8_t[]> rsne_;
     size_t rsne_len_{0};
