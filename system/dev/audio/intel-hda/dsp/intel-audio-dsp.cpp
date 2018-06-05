@@ -541,28 +541,36 @@ void IntelAudioDsp::RunCore(uint8_t core_mask) {
 }
 
 void IntelAudioDsp::EnableInterrupts() {
-    REG_SET_BITS(&regs()->adspic, ADSP_REG_ADSPIC_IPC);
+    REG_SET_BITS(&regs()->adspic, ADSP_REG_ADSPIC_CLDMA | ADSP_REG_ADSPIC_IPC);
     REG_SET_BITS(&regs()->hipcctl, ADSP_REG_HIPCCTL_IPCTDIE | ADSP_REG_HIPCCTL_IPCTBIE);
 }
 
 void IntelAudioDsp::ProcessIrq() {
-    IpcMessage message(REG_RD(&regs()->hipct), REG_RD(&regs()->hipcte));
-    if (message.primary & ADSP_REG_HIPCT_BUSY) {
-        if (state_ != State::OPERATING) {
-            LOG(WARN, "Got IRQ when device is not operating (state %u)\n", to_underlying(state_));
-        } else {
-            // Process the incoming message
-            ipc_.ProcessIpc(message);
+    uint32_t adspis = REG_RD(&regs()->adspis);
+    if (adspis & ADSP_REG_ADSPIC_CLDMA) {
+        LOG(TRACE, "Got CLDMA irq\n");
+        uint32_t w = REG_RD(&regs()->cldma.stream.ctl_sts.w);
+        REG_WR(&regs()->cldma.stream.ctl_sts.w, w);
+    }
+    if (adspis & ADSP_REG_ADSPIC_IPC) {
+        IpcMessage message(REG_RD(&regs()->hipct), REG_RD(&regs()->hipcte));
+        if (message.primary & ADSP_REG_HIPCT_BUSY) {
+            if (state_ != State::OPERATING) {
+                LOG(WARN, "Got IRQ when device is not operating (state %u)\n", to_underlying(state_));
+            } else {
+                // Process the incoming message
+                ipc_.ProcessIpc(message);
+            }
+
+            // Ack the IRQ after reading mailboxes.
+            REG_SET_BITS(&regs()->hipct, ADSP_REG_HIPCT_BUSY);
         }
 
-        // Ack the IRQ after reading mailboxes.
-        REG_SET_BITS(&regs()->hipct, ADSP_REG_HIPCT_BUSY);
-    }
-
-    // Ack the IPC target done IRQ
-    uint32_t val = REG_RD(&regs()->hipcie);
-    if (val & ADSP_REG_HIPCIE_DONE) {
-        REG_WR(&regs()->hipcie, val);
+        // Ack the IPC target done IRQ
+        uint32_t val = REG_RD(&regs()->hipcie);
+        if (val & ADSP_REG_HIPCIE_DONE) {
+            REG_WR(&regs()->hipcie, val);
+        }
     }
 }
 

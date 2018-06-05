@@ -174,6 +174,7 @@ zx_status_t IntelDspCodeLoader::TransferFirmware(const zx::vmo& fw, size_t fw_si
 
     // Build BDL to transfer the firmware
     IntelHDABDLEntry* bdl = reinterpret_cast<IntelHDABDLEntry*>(bdl_cpu_mem_.start());
+    size_t remaining = stripped_size;
     uint32_t num_region;
     for (num_region = 0; num_region < region_count; num_region++) {
         const auto& r = pinned_fw.region(num_region);
@@ -184,7 +185,9 @@ zx_status_t IntelDspCodeLoader::TransferFirmware(const zx::vmo& fw, size_t fw_si
         }
 
         bdl[num_region].address = r.phys_addr;
-        bdl[num_region].length  = static_cast<uint32_t>(r.size);
+        bdl[num_region].length = (remaining > r.size) ? static_cast<uint32_t>(r.size) :
+                                                        static_cast<uint32_t>(remaining);
+        remaining -= bdl[num_region].length;
     }
 
     // Interrupt on the last BDL entry
@@ -198,11 +201,12 @@ zx_status_t IntelDspCodeLoader::TransferFirmware(const zx::vmo& fw, size_t fw_si
     REG_WR(&regs_->stream.ctl_sts.w, ctl_val);
     REG_WR(&regs_->stream.bdpl, static_cast<uint32_t>(bdl_phys & 0xFFFFFFFFu));
     REG_WR(&regs_->stream.bdpu, static_cast<uint32_t>((bdl_phys >> 32) & 0xFFFFFFFFu));
-    REG_WR(&regs_->stream.cbl, fw_size);
+    REG_WR(&regs_->stream.cbl, stripped_size);
     REG_WR(&regs_->stream.lvi, region_count - 1);
 
     REG_WR(&regs_->spbfctl, ADSP_REG_CL_SPBFCTL_SPIBE);
-    REG_WR(&regs_->spib, fw_size);
+    REG_WR(&regs_->spib, stripped_size);
+
     hw_wmb();
 
     // Start DMA
