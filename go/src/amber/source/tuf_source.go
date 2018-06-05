@@ -26,6 +26,10 @@ import (
 	"github.com/flynn/go-tuf/verify"
 )
 
+const (
+	configFileName = "config.json"
+)
+
 // ErrTufSrcNoHash is returned if the TUF entry doesn't have a SHA512 hash
 var ErrTufSrcNoHash = errors.New("tufsource: hash missing or wrong type")
 
@@ -275,12 +279,19 @@ func (f *TUFSource) Equals(o Source) bool {
 	}
 }
 
-func (s *TUFSource) Save(p string) error {
+func (s *TUFSource) Save() error {
+	// Ignore errors if the data dir already exists
+	err := os.MkdirAll(s.Store, os.ModePerm)
+	if err != nil {
+		return err
+	}
+
+	p := path.Join(s.Store, configFileName)
+
 	// We want to atomically write the config, so we'll first write it to a
 	// temp file, then do an atomic rename to overwrite the target.
 
-	dir, filename := path.Split(p)
-	f, err := ioutil.TempFile(dir, filename)
+	f, err := ioutil.TempFile(s.Store, configFileName)
 	if err != nil {
 		return err
 	}

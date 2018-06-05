@@ -91,7 +91,7 @@ func (t *testSrc) CheckLimit() uint64 {
 	return t.limit
 }
 
-func (t *testSrc) Save(p string) error {
+func (t *testSrc) Save() error {
 	return nil
 }
 

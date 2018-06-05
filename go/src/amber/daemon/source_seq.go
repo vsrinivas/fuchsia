@@ -87,6 +87,6 @@ func (k *SourceKeeper) CheckLimit() uint64 {
 	return k.src.CheckLimit()
 }
 
-func (k *SourceKeeper) Save(p string) error {
-	return k.src.Save(p)
+func (k *SourceKeeper) Save() error {
+	return k.src.Save()
 }

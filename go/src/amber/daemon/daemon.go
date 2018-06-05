@@ -152,8 +152,9 @@ func (d *Daemon) AddTUFSource(cfg *amber.SourceConfig) error {
 	}
 
 	// Save the config.
-	if err := d.saveSource(src); err != nil {
-		return nil
+	if err := src.Save(); err != nil {
+		log.Printf("failed to save TUF config: %v: %s", cfg.Id, err)
+		return err
 	}
 
 	// Add the source's blob repo. If not specified, assume the blobs are
@@ -182,21 +183,6 @@ func (d *Daemon) AddTUFSource(cfg *amber.SourceConfig) error {
 	}
 
 	log.Printf("added TUF source %s %v\n", cfg.Id, cfg.RepoUrl)
-
-	return nil
-}
-
-// Save the source config to the directory `${d.store}/${src.Id()}/config.json`.
-func (d *Daemon) saveSource(src source.Source) error {
-	// Ignore errors if the data dir already exists
-	dir := path.Join(d.store, url.PathEscape(src.Id()))
-	os.MkdirAll(dir, os.ModePerm)
-
-	p := path.Join(dir, "config.json")
-	if err := src.Save(p); err != nil {
-		log.Printf("failed to save TUF config: %v: %s", src.Id(), err)
-		return err
-	}
 
 	return nil
 }
