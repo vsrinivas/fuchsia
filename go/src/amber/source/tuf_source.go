@@ -35,12 +35,10 @@ var ErrTufSrcNoHash = errors.New("tufsource: hash missing or wrong type")
 
 // TUFSource wraps a TUF Client into the Source interface
 type TUFSource struct {
-	client     *tuf.Client
-	ratePeriod time.Duration
-	rateLimit  uint64
-	Store      string
-	keys       []*tuf_data.Key
-	Config     *amber.SourceConfig
+	client *tuf.Client
+	Store  string
+	keys   []*tuf_data.Key
+	Config *amber.SourceConfig
 }
 
 type merkle struct {
@@ -106,11 +104,9 @@ func NewTUFSource(store string, cfg *amber.SourceConfig) (*TUFSource, error) {
 	}
 
 	src := TUFSource{
-		ratePeriod: time.Millisecond * time.Duration(cfg.RatePeriod),
-		rateLimit:  cfg.RateLimit,
-		Store:      store,
-		keys:       keys,
-		Config:     cfg,
+		Store:  store,
+		keys:   keys,
+		Config: cfg,
 	}
 
 	return &src, nil
@@ -254,11 +250,11 @@ func (f *TUFSource) FetchPkg(pkg *pkg.Package) (*os.File, error) {
 func (f *TUFSource) CheckInterval() time.Duration {
 	// TODO(jmatt) figure out how to establish a real value from the
 	// Client we wrap
-	return f.ratePeriod
+	return time.Millisecond * time.Duration(f.Config.RatePeriod)
 }
 
 func (f *TUFSource) CheckLimit() uint64 {
-	return f.rateLimit
+	return f.Config.RateLimit
 }
 
 // Equals returns true if the Source passed in is a pointer to this instance
