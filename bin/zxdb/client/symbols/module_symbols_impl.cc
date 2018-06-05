@@ -62,11 +62,14 @@ Location ModuleSymbolsImpl::RelativeLocationForRelativeAddress(
 
 std::vector<uint64_t> ModuleSymbolsImpl::RelativeAddressesForFunction(
     const std::string& name) const {
-  const std::vector<llvm::DWARFDie>& entries = index_.FindFunctionExact(name);
+  const std::vector<ModuleSymbolIndexNode::DieRef>& entries =
+      index_.FindFunctionExact(name);
 
   std::vector<uint64_t> result;
   for (const auto& cur : entries) {
-    llvm::DWARFAddressRangesVector ranges = cur.getAddressRanges();
+    llvm::DWARFDie die = cur.ToDie(context_.get());
+
+    llvm::DWARFAddressRangesVector ranges = die.getAddressRanges();
     if (ranges.empty())
       continue;
 

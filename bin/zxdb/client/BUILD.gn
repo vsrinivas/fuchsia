@@ -74,12 +74,20 @@ static_library("common") {
   public = [
     "client_object.h",
     "err.h",
-    "host_utils.h",
+    "file_util.h",
+    "host_util.h",
+    "string_util.h",
   ]
   sources = [
     "client_object.cc",
     "err.cc",
-    "host_utils.cc",
+    "file_util.cc",
+    "host_util.cc",
+    "string_util.cc",
+  ]
+
+  public_deps = [
+    "//garnet/public/lib/fxl",
   ]
 }
 
@@ -88,7 +96,9 @@ source_set("tests") {
   sources = [
     "breakpoint_impl_unittest.cc",
     "disassembler_unittest.cc",
+    "file_util_unittest.cc",
     "memory_dump_unittest.cc",
+    "string_util_unittest.cc",
   ]
 
   deps = [

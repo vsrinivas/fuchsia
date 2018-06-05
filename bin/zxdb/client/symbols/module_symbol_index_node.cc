@@ -7,14 +7,20 @@
 #include <sstream>
 
 #include "garnet/public/lib/fxl/strings/string_printf.h"
+#include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFDie.h"
 
 namespace zxdb {
 
+llvm::DWARFDie ModuleSymbolIndexNode::DieRef::ToDie(
+    llvm::DWARFContext* context) const {
+  return context->getDIEForOffset(offset_);
+}
+
 ModuleSymbolIndexNode::ModuleSymbolIndexNode() = default;
 
-ModuleSymbolIndexNode::ModuleSymbolIndexNode(const llvm::DWARFDie& die) {
-  function_dies_.push_back(die);
+ModuleSymbolIndexNode::ModuleSymbolIndexNode(const DieRef& ref) {
+  function_dies_.emplace_back(ref);
 }
 
 ModuleSymbolIndexNode::~ModuleSymbolIndexNode() = default;
@@ -41,8 +47,8 @@ std::string ModuleSymbolIndexNode::AsString(int indent_level) const {
   return out.str();
 }
 
-void ModuleSymbolIndexNode::AddFunctionDie(const llvm::DWARFDie& die) {
-  function_dies_.emplace_back(die);
+void ModuleSymbolIndexNode::AddFunctionDie(const DieRef& ref) {
+  function_dies_.emplace_back(ref);
 }
 
 ModuleSymbolIndexNode* ModuleSymbolIndexNode::AddChild(std::string&& name) {

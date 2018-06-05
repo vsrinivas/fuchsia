@@ -4,7 +4,7 @@
 
 #include "garnet/bin/zxdb/client/symbols/test_symbol_module.h"
 
-#include "garnet/bin/zxdb/client/host_utils.h"
+#include "garnet/bin/zxdb/client/host_util.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFUnit.h"
 #include "llvm/Object/Binary.h"
@@ -42,14 +42,17 @@ std::string TestSymbolModule::GetTestFileName() {
 }
 
 bool TestSymbolModule::Load(std::string* err_msg) {
-  std::string filename = GetTestFileName();
+  return LoadSpecific(GetTestFileName(), err_msg);
+}
 
+bool TestSymbolModule::LoadSpecific(const std::string& path,
+                                    std::string* err_msg) {
   llvm::Expected<llvm::object::OwningBinary<llvm::object::Binary>> bin_or_err =
-      llvm::object::createBinary(filename);
+      llvm::object::createBinary(path);
   if (!bin_or_err) {
     auto err_str = llvm::toString(bin_or_err.takeError());
     *err_msg =
-        "Error loading symbols for \"" + filename + "\", LLVM said: " + err_str;
+        "Error loading symbols for \"" + path + "\", LLVM said: " + err_str;
     return false;
   }
 

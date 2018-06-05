@@ -11,6 +11,10 @@
 
 #include "llvm/DebugInfo/DWARF/DWARFDie.h"
 
+namespace llvm {
+class DWARFContext;
+}
+
 namespace zxdb {
 
 // One node in the ModuleSymbolIndex tree. One node represents the set of things
@@ -20,10 +24,32 @@ namespace zxdb {
 // many namespaces and functions.
 class ModuleSymbolIndexNode {
  public:
+  // A reference to a DIE that doesn't need the unit or the underlying
+  // llvm::DwarfDebugInfoEntry to be kept. This allows the discarding of the
+  // full parsed DIE structures after indexing. It can be converted back to a
+  // DIE, which will cause the DWARFUnit to be re-parsed.
+  //
+  // The offset stored in this structure is the offset from the beginning of
+  // the .debug_info section, which is the same as the offset stored in the
+  // llvm::DWARFDebugInfoEntry.
+  class DieRef {
+   public:
+    explicit DieRef() : offset_(0) {}
+    explicit DieRef(uint32_t offset) : offset_(offset) {}
+    explicit DieRef(const llvm::DWARFDie& die) : offset_(die.getOffset()) {}
+
+    uint32_t offset() const { return offset_; }
+
+    llvm::DWARFDie ToDie(llvm::DWARFContext* context) const;
+
+   private:
+    uint32_t offset_;
+  };
+
   ModuleSymbolIndexNode();
 
   // Makes a node pointing to one function.
-  ModuleSymbolIndexNode(const llvm::DWARFDie& die);
+  ModuleSymbolIndexNode(const DieRef& ref);
 
   ~ModuleSymbolIndexNode();
 
@@ -32,7 +58,7 @@ class ModuleSymbolIndexNode {
   const std::map<std::string, ModuleSymbolIndexNode>& sub() const {
     return sub_;
   }
-  const std::vector<llvm::DWARFDie>& function_dies() const {
+  const std::vector<DieRef>& function_dies() const {
     return function_dies_;
   }
 
@@ -48,7 +74,7 @@ class ModuleSymbolIndexNode {
   std::string AsString(int indent_level = 0) const;
 
   // Adds a DIE for a function with the name of this node.
-  void AddFunctionDie(const llvm::DWARFDie& die);
+  void AddFunctionDie(const DieRef& ref);
 
   // Adds a child node with the given name and returns it. If one already exits
   // with the name, returns the existing one.
@@ -71,7 +97,7 @@ class ModuleSymbolIndexNode {
   // For any functions matching this name, lists the DIEs that implement it.
   // If a function has the same name as a namespace, there could be sub_
   // entries as well as function_dies_.
-  std::vector<llvm::DWARFDie> function_dies_;
+  std::vector<DieRef> function_dies_;
 };
 
 }  // namespace zxdb

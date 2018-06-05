@@ -6,15 +6,16 @@
 
 #include <limits>
 
+#include "garnet/bin/zxdb/client/file_util.h"
+#include "garnet/bin/zxdb/client/string_util.h"
 #include "garnet/bin/zxdb/client/symbols/dwarf_die_decoder.h"
 #include "garnet/bin/zxdb/client/symbols/module_symbol_index_node.h"
 #include "garnet/public/lib/fxl/logging.h"
 #include "llvm/DebugInfo/DWARF/DWARFCompileUnit.h"
+#include "llvm/DebugInfo/DWARF/DWARFContext.h"
+#include "llvm/DebugInfo/DWARF/DWARFDebugLine.h"
 
 namespace zxdb {
-
-// Note: interesting file name extraction in dumpAttribute implementation in
-// DWARFDIE.cpp.
 
 namespace {
 
@@ -247,7 +248,7 @@ class FunctionImplIndexer {
     ModuleSymbolIndexNode* cur = root_;
     for (int i = static_cast<int>(components.size()) - 1; i >= 0; i--)
       cur = cur->AddChild(std::move(components[i]));
-    cur->AddFunctionDie(llvm::DWARFDie(unit_, impl.entry));
+    cur->AddFunctionDie(ModuleSymbolIndexNode::DieRef(impl.entry->getOffset()));
   }
 
  private:
@@ -278,10 +279,21 @@ void ModuleSymbolIndex::CreateIndex(
     llvm::DWARFUnitSection<llvm::DWARFCompileUnit>& units) {
   for (const std::unique_ptr<llvm::DWARFCompileUnit>& unit : units)
     IndexCompileUnit(context, unit.get());
+
+  IndexFileNames();
+
+  // TODO(brettw) LLVM creates a memory mapped file (the MemoryBuffer) to back
+  // the context. The indexing process pages it all in. We likely won't use
+  // most of it again so we could save substantial memory by somehow resetting
+  // the memory region so it will get paged back in as needed.
+  //
+  // The LLVM APIs don't seem to support exactly what we need. We may have to
+  // get creative in supplying our own MemoryBuffer to the llvm::object::Binary
+  // or closing and reopening everything (which may be slow).
 }
 
-const std::vector<llvm::DWARFDie>& ModuleSymbolIndex::FindFunctionExact(
-    const std::string& input) const {
+const std::vector<ModuleSymbolIndexNode::DieRef>&
+ModuleSymbolIndex::FindFunctionExact(const std::string& input) const {
   // Split the input on "::" which we'll traverse the tree with.
   //
   // TODO(brettw) this doesn't handle a lot of things like templates. By
@@ -306,7 +318,7 @@ const std::vector<llvm::DWARFDie>& ModuleSymbolIndex::FindFunctionExact(
 
     auto found = cur->sub().find(cur_name);
     if (found == cur->sub().end()) {
-      static std::vector<llvm::DWARFDie> empty_vector;
+      static std::vector<ModuleSymbolIndexNode::DieRef> empty_vector;
       return empty_vector;
     }
 
@@ -314,6 +326,37 @@ const std::vector<llvm::DWARFDie>& ModuleSymbolIndex::FindFunctionExact(
   }
 
   return cur->function_dies();
+}
+
+std::vector<const ModuleSymbolIndex::FilePair*>
+ModuleSymbolIndex::FindFileMatches(const std::string& name) const {
+  fxl::StringView name_last_comp = ExtractLastFileComponent(name);
+
+  std::vector<const FilePair*> result;
+
+  // Search all files whose last component matches (the input may contain more
+  // than one component).
+  FileNameIndex::const_iterator iter =
+      file_name_index_.lower_bound(name_last_comp);
+  while (iter != file_name_index_.end() && iter->first == name_last_comp) {
+    const FilePair& pair = *iter->second;
+    if (StringEndsWith(pair.first, name) &&
+        (pair.first.size() == name.size() ||
+         pair.first[pair.first.size() - name.size() - 1] == '/')) {
+      result.push_back(&pair);
+    }
+    ++iter;
+  }
+
+  return result;
+}
+
+void ModuleSymbolIndex::DumpFileIndex(std::ostream& out) {
+  for (const auto& name_pair : file_name_index_) {
+    const FilePair& full_pair = *name_pair.second;
+    out << name_pair.first << " -> " << full_pair.first << " -> "
+        << full_pair.second.size() << " units\n";
+  }
 }
 
 void ModuleSymbolIndex::IndexCompileUnit(llvm::DWARFContext* context,
@@ -329,6 +372,62 @@ void ModuleSymbolIndex::IndexCompileUnit(llvm::DWARFContext* context,
   FunctionImplIndexer indexer(context, unit, parent_indices, &root_);
   for (const FunctionImpl& impl : function_impls)
     indexer.AddFunction(impl);
+
+  IndexCompileUnitSourceFiles(context, unit);
+
+  // Clear the cached unit information. It will be holding a lot of parsed DIE
+  // information that likely isn't needed and it will get lazily repopulated if
+  // it is. This saves 7GB of memory for Chrome, for example.
+  //
+  // This is possible because the nodes store "DieRef" objects which contain
+  // the offset necessary to reconstitute the DIE, rather than references to
+  // any LLVM structures.
+  unit->clear();
+}
+
+void ModuleSymbolIndex::IndexCompileUnitSourceFiles(
+    llvm::DWARFContext* context, llvm::DWARFCompileUnit* unit) {
+  const llvm::DWARFDebugLine::LineTable* line_table =
+      context->getLineTableForUnit(unit);
+  const char* compilation_dir = unit->getCompilationDir();
+
+  // This table is the size of the file name table. Entries are set to 1 when
+  // we've added them to the index already.
+  std::vector<int> added_file;
+  added_file.resize(line_table->Prologue.FileNames.size(), 0);
+
+  // We don't want to just add all the files from the line table to the index.
+  // The line table will contain entries for every file referenced by the
+  // compilation unit, which includes declarations. We want only files that
+  // contribute code, which in practice is a tiny fraction of the total.
+  //
+  // To get this, iterate through the unit's row table and collect all
+  // referenced file names.
+  std::string file_name;
+  for (size_t i = 0; i < line_table->Rows.size(); i++) {
+    auto file_index = line_table->Rows[i].File;
+    // Watch out: file_index is 1-based.
+    if (!added_file[file_index - 1]) {
+      added_file[file_index - 1] = 1;
+      if (line_table->getFileNameByIndex(
+              file_index, compilation_dir,
+              llvm::DILineInfoSpecifier::FileLineInfoKind::AbsoluteFilePath,
+              file_name)) {
+        // TODO(brettw) the files here can contain relative components like
+        // "/foo/bar/../baz". We should canonicalize those (in a second pass
+        // once the unique names are known).
+        files_[file_name].push_back(unit);
+      }
+    }
+  }
+}
+
+void ModuleSymbolIndex::IndexFileNames() {
+  for (FileIndex::const_iterator iter = files_.begin(); iter != files_.end();
+       ++iter) {
+    fxl::StringView name = ExtractLastFileComponent(iter->first);
+    file_name_index_.insert(std::make_pair(name, iter));
+  }
 }
 
 }  // namespace zxdb
