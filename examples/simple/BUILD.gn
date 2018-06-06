@@ -3,9 +3,9 @@
 # found in the LICENSE file.
 
 import("//build/fidl/fidl.gni")
-import("//build/package.gni")
+import("//peridot/build/executable_package.gni")
 
-executable("simple_agent") {
+executable_package("simple_agent") {
   sources = [
     "simple_agent.cc",
     "simple_impl.cc",
@@ -21,17 +21,7 @@ executable("simple_agent") {
 
 }
 
-package("simple_module") {
-  deps = [
-    ":simple_module_bin",
-  ]
-
-  binary = "simple_module"
-}
-
-executable("simple_module_bin") {
-  output_name = "simple_module"
-
+executable_package("simple_module") {
   sources = [
     "simple_module.cc",
   ]

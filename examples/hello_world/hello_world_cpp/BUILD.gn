@@ -3,15 +3,9 @@
 # found in the LICENSE file.
 
 import("//build/fidl/fidl.gni")
+import("//peridot/build/executable_package.gni")
 
-group("hello_world_cpp") {
-  public_deps = [
-    ":hello_app_child",
-    ":hello_app_parent",
-  ]
-}
-
-executable("hello_app_parent") {
+executable_package("hello_app_parent") {
   deps = [
     ":interfaces",
     "//garnet/public/lib/app/cpp",
@@ -24,7 +18,7 @@ executable("hello_app_parent") {
   ]
 }
 
-executable("hello_app_child") {
+executable_package("hello_app_child") {
   deps = [
     ":interfaces",
     "//garnet/public/lib/app/cpp",

@@ -2,15 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-group("swap_cpp") {
-  public_deps = [
-    ":swap_module1",
-    ":swap_module2",
-    ":swap_recipe",
-  ]
-}
+import("//peridot/build/executable_package.gni")
 
-executable("swap_module1") {
+executable_package("swap_module1") {
   sources = [
     "swap_module1.cc",
   ]
@@ -21,7 +15,7 @@ executable("swap_module1") {
   ]
 }
 
-executable("swap_module2") {
+executable_package("swap_module2") {
   sources = [
     "swap_module2.cc",
   ]
@@ -49,7 +43,7 @@ source_set("module") {
   ]
 }
 
-executable("swap_recipe") {
+executable_package("swap_recipe") {
   sources = [
     "swap_recipe.cc",
   ]
