@@ -410,8 +410,10 @@ void UserRunnerImpl::InitializeMaxwellAndModular(
   AppConfig maxwell_config;
   maxwell_config.url = kMaxwellUrl;
   if (test_) {
+    // TODO(mesch): This path name is local to the maxwell package. It should
+    // not be exposed outside it at all. Presumably just pass --test.
     maxwell_config.args.push_back(
-        "--config=/system/data/maxwell/test_config.json");
+        "--config=/pkg/data/maxwell/test_config.json");
   }
 
   maxwell_app_ = std::make_unique<

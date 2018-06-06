@@ -2,21 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
+import("//peridot/build/executable_package.gni")
 
-package("maxwell") {
-  deprecated_system_image = true
-
-  deps = [
-    ":bin",
-  ]
-
-  binaries = [
-    {
-      name = "maxwell"
-    },
-  ]
-
+executable_package("maxwell") {
   resources = [
     {
       path = rebase_path("//peridot/bin/maxwell/resources/default_config.json")
@@ -27,10 +15,6 @@ package("maxwell") {
       dest = "maxwell/test_config.json"
     },
   ]
-}
-
-executable("bin") {
-  output_name = "maxwell"
 
   sources = [
     "maxwell_main.cc",

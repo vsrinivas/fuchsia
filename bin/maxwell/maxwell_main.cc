@@ -110,8 +110,8 @@ bool LoadAndValidateConfig(const std::string& path, Config* out) {
 }  // namespace maxwell
 
 const char kDefaultConfigPaths[] =
-    "/system/data/maxwell/default_config.json,"
-    "/system/data/maxwell/second_config.json";
+    "/pkg/data/maxwell/default_config.json,"
+    "/pkg/data/maxwell/second_config.json";
 const char kUsage[] = R"USAGE(%s --config=<files>
 
 <files> = comma-separated list of paths to JSON configuration files
