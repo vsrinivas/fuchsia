@@ -16,7 +16,7 @@ class WeakStubController;
 //
 // When a server receives a message that expects a response, the stub receives a
 // |PendingResponse| object that the implementation can use to reply to the
-// message. A given |PendingResponse| objects can be used to send a reply at
+// message. A given |PendingResponse| object can be used to send a reply at
 // most once.
 //
 // If the |StubController| that processed the original message is destroyed or
