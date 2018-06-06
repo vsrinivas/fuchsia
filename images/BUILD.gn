@@ -224,6 +224,11 @@ generate_manifest("system_image.manifest") {
   sources += [ pkgsvr_index ]
   args += [ "--entry=data/static_packages=" +
             rebase_path(pkgsvr_index, root_build_dir) ]
+
+  # Add pkgsvr, required to serve a system image package.
+  pkgsvr_binary_label = "//garnet/go/src/pmd:pkgsvr_bin"
+  deps += [ pkgsvr_binary_label ]
+  sources += [ get_label_info(pkgsvr_binary_label, "root_out_dir") + "/pkgsvr" ]
 }
 
 system_manifest_outputs = get_target_outputs(":system_image.manifest")
