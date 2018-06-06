@@ -240,7 +240,7 @@ EchoServerApp()
 The function calls `AddPublicService` once for each service it makes available
 to the other component (remember that each service exposes a single
 interface). The information is cached by `StartupContext` and used to decide
-which `InterfaceFactory<>` to use for additional incoming channels. A new
+which `Interface` factory to use for additional incoming channels. A new
 channel is created every time someone calls `ConnectToService()` on the other
 end.
 
