@@ -80,14 +80,16 @@ func (e ErrDaemon) Error() string {
 	return string(e)
 }
 
-func doTest(pxy *amber.ControlInterface) {
+func doTest(pxy *amber.ControlInterface) error {
 	v := int32(42)
 	resp, err := pxy.DoTest(v)
 	if err != nil {
 		fmt.Println(err)
-	} else {
-		fmt.Printf("Response: %s\n", resp)
+		return err
 	}
+
+	fmt.Printf("Response: %s\n", resp)
+	return nil
 }
 
 func connect(ctx *context.Context) (*amber.ControlInterface, amber.ControlInterfaceRequest) {
@@ -173,6 +175,45 @@ func addSource(a *amber.ControlInterface) error {
 	return err
 }
 
+func getUp(a *amber.ControlInterface) error {
+	// the amber daemon wants package names that start with "/", if not present
+	// add this as a prefix
+	if strings.Index(*name, "/") != 0 {
+		*name = fmt.Sprintf("/%s", *name)
+	}
+	if *pkgVersion == "" {
+		*pkgVersion = "0"
+	}
+	// combine name and 'version' here, because the FIDL interface is talking
+	// about an amber version as opposed to human version. the human version is
+	// part of the package name
+	*name = fmt.Sprintf("%s/%s", *name, *pkgVersion)
+	if *noWait {
+		blobID, err := a.GetUpdate(*name, nil, merkle)
+		if err != nil {
+			fmt.Printf("Error getting update %s\n", err)
+			return err
+		}
+
+		fmt.Printf("Wrote update to blob %s\n", *blobID)
+	} else {
+		var err error
+		for i := 0; i < 3; i++ {
+			err = getUpdateComplete(a, name, merkle)
+			if err == nil {
+				break
+			}
+			fmt.Printf("Update failed with error %s, retrying...\n", err)
+			time.Sleep(2 * time.Second)
+		}
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 func listSources(a *amber.ControlInterface) error {
 	srcs, err := a.ListSrcs()
 	if err != nil {
@@ -204,38 +245,13 @@ func main() {
 
 	switch os.Args[1] {
 	case "get_up":
-		// the amber daemon wants package names that start with "/", if not present
-		// add this as a prefix
-		if strings.Index(*name, "/") != 0 {
-			*name = fmt.Sprintf("/%s", *name)
-		}
-		if *pkgVersion == "" {
-			*pkgVersion = "0"
-		}
-		// combine name and 'version' here, because the FIDL interface is talking
-		// about an amber version as opposed to human version. the human version is
-		// part of the package name
-		*name = fmt.Sprintf("%s/%s", *name, *pkgVersion)
-		if *noWait {
-			blobID, err := proxy.GetUpdate(*name, nil, merkle)
-			if err == nil {
-				fmt.Printf("Wrote update to blob %s\n", *blobID)
-			} else {
-				fmt.Printf("Error getting update %s\n", err)
-			}
-		} else {
-			for i := 0; i < 3; i++ {
-				err := getUpdateComplete(proxy, name, merkle)
-				if err == nil {
-					break
-				}
-				fmt.Printf("Update failed with error %s, retrying...\n", err)
-				time.Sleep(2 * time.Second)
-			}
+		if err := getUp(proxy); err != nil {
+			os.Exit(1)
 		}
 	case "get_blob":
 		if err := proxy.GetBlob(*blobID); err != nil {
 			fmt.Printf("Error getting content blob %s\n", err)
+			os.Exit(1)
 		}
 	case "add_src":
 		if err := addSource(proxy); err != nil {
@@ -243,20 +259,35 @@ func main() {
 		}
 	case "rm_src":
 		fmt.Printf("%q not yet supported\n", os.Args[1])
+		os.Exit(1)
 	case "list_srcs":
 		if err := listSources(proxy); err != nil {
 			os.Exit(1)
 		}
 	case "check":
 		fmt.Printf("%q not yet supported\n", os.Args[1])
+		os.Exit(1)
 	case "test":
-		doTest(proxy)
+		if err := doTest(proxy); err != nil {
+			os.Exit(1)
+		}
 	case "system_update":
-		proxy.CheckForSystemUpdate()
+		configured, err := proxy.CheckForSystemUpdate()
+		if err != nil {
+			fmt.Printf("error checking for system update: %s\n", err)
+			os.Exit(1)
+		}
+
+		if configured {
+			fmt.Printf("triggered a system update check\n")
+		} else {
+			fmt.Printf("system update is not configured\n")
+		}
 	case "login":
 		device, err := proxy.Login(*name)
 		if err != nil {
-			log.Fatalf("failed to login: %s", err)
+			fmt.Printf("failed to login: %s", err)
+			os.Exit(1)
 		}
 		fmt.Printf("On your computer go to:\n\n\t%v\n\nand enter\n\n\t%v\n\n", device.VerificationUrl, device.UserCode)
 	default:
