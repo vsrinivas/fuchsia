@@ -2495,6 +2495,7 @@ zx_status_t ath10k_core_create(struct ath10k** ar_ptr, size_t priv_size,
     ar->vdev_setup_done = COMPLETION_INIT;
     ar->thermal.wmi_sync = COMPLETION_INIT;
     ar->bss_survey_done = COMPLETION_INIT;
+    ar->assoc_complete = COMPLETION_INIT;
 
 #if 0 // NEEDS PORTING
     INIT_DELAYED_WORK(&ar->scan.timeout, ath10k_scan_timeout_work);
@@ -2513,6 +2514,7 @@ zx_status_t ath10k_core_create(struct ath10k** ar_ptr, size_t priv_size,
     mtx_init(&ar->conf_mutex, mtx_plain);
     mtx_init(&ar->data_lock, mtx_plain);
     mtx_init(&ar->txqs_lock, mtx_plain);
+    mtx_init(&ar->assoc_lock, mtx_plain);
 
     list_initialize(&ar->txqs);
     list_initialize(&ar->peers);
@@ -2521,6 +2523,9 @@ zx_status_t ath10k_core_create(struct ath10k** ar_ptr, size_t priv_size,
     if (ret != ZX_OK) {
         goto err_free_mac;
     }
+
+    thrd_create_with_name(&ar->assoc_work, ath10k_mac_bss_assoc, ar, "ath10k_assoc_work");
+    thrd_detach(ar->assoc_work);
 
 #if 0 // NEEDS PORTING
     init_waitqueue_head(&ar->peer_mapping_wq);

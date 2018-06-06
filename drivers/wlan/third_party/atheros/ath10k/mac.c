@@ -2926,129 +2926,141 @@ invalid_data:
 }
 
 int ath10k_mac_bss_assoc(void* thrd_data) {
-    struct ath10k_msg_buf* buf = thrd_data;
-    struct ath10k* ar = buf->state->ar;
-    mtx_lock(&ar->conf_mutex);
-    struct ath10k_vif* arvif = &ar->arvif;
-    struct wmi_peer_assoc_complete_arg assoc_arg;
-    struct ieee80211_frame_header* frame_hdr;
-    struct ieee80211_assoc_resp* assoc_resp;
+    struct ath10k* ar = thrd_data;
     zx_status_t status;
-    int result = 0; // success
 
-    if (arvif->is_up) {
-        // TODO -- figure out why we can't disassociate
-        return 0;
+    while (1) {
+        completion_wait(&ar->assoc_complete, ZX_TIME_INFINITE);
+        mtx_lock(&ar->assoc_lock);
+        completion_reset(&ar->assoc_complete);
+
+        // assoc_frame is set by ath10k_wmi_event_mgmt_rx before signaling the
+        // assoc_complete completion.
+        struct ath10k_msg_buf* buf = ar->assoc_frame;
+        ZX_DEBUG_ASSERT(buf != NULL);
+        mtx_unlock(&ar->assoc_lock);
+
+        mtx_lock(&ar->conf_mutex);
+        struct ath10k_vif* arvif = &ar->arvif;
+        struct wmi_peer_assoc_complete_arg assoc_arg;
+        struct ieee80211_frame_header* frame_hdr;
+        struct ieee80211_assoc_resp* assoc_resp;
+
+        if (arvif->is_up) {
+            // TODO -- figure out why we can't disassociate
+            goto done;
 #if 0
-        ath10k_info("disassociating from bss\n");
-        status = ath10k_wmi_vdev_down(ar, arvif->vdev_id);
-        if (status != ZX_OK) {
-            ath10k_err("failed to disassociate from bss: %s\n", zx_status_get_string(status));
-            return status;
-        }
-        arvif->is_up = false;
+            ath10k_info("disassociating from bss\n");
+            status = ath10k_wmi_vdev_down(ar, arvif->vdev_id);
+            if (status != ZX_OK) {
+                ath10k_err("failed to disassociate from bss: %s\n", zx_status_get_string(status));
+                return status;
+            }
+            arvif->is_up = false;
 #endif
-    }
+        }
 
-    void* frame_ptr = ath10k_msg_buf_get_payload(buf) + buf->rx.frame_offset;
-    frame_hdr = frame_ptr;
-    assoc_resp = frame_ptr + sizeof(*frame_hdr);
-    arvif->aid = (assoc_resp->assoc_id & 0x3fff);
+        void* frame_ptr = ath10k_msg_buf_get_payload(buf) + buf->rx.frame_offset;
+        frame_hdr = frame_ptr;
+        assoc_resp = frame_ptr + sizeof(*frame_hdr);
+        arvif->aid = (assoc_resp->assoc_id & 0x3fff);
 
-    status = ath10k_wmi_peer_create(ar, arvif->vdev_id, frame_hdr->addr3, WMI_PEER_TYPE_BSS);
-    if (status != ZX_OK) {
-        ath10k_warn("failed to create peer: %s\n", zx_status_get_string(status));
-        result = 1;
-        goto done;
-    }
+        uint8_t* frame_bssid = ieee80211_get_bssid(frame_hdr);
+        status = ath10k_wmi_peer_create(ar, arvif->vdev_id, frame_bssid, WMI_PEER_TYPE_BSS);
+        if (status != ZX_OK) {
+            ath10k_warn("failed to create peer: %s\n", zx_status_get_string(status));
+            goto done;
+        }
 
-    size_t total_size = buf->rx.frame_size;
-    size_t rate_info_size = total_size - (sizeof(*frame_hdr) + sizeof(*assoc_resp));
+        size_t total_size = buf->rx.frame_size;
+        size_t rate_info_size = total_size - (sizeof(*frame_hdr) + sizeof(*assoc_resp));
 
-    if (assoc_resp->status != 0) {
-        result = 1;
-        goto done;
-    }
+        if (assoc_resp->status != 0) {
+            goto done;
+        }
 
-    memset(&assoc_arg, 0, sizeof(assoc_arg));
-    uint8_t* bssid = ieee80211_get_bssid(frame_hdr);
-    if (memcmp(bssid, arvif->bssid, ETH_ALEN)) {
-        char bssid_expected[ETH_ALEN * 3];
-        char bssid_actual[ETH_ALEN * 3];
-        ethaddr_sprintf(bssid_expected, arvif->bssid);
-        ethaddr_sprintf(bssid_actual, bssid);
-        ath10k_warn("expected to associate with %s but got response from %s - ignoring\n",
-                    bssid_expected, bssid_actual);
-        result = 1;
-        goto done;
-    }
-    memcpy(assoc_arg.addr, bssid, ETH_ALEN);
+        memset(&assoc_arg, 0, sizeof(assoc_arg));
+        if (memcmp(frame_bssid, arvif->bssid, ETH_ALEN)) {
+            char bssid_expected[ETH_ALEN * 3];
+            char bssid_actual[ETH_ALEN * 3];
+            ethaddr_sprintf(bssid_expected, arvif->bssid);
+            ethaddr_sprintf(bssid_actual, frame_bssid);
+            ath10k_warn("expected to associate with %s but got response from %s - ignoring\n",
+                        bssid_expected, bssid_actual);
+            goto done;
+        }
+        memcpy(assoc_arg.addr, frame_bssid, ETH_ALEN);
 
-    assoc_arg.vdev_id = arvif->vdev_id;
-    assoc_arg.peer_reassoc = false;
-    assoc_arg.peer_aid = arvif->aid;
-    assoc_arg.peer_flags |= ar->wmi.peer_flags->auth;
-    assoc_arg.peer_listen_intval = 1;
-    assoc_arg.peer_num_spatial_streams = 1;
-    assoc_arg.peer_caps = assoc_resp->capabilities;
+        assoc_arg.vdev_id = arvif->vdev_id;
+        assoc_arg.peer_reassoc = false;
+        assoc_arg.peer_aid = arvif->aid;
+        assoc_arg.peer_flags |= ar->wmi.peer_flags->auth;
+        assoc_arg.peer_listen_intval = 1;
+        assoc_arg.peer_num_spatial_streams = 1;
+        assoc_arg.peer_caps = assoc_resp->capabilities;
 
-    ath10k_mac_parse_assoc_resp(assoc_resp->info, rate_info_size, &assoc_arg);
+        ath10k_mac_parse_assoc_resp(assoc_resp->info, rate_info_size, &assoc_arg);
 
-    // TODO: Ideally we should look this up
-    assoc_arg.peer_phymode = ar->rx_channel.primary <= 14 ? MODE_11G : MODE_11A;
+        // TODO: Ideally we should look this up
+        assoc_arg.peer_phymode = ar->rx_channel.primary <= 14 ? MODE_11G : MODE_11A;
 
-    // TODO: set crypto flags (as per ath10k_peer_assoc_h_crypto
+        // TODO: set crypto flags (as per ath10k_peer_assoc_h_crypto
 
 #if 0 // TODO: HT
-    assoc_arg.peer_rate_caps
-    assoc_arg.peer_ht_rates
+        assoc_arg.peer_rate_caps
+        assoc_arg.peer_ht_rates
 #endif
 
 #if 0 // TODO: VHT
-    assoc_arg.peer_vht_caps
-    assoc_arg.peer_vht_rates
-    assoc_arg.peer_bw_rxnss_override
+        assoc_arg.peer_vht_caps
+        assoc_arg.peer_vht_rates
+        assoc_arg.peer_bw_rxnss_override
 #endif
 
-    char bssid_str[ETH_ALEN * 3];
-    ethaddr_sprintf(bssid_str, arvif->bssid);
+        char bssid_str[ETH_ALEN * 3];
+        ethaddr_sprintf(bssid_str, arvif->bssid);
 
-    status = ath10k_wmi_peer_assoc(ar, &assoc_arg);
-    if (status != ZX_OK) {
-        ath10k_warn("failed to run peer assoc for %pM vdev %i: %s\n",
-                    arvif->bssid, arvif->vdev_id, zx_status_get_string(status));
-        goto done;
-    }
+        status = ath10k_wmi_peer_assoc(ar, &assoc_arg);
+        if (status != ZX_OK) {
+            ath10k_warn("failed to run peer assoc for %pM vdev %i: %s\n",
+                        arvif->bssid, arvif->vdev_id, zx_status_get_string(status));
+            goto done;
+        }
 
-    ath10k_dbg(ar, ATH10K_DBG_MAC, "mac vdev %d up (associated) bssid %pM aid %d\n",
-               arvif->vdev_id, arvif->bssid, arvif->aid);
+        ath10k_dbg(ar, ATH10K_DBG_MAC, "mac vdev %d up (associated) bssid %pM aid %d\n",
+                   arvif->vdev_id, arvif->bssid, arvif->aid);
 
-    status = ath10k_wmi_vdev_up(ar, arvif->vdev_id, arvif->aid, arvif->bssid);
-    if (status != ZX_OK) {
-        ath10k_warn("failed to bring vdev %d up with aid: %d bssid: %s (%s)\n",
-                    arvif->vdev_id, arvif->aid, bssid_str, zx_status_get_string(status));
-    }
+        status = ath10k_wmi_vdev_up(ar, arvif->vdev_id, arvif->aid, arvif->bssid);
+        if (status != ZX_OK) {
+            ath10k_warn("failed to bring vdev %d up with aid: %d bssid: %s (%s)\n",
+                        arvif->vdev_id, arvif->aid, bssid_str, zx_status_get_string(status));
+        }
 
-    arvif->is_up = true;
+        arvif->is_up = true;
 
-    ath10k_info("successfully associated with bssid %s\n", bssid_str);
+        ath10k_info("successfully associated with bssid %s\n", bssid_str);
 
-    /* Workaround: Some firmware revisions (tested with qca6174
-     * WLAN.RM.2.0-00073) have buggy powersave state machine and must be
-     * poked with peer param command.
-     */
-    status = ath10k_wmi_peer_set_param(ar, arvif->vdev_id, arvif->bssid,
-                                       WMI_PEER_DUMMY_VAR, 1);
-    if (status != ZX_OK) {
-        ath10k_warn("failed to poke peer %pM param for ps workaround on vdev %i: %s\n",
-                    arvif->bssid, arvif->vdev_id, zx_status_get_string(status));
-        goto done;
-    }
+        /* Workaround: Some firmware revisions (tested with qca6174
+         * WLAN.RM.2.0-00073) have buggy powersave state machine and must be
+         * poked with peer param command.
+         */
+        status = ath10k_wmi_peer_set_param(ar, arvif->vdev_id, arvif->bssid,
+                                           WMI_PEER_DUMMY_VAR, 1);
+        if (status != ZX_OK) {
+            ath10k_warn("failed to poke peer %pM param for ps workaround on vdev %i: %s\n",
+                        arvif->bssid, arvif->vdev_id, zx_status_get_string(status));
+            goto done;
+        }
 
 done:
-    mtx_unlock(&ar->conf_mutex);
-    ath10k_msg_buf_free(buf);
-    return result;
+        mtx_unlock(&ar->conf_mutex);
+
+        mtx_lock(&ar->assoc_lock);
+        ath10k_msg_buf_free(buf);
+        ar->assoc_frame = NULL;
+        mtx_unlock(&ar->assoc_lock);
+    }
+    return 1; // We should never exit...
 }
 
 #if 0
@@ -3272,7 +3284,6 @@ static int ath10k_station_disassoc(struct ath10k* ar,
 
     return ret;
 }
-#endif // NEEDS PORTING
 
 /**************/
 /* Regulatory */
@@ -3361,7 +3372,6 @@ static zx_status_t ath10k_update_channel_list(struct ath10k* ar) {
     return ret;
 }
 
-#if 0 // NEEDS PORTING
 static enum wmi_dfs_region
 ath10k_mac_get_dfs_region(enum nl80211_dfs_regions dfs_region) {
     switch (dfs_region) {
@@ -3379,7 +3389,7 @@ ath10k_mac_get_dfs_region(enum nl80211_dfs_regions dfs_region) {
 #endif // NEEDS PORTING
 
 static void ath10k_regd_update(struct ath10k* ar) {
-    zx_status_t ret;
+//    zx_status_t ret;
 #if 0 // NEEDS PORTING
     struct reg_dmn_pair_mapping* regpair;
     enum wmi_dfs_region wmi_dfs_reg;
@@ -3388,10 +3398,12 @@ static void ath10k_regd_update(struct ath10k* ar) {
 
     ASSERT_MTX_HELD(&ar->conf_mutex);
 
+#if 0
     ret = ath10k_update_channel_list(ar);
     if (ret != ZX_OK) {
         ath10k_warn("failed to update channel list: %s\n", zx_status_get_string(ret));
     }
+#endif
 
 #if 0 // NEEDS PORTING
     regpair = ar->ath_common.regulatory.regpair;
