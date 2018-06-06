@@ -17,6 +17,7 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"path/filepath"
 	"strings"
 )
 
@@ -159,7 +160,7 @@ func processIdsFiles(idsFiles []string, options *Options) (gotErrors bool) {
 			visited[binaryPath] = true
 
 			// Generate the symbol file path.
-			symbolFile := path.Join(options.outdir, hashText(binaryPath)+".sym")
+			symbolFile := createSymbolFilepath(options.outdir, binaryPath)
 
 			// Record the mapping in the summary.
 			binaryToSymbolFile[binaryPath] = symbolFile
@@ -225,20 +226,32 @@ func processIdsFiles(idsFiles []string, options *Options) (gotErrors bool) {
 	return
 }
 
-// Returns a sha1 hash of the input text.
-func hashText(text string) string {
+// Creates the absolute path to the symbol file for the given binary.
+//
+// The returned path is generated as a subpath of parentDir.
+func createSymbolFilepath(parentDir string, binaryPath string) string {
+	// Create the symbole file basename as a hash of the path to the binary.
+	// This ensures that filenames are unique within the output directory.
 	hash := sha1.New()
-	n, err := hash.Write([]byte(text))
+	n, err := hash.Write([]byte(binaryPath))
 	if err != nil {
 		panic(err)
 	}
 	if n == 0 {
 		// Empty text should never be passed to this function and likely signifies
 		// an error in the input file. Panic here as well.
-		panic("0 bytes written for hash of input text '" + text + "'")
+		panic("0 bytes written for hash of input text '" + binaryPath + "'")
+	}
+	basename := hex.EncodeToString(hash.Sum(nil)) + ".sym"
+
+	// Generate the filepath as an subdirectory of the given parent directory.
+	absPath, err := filepath.Abs(path.Join(parentDir, basename))
+	if err != nil {
+		// Panic because if this fails once it's likely to keep failing.
+		panic(fmt.Sprintf("failed to get path to symbol file for %s: %v", binaryPath, err))
 	}
 
-	return hex.EncodeToString(hash.Sum(nil))
+	return absPath
 }
 
 // Logs an error message.
