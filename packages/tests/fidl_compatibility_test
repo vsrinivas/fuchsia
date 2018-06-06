@@ -1,0 +1,9 @@
+{
+    "imports": [
+        "garnet/packages/tests/fidl_compatibility_test_bin",
+        "garnet/packages/tests/fidl_compatibility_test_server_cpp"
+    ],
+    "packages": {
+        "fidl_compatibility_test": "//garnet/bin/fidl_compatibility_test:package"
+    }
+}
