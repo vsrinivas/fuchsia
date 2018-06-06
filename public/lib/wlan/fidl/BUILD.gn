@@ -16,7 +16,7 @@ fidl("mlme") {
 }
 
 fidl("service") {
-  name = "wlan_service"
+  name = "fuchsia.wlan.service"
   sources = [
     "wlan_service.fidl",
   ]

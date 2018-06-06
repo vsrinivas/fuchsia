@@ -83,7 +83,7 @@ void App::LaunchNetstack() {
 void App::LaunchWlanstack() {
   zx::channel h1, h2;
   zx::channel::create(0, &h1, &h2);
-  ConnectToService("wlan_service.Wlan", std::move(h1));
+  ConnectToService("fuchsia.wlan.service.Wlan", std::move(h1));
 }
 
 void App::RegisterSingleton(std::string service_name,

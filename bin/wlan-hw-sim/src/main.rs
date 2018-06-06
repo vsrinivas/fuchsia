@@ -12,7 +12,7 @@ extern crate fuchsia_async as async;
 extern crate fuchsia_zircon as zx;
 extern crate wlantap_client;
 extern crate fidl_fuchsia_wlan_device as wlan_device;
-extern crate fidl_wlan_service;
+extern crate fidl_fuchsia_wlan_service as fidl_wlan_service;
 extern crate fidl_fuchsia_wlan_tap as wlantap;
 extern crate futures;
 

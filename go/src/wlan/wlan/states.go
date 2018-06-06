@@ -6,7 +6,7 @@ package wlan
 
 import (
 	"fidl/fuchsia/wlan/mlme"
-	"fidl/wlan_service"
+	wlan_service "fidl/fuchsia/wlan/service"
 	"wlan/eapol"
 	"wlan/eapol/handshake"
 	"wlan/wlan/elements"
