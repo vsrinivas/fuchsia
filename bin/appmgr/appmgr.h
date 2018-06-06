@@ -16,10 +16,16 @@
 namespace fuchsia {
 namespace sys {
 
+struct AppmgrArgs {
+  zx_handle_t pa_directory_request;
+  std::string sysmgr_url;
+  fidl::VectorPtr<fidl::StringPtr> sysmgr_args;
+  bool run_virtual_console;
+};
+
 class Appmgr {
  public:
-  Appmgr(async_t* async, zx_handle_t pa_directory_request,
-         std::string sysmgr_url, fidl::VectorPtr<fidl::StringPtr> sysmgr_args);
+  Appmgr(async_t* async, AppmgrArgs args);
   ~Appmgr();
 
  private:

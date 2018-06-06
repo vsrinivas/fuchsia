@@ -10,15 +10,13 @@ namespace {
 constexpr char kRootLabel[] = "app";
 }  // namespace
 
-Appmgr::Appmgr(async_t* async, zx_handle_t pa_directory_request,
-               std::string sysmgr_url,
-               fidl::VectorPtr<fidl::StringPtr> sysmgr_args)
+Appmgr::Appmgr(async_t* async, AppmgrArgs args)
     : loader_vfs_(async),
       loader_dir_(fbl::AdoptRef(new fs::PseudoDir())),
       publish_vfs_(async),
       publish_dir_(fbl::AdoptRef(new fs::PseudoDir())),
-      sysmgr_url_(std::move(sysmgr_url)),
-      sysmgr_args_(std::move(sysmgr_args)) {
+      sysmgr_url_(std::move(args.sysmgr_url)),
+      sysmgr_args_(std::move(args.sysmgr_args)) {
   // 1. Serve loader.
   loader_dir_->AddEntry(
       Loader::Name_, fbl::AdoptRef(new fs::Service([this](zx::channel channel) {
@@ -38,17 +36,19 @@ Appmgr::Appmgr(async_t* async, zx_handle_t pa_directory_request,
     return;
   }
 
-  root_realm_ = std::make_unique<Realm>(nullptr, std::move(h1), kRootLabel);
+  RealmArgs realm_args{nullptr, std::move(h1), kRootLabel,
+                       args.run_virtual_console};
+  root_realm_ = std::make_unique<Realm>(std::move(realm_args));
 
   // 2. Publish outgoing directories.
-  if (pa_directory_request != ZX_HANDLE_INVALID) {
+  if (args.pa_directory_request != ZX_HANDLE_INVALID) {
     auto svc = fbl::AdoptRef(new fs::Service([this](zx::channel channel) {
       return root_realm_->BindSvc(std::move(channel));
     }));
     publish_dir_->AddEntry("hub", root_realm_->hub_dir());
     publish_dir_->AddEntry("svc", svc);
     publish_vfs_.ServeDirectory(publish_dir_,
-                                zx::channel(pa_directory_request));
+                                zx::channel(args.pa_directory_request));
   }
 
   // 3. Run sysmgr

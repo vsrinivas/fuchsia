@@ -30,9 +30,16 @@
 namespace fuchsia {
 namespace sys {
 
+struct RealmArgs {
+  Realm* parent;
+  zx::channel host_directory;
+  fidl::StringPtr label;
+  bool run_virtual_console;
+};
+
 class Realm {
  public:
-  Realm(Realm* parent, zx::channel host_directory, fidl::StringPtr label);
+  Realm(RealmArgs args);
   ~Realm();
 
   Realm* parent() const { return parent_; }
@@ -97,6 +104,7 @@ class Realm {
   LoaderPtr loader_;
   std::string label_;
   std::string koid_;
+  const bool run_virtual_console_;
 
   zx::job job_;
   zx::job job_for_child_;

@@ -5,10 +5,10 @@
 #include "garnet/bin/appmgr/realm.h"
 
 #include <fcntl.h>
-#include <lib/fdio/namespace.h>
-#include <lib/fdio/util.h>
 #include <launchpad/launchpad.h>
 #include <lib/async/default.h>
+#include <lib/fdio/namespace.h>
+#include <lib/fdio/util.h>
 #include <lib/zx/process.h>
 #include <unistd.h>
 #include <zircon/process.h>
@@ -158,8 +158,9 @@ LaunchType Classify(const zx::vmo& data, std::string* runner) {
 
 uint32_t Realm::next_numbered_label_ = 1u;
 
-Realm::Realm(Realm* parent, zx::channel host_directory, fidl::StringPtr label)
-    : parent_(parent),
+Realm::Realm(RealmArgs args)
+    : parent_(args.parent),
+      run_virtual_console_(args.run_virtual_console),
       default_namespace_(
           fxl::MakeRefCounted<Namespace>(nullptr, this, nullptr)),
       hub_(fbl::AdoptRef(new fs::PseudoDir())),
@@ -178,16 +179,17 @@ Realm::Realm(Realm* parent, zx::channel host_directory, fidl::StringPtr label)
   FXL_CHECK(job_.duplicate(kChildJobRights, &job_for_child_) == ZX_OK);
 
   koid_ = std::to_string(fsl::GetKoid(job_.get()));
-  if (label->size() == 0)
+  if (args.label->size() == 0)
     label_ = fxl::StringPrintf(kNumberedLabelFormat, next_numbered_label_++);
   else
-    label_ = label.get().substr(0, fuchsia::sys::kLabelMaxLength);
+    label_ = args.label.get().substr(0, fuchsia::sys::kLabelMaxLength);
 
   fsl::SetObjectName(job_.get(), label_);
   hub_.SetName(label_);
   hub_.SetJobId(koid_);
 
-  default_namespace_->services().set_backing_dir(std::move(host_directory));
+  default_namespace_->services().set_backing_dir(
+      std::move(args.host_directory));
 
   ServiceProviderPtr service_provider;
   default_namespace_->services().AddBinding(service_provider.NewRequest());
@@ -221,9 +223,9 @@ void Realm::CreateNestedJob(
     zx::channel host_directory, fidl::InterfaceRequest<Environment> environment,
     fidl::InterfaceRequest<EnvironmentController> controller_request,
     fidl::StringPtr label) {
+  RealmArgs args{this, std::move(host_directory), label, false};
   auto controller = std::make_unique<EnvironmentControllerImpl>(
-      std::move(controller_request),
-      std::make_unique<Realm>(this, std::move(host_directory), label));
+      std::move(controller_request), std::make_unique<Realm>(std::move(args)));
   Realm* child = controller->realm();
   child->AddBinding(std::move(environment));
 
@@ -239,7 +241,7 @@ void Realm::CreateNestedJob(
   child->default_namespace_->services().ServeDirectory(
       std::move(root_realm->svc_channel_server_));
 
-  if (!parent()) {
+  if (run_virtual_console_) {
     child->CreateShell("/boot/bin/run-vc");
     child->CreateShell("/boot/bin/run-vc");
     child->CreateShell("/boot/bin/run-vc");

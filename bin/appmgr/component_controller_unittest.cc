@@ -100,7 +100,8 @@ zx::process create_process() {
 }
 
 TEST_F(ComponentControllerTest, CreateAndKill) {
-  Realm realm(nullptr, zx::channel(), "test");
+  RealmArgs args{nullptr, zx::channel(), "test", false};
+  Realm realm(std::move(args));
   zx::process process = create_process();
   ASSERT_TRUE(process);
   auto koid = std::to_string(fsl::GetKoid(process.get()));
@@ -130,7 +131,8 @@ TEST_F(ComponentControllerTest, CreateAndKill) {
 }
 
 TEST_F(ComponentControllerTest, ControllerScope) {
-  Realm realm(nullptr, zx::channel(), "test");
+  RealmArgs args{nullptr, zx::channel(), "test", false};
+  Realm realm(std::move(args));
   zx::process process = create_process();
   ASSERT_TRUE(process);
   auto koid = std::to_string(fsl::GetKoid(process.get()));
@@ -158,7 +160,8 @@ TEST_F(ComponentControllerTest, ControllerScope) {
 }
 
 TEST_F(ComponentControllerTest, DetachController) {
-  Realm realm(nullptr, zx::channel(), "test");
+  RealmArgs args{nullptr, zx::channel(), "test", false};
+  Realm realm(std::move(args));
   zx::process process = create_process();
   ASSERT_TRUE(process);
   bool wait = false;
@@ -186,7 +189,8 @@ TEST_F(ComponentControllerTest, DetachController) {
 }
 
 TEST_F(ComponentControllerTest, Hub) {
-  Realm realm(nullptr, zx::channel(), "test");
+  RealmArgs args{nullptr, zx::channel(), "test", false};
+  Realm realm(std::move(args));
   zx::channel export_dir, export_dir_req;
   ASSERT_EQ(zx::channel::create(0, &export_dir, &export_dir_req), ZX_OK);
 
