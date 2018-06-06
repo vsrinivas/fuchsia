@@ -27,23 +27,26 @@ constexpr uint32_t kGetCommitsSeed = 2u;
 constexpr uint32_t kAddObjectSeed = 3u;
 constexpr uint32_t kGetObjectSeed = 4u;
 
-fidl::VectorPtr<uint8_t> PositionToToken(size_t position) {
+std::unique_ptr<cloud_provider::Token> PositionToToken(size_t position) {
   std::string bytes(
       std::string(reinterpret_cast<char*>(&position), sizeof(position)));
-  return convert::ToArray(bytes);
+  auto result = std::make_unique<cloud_provider::Token>();
+  result->opaque_id = convert::ToArray(bytes);
+  return result;
 }
 
-bool TokenToPosition(const fidl::VectorPtr<uint8_t>& token, size_t* result) {
-  if (token.is_null()) {
+bool TokenToPosition(const std::unique_ptr<cloud_provider::Token>& token,
+                     size_t* result) {
+  if (!token) {
     *result = 0u;
     return true;
   }
 
-  if (token->size() != sizeof(*result)) {
+  if (token->opaque_id->size() != sizeof(*result)) {
     return false;
   }
 
-  memcpy(result, token->data(), sizeof(*result));
+  memcpy(result, token->opaque_id->data(), sizeof(*result));
   return true;
 }
 
@@ -178,10 +181,12 @@ void FakePageCloud::AddCommits(fidl::VectorPtr<cloud_provider::Commit> commits,
   callback(cloud_provider::Status::OK);
 }
 
-void FakePageCloud::GetCommits(fidl::VectorPtr<uint8_t> min_position_token,
-                               GetCommitsCallback callback) {
-  if (MustReturnError(
-          GetVectorSignature(min_position_token, kGetCommitsSeed))) {
+void FakePageCloud::GetCommits(
+    std::unique_ptr<cloud_provider::Token> min_position_token,
+    GetCommitsCallback callback) {
+  if (MustReturnError(GetVectorSignature(
+          min_position_token ? min_position_token->opaque_id.Clone() : nullptr,
+          kGetCommitsSeed))) {
     callback(cloud_provider::Status::NETWORK_ERROR, nullptr, nullptr);
     return;
   }
@@ -195,7 +200,7 @@ void FakePageCloud::GetCommits(fidl::VectorPtr<uint8_t> min_position_token,
   for (size_t i = start; i < commits_->size(); i++) {
     result.push_back(fidl::Clone(commits_->at(i)));
   }
-  fidl::VectorPtr<uint8_t> token;
+  std::unique_ptr<cloud_provider::Token> token;
   if (!result->empty()) {
     // This will cause the last commit to be delivered again when the token is
     // used for the next GetCommits() call. This is allowed by the FIDL contract
@@ -239,7 +244,7 @@ void FakePageCloud::GetObject(fidl::VectorPtr<uint8_t> id,
 }
 
 void FakePageCloud::SetWatcher(
-    fidl::VectorPtr<uint8_t> min_position_token,
+    std::unique_ptr<cloud_provider::Token> min_position_token,
     fidl::InterfaceHandle<cloud_provider::PageCloudWatcher> watcher,
     SetWatcherCallback callback) {
   // TODO(qsr): Inject errors here when LE-438 is fixed.

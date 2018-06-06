@@ -22,6 +22,14 @@ namespace cloud_sync {
 
 namespace {
 
+// Creates a dummy continuation token.
+std::unique_ptr<cloud_provider::Token> MakeToken(
+    convert::ExtendedStringView token_id) {
+  auto token = std::make_unique<cloud_provider::Token>();
+  token->opaque_id = convert::ToArray(token_id);
+  return token;
+}
+
 // Fake implementation of storage::PageStorage. Injects the data that
 // CommitUpload asks about: page id and unsynced objects to be uploaded.
 // Registers the reported results of the upload: commits and objects marked as
@@ -84,10 +92,9 @@ TEST_F(BatchDownloadTest, AddCommit) {
   int error_calls = 0;
   fidl::VectorPtr<cloud_provider::Commit> commits;
   commits.push_back(MakeTestCommit(&encryption_service_, "id1", "content1"));
-  BatchDownload batch_download(&storage_, &encryption_service_,
-                               std::move(commits), convert::ToArray("42"),
-                               [&done_calls] { done_calls++; },
-                               [&error_calls] { error_calls++; });
+  BatchDownload batch_download(
+      &storage_, &encryption_service_, std::move(commits), MakeToken("42"),
+      [&done_calls] { done_calls++; }, [&error_calls] { error_calls++; });
   batch_download.Start();
 
   RunLoopUntilIdle();
@@ -104,10 +111,9 @@ TEST_F(BatchDownloadTest, AddMultipleCommits) {
   fidl::VectorPtr<cloud_provider::Commit> commits;
   commits.push_back(MakeTestCommit(&encryption_service_, "id1", "content1"));
   commits.push_back(MakeTestCommit(&encryption_service_, "id2", "content2"));
-  BatchDownload batch_download(&storage_, &encryption_service_,
-                               std::move(commits), convert::ToArray("43"),
-                               [&done_calls] { done_calls++; },
-                               [&error_calls] { error_calls++; });
+  BatchDownload batch_download(
+      &storage_, &encryption_service_, std::move(commits), MakeToken("43"),
+      [&done_calls] { done_calls++; }, [&error_calls] { error_calls++; });
   batch_download.Start();
 
   RunLoopUntilIdle();
@@ -124,10 +130,9 @@ TEST_F(BatchDownloadTest, FailToAddCommit) {
   int error_calls = 0;
   fidl::VectorPtr<cloud_provider::Commit> commits;
   commits.push_back(MakeTestCommit(&encryption_service_, "id1", "content1"));
-  BatchDownload batch_download(&storage_, &encryption_service_,
-                               std::move(commits), convert::ToArray("42"),
-                               [&done_calls] { done_calls++; },
-                               [&error_calls] { error_calls++; });
+  BatchDownload batch_download(
+      &storage_, &encryption_service_, std::move(commits), MakeToken("42"),
+      [&done_calls] { done_calls++; }, [&error_calls] { error_calls++; });
   storage_.should_fail_add_commit_from_sync = true;
   batch_download.Start();
 

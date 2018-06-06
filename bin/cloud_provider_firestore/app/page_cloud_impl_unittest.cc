@@ -95,7 +95,7 @@ TEST_F(PageCloudImplTest, GetCommits) {
   bool callback_called = false;
   auto status = cloud_provider::Status::INTERNAL_ERROR;
   fidl::VectorPtr<cloud_provider::Commit> commits;
-  fidl::VectorPtr<uint8_t> position_token;
+  std::unique_ptr<cloud_provider::Token> position_token;
   page_cloud_->GetCommits(
       nullptr, callback::Capture(callback::SetWhenCalled(&callback_called),
                                  &status, &commits, &position_token));
@@ -140,8 +140,8 @@ TEST_F(PageCloudImplTest, GetCommits) {
 
   EXPECT_TRUE(position_token);
   google::protobuf::Timestamp decoded_timestamp;
-  ASSERT_TRUE(
-      decoded_timestamp.ParseFromString(convert::ToString(position_token)));
+  ASSERT_TRUE(decoded_timestamp.ParseFromString(
+      convert::ToString(position_token->opaque_id)));
   EXPECT_EQ(100, decoded_timestamp.seconds());
   EXPECT_EQ(2, decoded_timestamp.nanos());
 }
@@ -155,8 +155,8 @@ TEST_F(PageCloudImplTest, GetCommitsQueryPositionToken) {
   timestamp.set_nanos(1);
   std::string position_token_str;
   ASSERT_TRUE(timestamp.SerializeToString(&position_token_str));
-  fidl::VectorPtr<uint8_t> position_token =
-      convert::ToArray(position_token_str);
+  auto position_token = std::make_unique<cloud_provider::Token>();
+  position_token->opaque_id = convert::ToArray(position_token_str);
   page_cloud_->GetCommits(
       std::move(position_token),
       callback::Capture(callback::SetWhenCalled(&callback_called), &status,

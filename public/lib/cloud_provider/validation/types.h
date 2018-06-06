@@ -22,6 +22,7 @@ using PageCloudPtr = fuchsia::ledger::cloud::PageCloudPtr;
 using PageCloudWatcher = fuchsia::ledger::cloud::PageCloudWatcher;
 using PageCloudWatcherPtr = fuchsia::ledger::cloud::PageCloudWatcherPtr;
 using Status = fuchsia::ledger::cloud::Status;
+using Token = fuchsia::ledger::cloud::Token;
 }  // namespace cloud_provider
 
 #endif  // PERIDOT_PUBLIC_LIB_CLOUD_PROVIDER_VALIDATION_TYPES_H_

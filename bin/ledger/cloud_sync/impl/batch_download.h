@@ -28,8 +28,8 @@ class BatchDownload {
   BatchDownload(storage::PageStorage* storage,
                 encryption::EncryptionService* encryption_service,
                 fidl::VectorPtr<cloud_provider::Commit> commits,
-                fidl::VectorPtr<uint8_t> position_token, fxl::Closure on_done,
-                fxl::Closure on_error);
+                std::unique_ptr<cloud_provider::Token> position_token,
+                fxl::Closure on_done, fxl::Closure on_error);
   ~BatchDownload();
 
   // Can be called only once.
@@ -41,7 +41,7 @@ class BatchDownload {
   storage::PageStorage* const storage_;
   encryption::EncryptionService* const encryption_service_;
   fidl::VectorPtr<cloud_provider::Commit> commits_;
-  fidl::VectorPtr<uint8_t> position_token_;
+  std::unique_ptr<cloud_provider::Token> position_token_;
   fxl::Closure on_done_;
   fxl::Closure on_error_;
   bool started_ = false;

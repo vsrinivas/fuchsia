@@ -84,14 +84,13 @@ class PageCloudTest : public ValidationTest, public PageCloudWatcher {
   }
 
   ::testing::AssertionResult GetLatestPositionToken(
-      PageCloudPtr* page_cloud,
-      fidl::VectorPtr<uint8_t>* token) {
+      PageCloudPtr* page_cloud, std::unique_ptr<cloud_provider::Token>* token) {
     Status status = Status::INTERNAL_ERROR;
     (*page_cloud)
         ->GetCommits(nullptr,
-                     [&status, &token](Status got_status,
-                                       fidl::VectorPtr<Commit> got_commits,
-                                       fidl::VectorPtr<uint8_t> got_token) {
+                     [&status, &token](
+                         Status got_status, fidl::VectorPtr<Commit> got_commits,
+                         std::unique_ptr<cloud_provider::Token> got_token) {
                        status = got_status;
                        *token = std::move(got_token);
                      });
@@ -111,7 +110,7 @@ class PageCloudTest : public ValidationTest, public PageCloudWatcher {
 
   int on_new_commits_calls_ = 0;
   fidl::VectorPtr<cloud_provider::Commit> on_new_commits_commits_;
-  fidl::VectorPtr<uint8_t> on_new_commits_position_token_;
+  std::unique_ptr<cloud_provider::Token> on_new_commits_position_token_;
   OnNewCommitsCallback on_new_commits_commits_callback_;
 
   cloud_provider::Status on_error_status_ = cloud_provider::Status::OK;
@@ -119,7 +118,7 @@ class PageCloudTest : public ValidationTest, public PageCloudWatcher {
  private:
   // PageCloudWatcher:
   void OnNewCommits(fidl::VectorPtr<cloud_provider::Commit> commits,
-                    fidl::VectorPtr<uint8_t> position_token,
+                    std::unique_ptr<cloud_provider::Token> position_token,
                     OnNewCommitsCallback callback) override {
     on_new_commits_calls_++;
     for (size_t i = 0; i < commits->size(); ++i) {
@@ -162,9 +161,9 @@ TEST_F(PageCloudTest, AddAndGetCommits) {
 
   commits.reset();
   page_cloud->GetCommits(
-      nullptr, [&status, &commits](Status got_status,
-                                   fidl::VectorPtr<Commit> got_commits,
-                                   fidl::VectorPtr<uint8_t> got_token) {
+      nullptr, [&status, &commits](
+                   Status got_status, fidl::VectorPtr<Commit> got_commits,
+                   std::unique_ptr<cloud_provider::Token> got_token) {
         status = got_status;
         commits = std::move(got_commits);
       });
@@ -190,7 +189,7 @@ TEST_F(PageCloudTest, GetCommitsByPositionToken) {
   EXPECT_EQ(Status::OK, status);
 
   // Retrieve the position token of the newest of the two (`id1`).
-  fidl::VectorPtr<uint8_t> token;
+  std::unique_ptr<cloud_provider::Token> token;
   ASSERT_TRUE(GetLatestPositionToken(&page_cloud, &token));
   EXPECT_TRUE(token);
 
@@ -206,9 +205,9 @@ TEST_F(PageCloudTest, GetCommitsByPositionToken) {
   commits.reset();
   page_cloud->GetCommits(
       std::move(token),
-      [&status, &commits, &token](Status got_status,
-                                  fidl::VectorPtr<Commit> got_commits,
-                                  fidl::VectorPtr<uint8_t> got_token) {
+      [&status, &commits, &token](
+          Status got_status, fidl::VectorPtr<Commit> got_commits,
+          std::unique_ptr<cloud_provider::Token> got_token) {
         status = got_status;
         commits = std::move(got_commits);
         token = std::move(got_token);
@@ -335,7 +334,7 @@ TEST_F(PageCloudTest, WatchWithPositionToken) {
   EXPECT_EQ(Status::OK, status);
 
   // Retrieve the position token of the newest of the two (`id1`).
-  fidl::VectorPtr<uint8_t> token;
+  std::unique_ptr<cloud_provider::Token> token;
   ASSERT_TRUE(GetLatestPositionToken(&page_cloud, &token));
   EXPECT_TRUE(token);
 

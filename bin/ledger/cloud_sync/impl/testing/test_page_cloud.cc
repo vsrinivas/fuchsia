@@ -45,8 +45,9 @@ void TestPageCloud::AddCommits(fidl::VectorPtr<cloud_provider::Commit> commits,
   callback(commit_status_to_return);
 }
 
-void TestPageCloud::GetCommits(fidl::VectorPtr<uint8_t> /*min_position_token*/,
-                               GetCommitsCallback callback) {
+void TestPageCloud::GetCommits(
+    std::unique_ptr<cloud_provider::Token> /*min_position_token*/,
+    GetCommitsCallback callback) {
   get_commits_calls++;
   callback(status_to_return, std::move(commits_to_return),
            std::move(position_token_to_return));
@@ -95,10 +96,10 @@ void TestPageCloud::GetObject(fidl::VectorPtr<uint8_t> id,
 }
 
 void TestPageCloud::SetWatcher(
-    fidl::VectorPtr<uint8_t> min_position_token,
+    std::unique_ptr<cloud_provider::Token> min_position_token,
     fidl::InterfaceHandle<cloud_provider::PageCloudWatcher> watcher,
     SetWatcherCallback callback) {
-  set_watcher_position_tokens.push_back(convert::ToString(min_position_token));
+  set_watcher_position_tokens.push_back(std::move(min_position_token));
   set_watcher = watcher.Bind();
   callback(status_to_return);
 }

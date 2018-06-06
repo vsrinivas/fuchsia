@@ -91,6 +91,11 @@ struct Commit {
   vector<uint8> data;
 };
 
+// A continuation token for paginated requests.
+struct Token {
+  vector<uint8> opaque_id;
+};
+
 // Handler for cloud sync of a single page.
 //
 // Implementation of this class manages a *commit log*, which is an append-only
@@ -119,8 +124,8 @@ interface PageCloud {
   // If the resulting |status| is |OK|, |commits| contains all matching commits
   // (might be empty) and |position_token| contains the position token of the
   // most recent of the |commits| (null if |commits| is empty).
-  2: GetCommits(vector<uint8>? min_position_token)
-      -> (Status @status, vector<Commit>? commits, vector<uint8>? position_token);
+  2: GetCommits(Token? min_position_token)
+      -> (Status @status, vector<Commit>? commits, Token? position_token);
 
   // Uploads the given object to the cloud under the given id.
   3: AddObject(vector<uint8> id, fuchsia.mem.Buffer buffer) -> (Status @status);
@@ -146,7 +151,7 @@ interface PageCloud {
   // addition to that, additional commits older than or at |min_position_token|
   // may be delivered to. If |min_position_token| is null, notifications for
   // all commits are delivered.
-  5: SetWatcher(vector<uint8>? min_position_token, PageCloudWatcher watcher)
+  5: SetWatcher(Token? min_position_token, PageCloudWatcher watcher)
       -> (Status @status);
 };
 
@@ -159,7 +164,7 @@ interface PageCloudWatcher {
   //
   // No subsequent calls are made until the client calls the callback of the
   // previous one.
-  1: OnNewCommits(vector<Commit> commits, vector<uint8> position_token) -> ();
+  1: OnNewCommits(vector<Commit> commits, Token? position_token) -> ();
 
   // Called when a new object is added to the cloud.
   //

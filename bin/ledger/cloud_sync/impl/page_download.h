@@ -51,7 +51,7 @@ class PageDownload : public cloud_provider::PageCloudWatcher,
  private:
   // cloud_provider::PageCloudWatcher:
   void OnNewCommits(fidl::VectorPtr<cloud_provider::Commit> commits,
-                    fidl::VectorPtr<uint8_t> position_token,
+                    std::unique_ptr<cloud_provider::Token> position_token,
                     OnNewCommitsCallback callback) override;
 
   void OnNewObject(fidl::VectorPtr<uint8_t> id, fuchsia::mem::Buffer data,
@@ -67,7 +67,7 @@ class PageDownload : public cloud_provider::PageCloudWatcher,
 
   // Downloads the given batch of commits.
   void DownloadBatch(fidl::VectorPtr<cloud_provider::Commit> commits,
-                     fidl::VectorPtr<uint8_t> position_token,
+                     std::unique_ptr<cloud_provider::Token> position_token,
                      fxl::Closure on_done);
 
   // storage::PageSyncDelegate:
@@ -116,7 +116,7 @@ class PageDownload : public cloud_provider::PageCloudWatcher,
   std::unique_ptr<BatchDownload> batch_download_;
   // Pending remote commits to download.
   fidl::VectorPtr<cloud_provider::Commit> commits_to_download_;
-  fidl::VectorPtr<uint8_t> position_token_;
+  std::unique_ptr<cloud_provider::Token> position_token_;
   // Container for in-progress datasource.
   callback::ManagedContainer managed_container_;
 

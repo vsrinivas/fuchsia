@@ -65,7 +65,7 @@ void PageDownload::StartDownload() {
   storage_->GetSyncMetadata(
       kTimestampKey,
       task_runner_->MakeScoped([this](storage::Status status,
-                                      std::string last_commit_ts) {
+                                      std::string last_commit_token_id) {
         // NOT_FOUND means that we haven't persisted the state yet, e.g. because
         // we haven't received any remote commits yet. In this case an empty
         // timestamp is the right value.
@@ -74,19 +74,20 @@ void PageDownload::StartDownload() {
           HandleDownloadCommitError("Failed to retrieve the sync metadata.");
           return;
         }
-        if (last_commit_ts.empty()) {
+        if (last_commit_token_id.empty()) {
           FXL_VLOG(1) << log_prefix_ << "starting sync for the first time, "
                       << "retrieving all remote commits";
         } else {
           // TODO(ppi): print the timestamp out as human-readable wall time.
           FXL_VLOG(1) << log_prefix_ << "starting sync again, "
                       << "retrieving commits uploaded after: "
-                      << last_commit_ts;
+                      << last_commit_token_id;
         }
 
-        fidl::VectorPtr<uint8_t> position_token;
-        if (!last_commit_ts.empty()) {
-          position_token = convert::ToArray(last_commit_ts);
+        std::unique_ptr<cloud_provider::Token> position_token;
+        if (!last_commit_token_id.empty()) {
+          position_token = std::make_unique<cloud_provider::Token>();
+          position_token->opaque_id = convert::ToArray(last_commit_token_id);
         }
         // TODO(ppi): handle pagination when the response is huge.
         (*page_cloud_)
@@ -94,7 +95,7 @@ void PageDownload::StartDownload() {
                 std::move(position_token),
                 [this](cloud_provider::Status cloud_status,
                        fidl::VectorPtr<cloud_provider::Commit> commits,
-                       fidl::VectorPtr<uint8_t> position_token) {
+                       std::unique_ptr<cloud_provider::Token> position_token) {
                   if (cloud_status != cloud_provider::Status::OK) {
                     // Fetching the remote commits failed, schedule a retry.
                     FXL_LOG(WARNING)
@@ -159,21 +160,23 @@ void PageDownload::SetRemoteWatcher(bool is_retry) {
              commit_state_ == DOWNLOAD_TEMPORARY_ERROR)
       << "Current state: " << commit_state_;
   SetCommitState(DOWNLOAD_SETTING_REMOTE_WATCHER);
-  // Retrieve the server-side timestamp of the last commit we received.
-  std::string last_commit_ts;
+  // Retrieve the server-side token of the last commit we received.
+  std::string last_commit_token_id;
   storage_->GetSyncMetadata(
       kTimestampKey,
-      task_runner_->MakeScoped([this, is_retry](storage::Status status,
-                                                std::string last_commit_ts) {
+      task_runner_->MakeScoped([this, is_retry](
+                                   storage::Status status,
+                                   std::string last_commit_token_id) {
         if (status != storage::Status::OK &&
             status != storage::Status::NOT_FOUND) {
           HandleDownloadCommitError("Failed to retrieve the sync metadata.");
           return;
         }
 
-        fidl::VectorPtr<uint8_t> position_token;
-        if (!last_commit_ts.empty()) {
-          position_token = convert::ToArray(last_commit_ts);
+        std::unique_ptr<cloud_provider::Token> position_token;
+        if (!last_commit_token_id.empty()) {
+          position_token = std::make_unique<cloud_provider::Token>();
+          position_token->opaque_id = convert::ToArray(last_commit_token_id);
         }
         cloud_provider::PageCloudWatcherPtr watcher;
         watcher_binding_.Bind(watcher.NewRequest());
@@ -195,9 +198,10 @@ void PageDownload::SetRemoteWatcher(bool is_retry) {
       }));
 }
 
-void PageDownload::OnNewCommits(fidl::VectorPtr<cloud_provider::Commit> commits,
-                                fidl::VectorPtr<uint8_t> position_token,
-                                OnNewCommitsCallback callback) {
+void PageDownload::OnNewCommits(
+    fidl::VectorPtr<cloud_provider::Commit> commits,
+    std::unique_ptr<cloud_provider::Token> position_token,
+    OnNewCommitsCallback callback) {
   if (batch_download_) {
     // If there is already a commit batch being downloaded, save the new commits
     // to be downloaded when it is done.
@@ -250,7 +254,8 @@ void PageDownload::OnError(cloud_provider::Status status) {
 
 void PageDownload::DownloadBatch(
     fidl::VectorPtr<cloud_provider::Commit> commits,
-    fidl::VectorPtr<uint8_t> position_token, fxl::Closure on_done) {
+    std::unique_ptr<cloud_provider::Token> position_token,
+    fxl::Closure on_done) {
   FXL_DCHECK(!batch_download_);
   batch_download_ = std::make_unique<BatchDownload>(
       storage_, encryption_service_, std::move(commits),

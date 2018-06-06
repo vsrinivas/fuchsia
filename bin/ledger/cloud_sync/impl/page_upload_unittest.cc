@@ -28,6 +28,14 @@
 namespace cloud_sync {
 namespace {
 
+// Creates a dummy continuation token.
+std::unique_ptr<cloud_provider::Token> MakeToken(
+    convert::ExtendedStringView token_id) {
+  auto token = std::make_unique<cloud_provider::Token>();
+  token->opaque_id = convert::ToArray(token_id);
+  return token;
+}
+
 class PageUploadTest : public gtest::TestWithMessageLoop,
                        public PageUpload::Delegate {
  public:
@@ -153,7 +161,7 @@ TEST_F(PageUploadTest, UploadExistingCommitsOnlyAfterBacklogDownload) {
       MakeTestCommit(&encryption_service_, "remote3", "content3"));
   page_cloud_.commits_to_return.push_back(
       MakeTestCommit(&encryption_service_, "remote4", "content4"));
-  page_cloud_.position_token_to_return = convert::ToArray("44");
+  page_cloud_.position_token_to_return = MakeToken("44");
 
   is_download_idle_ = false;
   bool upload_wait_remote_download = false;

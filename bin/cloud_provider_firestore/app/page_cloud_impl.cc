@@ -149,13 +149,14 @@ void PageCloudImpl::AddCommits(fidl::VectorPtr<cloud_provider::Commit> commits,
   });
 }
 
-void PageCloudImpl::GetCommits(fidl::VectorPtr<uint8_t> min_position_token,
-                               GetCommitsCallback callback) {
+void PageCloudImpl::GetCommits(
+    std::unique_ptr<cloud_provider::Token> min_position_token,
+    GetCommitsCallback callback) {
   std::unique_ptr<google::protobuf::Timestamp> timestamp_or_null;
   if (min_position_token) {
     timestamp_or_null = std::make_unique<google::protobuf::Timestamp>();
     if (!timestamp_or_null->ParseFromString(
-            convert::ToString(min_position_token))) {
+            convert::ToString(min_position_token->opaque_id))) {
       callback(cloud_provider::Status::ARGUMENT_ERROR, nullptr, nullptr);
       return;
     }
@@ -176,8 +177,8 @@ void PageCloudImpl::GetCommits(fidl::VectorPtr<uint8_t> min_position_token,
             return;
           }
 
-          fidl::VectorPtr<cloud_provider::Commit> commits(
-              static_cast<size_t>(0u));
+          fidl::VectorPtr<cloud_provider::Commit> commits =
+              fidl::VectorPtr<cloud_provider::Commit>::New(0);
           std::string timestamp;
 
           for (const auto& response : result) {
@@ -192,8 +193,13 @@ void PageCloudImpl::GetCommits(fidl::VectorPtr<uint8_t> min_position_token,
                       std::back_inserter(*commits));
           }
 
+          std::unique_ptr<cloud_provider::Token> token;
+          if (!commits->empty()) {
+            token = std::make_unique<cloud_provider::Token>();
+            token->opaque_id = convert::ToArray(timestamp);
+          }
           callback(cloud_provider::Status::OK, std::move(commits),
-                   convert::ToArray(timestamp));
+                   std::move(token));
         });
   });
 }
@@ -261,7 +267,7 @@ void PageCloudImpl::GetObject(fidl::VectorPtr<uint8_t> id,
 }
 
 void PageCloudImpl::SetWatcher(
-    fidl::VectorPtr<uint8_t> /*min_position_token*/,
+    std::unique_ptr<cloud_provider::Token> /*min_position_token*/,
     fidl::InterfaceHandle<cloud_provider::PageCloudWatcher> /*watcher*/,
     SetWatcherCallback callback) {
   FXL_NOTIMPLEMENTED();

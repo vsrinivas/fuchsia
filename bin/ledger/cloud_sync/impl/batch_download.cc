@@ -14,11 +14,12 @@
 
 namespace cloud_sync {
 
-BatchDownload::BatchDownload(storage::PageStorage* storage,
-                             encryption::EncryptionService* encryption_service,
-                             fidl::VectorPtr<cloud_provider::Commit> commits,
-                             fidl::VectorPtr<uint8_t> position_token,
-                             fxl::Closure on_done, fxl::Closure on_error)
+BatchDownload::BatchDownload(
+    storage::PageStorage* storage,
+    encryption::EncryptionService* encryption_service,
+    fidl::VectorPtr<cloud_provider::Commit> commits,
+    std::unique_ptr<cloud_provider::Token> position_token, fxl::Closure on_done,
+    fxl::Closure on_error)
     : storage_(storage),
       encryption_service_(encryption_service),
       commits_(std::move(commits)),
@@ -75,8 +76,14 @@ void BatchDownload::Start() {
 }
 
 void BatchDownload::UpdateTimestampAndQuit() {
+  if (!position_token_) {
+    // Can be deleted within.
+    on_done_();
+    return;
+  }
+
   storage_->SetSyncMetadata(
-      kTimestampKey, convert::ToString(position_token_),
+      kTimestampKey, convert::ToString(position_token_->opaque_id),
       callback::MakeScoped(weak_ptr_factory_.GetWeakPtr(),
                            [this](storage::Status status) {
                              if (status != storage::Status::OK) {

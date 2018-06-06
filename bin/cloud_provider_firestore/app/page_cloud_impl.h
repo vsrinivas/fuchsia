@@ -38,7 +38,7 @@ class PageCloudImpl : public cloud_provider::PageCloud {
   // cloud_provider::PageCloud:
   void AddCommits(fidl::VectorPtr<cloud_provider::Commit> commits,
                   AddCommitsCallback callback) override;
-  void GetCommits(fidl::VectorPtr<uint8_t> min_position_token,
+  void GetCommits(std::unique_ptr<cloud_provider::Token> min_position_token,
                   GetCommitsCallback callback) override;
   void AddObject(fidl::VectorPtr<uint8_t> id,
                  fuchsia::mem::Buffer data,
@@ -46,7 +46,7 @@ class PageCloudImpl : public cloud_provider::PageCloud {
   void GetObject(fidl::VectorPtr<uint8_t> id,
                  GetObjectCallback callback) override;
   void SetWatcher(
-      fidl::VectorPtr<uint8_t> min_position_token,
+      std::unique_ptr<cloud_provider::Token> min_position_token,
       fidl::InterfaceHandle<cloud_provider::PageCloudWatcher> watcher,
       SetWatcherCallback callback) override;
 

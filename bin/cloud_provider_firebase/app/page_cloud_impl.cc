@@ -13,9 +13,16 @@ namespace cloud_provider_firebase {
 
 namespace {
 
+std::string ToTimestamp(const std::unique_ptr<cloud_provider::Token>& token) {
+  if (!token) {
+    return "";
+  }
+  return convert::ToString(token->opaque_id);
+}
+
 void ConvertRecords(const std::vector<Record>& records,
                     fidl::VectorPtr<cloud_provider::Commit>* out_commits,
-                    fidl::VectorPtr<uint8_t>* out_token) {
+                    std::unique_ptr<cloud_provider::Token>* out_token) {
   fidl::VectorPtr<cloud_provider::Commit> commits;
   for (auto& record : records) {
     cloud_provider::Commit commit;
@@ -23,9 +30,10 @@ void ConvertRecords(const std::vector<Record>& records,
     commit.data = convert::ToArray(record.commit.content);
     commits.push_back(std::move(commit));
   }
-  fidl::VectorPtr<uint8_t> token;
+  std::unique_ptr<cloud_provider::Token> token;
   if (!records.empty()) {
-    token = convert::ToArray(records.back().timestamp);
+    token = std::make_unique<cloud_provider::Token>();
+    token->opaque_id = convert::ToArray(records.back().timestamp);
   }
 
   out_commits->swap(commits);
@@ -92,7 +100,7 @@ void PageCloudImpl::SendRemoteCommits() {
   }
 
   fidl::VectorPtr<cloud_provider::Commit> commits;
-  fidl::VectorPtr<uint8_t> position_token;
+  std::unique_ptr<cloud_provider::Token> position_token;
   ConvertRecords(records_, &commits, &position_token);
   waiting_for_remote_commits_ack_ = true;
   watcher_->OnNewCommits(std::move(commits), std::move(position_token), [this] {
@@ -126,38 +134,40 @@ void PageCloudImpl::AddCommits(fidl::VectorPtr<cloud_provider::Commit> commits,
   auth_token_requests_.emplace(request);
 }
 
-void PageCloudImpl::GetCommits(fidl::VectorPtr<uint8_t> min_position_token,
-                               GetCommitsCallback callback) {
-  auto request = firebase_auth_->GetFirebaseToken(fxl::MakeCopyable([
-    this, min_timestamp = convert::ToString(min_position_token), callback
-  ](firebase_auth::AuthStatus auth_status, std::string auth_token) mutable {
-    if (auth_status != firebase_auth::AuthStatus::OK) {
-      callback(cloud_provider::Status::AUTH_ERROR, nullptr, nullptr);
-      return;
-    }
+void PageCloudImpl::GetCommits(
+    std::unique_ptr<cloud_provider::Token> min_position_token,
+    GetCommitsCallback callback) {
+  auto request = firebase_auth_->GetFirebaseToken(
+      fxl::MakeCopyable([this, min_timestamp = ToTimestamp(min_position_token),
+                         callback](firebase_auth::AuthStatus auth_status,
+                                   std::string auth_token) mutable {
+        if (auth_status != firebase_auth::AuthStatus::OK) {
+          callback(cloud_provider::Status::AUTH_ERROR, nullptr, nullptr);
+          return;
+        }
 
-    handler_->GetCommits(
-        std::move(auth_token), min_timestamp,
-        [callback = std::move(callback)](Status status,
-                                         std::vector<Record> records) {
-          if (status != Status::OK) {
-            callback(ConvertInternalStatus(status), nullptr, nullptr);
-            return;
-          }
+        handler_->GetCommits(
+            std::move(auth_token), min_timestamp,
+            [callback = std::move(callback)](Status status,
+                                             std::vector<Record> records) {
+              if (status != Status::OK) {
+                callback(ConvertInternalStatus(status), nullptr, nullptr);
+                return;
+              }
 
-          fidl::VectorPtr<cloud_provider::Commit> commits;
-          if (records.empty()) {
-            callback(ConvertInternalStatus(status), std::move(commits),
-                     nullptr);
-            return;
-          }
+              fidl::VectorPtr<cloud_provider::Commit> commits;
+              if (records.empty()) {
+                callback(ConvertInternalStatus(status), std::move(commits),
+                         nullptr);
+                return;
+              }
 
-          fidl::VectorPtr<uint8_t> position_token;
-          ConvertRecords(records, &commits, &position_token);
-          callback(ConvertInternalStatus(status), std::move(commits),
-                   std::move(position_token));
-        });
-  }));
+              std::unique_ptr<cloud_provider::Token> position_token;
+              ConvertRecords(records, &commits, &position_token);
+              callback(ConvertInternalStatus(status), std::move(commits),
+                       std::move(position_token));
+            });
+      }));
   auth_token_requests_.emplace(request);
 }
 
@@ -207,7 +217,7 @@ void PageCloudImpl::GetObject(fidl::VectorPtr<uint8_t> id,
 }
 
 void PageCloudImpl::SetWatcher(
-    fidl::VectorPtr<uint8_t> min_position_token,
+    std::unique_ptr<cloud_provider::Token> min_position_token,
     fidl::InterfaceHandle<cloud_provider::PageCloudWatcher> watcher,
     SetWatcherCallback callback) {
   watcher_ = watcher.Bind();
@@ -217,20 +227,21 @@ void PageCloudImpl::SetWatcher(
     }
     waiting_for_remote_commits_ack_ = false;
   });
-  auto request = firebase_auth_->GetFirebaseToken([
-    this, min_timestamp = convert::ToString(min_position_token), callback
-  ](firebase_auth::AuthStatus auth_status, std::string auth_token) mutable {
-    if (auth_status != firebase_auth::AuthStatus::OK) {
-      watcher_->OnError(cloud_provider::Status::AUTH_ERROR);
-      callback(cloud_provider::Status::AUTH_ERROR);
-      return;
-    }
+  auto request = firebase_auth_->GetFirebaseToken(
+      [this, min_timestamp = ToTimestamp(min_position_token), callback](
+          firebase_auth::AuthStatus auth_status,
+          std::string auth_token) mutable {
+        if (auth_status != firebase_auth::AuthStatus::OK) {
+          watcher_->OnError(cloud_provider::Status::AUTH_ERROR);
+          callback(cloud_provider::Status::AUTH_ERROR);
+          return;
+        }
 
-    handler_->WatchCommits(std::move(auth_token), std::move(min_timestamp),
-                           this);
-    handler_watcher_set_ = true;
-    callback(cloud_provider::Status::OK);
-  });
+        handler_->WatchCommits(std::move(auth_token), std::move(min_timestamp),
+                               this);
+        handler_watcher_set_ = true;
+        callback(cloud_provider::Status::OK);
+      });
   auth_token_requests_.emplace(request);
 }
 

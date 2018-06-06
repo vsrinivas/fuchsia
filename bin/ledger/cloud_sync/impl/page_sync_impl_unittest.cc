@@ -30,6 +30,14 @@
 namespace cloud_sync {
 namespace {
 
+// Creates a dummy continuation token.
+std::unique_ptr<cloud_provider::Token> MakeToken(
+    convert::ExtendedStringView token_id) {
+  auto token = std::make_unique<cloud_provider::Token>();
+  token->opaque_id = convert::ToArray(token_id);
+  return token;
+}
+
 // Dummy implementation of a backoff policy, which always returns zero backoff
 // time.
 class TestBackoff : public backoff::Backoff {
@@ -198,8 +206,8 @@ TEST_F(PageSyncImplTest, NoUploadWhenDownloading) {
   ASSERT_TRUE(page_cloud_.set_watcher.is_bound());
   fidl::VectorPtr<cloud_provider::Commit> commits;
   commits.push_back(MakeTestCommit(&encryption_service_, "id1", "content1"));
-  page_cloud_.set_watcher->OnNewCommits(std::move(commits),
-                                        convert::ToArray("44"), [] {});
+  page_cloud_.set_watcher->OnNewCommits(std::move(commits), MakeToken("44"),
+                                        [] {});
   RunLoopUntilIdle();
   EXPECT_LT(0u, storage_.add_commits_from_sync_calls);
 
@@ -227,7 +235,7 @@ TEST_F(PageSyncImplTest, UploadExistingCommitsOnlyAfterBacklogDownload) {
       MakeTestCommit(&encryption_service_, "remote3", "content3"));
   page_cloud_.commits_to_return.push_back(
       MakeTestCommit(&encryption_service_, "remote4", "content4"));
-  page_cloud_.position_token_to_return = convert::ToArray("43");
+  page_cloud_.position_token_to_return = MakeToken("43");
   bool backlog_downloaded_called = false;
   page_sync_->SetOnBacklogDownloaded([this, &backlog_downloaded_called] {
     EXPECT_EQ(0u, page_cloud_.received_commits.size());
@@ -328,8 +336,8 @@ TEST_F(PageSyncImplTest, FailToStoreRemoteCommit) {
   commits.push_back(MakeTestCommit(&encryption_service_, "id1", "content1"));
   storage_.should_fail_add_commit_from_sync = true;
   EXPECT_EQ(0, error_callback_calls_);
-  page_cloud_.set_watcher->OnNewCommits(std::move(commits),
-                                        convert::ToArray("42"), [] {});
+  page_cloud_.set_watcher->OnNewCommits(std::move(commits), MakeToken("42"),
+                                        [] {});
 
   RunLoopUntilIdle();
   EXPECT_FALSE(page_cloud_.set_watcher.is_bound());
@@ -343,7 +351,7 @@ TEST_F(PageSyncImplTest, DownloadIdleCallback) {
       MakeTestCommit(&encryption_service_, "id1", "content1"));
   page_cloud_.commits_to_return.push_back(
       MakeTestCommit(&encryption_service_, "id2", "content2"));
-  page_cloud_.position_token_to_return = convert::ToArray("43");
+  page_cloud_.position_token_to_return = MakeToken("43");
 
   int on_idle_calls = 0;
   page_sync_->SetOnIdle([&on_idle_calls] { on_idle_calls++; });
@@ -362,8 +370,8 @@ TEST_F(PageSyncImplTest, DownloadIdleCallback) {
   // called again on completion.
   fidl::VectorPtr<cloud_provider::Commit> commits;
   commits.push_back(MakeTestCommit(&encryption_service_, "id3", "content3"));
-  page_cloud_.set_watcher->OnNewCommits(std::move(commits),
-                                        convert::ToArray("44"), [] {});
+  page_cloud_.set_watcher->OnNewCommits(std::move(commits), MakeToken("44"),
+                                        [] {});
   RunLoopUntilIdle();
   EXPECT_EQ(3u, storage_.received_commits.size());
   EXPECT_EQ(2, on_idle_calls);
@@ -417,8 +425,8 @@ TEST_F(PageSyncImplTest, UploadCommitAlreadyInCloud) {
   // Let's receive the same commit from the remote side.
   fidl::VectorPtr<cloud_provider::Commit> commits;
   commits.push_back(MakeTestCommit(&encryption_service_, "id1", "content1"));
-  page_cloud_.set_watcher->OnNewCommits(std::move(commits),
-                                        convert::ToArray("44"), [] {});
+  page_cloud_.set_watcher->OnNewCommits(std::move(commits), MakeToken("44"),
+                                        [] {});
   RunLoopUntilIdle();
   EXPECT_TRUE(page_sync_->IsIdle());
 
