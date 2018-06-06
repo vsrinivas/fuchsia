@@ -4,15 +4,15 @@
 
 Fuchsia tracing library and utilities require access to the `trace_manager`'s
 services in the environment, which is typically set up by the
-[boot sequence](https://fuchsia.googlesource.com/docs/+/master/boot_sequence.md).
+[boot sequence](https://fuchsia.googlesource.com/docs/+/master/the-book/boot_sequence.md).
 
 ## Capturing Traces From a Development Host
 
-Traces are captured using the `traceutil` host utility.  To record a trace
+Traces are captured using the `fx traceutil` host utility.  To record a trace
 simply run the following on your development host:
 
 ```{shell}
-traceutil record
+fx traceutil record
 ```
 
 This will:
@@ -23,17 +23,17 @@ This will:
 This is a great place to start an investigation.  It is also a good when you
 are reporting a bug and are unsure what data is useful.
 
-Some additional command line arguments to `traceutil record` include:
- * `--duration <time>`
+Some additional command line arguments to `fx traceutil record` include:
+ * `-duration <time>`
 
    Sets the duration of the trace in seconds.
 
- * `--target <hostname or ip address>`
+ * `-target <hostname or ip address>`
 
    Specifies one which target to take a trace.  Useful if you have multiple
    targets on the same network or network discovery is not working.
 
-For a complete list of command line arguments run `traceutil --help`.
+For a complete list of command line arguments run `fx traceutil record --help`.
 
 ## Capturing Traces From a Fuchsia Target
 
@@ -56,7 +56,7 @@ The easiest way to view a JSON trace is to embed it into an HTML file with
 Trace-Viewer.  To convert one or more JSON files run:
 
 ```{shell}
-traceutil convert FILE ...
+fx traceutil convert FILE ...
 ```
 
 The HTML files written are standalone and can be opened in the
