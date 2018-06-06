@@ -4,8 +4,8 @@
 
 #include "peridot/lib/fidl/app_client.h"
 
-#include <fdio/limits.h>
-#include <fdio/util.h>
+#include <lib/fdio/limits.h>
+#include <lib/fdio/util.h>
 #include <zircon/processargs.h>
 
 #include <fcntl.h>

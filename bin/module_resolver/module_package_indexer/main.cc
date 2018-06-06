@@ -7,7 +7,7 @@
 #include <vector>
 
 #include <dirent.h>
-#include <fdio/util.h>
+#include <lib/fdio/util.h>
 #include <glob.h>
 #include <sys/types.h>
 

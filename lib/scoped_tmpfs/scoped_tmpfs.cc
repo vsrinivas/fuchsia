@@ -4,7 +4,7 @@
 
 #include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"
 
-#include <fdio/util.h>
+#include <lib/fdio/util.h>
 #include <sync/completion.h>
 #include <zircon/processargs.h>
 
