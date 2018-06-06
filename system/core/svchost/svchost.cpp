@@ -112,7 +112,7 @@ static constexpr const char* deprecated_services[] = {
     // fdio name for Netstack. Will be removed with the new interfaces defined
     // in NET-863.
     "net.Netstack",
-    "power_manager.PowerManager",
+    "fuchsia.power.PowerManager",
     "wlan_service.Wlan",
     nullptr,
     // DO NOT ADD MORE ENTRIES TO THIS LIST.
