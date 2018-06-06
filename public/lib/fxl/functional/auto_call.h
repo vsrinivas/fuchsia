@@ -39,8 +39,11 @@ class AutoCall {
   }
 
   AutoCall& operator=(AutoCall&& c) {
+    call();
     call_ = std::move(c.call_);
+    active_ = c.active_;
     c.cancel();
+    return *this;
   }
 
   // no copy, assign, but allow move

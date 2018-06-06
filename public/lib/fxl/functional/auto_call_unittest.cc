@@ -4,6 +4,8 @@
 
 #include "lib/fxl/functional/auto_call.h"
 
+#include "lib/fxl/functional/closure.h"
+
 #include <memory>
 
 #include "gtest/gtest.h"
@@ -11,39 +13,148 @@
 namespace fxl {
 namespace {
 
-void reset_arg(int* p) { *p = 0; }
-
-void helper_basic(int* var_ptr) {
-  auto reset = fxl::MakeAutoCall([var_ptr]() { reset_arg(var_ptr); });
-}
+void incr_arg(int* p) { *p += 1; }
 
 TEST(AutoCallTest, Basic) {
-  int var = 42;
-  helper_basic(&var);
-  EXPECT_EQ(var, 0);
-}
-
-void helper_cancel(int* var_ptr) {
-  auto reset = fxl::MakeAutoCall([var_ptr]() { reset_arg(var_ptr); });
-  reset.cancel();
+  int var = 0;
+  {
+    auto do_incr = fxl::MakeAutoCall([&var]() { incr_arg(&var); });
+    EXPECT_EQ(var, 0);
+  }
+  EXPECT_EQ(var, 1);
 }
 
 TEST(AutoCallTest, Cancel) {
-  int var = 42;
-  helper_cancel(&var);
-  EXPECT_EQ(var, 42);
-}
-
-void helper_call(int* var_ptr) {
-  auto reset = fxl::MakeAutoCall([var_ptr]() { reset_arg(var_ptr); });
-  reset.call();
+  int var = 0;
+  {
+    auto do_incr = fxl::MakeAutoCall([&var]() { incr_arg(&var); });
+    EXPECT_EQ(var, 0);
+    do_incr.cancel();
+    EXPECT_EQ(var, 0);
+    // Once cancelled, call has no effect.
+    do_incr.call();
+    EXPECT_EQ(var, 0);
+  }
+  EXPECT_EQ(var, 0);
 }
 
 TEST(AutoCallTest, Call) {
-  int var = 42;
-  helper_call(&var);
+  int var = 0;
+  {
+    auto do_incr = fxl::MakeAutoCall([&var]() { incr_arg(&var); });
+    EXPECT_EQ(var, 0);
+    do_incr.call();
+    EXPECT_EQ(var, 1);
+    // Call is effective only once.
+    do_incr.call();
+    EXPECT_EQ(var, 1);
+  }
+  EXPECT_EQ(var, 1);
+}
+
+TEST(AutoCallTest, MoveConstructBasic) {
+  int var = 0;
+  {
+    auto do_incr = fxl::MakeAutoCall([&var]() { incr_arg(&var); });
+    auto do_incr2(std::move(do_incr));
+    EXPECT_EQ(var, 0);
+  }
+  EXPECT_EQ(var, 1);
+}
+
+TEST(AutoCallTest, MoveConstructFromCancelled) {
+  int var = 0;
+  {
+    auto do_incr = fxl::MakeAutoCall([&var]() { incr_arg(&var); });
+    do_incr.cancel();
+    auto do_incr2(std::move(do_incr));
+    EXPECT_EQ(var, 0);
+  }
   EXPECT_EQ(var, 0);
 }
+
+TEST(AutoCallTest, MoveConstructFromCalled) {
+  int var = 0;
+  {
+    auto do_incr = fxl::MakeAutoCall([&var]() { incr_arg(&var); });
+    EXPECT_EQ(var, 0);
+    do_incr.call();
+    EXPECT_EQ(var, 1);
+    // Must not be called again, since do_incr has triggered already.
+    auto do_incr2(std::move(do_incr));
+  }
+  EXPECT_EQ(var, 1);
+}
+
+TEST(AutoCallTest, MoveAssignBasic) {
+  int var1 = 0, var2 = 0;
+  {
+    auto do_incr =
+        fxl::MakeAutoCall<fxl::Closure>([&var1]() { incr_arg(&var1); });
+    EXPECT_EQ(var1, 0);
+    EXPECT_EQ(var2, 0);
+    auto do_incr2 =
+        fxl::MakeAutoCall<fxl::Closure>([&var2]() { incr_arg(&var2); });
+    EXPECT_EQ(var1, 0);
+    EXPECT_EQ(var2, 0);
+    // do_incr2 is moved-to, so its associated function is called.
+    do_incr2 = std::move(do_incr);
+    EXPECT_EQ(var1, 0);
+    EXPECT_EQ(var2, 1);
+  }
+  EXPECT_EQ(var1, 1);
+  EXPECT_EQ(var2, 1);
+}
+
+TEST(AutoCallTest, MoveAssignFromCancelled) {
+  int var1 = 0, var2 = 0;
+  {
+    auto do_incr =
+        fxl::MakeAutoCall<fxl::Closure>([&var1]() { incr_arg(&var1); });
+    EXPECT_EQ(var1, 0);
+    EXPECT_EQ(var2, 0);
+    auto do_incr2 =
+        fxl::MakeAutoCall<fxl::Closure>([&var2]() { incr_arg(&var2); });
+    EXPECT_EQ(var1, 0);
+    EXPECT_EQ(var2, 0);
+    do_incr.cancel();
+    EXPECT_EQ(var1, 0);
+    EXPECT_EQ(var2, 0);
+    // do_incr2 is moved-to, so its associated function is called.
+    do_incr2 = std::move(do_incr);
+    EXPECT_EQ(var1, 0);
+    EXPECT_EQ(var2, 1);
+  }
+  // do_incr was cancelled, this state is preserved by the move.
+  EXPECT_EQ(var1, 0);
+  EXPECT_EQ(var2, 1);
+}
+
+TEST(AutoCallTest, MoveAssignFromCalled) {
+  int var1 = 0, var2 = 0;
+  {
+    auto do_incr =
+        fxl::MakeAutoCall<fxl::Closure>([&var1]() { incr_arg(&var1); });
+    EXPECT_EQ(var1, 0);
+    EXPECT_EQ(var2, 0);
+    auto do_incr2 =
+        fxl::MakeAutoCall<fxl::Closure>([&var2]() { incr_arg(&var2); });
+    EXPECT_EQ(var1, 0);
+    EXPECT_EQ(var2, 0);
+    do_incr.call();
+    EXPECT_EQ(var1, 1);
+    EXPECT_EQ(var2, 0);
+    // do_incr2 is moved-to, so its associated function is called.
+    do_incr2 = std::move(do_incr);
+    EXPECT_EQ(var1, 1);
+    EXPECT_EQ(var2, 1);
+  }
+  // do_incr was called already, this state is preserved by the move.
+  EXPECT_EQ(var1, 1);
+  EXPECT_EQ(var2, 1);
+}
+
+
 
 }  // namespace
 }  // namespace fxl
