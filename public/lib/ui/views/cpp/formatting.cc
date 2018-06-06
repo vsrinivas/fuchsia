@@ -22,13 +22,7 @@ std::ostream& operator<<(std::ostream& os,
 
 std::ostream& operator<<(std::ostream& os,
                          const ::fuchsia::ui::views_v1::ViewProperties& value) {
-  return os << "{display_metrics=" << *value.display_metrics
-            << ", view_layout=" << *value.view_layout << "}";
-}
-
-std::ostream& operator<<(std::ostream& os,
-                         const ::fuchsia::ui::views_v1::DisplayMetrics& value) {
-  return os << "{device_pixel_ratio=" << value.device_pixel_ratio << "}";
+  return os << "{view_layout=" << *value.view_layout << "}";
 }
 
 std::ostream& operator<<(std::ostream& os,

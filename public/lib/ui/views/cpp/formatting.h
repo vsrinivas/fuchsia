@@ -23,8 +23,6 @@ std::ostream& operator<<(std::ostream& os,
 std::ostream& operator<<(std::ostream& os,
                          const ::fuchsia::ui::views_v1::ViewProperties& value);
 std::ostream& operator<<(std::ostream& os,
-                         const ::fuchsia::ui::views_v1::DisplayMetrics& value);
-std::ostream& operator<<(std::ostream& os,
                          const ::fuchsia::ui::views_v1::ViewLayout& value);
 
 }  // namespace views_v1

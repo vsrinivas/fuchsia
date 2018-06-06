@@ -174,9 +174,6 @@ TEST_F(ViewManagerTest, SetChildProperties) {
   tree_container->AddChild(parent_key, std::move(parent_view_owner));
 
   auto parent_view_properties = ::fuchsia::ui::views_v1::ViewProperties::New();
-  parent_view_properties->display_metrics =
-      ::fuchsia::ui::views_v1::DisplayMetrics::New();
-  parent_view_properties->display_metrics->device_pixel_ratio = 1.0;
   parent_view_properties->view_layout =
       ::fuchsia::ui::views_v1::ViewLayout::New();
   parent_view_properties->view_layout->size = fuchsia::math::Size::New();
@@ -217,9 +214,6 @@ TEST_F(ViewManagerTest, SetChildProperties) {
 
   auto view_properties = ::fuchsia::ui::views_v1::ViewProperties::New();
   view_properties->view_layout = ::fuchsia::ui::views_v1::ViewLayout::New();
-  view_properties->display_metrics =
-      ::fuchsia::ui::views_v1::DisplayMetrics::New();
-  view_properties->display_metrics->device_pixel_ratio = 1.0;
   view_properties->view_layout->size = fuchsia::math::Size::New();
   view_properties->view_layout->size->width = child_view_width;
   view_properties->view_layout->size->height = child_view_height;

@@ -112,7 +112,8 @@ Presentation::~Presentation() {}
 
 void Presentation::Present(
     ::fuchsia::ui::views_v1_token::ViewOwnerPtr view_owner,
-    fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> presentation_request,
+    fidl::InterfaceRequest<fuchsia::ui::policy::Presentation>
+        presentation_request,
     YieldCallback yield_callback, ShutdownCallback shutdown_callback) {
   FXL_DCHECK(view_owner);
   FXL_DCHECK(!display_model_initialized_);
@@ -133,7 +134,8 @@ void Presentation::Present(
 
 void Presentation::CreateViewTree(
     ::fuchsia::ui::views_v1_token::ViewOwnerPtr view_owner,
-    fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> presentation_request,
+    fidl::InterfaceRequest<fuchsia::ui::policy::Presentation>
+        presentation_request,
     fuchsia::ui::gfx::DisplayInfo display_info) {
   if (presentation_request) {
     presentation_binding_.Bind(std::move(presentation_request));
@@ -174,7 +176,8 @@ void Presentation::CreateViewTree(
   });
 
   // Create root view.
-  fidl::InterfaceHandle<::fuchsia::ui::views_v1_token::ViewOwner> root_view_owner;
+  fidl::InterfaceHandle<::fuchsia::ui::views_v1_token::ViewOwner>
+      root_view_owner;
   auto root_view_owner_request = root_view_owner.NewRequest();
   ::fuchsia::ui::views_v1::ViewListenerPtr root_view_listener;
   view_listener_binding_.Bind(root_view_listener.NewRequest());
@@ -197,8 +200,8 @@ void Presentation::CreateViewTree(
   root_container_->SetListener(std::move(view_container_listener));
   root_container_->AddChild(kContentViewKey, std::move(view_owner),
                             std::move(content_view_host_import_token_));
-  root_container_->SetChildProperties(kContentViewKey,
-                                      ::fuchsia::ui::views_v1::ViewProperties::New());
+  root_container_->SetChildProperties(
+      kContentViewKey, ::fuchsia::ui::views_v1::ViewProperties::New());
 
   PresentScene();
 }
@@ -362,13 +365,7 @@ bool Presentation::ApplyDisplayModelChanges(bool print_log) {
   display_rotation_current_ = display_rotation_desired_;
 
   auto root_properties = ::fuchsia::ui::views_v1::ViewProperties::New();
-  root_properties->display_metrics = ::fuchsia::ui::views_v1::DisplayMetrics::New();
 
-  // TODO(MZ-411): Handle densities that differ in x and y.
-  FXL_DCHECK(display_metrics_.x_scale_in_px_per_pp() ==
-             display_metrics_.y_scale_in_px_per_pp());
-  root_properties->display_metrics->device_pixel_ratio =
-      display_metrics_.x_scale_in_px_per_pp();
   root_properties->view_layout = ::fuchsia::ui::views_v1::ViewLayout::New();
   root_properties->view_layout->size.width = display_metrics_.width_in_pp();
   root_properties->view_layout->size.height = display_metrics_.height_in_pp();
@@ -514,7 +511,8 @@ void Presentation::GetPresentationMode(GetPresentationModeCallback callback) {
 }
 
 void Presentation::SetPresentationModeListener(
-    fidl::InterfaceHandle<fuchsia::ui::policy::PresentationModeListener> listener) {
+    fidl::InterfaceHandle<fuchsia::ui::policy::PresentationModeListener>
+        listener) {
   if (presentation_mode_listener_) {
     FXL_LOG(ERROR) << "Cannot listen to presentation mode; already listening.";
     return;
@@ -649,9 +647,9 @@ void Presentation::OnSensorEvent(uint32_t device_id,
   }
 }
 
-void Presentation::OnChildAttached(uint32_t child_key,
-                                   ::fuchsia::ui::views_v1::ViewInfo child_view_info,
-                                   OnChildAttachedCallback callback) {
+void Presentation::OnChildAttached(
+    uint32_t child_key, ::fuchsia::ui::views_v1::ViewInfo child_view_info,
+    OnChildAttachedCallback callback) {
   if (kContentViewKey == child_key) {
     FXL_VLOG(1) << "OnChildAttached(content): child_view_info="
                 << child_view_info;
@@ -671,8 +669,9 @@ void Presentation::OnChildUnavailable(uint32_t child_key,
   callback();
 }
 
-void Presentation::OnPropertiesChanged(::fuchsia::ui::views_v1::ViewProperties properties,
-                                       OnPropertiesChangedCallback callback) {
+void Presentation::OnPropertiesChanged(
+    ::fuchsia::ui::views_v1::ViewProperties properties,
+    OnPropertiesChangedCallback callback) {
   // Nothing to do right now.
   callback();
 }
