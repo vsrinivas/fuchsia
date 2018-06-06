@@ -4,7 +4,7 @@
 
 use async;
 use byteorder::{ByteOrder, LittleEndian};
-use fidl_logger::LogMessage;
+use fidl_fuchsia_logger::LogMessage;
 use futures::io;
 use futures::prelude::*;
 use libc::{c_char, c_int, uint32_t, uint64_t, uint8_t};

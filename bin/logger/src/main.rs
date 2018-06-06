@@ -7,7 +7,7 @@
 extern crate byteorder;
 extern crate failure;
 extern crate fidl;
-extern crate fidl_logger;
+extern crate fidl_fuchsia_logger;
 extern crate fuchsia_app as app;
 extern crate fuchsia_async as async;
 extern crate fuchsia_zircon as zx;
@@ -30,8 +30,9 @@ use std::collections::HashSet;
 use std::collections::{vec_deque, VecDeque};
 use std::sync::Arc;
 
-use fidl_logger::{Log, LogFilterOptions, LogImpl, LogLevelFilter, LogListenerMarker,
-                  LogListenerProxy, LogMarker, LogMessage, LogSink, LogSinkImpl, LogSinkMarker};
+use fidl_fuchsia_logger::{Log, LogFilterOptions, LogImpl, LogLevelFilter, LogListenerMarker,
+                          LogListenerProxy, LogMarker, LogMessage, LogSink, LogSinkImpl,
+                          LogSinkMarker};
 
 mod klogger;
 mod logger;
@@ -205,12 +206,12 @@ fn log_manager_helper(
 
     if let Some(mut options) = options {
         lw.tags = options.tags.drain(..).collect();
-        if lw.tags.len() > fidl_logger::MAX_TAGS as usize {
+        if lw.tags.len() > fidl_fuchsia_logger::MAX_TAGS as usize {
             // TODO: close channel
             return fok(());
         }
         for tag in &lw.tags {
-            if tag.len() > fidl_logger::MAX_TAG_LEN as usize {
+            if tag.len() > fidl_fuchsia_logger::MAX_TAG_LEN as usize {
                 // TODO: close channel
                 return fok(());
             }
@@ -233,7 +234,7 @@ fn log_manager_helper(
         let mut v = vec![];
         for (msg, s) in shared_members.log_msg_buffer.iter_mut() {
             if lw.filter(msg) {
-                if log_length + s > fidl_logger::MAX_LOG_MANY_SIZE as usize {
+                if log_length + s > fidl_fuchsia_logger::MAX_LOG_MANY_SIZE as usize {
                     if ListenerStatus::Fine != lw.send_filtered_logs(&mut v) {
                         return fok(());
                     }
@@ -361,8 +362,8 @@ mod tests {
     use std::sync::atomic::{AtomicBool, Ordering};
 
     use fidl::encoding2::OutOfLine;
-    use fidl_logger::{LogFilterOptions, LogListener, LogListenerImpl, LogListenerMarker, LogProxy,
-                      LogSinkProxy};
+    use fidl_fuchsia_logger::{LogFilterOptions, LogListener, LogListenerImpl, LogListenerMarker,
+                              LogProxy, LogSinkProxy};
     use logger::fx_log_packet_t;
     use zx::prelude::*;
 

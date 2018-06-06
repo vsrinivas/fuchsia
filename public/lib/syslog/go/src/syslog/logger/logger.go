@@ -18,7 +18,7 @@ import (
 
 	"app/context"
 
-	logger_fidl "fidl/logger"
+	logger_fidl "fidl/fuchsia/logger"
 )
 
 var (

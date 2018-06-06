@@ -6,7 +6,7 @@
 
 use async;
 use byteorder::{ByteOrder, LittleEndian};
-use fidl_logger::{self, LogMessage};
+use fidl_fuchsia_logger::{self, LogMessage};
 use futures::future::{loop_fn, Loop};
 use futures::FutureExt;
 use logger;
@@ -46,7 +46,7 @@ where
                 time: LittleEndian::read_u64(&buf[8..16]),
                 pid: LittleEndian::read_u64(&buf[16..24]),
                 tid: LittleEndian::read_u64(&buf[24..32]),
-                severity: fidl_logger::LogLevelFilter::Info as i32,
+                severity: fidl_fuchsia_logger::LogLevelFilter::Info as i32,
                 dropped_logs: 0,
                 tags: vec!["klog".to_string()],
                 msg: String::new(),

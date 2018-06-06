@@ -20,9 +20,9 @@ use std::env;
 use std::io::{stdout, Write};
 
 // Include the generated FIDL bindings for the `Logger` service.
-extern crate fidl_logger;
-use fidl_logger::{LogFilterOptions, LogLevelFilter, LogListener, LogListenerImpl,
-                  LogListenerMarker, LogMarker, LogMessage, MAX_TAGS, MAX_TAG_LEN};
+extern crate fidl_fuchsia_logger;
+use fidl_fuchsia_logger::{LogFilterOptions, LogLevelFilter, LogListener, LogListenerImpl,
+                          LogListenerMarker, LogMarker, LogMessage, MAX_TAGS, MAX_TAG_LEN};
 
 fn default_log_filter_options() -> LogFilterOptions {
     LogFilterOptions {
@@ -215,7 +215,7 @@ where
 {
     LogListenerImpl {
         state: listener,
-        on_open: |_,_| fok(()),
+        on_open: |_, _| fok(()),
         done: |_, _| {
             //ignore, only called when dump_logs is called.
             fok(())
@@ -238,8 +238,7 @@ fn run_log_listener(options: Option<&mut LogFilterOptions>) -> Result<(), Error>
     let logger = connect_to_service::<LogMarker>()?;
     let (log_listener_local, log_listener_remote) = zx::Channel::create()?;
     let log_listener_local = async::Channel::from_channel(log_listener_local)?;
-    let listener_ptr =
-        fidl::endpoints2::ClientEnd::<LogListenerMarker>::new(log_listener_remote);
+    let listener_ptr = fidl::endpoints2::ClientEnd::<LogListenerMarker>::new(log_listener_remote);
 
     let options = options.map(OutOfLine);
     logger
