@@ -124,6 +124,24 @@ func TestSupplicant_ResponseToValidMessage1(t *testing.T) {
 	}
 }
 
+// NET-927: Some routers don't zero the MIC of the first message of the handshake. Rather than refusing the handshake
+// the MIC should be zeroed by the Supplicant.
+func TestSupplicant_RespondToNonZeroedMic(t *testing.T) {
+	for _, table := range inputTables {
+		env := NewEnv(t, table)
+
+		// Send message 1 to Supplicant.
+		msg1 := env.CreateValidMessage1()
+		copy(msg1.MIC, []uint8{0xFF})
+		err := env.SendToTestSubject(msg1)
+		if err != nil {
+			t.Fatal("Unexpected error:", err)
+		}
+		msg2 := env.RetrieveTestSubjectResponse()
+		env.ExpectValidMessage2(msg1, msg2)
+	}
+}
+
 // Send two valid message 1 to the Supplicant. Supplicant's responses should be IEEE compliant and
 // the sNonce should not be reused.
 func TestSupplicant_ResponseToValidReplayedMessage1(t *testing.T) {
@@ -268,25 +286,6 @@ func TestSupplicant_DropInvalidMessage1(t *testing.T) {
 		resp = env.RetrieveTestSubjectResponse()
 		if err == nil || resp != nil {
 			t.Fatal("Expected error with MIC bit set")
-		}
-
-		// MIC bit and MIC set.
-		f = env.CreateValidMessage1()
-		f.Info = f.Info.Update(0, eapol.KeyInfo_MIC)
-		copy(f.MIC, []uint8{3}) // Note: We cannot compute a valid MIC since we have no key
-		err = env.SendToTestSubject(f)
-		resp = env.RetrieveTestSubjectResponse()
-		if err == nil || resp != nil {
-			t.Fatal("Expected error with MIC set")
-		}
-
-		// MIC set.
-		f = env.CreateValidMessage1()
-		copy(f.MIC, []uint8{3}) // Note: We cannot compute a valid MIC since we have no key
-		err = env.SendToTestSubject(f)
-		resp = env.RetrieveTestSubjectResponse()
-		if err == nil || resp != nil {
-			t.Fatal("Expected error with MIC set")
 		}
 
 		// Secure bit set.

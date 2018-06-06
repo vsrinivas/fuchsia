@@ -371,7 +371,9 @@ func (hs *FourWay) isIntegrous(f *eapol.KeyFrame) (bool, error) {
 	}
 	// IEEE Std 802.11-2016, 12.7.6.2
 	if isFirstMsg && !isZero(f.MIC[:]) {
-		return false, fmt.Errorf("invalid MIC, must be zero")
+		// Some routers don't zero the MIC in the first message of the handshake. Rather than refusing the
+		// handshake entirely, fix the glitch ourselves (NET-927).
+		f.MIC = make([]byte, len(f.MIC))
 	}
 
 	// IEEE Std 802.11-2016, 12.7.2 b.8) & b.9)
