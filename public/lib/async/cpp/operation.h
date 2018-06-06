@@ -158,14 +158,6 @@ class OperationBase {
     observer_ = std::move(observer);
   }
 
- protected:
-  // |trace_name| and |trace_info| are used to annotate performance traces.
-  // |trace_name| must outlive *this.
-  OperationBase(const char* trace_name, std::string trace_info);
-
-  // Useful in log messages.
-  const char* trace_name() const { return trace_name_; }
-
   // Needed to guard callbacks to methods on FIDL pointers that are not owned by
   // this Operation instance.
   //
@@ -176,6 +168,14 @@ class OperationBase {
   // invoked after the Operation instance was destroyed, if the FIDL pointer
   // lives longer.
   fxl::WeakPtr<OperationBase> GetWeakPtr();
+
+ protected:
+  // |trace_name| and |trace_info| are used to annotate performance traces.
+  // |trace_name| must outlive *this.
+  OperationBase(const char* trace_name, std::string trace_info);
+
+  // Useful in log messages.
+  const char* trace_name() const { return trace_name_; }
 
   class FlowTokenBase;
 
@@ -443,12 +443,13 @@ class FutureOperation : public Operation<Args...> {
   FXL_DISALLOW_COPY_AND_ASSIGN(FutureOperation);
 };
 
+// EXPERIMENTAL
 // This is useful to glue a FIDL call that expects its result as a callback
 // with a Future<>, but have the business logic of the Future<> run on an
 // OperationContainer.
 //
 // Usage:
-// void MyFidlCall(args..., MyFidlCallResult) {
+// void MyFidlCall(args..., MyFidlCallResult result_call) {
 //   auto on_run = Future<>::Create();
 //   auto done = on_run->Map(...)->Then(...);
 //   operation_container.Add(WrapFutureAsOperation(on_run, done, result_call,
@@ -462,6 +463,69 @@ OperationBase* WrapFutureAsOperation(
   return new FutureOperation<ResultArgs...>(trace_name.c_str(),
                                             std::move(on_run), std::move(done),
                                             std::move(result_call));
+}
+
+template <typename... Args>
+class FutureOperation2 : public Operation<Args...> {
+ public:
+  using ResultCall = std::function<void(Args...)>;
+  using RunOpCall = std::function<FuturePtr<Args...>(OperationBase*)>;
+
+  FutureOperation2(const char* trace_name, RunOpCall run_op, ResultCall done)
+      : Operation<Args...>(trace_name, std::move(done)),
+        run_op_(run_op) {}
+
+ private:
+  // |OperationBase|
+  void Run() {
+    // FuturePtr is a shared ptr, so the Then() callback is not necessarily
+    // cancelled by the destructor of this Operation instance. Hence the
+    // callback must be protected against invocation after delete of this.
+    run_op_(this)->WeakThen(this->GetWeakPtr(), [this](Args&&... args) {
+      this->Done(std::forward<Args>(args)...);
+    });
+  }
+
+  RunOpCall run_op_;
+
+  FXL_DISALLOW_COPY_AND_ASSIGN(FutureOperation2);
+};
+
+// EXPERIMENTAL
+// Glue code to define operations where the body of the operation is defined
+// inline to where the operation instance is created. It is an alternative to
+// WrapFutureAsOperation.
+//
+// The body of the operation is defined as a callback, and is expected to return
+// a Future<> that is completed when the operation is finished. If the Future<>
+// is completed with values, those values are used as the result of the
+// Operation.
+//
+// Usage:
+// void MyFidlCall(args..., MyFidlCallResult result_call) {
+//   operation_container.Add(NewCallbackOperation(
+//      "MyFidlService::MyFidlCall",
+//      [this] (OperationBase* op) {
+//        // Use |op->GetWeakPtr()| to guard any async calls.
+//        auto f = Future<>::Create();
+//
+//        DoSomethingAsync(f->Completer());
+//
+//        f->WeakMap(op->GetWeakPtr(), [] (int do_something_result) {
+//          return do_something_result * 2;
+//        });
+//
+//        return f;
+//      },
+//      result_call);
+// }
+template <typename... ResultArgs>
+OperationBase* NewCallbackOperation(
+    const char* trace_name,
+    typename FutureOperation2<ResultArgs...>::RunOpCall run,
+    typename FutureOperation2<ResultArgs...>::ResultCall done) {
+  return new FutureOperation2<ResultArgs...>(
+      trace_name, std::move(run), std::move(done));
 }
 
 // An operation which immediately calls its result callback. This is useful for

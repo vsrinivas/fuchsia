@@ -131,30 +131,28 @@ FuturePtr<fidl::StringPtr, fuchsia::ledger::PageId> SessionStorage::CreateStory(
 }
 
 FuturePtr<> SessionStorage::DeleteStory(fidl::StringPtr story_id) {
-  auto on_run = Future<>::Create("SessionStorage.DeleteStory.on_run");
-  auto done = on_run->AsyncMap([this, story_id] {
-    auto deleted = Future<>::Create("SessionStorage.DeleteStory.deleted");
-    page()->Delete(to_array(StoryIdToLedgerKey(story_id)),
-                   [this, deleted](fuchsia::ledger::Status status) {
-                     // Deleting a key that doesn't exist is OK, not
-                     // KEY_NOT_FOUND.
-                     if (status != fuchsia::ledger::Status::OK) {
-                       FXL_LOG(ERROR)
-                           << "SessionStorage: Page.Delete() " << status;
-                     }
-                     deleted->Complete();
-                   });
-
-    return deleted;
-  });
   auto ret = Future<>::Create("SessionStorage.DeleteStory.ret");
-  operation_queue_.Add(WrapFutureAsOperation(on_run, done, ret->Completer(),
-                                             "SessionStorage::DeleteStory"));
+  operation_queue_.Add(NewCallbackOperation(
+      "SessionStorage::DeleteStory",
+      [this, story_id](OperationBase* op) {
+        auto deleted = Future<>::Create("SessionStorage.DeleteStory.deleted");
+        page()->Delete(to_array(StoryIdToLedgerKey(story_id)),
+                       [this, deleted](fuchsia::ledger::Status status) {
+                         // Deleting a key that doesn't exist is OK, not
+                         // KEY_NOT_FOUND.
+                         if (status != fuchsia::ledger::Status::OK) {
+                           FXL_LOG(ERROR)
+                               << "SessionStorage: Page.Delete() " << status;
+                         }
+                         deleted->Complete();
+                       });
+        return deleted;
+      },
+      ret->Completer()));
   return ret;
 }
 
 namespace {
-
 class MutateStoryDataCall : public Operation<> {
  public:
   MutateStoryDataCall(

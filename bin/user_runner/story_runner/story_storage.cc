@@ -41,6 +41,7 @@ struct UpdateModuleDataState {
   std::function<void(fuchsia::modular::ModuleDataPtr*)> mutate_fn;
   OperationQueue sub_operations;
 };
+
 }  // namespace
 
 FuturePtr<> StoryStorage::UpdateModuleData(
@@ -50,87 +51,62 @@ FuturePtr<> StoryStorage::UpdateModuleData(
   op_state->module_path = fidl::Clone(module_path);
   op_state->mutate_fn = std::move(mutate_fn);
 
-  auto ret = Future<>::Create("StoryStorage.UpdateModuleData.ret");
   auto key = MakeModuleKey(module_path);
+  auto op_body = [this, op_state, key](OperationBase* op) {
+    auto did_read = Future<fuchsia::modular::ModuleDataPtr>::Create(
+        "StoryStorage.UpdateModuleData.did_read");
+    op_state->sub_operations.Add(new ReadDataCall<fuchsia::modular::ModuleData>(
+        page(), key, true /* not_found_is_ok */, XdrModuleData,
+        did_read->Completer()));
 
-  auto on_run = Future<>::Create("StoryStorage.UpdateModuleData.on_run");
-  auto done =
-      on_run
-          ->WeakAsyncMap(
-              GetWeakPtr(),
-              [this, op_state, key] {
-                auto ret = Future<fuchsia::modular::ModuleDataPtr>::Create(
-                    "StoryStorage.UpdateModuleData.done.WeakAsyncMap");
-                op_state->sub_operations.Add(
-                    new ReadDataCall<fuchsia::modular::ModuleData>(
-                        page(), key, true /* not_found_is_ok */, XdrModuleData,
-                        ret->Completer()));
-                return ret;
-              })
-          ->WeakAsyncMap(GetWeakPtr(), [this, op_state,
-                                        key](fuchsia::modular::ModuleDataPtr
-                                                 current_module_data) {
-            auto new_module_data = CloneOptional(current_module_data);
-            op_state->mutate_fn(&new_module_data);
+    auto did_mutate = did_read->AsyncMap(
+        [this, op_state,
+         key](fuchsia::modular::ModuleDataPtr current_module_data) {
+          auto new_module_data = CloneOptional(current_module_data);
+          op_state->mutate_fn(&new_module_data);
 
-            if (!new_module_data && !current_module_data) {
-              return Future<>::CreateCompleted(
-                  "StoryStorage.UpdateModuleData.done.WeakAsyncMap."
-                  "WeakAsyncMap");
-            }
+          if (!new_module_data && !current_module_data) {
+            return Future<>::CreateCompleted(
+                "StoryStorage.UpdateModuleData.did_mutate");
+          }
 
-            if (current_module_data) {
-              FXL_DCHECK(new_module_data)
-                  << "StoryStorage::UpdateModuleData(): mutate_fn() must not "
-                     "set to null an existing ModuleData record.";
-            }
-            FXL_DCHECK(new_module_data->module_path == op_state->module_path)
-                << "StorageStorage::UpdateModuleData(path, ...): mutate_fn() "
-                   "must set "
-                   "ModuleData.module_path to |path|.";
+          if (current_module_data) {
+            FXL_DCHECK(new_module_data)
+                << "StoryStorage::UpdateModuleData(): mutate_fn() must not "
+                   "set to null an existing ModuleData record.";
+          }
+          FXL_DCHECK(new_module_data->module_path == op_state->module_path)
+              << "StorageStorage::UpdateModuleData(path, ...): mutate_fn() "
+                 "must set "
+                 "ModuleData.module_path to |path|.";
 
-            // We complete this Future chain when the Ledger gives us the
-            // notification that |module_data| has been written. The Ledger
-            // won't do that if the current value for |key| won't change, so we
-            // have to short-circuit here.
-            if (current_module_data &&
-                *current_module_data == *new_module_data) {
-              return Future<>::CreateCompleted(
-                  "StoryStorage.UpdateModuleData.done.WeakAsyncMap."
-                  "WeakAsyncMap");
-            }
+          // We complete this Future chain when the Ledger gives us the
+          // notification that |module_data| has been written. The Ledger
+          // won't do that if the current value for |key| won't change, so
+          // we have to short-circuit here.
+          if (current_module_data && *current_module_data == *new_module_data) {
+            return Future<>::CreateCompleted(
+                "StoryStorage.UpdateModuleData.did_mutate");
+          }
 
-            auto module_data_copy = CloneOptional(new_module_data);
-            std::string expected_value;
-            XdrWrite(&expected_value, &module_data_copy, XdrModuleData);
+          auto module_data_copy = CloneOptional(new_module_data);
+          std::string expected_value;
+          XdrWrite(&expected_value, &module_data_copy, XdrModuleData);
 
-            op_state->sub_operations.Add(
-                new WriteDataCall<fuchsia::modular::ModuleData>(
-                    page(), key, XdrModuleData, std::move(module_data_copy),
-                    [] {}));
+          op_state->sub_operations.Add(
+              new WriteDataCall<fuchsia::modular::ModuleData>(
+                  page(), key, XdrModuleData, std::move(module_data_copy),
+                  [] {}));
 
-            return WaitForWrite(key, expected_value);
-          });
+          return WaitForWrite(key, expected_value);
+        });
 
-  // TODO(thatguy,apang): The lifecycle of Future is currently bounded by the
-  // last reference to it (since it is effectively a shared_ptr). This causes
-  // both confusion and problems in terms of guarding illegal memory access.
-  // It's not unusual for a Future's completer to be captured by an object
-  // (such as a FIDL interface proxy, or an async task loop) that outlives
-  // |this|.
-  //
-  // Because of this, we guard (almost) every chain (Then/Map calls) on a
-  // Future with a WeakPtr<>. Better ownership and/or lifecycle semantics are
-  // necessary.
-  //
-  // In this case, |operation_queue_| is going to hold onto FuturePtrs for
-  // |on_run|, |done| and |ret|. |on_run| has a reference to |done| (through
-  // transitive ownership through each step in the chain). These references
-  // are dropped if either that step in the execution chain is executed, or if
-  // it is aborted due to the weak guard. Either way it is difficult to reason
-  // about lifecycle.
-  operation_queue_.Add(WrapFutureAsOperation(
-      on_run, done, ret->Completer(), "StoryStorage.UpdateModuleData.op"));
+    return did_mutate;
+  };
+
+  auto ret = Future<>::Create("StoryStorage.ReadModuleData.ret");
+  operation_queue_.Add(NewCallbackOperation(
+      "StoryStorage::UpdateModuleData", std::move(op_body), ret->Completer()));
   return ret;
 }
 
