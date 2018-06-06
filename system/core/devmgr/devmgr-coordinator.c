@@ -161,16 +161,18 @@ static zx_status_t handle_dmctl_write(size_t len, const char* cmd) {
             return ZX_OK;
         }
         if (!memcmp(cmd, "help", 4)) {
-            dmprintf("dump        - dump device tree\n"
-                     "poweroff    - power off the system\n"
-                     "shutdown    - power off the system\n"
-                     "suspend     - suspend the system to RAM\n"
-                     "reboot      - reboot the system\n"
-                     "kerneldebug - send a command to the kernel\n"
-                     "ktraceoff   - stop kernel tracing\n"
-                     "ktraceon    - start kernel tracing\n"
-                     "devprops    - dump published devices and their binding properties\n"
-                     "drivers     - list discovered drivers and their properties\n"
+            dmprintf("dump              - dump device tree\n"
+                     "poweroff          - power off the system\n"
+                     "shutdown          - power off the system\n"
+                     "suspend           - suspend the system to RAM\n"
+                     "reboot            - reboot the system\n"
+                     "reboot-bootloader - reboot the system into boatloader\n"
+                     "reboot-recovery   - reboot the system into recovery\n"
+                     "kerneldebug       - send a command to the kernel\n"
+                     "ktraceoff         - stop kernel tracing\n"
+                     "ktraceon          - start kernel tracing\n"
+                     "devprops          - dump published devices and their binding properties\n"
+                     "drivers           - list discovered drivers and their properties\n"
                      );
             return ZX_OK;
         }
