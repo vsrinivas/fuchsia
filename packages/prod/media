@@ -1,6 +1,7 @@
 {
     "imports": [
         "garnet/packages/prod/media_audio",
+        "garnet/packages/prod/media_codec",
         "garnet/packages/prod/media_player"
     ],
     "packages": {

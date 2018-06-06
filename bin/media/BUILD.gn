@@ -6,6 +6,7 @@ import("//build/package.gni")
 
 group("services") {
   public_deps = [
+    "//garnet/bin/media/codec_factory",
     "//garnet/bin/media/media_player",
     "//garnet/bin/media/net_media_service",
   ]
@@ -28,6 +29,32 @@ package("audio_server") {
     {
       path = rebase_path("audio_server/meta/audio_server.cmx")
       dest = "audio_server.cmx"
+    },
+  ]
+}
+
+package("codec_factory") {
+  deps = [
+    "//garnet/bin/media/codec_factory:codec_factory",
+  ]
+
+  binary = "codec_factory"
+}
+
+# This package is only really expected to be used by the codec_factory package.
+package("codec_runner_sw_omx") {
+  deps = [
+    "//garnet/bin/media/codecs/sw/omx/codec_runner_sw_omx:codec_runner_sw_omx",
+
+    # Codec loadable_module(s)
+    "//garnet/bin/media/codecs/sw/omx/dec/aac:libcodec_sw_omx_dec_aac",
+  ]
+
+  binary = "codec_runner_sw_omx"
+
+  loadable_modules = [
+    {
+      name = "libcodec_sw_omx_dec_aac.so"
     },
   ]
 }

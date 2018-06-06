@@ -14,6 +14,7 @@
         "garnet/packages/prod/logger",
         "garnet/packages/prod/mdns_service",
         "garnet/packages/prod/media_audio",
+        "garnet/packages/prod/media_codec",
         "garnet/packages/prod/media_player",
         "garnet/packages/prod/network",
         "garnet/packages/prod/network_time",
