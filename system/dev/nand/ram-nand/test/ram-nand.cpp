@@ -165,7 +165,7 @@ class Operation {
     NandTest* test_;
     zx_status_t status_ = ZX_ERR_ACCESS_DENIED;
     bool completed_ = false;
-    static constexpr size_t buffer_size_ = kPageSize * kBlockSize;
+    static constexpr size_t buffer_size_ = kPageSize * kNumPages;
     fbl::unique_ptr<char[]> raw_buffer_;
     DISALLOW_COPY_ASSIGN_AND_MOVE(Operation);
 };
@@ -299,10 +299,10 @@ bool QueueOneTest() {
 
 // Verifies that the buffer pointed to by the operation's vmo contains the given
 // pattern for the desired number of pages, skipping the pages before start.
-bool CheckPattern(char what, int start, int num_pages, const Operation& operation) {
+bool CheckPattern(uint8_t what, int start, int num_pages, const Operation& operation) {
     const char* buffer = operation.buffer() + kPageSize * start;
     for (int i = 0; i < kPageSize * num_pages; i++) {
-        if (buffer[i] != what) {
+        if (static_cast<uint8_t>(buffer[i]) != what) {
             return false;
         }
     }
@@ -357,6 +357,36 @@ bool ReadWriteTest() {
     ASSERT_EQ(ZX_OK, operation.status());
     ASSERT_EQ(0, op->rw.corrected_bit_flips);
     ASSERT_TRUE(CheckPattern(0x55, 0, 4, operation));
+
+    END_TEST;
+}
+
+// Tests that a new device is filled with 0xff (as a new nand chip).
+bool NewChipTest() {
+    BEGIN_TEST;
+
+    size_t op_size;
+    fbl::unique_ptr<NandDevice> device = CreateDevice(&op_size);
+    ASSERT_TRUE(device);
+
+    NandTest test;
+    Operation operation(op_size, &test);
+    ASSERT_TRUE(operation.SetVmo());
+    memset(operation.buffer(), 0x55, operation.buffer_size());
+
+    nand_op_t* op = operation.GetOperation();
+    op->rw.corrected_bit_flips = 125;
+
+    SetForRead(0, kNumPages, &operation);
+    device->Queue(op);
+
+    ASSERT_TRUE(test.Wait());
+    ASSERT_EQ(ZX_OK, operation.status());
+    ASSERT_EQ(0, op->rw.corrected_bit_flips);
+
+    ASSERT_TRUE(CheckPattern(0xff, 0, kNumPages, operation));
+
+    // TODO(rvargas): Verify OOB area.
 
     END_TEST;
 }
@@ -564,13 +594,13 @@ bool EraseTest() {
     device->Queue(op);
     ASSERT_TRUE(test.Wait());
     ASSERT_EQ(ZX_OK, operation.status());
-    ASSERT_TRUE(CheckPattern(static_cast<char>(0xff), 0, 4, operation));
+    ASSERT_TRUE(CheckPattern(0xff, 0, 4, operation));
 
     SetForRead(16, 4, &operation);
     device->Queue(op);
     ASSERT_TRUE(test.Wait());
     ASSERT_EQ(ZX_OK, operation.status());
-    ASSERT_TRUE(CheckPattern(static_cast<char>(0xff), 0, 4, operation));
+    ASSERT_TRUE(CheckPattern(0xff, 0, 4, operation));
 
     END_TEST;
 }

@@ -64,6 +64,7 @@ zx_status_t NandDevice::Init(char name[NAME_MAX]) {
     if (status != ZX_OK) {
         return status;
     }
+    memset(reinterpret_cast<char*>(mapped_addr_), 0xff, GetSize());
 
     list_initialize(&txn_list_);
     if (thrd_create(&worker_, WorkerThreadStub, this) != thrd_success) {
