@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <zircon/device/audio.h>
+
 #include "intel-audio-dsp.h"
 #include "intel-dsp-topology.h"
 
@@ -527,6 +529,7 @@ zx_status_t IntelAudioDsp::CreateAndStartStreams() {
         uint32_t stream_id;
         bool is_input;
         struct DspPipeline pipeline;
+        audio_stream_unique_id_t uid;
     } STREAMS[] = {
         // Speakers
         {
@@ -536,13 +539,15 @@ zx_status_t IntelAudioDsp::CreateAndStartStreams() {
                 .pl_source = PIPELINE0_ID,
                 .pl_sink = PIPELINE1_ID,
             },
+            .uid = AUDIO_STREAM_UNIQUE_ID_BUILTIN_SPEAKERS,
         },
     };
 
     for (const auto& stream_def : STREAMS) {
         auto stream = fbl::AdoptRef(new IntelDspStream(stream_def.stream_id,
                                                        stream_def.is_input,
-                                                       stream_def.pipeline));
+                                                       stream_def.pipeline,
+                                                       &stream_def.uid));
 
         res = ActivateStream(stream);
         if (res != ZX_OK) {

@@ -15,9 +15,27 @@
 namespace audio {
 namespace intel_hda {
 
-IntelDspStream::IntelDspStream(uint32_t id, bool is_input, const DspPipeline& pipeline)
+IntelDspStream::IntelDspStream(uint32_t id,
+                               bool is_input,
+                               const DspPipeline& pipeline,
+                               const audio_stream_unique_id_t* unique_id)
     : IntelHDAStreamBase(id, is_input), pipeline_(pipeline) {
     snprintf(log_prefix_, sizeof(log_prefix_), "IHDA DSP %cStream #%u", is_input ? 'I' : 'O', id);
+
+    if (unique_id) {
+        SetPersistentUniqueId(*unique_id);
+    } else {
+        const audio_stream_unique_id_t uid = {
+            'I', 'D', 'S', 'P',
+            static_cast<uint8_t>(id >> 24),
+            static_cast<uint8_t>(id >> 16),
+            static_cast<uint8_t>(id >> 8),
+            static_cast<uint8_t>(id),
+            static_cast<uint8_t>(is_input),
+            0
+        };
+        SetPersistentUniqueId(uid);
+    }
 }
 
 zx_status_t IntelDspStream::ProcessSetStreamFmt(const ihda_proto::SetStreamFmtResp& codec_resp,
@@ -350,6 +368,33 @@ void IntelDspStream::OnPlugDetectLocked(dispatcher::Channel* response_channel,
                                         audio_proto::PlugDetectResp* out_resp) {
     LOG(TRACE, "OnPlugDetectLocked\n");
     IntelHDAStreamBase::OnPlugDetectLocked(response_channel, req, out_resp);
+}
+
+void IntelDspStream::OnGetStringLocked(const audio_proto::GetStringReq& req,
+                                       audio_proto::GetStringResp* out_resp) {
+    ZX_DEBUG_ASSERT(out_resp);
+    const char* requested_string = nullptr;
+
+    switch (req.id) {
+        case AUDIO_STREAM_STR_ID_MANUFACTURER:
+            requested_string = "Intel";
+            break;
+
+        case AUDIO_STREAM_STR_ID_PRODUCT:
+            requested_string = is_input() ? "Builtin Microphone" : "Builtin Speakers";
+            break;
+
+        default:
+            IntelHDAStreamBase::OnGetStringLocked(req, out_resp);
+            return;
+    }
+
+    int res = snprintf(reinterpret_cast<char*>(out_resp->str), sizeof(out_resp->str), "%s",
+                       requested_string ? requested_string : "<unassigned>");
+    ZX_DEBUG_ASSERT(res >= 0);
+    out_resp->result = ZX_OK;
+    out_resp->strlen = fbl::min<uint32_t>(res, sizeof(out_resp->str) - 1);
+    out_resp->id = req.id;
 }
 
 }  // namespace intel_hda

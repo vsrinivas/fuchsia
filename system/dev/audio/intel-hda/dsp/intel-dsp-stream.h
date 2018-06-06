@@ -18,7 +18,8 @@ class IntelAudioDsp;
 
 class IntelDspStream : public codecs::IntelHDAStreamBase {
 public:
-    IntelDspStream(uint32_t id, bool is_input, const DspPipeline& pipeline);
+    IntelDspStream(uint32_t id, bool is_input, const DspPipeline& pipeline,
+                   const audio_stream_unique_id_t* unique_id = nullptr);
 
     // Overloaded
     zx_status_t ProcessSetStreamFmt(const ihda_proto::SetStreamFmtResp& resp,
@@ -50,6 +51,8 @@ protected:
     void OnPlugDetectLocked(dispatcher::Channel* response_channel,
                             const audio_proto::PlugDetectReq& req,
                             audio_proto::PlugDetectResp* out_resp) __TA_REQUIRES(obj_lock()) final;
+    void OnGetStringLocked(const audio_proto::GetStringReq& req,
+                           audio_proto::GetStringResp* out_resp) __TA_REQUIRES(obj_lock()) final;
 
 private:
     friend class fbl::RefPtr<IntelDspStream>;
