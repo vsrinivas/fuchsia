@@ -523,7 +523,7 @@ zx_status_t IntelAudioDsp::PowerDownCore(uint8_t core_mask) {
                          INTEL_ADSP_POLL_NSEC,
                          [this, &core_mask]() -> bool {
                              return (REG_RD(&regs()->adspcs) &
-                                     ADSP_REG_ADSPCS_SPA(core_mask)) == 0;
+                                     ADSP_REG_ADSPCS_CPA(core_mask)) == 0;
                          });
 }
 
@@ -532,7 +532,7 @@ zx_status_t IntelAudioDsp::PowerUpCore(uint8_t core_mask) {
     return WaitCondition(INTEL_ADSP_TIMEOUT_NSEC,
                          INTEL_ADSP_POLL_NSEC,
                          [this, &core_mask]() -> bool {
-                             return (REG_RD(&regs()->adspcs) & ADSP_REG_ADSPCS_SPA(core_mask)) != 0;
+                             return (REG_RD(&regs()->adspcs) & ADSP_REG_ADSPCS_CPA(core_mask)) != 0;
                          });
 }
 
