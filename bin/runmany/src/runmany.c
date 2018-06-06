@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD - style license that can be
 // found in the LICENSE file.
 
-#include <fdio/io.h>
-#include <fdio/private.h>
-#include <fdio/spawn.h>
+#include <lib/fdio/io.h>
+#include <lib/fdio/private.h>
+#include <lib/fdio/spawn.h>
 #include <poll.h>
 #include <stdio.h>
 #include <stdlib.h>

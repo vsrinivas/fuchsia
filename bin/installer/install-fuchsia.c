@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <dirent.h>
-#include <fdio/spawn.h>
+#include <lib/fdio/spawn.h>
 #include <fnmatch.h>
 #include <limits.h>
 #include <stdio.h>

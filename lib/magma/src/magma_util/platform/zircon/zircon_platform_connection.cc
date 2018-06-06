@@ -7,7 +7,7 @@
 
 #include <list>
 
-#include <fdio/io.h>
+#include <lib/fdio/io.h>
 #include <lib/zx/channel.h>
 #include <zircon/syscalls.h>
 #include <zircon/types.h>

@@ -7,7 +7,7 @@
 #include <poll.h>
 #include <iostream>
 
-#include <fdio/util.h>
+#include <lib/fdio/util.h>
 #include <fuchsia/guest/cpp/fidl.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/fit/function.h>

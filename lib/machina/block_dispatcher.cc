@@ -13,7 +13,7 @@
 #include <fbl/auto_lock.h>
 #include <fbl/unique_fd.h>
 #include <fbl/unique_ptr.h>
-#include <fdio/watcher.h>
+#include <lib/fdio/watcher.h>
 #include <trace/event.h>
 #include <virtio/virtio_ids.h>
 #include <virtio/virtio_ring.h>

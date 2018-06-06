@@ -4,7 +4,7 @@
 
 #include "lib/app/cpp/environment_services.h"
 
-#include <fdio/util.h>
+#include <lib/fdio/util.h>
 
 namespace fuchsia {
 namespace sys {

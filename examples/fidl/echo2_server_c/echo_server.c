@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fdio/util.h>
+#include <lib/fdio/util.h>
 #include <lib/async-loop/loop.h>
 #include <lib/svc/dir.h>
 #include <stdio.h>

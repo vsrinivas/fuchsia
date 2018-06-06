@@ -4,7 +4,7 @@
 
 #include "garnet/examples/ui/tile/tile_view.h"
 
-#include <fdio/util.h>
+#include <lib/fdio/util.h>
 
 #include <fuchsia/ui/views_v1/cpp/fidl.h>
 #include "lib/fidl/cpp/optional.h"

@@ -5,7 +5,7 @@
 #include "garnet/bin/appmgr/component_controller_impl.h"
 
 #include <fbl/string_printf.h>
-#include <fdio/util.h>
+#include <lib/fdio/util.h>
 #include <fs/pseudo-file.h>
 #include <fs/remote-dir.h>
 #include <lib/async/default.h>

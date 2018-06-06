@@ -7,7 +7,7 @@
 #include <link.h>
 #include <cinttypes>
 
-#include <fdio/io.h>
+#include <lib/fdio/io.h>
 #include <launchpad/vmo.h>
 #include <lib/fit/function.h>
 #include <zircon/syscalls.h>

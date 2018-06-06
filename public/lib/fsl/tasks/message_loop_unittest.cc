@@ -4,7 +4,7 @@
 
 #include "lib/fsl/tasks/message_loop.h"
 
-#include <fdio/io.h>
+#include <lib/fdio/io.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/event.h>
 

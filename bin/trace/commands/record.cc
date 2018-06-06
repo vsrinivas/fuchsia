@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fdio/spawn.h>
+#include <lib/fdio/spawn.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 #include <zx/time.h>

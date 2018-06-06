@@ -4,8 +4,8 @@
 
 #include "garnet/lib/debug_ipc/helper/message_loop_zircon.h"
 
-#include <fdio/io.h>
-#include <fdio/private.h>
+#include <lib/fdio/io.h>
+#include <lib/fdio/private.h>
 #include <zircon/syscalls/exception.h>
 #include <zircon/syscalls/port.h>
 

@@ -4,7 +4,7 @@
 
 #include "garnet/lib/far/far.h"
 
-#include <fdio/io.h>
+#include <lib/fdio/io.h>
 #include <zircon/syscalls.h>
 
 bool far_reader_read_vmo(far_reader_t reader, zx_handle_t vmo) {

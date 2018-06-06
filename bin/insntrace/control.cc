@@ -20,7 +20,7 @@
 #include <zircon/ktrace.h>
 #include <zircon/syscalls.h>
 
-#include <fdio/util.h>
+#include <lib/fdio/util.h>
 #include <lib/zx/handle.h>
 #include <lib/zx/vmo.h>
 

@@ -4,7 +4,7 @@
 
 #include "lib/svc/cpp/services.h"
 
-#include <fdio/util.h>
+#include <lib/fdio/util.h>
 
 #include "lib/fxl/logging.h"
 

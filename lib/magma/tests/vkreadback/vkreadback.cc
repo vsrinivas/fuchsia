@@ -8,6 +8,7 @@
 #else
 #include <vulkan/vulkan.h>
 #endif
+#include <lib/fdio/io.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -15,7 +16,6 @@
 #include <vector>
 #include <zircon/syscalls.h>
 
-#include "fdio/io.h"
 #include "magma_util/dlog.h"
 #include "magma_util/macros.h"
 

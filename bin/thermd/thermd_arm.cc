@@ -7,7 +7,7 @@
 #include <zircon/syscalls/system.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/port.h>
-#include <fdio/watcher.h>
+#include <lib/fdio/watcher.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <inttypes.h>

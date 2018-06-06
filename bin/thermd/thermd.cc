@@ -9,7 +9,7 @@
 
 #include <lib/async-loop/cpp/loop.h>
 
-#include <fdio/watcher.h>
+#include <lib/fdio/watcher.h>
 #include <trace-provider/provider.h>
 #include <trace/event.h>
 

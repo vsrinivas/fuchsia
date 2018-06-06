@@ -3,14 +3,15 @@
 // found in the LICENSE file.
 
 #include "zircon_platform_buffer.h"
-#include "fdio/io.h"
+
 #include "platform_trace.h"
 #include "zircon_platform_handle.h"
 #include <ddk/driver.h>
-#include <limits.h> // PAGE_SIZE
-#include <map>
+#include <lib/fdio/io.h>
 #include <lib/zx/vmar.h>
 #include <lib/zx/vmo.h>
+#include <limits.h> // PAGE_SIZE
+#include <map>
 #include <vector>
 
 namespace magma {

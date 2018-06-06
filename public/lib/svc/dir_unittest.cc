@@ -7,7 +7,7 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/loop.h>
 #include <lib/zx/channel.h>
-#include <fdio/util.h>
+#include <lib/fdio/util.h>
 
 #include <thread>
 

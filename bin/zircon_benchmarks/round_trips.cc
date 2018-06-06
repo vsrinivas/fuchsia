@@ -7,7 +7,7 @@
 #include <vector>
 
 #include <lib/async-loop/cpp/loop.h>
-#include <fdio/spawn.h>
+#include <lib/fdio/spawn.h>
 #include <zircon/process.h>
 #include <zircon/processargs.h>
 #include <zircon/syscalls.h>

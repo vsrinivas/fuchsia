@@ -7,8 +7,8 @@
 #include <iostream>
 #include <sstream>
 
-#include <fdio/io.h>
-#include <fdio/spawn.h>
+#include <lib/fdio/io.h>
+#include <lib/fdio/spawn.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <test_runner/cpp/fidl.h>
 #include <zircon/processargs.h>

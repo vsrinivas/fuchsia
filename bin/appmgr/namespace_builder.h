@@ -5,7 +5,7 @@
 #ifndef GARNET_BIN_APPMGR_NAMESPACE_BUILDER_H_
 #define GARNET_BIN_APPMGR_NAMESPACE_BUILDER_H_
 
-#include <fdio/namespace.h>
+#include <lib/fdio/namespace.h>
 #include <lib/fit/function.h>
 #include <lib/zx/channel.h>
 

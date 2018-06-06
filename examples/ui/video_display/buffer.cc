@@ -5,7 +5,7 @@
 #include <garnet/examples/ui/video_display/buffer.h>
 
 #include <fcntl.h>
-#include <fdio/io.h>
+#include <lib/fdio/io.h>
 #include <stdio.h>
 #include <unistd.h>
 

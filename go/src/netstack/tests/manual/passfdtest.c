@@ -5,7 +5,7 @@
 #include <arpa/inet.h>
 #include <ctype.h>
 #include <errno.h>
-#include <fdio/spawn.h>
+#include <lib/fdio/spawn.h>
 #include <netdb.h>
 #include <netinet/in.h>
 #include <stdio.h>

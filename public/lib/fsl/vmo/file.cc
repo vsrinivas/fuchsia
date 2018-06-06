@@ -5,7 +5,7 @@
 #include "lib/fsl/vmo/file.h"
 
 #include <fcntl.h>
-#include <fdio/io.h>
+#include <lib/fdio/io.h>
 #include <sys/stat.h>
 #include <unistd.h>
 

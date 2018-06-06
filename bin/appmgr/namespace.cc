@@ -4,7 +4,7 @@
 
 #include "garnet/bin/appmgr/namespace.h"
 
-#include <fdio/util.h>
+#include <lib/fdio/util.h>
 #include <fuchsia/process/cpp/fidl.h>
 
 #include <utility>

@@ -7,7 +7,7 @@
 
 #include <functional>
 
-#include <fdio/private.h>
+#include <lib/fdio/private.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/async/default.h>
 #include <zircon/types.h>

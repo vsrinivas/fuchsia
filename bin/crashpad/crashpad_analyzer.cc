@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fdio/io.h>
+#include <lib/fdio/io.h>
 #include <launchpad/launchpad.h>
 #include <lib/zx/handle.h>
 #include <lib/zx/log.h>

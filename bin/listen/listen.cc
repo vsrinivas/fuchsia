@@ -4,9 +4,9 @@
 
 #include <arpa/inet.h>
 #include <errno.h>
-#include <fdio/io.h>
-#include <fdio/spawn.h>
-#include <fdio/util.h>
+#include <lib/fdio/io.h>
+#include <lib/fdio/spawn.h>
+#include <lib/fdio/util.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/async/default.h>

@@ -5,7 +5,7 @@
 #include "lib/svc/cpp/service_provider_bridge.h"
 
 #include <fcntl.h>
-#include <fdio/util.h>
+#include <lib/fdio/util.h>
 #include <fs/service.h>
 #include <lib/async/default.h>
 #include <zircon/device/vfs.h>

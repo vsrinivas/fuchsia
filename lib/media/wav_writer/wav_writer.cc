@@ -5,7 +5,7 @@
 #include "garnet/lib/media/wav_writer/wav_writer.h"
 #include <endian.h>
 #include <fcntl.h>
-#include <fdio/io.h>
+#include <lib/fdio/io.h>
 #include <unistd.h>
 #include <zircon/compiler.h>
 #include <iomanip>

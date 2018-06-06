@@ -8,7 +8,7 @@
 #include <fcntl.h>
 #include <sys/types.h>
 
-#include <fdio/io.h>
+#include <lib/fdio/io.h>
 #include <lib/async/default.h>
 #include <zircon/device/vfs.h>
 

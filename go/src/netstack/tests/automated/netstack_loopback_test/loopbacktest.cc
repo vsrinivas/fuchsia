@@ -15,9 +15,9 @@
 #include <string>
 #include <thread>
 
-#include <fdio/io.h>
-#include <fdio/private.h>
-#include <fdio/util.h>
+#include <lib/fdio/io.h>
+#include <lib/fdio/private.h>
+#include <lib/fdio/util.h>
 
 #include <zircon/syscalls.h>
 

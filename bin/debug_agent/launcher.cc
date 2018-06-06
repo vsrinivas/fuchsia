@@ -4,7 +4,7 @@
 
 #include "garnet/bin/debug_agent/launcher.h"
 
-#include <fdio/io.h>
+#include <lib/fdio/io.h>
 #include <launchpad/launchpad.h>
 
 namespace debug_agent {

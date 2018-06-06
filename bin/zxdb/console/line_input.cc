@@ -9,7 +9,7 @@
 
 #ifdef __Fuchsia__
 #include <zircon/device/pty.h>
-#include <fdio/io.h>
+#include <lib/fdio/io.h>
 #else
 #include <sys/ioctl.h>
 #include <termios.h>
