@@ -35,7 +35,7 @@ constexpr fxl::StringView kMinFsName = "minfs";
 constexpr zx::duration kMaxPollingDelay = zx::sec(10);
 constexpr fxl::StringView kNoMinFsFlag = "no_minfs_wait";
 constexpr fxl::StringView kNoStatisticsReporting =
-    "no_statistics_reporting_for_testing";
+    "disable_reporting";
 
 struct AppParams {
   bool disable_statistics = false;
@@ -76,7 +76,8 @@ class App : public ledger_internal::LedgerController {
         EnvironmentBuilder().SetAsync(loop_.async()).Build());
     auto user_communicator_factory =
         std::make_unique<p2p_sync::UserCommunicatorFactoryImpl>(
-            environment_.get(), startup_context_.get());
+            environment_.get(), startup_context_.get(),
+            app_params_.disable_statistics ? "" : "ledger_p2p");
 
     factory_impl_ = std::make_unique<LedgerRepositoryFactoryImpl>(
         environment_.get(), std::move(user_communicator_factory));

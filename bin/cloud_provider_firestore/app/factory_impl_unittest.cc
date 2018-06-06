@@ -16,7 +16,8 @@ namespace cloud_provider_firestore {
 class FactoryImplTest : public gtest::TestWithMessageLoop {
  public:
   FactoryImplTest()
-      : factory_impl_(message_loop_.async()),
+      : factory_impl_(message_loop_.async(), /*startup_context=*/nullptr,
+                      /*cobalt_client_name=*/""),
         factory_binding_(&factory_impl_, factory_.NewRequest()),
         token_provider_(message_loop_.async()),
         token_provider_binding_(&token_provider_) {}

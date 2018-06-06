@@ -15,13 +15,22 @@
 namespace cloud_provider_firestore {
 namespace {
 
+constexpr fxl::StringView kNoStatisticsReporting =
+    "disable_reporting";
+
+struct AppParams {
+  bool disable_statistics = false;
+};
+
 class App : public fuchsia::modular::Lifecycle {
  public:
-  App()
+  explicit App(AppParams app_params)
       : loop_(&kAsyncLoopConfigMakeDefault),
         startup_context_(fuchsia::sys::StartupContext::CreateFromStartupInfo()),
         trace_provider_(loop_.async()),
-        factory_impl_(loop_.async()) {
+        factory_impl_(
+            loop_.async(), startup_context_.get(),
+            app_params.disable_statistics ? "" : "cloud_provider_firestore") {
     FXL_DCHECK(startup_context_);
   }
 
@@ -64,7 +73,11 @@ int main(int argc, const char** argv) {
   const auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
   fxl::SetLogSettingsFromCommandLine(command_line);
 
-  cloud_provider_firestore::App app;
+  cloud_provider_firestore::AppParams app_params;
+  app_params.disable_statistics =
+      command_line.HasOption(cloud_provider_firestore::kNoStatisticsReporting);
+
+  cloud_provider_firestore::App app(app_params);
   app.Run();
 
   return 0;

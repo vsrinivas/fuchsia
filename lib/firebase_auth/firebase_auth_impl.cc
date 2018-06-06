@@ -6,14 +6,17 @@
 
 #include <utility>
 
+#include "lib/backoff/exponential_backoff.h"
 #include "lib/callback/cancellable_helper.h"
 #include "lib/fxl/functional/make_copyable.h"
 
 namespace firebase_auth {
 namespace {
 
-// Maximum number of retries on non-fatal errors.
-constexpr int kDefaultMaxRetries = 5;
+// Cobalt constants. See third_party/cobalt_config/fuchsia/ledger/config.yaml.
+constexpr int32_t kLedgerCobaltProjectId = 100;
+constexpr int32_t kCobaltAuthFailureMetricId = 3;
+constexpr int32_t kCobaltNoOpEncodingId = 3;
 
 // Returns true if the authentication failure may be transient.
 bool IsRetriableError(fuchsia::modular::auth::Status status) {
@@ -25,29 +28,30 @@ bool IsRetriableError(fuchsia::modular::auth::Status status) {
       return true;
   }
 }
-
-// Maps fuchsia::modular::auth error space to firebase_auth one.
-AuthStatus ConvertAuthErr(fuchsia::modular::auth::AuthErr error) {
-  return error.status == fuchsia::modular::auth::Status::OK ? AuthStatus::OK
-                                                  : AuthStatus::ERROR;
-}
 }  // namespace
 
 FirebaseAuthImpl::FirebaseAuthImpl(
-    async_t* async, std::string api_key,
+    Config config, async_t* async,
     fuchsia::modular::auth::TokenProviderPtr token_provider,
-    std::unique_ptr<backoff::Backoff> backoff)
-    : FirebaseAuthImpl(async, std::move(api_key), std::move(token_provider),
-                       std::move(backoff), kDefaultMaxRetries) {}
+    fuchsia::sys::StartupContext* startup_context)
+    : FirebaseAuthImpl(std::move(config), async, std::move(token_provider),
+                       std::make_unique<backoff::ExponentialBackoff>(),
+                       startup_context
+                           ? cobalt::MakeCobaltContext(async, startup_context,
+                                                       kLedgerCobaltProjectId)
+                           : nullptr) {}
 
 FirebaseAuthImpl::FirebaseAuthImpl(
-    async_t* async, std::string api_key,
+    Config config, async_t* async,
     fuchsia::modular::auth::TokenProviderPtr token_provider,
-    std::unique_ptr<backoff::Backoff> backoff, int max_retries)
-    : api_key_(std::move(api_key)),
+    std::unique_ptr<backoff::Backoff> backoff,
+    std::unique_ptr<cobalt::CobaltContext> cobalt_context)
+    : api_key_(std::move(config.api_key)),
       token_provider_(std::move(token_provider)),
       backoff_(std::move(backoff)),
-      max_retries_(max_retries),
+      max_retries_(config.max_retries),
+      cobalt_client_name_(std::move(config.cobalt_client_name)),
+      cobalt_context_(std::move(cobalt_context)),
       task_runner_(async) {}
 
 void FirebaseAuthImpl::set_error_handler(fxl::Closure on_error) {
@@ -78,7 +82,8 @@ fxl::RefPtr<callback::Cancellable> FirebaseAuthImpl::GetFirebaseUserId(
 
 void FirebaseAuthImpl::GetToken(
     int max_retries,
-    std::function<void(AuthStatus, fuchsia::modular::auth::FirebaseTokenPtr)> callback) {
+    std::function<void(AuthStatus, fuchsia::modular::auth::FirebaseTokenPtr)>
+        callback) {
   token_provider_->GetFirebaseAuthToken(
       api_key_, [this, max_retries, callback = std::move(callback)](
                     fuchsia::modular::auth::FirebaseTokenPtr token,
@@ -105,8 +110,30 @@ void FirebaseAuthImpl::GetToken(
         }
 
         backoff_->Reset();
-        callback(ConvertAuthErr(error), std::move(token));
+        if (error.status == fuchsia::modular::auth::Status::OK) {
+          callback(AuthStatus::OK, std::move(token));
+        } else {
+          ReportError(error.status);
+          callback(AuthStatus::ERROR, std::move(token));
+        }
       });
 }
 
+void FirebaseAuthImpl::ReportError(fuchsia::modular::auth::Status status) {
+  if (cobalt_client_name_.empty() || cobalt_context_ == nullptr) {
+    return;
+  }
+  auto parts = fidl::VectorPtr<fuchsia::cobalt::ObservationValue>::New(2);
+  parts->at(0).name = "client-name";
+  parts->at(0).encoding_id = kCobaltNoOpEncodingId;
+  parts->at(0).value.set_string_value(cobalt_client_name_);
+
+  parts->at(1).name = "failure-type";
+  parts->at(1).encoding_id = kCobaltNoOpEncodingId;
+  parts->at(1).value.set_index_value(static_cast<uint32_t>(status));
+
+  cobalt::CobaltObservation observation(
+      static_cast<uint32_t>(kCobaltAuthFailureMetricId), std::move(parts));
+  cobalt_context_->ReportObservation(observation);
+}
 }  // namespace firebase_auth

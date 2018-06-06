@@ -6,7 +6,6 @@
 
 #include <grpc++/grpc++.h>
 
-#include "lib/backoff/exponential_backoff.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
 #include "peridot/bin/cloud_provider_firestore/firestore/firestore_service_impl.h"
@@ -21,7 +20,12 @@ std::shared_ptr<grpc::Channel> MakeChannel() {
 }
 }  // namespace
 
-FactoryImpl::FactoryImpl(async_t* async) : async_(async) {}
+FactoryImpl::FactoryImpl(async_t* async,
+                         fuchsia::sys::StartupContext* startup_context,
+                         std::string cobalt_client_name)
+    : async_(async),
+      startup_context_(startup_context),
+      cobalt_client_name_(std::move(cobalt_client_name)) {}
 
 FactoryImpl::~FactoryImpl() {}
 
@@ -45,8 +49,9 @@ void FactoryImpl::GetCloudProvider(
     GetCloudProviderCallback callback) {
   auto token_provider_ptr = token_provider.Bind();
   auto firebase_auth = std::make_unique<firebase_auth::FirebaseAuthImpl>(
-      async_, config.api_key, std::move(token_provider_ptr),
-      std::make_unique<backoff::ExponentialBackoff>());
+      firebase_auth::FirebaseAuthImpl::Config{config.api_key,
+                                              cobalt_client_name_},
+      async_, std::move(token_provider_ptr), startup_context_);
   firebase_auth::FirebaseAuthImpl* firebase_auth_ptr = firebase_auth.get();
   auto token_request =
       firebase_auth_ptr->GetFirebaseUserId(fxl::MakeCopyable(

@@ -18,14 +18,34 @@ namespace firebase_auth {
 
 namespace {
 
+class MockCobaltContext : public cobalt::CobaltContext {
+ public:
+  ~MockCobaltContext() override = default;
+
+  MockCobaltContext(int* called) : called_(called) {}
+
+  void ReportObservation(cobalt::CobaltObservation observation) override {
+    EXPECT_EQ(3u, observation.metric_id());
+    // The value should contain the client name.
+    EXPECT_TRUE(observation.ValueRepr().find("firebase-test") !=
+                std::string::npos);
+    *called_ += 1;
+  }
+
+ private:
+  int* called_;
+};
+
 class FirebaseAuthImplTest : public gtest::TestWithMessageLoop {
  public:
   FirebaseAuthImplTest()
       : token_provider_(message_loop_.async()),
         token_provider_binding_(&token_provider_),
-        firebase_auth_(message_loop_.async(), "api_key",
-                       token_provider_binding_.NewBinding().Bind(),
-                       InitBackoff(), /*max_retries=*/1) {}
+        firebase_auth_(
+            {"api_key", "firebase-test", 1}, message_loop_.async(),
+            token_provider_binding_.NewBinding().Bind(), InitBackoff(),
+            std::make_unique<MockCobaltContext>(&report_observation_count_)) {}
+
   ~FirebaseAuthImplTest() override {}
 
  protected:
@@ -38,6 +58,8 @@ class FirebaseAuthImplTest : public gtest::TestWithMessageLoop {
   TestTokenProvider token_provider_;
   fidl::Binding<fuchsia::modular::auth::TokenProvider> token_provider_binding_;
   FirebaseAuthImpl firebase_auth_;
+  int report_observation_count_ = 0;
+  MockCobaltContext* mock_cobalt_context_;
   backoff::TestBackoff* backoff_;
 
  private:
@@ -54,6 +76,7 @@ TEST_F(FirebaseAuthImplTest, GetFirebaseToken) {
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(AuthStatus::OK, auth_status);
   EXPECT_EQ("this is a token", firebase_token);
+  EXPECT_EQ(0, report_observation_count_);
 }
 
 TEST_F(FirebaseAuthImplTest, GetFirebaseTokenRetryOnError) {
@@ -61,7 +84,8 @@ TEST_F(FirebaseAuthImplTest, GetFirebaseTokenRetryOnError) {
 
   AuthStatus auth_status;
   std::string firebase_token;
-  token_provider_.error_to_return.status = fuchsia::modular::auth::Status::NETWORK_ERROR;
+  token_provider_.error_to_return.status =
+      fuchsia::modular::auth::Status::NETWORK_ERROR;
   backoff_->SetOnGetNext(MakeQuitTask());
   bool called = false;
   firebase_auth_.GetFirebaseToken(
@@ -75,6 +99,7 @@ TEST_F(FirebaseAuthImplTest, GetFirebaseTokenRetryOnError) {
   EXPECT_FALSE(called);
   EXPECT_EQ(1, backoff_->get_next_count);
   EXPECT_EQ(0, backoff_->reset_count);
+  EXPECT_EQ(0, report_observation_count_);
 
   token_provider_.error_to_return.status = fuchsia::modular::auth::Status::OK;
   EXPECT_FALSE(RunLoopWithTimeout());
@@ -83,6 +108,7 @@ TEST_F(FirebaseAuthImplTest, GetFirebaseTokenRetryOnError) {
   EXPECT_EQ("this is a token", firebase_token);
   EXPECT_EQ(1, backoff_->get_next_count);
   EXPECT_EQ(1, backoff_->reset_count);
+  EXPECT_EQ(0, report_observation_count_);
 }
 
 TEST_F(FirebaseAuthImplTest, GetFirebaseUserId) {
@@ -95,6 +121,7 @@ TEST_F(FirebaseAuthImplTest, GetFirebaseUserId) {
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(AuthStatus::OK, auth_status);
   EXPECT_EQ("some id", firebase_user_id);
+  EXPECT_EQ(0, report_observation_count_);
 }
 
 TEST_F(FirebaseAuthImplTest, GetFirebaseUserIdRetryOnError) {
@@ -102,7 +129,8 @@ TEST_F(FirebaseAuthImplTest, GetFirebaseUserIdRetryOnError) {
 
   AuthStatus auth_status;
   std::string firebase_id;
-  token_provider_.error_to_return.status = fuchsia::modular::auth::Status::NETWORK_ERROR;
+  token_provider_.error_to_return.status =
+      fuchsia::modular::auth::Status::NETWORK_ERROR;
   backoff_->SetOnGetNext(MakeQuitTask());
   bool called = false;
   firebase_auth_.GetFirebaseUserId(
@@ -116,6 +144,7 @@ TEST_F(FirebaseAuthImplTest, GetFirebaseUserIdRetryOnError) {
   EXPECT_FALSE(called);
   EXPECT_EQ(1, backoff_->get_next_count);
   EXPECT_EQ(0, backoff_->reset_count);
+  EXPECT_EQ(0, report_observation_count_);
 
   token_provider_.error_to_return.status = fuchsia::modular::auth::Status::OK;
   EXPECT_FALSE(RunLoopWithTimeout());
@@ -124,13 +153,15 @@ TEST_F(FirebaseAuthImplTest, GetFirebaseUserIdRetryOnError) {
   EXPECT_EQ("some id", firebase_id);
   EXPECT_EQ(1, backoff_->get_next_count);
   EXPECT_EQ(1, backoff_->reset_count);
+  EXPECT_EQ(0, report_observation_count_);
 }
 
 TEST_F(FirebaseAuthImplTest, GetFirebaseUserIdMaxRetry) {
   token_provider_.Set("this is a token", "some id", "me@example.com");
 
   AuthStatus auth_status;
-  token_provider_.error_to_return.status = fuchsia::modular::auth::Status::NETWORK_ERROR;
+  token_provider_.error_to_return.status =
+      fuchsia::modular::auth::Status::NETWORK_ERROR;
   backoff_->SetOnGetNext(MakeQuitTask());
   bool called = false;
   firebase_auth_.GetFirebaseUserId(
@@ -143,21 +174,25 @@ TEST_F(FirebaseAuthImplTest, GetFirebaseUserIdMaxRetry) {
   EXPECT_FALSE(called);
   EXPECT_EQ(1, backoff_->get_next_count);
   EXPECT_EQ(0, backoff_->reset_count);
+  EXPECT_EQ(0, report_observation_count_);
 
   // Exceeding the maximum number of retriable errors returns an error.
-  token_provider_.error_to_return.status = fuchsia::modular::auth::Status::INTERNAL_ERROR;
+  token_provider_.error_to_return.status =
+      fuchsia::modular::auth::Status::INTERNAL_ERROR;
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_TRUE(called);
   EXPECT_EQ(AuthStatus::ERROR, auth_status);
   EXPECT_EQ(1, backoff_->get_next_count);
   EXPECT_EQ(1, backoff_->reset_count);
+  EXPECT_EQ(1, report_observation_count_);
 }
 
 TEST_F(FirebaseAuthImplTest, GetFirebaseUserIdNonRetriableError) {
   token_provider_.Set("this is a token", "some id", "me@example.com");
 
   AuthStatus auth_status;
-  token_provider_.error_to_return.status = fuchsia::modular::auth::Status::BAD_REQUEST;
+  token_provider_.error_to_return.status =
+      fuchsia::modular::auth::Status::BAD_REQUEST;
   backoff_->SetOnGetNext(MakeQuitTask());
   bool called = false;
   firebase_auth_.GetFirebaseUserId(
@@ -171,6 +206,7 @@ TEST_F(FirebaseAuthImplTest, GetFirebaseUserIdNonRetriableError) {
   EXPECT_EQ(AuthStatus::ERROR, auth_status);
   EXPECT_EQ(0, backoff_->get_next_count);
   EXPECT_EQ(1, backoff_->reset_count);
+  EXPECT_EQ(1, report_observation_count_);
 }
 
 }  // namespace

@@ -18,6 +18,7 @@ source_set("firebase_auth") {
     "//garnet/public/lib/backoff",
     "//garnet/public/lib/callback",
     "//garnet/public/lib/fxl",
+    "//peridot/lib/cobalt",
     "//peridot/public/lib/auth/fidl",
   ]
 }

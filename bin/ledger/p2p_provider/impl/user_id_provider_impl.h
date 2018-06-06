@@ -9,6 +9,7 @@
 
 #include <string>
 
+#include "lib/app/cpp/startup_context.h"
 #include "peridot/bin/ledger/environment/environment.h"
 #include "peridot/bin/ledger/filesystem/detached_path.h"
 #include "peridot/bin/ledger/p2p_provider/public/user_id_provider.h"
@@ -18,9 +19,12 @@ namespace p2p_provider {
 
 class UserIdProviderImpl : public UserIdProvider {
  public:
-  UserIdProviderImpl(ledger::Environment* environment,
-                     ledger::DetachedPath user_directory,
-                     fuchsia::modular::auth::TokenProviderPtr token_provider_ptr);
+  UserIdProviderImpl(
+      ledger::Environment* environment,
+      fuchsia::sys::StartupContext* startup_context,
+      ledger::DetachedPath user_directory,
+      fuchsia::modular::auth::TokenProviderPtr token_provider_ptr,
+      std::string cobalt_client_name);
 
   void GetUserId(std::function<void(Status, std::string)> callback) override;
 

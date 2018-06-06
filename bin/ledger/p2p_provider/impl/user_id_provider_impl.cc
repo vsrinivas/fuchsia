@@ -15,13 +15,17 @@ namespace p2p_provider {
 constexpr fxl::StringView user_id_filename = "p2p_user_id";
 
 UserIdProviderImpl::UserIdProviderImpl(
-    ledger::Environment* environment, ledger::DetachedPath user_directory,
-    fuchsia::modular::auth::TokenProviderPtr token_provider_ptr)
-    : user_id_path_(user_directory.SubPath(user_id_filename)) {
-  firebase_auth_ = std::make_unique<firebase_auth::FirebaseAuthImpl>(
-      environment->async(), modular::kFirebaseApiKey,
-      std::move(token_provider_ptr), environment->MakeBackoff());
-}
+    ledger::Environment* environment,
+    fuchsia::sys::StartupContext* startup_context,
+    ledger::DetachedPath user_directory,
+    fuchsia::modular::auth::TokenProviderPtr token_provider_ptr,
+    std::string cobalt_client_name)
+    : user_id_path_(user_directory.SubPath(user_id_filename)),
+      firebase_auth_(std::make_unique<firebase_auth::FirebaseAuthImpl>(
+          firebase_auth::FirebaseAuthImpl::Config{modular::kFirebaseApiKey,
+                                                  cobalt_client_name},
+          environment->async(), std::move(token_provider_ptr),
+          startup_context)) {}
 
 void UserIdProviderImpl::GetUserId(
     std::function<void(Status, std::string)> callback) {
@@ -32,21 +36,21 @@ void UserIdProviderImpl::GetUserId(
     return;
   }
 
-  firebase_auth_->GetFirebaseUserId([this, callback = std::move(callback)](
-                                        firebase_auth::AuthStatus status,
-                                        std::string user_id) {
-    if (status != firebase_auth::AuthStatus::OK) {
-      FXL_LOG(ERROR) << "Firebase auth returned an error.";
-      callback(Status::ERROR, "");
-      return;
-    }
-    if (!UpdateUserId(user_id)) {
-      FXL_LOG(WARNING)
-          << "Unable to persist the user id for caching. Continuing anyway...";
-      // We have the user id, we can continue anyway.
-    }
-    callback(Status::OK, user_id);
-  });
+  firebase_auth_->GetFirebaseUserId(
+      [this, callback = std::move(callback)](firebase_auth::AuthStatus status,
+                                             std::string user_id) {
+        if (status != firebase_auth::AuthStatus::OK) {
+          FXL_LOG(ERROR) << "Firebase auth returned an error.";
+          callback(Status::ERROR, "");
+          return;
+        }
+        if (!UpdateUserId(user_id)) {
+          FXL_LOG(WARNING) << "Unable to persist the user id for caching. "
+                              "Continuing anyway...";
+          // We have the user id, we can continue anyway.
+        }
+        callback(Status::OK, user_id);
+      });
 }
 
 bool UserIdProviderImpl::LoadUserIdFromFile(std::string* id) {

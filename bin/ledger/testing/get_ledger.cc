@@ -32,7 +32,7 @@ ledger::Status GetLedger(fxl::Closure run_loop, fxl::Closure stop_loop,
   launch_info.url = "ledger";
   launch_info.directory_request = child_services.NewRequest();
   launch_info.arguments.push_back("--no_minfs_wait");
-  launch_info.arguments.push_back("--no_statistics_reporting_for_testing");
+  launch_info.arguments.push_back("--disable_reporting");
 
   context->launcher()->CreateComponent(std::move(launch_info),
                                        controller->NewRequest());

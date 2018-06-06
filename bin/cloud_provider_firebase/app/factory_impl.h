@@ -22,7 +22,9 @@ namespace cloud_provider_firebase {
 class FactoryImpl : public Factory {
  public:
   explicit FactoryImpl(async_t* async,
-                       network_wrapper::NetworkWrapper* network_wrapper);
+                       fuchsia::sys::StartupContext* startup_context,
+                       network_wrapper::NetworkWrapper* network_wrapper,
+                       std::string cobalt_client_name);
 
   ~FactoryImpl() override;
 
@@ -30,12 +32,15 @@ class FactoryImpl : public Factory {
   // Factory:
   void GetCloudProvider(
       Config config,
-      fidl::InterfaceHandle<fuchsia::modular::auth::TokenProvider> token_provider,
+      fidl::InterfaceHandle<fuchsia::modular::auth::TokenProvider>
+          token_provider,
       fidl::InterfaceRequest<cloud_provider::CloudProvider> cloud_provider,
       GetCloudProviderCallback callback) override;
 
   async_t* const async_;
+  fuchsia::sys::StartupContext* const startup_context_;
   network_wrapper::NetworkWrapper* const network_wrapper_;
+  const std::string cobalt_client_name_;
   callback::CancellableContainer token_requests_;
   callback::AutoCleanableSet<CloudProviderImpl> providers_;
 

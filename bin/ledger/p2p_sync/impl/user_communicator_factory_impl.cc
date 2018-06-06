@@ -15,8 +15,11 @@
 namespace p2p_sync {
 UserCommunicatorFactoryImpl::UserCommunicatorFactoryImpl(
     ledger::Environment* environment,
-    fuchsia::sys::StartupContext* startup_context)
-    : environment_(environment), startup_context_(startup_context) {}
+    fuchsia::sys::StartupContext* startup_context,
+    std::string cobalt_client_name)
+    : environment_(environment),
+      startup_context_(startup_context),
+      cobalt_client_name_(std::move(cobalt_client_name)) {}
 
 UserCommunicatorFactoryImpl::~UserCommunicatorFactoryImpl() {}
 
@@ -31,14 +34,15 @@ UserCommunicatorFactoryImpl::GetUserCommunicator(
   }
 
   fuchsia::modular::auth::TokenProviderPtr token_provider =
-      startup_context_
-          ->ConnectToEnvironmentService<fuchsia::modular::auth::TokenProvider>();
+      startup_context_->ConnectToEnvironmentService<
+          fuchsia::modular::auth::TokenProvider>();
   netconnector::NetConnectorPtr net_connector =
       startup_context_
           ->ConnectToEnvironmentService<netconnector::NetConnector>();
   std::unique_ptr<p2p_provider::UserIdProviderImpl> user_id_provider =
       std::make_unique<p2p_provider::UserIdProviderImpl>(
-          environment_, std::move(user_directory), std::move(token_provider));
+          environment_, startup_context_, std::move(user_directory),
+          std::move(token_provider), cobalt_client_name_);
   return std::make_unique<p2p_sync::UserCommunicatorImpl>(
       std::make_unique<p2p_provider::P2PProviderImpl>(
           host_name_buffer, std::move(net_connector),
