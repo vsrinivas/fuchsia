@@ -102,12 +102,12 @@ static constexpr const char* deprecated_services[] = {
     "amber.Control",
     "cobalt.CobaltEncoderFactory",
     "fuchsia.sys.Launcher",
+    "fuchsia.media.AudioServer",
     "fuchsia.netstack.Netstack",
     "fuchsia.sys.Environment",
     "device_settings.DeviceSettingsManager",
     "logger.Log",
     "logger.LogSink",
-    "media.AudioServer",
     "media_player.MediaPlayer",
     // fdio name for Netstack. Will be removed with the new interfaces defined
     // in NET-863.
