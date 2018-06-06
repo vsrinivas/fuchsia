@@ -198,10 +198,10 @@ struct CodecBufferConstraints {
   // support single-buffer mode on output.  Nearly all video decoders will set
   // this to false for their output.
   //
-  // All decoder inputs: Servers must support single-buffer mode on fuchsia.ui.input.  The
-  // client is responsible for managing the input buffer space such that filling
-  // an input packet doesn't over-write any portion of an input packet already
-  // in flight to the codec.
+  // All decoder inputs: Servers must support single-buffer mode on input.  The
+  // client is responsible for managing the input buffer space such that
+  // filling an input packet doesn't over-write any portion of an input packet
+  // already in flight to the codec.
   //
   // Encoder inputs: Server support for single-buffer mode on encoder input is
   // optional.  This is more often useful for audio than for video.
@@ -330,6 +330,46 @@ struct CodecOutputConfig {
   CodecFormatDetails format_details;
 };
 
+// Default values for input and output 
+// CodecBufferConstraints.default_settings.packet_count_for_codec.
+//
+// These are defined as "const" in FIDL to avoid all server implementations
+// needing to separately define their own values, and these should be
+// reasonable as default values, but strictly speaking this is not intended to
+// promise that this value won't change from build to build.  If a client cares
+// about a specific number, the client should separately define what that
+// number is and ensure that CodecPortBufferSettings.packet_count_for_client is
+// at least large enough.
+//
+// In contrast to packet_count_for_client, the packet_count_for_codec is much
+// more codec-specific, so this file has no numbers for that - each codec will
+// set those as appropriate for the specific codec.
+//
+// These are not "recommended" values, only "default" values, in the sense that
+// the codec doesn't really know what the correct setting for these values is
+// for a given client, and if the default is not appropriate for a client,
+// large problems could result such as deadlock.  See the comments on
+// packet_count_for_client.
+//
+// Despite these defaults, every client should ideally care about the
+// packet_count_for_client setting and should ensure that the setting is at
+// least large enough to cover the number of packets the client might ever need
+// to camp on for any non-transient duration concurrently.  The defaults are
+// only intended to be plausible for some clients, not all clients.
+//
+// One for the client to be filling and one in transit.
+const uint32 kDefaultInputPacketCountForClient = 2;
+// One for the client to be rendering, and one in transit.
+const uint32 kDefaultOutputPacketCountForClient = 2;
+
+// For input, this is the default on a fairly arbitrary basis.
+//
+// TODO(dustingreen): Do we want the default for audio encoding to be
+// single_buffer_mode true instead?  If so, we may split this up by audio/video
+// encoder/decoder.
+const bool kDefaultInputIsSingleBufferMode = false;
+const bool kDefaultOutputIsSingleBufferMode = false;
+
 // CodecPortBufferSettings
 //
 // See relevant corresponding constraints in CodecBufferConstraints.  The
@@ -337,6 +377,9 @@ struct CodecOutputConfig {
 //
 // The client informs the codec of these settings and then separately informs
 // the codec of each buffer.
+//
+// TODO(dustingreen): Rename from CodecPortBufferSettings to CodecBufferSettings
+// in a separate CL (after some other stuff is out of the way first).
 struct CodecPortBufferSettings {
   // buffer_lifetime_ordinal
   //
@@ -533,7 +576,7 @@ struct CodecBufferDataVmo {
   // one byte beyond the end of the VMO if desired.  In other words, this can
   // be equal to the VMO's size, to indicate that the last byte of the VMO is
   // usable (and possibly many byte before that, depending on
-  // vmo_offset_begin).
+  // vmo_usable_start).
   uint64 vmo_usable_size;
 };
 
@@ -719,7 +762,7 @@ interface CodecEvents {
   // for the life of the Codec.
   //
   // The "max" values for buffer size and count are large enough to support the
-  // most demanding format the server supports on fuchsia.ui.input.  The "recommended"
+  // most demanding format the server supports on input.  The "recommended"
   // values should be workable for use with the input CodecFormatDetails
   // conveyed during Codec creation.  The "recommended" values are not
   // necessarily suitable if the client uses QueueInputFormatDetails() to
