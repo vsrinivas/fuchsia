@@ -614,6 +614,35 @@ if (target_cpu != "arm64") {
   image_paths += [ "IMAGE_ESP_RAW=" + rebase_path(esp_image_path[0], root_build_dir) ]
 }
 
+zbi("bootfs") {
+  manifest = boot_manifest
+  deps = [
+    ":boot.manifest",
+  ]
+}
+zircon_bootfs_label = ":bootfs.zbi"
+
+zbi("zircon") {
+  testonly = true
+  zircon_bin = "${zircon_build_dir}/zircon.bin"
+
+  cmdline = [
+    "cmdline.txt",
+  ] + get_target_outputs(":system_image_cmdline.txt")
+  if (kernel_cmdline_file != "") {
+    cmdline += [ kernel_cmdline_file ]
+  }
+
+  boot_output = get_target_outputs(zircon_bootfs_label)
+  bootdata = boot_output[0]
+  deps = [
+    ":system_image_cmdline.txt",
+    zircon_bootfs_label,
+  ]
+}
+zircon_image_path = get_target_outputs(":zircon.zbi")
+image_paths += [ "IMAGE_ZIRCONA_ZBI=" + rebase_path(zircon_image_path[0], root_build_dir) ]
+
 # The installer needs all images except for fvm.blk (it has fvm.sparse.blk):
 installer_images = [
   "fvm.sparse.blk",
@@ -744,6 +773,7 @@ group("images") {
     ":legacy-images",
     ":zircon-boot-blob",
     ":zircon.vboot",
+    ":zircon.zbi",
     "zedboot",
   ]
   if (target_cpu != "arm64") {

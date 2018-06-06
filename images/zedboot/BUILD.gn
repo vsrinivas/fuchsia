@@ -143,10 +143,38 @@ if (target_cpu != "arm64") {
   zedboot_image_paths += [ "IMAGE_ZEDBOOT_ESP=" + rebase_path(zedboot_esp_image_path[0], root_build_dir) ]
 }
 
+zbi("zedboot-bootfs") {
+  manifest_outputs = get_target_outputs(":zedboot.manifest")
+  manifest = manifest_outputs[0]
+  deps = [
+    ":zedboot.manifest",
+  ]
+}
+zedboot_bootfs_label = ":zedboot-bootfs.zbi"
+
+zbi("zedboot") {
+  zircon_bin = "${zircon_build_dir}/zircon.bin"
+  cmdline = [
+    "cmdline.txt",
+  ]
+  if (zedboot_cmdline_file != "") {
+    cmdline += [ zedboot_cmdline_file ]
+  }
+
+  boot_output = get_target_outputs(zedboot_bootfs_label)
+  bootdata = boot_output[0]
+  deps = [
+    zedboot_bootfs_label
+  ]
+}
+zedboot_image_path = get_target_outputs(":zedboot.zbi")
+zedboot_image_paths += [ "IMAGE_ZIRCONR_ZBI=" + rebase_path(zedboot_image_path[0], root_build_dir) ]
+
 group("zedboot") {
   deps = [
     ":zedboot.bin",
     ":zedboot.vboot",
+    ":zedboot.zbi",
   ]
   if (target_cpu != "arm64") {
     deps += [ ":zedboot.esp.blk" ]

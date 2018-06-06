@@ -158,3 +158,84 @@ template("esp") {
     }
   }
 }
+
+# Build a Zircon Boot Image (ZBI) that is a bootable "kernel partition".
+#
+# Parameters
+#
+#   deps (optional)
+#     [list of labels] Build targets that are necessary to produce any of the other arguments.
+#
+#   zircon_bin (optional)
+#     [path] A zircon kernel.
+#
+#   manifest (optional)
+#     [path] A bootfs manifest file.
+
+#   bootdata (optional)
+#     [path] A bootdata path defined earlier in the file.
+#
+#   cmdline (optional):
+#     [list of paths] Text files containing cmdline arguments.
+#
+template("zbi") {
+  output_name = "${target_name}.zbi"
+
+  zircon_tool_action(output_name) {
+    forward_variables_from(invoker,
+                           [
+                             "deps",
+                             "sources",
+                             "visibility",
+                             "testonly",
+                           ])
+    tool = "zbi"
+
+    zbi_image_path = "$images_dir/$output_name"
+    outputs = [
+      zbi_image_path,
+    ]
+
+    inputs = []
+
+    args = [
+      "-o",
+      rebase_path(zbi_image_path),
+    ]
+
+    if (defined(invoker.zircon_bin)) {
+      assert(!defined(invoker.manifest))
+      inputs += [ invoker.zircon_bin ]
+      args += [
+        rebase_path(invoker.zircon_bin),
+      ]
+    }
+
+    if (defined(invoker.manifest)) {
+      assert(!defined(invoker.zircon_bin))
+      inputs += [ invoker.manifest ]
+      args += [
+        "-c",
+        rebase_path(invoker.manifest),
+      ]
+    }
+
+    if (defined(invoker.bootdata)) {
+      inputs += [ invoker.bootdata ]
+      args += [
+        rebase_path(invoker.bootdata),
+      ]
+    }
+
+    if (defined(invoker.cmdline)) {
+      inputs += invoker.cmdline
+      args += [
+        "-T",
+        "cmdline",
+      ]
+      foreach(cmdline, invoker.cmdline) {
+        args += [ rebase_path(cmdline) ]
+      }
+    }
+  }
+}
