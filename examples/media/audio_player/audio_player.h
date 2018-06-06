@@ -7,7 +7,7 @@
 
 #include <fuchsia/media/cpp/fidl.h>
 #include <lib/fit/function.h>
-#include <media_player/cpp/fidl.h>
+#include <fuchsia/mediaplayer/cpp/fidl.h>
 
 #include "garnet/examples/media/audio_player/audio_player_params.h"
 #include "lib/app/cpp/startup_context.h"
@@ -24,10 +24,10 @@ class AudioPlayer {
 
  private:
   // Handles a status update from the player.
-  void HandleStatusChanged(const media_player::MediaPlayerStatus& status);
+  void HandleStatusChanged(const fuchsia::mediaplayer::MediaPlayerStatus& status);
 
   fit::closure quit_callback_;
-  media_player::MediaPlayerPtr media_player_;
+  fuchsia::mediaplayer::MediaPlayerPtr media_player_;
   bool metadata_shown_ = false;
   bool problem_shown_ = false;
   bool quit_when_done_;

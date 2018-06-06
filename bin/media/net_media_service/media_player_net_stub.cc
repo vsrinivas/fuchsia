@@ -17,15 +17,18 @@
 namespace media_player {
 
 MediaPlayerNetStub::MediaPlayerNetStub(
-    const fidl::InterfacePtr<MediaPlayer>& player, zx::channel channel,
-    netconnector::NetStubResponder<MediaPlayer, MediaPlayerNetStub>* responder)
+    const fidl::InterfacePtr<fuchsia::mediaplayer::MediaPlayer>& player,
+    zx::channel channel,
+    netconnector::NetStubResponder<fuchsia::mediaplayer::MediaPlayer,
+                                   MediaPlayerNetStub>* responder)
     : player_(player), responder_(responder) {
   FXL_DCHECK(player_);
   FXL_DCHECK(responder_);
 
-  player_.events().StatusChanged = [this](MediaPlayerStatus status) {
-    HandleStatusChanged(status);
-  };
+  player_.events().StatusChanged =
+      [this](fuchsia::mediaplayer::MediaPlayerStatus status) {
+        HandleStatusChanged(status);
+      };
 
   message_relay_.SetMessageReceivedCallback(
       [this](std::vector<uint8_t> message) { HandleReceivedMessage(message); });
@@ -92,7 +95,8 @@ void MediaPlayerNetStub::HandleReceivedMessage(
   }
 }
 
-void MediaPlayerNetStub::HandleStatusChanged(const MediaPlayerStatus& status) {
+void MediaPlayerNetStub::HandleStatusChanged(
+    const fuchsia::mediaplayer::MediaPlayerStatus& status) {
   if (!time_check_received_) {
     cached_status_ = fidl::MakeOptional(fidl::Clone(status));
     return;

@@ -30,15 +30,18 @@ MediaPlayerTestUnattended::MediaPlayerTestUnattended(
   std::cerr << "MediaPlayerTest starting\n";
 
   std::cerr << "creating player\n";
-  media_player_ = startup_context_->ConnectToEnvironmentService<MediaPlayer>();
-  media_player_.events().StatusChanged = [this](MediaPlayerStatus status) {
-    if (status.end_of_stream) {
-      FXL_LOG(INFO) << "MediaPlayerTest "
-                    << (fake_audio_renderer_.expected() ? "SUCCEEDED"
-                                                        : "FAILED");
-      quit_callback_(fake_audio_renderer_.expected() ? 0 : 1);
-    }
-  };
+  media_player_ =
+      startup_context_
+          ->ConnectToEnvironmentService<fuchsia::mediaplayer::MediaPlayer>();
+  media_player_.events().StatusChanged =
+      [this](fuchsia::mediaplayer::MediaPlayerStatus status) {
+        if (status.end_of_stream) {
+          FXL_LOG(INFO) << "MediaPlayerTest "
+                        << (fake_audio_renderer_.expected() ? "SUCCEEDED"
+                                                            : "FAILED");
+          quit_callback_(fake_audio_renderer_.expected() ? 0 : 1);
+        }
+      };
 
   fake_audio_renderer_.SetPtsUnits(48000, 1);
 
@@ -59,8 +62,8 @@ MediaPlayerTestUnattended::MediaPlayerTestUnattended(
                                       {14336, 4096, 0xf7960542f1991800},
                                       {15360, 4052, 0x7308a9824acbd5ea}});
 
-  SeekingReaderPtr fake_reader_ptr;
-  fidl::InterfaceRequest<SeekingReader> reader_request =
+  fuchsia::mediaplayer::SeekingReaderPtr fake_reader_ptr;
+  fidl::InterfaceRequest<fuchsia::mediaplayer::SeekingReader> reader_request =
       fake_reader_ptr.NewRequest();
   fake_reader_.Bind(std::move(reader_request));
 

@@ -9,9 +9,6 @@
 #include "garnet/bin/media/media_player/framework/types/text_stream_type.h"
 #include "garnet/bin/media/media_player/framework/types/video_stream_type.h"
 
-using media_player::MediaMetadata;
-using media_player::MediaMetadataPtr;
-
 namespace fxl {
 
 namespace {
@@ -601,22 +598,28 @@ std::unique_ptr<media_player::StreamTypeSet> TypeConverter<
   return nullptr;
 }
 
-MediaMetadataPtr
-TypeConverter<MediaMetadataPtr, std::unique_ptr<media_player::Metadata>>::
+fuchsia::mediaplayer::MediaMetadataPtr
+TypeConverter<fuchsia::mediaplayer::MediaMetadataPtr,
+              std::unique_ptr<media_player::Metadata>>::
     Convert(const std::unique_ptr<media_player::Metadata>& input) {
-  return input == nullptr ? nullptr : fxl::To<MediaMetadataPtr>(*input);
+  return input == nullptr
+             ? nullptr
+             : fxl::To<fuchsia::mediaplayer::MediaMetadataPtr>(*input);
 }
 
-MediaMetadataPtr
-TypeConverter<MediaMetadataPtr, const media_player::Metadata*>::Convert(
-    const media_player::Metadata* input) {
-  return input == nullptr ? nullptr : fxl::To<MediaMetadataPtr>(*input);
+fuchsia::mediaplayer::MediaMetadataPtr TypeConverter<
+    fuchsia::mediaplayer::MediaMetadataPtr,
+    const media_player::Metadata*>::Convert(const media_player::Metadata*
+                                                input) {
+  return input == nullptr
+             ? nullptr
+             : fxl::To<fuchsia::mediaplayer::MediaMetadataPtr>(*input);
 }
 
-MediaMetadataPtr
-TypeConverter<MediaMetadataPtr, media_player::Metadata>::Convert(
-    const media_player::Metadata& input) {
-  auto result = media_player::MediaMetadata::New();
+fuchsia::mediaplayer::MediaMetadataPtr TypeConverter<
+    fuchsia::mediaplayer::MediaMetadataPtr,
+    media_player::Metadata>::Convert(const media_player::Metadata& input) {
+  auto result = fuchsia::mediaplayer::MediaMetadata::New();
   result->duration = input.duration_ns();
   result->title = input.title().empty() ? fidl::StringPtr()
                                         : fidl::StringPtr(input.title());
@@ -637,7 +640,8 @@ TypeConverter<MediaMetadataPtr, media_player::Metadata>::Convert(
 
 std::unique_ptr<media_player::Metadata>
 TypeConverter<std::unique_ptr<media_player::Metadata>,
-              MediaMetadataPtr>::Convert(const MediaMetadataPtr& input) {
+              fuchsia::mediaplayer::MediaMetadataPtr>::
+    Convert(const fuchsia::mediaplayer::MediaMetadataPtr& input) {
   if (!input) {
     return nullptr;
   }

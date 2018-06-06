@@ -6,9 +6,9 @@
 
 #include <fs/pseudo-file.h>
 #include <fuchsia/media/cpp/fidl.h>
+#include <fuchsia/mediaplayer/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/task.h>
-#include <media_player/cpp/fidl.h>
 #include <trace-provider/provider.h>
 
 #include "garnet/bin/media/media_player/media_player_impl.h"
@@ -53,25 +53,30 @@ int main(int argc, const char** argv) {
 
   if (transient) {
     std::unique_ptr<media_player::MediaPlayerImpl> player;
-    startup_context->outgoing().AddPublicService<media_player::MediaPlayer>(
-        [startup_context = startup_context.get(), &player,
-         &loop](fidl::InterfaceRequest<media_player::MediaPlayer> request) {
-          player = media_player::MediaPlayerImpl::Create(
-              std::move(request), startup_context, [&loop]() {
-                async::PostTask(loop.async(), [&loop]() { loop.Quit(); });
-              });
-        });
+    startup_context->outgoing()
+        .AddPublicService<fuchsia::mediaplayer::MediaPlayer>(
+            [startup_context = startup_context.get(), &player,
+             &loop](fidl::InterfaceRequest<fuchsia::mediaplayer::MediaPlayer>
+                        request) {
+              player = media_player::MediaPlayerImpl::Create(
+                  std::move(request), startup_context, [&loop]() {
+                    async::PostTask(loop.async(), [&loop]() { loop.Quit(); });
+                  });
+            });
 
     loop.Run();
   } else {
     fuchsia::sys::LauncherPtr launcher;
     startup_context->environment()->GetLauncher(launcher.NewRequest());
 
-    startup_context->outgoing().AddPublicService<media_player::MediaPlayer>(
-        [&launcher](fidl::InterfaceRequest<media_player::MediaPlayer> request) {
-          ConnectToIsolate<media_player::MediaPlayer>(std::move(request),
-                                                      launcher.get());
-        });
+    startup_context->outgoing()
+        .AddPublicService<fuchsia::mediaplayer::MediaPlayer>(
+            [&launcher](
+                fidl::InterfaceRequest<fuchsia::mediaplayer::MediaPlayer>
+                    request) {
+              ConnectToIsolate<fuchsia::mediaplayer::MediaPlayer>(
+                  std::move(request), launcher.get());
+            });
 
     loop.Run();
   }

@@ -22,18 +22,21 @@ class MediaPlayerNetPublisher : public NetMediaServiceImpl::ProductBase {
  public:
   static std::shared_ptr<MediaPlayerNetPublisher> Create(
       fidl::StringPtr service_name,
-      fidl::InterfaceHandle<MediaPlayer> media_player,
+      fidl::InterfaceHandle<fuchsia::mediaplayer::MediaPlayer> media_player,
       NetMediaServiceImpl* owner);
 
   ~MediaPlayerNetPublisher() override;
 
  private:
-  MediaPlayerNetPublisher(fidl::StringPtr service_name,
-                          fidl::InterfaceHandle<MediaPlayer> media_player,
-                          NetMediaServiceImpl* owner);
+  MediaPlayerNetPublisher(
+      fidl::StringPtr service_name,
+      fidl::InterfaceHandle<fuchsia::mediaplayer::MediaPlayer> media_player,
+      NetMediaServiceImpl* owner);
 
-  MediaPlayerPtr media_player_;
-  netconnector::NetStubResponder<MediaPlayer, MediaPlayerNetStub> responder_;
+  fuchsia::mediaplayer::MediaPlayerPtr media_player_;
+  netconnector::NetStubResponder<fuchsia::mediaplayer::MediaPlayer,
+                                 MediaPlayerNetStub>
+      responder_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(MediaPlayerNetPublisher);
 };

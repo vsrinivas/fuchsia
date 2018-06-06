@@ -15,7 +15,7 @@ namespace media_player {
 // static
 std::shared_ptr<MediaPlayerNetPublisher> MediaPlayerNetPublisher::Create(
     fidl::StringPtr service_name,
-    fidl::InterfaceHandle<MediaPlayer> media_player,
+    fidl::InterfaceHandle<fuchsia::mediaplayer::MediaPlayer> media_player,
     NetMediaServiceImpl* owner) {
   return std::shared_ptr<MediaPlayerNetPublisher>(new MediaPlayerNetPublisher(
       service_name, std::move(media_player), owner));
@@ -23,7 +23,8 @@ std::shared_ptr<MediaPlayerNetPublisher> MediaPlayerNetPublisher::Create(
 
 MediaPlayerNetPublisher::MediaPlayerNetPublisher(
     fidl::StringPtr service_name,
-    fidl::InterfaceHandle<MediaPlayer> media_player, NetMediaServiceImpl* owner)
+    fidl::InterfaceHandle<fuchsia::mediaplayer::MediaPlayer> media_player,
+    NetMediaServiceImpl* owner)
     : NetMediaServiceImpl::ProductBase(owner),
       media_player_(media_player.Bind()),
       responder_(media_player_, service_name, owner->startup_context()) {

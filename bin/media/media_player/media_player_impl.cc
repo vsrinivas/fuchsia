@@ -8,10 +8,10 @@
 
 #include <fs/pseudo-file.h>
 #include <fuchsia/media/cpp/fidl.h>
+#include <fuchsia/mediaplayer/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 #include <lib/fit/function.h>
-#include <media_player/cpp/fidl.h>
 
 #include "garnet/bin/media/media_player/demux/fidl_reader.h"
 #include "garnet/bin/media/media_player/demux/file_reader.h"
@@ -38,15 +38,15 @@ static const char* kDumpEntry = "dump";
 
 // static
 std::unique_ptr<MediaPlayerImpl> MediaPlayerImpl::Create(
-    fidl::InterfaceRequest<MediaPlayer> request,
+    fidl::InterfaceRequest<fuchsia::mediaplayer::MediaPlayer> request,
     fuchsia::sys::StartupContext* startup_context, fit::closure quit_callback) {
   return std::make_unique<MediaPlayerImpl>(std::move(request), startup_context,
                                            std::move(quit_callback));
 }
 
-MediaPlayerImpl::MediaPlayerImpl(fidl::InterfaceRequest<MediaPlayer> request,
-                                 fuchsia::sys::StartupContext* startup_context,
-                                 fit::closure quit_callback)
+MediaPlayerImpl::MediaPlayerImpl(
+    fidl::InterfaceRequest<fuchsia::mediaplayer::MediaPlayer> request,
+    fuchsia::sys::StartupContext* startup_context, fit::closure quit_callback)
     : async_(async_get_default()),
       startup_context_(startup_context),
       quit_callback_(std::move(quit_callback)),
@@ -388,7 +388,7 @@ void MediaPlayerImpl::SetFileSource(zx::channel file_channel) {
 }
 
 void MediaPlayerImpl::SetReaderSource(
-    fidl::InterfaceHandle<SeekingReader> reader_handle) {
+    fidl::InterfaceHandle<fuchsia::mediaplayer::SeekingReader> reader_handle) {
   if (!reader_handle) {
     BeginSetReader(nullptr);
     return;
@@ -491,7 +491,8 @@ void MediaPlayerImpl::SetAudioRenderer(
                          StreamType::Medium::kAudio);
 }
 
-void MediaPlayerImpl::AddBinding(fidl::InterfaceRequest<MediaPlayer> request) {
+void MediaPlayerImpl::AddBinding(
+    fidl::InterfaceRequest<fuchsia::mediaplayer::MediaPlayer> request) {
   FXL_DCHECK(request);
   bindings_.AddBinding(this, std::move(request));
 
@@ -520,7 +521,8 @@ void MediaPlayerImpl::UpdateStatus() {
   status_.video_connected =
       player_.medium_connected(StreamType::Medium::kVideo);
 
-  status_.metadata = fxl::To<MediaMetadataPtr>(player_.metadata());
+  status_.metadata =
+      fxl::To<fuchsia::mediaplayer::MediaMetadataPtr>(player_.metadata());
 
   if (video_renderer_) {
     status_.video_size = SafeClone(video_renderer_->video_size());

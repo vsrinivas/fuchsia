@@ -5,7 +5,7 @@
 extern crate failure;
 extern crate fdio;
 extern crate fidl;
-extern crate fidl_media_player;
+extern crate fidl_fuchsia_mediaplayer;
 extern crate fuchsia_app as app;
 extern crate fuchsia_async as async;
 extern crate fuchsia_zircon as zx;
@@ -18,7 +18,7 @@ extern crate url;
 use app::client::connect_to_service;
 use failure::{Error, ResultExt};
 use fdio::fdio_sys::*;
-use fidl_media_player::*;
+use fidl_fuchsia_mediaplayer::*;
 use futures::prelude::*;
 use mxruntime_sys::*;
 use std::fs::File;

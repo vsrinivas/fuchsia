@@ -197,7 +197,7 @@ const Metadata* Player::metadata() const {
   return nullptr;
 }
 
-const Problem* Player::problem() const {
+const fuchsia::mediaplayer::Problem* Player::problem() const {
   // First, see if the source segment has a problem to report.
   if (source_segment_ && source_segment_->problem()) {
     return source_segment_->problem();

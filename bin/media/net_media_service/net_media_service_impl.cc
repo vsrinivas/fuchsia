@@ -12,24 +12,28 @@ namespace media_player {
 NetMediaServiceImpl::NetMediaServiceImpl(
     std::unique_ptr<fuchsia::sys::StartupContext> startup_context)
     : FactoryServiceBase(std::move(startup_context)) {
-  this->startup_context()->outgoing().AddPublicService<NetMediaService>(
-      [this](fidl::InterfaceRequest<NetMediaService> request) {
-        bindings_.AddBinding(this, std::move(request));
-      });
+  this->startup_context()
+      ->outgoing()
+      .AddPublicService<fuchsia::mediaplayer::NetMediaService>(
+          [this](fidl::InterfaceRequest<fuchsia::mediaplayer::NetMediaService>
+                     request) {
+            bindings_.AddBinding(this, std::move(request));
+          });
 }
 
 NetMediaServiceImpl::~NetMediaServiceImpl() {}
 
 void NetMediaServiceImpl::PublishMediaPlayer(
     fidl::StringPtr service_name,
-    fidl::InterfaceHandle<MediaPlayer> media_player) {
+    fidl::InterfaceHandle<fuchsia::mediaplayer::MediaPlayer> media_player) {
   AddProduct(MediaPlayerNetPublisher::Create(service_name,
                                              std::move(media_player), this));
 }
 
 void NetMediaServiceImpl::CreateMediaPlayerProxy(
     fidl::StringPtr device_name, fidl::StringPtr service_name,
-    fidl::InterfaceRequest<MediaPlayer> media_player_request) {
+    fidl::InterfaceRequest<fuchsia::mediaplayer::MediaPlayer>
+        media_player_request) {
   AddProduct(MediaPlayerNetProxy::Create(
       device_name, service_name, std::move(media_player_request), this));
 }

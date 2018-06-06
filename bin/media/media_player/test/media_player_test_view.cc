@@ -87,11 +87,14 @@ MediaPlayerTestView::MediaPlayerTestView(
   pixel_aspect_ratio_.height = 1;
 
   // Create a player from all that stuff.
-  media_player_ = startup_context->ConnectToEnvironmentService<MediaPlayer>();
+  media_player_ =
+      startup_context
+          ->ConnectToEnvironmentService<fuchsia::mediaplayer::MediaPlayer>();
 
-  media_player_.events().StatusChanged = [this](MediaPlayerStatus status) {
-    HandleStatusChanged(status);
-  };
+  media_player_.events().StatusChanged =
+      [this](fuchsia::mediaplayer::MediaPlayerStatus status) {
+        HandleStatusChanged(status);
+      };
 
   ::fuchsia::ui::views_v1_token::ViewOwnerPtr video_view_owner;
   media_player_->CreateView(
@@ -301,7 +304,7 @@ void MediaPlayerTestView::OnChildUnavailable(uint32_t child_key) {
 }
 
 void MediaPlayerTestView::HandleStatusChanged(
-    const media_player::MediaPlayerStatus& status) {
+    const fuchsia::mediaplayer::MediaPlayerStatus& status) {
   // Process status received from the player.
   if (status.timeline_transform) {
     timeline_function_ = media::TimelineFunction(*status.timeline_transform);

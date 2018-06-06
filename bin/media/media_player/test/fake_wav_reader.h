@@ -7,9 +7,9 @@
 
 #include <vector>
 
+#include <fuchsia/mediaplayer/cpp/fidl.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/zx/socket.h>
-#include <media_player/cpp/fidl.h>
 
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fxl/logging.h"
@@ -17,7 +17,7 @@
 namespace media_player {
 
 // Fake SeekingReader that 'reads' a synthetic wav file.
-class FakeWavReader : public SeekingReader {
+class FakeWavReader : public fuchsia::mediaplayer::SeekingReader {
  public:
   // Constructs a FakeWavReader that produces a file of |size| bytes total.
   FakeWavReader();
@@ -32,7 +32,8 @@ class FakeWavReader : public SeekingReader {
   }
 
   // Binds the reader.
-  void Bind(fidl::InterfaceRequest<SeekingReader> request);
+  void Bind(
+      fidl::InterfaceRequest<fuchsia::mediaplayer::SeekingReader> request);
 
   // SeekingReader implementation.
   void Describe(DescribeCallback callback) override;
@@ -69,7 +70,7 @@ class FakeWavReader : public SeekingReader {
   // Gets the positionth byte of the file.
   uint8_t GetByte(size_t position);
 
-  fidl::Binding<SeekingReader> binding_;
+  fidl::Binding<fuchsia::mediaplayer::SeekingReader> binding_;
   std::vector<uint8_t> header_;
   uint64_t size_ = kDefaultSize;
   zx::socket socket_;

@@ -5,7 +5,7 @@
 #ifndef GARNET_BIN_MEDIA_NET_MEDIA_SERVICE_NET_MEDIA_SERVICE_IMPL_H_
 #define GARNET_BIN_MEDIA_NET_MEDIA_SERVICE_NET_MEDIA_SERVICE_IMPL_H_
 
-#include <media_player/cpp/fidl.h>
+#include <fuchsia/mediaplayer/cpp/fidl.h>
 
 #include "garnet/bin/media/net_media_service/factory_service_base.h"
 #include "lib/app/cpp/startup_context.h"
@@ -15,7 +15,7 @@
 namespace media_player {
 
 class NetMediaServiceImpl : public FactoryServiceBase<NetMediaServiceImpl>,
-                            public NetMediaService {
+                            public fuchsia::mediaplayer::NetMediaService {
  public:
   NetMediaServiceImpl(
       std::unique_ptr<fuchsia::sys::StartupContext> startup_context);
@@ -24,14 +24,16 @@ class NetMediaServiceImpl : public FactoryServiceBase<NetMediaServiceImpl>,
   // NetMediaService implementation.
   void PublishMediaPlayer(
       fidl::StringPtr service_name,
-      fidl::InterfaceHandle<MediaPlayer> media_player) override;
+      fidl::InterfaceHandle<fuchsia::mediaplayer::MediaPlayer> media_player)
+      override;
 
   void CreateMediaPlayerProxy(
       fidl::StringPtr device_name, fidl::StringPtr service_name,
-      fidl::InterfaceRequest<MediaPlayer> media_player_request) override;
+      fidl::InterfaceRequest<fuchsia::mediaplayer::MediaPlayer>
+          media_player_request) override;
 
  private:
-  fidl::BindingSet<NetMediaService> bindings_;
+  fidl::BindingSet<fuchsia::mediaplayer::NetMediaService> bindings_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(NetMediaServiceImpl);
 };

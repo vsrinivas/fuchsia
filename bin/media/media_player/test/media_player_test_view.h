@@ -9,9 +9,9 @@
 #include <queue>
 
 #include <fuchsia/media/cpp/fidl.h>
+#include <fuchsia/mediaplayer/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fit/function.h>
-#include <media_player/cpp/fidl.h>
 
 #include "garnet/bin/media/media_player/test/media_player_test_params.h"
 #include "lib/app/cpp/startup_context.h"
@@ -55,7 +55,8 @@ class MediaPlayerTestView : public mozart::BaseView {
   void Layout();
 
   // Handles a status changed event from the player.
-  void HandleStatusChanged(const media_player::MediaPlayerStatus& status);
+  void HandleStatusChanged(
+      const fuchsia::mediaplayer::MediaPlayerStatus& status);
 
   // Handle transition to end-of-stream.
   void OnEndOfStream();
@@ -81,12 +82,12 @@ class MediaPlayerTestView : public mozart::BaseView {
   scenic_lib::ShapeNode progress_bar_slider_node_;
   std::unique_ptr<scenic_lib::EntityNode> video_host_node_;
 
-  media_player::MediaPlayerPtr media_player_;
+  fuchsia::mediaplayer::MediaPlayerPtr media_player_;
   fuchsia::math::Size video_size_;
   fuchsia::math::Size pixel_aspect_ratio_;
   State state_ = State::kPaused;
   media::TimelineFunction timeline_function_;
-  media_player::MediaMetadataPtr metadata_;
+  fuchsia::mediaplayer::MediaMetadataPtr metadata_;
   fuchsia::math::RectF content_rect_;
   fuchsia::math::RectF controls_rect_;
   bool problem_shown_ = false;

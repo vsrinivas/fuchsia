@@ -7,7 +7,7 @@
 
 #include <memory>
 
-#include <media_player/cpp/fidl.h>
+#include <fuchsia/mediaplayer/cpp/fidl.h>
 
 #include "garnet/bin/media/net_media_service/serialization.h"
 
@@ -66,7 +66,7 @@ struct MediaPlayerSetGainRequest {
 
 // Sent by the stub to notify the proxy of a change in status.
 struct MediaPlayerStatusNotification {
-  MediaPlayerStatusPtr status_;
+  fuchsia::mediaplayer::MediaPlayerStatusPtr status_;
 };
 
 // Union-like of all possible messages sent by the proxy and handled
@@ -96,7 +96,7 @@ struct MediaPlayerOutMessage {
   static std::unique_ptr<MediaPlayerOutMessage> TimeCheckResponse(
       int64_t requestor_time, int64_t responder_time);
   static std::unique_ptr<MediaPlayerOutMessage> StatusNotification(
-      MediaPlayerStatusPtr status);
+      fuchsia::mediaplayer::MediaPlayerStatusPtr status);
 
   MediaPlayerOutMessageType type_;
   std::unique_ptr<MediaPlayerTimeCheckResponse> time_check_response_;
@@ -124,11 +124,13 @@ Serializer& operator<<(
     Serializer& serializer,
     const std::unique_ptr<MediaPlayerStatusNotification>& value);
 Serializer& operator<<(Serializer& serializer,
-                       const MediaPlayerStatusPtr& value);
+                       const fuchsia::mediaplayer::MediaPlayerStatusPtr& value);
 Serializer& operator<<(Serializer& serializer,
                        const fuchsia::media::TimelineTransformPtr& value);
-Serializer& operator<<(Serializer& serializer, const MediaMetadataPtr& value);
-Serializer& operator<<(Serializer& serializer, const ProblemPtr& value);
+Serializer& operator<<(Serializer& serializer,
+                       const fuchsia::mediaplayer::MediaMetadataPtr& value);
+Serializer& operator<<(Serializer& serializer,
+                       const fuchsia::mediaplayer::ProblemPtr& value);
 Serializer& operator<<(Serializer& serializer,
                        const std::unique_ptr<MediaPlayerInMessage>& value);
 Serializer& operator<<(Serializer& serializer,
@@ -154,11 +156,13 @@ Deserializer& operator>>(Deserializer& deserializer,
 Deserializer& operator>>(Deserializer& deserializer,
                          std::unique_ptr<MediaPlayerStatusNotification>& value);
 Deserializer& operator>>(Deserializer& deserializer,
-                         MediaPlayerStatusPtr& value);
+                         fuchsia::mediaplayer::MediaPlayerStatusPtr& value);
 Deserializer& operator>>(Deserializer& deserializer,
                          fuchsia::media::TimelineTransformPtr& value);
-Deserializer& operator>>(Deserializer& deserializer, MediaMetadataPtr& value);
-Deserializer& operator>>(Deserializer& deserializer, ProblemPtr& value);
+Deserializer& operator>>(Deserializer& deserializer,
+                         fuchsia::mediaplayer::MediaMetadataPtr& value);
+Deserializer& operator>>(Deserializer& deserializer,
+                         fuchsia::mediaplayer::ProblemPtr& value);
 Deserializer& operator>>(Deserializer& deserializer,
                          std::unique_ptr<MediaPlayerInMessage>& value);
 Deserializer& operator>>(Deserializer& deserializer,

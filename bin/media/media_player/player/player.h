@@ -107,7 +107,7 @@ class Player {
 
   // Returns the current problem preventing intended operation or nullptr if
   // there is no such problem.
-  const Problem* problem() const;
+  const fuchsia::mediaplayer::Problem* problem() const;
 
   // Test only.
   // Returns a pointer to the graph.

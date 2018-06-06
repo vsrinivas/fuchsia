@@ -30,7 +30,7 @@ class MediaPlayerTestUnattended {
   fit::function<void(int)> quit_callback_;
   FakeWavReader fake_reader_;
   FakeAudioRenderer fake_audio_renderer_;
-  MediaPlayerPtr media_player_;
+  fuchsia::mediaplayer::MediaPlayerPtr media_player_;
 };
 
 }  // namespace test

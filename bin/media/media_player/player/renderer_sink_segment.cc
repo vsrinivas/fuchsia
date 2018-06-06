@@ -52,8 +52,8 @@ void RendererSinkSegment::Connect(const StreamType& type, OutputRef output,
   if (!BuildConversionPipeline(type, supported_stream_types, &graph(),
                                &output_in_out, &out_type)) {
     ReportProblem(type.medium() == StreamType::Medium::kAudio
-                      ? kProblemAudioEncodingNotSupported
-                      : kProblemVideoEncodingNotSupported,
+                      ? fuchsia::mediaplayer::kProblemAudioEncodingNotSupported
+                      : fuchsia::mediaplayer::kProblemVideoEncodingNotSupported,
                   "");
     callback(Result::kUnsupportedOperation);
     return;

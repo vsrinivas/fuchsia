@@ -18,17 +18,19 @@ namespace media_player {
 // static
 std::shared_ptr<MediaPlayerNetProxy> MediaPlayerNetProxy::Create(
     fidl::StringPtr device_name, fidl::StringPtr service_name,
-    fidl::InterfaceRequest<MediaPlayer> request, NetMediaServiceImpl* owner) {
+    fidl::InterfaceRequest<fuchsia::mediaplayer::MediaPlayer> request,
+    NetMediaServiceImpl* owner) {
   return std::shared_ptr<MediaPlayerNetProxy>(new MediaPlayerNetProxy(
       device_name, service_name, std::move(request), owner));
 }
 
 MediaPlayerNetProxy::MediaPlayerNetProxy(
     fidl::StringPtr device_name, fidl::StringPtr service_name,
-    fidl::InterfaceRequest<MediaPlayer> request, NetMediaServiceImpl* owner)
-    : NetMediaServiceImpl::MultiClientProduct<MediaPlayer>(
-          this, std::move(request), owner),
-      status_(MediaPlayerStatus::New()) {
+    fidl::InterfaceRequest<fuchsia::mediaplayer::MediaPlayer> request,
+    NetMediaServiceImpl* owner)
+    : NetMediaServiceImpl::MultiClientProduct<
+          fuchsia::mediaplayer::MediaPlayer>(this, std::move(request), owner),
+      status_(fuchsia::mediaplayer::MediaPlayerStatus::New()) {
   FXL_DCHECK(owner);
 
   // Fire |StatusChanged| event for the new client.
@@ -77,7 +79,7 @@ void MediaPlayerNetProxy::SetFileSource(zx::channel file_channel) {
 }
 
 void MediaPlayerNetProxy::SetReaderSource(
-    fidl::InterfaceHandle<SeekingReader> reader_handle) {
+    fidl::InterfaceHandle<fuchsia::mediaplayer::SeekingReader> reader_handle) {
   FXL_LOG(ERROR)
       << "SetReaderSource called on MediaPlayer proxy - not supported.";
   UnbindAndReleaseFromOwner();
@@ -119,7 +121,7 @@ void MediaPlayerNetProxy::SetAudioRenderer(
 }
 
 void MediaPlayerNetProxy::AddBinding(
-    fidl::InterfaceRequest<MediaPlayer> request) {
+    fidl::InterfaceRequest<fuchsia::mediaplayer::MediaPlayer> request) {
   MultiClientProduct::AddBinding(std::move(request));
 
   // Fire |StatusChanged| event for the new client.

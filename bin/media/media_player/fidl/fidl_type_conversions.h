@@ -6,7 +6,7 @@
 #define GARNET_BIN_MEDIA_MEDIA_PLAYER_FIDL_FIDL_TYPE_CONVERSIONS_H_
 
 #include <fuchsia/media/cpp/fidl.h>
-#include <media_player/cpp/fidl.h>
+#include <fuchsia/mediaplayer/cpp/fidl.h>
 
 #include "garnet/bin/media/media_player/framework/metadata.h"
 #include "garnet/bin/media/media_player/framework/result.h"
@@ -154,30 +154,31 @@ struct TypeConverter<std::unique_ptr<media_player::StreamTypeSet>,
 };
 
 template <>
-struct TypeConverter<media_player::MediaMetadataPtr,
+struct TypeConverter<fuchsia::mediaplayer::MediaMetadataPtr,
                      std::unique_ptr<media_player::Metadata>> {
-  static media_player::MediaMetadataPtr Convert(
+  static fuchsia::mediaplayer::MediaMetadataPtr Convert(
       const std::unique_ptr<media_player::Metadata>& input);
 };
 
 template <>
-struct TypeConverter<media_player::MediaMetadataPtr,
+struct TypeConverter<fuchsia::mediaplayer::MediaMetadataPtr,
                      const media_player::Metadata*> {
-  static media_player::MediaMetadataPtr Convert(
+  static fuchsia::mediaplayer::MediaMetadataPtr Convert(
       const media_player::Metadata* input);
 };
 
 template <>
-struct TypeConverter<media_player::MediaMetadataPtr, media_player::Metadata> {
-  static media_player::MediaMetadataPtr Convert(
+struct TypeConverter<fuchsia::mediaplayer::MediaMetadataPtr,
+                     media_player::Metadata> {
+  static fuchsia::mediaplayer::MediaMetadataPtr Convert(
       const media_player::Metadata& input);
 };
 
 template <>
 struct TypeConverter<std::unique_ptr<media_player::Metadata>,
-                     media_player::MediaMetadataPtr> {
+                     fuchsia::mediaplayer::MediaMetadataPtr> {
   static std::unique_ptr<media_player::Metadata> Convert(
-      const media_player::MediaMetadataPtr& input);
+      const fuchsia::mediaplayer::MediaMetadataPtr& input);
 };
 
 template <>

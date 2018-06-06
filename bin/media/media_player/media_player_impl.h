@@ -23,16 +23,17 @@
 namespace media_player {
 
 // Fidl agent that renders streams.
-class MediaPlayerImpl : public MediaPlayer {
+class MediaPlayerImpl : public fuchsia::mediaplayer::MediaPlayer {
  public:
   static std::unique_ptr<MediaPlayerImpl> Create(
-      fidl::InterfaceRequest<MediaPlayer> request,
+      fidl::InterfaceRequest<fuchsia::mediaplayer::MediaPlayer> request,
       fuchsia::sys::StartupContext* startup_context,
       fit::closure quit_callback);
 
-  MediaPlayerImpl(fidl::InterfaceRequest<MediaPlayer> request,
-                  fuchsia::sys::StartupContext* startup_context,
-                  fit::closure quit_callback);
+  MediaPlayerImpl(
+      fidl::InterfaceRequest<fuchsia::mediaplayer::MediaPlayer> request,
+      fuchsia::sys::StartupContext* startup_context,
+      fit::closure quit_callback);
 
   ~MediaPlayerImpl() override;
 
@@ -42,7 +43,8 @@ class MediaPlayerImpl : public MediaPlayer {
   void SetFileSource(zx::channel file_channel) override;
 
   void SetReaderSource(
-      fidl::InterfaceHandle<SeekingReader> reader_handle) override;
+      fidl::InterfaceHandle<fuchsia::mediaplayer::SeekingReader> reader_handle)
+      override;
 
   void Play() override;
 
@@ -60,7 +62,8 @@ class MediaPlayerImpl : public MediaPlayer {
   void SetAudioRenderer(fidl::InterfaceHandle<fuchsia::media::AudioRenderer2>
                             audio_renderer) override;
 
-  void AddBinding(fidl::InterfaceRequest<MediaPlayer> request) override;
+  void AddBinding(fidl::InterfaceRequest<fuchsia::mediaplayer::MediaPlayer>
+                      request) override;
 
  private:
   static constexpr int64_t kMinimumLeadTime = media::Timeline::ns_from_ms(30);
@@ -117,7 +120,7 @@ class MediaPlayerImpl : public MediaPlayer {
   async_t* async_;
   fuchsia::sys::StartupContext* startup_context_;
   fit::closure quit_callback_;
-  fidl::BindingSet<MediaPlayer> bindings_;
+  fidl::BindingSet<fuchsia::mediaplayer::MediaPlayer> bindings_;
   Player player_;
 
   float gain_ = 1.0f;
@@ -155,7 +158,7 @@ class MediaPlayerImpl : public MediaPlayer {
   // reader and transition to kInactive.
   std::shared_ptr<Reader> new_reader_;
 
-  MediaPlayerStatus status_;
+  fuchsia::mediaplayer::MediaPlayerStatus status_;
 };
 
 }  // namespace media_player

@@ -85,7 +85,8 @@ std::unique_ptr<MediaPlayerOutMessage> MediaPlayerOutMessage::TimeCheckResponse(
 
 // static
 std::unique_ptr<MediaPlayerOutMessage>
-MediaPlayerOutMessage::StatusNotification(MediaPlayerStatusPtr status) {
+MediaPlayerOutMessage::StatusNotification(
+    fuchsia::mediaplayer::MediaPlayerStatusPtr status) {
   std::unique_ptr<MediaPlayerOutMessage> message =
       std::make_unique<MediaPlayerOutMessage>();
   message->type_ = MediaPlayerOutMessageType::kStatusNotification;
@@ -151,8 +152,9 @@ Serializer& operator<<(
   return serializer << value->status_;
 }
 
-Serializer& operator<<(Serializer& serializer,
-                       const MediaPlayerStatusPtr& value) {
+Serializer& operator<<(
+    Serializer& serializer,
+    const fuchsia::mediaplayer::MediaPlayerStatusPtr& value) {
   FXL_DCHECK(value);
   return serializer << Optional(value->timeline_transform)
                     << value->end_of_stream << value->content_has_audio
@@ -168,7 +170,8 @@ Serializer& operator<<(Serializer& serializer,
                     << value->reference_delta << value->subject_delta;
 }
 
-Serializer& operator<<(Serializer& serializer, const MediaMetadataPtr& value) {
+Serializer& operator<<(Serializer& serializer,
+                       const fuchsia::mediaplayer::MediaMetadataPtr& value) {
   FXL_DCHECK(value);
   return serializer << value->duration << Optional(value->title)
                     << Optional(value->artist) << Optional(value->album)
@@ -176,7 +179,8 @@ Serializer& operator<<(Serializer& serializer, const MediaMetadataPtr& value) {
                     << Optional(value->composer);
 }
 
-Serializer& operator<<(Serializer& serializer, const ProblemPtr& value) {
+Serializer& operator<<(Serializer& serializer,
+                       const fuchsia::mediaplayer::ProblemPtr& value) {
   FXL_DCHECK(value);
   return serializer << value->type << Optional(value->details);
 }
@@ -311,8 +315,8 @@ Deserializer& operator>>(
 }
 
 Deserializer& operator>>(Deserializer& deserializer,
-                         MediaPlayerStatusPtr& value) {
-  value = MediaPlayerStatus::New();
+                         fuchsia::mediaplayer::MediaPlayerStatusPtr& value) {
+  value = fuchsia::mediaplayer::MediaPlayerStatus::New();
   deserializer >> Optional(value->timeline_transform) >> value->end_of_stream >>
       value->content_has_audio >> value->content_has_video >>
       value->audio_connected >> value->video_connected >>
@@ -334,8 +338,9 @@ Deserializer& operator>>(Deserializer& deserializer,
   return deserializer;
 }
 
-Deserializer& operator>>(Deserializer& deserializer, MediaMetadataPtr& value) {
-  value = MediaMetadata::New();
+Deserializer& operator>>(Deserializer& deserializer,
+                         fuchsia::mediaplayer::MediaMetadataPtr& value) {
+  value = fuchsia::mediaplayer::MediaMetadata::New();
   deserializer >> value->duration >> Optional(value->title) >>
       Optional(value->artist) >> Optional(value->album) >>
       Optional(value->publisher) >> Optional(value->genre) >>
@@ -346,8 +351,9 @@ Deserializer& operator>>(Deserializer& deserializer, MediaMetadataPtr& value) {
   return deserializer;
 }
 
-Deserializer& operator>>(Deserializer& deserializer, ProblemPtr& value) {
-  value = Problem::New();
+Deserializer& operator>>(Deserializer& deserializer,
+                         fuchsia::mediaplayer::ProblemPtr& value) {
+  value = fuchsia::mediaplayer::Problem::New();
   deserializer >> value->type >> Optional(value->details);
   if (!deserializer.healthy()) {
     value.reset();

@@ -6,9 +6,9 @@
 #define GARNET_BIN_MEDIA_MEDIA_PLAYER_PLAYER_SEGMENT_H_
 
 #include <fuchsia/media/cpp/fidl.h>
+#include <fuchsia/mediaplayer/cpp/fidl.h>
 #include <lib/async/dispatcher.h>
 #include <lib/fit/function.h>
-#include <media_player/cpp/fidl.h>
 
 #include "garnet/bin/media/media_player/framework/graph.h"
 #include "garnet/bin/media/media_player/framework/metadata.h"
@@ -43,7 +43,9 @@ class Segment {
 
   // Returns the current problem preventing intended operation or nullptr if
   // there is no such problem.
-  const Problem* problem() const { return problem_.get(); }
+  const fuchsia::mediaplayer::Problem* problem() const {
+    return problem_.get();
+  }
 
  protected:
   Graph& graph() {
@@ -80,7 +82,7 @@ class Segment {
   Graph* graph_ = nullptr;
   async_t* async_ = nullptr;
   fit::closure update_callback_;
-  ProblemPtr problem_;
+  fuchsia::mediaplayer::ProblemPtr problem_;
 };
 
 }  // namespace media_player

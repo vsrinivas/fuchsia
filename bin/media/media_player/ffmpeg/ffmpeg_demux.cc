@@ -7,9 +7,9 @@
 #include <thread>
 
 #include <fuchsia/media/cpp/fidl.h>
+#include <fuchsia/mediaplayer/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
-#include <media_player/cpp/fidl.h>
 
 #include "garnet/bin/media/media_player/ffmpeg/av_codec_context.h"
 #include "garnet/bin/media/media_player/ffmpeg/av_format_context.h"
@@ -238,9 +238,10 @@ void FfmpegDemuxImpl::Worker() {
   if (result_ != Result::kOk) {
     FXL_LOG(ERROR) << "AvIoContext::Create failed, result "
                    << static_cast<int>(result_);
-    ReportProblem(
-        result_ == Result::kNotFound ? kProblemAssetNotFound : kProblemInternal,
-        "");
+    ReportProblem(result_ == Result::kNotFound
+                      ? fuchsia::mediaplayer::kProblemAssetNotFound
+                      : fuchsia::mediaplayer::kProblemInternal,
+                  "");
     init_complete_.Occur();
     return;
   }
@@ -251,7 +252,7 @@ void FfmpegDemuxImpl::Worker() {
   if (!format_context_) {
     FXL_LOG(ERROR) << "AvFormatContext::OpenInput failed";
     result_ = Result::kUnsupportedOperation;
-    ReportProblem(kProblemContainerNotSupported, "");
+    ReportProblem(fuchsia::mediaplayer::kProblemContainerNotSupported, "");
     init_complete_.Occur();
     return;
   }
@@ -260,7 +261,8 @@ void FfmpegDemuxImpl::Worker() {
   if (r < 0) {
     FXL_LOG(ERROR) << "avformat_find_stream_info failed, result " << r;
     result_ = Result::kInternalError;
-    ReportProblem(kProblemInternal, "avformat_find_stream_info failed");
+    ReportProblem(fuchsia::mediaplayer::kProblemInternal,
+                  "avformat_find_stream_info failed");
     init_complete_.Occur();
     return;
   }

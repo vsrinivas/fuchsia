@@ -43,7 +43,8 @@ void FakeWavReader::WriteHeader() {
 
 FakeWavReader::~FakeWavReader() {}
 
-void FakeWavReader::Bind(fidl::InterfaceRequest<SeekingReader> request) {
+void FakeWavReader::Bind(
+    fidl::InterfaceRequest<fuchsia::mediaplayer::SeekingReader> request) {
   binding_.Bind(std::move(request));
 }
 

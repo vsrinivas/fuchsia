@@ -23,7 +23,7 @@ fidl("fidl") {
 }
 
 fidl("media_player") {
-  name = "media_player"
+  name = "fuchsia.mediaplayer"
 
   sources = [
     "media_metadata.fidl",
