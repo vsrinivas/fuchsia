@@ -41,13 +41,15 @@ public:
 
 private:
     zx::vmo framebuffer_handle_;
-    bool framebuffer_claimed_ = false;
     zx_koid_t framebuffer_koid_;
 
     uint32_t width_;
     uint32_t height_;
     uint32_t stride_;
     zx_pixel_format_t format_;
+
+    display_controller_cb_t* cb_;
+    void* cb_ctx_;
 };
 
 #endif // __cplusplus

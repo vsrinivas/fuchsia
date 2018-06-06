@@ -23,7 +23,12 @@
 // implement display controller protocol
 static constexpr uint64_t kDisplayId = 1;
 
+static void* const kImageHandle = reinterpret_cast<void*>(0xdecafc0ffee);
+
 void SimpleDisplay::SetDisplayControllerCb(void* cb_ctx, display_controller_cb_t* cb) {
+    cb_ctx_ = cb_ctx;
+    cb_ = cb;
+
     uint64_t display_id = kDisplayId;
     cb->on_displays_changed(cb_ctx, &display_id, 1, nullptr, 0);
 }
@@ -58,6 +63,7 @@ zx_status_t SimpleDisplay::ImportVmoImage(image_t* image, const zx::vmo& vmo, si
             || image->pixel_format != format_ || offset != 0) {
         return ZX_ERR_INVALID_ARGS;
     }
+    image->handle = kImageHandle;
     return ZX_OK;
 }
 
@@ -98,7 +104,11 @@ void SimpleDisplay::CheckConfiguration(const display_config_t** display_configs,
 
 void SimpleDisplay::ApplyConfiguration(const display_config_t** display_config,
                                        uint32_t display_count) {
-    // noop
+    bool has_image = display_count != 0 && display_config[0]->layer_count != 0;
+    void* handles[] = { kImageHandle };
+    if (cb_) {
+        cb_->on_display_vsync(cb_ctx_, kDisplayId, handles, has_image);
+    }
 }
 
 uint32_t SimpleDisplay::ComputeLinearStride(uint32_t width, zx_pixel_format_t format) {
@@ -106,18 +116,20 @@ uint32_t SimpleDisplay::ComputeLinearStride(uint32_t width, zx_pixel_format_t fo
 }
 
 zx_status_t SimpleDisplay::AllocateVmo(uint64_t size, zx_handle_t* vmo_out) {
-    if (framebuffer_claimed_) {
+    zx_info_handle_count handle_count;
+    size_t actual, avail;
+    zx_status_t status = framebuffer_handle_.get_info(ZX_INFO_HANDLE_COUNT, &handle_count,
+                                                      sizeof(handle_count), &actual, &avail);
+    if (status != ZX_OK) {
+        return status;
+    }
+    if (handle_count.handle_count != 1) {
         return ZX_ERR_NO_RESOURCES;
     }
     if (size > height_ * stride_ * ZX_PIXEL_FORMAT_BYTES(format_)) {
         return ZX_ERR_OUT_OF_RANGE;
     }
-    zx_status_t status = zx_handle_duplicate(framebuffer_handle_.get(),
-                                             ZX_RIGHT_SAME_RIGHTS, vmo_out);
-    if (status == ZX_OK) {
-        framebuffer_claimed_ = true;
-    }
-    return status;
+    return zx_handle_duplicate(framebuffer_handle_.get(), ZX_RIGHT_SAME_RIGHTS, vmo_out);
 }
 
 // implement device protocol
