@@ -271,6 +271,25 @@ zx_status_t AudioDeviceStream::SetMute(bool mute) {
     return res;
 }
 
+zx_status_t AudioDeviceStream::SetAgc(bool enabled) {
+    audio_stream_cmd_set_gain_req  req;
+    audio_stream_cmd_set_gain_resp resp;
+
+    req.hdr.cmd = AUDIO_STREAM_CMD_SET_GAIN;
+    req.hdr.transaction_id = 1;
+    req.flags = enabled
+              ? static_cast<audio_set_gain_flags_t>(AUDIO_SGF_AGC_VALID | AUDIO_SGF_AGC)
+              : AUDIO_SGF_AGC_VALID;
+
+    zx_status_t res = DoCall(stream_ch_, req, &resp);
+    if (res != ZX_OK)
+        printf("Failed to %sable AGC for stream! (res %d)\n", enabled ? "en" : "dis", res);
+    else
+        printf("Stream AGC is now %sabled\n", enabled ? "en" : "dis");
+
+    return res;
+}
+
 zx_status_t AudioDeviceStream::SetGain(float gain) {
     audio_stream_cmd_set_gain_req  req;
     audio_stream_cmd_set_gain_resp resp;
@@ -300,6 +319,30 @@ zx_status_t AudioDeviceStream::GetGain(audio_stream_cmd_get_gain_resp_t* out_gai
     req.hdr.transaction_id = 1;
 
     return DoNoFailCall(stream_ch_, req, out_gain);
+}
+
+zx_status_t AudioDeviceStream::GetUniqueId(audio_stream_cmd_get_unique_id_resp_t* out_id) const {
+    if (out_id == nullptr)
+        return ZX_ERR_INVALID_ARGS;
+
+    audio_stream_cmd_get_unique_id_req req;
+    req.hdr.cmd = AUDIO_STREAM_CMD_GET_UNIQUE_ID;
+    req.hdr.transaction_id = 1;
+
+    return DoNoFailCall(stream_ch_, req, out_id);
+}
+
+zx_status_t AudioDeviceStream::GetString(audio_stream_string_id_t id,
+                                         audio_stream_cmd_get_string_resp_t* out_str) const {
+    if (out_str == nullptr)
+        return ZX_ERR_INVALID_ARGS;
+
+    audio_stream_cmd_get_string_req req;
+    req.hdr.cmd = AUDIO_STREAM_CMD_GET_STRING;
+    req.hdr.transaction_id = 1;
+    req.id = id;
+
+    return DoNoFailCall(stream_ch_, req, out_str);
 }
 
 zx_status_t AudioDeviceStream::PlugMonitor(float duration) {

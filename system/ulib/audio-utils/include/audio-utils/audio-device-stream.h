@@ -19,8 +19,12 @@ public:
     zx_status_t Open();
     zx_status_t GetSupportedFormats(fbl::Vector<audio_stream_format_range_t>* out_formats) const;
     zx_status_t SetMute(bool mute);
+    zx_status_t SetAgc(bool enabled);
     zx_status_t SetGain(float gain);
     zx_status_t GetGain(audio_stream_cmd_get_gain_resp_t* out_gain) const;
+    zx_status_t GetUniqueId(audio_stream_cmd_get_unique_id_resp_t* out_id) const;
+    zx_status_t GetString(audio_stream_string_id_t id,
+                          audio_stream_cmd_get_string_resp_t* out_str) const;
     zx_status_t PlugMonitor(float duration);
     zx_status_t SetFormat(uint32_t frames_per_second,
                           uint16_t channels,
