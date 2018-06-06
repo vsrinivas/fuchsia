@@ -24,10 +24,10 @@
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
 
-#include <fdio/debug.h>
-#include <fdio/io.fidl.h>
-#include <fdio/io.h>
-#include <fdio/vfs.h>
+#include <lib/fdio/debug.h>
+#include <lib/fdio/io.fidl.h>
+#include <lib/fdio/io.h>
+#include <lib/fdio/vfs.h>
 
 #define ZXDEBUG 0
 

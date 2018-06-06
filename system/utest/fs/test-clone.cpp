@@ -10,8 +10,8 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-#include <fdio/limits.h>
-#include <fdio/util.h>
+#include <lib/fdio/limits.h>
+#include <lib/fdio/util.h>
 #include <unittest/unittest.h>
 #include <zircon/syscalls.h>
 

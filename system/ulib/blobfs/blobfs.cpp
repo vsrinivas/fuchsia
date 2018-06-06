@@ -16,7 +16,7 @@
 #include <fbl/auto_call.h>
 #include <fbl/limits.h>
 #include <fbl/ref_ptr.h>
-#include <fdio/debug.h>
+#include <lib/fdio/debug.h>
 #include <fs/block-txn.h>
 #include <fs/ticker.h>
 #include <lib/zx/event.h>

@@ -8,7 +8,7 @@
 #include <fbl/type_support.h>
 #include <fbl/unique_ptr.h>
 #include <fbl/vector.h>
-#include <fdio/watcher.h>
+#include <lib/fdio/watcher.h>
 #include <unittest/unittest.h>
 #include <zircon/compiler.h>
 #include <zircon/device/device.h>

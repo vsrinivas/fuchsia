@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <zircon/device/intel-hda.h>
-#include <fdio/io.h>
+#include <lib/fdio/io.h>
 
 #include "intel_hda_device.h"
 

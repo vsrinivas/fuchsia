@@ -11,7 +11,7 @@
 
 #include <launchpad/launchpad.h>
 #include <launchpad/vmo.h>
-#include <fdio/namespace.h>
+#include <lib/fdio/namespace.h>
 #include <zircon/syscalls.h>
 
 void print_namespace(fdio_flat_namespace_t* flat) {

@@ -8,7 +8,7 @@
 #include <ddk/driver.h>
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
-#include <fdio/debug.h>
+#include <lib/fdio/debug.h>
 #include <threads.h>
 
 #include "errors.h"

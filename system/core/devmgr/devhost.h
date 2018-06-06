@@ -11,7 +11,7 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 
-#include <fdio/remoteio.h>
+#include <lib/fdio/remoteio.h>
 
 #include <zircon/thread_annotations.h>
 #include <zircon/types.h>

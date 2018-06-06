@@ -6,7 +6,7 @@
 
 #include <errno.h>
 #include <fcntl.h>
-#include <fdio/io.h>
+#include <lib/fdio/io.h>
 #include <inttypes.h>
 #include <ldmsg/ldmsg.h>
 #include <lib/async-loop/loop.h>

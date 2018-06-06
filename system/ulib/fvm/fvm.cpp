@@ -20,8 +20,8 @@
 
 #include <fbl/unique_fd.h>
 #include <fbl/unique_ptr.h>
-#include <fdio/debug.h>
-#include <fdio/watcher.h>
+#include <lib/fdio/debug.h>
+#include <lib/fdio/watcher.h>
 #include <zircon/device/block.h>
 #include <zircon/types.h>
 

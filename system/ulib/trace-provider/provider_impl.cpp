@@ -8,7 +8,7 @@
 
 #include <fbl/algorithm.h>
 #include <fbl/type_support.h>
-#include <fdio/util.h>
+#include <lib/fdio/util.h>
 #include <lib/fidl/coding.h>
 #include <zircon/assert.h>
 #include <zircon/syscalls.h>

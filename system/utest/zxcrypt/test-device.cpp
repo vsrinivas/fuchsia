@@ -18,8 +18,8 @@
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 #include <fbl/unique_fd.h>
-#include <fdio/debug.h>
-#include <fdio/watcher.h>
+#include <lib/fdio/debug.h>
+#include <lib/fdio/watcher.h>
 #include <fs-management/mount.h>
 #include <fs-management/ramdisk.h>
 #include <fvm/fvm.h>

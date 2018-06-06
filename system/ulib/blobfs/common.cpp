@@ -15,7 +15,7 @@
 #include <digest/merkle-tree.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/limits.h>
-#include <fdio/debug.h>
+#include <lib/fdio/debug.h>
 #include <fs/block-txn.h>
 #include <fs/trace.h>
 

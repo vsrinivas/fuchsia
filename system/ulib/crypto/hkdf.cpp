@@ -11,7 +11,7 @@
 #include <crypto/hkdf.h>
 #include <explicit-memory/bytes.h>
 #include <fbl/auto_call.h>
-#include <fdio/debug.h>
+#include <lib/fdio/debug.h>
 #include <openssl/digest.h>
 #include <openssl/hkdf.h>
 #include <zircon/errors.h>

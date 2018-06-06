@@ -7,7 +7,7 @@
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
-#include <fdio/limits.h>
+#include <lib/fdio/limits.h>
 
 #include <assert.h>
 #include <limits.h>

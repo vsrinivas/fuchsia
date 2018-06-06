@@ -16,7 +16,7 @@
 #include <fs-management/mount.h>
 #include <zircon/processargs.h>
 #include <zircon/syscalls.h>
-#include <fdio/util.h>
+#include <lib/fdio/util.h>
 
 
 int usage(void) {

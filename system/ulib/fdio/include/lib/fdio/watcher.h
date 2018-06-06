@@ -5,7 +5,7 @@
 #pragma once
 
 #include <zircon/compiler.h>
-#include <fdio/io.h>
+#include <lib/fdio/io.h>
 
 __BEGIN_CDECLS
 

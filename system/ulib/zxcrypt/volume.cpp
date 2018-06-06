@@ -22,7 +22,7 @@
 #include <fbl/macros.h>
 #include <fbl/unique_fd.h>
 #include <fbl/unique_ptr.h>
-#include <fdio/debug.h>
+#include <lib/fdio/debug.h>
 #include <fs-management/mount.h>
 #include <fs-management/ramdisk.h>
 #include <lib/zx/vmo.h>

@@ -14,10 +14,10 @@
 #include <zircon/processargs.h>
 #include <zircon/device/vfs.h>
 
-#include <fdio/namespace.h>
-#include <fdio/remoteio.h>
-#include <fdio/util.h>
-#include <fdio/vfs.h>
+#include <lib/fdio/namespace.h>
+#include <lib/fdio/remoteio.h>
+#include <lib/fdio/util.h>
+#include <lib/fdio/vfs.h>
 
 #include "private.h"
 #include "private-remoteio.h"

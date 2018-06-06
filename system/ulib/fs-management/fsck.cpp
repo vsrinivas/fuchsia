@@ -10,9 +10,9 @@
 #include <unistd.h>
 
 #include <fbl/unique_ptr.h>
-#include <fdio/limits.h>
-#include <fdio/util.h>
-#include <fdio/vfs.h>
+#include <lib/fdio/limits.h>
+#include <lib/fdio/util.h>
+#include <lib/fdio/vfs.h>
 #include <zircon/compiler.h>
 #include <zircon/device/vfs.h>
 #include <zircon/processargs.h>

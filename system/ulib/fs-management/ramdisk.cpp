@@ -16,7 +16,7 @@
 
 #include <fbl/auto_call.h>
 #include <fbl/unique_fd.h>
-#include <fdio/watcher.h>
+#include <lib/fdio/watcher.h>
 #include <lib/zx/time.h>
 #include <zircon/device/block.h>
 #include <zircon/device/ramdisk.h>

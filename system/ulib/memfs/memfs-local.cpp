@@ -10,8 +10,8 @@
 
 #include <fbl/ref_ptr.h>
 #include <fbl/unique_ptr.h>
-#include <fdio/namespace.h>
-#include <fdio/vfs.h>
+#include <lib/fdio/namespace.h>
+#include <lib/fdio/vfs.h>
 #include <fs/vfs.h>
 #include <lib/async/dispatcher.h>
 #include <lib/memfs/cpp/vnode.h>

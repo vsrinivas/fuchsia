@@ -29,7 +29,7 @@
 #include <hw/sdmmc.h>
 
 // Zircon Includes
-#include <fdio/watcher.h>
+#include <lib/fdio/watcher.h>
 #include <zircon/threads.h>
 #include <zircon/assert.h>
 #include <sync/completion.h>

@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <zircon/types.h>
-#include <fdio/io.h>
+#include <lib/fdio/io.h>
 #include <dirent.h>
 #include <endian.h>
 #include <fcntl.h>

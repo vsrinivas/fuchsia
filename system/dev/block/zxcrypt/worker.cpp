@@ -7,7 +7,7 @@
 #include <threads.h>
 
 #include <crypto/cipher.h>
-#include <fdio/debug.h>
+#include <lib/fdio/debug.h>
 #include <lib/zx/port.h>
 #include <zircon/listnode.h>
 #include <zircon/status.h>

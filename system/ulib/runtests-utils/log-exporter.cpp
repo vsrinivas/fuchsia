@@ -7,7 +7,7 @@
 #include <errno.h>
 #include <stdint.h>
 
-#include <fdio/util.h>
+#include <lib/fdio/util.h>
 #include <lib/fidl/cpp/message_buffer.h>
 #include <lib/zx/channel.h>
 #include <logger/c/fidl.h>

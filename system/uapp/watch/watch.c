@@ -6,7 +6,7 @@
 #include <unistd.h>
 #include <fcntl.h>
 
-#include <fdio/watcher.h>
+#include <lib/fdio/watcher.h>
 
 zx_status_t callback(int dirfd, int event, const char* fn, void* cookie) {
     const char* path = cookie;

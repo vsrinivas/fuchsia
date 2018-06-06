@@ -8,7 +8,7 @@
 
 #include <gfx/gfx.h>
 #include <hid/hid.h>
-#include <fdio/vfs.h>
+#include <lib/fdio/vfs.h>
 #include <zircon/listnode.h>
 #include <zircon/thread_annotations.h>
 #include <port/port.h>

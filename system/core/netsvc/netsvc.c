@@ -18,7 +18,7 @@
 #include <zircon/processargs.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/log.h>
-#include <fdio/io.h>
+#include <lib/fdio/io.h>
 
 #include <zircon/boot/netboot.h>
 

@@ -10,7 +10,7 @@
 #include <crypto/hmac.h>
 #include <explicit-memory/bytes.h>
 #include <fbl/alloc_checker.h>
-#include <fdio/debug.h>
+#include <lib/fdio/debug.h>
 #include <openssl/digest.h>
 #include <openssl/hmac.h>
 #include <zircon/errors.h>

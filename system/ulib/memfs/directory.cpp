@@ -14,7 +14,7 @@
 #include <fbl/atomic.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/unique_ptr.h>
-#include <fdio/vfs.h>
+#include <lib/fdio/vfs.h>
 #include <fs/vfs.h>
 #include <lib/memfs/cpp/vnode.h>
 #include <zircon/device/vfs.h>

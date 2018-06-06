@@ -20,7 +20,7 @@
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/object.h>
 
-#include <fdio/util.h>
+#include <lib/fdio/util.h>
 
 #include <unittest/unittest.h>
 

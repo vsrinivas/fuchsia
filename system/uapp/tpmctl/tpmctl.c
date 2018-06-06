@@ -7,7 +7,7 @@
 #include <fcntl.h>
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
-#include <fdio/util.h>
+#include <lib/fdio/util.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>

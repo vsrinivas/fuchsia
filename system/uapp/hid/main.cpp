@@ -21,7 +21,7 @@
 
 #include <fbl/unique_ptr.h>
 
-#include <fdio/watcher.h>
+#include <lib/fdio/watcher.h>
 
 // defined in report.cpp
 void print_report_descriptor(const uint8_t* rpt_desc, size_t desc_len);

@@ -14,7 +14,7 @@
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 #include <fbl/unique_ptr.h>
-#include <fdio/debug.h>
+#include <lib/fdio/debug.h>
 #include <lib/zx/port.h>
 #include <lib/zx/vmar.h>
 #include <lib/zx/vmo.h>

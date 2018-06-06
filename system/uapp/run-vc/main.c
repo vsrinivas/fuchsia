@@ -11,9 +11,9 @@
 #include <zircon/processargs.h>
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
-#include <fdio/io.h>
-#include <fdio/util.h>
-#include <fdio/watcher.h>
+#include <lib/fdio/io.h>
+#include <lib/fdio/util.h>
+#include <lib/fdio/watcher.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>

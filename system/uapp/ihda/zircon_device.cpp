@@ -7,7 +7,7 @@
 #include <stdio.h>
 
 #include <zircon/device/intel-hda.h>
-#include <fdio/io.h>
+#include <lib/fdio/io.h>
 #include <fbl/limits.h>
 
 #include "zircon_device.h"

@@ -15,7 +15,7 @@
 #include <fbl/auto_call.h>
 #include <fbl/macros.h>
 #include <fbl/unique_ptr.h>
-#include <fdio/debug.h>
+#include <lib/fdio/debug.h>
 #include <openssl/cipher.h>
 #include <zircon/errors.h>
 #include <zircon/types.h>

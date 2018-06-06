@@ -10,7 +10,7 @@
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/port.h>
 
-#include <fdio/private.h>
+#include <lib/fdio/private.h>
 
 #include <port/port.h>
 

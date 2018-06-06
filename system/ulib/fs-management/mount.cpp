@@ -14,9 +14,9 @@
 #include <fbl/type_support.h>
 #include <fbl/unique_fd.h>
 #include <fbl/unique_ptr.h>
-#include <fdio/limits.h>
-#include <fdio/util.h>
-#include <fdio/vfs.h>
+#include <lib/fdio/limits.h>
+#include <lib/fdio/util.h>
+#include <lib/fdio/vfs.h>
 #include <fs/client.h>
 #include <zircon/compiler.h>
 #include <zircon/device/vfs.h>

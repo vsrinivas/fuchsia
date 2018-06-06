@@ -19,12 +19,12 @@
 #include <lib/fidl/cpp/message.h>
 #include <lib/fidl/cpp/string_view.h>
 #include <lib/fidl/cpp/vector_view.h>
-#include <fdio/debug.h>
-#include <fdio/io.fidl.h>
-#include <fdio/io.h>
-#include <fdio/remoteio.h>
-#include <fdio/util.h>
-#include <fdio/vfs.h>
+#include <lib/fdio/debug.h>
+#include <lib/fdio/io.fidl.h>
+#include <lib/fdio/io.h>
+#include <lib/fdio/remoteio.h>
+#include <lib/fdio/util.h>
+#include <lib/fdio/vfs.h>
 #include <lib/zx/channel.h>
 
 #include "private-fidl.h"

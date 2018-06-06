@@ -15,7 +15,7 @@
 #include <blobfs/format.h>
 #include <digest/digest.h>
 #include <digest/merkle-tree.h>
-#include <fdio/io.h>
+#include <lib/fdio/io.h>
 #include <fbl/atomic.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>

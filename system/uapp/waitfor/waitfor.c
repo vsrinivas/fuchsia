@@ -8,7 +8,7 @@
 #include <string.h>
 #include <unistd.h>
 
-#include <fdio/watcher.h>
+#include <lib/fdio/watcher.h>
 
 // for guid printing
 #include <gpt/gpt.h>

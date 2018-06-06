@@ -13,7 +13,7 @@
 #include <zircon/stack.h>
 #include <zircon/syscalls.h>
 #include <ldmsg/ldmsg.h>
-#include <fdio/io.h>
+#include <lib/fdio/io.h>
 #include <assert.h>
 #include <stdatomic.h>
 #include <stdbool.h>

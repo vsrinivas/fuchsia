@@ -4,8 +4,8 @@
 
 #pragma once
 
-#include <fdio/remoteio.h>
-#include <fdio/vfs.h>
+#include <lib/fdio/remoteio.h>
+#include <lib/fdio/vfs.h>
 #include <zircon/compiler.h>
 
 __BEGIN_CDECLS

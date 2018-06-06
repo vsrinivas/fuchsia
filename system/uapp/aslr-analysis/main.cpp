@@ -8,7 +8,7 @@
 #include <launchpad/vmo.h>
 #include <limits.h>
 #include <math.h>
-#include <fdio/io.h>
+#include <lib/fdio/io.h>
 #include <fbl/algorithm.h>
 #include <fbl/array.h>
 #include <fbl/auto_call.h>

@@ -12,7 +12,7 @@
 #include <zircon/syscalls/object.h>
 #include <string.h>
 #include <unistd.h>
-#include <fdio/private.h>
+#include <lib/fdio/private.h>
 #include <poll.h>
 
 #include "shell.h"

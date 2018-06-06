@@ -7,8 +7,8 @@
 #include <launchpad/launchpad.h>
 #include <launchpad/vmo.h>
 
-#include <fdio/io.h>
-#include <fdio/util.h>
+#include <lib/fdio/io.h>
+#include <lib/fdio/util.h>
 
 #include <zircon/paths.h>
 #include <zircon/processargs.h>

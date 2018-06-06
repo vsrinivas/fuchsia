@@ -21,9 +21,9 @@
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/log.h>
 
-#include <fdio/io.fidl.h>
-#include <fdio/util.h>
-#include <fdio/remoteio.h>
+#include <lib/fdio/io.fidl.h>
+#include <lib/fdio/util.h>
+#include <lib/fdio/remoteio.h>
 
 #include "devcoordinator.h"
 #include "devhost.h"

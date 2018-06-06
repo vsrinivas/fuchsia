@@ -7,9 +7,9 @@
 #include <zircon/syscalls.h>
 
 #include <errno.h>
-#include <fdio/io.h>
-#include <fdio/socket.h>
-#include <fdio/util.h>
+#include <lib/fdio/io.h>
+#include <lib/fdio/socket.h>
+#include <lib/fdio/util.h>
 
 #include "pipe.h"
 #include "private.h"

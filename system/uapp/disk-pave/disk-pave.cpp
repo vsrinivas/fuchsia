@@ -19,7 +19,7 @@
 #include <fbl/auto_call.h>
 #include <fbl/unique_fd.h>
 #include <fbl/unique_ptr.h>
-#include <fdio/watcher.h>
+#include <lib/fdio/watcher.h>
 #include <fs-management/mount.h>
 #include <fs-management/ramdisk.h>
 #include <fs/mapped-vmo.h>

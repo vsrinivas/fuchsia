@@ -21,9 +21,9 @@
 #include <zircon/syscalls/log.h>
 #include <zircon/syscalls/object.h>
 
-#include <fdio/io.h>
-#include <fdio/util.h>
-#include <fdio/watcher.h>
+#include <lib/fdio/io.h>
+#include <lib/fdio/util.h>
+#include <lib/fdio/watcher.h>
 
 #include <port/port.h>
 

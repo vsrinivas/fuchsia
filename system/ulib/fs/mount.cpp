@@ -9,9 +9,9 @@
 
 #include <fs/vfs.h>
 #include <fs/vnode.h>
-#include <fdio/debug.h>
-#include <fdio/remoteio.h>
-#include <fdio/vfs.h>
+#include <lib/fdio/debug.h>
+#include <lib/fdio/remoteio.h>
+#include <lib/fdio/vfs.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_lock.h>
 #include <fbl/intrusive_double_list.h>

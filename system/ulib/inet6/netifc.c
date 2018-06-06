@@ -25,8 +25,8 @@
 #include <inet6/inet6.h>
 #include <inet6/netifc.h>
 
-#include <fdio/io.h>
-#include <fdio/watcher.h>
+#include <lib/fdio/io.h>
+#include <lib/fdio/watcher.h>
 
 #define ALIGN(n, a) (((n) + ((a) - 1)) & ~((a) - 1))
 // if nonzero, drop 1 in DROP_PACKETS packets at random

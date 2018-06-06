@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <fdio/remoteio.h>
+#include <lib/fdio/remoteio.h>
 
 #include <stdlib.h>
 #include <stdint.h>
@@ -13,7 +13,7 @@
 #include <zircon/assert.h>
 #include <zircon/types.h>
 
-#include <fdio/vfs.h>
+#include <lib/fdio/vfs.h>
 
 __BEGIN_CDECLS
 

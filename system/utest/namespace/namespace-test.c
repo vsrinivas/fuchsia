@@ -12,7 +12,7 @@
 #include <unistd.h>
 
 #include <launchpad/launchpad.h>
-#include <fdio/namespace.h>
+#include <lib/fdio/namespace.h>
 #include <zircon/compiler.h>
 #include <zircon/syscalls.h>
 #include <unittest/unittest.h>

@@ -8,9 +8,9 @@
 #include <zircon/process.h>
 #include <zircon/processargs.h>
 #include <zircon/syscalls.h>
-#include <fdio/io.h>
-#include <fdio/namespace.h>
-#include <fdio/util.h>
+#include <lib/fdio/io.h>
+#include <lib/fdio/namespace.h>
+#include <lib/fdio/util.h>
 
 #include <stdlib.h>
 #include <unistd.h>

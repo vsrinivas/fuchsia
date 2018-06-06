@@ -15,9 +15,9 @@
 #include <fbl/macros.h>
 #include <fbl/ref_counted_internal.h>
 #include <fbl/ref_ptr.h>
-#include <fdio/io.h>
-#include <fdio/remoteio.h>
-#include <fdio/vfs.h>
+#include <lib/fdio/io.h>
+#include <lib/fdio/remoteio.h>
+#include <lib/fdio/vfs.h>
 #include <fs/ref_counted.h>
 #include <fs/vfs.h>
 #include <zircon/assert.h>

@@ -4,7 +4,7 @@
 
 #include <launchpad/vmo.h>
 #include <zircon/syscalls.h>
-#include <fdio/io.h>
+#include <lib/fdio/io.h>
 
 #include <fcntl.h>
 #include <string.h>

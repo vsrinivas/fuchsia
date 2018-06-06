@@ -7,9 +7,9 @@
 
 #include <bootdata/decompress.h>
 
-#include <fdio/namespace.h>
-#include <fdio/util.h>
-#include <fdio/watcher.h>
+#include <lib/fdio/namespace.h>
+#include <lib/fdio/util.h>
+#include <lib/fdio/watcher.h>
 #include <fs-management/ramdisk.h>
 #include <launchpad/launchpad.h>
 #include <loader-service/loader-service.h>

@@ -119,7 +119,7 @@
 
 #ifdef __Fuchsia__
 #include <zircon/device/pty.h>
-#include <fdio/io.h>
+#include <lib/fdio/io.h>
 #endif
 
 #include "linenoise.h"

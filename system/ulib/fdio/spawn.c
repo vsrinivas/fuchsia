@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fdio/spawn.h>
+#include <lib/fdio/spawn.h>
 
 #include <fcntl.h>
-#include <fdio/io.h>
-#include <fdio/limits.h>
-#include <fdio/namespace.h>
-#include <fdio/util.h>
+#include <lib/fdio/io.h>
+#include <lib/fdio/limits.h>
+#include <lib/fdio/namespace.h>
+#include <lib/fdio/util.h>
 #include <fuchsia/process/c/fidl.h>
 #include <stdarg.h>
 #include <stdio.h>

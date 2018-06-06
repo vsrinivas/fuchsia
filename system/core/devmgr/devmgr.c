@@ -21,8 +21,8 @@
 #include <zircon/syscalls/exception.h>
 #include <zircon/syscalls/object.h>
 
-#include <fdio/namespace.h>
-#include <fdio/util.h>
+#include <lib/fdio/namespace.h>
+#include <lib/fdio/util.h>
 
 #include "bootfs.h"
 #include "devmgr.h"

@@ -4,7 +4,7 @@
 
 #include <gpt/gpt.h>
 #include <zircon/types.h>
-#include <fdio/io.h>
+#include <lib/fdio/io.h>
 #include <dirent.h>
 #include <fcntl.h>
 #include <inttypes.h>

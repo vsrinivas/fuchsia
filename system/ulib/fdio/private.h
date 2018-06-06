@@ -5,8 +5,8 @@
 #pragma once
 
 #include <zircon/types.h>
-#include <fdio/limits.h>
-#include <fdio/remoteio.h>
+#include <lib/fdio/limits.h>
+#include <lib/fdio/remoteio.h>
 #include <stdarg.h>
 #include <stdatomic.h>
 #include <stdbool.h>

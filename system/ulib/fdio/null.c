@@ -9,7 +9,7 @@
 #include <string.h>
 
 #include <zircon/types.h>
-#include <fdio/io.h>
+#include <lib/fdio/io.h>
 
 #include "private.h"
 

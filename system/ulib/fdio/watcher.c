@@ -12,7 +12,7 @@
 #include <zircon/types.h>
 #include <zircon/device/vfs.h>
 
-#include <fdio/watcher.h>
+#include <lib/fdio/watcher.h>
 
 typedef struct fdio_watcher {
     zx_handle_t h;

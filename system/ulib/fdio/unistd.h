@@ -5,7 +5,7 @@
 #pragma once
 
 #include <errno.h>
-#include <fdio/io.h>
+#include <lib/fdio/io.h>
 #include <limits.h>
 #include <stdbool.h>
 #include <sys/types.h>

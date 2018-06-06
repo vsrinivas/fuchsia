@@ -6,7 +6,7 @@
 #include <launchpad/launchpad.h>
 #include <zircon/syscalls.h>
 #include <zircon/status.h>
-#include <fdio/io.h>
+#include <lib/fdio/io.h>
 #include <stdio.h>
 #include <unistd.h>
 

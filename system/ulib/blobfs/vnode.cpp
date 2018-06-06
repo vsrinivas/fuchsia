@@ -16,8 +16,8 @@
 #include <zircon/device/vfs.h>
 
 #include <fbl/ref_ptr.h>
-#include <fdio/debug.h>
-#include <fdio/vfs.h>
+#include <lib/fdio/debug.h>
+#include <lib/fdio/vfs.h>
 #include <sync/completion.h>
 #include <zircon/syscalls.h>
 

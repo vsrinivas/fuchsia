@@ -3,10 +3,10 @@
 // found in the LICENSE file.
 
 #include <fcntl.h>
-#include <fdio/limits.h>
-#include <fdio/namespace.h>
-#include <fdio/spawn.h>
-#include <fdio/util.h>
+#include <lib/fdio/limits.h>
+#include <lib/fdio/namespace.h>
+#include <lib/fdio/spawn.h>
+#include <lib/fdio/util.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>

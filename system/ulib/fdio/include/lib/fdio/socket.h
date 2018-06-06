@@ -8,7 +8,7 @@
 #include <zircon/types.h>
 #include <zircon/device/ioctl.h>
 
-#include <fdio/io.h>
+#include <lib/fdio/io.h>
 
 #include <stdint.h>
 

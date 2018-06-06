@@ -12,9 +12,9 @@
 
 #include <zircon/device/vfs.h>
 
-#include <fdio/io.fidl.h>
-#include <fdio/remoteio.h>
-#include <fdio/util.h>
+#include <lib/fdio/io.fidl.h>
+#include <lib/fdio/remoteio.h>
+#include <lib/fdio/util.h>
 
 #include <fcntl.h>
 #include <stdio.h>

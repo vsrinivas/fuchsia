@@ -11,11 +11,11 @@
 
 #include <zircon/processargs.h>
 #include <zircon/syscalls.h>
-#include <fdio/io.h>
-#include <fdio/util.h>
+#include <lib/fdio/io.h>
+#include <lib/fdio/util.h>
 
-#include <fdio/remoteio.h>
-#include <fdio/vfs.h>
+#include <lib/fdio/remoteio.h>
+#include <lib/fdio/vfs.h>
 
 #include "private.h"
 

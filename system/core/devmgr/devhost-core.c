@@ -22,7 +22,7 @@
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
 
-#include <fdio/remoteio.h>
+#include <lib/fdio/remoteio.h>
 
 #define TRACE 0
 

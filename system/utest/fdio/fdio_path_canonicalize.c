@@ -6,7 +6,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
-#include <fdio/private.h>
+#include <lib/fdio/private.h>
 
 #include <unittest/unittest.h>
 

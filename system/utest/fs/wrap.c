@@ -17,7 +17,7 @@
 #include <sys/stat.h>
 #include <sys/time.h>
 
-#include <fdio/vfs.h>
+#include <lib/fdio/vfs.h>
 
 #include "filesystems.h"
 

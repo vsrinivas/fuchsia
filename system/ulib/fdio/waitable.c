@@ -7,7 +7,7 @@
 #include <stdlib.h>
 
 #include <zircon/syscalls.h>
-#include <fdio/io.h>
+#include <lib/fdio/io.h>
 
 #include "private.h"
 

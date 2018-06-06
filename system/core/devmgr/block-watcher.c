@@ -7,7 +7,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <fdio/watcher.h>
+#include <lib/fdio/watcher.h>
 #include <fs-management/mount.h>
 #include <gpt/gpt.h>
 #include <zircon/device/block.h>
@@ -15,7 +15,7 @@
 #include <zircon/processargs.h>
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
-#include <fdio/util.h>
+#include <lib/fdio/util.h>
 
 #include "block-watcher.h"
 #include "devmgr.h"

@@ -10,7 +10,7 @@
 #include <zircon/assert.h>
 #include <fbl/auto_call.h>
 #include <fbl/algorithm.h>
-#include <fdio/io.h>
+#include <lib/fdio/io.h>
 
 zx_status_t WAVSource::Initialize(const char* filename) {
     zx_status_t res = WAVCommon::Initialize(filename, InitMode::SOURCE);

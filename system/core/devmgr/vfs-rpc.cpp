@@ -17,9 +17,9 @@
 #include <zircon/processargs.h>
 #include <zircon/syscalls.h>
 #include <zircon/thread_annotations.h>
-#include <fdio/debug.h>
-#include <fdio/io.h>
-#include <fdio/remoteio.h>
+#include <lib/fdio/debug.h>
+#include <lib/fdio/io.h>
+#include <lib/fdio/remoteio.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_lock.h>
 #include <fbl/unique_ptr.h>

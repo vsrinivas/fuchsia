@@ -3,10 +3,10 @@
 // found in the LICENSE file.
 
 #include <fs/vfs.h>
-#include <fdio/debug.h>
-#include <fdio/io.fidl.h>
-#include <fdio/remoteio.h>
-#include <fdio/vfs.h>
+#include <lib/fdio/debug.h>
+#include <lib/fdio/io.fidl.h>
+#include <lib/fdio/remoteio.h>
+#include <lib/fdio/vfs.h>
 
 #include <stdlib.h>
 #include <string.h>

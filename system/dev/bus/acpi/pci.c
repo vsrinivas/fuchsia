@@ -5,7 +5,7 @@
 #include "pci.h"
 
 #include <assert.h>
-#include <fdio/debug.h>
+#include <lib/fdio/debug.h>
 #include <stdio.h>
 
 #include <acpica/acpi.h>

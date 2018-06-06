@@ -9,7 +9,7 @@
 
 #include <fs/vfs.h>
 #include <fs/vnode.h>
-#include <fdio/vfs.h>
+#include <lib/fdio/vfs.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>

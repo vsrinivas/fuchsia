@@ -18,7 +18,7 @@
 #include <fbl/auto_call.h>
 #include <fbl/new.h>
 #include <fbl/unique_ptr.h>
-#include <fdio/debug.h>
+#include <lib/fdio/debug.h>
 #include <fs/block-txn.h>
 
 #define ZXDEBUG 0

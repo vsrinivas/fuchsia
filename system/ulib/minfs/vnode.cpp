@@ -17,7 +17,7 @@
 
 #ifdef __Fuchsia__
 #include <zircon/syscalls.h>
-#include <fdio/vfs.h>
+#include <lib/fdio/vfs.h>
 #include <fbl/auto_lock.h>
 #endif
 

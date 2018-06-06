@@ -5,7 +5,7 @@
 #include <stddef.h>
 
 #include <crypto/error.h>
-#include <fdio/debug.h>
+#include <lib/fdio/debug.h>
 #include <openssl/cipher.h>
 #include <openssl/digest.h>
 #include <openssl/err.h>

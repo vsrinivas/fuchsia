@@ -22,7 +22,7 @@
 #include <zircon/syscalls/system.h>
 #include <zircon/device/dmctl.h>
 #include <zircon/boot/bootdata.h>
-#include <fdio/io.h>
+#include <lib/fdio/io.h>
 
 #include "devcoordinator.h"
 #include "devmgr.h"

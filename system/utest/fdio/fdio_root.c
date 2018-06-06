@@ -8,7 +8,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
-#include <fdio/private.h>
+#include <lib/fdio/private.h>
 
 #include <unittest/unittest.h>
 

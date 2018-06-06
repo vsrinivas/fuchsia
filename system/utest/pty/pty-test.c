@@ -10,7 +10,7 @@
 #include <stdio.h>
 #include <unistd.h>
 
-#include <fdio/io.h>
+#include <lib/fdio/io.h>
 
 #include <zircon/device/pty.h>
 

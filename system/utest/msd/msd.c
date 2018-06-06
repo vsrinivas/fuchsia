@@ -9,7 +9,7 @@
 #include <string.h>
 
 
-#include <fdio/io.h>
+#include <lib/fdio/io.h>
 
 // change this number to change how many bytes are being written/read
 #define TEST_LEN 1024

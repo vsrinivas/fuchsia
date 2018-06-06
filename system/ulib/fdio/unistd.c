@@ -29,14 +29,14 @@
 #include <zircon/processargs.h>
 #include <zircon/syscalls.h>
 
-#include <fdio/debug.h>
-#include <fdio/io.h>
-#include <fdio/namespace.h>
-#include <fdio/private.h>
-#include <fdio/remoteio.h>
-#include <fdio/util.h>
-#include <fdio/vfs.h>
-#include <fdio/socket.h>
+#include <lib/fdio/debug.h>
+#include <lib/fdio/io.h>
+#include <lib/fdio/namespace.h>
+#include <lib/fdio/private.h>
+#include <lib/fdio/remoteio.h>
+#include <lib/fdio/util.h>
+#include <lib/fdio/vfs.h>
+#include <lib/fdio/socket.h>
 
 #include "private.h"
 #include "unistd.h"

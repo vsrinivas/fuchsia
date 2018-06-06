@@ -11,7 +11,7 @@
 #include <fbl/algorithm.h>
 #include <fbl/macros.h>
 #include <fbl/unique_ptr.h>
-#include <fdio/debug.h>
+#include <lib/fdio/debug.h>
 #include <openssl/mem.h>
 #include <zircon/errors.h>
 #include <zircon/status.h>

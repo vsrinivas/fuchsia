@@ -17,7 +17,7 @@
 #include <zircon/syscalls/object.h>
 #include <limits.h>
 
-#include <fdio/util.h>
+#include <lib/fdio/util.h>
 
 #include <unittest/unittest.h>
 

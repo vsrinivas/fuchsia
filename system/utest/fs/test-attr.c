@@ -13,7 +13,7 @@
 #include <sys/time.h>
 
 #include <zircon/syscalls.h>
-#include <fdio/vfs.h>
+#include <lib/fdio/vfs.h>
 
 #include "filesystems.h"
 

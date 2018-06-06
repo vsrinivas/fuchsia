@@ -12,8 +12,8 @@
 #include <unistd.h>
 
 #include <zircon/syscalls.h>
-#include <fdio/io.h>
-#include <fdio/util.h>
+#include <lib/fdio/io.h>
+#include <lib/fdio/util.h>
 #include <unittest/unittest.h>
 
 bool close_test(void) {

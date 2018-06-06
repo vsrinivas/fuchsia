@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/async-loop/cpp/loop.h>
-#include <fdio/util.h>
+#include <lib/fdio/util.h>
 #include <fs/synchronous-vfs.h>
 #include <fs/pseudo-dir.h>
 #include <fs/service.h>

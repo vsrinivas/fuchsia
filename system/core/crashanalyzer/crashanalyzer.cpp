@@ -19,7 +19,7 @@
 #include <zircon/syscalls/exception.h>
 #include <zircon/syscalls/port.h>
 #include <zircon/threads.h>
-#include <fdio/util.h>
+#include <lib/fdio/util.h>
 #include <inspector/inspector.h>
 #include <pretty/hexdump.h>
 

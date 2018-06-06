@@ -18,7 +18,7 @@
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
 #include <fbl/limits.h>
-#include <fdio/io.h>
+#include <lib/fdio/io.h>
 #include <stdio.h>
 #include <string.h>
 

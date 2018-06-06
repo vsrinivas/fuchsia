@@ -12,7 +12,7 @@
 #include <zircon/types.h>
 #include <zircon/compiler.h>
 
-#include <fdio/limits.h>
+#include <lib/fdio/limits.h>
 
 // flag on handle args in processargs
 // instructing that this fd should be dup'd to 0/1/2

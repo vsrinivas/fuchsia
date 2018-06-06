@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 #include <fbl/auto_call.h>
-#include <fdio/remoteio.h>
-#include <fdio/watcher.h>
+#include <lib/fdio/remoteio.h>
+#include <lib/fdio/watcher.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>

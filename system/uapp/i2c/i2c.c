@@ -7,7 +7,7 @@
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
 #include <zircon/device/i2c.h>
-#include <fdio/util.h>
+#include <lib/fdio/util.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>

@@ -12,8 +12,8 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-#include <fdio/io.h>
-#include <fdio/util.h>
+#include <lib/fdio/io.h>
+#include <lib/fdio/util.h>
 #include <fs-management/mount.h>
 #include <launchpad/launchpad.h>
 #include <launchpad/vmo.h>

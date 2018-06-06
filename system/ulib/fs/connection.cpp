@@ -11,11 +11,11 @@
 #include <string.h>
 #include <sys/stat.h>
 
-#include <fdio/debug.h>
-#include <fdio/io.fidl.h>
-#include <fdio/io.h>
-#include <fdio/remoteio.h>
-#include <fdio/vfs.h>
+#include <lib/fdio/debug.h>
+#include <lib/fdio/io.fidl.h>
+#include <lib/fdio/io.h>
+#include <lib/fdio/remoteio.h>
+#include <lib/fdio/vfs.h>
 #include <fs/trace.h>
 #include <fs/vnode.h>
 #include <zircon/assert.h>
