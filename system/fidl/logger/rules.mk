@@ -10,7 +10,7 @@ MODULE_TYPE := fidl
 
 MODULE_PACKAGE := fidl
 
-MODULE_FIDL_LIBRARY := logger
+MODULE_FIDL_LIBRARY := fuchsia.logger
 
 MODULE_SRCS += $(LOCAL_DIR)/logger.fidl
 

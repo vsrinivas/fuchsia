@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/fdio/util.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/fdio/util.h>
 #include <lib/process-launcher/launcher.h>
 #include <lib/svc/outgoing.h>
 #include <zircon/process.h>
@@ -106,8 +106,8 @@ static constexpr const char* deprecated_services[] = {
     "fuchsia.netstack.Netstack",
     "fuchsia.sys.Environment",
     "device_settings.DeviceSettingsManager",
-    "logger.Log",
-    "logger.LogSink",
+    "fuchsia.logger.Log",
+    "fuchsia.logger.LogSink",
     "media_player.MediaPlayer",
     // fdio name for Netstack. Will be removed with the new interfaces defined
     // in NET-863.

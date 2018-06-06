@@ -17,8 +17,8 @@
 #include <stdint.h>
 
 // TODO(FIDL-182): Remove this once fixed.
-typedef zx_handle_t logger_LogListener;
-#include <logger/c/fidl.h>
+typedef zx_handle_t fuchsia_logger_LogListener;
+#include <fuchsia/logger/c/fidl.h>
 
 namespace runtests {
 
@@ -100,7 +100,7 @@ private:
     zx_status_t LogMany(fidl::Message message);
 
     // Helper method to log |message| to file.
-    int LogMessage(logger_LogMessage* message);
+    int LogMessage(fuchsia_logger_LogMessage* message);
 
     // Helper method to call |error_handler_|.
     void NotifyError(zx_status_t error);
@@ -133,7 +133,6 @@ private:
 // Returns nullptr if it is not possible to launch Log Exporter.
 fbl::unique_ptr<LogExporter> LaunchLogExporter(const fbl::StringPiece syslog_path,
                                                ExporterLaunchError* error);
-
 
 } // namespace runtests
 

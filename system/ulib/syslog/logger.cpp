@@ -8,8 +8,8 @@
 #include <syslog/logger.h>
 
 // TODO: Remove this hack once FIDL-182  is fixed.
-typedef zx_handle_t logger_LogListener;
-#include <logger/c/fidl.h>
+typedef zx_handle_t fuchsia_logger_LogListener;
+#include <fuchsia/logger/c/fidl.h>
 
 #include "fx_logger.h"
 
@@ -21,16 +21,16 @@ zx::socket connect_to_logger() {
     if (zx::channel::create(0, &logger, &logger_request) != ZX_OK) {
         return invalid;
     }
-    if (fdio_service_connect("/svc/logger.LogSink", logger_request.release()) != ZX_OK) {
+    if (fdio_service_connect("/svc/fuchsia.logger.LogSink", logger_request.release()) != ZX_OK) {
         return invalid;
     }
     zx::socket local, remote;
     if (zx::socket::create(ZX_SOCKET_DATAGRAM, &local, &remote) != ZX_OK) {
         return invalid;
     }
-    logger_LogSinkConnectRequest req;
+    fuchsia_logger_LogSinkConnectRequest req;
     memset(&req, 0, sizeof(req));
-    req.hdr.ordinal = logger_LogSinkConnectOrdinal;
+    req.hdr.ordinal = fuchsia_logger_LogSinkConnectOrdinal;
     req.socket = FIDL_HANDLE_PRESENT;
     zx_handle_t handles[1] = {remote.release()};
     if (logger.write(0, &req, sizeof(req), handles, 1) != ZX_OK) {

@@ -7,10 +7,10 @@
 #include <errno.h>
 #include <stdint.h>
 
+#include <fuchsia/logger/c/fidl.h>
 #include <lib/fdio/util.h>
 #include <lib/fidl/cpp/message_buffer.h>
 #include <lib/zx/channel.h>
-#include <logger/c/fidl.h>
 #include <zircon/status.h>
 
 namespace runtests {
@@ -96,9 +96,9 @@ zx_status_t LogExporter::ReadAndDispatchMessage(fidl::MessageBuffer* buffer) {
         return ZX_ERR_INVALID_ARGS;
     }
     switch (message.ordinal()) {
-    case logger_LogListenerLogOrdinal:
+    case fuchsia_logger_LogListenerLogOrdinal:
         return Log(fbl::move(message));
-    case logger_LogListenerLogManyOrdinal:
+    case fuchsia_logger_LogListenerLogManyOrdinal:
         return LogMany(fbl::move(message));
     default:
         return ZX_ERR_NOT_SUPPORTED;
@@ -125,13 +125,13 @@ uint64_t GetNanoSeconds(uint64_t nanoseconds) {
 
 int LogExporter::WriteSeverity(int32_t severity) {
     switch (severity) {
-    case logger_LogLevelFilter_INFO:
+    case fuchsia_logger_LogLevelFilter_INFO:
         return fputs(" INFO", output_file_);
-    case logger_LogLevelFilter_WARN:
+    case fuchsia_logger_LogLevelFilter_WARN:
         return fputs(" WARNING", output_file_);
-    case logger_LogLevelFilter_ERROR:
+    case fuchsia_logger_LogLevelFilter_ERROR:
         return fputs(" ERROR", output_file_);
-    case logger_LogLevelFilter_FATAL:
+    case fuchsia_logger_LogLevelFilter_FATAL:
         return fputs(" FATAL", output_file_);
     default:
         // all other cases severity would be a negative nuber so print it as
@@ -140,7 +140,7 @@ int LogExporter::WriteSeverity(int32_t severity) {
     }
 }
 
-int LogExporter::LogMessage(logger_LogMessage* log_message) {
+int LogExporter::LogMessage(fuchsia_logger_LogMessage* log_message) {
     RETURN_IF_ERROR(fprintf(output_file_, "[%05ld.%06ld][%lu][%lu]", GetSeconds(log_message->time),
                             GetNanoSeconds(log_message->time), log_message->pid, log_message->tid));
     RETURN_IF_ERROR(fputs("[", output_file_));
@@ -196,13 +196,13 @@ int LogExporter::LogMessage(logger_LogMessage* log_message) {
 
 zx_status_t LogExporter::Log(fidl::Message message) {
     const char* error_msg = nullptr;
-    zx_status_t status = message.Decode(&logger_LogListenerLogRequestTable, &error_msg);
+    zx_status_t status = message.Decode(&fuchsia_logger_LogListenerLogRequestTable, &error_msg);
     if (status != ZX_OK) {
         fprintf(stderr, "log-listener: error: Log: %s\n", error_msg);
         return status;
     }
 
-    logger_LogMessage* log_message = message.GetPayloadAs<logger_LogMessage>();
+    fuchsia_logger_LogMessage* log_message = message.GetPayloadAs<fuchsia_logger_LogMessage>();
     if (LogMessage(log_message) < 0) {
         NotifyFileError(strerror(errno));
     }
@@ -211,14 +211,14 @@ zx_status_t LogExporter::Log(fidl::Message message) {
 
 zx_status_t LogExporter::LogMany(fidl::Message message) {
     const char* error_msg = nullptr;
-    zx_status_t status = message.Decode(&logger_LogListenerLogManyRequestTable, &error_msg);
+    zx_status_t status = message.Decode(&fuchsia_logger_LogListenerLogManyRequestTable, &error_msg);
     if (status != ZX_OK) {
         fprintf(stderr, "log-listener: error: LogMany: %s\n", error_msg);
         return status;
     }
 
     fidl_vector_t* log_messages = message.GetPayloadAs<fidl_vector_t>();
-    logger_LogMessage* msgs = static_cast<logger_LogMessage*>(log_messages->data);
+    fuchsia_logger_LogMessage* msgs = static_cast<fuchsia_logger_LogMessage*>(log_messages->data);
     for (size_t i = 0; i < log_messages->count; ++i) {
         if (LogMessage(&msgs[i]) < 0) {
             NotifyFileError(strerror(errno));
@@ -270,7 +270,7 @@ fbl::unique_ptr<LogExporter> LaunchLogExporter(const fbl::StringPiece syslog_pat
         return nullptr;
     }
 
-    status = fdio_service_connect("/svc/logger.Log", logger_request.release());
+    status = fdio_service_connect("/svc/fuchsia.logger.Log", logger_request.release());
     if (status != ZX_OK) {
         printf("LaunchLogExporter: cannot connect to logger service: %d (%s).\n",
                status, zx_status_get_string(status));
@@ -287,8 +287,8 @@ fbl::unique_ptr<LogExporter> LaunchLogExporter(const fbl::StringPiece syslog_pat
         *error = CREATE_CHANNEL;
         return nullptr;
     }
-    logger_LogListenRequest req = {};
-    req.hdr.ordinal = logger_LogListenOrdinal;
+    fuchsia_logger_LogListenRequest req = {};
+    req.hdr.ordinal = fuchsia_logger_LogListenOrdinal;
     req.log_listener = FIDL_HANDLE_PRESENT;
     zx_handle_t listener_handle = listener.release();
     status = logger.write(0, &req, sizeof(req), &listener_handle, 1);
@@ -321,7 +321,5 @@ fbl::unique_ptr<LogExporter> LaunchLogExporter(const fbl::StringPiece syslog_pat
     }
     return log_exporter;
 }
-
-
 
 } // namespace runtests
