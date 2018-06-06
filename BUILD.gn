@@ -19,21 +19,14 @@ package("peridot_tests") {
   deps = [
     "//peridot/lib:peridot_lib_unittests",
     "//peridot/public/lib:peridot_public_lib_unittests",
-    "//peridot/tests/maxwell_integration",
   ]
 
   tests = [
-    {
-      name = "context_engine_test"
-    },
     {
       name = "peridot_lib_unittests"
     },
     {
       name = "peridot_public_lib_unittests"
-    },
-    {
-      name = "suggestion_engine_test"
     },
   ]
 }

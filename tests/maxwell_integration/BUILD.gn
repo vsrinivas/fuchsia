@@ -2,12 +2,23 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-group("maxwell_integration") {
+import("//build/package.gni")
+
+package("maxwell_integration_tests") {
   testonly = true
 
-  public_deps = [
+  deps = [
     ":context_engine_test",
     ":suggestion_engine_test",
+  ]
+
+  tests = [
+    {
+      name = "context_engine_test"
+    },
+    {
+      name = "suggestion_engine_test"
+    },
   ]
 }
 
