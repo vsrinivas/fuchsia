@@ -14,6 +14,9 @@
 #define S905D2_USB0_BASE                0xff500000
 #define S905D2_USB0_LENGTH              0x100000
 
+#define S905D2_DOS_BASE                 0xff620000
+#define S905D2_DOS_LENGTH               0x10000
+
 #define S905D2_DMC_BASE                 0xff638000
 #define S905D2_DMC_LENGTH               0x1000
 
@@ -36,12 +39,14 @@
 #define S905D2_MALI_LENGTH              0x40000
 
 #define S905D2_CBUS_BASE                0xffd00000
+#define S905D2_CBUS_LENGTH              0x100000
 #define S905D2_I2C0_BASE                (S905D2_CBUS_BASE + 0x1f000)
 #define S905D2_I2C1_BASE                (S905D2_CBUS_BASE + 0x1e000)
 #define S905D2_I2C2_BASE                (S905D2_CBUS_BASE + 0x1d000)
 #define S905D2_I2C3_BASE                (S905D2_CBUS_BASE + 0x1c000)
 
 #define S905D2_AOBUS_BASE               0xff800000
+#define S905D2_AOBUS_LENGTH             0x100000
 
 #define S905D2_I2C_AO_0_BASE            (S905D2_AOBUS_BASE + 0x5000)
 
@@ -76,7 +81,13 @@
 #define S905D2_I2C3_IRQ                 71
 #define S905D2_I2C_AO_0_IRQ             227
 
+// Datasheet has incorrect number, but linux device tree seems correct.
+#define S905D2_DEMUX_IRQ                55
 #define S905D2_USB0_IRQ                 62
+#define S905D2_PARSER_IRQ               64
+#define S905D2_DOS_MBOX_0_IRQ           75
+#define S905D2_DOS_MBOX_1_IRQ           76
+#define S905D2_DOS_MBOX_2_IRQ           77
 #define S905D2_GPIO_IRQ_0               96
 #define S905D2_GPIO_IRQ_1               97
 #define S905D2_GPIO_IRQ_2               98
