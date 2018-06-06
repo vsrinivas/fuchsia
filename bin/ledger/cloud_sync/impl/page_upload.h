@@ -8,6 +8,7 @@
 #include <fuchsia/ledger/cloud/cpp/fidl.h>
 
 #include <memory>
+#include <queue>
 #include <vector>
 
 #include "lib/backoff/backoff.h"
@@ -21,6 +22,15 @@
 #include "peridot/bin/ledger/storage/public/types.h"
 
 namespace cloud_sync {
+// Internal state of PageUpload.
+// This ensures there is only one stream of work at any given time, and one in
+// "backlog".
+enum PageUploadState {
+  NO_COMMIT = 0,
+  PROCESSING,
+  PROCESSING_NEW_COMMIT,
+};
+
 // PageUpload handles all the upload operations for a page.
 class PageUpload : public storage::CommitWatcher {
  public:
@@ -69,6 +79,10 @@ class PageUpload : public storage::CommitWatcher {
 
   void RetryWithBackoff(fxl::Closure callable);
 
+  // Manages the internal state machine.
+  void NextState();
+  void PreviousState();
+
   // Owned by whoever owns this class.
   callback::ScopedTaskRunner* const task_runner_;
   storage::PageStorage* const storage_;
@@ -83,10 +97,12 @@ class PageUpload : public storage::CommitWatcher {
   // Current batch of local commits being uploaded.
   std::unique_ptr<BatchUpload> batch_upload_;
   // Set to true when there are new commits to upload.
-  bool commits_to_upload_ = false;
-
+  bool commits_to_upload_ = true;
   // Internal state.
-  UploadSyncState state_ = UPLOAD_STOPPED;
+  PageUploadState internal_state_ = PageUploadState::NO_COMMIT;
+
+  // External state.
+  UploadSyncState external_state_ = UPLOAD_STOPPED;
 
   // Must be the last member.
   fxl::WeakPtrFactory<PageUpload> weak_ptr_factory_;

@@ -86,6 +86,9 @@ class TestPageStorage : public storage::PageStorageEmptyImpl {
   bool should_fail_add_commit_from_sync = false;
   bool should_delay_add_commit_confirmation = false;
   std::vector<fxl::Closure> delayed_add_commit_confirmations;
+  bool should_delay_get_head_commit_ids = false;
+  std::vector<fxl::Closure> delayed_get_head_commit_ids;
+
   unsigned int add_commits_from_sync_calls = 0u;
 
   storage::PageSyncDelegate* page_sync_delegate_;

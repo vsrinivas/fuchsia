@@ -8,6 +8,7 @@
 #include "lib/fxl/functional/make_copyable.h"
 
 namespace cloud_sync {
+
 PageUpload::PageUpload(callback::ScopedTaskRunner* task_runner,
                        storage::PageStorage* storage,
                        encryption::EncryptionService* encryption_service,
@@ -28,11 +29,14 @@ PageUpload::~PageUpload() {}
 
 void PageUpload::StartUpload() {
   // Prime the upload process.
-  if (state_ == UPLOAD_STOPPED) {
-    commits_to_upload_ = true;
+  if (external_state_ == UPLOAD_STOPPED) {
     SetState(UPLOAD_SETUP);
+    // Starting to watch right away is not an issue, because new commit
+    // notifications are used as a tickle only, and we use a separate call to
+    // get unsynced commits.
+    storage_->AddCommitWatcher(this);
   }
-  UploadUnsyncedCommits();
+  NextState();
 }
 
 void PageUpload::OnNewCommits(
@@ -44,32 +48,28 @@ void PageUpload::OnNewCommits(
     return;
   }
 
-  commits_to_upload_ = true;
+  if (external_state_ == UPLOAD_TEMPORARY_ERROR) {
+    // Upload is already scheduled to retry uploading. No need to do anything
+    // here.
+    return;
+  }
+  NextState();
+}
+
+void PageUpload::UploadUnsyncedCommits() {
+  FXL_DCHECK(internal_state_ == PageUploadState::PROCESSING);
+
   if (!delegate_->IsDownloadIdle()) {
     // If a commit batch is currently being downloaded, don't try to start the
     // upload.
     SetState(UPLOAD_WAIT_REMOTE_DOWNLOAD);
-  } else if (state_ == UPLOAD_TEMPORARY_ERROR) {
-    // Upload is already scheduled to retry uploading. No need to do anything
-    // here.
-  } else {
-    SetState(UPLOAD_PENDING);
-    UploadUnsyncedCommits();
-  }
-}
-
-void PageUpload::UploadUnsyncedCommits() {
-  if (!commits_to_upload_) {
-    SetState(UPLOAD_IDLE);
+    PreviousState();
     return;
   }
 
-  if (batch_upload_) {
-    // If we are already uploading a commit batch, return early.
-    return;
-  }
+  SetState(UPLOAD_PENDING);
 
-  // Retrieve the backlog of the existing unsynced commits and enqueue them for
+  // Retrieve the  of the existing unsynced commits and enqueue them for
   // upload.
   // TODO(ppi): either switch to a paginating API or (better?) ensure that long
   // backlogs of local commits are squashed in storage, as otherwise the list of
@@ -84,11 +84,6 @@ void PageUpload::UploadUnsyncedCommits() {
           return;
         }
 
-        if (state_ == UPLOAD_SETUP) {
-          // Subscribe to notifications about new commits in Storage.
-          storage_->AddCommitWatcher(this);
-        }
-
         VerifyUnsyncedCommits(std::move(commits));
       }));
 }
@@ -98,7 +93,7 @@ void PageUpload::VerifyUnsyncedCommits(
   // If we have no commit to upload, skip.
   if (commits.empty()) {
     SetState(UPLOAD_IDLE);
-    commits_to_upload_ = false;
+    PreviousState();
     return;
   }
 
@@ -111,23 +106,21 @@ void PageUpload::VerifyUnsyncedCommits(
           HandleError("Failed to retrieve the current heads");
           return;
         }
-        if (batch_upload_) {
-          // If we are already uploading a commit batch, return early.
-          return;
-        }
+
         FXL_DCHECK(!heads.empty());
 
         if (!delegate_->IsDownloadIdle()) {
           // If a commit batch is currently being downloaded, don't try to start
           // the upload.
           SetState(UPLOAD_WAIT_REMOTE_DOWNLOAD);
+          PreviousState();
           return;
         }
 
         if (heads.size() > 1u) {
           // Too many local heads.
-          commits_to_upload_ = false;
           SetState(UPLOAD_WAIT_TOO_MANY_LOCAL_HEADS);
+          PreviousState();
           return;
         }
 
@@ -146,7 +139,7 @@ void PageUpload::HandleUnsyncedCommits(
         // Upload succeeded, reset the backoff delay.
         backoff_->Reset();
         batch_upload_.reset();
-        UploadUnsyncedCommits();
+        PreviousState();
       },
       [this](BatchUpload::ErrorType error_type) {
         switch (error_type) {
@@ -156,7 +149,8 @@ void PageUpload::HandleUnsyncedCommits(
                 << "commit upload failed due to a connection error, retrying.";
             SetState(UPLOAD_TEMPORARY_ERROR);
             batch_upload_.reset();
-            RetryWithBackoff([this] { UploadUnsyncedCommits(); });
+            PreviousState();
+            RetryWithBackoff([this] { NextState(); });
           } break;
           case BatchUpload::ErrorType::PERMANENT: {
             FXL_LOG(WARNING) << log_prefix_
@@ -170,7 +164,7 @@ void PageUpload::HandleUnsyncedCommits(
 
 void PageUpload::HandleError(const char error_description[]) {
   FXL_LOG(ERROR) << log_prefix_ << error_description << " Stopping sync.";
-  if (state_ > UPLOAD_SETUP) {
+  if (external_state_ > UPLOAD_SETUP) {
     storage_->RemoveCommitWatcher(this);
   }
   SetState(UPLOAD_PERMANENT_ERROR);
@@ -179,7 +173,7 @@ void PageUpload::HandleError(const char error_description[]) {
 void PageUpload::RetryWithBackoff(fxl::Closure callable) {
   task_runner_->PostDelayedTask(
       [this, callable = std::move(callable)]() {
-        if (this->state_ != UPLOAD_PERMANENT_ERROR) {
+        if (this->external_state_ != UPLOAD_PERMANENT_ERROR) {
           callable();
         }
       },
@@ -187,15 +181,15 @@ void PageUpload::RetryWithBackoff(fxl::Closure callable) {
 }
 
 void PageUpload::SetState(UploadSyncState new_state) {
-  if (new_state == state_) {
+  if (new_state == external_state_) {
     return;
   }
-  state_ = new_state;
-  delegate_->SetUploadState(state_);
+  external_state_ = new_state;
+  delegate_->SetUploadState(external_state_);
 }
 
 bool PageUpload::IsIdle() {
-  switch (state_) {
+  switch (external_state_) {
     case UPLOAD_STOPPED:
     case UPLOAD_IDLE:
     case UPLOAD_WAIT_TOO_MANY_LOCAL_HEADS:
@@ -209,6 +203,36 @@ bool PageUpload::IsIdle() {
     case UPLOAD_IN_PROGRESS:
       return false;
       break;
+  }
+}
+
+void PageUpload::NextState() {
+  switch (internal_state_) {
+    case PageUploadState::NO_COMMIT:
+      internal_state_ = PageUploadState::PROCESSING;
+      UploadUnsyncedCommits();
+      return;
+    case PageUploadState::PROCESSING:
+    case PageUploadState::PROCESSING_NEW_COMMIT:
+      internal_state_ = PageUploadState::PROCESSING_NEW_COMMIT;
+      return;
+  }
+}
+
+void PageUpload::PreviousState() {
+  switch (internal_state_) {
+    case PageUploadState::NO_COMMIT:
+      FXL_NOTREACHED() << "Bad state";
+    case PageUploadState::PROCESSING:
+      internal_state_ = PageUploadState::NO_COMMIT;
+      if (external_state_ == UPLOAD_IN_PROGRESS) {
+        SetState(UPLOAD_IDLE);
+      }
+      return;
+    case PageUploadState::PROCESSING_NEW_COMMIT:
+      internal_state_ = PageUploadState::PROCESSING;
+      UploadUnsyncedCommits();
+      return;
   }
 }
 

@@ -223,7 +223,7 @@ TEST_F(PageUploadTest, UploadNewCommits) {
   auto commit3 = storage_.NewCommit("id3", "content3");
   storage_.new_commits_to_return["id3"] = commit3->Clone();
   storage_.watcher_->OnNewCommits(commit3->AsList(),
-                                  storage::ChangeSource::CLOUD);
+                                  storage::ChangeSource::LOCAL);
 
   RunLoopUntilIdle();
   ASSERT_TRUE(upload_is_idle);
@@ -400,9 +400,7 @@ TEST_F(PageUploadTest, UploadIdleStatus) {
 }
 
 // Verifies that if listing the original commits to be uploaded fails, the
-// client is notified about the error and the storage watcher is never set, so
-// that subsequent commits are not handled. (as this would violate the contract
-// of uploading commits in order)
+// client is notified about the error.
 TEST_F(PageUploadTest, FailToListCommits) {
   EXPECT_FALSE(storage_.watcher_set);
   int error_calls = 0;
@@ -416,7 +414,6 @@ TEST_F(PageUploadTest, FailToListCommits) {
   page_upload_->StartUpload();
   RunLoopUntilIdle();
   EXPECT_EQ(1, error_calls);
-  EXPECT_FALSE(storage_.watcher_set);
   EXPECT_EQ(0u, page_cloud_.received_commits.size());
 }
 
@@ -479,5 +476,39 @@ TEST_F(PageUploadTest, DoNotUploadSyncedCommitsOnRetry) {
   // Verify that no calls were made to attempt to upload the commit.
   EXPECT_EQ(0u, page_cloud_.add_commits_calls);
 }
+
+// Verifies that concurrent new commit notifications do not crash PageUpload.
+TEST_F(PageUploadTest, UploadNewCommitsConcurrentNoCrash) {
+  bool upload_is_idle = false;
+  SetOnNewStateCallback(
+      [this, &upload_is_idle] { upload_is_idle = page_upload_->IsIdle(); });
+  page_upload_->StartUpload();
+  RunLoopUntilIdle();
+  ASSERT_TRUE(upload_is_idle);
+  upload_is_idle = false;
+
+  storage_.head_count = 2;
+  storage_.should_delay_get_head_commit_ids = true;
+  auto commit0 = storage_.NewCommit("id0", "content0");
+  storage_.new_commits_to_return["id0"] = commit0->Clone();
+  storage_.watcher_->OnNewCommits(commit0->AsList(),
+                                  storage::ChangeSource::LOCAL);
+  RunLoopUntilIdle();
+
+  auto commit1 = storage_.NewCommit("id1", "content1");
+  storage_.new_commits_to_return["id1"] = commit1->Clone();
+  storage_.watcher_->OnNewCommits(commit1->AsList(),
+                                  storage::ChangeSource::LOCAL);
+  RunLoopUntilIdle();
+  ASSERT_EQ(1u, storage_.delayed_get_head_commit_ids.size());
+  storage_.head_count = 1;
+  storage_.delayed_get_head_commit_ids[0]();
+  RunLoopUntilIdle();
+
+  ASSERT_EQ(2u, storage_.delayed_get_head_commit_ids.size());
+  storage_.delayed_get_head_commit_ids[1]();
+  RunLoopUntilIdle();
+}
+
 }  // namespace
 }  // namespace cloud_sync
