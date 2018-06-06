@@ -67,6 +67,25 @@
 //   Thus, the references to dst and src passed to read, read_at, write, and
 //   write_at cannot overlap with the buffer itself, and so it's safe to use
 //   ptr::copy_nonoverlapping.
+// - Note on volatility and observability: The memory in a SharedBuffer is
+//   either allocated by this process and then sent to another process, or
+//   allocated by another process and sent to this process. However, on Fuchsia,
+//   what's actually shared is a VMO, which is then mapped into the address
+//   space. While LLVM is almost certainly guaranteed to treat this call as
+//   opaque, and thus to be unable to prove to itself that the returned memory
+//   is not shared, it is worth hedging against that reasoning being wrong. If
+//   LLVM were, for some reason, to decide that mapping a VMO resulted in
+//   uniquely owned memory, it would be able to reason that writes to that
+//   memory could never be observed by other threads, and so if the writes were
+//   not observed by the _current_ thread, they could be elided altogether since
+//   they could have no effect. In order to hedge against this possibility, and
+//   to ensure that LLVM definitely cannot take this line of reasoning, we
+//   volatile write the pointer when we first construct the SharedBuffer. LLVM
+//   must conclude that it doesn't know who else is using the memory once a
+//   pointer to it has been written in a volatile manner, and so must assume
+//   that all future writes must be observable. This single volatile write which
+//   happens at most once per message (although more likely once when the
+//   connection is first established) has minimal performance overhead.
 
 // TODO(joshlf):
 // - Create a variant for read-only memory
@@ -76,6 +95,7 @@
 
 use core::marker::PhantomData;
 use core::ptr;
+use core::sync::atomic::{fence, Ordering};
 
 /// A shared region of memory.
 ///
@@ -115,6 +135,11 @@ impl<'a> SharedBuffer<'a> {
     /// If any of these guarantees are violated, it may cause undefined
     /// behavior.
     pub unsafe fn new(buf: *mut u8, len: usize) -> SharedBuffer<'a> {
+        // Write the pointer and the length using a volatile write so that LLVM
+        // must assume that the memory has escaped, and that all future writes
+        // to it are observable. See the NOTE above for more details.
+        let mut scratch = (ptr::null_mut(), 0);
+        ptr::write_volatile(&mut scratch, (buf, len));
         SharedBuffer {
             buf,
             len,
@@ -166,6 +191,16 @@ impl<'a> SharedBuffer<'a> {
     /// Write up to `src.len()` bytes into the buffer, returning how many bytes
     /// were written. The only thing that can cause fewer bytes to be written
     /// than requested is if `src` is larger than the buffer itself.
+    ///
+    /// A call to `write` is only guaranteed to happen before an operation in
+    /// another thread or process if the mechanism used to signal the other
+    /// process has well-defined memory ordering semantics. Otherwise, the
+    /// `release_writes` method must be called after `write` and before
+    /// signalling the other process in order to provide such ordering
+    /// guarantees. In practice, this means that `release_writes` should be the
+    /// last write operation that happens before signalling another process that
+    /// the memory may be read. See the `release_writes` documentation for more
+    /// details.
     #[inline]
     pub fn write(&self, src: &[u8]) -> usize {
         self.write_at(0, src)
@@ -177,6 +212,16 @@ impl<'a> SharedBuffer<'a> {
     /// returning how many bytes were written. The only thing that can cause
     /// fewer bytes to be written than requested is if there are fewer than
     /// `src.len()` bytes available starting at `offset` within the buffer.
+    ///
+    /// A call to `write_at` is only guaranteed to happen before an operation in
+    /// another thread or process if the mechanism used to signal the other
+    /// process has well-defined memory ordering semantics. Otherwise, the
+    /// `release_writes` method must be called after `write_at` and before
+    /// signalling the other process in order to provide such ordering
+    /// guarantees. In practice, this means that `release_writes` should be the
+    /// last write operation that happens before signalling another process that
+    /// the memory may be read. See the `release_writes` documentation for more
+    /// details.
     ///
     /// # Panics
     ///
@@ -198,6 +243,28 @@ impl<'a> SharedBuffer<'a> {
                 offset, self.len
             );
         }
+    }
+
+    /// Atomically release all writes performed so far.
+    ///
+    /// On some systems (such as Fuchsia, currently), the communication
+    /// mechanism used for signalling the other process that memory is readable
+    /// does not have well-defined synchronization semantics. On those systems,
+    /// this method MUST be called before such signalling, or else writes
+    /// performed before that signal are not guaranteed to be observed by the
+    /// other process.
+    ///
+    /// # Note on Fuchsia
+    ///
+    /// Zircon, the Fuchsia kernel, will likely eventually have well-defined
+    /// semantics around the synchronization behavior of various syscalls. Once
+    /// that happens, calling this method in Fuchsia programs may become
+    /// optional. This work is tracked in [ZX-2239].
+    ///
+    /// [ZX-2239]: #
+    // // TODO(joshlf): Replace with link once issues are public.
+    pub fn release_writes(&self) {
+        fence(Ordering::Release);
     }
 
     /// Create a slice of the original `SharedBuffer`.
