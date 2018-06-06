@@ -22,7 +22,6 @@ use failure::{Fail, ResultExt};
 use failure::Error;
 use fidl_bluetooth_control::{ControlEvent, ControlMarker, ControlProxy};
 use futures::{Future, FutureExt, StreamExt};
-use futures::{task, Poll};
 use futures::future::ok as fok;
 use parking_lot::RwLock;
 use rustyline::{CompletionType, Config, EditMode, Editor};
