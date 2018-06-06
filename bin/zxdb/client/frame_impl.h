@@ -15,8 +15,7 @@ class ThreadImpl;
 // A frame is lazily symbolized.
 class FrameImpl : public Frame {
  public:
-  FrameImpl(ThreadImpl* thread,
-            const debug_ipc::StackFrame& stack_frame,
+  FrameImpl(ThreadImpl* thread, const debug_ipc::StackFrame& stack_frame,
             Location location);
   ~FrameImpl() override;
 

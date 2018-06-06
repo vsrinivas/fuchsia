@@ -86,7 +86,7 @@ Examples
       if no index is specified).
 )";
 Err DoContinue(ConsoleContext* context, const Command& cmd) {
-  Err err = cmd.ValidateNouns({ Noun::kProcess, Noun::kThread });
+  Err err = cmd.ValidateNouns({Noun::kProcess, Noun::kThread});
   if (err.has_error())
     return err;
 
@@ -155,7 +155,7 @@ Examples
       if no index is specified).
 )";
 Err DoPause(ConsoleContext* context, const Command& cmd) {
-  Err err = cmd.ValidateNouns({ Noun::kProcess, Noun::kThread });
+  Err err = cmd.ValidateNouns({Noun::kProcess, Noun::kThread});
   if (err.has_error())
     return err;
 
@@ -209,7 +209,7 @@ Examples
       Steps thread 2 in process 3.
 )";
 Err DoStepi(ConsoleContext* context, const Command& cmd) {
-  Err err = cmd.ValidateNouns({ Noun::kProcess, Noun::kThread });
+  Err err = cmd.ValidateNouns({Noun::kProcess, Noun::kThread});
   if (err.has_error())
     return err;
 
@@ -225,9 +225,8 @@ Err DoStepi(ConsoleContext* context, const Command& cmd) {
 }  // namespace
 
 void AppendThreadVerbs(std::map<Verb, VerbRecord>* verbs) {
-  (*verbs)[Verb::kContinue] =
-      VerbRecord(&DoContinue, {"continue", "c"}, kContinueShortHelp,
-                 kContinueHelp);
+  (*verbs)[Verb::kContinue] = VerbRecord(&DoContinue, {"continue", "c"},
+                                         kContinueShortHelp, kContinueHelp);
   (*verbs)[Verb::kPause] =
       VerbRecord(&DoPause, {"pause", "pa"}, kPauseShortHelp, kPauseHelp);
   (*verbs)[Verb::kStepi] =

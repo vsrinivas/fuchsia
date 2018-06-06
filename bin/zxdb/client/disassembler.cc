@@ -14,8 +14,8 @@
 #include "garnet/public/lib/fxl/strings/trim.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
-#include "llvm/MC/MCInstPrinter.h"
 #include "llvm/MC/MCDisassembler/MCDisassembler.h"
+#include "llvm/MC/MCInstPrinter.h"
 #include "llvm/Support/TargetRegistry.h"
 
 namespace zxdb {
@@ -24,8 +24,7 @@ namespace {
 
 // In-place replaces instances of ANY of the charcters in "search_for" with the
 // given replacement in the given string.
-void ReplaceAllInstancesOf(const char* search_for,
-                           char replace_with,
+void ReplaceAllInstancesOf(const char* search_for, char replace_with,
                            std::string* str) {
   size_t found_pos = 0;
   while ((found_pos = str->find_first_of(search_for, found_pos)) !=
@@ -34,10 +33,8 @@ void ReplaceAllInstancesOf(const char* search_for,
   }
 }
 
-void GetInvalidInstructionStrs(const uint8_t* data,
-                               size_t len,
-                               std::string* instruction,
-                               std::string* params,
+void GetInvalidInstructionStrs(const uint8_t* data, size_t len,
+                               std::string* instruction, std::string* params,
                                std::string* comment) {
   *instruction = ".byte";
   params->clear();
@@ -77,13 +74,9 @@ void SplitInstruction(std::string* instruction, std::string* params) {
 // Formats the asembly instruction and adds it to the row. Using this function
 // consistently ensures that there is always the same number of columns in
 // each output row.
-void WriteRow(const Disassembler::Options& options,
-              uint64_t address,
-              const uint8_t* bytes,
-              size_t bytes_len,
-              std::string instruction,
-              std::string params,
-              std::string comment,
+void WriteRow(const Disassembler::Options& options, uint64_t address,
+              const uint8_t* bytes, size_t bytes_len, std::string instruction,
+              std::string params, std::string comment,
               std::vector<std::string>* out) {
   out->clear();
 
@@ -131,10 +124,8 @@ Err Disassembler::Init(const ArchInfo* arch) {
   return Err();
 }
 
-size_t Disassembler::DisassembleOne(const uint8_t* data,
-                                    size_t data_len,
-                                    uint64_t address,
-                                    const Options& options,
+size_t Disassembler::DisassembleOne(const uint8_t* data, size_t data_len,
+                                    uint64_t address, const Options& options,
                                     std::vector<std::string>* out) const {
   out->clear();
 
@@ -185,11 +176,8 @@ size_t Disassembler::DisassembleOne(const uint8_t* data,
 }
 
 size_t Disassembler::DisassembleMany(
-    const uint8_t* data,
-    size_t data_len,
-    uint64_t start_address,
-    const Options& in_options,
-    size_t max_instructions,
+    const uint8_t* data, size_t data_len, uint64_t start_address,
+    const Options& in_options, size_t max_instructions,
     std::vector<std::vector<std::string>>* out) const {
   if (max_instructions == 0)
     max_instructions = std::numeric_limits<size_t>::max();
@@ -213,9 +201,7 @@ size_t Disassembler::DisassembleMany(
 }
 
 size_t Disassembler::DisassembleDump(
-    const MemoryDump& dump,
-    const Options& options,
-    size_t max_instructions,
+    const MemoryDump& dump, const Options& options, size_t max_instructions,
     std::vector<std::vector<std::string>>* out) const {
   if (max_instructions == 0)
     max_instructions = std::numeric_limits<size_t>::max();

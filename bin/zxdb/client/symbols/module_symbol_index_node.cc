@@ -46,10 +46,10 @@ void ModuleSymbolIndexNode::AddFunctionDie(const llvm::DWARFDie& die) {
 }
 
 ModuleSymbolIndexNode* ModuleSymbolIndexNode::AddChild(std::string&& name) {
-  return &sub_.emplace(
-      std::piecewise_construct,
-      std::forward_as_tuple(std::move(name)),
-      std::forward_as_tuple()).first->second;
+  return &sub_.emplace(std::piecewise_construct,
+                       std::forward_as_tuple(std::move(name)),
+                       std::forward_as_tuple())
+              .first->second;
 }
 
 void ModuleSymbolIndexNode::AddChild(

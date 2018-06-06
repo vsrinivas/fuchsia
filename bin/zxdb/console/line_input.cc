@@ -8,8 +8,8 @@
 #include <unistd.h>
 
 #ifdef __Fuchsia__
-#include <zircon/device/pty.h>
 #include <lib/fdio/io.h>
+#include <zircon/device/pty.h>
 #else
 #include <sys/ioctl.h>
 #include <termios.h>
@@ -60,9 +60,7 @@ LineInputBase::LineInputBase(const std::string& prompt) : prompt_(prompt) {
   history_.emplace_front();
 }
 
-LineInputBase::~LineInputBase() {
-  EnsureNoRawMode();
-}
+LineInputBase::~LineInputBase() { EnsureNoRawMode(); }
 
 void LineInputBase::BeginReadLine() {
   FXL_DCHECK(!editing_);  // Two BeginReadLine calls with no enter input.
@@ -281,8 +279,7 @@ void LineInputBase::HandleTab() {
 
 void LineInputBase::Insert(char c) {
   if (pos_ == cur_line().size() &&
-      (max_cols_ == 0 ||
-       cur_line().size() + prompt_.size() < max_cols_ - 1)) {
+      (max_cols_ == 0 || cur_line().size() + prompt_.size() < max_cols_ - 1)) {
     // Append to end and no scrolling needed. Optimize output to avoid
     // redrawing the entire line.
     cur_line().push_back(c);
@@ -430,12 +427,12 @@ void LineInputStdout::EnsureRawMode() {
 }
 
 void LineInputStdout::EnsureNoRawMode() {
-  #if !defined(__Fuchsia__)
+#if !defined(__Fuchsia__)
   if (raw_mode_enabled_) {
     tcsetattr(STDOUT_FILENO, TCSAFLUSH, original_termios_.get());
     raw_mode_enabled_ = false;
   }
-  #endif
+#endif
 }
 
 LineInputBlockingStdio::LineInputBlockingStdio(const std::string& prompt)

@@ -10,8 +10,8 @@
 #include <netdb.h>
 #include <stdio.h>
 #include <sys/socket.h>
-#include <thread>
 #include <unistd.h>
+#include <thread>
 
 #include "garnet/bin/zxdb/client/arch_info.h"
 #include "garnet/bin/zxdb/client/process_impl.h"
@@ -130,8 +130,7 @@ class Session::PendingConnection
 };
 
 void Session::PendingConnection::Initiate(
-    fxl::WeakPtr<Session> session,
-    std::function<void(const Err&)> callback) {
+    fxl::WeakPtr<Session> session, std::function<void(const Err&)> callback) {
   FXL_DCHECK(!thread_.get());  // Duplicate Initiate() call.
 
   main_loop_ = debug_ipc::MessageLoop::Current();
@@ -156,8 +155,7 @@ void Session::PendingConnection::ConnectBackgroundThread(
 }
 
 void Session::PendingConnection::ConnectCompleteMainThread(
-    fxl::RefPtr<PendingConnection> owner,
-    const Err& err) {
+    fxl::RefPtr<PendingConnection> owner, const Err& err) {
   // The background thread function has now completed so the thread can be
   // destroyed. We do want to join with the thread here to ensure there are no
   // references to the PendingConnection on the background thread, which might
@@ -222,8 +220,7 @@ void Session::PendingConnection::DataAvailableMainThread(
 }
 
 void Session::PendingConnection::HelloCompleteMainThread(
-    fxl::RefPtr<PendingConnection> owner,
-    const Err& err,
+    fxl::RefPtr<PendingConnection> owner, const Err& err,
     const debug_ipc::HelloReply& reply) {
   if (session_) {
     // The buffer must be created here on the main thread since it will
@@ -345,12 +342,9 @@ void Session::OnStreamReadable() {
   }
 }
 
-bool Session::IsConnected() const {
-  return !!stream_;
-}
+bool Session::IsConnected() const { return !!stream_; }
 
-void Session::Connect(const std::string& host,
-                      uint16_t port,
+void Session::Connect(const std::string& host, uint16_t port,
                       std::function<void(const Err&)> callback) {
   Err err;
   if (IsConnected()) {

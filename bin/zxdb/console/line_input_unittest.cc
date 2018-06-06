@@ -27,9 +27,7 @@ class TestLineInput : public LineInputBase {
  public:
   TestLineInput(const std::string& prompt) : LineInputBase(prompt) {}
 
-  void ClearOutput() {
-    output_.clear();
-  }
+  void ClearOutput() { output_.clear(); }
   std::string GetAndClearOutput() {
     std::string ret = output_;
     ClearOutput();
@@ -46,9 +44,7 @@ class TestLineInput : public LineInputBase {
   }
 
  protected:
-  void Write(const std::string& data) {
-    output_.append(data);
-  }
+  void Write(const std::string& data) { output_.append(data); }
 
  private:
   std::string output_;

@@ -98,8 +98,7 @@ class Process : public ClientObject {
 
   // Reads memory from the debugged process.
   virtual void ReadMemory(
-      uint64_t address,
-      uint32_t size,
+      uint64_t address, uint32_t size,
       std::function<void(const Err&, MemoryDump)> callback) = 0;
 
  protected:

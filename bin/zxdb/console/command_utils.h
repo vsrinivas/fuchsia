@@ -26,8 +26,7 @@ class Thread;
 // Ensures the target is currently running (it has a current Process associated
 // with it. If not, generates an error of the form
 // "<command_name> requires a running target".
-Err AssertRunningTarget(ConsoleContext* context,
-                        const char* command_name,
+Err AssertRunningTarget(ConsoleContext* context, const char* command_name,
                         Target* target);
 
 [[nodiscard]] Err StringToUint64(const std::string& s, uint64_t* out);
@@ -36,20 +35,15 @@ Err AssertRunningTarget(ConsoleContext* context,
 // if there are not enough args, or if the value isn't an int64.
 //
 // The param_desc will be used in the error string, for example "process koid".
-[[nodiscard]] Err ReadUint64Arg(const Command& cmd,
-                                size_t arg_index,
-                                const char* param_desc,
-                                uint64_t* out);
+[[nodiscard]] Err ReadUint64Arg(const Command& cmd, size_t arg_index,
+                                const char* param_desc, uint64_t* out);
 
 // Parses a host and port. The two-argument version assumes the host and
 // port are given separately. The one-argument version assumes they're
 // separated by a colon.
-Err ParseHostPort(const std::string& in_host,
-                  const std::string& in_port,
-                  std::string* out_host,
-                  uint16_t* out_port);
-Err ParseHostPort(const std::string& input,
-                  std::string* out_host,
+Err ParseHostPort(const std::string& in_host, const std::string& in_port,
+                  std::string* out_host, uint16_t* out_port);
+Err ParseHostPort(const std::string& input, std::string* out_host,
                   uint16_t* out_port);
 
 std::string TargetStateToString(Target::State state);
@@ -62,8 +56,7 @@ const char* BreakpointEnabledToString(bool enabled);
 
 std::string ExceptionTypeToString(debug_ipc::NotifyException::Type type);
 
-std::string DescribeTarget(const ConsoleContext* context,
-                           const Target* target);
+std::string DescribeTarget(const ConsoleContext* context, const Target* target);
 
 // Returns the process name of the given target, depending on the running
 // process or the current app name, as applicable.
@@ -79,10 +72,8 @@ std::string DescribeLocation(const Location& loc);
 enum class Align { kLeft, kRight };
 
 struct ColSpec {
-  explicit ColSpec(Align align = Align::kLeft,
-                   int max_width = 0,
-                   const std::string& head = std::string(),
-                   int pad_left = 0)
+  explicit ColSpec(Align align = Align::kLeft, int max_width = 0,
+                   const std::string& head = std::string(), int pad_left = 0)
       : align(align), max_width(max_width), head(head), pad_left(pad_left) {}
 
   Align align = Align::kLeft;

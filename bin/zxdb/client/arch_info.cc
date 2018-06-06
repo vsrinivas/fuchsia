@@ -10,8 +10,8 @@
 #include "llvm/MC/MCInstPrinter.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
-#include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/InitLLVM.h"
+#include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/TargetSelect.h"
 
 namespace zxdb {

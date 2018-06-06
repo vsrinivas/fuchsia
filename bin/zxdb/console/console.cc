@@ -7,7 +7,6 @@
 #include <fcntl.h>
 #include <unistd.h>
 
-#include "garnet/public/lib/fxl/logging.h"
 #include "garnet/bin/zxdb/client/err.h"
 #include "garnet/bin/zxdb/client/process.h"
 #include "garnet/bin/zxdb/client/target.h"
@@ -15,14 +14,14 @@
 #include "garnet/bin/zxdb/console/command.h"
 #include "garnet/bin/zxdb/console/command_parser.h"
 #include "garnet/bin/zxdb/console/output_buffer.h"
+#include "garnet/public/lib/fxl/logging.h"
 #include "garnet/public/lib/fxl/strings/string_printf.h"
 
 namespace zxdb {
 
 Console* Console::singleton_ = nullptr;
 
-Console::Console(Session* session)
-    : context_(session), line_input_("[zxdb] ") {
+Console::Console(Session* session) : context_(session), line_input_("[zxdb] ") {
   FXL_DCHECK(!singleton_);
   singleton_ = this;
 

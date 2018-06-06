@@ -4,8 +4,8 @@
 
 #include "garnet/bin/zxdb/console/nouns.h"
 
-#include <algorithm>
 #include <inttypes.h>
+#include <algorithm>
 #include <utility>
 
 #include "garnet/bin/zxdb/client/breakpoint.h"
@@ -111,11 +111,11 @@ void ListThreads(ConsoleContext* context, Process* process) {
   }
 
   OutputBuffer out;
-  FormatColumns({ColSpec(Align::kLeft),
-                 ColSpec(Align::kRight, 0, "#"),
-                 ColSpec(Align::kLeft, 0, "State"),
-                 ColSpec(Align::kRight, 0, "Koid"),
-                 ColSpec(Align::kLeft, 0, "Name")}, rows, &out);
+  FormatColumns(
+      {ColSpec(Align::kLeft), ColSpec(Align::kRight, 0, "#"),
+       ColSpec(Align::kLeft, 0, "State"), ColSpec(Align::kRight, 0, "Koid"),
+       ColSpec(Align::kLeft, 0, "Name")},
+      rows, &out);
   Console::get()->Output(std::move(out));
 }
 
@@ -198,11 +198,11 @@ void ListProcesses(ConsoleContext* context) {
   }
 
   OutputBuffer out;
-  FormatColumns({ColSpec(Align::kLeft),
-                 ColSpec(Align::kRight, 0, "#"),
-                 ColSpec(Align::kLeft, 0, "State"),
-                 ColSpec(Align::kRight, 0, "Koid"),
-                 ColSpec(Align::kLeft, 0, "Name")}, rows, &out);
+  FormatColumns(
+      {ColSpec(Align::kLeft), ColSpec(Align::kRight, 0, "#"),
+       ColSpec(Align::kLeft, 0, "State"), ColSpec(Align::kRight, 0, "Koid"),
+       ColSpec(Align::kLeft, 0, "Name")},
+      rows, &out);
   Console::get()->Output(std::move(out));
 }
 
@@ -263,12 +263,12 @@ void ListBreakpoints(ConsoleContext* context) {
   }
 
   OutputBuffer out;
-  FormatColumns({ColSpec(Align::kLeft),
-                 ColSpec(Align::kRight, 0, "#"),
-                 ColSpec(Align::kLeft, 0, "Scope"),
-                 ColSpec(Align::kLeft, 0, "Stop"),
-                 ColSpec(Align::kLeft, 0, "Enabled"),
-                 ColSpec(Align::kLeft, 0, "Location")}, rows, &out);
+  FormatColumns(
+      {ColSpec(Align::kLeft), ColSpec(Align::kRight, 0, "#"),
+       ColSpec(Align::kLeft, 0, "Scope"), ColSpec(Align::kLeft, 0, "Stop"),
+       ColSpec(Align::kLeft, 0, "Enabled"),
+       ColSpec(Align::kLeft, 0, "Location")},
+      rows, &out);
   Console::get()->Output(std::move(out));
 }
 

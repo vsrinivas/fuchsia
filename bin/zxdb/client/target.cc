@@ -17,8 +17,6 @@ void Target::RemoveObserver(TargetObserver* observer) {
   observers_.RemoveObserver(observer);
 }
 
-fxl::WeakPtr<Target> Target::GetWeakPtr() {
-  return weak_factory_.GetWeakPtr();
-}
+fxl::WeakPtr<Target> Target::GetWeakPtr() { return weak_factory_.GetWeakPtr(); }
 
 }  // namespace zxdb

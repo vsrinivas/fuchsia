@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/zxdb/client/breakpoint_settings.h"
 #include "garnet/bin/zxdb/console/verbs_breakpoint.h"
+#include "garnet/bin/zxdb/client/breakpoint_settings.h"
 #include "gtest/gtest.h"
 
 namespace zxdb {

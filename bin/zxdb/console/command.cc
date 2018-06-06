@@ -16,8 +16,7 @@ namespace zxdb {
 
 namespace {
 
-const char kFrameShortHelp[] =
-    "frame / f: Select or list stack frames.";
+const char kFrameShortHelp[] = "frame / f: Select or list stack frames.";
 const char kFrameHelp[] =
     R"(frame [ <id> [ <command> ... ] ]
 
@@ -48,8 +47,7 @@ Examples
     Selects the specified process, thread, and frame.
 )";
 
-const char kThreadShortHelp[] =
-    "thread / t: Select or list threads.";
+const char kThreadShortHelp[] = "thread / t: Select or list threads.";
 const char kThreadHelp[] =
     R"(thread [ <id> [ <command> ... ] ]
 
@@ -189,9 +187,10 @@ Err Command::ValidateNouns(std::initializer_list<Noun> allowed_nouns) const {
   for (const auto& pair : nouns_) {
     if (std::find(allowed_nouns.begin(), allowed_nouns.end(), pair.first) ==
         allowed_nouns.end()) {
-      return Err(ErrType::kInput, fxl::StringPrintf(
-          "\"%s\" may not be specified for this command.",
-          NounToString(pair.first).c_str()));
+      return Err(
+          ErrType::kInput,
+          fxl::StringPrintf("\"%s\" may not be specified for this command.",
+                            NounToString(pair.first).c_str()));
     }
   }
   return Err();
@@ -220,16 +219,14 @@ SwitchRecord::~SwitchRecord() = default;
 
 NounRecord::NounRecord() = default;
 NounRecord::NounRecord(std::initializer_list<std::string> aliases,
-                       const char* short_help,
-                       const char* help)
+                       const char* short_help, const char* help)
     : aliases(aliases), short_help(short_help), help(help) {}
 NounRecord::~NounRecord() = default;
 
 VerbRecord::VerbRecord() = default;
 VerbRecord::VerbRecord(CommandExecutor exec,
                        std::initializer_list<std::string> aliases,
-                       const char* short_help,
-                       const char* help)
+                       const char* short_help, const char* help)
     : exec(exec), aliases(aliases), short_help(short_help), help(help) {}
 VerbRecord::~VerbRecord() = default;
 
@@ -318,8 +315,7 @@ Err DispatchCommand(ConsoleContext* context, const Command& cmd) {
   const auto& found = verbs.find(cmd.verb());
   if (found == verbs.end()) {
     return Err(ErrType::kInput,
-               "Invalid verb \"" + VerbToString(cmd.verb()) +
-               "\".");
+               "Invalid verb \"" + VerbToString(cmd.verb()) + "\".");
   }
   return found->second.exec(context, cmd);
 }

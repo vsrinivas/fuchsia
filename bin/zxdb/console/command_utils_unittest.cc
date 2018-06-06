@@ -131,7 +131,9 @@ TEST(CommandUtils, FormatColumns) {
 
   // Heading only.
   out = OutputBuffer();
-  FormatColumns({ColSpec(Align::kLeft, 0, "One"), ColSpec(Align::kLeft, 0, "Two")}, rows, &out);
+  FormatColumns(
+      {ColSpec(Align::kLeft, 0, "One"), ColSpec(Align::kLeft, 0, "Two")}, rows,
+      &out);
   EXPECT_EQ("One Two\n", out.AsString());
 
   // Two rows for all tests below.
@@ -145,17 +147,22 @@ TEST(CommandUtils, FormatColumns) {
 
   // Right align with padding.
   out = OutputBuffer();
-  FormatColumns({ColSpec(Align::kRight), ColSpec(Align::kRight, 0, std::string(), 2)}, rows, &out);
+  FormatColumns(
+      {ColSpec(Align::kRight), ColSpec(Align::kRight, 0, std::string(), 2)},
+      rows, &out);
   EXPECT_EQ("    0   Hello, world\n12345          Hello\n", out.AsString());
 
   // Max width + heading.
   out = OutputBuffer();
-  FormatColumns({ColSpec(Align::kRight, 3, "One"), ColSpec(Align::kLeft, 3, "Two")}, rows, &out);
+  FormatColumns(
+      {ColSpec(Align::kRight, 3, "One"), ColSpec(Align::kLeft, 3, "Two")}, rows,
+      &out);
   EXPECT_EQ("One Two\n  0 Hello, world\n12345 Hello\n", out.AsString());
 
   // Overflowing cells shouldn't force the whole column to max width.
   out = OutputBuffer();
-  FormatColumns({ColSpec(Align::kRight, 1), ColSpec(Align::kLeft, 0)}, rows, &out);
+  FormatColumns({ColSpec(Align::kRight, 1), ColSpec(Align::kLeft, 0)}, rows,
+                &out);
   EXPECT_EQ("0 Hello, world\n12345 Hello\n", out.AsString());
 }
 

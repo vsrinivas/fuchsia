@@ -23,8 +23,8 @@ class SystemObserver;
 class System : public ClientObject {
  public:
   // Callback for requesting the process tree.
-  using ProcessTreeCallback = std::function<
-      void(const Err&, debug_ipc::ProcessTreeReply)>;
+  using ProcessTreeCallback =
+      std::function<void(const Err&, debug_ipc::ProcessTreeReply)>;
 
   System(Session* session);
   ~System() override;

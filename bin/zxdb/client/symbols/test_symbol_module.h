@@ -18,7 +18,7 @@ class MemoryBuffer;
 
 namespace object {
 class Binary;
-} // namespace object
+}  // namespace object
 
 }  // namespace llvm
 

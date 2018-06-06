@@ -4,9 +4,9 @@
 
 #include "garnet/bin/zxdb/console/command_parser.h"
 
+#include <stdio.h>
 #include <map>
 #include <set>
-#include <stdio.h>
 
 #include "garnet/bin/zxdb/client/err.h"
 #include "garnet/bin/zxdb/console/command.h"
@@ -45,12 +45,9 @@ const std::set<std::string>& GetCanonicalNounVerbStrings() {
       strings.insert(verb_pair.second.aliases[0]);
   }
   return strings;
-
 }
 
-bool IsTokenSeparator(char c) {
-  return c == ' ';
-}
+bool IsTokenSeparator(char c) { return c == ' '; }
 
 // Finds the record for the switch associated with long switch string (which
 // includes the two leading dashes), or null if there is no match.
@@ -117,10 +114,8 @@ bool IsIndexToken(const std::string& token) {
 //
 // *consumed will be set if any nouns were consumed (to disambiguate the
 // "error parsing" case and the "the next thing wasn't a noun" case).
-Err ConsumeNoun(const std::vector<std::string>& tokens,
-                size_t* token_index,
-                Command* output,
-                bool* consumed) {
+Err ConsumeNoun(const std::vector<std::string>& tokens, size_t* token_index,
+                Command* output, bool* consumed) {
   *consumed = false;
 
   const auto& nouns = GetStringNounMap();
@@ -140,8 +135,8 @@ Err ConsumeNoun(const std::vector<std::string>& tokens,
   size_t noun_index = Command::kNoIndex;
   if ((*token_index) < tokens.size() && IsIndexToken(tokens[*token_index])) {
     if (sscanf(tokens[*token_index].c_str(), "%zu", &noun_index) != 1) {
-      return Err("Invalid index \"" + tokens[*token_index] +
-                 "\" for \"" + NounToString(noun) + "\".");
+      return Err("Invalid index \"" + tokens[*token_index] + "\" for \"" +
+                 NounToString(noun) + "\".");
     }
     (*token_index)++;
   }

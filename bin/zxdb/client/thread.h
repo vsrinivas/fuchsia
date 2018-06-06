@@ -4,8 +4,8 @@
 
 #pragma once
 
-#include <stdint.h>
 #include <stddef.h>
+#include <stdint.h>
 #include <string>
 
 #include "garnet/bin/zxdb/client/client_object.h"

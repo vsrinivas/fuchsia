@@ -27,7 +27,8 @@ class ScopedUnlink {
 
 // Trying to load a nonexistand file should error.
 TEST(ModuleSymbols, NonExistantFile) {
-  ModuleSymbolsImpl module(TestSymbolModule::GetTestFileName() + "_NONEXISTANT");
+  ModuleSymbolsImpl module(TestSymbolModule::GetTestFileName() +
+                           "_NONEXISTANT");
   Err err = module.Load();
   EXPECT_TRUE(err.has_error());
 }
@@ -43,7 +44,8 @@ TEST(ModuleSymbols, BadFileType) {
   EXPECT_LT(0, write(fd, temp_name, strlen(temp_name)));
   close(fd);
 
-  ModuleSymbolsImpl module(TestSymbolModule::GetTestFileName() + "_NONEXISTANT");
+  ModuleSymbolsImpl module(TestSymbolModule::GetTestFileName() +
+                           "_NONEXISTANT");
   Err err = module.Load();
   EXPECT_TRUE(err.has_error());
 }

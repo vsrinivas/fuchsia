@@ -106,9 +106,7 @@ Err DoMemRead(ConsoleContext* context, const Command& cmd) {
 // disassemble -----------------------------------------------------------------
 
 // Completion callback after reading process memory.
-void CompleteDisassemble(const Err& err,
-                         MemoryDump dump,
-                         uint64_t num_instr,
+void CompleteDisassemble(const Err& err, MemoryDump dump, uint64_t num_instr,
                          fxl::WeakPtr<Process> weak_process,
                          Disassembler::Options options) {
   Console* console = Console::get();

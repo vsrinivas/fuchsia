@@ -18,17 +18,14 @@ namespace zxdb {
 ModuleSymbolsImpl::ModuleSymbolsImpl(const std::string& name) : name_(name) {}
 ModuleSymbolsImpl::~ModuleSymbolsImpl() = default;
 
-const std::string& ModuleSymbolsImpl::GetLocalFileName() const {
-  return name_;
-}
+const std::string& ModuleSymbolsImpl::GetLocalFileName() const { return name_; }
 
 Err ModuleSymbolsImpl::Load() {
   llvm::Expected<llvm::object::OwningBinary<llvm::object::Binary>> bin_or_err =
       llvm::object::createBinary(name_);
   if (!bin_or_err) {
     auto err_str = llvm::toString(bin_or_err.takeError());
-    return Err("Error loading symbols for \"" + name_ + "\": " +
-               err_str);
+    return Err("Error loading symbols for \"" + name_ + "\": " + err_str);
   }
 
   auto binary_pair = bin_or_err->takeBinary();

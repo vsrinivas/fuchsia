@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "garnet/bin/zxdb/client/symbols/process_symbols_impl.h"
 #include "garnet/bin/zxdb/client/symbols/loaded_module_symbols.h"
 #include "garnet/bin/zxdb/client/symbols/module_symbols.h"
-#include "garnet/bin/zxdb/client/symbols/process_symbols_impl.h"
 #include "garnet/bin/zxdb/client/symbols/system_symbols.h"
 #include "garnet/bin/zxdb/client/symbols/target_symbols_impl.h"
 #include "garnet/bin/zxdb/client/symbols/test_symbol_module.h"
@@ -49,9 +49,7 @@ class NotificationsImpl : public ProcessSymbolsImpl::Notifications {
   void WillUnloadModuleSymbols(LoadedModuleSymbols* module) override {
     unloaded_.push_back(module->GetLoadAddress());
   }
-  void OnSymbolLoadFailure(const Err& err) override {
-    err_count_++;
-  }
+  void OnSymbolLoadFailure(const Err& err) override { err_count_++; }
 
  private:
   std::vector<LoadedModuleSymbols*> loaded_;

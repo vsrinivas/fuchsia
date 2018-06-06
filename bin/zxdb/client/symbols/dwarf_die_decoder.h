@@ -43,8 +43,7 @@ class DwarfDieDecoder {
   //
   // The output pointer must remain valid until the last call to Decode()
   // has returned.
-  void AddPresenceCheck(llvm::dwarf::Attribute attribute,
-                        bool* present);
+  void AddPresenceCheck(llvm::dwarf::Attribute attribute, bool* present);
 
   // These register for a given attribute, and call the similarly-named
   // function in llvm::DWARFFormValue to extract the attribute and place it

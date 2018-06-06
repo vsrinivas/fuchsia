@@ -108,7 +108,7 @@ Err DoHelp(ConsoleContext* context, const Command& cmd) {
     } else {
       // Not a valid command.
       out.OutputErr(Err("\"" + on_what + "\" is not a valid command.\n"
-                        "Try just \"help\" to get a list."));
+                                         "Try just \"help\" to get a list."));
       Console::get()->Output(std::move(out));
       return Err();
     }
@@ -183,14 +183,14 @@ Err DoConnect(ConsoleContext* context, const Command& cmd) {
   }
 
   context->session()->Connect(host, port, [](const Err& err) {
-      if (err.has_error()) {
-        // Don't display error message if they canceled the connection.
-        if (err.type() != ErrType::kCanceled)
-          Console::get()->Output(err);
-      } else {
-        Console::get()->Output("Connected successfully.");
-      }
-    });
+    if (err.has_error()) {
+      // Don't display error message if they canceled the connection.
+      if (err.type() != ErrType::kCanceled)
+        Console::get()->Output(err);
+    } else {
+      Console::get()->Output("Connected successfully.");
+    }
+  });
   Console::get()->Output("Connecting (use \"disconnect\" to cancel)...\n");
 
   return Err();
@@ -211,11 +211,11 @@ Err DoDisconnect(ConsoleContext* context, const Command& cmd) {
     return Err(ErrType::kInput, "\"disconnect\" takes no arguments.");
 
   context->session()->Disconnect([](const Err& err) {
-      if (err.has_error())
-        Console::get()->Output(err);
-      else
-        Console::get()->Output("Disconnected successfully.");
-    });
+    if (err.has_error())
+      Console::get()->Output(err);
+    else
+      Console::get()->Output("Disconnected successfully.");
+  });
 
   return Err();
 }
@@ -229,9 +229,8 @@ void AppendControlVerbs(std::map<Verb, VerbRecord>* verbs) {
       VerbRecord(&DoQuit, {"quit", "q"}, kQuitShortHelp, kQuitHelp);
   (*verbs)[Verb::kConnect] =
       VerbRecord(&DoConnect, {"connect"}, kConnectShortHelp, kConnectHelp);
-  (*verbs)[Verb::kDisconnect] =
-      VerbRecord(&DoDisconnect, {"disconnect"}, kDisconnectShortHelp,
-                 kDisconnectHelp);
+  (*verbs)[Verb::kDisconnect] = VerbRecord(
+      &DoDisconnect, {"disconnect"}, kDisconnectShortHelp, kDisconnectHelp);
 }
 
 }  // namespace zxdb

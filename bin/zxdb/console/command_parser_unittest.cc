@@ -15,7 +15,7 @@ namespace {
 bool CompletionContains(const std::vector<std::string>& suggestions,
                         const std::string& contains) {
   return std::find(suggestions.begin(), suggestions.end(), contains) !=
-      suggestions.end();
+         suggestions.end();
 }
 
 }  // namespace

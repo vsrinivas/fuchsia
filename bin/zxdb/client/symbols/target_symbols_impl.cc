@@ -16,11 +16,11 @@ bool TargetSymbolsImpl::ModuleRefComparePtr::operator()(
 TargetSymbolsImpl::TargetSymbolsImpl(SystemSymbols* system_symbols)
     : system_symbols_(system_symbols) {}
 TargetSymbolsImpl::TargetSymbolsImpl(const TargetSymbolsImpl& other)
-    : system_symbols_(other.system_symbols_),
-      modules_(other.modules_) {}
+    : system_symbols_(other.system_symbols_), modules_(other.modules_) {}
 TargetSymbolsImpl::~TargetSymbolsImpl() {}
 
-TargetSymbolsImpl& TargetSymbolsImpl::operator=(const TargetSymbolsImpl& other) {
+TargetSymbolsImpl& TargetSymbolsImpl::operator=(
+    const TargetSymbolsImpl& other) {
   modules_ = other.modules_;
   return *this;
 }
@@ -40,8 +40,6 @@ void TargetSymbolsImpl::RemoveModule(
   modules_.erase(found);
 }
 
-void TargetSymbolsImpl::RemoveAllModules() {
-  modules_.clear();
-}
+void TargetSymbolsImpl::RemoveAllModules() { modules_.clear(); }
 
 }  // namespace zxdb

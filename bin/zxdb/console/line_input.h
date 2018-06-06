@@ -131,7 +131,7 @@ class LineInputBase {
   // you edit, and this shadow copy is replaced with the actual history
   // whenever you start editing a new line.
   std::deque<std::string> history_;  // front() is newest.
-  size_t history_index_ = 0;  // Offset from history_.front().
+  size_t history_index_ = 0;         // Offset from history_.front().
   const size_t max_history_ = 256;
 
   bool completion_mode_ = false;
@@ -176,7 +176,6 @@ class LineInputStdout : public LineInputBase {
   std::unique_ptr<termios> raw_termios_;
   std::unique_ptr<termios> original_termios_;
 #endif
-
 };
 
 // A blocking implementation that reads from stdin and writes to stdout.

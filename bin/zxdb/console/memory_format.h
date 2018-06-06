@@ -23,9 +23,7 @@ struct MemoryFormatOptions {
   int separator_every = 0;
 };
 
-std::string FormatMemory(const MemoryDump& dump,
-                         uint64_t begin,
-                         uint32_t size,
+std::string FormatMemory(const MemoryDump& dump, uint64_t begin, uint32_t size,
                          const MemoryFormatOptions& opts);
 
 }  // namespace zxdb

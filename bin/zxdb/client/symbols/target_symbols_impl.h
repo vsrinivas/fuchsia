@@ -34,9 +34,7 @@ class TargetSymbolsImpl : public TargetSymbols {
 
   TargetSymbolsImpl& operator=(const TargetSymbolsImpl& other);
 
-  SystemSymbols* system_symbols() {
-    return system_symbols_;
-  }
+  SystemSymbols* system_symbols() { return system_symbols_; }
 
   // Notifications from ProcessSymbols to keep things in sync. Multiple add
   // notifications are allowed for the same module (this happens when

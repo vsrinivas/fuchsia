@@ -24,8 +24,7 @@ constexpr int kEnableSwitch = 2;
 // Backend for setting attributes on a breakpoint from both creation and
 // editing. The given breakpoint is specified if this is an edit, or is null
 // if this is a creation.
-Err CreateOrEditBreakpoint(ConsoleContext* context,
-                           const Command& cmd,
+Err CreateOrEditBreakpoint(ConsoleContext* context, const Command& cmd,
                            Breakpoint* breakpoint) {
   // Get existing settings (or defaults for new one).
   BreakpointSettings settings;
@@ -73,8 +72,9 @@ Err CreateOrEditBreakpoint(ConsoleContext* context,
       return err;
     settings.location_type = BreakpointSettings::LocationType::kAddress;
   } else {
-    return Err(ErrType::kInput, "Expecting only one arg for the location.\n"
-        "Formats: <function>, <file>:<line#>, <line#>, or *<address>");
+    return Err(ErrType::kInput,
+               "Expecting only one arg for the location.\n"
+               "Formats: <function>, <file>:<line#>, <line#>, or *<address>");
   }
 
   // Scope.
@@ -328,8 +328,8 @@ Err ParseBreakpointLocation(const std::string& input,
 
   // Check for one colon. Two colons is a C++ member function.
   size_t colon = input.find(':');
-  if (colon != std::string::npos &&
-      colon < input.size() - 1 && input[colon + 1] != ':') {
+  if (colon != std::string::npos && colon < input.size() - 1 &&
+      input[colon + 1] != ':') {
     // <file>:<line> format.
     std::string file = input.substr(0, colon);
 
@@ -364,7 +364,8 @@ Err ParseBreakpointLocation(const std::string& input,
   }
 
   // Number, assume line number in current file.
-  return Err("TODO(brettw): Need to get the current source file to interpret "
+  return Err(
+      "TODO(brettw): Need to get the current source file to interpret "
       "this line number inside of.");
 }
 

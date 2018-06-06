@@ -24,9 +24,14 @@ void OutputProcessTreeRecord(const debug_ipc::ProcessTreeRecord& rec,
   line << std::setw(indent * 2) << "";
 
   switch (rec.type) {
-    case debug_ipc::ProcessTreeRecord::Type::kJob: line << 'j'; break;
-    case debug_ipc::ProcessTreeRecord::Type::kProcess: line << 'p'; break;
-    default: line << '?';
+    case debug_ipc::ProcessTreeRecord::Type::kJob:
+      line << 'j';
+      break;
+    case debug_ipc::ProcessTreeRecord::Type::kProcess:
+      line << 'p';
+      break;
+    default:
+      line << '?';
   }
 
   line << ": " << rec.koid << " " << rec.name << "\n";

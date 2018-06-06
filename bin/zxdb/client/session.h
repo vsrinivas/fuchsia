@@ -54,8 +54,7 @@ class Session {
 
   // Connects to a remote system. Calling when there is already a connection
   // will issue the callback with an error.
-  void Connect(const std::string& host,
-               uint16_t port,
+  void Connect(const std::string& host, uint16_t port,
                std::function<void(const Err&)> callback);
 
   // Disconnects from the remote system. Calling when there is no connection
@@ -109,8 +108,7 @@ class Session {
 
   // Callback when a connection has been successful or failed.
   void ConnectionResolved(fxl::RefPtr<PendingConnection> pending,
-                          const Err& err,
-                          const debug_ipc::HelloReply& reply,
+                          const Err& err, const debug_ipc::HelloReply& reply,
                           std::unique_ptr<debug_ipc::BufferedFD> buffer,
                           std::function<void(const Err&)> callback);
 

@@ -58,9 +58,7 @@ class Disassembler {
   // The number of bytes consumed will be returned.
   //
   // Be sure the input buffer always has enough data for any instruction.
-  size_t DisassembleOne(const uint8_t* data,
-                        size_t data_len,
-                        uint64_t address,
+  size_t DisassembleOne(const uint8_t* data, size_t data_len, uint64_t address,
                         const Options& options,
                         std::vector<std::string>* out) const;
 
@@ -74,10 +72,8 @@ class Disassembler {
   //
   // The output will be one vector of columns per line. See DisassembleOne for
   // row format.
-  size_t DisassembleMany(const uint8_t* data,
-                         size_t data_len,
-                         uint64_t start_address,
-                         const Options& options,
+  size_t DisassembleMany(const uint8_t* data, size_t data_len,
+                         uint64_t start_address, const Options& options,
                          size_t max_instructions,
                          std::vector<std::vector<std::string>>* out) const;
 
@@ -89,8 +85,7 @@ class Disassembler {
   // An unmapped range will be counted as one instruction. The memory
   // addresses for unmapped ranges will always be shown even if disabled in the
   // options.
-  size_t DisassembleDump(const MemoryDump& dump,
-                         const Options& options,
+  size_t DisassembleDump(const MemoryDump& dump, const Options& options,
                          size_t max_instructions,
                          std::vector<std::vector<std::string>>* out) const;
 

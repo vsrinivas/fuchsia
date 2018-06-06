@@ -59,7 +59,7 @@ void DwarfDieDecoder::AddReference(llvm::dwarf::Attribute attribute,
                                    llvm::Optional<uint64_t>* unit_offset,
                                    llvm::Optional<uint64_t>* global_offset) {
   attrs_.emplace_back(attribute, [unit_offset, global_offset](
-      const llvm::DWARFFormValue& form) {
+                                     const llvm::DWARFFormValue& form) {
     switch (form.getForm()) {
       case llvm::dwarf::DW_FORM_ref1:
       case llvm::dwarf::DW_FORM_ref2:

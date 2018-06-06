@@ -16,16 +16,13 @@ namespace {
 
 // The vDSO doesn't have symbols and we don't want to give error messages for
 // it. Ignore failures for modules that this returns true for.
-bool ExpectSymbolsForName(const std::string& name) {
-  return name != "<vDSO>";
-}
+bool ExpectSymbolsForName(const std::string& name) { return name != "<vDSO>"; }
 
 }  // namespace
 
 ProcessSymbolsImpl::ProcessSymbolsImpl(Notifications* notifications,
                                        TargetSymbolsImpl* target_symbols)
-    : notifications_(notifications),
-      target_symbols_(target_symbols) {}
+    : notifications_(notifications), target_symbols_(target_symbols) {}
 
 ProcessSymbolsImpl::~ProcessSymbolsImpl() = default;
 
@@ -81,8 +78,8 @@ void ProcessSymbolsImpl::SetModules(
     info.base = module.base;
 
     fxl::RefPtr<SystemSymbols::ModuleRef> module_symbols;
-    Err err = system_symbols->GetModule(
-        module.name, module.build_id, &module_symbols);
+    Err err = system_symbols->GetModule(module.name, module.build_id,
+                                        &module_symbols);
     if (!err.has_error()) {
       // Success, make the LoadedModuleSymbolsImpl.
       info.symbols = std::make_unique<LoadedModuleSymbolsImpl>(
@@ -112,7 +109,8 @@ TargetSymbols* ProcessSymbolsImpl::GetTargetSymbols() {
   return target_symbols_;
 }
 
-std::vector<ProcessSymbols::ModuleStatus> ProcessSymbolsImpl::GetStatus() const {
+std::vector<ProcessSymbols::ModuleStatus> ProcessSymbolsImpl::GetStatus()
+    const {
   std::vector<ModuleStatus> result;
   for (const auto& pair : modules_) {
     ModuleStatus status;

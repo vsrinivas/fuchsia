@@ -4,8 +4,8 @@
 
 #include "garnet/bin/zxdb/console/verbs.h"
 
-#include <algorithm>
 #include <inttypes.h>
+#include <algorithm>
 #include <vector>
 
 #include "garnet/bin/zxdb/client/err.h"
@@ -41,10 +41,8 @@ Err AssertRunnableTarget(Target* target) {
 
 // Callback for "run", "attach", "detach" and "stop". The verb affects the
 // message printed to the screen.
-void ProcessCommandCallback(const char* verb,
-                            fxl::WeakPtr<Target> target,
-                            bool display_message_on_success,
-                            const Err& err) {
+void ProcessCommandCallback(const char* verb, fxl::WeakPtr<Target> target,
+                            bool display_message_on_success, const Err& err) {
   if (!display_message_on_success && !err.has_error())
     return;
 

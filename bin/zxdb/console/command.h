@@ -144,7 +144,7 @@ class Command {
   // will inherit the default.
   Target* target_ = nullptr;  // Guaranteed non-null for valid commands.
   Thread* thread_ = nullptr;  // Will be null if not running.
-  Frame* frame_ = nullptr;  // Will be null if no valid thread stopped.
+  Frame* frame_ = nullptr;    // Will be null if no valid thread stopped.
   Breakpoint* breakpoint_ = nullptr;  // May be null.
 
   Verb verb_ = Verb::kNone;
@@ -180,8 +180,7 @@ using CommandExecutor = Err (*)(ConsoleContext*, const Command& cmd);
 
 struct NounRecord {
   NounRecord();
-  NounRecord(std::initializer_list<std::string> aliases,
-             const char* short_help,
+  NounRecord(std::initializer_list<std::string> aliases, const char* short_help,
              const char* help);
   ~NounRecord();
 
@@ -198,10 +197,8 @@ struct VerbRecord {
 
   // The help will be referenced by pointer. It is expected to be a static
   // string.
-  VerbRecord(CommandExecutor exec,
-             std::initializer_list<std::string> aliases,
-             const char* short_help,
-             const char* help);
+  VerbRecord(CommandExecutor exec, std::initializer_list<std::string> aliases,
+             const char* short_help, const char* help);
   ~VerbRecord();
 
   CommandExecutor exec = nullptr;

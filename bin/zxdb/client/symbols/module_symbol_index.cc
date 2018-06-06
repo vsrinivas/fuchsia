@@ -88,8 +88,7 @@ bool AbbrevHasCode(const llvm::DWARFAbbreviationDeclaration* abbrev) {
 // unit (it will be exactly unit->getNumDIEs() long). The root node will have
 // kNoParent set.
 void ExtractUnitFunctionImplsAndParents(
-    llvm::DWARFContext* context,
-    llvm::DWARFCompileUnit* unit,
+    llvm::DWARFContext* context, llvm::DWARFCompileUnit* unit,
     std::vector<FunctionImpl>* function_impls,
     std::vector<unsigned>* parent_indices) {
   DwarfDieDecoder decoder(context, unit);
@@ -102,8 +101,8 @@ void ExtractUnitFunctionImplsAndParents(
   // since probably we won't do any optimized lookups.
   llvm::Optional<uint64_t> decl_unit_offset;
   llvm::Optional<uint64_t> decl_global_offset;
-  decoder.AddReference(llvm::dwarf::DW_AT_specification,
-                       &decl_unit_offset, &decl_global_offset);
+  decoder.AddReference(llvm::dwarf::DW_AT_specification, &decl_unit_offset,
+                       &decl_global_offset);
 
   // Stores the index of the parent DIE for each one we encounter. The root
   // DIE with no parent will be set to kNoParent.
@@ -148,7 +147,8 @@ void ExtractUnitFunctionImplsAndParents(
       // Found a function implementation.
       if (decl_unit_offset) {
         // Save the declaration for indexing.
-        function_impls->emplace_back(die, unit->getOffset() + *decl_unit_offset);
+        function_impls->emplace_back(die,
+                                     unit->getOffset() + *decl_unit_offset);
       } else if (decl_global_offset) {
         FXL_NOTREACHED() << "Implement DW_FORM_ref_addr for references.";
       } else {
@@ -185,11 +185,12 @@ void ExtractUnitFunctionImplsAndParents(
 // ExtractUnitFunctionImplsAndParents for quickly finding parents.
 class FunctionImplIndexer {
  public:
-  FunctionImplIndexer(llvm::DWARFContext* context,
-                      llvm::DWARFCompileUnit* unit,
+  FunctionImplIndexer(llvm::DWARFContext* context, llvm::DWARFCompileUnit* unit,
                       const std::vector<unsigned>& parent_indices,
                       ModuleSymbolIndexNode* root)
-      : unit_(unit), parent_indices_(parent_indices), root_(root),
+      : unit_(unit),
+        parent_indices_(parent_indices),
+        root_(root),
         decoder_(context, unit) {
     decoder_.AddCString(llvm::dwarf::DW_AT_name, &name_);
   }
@@ -321,8 +322,8 @@ void ModuleSymbolIndex::IndexCompileUnit(llvm::DWARFContext* context,
   std::vector<FunctionImpl> function_impls;
   function_impls.reserve(256);
   std::vector<unsigned> parent_indices;
-  ExtractUnitFunctionImplsAndParents(
-      context, unit, &function_impls, &parent_indices);
+  ExtractUnitFunctionImplsAndParents(context, unit, &function_impls,
+                                     &parent_indices);
 
   // Index each one.
   FunctionImplIndexer indexer(context, unit, parent_indices, &root_);

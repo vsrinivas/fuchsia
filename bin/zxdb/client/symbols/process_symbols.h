@@ -5,8 +5,8 @@
 #pragma once
 
 #include <stdint.h>
-#include <string>
 #include <functional>
+#include <string>
 
 #include "garnet/bin/zxdb/client/symbols/location.h"
 #include "garnet/public/lib/fxl/macros.h"

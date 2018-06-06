@@ -44,8 +44,7 @@ class ProcessImpl : public Process, public ProcessSymbolsImpl::Notifications {
   void Pause() override;
   void Continue() override;
   void ReadMemory(
-      uint64_t address,
-      uint32_t size,
+      uint64_t address, uint32_t size,
       std::function<void(const Err&, MemoryDump)> callback) override;
 
   // Notifications from the agent that a thread has started or exited.

@@ -11,11 +11,7 @@ namespace zxdb {
 class TargetObserver {
  public:
   // Reason for destroying a process object.
-  enum class DestroyReason {
-    kExit,
-    kDetach,
-    kKill
-  };
+  enum class DestroyReason { kExit, kDetach, kKill };
 
   // The process could have been newly launched or attached to an existing
   // process.

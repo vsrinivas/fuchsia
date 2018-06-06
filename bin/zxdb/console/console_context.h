@@ -23,9 +23,11 @@ class Session;
 // objects and watches for changes.
 //
 // This class maintains the mapping between objects and IDs.
-class ConsoleContext
-    : public ProcessObserver, public SystemObserver, public TargetObserver,
-      public ThreadObserver, public BreakpointObserver {
+class ConsoleContext : public ProcessObserver,
+                       public SystemObserver,
+                       public TargetObserver,
+                       public ThreadObserver,
+                       public BreakpointObserver {
  public:
   explicit ConsoleContext(Session* session);
   ~ConsoleContext();

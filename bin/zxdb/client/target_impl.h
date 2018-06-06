@@ -4,8 +4,8 @@
 
 #pragma once
 
-#include "garnet/bin/zxdb/client/target.h"
 #include "garnet/bin/zxdb/client/symbols/target_symbols_impl.h"
+#include "garnet/bin/zxdb/client/target.h"
 #include "garnet/public/lib/fxl/macros.h"
 #include "garnet/public/lib/fxl/memory/weak_ptr.h"
 
@@ -42,16 +42,11 @@ class TargetImpl : public Target {
 
  private:
   static void OnLaunchOrAttachReplyThunk(fxl::WeakPtr<TargetImpl> target,
-                                         Callback callback,
-                                         const Err& err,
-                                         uint64_t koid,
-                                         uint32_t status,
+                                         Callback callback, const Err& err,
+                                         uint64_t koid, uint32_t status,
                                          const std::string& process_name);
-  void OnLaunchOrAttachReply(Callback callback,
-                             const Err& err,
-                             uint64_t koid,
-                             uint32_t status,
-                             const std::string& process_name);
+  void OnLaunchOrAttachReply(Callback callback, const Err& err, uint64_t koid,
+                             uint32_t status, const std::string& process_name);
 
   void OnKillOrDetachReply(const Err& err, uint32_t status, Callback callback);
 

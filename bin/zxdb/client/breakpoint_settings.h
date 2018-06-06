@@ -28,12 +28,7 @@ struct BreakpointSettings {
   };
 
   // How this breakpoint's location was specified.
-  enum class LocationType {
-    kNone,
-    kLine,
-    kSymbol,
-    kAddress
-  };
+  enum class LocationType { kNone, kLine, kSymbol, kAddress };
 
   // What to stop when this breakpoint is hit.
   enum class StopMode {

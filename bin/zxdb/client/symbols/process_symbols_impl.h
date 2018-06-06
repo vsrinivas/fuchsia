@@ -44,9 +44,7 @@ class ProcessSymbolsImpl : public ProcessSymbols {
                      TargetSymbolsImpl* target_symbols);
   ~ProcessSymbolsImpl();
 
-  TargetSymbolsImpl* target_symbols() {
-    return target_symbols_;
-  }
+  TargetSymbolsImpl* target_symbols() { return target_symbols_; }
 
   // Adds the given module to the process. The callback will be executed with
   // the local path of the module if it is found, or the empty string if it is

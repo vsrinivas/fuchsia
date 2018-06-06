@@ -14,8 +14,7 @@
 
 namespace zxdb {
 
-ProcessImpl::ProcessImpl(TargetImpl* target,
-                         uint64_t koid,
+ProcessImpl::ProcessImpl(TargetImpl* target, uint64_t koid,
                          const std::string& name)
     : Process(target->session()),
       target_(target),
@@ -39,28 +38,20 @@ ThreadImpl* ProcessImpl::GetThreadImplFromKoid(uint64_t koid) {
   return found->second.get();
 }
 
-Target* ProcessImpl::GetTarget() const {
-  return target_;
-}
+Target* ProcessImpl::GetTarget() const { return target_; }
 
-uint64_t ProcessImpl::GetKoid() const {
-  return koid_;
-}
+uint64_t ProcessImpl::GetKoid() const { return koid_; }
 
-const std::string& ProcessImpl::GetName() const {
-  return name_;
-}
+const std::string& ProcessImpl::GetName() const { return name_; }
 
-ProcessSymbols* ProcessImpl::GetSymbols() {
-  return &symbols_;
-}
+ProcessSymbols* ProcessImpl::GetSymbols() { return &symbols_; }
 
 void ProcessImpl::GetModules(
     std::function<void(const Err&, std::vector<debug_ipc::Module>)> callback) {
   debug_ipc::ModulesRequest request;
   request.process_koid = koid_;
   session()->Send<debug_ipc::ModulesRequest, debug_ipc::ModulesReply>(
-      request, [process = weak_factory_.GetWeakPtr(), callback](
+      request, [ process = weak_factory_.GetWeakPtr(), callback ](
                    const Err& err, debug_ipc::ModulesReply reply) {
         if (process)
           process->symbols_.SetModules(reply.modules);
@@ -99,7 +90,7 @@ void ProcessImpl::SyncThreads(std::function<void()> callback) {
   debug_ipc::ThreadsRequest request;
   request.process_koid = koid_;
   session()->Send<debug_ipc::ThreadsRequest, debug_ipc::ThreadsReply>(
-      request, [callback, process = weak_factory_.GetWeakPtr()](
+      request, [ callback, process = weak_factory_.GetWeakPtr() ](
                    const Err& err, debug_ipc::ThreadsReply reply) {
         if (process) {
           process->UpdateThreads(reply.threads);
@@ -127,8 +118,7 @@ void ProcessImpl::Continue() {
 }
 
 void ProcessImpl::ReadMemory(
-    uint64_t address,
-    uint32_t size,
+    uint64_t address, uint32_t size,
     std::function<void(const Err&, MemoryDump)> callback) {
   debug_ipc::ReadMemoryRequest request;
   request.process_koid = koid_;

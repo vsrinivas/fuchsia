@@ -73,9 +73,7 @@ BreakpointImpl::~BreakpointImpl() {
   StopObserving();
 }
 
-BreakpointSettings BreakpointImpl::GetSettings() const {
-  return settings_;
-}
+BreakpointSettings BreakpointImpl::GetSettings() const { return settings_; }
 
 void BreakpointImpl::SetSettings(const BreakpointSettings& settings,
                                  std::function<void(const Err&)> callback) {
@@ -100,9 +98,7 @@ void BreakpointImpl::SetSettings(const BreakpointSettings& settings,
   }
 }
 
-int BreakpointImpl::GetHitCount() const {
-  return hit_count_;
-}
+int BreakpointImpl::GetHitCount() const { return hit_count_; }
 
 void BreakpointImpl::WillDestroyThread(Process* process, Thread* thread) {
   if (settings_.scope_thread == thread) {
@@ -222,7 +218,7 @@ void BreakpointImpl::StartObserving() {
 
 void BreakpointImpl::SendAddOrChange(Process* process,
                                      std::function<void(const Err&)> callback) {
-  FXL_DCHECK(backend_id_); // ID should have been assigned by the caller.
+  FXL_DCHECK(backend_id_);        // ID should have been assigned by the caller.
   FXL_DCHECK(settings_.enabled);  // Shouldn't add or change disabled ones.
 
   debug_ipc::AddOrChangeBreakpointRequest request;
@@ -235,54 +231,56 @@ void BreakpointImpl::SendAddOrChange(Process* process,
       settings_.scope_thread ? settings_.scope_thread->GetKoid() : 0;
   request.breakpoint.locations[0].address = settings_.location_address;
 
-  session()->Send<debug_ipc::AddOrChangeBreakpointRequest,
-                  debug_ipc::AddOrChangeBreakpointReply>(
-    request,
-    [callback, breakpoint = weak_factory_.GetWeakPtr()](
-        const Err& err, debug_ipc::AddOrChangeBreakpointReply reply) {
-      // Be sure to issue the callback even if the breakpoint no longer exists.
-      if (err.has_error()) {
-        // Transport error. We don't actually know what state the agent is in
-        // since it never got the message. In general this means things were
-        // disconnected and the agent no longer exists, so mark the breakpoint
-        // disabled.
-        if (breakpoint)
-          breakpoint->settings_.enabled = false;
-        if (callback)
-          callback(err);
-      } else if (reply.status != 0) {
-        // Backend error. The protocol specifies that errors adding or changing
-        // will result in any existing breakpoints with that ID being removed.
-        // So mark the breakpoint disabled but keep the settings to the user
-        // can fix the problem from the current state if desired.
-        if (breakpoint)
-          breakpoint->settings_.enabled = false;
-        if (callback)
-          callback(Err(ErrType::kGeneral, "Breakpoint set error."));
-      } else {
-        // Success.
-        if (callback)
-          callback(Err());
-      }
-    });
+  session()
+      ->Send<debug_ipc::AddOrChangeBreakpointRequest,
+             debug_ipc::AddOrChangeBreakpointReply>(request, [
+        callback, breakpoint = weak_factory_.GetWeakPtr()
+      ](const Err& err, debug_ipc::AddOrChangeBreakpointReply reply) {
+        // Be sure to issue the callback even if the breakpoint no longer
+        // exists.
+        if (err.has_error()) {
+          // Transport error. We don't actually know what state the agent is in
+          // since it never got the message. In general this means things were
+          // disconnected and the agent no longer exists, so mark the breakpoint
+          // disabled.
+          if (breakpoint)
+            breakpoint->settings_.enabled = false;
+          if (callback)
+            callback(err);
+        } else if (reply.status != 0) {
+          // Backend error. The protocol specifies that errors adding or
+          // changing
+          // will result in any existing breakpoints with that ID being removed.
+          // So mark the breakpoint disabled but keep the settings to the user
+          // can fix the problem from the current state if desired.
+          if (breakpoint)
+            breakpoint->settings_.enabled = false;
+          if (callback)
+            callback(Err(ErrType::kGeneral, "Breakpoint set error."));
+        } else {
+          // Success.
+          if (callback)
+            callback(Err());
+        }
+      });
 }
 
 void BreakpointImpl::SendBreakpointRemove(
-    Process* process,
-    std::function<void(const Err&)> callback) {
+    Process* process, std::function<void(const Err&)> callback) {
   FXL_DCHECK(!settings_.enabled);  // Caller should have disabled already.
   FXL_DCHECK(backend_id_);
 
   debug_ipc::RemoveBreakpointRequest request;
   request.breakpoint_id = backend_id_;
 
-  session()->Send<debug_ipc::RemoveBreakpointRequest,
-                  debug_ipc::RemoveBreakpointReply>(
-    request,
-    [callback](const Err& err, debug_ipc::RemoveBreakpointReply reply) {
-      if (callback)
-        callback(Err());
-    });
+  session()
+      ->Send<debug_ipc::RemoveBreakpointRequest,
+             debug_ipc::RemoveBreakpointReply>(
+          request,
+          [callback](const Err& err, debug_ipc::RemoveBreakpointReply reply) {
+            if (callback)
+              callback(Err());
+          });
 
   // Indicate the backend breakpoint is gone.
   backend_id_ = 0;
