@@ -12,25 +12,25 @@ import (
 	"app/context"
 	"fidl/bindings"
 
-	"fidl/power_manager"
+	"fidl/fuchsia/power"
 )
 
 type ClientMock struct {
-	pm *power_manager.PowerManagerInterface
+	pm *power.PowerManagerInterface
 }
 
 type WatcherMock struct {
 	called uint32
 }
 
-func (pmw *WatcherMock) OnChangeBatteryStatus(bs power_manager.BatteryStatus) error {
+func (pmw *WatcherMock) OnChangeBatteryStatus(bs power.BatteryStatus) error {
 	atomic.AddUint32(&pmw.called, 1)
 	return nil
 }
 
 func TestPowerManager(t *testing.T) {
 	ctx := context.CreateFromStartupInfo()
-	req, iface, err := power_manager.NewPowerManagerInterfaceRequest()
+	req, iface, err := power.NewPowerManagerInterfaceRequest()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -46,7 +46,7 @@ func TestPowerManager(t *testing.T) {
 
 func TestPowerManagerWatcher(t *testing.T) {
 	ctx := context.CreateFromStartupInfo()
-	r, p, err := power_manager.NewPowerManagerInterfaceRequest()
+	r, p, err := power.NewPowerManagerInterfaceRequest()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -54,13 +54,13 @@ func TestPowerManagerWatcher(t *testing.T) {
 	pmClient.pm = p
 	ctx.ConnectToEnvService(r)
 
-	rw, pw, err := power_manager.NewPowerManagerWatcherInterfaceRequest()
+	rw, pw, err := power.NewPowerManagerWatcherInterfaceRequest()
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	pmWatcher := &WatcherMock{called: 0}
-	s := power_manager.PowerManagerWatcherStub{Impl: pmWatcher}
+	s := power.PowerManagerWatcherStub{Impl: pmWatcher}
 	bs := bindings.BindingSet{}
 	bs.Add(&s, rw.Channel, nil)
 	go bindings.Serve()

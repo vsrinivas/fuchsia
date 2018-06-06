@@ -35,8 +35,8 @@ use std::io;
 use std::path::PathBuf;
 use std::sync::Arc;
 
-extern crate fidl_power_manager;
-use fidl_power_manager::{BatteryStatus, PowerManager, PowerManagerImpl, PowerManagerMarker,
+extern crate fidl_fuchsia_power;
+use fidl_fuchsia_power::{BatteryStatus, PowerManager, PowerManagerImpl, PowerManagerMarker,
                          PowerManagerWatcherProxy, Status as power_status};
 
 static POWER_DEVICE: &str = "/dev/class/power";

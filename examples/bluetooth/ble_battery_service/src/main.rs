@@ -13,7 +13,7 @@ extern crate futures;
 extern crate fidl_bluetooth as bt;
 extern crate fidl_bluetooth_gatt as gatt;
 extern crate fidl_bluetooth_low_energy as le;
-extern crate fidl_power_manager;
+extern crate fidl_fuchsia_power;
 extern crate parking_lot;
 
 mod cancelable_future;
@@ -23,7 +23,7 @@ use cancelable_future::{Cancelable, CancelHandle};
 use failure::{Error, Fail};
 use futures::prelude::*;
 use futures::future::{FutureResult, ok as fok};
-use fidl_power_manager::{
+use fidl_fuchsia_power::{
     PowerManager,
     PowerManagerMarker,
     PowerManagerWatcher,

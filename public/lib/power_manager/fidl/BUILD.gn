@@ -5,9 +5,9 @@
 import("//build/fidl/fidl.gni")
 
 fidl("fidl") {
-  name = "power_manager"
+  name = "fuchsia.power"
 
   sources = [
-    "power_manager.fidl",
+    "power.fidl",
   ]
 }
