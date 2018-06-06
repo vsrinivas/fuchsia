@@ -15,22 +15,41 @@
 
 namespace fuchsia {
 namespace sys {
-
-class RealmFriendForTests {
- public:
-  static size_t ComponentCount(const Realm* realm) {
-    return realm->applications_.size();
-  }
-
-  static void AddComponent(Realm* realm,
-                           std::unique_ptr<ComponentControllerImpl> component) {
-    // update hub
-    realm->hub_.AddComponent(component->HubInfo());
-    auto key = component.get();
-    realm->applications_.emplace(key, std::move(component));
-  }
-};
 namespace {
+
+class RealmMock : public ComponentContainer<ComponentControllerImpl> {
+ public:
+  size_t ComponentCount() { return components_.size(); }
+  const std::string koid() { return "5342"; }
+
+  void AddComponent(std::unique_ptr<ComponentControllerImpl> component);
+
+  std::unique_ptr<ComponentControllerImpl> ExtractComponent(
+      ComponentControllerImpl* controller) override;
+
+ private:
+  std::unordered_map<ComponentControllerBase*,
+                     std::unique_ptr<ComponentControllerImpl>>
+      components_;
+};
+
+void RealmMock::AddComponent(
+    std::unique_ptr<ComponentControllerImpl> component) {
+  auto key = component.get();
+  components_.emplace(key, std::move(component));
+}
+
+std::unique_ptr<ComponentControllerImpl> RealmMock::ExtractComponent(
+    ComponentControllerImpl* controller) {
+  auto it = components_.find(controller);
+  if (it == components_.end()) {
+    return nullptr;
+  }
+  auto component = std::move(it->second);
+
+  components_.erase(it);
+  return component;
+}
 
 class ComponentControllerTest : public gtest::TestWithMessageLoop {};
 
@@ -73,7 +92,8 @@ fbl::String get_value(const fbl::RefPtr<fs::PseudoDir>& hub_dir,
   return fbl::String(buf, read_len);
 }
 
-bool path_exists(const fbl::RefPtr<fs::PseudoDir>& hub_dir, std::string path) {
+bool path_exists(const fbl::RefPtr<fs::PseudoDir>& hub_dir, std::string path,
+                 fbl::RefPtr<fs::Vnode>* out = nullptr) {
   auto tokens = split(path, '/');
   auto ntokens = tokens.size();
   fbl::RefPtr<fs::Vnode> dir = hub_dir;
@@ -84,6 +104,9 @@ bool path_exists(const fbl::RefPtr<fs::PseudoDir>& hub_dir, std::string path) {
     if (pdir->Lookup(&dir, token) != ZX_OK) {
       return false;
     }
+  }
+  if (out != nullptr) {
+    *out = dir;
   }
   return true;
 }
@@ -100,23 +123,25 @@ zx::process create_process() {
 }
 
 TEST_F(ComponentControllerTest, CreateAndKill) {
-  RealmArgs args{nullptr, zx::channel(), "test", false};
-  Realm realm(std::move(args));
+  RealmMock realm;
   zx::process process = create_process();
   ASSERT_TRUE(process);
   auto koid = std::to_string(fsl::GetKoid(process.get()));
 
   ComponentControllerPtr component_ptr;
   auto component = std::make_unique<ComponentControllerImpl>(
-      component_ptr.NewRequest(), &realm, nullptr, std::move(process),
-      "test-url", "test-arg", "test-label", nullptr,
+      component_ptr.NewRequest(), &realm, realm.koid(), nullptr,
+      std::move(process), "test-url", "test-arg", "test-label", nullptr,
       ExportedDirType::kLegacyFlatLayout, zx::channel(), zx::channel());
-  ASSERT_EQ(RealmFriendForTests::ComponentCount(&realm), 0u);
-  RealmFriendForTests::AddComponent(&realm, std::move(component));
+  auto hub_info = component->HubInfo();
 
-  ASSERT_EQ(RealmFriendForTests::ComponentCount(&realm), 1u);
-  auto hub_path = "c/test-label/" + koid;
-  EXPECT_TRUE(path_exists(realm.hub_dir(), hub_path));
+  EXPECT_EQ(hub_info.label(), "test-label");
+  EXPECT_EQ(hub_info.koid(), koid);
+
+  ASSERT_EQ(realm.ComponentCount(), 0u);
+  realm.AddComponent(std::move(component));
+
+  ASSERT_EQ(realm.ComponentCount(), 1u);
 
   bool wait = false;
   component_ptr->Wait([&wait](int errcode) { wait = true; });
@@ -126,13 +151,11 @@ TEST_F(ComponentControllerTest, CreateAndKill) {
 
   // make sure all messages are processed after wait was called
   RunLoopUntilIdle();
-  EXPECT_EQ(RealmFriendForTests::ComponentCount(&realm), 0u);
-  EXPECT_FALSE(path_exists(realm.hub_dir(), hub_path));
+  EXPECT_EQ(realm.ComponentCount(), 0u);
 }
 
 TEST_F(ComponentControllerTest, ControllerScope) {
-  RealmArgs args{nullptr, zx::channel(), "test", false};
-  Realm realm(std::move(args));
+  RealmMock realm;
   zx::process process = create_process();
   ASSERT_TRUE(process);
   auto koid = std::to_string(fsl::GetKoid(process.get()));
@@ -141,40 +164,37 @@ TEST_F(ComponentControllerTest, ControllerScope) {
   {
     ComponentControllerPtr component_ptr;
     auto component = std::make_unique<ComponentControllerImpl>(
-        component_ptr.NewRequest(), &realm, nullptr, std::move(process),
-        "test-url", "test-arg", "test-label", nullptr,
+        component_ptr.NewRequest(), &realm, realm.koid(), nullptr,
+        std::move(process), "test-url", "test-arg", "test-label", nullptr,
         ExportedDirType::kLegacyFlatLayout, zx::channel(), zx::channel());
     component->Wait([&wait](int errcode) { wait = true; });
-    RealmFriendForTests::AddComponent(&realm, std::move(component));
+    realm.AddComponent(std::move(component));
 
-    ASSERT_EQ(RealmFriendForTests::ComponentCount(&realm), 1u);
-    EXPECT_TRUE(path_exists(realm.hub_dir(), hub_path));
+    ASSERT_EQ(realm.ComponentCount(), 1u);
   }
   EXPECT_TRUE(RunLoopUntilWithTimeout([&wait] { return wait; },
                                       fxl::TimeDelta::FromSeconds(5)));
 
   // make sure all messages are processed after wait was called
   RunLoopUntilIdle();
-  EXPECT_EQ(RealmFriendForTests::ComponentCount(&realm), 0u);
-  EXPECT_FALSE(path_exists(realm.hub_dir(), hub_path));
+  EXPECT_EQ(realm.ComponentCount(), 0u);
 }
 
 TEST_F(ComponentControllerTest, DetachController) {
-  RealmArgs args{nullptr, zx::channel(), "test", false};
-  Realm realm(std::move(args));
+  RealmMock realm;
   zx::process process = create_process();
   ASSERT_TRUE(process);
   bool wait = false;
   {
     ComponentControllerPtr component_ptr;
     auto component = std::make_unique<ComponentControllerImpl>(
-        component_ptr.NewRequest(), &realm, nullptr, std::move(process),
-        "test-url", "test-arg", "test-label", nullptr,
+        component_ptr.NewRequest(), &realm, realm.koid(), nullptr,
+        std::move(process), "test-url", "test-arg", "test-label", nullptr,
         ExportedDirType::kLegacyFlatLayout, zx::channel(), zx::channel());
     component->Wait([&wait](int errcode) { wait = true; });
-    RealmFriendForTests::AddComponent(&realm, std::move(component));
+    realm.AddComponent(std::move(component));
 
-    ASSERT_EQ(RealmFriendForTests::ComponentCount(&realm), 1u);
+    ASSERT_EQ(realm.ComponentCount(), 1u);
 
     // detach controller before it goes out of scope and then test that our
     // component did not die.
@@ -185,12 +205,11 @@ TEST_F(ComponentControllerTest, DetachController) {
   // make sure all messages are processed if Kill was called.
   RunLoopUntilIdle();
   ASSERT_FALSE(wait);
-  EXPECT_EQ(RealmFriendForTests::ComponentCount(&realm), 1u);
+  EXPECT_EQ(realm.ComponentCount(), 1u);
 }
 
 TEST_F(ComponentControllerTest, Hub) {
-  RealmArgs args{nullptr, zx::channel(), "test", false};
-  Realm realm(std::move(args));
+  RealmMock realm;
   zx::channel export_dir, export_dir_req;
   ASSERT_EQ(zx::channel::create(0, &export_dir, &export_dir_req), ZX_OK);
 
@@ -200,8 +219,8 @@ TEST_F(ComponentControllerTest, Hub) {
   ComponentControllerPtr component_ptr;
 
   auto component = std::make_unique<ComponentControllerImpl>(
-      component_ptr.NewRequest(), &realm, nullptr, std::move(process),
-      "test-url", "test-arg", "test-label", nullptr,
+      component_ptr.NewRequest(), &realm, realm.koid(), nullptr,
+      std::move(process), "test-url", "test-arg", "test-label", nullptr,
       ExportedDirType::kPublicDebugCtrlLayout, std::move(export_dir_req),
       zx::channel());
 
@@ -212,7 +231,9 @@ TEST_F(ComponentControllerTest, Hub) {
   EXPECT_STREQ(get_value(component->hub_dir(), "url").c_str(), "test-url");
   EXPECT_STREQ(get_value(component->hub_dir(), "process-id").c_str(),
                koid.c_str());
-  EXPECT_TRUE(path_exists(component->hub_dir(), "out"));
+  fbl::RefPtr<fs::Vnode> out_dir;
+  ASSERT_TRUE(path_exists(component->hub_dir(), "out", &out_dir));
+  ASSERT_TRUE(out_dir->IsRemote());
 }
 
 }  // namespace

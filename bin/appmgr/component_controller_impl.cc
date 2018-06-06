@@ -5,18 +5,17 @@
 #include "garnet/bin/appmgr/component_controller_impl.h"
 
 #include <fbl/string_printf.h>
-#include <lib/fdio/util.h>
 #include <fs/pseudo-file.h>
 #include <fs/remote-dir.h>
 #include <lib/async/default.h>
+#include <lib/fdio/util.h>
 #include <lib/fit/function.h>
 
 #include <cinttypes>
 #include <utility>
 
+#include "garnet/bin/appmgr/component_container.h"
 #include "garnet/bin/appmgr/namespace.h"
-#include "garnet/bin/appmgr/realm.h"
-#include "garnet/bin/appmgr/runner_holder.h"
 #include "lib/fsl/handles/object_info.h"
 
 namespace fuchsia {
@@ -73,12 +72,11 @@ HubInfo ComponentControllerBase::HubInfo() {
   return fuchsia::sys::HubInfo(label_, hub_instance_id_, hub_.dir());
 }
 
-void ComponentControllerBase::Detach() {
-  binding_.set_error_handler(nullptr);
-}
+void ComponentControllerBase::Detach() { binding_.set_error_handler(nullptr); }
 
 ComponentControllerImpl::ComponentControllerImpl(
-    fidl::InterfaceRequest<ComponentController> request, Realm* realm,
+    fidl::InterfaceRequest<ComponentController> request,
+    ComponentContainer<ComponentControllerImpl>* container, std::string job_id,
     std::unique_ptr<archive::FileSystem> fs, zx::process process,
     std::string url, std::string args, std::string label,
     fxl::RefPtr<Namespace> ns, ExportedDirType export_dir_type,
@@ -88,14 +86,14 @@ ComponentControllerImpl::ComponentControllerImpl(
           std::move(label), std::to_string(fsl::GetKoid(process.get())),
           std::move(ns), std::move(export_dir_type), std::move(exported_dir),
           std::move(client_request)),
-      realm_(realm),
+      container_(container),
       process_(std::move(process)),
       koid_(std::to_string(fsl::GetKoid(process_.get()))),
       wait_(this, process_.get(), ZX_TASK_TERMINATED) {
   zx_status_t status = wait_.Begin(async_get_default());
   FXL_DCHECK(status == ZX_OK);
 
-  hub()->SetJobId(realm->koid());
+  hub()->SetJobId(job_id);
   hub()->SetProcessId(koid_);
 }
 
@@ -157,14 +155,15 @@ void ComponentControllerImpl::Handler(async_t* async, async::WaitBase* wait,
 
   process_.reset();
 
-  realm_->ExtractApplication(this);
-  // The destructor of the temporary returned by ExtractApplication destroys
+  container_->ExtractComponent(this);
+  // The destructor of the temporary returned by ExtractComponent destroys
   // |this| at the end of the previous statement.
 }
 
 ComponentBridge::ComponentBridge(
     fidl::InterfaceRequest<ComponentController> request,
-    ComponentControllerPtr remote_controller, RunnerHolder* runner,
+    ComponentControllerPtr remote_controller,
+    ComponentContainer<ComponentBridge>* container,
     std::unique_ptr<archive::FileSystem> fs, std::string url, std::string args,
     std::string label, std::string hub_instance_id, fxl::RefPtr<Namespace> ns,
     ExportedDirType export_dir_type, zx::channel exported_dir,
@@ -175,9 +174,9 @@ ComponentBridge::ComponentBridge(
           std::move(export_dir_type), std::move(exported_dir),
           std::move(client_request)),
       remote_controller_(std::move(remote_controller)),
-      runner_(std::move(runner)) {
+      container_(std::move(container)) {
   remote_controller_.set_error_handler(
-      [this] { runner_->ExtractComponent(this); });
+      [this] { container_->ExtractComponent(this); });
   // The destructor of the temporary returned by ExtractComponent destroys
   // |this| at the end of the previous statement.
 }

@@ -8,6 +8,8 @@
 #include <lib/zx/vmo.h>
 
 #include <fuchsia/sys/cpp/fidl.h>
+#include "garnet/bin/appmgr/component_container.h"
+#include "garnet/bin/appmgr/component_controller_impl.h"
 #include "garnet/bin/appmgr/namespace.h"
 #include "garnet/lib/farfs/file_system.h"
 #include "lib/fxl/files/unique_fd.h"
@@ -18,11 +20,9 @@
 namespace fuchsia {
 namespace sys {
 
-class ComponentControllerImpl;
-class ComponentBridge;
 class Realm;
 
-class RunnerHolder {
+class RunnerHolder : public ComponentContainer<ComponentBridge> {
  public:
   RunnerHolder(Services services, ComponentControllerPtr controller,
                LaunchInfo launch_info, Realm* realm,
@@ -35,7 +35,7 @@ class RunnerHolder {
                       fidl::InterfaceRequest<ComponentController> controller);
 
   std::unique_ptr<ComponentBridge> ExtractComponent(
-      ComponentBridge* controller);
+      ComponentBridge* controller) override;
 
  private:
   void CreateComponentCallback(ComponentControllerImpl* component);

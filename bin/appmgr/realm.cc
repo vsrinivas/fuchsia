@@ -341,7 +341,7 @@ std::unique_ptr<EnvironmentControllerImpl> Realm::ExtractChild(Realm* child) {
   return controller;
 }
 
-std::unique_ptr<ComponentControllerImpl> Realm::ExtractApplication(
+std::unique_ptr<ComponentControllerImpl> Realm::ExtractComponent(
     ComponentControllerImpl* controller) {
   auto it = applications_.find(controller);
   if (it == applications_.end()) {
@@ -394,7 +394,7 @@ void Realm::CreateComponentWithProcess(
 
   if (process) {
     auto application = std::make_unique<ComponentControllerImpl>(
-        std::move(controller), this, nullptr, std::move(process), url,
+        std::move(controller), this, koid_, nullptr, std::move(process), url,
         std::move(args), util::GetLabelFromURL(url), std::move(ns),
         ExportedDirType::kPublicDebugCtrlLayout,
         std::move(channels.exported_dir), std::move(channels.client_request));
@@ -497,9 +497,9 @@ void Realm::CreateComponentFromPackage(
 
     if (process) {
       auto application = std::make_unique<ComponentControllerImpl>(
-          std::move(controller), this, std::move(pkg_fs), std::move(process),
-          url, std::move(args), util::GetLabelFromURL(url), std::move(ns),
-          exported_dir_layout, std::move(channels.exported_dir),
+          std::move(controller), this, koid_, std::move(pkg_fs),
+          std::move(process), url, std::move(args), util::GetLabelFromURL(url),
+          std::move(ns), exported_dir_layout, std::move(channels.exported_dir),
           std::move(channels.client_request));
       // update hub
       hub_.AddComponent(application->HubInfo());

@@ -10,6 +10,7 @@
 #include <lib/async/cpp/wait.h>
 #include <lib/zx/process.h>
 
+#include "garnet/bin/appmgr/component_container.h"
 #include "garnet/bin/appmgr/hub/component_hub.h"
 #include "garnet/bin/appmgr/hub/hub_info.h"
 #include "garnet/bin/appmgr/namespace.h"
@@ -21,8 +22,6 @@
 
 namespace fuchsia {
 namespace sys {
-class Realm;
-class RunnerHolder;
 
 enum class ExportedDirType {
   // Legacy exported directory layout where each file / service is exposed at
@@ -75,13 +74,13 @@ class ComponentControllerBase : public ComponentController {
 
 class ComponentControllerImpl : public ComponentControllerBase {
  public:
-  ComponentControllerImpl(fidl::InterfaceRequest<ComponentController> request,
-                          Realm* realm, std::unique_ptr<archive::FileSystem> fs,
-                          zx::process process, std::string url,
-                          std::string args, std::string label,
-                          fxl::RefPtr<Namespace> ns,
-                          ExportedDirType export_dir_type,
-                          zx::channel exported_dir, zx::channel client_request);
+  ComponentControllerImpl(
+      fidl::InterfaceRequest<ComponentController> request,
+      ComponentContainer<ComponentControllerImpl>* container,
+      std::string job_id, std::unique_ptr<archive::FileSystem> fs,
+      zx::process process, std::string url, std::string args, std::string label,
+      fxl::RefPtr<Namespace> ns, ExportedDirType export_dir_type,
+      zx::channel exported_dir, zx::channel client_request);
   ~ComponentControllerImpl() override;
 
   const std::string& koid() const { return koid_; }
@@ -99,7 +98,7 @@ class ComponentControllerImpl : public ComponentControllerBase {
 
   bool SendReturnCodeIfTerminated();
 
-  Realm* realm_;
+  ComponentContainer<ComponentControllerImpl>* container_;
   zx::process process_;
   const std::string koid_;
   std::vector<WaitCallback> wait_callbacks_;
@@ -116,8 +115,9 @@ class ComponentBridge : public ComponentControllerBase {
  public:
   ComponentBridge(fidl::InterfaceRequest<ComponentController> request,
                   ComponentControllerPtr remote_controller,
-                  RunnerHolder* runner, std::unique_ptr<archive::FileSystem> fs,
-                  std::string url, std::string args, std::string label,
+                  ComponentContainer<ComponentBridge>* container,
+                  std::unique_ptr<archive::FileSystem> fs, std::string url,
+                  std::string args, std::string label,
                   std::string hub_instance_id, fxl::RefPtr<Namespace> ns,
                   ExportedDirType export_dir_type, zx::channel exported_dir,
                   zx::channel client_request);
@@ -132,7 +132,7 @@ class ComponentBridge : public ComponentControllerBase {
 
  private:
   ComponentControllerPtr remote_controller_;
-  RunnerHolder* runner_;
+  ComponentContainer<ComponentBridge>* container_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ComponentBridge);
 };

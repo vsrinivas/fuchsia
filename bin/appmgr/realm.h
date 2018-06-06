@@ -14,6 +14,7 @@
 #include <unordered_map>
 
 #include <fuchsia/sys/cpp/fidl.h>
+#include "garnet/bin/appmgr/component_container.h"
 #include "garnet/bin/appmgr/component_controller_impl.h"
 #include "garnet/bin/appmgr/environment_controller_impl.h"
 #include "garnet/bin/appmgr/hub/hub_info.h"
@@ -37,7 +38,7 @@ struct RealmArgs {
   bool run_virtual_console;
 };
 
-class Realm {
+class Realm : public ComponentContainer<ComponentControllerImpl> {
  public:
   Realm(RealmArgs args);
   ~Realm();
@@ -72,8 +73,8 @@ class Realm {
   // reference to the application's controller. The caller of this function
   // typically destroys the controller (and hence the application) shortly after
   // calling this function.
-  std::unique_ptr<ComponentControllerImpl> ExtractApplication(
-      ComponentControllerImpl* controller);
+  std::unique_ptr<ComponentControllerImpl> ExtractComponent(
+      ComponentControllerImpl* controller) override;
 
   void AddBinding(fidl::InterfaceRequest<Environment> environment);
 
@@ -81,7 +82,6 @@ class Realm {
   void CreateShell(const std::string& path);
 
  private:
-  friend class RealmFriendForTests;
   static uint32_t next_numbered_label_;
 
   RunnerHolder* GetOrCreateRunner(const std::string& runner);
