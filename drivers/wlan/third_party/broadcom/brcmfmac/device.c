@@ -28,11 +28,6 @@ struct brcmf_bus* dev_get_drvdata(struct brcmf_device* dev) {
     return dev->drvdata;
 }
 
-struct brcmfmac_platform_data* dev_get_platdata(struct brcmf_device* dev) {
-    brcmf_err("dev_get_platdata was called, but I don't know how to do it.\n");
-    return NULL;
-}
-
 void dev_set_drvdata(struct brcmf_device* dev, struct brcmf_bus* drvdata) {
     dev->drvdata = drvdata;
 }
@@ -79,6 +74,31 @@ void brcmf_timer_stop(brcmf_timer_info_t* timer) {
     if (result != ZX_OK) {
         completion_wait(&timer->finished, ZX_TIME_INFINITE);
     }
+}
+
+struct net_device* brcmf_allocate_net_device(size_t priv_size, const char* name) {
+    struct net_device* dev = calloc(1, sizeof(*dev));
+    if (dev == NULL) {
+        return NULL;
+    }
+    dev->priv = calloc(1, priv_size);
+    if (dev->priv == NULL) {
+        free(dev);
+        return NULL;
+    }
+    strlcpy(dev->name, name, sizeof(dev->name));
+    return dev;
+}
+
+void brcmf_free_net_device(struct net_device* dev) {
+    if (dev != NULL) {
+        free(dev->priv);
+    }
+    free(dev);
+}
+
+void brcmf_enable_tx(struct net_device* dev) {
+    brcmf_dbg(INFO, " * * NOTE: brcmf_enable_tx called. Enable TX. (Was netif_wake_queue)");
 }
 
 // This is a kill-flies-with-sledgehammers, just-get-it-working version; TODO(NET-805) for

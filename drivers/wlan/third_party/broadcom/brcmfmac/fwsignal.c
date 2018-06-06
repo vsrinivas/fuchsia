@@ -694,10 +694,10 @@ static void brcmf_fws_macdesc_set_name(struct brcmf_fws_info* fws,
     if (desc == &fws->desc.other) {
         strlcpy(desc->name, "MAC-OTHER", sizeof(desc->name));
     } else if (desc->mac_handle)
-        scnprintf(desc->name, sizeof(desc->name), "MAC-%d:%d", desc->mac_handle,
+        snprintf(desc->name, sizeof(desc->name), "MAC-%d:%d", desc->mac_handle,
                   desc->interface_id);
     else {
-        scnprintf(desc->name, sizeof(desc->name), "MACIF:%d", desc->interface_id);
+        snprintf(desc->name, sizeof(desc->name), "MACIF:%d", desc->interface_id);
     }
 }
 
@@ -757,7 +757,7 @@ static zx_status_t brcmf_fws_macdesc_find(struct brcmf_fws_info* fws,
     bool multicast;
     zx_status_t ret;
 
-    multicast = is_multicast_ether_addr(da);
+    multicast = address_is_multicast(da);
 
     /* Multicast destination, STA and P2P clients get the interface entry.
      * STA/GC gets the Mac Entry for TDLS destinations, TDLS destinations
@@ -1663,7 +1663,7 @@ void brcmf_fws_rxreorder(struct brcmf_if* ifp, struct sk_buff* pkt) {
 
         /* allocate space for flow reorder info */
         brcmf_dbg(INFO, "flow-%d: start, maxidx %d\n", flow_id, max_idx);
-        rfi = kzalloc(buf_size, GFP_ATOMIC);
+        rfi = calloc(1, buf_size);
         if (rfi == NULL) {
             brcmf_err("failed to alloc buffer\n");
             brcmf_netif_rx(ifp, pkt);
@@ -2052,10 +2052,10 @@ zx_status_t brcmf_fws_process_skb(struct brcmf_if* ifp, struct sk_buff* skb) {
     struct brcmf_skbuff_cb* skcb = brcmf_skbcb(skb);
     struct ethhdr* eh = (struct ethhdr*)(skb->data);
     int fifo = BRCMF_FWS_FIFO_BCMC;
-    bool multicast = is_multicast_ether_addr(eh->h_dest);
+    bool multicast = address_is_multicast(eh->h_dest);
     zx_status_t rc = ZX_OK;
 
-    brcmf_dbg(DATA, "tx proto=0x%X\n", ntohs(eh->h_proto));
+    brcmf_dbg(DATA, "tx proto=0x%X\n", be16toh(eh->h_proto));
 
     /* set control buffer information */
     skcb->if_flags = 0;

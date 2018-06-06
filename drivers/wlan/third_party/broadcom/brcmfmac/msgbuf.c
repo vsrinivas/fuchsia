@@ -213,7 +213,7 @@ struct msgbuf_flowring_flush_resp {
 };
 
 struct brcmf_msgbuf_work_item {
-    struct list_head queue;
+    struct list_node queue;
     uint32_t flowid;
     int ifidx;
     uint8_t sa[ETH_ALEN];
@@ -265,7 +265,7 @@ struct brcmf_msgbuf {
 
     struct work_struct flowring_work;
     //spinlock_t flowring_work_lock;
-    struct list_head work_queue;
+    struct list_node work_queue;
 };
 
 struct brcmf_msgbuf_pktid {
@@ -289,7 +289,7 @@ static struct brcmf_msgbuf_pktids* brcmf_msgbuf_init_pktids(uint32_t nr_array_en
     struct brcmf_msgbuf_pktid* array;
     struct brcmf_msgbuf_pktids* pktids;
 
-    array = kcalloc(nr_array_entries, sizeof(*array), GFP_KERNEL);
+    array = calloc(nr_array_entries, sizeof(*array));
     if (!array) {
         return NULL;
     }
@@ -617,7 +617,7 @@ static uint32_t brcmf_msgbuf_flowring_create(struct brcmf_msgbuf* msgbuf, int if
     struct ethhdr* eh = (struct ethhdr*)(skb->data);
     uint32_t flowid;
 
-    create = kzalloc(sizeof(*create), GFP_ATOMIC);
+    create = calloc(1, sizeof(*create));
     if (create == NULL) {
         return BRCMF_FLOWRING_INVALID_ID;
     }

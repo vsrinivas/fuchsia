@@ -23,6 +23,7 @@
 #include <string.h>
 
 #include "brcmu_utils.h"
+#include "debug.h"
 
 MODULE_AUTHOR("Broadcom Corporation");
 MODULE_DESCRIPTION("Broadcom 802.11n wireless LAN driver utilities.");
@@ -309,7 +310,7 @@ void brcmu_prpkt(const char* msg, struct sk_buff* p0) {
     }
 
     for (p = p0; p; p = p->next) {
-        print_hex_dump_bytes("", DUMP_PREFIX_OFFSET, p->data, p->len);
+        brcmf_hexdump(p->data, p->len + DUMP_PREFIX_OFFSET);
     }
 }
 EXPORT_SYMBOL(brcmu_prpkt);
@@ -327,7 +328,7 @@ void brcmu_dbg_hex_dump(const void* data, size_t size, const char* fmt, ...) {
 
     va_end(args);
 
-    print_hex_dump_bytes("", DUMP_PREFIX_OFFSET, data, size);
+    brcmf_hexdump(data, size);
 }
 EXPORT_SYMBOL(brcmu_dbg_hex_dump);
 

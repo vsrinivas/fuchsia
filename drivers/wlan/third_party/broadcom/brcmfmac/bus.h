@@ -50,7 +50,7 @@ struct brcmf_bus_dcmd {
     char* name;
     char* param;
     int param_len;
-    struct list_head list;
+    struct list_node list;
 };
 
 /**

@@ -16,6 +16,7 @@
 
 #include "workqueue.h"
 
+#include <pthread.h>
 #include <string.h>
 #define _ALL_SOURCE // to get MTX_INIT from threads.h
 #include <threads.h>

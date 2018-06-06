@@ -235,6 +235,17 @@ struct brcmf_pcie_core_info {
     uint32_t wrapbase;
 };
 
+struct brcmf_pci_device {
+    struct brcmf_device dev;
+    int vendor;
+    int device;
+    int irq;
+    int bus_number;
+    int domain;
+    zx_handle_t bti;
+    pci_protocol_t pci_proto;
+};
+
 struct brcmf_pciedev_info {
     enum brcmf_pcie_state state;
     bool in_irq;
@@ -533,7 +544,7 @@ static void brcmf_pcie_attach(struct brcmf_pciedev_info* devinfo) {
     config = brcmf_pcie_read_reg32(devinfo, BRCMF_PCIE_PCIE2REG_CONFIGDATA);
     brcmf_pcie_write_reg32(devinfo, BRCMF_PCIE_PCIE2REG_CONFIGDATA, config);
 
-    device_wakeup_enable(&devinfo->pdev->dev);
+    brcmf_err("* * Used to call 'device_wakeup_enable(&devinfo->pdev->dev);'");
 }
 
 static zx_status_t brcmf_pcie_enter_download_state(struct brcmf_pciedev_info* devinfo) {
@@ -1060,7 +1071,7 @@ static zx_status_t brcmf_pcie_init_ringbuffers(struct brcmf_pciedev_info* devinf
     devinfo->shared.max_flowrings = max_flowrings;
     devinfo->shared.max_submissionrings = max_submissionrings;
     devinfo->shared.max_completionrings = max_completionrings;
-    rings = kcalloc(max_flowrings, sizeof(*ring), GFP_KERNEL);
+    rings = calloc(max_flowrings, sizeof(*ring));
     if (!rings) {
         goto fail;
     }
@@ -1302,7 +1313,6 @@ static zx_status_t brcmf_pcie_download_fw_nvram(struct brcmf_pciedev_info* devin
     brcmf_dbg(TEMP, "Survived copy_mem_todev");
 
     resetintr = get_unaligned_le32(fw->data);
-    release_firmware(fw);
 
     /* reset last 4 bytes of RAM address. to be used for shared
      * area. This identifies when FW is running
@@ -1542,7 +1552,7 @@ static void brcmf_pcie_setup(struct brcmf_device* dev, zx_status_t ret,
         bus->msgbuf->commonrings[i] = &devinfo->shared.commonrings[i]->commonring;
     }
 
-    flowrings = kcalloc(devinfo->shared.max_flowrings, sizeof(*flowrings), GFP_KERNEL);
+    flowrings = calloc(devinfo->shared.max_flowrings, sizeof(*flowrings));
     if (!flowrings) {
         goto fail;
     }
@@ -1566,7 +1576,12 @@ static void brcmf_pcie_setup(struct brcmf_device* dev, zx_status_t ret,
     brcmf_pcie_bus_console_read(devinfo);
 
 fail:
-    device_release_driver(dev);
+    brcmf_err("TODO(cphoenix): Used to call device_release_driver(dev);");
+}
+
+// TODO(cphoenix): Check with cja@ for when we support power management.
+static inline bool pci_is_pme_capable(struct brcmf_pci_device* pdev, int level) {
+    return false;
 }
 
 static zx_status_t brcmf_pcie_probe(struct brcmf_pci_device* pdev) {
@@ -1630,7 +1645,7 @@ static zx_status_t brcmf_pcie_probe(struct brcmf_pci_device* pdev) {
     bus->ops = &brcmf_pcie_bus_ops;
     bus->proto_type = BRCMF_PROTO_MSGBUF;
     bus->chip = devinfo->coreid;
-    bus->wowl_supported = pci_pme_capable(pdev, PCI_D3hot);
+    bus->wowl_supported = pci_is_pme_capable(pdev, PCI_D3hot);
     dev_set_drvdata(&pdev->dev, bus);
 
     ret = brcmf_fw_map_chip_to_name(devinfo->ci->chip, devinfo->ci->chiprev, brcmf_pcie_fwnames,

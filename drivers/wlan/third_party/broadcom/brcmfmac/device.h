@@ -19,6 +19,7 @@
 
 #include <ddk/driver.h>
 #include <ddk/protocol/pci.h>
+#include <ddk/protocol/usb.h>
 #include <lib/async-loop/loop.h> // to start the worker thread
 #include <lib/async/default.h>  // for async_get_default()
 #include <lib/async/task.h>     // for async_post_task()
@@ -29,6 +30,9 @@
 #include <threads.h>
 #include <zircon/listnode.h>
 #include <zircon/types.h>
+
+#include "debug.h"
+#include "usb.h"
 
 #define BACKPLANE_ID_HIGH_REVCODE_HIGH 0x7000
 #define BACKPLANE_ID_HIGH_REVCODE_HIGH_SHIFT 8
@@ -56,6 +60,10 @@
 #define BC_CORE_POWER_CONTROL_RELOAD 0x2
 #define BC_CORE_POWER_CONTROL_SHIFT 13
 
+#define BRCMF_ERR_FIRMWARE_UNSUPPORTED (-23)
+
+#define max(a, b) ((a)>(b)?(a):(b))
+
 extern async_t* default_async;
 
 // This is the function that timer users write to receive callbacks.
@@ -76,22 +84,71 @@ void brcmf_timer_set(brcmf_timer_info_t* timer, zx_duration_t delay);
 
 void brcmf_timer_stop(brcmf_timer_info_t* timer);
 
+static inline bool address_is_multicast(const uint8_t* address) {
+    return 1 & *address;
+}
+
+static inline bool address_is_broadcast(const uint8_t* address) {
+    static uint8_t all_ones[] = {255, 255, 255, 255, 255, 255};
+    static_assert(ETH_ALEN == 6, "Oops");
+    return !memcmp(address, all_ones, ETH_ALEN);
+}
+
+static inline bool address_is_zero(const uint8_t* address) {
+    static uint8_t all_zeros[] = {0, 0, 0, 0, 0, 0};
+    static_assert(ETH_ALEN == 6, "Oops");
+    return !memcmp(address, all_zeros, ETH_ALEN);
+}
+
+static inline void fill_with_broadcast_addr(uint8_t* address) {
+    memset(address, 0xff, ETH_ALEN);
+}
+
+enum {ADDRESSED_TO_MULTICAST = 1, ADDRESSED_TO_BROADCAST, ADDRESSED_TO_OTHER_HOST};
+
 struct brcmf_device {
     void* of_node;
     void* parent;
     void* drvdata;
     zx_device_t* zxdev;
+    zx_device_t* child_zxdev;
 };
 
-struct brcmf_pci_device {
+struct brcmf_usb_interface_descriptor {
+    int bInterfaceClass;
+    int bInterfaceSubClass;
+    int bInterfaceProtocol;
+    int bInterfaceNumber;
+    int bNumEndpoints;
+};
+
+struct brcmf_usb_device {
+    usb_speed_t speed;
     struct brcmf_device dev;
-    int vendor;
-    int device;
-    int irq;
-    int bus_number;
-    int domain;
-    zx_handle_t bti;
-    pci_protocol_t pci_proto;
+    struct {
+        int bNumConfigurations;
+        int bDeviceClass;
+    } descriptor;
+};
+
+struct brcmf_endpoint_container {
+    usb_endpoint_descriptor_t desc;
+};
+
+struct brcmf_usb_altsetting {
+    struct brcmf_usb_interface_descriptor desc;
+    struct brcmf_endpoint_container* endpoint;
+};
+
+struct brcmf_usb_interface {
+    struct brcmf_usb_altsetting* altsetting;
+    struct brcmf_usb_device* usb_device;
+    void* intfdata;
+};
+
+struct brcmf_usb_device_id {
+    int idVendor;
+    int idProduct;
 };
 
 struct brcmf_firmware {
@@ -103,13 +160,23 @@ struct brcmf_bus* dev_get_drvdata(struct brcmf_device* dev);
 
 void dev_set_drvdata(struct brcmf_device* dev, struct brcmf_bus* bus);
 
-struct brcmfmac_platform_data* dev_get_platdata(struct brcmf_device* dev);
 
 // TODO(cphoenix): Wrap around whatever completion functions exist in PCIE and SDIO.
 // TODO(cphoenix): To improve efficiency, analyze which spinlocks only need to protect small
 // critical subsections of the completion functions. For those, bring back the individual spinlock.
 // Note: This is a pthread_mutex_t instead of mtx_t because mtx_t doesn't implement recursive.
 extern pthread_mutex_t irq_callback_lock;
+
+struct net_device* brcmf_allocate_net_device(size_t priv_size, const char* name);
+
+void brcmf_free_net_device(struct net_device* dev);
+
+void brcmf_enable_tx(struct net_device* dev);
+
+extern bool verbose; // TODO(cphoenix): Temporary, for debugging.
+
+// TODO(cphoenix): Fix this hack
+#define ieee80211_frequency_to_channel(freq) (freq)
 
 bool brcmf_test_and_set_bit_in_array(size_t bit_number, atomic_ulong* addr);
 

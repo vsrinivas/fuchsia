@@ -30,6 +30,31 @@
 
 static struct dentry* root_folder;
 
+void brcmf_hexdump(const void* buf, size_t len) {
+    if (len > 4096) {
+        brcmf_dbg(INFO, "Truncating hexdump to 4096 bytes");
+        len = 4096;
+    }
+    if (len == 0) {
+        brcmf_dbg(INFO, "Empty hexdump %p", buf);
+        return;
+    }
+    char output[120];
+    uint8_t* bytes = (uint8_t*)buf;
+    size_t i;
+    char* next = output;
+    for (i = 0; i < len; i++) {
+        next += sprintf(next, "%02x ", *bytes++);
+        if ((i % 32) == 31) {
+            brcmf_dbg(INFO, "%s", output);
+            next = output;
+        }
+    }
+    if ((i % 32) != 0) {
+        brcmf_dbg(INFO, "%s", output);
+    }
+}
+
 zx_status_t brcmf_debug_create_memdump(struct brcmf_bus* bus, const void* data, size_t len) {
     void* dump;
     size_t ramsize;
@@ -40,7 +65,7 @@ zx_status_t brcmf_debug_create_memdump(struct brcmf_bus* bus, const void* data, 
         return ZX_ERR_NOT_SUPPORTED;
     }
 
-    dump = vzalloc(len + ramsize);
+    dump = calloc(1, len + ramsize);
     if (!dump) {
         return ZX_ERR_NO_MEMORY;
     }
@@ -48,7 +73,7 @@ zx_status_t brcmf_debug_create_memdump(struct brcmf_bus* bus, const void* data, 
     memcpy(dump, data, len);
     err = brcmf_bus_get_memdump(bus, dump + len, ramsize);
     if (err != ZX_OK) {
-        vfree(dump);
+        free(dump);
         return err;
     }
 

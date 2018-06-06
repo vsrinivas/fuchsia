@@ -106,6 +106,7 @@ struct brcmf_bcdc {
     uint16_t reqid;
     uint8_t bus_header[BUS_HEADER_LEN];
     struct brcmf_proto_bcdc_dcmd msg;
+    // buf must be packed right after msg; see brcmf_proto_bcdc_msg
     unsigned char buf[BRCMF_DCMD_MAXLEN];
     struct brcmf_fws_info* fws;
 };
@@ -428,7 +429,7 @@ static zx_status_t brcmf_proto_bcdc_init_done(struct brcmf_pub* drvr) {
 zx_status_t brcmf_proto_bcdc_attach(struct brcmf_pub* drvr) {
     struct brcmf_bcdc* bcdc;
 
-    bcdc = kzalloc(sizeof(*bcdc), GFP_ATOMIC);
+    bcdc = calloc(1, sizeof(*bcdc));
     if (!bcdc) {
         goto fail;
     }

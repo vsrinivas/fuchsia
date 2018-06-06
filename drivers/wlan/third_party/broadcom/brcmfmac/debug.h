@@ -92,7 +92,7 @@ __PRINTFLIKE(3, 4) void __brcmf_dbg(uint32_t filter, const char* func, const cha
         pr_info("%s: " fmt, __func__, ##__VA_ARGS__); \
     } while (0)
 
-#define brcmf_dbg(level, fmt, ...) no_printk(fmt, ##__VA_ARGS__)
+#define brcmf_dbg(level, fmt, ...)
 
 #define BRCMF_DATA_ON()  0
 #define BRCMF_CTL_ON()   0
@@ -108,11 +108,17 @@ __PRINTFLIKE(3, 4) void __brcmf_dbg(uint32_t filter, const char* func, const cha
 
 #endif /* defined(DEBUG) || defined(CONFIG_BRCM_TRACING) */
 
+// TODO(cphoenix): The call to brcmf_hexdump was originally trace_brcmf_hexdump, so this is
+// probably too spammy.
 #define brcmf_dbg_hex_dump(test, data, len, fmt, ...)                \
     do {                                                             \
-        trace_brcmf_hexdump((void*)data, len);                       \
+        brcmf_hexdump((void*)data, len);                             \
         if (test) brcmu_dbg_hex_dump(data, len, fmt, ##__VA_ARGS__); \
     } while (0)
+
+void brcmf_hexdump(const void* buf, size_t len);
+
+void brcmf_alphadump(const void* buf, size_t len);
 
 extern int brcmf_msg_filter;
 

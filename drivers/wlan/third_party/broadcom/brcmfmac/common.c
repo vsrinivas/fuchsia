@@ -23,6 +23,7 @@
 #include "common.h"
 
 #include <stdarg.h>
+#include <string.h>
 
 #include "brcmu_utils.h"
 #include "brcmu_wifi.h"
@@ -87,7 +88,6 @@ module_param_named(ignore_probe_fail, brcmf_ignore_probe_fail, int, 0);
 MODULE_PARM_DESC(ignore_probe_fail, "always succeed probe for debugging");
 #endif
 
-static struct brcmfmac_platform_data* brcmfmac_pdata;
 struct brcmf_mp_global_t brcmf_mp_global;
 
 void brcmf_c_set_joinpref_default(struct brcmf_if* ifp) {
@@ -160,7 +160,7 @@ done:
 }
 
 static zx_status_t brcmf_c_process_clm_blob(struct brcmf_if* ifp) {
-    struct brcmf_device* dev = ifp->drvr->bus_if->dev;
+    //struct brcmf_device* dev = ifp->drvr->bus_if->dev;
     struct brcmf_dload_data_le* chunk_buf;
     const struct brcmf_firmware* clm = NULL;
     uint8_t clm_name[BRCMF_FW_NAME_LEN];
@@ -180,7 +180,9 @@ static zx_status_t brcmf_c_process_clm_blob(struct brcmf_if* ifp) {
         return err;
     }
 
-    err = request_firmware(&clm, clm_name, dev);
+    brcmf_dbg(TEMP, "* * Would have requested firmware name %s", clm_name);
+    err = ZX_ERR_CALL_FAILED;
+//    err = request_firmware(&clm, clm_name, dev);
     if (err != ZX_OK) {
         brcmf_info("no clm_blob available(err=%d), device may have limited channels available\n",
                    err);
@@ -226,7 +228,6 @@ static zx_status_t brcmf_c_process_clm_blob(struct brcmf_if* ifp) {
 
     free(chunk_buf);
 done:
-    release_firmware(clm);
     return err;
 }
 
@@ -242,7 +243,7 @@ zx_status_t brcmf_c_preinit_dcmds(struct brcmf_if* ifp) {
     /* retreive mac address */
     err = brcmf_fil_iovar_data_get(ifp, "cur_etheraddr", ifp->mac_addr, sizeof(ifp->mac_addr));
     if (err != ZX_OK) {
-        brcmf_err("Retreiving cur_etheraddr failed, %d\n", err);
+        brcmf_err("Retrieving cur_etheraddr failed, %d\n", err);
         goto done;
     }
     memcpy(ifp->drvr->mac, ifp->mac_addr, sizeof(ifp->drvr->mac));
@@ -310,8 +311,9 @@ zx_status_t brcmf_c_preinit_dcmds(struct brcmf_if* ifp) {
         /* Replace all newline/linefeed characters with space
          * character
          */
+        clmver[sizeof(buf) - 1] = 0;
         ptr = clmver;
-        while ((ptr = strnchr(ptr, '\n', sizeof(buf))) != NULL) {
+        while ((ptr = strchr(ptr, '\n')) != NULL) {
             *ptr = ' ';
         }
 
@@ -406,22 +408,12 @@ static void brcmf_mp_attach(void) {
      * sure it gets initialized at all, always copy the module param version
      */
     strlcpy(brcmf_mp_global.firmware_path, brcmf_firmware_path, BRCMF_FW_ALTPATH_LEN);
-    if ((brcmfmac_pdata) && (brcmfmac_pdata->fw_alternative_path) &&
-            (brcmf_mp_global.firmware_path[0] == '\0')) {
-        strlcpy(brcmf_mp_global.firmware_path, brcmfmac_pdata->fw_alternative_path,
-                BRCMF_FW_ALTPATH_LEN);
-    }
 }
 
 struct brcmf_mp_device* brcmf_get_module_param(struct brcmf_device* dev,
                                                enum brcmf_bus_type bus_type,
                                                uint32_t chip, uint32_t chiprev) {
     struct brcmf_mp_device* settings;
-#ifdef USE_PLATFORM_DATA
-    struct brcmfmac_pd_device* device_pd;
-    bool found;
-    int i;
-#endif /* USE_PLATFORM_DATA */
 
     brcmf_dbg(TEMP, "Enter, bus=%d, chip=%d, rev=%d\n", bus_type, chip, chiprev);
     settings = calloc(1, sizeof(*settings));
@@ -442,6 +434,21 @@ struct brcmf_mp_device* brcmf_get_module_param(struct brcmf_device* dev,
         settings->bus.sdio.txglomsz = brcmf_sdiod_txglomsz;
     }
 #ifdef USE_PLATFORM_DATA
+// TODO(NET-831): Do we need to do this?
+struct brcmfmac_pd_device {
+    uint32_t bus_type;
+    uint32_t id;
+    int rev;
+    struct brcmfmac_pd_cc country_codes[555];
+    struct {
+        void* sdio;
+    } bus;
+};
+
+    struct brcmfmac_pd_device* device_pd;
+    bool found;
+    int i;
+
     /* See if there is any device specific platform data configured */
     found = false;
     if (brcmfmac_pdata) {
@@ -471,43 +478,13 @@ void brcmf_release_module_param(struct brcmf_mp_device* module_param) {
     free(module_param);
 }
 
-static zx_status_t brcmf_common_pd_probe(struct platform_device* pdev) {
-    brcmf_dbg(TEMP, "Enter");
-
-    brcmfmac_pdata = dev_get_platdata(&pdev->dev);
-
-    if (brcmfmac_pdata->power_on) {
-        brcmfmac_pdata->power_on();
-    }
-
-    return ZX_OK;
-}
-
-static zx_status_t brcmf_common_pd_remove(struct platform_device* pdev) {
-    brcmf_dbg(TEMP, "Enter");
-
-    if (brcmfmac_pdata->power_off) {
-        brcmfmac_pdata->power_off();
-    }
-
-    return ZX_OK;
-}
-
-static struct platform_driver brcmf_pd = {
-    .remove = brcmf_common_pd_remove,
-    .driver = {
-        .name = BRCMFMAC_PDATA_NAME,
-    }
-};
-
-static async_loop_t* async_loop;
-
 zx_status_t brcmfmac_module_init(zx_device_t* device) {
     zx_status_t err;
 
     /* Initialize debug system first */
     brcmf_debugfs_init();
 
+    async_loop_t* async_loop;
     async_loop_config_t async_config;
     memset(&async_config, 0, sizeof(async_config));
     err = async_loop_create(&async_config, &async_loop);
@@ -521,12 +498,6 @@ zx_status_t brcmfmac_module_init(zx_device_t* device) {
     }
     default_async = async_loop_get_dispatcher(async_loop);
 
-    /* Get the platform data (if available) for our devices */
-    err = platform_driver_probe(&brcmf_pd, brcmf_common_pd_probe);
-    if (err == ZX_ERR_IO_NOT_PRESENT) {
-        brcmf_dbg(INFO, "No platform data available.\n");
-    }
-
     /* Initialize global module paramaters */
     brcmf_mp_attach();
 
@@ -534,9 +505,6 @@ zx_status_t brcmfmac_module_init(zx_device_t* device) {
     err = brcmf_core_init(device);
     if (err != ZX_OK) {
         brcmf_debugfs_exit();
-        if (brcmfmac_pdata) {
-            platform_driver_unregister(&brcmf_pd);
-        }
     }
 
     return err;
@@ -544,11 +512,8 @@ zx_status_t brcmfmac_module_init(zx_device_t* device) {
 
 static void brcmfmac_module_exit(void) {
     brcmf_core_exit();
-    if (brcmfmac_pdata) {
-        platform_driver_unregister(&brcmf_pd);
-    }
     if (default_async != NULL) {
-        async_loop_destroy(async_loop);
+        async_loop_destroy(async_loop_from_dispatcher(default_async));
     }
     brcmf_debugfs_exit();
 }

@@ -24,8 +24,7 @@
 
 zx_status_t brcmfmac_bind(void* ctx, zx_device_t* device) {
     zxlogf(INFO, "brcmfmac: Bind was called!!\n");
-    brcmfmac_module_init(device);
-    return ZX_ERR_NOT_SUPPORTED;
+    return brcmfmac_module_init(device);
 }
 
 static zx_driver_ops_t brcmfmac_driver_ops = {
@@ -33,7 +32,8 @@ static zx_driver_ops_t brcmfmac_driver_ops = {
     .bind = brcmfmac_bind,
 };
 
-ZIRCON_DRIVER_BEGIN(brcmfmac, brcmfmac_driver_ops, "zircon", "0.1", 21)
+ZIRCON_DRIVER_BEGIN(brcmfmac, brcmfmac_driver_ops, "zircon", "0.1", 26)
+    BI_GOTO_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_USB, 42),
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PCI),
     BI_ABORT_IF(NE, BIND_PCI_VID, BRCM_PCIE_VENDOR_ID_BROADCOM),
     BI_ABORT_IF(NE, BIND_PCI_CLASS, PCI_CLASS_NETWORK),
@@ -56,4 +56,8 @@ ZIRCON_DRIVER_BEGIN(brcmfmac, brcmfmac_driver_ops, "zircon", "0.1", 21)
     BI_MATCH_IF(EQ, BIND_PCI_DID, BRCM_PCIE_4366_2G_DEVICE_ID),
     BI_MATCH_IF(EQ, BIND_PCI_DID, BRCM_PCIE_4366_5G_DEVICE_ID),
     BI_MATCH_IF(EQ, BIND_PCI_DID, BRCM_PCIE_4371_DEVICE_ID),
+    BI_ABORT(),
+    BI_LABEL(42),
+    BI_ABORT_IF(NE, BIND_USB_VID, 0x043e),
+    BI_MATCH_IF(EQ, BIND_USB_PID, 0x3101),
 ZIRCON_DRIVER_END(brcmfmac)

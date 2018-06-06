@@ -21,15 +21,17 @@
 //#include <linux/list.h>
 //#include <linux/ssb/ssb_regs.h>
 
-#include "linuxisms.h"
+#include <zircon/listnode.h>
 
 #include "brcm_hw_ids.h"
 #include "brcmu_utils.h"
-#include "chipcommon.h"
-#include "defs.h"
-#include "soc.h"
 #include "chip.h"
+#include "chipcommon.h"
 #include "debug.h"
+#include "defs.h"
+#include "device.h"
+#include "linuxisms.h"
+#include "soc.h"
 
 /* SOC Interconnect types (aka chip types) */
 #define SOCI_SB 0
@@ -232,7 +234,7 @@ struct sbsocramregs {
 struct brcmf_core_priv {
     struct brcmf_core pub;
     uint32_t wrapbase;
-    struct list_head list;
+    struct list_node list;
     struct brcmf_chip_priv* chip;
 };
 
@@ -241,7 +243,7 @@ struct brcmf_chip_priv {
     const struct brcmf_buscore_ops* ops;
     void* ctx;
     /* assured first core is chipcommon, second core is buscore */
-    struct list_head cores;
+    struct list_node cores;
     uint16_t num_cores;
 
     bool (*iscoreup)(struct brcmf_core_priv* core);

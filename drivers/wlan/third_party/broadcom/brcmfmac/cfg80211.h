@@ -20,6 +20,8 @@
 #include <sync/completion.h>
 #include <threads.h>
 
+#include <zircon/listnode.h>
+
 /* for brcmu_d11inf */
 #include "brcmu_d11.h"
 #include "core.h"
@@ -200,7 +202,7 @@ struct brcmf_cfg80211_vif {
     struct brcmf_cfg80211_profile profile;
     atomic_ulong sme_state;
     struct vif_saved_ie saved_ie;
-    struct list_head list;
+    struct list_node list;
     uint16_t mgmt_rx_reg;
     bool mbss;
     int is_11d;
@@ -327,7 +329,7 @@ struct brcmf_cfg80211_info {
     struct escan_info escan_info;
     brcmf_timer_info_t escan_timeout;
     struct work_struct escan_timeout_work;
-    struct list_head vif_list;
+    struct list_node vif_list;
     struct brcmf_cfg80211_vif_event vif_event;
     uint8_t vif_event_pending_action;
     completion_t vif_disabled;
@@ -355,11 +357,11 @@ static inline struct wiphy* cfg_to_wiphy(struct brcmf_cfg80211_info* cfg) {
 }
 
 static inline struct brcmf_cfg80211_info* wiphy_to_cfg(struct wiphy* w) {
-    return (struct brcmf_cfg80211_info*)(wiphy_priv(w));
+    return w->priv_info;
 }
 
 static inline struct brcmf_cfg80211_info* wdev_to_cfg(struct wireless_dev* wd) {
-    return (struct brcmf_cfg80211_info*)(wdev_priv(wd));
+    return wd->priv_info;
 }
 
 static inline struct net_device* cfg_to_ndev(struct brcmf_cfg80211_info* cfg) {
@@ -372,14 +374,16 @@ static inline struct brcmf_cfg80211_info* ndev_to_cfg(struct net_device* ndev) {
     return wdev_to_cfg(ndev->ieee80211_ptr);
 }
 
-static inline struct brcmf_cfg80211_profile* ndev_to_prof(struct net_device* nd) {
-    struct brcmf_if* ifp = netdev_priv(nd);
-    return &ifp->vif->profile;
+static inline struct brcmf_if* ndev_to_if(struct net_device* ndev) {
+    return ndev->priv;
 }
 
 static inline struct brcmf_cfg80211_vif* ndev_to_vif(struct net_device* ndev) {
-    struct brcmf_if* ifp = netdev_priv(ndev);
-    return ifp->vif;
+    return ndev_to_if(ndev)->vif;
+}
+
+static inline struct brcmf_cfg80211_profile* ndev_to_prof(struct net_device* ndev) {
+    return &ndev_to_vif(ndev)->profile;
 }
 
 static inline struct brcmf_cfg80211_connect_info* cfg_to_conn(struct brcmf_cfg80211_info* cfg) {
@@ -412,6 +416,6 @@ zx_status_t brcmf_notify_escan_complete(struct brcmf_cfg80211_info* cfg, struct 
                                         bool aborted, bool fw_abort);
 void brcmf_set_mpc(struct brcmf_if* ndev, int mpc);
 void brcmf_abort_scanning(struct brcmf_cfg80211_info* cfg);
-void brcmf_cfg80211_free_netdev(struct net_device* ndev);
+void brcmf_free_net_device_vif(struct net_device* ndev);
 
 #endif /* BRCMFMAC_CFG80211_H */

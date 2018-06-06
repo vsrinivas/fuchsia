@@ -330,7 +330,7 @@ static zx_status_t brcmf_pno_prep_fwconfig(struct brcmf_pno_info* pi,
     }
 
     *buckets = NULL;
-    fw_buckets = kcalloc(pi->n_reqs, sizeof(*fw_buckets), GFP_KERNEL);
+    fw_buckets = calloc(pi->n_reqs, sizeof(*fw_buckets));
     if (!fw_buckets) {
         return ZX_ERR_NO_MEMORY;
     }

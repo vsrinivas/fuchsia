@@ -16,9 +16,9 @@
 #ifndef BRCMFMAC_USB_H
 #define BRCMFMAC_USB_H
 
+#include <ddk/protocol/usb.h>
+#include <zircon/listnode.h>
 #include <zircon/types.h>
-
-#include "linuxisms.h"
 
 enum brcmf_usb_state {
     BRCMFMAC_USB_STATE_DOWN,
@@ -40,7 +40,9 @@ struct brcmf_usbdev {
     struct brcmf_usbdev_info* devinfo;
     enum brcmf_usb_state state;
     struct brcmf_stats stats;
-    int ntxq, nrxq, rxsize;
+    int ntxq;
+    int nrxq;
+    int rxsize;
     uint32_t bus_mtu;
     int devid;
     int chiprev; /* chip revsion number */
@@ -48,7 +50,7 @@ struct brcmf_usbdev {
 
 /* IO Request Block (IRB) */
 struct brcmf_usbreq {
-    struct list_head list;
+    struct list_node list;
     struct brcmf_usbdev_info* devinfo;
     struct urb* urb;
     struct sk_buff* skb;

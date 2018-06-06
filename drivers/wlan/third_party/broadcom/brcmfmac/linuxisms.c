@@ -17,9 +17,6 @@
 
 #include "linuxisms.h"
 
-struct current_with_pid* current; // likewise current
-
-
 // TODO(jeffbrown): Once we have an equivalent of debugfs, implement / connect these.
 zx_status_t debugfs_create_dir(const char *name, struct dentry* parent,
                                struct dentry** new_folder_out) {

@@ -28,7 +28,9 @@
 #include <ddk/device.h>
 #include <ddk/protocol/pci.h>
 #include <ddk/protocol/usb.h>
+#include <endian.h>
 #include <pthread.h>
+#include <stdatomic.h>
 #include <threads.h>
 
 #include "brcmu_utils.h"
@@ -137,7 +139,7 @@ static void _brcmf_set_multicast_list(struct work_struct* work) {
     /* Send down the multicast list first. */
     cnt = netdev_mc_count(ndev);
     buflen = sizeof(cnt) + (cnt * ETH_ALEN);
-    buf = kmalloc(buflen, GFP_ATOMIC);
+    buf = malloc(buflen);
     if (!buf) {
         return;
     }
@@ -211,7 +213,7 @@ static void _brcmf_update_ndtable(struct work_struct* work) {}
 #endif
 
 static zx_status_t brcmf_netdev_set_mac_address(struct net_device* ndev, void* addr) {
-    struct brcmf_if* ifp = netdev_priv(ndev);
+    struct brcmf_if* ifp = ndev_to_if(ndev);
     struct sockaddr* sa = (struct sockaddr*)addr;
     zx_status_t err;
 
@@ -229,14 +231,14 @@ static zx_status_t brcmf_netdev_set_mac_address(struct net_device* ndev, void* a
 }
 
 static void brcmf_netdev_set_multicast_list(struct net_device* ndev) {
-    struct brcmf_if* ifp = netdev_priv(ndev);
+    struct brcmf_if* ifp = ndev_to_if(ndev);
 
     workqueue_schedule_default(&ifp->multicast_work);
 }
 
 static netdev_tx_t brcmf_netdev_start_xmit(struct sk_buff* skb, struct net_device* ndev) {
     zx_status_t ret;
-    struct brcmf_if* ifp = netdev_priv(ndev);
+    struct brcmf_if* ifp = ndev_to_if(ndev);
     struct brcmf_pub* drvr = ifp->drvr;
     struct ethhdr* eh;
     int head_delta;
@@ -275,7 +277,7 @@ static netdev_tx_t brcmf_netdev_start_xmit(struct sk_buff* skb, struct net_devic
 
     eh = (struct ethhdr*)(skb->data);
 
-    if (eh->h_proto == htons(ETH_P_PAE)) {
+    if (eh->h_proto == htobe16(ETH_P_PAE)) {
         atomic_fetch_add(&ifp->pend_8021x_cnt, 1);
     }
 
@@ -320,7 +322,7 @@ void brcmf_txflowblock_if(struct brcmf_if* ifp, enum brcmf_netif_stop_reason rea
     } else {
         ifp->netif_stop &= ~reason;
         if (!ifp->netif_stop) {
-            netif_wake_queue(ifp->ndev);
+            brcmf_enable_tx(ifp->ndev);
         }
     }
     //spin_unlock_irqrestore(&ifp->netif_stop_lock, flags);
@@ -328,7 +330,7 @@ void brcmf_txflowblock_if(struct brcmf_if* ifp, enum brcmf_netif_stop_reason rea
 }
 
 void brcmf_netif_rx(struct brcmf_if* ifp, struct sk_buff* skb) {
-    if (skb->pkt_type == PACKET_MULTICAST) {
+    if (skb->pkt_type == ADDRESSED_TO_MULTICAST) {
         ifp->ndev->stats.multicast++;
     }
 
@@ -340,7 +342,7 @@ void brcmf_netif_rx(struct brcmf_if* ifp, struct sk_buff* skb) {
     ifp->ndev->stats.rx_bytes += skb->len;
     ifp->ndev->stats.rx_packets++;
 
-    brcmf_dbg(DATA, "rx proto=0x%X\n", ntohs(skb->protocol));
+    brcmf_dbg(DATA, "rx proto=0x%X\n", be16toh(skb->protocol));
     if (in_interrupt()) {
         netif_rx(skb);
     } else {
@@ -414,7 +416,7 @@ void brcmf_txfinalize(struct brcmf_if* ifp, struct sk_buff* txp, bool success) {
     uint16_t type;
 
     eh = (struct ethhdr*)(txp->data);
-    type = ntohs(eh->h_proto);
+    type = be16toh(eh->h_proto);
 
     if (type == ETH_P_PAE) {
         if (atomic_fetch_sub(&ifp->pend_8021x_cnt, 1) == 1) {
@@ -430,7 +432,7 @@ void brcmf_txfinalize(struct brcmf_if* ifp, struct sk_buff* txp, bool success) {
 }
 
 static void brcmf_ethtool_get_drvinfo(struct net_device* ndev, struct ethtool_drvinfo* info) {
-    struct brcmf_if* ifp = netdev_priv(ndev);
+    struct brcmf_if* ifp = ndev_to_if(ndev);
     struct brcmf_pub* drvr = ifp->drvr;
     char drev[BRCMU_DOTREV_LEN] = "n/a";
 
@@ -448,7 +450,7 @@ static const struct ethtool_ops brcmf_ethtool_ops = {
 };
 
 static zx_status_t brcmf_netdev_stop(struct net_device* ndev) {
-    struct brcmf_if* ifp = netdev_priv(ndev);
+    struct brcmf_if* ifp = ndev_to_if(ndev);
 
     brcmf_dbg(TRACE, "Enter, bsscfgidx=%d\n", ifp->bsscfgidx);
 
@@ -461,8 +463,8 @@ static zx_status_t brcmf_netdev_stop(struct net_device* ndev) {
     return ZX_OK;
 }
 
-static zx_status_t brcmf_netdev_open(struct net_device* ndev) {
-    struct brcmf_if* ifp = netdev_priv(ndev);
+zx_status_t brcmf_netdev_open(struct net_device* ndev) {
+    struct brcmf_if* ifp = ndev_to_if(ndev);
     struct brcmf_pub* drvr = ifp->drvr;
     struct brcmf_bus* bus_if = drvr->bus_if;
     uint32_t toe_ol;
@@ -490,7 +492,7 @@ static zx_status_t brcmf_netdev_open(struct net_device* ndev) {
     }
 
     /* Clear, carrier, set when connected or AP mode. */
-    netif_carrier_off(ndev);
+    brcmf_dbg(TEMP, "* * Would have called netif_carrier_off(ndev);");
     return ZX_OK;
 }
 
@@ -518,7 +520,9 @@ zx_status_t brcmf_net_attach(struct brcmf_if* ifp, bool rtnl_locked) {
 
     /* set the mac address & netns */
     memcpy(ndev->dev_addr, ifp->mac_addr, ETH_ALEN);
-    dev_net_set(ndev, wiphy_net(cfg_to_wiphy(drvr->config)));
+    brcmf_dbg(TEMP, " * * Tried to call dev_net_set(ndev, wiphy_net(cfg_to_wiphy(drvr->config)));");
+    brcmf_dbg(TEMP, "  to 'set the nd_net of net_device to the specified net namespace'");
+    brcmf_dbg(TEMP, "  file:///usr/local/google/home/cphoenix/Downloads/linuxkernnet.pdf");
 
     workqueue_init_work(&ifp->multicast_work, _brcmf_set_multicast_list);
     workqueue_init_work(&ifp->ndoffload_work, _brcmf_update_ndtable);
@@ -533,7 +537,7 @@ zx_status_t brcmf_net_attach(struct brcmf_if* ifp, bool rtnl_locked) {
         goto fail;
     }
 
-    ndev->priv_destructor = brcmf_cfg80211_free_netdev;
+    ndev->priv_destructor = brcmf_free_net_device_vif;
     brcmf_dbg(INFO, "%s: Broadcom Dongle Host Driver\n", ndev->name);
     return ZX_OK;
 
@@ -545,14 +549,15 @@ fail:
 
 static void brcmf_net_detach(struct net_device* ndev, bool rtnl_locked) {
     if (ndev->reg_state == NETREG_REGISTERED) {
-        if (rtnl_locked) {
+        brcmf_dbg(TEMP, "* * TODO(cphoenix): Tell devhost we're not valid anymore");
+        /*if (rtnl_locked) {
             unregister_netdevice(ndev);
         } else {
             unregister_netdev(ndev);
-        }
+        }*/
     } else {
-        brcmf_cfg80211_free_netdev(ndev);
-        free_netdev(ndev);
+        brcmf_free_net_device_vif(ndev);
+        brcmf_free_net_device(ndev);
     }
 }
 
@@ -612,19 +617,17 @@ static zx_status_t brcmf_net_p2p_attach(struct brcmf_if* ifp) {
     /* set the mac address */
     memcpy(ndev->dev_addr, ifp->mac_addr, ETH_ALEN);
 
-    if (register_netdev(ndev) != ZX_OK) {
-        brcmf_err("couldn't register the p2p net device\n");
-        goto fail;
-    }
+    brcmf_err("* * Tried to register_netdev(ndev); do the ZX thing instead.");
+    // If register_netdev failed, goto fail;
 
     brcmf_dbg(INFO, "%s: Broadcom Dongle Host Driver\n", ndev->name);
 
     return ZX_OK;
 
-fail:
-    ifp->drvr->iflist[ifp->bsscfgidx] = NULL;
-    ndev->netdev_ops = NULL;
-    return ZX_ERR_IO_NOT_PRESENT;
+//fail:
+//    ifp->drvr->iflist[ifp->bsscfgidx] = NULL;
+//    ndev->netdev_ops = NULL;
+//    return ZX_ERR_IO_NOT_PRESENT;
 }
 
 zx_status_t brcmf_add_if(struct brcmf_pub* drvr, int32_t bsscfgidx, int32_t ifidx, bool is_p2pdev,
@@ -665,14 +668,13 @@ zx_status_t brcmf_add_if(struct brcmf_pub* drvr, int32_t bsscfgidx, int32_t ifid
     } else {
         brcmf_dbg(INFO, "allocate netdev interface\n");
         /* Allocate netdev, including space for private structure */
-        ndev =
-            alloc_netdev(sizeof(*ifp), is_p2pdev ? "p2p%d" : name, NET_NAME_UNKNOWN, ether_setup);
+        ndev = brcmf_allocate_net_device(sizeof(*ifp), is_p2pdev ? "p2p" : name);
         if (!ndev) {
             return ZX_ERR_NO_MEMORY;
         }
 
-        ndev->needs_free_netdev = true;
-        ifp = netdev_priv(ndev);
+        ndev->needs_free_net_device = true;
+        ifp = ndev_to_if(ndev);
         ifp->ndev = ndev;
         /* store mapping ifidx to bsscfgidx */
         if (drvr->if2bss[ifidx] == BRCMF_BSSIDX_INVALID) {
@@ -692,8 +694,7 @@ zx_status_t brcmf_add_if(struct brcmf_pub* drvr, int32_t bsscfgidx, int32_t ifid
         memcpy(ifp->mac_addr, mac_addr, ETH_ALEN);
     }
 
-    brcmf_dbg(TRACE, " ==== pid:%x, if:%s (%pM) created ===\n", current->pid, name, ifp->mac_addr);
-
+    brcmf_dbg(TRACE, " ==== if:%s (%pM) created ===\n", name, ifp->mac_addr);
     if (if_out) {
         *if_out = ifp;
     }
@@ -922,7 +923,7 @@ zx_status_t brcmf_attach(struct brcmf_device* dev, struct brcmf_mp_device* setti
     brcmf_dbg(TRACE, "Enter\n");
 
     /* Allocate primary brcmf_info */
-    drvr = kzalloc(sizeof(struct brcmf_pub), GFP_ATOMIC);
+    drvr = calloc(1, sizeof(struct brcmf_pub));
     if (!drvr) {
         return ZX_ERR_NO_MEMORY;
     }
@@ -1003,7 +1004,7 @@ zx_status_t brcmf_bus_started(struct brcmf_device* dev) {
     brcmf_dbg(TRACE, "\n");
 
     /* add primary networking interface */
-    err = brcmf_add_if(drvr, 0, 0, false, "wlan%d", NULL, &ifp);
+    err = brcmf_add_if(drvr, 0, 0, false, "wlan", NULL, &ifp);
     if (err != ZX_OK) {
         return err;
     }
@@ -1196,9 +1197,8 @@ void brcmf_bus_change_state(struct brcmf_bus* bus, enum brcmf_bus_state state) {
         for (ifidx = 0; ifidx < BRCMF_MAX_IFS; ifidx++) {
             if ((drvr->iflist[ifidx]) && (drvr->iflist[ifidx]->ndev)) {
                 ndev = drvr->iflist[ifidx]->ndev;
-                if (netif_queue_stopped(ndev)) {
-                    netif_wake_queue(ndev);
-                }
+                brcmf_dbg(INFO, "TODO(cphoenix): This code called netif_wake_queue(ndev)");
+                brcmf_dbg(INFO, "  if netif_queue_stopped(ndev). Do the Fuchsia equivalent.");
             }
         }
     }
@@ -1208,12 +1208,13 @@ zx_status_t brcmf_core_init(zx_device_t* device) {
     zx_status_t result;
     pthread_mutexattr_t pmutex_attributes;
 
-    zxlogf(INFO, "brcmfmac: core_init was called\n");
+    brcmf_dbg(TEMP, "brcmfmac: core_init was called\n");
 
     pthread_mutexattr_init(&pmutex_attributes);
     pthread_mutexattr_settype(&pmutex_attributes, PTHREAD_MUTEX_NORMAL | PTHREAD_MUTEX_RECURSIVE);
     pthread_mutex_init(&irq_callback_lock, &pmutex_attributes);
 
+#ifdef CONFIG_BRCMFMAC_PCIE
     pci_protocol_t pdev;
     result = device_get_protocol(device, ZX_PROTOCOL_PCI, &pdev);
     if (result == ZX_OK) {
@@ -1223,6 +1224,9 @@ zx_status_t brcmf_core_init(zx_device_t* device) {
         }
         return result;
     }
+#endif // CONFIG_BRCMFMAC_PCIE
+
+#ifdef CONFIG_BRCMFMAC_USB
     usb_protocol_t udev;
     result = device_get_protocol(device, ZX_PROTOCOL_USB, &udev);
     if (result == ZX_OK) {
@@ -1232,6 +1236,7 @@ zx_status_t brcmf_core_init(zx_device_t* device) {
         }
         return result;
     }
+#endif // CONFIG_BRCMFMAC_USB
     // TODO(cphoenix): Add SDIO when it's avaialble
     return ZX_ERR_INTERNAL;
 }

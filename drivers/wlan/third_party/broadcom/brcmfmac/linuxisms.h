@@ -26,6 +26,7 @@
 
 #include <ddk/debug.h>
 #include <ddk/device.h>
+#include <ddk/protocol/usb.h> // Remove when the USB structs move out
 #include <netinet/if_ether.h>
 #include <stdarg.h>
 #include <stdint.h>
@@ -37,11 +38,7 @@
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
 
-#include "device.h"
-
 // TODO(cphoenix): Clean up the list stuff
-// TODO(cphoenix): Replace other functions e.g. pci_write_config_dword() in code
-#define list_head list_node // for struct list_head
 #define INIT_LIST_HEAD(head) list_initialize(head)
 #define list_empty(list) list_is_empty(list)
 #define list_del(item) list_delete(item)
@@ -224,7 +221,6 @@ LINUX_FUNCVI(skb_queue_head_init)
 #define skb_queue_walk_safe(a, b, c) for((void)c, b=(a)->next;;)
 #define skb_queue_walk(a, b) for(b=(a)->next;;)
 LINUX_FUNCVV(netdev_priv)
-LINUX_FUNCVI(free_netdev)
 LINUX_FUNCcVI(is_zero_ether_addr)
 LINUX_FUNCII(trace_brcmf_sdpcm_hdr)
 LINUX_FUNCUU(cpu_to_be16)
@@ -264,11 +260,6 @@ LINUX_FUNCVI(sdio_disable_func)
 LINUX_FUNCX(wmb)
 LINUX_FUNCX(rmb)
 
-// TODO(cphoenix): Make sure we free everything we've gotten.
-static inline void release_firmware(const struct brcmf_firmware* firmware) {
-    return;
-}
-
 LINUX_FUNCII(enable_irq)
 LINUX_FUNCVV(wiphy_priv)
 LINUX_FUNCVS(wiphy_register)
@@ -299,7 +290,6 @@ static inline const char* dev_name(void* dev) {
     return device_get_name(dev);
 }
 LINUX_FUNCVI(init_waitqueue_head)
-LINUX_FUNCVI(device_release_driver)
 LINUX_FUNCVV(strnchr)
 LINUX_FUNCVI(request_firmware)
 #define module_param_string(a, b, c, d)
@@ -337,14 +327,6 @@ LINUX_FUNCcVI(pci_resource_len)
 LINUX_FUNCcVS(pci_register_driver)
 LINUX_FUNCcVI(pci_unregister_driver)
 
-// TODO(cphoenix): Check with cja@ for when we support power management.
-static inline bool pci_pme_capable(struct brcmf_pci_device* pdev, int level) {
-    return false;
-}
-static inline void device_wakeup_enable(struct brcmf_device* dev) {
-    return;
-}
-
 LINUX_FUNCVI(wake_up)
 LINUX_FUNCII(request_threaded_irq)
 LINUX_FUNCII(free_irq)
@@ -366,13 +348,10 @@ LINUX_FUNCVV(cfg80211_del_sta)
 LINUX_FUNCVV(cfg80211_ibss_joined)
 LINUX_FUNCVV(cfg80211_michael_mic_failure)
 LINUX_FUNCII(MBM_TO_DBM)
-LINUX_FUNCVI(SET_NETDEV_DEV)
-LINUX_FUNCVV(wiphy_dev)
 LINUX_FUNCX(cond_resched)
 LINUX_FUNCII(max)
 LINUX_FUNCVI(netdev_mc_count)
 LINUX_FUNCVI(netif_stop_queue)
-LINUX_FUNCVI(netif_wake_queue)
 LINUX_FUNCVI(dev_kfree_skb)
 LINUX_FUNCVV(skb_header_cloned)
 LINUX_FUNCUU(htons)
@@ -385,14 +364,11 @@ LINUX_FUNCVI(waitqueue_active)
 LINUX_FUNCVI(netif_carrier_off)
 LINUX_FUNCVI(dev_net_set)
 LINUX_FUNCVI(register_netdevice)
-LINUX_FUNCVI(unregister_netdevice)
 LINUX_FUNCVI(register_netdev)
-LINUX_FUNCVI(unregister_netdev)
 LINUX_FUNCVV(wiphy_net)
 LINUX_FUNCVI(netif_carrier_ok)
 LINUX_FUNCVI(netif_carrier_on)
 LINUX_FUNCVI(dev_kfree_skb_any)
-LINUX_FUNCIV(alloc_netdev)
 LINUX_FUNCVI(seq_printf)
 LINUX_FUNCVS(seq_write)
 LINUX_FUNCVI(netif_queue_stopped)
@@ -461,13 +437,8 @@ LINUX_FUNCVS(sdio_set_block_size)
 #define USB_DEVICE(a,b) .idVendor=a, .idProduct=b
 LINUX_FUNCVS(sdio_register_driver)
 LINUX_FUNCVV(sdio_unregister_driver)
-LINUX_FUNCVI(usb_set_intfdata)
-LINUX_FUNCVI(usb_endpoint_xfer_bulk)
-LINUX_FUNCVI(usb_endpoint_num)
 LINUX_FUNCVI(usb_rcvbulkpipe)
 LINUX_FUNCVI(usb_sndbulkpipe)
-LINUX_FUNCVV(usb_get_intfdata)
-LINUX_FUNCVI(usb_endpoint_dir_in)
 LINUX_FUNCVI(driver_for_each_device)
 LINUX_FUNCVI(usb_deregister)
 LINUX_FUNCVI(usb_register)
@@ -778,35 +749,6 @@ struct brcmfmac_pd_cc {
     struct brcmfmac_pd_cc_entry* table;
 };
 
-struct brcmfmac_pd_device {
-    uint32_t bus_type;
-    uint32_t id;
-    int rev;
-    struct brcmfmac_pd_cc country_codes[555];
-    struct {
-        void* sdio;
-    } bus;
-};
-
-struct brcmfmac_platform_data {
-    int (*power_on)();
-    int (*power_off)();
-    char* fw_alternative_path;
-    int device_count;
-    struct brcmfmac_pd_device devices[555];
-};
-
-struct platform_device {
-    struct brcmf_device dev;
-};
-
-struct platform_driver {
-    int (*remove)(struct platform_device* pdev);
-    struct {
-        char* name;
-    } driver;
-};
-
 struct net_device_ops { // Probably all return zx_status_t
     void* ndo_open;
     void* ndo_stop;
@@ -825,6 +767,7 @@ struct net_device {
     const struct ethtool_ops* ethtool_ops;
     void* dev_addr;
     void* name;
+    void* priv;
     uint8_t name_assign_type;
     uint32_t flags;
     struct {
@@ -841,7 +784,7 @@ struct net_device {
     uint32_t needed_headroom;
     void* priv_destructor;
     int reg_state;
-    int needs_free_netdev;
+    int needs_free_net_device;
 };
 
 void ether_setup(void);
@@ -929,6 +872,9 @@ struct wiphy {
     void (*reg_notifier)(struct wiphy*, struct regulatory_request*);
     uint32_t regulatory_flags;
     uint32_t features;
+    struct brcmf_cfg80211_info* priv_info;
+    struct cfg80211_ops* ops;
+    struct brcmf_device* dev;
 };
 
 struct vif_params {
@@ -940,6 +886,7 @@ struct wireless_dev {
     int iftype;
     void* address;
     struct wiphy* wiphy;
+    void* priv_info;
 };
 
 struct cfg80211_ssid {
@@ -1004,37 +951,10 @@ struct seq_file {
     void* private;
 };
 
-struct asdf {
-    int foo;
-};
-
-struct sdio_func {
-    uint32_t class;
-    uint32_t vendor;
-    int cur_blksize;
-    int enable_timeout;
-    int device;
-    struct brcmf_device dev;
-    int num;
-    struct {
-        struct mmc_host* host;
-        uint32_t quirks;
-        void** sdio_func;
-    } * card;
-};
-
 typedef uint64_t dma_addr_t;
 
 struct pci_device_id {
     int a, b, c, d, e, f, g;
-};
-
-struct pci_driver {
-    struct pci_device_id node;
-    char* name;
-    const void* id_table;
-    zx_status_t (*probe)(struct brcmf_pci_device* pdev, const struct pci_device_id* id);
-    void (*remove)(struct brcmf_pci_device* pdev);
 };
 
 struct ieee80211_regdomain {
@@ -1421,41 +1341,6 @@ struct mmc_host {
     int max_seg_size;
 };
 
-struct usb_interface_descriptor {
-    int bInterfaceClass;
-    int bInterfaceSubClass;
-    int bInterfaceProtocol;
-    int bInterfaceNumber;
-    int bNumEndpoints;
-};
-
-struct usb_endpoint_descriptor {
-    int foo;
-};
-
-struct usb_interface {
-    struct {
-        struct usb_interface_descriptor desc;
-        struct {
-            struct usb_endpoint_descriptor desc;
-        } * endpoint;
-    } * altsetting;
-};
-
-struct usb_device_id {
-    int idVendor;
-    int idProduct;
-};
-
-struct usb_device {
-    int speed;
-    struct brcmf_device dev;
-    struct {
-        int bNumConfigurations;
-        int bDeviceClass;
-    } descriptor;
-};
-
 struct sdio_device_id {
     int foo;
 };
@@ -1482,7 +1367,7 @@ struct usb_driver {
     void* resume;
     void* reset_resume;
     int disable_hub_initiated_lpm;
-    const struct usb_device_id* id_table;
+    const struct brcmf_usb_device_id* id_table;
     struct {
         struct device_driver driver;
     } drvwrap;

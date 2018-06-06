@@ -21,6 +21,7 @@
 #include <sync/completion.h>
 
 #include "core.h"
+#include "device.h"
 #include "fwil_types.h"
 #include "linuxisms.h"
 #include "workqueue.h"
@@ -155,8 +156,7 @@ struct brcmf_p2p_info {
 
 zx_status_t brcmf_p2p_attach(struct brcmf_cfg80211_info* cfg, bool p2pdev_forced);
 void brcmf_p2p_detach(struct brcmf_p2p_info* p2p);
-zx_status_t brcmf_p2p_add_vif(struct wiphy* wiphy, const char* name,
-                              unsigned char name_assign_type, enum nl80211_iftype type,
+zx_status_t brcmf_p2p_add_vif(struct wiphy* wiphy, const char* name, enum nl80211_iftype type,
                               struct vif_params* params, struct wireless_dev** vif_out);
 zx_status_t brcmf_p2p_del_vif(struct wiphy* wiphy, struct wireless_dev* wdev);
 zx_status_t brcmf_p2p_ifchange(struct brcmf_cfg80211_info* cfg, enum brcmf_fil_p2p_if_types if_type);

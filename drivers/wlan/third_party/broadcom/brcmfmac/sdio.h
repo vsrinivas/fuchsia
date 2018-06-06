@@ -169,6 +169,21 @@ struct brcmf_sdreg {
 struct brcmf_sdio;
 struct brcmf_sdiod_freezer;
 
+struct sdio_func {
+    uint32_t class;
+    uint32_t vendor;
+    int cur_blksize;
+    int enable_timeout;
+    int device;
+    struct brcmf_device dev;
+    int num;
+    struct {
+        struct mmc_host* host;
+        uint32_t quirks;
+        void** sdio_func;
+    } * card;
+};
+
 struct brcmf_sdio_dev {
     struct sdio_func* func1;
     struct sdio_func* func2;

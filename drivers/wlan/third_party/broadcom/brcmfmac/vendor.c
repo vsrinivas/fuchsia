@@ -72,7 +72,7 @@ static zx_status_t brcmf_cfg80211_vndr_cmds_dcmd_handler(struct wiphy* wiphy,
             ret_len = BRCMF_DCMD_MAXLEN;
         }
         payload = max(ret_len, len) + 1;
-        dcmd_buf = vzalloc(payload);
+        dcmd_buf = calloc(1, payload);
         if (NULL == dcmd_buf) {
             return ZX_ERR_NO_MEMORY;
         }
@@ -117,7 +117,7 @@ static zx_status_t brcmf_cfg80211_vndr_cmds_dcmd_handler(struct wiphy* wiphy,
     }
 
 exit:
-    vfree(dcmd_buf);
+    free(dcmd_buf);
 
     return ret;
 }

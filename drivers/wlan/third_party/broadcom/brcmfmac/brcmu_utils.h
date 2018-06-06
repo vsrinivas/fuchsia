@@ -185,6 +185,14 @@ static inline uint16_t brcmu_maskget16(uint16_t var, uint16_t mask, uint8_t shif
     return (var & mask) >> shift;
 }
 
+static inline void* brcmu_alloc_and_copy(const void* buf, size_t size) {
+    void* copy = malloc(size);
+    if (copy != NULL) {
+        memcpy(copy, buf, size);
+    }
+    return copy;
+}
+
 /* externs */
 /* format/print */
 #ifdef DEBUG

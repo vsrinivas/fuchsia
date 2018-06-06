@@ -67,7 +67,7 @@ uint32_t brcmf_flowring_lookup(struct brcmf_flowring* flow, uint8_t da[ETH_ALEN]
     fifo = brcmf_flowring_prio2fifo[prio];
     sta = (flow->addr_mode[ifidx] == ADDR_INDIRECT);
     mac = da;
-    if ((!sta) && (is_multicast_ether_addr(da))) {
+    if ((!sta) && (address_is_multicast(da))) {
         mac = (uint8_t*)ALLFFMAC;
         fifo = 0;
     }
@@ -109,7 +109,7 @@ zx_status_t brcmf_flowring_create(struct brcmf_flowring* flow, uint8_t da[ETH_AL
     fifo = brcmf_flowring_prio2fifo[prio];
     sta = (flow->addr_mode[ifidx] == ADDR_INDIRECT);
     mac = da;
-    if ((!sta) && (is_multicast_ether_addr(da))) {
+    if ((!sta) && (address_is_multicast(da))) {
         mac = (uint8_t*)ALLFFMAC;
         fifo = 0;
     }
@@ -123,7 +123,7 @@ zx_status_t brcmf_flowring_create(struct brcmf_flowring* flow, uint8_t da[ETH_AL
     hash = flow->hash;
     for (i = 0; i < BRCMF_FLOWRING_HASHSIZE; i++) {
         if ((hash[hash_idx].ifidx == BRCMF_FLOWRING_INVALID_IFIDX) &&
-                (is_zero_ether_addr(hash[hash_idx].mac))) {
+                (address_is_zero(hash[hash_idx].mac))) {
             found = true;
             break;
         }
@@ -140,7 +140,7 @@ zx_status_t brcmf_flowring_create(struct brcmf_flowring* flow, uint8_t da[ETH_AL
             return ZX_ERR_NO_MEMORY;
         }
 
-        ring = kzalloc(sizeof(*ring), GFP_ATOMIC);
+        ring = calloc(1, sizeof(*ring));
         if (!ring) {
             return ZX_ERR_NO_MEMORY;
         }
@@ -349,7 +349,7 @@ struct brcmf_flowring* brcmf_flowring_attach(struct brcmf_device* dev, uint16_t 
         for (i = 0; i < ARRAY_SIZE(flow->hash); i++) {
             flow->hash[i].ifidx = BRCMF_FLOWRING_INVALID_IFIDX;
         }
-        flow->rings = kcalloc(nrofrings, sizeof(*flow->rings), GFP_KERNEL);
+        flow->rings = calloc(nrofrings, sizeof(*flow->rings));
         if (!flow->rings) {
             free(flow);
             flow = NULL;
@@ -455,7 +455,7 @@ void brcmf_flowring_add_tdls_peer(struct brcmf_flowring* flow, int ifidx, uint8_
     struct brcmf_flowring_tdls_entry* tdls_entry;
     struct brcmf_flowring_tdls_entry* search;
 
-    tdls_entry = kzalloc(sizeof(*tdls_entry), GFP_ATOMIC);
+    tdls_entry = calloc(1, sizeof(*tdls_entry));
     if (tdls_entry == NULL) {
         return;
     }

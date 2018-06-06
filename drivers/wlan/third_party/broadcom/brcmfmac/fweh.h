@@ -24,6 +24,9 @@
 
 #include "linuxisms.h"
 
+#include <zircon/listnode.h>
+
+#include <endian.h>
 #include <string.h>
 
 #include "workqueue.h"
@@ -318,7 +321,7 @@ struct brcmf_fweh_info {
     bool p2pdev_setup_ongoing;
     struct work_struct event_work;
     //spinlock_t evt_q_lock;
-    struct list_head event_q;
+    struct list_node event_q;
     zx_status_t (*evt_handler[BRCMF_E_LAST])(struct brcmf_if* ifp,
                                              const struct brcmf_event_msg* evtmsg, void* data);
 };
@@ -342,18 +345,21 @@ static inline void brcmf_fweh_process_skb(struct brcmf_pub* drvr, struct sk_buff
     uint16_t usr_stype;
 
     /* only process events when protocol matches */
-    if (skb->protocol != cpu_to_be16(ETH_P_LINK_CTL)) { return; }
+    if (skb->protocol != htobe16(ETH_P_LINK_CTL)) { return; }
 
     if ((skb->len + ETH_HLEN) < sizeof(*event_packet)) { return; }
 
     /* check for BRCM oui match */
     event_packet = (struct brcmf_event*)skb_mac_header(skb);
-    if (memcmp(BRCM_OUI, &event_packet->hdr.oui[0], sizeof(event_packet->hdr.oui))) { return; }
+    if (memcmp(BRCM_OUI, &event_packet->hdr.oui[0], sizeof(event_packet->hdr.oui))) {
+        return;
+    }
 
     /* final match on usr_subtype */
-    usr_stype = get_unaligned_be16(&event_packet->hdr.usr_subtype);
-    if (usr_stype != BCMILCP_BCM_SUBTYPE_EVENT) { return; }
-
+    usr_stype = be16toh(event_packet->hdr.usr_subtype);
+    if (usr_stype != BCMILCP_BCM_SUBTYPE_EVENT) {
+        return;
+    }
     brcmf_fweh_process_event(drvr, event_packet, skb->len + ETH_HLEN);
 }
 

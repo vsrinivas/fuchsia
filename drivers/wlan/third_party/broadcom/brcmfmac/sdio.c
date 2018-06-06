@@ -37,6 +37,7 @@
 
 #include "sdio.h"
 
+#include <stdatomic.h>
 #include <sync/completion.h>
 #include <threads.h>
 
@@ -1618,7 +1619,7 @@ static void brcmf_sdio_read_control(struct brcmf_sdio* bus, uint8_t* hdr, uint l
     brcmf_dbg(TRACE, "Enter\n");
 
     if (bus->rxblen) {
-        buf = vzalloc(bus->rxblen);
+        buf = calloc(1, bus->rxblen);
     }
     if (!buf) {
         goto done;
@@ -1689,7 +1690,7 @@ gotpkt:
         brcmf_err("last control frame is being processed.\n");
         //spin_unlock_bh(&bus->rxctl_lock);
         pthread_mutex_unlock(&irq_callback_lock);
-        vfree(buf);
+        free(buf);
         goto done;
     }
     bus->rxctl = buf + doff;
@@ -2703,7 +2704,7 @@ static zx_status_t brcmf_sdio_readconsole(struct brcmf_sdio* bus) {
     /* Allocate console buffer (one time only) */
     if (c->buf == NULL) {
         c->bufsize = c->log_le.buf_size;
-        c->buf = kmalloc(c->bufsize, GFP_ATOMIC);
+        c->buf = malloc(c->bufsize);
         if (c->buf == NULL) {
             return ZX_ERR_NO_MEMORY;
         }
@@ -2842,7 +2843,7 @@ static zx_status_t brcmf_sdio_dump_console(struct seq_file* seq, struct brcmf_sd
 
     /* allocate buffer for console data */
     if (console_size <= CONSOLE_BUFFER_MAX) {
-        conbuf = vzalloc(console_size + 1);
+        conbuf = calloc(1, console_size + 1);
     }
 
     if (!conbuf) {
@@ -2866,7 +2867,7 @@ static zx_status_t brcmf_sdio_dump_console(struct seq_file* seq, struct brcmf_sd
     }
 
 done:
-    vfree(conbuf);
+    free(conbuf);
     return rv;
 }
 
@@ -3070,7 +3071,7 @@ static zx_status_t brcmf_sdio_bus_rxctl(struct brcmf_device* dev, unsigned char*
     bus->rxlen = 0;
     //spin_unlock_bh(&bus->rxctl_lock);
     pthread_mutex_unlock(&irq_callback_lock);
-    vfree(buf);
+    free(buf);
 
     if (rxlen) {
         brcmf_dbg(CTL, "resumed on rxctl frame, got %d expected %d\n", rxlen, msglen);
@@ -3111,7 +3112,7 @@ static bool brcmf_sdio_verifymemory(struct brcmf_sdio_dev* sdiodev, uint32_t ram
 
     /* read back and verify */
     brcmf_dbg(INFO, "Compare RAM dl & ul at 0x%08x; size=%d\n", ram_addr, ram_sz);
-    ram_cmp = kmalloc(MEMBLOCK, GFP_KERNEL);
+    ram_cmp = malloc(MEMBLOCK);
     /* do not proceed while no memory but  */
     if (!ram_cmp) {
         return true;
@@ -3195,7 +3196,6 @@ static zx_status_t brcmf_sdio_download_firmware(struct brcmf_sdio* bus,
     brcmf_dbg(SDIO, "firmware rstvec: %x\n", rstvec);
 
     bcmerror = brcmf_sdio_download_code_file(bus, fw);
-    release_firmware(fw);
     if (bcmerror != ZX_OK) {
         brcmf_err("dongle image file download failed\n");
         brcmf_fw_nvram_free(nvram);
@@ -3990,8 +3990,9 @@ release:
     sdio_release_host(sdiodev->func1);
 fail:
     brcmf_dbg(TRACE, "failed: dev=%s, err=%d\n", dev_name(dev), err);
-    device_release_driver(&sdiodev->func2->dev);
-    device_release_driver(dev);
+    brcmf_err("TODO(cphoenix): Used to call device_release_driver(&sdiodev->func2->dev);");
+    brcmf_err("TODO(cphoenix): Used to call device_release_driver(dev);");
+
 }
 
 struct brcmf_sdio* brcmf_sdio_probe(struct brcmf_sdio_dev* sdiodev) {
@@ -4002,7 +4003,7 @@ struct brcmf_sdio* brcmf_sdio_probe(struct brcmf_sdio_dev* sdiodev) {
     brcmf_dbg(TRACE, "Enter\n");
 
     /* Allocate private bus interface state */
-    bus = kzalloc(sizeof(struct brcmf_sdio), GFP_ATOMIC);
+    bus = calloc(1, sizeof(struct brcmf_sdio));
     if (!bus) {
         goto fail;
     }
@@ -4017,7 +4018,8 @@ struct brcmf_sdio* brcmf_sdio_probe(struct brcmf_sdio_dev* sdiodev) {
 
     /* single-threaded workqueue */
     char name[WORKQUEUE_NAME_MAXLEN];
-    snprintf(name, WORKQUEUE_NAME_MAXLEN, "brcmf_wq/%s", dev_name(&sdiodev->func1->dev));
+    static int queue_uniquify = 0;
+    snprintf(name, WORKQUEUE_NAME_MAXLEN, "brcmf_wq/%d", queue_uniquify++);
     wq = workqueue_create(name);
     if (!wq) {
         brcmf_err("insufficient memory to create txworkqueue\n");
@@ -4042,12 +4044,15 @@ struct brcmf_sdio* brcmf_sdio_probe(struct brcmf_sdio_dev* sdiodev) {
     brcmf_timer_init(&bus->timer, brcmf_sdio_watchdog);
     /* Initialize watchdog thread */
     bus->watchdog_wait = COMPLETION_INIT;
-    ret = kthread_run(brcmf_sdio_watchdog_thread, bus, "brcmf_wdog/%s",
-                      dev_name(&sdiodev->func1->dev), &bus->watchdog_tsk);
-    if (ret != ZX_OK) {
-        pr_warn("brcmf_watchdog thread failed to start\n");
-        bus->watchdog_tsk = NULL;
-    }
+    // Hack to make it compile - will be fixed when we support SDIO.
+    brcmf_err("TODO(cphoenix): ret = kthread_run(brcmf_sdio_watchdog_thread, ...");
+    (void)brcmf_sdio_watchdog_thread;
+//    ret = kthread_run(brcmf_sdio_watchdog_thread, bus, "brcmf_wdog/%s",
+//                      dev_name(&sdiodev->func1->dev), &bus->watchdog_tsk);
+//    if (ret != ZX_OK) {
+//        pr_warn("brcmf_watchdog thread failed to start\n");
+//        bus->watchdog_tsk = NULL;
+//    }
     /* Initialize DPC thread */
     bus->dpc_triggered = false;
     bus->dpc_running = false;
@@ -4077,7 +4082,7 @@ struct brcmf_sdio* brcmf_sdio_probe(struct brcmf_sdio_dev* sdiodev) {
         bus->sdiodev->bus_if->maxctl += bus->roundup;
         bus->rxblen =
             roundup((bus->sdiodev->bus_if->maxctl + SDPCM_HDRLEN), ALIGNMENT) + bus->head_align;
-        bus->rxbuf = kmalloc(bus->rxblen, GFP_ATOMIC);
+        bus->rxbuf = malloc(bus->rxblen);
         if (!(bus->rxbuf)) {
             brcmf_err("rxbuf allocation failed\n");
             goto fail;

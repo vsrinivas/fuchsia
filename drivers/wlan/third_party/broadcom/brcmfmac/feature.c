@@ -17,7 +17,7 @@
 //#include <linux/module.h>
 //#include <linux/netdevice.h>
 
-#include "linuxisms.h"
+#include <string.h>
 
 #include "brcm_hw_ids.h"
 #include "brcmu_wifi.h"
@@ -28,9 +28,7 @@
 #include "feature.h"
 #include "fwil.h"
 #include "fwil_types.h"
-
-// TODO(cphoenix): Figure out what this magic number was used for
-#define BRCMF_FW_UNSUPPORTED 23
+#include "linuxisms.h"
 
 /*
  * expand feature list to array of feature strings.
@@ -113,9 +111,17 @@ static void brcmf_feat_iovar_data_set(struct brcmf_if* ifp, enum brcmf_feat_id i
     zx_status_t err;
 
     err = brcmf_fil_iovar_data_set(ifp, name, data, len);
-    if (err == ZX_OK) { // TODO(cphoenix): was err != -BRCMF_FW_UNSUPPORTED
+    if (err == ZX_OK) {
         brcmf_dbg(INFO, "enabling feature: %s\n", brcmf_feat_names[id]);
         ifp->drvr->feat_flags |= BIT(id);
+    } else if (err == ZX_ERR_NOT_SUPPORTED) {
+        // brcmf_fil_iovar_data_set() returns the result of brcmf_fil_cmd_data, which returned
+        // -EBADE on any firmware error rather than passing the firmware error through. The
+        // original error check was "(err != -BRCMF_FW_UNSUPPORTED)" which meant that if the
+        // firmware reported BRCMF_FW_UNSUPPORTED, this logic would see -EBADE and think all
+        // was well.
+        brcmf_dbg(INFO, " * * NOT enabling feature %s, though the buggy Linux driver would have",
+            brcmf_feat_names[id]);
     } else {
         brcmf_dbg(TRACE, "%s feature check failed: %d\n", brcmf_feat_names[id], err);
     }
@@ -134,10 +140,11 @@ static void brcmf_feat_firmware_capabilities(struct brcmf_if* ifp) {
         return;
     }
 
+    caps[sizeof(caps)-1] = 0;
     brcmf_dbg(INFO, "[ %s]\n", caps);
 
     for (i = 0; i < (int)ARRAY_SIZE(brcmf_fwcap_map); i++) {
-        if (strnstr(caps, brcmf_fwcap_map[i].fwcap_id, sizeof(caps))) {
+        if (strstr(caps, brcmf_fwcap_map[i].fwcap_id)) {
             id = brcmf_fwcap_map[i].feature;
             brcmf_dbg(INFO, "enabling feature: %s\n", brcmf_feat_names[id]);
             ifp->drvr->feat_flags |= BIT(id);

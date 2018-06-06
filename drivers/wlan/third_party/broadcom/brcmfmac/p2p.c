@@ -450,7 +450,7 @@ static void brcmf_p2p_generate_bss_mac(struct brcmf_p2p_info* p2p, uint8_t* dev_
     struct brcmf_if* pri_ifp = p2p->bss_idx[P2PAPI_BSSCFG_PRIMARY].vif->ifp;
     bool local_admin = false;
 
-    if (!dev_addr || is_zero_ether_addr(dev_addr)) {
+    if (!dev_addr || address_is_zero(dev_addr)) {
         dev_addr = pri_ifp->mac_addr;
         local_admin = true;
     }
@@ -638,7 +638,7 @@ static zx_status_t brcmf_p2p_escan(struct brcmf_p2p_info* p2p, uint32_t num_chan
         /*
          * If we in SEARCH STATE, we don't need to set SSID explictly
          * because dongle use P2P WILDCARD internally by default, use
-         * null ssid, which it is already due to kzalloc.
+         * null ssid, which it is already due to calloc.
          */
         break;
     case WL_P2P_DISC_ST_SCAN:
@@ -668,7 +668,7 @@ static zx_status_t brcmf_p2p_escan(struct brcmf_p2p_info* p2p, uint32_t num_chan
     sparams->bss_type = DOT11_BSSTYPE_ANY;
     sparams->scan_type = BRCMF_SCANTYPE_ACTIVE;
 
-    eth_broadcast_addr(sparams->bssid);
+    fill_with_broadcast_addr(sparams->bssid);
     sparams->home_time = P2PAPI_SCAN_HOME_TIME_MS;
 
     /*
@@ -753,7 +753,7 @@ static zx_status_t brcmf_p2p_run_escan(struct brcmf_cfg80211_info* cfg, struct b
     }
 
     if (request->n_channels) {
-        chanspecs = kcalloc(request->n_channels, sizeof(*chanspecs), GFP_KERNEL);
+        chanspecs = calloc(request->n_channels, sizeof(*chanspecs));
         if (!chanspecs) {
             err = ZX_ERR_NO_MEMORY;
             goto exit;
@@ -1306,7 +1306,7 @@ zx_status_t brcmf_p2p_notify_action_frame_rx(struct brcmf_if* ifp, const struct 
         return ZX_OK;
     }
 
-    ch.chspec = be16_to_cpu(rxframe->chanspec);
+    ch.chspec = be16toh(rxframe->chanspec);
     cfg->d11inf.decchspec(&ch);
     /* Check if wpa_supplicant has registered for this frame */
     brcmf_dbg(INFO, "ifp->vif->mgmt_rx_reg %04x\n", ifp->vif->mgmt_rx_reg);
@@ -1568,7 +1568,7 @@ static zx_status_t brcmf_p2p_pub_af_tx(struct brcmf_cfg80211_info* cfg,
 bool brcmf_p2p_send_action_frame(struct brcmf_cfg80211_info* cfg, struct net_device* ndev,
                                  struct brcmf_fil_af_params_le* af_params) {
     struct brcmf_p2p_info* p2p = &cfg->p2p;
-    struct brcmf_if* ifp = netdev_priv(ndev);
+    struct brcmf_if* ifp = ndev_to_if(ndev);
     struct brcmf_fil_action_frame_le* action_frame;
     struct brcmf_config_af_params config_af_params;
     struct afx_hdl* afx_hdl = &p2p->afx_hdl;
@@ -1772,7 +1772,7 @@ zx_status_t brcmf_p2p_notify_rx_mgmt_p2p_probereq(struct brcmf_if* ifp,
         return ZX_OK;
     }
 
-    ch.chspec = be16_to_cpu(rxframe->chanspec);
+    ch.chspec = be16toh(rxframe->chanspec);
     cfg->d11inf.decchspec(&ch);
 
     if (brcmf_test_bit_in_array(BRCMF_P2P_STATUS_FINDING_COMMON_CHANNEL, &p2p->status) &&
@@ -1939,7 +1939,7 @@ static zx_status_t brcmf_p2p_request_p2p_if(struct brcmf_p2p_info* p2p, struct b
 static zx_status_t brcmf_p2p_disable_p2p_if(struct brcmf_cfg80211_vif* vif) {
     struct brcmf_cfg80211_info* cfg = wdev_to_cfg(&vif->wdev);
     struct net_device* pri_ndev = cfg_to_ndev(cfg);
-    struct brcmf_if* ifp = netdev_priv(pri_ndev);
+    struct brcmf_if* ifp = ndev_to_if(pri_ndev);
     uint8_t* addr = vif->wdev.netdev->dev_addr;
 
     return brcmf_fil_iovar_data_set(ifp, "p2p_ifdis", addr, ETH_ALEN);
@@ -1948,7 +1948,7 @@ static zx_status_t brcmf_p2p_disable_p2p_if(struct brcmf_cfg80211_vif* vif) {
 static zx_status_t brcmf_p2p_release_p2p_if(struct brcmf_cfg80211_vif* vif) {
     struct brcmf_cfg80211_info* cfg = wdev_to_cfg(&vif->wdev);
     struct net_device* pri_ndev = cfg_to_ndev(cfg);
-    struct brcmf_if* ifp = netdev_priv(pri_ndev);
+    struct brcmf_if* ifp = ndev_to_if(pri_ndev);
     uint8_t* addr = vif->wdev.netdev->dev_addr;
 
     return brcmf_fil_iovar_data_set(ifp, "p2p_ifdel", addr, ETH_ALEN);
@@ -2044,15 +2044,13 @@ fail:
  *
  * @wiphy: wiphy device of new interface.
  * @name: name of the new interface.
- * @name_assign_type: origin of the interface name
  * @type: nl80211 interface type.
  * @params: contains mac address for P2P device.
  */
-zx_status_t brcmf_p2p_add_vif(struct wiphy* wiphy, const char* name,
-                              unsigned char name_assign_type, enum nl80211_iftype type,
+zx_status_t brcmf_p2p_add_vif(struct wiphy* wiphy, const char* name, enum nl80211_iftype type,
                               struct vif_params* params, struct wireless_dev** vif_out) {
     struct brcmf_cfg80211_info* cfg = wiphy_to_cfg(wiphy);
-    struct brcmf_if* ifp = netdev_priv(cfg_to_ndev(cfg));
+    struct brcmf_if* ifp = ndev_to_if(cfg_to_ndev(cfg));
     struct brcmf_cfg80211_vif* vif;
     enum brcmf_fil_p2p_if_types iftype;
     zx_status_t err;
@@ -2111,11 +2109,10 @@ zx_status_t brcmf_p2p_add_vif(struct wiphy* wiphy, const char* name,
     }
 
     strncpy(ifp->ndev->name, name, sizeof(ifp->ndev->name) - 1);
-    ifp->ndev->name_assign_type = name_assign_type;
     err = brcmf_net_attach(ifp, true);
     if (err != ZX_OK) {
         brcmf_err("Registering netdevice failed\n");
-        free_netdev(ifp->ndev);
+        brcmf_free_net_device(ifp->ndev);
         goto fail;
     }
 
@@ -2143,7 +2140,7 @@ fail:
  * @wdev: wireless device of interface.
  */
 zx_status_t brcmf_p2p_del_vif(struct wiphy* wiphy, struct wireless_dev* wdev) {
-    struct brcmf_cfg80211_info* cfg = wiphy_priv(wiphy);
+    struct brcmf_cfg80211_info* cfg = wiphy_to_cfg(wiphy);
     struct brcmf_p2p_info* p2p = &cfg->p2p;
     struct brcmf_cfg80211_vif* vif;
     enum nl80211_iftype iftype;

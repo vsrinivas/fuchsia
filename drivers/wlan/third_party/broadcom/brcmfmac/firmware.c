@@ -474,7 +474,6 @@ static zx_status_t brcmf_fw_request_nvram_done(const struct brcmf_firmware* fw, 
     if (raw_nvram) {
         bcm47xx_nvram_release_contents(data);
     }
-    release_firmware(fw);
     if (!nvram && !(fwctx->flags & BRCMF_FW_REQ_NV_OPTIONAL)) {
         goto fail;
     }
@@ -485,7 +484,6 @@ static zx_status_t brcmf_fw_request_nvram_done(const struct brcmf_firmware* fw, 
 
 fail:
     brcmf_dbg(TRACE, "failed: dev=%s\n", dev_name(fwctx->dev));
-    release_firmware(fwctx->code);
     fwctx->done(fwctx->dev, ZX_ERR_NOT_FOUND, NULL, NULL, 0);
     free(fwctx);
     return ZX_ERR_NO_RESOURCES;
