@@ -194,3 +194,7 @@ func (c *ControlSrvr) Bind(ch zx.Channel) error {
 	_, err := c.bs.Add(&s, ch, nil)
 	return err
 }
+
+func (c *ControlSrvr) Login(srcId string) (*amber.DeviceCode, error) {
+	return c.daemon.Login(srcId)
+}

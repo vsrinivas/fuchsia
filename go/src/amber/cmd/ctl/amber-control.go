@@ -253,6 +253,12 @@ func main() {
 		doTest(proxy)
 	case "system_update":
 		proxy.CheckForSystemUpdate()
+	case "login":
+		device, err := proxy.Login(*name)
+		if err != nil {
+			log.Fatalf("failed to login: %s", err)
+		}
+		fmt.Printf("On your computer go to:\n\n\t%v\n\nand enter\n\n\t%v\n\n", device.VerificationUrl, device.UserCode)
 	default:
 		fmt.Printf("Error, %q is not a recognized command\n%s",
 			os.Args[1], usage)

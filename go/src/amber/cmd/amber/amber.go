@@ -83,7 +83,7 @@ func main() {
 	if !storeExists {
 		log.Printf("initializing store: %s", *store)
 
-		if err := addDefaultSources(d, defaultSourceDir); err != nil {
+		if err := addDefaultSourceConfigs(d, defaultSourceDir); err != nil {
 			log.Fatalf("failed to register default sources: %s", err)
 		}
 	}
@@ -106,7 +106,7 @@ func main() {
 //     $dir/source1/config.json
 //     $dir/source2/config.json
 //     ...
-func addDefaultSources(d *daemon.Daemon, dir string) error {
+func addDefaultSourceConfigs(d *daemon.Daemon, dir string) error {
 	files, err := ioutil.ReadDir(dir)
 	if err != nil {
 		return err

@@ -4,6 +4,23 @@
 
 library amber;
 
+struct OAuth2Config {
+  string clientId;
+
+  string clientSecret = "";
+
+  string authUrl;
+  string tokenUrl;
+  vector<string> scopes;
+  string deviceCodeUrl;
+};
+
+struct DeviceCode {
+  string userCode;
+  string verificationUrl;
+  int64 expiresIn;
+};
+
 struct KeyConfig {
   // Supported TUF key types. The only supported algorithm is ed25519.
   string type;
@@ -33,6 +50,8 @@ struct SourceConfig {
   // A vector of public keys. These keys must match one of the trusted keys
   // known to the system.
   vector<KeyConfig> rootKeys;
+
+  OAuth2Config? oauth2Config;
 };
 
 
@@ -71,4 +90,8 @@ interface Control {
   9: GetUpdateComplete(string name, string? version, string? merkle) -> (handle<channel> rplyChan);
 
   10: CheckForSystemUpdate() -> (bool res);
+
+  // Log into the source specified by the source id. Returns the oauth2 device
+  // flow code if the source is configured for authentication, or null if not.
+  11: Login(string sourceId) -> (DeviceCode? device);
 };

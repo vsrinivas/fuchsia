@@ -55,4 +55,8 @@ type Source interface {
 	Equals(s Source) bool
 
 	Save() error
+
+	// Log into the TUF remote server and return the oauth2 device flow
+	// code to complete the authentication process.
+	Login() (*amber.DeviceCode, error)
 }

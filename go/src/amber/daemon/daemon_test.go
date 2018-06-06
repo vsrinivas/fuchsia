@@ -50,6 +50,10 @@ func (t *testSrc) GetConfig() *amber.SourceConfig {
 	return nil
 }
 
+func (t *testSrc) Login() (*amber.DeviceCode, error) {
+	return nil, fmt.Errorf("Login() is not implemented")
+}
+
 func (t *testSrc) AvailableUpdates(pkgs []*pkg.Package) (map[pkg.Package]pkg.Package, error) {
 	t.mu.Lock()
 	time.Sleep(t.replyDelay)

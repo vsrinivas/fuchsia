@@ -178,6 +178,20 @@ func (d *Daemon) AddTUFSource(cfg *amber.SourceConfig) error {
 	return nil
 }
 
+func (d *Daemon) Login(srcId string) (*amber.DeviceCode, error) {
+	log.Printf("logging into %s", srcId)
+	d.muSrcs.Lock()
+	src, ok := d.srcs[srcId]
+	d.muSrcs.Unlock()
+
+	if !ok {
+		log.Printf("unknown source id: %v", srcId)
+		return nil, fmt.Errorf("unknown source: %v", srcId)
+	}
+
+	return src.Login()
+}
+
 func (d *Daemon) blobRepos() []BlobRepo {
 	d.muRepos.Lock()
 	defer d.muRepos.Unlock()

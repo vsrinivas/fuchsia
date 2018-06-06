@@ -45,6 +45,10 @@ func (k *SourceKeeper) GetConfig() *amber.SourceConfig {
 	return k.src.GetConfig()
 }
 
+func (k *SourceKeeper) Login() (*amber.DeviceCode, error) {
+	return k.src.Login()
+}
+
 func (k *SourceKeeper) AvailableUpdates(pkgs []*pkg.Package) (map[pkg.Package]pkg.Package, error) {
 	k.mu.Lock()
 	defer k.mu.Unlock()

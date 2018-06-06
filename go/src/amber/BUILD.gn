@@ -41,6 +41,18 @@ common_dependencies = [
     package = "github.com/golang/snappy"
     source = "//third_party/golibs/github.com/golang/snappy"
   },
+  {
+    package = "golang.org/x/net"
+    source = "//third_party/golibs/golang.org/x/net"
+  },
+  {
+    package = "golang.org/x/oauth2"
+    source = "//third_party/golibs/golang.org/x/oauth2"
+  },
+  {
+    package = "github.com/rjw57/oauth2device"
+    source = "//third_party/golibs/github.com/rjw57/oauth2device"
+  },
 ]
 
 amber_target_binaries = [
