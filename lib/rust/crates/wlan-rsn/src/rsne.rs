@@ -42,6 +42,40 @@ pub struct Rsne {
 }
 
 impl Rsne {
+    pub fn len(&self) -> usize {
+        let mut length: usize = 4;
+        match self.group_data_cipher_suite.as_ref() {
+            None => return length,
+            Some(cipher) => length += 4,
+        };
+
+        if self.pairwise_cipher_suites.is_empty() {
+            return length;
+        }
+        length += 2 + 4 * self.pairwise_cipher_suites.len();
+
+        if self.akm_suites.is_empty() {
+            return length;
+        }
+        length += 2 + 4 * self.akm_suites.len();
+
+        match self.rsn_capabilities.as_ref() {
+            None => return length,
+            Some(caps) => length += 2,
+        };
+
+        if self.pmkids.is_empty() {
+            return length;
+        }
+        length += 2 + 16 * self.pmkids.len();
+
+        length += match self.group_mgmt_cipher_suite.as_ref() {
+            None => 0,
+            Some(cipher) => 4,
+        };
+        length
+    }
+
     pub fn as_bytes(&self, buf: &mut BytesMut) -> Result<(), Error> {
         check_remaining!(4, buf.remaining_mut());
         buf.put_u8(self.element_id);

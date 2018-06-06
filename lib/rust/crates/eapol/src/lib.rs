@@ -151,9 +151,15 @@ impl KeyFrame {
         buf.put_slice(&self.key_data[..]);
         Ok(())
     }
+
+    pub fn update_packet_body_len(&mut self) {
+        // Minimum length of an EAPOL Key frame without its dynamic MIC and Key Data field.
+        let min_len = 79;
+        self.packet_body_len = min_len + self.key_mic.len() as u16 + self.key_data_len;
+    }
 }
 
-fn to_array<A>(slice: &[u8]) -> A
+pub fn to_array<A>(slice: &[u8]) -> A
     where
         A: Sized + Default + AsMut<[u8]>,
 {

@@ -7,8 +7,8 @@ mod supplicant;
 
 use self::authenticator::Authenticator;
 use self::supplicant::Supplicant;
-use Error;
 use akm::Akm;
+use bytes::BytesMut;
 use cipher::{Cipher, GROUP_CIPHER_SUITE, TKIP};
 use eapol;
 use failure;
@@ -18,7 +18,7 @@ use key::ptk::Ptk;
 use rsna::{Role, SecAssocResult, SecAssocUpdate};
 use rsne::Rsne;
 use std::rc::Rc;
-use bytes::BytesMut;
+use Error;
 
 enum RoleHandler {
     Authenticator(Authenticator),
@@ -44,12 +44,22 @@ pub struct Config {
 
 impl Config {
     pub fn new(
-        role: Role, s_addr: [u8; 6], s_rsne: Rsne, a_addr: [u8; 6], a_rsne: Rsne
+        role: Role,
+        s_addr: [u8; 6],
+        s_rsne: Rsne,
+        a_addr: [u8; 6],
+        a_rsne: Rsne,
     ) -> Result<Config, failure::Error> {
         // TODO(hahnr): Validate configuration for:
         // (1) Correct RSNE subset
         // (2) Correct AKM and Cipher Suite configuration
-        Ok(Config { role, s_addr, s_rsne, a_addr, a_rsne })
+        Ok(Config {
+            role,
+            s_addr,
+            s_rsne,
+            a_addr,
+            a_rsne,
+        })
     }
 }
 

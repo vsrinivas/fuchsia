@@ -2,26 +2,35 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use Error;
+use akm::Akm;
+use bytes::Bytes;
+use bytes::BytesMut;
 use crypto_utils::nonce::NonceReader;
 use eapol;
 use failure;
-use key::exchange::Key;
+use integrity;
 use key::exchange::handshake::fourway;
+use key::exchange::Key;
 use key::gtk::Gtk;
 use key::ptk::Ptk;
-use rsna::{SecAssocResult, SecAssocUpdate};
-use std::rc::Rc;
 use key_data;
+use rsna::{SecAssocResult, SecAssocUpdate};
 use rsne::Rsne;
+use std::rc::Rc;
+use Error;
 
 #[derive(Default)]
 struct PtkInitState {}
 struct GtkInitState {}
 
 impl PtkInitState {
+
+    // IEEE Std 802.1X-2010, 12.7.6.2
     fn on_message_1(
-        &self, shared: &mut SharedState, msg1: &eapol::KeyFrame, _plain_data: &[u8]
+        &self,
+        shared: &mut SharedState,
+        msg1: &eapol::KeyFrame,
+        _plain_data: &[u8],
     ) -> Result<(eapol::KeyFrame, Ptk), failure::Error> {
         let anonce = &msg1.key_nonce;
         let snonce = shared.nonce_rdr.next();
@@ -38,34 +47,72 @@ impl PtkInitState {
             akm,
             cipher,
         )?;
-
-        let msg2 = self.create_message_2(msg1, &snonce[..])?;
-
         shared.anonce.copy_from_slice(&anonce[..]);
         shared.kek = ptk.kek().to_vec();
         shared.kck = ptk.kck().to_vec();
 
+        let msg2 = self.create_message_2(shared, msg1, &snonce[..])?;
+
         Ok((msg2, ptk))
     }
 
+
+    // IEEE Std 802.1X-2010, 12.7.6.3
     fn create_message_2(
-        &self, _msg1: &eapol::KeyFrame, _snonce: &[u8]
+        &self,
+        shared: &SharedState,
+        msg1: &eapol::KeyFrame,
+        snonce: &[u8],
     ) -> Result<eapol::KeyFrame, failure::Error> {
-        // TODO(hahnr): Implement.
-        unimplemented!()
+        let mut key_info = eapol::KeyInformation(0);
+        key_info.set_key_descriptor_version(msg1.key_info.key_descriptor_version());
+        key_info.set_key_type(msg1.key_info.key_type());
+        key_info.set_key_mic(true);
+
+        let mut key_data = BytesMut::with_capacity(shared.cfg.a_rsne.len());
+        shared.cfg.a_rsne.as_bytes(&mut key_data)?;
+
+        let mut msg2 = eapol::KeyFrame {
+            version: eapol::ProtocolVersion::Ieee802dot1x2010 as u8,
+            packet_type: eapol::PacketType::Key as u8,
+            packet_body_len: 0, // Updated afterwards
+            descriptor_type: eapol::KeyDescriptor::Ieee802dot11 as u8,
+            key_info: key_info,
+            key_len: 0,
+            key_replay_counter: msg1.key_replay_counter,
+            key_mic: Bytes::from(vec![0u8; msg1.key_mic.len()]),
+            key_rsc: 0,
+            key_iv: [0u8; 16],
+            key_nonce: eapol::to_array(snonce),
+            key_data_len: key_data.len() as u16,
+            key_data: key_data.freeze(),
+        };
+        msg2.update_packet_body_len();
+
+        // Verified before that Supplicant's RSNE holds one AKM Suite.
+        let akm = &shared.cfg.s_rsne.akm_suites[0];
+        let integrity_alg = akm.integrity_algorithm().ok_or(Error::UnsupportedAkmSuite)?;
+        update_mic(&shared.kck[..], integrity_alg, &mut msg2)?;
+
+        Ok(msg2)
     }
 }
 
 impl GtkInitState {
+
+    // IEEE Std 802.1X-2010, 12.7.6.4
     fn on_message_3(
-        &self, shared: &mut SharedState, msg3: &eapol::KeyFrame, _plain_data: &[u8]
+        &self,
+        shared: &mut SharedState,
+        msg3: &eapol::KeyFrame,
+        plain_data: &[u8],
     ) -> Result<(eapol::KeyFrame, Gtk), failure::Error> {
         shared.key_replay_counter = msg3.key_replay_counter;
 
         let mut gtk: Option<key_data::kde::Gtk> = None;
         let mut rsne: Option<Rsne> = None;
         let mut _second_rsne: Option<Rsne> = None;
-        let elements = key_data::extract_elements(&msg3.key_data[..])?;
+        let elements = key_data::extract_elements(plain_data)?;
         for ele in elements {
             match (ele, rsne.as_ref()) {
                 (key_data::Element::Gtk(_, e), _) => gtk = Some(e),
@@ -75,23 +122,56 @@ impl GtkInitState {
             }
         }
 
-        // Proceed if key data held a GTK and RSNE.
+        // Proceed if key data held a GTK and RSNE and RSNE is the Authenticator's announced one.
         match (gtk, rsne) {
             (Some(gtk), Some(rsne)) => {
                 if &rsne == &shared.cfg.a_rsne {
-                    let msg4 = self.create_message_4(msg3)?;
+                    let msg4 = self.create_message_4(shared, msg3)?;
                     Ok((msg4, Gtk::from_gtk(gtk.gtk)))
                 } else {
                     Err(Error::InvalidKeyDataRsne.into())
                 }
-            },
-            _ => Err(Error::InvalidKeyDataContent.into())
+            }
+            _ => Err(Error::InvalidKeyDataContent.into()),
         }
     }
 
-    fn create_message_4(&self, _msg3: &eapol::KeyFrame) -> Result<eapol::KeyFrame, failure::Error> {
-        // TODO(hahnr): Implement.
-        unimplemented!()
+
+    // IEEE Std 802.1X-2010, 12.7.6.5
+    fn create_message_4(
+        &self,
+        shared: &SharedState,
+        msg3: &eapol::KeyFrame,
+    ) -> Result<eapol::KeyFrame, failure::Error> {
+        let mut key_info = eapol::KeyInformation(0);
+        key_info.set_key_descriptor_version(msg3.key_info.key_descriptor_version());
+        key_info.set_key_type(msg3.key_info.key_type());
+        key_info.set_key_mic(true);
+        key_info.set_secure(true);
+
+        let mut msg4 = eapol::KeyFrame {
+            version: eapol::ProtocolVersion::Ieee802dot1x2010 as u8,
+            packet_type: eapol::PacketType::Key as u8,
+            packet_body_len: 0, // Updated afterwards
+            descriptor_type: eapol::KeyDescriptor::Ieee802dot11 as u8,
+            key_info: key_info,
+            key_len: 0,
+            key_replay_counter: msg3.key_replay_counter,
+            key_mic: Bytes::from(vec![0u8; msg3.key_mic.len()]),
+            key_rsc: 0,
+            key_iv: [0u8; 16],
+            key_nonce: [0u8; 32],
+            key_data_len: 0,
+            key_data: Bytes::from(vec![]),
+        };
+        msg4.update_packet_body_len();
+
+        // Verified before that Supplicant's RSNE holds one AKM Suite.
+        let akm = &shared.cfg.s_rsne.akm_suites[0];
+        let integrity_alg = akm.integrity_algorithm().ok_or(Error::UnsupportedAkmSuite)?;
+        update_mic(&shared.kck[..], integrity_alg, &mut msg4)?;
+
+        Ok(msg4)
     }
 }
 
@@ -103,7 +183,10 @@ enum State {
 
 impl State {
     pub fn on_eapol_key_frame(
-        &mut self, shared: &mut SharedState, frame: &eapol::KeyFrame, plain_data: &[u8]
+        &mut self,
+        shared: &mut SharedState,
+        frame: &eapol::KeyFrame,
+        plain_data: &[u8],
     ) -> SecAssocResult {
         match fourway::message_number(frame) {
             // Only process first and third message of the Handshake.
@@ -115,7 +198,10 @@ impl State {
     }
 
     fn on_message_1(
-        &mut self, shared: &mut SharedState, msg1: &eapol::KeyFrame, plain_data: &[u8]
+        &mut self,
+        shared: &mut SharedState,
+        msg1: &eapol::KeyFrame,
+        plain_data: &[u8],
     ) -> SecAssocResult {
         // Always reset Handshake when first message was received.
         match self {
@@ -145,7 +231,10 @@ impl State {
     }
 
     fn on_message_3(
-        &mut self, shared: &mut SharedState, msg3: &eapol::KeyFrame, plain_data: &[u8]
+        &mut self,
+        shared: &mut SharedState,
+        msg3: &eapol::KeyFrame,
+        plain_data: &[u8],
     ) -> SecAssocResult {
         // Third message of Handshake is only processed once to prevent replay attacks such as
         // KRACK. A replayed third message will be dropped and has no effect on the Supplicant.
@@ -210,9 +299,25 @@ impl Supplicant {
     }
 
     pub fn on_eapol_key_frame(
-        &mut self, frame: &eapol::KeyFrame, plain_data: &[u8]
+        &mut self,
+        frame: &eapol::KeyFrame,
+        plain_data: &[u8],
     ) -> SecAssocResult {
         self.state
             .on_eapol_key_frame(&mut self.shared, frame, plain_data)
     }
+}
+
+fn update_mic(
+    kck: &[u8],
+    alg: Box<integrity::Algorithm>,
+    frame: &mut eapol::KeyFrame,
+) -> Result<(), failure::Error> {
+    let mut buf = BytesMut::with_capacity(frame.len());
+    frame.as_bytes(true, &mut buf)?;
+    let written = buf.len();
+    buf.truncate(written);
+    let mic = alg.compute(kck, &buf[..])?;
+    frame.key_mic = Bytes::from(mic);
+    Ok(())
 }
