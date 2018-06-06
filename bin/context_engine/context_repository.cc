@@ -15,7 +15,6 @@
 #include "peridot/lib/rapidjson/rapidjson.h"
 #include "rapidjson/document.h"
 
-namespace fuchsia {
 namespace modular {
 
 ContextGraph::ContextGraph() = default;
@@ -101,8 +100,9 @@ ContextRepository::Id CreateSubscriptionId() {
   return std::to_string(next_id++);
 }
 
-void LogInvalidAncestorMetadata(const ContextMetadata& from,
-                                ContextMetadata* to, const char* type) {
+void LogInvalidAncestorMetadata(const fuchsia::modular::ContextMetadata& from,
+                                fuchsia::modular::ContextMetadata* to,
+                                const char* type) {
   FXL_LOG(WARNING) << "Context value and ancestor both have metadata type ("
                    << type
                    << "), which is not allowed. Ignoring value metadata.";
@@ -110,7 +110,8 @@ void LogInvalidAncestorMetadata(const ContextMetadata& from,
   FXL_LOG(WARNING) << "Ancestor metadata: " << from;
 }
 
-void MergeMetadata(const ContextMetadata& from, ContextMetadata* to) {
+void MergeMetadata(const fuchsia::modular::ContextMetadata& from,
+                   fuchsia::modular::ContextMetadata* to) {
 #define MERGE(type)                                \
   if (from.type) {                                 \
     if (to->type) {                                \
@@ -139,17 +140,19 @@ bool ContextRepository::Contains(const Id& id) const {
   return values_.find(id) != values_.end();
 }
 
-ContextRepository::Id ContextRepository::Add(const Id& parent_id,
-                                             ContextValue value) {
+ContextRepository::Id ContextRepository::Add(
+    const Id& parent_id, fuchsia::modular::ContextValue value) {
   FXL_DCHECK(values_.find(parent_id) != values_.end()) << parent_id;
   return AddInternal(parent_id, std::move(value));
 }
 
-ContextRepository::Id ContextRepository::Add(ContextValue value) {
+ContextRepository::Id ContextRepository::Add(
+    fuchsia::modular::ContextValue value) {
   return AddInternal("", std::move(value));
 }
 
-void ContextRepository::Update(const Id& id, ContextValue value) {
+void ContextRepository::Update(const Id& id,
+                               fuchsia::modular::ContextValue value) {
   // TODO(thatguy): Short-circuit if |value| isn't changing anything to avoid
   // spurious update computation.
 
@@ -172,8 +175,8 @@ void ContextRepository::Update(const Id& id, ContextValue value) {
   debug_->OnValueChanged(graph_.GetParents(id), id, it->second.value);
 }
 
-ContextRepository::Id ContextRepository::AddInternal(const Id& parent_id,
-                                                     ContextValue value) {
+ContextRepository::Id ContextRepository::AddInternal(
+    const Id& parent_id, fuchsia::modular::ContextValue value) {
   const auto new_id = CreateValueId();
 
   // Add the new value to |values_|.
@@ -224,35 +227,38 @@ void ContextRepository::Remove(const Id& id) {
   ReindexAndNotify(std::move(update));
 }
 
-ContextValuePtr ContextRepository::Get(const Id& id) const {
+fuchsia::modular::ContextValuePtr ContextRepository::Get(const Id& id) const {
   auto it = values_.find(id);
   if (it == values_.end())
-    return ContextValuePtr();
+    return fuchsia::modular::ContextValuePtr();
 
-  ContextValue value;
+  fuchsia::modular::ContextValue value;
   fidl::Clone(it->second.value, &value);
   return fidl::MakeOptional(std::move(value));
 }
 
-ContextValuePtr ContextRepository::GetMerged(const Id& id) const {
+fuchsia::modular::ContextValuePtr ContextRepository::GetMerged(
+    const Id& id) const {
   auto it = values_.find(id);
   if (it == values_.end())
-    return ContextValuePtr();
+    return fuchsia::modular::ContextValuePtr();
 
-  ContextValue merged_value;
+  fuchsia::modular::ContextValue merged_value;
   fidl::Clone(it->second.value, &merged_value);
   // Copy the merged metadata (includes ancestor metadata).
   fidl::Clone(it->second.merged_metadata, &merged_value.meta);
   return fidl::MakeOptional(std::move(merged_value));
 }
 
-ContextUpdate ContextRepository::Query(const ContextQuery& query) {
+fuchsia::modular::ContextUpdate ContextRepository::Query(
+    const fuchsia::modular::ContextQuery& query) {
   return QueryInternal(query).first;
 }
 
 ContextRepository::Id ContextRepository::AddSubscription(
-    ContextQuery query, ContextListener* const listener,
-    SubscriptionDebugInfo debug_info) {
+    fuchsia::modular::ContextQuery query,
+    fuchsia::modular::ContextListener* const listener,
+    fuchsia::modular::SubscriptionDebugInfo debug_info) {
   // Add the subscription to our list.
   Subscription subscription;
   subscription.query = std::move(query);
@@ -271,9 +277,10 @@ ContextRepository::Id ContextRepository::AddSubscription(
   return id;
 }
 
-void ContextRepository::AddSubscription(ContextQuery query,
-                                        ContextListenerPtr listener,
-                                        SubscriptionDebugInfo debug_info) {
+void ContextRepository::AddSubscription(
+    fuchsia::modular::ContextQuery query,
+    fuchsia::modular::ContextListenerPtr listener,
+    fuchsia::modular::SubscriptionDebugInfo debug_info) {
   auto id =
       AddSubscription(std::move(query), listener.get(), std::move(debug_info));
   listener.set_error_handler([this, id] { RemoveSubscription(id); });
@@ -284,7 +291,7 @@ void ContextRepository::AddSubscription(ContextQuery query,
 ContextDebugImpl* ContextRepository::debug() { return debug_.get(); }
 
 void ContextRepository::AddDebugBinding(
-    fidl::InterfaceRequest<ContextDebug> request) {
+    fidl::InterfaceRequest<fuchsia::modular::ContextDebug> request) {
   debug_bindings_.AddBinding(debug_.get(), std::move(request));
 }
 
@@ -296,20 +303,21 @@ void ContextRepository::RemoveSubscription(Id id) {
   debug_->OnSubscriptionRemoved(id);
 }
 
-std::pair<ContextUpdate, ContextRepository::IdAndVersionSet>
-ContextRepository::QueryInternal(const ContextQuery& query) {
+std::pair<fuchsia::modular::ContextUpdate, ContextRepository::IdAndVersionSet>
+ContextRepository::QueryInternal(const fuchsia::modular::ContextQuery& query) {
   // For each entry in |query->selector|, query the index for matching values.
   IdAndVersionSet matching_id_version;
-  ContextUpdate update;
+  fuchsia::modular::ContextUpdate update;
   for (const auto& entry : *query.selector) {
     const auto& key = entry.key;
     const auto& selector = entry.value;
 
     std::set<ContextIndex::Id> values = Select(selector);
 
-    ContextUpdateEntry update_entry;
+    fuchsia::modular::ContextUpdateEntry update_entry;
     update_entry.key = key;
-    update_entry.value = fidl::VectorPtr<ContextValue>::New(0);
+    update_entry.value =
+        fidl::VectorPtr<fuchsia::modular::ContextValue>::New(0);
     update.values.push_back(std::move(update_entry));
     for (const auto& id : values) {
       auto it = values_.find(id);
@@ -327,7 +335,7 @@ ContextRepository::QueryInternal(const ContextQuery& query) {
 
 void ContextRepository::QueryAndMaybeNotify(Subscription* const subscription,
                                             bool force) {
-  std::pair<ContextUpdate, IdAndVersionSet> result =
+  std::pair<fuchsia::modular::ContextUpdate, IdAndVersionSet> result =
       QueryInternal(subscription->query);
   if (!force) {
     // Check if this update contains any new values.
@@ -369,7 +377,7 @@ void ContextRepository::ReindexAndNotify(
 }
 
 void ContextRepository::RecomputeMergedMetadata(ValueInternal* const value) {
-  value->merged_metadata = ContextMetadata();
+  value->merged_metadata = fuchsia::modular::ContextMetadata();
   // It doesn't matter what order we merge the ancestor values, because there
   // should always only be one of each type, and thus no collisions.
   std::vector<Id> ancestors = graph_.GetAncestors(value->id);
@@ -383,11 +391,10 @@ void ContextRepository::RecomputeMergedMetadata(ValueInternal* const value) {
 }
 
 std::set<ContextRepository::Id> ContextRepository::Select(
-    const ContextSelector& selector) {
+    const fuchsia::modular::ContextSelector& selector) {
   std::set<ContextIndex::Id> values;
   index_.Query(selector.type, selector.meta, &values);
   return values;
 }
 
 }  // namespace modular
-}  // namespace fuchsia

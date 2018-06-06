@@ -11,7 +11,6 @@
 #include "peridot/lib/ledger_client/page_client.h"
 #include "peridot/lib/ledger_client/page_id.h"
 
-namespace fuchsia {
 namespace modular {
 
 // This class has the following responsibilities:
@@ -46,6 +45,5 @@ class StoryStorage : public PageClient {
 };
 
 }  // namespace modular
-}  // namespace fuchsia
 
 #endif  // PERIDOT_BIN_USER_RUNNER_STORY_RUNNER_STORY_STORAGE_H_

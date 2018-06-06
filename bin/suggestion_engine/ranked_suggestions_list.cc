@@ -10,7 +10,6 @@
 #include "lib/context/cpp/context_helper.h"
 #include "lib/fxl/logging.h"
 
-namespace fuchsia {
 namespace modular {
 
 MatchPredicate GetSuggestionMatcher(const std::string& component_url,
@@ -68,7 +67,7 @@ bool RankedSuggestionsList::RemoveMatchingSuggestion(
   }
 }
 
-void RankedSuggestionsList::Rank(const UserInput& query) {
+void RankedSuggestionsList::Rank(const fuchsia::modular::UserInput& query) {
   if (!ranker_) {
     FXL_LOG(WARNING)
         << "RankedSuggestionList.Rank ignored since no ranker was set.";
@@ -76,7 +75,7 @@ void RankedSuggestionsList::Rank(const UserInput& query) {
   }
   for (auto& suggestion : suggestions_) {
     suggestion->confidence = ranker_->Rank(query, *suggestion);
-    FXL_VLOG(1) << "Proposal "
+    FXL_VLOG(1) << "fuchsia::modular::Proposal "
                 << suggestion->prototype->proposal.display.headline
                 << " confidence " << suggestion->prototype->proposal.confidence
                 << " => " << suggestion->confidence;
@@ -105,17 +104,14 @@ RankedSuggestion* RankedSuggestionsList::GetSuggestion(
 }
 
 RankedSuggestion* RankedSuggestionsList::GetSuggestion(
-    const std::string& component_url,
-    const std::string& proposal_id) const {
+    const std::string& component_url, const std::string& proposal_id) const {
   return GetMatchingSuggestion(
       GetSuggestionMatcher(component_url, proposal_id));
 }
 
-void RankedSuggestionsList::RemoveAllSuggestions() {
-  suggestions_.clear();
-}
+void RankedSuggestionsList::RemoveAllSuggestions() { suggestions_.clear(); }
 
-void RankedSuggestionsList::Refresh(const UserInput& query) {
+void RankedSuggestionsList::Refresh(const fuchsia::modular::UserInput& query) {
   // Apply the active filters that modify the entire suggestions list.
   // TODO(miguelfrde): Fix. Currently not WAI. For dead stories for example,
   // this will remove suggestions that belong to a story that is being created.
@@ -126,11 +122,10 @@ void RankedSuggestionsList::Refresh(const UserInput& query) {
   // Apply the passive filters that hide some of the suggestions.
   for (auto& suggestion : suggestions_) {
     suggestion->hidden = std::any_of(
-       suggestion_passive_filters_.begin(),
-       suggestion_passive_filters_.end(),
-       [&suggestion](const std::unique_ptr<SuggestionPassiveFilter>& f) {
-         return f->Filter(suggestion);
-       });
+        suggestion_passive_filters_.begin(), suggestion_passive_filters_.end(),
+        [&suggestion](const std::unique_ptr<SuggestionPassiveFilter>& f) {
+          return f->Filter(suggestion);
+        });
   }
 
   // Rerank and sort the updated suggestions_ list
@@ -150,4 +145,3 @@ void RankedSuggestionsList::DoStableSort() {
 // End of private sorting methods.
 
 }  // namespace modular
-}  // namespace fuchsia

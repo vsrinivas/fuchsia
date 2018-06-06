@@ -5,7 +5,6 @@
 #ifndef PERIDOT_LIB_LEDGER_CLIENT_CONSTANTS_H_
 #define PERIDOT_LIB_LEDGER_CLIENT_CONSTANTS_H_
 
-namespace fuchsia {
 namespace modular {
 
 constexpr char kCloudProviderFirebaseAppUrl[] = "cloud_provider_firebase";
@@ -21,6 +20,5 @@ const char kFirebaseServerId[] = "fuchsia-ledger";
 const char kFirebaseApiKey[] = "AIzaSyDzzuJILOn6riFPTXC36HlH6CEdliLapDA";
 
 }  // namespace modular
-}  // namespace fuchsia
 
 #endif  // PERIDOT_LIB_LEDGER_CLIENT_CONSTANTS_H_

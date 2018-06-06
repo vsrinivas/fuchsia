@@ -12,22 +12,21 @@
 #include "peridot/tests/common/defs.h"
 #include "peridot/tests/component_context/defs.h"
 
-using fuchsia::modular::testing::TestPoint;
+using modular::testing::TestPoint;
 
 namespace {
 
 // Cf. README.md for what this test does and how.
 class TestApp {
  public:
-  TestApp(fuchsia::modular::AgentHost* const agent_host) {
-    fuchsia::modular::testing::Init(agent_host->startup_context(), __FILE__);
+  TestApp(modular::AgentHost* const agent_host) {
+    modular::testing::Init(agent_host->startup_context(), __FILE__);
   }
 
   // Called by AgentDriver.
   void Connect(
       fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> /*services*/) {
-    fuchsia::modular::testing::GetStore()->Put("two_agent_connected", "",
-                                               [] {});
+    modular::testing::GetStore()->Put("two_agent_connected", "", [] {});
   }
 
   // Called by AgentDriver.
@@ -39,7 +38,7 @@ class TestApp {
   // Called by AgentDriver.
   void Terminate(const std::function<void()>& done) {
     terminate_called_.Pass();
-    fuchsia::modular::testing::Done(done);
+    modular::testing::Done(done);
   }
 
   FXL_DISALLOW_COPY_AND_ASSIGN(TestApp);
@@ -50,8 +49,8 @@ class TestApp {
 int main(int /*argc*/, const char** /*argv*/) {
   fsl::MessageLoop loop;
   auto context = fuchsia::sys::StartupContext::CreateFromStartupInfo();
-  fuchsia::modular::AgentDriver<TestApp> driver(context.get(),
-                                                [&loop] { loop.QuitNow(); });
+  modular::AgentDriver<TestApp> driver(context.get(),
+                                       [&loop] { loop.QuitNow(); });
   loop.Run();
   return 0;
 }

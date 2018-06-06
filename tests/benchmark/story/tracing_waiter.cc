@@ -6,7 +6,6 @@
 
 #include <lib/async/default.h>
 
-namespace fuchsia {
 namespace modular {
 
 TracingWaiter::TracingWaiter() = default;
@@ -33,4 +32,3 @@ void TracingWaiter::WaitForTracing(std::function<void()> cont) {
 }
 
 }  // namespace modular
-}  // namespace fuchsia

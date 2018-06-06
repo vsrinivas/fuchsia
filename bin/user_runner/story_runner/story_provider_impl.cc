@@ -10,10 +10,10 @@
 
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/modular/internal/cpp/fidl.h>
+#include <fuchsia/ui/views_v1/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 #include <lib/zx/time.h>
-#include <fuchsia/ui/views_v1/cpp/fidl.h>
 
 #include "lib/fidl/cpp/array.h"
 #include "lib/fidl/cpp/interface_handle.h"
@@ -39,18 +39,17 @@
 #include "peridot/lib/ledger_client/storage.h"
 #include "peridot/lib/rapidjson/rapidjson.h"
 
-namespace fuchsia {
 namespace modular {
 
 // 1. Ask SessionStorage to create an ID and storage for the new story.
 // 2. Optionally add the module in |url| to the story.
 class StoryProviderImpl::CreateStoryCall : public Operation<fidl::StringPtr> {
  public:
-  CreateStoryCall(SessionStorage* session_storage,
-                  StoryProviderImpl* const story_provider_impl,
-                  fidl::StringPtr url,
-                  fidl::VectorPtr<StoryInfoExtraEntry> extra_info,
-                  fidl::StringPtr root_json, ResultCall result_call)
+  CreateStoryCall(
+      SessionStorage* session_storage,
+      StoryProviderImpl* const story_provider_impl, fidl::StringPtr url,
+      fidl::VectorPtr<fuchsia::modular::StoryInfoExtraEntry> extra_info,
+      fidl::StringPtr root_json, ResultCall result_call)
       : Operation("StoryProviderImpl::CreateStoryCall", std::move(result_call)),
         session_storage_(session_storage),
         story_provider_impl_(story_provider_impl),
@@ -98,8 +97,8 @@ class StoryProviderImpl::CreateStoryCall : public Operation<fidl::StringPtr> {
 
   SessionStorage* const session_storage_;         // Not owned
   StoryProviderImpl* const story_provider_impl_;  // Not owned
-  Intent intent_;
-  fidl::VectorPtr<StoryInfoExtraEntry> extra_info_;
+  fuchsia::modular::Intent intent_;
+  fidl::VectorPtr<fuchsia::modular::StoryInfoExtraEntry> extra_info_;
   const zx_time_t start_time_;
 
   std::unique_ptr<StoryControllerImpl> controller_;
@@ -185,10 +184,10 @@ class StoryProviderImpl::DeleteStoryCall : public Operation<> {
 // 3. Return a controller for this story that contains the page pointer.
 class StoryProviderImpl::GetControllerCall : public Operation<> {
  public:
-  GetControllerCall(StoryProviderImpl* const story_provider_impl,
-                    SessionStorage* const session_storage,
-                    fidl::StringPtr story_id,
-                    fidl::InterfaceRequest<StoryController> request)
+  GetControllerCall(
+      StoryProviderImpl* const story_provider_impl,
+      SessionStorage* const session_storage, fidl::StringPtr story_id,
+      fidl::InterfaceRequest<fuchsia::modular::StoryController> request)
       : Operation("StoryProviderImpl::GetControllerCall", [] {}),
         story_provider_impl_(story_provider_impl),
         session_storage_(session_storage),
@@ -209,7 +208,7 @@ class StoryProviderImpl::GetControllerCall : public Operation<> {
     }
 
     session_storage_->GetStoryData(story_id_)->Then(
-        [this, flow](modular::internal ::StoryDataPtr story_data) {
+        [this, flow](fuchsia::modular::internal::StoryDataPtr story_data) {
           if (!story_data) {
             return;
           }
@@ -227,7 +226,7 @@ class StoryProviderImpl::GetControllerCall : public Operation<> {
   StoryProviderImpl* const story_provider_impl_;  // not owned
   SessionStorage* const session_storage_;         // not owned
   const fidl::StringPtr story_id_;
-  fidl::InterfaceRequest<StoryController> request_;
+  fidl::InterfaceRequest<fuchsia::modular::StoryController> request_;
 
   // Sub operations run in this queue.
   OperationQueue operation_queue_;
@@ -253,9 +252,9 @@ class StoryProviderImpl::StopAllStoriesCall : public Operation<> {
       //
       // TODO(mesch): If a DeleteCall is executing in front of
       // StopForTeardown(), then the StopCall in StopForTeardown() never
-      // executes because the StoryController instance is deleted after the
-      // DeleteCall finishes. This will then block unless it runs in a
-      // timeout.
+      // executes because the fuchsia::modular::StoryController instance is
+      // deleted after the DeleteCall finishes. This will then block unless it
+      // runs in a timeout.
       it.second.impl->StopForTeardown([this, story_id = it.first, flow] {
         // It is okay to erase story_id because story provider binding has
         // been closed and this callback cannot be invoked synchronously.
@@ -308,7 +307,7 @@ class StoryProviderImpl::GetLinkPeerCall : public Operation<> {
                   fidl::StringPtr story_id,
                   fidl::VectorPtr<fidl::StringPtr> module_path,
                   fidl::StringPtr link_name,
-                  fidl::InterfaceRequest<Link> request)
+                  fidl::InterfaceRequest<fuchsia::modular::Link> request)
       : Operation("StoryProviderImpl::GetLinkPeerCall", [] {}),
         impl_(impl),
         session_storage_(session_storage),
@@ -322,10 +321,10 @@ class StoryProviderImpl::GetLinkPeerCall : public Operation<> {
     FlowToken flow{this};
 
     session_storage_->GetStoryData(story_id_)->Then(
-        [this, flow](modular::internal ::StoryDataPtr story_data) {
+        [this, flow](fuchsia::modular::internal::StoryDataPtr story_data) {
           if (!story_data) {
-            // The InterfaceRequest<Link> will go out of scope, and the channel
-            // closed with an error.
+            // The InterfaceRequest<fuchsia::modular::Link> will go out of
+            // scope, and the channel closed with an error.
             return;
           }
           auto link_peer = std::make_unique<LinkPeer>();
@@ -333,7 +332,7 @@ class StoryProviderImpl::GetLinkPeerCall : public Operation<> {
           link_peer->ledger =
               session_storage_->ledger_client()->GetLedgerClientPeer();
 
-          auto link_path = LinkPath::New();
+          auto link_path = fuchsia::modular::LinkPath::New();
           link_path->module_path = module_path_.Clone();
           link_path->link_name = link_name_;
 
@@ -355,7 +354,7 @@ class StoryProviderImpl::GetLinkPeerCall : public Operation<> {
   const fidl::StringPtr story_id_;
   const fidl::VectorPtr<fidl::StringPtr> module_path_;
   const fidl::StringPtr link_name_;
-  fidl::InterfaceRequest<Link> request_;
+  fidl::InterfaceRequest<fuchsia::modular::Link> request_;
 
   // Sub operations run in this queue.
   OperationQueue operation_queue_;
@@ -365,11 +364,13 @@ class StoryProviderImpl::GetLinkPeerCall : public Operation<> {
 
 StoryProviderImpl::StoryProviderImpl(
     Scope* const user_scope, std::string device_id,
-    SessionStorage* const session_storage, AppConfig story_shell,
+    SessionStorage* const session_storage,
+    fuchsia::modular::AppConfig story_shell,
     const ComponentContextInfo& component_context_info,
-    FocusProviderPtr focus_provider,
-    UserIntelligenceProvider* const user_intelligence_provider,
-    ModuleResolver* const module_resolver,
+    fuchsia::modular::FocusProviderPtr focus_provider,
+    fuchsia::modular::UserIntelligenceProvider* const
+        user_intelligence_provider,
+    fuchsia::modular::ModuleResolver* const module_resolver,
     PresentationProvider* const presentation_provider, const bool test)
     : user_scope_(user_scope),
       session_storage_(session_storage),
@@ -391,7 +392,8 @@ StoryProviderImpl::StoryProviderImpl(
       });
   session_storage_->set_on_story_updated(
       [weak_ptr = weak_factory_.GetWeakPtr()](
-          fidl::StringPtr story_id, modular::internal ::StoryData story_data) {
+          fidl::StringPtr story_id,
+          fuchsia::modular::internal::StoryData story_data) {
         if (!weak_ptr)
           return;
         weak_ptr->OnStoryStorageUpdated(std::move(story_id),
@@ -409,7 +411,8 @@ StoryProviderImpl::StoryProviderImpl(
 
 StoryProviderImpl::~StoryProviderImpl() = default;
 
-void StoryProviderImpl::Connect(fidl::InterfaceRequest<StoryProvider> request) {
+void StoryProviderImpl::Connect(
+    fidl::InterfaceRequest<fuchsia::modular::StoryProvider> request) {
   bindings_.AddBinding(this, std::move(request));
 }
 
@@ -427,9 +430,9 @@ void StoryProviderImpl::Teardown(const std::function<void()>& callback) {
   operation_queue_.Add(new StopStoryShellCall(this, callback));
 }
 
-// |StoryProvider|
+// |fuchsia::modular::StoryProvider|
 void StoryProviderImpl::Watch(
-    fidl::InterfaceHandle<StoryProviderWatcher> watcher) {
+    fidl::InterfaceHandle<fuchsia::modular::StoryProviderWatcher> watcher) {
   auto watcher_ptr = watcher.Bind();
   for (const auto& item : story_controller_impls_) {
     const auto& container = item.second;
@@ -439,19 +442,20 @@ void StoryProviderImpl::Watch(
   watchers_.AddInterfacePtr(std::move(watcher_ptr));
 }
 
-// |StoryProvider|
+// |fuchsia::modular::StoryProvider|
 void StoryProviderImpl::WatchActivity(
-    fidl::InterfaceHandle<StoryActivityWatcher> watcher) {
+    fidl::InterfaceHandle<fuchsia::modular::StoryActivityWatcher> watcher) {
   activity_watchers_.AddInterfacePtr(watcher.Bind());
 }
 
-// |StoryProvider|
+// |fuchsia::modular::StoryProvider|
 void StoryProviderImpl::Duplicate(
-    fidl::InterfaceRequest<StoryProvider> request) {
+    fidl::InterfaceRequest<fuchsia::modular::StoryProvider> request) {
   Connect(std::move(request));
 }
 
-std::unique_ptr<AppClient<Lifecycle>> StoryProviderImpl::StartStoryShell(
+std::unique_ptr<AppClient<fuchsia::modular::Lifecycle>>
+StoryProviderImpl::StartStoryShell(
     fidl::InterfaceRequest<fuchsia::ui::views_v1_token::ViewOwner> request) {
   MaybeLoadStoryShell();
 
@@ -461,9 +465,9 @@ std::unique_ptr<AppClient<Lifecycle>> StoryProviderImpl::StartStoryShell(
   proxies_.Connect(std::move(preloaded_story_shell->story_shell_view),
                    std::move(request));
 
-  // Kickoff another StoryShell, to make it faster for next story. We
-  // optimize even further by delaying the loading of the next story shell
-  // instance by waiting a few seconds.
+  // Kickoff another fuchsia::modular::StoryShell, to make it faster for next
+  // story. We optimize even further by delaying the loading of the next story
+  // shell instance by waiting a few seconds.
   if (!test_) {
     MaybeLoadStoryShellDelayed();
   }
@@ -491,8 +495,9 @@ void StoryProviderImpl::MaybeLoadStoryShell() {
     return;
   }
 
-  auto story_shell_app = std::make_unique<AppClient<Lifecycle>>(
-      user_scope_->GetLauncher(), CloneStruct(story_shell_));
+  auto story_shell_app =
+      std::make_unique<AppClient<fuchsia::modular::Lifecycle>>(
+          user_scope_->GetLauncher(), CloneStruct(story_shell_));
 
   // CreateView must be called in order to get the Flutter application to
   // run
@@ -508,18 +513,19 @@ void StoryProviderImpl::MaybeLoadStoryShell() {
           std::move(story_shell_app), std::move(story_shell_view)});
 }
 
-// |StoryProvider|
+// |fuchsia::modular::StoryProvider|
 void StoryProviderImpl::CreateStory(fidl::StringPtr module_url,
                                     CreateStoryCallback callback) {
-  FXL_LOG(INFO) << "CreateStory() " << module_url;
+  FXL_LOG(INFO) << "fuchsia::modular::CreateStory() " << module_url;
   operation_queue_.Add(new CreateStoryCall(session_storage_, this, module_url,
                                            nullptr /* extra_info */,
                                            nullptr /* root_json */, callback));
 }
 
-// |StoryProvider|
+// |fuchsia::modular::StoryProvider|
 void StoryProviderImpl::CreateStoryWithInfo(
-    fidl::StringPtr module_url, fidl::VectorPtr<StoryInfoExtraEntry> extra_info,
+    fidl::StringPtr module_url,
+    fidl::VectorPtr<fuchsia::modular::StoryInfoExtraEntry> extra_info,
     fidl::StringPtr root_json, CreateStoryWithInfoCallback callback) {
   FXL_LOG(INFO) << "CreateStoryWithInfo() " << module_url << " " << root_json;
   operation_queue_.Add(new CreateStoryCall(session_storage_, this, module_url,
@@ -527,7 +533,7 @@ void StoryProviderImpl::CreateStoryWithInfo(
                                            std::move(root_json), callback));
 }
 
-// |StoryProvider|
+// |fuchsia::modular::StoryProvider|
 void StoryProviderImpl::DeleteStory(fidl::StringPtr story_id,
                                     DeleteStoryCallback callback) {
   operation_queue_.Add(
@@ -536,7 +542,7 @@ void StoryProviderImpl::DeleteStory(fidl::StringPtr story_id,
                           false /* already_deleted */, callback));
 }
 
-// |StoryProvider|
+// |fuchsia::modular::StoryProvider|
 void StoryProviderImpl::GetStoryInfo(fidl::StringPtr story_id,
                                      GetStoryInfoCallback callback) {
   auto on_run = Future<>::Create();
@@ -545,13 +551,13 @@ void StoryProviderImpl::GetStoryInfo(fidl::StringPtr story_id,
           ->AsyncMap([this, story_id] {
             return session_storage_->GetStoryData(story_id);
           })
-          ->Map(
-              [](modular::internal ::StoryDataPtr story_data) -> StoryInfoPtr {
-                if (!story_data) {
-                  return nullptr;
-                }
-                return fidl::MakeOptional(std::move(story_data->story_info));
-              });
+          ->Map([](fuchsia::modular::internal::StoryDataPtr story_data)
+                    -> fuchsia::modular::StoryInfoPtr {
+            if (!story_data) {
+              return nullptr;
+            }
+            return fidl::MakeOptional(std::move(story_data->story_info));
+          });
   operation_queue_.Add(WrapFutureAsOperation(
       on_run, done, callback, "StoryProviderImpl::GetStoryInfo"));
 }
@@ -562,8 +568,8 @@ void StoryProviderImpl::RequestStoryFocus(fidl::StringPtr story_id) {
   focus_provider_->Request(story_id);
 }
 
-void StoryProviderImpl::NotifyStoryStateChange(fidl::StringPtr story_id,
-                                               const StoryState story_state) {
+void StoryProviderImpl::NotifyStoryStateChange(
+    fidl::StringPtr story_id, const fuchsia::modular::StoryState story_state) {
   auto i = story_controller_impls_.find(story_id);
 
   if (i == story_controller_impls_.end()) {
@@ -572,23 +578,25 @@ void StoryProviderImpl::NotifyStoryStateChange(fidl::StringPtr story_id,
     return;
   }
 
-  const StoryInfo* const story_info = i->second.current_info.get();
+  const fuchsia::modular::StoryInfo* const story_info =
+      i->second.current_info.get();
   NotifyStoryWatchers(story_info, story_state);
 }
 
-// |StoryProvider|
+// |fuchsia::modular::StoryProvider|
 void StoryProviderImpl::GetController(
-    fidl::StringPtr story_id, fidl::InterfaceRequest<StoryController> request) {
+    fidl::StringPtr story_id,
+    fidl::InterfaceRequest<fuchsia::modular::StoryController> request) {
   operation_queue_.Add(new GetControllerCall(this, session_storage_, story_id,
                                              std::move(request)));
 }
 
-// |StoryProvider|
+// |fuchsia::modular::StoryProvider|
 void StoryProviderImpl::PreviousStories(PreviousStoriesCallback callback) {
   auto on_run = Future<>::Create();
   auto done =
       on_run->AsyncMap([this] { return session_storage_->GetAllStoryData(); })
-          ->Map([](fidl::VectorPtr<modular::internal ::StoryData>
+          ->Map([](fidl::VectorPtr<fuchsia::modular::internal::StoryData>
                        all_story_data) {
             FXL_DCHECK(all_story_data);
             auto result = fidl::VectorPtr<fuchsia::modular::StoryInfo>::New(0);
@@ -602,7 +610,7 @@ void StoryProviderImpl::PreviousStories(PreviousStoriesCallback callback) {
       on_run, done, callback, "StoryProviderImpl::PreviousStories"));
 }
 
-// |StoryProvider|
+// |fuchsia::modular::StoryProvider|
 void StoryProviderImpl::RunningStories(RunningStoriesCallback callback) {
   auto stories = fidl::VectorPtr<fidl::StringPtr>::New(0);
   for (const auto& impl_container : story_controller_impls_) {
@@ -614,14 +622,15 @@ void StoryProviderImpl::RunningStories(RunningStoriesCallback callback) {
 }
 
 void StoryProviderImpl::OnStoryStorageUpdated(
-    fidl::StringPtr story_id, modular::internal ::StoryData story_data) {
+    fidl::StringPtr story_id,
+    fuchsia::modular::internal::StoryData story_data) {
   // HACK(jimbe) We don't have the page and it's expensive to get it, so
   // just mark it as STOPPED. We know it's not running or we'd have a
-  // StoryController.
+  // fuchsia::modular::StoryController.
   //
   // If we have a StoryControllerImpl for this story id, update our cached
-  // StoryInfo.
-  StoryState state = StoryState::STOPPED;
+  // fuchsia::modular::StoryInfo.
+  fuchsia::modular::StoryState state = fuchsia::modular::StoryState::STOPPED;
   auto i = story_controller_impls_.find(story_data.story_info.id);
   if (i != story_controller_impls_.end()) {
     state = i->second.impl->GetStoryState();
@@ -646,8 +655,8 @@ void StoryProviderImpl::OnStoryStorageDeleted(fidl::StringPtr story_id) {
                           true /* already_deleted */, [] {}));
 }
 
-// |FocusWatcher|
-void StoryProviderImpl::OnFocusChange(FocusInfoPtr info) {
+// |fuchsia::modular::FocusWatcher|
+void StoryProviderImpl::OnFocusChange(fuchsia::modular::FocusInfoPtr info) {
   if (info->device_id.get() != device_id_) {
     return;
   }
@@ -678,8 +687,9 @@ void StoryProviderImpl::OnFocusChange(FocusInfoPtr info) {
       on_run, done, callback, "StoryProviderImpl::OnFocusChange"));
 }
 
-void StoryProviderImpl::NotifyStoryWatchers(const StoryInfo* const story_info,
-                                            const StoryState story_state) {
+void StoryProviderImpl::NotifyStoryWatchers(
+    const fuchsia::modular::StoryInfo* const story_info,
+    const fuchsia::modular::StoryState story_state) {
   for (const auto& i : watchers_.ptrs()) {
     (*i)->OnChange(CloneStruct(*story_info), story_state);
   }
@@ -687,7 +697,8 @@ void StoryProviderImpl::NotifyStoryWatchers(const StoryInfo* const story_info,
 
 void StoryProviderImpl::GetLinkPeer(
     fidl::StringPtr story_id, fidl::VectorPtr<fidl::StringPtr> module_path,
-    fidl::StringPtr link_name, fidl::InterfaceRequest<Link> request) {
+    fidl::StringPtr link_name,
+    fidl::InterfaceRequest<fuchsia::modular::Link> request) {
   operation_queue_.Add(new GetLinkPeerCall(this, session_storage_, story_id,
                                            std::move(module_path), link_name,
                                            std::move(request)));
@@ -702,7 +713,7 @@ void StoryProviderImpl::GetPresentation(
 
 void StoryProviderImpl::WatchVisualState(
     fidl::StringPtr story_id,
-    fidl::InterfaceHandle<StoryVisualStateWatcher> watcher) {
+    fidl::InterfaceHandle<fuchsia::modular::StoryVisualStateWatcher> watcher) {
   presentation_provider_->WatchVisualState(std::move(story_id),
                                            std::move(watcher));
 }
@@ -714,4 +725,3 @@ void StoryProviderImpl::Active(const fidl::StringPtr& story_id) {
 }
 
 }  // namespace modular
-}  // namespace fuchsia

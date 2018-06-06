@@ -7,14 +7,14 @@
 
 #include <fuchsia/modular/cpp/fidl.h>
 
-namespace fuchsia {
 namespace modular {
 
-std::ostream& operator<<(std::ostream& os, const Intent& intent);
 std::ostream& operator<<(std::ostream& os,
-                         const IntentParameterData& parameter_data);
+                         const fuchsia::modular::Intent& intent);
+std::ostream& operator<<(
+    std::ostream& os,
+    const fuchsia::modular::IntentParameterData& parameter_data);
 
 }  // namespace modular
-}  // namespace fuchsia
 
 #endif  // LIB_MODULE_RESOLVER_CPP_FORMATTING_H_

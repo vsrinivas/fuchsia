@@ -14,13 +14,12 @@
 
 namespace maxwell {
 
-StoryInfoAcquirer::StoryInfoAcquirer(
-    fuchsia::modular::AgentHost* const agent_host)
+StoryInfoAcquirer::StoryInfoAcquirer(modular::AgentHost* const agent_host)
     : initializer_binding_(this),
       visible_stories_watcher_binding_(this),
       story_provider_watcher_binding_(this),
       focus_watcher_binding_(this) {
-  // Initialize IntelligenceServices.
+  // Initialize fuchsia::modular::IntelligenceServices.
   fuchsia::modular::IntelligenceServicesPtr intelligence_services;
   agent_host->agent_context()->GetIntelligenceServices(
       intelligence_services.NewRequest());
@@ -52,9 +51,7 @@ void StoryInfoAcquirer::RunTask(
   FXL_LOG(FATAL) << "Not implemented.";
 }
 
-void StoryInfoAcquirer::Terminate(const std::function<void()>& done) {
-  done();
-}
+void StoryInfoAcquirer::Terminate(const std::function<void()>& done) { done(); }
 
 void StoryInfoAcquirer::Initialize(
     fidl::InterfaceHandle<fuchsia::modular::StoryProvider> story_provider,

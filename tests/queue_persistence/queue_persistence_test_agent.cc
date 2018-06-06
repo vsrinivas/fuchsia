@@ -13,15 +13,15 @@
 #include "peridot/tests/common/defs.h"
 #include "peridot/tests/queue_persistence/defs.h"
 
-using fuchsia::modular::testing::TestPoint;
+using modular::testing::TestPoint;
 
 namespace {
 
 // Cf. README.md for what this test does and how.
 class TestApp : queue_persistence_test_service::QueuePersistenceTestService {
  public:
-  TestApp(fuchsia::modular::AgentHost* agent_host) {
-    fuchsia::modular::testing::Init(agent_host->startup_context(), __FILE__);
+  TestApp(modular::AgentHost* agent_host) {
+    modular::testing::Init(agent_host->startup_context(), __FILE__);
     agent_host->agent_context()->GetComponentContext(
         component_context_.NewRequest());
 
@@ -29,11 +29,11 @@ class TestApp : queue_persistence_test_service::QueuePersistenceTestService {
     // message on it.
     component_context_->ObtainMessageQueue("Test Queue",
                                            msg_queue_.NewRequest());
-    msg_receiver_ = std::make_unique<fuchsia::modular::MessageReceiverClient>(
+    msg_receiver_ = std::make_unique<modular::MessageReceiverClient>(
         msg_queue_.get(),
         [this](const fidl::StringPtr& message, std::function<void()> ack) {
           ack();
-          fuchsia::modular::testing::GetStore()->Put(
+          modular::testing::GetStore()->Put(
               "queue_persistence_test_agent_received_message", "", [] {});
         });
 
@@ -51,8 +51,8 @@ class TestApp : queue_persistence_test_service::QueuePersistenceTestService {
   // Called by AgentDriver.
   void Connect(fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> services) {
     services_.AddBinding(std::move(services));
-    fuchsia::modular::testing::GetStore()->Put(
-        "queue_persistence_test_agent_connected", "", [] {});
+    modular::testing::GetStore()->Put("queue_persistence_test_agent_connected",
+                                      "", [] {});
   }
 
   // Called by AgentDriver.
@@ -65,9 +65,9 @@ class TestApp : queue_persistence_test_service::QueuePersistenceTestService {
     // want our receiver to fire.
     msg_receiver_.reset();
 
-    fuchsia::modular::testing::GetStore()->Put(
-        "queue_persistence_test_agent_stopped", "",
-        [done] { fuchsia::modular::testing::Done(done); });
+    modular::testing::GetStore()->Put("queue_persistence_test_agent_stopped",
+                                      "",
+                                      [done] { modular::testing::Done(done); });
   }
 
  private:
@@ -82,7 +82,7 @@ class TestApp : queue_persistence_test_service::QueuePersistenceTestService {
   fuchsia::modular::ComponentContextPtr component_context_;
   fuchsia::modular::MessageQueuePtr msg_queue_;
 
-  std::unique_ptr<fuchsia::modular::MessageReceiverClient> msg_receiver_;
+  std::unique_ptr<modular::MessageReceiverClient> msg_receiver_;
 
   fuchsia::sys::ServiceNamespace services_;
   fidl::BindingSet<queue_persistence_test_service::QueuePersistenceTestService>
@@ -96,8 +96,8 @@ class TestApp : queue_persistence_test_service::QueuePersistenceTestService {
 int main(int /*argc*/, const char** /*argv*/) {
   fsl::MessageLoop loop;
   auto context = fuchsia::sys::StartupContext::CreateFromStartupInfo();
-  fuchsia::modular::AgentDriver<TestApp> driver(context.get(),
-                                                [&loop] { loop.QuitNow(); });
+  modular::AgentDriver<TestApp> driver(context.get(),
+                                       [&loop] { loop.QuitNow(); });
   loop.Run();
   return 0;
 }

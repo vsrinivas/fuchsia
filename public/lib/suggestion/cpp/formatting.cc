@@ -4,7 +4,6 @@
 
 #include "lib/suggestion/cpp/formatting.h"
 
-namespace fuchsia {
 namespace modular {
 
 std::ostream& operator<<(std::ostream& os,
@@ -21,4 +20,3 @@ std::ostream& operator<<(std::ostream& os,
 }
 
 }  // namespace modular
-}  // namespace fuchsia

@@ -4,7 +4,6 @@
 
 #include "peridot/lib/testing/reporting.h"
 
-namespace fuchsia {
 namespace modular {
 namespace testing {
 
@@ -25,4 +24,3 @@ void TestPoint::Pass() {
 
 }  // namespace testing
 }  // namespace modular
-}  // namespace fuchsia

@@ -3,15 +3,15 @@
 // found in the LICENSE file.
 
 // Implementation of a user shell for module development. It takes a
-// root module URL and data for its Link as command line arguments,
-// which can be set using the device_runner --user-shell-args flag.
+// root module URL and data for its fuchsia::modular::Link as command line
+// arguments, which can be set using the device_runner --user-shell-args flag.
 
 #include <utility>
 
 #include <memory>
 
-#include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/modular/cpp/fidl.h>
+#include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/ui/views_v1/cpp/fidl.h>
 #include <fuchsia/ui/views_v1_token/cpp/fidl.h>
 #include "lib/app/cpp/connect.h"
@@ -46,7 +46,7 @@ class DevUserShellApp
     : fuchsia::modular::StoryWatcher,
       fuchsia::modular::InterruptionListener,
       fuchsia::modular::NextListener,
-      public fuchsia::modular::SingleServiceApp<fuchsia::modular::UserShell> {
+      public modular::SingleServiceApp<fuchsia::modular::UserShell> {
  public:
   explicit DevUserShellApp(fuchsia::sys::StartupContext* const startup_context,
                            Settings settings)
@@ -67,7 +67,7 @@ class DevUserShellApp
     Connect();
   }
 
-  // |UserShell|
+  // |fuchsia::modular::UserShell|
   void Initialize(fidl::InterfaceHandle<fuchsia::modular::UserShellContext>
                       user_shell_context) override {
     user_shell_context_.Bind(std::move(user_shell_context));
@@ -96,7 +96,7 @@ class DevUserShellApp
     FXL_LOG(INFO) << "DevUserShell START " << settings_.root_module << " "
                   << settings_.root_link;
 
-    view_ = std::make_unique<fuchsia::modular::ViewHost>(
+    view_ = std::make_unique<modular::ViewHost>(
         startup_context()
             ->ConnectToEnvironmentService<fuchsia::ui::views_v1::ViewManager>(),
         std::move(view_owner_request_));
@@ -137,41 +137,44 @@ class DevUserShellApp
     }
   }
 
-  // |StoryWatcher|
+  // |fuchsia::modular::StoryWatcher|
   void OnStateChange(fuchsia::modular::StoryState state) override {
     FXL_LOG(INFO) << "DevUserShell State " << state;
   }
 
-  // |StoryWatcher|
+  // |fuchsia::modular::StoryWatcher|
   void OnModuleAdded(fuchsia::modular::ModuleData /*module_data*/) override {}
 
-  // |NextListener|
+  // |fuchsia::modular::NextListener|
   void OnNextResults(
       fidl::VectorPtr<fuchsia::modular::Suggestion> suggestions) override {
-    FXL_VLOG(4) << "DevUserShell/NextListener::OnNextResults()";
+    FXL_VLOG(4)
+        << "DevUserShell/fuchsia::modular::NextListener::OnNextResults()";
     for (auto& suggestion : *suggestions) {
       FXL_LOG(INFO) << "  " << suggestion.uuid << " "
                     << suggestion.display.headline;
     }
   }
 
-  // |InterruptionListener|
+  // |fuchsia::modular::InterruptionListener|
   void OnInterrupt(fuchsia::modular::Suggestion suggestion) override {
-    FXL_VLOG(4) << "DevUserShell/InterruptionListener::OnInterrupt() "
-                << suggestion.uuid;
+    FXL_VLOG(4)
+        << "DevUserShell/fuchsia::modular::InterruptionListener::OnInterrupt() "
+        << suggestion.uuid;
   }
 
-  // |NextListener|
+  // |fuchsia::modular::NextListener|
   void OnProcessingChange(bool processing) override {
-    FXL_VLOG(4) << "DevUserShell/NextListener::OnProcessingChange("
-                << processing << ")";
+    FXL_VLOG(4)
+        << "DevUserShell/fuchsia::modular::NextListener::OnProcessingChange("
+        << processing << ")";
   }
 
   const Settings settings_;
 
   fidl::InterfaceRequest<fuchsia::ui::views_v1_token::ViewOwner>
       view_owner_request_;
-  std::unique_ptr<fuchsia::modular::ViewHost> view_;
+  std::unique_ptr<modular::ViewHost> view_;
 
   fuchsia::modular::UserShellContextPtr user_shell_context_;
   fuchsia::modular::StoryProviderPtr story_provider_;
@@ -198,7 +201,7 @@ int main(int argc, const char** argv) {
   fsl::MessageLoop loop;
 
   auto context = fuchsia::sys::StartupContext::CreateFromStartupInfo();
-  fuchsia::modular::AppDriver<DevUserShellApp> driver(
+  modular::AppDriver<DevUserShellApp> driver(
       context->outgoing().deprecated_services(),
       std::make_unique<DevUserShellApp>(context.get(), std::move(settings)),
       [&loop] { loop.QuitNow(); });

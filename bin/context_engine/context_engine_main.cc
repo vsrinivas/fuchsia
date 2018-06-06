@@ -11,20 +11,20 @@
 #include "lib/fsl/tasks/message_loop.h"
 #include "peridot/bin/context_engine/context_engine_impl.h"
 
-namespace fuchsia {
 namespace modular {
-namespace {
 
 class ContextEngineApp {
  public:
   ContextEngineApp(fuchsia::sys::StartupContext* context) {
     auto component_context =
-        context->ConnectToEnvironmentService<ComponentContext>();
+        context
+            ->ConnectToEnvironmentService<fuchsia::modular::ComponentContext>();
     component_context->GetEntityResolver(entity_resolver_.NewRequest());
     context_engine_impl_.reset(new ContextEngineImpl(entity_resolver_.get()));
 
-    context->outgoing().AddPublicService<ContextEngine>(
-        [this](fidl::InterfaceRequest<ContextEngine> request) {
+    context->outgoing().AddPublicService<fuchsia::modular::ContextEngine>(
+        [this](
+            fidl::InterfaceRequest<fuchsia::modular::ContextEngine> request) {
           context_engine_impl_->AddBinding(std::move(request));
         });
   }
@@ -36,26 +36,23 @@ class ContextEngineApp {
   }
 
  private:
-  EntityResolverPtr entity_resolver_;
+  fuchsia::modular::EntityResolverPtr entity_resolver_;
   std::unique_ptr<ContextEngineImpl> context_engine_impl_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ContextEngineApp);
 };
 
-}  // namespace
 }  // namespace modular
-}  // namespace fuchsia
 
 int main(int argc, const char** argv) {
   fsl::MessageLoop loop;
   auto context = fuchsia::sys::StartupContext::CreateFromStartupInfo();
   auto context_engine_app =
-      std::make_unique<fuchsia::modular::ContextEngineApp>(context.get());
-  fxl::WeakPtr<fuchsia::modular::ContextDebugImpl> debug =
-      context_engine_app->debug();
+      std::make_unique<modular::ContextEngineApp>(context.get());
+  fxl::WeakPtr<modular::ContextDebugImpl> debug = context_engine_app->debug();
   debug->GetIdleWaiter()->SetMessageLoop(&loop);
 
-  fuchsia::modular::AppDriver<fuchsia::modular::ContextEngineApp> driver(
+  modular::AppDriver<modular::ContextEngineApp> driver(
       context->outgoing().deprecated_services(), std::move(context_engine_app),
       [&loop] { loop.QuitNow(); });
 

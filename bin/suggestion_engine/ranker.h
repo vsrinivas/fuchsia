@@ -9,7 +9,6 @@
 
 #include "peridot/bin/suggestion_engine/ranked_suggestion.h"
 
-namespace fuchsia {
 namespace modular {
 
 // Base class for performing ranking on a suggestion.
@@ -20,14 +19,13 @@ class Ranker {
 
   // Ranks a suggestion based on a given query (which might be empty) and
   // returns the confidence that would be the new suggestion.confidence.
-  virtual double Rank(
-      const UserInput& query, const RankedSuggestion& suggestion) = 0;
+  virtual double Rank(const fuchsia::modular::UserInput& query,
+                      const RankedSuggestion& suggestion) = 0;
 
   // Ranks a suggestion without any query input.
   double Rank(const RankedSuggestion& suggestion);
 };
 
 }  // namespace modular
-}  // namespace fuchsia
 
 #endif  // PERIDOT_BIN_SUGGESTION_ENGINE_RANKER_H_

@@ -12,7 +12,6 @@
 #include "peridot/lib/ledger_client/operations.h"
 #include "peridot/lib/ledger_client/storage.h"
 
-namespace fuchsia {
 namespace modular {
 
 StoryStorage::StoryStorage(LedgerClient* ledger_client, LedgerPageId page_id)
@@ -29,4 +28,3 @@ void StoryStorage::OnPageChange(const std::string& key,
 void StoryStorage::OnPageDelete(const std::string& key) {}
 
 }  // namespace modular
-}  // namespace fuchsia

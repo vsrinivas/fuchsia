@@ -5,28 +5,27 @@
 #include "peridot/bin/suggestion_engine/ranking_features/focused_story_ranking_feature.h"
 #include "gtest/gtest.h"
 
-namespace fuchsia {
 namespace modular {
 namespace {
 
 class FocusedStoryRankingFeatureTest : public ::testing::Test {
  protected:
   FocusedStoryRankingFeature focused_story_feature;
-  UserInput query;
+  fuchsia::modular::UserInput query;
 };
 
 // Creates the values from a context query to mock the modules in a focused
 // story based on which this ranking feature computes its value.
 void SetFocusedStoryContextUpdate(
-    fidl::VectorPtr<ContextValue>& context_update) {
-  ContextValue value;
-  value.meta.story = StoryMetadata::New();
+    fidl::VectorPtr<fuchsia::modular::ContextValue>& context_update) {
+  fuchsia::modular::ContextValue value;
+  value.meta.story = fuchsia::modular::StoryMetadata::New();
   value.meta.story->id = "focused_story";
   context_update.push_back(std::move(value));
 }
 
 TEST_F(FocusedStoryRankingFeatureTest, ComputeFeatureFocusedStory) {
-  Proposal proposal;
+  fuchsia::modular::Proposal proposal;
   proposal.story_affinity = true;
   SuggestionPrototype prototype;
   prototype.story_id = "focused_story";
@@ -34,7 +33,7 @@ TEST_F(FocusedStoryRankingFeatureTest, ComputeFeatureFocusedStory) {
   RankedSuggestion suggestion;
   suggestion.prototype = &prototype;
 
-  fidl::VectorPtr<ContextValue> context_update;
+  fidl::VectorPtr<fuchsia::modular::ContextValue> context_update;
   SetFocusedStoryContextUpdate(context_update);
   focused_story_feature.UpdateContext(context_update);
   double value = focused_story_feature.ComputeFeature(query, suggestion);
@@ -42,7 +41,7 @@ TEST_F(FocusedStoryRankingFeatureTest, ComputeFeatureFocusedStory) {
 }
 
 TEST_F(FocusedStoryRankingFeatureTest, ComputeFeatureNonFocusedStory) {
-  Proposal proposal;
+  fuchsia::modular::Proposal proposal;
   proposal.story_id = "other_story";
   proposal.story_affinity = true;
   SuggestionPrototype prototype;
@@ -51,7 +50,7 @@ TEST_F(FocusedStoryRankingFeatureTest, ComputeFeatureNonFocusedStory) {
   RankedSuggestion suggestion;
   suggestion.prototype = &prototype;
 
-  fidl::VectorPtr<ContextValue> context_update;
+  fidl::VectorPtr<fuchsia::modular::ContextValue> context_update;
   SetFocusedStoryContextUpdate(context_update);
   focused_story_feature.UpdateContext(context_update);
   double value = focused_story_feature.ComputeFeature(query, suggestion);
@@ -60,7 +59,7 @@ TEST_F(FocusedStoryRankingFeatureTest, ComputeFeatureNonFocusedStory) {
 
 TEST_F(FocusedStoryRankingFeatureTest,
        ComputeFeatureNonFocusedStoryNoStoryAffinity) {
-  Proposal proposal;
+  fuchsia::modular::Proposal proposal;
   proposal.story_id = "other_story";
   proposal.story_affinity = false;
   SuggestionPrototype prototype;
@@ -69,7 +68,7 @@ TEST_F(FocusedStoryRankingFeatureTest,
   RankedSuggestion suggestion;
   suggestion.prototype = &prototype;
 
-  fidl::VectorPtr<ContextValue> context_update;
+  fidl::VectorPtr<fuchsia::modular::ContextValue> context_update;
   SetFocusedStoryContextUpdate(context_update);
   focused_story_feature.UpdateContext(context_update);
   double value = focused_story_feature.ComputeFeature(query, suggestion);
@@ -78,4 +77,3 @@ TEST_F(FocusedStoryRankingFeatureTest,
 
 }  // namespace
 }  // namespace modular
-}  // namespace fuchsia

@@ -4,8 +4,9 @@
 
 // The Story service is the context in which a story executes. It
 // starts modules and provides them with a handle to itself, so they
-// can start more modules. It also serves as the factory for Link
-// instances, which are used to share data between modules.
+// can start more modules. It also serves as the factory for
+// fuchsia::modular::Link instances, which are used to share data between
+// modules.
 
 #ifndef PERIDOT_BIN_USER_RUNNER_STORY_RUNNER_STORY_CONTROLLER_IMPL_H_
 #define PERIDOT_BIN_USER_RUNNER_STORY_RUNNER_STORY_CONTROLLER_IMPL_H_
@@ -16,8 +17,8 @@
 #include <string>
 #include <vector>
 
-#include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/modular/cpp/fidl.h>
+#include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/ui/views_v1_token/cpp/fidl.h>
 #include "lib/async/cpp/operation.h"
 #include "lib/fidl/cpp/binding.h"
@@ -34,7 +35,6 @@
 #include "peridot/lib/ledger_client/page_client.h"
 #include "peridot/lib/ledger_client/types.h"
 
-namespace fuchsia {
 namespace modular {
 
 class ChainImpl;
@@ -43,9 +43,11 @@ class ModuleContextImpl;
 class StoryProviderImpl;
 
 // The story runner, which holds all the links and runs all the modules as well
-// as the story shell. It also implements the StoryController service to give
-// clients control over the story.
-class StoryControllerImpl : PageClient, StoryController, StoryContext {
+// as the story shell. It also implements the fuchsia::modular::StoryController
+// service to give clients control over the story.
+class StoryControllerImpl : PageClient,
+                            fuchsia::modular::StoryController,
+                            fuchsia::modular::StoryContext {
  public:
   StoryControllerImpl(fidl::StringPtr story_id, LedgerClient* ledger_client,
                       LedgerPageId story_page_id,
@@ -53,7 +55,8 @@ class StoryControllerImpl : PageClient, StoryController, StoryContext {
   ~StoryControllerImpl() override;
 
   // Called by StoryProviderImpl.
-  void Connect(fidl::InterfaceRequest<StoryController> request);
+  void Connect(
+      fidl::InterfaceRequest<fuchsia::modular::StoryController> request);
 
   // Called by StoryProviderImpl.
   bool IsRunning();
@@ -75,7 +78,7 @@ class StoryControllerImpl : PageClient, StoryController, StoryContext {
   void StopForTeardown(const std::function<void()>& done);
 
   // Called by StoryProviderImpl.
-  StoryState GetStoryState() const;
+  fuchsia::modular::StoryState GetStoryState() const;
   void Sync(const std::function<void()>& done);
 
   // Called by ModuleControllerImpl and ModuleContextImpl.
@@ -101,43 +104,49 @@ class StoryControllerImpl : PageClient, StoryController, StoryContext {
   void RequestStoryFocus();
 
   // Called by ModuleContextImpl.
-  void ConnectLinkPath(LinkPathPtr link_path,
-                       fidl::InterfaceRequest<Link> request);
+  void ConnectLinkPath(fuchsia::modular::LinkPathPtr link_path,
+                       fidl::InterfaceRequest<fuchsia::modular::Link> request);
 
   // Called by ModuleContextImpl.
-  LinkPathPtr GetLinkPathForParameterName(
+  fuchsia::modular::LinkPathPtr GetLinkPathForParameterName(
       const fidl::VectorPtr<fidl::StringPtr>& module_path, fidl::StringPtr key);
 
   // Called by ModuleContextImpl.
   void EmbedModule(
       const fidl::VectorPtr<fidl::StringPtr>& parent_module_path,
-      fidl::StringPtr module_name, IntentPtr intent,
-      fidl::InterfaceRequest<ModuleController> module_controller_request,
+      fidl::StringPtr module_name, fuchsia::modular::IntentPtr intent,
+      fidl::InterfaceRequest<fuchsia::modular::ModuleController>
+          module_controller_request,
       fidl::InterfaceRequest<fuchsia::ui::views_v1_token::ViewOwner>
           view_owner_request,
-      ModuleSource module_source,
-      std::function<void(StartModuleStatus)> callback);
+      fuchsia::modular::ModuleSource module_source,
+      std::function<void(fuchsia::modular::StartModuleStatus)> callback);
 
   // Called by ModuleContextImpl.
   void StartModule(
       const fidl::VectorPtr<fidl::StringPtr>& parent_module_path,
-      fidl::StringPtr module_name, IntentPtr intent,
-      fidl::InterfaceRequest<ModuleController> module_controller_request,
-      SurfaceRelationPtr surface_relation, ModuleSource module_source,
-      std::function<void(StartModuleStatus)> callback);
+      fidl::StringPtr module_name, fuchsia::modular::IntentPtr intent,
+      fidl::InterfaceRequest<fuchsia::modular::ModuleController>
+          module_controller_request,
+      fuchsia::modular::SurfaceRelationPtr surface_relation,
+      fuchsia::modular::ModuleSource module_source,
+      std::function<void(fuchsia::modular::StartModuleStatus)> callback);
 
   // Called by ModuleContextImpl.
   void StartContainerInShell(
       const fidl::VectorPtr<fidl::StringPtr>& parent_module_path,
-      fidl::StringPtr name, SurfaceRelationPtr parent_relation,
-      fidl::VectorPtr<ContainerLayout> layout,
-      fidl::VectorPtr<ContainerRelationEntry> relationships,
-      fidl::VectorPtr<ContainerNodePtr> nodes);
+      fidl::StringPtr name,
+      fuchsia::modular::SurfaceRelationPtr parent_relation,
+      fidl::VectorPtr<fuchsia::modular::ContainerLayout> layout,
+      fidl::VectorPtr<fuchsia::modular::ContainerRelationEntry> relationships,
+      fidl::VectorPtr<fuchsia::modular::ContainerNodePtr> nodes);
 
-  // |StoryController| - public so that StoryProvider can call it
-  void AddModule(fidl::VectorPtr<fidl::StringPtr> module_path,
-                 fidl::StringPtr module_name, Intent intent,
-                 SurfaceRelationPtr surface_relation) override;
+  // |fuchsia::modular::StoryController| - public so that
+  // fuchsia::modular::StoryProvider can call it
+  void AddModule(
+      fidl::VectorPtr<fidl::StringPtr> module_path, fidl::StringPtr module_name,
+      fuchsia::modular::Intent intent,
+      fuchsia::modular::SurfaceRelationPtr surface_relation) override;
 
   // Called by ModuleContextImpl.
   void Active();
@@ -148,40 +157,45 @@ class StoryControllerImpl : PageClient, StoryController, StoryContext {
   // |PageClient|
   void OnPageChange(const std::string& key, const std::string& value) override;
 
-  // |StoryController|
+  // |fuchsia::modular::StoryController|
   void GetInfo(GetInfoCallback callback) override;
   void Start(fidl::InterfaceRequest<fuchsia::ui::views_v1_token::ViewOwner>
                  request) override;
   void Stop(StopCallback done) override;
-  void Watch(fidl::InterfaceHandle<StoryWatcher> watcher) override;
-  void GetActiveModules(fidl::InterfaceHandle<StoryModulesWatcher> watcher,
-                        GetActiveModulesCallback callback) override;
+  void Watch(
+      fidl::InterfaceHandle<fuchsia::modular::StoryWatcher> watcher) override;
+  void GetActiveModules(
+      fidl::InterfaceHandle<fuchsia::modular::StoryModulesWatcher> watcher,
+      GetActiveModulesCallback callback) override;
   void GetModules(GetModulesCallback callback) override;
   void GetModuleController(
       fidl::VectorPtr<fidl::StringPtr> module_path,
-      fidl::InterfaceRequest<ModuleController> request) override;
-  void GetActiveLinks(fidl::InterfaceHandle<StoryLinksWatcher> watcher,
-                      GetActiveLinksCallback callback) override;
+      fidl::InterfaceRequest<fuchsia::modular::ModuleController> request)
+      override;
+  void GetActiveLinks(
+      fidl::InterfaceHandle<fuchsia::modular::StoryLinksWatcher> watcher,
+      GetActiveLinksCallback callback) override;
   void GetLink(fidl::VectorPtr<fidl::StringPtr> module_path,
                fidl::StringPtr name,
-               fidl::InterfaceRequest<Link> request) override;
+               fidl::InterfaceRequest<fuchsia::modular::Link> request) override;
 
-  // |StoryContext|
-  void GetPresentation(
-      fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> request) override;
+  // |fuchsia::modular::StoryContext|
+  void GetPresentation(fidl::InterfaceRequest<fuchsia::ui::policy::Presentation>
+                           request) override;
   void WatchVisualState(
-      fidl::InterfaceHandle<StoryVisualStateWatcher> watcher) override;
+      fidl::InterfaceHandle<fuchsia::modular::StoryVisualStateWatcher> watcher)
+      override;
 
   // Phases of Start() broken out into separate methods.
   void StartStoryShell(
       fidl::InterfaceRequest<fuchsia::ui::views_v1_token::ViewOwner> request);
 
   // Misc internal helpers.
-  void SetState(StoryState new_state);
+  void SetState(fuchsia::modular::StoryState new_state);
   void DisposeLink(LinkImpl* link);
-  void AddModuleWatcher(ModuleControllerPtr module_controller,
+  void AddModuleWatcher(fuchsia::modular::ModuleControllerPtr module_controller,
                         const fidl::VectorPtr<fidl::StringPtr>& module_path);
-  void UpdateStoryState(ModuleState state);
+  void UpdateStoryState(fuchsia::modular::ModuleState state);
   void ProcessPendingViews();
 
   bool IsExternalModule(const fidl::VectorPtr<fidl::StringPtr>& module_path);
@@ -192,7 +206,7 @@ class StoryControllerImpl : PageClient, StoryController, StoryContext {
 
   // This is the canonical source for state. The value in the ledger is just a
   // write-behind copy of this value.
-  StoryState state_{StoryState::STOPPED};
+  fuchsia::modular::StoryState state_{fuchsia::modular::StoryState::STOPPED};
 
   StoryProviderImpl* const story_provider_impl_;
 
@@ -202,19 +216,21 @@ class StoryControllerImpl : PageClient, StoryController, StoryContext {
   // The scope in which the modules within this story run.
   Scope story_scope_;
 
-  // Implements the primary service provided here: StoryController.
-  fidl::BindingSet<StoryController> bindings_;
+  // Implements the primary service provided here:
+  // fuchsia::modular::StoryController.
+  fidl::BindingSet<fuchsia::modular::StoryController> bindings_;
 
   // Watcher for various aspects of the story.
-  fidl::InterfacePtrSet<StoryWatcher> watchers_;
-  fidl::InterfacePtrSet<StoryModulesWatcher> modules_watchers_;
-  fidl::InterfacePtrSet<StoryLinksWatcher> links_watchers_;
+  fidl::InterfacePtrSet<fuchsia::modular::StoryWatcher> watchers_;
+  fidl::InterfacePtrSet<fuchsia::modular::StoryModulesWatcher>
+      modules_watchers_;
+  fidl::InterfacePtrSet<fuchsia::modular::StoryLinksWatcher> links_watchers_;
 
   // Everything for the story shell. Relationships between modules are conveyed
   // to the story shell using their instance IDs.
-  std::unique_ptr<AppClient<Lifecycle>> story_shell_app_;
-  StoryShellPtr story_shell_;
-  fidl::Binding<StoryContext> story_context_binding_;
+  std::unique_ptr<AppClient<fuchsia::modular::Lifecycle>> story_shell_app_;
+  fuchsia::modular::StoryShellPtr story_shell_;
+  fidl::Binding<fuchsia::modular::StoryContext> story_context_binding_;
 
   // The module instances (identified by their serialized module paths) already
   // known to story shell. Does not include modules whose views are pending and
@@ -226,8 +242,8 @@ class StoryControllerImpl : PageClient, StoryController, StoryContext {
   // shell cannot display views whose parents are not yet displayed.
   struct PendingView {
     fidl::VectorPtr<fidl::StringPtr> module_path;
-    ModuleManifestPtr module_manifest;
-    SurfaceRelationPtr surface_relation;
+    fuchsia::modular::ModuleManifestPtr module_manifest;
+    fuchsia::modular::SurfaceRelationPtr surface_relation;
     fuchsia::ui::views_v1_token::ViewOwnerPtr view_owner;
   };
   std::map<fidl::StringPtr, PendingView> pending_views_;
@@ -235,7 +251,7 @@ class StoryControllerImpl : PageClient, StoryController, StoryContext {
   // The first ingredient of a story: Modules. For each Module in the Story,
   // there is one Connection to it.
   struct Connection {
-    ModuleDataPtr module_data;
+    fuchsia::modular::ModuleDataPtr module_data;
     std::unique_ptr<ModuleContextImpl> module_context_impl;
     std::unique_ptr<ModuleControllerImpl> module_controller_impl;
   };
@@ -265,7 +281,7 @@ class StoryControllerImpl : PageClient, StoryController, StoryContext {
 
   // A collection of services, scoped to this Story, for use by intelligent
   // Modules.
-  IntelligenceServicesPtr intelligence_services_;
+  fuchsia::modular::IntelligenceServicesPtr intelligence_services_;
 
   // Asynchronous operations are sequenced in a queue.
   OperationQueue operation_queue_;
@@ -291,13 +307,13 @@ class StoryControllerImpl : PageClient, StoryController, StoryContext {
 
   // A blocking module data write call blocks while waiting for some
   // notifications, which are received by the StoryControllerImpl instance.
-  std::vector<std::pair<ModuleData, BlockingModuleDataWriteCall*>>
+  std::vector<
+      std::pair<fuchsia::modular::ModuleData, BlockingModuleDataWriteCall*>>
       blocked_operations_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(StoryControllerImpl);
 };
 
 }  // namespace modular
-}  // namespace fuchsia
 
 #endif  // PERIDOT_BIN_USER_RUNNER_STORY_RUNNER_STORY_CONTROLLER_IMPL_H_

@@ -15,10 +15,10 @@
 #include "third_party/rapidjson/rapidjson/stringbuffer.h"
 #include "third_party/rapidjson/rapidjson/writer.h"
 
-namespace fuchsia {
 namespace modular {
 
-UserActionLogImpl::UserActionLogImpl(ProposalPublisherPtr proposal_publisher)
+UserActionLogImpl::UserActionLogImpl(
+    fuchsia::modular::ProposalPublisherPtr proposal_publisher)
     : action_log_([this](const ActionData& action_data) {
         BroadcastToSubscribers(action_data);
         MaybeProposeSharingVideo(action_data);
@@ -29,12 +29,12 @@ UserActionLogImpl::UserActionLogImpl(ProposalPublisherPtr proposal_publisher)
 UserActionLogImpl::~UserActionLogImpl() = default;
 
 void UserActionLogImpl::BroadcastToSubscribers(const ActionData& action_data) {
-  UserAction action;
+  fuchsia::modular::UserAction action;
   action.component_url = action_data.component_url;
   action.method = action_data.method;
   action.parameters = action_data.params;
   for (auto& listener : subscribers_.ptrs()) {
-    UserAction copy;
+    fuchsia::modular::UserAction copy;
     fidl::Clone(action, &copy);
     (*listener)->OnAction(std::move(copy));
   };
@@ -71,7 +71,7 @@ void UserActionLogImpl::MaybeProposeSharingVideo(
       video_title = title_value->GetString();
     }
 
-    ProposalPtr proposal(Proposal::New());
+    fuchsia::modular::ProposalPtr proposal(fuchsia::modular::Proposal::New());
     proposal->id = proposal_id;
 
     auto add_module = AddModuleToStory::New();
@@ -123,19 +123,20 @@ void UserActionLogImpl::MaybeProposeSharingVideo(
         fuchsia::modular::SurfaceDependency::DEPENDENT;
     add_module->surface_relation->emphasis = 0.5;
 
-    ActionPtr action(Action::New());
+    fuchsia::modular::ActionPtr action(fuchsia::modular::Action::New());
     action->set_add_module_to_story(std::move(add_module));
     proposal->on_selected.push_back(std::move(action));
 
     action->set_add_module_to_story(std::move(add_module));
     proposal->on_selected.push_back(std::move(action));
 
-    SuggestionDisplayImagePtr displayImage(SuggestionDisplayImage::New());
+    fuchsia::modular::SuggestionDisplayImagePtr
+    displayImage(fuchsia::modular::SuggestionDisplayImage::New());
     displayImage->url = "http://img.youtube.com/vi/" + video_id + "/0.jpg";
-    displayImage->image_type = SuggestionImageType::OTHER;
+    displayImage->image_type = fuchsia::modular::SuggestionImageType::OTHER;
 
-    SuggestionDisplayPtr display(SuggestionDisplay::New());
-    if (has_title) {
+    fuchsia::modular::SuggestionDisplayPtr
+    display(fuchsia::modular::SuggestionDisplay::New()); if (has_title) {
       display->headline = "Share \"" + video_title + "\" Video via email";
     } else {
       display->headline = "Share Video via email";
@@ -145,7 +146,7 @@ void UserActionLogImpl::MaybeProposeSharingVideo(
     // If there is an email recipient already available, set an interrupt
     // suggestion.
     if (!last_email_rcpt_.empty()) {
-      display->annoyance = AnnoyanceType::INTERRUPT;
+      display->annoyance = fuchsia::modular::AnnoyanceType::INTERRUPT;
       if (has_title) {
         display->headline =
             "Share \"" + video_title + "\" Video with " + last_email_rcpt_;
@@ -181,8 +182,9 @@ void UserActionLogImpl::MaybeRecordEmailRecipient(
 }
 
 void UserActionLogImpl::GetComponentActionLog(
-    ComponentScope scope,
-    fidl::InterfaceRequest<ComponentActionLog> action_log_request) {
+    fuchsia::modular::ComponentScope scope,
+    fidl::InterfaceRequest<fuchsia::modular::ComponentActionLog>
+        action_log_request) {
   std::unique_ptr<ComponentActionLogImpl> module_action_log_impl(
       new ComponentActionLogImpl(
           action_log_.GetActionLogger(std::move(scope))));
@@ -192,13 +194,14 @@ void UserActionLogImpl::GetComponentActionLog(
 }
 
 void UserActionLogImpl::Duplicate(
-    fidl::InterfaceRequest<UserActionLog> request) {
+    fidl::InterfaceRequest<fuchsia::modular::UserActionLog> request) {
   bindings_.AddBinding(this, std::move(request));
 }
 
 void UserActionLogImpl::Subscribe(
-    fidl::InterfaceHandle<ActionLogListener> listener_handle) {
-  ActionLogListenerPtr listener = listener_handle.Bind();
+    fidl::InterfaceHandle<fuchsia::modular::ActionLogListener>
+        listener_handle) {
+  fuchsia::modular::ActionLogListenerPtr listener = listener_handle.Bind();
   subscribers_.AddInterfacePtr(std::move(listener));
 }
 
@@ -219,4 +222,3 @@ void ComponentActionLogImpl::LogAction(fidl::StringPtr method,
 }
 
 }  // namespace modular
-}  // namespace fuchsia

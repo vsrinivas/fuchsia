@@ -5,14 +5,13 @@
 #include "peridot/bin/suggestion_engine/ranking_features/kronk_ranking_feature.h"
 #include "gtest/gtest.h"
 
-namespace fuchsia {
 namespace modular {
 namespace {
 
 class KronkRankingFeatureTest : public ::testing::Test {
  protected:
   KronkRankingFeature kronk_ranking_feature;
-  UserInput query;
+  fuchsia::modular::UserInput query;
 };
 
 TEST_F(KronkRankingFeatureTest, TestComputeFeatureKronk) {
@@ -24,7 +23,7 @@ TEST_F(KronkRankingFeatureTest, TestComputeFeatureKronk) {
   EXPECT_EQ(value, kMaxConfidence);
 }
 
-TEST_F(KronkRankingFeatureTest, TestComputeFeatureNonKronk)  {
+TEST_F(KronkRankingFeatureTest, TestComputeFeatureNonKronk) {
   SuggestionPrototype prototype;
   prototype.source_url = "chat";
   RankedSuggestion suggestion;
@@ -35,4 +34,3 @@ TEST_F(KronkRankingFeatureTest, TestComputeFeatureNonKronk)  {
 
 }  // namespace
 }  // namespace modular
-}  // namespace fuchsia

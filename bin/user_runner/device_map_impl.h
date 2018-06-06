@@ -18,37 +18,35 @@
 #include "peridot/lib/ledger_client/page_client.h"
 #include "peridot/lib/ledger_client/types.h"
 
-namespace fuchsia {
 namespace modular {
 
 // See services/user/device_map.fidl for details.
 //
 // Mostly scaffolding to demonstrate a complete page client.
-class DeviceMapImpl : DeviceMap, PageClient {
+class DeviceMapImpl : fuchsia::modular::DeviceMap, PageClient {
  public:
-  DeviceMapImpl(const std::string& device_name,
-                const std::string& device_id,
-                const std::string& device_profile,
-                LedgerClient* ledger_client,
+  DeviceMapImpl(const std::string& device_name, const std::string& device_id,
+                const std::string& device_profile, LedgerClient* ledger_client,
                 LedgerPageId page_id);
   ~DeviceMapImpl() override;
 
   const std::string& current_device_id() const { return current_device_id_; }
 
-  void Connect(fidl::InterfaceRequest<DeviceMap> request);
+  void Connect(fidl::InterfaceRequest<fuchsia::modular::DeviceMap> request);
 
  private:
-  // |DeviceMap|
+  // |fuchsia::modular::DeviceMap|
   void Query(QueryCallback callback) override;
 
-  // |DeviceMap|
+  // |fuchsia::modular::DeviceMap|
   void GetCurrentDevice(GetCurrentDeviceCallback callback) override;
 
-  // |DeviceMap|
+  // |fuchsia::modular::DeviceMap|
   void SetCurrentDeviceProfile(::fidl::StringPtr profile) override;
 
-  // |DeviceMap|
-  void WatchDeviceMap(fidl::InterfaceHandle<DeviceMapWatcher> watcher) override;
+  // |fuchsia::modular::DeviceMap|
+  void WatchDeviceMap(fidl::InterfaceHandle<fuchsia::modular::DeviceMapWatcher>
+                          watcher) override;
 
   // |PageClient|
   void OnPageChange(const std::string& key, const std::string& value) override;
@@ -63,10 +61,10 @@ class DeviceMapImpl : DeviceMap, PageClient {
   void Notify(const std::string& device_id);
 
   // Clients that have connected to this service.
-  fidl::BindingSet<DeviceMap> bindings_;
+  fidl::BindingSet<fuchsia::modular::DeviceMap> bindings_;
 
   // All known devices from the Ledger page.
-  std::map<std::string, DeviceMapEntry> devices_;
+  std::map<std::string, fuchsia::modular::DeviceMapEntry> devices_;
 
   // The local device in the |devices_| map.
   std::string current_device_id_;
@@ -79,6 +77,5 @@ class DeviceMapImpl : DeviceMap, PageClient {
 };
 
 }  // namespace modular
-}  // namespace fuchsia
 
 #endif  // PERIDOT_BIN_USER_RUNNER_DEVICE_MAP_IMPL_H_

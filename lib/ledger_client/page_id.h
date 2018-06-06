@@ -9,7 +9,6 @@
 
 #include <fuchsia/ledger/cpp/fidl.h>
 
-namespace fuchsia {
 namespace modular {
 
 // Creates a page ID from an equivalent |std::string|.
@@ -21,6 +20,5 @@ namespace modular {
 fuchsia::ledger::PageId MakePageId(const std::string& value);
 
 }  // namespace modular
-}  // namespace fuchsia
 
 #endif  // PERIDOT_LIB_LEDGER_CLIENT_PAGE_ID_H_

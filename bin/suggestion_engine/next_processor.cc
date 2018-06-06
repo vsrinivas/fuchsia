@@ -6,7 +6,6 @@
 
 #include "peridot/bin/suggestion_engine/suggestion_engine_helper.h"
 
-namespace fuchsia {
 namespace modular {
 
 NextProcessor::NextProcessor(std::shared_ptr<SuggestionDebugImpl> debug)
@@ -15,7 +14,7 @@ NextProcessor::NextProcessor(std::shared_ptr<SuggestionDebugImpl> debug)
 NextProcessor::~NextProcessor() = default;
 
 void NextProcessor::RegisterListener(
-    fidl::InterfaceHandle<NextListener> listener,
+    fidl::InterfaceHandle<fuchsia::modular::NextListener> listener,
     const size_t max_results) {
   auto listenerPtr = listener.Bind();
 
@@ -27,8 +26,8 @@ void NextProcessor::RegisterListener(
 
   // Register connection error handler on new listener to remove from list
   // if connection drops.  This code is mostly borrowed from InterfacePtrSet
-  NextListenerPtr& nextPtr = listeners_.back().first;
-  NextListener* pointer = nextPtr.get();
+  fuchsia::modular::NextListenerPtr& nextPtr = listeners_.back().first;
+  fuchsia::modular::NextListener* pointer = nextPtr.get();
   nextPtr.set_error_handler([pointer, this]() {
     auto it = std::find_if(
         listeners_.begin(), listeners_.end(),
@@ -39,20 +38,20 @@ void NextProcessor::RegisterListener(
 }
 
 void NextProcessor::RegisterInterruptionListener(
-    fidl::InterfaceHandle<InterruptionListener> listener) {
+    fidl::InterfaceHandle<fuchsia::modular::InterruptionListener> listener) {
   interruptions_processor_.RegisterListener(std::move(listener));
 }
 
 void NextProcessor::AddProposal(const std::string& component_url,
                                 const std::string& story_id,
-                                Proposal proposal) {
+                                fuchsia::modular::Proposal proposal) {
   NotifyOfProcessingChange(true);
   // The component_url and proposal ID form a unique identifier for a proposal.
   // If one already exists, remove it before adding the new one.
   RemoveProposal(component_url, proposal.id);
 
-  auto prototype = CreateSuggestionPrototype(
-      &prototypes_, component_url, story_id, std::move(proposal));
+  auto prototype = CreateSuggestionPrototype(&prototypes_, component_url,
+                                             story_id, std::move(proposal));
   auto ranked_suggestion = RankedSuggestion::New(prototype);
 
   // TODO(miguelfrde): Make NextProcessor not depend on InterruptionsProcessor.
@@ -135,11 +134,12 @@ void NextProcessor::NotifyOfProcessingChange(const bool processing) {
   }
 }
 
-void NextProcessor::NotifyOfResults(const NextListenerPtr& listener,
-                                    const size_t max_results) {
+void NextProcessor::NotifyOfResults(
+    const fuchsia::modular::NextListenerPtr& listener,
+    const size_t max_results) {
   const auto& suggestion_vector = suggestions_.Get();
 
-  fidl::VectorPtr<Suggestion> window;
+  fidl::VectorPtr<fuchsia::modular::Suggestion> window;
   // Prefer to return an array of size 0 vs. null
   window.resize(0);
   for (size_t i = 0;
@@ -153,4 +153,3 @@ void NextProcessor::NotifyOfResults(const NextListenerPtr& listener,
 }
 
 }  // namespace modular
-}  // namespace fuchsia

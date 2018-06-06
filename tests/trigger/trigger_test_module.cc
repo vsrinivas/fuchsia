@@ -14,9 +14,9 @@
 #include "peridot/lib/testing/testing.h"
 #include "peridot/tests/trigger/defs.h"
 
-using fuchsia::modular::testing::Await;
-using fuchsia::modular::testing::Signal;
-using fuchsia::modular::testing::TestPoint;
+using modular::testing::Await;
+using modular::testing::Signal;
+using modular::testing::TestPoint;
 
 namespace {
 
@@ -25,13 +25,13 @@ class TestApp {
  public:
   TestPoint initialized_{"Root module initialized"};
 
-  TestApp(fuchsia::modular::ModuleHost* const module_host,
+  TestApp(modular::ModuleHost* const module_host,
           fidl::InterfaceRequest<
               fuchsia::ui::views_v1::ViewProvider> /*view_provider_request*/) {
-    fuchsia::modular::testing::Init(module_host->startup_context(), __FILE__);
+    modular::testing::Init(module_host->startup_context(), __FILE__);
     initialized_.Pass();
 
-    // Exercise ComponentContext.ConnectToAgent()
+    // Exercise fuchsia::modular::ComponentContext.ConnectToAgent()
     module_host->module_context()->GetComponentContext(
         component_context_.NewRequest());
 
@@ -50,8 +50,8 @@ class TestApp {
     component_context_->ObtainMessageQueue("implicit_test",
                                            implicit_msg_queue_.NewRequest());
     implicit_msg_queue_->GetToken([this](fidl::StringPtr token) {
-      fuchsia::modular::testing::GetStore()->Put(
-          "trigger_test_module_queue_token", token, [] {});
+      modular::testing::GetStore()->Put("trigger_test_module_queue_token",
+                                        token, [] {});
       agent_service_->ObserveMessageQueueDeletion(token);
       explicit_msg_queue_->GetToken([this](fidl::StringPtr token) {
         explicit_queue_token_ = token;
@@ -63,9 +63,9 @@ class TestApp {
   }
 
   TestPoint received_trigger_token_{"Received trigger token"};
-  TestPoint agent_connected_{"Agent accepted connection"};
-  TestPoint agent_stopped_{"Agent stopped"};
-  TestPoint task_triggered_{"Agent task triggered"};
+  TestPoint agent_connected_{"fuchsia::modular::Agent accepted connection"};
+  TestPoint agent_stopped_{"fuchsia::modular::Agent stopped"};
+  TestPoint task_triggered_{"fuchsia::modular::Agent task triggered"};
   void TestMessageQueueMessageTrigger() {
     Await("trigger_test_agent_connected", [this] {
       agent_connected_.Pass();
@@ -122,7 +122,7 @@ class TestApp {
   // Called by ModuleDriver.
   void Terminate(const std::function<void()>& done) {
     stopped_.Pass();
-    fuchsia::modular::testing::Done(done);
+    modular::testing::Done(done);
   }
 
  private:
@@ -145,8 +145,8 @@ class TestApp {
 int main(int /*argc*/, const char** /*argv*/) {
   fsl::MessageLoop loop;
   auto context = fuchsia::sys::StartupContext::CreateFromStartupInfo();
-  fuchsia::modular::ModuleDriver<TestApp> driver(context.get(),
-                                                 [&loop] { loop.QuitNow(); });
+  modular::ModuleDriver<TestApp> driver(context.get(),
+                                        [&loop] { loop.QuitNow(); });
   loop.Run();
   return 0;
 }

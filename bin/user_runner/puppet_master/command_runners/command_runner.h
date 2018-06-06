@@ -7,18 +7,16 @@
 
 #include <fuchsia/modular/cpp/fidl.h>
 
-namespace fuchsia {
 namespace modular {
 
 class CommandRunner {
  public:
   virtual ~CommandRunner();
 
-  virtual void Execute(fidl::StringPtr story_id, StoryCommand command,
-                       std::function<void(ExecuteResult)> done) = 0;
+  virtual void Execute(fidl::StringPtr story_id, fuchsia::modular::StoryCommand command,
+                       std::function<void(fuchsia::modular::ExecuteResult)> done) = 0;
 };
 
 }  // namespace modular
-}  // namespace fuchsia
 
 #endif  // PERIDOT_BIN_USER_RUNNER_PUPPET_MASTER_COMMAND_RUNNERS_COMMAND_RUNNER_H_

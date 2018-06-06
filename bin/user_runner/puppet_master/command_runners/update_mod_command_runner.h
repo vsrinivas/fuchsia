@@ -8,7 +8,6 @@
 #include <fuchsia/modular/cpp/fidl.h>
 #include "peridot/bin/user_runner/puppet_master/command_runners/command_runner.h"
 
-namespace fuchsia {
 namespace modular {
 
 class UpdateModCommandRunner : public CommandRunner {
@@ -16,11 +15,10 @@ class UpdateModCommandRunner : public CommandRunner {
    UpdateModCommandRunner();
    ~UpdateModCommandRunner();
 
-   void Execute(fidl::StringPtr story_id, StoryCommand command,
-                std::function<void(ExecuteResult)> done) override;
+   void Execute(fidl::StringPtr story_id, fuchsia::modular::StoryCommand command,
+                std::function<void(fuchsia::modular::ExecuteResult)> done) override;
 };
 
 }  // namespace modular
-}  // namespace fuchsia
 
 #endif  // PERIDOT_BIN_USER_RUNNER_PUPPET_MASTER_COMMAND_RUNNERS_UPDATE_MOD_COMMAND_RUNNER_H_

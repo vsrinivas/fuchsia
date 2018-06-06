@@ -3,8 +3,8 @@
 * [Home][home]
 * [Modular](/docs/modular/getting_started.md)
 * [Ledger](/docs/ledger/README.md)
-* [Intent](/docs/modular/intent.md)
-* [Entity](/docs/modular/entity.md)
+* [fuchsia::modular::Intent](/docs/modular/intent.md)
+* [fuchsia::modular::Entity](/docs/modular/entity.md)
 * [Examples](/examples)
 * [Tests](/tests)
 

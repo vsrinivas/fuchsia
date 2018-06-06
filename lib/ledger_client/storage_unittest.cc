@@ -10,7 +10,6 @@
 #include "gtest/gtest.h"
 #include "lib/fxl/strings/string_view.h"
 
-namespace fuchsia {
 namespace modular {
 namespace {
 
@@ -28,7 +27,7 @@ TEST(Storage, EncodeLinkPath) {
     fidl_array.push_back(s);
   }
 
-  LinkPath link_path;
+  fuchsia::modular::LinkPath link_path;
   link_path.link_name = "Fred";
   link_path.module_path = std::move(fidl_array);
   EXPECT_EQ("foo:\\:bar/Fred", EncodeLinkPath(link_path));
@@ -36,4 +35,3 @@ TEST(Storage, EncodeLinkPath) {
 
 }  // namespace
 }  // namespace modular
-}  // namespace fuchsia

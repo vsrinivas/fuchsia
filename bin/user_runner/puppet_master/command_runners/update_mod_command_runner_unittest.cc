@@ -6,7 +6,6 @@
 #include "lib/gtest/test_with_loop.h"
 #include "peridot/bin/user_runner/puppet_master/command_runners/update_mod_command_runner.h"
 
-namespace fuchsia {
 namespace modular {
 namespace {
 
@@ -20,4 +19,3 @@ TEST_F(UpdateModCommandRunnerTest, EmptyTest) {
 
 }  // namespace
 }  // namespace modular
-}  // namespace fuchsia

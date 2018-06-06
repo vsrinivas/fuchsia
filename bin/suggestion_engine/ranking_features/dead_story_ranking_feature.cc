@@ -6,7 +6,6 @@
 
 #include "peridot/bin/suggestion_engine/ranking_features/dead_story_ranking_feature.h"
 
-namespace fuchsia {
 namespace modular {
 
 DeadStoryRankingFeature::DeadStoryRankingFeature() {}
@@ -14,11 +13,12 @@ DeadStoryRankingFeature::DeadStoryRankingFeature() {}
 DeadStoryRankingFeature::~DeadStoryRankingFeature() = default;
 
 double DeadStoryRankingFeature::ComputeFeatureInternal(
-    const UserInput& query, const RankedSuggestion& ranked_suggestion) {
+    const fuchsia::modular::UserInput& query,
+    const RankedSuggestion& ranked_suggestion) {
   bool story_affinity = ranked_suggestion.prototype->proposal.story_affinity;
   const auto& story_id = ranked_suggestion.prototype->story_id;
 
-  // Proposal not tied to any story.
+  // fuchsia::modular::Proposal not tied to any story.
   if (!story_affinity || story_id.empty()) {
     return kMinConfidence;
   }
@@ -33,13 +33,12 @@ double DeadStoryRankingFeature::ComputeFeatureInternal(
   return kMaxConfidence;
 }
 
-ContextSelectorPtr
+fuchsia::modular::ContextSelectorPtr
 DeadStoryRankingFeature::CreateContextSelectorInternal() {
   // Get stories in context.
-  auto selector = ContextSelector::New();
-  selector->type = ContextValueType::STORY;
+  auto selector = fuchsia::modular::ContextSelector::New();
+  selector->type = fuchsia::modular::ContextValueType::STORY;
   return selector;
 }
 
 }  // namespace modular
-}  // namespace fuchsia

@@ -9,8 +9,8 @@
 #include "peridot/lib/testing/testing.h"
 #include "peridot/tests/common/defs.h"
 
-using fuchsia::modular::testing::Signal;
-using fuchsia::modular::testing::TestPoint;
+using modular::testing::Signal;
+using modular::testing::TestPoint;
 
 namespace {
 
@@ -19,11 +19,11 @@ class NullModule {
  public:
   TestPoint initialized_{"Null module initialized"};
 
-  NullModule(fuchsia::modular::ModuleHost* const module_host,
+  NullModule(modular::ModuleHost* const module_host,
              fidl::InterfaceRequest<
                  fuchsia::ui::views_v1::ViewProvider> /*view_provider_request*/)
       : module_host_(module_host) {
-    fuchsia::modular::testing::Init(module_host_->startup_context(), __FILE__);
+    modular::testing::Init(module_host_->startup_context(), __FILE__);
     initialized_.Pass();
     Signal(kCommonNullModuleStarted);
   }
@@ -34,11 +34,11 @@ class NullModule {
   void Terminate(const std::function<void()>& done) {
     Signal(kCommonNullModuleStopped);
     stopped_.Pass();
-    fuchsia::modular::testing::Done(done);
+    modular::testing::Done(done);
   }
 
  private:
-  fuchsia::modular::ModuleHost* const module_host_;
+  modular::ModuleHost* const module_host_;
 };
 
 }  // namespace
@@ -46,8 +46,8 @@ class NullModule {
 int main(int /*argc*/, const char** /*argv*/) {
   fsl::MessageLoop loop;
   auto context = fuchsia::sys::StartupContext::CreateFromStartupInfo();
-  fuchsia::modular::ModuleDriver<NullModule> driver(
-      context.get(), [&loop] { loop.QuitNow(); });
+  modular::ModuleDriver<NullModule> driver(context.get(),
+                                           [&loop] { loop.QuitNow(); });
   loop.Run();
   return 0;
 }

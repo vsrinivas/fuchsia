@@ -12,7 +12,6 @@
 #include "peridot/lib/fidl/array_to_string.h"
 #include "peridot/lib/ledger_client/ledger_client.h"
 
-namespace fuchsia {
 namespace modular {
 
 PageClient::PageClient(std::string context, LedgerClient* ledger_client,
@@ -147,4 +146,3 @@ void GetEntries(fuchsia::ledger::PageSnapshot* const snapshot,
 }
 
 }  // namespace modular
-}  // namespace fuchsia

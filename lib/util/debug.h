@@ -8,7 +8,6 @@
 #include <ostream>
 #include <string>
 
-namespace fuchsia {
 namespace modular {
 
 // When debugging multiple copies of an object (such as Links), this creates a
@@ -20,6 +19,5 @@ inline std::string GetDebugId(void* p) {
 }
 
 }  // namespace modular
-}  // namespace fuchsia
 
 #endif  // PERIDOT_LIB_UTIL_DEBUG_H_

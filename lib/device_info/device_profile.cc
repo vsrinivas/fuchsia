@@ -6,7 +6,6 @@
 
 #include "peridot/lib/rapidjson/rapidjson.h"
 
-namespace fuchsia {
 namespace modular {
 
 // TODO(zbowling): this is a hack. we need to later decide how we want to
@@ -31,9 +30,6 @@ bool DeviceProfile::Parse(const std::string& jsonProfile) {
   return true;
 }
 
-bool DeviceProfile::ParseDefaultProfile() {
-  return Parse(LoadDeviceProfile());
-}
+bool DeviceProfile::ParseDefaultProfile() { return Parse(LoadDeviceProfile()); }
 
 }  // namespace modular
-}  // namespace fuchsia

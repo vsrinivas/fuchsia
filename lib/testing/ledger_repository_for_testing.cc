@@ -11,14 +11,13 @@
 #include "peridot/lib/fidl/app_client.h"
 #include "peridot/lib/ledger_client/constants.h"
 
-namespace fuchsia {
 namespace modular {
 
 namespace testing {
 
 LedgerRepositoryForTesting::LedgerRepositoryForTesting()
     : startup_context_(fuchsia::sys::StartupContext::CreateFromStartupInfo()) {
-  AppConfig ledger_config;
+  fuchsia::modular::AppConfig ledger_config;
   ledger_config.url = kLedgerAppUrl;
   ledger_config.args.push_back(kLedgerNoMinfsWaitFlag);
 
@@ -61,4 +60,3 @@ void LedgerRepositoryForTesting::Terminate(std::function<void()> done) {
 
 }  // namespace testing
 }  // namespace modular
-}  // namespace fuchsia

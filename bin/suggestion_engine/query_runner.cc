@@ -8,7 +8,6 @@
 #include <lib/async/default.h>
 #include <lib/zx/time.h>
 
-namespace fuchsia {
 namespace modular {
 
 namespace {
@@ -18,12 +17,16 @@ namespace {
 // complicate the API.
 constexpr zx::duration kQueryTimeout = zx::sec(9);
 
-}
+}  // namespace
 
-QueryRunner::QueryRunner(fidl::InterfaceHandle<QueryListener> listener,
-                         UserInput input, int count) :
-  listener_(listener.Bind()), input_(input), max_results_(count),
-  request_ended_(false), weak_ptr_factory_(this) {}
+QueryRunner::QueryRunner(
+    fidl::InterfaceHandle<fuchsia::modular::QueryListener> listener,
+    fuchsia::modular::UserInput input, int count)
+    : listener_(listener.Bind()),
+      input_(input),
+      max_results_(count),
+      request_ended_(false),
+      weak_ptr_factory_(this) {}
 
 // TODO(rosswang): Consider moving some of the cleanup logic into here, but
 // beware that this may not happen until after the next QueryProcessor has been
@@ -42,14 +45,13 @@ void QueryRunner::Run(const std::vector<QueryHandlerRecord>& query_handlers) {
       DispatchQuery(handler_record);
     }
 
-    async::PostDelayedTask(
-        async_get_default(),
-        [w = weak_ptr_factory_.GetWeakPtr()] {
-          if (w) {
-            w->TimeOut();
-          }
-        },
-        kQueryTimeout);
+    async::PostDelayedTask(async_get_default(),
+                           [w = weak_ptr_factory_.GetWeakPtr()] {
+                             if (w) {
+                               w->TimeOut();
+                             }
+                           },
+                           kQueryTimeout);
   }
 }
 
@@ -58,7 +60,8 @@ void QueryRunner::SetEndRequestCallback(std::function<void()> callback) {
 }
 
 void QueryRunner::SetResponseCallback(
-    std::function<void(std::string, QueryResponse)> callback) {
+    std::function<void(std::string, fuchsia::modular::QueryResponse)>
+        callback) {
   on_query_response_callback_ = std::move(callback);
 }
 
@@ -66,8 +69,8 @@ void QueryRunner::DispatchQuery(const QueryHandlerRecord& handler_record) {
   outstanding_handlers_.insert(handler_record.url);
   handler_record.handler->OnQuery(
       input_,
-      [w = weak_ptr_factory_.GetWeakPtr(),
-       handler_url = handler_record.url](QueryResponse response) {
+      [w = weak_ptr_factory_.GetWeakPtr(), handler_url = handler_record.url](
+          fuchsia::modular::QueryResponse response) {
         if (w) {
           w->HandlerCallback(handler_url, std::move(response));
         }
@@ -75,7 +78,7 @@ void QueryRunner::DispatchQuery(const QueryHandlerRecord& handler_record) {
 }
 
 void QueryRunner::HandlerCallback(const std::string& handler_url,
-                                  QueryResponse response) {
+                                  fuchsia::modular::QueryResponse response) {
   on_query_response_callback_(handler_url, std::move(response));
 
   FXL_VLOG(1) << "Handler " << handler_url << " complete";
@@ -105,6 +108,4 @@ void QueryRunner::TimeOut() {
   }
 }
 
-
 }  // namespace modular
-}  // namespace fuchsia

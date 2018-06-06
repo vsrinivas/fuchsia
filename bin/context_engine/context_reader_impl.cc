@@ -4,17 +4,15 @@
 
 #include "peridot/bin/context_engine/context_reader_impl.h"
 
-#include "lib/fidl/cpp/clone.h"
 #include "lib/context/cpp/formatting.h"
+#include "lib/fidl/cpp/clone.h"
 #include "peridot/bin/context_engine/context_repository.h"
 
-namespace fuchsia {
 namespace modular {
 
 ContextReaderImpl::ContextReaderImpl(
-    ComponentScope client_info,
-    ContextRepository* repository,
-    fidl::InterfaceRequest<ContextReader> request)
+    fuchsia::modular::ComponentScope client_info, ContextRepository* repository,
+    fidl::InterfaceRequest<fuchsia::modular::ContextReader> request)
     : binding_(this, std::move(request)), repository_(repository) {
   debug_.client_info = std::move(client_info);
 }
@@ -22,20 +20,18 @@ ContextReaderImpl::ContextReaderImpl(
 ContextReaderImpl::~ContextReaderImpl() = default;
 
 void ContextReaderImpl::Subscribe(
-    ContextQuery query,
-    fidl::InterfaceHandle<ContextListener> listener) {
+    fuchsia::modular::ContextQuery query,
+    fidl::InterfaceHandle<fuchsia::modular::ContextListener> listener) {
   auto listener_ptr = listener.Bind();
-  SubscriptionDebugInfo debug_info;
+  fuchsia::modular::SubscriptionDebugInfo debug_info;
   fidl::Clone(debug_, &debug_info);
   repository_->AddSubscription(std::move(query), std::move(listener_ptr),
                                std::move(debug_info));
 }
 
-void ContextReaderImpl::Get(
-    ContextQuery query,
-    GetCallback callback) {
+void ContextReaderImpl::Get(fuchsia::modular::ContextQuery query,
+                            GetCallback callback) {
   callback(repository_->Query(query));
 }
 
 }  // namespace modular
-}  // namespace fuchsia

@@ -9,7 +9,6 @@
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fxl/macros.h"
 
-namespace fuchsia {
 namespace modular {
 
 // A simple story provider watcher implementation that calls the Continue()
@@ -36,10 +35,10 @@ class StoryProviderWatcherBase : fuchsia::modular::StoryProviderWatcher {
   std::function<void()> continue_;
 
  private:
-  // |StoryProviderWatcher|
+  // |fuchsia::modular::StoryProviderWatcher|
   void OnDelete(::fidl::StringPtr story_id) override;
 
-  // |StoryProviderWatcher|
+  // |fuchsia::modular::StoryProviderWatcher|
   void OnChange(fuchsia::modular::StoryInfo story_info,
                 fuchsia::modular::StoryState story_state) override;
 
@@ -48,6 +47,5 @@ class StoryProviderWatcherBase : fuchsia::modular::StoryProviderWatcher {
 };
 
 }  // namespace modular
-}  // namespace fuchsia
 
 #endif  // PERIDOT_LIB_COMMON_STORY_PROVIDER_WATCHER_BASE_H_

@@ -9,7 +9,6 @@
 
 #include "peridot/bin/suggestion_engine/ranking_feature.h"
 
-namespace fuchsia {
 namespace modular {
 
 class AnnoyanceRankingFeature : public RankingFeature {
@@ -18,11 +17,10 @@ class AnnoyanceRankingFeature : public RankingFeature {
   ~AnnoyanceRankingFeature() override;
 
  private:
-  double ComputeFeatureInternal(
-      const UserInput& query, const RankedSuggestion& suggestion) override;
+  double ComputeFeatureInternal(const fuchsia::modular::UserInput& query,
+                                const RankedSuggestion& suggestion) override;
 };
 
 }  // namespace modular
-}  // namespace fuchsia
 
 #endif  // PERIDOT_BIN_SUGGESTION_ENGINE_RANKING_FEATURES_ANNOYANCE_RANKING_FEATURE_H_

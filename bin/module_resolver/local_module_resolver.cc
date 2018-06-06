@@ -15,7 +15,6 @@
 #include "lib/fxl/strings/split_string.h"
 #include "peridot/public/lib/entity/cpp/json.h"
 
-namespace fuchsia {
 namespace modular {
 
 namespace {
@@ -38,8 +37,7 @@ LocalModuleResolver::LocalModuleResolver(
 LocalModuleResolver::~LocalModuleResolver() = default;
 
 void LocalModuleResolver::AddSource(
-    std::string name,
-    std::unique_ptr<fuchsia::modular::ModuleManifestSource> repo) {
+    std::string name, std::unique_ptr<ModuleManifestSource> repo) {
   FXL_CHECK(bindings_.size() == 0);
 
   auto ptr = repo.get();
@@ -66,12 +64,12 @@ void LocalModuleResolver::Connect(
 }
 
 void LocalModuleResolver::BindQueryHandler(
-    fidl::InterfaceRequest<QueryHandler> request) {
+    fidl::InterfaceRequest<fuchsia::modular::QueryHandler> request) {
   query_handler_binding_.Bind(std::move(request));
 }
 
 class LocalModuleResolver::FindModulesCall
-    : public fuchsia::modular::Operation<fuchsia::modular::FindModulesResult> {
+    : public Operation<fuchsia::modular::FindModulesResult> {
  public:
   FindModulesCall(LocalModuleResolver* local_module_resolver,
                   fuchsia::modular::ResolverQuery query,
@@ -110,8 +108,8 @@ class LocalModuleResolver::FindModulesCall
       candidates_ = action_it->second;
     }
 
-    // For each parameter in the ResolverQuery, try to find Modules that provide
-    // the types in the parameter as constraints.
+    // For each parameter in the fuchsia::modular::ResolverQuery, try to find
+    // Modules that provide the types in the parameter as constraints.
     if (query_.parameter_constraints.is_null() ||
         query_.parameter_constraints->size() == 0) {
       Finally(flow);
@@ -136,7 +134,7 @@ class LocalModuleResolver::FindModulesCall
   }
 
  private:
-  // |parameter_name| and |types| come from the ResolverQuery.
+  // |parameter_name| and |types| come from the fuchsia::modular::ResolverQuery.
   // |match_name| is true if the entries are required to match both the
   // parameter name and types. If false, only the types are matched.
   void ProcessParameterTypes(const std::string& parameter_name,
@@ -418,8 +416,8 @@ class LocalModuleResolver::FindModulesCall
 
       if (parameter.is_entity_reference()) {
         fuchsia::modular::CreateLinkInfo create_link;
-        create_link.initial_data = fuchsia::modular::EntityReferenceToJson(
-            parameter.entity_reference());
+        create_link.initial_data =
+            EntityReferenceToJson(parameter.entity_reference());
         // TODO(thatguy): set |create_link->allowed_types|.
         // TODO(thatguy): set |create_link->permissions|.
         fuchsia::modular::CreateModuleParameterInfo property_info;
@@ -484,7 +482,8 @@ class LocalModuleResolver::FindModulesCall
   fuchsia::modular::ResolverQuery query_;
   fuchsia::modular::ResolverScoringInfoPtr scoring_info_;
 
-  // A cache of the Entity types for each parameter in |query_|.
+  // A cache of the fuchsia::modular::Entity types for each parameter in
+  // |query_|.
   std::map<std::string, std::vector<std::string>> parameter_types_cache_;
 
   std::set<EntryId> candidates_;
@@ -512,16 +511,17 @@ bool StringStartsWith(const std::string& str, const std::string& prefix) {
 }
 }  // namespace
 
-void LocalModuleResolver::OnQuery(UserInput query, OnQueryCallback done) {
+void LocalModuleResolver::OnQuery(fuchsia::modular::UserInput query,
+                                  OnQueryCallback done) {
   // TODO(thatguy): This implementation is bare-bones. Don't judge.
   // Before adding new member variables to support OnQuery() (and tying the
   // LocalModuleResolver internals up with what's needed for this method),
   // please split the index-building & querying portion of LocalModuleResolver
   // out into its own class. Then, make a new class to handle OnQuery() and
   // share the same index instance here and there.
-  auto proposals = fidl::VectorPtr<Proposal>::New(0);
+  auto proposals = fidl::VectorPtr<fuchsia::modular::Proposal>::New(0);
   if (query.text->empty()) {
-    QueryResponse response;
+    fuchsia::modular::QueryResponse response;
     response.proposals = std::move(proposals);
     done(std::move(response));
     return;
@@ -538,15 +538,15 @@ void LocalModuleResolver::OnQuery(UserInput query, OnQueryCallback done) {
     const auto& last_part = parts.back();
     if (StringStartsWith(entry.action, query.text) ||
         StringStartsWith(last_part.ToString(), query.text)) {
-      Proposal proposal;
+      fuchsia::modular::Proposal proposal;
       proposal.id = entry.binary;
 
-      CreateStory create_story;
-      Intent intent;
+      fuchsia::modular::CreateStory create_story;
+      fuchsia::modular::Intent intent;
       intent.action.handler = entry.binary;
       create_story.intent = std::move(intent);
 
-      Action action;
+      fuchsia::modular::Action action;
       action.set_create_story(std::move(create_story));
       proposal.on_selected.push_back(std::move(action));
 
@@ -554,7 +554,7 @@ void LocalModuleResolver::OnQuery(UserInput query, OnQueryCallback done) {
           std::string("Go go gadget ") + last_part.ToString();
       proposal.display.subheadline = entry.binary;
       proposal.display.color = 0xffffffff;
-      proposal.display.annoyance = AnnoyanceType::NONE;
+      proposal.display.annoyance = fuchsia::modular::AnnoyanceType::NONE;
 
       proposal.confidence = 1.0;  // Yeah, super confident.
 
@@ -566,7 +566,7 @@ void LocalModuleResolver::OnQuery(UserInput query, OnQueryCallback done) {
     proposals.resize(10);
   }
 
-  QueryResponse response;
+  fuchsia::modular::QueryResponse response;
   response.proposals = std::move(proposals);
   done(std::move(response));
 }
@@ -661,4 +661,3 @@ void LocalModuleResolver::PeriodicCheckIfSourcesAreReady() {
 }
 
 }  // namespace modular
-}  // namespace fuchsia

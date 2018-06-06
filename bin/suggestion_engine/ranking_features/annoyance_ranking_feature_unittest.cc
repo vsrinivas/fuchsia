@@ -5,16 +5,15 @@
 #include "peridot/bin/suggestion_engine/ranking_features/annoyance_ranking_feature.h"
 #include "gtest/gtest.h"
 
-namespace fuchsia {
 namespace modular {
 namespace {
 
 class AnnoyanceRankingFeatureTest : public ::testing::Test {
  protected:
-  RankedSuggestion GetSuggestion(AnnoyanceType annoyance) {
-    SuggestionDisplay display;
+  RankedSuggestion GetSuggestion(fuchsia::modular::AnnoyanceType annoyance) {
+    fuchsia::modular::SuggestionDisplay display;
     display.annoyance = annoyance;
-    Proposal proposal;
+    fuchsia::modular::Proposal proposal;
     proposal.display = std::move(display);
     SuggestionPrototype prototype;
     prototype.proposal = std::move(proposal);
@@ -23,21 +22,20 @@ class AnnoyanceRankingFeatureTest : public ::testing::Test {
     return suggestion;
   }
   AnnoyanceRankingFeature annoyance_ranking_feature;
-  UserInput query;
+  fuchsia::modular::UserInput query;
 };
 
 TEST_F(AnnoyanceRankingFeatureTest, ComputeFeatureAnnoyance) {
-  auto suggestion = GetSuggestion(AnnoyanceType::INTERRUPT);
+  auto suggestion = GetSuggestion(fuchsia::modular::AnnoyanceType::INTERRUPT);
   double value = annoyance_ranking_feature.ComputeFeature(query, suggestion);
   EXPECT_EQ(value, kMaxConfidence);
 }
 
-TEST_F(AnnoyanceRankingFeatureTest, ComputeFeatureNonAnnoyance)  {
-  auto suggestion = GetSuggestion(AnnoyanceType::NONE);
+TEST_F(AnnoyanceRankingFeatureTest, ComputeFeatureNonAnnoyance) {
+  auto suggestion = GetSuggestion(fuchsia::modular::AnnoyanceType::NONE);
   double value = annoyance_ranking_feature.ComputeFeature(query, suggestion);
   EXPECT_EQ(value, kMinConfidence);
 }
 
 }  // namespace
 }  // namespace modular
-}  // namespace fuchsia

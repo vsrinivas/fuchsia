@@ -6,7 +6,6 @@
 
 #include "peridot/bin/suggestion_engine/filters/ranked_active_filter.h"
 
-namespace fuchsia {
 namespace modular {
 
 RankedActiveFilter::RankedActiveFilter(
@@ -18,14 +17,14 @@ RankedActiveFilter::~RankedActiveFilter() = default;
 void RankedActiveFilter::Filter(
     std::vector<std::unique_ptr<RankedSuggestion>>* const suggestions) {
   suggestions->erase(
-      std::remove_if(suggestions->begin(), suggestions->end(),
-      [this] (const std::unique_ptr<RankedSuggestion>& ranked_suggestion) {
-        double confidence = ranking_feature_->ComputeFeature(
-            UserInput(), *ranked_suggestion);
-        return confidence >= kMaxConfidence;
-      }),
+      std::remove_if(
+          suggestions->begin(), suggestions->end(),
+          [this](const std::unique_ptr<RankedSuggestion>& ranked_suggestion) {
+            double confidence = ranking_feature_->ComputeFeature(
+                fuchsia::modular::UserInput(), *ranked_suggestion);
+            return confidence >= kMaxConfidence;
+          }),
       suggestions->end());
 }
 
 }  // namespace modular
-}  // namespace fuchsia

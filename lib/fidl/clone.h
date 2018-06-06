@@ -10,7 +10,6 @@
 #include "lib/fidl/cpp/optional.h"
 #include "lib/fidl/cpp/vector.h"
 
-namespace fuchsia {
 namespace modular {
 
 template <typename T>
@@ -38,6 +37,5 @@ std::unique_ptr<T> CloneOptional(const std::unique_ptr<T>& value_ptr) {
 }
 
 }  // namespace modular
-}  // namespace fuchsia
 
 #endif  // PERIDOT_LIB_FIDL_CLONE_H_

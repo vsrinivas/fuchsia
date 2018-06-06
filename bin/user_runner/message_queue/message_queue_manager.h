@@ -23,7 +23,6 @@
 #include "peridot/lib/ledger_client/page_client.h"
 #include "peridot/lib/ledger_client/types.h"
 
-namespace fuchsia {
 namespace modular {
 
 class MessageQueueStorage;
@@ -32,8 +31,8 @@ struct MessageQueueInfo;
 // Manages message queues for components. One MessageQueueManager
 // instance is used by all ComponentContextImpl instances, and manages
 // the message queues for all component instances. The
-// ComponentContext instance is responsible for deleting the message
-// queues it has created, otherwise they are persisted.
+// fuchsia::modular::ComponentContext instance is responsible for deleting the
+// message queues it has created, otherwise they are persisted.
 class MessageQueueManager : PageClient {
  public:
   MessageQueueManager(LedgerClient* ledger_client,
@@ -49,10 +48,10 @@ class MessageQueueManager : PageClient {
     QUEUE_DELETED,
   };
 
-  void ObtainMessageQueue(const std::string& component_namespace,
-                          const std::string& component_instance_id,
-                          const std::string& queue_name,
-                          fidl::InterfaceRequest<MessageQueue> request);
+  void ObtainMessageQueue(
+      const std::string& component_namespace,
+      const std::string& component_instance_id, const std::string& queue_name,
+      fidl::InterfaceRequest<fuchsia::modular::MessageQueue> request);
 
   void DeleteMessageQueue(const std::string& component_namespace,
                           const std::string& component_instance_id,
@@ -61,8 +60,9 @@ class MessageQueueManager : PageClient {
   void DeleteNamespace(const std::string& component_namespace,
                        std::function<void()> done);
 
-  void GetMessageSender(const std::string& queue_token,
-                        fidl::InterfaceRequest<MessageSender> request);
+  void GetMessageSender(
+      const std::string& queue_token,
+      fidl::InterfaceRequest<fuchsia::modular::MessageSender> request);
 
   // Registers a watcher that will be called when there is a new message on a
   // queue corresponding to |component_namespace| x |component_instance_id| x
@@ -193,6 +193,5 @@ class MessageQueueManager : PageClient {
 };
 
 }  // namespace modular
-}  // namespace fuchsia
 
 #endif  // PERIDOT_BIN_USER_RUNNER_MESSAGE_QUEUE_MESSAGE_QUEUE_MANAGER_H_

@@ -7,8 +7,8 @@
 
 #include <memory>
 
-#include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/modular/cpp/fidl.h>
+#include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/ui/views_v1/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
@@ -20,14 +20,13 @@
 #include "lib/fxl/logging.h"
 #include "lib/lifecycle/cpp/lifecycle_impl.h"
 
-namespace fuchsia {
 namespace modular {
 
 // This interface is passed to the |Impl| object that ModuleDriver initializes.
 class ModuleHost {
  public:
   virtual fuchsia::sys::StartupContext* startup_context() = 0;
-  virtual ModuleContext* module_context() = 0;
+  virtual fuchsia::modular::ModuleContext* module_context() = 0;
 };
 
 // ModuleDriver provides a way to write modules and participate in application
@@ -39,7 +38,7 @@ class ModuleHost {
 //
 //      // A constructor with the following signature:
 //      Constructor(
-//           fuchsia::modular::ModuleHost* module_host,
+//           modular::ModuleHost* module_host,
 //           fidl::InterfaceRequest<fuchsia::ui::views_v1::ViewProvider>
 //           view_provider_request);
 //
@@ -52,7 +51,7 @@ class ModuleHost {
 // class HelloWorldModule {
 //  public:
 //   HelloWorldModule(
-//      fuchsia::modular::ModuleHost* module_host,
+//      modular::ModuleHost* module_host,
 //      fidl::InterfaceRequest<fuchsia::ui::views_v1::ViewProvider>
 //      view_provider_request) {}
 //
@@ -63,7 +62,7 @@ class ModuleHost {
 // int main(int argc, const char** argv) {
 //   fsl::MessageLoop loop;
 //   auto context = fuchsia::sys::StartupContext::CreateFromStartupInfo();
-//   fuchsia::modular::ModuleDriver<HelloWorldApp> driver(context.get(),
+//   modular::ModuleDriver<HelloWorldApp> driver(context.get(),
 //                                               [&loop] { loop.QuitNow(); });
 //   loop.Run();
 //   return 0;
@@ -94,17 +93,18 @@ class ModuleDriver : LifecycleImpl::Delegate, ModuleHost {
   fuchsia::sys::StartupContext* startup_context() override { return context_; }
 
   // |ModuleHost|
-  ModuleContext* module_context() override {
+  fuchsia::modular::ModuleContext* module_context() override {
     FXL_DCHECK(module_context_);
     return module_context_.get();
   }
 
   // |LifecycleImpl::Delegate|
   void Terminate() override {
-    // It's possible that we process the |Lifecycle.Terminate| message before
-    // the |Module.Initialize| message, even when both messages are ready to be
-    // processed at the same time. In this case, because |impl_| hasn't been
-    // instantiated yet, we cannot delegate the |Lifecycle.Terminate| message.
+    // It's possible that we process the |fuchsia::modular::Lifecycle.Terminate|
+    // message before the |Module.Initialize| message, even when both messages
+    // are ready to be processed at the same time. In this case, because |impl_|
+    // hasn't been instantiated yet, we cannot delegate the
+    // |fuchsia::modular::Lifecycle.Terminate| message.
     if (impl_) {
       impl_->Terminate([this] {
         // Cf. AppDriver::Terminate().
@@ -126,7 +126,7 @@ class ModuleDriver : LifecycleImpl::Delegate, ModuleHost {
   fuchsia::sys::StartupContext* const context_;
   LifecycleImpl lifecycle_impl_;
   std::function<void()> on_terminated_;
-  ModuleContextPtr module_context_;
+  fuchsia::modular::ModuleContextPtr module_context_;
 
   // Only valid until |impl_| is instantiated.
   fidl::InterfaceRequest<fuchsia::ui::views_v1::ViewProvider>
@@ -138,6 +138,5 @@ class ModuleDriver : LifecycleImpl::Delegate, ModuleHost {
 };
 
 }  // namespace modular
-}  // namespace fuchsia
 
 #endif  // LIB_APP_DRIVER_CPP_MODULE_DRIVER_H_

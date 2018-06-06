@@ -2,15 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef PERIDOT_BIN_SUGGESTION_ENGINE_RANKERS_RANKED_ACTIVE_FILTER_H_
-#define PERIDOT_BIN_SUGGESTION_ENGINE_RANKERS_RANKED_ACTIVE_FILTER_H_
+#ifndef PERIDOT_BIN_SUGGESTION_ENGINE_FILTERS_RANKED_ACTIVE_FILTER_H_
+#define PERIDOT_BIN_SUGGESTION_ENGINE_FILTERS_RANKED_ACTIVE_FILTER_H_
 
 #include <fuchsia/modular/cpp/fidl.h>
 
 #include "peridot/bin/suggestion_engine/ranking_feature.h"
 #include "peridot/bin/suggestion_engine/suggestion_active_filter.h"
 
-namespace fuchsia {
 namespace modular {
 
 class RankedActiveFilter : public SuggestionActiveFilter {
@@ -18,14 +17,13 @@ class RankedActiveFilter : public SuggestionActiveFilter {
   RankedActiveFilter(std::shared_ptr<RankingFeature> ranking_feature);
   ~RankedActiveFilter() override;
 
-  void Filter(
-      std::vector<std::unique_ptr<RankedSuggestion>>* const suggestions) override;
+  void Filter(std::vector<std::unique_ptr<RankedSuggestion>>* const suggestions)
+      override;
 
  private:
   std::shared_ptr<RankingFeature> ranking_feature_;
 };
 
 }  // namespace modular
-}  // namespace fuchsia
 
-#endif  // PERIDOT_BIN_SUGGESTION_ENGINE_RANKERS_RANKED_ACTIVE_FILTER_H_
+#endif  // PERIDOT_BIN_SUGGESTION_ENGINE_FILTERS_RANKED_ACTIVE_FILTER_H_

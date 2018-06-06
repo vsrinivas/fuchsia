@@ -2,20 +2,20 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef PERIDOT_BIN_USER_RUNNER_PUPPET_MASTER_DISPATCH_STORY_COMMAND_EXECUTOR_H_
+#define PERIDOT_BIN_USER_RUNNER_PUPPET_MASTER_DISPATCH_STORY_COMMAND_EXECUTOR_H_
 
 #include "lib/fidl/cpp/string.h"
 #include "peridot/bin/user_runner/puppet_master/command_runners/command_runner.h"
 #include "peridot/bin/user_runner/puppet_master/story_command_executor.h"
 
-namespace fuchsia {
 namespace modular {
 
 class OperationContainer;
 
 // An implementation of StoryCommandExecutor which dispatches execution of
 // individual StoryCommands to CommandRunners for each union tag of
-// StoryCommand.
+// fuchsia::modular::StoryCommand.
 class DispatchStoryCommandExecutor : public StoryCommandExecutor {
  public:
   // Returns an OperationContainer* for a given |story_id|, or nullptr if
@@ -25,27 +25,32 @@ class DispatchStoryCommandExecutor : public StoryCommandExecutor {
   using OperationContainerAccessor =
       std::function<OperationContainer*(const fidl::StringPtr& story_id)>;
 
-  DispatchStoryCommandExecutor(
-      OperationContainerAccessor container_accessor,
-      std::map<StoryCommand::Tag, std::unique_ptr<CommandRunner>>
-          command_runners);
+  DispatchStoryCommandExecutor(OperationContainerAccessor container_accessor,
+                               std::map<fuchsia::modular::StoryCommand::Tag,
+                                        std::unique_ptr<CommandRunner>>
+                                   command_runners);
   ~DispatchStoryCommandExecutor() override;
 
  private:
   // |StoryCommandExecutor|
-  void ExecuteCommands(fidl::StringPtr story_id,
-                       std::vector<StoryCommand> commands,
-                       std::function<void(ExecuteResult)> done) override;
+  void ExecuteCommands(
+      fidl::StringPtr story_id,
+      std::vector<fuchsia::modular::StoryCommand> commands,
+      std::function<void(fuchsia::modular::ExecuteResult)> done) override;
 
   class ExecuteStoryCommandsCall;
 
   OperationContainerAccessor container_accessor_;
-  const std::map<StoryCommand::Tag, std::unique_ptr<CommandRunner>>
+  const std::map<fuchsia::modular::StoryCommand::Tag,
+                 std::unique_ptr<CommandRunner>>
       command_runners_;
 
-  // Lookup table from StoryCommand union tag to a human-readable string.
-  const std::map<StoryCommand::Tag, const char*> story_command_tag_strings_;
+  // Lookup table from fuchsia::modular::StoryCommand union tag to a
+  // human-readable string.
+  const std::map<fuchsia::modular::StoryCommand::Tag, const char*>
+      story_command_tag_strings_;
 };
 
 }  // namespace modular
-}  // namespace fuchsia
+
+#endif  // PERIDOT_BIN_USER_RUNNER_PUPPET_MASTER_DISPATCH_STORY_COMMAND_EXECUTOR_H_

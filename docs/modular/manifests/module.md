@@ -79,7 +79,7 @@ The `suggestion_headline` attribute provides human-readable
 text. It will be used if this `Module` is suggested for inclusion
 in the current Story.
 
-#### Action
+#### fuchsia::modular::Action
 
 ```javascript
 "action": "com.google.fuchsia.preview.v1",
@@ -106,15 +106,15 @@ The `action` must match an `action` name in an associated
 ```
 
 In the [action template](action_template.md), the parameters are given names but not
-assigned concrete Entity types (**TODO** link). Here, we constrain this
-action implementation to operate on a specific set of [Entity](../entity.md)
+assigned concrete fuchsia::modular::Entity types (**TODO** link). Here, we constrain this
+action implementation to operate on a specific set of [fuchsia::modular::Entity](../entity.md)
 types.
 
 Each parameter in the action template gets an entry in `parameter_constraints`. Each entry
 is made up of the following fields:
 
 * `name`: this is the name of the parameter given in the [action template](action_template.md)
-* `type`: an [Entity](../entity.md) types.
+* `type`: an [fuchsia::modular::Entity](../entity.md) types.
 
    > TODO(thatguy): Add information about where entity types & schemas are discoverable.
 
@@ -122,8 +122,8 @@ is made up of the following fields:
      or maybe *input/output* parameters.
 
 At runtime, this `Module` will communicate with its parent (the invoker of the
-`Module`) through multiple [`Link`](../../services/story/link.fidl) interfaces. The `Link` enforces the
-typing described here, making any attempt to write an `Entity` with an
+`Module`) through multiple [`fuchsia::modular::Link`](../../services/story/link.fidl) interfaces. The `fuchsia::modular::Link` enforces the
+typing described here, making any attempt to write an `fuchsia::modular::Entity` with an
 incompatible type an error.
 
 #### composition_pattern

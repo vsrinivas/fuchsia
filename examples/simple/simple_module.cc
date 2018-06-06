@@ -16,7 +16,7 @@ namespace simple {
 
 class SimpleModule : fuchsia::ui::views_v1::ViewProvider {
  public:
-  SimpleModule(fuchsia::modular::ModuleHost* module_host,
+  SimpleModule(modular::ModuleHost* module_host,
                fidl::InterfaceRequest<fuchsia::ui::views_v1::ViewProvider>
                    view_provider_request)
       : view_provider_binding_(this) {
@@ -37,7 +37,7 @@ class SimpleModule : fuchsia::ui::views_v1::ViewProvider {
     // Connect to the SimpleService in the agent's services.
     SimplePtr agent_service;
     fuchsia::sys::ConnectToService(agent_services.get(),
-                                agent_service.NewRequest());
+                                   agent_service.NewRequest());
 
     // Request a new message queue from the component context.
     fuchsia::modular::MessageQueuePtr message_queue;
@@ -46,13 +46,12 @@ class SimpleModule : fuchsia::ui::views_v1::ViewProvider {
 
     // Register a callback with a message receiver client that logs any
     // messages that SimpleAgent sends.
-    message_receiver_ =
-        std::make_unique<fuchsia::modular::MessageReceiverClient>(
-            message_queue.get(),
-            [](fidl::StringPtr msg, std::function<void()> ack) {
-              ack();
-              FXL_LOG(INFO) << "new message: " << msg;
-            });
+    message_receiver_ = std::make_unique<modular::MessageReceiverClient>(
+        message_queue.get(),
+        [](fidl::StringPtr msg, std::function<void()> ack) {
+          ack();
+          FXL_LOG(INFO) << "new message: " << msg;
+        });
 
     // Get the token for the message queue and send it to the agent.
     message_queue->GetToken(fxl::MakeCopyable(
@@ -69,11 +68,12 @@ class SimpleModule : fuchsia::ui::views_v1::ViewProvider {
   // |fuchsia::ui::views_v1::ViewProvider|
   void CreateView(
       fidl::InterfaceRequest<fuchsia::ui::views_v1_token::ViewOwner> view_owner,
-      fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> services) override {}
+      fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> services) override {
+  }
 
   fidl::Binding<fuchsia::ui::views_v1::ViewProvider> view_provider_binding_;
 
-  std::unique_ptr<fuchsia::modular::MessageReceiverClient> message_receiver_;
+  std::unique_ptr<modular::MessageReceiverClient> message_receiver_;
 };
 
 }  // namespace simple
@@ -81,8 +81,8 @@ class SimpleModule : fuchsia::ui::views_v1::ViewProvider {
 int main(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigMakeDefault);
   auto context = fuchsia::sys::StartupContext::CreateFromStartupInfo();
-  fuchsia::modular::ModuleDriver<simple::SimpleModule> driver(
-      context.get(), [&loop] { loop.Quit(); });
+  modular::ModuleDriver<simple::SimpleModule> driver(context.get(),
+                                                     [&loop] { loop.Quit(); });
   loop.Run();
   return 0;
 }

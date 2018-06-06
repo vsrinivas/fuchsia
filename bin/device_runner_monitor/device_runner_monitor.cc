@@ -11,37 +11,38 @@
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
 
-namespace fuchsia {
 namespace modular {
 
-class DeviceRunnerMonitorApp : DeviceRunnerMonitor {
+class DeviceRunnerMonitorApp : fuchsia::modular::DeviceRunnerMonitor {
  public:
   DeviceRunnerMonitorApp()
-      : context_(fuchsia::sys::StartupContext::CreateFromStartupInfoNotChecked()) {
-    context_->outgoing().AddPublicService<DeviceRunnerMonitor>(
-        [this](fidl::InterfaceRequest<DeviceRunnerMonitor> request) {
-          bindings_.AddBinding(this, std::move(request));
-        });
+      : context_(
+            fuchsia::sys::StartupContext::CreateFromStartupInfoNotChecked()) {
+    context_->outgoing()
+        .AddPublicService<fuchsia::modular::DeviceRunnerMonitor>(
+            [this](fidl::InterfaceRequest<fuchsia::modular::DeviceRunnerMonitor>
+                       request) {
+              bindings_.AddBinding(this, std::move(request));
+            });
   }
 
  private:
-  // |DeviceRunnerMonitor|
+  // |fuchsia::modular::DeviceRunnerMonitor|
   void GetConnectionCount(GetConnectionCountCallback callback) override {
     callback(bindings_.size());
   }
 
   std::unique_ptr<fuchsia::sys::StartupContext> context_;
-  fidl::BindingSet<DeviceRunnerMonitor> bindings_;
+  fidl::BindingSet<fuchsia::modular::DeviceRunnerMonitor> bindings_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(DeviceRunnerMonitorApp);
 };
 
 }  // namespace modular
-}  // namespace fuchsia
 
 int main(int /*argc*/, const char** /*argv*/) {
   fsl::MessageLoop loop;
-  fuchsia::modular::DeviceRunnerMonitorApp app;
+  modular::DeviceRunnerMonitorApp app;
   loop.Run();
   return 0;
 }

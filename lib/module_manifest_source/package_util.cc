@@ -6,7 +6,6 @@
 
 #include "lib/fxl/strings/string_printf.h"
 
-namespace fuchsia {
 namespace modular {
 
 std::string GetModuleManifestPathFromPackage(fxl::StringView package_name,
@@ -16,4 +15,3 @@ std::string GetModuleManifestPathFromPackage(fxl::StringView package_name,
 }
 
 }  // namespace modular
-}  // namespace fuchsia

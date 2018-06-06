@@ -1,23 +1,23 @@
-# How-To: Write an Agent in C++
+# How-To: Write an fuchsia::modular::Agent in C++
 
 ## Overview
 
-An `Agent` is a Peridot component that runs without any direct user interaction.
-The lifetime of a single Agent instance is bounded by its session.  It can be
+An `fuchsia::modular::Agent` is a Peridot component that runs without any direct user interaction.
+The lifetime of a single fuchsia::modular::Agent instance is bounded by its session.  It can be
 shared by mods across many stories. In addition to the capabilities provided to all
-Peridot components via `ComponentContext`, an `Agent` is given additional
-capabilities via its `AgentContext`.
+Peridot components via `fuchsia::modular::ComponentContext`, an `fuchsia::modular::Agent` is given additional
+capabilities via its `fuchsia::modular::AgentContext`.
 
 See [the simple directory](../simple/) for a complete implementation of
-the `Agent` described here.
+the `fuchsia::modular::Agent` described here.
 
 ## SimpleAgent
 
-`SimpleAgent` is an `Agent` that periodically writes a simple message to
-a `MessageQueue` (a common communication channel).
+`SimpleAgent` is an `fuchsia::modular::Agent` that periodically writes a simple message to
+a `fuchsia::modular::MessageQueue` (a common communication channel).
 
 `SimpleAgent` implements the `Simple` FIDL interface which exposes the
-ability to control which `MessageQueue` the messages will be sent to.
+ability to control which `fuchsia::modular::MessageQueue` the messages will be sent to.
 
 ```
 library simple;
@@ -30,9 +30,9 @@ interface Simple {
 };
 ```
 
-### Agent Initialization
+### fuchsia::modular::Agent Initialization
 
-The first step to writing an `Agent` is implementing the initializer:
+The first step to writing an `fuchsia::modular::Agent` is implementing the initializer:
 
 ```c++
 #include "lib/app_driver/cpp/agent_driver.h"
@@ -45,24 +45,24 @@ class SimpleAgent {
 };
 ```
 
-The `AgentHost` parameter provides the `Agent` with an `StartupContext`
-and an `AgentContext`.
+The `AgentHost` parameter provides the `fuchsia::modular::Agent` with an `StartupContext`
+and an `fuchsia::modular::AgentContext`.
 
 #### `StartupContext`
 
-`StartupContext` gives the `Agent` access to services provided to it by
-other system components via `incoming_services`. It also allows the `Agent`
+`StartupContext` gives the `fuchsia::modular::Agent` access to services provided to it by
+other system components via `incoming_services`. It also allows the `fuchsia::modular::Agent`
 to provide services to other components via `outgoing_services`.
 
-#### `AgentContext`
+#### `fuchsia::modular::AgentContext`
 
-`AgentContext` is an interface that is exposed to all `Agents`.
+`fuchsia::modular::AgentContext` is an interface that is exposed to all `Agents`.
 For example, it allows agents to schedule `Task`s that will be executed at
 specific intervals.
 
-`AgentContext` also gives `Agent`s access to `ComponentContext` which is an
-interface that is exposed to all Peridot components (i.e. `Agent` and `Module`).
-For example, `ComponentContext` provides access to `Ledger`, Peridot's cross-device
+`fuchsia::modular::AgentContext` also gives `fuchsia::modular::Agent`s access to `fuchsia::modular::ComponentContext` which is an
+interface that is exposed to all Peridot components (i.e. `fuchsia::modular::Agent` and `Module`).
+For example, `fuchsia::modular::ComponentContext` provides access to `Ledger`, Peridot's cross-device
 storage solution.
 
 ### Advertising the `Simple` Interface
@@ -122,25 +122,25 @@ class SimpleImpl : Simple {
 ```
 
 The `SimpleImpl` could be part of the `SimpleAgent` class, but it's good practice
-to separate out the implementation of an `Agent` from the implementation(s) of the
+to separate out the implementation of an `fuchsia::modular::Agent` from the implementation(s) of the
 interface(s) it provides.
 
-## Running the Agent
+## Running the fuchsia::modular::Agent
 
 ```c++
 int main(int /*argc*/, const char** /*argv*/) {
   fsl::MessageLoop loop;
   auto context = fuchsia::sys::StartupContext::CreateFromStartupInfo();
-  fuchsia::modular::AgentDriver<simple_agent::SimpleAgent> driver(
+  modular::AgentDriver<simple_agent::SimpleAgent> driver(
       context.get(), [&loop] { loop.QuitNow(); });
   loop.Run();
   return 0;
 }
 ```
 
-`AgentDriver` is a helper class that helps manage the `Agent` lifecycle. Here
+`AgentDriver` is a helper class that helps manage the `fuchsia::modular::Agent` lifecycle. Here
 it is given a newly created `StartupContext` and a callback that will be
-executed when the `Agent` exits. `AgentDriver` requires `SimpleAgent` to
+executed when the `fuchsia::modular::Agent` exits. `AgentDriver` requires `SimpleAgent` to
 implement three methods, one of which is `Connect` which was shown above.
 
 The other two are:
@@ -154,10 +154,10 @@ void RunTask(const fidl::StringPtr& task_id,
 void Terminate(const std::function<void()>& done) { done(); }
 ```
 
-`RunTask` is called when a task, scheduled through `AgentContext`'s `ScheduleTask`,
+`RunTask` is called when a task, scheduled through `fuchsia::modular::AgentContext`'s `ScheduleTask`,
 is triggered.
 
-`Terminate` is called when the framework requests `Agent` to
+`Terminate` is called when the framework requests `fuchsia::modular::Agent` to
 exit gracefully.
 
 ## Connecting to SimpleAgent
@@ -176,12 +176,12 @@ ConnectToService(agent_services.get(), agent_service.NewRequest());
 agent_service->SetMessageQueue(...);
 ```
 
-Here the component context is asked to connect to the Agent at `agent_url`, and is
+Here the component context is asked to connect to the fuchsia::modular::Agent at `agent_url`, and is
 given a request for the services that the `SimpleAgent` will provide via `agent_services`,
-and a controller for the `Agent` via `agent_controller`.
+and a controller for the `fuchsia::modular::Agent` via `agent_controller`.
 
 Then the client connects to the `Simple` interface by invoking `ConnectToService` with
 a request for a new `SimpleServicePtr`. This interface pointer can be used immediately
-to provide the agent with the token for the `MessageQueue` to send messages to.
+to provide the agent with the token for the `fuchsia::modular::MessageQueue` to send messages to.
 
 See the [SimpleModule](how_to_write_a_mod.md) guide for a more in-depth example.

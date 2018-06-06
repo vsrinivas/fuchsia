@@ -24,17 +24,18 @@ class StoryWatcherImpl;
 //
 // It maintains a hierarchy of context values to represent:
 // Stories -> Modules
-//         -> Link Entities
+//         -> fuchsia::modular::Link Entities
 //
-// TODO(thatguy): Add Link value types to the Context engine and use them here.
-// Then update the resulting published value to remove its added JSON
-// structure, since it will all be represented in the metadata of the value.
+// TODO(thatguy): Add fuchsia::modular::Link value types to the Context engine
+// and use them here. Then update the resulting published value to remove its
+// added JSON structure, since it will all be represented in the metadata of the
+// value.
 class StoryInfoAcquirer : public fuchsia::modular::VisibleStoriesWatcher,
                           public fuchsia::modular::StoryProviderWatcher,
                           public fuchsia::modular::FocusWatcher,
                           public StoryInfoInitializer {
  public:
-  StoryInfoAcquirer(fuchsia::modular::AgentHost* agent_host);
+  StoryInfoAcquirer(modular::AgentHost* agent_host);
   ~StoryInfoAcquirer() override;
 
   // Called by AgentDriver.
@@ -58,13 +59,13 @@ class StoryInfoAcquirer : public fuchsia::modular::VisibleStoriesWatcher,
       fidl::InterfaceHandle<fuchsia::modular::VisibleStoriesProvider>
           visible_stories_provider) override;
 
-  // |FocusWatcher|
+  // |fuchsia::modular::FocusWatcher|
   void OnFocusChange(fuchsia::modular::FocusInfoPtr info) override;
 
-  // |VisibleStoriesWatcher|
+  // |fuchsia::modular::VisibleStoriesWatcher|
   void OnVisibleStoriesChange(fidl::VectorPtr<fidl::StringPtr> ids) override;
 
-  // |StoryProviderWatcher|
+  // |fuchsia::modular::StoryProviderWatcher|
   void OnChange(fuchsia::modular::StoryInfo info,
                 fuchsia::modular::StoryState state) override;
   void OnDelete(fidl::StringPtr story_id) override;
@@ -88,7 +89,7 @@ class StoryInfoAcquirer : public fuchsia::modular::VisibleStoriesWatcher,
   std::set<fidl::StringPtr> visible_story_ids_;
 
   // A collection of all active stories we watch. Keys are story IDs, Values are
-  // the StoryWatcher instances.
+  // the fuchsia::modular::StoryWatcher instances.
   std::map<std::string, std::unique_ptr<StoryWatcherImpl>> stories_;
 
   fuchsia::sys::ServiceNamespace agent_services_;

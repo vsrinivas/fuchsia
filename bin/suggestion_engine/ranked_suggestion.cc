@@ -4,7 +4,6 @@
 
 #include "peridot/bin/suggestion_engine/ranked_suggestion.h"
 
-namespace fuchsia {
 namespace modular {
 
 std::unique_ptr<RankedSuggestion> RankedSuggestion::New(
@@ -16,11 +15,12 @@ std::unique_ptr<RankedSuggestion> RankedSuggestion::New(
   return ranked_suggestion;
 }
 
-Suggestion CreateSuggestion(const RankedSuggestion& suggestion_data) {
-  Suggestion suggestion = CreateSuggestion(*suggestion_data.prototype);
+fuchsia::modular::Suggestion CreateSuggestion(
+    const RankedSuggestion& suggestion_data) {
+  fuchsia::modular::Suggestion suggestion =
+      CreateSuggestion(*suggestion_data.prototype);
   suggestion.confidence = suggestion_data.confidence;
   return suggestion;
 }
 
 }  // namespace modular
-}  // namespace fuchsia

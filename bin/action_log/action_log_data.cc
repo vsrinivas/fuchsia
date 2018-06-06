@@ -10,14 +10,14 @@
 #include "third_party/rapidjson/rapidjson/stringbuffer.h"
 #include "third_party/rapidjson/rapidjson/writer.h"
 
-namespace fuchsia {
 namespace modular {
 
 ActionLogData::ActionLogData(ActionListener listener) : listener_(listener) {}
 
 ActionLogData::~ActionLogData() = default;
 
-ActionLogger ActionLogData::GetActionLogger(ComponentScope scope) {
+ActionLogger ActionLogData::GetActionLogger(
+    fuchsia::modular::ComponentScope scope) {
   std::string component_url;
   std::string story_id = "";
   std::vector<std::string> module_path;
@@ -46,4 +46,3 @@ void ActionLogData::Append(const ActionData& action_data) {
 }
 
 }  // namespace modular
-}  // namespace fuchsia

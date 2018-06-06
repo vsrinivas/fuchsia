@@ -20,14 +20,14 @@
 #include "lib/fxl/memory/weak_ptr.h"
 #include "lib/lifecycle/cpp/lifecycle_impl.h"
 
-namespace fuchsia {
 namespace modular {
 
 // AppDriver is a wrapper that simplifies participating in lifecycle management
-// by the application's parent. It does this by exposing the Lifecycle service
-// in fuchsia::sys::StartupContext::outgoing().deprecated_services() and
-// proxies the Terminate() call of fuchsia::modular::Lifecycle to the
-// Terminate() method on your application's class instance.
+// by the application's parent. It does this by exposing the
+// fuchsia::modular::Lifecycle service in
+// fuchsia::sys::StartupContext::outgoing().deprecated_services() and proxies
+// the Terminate() call of fuchsia::modular::Lifecycle to the Terminate() method
+// on your application's class instance.
 //
 // Usage:
 //
@@ -53,7 +53,7 @@ namespace modular {
 // int main(int argc, const char** argv) {
 //   fsl::MessageLoop loop;
 //   auto context = fuchsia::sys::StartupContext::CreateFromStartupInfo();
-//   fuchsia::modular::AppDriver<HelloWorldApp> driver(
+//   modular::AppDriver<HelloWorldApp> driver(
 //       context->outgoing().deprecated_services(),
 //       std::make_unique<HelloWorldApp>(context.get()),
 //       [&loop] { loop.QuitNow(); });
@@ -92,6 +92,5 @@ class AppDriver : LifecycleImpl::Delegate {
 };
 
 }  // namespace modular
-}  // namespace fuchsia
 
 #endif  // LIB_APP_DRIVER_CPP_APP_DRIVER_H_

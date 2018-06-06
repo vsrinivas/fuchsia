@@ -19,7 +19,7 @@
 #include "peridot/tests/common/defs.h"
 #include "peridot/tests/link_update/defs.h"
 
-using fuchsia::modular::testing::TestPoint;
+using modular::testing::TestPoint;
 
 namespace {
 
@@ -42,9 +42,9 @@ class LinkWatcherImpl : fuchsia::modular::LinkWatcher {
   }
 
  private:
-  // |LinkWatcher|
+  // |fuchsia::modular::LinkWatcher|
   void Notify(fidl::StringPtr json) override {
-    FXL_LOG(INFO) << "LinkWatcher: " << json;
+    FXL_LOG(INFO) << "fuchsia::modular::LinkWatcher: " << json;
     continue_(json);
   }
 
@@ -55,8 +55,8 @@ class LinkWatcherImpl : fuchsia::modular::LinkWatcher {
 };
 
 // Cf. README.md for what this test does and how.
-class TestApp : public fuchsia::modular::testing::ComponentBase<
-                    fuchsia::modular::UserShell> {
+class TestApp
+    : public modular::testing::ComponentBase<fuchsia::modular::UserShell> {
  public:
   TestApp(fuchsia::sys::StartupContext* const startup_context)
       : ComponentBase(startup_context) {
@@ -69,7 +69,7 @@ class TestApp : public fuchsia::modular::testing::ComponentBase<
   TestPoint initialize_{"Initialize()"};
   TestPoint story_create_{"Story Create"};
 
-  // |UserShell|
+  // |fuchsia::modular::UserShell|
   void Initialize(fidl::InterfaceHandle<fuchsia::modular::UserShellContext>
                       user_shell_context) override {
     initialize_.Pass();
@@ -138,9 +138,9 @@ class TestApp : public fuchsia::modular::testing::ComponentBase<
   }
 
   // The local update 6 is the only update guaranteed to be seen locally.
-  // However, if update 5 is processed by the Link after update 6, it will not
-  // affect the current value and so will not generate a second notification
-  // for update 6.
+  // However, if update 5 is processed by the fuchsia::modular::Link after
+  // update 6, it will not affect the current value and so will not generate a
+  // second notification for update 6.
   //
   // NOTE(mesch): There is no ordering guarantee between the two updates. This
   // is as intended as far as production behavior is concerned. For testing, we
@@ -196,6 +196,6 @@ class TestApp : public fuchsia::modular::testing::ComponentBase<
 }  // namespace
 
 int main(int /*argc*/, const char** /*argv*/) {
-  fuchsia::modular::testing::ComponentMain<TestApp>();
+  modular::testing::ComponentMain<TestApp>();
   return 0;
 }

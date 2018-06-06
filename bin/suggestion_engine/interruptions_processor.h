@@ -10,7 +10,6 @@
 #include "peridot/bin/suggestion_engine/decision_policy.h"
 #include "peridot/bin/suggestion_engine/ranked_suggestion.h"
 
-namespace fuchsia {
 namespace modular {
 
 // The InterruptionProcessor determines whether a proposal should interrupt
@@ -25,26 +24,26 @@ class InterruptionsProcessor {
   ~InterruptionsProcessor();
 
   // Ranker that will be used to know if a suggestion should interrupt.
-  void SetDecisionPolicy(
-      std::unique_ptr<DecisionPolicy> ranker);
+  void SetDecisionPolicy(std::unique_ptr<DecisionPolicy> ranker);
 
   // Add listener that will be notified when an interruption comes.
-  void RegisterListener(fidl::InterfaceHandle<InterruptionListener> listener);
+  void RegisterListener(
+      fidl::InterfaceHandle<fuchsia::modular::InterruptionListener> listener);
 
   // Based on ranker confidence, dispatch an interruption for the given
   // suggestion
   bool MaybeInterrupt(const RankedSuggestion& suggestion);
 
  private:
-  void DispatchInterruption(InterruptionListener* const listener,
-                            const RankedSuggestion& ranked_suggestion);
+  void DispatchInterruption(
+      fuchsia::modular::InterruptionListener* const listener,
+      const RankedSuggestion& ranked_suggestion);
 
-  fidl::InterfacePtrSet<InterruptionListener> listeners_;
+  fidl::InterfacePtrSet<fuchsia::modular::InterruptionListener> listeners_;
 
   std::unique_ptr<DecisionPolicy> decision_policy_;
 };
 
 }  // namespace modular
-}  // namespace fuchsia
 
 #endif  // PERIDOT_BIN_SUGGESTION_ENGINE_INTERRUPTIONS_PROCESSOR_H_

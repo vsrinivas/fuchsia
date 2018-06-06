@@ -9,7 +9,6 @@
 #include "third_party/rapidjson/rapidjson/document.h"
 #include "third_party/rapidjson/rapidjson/schema.h"
 
-namespace fuchsia {
 namespace modular {
 
 namespace {
@@ -45,27 +44,27 @@ void ModPairRankingFeature::LoadDataFromFile(const std::string& filepath) {
 }
 
 double ModPairRankingFeature::ComputeFeatureInternal(
-    const UserInput& query,
+    const fuchsia::modular::UserInput& query,
     const RankedSuggestion& suggestion) {
   double prob = 0.0;
 
   for (auto& action : *suggestion.prototype->proposal.on_selected) {
     fidl::StringPtr module_url;
     switch (action.Which()) {
-      case Action::Tag::kCreateStory: {
+      case fuchsia::modular::Action::Tag::kCreateStory: {
         module_url = action.create_story().intent.action.handler;
         break;
       }
-      case Action::Tag::kAddModule: {
+      case fuchsia::modular::Action::Tag::kAddModule: {
         module_url = action.add_module().intent.action.handler;
         break;
       }
-      case Action::Tag::kCustomAction:
-      case Action::Tag::kFocusStory:
-      case Action::Tag::kSetLinkValueAction:
-      case Action::Tag::kUpdateModule:
-      case Action::Tag::kQueryAction:
-      case Action::Tag::Invalid:
+      case fuchsia::modular::Action::Tag::kCustomAction:
+      case fuchsia::modular::Action::Tag::kFocusStory:
+      case fuchsia::modular::Action::Tag::kSetLinkValueAction:
+      case fuchsia::modular::Action::Tag::kUpdateModule:
+      case fuchsia::modular::Action::Tag::kQueryAction:
+      case fuchsia::modular::Action::Tag::Invalid:
         continue;
     }
     if (module_url.is_null() || module_url->empty()) {
@@ -84,16 +83,17 @@ double ModPairRankingFeature::ComputeFeatureInternal(
   return prob;
 }
 
-ContextSelectorPtr ModPairRankingFeature::CreateContextSelectorInternal() {
+fuchsia::modular::ContextSelectorPtr
+ModPairRankingFeature::CreateContextSelectorInternal() {
   // Get modules in the currently focused story.
-  auto selector = ContextSelector::New();
-  selector->type = ContextValueType::MODULE;
-  selector->meta = ContextMetadata::New();
-  selector->meta->story = StoryMetadata::New();
-  selector->meta->story->focused = FocusedState::New();
-  selector->meta->story->focused->state = FocusedStateState::FOCUSED;
+  auto selector = fuchsia::modular::ContextSelector::New();
+  selector->type = fuchsia::modular::ContextValueType::MODULE;
+  selector->meta = fuchsia::modular::ContextMetadata::New();
+  selector->meta->story = fuchsia::modular::StoryMetadata::New();
+  selector->meta->story->focused = fuchsia::modular::FocusedState::New();
+  selector->meta->story->focused->state =
+      fuchsia::modular::FocusedStateState::FOCUSED;
   return selector;
 }
 
 }  // namespace modular
-}  // namespace fuchsia

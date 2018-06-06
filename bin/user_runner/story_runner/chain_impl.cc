@@ -6,11 +6,11 @@
 
 #include "peridot/lib/fidl/clone.h"
 
-namespace fuchsia {
 namespace modular {
 
-ChainImpl::ChainImpl(const fidl::VectorPtr<fidl::StringPtr>& path,
-                     const ModuleParameterMap& parameter_map) {
+ChainImpl::ChainImpl(
+    const fidl::VectorPtr<fidl::StringPtr>& path,
+    const fuchsia::modular::ModuleParameterMap& parameter_map) {
   for (const auto& i : *path) {
     path_->push_back(i);
   }
@@ -19,13 +19,13 @@ ChainImpl::ChainImpl(const fidl::VectorPtr<fidl::StringPtr>& path,
 
 ChainImpl::~ChainImpl() = default;
 
-LinkPathPtr ChainImpl::GetLinkPathForParameterName(
+fuchsia::modular::LinkPathPtr ChainImpl::GetLinkPathForParameterName(
     const fidl::StringPtr& name) {
-  auto it = std::find_if(parameter_map_.entries->begin(),
-                         parameter_map_.entries->end(),
-                         [&name](const ModuleParameterMapEntry& data) {
-                           return data.name == name;
-                         });
+  auto it = std::find_if(
+      parameter_map_.entries->begin(), parameter_map_.entries->end(),
+      [&name](const fuchsia::modular::ModuleParameterMapEntry& data) {
+        return data.name == name;
+      });
 
   if (it == parameter_map_.entries->end()) {
     return nullptr;
@@ -34,4 +34,3 @@ LinkPathPtr ChainImpl::GetLinkPathForParameterName(
 }
 
 }  // namespace modular
-}  // namespace fuchsia

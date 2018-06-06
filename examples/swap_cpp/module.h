@@ -29,7 +29,7 @@ class ModuleView : public mozart::BaseView {
   FXL_DISALLOW_COPY_AND_ASSIGN(ModuleView);
 };
 
-class ModuleApp : public fuchsia::modular::ViewApp {
+class ModuleApp : public modular::ViewApp {
  public:
   using CreateViewCallback = std::function<mozart::BaseView*(
       fuchsia::ui::views_v1::ViewManagerPtr,

@@ -9,7 +9,6 @@
 #include "peridot/lib/rapidjson/rapidjson.h"
 #include "third_party/rapidjson/rapidjson/document.h"
 
-namespace fuchsia {
 namespace modular {
 
 bool ModuleManifestEntryFromJson(const std::string& json,
@@ -28,7 +27,7 @@ bool ModuleManifestEntryFromJson(const std::string& json,
   // Our tooling validates |doc|'s JSON schema so that we don't have to here.
   // It may be good to do this, though.
   // TODO(thatguy): Do this if it becomes a problem.
-  if (!fuchsia::modular::XdrRead(&doc, entry, XdrModuleManifest)) {
+  if (!XdrRead(&doc, entry, XdrModuleManifest)) {
     return false;
   }
   return true;
@@ -39,10 +38,9 @@ void ModuleManifestEntryToJson(const fuchsia::modular::ModuleManifest& entry,
   rapidjson::Document doc;
   fuchsia::modular::ModuleManifest local_entry;
   fidl::Clone(entry, &local_entry);
-  fuchsia::modular::XdrWrite(&doc, &local_entry, XdrModuleManifest);
+  XdrWrite(&doc, &local_entry, XdrModuleManifest);
 
   *json = JsonValueToPrettyString(doc);
 }
 
 }  // namespace modular
-}  // namespace fuchsia

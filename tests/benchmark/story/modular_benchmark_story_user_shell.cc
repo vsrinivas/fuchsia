@@ -8,8 +8,8 @@
 #include <memory>
 #include <utility>
 
-#include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/modular/cpp/fidl.h>
+#include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/ui/views_v1_token/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
@@ -71,7 +71,7 @@ class StoryWatcherImpl : fuchsia::modular::StoryWatcher {
   }
 
  private:
-  // |StoryWatcher|
+  // |fuchsia::modular::StoryWatcher|
   void OnStateChange(fuchsia::modular::StoryState state) override {
     if (state != continue_state_) {
       return;
@@ -80,7 +80,7 @@ class StoryWatcherImpl : fuchsia::modular::StoryWatcher {
     continue_();
   }
 
-  // |StoryWatcher|
+  // |fuchsia::modular::StoryWatcher|
   void OnModuleAdded(fuchsia::modular::ModuleData module_data) override {}
 
   fidl::Binding<fuchsia::modular::StoryWatcher> binding_;
@@ -112,7 +112,7 @@ class LinkWatcherImpl : fuchsia::modular::LinkWatcher {
   void Continue(std::function<void(fidl::StringPtr)> at) { continue_ = at; }
 
  private:
-  // |LinkWatcher|
+  // |fuchsia::modular::LinkWatcher|
   void Notify(fidl::StringPtr json) override { continue_(json); }
 
   fidl::Binding<fuchsia::modular::LinkWatcher> binding_;
@@ -126,11 +126,11 @@ class LinkWatcherImpl : fuchsia::modular::LinkWatcher {
 // is invoked as a user shell from device runner and executes a predefined
 // sequence of steps, rather than to expose a UI to be driven by user
 // interaction, as a user shell normally would.
-class TestApp
-    : public fuchsia::modular::SingleServiceApp<fuchsia::modular::UserShell> {
+class TestApp : public modular::SingleServiceApp<fuchsia::modular::UserShell> {
  public:
-  using Base = fuchsia::modular::SingleServiceApp<fuchsia::modular::UserShell>;
-  TestApp(fuchsia::sys::StartupContext* const startup_context, Settings settings)
+  using Base = modular::SingleServiceApp<fuchsia::modular::UserShell>;
+  TestApp(fuchsia::sys::StartupContext* const startup_context,
+          Settings settings)
       : Base(startup_context), settings_(std::move(settings)) {}
 
   ~TestApp() override = default;
@@ -145,7 +145,7 @@ class TestApp
   }
 
  private:
-  // |UserShell|
+  // |fuchsia::modular::UserShell|
   void Initialize(fidl::InterfaceHandle<fuchsia::modular::UserShellContext>
                       user_shell_context) override {
     user_shell_context_.Bind(std::move(user_shell_context));
@@ -234,7 +234,7 @@ class TestApp
     Loop();
   }
 
-  fuchsia::modular::TracingWaiter tracing_waiter_;
+  modular::TracingWaiter tracing_waiter_;
 
   const Settings settings_;
 
@@ -256,7 +256,6 @@ class TestApp
 int main(int argc, const char** argv) {
   auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
   Settings settings(command_line);
-  fuchsia::modular::testing::ComponentMain<TestApp, Settings>(
-      std::move(settings));
+  modular::testing::ComponentMain<TestApp, Settings>(std::move(settings));
   return 0;
 }

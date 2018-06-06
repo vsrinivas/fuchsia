@@ -5,12 +5,12 @@
 A `Module` is a UI component that can participate in a [Story](link to story doc), 
 potentially composed of many different `Module`s. A `Module`'s lifecycle is tightly
 bound to the story to which it was added. In addition to the capabilities
-provided to all Peridot components via `ComponentContext`, a `Module` is given
-additional capabilities via its `ModuleContext`.
+provided to all Peridot components via `fuchsia::modular::ComponentContext`, a `Module` is given
+additional capabilities via its `fuchsia::modular::ModuleContext`.
 
 ## `SimpleMod`
 
-`SimpleMod` is a `Module` communicates with `SimpleAgent` via a `MessageQueue`, and
+`SimpleMod` is a `Module` communicates with `SimpleAgent` via a `fuchsia::modular::MessageQueue`, and
 displays the messages from `SimpleAgent` on screen.
 
 ### Mod Initialization
@@ -44,7 +44,7 @@ class SimpleModule : fuchsia::ui::views_v1::ViewProvider {
 ```
 
 The `ModuleHost` provides `SimpleModule` with its `StartupContext` and
-`ModuleContext`.
+`fuchsia::modular::ModuleContext`.
 
 The `ViewProvider` request allows the system to connect to `SimpleModule`'s view.
 TODO: Update guide to explain view connections.
@@ -52,30 +52,30 @@ TODO: Update guide to explain view connections.
 ### Connecting to `SimpleAgent`
 
 In order to provide `SimpleAgent` with a message queue `SimpleModule` first
-needs to connect to the agent via its `ComponentContext`.
+needs to connect to the agent via its `fuchsia::modular::ComponentContext`.
 
 ```c++
 // Get the component context from the module context.
-modular::ComponentContextPtr component_context;
+modular::fuchsia::modular::ComponentContextPtr component_context;
 module_host->module_context()->GetComponentContext(
     component_context.NewRequest());
 
 // Connect to the agent to retrieve it's outgoing services.
-modular::AgentControllerPtr agent_controller;
+modular::fuchsia::modular::AgentControllerPtr agent_controller;
 fuchsia::sys::ServiceProviderPtr agent_services;
 component_context->ConnectToAgent("system/bin/simple_agent",
                                   agent_services.NewRequest(),
                                   agent_controller.NewRequest());
 ```
 
-### Creating a `MessageQueue`
+### Creating a `fuchsia::modular::MessageQueue`
 
 `SimpleModule` needs to create a message queue and retrieve its token to hand
 it over to `SimpleAgent` so it can write messages to it.
 
 ```c++
 // Request a new message queue from the component context.
-modular::MessageQueuePtr message_queue;
+modular::fuchsia::modular::MessageQueuePtr message_queue;
 component_context->ObtainMessageQueue("agent_queue",
                                       message_queue.NewRequest());
 

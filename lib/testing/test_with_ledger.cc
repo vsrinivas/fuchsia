@@ -7,7 +7,6 @@
 #include "gtest/gtest.h"
 #include "peridot/lib/ledger_client/ledger_client.h"
 
-namespace fuchsia {
 namespace modular {
 namespace testing {
 
@@ -17,8 +16,7 @@ TestWithLedger::~TestWithLedger() = default;
 void TestWithLedger::SetUp() {
   TestWithMessageLoop::SetUp();
 
-  ledger_app_ =
-      std::make_unique<fuchsia::modular::testing::LedgerRepositoryForTesting>();
+  ledger_app_ = std::make_unique<testing::LedgerRepositoryForTesting>();
 
   ledger_client_.reset(new LedgerClient(ledger_app_->ledger_repository(),
                                         __FILE__, [] { ASSERT_TRUE(false); }));
@@ -50,4 +48,3 @@ bool TestWithLedger::RunLoopUntilWithTimeout(std::function<bool()> condition,
 
 }  // namespace testing
 }  // namespace modular
-}  // namespace fuchsia

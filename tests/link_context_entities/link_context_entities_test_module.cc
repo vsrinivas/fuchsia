@@ -12,7 +12,7 @@
 #include "peridot/tests/common/defs.h"
 #include "peridot/tests/link_context_entities/defs.h"
 
-using fuchsia::modular::testing::TestPoint;
+using modular::testing::TestPoint;
 
 namespace {
 
@@ -21,10 +21,10 @@ class TestApp {
  public:
   TestPoint initialized_{"Child module initialized"};
 
-  TestApp(fuchsia::modular::ModuleHost* module_host,
+  TestApp(modular::ModuleHost* module_host,
           fidl::InterfaceRequest<
               fuchsia::ui::views_v1::ViewProvider> /*view_provider_request*/) {
-    fuchsia::modular::testing::Init(module_host->startup_context(), __FILE__);
+    modular::testing::Init(module_host->startup_context(), __FILE__);
     initialized_.Pass();
     module_host->module_context()->GetLink("link1", link1_.NewRequest());
     module_host->module_context()->GetLink("link2", link2_.NewRequest());
@@ -36,7 +36,7 @@ class TestApp {
   // Called from ModuleDriver.
   void Terminate(const std::function<void()>& done) {
     stopped_.Pass();
-    fuchsia::modular::testing::Done(done);
+    modular::testing::Done(done);
   }
 
  private:
@@ -44,8 +44,9 @@ class TestApp {
     link1_->Set(nullptr, R"({"@type": "type1", "value": "value1"})");
     link2_->Set(nullptr,
                 R"({"a_property": {"@type": "type2", "value": "value2"}})");
-    // TODO(thatguy): When we have Entity support in ContextWriter, create a
-    // simple Entity reference and slap it into the Link.
+    // TODO(thatguy): When we have fuchsia::modular::Entity support in
+    // fuchsia::modular::ContextWriter, create a simple fuchsia::modular::Entity
+    // reference and slap it into the fuchsia::modular::Link.
   }
 
   fuchsia::modular::LinkPtr link1_;
@@ -59,8 +60,8 @@ class TestApp {
 int main(int /*argc*/, const char** /*argv*/) {
   fsl::MessageLoop loop;
   auto context = fuchsia::sys::StartupContext::CreateFromStartupInfo();
-  fuchsia::modular::ModuleDriver<TestApp> driver(context.get(),
-                                                 [&loop] { loop.QuitNow(); });
+  modular::ModuleDriver<TestApp> driver(context.get(),
+                                        [&loop] { loop.QuitNow(); });
   loop.Run();
   return 0;
 }

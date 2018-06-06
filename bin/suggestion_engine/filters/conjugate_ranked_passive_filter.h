@@ -2,15 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef PERIDOT_BIN_SUGGESTION_ENGINE_RANKERS_CONJUGATE_RANKED_PASSIVE_FILTER_H_
-#define PERIDOT_BIN_SUGGESTION_ENGINE_RANKERS_CONJUGATE_RANKED_PASSIVE_FILTER_H_
+#ifndef PERIDOT_BIN_SUGGESTION_ENGINE_FILTERS_CONJUGATE_RANKED_PASSIVE_FILTER_H_
+#define PERIDOT_BIN_SUGGESTION_ENGINE_FILTERS_CONJUGATE_RANKED_PASSIVE_FILTER_H_
 
 #include <fuchsia/modular/cpp/fidl.h>
 
 #include "peridot/bin/suggestion_engine/ranking_feature.h"
 #include "peridot/bin/suggestion_engine/suggestion_passive_filter.h"
 
-namespace fuchsia {
 namespace modular {
 
 class ConjugateRankedPassiveFilter : public SuggestionPassiveFilter {
@@ -25,6 +24,5 @@ class ConjugateRankedPassiveFilter : public SuggestionPassiveFilter {
 };
 
 }  // namespace modular
-} // namespace fuchsia
 
-#endif  // PERIDOT_BIN_SUGGESTION_ENGINE_RANKERS_CONJUGATE_RANKED_PASSIVE_FILTER_H_
+#endif  // PERIDOT_BIN_SUGGESTION_ENGINE_FILTERS_CONJUGATE_RANKED_PASSIVE_FILTER_H_

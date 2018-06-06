@@ -4,7 +4,6 @@
 
 #include "peridot/lib/util/rate_limited_retry.h"
 
-namespace fuchsia {
 namespace modular {
 
 RateLimitedRetry::RateLimitedRetry(const Threshold& threshold)
@@ -27,4 +26,3 @@ bool RateLimitedRetry::ShouldRetry() {
 }
 
 }  // namespace modular
-}  // namespace fuchsia

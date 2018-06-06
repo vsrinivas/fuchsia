@@ -14,7 +14,6 @@
 #include "lib/fxl/files/directory.h"
 #include "lib/fxl/files/unique_fd.h"
 
-namespace fuchsia {
 namespace modular {
 namespace {
 
@@ -45,7 +44,8 @@ zx::channel CloneChannel(int fd) {
 }  // namespace
 
 AppClientBase::AppClientBase(fuchsia::sys::Launcher* const launcher,
-                             AppConfig config, std::string data_origin,
+                             fuchsia::modular::AppConfig config,
+                             std::string data_origin,
                              fuchsia::sys::ServiceListPtr additional_services)
     : AsyncHolderBase(config.url) {
   fuchsia::sys::LaunchInfo launch_info;
@@ -106,11 +106,11 @@ void AppClientBase::ServiceTerminate(const std::function<void()>& /* done */) {}
 void AppClientBase::ServiceUnbind() {}
 
 template <>
-void AppClient<Lifecycle>::ServiceTerminate(const std::function<void()>& done) {
+void AppClient<fuchsia::modular::Lifecycle>::ServiceTerminate(
+    const std::function<void()>& done) {
   SetAppErrorHandler(done);
   if (primary_service())
     primary_service()->Terminate();
 }
 
 }  // namespace modular
-}  // namespace fuchsia

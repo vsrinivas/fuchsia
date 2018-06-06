@@ -10,7 +10,6 @@
 #include "peridot/bin/user_runner/agent_runner/agent_runner.h"
 #include "peridot/lib/fidl/array_to_string.h"
 
-namespace fuchsia {
 namespace modular {
 
 ComponentContextImpl::ComponentContextImpl(const ComponentContextInfo& info,
@@ -33,12 +32,12 @@ ComponentContextImpl::ComponentContextImpl(const ComponentContextInfo& info,
 ComponentContextImpl::~ComponentContextImpl() = default;
 
 void ComponentContextImpl::Connect(
-    fidl::InterfaceRequest<ComponentContext> request) {
+    fidl::InterfaceRequest<fuchsia::modular::ComponentContext> request) {
   bindings_.AddBinding(this, std::move(request));
 }
 
-ComponentContextPtr ComponentContextImpl::NewBinding() {
-  ComponentContextPtr ptr;
+fuchsia::modular::ComponentContextPtr ComponentContextImpl::NewBinding() {
+  fuchsia::modular::ComponentContextPtr ptr;
   Connect(ptr.NewRequest());
   return ptr;
 }
@@ -54,7 +53,8 @@ void ComponentContextImpl::ConnectToAgent(
     fidl::StringPtr url,
     fidl::InterfaceRequest<fuchsia::sys::ServiceProvider>
         incoming_services_request,
-    fidl::InterfaceRequest<AgentController> agent_controller_request) {
+    fidl::InterfaceRequest<fuchsia::modular::AgentController>
+        agent_controller_request) {
   agent_runner_->ConnectToAgent(component_instance_id_, url,
                                 std::move(incoming_services_request),
                                 std::move(agent_controller_request));
@@ -62,7 +62,7 @@ void ComponentContextImpl::ConnectToAgent(
 
 void ComponentContextImpl::ObtainMessageQueue(
     fidl::StringPtr name,
-    fidl::InterfaceRequest<MessageQueue> request) {
+    fidl::InterfaceRequest<fuchsia::modular::MessageQueue> request) {
   message_queue_manager_->ObtainMessageQueue(
       component_namespace_, component_instance_id_, name, std::move(request));
 }
@@ -74,17 +74,17 @@ void ComponentContextImpl::DeleteMessageQueue(fidl::StringPtr name) {
 
 void ComponentContextImpl::GetMessageSender(
     fidl::StringPtr queue_token,
-    fidl::InterfaceRequest<MessageSender> request) {
+    fidl::InterfaceRequest<fuchsia::modular::MessageSender> request) {
   message_queue_manager_->GetMessageSender(queue_token, std::move(request));
 }
 
 void ComponentContextImpl::GetEntityResolver(
-    fidl::InterfaceRequest<EntityResolver> request) {
+    fidl::InterfaceRequest<fuchsia::modular::EntityResolver> request) {
   entity_provider_runner_->ConnectEntityResolver(std::move(request));
 }
 
 void ComponentContextImpl::CreateEntityWithData(
-    fidl::VectorPtr<TypeToDataEntry> type_to_data,
+    fidl::VectorPtr<fuchsia::modular::TypeToDataEntry> type_to_data,
     CreateEntityWithDataCallback result) {
   std::map<std::string, std::string> copy;
   for (const auto& it : *type_to_data) {
@@ -98,4 +98,3 @@ void ComponentContextImpl::GetPackageName(GetPackageNameCallback result) {
 }
 
 }  // namespace modular
-}  // namespace fuchsia

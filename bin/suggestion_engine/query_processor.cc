@@ -11,7 +11,6 @@
 #include "peridot/bin/suggestion_engine/suggestion_engine_helper.h"
 #include "peridot/lib/fidl/json_xdr.h"
 
-namespace fuchsia {
 namespace modular {
 
 namespace {
@@ -26,20 +25,23 @@ QueryProcessor::QueryProcessor(fuchsia::media::AudioServerPtr audio_server,
       media_player_(std::move(audio_server), debug),
       has_media_response_(false) {
   media_player_.SetSpeechStatusCallback(
-      [this](SpeechStatus status) { NotifySpeechListeners(status); });
+      [this](fuchsia::modular::SpeechStatus status) {
+        NotifySpeechListeners(status);
+      });
 }
 
 QueryProcessor::~QueryProcessor() = default;
 
 void QueryProcessor::Initialize(
-    fidl::InterfaceHandle<ContextWriter> context_writer) {
+    fidl::InterfaceHandle<fuchsia::modular::ContextWriter> context_writer) {
   context_writer_.Bind(std::move(context_writer));
 }
 
 void QueryProcessor::ExecuteQuery(
-    UserInput input, int count, fidl::InterfaceHandle<QueryListener> listener) {
+    fuchsia::modular::UserInput input, int count,
+    fidl::InterfaceHandle<fuchsia::modular::QueryListener> listener) {
   // TODO(jwnichols): I'm not sure this is correct or should be here
-  NotifySpeechListeners(SpeechStatus::PROCESSING);
+  NotifySpeechListeners(fuchsia::modular::SpeechStatus::PROCESSING);
 
   // Process:
   //   1. Close out and clean up any existing query process
@@ -58,12 +60,12 @@ void QueryProcessor::ExecuteQuery(
     // Update context engine
     std::string formattedQuery;
 
-    fuchsia::modular::XdrFilterType<std::string> filter_list[] = {
-        fuchsia::modular::XdrFilter<std::string>,
+    XdrFilterType<std::string> filter_list[] = {
+        XdrFilter<std::string>,
         nullptr,
     };
 
-    fuchsia::modular::XdrWrite(&formattedQuery, &query, filter_list);
+    XdrWrite(&formattedQuery, &query, filter_list);
     context_writer_->WriteEntityTopic(kQueryContextKey, formattedQuery);
 
     // Update suggestion engine debug interface
@@ -75,7 +77,8 @@ void QueryProcessor::ExecuteQuery(
   active_query_ = std::make_unique<QueryRunner>(std::move(listener),
                                                 std::move(input), count);
   active_query_->SetResponseCallback(
-      [this, input](const std::string& handler_url, QueryResponse response) {
+      [this, input](const std::string& handler_url,
+                    fuchsia::modular::QueryResponse response) {
         OnQueryResponse(input, handler_url, std::move(response));
       });
   active_query_->SetEndRequestCallback(
@@ -84,13 +87,13 @@ void QueryProcessor::ExecuteQuery(
 }
 
 void QueryProcessor::RegisterFeedbackListener(
-    fidl::InterfaceHandle<FeedbackListener> speech_listener) {
+    fidl::InterfaceHandle<fuchsia::modular::FeedbackListener> speech_listener) {
   speech_listeners_.AddInterfacePtr(speech_listener.Bind());
 }
 
 void QueryProcessor::RegisterQueryHandler(
-    fidl::StringPtr url,
-    fidl::InterfaceHandle<QueryHandler> query_handler_handle) {
+    fidl::StringPtr url, fidl::InterfaceHandle<fuchsia::modular::QueryHandler>
+                             query_handler_handle) {
   auto query_handler = query_handler_handle.Bind();
   query_handlers_.emplace_back(std::move(query_handler), url);
 }
@@ -118,7 +121,7 @@ void QueryProcessor::CleanUpPreviousQuery() {
 }
 
 void QueryProcessor::AddProposal(const std::string& source_url,
-                                 Proposal proposal) {
+                                 fuchsia::modular::Proposal proposal) {
   suggestions_.RemoveProposal(source_url, proposal.id);
 
   auto suggestion =
@@ -127,15 +130,17 @@ void QueryProcessor::AddProposal(const std::string& source_url,
   suggestions_.AddSuggestion(std::move(suggestion));
 }
 
-void QueryProcessor::NotifySpeechListeners(SpeechStatus status) {
+void QueryProcessor::NotifySpeechListeners(
+    fuchsia::modular::SpeechStatus status) {
   for (auto& speech_listener : speech_listeners_.ptrs()) {
-    (*speech_listener)->OnStatusChanged(SpeechStatus::PROCESSING);
+    (*speech_listener)
+        ->OnStatusChanged(fuchsia::modular::SpeechStatus::PROCESSING);
   }
 }
 
-void QueryProcessor::OnQueryResponse(UserInput input,
+void QueryProcessor::OnQueryResponse(fuchsia::modular::UserInput input,
                                      const std::string& handler_url,
-                                     QueryResponse response) {
+                                     fuchsia::modular::QueryResponse response) {
   // TODO(rosswang): defer selection of "I don't know" responses
   if (!has_media_response_ && response.media_response) {
     has_media_response_ = true;
@@ -164,18 +169,18 @@ void QueryProcessor::OnQueryResponse(UserInput input,
   }
   suggestions_.Refresh(input);
 
-  // Update the QueryListener with new results
+  // Update the fuchsia::modular::QueryListener with new results
   NotifyOfResults();
 
   // Update the suggestion engine debug interface
   debug_->OnAskStart(input.text, &suggestions_);
 }
 
-void QueryProcessor::OnQueryEndRequest(UserInput input) {
+void QueryProcessor::OnQueryEndRequest(fuchsia::modular::UserInput input) {
   debug_->OnAskStart(input.text, &suggestions_);
   if (!has_media_response_) {
     // there was no media response for this query, so idle immediately
-    NotifySpeechListeners(SpeechStatus::IDLE);
+    NotifySpeechListeners(fuchsia::modular::SpeechStatus::IDLE);
   }
   activity_ = nullptr;
 }
@@ -183,7 +188,7 @@ void QueryProcessor::OnQueryEndRequest(UserInput input) {
 void QueryProcessor::NotifyOfResults() {
   const auto& suggestion_vector = suggestions_.Get();
 
-  fidl::VectorPtr<Suggestion> window;
+  fidl::VectorPtr<fuchsia::modular::Suggestion> window;
   for (size_t i = 0;
        i < active_query_->max_results() && i < suggestion_vector.size(); i++) {
     window.push_back(CreateSuggestion(*suggestion_vector[i]));
@@ -195,4 +200,3 @@ void QueryProcessor::NotifyOfResults() {
 }
 
 }  // namespace modular
-}  // namespace fuchsia

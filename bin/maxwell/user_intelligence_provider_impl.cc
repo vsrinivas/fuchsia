@@ -21,7 +21,7 @@ constexpr char kMIDashboardUrl[] = "mi_dashboard";
 constexpr char kUsageLogUrl[] = "usage_log";
 constexpr char kStoryInfoAgentUrl[] = "story_info";
 
-constexpr fuchsia::modular::RateLimitedRetry::Threshold kKronkRetryLimit = {
+constexpr modular::RateLimitedRetry::Threshold kKronkRetryLimit = {
     3, fxl::TimeDelta::FromSeconds(45)};
 
 // Calls Duplicate() on an InterfacePtr<> and returns the newly bound
@@ -41,9 +41,8 @@ fuchsia::modular::AgentControllerPtr StartStoryInfoAgent(
         visible_stories_provider) {
   fuchsia::sys::ServiceProviderPtr agent_services;
   fuchsia::modular::AgentControllerPtr controller;
-  component_context->ConnectToAgent(kStoryInfoAgentUrl,
-                                    agent_services.NewRequest(),
-                                    controller.NewRequest());
+  component_context->ConnectToAgent(
+      kStoryInfoAgentUrl, agent_services.NewRequest(), controller.NewRequest());
 
   auto initializer =
       fuchsia::sys::ConnectToService<maxwell::StoryInfoInitializer>(
@@ -86,7 +85,9 @@ UserIntelligenceProviderImpl::UserIntelligenceProviderImpl(
       suggestion_services_
           .ConnectToService<fuchsia::modular::SuggestionEngine>();
 
-  // Generate a ContextWriter and ContextReader to pass to the SuggestionEngine.
+  // Generate a fuchsia::modular::ContextWriter and
+  // fuchsia::modular::ContextReader to pass to the
+  // fuchsia::modular::SuggestionEngine.
   fidl::InterfaceHandle<fuchsia::modular::ContextReader> context_reader;
   fidl::InterfaceHandle<fuchsia::modular::ContextWriter> context_writer;
   fuchsia::modular::ComponentScope scope1;
@@ -196,8 +197,9 @@ void UserIntelligenceProviderImpl::StartActionLog(
 void UserIntelligenceProviderImpl::StartKronk() {
   component_context_->ConnectToAgent(kronk_url_, kronk_services_.NewRequest(),
                                      kronk_controller_.NewRequest());
-  // Agent runner closes the agent controller connection when the agent
-  // terminates. We restart the agent (up to a limit) when we notice this.
+  // fuchsia::modular::Agent runner closes the agent controller connection when
+  // the agent terminates. We restart the agent (up to a limit) when we notice
+  // this.
   //
   // NOTE(rosswang,mesch): Although the interface we're actually interested in
   // is kronk_services_, we still need to put the restart handler on the
@@ -310,7 +312,7 @@ void UserIntelligenceProviderFactoryImpl::GetUserIntelligenceProvider(
     fidl::InterfaceRequest<fuchsia::modular::UserIntelligenceProvider>
         user_intelligence_provider_request) {
   // Fail if someone has already used this Factory to create an instance of
-  // UserIntelligenceProvider.
+  // fuchsia::modular::UserIntelligenceProvider.
   FXL_CHECK(!impl_);
   impl_.reset(new UserIntelligenceProviderImpl(
       context_, config_, std::move(context_engine), std::move(story_provider),

@@ -21,41 +21,45 @@
 
 // See services/user/focus.fidl for details.
 
-namespace fuchsia {
 namespace modular {
 
-class FocusHandler : FocusProvider, FocusController, PageClient {
+class FocusHandler : fuchsia::modular::FocusProvider,
+                     fuchsia::modular::FocusController,
+                     PageClient {
  public:
-  FocusHandler(fidl::StringPtr device_id,
-               LedgerClient* ledger_client,
+  FocusHandler(fidl::StringPtr device_id, LedgerClient* ledger_client,
                LedgerPageId page_id);
   ~FocusHandler() override;
 
-  void AddProviderBinding(fidl::InterfaceRequest<FocusProvider> request);
-  void AddControllerBinding(fidl::InterfaceRequest<FocusController> request);
+  void AddProviderBinding(
+      fidl::InterfaceRequest<fuchsia::modular::FocusProvider> request);
+  void AddControllerBinding(
+      fidl::InterfaceRequest<fuchsia::modular::FocusController> request);
 
  private:
-  // |FocusProvider|
+  // |fuchsia::modular::FocusProvider|
   void Query(QueryCallback callback) override;
-  void Watch(fidl::InterfaceHandle<FocusWatcher> watcher) override;
+  void Watch(
+      fidl::InterfaceHandle<fuchsia::modular::FocusWatcher> watcher) override;
   void Request(fidl::StringPtr story_id) override;
-  void Duplicate(fidl::InterfaceRequest<FocusProvider> request) override;
+  void Duplicate(
+      fidl::InterfaceRequest<fuchsia::modular::FocusProvider> request) override;
 
-  // |FocusController|
+  // |fuchsia::modular::FocusController|
   void Set(fidl::StringPtr story_id) override;
-  void WatchRequest(
-      fidl::InterfaceHandle<FocusRequestWatcher> watcher) override;
+  void WatchRequest(fidl::InterfaceHandle<fuchsia::modular::FocusRequestWatcher>
+                        watcher) override;
 
   // |PageClient|
   void OnPageChange(const std::string& key, const std::string& value) override;
 
   const fidl::StringPtr device_id_;
 
-  fidl::BindingSet<FocusProvider> provider_bindings_;
-  fidl::BindingSet<FocusController> controller_bindings_;
+  fidl::BindingSet<fuchsia::modular::FocusProvider> provider_bindings_;
+  fidl::BindingSet<fuchsia::modular::FocusController> controller_bindings_;
 
-  std::vector<FocusWatcherPtr> change_watchers_;
-  std::vector<FocusRequestWatcherPtr> request_watchers_;
+  std::vector<fuchsia::modular::FocusWatcherPtr> change_watchers_;
+  std::vector<fuchsia::modular::FocusRequestWatcherPtr> request_watchers_;
 
   // Operations on an instance of this clas are sequenced in this operation
   // queue. TODO(mesch): They currently do not need to be, but it's easier to
@@ -65,30 +69,35 @@ class FocusHandler : FocusProvider, FocusController, PageClient {
   FXL_DISALLOW_COPY_AND_ASSIGN(FocusHandler);
 };
 
-class VisibleStoriesHandler : VisibleStoriesProvider, VisibleStoriesController {
+class VisibleStoriesHandler : fuchsia::modular::VisibleStoriesProvider,
+                              fuchsia::modular::VisibleStoriesController {
  public:
   VisibleStoriesHandler();
   ~VisibleStoriesHandler() override;
 
   void AddProviderBinding(
-      fidl::InterfaceRequest<VisibleStoriesProvider> request);
+      fidl::InterfaceRequest<fuchsia::modular::VisibleStoriesProvider> request);
   void AddControllerBinding(
-      fidl::InterfaceRequest<VisibleStoriesController> request);
+      fidl::InterfaceRequest<fuchsia::modular::VisibleStoriesController>
+          request);
 
  private:
-  // |VisibleStoriesProvider|
+  // |fuchsia::modular::VisibleStoriesProvider|
   void Query(QueryCallback callback) override;
-  void Watch(fidl::InterfaceHandle<VisibleStoriesWatcher> watcher) override;
+  void Watch(fidl::InterfaceHandle<fuchsia::modular::VisibleStoriesWatcher>
+                 watcher) override;
   void Duplicate(
-      fidl::InterfaceRequest<VisibleStoriesProvider> request) override;
+      fidl::InterfaceRequest<fuchsia::modular::VisibleStoriesProvider> request)
+      override;
 
-  // |VisibleStoriesController|
+  // |fuchsia::modular::VisibleStoriesController|
   void Set(fidl::VectorPtr<fidl::StringPtr> story_ids) override;
 
-  fidl::BindingSet<VisibleStoriesProvider> provider_bindings_;
-  fidl::BindingSet<VisibleStoriesController> controller_bindings_;
+  fidl::BindingSet<fuchsia::modular::VisibleStoriesProvider> provider_bindings_;
+  fidl::BindingSet<fuchsia::modular::VisibleStoriesController>
+      controller_bindings_;
 
-  std::vector<VisibleStoriesWatcherPtr> change_watchers_;
+  std::vector<fuchsia::modular::VisibleStoriesWatcherPtr> change_watchers_;
 
   fidl::VectorPtr<fidl::StringPtr> visible_stories_;
 
@@ -96,6 +105,5 @@ class VisibleStoriesHandler : VisibleStoriesProvider, VisibleStoriesController {
 };
 
 }  // namespace modular
-}  // namespace fuchsia
 
 #endif  // PERIDOT_BIN_USER_RUNNER_FOCUS_H_

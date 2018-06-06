@@ -74,7 +74,7 @@ class UserIntelligenceProviderImpl
   fuchsia::modular::UserActionLogPtr user_action_log_;
 
   std::string kronk_url_;
-  fuchsia::modular::RateLimitedRetry kronk_restart_;
+  modular::RateLimitedRetry kronk_restart_;
   fuchsia::sys::ServiceProviderPtr kronk_services_;
   fuchsia::modular::AgentControllerPtr kronk_controller_;
 
@@ -88,8 +88,8 @@ class UserIntelligenceProviderImpl
   fidl::InterfacePtr<fuchsia::modular::VisibleStoriesProvider>
       visible_stories_provider_;
 
-  // Framework Agent controllers. Hanging onto these tells the Framework we
-  // want the Agents to keep running.
+  // Framework fuchsia::modular::Agent controllers. Hanging onto these tells the
+  // Framework we want the Agents to keep running.
   std::vector<fuchsia::modular::AgentControllerPtr> agent_controllers_;
 
   // ServiceNamespace(s) backing the services provided to these agents via its
@@ -119,7 +119,7 @@ class UserIntelligenceProviderFactoryImpl
   const Config config_;
 
   // We expect a 1:1 relationship between instances of this Factory and
-  // instances of UserIntelligenceProvider.
+  // instances of fuchsia::modular::UserIntelligenceProvider.
   std::unique_ptr<UserIntelligenceProviderImpl> impl_;
   std::unique_ptr<fidl::Binding<fuchsia::modular::UserIntelligenceProvider>>
       binding_;

@@ -17,26 +17,25 @@
 #include "peridot/tests/common/defs.h"
 #include "peridot/tests/last_focus_time/defs.h"
 
-using fuchsia::modular::testing::TestPoint;
+using modular::testing::TestPoint;
 
 namespace {
 
 // A simple story provider watcher implementation. It confirms that it sees an
-// increase in the last_focus_time in the StoryInfo it receives, and pushes the
-// test through to the next step.
-class StoryProviderWatcherImpl
-    : public fuchsia::modular::StoryProviderWatcherBase {
+// increase in the last_focus_time in the fuchsia::modular::StoryInfo it
+// receives, and pushes the test through to the next step.
+class StoryProviderWatcherImpl : public modular::StoryProviderWatcherBase {
  public:
   StoryProviderWatcherImpl() = default;
   ~StoryProviderWatcherImpl() override = default;
 
  private:
   TestPoint last_focus_time_created_{
-      "StoryInfo::last_focus_time increased after create"};
+      "fuchsia::modular::StoryInfo::last_focus_time increased after create"};
   TestPoint last_focus_time_focused_{
-      "StoryInfo::last_focus_time increased after focus"};
+      "fuchsia::modular::StoryInfo::last_focus_time increased after focus"};
 
-  // |StoryProviderWatcher|
+  // |fuchsia::modular::StoryProviderWatcher|
   void OnChange(fuchsia::modular::StoryInfo story_info,
                 fuchsia::modular::StoryState story_state) override {
     FXL_CHECK(story_info.last_focus_time >= last_focus_time_);
@@ -94,7 +93,7 @@ class StoryWatcherImpl : fuchsia::modular::StoryWatcher {
   void Continue(std::function<void()> at) { continue_ = at; }
 
  private:
-  // |StoryWatcher|
+  // |fuchsia::modular::StoryWatcher|
   void OnStateChange(fuchsia::modular::StoryState state) override {
     FXL_LOG(INFO) << "OnStateChange() " << state;
     if (state != fuchsia::modular::StoryState::RUNNING) {
@@ -104,7 +103,7 @@ class StoryWatcherImpl : fuchsia::modular::StoryWatcher {
     continue_();
   }
 
-  // |StoryWatcher|
+  // |fuchsia::modular::StoryWatcher|
   void OnModuleAdded(fuchsia::modular::ModuleData /*module_data*/) override {}
 
   fidl::Binding<fuchsia::modular::StoryWatcher> binding_;
@@ -128,7 +127,7 @@ class FocusWatcherImpl : fuchsia::modular::FocusWatcher {
   void Reset() { binding_.Unbind(); }
 
  private:
-  // |FocusWatcher|
+  // |fuchsia::modular::FocusWatcher|
   void OnFocusChange(fuchsia::modular::FocusInfoPtr info) override {
     FXL_LOG(INFO) << "OnFocusChange() " << info->focused_story_id;
   }
@@ -139,8 +138,8 @@ class FocusWatcherImpl : fuchsia::modular::FocusWatcher {
 };
 
 // Cf. README.md for what this test does and how.
-class TestApp : public fuchsia::modular::testing::ComponentBase<
-                    fuchsia::modular::UserShell> {
+class TestApp
+    : public modular::testing::ComponentBase<fuchsia::modular::UserShell> {
  public:
   TestApp(fuchsia::sys::StartupContext* const startup_context)
       : ComponentBase(startup_context) {
@@ -152,7 +151,7 @@ class TestApp : public fuchsia::modular::testing::ComponentBase<
  private:
   TestPoint initialize_{"Initialize()"};
 
-  // |UserShell|
+  // |fuchsia::modular::UserShell|
   void Initialize(fidl::InterfaceHandle<fuchsia::modular::UserShellContext>
                       user_shell_context) override {
     initialize_.Pass();
@@ -229,6 +228,6 @@ class TestApp : public fuchsia::modular::testing::ComponentBase<
 }  // namespace
 
 int main(int /*argc*/, const char** /*argv*/) {
-  fuchsia::modular::testing::ComponentMain<TestApp>();
+  modular::testing::ComponentMain<TestApp>();
   return 0;
 }

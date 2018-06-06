@@ -15,10 +15,10 @@
 #include "peridot/bin/suggestion_engine/debug.h"
 #include "peridot/lib/util/idle_waiter.h"
 
-namespace fuchsia {
 namespace modular {
 
-using SpeechStatusCallback = std::function<void(SpeechStatus)>;
+using SpeechStatusCallback =
+    std::function<void(fuchsia::modular::SpeechStatus)>;
 
 // Class in charge of playing media (speech) responses coming from query
 // responses.
@@ -31,11 +31,12 @@ class MediaPlayer {
               std::shared_ptr<SuggestionDebugImpl> debug);
   ~MediaPlayer();
 
-  // Sets callback that is called whenever a change to SpeechStatus occurs.
+  // Sets callback that is called whenever a change to
+  // fuchsia::modular::SpeechStatus occurs.
   void SetSpeechStatusCallback(SpeechStatusCallback callback);
 
   // Plays media response coming from a query response.
-  void PlayMediaResponse(MediaResponsePtr media_response);
+  void PlayMediaResponse(fuchsia::modular::MediaResponsePtr media_response);
 
  private:
   void HandleMediaUpdates(
@@ -54,6 +55,5 @@ class MediaPlayer {
 };
 
 }  // namespace modular
-}  // namespace fuchsia
 
 #endif  // PERIDOT_BIN_SUGGESTION_ENGINE_MEDIA_PLAYER_H_

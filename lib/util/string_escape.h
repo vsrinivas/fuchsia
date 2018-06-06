@@ -9,15 +9,13 @@
 
 #include "lib/fxl/strings/string_view.h"
 
-namespace fuchsia {
 namespace modular {
 
 constexpr char kDefaultEscapeChar = '\\';
 
 // Escape the set of chars in |chars_to_escape| in |input||. Use |escape_char|
 // to escape. All params are expected to be in ASCII.
-std::string StringEscape(fxl::StringView input,
-                         fxl::StringView chars_to_escape,
+std::string StringEscape(fxl::StringView input, fxl::StringView chars_to_escape,
                          char escape_char = kDefaultEscapeChar);
 
 // Unescape all escape sequences in |input|, where the escape sequence begins
@@ -34,11 +32,9 @@ std::string StringUnescape(fxl::StringView input,
 //  SplitEscapedString("a_b\\_c_d", '_', '\\')
 //    => std::vector<StringView>{"a", "b\\_c", "d"}
 std::vector<fxl::StringView> SplitEscapedString(
-    fxl::StringView input,
-    char split_char,
+    fxl::StringView input, char split_char,
     char escape_char = kDefaultEscapeChar);
 
 }  // namespace modular
-}  // namespace fuchsia
 
 #endif  // PERIDOT_LIB_UTIL_STRING_ESCAPE_H_

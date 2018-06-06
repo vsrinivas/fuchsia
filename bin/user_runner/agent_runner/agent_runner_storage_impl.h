@@ -13,7 +13,6 @@
 #include "peridot/lib/ledger_client/page_client.h"
 #include "peridot/lib/ledger_client/types.h"
 
-namespace fuchsia {
 namespace modular {
 
 // An implementation of |AgentRunnerStorage| that persists data in the ledger.
@@ -29,13 +28,11 @@ class AgentRunnerStorageImpl : public AgentRunnerStorage, PageClient {
                   std::function<void()> done) override;
 
   // |AgentRunnerStorage|
-  void WriteTask(const std::string& agent_url,
-                 TriggerInfo data,
+  void WriteTask(const std::string& agent_url, TriggerInfo data,
                  std::function<void(bool)> done) override;
 
   // |AgentRunnerStorage|
-  void DeleteTask(const std::string& agent_url,
-                  const std::string& task_id,
+  void DeleteTask(const std::string& agent_url, const std::string& task_id,
                   std::function<void(bool)> done) override;
 
   // Operation subclasses:
@@ -57,6 +54,5 @@ class AgentRunnerStorageImpl : public AgentRunnerStorage, PageClient {
 };
 
 }  // namespace modular
-}  // namespace fuchsia
 
 #endif  // PERIDOT_BIN_USER_RUNNER_AGENT_RUNNER_AGENT_RUNNER_STORAGE_IMPL_H_

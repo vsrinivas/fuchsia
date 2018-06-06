@@ -13,7 +13,6 @@
 #include "peridot/lib/testing/reporting.h"
 #include "peridot/lib/testing/testing.h"
 
-namespace fuchsia {
 namespace modular {
 namespace testing {
 
@@ -27,7 +26,7 @@ template <typename Component>
 class ComponentBase : protected SingleServiceApp<Component> {
  public:
   void Terminate(std::function<void()> done) override {
-    fuchsia::modular::testing::Done(done);
+    modular::testing::Done(done);
   }
 
  protected:
@@ -39,18 +38,18 @@ class ComponentBase : protected SingleServiceApp<Component> {
   // marked as error by the compiler) at template definition. Essentially, the
   // class name prefix turns the independent name into a dependent
   // name. Cf. http://en.cppreference.com/w/cpp/language/dependent_name.
-  using Base = fuchsia::modular::SingleServiceApp<Component>;
+  using Base = SingleServiceApp<Component>;
 
   ComponentBase(fuchsia::sys::StartupContext* const startup_context)
       : Base(startup_context), weak_factory_(this) {}
 
   ~ComponentBase() override = default;
 
-  // We must not call fuchsia::modular::testing::Init() in the base class
+  // We must not call testing::Init() in the base class
   // constructor, because that's before the test points are initialized. It's
   // fine to call this from the derived class constructor.
   void TestInit(const char* const file) {
-    fuchsia::modular::testing::Init(Base::startup_context(), file);
+    testing::Init(Base::startup_context(), file);
   }
 
   // Wraps the callback function into a layer that protects executing the
@@ -86,14 +85,14 @@ class ComponentBase : protected SingleServiceApp<Component> {
 //   int main(int argc, const char** argv) {
 //     auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
 //     Settings settings(command_line);
-//     fuchsia::modular::testing::ComponentMain<TestApp,
+//     modular::testing::ComponentMain<TestApp,
 //     Settings>(std::move(settings)); return 0;
 //   }
 //
 // Example use without settings (TestApp is a locally defined class):
 //
 //   int main(int, const char**) {
-//     fuchsia::modular::testing::ComponentMain<TestApp>();
+//     modular::testing::ComponentMain<TestApp>();
 //     return 0;
 //   }
 //
@@ -102,7 +101,7 @@ void ComponentMain(Args... args) {
   fsl::MessageLoop loop;
 
   auto context = fuchsia::sys::StartupContext::CreateFromStartupInfo();
-  fuchsia::modular::AppDriver<Impl> driver(
+  modular::AppDriver<Impl> driver(
       context->outgoing().deprecated_services(),
       std::make_unique<Impl>(context.get(), std::move(args)...),
       [&loop] { loop.QuitNow(); });
@@ -112,6 +111,5 @@ void ComponentMain(Args... args) {
 
 }  // namespace testing
 }  // namespace modular
-}  // namespace fuchsia
 
 #endif  // PERIDOT_LIB_TESTING_COMPONENT_BASE_H_

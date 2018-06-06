@@ -14,10 +14,9 @@
 #include "lib/fxl/macros.h"
 #include "lib/svc/cpp/service_namespace.h"
 
-namespace fuchsia {
 namespace modular {
 
-class LifecycleImpl : Lifecycle {
+class LifecycleImpl : fuchsia::modular::Lifecycle {
  public:
   // Users of LifecycleImpl register a delegate to receive Terminate().
   class Delegate {
@@ -25,22 +24,21 @@ class LifecycleImpl : Lifecycle {
     virtual void Terminate() = 0;
   };
 
-  // |Delegate.Terminate()| is called when a Lifecycle.Terminate message is
-  // received.
+  // |Delegate.Terminate()| is called when a
+  // fuchsia::modular::Lifecycle.Terminate message is received.
   LifecycleImpl(fuchsia::sys::ServiceNamespace* service_namespace,
                 Delegate* delegate);
 
  private:
-  // |Lifecycle|
+  // |fuchsia::modular::Lifecycle|
   void Terminate() override;
 
   Delegate* const delegate_;
-  fidl::Binding<Lifecycle> binding_;
+  fidl::Binding<fuchsia::modular::Lifecycle> binding_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(LifecycleImpl);
 };
 
 }  // namespace modular
-}  // namespace fuchsia
 
 #endif  // LIB_LIFECYCLE_CPP_LIFECYCLE_IMPL_H_

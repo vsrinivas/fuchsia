@@ -12,7 +12,6 @@
 #include "peridot/bin/module_resolver/type_inference.h"
 #include "peridot/public/lib/entity/cpp/json.h"
 
-namespace fuchsia {
 namespace modular {
 
 ParameterTypeInferenceHelper::ParameterTypeInferenceHelper(
@@ -22,7 +21,7 @@ ParameterTypeInferenceHelper::ParameterTypeInferenceHelper(
 ParameterTypeInferenceHelper::~ParameterTypeInferenceHelper() = default;
 
 class ParameterTypeInferenceHelper::GetParameterTypesCall
-    : public fuchsia::modular::Operation<std::vector<std::string>> {
+    : public Operation<std::vector<std::string>> {
  public:
   GetParameterTypesCall(fuchsia::modular::EntityResolver* entity_resolver,
                         const fidl::StringPtr& entity_reference,
@@ -56,8 +55,7 @@ void ParameterTypeInferenceHelper::GetParameterTypes(
                                  parameter_constraint.entity_type()->end()));
   } else if (parameter_constraint.is_json()) {
     std::vector<std::string> types;
-    if (!fuchsia::modular::ExtractEntityTypesFromJson(
-            parameter_constraint.json(), &types)) {
+    if (!ExtractEntityTypesFromJson(parameter_constraint.json(), &types)) {
       FXL_LOG(WARNING) << "Mal-formed JSON in parameter: "
                        << parameter_constraint.json();
       result_callback({});
@@ -77,14 +75,15 @@ void ParameterTypeInferenceHelper::GetParameterTypes(
               .allowed_types->allowed_entity_types->end());
       result_callback(std::move(types));
     } else if (parameter_constraint.link_info().content_snapshot) {
-      // TODO(thatguy): See if there's an Entity reference on the Link. If so,
-      // get the types from that.  If resolution results in a Module being
-      // started, this Link should have its allowed types constrained, since
+      // TODO(thatguy): See if there's an fuchsia::modular::Entity reference on
+      // the fuchsia::modular::Link. If so, get the types from that.  If
+      // resolution results in a Module being started, this
+      // fuchsia::modular::Link should have its allowed types constrained, since
       // *another* Module is now relying on a small set of types being set.
       // Consider doing this when we move type extraction to the Framework and
       // simplify the Resolver.
       std::string entity_reference;
-      if (fuchsia::modular::EntityReferenceFromJson(
+      if (EntityReferenceFromJson(
               parameter_constraint.link_info().content_snapshot,
               &entity_reference)) {
         operation_collection_.Add(new GetParameterTypesCall(
@@ -97,4 +96,3 @@ void ParameterTypeInferenceHelper::GetParameterTypes(
 }
 
 }  // namespace modular
-}  // namespace fuchsia

@@ -18,12 +18,12 @@
 #include "peridot/lib/util/debug.h"
 #include "peridot/public/lib/entity/cpp/json.h"
 
-namespace fuchsia {
 namespace modular {
 
 class LinkImpl::ReadLinkDataCall : public PageOperation<fidl::StringPtr> {
  public:
-  ReadLinkDataCall(fuchsia::ledger::Page* const page, const LinkPath& link_path,
+  ReadLinkDataCall(fuchsia::ledger::Page* const page,
+                   const fuchsia::modular::LinkPath& link_path,
                    ResultCall result_call)
       : PageOperation("LinkImpl::ReadLinkDataCall", page,
                       std::move(result_call)),
@@ -33,18 +33,17 @@ class LinkImpl::ReadLinkDataCall : public PageOperation<fidl::StringPtr> {
   void Run() override {
     FlowToken flow{this, &result_};
 
-    page()->GetSnapshot(page_snapshot_.NewRequest(),
-                        fidl::VectorPtr<uint8_t>::New(0), nullptr,
-                        Protect([this, flow](fuchsia::ledger::Status status) {
-                          if (status != fuchsia::ledger::Status::OK) {
-                            FXL_LOG(ERROR)
-                                << trace_name() << " " << link_key_ << " "
-                                << " Page.GetSnapshot() " << status;
-                            return;
-                          }
+    page()->GetSnapshot(
+        page_snapshot_.NewRequest(), fidl::VectorPtr<uint8_t>::New(0), nullptr,
+        Protect([this, flow](fuchsia::ledger::Status status) {
+          if (status != fuchsia::ledger::Status::OK) {
+            FXL_LOG(ERROR) << trace_name() << " " << link_key_ << " "
+                           << " Page.GetSnapshot() " << status;
+            return;
+          }
 
-                          Cont(flow);
-                        }));
+          Cont(flow);
+        }));
   }
 
   void Cont(FlowToken flow) {
@@ -84,8 +83,8 @@ class LinkImpl::ReadLinkDataCall : public PageOperation<fidl::StringPtr> {
 class LinkImpl::WriteLinkDataCall : public PageOperation<> {
  public:
   WriteLinkDataCall(fuchsia::ledger::Page* const page,
-                    const LinkPathPtr& link_path, fidl::StringPtr data,
-                    ResultCall result_call)
+                    const fuchsia::modular::LinkPathPtr& link_path,
+                    fidl::StringPtr data, ResultCall result_call)
       : PageOperation("LinkImpl::WriteLinkDataCall", page,
                       std::move(result_call)),
         link_key_(MakeLinkKey(link_path)),
@@ -126,15 +125,15 @@ class LinkImpl::FlushWatchersCall : public PageOperation<> {
     // call, then all link watcher notifications are guaranteed to have been
     // received when this Operation is Done().
 
-    page()->StartTransaction(Protect([this,
-                                      flow](fuchsia::ledger::Status status) {
-      if (status != fuchsia::ledger::Status::OK) {
-        FXL_LOG(ERROR) << trace_name() << " "
-                       << " Page.StartTransaction() " << status;
-        return;
-      }
-      Cont(flow);
-    }));
+    page()->StartTransaction(
+        Protect([this, flow](fuchsia::ledger::Status status) {
+          if (status != fuchsia::ledger::Status::OK) {
+            FXL_LOG(ERROR) << trace_name() << " "
+                           << " Page.StartTransaction() " << status;
+            return;
+          }
+          Cont(flow);
+        }));
   }
 
   void Cont(FlowToken flow) {
@@ -363,7 +362,8 @@ class LinkImpl::GetEntityCall : public Operation<fidl::StringPtr> {
 
 class LinkImpl::WatchCall : public Operation<> {
  public:
-  WatchCall(LinkImpl* const impl, fidl::InterfaceHandle<LinkWatcher> watcher,
+  WatchCall(LinkImpl* const impl,
+            fidl::InterfaceHandle<fuchsia::modular::LinkWatcher> watcher,
             const uint32_t conn)
       : Operation("LinkImpl::WatchCall", [] {}),
         impl_(impl),
@@ -389,7 +389,7 @@ class LinkImpl::WatchCall : public Operation<> {
   }
 
   LinkImpl* const impl_;  // not owned
-  LinkWatcherPtr watcher_;
+  fuchsia::modular::LinkWatcherPtr watcher_;
   const uint32_t conn_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(WatchCall);
@@ -430,8 +430,8 @@ class LinkImpl::ChangeCall : public Operation<> {
 };
 
 LinkImpl::LinkImpl(LedgerClient* const ledger_client, LedgerPageId page_id,
-                   const LinkPath& link_path,
-                   CreateLinkInfoPtr create_link_info)
+                   const fuchsia::modular::LinkPath& link_path,
+                   fuchsia::modular::CreateLinkInfoPtr create_link_info)
     : PageClient(MakeLinkKey(link_path), ledger_client, std::move(page_id),
                  MakeLinkKey(link_path)),
       create_link_info_(std::move(create_link_info)) {
@@ -447,7 +447,7 @@ LinkImpl::LinkImpl(LedgerClient* const ledger_client, LedgerPageId page_id,
 
 LinkImpl::~LinkImpl() = default;
 
-void LinkImpl::Connect(fidl::InterfaceRequest<Link> request) {
+void LinkImpl::Connect(fidl::InterfaceRequest<fuchsia::modular::Link> request) {
   if (ready_) {
     LinkConnection::New(this, next_connection_id_++, std::move(request));
   } else {
@@ -466,19 +466,19 @@ void LinkImpl::Get(fidl::VectorPtr<fidl::StringPtr> path,
 //
 // When a watcher is registered, it first receives an OnChange() call with the
 // current value. Thus, when a client first calls Set() and then Watch(), its
-// LinkWatcher receives the value that was just Set(). This should not be
-// surprising, and clients should register their watchers first before setting
-// the link value.
+// fuchsia::modular::LinkWatcher receives the value that was just Set(). This
+// should not be surprising, and clients should register their watchers first
+// before setting the link value.
 void LinkImpl::Set(fidl::VectorPtr<fidl::StringPtr> path, fidl::StringPtr json,
                    const uint32_t src) {
   // TODO(jimbe, mesch): This method needs a success status, otherwise clients
   // have no way to know they sent bogus data.
 
   if (kEnableIncrementalLinks) {
-    modular::internal ::LinkChangePtr data =
-        modular::internal ::LinkChange::New();
+    fuchsia::modular::internal::LinkChangePtr data =
+        fuchsia::modular::internal::LinkChange::New();
     // Leave data->key null to signify a new entry
-    data->op = modular::internal ::LinkChangeOp::SET;
+    data->op = fuchsia::modular::internal::LinkChangeOp::SET;
     data->pointer = std::move(path);
     data->json = json;
     MakeIncrementalChangeCall(std::move(data), src);
@@ -493,10 +493,10 @@ void LinkImpl::UpdateObject(fidl::VectorPtr<fidl::StringPtr> path,
   // otherwise clients have no way to know they sent bogus data.
 
   if (kEnableIncrementalLinks) {
-    modular::internal ::LinkChangePtr data =
-        modular::internal ::LinkChange::New();
+    fuchsia::modular::internal::LinkChangePtr data =
+        fuchsia::modular::internal::LinkChange::New();
     // Leave data->key empty to signify a new entry
-    data->op = modular::internal ::LinkChangeOp::UPDATE;
+    data->op = fuchsia::modular::internal::LinkChangeOp::UPDATE;
     data->pointer = std::move(path);
     data->json = json;
     MakeIncrementalChangeCall(std::move(data), src);
@@ -509,10 +509,10 @@ void LinkImpl::UpdateObject(fidl::VectorPtr<fidl::StringPtr> path,
 void LinkImpl::Erase(fidl::VectorPtr<fidl::StringPtr> path,
                      const uint32_t src) {
   if (kEnableIncrementalLinks) {
-    modular::internal ::LinkChangePtr data =
-        modular::internal ::LinkChange::New();
+    fuchsia::modular::internal::LinkChangePtr data =
+        fuchsia::modular::internal::LinkChange::New();
     // Leave data->key empty to signify a new entry
-    data->op = modular::internal ::LinkChangeOp::ERASE;
+    data->op = fuchsia::modular::internal::LinkChangeOp::ERASE;
     data->pointer = std::move(path);
     // Leave data->json null for ERASE.
 
@@ -522,7 +522,8 @@ void LinkImpl::Erase(fidl::VectorPtr<fidl::StringPtr> path,
   }
 }
 
-void LinkImpl::GetEntity(const Link::GetEntityCallback& callback) {
+void LinkImpl::GetEntity(
+    const fuchsia::modular::Link::GetEntityCallback& callback) {
   operation_queue_.Add(new GetEntityCall(this, callback));
 }
 
@@ -655,17 +656,20 @@ void LinkImpl::RemoveConnection(LinkWatcherConnection* const connection) {
   watchers_.erase(i, watchers_.end());
 }
 
-void LinkImpl::Watch(fidl::InterfaceHandle<LinkWatcher> watcher,
-                     const uint32_t conn) {
+void LinkImpl::Watch(
+    fidl::InterfaceHandle<fuchsia::modular::LinkWatcher> watcher,
+    const uint32_t conn) {
   operation_queue_.Add(new WatchCall(this, std::move(watcher), conn));
 }
 
-void LinkImpl::WatchAll(fidl::InterfaceHandle<LinkWatcher> watcher) {
+void LinkImpl::WatchAll(
+    fidl::InterfaceHandle<fuchsia::modular::LinkWatcher> watcher) {
   Watch(std::move(watcher), kWatchAllConnectionId);
 }
 
-LinkConnection::LinkConnection(LinkImpl* const impl, const uint32_t id,
-                               fidl::InterfaceRequest<Link> link_request)
+LinkConnection::LinkConnection(
+    LinkImpl* const impl, const uint32_t id,
+    fidl::InterfaceRequest<fuchsia::modular::Link> link_request)
     : impl_(impl), binding_(this, std::move(link_request)), id_(id) {
   impl_->AddConnection(this);
   binding_.set_error_handler([this] { impl_->RemoveConnection(this); });
@@ -673,14 +677,16 @@ LinkConnection::LinkConnection(LinkImpl* const impl, const uint32_t id,
 
 LinkConnection::~LinkConnection() = default;
 
-void LinkConnection::Watch(fidl::InterfaceHandle<LinkWatcher> watcher) {
+void LinkConnection::Watch(
+    fidl::InterfaceHandle<fuchsia::modular::LinkWatcher> watcher) {
   // This watcher stays associated with the connection it was registered
   // through. The ID is used to block notifications for updates that originate
   // at the same connection.
   impl_->Watch(std::move(watcher), id_);
 }
 
-void LinkConnection::WatchAll(fidl::InterfaceHandle<LinkWatcher> watcher) {
+void LinkConnection::WatchAll(
+    fidl::InterfaceHandle<fuchsia::modular::LinkWatcher> watcher) {
   // This watcher is not associated with the connection it was registered
   // through. The connection is recorded as 0, which never identifies any
   // connection that originates an update, so no update notification is ever
@@ -717,9 +723,9 @@ void LinkConnection::Get(fidl::VectorPtr<fidl::StringPtr> path,
   impl_->Get(std::move(path), callback);
 }
 
-LinkWatcherConnection::LinkWatcherConnection(LinkImpl* const impl,
-                                             LinkWatcherPtr watcher,
-                                             const uint32_t conn)
+LinkWatcherConnection::LinkWatcherConnection(
+    LinkImpl* const impl, fuchsia::modular::LinkWatcherPtr watcher,
+    const uint32_t conn)
     : impl_(impl), watcher_(std::move(watcher)), conn_(conn) {
   watcher_.set_error_handler([this] { impl_->RemoveConnection(this); });
 }
@@ -733,4 +739,3 @@ void LinkWatcherConnection::Notify(fidl::StringPtr value, const uint32_t src) {
 }
 
 }  // namespace modular
-}  // namespace fuchsia

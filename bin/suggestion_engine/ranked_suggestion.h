@@ -8,7 +8,6 @@
 #include <fuchsia/modular/cpp/fidl.h>
 #include "peridot/bin/suggestion_engine/suggestion_prototype.h"
 
-namespace fuchsia {
 namespace modular {
 
 // |rank| and |adjusted_confidence| should satisfy the invariant that for any
@@ -21,9 +20,9 @@ struct RankedSuggestion {
   static std::unique_ptr<RankedSuggestion> New(SuggestionPrototype* prototype);
 };
 
-Suggestion CreateSuggestion(const RankedSuggestion& suggestion_data);
+fuchsia::modular::Suggestion CreateSuggestion(
+    const RankedSuggestion& suggestion_data);
 
 }  // namespace modular
-}  // namespace fuchsia
 
 #endif  // PERIDOT_BIN_SUGGESTION_ENGINE_RANKED_SUGGESTION_H_

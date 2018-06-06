@@ -17,9 +17,9 @@
 #include "peridot/tests/common/defs.h"
 #include "peridot/tests/queue_persistence/defs.h"
 
-using fuchsia::modular::testing::Await;
-using fuchsia::modular::testing::Signal;
-using fuchsia::modular::testing::TestPoint;
+using modular::testing::Await;
+using modular::testing::Signal;
+using modular::testing::TestPoint;
 
 namespace {
 
@@ -28,11 +28,11 @@ class TestApp {
  public:
   TestPoint initialized_{"Root module initialized"};
 
-  TestApp(fuchsia::modular::ModuleHost* module_host,
+  TestApp(modular::ModuleHost* module_host,
           fidl::InterfaceRequest<
               fuchsia::ui::views_v1::ViewProvider> /*view_provider_request*/)
       : module_host_(module_host), weak_ptr_factory_(this) {
-    fuchsia::modular::testing::Init(module_host->startup_context(), __FILE__);
+    modular::testing::Init(module_host->startup_context(), __FILE__);
     initialized_.Pass();
 
     module_host_->module_context()->GetComponentContext(
@@ -52,11 +52,11 @@ class TestApp {
   // Called by ModuleDriver.
   void Terminate(const std::function<void()>& done) {
     stopped_.Pass();
-    fuchsia::modular::testing::Done(done);
+    modular::testing::Done(done);
   }
 
  private:
-  TestPoint agent_connected_{"Agent accepted connection"};
+  TestPoint agent_connected_{"fuchsia::modular::Agent accepted connection"};
 
   void AgentConnected() {
     agent_connected_.Pass();
@@ -77,7 +77,7 @@ class TestApp {
     Await("queue_persistence_test_agent_stopped", [this] { AgentStopped(); });
   }
 
-  TestPoint agent_stopped_{"Agent stopped"};
+  TestPoint agent_stopped_{"fuchsia::modular::Agent stopped"};
 
   void AgentStopped() {
     agent_stopped_.Pass();
@@ -99,7 +99,8 @@ class TestApp {
           [this] { AgentConnectedAgain(); });
   }
 
-  TestPoint agent_connected_again_{"Agent accepted connection, again"};
+  TestPoint agent_connected_again_{
+      "fuchsia::modular::Agent accepted connection, again"};
 
   void AgentConnectedAgain() {
     agent_connected_again_.Pass();
@@ -107,7 +108,7 @@ class TestApp {
           [this] { AgentReceivedMessage(); });
   }
 
-  TestPoint agent_received_message_{"Agent received message"};
+  TestPoint agent_received_message_{"fuchsia::modular::Agent received message"};
 
   void AgentReceivedMessage() {
     agent_received_message_.Pass();
@@ -116,10 +117,10 @@ class TestApp {
     agent_controller_.Unbind();
     agent_service_.Unbind();
     Await("queue_persistence_test_agent_stopped",
-          [this] { Signal(fuchsia::modular::testing::kTestShutdown); });
+          [this] { Signal(modular::testing::kTestShutdown); });
   }
 
-  fuchsia::modular::ModuleHost* module_host_;
+  modular::ModuleHost* module_host_;
   fuchsia::modular::AgentControllerPtr agent_controller_;
   queue_persistence_test_service::QueuePersistenceTestServicePtr agent_service_;
   fuchsia::modular::ComponentContextPtr component_context_;
@@ -137,8 +138,8 @@ class TestApp {
 int main(int /*argc*/, const char** /*argv*/) {
   fsl::MessageLoop loop;
   auto context = fuchsia::sys::StartupContext::CreateFromStartupInfo();
-  fuchsia::modular::ModuleDriver<TestApp> driver(context.get(),
-                                                 [&loop] { loop.QuitNow(); });
+  modular::ModuleDriver<TestApp> driver(context.get(),
+                                        [&loop] { loop.QuitNow(); });
   loop.Run();
   return 0;
 }

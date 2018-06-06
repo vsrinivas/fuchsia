@@ -7,14 +7,13 @@
 #include "peridot/bin/agents/clipboard/clipboard_storage.h"
 #include "peridot/lib/ledger_client/ledger_client.h"
 
-namespace fuchsia {
 namespace modular {
 
-// An agent responsible for providing the Clipboard service.
+// An agent responsible for providing the fuchsia::modular::Clipboard service.
 class ClipboardAgent {
  public:
   ClipboardAgent(AgentHost* const agent_host) {
-    ComponentContextPtr component_context;
+    fuchsia::modular::ComponentContextPtr component_context;
     agent_host->agent_context()->GetComponentContext(
         component_context.NewRequest());
 
@@ -32,8 +31,8 @@ class ClipboardAgent {
 
     clipboard_.reset(new ClipboardImpl(ledger_client_.get()));
 
-    services_.AddService<Clipboard>(
-        [this](fidl::InterfaceRequest<Clipboard> request) {
+    services_.AddService<fuchsia::modular::Clipboard>(
+        [this](fidl::InterfaceRequest<fuchsia::modular::Clipboard> request) {
           clipboard_->Connect(std::move(request));
         });
   }
@@ -56,19 +55,18 @@ class ClipboardAgent {
 
   std::unique_ptr<ClipboardImpl> clipboard_;
 
-  // The service namespace that the Clipboard is added to.
+  // The service namespace that the fuchsia::modular::Clipboard is added to.
   fuchsia::sys::ServiceNamespace services_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ClipboardAgent);
 };
 
 }  // namespace modular
-}  // namespace fuchsia
 
 int main(int /*argc*/, const char** /*argv*/) {
   fsl::MessageLoop loop;
   auto context = fuchsia::sys::StartupContext::CreateFromStartupInfo();
-  fuchsia::modular::AgentDriver<fuchsia::modular::ClipboardAgent> driver(
+  modular::AgentDriver<modular::ClipboardAgent> driver(
       context.get(), [&loop] { loop.QuitNow(); });
   loop.Run();
   return 0;

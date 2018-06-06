@@ -66,7 +66,7 @@ class RecipeView : public mozart::BaseView {
   std::unique_ptr<scenic_lib::EntityNode> host_node_;
 };
 
-class RecipeApp : public fuchsia::modular::ViewApp {
+class RecipeApp : public modular::ViewApp {
  public:
   RecipeApp(fuchsia::sys::StartupContext* const startup_context)
       : ViewApp(startup_context) {
@@ -137,7 +137,7 @@ int main(int /*argc*/, const char** /*argv*/) {
   fsl::MessageLoop loop;
 
   auto context = fuchsia::sys::StartupContext::CreateFromStartupInfo();
-  fuchsia::modular::AppDriver<RecipeApp> driver(
+  modular::AppDriver<RecipeApp> driver(
       context->outgoing().deprecated_services(),
       std::make_unique<RecipeApp>(context.get()), [&loop] { loop.QuitNow(); });
 

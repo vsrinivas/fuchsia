@@ -3,10 +3,9 @@
 // found in the LICENSE file.
 
 #include "peridot/bin/suggestion_engine/filters/ranked_active_filter.h"
-#include "peridot/bin/suggestion_engine/ranking_feature.h"
 #include "gtest/gtest.h"
+#include "peridot/bin/suggestion_engine/ranking_feature.h"
 
-namespace fuchsia {
 namespace modular {
 namespace {
 
@@ -15,7 +14,7 @@ class ConfidenceRankingFeature : public RankingFeature {
   ConfidenceRankingFeature() {}
 
  private:
-  double ComputeFeatureInternal(const UserInput& query,
+  double ComputeFeatureInternal(const fuchsia::modular::UserInput& query,
                                 const RankedSuggestion& suggestion) override {
     return suggestion.confidence;
   }
@@ -27,10 +26,10 @@ class RankedActiveFilterTest : public ::testing::Test {
     filter = std::make_unique<RankedActiveFilter>(
         std::make_shared<ConfidenceRankingFeature>());
   }
+
  protected:
   std::unique_ptr<RankedActiveFilter> filter;
 };
-
 
 void AddTestRankedSuggestion(
     std::vector<std::unique_ptr<RankedSuggestion>>* const list,
@@ -40,7 +39,7 @@ void AddTestRankedSuggestion(
   list->push_back(std::move(suggestion));
 }
 
-TEST_F(RankedActiveFilterTest, Filter)  {
+TEST_F(RankedActiveFilterTest, Filter) {
   // Should filter all ranked suggestions for which the ranking feature
   // evaluates to 1 (max confidence).
   std::vector<std::unique_ptr<RankedSuggestion>> list;
@@ -61,4 +60,3 @@ TEST_F(RankedActiveFilterTest, Filter)  {
 
 }  // namespace
 }  // namespace modular
-}  // namespace fuchsia

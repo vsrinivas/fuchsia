@@ -9,7 +9,6 @@
 
 #include "peridot/bin/suggestion_engine/ranking_feature.h"
 
-namespace fuchsia {
 namespace modular {
 
 class DeadStoryRankingFeature : public RankingFeature {
@@ -18,13 +17,12 @@ class DeadStoryRankingFeature : public RankingFeature {
   ~DeadStoryRankingFeature() override;
 
  private:
-  double ComputeFeatureInternal(
-      const UserInput& query, const RankedSuggestion& suggestion) override;
+  double ComputeFeatureInternal(const fuchsia::modular::UserInput& query,
+                                const RankedSuggestion& suggestion) override;
 
-  ContextSelectorPtr CreateContextSelectorInternal() override;
+  fuchsia::modular::ContextSelectorPtr CreateContextSelectorInternal() override;
 };
 
 }  // namespace modular
-}  // namespace fuchsia
 
 #endif  // PERIDOT_BIN_SUGGESTION_ENGINE_RANKING_FEATURES_DEAD_STORY_RANKING_FEATURE_H_

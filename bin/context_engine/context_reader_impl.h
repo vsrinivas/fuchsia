@@ -1,5 +1,6 @@
 // Copyright 2017 The Fuchsia Authors. All rights reserved.
-// Use of this source code is governed by a BSD-style license that can be // found in the LICENSE file.
+// Use of this source code is governed by a BSD-style license that can be //
+// found in the LICENSE file.
 
 #ifndef PERIDOT_BIN_CONTEXT_ENGINE_CONTEXT_READER_IMPL_H_
 #define PERIDOT_BIN_CONTEXT_ENGINE_CONTEXT_READER_IMPL_H_
@@ -10,35 +11,33 @@
 #include "lib/fidl/cpp/binding.h"
 #include "peridot/bin/context_engine/context_repository.h"
 
-namespace fuchsia {
 namespace modular {
 
-class ContextReaderImpl : ContextReader {
+class ContextReaderImpl : fuchsia::modular::ContextReader {
  public:
-  ContextReaderImpl(ComponentScope client,
-                    ContextRepository* repository,
-                    fidl::InterfaceRequest<ContextReader> request);
+  ContextReaderImpl(
+      fuchsia::modular::ComponentScope client, ContextRepository* repository,
+      fidl::InterfaceRequest<fuchsia::modular::ContextReader> request);
   ~ContextReaderImpl() override;
 
  private:
-  // |ContextReader|
-  void Subscribe(ContextQuery query,
-                 fidl::InterfaceHandle<ContextListener> listener) override;
+  // |fuchsia::modular::ContextReader|
+  void Subscribe(fuchsia::modular::ContextQuery query,
+                 fidl::InterfaceHandle<fuchsia::modular::ContextListener>
+                     listener) override;
 
-  // |ContextReader|
-  void Get(
-      ContextQuery query,
-      ContextReader::GetCallback callback) override;
+  // |fuchsia::modular::ContextReader|
+  void Get(fuchsia::modular::ContextQuery query,
+           fuchsia::modular::ContextReader::GetCallback callback) override;
 
-  fidl::Binding<ContextReader> binding_;
+  fidl::Binding<fuchsia::modular::ContextReader> binding_;
 
-  SubscriptionDebugInfo debug_;
+  fuchsia::modular::SubscriptionDebugInfo debug_;
   ContextRepository* const repository_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ContextReaderImpl);
 };
 
 }  // namespace modular
-}  // namespace fuchsia
 
 #endif  // PERIDOT_BIN_CONTEXT_ENGINE_CONTEXT_READER_IMPL_H_

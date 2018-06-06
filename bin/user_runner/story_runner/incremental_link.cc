@@ -15,23 +15,23 @@
 #include "peridot/lib/ledger_client/storage.h"
 #include "peridot/lib/util/debug.h"
 
-namespace fuchsia {
 namespace modular {
 
 namespace {
 
-std::string MakeSequencedLinkKey(const LinkPath& link_path,
+std::string MakeSequencedLinkKey(const fuchsia::modular::LinkPath& link_path,
                                  const std::string& sequence_key) {
   // |sequence_key| uses characters that never require escaping
   return MakeLinkKey(link_path) + kSeparator + sequence_key;
 }
 
-std::string MakeSequencedLinkKeyPrefix(const LinkPath& link_path) {
+std::string MakeSequencedLinkKeyPrefix(
+    const fuchsia::modular::LinkPath& link_path) {
   return MakeLinkKey(link_path) + kSeparator;
 }
 
 void XdrLinkChange_v1(XdrContext* const xdr,
-                      modular::internal ::LinkChange* const data) {
+                      fuchsia::modular::internal::LinkChange* const data) {
   xdr->Field("key", &data->key);
   xdr->Field("op", &data->op);
   xdr->Field("path", &data->pointer);
@@ -39,7 +39,7 @@ void XdrLinkChange_v1(XdrContext* const xdr,
 }
 
 void XdrLinkChange_v2(XdrContext* const xdr,
-                      modular::internal ::LinkChange* const data) {
+                      fuchsia::modular::internal::LinkChange* const data) {
   if (!xdr->Version(2)) {
     return;
   }
@@ -79,7 +79,7 @@ class LinkImpl::ReloadCall : public Operation<> {
 class LinkImpl::IncrementalWriteCall : public Operation<> {
  public:
   IncrementalWriteCall(LinkImpl* const impl,
-                       modular::internal ::LinkChangePtr data,
+                       fuchsia::modular::internal::LinkChangePtr data,
                        ResultCall result_call)
       : Operation("LinkImpl::IncrementalWriteCall", std::move(result_call)),
         impl_(impl),
@@ -99,7 +99,7 @@ class LinkImpl::IncrementalWriteCall : public Operation<> {
   }
 
   LinkImpl* const impl_;  // not owned
-  modular::internal ::LinkChangePtr data_;
+  fuchsia::modular::internal::LinkChangePtr data_;
   OperationQueue operation_queue_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(IncrementalWriteCall);
@@ -108,8 +108,8 @@ class LinkImpl::IncrementalWriteCall : public Operation<> {
 class LinkImpl::IncrementalChangeCall : public Operation<> {
  public:
   IncrementalChangeCall(LinkImpl* const impl,
-                        modular::internal ::LinkChangePtr data, uint32_t src,
-                        ResultCall result_call)
+                        fuchsia::modular::internal::LinkChangePtr data,
+                        uint32_t src, ResultCall result_call)
       : Operation("LinkImpl::IncrementalChangeCall", std::move(result_call)),
         impl_(impl),
         data_(std::move(data)),
@@ -176,7 +176,7 @@ class LinkImpl::IncrementalChangeCall : public Operation<> {
   }
 
   LinkImpl* const impl_;  // not owned
-  modular::internal ::LinkChangePtr data_;
+  fuchsia::modular::internal::LinkChangePtr data_;
   std::string old_json_;
   uint32_t src_;
 
@@ -190,43 +190,46 @@ class LinkImpl::IncrementalChangeCall : public Operation<> {
 // caused by |new IncrementalChangeCall|. Although it's possible that this Run()
 // function gets called recursively, it will stop recursing because of the
 // following sequence of events:
-// (1) the SET operation will be applied to the Link
+// (1) the SET operation will be applied to the fuchsia::modular::Link
 // (2) |changes| will no longer be empty
 // (3) the |Replay()| path will be taken in any recursive call
 void LinkImpl::ReloadCall::Run() {
   FlowToken flow{this};
-  operation_queue_.Add(new ReadAllDataCall<internal::LinkChange>(
-      impl_->page(), MakeSequencedLinkKeyPrefix(impl_->link_path_),
-      XdrLinkChange,
-      [this,
-       flow](fidl::VectorPtr<fuchsia::modular::internal::LinkChange> changes) {
-        // NOTE(mesch): Initial link data must be applied only at the time the
-        // Intent is originally issued, not when the story is resumed and
-        // modules are restarted from the Intent stored in the story record.
-        // Therefore, initial data from create_link_info are ignored if there
-        // are increments to replay.
-        //
-        // Presumably, it is possible that at the time the Intent is issued with
-        // initial data for a link, a link of the same name already exists. In
-        // that case the initial data are not applied either. Unclear whether
-        // that should be considered wrong or not.
-        if (changes->empty()) {
-          if (impl_->create_link_info_ &&
-              !impl_->create_link_info_->initial_data.is_null() &&
-              !impl_->create_link_info_->initial_data->empty()) {
-            modular::internal ::LinkChangePtr data =
-                modular::internal ::LinkChange::New();
-            // Leave data->key null to signify a new entry
-            data->op = modular::internal ::LinkChangeOp::SET;
-            data->pointer = fidl::VectorPtr<fidl::StringPtr>::New(0);
-            data->json = std::move(impl_->create_link_info_->initial_data);
-            operation_queue_.Add(new IncrementalChangeCall(
-                impl_, std::move(data), kWatchAllConnectionId, [flow] {}));
-          }
-        } else {
-          impl_->Replay(std::move(changes));
-        }
-      }));
+  operation_queue_.Add(
+      new ReadAllDataCall<fuchsia::modular::internal::LinkChange>(
+          impl_->page(), MakeSequencedLinkKeyPrefix(impl_->link_path_),
+          XdrLinkChange,
+          [this, flow](
+              fidl::VectorPtr<fuchsia::modular::internal::LinkChange> changes) {
+            // NOTE(mesch): Initial link data must be applied only at the time
+            // the fuchsia::modular::Intent is originally issued, not when the
+            // story is resumed and modules are restarted from the
+            // fuchsia::modular::Intent stored in the story record. Therefore,
+            // initial data from create_link_info are ignored if there are
+            // increments to replay.
+            //
+            // Presumably, it is possible that at the time the
+            // fuchsia::modular::Intent is issued with initial data for a link,
+            // a link of the same name already exists. In that case the initial
+            // data are not applied either. Unclear whether that should be
+            // considered wrong or not.
+            if (changes->empty()) {
+              if (impl_->create_link_info_ &&
+                  !impl_->create_link_info_->initial_data.is_null() &&
+                  !impl_->create_link_info_->initial_data->empty()) {
+                fuchsia::modular::internal::LinkChangePtr data =
+                    fuchsia::modular::internal::LinkChange::New();
+                // Leave data->key null to signify a new entry
+                data->op = fuchsia::modular::internal::LinkChangeOp::SET;
+                data->pointer = fidl::VectorPtr<fidl::StringPtr>::New(0);
+                data->json = std::move(impl_->create_link_info_->initial_data);
+                operation_queue_.Add(new IncrementalChangeCall(
+                    impl_, std::move(data), kWatchAllConnectionId, [flow] {}));
+              }
+            } else {
+              impl_->Replay(std::move(changes));
+            }
+          }));
 }
 
 void LinkImpl::Replay(
@@ -235,7 +238,7 @@ void LinkImpl::Replay(
   auto it1 = changes->begin();
   auto it2 = pending_ops_.begin();
 
-  modular::internal ::LinkChange* change{};
+  fuchsia::modular::internal::LinkChange* change{};
   for (;;) {
     bool it1_done = it1 == changes->end();
     bool it2_done = it2 == pending_ops_.end();
@@ -283,15 +286,16 @@ void LinkImpl::Replay(
   }
 }
 
-bool LinkImpl::ApplyChange(modular::internal ::LinkChange* const change) {
+bool LinkImpl::ApplyChange(
+    fuchsia::modular::internal::LinkChange* const change) {
   CrtJsonPointer ptr = CreatePointer(doc_, *change->pointer);
 
   switch (change->op) {
-    case modular::internal ::LinkChangeOp::SET:
+    case fuchsia::modular::internal::LinkChangeOp::SET:
       return ApplySetOp(ptr, change->json);
-    case modular::internal ::LinkChangeOp::UPDATE:
+    case fuchsia::modular::internal::LinkChangeOp::UPDATE:
       return ApplyUpdateOp(ptr, change->json);
-    case modular::internal ::LinkChangeOp::ERASE:
+    case fuchsia::modular::internal::LinkChangeOp::ERASE:
       return ApplyEraseOp(ptr);
     default:
       FXL_DCHECK(false);
@@ -303,20 +307,21 @@ void LinkImpl::MakeReloadCall(std::function<void()> done) {
   operation_queue_.Add(new ReloadCall(this, std::move(done)));
 }
 
-void LinkImpl::MakeIncrementalWriteCall(modular::internal ::LinkChangePtr data,
-                                        std::function<void()> done) {
+void LinkImpl::MakeIncrementalWriteCall(
+    fuchsia::modular::internal::LinkChangePtr data,
+    std::function<void()> done) {
   operation_queue_.Add(
       new IncrementalWriteCall(this, std::move(data), std::move(done)));
 }
 
-void LinkImpl::MakeIncrementalChangeCall(modular::internal ::LinkChangePtr data,
-                                         uint32_t src) {
+void LinkImpl::MakeIncrementalChangeCall(
+    fuchsia::modular::internal::LinkChangePtr data, uint32_t src) {
   operation_queue_.Add(
       new IncrementalChangeCall(this, std::move(data), src, [] {}));
 }
 
 void LinkImpl::OnPageChange(const std::string& key, const std::string& value) {
-  modular::internal ::LinkChangePtr data;
+  fuchsia::modular::internal::LinkChangePtr data;
   if (!XdrRead(value, &data, XdrLinkChange)) {
     FXL_LOG(ERROR) << EncodeLinkPath(link_path_)
                    << "LinkImpl::OnChange() XdrRead failed: " << key << " "
@@ -328,4 +333,3 @@ void LinkImpl::OnPageChange(const std::string& key, const std::string& value) {
 }
 
 }  // namespace modular
-}  // namespace fuchsia

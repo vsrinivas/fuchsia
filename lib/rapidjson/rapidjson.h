@@ -15,7 +15,6 @@
 #include "third_party/rapidjson/rapidjson/stringbuffer.h"
 #include "third_party/rapidjson/rapidjson/writer.h"
 
-namespace fuchsia {
 namespace modular {
 
 using JsonDoc = ::rapidjson::Document;
@@ -55,8 +54,7 @@ inline std::string PrettyPrintPath(const std::vector<std::string>& path) {
 // and construct a rapidjson::GenericPointer() object.
 template <typename Doc>
 inline rapidjson::GenericPointer<typename Doc::ValueType> CreatePointer(
-    const Doc& /*doc*/,
-    std::vector<std::string>::iterator begin,
+    const Doc& /*doc*/, std::vector<std::string>::iterator begin,
     std::vector<std::string>::iterator end) {
   rapidjson::GenericPointer<typename Doc::ValueType> pointer;
   for (auto it = begin; it != end; ++it) {
@@ -67,8 +65,7 @@ inline rapidjson::GenericPointer<typename Doc::ValueType> CreatePointer(
 
 template <typename Doc, typename Collection>
 inline rapidjson::GenericPointer<typename Doc::ValueType> CreatePointer(
-    const Doc& doc,
-    const Collection& path) {
+    const Doc& doc, const Collection& path) {
   rapidjson::GenericPointer<typename Doc::ValueType> pointer;
   for (const auto& it : path) {
     pointer = pointer.Append(it.get(), nullptr);
@@ -77,6 +74,5 @@ inline rapidjson::GenericPointer<typename Doc::ValueType> CreatePointer(
 }
 
 }  // namespace modular
-}  // namespace fuchsia
 
 #endif  // PERIDOT_LIB_RAPIDJSON_RAPIDJSON_H_

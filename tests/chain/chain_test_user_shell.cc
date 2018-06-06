@@ -22,15 +22,15 @@
 #include "peridot/tests/chain/defs.h"
 #include "peridot/tests/common/defs.h"
 
-using fuchsia::modular::testing::Await;
-using fuchsia::modular::testing::Put;
-using fuchsia::modular::testing::TestPoint;
+using modular::testing::Await;
+using modular::testing::Put;
+using modular::testing::TestPoint;
 
 namespace {
 
 // Cf. README.md for what this test does and how.
-class TestApp : public fuchsia::modular::testing::ComponentBase<
-                    fuchsia::modular::UserShell> {
+class TestApp
+    : public modular::testing::ComponentBase<fuchsia::modular::UserShell> {
  public:
   TestApp(fuchsia::sys::StartupContext* const startup_context)
       : ComponentBase(startup_context) {
@@ -42,7 +42,7 @@ class TestApp : public fuchsia::modular::testing::ComponentBase<
  private:
   TestPoint initialize_{"Initialize()"};
 
-  // |UserShell|
+  // |fuchsia::modular::UserShell|
   void Initialize(fidl::InterfaceHandle<fuchsia::modular::UserShellContext>
                       user_shell_context) override {
     initialize_.Pass();
@@ -52,7 +52,7 @@ class TestApp : public fuchsia::modular::testing::ComponentBase<
     CreateStory();
   }
 
-  TestPoint create_story_{"CreateStory()"};
+  TestPoint create_story_{"fuchsia::modular::CreateStory()"};
 
   void CreateStory() {
     // Create an empty Story. Once it has been created, add our first Module.
@@ -103,6 +103,6 @@ class TestApp : public fuchsia::modular::testing::ComponentBase<
 }  // namespace
 
 int main(int /*argc*/, const char** /*argv*/) {
-  fuchsia::modular::testing::ComponentMain<TestApp>();
+  modular::testing::ComponentMain<TestApp>();
   return 0;
 }

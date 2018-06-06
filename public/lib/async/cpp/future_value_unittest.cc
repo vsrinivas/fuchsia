@@ -6,7 +6,6 @@
 
 #include <string>
 
-namespace fuchsia {
 namespace modular {
 
 namespace {
@@ -54,4 +53,3 @@ TEST_F(FutureValueTest, OnValue) {
 
 }  // namespace
 }  // namespace modular
-}  // namespace fuchsia

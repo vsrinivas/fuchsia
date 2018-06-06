@@ -10,7 +10,6 @@
 #include "lib/media/timeline/timeline_rate.h"
 #include "peridot/bin/suggestion_engine/media_player.h"
 
-namespace fuchsia {
 namespace modular {
 
 MediaPlayer::MediaPlayer(fuchsia::media::AudioServerPtr audio_server,
@@ -31,7 +30,8 @@ void MediaPlayer::SetSpeechStatusCallback(SpeechStatusCallback callback) {
   speech_status_callback_ = std::move(callback);
 }
 
-void MediaPlayer::PlayMediaResponse(MediaResponsePtr media_response) {
+void MediaPlayer::PlayMediaResponse(
+    fuchsia::modular::MediaResponsePtr media_response) {
   if (!audio_server_) {
     FXL_LOG(ERROR) << "Not playing query media response because our connection "
                    << "to the AudioServer died earlier.";
@@ -53,8 +53,9 @@ void MediaPlayer::PlayMediaResponse(MediaResponsePtr media_response) {
     OnMediaPacketProducerConnected(activity);
   });
 
-  media_packet_producer_.set_error_handler(
-      [this] { speech_status_callback_(SpeechStatus::IDLE); });
+  media_packet_producer_.set_error_handler([this] {
+    speech_status_callback_(fuchsia::modular::SpeechStatus::IDLE);
+  });
 }
 
 void MediaPlayer::OnMediaPacketProducerConnected(
@@ -62,7 +63,7 @@ void MediaPlayer::OnMediaPacketProducerConnected(
   time_lord_.Unbind();
   media_timeline_consumer_.Unbind();
 
-  speech_status_callback_(SpeechStatus::RESPONDING);
+  speech_status_callback_(fuchsia::modular::SpeechStatus::RESPONDING);
 
   media_renderer_->GetTimelineControlPoint(time_lord_.NewRequest());
   time_lord_->GetTimelineConsumer(media_timeline_consumer_.NewRequest());
@@ -100,4 +101,3 @@ void MediaPlayer::HandleMediaUpdates(
 }
 
 }  // namespace modular
-}  // namespace fuchsia

@@ -10,7 +10,6 @@
 #include "peridot/bin/suggestion_engine/debug.h"
 #include "peridot/bin/suggestion_engine/suggestion_engine_impl.h"
 
-namespace fuchsia {
 namespace modular {
 
 class SuggestionEngineApp {
@@ -21,19 +20,18 @@ class SuggestionEngineApp {
     fuchsia::media::AudioServerPtr audio_server;
     context->ConnectToEnvironmentService(audio_server.NewRequest());
 
-    engine_impl_ = std::make_unique<fuchsia::modular::SuggestionEngineImpl>(
+    engine_impl_ = std::make_unique<modular::SuggestionEngineImpl>(
         std::move(audio_server));
 
-    context->outgoing().AddPublicService<SuggestionEngine>(
-        [this](fidl::InterfaceRequest<SuggestionEngine> request) {
-          engine_impl_->Connect(std::move(request));
-        });
-    context->outgoing().AddPublicService<SuggestionProvider>(
-        [this](fidl::InterfaceRequest<SuggestionProvider> request) {
-          engine_impl_->Connect(std::move(request));
-        });
-    context->outgoing().AddPublicService<SuggestionDebug>(
-        [this](fidl::InterfaceRequest<SuggestionDebug> request) {
+    context->outgoing().AddPublicService<fuchsia::modular::SuggestionEngine>(
+        [this](fidl::InterfaceRequest<fuchsia::modular::SuggestionEngine>
+                   request) { engine_impl_->Connect(std::move(request)); });
+    context->outgoing().AddPublicService<fuchsia::modular::SuggestionProvider>(
+        [this](fidl::InterfaceRequest<fuchsia::modular::SuggestionProvider>
+                   request) { engine_impl_->Connect(std::move(request)); });
+    context->outgoing().AddPublicService<fuchsia::modular::SuggestionDebug>(
+        [this](
+            fidl::InterfaceRequest<fuchsia::modular::SuggestionDebug> request) {
           engine_impl_->Connect(std::move(request));
         });
   }
@@ -44,25 +42,23 @@ class SuggestionEngineApp {
 
  private:
   std::unique_ptr<SuggestionEngineImpl> engine_impl_;
-  IntelligenceServicesPtr intelligence_services_;
+  fuchsia::modular::IntelligenceServicesPtr intelligence_services_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(SuggestionEngineApp);
 };
 
 }  // namespace modular
-}  // namespace fuchsia
 
 int main(int argc, const char** argv) {
   fsl::MessageLoop loop;
   auto context = fuchsia::sys::StartupContext::CreateFromStartupInfo();
   auto suggestion_engine =
-      std::make_unique<fuchsia::modular::SuggestionEngineApp>(context.get());
+      std::make_unique<modular::SuggestionEngineApp>(context.get());
 
-  fxl::WeakPtr<fuchsia::modular::SuggestionDebugImpl> debug =
-      suggestion_engine->debug();
+  fxl::WeakPtr<modular::SuggestionDebugImpl> debug = suggestion_engine->debug();
   debug->GetIdleWaiter()->SetMessageLoop(&loop);
 
-  fuchsia::modular::AppDriver<fuchsia::modular::SuggestionEngineApp> driver(
+  modular::AppDriver<modular::SuggestionEngineApp> driver(
       context->outgoing().deprecated_services(), std::move(suggestion_engine),
       [&loop] { loop.QuitNow(); });
 

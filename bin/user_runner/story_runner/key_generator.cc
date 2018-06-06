@@ -18,7 +18,6 @@ constexpr char kEncodingDictionary[] =
 
 }  // namespace
 
-namespace fuchsia {
 namespace modular {
 
 uint64_t WallClockTimeOfDay::GetTimeOfDayMs() {
@@ -29,9 +28,7 @@ uint64_t WallClockTimeOfDay::GetTimeOfDayMs() {
   return milliseconds;
 }
 
-uint64_t FuchsiaRandomNumber::RandUint64() {
-  return fxl::RandUint64();
-}
+uint64_t FuchsiaRandomNumber::RandUint64() { return fxl::RandUint64(); }
 
 KeyGenerator::KeyGenerator() = default;
 
@@ -73,4 +70,3 @@ std::string KeyGenerator::Create() {
 }
 
 }  // namespace modular
-}  // namespace fuchsia

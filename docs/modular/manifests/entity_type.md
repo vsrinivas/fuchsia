@@ -1,4 +1,4 @@
-Entity Types
+fuchsia::modular::Entity Types
 ===
 > Status: DRAFT
 > 
@@ -8,18 +8,18 @@ Entity Types
 
 In Fuchsia, data sharing between system and application components is a central
 part of enabling interesting and powerful user experiences. To promote
-interoperability, Fuchsia includes an [`Entity`](../entity.md) runtime primitive, which
-represents structured data. An `Entity` can represent data of multiple `types`.
+interoperability, Fuchsia includes an [`fuchsia::modular::Entity`](../entity.md) runtime primitive, which
+represents structured data. An `fuchsia::modular::Entity` can represent data of multiple `types`.
 A `type` indicates both the semantics of the data as access patterns.
 
-Entity types and, if relevant, their schemas for schematic data, are published and 
+fuchsia::modular::Entity types and, if relevant, their schemas for schematic data, are published and
 public to everyone.
 
-## Defining Entity types in a JSON file
+## Defining fuchsia::modular::Entity types in a JSON file
 
 > TODO(thatguy): Add information about where these schemas are discoverable.
 
-Entity types and schemas are defined in file with a JSON-encoded list of dictionaries with the following format (JSON schema [available
+fuchsia::modular::Entity types and schemas are defined in file with a JSON-encoded list of dictionaries with the following format (JSON schema [available
 here](../src/package_manager/metadata_schemas/entity_type.json)):
 
 ```javascript
@@ -42,4 +42,4 @@ file.
 `schema` is a path to a file within the package that contains a [JSON
 Schema](http://json-schema.org/).
 
-Any number of `Entity` types can be defined in one file.
+Any number of `fuchsia::modular::Entity` types can be defined in one file.

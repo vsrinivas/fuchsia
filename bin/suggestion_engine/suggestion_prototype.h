@@ -10,27 +10,26 @@
 #include <fuchsia/modular/cpp/fidl.h>
 #include "lib/fxl/time/time_point.h"
 
-namespace fuchsia {
 namespace modular {
 
 struct SuggestionPrototype {
   std::string suggestion_id;
-  // Story ID is set when the proposal came with a name. SuggestionEngine maps
-  // this name namespaced by the source to this ID and propagates it here. If
-  // this story id was not set, it can be set to the (deprecated)
-  // proposal.story_id.
+  // Story ID is set when the proposal came with a name.
+  // fuchsia::modular::SuggestionEngine maps this name namespaced by the source
+  // to this ID and propagates it here. If this story id was not set, it can be
+  // set to the (deprecated) proposal.story_id.
   std::string story_id;
   std::string source_url;
   fxl::TimePoint timestamp;
-  Proposal proposal;
+  fuchsia::modular::Proposal proposal;
 };
 
 std::string short_proposal_str(const SuggestionPrototype& prototype);
 
 // Creates a partial suggestion from a prototype. Confidence will not be set.
-Suggestion CreateSuggestion(const SuggestionPrototype& prototype);
+fuchsia::modular::Suggestion CreateSuggestion(
+    const SuggestionPrototype& prototype);
 
 }  // namespace modular
-}  // namespace fuchsia
 
 #endif  // PERIDOT_BIN_SUGGESTION_ENGINE_SUGGESTION_PROTOTYPE_H_

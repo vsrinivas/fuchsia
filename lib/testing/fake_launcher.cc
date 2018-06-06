@@ -4,7 +4,6 @@
 
 #include "peridot/lib/testing/fake_launcher.h"
 
-namespace fuchsia {
 namespace modular {
 namespace testing {
 
@@ -24,4 +23,3 @@ void FakeLauncher::RegisterApplication(std::string url,
 
 }  // namespace testing
 }  // namespace modular
-}  // namespace fuchsia

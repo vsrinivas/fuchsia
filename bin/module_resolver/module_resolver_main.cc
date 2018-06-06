@@ -20,7 +20,6 @@
 #include "peridot/lib/module_manifest_source/module_package_source.h"
 #include "peridot/public/lib/entity/cpp/json.h"
 
-namespace fuchsia {
 namespace modular {
 namespace {
 
@@ -28,7 +27,7 @@ namespace http = ::fuchsia::net::oldhttp;
 
 constexpr char kContextListenerEntitiesKey[] = "entities";
 
-class ModuleResolverApp : ContextListener {
+class ModuleResolverApp : fuchsia::modular::ContextListener {
  public:
   ModuleResolverApp(fuchsia::sys::StartupContext* const context, bool is_test)
       : context_(context), context_listener_binding_(this) {
@@ -45,13 +44,12 @@ class ModuleResolverApp : ContextListener {
     resolver_impl_ =
         std::make_unique<LocalModuleResolver>(std::move(entity_resolver));
     // Set up |resolver_impl_|.
-    resolver_impl_->AddSource(
-        "module_package",
-        std::make_unique<fuchsia::modular::ModulePackageSource>(context));
+    resolver_impl_->AddSource("module_package",
+                              std::make_unique<ModulePackageSource>(context));
     if (!is_test) {
       resolver_impl_->AddSource(
           "firebase_mods",
-          std::make_unique<fuchsia::modular::FirebaseModuleManifestSource>(
+          std::make_unique<FirebaseModuleManifestSource>(
               async_get_default(),
               [context]() {
                 http::HttpServicePtr http_service;
@@ -62,20 +60,20 @@ class ModuleResolverApp : ContextListener {
     }
 
     // Make |resolver_impl_| a query (ask) handler.
-    fidl::InterfaceHandle<QueryHandler> query_handler;
+    fidl::InterfaceHandle<fuchsia::modular::QueryHandler> query_handler;
     resolver_impl_->BindQueryHandler(query_handler.NewRequest());
     intelligence_services_->RegisterQueryHandler(std::move(query_handler));
 
     intelligence_services_->GetProposalPublisher(
         proposal_publisher_.NewRequest());
 
-    ContextQuery query;
-    ContextSelector selector;
-    selector.type = ContextValueType::ENTITY;
-    ContextQueryEntry selector_entry;
+    fuchsia::modular::ContextQuery query;
+    fuchsia::modular::ContextSelector selector;
+    selector.type = fuchsia::modular::ContextValueType::ENTITY;
+    fuchsia::modular::ContextQueryEntry selector_entry;
     selector_entry.key = kContextListenerEntitiesKey;
     selector_entry.value = std::move(selector);
-    fidl::VectorPtr<ContextQueryEntry> selector_array;
+    fidl::VectorPtr<fuchsia::modular::ContextQueryEntry> selector_array;
     selector_array.push_back(std::move(selector_entry));
     query.selector = std::move(selector_array);
     context_reader_->Subscribe(std::move(query),
@@ -90,8 +88,8 @@ class ModuleResolverApp : ContextListener {
 
   void Terminate(const std::function<void()>& done) { done(); }
 
-  void OnContextUpdate(ContextUpdate update) override {
-    fidl::VectorPtr<ContextValue> values;
+  void OnContextUpdate(fuchsia::modular::ContextUpdate update) override {
+    fidl::VectorPtr<fuchsia::modular::ContextValue> values;
     for (auto& entry : *update.values) {
       if (entry.key == kContextListenerEntitiesKey) {
         values = std::move(entry.value);
@@ -119,7 +117,7 @@ class ModuleResolverApp : ContextListener {
     resolver_impl_->FindModules(
         std::move(query),
         [this, story_id](const fuchsia::modular::FindModulesResult& result) {
-          std::vector<Proposal> new_proposals;
+          std::vector<fuchsia::modular::Proposal> new_proposals;
           std::vector<fuchsia::modular::Intent>
               new_intents;  // Only for comparison.
           int proposal_count = 0;
@@ -168,7 +166,7 @@ class ModuleResolverApp : ContextListener {
   // |story_id| is the id of the story that the proposal should add modules to.
   // |proposal_id| is the id of the created proposal, which will also be cached
   // in |current_proposal_ids_|.
-  Proposal CreateProposalFromModuleResolverResult(
+  fuchsia::modular::Proposal CreateProposalFromModuleResolverResult(
       const fuchsia::modular::ModuleResolverResult& module_result,
       const std::string& story_id, int proposal_id,
       fuchsia::modular::Intent* intent_out) {
@@ -210,20 +208,20 @@ class ModuleResolverApp : ContextListener {
     }
     intent.parameters = std::move(parameters);
 
-    AddModule add_module;
+    fuchsia::modular::AddModule add_module;
     fidl::Clone(intent, intent_out);
     add_module.intent = std::move(intent);
     add_module.module_name = module_result.module_id;
     add_module.story_id = story_id;
     add_module.surface_parent_module_path = std::move(parent_mod_path);
-    Action action;
+    fuchsia::modular::Action action;
     action.set_add_module(std::move(add_module));
 
-    Proposal proposal;
+    fuchsia::modular::Proposal proposal;
     proposal.id = std::to_string(proposal_id);
     proposal.on_selected.push_back(std::move(action));
 
-    SuggestionDisplay display;
+    fuchsia::modular::SuggestionDisplay display;
     if (module_result.manifest && module_result.manifest->suggestion_headline) {
       display.headline = module_result.manifest->suggestion_headline;
       display.subheadline = module_result.module_id;
@@ -231,7 +229,7 @@ class ModuleResolverApp : ContextListener {
       display.headline = module_result.module_id;
     }
     display.color = 0x00aa00aa;  // argb purple
-    display.annoyance = AnnoyanceType::NONE;
+    display.annoyance = fuchsia::modular::AnnoyanceType::NONE;
     proposal.display = std::move(display);
 
     return proposal;
@@ -243,10 +241,11 @@ class ModuleResolverApp : ContextListener {
   // |value| must contain |entity| and |link| in its |meta|. This is to ensure
   // that link_info can be constructed for the parameter constraint.
   fuchsia::modular::ResolverParameterConstraintEntry
-  CreateResolverParameterConstraintFromContextValue(const ContextValue& value) {
+  CreateResolverParameterConstraintFromContextValue(
+      const fuchsia::modular::ContextValue& value) {
     fidl::VectorPtr<fidl::StringPtr> entity_types =
         value.meta.entity->type.Clone();
-    const LinkMetadataPtr& link_metadata = value.meta.link;
+    const fuchsia::modular::LinkMetadataPtr& link_metadata = value.meta.link;
 
     fuchsia::modular::ResolverLinkInfo link_info;
     fuchsia::modular::LinkPath link_path;
@@ -273,7 +272,7 @@ class ModuleResolverApp : ContextListener {
 
   // The proposal publisher that is used to make proposals based on the current
   // context.
-  ProposalPublisherPtr proposal_publisher_;
+  fuchsia::modular::ProposalPublisherPtr proposal_publisher_;
 
   // A vector of the ids last passed to the proposal publisher.
   std::vector<std::string> current_proposal_ids_;
@@ -283,19 +282,18 @@ class ModuleResolverApp : ContextListener {
   // "Next" section of suggestions at a high rate.
   std::vector<fuchsia::modular::Intent> current_proposal_intents_;
 
-  IntelligenceServicesPtr intelligence_services_;
+  fuchsia::modular::IntelligenceServicesPtr intelligence_services_;
 
   fuchsia::sys::StartupContext* const context_;
 
-  ContextReaderPtr context_reader_;
-  fidl::Binding<ContextListener> context_listener_binding_;
+  fuchsia::modular::ContextReaderPtr context_reader_;
+  fidl::Binding<fuchsia::modular::ContextListener> context_listener_binding_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ModuleResolverApp);
 };
 
 }  // namespace
 }  // namespace modular
-}  // namespace fuchsia
 
 const char kUsage[] = R"USAGE(%s [--test])USAGE";
 
@@ -308,10 +306,9 @@ int main(int argc, const char** argv) {
   }
   auto is_test = command_line.HasOption("test");
   auto context = fuchsia::sys::StartupContext::CreateFromStartupInfo();
-  fuchsia::modular::AppDriver<fuchsia::modular::ModuleResolverApp> driver(
+  modular::AppDriver<modular::ModuleResolverApp> driver(
       context->outgoing().deprecated_services(),
-      std::make_unique<fuchsia::modular::ModuleResolverApp>(context.get(),
-                                                            is_test),
+      std::make_unique<modular::ModuleResolverApp>(context.get(), is_test),
       [&loop] { loop.QuitNow(); });
   loop.Run();
   return 0;

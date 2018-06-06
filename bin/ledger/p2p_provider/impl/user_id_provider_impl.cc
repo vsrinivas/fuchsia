@@ -19,7 +19,7 @@ UserIdProviderImpl::UserIdProviderImpl(
     fuchsia::modular::auth::TokenProviderPtr token_provider_ptr)
     : user_id_path_(user_directory.SubPath(user_id_filename)) {
   firebase_auth_ = std::make_unique<firebase_auth::FirebaseAuthImpl>(
-      environment->async(), fuchsia::modular::kFirebaseApiKey,
+      environment->async(), modular::kFirebaseApiKey,
       std::move(token_provider_ptr), environment->MakeBackoff());
 }
 

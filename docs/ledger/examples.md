@@ -1,7 +1,7 @@
 # Examples
 
 List of example apps that directly integrate with Ledger - this does not include
-apps that use Ledger through Framework Link objects.
+apps that use Ledger through Framework fuchsia::modular::Link objects.
 
 ## C++
 

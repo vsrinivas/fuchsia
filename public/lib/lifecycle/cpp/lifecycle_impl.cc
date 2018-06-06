@@ -4,23 +4,21 @@
 
 #include "lib/lifecycle/cpp/lifecycle_impl.h"
 
-namespace fuchsia {
 namespace modular {
 
 LifecycleImpl::LifecycleImpl(fuchsia::sys::ServiceNamespace* service_namespace,
                              LifecycleImpl::Delegate* delegate)
     : delegate_(delegate), binding_(this) {
-  service_namespace->AddService<Lifecycle>(
-      [this](fidl::InterfaceRequest<Lifecycle> request) {
+  service_namespace->AddService<fuchsia::modular::Lifecycle>(
+      [this](fidl::InterfaceRequest<fuchsia::modular::Lifecycle> request) {
         binding_.Bind(std::move(request));
       });
 }
 
-// |Lifecycle|
+// |fuchsia::modular::Lifecycle|
 void LifecycleImpl::Terminate() {
   binding_.Unbind();
   delegate_->Terminate();
 }
 
 }  // namespace modular
-}  // namespace fuchsia

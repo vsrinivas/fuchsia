@@ -13,5 +13,5 @@ also implement the view associated with this story which might embed views from
 other applications / modules.
 
 ## See also:
-[StoryProvider](../services/story/story_provider.fidl)
-[StoryController](../services/story/story_controller.fidl)
+[fuchsia::modular::StoryProvider](../services/story/story_provider.fidl)
+[fuchsia::modular::StoryController](../services/story/story_controller.fidl)

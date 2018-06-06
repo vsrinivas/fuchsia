@@ -11,7 +11,6 @@
 #include "peridot/lib/ledger_client/ledger_client.h"
 #include "peridot/lib/ledger_client/page_client.h"
 
-namespace fuchsia {
 namespace modular {
 
 // |ClipboardStorage| manages serialization of clipboard data to and from the
@@ -43,6 +42,5 @@ class ClipboardStorage : public PageClient {
 };
 
 }  // namespace modular
-}  // namespace fuchsia
 
 #endif  // PERIDOT_BIN_AGENTS_CLIPBOARD_CLIPBOARD_STORAGE_H_

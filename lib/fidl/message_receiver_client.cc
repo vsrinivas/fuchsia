@@ -6,7 +6,6 @@
 
 #include <utility>
 
-namespace fuchsia {
 namespace modular {
 
 MessageReceiverClient::MessageReceiverClient(
@@ -24,4 +23,3 @@ void MessageReceiverClient::OnReceive(fidl::StringPtr message,
 }
 
 }  // namespace modular
-}  // namespace fuchsia

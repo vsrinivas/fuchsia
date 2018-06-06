@@ -23,9 +23,13 @@ namespace modular {
 namespace internal {
 class LinkChange;
 }  // namespace internal
+}  // namespace modular
+}  // namespace fuchsia
 
+namespace modular {
 // Defined in incremental_link.cc.
-extern const XdrFilterType<internal::LinkChange> XdrLinkChange[];
+extern const XdrFilterType<fuchsia::modular::internal::LinkChange>
+    XdrLinkChange[];
 
 namespace {
 const char kInitialLinkValue[] = "{}";
@@ -33,8 +37,8 @@ const char kInitialLinkValue[] = "{}";
 
 namespace {
 
-LinkPath GetTestLinkPath() {
-  LinkPath link_path;
+fuchsia::modular::LinkPath GetTestLinkPath() {
+  fuchsia::modular::LinkPath link_path;
   link_path.module_path.push_back("root");
   link_path.module_path.push_back("photos");
   link_path.link_name = "theLinkName";
@@ -56,10 +60,9 @@ bool HasPrefix(const std::string& value, const std::string& prefix) {
   return true;
 }
 
-class PageClientPeer : fuchsia::modular::PageClient {
+class PageClientPeer : PageClient {
  public:
-  PageClientPeer(LedgerClient* const ledger_client,
-                 LedgerPageId page_id,
+  PageClientPeer(LedgerClient* const ledger_client, LedgerPageId page_id,
                  std::string expected_prefix)
       : PageClient("PageClientPeer", ledger_client, std::move(page_id)),
         expected_prefix_(std::move(expected_prefix)) {}
@@ -75,7 +78,7 @@ class PageClientPeer : fuchsia::modular::PageClient {
   };
 
   std::vector<std::pair<std::string, std::string>> changes;
-  modular::internal ::LinkChangePtr last_change;
+  fuchsia::modular::internal::LinkChangePtr last_change;
 
  private:
   std::string expected_prefix_;
@@ -86,7 +89,7 @@ class LinkImplTestBase : public testing::TestWithLedger,
  public:
   LinkImplTestBase() : watcher_binding_(this) {}
 
-  virtual CreateLinkInfoPtr GetCreateLinkInfo() = 0;
+  virtual fuchsia::modular::CreateLinkInfoPtr GetCreateLinkInfo() = 0;
 
   void SetUp() override {
     TestWithLedger::SetUp();
@@ -130,7 +133,7 @@ class LinkImplTestBase : public testing::TestWithLedger,
 
   int ledger_change_count() const { return page_client_peer_->changes.size(); }
 
-  modular::internal ::LinkChangePtr& last_change() {
+  fuchsia::modular::internal::LinkChangePtr& last_change() {
     return page_client_peer_->last_change;
   }
 
@@ -171,7 +174,7 @@ class LinkImplTestBase : public testing::TestWithLedger,
   };
 
   std::unique_ptr<LinkImpl> link_impl_;
-  LinkPtr link_;
+  fuchsia::modular::LinkPtr link_;
 
   std::unique_ptr<LedgerClient> ledger_client_peer_;
   std::unique_ptr<PageClientPeer> page_client_peer_;
@@ -189,8 +192,8 @@ class LinkImplTest : public LinkImplTestBase {
   LinkImplTest() = default;
   ~LinkImplTest() = default;
 
-  CreateLinkInfoPtr GetCreateLinkInfo() override {
-    auto create_link_info = CreateLinkInfo::New();
+  fuchsia::modular::CreateLinkInfoPtr GetCreateLinkInfo() override {
+    auto create_link_info = fuchsia::modular::CreateLinkInfo::New();
     create_link_info->initial_data = kInitialLinkValue;
     // |create_link_info->allowed_types| is already null.
     return create_link_info;
@@ -360,7 +363,9 @@ class LinkImplNullInitTest : public LinkImplTestBase {
   LinkImplNullInitTest() = default;
   ~LinkImplNullInitTest() = default;
 
-  CreateLinkInfoPtr GetCreateLinkInfo() override { return CreateLinkInfoPtr(); }
+  fuchsia::modular::CreateLinkInfoPtr GetCreateLinkInfo() override {
+    return fuchsia::modular::CreateLinkInfoPtr();
+  }
 };
 
 TEST_F(LinkImplNullInitTest, Set) {
@@ -379,10 +384,10 @@ TEST_F(LinkImplNullInitTest, Set) {
 
 // TODO(jimbe) Still many tests to be written, including:
 //
-// * Specific behavior of LinkWatcher notification (Watch() not called for own
+// * Specific behavior of fuchsia::modular::LinkWatcher notification (Watch()
+// not called for own
 //   changes, Watch() and WatchAll() only called for changes that really occur,
 //   and only once.
 
 }  // namespace
 }  // namespace modular
-}  // namespace fuchsia

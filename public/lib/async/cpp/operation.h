@@ -17,7 +17,6 @@
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/weak_ptr.h"
 
-namespace fuchsia {
 namespace modular {
 class OperationBase;
 
@@ -481,6 +480,5 @@ class SyncCall : public Operation<> {
 };
 
 }  // namespace modular
-}  // namespace fuchsia
 
 #endif  // LIB_ASYNC_CPP_OPERATION_H_

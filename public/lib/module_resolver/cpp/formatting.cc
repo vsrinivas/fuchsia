@@ -4,10 +4,10 @@
 
 #include "lib/module_resolver/cpp/formatting.h"
 
-namespace fuchsia {
 namespace modular {
 
-std::ostream& operator<<(std::ostream& os, const Intent& intent) {
+std::ostream& operator<<(std::ostream& os,
+                         const fuchsia::modular::Intent& intent) {
   os << "{ action: " << intent.action.name << ", parameters: [" << std::endl;
   for (auto it = intent.parameters->begin(); it != intent.parameters->end();
        ++it) {
@@ -17,8 +17,9 @@ std::ostream& operator<<(std::ostream& os, const Intent& intent) {
   return os;
 }
 
-std::ostream& operator<<(std::ostream& os,
-                         const IntentParameterData& parameter_data) {
+std::ostream& operator<<(
+    std::ostream& os,
+    const fuchsia::modular::IntentParameterData& parameter_data) {
   if (parameter_data.is_json()) {
     os << parameter_data.json();
   } else if (parameter_data.is_entity_reference()) {
@@ -32,4 +33,3 @@ std::ostream& operator<<(std::ostream& os,
 }
 
 }  // namespace modular
-}  // namespace fuchsia

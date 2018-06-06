@@ -12,7 +12,6 @@
 #include "peridot/lib/ledger_client/page_client.h"
 #include "peridot/lib/ledger_client/page_id.h"
 
-namespace fuchsia {
 namespace modular {
 
 // This class has the following responsibilities:
@@ -52,7 +51,7 @@ class SessionStorage : public PageClient {
   // Update*()) or a modification on another device.
   void set_on_story_updated(
       std::function<void(fidl::StringPtr story_id,
-                         modular::internal ::StoryData story_data)>
+                         fuchsia::modular::internal::StoryData story_data)>
           callback) {
     on_story_updated_ = std::move(callback);
   }
@@ -61,7 +60,7 @@ class SessionStorage : public PageClient {
   // id) on completion. |extra_info| may be null. If set, populates
   // StoryData.story_info.extra with the entries given.
   FuturePtr<fidl::StringPtr, fuchsia::ledger::PageId> CreateStory(
-      fidl::VectorPtr<StoryInfoExtraEntry> extra_info);
+      fidl::VectorPtr<fuchsia::modular::StoryInfoExtraEntry> extra_info);
 
   // Deletes the |story_id| from the list of known stories and completes the
   // returned Future when done.
@@ -85,14 +84,15 @@ class SessionStorage : public PageClient {
 
   // Returns a Future StoryDataPtr for |story_id|. If |story_id| is not a valid
   // story, the returned StoryDataPtr will be null.
-  FuturePtr<modular::internal ::StoryDataPtr> GetStoryData(
+  FuturePtr<fuchsia::modular::internal::StoryDataPtr> GetStoryData(
       fidl::StringPtr story_id);
 
   // Returns a Future vector of StoryData for all stories in this session.
   //
   // TODO(thatguy): If the return value grows large, an async stream would be
   // a more appropriate return value.
-  FuturePtr<fidl::VectorPtr<modular::internal ::StoryData>> GetAllStoryData();
+  FuturePtr<fidl::VectorPtr<fuchsia::modular::internal::StoryData>>
+  GetAllStoryData();
 
   // TODO(thatguy): Eliminate all users of this, and remove it. We want all
   // interfaces with the Ledger to be contained within *Storage classes.
@@ -110,13 +110,12 @@ class SessionStorage : public PageClient {
 
   std::function<void(fidl::StringPtr story_id)> on_story_deleted_;
   std::function<void(fidl::StringPtr story_id,
-                     modular::internal ::StoryData story_data)>
+                     fuchsia::modular::internal::StoryData story_data)>
       on_story_updated_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(SessionStorage);
 };
 
 }  // namespace modular
-}  // namespace fuchsia
 
 #endif  // PERIDOT_BIN_USER_RUNNER_STORY_RUNNER_SESSION_STORAGE_H_

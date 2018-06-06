@@ -20,7 +20,7 @@ namespace {
 // it's terminated.
 class NullModule : fuchsia::modular::LinkWatcher {
  public:
-  NullModule(fuchsia::modular::ModuleHost* const module_host,
+  NullModule(modular::ModuleHost* const module_host,
              fidl::InterfaceRequest<
                  fuchsia::ui::views_v1::ViewProvider> /*view_provider_request*/)
       : module_host_(module_host), link_watcher_binding_(this) {
@@ -43,7 +43,7 @@ class NullModule : fuchsia::modular::LinkWatcher {
     link_->Set(nullptr, std::to_string(count_));
   }
 
-  // |LinkWatcher|
+  // |fuchsia::modular::LinkWatcher|
   void Notify(fidl::StringPtr json) override {
     // First invocation is from WatchAll(); next from Set().
     if (count_ == -1) {
@@ -58,8 +58,8 @@ class NullModule : fuchsia::modular::LinkWatcher {
     }
   }
 
-  fuchsia::modular::ModuleHost* const module_host_;
-  fuchsia::modular::TracingWaiter tracing_waiter_;
+  modular::ModuleHost* const module_host_;
+  modular::TracingWaiter tracing_waiter_;
   fuchsia::modular::LinkPtr link_;
   fidl::Binding<fuchsia::modular::LinkWatcher> link_watcher_binding_;
 
@@ -71,8 +71,8 @@ class NullModule : fuchsia::modular::LinkWatcher {
 int main(int /*argc*/, const char** /*argv*/) {
   fsl::MessageLoop loop;
   auto context = fuchsia::sys::StartupContext::CreateFromStartupInfo();
-  fuchsia::modular::ModuleDriver<NullModule> driver(
-      context.get(), [&loop] { loop.QuitNow(); });
+  modular::ModuleDriver<NullModule> driver(context.get(),
+                                           [&loop] { loop.QuitNow(); });
   loop.Run();
   return 0;
 }

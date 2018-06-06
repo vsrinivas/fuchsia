@@ -11,7 +11,6 @@
 #include "lib/module_resolver/cpp/formatting.h"
 #include "peridot/lib/testing/entity_resolver_fake.h"
 
-namespace fuchsia {
 namespace modular {
 namespace {
 
@@ -50,7 +49,7 @@ class QueryBuilder {
     return *this;
   }
 
-  // Creates a parameter that's just Entity types.
+  // Creates a parameter that's just fuchsia::modular::Entity types.
   QueryBuilder& AddParameterTypes(std::string name,
                                   std::vector<std::string> types) {
     fuchsia::modular::ResolverParameterConstraint parameter;
@@ -109,8 +108,7 @@ class QueryBuilder {
 
     fuchsia::modular::ResolverLinkInfo link_info;
     link_info.path = std::move(link_path);
-    link_info.content_snapshot =
-        fuchsia::modular::EntityReferenceToJson(entity_reference);
+    link_info.content_snapshot = EntityReferenceToJson(entity_reference);
 
     fuchsia::modular::ResolverParameterConstraint parameter;
     parameter.set_link_info(std::move(link_info));
@@ -160,7 +158,7 @@ class QueryBuilder {
   fuchsia::modular::ResolverQuery query;
 };
 
-class TestManifestSource : public fuchsia::modular::ModuleManifestSource {
+class TestManifestSource : public ModuleManifestSource {
  public:
   IdleFn idle;
   NewEntryFn add;
@@ -179,15 +177,14 @@ class LocalModuleResolverTest : public gtest::TestWithMessageLoop {
  protected:
   void ResetResolver() {
     fuchsia::modular::EntityResolverPtr entity_resolver_ptr;
-    entity_resolver_.reset(new fuchsia::modular::EntityResolverFake());
+    entity_resolver_.reset(new EntityResolverFake());
     entity_resolver_->Connect(entity_resolver_ptr.NewRequest());
     // TODO: |impl_| will fail to resolve any queries whose parameters are
     // entity references.
     impl_.reset(new LocalModuleResolver(std::move(entity_resolver_ptr)));
     for (auto entry : test_sources_) {
       impl_->AddSource(entry.first,
-                       std::unique_ptr<fuchsia::modular::ModuleManifestSource>(
-                           entry.second));
+                       std::unique_ptr<ModuleManifestSource>(entry.second));
     }
     test_sources_.clear();
     impl_->Connect(resolver_.NewRequest());
@@ -225,9 +222,9 @@ class LocalModuleResolverTest : public gtest::TestWithMessageLoop {
   }
 
   std::unique_ptr<LocalModuleResolver> impl_;
-  std::unique_ptr<fuchsia::modular::EntityResolverFake> entity_resolver_;
+  std::unique_ptr<EntityResolverFake> entity_resolver_;
 
-  std::map<std::string, fuchsia::modular::ModuleManifestSource*> test_sources_;
+  std::map<std::string, ModuleManifestSource*> test_sources_;
   fuchsia::modular::ModuleResolverPtr resolver_;
 
   fuchsia::modular::FindModulesResult result_;
@@ -412,7 +409,7 @@ TEST_F(LocalModuleResolverTest, SimpleParameterTypes) {
   ASSERT_TRUE(GetProperty(res.create_parameter_map_info, "start").first);
   auto start = GetProperty(res.create_parameter_map_info, "start").second;
   ASSERT_TRUE(start->is_create_link());
-  EXPECT_EQ(fuchsia::modular::EntityReferenceToJson(location_entity),
+  EXPECT_EQ(EntityReferenceToJson(location_entity),
             start->create_link().initial_data);
   // TODO(thatguy): Populate |allowed_types| correctly.
   EXPECT_FALSE(start->create_link().allowed_types);
@@ -519,8 +516,9 @@ TEST_F(LocalModuleResolverTest, LinkInfoParameterType) {
   }
   source->idle();
 
-  // First try matching "module1" for a query that describes a Link that
-  // already allows "foo" in the Link.
+  // First try matching "module1" for a query that describes a
+  // fuchsia::modular::Link that already allows "foo" in the
+  // fuchsia::modular::Link.
   auto query = QueryBuilder("com.google.fuchsia.navigate.v1")
                    .AddLinkInfoParameterWithTypeConstraints(
                        "start", {{"a", "b"}, "c"}, {"foo"})
@@ -529,8 +527,9 @@ TEST_F(LocalModuleResolverTest, LinkInfoParameterType) {
   ASSERT_EQ(1lu, results()->size());
   EXPECT_EQ("module1", results()->at(0).module_id);
 
-  // Same thing should happen if there aren't any allowed types, but the Link's
-  // content encodes an Entity reference.
+  // Same thing should happen if there aren't any allowed types, but the
+  // fuchsia::modular::Link's content encodes an fuchsia::modular::Entity
+  // reference.
   fidl::StringPtr entity_reference = AddEntity({{"foo", ""}});
   query = QueryBuilder("com.google.fuchsia.navigate.v1")
               .AddLinkInfoParameterWithContent("start", {{"a", "b"}, "c"},
@@ -771,11 +770,11 @@ TEST_F(LocalModuleResolverTest, QueryWithoutActionAndMultipleParameters) {
   EXPECT_EQ(GetProperty(result.create_parameter_map_info, "start")
                 .second->create_link()
                 .initial_data,
-            fuchsia::modular::EntityReferenceToJson(start_entity));
+            EntityReferenceToJson(start_entity));
   EXPECT_EQ(GetProperty(result.create_parameter_map_info, "end")
                 .second->create_link()
                 .initial_data,
-            fuchsia::modular::EntityReferenceToJson(end_entity));
+            EntityReferenceToJson(end_entity));
 }
 
 // Tests that when there are multiple valid mappings of query parameter types to
@@ -823,23 +822,19 @@ TEST_F(LocalModuleResolverTest, QueryWithoutActionAndTwoParametersOfSameType) {
     bool start_mapped_to_start =
         GetProperty(result.create_parameter_map_info, "start")
             .second->create_link()
-            .initial_data ==
-        fuchsia::modular::EntityReferenceToJson(start_entity);
+            .initial_data == EntityReferenceToJson(start_entity);
     bool start_mapped_to_end =
         GetProperty(result.create_parameter_map_info, "start")
             .second->create_link()
-            .initial_data ==
-        fuchsia::modular::EntityReferenceToJson(end_entity);
+            .initial_data == EntityReferenceToJson(end_entity);
     bool end_mapped_to_end =
         GetProperty(result.create_parameter_map_info, "end")
             .second->create_link()
-            .initial_data ==
-        fuchsia::modular::EntityReferenceToJson(end_entity);
+            .initial_data == EntityReferenceToJson(end_entity);
     bool end_mapped_to_start =
         GetProperty(result.create_parameter_map_info, "end")
             .second->create_link()
-            .initial_data ==
-        fuchsia::modular::EntityReferenceToJson(start_entity);
+            .initial_data == EntityReferenceToJson(start_entity);
     found_first_mapping |= start_mapped_to_start && end_mapped_to_end;
     found_second_mapping |= start_mapped_to_end && end_mapped_to_start;
   }
@@ -967,8 +962,8 @@ TEST_F(LocalModuleResolverTest,
   fidl::StringPtr start_entity = AddEntity({{"gps", "gps data"}});
   ASSERT_TRUE(!start_entity->empty());
 
-  // The query only contains an Entity for "parameter1", but the module manifest
-  // requires two parameters of type "gps."
+  // The query only contains an fuchsia::modular::Entity for "parameter1", but
+  // the module manifest requires two parameters of type "gps."
   auto query =
       QueryBuilder().AddEntityParameter("parameter1", start_entity).build();
 
@@ -999,8 +994,8 @@ TEST_F(LocalModuleResolverTest, QueryWithoutActionIncompatibleParameterTypes) {
   fidl::StringPtr start_entity = AddEntity({{"not_gps", "not gps data"}});
   ASSERT_TRUE(!start_entity->empty());
 
-  // The query only contains an Entity for "parameter1", but the module manifest
-  // requires two parameters of type "gps."
+  // The query only contains an fuchsia::modular::Entity for "parameter1", but
+  // the module manifest requires two parameters of type "gps."
   auto query =
       QueryBuilder().AddEntityParameter("parameter1", start_entity).build();
 
@@ -1041,4 +1036,3 @@ TEST_F(LocalModuleResolverTest,
 
 }  // namespace
 }  // namespace modular
-}  // namespace fuchsia

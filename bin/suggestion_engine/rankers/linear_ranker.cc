@@ -6,7 +6,6 @@
 
 #include "lib/fxl/logging.h"
 
-namespace fuchsia {
 namespace modular {
 
 LinearRanker::LinearRanker() : normalization_factor_(0.0) {}
@@ -22,9 +21,8 @@ void LinearRanker::AddRankingFeature(
   }
 }
 
-double LinearRanker::Rank(
-    const UserInput& query,
-    const RankedSuggestion& suggestion) {
+double LinearRanker::Rank(const fuchsia::modular::UserInput& query,
+                          const RankedSuggestion& suggestion) {
   double confidence = 0.0;
   for (auto& feature : ranking_features_) {
     confidence +=
@@ -39,4 +37,3 @@ double LinearRanker::Rank(
 }
 
 }  // namespace modular
-}  // namespace fuchsia

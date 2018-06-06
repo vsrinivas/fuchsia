@@ -7,7 +7,6 @@
 
 #include <string>
 
-namespace fuchsia {
 namespace modular {
 
 std::string LoadDeviceProfile();
@@ -17,6 +16,5 @@ std::string LoadDeviceID(const std::string& user);
 std::string LoadDeviceName(const std::string& user);
 
 }  // namespace modular
-}  // namespace fuchsia
 
 #endif  // PERIDOT_LIB_DEVICE_INFO_DEVICE_INFO_H_

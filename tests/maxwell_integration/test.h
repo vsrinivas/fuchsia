@@ -36,7 +36,7 @@ class MaxwellTestBase : public gtest::TestWithMessageLoop {
 
   fuchsia::sys::Environment* root_environment();
 
-  fuchsia::modular::EntityResolverFake& entity_resolver() {
+  modular::EntityResolverFake& entity_resolver() {
     return child_component_context_.entity_resolver_fake();
   }
 
@@ -45,7 +45,7 @@ class MaxwellTestBase : public gtest::TestWithMessageLoop {
   std::unique_ptr<AgentLauncher> agent_launcher_;
 
   fuchsia::sys::ServiceProviderImpl child_app_services_;
-  fuchsia::modular::ComponentContextFake child_component_context_;
+  modular::ComponentContextFake child_component_context_;
 };
 
 }  // namespace maxwell

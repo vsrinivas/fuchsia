@@ -4,7 +4,6 @@
 
 #include "peridot/bin/suggestion_engine/suggestion_passive_filter.h"
 
-namespace fuchsia {
 namespace modular {
 
 SuggestionPassiveFilter::SuggestionPassiveFilter() = default;
@@ -12,4 +11,3 @@ SuggestionPassiveFilter::SuggestionPassiveFilter() = default;
 SuggestionPassiveFilter::~SuggestionPassiveFilter() = default;
 
 }  // namespace modular
-}  // namespace fuchsia

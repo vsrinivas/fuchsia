@@ -15,9 +15,9 @@
 #include "peridot/tests/common/defs.h"
 #include "peridot/tests/suggestion/defs.h"
 
-using fuchsia::modular::testing::Await;
-using fuchsia::modular::testing::Signal;
-using fuchsia::modular::testing::TestPoint;
+using modular::testing::Await;
+using modular::testing::Signal;
+using modular::testing::TestPoint;
 
 namespace {
 
@@ -26,13 +26,13 @@ class TestApp : fuchsia::modular::ProposalListener {
  public:
   TestPoint initialized_{"Root module initialized"};
   TestPoint received_story_id_{"Root module received story id"};
-  TestPoint proposal_was_accepted_{"Proposal was accepted"};
+  TestPoint proposal_was_accepted_{"fuchsia::modular::Proposal was accepted"};
 
-  TestApp(fuchsia::modular::ModuleHost* module_host,
+  TestApp(modular::ModuleHost* module_host,
           fidl::InterfaceRequest<
               fuchsia::ui::views_v1::ViewProvider> /*view_provider_request*/)
       : module_host_(module_host) {
-    fuchsia::modular::testing::Init(module_host_->startup_context(), __FILE__);
+    modular::testing::Init(module_host_->startup_context(), __FILE__);
     initialized_.Pass();
 
     fuchsia::modular::IntelligenceServicesPtr intelligence_services;
@@ -81,17 +81,17 @@ class TestApp : fuchsia::modular::ProposalListener {
   // Called by ModuleDriver.
   void Terminate(const std::function<void()>& done) {
     stopped_.Pass();
-    fuchsia::modular::testing::Done(done);
+    modular::testing::Done(done);
   }
 
-  // |ProposalListener|
+  // |fuchsia::modular::ProposalListener|
   void OnProposalAccepted(fidl::StringPtr proposal_id,
                           fidl::StringPtr story_id) override {
     Signal("proposal_was_accepted");
   }
 
  private:
-  fuchsia::modular::ModuleHost* const module_host_;
+  modular::ModuleHost* const module_host_;
   fuchsia::modular::ModuleContextPtr module_context_;
   fuchsia::modular::ProposalPublisherPtr proposal_publisher_;
   fidl::BindingSet<fuchsia::modular::ProposalListener>
@@ -104,8 +104,8 @@ class TestApp : fuchsia::modular::ProposalListener {
 int main(int /*argc*/, const char** /*argv*/) {
   fsl::MessageLoop loop;
   auto context = fuchsia::sys::StartupContext::CreateFromStartupInfo();
-  fuchsia::modular::ModuleDriver<TestApp> driver(context.get(),
-                                                 [&loop] { loop.QuitNow(); });
+  modular::ModuleDriver<TestApp> driver(context.get(),
+                                        [&loop] { loop.QuitNow(); });
   loop.Run();
   return 0;
 }

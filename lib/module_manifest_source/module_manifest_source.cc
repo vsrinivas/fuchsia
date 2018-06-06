@@ -4,10 +4,8 @@
 
 #include "peridot/lib/module_manifest_source/module_manifest_source.h"
 
-namespace fuchsia {
 namespace modular {
 
 ModuleManifestSource::~ModuleManifestSource() = default;
 
 }  // namespace modular
-}  // namespace fuchsia

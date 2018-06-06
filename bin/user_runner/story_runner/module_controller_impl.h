@@ -18,31 +18,34 @@
 #include "lib/fxl/macros.h"
 #include "peridot/lib/fidl/app_client.h"
 
-namespace fuchsia {
 namespace modular {
 
 class StoryControllerImpl;
 
-// Implements the ModuleController interface, which is given to the
-// client that called ModuleContext.(Start|Embed)Module(). Exactly one
+// Implements the fuchsia::modular::ModuleController interface, which is given
+// to the client that called
+// fuchsia::modular::ModuleContext.(Start|Embed)Module(). Exactly one
 // ModuleControllerImpl instance is associated with each
 // ModuleContextImpl instance.
-class ModuleControllerImpl : ModuleController {
+class ModuleControllerImpl : fuchsia::modular::ModuleController {
  public:
   ModuleControllerImpl(
       StoryControllerImpl* story_controller_impl,
-      fuchsia::sys::Launcher* launcher, AppConfig module_config,
-      const ModuleData* module_data, fuchsia::sys::ServiceListPtr service_list,
+      fuchsia::sys::Launcher* launcher,
+      fuchsia::modular::AppConfig module_config,
+      const fuchsia::modular::ModuleData* module_data,
+      fuchsia::sys::ServiceListPtr service_list,
       fidl::InterfaceRequest<fuchsia::ui::views_v1::ViewProvider>
           view_provider_request);
 
   ~ModuleControllerImpl() override;
 
-  void Connect(fidl::InterfaceRequest<ModuleController> request);
+  void Connect(
+      fidl::InterfaceRequest<fuchsia::modular::ModuleController> request);
 
   // Notifies all watchers of a state change of the module. Also
   // remembers the state to initialize future added watchers.
-  void SetState(ModuleState new_state);
+  void SetState(fuchsia::modular::ModuleState new_state);
 
   // Calls Teardown() on the AppClient of the module component instance,
   // notifies watchers, then ReleaseModule()s the connection and finally calls
@@ -53,16 +56,17 @@ class ModuleControllerImpl : ModuleController {
   void Teardown(std::function<void()> done);
 
  private:
-  // |ModuleController|
-  void Watch(fidl::InterfaceHandle<ModuleWatcher> watcher) override;
+  // |fuchsia::modular::ModuleController|
+  void Watch(
+      fidl::InterfaceHandle<fuchsia::modular::ModuleWatcher> watcher) override;
 
-  // |ModuleController|
+  // |fuchsia::modular::ModuleController|
   void Focus() override;
 
-  // |ModuleController|
+  // |fuchsia::modular::ModuleController|
   void Defocus() override;
 
-  // |ModuleController|
+  // |fuchsia::modular::ModuleController|
   void Stop(StopCallback done) override;
 
   // Used as application error handler on the Module app client.
@@ -71,20 +75,21 @@ class ModuleControllerImpl : ModuleController {
   // The story this Module instance runs in.
   StoryControllerImpl* const story_controller_impl_;
 
-  AppClient<Lifecycle> app_client_;
+  AppClient<fuchsia::modular::Lifecycle> app_client_;
 
   // The Module path and other information about the module instance.
-  const ModuleData* const module_data_;
+  const fuchsia::modular::ModuleData* const module_data_;
 
   // The service provided here.
-  fidl::BindingSet<ModuleController> module_controller_bindings_;
+  fidl::BindingSet<fuchsia::modular::ModuleController>
+      module_controller_bindings_;
 
   // Watchers of this Module instance.
-  fidl::InterfacePtrSet<ModuleWatcher> watchers_;
+  fidl::InterfacePtrSet<fuchsia::modular::ModuleWatcher> watchers_;
 
   // The state of this Module instance, stored here to initialize watchers
   // registered in the future to the current state.
-  ModuleState state_{ModuleState::RUNNING};
+  fuchsia::modular::ModuleState state_{fuchsia::modular::ModuleState::RUNNING};
 
   // Callbacks passed to Teardown() calls. If there is one Stop() request
   // pending, a second one is only queued, no second call to Stop() is made.
@@ -94,6 +99,5 @@ class ModuleControllerImpl : ModuleController {
 };
 
 }  // namespace modular
-}  // namespace fuchsia
 
 #endif  // PERIDOT_BIN_USER_RUNNER_STORY_RUNNER_MODULE_CONTROLLER_IMPL_H_

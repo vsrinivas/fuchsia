@@ -15,7 +15,6 @@
 #include "lib/fxl/memory/weak_ptr.h"
 #include "peridot/lib/module_manifest_source/module_manifest_source.h"
 
-namespace fuchsia {
 namespace modular {
 
 // This source exposes a |ModuleManifestIndexer| service to this application's
@@ -49,6 +48,5 @@ class ModulePackageSource : public ModuleManifestSource,
 };
 
 }  // namespace modular
-}  // namespace fuchsia
 
 #endif  // PERIDOT_LIB_MODULE_MANIFEST_SOURCE_MODULE_PACKAGE_SOURCE_H_

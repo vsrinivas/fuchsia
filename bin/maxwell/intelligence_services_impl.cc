@@ -45,8 +45,9 @@ void IntelligenceServicesImpl::GetProposalPublisher(
     component_id = "global";
   }
 
-  // TODO(thatguy): Change |component_id| to use ComponentScope once it is
-  // renamed to something like ComponentInfo.
+  // TODO(thatguy): Change |component_id| to use
+  // fuchsia::modular::ComponentScope once it is renamed to something like
+  // ComponentInfo.
   suggestion_engine_->RegisterProposalPublisher(component_id,
                                                 std::move(request));
 }

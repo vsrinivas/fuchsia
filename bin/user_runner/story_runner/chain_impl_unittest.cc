@@ -13,7 +13,6 @@
 #include "peridot/bin/user_runner/story_runner/chain_impl.h"
 #include "peridot/lib/testing/story_controller_mock.h"
 
-namespace fuchsia {
 namespace modular {
 namespace {
 
@@ -21,12 +20,12 @@ class ChainImplTest : public gtest::TestWithMessageLoop {
  public:
   void Reset(std::vector<fidl::StringPtr> path,
              std::map<std::string, std::vector<std::string>> link_map) {
-    ModuleParameterMap map;
+    fuchsia::modular::ModuleParameterMap map;
     for (const auto& entry : link_map) {
-      LinkPath link_path;
+      fuchsia::modular::LinkPath link_path;
       link_path.module_path =
           fxl::To<fidl::VectorPtr<fidl::StringPtr>>(entry.second);
-      ModuleParameterMapEntry map_entry;
+      fuchsia::modular::ModuleParameterMapEntry map_entry;
       map_entry.name = entry.first;
       map_entry.link_path = std::move(link_path);
       map.entries.push_back(std::move(map_entry));
@@ -51,8 +50,9 @@ TEST_F(ChainImplTest, Empty) {
 }
 
 TEST_F(ChainImplTest, GetLinkPath) {
-  // Show that the GetLink call is proxied to the StoryController.
-  // StoryController owns all Links.
+  // Show that the GetLink call is proxied to the
+  // fuchsia::modular::StoryController. fuchsia::modular::StoryController owns
+  // all Links.
   Reset({"one", "two"},
         {{"key1", {"link", "path1"}}, {"key2", {"link", "path2"}}});
 
@@ -72,4 +72,3 @@ TEST_F(ChainImplTest, GetLinkPath) {
 
 }  // namespace
 }  // namespace modular
-}  // namespace fuchsia

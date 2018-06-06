@@ -11,7 +11,6 @@
 
 #include "lib/app/cpp/startup_context.h"
 
-namespace fuchsia {
 namespace modular {
 namespace testing {
 
@@ -101,6 +100,5 @@ void PassTestPoint(const std::string& label);
 }  // namespace internal
 }  // namespace testing
 }  // namespace modular
-}  // namespace fuchsia
 
 #endif  // PERIDOT_LIB_TESTING_TESTING_H_

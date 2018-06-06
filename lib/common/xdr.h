@@ -15,12 +15,10 @@ class Account;
 } // namespace modular
 } // namespace auth
 
-namespace fuchsia {
 namespace modular {
 
 extern const XdrFilterType<fuchsia::modular::auth::Account> XdrAccount[];
 
 }  // namespace modular
-}  // namespace fuchsia
 
 #endif  // PERIDOT_LIB_COMMON_XDR_H_

@@ -10,7 +10,6 @@
 #include "lib/fxl/macros.h"
 #include "peridot/lib/rapidjson/rapidjson.h"
 
-namespace fuchsia {
 namespace modular {
 
 namespace {
@@ -37,8 +36,7 @@ const char* JsonTypeName(const rapidjson::Type type) {
 // HACK(mesch): We should not need this, get rid of it.
 thread_local JsonValue XdrContext::null_ = JsonValue();
 
-XdrContext::XdrContext(const XdrOp op,
-                       JsonDoc* const doc,
+XdrContext::XdrContext(const XdrOp op, JsonDoc* const doc,
                        std::string* const error)
     : parent_(nullptr),
       name_(nullptr),
@@ -50,10 +48,8 @@ XdrContext::XdrContext(const XdrOp op,
   FXL_DCHECK(error_ != nullptr);
 }
 
-XdrContext::XdrContext(XdrContext* const parent,
-                       const char* const name,
-                       const XdrOp op,
-                       JsonDoc* const doc,
+XdrContext::XdrContext(XdrContext* const parent, const char* const name,
+                       const XdrOp op, JsonDoc* const doc,
                        JsonValue* const value)
     : parent_(parent),
       name_(name),
@@ -88,10 +84,8 @@ bool XdrContext::Version(uint32_t version) {
       uint32_t actual_version{};
       Field(kVersion).Value(&actual_version);
       if (actual_version != version) {
-        AddError("Version(): Found version " +
-                 std::to_string(actual_version) +
-                 " but expected version " +
-                 std::to_string(version));
+        AddError("Version(): Found version " + std::to_string(actual_version) +
+                 " but expected version " + std::to_string(version));
         return false;
       }
       return true;
@@ -289,4 +283,3 @@ std::string* XdrContext::GetError() {
 }
 
 }  // namespace modular
-}  // namespace fuchsia

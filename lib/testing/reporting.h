@@ -15,10 +15,9 @@
 #define TEST_FAIL(label)                                  \
   {                                                       \
     std::cerr << "[TEST] FAIL: " << (label) << std::endl; \
-    fuchsia::modular::testing::Fail(label);               \
+    testing::Fail(label);                                 \
   }
 
-namespace fuchsia {
 namespace modular {
 namespace testing {
 
@@ -39,6 +38,5 @@ class TestPoint {
 
 }  // namespace testing
 }  // namespace modular
-}  // namespace fuchsia
 
 #endif  // PERIDOT_LIB_TESTING_REPORTING_H_

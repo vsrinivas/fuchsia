@@ -9,12 +9,15 @@
 
 namespace fuchsia {
 namespace modular {
-
 class ModuleManifest;
+}
+}  // namespace fuchsia
 
-extern const XdrFilterType<ModuleManifest> XdrModuleManifest[];
+namespace modular {
+
+extern const XdrFilterType<fuchsia::modular::ModuleManifest>
+    XdrModuleManifest[];
 
 }  // namespace modular
-}  // namespace fuchsia
 
 #endif  // PERIDOT_LIB_MODULE_MANIFEST_SOURCE_XDR_H_

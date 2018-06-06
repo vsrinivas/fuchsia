@@ -11,7 +11,6 @@
 #include "peridot/bin/suggestion_engine/ranker.h"
 #include "peridot/bin/suggestion_engine/ranking_feature.h"
 
-namespace fuchsia {
 namespace modular {
 
 // Ranks based on a linear combination using the set ranking features and its
@@ -28,8 +27,8 @@ class LinearRanker : public Ranker {
   // AddRankingFeature.
   // The data from |query| and |suggestion| needed depends on the data each
   // ranking feature needs.
-  double Rank(
-      const UserInput& query, const RankedSuggestion& suggestion) override;
+  double Rank(const fuchsia::modular::UserInput& query,
+              const RankedSuggestion& suggestion) override;
 
   // Sets a ranking feature and associates it to the given weight for the linear
   // combination.
@@ -46,6 +45,5 @@ class LinearRanker : public Ranker {
 };
 
 }  // namespace modular
-}  // namespace fuchsia
 
 #endif  // PERIDOT_BIN_SUGGESTION_ENGINE_RANKERS_LINEAR_RANKER_H_

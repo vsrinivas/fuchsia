@@ -3,10 +3,9 @@
 // found in the LICENSE file.
 
 #include "peridot/bin/suggestion_engine/rankers/linear_ranker.h"
-#include "peridot/bin/suggestion_engine/ranking_feature.h"
 #include "gtest/gtest.h"
+#include "peridot/bin/suggestion_engine/ranking_feature.h"
 
-namespace fuchsia {
 namespace modular {
 namespace {
 
@@ -15,7 +14,7 @@ class ConstantRankingFeature : public RankingFeature {
   ConstantRankingFeature(double value) : value_(value) {}
 
  private:
-  double ComputeFeatureInternal(const UserInput& query,
+  double ComputeFeatureInternal(const fuchsia::modular::UserInput& query,
                                 const RankedSuggestion& suggestion) {
     return value_;
   };
@@ -25,9 +24,9 @@ class ConstantRankingFeature : public RankingFeature {
 
 class LinearRankerTest : public ::testing::Test {
  protected:
-   UserInput query_;
-   RankedSuggestion suggestion_;
-   LinearRanker ranker_;
+  fuchsia::modular::UserInput query_;
+  RankedSuggestion suggestion_;
+  LinearRanker ranker_;
 };
 
 TEST_F(LinearRankerTest, Rank) {
@@ -57,4 +56,3 @@ TEST_F(LinearRankerTest, RankZeroIfNegative) {
 
 }  // namespace
 }  // namespace modular
-}  // namespace fuchsia

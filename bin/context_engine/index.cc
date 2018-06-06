@@ -10,41 +10,40 @@
 #include "lib/fxl/logging.h"
 #include "peridot/bin/context_engine/index.h"
 
-namespace fuchsia {
 namespace modular {
 
 ContextIndex::ContextIndex() = default;
 ContextIndex::~ContextIndex() = default;
 
 namespace internal {
-// Keys for fields within ContextMetadata.story:
+// Keys for fields within fuchsia::modular::ContextMetadata.story:
 const char kStoryIdKey[] = "si";
 const char kStoryFocusedKey[] = "sf";
 
-// Keys for fields within ContextMetadata.mod:
+// Keys for fields within fuchsia::modular::ContextMetadata.mod:
 const char kModPathKey[] = "mp";
 const char kModUrlKey[] = "mu";
 
-// Keys for fields within ContextMetadata.entity:
+// Keys for fields within fuchsia::modular::ContextMetadata.entity:
 const char kEntityTopicKey[] = "et";
 const char kEntityTypeKey[] = "ey";
 // We don't index |ctime|.
 
-// Key for ContextValueType.
+// Key for fuchsia::modular::ContextValueType.
 const char kContextValueTypeKey[] = "t";
 
 std::set<std::string> EncodeMetadataAndType(
-    ContextValueType nodeType,
-    const ContextMetadata& metadata) {
-  ContextMetadata meta_clone;
+    fuchsia::modular::ContextValueType nodeType,
+    const fuchsia::modular::ContextMetadata& metadata) {
+  fuchsia::modular::ContextMetadata meta_clone;
   fidl::Clone(metadata, &meta_clone);
   return EncodeMetadataAndType(nodeType,
                                fidl::MakeOptional(std::move(meta_clone)));
 }
 
 std::set<std::string> EncodeMetadataAndType(
-    ContextValueType nodeType,
-    const ContextMetadataPtr& metadata) {
+    fuchsia::modular::ContextValueType nodeType,
+    const fuchsia::modular::ContextMetadataPtr& metadata) {
   std::set<std::string> ret;
 
   if (metadata) {
@@ -57,7 +56,8 @@ std::set<std::string> EncodeMetadataAndType(
       if (metadata->story->focused) {
         std::ostringstream str;
         str << kStoryFocusedKey;
-        if (metadata->story->focused->state == FocusedStateState::FOCUSED) {
+        if (metadata->story->focused->state ==
+            fuchsia::modular::FocusedStateState::FOCUSED) {
           str << "1";
         } else {
           str << "0";
@@ -107,26 +107,24 @@ std::set<std::string> EncodeMetadataAndType(
 
 }  // namespace internal
 
-void ContextIndex::Add(Id id,
-                       ContextValueType type,
-                       const ContextMetadata& metadata) {
+void ContextIndex::Add(Id id, fuchsia::modular::ContextValueType type,
+                       const fuchsia::modular::ContextMetadata& metadata) {
   auto keys = internal::EncodeMetadataAndType(type, metadata);
   for (const auto& key : keys) {
     index_[key].insert(id);
   }
 }
 
-void ContextIndex::Remove(Id id,
-                          ContextValueType type,
-                          const ContextMetadata& metadata) {
+void ContextIndex::Remove(Id id, fuchsia::modular::ContextValueType type,
+                          const fuchsia::modular::ContextMetadata& metadata) {
   auto keys = internal::EncodeMetadataAndType(type, metadata);
   for (const auto& key : keys) {
     index_[key].erase(id);
   }
 }
 
-void ContextIndex::Query(ContextValueType type,
-                         const ContextMetadataPtr& metadata,
+void ContextIndex::Query(fuchsia::modular::ContextValueType type,
+                         const fuchsia::modular::ContextMetadataPtr& metadata,
                          std::set<ContextIndex::Id>* out) {
   FXL_DCHECK(out != nullptr);
 
@@ -151,4 +149,3 @@ void ContextIndex::Query(ContextValueType type,
 }
 
 }  // namespace modular
-}  // namespace fuchsia

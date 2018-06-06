@@ -10,7 +10,6 @@
 #include "lib/gtest/test_with_message_loop.h"
 #include "peridot/lib/testing/fake_launcher.h"
 
-namespace fuchsia {
 namespace modular {
 namespace testing {
 namespace {
@@ -18,8 +17,8 @@ namespace {
 constexpr char kServiceName[] = "service1";
 constexpr char kTestUrl[] = "some/test/url";
 
-AppConfig GetTestAppConfig() {
-  AppConfig app_config;
+fuchsia::modular::AppConfig GetTestAppConfig() {
+  fuchsia::modular::AppConfig app_config;
   app_config.url = kTestUrl;
   return app_config;
 }
@@ -146,4 +145,3 @@ TEST_F(AppClientTest, RunWithParams_Success) {
 }  // namespace
 }  // namespace testing
 }  // namespace modular
-}  // namespace fuchsia

@@ -7,13 +7,12 @@
 #include "lib/fidl/cpp/interface_handle.h"
 #include "lib/fxl/logging.h"
 
-namespace fuchsia {
 namespace modular {
 
 TimelineStoriesWatcher::TimelineStoriesWatcher(
     fuchsia::modular::StoryProviderPtr* story_provider)
     : binding_(this) {
-  // Add ourselves as a watcher to the StoryProvider.
+  // Add ourselves as a watcher to the fuchsia::modular::StoryProvider.
   fidl::InterfaceHandle<fuchsia::modular::StoryProviderWatcher> handle;
   binding_.Bind(handle.NewRequest());
   (*story_provider)->Watch(std::move(handle));
@@ -45,4 +44,3 @@ void TimelineStoriesWatcher::OnDelete(fidl::StringPtr story_id) {
 }
 
 }  // namespace modular
-}  // namespace fuchsia

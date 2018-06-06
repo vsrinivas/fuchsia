@@ -6,7 +6,6 @@
 
 #include "peridot/bin/suggestion_engine/suggestion_engine_impl.h"
 
-namespace fuchsia {
 namespace modular {
 
 ProposalPublisherImpl::ProposalPublisherImpl(SuggestionEngineImpl* engine,
@@ -19,12 +18,12 @@ ProposalPublisherImpl::ProposalPublisherImpl(SuggestionEngineImpl* engine,
 ProposalPublisherImpl::~ProposalPublisherImpl() = default;
 
 void ProposalPublisherImpl::AddBinding(
-    fidl::InterfaceRequest<ProposalPublisher> request) {
-  bindings_.emplace(
-      new fidl::Binding<ProposalPublisher>(this, std::move(request)));
+    fidl::InterfaceRequest<fuchsia::modular::ProposalPublisher> request) {
+  bindings_.emplace(new fidl::Binding<fuchsia::modular::ProposalPublisher>(
+      this, std::move(request)));
 }
 
-void ProposalPublisherImpl::Propose(Proposal proposal) {
+void ProposalPublisherImpl::Propose(fuchsia::modular::Proposal proposal) {
   engine_->AddNextProposal(this, std::move(proposal));
 }
 
@@ -38,8 +37,9 @@ ProposalPublisherImpl::BindingSet::BindingSet(ProposalPublisherImpl* impl)
 ProposalPublisherImpl::BindingSet::~BindingSet() = default;
 
 void ProposalPublisherImpl::BindingSet::OnConnectionError(
-    fidl::Binding<ProposalPublisher>* binding) {
-  fuchsia::modular::BindingSet<ProposalPublisher>::OnConnectionError(binding);
+    fidl::Binding<fuchsia::modular::ProposalPublisher>* binding) {
+  ::modular::BindingSet<fuchsia::modular::ProposalPublisher>::OnConnectionError(
+      binding);
 
   if (impl_->ShouldEraseSelf())
     impl_->EraseSelf();
@@ -54,4 +54,3 @@ void ProposalPublisherImpl::EraseSelf() {
 }
 
 }  // namespace modular
-}  // namespace fuchsia

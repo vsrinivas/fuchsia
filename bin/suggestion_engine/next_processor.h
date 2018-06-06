@@ -21,7 +21,6 @@
 #include "peridot/bin/suggestion_engine/suggestion_passive_filter.h"
 #include "peridot/bin/suggestion_engine/suggestion_prototype.h"
 
-namespace fuchsia {
 namespace modular {
 
 class ProposalPublisherImpl;
@@ -34,15 +33,17 @@ class NextProcessor {
   NextProcessor(std::shared_ptr<SuggestionDebugImpl> debug);
   virtual ~NextProcessor();
 
-  void RegisterListener(fidl::InterfaceHandle<NextListener> listener,
-                        size_t max_results);
+  void RegisterListener(
+      fidl::InterfaceHandle<fuchsia::modular::NextListener> listener,
+      size_t max_results);
 
   void RegisterInterruptionListener(
-      fidl::InterfaceHandle<InterruptionListener> listener);
+      fidl::InterfaceHandle<fuchsia::modular::InterruptionListener> listener);
 
   // Add and remove proposals
   void AddProposal(const std::string& component_url,
-                   const std::string& story_id, Proposal proposal);
+                   const std::string& story_id,
+                   fuchsia::modular::Proposal proposal);
   void RemoveProposal(const std::string& component_url,
                       const std::string& proposal_id);
 
@@ -73,7 +74,8 @@ class NextProcessor {
   using SuggestionPrototypeMap = std::map<std::pair<std::string, std::string>,
                                           std::unique_ptr<SuggestionPrototype>>;
 
-  void NotifyOfResults(const NextListenerPtr& listener, size_t max_results);
+  void NotifyOfResults(const fuchsia::modular::NextListenerPtr& listener,
+                       size_t max_results);
 
   void RemoveProposalFromList(const std::string& component_url,
                               const std::string& proposal_id);
@@ -84,10 +86,9 @@ class NextProcessor {
   SuggestionPrototypeMap prototypes_;
   bool processing_;
 
-  std::vector<std::pair<NextListenerPtr, size_t>> listeners_;
+  std::vector<std::pair<fuchsia::modular::NextListenerPtr, size_t>> listeners_;
 };
 
 }  // namespace modular
-}  // namespace fuchsia
 
 #endif  // PERIDOT_BIN_SUGGESTION_ENGINE_NEXT_PROCESSOR_H_

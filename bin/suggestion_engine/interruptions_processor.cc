@@ -5,14 +5,13 @@
 #include "peridot/bin/suggestion_engine/interruptions_processor.h"
 #include "peridot/bin/suggestion_engine/ranking_feature.h"
 
-namespace fuchsia {
 namespace modular {
 
 InterruptionsProcessor::InterruptionsProcessor() = default;
 InterruptionsProcessor::~InterruptionsProcessor() = default;
 
 void InterruptionsProcessor::RegisterListener(
-    fidl::InterfaceHandle<InterruptionListener> listener) {
+    fidl::InterfaceHandle<fuchsia::modular::InterruptionListener> listener) {
   listeners_.AddInterfacePtr(listener.Bind());
 }
 
@@ -33,12 +32,11 @@ bool InterruptionsProcessor::MaybeInterrupt(
 }
 
 void InterruptionsProcessor::DispatchInterruption(
-    InterruptionListener* const listener,
+    fuchsia::modular::InterruptionListener* const listener,
     const RankedSuggestion& ranked_suggestion) {
-  Suggestion suggestion = CreateSuggestion(ranked_suggestion);
+  fuchsia::modular::Suggestion suggestion = CreateSuggestion(ranked_suggestion);
   suggestion.confidence = kMaxConfidence;
   listener->OnInterrupt(std::move(suggestion));
 }
 
 }  // namespace modular
-}  // namespace fuchsia

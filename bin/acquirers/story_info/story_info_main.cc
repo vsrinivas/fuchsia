@@ -11,7 +11,7 @@
 int main(int argc, const char** argv) {
   fsl::MessageLoop loop;
   auto context = fuchsia::sys::StartupContext::CreateFromStartupInfo();
-  fuchsia::modular::AgentDriver<maxwell::StoryInfoAcquirer> driver(
+  modular::AgentDriver<maxwell::StoryInfoAcquirer> driver(
       context.get(), [&loop] { loop.QuitNow(); });
   loop.Run();
   return 0;

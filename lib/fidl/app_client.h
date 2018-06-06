@@ -18,7 +18,6 @@
 #include "lib/svc/cpp/services.h"
 #include "peridot/lib/common/async_holder.h"
 
-namespace fuchsia {
 namespace modular {
 
 // A class that holds a connection to a single service instance in an
@@ -39,7 +38,8 @@ namespace modular {
 // be inline. It can be used on its own too.
 class AppClientBase : public AsyncHolderBase {
  public:
-  AppClientBase(fuchsia::sys::Launcher* launcher, AppConfig config,
+  AppClientBase(fuchsia::sys::Launcher* launcher,
+                fuchsia::modular::AppConfig config,
                 std::string data_origin = "",
                 fuchsia::sys::ServiceListPtr additional_services = nullptr);
   virtual ~AppClientBase();
@@ -74,8 +74,8 @@ class AppClientBase : public AsyncHolderBase {
 template <class Service>
 class AppClient : public AppClientBase {
  public:
-  AppClient(fuchsia::sys::Launcher* const launcher, AppConfig config,
-            std::string data_origin = "",
+  AppClient(fuchsia::sys::Launcher* const launcher,
+            fuchsia::modular::AppConfig config, std::string data_origin = "",
             fuchsia::sys::ServiceListPtr additional_services = nullptr)
       : AppClientBase(launcher, std::move(config), std::move(data_origin),
                       std::move(additional_services)) {
@@ -101,9 +101,9 @@ class AppClient : public AppClientBase {
 };
 
 template <>
-void AppClient<Lifecycle>::ServiceTerminate(const std::function<void()>& done);
+void AppClient<fuchsia::modular::Lifecycle>::ServiceTerminate(
+    const std::function<void()>& done);
 
 }  // namespace modular
-}  // namespace fuchsia
 
 #endif  // PERIDOT_LIB_FIDL_APP_CLIENT_H_

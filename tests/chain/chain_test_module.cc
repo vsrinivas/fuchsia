@@ -15,7 +15,7 @@
 #include "peridot/tests/chain/defs.h"
 #include "peridot/tests/common/defs.h"
 
-using fuchsia::modular::testing::TestPoint;
+using modular::testing::TestPoint;
 
 namespace {
 
@@ -24,18 +24,18 @@ class TestApp {
  public:
   TestPoint initialized_{"Parent module initialized"};
 
-  TestApp(fuchsia::modular::ModuleHost* module_host,
+  TestApp(modular::ModuleHost* module_host,
           fidl::InterfaceRequest<
               fuchsia::ui::views_v1::ViewProvider> /*view_provider_request*/)
       : module_context_(module_host->module_context()) {
     module_context_->GetComponentContext(component_context_.NewRequest());
-    fuchsia::modular::testing::Init(module_host->startup_context(), __FILE__);
+    modular::testing::Init(module_host->startup_context(), __FILE__);
     initialized_.Pass();
 
-    // We'll use an Entity stored on one of our Links, which will be used in
-    // the resolution process to choose a compatible Module.
+    // We'll use an fuchsia::modular::Entity stored on one of our Links, which
+    // will be used in the resolution process to choose a compatible Module.
     // TODO(thatguy): We should be specifying type constraints when we create
-    // the Link.
+    // the fuchsia::modular::Link.
     auto entity_data =
         fidl::VectorPtr<fuchsia::modular::TypeToDataEntry>::New(1);
     entity_data->at(0) = fuchsia::modular::TypeToDataEntry();
@@ -54,26 +54,27 @@ class TestApp {
   // Called from ModuleDriver.
   void Terminate(const std::function<void()>& done) {
     stopped_.Pass();
-    fuchsia::modular::testing::Done(done);
+    modular::testing::Done(done);
   }
 
  private:
-  TestPoint start_intent_{"Started child Intent"};
+  TestPoint start_intent_{"Started child fuchsia::modular::Intent"};
 
   void EmbedModule() {
     intent_.action.handler = kChildModuleUrl;
     intent_.parameters.resize(4);
 
-    // We'll put three parameters "one", "two" and "three" on the Intent. The
-    // first is used to match the Module, because we know that it expectes a
-    // parameter named "one". The other two are extra and are going to be passed
-    // on to the Module regardless.
+    // We'll put three parameters "one", "two" and "three" on the
+    // fuchsia::modular::Intent. The first is used to match the Module, because
+    // we know that it expectes a parameter named "one". The other two are extra
+    // and are going to be passed on to the Module regardless.
     //
-    // The second parameter is set to a Link that we own with regular JSON
-    // content.
+    // The second parameter is set to a fuchsia::modular::Link that we own with
+    // regular JSON content.
     //
-    // The third parameter we expect to reference a Link created on our behalf
-    // by the Framework. We don't get access to that Link.
+    // The third parameter we expect to reference a fuchsia::modular::Link
+    // created on our behalf by the Framework. We don't get access to that
+    // fuchsia::modular::Link.
     module_context_->GetLink("foo", link_one_.NewRequest());
     link_one_->SetEntity(entity_one_reference_);
     fuchsia::modular::IntentParameterData parameter_data;
@@ -137,8 +138,8 @@ class TestApp {
 int main(int /*argc*/, const char** /*argv*/) {
   fsl::MessageLoop loop;
   auto context = fuchsia::sys::StartupContext::CreateFromStartupInfo();
-  fuchsia::modular::ModuleDriver<TestApp> driver(context.get(),
-                                                 [&loop] { loop.QuitNow(); });
+  modular::ModuleDriver<TestApp> driver(context.get(),
+                                        [&loop] { loop.QuitNow(); });
   loop.Run();
   return 0;
 }

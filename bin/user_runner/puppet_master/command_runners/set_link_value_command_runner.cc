@@ -6,7 +6,6 @@
 
 #include "lib/fxl/logging.h"
 
-namespace fuchsia {
 namespace modular {
 
 SetLinkValueCommandRunner::SetLinkValueCommandRunner() {}
@@ -14,11 +13,10 @@ SetLinkValueCommandRunner::SetLinkValueCommandRunner() {}
 SetLinkValueCommandRunner::~SetLinkValueCommandRunner() = default;
 
 void SetLinkValueCommandRunner::Execute(
-    fidl::StringPtr story_id, StoryCommand command,
-    std::function<void(ExecuteResult)> done) {
+    fidl::StringPtr story_id, fuchsia::modular::StoryCommand command,
+    std::function<void(fuchsia::modular::ExecuteResult)> done) {
   FXL_CHECK(command.is_set_link_value());
   // TODO(miguelfrde): implement
 }
 
 }  // namespace modular
-}  // namespace fuchsia

@@ -16,23 +16,27 @@
 namespace {
 
 using namespace fuchsia::modular;
+using namespace modular;
 
-class UserActionLogFactoryImpl : public UserActionLogFactory {
+class UserActionLogFactoryImpl : public fuchsia::modular::UserActionLogFactory {
  public:
   UserActionLogFactoryImpl() {}
 
  private:
   void GetUserActionLog(
-      fidl::InterfaceHandle<ProposalPublisher> proposal_publisher_handle,
-      fidl::InterfaceRequest<UserActionLog> request) {
-    ProposalPublisherPtr proposal_publisher = proposal_publisher_handle.Bind();
+      fidl::InterfaceHandle<fuchsia::modular::ProposalPublisher>
+          proposal_publisher_handle,
+      fidl::InterfaceRequest<fuchsia::modular::UserActionLog> request) {
+    fuchsia::modular::ProposalPublisherPtr proposal_publisher =
+        proposal_publisher_handle.Bind();
     std::unique_ptr<UserActionLogImpl> user_action_log_impl(
         new UserActionLogImpl(std::move(proposal_publisher)));
     user_action_log_bindings_.AddBinding(std::move(user_action_log_impl),
                                          std::move(request));
   }
 
-  fidl::BindingSet<UserActionLog, std::unique_ptr<UserActionLog>>
+  fidl::BindingSet<fuchsia::modular::UserActionLog,
+                   std::unique_ptr<fuchsia::modular::UserActionLog>>
       user_action_log_bindings_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(UserActionLogFactoryImpl);
@@ -47,16 +51,20 @@ class UserActionLogFactoryApp {
     factory_impl_.swap(factory_impl);
 
     // Singleton service
-    context_->outgoing().AddPublicService<UserActionLogFactory>(
-        [this](fidl::InterfaceRequest<UserActionLogFactory> request) {
-          factory_bindings_.AddBinding(factory_impl_.get(), std::move(request));
-        });
+    context_->outgoing()
+        .AddPublicService<fuchsia::modular::UserActionLogFactory>(
+            [this](
+                fidl::InterfaceRequest<fuchsia::modular::UserActionLogFactory>
+                    request) {
+              factory_bindings_.AddBinding(factory_impl_.get(),
+                                           std::move(request));
+            });
   }
 
  private:
   std::unique_ptr<fuchsia::sys::StartupContext> context_;
   std::unique_ptr<UserActionLogFactoryImpl> factory_impl_;
-  fidl::BindingSet<UserActionLogFactory> factory_bindings_;
+  fidl::BindingSet<fuchsia::modular::UserActionLogFactory> factory_bindings_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(UserActionLogFactoryApp);
 };

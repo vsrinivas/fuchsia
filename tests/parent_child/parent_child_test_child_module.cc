@@ -11,18 +11,18 @@
 #include "peridot/tests/common/defs.h"
 #include "peridot/tests/parent_child/defs.h"
 
-using fuchsia::modular::testing::Signal;
-using fuchsia::modular::testing::TestPoint;
+using modular::testing::Signal;
+using modular::testing::TestPoint;
 
 namespace {
 
 // Cf. README.md for what this test does and how.
 class TestApp {
  public:
-  TestApp(fuchsia::modular::ModuleHost* module_host,
+  TestApp(modular::ModuleHost* module_host,
           fidl::InterfaceRequest<
               fuchsia::ui::views_v1::ViewProvider> /*view_provider_request*/) {
-    fuchsia::modular::testing::Init(module_host->startup_context(), __FILE__);
+    modular::testing::Init(module_host->startup_context(), __FILE__);
     Signal("child_module_init");
   }
 
@@ -32,7 +32,7 @@ class TestApp {
   void Terminate(const std::function<void()>& done) {
     stopped_.Pass();
     Signal("child_module_stop");
-    fuchsia::modular::testing::Done(done);
+    modular::testing::Done(done);
   }
 
  private:
@@ -44,8 +44,8 @@ class TestApp {
 int main(int /*argc*/, const char** /*argv*/) {
   fsl::MessageLoop loop;
   auto context = fuchsia::sys::StartupContext::CreateFromStartupInfo();
-  fuchsia::modular::ModuleDriver<TestApp> driver(context.get(),
-                                                 [&loop] { loop.QuitNow(); });
+  modular::ModuleDriver<TestApp> driver(context.get(),
+                                        [&loop] { loop.QuitNow(); });
   loop.Run();
   return 0;
 }

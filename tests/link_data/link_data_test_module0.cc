@@ -15,12 +15,13 @@
 #include "peridot/tests/common/defs.h"
 #include "peridot/tests/link_data/defs.h"
 
-using fuchsia::modular::testing::Signal;
+using modular::testing::Signal;
 
 namespace {
 
-// Implementation of the LinkWatcher service that forwards the value of one Link
-// instance to a second Link instance whenever it changes.
+// Implementation of the fuchsia::modular::LinkWatcher service that forwards the
+// value of one fuchsia::modular::Link instance to a second
+// fuchsia::modular::Link instance whenever it changes.
 class LinkForwarder : fuchsia::modular::LinkWatcher {
  public:
   LinkForwarder(fuchsia::modular::Link* const src,
@@ -29,7 +30,7 @@ class LinkForwarder : fuchsia::modular::LinkWatcher {
     src_->Watch(src_binding_.NewBinding());
   }
 
-  // |LinkWatcher|
+  // |fuchsia::modular::LinkWatcher|
   void Notify(fidl::StringPtr json) override { dst_->Set(nullptr, json); }
 
  private:
@@ -43,12 +44,12 @@ class LinkForwarder : fuchsia::modular::LinkWatcher {
 // Cf. README.md for what this test does and how.
 class TestApp {
  public:
-  TestApp(fuchsia::modular::ModuleHost* const module_host,
+  TestApp(modular::ModuleHost* const module_host,
           fidl::InterfaceRequest<
               fuchsia::ui::views_v1::ViewProvider> /*view_provider_request*/)
       : module_host_(module_host),
         module_context_(module_host_->module_context()) {
-    fuchsia::modular::testing::Init(module_host->startup_context(), __FILE__);
+    modular::testing::Init(module_host->startup_context(), __FILE__);
     Signal("module0_init");
 
     Start();
@@ -110,11 +111,11 @@ class TestApp {
   // Called from ModuleDriver.
   void Terminate(const std::function<void()>& done) {
     Signal("module1_stop");
-    fuchsia::modular::testing::Done(done);
+    modular::testing::Done(done);
   }
 
  private:
-  fuchsia::modular::ModuleHost* const module_host_;
+  modular::ModuleHost* const module_host_;
   fuchsia::modular::ModuleContext* const module_context_;
 
   fuchsia::modular::LinkPtr link_;
@@ -135,8 +136,8 @@ class TestApp {
 int main(int /*argc*/, const char** /*argv*/) {
   fsl::MessageLoop loop;
   auto context = fuchsia::sys::StartupContext::CreateFromStartupInfo();
-  fuchsia::modular::ModuleDriver<TestApp> driver(context.get(),
-                                                 [&loop] { loop.QuitNow(); });
+  modular::ModuleDriver<TestApp> driver(context.get(),
+                                        [&loop] { loop.QuitNow(); });
   loop.Run();
   return 0;
 }

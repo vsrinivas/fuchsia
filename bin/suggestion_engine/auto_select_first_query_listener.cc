@@ -6,7 +6,6 @@
 #include <fuchsia/modular/cpp/fidl.h>
 #include "peridot/bin/suggestion_engine/suggestion_engine_impl.h"
 
-namespace fuchsia {
 namespace modular {
 
 AutoSelectFirstQueryListener::AutoSelectFirstQueryListener(
@@ -14,7 +13,7 @@ AutoSelectFirstQueryListener::AutoSelectFirstQueryListener(
     : engine_(suggestion_engine) {}
 
 void AutoSelectFirstQueryListener::OnQueryResults(
-    fidl::VectorPtr<Suggestion> suggestions) {
+    fidl::VectorPtr<fuchsia::modular::Suggestion> suggestions) {
   suggestions_.reset();
   suggestions_ = std::move(suggestions);
 }
@@ -23,11 +22,9 @@ void AutoSelectFirstQueryListener::OnQueryComplete() {
   if (suggestions_->empty()) {
     return;
   }
-  Interaction interaction;
-  interaction.type = InteractionType::SELECTED;
-  engine_->NotifyInteraction(
-      suggestions_->at(0).uuid, std::move(interaction));
+  fuchsia::modular::Interaction interaction;
+  interaction.type = fuchsia::modular::InteractionType::SELECTED;
+  engine_->NotifyInteraction(suggestions_->at(0).uuid, std::move(interaction));
 }
 
 }  // namespace modular
-}  // namespace fuchsia

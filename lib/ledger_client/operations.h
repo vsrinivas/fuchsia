@@ -17,7 +17,6 @@
 #include "peridot/lib/fidl/json_xdr.h"
 #include "peridot/lib/ledger_client/page_client.h"
 
-namespace fuchsia {
 namespace modular {
 
 // Common base class for all Operation classes that operate on a ledger Page.
@@ -145,37 +144,37 @@ class ReadDataCall : public PageOperation<DataPtr> {
   }
 
   void Cont(FlowToken flow) {
-    page_snapshot_->Get(to_array(key_), [this, flow](
-                                            fuchsia::ledger::Status status,
-                                            fuchsia::mem::BufferPtr value) {
-      if (status != fuchsia::ledger::Status::OK) {
-        if (status != fuchsia::ledger::Status::KEY_NOT_FOUND ||
-            !not_found_is_ok_) {
-          FXL_LOG(ERROR) << this->trace_name() << " " << key_ << " "
-                         << "PageSnapshot.Get() " << status;
-        }
-        return;
-      }
+    page_snapshot_->Get(
+        to_array(key_), [this, flow](fuchsia::ledger::Status status,
+                                     fuchsia::mem::BufferPtr value) {
+          if (status != fuchsia::ledger::Status::OK) {
+            if (status != fuchsia::ledger::Status::KEY_NOT_FOUND ||
+                !not_found_is_ok_) {
+              FXL_LOG(ERROR) << this->trace_name() << " " << key_ << " "
+                             << "PageSnapshot.Get() " << status;
+            }
+            return;
+          }
 
-      if (!value) {
-        FXL_LOG(ERROR) << this->trace_name() << " " << key_ << " "
-                       << "PageSnapshot.Get() null vmo";
-      }
+          if (!value) {
+            FXL_LOG(ERROR) << this->trace_name() << " " << key_ << " "
+                           << "PageSnapshot.Get() null vmo";
+          }
 
-      std::string value_as_string;
-      if (!fsl::StringFromVmo(*value, &value_as_string)) {
-        FXL_LOG(ERROR) << this->trace_name() << " " << key_
-                       << " Unable to extract data.";
-        return;
-      }
+          std::string value_as_string;
+          if (!fsl::StringFromVmo(*value, &value_as_string)) {
+            FXL_LOG(ERROR) << this->trace_name() << " " << key_
+                           << " Unable to extract data.";
+            return;
+          }
 
-      if (!XdrRead(value_as_string, &result_, filter_)) {
-        result_.reset();
-        return;
-      }
+          if (!XdrRead(value_as_string, &result_, filter_)) {
+            result_.reset();
+            return;
+          }
 
-      FXL_DCHECK(result_);
-    });
+          FXL_DCHECK(result_);
+        });
   }
 
   const std::string key_;
@@ -355,6 +354,5 @@ class DumpPageSnapshotCall : public PageOperation<std::string> {
 };
 
 }  // namespace modular
-}  // namespace fuchsia
 
 #endif  // PERIDOT_LIB_LEDGER_CLIENT_OPERATIONS_H_

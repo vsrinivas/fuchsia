@@ -7,7 +7,6 @@
 
 #include "lib/fxl/time/time_delta.h"
 
-namespace fuchsia {
 namespace modular {
 
 // Standard timeout for async teardown.
@@ -20,7 +19,7 @@ constexpr auto kBasicTimeout = fxl::TimeDelta::FromSeconds(1);
 // TODO(mesch): Obviously, this should adjust, be negotiated, or be set
 // automatically as needed rather than hardcoded.
 
-// Agent + overhead.
+// fuchsia::modular::Agent + overhead.
 constexpr auto kAgentRunnerTimeout = kBasicTimeout * 2;
 
 // Stories + overhead.
@@ -33,6 +32,5 @@ constexpr auto kUserRunnerTimeout =
 constexpr auto kUserProviderTimeout = kBasicTimeout + kUserRunnerTimeout;
 
 }  // namespace modular
-}  // namespace fuchsia
 
 #endif  // PERIDOT_LIB_COMMON_TEARDOWN_H_

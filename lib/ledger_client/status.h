@@ -9,12 +9,10 @@
 
 #include <fuchsia/ledger/cpp/fidl.h>
 
-namespace fuchsia {
 namespace modular {
 
 std::string LedgerStatusToString(fuchsia::ledger::Status status);
 
 }  // namespace modular
-}  // namespace fuchsia
 
 #endif  // PERIDOT_LIB_LEDGER_CLIENT_STATUS_H_

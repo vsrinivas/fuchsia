@@ -17,7 +17,6 @@
 #include "peridot/lib/common/teardown.h"
 #include "peridot/lib/fidl/clone.h"
 
-namespace fuchsia {
 namespace modular {
 
 constexpr char kAppStoragePath[] = "/data/APP_DATA";
@@ -40,8 +39,9 @@ std::string HashModuleUrl(const std::string& module_url) {
 
 ModuleControllerImpl::ModuleControllerImpl(
     StoryControllerImpl* const story_controller_impl,
-    fuchsia::sys::Launcher* const launcher, AppConfig module_config,
-    const ModuleData* const module_data,
+    fuchsia::sys::Launcher* const launcher,
+    fuchsia::modular::AppConfig module_config,
+    const fuchsia::modular::ModuleData* const module_data,
     fuchsia::sys::ServiceListPtr service_list,
     fidl::InterfaceRequest<fuchsia::ui::views_v1::ViewProvider>
         view_provider_request)
@@ -58,17 +58,18 @@ ModuleControllerImpl::ModuleControllerImpl(
 ModuleControllerImpl::~ModuleControllerImpl() {}
 
 void ModuleControllerImpl::Connect(
-    fidl::InterfaceRequest<ModuleController> request) {
+    fidl::InterfaceRequest<fuchsia::modular::ModuleController> request) {
   module_controller_bindings_.AddBinding(this, std::move(request));
 }
 
 // If the ComponentController connection closes, it means the module cannot be
 // started. We indicate this by the ERROR state.
 void ModuleControllerImpl::OnAppConnectionError() {
-  SetState(ModuleState::ERROR);
+  SetState(fuchsia::modular::ModuleState::ERROR);
 }
 
-void ModuleControllerImpl::SetState(const ModuleState new_state) {
+void ModuleControllerImpl::SetState(
+    const fuchsia::modular::ModuleState new_state) {
   if (state_ == new_state) {
     return;
   }
@@ -88,14 +89,14 @@ void ModuleControllerImpl::Teardown(std::function<void()> done) {
   }
 
   auto cont = [this] {
-    SetState(ModuleState::STOPPED);
+    SetState(fuchsia::modular::ModuleState::STOPPED);
 
     // We take ownership of *this from |story_controller_impl_| so that
     // teardown happens in StoryControllerImpl but *this is still alive when we
     // call |teardown_done_callbacks_|. One or more of the callbacks may be a
-    // result callback for ModuleController::Stop() and since *this owns the
-    // fidl::Binding for the channel on which the result message will be sent,
-    // it must be alive when the message is posted.
+    // result callback for fuchsia::modular::ModuleController::Stop() and since
+    // *this owns the fidl::Binding for the channel on which the result message
+    // will be sent, it must be alive when the message is posted.
     // TODO(thatguy,mesch): This point is reachable from two distinct
     // code-paths: originating from ModuleControllerImpl::Stop() or
     // StoryControllerImpl::Stop(). It is not clear whether ReleaseModule()
@@ -125,7 +126,8 @@ void ModuleControllerImpl::Teardown(std::function<void()> done) {
   app_client_.Teardown(kBasicTimeout, cont);
 }
 
-void ModuleControllerImpl::Watch(fidl::InterfaceHandle<ModuleWatcher> watcher) {
+void ModuleControllerImpl::Watch(
+    fidl::InterfaceHandle<fuchsia::modular::ModuleWatcher> watcher) {
   auto ptr = watcher.Bind();
   ptr->OnStateChange(state_);
   watchers_.AddInterfacePtr(std::move(ptr));
@@ -144,4 +146,3 @@ void ModuleControllerImpl::Stop(StopCallback done) {
 }
 
 }  // namespace modular
-}  // namespace fuchsia

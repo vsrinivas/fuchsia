@@ -15,7 +15,6 @@
 #include "peridot/bin/user_runner/entity_provider_runner/entity_provider_runner.h"
 #include "peridot/bin/user_runner/message_queue/message_queue_manager.h"
 
-namespace fuchsia {
 namespace modular {
 
 class AgentRunner;
@@ -28,11 +27,11 @@ struct ComponentContextInfo {
   EntityProviderRunner* const entity_provider_runner;
 };
 
-// Implements the ComponentContext interface, which is provided to
-// modules and agents. The interface is public, because the class
+// Implements the fuchsia::modular::ComponentContext interface, which is
+// provided to modules and agents. The interface is public, because the class
 // doesn't contain the Bindings for this interface. TODO(mesch): Move
 // bindings into the class.
-class ComponentContextImpl : public ComponentContext {
+class ComponentContextImpl : public fuchsia::modular::ComponentContext {
  public:
   // * A component namespace identifies components whose lifetimes are related,
   //   where all of their persisted information will live together; for modules
@@ -51,42 +50,46 @@ class ComponentContextImpl : public ComponentContext {
 
   const std::string& component_instance_id() { return component_instance_id_; }
 
-  void Connect(fidl::InterfaceRequest<ComponentContext> request);
-  ComponentContextPtr NewBinding();
+  void Connect(
+      fidl::InterfaceRequest<fuchsia::modular::ComponentContext> request);
+  fuchsia::modular::ComponentContextPtr NewBinding();
 
  private:
-  // |ComponentContext|
+  // |fuchsia::modular::ComponentContext|
   void GetLedger(fidl::InterfaceRequest<fuchsia::ledger::Ledger> request,
                  GetLedgerCallback result) override;
 
-  // |ComponentContext|
+  // |fuchsia::modular::ComponentContext|
   void ConnectToAgent(fidl::StringPtr url,
                       fidl::InterfaceRequest<fuchsia::sys::ServiceProvider>
                           incoming_services_request,
-                      fidl::InterfaceRequest<AgentController>
+                      fidl::InterfaceRequest<fuchsia::modular::AgentController>
                           agent_controller_request) override;
 
-  // |ComponentContext|
+  // |fuchsia::modular::ComponentContext|
   void ObtainMessageQueue(
       fidl::StringPtr name,
-      fidl::InterfaceRequest<MessageQueue> request) override;
+      fidl::InterfaceRequest<fuchsia::modular::MessageQueue> request) override;
 
-  // |ComponentContext|
+  // |fuchsia::modular::ComponentContext|
   void DeleteMessageQueue(fidl::StringPtr name) override;
 
-  // |ComponentContext|
-  void GetMessageSender(fidl::StringPtr queue_token,
-                        fidl::InterfaceRequest<MessageSender> request) override;
+  // |fuchsia::modular::ComponentContext|
+  void GetMessageSender(
+      fidl::StringPtr queue_token,
+      fidl::InterfaceRequest<fuchsia::modular::MessageSender> request) override;
 
-  // |ComponentContext|
+  // |fuchsia::modular::ComponentContext|
   void GetEntityResolver(
-      fidl::InterfaceRequest<EntityResolver> request) override;
+      fidl::InterfaceRequest<fuchsia::modular::EntityResolver> request)
+      override;
 
-  // |ComponentContext|
-  void CreateEntityWithData(fidl::VectorPtr<TypeToDataEntry> type_to_data,
-                            CreateEntityWithDataCallback result) override;
+  // |fuchsia::modular::ComponentContext|
+  void CreateEntityWithData(
+      fidl::VectorPtr<fuchsia::modular::TypeToDataEntry> type_to_data,
+      CreateEntityWithDataCallback result) override;
 
-  // |ComponentContext|
+  // |fuchsia::modular::ComponentContext|
   void GetPackageName(GetPackageNameCallback result) override;
 
   MessageQueueManager* const message_queue_manager_;
@@ -98,12 +101,11 @@ class ComponentContextImpl : public ComponentContext {
   const std::string component_instance_id_;
   const std::string component_url_;
 
-  fidl::BindingSet<ComponentContext> bindings_;
+  fidl::BindingSet<fuchsia::modular::ComponentContext> bindings_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ComponentContextImpl);
 };
 
 }  // namespace modular
-}  // namespace fuchsia
 
 #endif  // PERIDOT_BIN_USER_RUNNER_COMPONENT_CONTEXT_IMPL_H_

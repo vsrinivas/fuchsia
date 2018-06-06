@@ -15,8 +15,8 @@
 #include "peridot/tests/chain/defs.h"
 #include "peridot/tests/common/defs.h"
 
-using fuchsia::modular::testing::Signal;
-using fuchsia::modular::testing::TestPoint;
+using modular::testing::Signal;
+using modular::testing::TestPoint;
 
 namespace {
 
@@ -25,13 +25,13 @@ class TestApp {
  public:
   TestPoint initialized_{"Child module initialized"};
 
-  TestApp(fuchsia::modular::ModuleHost* module_host,
+  TestApp(modular::ModuleHost* module_host,
           fidl::InterfaceRequest<
               fuchsia::ui::views_v1::ViewProvider> /*view_provider_request*/)
       : module_context_(module_host->module_context()) {
     module_context_->GetComponentContext(component_context_.NewRequest());
     component_context_->GetEntityResolver(entity_resolver_.NewRequest());
-    fuchsia::modular::testing::Init(module_host->startup_context(), __FILE__);
+    modular::testing::Init(module_host->startup_context(), __FILE__);
 
     initialized_.Pass();
 
@@ -45,11 +45,11 @@ class TestApp {
   // Called from ModuleDriver.
   void Terminate(const std::function<void()>& done) {
     stopped_.Pass();
-    fuchsia::modular::testing::Done(done);
+    modular::testing::Done(done);
   }
 
  private:
-  TestPoint link_one_correct_{"Link one value is correct."};
+  TestPoint link_one_correct_{"fuchsia::modular::Link one value is correct."};
 
   void VerifyLinkOne() {
     module_context_->GetLink("one", link_one_.NewRequest());
@@ -69,7 +69,7 @@ class TestApp {
     });
   }
 
-  TestPoint link_two_correct_{"Link two value is correct."};
+  TestPoint link_two_correct_{"fuchsia::modular::Link two value is correct."};
 
   void VerifyLinkTwo() {
     module_context_->GetLink("two", link_two_.NewRequest());
@@ -82,7 +82,8 @@ class TestApp {
     });
   }
 
-  TestPoint link_three_correct_{"Link three value is correct."};
+  TestPoint link_three_correct_{
+      "fuchsia::modular::Link three value is correct."};
 
   void VerifyLinkThree() {
     module_context_->GetLink("three", link_three_.NewRequest());
@@ -95,17 +96,19 @@ class TestApp {
     });
   }
 
-  TestPoint default_link_correct_{"Default Link value is correct."};
+  TestPoint default_link_correct_{
+      "Default fuchsia::modular::Link value is correct."};
 
   void VerifyDefaultLink() {
-    // Check that we did get a default link as specified by the Intent.
+    // Check that we did get a default link as specified by the
+    // fuchsia::modular::Intent.
     module_context_->GetLink(nullptr, default_link_.NewRequest());
     default_link_->Get(nullptr, [this](fidl::StringPtr content) {
       if (content == "1337") {
         default_link_correct_.Pass();
       }
 
-      Signal(fuchsia::modular::testing::kTestShutdown);
+      Signal(modular::testing::kTestShutdown);
     });
   }
 
@@ -132,8 +135,8 @@ class TestApp {
 int main(int /*argc*/, const char** /*argv*/) {
   fsl::MessageLoop loop;
   auto context = fuchsia::sys::StartupContext::CreateFromStartupInfo();
-  fuchsia::modular::ModuleDriver<TestApp> driver(context.get(),
-                                                 [&loop] { loop.QuitNow(); });
+  modular::ModuleDriver<TestApp> driver(context.get(),
+                                        [&loop] { loop.QuitNow(); });
   loop.Run();
   return 0;
 }

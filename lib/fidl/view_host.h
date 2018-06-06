@@ -13,7 +13,6 @@
 #include "lib/fxl/macros.h"
 #include "lib/ui/view_framework/base_view.h"
 
-namespace fuchsia {
 namespace modular {
 
 // A class that allows modules to display the UI of their child
@@ -25,20 +24,23 @@ class ViewHost : public mozart::BaseView {
  public:
   explicit ViewHost(
       fuchsia::ui::views_v1::ViewManagerPtr view_manager,
-      fidl::InterfaceRequest<fuchsia::ui::views_v1_token::ViewOwner> view_owner_request);
+      fidl::InterfaceRequest<fuchsia::ui::views_v1_token::ViewOwner>
+          view_owner_request);
   ~ViewHost() override;
 
   // Connects one more view. Calling this method multiple times adds
   // multiple views and lays them out horizontally next to each other.
   // This is experimental to establish data flow patterns in toy
   // applications and can be changed or extended as needed.
-  void ConnectView(fidl::InterfaceHandle<fuchsia::ui::views_v1_token::ViewOwner> view_owner);
+  void ConnectView(
+      fidl::InterfaceHandle<fuchsia::ui::views_v1_token::ViewOwner> view_owner);
 
  private:
   struct ViewData;
 
   // |BaseView|:
-  void OnPropertiesChanged(fuchsia::ui::views_v1::ViewProperties old_properties) override;
+  void OnPropertiesChanged(
+      fuchsia::ui::views_v1::ViewProperties old_properties) override;
   void OnChildUnavailable(uint32_t child_key) override;
 
   void UpdateScene();
@@ -52,6 +54,5 @@ class ViewHost : public mozart::BaseView {
 };
 
 }  // namespace modular
-}  // namespace fuchsia
 
 #endif  // PERIDOT_LIB_FIDL_VIEW_HOST_H_

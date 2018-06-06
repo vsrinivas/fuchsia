@@ -8,11 +8,10 @@
 #include "peridot/bin/suggestion_engine/decision_policy.h"
 #include "peridot/bin/suggestion_engine/ranker.h"
 
-namespace fuchsia {
 namespace modular {
 
 namespace {
-  constexpr double kDefaultThreshold = 1.0;
+constexpr double kDefaultThreshold = 1.0;
 }  // namespace
 
 // Base class for performing a decision on some value.
@@ -31,6 +30,5 @@ class RankOverThresholdDecisionPolicy : public DecisionPolicy {
 };
 
 }  // namespace modular
-}  // namespace fuchsia
 
 #endif  // PERIDOT_BIN_SUGGESTION_ENGINE_DECISION_POLICIES_RANK_OVER_THRESHOLD_DECISION_POLICY_H_

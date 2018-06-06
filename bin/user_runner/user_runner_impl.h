@@ -32,7 +32,6 @@
 #include "peridot/lib/fidl/view_host.h"
 #include "peridot/lib/rapidjson/rapidjson.h"
 
-namespace fuchsia {
 namespace modular {
 
 class AgentRunner;
@@ -48,8 +47,8 @@ class StoryProviderImpl;
 class SessionStorage;
 class VisibleStoriesHandler;
 
-class UserRunnerImpl : modular::internal::UserRunner,
-                       UserShellContext,
+class UserRunnerImpl : fuchsia::modular::internal::UserRunner,
+                       fuchsia::modular::UserShellContext,
                        EntityProviderLauncher {
  public:
   UserRunnerImpl(fuchsia::sys::StartupContext* startup_context, bool test);
@@ -61,8 +60,9 @@ class UserRunnerImpl : modular::internal::UserRunner,
 
  private:
   // |UserRunner|
-  void Initialize(fuchsia::modular::auth::AccountPtr account, AppConfig user_shell,
-                  AppConfig story_shell,
+  void Initialize(fuchsia::modular::auth::AccountPtr account, 
+                  fuchsia::modular::AppConfig user_shell,
+                  fuchsia::modular::AppConfig story_shell,
                   fidl::InterfaceHandle<fuchsia::modular::auth::TokenProviderFactory>
                       token_provider_factory,
                   fidl::InterfaceHandle<fuchsia::modular::internal::UserContext>
@@ -71,7 +71,7 @@ class UserRunnerImpl : modular::internal::UserRunner,
                       view_owner_request) override;
 
   // |UserRunner|
-  void SwapUserShell(AppConfig user_shell,
+  void SwapUserShell(fuchsia::modular::AppConfig user_shell,
                      SwapUserShellCallback callback) override;
 
   // Sequence of Initialize() broken up into steps for clarity.
@@ -87,50 +87,58 @@ class UserRunnerImpl : modular::internal::UserRunner,
   void InitializeClipboard();
   void InitializeMessageQueueManager();
   void InitializeMaxwellAndModular(const fidl::StringPtr& user_shell_url,
-                                   AppConfig story_shell);
+                                   fuchsia::modular::AppConfig story_shell);
   void InitializeUserShell(
-      AppConfig user_shell,
+      fuchsia::modular::AppConfig user_shell,
       fidl::InterfaceRequest<fuchsia::ui::views_v1_token::ViewOwner>
           view_owner_request);
 
-  void RunUserShell(AppConfig user_shell);
+  void RunUserShell(fuchsia::modular::AppConfig user_shell);
   // This is a termination sequence that may be used with |AtEnd()|, but also
   // may be executed to terminate the currently running user shell.
   void TerminateUserShell(const std::function<void()>& done);
 
-  // |UserShellContext|
+  // |fuchsia::modular::UserShellContext|
   void GetAccount(GetAccountCallback callback) override;
-  void GetAgentProvider(fidl::InterfaceRequest<AgentProvider> request) override;
+  void GetAgentProvider(
+      fidl::InterfaceRequest<fuchsia::modular::AgentProvider> request) override;
   void GetComponentContext(
-      fidl::InterfaceRequest<ComponentContext> request) override;
+      fidl::InterfaceRequest<fuchsia::modular::ComponentContext> request)
+      override;
   void GetDeviceName(GetDeviceNameCallback callback) override;
   void GetFocusController(
-      fidl::InterfaceRequest<FocusController> request) override;
-  void GetFocusProvider(fidl::InterfaceRequest<FocusProvider> request) override;
+      fidl::InterfaceRequest<fuchsia::modular::FocusController> request)
+      override;
+  void GetFocusProvider(
+      fidl::InterfaceRequest<fuchsia::modular::FocusProvider> request) override;
   void GetIntelligenceServices(
       fidl::InterfaceRequest<fuchsia::modular::IntelligenceServices> request)
       override;
-  void GetLink(fidl::InterfaceRequest<Link> request) override;
-  void GetPresentation(
-      fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> request) override;
+  void GetLink(fidl::InterfaceRequest<fuchsia::modular::Link> request) override;
+  void GetPresentation(fidl::InterfaceRequest<fuchsia::ui::policy::Presentation>
+                           request) override;
   void GetSpeechToText(
       fidl::InterfaceRequest<speech::SpeechToText> request) override;
-  void GetStoryProvider(fidl::InterfaceRequest<StoryProvider> request) override;
+  void GetStoryProvider(
+      fidl::InterfaceRequest<fuchsia::modular::StoryProvider> request) override;
   void GetSuggestionProvider(
       fidl::InterfaceRequest<fuchsia::modular::SuggestionProvider> request)
       override;
   void GetVisibleStoriesController(
-      fidl::InterfaceRequest<VisibleStoriesController> request) override;
+      fidl::InterfaceRequest<fuchsia::modular::VisibleStoriesController>
+          request) override;
   void Logout() override;
 
   // |EntityProviderLauncher|
   void ConnectToEntityProvider(
       const std::string& component_id,
-      fidl::InterfaceRequest<EntityProvider> entity_provider_request,
-      fidl::InterfaceRequest<AgentController> agent_controller_request)
-      override;
+      fidl::InterfaceRequest<fuchsia::modular::EntityProvider>
+          entity_provider_request,
+      fidl::InterfaceRequest<fuchsia::modular::AgentController>
+          agent_controller_request) override;
 
-  fuchsia::sys::ServiceProviderPtr GetServiceProvider(AppConfig config);
+  fuchsia::sys::ServiceProviderPtr GetServiceProvider(
+      fuchsia::modular::AppConfig config);
   fuchsia::sys::ServiceProviderPtr GetServiceProvider(const std::string& url);
 
   fuchsia::ledger::cloud::CloudProviderPtr GetCloudProvider();
@@ -163,11 +171,11 @@ class UserRunnerImpl : modular::internal::UserRunner,
   const bool test_;
 
   fidl::BindingSet<fuchsia::modular::internal::UserRunner> bindings_;
-  fidl::Binding<UserShellContext> user_shell_context_binding_;
+  fidl::Binding<fuchsia::modular::UserShellContext> user_shell_context_binding_;
 
   fuchsia::modular::auth::TokenProviderFactoryPtr token_provider_factory_;
-  modular::internal::UserContextPtr user_context_;
-  std::unique_ptr<AppClient<Lifecycle>> cloud_provider_app_;
+  fuchsia::modular::internal::UserContextPtr user_context_;
+  std::unique_ptr<AppClient<fuchsia::modular::Lifecycle>> cloud_provider_app_;
   fuchsia::ledger::cloud::firebase::FactoryPtr cloud_provider_factory_;
   std::unique_ptr<AppClient<fuchsia::ledger::internal::LedgerController>>
       ledger_app_;
@@ -184,10 +192,10 @@ class UserRunnerImpl : modular::internal::UserRunner,
 
   std::unique_ptr<AppClient<fuchsia::modular::UserIntelligenceProviderFactory>>
       maxwell_app_;
-  std::unique_ptr<AppClient<Lifecycle>> context_engine_app_;
-  std::unique_ptr<AppClient<Lifecycle>> module_resolver_app_;
-  std::unique_ptr<AppClient<Lifecycle>> user_shell_app_;
-  UserShellPtr user_shell_;
+  std::unique_ptr<AppClient<fuchsia::modular::Lifecycle>> context_engine_app_;
+  std::unique_ptr<AppClient<fuchsia::modular::Lifecycle>> module_resolver_app_;
+  std::unique_ptr<AppClient<fuchsia::modular::Lifecycle>> user_shell_app_;
+  fuchsia::modular::UserShellPtr user_shell_;
   std::unique_ptr<ViewHost> user_shell_view_host_;
 
   std::unique_ptr<EntityProviderRunner> entity_provider_runner_;
@@ -210,8 +218,8 @@ class UserRunnerImpl : modular::internal::UserRunner,
   //   and create message queues
   // - |context_engine_app_| so it can resolve entity references
   // - |modular resolver_service_| so it can resolve entity references
-  std::unique_ptr<
-      fidl::BindingSet<ComponentContext, std::unique_ptr<ComponentContextImpl>>>
+  std::unique_ptr<fidl::BindingSet<fuchsia::modular::ComponentContext,
+                                   std::unique_ptr<ComponentContextImpl>>>
       maxwell_component_context_bindings_;
 
   // Service provider interfaces for maxwell services. They are created with
@@ -223,7 +231,7 @@ class UserRunnerImpl : modular::internal::UserRunner,
 
   // Services we provide to the module resolver's namespace.
   fuchsia::sys::ServiceProviderImpl module_resolver_ns_services_;
-  ModuleResolverPtr module_resolver_service_;
+  fuchsia::modular::ModuleResolverPtr module_resolver_service_;
 
   class PresentationProviderImpl;
   std::unique_ptr<PresentationProviderImpl> presentation_provider_impl_;
@@ -242,7 +250,7 @@ class UserRunnerImpl : modular::internal::UserRunner,
 
   // For the Ledger Debug Dashboard
   std::unique_ptr<Scope> ledger_dashboard_scope_;
-  std::unique_ptr<AppClient<Lifecycle>> ledger_dashboard_app_;
+  std::unique_ptr<AppClient<fuchsia::modular::Lifecycle>> ledger_dashboard_app_;
 
   // Holds the actions scheduled by calls to the AtEnd() method.
   std::vector<std::function<void(std::function<void()>)>> at_end_;
@@ -257,7 +265,7 @@ class UserRunnerImpl : modular::internal::UserRunner,
   fuchsia::sys::ServiceProviderPtr services_from_clipboard_agent_;
 
   // The agent controller used to control the clipboard agent.
-  AgentControllerPtr clipboard_agent_controller_;
+  fuchsia::modular::AgentControllerPtr clipboard_agent_controller_;
 
   class SwapUserShellOperation;
 
@@ -267,6 +275,5 @@ class UserRunnerImpl : modular::internal::UserRunner,
 };
 
 }  // namespace modular
-}  // namespace fuchsia
 
 #endif  // PERIDOT_BIN_USER_RUNNER_USER_RUNNER_IMPL_H_

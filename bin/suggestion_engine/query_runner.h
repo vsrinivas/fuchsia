@@ -10,7 +10,6 @@
 
 #include "lib/fxl/memory/weak_ptr.h"
 
-namespace fuchsia {
 namespace modular {
 
 struct QueryHandlerRecord;
@@ -21,9 +20,8 @@ struct QueryHandlerRecord;
 // arrives and when all handlers finish processing the query or it times out.
 class QueryRunner {
  public:
-  QueryRunner(fidl::InterfaceHandle<QueryListener> listener,
-              UserInput input,
-              int count);
+  QueryRunner(fidl::InterfaceHandle<fuchsia::modular::QueryListener> listener,
+              fuchsia::modular::UserInput input, int count);
   ~QueryRunner();
 
   // Starts running a query notifying the provided handlers and processes their
@@ -36,42 +34,43 @@ class QueryRunner {
   // Sets a callback that will be executed when a response for the query in
   // execution is received.
   void SetResponseCallback(
-      std::function<void(std::string, QueryResponse)> callback);
+      std::function<void(std::string, fuchsia::modular::QueryResponse)>
+          callback);
 
-  QueryListener* listener() const { return listener_.get(); }
+  fuchsia::modular::QueryListener* listener() const { return listener_.get(); }
   size_t max_results() const { return max_results_; }
 
  private:
   void DispatchQuery(const QueryHandlerRecord& handler);
 
   void HandlerCallback(const std::string& handler_url,
-                       QueryResponse response);
+                       fuchsia::modular::QueryResponse response);
 
   void TimeOut();
 
   void EndRequest();
 
-  QueryListenerPtr listener_;
-  const UserInput input_;
+  fuchsia::modular::QueryListenerPtr listener_;
+  const fuchsia::modular::UserInput input_;
   const size_t max_results_;
   bool request_ended_;
   fxl::WeakPtrFactory<QueryRunner> weak_ptr_factory_;
 
-  std::function<void(std::string, QueryResponse)> on_query_response_callback_;
+  std::function<void(std::string, fuchsia::modular::QueryResponse)>
+      on_query_response_callback_;
   std::function<void()> on_end_request_callback_;
 
   std::multiset<std::string> outstanding_handlers_;
 };
 
 struct QueryHandlerRecord {
-  QueryHandlerRecord(QueryHandlerPtr handler, std::string url)
+  QueryHandlerRecord(fuchsia::modular::QueryHandlerPtr handler, std::string url)
       : handler(std::move(handler)), url(std::move(url)) {}
 
-  QueryHandlerPtr handler;
+  fuchsia::modular::QueryHandlerPtr handler;
   std::string url;
 };
 
 }  // namespace modular
-}  // namespace fuchsia
 
 #endif  // PERIDOT_BIN_SUGGESTION_ENGINE_QUERY_RUNNER_H_

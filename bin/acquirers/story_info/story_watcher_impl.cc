@@ -38,7 +38,7 @@ StoryWatcherImpl::StoryWatcherImpl(
                           .SetStoryId(story_id)
                           .SetStoryFocused(false)
                           .Build();
-  // TODO(thatguy): Add modular.StoryState.
+  // TODO(thatguy): Add StoryState.
   // TODO(thatguy): Add visible state.
 
   writer_->CreateValue(context_value_.NewRequest(),
@@ -59,12 +59,12 @@ StoryWatcherImpl::StoryWatcherImpl(
 
 StoryWatcherImpl::~StoryWatcherImpl() = default;
 
-// |StoryWatcher|
+// |fuchsia::modular::StoryWatcher|
 void StoryWatcherImpl::OnStateChange(fuchsia::modular::StoryState new_state) {
-  // TODO(thatguy): Add recording of state to StoryMetadata.
+  // TODO(thatguy): Add recording of state to fuchsia::modular::StoryMetadata.
 }
 
-// |StoryWatcher|
+// |fuchsia::modular::StoryWatcher|
 void StoryWatcherImpl::OnModuleAdded(fuchsia::modular::ModuleData module_data) {
   fuchsia::modular::ContextValueWriterPtr module_value;
   context_value_->CreateChildValue(module_value.NewRequest(),
@@ -76,18 +76,18 @@ void StoryWatcherImpl::OnModuleAdded(fuchsia::modular::ModuleData module_data) {
                              .SetModulePath(module_data.module_path)
                              .Build()));
 
-  auto path = fuchsia::modular::EncodeModulePath(module_data.module_path);
+  auto path = modular::EncodeModulePath(module_data.module_path);
   module_values_.emplace(path, std::move(module_value));
 }
 
-// |StoryLinksWatcher|
+// |fuchsia::modular::StoryLinksWatcher|
 void StoryWatcherImpl::OnNewLink(fuchsia::modular::LinkPath link_path) {
   WatchLink(std::move(link_path));
 }
 
 void StoryWatcherImpl::WatchLink(fuchsia::modular::LinkPath link_path) {
   links_.emplace(std::make_pair(
-      fuchsia::modular::MakeLinkKey(link_path),
+      modular::MakeLinkKey(link_path),
       std::make_unique<LinkWatcherImpl>(this, story_controller_.get(),
                                         story_id_, context_value_.get(),
                                         std::move(link_path))));

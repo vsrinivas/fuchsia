@@ -14,7 +14,6 @@
 #include "peridot/lib/fidl/json_xdr.h"
 #include "peridot/lib/ledger_client/storage.h"
 
-namespace fuchsia {
 namespace modular {
 namespace {
 
@@ -42,9 +41,9 @@ void XdrTriggerInfo_v2(XdrContext* const xdr,
 }
 
 constexpr XdrFilterType<AgentRunnerStorage::TriggerInfo> XdrTriggerInfo[] = {
-  XdrTriggerInfo_v2,
-  XdrTriggerInfo_v1,
-  nullptr,
+    XdrTriggerInfo_v2,
+    XdrTriggerInfo_v1,
+    nullptr,
 };
 
 }  // namespace
@@ -228,4 +227,3 @@ void AgentRunnerStorageImpl::OnPageDelete(const std::string& key) {
 }
 
 }  // namespace modular
-}  // namespace fuchsia

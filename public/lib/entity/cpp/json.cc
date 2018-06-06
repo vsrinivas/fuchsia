@@ -10,7 +10,6 @@
 #include "rapidjson/stringbuffer.h"
 #include "rapidjson/writer.h"
 
-namespace fuchsia {
 namespace modular {
 
 constexpr char kEntityTypeProperty[] = "@type";
@@ -62,7 +61,8 @@ bool ExtractEntityTypesFromJson(const std::string& json,
                                 std::vector<std::string>* const output) {
   FXL_CHECK(output != nullptr);
   // If the content has the @type attribute, take its contents and populate the
-  // EntityMetadata appropriately, overriding whatever is there.
+  // fuchsia::modular::EntityMetadata appropriately, overriding whatever is
+  // there.
   rapidjson::Document doc;
   doc.Parse(json);
   if (doc.HasParseError()) {
@@ -100,4 +100,3 @@ bool ExtractEntityTypesFromJson(const rapidjson::Value& value,
 }
 
 }  // namespace modular
-}  // namespace fuchsia

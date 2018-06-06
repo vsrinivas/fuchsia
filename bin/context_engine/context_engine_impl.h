@@ -10,7 +10,6 @@
 #include "peridot/bin/context_engine/context_repository.h"
 #include "peridot/bin/context_engine/debug.h"
 
-namespace fuchsia {
 namespace modular {
 
 class EntityResolver;
@@ -18,33 +17,37 @@ class EntityResolver;
 class ContextReaderImpl;
 class ContextWriterImpl;
 
-class ContextEngineImpl : ContextEngine {
+class ContextEngineImpl : fuchsia::modular::ContextEngine {
  public:
   // Does not take ownership of |entity_resolver|.
-  ContextEngineImpl(EntityResolver* entity_resolver);
+  ContextEngineImpl(fuchsia::modular::EntityResolver* entity_resolver);
   ~ContextEngineImpl() override;
 
-  void AddBinding(fidl::InterfaceRequest<ContextEngine> request);
+  void AddBinding(
+      fidl::InterfaceRequest<fuchsia::modular::ContextEngine> request);
 
   fxl::WeakPtr<ContextDebugImpl> debug();
 
  private:
-  // |ContextEngine|
-  void GetWriter(ComponentScope client_info,
-                 fidl::InterfaceRequest<ContextWriter> request) override;
+  // |fuchsia::modular::ContextEngine|
+  void GetWriter(
+      fuchsia::modular::ComponentScope client_info,
+      fidl::InterfaceRequest<fuchsia::modular::ContextWriter> request) override;
 
-  // |ContextEngine|
-  void GetReader(ComponentScope client_info,
-                 fidl::InterfaceRequest<ContextReader> request) override;
+  // |fuchsia::modular::ContextEngine|
+  void GetReader(
+      fuchsia::modular::ComponentScope client_info,
+      fidl::InterfaceRequest<fuchsia::modular::ContextReader> request) override;
 
-  // |ContextEngine|
-  void GetContextDebug(fidl::InterfaceRequest<ContextDebug> request) override;
+  // |fuchsia::modular::ContextEngine|
+  void GetContextDebug(
+      fidl::InterfaceRequest<fuchsia::modular::ContextDebug> request) override;
 
-  EntityResolver* const entity_resolver_;
+  fuchsia::modular::EntityResolver* const entity_resolver_;
 
   ContextRepository repository_;
 
-  fidl::BindingSet<ContextEngine> bindings_;
+  fidl::BindingSet<fuchsia::modular::ContextEngine> bindings_;
 
   std::vector<std::unique_ptr<ContextReaderImpl>> readers_;
   std::vector<std::unique_ptr<ContextWriterImpl>> writers_;
@@ -53,6 +56,5 @@ class ContextEngineImpl : ContextEngine {
 };
 
 }  // namespace modular
-}  // namespace fuchsia
 
 #endif  // PERIDOT_BIN_CONTEXT_ENGINE_CONTEXT_ENGINE_IMPL_H_

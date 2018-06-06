@@ -9,7 +9,6 @@
 #include <fuchsia/ledger/cpp/fidl.h>
 #include "lib/fxl/logging.h"
 
-namespace fuchsia {
 namespace modular {
 
 std::string LedgerStatusToString(fuchsia::ledger::Status status) {
@@ -48,4 +47,3 @@ std::string LedgerStatusToString(fuchsia::ledger::Status status) {
 };
 
 }  // namespace modular
-}  // namespace fuchsia

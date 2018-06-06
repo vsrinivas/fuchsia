@@ -15,7 +15,6 @@
 #include "lib/fxl/macros.h"
 #include "peridot/lib/fidl/app_client.h"
 
-namespace fuchsia {
 namespace modular {
 namespace testing {
 
@@ -44,6 +43,5 @@ class LedgerRepositoryForTesting {
 
 }  // namespace testing
 }  // namespace modular
-}  // namespace fuchsia
 
 #endif  // PERIDOT_LIB_TESTING_LEDGER_REPOSITORY_FOR_TESTING_H_

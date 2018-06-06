@@ -11,7 +11,6 @@
 #include <fuchsia/modular/cpp/fidl.h>
 #include "lib/async/cpp/operation.h"
 
-namespace fuchsia {
 namespace modular {
 
 class ParameterTypeInferenceHelper {
@@ -30,12 +29,11 @@ class ParameterTypeInferenceHelper {
   class GetParameterTypesCall;
 
   fuchsia::modular::EntityResolverPtr entity_resolver_;
-  fuchsia::modular::OperationCollection operation_collection_;
+  OperationCollection operation_collection_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ParameterTypeInferenceHelper);
 };
 
 }  // namespace modular
-}  // namespace fuchsia
 
 #endif  // PERIDOT_BIN_MODULE_RESOLVER_TYPE_INFERENCE_H_

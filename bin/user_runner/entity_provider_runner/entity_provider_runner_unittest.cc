@@ -29,7 +29,6 @@
 #include "peridot/lib/testing/mock_base.h"
 #include "peridot/lib/testing/test_with_ledger.h"
 
-namespace fuchsia {
 namespace modular {
 namespace testing {
 namespace {
@@ -45,8 +44,8 @@ class EntityProviderRunnerTest : public TestWithLedger, EntityProviderLauncher {
         ledger_client(), MakePageId("0123456789123456"), mq_data_dir_.path()));
     entity_provider_runner_.reset(
         new EntityProviderRunner(static_cast<EntityProviderLauncher*>(this)));
-    // The |UserIntelligenceProvider| below must be nullptr in order for agent
-    // creation to be synchronous, which these tests assume.
+    // The |fuchsia::modular::UserIntelligenceProvider| below must be nullptr in
+    // order for agent creation to be synchronous, which these tests assume.
     agent_runner_.reset(new AgentRunner(
         &launcher_, mqm_.get(), ledger_repository(), &agent_runner_storage_,
         token_provider_factory_.get(), nullptr, entity_provider_runner_.get()));
@@ -74,9 +73,10 @@ class EntityProviderRunnerTest : public TestWithLedger, EntityProviderLauncher {
   // |EntityProviderLauncher|
   void ConnectToEntityProvider(
       const std::string& agent_url,
-      fidl::InterfaceRequest<EntityProvider> entity_provider_request,
-      fidl::InterfaceRequest<AgentController> agent_controller_request)
-      override {
+      fidl::InterfaceRequest<fuchsia::modular::EntityProvider>
+          entity_provider_request,
+      fidl::InterfaceRequest<fuchsia::modular::AgentController>
+          agent_controller_request) override {
     agent_runner_->ConnectToEntityProvider(agent_url,
                                            std::move(entity_provider_request),
                                            std::move(agent_controller_request));
@@ -96,7 +96,7 @@ class EntityProviderRunnerTest : public TestWithLedger, EntityProviderLauncher {
 };
 
 class MyEntityProvider : AgentImpl::Delegate,
-                         EntityProvider,
+                         fuchsia::modular::EntityProvider,
                          public fuchsia::sys::ComponentController,
                          public testing::MockBase {
  public:
@@ -109,7 +109,7 @@ class MyEntityProvider : AgentImpl::Delegate,
         entity_provider_binding_(this),
         launch_info_(std::move(launch_info)) {
     outgoing_directory_->AddEntry(
-        EntityProvider::Name_,
+        fuchsia::modular::EntityProvider::Name_,
         fbl::AdoptRef(new fs::Service([this](zx::channel channel) {
           entity_provider_binding_.Bind(std::move(channel));
           return ZX_OK;
@@ -126,14 +126,18 @@ class MyEntityProvider : AgentImpl::Delegate,
         launch_info_.additional_services->provider.Bind();
     fuchsia::sys::ConnectToService(additional_services.get(),
                                    agent_context_.NewRequest());
-    ComponentContextPtr component_context;
+    fuchsia::modular::ComponentContextPtr component_context;
     agent_context_->GetComponentContext(component_context.NewRequest());
     component_context->GetEntityResolver(entity_resolver_.NewRequest());
   }
 
   size_t GetCallCount(const std::string func) { return counts.count(func); }
-  EntityResolver* entity_resolver() { return entity_resolver_.get(); }
-  AgentContext* agent_context() { return agent_context_.get(); }
+  fuchsia::modular::EntityResolver* entity_resolver() {
+    return entity_resolver_.get();
+  }
+  fuchsia::modular::AgentContext* agent_context() {
+    return agent_context_.get();
+  }
 
  private:
   // |ComponentController|
@@ -155,14 +159,14 @@ class MyEntityProvider : AgentImpl::Delegate,
     done();
   }
 
-  // |EntityProvider|
+  // |fuchsia::modular::EntityProvider|
   void GetTypes(fidl::StringPtr cookie, GetTypesCallback callback) override {
     fidl::VectorPtr<fidl::StringPtr> types;
     types.push_back("MyType");
     callback(std::move(types));
   }
 
-  // |EntityProvider|
+  // |fuchsia::modular::EntityProvider|
   void GetData(fidl::StringPtr cookie, fidl::StringPtr type,
                GetDataCallback callback) override {
     callback(type.get() + ":MyData");
@@ -171,9 +175,9 @@ class MyEntityProvider : AgentImpl::Delegate,
  private:
   fs::SynchronousVfs vfs_;
   fbl::RefPtr<fs::PseudoDir> outgoing_directory_;
-  AgentContextPtr agent_context_;
+  fuchsia::modular::AgentContextPtr agent_context_;
   std::unique_ptr<AgentImpl> agent_impl_;
-  EntityResolverPtr entity_resolver_;
+  fuchsia::modular::EntityResolverPtr entity_resolver_;
   fidl::Binding<fuchsia::sys::ComponentController> controller_;
   fidl::Binding<fuchsia::modular::EntityProvider> entity_provider_binding_;
   fuchsia::sys::LaunchInfo launch_info_;
@@ -195,7 +199,7 @@ TEST_F(EntityProviderRunnerTest, Basic) {
 
   // 1. Start up the entity provider agent.
   fuchsia::sys::ServiceProviderPtr incoming_services;
-  AgentControllerPtr agent_controller;
+  fuchsia::modular::AgentControllerPtr agent_controller;
   agent_runner()->ConnectToAgent("dummy_requestor_url", kMyAgentUrl,
                                  incoming_services.NewRequest(),
                                  agent_controller.NewRequest());
@@ -209,7 +213,7 @@ TEST_F(EntityProviderRunnerTest, Basic) {
   // 2. Make an entity reference on behalf of this agent.
   // The framework should use |kMyAgentUrl| as the agent to associate new
   // references.
-  EntityReferenceFactoryPtr factory;
+  fuchsia::modular::EntityReferenceFactoryPtr factory;
   dummy_agent->agent_context()->GetEntityReferenceFactory(factory.NewRequest());
   fidl::StringPtr entity_ref;
   factory->CreateReference("my_cookie", [&entity_ref](fidl::StringPtr retval) {
@@ -219,9 +223,10 @@ TEST_F(EntityProviderRunnerTest, Basic) {
   RunLoopUntilWithTimeout([&entity_ref] { return !entity_ref.is_null(); });
   EXPECT_FALSE(entity_ref.is_null());
 
-  // 3. Resolve the reference into an |Entity|, make calls to GetTypes and
+  // 3. Resolve the reference into an |fuchsia::modular::Entity|, make calls to
+  // GetTypes and
   //    GetData, which should route into our |MyEntityProvider|.
-  EntityPtr entity;
+  fuchsia::modular::EntityPtr entity;
   dummy_agent->entity_resolver()->ResolveEntity(entity_ref,
                                                 entity.NewRequest());
 
@@ -247,9 +252,9 @@ TEST_F(EntityProviderRunnerTest, DataEntity) {
 
   auto entity_ref = entity_provider_runner()->CreateReferenceFromData(data);
 
-  EntityResolverPtr entity_resolver;
+  fuchsia::modular::EntityResolverPtr entity_resolver;
   entity_provider_runner()->ConnectEntityResolver(entity_resolver.NewRequest());
-  EntityPtr entity;
+  fuchsia::modular::EntityPtr entity;
   entity_resolver->ResolveEntity(entity_ref, entity.NewRequest());
 
   fidl::VectorPtr<fidl::StringPtr> output_types;
@@ -272,4 +277,3 @@ TEST_F(EntityProviderRunnerTest, DataEntity) {
 }  // namespace
 }  // namespace testing
 }  // namespace modular
-}  // namespace fuchsia

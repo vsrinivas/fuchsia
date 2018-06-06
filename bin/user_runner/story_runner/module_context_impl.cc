@@ -13,13 +13,13 @@
 #include "peridot/lib/fidl/clone.h"
 #include "peridot/lib/ledger_client/storage.h"
 
-namespace fuchsia {
 namespace modular {
 
 ModuleContextImpl::ModuleContextImpl(
     const ModuleContextInfo& info,
-    const ModuleData* const module_data,
-    fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> service_provider_request)
+    const fuchsia::modular::ModuleData* const module_data,
+    fidl::InterfaceRequest<fuchsia::sys::ServiceProvider>
+        service_provider_request)
     : module_data_(module_data),
       story_controller_impl_(info.story_controller_impl),
       component_context_impl_(info.component_context_info,
@@ -28,8 +28,8 @@ ModuleContextImpl::ModuleContextImpl(
                               EncodeModulePath(module_data_->module_path),
                               module_data_->module_url),
       user_intelligence_provider_(info.user_intelligence_provider) {
-  service_provider_impl_.AddService<ModuleContext>(
-      [this](fidl::InterfaceRequest<ModuleContext> request) {
+  service_provider_impl_.AddService<fuchsia::modular::ModuleContext>(
+      [this](fidl::InterfaceRequest<fuchsia::modular::ModuleContext> request) {
         bindings_.AddBinding(this, std::move(request));
       });
   service_provider_impl_.AddBinding(std::move(service_provider_request));
@@ -37,9 +37,10 @@ ModuleContextImpl::ModuleContextImpl(
 
 ModuleContextImpl::~ModuleContextImpl() {}
 
-void ModuleContextImpl::GetLink(fidl::StringPtr name,
-                                fidl::InterfaceRequest<Link> request) {
-  LinkPathPtr link_path;
+void ModuleContextImpl::GetLink(
+    fidl::StringPtr name,
+    fidl::InterfaceRequest<fuchsia::modular::Link> request) {
+  fuchsia::modular::LinkPathPtr link_path;
   // See if there's a parameter mapping for this link.
   link_path = story_controller_impl_->GetLinkPathForParameterName(
       module_data_->module_path, name);
@@ -48,32 +49,35 @@ void ModuleContextImpl::GetLink(fidl::StringPtr name,
 }
 
 void ModuleContextImpl::EmbedModule(
-    fidl::StringPtr name, Intent intent,
-    fidl::InterfaceRequest<ModuleController> module_controller,
+    fidl::StringPtr name, fuchsia::modular::Intent intent,
+    fidl::InterfaceRequest<fuchsia::modular::ModuleController>
+        module_controller,
     fidl::InterfaceRequest<fuchsia::ui::views_v1_token::ViewOwner> view_owner,
     EmbedModuleCallback callback) {
   story_controller_impl_->EmbedModule(
       module_data_->module_path, name, fidl::MakeOptional(std::move(intent)),
       std::move(module_controller), std::move(view_owner),
-      ModuleSource::INTERNAL, callback);
+      fuchsia::modular::ModuleSource::INTERNAL, callback);
 }
 
 void ModuleContextImpl::StartModule(
-    fidl::StringPtr name, Intent intent,
-    fidl::InterfaceRequest<ModuleController> module_controller,
-    SurfaceRelationPtr surface_relation, StartModuleCallback callback) {
+    fidl::StringPtr name, fuchsia::modular::Intent intent,
+    fidl::InterfaceRequest<fuchsia::modular::ModuleController>
+        module_controller,
+    fuchsia::modular::SurfaceRelationPtr surface_relation,
+    StartModuleCallback callback) {
   story_controller_impl_->StartModule(
       module_data_->module_path, name, fidl::MakeOptional(std::move(intent)),
       std::move(module_controller), std::move(surface_relation),
-      ModuleSource::INTERNAL, callback);
+      fuchsia::modular::ModuleSource::INTERNAL, callback);
 }
 
 void ModuleContextImpl::StartContainerInShell(
-    fidl::StringPtr name, SurfaceRelation parent_relation,
-    fidl::VectorPtr<ContainerLayout> layout,
-    fidl::VectorPtr<ContainerRelationEntry> relationships,
-    fidl::VectorPtr<ContainerNode> nodes) {
-  fidl::VectorPtr<ContainerNodePtr> node_ptrs;
+    fidl::StringPtr name, fuchsia::modular::SurfaceRelation parent_relation,
+    fidl::VectorPtr<fuchsia::modular::ContainerLayout> layout,
+    fidl::VectorPtr<fuchsia::modular::ContainerRelationEntry> relationships,
+    fidl::VectorPtr<fuchsia::modular::ContainerNode> nodes) {
+  fidl::VectorPtr<fuchsia::modular::ContainerNodePtr> node_ptrs;
   node_ptrs->reserve(nodes->size());
   for (auto& i : *nodes) {
     node_ptrs.push_back(fidl::MakeOptional(std::move(i)));
@@ -85,18 +89,19 @@ void ModuleContextImpl::StartContainerInShell(
 }
 
 void ModuleContextImpl::GetComponentContext(
-    fidl::InterfaceRequest<ComponentContext> context_request) {
+    fidl::InterfaceRequest<fuchsia::modular::ComponentContext>
+        context_request) {
   component_context_impl_.Connect(std::move(context_request));
 }
 
 void ModuleContextImpl::GetIntelligenceServices(
-    fidl::InterfaceRequest<IntelligenceServices> request) {
-  auto module_scope = ModuleScope::New();
+    fidl::InterfaceRequest<fuchsia::modular::IntelligenceServices> request) {
+  auto module_scope = fuchsia::modular::ModuleScope::New();
   module_scope->module_path = module_data_->module_path.Clone();
   module_scope->url = module_data_->module_url;
   module_scope->story_id = story_controller_impl_->GetStoryId();
 
-  auto scope = ComponentScope::New();
+  auto scope = fuchsia::modular::ComponentScope::New();
   scope->set_module_scope(std::move(*module_scope));
   user_intelligence_provider_->GetComponentIntelligenceServices(
       std::move(*scope), std::move(request));
@@ -111,9 +116,6 @@ void ModuleContextImpl::RequestFocus() {
   story_controller_impl_->RequestStoryFocus();
 }
 
-void ModuleContextImpl::Active() {
-  story_controller_impl_->Active();
-}
+void ModuleContextImpl::Active() { story_controller_impl_->Active(); }
 
 }  // namespace modular
-}  // namespace fuchsia

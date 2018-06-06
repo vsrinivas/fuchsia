@@ -8,7 +8,6 @@
 
 #include "lib/fidl/cpp/clone.h"
 
-namespace fuchsia {
 namespace modular {
 
 std::string short_proposal_str(const SuggestionPrototype& prototype) {
@@ -18,17 +17,18 @@ std::string short_proposal_str(const SuggestionPrototype& prototype) {
   return str.str();
 }
 
-Suggestion CreateSuggestion(const SuggestionPrototype& prototype) {
-  Suggestion suggestion;
+fuchsia::modular::Suggestion CreateSuggestion(
+    const SuggestionPrototype& prototype) {
+  fuchsia::modular::Suggestion suggestion;
   suggestion.uuid = prototype.suggestion_id;
   fidl::Clone(prototype.proposal.display, &suggestion.display);
   if (!prototype.proposal.on_selected->empty()) {
     const auto& selected_action = prototype.proposal.on_selected->at(0);
     switch (selected_action.Which()) {
-      case Action::Tag::kFocusStory:
+      case fuchsia::modular::Action::Tag::kFocusStory:
         suggestion.story_id = selected_action.focus_story().story_id;
         break;
-      case Action::Tag::kAddModule:
+      case fuchsia::modular::Action::Tag::kAddModule:
         suggestion.story_id = selected_action.add_module().story_id;
         break;
       default:
@@ -39,4 +39,3 @@ Suggestion CreateSuggestion(const SuggestionPrototype& prototype) {
 }
 
 }  // namespace modular
-}  // namespace fuchsia

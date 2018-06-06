@@ -6,11 +6,9 @@
 
 using fxl::StringView;
 
-namespace fuchsia {
 namespace modular {
 
-std::string StringEscape(StringView input,
-                         StringView chars_to_escape,
+std::string StringEscape(StringView input, StringView chars_to_escape,
                          char escape_char) {
   std::string output;
   output.reserve(input.size());
@@ -42,8 +40,7 @@ std::string StringUnescape(StringView input, char escape_char) {
   return output;
 }
 
-std::vector<StringView> SplitEscapedString(StringView input,
-                                           char split_char,
+std::vector<StringView> SplitEscapedString(StringView input, char split_char,
                                            char escape_char) {
   std::vector<StringView> output;
   size_t last_pos = 0;
@@ -69,4 +66,3 @@ std::vector<StringView> SplitEscapedString(StringView input,
 }
 
 }  // namespace modular
-}  // namespace fuchsia

@@ -19,7 +19,7 @@ fxl::AutoCall<fxl::Closure> SetupCobalt(
   if (disable_statistics) {
     return fxl::MakeAutoCall<fxl::Closure>([] {});
   }
-  return fuchsia::modular::InitializeCobalt(async, startup_context);
+  return modular::InitializeCobalt(async, startup_context);
 }
 
 int main(int argc, const char** argv) {
@@ -34,9 +34,9 @@ int main(int argc, const char** argv) {
   fxl::AutoCall<fxl::Closure> cobalt_cleanup =
       SetupCobalt(test, std::move(loop.async()), context.get());
 
-  fuchsia::modular::AppDriver<fuchsia::modular::UserRunnerImpl> driver(
+  modular::AppDriver<modular::UserRunnerImpl> driver(
       context->outgoing().deprecated_services(),
-      std::make_unique<fuchsia::modular::UserRunnerImpl>(context.get(), test),
+      std::make_unique<modular::UserRunnerImpl>(context.get(), test),
       [&loop, &cobalt_cleanup] {
         cobalt_cleanup.call();
         loop.QuitNow();

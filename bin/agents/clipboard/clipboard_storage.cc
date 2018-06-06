@@ -6,7 +6,6 @@
 #include "lib/fsl/vmo/strings.h"
 #include "lib/fxl/functional/make_copyable.h"
 
-namespace fuchsia {
 namespace modular {
 namespace {
 
@@ -24,7 +23,8 @@ std::string ToString(fuchsia::mem::Buffer value) {
     return "";
   }
   if (!fsl::StringFromVmo(vmo, &parsed_string)) {
-    FXL_LOG(ERROR) << "Clipboard vmo could not be decoded to string.";
+    FXL_LOG(ERROR)
+        << "fuchsia::modular::Clipboard vmo could not be decoded to string.";
     return "";
   }
   return parsed_string;
@@ -114,4 +114,3 @@ void ClipboardStorage::Peek(
 }
 
 }  // namespace modular
-}  // namespace fuchsia

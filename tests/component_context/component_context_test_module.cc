@@ -20,9 +20,9 @@
 #include "peridot/tests/common/defs.h"
 #include "peridot/tests/component_context/defs.h"
 
-using fuchsia::modular::testing::Await;
-using fuchsia::modular::testing::Signal;
-using fuchsia::modular::testing::TestPoint;
+using modular::testing::Await;
+using modular::testing::Signal;
+using modular::testing::TestPoint;
 
 namespace {
 
@@ -69,19 +69,18 @@ class TestApp {
   TestPoint initialized_{"Root module initialized"};
   TestPoint one_agent_connected_{"One agent accepted connection"};
 
-  TestApp(fuchsia::modular::ModuleHost* module_host,
+  TestApp(modular::ModuleHost* module_host,
           fidl::InterfaceRequest<
               fuchsia::ui::views_v1::ViewProvider> /*view_provider_request*/)
-      : steps_(kTotalSimultaneousTests,
-               [this, module_host] {
-                 Signal(fuchsia::modular::testing::kTestShutdown);
-               }),
+      : steps_(
+            kTotalSimultaneousTests,
+            [this, module_host] { Signal(modular::testing::kTestShutdown); }),
         weak_ptr_factory_(this) {
-    fuchsia::modular::testing::Init(module_host->startup_context(), __FILE__);
+    modular::testing::Init(module_host->startup_context(), __FILE__);
 
     initialized_.Pass();
 
-    // Exercise ComponentContext.ConnectToAgent()
+    // Exercise fuchsia::modular::ComponentContext.ConnectToAgent()
     module_host->module_context()->GetComponentContext(
         component_context_.NewRequest());
 
@@ -109,12 +108,13 @@ class TestApp {
   // Called by ModuleDriver.
   void Terminate(const std::function<void()>& done) {
     stopped_.Pass();
-    fuchsia::modular::testing::Done(done);
+    modular::testing::Done(done);
   }
 
  private:
   TestPoint msg_queue_communicated_{
-      "Communicated message between Agent one using a MessageQueue"};
+      "Communicated message between fuchsia::modular::Agent one using a "
+      "fuchsia::modular::MessageQueue"};
 
   // Tests message queues. Calls |done_cb| when completed successfully.
   void TestMessageQueue(std::function<void()> done_cb) {
@@ -124,7 +124,7 @@ class TestApp {
                                            msg_queue_.NewRequest());
 
     // MessageQueueManager shouldn't send us anything just yet.
-    msg_receiver_ = std::make_unique<fuchsia::modular::MessageReceiverClient>(
+    msg_receiver_ = std::make_unique<modular::MessageReceiverClient>(
         msg_queue_.get(),
         [this, done_cb, kTestMessage](const fidl::StringPtr& msg,
                                       std::function<void()> ack) {
@@ -145,7 +145,8 @@ class TestApp {
 
   TestPoint one_agent_stopped_{"One agent stopped"};
 
-  // Tests AgentController. Calls |done_cb| when completed successfully.
+  // Tests fuchsia::modular::AgentController. Calls |done_cb| when completed
+  // successfully.
   void TestAgentController(std::function<void()> done_cb) {
     // Closing the agent controller should trigger the agent to stop.
     one_agent_controller.Unbind();
@@ -163,7 +164,8 @@ class TestApp {
         kUnstoppableAgent, unstoppable_agent_services.NewRequest(),
         unstoppable_agent_controller_.NewRequest());
 
-    // After 500ms close the AgentController for the unstoppable agent.
+    // After 500ms close the fuchsia::modular::AgentController for the
+    // unstoppable agent.
     // TODO(jimbe) We don't check if the agent started running in the allotted
     // time, so this test isn't reliable. We need to make a call to the agent
     // and wait for a response.
@@ -186,7 +188,7 @@ class TestApp {
 
   fuchsia::modular::AgentControllerPtr unstoppable_agent_controller_;
 
-  std::unique_ptr<fuchsia::modular::MessageReceiverClient> msg_receiver_;
+  std::unique_ptr<modular::MessageReceiverClient> msg_receiver_;
 
   fxl::WeakPtrFactory<TestApp> weak_ptr_factory_;
 
@@ -198,8 +200,8 @@ class TestApp {
 int main(int /*argc*/, const char** /*argv*/) {
   fsl::MessageLoop loop;
   auto context = fuchsia::sys::StartupContext::CreateFromStartupInfo();
-  fuchsia::modular::ModuleDriver<TestApp> driver(context.get(),
-                                                 [&loop] { loop.QuitNow(); });
+  modular::ModuleDriver<TestApp> driver(context.get(),
+                                        [&loop] { loop.QuitNow(); });
   loop.Run();
   return 0;
 }

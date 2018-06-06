@@ -11,7 +11,6 @@
 #include "lib/fxl/memory/weak_ptr.h"
 #include "peridot/lib/bound_set/bound_set.h"
 
-namespace fuchsia {
 namespace modular {
 
 class SuggestionEngineImpl;
@@ -24,28 +23,31 @@ class SuggestionEngineImpl;
  TODO: The component_url should eventually be replaced with a more consistent
   identifier that's reused across components to identify specific executables.
 */
-class ProposalPublisherImpl : public ProposalPublisher {
+class ProposalPublisherImpl : public fuchsia::modular::ProposalPublisher {
  public:
   ProposalPublisherImpl(SuggestionEngineImpl* engine,
                         const std::string& component_url);
 
   ~ProposalPublisherImpl() override;
 
-  void AddBinding(fidl::InterfaceRequest<ProposalPublisher> request);
+  void AddBinding(
+      fidl::InterfaceRequest<fuchsia::modular::ProposalPublisher> request);
 
-  void Propose(Proposal proposal) override;
+  void Propose(fuchsia::modular::Proposal proposal) override;
   void Remove(fidl::StringPtr proposal_id) override;
 
   const std::string component_url() { return component_url_; }
 
  private:
-  class BindingSet : public fuchsia::modular::BindingSet<ProposalPublisher> {
+  class BindingSet
+      : public ::modular::BindingSet<fuchsia::modular::ProposalPublisher> {
    public:
     BindingSet(ProposalPublisherImpl* impl);
     ~BindingSet() override;
 
    protected:
-    void OnConnectionError(fidl::Binding<ProposalPublisher>* binding) override;
+    void OnConnectionError(
+        fidl::Binding<fuchsia::modular::ProposalPublisher>* binding) override;
 
    private:
     ProposalPublisherImpl* const impl_;
@@ -62,6 +64,5 @@ class ProposalPublisherImpl : public ProposalPublisher {
 };
 
 }  // namespace modular
-}  // namespace fuchsia
 
 #endif  // PERIDOT_BIN_SUGGESTION_ENGINE_PROPOSAL_PUBLISHER_IMPL_H_

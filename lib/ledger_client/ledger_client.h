@@ -18,7 +18,6 @@
 #include "lib/fxl/macros.h"
 #include "peridot/lib/ledger_client/types.h"
 
-namespace fuchsia {
 namespace modular {
 
 class PageClient;
@@ -45,7 +44,7 @@ class LedgerClient : fuchsia::ledger::ConflictResolverFactory {
   // LedgerClient it was obtained from, but it creates new Page connections for
   // its PageClients. This allows the creation of PageClients that behave as if
   // they run on another device. Useful to simplify testing of cross device
-  // behavior. See StoryProvider.GetLinkPeer().
+  // behavior. See fuchsia::modular::StoryProvider.GetLinkPeer().
   //
   // The Peer instance does NOT register itself as a conflict resolver for the
   // Ledger, as the primary LedgerClient must remain the conflict resolver.
@@ -73,8 +72,7 @@ class LedgerClient : fuchsia::ledger::ConflictResolverFactory {
   void DropPageClient(PageClient* page_client);
 
   // |ConflictResolverFactory|
-  void GetPolicy(LedgerPageId page_id,
-                 GetPolicyCallback callback) override;
+  void GetPolicy(LedgerPageId page_id, GetPolicyCallback callback) override;
 
   // |ConflictResolverFactory|
   void NewConflictResolver(
@@ -109,7 +107,8 @@ class LedgerClient : fuchsia::ledger::ConflictResolverFactory {
 // appropriate page client that handles that key.
 class LedgerClient::ConflictResolverImpl : fuchsia::ledger::ConflictResolver {
  public:
-  ConflictResolverImpl(LedgerClient* ledger_client, const LedgerPageId& page_id);
+  ConflictResolverImpl(LedgerClient* ledger_client,
+                       const LedgerPageId& page_id);
   ~ConflictResolverImpl() override;
 
   void Connect(
@@ -142,6 +141,5 @@ class LedgerClient::ConflictResolverImpl : fuchsia::ledger::ConflictResolver {
 };
 
 }  // namespace modular
-}  // namespace fuchsia
 
 #endif  // PERIDOT_LIB_LEDGER_CLIENT_LEDGER_CLIENT_H_

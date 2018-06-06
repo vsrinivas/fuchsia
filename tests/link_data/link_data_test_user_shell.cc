@@ -22,15 +22,15 @@
 #include "peridot/tests/common/defs.h"
 #include "peridot/tests/link_data/defs.h"
 
-using fuchsia::modular::testing::Await;
-using fuchsia::modular::testing::Get;
-using fuchsia::modular::testing::TestPoint;
+using modular::testing::Await;
+using modular::testing::Get;
+using modular::testing::TestPoint;
 
 namespace {
 
 // Cf. README.md for what this test does and how.
-class TestApp : public fuchsia::modular::testing::ComponentBase<
-                    fuchsia::modular::UserShell> {
+class TestApp
+    : public modular::testing::ComponentBase<fuchsia::modular::UserShell> {
  public:
   explicit TestApp(fuchsia::sys::StartupContext* const startup_context)
       : ComponentBase(startup_context) {
@@ -42,7 +42,7 @@ class TestApp : public fuchsia::modular::testing::ComponentBase<
  private:
   TestPoint initialize_{"Initialize()"};
 
-  // |UserShell|
+  // |fuchsia::modular::UserShell|
   void Initialize(fidl::InterfaceHandle<fuchsia::modular::UserShellContext>
                       user_shell_context) override {
     initialize_.Pass();
@@ -80,7 +80,7 @@ class TestApp : public fuchsia::modular::testing::ComponentBase<
 
   void TestStory1_GetModule0Link() {
     fidl::VectorPtr<fidl::StringPtr> module_path;
-    module_path.push_back(fuchsia::modular::kRootModuleName);
+    module_path.push_back(modular::kRootModuleName);
     story_controller_->GetLink(std::move(module_path), nullptr,
                                root_link_.NewRequest());
     root_link_->Get(nullptr, [this](fidl::StringPtr value) {
@@ -220,6 +220,6 @@ class TestApp : public fuchsia::modular::testing::ComponentBase<
 }  // namespace
 
 int main(int argc, const char** argv) {
-  fuchsia::modular::testing::ComponentMain<TestApp>();
+  modular::testing::ComponentMain<TestApp>();
   return 0;
 }

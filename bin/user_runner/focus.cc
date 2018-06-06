@@ -14,19 +14,21 @@
 #include "peridot/lib/ledger_client/storage.h"
 #include "peridot/lib/rapidjson/rapidjson.h"
 
-namespace fuchsia {
 namespace modular {
 
 namespace {
 
-// Serialization and deserialization of FocusInfo to and from JSON.
-void XdrFocusInfo_v1(XdrContext* const xdr, FocusInfo* const data) {
+// Serialization and deserialization of fuchsia::modular::FocusInfo to and from
+// JSON.
+void XdrFocusInfo_v1(XdrContext* const xdr,
+                     fuchsia::modular::FocusInfo* const data) {
   xdr->Field("device_id", &data->device_id);
   xdr->Field("focused_story_id", &data->focused_story_id);
   xdr->Field("last_focus_timestamp", &data->last_focus_change_timestamp);
 }
 
-void XdrFocusInfo_v2(XdrContext* const xdr, FocusInfo* const data) {
+void XdrFocusInfo_v2(XdrContext* const xdr,
+                     fuchsia::modular::FocusInfo* const data) {
   if (!xdr->Version(2)) {
     return;
   }
@@ -35,10 +37,10 @@ void XdrFocusInfo_v2(XdrContext* const xdr, FocusInfo* const data) {
   xdr->Field("last_focus_timestamp", &data->last_focus_change_timestamp);
 }
 
-constexpr XdrFilterType<FocusInfo> XdrFocusInfo[] = {
-  XdrFocusInfo_v2,
-  XdrFocusInfo_v1,
-  nullptr,
+constexpr XdrFilterType<fuchsia::modular::FocusInfo> XdrFocusInfo[] = {
+    XdrFocusInfo_v2,
+    XdrFocusInfo_v1,
+    nullptr,
 };
 
 }  // namespace
@@ -46,74 +48,71 @@ constexpr XdrFilterType<FocusInfo> XdrFocusInfo[] = {
 FocusHandler::FocusHandler(fidl::StringPtr device_id,
                            LedgerClient* const ledger_client,
                            LedgerPageId page_id)
-    : PageClient("FocusHandler",
-                 ledger_client,
-                 std::move(page_id),
+    : PageClient("FocusHandler", ledger_client, std::move(page_id),
                  kFocusKeyPrefix),
       device_id_(device_id) {}
 
 FocusHandler::~FocusHandler() = default;
 
 void FocusHandler::AddProviderBinding(
-    fidl::InterfaceRequest<FocusProvider> request) {
+    fidl::InterfaceRequest<fuchsia::modular::FocusProvider> request) {
   provider_bindings_.AddBinding(this, std::move(request));
 }
 
 void FocusHandler::AddControllerBinding(
-    fidl::InterfaceRequest<FocusController> request) {
+    fidl::InterfaceRequest<fuchsia::modular::FocusController> request) {
   controller_bindings_.AddBinding(this, std::move(request));
 }
 
-// |FocusProvider|
+// |fuchsia::modular::FocusProvider|
 void FocusHandler::Query(QueryCallback callback) {
-  operation_queue_.Add(
-  new ReadAllDataCall<FocusInfo>(page(), kFocusKeyPrefix,
-                                 XdrFocusInfo,
-                                 [callback](fidl::VectorPtr<FocusInfo> infos) {
-                                   callback(std::move(infos));
-                                 }));
+  operation_queue_.Add(new ReadAllDataCall<fuchsia::modular::FocusInfo>(
+      page(), kFocusKeyPrefix, XdrFocusInfo,
+      [callback](fidl::VectorPtr<fuchsia::modular::FocusInfo> infos) {
+        callback(std::move(infos));
+      }));
 }
 
-// |FocusProvider|
-void FocusHandler::Watch(fidl::InterfaceHandle<FocusWatcher> watcher) {
+// |fuchsia::modular::FocusProvider|
+void FocusHandler::Watch(
+    fidl::InterfaceHandle<fuchsia::modular::FocusWatcher> watcher) {
   change_watchers_.push_back(watcher.Bind());
 }
 
-// |FocusProvider|
+// |fuchsia::modular::FocusProvider|
 void FocusHandler::Request(fidl::StringPtr story_id) {
   for (const auto& watcher : request_watchers_) {
     watcher->OnFocusRequest(story_id);
   }
 }
 
-// |FocusProvider|
-void FocusHandler::Duplicate(fidl::InterfaceRequest<FocusProvider> request) {
+// |fuchsia::modular::FocusProvider|
+void FocusHandler::Duplicate(
+    fidl::InterfaceRequest<fuchsia::modular::FocusProvider> request) {
   provider_bindings_.AddBinding(this, std::move(request));
 }
 
-// |FocusController|
+// |fuchsia::modular::FocusController|
 void FocusHandler::Set(fidl::StringPtr story_id) {
-  FocusInfoPtr data = FocusInfo::New();
+  fuchsia::modular::FocusInfoPtr data = fuchsia::modular::FocusInfo::New();
   data->device_id = device_id_;
   data->focused_story_id = story_id;
   data->last_focus_change_timestamp = time(nullptr);
 
-  operation_queue_.Add(
-  new WriteDataCall<FocusInfo>(page(),
-                               MakeFocusKey(device_id_), XdrFocusInfo,
-                               std::move(data), [] {}));
+  operation_queue_.Add(new WriteDataCall<fuchsia::modular::FocusInfo>(
+      page(), MakeFocusKey(device_id_), XdrFocusInfo, std::move(data), [] {}));
 }
 
-// |FocusController|
+// |fuchsia::modular::FocusController|
 void FocusHandler::WatchRequest(
-    fidl::InterfaceHandle<FocusRequestWatcher> watcher) {
+    fidl::InterfaceHandle<fuchsia::modular::FocusRequestWatcher> watcher) {
   request_watchers_.push_back(watcher.Bind());
 }
 
 // |PageClient|
 void FocusHandler::OnPageChange(const std::string& /*key*/,
                                 const std::string& value) {
-  auto focus_info = FocusInfo::New();
+  auto focus_info = fuchsia::modular::FocusInfo::New();
   if (!XdrRead(value, &focus_info, XdrFocusInfo)) {
     return;
   }
@@ -129,12 +128,13 @@ VisibleStoriesHandler::VisibleStoriesHandler()
 VisibleStoriesHandler::~VisibleStoriesHandler() = default;
 
 void VisibleStoriesHandler::AddProviderBinding(
-    fidl::InterfaceRequest<VisibleStoriesProvider> request) {
+    fidl::InterfaceRequest<fuchsia::modular::VisibleStoriesProvider> request) {
   provider_bindings_.AddBinding(this, std::move(request));
 }
 
 void VisibleStoriesHandler::AddControllerBinding(
-    fidl::InterfaceRequest<VisibleStoriesController> request) {
+    fidl::InterfaceRequest<fuchsia::modular::VisibleStoriesController>
+        request) {
   controller_bindings_.AddBinding(this, std::move(request));
 }
 
@@ -143,12 +143,12 @@ void VisibleStoriesHandler::Query(QueryCallback callback) {
 }
 
 void VisibleStoriesHandler::Watch(
-    fidl::InterfaceHandle<VisibleStoriesWatcher> watcher) {
+    fidl::InterfaceHandle<fuchsia::modular::VisibleStoriesWatcher> watcher) {
   change_watchers_.push_back(watcher.Bind());
 }
 
 void VisibleStoriesHandler::Duplicate(
-    fidl::InterfaceRequest<VisibleStoriesProvider> request) {
+    fidl::InterfaceRequest<fuchsia::modular::VisibleStoriesProvider> request) {
   provider_bindings_.AddBinding(this, std::move(request));
 }
 
@@ -160,4 +160,3 @@ void VisibleStoriesHandler::Set(fidl::VectorPtr<fidl::StringPtr> story_ids) {
 }
 
 }  // namespace modular
-}  // namespace fuchsia

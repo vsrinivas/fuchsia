@@ -41,7 +41,7 @@ class TestListener : public fuchsia::modular::ContextListener {
   void Reset() { last_update.reset(); }
 
  private:
-  fidl::Binding<ContextListener> binding_;
+  fidl::Binding<fuchsia::modular::ContextListener> binding_;
 };
 
 class ContextEngineTest : public ContextEngineTestBase {
@@ -71,9 +71,10 @@ class ContextEngineTest : public ContextEngineTestBase {
   fuchsia::modular::ContextWriterPtr writer_;
 };
 
-// Result ordering for |ContextValue|s is not specified, and ordering ends up
-// depending on the order the |ContextValueWriter::Set| calls get handled,
-// which is nondeterministic since they are on separate channels.
+// Result ordering for |fuchsia::modular::ContextValue|s is not specified, and
+// ordering ends up depending on the order the
+// |fuchsia::modular::ContextValueWriter::Set| calls get handled, which is
+// nondeterministic since they are on separate channels.
 std::set<std::string> GetTopicSet(
     const std::vector<fuchsia::modular::ContextValue>& values) {
   std::set<std::string> topics;
@@ -86,33 +87,37 @@ std::set<std::string> GetTopicSet(
 }  // namespace
 
 TEST_F(ContextEngineTest, ContextValueWriter) {
-  // Use the ContextValueWriter interface, available by calling
-  // ContextWriter.CreateValue().
+  // Use the fuchsia::modular::ContextValueWriter interface, available by
+  // calling fuchsia::modular::ContextWriter.CreateValue().
   fuchsia::modular::ContextValueWriterPtr value1;
   writer_->CreateValue(value1.NewRequest(),
                        fuchsia::modular::ContextValueType::ENTITY);
   value1->Set(R"({ "@type": "someType", "foo": "bar" })",
-              fidl::MakeOptional(ContextMetadataBuilder().SetEntityTopic("topic").Build()));
+              fidl::MakeOptional(
+                  ContextMetadataBuilder().SetEntityTopic("topic").Build()));
 
   fuchsia::modular::ContextValueWriterPtr value2;
   writer_->CreateValue(value2.NewRequest(),
                        fuchsia::modular::ContextValueType::ENTITY);
   value2->Set(R"({ "@type": ["someType", "alsoAnotherType"], "baz": "bang" })",
-              fidl::MakeOptional(ContextMetadataBuilder().SetEntityTopic("frob").Build()));
+              fidl::MakeOptional(
+                  ContextMetadataBuilder().SetEntityTopic("frob").Build()));
 
   fuchsia::modular::ContextValueWriterPtr value3;
   writer_->CreateValue(value3.NewRequest(),
                        fuchsia::modular::ContextValueType::ENTITY);
   value3->Set(
       entity_resolver().AddEntity({{"someType", ""}, {"evenMoreType", ""}}),
-      fidl::MakeOptional(ContextMetadataBuilder().SetEntityTopic("borf").Build()));
+      fidl::MakeOptional(
+          ContextMetadataBuilder().SetEntityTopic("borf").Build()));
 
   // Subscribe to those values.
   fuchsia::modular::ContextSelector selector;
   selector.type = fuchsia::modular::ContextValueType::ENTITY;
-  selector.meta = fidl::MakeOptional(ContextMetadataBuilder().AddEntityType("someType").Build());
+  selector.meta = fidl::MakeOptional(
+      ContextMetadataBuilder().AddEntityType("someType").Build());
   fuchsia::modular::ContextQuery query;
-  AddToContextQuery(&query, "a", std::move(selector));
+  modular::AddToContextQuery(&query, "a", std::move(selector));
 
   TestListener listener;
   std::vector<fuchsia::modular::ContextValue> results;
@@ -120,7 +125,8 @@ TEST_F(ContextEngineTest, ContextValueWriter) {
 
   WaitUntilIdle();
   ASSERT_TRUE(listener.last_update);
-  results = TakeContextValue(listener.last_update.get(), "a").second.take();
+  results =
+      modular::TakeContextValue(listener.last_update.get(), "a").second.take();
   ASSERT_EQ(3u, results.size());
   EXPECT_EQ(std::set<std::string>({"topic", "frob", "borf"}),
             GetTopicSet(results));
@@ -133,27 +139,32 @@ TEST_F(ContextEngineTest, ContextValueWriter) {
 
   WaitUntilIdle();
   ASSERT_TRUE(listener.last_update);
-  results = TakeContextValue(listener.last_update.get(), "a").second.take();
+  results =
+      modular::TakeContextValue(listener.last_update.get(), "a").second.take();
   ASSERT_EQ(1u, results.size());
   EXPECT_EQ("frob", results[0].meta.entity->topic);
 
-  // Create two new values: A Story value and a child Entity value, where the
-  // Entity value matches our query.
+  // Create two new values: A Story value and a child fuchsia::modular::Entity
+  // value, where the fuchsia::modular::Entity value matches our query.
   listener.Reset();
   fuchsia::modular::ContextValueWriterPtr story_value;
   writer_->CreateValue(story_value.NewRequest(),
                        fuchsia::modular::ContextValueType::STORY);
-  story_value->Set(nullptr,
-                   fidl::MakeOptional(ContextMetadataBuilder().SetStoryId("story").Build()));
+  story_value->Set(
+      nullptr,
+      fidl::MakeOptional(ContextMetadataBuilder().SetStoryId("story").Build()));
 
   fuchsia::modular::ContextValueWriterPtr value4;
   story_value->CreateChildValue(value4.NewRequest(),
                                 fuchsia::modular::ContextValueType::ENTITY);
-  value4->Set("1", fidl::MakeOptional(ContextMetadataBuilder().AddEntityType("someType").Build()));
+  value4->Set("1",
+              fidl::MakeOptional(
+                  ContextMetadataBuilder().AddEntityType("someType").Build()));
 
   WaitUntilIdle();
   ASSERT_TRUE(listener.last_update);
-  results = TakeContextValue(listener.last_update.get(), "a").second.take();
+  results =
+      modular::TakeContextValue(listener.last_update.get(), "a").second.take();
   ASSERT_EQ(2u, results.size());
 
   fuchsia::modular::ContextValue entity_result, story_result;
@@ -168,13 +179,15 @@ TEST_F(ContextEngineTest, ContextValueWriter) {
   EXPECT_EQ("1", story_result.content);
   EXPECT_EQ("story", story_result.meta.story->id);
 
-  // Lastly remove one of the values by resetting the ContextValueWriter proxy.
+  // Lastly remove one of the values by resetting the
+  // fuchsia::modular::ContextValueWriter proxy.
   listener.Reset();
   value4.Unbind();
 
   WaitUntilIdle();
   ASSERT_TRUE(listener.last_update);
-  results = TakeContextValue(listener.last_update.get(), "a").second.take();
+  results =
+      modular::TakeContextValue(listener.last_update.get(), "a").second.take();
   ASSERT_EQ(1u, results.size());
   EXPECT_EQ("frob", results[0].meta.entity->topic);
 }
@@ -187,7 +200,7 @@ TEST_F(ContextEngineTest, WriteNullEntity) {
   selector.type = fuchsia::modular::ContextValueType::ENTITY;
   selector.meta = fidl::MakeOptional(fidl::Clone(meta));
   fuchsia::modular::ContextQuery query;
-  AddToContextQuery(&query, "a", std::move(selector));
+  modular::AddToContextQuery(&query, "a", std::move(selector));
 
   fuchsia::modular::ContextValueWriterPtr value;
   writer_->CreateValue(value.NewRequest(),
@@ -205,7 +218,8 @@ TEST_F(ContextEngineTest, WriteNullEntity) {
   WaitUntilIdle();
 
   ASSERT_TRUE(listener.last_update);
-  result = TakeContextValue(listener.last_update.get(), "a").second.take();
+  result =
+      modular::TakeContextValue(listener.last_update.get(), "a").second.take();
   ASSERT_EQ(1u, result.size());
   EXPECT_EQ(value1, result[0].content);
 
@@ -221,7 +235,8 @@ TEST_F(ContextEngineTest, WriteNullEntity) {
   WaitUntilIdle();
   ASSERT_TRUE(listener.last_update);
 
-  result = TakeContextValue(listener.last_update.get(), "a").second.take();
+  result =
+      modular::TakeContextValue(listener.last_update.get(), "a").second.take();
   ASSERT_EQ(1u, result.size());
   EXPECT_EQ(value2, result[0].content);
 }
@@ -231,9 +246,10 @@ TEST_F(ContextEngineTest, CloseListenerAndReader) {
   // itself can be closed and listeners are still valid.
   fuchsia::modular::ContextSelector selector;
   selector.type = fuchsia::modular::ContextValueType::ENTITY;
-  selector.meta = fidl::MakeOptional(ContextMetadataBuilder().SetEntityTopic("topic").Build());
+  selector.meta = fidl::MakeOptional(
+      ContextMetadataBuilder().SetEntityTopic("topic").Build());
   fuchsia::modular::ContextQuery query;
-  AddToContextQuery(&query, "a", std::move(selector));
+  modular::AddToContextQuery(&query, "a", std::move(selector));
 
   TestListener listener2;
   {
@@ -252,38 +268,45 @@ TEST_F(ContextEngineTest, CloseListenerAndReader) {
   fuchsia::modular::ContextValueWriterPtr value;
   writer_->CreateValue(value.NewRequest(),
                        fuchsia::modular::ContextValueType::ENTITY);
-  value->Set("foo", fidl::MakeOptional(ContextMetadataBuilder().SetEntityTopic("topic").Build()));
+  value->Set("foo",
+             fidl::MakeOptional(
+                 ContextMetadataBuilder().SetEntityTopic("topic").Build()));
 
   WaitUntilIdle();
   EXPECT_TRUE(listener2.last_update);
 }
 
 TEST_F(ContextEngineTest, GetContext) {
-  // Ensure ContextReader::Get returns values in the context we queried for.
+  // Ensure fuchsia::modular::ContextReader::Get returns values in the context
+  // we queried for.
   fuchsia::modular::ContextValueWriterPtr value1;
   writer_->CreateValue(value1.NewRequest(),
                        fuchsia::modular::ContextValueType::ENTITY);
   value1->Set(R"({ "@type": "someType", "foo": "bar" })",
-              fidl::MakeOptional(ContextMetadataBuilder().SetEntityTopic("topic").Build()));
+              fidl::MakeOptional(
+                  ContextMetadataBuilder().SetEntityTopic("topic").Build()));
 
   fuchsia::modular::ContextValueWriterPtr value2;
   writer_->CreateValue(value2.NewRequest(),
                        fuchsia::modular::ContextValueType::ENTITY);
   value2->Set(R"({ "@type": ["someType", "alsoAnotherType"], "baz": "bang" })",
-              fidl::MakeOptional(ContextMetadataBuilder().SetEntityTopic("frob").Build()));
+              fidl::MakeOptional(
+                  ContextMetadataBuilder().SetEntityTopic("frob").Build()));
 
   fuchsia::modular::ContextValueWriterPtr value3;
   writer_->CreateValue(value3.NewRequest(),
                        fuchsia::modular::ContextValueType::ENTITY);
   value3->Set(R"({ "@type": ["otherType", "alsoAnotherType"], "qux": "quux" })",
-              fidl::MakeOptional(ContextMetadataBuilder().SetEntityTopic("borf").Build()));
+              fidl::MakeOptional(
+                  ContextMetadataBuilder().SetEntityTopic("borf").Build()));
 
   // Query those values.
   fuchsia::modular::ContextSelector selector;
   selector.type = fuchsia::modular::ContextValueType::ENTITY;
-  selector.meta = fidl::MakeOptional(ContextMetadataBuilder().AddEntityType("someType").Build());
+  selector.meta = fidl::MakeOptional(
+      ContextMetadataBuilder().AddEntityType("someType").Build());
   fuchsia::modular::ContextQuery query;
-  AddToContextQuery(&query, "a", std::move(selector));
+  modular::AddToContextQuery(&query, "a", std::move(selector));
 
   // Make sure context has been written.
   TestListener listener;
@@ -294,18 +317,17 @@ TEST_F(ContextEngineTest, GetContext) {
 
   // Assert Get gives us the expected context.
   bool callback_called = false;
-  reader_->Get(std::move(query),
-               [&callback_called](fuchsia::modular::ContextUpdate update) {
-                 callback_called = true;
+  reader_->Get(std::move(query), [&callback_called](
+                                     fuchsia::modular::ContextUpdate update) {
+    callback_called = true;
 
-                 std::pair<bool,
-                           fidl::VectorPtr<fuchsia::modular::ContextValue>>
-                     results = TakeContextValue(&update, "a");
-                 EXPECT_TRUE(results.first);
-                 ASSERT_EQ(2u, results.second->size());
-                 EXPECT_EQ(std::set<std::string>({"topic", "frob"}),
-                           GetTopicSet(*results.second));
-               });
+    std::pair<bool, fidl::VectorPtr<fuchsia::modular::ContextValue>> results =
+        modular::TakeContextValue(&update, "a");
+    EXPECT_TRUE(results.first);
+    ASSERT_EQ(2u, results.second->size());
+    EXPECT_EQ(std::set<std::string>({"topic", "frob"}),
+              GetTopicSet(*results.second));
+  });
 
   WaitUntilIdle();
   EXPECT_TRUE(callback_called);

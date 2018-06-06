@@ -15,13 +15,13 @@
 #include "peridot/bin/context_engine/debug.h"
 #include "rapidjson/document.h"
 
-namespace fuchsia {
 namespace modular {
 
 ContextWriterImpl::ContextWriterImpl(
-    const ComponentScope& client_info, ContextRepository* const repository,
-    EntityResolver* const entity_resolver,
-    fidl::InterfaceRequest<ContextWriter> request)
+    const fuchsia::modular::ComponentScope& client_info,
+    ContextRepository* const repository,
+    fuchsia::modular::EntityResolver* const entity_resolver,
+    fidl::InterfaceRequest<fuchsia::modular::ContextWriter> request)
     : binding_(this, std::move(request)),
       repository_(repository),
       entity_resolver_(entity_resolver),
@@ -30,12 +30,12 @@ ContextWriterImpl::ContextWriterImpl(
 
   // Set up a query to the repository to get our parent id.
   if (client_info.is_module_scope()) {
-    parent_value_selector_.type = ContextValueType::MODULE;
-    parent_value_selector_.meta = ContextMetadata::New();
-    parent_value_selector_.meta->story = StoryMetadata::New();
+    parent_value_selector_.type = fuchsia::modular::ContextValueType::MODULE;
+    parent_value_selector_.meta = fuchsia::modular::ContextMetadata::New();
+    parent_value_selector_.meta->story = fuchsia::modular::StoryMetadata::New();
     parent_value_selector_.meta->story->id =
         client_info.module_scope().story_id;
-    parent_value_selector_.meta->mod = ModuleMetadata::New();
+    parent_value_selector_.meta->mod = fuchsia::modular::ModuleMetadata::New();
     fidl::Clone(client_info.module_scope().module_path,
                 &parent_value_selector_.meta->mod->path);
   }
@@ -48,7 +48,8 @@ namespace {
 fidl::VectorPtr<fidl::StringPtr> Deprecated_GetTypesFromJsonEntity(
     const fidl::StringPtr& content) {
   // If the content has the @type attribute, take its contents and populate the
-  // EntityMetadata appropriately, overriding whatever is there.
+  // fuchsia::modular::EntityMetadata appropriately, overriding whatever is
+  // there.
   std::vector<std::string> types;
   if (!ExtractEntityTypesFromJson(content, &types)) {
     FXL_LOG(WARNING) << "Invalid entity metadata in JSON value: " << content;
@@ -65,23 +66,23 @@ fidl::VectorPtr<fidl::StringPtr> Deprecated_GetTypesFromJsonEntity(
 }
 
 void MaybeFillEntityTypeMetadata(const fidl::VectorPtr<fidl::StringPtr>& types,
-                                 ContextValue& value) {
-  if (value.type != ContextValueType::ENTITY || !types)
+                                 fuchsia::modular::ContextValue& value) {
+  if (value.type != fuchsia::modular::ContextValueType::ENTITY || !types)
     return;
 
   if (!value.meta.entity) {
-    value.meta.entity = EntityMetadata::New();
+    value.meta.entity = fuchsia::modular::EntityMetadata::New();
   }
   fidl::Clone(types, &value.meta.entity->type);
 }
 
 bool MaybeFindParentValueId(ContextRepository* repository,
-                            const ContextSelector& selector,
+                            const fuchsia::modular::ContextSelector& selector,
                             ContextRepository::Id* out) {
   // There is technically a race condition here, since on construction, we
-  // are given a ComponentScope, which contains some metadata to find a value
-  // in the context engine. It is the responsibility of the story_info
-  // acquierer to actually create that value, so we query at
+  // are given a fuchsia::modular::ComponentScope, which contains some metadata
+  // to find a value in the context engine. It is the responsibility of the
+  // story_info acquierer to actually create that value, so we query at
   // CreateValue()-time because it makes it less likely to hit the race
   // condition.
   //
@@ -100,7 +101,8 @@ bool MaybeFindParentValueId(ContextRepository* repository,
 }  // namespace
 
 void ContextWriterImpl::CreateValue(
-    fidl::InterfaceRequest<ContextValueWriter> request, ContextValueType type) {
+    fidl::InterfaceRequest<fuchsia::modular::ContextValueWriter> request,
+    fuchsia::modular::ContextValueType type) {
   ContextRepository::Id parent_id;
   // We ignore the return value - if it returns false |parent_id| will stay
   // default-initialized.
@@ -140,10 +142,10 @@ void ContextWriterImpl::WriteEntityTopic(fidl::StringPtr topic,
   GetEntityTypesFromEntityReference(
       value, [this, activity, topic,
               value](const fidl::VectorPtr<fidl::StringPtr>& types) {
-        ContextValue context_value;
-        context_value.type = ContextValueType::ENTITY;
+        fuchsia::modular::ContextValue context_value;
+        context_value.type = fuchsia::modular::ContextValueType::ENTITY;
         context_value.content = value;
-        context_value.meta.entity = EntityMetadata::New();
+        context_value.meta.entity = fuchsia::modular::EntityMetadata::New();
         context_value.meta.entity->topic = topic;
         fidl::Clone(types, &context_value.meta.entity->type);
 
@@ -172,12 +174,13 @@ void ContextWriterImpl::GetEntityTypesFromEntityReference(
 
   // TODO(thatguy): This function could be re-used in multiple places. Move it
   // somewhere other places can reach it.
-  std::unique_ptr<EntityPtr> entity = std::make_unique<EntityPtr>();
+  std::unique_ptr<fuchsia::modular::EntityPtr> entity =
+      std::make_unique<fuchsia::modular::EntityPtr>();
   entity_resolver_->ResolveEntity(reference, entity->NewRequest());
 
   auto fallback = fxl::MakeAutoCall([done, reference] {
-    // The contents of the Entity value could be a deprecated JSON Entity, not
-    // an Entity reference.
+    // The contents of the fuchsia::modular::Entity value could be a deprecated
+    // JSON fuchsia::modular::Entity, not an fuchsia::modular::Entity reference.
     done(Deprecated_GetTypesFromJsonEntity(reference));
   });
 
@@ -195,7 +198,8 @@ void ContextWriterImpl::GetEntityTypesFromEntityReference(
 
 ContextValueWriterImpl::ContextValueWriterImpl(
     ContextWriterImpl* writer, const ContextRepository::Id& parent_id,
-    ContextValueType type, fidl::InterfaceRequest<ContextValueWriter> request)
+    fuchsia::modular::ContextValueType type,
+    fidl::InterfaceRequest<fuchsia::modular::ContextValueWriter> request)
     : binding_(this, std::move(request)),
       writer_(writer),
       parent_id_(parent_id),
@@ -225,7 +229,8 @@ ContextValueWriterImpl::~ContextValueWriterImpl() {
 }
 
 void ContextValueWriterImpl::CreateChildValue(
-    fidl::InterfaceRequest<ContextValueWriter> request, ContextValueType type) {
+    fidl::InterfaceRequest<fuchsia::modular::ContextValueWriter> request,
+    fuchsia::modular::ContextValueType type) {
   // We can't create a child value until this value has an ID.
   value_id_->WeakConstThen(
       weak_factory_.GetWeakPtr(),
@@ -237,8 +242,8 @@ void ContextValueWriterImpl::CreateChildValue(
       }));
 }
 
-void ContextValueWriterImpl::Set(fidl::StringPtr content,
-                                 ContextMetadataPtr metadata) {
+void ContextValueWriterImpl::Set(
+    fidl::StringPtr content, fuchsia::modular::ContextMetadataPtr metadata) {
   auto activity = writer_->repository()
                       ->debug()
                       ->GetIdleWaiter()
@@ -253,7 +258,7 @@ void ContextValueWriterImpl::Set(fidl::StringPtr content,
 
         if (!weak_this->have_value_id_) {
           // We're creating this value for the first time.
-          ContextValue value;
+          fuchsia::modular::ContextValue value;
           value.type = weak_this->type_;
           value.content = content;
           if (metadata) {
@@ -297,9 +302,9 @@ void ContextValueWriterImpl::Set(fidl::StringPtr content,
         }
       };
 
-  if (type_ != ContextValueType::ENTITY || !content) {
-    // Avoid an extra round-trip to EntityResolver that won't get us
-    // anything.
+  if (type_ != fuchsia::modular::ContextValueType::ENTITY || !content) {
+    // Avoid an extra round-trip to fuchsia::modular::EntityResolver that won't
+    // get us anything.
     done_getting_types({});
   } else {
     writer_->GetEntityTypesFromEntityReference(
@@ -308,4 +313,3 @@ void ContextValueWriterImpl::Set(fidl::StringPtr content,
 }
 
 }  // namespace modular
-}  // namespace fuchsia

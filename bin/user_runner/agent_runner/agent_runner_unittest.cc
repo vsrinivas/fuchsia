@@ -26,7 +26,6 @@
 #include "peridot/lib/testing/mock_base.h"
 #include "peridot/lib/testing/test_with_ledger.h"
 
-namespace fuchsia {
 namespace modular {
 namespace testing {
 namespace {
@@ -41,8 +40,8 @@ class AgentRunnerTest : public TestWithLedger {
     mqm_.reset(new MessageQueueManager(
         ledger_client(), MakePageId("0123456789123456"), mq_data_dir_.path()));
     entity_provider_runner_.reset(new EntityProviderRunner(nullptr));
-    // The |UserIntelligenceProvider| below must be nullptr in order for agent
-    // creation to be synchronous, which these tests assume.
+    // The |fuchsia::modular::UserIntelligenceProvider| below must be nullptr in
+    // order for agent creation to be synchronous, which these tests assume.
     agent_runner_.reset(new AgentRunner(
         &launcher_, mqm_.get(), ledger_repository(), &agent_runner_storage_,
         token_provider_factory_.get(), nullptr, entity_provider_runner_.get()));
@@ -76,7 +75,7 @@ class AgentRunnerTest : public TestWithLedger {
   FXL_DISALLOW_COPY_AND_ASSIGN(AgentRunnerTest);
 };
 
-class MyDummyAgent : Agent,
+class MyDummyAgent : fuchsia::modular::Agent,
                      public fuchsia::sys::ComponentController,
                      public testing::MockBase {
  public:
@@ -87,7 +86,7 @@ class MyDummyAgent : Agent,
         controller_(this, std::move(ctrl)),
         agent_binding_(this) {
     outgoing_directory_->AddEntry(
-        Agent::Name_,
+        fuchsia::modular::Agent::Name_,
         fbl::AdoptRef(new fs::Service([this](zx::channel channel) {
           agent_binding_.Bind(std::move(channel));
           return ZX_OK;
@@ -107,7 +106,7 @@ class MyDummyAgent : Agent,
   // |ComponentController|
   void Wait(WaitCallback callback) override { ++counts["Wait"]; }
 
-  // |Agent|
+  // |fuchsia::modular::Agent|
   void Connect(
       fidl::StringPtr /*requestor_url*/,
       fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> /*services*/)
@@ -115,7 +114,7 @@ class MyDummyAgent : Agent,
     ++counts["Connect"];
   }
 
-  // |Agent|
+  // |fuchsia::modular::Agent|
   void RunTask(fidl::StringPtr /*task_id*/,
                RunTaskCallback /*callback*/) override {
     ++counts["RunTask"];
@@ -131,7 +130,7 @@ class MyDummyAgent : Agent,
 };
 
 // Test that connecting to an agent will start it up.
-// Then there should be an Agent.Connect().
+// Then there should be an fuchsia::modular::Agent.Connect().
 TEST_F(AgentRunnerTest, ConnectToAgent) {
   int agent_launch_count = 0;
   std::unique_ptr<MyDummyAgent> dummy_agent;
@@ -147,7 +146,7 @@ TEST_F(AgentRunnerTest, ConnectToAgent) {
       });
 
   fuchsia::sys::ServiceProviderPtr incoming_services;
-  AgentControllerPtr agent_controller;
+  fuchsia::modular::AgentControllerPtr agent_controller;
   agent_runner()->ConnectToAgent("requestor_url", kMyAgentUrl,
                                  incoming_services.NewRequest(),
                                  agent_controller.NewRequest());
@@ -163,7 +162,7 @@ TEST_F(AgentRunnerTest, ConnectToAgent) {
   // shouldn't re-initialize the existing instance of the agent application,
   // but should call |Connect()|.
 
-  AgentControllerPtr agent_controller2;
+  fuchsia::modular::AgentControllerPtr agent_controller2;
   fuchsia::sys::ServiceProviderPtr incoming_services2;
   agent_runner()->ConnectToAgent("requestor_url2", kMyAgentUrl,
                                  incoming_services2.NewRequest(),
@@ -192,7 +191,7 @@ TEST_F(AgentRunnerTest, AgentController) {
       });
 
   fuchsia::sys::ServiceProviderPtr incoming_services;
-  AgentControllerPtr agent_controller;
+  fuchsia::modular::AgentControllerPtr agent_controller;
   agent_runner()->ConnectToAgent("requestor_url", kMyAgentUrl,
                                  incoming_services.NewRequest(),
                                  agent_controller.NewRequest());
@@ -200,7 +199,8 @@ TEST_F(AgentRunnerTest, AgentController) {
   RunLoopUntilWithTimeout([&dummy_agent] { return !!dummy_agent; });
   dummy_agent->KillApplication();
 
-  // Agent application died, so check that AgentController dies here.
+  // fuchsia::modular::Agent application died, so check that
+  // fuchsia::modular::AgentController dies here.
   agent_controller.set_error_handler(
       [&agent_controller] { agent_controller.Unbind(); });
   RunLoopUntilWithTimeout(
@@ -211,4 +211,3 @@ TEST_F(AgentRunnerTest, AgentController) {
 }  // namespace
 }  // namespace testing
 }  // namespace modular
-}  // namespace fuchsia

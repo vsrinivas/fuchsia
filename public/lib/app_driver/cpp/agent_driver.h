@@ -7,8 +7,8 @@
 
 #include <memory>
 
-#include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/modular/cpp/fidl.h>
+#include <fuchsia/sys/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 
@@ -20,14 +20,13 @@
 #include "lib/fxl/logging.h"
 #include "lib/lifecycle/cpp/lifecycle_impl.h"
 
-namespace fuchsia {
 namespace modular {
 
 // This interface is passed to the Impl object that AgentDriver initializes.
 class AgentHost {
  public:
   virtual fuchsia::sys::StartupContext* startup_context() = 0;
-  virtual AgentContext* agent_context() = 0;
+  virtual fuchsia::modular::AgentContext* agent_context() = 0;
 };
 
 // AgentDriver provides a way to write agents and participate in application
@@ -51,7 +50,7 @@ class AgentHost {
 // int main(int argc, const char** argv) {
 //   fsl::MessageLoop loop;
 //   auto context = fuchsia::sys::StartupContext::CreateFromStartupInfo();
-//   fuchsia::modular::AgentDriver<HelloAgent> driver(context.get(),
+//   modular::AgentDriver<HelloAgent> driver(context.get(),
 //                                               [&loop] { loop.QuitNow(); });
 //   loop.Run();
 //   return 0;
@@ -67,7 +66,8 @@ class AgentDriver : LifecycleImpl::Delegate, AgentImpl::Delegate, AgentHost {
             context->outgoing().deprecated_services(),
             static_cast<AgentImpl::Delegate*>(this))),
         on_terminated_(std::move(on_terminated)),
-        agent_context_(context_->ConnectToEnvironmentService<AgentContext>()),
+        agent_context_(context_->ConnectToEnvironmentService<
+                       fuchsia::modular::AgentContext>()),
         impl_(std::make_unique<Impl>(static_cast<AgentHost*>(this))) {}
 
  private:
@@ -75,7 +75,7 @@ class AgentDriver : LifecycleImpl::Delegate, AgentImpl::Delegate, AgentHost {
   fuchsia::sys::StartupContext* startup_context() override { return context_; }
 
   // |AgentHost|
-  AgentContext* agent_context() override {
+  fuchsia::modular::AgentContext* agent_context() override {
     FXL_DCHECK(agent_context_);
     return agent_context_.get();
   }
@@ -111,13 +111,12 @@ class AgentDriver : LifecycleImpl::Delegate, AgentImpl::Delegate, AgentHost {
   LifecycleImpl lifecycle_impl_;
   std::unique_ptr<AgentImpl> agent_impl_;
   std::function<void()> on_terminated_;
-  AgentContextPtr agent_context_;
+  fuchsia::modular::AgentContextPtr agent_context_;
   std::unique_ptr<Impl> impl_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(AgentDriver);
 };
 
 }  // namespace modular
-}  // namespace fuchsia
 
 #endif  // LIB_APP_DRIVER_CPP_AGENT_DRIVER_H_

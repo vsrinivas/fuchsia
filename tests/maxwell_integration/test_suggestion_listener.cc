@@ -11,7 +11,6 @@ bool suggestion_less(const fuchsia::modular::Suggestion* a,
   return a->confidence > b->confidence;
 }
 
-namespace fuchsia {
 namespace modular {
 
 template <typename T>
@@ -34,8 +33,9 @@ void TestSuggestionListener::OnInterrupt(
                                  &suggestion, suggestion_less);
   suggestions_by_id_[suggestion.uuid] = fuchsia::modular::Suggestion();
   fidl::Clone(suggestion, &suggestions_by_id_[suggestion.uuid]);
-  insert_head =
-      ordered_suggestions_.insert(insert_head, &suggestions_by_id_[suggestion.uuid]) + 1;
+  insert_head = ordered_suggestions_.insert(
+                    insert_head, &suggestions_by_id_[suggestion.uuid]) +
+                1;
 
   EXPECT_EQ((signed)ordered_suggestions_.size(),
             (signed)suggestions_by_id_.size());
@@ -65,8 +65,9 @@ void TestSuggestionListener::OnAnyResults(
                                    &suggestion, suggestion_less);
     suggestions_by_id_[suggestion.uuid] = fuchsia::modular::Suggestion();
     fidl::Clone(suggestion, &suggestions_by_id_[suggestion.uuid]);
-    insert_head =
-        ordered_suggestions_.insert(insert_head, &suggestions_by_id_[suggestion.uuid]) + 1;
+    insert_head = ordered_suggestions_.insert(
+                      insert_head, &suggestions_by_id_[suggestion.uuid]) +
+                  1;
   }
 
   EXPECT_EQ((signed)ordered_suggestions_.size(),
@@ -88,4 +89,3 @@ void TestSuggestionListener::OnQueryComplete() {
 }
 
 }  // namespace modular
-}  // namespace fuchsia

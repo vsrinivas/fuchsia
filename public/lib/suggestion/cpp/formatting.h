@@ -7,7 +7,6 @@
 
 #include <fuchsia/modular/cpp/fidl.h>
 
-namespace fuchsia {
 namespace modular {
 
 std::ostream& operator<<(std::ostream& os,
@@ -16,6 +15,5 @@ std::ostream& operator<<(std::ostream& os,
                          const fuchsia::modular::Suggestion& o);
 
 }  // namespace modular
-}  // namespace fuchsia
 
 #endif  // LIB_SUGGESTION_CPP_FORMATTING_H_

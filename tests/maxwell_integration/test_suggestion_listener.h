@@ -12,28 +12,27 @@
 #include "gtest/gtest.h"
 #include "lib/fxl/logging.h"
 
-namespace fuchsia {
 namespace modular {
 
 class TestSuggestionListener : public fuchsia::modular::NextListener,
                                public fuchsia::modular::QueryListener,
                                public fuchsia::modular::InterruptionListener {
  public:
-  // |InterruptionListener|
+  // |fuchsia::modular::InterruptionListener|
   void OnInterrupt(fuchsia::modular::Suggestion suggestion) override;
 
-  // |NextListener|
+  // |fuchsia::modular::NextListener|
   void OnNextResults(
       fidl::VectorPtr<fuchsia::modular::Suggestion> suggestions) override;
 
-  // |NextListener|
+  // |fuchsia::modular::NextListener|
   void OnProcessingChange(bool processing) override;
 
-  // |QueryListener|
+  // |fuchsia::modular::QueryListener|
   void OnQueryResults(
       fidl::VectorPtr<fuchsia::modular::Suggestion> suggestions) override;
 
-  // |QueryListener|
+  // |fuchsia::modular::QueryListener|
   void OnQueryComplete() override;
 
   int suggestion_count() const { return (signed)ordered_suggestions_.size(); }
@@ -143,6 +142,5 @@ class TestDebugInterruptionListener
 };
 
 }  // namespace modular
-}  // namespace fuchsia
 
 #endif  // PERIDOT_TESTS_MAXWELL_INTEGRATION_TEST_SUGGESTION_LISTENER_H_

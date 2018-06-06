@@ -9,15 +9,14 @@
 #include "peridot/bin/user_runner/puppet_master/puppet_master_impl.h"
 #include "peridot/bin/user_runner/puppet_master/story_command_executor.h"
 
-namespace fuchsia {
 namespace modular {
 namespace {
 
 class TestStoryCommandExecutor : public StoryCommandExecutor {
  public:
-  void SetExecuteReturnResult(ExecuteStatus status,
-                             fidl::StringPtr error_message,
-                             fidl::StringPtr story_id) {
+  void SetExecuteReturnResult(fuchsia::modular::ExecuteStatus status,
+                              fidl::StringPtr error_message,
+                              fidl::StringPtr story_id) {
     result_.status = status;
     result_.error_message = error_message;
     result_.story_id = story_id;
@@ -25,27 +24,28 @@ class TestStoryCommandExecutor : public StoryCommandExecutor {
 
   int execute_count{0};
   fidl::StringPtr last_story_id;
-  std::vector<StoryCommand> last_commands;
+  std::vector<fuchsia::modular::StoryCommand> last_commands;
 
  private:
   // |StoryCommandExecutor|
-  void ExecuteCommands(fidl::StringPtr story_id,
-                       std::vector<StoryCommand> commands,
-                       std::function<void(ExecuteResult)> done) override {
+  void ExecuteCommands(
+      fidl::StringPtr story_id,
+      std::vector<fuchsia::modular::StoryCommand> commands,
+      std::function<void(fuchsia::modular::ExecuteResult)> done) override {
     ++execute_count;
     last_story_id = story_id;
     last_commands = std::move(commands);
-    ExecuteResult result;
+    fuchsia::modular::ExecuteResult result;
     fidl::Clone(result_, &result);
     done(std::move(result));
   }
 
-  ExecuteResult result_;
+  fuchsia::modular::ExecuteResult result_;
 };
 
-StoryCommand MakeRemoveModCommand(std::string mod_name) {
-  StoryCommand command;
-  RemoveMod remove_mod;
+fuchsia::modular::StoryCommand MakeRemoveModCommand(std::string mod_name) {
+  fuchsia::modular::StoryCommand command;
+  fuchsia::modular::RemoveMod remove_mod;
   remove_mod.mod_name.push_back(mod_name);
   command.set_remove_mod(std::move(remove_mod));
   return command;
@@ -55,8 +55,9 @@ class PuppetMasterTest : public gtest::TestWithLoop {
  public:
   PuppetMasterTest() : impl_(&executor_) { impl_.Connect(ptr_.NewRequest()); }
 
-  StoryPuppetMasterPtr ControlStory(fidl::StringPtr story_id) {
-    StoryPuppetMasterPtr ptr;
+  fuchsia::modular::StoryPuppetMasterPtr ControlStory(
+      fidl::StringPtr story_id) {
+    fuchsia::modular::StoryPuppetMasterPtr ptr;
     ptr_->ControlStory(story_id, ptr.NewRequest());
     return ptr;
   }
@@ -64,7 +65,7 @@ class PuppetMasterTest : public gtest::TestWithLoop {
  protected:
   TestStoryCommandExecutor executor_;
   PuppetMasterImpl impl_;
-  PuppetMasterPtr ptr_;
+  fuchsia::modular::PuppetMasterPtr ptr_;
 };
 
 TEST_F(PuppetMasterTest, CommandsAreSentToExecutor) {
@@ -72,7 +73,7 @@ TEST_F(PuppetMasterTest, CommandsAreSentToExecutor) {
 
   // Enqueue some commands. Do this twice and show that all the commands show
   // up as one batch.
-  fidl::VectorPtr<StoryCommand> commands;
+  fidl::VectorPtr<fuchsia::modular::StoryCommand> commands;
   commands.push_back(MakeRemoveModCommand("one"));
   story->Enqueue(std::move(commands));
   commands.push_back(MakeRemoveModCommand("two"));
@@ -83,18 +84,19 @@ TEST_F(PuppetMasterTest, CommandsAreSentToExecutor) {
   RunLoopUntilIdle();
   EXPECT_EQ(0, executor_.execute_count);
 
-  ExecuteResult result;
+  fuchsia::modular::ExecuteResult result;
   bool got_result{false};
   // Instruct our test executor to return an OK status.
-  executor_.SetExecuteReturnResult(ExecuteStatus::OK, nullptr, "foo");
-  story->Execute([&result, &got_result](ExecuteResult r) {
+  executor_.SetExecuteReturnResult(fuchsia::modular::ExecuteStatus::OK, nullptr,
+                                   "foo");
+  story->Execute([&result, &got_result](fuchsia::modular::ExecuteResult r) {
     result = std::move(r);
     got_result = true;
   });
   RunLoopUntilIdle();
   EXPECT_EQ(1, executor_.execute_count);
   EXPECT_TRUE(got_result);
-  EXPECT_EQ(ExecuteStatus::OK, result.status);
+  EXPECT_EQ(fuchsia::modular::ExecuteStatus::OK, result.status);
   EXPECT_EQ("foo", result.story_id);
 
   EXPECT_EQ("foo", executor_.last_story_id);
@@ -112,17 +114,18 @@ TEST_F(PuppetMasterTest, NewStoryIdIsPreserved) {
   // execution.
   auto story = ControlStory(nullptr);
 
-  fidl::VectorPtr<StoryCommand> commands;
+  fidl::VectorPtr<fuchsia::modular::StoryCommand> commands;
   commands.push_back(MakeRemoveModCommand("one"));
-  executor_.SetExecuteReturnResult(ExecuteStatus::OK, nullptr, "foo");
-  story->Execute([](ExecuteResult r) {});
+  executor_.SetExecuteReturnResult(fuchsia::modular::ExecuteStatus::OK, nullptr,
+                                   "foo");
+  story->Execute([](fuchsia::modular::ExecuteResult r) {});
   RunLoopUntilIdle();
   EXPECT_EQ(nullptr, executor_.last_story_id);
 
   // Execute more commands.
   commands.push_back(MakeRemoveModCommand("three"));
   story->Enqueue(std::move(commands));
-  story->Execute([](ExecuteResult r) {});
+  story->Execute([](fuchsia::modular::ExecuteResult r) {});
   RunLoopUntilIdle();
   EXPECT_EQ("foo", executor_.last_story_id);
 }
@@ -133,7 +136,7 @@ TEST_F(PuppetMasterTest, NewStoriesAreKeptSeparate) {
   auto story1 = ControlStory(nullptr);
   auto story2 = ControlStory(nullptr);
 
-  fidl::VectorPtr<StoryCommand> commands;
+  fidl::VectorPtr<fuchsia::modular::StoryCommand> commands;
   commands.push_back(MakeRemoveModCommand("one"));
   story1->Enqueue(std::move(commands));
   // We must run the loop to ensure that our message is dispatched.
@@ -143,17 +146,21 @@ TEST_F(PuppetMasterTest, NewStoriesAreKeptSeparate) {
   story2->Enqueue(std::move(commands));
   RunLoopUntilIdle();
 
-  ExecuteResult result;
-  executor_.SetExecuteReturnResult(ExecuteStatus::OK, nullptr, "story1");
-  story1->Execute([&result](ExecuteResult r) { result = std::move(r); });
+  fuchsia::modular::ExecuteResult result;
+  executor_.SetExecuteReturnResult(fuchsia::modular::ExecuteStatus::OK, nullptr,
+                                   "story1");
+  story1->Execute(
+      [&result](fuchsia::modular::ExecuteResult r) { result = std::move(r); });
   RunLoopUntilIdle();
   EXPECT_EQ(1, executor_.execute_count);
   EXPECT_EQ("story1", result.story_id);
   EXPECT_EQ(1u, executor_.last_commands.size());
   EXPECT_EQ("one", executor_.last_commands.at(0).remove_mod().mod_name->at(0));
 
-  executor_.SetExecuteReturnResult(ExecuteStatus::OK, nullptr, "story2");
-  story2->Execute([&result](ExecuteResult r) { result = std::move(r); });
+  executor_.SetExecuteReturnResult(fuchsia::modular::ExecuteStatus::OK, nullptr,
+                                   "story2");
+  story2->Execute(
+      [&result](fuchsia::modular::ExecuteResult r) { result = std::move(r); });
   RunLoopUntilIdle();
   EXPECT_EQ(2, executor_.execute_count);
   EXPECT_EQ("story2", result.story_id);
@@ -167,7 +174,7 @@ TEST_F(PuppetMasterTest, ExistingStoriesAreKeptSeparate) {
   auto story1 = ControlStory("foo");
   auto story2 = ControlStory("foo");
 
-  fidl::VectorPtr<StoryCommand> commands;
+  fidl::VectorPtr<fuchsia::modular::StoryCommand> commands;
   commands.push_back(MakeRemoveModCommand("one"));
   story1->Enqueue(std::move(commands));
   // We must run the loop to ensure that our message is dispatched.
@@ -177,17 +184,21 @@ TEST_F(PuppetMasterTest, ExistingStoriesAreKeptSeparate) {
   story2->Enqueue(std::move(commands));
   RunLoopUntilIdle();
 
-  ExecuteResult result;
-  executor_.SetExecuteReturnResult(ExecuteStatus::OK, nullptr, "foo");
-  story1->Execute([&result](ExecuteResult r) { result = std::move(r); });
+  fuchsia::modular::ExecuteResult result;
+  executor_.SetExecuteReturnResult(fuchsia::modular::ExecuteStatus::OK, nullptr,
+                                   "foo");
+  story1->Execute(
+      [&result](fuchsia::modular::ExecuteResult r) { result = std::move(r); });
   RunLoopUntilIdle();
   EXPECT_EQ(1, executor_.execute_count);
   EXPECT_EQ("foo", result.story_id);
   EXPECT_EQ(1u, executor_.last_commands.size());
   EXPECT_EQ("one", executor_.last_commands.at(0).remove_mod().mod_name->at(0));
 
-  executor_.SetExecuteReturnResult(ExecuteStatus::OK, nullptr, "foo");
-  story2->Execute([&result](ExecuteResult r) { result = std::move(r); });
+  executor_.SetExecuteReturnResult(fuchsia::modular::ExecuteStatus::OK, nullptr,
+                                   "foo");
+  story2->Execute(
+      [&result](fuchsia::modular::ExecuteResult r) { result = std::move(r); });
   RunLoopUntilIdle();
   EXPECT_EQ(2, executor_.execute_count);
   EXPECT_EQ("foo", result.story_id);
@@ -197,4 +208,3 @@ TEST_F(PuppetMasterTest, ExistingStoriesAreKeptSeparate) {
 
 }  // namespace
 }  // namespace modular
-}  // namespace fuchsia

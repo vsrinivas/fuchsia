@@ -8,7 +8,6 @@
 #include "lib/fxl/time/time_delta.h"
 #include "lib/fxl/time/time_point.h"
 
-namespace fuchsia {
 namespace modular {
 
 // Keeps track of a retry scheme where infinite retries are allowed unless an
@@ -42,6 +41,5 @@ class RateLimitedRetry {
 };
 
 }  // namespace modular
-}  // namespace fuchsia
 
 #endif  // PERIDOT_LIB_UTIL_RATE_LIMITED_RETRY_H_

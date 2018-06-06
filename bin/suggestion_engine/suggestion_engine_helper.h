@@ -7,7 +7,6 @@
 
 #include "peridot/bin/suggestion_engine/suggestion_prototype.h"
 
-namespace fuchsia {
 namespace modular {
 
 // (proposer ID, proposal ID) => suggestion prototype
@@ -15,12 +14,10 @@ using SuggestionPrototypeMap = std::map<std::pair<std::string, std::string>,
                                         std::unique_ptr<SuggestionPrototype>>;
 
 // Creates a suggestion prototype owned by the given |SuggestionPrototypeMap|.
-SuggestionPrototype* CreateSuggestionPrototype(SuggestionPrototypeMap* owner,
-                                               const std::string& source_url,
-                                               const std::string& story_id,
-                                               Proposal proposal);
+SuggestionPrototype* CreateSuggestionPrototype(
+    SuggestionPrototypeMap* owner, const std::string& source_url,
+    const std::string& story_id, fuchsia::modular::Proposal proposal);
 
 }  // namespace modular
-}  // namespace fuchsia
 
 #endif  // PERIDOT_BIN_SUGGESTION_ENGINE_SUGGESTION_ENGINE_HELPER_H_

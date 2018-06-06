@@ -15,11 +15,10 @@
 #include "peridot/bin/suggestion_engine/suggestion_prototype.h"
 #include "peridot/lib/util/idle_waiter.h"
 
-namespace fuchsia {
 namespace modular {
 
 // Provides a debug interface that is accessible through the MI dashboard.
-class SuggestionDebugImpl : public SuggestionDebug {
+class SuggestionDebugImpl : public fuchsia::modular::SuggestionDebug {
  public:
   SuggestionDebugImpl();
   ~SuggestionDebugImpl() override;
@@ -34,31 +33,35 @@ class SuggestionDebugImpl : public SuggestionDebug {
   util::IdleWaiter* GetIdleWaiter();
 
  private:
-  // |SuggestionDebug|
+  // |fuchsia::modular::SuggestionDebug|
   void WatchAskProposals(
-      fidl::InterfaceHandle<AskProposalListener> listener) override;
-  // |SuggestionDebug|
+      fidl::InterfaceHandle<fuchsia::modular::AskProposalListener> listener)
+      override;
+  // |fuchsia::modular::SuggestionDebug|
   void WatchInterruptionProposals(
-      fidl::InterfaceHandle<InterruptionProposalListener> listener) override;
-  // |SuggestionDebug|
+      fidl::InterfaceHandle<fuchsia::modular::InterruptionProposalListener>
+          listener) override;
+  // |fuchsia::modular::SuggestionDebug|
   void WatchNextProposals(
-      fidl::InterfaceHandle<NextProposalListener> listener) override;
-  // |SuggestionDebug|
+      fidl::InterfaceHandle<fuchsia::modular::NextProposalListener> listener)
+      override;
+  // |fuchsia::modular::SuggestionDebug|
   void WaitUntilIdle(WaitUntilIdleCallback callback) override;
 
-  fidl::InterfacePtrSet<AskProposalListener> ask_proposal_listeners_;
-  fidl::InterfacePtrSet<InterruptionProposalListener>
+  fidl::InterfacePtrSet<fuchsia::modular::AskProposalListener>
+      ask_proposal_listeners_;
+  fidl::InterfacePtrSet<fuchsia::modular::InterruptionProposalListener>
       interruption_proposal_listeners_;
-  fidl::InterfacePtrSet<NextProposalListener> next_proposal_listeners_;
+  fidl::InterfacePtrSet<fuchsia::modular::NextProposalListener>
+      next_proposal_listeners_;
 
   // The cached set of next proposals.
-  fidl::VectorPtr<ProposalSummary> cached_next_proposals_;
+  fidl::VectorPtr<fuchsia::modular::ProposalSummary> cached_next_proposals_;
 
   util::IdleWaiter idle_waiter_;
   fxl::WeakPtrFactory<SuggestionDebugImpl> weak_ptr_factory_;
 };
 
 }  // namespace modular
-}  // namespace fuchsia
 
 #endif  // PERIDOT_BIN_SUGGESTION_ENGINE_DEBUG_H_

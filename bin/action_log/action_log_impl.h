@@ -15,23 +15,24 @@
 #include "lib/fxl/macros.h"
 #include "peridot/bin/action_log/action_log_data.h"
 
-namespace fuchsia {
 namespace modular {
 
-class UserActionLogImpl : public UserActionLog {
+class UserActionLogImpl : public fuchsia::modular::UserActionLog {
  public:
-  UserActionLogImpl(ProposalPublisherPtr proposal_publisher);
+  UserActionLogImpl(fuchsia::modular::ProposalPublisherPtr proposal_publisher);
   ~UserActionLogImpl() override;
 
  private:
   void GetComponentActionLog(
-      ComponentScope scope,
-      fidl::InterfaceRequest<ComponentActionLog> action_log_request) override;
+      fuchsia::modular::ComponentScope scope,
+      fidl::InterfaceRequest<fuchsia::modular::ComponentActionLog>
+          action_log_request) override;
 
-  void Subscribe(
-      fidl::InterfaceHandle<ActionLogListener> listener_handle) override;
+  void Subscribe(fidl::InterfaceHandle<fuchsia::modular::ActionLogListener>
+                     listener_handle) override;
 
-  void Duplicate(fidl::InterfaceRequest<UserActionLog> request) override;
+  void Duplicate(
+      fidl::InterfaceRequest<fuchsia::modular::UserActionLog> request) override;
 
   void BroadcastToSubscribers(const ActionData& action_data);
 
@@ -40,17 +41,18 @@ class UserActionLogImpl : public UserActionLog {
   void MaybeRecordEmailRecipient(const ActionData& action_data);
 
   ActionLogData action_log_;
-  ProposalPublisherPtr proposal_publisher_;
-  fidl::BindingSet<ComponentActionLog, std::unique_ptr<ComponentActionLog>>
+  fuchsia::modular::ProposalPublisherPtr proposal_publisher_;
+  fidl::BindingSet<fuchsia::modular::ComponentActionLog,
+                   std::unique_ptr<fuchsia::modular::ComponentActionLog>>
       action_log_bindings_;
-  fidl::InterfacePtrSet<ActionLogListener> subscribers_;
-  fidl::BindingSet<UserActionLog> bindings_;
+  fidl::InterfacePtrSet<fuchsia::modular::ActionLogListener> subscribers_;
+  fidl::BindingSet<fuchsia::modular::UserActionLog> bindings_;
   std::string last_email_rcpt_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(UserActionLogImpl);
 };
 
-class ComponentActionLogImpl : public ComponentActionLog {
+class ComponentActionLogImpl : public fuchsia::modular::ComponentActionLog {
  public:
   ComponentActionLogImpl(ActionLogger log_action);
   ~ComponentActionLogImpl() override;
@@ -63,6 +65,5 @@ class ComponentActionLogImpl : public ComponentActionLog {
   FXL_DISALLOW_COPY_AND_ASSIGN(ComponentActionLogImpl);
 };
 }  // namespace modular
-}  // namespace fuchsia
 
 #endif  // PERIDOT_BIN_ACTION_LOG_ACTION_LOG_IMPL_H_

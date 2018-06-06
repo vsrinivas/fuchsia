@@ -18,13 +18,13 @@
 #include "peridot/tests/common/defs.h"
 #include "peridot/tests/trigger/defs.h"
 
-using fuchsia::modular::testing::Await;
-using fuchsia::modular::testing::TestPoint;
+using modular::testing::Await;
+using modular::testing::TestPoint;
 
 namespace {
 
-class TestApp : public fuchsia::modular::testing::ComponentBase<
-                    fuchsia::modular::UserShell> {
+class TestApp
+    : public modular::testing::ComponentBase<fuchsia::modular::UserShell> {
  public:
   TestApp(fuchsia::sys::StartupContext* const startup_context)
       : ComponentBase(startup_context), weak_ptr_factory_(this) {
@@ -34,12 +34,12 @@ class TestApp : public fuchsia::modular::testing::ComponentBase<
   ~TestApp() override = default;
 
  private:
-  using TestPoint = fuchsia::modular::testing::TestPoint;
+  using TestPoint = modular::testing::TestPoint;
 
   TestPoint initialize_{"Initialize()"};
   TestPoint story_create_{"Created story."};
 
-  // |UserShell|
+  // |fuchsia::modular::UserShell|
   void Initialize(fidl::InterfaceHandle<fuchsia::modular::UserShellContext>
                       user_shell_context) override {
     initialize_.Pass();
@@ -61,7 +61,8 @@ class TestApp : public fuchsia::modular::testing::ComponentBase<
   TestPoint got_queue_token_{"Got message queue token."};
   TestPoint module_finished_{"Trigger test module finished work."};
   TestPoint story_was_deleted_{"Story was deleted."};
-  TestPoint agent_executed_delete_task_{"Agent executed message queue task."};
+  TestPoint agent_executed_delete_task_{
+      "fuchsia::modular::Agent executed message queue task."};
   void StartStory(const std::string& story_id) {
     story_provider_->GetController(story_id, story_controller_.NewRequest());
     story_controller_.set_error_handler([this, story_id] {
@@ -73,7 +74,7 @@ class TestApp : public fuchsia::modular::testing::ComponentBase<
 
     // Retrieve the message queue token for the messsage queue that the module
     // created.
-    fuchsia::modular::testing::GetStore()->Get(
+    modular::testing::GetStore()->Get(
         "trigger_test_module_queue_token",
         [this, story_id](fidl::StringPtr value) {
           got_queue_token_.Pass();
@@ -111,6 +112,6 @@ class TestApp : public fuchsia::modular::testing::ComponentBase<
 }  // namespace
 
 int main(int /*argc*/, const char** /*argv*/) {
-  fuchsia::modular::testing::ComponentMain<TestApp>();
+  modular::testing::ComponentMain<TestApp>();
   return 0;
 }

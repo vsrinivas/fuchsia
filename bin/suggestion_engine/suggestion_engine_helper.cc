@@ -6,14 +6,11 @@
 
 #include "lib/fxl/random/uuid.h"
 
-namespace fuchsia {
 namespace modular {
 
 SuggestionPrototype* CreateSuggestionPrototype(
-    SuggestionPrototypeMap* owner,
-    const std::string& source_url,
-    const std::string& story_id,
-    Proposal proposal) {
+    SuggestionPrototypeMap* owner, const std::string& source_url,
+    const std::string& story_id, fuchsia::modular::Proposal proposal) {
   auto prototype_pair = owner->emplace(std::make_pair(source_url, proposal.id),
                                        std::make_unique<SuggestionPrototype>());
   auto suggestion_prototype = prototype_pair.first->second.get();
@@ -32,4 +29,3 @@ SuggestionPrototype* CreateSuggestionPrototype(
 }
 
 }  // namespace modular
-}  // namespace fuchsia

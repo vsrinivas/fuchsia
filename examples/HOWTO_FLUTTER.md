@@ -26,7 +26,7 @@ aspects:
 
 * Starting a new module as a child, using the `Story` service.
 * Composing the child's UI into the parent's widget tree using `ChildView`.
-* Exchanging data between modules using a shared `Link` service.
+* Exchanging data between modules using a shared `fuchsia::modular::Link` service.
 
 ## Running the Examples on Fuchsia
 
@@ -195,8 +195,8 @@ Also, refer to the example flutter module code to see how the
 
 Once an `InterfaceHandle<Foo>` is bound to a proxy, the handle cannot be used in
 other places. Often, in case you have to share the same service with multiple
-parties (e.g. sharing the same `Link` service across multiple modules), the
-service will provide a way to obtain a duplicate handle (e.g. `Link::Dup()`).
+parties (e.g. sharing the same `fuchsia::modular::Link` service across multiple modules), the
+service will provide a way to obtain a duplicate handle (e.g. `fuchsia::modular::Link::Dup()`).
 
 You can also call `unbind()` method on `ProxyController` to get the usable
 `InterfaceHandle<Foo>` back, which then can be used by someone else.

@@ -10,7 +10,6 @@
 
 #include "lib/fxl/logging.h"
 
-namespace fuchsia {
 namespace modular {
 
 /* Implements a FIFO queue of strings that is persisted to local storage as
@@ -47,6 +46,5 @@ class PersistentQueue {
 };
 
 }  // namespace modular
-}  // namespace fuchsia
 
 #endif  // PERIDOT_BIN_USER_RUNNER_MESSAGE_QUEUE_PERSISTENT_QUEUE_H_

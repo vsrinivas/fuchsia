@@ -11,24 +11,24 @@
 #include "peridot/tests/common/defs.h"
 #include "peridot/tests/embed_shell/defs.h"
 
-using fuchsia::modular::testing::TestPoint;
+using modular::testing::TestPoint;
 
 namespace {
 
 // Cf. README.md for what this test does and how.
 class TestApp : fuchsia::modular::ModuleWatcher {
  public:
-  TestApp(fuchsia::modular::ModuleHost* const module_host,
+  TestApp(modular::ModuleHost* const module_host,
           fidl::InterfaceRequest<
               fuchsia::ui::views_v1::ViewProvider> /*view_provider_request*/)
       : module_host_(module_host) {
-    fuchsia::modular::testing::Init(module_host->startup_context(), __FILE__);
+    modular::testing::Init(module_host->startup_context(), __FILE__);
     StartChildModule();
   }
 
   // Called from ModuleDriver.
   void Terminate(const std::function<void()>& done) {
-    fuchsia::modular::testing::Done(done);
+    modular::testing::Done(done);
   }
 
  private:
@@ -43,15 +43,14 @@ class TestApp : fuchsia::modular::ModuleWatcher {
     child_module_->Watch(module_watcher_.AddBinding(this));
   }
 
-  // |ModuleWatcher|
+  // |fuchsia::modular::ModuleWatcher|
   void OnStateChange(fuchsia::modular::ModuleState state) override {
     if (state == fuchsia::modular::ModuleState::RUNNING) {
-      fuchsia::modular::testing::GetStore()->Put("child_module_done", "1",
-                                                 [] {});
+      modular::testing::GetStore()->Put("child_module_done", "1", [] {});
     }
   }
 
-  fuchsia::modular::ModuleHost* const module_host_;
+  modular::ModuleHost* const module_host_;
   fuchsia::modular::ModuleControllerPtr child_module_;
   fidl::BindingSet<fuchsia::modular::ModuleWatcher> module_watcher_;
 
@@ -63,8 +62,8 @@ class TestApp : fuchsia::modular::ModuleWatcher {
 int main(int /*argc*/, const char** /*argv*/) {
   fsl::MessageLoop loop;
   auto context = fuchsia::sys::StartupContext::CreateFromStartupInfo();
-  fuchsia::modular::ModuleDriver<TestApp> driver(context.get(),
-                                                 [&loop] { loop.QuitNow(); });
+  modular::ModuleDriver<TestApp> driver(context.get(),
+                                        [&loop] { loop.QuitNow(); });
   loop.Run();
   return 0;
 }

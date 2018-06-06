@@ -12,30 +12,30 @@
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fxl/memory/weak_ptr.h"
 
-namespace fuchsia {
 namespace modular {
 
 class StoryCommandExecutor;
 
-// An implementation of StoryPuppetMaster which delegates story command
-// execution to a StoryCommandExecutor.
-class StoryPuppetMasterImpl : public StoryPuppetMaster {
+// An implementation of fuchsia::modular::StoryPuppetMaster which delegates
+// story command execution to a StoryCommandExecutor.
+class StoryPuppetMasterImpl : public fuchsia::modular::StoryPuppetMaster {
  public:
   StoryPuppetMasterImpl(fidl::StringPtr story_id,
                         StoryCommandExecutor* executor_);
   ~StoryPuppetMasterImpl() override;
 
  private:
-  // |StoryPuppetMaster|
-  void Enqueue(fidl::VectorPtr<StoryCommand> commands) override;
+  // |fuchsia::modular::StoryPuppetMaster|
+  void Enqueue(
+      fidl::VectorPtr<fuchsia::modular::StoryCommand> commands) override;
 
-  // |StoryPuppetMaster|
+  // |fuchsia::modular::StoryPuppetMaster|
   void Execute(ExecuteCallback done) override;
 
   fidl::StringPtr story_id_;
   StoryCommandExecutor* const executor_;  // Not owned.
 
-  std::vector<StoryCommand> enqueued_commands_;
+  std::vector<fuchsia::modular::StoryCommand> enqueued_commands_;
 
   fxl::WeakPtrFactory<StoryPuppetMasterImpl> weak_factory_;
 
@@ -43,6 +43,5 @@ class StoryPuppetMasterImpl : public StoryPuppetMaster {
 };
 
 }  // namespace modular
-}  // namespace fuchsia
 
 #endif  // PERIDOT_BIN_USER_RUNNER_PUPPET_MASTER_STORY_PUPPET_MASTER_IMPL_H_

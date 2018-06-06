@@ -6,16 +6,17 @@
 
 #include "lib/fidl/cpp/clone.h"
 
-namespace fuchsia {
 namespace modular {
 
-void XdrLinkPath(XdrContext* const xdr, LinkPath* const data) {
+void XdrLinkPath(XdrContext* const xdr,
+                 fuchsia::modular::LinkPath* const data) {
   xdr->Field("module_path", &data->module_path);
   xdr->Field("link_name", &data->link_name);
 }
 
-void XdrModuleParameterMapEntry(XdrContext* const xdr,
-                                ModuleParameterMapEntry* const data) {
+void XdrModuleParameterMapEntry(
+    XdrContext* const xdr,
+    fuchsia::modular::ModuleParameterMapEntry* const data) {
   // NOTE: the JSON field naming doesn't match the FIDL struct naming because
   // the field names in FIDL were changed.
   xdr->Field("key", &data->name);
@@ -23,20 +24,21 @@ void XdrModuleParameterMapEntry(XdrContext* const xdr,
 }
 
 void XdrModuleParameterMap(XdrContext* const xdr,
-                           ModuleParameterMap* const data) {
+                           fuchsia::modular::ModuleParameterMap* const data) {
   // NOTE: the JSON field naming doesn't match the FIDL struct naming because
   // the field names in FIDL were changed.
   xdr->Field("key_to_link_map", &data->entries, XdrModuleParameterMapEntry);
 }
 
-void XdrSurfaceRelation(XdrContext* const xdr, SurfaceRelation* const data) {
+void XdrSurfaceRelation(XdrContext* const xdr,
+                        fuchsia::modular::SurfaceRelation* const data) {
   xdr->Field("arrangement", &data->arrangement);
   xdr->Field("dependency", &data->dependency);
   xdr->Field("emphasis", &data->emphasis);
 }
 
 void XdrIntentParameterData(XdrContext* const xdr,
-                            IntentParameterData* const data) {
+                            fuchsia::modular::IntentParameterData* const data) {
   static constexpr char kTag[] = "tag";
   static constexpr char kEntityReference[] = "entity_reference";
   static constexpr char kJson[] = "json";
@@ -66,7 +68,7 @@ void XdrIntentParameterData(XdrContext* const xdr,
         xdr->Field(kLinkName, &value);
         data->set_link_name(std::move(value));
       } else if (tag == kLinkPath) {
-        LinkPath value;
+        fuchsia::modular::LinkPath value;
         xdr->Field(kLinkPath, &value, XdrLinkPath);
         data->set_link_path(std::move(value));
       } else {
@@ -89,36 +91,36 @@ void XdrIntentParameterData(XdrContext* const xdr,
       // for all types.
 
       switch (data->Which()) {
-        case IntentParameterData::Tag::kEntityReference: {
+        case fuchsia::modular::IntentParameterData::Tag::kEntityReference: {
           tag = kEntityReference;
           fidl::StringPtr value = data->entity_reference();
           xdr->Field(kEntityReference, &value);
           break;
         }
-        case IntentParameterData::Tag::kJson: {
+        case fuchsia::modular::IntentParameterData::Tag::kJson: {
           tag = kJson;
           fidl::StringPtr value = data->json();
           xdr->Field(kJson, &value);
           break;
         }
-        case IntentParameterData::Tag::kEntityType: {
+        case fuchsia::modular::IntentParameterData::Tag::kEntityType: {
           tag = kEntityType;
           fidl::VectorPtr<fidl::StringPtr> value = Clone(data->entity_type());
           xdr->Field(kEntityType, &value);
           break;
         }
-        case IntentParameterData::Tag::kLinkName: {
+        case fuchsia::modular::IntentParameterData::Tag::kLinkName: {
           tag = kLinkName;
           fidl::StringPtr value = data->link_name();
           xdr->Field(kLinkName, &value);
           break;
         }
-        case IntentParameterData::Tag::kLinkPath: {
+        case fuchsia::modular::IntentParameterData::Tag::kLinkPath: {
           tag = kLinkPath;
           xdr->Field(kLinkPath, &data->link_path(), XdrLinkPath);
           break;
         }
-        case IntentParameterData::Tag::Invalid:
+        case fuchsia::modular::IntentParameterData::Tag::Invalid:
           FXL_LOG(ERROR) << "XdrIntentParameterData TO_JSON unknown tag: "
                          << static_cast<int>(data->Which());
           break;
@@ -130,24 +132,26 @@ void XdrIntentParameterData(XdrContext* const xdr,
   }
 }
 
-void XdrIntentParameter(XdrContext* const xdr, IntentParameter* const data) {
+void XdrIntentParameter(XdrContext* const xdr,
+                        fuchsia::modular::IntentParameter* const data) {
   xdr->Field("name", &data->name);
   xdr->Field("data", &data->data, XdrIntentParameterData);
 }
 
-void XdrIntent(XdrContext* const xdr, Intent* const data) {
+void XdrIntent(XdrContext* const xdr, fuchsia::modular::Intent* const data) {
   xdr->Field("action_name", &data->action.name);
   xdr->Field("action_handler", &data->action.handler);
   xdr->Field("parameters", &data->parameters, XdrIntentParameter);
 }
 
 void XdrParameterConstraint(XdrContext* const xdr,
-                            ParameterConstraint* const data) {
+                            fuchsia::modular::ParameterConstraint* const data) {
   xdr->Field("name", &data->name);
   xdr->Field("type", &data->type);
 }
 
-void XdrModuleManifest(XdrContext* const xdr, ModuleManifest* const data) {
+void XdrModuleManifest(XdrContext* const xdr,
+                       fuchsia::modular::ModuleManifest* const data) {
   xdr->Field("binary", &data->binary);
   xdr->Field("suggestion_headline", &data->suggestion_headline);
   xdr->Field("action", &data->action);
@@ -156,7 +160,8 @@ void XdrModuleManifest(XdrContext* const xdr, ModuleManifest* const data) {
   xdr->Field("composition_pattern", &data->composition_pattern);
 }
 
-void XdrModuleData_v1(XdrContext* const xdr, ModuleData* const data) {
+void XdrModuleData_v1(XdrContext* const xdr,
+                      fuchsia::modular::ModuleData* const data) {
   xdr->Field("url", &data->module_url);
   xdr->Field("module_path", &data->module_path);
   xdr->Field("module_source", &data->module_source);
@@ -169,7 +174,8 @@ void XdrModuleData_v1(XdrContext* const xdr, ModuleData* const data) {
   data->module_manifest.reset();
 }
 
-void XdrModuleData_v2(XdrContext* const xdr, ModuleData* const data) {
+void XdrModuleData_v2(XdrContext* const xdr,
+                      fuchsia::modular::ModuleData* const data) {
   xdr->Field("url", &data->module_url);
   xdr->Field("module_path", &data->module_path);
   xdr->Field("module_source", &data->module_source);
@@ -184,7 +190,8 @@ void XdrModuleData_v2(XdrContext* const xdr, ModuleData* const data) {
   data->module_manifest.reset();
 }
 
-void XdrModuleData_v3(XdrContext* const xdr, ModuleData* const data) {
+void XdrModuleData_v3(XdrContext* const xdr,
+                      fuchsia::modular::ModuleData* const data) {
   xdr->Field("url", &data->module_url);
   xdr->Field("module_path", &data->module_path);
   xdr->Field("module_source", &data->module_source);
@@ -197,7 +204,8 @@ void XdrModuleData_v3(XdrContext* const xdr, ModuleData* const data) {
   xdr->Field("module_manifest", &data->module_manifest, XdrModuleManifest);
 }
 
-void XdrModuleData_v4(XdrContext* const xdr, ModuleData* const data) {
+void XdrModuleData_v4(XdrContext* const xdr,
+                      fuchsia::modular::ModuleData* const data) {
   if (!xdr->Version(4)) {
     return;
   }
@@ -213,10 +221,9 @@ void XdrModuleData_v4(XdrContext* const xdr, ModuleData* const data) {
   xdr->Field("module_manifest", &data->module_manifest, XdrModuleManifest);
 }
 
-XdrFilterType<ModuleData> XdrModuleData[] = {
+XdrFilterType<fuchsia::modular::ModuleData> XdrModuleData[] = {
     XdrModuleData_v4, XdrModuleData_v3, XdrModuleData_v2,
     XdrModuleData_v1, nullptr,
 };
 
 }  // namespace modular
-}  // namespace fuchsia

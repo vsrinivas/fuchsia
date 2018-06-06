@@ -37,13 +37,13 @@ class StoryWatcherImpl : fuchsia::modular::StoryWatcher,
   void OnFocusChange(bool focused);
 
  private:
-  // |StoryWatcher|
+  // |fuchsia::modular::StoryWatcher|
   void OnStateChange(fuchsia::modular::StoryState new_state) override;
 
-  // |StoryWatcher|
+  // |fuchsia::modular::StoryWatcher|
   void OnModuleAdded(fuchsia::modular::ModuleData module_data) override;
 
-  // |StoryLinksWatcher|
+  // |fuchsia::modular::StoryLinksWatcher|
   void OnNewLink(fuchsia::modular::LinkPath link_path) override;
 
   void WatchLink(fuchsia::modular::LinkPath link_path);

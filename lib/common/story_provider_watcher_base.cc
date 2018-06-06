@@ -7,7 +7,6 @@
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fidl/cpp/string.h"
 
-namespace fuchsia {
 namespace modular {
 
 StoryProviderWatcherBase::StoryProviderWatcherBase()
@@ -24,9 +23,7 @@ void StoryProviderWatcherBase::Watch(
   (*story_provider)->Watch(binding_.NewBinding());
 }
 
-void StoryProviderWatcherBase::Reset() {
-  binding_.Unbind();
-}
+void StoryProviderWatcherBase::Reset() { binding_.Unbind(); }
 
 void StoryProviderWatcherBase::OnDelete(::fidl::StringPtr /*story_id*/) {}
 
@@ -37,4 +34,3 @@ void StoryProviderWatcherBase::OnChange(
 }
 
 }  // namespace modular
-}  // namespace fuchsia

@@ -10,7 +10,6 @@
 #include "lib/fxl/strings/join_strings.h"
 #include "peridot/lib/util/string_escape.h"
 
-namespace fuchsia {
 namespace modular {
 
 std::string MakeDeviceKey(const fidl::StringPtr& device_name) {
@@ -58,7 +57,7 @@ std::string EncodeModulePath(
   return fxl::JoinStrings(segments, kSubSeparator);
 }
 
-std::string EncodeLinkPath(const LinkPath& link_path) {
+std::string EncodeLinkPath(const fuchsia::modular::LinkPath& link_path) {
   std::string output;
   output.append(EncodeModulePath(link_path.module_path));
   output.append(kSeparator);
@@ -82,11 +81,11 @@ std::string MakeTriggerKey(const std::string& agent_url,
   return key;
 }
 
-std::string MakeLinkKey(const LinkPathPtr& link_path) {
+std::string MakeLinkKey(const fuchsia::modular::LinkPathPtr& link_path) {
   return MakeLinkKey(*link_path);
 }
 
-std::string MakeLinkKey(const LinkPath& link_path) {
+std::string MakeLinkKey(const fuchsia::modular::LinkPath& link_path) {
   std::string key{kLinkKeyPrefix};
   key.append(EncodeLinkPath(link_path));
   return key;
@@ -102,4 +101,3 @@ std::string MakeModuleKey(const fidl::VectorPtr<fidl::StringPtr>& module_path) {
 }
 
 }  // namespace modular
-}  // namespace fuchsia

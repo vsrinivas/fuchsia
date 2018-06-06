@@ -12,22 +12,21 @@
 #include "lib/fxl/macros.h"
 #include "peridot/bin/agents/clipboard/clipboard_storage.h"
 
-namespace fuchsia {
 namespace modular {
 
-// An agent responsible for providing the Clipboard service.
-class ClipboardImpl : Clipboard {
+// An agent responsible for providing the fuchsia::modular::Clipboard service.
+class ClipboardImpl : fuchsia::modular::Clipboard {
  public:
   explicit ClipboardImpl(LedgerClient* ledger_client);
   ~ClipboardImpl();
 
-  void Connect(fidl::InterfaceRequest<Clipboard> request);
+  void Connect(fidl::InterfaceRequest<fuchsia::modular::Clipboard> request);
 
  private:
-  // |Clipboard|
+  // |fuchsia::modular::Clipboard|
   void Push(fidl::StringPtr text) override;
 
-  // |Clipboard|
+  // |fuchsia::modular::Clipboard|
   void Peek(PeekCallback callback) override;
 
   // The storage instance that manages interactions with the Ledger.
@@ -35,13 +34,12 @@ class ClipboardImpl : Clipboard {
 
   // The bindings set containing the outgoing services request from the agent
   // driver.
-  fidl::BindingSet<Clipboard> bindings_;
+  fidl::BindingSet<fuchsia::modular::Clipboard> bindings_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ClipboardImpl);
   friend class ClipboardImplTest;
 };
 
 }  // namespace modular
-}  // namespace fuchsia
 
 #endif  // PERIDOT_BIN_AGENTS_CLIPBOARD_CLIPBOARD_IMPL_H_

@@ -18,7 +18,6 @@
 #include "lib/fxl/macros.h"
 #include "peridot/bin/user_runner/component_context_impl.h"
 
-namespace fuchsia {
 namespace modular {
 
 class StoryControllerImpl;
@@ -27,13 +26,13 @@ class StoryControllerImpl;
 struct ModuleContextInfo {
   const ComponentContextInfo component_context_info;
   StoryControllerImpl* const story_controller_impl;
-  modular::UserIntelligenceProvider* const user_intelligence_provider;
+  fuchsia::modular::UserIntelligenceProvider* const user_intelligence_provider;
 };
 
 // ModuleContextImpl keeps a single connection from a module instance in
 // the story to a StoryControllerImpl. This way, requests that the module makes
 // on its Story handle can be associated with the Module instance.
-class ModuleContextImpl : ModuleContext {
+class ModuleContextImpl : fuchsia::modular::ModuleContext {
  public:
   // |module_data| identifies this particular module instance using the path of
   // modules that have ended up starting this module in the module_path
@@ -41,50 +40,53 @@ class ModuleContextImpl : ModuleContext {
   // can be used to internally name resources that belong to this module
   // (message queues, Links).
   ModuleContextImpl(const ModuleContextInfo& info,
-                    const ModuleData* module_data,
+                    const fuchsia::modular::ModuleData* module_data,
                     fidl::InterfaceRequest<fuchsia::sys::ServiceProvider>
                         service_provider_request);
 
   ~ModuleContextImpl() override;
 
  private:
-  // |ModuleContext|
+  // |fuchsia::modular::ModuleContext|
   void GetLink(fidl::StringPtr name,
-               fidl::InterfaceRequest<Link> request) override;
-  // |ModuleContext|
+               fidl::InterfaceRequest<fuchsia::modular::Link> request) override;
+  // |fuchsia::modular::ModuleContext|
   void EmbedModule(
-      fidl::StringPtr name, Intent intent,
-      fidl::InterfaceRequest<ModuleController> module_controller,
+      fidl::StringPtr name, fuchsia::modular::Intent intent,
+      fidl::InterfaceRequest<fuchsia::modular::ModuleController>
+          module_controller,
       fidl::InterfaceRequest<fuchsia::ui::views_v1_token::ViewOwner> view_owner,
       EmbedModuleCallback callback) override;
-  // |ModuleContext|
-  void StartModule(fidl::StringPtr name, Intent intent,
-                   fidl::InterfaceRequest<ModuleController> module_controller,
-                   SurfaceRelationPtr surface_relation,
+  // |fuchsia::modular::ModuleContext|
+  void StartModule(fidl::StringPtr name, fuchsia::modular::Intent intent,
+                   fidl::InterfaceRequest<fuchsia::modular::ModuleController>
+                       module_controller,
+                   fuchsia::modular::SurfaceRelationPtr surface_relation,
                    StartModuleCallback callback) override;
-  // |ModuleContext|
+  // |fuchsia::modular::ModuleContext|
   void StartContainerInShell(
-      fidl::StringPtr name, SurfaceRelation parent_relation,
-      fidl::VectorPtr<ContainerLayout> layout,
-      fidl::VectorPtr<ContainerRelationEntry> relationships,
-      fidl::VectorPtr<ContainerNode> nodes) override;
-  // |ModuleContext|
+      fidl::StringPtr name, fuchsia::modular::SurfaceRelation parent_relation,
+      fidl::VectorPtr<fuchsia::modular::ContainerLayout> layout,
+      fidl::VectorPtr<fuchsia::modular::ContainerRelationEntry> relationships,
+      fidl::VectorPtr<fuchsia::modular::ContainerNode> nodes) override;
+  // |fuchsia::modular::ModuleContext|
   void GetComponentContext(
-      fidl::InterfaceRequest<ComponentContext> context_request) override;
-  // |ModuleContext|
+      fidl::InterfaceRequest<fuchsia::modular::ComponentContext>
+          context_request) override;
+  // |fuchsia::modular::ModuleContext|
   void GetIntelligenceServices(
       fidl::InterfaceRequest<fuchsia::modular::IntelligenceServices> request)
       override;
-  // |ModuleContext|
+  // |fuchsia::modular::ModuleContext|
   void GetStoryId(GetStoryIdCallback callback) override;
-  // |ModuleContext|
+  // |fuchsia::modular::ModuleContext|
   void RequestFocus() override;
-  // |ModuleContext|
+  // |fuchsia::modular::ModuleContext|
   void Active() override;
 
   // Identifies the module by its path, holds the URL of the running module, and
   // the link it was started with.
-  const ModuleData* const module_data_;
+  const fuchsia::modular::ModuleData* const module_data_;
 
   // Not owned. The StoryControllerImpl for the Story in which this Module
   // lives.
@@ -95,7 +97,7 @@ class ModuleContextImpl : ModuleContext {
   fuchsia::modular::UserIntelligenceProvider* const
       user_intelligence_provider_;  // Not owned
 
-  fidl::BindingSet<ModuleContext> bindings_;
+  fidl::BindingSet<fuchsia::modular::ModuleContext> bindings_;
 
   // A service provider that represents the services to be added into an
   // application's namespace.
@@ -105,6 +107,5 @@ class ModuleContextImpl : ModuleContext {
 };
 
 }  // namespace modular
-}  // namespace fuchsia
 
 #endif  // PERIDOT_BIN_USER_RUNNER_STORY_RUNNER_MODULE_CONTEXT_IMPL_H_

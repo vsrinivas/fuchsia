@@ -9,18 +9,17 @@
 #include "peridot/bin/user_runner/puppet_master/dispatch_story_command_executor.h"
 #include "peridot/bin/user_runner/puppet_master/make_production_impl.h"
 
-namespace fuchsia {
 namespace modular {
 
 class PuppetMasterImpl;
 
 std::unique_ptr<StoryCommandExecutor> MakeProductionStoryCommandExecutor(
     DispatchStoryCommandExecutor::OperationContainerAccessor factory) {
-  std::map<StoryCommand::Tag, std::unique_ptr<CommandRunner>> command_runners;
+  std::map<fuchsia::modular::StoryCommand::Tag, std::unique_ptr<CommandRunner>> command_runners;
   // TODO(thatguy): Add all required command runners.
-  command_runners.emplace(StoryCommand::Tag::kSetLinkValue,
+  command_runners.emplace(fuchsia::modular::StoryCommand::Tag::kSetLinkValue,
                           new SetLinkValueCommandRunner());
-  command_runners.emplace(StoryCommand::Tag::kUpdateMod,
+  command_runners.emplace(fuchsia::modular::StoryCommand::Tag::kUpdateMod,
                           new UpdateModCommandRunner());
 
   auto executor = std::make_unique<DispatchStoryCommandExecutor>(
@@ -29,4 +28,3 @@ std::unique_ptr<StoryCommandExecutor> MakeProductionStoryCommandExecutor(
 }
 
 }  // namespace modular
-}  // namespace fuchsia

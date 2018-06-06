@@ -28,7 +28,7 @@ class LinkWatcherImpl : fuchsia::modular::LinkWatcher {
   ~LinkWatcherImpl() override;
 
  private:
-  // |LinkWatcher|
+  // |fuchsia::modular::LinkWatcher|
   void Notify(fidl::StringPtr json) override;
 
   void ProcessNewValue(const fidl::StringPtr& json);
@@ -40,12 +40,14 @@ class LinkWatcherImpl : fuchsia::modular::LinkWatcher {
   const std::string story_id_;
   const fuchsia::modular::LinkPath link_path_;
 
-  // Allows us to write the initial Link node in the Context engine, and then
-  // create child nodes for each Entity we see in the Link.
+  // Allows us to write the initial fuchsia::modular::Link node in the Context
+  // engine, and then create child nodes for each fuchsia::modular::Entity we
+  // see in the fuchsia::modular::Link.
   fuchsia::modular::ContextValueWriterPtr link_node_writer_;
 
-  // When applicable: Per top-level JSON member key in the Link value, a value
-  // writer that allows us to store the contained Entity.
+  // When applicable: Per top-level JSON member key in the
+  // fuchsia::modular::Link value, a value writer that allows us to store the
+  // contained fuchsia::modular::Entity.
   //
   // See the documentation in ProcessNewValue() for more details.
   std::map<std::string, fuchsia::modular::ContextValueWriterPtr>

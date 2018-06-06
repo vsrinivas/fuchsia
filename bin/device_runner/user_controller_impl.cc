@@ -13,19 +13,21 @@
 #include "peridot/lib/common/teardown.h"
 #include "peridot/lib/fidl/array_to_string.h"
 
-namespace fuchsia {
 namespace modular {
 
 UserControllerImpl::UserControllerImpl(
-    fuchsia::sys::Launcher* const launcher, AppConfig user_runner,
-    AppConfig user_shell, AppConfig story_shell,
+    fuchsia::sys::Launcher* const launcher,
+    fuchsia::modular::AppConfig user_runner,
+    fuchsia::modular::AppConfig user_shell,
+    fuchsia::modular::AppConfig story_shell,
     fidl::InterfaceHandle<fuchsia::modular::auth::TokenProviderFactory>
         token_provider_factory,
     fuchsia::modular::auth::AccountPtr account,
     fidl::InterfaceRequest<fuchsia::ui::views_v1_token::ViewOwner>
         view_owner_request,
     fidl::InterfaceHandle<fuchsia::sys::ServiceProvider> device_shell_services,
-    fidl::InterfaceRequest<UserController> user_controller_request,
+    fidl::InterfaceRequest<fuchsia::modular::UserController>
+        user_controller_request,
     DoneCallback done)
     : user_context_binding_(this),
       user_controller_binding_(this, std::move(user_controller_request)),
@@ -43,8 +45,8 @@ UserControllerImpl::UserControllerImpl(
         zx_cprng_draw(&random_number, sizeof random_number, &random_size);
     FXL_CHECK(status == ZX_OK);
     FXL_CHECK(sizeof random_number == random_size);
-    data_origin =
-        std::string("/data/modular/USER_GUEST_") + std::to_string(random_number);
+    data_origin = std::string("/data/modular/USER_GUEST_") +
+                  std::to_string(random_number);
   } else {
     // Non-guest user.
     data_origin = std::string("/data/modular/USER_") + std::string(account->id);
@@ -53,7 +55,7 @@ UserControllerImpl::UserControllerImpl(
   FXL_LOG(INFO) << "USER RUNNER DATA ORIGIN IS " << data_origin;
 
   // 1. Launch UserRunner in the current environment.
-  user_runner_app_ = std::make_unique<AppClient<Lifecycle>>(
+  user_runner_app_ = std::make_unique<AppClient<fuchsia::modular::Lifecycle>>(
       launcher, std::move(user_runner), data_origin);
 
   // 2. Initialize the UserRunner service.
@@ -64,9 +66,9 @@ UserControllerImpl::UserControllerImpl(
       std::move(view_owner_request));
 }
 
-// |UserController|
+// |fuchsia::modular::UserController|
 void UserControllerImpl::Logout(LogoutCallback done) {
-  FXL_LOG(INFO) << "UserController::Logout()";
+  FXL_LOG(INFO) << "fuchsia::modular::UserController::Logout()";
   logout_response_callbacks_.push_back(done);
   if (logout_response_callbacks_.size() > 1) {
     return;
@@ -99,14 +101,15 @@ void UserControllerImpl::GetPresentation(
   }
 }
 
-// |UserController|
-void UserControllerImpl::SwapUserShell(AppConfig user_shell,
+// |fuchsia::modular::UserController|
+void UserControllerImpl::SwapUserShell(fuchsia::modular::AppConfig user_shell,
                                        SwapUserShellCallback callback) {
   user_runner_->SwapUserShell(std::move(user_shell), callback);
 }
 
-// |UserController|
-void UserControllerImpl::Watch(fidl::InterfaceHandle<UserWatcher> watcher) {
+// |fuchsia::modular::UserController|
+void UserControllerImpl::Watch(
+    fidl::InterfaceHandle<fuchsia::modular::UserWatcher> watcher) {
   user_watchers_.AddInterfacePtr(watcher.Bind());
 }
 
@@ -118,4 +121,3 @@ void UserControllerImpl::Logout() {
 }
 
 }  // namespace modular
-}  // namespace fuchsia

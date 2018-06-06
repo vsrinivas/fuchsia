@@ -12,7 +12,6 @@
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fidl/cpp/string.h"
 
-namespace fuchsia {
 namespace modular {
 
 // MessageReceiverAdapator implements a |modular.MessageReader| fidl interface
@@ -49,14 +48,12 @@ class MessageReceiverClient : fuchsia::modular::MessageReader {
 
  private:
   // |MessageReader|
-  void OnReceive(fidl::StringPtr message,
-                 OnReceiveCallback ack) override;
+  void OnReceive(fidl::StringPtr message, OnReceiveCallback ack) override;
 
   MessageReceiverClientCallback callback_;
   fidl::Binding<fuchsia::modular::MessageReader> receiver_;
 };
 
 }  // namespace modular
-}  // namespace fuchsia
 
 #endif  // PERIDOT_LIB_FIDL_MESSAGE_RECEIVER_CLIENT_H_

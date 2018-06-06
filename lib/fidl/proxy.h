@@ -12,7 +12,6 @@
 #include "lib/fidl/cpp/interface_request.h"
 #include "lib/fxl/macros.h"
 
-namespace fuchsia {
 namespace modular {
 
 class ProxyBase;
@@ -62,8 +61,7 @@ class ProxyBase {
 template <typename I>
 class Proxy : public ProxyBase {
  public:
-  Proxy(ProxySet* set,
-        fidl::InterfacePtr<I> ptr,
+  Proxy(ProxySet* set, fidl::InterfacePtr<I> ptr,
         fidl::InterfaceRequest<I> request);
   ~Proxy() override;
 
@@ -81,8 +79,7 @@ void ProxySet::Connect(fidl::InterfacePtr<I> ptr,
 }
 
 template <typename I>
-Proxy<I>::Proxy(ProxySet* const set,
-                fidl::InterfacePtr<I> ptr,
+Proxy<I>::Proxy(ProxySet* const set, fidl::InterfacePtr<I> ptr,
                 fidl::InterfaceRequest<I> request)
     : ProxyBase(set),
       ptr_(std::move(ptr)),
@@ -95,6 +92,5 @@ template <typename I>
 Proxy<I>::~Proxy() = default;
 
 }  // namespace modular
-}  // namespace fuchsia
 
 #endif  // PERIDOT_LIB_FIDL_PROXY_H_

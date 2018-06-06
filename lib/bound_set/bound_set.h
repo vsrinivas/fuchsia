@@ -11,7 +11,6 @@
 #include "lib/fidl/cpp/interface_ptr.h"
 #include "lib/fxl/logging.h"
 
-namespace fuchsia {
 namespace modular {
 
 // "Specialization" (overload) covering unique_ptr.
@@ -50,10 +49,8 @@ UniqueType Identify(FidlType* binding) {
 //  the pointer to the binding.
 // * Identify - a function that derives a UniqueType from a FidlType. Defaults
 //  behave as described at UniqueType.
-template <typename FidlType,
-          typename T = FidlType,
-          FidlType* GetFidlType(T*) = GetFidlType,
-          typename UniqueType = void*,
+template <typename FidlType, typename T = FidlType,
+          FidlType* GetFidlType(T*) = GetFidlType, typename UniqueType = void*,
           UniqueType Identify(FidlType*) = Identify>
 class BoundSet {
  public:
@@ -114,8 +111,7 @@ class BoundSet {
 //
 // Note that the default T here must be a unique_ptr rather than the FIDL type
 // itself since these FIDL types are not movable.
-template <typename FidlType,
-          typename T = std::unique_ptr<FidlType>,
+template <typename FidlType, typename T = std::unique_ptr<FidlType>,
           FidlType* GetFidlType(T*) = GetFidlType>
 using BoundNonMovableSet = BoundSet<FidlType, T, GetFidlType, FidlType*>;
 
@@ -123,7 +119,7 @@ template <typename Interface,
           typename T = std::unique_ptr<fidl::InterfacePtr<Interface>>,
           fidl::InterfacePtr<Interface>* GetFidlType(T*) = GetFidlType>
 using BoundPtrSet =
-  BoundNonMovableSet<fidl::InterfacePtr<Interface>, T, GetFidlType>;
+    BoundNonMovableSet<fidl::InterfacePtr<Interface>, T, GetFidlType>;
 
 // Convenience alias of BoundSet to handle Binding containers.
 template <typename Interface,
@@ -132,6 +128,5 @@ template <typename Interface,
 using BindingSet = BoundNonMovableSet<fidl::Binding<Interface>, T, GetFidlType>;
 
 }  // namespace modular
-}  // namespace fuchsia
 
 #endif  // PERIDOT_LIB_BOUND_SET_BOUND_SET_H_

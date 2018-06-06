@@ -15,12 +15,12 @@ namespace {
 // Cf. README.md for what this test does and how.
 class TestApp : fuchsia::modular::LinkWatcher {
  public:
-  TestApp(fuchsia::modular::ModuleHost* const module_host,
+  TestApp(modular::ModuleHost* const module_host,
           fidl::InterfaceRequest<
               fuchsia::ui::views_v1::ViewProvider> /*view_provider_request*/)
       : module_host_(module_host), link_watcher_binding_(this) {
-    fuchsia::modular::testing::Init(module_host->startup_context(), __FILE__);
-    fuchsia::modular::testing::GetStore()->Put("module2_init", "", [] {});
+    modular::testing::Init(module_host->startup_context(), __FILE__);
+    modular::testing::GetStore()->Put("module2_init", "", [] {});
     Start();
   }
 
@@ -31,17 +31,17 @@ class TestApp : fuchsia::modular::LinkWatcher {
 
   // Called from ModuleDriver.
   void Terminate(const std::function<void()>& done) {
-    fuchsia::modular::testing::GetStore()->Put("module2_stop", "", [] {});
-    fuchsia::modular::testing::Done(done);
+    modular::testing::GetStore()->Put("module2_stop", "", [] {});
+    modular::testing::Done(done);
   }
 
  private:
-  // |LinkWatcher|
+  // |fuchsia::modular::LinkWatcher|
   void Notify(fidl::StringPtr json) override {
-    fuchsia::modular::testing::GetStore()->Put("module2_link", json, [] {});
+    modular::testing::GetStore()->Put("module2_link", json, [] {});
   }
 
-  fuchsia::modular::ModuleHost* const module_host_;
+  modular::ModuleHost* const module_host_;
   fuchsia::modular::LinkPtr link_;
   fidl::Binding<fuchsia::modular::LinkWatcher> link_watcher_binding_;
 
@@ -53,8 +53,8 @@ class TestApp : fuchsia::modular::LinkWatcher {
 int main(int /*argc*/, const char** /*argv*/) {
   fsl::MessageLoop loop;
   auto context = fuchsia::sys::StartupContext::CreateFromStartupInfo();
-  fuchsia::modular::ModuleDriver<TestApp> driver(context.get(),
-                                                 [&loop] { loop.QuitNow(); });
+  modular::ModuleDriver<TestApp> driver(context.get(),
+                                        [&loop] { loop.QuitNow(); });
   loop.Run();
   return 0;
 }

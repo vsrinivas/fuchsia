@@ -22,7 +22,7 @@
 #include "peridot/tests/common/defs.h"
 #include "peridot/tests/link_context_entities/defs.h"
 
-using fuchsia::modular::testing::TestPoint;
+using modular::testing::TestPoint;
 
 namespace {
 
@@ -43,11 +43,12 @@ class ContextListenerImpl : fuchsia::modular::ContextListener {
     selector.type = fuchsia::modular::ContextValueType::ENTITY;
 
     fuchsia::modular::ContextQuery query;
-    AddToContextQuery(&query, "all", std::move(selector));
+    modular::AddToContextQuery(&query, "all", std::move(selector));
 
     context_reader->Subscribe(std::move(query), binding_.NewBinding());
     binding_.set_error_handler([] {
-      FXL_LOG(ERROR) << "Lost ContextListener connection to ContextReader.";
+      FXL_LOG(ERROR) << "Lost fuchsia::modular::ContextListener connection to "
+                        "fuchsia::modular::ContextReader.";
     });
   }
 
@@ -59,10 +60,10 @@ class ContextListenerImpl : fuchsia::modular::ContextListener {
   void Reset() { binding_.Unbind(); }
 
  private:
-  // |ContextListener|
+  // |fuchsia::modular::ContextListener|
   void OnContextUpdate(fuchsia::modular::ContextUpdate update) override {
     FXL_LOG(INFO) << "ContextListenerImpl::OnUpdate()";
-    const auto& values = TakeContextValue(&update, "all");
+    const auto& values = modular::TakeContextValue(&update, "all");
     for (const auto& value : *values.second) {
       FXL_LOG(INFO) << "ContextListenerImpl::OnUpdate() " << value;
       handler_(value);
@@ -76,8 +77,8 @@ class ContextListenerImpl : fuchsia::modular::ContextListener {
 };
 
 // Cf. README.md for what this test does and how.
-class TestApp : public fuchsia::modular::testing::ComponentBase<
-                    fuchsia::modular::UserShell> {
+class TestApp
+    : public modular::testing::ComponentBase<fuchsia::modular::UserShell> {
  public:
   TestApp(fuchsia::sys::StartupContext* const startup_context)
       : ComponentBase(startup_context) {
@@ -89,7 +90,7 @@ class TestApp : public fuchsia::modular::testing::ComponentBase<
  private:
   TestPoint initialize_{"Initialize()"};
 
-  // |UserShell|
+  // |fuchsia::modular::UserShell|
   void Initialize(fidl::InterfaceHandle<fuchsia::modular::UserShellContext>
                       user_shell_context) override {
     initialize_.Pass();
@@ -103,8 +104,9 @@ class TestApp : public fuchsia::modular::testing::ComponentBase<
         intelligence_services.NewRequest());
     intelligence_services->GetContextReader(context_reader_.NewRequest());
     context_listener_.Listen(context_reader_.get());
-    context_reader_.set_error_handler(
-        [] { FXL_LOG(ERROR) << "Lost ContextReader connection."; });
+    context_reader_.set_error_handler([] {
+      FXL_LOG(ERROR) << "Lost fuchsia::modular::ContextReader connection.";
+    });
 
     CreateStory();
   }
@@ -148,18 +150,20 @@ class TestApp : public fuchsia::modular::testing::ComponentBase<
     // The context value has metadata that is derived from the story id in
     // which it was published.
     if (!value.meta.story || !value.meta.link || !value.meta.entity) {
-      FXL_LOG(ERROR) << "ContextValue missing metadata: " << value;
+      FXL_LOG(ERROR) << "fuchsia::modular::ContextValue missing metadata: "
+                     << value;
       return;
     }
 
     if (value.meta.story->id != story_id_ ||
         value.meta.entity->type.is_null() ||
         value.meta.entity->type->size() != 1) {
-      FXL_LOG(ERROR) << "ContextValue metadata is incorrect: " << value;
+      FXL_LOG(ERROR) << "fuchsia::modular::ContextValue metadata is incorrect: "
+                     << value;
       return;
     }
 
-    fuchsia::modular::JsonDoc doc;
+    modular::JsonDoc doc;
     doc.Parse(value.content);
 
     if (doc.HasParseError()) {
@@ -226,6 +230,6 @@ class TestApp : public fuchsia::modular::testing::ComponentBase<
 }  // namespace
 
 int main(int /*argc*/, const char** /*argv*/) {
-  fuchsia::modular::testing::ComponentMain<TestApp>();
+  modular::testing::ComponentMain<TestApp>();
   return 0;
 }

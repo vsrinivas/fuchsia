@@ -14,19 +14,19 @@
 #include "peridot/bin/context_engine/context_repository.h"
 #include "peridot/lib/bound_set/bound_set.h"
 
-namespace fuchsia {
 namespace modular {
 
 class ContextRepository;
 class ContextValueWriterImpl;
 class EntityResolver;
 
-class ContextWriterImpl : ContextWriter {
+class ContextWriterImpl : fuchsia::modular::ContextWriter {
  public:
-  ContextWriterImpl(const ComponentScope& client_info,
-                    ContextRepository* repository,
-                    fuchsia::modular::EntityResolver* entity_resolver,
-                    fidl::InterfaceRequest<ContextWriter> request);
+  ContextWriterImpl(
+      const fuchsia::modular::ComponentScope& client_info,
+      ContextRepository* repository,
+      fuchsia::modular::EntityResolver* entity_resolver,
+      fidl::InterfaceRequest<fuchsia::modular::ContextWriter> request);
   ~ContextWriterImpl() override;
 
   // Takes ownership of |ptr|. Used by ContextWriterImpl and
@@ -46,17 +46,17 @@ class ContextWriterImpl : ContextWriter {
       std::function<void(const fidl::VectorPtr<fidl::StringPtr>&)> done);
 
  private:
-  // |ContextWriter|
-  void CreateValue(fidl::InterfaceRequest<ContextValueWriter> request,
-                   ContextValueType type) override;
+  // |fuchsia::modular::ContextWriter|
+  void CreateValue(
+      fidl::InterfaceRequest<fuchsia::modular::ContextValueWriter> request,
+      fuchsia::modular::ContextValueType type) override;
 
-  // |ContextWriter|
-  void WriteEntityTopic(fidl::StringPtr topic,
-                        fidl::StringPtr value) override;
+  // |fuchsia::modular::ContextWriter|
+  void WriteEntityTopic(fidl::StringPtr topic, fidl::StringPtr value) override;
 
-  fidl::Binding<ContextWriter> binding_;
+  fidl::Binding<fuchsia::modular::ContextWriter> binding_;
 
-  ContextSelector parent_value_selector_;
+  fuchsia::modular::ContextSelector parent_value_selector_;
   ContextRepository* const repository_;
   fuchsia::modular::EntityResolver* const entity_resolver_;
 
@@ -77,7 +77,7 @@ class ContextWriterImpl : ContextWriter {
   FXL_DISALLOW_COPY_AND_ASSIGN(ContextWriterImpl);
 };
 
-class ContextValueWriterImpl : ContextValueWriter {
+class ContextValueWriterImpl : fuchsia::modular::ContextValueWriter {
  public:
   // Binds |request| to |this|, and configures it to call
   // |writer->DestroyContextValueWriter(this)| when a connection error occurs.
@@ -86,26 +86,27 @@ class ContextValueWriterImpl : ContextValueWriter {
   // parent value.
   //
   // Does not take ownership of |writer|.
-  ContextValueWriterImpl(ContextWriterImpl* writer,
-                         const ContextRepository::Id& parent_id,
-                         ContextValueType type,
-                         fidl::InterfaceRequest<ContextValueWriter> request);
+  ContextValueWriterImpl(
+      ContextWriterImpl* writer, const ContextRepository::Id& parent_id,
+      fuchsia::modular::ContextValueType type,
+      fidl::InterfaceRequest<fuchsia::modular::ContextValueWriter> request);
   ~ContextValueWriterImpl() override;
 
  private:
-  // |ContextValueWriter|
-  void CreateChildValue(fidl::InterfaceRequest<ContextValueWriter> request,
-                        ContextValueType type) override;
+  // |fuchsia::modular::ContextValueWriter|
+  void CreateChildValue(
+      fidl::InterfaceRequest<fuchsia::modular::ContextValueWriter> request,
+      fuchsia::modular::ContextValueType type) override;
 
-  // |ContextValueWriter|
+  // |fuchsia::modular::ContextValueWriter|
   void Set(fidl::StringPtr content,
-           ContextMetadataPtr metadata) override;
+           fuchsia::modular::ContextMetadataPtr metadata) override;
 
-  fidl::Binding<ContextValueWriter> binding_;
+  fidl::Binding<fuchsia::modular::ContextValueWriter> binding_;
 
   ContextWriterImpl* const writer_;
   const ContextRepository::Id parent_id_;
-  ContextValueType type_;
+  fuchsia::modular::ContextValueType type_;
   FuturePtr<ContextRepository::Id> value_id_;
   bool have_value_id_{};
 
@@ -115,6 +116,5 @@ class ContextValueWriterImpl : ContextValueWriter {
 };
 
 }  // namespace modular
-}  // namespace fuchsia
 
 #endif  // PERIDOT_BIN_CONTEXT_ENGINE_CONTEXT_WRITER_IMPL_H_

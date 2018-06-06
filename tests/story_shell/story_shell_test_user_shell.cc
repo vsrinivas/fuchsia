@@ -6,12 +6,12 @@
 #include <set>
 #include <utility>
 
-#include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/modular/cpp/fidl.h>
+#include <fuchsia/sys/cpp/fidl.h>
+#include <fuchsia/ui/policy/cpp/fidl.h>
 #include <fuchsia/ui/views_v1_token/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
-#include <fuchsia/ui/policy/cpp/fidl.h>
 
 #include "lib/app/cpp/startup_context.h"
 #include "lib/fidl/cpp/binding.h"
@@ -29,16 +29,16 @@
 #include "peridot/tests/common/defs.h"
 #include "peridot/tests/story_shell/defs.h"
 
-using fuchsia::modular::testing::Get;
-using fuchsia::modular::testing::Put;
-using fuchsia::modular::testing::TestPoint;
+using modular::testing::Get;
+using modular::testing::Put;
+using modular::testing::TestPoint;
 
 namespace {
 
 // Cf. README.md for what this test does and how.
-class TestApp : public fuchsia::modular::testing::ComponentBase<
-                    fuchsia::modular::UserShell>,
-                fuchsia::modular::UserShellPresentationProvider {
+class TestApp
+    : public modular::testing::ComponentBase<fuchsia::modular::UserShell>,
+      fuchsia::modular::UserShellPresentationProvider {
  public:
   explicit TestApp(fuchsia::sys::StartupContext* const startup_context)
       : ComponentBase(startup_context) {
@@ -63,10 +63,10 @@ class TestApp : public fuchsia::modular::testing::ComponentBase<
   TestPoint story2_presentation_request_{"Story2 Presentation request"};
   bool story2_presentation_request_received_{};
 
-  // |UserShellPresentationProvider|
-  void GetPresentation(
-      fidl::StringPtr story_id,
-      fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> request) override {
+  // |fuchsia::modular::UserShellPresentationProvider|
+  void GetPresentation(fidl::StringPtr story_id,
+                       fidl::InterfaceRequest<fuchsia::ui::policy::Presentation>
+                           request) override {
     if (!story1_id_.is_null() && story_id == story1_id_ &&
         !story1_presentation_request_received_) {
       story1_presentation_request_.Pass();
@@ -82,7 +82,7 @@ class TestApp : public fuchsia::modular::testing::ComponentBase<
     MaybeLogout();
   }
 
-  // |UserShellPresentationProvider|
+  // |fuchsia::modular::UserShellPresentationProvider|
   void WatchVisualState(
       fidl::StringPtr story_id,
       fidl::InterfaceHandle<fuchsia::modular::StoryVisualStateWatcher> watcher)
@@ -99,7 +99,7 @@ class TestApp : public fuchsia::modular::testing::ComponentBase<
     create_view_.Pass();
   }
 
-  // |UserShell|
+  // |fuchsia::modular::UserShell|
   void Initialize(fidl::InterfaceHandle<fuchsia::modular::UserShellContext>
                       user_shell_context) override {
     user_shell_context_.Bind(std::move(user_shell_context));
@@ -122,11 +122,10 @@ class TestApp : public fuchsia::modular::testing::ComponentBase<
   TestPoint story1_run1_{"Story1 Run1"};
 
   void Story1_Run1() {
-    auto proceed_after_5 =
-        fuchsia::modular::testing::NewBarrierClosure(5, [this] {
-          story1_run1_.Pass();
-          Story1_Stop1();
-        });
+    auto proceed_after_5 = modular::testing::NewBarrierClosure(5, [this] {
+      story1_run1_.Pass();
+      Story1_Stop1();
+    });
 
     Get("root:one", proceed_after_5);
     Get("root:one manifest", proceed_after_5);
@@ -139,11 +138,12 @@ class TestApp : public fuchsia::modular::testing::ComponentBase<
     fidl::InterfaceHandle<fuchsia::ui::views_v1_token::ViewOwner> story_view;
     story_controller_->Start(story_view.NewRequest());
 
-    // TODO(mesch): StoryController.AddModule() with a null parent module loses
-    // information about the order in which modules are added. When the story is
-    // resumed, external modules without parent modules are started in
-    // alphabetical order of their names, not in the order they were added to
-    // the story.
+    // TODO(mesch):
+    // fuchsia::modular::StoryController.fuchsia::modular::AddModule() with a
+    // null parent module loses information about the order in which modules are
+    // added. When the story is resumed, external modules without parent modules
+    // are started in alphabetical order of their names, not in the order they
+    // were added to the story.
     fidl::VectorPtr<fidl::StringPtr> parent_one;
     parent_one.push_back("root");
     fuchsia::modular::Intent intent_one;
@@ -169,11 +169,10 @@ class TestApp : public fuchsia::modular::testing::ComponentBase<
   TestPoint story1_run2_{"Story1 Run2"};
 
   void Story1_Run2() {
-    auto proceed_after_5 =
-        fuchsia::modular::testing::NewBarrierClosure(5, [this] {
-          story1_run2_.Pass();
-          Story1_Stop2();
-        });
+    auto proceed_after_5 = modular::testing::NewBarrierClosure(5, [this] {
+      story1_run2_.Pass();
+      Story1_Stop2();
+    });
 
     Get("root:one", proceed_after_5);
     Get("root:one manifest", proceed_after_5);
@@ -206,11 +205,10 @@ class TestApp : public fuchsia::modular::testing::ComponentBase<
   TestPoint story2_run1_{"Story2 Run1"};
 
   void Story2_Run1() {
-    auto proceed_after_5 =
-        fuchsia::modular::testing::NewBarrierClosure(5, [this] {
-          story2_run1_.Pass();
-          Story2_Stop1();
-        });
+    auto proceed_after_5 = modular::testing::NewBarrierClosure(5, [this] {
+      story2_run1_.Pass();
+      Story2_Stop1();
+    });
 
     Get("root:one", proceed_after_5);
     Get("root:one manifest", proceed_after_5);
@@ -248,11 +246,10 @@ class TestApp : public fuchsia::modular::testing::ComponentBase<
   TestPoint story2_run2_{"Story2 Run2"};
 
   void Story2_Run2() {
-    auto proceed_after_5 =
-        fuchsia::modular::testing::NewBarrierClosure(5, [this] {
-          story2_run2_.Pass();
-          Story2_Stop2();
-        });
+    auto proceed_after_5 = modular::testing::NewBarrierClosure(5, [this] {
+      story2_run2_.Pass();
+      Story2_Stop2();
+    });
 
     Get("root:one", proceed_after_5);
     Get("root:one manifest", proceed_after_5);
@@ -295,6 +292,6 @@ class TestApp : public fuchsia::modular::testing::ComponentBase<
 }  // namespace
 
 int main(int /* argc */, const char** /* argv */) {
-  fuchsia::modular::testing::ComponentMain<TestApp>();
+  modular::testing::ComponentMain<TestApp>();
   return 0;
 }

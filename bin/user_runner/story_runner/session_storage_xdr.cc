@@ -6,11 +6,10 @@
 
 #include "peridot/lib/base64url/base64url.h"
 
-namespace fuchsia {
 namespace modular {
 
-// Serialization and deserialization of modular::internal::StoryData and
-// StoryInfo to and from JSON.
+// Serialization and deserialization of fuchsia::modular::internal::StoryData
+// and fuchsia::modular::StoryInfo to and from JSON.
 
 namespace {
 
@@ -49,19 +48,20 @@ std::string PageIdToBase64(const fuchsia::ledger::PageId& page_id) {
       {reinterpret_cast<const char*>(page_id.id.data()), page_id.id.count()});
 }
 
-// Serialization and deserialization of modular::internal::StoryData and
-// StoryInfo to and from JSON. We have different versions for backwards
-// compatibilty.
+// Serialization and deserialization of fuchsia::modular::internal::StoryData
+// and fuchsia::modular::StoryInfo to and from JSON. We have different versions
+// for backwards compatibilty.
 //
 // Version 1: During FIDL2 conversion. ExtraInfo fields are stored as "key"
 // and "value", page ids are stored as base64 string.
-void XdrStoryInfoExtraEntry_v1(XdrContext* const xdr,
-                             StoryInfoExtraEntry* const data) {
+void XdrStoryInfoExtraEntry_v1(
+    XdrContext* const xdr, fuchsia::modular::StoryInfoExtraEntry* const data) {
   xdr->Field("key", &data->key);
   xdr->Field("value", &data->value);
 }
 
-void XdrStoryInfo_v1(XdrContext* const xdr, StoryInfo* const data) {
+void XdrStoryInfo_v1(XdrContext* const xdr,
+                     fuchsia::modular::StoryInfo* const data) {
   xdr->Field("last_focus_time", &data->last_focus_time);
   xdr->Field("url", &data->url);
   xdr->Field("id", &data->id);
@@ -69,7 +69,7 @@ void XdrStoryInfo_v1(XdrContext* const xdr, StoryInfo* const data) {
 }
 
 void XdrStoryData_v1(XdrContext* const xdr,
-                     modular::internal::StoryData* const data) {
+                     fuchsia::modular::internal::StoryData* const data) {
   static constexpr char kStoryPageId[] = "story_page_id";
   xdr->Field("story_info", &data->story_info, XdrStoryInfo_v1);
   switch (xdr->op()) {
@@ -98,13 +98,14 @@ void XdrStoryData_v1(XdrContext* const xdr,
 // Version 2: Before FIDL2 conversion, and again after FIDL2 conversion was
 // complete. ExtraInfo fields are stored as @k and @v, page ids are stored as
 // array.
-void XdrStoryInfoExtraEntry_v2(XdrContext* const xdr,
-                               StoryInfoExtraEntry* const data) {
+void XdrStoryInfoExtraEntry_v2(
+    XdrContext* const xdr, fuchsia::modular::StoryInfoExtraEntry* const data) {
   xdr->Field("@k", &data->key);
   xdr->Field("@v", &data->value);
 }
 
-void XdrStoryInfo_v2(XdrContext* const xdr, StoryInfo* const data) {
+void XdrStoryInfo_v2(XdrContext* const xdr,
+                     fuchsia::modular::StoryInfo* const data) {
   xdr->Field("last_focus_time", &data->last_focus_time);
   xdr->Field("url", &data->url);
   xdr->Field("id", &data->id);
@@ -116,13 +117,13 @@ void XdrPageId_v2(XdrContext* const xdr, fuchsia::ledger::PageId* const data) {
 }
 
 void XdrStoryData_v2(XdrContext* const xdr,
-                     modular::internal::StoryData* const data) {
+                     fuchsia::modular::internal::StoryData* const data) {
   xdr->Field("story_info", &data->story_info, XdrStoryInfo_v2);
   xdr->Field("story_page_id", &data->story_page_id, XdrPageId_v2);
 }
 
 void XdrStoryData_v3(XdrContext* const xdr,
-                     modular::internal::StoryData* const data) {
+                     fuchsia::modular::internal::StoryData* const data) {
   if (!xdr->Version(3)) {
     return;
   }
@@ -134,7 +135,7 @@ void XdrStoryData_v3(XdrContext* const xdr,
 
 }  // namespace
 
-XdrFilterType<modular::internal::StoryData> XdrStoryData[] = {
+XdrFilterType<fuchsia::modular::internal::StoryData> XdrStoryData[] = {
     XdrStoryData_v3,
     XdrStoryData_v2,
     XdrStoryData_v1,
@@ -142,4 +143,3 @@ XdrFilterType<modular::internal::StoryData> XdrStoryData[] = {
 };
 
 }  // namespace modular
-}  // namespace fuchsia

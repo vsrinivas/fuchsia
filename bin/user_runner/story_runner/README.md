@@ -14,20 +14,20 @@ What happens so far:
    so started is able to start more modules, all in the scope of the same
    Story.
 
-3. The Story service also exposes a factory for instances of the Link service. A
-   Link instance exposes an API to store and retrieve values, and to register
-   callbacks to notify when values stored in the instance change. A Link
+3. The Story service also exposes a factory for instances of the fuchsia::modular::Link service. A
+   fuchsia::modular::Link instance exposes an API to store and retrieve values, and to register
+   callbacks to notify when values stored in the instance change. A fuchsia::modular::Link
    instance is shared between each pair of requesting and requested modules in
    the story.
 
-4. The Module and Link instances in the story are recorded in the Ledger by the
+4. The Module and fuchsia::modular::Link instances in the story are recorded in the Ledger by the
    story runner.
 
 5. An existing story can be restarted.
 
 What is still missing:
 
-6. The Link instance holds data according to a Schema.
+6. The fuchsia::modular::Link instance holds data according to a Schema.
 
 Miscellaneous observations on these interfaces:
 

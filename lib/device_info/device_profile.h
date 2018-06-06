@@ -11,7 +11,6 @@
 
 #include <string>
 
-namespace fuchsia {
 namespace modular {
 
 // Parses a device's profile JSON. Can be used to parse the current device or a
@@ -31,6 +30,5 @@ class DeviceProfile {
 };
 
 }  // namespace modular
-}  // namespace fuchsia
 
 #endif  // PERIDOT_LIB_DEVICE_INFO_DEVICE_PROFILE_H_

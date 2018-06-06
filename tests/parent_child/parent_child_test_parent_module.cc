@@ -18,9 +18,9 @@
 #include "peridot/tests/common/defs.h"
 #include "peridot/tests/parent_child/defs.h"
 
-using fuchsia::modular::testing::Await;
-using fuchsia::modular::testing::Signal;
-using fuchsia::modular::testing::TestPoint;
+using modular::testing::Await;
+using modular::testing::Signal;
+using modular::testing::TestPoint;
 
 namespace {
 
@@ -29,11 +29,11 @@ class TestApp {
  public:
   TestPoint initialized_{"Parent module initialized"};
 
-  TestApp(fuchsia::modular::ModuleHost* module_host,
+  TestApp(modular::ModuleHost* module_host,
           fidl::InterfaceRequest<
               fuchsia::ui::views_v1::ViewProvider> /*view_provider_request*/)
       : module_host_(module_host) {
-    fuchsia::modular::testing::Init(module_host->startup_context(), __FILE__);
+    modular::testing::Init(module_host->startup_context(), __FILE__);
     initialized_.Pass();
 
     StartChildModuleTwice();
@@ -44,7 +44,7 @@ class TestApp {
   // Called by ModuleDriver.
   void Terminate(const std::function<void()>& done) {
     stopped_.Pass();
-    fuchsia::modular::testing::Done(done);
+    modular::testing::Done(done);
   }
 
  private:
@@ -95,10 +95,10 @@ class TestApp {
 
   void OnChildModule2Stopped() {
     child_module_stopped_.Pass();
-    Signal(fuchsia::modular::testing::kTestShutdown);
+    Signal(modular::testing::kTestShutdown);
   }
 
-  fuchsia::modular::ModuleHost* module_host_;
+  modular::ModuleHost* module_host_;
   fuchsia::modular::ModuleControllerPtr child_module_;
   fuchsia::modular::ModuleControllerPtr child_module2_;
   FXL_DISALLOW_COPY_AND_ASSIGN(TestApp);
@@ -109,8 +109,8 @@ class TestApp {
 int main(int /*argc*/, const char** /*argv*/) {
   fsl::MessageLoop loop;
   auto context = fuchsia::sys::StartupContext::CreateFromStartupInfo();
-  fuchsia::modular::ModuleDriver<TestApp> driver(context.get(),
-                                                 [&loop] { loop.QuitNow(); });
+  modular::ModuleDriver<TestApp> driver(context.get(),
+                                        [&loop] { loop.QuitNow(); });
   loop.Run();
   return 0;
 }

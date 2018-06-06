@@ -12,7 +12,7 @@
 #include "peridot/tests/common/defs.h"
 #include "peridot/tests/trigger/defs.h"
 
-using fuchsia::modular::testing::TestPoint;
+using modular::testing::TestPoint;
 
 namespace {
 
@@ -21,9 +21,9 @@ class TestApp : modular_test_trigger::TriggerTestService {
  public:
   TestPoint initialized_{"Trigger test agent initialized"};
 
-  TestApp(fuchsia::modular::AgentHost* const agent_host)
+  TestApp(modular::AgentHost* const agent_host)
       : agent_context_(agent_host->agent_context()) {
-    fuchsia::modular::testing::Init(agent_host->startup_context(), __FILE__);
+    modular::testing::Init(agent_host->startup_context(), __FILE__);
     agent_context_->GetComponentContext(component_context_.NewRequest());
 
     // Create a message queue and schedule a task to be run on receiving a
@@ -48,20 +48,20 @@ class TestApp : modular_test_trigger::TriggerTestService {
   // Called by AgentDriver.
   void Connect(fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> services) {
     agent_services_.AddBinding(std::move(services));
-    fuchsia::modular::testing::GetStore()->Put("trigger_test_agent_connected",
-                                               "", [] {});
+    modular::testing::GetStore()->Put("trigger_test_agent_connected", "",
+                                      [] {});
   }
 
   // Called by AgentDriver.
   void RunTask(fidl::StringPtr task_id, const std::function<void()>& callback) {
-    fuchsia::modular::testing::GetStore()->Put(task_id, "", callback);
+    modular::testing::GetStore()->Put(task_id, "", callback);
   }
 
   // Called by AgentDriver.
   void Terminate(const std::function<void()>& done) {
-    fuchsia::modular::testing::GetStore()->Put("trigger_test_agent_stopped", "",
-                                               [done] { done(); });
-    fuchsia::modular::testing::Done(done);
+    modular::testing::GetStore()->Put("trigger_test_agent_stopped", "",
+                                      [done] { done(); });
+    modular::testing::Done(done);
   }
 
  private:
@@ -78,8 +78,8 @@ class TestApp : modular_test_trigger::TriggerTestService {
     task_info.trigger_condition.set_queue_deleted(queue_token);
     task_info.persistent = true;
     agent_context_->ScheduleTask(std::move(task_info));
-    fuchsia::modular::testing::GetStore()->Put(
-        "trigger_test_agent_token_received", "", [] {});
+    modular::testing::GetStore()->Put("trigger_test_agent_token_received", "",
+                                      [] {});
   }
 
   fuchsia::sys::ServiceNamespace agent_services_;
@@ -98,8 +98,8 @@ class TestApp : modular_test_trigger::TriggerTestService {
 int main(int /*argc*/, const char** /*argv*/) {
   fsl::MessageLoop loop;
   auto context = fuchsia::sys::StartupContext::CreateFromStartupInfo();
-  fuchsia::modular::AgentDriver<TestApp> driver(context.get(),
-                                                [&loop] { loop.QuitNow(); });
+  modular::AgentDriver<TestApp> driver(context.get(),
+                                       [&loop] { loop.QuitNow(); });
   loop.Run();
   return 0;
 }

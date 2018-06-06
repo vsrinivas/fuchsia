@@ -5,13 +5,11 @@
 #ifndef PERIDOT_LIB_UTIL_FILESYSTEM_H_
 #define PERIDOT_LIB_UTIL_FILESYSTEM_H_
 
-namespace fuchsia {
 namespace modular {
 
 // Sleep until Minfs is mounted.
 void WaitForMinfs();
 
 }  // namespace modular
-}  // namespace fuchsia
 
 #endif  // PERIDOT_LIB_UTIL_FILESYSTEM_H_

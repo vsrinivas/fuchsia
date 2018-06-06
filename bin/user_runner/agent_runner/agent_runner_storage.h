@@ -10,7 +10,6 @@
 
 #include "lib/fxl/macros.h"
 
-namespace fuchsia {
 namespace modular {
 
 // This abstract class is used by AgentRunner to persist data related to
@@ -25,10 +24,10 @@ class AgentRunnerStorage {
     std::string agent_url;
     std::string task_id;
 
-    // NOTE(mesch): We could include the TaskInfo fidl struct here
-    // directly, but it contains a union, and dealing with a fidl union
-    // in XDR is still rather complicated if we don't want to serialize
-    // the union tag enum value directly.
+    // NOTE(mesch): We could include the fuchsia::modular::TaskInfo fidl struct
+    // here directly, but it contains a union, and dealing with a fidl union in
+    // XDR is still rather complicated if we don't want to serialize the union
+    // tag enum value directly.
     enum TaskType {
       TYPE_ALARM = 0,
       TYPE_QUEUE_MESSAGE = 1,
@@ -72,8 +71,7 @@ class AgentRunnerStorage {
 
   // Writes a new task to storage. |NotificationDelegate| will be notified of
   // the new task.
-  virtual void WriteTask(const std::string& agent_url,
-                         TriggerInfo info,
+  virtual void WriteTask(const std::string& agent_url, TriggerInfo info,
                          std::function<void(bool)> done) = 0;
 
   // Deletes existing task on the storage. |NotificationDelegate| will be
@@ -87,6 +85,5 @@ class AgentRunnerStorage {
 };
 
 }  // namespace modular
-}  // namespace fuchsia
 
 #endif  // PERIDOT_BIN_USER_RUNNER_AGENT_RUNNER_AGENT_RUNNER_STORAGE_H_

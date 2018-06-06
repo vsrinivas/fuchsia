@@ -10,7 +10,6 @@
 #include "lib/fidl/cpp/interface_request.h"
 #include "lib/fxl/macros.h"
 
-namespace fuchsia {
 namespace modular {
 
 // Interface that allows a class that implements this functionality to pass a
@@ -26,10 +25,10 @@ class PresentationProvider {
 
   virtual void WatchVisualState(
       fidl::StringPtr story_id,
-      fidl::InterfaceHandle<StoryVisualStateWatcher> watcher) = 0;
+      fidl::InterfaceHandle<fuchsia::modular::StoryVisualStateWatcher>
+          watcher) = 0;
 };
 
 }  // namespace modular
-}  // namespace fuchsia
 
 #endif  // PERIDOT_BIN_USER_RUNNER_PRESENTATION_PROVIDER_H_

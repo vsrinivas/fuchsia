@@ -8,12 +8,10 @@
 #include <fuchsia/modular/internal/cpp/fidl.h>
 #include "peridot/lib/fidl/json_xdr.h"
 
-namespace fuchsia {
 namespace modular {
 
-extern XdrFilterType<ModuleData> XdrModuleData[];
+extern XdrFilterType<fuchsia::modular::ModuleData> XdrModuleData[];
 
 }  // namespace modular
-}  // namespace fuchsia
 
 #endif  // PERIDOT_BIN_USER_RUNNER_STORY_RUNNER_STORY_STORAGE_XDR_H_

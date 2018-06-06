@@ -15,12 +15,12 @@
 #include "lib/fxl/macros.h"
 #include "peridot/lib/testing/entity_resolver_fake.h"
 
-namespace fuchsia {
 namespace modular {
 
-// A fake implementation of ComponentContext for tests. ComponentContext gives
-// clients access to further services. This implementation returns fake
-// versions of the various services in question.
+// A fake implementation of fuchsia::modular::ComponentContext for tests.
+// fuchsia::modular::ComponentContext gives clients access to further services.
+// This implementation returns fake versions of the various services in
+// question.
 //
 // Implemented:
 //
@@ -28,48 +28,52 @@ namespace modular {
 //    lib/entity/cpp/testing/fake_entity_resolver.h).
 //  * CreateEntityWithData() -> returns a reference that the FakeEntityResolver
 //    will resolve.
-class ComponentContextFake : public ComponentContext {
+class ComponentContextFake : public fuchsia::modular::ComponentContext {
  public:
   ComponentContextFake();
   ~ComponentContextFake() override;
 
-  void Connect(fidl::InterfaceRequest<ComponentContext> request);
+  void Connect(
+      fidl::InterfaceRequest<fuchsia::modular::ComponentContext> request);
 
   EntityResolverFake& entity_resolver_fake() { return entity_resolver_; }
 
  private:
-  // |ComponentContext|
+  // |fuchsia::modular::ComponentContext|
   void GetLedger(fidl::InterfaceRequest<fuchsia::ledger::Ledger> request,
                  GetLedgerCallback result) override;
 
-  // |ComponentContext|
+  // |fuchsia::modular::ComponentContext|
   void ConnectToAgent(fidl::StringPtr url,
                       fidl::InterfaceRequest<fuchsia::sys::ServiceProvider>
                           incoming_services_request,
-                      fidl::InterfaceRequest<AgentController>
+                      fidl::InterfaceRequest<fuchsia::modular::AgentController>
                           agent_controller_request) override;
 
-  // |ComponentContext|
+  // |fuchsia::modular::ComponentContext|
   void ObtainMessageQueue(
       fidl::StringPtr name,
-      fidl::InterfaceRequest<MessageQueue> request) override;
+      fidl::InterfaceRequest<fuchsia::modular::MessageQueue> request) override;
 
-  // |ComponentContext|
+  // |fuchsia::modular::ComponentContext|
   void DeleteMessageQueue(fidl::StringPtr name) override;
 
-  // |ComponentContext|
-  void GetMessageSender(fidl::StringPtr queue_token,
-                        fidl::InterfaceRequest<MessageSender> request) override;
+  // |fuchsia::modular::ComponentContext|
+  void GetMessageSender(
+      fidl::StringPtr queue_token,
+      fidl::InterfaceRequest<fuchsia::modular::MessageSender> request) override;
 
-  // |ComponentContext|
+  // |fuchsia::modular::ComponentContext|
   void GetEntityResolver(
-      fidl::InterfaceRequest<EntityResolver> request) override;
+      fidl::InterfaceRequest<fuchsia::modular::EntityResolver> request)
+      override;
 
-  // |ComponentContext|
-  void CreateEntityWithData(fidl::VectorPtr<TypeToDataEntry> type_to_data,
-                            CreateEntityWithDataCallback result) override;
+  // |fuchsia::modular::ComponentContext|
+  void CreateEntityWithData(
+      fidl::VectorPtr<fuchsia::modular::TypeToDataEntry> type_to_data,
+      CreateEntityWithDataCallback result) override;
 
-  // |ComponentContext|
+  // |fuchsia::modular::ComponentContext|
   void GetPackageName(GetPackageNameCallback result) override;
 
   EntityResolverFake entity_resolver_;
@@ -80,6 +84,5 @@ class ComponentContextFake : public ComponentContext {
 };
 
 }  // namespace modular
-}  // namespace fuchsia
 
 #endif  // PERIDOT_LIB_TESTING_COMPONENT_CONTEXT_FAKE_H_

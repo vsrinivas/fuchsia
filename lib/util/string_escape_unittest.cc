@@ -7,7 +7,6 @@
 
 using fxl::StringView;
 
-namespace fuchsia {
 namespace modular {
 namespace {
 
@@ -46,4 +45,3 @@ TEST(EscapeStringTest, SplitWithEmpties) {
 
 }  // namespace
 }  // namespace modular
-}  // namespace fuchsia

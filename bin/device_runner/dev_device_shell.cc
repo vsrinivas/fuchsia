@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// Implementation of the DeviceShell service that passes a command line
-// configurable user name to its UserProvider, and is able to run a story with a
-// single module through its life cycle.
+// Implementation of the fuchsia::modular::DeviceShell service that passes a
+// command line configurable user name to its fuchsia::modular::UserProvider,
+// and is able to run a story with a single module through its life cycle.
 
 #include <memory>
 #include <utility>
@@ -23,7 +23,7 @@
 #include "peridot/lib/testing/reporting.h"
 #include "peridot/lib/testing/testing.h"
 
-namespace {
+namespace modular {
 
 class Settings {
  public:
@@ -44,20 +44,19 @@ class Settings {
 };
 
 class DevDeviceShellApp
-    : fuchsia::modular::SingleServiceApp<fuchsia::modular::DeviceShell>,
+    : modular::SingleServiceApp<fuchsia::modular::DeviceShell>,
       fuchsia::modular::UserWatcher {
  public:
-  explicit DevDeviceShellApp(fuchsia::sys::StartupContext* const startup_context,
-                             Settings settings)
+  explicit DevDeviceShellApp(
+      fuchsia::sys::StartupContext* const startup_context, Settings settings)
       : SingleServiceApp(startup_context),
         settings_(std::move(settings)),
         user_watcher_binding_(this),
         weak_ptr_factory_(this) {
     if (settings_.test) {
-      fuchsia::modular::testing::Init(this->startup_context(), __FILE__);
-      fuchsia::modular::testing::Await(
-          fuchsia::modular::testing::kTestShutdown,
-          [this] { device_shell_context_->Shutdown(); });
+      testing::Init(this->startup_context(), __FILE__);
+      testing::Await(testing::kTestShutdown,
+                     [this] { device_shell_context_->Shutdown(); });
 
       // Start a timer to quit in case a test component misbehaves and hangs.
       async::PostDelayedTask(
@@ -67,7 +66,7 @@ class DevDeviceShellApp
                                  FXL_LOG(WARNING) << "DevDeviceShell timed out";
                                  device_shell_context_->Shutdown();
                                }),
-          zx::msec(fuchsia::modular::testing::kTestTimeoutMilliseconds));
+          zx::msec(testing::kTestTimeoutMilliseconds));
     }
   }
 
@@ -76,7 +75,7 @@ class DevDeviceShellApp
   // |SingleServiceApp|
   void Terminate(std::function<void()> done) override {
     if (settings_.test) {
-      fuchsia::modular::testing::Teardown(done);
+      testing::Teardown(done);
     } else {
       done();
     }
@@ -93,7 +92,7 @@ class DevDeviceShellApp
     Connect();
   }
 
-  // |DeviceShell|
+  // |fuchsia::modular::DeviceShell|
   void Initialize(
       fidl::InterfaceHandle<fuchsia::modular::DeviceShellContext>
           device_shell_context,
@@ -104,18 +103,18 @@ class DevDeviceShellApp
     Connect();
   }
 
-  // |DeviceShell|
+  // |fuchsia::modular::DeviceShell|
   void GetAuthenticationContext(
       fidl::StringPtr /*username*/,
       fidl::InterfaceRequest<fuchsia::modular::auth::AuthenticationContext> /*request*/)
       override {
-    FXL_LOG(INFO)
-        << "DeviceShell::GetAuthenticationContext() is unimplemented.";
+    FXL_LOG(INFO) << "fuchsia::modular::DeviceShell::GetAuthenticationContext()"
+                     " is unimplemented.";
   }
 
-  // |UserWatcher|
+  // |fuchsia::modular::UserWatcher|
   void OnLogout() override {
-    FXL_LOG(INFO) << "UserWatcher::OnLogout()";
+    FXL_LOG(INFO) << "fuchsia::modular::UserWatcher::OnLogout()";
     device_shell_context_->Shutdown();
   }
 
@@ -177,18 +176,18 @@ class DevDeviceShellApp
   FXL_DISALLOW_COPY_AND_ASSIGN(DevDeviceShellApp);
 };
 
-}  // namespace
+}  // namespace modular
 
 int main(int argc, const char** argv) {
   auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
-  Settings settings(command_line);
+  modular::Settings settings(command_line);
 
   fsl::MessageLoop loop;
 
   auto context = fuchsia::sys::StartupContext::CreateFromStartupInfo();
-  fuchsia::modular::AppDriver<DevDeviceShellApp> driver(
+  modular::AppDriver<modular::DevDeviceShellApp> driver(
       context->outgoing().deprecated_services(),
-      std::make_unique<DevDeviceShellApp>(context.get(), settings),
+      std::make_unique<modular::DevDeviceShellApp>(context.get(), settings),
       [&loop] { loop.QuitNow(); });
 
   loop.Run();

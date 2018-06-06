@@ -8,7 +8,6 @@
 #include "lib/fxl/logging.h"
 #include "peridot/bin/user_runner/puppet_master/story_command_executor.h"
 
-namespace fuchsia {
 namespace modular {
 
 StoryPuppetMasterImpl::StoryPuppetMasterImpl(
@@ -19,7 +18,8 @@ StoryPuppetMasterImpl::StoryPuppetMasterImpl(
 
 StoryPuppetMasterImpl::~StoryPuppetMasterImpl() = default;
 
-void StoryPuppetMasterImpl::Enqueue(fidl::VectorPtr<StoryCommand> commands) {
+void StoryPuppetMasterImpl::Enqueue(
+    fidl::VectorPtr<fuchsia::modular::StoryCommand> commands) {
   if (!commands) {
     return;
   }
@@ -31,21 +31,21 @@ void StoryPuppetMasterImpl::Enqueue(fidl::VectorPtr<StoryCommand> commands) {
 void StoryPuppetMasterImpl::Execute(ExecuteCallback done) {
   executor_->ExecuteCommands(
       story_id_, std::move(enqueued_commands_),
-      fxl::MakeCopyable([weak_ptr = weak_factory_.GetWeakPtr(),
-                         done = std::move(done)](ExecuteResult result) {
-        // If the StoryPuppetMasterImpl is gone, the connection that would
-        // handle |done| is also gone.
-        if (!weak_ptr) {
-          return;
-        }
-        // Adopt the story id from the StoryCommandExecutor.
-        if (weak_ptr->story_id_) {
-          FXL_DCHECK(result.story_id == weak_ptr->story_id_);
-        }
-        weak_ptr->story_id_ = result.story_id;
-        done(std::move(result));
-      }));
+      fxl::MakeCopyable(
+          [weak_ptr = weak_factory_.GetWeakPtr(),
+           done = std::move(done)](fuchsia::modular::ExecuteResult result) {
+            // If the StoryPuppetMasterImpl is gone, the connection that would
+            // handle |done| is also gone.
+            if (!weak_ptr) {
+              return;
+            }
+            // Adopt the story id from the StoryCommandExecutor.
+            if (weak_ptr->story_id_) {
+              FXL_DCHECK(result.story_id == weak_ptr->story_id_);
+            }
+            weak_ptr->story_id_ = result.story_id;
+            done(std::move(result));
+          }));
 }
 
 }  // namespace modular
-}  // namespace fuchsia

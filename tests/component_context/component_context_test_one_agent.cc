@@ -13,15 +13,15 @@
 #include "peridot/tests/common/defs.h"
 #include "peridot/tests/component_context/defs.h"
 
-using fuchsia::modular::testing::TestPoint;
+using modular::testing::TestPoint;
 
 namespace {
 
 // Cf. README.md for what this test does and how.
 class TestApp : component_context_test::ComponentContextTestService {
  public:
-  TestApp(fuchsia::modular::AgentHost* const agent_host) {
-    fuchsia::modular::testing::Init(agent_host->startup_context(), __FILE__);
+  TestApp(modular::AgentHost* const agent_host) {
+    modular::testing::Init(agent_host->startup_context(), __FILE__);
     agent_host->agent_context()->GetComponentContext(
         component_context_.NewRequest());
     agent_services_
@@ -42,8 +42,7 @@ class TestApp : component_context_test::ComponentContextTestService {
   // Called by AgentDriver.
   void Connect(fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> request) {
     agent_services_.AddBinding(std::move(request));
-    fuchsia::modular::testing::GetStore()->Put("one_agent_connected", "",
-                                               [] {});
+    modular::testing::GetStore()->Put("one_agent_connected", "", [] {});
   }
 
   // Called by AgentDriver.
@@ -55,14 +54,14 @@ class TestApp : component_context_test::ComponentContextTestService {
   // Called by AgentDriver.
   void Terminate(const std::function<void()>& done) {
     // Before reporting that we stop, we wait until two_agent has connected.
-    fuchsia::modular::testing::GetStore()->Get(
+    modular::testing::GetStore()->Get(
         "two_agent_connected", [this, done](const fidl::StringPtr&) {
           // Killing the agent controller should stop it.
           two_agent_controller_.Unbind();
           two_agent_connected_.Pass();
-          fuchsia::modular::testing::GetStore()->Put(
-              "one_agent_stopped", "",
-              [done] { fuchsia::modular::testing::Done(done); });
+          modular::testing::GetStore()->Put("one_agent_stopped", "", [done] {
+            modular::testing::Done(done);
+          });
         });
   }
 
@@ -92,8 +91,8 @@ class TestApp : component_context_test::ComponentContextTestService {
 int main(int /*argc*/, const char** /*argv*/) {
   fsl::MessageLoop loop;
   auto context = fuchsia::sys::StartupContext::CreateFromStartupInfo();
-  fuchsia::modular::AgentDriver<TestApp> driver(context.get(),
-                                                [&loop] { loop.QuitNow(); });
+  modular::AgentDriver<TestApp> driver(context.get(),
+                                       [&loop] { loop.QuitNow(); });
   loop.Run();
   return 0;
 }

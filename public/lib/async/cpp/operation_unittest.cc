@@ -11,7 +11,6 @@
 #include "peridot/public/lib/async/cpp/future.h"
 #include "peridot/public/lib/async/cpp/operation.h"
 
-namespace fuchsia {
 namespace modular {
 namespace {
 
@@ -384,4 +383,3 @@ TEST_F(OperationTest, WrapFutureAsOperation_WithoutResult) {
 
 }  // namespace
 }  // namespace modular
-}  // namespace fuchsia

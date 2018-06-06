@@ -4,7 +4,6 @@
 
 #include "peridot/lib/ledger_client/page_id.h"
 
-namespace fuchsia {
 namespace modular {
 
 fuchsia::ledger::PageId MakePageId(const std::string& value) {
@@ -16,4 +15,3 @@ fuchsia::ledger::PageId MakePageId(const std::string& value) {
 }
 
 }  // namespace modular
-}  // namespace fuchsia

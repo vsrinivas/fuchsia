@@ -14,47 +14,52 @@
 
 namespace fuchsia {
 namespace modular {
-
 struct UsersStorage;
+}
+}  // namespace fuchsia
 
-class UserProviderImpl : UserProvider {
+namespace modular {
+
+class UserProviderImpl : fuchsia::modular::UserProvider {
  public:
   UserProviderImpl(std::shared_ptr<fuchsia::sys::StartupContext> context,
-                   const AppConfig& user_runner,
-                   const AppConfig& default_user_shell,
-                   const AppConfig& story_shell,
+                   const fuchsia::modular::AppConfig& user_runner,
+                   const fuchsia::modular::AppConfig& default_user_shell,
+                   const fuchsia::modular::AppConfig& story_shell,
                    fuchsia::modular::auth::AccountProvider* account_provider);
 
-  void Connect(fidl::InterfaceRequest<UserProvider> request);
+  void Connect(fidl::InterfaceRequest<fuchsia::modular::UserProvider> request);
 
   void Teardown(const std::function<void()>& callback);
 
  private:
-  // |UserProvider|
-  void Login(UserLoginParams params) override;
+  // |fuchsia::modular::UserProvider|
+  void Login(fuchsia::modular::UserLoginParams params) override;
 
-  // |UserProvider|
+  // |fuchsia::modular::UserProvider|
   void PreviousUsers(PreviousUsersCallback callback) override;
 
-  // |UserProvider|
+  // |fuchsia::modular::UserProvider|
   void AddUser(fuchsia::modular::auth::IdentityProvider identity_provider,
                AddUserCallback callback) override;
 
-  // |UserProvider|
+  // |fuchsia::modular::UserProvider|
   void RemoveUser(fidl::StringPtr account_id,
                   RemoveUserCallback callback) override;
 
   bool WriteUsersDb(const std::string& serialized_users, std::string* error);
   bool Parse(const std::string& serialized_users);
 
-  void LoginInternal(fuchsia::modular::auth::AccountPtr account, UserLoginParams params);
+  void LoginInternal(fuchsia::modular::auth::AccountPtr account,
+                     fuchsia::modular::UserLoginParams params);
 
-  fidl::BindingSet<UserProvider> bindings_;
+  fidl::BindingSet<fuchsia::modular::UserProvider> bindings_;
 
   std::shared_ptr<fuchsia::sys::StartupContext> context_;
-  const AppConfig& user_runner_;         // Neither owned nor copied.
-  const AppConfig& default_user_shell_;  // Neither owned nor copied.
-  const AppConfig& story_shell_;         // Neither owned nor copied.
+  const fuchsia::modular::AppConfig& user_runner_;  // Neither owned nor copied.
+  const fuchsia::modular::AppConfig&
+      default_user_shell_;                          // Neither owned nor copied.
+  const fuchsia::modular::AppConfig& story_shell_;  // Neither owned nor copied.
   fuchsia::modular::auth::AccountProvider* const account_provider_;
 
   std::string serialized_users_;
@@ -67,6 +72,5 @@ class UserProviderImpl : UserProvider {
 };
 
 }  // namespace modular
-}  // namespace fuchsia
 
 #endif  // PERIDOT_BIN_DEVICE_RUNNER_USER_PROVIDER_IMPL_H_

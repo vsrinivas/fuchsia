@@ -16,26 +16,26 @@
 #include "peridot/tests/common/defs.h"
 #include "peridot/tests/embed_shell/defs.h"
 
-using fuchsia::modular::testing::Await;
-using fuchsia::modular::testing::Signal;
-using fuchsia::modular::testing::TestPoint;
+using modular::testing::Await;
+using modular::testing::Signal;
+using modular::testing::TestPoint;
 
 namespace {
 
 // Cf. README.md for what this test does and how.
 class TestApp {
  public:
-  TestApp(fuchsia::modular::ModuleHost* const module_host,
+  TestApp(modular::ModuleHost* const module_host,
           fidl::InterfaceRequest<
               fuchsia::ui::views_v1::ViewProvider> /*view_provider_request*/)
       : module_host_(module_host) {
-    fuchsia::modular::testing::Init(module_host->startup_context(), __FILE__);
+    modular::testing::Init(module_host->startup_context(), __FILE__);
     ScheduleDone();
     StartChildModule();
   }
 
   void Terminate(const std::function<void()>& done) {
-    fuchsia::modular::testing::Done(done);
+    modular::testing::Done(done);
   }
 
  private:
@@ -43,7 +43,7 @@ class TestApp {
     auto check = [this, done = std::make_shared<int>(0)] {
       ++*done;
       if (*done == 2) {
-        Signal(fuchsia::modular::testing::kTestShutdown);
+        Signal(modular::testing::kTestShutdown);
       }
     };
 
@@ -60,7 +60,7 @@ class TestApp {
         [](const fuchsia::modular::StartModuleStatus) {});
   }
 
-  fuchsia::modular::ModuleHost* const module_host_;
+  modular::ModuleHost* const module_host_;
   fuchsia::modular::ModuleControllerPtr child_module_;
   fuchsia::ui::views_v1_token::ViewOwnerPtr child_view_;
 
@@ -72,8 +72,8 @@ class TestApp {
 int main(int /*argc*/, const char** /*argv*/) {
   fsl::MessageLoop loop;
   auto context = fuchsia::sys::StartupContext::CreateFromStartupInfo();
-  fuchsia::modular::ModuleDriver<TestApp> driver(context.get(),
-                                                 [&loop] { loop.QuitNow(); });
+  modular::ModuleDriver<TestApp> driver(context.get(),
+                                        [&loop] { loop.QuitNow(); });
   loop.Run();
   return 0;
 }

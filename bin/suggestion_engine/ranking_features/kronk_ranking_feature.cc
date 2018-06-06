@@ -4,7 +4,6 @@
 
 #include "peridot/bin/suggestion_engine/ranking_features/kronk_ranking_feature.h"
 
-namespace fuchsia {
 namespace modular {
 
 KronkRankingFeature::KronkRankingFeature() = default;
@@ -12,7 +11,8 @@ KronkRankingFeature::KronkRankingFeature() = default;
 KronkRankingFeature::~KronkRankingFeature() = default;
 
 double KronkRankingFeature::ComputeFeatureInternal(
-    const UserInput& query, const RankedSuggestion& suggestion) {
+    const fuchsia::modular::UserInput& query,
+    const RankedSuggestion& suggestion) {
   if (suggestion.prototype->source_url.find("kronk") != std::string::npos) {
     return kMaxConfidence;
   } else {
@@ -21,4 +21,3 @@ double KronkRankingFeature::ComputeFeatureInternal(
 }
 
 }  // namespace modular
-}  // namespace fuchsia

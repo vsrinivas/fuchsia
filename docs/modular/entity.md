@@ -39,7 +39,7 @@ which can be **referenced**, **retrieved**, **presented**, **manipulated**, or
 **shared**.
 
 This use of the term “entity” has parallels in the fields of
-[databases](https://en.wikipedia.org/wiki/Entity%E2%80%93relationship_model),
+[databases](https://en.wikipedia.org/wiki/fuchsia::modular::Entity%E2%80%93relationship_model),
 [information extraction](https://en.wikipedia.org/wiki/Named_entity), and
 [ontology](https://en.wikipedia.org/wiki/Ontology_(information_science)).
 
@@ -69,7 +69,7 @@ Fuchsia entities come in two flavors:
   - a contact card
   - a calendar event
 
-### How to create an Entity
+### How to create an fuchsia::modular::Entity
 
 It is currently possible to create *transient entities* by using the
 [`EntityStore`](../services/entity/entity_store.fidl) available in the
@@ -93,11 +93,11 @@ entityStore.createEntity([myType], [myContent], (final EntityProxy entity) {
 In C++:
 TODO
 
-### How to retrieve an Entity
+### How to retrieve an fuchsia::modular::Entity
 
 If you have an `EntityReference` (which is available by calling
-`Entity.getReference()` on any `Entity` instance), you can retrieve a handle to
-it by using the `EntityResolver` service available in the application
+`fuchsia::modular::Entity.getReference()` on any `fuchsia::modular::Entity` instance), you can retrieve a handle to
+it by using the `fuchsia::modular::EntityResolver` service available in the application
 namespace. Both `Modules` and `Agents` have this service available.
 
 In Dart:

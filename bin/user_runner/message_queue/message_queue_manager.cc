@@ -19,7 +19,6 @@
 #include "peridot/lib/ledger_client/page_client.h"
 #include "peridot/lib/ledger_client/storage.h"
 
-namespace fuchsia {
 namespace modular {
 
 struct MessageQueueInfo {
@@ -41,14 +40,16 @@ struct MessageQueueInfo {
 
 namespace {
 
-void XdrMessageQueueInfo_v1(XdrContext* const xdr, MessageQueueInfo* const data) {
+void XdrMessageQueueInfo_v1(XdrContext* const xdr,
+                            MessageQueueInfo* const data) {
   xdr->Field("component_namespace", &data->component_namespace);
   xdr->Field("component_instance_id", &data->component_instance_id);
   xdr->Field("queue_name", &data->queue_name);
   xdr->Field("queue_token", &data->queue_token);
 }
 
-void XdrMessageQueueInfo_v2(XdrContext* const xdr, MessageQueueInfo* const data) {
+void XdrMessageQueueInfo_v2(XdrContext* const xdr,
+                            MessageQueueInfo* const data) {
   if (!xdr->Version(2)) {
     return;
   }
@@ -59,40 +60,43 @@ void XdrMessageQueueInfo_v2(XdrContext* const xdr, MessageQueueInfo* const data)
 }
 
 constexpr XdrFilterType<MessageQueueInfo> XdrMessageQueueInfo[] = {
-  XdrMessageQueueInfo_v2,
-  XdrMessageQueueInfo_v1,
-  nullptr,
+    XdrMessageQueueInfo_v2,
+    XdrMessageQueueInfo_v1,
+    nullptr,
 };
 
 }  // namespace
 
 class MessageQueueStorage;
 
-// This class implements the |MessageQueue| fidl interface, and is owned by
-// |MessageQueueStorage|. It forwards all calls to its owner, and expects its
-// owner to manage outstanding |MessageQueue.Receive| calls. It also notifies
-// its owner on object destruction.
+// This class implements the |fuchsia::modular::MessageQueue| fidl interface,
+// and is owned by |MessageQueueStorage|. It forwards all calls to its owner,
+// and expects its owner to manage outstanding
+// |fuchsia::modular::MessageQueue.Receive| calls. It also notifies its owner on
+// object destruction.
 //
 // Interface is public, because bindings are outside of the class.
-class MessageQueueConnection : public MessageQueue {
+class MessageQueueConnection : public fuchsia::modular::MessageQueue {
  public:
   explicit MessageQueueConnection(MessageQueueStorage* queue_storage);
   ~MessageQueueConnection() override;
 
  private:
-  // |MessageQueue|
-  void RegisterReceiver(fidl::InterfaceHandle<MessageReader> receiver) override;
+  // |fuchsia::modular::MessageQueue|
+  void RegisterReceiver(
+      fidl::InterfaceHandle<fuchsia::modular::MessageReader> receiver) override;
 
-  // |MessageQueue|
+  // |fuchsia::modular::MessageQueue|
   void GetToken(GetTokenCallback callback) override;
 
   MessageQueueStorage* const queue_storage_;
 };
 
 // Class for managing a particular message queue, its tokens and its storage.
-// Implementations of |MessageQueue| and |MessageSender| call into this class to
-// manipulate the message queue. Owned by |MessageQueueManager|.
-class MessageQueueStorage : MessageSender {
+// Implementations of |fuchsia::modular::MessageQueue| and
+// |fuchsia::modular::MessageSender| call into this class to manipulate the
+// message queue. Owned by |MessageQueueManager|.
+class MessageQueueStorage : fuchsia::modular::MessageSender {
  public:
   MessageQueueStorage(std::string queue_name, std::string queue_token,
                       const std::string& file_name_)
@@ -102,11 +106,13 @@ class MessageQueueStorage : MessageSender {
 
   ~MessageQueueStorage() override = default;
 
-  void RegisterReceiver(fidl::InterfaceHandle<MessageReader> receiver) {
+  void RegisterReceiver(
+      fidl::InterfaceHandle<fuchsia::modular::MessageReader> receiver) {
     if (message_receiver_) {
-      FXL_DLOG(WARNING) << "Existing MessageReader is being replaced for "
-                           "message queue. queue name="
-                        << queue_name_;
+      FXL_DLOG(WARNING)
+          << "Existing fuchsia::modular::MessageReader is being replaced for "
+             "message queue. queue name="
+          << queue_name_;
     }
 
     message_receiver_.Bind(std::move(receiver));
@@ -126,11 +132,13 @@ class MessageQueueStorage : MessageSender {
 
   const std::string& queue_token() const { return queue_token_; }
 
-  void AddMessageSenderBinding(fidl::InterfaceRequest<MessageSender> request) {
+  void AddMessageSenderBinding(
+      fidl::InterfaceRequest<fuchsia::modular::MessageSender> request) {
     message_sender_bindings_.AddBinding(this, std::move(request));
   }
 
-  void AddMessageQueueBinding(fidl::InterfaceRequest<MessageQueue> request) {
+  void AddMessageQueueBinding(
+      fidl::InterfaceRequest<fuchsia::modular::MessageQueue> request) {
     message_queue_bindings_.AddBinding(
         std::make_unique<MessageQueueConnection>(this), std::move(request));
   }
@@ -158,7 +166,7 @@ class MessageQueueStorage : MessageSender {
     });
   }
 
-  // |MessageSender|
+  // |fuchsia::modular::MessageSender|
   void Send(fidl::StringPtr message) override {
     queue_data_.Enqueue(message);
     MaybeSendNextMessage();
@@ -175,14 +183,15 @@ class MessageQueueStorage : MessageSender {
   PersistentQueue queue_data_;
 
   bool receive_ack_pending_ = false;
-  MessageReaderPtr message_receiver_;
+  fuchsia::modular::MessageReaderPtr message_receiver_;
 
-  // When a |MessageQueue| connection closes, the corresponding
-  // MessageQueueConnection instance gets removed.
-  fidl::BindingSet<MessageQueue, std::unique_ptr<MessageQueueConnection>>
+  // When a |fuchsia::modular::MessageQueue| connection closes, the
+  // corresponding MessageQueueConnection instance gets removed.
+  fidl::BindingSet<fuchsia::modular::MessageQueue,
+                   std::unique_ptr<MessageQueueConnection>>
       message_queue_bindings_;
 
-  fidl::BindingSet<MessageSender> message_sender_bindings_;
+  fidl::BindingSet<fuchsia::modular::MessageSender> message_sender_bindings_;
 };
 
 // MessageQueueConnection -----------------------------------------------------
@@ -194,7 +203,7 @@ MessageQueueConnection::MessageQueueConnection(
 MessageQueueConnection::~MessageQueueConnection() = default;
 
 void MessageQueueConnection::RegisterReceiver(
-    fidl::InterfaceHandle<MessageReader> receiver) {
+    fidl::InterfaceHandle<fuchsia::modular::MessageReader> receiver) {
   queue_storage_->RegisterReceiver(std::move(receiver));
 }
 
@@ -257,34 +266,33 @@ class MessageQueueManager::GetQueueTokenCall
 
     key_ = MakeMessageQueueTokenKey(component_namespace_,
                                     component_instance_id_, queue_name_);
-    snapshot_->Get(to_array(key_),
-                   [this, flow](fuchsia::ledger::Status status,
-                                fuchsia::mem::BufferPtr value) {
-                     if (status == fuchsia::ledger::Status::KEY_NOT_FOUND) {
-                       // Key wasn't found, that's not an error.
-                       return;
-                     }
+    snapshot_->Get(to_array(key_), [this, flow](fuchsia::ledger::Status status,
+                                                fuchsia::mem::BufferPtr value) {
+      if (status == fuchsia::ledger::Status::KEY_NOT_FOUND) {
+        // Key wasn't found, that's not an error.
+        return;
+      }
 
-                     if (status != fuchsia::ledger::Status::OK) {
-                       FXL_LOG(ERROR) << trace_name() << " " << key_ << " "
-                                      << "PageSnapshot.Get() " << status;
-                       return;
-                     }
+      if (status != fuchsia::ledger::Status::OK) {
+        FXL_LOG(ERROR) << trace_name() << " " << key_ << " "
+                       << "PageSnapshot.Get() " << status;
+        return;
+      }
 
-                     if (!value) {
-                       FXL_LOG(ERROR) << trace_name() << " " << key_ << " "
-                                      << "Value is null.";
-                       return;
-                     }
+      if (!value) {
+        FXL_LOG(ERROR) << trace_name() << " " << key_ << " "
+                       << "Value is null.";
+        return;
+      }
 
-                     std::string queue_token;
-                     if (!fsl::StringFromVmo(*value, &queue_token)) {
-                       FXL_LOG(ERROR) << trace_name() << " " << key_ << " "
-                                      << "VMO could not be copied.";
-                       return;
-                     }
-                     result_ = queue_token;
-                   });
+      std::string queue_token;
+      if (!fsl::StringFromVmo(*value, &queue_token)) {
+        FXL_LOG(ERROR) << trace_name() << " " << key_ << " "
+                       << "VMO could not be copied.";
+        return;
+      }
+      result_ = queue_token;
+    });
   }
 
   const std::string component_namespace_;
@@ -300,9 +308,10 @@ class MessageQueueManager::GetQueueTokenCall
 
 class MessageQueueManager::GetMessageSenderCall : public PageOperation<> {
  public:
-  GetMessageSenderCall(MessageQueueManager* const message_queue_manager,
-                       fuchsia::ledger::Page* const page, std::string token,
-                       fidl::InterfaceRequest<MessageSender> request)
+  GetMessageSenderCall(
+      MessageQueueManager* const message_queue_manager,
+      fuchsia::ledger::Page* const page, std::string token,
+      fidl::InterfaceRequest<fuchsia::modular::MessageSender> request)
       : PageOperation("MessageQueueManager::GetMessageSenderCall", page, [] {}),
         message_queue_manager_(message_queue_manager),
         token_(std::move(token)),
@@ -365,7 +374,7 @@ class MessageQueueManager::GetMessageSenderCall : public PageOperation<> {
 
   MessageQueueManager* const message_queue_manager_;  // not owned
   const std::string token_;
-  fidl::InterfaceRequest<MessageSender> request_;
+  fidl::InterfaceRequest<fuchsia::modular::MessageSender> request_;
 
   fuchsia::ledger::PageSnapshotPtr snapshot_;
   std::string key_;
@@ -377,12 +386,11 @@ class MessageQueueManager::GetMessageSenderCall : public PageOperation<> {
 
 class MessageQueueManager::ObtainMessageQueueCall : public PageOperation<> {
  public:
-  ObtainMessageQueueCall(MessageQueueManager* const message_queue_manager,
-                         fuchsia::ledger::Page* const page,
-                         const std::string& component_namespace,
-                         const std::string& component_instance_id,
-                         const std::string& queue_name,
-                         fidl::InterfaceRequest<MessageQueue> request)
+  ObtainMessageQueueCall(
+      MessageQueueManager* const message_queue_manager,
+      fuchsia::ledger::Page* const page, const std::string& component_namespace,
+      const std::string& component_instance_id, const std::string& queue_name,
+      fidl::InterfaceRequest<fuchsia::modular::MessageQueue> request)
       : PageOperation("MessageQueueManager::ObtainMessageQueueCall", page,
                       [] {}, queue_name),
         message_queue_manager_(message_queue_manager),
@@ -474,7 +482,7 @@ class MessageQueueManager::ObtainMessageQueueCall : public PageOperation<> {
   }
 
   MessageQueueManager* const message_queue_manager_;  // not owned
-  fidl::InterfaceRequest<MessageQueue> request_;
+  fidl::InterfaceRequest<fuchsia::modular::MessageQueue> request_;
 
   MessageQueueInfo message_queue_info_;
   fuchsia::ledger::PageSnapshotPtr snapshot_;
@@ -670,7 +678,7 @@ MessageQueueManager::~MessageQueueManager() = default;
 void MessageQueueManager::ObtainMessageQueue(
     const std::string& component_namespace,
     const std::string& component_instance_id, const std::string& queue_name,
-    fidl::InterfaceRequest<MessageQueue> request) {
+    fidl::InterfaceRequest<fuchsia::modular::MessageQueue> request) {
   operation_collection_.Add(new ObtainMessageQueueCall(
       this, page(), component_namespace, component_instance_id, queue_name,
       std::move(request)));
@@ -750,8 +758,9 @@ MessageQueueStorage* MessageQueueManager::GetMessageQueueStorage(
 void MessageQueueManager::ClearMessageQueueStorage(
     const MessageQueueInfo& info) {
   // Remove the |MessageQueueStorage| and delete it which in turn will
-  // close all outstanding MessageSender and MessageQueue interface
-  // connections, and delete all messages on the queue permanently.
+  // close all outstanding fuchsia::modular::MessageSender and
+  // fuchsia::modular::MessageQueue interface connections, and delete all
+  // messages on the queue permanently.
   message_queues_.erase(info.queue_token);
 
   // Clear entries in message_queue_tokens_ and
@@ -803,7 +812,7 @@ void MessageQueueManager::DeleteNamespace(
 
 void MessageQueueManager::GetMessageSender(
     const std::string& queue_token,
-    fidl::InterfaceRequest<MessageSender> request) {
+    fidl::InterfaceRequest<fuchsia::modular::MessageSender> request) {
   const auto& it = message_queues_.find(queue_token);
   if (it != message_queues_.cend()) {
     // Found the message queue already.
@@ -817,8 +826,7 @@ void MessageQueueManager::GetMessageSender(
 
 void MessageQueueManager::RegisterMessageWatcher(
     const std::string& component_namespace,
-    const std::string& component_instance_id,
-    const std::string& queue_name,
+    const std::string& component_instance_id, const std::string& queue_name,
     const std::function<void()>& watcher) {
   const std::string* const token =
       FindQueueName(message_queue_tokens_,
@@ -837,8 +845,7 @@ void MessageQueueManager::RegisterMessageWatcher(
 
 void MessageQueueManager::RegisterDeletionWatcher(
     const std::string& component_namespace,
-    const std::string& component_instance_id,
-    const std::string& queue_token,
+    const std::string& component_instance_id, const std::string& queue_token,
     const std::function<void()>& watcher) {
   auto it = message_queue_infos_.find(queue_token);
   if (it == message_queue_infos_.end()) {
@@ -854,8 +861,7 @@ void MessageQueueManager::RegisterDeletionWatcher(
 
 void MessageQueueManager::DropMessageWatcher(
     const std::string& component_namespace,
-    const std::string& component_instance_id,
-    const std::string& queue_name) {
+    const std::string& component_instance_id, const std::string& queue_name) {
   MessageQueueInfo queue_info{component_namespace, component_instance_id,
                               queue_name, ""};
   const std::string* const token =
@@ -876,8 +882,7 @@ void MessageQueueManager::DropMessageWatcher(
 
 void MessageQueueManager::DropDeletionWatcher(
     const std::string& watcher_namespace,
-    const std::string& watcher_instance_id,
-    const std::string& queue_token) {
+    const std::string& watcher_instance_id, const std::string& queue_token) {
   auto it = message_queue_infos_.find(queue_token);
   if (it == message_queue_infos_.end()) {
     return;
@@ -891,4 +896,3 @@ void MessageQueueManager::DropDeletionWatcher(
 }
 
 }  // namespace modular
-}  // namespace fuchsia

@@ -10,28 +10,18 @@
 namespace fuchsia {
 namespace modular {
 
-std::ostream& operator<<(std::ostream& os,
-                         const fuchsia::modular::FocusedState& state);
-std::ostream& operator<<(std::ostream& os,
-                         const fuchsia::modular::StoryMetadata& meta);
-std::ostream& operator<<(std::ostream& os,
-                         const fuchsia::modular::ModuleMetadata& meta);
-std::ostream& operator<<(std::ostream& os,
-                         const fuchsia::modular::EntityMetadata& meta);
-std::ostream& operator<<(std::ostream& os,
-                         const fuchsia::modular::LinkMetadata& meta);
-std::ostream& operator<<(std::ostream& os,
-                         const fuchsia::modular::ContextMetadata& meta);
+std::ostream& operator<<(std::ostream& os, const FocusedState& state);
+std::ostream& operator<<(std::ostream& os, const StoryMetadata& meta);
+std::ostream& operator<<(std::ostream& os, const ModuleMetadata& meta);
+std::ostream& operator<<(std::ostream& os, const EntityMetadata& meta);
+std::ostream& operator<<(std::ostream& os, const LinkMetadata& meta);
+std::ostream& operator<<(std::ostream& os, const ContextMetadata& meta);
 
-std::ostream& operator<<(std::ostream& os,
-                         const fuchsia::modular::ContextValue& value);
-std::ostream& operator<<(std::ostream& os,
-                         const fuchsia::modular::ContextSelector& selector);
+std::ostream& operator<<(std::ostream& os, const ContextValue& value);
+std::ostream& operator<<(std::ostream& os, const ContextSelector& selector);
 
-std::ostream& operator<<(std::ostream& os,
-                         const fuchsia::modular::ContextUpdate& update);
-std::ostream& operator<<(std::ostream& os,
-                         const fuchsia::modular::ContextQuery& query);
+std::ostream& operator<<(std::ostream& os, const ContextUpdate& update);
+std::ostream& operator<<(std::ostream& os, const ContextQuery& query);
 
 }  // namespace modular
 }  // namespace fuchsia

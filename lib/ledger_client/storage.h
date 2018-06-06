@@ -14,7 +14,6 @@
 #include "lib/fidl/cpp/array.h"
 #include "lib/fidl/cpp/string.h"
 
-namespace fuchsia {
 namespace modular {
 
 // If this value is changed, the version in kLinkKeyPrefix must be changed too.
@@ -49,15 +48,15 @@ constexpr char kDeviceKeyPrefix[] = "Device/";
 constexpr char kFocusKeyPrefix[] = "Focus/";
 //
 //    Message Queue page:
-constexpr char kMessageQueueKeyPrefix[] = "MessageQueue/";
+constexpr char kMessageQueueKeyPrefix[] = "fuchsia::modular::MessageQueue/";
 constexpr char kMessageQueueTokenKeyPrefix[] = "MessageQueueToken/";
 //
-//    Agent Trigger page:
+//    fuchsia::modular::Agent Trigger page:
 constexpr char kTriggerKeyPrefix[] = "Trigger/";
 //
 //    Story page:
 constexpr char kLinkKeyPrefix[] =
-    "Link|2/";  // version 2: kEnableIncrementalLinks
+    "fuchsia::modular::Link|2/";  // version 2: kEnableIncrementalLinks
 constexpr char kModuleKeyPrefix[] = "Module/";
 
 // 2. ID values, separated by slashes, to identify the data item under this
@@ -73,8 +72,8 @@ std::string MakeMessageQueueTokenKey(const std::string& component_namespace,
 std::string MakeMessageQueueKey(const std::string& queue_token);
 std::string MakeTriggerKey(const std::string& agent_url,
                            const std::string& task_id);
-std::string MakeLinkKey(const LinkPathPtr& link_path);
-std::string MakeLinkKey(const LinkPath& link_path);
+std::string MakeLinkKey(const fuchsia::modular::LinkPathPtr& link_path);
+std::string MakeLinkKey(const fuchsia::modular::LinkPath& link_path);
 std::string MakeModuleKey(const fidl::VectorPtr<fidl::StringPtr>& module_path);
 
 // 3. The slash separator is escaped by a backslash inside the ID
@@ -90,7 +89,7 @@ constexpr char kCharsToEscape[] = ":/";
 constexpr char kSubSeparator[] = ":";
 std::string EncodeModulePath(
     const fidl::VectorPtr<fidl::StringPtr>& module_path);
-std::string EncodeLinkPath(const LinkPath& link_path);
+std::string EncodeLinkPath(const fuchsia::modular::LinkPath& link_path);
 std::string EncodeModuleComponentNamespace(const std::string& story_id);
 
 // More notes:
@@ -104,6 +103,5 @@ std::string EncodeModuleComponentNamespace(const std::string& story_id);
 //   Xdr*() functions to be found in the page access code.
 
 }  // namespace modular
-}  // namespace fuchsia
 
 #endif  // PERIDOT_LIB_LEDGER_CLIENT_STORAGE_H_

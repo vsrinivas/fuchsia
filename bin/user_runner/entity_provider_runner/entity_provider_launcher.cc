@@ -4,8 +4,6 @@
 
 #include "peridot/bin/user_runner/entity_provider_runner/entity_provider_launcher.h"
 
-namespace fuchsia {
 namespace modular {
 EntityProviderLauncher::~EntityProviderLauncher() = default;
 }  // namespace modular
-}  // namespace fuchsia

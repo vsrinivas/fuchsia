@@ -15,7 +15,6 @@
 #include "lib/fidl/cpp/interface_request.h"
 #include "lib/fxl/macros.h"
 
-namespace fuchsia {
 namespace modular {
 
 // Base class for a simple application which provides a single instance of a
@@ -107,6 +106,5 @@ class ViewApp : private fuchsia::ui::views_v1::ViewProvider {
 };
 
 }  // namespace modular
-}  // namespace fuchsia
 
 #endif  // PERIDOT_LIB_FIDL_SINGLE_SERVICE_APP_H_

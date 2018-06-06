@@ -3,8 +3,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// Implementation of the StoryShell service that just lays out the
-// views of all modules side by side.
+// Implementation of the fuchsia::modular::StoryShell service that just lays out
+// the views of all modules side by side.
 
 #include <memory>
 
@@ -23,7 +23,7 @@
 namespace {
 
 class DevStoryShellApp
-    : public fuchsia::modular::SingleServiceApp<fuchsia::modular::StoryShell> {
+    : public modular::SingleServiceApp<fuchsia::modular::StoryShell> {
  public:
   DevStoryShellApp(fuchsia::sys::StartupContext* const startup_context)
       : SingleServiceApp(startup_context) {}
@@ -35,20 +35,20 @@ class DevStoryShellApp
   void CreateView(
       fidl::InterfaceRequest<fuchsia::ui::views_v1_token::ViewOwner>
           view_owner_request,
-      fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> /*services_request*/)
-      override {
+      fidl::InterfaceRequest<
+          fuchsia::sys::ServiceProvider> /*services_request*/) override {
     view_owner_request_ = std::move(view_owner_request);
     Connect();
   }
 
-  // |StoryShell|
+  // |fuchsia::modular::StoryShell|
   void Initialize(fidl::InterfaceHandle<fuchsia::modular::StoryContext>
                       story_context) override {
     story_context_.Bind(std::move(story_context));
     Connect();
   }
 
-  // |StoryShell|
+  // |fuchsia::modular::StoryShell|
   void ConnectView(
       fidl::InterfaceHandle<fuchsia::ui::views_v1_token::ViewOwner> view_owner,
       fidl::StringPtr /*view_id*/, fidl::StringPtr /*parent_id*/,
@@ -61,17 +61,17 @@ class DevStoryShellApp
     }
   }
 
-  // |StoryShell|
+  // |fuchsia::modular::StoryShell|
   void FocusView(fidl::StringPtr /*view_id*/,
                  fidl::StringPtr /*relative_view_id*/) override {}
 
-  // |StoryShell|
+  // |fuchsia::modular::StoryShell|
   void DefocusView(fidl::StringPtr /*view_id*/,
                    DefocusViewCallback callback) override {
     callback();
   }
 
-  // |StoryShell|
+  // |fuchsia::modular::StoryShell|
   void AddContainer(
       fidl::StringPtr /*container_name*/, fidl::StringPtr /*parent_id*/,
       fuchsia::modular::SurfaceRelation /* relation */,
@@ -82,7 +82,7 @@ class DevStoryShellApp
 
   void Connect() {
     if (story_context_.is_bound() && view_owner_request_) {
-      view_ = std::make_unique<fuchsia::modular::ViewHost>(
+      view_ = std::make_unique<modular::ViewHost>(
           startup_context()
               ->ConnectToEnvironmentService<
                   fuchsia::ui::views_v1::ViewManager>(),
@@ -96,7 +96,7 @@ class DevStoryShellApp
     }
   }
 
-  std::unique_ptr<fuchsia::modular::ViewHost> view_;
+  std::unique_ptr<modular::ViewHost> view_;
   std::vector<fidl::InterfaceHandle<fuchsia::ui::views_v1_token::ViewOwner>>
       child_views_;
 
@@ -112,7 +112,7 @@ int main(int /*argc*/, const char** /*argv*/) {
   fsl::MessageLoop loop;
 
   auto context = fuchsia::sys::StartupContext::CreateFromStartupInfo();
-  fuchsia::modular::AppDriver<DevStoryShellApp> driver(
+  modular::AppDriver<DevStoryShellApp> driver(
       context->outgoing().deprecated_services(),
       std::make_unique<DevStoryShellApp>(context.get()),
       [&loop] { loop.QuitNow(); });

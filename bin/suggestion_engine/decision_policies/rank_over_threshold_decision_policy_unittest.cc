@@ -3,17 +3,16 @@
 // found in the LICENSE file.
 
 #include "peridot/bin/suggestion_engine/decision_policies/rank_over_threshold_decision_policy.h"
-#include "peridot/bin/suggestion_engine/ranker.h"
 #include "gtest/gtest.h"
+#include "peridot/bin/suggestion_engine/ranker.h"
 
-namespace fuchsia {
 namespace modular {
 namespace {
 
 class TestRanker : public Ranker {
  public:
-  double Rank(const UserInput& query, const RankedSuggestion& suggestion)
-      override {
+  double Rank(const fuchsia::modular::UserInput& query,
+              const RankedSuggestion& suggestion) override {
     return suggestion.confidence;
   }
 };
@@ -24,6 +23,7 @@ class RankOverThresholdDecisionPolicyTest : public ::testing::Test {
     decision_policy = std::make_unique<RankOverThresholdDecisionPolicy>(
         std::make_unique<TestRanker>(), 0.5);
   }
+
  protected:
   std::unique_ptr<RankOverThresholdDecisionPolicy> decision_policy;
 };
@@ -36,7 +36,7 @@ TEST_F(RankOverThresholdDecisionPolicyTest, Accept) {
   EXPECT_TRUE(decision_policy->Accept(suggestion));
 }
 
-TEST_F(RankOverThresholdDecisionPolicyTest, NotAccept)  {
+TEST_F(RankOverThresholdDecisionPolicyTest, NotAccept) {
   RankedSuggestion suggestion;
   suggestion.confidence = 0.4;
   EXPECT_FALSE(decision_policy->Accept(suggestion));
@@ -44,4 +44,3 @@ TEST_F(RankOverThresholdDecisionPolicyTest, NotAccept)  {
 
 }  // namespace
 }  // namespace modular
-}  // namespace fuchsia

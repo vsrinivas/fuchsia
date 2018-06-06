@@ -35,19 +35,18 @@ struct Source {
   fidl::StringPtr link_name;
 };
 
-void XdrContext_v1(fuchsia::modular::XdrContext* const xdr,
-                   Context* const data) {
+void XdrContext_v1(modular::XdrContext* const xdr, Context* const data) {
   // NOTE(mesch): No xdr->Version() call here, because the JSON output is not
   // persisted, hence cannot version skew.
   xdr->Field("topic", &data->topic);
 }
 
-constexpr fuchsia::modular::XdrFilterType<Context> XdrContext[] = {
+constexpr modular::XdrFilterType<Context> XdrContext[] = {
     XdrContext_v1,
     nullptr,
 };
 
-void XdrSource_v1(fuchsia::modular::XdrContext* const xdr, Source* const data) {
+void XdrSource_v1(modular::XdrContext* const xdr, Source* const data) {
   // NOTE(mesch): No xdr->Version() call here, because the JSON output is not
   // persisted, hence cannot version skew.
   xdr->Field("story_id", &data->story_id);
@@ -55,7 +54,7 @@ void XdrSource_v1(fuchsia::modular::XdrContext* const xdr, Source* const data) {
   xdr->Field("link_name", &data->link_name);
 }
 
-constexpr fuchsia::modular::XdrFilterType<Source> XdrSource[] = {
+constexpr modular::XdrFilterType<Source> XdrSource[] = {
     XdrSource_v1,
     nullptr,
 };
@@ -99,17 +98,19 @@ LinkWatcherImpl::LinkWatcherImpl(
   // updates from other devices, but nothing can tell us as it isn't kept in
   // memory on the current device.
   //
-  // The Link itself is not kept here, because otherwise it never becomes
-  // inactive (i.e. loses all its Link connections).
+  // The fuchsia::modular::Link itself is not kept here, because otherwise it
+  // never becomes inactive (i.e. loses all its fuchsia::modular::Link
+  // connections).
   link_watcher_binding_.set_error_handler(
-      [this] { owner_->DropLink(MakeLinkKey(link_path_)); });
+      [this] { owner_->DropLink(modular::MakeLinkKey(link_path_)); });
 }
 
 LinkWatcherImpl::~LinkWatcherImpl() = default;
 
 void LinkWatcherImpl::Notify(fidl::StringPtr json) {
   ProcessNewValue(json);
-  // TODO(thatguy): Deprecate this method once every Link is a "context link".
+  // TODO(thatguy): Deprecate this method once every fuchsia::modular::Link is a
+  // "context link".
   MaybeProcessContextLink(json);
 }
 
@@ -118,14 +119,14 @@ void LinkWatcherImpl::ProcessNewValue(const fidl::StringPtr& value) {
   //
   // 1) |value| contains a JSON-style entity:
   //   { "@type": ..., ... }
-  // 2) |value| contains a JSON-encoded Entity reference
+  // 2) |value| contains a JSON-encoded fuchsia::modular::Entity reference
   // (EntityReferenceFromJson() will return true).
   // 3) |value| is a JSON dictionary, and any of the members satisfies either
   // (1) or (2).
   //
   // TODO(thatguy): Moving to Bundles allows us to ignore (3), and using
   // Entities everywhere allows us to ignore (1).
-  fuchsia::modular::JsonDoc doc;
+  modular::JsonDoc doc;
   doc.Parse(value);
   FXL_CHECK(!doc.HasParseError());
 
@@ -136,19 +137,21 @@ void LinkWatcherImpl::ProcessNewValue(const fidl::StringPtr& value) {
   // (1) & (2)
   std::vector<std::string> types;
   std::string ref;
-  if (fuchsia::modular::ExtractEntityTypesFromJson(doc, &types) ||
-      fuchsia::modular::EntityReferenceFromJson(doc, &ref)) {
-    // There is only *one* Entity in this Link.
+  if (modular::ExtractEntityTypesFromJson(doc, &types) ||
+      modular::EntityReferenceFromJson(doc, &ref)) {
+    // There is only *one* fuchsia::modular::Entity in this
+    // fuchsia::modular::Link.
     entity_node_writers_.clear();
     if (!single_entity_node_writer_.is_bound()) {
       link_node_writer_->CreateChildValue(
           single_entity_node_writer_.NewRequest(),
           fuchsia::modular::ContextValueType::ENTITY);
     }
-    // TODO(thatguy): The context engine expects an Entity reference to be
-    // written directly as the content, versus the way Links wrap the reference
-    // in JSON. It'd be good to normalize on one encoded representation for
-    // Entity references in the context engine.
+    // TODO(thatguy): The context engine expects an fuchsia::modular::Entity
+    // reference to be written directly as the content, versus the way Links
+    // wrap the reference in JSON. It'd be good to normalize on one encoded
+    // representation for fuchsia::modular::Entity references in the context
+    // engine.
     if (ref.empty()) {
       single_entity_node_writer_->Set(value, nullptr);
     } else {
@@ -156,16 +159,16 @@ void LinkWatcherImpl::ProcessNewValue(const fidl::StringPtr& value) {
     }
     return;
   } else {
-    // There is not simply a *single* Entity in this Link. There may be
-    // multiple Entities (see below).
+    // There is not simply a *single* fuchsia::modular::Entity in this
+    // fuchsia::modular::Link. There may be multiple Entities (see below).
     single_entity_node_writer_.Unbind();
   }
 
   // (3)
   std::set<std::string> keys_that_have_entities;
   for (auto it = doc.MemberBegin(); it != doc.MemberEnd(); ++it) {
-    if (fuchsia::modular::ExtractEntityTypesFromJson(it->value, &types) ||
-        fuchsia::modular::EntityReferenceFromJson(it->value, &ref)) {
+    if (modular::ExtractEntityTypesFromJson(it->value, &types) ||
+        modular::EntityReferenceFromJson(it->value, &ref)) {
       keys_that_have_entities.insert(it->name.GetString());
 
       auto value_it = entity_node_writers_.find(it->name.GetString());
@@ -177,8 +180,7 @@ void LinkWatcherImpl::ProcessNewValue(const fidl::StringPtr& value) {
                        .emplace(it->name.GetString(), std::move(writer))
                        .first;
       }
-      value_it->second->Set(fuchsia::modular::JsonValueToString(it->value),
-                            nullptr);
+      value_it->second->Set(modular::JsonValueToString(it->value), nullptr);
     }
   }
 
@@ -195,7 +197,7 @@ void LinkWatcherImpl::ProcessNewValue(const fidl::StringPtr& value) {
 }
 
 void LinkWatcherImpl::MaybeProcessContextLink(const fidl::StringPtr& value) {
-  fuchsia::modular::JsonDoc doc;
+  modular::JsonDoc doc;
   doc.Parse(value);
   FXL_CHECK(!doc.HasParseError());
 
@@ -208,7 +210,7 @@ void LinkWatcherImpl::MaybeProcessContextLink(const fidl::StringPtr& value) {
     return;
   }
 
-  fuchsia::modular::JsonDoc context_doc;
+  modular::JsonDoc context_doc;
   context_doc.CopyFrom(i->value, context_doc.GetAllocator());
   doc.RemoveMember(i);
 
@@ -217,7 +219,7 @@ void LinkWatcherImpl::MaybeProcessContextLink(const fidl::StringPtr& value) {
   }
 
   Context context;
-  if (!fuchsia::modular::XdrRead(&context_doc, &context, XdrContext)) {
+  if (!modular::XdrRead(&context_doc, &context, XdrContext)) {
     return;
   }
 
@@ -226,11 +228,11 @@ void LinkWatcherImpl::MaybeProcessContextLink(const fidl::StringPtr& value) {
   fidl::Clone(link_path_.module_path, &source.module_path);
   source.link_name = link_path_.link_name;
 
-  fuchsia::modular::JsonDoc source_doc;
-  fuchsia::modular::XdrWrite(&source_doc, &source, XdrSource);
+  modular::JsonDoc source_doc;
+  modular::XdrWrite(&source_doc, &source, XdrSource);
   doc.AddMember(kSourceProperty, source_doc, doc.GetAllocator());
 
-  std::string json = fuchsia::modular::JsonValueToString(doc);
+  std::string json = modular::JsonValueToString(doc);
 
   auto it = topic_node_writers_.find(context.topic);
   if (it == topic_node_writers_.end()) {

@@ -4,7 +4,6 @@
 
 #include "peridot/bin/suggestion_engine/ranking_features/annoyance_ranking_feature.h"
 
-namespace fuchsia {
 namespace modular {
 
 AnnoyanceRankingFeature::AnnoyanceRankingFeature() = default;
@@ -12,12 +11,13 @@ AnnoyanceRankingFeature::AnnoyanceRankingFeature() = default;
 AnnoyanceRankingFeature::~AnnoyanceRankingFeature() = default;
 
 double AnnoyanceRankingFeature::ComputeFeatureInternal(
-    const UserInput& query, const RankedSuggestion& suggestion) {
-  if (suggestion.prototype->proposal.display.annoyance != AnnoyanceType::NONE) {
+    const fuchsia::modular::UserInput& query,
+    const RankedSuggestion& suggestion) {
+  if (suggestion.prototype->proposal.display.annoyance !=
+      fuchsia::modular::AnnoyanceType::NONE) {
     return kMaxConfidence;
   }
   return kMinConfidence;
 }
 
 }  // namespace modular
-}  // namespace fuchsia

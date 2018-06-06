@@ -16,7 +16,6 @@
 #include "lib/fxl/macros.h"
 #include "peridot/bin/context_engine/index.h"
 
-namespace fuchsia {
 namespace modular {
 
 class ContextDebug;
@@ -55,15 +54,16 @@ class ContextGraph {
   std::map<Id, std::set<Id>> children_;
 };
 
-// Stores a graph of ContextValue structs (values). Supports fetching lists of
-// values based on a) the value's type and b) ContextMetadata fields.
+// Stores a graph of fuchsia::modular::ContextValue structs (values). Supports
+// fetching lists of values based on a) the value's type and b)
+// fuchsia::modular::ContextMetadata fields.
 //
 // The graph structure is used to represent value namespaces or scope, although
 // the exact meaning or what concepts are represented is up to the client. When
 // a value is queried against and returned, its metadata is "flattened" with
 // its ancestors' metadata. For example, if an ENTITY value is a child of a
 // MODULE value, the ENTITY value will inherit the MODULE value's metadata (ie,
-// the |mod| field of the ContextMetadata struct).
+// the |mod| field of the fuchsia::modular::ContextMetadata struct).
 class ContextRepository {
   struct ValueInternal;
   struct Subscription;
@@ -77,47 +77,52 @@ class ContextRepository {
   ~ContextRepository();
 
   bool Contains(const Id& id) const;
-  Id Add(ContextValue value);
-  Id Add(const Id& parent_id, ContextValue value);
-  void Update(const Id& id, ContextValue value);
+  Id Add(fuchsia::modular::ContextValue value);
+  Id Add(const Id& parent_id, fuchsia::modular::ContextValue value);
+  void Update(const Id& id, fuchsia::modular::ContextValue value);
   void Remove(const Id& id);
 
-  // Returns a copy of the ContextValue for |id|. Returns a null
-  // |ContextValuePtr| if |id| is not valid.
-  ContextValuePtr Get(const Id& id) const;
+  // Returns a copy of the fuchsia::modular::ContextValue for |id|. Returns a
+  // null |fuchsia::modular::ContextValuePtr| if |id| is not valid.
+  fuchsia::modular::ContextValuePtr Get(const Id& id) const;
 
-  // Returns a copy of the ContextValue for |id|, with metadata merged
-  // from ancestors. Returns a null |ContextValuePtr| if |id| is not valid.
-  ContextValuePtr GetMerged(const Id& id) const;
+  // Returns a copy of the fuchsia::modular::ContextValue for |id|, with
+  // metadata merged from ancestors. Returns a null
+  // |fuchsia::modular::ContextValuePtr| if |id| is not valid.
+  fuchsia::modular::ContextValuePtr GetMerged(const Id& id) const;
 
-  std::set<Id> Select(const ContextSelector& selector);
+  std::set<Id> Select(const fuchsia::modular::ContextSelector& selector);
 
   // Returns the current requested values for the given query as a context
   // update.
-  ContextUpdate Query(const ContextQuery& query);
+  fuchsia::modular::ContextUpdate Query(
+      const fuchsia::modular::ContextQuery& query);
 
   // Does not take ownership of |listener|. |listener| must remain valid until
   // RemoveSubscription() is called with the returned Id.
-  Id AddSubscription(ContextQuery query, ContextListener* listener,
-                     SubscriptionDebugInfo debug_info);
+  Id AddSubscription(fuchsia::modular::ContextQuery query,
+                     fuchsia::modular::ContextListener* listener,
+                     fuchsia::modular::SubscriptionDebugInfo debug_info);
   void RemoveSubscription(Id id);
 
   // Like AddSubscription above, but takes ownership of the FIDL service proxy
   // object, |listener|. The subscription is automatically removed when
   // |listener| experiences a connection error.
-  void AddSubscription(ContextQuery query, ContextListenerPtr listener,
-                       SubscriptionDebugInfo debug_info);
+  void AddSubscription(fuchsia::modular::ContextQuery query,
+                       fuchsia::modular::ContextListenerPtr listener,
+                       fuchsia::modular::SubscriptionDebugInfo debug_info);
 
   ContextDebugImpl* debug();
-  void AddDebugBinding(fidl::InterfaceRequest<ContextDebug> request);
+  void AddDebugBinding(
+      fidl::InterfaceRequest<fuchsia::modular::ContextDebug> request);
 
  private:
-  Id AddInternal(const Id& parent_id, ContextValue value);
+  Id AddInternal(const Id& parent_id, fuchsia::modular::ContextValue value);
   void RecomputeMergedMetadata(ValueInternal* value);
   void ReindexAndNotify(InProgressUpdate update);
   void QueryAndMaybeNotify(Subscription* subscription, bool force);
-  std::pair<ContextUpdate, IdAndVersionSet> QueryInternal(
-      const ContextQuery& query);
+  std::pair<fuchsia::modular::ContextUpdate, IdAndVersionSet> QueryInternal(
+      const fuchsia::modular::ContextQuery& query);
 
   // Keyed by internal id.
   std::map<Id, ValueInternal> values_;
@@ -130,7 +135,7 @@ class ContextRepository {
 
   friend class ContextDebugImpl;
   std::unique_ptr<ContextDebugImpl> debug_;
-  fidl::BindingSet<ContextDebug> debug_bindings_;
+  fidl::BindingSet<fuchsia::modular::ContextDebug> debug_bindings_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ContextRepository);
 };
@@ -139,16 +144,17 @@ struct ContextRepository::ValueInternal {
   // The contents of |value.meta| merged with metadata from all
   // of this value's ancestors.
   Id id;
-  ContextMetadata merged_metadata;
-  ContextValue value;
+  fuchsia::modular::ContextMetadata merged_metadata;
+  fuchsia::modular::ContextValue value;
   uint32_t version;  // Incremented on change.
 };
 
 struct ContextRepository::Subscription {
-  ContextQuery query;
-  ContextListener* listener;  // Optionally owned by |listener_storage|.
-  ContextListenerPtr listener_storage;
-  SubscriptionDebugInfo debug_info;
+  fuchsia::modular::ContextQuery query;
+  fuchsia::modular::ContextListener*
+      listener;  // Optionally owned by |listener_storage|.
+  fuchsia::modular::ContextListenerPtr listener_storage;
+  fuchsia::modular::SubscriptionDebugInfo debug_info;
   // The set of value id and version we sent the last time we notified
   // |listener|. Used to calculate if a new update is different.
   IdAndVersionSet last_update;
@@ -164,6 +170,5 @@ struct ContextRepository::InProgressUpdate {
 };
 
 }  // namespace modular
-}  // namespace fuchsia
 
 #endif  // PERIDOT_BIN_CONTEXT_ENGINE_CONTEXT_REPOSITORY_H_

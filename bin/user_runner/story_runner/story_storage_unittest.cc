@@ -10,7 +10,6 @@
 #include "peridot/lib/ledger_client/page_id.h"
 #include "peridot/lib/testing/test_with_ledger.h"
 
-namespace fuchsia {
 namespace modular {
 namespace {
 
@@ -25,4 +24,3 @@ TEST_F(StoryStorageTest, Na) {}
 
 }  // namespace
 }  // namespace modular
-}  // namespace fuchsia

@@ -5,18 +5,17 @@
 #include "peridot/bin/suggestion_engine/ranking_features/proposal_hint_ranking_feature.h"
 #include "gtest/gtest.h"
 
-namespace fuchsia {
 namespace modular {
 namespace {
 
 class ProposalHintRankingFeatureTest : public ::testing::Test {
  protected:
   ProposalHintRankingFeature proposal_hint_feature;
-  UserInput query;
+  fuchsia::modular::UserInput query;
 };
 
-TEST_F(ProposalHintRankingFeatureTest, TestComputeFeature)  {
-  Proposal proposal;
+TEST_F(ProposalHintRankingFeatureTest, TestComputeFeature) {
+  fuchsia::modular::Proposal proposal;
   proposal.confidence = 0.5;
   SuggestionPrototype prototype;
   prototype.proposal = std::move(proposal);
@@ -29,4 +28,3 @@ TEST_F(ProposalHintRankingFeatureTest, TestComputeFeature)  {
 
 }  // namespace
 }  // namespace modular
-}  // namespace fuchsia

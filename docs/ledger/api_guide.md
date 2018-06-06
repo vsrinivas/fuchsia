@@ -10,7 +10,7 @@ and the most common operations, not necessarily to cover the entire API surface.
 
 The Ledger API is exposed through a [FIDL interface].
 
-Access to Ledger is vended from the `ComponentContext` of the running
+Access to Ledger is vended from the `fuchsia::modular::ComponentContext` of the running
 application. Each application component has a separate private data store for
 each user on behalf of which it runs.
 

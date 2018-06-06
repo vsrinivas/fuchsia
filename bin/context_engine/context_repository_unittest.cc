@@ -14,7 +14,6 @@
 
 using maxwell::ContextMetadataBuilder;
 
-namespace fuchsia {
 namespace modular {
 namespace {
 
@@ -50,27 +49,29 @@ class ContextRepositoryTest : public ::testing::Test {
   ContextRepository repository_;
 };
 
-class TestListener : public ContextListener {
+class TestListener : public fuchsia::modular::ContextListener {
  public:
-  ContextUpdatePtr last_update;
+  fuchsia::modular::ContextUpdatePtr last_update;
 
-  void OnContextUpdate(ContextUpdate update) override {
+  void OnContextUpdate(fuchsia::modular::ContextUpdate update) override {
     last_update = fidl::MakeOptional(std::move(update));
   }
 
   void reset() { last_update.reset(); }
 };
 
-ContextValue CreateValue(ContextValueType type, const std::string& content) {
-  ContextValue value;
+fuchsia::modular::ContextValue CreateValue(
+    fuchsia::modular::ContextValueType type, const std::string& content) {
+  fuchsia::modular::ContextValue value;
   value.type = type;
   value.content = content;
   return value;
 }
 
-ContextValue CreateValue(ContextValueType type, const std::string& content,
-                         ContextMetadata meta) {
-  ContextValue value;
+fuchsia::modular::ContextValue CreateValue(
+    fuchsia::modular::ContextValueType type, const std::string& content,
+    fuchsia::modular::ContextMetadata meta) {
+  fuchsia::modular::ContextValue value;
   value.type = type;
   value.content = content;
   value.meta = std::move(meta);
@@ -84,25 +85,27 @@ TEST_F(ContextRepositoryTest, GetAddUpdateRemove) {
   // operations.
 
   // Show that when we set values, we can get them back.
-  auto id1 = repository_.Add(CreateValue(ContextValueType::ENTITY, "content"));
+  auto id1 = repository_.Add(
+      CreateValue(fuchsia::modular::ContextValueType::ENTITY, "content"));
   auto value1 = repository_.Get(id1);
   ASSERT_TRUE(value1);
-  EXPECT_EQ(ContextValueType::ENTITY, value1->type);
+  EXPECT_EQ(fuchsia::modular::ContextValueType::ENTITY, value1->type);
   EXPECT_EQ("content", value1->content);
 
   // Setting another value doesn't affect the original value.
-  auto id2 = repository_.Add(CreateValue(ContextValueType::ENTITY, "content2"));
+  auto id2 = repository_.Add(
+      CreateValue(fuchsia::modular::ContextValueType::ENTITY, "content2"));
   auto value2 = repository_.Get(id2);
   ASSERT_TRUE(value2);
   EXPECT_EQ("content2", value2->content);
   value1 = repository_.Get(id1);
   ASSERT_TRUE(value1);
-  EXPECT_EQ(ContextValueType::ENTITY, value1->type);
+  EXPECT_EQ(fuchsia::modular::ContextValueType::ENTITY, value1->type);
   EXPECT_EQ("content", value1->content);
 
   // Let's create metadata.
   auto id3 = repository_.Add(
-      CreateValue(ContextValueType::ENTITY, "content3",
+      CreateValue(fuchsia::modular::ContextValueType::ENTITY, "content3",
                   ContextMetadataBuilder().SetStoryId("id3story").Build()));
   auto value3 = repository_.Get(id3);
   ASSERT_TRUE(value3);
@@ -113,7 +116,7 @@ TEST_F(ContextRepositoryTest, GetAddUpdateRemove) {
   // Update one of the previous values.
   repository_.Update(
       id2,
-      CreateValue(ContextValueType::ENTITY, "new content2",
+      CreateValue(fuchsia::modular::ContextValueType::ENTITY, "new content2",
                   ContextMetadataBuilder().SetStoryId("id2story").Build()));
   value2 = repository_.Get(id2);
   ASSERT_TRUE(value2);
@@ -138,12 +141,13 @@ TEST_F(ContextRepositoryTest, ValuesInheritMetadata) {
   // When a value is added as a child of another value, the child inherits the
   // metadata of its parent.
   auto meta1 = ContextMetadataBuilder().SetStoryId("id").Build();
-  auto id1 = repository_.Add(
-      CreateValue(ContextValueType::STORY, "s", std::move(meta1)));
+  auto id1 = repository_.Add(CreateValue(
+      fuchsia::modular::ContextValueType::STORY, "s", std::move(meta1)));
 
   auto meta2 = ContextMetadataBuilder().SetModuleUrl("url").Build();
   auto id2 = repository_.Add(
-      id1, CreateValue(ContextValueType::MODULE, "m", std::move(meta2)));
+      id1, CreateValue(fuchsia::modular::ContextValueType::MODULE, "m",
+                       std::move(meta2)));
 
   auto value1 = repository_.GetMerged(id1);
   ASSERT_TRUE(value1);
@@ -162,11 +166,11 @@ TEST_F(ContextRepositoryTest, ValuesInheritMetadata) {
   EXPECT_EQ("url", value2->meta.mod->url);
 
   // Changing the parent's metadata value should update the child's also.
-  meta1 = ContextMetadata();
-  meta1.story = StoryMetadata::New();
+  meta1 = fuchsia::modular::ContextMetadata();
+  meta1.story = fuchsia::modular::StoryMetadata::New();
   meta1.story->id = "newid";
-  repository_.Update(
-      id1, CreateValue(ContextValueType::STORY, "s", std::move(meta1)));
+  repository_.Update(id1, CreateValue(fuchsia::modular::ContextValueType::STORY,
+                                      "s", std::move(meta1)));
   value2 = repository_.GetMerged(id2);
   ASSERT_TRUE(value2);
   ASSERT_TRUE(value2->meta.story);
@@ -179,8 +183,8 @@ TEST_F(ContextRepositoryTest, ValuesInheritMetadata) {
   // 'mod' metadata), the parent's takes precendence.
   meta1 =
       ContextMetadataBuilder(std::move(meta1)).SetModuleUrl("override").Build();
-  repository_.Update(
-      id1, CreateValue(ContextValueType::STORY, "s", std::move(meta1)));
+  repository_.Update(id1, CreateValue(fuchsia::modular::ContextValueType::STORY,
+                                      "s", std::move(meta1)));
   value2 = repository_.GetMerged(id2);
   ASSERT_TRUE(value2);
   ASSERT_FALSE(value2->meta.story);
@@ -198,22 +202,22 @@ TEST_F(ContextRepositoryTest, ListenersGetUpdates) {
   // 4) When a value is removed, it is no longer returned.
 
   // (1)
-  ContextQuery query;
-  ContextSelector selector;
-  selector.type = ContextValueType::ENTITY;
+  fuchsia::modular::ContextQuery query;
+  fuchsia::modular::ContextSelector selector;
+  selector.type = fuchsia::modular::ContextValueType::ENTITY;
   selector.meta = ContextMetadataBuilder().SetEntityTopic("topic").BuildPtr();
   AddToContextQuery(&query, "a", std::move(selector));
 
   TestListener listener;
   repository_.AddSubscription(std::move(query), &listener,
-                              SubscriptionDebugInfo());
+                              fuchsia::modular::SubscriptionDebugInfo());
   EXPECT_EQ(0lu,
             TakeContextValue(listener.last_update.get(), "a").second->size());
   listener.reset();
 
   // (a)
-  ContextValue value;
-  value.type = ContextValueType::STORY;
+  fuchsia::modular::ContextValue value;
+  value.type = fuchsia::modular::ContextValueType::STORY;
   value.content = "no match";
   value.meta = ContextMetadataBuilder().SetEntityTopic("topic").Build();
   repository_.Add(std::move(value));
@@ -222,8 +226,8 @@ TEST_F(ContextRepositoryTest, ListenersGetUpdates) {
   listener.reset();
 
   // (b)
-  value = ContextValue();
-  value.type = ContextValueType::ENTITY;
+  value = fuchsia::modular::ContextValue();
+  value.type = fuchsia::modular::ContextValueType::ENTITY;
   value.content = "no match yet";
   value.meta = ContextMetadataBuilder().SetEntityTopic("not the topic").Build();
   auto id = repository_.Add(std::move(value));  // Save id for later.
@@ -232,8 +236,8 @@ TEST_F(ContextRepositoryTest, ListenersGetUpdates) {
   listener.reset();
 
   // (2)
-  value = ContextValue();
-  value.type = ContextValueType::ENTITY;
+  value = fuchsia::modular::ContextValue();
+  value.type = fuchsia::modular::ContextValueType::ENTITY;
   value.content = "match";
   value.meta = ContextMetadataBuilder().SetEntityTopic("topic").Build();
   repository_.Add(std::move(value));
@@ -243,8 +247,8 @@ TEST_F(ContextRepositoryTest, ListenersGetUpdates) {
   listener.reset();
 
   // (3)
-  value = ContextValue();
-  value.type = ContextValueType::ENTITY;
+  value = fuchsia::modular::ContextValue();
+  value.type = fuchsia::modular::ContextValueType::ENTITY;
   value.content = "now it matches";
   // Add more metadata than the query is looking for. It shouldn't affect
   // the query, because it doesn't express any constraint on 'type'.
@@ -273,34 +277,34 @@ TEST_F(ContextRepositoryTest, ListenersGetUpdates) {
 TEST_F(ContextRepositoryTest, ListenersGetUpdates_WhenParentsUpdated) {
   // We should see updates to listeners when an update to a node's
   // parent causes that node to be matched by a query.
-  ContextQuery query;
-  ContextSelector selector;
-  selector.type = ContextValueType::ENTITY;
+  fuchsia::modular::ContextQuery query;
+  fuchsia::modular::ContextSelector selector;
+  selector.type = fuchsia::modular::ContextValueType::ENTITY;
   selector.meta = ContextMetadataBuilder().SetStoryId("match").BuildPtr();
   AddToContextQuery(&query, "a", std::move(selector));
 
   TestListener listener;
   repository_.AddSubscription(std::move(query), &listener,
-                              SubscriptionDebugInfo());
+                              fuchsia::modular::SubscriptionDebugInfo());
   ASSERT_TRUE(listener.last_update);
   auto result = TakeContextValue(listener.last_update.get(), "a").second;
   EXPECT_EQ(0lu, result->size());
   listener.reset();
 
   // Add a Story value.
-  ContextValue story_value;
-  story_value.type = ContextValueType::STORY;
+  fuchsia::modular::ContextValue story_value;
+  story_value.type = fuchsia::modular::ContextValueType::STORY;
   story_value.meta = ContextMetadataBuilder().SetStoryId("no match").Build();
-  ContextValue first_story_value;
+  fuchsia::modular::ContextValue first_story_value;
   fidl::Clone(story_value, &first_story_value);  // Save for later.
   auto story_value_id = repository_.Add(std::move(story_value));
 
   // Expect no update.
   EXPECT_FALSE(listener.last_update);
 
-  // Add an Entity node, but it still shouldn't match.
-  ContextValue entity_value;
-  entity_value.type = ContextValueType::ENTITY;
+  // Add an fuchsia::modular::Entity node, but it still shouldn't match.
+  fuchsia::modular::ContextValue entity_value;
+  entity_value.type = fuchsia::modular::ContextValueType::ENTITY;
   entity_value.content = "content";
   repository_.Add(story_value_id, std::move(entity_value));
 
@@ -309,10 +313,10 @@ TEST_F(ContextRepositoryTest, ListenersGetUpdates_WhenParentsUpdated) {
 
   // Update the story value so its metadata matches the query, and we should
   // see the entity value returned in our update.
-  story_value = ContextValue();
-  story_value.type = ContextValueType::STORY;
+  story_value = fuchsia::modular::ContextValue();
+  story_value.type = fuchsia::modular::ContextValueType::STORY;
   story_value.meta = ContextMetadataBuilder().SetStoryId("match").Build();
-  ContextValue matching_story_value;
+  fuchsia::modular::ContextValue matching_story_value;
   fidl::Clone(story_value, &matching_story_value);  // Save for later.
   repository_.Update(story_value_id, std::move(story_value));
 
@@ -349,4 +353,3 @@ TEST_F(ContextRepositoryTest, ListenersGetUpdates_WhenParentsUpdated) {
 }
 
 }  // namespace modular
-}  // namespace fuchsia

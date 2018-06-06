@@ -15,17 +15,17 @@
 #include "peridot/lib/ledger_client/operations.h"
 #include "peridot/lib/ledger_client/storage.h"
 
-namespace fuchsia {
 namespace modular {
 
 namespace {
 
-using ReadDeviceDataCall = ReadDataCall<DeviceMapEntry>;
-using ReadAllDeviceDataCall = ReadAllDataCall<DeviceMapEntry>;
-using WriteDeviceDataCall = WriteDataCall<DeviceMapEntry>;
+using ReadDeviceDataCall = ReadDataCall<fuchsia::modular::DeviceMapEntry>;
+using ReadAllDeviceDataCall = ReadAllDataCall<fuchsia::modular::DeviceMapEntry>;
+using WriteDeviceDataCall = WriteDataCall<fuchsia::modular::DeviceMapEntry>;
 
 // Reads old versions of device data, which are missing a timestamp.
-void XdrDeviceMapEntry_v1(XdrContext* const xdr, DeviceMapEntry* const data) {
+void XdrDeviceMapEntry_v1(XdrContext* const xdr,
+                          fuchsia::modular::DeviceMapEntry* const data) {
   xdr->Field("name", &data->name);
   xdr->Field("device_id", &data->device_id);
   xdr->Field("profile", &data->profile);
@@ -37,7 +37,8 @@ void XdrDeviceMapEntry_v1(XdrContext* const xdr, DeviceMapEntry* const data) {
   data->last_change_timestamp = 1506447879;
 }
 
-void XdrDeviceMapEntry_v2(XdrContext* const xdr, DeviceMapEntry* const data) {
+void XdrDeviceMapEntry_v2(XdrContext* const xdr,
+                          fuchsia::modular::DeviceMapEntry* const data) {
   xdr->Field("name", &data->name);
   xdr->Field("device_id", &data->device_id);
   xdr->Field("profile", &data->profile);
@@ -45,7 +46,8 @@ void XdrDeviceMapEntry_v2(XdrContext* const xdr, DeviceMapEntry* const data) {
   xdr->Field("last_change_timestamp", &data->last_change_timestamp);
 }
 
-void XdrDeviceMapEntry_v3(XdrContext* const xdr, DeviceMapEntry* const data) {
+void XdrDeviceMapEntry_v3(XdrContext* const xdr,
+                          fuchsia::modular::DeviceMapEntry* const data) {
   if (!xdr->Version(3)) {
     return;
   }
@@ -56,11 +58,12 @@ void XdrDeviceMapEntry_v3(XdrContext* const xdr, DeviceMapEntry* const data) {
   xdr->Field("last_change_timestamp", &data->last_change_timestamp);
 }
 
-constexpr XdrFilterType<DeviceMapEntry> XdrDeviceMapEntry[] = {
-  XdrDeviceMapEntry_v3,
-  XdrDeviceMapEntry_v2,
-  XdrDeviceMapEntry_v1,
-  nullptr,
+constexpr XdrFilterType<fuchsia::modular::DeviceMapEntry> XdrDeviceMapEntry[] =
+    {
+        XdrDeviceMapEntry_v3,
+        XdrDeviceMapEntry_v2,
+        XdrDeviceMapEntry_v1,
+        nullptr,
 };
 
 std::string LoadHostname() {
@@ -86,8 +89,9 @@ DeviceMapImpl::DeviceMapImpl(const std::string& device_name,
                  kDeviceKeyPrefix) {
   current_device_id_ = device_id;
 
-  // TODO(jimbe) Load the DeviceMapEntry for the current device from the Ledger.
-  DeviceMapEntry device;
+  // TODO(jimbe) Load the fuchsia::modular::DeviceMapEntry for the current
+  // device from the Ledger.
+  fuchsia::modular::DeviceMapEntry device;
   device.name = device_name;
   device.device_id = device_id;
   device.profile = device_profile;
@@ -99,13 +103,14 @@ DeviceMapImpl::DeviceMapImpl(const std::string& device_name,
 
 DeviceMapImpl::~DeviceMapImpl() = default;
 
-void DeviceMapImpl::Connect(fidl::InterfaceRequest<DeviceMap> request) {
+void DeviceMapImpl::Connect(
+    fidl::InterfaceRequest<fuchsia::modular::DeviceMap> request) {
   bindings_.AddBinding(this, std::move(request));
 }
 
 void DeviceMapImpl::Query(QueryCallback callback) {
-  operation_queue_.Add(new ReadAllDeviceDataCall(
-      page(), kDeviceKeyPrefix, XdrDeviceMapEntry, callback));
+  operation_queue_.Add(new ReadAllDeviceDataCall(page(), kDeviceKeyPrefix,
+                                                 XdrDeviceMapEntry, callback));
 }
 
 void DeviceMapImpl::GetCurrentDevice(GetCurrentDeviceCallback callback) {
@@ -128,7 +133,7 @@ void DeviceMapImpl::SaveCurrentDevice() {
 }
 
 void DeviceMapImpl::WatchDeviceMap(
-    fidl::InterfaceHandle<DeviceMapWatcher> watcher) {
+    fidl::InterfaceHandle<fuchsia::modular::DeviceMapWatcher> watcher) {
   auto watcher_ptr = watcher.Bind();
   for (const auto& item : devices_) {
     const auto& device = item.second;
@@ -138,7 +143,7 @@ void DeviceMapImpl::WatchDeviceMap(
 }
 
 void DeviceMapImpl::Notify(const std::string& device_id) {
-  const DeviceMapEntry& device = devices_[current_device_id_];
+  const fuchsia::modular::DeviceMapEntry& device = devices_[current_device_id_];
   for (auto& watcher : change_watchers_.ptrs()) {
     (*watcher)->OnDeviceMapChange(device);
   }
@@ -148,7 +153,7 @@ void DeviceMapImpl::OnPageChange(const std::string& key,
                                  const std::string& value) {
   FXL_LOG(INFO) << "Updated Device: " << key << " value=" << value;
 
-  DeviceMapEntry device;
+  fuchsia::modular::DeviceMapEntry device;
   if (!XdrRead(value, &device, XdrDeviceMapEntry)) {
     FXL_DCHECK(false);
     return;
@@ -165,4 +170,3 @@ void DeviceMapImpl::OnPageDelete(const std::string& key) {
 }
 
 }  // namespace modular
-}  // namespace fuchsia

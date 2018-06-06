@@ -31,7 +31,7 @@ class TodoApp : public fuchsia::ledger::PageWatcher,
                 OnChangeCallback callback) override;
 
  private:
-  // |modular.Lifecycle|
+  // |modular.fuchsia::modular::Lifecycle|
   void Terminate() override;
 
   void List(fuchsia::ledger::PageSnapshotPtr snapshot);

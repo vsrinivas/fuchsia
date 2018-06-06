@@ -18,7 +18,7 @@
 #include "peridot/tests/common/defs.h"
 #include "peridot/tests/story_update/defs.h"
 
-using fuchsia::modular::testing::TestPoint;
+using modular::testing::TestPoint;
 
 namespace {
 
@@ -41,9 +41,9 @@ class ModuleWatcherImpl : fuchsia::modular::ModuleWatcher {
   }
 
  private:
-  // |ModuleWatcher|
+  // |fuchsia::modular::ModuleWatcher|
   void OnStateChange(fuchsia::modular::ModuleState module_state) override {
-    FXL_LOG(INFO) << "ModuleWatcher: " << module_state;
+    FXL_LOG(INFO) << "fuchsia::modular::ModuleWatcher: " << module_state;
     continue_(std::move(module_state));
   }
 
@@ -54,8 +54,8 @@ class ModuleWatcherImpl : fuchsia::modular::ModuleWatcher {
 };
 
 // Tests how modules are updated in a story.
-class TestApp : public fuchsia::modular::testing::ComponentBase<
-                    fuchsia::modular::UserShell> {
+class TestApp
+    : public modular::testing::ComponentBase<fuchsia::modular::UserShell> {
  public:
   TestApp(fuchsia::sys::StartupContext* const startup_context)
       : ComponentBase(startup_context) {
@@ -68,7 +68,7 @@ class TestApp : public fuchsia::modular::testing::ComponentBase<
   TestPoint initialize_{"Initialize()"};
   TestPoint story_create_{"Story Create"};
 
-  // |UserShell|
+  // |fuchsia::modular::UserShell|
   void Initialize(fidl::InterfaceHandle<fuchsia::modular::UserShellContext>
                       user_shell_context) override {
     initialize_.Pass();
@@ -112,10 +112,12 @@ class TestApp : public fuchsia::modular::testing::ComponentBase<
   void PipelinedAddGetStop() {
     // Tests two invariants:
     //
-    // 1. Pipelined AddModule(), GetModuleController(), ModuleController.Stop()
+    // 1. Pipelined fuchsia::modular::AddModule(), GetModuleController(),
+    // fuchsia::modular::ModuleController.Stop()
     //    transitions to the module state STOPPED.
     //
-    // 2. After ModuleController.Stop() completes (as observed by reaching teh
+    // 2. After fuchsia::modular::ModuleController.Stop() completes (as observed
+    // by reaching teh
     //    STOPPED state), GetActiveModules() shows the module as not running.
     //    (This cannot be pipelined because the requests are on different
     //    existing connections.)
@@ -167,11 +169,13 @@ class TestApp : public fuchsia::modular::testing::ComponentBase<
   void SequentialAddGetStop() {
     // Tests these invariants:
     //
-    // 1. Pipelined AddModule(), GetModuleController() transitions to the
+    // 1. Pipelined fuchsia::modular::AddModule(), GetModuleController()
+    // transitions to the
     //    module state RUNNING.
     //
     // 2. Sequential (sequenced after RUNNING state is reached)
-    //    ModuleController.Stop() transitions to the module state STOPPED.
+    //    fuchsia::modular::ModuleController.Stop() transitions to the module
+    //    state STOPPED.
     //
     // 3. Sequential GetActiveModules() (sequenced after STOPPED state is
     //    reached) shows the module as not running.
@@ -242,6 +246,6 @@ class TestApp : public fuchsia::modular::testing::ComponentBase<
 }  // namespace
 
 int main(int /*argc*/, const char** /*argv*/) {
-  fuchsia::modular::testing::ComponentMain<TestApp>();
+  modular::testing::ComponentMain<TestApp>();
   return 0;
 }

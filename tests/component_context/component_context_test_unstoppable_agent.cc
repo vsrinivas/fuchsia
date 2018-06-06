@@ -12,7 +12,7 @@
 #include "peridot/tests/common/defs.h"
 #include "peridot/tests/component_context/defs.h"
 
-using fuchsia::modular::testing::TestPoint;
+using modular::testing::TestPoint;
 
 namespace {
 
@@ -21,8 +21,8 @@ class TestApp {
  public:
   TestPoint initialized_{"Unstoppable agent initialized"};
 
-  TestApp(fuchsia::modular::AgentHost* agent_host) {
-    fuchsia::modular::testing::Init(agent_host->startup_context(), __FILE__);
+  TestApp(modular::AgentHost* agent_host) {
+    modular::testing::Init(agent_host->startup_context(), __FILE__);
     agent_host->agent_context()->GetComponentContext(
         component_context_.NewRequest());
     initialized_.Pass();
@@ -41,7 +41,7 @@ class TestApp {
   // Called by AgentDriver.
   void Terminate(const std::function<void()>& done) {
     stopped_.Pass();
-    fuchsia::modular::testing::Done(done);
+    modular::testing::Done(done);
   }
 
  private:
@@ -56,8 +56,8 @@ class TestApp {
 int main(int /*argc*/, const char** /*argv*/) {
   fsl::MessageLoop loop;
   auto context = fuchsia::sys::StartupContext::CreateFromStartupInfo();
-  fuchsia::modular::AgentDriver<TestApp> driver(context.get(),
-                                                [&loop] { loop.QuitNow(); });
+  modular::AgentDriver<TestApp> driver(context.get(),
+                                       [&loop] { loop.QuitNow(); });
   loop.Run();
   return 0;
 }

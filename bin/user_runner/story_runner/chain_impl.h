@@ -12,27 +12,26 @@
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fxl/macros.h"
 
-namespace fuchsia {
 namespace modular {
 
 class ChainImpl {
  public:
   ChainImpl(const fidl::VectorPtr<fidl::StringPtr>& path,
-            const ModuleParameterMap& parameter_map);
+            const fuchsia::modular::ModuleParameterMap& parameter_map);
   ~ChainImpl();
 
   const fidl::VectorPtr<fidl::StringPtr>& chain_path() const { return path_; }
 
-  LinkPathPtr GetLinkPathForParameterName(const fidl::StringPtr& name);
+  fuchsia::modular::LinkPathPtr GetLinkPathForParameterName(
+      const fidl::StringPtr& name);
 
  private:
   fidl::VectorPtr<fidl::StringPtr> path_;
-  ModuleParameterMap parameter_map_;
+  fuchsia::modular::ModuleParameterMap parameter_map_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ChainImpl);
 };
 
 }  // namespace modular
-}  // namespace fuchsia
 
 #endif  // PERIDOT_BIN_USER_RUNNER_STORY_RUNNER_CHAIN_IMPL_H_

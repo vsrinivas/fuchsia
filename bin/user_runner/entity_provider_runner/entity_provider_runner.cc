@@ -16,7 +16,6 @@
 #include "peridot/lib/fidl/json_xdr.h"
 #include "peridot/lib/util/string_escape.h"
 
-namespace fuchsia {
 namespace modular {
 namespace {
 
@@ -25,8 +24,8 @@ constexpr char kEntityDataReferencePrefix[] = "EntityData";
 
 using StringMap = std::map<std::string, std::string>;
 constexpr XdrFilterType<StringMap> XdrStringMap[] = {
-  XdrFilter<StringMap>,
-  nullptr,
+    XdrFilter<StringMap>,
+    nullptr,
 };
 
 // Given an agent_url and a cookie, encodes it into an entity reference.
@@ -67,14 +66,16 @@ bool DecodeEntityDataReference(const std::string& entity_reference,
 }  // namespace
 
 class EntityProviderRunner::EntityReferenceFactoryImpl
-    : EntityReferenceFactory {
+    : fuchsia::modular::EntityReferenceFactory {
  public:
   EntityReferenceFactoryImpl(const std::string& agent_url,
                              EntityProviderRunner* const entity_provider_runner)
       : agent_url_(agent_url),
         entity_provider_runner_(entity_provider_runner) {}
 
-  void AddBinding(fidl::InterfaceRequest<EntityReferenceFactory> request) {
+  void AddBinding(
+      fidl::InterfaceRequest<fuchsia::modular::EntityReferenceFactory>
+          request) {
     bindings_.AddBinding(this, std::move(request));
   }
 
@@ -83,7 +84,7 @@ class EntityProviderRunner::EntityReferenceFactoryImpl
   }
 
  private:
-  // |EntityReferenceFactory|
+  // |fuchsia::modular::EntityReferenceFactory|
   void CreateReference(fidl::StringPtr cookie,
                        CreateReferenceCallback callback) override {
     entity_provider_runner_->CreateReference(agent_url_, cookie, callback);
@@ -91,14 +92,14 @@ class EntityProviderRunner::EntityReferenceFactoryImpl
 
   const std::string agent_url_;
   EntityProviderRunner* const entity_provider_runner_;
-  fidl::BindingSet<EntityReferenceFactory> bindings_;
+  fidl::BindingSet<fuchsia::modular::EntityReferenceFactory> bindings_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(EntityReferenceFactoryImpl);
 };
 
-// This class provides |Entity| implementations for a given data entity
-// reference.
-class EntityProviderRunner::DataEntity : Entity {
+// This class provides |fuchsia::modular::Entity| implementations for a given
+// data entity reference.
+class EntityProviderRunner::DataEntity : fuchsia::modular::Entity {
  public:
   DataEntity(EntityProviderRunner* const provider,
              const std::string& entity_reference,
@@ -113,16 +114,16 @@ class EntityProviderRunner::DataEntity : Entity {
     });
   };
 
-  void AddBinding(fidl::InterfaceRequest<Entity> request) {
+  void AddBinding(fidl::InterfaceRequest<fuchsia::modular::Entity> request) {
     bindings_.AddBinding(this, std::move(request));
   }
 
  private:
-  // |Entity|
+  // |fuchsia::modular::Entity|
   void GetTypes(GetTypesCallback result) {
     result(fxl::To<fidl::VectorPtr<fidl::StringPtr>>(types_));
   }
-  // |Entity|
+  // |fuchsia::modular::Entity|
   void GetData(fidl::StringPtr type, GetDataCallback result) {
     auto it = data_.find(type);
     if (it != data_.end()) {
@@ -134,7 +135,7 @@ class EntityProviderRunner::DataEntity : Entity {
 
   std::vector<std::string> types_;
   std::map<std::string, std::string> data_;
-  fidl::BindingSet<Entity> bindings_;
+  fidl::BindingSet<fuchsia::modular::Entity> bindings_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(DataEntity);
 };
@@ -147,7 +148,7 @@ EntityProviderRunner::~EntityProviderRunner() = default;
 
 void EntityProviderRunner::ConnectEntityReferenceFactory(
     const std::string& agent_url,
-    fidl::InterfaceRequest<EntityReferenceFactory> request) {
+    fidl::InterfaceRequest<fuchsia::modular::EntityReferenceFactory> request) {
   auto it = entity_reference_factory_bindings_.find(agent_url);
   if (it == entity_reference_factory_bindings_.end()) {
     bool inserted;
@@ -163,7 +164,7 @@ void EntityProviderRunner::ConnectEntityReferenceFactory(
 }
 
 void EntityProviderRunner::ConnectEntityResolver(
-    fidl::InterfaceRequest<EntityResolver> request) {
+    fidl::InterfaceRequest<fuchsia::modular::EntityResolver> request) {
   entity_resolver_bindings_.AddBinding(this, std::move(request));
 }
 
@@ -174,7 +175,6 @@ void EntityProviderRunner::OnEntityProviderFinished(
 
 std::string EntityProviderRunner::CreateReferenceFromData(
     std::map<std::string, std::string> type_to_data) {
-
   // TODO(rosswang): Several of these heap allocations are unnecessary but this
   // code is only temporary.
   std::string encoded;
@@ -192,16 +192,16 @@ std::string EntityProviderRunner::CreateReferenceFromData(
 }
 
 void EntityProviderRunner::CreateReference(
-    const std::string& agent_url,
-    fidl::StringPtr cookie,
-    EntityReferenceFactory::CreateReferenceCallback callback) {
+    const std::string& agent_url, fidl::StringPtr cookie,
+    fuchsia::modular::EntityReferenceFactory::CreateReferenceCallback
+        callback) {
   auto entity_ref = EncodeEntityReference(agent_url, cookie);
   callback(entity_ref);
 }
 
 void EntityProviderRunner::ResolveDataEntity(
     fidl::StringPtr entity_reference,
-    fidl::InterfaceRequest<Entity> entity_request) {
+    fidl::InterfaceRequest<fuchsia::modular::Entity> entity_request) {
   std::map<std::string, std::string> entity_data;
   if (!DecodeEntityDataReference(entity_reference, &entity_data)) {
     FXL_LOG(INFO) << "Could not decode entity reference: " << entity_reference;
@@ -226,7 +226,7 @@ void EntityProviderRunner::OnDataEntityFinished(
 
 void EntityProviderRunner::ResolveEntity(
     fidl::StringPtr entity_reference,
-    fidl::InterfaceRequest<Entity> entity_request) {
+    fidl::InterfaceRequest<fuchsia::modular::Entity> entity_request) {
   if (entity_reference.get().find(kEntityDataReferencePrefix) == 0ul) {
     ResolveDataEntity(entity_reference, std::move(entity_request));
     return;
@@ -254,4 +254,3 @@ void EntityProviderRunner::ResolveEntity(
 }
 
 }  // namespace modular
-}  // namespace fuchsia

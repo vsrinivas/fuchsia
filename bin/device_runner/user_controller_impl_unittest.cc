@@ -10,7 +10,6 @@
 #include "peridot/lib/fidl/clone.h"
 #include "peridot/lib/testing/fake_launcher.h"
 
-namespace fuchsia {
 namespace modular {
 namespace testing {
 namespace {
@@ -20,7 +19,7 @@ class UserControllerImplTest : public gtest::TestWithMessageLoop {};
 TEST_F(UserControllerImplTest, StartUserRunner) {
   FakeLauncher launcher;
   std::string url = "test_url_string";
-  AppConfig app_config;
+  fuchsia::modular::AppConfig app_config;
   app_config.url = url;
 
   fuchsia::modular::auth::TokenProviderFactoryPtr token_provider_factory_ptr;
@@ -34,7 +33,7 @@ TEST_F(UserControllerImplTest, StartUserRunner) {
         callback_called = true;
       });
 
-  UserControllerPtr user_controller_ptr;
+  fuchsia::modular::UserControllerPtr user_controller_ptr;
   UserControllerImpl impl(
       &launcher, CloneStruct(app_config), CloneStruct(app_config),
       CloneStruct(app_config), std::move(token_provider_factory_ptr),
@@ -48,4 +47,3 @@ TEST_F(UserControllerImplTest, StartUserRunner) {
 }  // namespace
 }  // namespace testing
 }  // namespace modular
-}  // namespace fuchsia

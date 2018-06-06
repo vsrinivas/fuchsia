@@ -14,26 +14,27 @@
 #include "lib/fidl/cpp/string.h"
 #include "lib/fxl/macros.h"
 
-namespace fuchsia {
 namespace modular {
 
 class EntityProviderController;
 class EntityProviderLauncher;
 
-// This class provides an implementation for |EntityResolver| and
-// |EntityReferenceFactory| and manages all the EntityProviders running in the
-// system. One |EntityProviderRunner| instance services all |EntityResolver|
-// interfaces, and there is one |EntityReferenceFactoryImpl| for each
-// |EntityReferenceFactory| interface.
-class EntityProviderRunner : EntityResolver {
+// This class provides an implementation for |fuchsia::modular::EntityResolver|
+// and |fuchsia::modular::EntityReferenceFactory| and manages all the
+// EntityProviders running in the system. One |EntityProviderRunner| instance
+// services all |fuchsia::modular::EntityResolver| interfaces, and there is one
+// |EntityReferenceFactoryImpl| for each
+// |fuchsia::modular::EntityReferenceFactory| interface.
+class EntityProviderRunner : fuchsia::modular::EntityResolver {
  public:
   EntityProviderRunner(EntityProviderLauncher* entity_provider_launcher);
   ~EntityProviderRunner() override;
 
   void ConnectEntityReferenceFactory(
       const std::string& agent_url,
-      fidl::InterfaceRequest<EntityReferenceFactory> request);
-  void ConnectEntityResolver(fidl::InterfaceRequest<EntityResolver> request);
+      fidl::InterfaceRequest<fuchsia::modular::EntityReferenceFactory> request);
+  void ConnectEntityResolver(
+      fidl::InterfaceRequest<fuchsia::modular::EntityResolver> request);
 
   // Called by an EntityProviderController when the entity provider for a
   // component ID doesn't need to live anymore.
@@ -47,8 +48,8 @@ class EntityProviderRunner : EntityResolver {
   std::string CreateReferenceFromData(
       std::map<std::string, std::string> type_to_data);
 
-  // Called by a DataEntity when it has no more |Entity|s it needs to serve for
-  // a particular |entity_reference|.
+  // Called by a DataEntity when it has no more |fuchsia::modular::Entity|s it
+  // needs to serve for a particular |entity_reference|.
   void OnDataEntityFinished(const std::string& entity_reference);
 
  private:
@@ -57,36 +58,37 @@ class EntityProviderRunner : EntityResolver {
 
   // Called by |EntityReferenceFactoryImpl|.
   void CreateReference(
-      const std::string& agent_url,
-      fidl::StringPtr cookie,
-      EntityReferenceFactory::CreateReferenceCallback callback);
+      const std::string& agent_url, fidl::StringPtr cookie,
+      fuchsia::modular::EntityReferenceFactory::CreateReferenceCallback
+          callback);
 
-  // |EntityResolver|
-  void ResolveEntity(fidl::StringPtr entity_reference,
-                     fidl::InterfaceRequest<Entity> entity_request) override;
+  // |fuchsia::modular::EntityResolver|
+  void ResolveEntity(
+      fidl::StringPtr entity_reference,
+      fidl::InterfaceRequest<fuchsia::modular::Entity> entity_request) override;
 
-  void ResolveDataEntity(fidl::StringPtr entity_reference,
-                         fidl::InterfaceRequest<Entity> entity_request);
+  void ResolveDataEntity(
+      fidl::StringPtr entity_reference,
+      fidl::InterfaceRequest<fuchsia::modular::Entity> entity_request);
 
   EntityProviderLauncher* const entity_provider_launcher_;
 
-  // component id -> EntityReferenceFactory
+  // component id -> fuchsia::modular::EntityReferenceFactory
   std::map<std::string, std::unique_ptr<EntityReferenceFactoryImpl>>
       entity_reference_factory_bindings_;
-  fidl::BindingSet<EntityResolver> entity_resolver_bindings_;
+  fidl::BindingSet<fuchsia::modular::EntityResolver> entity_resolver_bindings_;
 
   // These are the running entity providers.
   // component id -> EntityProviderController.
   std::map<std::string, std::unique_ptr<EntityProviderController>>
       entity_provider_controllers_;
 
-  // entity reference -> |Entity| implementation.
+  // entity reference -> |fuchsia::modular::Entity| implementation.
   std::map<std::string, std::unique_ptr<DataEntity>> data_entities_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(EntityProviderRunner);
 };
 
 }  // namespace modular
-}  // namespace fuchsia
 
 #endif  // PERIDOT_BIN_USER_RUNNER_ENTITY_PROVIDER_RUNNER_ENTITY_PROVIDER_RUNNER_H_

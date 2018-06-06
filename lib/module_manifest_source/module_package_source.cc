@@ -20,7 +20,6 @@
 #include "peridot/lib/module_manifest_source/json.h"
 #include "peridot/lib/module_manifest_source/package_util.h"
 
-namespace fuchsia {
 namespace modular {
 namespace {
 // NOTE: This must match the path specified in
@@ -122,4 +121,3 @@ void ModulePackageSource::Watch(async_t* async, IdleFn idle_fn,
 }
 
 }  // namespace modular
-}  // namespace fuchsia

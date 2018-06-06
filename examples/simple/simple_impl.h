@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef PERIDOT_EXAMPLES_SIMPLE_AGENT_SIMPLE_IMPL_H_
-#define PERIDOT_EXAMPLES_SIMPLE_AGENT_SIMPLE_IMPL_H_
+#ifndef PERIDOT_EXAMPLES_SIMPLE_SIMPLE_IMPL_H_
+#define PERIDOT_EXAMPLES_SIMPLE_SIMPLE_IMPL_H_
 
 #include <string>
 
@@ -17,7 +17,7 @@ namespace simple {
 class SimpleImpl : Simple {
  public:
   SimpleImpl();
-  ~SimpleImpl();
+  ~SimpleImpl() override;
 
   void Connect(fidl::InterfaceRequest<Simple> request);
 
@@ -25,7 +25,7 @@ class SimpleImpl : Simple {
 
  private:
   // |Simple| interface method.
-  void SetMessageQueue(fidl::StringPtr queue_token);
+  void SetMessageQueue(fidl::StringPtr queue_token) override;
 
   // The bindings to the Simple service.
   fidl::BindingSet<Simple> bindings_;
@@ -36,4 +36,4 @@ class SimpleImpl : Simple {
 
 }  // namespace simple
 
-#endif // PERIDOT_EXAMPLES_SIMPLE_AGENT_SIMPLE_IMPL_H_
+#endif  // PERIDOT_EXAMPLES_SIMPLE_SIMPLE_IMPL_H_

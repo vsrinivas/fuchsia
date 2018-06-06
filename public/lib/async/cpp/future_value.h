@@ -16,7 +16,6 @@
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/macros.h"
 
-namespace fuchsia {
 namespace modular {
 
 // Supports asynchronous computation by queueing tasks that depend on a value
@@ -97,6 +96,5 @@ class FutureValue {
 };
 
 }  // namespace modular
-}  // namespace fuchsia
 
 #endif  // LIB_ASYNC_CPP_FUTURE_VALUE_H_

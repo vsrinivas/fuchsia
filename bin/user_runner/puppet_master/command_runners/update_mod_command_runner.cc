@@ -6,7 +6,6 @@
 
 #include "lib/fxl/logging.h"
 
-namespace fuchsia {
 namespace modular {
 
 UpdateModCommandRunner::UpdateModCommandRunner() {}
@@ -14,11 +13,10 @@ UpdateModCommandRunner::UpdateModCommandRunner() {}
 UpdateModCommandRunner::~UpdateModCommandRunner() = default;
 
 void UpdateModCommandRunner::Execute(
-    fidl::StringPtr story_id, StoryCommand command,
-    std::function<void(ExecuteResult)> done) {
+    fidl::StringPtr story_id, fuchsia::modular::StoryCommand command,
+    std::function<void(fuchsia::modular::ExecuteResult)> done) {
   FXL_CHECK(command.is_update_mod());
   // TODO(miguelfrde): implement.
 }
 
 }  // namespace modular
-}  // namespace fuchsia

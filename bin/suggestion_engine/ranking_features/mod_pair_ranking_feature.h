@@ -11,7 +11,6 @@
 
 #include "peridot/bin/suggestion_engine/ranking_feature.h"
 
-namespace fuchsia {
 namespace modular {
 
 class ModPairRankingFeature : public RankingFeature {
@@ -22,16 +21,15 @@ class ModPairRankingFeature : public RankingFeature {
   void LoadDataFromFile(const std::string& filepath);
 
  private:
-  double ComputeFeatureInternal(
-      const UserInput& query, const RankedSuggestion& suggestion) override;
+  double ComputeFeatureInternal(const fuchsia::modular::UserInput& query,
+                                const RankedSuggestion& suggestion) override;
 
-  ContextSelectorPtr CreateContextSelectorInternal() override;
+  fuchsia::modular::ContextSelectorPtr CreateContextSelectorInternal() override;
 
   std::unordered_map<std::string, std::unordered_map<std::string, double>>
       module_pairs_;
 };
 
 }  // namespace modular
-}  // namespace fuchsia
 
 #endif  // PERIDOT_BIN_SUGGESTION_ENGINE_RANKING_FEATURES_MOD_PAIR_RANKING_FEATURE_H_

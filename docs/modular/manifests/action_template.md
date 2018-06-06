@@ -1,4 +1,4 @@
-Action Template
+fuchsia::modular::Action Template
 =============
 > Status: DRAFT
 >
@@ -33,7 +33,7 @@ well as the action itself.</s>
 
 ## File format
 
-Action templates are defined in a <s>`action_template` metadata file</s> JSON file.
+fuchsia::modular::Action templates are defined in a <s>`action_template` metadata file</s> JSON file.
 The content of the file is a JSON array
 of dictionaries. The full JSON schema, for reference, can be [found
 here](../src/package_manager/metadata_schemas/action_template.json).
@@ -46,7 +46,7 @@ The following `action_template` file defines three actions: `Preview`,
 `Navigate` and `Pick`.
 
 `Preview` accepts a single required argument (called a "noun"), which
-represents the `Entity` that will be previewed.
+represents the `fuchsia::modular::Entity` that will be previewed.
 
 `Navigate` accepts two nouns, one of which (the *destination*) is required.
 
@@ -120,7 +120,7 @@ This is the action's name. It uniquely identifies this action.
 > TODO(thatguy): Add information about how action names are associated with the author
 > so no collisions are possible.
 
-Action names allow `Module` [metadata files](module.md) to reference this action
+fuchsia::modular::Action names allow `Module` [metadata files](module.md) to reference this action
 template when they declare that they provide an implementation, and allows [`Daisies`](../intent.md) to reference the same action when a client requests the associated action to take place.
 
 ### nouns
@@ -138,20 +138,20 @@ template when they declare that they provide an implementation, and allows [`Dai
 > TODO: There is no way to specify that a noun argument should be a list of
 > Entities.  This may be possible simply by adding a `is_list` property.
 
-Nouns give names to individual or sets of [`Entity`](../entity.md) references
+Nouns give names to individual or sets of [`fuchsia::modular::Entity`](../entity.md) references
 passed between `Modules` at runtime.
 
 Each noun declared in an `action` definition must have the following properties:
 
 * `name`: limited to the following characters: `[a-zA-Z0-9_]`
 * `direction`: any of `input`, `output` and `input/output`.
-  - `input`: only the target `Module`'s parent may set the `Entity`
+  - `input`: only the target `Module`'s parent may set the `fuchsia::modular::Entity`
     reference(s) value for this noun.
-  - `output`: only the target `Module` may set the `Entity` reference(s).
-  - `input/output`: either may set the `Entity` reference(s).
+  - `output`: only the target `Module` may set the `fuchsia::modular::Entity` reference(s).
+  - `input/output`: either may set the `fuchsia::modular::Entity` reference(s).
 * `required`: `true` or `false`. Default: `false`
 
-Note that nouns do not specify `Entity` types here. These are
+Note that nouns do not specify `fuchsia::modular::Entity` types here. These are
 defined at the time of declaring an implementation of this `action`
 by a `Module`, which is done in a [`Module` metadata file](module.md).
 

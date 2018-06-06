@@ -14,10 +14,9 @@
 #include "lib/fidl/cpp/interface_ptr_set.h"
 #include "peridot/lib/testing/story_controller_mock.h"
 
-namespace fuchsia {
 namespace modular {
 
-class StoryProviderMock : public StoryProvider {
+class StoryProviderMock : public fuchsia::modular::StoryProvider {
  public:
   // Allows notification of watchers.
   void NotifyStoryChanged(fuchsia::modular::StoryInfo story_info,
@@ -29,88 +28,90 @@ class StoryProviderMock : public StoryProvider {
     }
   }
 
-  const fuchsia::modular::StoryControllerMock& story_controller() const {
+  const StoryControllerMock& story_controller() const {
     return controller_mock_;
   }
 
  private:
-  // |StoryProvider|
+  // |fuchsia::modular::StoryProvider|
   void CreateStory(fidl::StringPtr url, CreateStoryCallback callback) override {
     last_created_story_ = url;
     callback("foo");
   }
 
-  // |StoryProvider|
-  void CreateStoryWithInfo(fidl::StringPtr url,
-                           fidl::VectorPtr<StoryInfoExtraEntry> extra_info,
-                           fidl::StringPtr json,
-                           CreateStoryWithInfoCallback callback) override {
+  // |fuchsia::modular::StoryProvider|
+  void CreateStoryWithInfo(
+      fidl::StringPtr url,
+      fidl::VectorPtr<fuchsia::modular::StoryInfoExtraEntry> extra_info,
+      fidl::StringPtr json, CreateStoryWithInfoCallback callback) override {
     last_created_story_ = url;
     callback("foo");
   }
 
-  // |StoryProvider|
+  // |fuchsia::modular::StoryProvider|
   void Watch(fidl::InterfaceHandle<fuchsia::modular::StoryProviderWatcher>
                  watcher) override {
     watchers_.AddInterfacePtr(watcher.Bind());
   }
 
-  // |StoryProvider|
-  void WatchActivity(fidl::InterfaceHandle<fuchsia::modular::StoryActivityWatcher>
-                     watcher) override {
+  // |fuchsia::modular::StoryProvider|
+  void WatchActivity(
+      fidl::InterfaceHandle<fuchsia::modular::StoryActivityWatcher> watcher)
+      override {
     activity_watchers_.AddInterfacePtr(watcher.Bind());
   }
 
-  // |StoryProvider|
+  // |fuchsia::modular::StoryProvider|
   void DeleteStory(fidl::StringPtr story_id,
                    DeleteStoryCallback callback) override {
     callback();
   }
 
-  // |StoryProvider|
+  // |fuchsia::modular::StoryProvider|
   void GetStoryInfo(fidl::StringPtr story_id,
                     GetStoryInfoCallback callback) override {
     callback(nullptr);
   }
 
-  // |StoryProvider|
+  // |fuchsia::modular::StoryProvider|
   void GetController(fidl::StringPtr story_id,
                      fidl::InterfaceRequest<fuchsia::modular::StoryController>
                          story) override {
     binding_set_.AddBinding(&controller_mock_, std::move(story));
   }
 
-  // |StoryProvider|
+  // |fuchsia::modular::StoryProvider|
   void PreviousStories(PreviousStoriesCallback callback) override {
     callback(fidl::VectorPtr<fuchsia::modular::StoryInfo>::New(0));
   }
 
-  // |StoryProvider|
+  // |fuchsia::modular::StoryProvider|
   void RunningStories(RunningStoriesCallback callback) override {
     callback(fidl::VectorPtr<fidl::StringPtr>::New(0));
   }
 
-  // |StoryProvider|
-  void Duplicate(fidl::InterfaceRequest<StoryProvider> request) override {
+  // |fuchsia::modular::StoryProvider|
+  void Duplicate(fidl::InterfaceRequest<fuchsia::modular::StoryProvider>
+                     request) override {
     FXL_LOG(FATAL) << "StoryProviderMock::Duplicate() not implemented.";
   }
 
-  // |StoryProvider|
-  void GetLinkPeer(fidl::StringPtr story_id,
-                   fidl::VectorPtr<fidl::StringPtr> module_path,
-                   fidl::StringPtr link_path,
-                   fidl::InterfaceRequest<Link> request) override {
+  // |fuchsia::modular::StoryProvider|
+  void GetLinkPeer(
+      fidl::StringPtr story_id, fidl::VectorPtr<fidl::StringPtr> module_path,
+      fidl::StringPtr link_path,
+      fidl::InterfaceRequest<fuchsia::modular::Link> request) override {
     FXL_LOG(FATAL) << "StoryProviderMock::GetLinkPeer() not implemented.";
   }
 
   std::string last_created_story_;
-  fuchsia::modular::StoryControllerMock controller_mock_;
+  StoryControllerMock controller_mock_;
   fidl::BindingSet<fuchsia::modular::StoryController> binding_set_;
   fidl::InterfacePtrSet<fuchsia::modular::StoryProviderWatcher> watchers_;
-  fidl::InterfacePtrSet<fuchsia::modular::StoryActivityWatcher> activity_watchers_;
+  fidl::InterfacePtrSet<fuchsia::modular::StoryActivityWatcher>
+      activity_watchers_;
 };
 
 }  // namespace modular
-}  // namespace fuchsia
 
 #endif  // PERIDOT_LIB_TESTING_STORY_PROVIDER_MOCK_H_

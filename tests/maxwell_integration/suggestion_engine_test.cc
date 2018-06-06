@@ -19,8 +19,6 @@
 #include "third_party/rapidjson/rapidjson/document.h"
 #include "third_party/rapidjson/rapidjson/pointer.h"
 
-using fuchsia::modular::StoryProviderMock;
-
 namespace maxwell {
 namespace {
 
@@ -98,7 +96,7 @@ class AskProposinator : public Proposinator,
   AskProposinator(fuchsia::modular::SuggestionEngine* suggestion_engine,
                   fidl::StringPtr url = "AskProposinator")
       : Proposinator(suggestion_engine, url), ask_binding_(this) {
-    fidl::InterfaceHandle<QueryHandler> query_handle;
+    fidl::InterfaceHandle<fuchsia::modular::QueryHandler> query_handle;
     ask_binding_.Bind(query_handle.NewRequest());
     suggestion_engine->RegisterQueryHandler(url, std::move(query_handle));
   }
@@ -144,7 +142,7 @@ class AskProposinator : public Proposinator,
   }
 
  private:
-  fidl::Binding<QueryHandler> ask_binding_;
+  fidl::Binding<fuchsia::modular::QueryHandler> ask_binding_;
   fuchsia::modular::UserInputPtr query_;
   fidl::VectorPtr<fuchsia::modular::Proposal> query_proposals_;
   OnQueryCallback query_callback_;
@@ -168,12 +166,12 @@ class NProposals : public Proposinator,
     selector.meta->entity = fuchsia::modular::EntityMetadata::New();
     selector.meta->entity->topic = "n";
     fuchsia::modular::ContextQuery query;
-    AddToContextQuery(&query, "n", std::move(selector));
+    modular::AddToContextQuery(&query, "n", std::move(selector));
     reader_->Subscribe(std::move(query), listener_binding_.NewBinding());
   }
 
   void OnContextUpdate(fuchsia::modular::ContextUpdate update) override {
-    auto r = TakeContextValue(&update, "n");
+    auto r = modular::TakeContextValue(&update, "n");
     ASSERT_TRUE(r.first) << "Expect an update key for every query key.";
     if (r.second->empty())
       return;
@@ -189,7 +187,7 @@ class NProposals : public Proposinator,
 
  private:
   fuchsia::modular::ContextReaderPtr reader_;
-  fidl::Binding<ContextListener> listener_binding_;
+  fidl::Binding<fuchsia::modular::ContextListener> listener_binding_;
 
   int n_ = 0;
 };
@@ -214,12 +212,13 @@ class SuggestionEngineTest : public ContextEngineTestBase,
         suggestion_services
             .ConnectToService<fuchsia::modular::SuggestionDebug>();
 
-    // Initialize the SuggestionEngine.
+    // Initialize the fuchsia::modular::SuggestionEngine.
     fidl::InterfaceHandle<fuchsia::modular::StoryProvider>
         story_provider_handle;
     story_provider_binding_.Bind(story_provider_handle.NewRequest());
 
-    // Hack to get an unbound FocusController for Initialize().
+    // Hack to get an unbound fuchsia::modular::FocusController for
+    // Initialize().
     fidl::InterfaceHandle<fuchsia::modular::FocusProvider>
         focus_provider_handle;
     focus_provider_handle.NewRequest();
@@ -255,7 +254,7 @@ class SuggestionEngineTest : public ContextEngineTestBase,
     return suggestion_debug_.get();
   }
 
-  StoryProviderMock* story_provider() { return &story_provider_; }
+  modular::StoryProviderMock* story_provider() { return &story_provider_; }
 
   void StartSuggestionAgent(const std::string& url) {
     auto agent_bridge =
@@ -315,7 +314,7 @@ class SuggestionEngineTest : public ContextEngineTestBase,
                                             std::move(interaction));
   }
 
-  // |ProposalListener|
+  // |fuchsia::modular::ProposalListener|
   void OnProposalAccepted(fidl::StringPtr proposal_id,
                           fidl::StringPtr story_id) override {
     accepted_proposal_id_ = proposal_id;
@@ -329,7 +328,7 @@ class SuggestionEngineTest : public ContextEngineTestBase,
   fuchsia::modular::SuggestionDebugPtr suggestion_debug_;
   fuchsia::modular::SuggestionProviderPtr suggestion_provider_;
 
-  StoryProviderMock story_provider_;
+  modular::StoryProviderMock story_provider_;
   fidl::Binding<fuchsia::modular::StoryProvider> story_provider_binding_;
   fidl::BindingSet<fuchsia::modular::ProposalListener>
       proposal_listener_bindings_;
@@ -365,7 +364,7 @@ class AskTest : public virtual SuggestionEngineTest {
 
   int suggestion_count() const { return listener_.suggestion_count(); }
 
-  fuchsia::modular::TestSuggestionListener* listener() { return &listener_; }
+  modular::TestSuggestionListener* listener() { return &listener_; }
 
  protected:
   void EnsureDebugMatches() {
@@ -382,8 +381,8 @@ class AskTest : public virtual SuggestionEngineTest {
   }
 
  private:
-  fuchsia::modular::TestSuggestionListener listener_;
-  fuchsia::modular::TestDebugAskListener debug_listener_;
+  modular::TestSuggestionListener listener_;
+  modular::TestDebugAskListener debug_listener_;
   fidl::Binding<fuchsia::modular::QueryListener> listener_binding_;
   fidl::Binding<fuchsia::modular::AskProposalListener> debug_listener_binding_;
 };
@@ -406,10 +405,10 @@ class InterruptionTest : public virtual SuggestionEngineTest {
     WaitUntilIdle();
   }
 
-  fuchsia::modular::TestDebugInterruptionListener* debugListener() {
+  modular::TestDebugInterruptionListener* debugListener() {
     return &debug_listener_;
   }
-  fuchsia::modular::TestSuggestionListener* listener() { return &listener_; }
+  modular::TestSuggestionListener* listener() { return &listener_; }
 
  protected:
   int suggestion_count() const { return listener_.suggestion_count(); }
@@ -426,8 +425,8 @@ class InterruptionTest : public virtual SuggestionEngineTest {
   }
 
  private:
-  fuchsia::modular::TestSuggestionListener listener_;
-  fuchsia::modular::TestDebugInterruptionListener debug_listener_;
+  modular::TestSuggestionListener listener_;
+  modular::TestDebugInterruptionListener debug_listener_;
 
   fidl::Binding<fuchsia::modular::InterruptionListener> listener_binding_;
   fidl::Binding<fuchsia::modular::InterruptionProposalListener>
@@ -447,10 +446,8 @@ class NextTest : public virtual SuggestionEngineTest {
         debug_listener_binding_.NewBinding());
   }
 
-  fuchsia::modular::TestDebugNextListener* debugListener() {
-    return &debug_listener_;
-  }
-  fuchsia::modular::TestSuggestionListener* listener() { return &listener_; }
+  modular::TestDebugNextListener* debugListener() { return &debug_listener_; }
+  modular::TestSuggestionListener* listener() { return &listener_; }
 
  protected:
   void StartListening(int count) {
@@ -489,8 +486,8 @@ class NextTest : public virtual SuggestionEngineTest {
   }
 
  private:
-  fuchsia::modular::TestSuggestionListener listener_;
-  fuchsia::modular::TestDebugNextListener debug_listener_;
+  modular::TestSuggestionListener listener_;
+  modular::TestDebugNextListener debug_listener_;
 
   fidl::Binding<fuchsia::modular::NextListener> listener_binding_;
   fidl::Binding<fuchsia::modular::NextProposalListener> debug_listener_binding_;
@@ -631,7 +628,8 @@ TEST_F(NextTest, CappedFifo) {
   fifo.Propose("2");
   WaitUntilIdle();
   EXPECT_EQ(uuid1, GetOnlySuggestion()->uuid)
-      << "Proposal 2 ranked over proposal 2; test invalid; update to test "
+      << "fuchsia::modular::Proposal 2 ranked over proposal 2; test invalid; "
+         "update to test "
          "FIFO-ranked proposals.";
 
   fifo.Remove("1");
@@ -848,7 +846,7 @@ TEST_F(SuggestionInteractionTest, AcceptSugestion_QueryAction) {
   WaitUntilIdle();
   EXPECT_EQ(1, suggestion_count());
 
-  // Suggestion is selected.
+  // fuchsia::modular::Suggestion is selected.
   auto suggestion_id = GetOnlySuggestion()->uuid;
   AcceptSuggestion(suggestion_id);
 
@@ -856,7 +854,7 @@ TEST_F(SuggestionInteractionTest, AcceptSugestion_QueryAction) {
   p.WaitForQuery();
   EXPECT_EQ(p.query(), "test query");
 
-  // Response from QueryHandler.
+  // Response from fuchsia::modular::QueryHandler.
   fuchsia::modular::CreateStory create_story;
   fuchsia::modular::Intent intent;
   intent.action.handler = "foo://bar";
@@ -1071,7 +1069,7 @@ TEST_F(SuggestionFilteringTest, Baseline_FilterDoesntMatch) {
   Proposinator p(suggestion_engine());
   StartListening(10);
 
-  // First notify watchers of the StoryProvider that a story
+  // First notify watchers of the fuchsia::modular::StoryProvider that a story
   // already exists.
   fuchsia::modular::StoryInfo story_info;
   story_info.url = "foo://bazzle_dazzle";

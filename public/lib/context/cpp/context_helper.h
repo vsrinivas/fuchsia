@@ -11,7 +11,6 @@
 
 #include "lib/fidl/cpp/vector.h"
 
-namespace fuchsia {
 namespace modular {
 
 // Takes a single value specified by |key| from |update|, and sets
@@ -28,6 +27,5 @@ bool HasSelectorKey(fuchsia::modular::ContextQuery* const query,
                     const std::string& key);
 
 }  // namespace modular
-}  // namespace fuchsia
 
 #endif  // LIB_CONTEXT_CPP_CONTEXT_HELPER_H_

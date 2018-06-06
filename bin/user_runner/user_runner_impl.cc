@@ -42,7 +42,6 @@
 #include "peridot/lib/ledger_client/status.h"
 #include "peridot/lib/ledger_client/storage.h"
 
-namespace fuchsia {
 namespace modular {
 
 // Maxwell doesn't yet implement lifecycle or has a lifecycle method, so we just
@@ -129,11 +128,11 @@ class UserRunnerImpl::PresentationProviderImpl : public PresentationProvider {
 
  private:
   // |PresentationProvider|
-  void GetPresentation(
-      fidl::StringPtr story_id,
-      fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> request) override {
+  void GetPresentation(fidl::StringPtr story_id,
+                       fidl::InterfaceRequest<fuchsia::ui::policy::Presentation>
+                           request) override {
     if (impl_->user_shell_app_) {
-      UserShellPresentationProviderPtr provider;
+      fuchsia::modular::UserShellPresentationProviderPtr provider;
       impl_->user_shell_app_->services().ConnectToService(
           provider.NewRequest());
       provider->GetPresentation(std::move(story_id), std::move(request));
@@ -142,9 +141,10 @@ class UserRunnerImpl::PresentationProviderImpl : public PresentationProvider {
 
   void WatchVisualState(
       fidl::StringPtr story_id,
-      fidl::InterfaceHandle<StoryVisualStateWatcher> watcher) override {
+      fidl::InterfaceHandle<fuchsia::modular::StoryVisualStateWatcher> watcher)
+      override {
     if (impl_->user_shell_app_) {
-      UserShellPresentationProviderPtr provider;
+      fuchsia::modular::UserShellPresentationProviderPtr provider;
       impl_->user_shell_app_->services().ConnectToService(
           provider.NewRequest());
       provider->WatchVisualState(std::move(story_id), std::move(watcher));
@@ -154,24 +154,26 @@ class UserRunnerImpl::PresentationProviderImpl : public PresentationProvider {
   UserRunnerImpl* const impl_;
 };
 
-UserRunnerImpl::UserRunnerImpl(fuchsia::sys::StartupContext* const startup_context,
-                               const bool test)
+UserRunnerImpl::UserRunnerImpl(
+    fuchsia::sys::StartupContext* const startup_context, const bool test)
     : startup_context_(startup_context),
       test_(test),
       user_shell_context_binding_(this),
       story_provider_impl_("StoryProviderImpl"),
       agent_runner_("AgentRunner") {
-  startup_context_->outgoing().AddPublicService<UserRunner>(
-      [this](fidl::InterfaceRequest<UserRunner> request) {
-        bindings_.AddBinding(this, std::move(request));
-      });
+  startup_context_->outgoing()
+      .AddPublicService<fuchsia::modular::internal::UserRunner>(
+          [this](fidl::InterfaceRequest<fuchsia::modular::internal::UserRunner>
+                     request) {
+            bindings_.AddBinding(this, std::move(request));
+          });
 }
 
 UserRunnerImpl::~UserRunnerImpl() = default;
 
 void UserRunnerImpl::Initialize(
-    fuchsia::modular::auth::AccountPtr account, AppConfig user_shell,
-    AppConfig story_shell,
+    fuchsia::modular::auth::AccountPtr account, fuchsia::modular::AppConfig user_shell,
+    fuchsia::modular::AppConfig story_shell,
     fidl::InterfaceHandle<fuchsia::modular::auth::TokenProviderFactory>
         token_provider_factory,
     fidl::InterfaceHandle<fuchsia::modular::internal::UserContext> user_context,
@@ -212,7 +214,7 @@ void UserRunnerImpl::InitializeUser(
 }
 
 void UserRunnerImpl::InitializeLedger() {
-  AppConfig ledger_config;
+  fuchsia::modular::AppConfig ledger_config;
   ledger_config.url = kLedgerAppUrl;
   ledger_config.args.push_back(kLedgerNoMinfsWaitFlag);
 
@@ -243,11 +245,12 @@ void UserRunnerImpl::InitializeLedger() {
   if (account_) {
     // If not running in Guest mode, spin up a cloud provider for Ledger to use
     // for syncing.
-    AppConfig cloud_provider_config;
+    fuchsia::modular::AppConfig cloud_provider_config;
     cloud_provider_config.url = kCloudProviderFirebaseAppUrl;
     cloud_provider_config.args = fidl::VectorPtr<fidl::StringPtr>::New(0);
-    cloud_provider_app_ = std::make_unique<AppClient<Lifecycle>>(
-        user_scope_->GetLauncher(), std::move(cloud_provider_config));
+    cloud_provider_app_ =
+        std::make_unique<AppClient<fuchsia::modular::Lifecycle>>(
+            user_scope_->GetLauncher(), std::move(cloud_provider_config));
     cloud_provider_app_->services().ConnectToService(
         cloud_provider_factory_.NewRequest());
 
@@ -311,12 +314,13 @@ void UserRunnerImpl::InitializeLedgerDashboard() {
         }
       });
 
-  AppConfig ledger_dashboard_config;
+  fuchsia::modular::AppConfig ledger_dashboard_config;
   ledger_dashboard_config.url = kLedgerDashboardUrl;
 
-  ledger_dashboard_app_ = std::make_unique<AppClient<Lifecycle>>(
-      ledger_dashboard_scope_->GetLauncher(),
-      std::move(ledger_dashboard_config));
+  ledger_dashboard_app_ =
+      std::make_unique<AppClient<fuchsia::modular::Lifecycle>>(
+          ledger_dashboard_scope_->GetLauncher(),
+          std::move(ledger_dashboard_config));
 
   AtEnd(Reset(&ledger_dashboard_app_));
   AtEnd(
@@ -326,7 +330,7 @@ void UserRunnerImpl::InitializeLedgerDashboard() {
 }
 
 void UserRunnerImpl::InitializeDeviceMap() {
-  // DeviceMap service
+  // fuchsia::modular::DeviceMap service
   const std::string device_id = LoadDeviceID(GetAccountId(account_));
   device_name_ = LoadDeviceName(GetAccountId(account_));
   const std::string device_profile = LoadDeviceProfile();
@@ -334,8 +338,8 @@ void UserRunnerImpl::InitializeDeviceMap() {
   device_map_impl_ = std::make_unique<DeviceMapImpl>(
       device_name_, device_id, device_profile, ledger_client_.get(),
       fuchsia::ledger::PageId());
-  user_scope_->AddService<DeviceMap>(
-      [this](fidl::InterfaceRequest<DeviceMap> request) {
+  user_scope_->AddService<fuchsia::modular::DeviceMap>(
+      [this](fidl::InterfaceRequest<fuchsia::modular::DeviceMap> request) {
         // device_map_impl_ may be reset before user_scope_.
         if (device_map_impl_) {
           device_map_impl_->Connect(std::move(request));
@@ -348,10 +352,10 @@ void UserRunnerImpl::InitializeClipboard() {
   agent_runner_->ConnectToAgent(kAppId, kClipboardAgentUrl,
                                 services_from_clipboard_agent_.NewRequest(),
                                 clipboard_agent_controller_.NewRequest());
-  user_scope_->AddService<Clipboard>(
-      [this](fidl::InterfaceRequest<Clipboard> request) {
-        services_from_clipboard_agent_->ConnectToService(Clipboard::Name_,
-                                                         request.TakeChannel());
+  user_scope_->AddService<fuchsia::modular::Clipboard>(
+      [this](fidl::InterfaceRequest<fuchsia::modular::Clipboard> request) {
+        services_from_clipboard_agent_->ConnectToService(
+            fuchsia::modular::Clipboard::Name_, request.TakeChannel());
       });
 }
 
@@ -370,17 +374,18 @@ void UserRunnerImpl::InitializeMessageQueueManager() {
 }
 
 void UserRunnerImpl::InitializeMaxwellAndModular(
-    const fidl::StringPtr& user_shell_url, AppConfig story_shell) {
+    const fidl::StringPtr& user_shell_url,
+    fuchsia::modular::AppConfig story_shell) {
   // NOTE: There is an awkward service exchange here between
-  // UserIntelligenceProvider, AgentRunner, StoryProviderImpl,
+  // fuchsia::modular::UserIntelligenceProvider, AgentRunner, StoryProviderImpl,
   // FocusHandler, VisibleStoriesHandler.
   //
-  // AgentRunner needs a UserIntelligenceProvider to expose services
-  // from Maxwell through its GetIntelligenceServices() method.
+  // AgentRunner needs a fuchsia::modular::UserIntelligenceProvider to expose
+  // services from Maxwell through its GetIntelligenceServices() method.
   // Initializing the Maxwell process (through
-  // UserIntelligenceProviderFactory) requires a ComponentContext.
-  // ComponentContext requires an AgentRunner, which creates a
-  // circular dependency.
+  // fuchsia::modular::UserIntelligenceProviderFactory) requires a
+  // fuchsia::modular::ComponentContext. fuchsia::modular::ComponentContext
+  // requires an AgentRunner, which creates a circular dependency.
   //
   // Because of FIDL late bindings, we can get around this by creating
   // a new InterfaceRequest here (|intelligence_provider_request|),
@@ -390,24 +395,25 @@ void UserRunnerImpl::InitializeMaxwellAndModular(
   // it's not a good pattern.
   //
   // A similar relationship holds between FocusHandler and
-  // UserIntelligenceProvider.
+  // fuchsia::modular::UserIntelligenceProvider.
   auto intelligence_provider_request = user_intelligence_provider_.NewRequest();
   AtEnd(Reset(&user_intelligence_provider_));
 
   fidl::InterfaceHandle<fuchsia::modular::ContextEngine> context_engine;
   auto context_engine_request = context_engine.NewRequest();
 
-  fidl::InterfaceHandle<StoryProvider> story_provider;
+  fidl::InterfaceHandle<fuchsia::modular::StoryProvider> story_provider;
   auto story_provider_request = story_provider.NewRequest();
 
-  fidl::InterfaceHandle<FocusProvider> focus_provider_maxwell;
+  fidl::InterfaceHandle<fuchsia::modular::FocusProvider> focus_provider_maxwell;
   auto focus_provider_request_maxwell = focus_provider_maxwell.NewRequest();
 
-  fidl::InterfaceHandle<VisibleStoriesProvider> visible_stories_provider;
+  fidl::InterfaceHandle<fuchsia::modular::VisibleStoriesProvider>
+      visible_stories_provider;
   auto visible_stories_provider_request = visible_stories_provider.NewRequest();
 
   // Start kMaxwellUrl
-  AppConfig maxwell_config;
+  fuchsia::modular::AppConfig maxwell_config;
   maxwell_config.url = kMaxwellUrl;
   if (test_) {
     // TODO(mesch): This path name is local to the maxwell package. It should
@@ -441,8 +447,9 @@ void UserRunnerImpl::InitializeMaxwellAndModular(
       entity_provider_runner_.get()));
   AtEnd(Teardown(kAgentRunnerTimeout, "AgentRunner", &agent_runner_));
 
-  maxwell_component_context_bindings_ = std::make_unique<fidl::BindingSet<
-      ComponentContext, std::unique_ptr<ComponentContextImpl>>>();
+  maxwell_component_context_bindings_ = std::make_unique<
+      fidl::BindingSet<fuchsia::modular::ComponentContext,
+                       std::unique_ptr<ComponentContextImpl>>>();
   AtEnd(Reset(&maxwell_component_context_bindings_));
 
   ComponentContextInfo component_context_info{
@@ -450,9 +457,10 @@ void UserRunnerImpl::InitializeMaxwellAndModular(
       ledger_repository_.get(), entity_provider_runner_.get()};
   // Start kContextEngineUrl.
   {
-    context_engine_ns_services_.AddService<ComponentContext>(
+    context_engine_ns_services_.AddService<fuchsia::modular::ComponentContext>(
         [this, component_context_info](
-            fidl::InterfaceRequest<ComponentContext> request) {
+            fidl::InterfaceRequest<fuchsia::modular::ComponentContext>
+                request) {
           maxwell_component_context_bindings_->AddBinding(
               std::make_unique<ComponentContextImpl>(
                   component_context_info, kContextEngineComponentNamespace,
@@ -460,19 +468,21 @@ void UserRunnerImpl::InitializeMaxwellAndModular(
               std::move(request));
         });
     auto service_list = fuchsia::sys::ServiceList::New();
-    service_list->names.push_back(ComponentContext::Name_);
+    service_list->names.push_back(fuchsia::modular::ComponentContext::Name_);
     context_engine_ns_services_.AddBinding(service_list->provider.NewRequest());
 
-    AppConfig context_engine_config;
+    fuchsia::modular::AppConfig context_engine_config;
     context_engine_config.url = kContextEngineUrl;
 
-    context_engine_app_ = std::make_unique<AppClient<Lifecycle>>(
-        user_scope_->GetLauncher(), std::move(context_engine_config),
-        "" /* data_origin */, std::move(service_list));
+    context_engine_app_ =
+        std::make_unique<AppClient<fuchsia::modular::Lifecycle>>(
+            user_scope_->GetLauncher(), std::move(context_engine_config),
+            "" /* data_origin */, std::move(service_list));
     context_engine_app_->services().ConnectToService(
         std::move(context_engine_request));
     AtEnd(Reset(&context_engine_app_));
-    AtEnd(Teardown(kBasicTimeout, "ContextEngine", context_engine_app_.get()));
+    AtEnd(Teardown(kBasicTimeout, "fuchsia::modular::ContextEngine",
+                   context_engine_app_.get()));
   }
 
   auto maxwell_app_component_context =
@@ -516,7 +526,7 @@ void UserRunnerImpl::InitializeMaxwellAndModular(
     module_resolver_ns_services_.AddBinding(
         service_list->provider.NewRequest());
 
-    AppConfig module_resolver_config;
+    fuchsia::modular::AppConfig module_resolver_config;
     module_resolver_config.url = kModuleResolverUrl;
     if (test_) {
       module_resolver_config.args.push_back("--test");
@@ -524,9 +534,10 @@ void UserRunnerImpl::InitializeMaxwellAndModular(
     // For now, we want data_origin to be "", which uses our (parent process's)
     // /data. This is appropriate for the module_resolver. We can in the future
     // isolate the data it reads to a subdir of /data and map that in here.
-    module_resolver_app_ = std::make_unique<AppClient<Lifecycle>>(
-        user_scope_->GetLauncher(), std::move(module_resolver_config),
-        "" /* data_origin */, std::move(service_list));
+    module_resolver_app_ =
+        std::make_unique<AppClient<fuchsia::modular::Lifecycle>>(
+            user_scope_->GetLauncher(), std::move(module_resolver_config),
+            "" /* data_origin */, std::move(service_list));
     AtEnd(Reset(&module_resolver_app_));
     AtEnd(Teardown(kBasicTimeout, "Resolver", module_resolver_app_.get()));
   }
@@ -542,7 +553,8 @@ void UserRunnerImpl::InitializeMaxwellAndModular(
 
   AtEnd(Reset(&user_shell_component_context_impl_));
 
-  fidl::InterfacePtr<FocusProvider> focus_provider_story_provider;
+  fidl::InterfacePtr<fuchsia::modular::FocusProvider>
+      focus_provider_story_provider;
   auto focus_provider_request_story_provider =
       focus_provider_story_provider.NewRequest();
 
@@ -565,10 +577,10 @@ void UserRunnerImpl::InitializeMaxwellAndModular(
       presentation_provider_impl_.get(), test_));
   story_provider_impl_->Connect(std::move(story_provider_request));
 
-  AtEnd(
-      Teardown(kStoryProviderTimeout, "StoryProvider", &story_provider_impl_));
+  AtEnd(Teardown(kStoryProviderTimeout, "fuchsia::modular::StoryProvider",
+                 &story_provider_impl_));
 
-  // Initialize the PuppetMaster.
+  // Initialize the fuchsia::modular::PuppetMaster.
   story_command_executor_ = MakeProductionStoryCommandExecutor(nullptr);
   puppet_master_impl_.reset(
       new PuppetMasterImpl(story_command_executor_.get()));
@@ -592,10 +604,11 @@ void UserRunnerImpl::InitializeMaxwellAndModular(
 }
 
 void UserRunnerImpl::InitializeUserShell(
-    AppConfig user_shell,
+    fuchsia::modular::AppConfig user_shell,
     fidl::InterfaceRequest<fuchsia::ui::views_v1_token::ViewOwner>
         view_owner_request) {
-  // We setup our own view and make the UserShell a child of it.
+  // We setup our own view and make the fuchsia::modular::UserShell a child of
+  // it.
   user_shell_view_host_ = std::make_unique<ViewHost>(
       startup_context_
           ->ConnectToEnvironmentService<fuchsia::ui::views_v1::ViewManager>(),
@@ -604,8 +617,8 @@ void UserRunnerImpl::InitializeUserShell(
   AtEnd([this](std::function<void()> cont) { TerminateUserShell(cont); });
 }
 
-void UserRunnerImpl::RunUserShell(AppConfig user_shell) {
-  user_shell_app_ = std::make_unique<AppClient<Lifecycle>>(
+void UserRunnerImpl::RunUserShell(fuchsia::modular::AppConfig user_shell) {
+  user_shell_app_ = std::make_unique<AppClient<fuchsia::modular::Lifecycle>>(
       user_scope_->GetLauncher(), std::move(user_shell));
 
   if (user_shell_.is_bound()) {
@@ -642,7 +655,8 @@ void UserRunnerImpl::TerminateUserShell(const std::function<void()>& done) {
 class UserRunnerImpl::SwapUserShellOperation : public Operation<> {
  public:
   SwapUserShellOperation(UserRunnerImpl* const user_runner_impl,
-                         AppConfig user_shell_config, ResultCall result_call)
+                         fuchsia::modular::AppConfig user_shell_config,
+                         ResultCall result_call)
       : Operation("UserRunnerImpl::SwapUserShellOperation",
                   std::move(result_call)),
         user_runner_impl_(user_runner_impl),
@@ -659,13 +673,14 @@ class UserRunnerImpl::SwapUserShellOperation : public Operation<> {
   }
 
   UserRunnerImpl* const user_runner_impl_;
-  AppConfig user_shell_config_;
+  fuchsia::modular::AppConfig user_shell_config_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(SwapUserShellOperation);
 };
 
-void UserRunnerImpl::SwapUserShell(AppConfig user_shell_config,
-                                   SwapUserShellCallback callback) {
+void UserRunnerImpl::SwapUserShell(
+    fuchsia::modular::AppConfig user_shell_config,
+    SwapUserShellCallback callback) {
   operation_queue_.Add(
       new SwapUserShellOperation(this, std::move(user_shell_config), callback));
 }
@@ -682,12 +697,12 @@ void UserRunnerImpl::GetAccount(GetAccountCallback callback) {
 }
 
 void UserRunnerImpl::GetAgentProvider(
-    fidl::InterfaceRequest<AgentProvider> request) {
+    fidl::InterfaceRequest<fuchsia::modular::AgentProvider> request) {
   agent_runner_->Connect(std::move(request));
 }
 
 void UserRunnerImpl::GetComponentContext(
-    fidl::InterfaceRequest<ComponentContext> request) {
+    fidl::InterfaceRequest<fuchsia::modular::ComponentContext> request) {
   user_shell_component_context_impl_->Connect(std::move(request));
 }
 
@@ -696,12 +711,12 @@ void UserRunnerImpl::GetDeviceName(GetDeviceNameCallback callback) {
 }
 
 void UserRunnerImpl::GetFocusController(
-    fidl::InterfaceRequest<FocusController> request) {
+    fidl::InterfaceRequest<fuchsia::modular::FocusController> request) {
   focus_handler_->AddControllerBinding(std::move(request));
 }
 
 void UserRunnerImpl::GetFocusProvider(
-    fidl::InterfaceRequest<FocusProvider> request) {
+    fidl::InterfaceRequest<fuchsia::modular::FocusProvider> request) {
   focus_handler_->AddProviderBinding(std::move(request));
 }
 
@@ -713,13 +728,14 @@ void UserRunnerImpl::GetIntelligenceServices(
       std::move(component_scope), std::move(request));
 }
 
-void UserRunnerImpl::GetLink(fidl::InterfaceRequest<Link> request) {
+void UserRunnerImpl::GetLink(
+    fidl::InterfaceRequest<fuchsia::modular::Link> request) {
   if (user_shell_link_) {
     user_shell_link_->Connect(std::move(request));
     return;
   }
 
-  LinkPath link_path;
+  fuchsia::modular::LinkPath link_path;
   link_path.module_path.resize(0);
   link_path.link_name = kUserShellLinkName;
   user_shell_link_ = std::make_unique<LinkImpl>(ledger_client_.get(),
@@ -739,7 +755,7 @@ void UserRunnerImpl::GetSpeechToText(
 }
 
 void UserRunnerImpl::GetStoryProvider(
-    fidl::InterfaceRequest<StoryProvider> request) {
+    fidl::InterfaceRequest<fuchsia::modular::StoryProvider> request) {
   story_provider_impl_->Connect(std::move(request));
 }
 
@@ -749,7 +765,8 @@ void UserRunnerImpl::GetSuggestionProvider(
 }
 
 void UserRunnerImpl::GetVisibleStoriesController(
-    fidl::InterfaceRequest<VisibleStoriesController> request) {
+    fidl::InterfaceRequest<fuchsia::modular::VisibleStoriesController>
+        request) {
   visible_stories_handler_->AddControllerBinding(std::move(request));
 }
 
@@ -758,8 +775,10 @@ void UserRunnerImpl::Logout() { user_context_->Logout(); }
 // |EntityProviderLauncher|
 void UserRunnerImpl::ConnectToEntityProvider(
     const std::string& agent_url,
-    fidl::InterfaceRequest<EntityProvider> entity_provider_request,
-    fidl::InterfaceRequest<AgentController> agent_controller_request) {
+    fidl::InterfaceRequest<fuchsia::modular::EntityProvider>
+        entity_provider_request,
+    fidl::InterfaceRequest<fuchsia::modular::AgentController>
+        agent_controller_request) {
   FXL_DCHECK(agent_runner_.get());
   agent_runner_->ConnectToEntityProvider(agent_url,
                                          std::move(entity_provider_request),
@@ -797,4 +816,3 @@ void UserRunnerImpl::TerminateRecurse(const int i) {
 }
 
 }  // namespace modular
-}  // namespace fuchsia

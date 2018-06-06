@@ -17,7 +17,6 @@
 #include "peridot/bin/suggestion_engine/suggestion_passive_filter.h"
 #include "peridot/bin/suggestion_engine/suggestion_prototype.h"
 
-namespace fuchsia {
 namespace modular {
 using MatchPredicate =
     std::function<bool(const std::unique_ptr<RankedSuggestion>& suggestion)>;
@@ -57,13 +56,15 @@ class RankedSuggestionsList {
     return suggestions_;
   }
 
-  void Refresh(const UserInput& query = UserInput());
+  void Refresh(
+      const fuchsia::modular::UserInput& query = fuchsia::modular::UserInput());
 
  private:
   RankedSuggestion* GetMatchingSuggestion(MatchPredicate matchFunction) const;
   bool RemoveMatchingSuggestion(MatchPredicate matchFunction);
   void DoStableSort();
-  void Rank(const UserInput& query = UserInput());
+  void Rank(
+      const fuchsia::modular::UserInput& query = fuchsia::modular::UserInput());
 
   // The sorted vector of RankedSuggestions, sorted by
   // |ranking_function_|. The vector is re-sorted whenever its
@@ -75,7 +76,8 @@ class RankedSuggestionsList {
 
   std::unique_ptr<Ranker> ranker_;
 
-  // The Suggestion Filters associated with this List of Ranked Suggestions
+  // The fuchsia::modular::Suggestion Filters associated with this List of
+  // Ranked Suggestions
   std::vector<std::unique_ptr<SuggestionActiveFilter>>
       suggestion_active_filters_;
   std::vector<std::unique_ptr<SuggestionPassiveFilter>>
@@ -83,6 +85,5 @@ class RankedSuggestionsList {
 };
 
 }  // namespace modular
-}  // namespace fuchsia
 
 #endif  // PERIDOT_BIN_SUGGESTION_ENGINE_RANKED_SUGGESTIONS_LIST_H_

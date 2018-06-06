@@ -4,7 +4,6 @@
 
 #include "peridot/bin/suggestion_engine/decision_policy.h"
 
-namespace fuchsia {
 namespace modular {
 
 DecisionPolicy::DecisionPolicy() = default;
@@ -12,4 +11,3 @@ DecisionPolicy::DecisionPolicy() = default;
 DecisionPolicy::~DecisionPolicy() = default;
 
 }  // namespace modular
-}  // namespace fuchsia

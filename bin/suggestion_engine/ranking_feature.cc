@@ -13,7 +13,6 @@
 #include "rapidjson/stringbuffer.h"
 #include "third_party/rapidjson/rapidjson/document.h"
 
-namespace fuchsia {
 namespace modular {
 
 int RankingFeature::instances_ = 0;
@@ -22,31 +21,34 @@ RankingFeature::RankingFeature() : id_(instances_++) {}
 
 RankingFeature::~RankingFeature() = default;
 
-double RankingFeature::ComputeFeature(
-    const UserInput& query, const RankedSuggestion& suggestion) {
+double RankingFeature::ComputeFeature(const fuchsia::modular::UserInput& query,
+                                      const RankedSuggestion& suggestion) {
   const double feature = ComputeFeatureInternal(query, suggestion);
   FXL_CHECK(feature <= kMaxConfidence);
   FXL_CHECK(feature >= kMinConfidence);
   return feature;
 }
 
-ContextSelectorPtr RankingFeature::CreateContextSelector() {
+fuchsia::modular::ContextSelectorPtr RankingFeature::CreateContextSelector() {
   return CreateContextSelectorInternal();
 }
 
 void RankingFeature::UpdateContext(
-    const fidl::VectorPtr<ContextValue>& context_update_values) {
+    const fidl::VectorPtr<fuchsia::modular::ContextValue>&
+        context_update_values) {
   fidl::Clone(context_update_values, &context_values_);
 }
 
-ContextSelectorPtr RankingFeature::CreateContextSelectorInternal() {
+fuchsia::modular::ContextSelectorPtr
+RankingFeature::CreateContextSelectorInternal() {
   // By default we return a nullptr, meaning that the ranking feature doesn't
   // require context. If a ranking feature requires context, it should create a
   // context selector, set the values it needs and return it.
   return nullptr;
 }
 
-fidl::VectorPtr<ContextValue>& RankingFeature::ContextValues() {
+fidl::VectorPtr<fuchsia::modular::ContextValue>&
+RankingFeature::ContextValues() {
   return context_values_;
 }
 
@@ -74,4 +76,3 @@ std::pair<bool, rapidjson::Document> RankingFeature::FetchJsonObject(
 }
 
 }  // namespace modular
-}  // namespace fuchsia

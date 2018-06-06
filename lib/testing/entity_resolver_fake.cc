@@ -4,20 +4,19 @@
 
 #include "peridot/lib/testing/entity_resolver_fake.h"
 
-namespace fuchsia {
 namespace modular {
 
-class EntityResolverFake::EntityImpl : Entity {
+class EntityResolverFake::EntityImpl : fuchsia::modular::Entity {
  public:
   EntityImpl(std::map<std::string, std::string> types_and_data)
       : types_and_data_(types_and_data) {}
 
-  void Connect(fidl::InterfaceRequest<Entity> request) {
+  void Connect(fidl::InterfaceRequest<fuchsia::modular::Entity> request) {
     bindings_.AddBinding(this, std::move(request));
   }
 
  private:
-  // |Entity|
+  // |fuchsia::modular::Entity|
   void GetTypes(GetTypesCallback callback) override {
     fidl::VectorPtr<fidl::StringPtr> types;
     for (const auto& entry : types_and_data_) {
@@ -26,9 +25,8 @@ class EntityResolverFake::EntityImpl : Entity {
     callback(std::move(types));
   }
 
-  // |Entity|
-  void GetData(fidl::StringPtr type,
-               GetDataCallback callback) override {
+  // |fuchsia::modular::Entity|
+  void GetData(fidl::StringPtr type, GetDataCallback callback) override {
     auto it = types_and_data_.find(type);
     if (it == types_and_data_.end()) {
       callback(nullptr);
@@ -39,19 +37,20 @@ class EntityResolverFake::EntityImpl : Entity {
 
   std::map<std::string, std::string> types_and_data_;
 
-  fidl::BindingSet<Entity> bindings_;
+  fidl::BindingSet<fuchsia::modular::Entity> bindings_;
 };
 
 EntityResolverFake::EntityResolverFake() = default;
 EntityResolverFake::~EntityResolverFake() = default;
 
 void EntityResolverFake::Connect(
-    fidl::InterfaceRequest<EntityResolver> request) {
+    fidl::InterfaceRequest<fuchsia::modular::EntityResolver> request) {
   bindings_.AddBinding(this, std::move(request));
 }
 
-// Returns an Entity reference that will resolve to an Entity.
-// |types_and_data| is a map of data type to data bytes.
+// Returns an fuchsia::modular::Entity reference that will resolve to an
+// fuchsia::modular::Entity. |types_and_data| is a map of data type to data
+// bytes.
 fidl::StringPtr EntityResolverFake::AddEntity(
     std::map<std::string, std::string> types_and_data) {
   const std::string id = std::to_string(next_entity_id_++);
@@ -63,7 +62,7 @@ fidl::StringPtr EntityResolverFake::AddEntity(
 
 void EntityResolverFake::ResolveEntity(
     fidl::StringPtr entity_reference,
-    fidl::InterfaceRequest<Entity> entity_request) {
+    fidl::InterfaceRequest<fuchsia::modular::Entity> entity_request) {
   auto it = entities_.find(entity_reference);
   if (it == entities_.end()) {
     return;  // |entity_request| is reset here.
@@ -73,4 +72,3 @@ void EntityResolverFake::ResolveEntity(
 }
 
 }  // namespace modular
-}  // namespace fuchsia

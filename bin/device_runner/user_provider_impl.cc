@@ -16,22 +16,22 @@
 #include "peridot/lib/fidl/clone.h"
 #include "peridot/lib/fidl/json_xdr.h"
 
-namespace fuchsia {
 namespace modular {
 
 namespace {
 
 constexpr char kUsersConfigurationFile[] = "/data/modular/users-v5.db";
 
-fuchsia::modular::auth::AccountPtr Convert(const UserStorage* const user) {
+fuchsia::modular::auth::AccountPtr Convert(
+    const fuchsia::modular::UserStorage* const user) {
   FXL_DCHECK(user);
   auto account = fuchsia::modular::auth::Account::New();
   account->id = user->id()->str();
   switch (user->identity_provider()) {
-    case IdentityProvider_DEV:
+    case fuchsia::modular::IdentityProvider_DEV:
       account->identity_provider = fuchsia::modular::auth::IdentityProvider::DEV;
       break;
-    case IdentityProvider_GOOGLE:
+    case fuchsia::modular::IdentityProvider_GOOGLE:
       account->identity_provider = fuchsia::modular::auth::IdentityProvider::GOOGLE;
       break;
     default:
@@ -62,8 +62,9 @@ std::string GetRandomId() {
 
 UserProviderImpl::UserProviderImpl(
     std::shared_ptr<fuchsia::sys::StartupContext> context,
-    const AppConfig& user_runner, const AppConfig& default_user_shell,
-    const AppConfig& story_shell,
+    const fuchsia::modular::AppConfig& user_runner,
+    const fuchsia::modular::AppConfig& default_user_shell,
+    const fuchsia::modular::AppConfig& story_shell,
     fuchsia::modular::auth::AccountProvider* const account_provider)
     : context_(std::move(context)),
       user_runner_(user_runner),
@@ -88,7 +89,8 @@ UserProviderImpl::UserProviderImpl(
   }
 }
 
-void UserProviderImpl::Connect(fidl::InterfaceRequest<UserProvider> request) {
+void UserProviderImpl::Connect(
+    fidl::InterfaceRequest<fuchsia::modular::UserProvider> request) {
   bindings_.AddBinding(this, std::move(request));
 }
 
@@ -116,17 +118,17 @@ void UserProviderImpl::Teardown(const std::function<void()>& callback) {
   }
 }
 
-void UserProviderImpl::Login(UserLoginParams params) {
+void UserProviderImpl::Login(fuchsia::modular::UserLoginParams params) {
   // If requested, run in incognito mode.
   if (params.account_id.is_null() || params.account_id == "") {
-    FXL_LOG(INFO) << "UserProvider::Login() Incognito mode";
+    FXL_LOG(INFO) << "fuchsia::modular::UserProvider::Login() Incognito mode";
     LoginInternal(nullptr /* account */, std::move(params));
     return;
   }
 
   // If not running in incognito mode, a corresponding entry must be present
   // in the users database.
-  const UserStorage* found_user = nullptr;
+  const fuchsia::modular::UserStorage* found_user = nullptr;
   if (users_storage_) {
     for (const auto* user : *users_storage_->users()) {
       if (user->id()->str() == params.account_id) {
@@ -139,11 +141,13 @@ void UserProviderImpl::Login(UserLoginParams params) {
   // If an entry is not found, we drop the incoming requests on the floor.
   if (!found_user) {
     FXL_LOG(INFO) << "The requested user was not found in the users database"
-                  << "It needs to be added first via UserProvider::AddUser().";
+                  << "It needs to be added first via "
+                     "fuchsia::modular::UserProvider::AddUser().";
     return;
   }
 
-  FXL_LOG(INFO) << "UserProvider::Login() account: " << params.account_id;
+  FXL_LOG(INFO) << "fuchsia::modular::UserProvider::Login() account: "
+                << params.account_id;
   LoginInternal(Convert(found_user), std::move(params));
 }
 
@@ -318,7 +322,7 @@ bool UserProviderImpl::Parse(const std::string& serialized_users) {
 }
 
 void UserProviderImpl::LoginInternal(fuchsia::modular::auth::AccountPtr account,
-                                     UserLoginParams params) {
+                                     fuchsia::modular::UserLoginParams params) {
   // Get token provider factory for this user.
   fuchsia::modular::auth::TokenProviderFactoryPtr token_provider_factory;
   account_provider_->GetTokenProviderFactory(
@@ -339,4 +343,3 @@ void UserProviderImpl::LoginInternal(fuchsia::modular::auth::AccountPtr account,
 }
 
 }  // namespace modular
-}  // namespace fuchsia

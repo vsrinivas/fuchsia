@@ -12,7 +12,6 @@
 #include "peridot/bin/user_runner/agent_runner/agent_runner.h"
 #include "peridot/lib/common/teardown.h"
 
-namespace fuchsia {
 namespace modular {
 
 constexpr char kAppStoragePath[] = "/data/APP_DATA";
@@ -36,7 +35,8 @@ std::string HashAgentUrl(const std::string& agent_url) {
 class AgentContextImpl::InitializeCall : public Operation<> {
  public:
   InitializeCall(AgentContextImpl* const agent_context_impl,
-                 fuchsia::sys::Launcher* const launcher, AppConfig agent_config)
+                 fuchsia::sys::Launcher* const launcher,
+                 fuchsia::modular::AppConfig agent_config)
       : Operation("AgentContextImpl::InitializeCall", [] {},
                   agent_context_impl->url_),
         agent_context_impl_(agent_context_impl),
@@ -69,18 +69,20 @@ class AgentContextImpl::InitializeCall : public Operation<> {
   }
 
   void Continue(fuchsia::sys::ServiceListPtr service_list, FlowToken flow) {
-    service_list->names.push_back(AgentContext::Name_);
+    service_list->names.push_back(fuchsia::modular::AgentContext::Name_);
     agent_context_impl_->service_provider_impl_.AddBinding(
         service_list->provider.NewRequest());
-    agent_context_impl_->app_client_ = std::make_unique<AppClient<Lifecycle>>(
-        launcher_, std::move(agent_config_),
-        std::string(kAppStoragePath) + HashAgentUrl(agent_context_impl_->url_),
-        std::move(service_list));
+    agent_context_impl_->app_client_ =
+        std::make_unique<AppClient<fuchsia::modular::Lifecycle>>(
+            launcher_, std::move(agent_config_),
+            std::string(kAppStoragePath) +
+                HashAgentUrl(agent_context_impl_->url_),
+            std::move(service_list));
 
     agent_context_impl_->app_client_->services().ConnectToService(
         agent_context_impl_->agent_.NewRequest());
 
-    // We only want to use Lifecycle if it exists.
+    // We only want to use fuchsia::modular::Lifecycle if it exists.
     agent_context_impl_->app_client_->primary_service().set_error_handler(
         [agent_context_impl = agent_context_impl_] {
           agent_context_impl->app_client_->primary_service().Unbind();
@@ -95,7 +97,8 @@ class AgentContextImpl::InitializeCall : public Operation<> {
               agent_context_impl->url_);
         });
 
-    // When all the |AgentController| bindings go away maybe stop the agent.
+    // When all the |fuchsia::modular::AgentController| bindings go away maybe
+    // stop the agent.
     agent_context_impl_->agent_controller_bindings_.set_empty_set_handler(
         [agent_context_impl = agent_context_impl_] {
           agent_context_impl->MaybeStopAgent();
@@ -106,7 +109,7 @@ class AgentContextImpl::InitializeCall : public Operation<> {
 
   AgentContextImpl* const agent_context_impl_;
   fuchsia::sys::Launcher* const launcher_;
-  AppConfig agent_config_;
+  fuchsia::modular::AppConfig agent_config_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(InitializeCall);
 };
@@ -169,7 +172,7 @@ class AgentContextImpl::StopCall : public Operation<bool> {
 };
 
 AgentContextImpl::AgentContextImpl(const AgentContextInfo& info,
-                                   AppConfig agent_config)
+                                   fuchsia::modular::AppConfig agent_config)
     : url_(agent_config.url),
       agent_runner_(info.component_context_info.agent_runner),
       component_context_impl_(info.component_context_info,
@@ -178,8 +181,8 @@ AgentContextImpl::AgentContextImpl(const AgentContextInfo& info,
       entity_provider_runner_(
           info.component_context_info.entity_provider_runner),
       user_intelligence_provider_(info.user_intelligence_provider) {
-  service_provider_impl_.AddService<AgentContext>(
-      [this](fidl::InterfaceRequest<AgentContext> request) {
+  service_provider_impl_.AddService<fuchsia::modular::AgentContext>(
+      [this](fidl::InterfaceRequest<fuchsia::modular::AgentContext> request) {
         agent_context_bindings_.AddBinding(this, std::move(request));
       });
   operation_queue_.Add(
@@ -192,7 +195,8 @@ void AgentContextImpl::NewAgentConnection(
     const std::string& requestor_url,
     fidl::InterfaceRequest<fuchsia::sys::ServiceProvider>
         incoming_services_request,
-    fidl::InterfaceRequest<AgentController> agent_controller_request) {
+    fidl::InterfaceRequest<fuchsia::modular::AgentController>
+        agent_controller_request) {
   // Queue adding the connection
   operation_queue_.Add(new SyncCall(fxl::MakeCopyable(
       [this, requestor_url,
@@ -211,8 +215,10 @@ void AgentContextImpl::NewAgentConnection(
 }
 
 void AgentContextImpl::NewEntityProviderConnection(
-    fidl::InterfaceRequest<EntityProvider> entity_provider_request,
-    fidl::InterfaceRequest<AgentController> agent_controller_request) {
+    fidl::InterfaceRequest<fuchsia::modular::EntityProvider>
+        entity_provider_request,
+    fidl::InterfaceRequest<fuchsia::modular::AgentController>
+        agent_controller_request) {
   operation_queue_.Add(new SyncCall(fxl::MakeCopyable(
       [this, entity_provider_request = std::move(entity_provider_request),
        agent_controller_request =
@@ -239,7 +245,7 @@ void AgentContextImpl::NewTask(const std::string& task_id) {
 }
 
 void AgentContextImpl::GetComponentContext(
-    fidl::InterfaceRequest<ComponentContext> request) {
+    fidl::InterfaceRequest<fuchsia::modular::ComponentContext> request) {
   component_context_impl_.Connect(std::move(request));
 }
 
@@ -249,22 +255,22 @@ void AgentContextImpl::GetTokenProvider(
 }
 
 void AgentContextImpl::GetIntelligenceServices(
-    fidl::InterfaceRequest<IntelligenceServices> request) {
-  AgentScope agent_scope;
+    fidl::InterfaceRequest<fuchsia::modular::IntelligenceServices> request) {
+  fuchsia::modular::AgentScope agent_scope;
   agent_scope.url = url_;
-  ComponentScope scope;
+  fuchsia::modular::ComponentScope scope;
   scope.set_agent_scope(std::move(agent_scope));
   user_intelligence_provider_->GetComponentIntelligenceServices(
       std::move(scope), std::move(request));
 }
 
 void AgentContextImpl::GetEntityReferenceFactory(
-    fidl::InterfaceRequest<EntityReferenceFactory> request) {
+    fidl::InterfaceRequest<fuchsia::modular::EntityReferenceFactory> request) {
   entity_provider_runner_->ConnectEntityReferenceFactory(url_,
                                                          std::move(request));
 }
 
-void AgentContextImpl::ScheduleTask(TaskInfo task_info) {
+void AgentContextImpl::ScheduleTask(fuchsia::modular::TaskInfo task_info) {
   agent_runner_->ScheduleTask(url_, std::move(task_info));
 }
 
@@ -295,4 +301,3 @@ void AgentContextImpl::StopForTeardown() {
 }
 
 }  // namespace modular
-}  // namespace fuchsia

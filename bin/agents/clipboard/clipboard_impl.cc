@@ -9,7 +9,6 @@
 #include "peridot/lib/fidl/array_to_string.h"
 #include "peridot/lib/ledger_client/page_id.h"
 
-namespace fuchsia {
 namespace modular {
 namespace {
 constexpr char kClipboardImplPageId[] = "ClipboardPage___";  // 16 chars
@@ -20,17 +19,13 @@ ClipboardImpl::ClipboardImpl(LedgerClient* ledger_client)
 
 ClipboardImpl::~ClipboardImpl() = default;
 
-void ClipboardImpl::Push(fidl::StringPtr text) {
-  storage_.Push(text);
-}
+void ClipboardImpl::Push(fidl::StringPtr text) { storage_.Push(text); }
 
-void ClipboardImpl::Peek(PeekCallback callback) {
-  storage_.Peek(callback);
-}
+void ClipboardImpl::Peek(PeekCallback callback) { storage_.Peek(callback); }
 
-void ClipboardImpl::Connect(fidl::InterfaceRequest<Clipboard> request) {
+void ClipboardImpl::Connect(
+    fidl::InterfaceRequest<fuchsia::modular::Clipboard> request) {
   bindings_.AddBinding(this, std::move(request));
 }
 
 }  // namespace modular
-}  // namespace fuchsia

@@ -17,7 +17,6 @@
 #include "peridot/lib/rapidjson/rapidjson.h"
 #include "rapidjson/document.h"
 
-namespace fuchsia {
 namespace modular {
 
 // This file provides a tool to serialize arbitrary data structures
@@ -134,7 +133,7 @@ template <typename T>
 using XdrFilterType = void (*)(XdrContext*, T*);
 
 template <typename T>
-using XdrFilterList = void (* const *)(XdrContext*, T*);
+using XdrFilterList = void (*const*)(XdrContext*, T*);
 
 // A generic implementation of such a filter, which works for simple
 // types. (The implementation uses XdrContext, so it's below.)
@@ -436,9 +435,9 @@ class XdrContext {
         }
 
         if (value_->Size() != N) {
-          AddError(std::string("Array size unexpected: found ")
-                   + std::to_string(value_->Size())
-                   + " expected " + std::to_string(N));
+          AddError(std::string("Array size unexpected: found ") +
+                   std::to_string(value_->Size()) + " expected " +
+                   std::to_string(N));
           return;
         }
 
@@ -495,8 +494,7 @@ class XdrContext {
   // can have non-string keys. There are two filters, for the key type and the
   // value type.
   template <typename K, typename V>
-  void Value(std::map<K, V>* const data,
-             XdrFilterType<K> const key_filter,
+  void Value(std::map<K, V>* const data, XdrFilterType<K> const key_filter,
              XdrFilterType<V> const value_filter) {
     switch (op_) {
       case XdrOp::TO_JSON: {
@@ -550,10 +548,7 @@ class XdrContext {
   }
 
  private:
-  XdrContext(XdrContext* parent,
-             const char* name,
-             XdrOp op,
-             JsonDoc* doc,
+  XdrContext(XdrContext* parent, const char* name, XdrOp op, JsonDoc* doc,
              JsonValue* value);
   JsonDoc::AllocatorType& allocator() const { return doc_->GetAllocator(); }
   XdrContext Field(const char field[]);
@@ -618,8 +613,7 @@ void XdrFilter(XdrContext* const xdr, V* const value) {
 // The items in the filter versions list are tried in turn until one succeeds.
 // The filter versions list must end with a nullptr entry to mark the end.
 template <typename D, typename V>
-bool XdrRead(JsonDoc* const doc,
-             D* const data,
+bool XdrRead(JsonDoc* const doc, D* const data,
              XdrFilterList<V> filter_versions) {
   std::vector<std::string> errors;
   for (XdrFilterList<V> filter = filter_versions; *filter; ++filter) {
@@ -650,8 +644,7 @@ bool XdrRead(JsonDoc* const doc,
 // list. In that case it logs an error and returns false. Clients are expected
 // to either crash or recover e.g. by ignoring the value.
 template <typename D, typename V>
-bool XdrRead(const std::string& json,
-             D* const data,
+bool XdrRead(const std::string& json, D* const data,
              XdrFilterList<V> filter_versions) {
   JsonDoc doc;
   doc.Parse(json);
@@ -668,8 +661,7 @@ bool XdrRead(const std::string& json,
 // anyway for symmetry with XdrRead(), so that the same filter version list
 // constant can be passed to both XdrRead and XdrWrite.
 template <typename D, typename V>
-void XdrWrite(JsonDoc* const doc,
-              D* const data,
+void XdrWrite(JsonDoc* const doc, D* const data,
               XdrFilterList<V> filter_versions) {
   std::string error;
   XdrContext xdr(XdrOp::TO_JSON, doc, &error);
@@ -682,8 +674,7 @@ void XdrWrite(JsonDoc* const doc,
 
 // A wrapper function to write data as JSON to a string. This never fails.
 template <typename D, typename V>
-void XdrWrite(std::string* const json,
-              D* const data,
+void XdrWrite(std::string* const json, D* const data,
               XdrFilterList<V> filter_versions) {
   JsonDoc doc;
   XdrWrite(&doc, data, filter_versions);
@@ -692,14 +683,12 @@ void XdrWrite(std::string* const json,
 
 // A wrapper function to return data as a JSON string. This never fails.
 template <typename D, typename V>
-std::string XdrWrite(D* const data,
-                     XdrFilterList<V> filter_versions) {
+std::string XdrWrite(D* const data, XdrFilterList<V> filter_versions) {
   std::string json;
   XdrWrite(&json, data, filter_versions);
   return json;
 }
 
 }  // namespace modular
-}  // namespace fuchsia
 
 #endif  // PERIDOT_LIB_FIDL_JSON_XDR_H_

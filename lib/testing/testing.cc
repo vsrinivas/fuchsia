@@ -10,7 +10,6 @@
 
 #include "lib/fxl/logging.h"
 
-namespace fuchsia {
 namespace modular {
 namespace testing {
 
@@ -97,20 +96,20 @@ std::function<void(fidl::StringPtr)> NewBarrierClosure(
 }
 
 void Put(const fidl::StringPtr& key, const fidl::StringPtr& value) {
-  fuchsia::modular::testing::GetStore()->Put(key, value, [] {});
+  modular::testing::GetStore()->Put(key, value, [] {});
 }
 
 void Get(const fidl::StringPtr& key,
          std::function<void(fidl::StringPtr)> callback) {
-  fuchsia::modular::testing::GetStore()->Get(key, std::move(callback));
+  modular::testing::GetStore()->Get(key, std::move(callback));
 }
 
 void Signal(const fidl::StringPtr& condition) {
-  fuchsia::modular::testing::GetStore()->Put(condition, condition, [] {});
+  modular::testing::GetStore()->Put(condition, condition, [] {});
 }
 
 void Await(const fidl::StringPtr& condition, std::function<void()> cont) {
-  fuchsia::modular::testing::GetStore()->Get(
+  modular::testing::GetStore()->Get(
       condition, [cont = std::move(cont)](fidl::StringPtr) { cont(); });
 }
 
@@ -148,4 +147,3 @@ void PassTestPoint(const std::string& label) {
 }  // namespace internal
 }  // namespace testing
 }  // namespace modular
-}  // namespace fuchsia

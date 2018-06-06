@@ -63,7 +63,7 @@ class HelloAppParent {
 int main(int argc, const char** argv) {
   fsl::MessageLoop loop;
   auto context = fuchsia::sys::StartupContext::CreateFromStartupInfo();
-  fuchsia::modular::AppDriver<HelloAppParent> driver(
+  modular::AppDriver<HelloAppParent> driver(
       context->outgoing().deprecated_services(),
       std::make_unique<HelloAppParent>(
           context.get(), fxl::CommandLineFromArgcArgv(argc, argv)),

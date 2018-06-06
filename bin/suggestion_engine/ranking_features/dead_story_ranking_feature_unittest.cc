@@ -5,27 +5,27 @@
 #include "peridot/bin/suggestion_engine/ranking_features/dead_story_ranking_feature.h"
 #include "gtest/gtest.h"
 
-namespace fuchsia {
 namespace modular {
 namespace {
 
 class DeadStoryRankingFeatureTest : public ::testing::Test {
  protected:
   DeadStoryRankingFeature focused_story_feature;
-  UserInput query;
+  fuchsia::modular::UserInput query;
 };
 
 // Creates the values from a context query to mock the modules in a focused
 // story based on which this ranking feature computes its value.
-void SetRunningStoryContextUpdate(fidl::VectorPtr<ContextValue>& context_update) {
-  ContextValue value;
-  value.meta.story = StoryMetadata::New();
+void SetRunningStoryContextUpdate(
+    fidl::VectorPtr<fuchsia::modular::ContextValue>& context_update) {
+  fuchsia::modular::ContextValue value;
+  value.meta.story = fuchsia::modular::StoryMetadata::New();
   value.meta.story->id = "running_story";
   context_update.push_back(std::move(value));
 }
 
 TEST_F(DeadStoryRankingFeatureTest, RunningStoryAndAffinity) {
-  Proposal proposal;
+  fuchsia::modular::Proposal proposal;
   proposal.story_affinity = true;
   SuggestionPrototype prototype;
   prototype.story_id = "running_story";
@@ -33,7 +33,7 @@ TEST_F(DeadStoryRankingFeatureTest, RunningStoryAndAffinity) {
   RankedSuggestion suggestion;
   suggestion.prototype = &prototype;
 
-  fidl::VectorPtr<ContextValue> context_update;
+  fidl::VectorPtr<fuchsia::modular::ContextValue> context_update;
   SetRunningStoryContextUpdate(context_update);
   focused_story_feature.UpdateContext(context_update);
   double value = focused_story_feature.ComputeFeature(query, suggestion);
@@ -41,14 +41,14 @@ TEST_F(DeadStoryRankingFeatureTest, RunningStoryAndAffinity) {
 }
 
 TEST_F(DeadStoryRankingFeatureTest, RunningButNoAffinity) {
-  Proposal proposal;
+  fuchsia::modular::Proposal proposal;
   SuggestionPrototype prototype;
   prototype.story_id = "running_story";
   prototype.proposal = std::move(proposal);
   RankedSuggestion suggestion;
   suggestion.prototype = &prototype;
 
-  fidl::VectorPtr<ContextValue> context_update;
+  fidl::VectorPtr<fuchsia::modular::ContextValue> context_update;
   SetRunningStoryContextUpdate(context_update);
   focused_story_feature.UpdateContext(context_update);
   double value = focused_story_feature.ComputeFeature(query, suggestion);
@@ -56,14 +56,14 @@ TEST_F(DeadStoryRankingFeatureTest, RunningButNoAffinity) {
 }
 
 TEST_F(DeadStoryRankingFeatureTest, NotRunningAndNoAffinity) {
-  Proposal proposal;
+  fuchsia::modular::Proposal proposal;
   SuggestionPrototype prototype;
   prototype.story_id = "other_story";
   prototype.proposal = std::move(proposal);
   RankedSuggestion suggestion;
   suggestion.prototype = &prototype;
 
-  fidl::VectorPtr<ContextValue> context_update;
+  fidl::VectorPtr<fuchsia::modular::ContextValue> context_update;
   SetRunningStoryContextUpdate(context_update);
   focused_story_feature.UpdateContext(context_update);
   double value = focused_story_feature.ComputeFeature(query, suggestion);
@@ -71,7 +71,7 @@ TEST_F(DeadStoryRankingFeatureTest, NotRunningAndNoAffinity) {
 }
 
 TEST_F(DeadStoryRankingFeatureTest, NotRunningStoryAndAffinity) {
-  Proposal proposal;
+  fuchsia::modular::Proposal proposal;
   proposal.story_affinity = true;
   SuggestionPrototype prototype;
   prototype.story_id = "other_story";
@@ -79,7 +79,7 @@ TEST_F(DeadStoryRankingFeatureTest, NotRunningStoryAndAffinity) {
   RankedSuggestion suggestion;
   suggestion.prototype = &prototype;
 
-  fidl::VectorPtr<ContextValue> context_update;
+  fidl::VectorPtr<fuchsia::modular::ContextValue> context_update;
   SetRunningStoryContextUpdate(context_update);
   focused_story_feature.UpdateContext(context_update);
   double value = focused_story_feature.ComputeFeature(query, suggestion);
@@ -88,4 +88,3 @@ TEST_F(DeadStoryRankingFeatureTest, NotRunningStoryAndAffinity) {
 
 }  // namespace
 }  // namespace modular
-}  // namespace fuchsia

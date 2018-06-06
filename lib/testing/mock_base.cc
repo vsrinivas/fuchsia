@@ -6,7 +6,6 @@
 #include "gtest/gtest.h"
 #include "lib/fxl/logging.h"
 
-namespace fuchsia {
 namespace modular {
 namespace testing {
 
@@ -22,9 +21,7 @@ void MockBase::ExpectCalledOnce(const std::string& func) {
   }
 }
 
-void MockBase::ClearCalls() {
-  counts.clear();
-}
+void MockBase::ClearCalls() { counts.clear(); }
 
 void MockBase::ExpectNoOtherCalls() {
   EXPECT_TRUE(counts.empty());
@@ -35,4 +32,3 @@ void MockBase::ExpectNoOtherCalls() {
 
 }  // namespace testing
 }  // namespace modular
-}  // namespace fuchsia

@@ -20,7 +20,6 @@
 #include "peridot/lib/fidl/json_xdr.h"
 #include "peridot/lib/ledger_client/storage.h"
 
-namespace fuchsia {
 namespace modular {
 
 constexpr zx::duration kTeardownTimeout = zx::sec(3);
@@ -31,7 +30,8 @@ AgentRunner::AgentRunner(
     fuchsia::ledger::internal::LedgerRepository* const ledger_repository,
     AgentRunnerStorage* const agent_runner_storage,
     fuchsia::modular::auth::TokenProviderFactory* const token_provider_factory,
-    UserIntelligenceProvider* const user_intelligence_provider,
+    fuchsia::modular::UserIntelligenceProvider* const
+        user_intelligence_provider,
     EntityProviderRunner* const entity_provider_runner)
     : launcher_(launcher),
       message_queue_manager_(message_queue_manager),
@@ -46,7 +46,8 @@ AgentRunner::AgentRunner(
 
 AgentRunner::~AgentRunner() = default;
 
-void AgentRunner::Connect(fidl::InterfaceRequest<AgentProvider> request) {
+void AgentRunner::Connect(
+    fidl::InterfaceRequest<fuchsia::modular::AgentProvider> request) {
   agent_provider_bindings_.AddBinding(this, std::move(request));
 }
 
@@ -102,7 +103,8 @@ void AgentRunner::MaybeRunAgent(const std::string& agent_url,
       run_agent_callbacks_[agent_url].push_back(done);
       return;
     }
-    // Agent is already running, so we can issue the callback immediately.
+    // fuchsia::modular::Agent is already running, so we can issue the callback
+    // immediately.
     done();
     return;
   }
@@ -119,7 +121,7 @@ void AgentRunner::RunAgent(const std::string& agent_url) {
                                          entity_provider_runner_};
   AgentContextInfo info = {component_info, launcher_, token_provider_factory_,
                            user_intelligence_provider_};
-  AppConfig agent_config;
+  fuchsia::modular::AppConfig agent_config;
   agent_config.url = agent_url;
 
   FXL_CHECK(running_agents_
@@ -142,7 +144,8 @@ void AgentRunner::ConnectToAgent(
     const std::string& requestor_url, const std::string& agent_url,
     fidl::InterfaceRequest<fuchsia::sys::ServiceProvider>
         incoming_services_request,
-    fidl::InterfaceRequest<AgentController> agent_controller_request) {
+    fidl::InterfaceRequest<fuchsia::modular::AgentController>
+        agent_controller_request) {
   // Drop all new requests if AgentRunner is terminating.
   if (*terminating_) {
     return;
@@ -161,8 +164,10 @@ void AgentRunner::ConnectToAgent(
 
 void AgentRunner::ConnectToEntityProvider(
     const std::string& agent_url,
-    fidl::InterfaceRequest<EntityProvider> entity_provider_request,
-    fidl::InterfaceRequest<AgentController> agent_controller_request) {
+    fidl::InterfaceRequest<fuchsia::modular::EntityProvider>
+        entity_provider_request,
+    fidl::InterfaceRequest<fuchsia::modular::AgentController>
+        agent_controller_request) {
   // Drop all new requests if AgentRunner is terminating.
   if (*terminating_) {
     return;
@@ -215,7 +220,7 @@ void AgentRunner::ForwardConnectionsToAgent(const std::string& agent_url) {
 }
 
 void AgentRunner::ScheduleTask(const std::string& agent_url,
-                               TaskInfo task_info) {
+                               fuchsia::modular::TaskInfo task_info) {
   AgentRunnerStorage::TriggerInfo data;
   data.agent_url = agent_url;
   data.task_id = task_info.task_id.get();
@@ -491,7 +496,8 @@ void AgentRunner::UpdateWatchers() {
   }
 }
 
-void AgentRunner::Watch(fidl::InterfaceHandle<AgentProviderWatcher> watcher) {
+void AgentRunner::Watch(
+    fidl::InterfaceHandle<fuchsia::modular::AgentProviderWatcher> watcher) {
   auto ptr = watcher.Bind();
   // 1. Send this watcher the current list of agents.
   ptr->OnUpdate(GetAllAgents());
@@ -502,4 +508,3 @@ void AgentRunner::Watch(fidl::InterfaceHandle<AgentProviderWatcher> watcher) {
 }
 
 }  // namespace modular
-}  // namespace fuchsia

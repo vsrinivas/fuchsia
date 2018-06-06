@@ -68,9 +68,9 @@ int main(int argc, const char** argv) {
 
   const auto& package_name = command_line.positional_args()[0];
   const auto& package_version = command_line.positional_args()[1];
-  indexer->IndexManifest(package_name,
-                         fuchsia::modular::GetModuleManifestPathFromPackage(
-                             package_name, package_version));
+  indexer->IndexManifest(
+      package_name,
+      modular::GetModuleManifestPathFromPackage(package_name, package_version));
 
   return 0;
 }

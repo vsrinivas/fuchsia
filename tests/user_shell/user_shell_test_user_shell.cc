@@ -6,8 +6,8 @@
 #include <set>
 #include <utility>
 
-#include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/modular/cpp/fidl.h>
+#include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/ui/views_v1_token/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
@@ -25,9 +25,9 @@
 #include "peridot/tests/common/defs.h"
 #include "peridot/tests/user_shell/defs.h"
 
-using fuchsia::modular::testing::Await;
-using fuchsia::modular::testing::Signal;
-using fuchsia::modular::testing::TestPoint;
+using modular::testing::Await;
+using modular::testing::Signal;
+using modular::testing::TestPoint;
 
 namespace {
 
@@ -55,12 +55,12 @@ class StoryModulesWatcherImpl : fuchsia::modular::StoryModulesWatcher {
   void Reset() { binding_.Unbind(); }
 
  private:
-  // |StoryModulesWatcher|
+  // |fuchsia::modular::StoryModulesWatcher|
   void OnNewModule(fuchsia::modular::ModuleData data) override {
     FXL_LOG(INFO) << "New Module: " << data.module_url;
   }
 
-  // |StoryModulesWatcher|
+  // |fuchsia::modular::StoryModulesWatcher|
   void OnStopModule(fuchsia::modular::ModuleData data) override {
     FXL_LOG(INFO) << "Stop Module: " << data.module_url;
   }
@@ -93,9 +93,9 @@ class StoryLinksWatcherImpl : fuchsia::modular::StoryLinksWatcher {
   void Reset() { binding_.Unbind(); }
 
  private:
-  // |StoryLinksWatcher|
+  // |fuchsia::modular::StoryLinksWatcher|
   void OnNewLink(fuchsia::modular::LinkPath data) override {
-    FXL_LOG(INFO) << "New Link: " << data.link_name;
+    FXL_LOG(INFO) << "New fuchsia::modular::Link: " << data.link_name;
   }
 
   fidl::Binding<fuchsia::modular::StoryLinksWatcher> binding_;
@@ -122,7 +122,7 @@ class StoryProviderStateWatcherImpl : fuchsia::modular::StoryProviderWatcher {
   TestPoint on_delete_called_once_{"OnDelete() Called"};
   int on_delete_called_{};
 
-  // |StoryProviderWatcher|
+  // |fuchsia::modular::StoryProviderWatcher|
   void OnDelete(fidl::StringPtr story_id) override {
     FXL_LOG(INFO) << "StoryProviderStateWatcherImpl::OnDelete() " << story_id;
 
@@ -139,7 +139,7 @@ class StoryProviderStateWatcherImpl : fuchsia::modular::StoryProviderWatcher {
   TestPoint on_stopped_called_once_{"OnChange() STOPPED Called"};
   int on_stopped_called_{};
 
-  // |StoryProviderWatcher|
+  // |fuchsia::modular::StoryProviderWatcher|
   void OnChange(const fuchsia::modular::StoryInfo story_info,
                 const fuchsia::modular::StoryState story_state) override {
     FXL_LOG(INFO) << "StoryProviderStateWatcherImpl::OnChange() "
@@ -149,8 +149,7 @@ class StoryProviderStateWatcherImpl : fuchsia::modular::StoryProviderWatcher {
     if (deleted_stories_.find(story_info.id) != deleted_stories_.end()) {
       FXL_LOG(ERROR) << "Status change notification for deleted story "
                      << story_info.id;
-      fuchsia::modular::testing::Fail(
-          "Status change notification for deleted story");
+      modular::testing::Fail("Status change notification for deleted story");
     }
 
     // Just check that all states are covered at least once, proving that we get
@@ -181,7 +180,7 @@ class StoryProviderStateWatcherImpl : fuchsia::modular::StoryProviderWatcher {
 // A simple story activity watcher implementation.
 class StoryActivityWatcherImpl : fuchsia::modular::StoryActivityWatcher {
  public:
-  StoryActivityWatcherImpl() : binding_(this), cont_([](fidl::StringPtr){}) {}
+  StoryActivityWatcherImpl() : binding_(this), cont_([](fidl::StringPtr) {}) {}
   ~StoryActivityWatcherImpl() override = default;
 
   void Watch(fuchsia::modular::StoryProviderPtr* const story_provider) {
@@ -195,7 +194,7 @@ class StoryActivityWatcherImpl : fuchsia::modular::StoryActivityWatcher {
   void Reset() { binding_.Unbind(); }
 
  private:
-  // |StoryActivityWatcher|
+  // |fuchsia::modular::StoryActivityWatcher|
   void OnStoryActivity(fidl::StringPtr story_id) override {
     cont_(std::move(story_id));
   }
@@ -207,8 +206,8 @@ class StoryActivityWatcherImpl : fuchsia::modular::StoryActivityWatcher {
 };
 
 // Cf. README.md for what this test does and how.
-class TestApp : public fuchsia::modular::testing::ComponentBase<
-                    fuchsia::modular::UserShell> {
+class TestApp
+    : public modular::testing::ComponentBase<fuchsia::modular::UserShell> {
  public:
   explicit TestApp(fuchsia::sys::StartupContext* const startup_context)
       : ComponentBase(startup_context) {
@@ -231,7 +230,7 @@ class TestApp : public fuchsia::modular::testing::ComponentBase<
 
   TestPoint initialize_{"Initialize()"};
 
-  // |UserShell|
+  // |fuchsia::modular::UserShell|
   void Initialize(fidl::InterfaceHandle<fuchsia::modular::UserShellContext>
                       user_shell_context) override {
     initialize_.Pass();
@@ -244,7 +243,8 @@ class TestApp : public fuchsia::modular::testing::ComponentBase<
     TestStoryProvider_GetStoryInfo_Null();
   }
 
-  TestPoint get_story_info_null_{"StoryProvider.GetStoryInfo() is null"};
+  TestPoint get_story_info_null_{
+      "fuchsia::modular::StoryProvider.GetStoryInfo() is null"};
 
   void TestStoryProvider_GetStoryInfo_Null() {
     story_provider_->GetStoryInfo(
@@ -257,7 +257,7 @@ class TestApp : public fuchsia::modular::testing::ComponentBase<
         });
   }
 
-  TestPoint get_link_{"UserShellContext.GetLink()"};
+  TestPoint get_link_{"fuchsia::modular::UserShellContext.GetLink()"};
 
   void TestUserShellContext_GetLink() {
     user_shell_context_->GetLink(user_shell_link_.NewRequest());
@@ -267,7 +267,8 @@ class TestApp : public fuchsia::modular::testing::ComponentBase<
     });
   }
 
-  TestPoint previous_stories_{"StoryProvider.PreviousStories()"};
+  TestPoint previous_stories_{
+      "fuchsia::modular::StoryProvider.PreviousStories()"};
 
   void TestStoryProvider_PreviousStories() {
     story_provider_->PreviousStories(
@@ -277,14 +278,15 @@ class TestApp : public fuchsia::modular::testing::ComponentBase<
         });
   }
 
-  TestPoint get_story_info_{"StoryProvider.GetStoryInfo()"};
+  TestPoint get_story_info_{"fuchsia::modular::StoryProvider.GetStoryInfo()"};
 
   void TestStoryProvider_GetStoryInfo(
       fidl::VectorPtr<fuchsia::modular::StoryInfo> stories) {
     if (stories->empty()) {
       get_story_info_.Pass();
     } else {
-      FXL_LOG(ERROR) << "StoryProvider.GetStoryInfo() " << stories->size();
+      FXL_LOG(ERROR) << "fuchsia::modular::StoryProvider.GetStoryInfo() "
+                     << stories->size();
       for (const auto& item : stories.get()) {
         FXL_LOG(INFO) << item.id;
       }
@@ -321,15 +323,14 @@ class TestApp : public fuchsia::modular::testing::ComponentBase<
   TestPoint story1_active_{"Story1 Active"};
 
   void TestStory1_Run() {
-    story_activity_watcher_.Continue(
-        [this](fidl::StringPtr story_id) {
-          if (story_id == story_info_.id) {
-            story1_active_.Pass();
-          }
+    story_activity_watcher_.Continue([this](fidl::StringPtr story_id) {
+      if (story_id == story_info_.id) {
+        story1_active_.Pass();
+      }
 
-          story_activity_watcher_.Reset();
-          TestStory1_Stop();
-        });
+      story_activity_watcher_.Reset();
+      TestStory1_Stop();
+    });
 
     story_modules_watcher_.Watch(&story_controller_);
     story_links_watcher_.Watch(&story_controller_);
@@ -430,11 +431,11 @@ class TestApp : public fuchsia::modular::testing::ComponentBase<
   void TestStory2_InfoAfterDeleteIsNull(fuchsia::modular::StoryInfoPtr info) {
     story2_info_after_delete_.Pass();
     if (info) {
-      fuchsia::modular::testing::Fail(
-          "StoryInfo after DeleteStory() must return null.");
+      modular::testing::Fail(
+          "fuchsia::modular::StoryInfo after DeleteStory() must return null.");
     }
 
-    Signal(fuchsia::modular::testing::kTestShutdown);
+    Signal(modular::testing::kTestShutdown);
   }
 
   void TeardownStoryController() {
@@ -461,6 +462,6 @@ class TestApp : public fuchsia::modular::testing::ComponentBase<
 
 int main(int argc, const char** argv) {
   auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
-  fuchsia::modular::testing::ComponentMain<TestApp>();
+  modular::testing::ComponentMain<TestApp>();
   return 0;
 }

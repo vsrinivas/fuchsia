@@ -15,16 +15,16 @@
 #include "peridot/tests/common/defs.h"
 #include "peridot/tests/suggestion/defs.h"
 
-using fuchsia::modular::testing::Await;
-using fuchsia::modular::testing::Signal;
-using fuchsia::modular::testing::TestPoint;
+using modular::testing::Await;
+using modular::testing::Signal;
+using modular::testing::TestPoint;
 
 namespace {
 
 // Cf. README.md for what this test does and how.
-class TestApp : fuchsia::modular::NextListener,
-                public fuchsia::modular::testing::ComponentBase<
-                    fuchsia::modular::UserShell> {
+class TestApp
+    : fuchsia::modular::NextListener,
+      public modular::testing::ComponentBase<fuchsia::modular::UserShell> {
  public:
   TestApp(fuchsia::sys::StartupContext* const startup_context)
       : ComponentBase(startup_context) {
@@ -36,7 +36,7 @@ class TestApp : fuchsia::modular::NextListener,
  private:
   TestPoint initialized_{"SuggestionTestUserShell initialized"};
 
-  // |UserShell|
+  // |fuchsia::modular::UserShell|
   void Initialize(fidl::InterfaceHandle<fuchsia::modular::UserShellContext>
                       user_shell_context) override {
     user_shell_context_.Bind(std::move(user_shell_context));
@@ -58,7 +58,7 @@ class TestApp : fuchsia::modular::NextListener,
     Await(kSuggestionTestModuleDone, [this] {
       story_controller_->Stop([this] {
         story_controller_.Unbind();
-        Signal(fuchsia::modular::testing::kTestShutdown);
+        Signal(modular::testing::kTestShutdown);
       });
     });
   }
@@ -75,15 +75,15 @@ class TestApp : fuchsia::modular::NextListener,
 
   TestPoint received_suggestion_{"SuggestionTestUserShell received suggestion"};
 
-  // |NextListener|
+  // |fuchsia::modular::NextListener|
   void OnNextResults(
       fidl::VectorPtr<fuchsia::modular::Suggestion> suggestions) override {
     for (auto& suggestion : *suggestions) {
       auto& display = suggestion.display;
       if (display.headline == "foo" && display.subheadline == "bar" &&
           display.details == "baz") {
-        fuchsia::modular::testing::GetStore()->Put(
-            "suggestion_proposal_received", "", [] {});
+        modular::testing::GetStore()->Put("suggestion_proposal_received", "",
+                                          [] {});
         received_suggestion_.Pass();
         fuchsia::modular::Interaction interaction;
         interaction.type = fuchsia::modular::InteractionType::SELECTED;
@@ -93,7 +93,7 @@ class TestApp : fuchsia::modular::NextListener,
     }
   }
 
-  // |NextListener|
+  // |fuchsia::modular::NextListener|
   void OnProcessingChange(bool processing) override {}
 
   fuchsia::ui::views_v1_token::ViewOwnerPtr view_owner_;
@@ -110,6 +110,6 @@ class TestApp : fuchsia::modular::NextListener,
 }  // namespace
 
 int main(int /*argc*/, const char** /*argv*/) {
-  fuchsia::modular::testing::ComponentMain<TestApp>();
+  modular::testing::ComponentMain<TestApp>();
   return 0;
 }

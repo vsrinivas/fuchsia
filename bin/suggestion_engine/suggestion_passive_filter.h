@@ -7,7 +7,6 @@
 
 #include "peridot/bin/suggestion_engine/ranked_suggestion.h"
 
-namespace fuchsia {
 namespace modular {
 
 class SuggestionPassiveFilter {
@@ -17,11 +16,9 @@ class SuggestionPassiveFilter {
 
   // Evaluate the suggestion based on the filter criteria and return a boolean
   // value.
-  virtual bool Filter(
-      const std::unique_ptr<RankedSuggestion>& suggestion) = 0;
+  virtual bool Filter(const std::unique_ptr<RankedSuggestion>& suggestion) = 0;
 };
 
 }  // namespace modular
-}  // namespace fuchsia
 
 #endif  // PERIDOT_BIN_SUGGESTION_ENGINE_SUGGESTION_PASSIVE_FILTER_H_

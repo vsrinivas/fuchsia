@@ -3,10 +3,9 @@
 // found in the LICENSE file.
 
 #include "peridot/bin/suggestion_engine/filters/conjugate_ranked_passive_filter.h"
-#include "peridot/bin/suggestion_engine/ranking_feature.h"
 #include "gtest/gtest.h"
+#include "peridot/bin/suggestion_engine/ranking_feature.h"
 
-namespace fuchsia {
 namespace modular {
 namespace {
 
@@ -15,7 +14,7 @@ class ConfidenceRankingFeature : public RankingFeature {
   ConfidenceRankingFeature() {}
 
  private:
-  double ComputeFeatureInternal(const UserInput& query,
+  double ComputeFeatureInternal(const fuchsia::modular::UserInput& query,
                                 const RankedSuggestion& suggestion) override {
     return suggestion.confidence;
   }
@@ -27,17 +26,18 @@ class ConjugateRankedPassiveFilterTest : public ::testing::Test {
     filter = std::make_unique<ConjugateRankedPassiveFilter>(
         std::make_shared<ConfidenceRankingFeature>());
   }
+
  protected:
   std::unique_ptr<ConjugateRankedPassiveFilter> filter;
 };
 
-TEST_F(ConjugateRankedPassiveFilterTest, FilterMinConfidence)  {
+TEST_F(ConjugateRankedPassiveFilterTest, FilterMinConfidence) {
   auto suggestion = std::make_unique<RankedSuggestion>();
   suggestion->confidence = 0.0;
   EXPECT_TRUE(filter->Filter(suggestion));
 }
 
-TEST_F(ConjugateRankedPassiveFilterTest, FilterOtherConfidence)  {
+TEST_F(ConjugateRankedPassiveFilterTest, FilterOtherConfidence) {
   auto suggestion = std::make_unique<RankedSuggestion>();
   suggestion->confidence = 0.5;
   EXPECT_FALSE(filter->Filter(suggestion));
@@ -47,7 +47,5 @@ TEST_F(ConjugateRankedPassiveFilterTest, FilterOtherConfidence)  {
   EXPECT_FALSE(filter->Filter(suggestion2));
 }
 
-
 }  // namespace
 }  // namespace modular
-}  // namespace fuchsia

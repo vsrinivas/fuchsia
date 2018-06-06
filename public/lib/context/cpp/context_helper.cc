@@ -4,13 +4,12 @@
 
 #include "lib/context/cpp/context_helper.h"
 
-namespace fuchsia {
 namespace modular {
 
 std::pair<bool, fidl::VectorPtr<fuchsia::modular::ContextValue>>
 TakeContextValue(fuchsia::modular::ContextUpdate* const update,
                  const std::string& key) {
-  for (auto& it: update->values.take()) {
+  for (auto& it : update->values.take()) {
     if (it.key == key) {
       return std::make_pair(true, std::move(it.value));
     }
@@ -39,4 +38,3 @@ bool HasSelectorKey(fuchsia::modular::ContextQuery* const query,
 }
 
 }  // namespace modular
-}  // namespace fuchsia

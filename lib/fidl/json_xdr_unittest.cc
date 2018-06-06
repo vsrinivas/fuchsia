@@ -9,7 +9,6 @@
 #include "gtest/gtest.h"
 #include "peridot/lib/fidl/json_xdr.h"
 
-namespace fuchsia {
 namespace modular {
 namespace {
 
@@ -40,8 +39,8 @@ void XdrT_v1(XdrContext* const xdr, T* const data) {
 }
 
 constexpr XdrFilterType<T> XdrT[] = {
-  XdrT_v1,
-  nullptr,
+    XdrT_v1,
+    nullptr,
 };
 
 TEST(Xdr, Struct) {
@@ -108,16 +107,16 @@ TEST(Xdr, StructVersions) {
   T t1;
 
   constexpr XdrFilterType<T> filter_versions_v2_only[] = {
-    XdrT_v2,
-    nullptr,
+      XdrT_v2,
+      nullptr,
   };
 
   EXPECT_FALSE(XdrRead(json, &t1, filter_versions_v2_only));
 
   constexpr XdrFilterType<T> filter_versions_all[] = {
-    XdrT_v2,
-    XdrT_v1,
-    nullptr,
+      XdrT_v2,
+      XdrT_v1,
+      nullptr,
   };
 
   EXPECT_TRUE(XdrRead(json, &t1, filter_versions_all));
@@ -163,16 +162,16 @@ TEST(Xdr, StructVersionsExplicitFallback) {
   T t1;
 
   constexpr XdrFilterType<T> filter_versions_v3_only[] = {
-    XdrT_v3,
-    nullptr,
+      XdrT_v3,
+      nullptr,
   };
 
   EXPECT_FALSE(XdrRead(json, &t1, filter_versions_v3_only));
 
   constexpr XdrFilterType<T> filter_versions_all[] = {
-    XdrT_v3,
-    XdrT_v1,
-    nullptr,
+      XdrT_v3,
+      XdrT_v1,
+      nullptr,
   };
 
   EXPECT_TRUE(XdrRead(json, &t1, filter_versions_all));
@@ -203,8 +202,8 @@ TEST(Xdr, StructVersionsExplicit) {
   std::string json;
 
   constexpr XdrFilterType<T> filter_versions_v3_only[] = {
-    XdrT_v3,
-    nullptr,
+      XdrT_v3,
+      nullptr,
   };
 
   T t0;
@@ -223,19 +222,15 @@ TEST(Xdr, StructVersionsExplicit) {
   EXPECT_TRUE(XdrRead(json, &t1, filter_versions_v3_only));
 
   constexpr XdrFilterType<T> filter_versions_v4_only[] = {
-    XdrT_v4,
-    nullptr,
+      XdrT_v4,
+      nullptr,
   };
 
   T t2;
   EXPECT_FALSE(XdrRead(json, &t2, filter_versions_v4_only));
 
   constexpr XdrFilterType<T> filter_versions_all[] = {
-    XdrT_v4,
-    XdrT_v3,
-    XdrT_v2,
-    XdrT_v1,
-    nullptr,
+      XdrT_v4, XdrT_v3, XdrT_v2, XdrT_v1, nullptr,
   };
 
   T t3;
@@ -299,7 +294,7 @@ void XdrUnion(XdrContext* const xdr, json_xdr_unittest::Union* const data) {
         }
         case json_xdr_unittest::Union::Tag::Invalid:
           ASSERT_TRUE(false) << "XdrUnion TO_JSON unknown tag: "
-            << static_cast<int>(data->Which());
+                             << static_cast<int>(data->Which());
           break;
       }
 
@@ -340,8 +335,8 @@ void XdrOptionalData_v1(XdrContext* const xdr, Data* const data) {
 }
 
 constexpr XdrFilterType<json_xdr_unittest::RequiredData> XdrRequiredData[] = {
-  XdrRequiredData_v1<json_xdr_unittest::RequiredData>,
-  nullptr,
+    XdrRequiredData_v1<json_xdr_unittest::RequiredData>,
+    nullptr,
 };
 
 TEST(Xdr, FidlRequired) {
@@ -393,8 +388,8 @@ TEST(Xdr, FidlRequired) {
 }
 
 constexpr XdrFilterType<json_xdr_unittest::OptionalData> XdrOptionalData[] = {
-  XdrOptionalData_v1<json_xdr_unittest::OptionalData>,
-  nullptr,
+    XdrOptionalData_v1<json_xdr_unittest::OptionalData>,
+    nullptr,
 };
 
 TEST(Xdr, FidlOptional) {
@@ -445,8 +440,8 @@ TEST(Xdr, FidlOptional) {
 
 constexpr XdrFilterType<json_xdr_unittest::RequiredRepeatedRequiredData>
     XdrRequiredRepeatedRequiredData[] = {
-  XdrRequiredData_v1<json_xdr_unittest::RequiredRepeatedRequiredData>,
-  nullptr,
+        XdrRequiredData_v1<json_xdr_unittest::RequiredRepeatedRequiredData>,
+        nullptr,
 };
 
 TEST(Xdr, FidlRequiredRepeatedRequired) {
@@ -516,8 +511,8 @@ TEST(Xdr, FidlRequiredRepeatedRequired) {
 
 constexpr XdrFilterType<json_xdr_unittest::RequiredRepeatedOptionalData>
     XdrRequiredRepeatedOptionalData[] = {
-  XdrOptionalData_v1<json_xdr_unittest::RequiredRepeatedOptionalData>,
-  nullptr,
+        XdrOptionalData_v1<json_xdr_unittest::RequiredRepeatedOptionalData>,
+        nullptr,
 };
 
 TEST(Xdr, FidlRequiredRepeatedOptional) {
@@ -579,8 +574,8 @@ TEST(Xdr, FidlRequiredRepeatedOptional) {
 
 constexpr XdrFilterType<json_xdr_unittest::OptionalRepeatedRequiredData>
     XdrOptionalRepeatedRequiredData[] = {
-  XdrRequiredData_v1<json_xdr_unittest::OptionalRepeatedRequiredData>,
-  nullptr,
+        XdrRequiredData_v1<json_xdr_unittest::OptionalRepeatedRequiredData>,
+        nullptr,
 };
 
 TEST(Xdr, FidlOptionalRepeatedRequired) {
@@ -720,8 +715,8 @@ TEST(Xdr, FidlOptionalRepeatedRequired) {
 
 constexpr XdrFilterType<json_xdr_unittest::OptionalRepeatedOptionalData>
     XdrOptionalRepeatedOptionalData[] = {
-  XdrOptionalData_v1<json_xdr_unittest::OptionalRepeatedOptionalData>,
-  nullptr,
+        XdrOptionalData_v1<json_xdr_unittest::OptionalRepeatedOptionalData>,
+        nullptr,
 };
 
 TEST(Xdr, FidlOptionalRepeatedOptional) {
@@ -810,8 +805,8 @@ TEST(Xdr, FidlOptionalRepeatedOptional) {
 }
 
 constexpr XdrFilterType<json_xdr_unittest::ArrayData> XdrArrayData[] = {
-  XdrRequiredData_v1<json_xdr_unittest::ArrayData>,
-  nullptr,
+    XdrRequiredData_v1<json_xdr_unittest::ArrayData>,
+    nullptr,
 };
 
 TEST(Xdr, FidlArray) {
@@ -864,4 +859,3 @@ TEST(Xdr, FidlArray) {
 
 }  // namespace
 }  // namespace modular
-}  // namespace fuchsia

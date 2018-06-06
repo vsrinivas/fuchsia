@@ -17,7 +17,6 @@
 #include "garnet/public/lib/fxl/memory/ref_ptr.h"
 #include "garnet/public/lib/fxl/memory/weak_ptr.h"
 
-namespace fuchsia {
 namespace modular {
 
 // # Futures
@@ -605,6 +604,5 @@ class Future : public fxl::RefCountedThreadSafe<Future<Result...>> {
 };
 
 }  // namespace modular
-}  // namespace fuchsia
 
 #endif  // LIB_ASYNC_CPP_FUTURE_H_
