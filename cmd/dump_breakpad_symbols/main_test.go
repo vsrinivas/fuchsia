@@ -4,12 +4,18 @@
 package main_test
 
 import (
+	"fmt"
 	"io/ioutil"
+	"os"
+	"path"
 	"path/filepath"
 	"testing"
 
 	cmd "fuchsia.googlesource.com/tools/cmd/dump_breakpad_symbols"
 )
+
+// TODO(kjharland): Inject an io.Writer in the main package to avoid writing to
+// disk in all of these tests.
 
 func TestParseFlags(t *testing.T) {
 	// Parses flags from the given command line args.
@@ -86,6 +92,91 @@ func TestParseFlags(t *testing.T) {
 			"-dump-syms-path=/path/to/dump_syms",
 		})
 	})
+}
+
+func TestDepFileOuptut(t *testing.T) {
+	// Create testing directory.  Use multiple input files to make sure each of
+	// them is included in the dep file.  Leave them empty to emphasize that
+	// their contents are not important.
+	dir := createDirectory(map[string]string{
+		"idsA.txt": "",
+		"idsB.txt": "",
+		// Empty dep file. This will get filled in by the command.
+		"deps.d": "",
+	})
+	defer os.RemoveAll(dir.Path)
+
+	inputFileAPath, err := filepath.Abs(dir.Entries["idsA.txt"].Name())
+	if err != nil {
+		t.Fatal(err)
+	}
+	inputFileBPath, err := filepath.Abs(dir.Entries["idsB.txt"].Name())
+	if err != nil {
+		t.Fatal(err)
+	}
+	depFilePath, err := filepath.Abs(dir.Entries["deps.d"].Name())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	cmd.RunMain([]string{
+		"dump_fuchsia_symbols",
+		"-dry-run",
+		"-out-dir=/out",
+		"-dump-syms-path=/path/to/dump_syms",
+		"-depfile", depFilePath,
+		"-summary-file", "summary.json",
+		inputFileAPath,
+		inputFileBPath,
+	})
+
+	depFile, err := ioutil.ReadFile(depFilePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expectedDepFile := fmt.Sprintf("summary.json: %s %s\n", inputFileAPath, inputFileBPath)
+	if string(depFile) != expectedDepFile {
+		t.Fatalf("expected dep file: %s. Got %s", expectedDepFile, depFile)
+	}
+}
+
+// TestingDirectory is a temporary directory that contains files for testing.
+//
+// Clients should always `defer os.RemoveAll(dir.Path)` when finished with this
+// object.
+type TestingDirectory struct {
+	Path    string
+	Entries map[string]*os.File
+}
+
+// Creates a directory from the given map of contents.
+//
+// The given contents should map the desired name of the file within the
+// directory to its contents.
+func createDirectory(entries map[string]string) *TestingDirectory {
+	directory, err := ioutil.TempDir("", "testing")
+	if err != nil {
+		panic(err)
+	}
+
+	basenameToPath := make(map[string]*os.File)
+	for basename, contents := range entries {
+		file, err := os.Create(path.Join(directory, basename))
+		if err != nil {
+			panic(err)
+		}
+		// Write the contents.
+		if _, err := file.Write([]byte(contents)); err != nil {
+			panic(err)
+		}
+		basenameToPath[basename] = file
+	}
+
+	return &TestingDirectory{
+		Path:    directory,
+		Entries: basenameToPath,
+	}
 }
 
 // Examples-as-tests below this line.  "Output:" at the end of each function
@@ -181,10 +272,6 @@ func ExampleSkipDuplicatePaths() {
 // Creates a temp file with the given name and contents for testing.
 //
 // Returns the absolute path to the file.
-//
-// TODO(kjharland): It would be nice to create an entire temp directory, and
-// create all files in that directory for testing. Then each test can
-// `defer dir.delete()` to clean up.
 func createTempFile(name, contents string) (absPath string) {
 	// Create the file.
 	file, err := ioutil.TempFile("", name)

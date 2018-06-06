@@ -47,9 +47,10 @@ $ dump_breakpad_symbols \
 
 // Options represents the command line options.
 type Options struct {
-	outdir       string
+	depFile      string
 	dryRun       bool
 	dumpSymsPath string
+	outdir       string
 	summaryFile  string
 }
 
@@ -96,6 +97,12 @@ func ParseFlags(args []string) (*flag.FlagSet, *Options, error) {
 		"Print the dump_syms commands to run, without running them, then exit. "+
 			"summary-file is always written to stdout during a dry-run.",
 	)
+	f.StringVar(&options.depFile, "depfile", "",
+		"Path to the ninja depfile to generate.  The file has the single line: "+
+			"`OUTPUT: INPUT1 INPUT2 ...` where OUTPUT is the value of -summary-file "+
+			"and INPUTX is the ids file in the same order it was provided on the "+
+			"command line. -summary-file must be provided with this flag. "+
+			"See `gn help depfile` for more information on depfiles.")
 	f.Parse(args[1:])
 
 	// Ensure at least one file was given.
@@ -109,6 +116,10 @@ func ParseFlags(args []string) (*flag.FlagSet, *Options, error) {
 	// Ensure output directory was given.
 	if options.outdir == "" {
 		return nil, nil, errors.New("-out-dir is required")
+	}
+	// Ensure summary file was provided if -depfile was provided.
+	if options.depFile != "" && options.summaryFile == "" {
+		return nil, nil, errors.New("must specify -summary-file with -depfile")
 	}
 
 	return f, &options, nil
@@ -190,6 +201,25 @@ func processIdsFiles(idsFiles []string, options *Options) (gotErrors bool) {
 		logError("failed to output summary %s: %v", options.summaryFile, err)
 		gotErrors = true
 		return
+	}
+
+	// Write the depfile if specified.
+	if options.depFile != "" {
+		if options.summaryFile == "" {
+			// If we get here there's a bug in the flag parsing.  Summary file
+			// should always be specified with Dep file.
+			logError("cannot print dep file without summary file path")
+			gotErrors = true
+			return
+		}
+
+		// Write the file.
+		depFileContents := []byte(
+			fmt.Sprintf("%s: %s\n", options.summaryFile, strings.Join(idsFiles, " ")))
+		if err := ioutil.WriteFile(options.depFile, depFileContents, 0644); err != nil {
+			logError("failed to write dep file %s: %v", options.depFile, err)
+			gotErrors = true
+		}
 	}
 
 	return
