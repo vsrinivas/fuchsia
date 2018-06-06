@@ -11,7 +11,10 @@
 
 __BEGIN_CDECLS;
 
-#define ETH_MAC_SIZE 6
+#define ETH_MAC_SIZE           (6)    // bytes
+#define ETH_MTU_SIZE           (1500) // bytes
+#define ETH_FRAME_MAX_HDR_SIZE (18)   // bytes. MAC Dest(6) + MAC Src(6) + 802.1Q tag(4) + Ethertype(2)
+#define ETH_FRAME_MAX_SIZE     (ETH_MTU_SIZE + ETH_FRAME_MAX_HDR_SIZE)
 
 // The ethermac interface supports both synchronous and asynchronous transmissions using the
 // proto->queue_tx() and ifc->complete_tx() methods.
