@@ -10,6 +10,7 @@ MODULE_TYPE := userapp
 MODULE_GROUP := usertest
 
 MODULE_SRCS += \
+    $(LOCAL_DIR)/main.cpp \
     $(LOCAL_DIR)/vmstress.cpp
 
 MODULE_LIBS := \

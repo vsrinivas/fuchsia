@@ -6,6 +6,7 @@
 #include <fbl/auto_call.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/unique_ptr.h>
+#include <lib/zx/thread.h>
 #include <lib/zx/vmar.h>
 #include <lib/zx/vmo.h>
 #include <zircon/device/sysinfo.h>
@@ -24,7 +25,27 @@
 #include <threads.h>
 #include <unistd.h>
 
-static fbl::atomic<bool> shutdown{false};
+#include "stress_test.h"
+
+class VmStressTest : public StressTest {
+public:
+    VmStressTest() = default;
+    virtual ~VmStressTest() = default;
+
+    virtual zx_status_t Start();
+    virtual zx_status_t Stop();
+
+private:
+    thrd_t threads_[16]{};
+
+    // used by the worker threads at runtime
+    fbl::atomic<bool> shutdown_{false};
+    zx::vmo vmo_{};
+};
+
+fbl::unique_ptr<StressTest> CreateVmStressTest() {
+    return fbl::unique_ptr<StressTest>{new VmStressTest()};
+}
 
 // VM Stresser
 //
@@ -38,17 +59,13 @@ static fbl::atomic<bool> shutdown{false};
 //
 // Will evolve over time to use multiple VMOs simultaneously along with cloned vmos.
 
-struct stress_thread_args {
-    zx::vmo vmo;
-};
-
-static int stress_thread_entry(void* arg_ptr) {
-    stress_thread_args* args = (stress_thread_args*)arg_ptr;
+namespace {
+int stress_thread(const fbl::atomic<bool>& shutdown, const zx::vmo& vmo) {
     zx_status_t status;
 
     uintptr_t ptr = 0;
     uint64_t size = 0;
-    status = args->vmo.get_size(&size);
+    status = vmo.get_size(&size);
     ZX_ASSERT(size > 0);
 
     // allocate a local buffer
@@ -62,14 +79,14 @@ static int stress_thread_entry(void* arg_ptr) {
         switch (r) {
         case 0 ... 9: // commit a range of the vmo
             printf("c");
-            status = args->vmo.op_range(ZX_VMO_OP_COMMIT, rand() % size, rand() % size, nullptr, 0);
+            status = vmo.op_range(ZX_VMO_OP_COMMIT, rand() % size, rand() % size, nullptr, 0);
             if (status != ZX_OK) {
                 fprintf(stderr, "failed to commit range, error %d (%s)\n", status, zx_status_get_string(status));
             }
             break;
         case 10 ... 19: // decommit a range of the vmo
             printf("d");
-            status = args->vmo.op_range(ZX_VMO_OP_DECOMMIT, rand() % size, rand() % size, nullptr, 0);
+            status = vmo.op_range(ZX_VMO_OP_DECOMMIT, rand() % size, rand() % size, nullptr, 0);
             if (status != ZX_OK) {
                 fprintf(stderr, "failed to decommit range, error %d (%s)\n", status, zx_status_get_string(status));
             }
@@ -85,7 +102,7 @@ static int stress_thread_entry(void* arg_ptr) {
             }
             // map it somewhere
             printf("m");
-            status = zx::vmar::root_self().map(0, args->vmo, 0, size,
+            status = zx::vmar::root_self().map(0, vmo, 0, size,
                                                ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE, &ptr);
             if (status != ZX_OK) {
                 fprintf(stderr, "failed to map range, error %d (%s)\n", status, zx_status_get_string(status));
@@ -94,7 +111,7 @@ static int stress_thread_entry(void* arg_ptr) {
         case 30 ... 59:
             // read from a random range of the vmo
             printf("r");
-            status = args->vmo.read(buf.get(), rand() % (size - bufsize), rand() % bufsize);
+            status = vmo.read(buf.get(), rand() % (size - bufsize), rand() % bufsize);
             if (status != ZX_OK) {
                 fprintf(stderr, "error reading from vmo\n");
             }
@@ -102,7 +119,7 @@ static int stress_thread_entry(void* arg_ptr) {
         case 60 ... 99:
             // write to a random range of the vmo
             printf("w");
-            status = args->vmo.write(buf.get(), rand() % (size - bufsize), rand() % bufsize);
+            status = vmo.write(buf.get(), rand() % (size - bufsize), rand() % bufsize);
             if (status != ZX_OK) {
                 fprintf(stderr, "error writing to vmo\n");
             }
@@ -115,134 +132,48 @@ static int stress_thread_entry(void* arg_ptr) {
     if (ptr) {
         status = zx::vmar::root_self().unmap(ptr, size);
     }
-    delete args;
 
     return 0;
 }
+} // namespace
 
-static int vmstress(zx_handle_t root_resource) {
-    zx_info_kmem_stats_t stats;
-    zx_status_t err = zx_object_get_info(
-        root_resource, ZX_INFO_KMEM_STATS, &stats, sizeof(stats), NULL, NULL);
-    if (err != ZX_OK) {
-        fprintf(stderr, "ZX_INFO_KMEM_STATS returns %d (%s)\n",
-                err, zx_status_get_string(err));
-        return err;
-    }
-
-    uint64_t free_bytes = stats.free_bytes;
+zx_status_t VmStressTest::Start() {
+    const uint64_t free_bytes = kmem_stats_.free_bytes;
 
     // scale the size of the VMO we create based on the size of memory in the system.
     // 1/64th the size of total memory generates a fairly sizeable vmo (16MB per 1GB)
-    uint64_t vmo_test_size = stats.free_bytes / 64;
+    const uint64_t vmo_test_size = free_bytes / 64;
 
     printf("starting stress test: free bytes %" PRIu64 "\n", free_bytes);
 
     printf("creating test vmo of size %" PRIu64 "\n", vmo_test_size);
 
     // create a test vmo
-    zx::vmo vmo;
-    auto status = zx::vmo::create(vmo_test_size, 0, &vmo);
+    auto status = zx::vmo::create(vmo_test_size, 0, &vmo_);
     if (status != ZX_OK)
         return status;
 
-    // map it
-    uintptr_t ptr[16];
-    for (auto& p : ptr) {
-        status = zx::vmar::root_self().map(0, vmo, 0, vmo_test_size,
-                                           ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE | ZX_VM_FLAG_MAP_RANGE, &p);
-        if (status != ZX_OK) {
-            fprintf(stderr, "mx_vmar_map returns %d (%s)\n", status, zx_status_get_string(status));
-            return status;
-        }
-
-        memset((void*)p, 0, vmo_test_size);
-    }
-
-    // clean up all the mappings on the way out
-    auto cleanup = fbl::MakeAutoCall([&] {
-        for (auto& p : ptr) {
-            zx::vmar::root_self().unmap(p, vmo_test_size);
-        }
-    });
-
     // create a pile of threads
     // TODO: scale based on the number of cores in the system and/or command line arg
-    thrd_t thread[16];
-    for (auto& t : thread) {
-        stress_thread_args* args = new stress_thread_args;
+    auto worker = [](void* arg) -> int {
+        VmStressTest* test = static_cast<VmStressTest*>(arg);
 
-        vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &args->vmo);
+        return stress_thread(test->shutdown_, test->vmo_);
+    };
 
-        thrd_create_with_name(&t, &stress_thread_entry, args, "vmstress_worker");
+    for (auto& t : threads_) {
+        thrd_create_with_name(&t, worker, this, "vmstress_worker");
     }
-
-    // sleep forever
-    for (;;)
-        zx_nanosleep(zx_deadline_after(ZX_SEC(10)));
-
-    shutdown.store(true);
-
-    auto cleanup2 = fbl::MakeAutoCall([&] {
-        for (auto& t : thread) {
-            thrd_join(t, nullptr);
-        }
-    });
 
     return ZX_OK;
 }
 
-static zx_status_t get_root_resource(zx_handle_t* root_resource) {
-    int fd = open("/dev/misc/sysinfo", O_RDWR);
-    if (fd < 0) {
-        fprintf(stderr, "ERROR: Cannot open sysinfo: %s (%d)\n",
-                strerror(errno), errno);
-        return ZX_ERR_NOT_FOUND;
+zx_status_t VmStressTest::Stop() {
+    shutdown_.store(true);
+
+    for (auto& t : threads_) {
+        thrd_join(t, nullptr);
     }
 
-    ssize_t n = ioctl_sysinfo_get_root_resource(fd, root_resource);
-    close(fd);
-    if (n != sizeof(*root_resource)) {
-        if (n < 0) {
-            fprintf(stderr, "ERROR: Cannot obtain root resource: %s (%zd)\n",
-                    zx_status_get_string((zx_status_t)n), n);
-            return (zx_status_t)n;
-        } else {
-            fprintf(stderr, "ERROR: Cannot obtain root resource (%zd != %zd)\n",
-                    n, sizeof(root_resource));
-            return ZX_ERR_NOT_FOUND;
-        }
-    }
     return ZX_OK;
-}
-
-static void print_help(char** argv, FILE* f) {
-    fprintf(f, "Usage: %s [options]\n", argv[0]);
-}
-
-int main(int argc, char** argv) {
-    int c;
-    while ((c = getopt(argc, argv, "h")) > 0) {
-        switch (c) {
-        case 'h':
-            print_help(argv, stderr);
-            return 0;
-        default:
-            fprintf(stderr, "Unknown option\n");
-            print_help(argv, stderr);
-            return 1;
-        }
-    }
-
-    zx_handle_t root_resource;
-    zx_status_t ret = get_root_resource(&root_resource);
-    if (ret != ZX_OK) {
-        return ret;
-    }
-
-    ret = vmstress(root_resource);
-
-    zx_handle_close(root_resource);
-
-    return ret;
 }
