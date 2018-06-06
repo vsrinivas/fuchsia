@@ -68,14 +68,17 @@ func FetchBlobFromRepo(r BlobRepo, blob string) (io.ReadCloser, int64, error) {
 		return nil, -1, err
 	}
 
-	if r, err := client.Get(srcAddr.String()); err == nil {
-		if r.StatusCode == 200 {
-			return r.Body, r.ContentLength, nil
-		}
-		r.Body.Close()
-		return nil, -1, fmt.Errorf("fetch failed with status %s", r.StatusCode)
+	resp, err := client.Get(srcAddr.String())
+	if err != nil {
+		return nil, -1, err
 	}
-	return nil, -1, err
+
+	if resp.StatusCode == 200 {
+		return resp.Body, resp.ContentLength, nil
+	} else {
+		resp.Body.Close()
+		return nil, -1, fmt.Errorf("fetch failed with status %s", resp.StatusCode)
+	}
 }
 
 func WriteBlob(name string, sz int64, con io.ReadCloser) error {
