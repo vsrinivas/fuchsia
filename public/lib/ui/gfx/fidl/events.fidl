@@ -9,7 +9,7 @@ library fuchsia.ui.gfx;
 const uint32 kMetricsEventMask = 1;
 
 // These are all of the types of events which can be reported by a |Session|.
-// Use |SetEventMaskCommand| to enable event delivery for a resource.
+// Use |SetEventMaskCmd| to enable event delivery for a resource.
 union Event {
   // Events which are controlled by a mask.
   MetricsEvent metrics;

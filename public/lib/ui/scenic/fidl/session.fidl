@@ -140,6 +140,6 @@ interface SessionListener {
   1: OnError(string error);
 
   // Called to deliver a batch of one or more events to the listener.
-  // Use |SetEventMaskCommand| to enable event delivery for a resource.
+  // Use |SetEventMaskCmd| to enable event delivery for a resource.
   2: OnEvent(vector<Event> events);
 };

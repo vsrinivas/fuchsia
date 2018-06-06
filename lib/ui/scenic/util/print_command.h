@@ -13,10 +13,10 @@ std::ostream& operator<<(std::ostream& stream,
                          const fuchsia::ui::gfx::Command& command);
 std::ostream& operator<<(
     std::ostream& stream,
-    const fuchsia::ui::gfx::CreateResourceCommand& command);
+    const fuchsia::ui::gfx::CreateResourceCmd& command);
 std::ostream& operator<<(
     std::ostream& stream,
-    const fuchsia::ui::gfx::SetRendererParamCommand& command);
+    const fuchsia::ui::gfx::SetRendererParamCmd& command);
 std::ostream& operator<<(std::ostream& stream,
                          const fuchsia::ui::gfx::Value::Tag& tag);
 

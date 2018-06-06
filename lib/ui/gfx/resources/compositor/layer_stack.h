@@ -33,11 +33,11 @@ class LayerStack : public Resource {
   // |session| is a pointer to the session that initiated the hit test.
   std::vector<Hit> HitTest(const escher::ray4& ray, Session* session) const;
 
-  // AddLayerCommand.
+  // AddLayerCmd.
   bool AddLayer(LayerPtr layer);
-  // RemoveLayerCommand.
+  // RemoveLayerCmd.
   bool RemoveLayer(LayerPtr layer);
-  // RemoveAllLayersCommand.
+  // RemoveAllLayersCmd.
   bool RemoveAllLayers();
 
   const std::unordered_set<LayerPtr>& layers() const { return layers_; }

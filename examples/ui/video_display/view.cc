@@ -219,7 +219,7 @@ View::View(async::Loop* loop, fuchsia::sys::StartupContext* startup_context,
   FXL_VLOG(4) << "Creating View";
   // Create an ImagePipe and pass one end to the Session:
   uint32_t image_pipe_id = session()->AllocResourceId();
-  session()->Enqueue(scenic_lib::NewCreateImagePipeCommand(
+  session()->Enqueue(scenic_lib::NewCreateImagePipeCmd(
       image_pipe_id, image_pipe_.NewRequest()));
 
   // Create a material that has our image pipe mapped onto it:

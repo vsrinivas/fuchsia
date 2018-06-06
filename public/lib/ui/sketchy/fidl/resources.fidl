@@ -4,7 +4,7 @@
 
 library fuchsia.ui.sketchy;
 
-// Specifies the type of a resource created via CreateResourceCommand, along with
+// Specifies the type of a resource created via CreateResourceCmd, along with
 // any other required data.
 union ResourceArgs {
   Stroke stroke;

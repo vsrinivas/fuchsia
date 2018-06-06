@@ -18,12 +18,14 @@ CanvasImpl::CanvasImpl(async::Loop* loop, scenic_lib::Session* session,
       shared_buffer_pool_(session, escher),
       stroke_manager_(escher) {}
 
-void CanvasImpl::Init(fidl::InterfaceHandle<::fuchsia::ui::sketchy::CanvasListener> listener) {
+void CanvasImpl::Init(
+    fidl::InterfaceHandle<::fuchsia::ui::sketchy::CanvasListener> listener) {
   // TODO(MZ-269): unimplemented.
   FXL_LOG(ERROR) << "Init: unimplemented.";
 }
 
-void CanvasImpl::Enqueue(fidl::VectorPtr<::fuchsia::ui::sketchy::Command> commands) {
+void CanvasImpl::Enqueue(
+    fidl::VectorPtr<::fuchsia::ui::sketchy::Command> commands) {
   // TODO: Use `AddAll()` when fidl::VectorPtr supports it.
   for (size_t i = 0; i < commands->size(); ++i) {
     commands_.push_back(std::move(commands->at(i)));
@@ -77,28 +79,28 @@ void CanvasImpl::RequestScenicPresent(uint64_t presentation_time) {
 bool CanvasImpl::ApplyCommand(::fuchsia::ui::sketchy::Command command) {
   switch (command.Which()) {
     case ::fuchsia::ui::sketchy::Command::Tag::kCreateResource:
-      return ApplyCreateResourceCommand(std::move(command.create_resource()));
+      return ApplyCreateResourceCmd(std::move(command.create_resource()));
     case ::fuchsia::ui::sketchy::Command::Tag::kReleaseResource:
-      return ApplyReleaseResourceCommand(std::move(command.release_resource()));
+      return ApplyReleaseResourceCmd(std::move(command.release_resource()));
     case ::fuchsia::ui::sketchy::Command::Tag::kSetPath:
-      return ApplySetPathCommand(std::move(command.set_path()));
+      return ApplySetPathCmd(std::move(command.set_path()));
     case ::fuchsia::ui::sketchy::Command::Tag::kAddStroke:
-      return ApplyAddStrokeCommand(std::move(command.add_stroke()));
+      return ApplyAddStrokeCmd(std::move(command.add_stroke()));
     case ::fuchsia::ui::sketchy::Command::Tag::kRemoveStroke:
-      return ApplyRemoveStrokeCommand(std::move(command.remove_stroke()));
+      return ApplyRemoveStrokeCmd(std::move(command.remove_stroke()));
     case ::fuchsia::ui::sketchy::Command::Tag::kBeginStroke:
-      return ApplyBeginStrokeCommand(std::move(command.begin_stroke()));
+      return ApplyBeginStrokeCmd(std::move(command.begin_stroke()));
     case ::fuchsia::ui::sketchy::Command::Tag::kExtendStroke:
-      return ApplyExtendStrokeCommand(std::move(command.extend_stroke()));
+      return ApplyExtendStrokeCmd(std::move(command.extend_stroke()));
     case ::fuchsia::ui::sketchy::Command::Tag::kFinishStroke:
-      return ApplyFinishStrokeCommand(std::move(command.finish_stroke()));
+      return ApplyFinishStrokeCmd(std::move(command.finish_stroke()));
     case ::fuchsia::ui::sketchy::Command::Tag::kClearGroup:
-      return ApplyClearGroupCommand(std::move(command.clear_group()));
+      return ApplyClearGroupCmd(std::move(command.clear_group()));
     case ::fuchsia::ui::sketchy::Command::Tag::kScenicImportResource:
-      return ApplyScenicImportResourceCommand(
+      return ApplyScenicImportResourceCmd(
           std::move(command.scenic_import_resource()));
     case ::fuchsia::ui::sketchy::Command::Tag::kScenicAddChild:
-      return ApplyScenicAddChildCommand(std::move(command.scenic_add_child()));
+      return ApplyScenicAddChildCmd(std::move(command.scenic_add_child()));
     default:
       FXL_DCHECK(false) << "Unsupported op: "
                         << static_cast<uint32_t>(command.Which());
@@ -106,8 +108,8 @@ bool CanvasImpl::ApplyCommand(::fuchsia::ui::sketchy::Command command) {
   }
 }
 
-bool CanvasImpl::ApplyCreateResourceCommand(
-    ::fuchsia::ui::sketchy::CreateResourceCommand create_resource) {
+bool CanvasImpl::ApplyCreateResourceCmd(
+    ::fuchsia::ui::sketchy::CreateResourceCmd create_resource) {
   switch (create_resource.args.Which()) {
     case ::fuchsia::ui::sketchy::ResourceArgs::Tag::kStroke:
       return CreateStroke(create_resource.id, create_resource.args.stroke());
@@ -121,24 +123,26 @@ bool CanvasImpl::ApplyCreateResourceCommand(
   }
 }
 
-bool CanvasImpl::CreateStroke(ResourceId id, ::fuchsia::ui::sketchy::Stroke stroke) {
+bool CanvasImpl::CreateStroke(ResourceId id,
+                              ::fuchsia::ui::sketchy::Stroke stroke) {
   return resource_map_.AddResource(
       id, fxl::MakeRefCounted<Stroke>(stroke_manager_.stroke_tessellator(),
                                       shared_buffer_pool_.factory()));
 }
 
-bool CanvasImpl::CreateStrokeGroup(ResourceId id,
-                                   ::fuchsia::ui::sketchy::StrokeGroup stroke_group) {
+bool CanvasImpl::CreateStrokeGroup(
+    ResourceId id, ::fuchsia::ui::sketchy::StrokeGroup stroke_group) {
   return resource_map_.AddResource(id,
                                    fxl::MakeRefCounted<StrokeGroup>(session_));
 }
 
-bool CanvasImpl::ApplyReleaseResourceCommand(
-    ::fuchsia::ui::sketchy::ReleaseResourceCommand command) {
+bool CanvasImpl::ApplyReleaseResourceCmd(
+    ::fuchsia::ui::sketchy::ReleaseResourceCmd command) {
   return resource_map_.RemoveResource(command.id);
 }
 
-bool CanvasImpl::ApplySetPathCommand(::fuchsia::ui::sketchy::SetStrokePathCommand command) {
+bool CanvasImpl::ApplySetPathCmd(
+    ::fuchsia::ui::sketchy::SetStrokePathCmd command) {
   auto stroke = resource_map_.FindResource<Stroke>(command.stroke_id);
   if (!stroke) {
     FXL_LOG(ERROR) << "No Stroke of id " << command.stroke_id << " was found!";
@@ -148,7 +152,8 @@ bool CanvasImpl::ApplySetPathCommand(::fuchsia::ui::sketchy::SetStrokePathComman
       stroke, std::make_unique<StrokePath>(std::move(command.path)));
 }
 
-bool CanvasImpl::ApplyAddStrokeCommand(::fuchsia::ui::sketchy::AddStrokeCommand command) {
+bool CanvasImpl::ApplyAddStrokeCmd(
+    ::fuchsia::ui::sketchy::AddStrokeCmd command) {
   auto stroke = resource_map_.FindResource<Stroke>(command.stroke_id);
   if (!stroke) {
     FXL_LOG(ERROR) << "No Stroke of id " << command.stroke_id << " was found!";
@@ -163,8 +168,8 @@ bool CanvasImpl::ApplyAddStrokeCommand(::fuchsia::ui::sketchy::AddStrokeCommand 
   return stroke_manager_.AddStrokeToGroup(stroke, group);
 }
 
-bool CanvasImpl::ApplyRemoveStrokeCommand(
-    ::fuchsia::ui::sketchy::RemoveStrokeCommand command) {
+bool CanvasImpl::ApplyRemoveStrokeCmd(
+    ::fuchsia::ui::sketchy::RemoveStrokeCmd command) {
   auto stroke = resource_map_.FindResource<Stroke>(command.stroke_id);
   if (!stroke) {
     FXL_LOG(ERROR) << "No Stroke of id " << command.stroke_id << " was found!";
@@ -179,7 +184,8 @@ bool CanvasImpl::ApplyRemoveStrokeCommand(
   return stroke_manager_.RemoveStrokeFromGroup(stroke, group);
 }
 
-bool CanvasImpl::ApplyBeginStrokeCommand(::fuchsia::ui::sketchy::BeginStrokeCommand command) {
+bool CanvasImpl::ApplyBeginStrokeCmd(
+    ::fuchsia::ui::sketchy::BeginStrokeCmd command) {
   auto stroke = resource_map_.FindResource<Stroke>(command.stroke_id);
   if (!stroke) {
     FXL_LOG(ERROR) << "No Stroke of id " << command.stroke_id << " was found!";
@@ -189,8 +195,8 @@ bool CanvasImpl::ApplyBeginStrokeCommand(::fuchsia::ui::sketchy::BeginStrokeComm
   return stroke_manager_.BeginStroke(stroke, {pos.x, pos.y});
 }
 
-bool CanvasImpl::ApplyExtendStrokeCommand(
-    ::fuchsia::ui::sketchy::ExtendStrokeCommand command) {
+bool CanvasImpl::ApplyExtendStrokeCmd(
+    ::fuchsia::ui::sketchy::ExtendStrokeCmd command) {
   auto stroke = resource_map_.FindResource<Stroke>(command.stroke_id);
   if (!stroke) {
     FXL_LOG(ERROR) << "No Stroke of id " << command.stroke_id << " was found!";
@@ -204,8 +210,8 @@ bool CanvasImpl::ApplyExtendStrokeCommand(
   return stroke_manager_.ExtendStroke(stroke, std::move(pts));
 }
 
-bool CanvasImpl::ApplyFinishStrokeCommand(
-    ::fuchsia::ui::sketchy::FinishStrokeCommand command) {
+bool CanvasImpl::ApplyFinishStrokeCmd(
+    ::fuchsia::ui::sketchy::FinishStrokeCmd command) {
   auto stroke = resource_map_.FindResource<Stroke>(command.stroke_id);
   if (!stroke) {
     FXL_LOG(ERROR) << "No Stroke of id " << command.stroke_id << " was found!";
@@ -214,7 +220,8 @@ bool CanvasImpl::ApplyFinishStrokeCommand(
   return stroke_manager_.FinishStroke(stroke);
 }
 
-bool CanvasImpl::ApplyClearGroupCommand(::fuchsia::ui::sketchy::ClearGroupCommand command) {
+bool CanvasImpl::ApplyClearGroupCmd(
+    ::fuchsia::ui::sketchy::ClearGroupCmd command) {
   auto group = resource_map_.FindResource<StrokeGroup>(command.group_id);
   if (!group) {
     FXL_LOG(ERROR) << "No Group of id " << command.group_id << " was found!";
@@ -223,8 +230,8 @@ bool CanvasImpl::ApplyClearGroupCommand(::fuchsia::ui::sketchy::ClearGroupComman
   return stroke_manager_.ClearGroup(group);
 }
 
-bool CanvasImpl::ApplyScenicImportResourceCommand(
-    fuchsia::ui::gfx::ImportResourceCommand import_resource) {
+bool CanvasImpl::ApplyScenicImportResourceCmd(
+    fuchsia::ui::gfx::ImportResourceCmd import_resource) {
   switch (import_resource.spec) {
     case fuchsia::ui::gfx::ImportSpec::NODE:
       return ScenicImportNode(import_resource.id,
@@ -239,8 +246,8 @@ bool CanvasImpl::ScenicImportNode(ResourceId id, zx::eventpair token) {
   return true;
 }
 
-bool CanvasImpl::ApplyScenicAddChildCommand(
-    fuchsia::ui::gfx::AddChildCommand add_child) {
+bool CanvasImpl::ApplyScenicAddChildCmd(
+    fuchsia::ui::gfx::AddChildCmd add_child) {
   auto import_node = resource_map_.FindResource<ImportNode>(add_child.node_id);
   auto stroke_group =
       resource_map_.FindResource<StrokeGroup>(add_child.child_id);

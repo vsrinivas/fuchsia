@@ -22,7 +22,7 @@ void Session::Enqueue(::fidl::VectorPtr<fuchsia::ui::scenic::Command> cmds) {
   for (auto& cmd : *cmds) {
     // TODO(SCN-710): This dispatch is far from optimal in terms of performance.
     // We need to benchmark it to figure out whether it matters.
-    System::TypeId type_id = SystemTypeForCommand(cmd);
+    System::TypeId type_id = SystemTypeForCmd(cmd);
     auto dispatcher = type_id != System::TypeId::kInvalid
                           ? dispatchers_[type_id].get()
                           : nullptr;

@@ -58,7 +58,7 @@ class Session : public fxl::RefCountedThreadSafe<Session> {
 
   // Return the number of resources that a client can identify via a
   // scenic::ResourceId. This number is decremented when a
-  // ReleaseResourceCommand is applied.  However, the resource may continue to
+  // ReleaseResourceCmd is applied.  However, the resource may continue to
   // exist if it is referenced by other resources.
   size_t GetMappedResourceCount() const { return resources_.size(); }
 
@@ -121,71 +121,71 @@ class Session : public fxl::RefCountedThreadSafe<Session> {
   // Called internally to initiate teardown.
   void BeginTearDown();
 
-  // Commanderation application functions, called by ApplyCommand().
-  bool ApplyCreateResourceCommand(
-      ::fuchsia::ui::gfx::CreateResourceCommand command);
-  bool ApplyReleaseResourceCommand(
-      ::fuchsia::ui::gfx::ReleaseResourceCommand command);
-  bool ApplyExportResourceCommand(
-      ::fuchsia::ui::gfx::ExportResourceCommand command);
-  bool ApplyImportResourceCommand(
-      ::fuchsia::ui::gfx::ImportResourceCommand command);
-  bool ApplyAddChildCommand(::fuchsia::ui::gfx::AddChildCommand command);
-  bool ApplyAddPartCommand(::fuchsia::ui::gfx::AddPartCommand command);
-  bool ApplyDetachCommand(::fuchsia::ui::gfx::DetachCommand command);
-  bool ApplyDetachChildrenCommand(
-      ::fuchsia::ui::gfx::DetachChildrenCommand command);
-  bool ApplySetTagCommand(::fuchsia::ui::gfx::SetTagCommand command);
-  bool ApplySetTranslationCommand(
-      ::fuchsia::ui::gfx::SetTranslationCommand command);
-  bool ApplySetScaleCommand(::fuchsia::ui::gfx::SetScaleCommand command);
-  bool ApplySetRotationCommand(::fuchsia::ui::gfx::SetRotationCommand command);
-  bool ApplySetAnchorCommand(::fuchsia::ui::gfx::SetAnchorCommand command);
-  bool ApplySetSizeCommand(::fuchsia::ui::gfx::SetSizeCommand command);
-  bool ApplySetShapeCommand(::fuchsia::ui::gfx::SetShapeCommand command);
-  bool ApplySetMaterialCommand(::fuchsia::ui::gfx::SetMaterialCommand command);
-  bool ApplySetClipCommand(::fuchsia::ui::gfx::SetClipCommand command);
-  bool ApplySetSpacePropertiesCommand(
-      ::fuchsia::ui::gfx::SetSpacePropertiesCommand command);
-  bool ApplySetHitTestBehaviorCommand(
-      ::fuchsia::ui::gfx::SetHitTestBehaviorCommand command);
-  bool ApplySetCameraCommand(::fuchsia::ui::gfx::SetCameraCommand command);
-  bool ApplySetCameraTransformCommand(
-      ::fuchsia::ui::gfx::SetCameraTransformCommand command);
-  bool ApplySetCameraProjectionCommand(
-      ::fuchsia::ui::gfx::SetCameraProjectionCommand command);
-  bool ApplySetStereoCameraProjectionCommand(
-      ::fuchsia::ui::gfx::SetStereoCameraProjectionCommand command);
-  bool ApplySetCameraPoseBufferCommand(
-      ::fuchsia::ui::gfx::SetCameraPoseBufferCommand command);
-  bool ApplySetLightColorCommand(
-      ::fuchsia::ui::gfx::SetLightColorCommand command);
-  bool ApplySetLightDirectionCommand(
-      ::fuchsia::ui::gfx::SetLightDirectionCommand command);
-  bool ApplyAddLightCommand(::fuchsia::ui::gfx::AddLightCommand command);
-  bool ApplyDetachLightCommand(::fuchsia::ui::gfx::DetachLightCommand command);
-  bool ApplyDetachLightsCommand(
-      ::fuchsia::ui::gfx::DetachLightsCommand command);
-  bool ApplySetTextureCommand(::fuchsia::ui::gfx::SetTextureCommand command);
-  bool ApplySetColorCommand(::fuchsia::ui::gfx::SetColorCommand command);
-  bool ApplyBindMeshBuffersCommand(
-      ::fuchsia::ui::gfx::BindMeshBuffersCommand command);
-  bool ApplyAddLayerCommand(::fuchsia::ui::gfx::AddLayerCommand command);
-  bool ApplyRemoveLayerCommand(::fuchsia::ui::gfx::RemoveLayerCommand command);
-  bool ApplyRemoveAllLayersCommand(
-      ::fuchsia::ui::gfx::RemoveAllLayersCommand command);
-  bool ApplySetLayerStackCommand(
-      ::fuchsia::ui::gfx::SetLayerStackCommand command);
-  bool ApplySetRendererCommand(::fuchsia::ui::gfx::SetRendererCommand command);
-  bool ApplySetRendererParamCommand(
-      ::fuchsia::ui::gfx::SetRendererParamCommand command);
-  bool ApplySetEventMaskCommand(
-      ::fuchsia::ui::gfx::SetEventMaskCommand command);
-  bool ApplySetLabelCommand(::fuchsia::ui::gfx::SetLabelCommand command);
-  bool ApplySetDisableClippingCommand(
-      ::fuchsia::ui::gfx::SetDisableClippingCommand command);
+  // Cmderation application functions, called by ApplyCommand().
+  bool ApplyCreateResourceCmd(
+      ::fuchsia::ui::gfx::CreateResourceCmd command);
+  bool ApplyReleaseResourceCmd(
+      ::fuchsia::ui::gfx::ReleaseResourceCmd command);
+  bool ApplyExportResourceCmd(
+      ::fuchsia::ui::gfx::ExportResourceCmd command);
+  bool ApplyImportResourceCmd(
+      ::fuchsia::ui::gfx::ImportResourceCmd command);
+  bool ApplyAddChildCmd(::fuchsia::ui::gfx::AddChildCmd command);
+  bool ApplyAddPartCmd(::fuchsia::ui::gfx::AddPartCmd command);
+  bool ApplyDetachCmd(::fuchsia::ui::gfx::DetachCmd command);
+  bool ApplyDetachChildrenCmd(
+      ::fuchsia::ui::gfx::DetachChildrenCmd command);
+  bool ApplySetTagCmd(::fuchsia::ui::gfx::SetTagCmd command);
+  bool ApplySetTranslationCmd(
+      ::fuchsia::ui::gfx::SetTranslationCmd command);
+  bool ApplySetScaleCmd(::fuchsia::ui::gfx::SetScaleCmd command);
+  bool ApplySetRotationCmd(::fuchsia::ui::gfx::SetRotationCmd command);
+  bool ApplySetAnchorCmd(::fuchsia::ui::gfx::SetAnchorCmd command);
+  bool ApplySetSizeCmd(::fuchsia::ui::gfx::SetSizeCmd command);
+  bool ApplySetShapeCmd(::fuchsia::ui::gfx::SetShapeCmd command);
+  bool ApplySetMaterialCmd(::fuchsia::ui::gfx::SetMaterialCmd command);
+  bool ApplySetClipCmd(::fuchsia::ui::gfx::SetClipCmd command);
+  bool ApplySetSpacePropertiesCmd(
+      ::fuchsia::ui::gfx::SetSpacePropertiesCmd command);
+  bool ApplySetHitTestBehaviorCmd(
+      ::fuchsia::ui::gfx::SetHitTestBehaviorCmd command);
+  bool ApplySetCameraCmd(::fuchsia::ui::gfx::SetCameraCmd command);
+  bool ApplySetCameraTransformCmd(
+      ::fuchsia::ui::gfx::SetCameraTransformCmd command);
+  bool ApplySetCameraProjectionCmd(
+      ::fuchsia::ui::gfx::SetCameraProjectionCmd command);
+  bool ApplySetStereoCameraProjectionCmd(
+      ::fuchsia::ui::gfx::SetStereoCameraProjectionCmd command);
+  bool ApplySetCameraPoseBufferCmd(
+      ::fuchsia::ui::gfx::SetCameraPoseBufferCmd command);
+  bool ApplySetLightColorCmd(
+      ::fuchsia::ui::gfx::SetLightColorCmd command);
+  bool ApplySetLightDirectionCmd(
+      ::fuchsia::ui::gfx::SetLightDirectionCmd command);
+  bool ApplyAddLightCmd(::fuchsia::ui::gfx::AddLightCmd command);
+  bool ApplyDetachLightCmd(::fuchsia::ui::gfx::DetachLightCmd command);
+  bool ApplyDetachLightsCmd(
+      ::fuchsia::ui::gfx::DetachLightsCmd command);
+  bool ApplySetTextureCmd(::fuchsia::ui::gfx::SetTextureCmd command);
+  bool ApplySetColorCmd(::fuchsia::ui::gfx::SetColorCmd command);
+  bool ApplyBindMeshBuffersCmd(
+      ::fuchsia::ui::gfx::BindMeshBuffersCmd command);
+  bool ApplyAddLayerCmd(::fuchsia::ui::gfx::AddLayerCmd command);
+  bool ApplyRemoveLayerCmd(::fuchsia::ui::gfx::RemoveLayerCmd command);
+  bool ApplyRemoveAllLayersCmd(
+      ::fuchsia::ui::gfx::RemoveAllLayersCmd command);
+  bool ApplySetLayerStackCmd(
+      ::fuchsia::ui::gfx::SetLayerStackCmd command);
+  bool ApplySetRendererCmd(::fuchsia::ui::gfx::SetRendererCmd command);
+  bool ApplySetRendererParamCmd(
+      ::fuchsia::ui::gfx::SetRendererParamCmd command);
+  bool ApplySetEventMaskCmd(
+      ::fuchsia::ui::gfx::SetEventMaskCmd command);
+  bool ApplySetLabelCmd(::fuchsia::ui::gfx::SetLabelCmd command);
+  bool ApplySetDisableClippingCmd(
+      ::fuchsia::ui::gfx::SetDisableClippingCmd command);
 
-  // Resource creation functions, called by ApplyCreateResourceCommand().
+  // Resource creation functions, called by ApplyCreateResourceCmd().
   bool ApplyCreateMemory(scenic::ResourceId id,
                          ::fuchsia::ui::gfx::MemoryArgs args);
   bool ApplyCreateImage(scenic::ResourceId id,

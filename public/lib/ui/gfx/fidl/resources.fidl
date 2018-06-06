@@ -195,10 +195,10 @@ struct DirectionalLightArgs {
 // Simple texture-mapped material.
 //
 // Commands that can be performed later:
-// SetTextureCommand will set the texture, or it can be left as zero (no
+// SetTextureCmd will set the texture, or it can be left as zero (no
 // texture).
 //   The texture can be an Image or ImagePipe.
-// SetColorCommand will set the color.
+// SetColorCmd will set the color.
 struct MaterialArgs {
   // TODO(SCN-694): Clean up dummy args.
   uint32 dummy = 0;
@@ -210,7 +210,7 @@ struct VariableArgs {
 };
 
 // Describes an exported resource that is to be imported by an
-// ImportResourceCommand.
+// ImportResourceCmd.
 //
 // NOTE: Currently just an enum of importable resource types, but may later be
 // expanded to express concepts like "meshes with a particular vertex format".

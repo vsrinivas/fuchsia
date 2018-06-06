@@ -46,7 +46,7 @@ class ResourceLinker {
   ~ResourceLinker();
 
   // Register a |resource| so that it can be imported into a different session
-  // via ImportResourceCommand with the peer of |export_token|.
+  // via ImportResourceCmd with the peer of |export_token|.
   //
   // Returns true if there are no errors.
   bool ExportResource(Resource* resource, zx::eventpair export_token);

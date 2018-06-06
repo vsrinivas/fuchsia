@@ -22,7 +22,7 @@ class MeshShape final : public Shape {
 
   MeshShape(Session* session, scenic::ResourceId id);
 
-  // These correspond to BindMeshBuffersCommand in commands.fidl.
+  // These correspond to BindMeshBuffersCmd in commands.fidl.
   bool BindBuffers(BufferPtr index_buffer,
                    ::fuchsia::ui::gfx::MeshIndexFormat index_format,
                    uint64_t index_offset, uint32_t index_count,

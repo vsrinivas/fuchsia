@@ -176,7 +176,7 @@ class Mesh final : public Shape {
   ~Mesh();
 
   // These arguments are documented in commands.fidl; see
-  // BindMeshBuffersCommand.
+  // BindMeshBuffersCmd.
   void BindBuffers(const Buffer& index_buffer,
                    fuchsia::ui::gfx::MeshIndexFormat index_format,
                    uint64_t index_offset, uint32_t index_count,

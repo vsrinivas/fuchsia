@@ -34,7 +34,7 @@ struct CircleArgs {
 };
 
 // A Mesh cannot be rendered until it has been bound to vertex/index buffers;
-// see BindMeshBuffersCommand.
+// see BindMeshBuffersCmd.
 struct MeshArgs {
     uint8 dummy;
 };

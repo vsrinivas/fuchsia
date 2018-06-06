@@ -25,7 +25,7 @@ class ResourceLinker;
 class Session;
 
 // Resource is the base class for all client-created objects (i.e. those that
-// are created in response to a CreateResourceCommand).
+// are created in response to a CreateResourceCmd).
 // TODO: use unsafe ref-counting for better performance (our architecture
 // guarantees that this is safe).
 class Resource : public fxl::RefCountedThreadSafe<Resource> {

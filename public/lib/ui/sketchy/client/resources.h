@@ -23,7 +23,7 @@ class Canvas;
 //
 // Resource is the base class for these other classes.
 // provides lifecycle management; the constructor enqueues a
-// CreateResourceCommand and the destructor enqueues a ReleaseResourceCommand.
+// CreateResourceCmd and the destructor enqueues a ReleaseResourceCmd.
 class Resource {
  public:
   Canvas* canvas() const { return canvas_; }
@@ -39,7 +39,7 @@ class Resource {
 
   // Enqueue an op in canvas to create a resource. Called in the constructor of
   // concrete resources to be created.
-  void EnqueueCreateResourceCommand(
+  void EnqueueCreateResourceCmd(
       ResourceId resource_id, ::fuchsia::ui::sketchy::ResourceArgs args) const;
 
   // Enqueue an op in canvas to import the resource. Called in the constructor
@@ -48,11 +48,11 @@ class Resource {
   // |token| Token that is exported by the local resource, with which the remote
   //     canvas can import.
   // |spec| Type of the resource.
-  void EnqueueImportResourceCommand(ResourceId resource_id, zx::eventpair token,
+  void EnqueueImportResourceCmd(ResourceId resource_id, zx::eventpair token,
                                     fuchsia::ui::gfx::ImportSpec spec) const;
 
   // Enqueue an op in canvas.
-  void EnqueueCommand(::fuchsia::ui::sketchy::Command command) const;
+  void EnqueueCmd(::fuchsia::ui::sketchy::Command command) const;
 
  private:
   Canvas* const canvas_;

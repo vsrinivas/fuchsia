@@ -40,7 +40,7 @@ void VkCubeView::OnSceneInvalidated(
   zx::channel::create(0, &endpoint0, &endpoint1);
 
   uint32_t image_pipe_id = session()->AllocResourceId();
-  session()->Enqueue(scenic_lib::NewCreateImagePipeCommand(
+  session()->Enqueue(scenic_lib::NewCreateImagePipeCmd(
       image_pipe_id,
       fidl::InterfaceRequest<fuchsia::images::ImagePipe>(std::move(endpoint1))));
   pane_material.SetTexture(image_pipe_id);

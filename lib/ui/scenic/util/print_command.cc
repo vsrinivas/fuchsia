@@ -105,8 +105,8 @@ std::ostream& operator<<(std::ostream& stream,
 
 std::ostream& operator<<(
     std::ostream& stream,
-    const fuchsia::ui::gfx::CreateResourceCommand& command) {
-  stream << "CreateResourceCommand(id:" << command.id << " ";
+    const fuchsia::ui::gfx::CreateResourceCmd& command) {
+  stream << "CreateResourceCmd(id:" << command.id << " ";
   switch (command.resource.Which()) {
     case ResourceArgs::Tag::kMemory:
       stream << "Memory";
@@ -192,8 +192,8 @@ std::ostream& operator<<(
 
 std::ostream& operator<<(
     std::ostream& stream,
-    const fuchsia::ui::gfx::SetRendererParamCommand& command) {
-  stream << "SetRendererParamCommand(id=" << command.renderer_id << " ";
+    const fuchsia::ui::gfx::SetRendererParamCmd& command) {
+  stream << "SetRendererParamCmd(id=" << command.renderer_id << " ";
   switch (command.param.Which()) {
     case RendererParam::Tag::kShadowTechnique:
       stream << "shadow_technique=";
@@ -230,15 +230,15 @@ std::ostream& operator<<(
 }
 
 std::ostream& operator<<(std::ostream& stream,
-                         const fuchsia::ui::gfx::SetTextureCommand& command) {
-  stream << "SetTextureCommand(id:" << command.material_id
+                         const fuchsia::ui::gfx::SetTextureCmd& command) {
+  stream << "SetTextureCmd(id:" << command.material_id
          << " texture: " << command.texture_id;
   return stream << ")";
 }
 
 std::ostream& operator<<(std::ostream& stream,
-                         const fuchsia::ui::gfx::SetColorCommand& command) {
-  stream << "SetColorCommand(id:" << command.material_id;
+                         const fuchsia::ui::gfx::SetColorCmd& command) {
+  stream << "SetColorCmd(id:" << command.material_id;
   return stream << ")";
 }
 

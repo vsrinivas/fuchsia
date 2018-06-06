@@ -72,7 +72,7 @@ View::View(async::Loop* loop, fuchsia::sys::StartupContext* startup_context,
   // Pass the other end of the ImagePipe to the Session, and wrap the
   // resulting resource in a Material.
   uint32_t image_pipe_id = session()->AllocResourceId();
-  session()->Enqueue(scenic_lib::NewCreateImagePipeCommand(
+  session()->Enqueue(scenic_lib::NewCreateImagePipeCmd(
       image_pipe_id, std::move(image_pipe_request)));
   scenic_lib::Material material(session());
   material.SetTexture(image_pipe_id);

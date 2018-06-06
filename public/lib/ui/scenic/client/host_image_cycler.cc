@@ -57,7 +57,7 @@ void HostImageCycler::ReleaseAndSwapImage() {
     reconfigured_ = false;
   }
 
-  // TODO(MZ-145): Define an |InvalidateCommand| on |Image| instead.
+  // TODO(MZ-145): Define an |InvalidateCmd| on |Image| instead.
   image_pool_.DiscardImage(image_index_);
   image_index_ = (image_index_ + 1) % kNumBuffers;
 }

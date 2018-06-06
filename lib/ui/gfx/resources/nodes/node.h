@@ -66,7 +66,7 @@ class Node : public Resource {
     reported_metrics_ = metrics;
   }
 
-  // |Resource|, DetachCommand.
+  // |Resource|, DetachCmd.
   bool Detach() override;
 
   Node* parent() const { return parent_; }
