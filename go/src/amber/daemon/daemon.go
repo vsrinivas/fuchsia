@@ -600,7 +600,6 @@ func WriteUpdateToPkgFS(data *GetResult) (string, error) {
 		return "", NewErrProcessPackage("couldn't truncate file destination %s", e)
 	}
 	written, err := io.Copy(dst, data)
-	// TODO(jmatt) validate file on disk, size, hash, etc
 	if err != nil {
 		return "", NewErrProcessPackage("couldn't write update to file %s", err)
 	}
