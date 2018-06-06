@@ -19,9 +19,9 @@ struct ViewHost::ViewData {
 
 ViewHost::ViewHost(
     fuchsia::ui::views_v1::ViewManagerPtr view_manager,
-    fidl::InterfaceRequest<fuchsia::ui::views_v1_token::ViewOwner> view_owner_request)
-    : BaseView(std::move(view_manager),
-               std::move(view_owner_request),
+    fidl::InterfaceRequest<fuchsia::ui::views_v1_token::ViewOwner>
+        view_owner_request)
+    : BaseView(std::move(view_manager), std::move(view_owner_request),
                "ViewHost"),
       container_node_(session()) {
   parent_node().AddChild(container_node_);
@@ -64,8 +64,7 @@ void ViewHost::OnChildUnavailable(uint32_t child_key) {
 }
 
 void ViewHost::UpdateScene() {
-  if ((!properties().display_metrics && !properties().view_layout) ||
-      views_.empty()) {
+  if (!properties().view_layout || views_.empty()) {
     return;
   }
 
