@@ -315,7 +315,7 @@ zx_status_t PortDispatcher::Dequeue(zx_time_t deadline, zx_port_packet_t* out_pa
 
         {
             ThreadDispatcher::AutoBlocked by(ThreadDispatcher::Blocked::PORT);
-            zx_status_t st = sema_.Wait(deadline, nullptr);
+            zx_status_t st = sema_.Wait(deadline);
             if (st != ZX_OK)
                 return st;
         }

@@ -26,18 +26,17 @@ void Semaphore::Post() {
         wait_queue_wake_one(&waitq_, true, ZX_OK);
 }
 
-zx_status_t Semaphore::Wait(zx_time_t deadline, bool* was_blocked) {
+zx_status_t Semaphore::Wait(zx_time_t deadline) {
     thread_t *current_thread = get_current_thread();
 
      // If there are no resources available then we need to
      // sit in the wait queue until sem_post adds some.
     zx_status_t ret = ZX_OK;
-    bool block;
 
     {
         AutoThreadLock lock;
         current_thread->interruptable = true;
-        block = --count_ < 0;
+        bool block = --count_ < 0;
 
         if (unlikely(block)) {
             ret = wait_queue_block(&waitq_, deadline);
@@ -50,7 +49,5 @@ zx_status_t Semaphore::Wait(zx_time_t deadline, bool* was_blocked) {
         current_thread->interruptable = false;
     }
 
-    if (was_blocked != nullptr)
-        *was_blocked = block;
     return ret;
 }

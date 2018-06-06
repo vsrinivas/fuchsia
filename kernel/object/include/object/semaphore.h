@@ -21,8 +21,7 @@ public:
 
     void Post();
 
-    // Returns whether we blocked via |was_blocked|.
-    zx_status_t Wait(zx_time_t deadline, bool* was_blocked);
+    zx_status_t Wait(zx_time_t deadline);
 
 private:
     int64_t count_;
