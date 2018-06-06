@@ -53,7 +53,6 @@ source_set("suggestion_engine_impl") {
     ":models",
     ":ranking",
     ":state",
-    ":timeline_stories_filter",
     ":timeline_stories_watcher",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/media/fidl",
@@ -206,19 +205,6 @@ source_set("models") {
   ]
 
   public_deps = [
-    "//peridot/public/lib:fidl",
-  ]
-}
-
-source_set("timeline_stories_filter") {
-  sources = [
-    "timeline_stories_filter.cc",
-    "timeline_stories_filter.h",
-  ]
-
-  deps = [
-    ":timeline_stories_watcher",
-    "//garnet/public/lib/fxl",
     "//peridot/public/lib:fidl",
   ]
 }

@@ -20,7 +20,6 @@
 #include "peridot/bin/suggestion_engine/proposal_publisher_impl.h"
 #include "peridot/bin/suggestion_engine/query_processor.h"
 #include "peridot/bin/suggestion_engine/ranked_suggestions_list.h"
-#include "peridot/bin/suggestion_engine/timeline_stories_filter.h"
 #include "peridot/bin/suggestion_engine/timeline_stories_watcher.h"
 #include "peridot/lib/bound_set/bound_set.h"
 
