@@ -47,7 +47,7 @@ void threads_test_wait_break_infinite_sleep_fn(void* arg) {
 #error Not supported on this platform.
 #endif
 
-    zx_nanosleep(UINT64_MAX);
+    zx_nanosleep(ZX_TIME_INFINITE);
 }
 
 void threads_test_busy_fn(void* arg) {
@@ -59,7 +59,7 @@ void threads_test_busy_fn(void* arg) {
 }
 
 void threads_test_infinite_sleep_fn(void* arg) {
-    zx_nanosleep(UINT64_MAX);
+    zx_nanosleep(ZX_TIME_INFINITE);
     __builtin_trap();
 }
 
