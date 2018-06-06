@@ -9,7 +9,11 @@
 namespace echo2 {
 
 EchoServerApp::EchoServerApp()
-    : context_(fuchsia::sys::StartupContext::CreateFromStartupInfo()) {
+    : EchoServerApp(fuchsia::sys::StartupContext::CreateFromStartupInfo()) {}
+
+EchoServerApp::EchoServerApp(
+    std::unique_ptr<fuchsia::sys::StartupContext> context)
+    : context_(std::move(context)) {
   context_->outgoing().AddPublicService<Echo>(
       [this](fidl::InterfaceRequest<Echo> request) {
         bindings_.AddBinding(this, std::move(request));

@@ -16,10 +16,12 @@ class EchoServerApp : public fidl::examples::echo::Echo {
   EchoServerApp();
   virtual void EchoString(fidl::StringPtr value, EchoStringCallback callback);
 
+ protected:
+  EchoServerApp(std::unique_ptr<fuchsia::sys::StartupContext> context);
+
  private:
   EchoServerApp(const EchoServerApp&) = delete;
   EchoServerApp& operator=(const EchoServerApp&) = delete;
-
   std::unique_ptr<fuchsia::sys::StartupContext> context_;
   fidl::BindingSet<Echo> bindings_;
 };
