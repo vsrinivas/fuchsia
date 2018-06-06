@@ -266,6 +266,8 @@ zx_status_t TdmOutputStream::ProcessStreamChannel(dispatcher::Channel* channel, 
         audio_proto::GetGainReq get_gain;
         audio_proto::SetGainReq set_gain;
         audio_proto::PlugDetectReq plug_detect;
+        audio_proto::GetUniqueIdReq get_unique_id;
+        audio_proto::GetStringReq get_string;
         // TODO(hollande): add more commands here
     } req;
 
@@ -289,6 +291,8 @@ zx_status_t TdmOutputStream::ProcessStreamChannel(dispatcher::Channel* channel, 
         HREQ(AUDIO_STREAM_CMD_GET_GAIN, get_gain, OnGetGainLocked, false);
         HREQ(AUDIO_STREAM_CMD_SET_GAIN, set_gain, OnSetGainLocked, true);
         HREQ(AUDIO_STREAM_CMD_PLUG_DETECT, plug_detect, OnPlugDetectLocked, true);
+        HREQ(AUDIO_STREAM_CMD_GET_UNIQUE_ID, get_unique_id, OnGetUniqueIdLocked, false);
+        HREQ(AUDIO_STREAM_CMD_GET_STRING, get_string, OnGetStringLocked, false);
     default:
         zxlogf(ERROR, "Unrecognized stream command 0x%04x\n", req.hdr.cmd);
         return ZX_ERR_NOT_SUPPORTED;
@@ -336,8 +340,9 @@ zx_status_t TdmOutputStream::ProcessRingBufferChannel(dispatcher::Channel* chann
 }
 #undef HREQ
 
-zx_status_t TdmOutputStream::OnGetStreamFormatsLocked(dispatcher::Channel* channel,
-                                                      const audio_proto::StreamGetFmtsReq& req) {
+zx_status_t TdmOutputStream::OnGetStreamFormatsLocked(
+        dispatcher::Channel* channel,
+        const audio_proto::StreamGetFmtsReq& req) const {
     ZX_DEBUG_ASSERT(channel != nullptr);
     uint16_t formats_sent = 0;
     audio_proto::StreamGetFmtsResp resp = { };
@@ -467,7 +472,7 @@ finished:
 }
 
 zx_status_t TdmOutputStream::OnGetGainLocked(dispatcher::Channel* channel,
-                                             const audio_proto::GetGainReq& req) {
+                                             const audio_proto::GetGainReq& req) const {
     ZX_DEBUG_ASSERT(channel != nullptr);
     audio_proto::GetGainResp resp = { };
 
@@ -523,8 +528,47 @@ zx_status_t TdmOutputStream::OnPlugDetectLocked(dispatcher::Channel* channel,
     return channel->Write(&resp, sizeof(resp));
 }
 
-zx_status_t TdmOutputStream::OnGetFifoDepthLocked(dispatcher::Channel* channel,
-                                                  const audio_proto::RingBufGetFifoDepthReq& req) {
+zx_status_t TdmOutputStream::OnGetUniqueIdLocked(dispatcher::Channel* channel,
+                                                 const audio_proto::GetUniqueIdReq& req) const {
+    audio_proto::GetUniqueIdResp resp;
+
+    static const audio_stream_unique_id_t spkr_id = AUDIO_STREAM_UNIQUE_ID_BUILTIN_SPEAKERS;
+    resp.hdr = req.hdr;
+    resp.unique_id = spkr_id;
+
+    return channel->Write(&resp, sizeof(resp));
+}
+
+zx_status_t TdmOutputStream::OnGetStringLocked(dispatcher::Channel* channel,
+                                               const audio_proto::GetStringReq& req) const {
+    audio_proto::GetStringResp resp;
+
+    resp.hdr = req.hdr;
+    resp.id = req.id;
+
+    const char* str;
+    switch (req.id) {
+        case AUDIO_STREAM_STR_ID_MANUFACTURER: str = "Gauss"; break;
+        case AUDIO_STREAM_STR_ID_PRODUCT:      str = "Builtin Speakers"; break;
+        default:                               str = nullptr; break;
+    }
+
+    if (str == nullptr) {
+        resp.result = ZX_ERR_NOT_FOUND;
+        resp.strlen = 0;
+    } else {
+        int res = snprintf(reinterpret_cast<char*>(resp.str), sizeof(resp.str), "%s", str);
+        ZX_DEBUG_ASSERT(res >= 0);
+        resp.result = ZX_OK;
+        resp.strlen = fbl::min<uint32_t>(res, sizeof(resp.str) - 1);
+    }
+
+    return channel->Write(&resp, sizeof(resp));
+}
+
+zx_status_t TdmOutputStream::OnGetFifoDepthLocked(
+        dispatcher::Channel* channel,
+        const audio_proto::RingBufGetFifoDepthReq& req) const {
     audio_proto::RingBufGetFifoDepthResp resp = { };
 
     resp.hdr = req.hdr;

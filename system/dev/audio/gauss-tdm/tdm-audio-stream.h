@@ -82,18 +82,25 @@ private:
     void DeactivateStreamChannel(const dispatcher::Channel* channel);
 
     zx_status_t OnGetStreamFormatsLocked(dispatcher::Channel* channel,
-                                         const audio_proto::StreamGetFmtsReq& req)
+                                         const audio_proto::StreamGetFmtsReq& req) const
         __TA_REQUIRES(lock_);
     zx_status_t OnSetStreamFormatLocked(dispatcher::Channel* channel,
                                         const audio_proto::StreamSetFmtReq& req,
                                         bool privileged)
         __TA_REQUIRES(lock_);
-    zx_status_t OnGetGainLocked(dispatcher::Channel* channel, const audio_proto::GetGainReq& req)
+    zx_status_t OnGetGainLocked(dispatcher::Channel* channel,
+                                const audio_proto::GetGainReq& req) const
         __TA_REQUIRES(lock_);
     zx_status_t OnSetGainLocked(dispatcher::Channel* channel, const audio_proto::SetGainReq& req)
         __TA_REQUIRES(lock_);
     zx_status_t OnPlugDetectLocked(dispatcher::Channel* channel,
                                    const audio_proto::PlugDetectReq& req) __TA_REQUIRES(lock_);
+    zx_status_t OnGetUniqueIdLocked(dispatcher::Channel* channel,
+                                    const audio_proto::GetUniqueIdReq& req) const
+        __TA_REQUIRES(lock_);
+    zx_status_t OnGetStringLocked(dispatcher::Channel* channel,
+                                  const audio_proto::GetStringReq& req) const
+        __TA_REQUIRES(lock_);
 
     // Thunks for dispatching ring buffer channel events.
     zx_status_t ProcessRingBufferChannel(dispatcher::Channel * channel);
@@ -106,8 +113,9 @@ private:
 
     // Stream command handlers
     // Ring buffer command handlers
-    zx_status_t OnGetFifoDepthLocked(dispatcher::Channel* channel,
-            const audio_proto::RingBufGetFifoDepthReq& req) __TA_REQUIRES(lock_);
+    zx_status_t OnGetFifoDepthLocked(
+            dispatcher::Channel* channel,
+            const audio_proto::RingBufGetFifoDepthReq& req) const __TA_REQUIRES(lock_);
     zx_status_t OnGetBufferLocked(dispatcher::Channel* channel,
             const audio_proto::RingBufGetBufferReq& req) __TA_REQUIRES(lock_);
     zx_status_t OnStartLocked(dispatcher::Channel* channel, const audio_proto::RingBufStartReq& req)
