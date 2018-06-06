@@ -1,0 +1,65 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/test.gni")
+
+source_set("use_aac_decoder_source_set") {
+  sources = [
+    "codec_buffer.cc",
+    "codec_buffer.h",
+    "codec_client.cc",
+    "codec_client.h",
+    "codec_output.cc",
+    "codec_output.h",
+    "use_aac_decoder.cc",
+    "use_aac_decoder.h",
+    "util.cc",
+    "util.h",
+  ]
+
+  deps = [
+    "//garnet/lib/media/wav_writer:wav_writer",
+
+    #"//garnet/public/lib/app/cpp",
+    "//zircon/public/lib/async-loop-cpp",
+  ]
+
+  public_deps = [
+    "//garnet/public/lib/media/fidl:media_codec",
+
+    # Because use_aac_decoder.h includes openssl/sha.h.
+    "//third_party/boringssl:crypto",
+  ]
+}
+
+executable("use_aac_decoder") {
+  sources = [
+    "main.cc",
+  ]
+
+  deps = [
+    ":use_aac_decoder_source_set",
+    "//garnet/public/lib/app/cpp",
+    "//zircon/public/lib/async-loop-cpp",
+  ]
+}
+
+# This test target uses the AAC decoder the same way as the example program and
+# then also verifies the output data (without writing an output file).
+test("test") {
+  testonly = true
+
+  output_name = "use_aac_decoder_test"
+
+  sources = [
+    "test/use_aac_decoder_test.cc",
+  ]
+
+  deps = [
+    ":use_aac_decoder_source_set",
+    "//garnet/bin/appmgr:appmgr_for_test",
+    "//garnet/public/lib/app/cpp",
+    "//zircon/public/lib/async-loop-cpp",
+  ]
+}

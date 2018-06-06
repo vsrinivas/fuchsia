@@ -18,6 +18,7 @@ package("media") {
     "simple_sine_sync",
     "tones",
     "tts",
+    "use_aac_decoder",
     "wav_record",
   ]
 
@@ -48,7 +49,36 @@ package("media") {
       name = "tts"
     },
     {
+      name = "use_aac_decoder"
+    },
+    {
       name = "wav_record"
+    },
+  ]
+}
+
+package("tests") {
+  testonly = true
+
+  # TODO(dustingreen) - do we need this to make a test package work?:
+  deprecated_system_image = true
+
+  package_name = "media_examples_tests"
+
+  deps = [
+    "//garnet/examples/media/use_aac_decoder:test",
+  ]
+
+  tests = [
+    {
+      name = "use_aac_decoder_test"
+    },
+  ]
+
+  resources = [
+    {
+      path = rebase_path("use_aac_decoder/test/test_audio.adts")
+      dest = "media_test_data/test_audio.adts"
     },
   ]
 }
