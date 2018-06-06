@@ -2,36 +2,16 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
 import("//peridot/build/executable_package.gni")
+import("//peridot/build/tests_package.gni")
 
-package("story_runner_unittests") {
-  testonly = true
-
+tests_package("story_runner_unittests") {
   deps = [
     ":chain_impl_unittest",
     ":key_generator_unittest",
     ":link_impl_unittest",
     ":session_storage_unittest",
     ":story_storage_unittest",
-  ]
-
-  tests = [
-    {
-      name = "chain_impl_unittest"
-    },
-    {
-      name = "key_generator_unittest"
-    },
-    {
-      name = "link_impl_unittest"
-    },
-    {
-      name = "session_storage_unittest"
-    },
-    {
-      name = "story_storage_unittest"
-    }
   ]
 }
 

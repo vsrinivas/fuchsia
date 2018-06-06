@@ -2,23 +2,12 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
+import("//peridot/build/tests_package.gni")
 
-package("maxwell_integration_tests") {
-  testonly = true
-
+tests_package("maxwell_integration_tests") {
   deps = [
     ":context_engine_test",
     ":suggestion_engine_test",
-  ]
-
-  tests = [
-    {
-      name = "context_engine_test"
-    },
-    {
-      name = "suggestion_engine_test"
-    },
   ]
 }
 

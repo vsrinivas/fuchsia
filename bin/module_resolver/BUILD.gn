@@ -4,6 +4,7 @@
 
 import("//build/package.gni")
 import("//peridot/build/executable_package.gni")
+import("//peridot/build/tests_package.gni")
 
 executable_package("module_resolver") {
   meta = [
@@ -31,17 +32,9 @@ executable_package("module_resolver") {
   ]
 }
 
-package("module_resolver_unittests") {
-  testonly = true
-
+tests_package("module_resolver_unittests") {
   deps = [
     ":local_module_resolver_unittest",
-  ]
-
-  tests = [
-    {
-      name = "local_module_resolver_unittest"
-    },
   ]
 }
 

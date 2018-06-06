@@ -2,8 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
 import("//peridot/build/executable_package.gni")
+import("//peridot/build/tests_package.gni")
 
 executable_package("suggestion_engine") {
   resources = [
@@ -66,25 +66,11 @@ source_set("suggestion_engine_impl") {
   ]
 }
 
-package("suggestion_engine_unittests") {
-  testonly = true
-
+tests_package("suggestion_engine_unittests") {
   deps = [
     ":decision_policy_unittest",
     ":filters_unittest",
     ":ranking_unittest",
-  ]
-
-  tests = [
-    {
-      name = "decision_policy_unittest"
-    },
-    {
-      name = "filters_unittest"
-    },
-    {
-      name = "ranking_unittest"
-    },
   ]
 }
 

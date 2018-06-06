@@ -2,8 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
 import("//peridot/build/executable_package.gni")
+import("//peridot/build/tests_package.gni")
 
 executable_package("context_engine") {
   sources = [
@@ -19,21 +19,10 @@ executable_package("context_engine") {
   ]
 }
 
-package("context_engine_unittests") {
-  testonly = true
-
+tests_package("context_engine_unittests") {
   deps = [
     ":context_index_unittest",
     ":context_repository_unittest",
-  ]
-
-  tests = [
-    {
-      name = "context_index_unittest"
-    },
-    {
-      name = "context_repository_unittest"
-    }
   ]
 }
 

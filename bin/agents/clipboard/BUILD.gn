@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//peridot/build/executable_package.gni")
+import("//peridot/build/tests_package.gni")
 
 executable_package("clipboard_agent") {
   sources = [
@@ -50,16 +51,8 @@ executable("clipboard_impl_unittest") {
   ]
 }
 
-package("clipboard_unittests") {
-  testonly = true
-
+tests_package("clipboard_unittests") {
   deps = [
     ":clipboard_impl_unittest",
-  ]
-
-  tests = [
-    {
-      name = "clipboard_impl_unittest"
-    },
   ]
 }

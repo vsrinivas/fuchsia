@@ -2,8 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
 import("//peridot/build/executable_package.gni")
+import("//peridot/build/tests_package.gni")
 import("//third_party/flatbuffers/flatbuffer.gni")
 
 flatbuffer("users") {
@@ -48,17 +48,9 @@ executable_package("device_runner") {
   ]
 }
 
-package("device_runner_unittests") {
-  testonly = true
-
+tests_package("device_runner_unittests") {
   deps = [
     ":user_controller_impl_unittest",
-  ]
-
-  tests = [
-    {
-      name = "user_controller_impl_unittest"
-    },
   ]
 }
 

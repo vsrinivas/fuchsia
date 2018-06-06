@@ -2,24 +2,14 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
+import("//peridot/build/tests_package.gni")
 
-package("puppet_master_unittests") {
-  testonly = true
-
+tests_package("puppet_master_unittests") {
   deps = [
-    ":puppet_master_impl_unittest",
     ":dispatch_story_command_executor_unittest",
-    "//peridot/bin/user_runner/puppet_master/command_runners:unittests",
-  ]
-
-  tests = [
-    {
-      name = "dispatch_story_command_executor_unittest"
-    },
-    {
-      name = "puppet_master_impl_unittest"
-    },
+    ":puppet_master_impl_unittest",
+    "command_runners:set_link_value_command_runner_unittest",
+    "command_runners:update_mod_command_runner_unittest",
   ]
 }
 

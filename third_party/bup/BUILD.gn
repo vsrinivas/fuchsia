@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
+import("//peridot/build/tests_package.gni")
 
 visibility = [ "//peridot/*" ]
 
@@ -17,9 +17,7 @@ source_set("bup") {
   ]
 }
 
-executable("unittests") {
-  output_name = "bup_unittests"
-
+executable("bupsplit_unittest") {
   testonly = true
 
   sources = [
@@ -32,17 +30,8 @@ executable("unittests") {
   ]
 }
 
-package("bup_tests") {
-  testonly = true
-  deprecated_system_image = true
-
+tests_package("bup_tests") {
   deps = [
-    ":unittests",
-  ]
-
-  tests = [
-    {
-      name = "bup_unittests"
-    },
+    ":bupsplit_unittest",
   ]
 }
