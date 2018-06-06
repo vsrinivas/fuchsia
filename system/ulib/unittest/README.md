@@ -9,6 +9,23 @@ and system/utest/core cannot use fdio. See system/utest/core/README.md.
 **If you want your unit tests to print to standard out, you must link your
 test executable to system/ulib/fdio!**
 
+## Rules for use of printf vs unittest_printf
+
+Tests are expected to *not* call `printf()`. By default we want tests
+to be less verbose, and use of printfs about means the output cannot
+not be disabled. This test harness can call `printf()`, but tests should not.
+Instead tests are expected to either call `unittest_printf()` or
+`unitest_printf_critical()`, the difference being that the former is
+controlled by the verbosity level, and the latter is not.
+Obviously `unittest_printf_critical()` is intended to be used *sparingly*.
+
+## Test verbosity
+
+Verbosity is controlled by passing `v=N` when invoking the test,
+where N has the range 0-9. The default is zero, which means
+`unittest_printf()` output does not appear. Any value above zero enables
+`unittest_printf()` output.
+
 ## Rules for parsing argv
 
 Unittest has a set of options that it recognizes.
