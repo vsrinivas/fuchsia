@@ -17,7 +17,6 @@ package("peridot_tests") {
   testonly = true
 
   deps = [
-    ":maxwell_unittests",
     "//peridot/lib:peridot_lib_unittests",
     "//peridot/public/lib:peridot_public_lib_unittests",
     "//peridot/tests/maxwell_integration",
@@ -26,9 +25,6 @@ package("peridot_tests") {
   tests = [
     {
       name = "context_engine_test"
-    },
-    {
-      name = "maxwell_unittests"
     },
     {
       name = "peridot_lib_unittests"
@@ -42,13 +38,3 @@ package("peridot_tests") {
   ]
 }
 
-executable("maxwell_unittests") {
-  testonly = true
-
-  deps = [
-    "//garnet/public/lib/test_runner/cpp:gtest_main",
-    "//peridot/bin/context_engine:unittests",
-    "//peridot/bin/module_resolver:unittests",
-    "//peridot/bin/suggestion_engine:unittests",
-  ]
-}

@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/package.gni")
 import("//peridot/build/executable_package.gni")
 
 executable_package("module_resolver") {
@@ -30,11 +31,17 @@ executable_package("module_resolver") {
   ]
 }
 
-group("unittests") {
+package("module_resolver_unittests") {
   testonly = true
 
   deps = [
     ":local_module_resolver_unittest",
+  ]
+
+  tests = [
+    {
+      name = "local_module_resolver_unittest"
+    },
   ]
 }
 
@@ -56,7 +63,7 @@ source_set("local_module_resolver") {
   ]
 }
 
-source_set("local_module_resolver_unittest") {
+executable("local_module_resolver_unittest") {
   testonly = true
 
   sources = [
@@ -71,6 +78,6 @@ source_set("local_module_resolver_unittest") {
     "//peridot/lib/testing:entity_resolver_fake",
     "//peridot/public/lib/entity/cpp:json",
     "//peridot/public/lib/module_resolver/cpp:formatting",
-    "//third_party/googletest:gtest",
+    "//third_party/googletest:gtest_main",
   ]
 }

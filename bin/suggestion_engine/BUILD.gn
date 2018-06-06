@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/package.gni")
 import("//peridot/build/executable_package.gni")
 
 executable_package("suggestion_engine") {
@@ -65,13 +66,25 @@ source_set("suggestion_engine_impl") {
   ]
 }
 
-group("unittests") {
+package("suggestion_engine_unittests") {
   testonly = true
 
   deps = [
     ":decision_policy_unittest",
     ":filters_unittest",
     ":ranking_unittest",
+  ]
+
+  tests = [
+    {
+      name = "decision_policy_unittest"
+    },
+    {
+      name = "filters_unittest"
+    },
+    {
+      name = "ranking_unittest"
+    },
   ]
 }
 
@@ -239,7 +252,7 @@ source_set("debug") {
   ]
 }
 
-source_set("decision_policy_unittest") {
+executable("decision_policy_unittest") {
   testonly = true
 
   sources = [
@@ -251,10 +264,11 @@ source_set("decision_policy_unittest") {
     ":decision_policies",
     "//garnet/public/lib/gtest",
     "//peridot/public/lib:fidl",
+    "//third_party/googletest:gtest_main",
   ]
 }
 
-source_set("filters_unittest") {
+executable("filters_unittest") {
   testonly = true
 
   sources = [
@@ -267,10 +281,11 @@ source_set("filters_unittest") {
     ":ranking",
     "//garnet/public/lib/gtest",
     "//peridot/public/lib:fidl",
+    "//third_party/googletest:gtest_main",
   ]
 }
 
-source_set("ranking_unittest") {
+executable("ranking_unittest") {
   testonly = true
 
   sources = [
@@ -288,6 +303,6 @@ source_set("ranking_unittest") {
     ":ranking",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/gtest",
-    "//third_party/googletest:gtest",
+    "//third_party/googletest:gtest_main",
   ]
 }
