@@ -61,9 +61,9 @@ Future<Null> main(List<String> args) async {
   print(new String.fromCharCodes(
       isolateResultString.codeUnits.map((int codeUnit) => '-'.codeUnitAt(0))));
   for (IsolateRef ref in isolates) {
-    // Using an explicit IP instead of the localhost hostname has proven to be
-    // inconsistent and spotty at best.
-    print('${ref.name}: http://localhost:${ref.dartVm.uri.port}');
+    // Replace the websocket protocol with http for browser-friendly links.
+    final Uri dartVmUri = ref.dartVm.uri.replace(scheme: 'http', path: '');
+    print('${ref.name}: $dartVmUri');
   }
 
   ProcessSignal.SIGINT.watch().listen((ProcessSignal signal) async {
