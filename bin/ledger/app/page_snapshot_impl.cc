@@ -117,7 +117,7 @@ void FillEntries(storage::PageStorage* page_storage,
 
   // Represents information shared between on_next and on_done callbacks.
   struct Context {
-    fidl::VectorPtr<EntryType> entries;
+    fidl::VectorPtr<EntryType> entries = fidl::VectorPtr<EntryType>::New(0);
     // The serialization size of all entries.
     size_t size = fidl_serialization::kVectorHeaderSize;
     // The number of handles used.
@@ -173,8 +173,8 @@ void FillEntries(storage::PageStorage* page_storage,
                                     callback = std::move(timed_callback)](
                                        storage::Status status) mutable {
     if (status != storage::Status::OK) {
-      FXL_LOG(ERROR) << "Error while reading.";
-      callback(Status::IO_ERROR, nullptr, nullptr);
+      FXL_LOG(ERROR) << "Error while reading: " << status;
+      callback(Status::IO_ERROR, fidl::VectorPtr<EntryType>::New(0), nullptr);
       return;
     }
     std::function<void(storage::Status,
@@ -185,8 +185,9 @@ void FillEntries(storage::PageStorage* page_storage,
                 std::vector<std::unique_ptr<const storage::Object>>
                     results) mutable {
               if (status != storage::Status::OK) {
-                FXL_LOG(ERROR) << "Error while reading.";
-                callback(Status::IO_ERROR, nullptr, nullptr);
+                FXL_LOG(ERROR) << "Error while reading: " << status;
+                callback(Status::IO_ERROR, fidl::VectorPtr<EntryType>::New(0),
+                         nullptr);
                 return;
               }
               FXL_DCHECK(context->entries->size() == results.size());
@@ -217,8 +218,8 @@ void FillEntries(storage::PageStorage* page_storage,
                 storage::Status read_status =
                     FillSingleEntry(*results[i], &entry);
                 if (read_status != storage::Status::OK) {
-                  callback(PageUtils::ConvertStatus(read_status), nullptr,
-                           nullptr);
+                  callback(PageUtils::ConvertStatus(read_status),
+                           fidl::VectorPtr<EntryType>::New(0), nullptr);
                   return;
                 }
                 size_t entry_size = ComputeEntrySize(entry);
@@ -230,7 +231,8 @@ void FillEntries(storage::PageStorage* page_storage,
               }
               if (i != results.size()) {
                 if (i == 0) {
-                  callback(Status::VALUE_TOO_LARGE, nullptr, nullptr);
+                  callback(Status::VALUE_TOO_LARGE,
+                           fidl::VectorPtr<EntryType>::New(0), nullptr);
                   return;
                 }
                 // We had to bail out early because the result would be too big
@@ -284,7 +286,8 @@ void PageSnapshotImpl::GetKeys(fidl::VectorPtr<uint8_t> key_start,
   // on_done callbacks.
   struct Context {
     // The result of GetKeys. New keys from on_next are appended to this array.
-    fidl::VectorPtr<fidl::VectorPtr<uint8_t>> keys;
+    fidl::VectorPtr<fidl::VectorPtr<uint8_t>> keys =
+        fidl::VectorPtr<fidl::VectorPtr<uint8_t>>::New(0);
     // The total size in number of bytes of the |keys| array.
     size_t size = fidl_serialization::kVectorHeaderSize;
     // If the |keys| array size exceeds the maximum allowed inlined data size,
@@ -313,7 +316,13 @@ void PageSnapshotImpl::GetKeys(fidl::VectorPtr<uint8_t> key_start,
       });
   auto on_done = fxl::MakeCopyable(
       [context = std::move(context),
-       callback = std::move(timed_callback)](storage::Status s) {
+       callback = std::move(timed_callback)](storage::Status status) {
+        if (status != storage::Status::OK) {
+          FXL_LOG(ERROR) << "Error while reading: " << status;
+          callback(Status::IO_ERROR,
+                   fidl::VectorPtr<fidl::VectorPtr<uint8_t>>::New(0), nullptr);
+          return;
+        }
         if (context->next_token) {
           callback(Status::PARTIAL_RESULT, std::move(context->keys),
                    std::move(context->next_token));
@@ -366,7 +375,7 @@ void PageSnapshotImpl::GetInline(fidl::VectorPtr<uint8_t> key,
           storage::Status status, storage::Entry entry) mutable {
         if (status != storage::Status::OK) {
           callback(PageUtils::ConvertStatus(status, Status::KEY_NOT_FOUND),
-                   nullptr);
+                   fidl::VectorPtr<uint8_t>::New(0));
           return;
         }
         PageUtils::ResolveObjectIdentifierAsStringView(
@@ -375,13 +384,14 @@ void PageSnapshotImpl::GetInline(fidl::VectorPtr<uint8_t> key,
             [callback = std::move(callback)](Status status,
                                              fxl::StringView data_view) {
               if (status != Status::OK) {
-                callback(status, nullptr);
+                callback(status, fidl::VectorPtr<uint8_t>::New(0));
                 return;
               }
               if (fidl_serialization::GetByteVectorSize(data_view.size()) +
                       fidl_serialization::kStatusEnumSize >
                   fidl_serialization::kMaxInlineDataSize) {
-                callback(Status::VALUE_TOO_LARGE, nullptr);
+                callback(Status::VALUE_TOO_LARGE,
+                         fidl::VectorPtr<uint8_t>::New(0));
                 return;
               }
               callback(status, convert::ToArray(data_view));

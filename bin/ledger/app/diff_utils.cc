@@ -199,7 +199,7 @@ void ComputeThreeWayDiff(
         callback) {
   struct Context {
     // The array to be returned through the callback.
-    fidl::VectorPtr<DiffEntry> changes;
+    fidl::VectorPtr<DiffEntry> changes = fidl::VectorPtr<DiffEntry>::New(0);
     // The serialization size of all entries.
     size_t fidl_size = fidl_serialization::kVectorHeaderSize;
     // The number of handles.
@@ -268,11 +268,13 @@ void ComputeThreeWayDiff(
                                        storage::Status status) mutable {
     if (status != storage::Status::OK) {
       FXL_LOG(ERROR) << "Unable to compute diff for PageChange: " << status;
-      callback(PageUtils::ConvertStatus(status), std::make_pair(nullptr, ""));
+      callback(PageUtils::ConvertStatus(status),
+               std::make_pair(fidl::VectorPtr<DiffEntry>::New(0), ""));
       return;
     }
     if (context->changes->empty()) {
-      callback(Status::OK, std::make_pair(nullptr, ""));
+      callback(Status::OK,
+               std::make_pair(fidl::VectorPtr<DiffEntry>::New(0), ""));
       return;
     }
 
@@ -288,7 +290,8 @@ void ComputeThreeWayDiff(
         FXL_LOG(ERROR)
             << "Error while reading changed values when computing PageChange: "
             << status;
-        callback(status, std::make_pair(nullptr, ""));
+        callback(status,
+                 std::make_pair(fidl::VectorPtr<DiffEntry>::New(0), ""));
         return;
       }
       FXL_DCHECK(results.size() == 3 * context->changes->size());

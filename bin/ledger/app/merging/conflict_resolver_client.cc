@@ -180,14 +180,15 @@ void ConflictResolverClient::GetDiff(
               Status status,
               std::pair<fidl::VectorPtr<DiffEntry>, std::string> page_change) {
             if (cancelled_) {
-              callback(Status::INTERNAL_ERROR, nullptr, nullptr);
+              callback(Status::INTERNAL_ERROR,
+                       fidl::VectorPtr<DiffEntry>::New(0), nullptr);
               Finalize(Status::INTERNAL_ERROR);
               return;
             }
             if (status != Status::OK) {
               FXL_LOG(ERROR) << "Unable to compute diff due to error " << status
                              << ", aborting.";
-              callback(status, nullptr, nullptr);
+              callback(status, fidl::VectorPtr<DiffEntry>::New(0), nullptr);
               Finalize(status);
               return;
             }

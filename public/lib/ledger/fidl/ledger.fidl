@@ -236,12 +236,12 @@ interface PageSnapshot {
   // Missing |LAZY| values can be retrieved over the network using Fetch().
   // The returned |entries| are sorted by |key|.
   1: GetEntries(vector<uint8>:256 key_start, Token? token)
-      -> (Status @status, vector<Entry>? entries, Token? next_token);
+      -> (Status @status, vector<Entry> entries, Token? next_token);
 
   // Same as |GetEntries()|. |VALUE_TOO_LARGE| is returned if a value does not
   // fit in a FIDL message.
   2: GetEntriesInline(vector<uint8>:256 key_start, Token? token)
-      -> (Status @status, vector<InlinedEntry>? entries,
+      -> (Status @status, vector<InlinedEntry> entries,
           Token? next_token);
 
   // Returns the keys of all entries in the page starting from the provided
@@ -254,7 +254,7 @@ interface PageSnapshot {
   // The returned |keys| are sorted. |status| will be |PARTIAL_RESULT| as long
   // as there are more results and |OK| once finished.
   3: GetKeys(vector<uint8>:256 key_start, Token? token)
-      -> (Status @status, vector<vector<uint8>:256>? keys,
+      -> (Status @status, vector<vector<uint8>:256> keys,
           Token? next_token);
 
   // Returns the value of a given key.
@@ -266,7 +266,7 @@ interface PageSnapshot {
   // Returns the value of a given key if it fits in a FIDL message.
   // |VALUE_TOO_LARGE| is returned if the value does not fit in a FIDL message.
   // See |Get()| for additional information.
-  5: GetInline(vector<uint8>:256 key) -> (Status @status, vector<uint8>? value);
+  5: GetInline(vector<uint8>:256 key) -> (Status @status, vector<uint8> value);
 
   // Fetches the value of a given key, over the network if not already present
   // locally. |NETWORK_ERROR| is returned if the download fails (e.g.: network
@@ -432,7 +432,7 @@ interface MergeResultProvider {
   // be used to retrieve the rest of the results by calling |GetFullDiff()|
   // with that token.
   1: GetFullDiff(Token? token)
-      -> (Status @status, vector<DiffEntry>? changes, Token? next_token);
+      -> (Status @status, vector<DiffEntry> changes, Token? next_token);
 
   // |GetConflictingDiff| returns the set of all key/value pairs that were
   // modified on both sides to different values, or deleted on one side and
@@ -440,7 +440,7 @@ interface MergeResultProvider {
   //
   // It behaves like |GetFullDiff| otherwise.
   2: GetConflictingDiff(Token? token)
-      -> (Status @status, vector<DiffEntry>? changes, Token? next_token);
+      -> (Status @status, vector<DiffEntry> changes, Token? next_token);
 
   // Once the result of the merge has been computed |Merge()| can be called with
   // all changes that resolve this conflict. If the result does not fit in a

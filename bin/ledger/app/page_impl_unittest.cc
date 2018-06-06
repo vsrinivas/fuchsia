@@ -1289,7 +1289,7 @@ TEST_F(PageImplTest, SnapshotGetNeedsFetch) {
   RunLoop();
 
   EXPECT_EQ(Status::NEEDS_FETCH, status);
-  EXPECT_FALSE(actual_inlined_value);
+  EXPECT_TRUE(actual_inlined_value->empty());
 }
 
 TEST_F(PageImplTest, SnapshotFetchPartial) {
