@@ -27,7 +27,7 @@ def _fuchsia_package_impl (ctx):
     manifest_file_contents=""
     for runfile in transitive_runfiles.to_list():
         if runfile.extension == '':
-            manifest_file_contents += "bin/{}={}\n".format(runfile.basename, runfile.path) 
+            manifest_file_contents += "bin/{}={}\n".format(runfile.basename, runfile.path)
         elif runfile.extension == 'so':
             manifest_file_contents += "lib/{}={}\n".format(runfile.basename, runfile.path)
 
@@ -82,5 +82,3 @@ fuchsia_package = rule(
         "pm": attr.label(executable=True, cfg="host", allow_files=True)
     },
 )
-
-

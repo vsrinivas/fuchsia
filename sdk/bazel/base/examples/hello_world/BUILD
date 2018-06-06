@@ -7,11 +7,11 @@ licenses(["unencumbered"])
 load("//fuchsia:fuchsia.bzl", "fuchsia_package")
 
 cc_binary(
-    name = "hello_world",
-    srcs = ["hello_world.cc"],
+  name = "hello_world",
+  srcs = ["hello_world.cc"],
 )
 
 fuchsia_package(
-	name = "hello_world_package",
-	deps = [":hello_world"],
+  name = "hello_world_package",
+  deps = [":hello_world"],
 )

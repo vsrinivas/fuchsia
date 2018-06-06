@@ -32,8 +32,10 @@ class Library(object):
         self.deps = []
         self.includes = []
 
+
 def remove_dashes(name):
     return name.replace("-", "_")
+
 
 class CppBuilder(Builder):
 
@@ -45,37 +47,50 @@ class CppBuilder(Builder):
         self.is_debug = debug
         self.tools = []
 
-        package_bzl_src = os.path.join(SCRIPT_DIR, 'package.bzl')
-        package_bzl_dest = os.path.join(self.output, 'build_defs', 'package.bzl')
-        self.make_dir(package_bzl_dest)
-        shutil.copyfile(package_bzl_src, package_bzl_dest)
-        open(os.path.join(self.output, 'build_defs', 'BUILD'),'w+')
 
-        if not overlay:
-            shutil.copytree(os.path.join(SCRIPT_DIR, 'examples'),
-                            os.path.join(self.output, 'examples'))
-
-        if self.is_debug:
-            workspace_filename = os.path.join(self.output, 'WORKSPACE')
-            self.make_dir(workspace_filename)
-            open(workspace_filename,'w+')
-            fuchsia_bzl_src = os.path.join(SCRIPT_DIR, 'fuchsia.bzl')
-            fuchsia_bzl_dest = os.path.join(self.output, 'fuchsia', 'fuchsia.bzl')
-            self.make_dir(fuchsia_bzl_dest)
-            shutil.copyfile(fuchsia_bzl_src, fuchsia_bzl_dest)
-            open(os.path.join(self.output, 'fuchsia', 'BUILD'),'w+')
+    def source(self, *args):
+        '''Builds a path in the current directory.'''
+        return os.path.join(SCRIPT_DIR, *args)
 
 
+    def dest(self, *args):
+        '''Builds a path in the output directory.'''
+        return os.path.join(self.output, *args)
+
+
+    def prepare(self):
+        if not self.is_overlay:
+            shutil.copytree(self.source('base'), self.dest())
+
+        if not self.is_debug:
+            return
+
+        # Add the tests.
+        shutil.copytree(self.source('tests'), self.dest('tests'))
+
+        # Turn the repository into a functional workspace.
+        workspace_filename = self.dest('WORKSPACE')
+        self.make_dir(workspace_filename)
+        with open(workspace_filename, 'w'):
+            pass
+        fuchsia_bzl_src = self.source('fuchsia.bzl')
+        fuchsia_bzl_dest = self.dest('fuchsia', 'fuchsia.bzl')
+        self.make_dir(fuchsia_bzl_dest)
+        shutil.copyfile(fuchsia_bzl_src, fuchsia_bzl_dest)
+        with open(self.dest('fuchsia', 'BUILD'), 'w'):
+            pass
 
 
     def finalize(self):
         self.write_tools_build_file()
+
 
     def write_tools_build_file(self):
         path = os.path.join(self.output, 'tools', 'BUILD')
         with open(path,'w') as build_file:
             template = Template(filename=os.path.join(SCRIPT_DIR, 'tools.mako'))
             build_file.write(template.render(data=self.tools))
+
 
     def install_cpp_atom(self, atom):
         '''Installs an atom from the "cpp" domain.'''
@@ -91,20 +106,21 @@ class CppBuilder(Builder):
 
 
     def write_build_file(self, library, type):
-
         if self.is_debug and type != 'sysroot':
-            library.deps.append("//pkg/system:system")
+            library.deps.append('//pkg/system:system')
 
         path = os.path.join(self.output, 'pkg', library.name, 'BUILD')
-        build_file = open(path,"w+")
+        build_file = open(path, 'w')
 
         # in debug mode we just make the sysroot another cc_library
+        # TODO: (sysroot vs. not sysroot) --> (common method) --> (sysroot vs. not sysroot)
         if type == 'sysroot' and not self.is_debug:
             template = Template(filename=os.path.join(SCRIPT_DIR, 'sysroot.mako'))
             build_file.write(template.render(data=library))
         else:
-            library.includes.append(".")
-            library.includes.append("./include")
+            # TODO: this include should not be needed.
+            library.includes.append('.')
+            library.includes.append('./include')
             template = Template(filename=os.path.join(SCRIPT_DIR, 'cc_library.mako'))
             build_file.write(template.render(data=library))
 
@@ -181,9 +197,8 @@ class CppBuilder(Builder):
                                 (extension, atom.id))
 
         for dep_id in atom.deps:
-            dep = os.path.join("//pkg/", dep_id.name)
+            dep = os.path.join("//pkg/", remove_dashes(dep_id.name))
             library.deps.append(dep)
-
 
         self.write_build_file(library, atom.tags['type'])
 

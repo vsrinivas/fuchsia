@@ -1,9 +1,15 @@
 Bazel SDK
 =========
 
-# Layout
+The Bazel SDK frontend produces a Bazel workspace.
 
-This document describes the standard layout of a Fuchsia Bazel SDK.
+# Directory structure
+
+The contents of `base/` are copied verbatim into the output SDK. The
+`generate.py` script then generates various files to produce a functional Bazel
+repository.
+
+# Output layout
 
 ```
 $root/
@@ -36,4 +42,13 @@ $root/
             docs/
             meta/
             BUILD
+```
+
+# Testing
+
+The `--debug` flag of the frontend script turns the generated repository into
+an actual Bazel workspace where build commands can be run. This also copied the
+contents of `tests/` into the workspace, so that smoke tests can be run with:
+```
+bazel build //tests/...
 ```
