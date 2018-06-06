@@ -4,4 +4,5 @@
 
 //! The device layer.
 
+pub mod arp;
 pub mod ethernet;

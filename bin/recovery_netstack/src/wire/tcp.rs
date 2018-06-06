@@ -661,7 +661,7 @@ mod tests {
 
     #[test]
     fn test_serialize_zeroes() {
-        // Test that TcpSegmentBuilder::build properly zeroes memory before
+        // Test that TcpSegmentBuilder::serialize properly zeroes memory before
         // serializing the header.
         let mut buf_0 = [0; 20];
         new_builder().serialize(

@@ -14,6 +14,7 @@
 //! caller does not need to worry about it. Any necessary conversions are
 //! performed under the hood.
 
+pub mod arp;
 pub mod ethernet;
 pub mod ipv4;
 pub mod tcp;

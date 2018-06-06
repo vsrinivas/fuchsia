@@ -19,6 +19,8 @@ pub enum NetstackError {
 pub enum ParseError {
     #[fail(display = "Operation is not supported")]
     NotSupported,
+    #[fail(display = "Operation was not expected in this context")]
+    NotExpected,
     #[fail(display = "Invalid checksum")]
     Checksum,
     #[fail(display = "Packet is not formatted properly")]

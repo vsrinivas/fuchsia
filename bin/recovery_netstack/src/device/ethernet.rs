@@ -4,6 +4,8 @@
 
 //! The Ethernet protocol.
 
+use zerocopy::{AsBytes, FromBytes, Unaligned};
+
 /// The broadcast MAC address.
 ///
 /// The broadcast MAC address, FF:FF:FF:FF:FF:FF, indicates that a frame should
@@ -12,7 +14,12 @@ pub const BROADCAST_MAC: Mac = Mac([0xFF; 6]);
 
 /// A media access control (MAC) address.
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
+#[repr(transparent)]
 pub struct Mac([u8; 6]);
+
+unsafe impl FromBytes for Mac {}
+unsafe impl AsBytes for Mac {}
+unsafe impl Unaligned for Mac {}
 
 impl Mac {
     /// Construct a new MAC address.

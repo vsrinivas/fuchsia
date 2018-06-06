@@ -219,7 +219,13 @@ impl<'a> EthernetFrame<&'a mut [u8]> {
     ///
     /// `serialize` also panics if the total frame length is less than the
     /// minimum of 60 bytes. The caller can guarantee that the frame will be
-    /// large enough by providing a body of at least `MIN_BODY_LEN` bytes.
+    /// large enough by providing a body of at least `MIN_BODY_LEN` bytes. If
+    /// there are not `MIN_BODY_LEN` bytes of payload, the payload can be padded
+    /// with zeroes in order to reach the minimum length. Note that, when using
+    /// padding, the receiver must be able to reconstruct the real payload
+    /// length simply by looking at the header of the payload (e.g., the IPv4
+    /// header, ARP header, etc). See the `DETAILS.md` file in the repository
+    /// root for more details.
     pub fn serialize(
         mut buffer: BufferAndRange<&'a mut [u8]>, src_mac: Mac, dst_mac: Mac, ethertype: EtherType,
     ) -> BufferAndRange<&'a mut [u8]> {
