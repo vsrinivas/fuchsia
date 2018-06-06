@@ -7,26 +7,18 @@
 
 #include <memory>
 
-#include <escher_demo/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 
 #include "garnet/examples/escher/common/demo_harness.h"
 #include "lib/app/cpp/startup_context.h"
 #include "lib/fidl/cpp/binding_set.h"
 
-class DemoHarnessFuchsia : public DemoHarness, public escher_demo::EscherDemo {
+class DemoHarnessFuchsia : public DemoHarness {
  public:
   DemoHarnessFuchsia(async::Loop* loop, WindowParams window_params);
 
   // |DemoHarness|
   void Run(Demo* demo) override;
-
-  // |EscherDemo|
-  void HandleKeyPress(uint8_t key) override;
-  void HandleTouchBegin(uint64_t touch_id, double xpos, double ypos) override;
-  void HandleTouchContinue(uint64_t touch_id, double xpos,
-                           double ypos) override;
-  void HandleTouchEnd(uint64_t touch_id, double xpos, double ypos) override;
 
   fuchsia::sys::StartupContext* startup_context() {
     return startup_context_.get();
@@ -53,7 +45,6 @@ class DemoHarnessFuchsia : public DemoHarness, public escher_demo::EscherDemo {
   std::unique_ptr<async::Loop> owned_loop_;
 
   std::unique_ptr<fuchsia::sys::StartupContext> startup_context_;
-  fidl::Binding<escher_demo::EscherDemo> escher_demo_binding_;
   std::unique_ptr<fuchsia::sys::ServiceProviderImpl> outgoing_services_;
 };
 
