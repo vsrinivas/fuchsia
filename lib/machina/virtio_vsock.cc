@@ -282,7 +282,9 @@ void VirtioVsock::OnSocketReady(async_t* async, async::Wait* wait,
 
   // If the socket is writable, wait on the Virtio transmit queue.
   if (signal->observed & ZX_SOCKET_WRITABLE) {
-    status = WaitOnQueueLocked(key, &writable_, &tx_stream_);
+    // TODO(tjdetwiler): Since space has been made available in the socket
+    // buffer, we should send a credit update to the guest to indicate transmits
+    // may resume.
   }
 
   if (status != ZX_OK) {
@@ -392,7 +394,7 @@ zx_status_t VirtioVsock::SendMessageForConnectionLocked(
       // We are sending a connection request, therefore we move to waiting
       // for response.
       conn->op = VIRTIO_VSOCK_OP_RESPONSE;
-      return WaitOnQueueLocked(key, &writable_, &tx_stream_);
+      return ZX_OK;
     }
     case VIRTIO_VSOCK_OP_RESPONSE:
     case VIRTIO_VSOCK_OP_CREDIT_UPDATE:
@@ -436,7 +438,7 @@ zx_status_t VirtioVsock::SendMessageForConnectionLocked(
         // ready to read/write.
         conn->op = VIRTIO_VSOCK_OP_RW;
       }
-      return WaitOnQueueLocked(key, &writable_, &tx_stream_);
+      return ZX_OK;
     default:
     case VIRTIO_VSOCK_OP_RST:
       // We are sending a connection reset, therefore remove the connection.
@@ -489,12 +491,6 @@ void VirtioVsock::Demux(zx_status_t status, uint16_t index) {
         status = AddConnectionLocked(key, std::move(new_conn));
         set_shutdown(header);
         FXL_LOG(ERROR) << "Connection does not exist";
-      } else if (writable_.find(key) == writable_.end()) {
-        // There was a write, but the socket is not ready. If the guest is
-        // respecting the credit update messages this should not happen.
-        FXL_LOG(ERROR) << "Received write to a socket that is not wriable!"
-                       << "Data will be lost.";
-        continue;
       } else if (conn->op == VIRTIO_VSOCK_OP_RW &&
                  conn->flags & VIRTIO_VSOCK_FLAG_SHUTDOWN_SEND) {
         // We are receiving a write, but send was shutdown.
@@ -568,7 +564,6 @@ void VirtioVsock::Demux(zx_status_t status, uint16_t index) {
             FXL_LOG(ERROR) << "Failed to write to connection socket " << status
                            << ". Attempted to write  " << len
                            << "b but only wrote " << actual << "b.";
-            writable_.erase(key);
             if (status == ZX_ERR_SHOULD_WAIT) {
               status = ZX_OK;
             }

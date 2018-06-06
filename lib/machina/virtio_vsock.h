@@ -143,7 +143,6 @@ class VirtioVsock
   mutable fbl::Mutex mutex_;
   ConnectionMap connections_ __TA_GUARDED(mutex_);
   ConnectionSet readable_ __TA_GUARDED(mutex_);
-  ConnectionSet writable_ __TA_GUARDED(mutex_);
   // NOTE(abdulla): We ignore the event queue, as we don't support VM migration.
 
   fidl::BindingSet<fuchsia::guest::SocketAcceptor> acceptor_bindings_;
