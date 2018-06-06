@@ -5,16 +5,11 @@
 #include "garnet/examples/ui/shadertoy/service/imagepipe_shadertoy.h"
 
 #include "garnet/examples/ui/shadertoy/service/renderer.h"
+#include "lib/escher/flib/fence.h"
 #include "lib/escher/util/fuchsia_utils.h"
 #include "lib/escher/vk/framebuffer.h"
 #include "lib/escher/vk/image.h"
 #include "lib/escher/vk/simple_image_factory.h"
-
-namespace {
-// TODO: Copied this constant from mozart/src/scene_manager/sync/fence.h.
-// Put it in a shared header file somewhere.
-constexpr zx_status_t kFenceSignalled = ZX_EVENT_SIGNALED;
-}  // namespace
 
 namespace shadertoy {
 
@@ -72,7 +67,7 @@ void ShadertoyStateForImagePipe::OnSetResolution() {
 
     // The release fences should be immediately ready to render, since they are
     // passed to DrawFrame() as the 'framebuffer_ready' semaphore.
-    release_semaphore_pair.second.signal(0u, kFenceSignalled);
+    release_semaphore_pair.second.signal(0u, escher::kFenceSignalled);
 
     auto image = factory.NewImage(escher_image_info);
     zx::vmo vmo = escher::ExportMemoryAsVmo(escher(), image->memory());
@@ -98,9 +93,9 @@ void ShadertoyStateForImagePipe::OnSetResolution() {
     image_info.stride = 0;  // inapplicable to GPU_OPTIMAL tiling.
     image_info.tiling = fuchsia::images::Tiling::GPU_OPTIMAL;
 
-    image_pipe_->AddImage(fb.image_pipe_id, std::move(image_info),
-                          std::move(vmo), fuchsia::images::MemoryType::VK_DEVICE_MEMORY,
-                          image->memory_offset());
+    image_pipe_->AddImage(
+        fb.image_pipe_id, std::move(image_info), std::move(vmo),
+        fuchsia::images::MemoryType::VK_DEVICE_MEMORY, image->memory_offset());
   }
 }
 
@@ -142,13 +137,13 @@ void ShadertoyStateForImagePipe::DrawFrame(uint64_t presentation_time,
                         fb.release_semaphore, fb.acquire_semaphore);
 
   // Present the image and request another frame.
-  auto present_image_callback =
-      [weak = weak_ptr_factory()->GetWeakPtr()](fuchsia::images::PresentationInfo info) {
-        // Need this cast in order to call protected member of superclass.
-        if (auto self = static_cast<ShadertoyStateForImagePipe*>(weak.get())) {
-          self->OnFramePresented(std::move(info));
-        }
-      };
+  auto present_image_callback = [weak = weak_ptr_factory()->GetWeakPtr()](
+                                    fuchsia::images::PresentationInfo info) {
+    // Need this cast in order to call protected member of superclass.
+    if (auto self = static_cast<ShadertoyStateForImagePipe*>(weak.get())) {
+      self->OnFramePresented(std::move(info));
+    }
+  };
 
   fidl::VectorPtr<zx::event> acquire_fences;
   acquire_fences.push_back(std::move(acquire_fence));

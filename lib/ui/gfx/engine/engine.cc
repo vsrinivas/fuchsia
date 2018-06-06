@@ -120,7 +120,7 @@ void Engine::ScheduleUpdate(uint64_t presentation_time) {
 
 std::unique_ptr<Swapchain> Engine::CreateDisplaySwapchain(Display* display) {
   FXL_DCHECK(!display->is_claimed());
-#if SCENE_MANAGER_VULKAN_SWAPCHAIN
+#if SCENIC_VULKAN_SWAPCHAIN
   return std::make_unique<VulkanDisplaySwapchain>(display, event_timestamper(),
                                                   escher());
 #else

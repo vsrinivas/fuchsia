@@ -5,8 +5,8 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/zx/channel.h>
 
-#include <fuchsia/ui/views_v1/cpp/fidl.h>
 #include <fuchsia/ui/policy/cpp/fidl.h>
+#include <fuchsia/ui/views_v1/cpp/fidl.h>
 #include "lib/app/cpp/startup_context.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/log_settings_command_line.h"
@@ -18,16 +18,19 @@ int main(int argc, const char** argv) {
   if (!fxl::SetLogSettingsFromCommandLine(command_line))
     return 1;
 
-  FXL_LOG(ERROR) << "BE ADVISED: The set_root_view tool takes the URL to an "
-                    "app that provided the ViewProvider interface and makes "
-                    "it's view the root view.";
-  FXL_LOG(ERROR) << "This tool is intended for testing and debugging purposes "
-                    "only and may cause problems if invoked incorrectly.";
-  FXL_LOG(ERROR) << "Do not invoke set_root_view if a view tree already exists "
-                    "(i.e. if any process that creates a view is already "
-                    "running).";
-  FXL_LOG(ERROR) << "If scene_manager is already running on your system you "
-                    "will probably want to kill it before invoking this tool.";
+  FXL_LOG(WARNING) << "BE ADVISED: The set_root_view tool takes the URL to an "
+                      "app that provided the ViewProvider interface and makes "
+                      "it's view the root view.";
+  FXL_LOG(WARNING)
+      << "This tool is intended for testing and debugging purposes "
+         "only and may cause problems if invoked incorrectly.";
+  FXL_LOG(WARNING)
+      << "Do not invoke set_root_view if a view tree already exists "
+         "(i.e. if any process that creates a view is already "
+         "running).";
+  FXL_LOG(WARNING)
+      << "If scenic is already running on your system you "
+         "will probably want to kill it before invoking this tool.";
 
   const auto& positional_args = command_line.positional_args();
   if (positional_args.empty()) {
@@ -63,7 +66,8 @@ int main(int argc, const char** argv) {
 
   // Ask the presenter to display it.
   auto presenter =
-      startup_context_->ConnectToEnvironmentService<fuchsia::ui::policy::Presenter>();
+      startup_context_
+          ->ConnectToEnvironmentService<fuchsia::ui::policy::Presenter>();
   presenter->Present(std::move(view_owner), nullptr);
 
   // Done!

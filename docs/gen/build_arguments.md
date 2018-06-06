@@ -416,7 +416,7 @@ No values for `target_cpu = "arm64"`.
 **Default value:** "//buildtools/linux-x64/rust/bin"
 
 
-### scene_manager_vulkan_swapchain
+### scenic_vulkan_swapchain
  0 - use normal swapchain
  1 - use vulkan swapchain, but wait for real display
  2 - use vulkan swapchain with fixed-size fake display
@@ -785,4 +785,3 @@ No values for `target_cpu = "arm64"`.
  Where to find Zircon's host-side tools that are run as part of the build.
 
 **Default value:** "//out/build-zircon/tools"
-

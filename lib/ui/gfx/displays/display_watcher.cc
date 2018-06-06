@@ -24,7 +24,7 @@ DisplayWatcher::~DisplayWatcher() = default;
 void DisplayWatcher::WaitForDisplay(DisplayReadyCallback callback) {
   FXL_DCHECK(!device_watcher_);
   // See declare_args() in lib/ui/gfx/BUILD.gn
-#if SCENE_MANAGER_VULKAN_SWAPCHAIN == 2
+#if SCENIC_VULKAN_SWAPCHAIN == 2
   // This is just for testing, so notify that there's a fake display.
   callback(fxl::UniqueFD(-1), ZX_HANDLE_INVALID, ZX_HANDLE_INVALID);
 #else

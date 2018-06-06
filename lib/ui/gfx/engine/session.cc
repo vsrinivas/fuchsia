@@ -58,8 +58,7 @@ constexpr std::array<::fuchsia::ui::gfx::Value::Tag, 2> kFloatValueTypes{
     {::fuchsia::ui::gfx::Value::Tag::kVector1,
      ::fuchsia::ui::gfx::Value::Tag::kVariableId}};
 
-// Converts the provided vector of scene_manager hits into a fidl array of
-// HitPtrs.
+// Converts the provided vector of Hits into a fidl array of HitPtrs.
 fidl::VectorPtr<::fuchsia::ui::gfx::Hit> WrapHits(
     const std::vector<Hit>& hits) {
   fidl::VectorPtr<::fuchsia::ui::gfx::Hit> wrapped_hits;
@@ -664,7 +663,7 @@ bool Session::ApplySetStereoCameraProjectionCmd(
   if (IsVariable(command.left_projection) ||
       IsVariable(command.right_projection)) {
     error_reporter_->ERROR()
-        << "scene_manager::Session::ApplySetStereoCameraProjectionOp(): "
+        << "scenic::gfx::Session::ApplySetStereoCameraProjectionOp(): "
            "unimplemented: variable properties.";
     return false;
   } else if (auto stereo_camera =

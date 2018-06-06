@@ -31,7 +31,7 @@ void DisplayManager::WaitForDefaultDisplay(fit::closure callback) {
   display_watcher_.WaitForDisplay(
       [this](fxl::UniqueFD fd, zx::channel dc_handle) {
   // See declare_args() in lib/ui/gfx/BUILD.gn
-#if SCENE_MANAGER_VULKAN_SWAPCHAIN == 2
+#if SCENIC_VULKAN_SWAPCHAIN == 2
         // This is just for testing, so notify that there's a fake display
         // that's 800x608. Without a display the scene manager won't try to draw
         // anything.
@@ -103,7 +103,7 @@ void DisplayManager::DisplaysChanged(
         fuchsia::ui::scenic::displayNotOwnedSignal);
 
     // See declare_args() in lib/ui/gfx/BUILD.gn.
-#if SCENE_MANAGER_VULKAN_SWAPCHAIN != 0
+#if SCENIC_VULKAN_SWAPCHAIN != 0
     // Vulkan swapchains don't necessarily support the concurrent
     // connection to the display controller.
     wait_.Cancel();
