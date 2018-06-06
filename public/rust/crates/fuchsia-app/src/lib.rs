@@ -44,7 +44,8 @@ pub mod client {
         let (proxy, server) = zx::Channel::create()?;
 
         let service_path = format!("/svc/{}", S::NAME);
-        fdio::service_connect(&service_path, server)?;
+        fdio::service_connect(&service_path, server)
+            .with_context(|_| format!("Error connecting to service path: {}", service_path))?;
 
         let proxy = async::Channel::from_channel(proxy)?;
         Ok(S::Proxy::from_channel(proxy))
