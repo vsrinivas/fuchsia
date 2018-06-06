@@ -174,7 +174,7 @@ zx_status_t AmlogicVideo::InitializeStreamBuffer() {
   DosSwReset0::Get().FromValue(1 << 4).WriteTo(dosbus_.get());
   DosSwReset0::Get().FromValue(0).WriteTo(dosbus_.get());
 
-  Reset0Register::Get().ReadFrom(cbus_.get());
+  Reset0Register::Get().ReadFrom(reset_.get());
   PowerCtlVld::Get().FromValue(1 << 4).WriteTo(dosbus_.get());
   uint32_t buffer_address =
       static_cast<uint32_t>(io_buffer_phys(&stream_buffer_));
@@ -212,10 +212,29 @@ zx_status_t AmlogicVideo::InitRegisters(zx_device_t* parent) {
 
   zx_status_t status =
       device_get_protocol(parent_, ZX_PROTOCOL_PLATFORM_DEV, &pdev_);
+
   if (status != ZX_OK) {
     DECODE_ERROR("Failed to get parent protocol");
     return ZX_ERR_NO_MEMORY;
   }
+  pdev_device_info_t info;
+  status = pdev_get_device_info(&pdev_, &info);
+  if (status != ZX_OK) {
+    DECODE_ERROR("pdev_get_device_info failed");
+    return status;
+  }
+  switch (info.pid) {
+    case PDEV_PID_AMLOGIC_S912:
+      device_type_ = DeviceType::kGXM;
+      break;
+    case PDEV_PID_AMLOGIC_S905D2:
+      device_type_ = DeviceType::kG12A;
+      break;
+    default:
+      DECODE_ERROR("Unknown soc pid: %d\n", info.pid);
+      return ZX_ERR_INVALID_ARGS;
+  }
+
   status = pdev_map_mmio_buffer(&pdev_, kCbus, ZX_CACHE_POLICY_UNCACHED_DEVICE,
                                 &mmio_cbus_);
   if (status != ZX_OK) {
@@ -268,6 +287,14 @@ zx_status_t AmlogicVideo::InitRegisters(zx_device_t* parent) {
   hiubus_ = std::make_unique<HiuRegisterIo>(io_buffer_virt(&mmio_hiubus_));
   aobus_ = std::make_unique<AoRegisterIo>(io_buffer_virt(&mmio_aobus_));
   dmc_ = std::make_unique<DmcRegisterIo>(io_buffer_virt(&mmio_dmc_));
+
+  int64_t reset_register_offset = 0;
+  if (device_type_ == DeviceType::kG12A) {
+    // Some portions of the cbus moved in newer versions (TXL and later).
+    reset_register_offset = (0x0401 - 0x1101);
+  }
+  auto cbus_base = static_cast<volatile uint32_t*>(io_buffer_virt(&mmio_cbus_));
+  reset_ = std::make_unique<ResetRegisterIo>(cbus_base + reset_register_offset);
 
   firmware_ = std::make_unique<FirmwareBlob>();
   status = firmware_->LoadFirmware(parent_);

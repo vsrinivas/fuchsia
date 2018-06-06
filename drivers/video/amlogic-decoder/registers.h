@@ -76,6 +76,11 @@ class DmcRegisterIo : public hwreg::RegisterIo {
   DmcRegisterIo(volatile void* mmio) : hwreg::RegisterIo(mmio) {}
 };
 
+class ResetRegisterIo : public hwreg::RegisterIo {
+ public:
+  ResetRegisterIo(volatile void* mmio) : hwreg::RegisterIo(mmio) {}
+};
+
 #define DEFINE_REGISTER(name, type, address)                           \
   class name : public TypedRegisterBase<type, name, uint32_t> {        \
    public:                                                             \
@@ -151,7 +156,7 @@ REGISTER_NAME(DmcReqCtrl, DmcRegisterIo, 0x0)
   DEF_BIT(13, vdec);
 };
 
-DEFINE_REGISTER(Reset0Register, CbusRegisterIo, 0x1101);
+DEFINE_REGISTER(Reset0Register, ResetRegisterIo, 0x1101);
 
 // clang-format on
 
