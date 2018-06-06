@@ -93,6 +93,14 @@ func WriteBlob(name string, sz int64, con io.ReadCloser) error {
 		return err
 	}
 
-	_, err = io.Copy(f, con)
-	return err
+	written, err := io.Copy(f, con)
+	if err != nil {
+		return err
+	}
+
+	if written != sz {
+		return fmt.Errorf("blob incomplete, only wrote %d out of %d bytes", written, sz)
+	}
+
+	return nil
 }

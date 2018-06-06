@@ -598,10 +598,14 @@ func WriteUpdateToPkgFS(data *GetResult) (string, error) {
 	if err != nil {
 		return "", NewErrProcessPackage("couldn't truncate file destination %s", e)
 	}
-	_, e = io.Copy(dst, data)
+	written, err := io.Copy(dst, data)
 	// TODO(jmatt) validate file on disk, size, hash, etc
-	if e != nil {
-		return "", NewErrProcessPackage("couldn't write update to file %s", e)
+	if err != nil {
+		return "", NewErrProcessPackage("couldn't write update to file %s", err)
+	}
+
+	if written != i.Size() {
+		return "", NewErrProcessPackage("pkg blob incomplete, only wrote %d out of %d bytes", written, i.Size())
 	}
 
 	return dstPath, nil
