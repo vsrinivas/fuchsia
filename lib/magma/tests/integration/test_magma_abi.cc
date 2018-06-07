@@ -107,23 +107,6 @@ public:
         magma_release_buffer(connection_, id);
     }
 
-    void WaitRendering()
-    {
-        ASSERT_NE(connection_, nullptr);
-
-        uint64_t size = PAGE_SIZE;
-        uint64_t id;
-
-        EXPECT_EQ(magma_create_buffer(connection_, size, &size, &id), 0);
-        EXPECT_EQ(magma_get_error(connection_), 0);
-
-        magma_wait_rendering(connection_, id);
-        EXPECT_EQ(magma_get_error(connection_), 0);
-
-        magma_release_buffer(connection_, id);
-        EXPECT_EQ(magma_get_error(connection_), 0);
-    }
-
     void BufferMap()
     {
         ASSERT_NE(connection_, nullptr);
@@ -278,12 +261,6 @@ TEST(MagmaAbi, NotificationChannel)
 {
     TestConnection test;
     test.NotificationChannel();
-}
-
-TEST(MagmaAbi, WaitRendering)
-{
-    TestConnection test;
-    test.WaitRendering();
 }
 
 TEST(MagmaAbi, BufferMap)

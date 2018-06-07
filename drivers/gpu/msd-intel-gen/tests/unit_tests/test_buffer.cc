@@ -264,34 +264,6 @@ public:
 
         EXPECT_EQ(buffer->shared_mapping_count(), 3u);
     }
-
-    static void WaitRendering()
-    {
-        auto buffer = MsdIntelBuffer::Create(PAGE_SIZE, "test");
-        uint32_t val = 0;
-
-        buffer->IncrementInflightCounter();
-        buffer->IncrementInflightCounter();
-
-        std::thread wait_thread(
-            [](MsdIntelBuffer* buffer, uint32_t* val) {
-                buffer->WaitRendering();
-                EXPECT_EQ(2u, *val);
-            },
-            buffer.get(), &val);
-
-        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-        ++val;
-        buffer->DecrementInflightCounter();
-
-        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-        ++val;
-        buffer->DecrementInflightCounter();
-
-        EXPECT_EQ(0u, buffer->inflight_counter());
-
-        wait_thread.join();
-    }
 };
 
 TEST(MsdIntelBuffer, CreateAndDestroy) { TestMsdIntelBuffer::CreateAndDestroy(); }
@@ -327,5 +299,3 @@ TEST(MsdIntelBuffer, OverlappedMapping)
 }
 
 TEST(MsdIntelBuffer, CachedMapping) { TestMsdIntelBuffer::CachedMapping(); }
-
-TEST(MsdIntelBuffer, WaitRendering) { TestMsdIntelBuffer::WaitRendering(); }

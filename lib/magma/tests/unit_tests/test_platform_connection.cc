@@ -85,11 +85,6 @@ public:
         ipc_connection_->ExecuteCommandBuffer(handle, test_context_id);
         EXPECT_EQ(ipc_connection_->GetError(), 0);
     }
-    void TestWaitRendering()
-    {
-        ipc_connection_->WaitRendering(test_buffer_id);
-        EXPECT_EQ(ipc_connection_->GetError(), 0);
-    }
 
     void TestGetError()
     {
@@ -221,12 +216,6 @@ public:
         auto buffer = magma::PlatformBuffer::Import(command_buffer_handle);
         EXPECT_EQ(buffer->id(), TestPlatformConnection::test_buffer_id);
         EXPECT_EQ(context_id, TestPlatformConnection::test_context_id);
-        TestPlatformConnection::test_complete = true;
-        return MAGMA_STATUS_OK;
-    }
-    magma::Status WaitRendering(uint64_t buffer_id) override
-    {
-        EXPECT_EQ(buffer_id, TestPlatformConnection::test_buffer_id);
         TestPlatformConnection::test_complete = true;
         return MAGMA_STATUS_OK;
     }
@@ -373,13 +362,6 @@ TEST(PlatformConnection, ExecuteCommandBuffer)
     auto Test = TestPlatformConnection::Create();
     ASSERT_NE(Test, nullptr);
     Test->TestExecuteCommandBuffer();
-}
-
-TEST(PlatformConnection, WaitRendering)
-{
-    auto Test = TestPlatformConnection::Create();
-    ASSERT_NE(Test, nullptr);
-    Test->TestWaitRendering();
 }
 
 TEST(PlatformConnection, MapUnmapBuffer)

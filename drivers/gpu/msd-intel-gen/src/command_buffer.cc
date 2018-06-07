@@ -58,10 +58,6 @@ CommandBuffer::CommandBuffer(std::shared_ptr<MsdIntelBuffer> abi_cmd_buf,
 
 CommandBuffer::~CommandBuffer()
 {
-    for (auto res : exec_resources_) {
-        res.buffer->DecrementInflightCounter();
-    }
-
     if (!prepared_to_execute_)
         return;
 
@@ -117,7 +113,6 @@ bool CommandBuffer::InitializeResources(
     for (uint32_t i = 0; i < num_resources(); i++) {
         exec_resources_.emplace_back(
             ExecResource{buffers[i], resource(i).offset(), resource(i).length()});
-        buffers[i]->IncrementInflightCounter();
         {
             TRACE_DURATION("magma", "CommitPages");
             uint64_t num_pages = AddressSpace::GetMappedSize(resource(i).length()) >> PAGE_SHIFT;

@@ -14,7 +14,7 @@
 
 class TestMultithread {
 public:
-    static std::unique_ptr<TestMultithread> Create(bool wait)
+    static std::unique_ptr<TestMultithread> Create()
     {
         auto driver = MagmaDriver::Create();
         if (!driver)
@@ -25,12 +25,11 @@ public:
             return DRETP(nullptr, "no device");
 
         return std::make_unique<TestMultithread>(
-            wait, std::move(driver), std::shared_ptr<MagmaSystemDevice>(std::move(device)));
+            std::move(driver), std::shared_ptr<MagmaSystemDevice>(std::move(device)));
     }
 
-    TestMultithread(bool wait, std::unique_ptr<MagmaDriver> driver,
-                    std::shared_ptr<MagmaSystemDevice> device)
-        : wait_(wait), driver_(std::move(driver)), device_(std::move(device))
+    TestMultithread(std::unique_ptr<MagmaDriver> driver, std::shared_ptr<MagmaSystemDevice> device)
+        : driver_(std::move(driver)), device_(std::move(device))
     {
     }
 
@@ -84,9 +83,6 @@ public:
             EXPECT_TRUE(InitCommandBuffer(command_buffer.get(), id));
 
             EXPECT_TRUE(context->ExecuteCommandBuffer(std::move(command_buffer)));
-
-            if (wait_)
-                EXPECT_TRUE(connection->WaitRendering(id));
         }
     }
 
@@ -132,22 +128,14 @@ public:
     }
 
 private:
-    const bool wait_;
     std::unique_ptr<MagmaDriver> driver_;
     std::shared_ptr<MagmaSystemDevice> device_;
     uint32_t context_id_ = 0;
 };
 
-TEST(MagmaSystem, MultithreadWithWait)
+TEST(MagmaSystem, Multithread)
 {
-    auto test = TestMultithread::Create(true);
-    ASSERT_NE(test, nullptr);
-    test->Test(2);
-}
-
-TEST(MagmaSystem, MultithreadNoWait)
-{
-    auto test = TestMultithread::Create(false);
+    auto test = TestMultithread::Create();
     ASSERT_NE(test, nullptr);
     test->Test(2);
 }

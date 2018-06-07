@@ -102,8 +102,6 @@ void magma_execute_immediate_commands(struct magma_connection_t* connection, uin
                                       uint64_t command_count,
                                       struct magma_system_inline_command_buffer* command_buffers);
 
-void magma_wait_rendering(struct magma_connection_t* connection, magma_buffer_t buffer);
-
 // makes the buffer returned by |buffer| able to be imported via |buffer_handle_out|
 magma_status_t magma_export(struct magma_connection_t* connection, magma_buffer_t buffer,
                             uint32_t* buffer_handle_out);

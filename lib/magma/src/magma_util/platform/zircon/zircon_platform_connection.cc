@@ -28,7 +28,6 @@ enum OpCode {
     CreateContext,
     DestroyContext,
     ExecuteCommandBuffer,
-    WaitRendering,
     GetError,
     MapBufferGpu,
     UnmapBufferGpu,
@@ -76,12 +75,6 @@ struct ExecuteCommandBufferOp {
     const OpCode opcode = ExecuteCommandBuffer;
     static constexpr uint32_t kNumHandles = 1;
     uint32_t context_id;
-} __attribute__((packed));
-
-struct WaitRenderingOp {
-    const OpCode opcode = WaitRendering;
-    static constexpr uint32_t kNumHandles = 0;
-    uint64_t buffer_id;
 } __attribute__((packed));
 
 struct ExecuteImmediateCommandsOp {
@@ -289,10 +282,6 @@ public:
                     OpCast<ExecuteCommandBufferOp>(bytes, actual_bytes, handles, actual_handles),
                     handles);
                 break;
-            case OpCode::WaitRendering:
-                success = WaitRendering(
-                    OpCast<WaitRenderingOp>(bytes, actual_bytes, handles, actual_handles));
-                break;
             case OpCode::ExecuteImmediateCommands:
                 success = ExecuteImmediateCommands(OpCast<ExecuteImmediateCommandsOp>(
                     bytes, actual_bytes, handles, actual_handles));
@@ -485,21 +474,6 @@ private:
         return true;
     }
 
-    bool WaitRendering(WaitRenderingOp* op)
-    {
-        DLOG("Operation: WaitRendering");
-        if (!op)
-            return DRETF(false, "malformed message");
-        magma::Status status = delegate_->WaitRendering(op->buffer_id);
-        if (status.get() == MAGMA_STATUS_CONTEXT_KILLED)
-            ShutdownEvent()->Signal();
-        if (!status)
-            SetError(MAGMA_STATUS_INTERNAL_ERROR);
-        if (!WriteError(0))
-            return false;
-        return true;
-    }
-
     bool ExecuteImmediateCommands(ExecuteImmediateCommandsOp* op)
     {
         DLOG("Operation: ExecuteImmediateCommands");
@@ -682,26 +656,6 @@ public:
         if (result != MAGMA_STATUS_OK) {
             SetError(result);
         }
-    }
-
-    void WaitRendering(uint64_t buffer_id) override
-    {
-        WaitRenderingOp op;
-        op.buffer_id = buffer_id;
-        magma_status_t result = channel_write(&op, sizeof(op), nullptr, 0);
-        if (result != MAGMA_STATUS_OK) {
-            SetError(result);
-            return;
-        }
-        magma_status_t error;
-        result = WaitError(&error);
-        if (result != 0) {
-            SetError(result);
-            return;
-        }
-
-        if (error != 0)
-            SetError(error);
     }
 
     void ExecuteImmediateCommands(uint32_t context_id, uint64_t command_count,

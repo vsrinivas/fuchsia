@@ -29,11 +29,6 @@ magma_status_t msd_context_execute_immediate_commands(msd_context_t* ctx, uint64
     return MAGMA_STATUS_UNIMPLEMENTED;
 }
 
-magma_status_t msd_connection_wait_rendering(msd_connection_t* abi_connection, msd_buffer_t* buffer)
-{
-    return MAGMA_STATUS_UNIMPLEMENTED;
-}
-
 magma_status_t msd_connection_map_buffer_gpu(msd_connection_t* abi_connection,
                                              msd_buffer_t* abi_buffer, uint64_t gpu_va,
                                              uint64_t page_offset, uint64_t page_count,

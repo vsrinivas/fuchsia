@@ -5,9 +5,10 @@
 #include <fcntl.h>
 #include <thread>
 
-#include "zircon/zircon_platform_ioctl.h"
 #include "magma.h"
+#include "magma_util/inflight_list.h"
 #include "magma_util/macros.h"
+#include "zircon/zircon_platform_ioctl.h"
 #include "gtest/gtest.h"
 
 namespace {
@@ -60,7 +61,9 @@ public:
         EXPECT_TRUE(InitCommandBuffer(command_buffer, batch_buffer, size));
 
         magma_submit_command_buffer(connection_, command_buffer, context_id);
-        magma_wait_rendering(connection_, batch_buffer);
+
+        magma::InflightList list(connection_);
+        EXPECT_TRUE(list.WaitForCompletion(1000));
 
         magma_release_context(connection_, context_id);
         magma_release_buffer(connection_, batch_buffer);

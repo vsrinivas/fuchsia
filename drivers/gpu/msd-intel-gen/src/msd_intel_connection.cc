@@ -21,15 +21,6 @@ msd_context_t* msd_connection_create_context(msd_connection_t* abi_connection)
         std::make_unique<ClientContext>(connection, connection->per_process_gtt()));
 }
 
-magma_status_t msd_connection_wait_rendering(msd_connection_t* abi_connection, msd_buffer_t* buffer)
-{
-    auto connection = MsdIntelAbiConnection::cast(abi_connection)->ptr();
-
-    MsdIntelAbiBuffer::cast(buffer)->ptr()->WaitRendering();
-
-    return MAGMA_STATUS_OK;
-}
-
 void msd_connection_set_notification_callback(struct msd_connection_t* connection,
                                               msd_connection_notification_callback_t callback,
                                               void* token)

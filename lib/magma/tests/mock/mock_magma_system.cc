@@ -121,8 +121,6 @@ void magma_submit_command_buffer(struct magma_connection_t* connection, uint64_t
     DLOG("magma_system submit command buffer - STUB");
 }
 
-void magma_wait_rendering(magma_connection_t* connection, uintptr_t buffer) {}
-
 magma_status_t magma_export(magma_connection_t* connection, magma_buffer_t buffer,
                             uint32_t* buffer_handle_out)
 {

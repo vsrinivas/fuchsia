@@ -30,17 +30,6 @@ public:
         return platform_buf_.get();
     }
 
-    // connection thread
-    void IncrementInflightCounter() { ++inflight_counter_; }
-
-    // device thread
-    void DecrementInflightCounter();
-
-    // connection thread
-    void WaitRendering();
-
-    uint32_t inflight_counter() { return inflight_counter_ & 0xFFFFFFFF; }
-
     // Retains a weak reference to the given mapping so it can be reused.
     std::shared_ptr<GpuMapping> ShareBufferMapping(std::unique_ptr<GpuMapping> mapping);
 
@@ -61,11 +50,6 @@ private:
     MsdIntelBuffer(std::unique_ptr<magma::PlatformBuffer> platform_buf);
 
     std::unique_ptr<magma::PlatformBuffer> platform_buf_;
-
-    std::atomic_uint64_t inflight_counter_{};
-    std::unique_ptr<magma::PlatformEvent> wait_rendering_event_;
-    std::mutex wait_rendering_mutex_;
-
     std::unordered_map<GpuMapping*, std::weak_ptr<GpuMapping>> shared_mappings_;
 };
 

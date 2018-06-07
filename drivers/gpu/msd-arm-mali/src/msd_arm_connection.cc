@@ -158,11 +158,6 @@ magma_status_t msd_context_execute_immediate_commands(msd_context_t* ctx, uint64
     return MAGMA_STATUS_OK;
 }
 
-magma_status_t msd_connection_wait_rendering(msd_connection_t* abi_connection, msd_buffer_t* buffer)
-{
-    return MAGMA_STATUS_INVALID_ARGS;
-}
-
 std::shared_ptr<MsdArmConnection> MsdArmConnection::Create(msd_client_id_t client_id, Owner* owner)
 {
     auto connection = std::shared_ptr<MsdArmConnection>(new MsdArmConnection(client_id, owner));

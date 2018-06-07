@@ -9,6 +9,7 @@
 
 #include "magma.h"
 #include "magma_util/dlog.h"
+#include "magma_util/inflight_list.h"
 #include "magma_util/macros.h"
 #include "gtest/gtest.h"
 
@@ -68,19 +69,22 @@ public:
         EXPECT_TRUE(InitCommandBuffer(command_buffer, batch_buffer, size, how == FAULT));
         magma_submit_command_buffer(connection_, command_buffer, context_id_);
 
-        // TODO(MA-129) - wait_rendering should return an error
-        magma_wait_rendering(connection_, batch_buffer);
+        magma::InflightList list(connection_);
 
         switch (how) {
             case NORMAL:
+                EXPECT_TRUE(list.WaitForCompletion(100));
                 EXPECT_EQ(MAGMA_STATUS_OK, magma_get_error(connection_));
                 EXPECT_EQ(kValue, reinterpret_cast<uint32_t*>(vaddr)[size / 4 - 1]);
                 break;
             case FAULT:
+                // Intel won't actually fault because bad gpu addresses are valid
+                EXPECT_TRUE(list.WaitForCompletion(1200));
                 EXPECT_EQ(MAGMA_STATUS_CONNECTION_LOST, magma_get_error(connection_));
                 EXPECT_EQ(0xdeadbeef, reinterpret_cast<uint32_t*>(vaddr)[size / 4 - 1]);
                 break;
             case HANG:
+                EXPECT_TRUE(list.WaitForCompletion(1200));
                 EXPECT_EQ(MAGMA_STATUS_CONNECTION_LOST, magma_get_error(connection_));
                 EXPECT_EQ(kValue, reinterpret_cast<uint32_t*>(vaddr)[size / 4 - 1]);
                 break;

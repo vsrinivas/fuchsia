@@ -123,23 +123,6 @@ magma::Status MagmaSystemConnection::ExecuteImmediateCommands(uint32_t context_i
                                              semaphore_ids);
 }
 
-magma::Status MagmaSystemConnection::WaitRendering(uint64_t buffer_id)
-{
-    if (!has_render_capability_)
-        return DRET_MSG(MAGMA_STATUS_ACCESS_DENIED,
-                        "Attempting to wait rendering without render capability");
-
-    std::shared_ptr<MagmaSystemBuffer> system_buffer = LookupBuffer(buffer_id);
-    if (!system_buffer)
-        return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "Couldn't find system buffer for id 0x%lx",
-                        buffer_id);
-
-    magma_status_t result =
-        msd_connection_wait_rendering(msd_connection(), system_buffer->msd_buf());
-
-    return DRET_MSG(result, "msd_connection_wait_rendering failed: %d", result);
-}
-
 bool MagmaSystemConnection::ImportBuffer(uint32_t handle, uint64_t* id_out)
 {
     auto device = device_.lock();

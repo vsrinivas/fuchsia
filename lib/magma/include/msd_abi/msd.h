@@ -59,13 +59,6 @@ void msd_connection_set_notification_callback(struct msd_connection_t* connectio
 // Creates a context for the given connection. returns null on failure.
 struct msd_context_t* msd_connection_create_context(struct msd_connection_t* connection);
 
-// Returns 0 on success.
-// Blocks until all currently outstanding work on the given buffer completes.
-// If more work that references this buffer is queued while waiting, this may return before that
-// work is completed.
-magma_status_t msd_connection_wait_rendering(struct msd_connection_t* connection,
-                                             struct msd_buffer_t* buf);
-
 // Destroys the given context.
 void msd_context_destroy(struct msd_context_t* ctx);
 

@@ -48,10 +48,6 @@ public:
 
     virtual void ExecuteCommandBuffer(uint32_t command_buffer_handle, uint32_t context_id) = 0;
 
-    // Blocks until all gpu work currently queued that references the buffer
-    // with |buffer_id| has completed.
-    virtual void WaitRendering(uint64_t buffer_id) = 0;
-
     virtual magma_status_t MapBufferGpu(uint64_t buffer_id, uint64_t gpu_va, uint64_t page_offset,
                                         uint64_t page_count, uint64_t flags) = 0;
 
@@ -96,7 +92,6 @@ public:
 
         virtual magma::Status ExecuteCommandBuffer(uint32_t command_buffer_handle,
                                                    uint32_t context_id) = 0;
-        virtual magma::Status WaitRendering(uint64_t buffer_id) = 0;
 
         virtual bool MapBufferGpu(uint64_t buffer_id, uint64_t gpu_va, uint64_t page_offset,
                                   uint64_t page_count, uint64_t flags) = 0;

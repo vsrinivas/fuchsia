@@ -311,13 +311,6 @@ void magma_execute_immediate_commands(magma_connection_t* connection, uint32_t c
         ->ExecuteImmediateCommands(context_id, command_count, command_buffers);
 }
 
-void magma_wait_rendering(magma_connection_t* connection, magma_buffer_t buffer)
-{
-    auto platform_buffer = reinterpret_cast<magma::PlatformBuffer*>(buffer);
-
-    magma::PlatformIpcConnection::cast(connection)->WaitRendering(platform_buffer->id());
-}
-
 magma_status_t magma_create_semaphore(magma_connection_t* connection,
                                       magma_semaphore_t* semaphore_out)
 {

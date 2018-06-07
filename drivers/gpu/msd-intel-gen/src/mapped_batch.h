@@ -35,10 +35,7 @@ public:
                       std::unique_ptr<GpuMapping> batch_buffer_mapping)
         : context_(context), batch_buffer_mapping_(std::move(batch_buffer_mapping))
     {
-        batch_buffer_mapping_->buffer()->IncrementInflightCounter();
     }
-
-    ~SimpleMappedBatch() { batch_buffer_mapping_->buffer()->DecrementInflightCounter(); }
 
     std::weak_ptr<MsdIntelContext> GetContext() override { return context_; }
 
