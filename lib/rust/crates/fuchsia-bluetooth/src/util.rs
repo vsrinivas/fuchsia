@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use fidl_bluetooth;
-use fidl_bluetooth_control::{AdapterInfo, AdapterState};
+use fidl_fuchsia_bluetooth;
+use fidl_fuchsia_bluetooth_control::{AdapterInfo, AdapterState};
 
 /// Macro to help make cloning host dispatchers nicer
 #[macro_export]
@@ -19,21 +19,21 @@ macro_rules! make_clones {
 /// Two Args is the error type & a description
 #[macro_export]
 macro_rules! bt_fidl_status {
-    () => (fidl_bluetooth::Status { error: None } );
+    () => (fidl_fuchsia_bluetooth::Status { error: None } );
 
-    ($error_code:ident) => (fidl_bluetooth::Status { error: Some(Box::new(
-                    fidl_bluetooth::Error {
+    ($error_code:ident) => (fidl_fuchsia_bluetooth::Status { error: Some(Box::new(
+                    fidl_fuchsia_bluetooth::Error {
                         description: None,
                         protocol_error_code: 0,
-                        error_code: fidl_bluetooth::ErrorCode::$error_code,
+                        error_code: fidl_fuchsia_bluetooth::ErrorCode::$error_code,
                     }))
     });
 
-    ($error_code:ident, $description:expr) => (fidl_bluetooth::Status { error: Some(Box::new(
-                    fidl_bluetooth::Error {
+    ($error_code:ident, $description:expr) => (fidl_fuchsia_bluetooth::Status { error: Some(Box::new(
+                    fidl_fuchsia_bluetooth::Error {
                         description: Some($description.to_string()),
                         protocol_error_code: 0,
-                        error_code: fidl_bluetooth::ErrorCode::$error_code,
+                        error_code: fidl_fuchsia_bluetooth::ErrorCode::$error_code,
                     }))
     });
 }
@@ -55,8 +55,8 @@ pub fn clone_host_info(a: &AdapterInfo) -> AdapterInfo {
 
 /// Clone Bluetooth Fidl bool type
 /// Only here until Rust bindings can derive `Clone`
-pub fn clone_bt_fidl_bool(a: &fidl_bluetooth::Bool) -> fidl_bluetooth::Bool {
-    fidl_bluetooth::Bool { value: a.value }
+pub fn clone_bt_fidl_bool(a: &fidl_fuchsia_bluetooth::Bool) -> fidl_fuchsia_bluetooth::Bool {
+    fidl_fuchsia_bluetooth::Bool { value: a.value }
 }
 
 /// Clone Adapter State

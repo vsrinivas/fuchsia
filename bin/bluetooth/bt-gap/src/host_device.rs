@@ -3,9 +3,9 @@
 // found in the LICENSE file.
 
 use fidl;
-use fidl_bluetooth::Status;
-use fidl_bluetooth_control::AdapterInfo;
-use fidl_bluetooth_host::{HostEvent, HostEventStream, HostProxy};
+use fidl_fuchsia_bluetooth::Status;
+use fidl_fuchsia_bluetooth_control::AdapterInfo;
+use fidl_fuchsia_bluetooth_host::{HostEvent, HostEventStream, HostProxy};
 use futures::{FutureExt, StreamExt};
 use futures::Future;
 use futures::future::ok as fok;

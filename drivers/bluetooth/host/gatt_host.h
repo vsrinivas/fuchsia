@@ -6,10 +6,10 @@
 
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
+#include <fuchsia/bluetooth/gatt/cpp/fidl.h>
 
 #include "garnet/drivers/bluetooth/lib/common/task_domain.h"
 #include "garnet/drivers/bluetooth/lib/gatt/gatt.h"
-#include <bluetooth_gatt/cpp/fidl.h>
 
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fxl/macros.h"
@@ -55,7 +55,8 @@ class GattHost final : public fbl::RefCounted<GattHost>,
   void CloseServers();
 
   // Binds the given GATT server request to a FIDL server.
-  void BindGattServer(fidl::InterfaceRequest<bluetooth_gatt::Server> request);
+  void BindGattServer(
+      fidl::InterfaceRequest<fuchsia::bluetooth::gatt::Server> request);
 
   // Binds the given GATT client request to a FIDL server. The binding will be
   // associated with the given |token|. The same token can be
@@ -63,8 +64,9 @@ class GattHost final : public fbl::RefCounted<GattHost>,
   //
   // The handle associated with |request| will be closed if |token| is already
   // bound to another handle.
-  void BindGattClient(Token token, std::string peer_id,
-                      fidl::InterfaceRequest<bluetooth_gatt::Client> request);
+  void BindGattClient(
+      Token token, std::string peer_id,
+      fidl::InterfaceRequest<fuchsia::bluetooth::gatt::Client> request);
 
   // Unbinds a previously bound GATT client server associated with |token|.
   void UnbindGattClient(Token token);

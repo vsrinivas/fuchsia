@@ -1,13 +1,16 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
 extern crate fdio;
 extern crate failure;
 extern crate rand;
 pub extern crate fuchsia_bluetooth as bluetooth;
 extern crate fuchsia_async as async;
-extern crate fidl_bluetooth_host;
+extern crate fidl_fuchsia_bluetooth_host;
 extern crate futures;
 
-
-use fidl_bluetooth_host::HostProxy;
+use fidl_fuchsia_bluetooth_host::HostProxy;
 use std::path::PathBuf;
 use std::{thread, time};
 use bluetooth::hci;

@@ -6,12 +6,11 @@
 
 #include "helpers.h"
 
-using bluetooth::ErrorCode;
-using bluetooth::Status;
-
-using bluetooth_gatt::Characteristic;
-using bluetooth_gatt::CharacteristicPtr;
-using bluetooth_gatt::Descriptor;
+using fuchsia::bluetooth::ErrorCode;
+using fuchsia::bluetooth::Status;
+using fuchsia::bluetooth::gatt::Characteristic;
+using fuchsia::bluetooth::gatt::CharacteristicPtr;
+using fuchsia::bluetooth::gatt::Descriptor;
 
 using btlib::common::ByteBuffer;
 using btlib::common::MutableBufferView;
@@ -51,7 +50,7 @@ void NopStatusCallback(btlib::att::Status) {}
 GattRemoteServiceServer::GattRemoteServiceServer(
     fbl::RefPtr<btlib::gatt::RemoteService> service,
     fbl::RefPtr<btlib::gatt::GATT> gatt,
-    fidl::InterfaceRequest<bluetooth_gatt::RemoteService> request)
+    fidl::InterfaceRequest<fuchsia::bluetooth::gatt::RemoteService> request)
     : GattServerBase(gatt, this, std::move(request)),
       service_(std::move(service)),
       weak_ptr_factory_(this) {

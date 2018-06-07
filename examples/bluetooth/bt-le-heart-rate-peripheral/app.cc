@@ -9,28 +9,29 @@
 
 #include <lib/fxl/logging.h>
 
+namespace ble = fuchsia::bluetooth::le;
+
 namespace bt_le_heart_rate {
 
 App::App(std::unique_ptr<HeartModel> heart_model)
     : context_(fuchsia::sys::StartupContext::CreateFromStartupInfo()),
       service_(std::move(heart_model)) {
   gatt_server_ =
-      context_->ConnectToEnvironmentService<bluetooth_gatt::Server>();
+      context_->ConnectToEnvironmentService<fuchsia::bluetooth::gatt::Server>();
   FXL_DCHECK(gatt_server_);
 
   service_.PublishService(&gatt_server_);
 
-  peripheral_ =
-      context_->ConnectToEnvironmentService<bluetooth_low_energy::Peripheral>();
+  peripheral_ = context_->ConnectToEnvironmentService<ble::Peripheral>();
   FXL_DCHECK(peripheral_);
 }
 
 void App::StartAdvertising() {
-  bluetooth_low_energy::AdvertisingData ad;
+  ble::AdvertisingData ad;
   ad.name = kDeviceName;
   ad.service_uuids = fidl::VectorPtr<fidl::StringPtr>({Service::kServiceUuid});
 
-  const auto start_adv_result_cb = [](bluetooth::Status status,
+  const auto start_adv_result_cb = [](fuchsia::bluetooth::Status status,
                                       fidl::StringPtr advertisement_id) {
     std::cout << "StartAdvertising status: " << bool(status.error)
               << ", advertisement_id: " << advertisement_id << std::endl;
@@ -44,7 +45,7 @@ void App::StartAdvertising() {
 constexpr char App::kDeviceName[];
 
 void App::OnCentralConnected(fidl::StringPtr advertisement_id,
-                             bluetooth_low_energy::RemoteDevice central) {
+                             ble::RemoteDevice central) {
   std::cout << "Central (" << central.identifier << ") connected" << std::endl;
 
   // Save the binding for this connection.

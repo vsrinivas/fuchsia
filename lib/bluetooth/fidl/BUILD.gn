@@ -5,15 +5,15 @@
 import("//build/fidl/fidl.gni")
 
 fidl("bluetooth_host") {
+  name = "fuchsia.bluetooth.host"
   sources = [
     "host.fidl",
   ]
   cpp_legacy_callbacks = true
-
-   public_deps = [
-     "//garnet/public/lib/bluetooth/fidl:bluetooth",
-     "//garnet/public/lib/bluetooth/fidl:bluetooth_control",
-     "//garnet/public/lib/bluetooth/fidl:bluetooth_gatt",
-     "//garnet/public/lib/bluetooth/fidl:bluetooth_low_energy",
-   ]
+  public_deps = [
+    "//garnet/public/lib/bluetooth/fidl:bluetooth",
+    "//garnet/public/lib/bluetooth/fidl:bluetooth_control",
+    "//garnet/public/lib/bluetooth/fidl:bluetooth_gatt",
+    "//garnet/public/lib/bluetooth/fidl:bluetooth_low_energy",
+  ]
 }

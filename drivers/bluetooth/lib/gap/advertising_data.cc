@@ -30,6 +30,8 @@ struct fxl::TypeConverter<fidl::VectorPtr<unsigned char>, T> {
   }
 };
 
+namespace ble = fuchsia::bluetooth::le;
+
 namespace btlib {
 namespace gap {
 
@@ -254,30 +256,29 @@ bool AdvertisingData::FromBytes(const common::ByteBuffer& data,
   return true;
 }
 
-::bluetooth_low_energy::AdvertisingDataPtr AdvertisingData::AsLEAdvertisingData()
-    const {
-  auto fidl_data = ::bluetooth_low_energy::AdvertisingData::New();
+::ble::AdvertisingDataPtr AdvertisingData::AsLEAdvertisingData() const {
+  auto fidl_data = ::ble::AdvertisingData::New();
   FXL_DCHECK(fidl_data);
 
   if (tx_power_) {
-    fidl_data->tx_power_level = ::btfidl::Int8::New();
+    fidl_data->tx_power_level = ::fuchsia::bluetooth::Int8::New();
     fidl_data->tx_power_level->value = *tx_power_;
   }
 
   if (appearance_) {
-    fidl_data->appearance = ::btfidl::UInt16::New();
+    fidl_data->appearance = ::fuchsia::bluetooth::UInt16::New();
     fidl_data->appearance->value = *appearance_;
   }
 
   for (const auto& pair : manufacturer_data_) {
-    ::bluetooth_low_energy::ManufacturerSpecificDataEntry entry;
+    ::ble::ManufacturerSpecificDataEntry entry;
     entry.company_id = pair.first;
     entry.data = fxl::To<fidl::VectorPtr<unsigned char>>(pair.second);
     fidl_data->manufacturer_specific_data.push_back(std::move(entry));
   }
 
   for (const auto& pair : service_data_) {
-    ::bluetooth_low_energy::ServiceDataEntry entry;
+    ::ble::ServiceDataEntry entry;
     entry.uuid = pair.first.ToString();
     entry.data = fxl::To<fidl::VectorPtr<unsigned char>>(pair.second);
     fidl_data->service_data.push_back(std::move(entry));
@@ -298,9 +299,8 @@ bool AdvertisingData::FromBytes(const common::ByteBuffer& data,
   return fidl_data;
 }
 
-void AdvertisingData::FromFidl(
-    const ::bluetooth_low_energy::AdvertisingData& fidl_ad,
-    AdvertisingData* out_ad) {
+void AdvertisingData::FromFidl(const ::ble::AdvertisingData& fidl_ad,
+                               AdvertisingData* out_ad) {
   FXL_DCHECK(out_ad);
   common::UUID uuid;
   for (const auto& uuid_str : *fidl_ad.service_uuids) {

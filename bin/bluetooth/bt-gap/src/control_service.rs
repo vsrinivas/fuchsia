@@ -4,8 +4,8 @@
 
 use async;
 use fidl::encoding2::OutOfLine;
-use fidl_bluetooth;
-use fidl_bluetooth_control::{Control, ControlImpl};
+use fidl_fuchsia_bluetooth;
+use fidl_fuchsia_bluetooth_control::{Control, ControlImpl};
 use futures::{future, Future, FutureExt, Never};
 use futures::future::Either::{Left, Right};
 use futures::prelude::*;

@@ -2,7 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-library bluetooth_low_energy;
+library fuchsia.bluetooth.le;
+
+using fuchsia.bluetooth;
+using fuchsia.bluetooth.gatt;
 
 struct ServiceDataEntry {
   string uuid;
@@ -20,10 +23,10 @@ struct AdvertisingData {
   string? name;
 
   // The radio transmission power level reported in the advertisement.
-  bluetooth.Int8? tx_power_level;
+  fuchsia.bluetooth.Int8? tx_power_level;
 
   // The appearance reported in the advertisemet.
-  bluetooth.UInt16? appearance;
+  fuchsia.bluetooth.UInt16? appearance;
 
   // List of service UUIDs reported in the advertisement.
   vector<string>? service_uuids;
@@ -54,7 +57,7 @@ struct RemoteDevice {
   bool connectable;
 
   // The last known RSSI of this device, if known.
-  bluetooth.Int8? rssi;
+  fuchsia.bluetooth.Int8? rssi;
 
   // Advertising data broadcast by this device if this device is a broadcaster or peripheral.
   AdvertisingData? advertising_data;
@@ -74,12 +77,12 @@ struct ScanFilter {
   // Filter based on a company identifier present in the manufacturer data. If this filter parameter
   // is set, then the advertising payload must contain manufacturer specific data with the provided
   // company identifier to satisfy this filter.
-  bluetooth.UInt16? manufacturer_identifier;
+  fuchsia.bluetooth.UInt16? manufacturer_identifier;
 
   // Filter based on whether or not a device is connectable. For example, a client that is only
   // interested in peripherals that it can connect to can set this to true. Similarly a client can
   // scan only for braodcasters by setting this to false.
-  bluetooth.Bool? connectable;
+  fuchsia.bluetooth.Bool? connectable;
 
   // Filter results based on a portion of the advertised device name.
   string? name_substring;
@@ -89,7 +92,7 @@ struct ScanFilter {
   //   1. Radio transmission power level and received signal strength must be available for the path
   //      loss calculation;
   //   2. The calculated path loss value must be less than, or equal to, |max_path_loss|.
-  bluetooth.Int8? max_path_loss;
+  fuchsia.bluetooth.Int8? max_path_loss;
 };
 
 interface CentralDelegate {
@@ -131,7 +134,7 @@ interface Central {
   // will be notified for all discoverable devices that are found. This is not recommended; clients
   // should generally filter results by at least one of |filter.service_uuids|,
   // |filter.service_data|, and/or |filter.manufacturer_identifier|.
-  4: StartScan(ScanFilter? filter) -> (bluetooth.Status @status);
+  4: StartScan(ScanFilter? filter) -> (fuchsia.bluetooth.Status @status);
 
   // Terminate a previously started scan session.
   5: StopScan();
@@ -142,10 +145,10 @@ interface Central {
   // On success, |gatt_client| will be bound and can be used for GATT client
   // role procedures. On failure, |gatt_client| will be closed and |status| will
   // indicate an error.
-  6: ConnectPeripheral(string identifier, request<bluetooth_gatt.Client> gatt_client) -> (bluetooth.Status @status);
+  6: ConnectPeripheral(string identifier, request<fuchsia.bluetooth.gatt.Client> gatt_client) -> (fuchsia.bluetooth.Status @status);
 
   // Disconnects this Central's connection to the peripheral with the given identifier.
-  7: DisconnectPeripheral(string identifier) -> (bluetooth.Status @status);
+  7: DisconnectPeripheral(string identifier) -> (fuchsia.bluetooth.Status @status);
 };
 
 interface PeripheralDelegate {
@@ -194,8 +197,8 @@ interface Peripheral {
   //   - If |anonymous| advertising is requested but the controller cannot support it.
   1: StartAdvertising(AdvertisingData advertising_data, AdvertisingData? scan_result,
                       PeripheralDelegate? delegate, uint32 interval_ms, bool anonymous) ->
-                      (bluetooth.Status @status, string? advertisement_id);
+                      (fuchsia.bluetooth.Status @status, string? advertisement_id);
 
   // Stop a an advertising session that was previously started by this application.
-  2: StopAdvertising(string advertisement_id) -> (bluetooth.Status @status);
+  2: StopAdvertising(string advertisement_id) -> (fuchsia.bluetooth.Status @status);
 };

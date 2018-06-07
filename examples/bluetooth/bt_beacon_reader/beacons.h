@@ -4,7 +4,7 @@
 
 #include <memory>
 
-#include <bluetooth_low_energy/cpp/fidl.h>
+#include <fuchsia/bluetooth/le/cpp/fidl.h>
 
 namespace bt_beacon_reader {
 
@@ -15,7 +15,7 @@ class IBeaconDetection {
   // If it is a beacon, fills out this class and returns it.
   // Otherwise, returns a nullptr.
   static std::unique_ptr<IBeaconDetection> Create(
-      const bluetooth_low_energy::RemoteDevice& device);
+      const fuchsia::bluetooth::le::RemoteDevice& device);
 
   uint8_t power_lvl_ = 0;
   std::string uuid_;
@@ -31,7 +31,7 @@ class IBeaconDetection {
 class TiltDetection {
  public:
   static std::unique_ptr<TiltDetection> Create(
-      const bluetooth_low_energy::RemoteDevice& device);
+      const fuchsia::bluetooth::le::RemoteDevice& device);
 
   void Print();
 

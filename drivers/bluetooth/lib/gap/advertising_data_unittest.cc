@@ -107,7 +107,7 @@ TEST(GAP_AdvertisingDataTest, ParseBlock) {
 }
 
 TEST(GAP_AdvertisingDataTest, ParseFIDL) {
-  ::bluetooth_low_energy::AdvertisingData fidl_ad;
+  fuchsia::bluetooth::le::AdvertisingData fidl_ad;
 
   // Confirming UTF-8 codepoints are working as well.
   fidl_ad.name = "Test💖";
@@ -119,7 +119,7 @@ TEST(GAP_AdvertisingDataTest, ParseFIDL) {
     array->at(i) = static_cast<uint8_t>(i * 3);
   }
 
-  bluetooth_low_energy::ServiceDataEntry service_data_entry;
+  fuchsia::bluetooth::le::ServiceDataEntry service_data_entry;
   service_data_entry.uuid = kId1AsString;
   service_data_entry.data = std::move(array);
   fidl_ad.service_data.push_back(std::move(service_data_entry));

@@ -18,11 +18,11 @@
 #include "low_energy_peripheral_server.h"
 
 namespace bthost {
-using bluetooth::Bool;
-using bluetooth::ErrorCode;
-using bluetooth::Status;
 
-using bluetooth_control::AdapterState;
+using fuchsia::bluetooth::Bool;
+using fuchsia::bluetooth::ErrorCode;
+using fuchsia::bluetooth::Status;
+using fuchsia::bluetooth::control::AdapterState;
 
 HostServer::HostServer(zx::channel channel,
                        fxl::WeakPtr<::btlib::gap::Adapter> adapter,
@@ -117,7 +117,7 @@ void HostServer::StartDiscovery(StartDiscoveryCallback callback) {
 
       // Send the adapter state update.
       AdapterState state;
-      state.discovering = bluetooth::Bool::New();
+      state.discovering = Bool::New();
       state.discovering->value = true;
       self->binding()->events().OnHostStateChanged(std::move(state));
 
@@ -139,7 +139,7 @@ void HostServer::StopDiscovery(StopDiscoveryCallback callback) {
   le_discovery_session_ = nullptr;
 
   AdapterState state;
-  state.discovering = bluetooth::Bool::New();
+  state.discovering = Bool::New();
   state.discovering->value = false;
   this->binding()->events().OnHostStateChanged(std::move(state));
 
@@ -164,7 +164,7 @@ void HostServer::SetDiscoverable(bool discoverable,
     bredr_discoverable_session_ = nullptr;
 
     AdapterState state;
-    state.discoverable = bluetooth::Bool::New();
+    state.discoverable = Bool::New();
     state.discoverable->value = false;
     this->binding()->events().OnHostStateChanged(std::move(state));
 
@@ -194,7 +194,7 @@ void HostServer::SetDiscoverable(bool discoverable,
         }
         self->bredr_discoverable_session_ = std::move(session);
         AdapterState state;
-        state.discoverable = bluetooth::Bool::New();
+        state.discoverable = Bool::New();
         state.discoverable->value = true;
         self->binding()->events().OnHostStateChanged(std::move(state));
         callback(Status());
@@ -213,17 +213,17 @@ void HostServer::OnDiscoveryResult(
 }
 
 void HostServer::RequestLowEnergyCentral(
-    fidl::InterfaceRequest<bluetooth_low_energy::Central> request) {
+    fidl::InterfaceRequest<fuchsia::bluetooth::le::Central> request) {
   BindServer<LowEnergyCentralServer>(std::move(request), gatt_host_);
 }
 
 void HostServer::RequestLowEnergyPeripheral(
-    fidl::InterfaceRequest<bluetooth_low_energy::Peripheral> request) {
+    fidl::InterfaceRequest<fuchsia::bluetooth::le::Peripheral> request) {
   BindServer<LowEnergyPeripheralServer>(std::move(request));
 }
 
 void HostServer::RequestGattServer(
-    fidl::InterfaceRequest<bluetooth_gatt::Server> request) {
+    fidl::InterfaceRequest<fuchsia::bluetooth::gatt::Server> request) {
   // GATT FIDL requests are handled by GattHost.
   gatt_host_->BindGattServer(std::move(request));
 }

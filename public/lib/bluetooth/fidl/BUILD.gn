@@ -15,7 +15,7 @@ group("fidl") {
 
 fidl("bluetooth") {
   cpp_legacy_callbacks = true
-
+  name = "fuchsia.bluetooth"
   sources = [
     "common.fidl",
   ]
@@ -23,6 +23,7 @@ fidl("bluetooth") {
 
 fidl("bluetooth_control") {
   cpp_legacy_callbacks = true
+  name = "fuchsia.bluetooth.control"
   sources = [
     "control.fidl",
   ]
@@ -31,6 +32,7 @@ fidl("bluetooth_control") {
 
 fidl("bluetooth_gatt") {
   cpp_legacy_callbacks = true
+  name = "fuchsia.bluetooth.gatt"
   sources = [
     "gatt.fidl",
   ]
@@ -39,6 +41,7 @@ fidl("bluetooth_gatt") {
 
 fidl("bluetooth_low_energy") {
   cpp_legacy_callbacks = true
+  name = "fuchsia.bluetooth.le"
   sources = [
     "low_energy.fidl",
   ]

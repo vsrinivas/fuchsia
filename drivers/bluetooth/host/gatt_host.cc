@@ -63,7 +63,7 @@ void GattHost::CleanUp() {
 }
 
 void GattHost::BindGattServer(
-    fidl::InterfaceRequest<bluetooth_gatt::Server> request) {
+    fidl::InterfaceRequest<fuchsia::bluetooth::gatt::Server> request) {
   PostMessage([this, request = std::move(request)]() mutable {
     auto self = weak_ptr_factory_.GetWeakPtr();
     auto server = std::make_unique<GattServerServer>(gatt_, std::move(request));
@@ -79,7 +79,7 @@ void GattHost::BindGattServer(
 
 void GattHost::BindGattClient(
     Token token, std::string peer_id,
-    fidl::InterfaceRequest<bluetooth_gatt::Client> request) {
+    fidl::InterfaceRequest<fuchsia::bluetooth::gatt::Client> request) {
   PostMessage([this, token, peer_id = std::move(peer_id),
                request = std::move(request)]() mutable {
     if (client_servers_.find(token) != client_servers_.end()) {

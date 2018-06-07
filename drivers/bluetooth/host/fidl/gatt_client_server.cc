@@ -12,13 +12,13 @@
 #include "gatt_remote_service_server.h"
 #include "helpers.h"
 
-using bluetooth::ErrorCode;
-using bluetooth::Status;
+using fuchsia::bluetooth::ErrorCode;
+using fuchsia::bluetooth::Status;
 
-using bluetooth_gatt::Client;
-using bluetooth_gatt::RemoteService;
-using bluetooth_gatt::ServiceInfo;
-using bluetooth_gatt::ServiceInfoPtr;
+using fuchsia::bluetooth::gatt::Client;
+using fuchsia::bluetooth::gatt::RemoteService;
+using fuchsia::bluetooth::gatt::ServiceInfo;
+using fuchsia::bluetooth::gatt::ServiceInfoPtr;
 
 namespace bthost {
 

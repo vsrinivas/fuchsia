@@ -12,15 +12,16 @@
 
 #include "helpers.h"
 
-using bluetooth::ErrorCode;
-using bluetooth::Status;
+using fuchsia::bluetooth::ErrorCode;
+using fuchsia::bluetooth::Status;
 
-using bluetooth_low_energy::AdvertisingData;
-using bluetooth_low_energy::AdvertisingDataPtr;
-using bluetooth_low_energy::Peripheral;
-using bluetooth_low_energy::PeripheralDelegate;
-using bluetooth_low_energy::PeripheralDelegatePtr;
-using bluetooth_low_energy::RemoteDevicePtr;
+using fuchsia::bluetooth::le::AdvertisingData;
+using fuchsia::bluetooth::le::AdvertisingDataPtr;
+using fuchsia::bluetooth::le::Peripheral;
+using fuchsia::bluetooth::le::PeripheralDelegate;
+using fuchsia::bluetooth::le::PeripheralDelegatePtr;
+using fuchsia::bluetooth::le::RemoteDevice;
+using fuchsia::bluetooth::le::RemoteDevicePtr;
 
 namespace bthost {
 
@@ -46,8 +47,7 @@ LowEnergyPeripheralServer::InstanceData::InstanceData(const std::string& id,
     : id_(id), delegate_(std::move(delegate)) {}
 
 void LowEnergyPeripheralServer::InstanceData::RetainConnection(
-    ConnectionRefPtr conn_ref,
-    bluetooth_low_energy::RemoteDevice peer) {
+    ConnectionRefPtr conn_ref, RemoteDevice peer) {
   FXL_DCHECK(connectable());
   FXL_DCHECK(!conn_ref_);
 
@@ -205,7 +205,7 @@ void LowEnergyPeripheralServer::OnConnected(std::string advertisement_id,
   FXL_DCHECK(device);
 
   FXL_VLOG(1) << "Central connected";
-  ::bluetooth_low_energy::RemoteDevicePtr remote_device =
+  RemoteDevicePtr remote_device =
       fidl_helpers::NewLERemoteDevice(std::move(*device));
   FXL_DCHECK(remote_device);
   it->second.RetainConnection(std::move(conn), std::move(*remote_device));

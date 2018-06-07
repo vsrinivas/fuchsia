@@ -7,10 +7,10 @@ use bt;
 use bt::util::clone_host_info;
 use failure::Error;
 use fidl;
-use fidl_bluetooth;
-use fidl_bluetooth_control::{ControlControlHandle, PairingDelegateProxy};
-use fidl_bluetooth_control::AdapterInfo;
-use fidl_bluetooth_host::HostProxy;
+use fidl_fuchsia_bluetooth;
+use fidl_fuchsia_bluetooth_control::{ControlControlHandle, PairingDelegateProxy};
+use fidl_fuchsia_bluetooth_control::AdapterInfo;
+use fidl_fuchsia_bluetooth_host::HostProxy;
 use futures::{Poll, task, Async, Future, FutureExt};
 use futures::IntoFuture;
 use futures::StreamExt;
@@ -81,7 +81,7 @@ impl HostDispatcher {
 
     pub fn set_name(
         &mut self, name: Option<String>
-    ) -> impl Future<Item = fidl_bluetooth::Status, Error = fidl::Error> {
+    ) -> impl Future<Item = fidl_fuchsia_bluetooth::Status, Error = fidl::Error> {
         match name {
             Some(name) => self.name = name,
             None => self.name = DEFAULT_NAME.to_string(),
@@ -114,7 +114,7 @@ impl HostDispatcher {
     pub fn start_discovery(
         hd: &Arc<RwLock<HostDispatcher>>
     ) -> impl Future<
-        Item = (fidl_bluetooth::Status, Option<Arc<DiscoveryRequestToken>>),
+        Item = (fidl_fuchsia_bluetooth::Status, Option<Arc<DiscoveryRequestToken>>),
         Error = fidl::Error,
     > {
         let strong_current_token = match hd.read().discovery {
@@ -155,7 +155,7 @@ impl HostDispatcher {
         hd: &Arc<RwLock<HostDispatcher>>
     ) -> impl Future<
         Item = (
-            fidl_bluetooth::Status,
+            fidl_fuchsia_bluetooth::Status,
             Option<Arc<DiscoverableRequestToken>>,
         ),
         Error = fidl::Error,
@@ -195,7 +195,7 @@ impl HostDispatcher {
         }
     }
 
-    pub fn set_active_adapter(&mut self, adapter_id: String) -> fidl_bluetooth::Status {
+    pub fn set_active_adapter(&mut self, adapter_id: String) -> fidl_fuchsia_bluetooth::Status {
         if self.host_devices.contains_key(&adapter_id) {
             // Close the prior adapter
             if let Some(ref id) = self.active_id {

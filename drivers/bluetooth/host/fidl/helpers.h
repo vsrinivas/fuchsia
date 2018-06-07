@@ -4,10 +4,10 @@
 
 #pragma once
 
-#include <bluetooth/cpp/fidl.h>
-#include <bluetooth_control/cpp/fidl.h>
-#include <bluetooth_gatt/cpp/fidl.h>
-#include <bluetooth_low_energy/cpp/fidl.h>
+#include <fuchsia/bluetooth/control/cpp/fidl.h>
+#include <fuchsia/bluetooth/cpp/fidl.h>
+#include <fuchsia/bluetooth/gatt/cpp/fidl.h>
+#include <fuchsia/bluetooth/le/cpp/fidl.h>
 
 #include "lib/fidl/cpp/vector.h"
 #include "lib/fxl/type_converter.h"
@@ -32,21 +32,22 @@ namespace fidl_helpers {
 
 // Functions for generating a FIDL bluetooth::Status
 
-::bluetooth::ErrorCode HostErrorToFidl(::btlib::common::HostError host_error);
+fuchsia::bluetooth::ErrorCode HostErrorToFidl(
+    ::btlib::common::HostError host_error);
 
-::bluetooth::Status NewFidlError(::bluetooth::ErrorCode error_code,
-                                 std::string description);
+fuchsia::bluetooth::Status NewFidlError(
+    fuchsia::bluetooth::ErrorCode error_code, std::string description);
 
 template <typename ProtocolErrorCode>
-::bluetooth::Status StatusToFidl(
+fuchsia::bluetooth::Status StatusToFidl(
     const ::btlib::common::Status<ProtocolErrorCode>& status,
     std::string msg = "") {
-  ::bluetooth::Status fidl_status;
+  fuchsia::bluetooth::Status fidl_status;
 
   if (status.is_success())
     return fidl_status;
 
-  auto error = ::bluetooth::Error::New();
+  auto error = fuchsia::bluetooth::Error::New();
   error->error_code = HostErrorToFidl(status.error());
   error->description = msg.empty() ? status.ToString() : std::move(msg);
   if (status.is_protocol_error()) {
@@ -59,24 +60,24 @@ template <typename ProtocolErrorCode>
 
 // Functions to convert host library objects into FIDL types.
 
-::bluetooth_control::AdapterInfo NewAdapterInfo(
+fuchsia::bluetooth::control::AdapterInfo NewAdapterInfo(
     const ::btlib::gap::Adapter& adapter);
-::bluetooth_control::RemoteDevicePtr NewRemoteDevice(
+fuchsia::bluetooth::control::RemoteDevicePtr NewRemoteDevice(
     const ::btlib::gap::RemoteDevice& device);
 
-::bluetooth_low_energy::AdvertisingDataPtr NewAdvertisingData(
+fuchsia::bluetooth::le::AdvertisingDataPtr NewAdvertisingData(
     const ::btlib::common::ByteBuffer& advertising_data);
-::bluetooth_low_energy::RemoteDevicePtr NewLERemoteDevice(
+fuchsia::bluetooth::le::RemoteDevicePtr NewLERemoteDevice(
     const ::btlib::gap::RemoteDevice& device);
 
 // Validates the contents of a ScanFilter.
-bool IsScanFilterValid(const ::bluetooth_low_energy::ScanFilter& fidl_filter);
+bool IsScanFilterValid(const fuchsia::bluetooth::le::ScanFilter& fidl_filter);
 
 // Populates a library DiscoveryFilter based on a FIDL ScanFilter. Returns false
 // if |fidl_filter| contains any malformed data and leaves |out_filter|
 // unmodified.
 bool PopulateDiscoveryFilter(
-    const ::bluetooth_low_energy::ScanFilter& fidl_filter,
+    const fuchsia::bluetooth::le::ScanFilter& fidl_filter,
     ::btlib::gap::DiscoveryFilter* out_filter);
 
 }  // namespace fidl_helpers

@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <bluetooth_gatt/cpp/fidl.h>
+#include <fuchsia/bluetooth/gatt/cpp/fidl.h>
 
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fxl/macros.h"
@@ -16,11 +16,12 @@
 namespace bthost {
 
 // Implements the gatt::Client FIDL interface.
-class GattClientServer : public GattServerBase<bluetooth_gatt::Client> {
+class GattClientServer
+    : public GattServerBase<fuchsia::bluetooth::gatt::Client> {
  public:
-  GattClientServer(std::string peer_id,
-                   fbl::RefPtr<btlib::gatt::GATT> gatt,
-                   fidl::InterfaceRequest<bluetooth_gatt::Client> request);
+  GattClientServer(
+      std::string peer_id, fbl::RefPtr<btlib::gatt::GATT> gatt,
+      fidl::InterfaceRequest<fuchsia::bluetooth::gatt::Client> request);
   ~GattClientServer() override = default;
 
  private:
@@ -29,7 +30,8 @@ class GattClientServer : public GattServerBase<bluetooth_gatt::Client> {
                     ListServicesCallback callback) override;
   void ConnectToService(
       uint64_t id,
-      ::fidl::InterfaceRequest<bluetooth_gatt::RemoteService> service) override;
+      ::fidl::InterfaceRequest<fuchsia::bluetooth::gatt::RemoteService> service)
+      override;
 
   // The ID of the peer that this client is attached to.
   std::string peer_id_;

@@ -7,7 +7,7 @@
 #include <memory>
 #include <unordered_map>
 
-#include <bluetooth_low_energy/cpp/fidl.h>
+#include <fuchsia/bluetooth/le/cpp/fidl.h>
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fxl/macros.h"
 
@@ -20,29 +20,29 @@ namespace bthost {
 
 // Implements the low_energy::Central FIDL interface.
 class LowEnergyCentralServer
-    : public AdapterServerBase<bluetooth_low_energy::Central> {
+    : public AdapterServerBase<fuchsia::bluetooth::le::Central> {
  public:
   LowEnergyCentralServer(
       fxl::WeakPtr<::btlib::gap::Adapter> adapter,
-      ::fidl::InterfaceRequest<::bluetooth_low_energy::Central> request,
+      ::fidl::InterfaceRequest<fuchsia::bluetooth::le::Central> request,
       fbl::RefPtr<GattHost> gatt_host);
   ~LowEnergyCentralServer() override;
 
  private:
-  // ::bluetooth_low_energy::Central overrides:
+  // fuchsia::bluetooth::le::Central overrides:
   void SetDelegate(
-      ::fidl::InterfaceHandle<::bluetooth_low_energy::CentralDelegate>
-          delegate) override;
+      ::fidl::InterfaceHandle<fuchsia::bluetooth::le::CentralDelegate> delegate)
+      override;
   void GetPeripherals(::fidl::VectorPtr<::fidl::StringPtr> service_uuids,
                       GetPeripheralsCallback callback) override;
   void GetPeripheral(::fidl::StringPtr identifier,
                      GetPeripheralCallback callback) override;
-  void StartScan(::bluetooth_low_energy::ScanFilterPtr filter,
+  void StartScan(fuchsia::bluetooth::le::ScanFilterPtr filter,
                  StartScanCallback callback) override;
   void StopScan() override;
   void ConnectPeripheral(
       ::fidl::StringPtr identifier,
-      ::fidl::InterfaceRequest<bluetooth_gatt::Client> client_request,
+      ::fidl::InterfaceRequest<fuchsia::bluetooth::gatt::Client> client_request,
       ConnectPeripheralCallback callback) override;
   void DisconnectPeripheral(
       ::fidl::StringPtr identifier,
@@ -75,7 +75,7 @@ class LowEnergyCentralServer
       connections_;
 
   // The delegate that is set via SetDelegate()
-  ::bluetooth_low_energy::CentralDelegatePtr delegate_;
+  fuchsia::bluetooth::le::CentralDelegatePtr delegate_;
 
   // Keep this as the last member to make sure that all weak pointers are
   // invalidated before other members get destroyed.

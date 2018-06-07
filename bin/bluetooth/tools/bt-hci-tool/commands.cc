@@ -19,8 +19,6 @@
 #include "lib/fxl/strings/string_printf.h"
 #include "lib/fxl/time/time_delta.h"
 
-using namespace bluetooth;
-
 namespace hcitool {
 namespace {
 

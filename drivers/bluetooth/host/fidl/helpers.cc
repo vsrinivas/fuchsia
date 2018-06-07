@@ -12,69 +12,64 @@
 #include "garnet/drivers/bluetooth/lib/gap/advertising_data.h"
 #include "garnet/drivers/bluetooth/lib/gap/discovery_filter.h"
 
-using bluetooth::Bool;
-using bluetooth::Error;
-using bluetooth::ErrorCode;
-using bluetooth::Int8;
-using bluetooth::Status;
-using bluetooth_control::AdapterInfo;
-using bluetooth_control::AdapterState;
-using bluetooth_control::Appearance;
-using bluetooth_control::TechnologyType;
+using fuchsia::bluetooth::Bool;
+using fuchsia::bluetooth::Error;
+using fuchsia::bluetooth::ErrorCode;
+using fuchsia::bluetooth::Int8;
+using fuchsia::bluetooth::Status;
 
-namespace ble = bluetooth_low_energy;
+namespace ctrl = fuchsia::bluetooth::control;
+namespace ble = fuchsia::bluetooth::le;
 
 namespace bthost {
 namespace fidl_helpers {
 namespace {
 
-::bluetooth_control::TechnologyType TechnologyTypeToFidl(
-    ::btlib::gap::TechnologyType type) {
+ctrl::TechnologyType TechnologyTypeToFidl(::btlib::gap::TechnologyType type) {
   switch (type) {
     case ::btlib::gap::TechnologyType::kLowEnergy:
-      return ::bluetooth_control::TechnologyType::LOW_ENERGY;
+      return ctrl::TechnologyType::LOW_ENERGY;
     case ::btlib::gap::TechnologyType::kClassic:
-      return ::bluetooth_control::TechnologyType::CLASSIC;
+      return ctrl::TechnologyType::CLASSIC;
     case ::btlib::gap::TechnologyType::kDualMode:
-      return ::bluetooth_control::TechnologyType::DUAL_MODE;
+      return ctrl::TechnologyType::DUAL_MODE;
     default:
       FXL_NOTREACHED();
       break;
   }
 
   // This should never execute.
-  return ::bluetooth_control::TechnologyType::DUAL_MODE;
+  return ctrl::TechnologyType::DUAL_MODE;
 }
 
 }  // namespace
 
-::bluetooth::ErrorCode HostErrorToFidl(::btlib::common::HostError host_error) {
+ErrorCode HostErrorToFidl(::btlib::common::HostError host_error) {
   switch (host_error) {
     case ::btlib::common::HostError::kFailed:
-      return ::bluetooth::ErrorCode::FAILED;
+      return ErrorCode::FAILED;
     case ::btlib::common::HostError::kTimedOut:
-      return ::bluetooth::ErrorCode::TIMED_OUT;
+      return ErrorCode::TIMED_OUT;
     case ::btlib::common::HostError::kInvalidParameters:
-      return ::bluetooth::ErrorCode::INVALID_ARGUMENTS;
+      return ErrorCode::INVALID_ARGUMENTS;
     case ::btlib::common::HostError::kCanceled:
-      return ::bluetooth::ErrorCode::CANCELED;
+      return ErrorCode::CANCELED;
     case ::btlib::common::HostError::kInProgress:
-      return ::bluetooth::ErrorCode::IN_PROGRESS;
+      return ErrorCode::IN_PROGRESS;
     case ::btlib::common::HostError::kNotSupported:
-      return ::bluetooth::ErrorCode::NOT_SUPPORTED;
+      return ErrorCode::NOT_SUPPORTED;
     case ::btlib::common::HostError::kNotFound:
-      return ::bluetooth::ErrorCode::NOT_FOUND;
+      return ErrorCode::NOT_FOUND;
     case ::btlib::common::HostError::kProtocolError:
-      return ::bluetooth::ErrorCode::PROTOCOL_ERROR;
+      return ErrorCode::PROTOCOL_ERROR;
     default:
       break;
   }
 
-  return ::bluetooth::ErrorCode::FAILED;
+  return ErrorCode::FAILED;
 }
 
-Status NewFidlError(::bluetooth::ErrorCode error_code,
-                    std::string description) {
+Status NewFidlError(ErrorCode error_code, std::string description) {
   Status status;
   status.error = Error::New();
   status.error->error_code = error_code;
@@ -82,10 +77,9 @@ Status NewFidlError(::bluetooth::ErrorCode error_code,
   return status;
 }
 
-::bluetooth_control::AdapterInfo NewAdapterInfo(
-    const ::btlib::gap::Adapter& adapter) {
-  ::bluetooth_control::AdapterInfo adapter_info;
-  adapter_info.state = ::bluetooth_control::AdapterState::New();
+ctrl::AdapterInfo NewAdapterInfo(const ::btlib::gap::Adapter& adapter) {
+  ctrl::AdapterInfo adapter_info;
+  adapter_info.state = ctrl::AdapterState::New();
 
   adapter_info.state->discoverable = Bool::New();
   adapter_info.state->discoverable->value = false;
@@ -98,9 +92,9 @@ Status NewFidlError(::bluetooth::ErrorCode error_code,
   return adapter_info;
 }
 
-::bluetooth_control::RemoteDevicePtr NewRemoteDevice(
+ctrl::RemoteDevicePtr NewRemoteDevice(
     const ::btlib::gap::RemoteDevice& device) {
-  auto fidl_device = ::bluetooth_control::RemoteDevice::New();
+  auto fidl_device = ctrl::RemoteDevice::New();
   fidl_device->identifier = device.identifier();
   fidl_device->address = device.address().value().ToString();
   fidl_device->technology = TechnologyTypeToFidl(device.technology());
@@ -110,7 +104,7 @@ Status NewFidlError(::bluetooth::ErrorCode error_code,
   fidl_device->bonded = false;
 
   // Set default value for device appearance.
-  fidl_device->appearance = ::bluetooth_control::Appearance::UNKNOWN;
+  fidl_device->appearance = ctrl::Appearance::UNKNOWN;
 
   if (device.rssi() != ::btlib::hci::kRSSIInvalid) {
     fidl_device->rssi = Int8::New();
@@ -139,8 +133,8 @@ Status NewFidlError(::bluetooth::ErrorCode error_code,
   if (adv_data.local_name())
     fidl_device->name = *adv_data.local_name();
   if (adv_data.appearance()) {
-    fidl_device->appearance = static_cast<::bluetooth_control::Appearance>(
-        le16toh(*adv_data.appearance()));
+    fidl_device->appearance =
+        static_cast<ctrl::Appearance>(le16toh(*adv_data.appearance()));
   }
   if (adv_data.tx_power()) {
     auto fidl_tx_power = Int8::New();

@@ -7,7 +7,7 @@
 
 #include <unordered_set>
 
-#include <bluetooth_gatt/cpp/fidl.h>
+#include <fuchsia/bluetooth/gatt/cpp/fidl.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/string.h>
 #include <lib/fidl/cpp/vector.h>
@@ -17,7 +17,7 @@ namespace bt_le_heart_rate {
 
 class HeartModel;
 
-class Service final : bluetooth_gatt::LocalServiceDelegate {
+class Service final : fuchsia::bluetooth::gatt::LocalServiceDelegate {
  public:
   // See assigned numbers for GATT services and characteristics.
   // https://www.bluetooth.com/specifications/gatt/services
@@ -35,8 +35,9 @@ class Service final : bluetooth_gatt::LocalServiceDelegate {
 
   // See Assigned Numbers for Heart Rate Service
   // https://www.bluetooth.com/specifications/gatt/viewer?attributeXmlFile=org.bluetooth.service.heart_rate.xml
-  static constexpr bluetooth_gatt::ErrorCode CONTROL_POINT_NOT_SUPPORTED =
-      static_cast<bluetooth_gatt::ErrorCode>(0x80);
+  static constexpr fuchsia::bluetooth::gatt::ErrorCode
+      CONTROL_POINT_NOT_SUPPORTED =
+          static_cast<fuchsia::bluetooth::gatt::ErrorCode>(0x80);
 
   // Heart Rate Service v1.0, 3.3.1 [Control Point] Characteristic Behavior.
   static constexpr uint8_t kResetEnergyExpendedValue = 0x01;
@@ -44,7 +45,7 @@ class Service final : bluetooth_gatt::LocalServiceDelegate {
   explicit Service(std::unique_ptr<HeartModel> heart_model);
   ~Service() = default;
 
-  void PublishService(bluetooth_gatt::ServerPtr* gatt_server);
+  void PublishService(fuchsia::bluetooth::gatt::ServerPtr* gatt_server);
 
   void set_measurement_interval(int msec) { measurement_interval_ = msec; }
 
@@ -66,8 +67,8 @@ class Service final : bluetooth_gatt::LocalServiceDelegate {
                               fidl::VectorPtr<uint8_t> value) override;
 
   std::unique_ptr<HeartModel> heart_model_;
-  fidl::Binding<bluetooth_gatt::LocalServiceDelegate> binding_;
-  bluetooth_gatt::LocalServicePtr service_;
+  fidl::Binding<fuchsia::bluetooth::gatt::LocalServiceDelegate> binding_;
+  fuchsia::bluetooth::gatt::LocalServicePtr service_;
 
   // Peers that have enabled measurement notifications.
   std::unordered_set<std::string> measurement_peers_;

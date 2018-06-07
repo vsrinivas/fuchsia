@@ -6,7 +6,7 @@
 
 #include <unordered_map>
 
-#include <bluetooth_gatt/cpp/fidl.h>
+#include <fuchsia/bluetooth/gatt/cpp/fidl.h>
 
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fxl/macros.h"
@@ -19,16 +19,16 @@ namespace bthost {
 
 // Implements the gatt::RemoteService FIDL interface.
 class GattRemoteServiceServer
-    : public GattServerBase<bluetooth_gatt::RemoteService> {
+    : public GattServerBase<fuchsia::bluetooth::gatt::RemoteService> {
  public:
   GattRemoteServiceServer(
       fbl::RefPtr<btlib::gatt::RemoteService> service,
       fbl::RefPtr<btlib::gatt::GATT> gatt,
-      fidl::InterfaceRequest<bluetooth_gatt::RemoteService> request);
+      fidl::InterfaceRequest<fuchsia::bluetooth::gatt::RemoteService> request);
   ~GattRemoteServiceServer() override;
 
  private:
-  // bluetooth_gatt::RemoteService overrides:
+  // fuchsia::bluetooth::gatt::RemoteService overrides:
   void DiscoverCharacteristics(
       DiscoverCharacteristicsCallback callback) override;
   void ReadCharacteristic(uint64_t id,

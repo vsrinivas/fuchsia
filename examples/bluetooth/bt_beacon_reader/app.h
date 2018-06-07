@@ -5,7 +5,7 @@
 #ifndef GARNET_EXAMPLES_BLUETOOTH_BT_BEACON_READER_APP_H_
 #define GARNET_EXAMPLES_BLUETOOTH_BT_BEACON_READER_APP_H_
 
-#include <bluetooth_low_energy/cpp/fidl.h>
+#include <fuchsia/bluetooth/le/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 
 #include "lib/app/cpp/startup_context.h"
@@ -13,24 +13,24 @@
 
 namespace bt_beacon_reader {
 
-class App final : public bluetooth_low_energy::CentralDelegate {
+class App final : public fuchsia::bluetooth::le::CentralDelegate {
  public:
   App(async::Loop* loop, bool just_tilts);
 
   void StartScanning();
 
  private:
-  // bluetooth_low_energy::CentralDelegate overrides:
+  // fuchsia::bluetooth::le::CentralDelegate overrides:
   void OnScanStateChanged(bool scanning);
-  void OnDeviceDiscovered(bluetooth_low_energy::RemoteDevice device);
+  void OnDeviceDiscovered(fuchsia::bluetooth::le::RemoteDevice device);
   void OnPeripheralDisconnected(::fidl::StringPtr identifier);
 
   async::Loop* const loop_;
   std::unique_ptr<fuchsia::sys::StartupContext> context_;
-  bluetooth_low_energy::CentralPtr central_;
+  fuchsia::bluetooth::le::CentralPtr central_;
 
   // Local CentralDelegate binding.
-  fidl::Binding<bluetooth_low_energy::CentralDelegate> central_delegate_;
+  fidl::Binding<fuchsia::bluetooth::le::CentralDelegate> central_delegate_;
 
   bool just_tilts_;
 

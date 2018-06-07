@@ -8,17 +8,12 @@
 #include <unordered_map>
 #include <unordered_set>
 
+#include <fuchsia/bluetooth/le/cpp/fidl.h>
+
 #include "garnet/drivers/bluetooth/lib/common/byte_buffer.h"
 #include "garnet/drivers/bluetooth/lib/common/optional.h"
 #include "garnet/drivers/bluetooth/lib/common/uuid.h"
 #include "garnet/drivers/bluetooth/lib/gap/gap.h"
-
-#include <bluetooth_low_energy/cpp/fidl.h>
-
-// The internal library components and the generated FIDL bindings are both
-// declared under the "bluetooth" namespace. We define an alias here to
-// disambiguate.
-namespace btfidl = ::bluetooth;
 
 namespace btlib {
 namespace gap {
@@ -55,7 +50,7 @@ class AdvertisingData {
 
   // Fill the AdvertisingData |out_ad| from the corresponding FIDL object |obj|
   // Does not clear |out_ad| first.
-  static void FromFidl(const ::bluetooth_low_energy::AdvertisingData& fidl_ad,
+  static void FromFidl(const fuchsia::bluetooth::le::AdvertisingData& fidl_ad,
                        AdvertisingData* out_ad);
 
   // Copies all of the data in this object to |out|, including making a copy of
@@ -134,7 +129,7 @@ class AdvertisingData {
   bool WriteBlock(common::MutableByteBuffer* buffer) const;
 
   // Makes a FIDL object that holds the same data
-  ::bluetooth_low_energy::AdvertisingDataPtr AsLEAdvertisingData() const;
+  fuchsia::bluetooth::le::AdvertisingDataPtr AsLEAdvertisingData() const;
 
   // Relation operators
   bool operator==(const AdvertisingData& other) const;

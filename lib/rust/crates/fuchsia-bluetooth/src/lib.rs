@@ -15,8 +15,8 @@ extern crate failure;
 extern crate rand;
 
 extern crate fuchsia_zircon as zircon;
-extern crate fidl_bluetooth;
-extern crate fidl_bluetooth_control;
+extern crate fidl_fuchsia_bluetooth;
+extern crate fidl_fuchsia_bluetooth_control;
 
 /// Bluetooth Error type
 pub mod error;

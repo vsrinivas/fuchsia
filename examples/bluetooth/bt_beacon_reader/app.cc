@@ -11,22 +11,13 @@
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 
-#include <bluetooth_control/cpp/fidl.h>
-#include <bluetooth_low_energy/cpp/fidl.h>
+#include <fuchsia/bluetooth/control/cpp/fidl.h>
+#include <fuchsia/bluetooth/le/cpp/fidl.h>
 #include "lib/fxl/functional/auto_call.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/split_string.h"
 
-char* date_string() {
-  static char date_buf[80];
-  time_t t = time(NULL);
-  struct tm tm = *localtime(&t);
-
-  snprintf(date_buf, sizeof(date_buf), "%4d-%02d-%02d %02d:%02d:%02d",
-           tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min,
-           tm.tm_sec);
-  return date_buf;
-}
+namespace ble = fuchsia::bluetooth::le;
 
 namespace bt_beacon_reader {
 
@@ -37,8 +28,7 @@ App::App(async::Loop* loop, bool just_tilts)
       just_tilts_(just_tilts) {
   FXL_DCHECK(context_);
 
-  central_ =
-      context_->ConnectToEnvironmentService<bluetooth_low_energy::Central>();
+  central_ = context_->ConnectToEnvironmentService<ble::Central>();
   FXL_DCHECK(central_);
 
   central_.set_error_handler([this] {
@@ -47,17 +37,17 @@ App::App(async::Loop* loop, bool just_tilts)
   });
 
   // Register with the Control as its delegate.
-  bluetooth_low_energy::CentralDelegatePtr delegate;
+  ble::CentralDelegatePtr delegate;
   central_delegate_.Bind(delegate.NewRequest());
   central_->SetDelegate(std::move(delegate));
 }
 
 void App::StartScanning() {
-  bluetooth_low_energy::ScanFilterPtr filter =
-      bluetooth_low_energy::ScanFilter::New();
-  filter->connectable = bluetooth::Bool::New();
+  ble::ScanFilterPtr filter = ble::ScanFilter::New();
+  filter->connectable = fuchsia::bluetooth::Bool::New();
   filter->connectable->value = false;
-  central_->StartScan(std::move(filter), [](bluetooth::Status status) {});
+  central_->StartScan(std::move(filter),
+                      [](fuchsia::bluetooth::Status status) {});
 }
 
 // Called when the scan state changes, e.g. when a scan session terminates due
@@ -66,7 +56,7 @@ void App::OnScanStateChanged(bool scanning) {
   printf("Device %s scanning.\n", scanning ? "started" : "stopped");
 }
 
-void PrintRDHeader(const bluetooth_low_energy::RemoteDevice& device) {
+void PrintRDHeader(const ble::RemoteDevice& device) {
   printf("id: %s ", device.identifier->c_str());
   if (device.advertising_data && device.advertising_data->appearance) {
     uint16_t appearance = device.advertising_data->appearance->value;
@@ -79,7 +69,7 @@ void PrintRDHeader(const bluetooth_low_energy::RemoteDevice& device) {
   printf("\n");
 }
 
-void PrintGeneralBeaconData(const bluetooth_low_energy::RemoteDevice& device) {
+void PrintGeneralBeaconData(const ble::RemoteDevice& device) {
   if (!device.advertising_data) {
     return;
   }
@@ -99,7 +89,7 @@ void PrintGeneralBeaconData(const bluetooth_low_energy::RemoteDevice& device) {
   }
 }
 
-void App::OnDeviceDiscovered(bluetooth_low_energy::RemoteDevice device) {
+void App::OnDeviceDiscovered(ble::RemoteDevice device) {
   if (just_tilts_) {
     std::unique_ptr<TiltDetection> tilt = TiltDetection::Create(device);
     if (tilt) {

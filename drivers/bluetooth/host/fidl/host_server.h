@@ -7,6 +7,8 @@
 #include <memory>
 #include <unordered_map>
 
+#include <fuchsia/bluetooth/control/cpp/fidl.h>
+#include <fuchsia/bluetooth/host/cpp/fidl.h>
 #include <lib/zx/channel.h>
 
 #include "lib/fidl/cpp/binding.h"
@@ -14,8 +16,6 @@
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/weak_ptr.h"
 
-#include <bluetooth_control/cpp/fidl.h>
-#include <bluetooth_host/cpp/fidl.h>
 #include "garnet/drivers/bluetooth/host/fidl/server_base.h"
 #include "garnet/drivers/bluetooth/lib/gap/adapter.h"
 #include "garnet/drivers/bluetooth/lib/gap/bredr_connection_manager.h"
@@ -28,14 +28,14 @@ class GattHost;
 
 // Implements the Host FIDL interface. Owns all FIDL connections that have been
 // opened through it.
-class HostServer : public AdapterServerBase<::bluetooth_host::Host> {
+class HostServer : public AdapterServerBase<fuchsia::bluetooth::host::Host> {
  public:
   HostServer(zx::channel channel, fxl::WeakPtr<btlib::gap::Adapter> adapter,
              fbl::RefPtr<GattHost> gatt_host);
   ~HostServer() override = default;
 
  private:
-  // ::bluetooth_host::Host overrides:
+  // ::fuchsia::bluetooth::Host overrides:
   void GetInfo(GetInfoCallback callback) override;
   void SetLocalName(::fidl::StringPtr local_name,
                     SetLocalNameCallback callback) override;
@@ -51,12 +51,14 @@ class HostServer : public AdapterServerBase<::bluetooth_host::Host> {
   void OnDiscoveryResult(const ::btlib::gap::RemoteDevice& remote_device);
 
   void RequestLowEnergyCentral(
-      ::fidl::InterfaceRequest<bluetooth_low_energy::Central> central) override;
+      ::fidl::InterfaceRequest<fuchsia::bluetooth::le::Central> central)
+      override;
   void RequestLowEnergyPeripheral(
-      ::fidl::InterfaceRequest<bluetooth_low_energy::Peripheral> peripheral)
+      ::fidl::InterfaceRequest<fuchsia::bluetooth::le::Peripheral> peripheral)
       override;
   void RequestGattServer(
-      ::fidl::InterfaceRequest<bluetooth_gatt::Server> server) override;
+      ::fidl::InterfaceRequest<fuchsia::bluetooth::gatt::Server> server)
+      override;
   void Close() override;
 
   // Called when |server| receives a channel connection error.

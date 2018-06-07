@@ -6,10 +6,12 @@
 
 #include "beacons.h"
 
+namespace ble = fuchsia::bluetooth::le;
+
 namespace bt_beacon_reader {
 
 std::unique_ptr<IBeaconDetection> IBeaconDetection::Create(
-    const bluetooth_low_energy::RemoteDevice& device) {
+    const ble::RemoteDevice& device) {
   if (!device.advertising_data ||
       device.advertising_data->manufacturer_specific_data->size() != 1) {
     return nullptr;
@@ -44,7 +46,7 @@ void IBeaconDetection::Read(const std::vector<uint8_t>& data) {
 }
 
 std::unique_ptr<TiltDetection> TiltDetection::Create(
-    const bluetooth_low_energy::RemoteDevice& device) {
+    const ble::RemoteDevice& device) {
   std::unique_ptr<IBeaconDetection> beacon = IBeaconDetection::Create(device);
   if (!beacon) {
     return nullptr;

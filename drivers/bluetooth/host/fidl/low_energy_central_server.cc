@@ -9,14 +9,14 @@
 
 #include "helpers.h"
 
-using bluetooth::ErrorCode;
-using bluetooth::Int8;
-using bluetooth::Status;
+using fuchsia::bluetooth::ErrorCode;
+using fuchsia::bluetooth::Int8;
+using fuchsia::bluetooth::Status;
 
-using bluetooth_gatt::Client;
-using bluetooth_low_energy::CentralDelegate;
-using bluetooth_low_energy::CentralDelegatePtr;
-using bluetooth_low_energy::ScanFilterPtr;
+using fuchsia::bluetooth::gatt::Client;
+using fuchsia::bluetooth::le::CentralDelegate;
+using fuchsia::bluetooth::le::CentralDelegatePtr;
+using fuchsia::bluetooth::le::ScanFilterPtr;
 
 namespace bthost {
 
@@ -141,7 +141,7 @@ void LowEnergyCentralServer::StopScan() {
 
 void LowEnergyCentralServer::ConnectPeripheral(
     ::fidl::StringPtr identifier,
-    ::fidl::InterfaceRequest<bluetooth_gatt::Client> client_request,
+    ::fidl::InterfaceRequest<Client> client_request,
     ConnectPeripheralCallback callback) {
   FXL_VLOG(1) << "Low Energy Central ConnectPeripheral()";
 

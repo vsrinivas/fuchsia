@@ -8,8 +8,8 @@
 #include <memory>
 #include <unordered_map>
 
-#include <bluetooth_gatt/cpp/fidl.h>
-#include <bluetooth_low_energy/cpp/fidl.h>
+#include <fuchsia/bluetooth/gatt/cpp/fidl.h>
+#include <fuchsia/bluetooth/le/cpp/fidl.h>
 #include <lib/app/cpp/startup_context.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/string.h>
@@ -18,7 +18,7 @@
 
 namespace bt_le_heart_rate {
 
-class App final : public bluetooth_low_energy::PeripheralDelegate {
+class App final : public fuchsia::bluetooth::le::PeripheralDelegate {
  public:
   explicit App(std::unique_ptr<HeartModel> heart_model);
   ~App() = default;
@@ -28,12 +28,13 @@ class App final : public bluetooth_low_energy::PeripheralDelegate {
   Service* service() { return &service_; }
 
  private:
-  using Binding = fidl::Binding<bluetooth_low_energy::PeripheralDelegate>;
+  using Binding = fidl::Binding<fuchsia::bluetooth::le::PeripheralDelegate>;
 
   static constexpr char kDeviceName[] = "FX BLE Heart Rate";
 
-  void OnCentralConnected(fidl::StringPtr advertisement_id,
-                          bluetooth_low_energy::RemoteDevice central) override;
+  void OnCentralConnected(
+      fidl::StringPtr advertisement_id,
+      fuchsia::bluetooth::le::RemoteDevice central) override;
   void OnCentralDisconnected(fidl::StringPtr device_id) override;
 
   // Application
@@ -41,12 +42,12 @@ class App final : public bluetooth_low_energy::PeripheralDelegate {
 
   // GATT
   Service service_;
-  bluetooth_gatt::ServerPtr gatt_server_;
+  fuchsia::bluetooth::gatt::ServerPtr gatt_server_;
 
   // BLE advertisement
   std::unique_ptr<Binding> binding_;  // For current advertisement
   std::unordered_map<std::string, std::unique_ptr<Binding>> connected_bindings_;
-  bluetooth_low_energy::PeripheralPtr peripheral_;
+  fuchsia::bluetooth::le::PeripheralPtr peripheral_;
 };
 
 }  // namespace bt_le_heart_rate

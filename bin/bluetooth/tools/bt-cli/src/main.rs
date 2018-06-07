@@ -5,7 +5,7 @@
 #![deny(warnings)]
 
 extern crate failure;
-extern crate fidl_bluetooth_control;
+extern crate fidl_fuchsia_bluetooth_control;
 extern crate fuchsia_app as app;
 #[macro_use]
 extern crate fuchsia_async as async;
@@ -20,7 +20,7 @@ use bluetooth::types::Status;
 use commands::{Cmd, CmdCompleter};
 use failure::{Fail, ResultExt};
 use failure::Error;
-use fidl_bluetooth_control::{ControlEvent, ControlMarker, ControlProxy};
+use fidl_fuchsia_bluetooth_control::{ControlEvent, ControlMarker, ControlProxy};
 use futures::{Future, FutureExt, StreamExt};
 use futures::future::ok as fok;
 use parking_lot::RwLock;

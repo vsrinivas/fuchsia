@@ -13,6 +13,10 @@
 #include <lib/async/default.h>
 #include <lib/fxl/logging.h>
 
+using fuchsia::bluetooth::Status;
+
+namespace gatt = fuchsia::bluetooth::gatt;
+
 namespace bt_le_heart_rate {
 namespace {
 
@@ -106,46 +110,44 @@ Service::Service(std::unique_ptr<HeartModel> heart_model)
   FXL_DCHECK(heart_model_);
 }
 
-void Service::PublishService(bluetooth_gatt::ServerPtr* gatt_server) {
-  using namespace bluetooth_gatt;
-
+void Service::PublishService(gatt::ServerPtr* gatt_server) {
   // Heart Rate Measurement
   // Allow update with default security of "none required."
-  Characteristic hrm;
+  gatt::Characteristic hrm;
   hrm.id = kHeartRateMeasurementId;
   hrm.type = kHeartRateMeasurementUuid;
-  hrm.properties = kPropertyNotify;
-  hrm.permissions = AttributePermissions::New();
-  hrm.permissions->update = SecurityRequirements::New();
+  hrm.properties = gatt::kPropertyNotify;
+  hrm.permissions = gatt::AttributePermissions::New();
+  hrm.permissions->update = gatt::SecurityRequirements::New();
 
   // Body Sensor Location
-  Characteristic bsl;
+  gatt::Characteristic bsl;
   bsl.id = kBodySensorLocationId;
   bsl.type = kBodySensorLocationUuid;
-  bsl.properties = kPropertyRead;
-  bsl.permissions = AttributePermissions::New();
-  bsl.permissions->read = SecurityRequirements::New();
+  bsl.properties = gatt::kPropertyRead;
+  bsl.permissions = gatt::AttributePermissions::New();
+  bsl.permissions->read = gatt::SecurityRequirements::New();
 
   // Heart Rate Control Point
-  Characteristic hrcp;
+  gatt::Characteristic hrcp;
   hrcp.id = kHeartRateControlPointId;
   hrcp.type = kHeartRateControlPointUuid;
-  hrcp.properties = kPropertyWrite;
-  hrcp.permissions = AttributePermissions::New();
-  hrcp.permissions->write = SecurityRequirements::New();
+  hrcp.properties = gatt::kPropertyWrite;
+  hrcp.permissions = gatt::AttributePermissions::New();
+  hrcp.permissions->write = gatt::SecurityRequirements::New();
 
-  fidl::VectorPtr<Characteristic> characteristics;
+  fidl::VectorPtr<gatt::Characteristic> characteristics;
   characteristics.push_back(std::move(hrm));
   characteristics.push_back(std::move(bsl));
   characteristics.push_back(std::move(hrcp));
 
-  ServiceInfo si;
+  gatt::ServiceInfo si;
   si.primary = true;
   si.type = kServiceUuid;
   si.characteristics = std::move(characteristics);
 
   std::cout << "Publishing service..." << std::endl;
-  auto publish_svc_result_cb = [](bluetooth::Status status) {
+  auto publish_svc_result_cb = [](Status status) {
     std::cout << "PublishService status: " << bool(status.error) << std::endl;
   };
   (*gatt_server)
@@ -223,14 +225,14 @@ void Service::OnReadValue(uint64_t id, int32_t offset,
             << std::endl;
 
   if (id != kBodySensorLocationId) {
-    callback(nullptr, bluetooth_gatt::ErrorCode::NOT_PERMITTED);
+    callback(nullptr, gatt::ErrorCode::NOT_PERMITTED);
     return;
   }
 
   // Body Sensor Location payload
   fidl::VectorPtr<uint8_t> value;
   value.push_back(static_cast<uint8_t>(BodySensorLocation::kOther));
-  callback(std::move(value), bluetooth_gatt::ErrorCode::NO_ERROR);
+  callback(std::move(value), gatt::ErrorCode::NO_ERROR);
 }
 
 void Service::OnWriteValue(uint64_t id, uint16_t offset,
@@ -245,19 +247,19 @@ void Service::OnWriteValue(uint64_t id, uint16_t offset,
     std::cout << "Ignoring writes to characteristic other than Heart Rate "
                  "Control Point"
               << std::endl;
-    callback(bluetooth_gatt::ErrorCode::NOT_PERMITTED);
+    callback(gatt::ErrorCode::NOT_PERMITTED);
     return;
   }
 
   if (offset != 0) {
     std::cout << "Write to control point at invalid offset" << std::endl;
-    callback(bluetooth_gatt::ErrorCode::INVALID_OFFSET);
+    callback(gatt::ErrorCode::INVALID_OFFSET);
     return;
   }
 
   if (value->size() != 1) {
     std::cout << "Write to control point of invalid length" << std::endl;
-    callback(bluetooth_gatt::ErrorCode::INVALID_VALUE_LENGTH);
+    callback(gatt::ErrorCode::INVALID_VALUE_LENGTH);
     return;
   }
 
@@ -271,7 +273,7 @@ void Service::OnWriteValue(uint64_t id, uint16_t offset,
 
   std::cout << "Resetting Energy Expended" << std::endl;
   heart_model_->ResetEnergyExpended();
-  callback(bluetooth_gatt::ErrorCode::NO_ERROR);
+  callback(gatt::ErrorCode::NO_ERROR);
 }
 
 void Service::OnWriteWithoutResponse(uint64_t id, uint16_t offset,

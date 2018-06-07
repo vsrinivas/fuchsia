@@ -1,18 +1,22 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
 use bluetooth::types::Bool;
 use bluetooth::util::clone_host_state;
 use bluetooth::util::clone_bt_fidl_bool;
-use fidl_bluetooth_control;
+use fidl_fuchsia_bluetooth_control as fidl_control;
 use std::fmt;
 
-pub struct AdapterInfo(fidl_bluetooth_control::AdapterInfo);
+pub struct AdapterInfo(fidl_control::AdapterInfo);
 
-impl From<fidl_bluetooth_control::AdapterInfo> for AdapterInfo {
-    fn from(b: fidl_bluetooth_control::AdapterInfo) -> AdapterInfo {
+impl From<fidl_control::AdapterInfo> for AdapterInfo {
+    fn from(b: fidl_control::AdapterInfo) -> AdapterInfo {
         AdapterInfo(b)
     }
 }
-impl Into<fidl_bluetooth_control::AdapterInfo> for AdapterInfo {
-    fn into(self) -> fidl_bluetooth_control::AdapterInfo {
+impl Into<fidl_control::AdapterInfo> for AdapterInfo {
+    fn into(self) -> fidl_control::AdapterInfo {
         self.0
     }
 }
@@ -35,15 +39,15 @@ impl fmt::Display for AdapterInfo {
     }
 }
 
-pub struct AdapterState(fidl_bluetooth_control::AdapterState);
+pub struct AdapterState(fidl_control::AdapterState);
 
-impl From<fidl_bluetooth_control::AdapterState> for AdapterState {
-    fn from(b: fidl_bluetooth_control::AdapterState) -> AdapterState {
+impl From<fidl_control::AdapterState> for AdapterState {
+    fn from(b: fidl_control::AdapterState) -> AdapterState {
         AdapterState(b)
     }
 }
-impl Into<fidl_bluetooth_control::AdapterState> for AdapterState {
-    fn into(self) -> fidl_bluetooth_control::AdapterState {
+impl Into<fidl_control::AdapterState> for AdapterState {
+    fn into(self) -> fidl_control::AdapterState {
         self.0
     }
 }

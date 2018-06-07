@@ -14,17 +14,17 @@
 
 #include "lib/fxl/functional/make_copyable.h"
 
-using bluetooth::ErrorCode;
-using bluetooth::Status;
-using GattErrorCode = bluetooth_gatt::ErrorCode;
+using fuchsia::bluetooth::ErrorCode;
+using fuchsia::bluetooth::Status;
+using GattErrorCode = fuchsia::bluetooth::gatt::ErrorCode;
 
-using bluetooth_gatt::Characteristic;
-using bluetooth_gatt::Descriptor;
-using bluetooth_gatt::LocalService;
-using bluetooth_gatt::LocalServiceDelegate;
-using bluetooth_gatt::LocalServiceDelegatePtr;
-using bluetooth_gatt::SecurityRequirementsPtr;
-using bluetooth_gatt::ServiceInfo;
+using fuchsia::bluetooth::gatt::Characteristic;
+using fuchsia::bluetooth::gatt::Descriptor;
+using fuchsia::bluetooth::gatt::LocalService;
+using fuchsia::bluetooth::gatt::LocalServiceDelegate;
+using fuchsia::bluetooth::gatt::LocalServiceDelegatePtr;
+using fuchsia::bluetooth::gatt::SecurityRequirementsPtr;
+using fuchsia::bluetooth::gatt::ServiceInfo;
 
 namespace bthost {
 namespace {
@@ -136,7 +136,7 @@ CharacteristicResult NewCharacteristic(const Characteristic& fidl_chrc) {
 // Implements the gatt::LocalService FIDL interface. Instances of this class are
 // only created by a GattServerServer.
 class GattServerServer::LocalServiceImpl
-    : public GattServerBase<::bluetooth_gatt::LocalService> {
+    : public GattServerBase<fuchsia::bluetooth::gatt::LocalService> {
  public:
   LocalServiceImpl(GattServerServer* owner,
                    uint64_t id,
@@ -163,7 +163,7 @@ class GattServerServer::LocalServiceImpl
   LocalServiceDelegate* delegate() { return delegate_.get(); }
 
  private:
-  // ::bluetooth_gatt::Service overrides:
+  // fuchsia::bluetooth::gatt::Service overrides:
   void RemoveService() override {
     CleanUp();
     owner_->RemoveService(id_);
@@ -197,7 +197,7 @@ class GattServerServer::LocalServiceImpl
 
 GattServerServer::GattServerServer(
     fbl::RefPtr<btlib::gatt::GATT> gatt,
-    fidl::InterfaceRequest<bluetooth_gatt::Server> request)
+    fidl::InterfaceRequest<fuchsia::bluetooth::gatt::Server> request)
     : GattServerBase(gatt, this, std::move(request)), weak_ptr_factory_(this) {}
 
 GattServerServer::~GattServerServer() {
