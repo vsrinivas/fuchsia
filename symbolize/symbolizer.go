@@ -68,7 +68,8 @@ func (s *LLVMSymbolizer) handle(ctx context.Context) {
 				continue
 			}
 			// Before sending a binary off to llvm-symbolizer, veryify the binary
-			if err := VerifyBinary(args.file, args.build); err != nil {
+			binary := &Binary{args.file, args.build}
+			if err := binary.Verify(); err != nil {
 				args.output <- LLVMSymbolizeResult{nil, err}
 				continue
 			}

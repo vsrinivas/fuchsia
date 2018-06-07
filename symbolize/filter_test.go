@@ -63,7 +63,7 @@ func ExampleBasic() {
 	})
 	// mock ids.txt
 	repo := NewRepo()
-	repo.AddSource(newMockSource())
+	repo.AddSource(NewMockSource("mock_source.txt", testBinaries))
 
 	// make an actual filter using those two mock objects
 	filter := NewFilter(repo, symbo)
@@ -146,7 +146,7 @@ func TestBacktrace(t *testing.T) {
 	})
 	// mock ids.txt
 	repo := NewRepo()
-	err := repo.AddSource(newMockSource())
+	err := repo.AddSource(NewMockSource("mock_source.txt", testBinaries))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -201,7 +201,7 @@ func TestReset(t *testing.T) {
 	})
 	// mock ids.txt
 	repo := NewRepo()
-	err = repo.AddSource(newMockSource())
+	err = repo.AddSource(NewMockSource("mock_source.txt", testBinaries))
 
 	if err != nil {
 		t.Fatal(err)

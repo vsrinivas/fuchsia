@@ -27,7 +27,7 @@ func (g *gobugMockSource) GetBinaries() ([]Binary, error) {
 		Binary{BuildID: "DEADBEEFA6387724A9F465A32CD8C14B", Name: "testdata/gobug.elf"},
 	}
 	for _, bin := range out {
-		if err := VerifyBinary(bin.Name, bin.BuildID); err != nil {
+		if err := bin.Verify(); err != nil {
 			return nil, err
 		}
 	}

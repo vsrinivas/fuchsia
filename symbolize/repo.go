@@ -16,12 +16,12 @@ import (
 	"fuchsia.googlesource.com/tools/elflib"
 )
 
-type Binary struct {
-	BuildID string
-	Name    string
-}
-
+// TODO(jakehehrlich): Document what this is for.
+// TODO(jakehehrlich): Consider giving this a more descriptive name.
 type Source interface {
+	// The name of this source which is usually the path to its backing file.
+	Name() string
+	// Extracts the set of binaries from this source.
 	GetBinaries() ([]Binary, error)
 }
 
@@ -38,7 +38,18 @@ func (b buildIDError) Error() string {
 	return fmt.Sprintf("error reading %s: %v", b.filename, b.err)
 }
 
-func VerifyBinary(filename, build string) error {
+// TODO(jakehehrlich): Document what this is for.
+// TODO(jakehehrlich): Consider giving this a more accurate name.
+type Binary struct {
+	BuildID string
+	Name    string
+}
+
+// Verify ensures this Binary's build ID is derived from its contents.
+func (b *Binary) Verify() error {
+	filename := b.Name
+	build := b.BuildID
+
 	file, err := os.Open(filename)
 	if err != nil {
 		return newBuildIDError(err, filename)
@@ -59,12 +70,18 @@ func VerifyBinary(filename, build string) error {
 	return newBuildIDError(fmt.Errorf("build id `%s` could not be found", build), filename)
 }
 
+// TODO(jakehehrlich): Document what this is for.
+// TODO(jakehehrlich): Consider giving this a more descriptive name.
 type IDsSource struct {
 	pathToIDs string
 }
 
 func NewIDsSource(pathToIDs string) Source {
 	return &IDsSource{pathToIDs}
+}
+
+func (i *IDsSource) Name() string {
+	return i.pathToIDs
 }
 
 func (i *IDsSource) GetBinaries() ([]Binary, error) {
@@ -81,9 +98,6 @@ func (i *IDsSource) GetBinaries() ([]Binary, error) {
 		}
 		build := parts[0]
 		filename := parts[1]
-		if err := VerifyBinary(filename, build); err != nil {
-			return nil, err
-		}
 		out = append(out, Binary{Name: filename, BuildID: build})
 	}
 	return out, nil
@@ -120,6 +134,12 @@ func (s *SymbolizerRepo) loadSource(source Source) error {
 	bins, err := source.GetBinaries()
 	if err != nil {
 		return err
+	}
+	// Verify each binary
+	for _, bin := range bins {
+		if err := bin.Verify(); err != nil {
+			return err
+		}
 	}
 	// TODO: Do this in parallel
 	for _, bin := range bins {
