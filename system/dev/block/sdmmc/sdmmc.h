@@ -12,6 +12,13 @@
 #include <ddk/protocol/sdio.h>
 #include <hw/sdmmc.h>
 
+// Tracing Includes
+#include <lib/async-loop/loop.h>
+#include <trace-provider/provider.h>
+#include <trace/event.h>
+
+#include <stdbool.h>
+
 #include "sdio.h"
 #include <threads.h>
 
@@ -31,6 +38,12 @@ typedef enum sdmmc_type {
 #define WITH_STATS 1
 
 typedef struct sdmmc_device {
+    //members for tracing
+    async_loop_t* loop;
+    trace_provider_t* trace_provider;
+    trace_async_id_t async_id;
+    bool trace_on;
+
     zx_device_t* zxdev;
 
     sdmmc_protocol_t host;
