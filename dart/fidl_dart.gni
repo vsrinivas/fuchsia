@@ -42,7 +42,7 @@ template("fidl_dart") {
       ":*",
     ]
 
-    tool = "//garnet/go/src/fidl:fidlgen"
+    tool = "//topaz/bin/fidlgen_dart"
 
     inputs = [
       json_representation,
@@ -60,8 +60,6 @@ template("fidl_dart") {
       rebase_path(bindings_dir, root_build_dir),
       "--include-base",
       rebase_path(root_gen_dir, root_build_dir),
-      "--generators",
-      "dart",
     ]
 
     deps = [
