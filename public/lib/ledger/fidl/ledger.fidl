@@ -208,13 +208,18 @@ struct Entry {
   Priority priority;
 };
 
+// A value inlined in a message.
+struct InlinedValue {
+  vector<uint8> value;
+};
+
 // A pair of key and an inlined value.
 struct InlinedEntry {
   vector<uint8>:256 key;
   // |value| is null if the value requested has the LAZY priority and is not
   // present on the device. Clients must use a Fetch call to retrieve the
   // contents.
-  vector<uint8>? value;
+  InlinedValue? inlined_value;
   Priority priority;
 };
 
@@ -266,7 +271,7 @@ interface PageSnapshot {
   // Returns the value of a given key if it fits in a FIDL message.
   // |VALUE_TOO_LARGE| is returned if the value does not fit in a FIDL message.
   // See |Get()| for additional information.
-  5: GetInline(vector<uint8>:256 key) -> (Status @status, vector<uint8> value);
+  5: GetInline(vector<uint8>:256 key) -> (Status @status, InlinedValue? value);
 
   // Fetches the value of a given key, over the network if not already present
   // locally. |NETWORK_ERROR| is returned if the download fails (e.g.: network

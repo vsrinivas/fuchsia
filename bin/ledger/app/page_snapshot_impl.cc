@@ -88,7 +88,8 @@ storage::Status FillSingleEntry(const storage::Object& object,
   if (status != storage::Status::OK) {
     return status;
   }
-  entry->value = convert::ToArray(data);
+  entry->inlined_value = std::make_unique<InlinedValue>();
+  entry->inlined_value->value = convert::ToArray(data);
   return storage::Status::OK;
 }
 
@@ -375,7 +376,7 @@ void PageSnapshotImpl::GetInline(fidl::VectorPtr<uint8_t> key,
           storage::Status status, storage::Entry entry) mutable {
         if (status != storage::Status::OK) {
           callback(PageUtils::ConvertStatus(status, Status::KEY_NOT_FOUND),
-                   fidl::VectorPtr<uint8_t>::New(0));
+                   nullptr);
           return;
         }
         PageUtils::ResolveObjectIdentifierAsStringView(
@@ -384,17 +385,18 @@ void PageSnapshotImpl::GetInline(fidl::VectorPtr<uint8_t> key,
             [callback = std::move(callback)](Status status,
                                              fxl::StringView data_view) {
               if (status != Status::OK) {
-                callback(status, fidl::VectorPtr<uint8_t>::New(0));
+                callback(status, nullptr);
                 return;
               }
               if (fidl_serialization::GetByteVectorSize(data_view.size()) +
                       fidl_serialization::kStatusEnumSize >
                   fidl_serialization::kMaxInlineDataSize) {
-                callback(Status::VALUE_TOO_LARGE,
-                         fidl::VectorPtr<uint8_t>::New(0));
+                callback(Status::VALUE_TOO_LARGE, nullptr);
                 return;
               }
-              callback(status, convert::ToArray(data_view));
+              auto inlined_value = std::make_unique<InlinedValue>();
+              inlined_value->value = convert::ToArray(data_view);
+              callback(status, std::move(inlined_value));
             });
       });
 }

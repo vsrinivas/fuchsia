@@ -648,11 +648,15 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntriesInline) {
 
   ASSERT_EQ(2u, actual_entries->size());
   EXPECT_EQ(eager_key, convert::ExtendedStringView(actual_entries->at(0).key));
-  EXPECT_EQ(eager_value, convert::ToString(actual_entries->at(0).value));
+  EXPECT_TRUE(actual_entries->at(0).inlined_value);
+  EXPECT_EQ(eager_value,
+            convert::ToString(actual_entries->at(0).inlined_value->value));
   EXPECT_EQ(Priority::EAGER, actual_entries->at(0).priority);
 
   EXPECT_EQ(lazy_key, convert::ExtendedStringView(actual_entries->at(1).key));
-  EXPECT_EQ(lazy_value, convert::ToString(actual_entries->at(1).value));
+  EXPECT_TRUE(actual_entries->at(1).inlined_value);
+  EXPECT_EQ(lazy_value,
+            convert::ToString(actual_entries->at(1).inlined_value->value));
   EXPECT_EQ(Priority::LAZY, actual_entries->at(1).priority);
 }
 
@@ -750,8 +754,9 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntriesInlineWithTokenForSize) {
   // in the correct order.
   for (int i = 0; i < static_cast<int>(actual_entries->size()); ++i) {
     ASSERT_EQ(GetKey(i, 0), convert::ToString(actual_entries->at(i).key));
+    ASSERT_TRUE(actual_entries->at(i).inlined_value);
     ASSERT_EQ(GetValue(i, min_value_size),
-              convert::ToString(actual_entries->at(i).value));
+              convert::ToString(actual_entries->at(i).inlined_value->value));
   }
 }
 
@@ -803,8 +808,9 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntriesInlineWithTokenForEntryCount) {
   // in the correct order.
   for (int i = 0; i < static_cast<int>(actual_entries->size()); ++i) {
     ASSERT_EQ(GetKey(i, 0), convert::ToString(actual_entries->at(i).key));
+    ASSERT_TRUE(actual_entries->at(i).inlined_value);
     ASSERT_EQ(GetValue(i, min_value_size),
-              convert::ToString(actual_entries->at(i).value));
+              convert::ToString(actual_entries->at(i).inlined_value->value));
   }
 }
 
@@ -1204,10 +1210,10 @@ TEST_F(PageImplTest, SnapshotGetSmall) {
 
   EXPECT_EQ(value, ToString(actual_value));
 
-  fidl::VectorPtr<uint8_t> actual_inlined_value;
+  std::unique_ptr<InlinedValue> actual_inlined_value;
   auto callback_get_inline = [this, &actual_inlined_value](
                                  Status status,
-                                 fidl::VectorPtr<uint8_t> value) {
+                                 std::unique_ptr<InlinedValue> value) {
     EXPECT_EQ(Status::OK, status);
     actual_inlined_value = std::move(value);
     message_loop_.PostQuitTask();
@@ -1215,7 +1221,8 @@ TEST_F(PageImplTest, SnapshotGetSmall) {
 
   snapshot->GetInline(convert::ToArray(key), callback_get_inline);
   RunLoop();
-  EXPECT_EQ(value, convert::ToString(actual_inlined_value));
+  EXPECT_TRUE(actual_inlined_value);
+  EXPECT_EQ(value, convert::ToString(actual_inlined_value->value));
 }
 
 TEST_F(PageImplTest, SnapshotGetLarge) {
@@ -1249,11 +1256,13 @@ TEST_F(PageImplTest, SnapshotGetLarge) {
 
   EXPECT_EQ(value_string, ToString(actual_value));
 
-  fidl::VectorPtr<uint8_t> array_value;
-  snapshot->GetInline(convert::ToArray(key),
-                      callback::Capture(MakeQuitTask(), &status, &array_value));
+  std::unique_ptr<InlinedValue> inlined_value;
+  snapshot->GetInline(
+      convert::ToArray(key),
+      callback::Capture(MakeQuitTask(), &status, &inlined_value));
   RunLoop();
   EXPECT_EQ(Status::VALUE_TOO_LARGE, status);
+  EXPECT_FALSE(inlined_value);
 }
 
 TEST_F(PageImplTest, SnapshotGetNeedsFetch) {
@@ -1282,14 +1291,14 @@ TEST_F(PageImplTest, SnapshotGetNeedsFetch) {
   EXPECT_EQ(Status::NEEDS_FETCH, status);
   EXPECT_FALSE(actual_value);
 
-  fidl::VectorPtr<uint8_t> actual_inlined_value;
+  std::unique_ptr<InlinedValue> actual_inlined_value;
   snapshot->GetInline(
       convert::ToArray(key),
       ::callback::Capture(postquit_callback, &status, &actual_inlined_value));
   RunLoop();
 
   EXPECT_EQ(Status::NEEDS_FETCH, status);
-  EXPECT_TRUE(actual_inlined_value->empty());
+  EXPECT_FALSE(actual_inlined_value);
 }
 
 TEST_F(PageImplTest, SnapshotFetchPartial) {

@@ -39,6 +39,7 @@ using ConflictResolverPtr = fuchsia::ledger::ConflictResolverPtr;
 using DiffEntry = fuchsia::ledger::DiffEntry;
 using Entry = fuchsia::ledger::Entry;
 using InlinedEntry = fuchsia::ledger::InlinedEntry;
+using InlinedValue = fuchsia::ledger::InlinedValue;
 using Ledger = fuchsia::ledger::Ledger;
 using LedgerPtr = fuchsia::ledger::LedgerPtr;
 using MergePolicy = fuchsia::ledger::MergePolicy;

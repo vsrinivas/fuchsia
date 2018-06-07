@@ -73,12 +73,14 @@ TEST_P(SyncIntegrationTest, SerialConnection) {
                     nullptr, callback::Capture(MakeQuitTask(), &status));
   RunLoop();
   ASSERT_EQ(ledger::Status::OK, status);
-  fidl::VectorPtr<uint8_t> value;
-  snapshot->GetInline(convert::ToArray("Hello"),
-                      callback::Capture(MakeQuitTask(), &status, &value));
+  std::unique_ptr<ledger::InlinedValue> inlined_value;
+  snapshot->GetInline(
+      convert::ToArray("Hello"),
+      callback::Capture(MakeQuitTask(), &status, &inlined_value));
   RunLoop();
   ASSERT_EQ(ledger::Status::OK, status);
-  ASSERT_EQ("World", convert::ToString(value));
+  ASSERT_TRUE(inlined_value);
+  ASSERT_EQ("World", convert::ToString(inlined_value->value));
 }
 
 TEST_P(SyncIntegrationTest, ConcurrentConnection) {
@@ -111,12 +113,14 @@ TEST_P(SyncIntegrationTest, ConcurrentConnection) {
                      callback::Capture(MakeQuitTask(), &status));
   RunLoop();
   ASSERT_EQ(ledger::Status::OK, status);
-  fidl::VectorPtr<uint8_t> value;
-  snapshot->GetInline(convert::ToArray("Hello"),
-                      callback::Capture(MakeQuitTask(), &status, &value));
+  std::unique_ptr<ledger::InlinedValue> inlined_value;
+  snapshot->GetInline(
+      convert::ToArray("Hello"),
+      callback::Capture(MakeQuitTask(), &status, &inlined_value));
   RunLoop();
   ASSERT_EQ(ledger::Status::OK, status);
-  ASSERT_EQ("World", convert::ToString(value));
+  ASSERT_TRUE(inlined_value);
+  ASSERT_EQ("World", convert::ToString(inlined_value->value));
 }
 
 INSTANTIATE_TEST_CASE_P(SyncIntegrationTest, SyncIntegrationTest,

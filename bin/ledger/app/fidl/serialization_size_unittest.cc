@@ -118,7 +118,8 @@ TEST_F(SerializationSizeTest, GetInline) {
   fidl::VectorPtr<uint8_t> value = convert::ToArray(GetValue(0, value_size));
 
   auto client_callback = [](Status /*status*/,
-                            fidl::VectorPtr<uint8_t> /*value*/) {};
+                            std::unique_ptr<InlinedValue> /*value*/) {};
+
   // FakeSnapshot saves the callback instead of running it.
   snapshot_proxy->GetInline(std::move(key), std::move(client_callback));
   RunLoopUntilIdle();
@@ -127,10 +128,13 @@ TEST_F(SerializationSizeTest, GetInline) {
   reader = handle.TakeChannel();
 
   // Run the callback directly.
-  snapshot_impl.get_inline_callback(Status::OK, std::move(value));
+  auto inlined_value = std::make_unique<InlinedValue>();
+  inlined_value->value = std::move(value);
+  snapshot_impl.get_inline_callback(Status::OK, std::move(inlined_value));
 
-  const size_t expected_bytes = Align(
-      kMessageHeaderSize + GetByteVectorSize(value_size) + kStatusEnumSize);
+  const size_t expected_bytes =
+      Align(kMessageHeaderSize + kPointerSize + GetByteVectorSize(value_size) +
+            kStatusEnumSize);
   const size_t expected_handles = 0;
   EXPECT_TRUE(
       CheckMessageSize(std::move(reader), expected_bytes, expected_handles));
@@ -205,28 +209,38 @@ TEST_F(SerializationSizeTest, GetEntriesInline) {
 
   const size_t key_size = 125;
   const size_t value_size = 125;
-  const size_t n_entries = 10;
+  const size_t n_entries = 7;
+  const size_t n_empty_entries = 7;
   auto token = std::make_unique<Token>();
   token->opaque_id = GetKey(0, key_size);
   InlinedEntry entry;
   entry.key = GetKey(0, key_size);
-  entry.value = convert::ToArray(GetValue(0, value_size));
+  entry.inlined_value = std::make_unique<InlinedValue>();
+  entry.inlined_value->value = convert::ToArray(GetValue(0, value_size));
+  size_t kExpectedEntrySize =  GetInlinedEntrySize(entry);
   for (size_t i = 0; i < n_entries; i++) {
     entries_to_send->push_back(fidl::Clone(entry));
   }
+  InlinedEntry empty_entry;
+  empty_entry.key = GetKey(0, key_size);
+  for (size_t i = 0; i < n_empty_entries; i++) {
+    entries_to_send->push_back(fidl::Clone(empty_entry));
+  }
+  size_t kExpectedEmptyEntrySize =  GetInlinedEntrySize(empty_entry);
 
   // Run the callback directly.
   snapshot_impl.get_entries_inline_callback(
       Status::OK, std::move(entries_to_send), std::move(token));
 
-  const size_t expected_bytes = Align(
-      kMessageHeaderSize +                                 // Header.
-      kVectorHeaderSize +                                  // VectorPtr.
-      n_entries * GetInlinedEntrySize(std::move(entry)) +  // Vector of entries.
-      kPointerSize +                                       // Pointer to next_token.
-      GetByteVectorSize(key_size) +                        // next_token.
-      kStatusEnumSize                                      // Status.
-  );
+  const size_t expected_bytes =
+      Align(kMessageHeaderSize +                        // Header.
+            kVectorHeaderSize +                         // VectorPtr.
+            n_entries * kExpectedEntrySize +            // Vector of entries.
+            n_empty_entries * kExpectedEmptyEntrySize + // Vector of entries.
+            kPointerSize +                              // Pointer to next_token.
+            GetByteVectorSize(key_size) +               // next_token.
+            kStatusEnumSize                             // Status.
+      );
   const size_t expected_handles = 0;
   EXPECT_TRUE(
       CheckMessageSize(std::move(reader), expected_bytes, expected_handles));

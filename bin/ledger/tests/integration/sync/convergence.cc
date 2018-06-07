@@ -73,13 +73,13 @@ class PageWatcherImpl : public ledger::PageWatcher {
     // call survives as long as the call is active, even if a new snapshot
     // arrives in between.
     (*current_snapshot_)
-        ->GetInline(
-            std::move(key),
-            [snapshot = current_snapshot_.Clone(),
-             callback = std::move(callback)](
-                ledger::Status status, fidl::VectorPtr<uint8_t> value) mutable {
-              callback(status, std::move(value));
-            });
+        ->GetInline(std::move(key),
+                    [snapshot = current_snapshot_.Clone(),
+                     callback = std::move(callback)](
+                        ledger::Status status,
+                        std::unique_ptr<ledger::InlinedValue> value) mutable {
+                      callback(status, std::move(value));
+                    });
   }
 
  private:
@@ -285,7 +285,7 @@ class ConvergenceTest
   bool AreValuesIdentical(
       const std::vector<std::unique_ptr<PageWatcherImpl>>& watchers,
       std::string key) {
-    std::vector<fidl::VectorPtr<uint8_t>> values;
+    std::vector<std::unique_ptr<ledger::InlinedValue>> values;
     for (int i = 0; i < num_ledgers_; i++) {
       values.emplace_back();
       ledger::Status status = ledger::Status::UNKNOWN_ERROR;
@@ -298,8 +298,8 @@ class ConvergenceTest
 
     bool values_are_identical = true;
     for (int i = 1; i < num_ledgers_; i++) {
-      values_are_identical &= convert::ExtendedStringView(values[0]) ==
-                              convert::ExtendedStringView(values[i]);
+      values_are_identical &= convert::ExtendedStringView(values[0]->value) ==
+                              convert::ExtendedStringView(values[i]->value);
     }
     return values_are_identical;
   }
