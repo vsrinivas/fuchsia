@@ -9,6 +9,7 @@ namespace encoder {
 
 using cobalt::TimerManager;
 using config::ClientConfig;
+using fuchsia::cobalt::CobaltEncoder;
 
 const int32_t kFuchsiaCustomerId = 1;
 

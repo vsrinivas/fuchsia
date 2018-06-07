@@ -49,14 +49,13 @@ CobaltApp::CobaltApp(async_t* async, std::chrono::seconds schedule_interval,
       network_wrapper_(
           async, std::make_unique<backoff::ExponentialBackoff>(),
           [this] {
-            return context_
-                ->ConnectToEnvironmentService<http::HttpService>();
+            return context_->ConnectToEnvironmentService<http::HttpService>();
           }),
       timer_manager_(async),
       controller_impl_(new CobaltControllerImpl(async, &shipping_dispatcher_)) {
   auto size_params = ShippingManager::SizeParams(
-      cobalt::kMaxBytesPerObservation, kMaxBytesPerEnvelope, kMaxBytesTotal,
-      kMinEnvelopeSendSize);
+      fuchsia::cobalt::kMaxBytesPerObservation, kMaxBytesPerEnvelope,
+      kMaxBytesTotal, kMinEnvelopeSendSize);
   auto schedule_params =
       ShippingManager::ScheduleParams(schedule_interval, min_interval);
   auto envelope_maker_params = ShippingManager::EnvelopeMakerParams(
@@ -103,13 +102,15 @@ CobaltApp::CobaltApp(async_t* async, std::chrono::seconds schedule_interval,
       client_config_, getClientSecret(), &shipping_dispatcher_, &system_data_,
       &timer_manager_));
 
-  context_->outgoing().AddPublicService<CobaltEncoderFactory>(
-      [this](fidl::InterfaceRequest<CobaltEncoderFactory> request) {
+  context_->outgoing().AddPublicService<fuchsia::cobalt::CobaltEncoderFactory>(
+      [this](fidl::InterfaceRequest<fuchsia::cobalt::CobaltEncoderFactory>
+                 request) {
         factory_bindings_.AddBinding(factory_impl_.get(), std::move(request));
       });
 
-  context_->outgoing().AddPublicService<CobaltController>(
-      [this](fidl::InterfaceRequest<CobaltController> request) {
+  context_->outgoing().AddPublicService<fuchsia::cobalt::CobaltController>(
+      [this](
+          fidl::InterfaceRequest<fuchsia::cobalt::CobaltController> request) {
         controller_bindings_.AddBinding(controller_impl_.get(),
                                         std::move(request));
       });

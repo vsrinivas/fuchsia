@@ -8,7 +8,7 @@
 
 namespace cobalt {
 
-using cobalt::Status;
+using fuchsia::cobalt::Status;
 using std::string;
 using wlan::SystemClock;
 
@@ -21,8 +21,9 @@ void TimerVal::AddStart(uint32_t metric_id, uint32_t encoding_id,
   this->start_timestamp = timestamp;
 }
 
-void TimerVal::AddEnd(int64_t timestamp, const std::string& part_name,
-                      fidl::VectorPtr<ObservationValue> observation) {
+void TimerVal::AddEnd(
+    int64_t timestamp, const std::string& part_name,
+    fidl::VectorPtr<fuchsia::cobalt::ObservationValue> observation) {
   this->end_timestamp = timestamp;
   this->part_name = std::move(part_name);
   this->observation = std::move(observation);
@@ -146,7 +147,8 @@ Status TimerManager::GetTimerValWithEnd(
 
 Status TimerManager::GetTimerValWithEnd(
     const std::string& timer_id, int64_t timestamp, uint32_t timeout_s,
-    const std::string& part_name, fidl::VectorPtr<ObservationValue> observation,
+    const std::string& part_name,
+    fidl::VectorPtr<fuchsia::cobalt::ObservationValue> observation,
     std::unique_ptr<TimerVal>* timer_val_ptr) {
   if (!timer_val_ptr ||
       !isValidTimerArguments(timer_id, timestamp, timeout_s)) {

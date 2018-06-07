@@ -11,7 +11,7 @@
 #include <fstream>
 #include <string>
 
-#include <cobalt/cpp/fidl.h>
+#include <fuchsia/cobalt/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 
 #include "garnet/bin/cobalt/app/cobalt_controller_impl.h"
@@ -57,11 +57,11 @@ class CobaltApp {
 
   std::shared_ptr<config::ClientConfig> client_config_;
 
-  std::unique_ptr<CobaltController> controller_impl_;
-  fidl::BindingSet<CobaltController> controller_bindings_;
+  std::unique_ptr<fuchsia::cobalt::CobaltController> controller_impl_;
+  fidl::BindingSet<fuchsia::cobalt::CobaltController> controller_bindings_;
 
-  std::unique_ptr<CobaltEncoderFactory> factory_impl_;
-  fidl::BindingSet<CobaltEncoderFactory> factory_bindings_;
+  std::unique_ptr<fuchsia::cobalt::CobaltEncoderFactory> factory_impl_;
+  fidl::BindingSet<fuchsia::cobalt::CobaltEncoderFactory> factory_bindings_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(CobaltApp);
 };

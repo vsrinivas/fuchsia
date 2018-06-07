@@ -9,8 +9,9 @@
 namespace cobalt {
 
 using encoder::ShippingManager;
+using fuchsia::cobalt::Status;
 
-cobalt::Status ToCobaltStatus(ShippingManager::Status s) {
+Status ToCobaltStatus(ShippingManager::Status s) {
   switch (s) {
     case ShippingManager::kOk:
       return Status::OK;

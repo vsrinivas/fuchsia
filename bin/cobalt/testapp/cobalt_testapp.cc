@@ -13,7 +13,7 @@
 #include <sstream>
 #include <string>
 
-#include <cobalt/cpp/fidl.h>
+#include <fuchsia/cobalt/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 
 #include "lib/app/cpp/startup_context.h"
@@ -26,8 +26,8 @@
 #include "lib/fxl/strings/string_view.h"
 #include "lib/svc/cpp/services.h"
 
-using cobalt::ObservationValue;
 using fidl::VectorPtr;
+using fuchsia::cobalt::Status;
 
 // Command-line flags
 
@@ -106,21 +106,21 @@ const uint32_t kV1BackendMetricId = 10;
 const uint32_t kV1BackendEncodingId = 4;
 const std::string kV1BackendEvent = "Send-to-V1";
 
-std::string StatusToString(cobalt::Status status) {
+std::string StatusToString(Status status) {
   switch (status) {
-    case cobalt::Status::OK:
+    case Status::OK:
       return "OK";
-    case cobalt::Status::INVALID_ARGUMENTS:
+    case Status::INVALID_ARGUMENTS:
       return "INVALID_ARGUMENTS";
-    case cobalt::Status::OBSERVATION_TOO_BIG:
+    case Status::OBSERVATION_TOO_BIG:
       return "OBSERVATION_TOO_BIG";
-    case cobalt::Status::TEMPORARILY_FULL:
+    case Status::TEMPORARILY_FULL:
       return "TEMPORARILY_FULL";
-    case cobalt::Status::SEND_FAILED:
+    case Status::SEND_FAILED:
       return "SEND_FAILED";
-    case cobalt::Status::FAILED_PRECONDITION:
+    case Status::FAILED_PRECONDITION:
       return "FAILED_PRECONDITION";
-    case cobalt::Status::INTERNAL_ERROR:
+    case Status::INTERNAL_ERROR:
       return "INTERNAL_ERROR";
   }
 };
@@ -262,8 +262,8 @@ class CobaltTestApp {
   int previous_value_of_num_send_attempts_ = 0;
   std::unique_ptr<fuchsia::sys::StartupContext> context_;
   fuchsia::sys::ComponentControllerPtr controller_;
-  cobalt::CobaltEncoderSyncPtr encoder_;
-  cobalt::CobaltControllerSyncPtr cobalt_controller_;
+  fuchsia::cobalt::CobaltEncoderSyncPtr encoder_;
+  fuchsia::cobalt::CobaltControllerSyncPtr cobalt_controller_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(CobaltTestApp);
 };
@@ -314,7 +314,7 @@ void CobaltTestApp::Connect(uint32_t schedule_interval_seconds,
     FXL_LOG(ERROR) << "Connection error from CobaltTestApp to CobaltClient.";
   });
 
-  cobalt::CobaltEncoderFactorySyncPtr factory;
+  fuchsia::cobalt::CobaltEncoderFactorySyncPtr factory;
   services.ConnectToService(factory.NewRequest());
   factory->GetEncoder(kTestAppProjectId, encoder_.NewRequest());
 
@@ -357,7 +357,7 @@ bool CobaltTestApp::RunTestsWithBlockUntilEmpty() {
 
 bool CobaltTestApp::RunTestsUsingServiceFromEnvironment() {
   // Connect to the Cobalt FIDL service provided by the environment.
-  cobalt::CobaltEncoderFactorySyncPtr factory;
+  fuchsia::cobalt::CobaltEncoderFactorySyncPtr factory;
   context_->ConnectToEnvironmentService(factory.NewRequest());
 
   factory->GetEncoder(kTestAppProjectId, encoder_.NewRequest());
@@ -563,9 +563,9 @@ bool CobaltTestApp::EncodeStringAndSend(uint32_t metric_id,
                                         std::string val,
                                         bool use_request_send_soon) {
   for (int i = 0; i < num_observations_per_batch_; i++) {
-    cobalt::Status status = cobalt::Status::INTERNAL_ERROR;
+    Status status = Status::INTERNAL_ERROR;
     if (i == 0) {
-      cobalt::Value value;
+      fuchsia::cobalt::Value value;
       value.set_string_value(val);
       encoder_->AddObservation(metric_id, encoding_config_id, std::move(value),
                                &status);
@@ -575,7 +575,7 @@ bool CobaltTestApp::EncodeStringAndSend(uint32_t metric_id,
     }
     FXL_VLOG(1) << "AddStringObservation(" << val << ") => "
                 << StatusToString(status);
-    if (status != cobalt::Status::OK) {
+    if (status != Status::OK) {
       FXL_LOG(ERROR) << "AddStringObservation() => " << StatusToString(status);
       return false;
     }
@@ -588,9 +588,9 @@ bool CobaltTestApp::EncodeIntAndSend(uint32_t metric_id,
                                      uint32_t encoding_config_id, int32_t val,
                                      bool use_request_send_soon) {
   for (int i = 0; i < num_observations_per_batch_; i++) {
-    cobalt::Status status = cobalt::Status::INTERNAL_ERROR;
+    Status status = Status::INTERNAL_ERROR;
     if (i == 0) {
-      cobalt::Value value;
+      fuchsia::cobalt::Value value;
       value.set_int_value(val);
       encoder_->AddObservation(metric_id, encoding_config_id, std::move(value),
                                &status);
@@ -599,7 +599,7 @@ bool CobaltTestApp::EncodeIntAndSend(uint32_t metric_id,
     }
     FXL_VLOG(1) << "AddIntObservation(" << val << ") => "
                 << StatusToString(status);
-    if (status != cobalt::Status::OK) {
+    if (status != Status::OK) {
       FXL_LOG(ERROR) << "AddIntObservation() => " << StatusToString(status);
       return false;
     }
@@ -612,18 +612,18 @@ bool CobaltTestApp::EncodeIntDistributionAndSend(
     uint32_t metric_id, uint32_t encoding_config_id,
     std::map<uint32_t, uint64_t> distribution_map, bool use_request_send_soon) {
   for (int i = 0; i < num_observations_per_batch_; i++) {
-    cobalt::Status status = cobalt::Status::INTERNAL_ERROR;
-    fidl::VectorPtr<cobalt::BucketDistributionEntry> distribution;
+    Status status = Status::INTERNAL_ERROR;
+    fidl::VectorPtr<fuchsia::cobalt::BucketDistributionEntry> distribution;
     for (auto it = distribution_map.begin(); distribution_map.end() != it;
          it++) {
-      cobalt::BucketDistributionEntry entry;
+      fuchsia::cobalt::BucketDistributionEntry entry;
       entry.index = it->first;
       entry.count = it->second;
       distribution.push_back(std::move(entry));
     }
 
     if (i == 0) {
-      cobalt::Value value;
+      fuchsia::cobalt::Value value;
       value.set_int_bucket_distribution(std::move(distribution));
       encoder_->AddObservation(metric_id, encoding_config_id, std::move(value),
                                &status);
@@ -632,7 +632,7 @@ bool CobaltTestApp::EncodeIntDistributionAndSend(
                                          std::move(distribution), &status);
     }
     FXL_VLOG(1) << "AddIntBucketDistribution() => " << StatusToString(status);
-    if (status != cobalt::Status::OK) {
+    if (status != Status::OK) {
       FXL_LOG(ERROR) << "AddIntBucketDistribution() => "
                      << StatusToString(status);
       return false;
@@ -647,9 +647,9 @@ bool CobaltTestApp::EncodeDoubleAndSend(uint32_t metric_id,
                                         uint32_t encoding_config_id, double val,
                                         bool use_request_send_soon) {
   for (int i = 0; i < num_observations_per_batch_; i++) {
-    cobalt::Status status = cobalt::Status::INTERNAL_ERROR;
+    Status status = Status::INTERNAL_ERROR;
     if (i == 0) {
-      cobalt::Value value;
+      fuchsia::cobalt::Value value;
       value.set_double_value(val);
       encoder_->AddObservation(metric_id, encoding_config_id, std::move(value),
                                &status);
@@ -659,7 +659,7 @@ bool CobaltTestApp::EncodeDoubleAndSend(uint32_t metric_id,
     }
     FXL_VLOG(1) << "AddDoubleObservation(" << val << ") => "
                 << StatusToString(status);
-    if (status != cobalt::Status::OK) {
+    if (status != Status::OK) {
       FXL_LOG(ERROR) << "AddDoubleObservation() => " << StatusToString(status);
       return false;
     }
@@ -673,9 +673,9 @@ bool CobaltTestApp::EncodeIndexAndSend(uint32_t metric_id,
                                        uint32_t index,
                                        bool use_request_send_soon) {
   for (int i = 0; i < num_observations_per_batch_; i++) {
-    cobalt::Status status = cobalt::Status::INTERNAL_ERROR;
+    Status status = Status::INTERNAL_ERROR;
     if (i == 0) {
-      cobalt::Value value;
+      fuchsia::cobalt::Value value;
       value.set_index_value(index);
       encoder_->AddObservation(metric_id, encoding_config_id, std::move(value),
                                &status);
@@ -685,7 +685,7 @@ bool CobaltTestApp::EncodeIndexAndSend(uint32_t metric_id,
     }
     FXL_VLOG(1) << "AddIndexObservation(" << index << ") => "
                 << StatusToString(status);
-    if (status != cobalt::Status::OK) {
+    if (status != Status::OK) {
       FXL_LOG(ERROR) << "AddIndexObservation() => " << StatusToString(status);
       return false;
     }
@@ -700,7 +700,7 @@ bool CobaltTestApp::EncodeTimerAndSend(uint32_t metric_id,
                                        std::string timer_id, uint32_t timeout_s,
                                        bool use_request_send_soon) {
   for (int i = 0; i < num_observations_per_batch_; i++) {
-    cobalt::Status status = cobalt::Status::INTERNAL_ERROR;
+    Status status = Status::INTERNAL_ERROR;
     encoder_->StartTimer(metric_id, encoding_config_id, timer_id, start_time,
                          timeout_s, &status);
     encoder_->EndTimer(timer_id, end_time, timeout_s, &status);
@@ -709,7 +709,7 @@ bool CobaltTestApp::EncodeTimerAndSend(uint32_t metric_id,
                 << "timer_id:" << timer_id << ", start_time:" << start_time
                 << ", end_time:" << end_time << ") => "
                 << StatusToString(status);
-    if (status != cobalt::Status::OK) {
+    if (status != Status::OK) {
       FXL_LOG(ERROR) << "AddTimerObservation() => " << StatusToString(status);
       return false;
     }
@@ -724,8 +724,8 @@ bool CobaltTestApp::EncodeMultipartTimerAndSend(
     uint32_t start_time, uint32_t end_time, std::string timer_id,
     uint32_t timeout_s, bool use_request_send_soon) {
   for (int i = 0; i < num_observations_per_batch_; i++) {
-    cobalt::Status status = cobalt::Status::INTERNAL_ERROR;
-    fidl::VectorPtr<ObservationValue> parts(1);
+    Status status = Status::INTERNAL_ERROR;
+    fidl::VectorPtr<fuchsia::cobalt::ObservationValue> parts(1);
     parts->at(0).name = part0;
     parts->at(0).encoding_id = encoding_id0;
     parts->at(0).value.set_string_value(val0);
@@ -739,7 +739,7 @@ bool CobaltTestApp::EncodeMultipartTimerAndSend(
                 << "timer_id:" << timer_id << ", start_time:" << start_time
                 << ", end_time:" << end_time << ") => "
                 << StatusToString(status);
-    if (status != cobalt::Status::OK) {
+    if (status != Status::OK) {
       FXL_LOG(ERROR) << "AddMultipartTimerObservation() => "
                      << StatusToString(status);
       return false;
@@ -754,8 +754,8 @@ bool CobaltTestApp::EncodeStringPairAndSend(
     std::string val0, std::string part1, uint32_t encoding_id1,
     std::string val1, bool use_request_send_soon) {
   for (int i = 0; i < num_observations_per_batch_; i++) {
-    cobalt::Status status = cobalt::Status::INTERNAL_ERROR;
-    fidl::VectorPtr<ObservationValue> parts(2);
+    Status status = Status::INTERNAL_ERROR;
+    fidl::VectorPtr<fuchsia::cobalt::ObservationValue> parts(2);
     parts->at(0).name = part0;
     parts->at(0).encoding_id = encoding_id0;
     parts->at(0).value.set_string_value(val0);
@@ -765,7 +765,7 @@ bool CobaltTestApp::EncodeStringPairAndSend(
     encoder_->AddMultipartObservation(metric_id, std::move(parts), &status);
     FXL_VLOG(1) << "AddMultipartObservation(" << val0 << ", " << val1 << ") => "
                 << StatusToString(status);
-    if (status != cobalt::Status::OK) {
+    if (status != Status::OK) {
       FXL_LOG(ERROR) << "AddMultipartObservation() => "
                      << StatusToString(status);
       return false;

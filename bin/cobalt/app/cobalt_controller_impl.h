@@ -5,14 +5,14 @@
 #ifndef GARNET_BIN_COBALT_APP_COBALT_CONTROLLER_IMPL_H_
 #define GARNET_BIN_COBALT_APP_COBALT_CONTROLLER_IMPL_H_
 
-#include <cobalt/cpp/fidl.h>
+#include <fuchsia/cobalt/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 
 #include "third_party/cobalt/encoder/shipping_dispatcher.h"
 
 namespace cobalt {
 
-class CobaltControllerImpl : public CobaltController {
+class CobaltControllerImpl : public fuchsia::cobalt::CobaltController {
  public:
   // Does not take ownerhsip of |shipping_dispatcher|.
   CobaltControllerImpl(async_t* async,

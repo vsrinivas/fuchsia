@@ -11,9 +11,9 @@
 #include <thread>
 #include <utility>
 
-#include <cobalt/cpp/fidl.h>
-#include <lib/async/cpp/task.h>
+#include <fuchsia/cobalt/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async/cpp/task.h>
 
 #include "garnet/bin/cobalt/app/cobalt_app.h"
 #include "garnet/bin/cobalt/app/product_hack.h"

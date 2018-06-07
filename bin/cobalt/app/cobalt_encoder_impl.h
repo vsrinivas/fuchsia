@@ -7,7 +7,7 @@
 
 #include <stdlib.h>
 
-#include <cobalt/cpp/fidl.h>
+#include <fuchsia/cobalt/cpp/fidl.h>
 
 #include "garnet/bin/cobalt/app/timer_manager.h"
 #include "third_party/cobalt/config/client_config.h"
@@ -21,7 +21,7 @@
 namespace cobalt {
 namespace encoder {
 
-class CobaltEncoderImpl : public CobaltEncoder {
+class CobaltEncoderImpl : public fuchsia::cobalt::CobaltEncoder {
  public:
   // Does not take ownership of |timer_manager|, |shipping_dispatcher| or
   // |system_data|.
@@ -51,16 +51,17 @@ class CobaltEncoderImpl : public CobaltEncoder {
                            AddIndexObservationCallback callback) override;
 
   void AddObservation(uint32_t metric_id, uint32_t encoding_id,
-                      Value observation,
+                      fuchsia::cobalt::Value observation,
                       AddObservationCallback callback) override;
 
   void AddMultipartObservation(
-      uint32_t metric_id, fidl::VectorPtr<ObservationValue> observation,
+      uint32_t metric_id,
+      fidl::VectorPtr<fuchsia::cobalt::ObservationValue> observation,
       AddMultipartObservationCallback callback) override;
 
   void AddIntBucketDistribution(
       uint32_t metric_id, uint32_t encoding_id,
-      fidl::VectorPtr<BucketDistributionEntry> distribution,
+      fidl::VectorPtr<fuchsia::cobalt::BucketDistributionEntry> distribution,
       AddIntBucketDistributionCallback callback) override;
 
   // Adds an observation from the timer given if both StartTimer and EndTimer
@@ -76,11 +77,10 @@ class CobaltEncoderImpl : public CobaltEncoder {
   void EndTimer(fidl::StringPtr timer_id, uint64_t timestamp,
                 uint32_t timeout_s, EndTimerCallback callback) override;
 
-  void EndTimerMultiPart(fidl::StringPtr timer_id, uint64_t timestamp,
-                         fidl::StringPtr part_name,
-                         fidl::VectorPtr<ObservationValue> observation,
-                         uint32_t timeout_s,
-                         EndTimerMultiPartCallback callback) override;
+  void EndTimerMultiPart(
+      fidl::StringPtr timer_id, uint64_t timestamp, fidl::StringPtr part_name,
+      fidl::VectorPtr<fuchsia::cobalt::ObservationValue> observation,
+      uint32_t timeout_s, EndTimerMultiPartCallback callback) override;
 
   void SendObservations(SendObservationsCallback callback) override;
 

@@ -8,14 +8,14 @@
 #include <stdlib.h>
 #include <string>
 
-#include <cobalt/cpp/fidl.h>
+#include <fuchsia/cobalt/cpp/fidl.h>
 
 #include "third_party/cobalt/encoder/shipping_manager.h"
 
 namespace cobalt {
 
-// Maps a ShippingManager::Status to a cobalt::Status.
-cobalt::Status ToCobaltStatus(encoder::ShippingManager::Status s);
+// Maps a ShippingManager::Status to a fuchsia::cobalt::Status.
+fuchsia::cobalt::Status ToCobaltStatus(encoder::ShippingManager::Status s);
 
 // Reads the PEM file at the specified path and returns the contents as
 // a string. CHECK fails if the file cannot be read.

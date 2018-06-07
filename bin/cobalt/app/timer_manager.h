@@ -14,12 +14,14 @@
 #include <string>
 #include <unordered_map>
 
-#include <cobalt/cpp/fidl.h>
+#include <fuchsia/cobalt/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/fxl/logging.h>
 #include <lib/zx/time.h>
 
 #include "garnet/lib/wlan/mlme/include/wlan/mlme/clock.h"
+
+using fuchsia::cobalt::Status;
 
 namespace cobalt {
 
@@ -41,14 +43,14 @@ struct TimerVal {
   // The name of the timer field/part if it is a multipart obervation.
   std::string part_name;
   // The remaining fields of a multipart obervation.
-  fidl::VectorPtr<ObservationValue> observation;
+  fidl::VectorPtr<fuchsia::cobalt::ObservationValue> observation;
 
   // Stores the start-related arguments in the given TimerVal.
   void AddStart(uint32_t metric_id, uint32_t encoding_id, int64_t timestamp);
 
   // Stores the end-related arguments in the given TimerVal.
   void AddEnd(int64_t timestamp, const std::string& part_name,
-              fidl::VectorPtr<ObservationValue> observation);
+              fidl::VectorPtr<fuchsia::cobalt::ObservationValue> observation);
 };
 
 // Stores partial timer values as they are encountered. Once both the start and
@@ -80,27 +82,27 @@ class TimerManager {
   // same timer_id and different start timestamp exists it returns
   // FAILED_PRECONDITION. If timer_ID or timeout_s is invalid, returns
   // INVALID_ARGUMENTS.
-  cobalt::Status GetTimerValWithStart(uint32_t metric_id, uint32_t encoding_id,
-                                      const std::string& timer_id,
-                                      int64_t timestamp, uint32_t timeout_s,
-                                      std::unique_ptr<TimerVal>* timer_val_ptr);
+  Status GetTimerValWithStart(uint32_t metric_id, uint32_t encoding_id,
+                              const std::string& timer_id, int64_t timestamp,
+                              uint32_t timeout_s,
+                              std::unique_ptr<TimerVal>* timer_val_ptr);
 
   // Populates the TimerVal parameter with the timer's values if there is a
   // valid timer with the timer_id. If no valid timer exists it creates a new
   // timer with the end data and resets the TimerVal ptr. If a timer with the
   // same timer_id and different end timestamp exists it returns an error.
-  cobalt::Status GetTimerValWithEnd(const std::string& timer_id,
-                                    int64_t timestamp, uint32_t timeout_s,
-                                    std::unique_ptr<TimerVal>* timer_val_ptr);
+  Status GetTimerValWithEnd(const std::string& timer_id, int64_t timestamp,
+                            uint32_t timeout_s,
+                            std::unique_ptr<TimerVal>* timer_val_ptr);
 
   // Populates the TimerVal parameter with the timer's values if there is a
   // valid timer with the timer_id. If no valid timer exists it creates a new
   // timer with the end data and resets the TimerVal ptr. If a timer with the
   // same timer_id and different end timestamp exists it returns an error.
-  cobalt::Status GetTimerValWithEnd(
+  Status GetTimerValWithEnd(
       const std::string& timer_id, int64_t timestamp, uint32_t timeout_s,
       const std::string& part_name,
-      fidl::VectorPtr<ObservationValue> observation,
+      fidl::VectorPtr<fuchsia::cobalt::ObservationValue> observation,
       std::unique_ptr<TimerVal>* timer_val_ptr);
 
   // Tests can use private methods for setup.

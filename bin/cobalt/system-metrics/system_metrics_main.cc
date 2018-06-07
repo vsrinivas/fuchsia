@@ -10,7 +10,7 @@
 #include <memory>
 #include <thread>
 
-#include <cobalt/cpp/fidl.h>
+#include <fuchsia/cobalt/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/zx/resource.h>
 #include <zircon/device/device.h>
@@ -47,21 +47,21 @@ zx_status_t get_root_resource(zx::resource* resource_out) {
   return ZX_OK;
 }
 
-std::string StatusToString(cobalt::Status status) {
+std::string StatusToString(fuchsia::cobalt::Status status) {
   switch (status) {
-    case cobalt::Status::OK:
+    case fuchsia::cobalt::Status::OK:
       return "OK";
-    case cobalt::Status::INVALID_ARGUMENTS:
+    case fuchsia::cobalt::Status::INVALID_ARGUMENTS:
       return "INVALID_ARGUMENTS";
-    case cobalt::Status::OBSERVATION_TOO_BIG:
+    case fuchsia::cobalt::Status::OBSERVATION_TOO_BIG:
       return "OBSERVATION_TOO_BIG";
-    case cobalt::Status::TEMPORARILY_FULL:
+    case fuchsia::cobalt::Status::TEMPORARILY_FULL:
       return "TEMPORARILY_FULL";
-    case cobalt::Status::SEND_FAILED:
+    case fuchsia::cobalt::Status::SEND_FAILED:
       return "SEND_FAILED";
-    case cobalt::Status::FAILED_PRECONDITION:
+    case fuchsia::cobalt::Status::FAILED_PRECONDITION:
       return "FAILED_PRECONDITION";
-    case cobalt::Status::INTERNAL_ERROR:
+    case fuchsia::cobalt::Status::INTERNAL_ERROR:
       return "INTERNAL_ERROR";
   }
 };
@@ -84,17 +84,17 @@ class SystemMetricsApp {
   void GatherMetrics();
 
   // LogUptime returns the status returned by its call to Add*Observation.
-  cobalt::Status LogUptime(std::chrono::minutes uptime_minutes);
+  fuchsia::cobalt::Status LogUptime(std::chrono::minutes uptime_minutes);
 
   // LogMemoryUsage returns the status OK if everything went fine, or the
   // logging was skipped due to scheduling, INTERNAL_ERROR if it was somehow
   // unable to get the memory usage information and whatever was returned by
   // Add*Observation otherwise.
-  cobalt::Status LogMemoryUsage(std::chrono::minutes uptime_minutes);
+  fuchsia::cobalt::Status LogMemoryUsage(std::chrono::minutes uptime_minutes);
 
  private:
   std::unique_ptr<fuchsia::sys::StartupContext> context_;
-  cobalt::CobaltEncoderSyncPtr encoder_;
+  fuchsia::cobalt::CobaltEncoderSyncPtr encoder_;
   std::chrono::steady_clock::time_point start_time_;
   std::chrono::minutes tick_interval_;
   // We don't log every minute of uptime. We log in exponentially-growing
@@ -115,16 +115,16 @@ void SystemMetricsApp::GatherMetrics() {
   LogMemoryUsage(uptime_minutes);
 }
 
-cobalt::Status SystemMetricsApp::LogUptime(
+fuchsia::cobalt::Status SystemMetricsApp::LogUptime(
     std::chrono::minutes uptime_minutes) {
   while (next_uptime_bucket_ <= uptime_minutes.count()) {
-    cobalt::Status status = cobalt::Status::INTERNAL_ERROR;
+    fuchsia::cobalt::Status status = fuchsia::cobalt::Status::INTERNAL_ERROR;
 
     encoder_->AddIntObservation(kUptimeMetricId, kRawEncodingId,
                                 next_uptime_bucket_, &status);
     // If we failed to send an observation, we stop gathering metrics for up to
     // one minute.
-    if (status != cobalt::Status::OK) {
+    if (status != fuchsia::cobalt::Status::OK) {
       FXL_LOG(ERROR) << "AddIntObservation() => " << StatusToString(status);
       return status;
     }
@@ -136,20 +136,20 @@ cobalt::Status SystemMetricsApp::LogUptime(
     }
   }
 
-  return cobalt::Status::OK;
+  return fuchsia::cobalt::Status::OK;
 }
 
-cobalt::Status SystemMetricsApp::LogMemoryUsage(
+fuchsia::cobalt::Status SystemMetricsApp::LogMemoryUsage(
     std::chrono::minutes uptime_minutes) {
   if (uptime_minutes.count() < next_log_memory_usage_) {
-    return cobalt::Status::OK;
+    return fuchsia::cobalt::Status::OK;
   }
 
   zx::resource root_resource;
   zx_status_t status = get_root_resource(&root_resource);
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "get_root_resource failed!!!";
-    return cobalt::Status::INTERNAL_ERROR;
+    return fuchsia::cobalt::Status::INTERNAL_ERROR;
   }
 
   zx_info_kmem_stats_t stats;
@@ -157,10 +157,10 @@ cobalt::Status SystemMetricsApp::LogMemoryUsage(
                               sizeof(stats), NULL, NULL);
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "zx_object_get_info failed with " << status << ".";
-    return cobalt::Status::INTERNAL_ERROR;
+    return fuchsia::cobalt::Status::INTERNAL_ERROR;
   }
 
-  auto values = fidl::VectorPtr<cobalt::ObservationValue>::New(3);
+  auto values = fidl::VectorPtr<fuchsia::cobalt::ObservationValue>::New(3);
   // Metric part name as defined in the corresponding metric config.
   values->at(0).name = "system_uptime_minutes";
   values->at(0).value.set_int_value(uptime_minutes.count());
@@ -176,10 +176,10 @@ cobalt::Status SystemMetricsApp::LogMemoryUsage(
   values->at(2).value.set_int_value(stats.free_bytes);
   values->at(2).encoding_id = kRawEncodingId;
 
-  cobalt::Status cobalt_status = cobalt::Status::INTERNAL_ERROR;
+  auto cobalt_status = fuchsia::cobalt::Status::INTERNAL_ERROR;
   encoder_->AddMultipartObservation(kMemoryUsageMetricId, std::move(values),
                                     &cobalt_status);
-  if (cobalt_status != cobalt::Status::OK) {
+  if (cobalt_status != fuchsia::cobalt::Status::OK) {
     FXL_LOG(ERROR) << "AddMultipartObservation() => "
                    << StatusToString(cobalt_status);
     return cobalt_status;
@@ -187,7 +187,7 @@ cobalt::Status SystemMetricsApp::LogMemoryUsage(
 
   // The next time to log is in 5 minutes.
   next_log_memory_usage_ = uptime_minutes.count() + 5;
-  return cobalt::Status::OK;
+  return fuchsia::cobalt::Status::OK;
 }
 
 void SystemMetricsApp::Main() {
@@ -200,8 +200,8 @@ void SystemMetricsApp::Main() {
 }
 
 void SystemMetricsApp::ConnectToEnvironmentService() {
-  // Connect to the Cobalt FIDL service provided by the environment.
-  cobalt::CobaltEncoderFactorySyncPtr factory;
+  // connect to the cobalt fidl service provided by the environment.
+  fuchsia::cobalt::CobaltEncoderFactorySyncPtr factory;
   context_->ConnectToEnvironmentService(factory.NewRequest());
   factory->GetEncoder(kSystemMetricsProjectId, encoder_.NewRequest());
 }

@@ -85,7 +85,7 @@ TEST_F(TimerManagerTests, GetValidMultipartTimer) {
   EXPECT_EQ(Status::OK, status);
   EXPECT_FALSE(TimerManager::isReady(timer_val_ptr));
 
-  fidl::VectorPtr<ObservationValue> parts(1);
+  fidl::VectorPtr<fuchsia::cobalt::ObservationValue> parts(1);
   parts->at(0).name = "test_part";
   parts->at(0).encoding_id = kEncodingId;
   parts->at(0).value.set_string_value("test_value");
