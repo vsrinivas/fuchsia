@@ -10,6 +10,7 @@
 #include <assert.h>
 #include <debug.h>
 #include <err.h>
+#include <fbl/algorithm.h>
 #include <fbl/mutex.h>
 #include <inttypes.h>
 #include <kernel/event.h>
@@ -90,13 +91,13 @@ static int mutex_test(void) {
 
     thread_t* threads[5];
 
-    for (uint i = 0; i < countof(threads); i++) {
+    for (uint i = 0; i < fbl::count_of(threads); i++) {
         threads[i] = thread_create("mutex tester", &mutex_thread, &m,
                                    get_current_thread()->base_priority, DEFAULT_STACK_SIZE);
         thread_resume(threads[i]);
     }
 
-    for (uint i = 0; i < countof(threads); i++) {
+    for (uint i = 0; i < fbl::count_of(threads); i++) {
         thread_join(threads[i], NULL, ZX_TIME_INFINITE);
     }
 
@@ -234,10 +235,10 @@ static void event_test(void) {
     threads[3] = thread_create("event waiter 2", &event_waiter, (void*)2, DEFAULT_PRIORITY, DEFAULT_STACK_SIZE);
     threads[4] = thread_create("event waiter 3", &event_waiter, (void*)2, DEFAULT_PRIORITY, DEFAULT_STACK_SIZE);
 
-    for (uint i = 0; i < countof(threads); i++)
+    for (uint i = 0; i < fbl::count_of(threads); i++)
         thread_resume(threads[i]);
 
-    for (uint i = 0; i < countof(threads); i++)
+    for (uint i = 0; i < fbl::count_of(threads); i++)
         thread_join(threads[i], NULL, ZX_TIME_INFINITE);
 
     thread_sleep_relative(ZX_SEC(2));
@@ -253,12 +254,12 @@ static void event_test(void) {
     threads[3] = thread_create("event waiter 2", &event_waiter, (void*)99, DEFAULT_PRIORITY, DEFAULT_STACK_SIZE);
     threads[4] = thread_create("event waiter 3", &event_waiter, (void*)99, DEFAULT_PRIORITY, DEFAULT_STACK_SIZE);
 
-    for (uint i = 0; i < countof(threads); i++)
+    for (uint i = 0; i < fbl::count_of(threads); i++)
         thread_resume(threads[i]);
 
     thread_sleep_relative(ZX_SEC(2));
 
-    for (uint i = 0; i < countof(threads); i++) {
+    for (uint i = 0; i < fbl::count_of(threads); i++) {
         thread_kill(threads[i]);
         thread_join(threads[i], NULL, ZX_TIME_INFINITE);
     }
@@ -376,11 +377,11 @@ static void atomic_test(void) {
     threads[7] = thread_create("atomic tester 2", &atomic_tester, (void*)-1, LOW_PRIORITY, DEFAULT_STACK_SIZE);
 
     /* start all the threads */
-    for (uint i = 0; i < countof(threads); i++)
+    for (uint i = 0; i < fbl::count_of(threads); i++)
         thread_resume(threads[i]);
 
     /* wait for them to all stop */
-    for (uint i = 0; i < countof(threads); i++) {
+    for (uint i = 0; i < fbl::count_of(threads); i++) {
         thread_join(threads[i], NULL, ZX_TIME_INFINITE);
     }
 
@@ -710,7 +711,7 @@ static int affinity_test_thread(void* arg) {
     printf("top of affinity tester %p\n", t);
 
     while (!state->shutdown) {
-        int which = rand() % countof(state->threads);
+        int which = rand() % static_cast<int>(fbl::count_of(state->threads));
         switch (rand() % 5) {
         case 0: // set affinity
             //printf("%p set aff %p\n", t, state->threads[which]);

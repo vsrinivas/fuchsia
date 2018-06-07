@@ -16,6 +16,8 @@
 #include <kernel/thread.h>
 #include <kernel/timer.h>
 
+#include <fbl/algorithm.h>
+#include <fbl/atomic.h>
 #include <zircon/types.h>
 
 static void timer_cb(timer_t* timer, zx_time_t now, void* arg) {
@@ -69,25 +71,25 @@ static void timer_test_all_cpus(void) {
 }
 
 static void timer_cb2(timer_t* timer, zx_time_t now, void* arg) {
-    int* timer_count = (int*)arg;
-    atomic_add(timer_count, 1);
+    auto timer_count = static_cast<fbl::atomic<size_t>*>(arg);
+    timer_count->fetch_add(1);
     thread_preempt_set_pending();
 }
 
 static void timer_test_coalescing(enum slack_mode mode, uint64_t slack,
-                                  const zx_time_t* deadline, const int64_t* expected_adj, int count) {
+                                  const zx_time_t* deadline, const int64_t* expected_adj, size_t count) {
     printf("testing coalsecing mode %d\n", mode);
 
-    int timer_count = 0;
+    fbl::atomic<size_t> timer_count(0);
 
     timer_t* timer = (timer_t*)malloc(sizeof(timer_t) * count);
 
     printf("       orig         new       adjustment\n");
-    for (int ix = 0; ix != count; ++ix) {
+    for (size_t ix = 0; ix != count; ++ix) {
         timer_init(&timer[ix]);
         zx_time_t dl = deadline[ix];
         timer_set(&timer[ix], dl, mode, slack, timer_cb2, &timer_count);
-        printf("[%d] %" PRIu64 "  -> %" PRIu64 ", %" PRIi64 "\n",
+        printf("[%zu] %" PRIu64 "  -> %" PRIu64 ", %" PRIi64 "\n",
                ix, dl, timer[ix].scheduled_time, timer[ix].slack);
 
         if (timer[ix].slack != expected_adj[ix]) {
@@ -96,7 +98,7 @@ static void timer_test_coalescing(enum slack_mode mode, uint64_t slack,
     }
 
     // Wait for the timers to fire.
-    while (atomic_load(&timer_count) != count) {
+    while (timer_count.load() != count) {
         thread_sleep(current_time() + ZX_MSEC(5));
     }
 
@@ -119,11 +121,11 @@ static void timer_test_coalescing_center(void) {
         when - (3u * off), // non-coalesced, same as [3], adjustment = 0
     };
 
-    const int64_t expected_adj[countof(deadline)] = {
+    const int64_t expected_adj[fbl::count_of(deadline)] = {
         0, 0, ZX_USEC(10), 0, -(int64_t)ZX_USEC(10), 0, ZX_USEC(10), 0};
 
     timer_test_coalescing(
-        TIMER_SLACK_CENTER, slack, deadline, expected_adj, countof(deadline));
+        TIMER_SLACK_CENTER, slack, deadline, expected_adj, fbl::count_of(deadline));
 }
 
 static void timer_test_coalescing_late(void) {
@@ -141,11 +143,11 @@ static void timer_test_coalescing_late(void) {
         when - (4u * off), // coalesced with [3], adjustment = 10u
     };
 
-    const int64_t expected_adj[countof(deadline)] = {
+    const int64_t expected_adj[fbl::count_of(deadline)] = {
         0, 0, ZX_USEC(20), 0, 0, 0, ZX_USEC(10)};
 
     timer_test_coalescing(
-        TIMER_SLACK_LATE, slack, deadline, expected_adj, countof(deadline));
+        TIMER_SLACK_LATE, slack, deadline, expected_adj, fbl::count_of(deadline));
 }
 
 static void timer_test_coalescing_early(void) {
@@ -163,11 +165,11 @@ static void timer_test_coalescing_early(void) {
         when - (2u * off), // coalesced with [3], adjustment = -10u
     };
 
-    const int64_t expected_adj[countof(deadline)] = {
+    const int64_t expected_adj[fbl::count_of(deadline)] = {
         0, -(int64_t)ZX_USEC(20), 0, 0, 0, -(int64_t)ZX_USEC(10), -(int64_t)ZX_USEC(10)};
 
     timer_test_coalescing(
-        TIMER_SLACK_EARLY, slack, deadline, expected_adj, countof(deadline));
+        TIMER_SLACK_EARLY, slack, deadline, expected_adj, fbl::count_of(deadline));
 }
 
 static void timer_far_deadline(void) {

@@ -147,7 +147,7 @@ zx_status_t IommuImpl::ValidateIommuDesc(const fbl::unique_ptr<const uint8_t[]>&
             LTRACEF("desc scope %zu has no hops\n", i);
             return ZX_ERR_INVALID_ARGS;
         }
-        if (scopes[i].num_hops > countof(scopes[0].dev_func)) {
+        if (scopes[i].num_hops > fbl::count_of(scopes[0].dev_func)) {
             LTRACEF("desc scope %zu has too many hops\n", i);
             return ZX_ERR_INVALID_ARGS;
         }
@@ -192,7 +192,7 @@ zx_status_t IommuImpl::ValidateIommuDesc(const fbl::unique_ptr<const uint8_t[]>&
                 LTRACEF("desc reserved memory entry scope %zu has no hops\n", i);
                 return ZX_ERR_INVALID_ARGS;
             }
-            if (scopes[i].num_hops > countof(scopes[0].dev_func)) {
+            if (scopes[i].num_hops > fbl::count_of(scopes[0].dev_func)) {
                 LTRACEF("desc reserved memory entry scope %zu has too many hops\n", i);
                 return ZX_ERR_INVALID_ARGS;
             }

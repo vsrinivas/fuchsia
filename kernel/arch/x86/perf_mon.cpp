@@ -47,6 +47,7 @@
 #include <assert.h>
 #include <dev/pci_common.h>
 #include <err.h>
+#include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/macros.h>
 #include <fbl/ref_ptr.h>
@@ -397,7 +398,7 @@ static void x86_perfmon_init_mchbar() {
         // See PCI spec 6.2.5.1.
         perfmon_mchbar_bar = bar & ~15u;
         perfmon_num_misc_events =
-            countof(static_cast<zx_x86_ipm_config_t*>(nullptr)->misc_ids);
+            static_cast<uint32_t>(fbl::count_of(static_cast<zx_x86_ipm_config_t*>(nullptr)->misc_ids));
     } else {
         TRACEF("perfmon: error %d reading mchbar\n", status);
     }
@@ -777,9 +778,9 @@ static zx_status_t x86_ipm_verify_misc_config(
         const zx_x86_ipm_config_t* config,
         unsigned* out_num_used) {
     bool seen_last = false;
-    unsigned max_num_used = countof(config->misc_ids);
-    unsigned num_used = max_num_used;
-    for (unsigned i = 0; i < max_num_used; ++i) {
+    size_t max_num_used = fbl::count_of(config->misc_ids);
+    size_t num_used = max_num_used;
+    for (size_t i = 0; i < max_num_used; ++i) {
         cpuperf_event_id_t id = config->misc_ids[i];
         if (id != 0 && seen_last) {
             TRACEF("Active misc events not front-filled\n");
@@ -792,24 +793,24 @@ static zx_status_t x86_ipm_verify_misc_config(
         }
         if (seen_last) {
             if (config->misc_flags[i] != 0) {
-                TRACEF("Unused |misc_flags[%u]| not zero\n", i);
+                TRACEF("Unused |misc_flags[%zu]| not zero\n", i);
                 return ZX_ERR_INVALID_ARGS;
             }
         } else {
             if (config->misc_flags[i] & ~IPM_CONFIG_FLAG_MASK) {
-                TRACEF("Unused bits set in |misc_flags[%u]|\n", i);
+                TRACEF("Unused bits set in |misc_flags[%zu]|\n", i);
                 return ZX_ERR_INVALID_ARGS;
             }
             // Currently we only support the MCHBAR events.
             // They cannot provide pc. We ignore the OS/USER bits.
             if (config->misc_flags[i] & IPM_CONFIG_FLAG_PC) {
-                TRACEF("Invalid bits (0x%x) in |misc_flags[%u]|\n",
+                TRACEF("Invalid bits (0x%x) in |misc_flags[%zu]|\n",
                        config->misc_flags[i], i);
                 return ZX_ERR_INVALID_ARGS;
             }
             if ((config->misc_flags[i] & IPM_CONFIG_FLAG_TIMEBASE) &&
                     config->timebase_id == CPUPERF_EVENT_ID_NONE) {
-                TRACEF("Timebase requested for |misc_flags[%u]|, but not provided\n", i);
+                TRACEF("Timebase requested for |misc_flags[%zu]|, but not provided\n", i);
                 return ZX_ERR_INVALID_ARGS;
             }
             switch (CPUPERF_EVENT_ID_EVENT(id)) {
@@ -817,13 +818,13 @@ static zx_status_t x86_ipm_verify_misc_config(
             case id: break;
 #include <zircon/device/cpu-trace/skylake-misc-events.inc>
             default:
-                TRACEF("Invalid misc event id |misc_ids[%u]|\n", i);
+                TRACEF("Invalid misc event id |misc_ids[%zu]|\n", i);
                 return ZX_ERR_INVALID_ARGS;
             }
         }
     }
 
-    *out_num_used = num_used;
+    *out_num_used = static_cast<unsigned>(num_used);
     return ZX_OK;
 }
 
@@ -904,7 +905,7 @@ static void x86_ipm_stage_fixed_config(const zx_x86_ipm_config_t* config,
     memcpy(state->fixed_flags, config->fixed_flags,
            sizeof(state->fixed_flags));
 
-    for (unsigned i = 0; i < countof(state->fixed_hw_map); ++i) {
+    for (unsigned i = 0; i < fbl::count_of(state->fixed_hw_map); ++i) {
         state->fixed_hw_map[i] = x86_perfmon_lookup_fixed_counter(config->fixed_ids[i]);
     }
 }

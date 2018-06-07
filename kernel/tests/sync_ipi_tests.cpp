@@ -10,6 +10,7 @@
 #include <arch/ops.h>
 #include <assert.h>
 #include <err.h>
+#include <fbl/algorithm.h>
 #include <kernel/event.h>
 #include <kernel/mp.h>
 #include <kernel/thread.h>
@@ -57,7 +58,7 @@ static void deadlock_test(void) {
     event_t gate = EVENT_INITIAL_VALUE(gate, false, 0);
 
     thread_t* threads[5] = {0};
-    for (uint i = 0; i < countof(threads); ++i) {
+    for (uint i = 0; i < fbl::count_of(threads); ++i) {
         threads[i] = thread_create("sync_ipi_deadlock", deadlock_test_thread, &gate, DEFAULT_PRIORITY, DEFAULT_STACK_SIZE);
         if (!threads[i]) {
             TRACEF("  failed to create thread\n");
@@ -69,7 +70,7 @@ static void deadlock_test(void) {
     event_signal(&gate, true);
 
 cleanup:
-    for (uint i = 0; i < countof(threads); ++i) {
+    for (uint i = 0; i < fbl::count_of(threads); ++i) {
         if (threads[i]) {
             thread_join(threads[i], NULL, ZX_TIME_INFINITE);
         }

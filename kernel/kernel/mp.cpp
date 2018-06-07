@@ -12,6 +12,7 @@
 #include <assert.h>
 #include <debug.h>
 #include <err.h>
+#include <fbl/algorithm.h>
 #include <inttypes.h>
 #include <kernel/align.h>
 #include <kernel/dpc.h>
@@ -40,7 +41,7 @@ static void mp_sync_task(void* context);
 void mp_init(void) {
     mutex_init(&mp.hotplug_lock);
     mp.ipi_task_lock = SPIN_LOCK_INITIAL_VALUE;
-    for (uint i = 0; i < countof(mp.ipi_task_list); ++i) {
+    for (uint i = 0; i < fbl::count_of(mp.ipi_task_list); ++i) {
         list_initialize(&mp.ipi_task_list[i]);
     }
 }
