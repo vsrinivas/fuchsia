@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-library maxwell;
+library fuchsia.maxwell.internal;
 
 // This service is provided by the StoryInfoAcquirer through the
 // modular.Agent's Connect() call. Implemented by the StoryInfoAcquirer to get

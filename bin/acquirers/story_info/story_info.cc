@@ -14,6 +14,8 @@
 
 namespace maxwell {
 
+using ::fuchsia::maxwell::internal::StoryInfoInitializer;
+
 StoryInfoAcquirer::StoryInfoAcquirer(modular::AgentHost* const agent_host)
     : initializer_binding_(this),
       visible_stories_watcher_binding_(this),

@@ -9,7 +9,7 @@
 #include <set>
 
 #include <fuchsia/modular/cpp/fidl.h>
-#include <maxwell/cpp/fidl.h>
+#include <fuchsia/maxwell/internal/cpp/fidl.h>
 #include "lib/app_driver/cpp/agent_driver.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fxl/macros.h"
@@ -33,7 +33,7 @@ class StoryWatcherImpl;
 class StoryInfoAcquirer : public fuchsia::modular::VisibleStoriesWatcher,
                           public fuchsia::modular::StoryProviderWatcher,
                           public fuchsia::modular::FocusWatcher,
-                          public StoryInfoInitializer {
+                          public fuchsia::maxwell::internal::StoryInfoInitializer {
  public:
   StoryInfoAcquirer(modular::AgentHost* agent_host);
   ~StoryInfoAcquirer() override;
@@ -75,7 +75,8 @@ class StoryInfoAcquirer : public fuchsia::modular::VisibleStoriesWatcher,
   fuchsia::modular::StoryProviderPtr story_provider_;
   fuchsia::modular::FocusProviderPtr focus_provider_;
 
-  fidl::Binding<StoryInfoInitializer> initializer_binding_;
+  fidl::Binding<fuchsia::maxwell::internal::StoryInfoInitializer>
+      initializer_binding_;
   fidl::Binding<fuchsia::modular::VisibleStoriesWatcher>
       visible_stories_watcher_binding_;
   fidl::Binding<fuchsia::modular::StoryProviderWatcher>

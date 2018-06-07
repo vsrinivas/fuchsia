@@ -7,7 +7,7 @@
 #include <fuchsia/bluetooth/le/cpp/fidl.h>
 #include <fuchsia/cobalt/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
-#include <maxwell/cpp/fidl.h>
+#include <fuchsia/maxwell/internal/cpp/fidl.h>
 #include "lib/app/cpp/connect.h"
 #include "lib/fxl/files/file.h"
 #include "lib/fxl/functional/make_copyable.h"
@@ -44,9 +44,9 @@ fuchsia::modular::AgentControllerPtr StartStoryInfoAgent(
   component_context->ConnectToAgent(
       kStoryInfoAgentUrl, agent_services.NewRequest(), controller.NewRequest());
 
+  using fuchsia::maxwell::internal::StoryInfoInitializer;
   auto initializer =
-      fuchsia::sys::ConnectToService<maxwell::StoryInfoInitializer>(
-          agent_services.get());
+      fuchsia::sys::ConnectToService<StoryInfoInitializer>(agent_services.get());
   initializer->Initialize(std::move(story_provider), std::move(focus_provider),
                           std::move(visible_stories_provider));
 

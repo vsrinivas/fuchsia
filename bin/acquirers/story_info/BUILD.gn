@@ -17,11 +17,11 @@ executable_package("story_info") {
   ]
 
   deps = [
-    ":initializer",
     "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/svc/cpp",
+    "//peridot/lib:maxwell_internal",
     "//peridot/lib/fidl:json_xdr",
     "//peridot/lib/ledger_client:storage",
     "//peridot/lib/rapidjson",
@@ -32,18 +32,5 @@ executable_package("story_info") {
     "//peridot/public/lib/entity/cpp",
     "//peridot/public/lib/entity/cpp:json",
     "//third_party/rapidjson",
-  ]
-}
-
-fidl("initializer") {
-  name = "maxwell"
-  cpp_legacy_callbacks = true
-
-  sources = [
-    "initializer.fidl",
-  ]
-
-  deps = [
-    "//peridot/public/lib:fidl",
   ]
 }
