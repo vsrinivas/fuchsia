@@ -53,6 +53,14 @@ public:
 
     void set_context_killed() { context_killed_ = true; }
 
+    void SetNotificationCallback(msd_connection_notification_callback_t callback, void* token)
+    {
+        notifications_.Set(callback, token);
+    }
+
+    // Called by the device thread when command buffers complete.
+    void SendNotification(uint64_t buffer_id) { notifications_.SendBufferId(buffer_id); }
+
 private:
     // PerProcessGtt::Owner
     magma::PlatformBusMapper* GetBusMapper() override { return owner_->GetBusMapper(); }
@@ -69,6 +77,35 @@ private:
     std::shared_ptr<PerProcessGtt> ppgtt_;
     msd_client_id_t client_id_;
     bool context_killed_ = false;
+
+    class Notifications {
+    public:
+        void SendBufferId(uint64_t buffer_id)
+        {
+            std::lock_guard<std::mutex> lock(mutex_);
+            if (callback_ && token_) {
+                msd_notification_t notification = {};
+                notification.type = MSD_CONNECTION_NOTIFICATION_CHANNEL_SEND;
+                *reinterpret_cast<uint64_t*>(notification.u.channel_send.data) = buffer_id;
+                notification.u.channel_send.size = sizeof(buffer_id);
+                callback_(token_, &notification);
+            }
+        }
+
+        void Set(msd_connection_notification_callback_t callback, void* token)
+        {
+            std::lock_guard<std::mutex> lock(mutex_);
+            callback_ = callback;
+            token_ = token;
+        }
+
+    private:
+        msd_connection_notification_callback_t callback_ = nullptr;
+        void* token_ = nullptr;
+        std::mutex mutex_;
+    };
+
+    Notifications notifications_;
 };
 
 class MsdIntelAbiConnection : public msd_connection_t {

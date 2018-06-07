@@ -40,6 +40,7 @@ void msd_connection_set_notification_callback(struct msd_connection_t* connectio
                                               msd_connection_notification_callback_t callback,
                                               void* token)
 {
+    MsdIntelAbiConnection::cast(connection)->ptr()->SetNotificationCallback(callback, token);
 }
 
 magma_status_t msd_connection_map_buffer_gpu(msd_connection_t* connection, msd_buffer_t* buffer,

@@ -6,6 +6,7 @@
 #include "address_space.h"
 #include "engine_command_streamer.h"
 #include "instructions.h"
+#include "msd_intel_connection.h"
 #include "msd_intel_context.h"
 #include "msd_intel_semaphore.h"
 #include "platform_trace.h"
@@ -75,6 +76,13 @@ CommandBuffer::~CommandBuffer()
     for (auto& semaphore : signal_semaphores_) {
         semaphore->Signal();
     }
+
+    std::shared_ptr<MsdIntelConnection> connection = locked_context_->connection().lock();
+    uint64_t batch_buffer_id = GetBatchBufferId();
+    if (connection && batch_buffer_id) {
+        connection->SendNotification(batch_buffer_id);
+    }
+
     TRACE_ASYNC_END("magma-exec", "CommandBuffer Exec", nonce_);
 }
 
