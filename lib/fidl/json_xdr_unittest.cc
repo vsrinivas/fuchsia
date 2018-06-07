@@ -5,12 +5,14 @@
 #include <map>
 #include <vector>
 
-#include <json_xdr_unittest/cpp/fidl.h>
+#include <test/peridot/lib/fidl/jsonxdr/cpp/fidl.h>
 #include "gtest/gtest.h"
 #include "peridot/lib/fidl/json_xdr.h"
 
 namespace modular {
 namespace {
+
+namespace json_xdr_unittest = ::test::peridot::lib::fidl::jsonxdr;
 
 struct T {
   int i;
