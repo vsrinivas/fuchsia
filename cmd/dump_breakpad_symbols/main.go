@@ -9,16 +9,17 @@ import (
 	"crypto/sha1"
 	"encoding/hex"
 	"encoding/json"
-	"errors"
 	"flag"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"os"
 	"os/exec"
 	"path"
 	"path/filepath"
 	"strings"
+
+	"fuchsia.googlesource.com/tools/symbolize"
 )
 
 const usage = `usage: dump_breakpad_symbols [options] file1 file2 ... fileN
@@ -46,112 +47,109 @@ $ dump_breakpad_symbols \
 	/path/to/ids1.txt
 `
 
-// Options represents the command line options.
-type Options struct {
-	depFile      string
-	dryRun       bool
-	dumpSymsPath string
-	outdir       string
-	summaryFile  string
-}
+// Command line flag values
+var (
+	summaryFilename string
+	depFilename     string
+	dumpSymsPath    string
+	outdir          string
+)
 
-func main() {
-	RunMain(os.Args)
-}
+// ExecDumpSyms runs the beakpad `dump_syms` command and returns the output.
+type ExecDumpSyms = func(args []string) ([]byte, error)
 
-// RunMain implements the main() function. Visible for testing.
-// TODO(kjharland): Do this in init() and test this library directly rather
-// than from a separate main_test package.
-func RunMain(args []string) {
-	f, options, err := ParseFlags(args)
-	if err != nil {
-		log.Fatal(err)
-	}
+// CreateFile returns an io.ReadWriteCloser for the file at the given path.
+type CreateFile = func(path string) (io.ReadWriteCloser, error)
 
-	if processIdsFiles(f.Args(), options) {
-		log.Println("finished with errors")
-		os.Exit(1)
-	}
-}
-
-// ParseFlags parses command line parameters. Visible for testing.
-func ParseFlags(args []string) (*flag.FlagSet, *Options, error) {
-	f := flag.NewFlagSet(args[0], flag.ContinueOnError)
-	f.Usage = func() {
-		fmt.Println(usage)
+func init() {
+	flag.Usage = func() {
+		fmt.Fprint(os.Stderr, usage)
 		flag.PrintDefaults()
 		os.Exit(0)
 	}
 
-	var options Options
 	// First set the flags ...
-	f.StringVar(&options.summaryFile, "summary-file", "",
+	flag.StringVar(&summaryFilename, "summary-file", "",
 		"Path to a JSON file to write that maps each binary to its symbol file. "+
-			"The output looks like {'/path/to/binary': '$out-dir/path/to/file'}. "+
-			"Prints to stdout by default.",
-	)
-	f.StringVar(&options.outdir, "out-dir", "",
+			"The output looks like {'/path/to/binary': '$out-dir/path/to/file'}. ")
+	flag.StringVar(&outdir, "out-dir", "",
 		"The directory where symbol output should be written")
-	f.StringVar(&options.dumpSymsPath, "dump-syms-path", "",
+	flag.StringVar(&dumpSymsPath, "dump-syms-path", "",
 		"Path to the breakpad tools `dump_syms` executable")
-	f.BoolVar(&options.dryRun, "dry-run", false,
-		"Print the dump_syms commands to run, without running them, then exit. "+
-			"summary-file is always written to stdout during a dry-run.",
-	)
-	f.StringVar(&options.depFile, "depfile", "",
+	flag.StringVar(&depFilename, "depfile", "",
 		"Path to the ninja depfile to generate.  The file has the single line: "+
 			"`OUTPUT: INPUT1 INPUT2 ...` where OUTPUT is the value of -summary-file "+
 			"and INPUTX is the ids file in the same order it was provided on the "+
 			"command line. -summary-file must be provided with this flag. "+
 			"See `gn help depfile` for more information on depfiles.")
-	f.Parse(args[1:])
-
-	// Ensure at least one file was given.
-	if f.NArg() < 1 {
-		return nil, nil, errors.New("at least one ids.txt file is required")
-	}
-	// Ensure path to dump_syms is specified
-	if options.dumpSymsPath == "" {
-		return nil, nil, errors.New("-dump-syms-path is required")
-	}
-	// Ensure output directory was given.
-	if options.outdir == "" {
-		return nil, nil, errors.New("-out-dir is required")
-	}
-	// Ensure summary file was provided if -depfile was provided.
-	if options.depFile != "" && options.summaryFile == "" {
-		return nil, nil, errors.New("must specify -summary-file with -depfile")
-	}
-
-	return f, &options, nil
 }
 
-// processidsFiles dumps symbol data for each executable in a set of ids files.
-//
-// Returns true iff any errors occurred.
-func processIdsFiles(idsFiles []string, options *Options) (gotErrors bool) {
-	// Indicates whether we've seen a binary path already.  Duplicate paths are
-	// skipped.
+func main() {
+	flag.Parse()
+
+	// Create and open depfile.
+	depFile, err := os.Create(depFilename)
+	if err != nil {
+		log.Fatalf("could not create file %s: %v", depFilename, err)
+	}
+	defer depFile.Close()
+
+	// Create and open summary file.
+	summaryFile, err := os.Create(summaryFilename)
+	if err != nil {
+		log.Fatalf("could not create file %s: %v", summaryFilename, err)
+	}
+	defer summaryFile.Close()
+
+	// Create a symbolize.Source from each IDs file.
+	var IDsFiles []symbolize.Source
+	for _, path := range flag.Args() {
+		IDsFiles = append(IDsFiles, symbolize.NewIDsSource(path))
+	}
+
+	// Callback to run breakpad `dump_syms` command.
+	execDumpSyms := func(args []string) ([]byte, error) {
+		return exec.Command(dumpSymsPath, args...).Output()
+	}
+
+	// Callback to create new files.
+	createFile := func(path string) (io.ReadWriteCloser, error) {
+		return os.Create(path)
+	}
+
+	// Process the IDsFiles.
+	summary := processIdsFiles(IDsFiles, outdir, execDumpSyms, createFile)
+
+	// Write the summary.
+	if err := writeSummary(summaryFile, summary); err != nil {
+		fmt.Fprintf(os.Stderr, "failed to write summary %s: %v", summaryFilename, err)
+		os.Exit(1)
+	}
+	// Write the dep file.
+	if err := writeDepFile(depFile, summaryFilename, IDsFiles); err != nil {
+		fmt.Fprintf(os.Stderr, "failed to write depfile %s: %v", depFilename, err)
+		os.Exit(1)
+	}
+}
+
+// processIdsFiles dumps symbol data for each executable in a set of ids files.
+func processIdsFiles(idsFiles []symbolize.Source, outdir string, execDumpSyms ExecDumpSyms, createFile CreateFile) map[string]string {
+	// Binary paths we've already seen.  Duplicates are skipped.
 	visited := make(map[string]bool)
 	binaryToSymbolFile := make(map[string]string)
-
-	// Confirm that the user is performing a dry-run.
-	if options.dryRun {
-		log.Println("Performing dry-run")
-	}
 
 	// Iterate through the given set of filepaths.
 	for _, idsFile := range idsFiles {
 		// Extract the paths to each binary from the IDs file.
-		binaryPaths, err := extractBinaryPaths(idsFile)
+		binaries, err := idsFile.GetBinaries()
 		if err != nil {
-			logError("failed to extract paths from %s: %v", idsFile, err)
-			gotErrors = true
+			log.Printf("ERROR: failed to extract paths from %s: %v", idsFile, err)
 			continue
 		}
 
-		// Generate symbol data for each binary.
-		for _, binaryPath := range binaryPaths {
+		for _, bin := range binaries {
+			binaryPath := bin.Name
+
 			// Check whether we've seen this path already. Skip if so.
 			if _, ok := visited[binaryPath]; ok {
 				continue
@@ -160,70 +158,106 @@ func processIdsFiles(idsFiles []string, options *Options) (gotErrors bool) {
 			visited[binaryPath] = true
 
 			// Generate the symbol file path.
-			symbolFile := createSymbolFilepath(options.outdir, binaryPath)
+			symbolFilepath := createSymbolFilepath(outdir, binaryPath)
 
 			// Record the mapping in the summary.
-			binaryToSymbolFile[binaryPath] = symbolFile
+			binaryToSymbolFile[binaryPath] = symbolFilepath
 
-			// Log what we're about to do. If this a dry run, say so and
-			// continue without dumping symbols.
-			info := fmt.Sprintf("dumping symbols for %s into %s", binaryPath, symbolFile)
-			if options.dryRun {
-				log.Println("DRY_RUN: " + info)
+			log.Printf("dumping symbols for %s into %s\n", binaryPath, symbolFilepath)
+
+			// Generate the symbol data.
+			symbolData, err := execDumpSyms([]string{binaryPath})
+			if err != nil {
+				log.Printf("ERROR: failed to generate symbol data for %s: %v", binaryPath, err)
 				continue
 			}
-			log.Println(info)
 
-			// Dump the symbol data to disk. Record an error
-			if err := dumpSymbolData(binaryPath, symbolFile, options.dumpSymsPath); err != nil {
-				logError("%v", err)
-				gotErrors = true
+			// Write the symbol file.
+			symbolFile, err := createFile(symbolFilepath)
+			if err != nil {
+				log.Printf("ERROR: failed to create symbol file %s: %v", symbolFilepath, err)
 				continue
 			}
+			if err := writeSymbolFile(symbolFile, symbolData); err != nil {
+				symbolFile.Close()
+				log.Printf("ERROR: failed to write symbol file %s: %v", symbolFilepath, err)
+				continue
+			}
+			symbolFile.Close()
 		}
 	}
 
-	var summaryFile *os.File
+	return binaryToSymbolFile
+}
 
-	// If no summary file path was given, write the summmary to stdout.
-	if options.summaryFile == "" || options.dryRun {
-		summaryFile = os.Stdout
-	} else {
-		var err error
-		summaryFile, err = os.Create(options.summaryFile)
-		if err != nil {
-			logError("failed to open summary file %s: %v", options.summaryFile, err)
-			gotErrors = true
-			return
-		}
+// writeSummary writes the summary file to the given io.Writer.
+func writeSummary(w io.Writer, summary map[string]string) error {
+	// TODO(kjharland): Sort the keys before printing to ensure predictable
+	// output or use a different data structure with a consistent ordering.
+
+	// Serialize the summary.
+	summaryBytes, err := json.MarshalIndent(summary, "", "  ")
+	if err != nil {
+		return fmt.Errorf("failed to marshal summary: %v", err)
 	}
 
-	if err := writeSummary(binaryToSymbolFile, summaryFile); err != nil {
-		logError("failed to output summary %s: %v", options.summaryFile, err)
-		gotErrors = true
-		return
+	// Write the summary.
+	if _, err := w.Write(summaryBytes); err != nil {
+		return fmt.Errorf("write failed: %v", err)
 	}
 
-	// Write the depfile if specified.
-	if options.depFile != "" {
-		if options.summaryFile == "" {
-			// If we get here there's a bug in the flag parsing.  Summary file
-			// should always be specified with Dep file.
-			logError("cannot print dep file without summary file path")
-			gotErrors = true
-			return
-		}
+	return nil
+}
 
-		// Write the file.
-		depFileContents := []byte(
-			fmt.Sprintf("%s: %s\n", options.summaryFile, strings.Join(idsFiles, " ")))
-		if err := ioutil.WriteFile(options.depFile, depFileContents, 0644); err != nil {
-			logError("failed to write dep file %s: %v", options.depFile, err)
-			gotErrors = true
-		}
+// writeDepFile writes a ninja dep file to the given io.Writer.
+//
+// summaryPath is the summary file generated by this command.
+// IDsFiles are the input sources to this command.
+func writeDepFile(w io.Writer, summaryFilename string, IDsFiles []symbolize.Source) error {
+	// Write the dep file.
+	var idsFileNames []string
+	for _, f := range IDsFiles {
+		idsFileNames = append(idsFileNames, f.Name())
 	}
 
-	return
+	contents := []byte(fmt.Sprintf("%s: %s\n", summaryFilename, strings.Join(idsFileNames, " ")))
+	if _, err := w.Write(contents); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// Writes the given symbol file data to the given writer after massaging the data.
+func writeSymbolFile(w io.Writer, symbolData []byte) error {
+	// Many Fuchsia binaries are built as "something.elf", but then packaged as
+	// just "something". In the ids.txt file, the name still includes the ".elf"
+	// extension, which dump_syms emits into the .sym file, and the crash server
+	// uses as part of the lookup.  The binary name and this value written to
+	// the .sym file must match, so if the first header line ends in ".elf"
+	// strip it off.  This line usually looks something like:
+	// MODULE Linux x86_64 094B63014248508BA0636AD3AC3E81D10 sysconf.elf
+	lines := strings.SplitN(string(symbolData), "\n", 2)
+	if len(lines) != 2 {
+		return fmt.Errorf("got <2 lines in symbol data")
+	}
+
+	// Make sure the first line is not empty.
+	lines[0] = strings.TrimSpace(lines[0])
+	if lines[0] == "" {
+		return fmt.Errorf("unexpected blank first line in symbol data")
+	}
+
+	// Strip .elf from header if it exists.
+	if strings.HasSuffix(lines[0], ".elf") {
+		lines[0] = strings.TrimSuffix(lines[0], ".elf")
+		// Join the new lines of the symbol data.
+		symbolData = []byte(strings.Join(lines, "\n"))
+	}
+
+	// Write the symbol file.
+	_, err := w.Write(symbolData)
+	return err
 }
 
 // Creates the absolute path to the symbol file for the given binary.
@@ -252,113 +286,4 @@ func createSymbolFilepath(parentDir string, binaryPath string) string {
 	}
 
 	return absPath
-}
-
-// Logs an error message.
-//
-// format and args work the same as with fmt.Printf.
-func logError(format string, args ...interface{}) {
-	log.Printf("ERROR: "+format, args...)
-}
-
-// Writes the summary.
-func writeSummary(summary map[string]string, file *os.File) error {
-	// TODO(kjharland): Sort the keys before priting to ensure predictable
-	// output or use a different data structure with a consistent ordering.
-
-	// Serialize the summary.
-	summaryBytes, err := json.MarshalIndent(summary, "", "  ")
-	if err != nil {
-		return fmt.Errorf("json marhsal failed: %v", err)
-	}
-
-	// Write the summary.
-	if _, err := file.Write(summaryBytes); err != nil {
-		return fmt.Errorf("write failed: %v", err)
-	}
-
-	return nil
-}
-
-// Extracts a list of absolute paths to binaries from an idsFile.
-//
-// See the helptext for this command for info about the idsFile.  This function
-// handles malformed input gracefully, logging errors rather than returning
-// early.
-//
-// Returns the list of binary paths.
-//
-// TODO(kjharland): Use https://fuchsia.googlesource.com/tools/+/master/symbolize/repo.go
-// and delete this.
-func extractBinaryPaths(idsFile string) ([]string, error) {
-	var binaryPaths []string
-
-	// Read file contents.
-	idsFileBytes, err := ioutil.ReadFile(idsFile)
-	if err != nil {
-		return nil, err
-	}
-
-	idsFileLines := strings.Split(string(idsFileBytes), "\n")
-
-	// Extract the path to the binary from each line.
-	for _, line := range idsFileLines {
-		line = strings.TrimSpace(line)
-		if len(line) == 0 {
-			// Skip empty lines gracefully.
-			continue
-		}
-
-		fields := strings.Split(line, " ")
-		if len(fields) != 2 {
-			// Lines should only have two columns. Abort if input is malformed.
-			return nil, fmt.Errorf("malformed line in %s: %s", idsFile, line)
-		}
-
-		binaryPaths = append(binaryPaths, fields[1])
-	}
-
-	return binaryPaths, nil
-}
-
-// Runs the breakpad tool `dump_syms` on the binary at the given absolute path,
-// Then writes the symbol data to the given path.
-func dumpSymbolData(binaryPath, symbolFile, dumpSymsPath string) error {
-	// Run the dump_syms command.
-	symbolData, err := exec.Command(dumpSymsPath, binaryPath).Output()
-	if err != nil {
-		return fmt.Errorf("failed to execute %s: %s", dumpSymsPath, err)
-	}
-
-	// Many Fuchsia binaries are built as "something.elf", but then packaged as
-	// just "something". In the ids.txt file, the name still includes the ".elf"
-	// extension, which dump_syms emits into the .sym file, and the crash server
-	// uses as part of the lookup.  The binary name and this value written to
-	// the .sym file must match, so if the first header line ends in ".elf"
-	// strip it off.  This line usually looks something like:
-	// MODULE Linux x86_64 094B63014248508BA0636AD3AC3E81D10 sysconf.elf
-	lines := strings.SplitN(string(symbolData), "\n", 2)
-	if len(lines) != 2 {
-		return fmt.Errorf("got <2 lines in symbol data for %s", binaryPath)
-	}
-
-	// Make sure the first line is not empty.
-	lines[0] = strings.TrimSpace(lines[0])
-	if lines[0] == "" {
-		return fmt.Errorf("unexpected blank first line in symbol data for %s", binaryPath)
-	}
-
-	// Strip .elf from header if it exists.
-	if strings.HasSuffix(lines[0], ".elf") {
-		lines[0] = strings.TrimSuffix(lines[0], ".elf")
-		// Join the new lines of the symbol data.
-		symbolData = []byte(strings.Join(lines, "\n"))
-	}
-
-	// Write the symbol file.
-	if err := ioutil.WriteFile(symbolFile, []byte(symbolData), 0644); err != nil {
-		return fmt.Errorf("could not write output file %s: %v", symbolFile, err)
-	}
-
-	return nil
 }
