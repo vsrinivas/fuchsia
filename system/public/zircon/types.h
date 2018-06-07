@@ -264,6 +264,8 @@ typedef uintptr_t zx_vaddr_t;
 typedef uintptr_t zx_paddr_t;
 // low mem physical address
 typedef uint32_t  zx_paddr32_t;
+// Hypervisor guest physical addresses.
+typedef uintptr_t zx_gpaddr_t;
 
 // offset
 typedef uint64_t zx_off_t;
