@@ -143,9 +143,6 @@ zx_status_t IntelDspCodeLoader::TransferFirmware(const PinnedVmo& pinned_fw, siz
     REG_SET_BITS(&regs_->stream.ctl_sts.w, SET);
     hw_wmb();
 
-    // TODO(yky) I don't know why I need this
-    zx_nanosleep(zx_deadline_after(ZX_SEC(1)));
-
     return ZX_OK;
 }
 

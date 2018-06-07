@@ -54,6 +54,8 @@ zx_status_t IntelDspIpc::SendIpcWait(Txn* txn) {
     if (res != ZX_OK) {
         dsp_.DeviceShutdown();
     }
+    // TODO(yky): ZX-2261: Figure out why this is needed and eliminate it.
+    zx_nanosleep(zx_deadline_after(ZX_MSEC(1)));
     return res;
 }
 
