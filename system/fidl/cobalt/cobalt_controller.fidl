@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-library fuchsia.cobalt;
+library cobalt;
 
 // The CobaltController is primarily useful for testing the Cobalt service.
 // Cobalt clients should use the CobaltEncoder.
