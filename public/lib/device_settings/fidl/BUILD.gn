@@ -5,8 +5,8 @@
 import("//build/fidl/fidl.gni")
 
 fidl("fidl") {
-  name = "device_settings"
+  name = "fuchsia.devicesettings"
   sources = [
-    "device_settings.fidl",
+    "devicesettings.fidl",
   ]
 }

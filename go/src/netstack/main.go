@@ -13,7 +13,7 @@ import (
 	"netstack/watcher"
 
 	"fidl/bindings"
-	"fidl/device_settings"
+	"fidl/fuchsia/devicesettings"
 
 	"github.com/google/netstack/tcpip"
 	"github.com/google/netstack/tcpip/network/arp"
@@ -59,7 +59,7 @@ func main() {
 		log.Fatalf("ethernet: %v", err)
 	}
 
-	req, ds, err := device_settings.NewDeviceSettingsManagerInterfaceRequest()
+	req, ds, err := devicesettings.NewDeviceSettingsManagerInterfaceRequest()
 	if err != nil {
 		log.Printf("could not connect to device settings service: %s", err)
 	}

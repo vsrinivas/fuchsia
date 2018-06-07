@@ -13,7 +13,7 @@ import (
 	"strings"
 	"sync"
 
-	"fidl/device_settings"
+	"fidl/fuchsia/devicesettings"
 	"netstack/filter"
 	"netstack/link/eth"
 	"netstack/link/stats"
@@ -41,7 +41,7 @@ type netstack struct {
 	stack      *stack.Stack
 	dispatcher *socketServer
 
-	deviceSettings *device_settings.DeviceSettingsManagerInterface
+	deviceSettings *devicesettings.DeviceSettingsManagerInterface
 
 	mu       sync.Mutex
 	nodename string

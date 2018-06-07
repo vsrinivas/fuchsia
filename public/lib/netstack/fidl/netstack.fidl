@@ -142,7 +142,7 @@ interface Netstack {
   // Returns the list of registered network interfaces.
   4: GetInterfaces() -> (vector<NetInterface> interfaces);
 
-  // DEPRECATED: see device_settings.fidl
+  // DEPRECATED: see devicesettings.fidl
   // Returns the netstack's node name.
   // 5: GetNodeName() -> (string node_name);
 

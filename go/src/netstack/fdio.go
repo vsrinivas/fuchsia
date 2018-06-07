@@ -18,7 +18,7 @@ import (
 	"time"
 
 	"app/context"
-	"fidl/device_settings"
+	"fidl/fuchsia/devicesettings"
 
 	"github.com/google/netstack/dns"
 	"github.com/google/netstack/tcpip"
@@ -959,18 +959,18 @@ func (s *socketServer) opIoctl(ios *iostate, msg *zxsocket.Msg) zx.Status {
 			log.Printf("ioctlNetcGetNodename: error accessing device settings: %s\n", err)
 			nodename = defaultNodename // defined in netstack.go
 		}
-		if status != device_settings.StatusOk {
+		if status != devicesettings.StatusOk {
 			var reportStatus string
 			switch status {
-			case device_settings.StatusErrNotSet:
+			case devicesettings.StatusErrNotSet:
 				reportStatus = "key not set"
-			case device_settings.StatusErrInvalidSetting:
+			case devicesettings.StatusErrInvalidSetting:
 				reportStatus = "invalid setting"
-			case device_settings.StatusErrRead:
+			case devicesettings.StatusErrRead:
 				reportStatus = "error reading key"
-			case device_settings.StatusErrIncorrectType:
+			case devicesettings.StatusErrIncorrectType:
 				reportStatus = "value type was incorrect"
-			case device_settings.StatusErrUnknown:
+			case devicesettings.StatusErrUnknown:
 				reportStatus = "unknown"
 			}
 			log.Println("ioctlNetcGetNodename: falling back to default nodename.")

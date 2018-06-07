@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	"app/context"
-	"fidl/device_settings"
+	"fidl/fuchsia/devicesettings"
 )
 
 const (
@@ -17,7 +17,7 @@ const (
 
 func TestDeviceSettingsSimple(t *testing.T) {
 	ctx := context.CreateFromStartupInfo()
-	req, dm, err := device_settings.NewDeviceSettingsManagerInterfaceRequest()
+	req, dm, err := devicesettings.NewDeviceSettingsManagerInterfaceRequest()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -30,7 +30,7 @@ func TestDeviceSettingsSimple(t *testing.T) {
 	}
 	if i, s, err := dm.GetInteger(TestSettingKey); err != nil {
 		t.Fatal(err)
-	} else if s != device_settings.StatusOk {
+	} else if s != devicesettings.StatusOk {
 		t.Fatalf("got err status: %s", s)
 	} else if i != 10 {
 		t.Fatalf("expected 10 got : %d", i)
@@ -43,7 +43,7 @@ func TestDeviceSettingsSimple(t *testing.T) {
 	}
 	if str, s, err := dm.GetString(TestSettingKey); err != nil {
 		t.Fatal(err)
-	} else if s != device_settings.StatusOk {
+	} else if s != devicesettings.StatusOk {
 		t.Fatalf("got err status: %s", s)
 	} else if str != "somestring" {
 		t.Fatalf("expected 'somestring' got : %q", str)
