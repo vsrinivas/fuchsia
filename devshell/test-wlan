@@ -10,6 +10,7 @@ readonly LOG_FILE="wlan-doctor.log"
 readonly SOURCE="garnet/bin/wlan/wlan-smoke.sh"
 readonly SCRIPT="$(basename ${SOURCE})"
 readonly ETH_IFACE_PREFIX="en"
+readonly SHELL_CMD="fx-command-run shell"
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/lib/vars.sh
 fx-config-read
@@ -41,26 +42,27 @@ function setup {
 }
 
 function get_eth_iface_list {
-  local iface_list=$(fx shell ifconfig | grep "^${ETH_IFACE_PREFIX}" | tr '[:blank:]' ' ' | cut -f1 -d ' ')
+  local iface_list=$(${SHELL_CMD} ifconfig | grep "^${ETH_IFACE_PREFIX}" | tr '[:blank:]' ' ' | cut -f1 -d ' ')
   echo "${iface_list}"
 }
 
 function run {
   fx-command-run cp "${FUCHSIA_DIR}/${SOURCE}" "${LOG_DIR}/${SCRIPT}" >& /dev/null
-  fx shell "${LOG_DIR}/${SCRIPT}" "${LOG_DIR}/${LOG_FILE}" & >& /dev/null
+  local suppres_output=$(${SHELL_CMD} "${LOG_DIR}/${SCRIPT}" "${LOG_DIR}/${LOG_FILE}" &)
 }
 
 function wait_for_result {
   local timeout="$1"
-  if [ -z $timeout ]; then
+  if [ -z "$timeout" ]; then
     timeout="${TEST_TIMEOUT_SEC}"
   fi
   echo "Wait ${timeout} seconds for wlan-smoke to complete"
-  for i in $( seq 1 $timeout ); do
-    if [ $i -lt 3 ]; then
+  for i in $( seq 1 "$timeout" ); do
+    if [ "$i" -lt 3 ]; then
       sleep 1
     else
-      if fx-command-run shell -o ConnectTimeout=1 ifconfig en2 |& grep -q UP ; then
+      if ${SHELL_CMD} -o ConnectTimeout=1 ifconfig en2 |& grep -q UP ; then
+        printf "\nDone in %d seconds" "$i"
         break
       fi
     fi
