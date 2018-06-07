@@ -101,11 +101,11 @@ static constexpr const char* deprecated_services[] = {
     // remove amber.Control when CP-50 is resolved
     "amber.Control",
     "cobalt.CobaltEncoderFactory",
-    "fuchsia.sys.Launcher",
+    "fuchsia.devicesettings.DeviceSettingsManager",
     "fuchsia.media.AudioServer",
     "fuchsia.netstack.Netstack",
     "fuchsia.sys.Environment",
-    "device_settings.DeviceSettingsManager",
+    "fuchsia.sys.Launcher",
     "fuchsia.logger.Log",
     "fuchsia.logger.LogSink",
     "media_player.MediaPlayer",
