@@ -29,19 +29,24 @@ namespace fbl {
 template <typename T>
 class AutoCall {
 public:
-    constexpr explicit AutoCall(T c) : call_(move(c)) {}
+    constexpr explicit AutoCall(T c)
+        : call_(fbl::move(c)) {}
     ~AutoCall() {
         call();
     }
 
     // move semantics
-    AutoCall(AutoCall&& c) : call_(move(c.call_)), active_(c.active_) {
+    AutoCall(AutoCall&& c)
+        : call_(fbl::move(c.call_)), active_(c.active_) {
         c.cancel();
     }
 
     AutoCall& operator=(AutoCall&& c) {
-        call_ = move(c.call_);
+        call();
+        call_ = fbl::move(c.call_);
+        active_ = c.active_;
         c.cancel();
+        return *this;
     }
 
     // no copy
@@ -54,9 +59,12 @@ public:
 
     // call it immediately
     void call() {
+        // Reset |active_| first to handle recursion (in the unlikely case it
+        // should happen).
         bool active = active_;
         cancel();
-        if (active) (call_)();
+        if (active)
+            (call_)();
     }
 
 private:
@@ -68,7 +76,7 @@ private:
 // specialization
 template <typename T>
 inline AutoCall<T> MakeAutoCall(T c) {
-    return AutoCall<T>(move(c));
+    return AutoCall<T>(fbl::move(c));
 }
 
-}  // namespace fbl
+} // namespace fbl

@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <fbl/auto_call.h>
+#include <fbl/type_support.h>
 #include <unittest/unittest.h>
 
 static volatile int test_func_count;
@@ -74,6 +75,25 @@ static bool auto_call_test()
     }
     EXPECT_EQ(test_func_count, 1, "autocall has run");
 
+    // move constructor
+    {
+        a = 0;
+        auto ac = fbl::MakeAutoCall([&](){ a++; });
+        auto ac2 = fbl::move(ac);
+        EXPECT_EQ(a, 0, "autocall hasn't run");
+    }
+    EXPECT_EQ(a, 1, "autocall has run once");
+
+    // move assignment
+    {
+        test_func_count = 0;
+        auto ac = fbl::MakeAutoCall(&test_func);
+        auto ac2 = fbl::MakeAutoCall(&test_func);
+        EXPECT_EQ(test_func_count, 0, "autocall hasn't run");
+        ac2 = fbl::move(ac);
+        EXPECT_EQ(test_func_count, 1, "autocall has run once");
+    }
+    EXPECT_EQ(test_func_count, 2, "autocall has run twice");
     END_TEST;
 }
 
