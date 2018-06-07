@@ -14,7 +14,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include <zircon/boot/bootdata.h>
+#include <zircon/boot/image.h>
 #include <zircon/device/block.h>
 #include <zircon/types.h>
 
@@ -27,7 +27,7 @@ typedef struct {
     zx_device_t* parent;
 
     block_protocol_t bp;
-    bootdata_partition_t part;
+    zbi_partition_t part;
 
     block_info_t info;
     size_t block_op_size;
@@ -68,17 +68,17 @@ static zx_status_t bootpart_ioctl(void* ctx, uint32_t op, const void* cmd, size_
     }
     case IOCTL_BLOCK_GET_TYPE_GUID: {
         char* guid = reply;
-        if (max < BOOTDATA_PART_GUID_LEN) return ZX_ERR_BUFFER_TOO_SMALL;
-        memcpy(guid, device->part.type_guid, BOOTDATA_PART_GUID_LEN);
-        return BOOTDATA_PART_GUID_LEN;
-        *out_actual = BOOTDATA_PART_GUID_LEN;
+        if (max < ZBI_PARTITION_GUID_LEN) return ZX_ERR_BUFFER_TOO_SMALL;
+        memcpy(guid, device->part.type_guid, ZBI_PARTITION_GUID_LEN);
+        return ZBI_PARTITION_GUID_LEN;
+        *out_actual = ZBI_PARTITION_GUID_LEN;
         return ZX_OK;
     }
     case IOCTL_BLOCK_GET_PARTITION_GUID: {
         char* guid = reply;
-        if (max < BOOTDATA_PART_GUID_LEN) return ZX_ERR_BUFFER_TOO_SMALL;
-        memcpy(guid, device->part.uniq_guid, BOOTDATA_PART_GUID_LEN);
-        *out_actual = BOOTDATA_PART_GUID_LEN;
+        if (max < ZBI_PARTITION_GUID_LEN) return ZX_ERR_BUFFER_TOO_SMALL;
+        memcpy(guid, device->part.uniq_guid, ZBI_PARTITION_GUID_LEN);
+        *out_actual = ZBI_PARTITION_GUID_LEN;
         return ZX_OK;
     }
     case IOCTL_BLOCK_GET_NAME: {
@@ -179,7 +179,7 @@ static zx_status_t bootpart_bind(void* ctx, zx_device_t* parent) {
         return status;
     }
 
-    bootdata_partition_map_t* pmap = (bootdata_partition_map_t*)buffer;
+    zbi_partition_map_t* pmap = (zbi_partition_map_t*)buffer;
     if (pmap->partition_count == 0) {
         zxlogf(ERROR, "bootpart: partition_count is zero\n");
         return ZX_ERR_INTERNAL;
@@ -190,7 +190,7 @@ static zx_status_t bootpart_bind(void* ctx, zx_device_t* parent) {
     bp.ops->query(bp.ctx, &block_info, &block_op_size);
 
     for (unsigned i = 0; i < pmap->partition_count; i++) {
-        bootdata_partition_t* part = &pmap->partitions[i];
+        zbi_partition_t* part = &pmap->partitions[i];
         char name[128];
         char type_guid[GUID_STRLEN];
         char uniq_guid[GUID_STRLEN];

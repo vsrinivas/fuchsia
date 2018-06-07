@@ -16,7 +16,7 @@
 #include <sys/param.h>
 #include <threads.h>
 #include <sync/completion.h>
-#include <zircon/boot/bootdata.h>
+#include <zircon/boot/image.h>
 #include <zircon/device/block.h>
 #include <zircon/process.h>
 #include <zircon/types.h>
@@ -42,7 +42,7 @@ typedef struct blkdev {
     BlockServer* bs;
     bool dead; // Release has been called; we should free memory and leave.
 
-    // true if we have metadata for a bootdata partition map
+    // true if we have metadata for a ZBI partition map
     bool has_bootpart;
 
     mtx_t iolock;
@@ -459,13 +459,13 @@ static zx_status_t block_driver_bind(void* ctx, zx_device_t* dev) {
         goto fail;
     }
 
-    // check to see if we have a bootdata partition map
+    // check to see if we have a ZBI partition map
     // and set BLOCK_FLAG_BOOTPART accordingly
     uint8_t buffer[METADATA_PARTITION_MAP_MAX];
     size_t actual;
     status = device_get_metadata(dev, DEVICE_METADATA_PARTITION_MAP, buffer, sizeof(buffer),
                                  &actual);
-    if (status == ZX_OK && actual >= sizeof(bootdata_partition_map_t)) {
+    if (status == ZX_OK && actual >= sizeof(zbi_partition_map_t)) {
         bdev->has_bootpart = true;
     }
 

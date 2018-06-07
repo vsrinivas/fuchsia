@@ -4,17 +4,17 @@
 
 #pragma once
 
-#include <zircon/boot/bootdata.h>
+#include <zircon/boot/image.h>
 
 // This file contains metadata types for device_get_metadata()
 
 // MAC Address for Ethernet, Wifi, Bluetooth, etc.
 // Content: uint8_t[] (variable length based on type of MAC address)
-#define DEVICE_METADATA_MAC_ADDRESS     BOOTDATA_MAC_ADDRESS
+#define DEVICE_METADATA_MAC_ADDRESS     ZBI_TYPE_DRV_MAC_ADDRESS
 
 // Partition map for raw block device.
 // Content: bootdata_partition_map_t
-#define DEVICE_METADATA_PARTITION_MAP   BOOTDATA_PARTITION_MAP
+#define DEVICE_METADATA_PARTITION_MAP   ZBI_TYPE_DRV_PARTITION_MAP
 
 // Metadata types that have least significant byte set to lowercase 'd'
 // signify driver data.  Ex: Used by board files to pass config info

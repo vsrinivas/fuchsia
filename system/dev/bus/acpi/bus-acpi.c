@@ -783,13 +783,13 @@ static zx_status_t publish_acpi_devices(zx_device_t* parent) {
 }
 
 static zx_status_t acpi_drv_create(void* ctx, zx_device_t* parent, const char* name,
-                                   const char* _args, zx_handle_t bootdata_vmo) {
+                                   const char* _args, zx_handle_t zbi_vmo) {
     // ACPI is the root driver for its devhost so run init in the bind thread.
     zxlogf(TRACE, "acpi: bind to %s %p\n", device_get_name(parent), parent);
     root_resource_handle = get_root_resource();
 
-    // We don't need bootdata VMO handle.
-    zx_handle_close(bootdata_vmo);
+    // We don't need ZBI VMO handle.
+    zx_handle_close(zbi_vmo);
 
     zx_status_t st;
     if (ZX_OK != (st = init())) {

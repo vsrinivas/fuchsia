@@ -17,7 +17,7 @@
 #include <ddk/protocol/mailbox.h>
 #include <ddk/protocol/scpi.h>
 #include <sync/completion.h>
-#include <zircon/boot/bootdata.h>
+#include <zircon/boot/image.h>
 #include <zircon/types.h>
 
 typedef struct pdev_req pdev_req_t;
@@ -36,8 +36,8 @@ typedef struct {
     clk_protocol_t clk;
     iommu_protocol_t iommu;
     zx_handle_t resource;   // root resource for platform bus
-    bootdata_platform_id_t platform_id;
-    uint8_t* metadata;   // metadata extracted from bootdata
+    zbi_platform_id_t platform_id;
+    uint8_t* metadata;   // metadata extracted from ZBI
     size_t metadata_size;
 
     list_node_t devices;    // list of platform_dev_t

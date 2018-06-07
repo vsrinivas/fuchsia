@@ -118,12 +118,12 @@ static zx_status_t platform_bus_publish_boot_metadata(void* ctx, uint32_t type, 
     zx_off_t offset = 0;
 
     while (offset < bus->metadata_size) {
-        bootdata_t* bootdata = (bootdata_t*)metadata;
-        size_t length = BOOTDATA_ALIGN(sizeof(bootdata_t) + bootdata->length);
+        zbi_header_t* header = (zbi_header_t*)metadata;
+        size_t length = ZBI_ALIGN(sizeof(zbi_header_t) + header->length);
 
-        if (bootdata->type == type && bootdata->extra == extra) {
-            return device_publish_metadata(bus->zxdev, path, type, bootdata + 1,
-                                           length - sizeof(bootdata_t));
+        if (header->type == type && header->extra == extra) {
+            return device_publish_metadata(bus->zxdev, path, type, header + 1,
+                                           length - sizeof(zbi_header_t));
         }
         metadata += length;
         offset += length;
@@ -229,41 +229,37 @@ static zx_protocol_device_t sys_device_proto = {
     .suspend = platform_bus_suspend,
 };
 
-static zx_status_t platform_bus_read_bootdata(platform_bus_t* bus, zx_handle_t vmo) {
-    bootdata_t bootdata;
+static zx_status_t platform_bus_read_zbi(platform_bus_t* bus, zx_handle_t vmo) {
+    zbi_header_t header;
 
-    zx_status_t status = zx_vmo_read(vmo, &bootdata, 0, sizeof(bootdata));
+    zx_status_t status = zx_vmo_read(vmo, &header, 0, sizeof(header));
     if (status != ZX_OK) {
         return status;
     }
-    if ((bootdata.type != BOOTDATA_CONTAINER) || (bootdata.extra != BOOTDATA_MAGIC)) {
-        zxlogf(ERROR, "platform_bus: bootdata item does not contain bootdata\n");
+    if ((header.type != ZBI_TYPE_CONTAINER) || (header.extra != ZBI_CONTAINER_MAGIC)) {
+        zxlogf(ERROR, "platform_bus: ZBI VMO not contain ZBI container\n");
         return ZX_ERR_INTERNAL;
     }
-    if (!(bootdata.flags & BOOTDATA_FLAG_V2)) {
-        zxlogf(ERROR, "platform_bus: bootdata v1 not supported\n");
-        return ZX_ERR_NOT_SUPPORTED;
-    }
 
-    size_t bootdata_length = bootdata.length;
+    size_t zbi_length = header.length;
 
-    // compute size of bootdata records we need to save for metadata
+    // compute size of ZBI records we need to save for metadata
     size_t metadata_size = 0;
-    size_t len = bootdata_length;
-    size_t off = sizeof(bootdata);
+    size_t len = zbi_length;
+    size_t off = sizeof(header);
 
-    while (len > sizeof(bootdata)) {
-        zx_status_t status = zx_vmo_read(vmo, &bootdata, off, sizeof(bootdata));
+    while (len > sizeof(header)) {
+        zx_status_t status = zx_vmo_read(vmo, &header, off, sizeof(header));
         if (status < 0) {
             zxlogf(ERROR, "zx_vmo_read failed: %d\n", status);
             return status;
         }
-        size_t itemlen = BOOTDATA_ALIGN(sizeof(bootdata_t) + bootdata.length);
+        size_t itemlen = ZBI_ALIGN(sizeof(zbi_header_t) + header.length);
         if (itemlen > len) {
-            zxlogf(ERROR, "platform_bus: bootdata item too large (%zd > %zd)\n", itemlen, len);
+            zxlogf(ERROR, "platform_bus: ZBI item too large (%zd > %zd)\n", itemlen, len);
             break;
         }
-        if (bootdata_is_metadata(bootdata.type)) {
+        if (ZBI_TYPE_DRV_METADATA(header.type)) {
             metadata_size += itemlen;
         }
         off += itemlen;
@@ -280,29 +276,29 @@ static zx_status_t platform_bus_read_bootdata(platform_bus_t* bus, zx_handle_t v
     bool got_platform_id = false;
     zx_off_t metadata_offset = 0;
     uint8_t* metadata = (uint8_t*)bus->metadata;
-    len = bootdata_length;
-    off = sizeof(bootdata);
+    len = zbi_length;
+    off = sizeof(header);
 
     // find platform ID record and copy metadata records
-    while (len > sizeof(bootdata)) {
-        zx_status_t status = zx_vmo_read(vmo, &bootdata, off, sizeof(bootdata));
+    while (len > sizeof(header)) {
+        zx_status_t status = zx_vmo_read(vmo, &header, off, sizeof(header));
         if (status < 0) {
             break;
         }
-        size_t itemlen = BOOTDATA_ALIGN(sizeof(bootdata_t) + bootdata.length);
+        size_t itemlen = ZBI_ALIGN(sizeof(zbi_header_t) + header.length);
         if (itemlen > len) {
-            zxlogf(ERROR, "platform_bus: bootdata item too large (%zd > %zd)\n", itemlen, len);
+            zxlogf(ERROR, "platform_bus: ZBI item too large (%zd > %zd)\n", itemlen, len);
             break;
         }
-        if (bootdata.type == BOOTDATA_PLATFORM_ID) {
-            status = zx_vmo_read(vmo, &bus->platform_id, off + sizeof(bootdata_t),
+        if (header.type == ZBI_TYPE_PLATFORM_ID) {
+            status = zx_vmo_read(vmo, &bus->platform_id, off + sizeof(zbi_header_t),
                                  sizeof(bus->platform_id));
             if (status != ZX_OK) {
                 zxlogf(ERROR, "zx_vmo_read failed: %d\n", status);
                 return status;
             }
             got_platform_id = true;
-        } else if (bootdata_is_metadata(bootdata.type)) {
+        } else if (ZBI_TYPE_DRV_METADATA(header.type)) {
             status = zx_vmo_read(vmo, metadata + metadata_offset, off, itemlen);
             if (status != ZX_OK) {
                 zxlogf(ERROR, "zx_vmo_read failed: %d\n", status);
@@ -316,14 +312,14 @@ static zx_status_t platform_bus_read_bootdata(platform_bus_t* bus, zx_handle_t v
     bus->metadata_size = metadata_size;
 
     if (!got_platform_id) {
-         zxlogf(ERROR, "platform_bus: BOOTDATA_PLATFORM_ID not found\n");
+         zxlogf(ERROR, "platform_bus: ZBI_TYPE_PLATFORM_ID not found\n");
         return ZX_ERR_INTERNAL;
     }
     return ZX_OK;
 }
 
 static zx_status_t platform_bus_create(void* ctx, zx_device_t* parent, const char* name,
-                                       const char* args, zx_handle_t bootdata_vmo) {
+                                       const char* args, zx_handle_t zbi_vmo) {
     if (!args) {
         zxlogf(ERROR, "platform_bus_create: args missing\n");
         return ZX_ERR_NOT_SUPPORTED;
@@ -336,8 +332,8 @@ static zx_status_t platform_bus_create(void* ctx, zx_device_t* parent, const cha
     completion_reset(&bus->proto_completion);
     bus->resource = get_root_resource();
 
-    zx_status_t status = platform_bus_read_bootdata(bus, bootdata_vmo);
-    zx_handle_close(bootdata_vmo);
+    zx_status_t status = platform_bus_read_zbi(bus, zbi_vmo);
+    zx_handle_close(zbi_vmo);
     if (status != ZX_OK) {
         free(bus);
         return status;

@@ -651,11 +651,11 @@ static zx_status_t platform_device_add_metadata(platform_dev_t* dev, uint32_t in
     zx_off_t offset = 0;
 
     while (offset < bus->metadata_size) {
-        bootdata_t* bootdata = (bootdata_t*)metadata;
-        size_t length = BOOTDATA_ALIGN(sizeof(bootdata_t) + bootdata->length);
+        zbi_header_t* header = (zbi_header_t*)metadata;
+        size_t length = ZBI_ALIGN(sizeof(zbi_header_t) + header->length);
 
-        if (bootdata->type == type && bootdata->extra == extra) {
-            return device_add_metadata(dev->zxdev, type, bootdata + 1, length - sizeof(bootdata_t));
+        if (header->type == type && header->extra == extra) {
+            return device_add_metadata(dev->zxdev, type, header + 1, length - sizeof(zbi_header_t));
         }
         metadata += length;
         offset += length;
