@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <fuchsia/modular/cpp/fidl.h>
-#include <modular_test_trigger/cpp/fidl.h>
+#include <test/peridot/tests/trigger/cpp/fidl.h>
 #include "lib/app_driver/cpp/agent_driver.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/logging.h"
@@ -12,12 +12,13 @@
 #include "peridot/tests/common/defs.h"
 #include "peridot/tests/trigger/defs.h"
 
-using modular::testing::TestPoint;
+using ::modular::testing::TestPoint;
+using ::test::peridot::tests::trigger::TriggerTestService;
 
 namespace {
 
 // Cf. README.md for what this test does and how.
-class TestApp : modular_test_trigger::TriggerTestService {
+class TestApp : TriggerTestService {
  public:
   TestPoint initialized_{"Trigger test agent initialized"};
 
@@ -36,8 +37,8 @@ class TestApp : modular_test_trigger::TriggerTestService {
     task_info.persistent = true;
     agent_host->agent_context()->ScheduleTask(std::move(task_info));
 
-    agent_services_.AddService<modular_test_trigger::TriggerTestService>(
-        [this](fidl::InterfaceRequest<modular_test_trigger::TriggerTestService>
+    agent_services_.AddService<TriggerTestService>(
+        [this](fidl::InterfaceRequest<TriggerTestService>
                    request) {
           service_bindings_.AddBinding(this, std::move(request));
         });
@@ -88,7 +89,7 @@ class TestApp : modular_test_trigger::TriggerTestService {
   fuchsia::modular::AgentContext* const agent_context_;
   fuchsia::modular::MessageQueuePtr msg_queue_;
 
-  fidl::BindingSet<modular_test_trigger::TriggerTestService> service_bindings_;
+  fidl::BindingSet<TriggerTestService> service_bindings_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(TestApp);
 };

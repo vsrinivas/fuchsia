@@ -18,8 +18,8 @@
 #include "peridot/tests/common/defs.h"
 #include "peridot/tests/trigger/defs.h"
 
-using modular::testing::Await;
-using modular::testing::TestPoint;
+using ::modular::testing::Await;
+using ::modular::testing::TestPoint;
 
 namespace {
 

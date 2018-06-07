@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-library modular_test_trigger;
+library test.peridot.tests.trigger;
 
 // Cf. README.md for what this test does and how.
 [Discoverable]

@@ -5,7 +5,7 @@
 #include <fuchsia/modular/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
-#include <modular_test_trigger/cpp/fidl.h>
+#include <test/peridot/tests/trigger/cpp/fidl.h>
 
 #include "lib/app/cpp/connect.h"
 #include "lib/app_driver/cpp/module_driver.h"
@@ -14,9 +14,10 @@
 #include "peridot/lib/testing/testing.h"
 #include "peridot/tests/trigger/defs.h"
 
-using modular::testing::Await;
-using modular::testing::Signal;
-using modular::testing::TestPoint;
+using ::modular::testing::Await;
+using ::modular::testing::Signal;
+using ::modular::testing::TestPoint;
+using ::test::peridot::tests::trigger::TriggerTestServicePtr;
 
 namespace {
 
@@ -127,7 +128,7 @@ class TestApp {
 
  private:
   fuchsia::modular::AgentControllerPtr agent_controller_;
-  modular_test_trigger::TriggerTestServicePtr agent_service_;
+  TriggerTestServicePtr agent_service_;
   fuchsia::modular::ComponentContextPtr component_context_;
   // The queue used for observing explicit queue deletion.
   fuchsia::modular::MessageQueuePtr explicit_msg_queue_;
