@@ -267,7 +267,11 @@ class BlobStats {
         var blobTree = {};
         blobTree["n"] = blobName;
         blobTree["k"] = "s";  // kind=symbol
-        blobTree["t"] = "T";  // type=global text
+        if (blobName.endsWith(".dilp") || blobName.endsWith(".aotsnapshot")) {
+          blobTree["t"] = "t";  // type=local text ("blue")
+        } else {
+          blobTree["t"] = "T";  // type=global text ("red")
+        }
         blobTree["value"] = blob.proportional;
         pkgTree["children"].add(blobTree);
       });
