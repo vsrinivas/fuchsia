@@ -9,6 +9,7 @@ import("//build/fidl/fidl.gni")
 # TODO(alhaad/ukode): Also move these services to a separate repository.
 fidl("fidl") {
   name = "fuchsia.modular.auth"
+  cpp_legacy_callbacks = true
 
   sdk_category = "partner"
 

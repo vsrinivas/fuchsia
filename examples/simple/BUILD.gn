@@ -36,6 +36,7 @@ executable_package("simple_module") {
 
 fidl("interfaces") {
   name = "simple"
+  cpp_legacy_callbacks = true
 
   sources = [
     "simple.fidl",

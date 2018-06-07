@@ -6,6 +6,7 @@ import("//build/fidl/fidl.gni")
 
 fidl("fidl") {
   name = "module_manifest_source"
+  cpp_legacy_callbacks = true
 
   sources = [
     "module_package_indexer.fidl",

@@ -37,6 +37,7 @@ executable_package("story_info") {
 
 fidl("initializer") {
   name = "maxwell"
+  cpp_legacy_callbacks = true
 
   sources = [
     "initializer.fidl",

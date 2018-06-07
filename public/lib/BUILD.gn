@@ -28,6 +28,7 @@ executable("peridot_public_lib_unittests") {
 
 fidl("fidl") {
   name = "fuchsia.modular"
+  cpp_legacy_callbacks = true
 
   sdk_category = "partner"
 
@@ -109,6 +110,7 @@ fidl("fidl") {
 
 fidl("fidl_internal") {
   name = "fuchsia.modular.internal"
+  cpp_legacy_callbacks = true
 
   sources = [
     "story/fidl/link_change.fidl",

@@ -136,6 +136,7 @@ fidl("app_client_unittest_fidl") {
   testonly = true
 
   name = "modular_test"
+  cpp_legacy_callbacks = true
 
   sources = [
     "app_client_unittest.fidl",
@@ -174,6 +175,7 @@ fidl("json_xdr_unittest_fidl") {
   testonly = true
 
   name = "json_xdr_unittest"
+  cpp_legacy_callbacks = true
 
   sources = [
     "json_xdr_unittest.fidl",

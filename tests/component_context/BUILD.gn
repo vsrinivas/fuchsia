@@ -79,6 +79,7 @@ executable_package("component_context_test_unstoppable_agent") {
 
 fidl("component_context_test_service") {
   name = "component_context_test"
+  cpp_legacy_callbacks = true
 
   sources = [
     "component_context_test_service.fidl",
@@ -92,4 +93,3 @@ source_set("defs") {
     "defs.h",
   ]
 }
-
