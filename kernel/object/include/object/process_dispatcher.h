@@ -279,11 +279,11 @@ private:
     zx_status_t AddThread(ThreadDispatcher* t, bool initial_thread);
     void RemoveThread(ThreadDispatcher* t);
 
-    void SetStateLocked(State) TA_REQ(state_lock_);
+    void SetStateLocked(State) TA_REQ(get_lock());
     void FinishDeadTransition();
 
     // Kill all threads
-    void KillAllThreadsLocked() TA_REQ(state_lock_);
+    void KillAllThreadsLocked() TA_REQ(get_lock());
 
     // TODO(dbort): Add "canary_.Assert()" calls to methods.
     fbl::Canary<fbl::magic("PROC")> canary_;
@@ -302,7 +302,7 @@ private:
 
     // list of threads in this process
     using ThreadList = fbl::DoublyLinkedList<ThreadDispatcher*, ThreadDispatcher::ThreadListTraits>;
-    ThreadList thread_list_ TA_GUARDED(state_lock_);
+    ThreadList thread_list_ TA_GUARDED(get_lock());
 
     // our address space
     fbl::RefPtr<VmAspace> aspace_;
@@ -314,8 +314,7 @@ private:
     FutexContext futex_context_;
 
     // our state
-    State state_ TA_GUARDED(state_lock_) = State::INITIAL;
-    mutable fbl::Mutex state_lock_;
+    State state_ TA_GUARDED(get_lock()) = State::INITIAL;
 
     // True if FinishDeadTransition has been called.
     // This is used as a sanity check only.
@@ -325,12 +324,12 @@ private:
     int64_t retcode_ = 0;
 
     // Exception ports bound to the process.
-    fbl::RefPtr<ExceptionPort> exception_port_ TA_GUARDED(state_lock_);
-    fbl::RefPtr<ExceptionPort> debugger_exception_port_ TA_GUARDED(state_lock_);
+    fbl::RefPtr<ExceptionPort> exception_port_ TA_GUARDED(get_lock());
+    fbl::RefPtr<ExceptionPort> debugger_exception_port_ TA_GUARDED(get_lock());
 
     // This is the value of _dl_debug_addr from ld.so.
     // See third_party/ulib/musl/ldso/dynlink.c.
-    uintptr_t debug_addr_ TA_GUARDED(state_lock_) = 0;
+    uintptr_t debug_addr_ TA_GUARDED(get_lock()) = 0;
 
     // This is a cache of aspace()->vdso_code_address().
     uintptr_t vdso_code_address_ = 0;
