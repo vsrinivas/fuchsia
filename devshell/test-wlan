@@ -4,7 +4,7 @@
 # found in the LICENSE file.
 
 ### Performs WLAN smoke tests by reaching out the Internet
-TEST_WLAN_WAIT_PERIOD=60
+TEST_TIMEOUT_SEC=80
 readonly LOG_DIR="/tmp"
 readonly LOG_FILE="wlan-doctor.log"
 readonly SOURCE="garnet/bin/wlan/wlan-smoke.sh"
@@ -29,7 +29,7 @@ fi
 if [[ $# -eq 1 ]]; then
   re='^[0-9]+$'
   if [[ $1 =~ $re ]]; then
-    TEST_WLAN_WAIT_PERIOD="$1"
+    TEST_TIMEOUT_SEC="$1"
   else
     usage
     exit 1
@@ -51,8 +51,19 @@ function run {
 }
 
 function wait_for_result {
-  echo "Wait ${TEST_WLAN_WAIT_PERIOD} seconds for wlan-smoke to complete"
-  for i in $( seq 1 $TEST_WLAN_WAIT_PERIOD ); do
+  local timeout="$1"
+  if [ -z $timeout ]; then
+    timeout="${TEST_TIMEOUT_SEC}"
+  fi
+  echo "Wait ${timeout} seconds for wlan-smoke to complete"
+  for i in $( seq 1 $timeout ); do
+    if [ $i -lt 3 ]; then
+      sleep 1
+    else
+      if fx-command-run shell -o ConnectTimeout=1 ifconfig en2 |& grep -q UP ; then
+        break
+      fi
+    fi
     printf "."
     if ! ((i % 10)); then
       printf " "
@@ -60,7 +71,6 @@ function wait_for_result {
     if ! ((i % 60)); then
       echo ""
     fi
-    sleep 1
   done
   echo ""
 }
@@ -87,6 +97,6 @@ function display_cleanup {
 setup
 eth_iface_list=$(get_eth_iface_list)
 run
-wait_for_result
+wait_for_result "${TEST_TIMEOUT_SEC}"
 recover_eth "${eth_iface_list[@]}"
 display_cleanup
