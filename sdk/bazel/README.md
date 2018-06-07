@@ -52,3 +52,37 @@ contents of `tests/` into the workspace, so that smoke tests can be run with:
 ```
 bazel build //tests/...
 ```
+
+# Consuming
+
+The produced Bazel SDK can be consumed by adding those lines to a Bazel
+`WORKSPACE`:
+
+```
+http_repository(
+  name = "fuchsia_sdk",
+  path = "<FUCHSIA_SDK_URL>",
+)
+
+load("@fuchsia_sdk//build_defs:crosstool.bzl", "install_fuchsia_crosstool")
+install_fuchsia_crosstool(
+  name = "fuchsia_crosstool"
+)
+```
+
+This adds the Fuchsia SDK to the workspace and sets up the necessary toolchains
+for cross compilation against `x86_64` targets.
+
+To reference the toolchains, add this to the .bazelrc file:
+
+```
+build:fuchsia --crosstool_top=@fuchsia_crosstool//:toolchain
+build:fuchsia --cpu=x86_64
+build:fuchsia --host_crosstool_top=@bazel_tools//tools/cpp:toolchain
+```
+
+Target can then be built for Fuschsia with:
+
+```
+$ bazel build --config=fuchsia //...
+```

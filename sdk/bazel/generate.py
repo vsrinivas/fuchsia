@@ -68,11 +68,6 @@ class CppBuilder(Builder):
         # Add the tests.
         shutil.copytree(self.source('tests'), self.dest('tests'))
 
-        # Turn the repository into a functional workspace.
-        workspace_filename = self.dest('WORKSPACE')
-        self.make_dir(workspace_filename)
-        with open(workspace_filename, 'w'):
-            pass
         fuchsia_bzl_src = self.source('fuchsia.bzl')
         fuchsia_bzl_dest = self.dest('fuchsia', 'fuchsia.bzl')
         self.make_dir(fuchsia_bzl_dest)

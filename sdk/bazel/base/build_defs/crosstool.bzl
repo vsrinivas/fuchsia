@@ -1,0 +1,47 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+"""
+Defines a Fuchsia crosstool workspace.
+"""
+
+# TODO(alainv): Do not hardcode download URLs but export the URL from the
+#               the one used in //buildtools, using the CIPD APIs.
+CLANG_DOWNLOAD_URL = (
+    "https://storage.googleapis.com/fuchsia/clang/linux-amd64/0c20cca57e424c54cd65644168c68725aae41c44"
+)
+
+CLANG_SHA256 = (
+    "fa304a74a9e39d1e6d4cdf29d368923abc58fa974d1ecb55662065252c4a1802"
+)
+
+
+def _configure_crosstool_impl(repository_ctx):
+    """
+    Configures the Fuchsia crosstool repository.
+    """
+    # Download the toolchain.
+    repository_ctx.download_and_extract(
+        CLANG_DOWNLOAD_URL, "clang", CLANG_SHA256, "zip")
+    # Set up the BUILD file from the Fuchsia SDK.
+    repository_ctx.symlink(
+        Label("@fuchsia_sdk//build_defs:BUILD.crosstool"), "BUILD")
+    # Hack to get the path to the sysroot directory, see
+    # https://github.com/bazelbuild/bazel/issues/3901
+    system_pkg = repository_ctx.path(
+        Label("@fuchsia_sdk//pkg/system:BUILD")).dirname
+    # Set up the CROSSTOOL file from the template.
+    repository_ctx.template(
+        "CROSSTOOL",
+        Label("@fuchsia_sdk//build_defs:CROSSTOOL.in"),
+        {
+            "%{SYSROOT}": str(system_pkg.get_child("arch").get_child("x64")),
+            "%{SYSROOT_INCLUDE}": str(system_pkg.get_child("include")),
+            "%{CROSSTOOL_ROOT}": str(repository_ctx.path("."))
+        })
+
+
+install_fuchsia_crosstool = repository_rule(
+    implementation = _configure_crosstool_impl
+)
