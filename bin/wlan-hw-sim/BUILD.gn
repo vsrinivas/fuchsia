@@ -8,6 +8,7 @@ import("//build/package.gni")
 rustc_binary("bin") {
   name = "wlan_hw_sim"
   with_unit_tests = true
+  with_lto = "fat"
 
   deps = [
     "//garnet/lib/rust/crates/wlantap-client",

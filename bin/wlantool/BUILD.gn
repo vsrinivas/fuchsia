@@ -7,6 +7,8 @@ import("//build/package.gni")
 
 rustc_binary("bin") {
   name = "wlantool2"
+  with_lto = "fat"
+
   deps = [
     "//garnet/lib/wlan/fidl:fidl-rustc",
     "//garnet/lib/wlan/fidl:service-rustc",
