@@ -12,7 +12,7 @@
 #include "peridot/tests/common/defs.h"
 #include "peridot/tests/component_context/defs.h"
 
-using modular::testing::TestPoint;
+using ::modular::testing::TestPoint;
 
 namespace {
 

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-library component_context_test;
+library test.peridot.tests.componentcontext;
 
 // An interface implemented by component_context_test_one_agent.cc which the
 // root module uses.

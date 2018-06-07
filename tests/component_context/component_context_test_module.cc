@@ -4,10 +4,10 @@
 
 #include <utility>
 
-#include <component_context_test/cpp/fidl.h>
 #include <fuchsia/modular/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
+#include <test/peridot/tests/componentcontext/cpp/fidl.h>
 
 #include "lib/app/cpp/connect.h"
 #include "lib/app_driver/cpp/module_driver.h"
@@ -20,9 +20,10 @@
 #include "peridot/tests/common/defs.h"
 #include "peridot/tests/component_context/defs.h"
 
-using modular::testing::Await;
-using modular::testing::Signal;
-using modular::testing::TestPoint;
+using ::modular::testing::Await;
+using ::modular::testing::Signal;
+using ::modular::testing::TestPoint;
+using ::test::peridot::tests::componentcontext::ComponentContextTestServicePtr;
 
 namespace {
 
@@ -182,7 +183,7 @@ class TestApp {
   CounterTrigger steps_;
 
   fuchsia::modular::AgentControllerPtr one_agent_controller;
-  component_context_test::ComponentContextTestServicePtr one_agent_interface_;
+  ComponentContextTestServicePtr one_agent_interface_;
   fuchsia::modular::ComponentContextPtr component_context_;
   fuchsia::modular::MessageQueuePtr msg_queue_;
 

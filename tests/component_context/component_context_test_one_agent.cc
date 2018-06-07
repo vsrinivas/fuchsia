@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <component_context_test/cpp/fidl.h>
 #include <fuchsia/modular/cpp/fidl.h>
+#include <test/peridot/tests/componentcontext/cpp/fidl.h>
 
 #include "lib/app_driver/cpp/agent_driver.h"
 #include "lib/fsl/tasks/message_loop.h"
@@ -13,21 +13,21 @@
 #include "peridot/tests/common/defs.h"
 #include "peridot/tests/component_context/defs.h"
 
-using modular::testing::TestPoint;
+using ::modular::testing::TestPoint;
+using ::test::peridot::tests::componentcontext::ComponentContextTestService;
 
 namespace {
 
 // Cf. README.md for what this test does and how.
-class TestApp : component_context_test::ComponentContextTestService {
+class TestApp : ComponentContextTestService {
  public:
   TestApp(modular::AgentHost* const agent_host) {
     modular::testing::Init(agent_host->startup_context(), __FILE__);
     agent_host->agent_context()->GetComponentContext(
         component_context_.NewRequest());
     agent_services_
-        .AddService<component_context_test::ComponentContextTestService>(
-            [this](fidl::InterfaceRequest<
-                   component_context_test::ComponentContextTestService>
+        .AddService<ComponentContextTestService>(
+            [this](fidl::InterfaceRequest<ComponentContextTestService>
                        request) {
               agent_interface_.AddBinding(this, std::move(request));
             });
@@ -80,8 +80,7 @@ class TestApp : component_context_test::ComponentContextTestService {
   fuchsia::modular::AgentControllerPtr two_agent_controller_;
 
   fuchsia::sys::ServiceNamespace agent_services_;
-  fidl::BindingSet<component_context_test::ComponentContextTestService>
-      agent_interface_;
+  fidl::BindingSet<ComponentContextTestService> agent_interface_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(TestApp);
 };
