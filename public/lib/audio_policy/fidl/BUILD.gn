@@ -6,6 +6,7 @@ import("//build/fidl/fidl.gni")
 
 fidl("fidl") {
   name = "audio_policy"
+  cpp_legacy_callbacks = true
 
   sources = [
     "audio_policy.fidl",

@@ -6,6 +6,7 @@ import("//build/fidl/fidl.gni")
 
 fidl("fidl") {
   name = "fuchsia.ui.gfx"
+  cpp_legacy_callbacks = true
 
   sdk_category = "partner"
 

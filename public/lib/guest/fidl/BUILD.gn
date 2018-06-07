@@ -6,6 +6,7 @@ import("//build/fidl/fidl.gni")
 
 fidl("fidl") {
   name = "fuchsia.guest"
+  cpp_legacy_callbacks = true
 
   sources = [
     "guest_controller.fidl",

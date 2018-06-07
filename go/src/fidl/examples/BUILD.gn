@@ -12,6 +12,7 @@ template("fidl_example") {
       nick = invoker.nick
     }
     name = "fidl.examples.$nick"
+    cpp_legacy_callbacks = true
 
     sources = [
       "//zircon/system/host/fidl/examples/${target_name}.fidl"
@@ -39,6 +40,7 @@ fidl_example("types") {}
 
 fidl("point") {
   name = "fidl.examples.libraryA"
+  cpp_legacy_callbacks = true
 
   sources = [
     "//zircon/system/host/fidl/examples/library-a/point.fidl"
@@ -47,6 +49,7 @@ fidl("point") {
 
 fidl("view") {
   name = "fidl.examples.libraryB"
+  cpp_legacy_callbacks = true
 
   sources = [
     "//zircon/system/host/fidl/examples/library-b/view.fidl"

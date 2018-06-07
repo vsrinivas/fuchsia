@@ -6,6 +6,7 @@ import("//build/fidl/fidl.gni")
 
 fidl("fidl") {
   name = "auth"
+  cpp_legacy_callbacks = true
   sources = [
     "auth_provider.fidl",
     "auth_provider_factory.fidl",

@@ -6,6 +6,7 @@ import("//build/fidl/fidl.gni")
 
 fidl("fidl") {
   name = "fuchsia.wlan.device"
+  cpp_legacy_callbacks = true
 
   sources = [
     "iface.fidl",
@@ -15,6 +16,7 @@ fidl("fidl") {
 
 fidl("sme") {
   name = "fuchsia.wlan.sme"
+  cpp_legacy_callbacks = true
 
   sources = [
     "sme.fidl"
@@ -23,6 +25,7 @@ fidl("sme") {
 
 fidl("service") {
   name = "fuchsia.wlan.device.service"
+  cpp_legacy_callbacks = true
 
   sources = [
     "service.fidl"
@@ -36,6 +39,7 @@ fidl("service") {
 
 fidl("wlantap") {
   name = "fuchsia.wlan.tap"
+  cpp_legacy_callbacks = true
 
   sources = [
     "wlantap.fidl"

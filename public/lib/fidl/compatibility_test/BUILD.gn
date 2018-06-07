@@ -7,6 +7,7 @@ import("//build/package.gni")
 
 fidl("compatibility_test_service") {
   name = "fidl.test.compatibility"
+  cpp_legacy_callbacks = true
 
   sources = [
     "compatibility_test_service.fidl",

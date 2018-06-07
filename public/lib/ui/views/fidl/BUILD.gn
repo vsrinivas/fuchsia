@@ -6,6 +6,7 @@ import("//build/fidl/fidl.gni")
 
 fidl("v1") {
   name = "fuchsia.ui.views_v1"
+  cpp_legacy_callbacks = true
 
   sdk_category = "partner"
 
@@ -33,6 +34,7 @@ fidl("v1") {
 # ":fidl" after ViewManager is re-implemented in Mozart.
 fidl("v2") {
   name = "fuchsia.ui.views"
+  cpp_legacy_callbacks = true
 
   sdk_category = "partner"
 
@@ -51,6 +53,7 @@ fidl("v2") {
 
 fidl("view_token") {
   name = "fuchsia.ui.views_v1_token"
+  cpp_legacy_callbacks = true
 
   sdk_category = "partner"
 

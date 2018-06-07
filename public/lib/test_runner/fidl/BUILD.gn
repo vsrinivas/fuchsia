@@ -6,6 +6,7 @@ import("//build/fidl/fidl.gni")
 
 fidl("fidl") {
   name = "test_runner"
+  cpp_legacy_callbacks = true
 
   sources = [
     "test_runner.fidl",

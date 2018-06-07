@@ -8,6 +8,7 @@ import("//build/fidl/fidl.gni")
 # reorganized.
 fidl("fidl") {
   name = "fuchsia.ui.app"
+  cpp_legacy_callbacks = true
 
   sdk_category = "partner"
 
