@@ -16,14 +16,6 @@
 namespace cobalt {
 namespace {
 
-template <typename T>
-T CloneType(const T& other) {
-  T result;
-  zx_status_t status = fidl::Clone(other, &result);
-  FXL_DCHECK(status == ZX_OK);
-  return result;
-}
-
 bool Equals(const Value& v1, const Value& v2) {
   if (v1.Which() != v2.Which()) {
     return false;
@@ -249,7 +241,7 @@ TEST_F(CobaltTest, ReportIndexObservation) {
   Value value;
   value.set_index_value(123);
   CobaltObservation observation(kFakeCobaltMetricId, kFakeCobaltEncodingId,
-                                CloneType(value));
+                                fidl::Clone(value));
   CobaltContext* cobalt_context = nullptr;
   auto ac = InitializeCobalt(async_get_default(), context(),
                              kFakeCobaltProjectId, &cobalt_context);
@@ -262,7 +254,7 @@ TEST_F(CobaltTest, ReportIntObservation) {
   Value value;
   value.set_int_value(123);
   CobaltObservation observation(kFakeCobaltMetricId, kFakeCobaltEncodingId,
-                                CloneType(value));
+                                fidl::Clone(value));
   CobaltContext* cobalt_context = nullptr;
   auto ac = InitializeCobalt(async_get_default(), context(),
                              kFakeCobaltProjectId, &cobalt_context);
@@ -275,7 +267,7 @@ TEST_F(CobaltTest, ReportDoubleObservation) {
   Value value;
   value.set_double_value(1.5);
   CobaltObservation observation(kFakeCobaltMetricId, kFakeCobaltEncodingId,
-                                CloneType(value));
+                                fidl::Clone(value));
   CobaltContext* cobalt_context = nullptr;
   auto ac = InitializeCobalt(async_get_default(), context(),
                              kFakeCobaltProjectId, &cobalt_context);
@@ -288,7 +280,7 @@ TEST_F(CobaltTest, ReportStringObservation) {
   Value value;
   value.set_string_value("test");
   CobaltObservation observation(kFakeCobaltMetricId, kFakeCobaltEncodingId,
-                                CloneType(value));
+                                fidl::Clone(value));
   CobaltContext* cobalt_context = nullptr;
   auto ac = InitializeCobalt(async_get_default(), context(),
                              kFakeCobaltProjectId, &cobalt_context);
@@ -306,7 +298,7 @@ TEST_F(CobaltTest, ReportIntBucketObservation) {
   distribution->at(1).count = 3;
   value.set_int_bucket_distribution(std::move(distribution));
   CobaltObservation observation(kFakeCobaltMetricId, kFakeCobaltEncodingId,
-                                CloneType(value));
+                                fidl::Clone(value));
   CobaltContext* cobalt_context = nullptr;
   auto ac = InitializeCobalt(async_get_default(), context(),
                              kFakeCobaltProjectId, &cobalt_context);
@@ -326,7 +318,7 @@ TEST_F(CobaltTest, ReportMultipartObservation) {
   parts->at(1).value.set_int_value(2);
 
   CobaltObservation observation(static_cast<uint32_t>(kFakeCobaltMetricId),
-                                CloneType(parts));
+                                fidl::Clone(parts));
   CobaltContext* cobalt_context = nullptr;
   auto ac = InitializeCobalt(async_get_default(), context(),
                              kFakeCobaltProjectId, &cobalt_context);

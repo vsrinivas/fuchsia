@@ -178,20 +178,49 @@ CobaltObservation& CobaltObservation::operator=(CobaltObservation&& rhs) {
   return *this;
 }
 
-CobaltContext::CobaltContext(async_t* async, fuchsia::sys::StartupContext* context,
-                             int32_t project_id)
+namespace {
+class CobaltContextImpl : public CobaltContext {
+ public:
+  CobaltContextImpl(async_t* async, fuchsia::sys::StartupContext* context,
+                    int32_t project_id);
+  ~CobaltContextImpl();
+
+  void ReportObservation(CobaltObservation observation) override;
+
+ private:
+  void ConnectToCobaltApplication();
+  void OnConnectionError();
+  void ReportObservationOnMainThread(CobaltObservation observation);
+  void SendObservations();
+  void AddObservationCallback(CobaltObservation observation, Status status);
+
+  backoff::ExponentialBackoff backoff_;
+  async_t* const async_;
+  fuchsia::sys::StartupContext* context_;
+  CobaltEncoderPtr encoder_;
+  const int32_t project_id_;
+
+  std::multiset<CobaltObservation> observations_to_send_;
+  std::multiset<CobaltObservation> observations_in_transit_;
+
+  FXL_DISALLOW_COPY_AND_ASSIGN(CobaltContextImpl);
+};
+
+CobaltContextImpl::CobaltContextImpl(async_t* async,
+                                     fuchsia::sys::StartupContext* context,
+                                     int32_t project_id)
     : async_(async), context_(context), project_id_(project_id) {
   ConnectToCobaltApplication();
 }
 
-CobaltContext::~CobaltContext() {
+CobaltContextImpl::~CobaltContextImpl() {
   if (!observations_in_transit_.empty() || !observations_to_send_.empty()) {
     FXL_LOG(WARNING) << "Disconnecting connection to cobalt with observation "
                         "still pending... Observations will be lost.";
   }
 }
 
-void CobaltContext::ReportObservation(CobaltObservation observation) {
+void CobaltContextImpl::ReportObservation(CobaltObservation observation) {
   if (async_ == async_get_default()) {
     ReportObservationOnMainThread(std::move(observation));
     return;
@@ -203,7 +232,7 @@ void CobaltContext::ReportObservation(CobaltObservation observation) {
   });
 }
 
-void CobaltContext::ConnectToCobaltApplication() {
+void CobaltContextImpl::ConnectToCobaltApplication() {
   auto encoder_factory =
       context_->ConnectToEnvironmentService<CobaltEncoderFactory>();
   encoder_factory->GetEncoder(project_id_, encoder_.NewRequest());
@@ -212,7 +241,7 @@ void CobaltContext::ConnectToCobaltApplication() {
   SendObservations();
 }
 
-void CobaltContext::OnConnectionError() {
+void CobaltContextImpl::OnConnectionError() {
   FXL_LOG(ERROR) << "Connection to cobalt failed. Reconnecting after a delay.";
 
   observations_to_send_.insert(observations_in_transit_.begin(),
@@ -223,7 +252,7 @@ void CobaltContext::OnConnectionError() {
                          backoff_.GetNext());
 }
 
-void CobaltContext::ReportObservationOnMainThread(
+void CobaltContextImpl::ReportObservationOnMainThread(
     CobaltObservation observation) {
   observations_to_send_.insert(observation);
   if (!encoder_ || !observations_in_transit_.empty()) {
@@ -233,7 +262,7 @@ void CobaltContext::ReportObservationOnMainThread(
   SendObservations();
 }
 
-void CobaltContext::SendObservations() {
+void CobaltContextImpl::SendObservations() {
   FXL_DCHECK(observations_in_transit_.empty());
 
   if (observations_to_send_.empty()) {
@@ -278,8 +307,8 @@ void CobaltContext::SendObservations() {
   });
 }
 
-void CobaltContext::AddObservationCallback(CobaltObservation observation,
-                                           cobalt::Status status) {
+void CobaltContextImpl::AddObservationCallback(CobaltObservation observation,
+                                               cobalt::Status status) {
   switch (status) {
     case cobalt::Status::INVALID_ARGUMENTS:
     case cobalt::Status::FAILED_PRECONDITION:
@@ -301,13 +330,18 @@ void CobaltContext::AddObservationCallback(CobaltObservation observation,
       break;
   }
 }
+}  // namespace
+
+std::unique_ptr<CobaltContext> MakeCobaltContext(
+    async_t* async, fuchsia::sys::StartupContext* context, int32_t project_id) {
+  return std::make_unique<CobaltContextImpl>(async, context, project_id);
+}
 
 fxl::AutoCall<fxl::Closure> InitializeCobalt(
     async_t* async, fuchsia::sys::StartupContext* startup_context,
     int32_t project_id, CobaltContext** cobalt_context) {
   FXL_DCHECK(!*cobalt_context);
-  auto context =
-      std::make_unique<CobaltContext>(async, startup_context, project_id);
+  auto context = MakeCobaltContext(async, startup_context, project_id);
   *cobalt_context = context.get();
   return fxl::MakeAutoCall<fxl::Closure>(fxl::MakeCopyable(
       [context = std::move(context), cobalt_context]() mutable {

@@ -5,7 +5,9 @@
 #ifndef PERIDOT_LIB_COBALT_COBALT_H_
 #define PERIDOT_LIB_COBALT_COBALT_H_
 
-#include <set>
+#include <memory>
+#include <string>
+#include <utility>
 
 #include <cobalt/cpp/fidl.h>
 
@@ -46,47 +48,28 @@ class CobaltObservation {
 
 class CobaltContext {
  public:
-  CobaltContext(async_t* async, fuchsia::sys::StartupContext* context,
-                int32_t project_id);
-  ~CobaltContext();
+  virtual ~CobaltContext() {}
 
-  void ReportObservation(CobaltObservation observation);
-
- private:
-  void ConnectToCobaltApplication();
-  void OnConnectionError();
-  void ReportObservationOnMainThread(CobaltObservation observation);
-  void SendObservations();
-  void AddObservationCallback(CobaltObservation observation, Status status);
-
-  backoff::ExponentialBackoff backoff_;
-  async_t* const async_;
-  fuchsia::sys::StartupContext* context_;
-  CobaltEncoderPtr encoder_;
-  const int32_t project_id_;
-
-  std::multiset<CobaltObservation> observations_to_send_;
-  std::multiset<CobaltObservation> observations_in_transit_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(CobaltContext);
+  // Reports an observation to Cobalt.
+  virtual void ReportObservation(CobaltObservation observation) = 0;
 };
 
-// Cobalt initialization. When cobalt is not need, the returned object must be
-// deleted. This method must not be called again until then.
-fxl::AutoCall<fxl::Closure> InitializeCobalt(async_t* async,
-                                             fuchsia::sys::StartupContext* context,
-                                             int32_t project_id,
-                                             CobaltContext** cobalt_context);
+// Returns a CobaltContext initialized with the provided parameters.
+std::unique_ptr<CobaltContext> MakeCobaltContext(
+    async_t* async, fuchsia::sys::StartupContext* context, int32_t project_id);
 
-// Report an observation to Cobalt.
+// Cobalt initialization. When cobalt is not needed anymore, the returned object
+// must be deleted. This method must not be called again until then.
+// DEPRECATED - prefer MakeCobaltContext().
+fxl::AutoCall<fxl::Closure> InitializeCobalt(
+    async_t* async, fuchsia::sys::StartupContext* startup_context,
+    int32_t project_id, CobaltContext** cobalt_context);
+
+// Reports an observation to Cobalt if |cobalt_context| is not nullptr.
+// DEPRECATED - prefer calling CobaltContext::ReportObservation directly
+// (testing the pointer only if necessary).
 void ReportObservation(CobaltObservation observation,
                        CobaltContext* cobalt_context);
-
-// Report a multipart observation to Cobalt.
-void ReportMultipartObservation(uint32_t metric_id,
-                                fidl::VectorPtr<cobalt::ObservationValue> parts,
-                                CobaltContext* cobalt_context);
-
 };  // namespace cobalt
 
 #endif  // PERIDOT_LIB_COBALT_COBALT_H_
