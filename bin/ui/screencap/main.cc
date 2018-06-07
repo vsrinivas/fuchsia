@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fstream>
+#include <iostream>
 #include <memory>
 
 #include <lib/async-loop/cpp/loop.h>
@@ -23,12 +23,14 @@ int main(int argc, const char** argv) {
     return 1;
 
   const auto& positional_args = command_line.positional_args();
-  if (positional_args.empty()) {
-    FXL_LOG(ERROR) << "screencap requires a path for where to save "
-                   << "the screenshot.";
+  if (!positional_args.empty()) {
+    FXL_LOG(ERROR) << "Usage: screencap\n"
+                   << "Takes a screenshot in PPM format and writes it "
+                   << "to stdout.\n"
+                   << "To write to a file, redirect stdout, e.g.: "
+                   << "screencap > \"${DST}\"";
     return 1;
   }
-  const std::string filename = positional_args[0];
 
   async::Loop loop(&kAsyncLoopConfigMakeDefault);
   trace::TraceProvider trace_provider(loop.async());
@@ -41,7 +43,7 @@ int main(int argc, const char** argv) {
     FXL_LOG(ERROR) << "Lost connection to Scenic service.";
     loop.Quit();
   });
-  scenic->TakeScreenshot([&loop, &filename](
+  scenic->TakeScreenshot([&loop](
                              fuchsia::ui::scenic::ScreenshotData screenshot,
                              bool status) {
     std::vector<uint8_t> imgdata;
@@ -51,26 +53,18 @@ int main(int argc, const char** argv) {
       return;
     }
 
-    std::ofstream file(filename, std::ios::binary);
-    if (!file.is_open()) {
-      FXL_LOG(ERROR) << "Could not open file to write screenshot: " << filename;
-      loop.Quit();
-      return;
-    }
-
-    file << "P6\n";
-    file << screenshot.info.width << "\n";
-    file << screenshot.info.height << "\n";
-    file << 255 << "\n";
+    std::cout << "P6\n";
+    std::cout << screenshot.info.width << "\n";
+    std::cout << screenshot.info.height << "\n";
+    std::cout << 255 << "\n";
 
     const uint8_t* pchannel = &imgdata[0];
     for (uint32_t pixel = 0;
          pixel < screenshot.info.width * screenshot.info.height; pixel++) {
       uint8_t rgb[] = {pchannel[2], pchannel[1], pchannel[0]};
-      file.write(reinterpret_cast<const char*>(rgb), 3);
+      std::cout.write(reinterpret_cast<const char*>(rgb), 3);
       pchannel += 4;
     }
-    file.close();
     loop.Quit();
   });
   loop.Run();
