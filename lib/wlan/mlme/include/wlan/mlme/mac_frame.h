@@ -28,20 +28,20 @@ template <unsigned int N, typename T> T align(T t) {
 }  // namespace
 
 using NilHeader = uint8_t[0];
-using UnknownBody = uint8_t;
+struct UnknownBody {
+    uint8_t data[];
+} __PACKED;
 
 // TODO(hahnr): Remove once frame owns Packet.
 template <typename Header, typename Body = UnknownBody> class Frame {
    public:
-    template <typename H, typename B>
-    static Frame FromOffset(size_t offset, fbl::unique_ptr<Packet> pkt) {
-        Frame<H, B> frame(fbl::move(pkt));
-        frame.data_offset_ = offset;
-        return fbl::move(frame);
-    }
-
     explicit Frame(fbl::unique_ptr<Packet> pkt) : pkt_(fbl::move(pkt)) {
         ZX_DEBUG_ASSERT(pkt_ != nullptr);
+    }
+
+    Frame(size_t offset, fbl::unique_ptr<Packet> pkt) : pkt_(fbl::move(pkt)) {
+        ZX_DEBUG_ASSERT(pkt_ != nullptr);
+        data_offset_ = offset;
     }
 
     Frame() : pkt_(nullptr) {}
@@ -59,7 +59,7 @@ template <typename Header, typename Body = UnknownBody> class Frame {
         ZX_DEBUG_ASSERT(!IsTaken());
         if (IsTaken()) { return nullptr; }
 
-        auto hdr = pkt_->mut_field<Header>(0);
+        auto hdr = pkt_->mut_field<Header>(data_offset_);
         ZX_DEBUG_ASSERT(hdr != nullptr);
         return hdr;
     }
@@ -97,8 +97,7 @@ template <typename Header, typename Body = UnknownBody> class Frame {
         if (IsTaken()) { return ZX_ERR_NO_RESOURCES; }
         ZX_DEBUG_ASSERT(len <= pkt_->len());
 
-        // TODO(hahnr): We might need to take padding into account at some point.
-        return pkt_->set_len(data_offset_ + hdr()->len() + len);
+        return pkt_->set_len(body_offset<Header>() + len);
     }
 
     size_t len() const {
@@ -155,7 +154,6 @@ template <typename Header, typename Body = UnknownBody> class Frame {
     }
 
     bool HasValidLen() const {
-        ZX_DEBUG_ASSERT(!IsTaken());
         if (IsTaken()) { return false; }
 
         if (pkt_->field<Header>(data_offset_) == nullptr) { return false; }
@@ -168,8 +166,8 @@ template <typename Header, typename Body = UnknownBody> class Frame {
     // The current frame will be considered `taken` after this call.
     template <typename NextH = Body, typename NextB = UnknownBody>
     Frame<NextH, NextB> NextFrame() {
-        size_t hdr_len = hdr()->len();
-        return FromOffset(hdr_len, take());
+        size_t offset = body_offset<Header>();
+        return Frame<NextH, NextB>(offset, take());
     }
 
     // Returns the Frame's underlying Packet. The Frame will no longer own the Packet and
@@ -192,10 +190,13 @@ template <typename Header, typename Body = UnknownBody> class Frame {
 
     template <typename T> static constexpr bool CanCarryTxInfo() { return CanCarryRxInfo<T>(); }
 
-    // If the frame can carry wlan_rx_info_t, it might use padding. In that case, check for, and
+    // If the frame carries wlan_rx_info_t, it might use padding. In that case, check for, and
     // account for padding when computing the body's offset.
     template <typename H>
     typename std::enable_if<CanCarryRxInfo<H>(), size_t>::type body_offset() const {
+        // TODO(hahnr): Similar to wlan_rx_info_t, we might have to take additional padding for
+        // the tx path into account.
+
         size_t offset = hdr()->len();
         if (has_rx_info() && rx_info()->rx_flags & WLAN_RX_INFO_FLAGS_FRAME_BODY_PADDING_4) {
             offset = align<4>(offset);
@@ -210,8 +211,8 @@ template <typename Header, typename Body = UnknownBody> class Frame {
         return data_offset_ + hdr()->len();
     }
 
-    fbl::unique_ptr<Packet> pkt_;
     size_t data_offset_ = 0;
+    fbl::unique_ptr<Packet> pkt_;
 };
 
 // Frame which contains a known header but unknown payload.
