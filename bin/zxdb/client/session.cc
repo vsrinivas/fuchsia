@@ -17,8 +17,12 @@
 #include "garnet/bin/zxdb/client/process_impl.h"
 #include "garnet/bin/zxdb/client/remote_api_impl.h"
 #include "garnet/bin/zxdb/client/thread_impl.h"
+#include "garnet/lib/debug_ipc/client_protocol.h"
 #include "garnet/lib/debug_ipc/helper/buffered_fd.h"
+#include "garnet/lib/debug_ipc/helper/message_loop.h"
 #include "garnet/lib/debug_ipc/helper/stream_buffer.h"
+#include "garnet/lib/debug_ipc/message_reader.h"
+#include "garnet/lib/debug_ipc/message_writer.h"
 #include "garnet/public/lib/fxl/logging.h"
 #include "garnet/public/lib/fxl/memory/ref_counted.h"
 #include "garnet/public/lib/fxl/strings/string_printf.h"
@@ -140,9 +144,8 @@ void Session::PendingConnection::Initiate(
 
   // Create the background thread, and run the background function. The
   // context will keep a ref to this class.
-  thread_ =
-      std::make_unique<std::thread>([owner = fxl::RefPtr<PendingConnection>(
-                                         this)]() {
+  thread_ = std::make_unique<std::thread>(
+      [owner = fxl::RefPtr<PendingConnection>(this)]() {
         owner->ConnectBackgroundThread(owner);
       });
 }
@@ -150,7 +153,7 @@ void Session::PendingConnection::Initiate(
 void Session::PendingConnection::ConnectBackgroundThread(
     fxl::RefPtr<PendingConnection> owner) {
   Err err = DoConnectBackgroundThread();
-  main_loop_->PostTask([ owner = std::move(owner), err ]() {
+  main_loop_->PostTask([owner = std::move(owner), err]() {
     owner->ConnectCompleteMainThread(owner, err);
   });
 }
@@ -182,9 +185,8 @@ void Session::PendingConnection::ConnectCompleteMainThread(
   std::vector<char> serialized = writer.MessageComplete();
   buffer_->stream().Write(std::move(serialized));
 
-  buffer_->set_data_available_callback([owner = std::move(owner)]() {
-    owner->DataAvailableMainThread(owner);
-  });
+  buffer_->set_data_available_callback(
+      [owner = std::move(owner)]() { owner->DataAvailableMainThread(owner); });
 }
 
 void Session::PendingConnection::DataAvailableMainThread(

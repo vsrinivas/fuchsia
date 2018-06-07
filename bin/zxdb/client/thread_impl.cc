@@ -6,6 +6,7 @@
 
 #include "garnet/bin/zxdb/client/frame_impl.h"
 #include "garnet/bin/zxdb/client/process_impl.h"
+#include "garnet/bin/zxdb/client/remote_api.h"
 #include "garnet/bin/zxdb/client/session.h"
 #include "garnet/public/lib/fxl/logging.h"
 
@@ -34,8 +35,8 @@ void ThreadImpl::Pause() {
   debug_ipc::PauseRequest request;
   request.process_koid = process_->GetKoid();
   request.thread_koid = koid_;
-  session()->Send<debug_ipc::PauseRequest, debug_ipc::PauseReply>(
-      request, [](const Err& err, debug_ipc::PauseReply) {});
+  session()->remote_api()->Pause(request,
+                                 [](const Err& err, debug_ipc::PauseReply) {});
 }
 
 void ThreadImpl::Continue() {
@@ -43,7 +44,7 @@ void ThreadImpl::Continue() {
   request.process_koid = process_->GetKoid();
   request.thread_koid = koid_;
   request.how = debug_ipc::ResumeRequest::How::kContinue;
-  session()->Send<debug_ipc::ResumeRequest, debug_ipc::ResumeReply>(
+  session()->remote_api()->Resume(
       request, [](const Err& err, debug_ipc::ResumeReply) {});
 }
 
@@ -52,7 +53,7 @@ void ThreadImpl::StepInstruction() {
   request.process_koid = process_->GetKoid();
   request.thread_koid = koid_;
   request.how = debug_ipc::ResumeRequest::How::kStepInstruction;
-  session()->Send<debug_ipc::ResumeRequest, debug_ipc::ResumeReply>(
+  session()->remote_api()->Resume(
       request, [](const Err& err, debug_ipc::ResumeReply) {});
 }
 
@@ -75,8 +76,8 @@ void ThreadImpl::SyncFrames(std::function<void()> callback) {
 
   ClearFrames();
 
-  session()->Send<debug_ipc::BacktraceRequest, debug_ipc::BacktraceReply>(
-      request, [ callback, thread = weak_factory_.GetWeakPtr() ](
+  session()->remote_api()->Backtrace(
+      request, [callback, thread = weak_factory_.GetWeakPtr()](
                    const Err& err, debug_ipc::BacktraceReply reply) {
         if (!thread)
           return;
@@ -114,7 +115,7 @@ void ThreadImpl::OnException(const debug_ipc::NotifyException& notify) {
   frame.push_back(notify.frame);
   // HaveFrames will only issue the callback if the ThreadImpl is still in
   // scope so we don't need a weak pointer here.
-  HaveFrames(frame, [ notify, thread = this ]() {
+  HaveFrames(frame, [notify, thread = this]() {
     thread->SetMetadata(notify.thread);
 
     // After an exception the thread should be blocked.
