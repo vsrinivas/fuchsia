@@ -86,7 +86,7 @@ void Scenic::GetDisplayInfo(
   FXL_DCHECK(systems_[System::kGfx]);
   TempSystemDelegate* delegate =
       reinterpret_cast<TempSystemDelegate*>(systems_[System::kGfx].get());
-  delegate->GetDisplayInfo(callback);
+  delegate->GetDisplayInfo(std::move(callback));
 }
 
 void Scenic::TakeScreenshot(
@@ -94,7 +94,7 @@ void Scenic::TakeScreenshot(
   FXL_DCHECK(systems_[System::kGfx]);
   TempSystemDelegate* delegate =
       reinterpret_cast<TempSystemDelegate*>(systems_[System::kGfx].get());
-  delegate->TakeScreenshot(callback);
+  delegate->TakeScreenshot(std::move(callback));
 }
 
 void Scenic::GetOwnershipEvent(
@@ -102,7 +102,7 @@ void Scenic::GetOwnershipEvent(
   FXL_DCHECK(systems_[System::kGfx]);
   TempSystemDelegate* delegate =
       reinterpret_cast<TempSystemDelegate*>(systems_[System::kGfx].get());
-  delegate->GetOwnershipEvent(callback);
+  delegate->GetOwnershipEvent(std::move(callback));
 }
 
 }  // namespace scenic

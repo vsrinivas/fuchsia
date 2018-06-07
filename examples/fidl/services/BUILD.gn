@@ -6,7 +6,6 @@ import("//build/fidl/fidl.gni")
 
 fidl("echo2") {
   name = "fidl.examples.echo"
-  cpp_legacy_callbacks = true
 
   sources = [
     "echo2.fidl",

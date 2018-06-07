@@ -130,9 +130,9 @@ TEST_F(ImagePipeTest, PresentImagesOutOfOrder) {
   fuchsia::images::ImagePipe::PresentImageCallback callback = [](auto) {};
 
   image_pipe->PresentImage(imageId1, 1, CopyEventIntoFidlArray(CreateEvent()),
-                           CopyEventIntoFidlArray(CreateEvent()), callback);
+                           CopyEventIntoFidlArray(CreateEvent()), std::move(callback));
   image_pipe->PresentImage(imageId1, 0, CopyEventIntoFidlArray(CreateEvent()),
-                           CopyEventIntoFidlArray(CreateEvent()), callback);
+                           CopyEventIntoFidlArray(CreateEvent()), std::move(callback));
 
   EXPECT_EQ(
       "scenic::gfx::ImagePipe: Present called with out-of-order presentation "
@@ -161,9 +161,9 @@ TEST_F(ImagePipeTest, PresentImagesInOrder) {
   fuchsia::images::ImagePipe::PresentImageCallback callback = [](auto) {};
 
   image_pipe->PresentImage(imageId1, 1, CopyEventIntoFidlArray(CreateEvent()),
-                           CopyEventIntoFidlArray(CreateEvent()), callback);
+                           CopyEventIntoFidlArray(CreateEvent()), std::move(callback));
   image_pipe->PresentImage(imageId1, 1, CopyEventIntoFidlArray(CreateEvent()),
-                           CopyEventIntoFidlArray(CreateEvent()), callback);
+                           CopyEventIntoFidlArray(CreateEvent()), std::move(callback));
 
   EXPECT_TRUE(reported_errors_.empty());
 }

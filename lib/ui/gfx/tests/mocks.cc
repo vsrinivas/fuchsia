@@ -38,7 +38,7 @@ void SessionHandlerForTest::Present(
     ::fidl::VectorPtr<zx::event> release_fences,
     fuchsia::ui::scenic::Session::PresentCallback callback) {
   SessionHandler::Present(presentation_time, std::move(acquire_fences),
-                          std::move(release_fences), callback);
+                          std::move(release_fences), std::move(callback));
   ++present_count_;
 }
 

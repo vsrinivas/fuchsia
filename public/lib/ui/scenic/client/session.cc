@@ -85,7 +85,7 @@ void Session::Present(uint64_t presentation_time, PresentCallback callback) {
     release_fences_.resize(0u);
   session_->Present(presentation_time, std::move(acquire_fences_),
                     std::move(release_fences_),
-                    fxl::MakeCopyable(std::move(callback)));
+                    std::move(callback));
 }
 
 void Session::HitTest(uint32_t node_id, const float ray_origin[3],
@@ -102,12 +102,12 @@ void Session::HitTest(uint32_t node_id, const float ray_origin[3],
 
   session_->HitTest(node_id, std::move(ray_origin_vec),
                     std::move(ray_direction_vec),
-                    fxl::MakeCopyable(std::move(callback)));
+                    std::move(callback));
 }
 
 void Session::HitTestDeviceRay(
     const float ray_origin[3], const float ray_direction[3],
-    const fuchsia::ui::scenic::Session::HitTestDeviceRayCallback& callback) {
+    fuchsia::ui::scenic::Session::HitTestDeviceRayCallback callback) {
   fuchsia::ui::gfx::vec3 ray_origin_vec;
   ray_origin_vec.x = ray_origin[0];
   ray_origin_vec.y = ray_origin[1];
@@ -120,7 +120,7 @@ void Session::HitTestDeviceRay(
 
   session_->HitTestDeviceRay(std::move(ray_origin_vec),
                              std::move(ray_direction_vec),
-                             fxl::MakeCopyable(callback));
+                             std::move(callback));
 }
 
 void Session::OnError(fidl::StringPtr error) {

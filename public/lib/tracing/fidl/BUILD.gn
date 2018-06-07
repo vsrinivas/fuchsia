@@ -6,7 +6,6 @@ import("//build/fidl/fidl.gni")
 
 fidl("fidl") {
   name = "tracing"
-  cpp_legacy_callbacks = true
 
   sources = [
     "trace_controller.fidl",

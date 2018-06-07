@@ -22,10 +22,10 @@ static const std::string kFuchsia = "fuchsia";
 class NetstackClient {
  public:
   static void GetInterfaces(
-      const fuchsia::netstack::Netstack::GetInterfacesCallback& callback) {
+      fuchsia::netstack::Netstack::GetInterfacesCallback callback) {
     NetstackClient* client = new NetstackClient();
     client->netstack_->GetInterfaces(
-        [client, callback](
+        [client, callback = std::move(callback)](
             fidl::VectorPtr<fuchsia::netstack::NetInterface> interfaces) {
           callback(std::move(interfaces));
           delete client;

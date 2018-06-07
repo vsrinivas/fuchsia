@@ -55,7 +55,7 @@ void TraceManager::StartTracing(TraceOptions options, zx::socket output,
   }
 
   session_->WaitForProvidersToStart(
-      start_callback, zx::msec(options.start_timeout_milliseconds));
+      std::move(start_callback), zx::msec(options.start_timeout_milliseconds));
 }
 
 void TraceManager::StopTracing() {

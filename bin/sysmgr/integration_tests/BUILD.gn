@@ -7,7 +7,6 @@ import("//build/package.gni")
 
 fidl("interface") {
   name = "test.sysmgr"
-  cpp_legacy_callbacks = true
   sources = [
     "interface.fidl",
   ]

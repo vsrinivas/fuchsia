@@ -1362,7 +1362,7 @@ bool Session::ScheduleUpdate(
 
     scheduled_updates_.push(Update{
         requested_presentation_time, std::move(commands),
-        std::move(acquire_fence_set), std::move(release_events), callback});
+        std::move(acquire_fence_set), std::move(release_events), std::move(callback)});
   }
   return true;
 }

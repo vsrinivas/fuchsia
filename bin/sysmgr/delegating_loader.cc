@@ -42,12 +42,12 @@ void DelegatingLoader::LoadComponent(fidl::StringPtr url,
       if (!record->loader) {
         StartDelegate(record);
       }
-      record->loader->LoadComponent(url, callback);
+      record->loader->LoadComponent(url, std::move(callback));
       return;
     }
   }
 
-  fallback_->LoadComponent(url, callback);
+  fallback_->LoadComponent(url, std::move(callback));
 }
 
 void DelegatingLoader::StartDelegate(LoaderRecord* record) {

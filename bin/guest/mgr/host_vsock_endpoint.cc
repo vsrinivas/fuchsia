@@ -64,7 +64,7 @@ void HostVsockEndpoint::Connect(
   }
   Connect(src_port, cid, port,
           [this, src_port, callback = std::move(callback)](zx_status_t status,
-                                                           zx::socket socket) {
+                                                           zx::socket socket) mutable {
             ConnectCallback(status, std::move(socket), src_port,
                             std::move(callback));
           });

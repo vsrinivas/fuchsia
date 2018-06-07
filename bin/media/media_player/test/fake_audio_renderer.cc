@@ -92,7 +92,7 @@ void FakeAudioRenderer::SendPacket(fuchsia::media::AudioPacket packet,
     ++expected_packets_info_iter_;
   }
 
-  packet_queue_.push(std::make_pair(packet, callback));
+  packet_queue_.push(std::make_pair(packet, std::move(callback)));
 
   if (packet_queue_.size() == 1) {
     MaybeScheduleRetirement();

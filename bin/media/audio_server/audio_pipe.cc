@@ -82,7 +82,7 @@ void AudioPipe::PrimeRequested(
     return;
   }
 
-  prime_callback_ = cbk;
+  prime_callback_ = std::move(cbk);
   SetDemand(kDemandMinPacketsOutstanding);
   // TODO(dalesat): Implement better demand strategy.
 }
@@ -175,7 +175,7 @@ void AudioPipe::OnPacketSupplied(
 void AudioPipe::OnFlushRequested(bool hold_frame, FlushCallback cbk) {
   FXL_DCHECK(owner_);
   next_pts_known_ = false;
-  owner_->OnFlushRequested(cbk);
+  owner_->OnFlushRequested(std::move(cbk));
 }
 
 }  // namespace audio

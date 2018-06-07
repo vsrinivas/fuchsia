@@ -6,7 +6,6 @@ import("//build/fidl/fidl.gni")
 
 fidl("fidl") {
   name = "fonts"
-  cpp_legacy_callbacks = true
 
   sources = [
     "font_provider.fidl",

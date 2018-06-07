@@ -6,7 +6,6 @@ import("//build/fidl/fidl.gni")
 
 fidl("mlme") {
   name = "fuchsia.wlan.mlme"
-  cpp_legacy_callbacks = true
   sources = [
     "wlan_mlme.fidl",
     "wlan_mlme_ext.fidl",
@@ -18,7 +17,6 @@ fidl("mlme") {
 
 fidl("service") {
   name = "fuchsia.wlan.service"
-  cpp_legacy_callbacks = true
   sources = [
     "wlan_service.fidl",
   ]
@@ -30,7 +28,6 @@ fidl("service") {
 
 fidl("stats") {
   name = "fuchsia.wlan.stats"
-  cpp_legacy_callbacks = true
   sources = [
     "wlan_stats.fidl"
   ]

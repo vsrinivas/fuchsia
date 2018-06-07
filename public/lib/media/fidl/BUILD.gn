@@ -6,7 +6,6 @@ import("//build/fidl/fidl.gni")
 
 fidl("fidl") {
   name = "fuchsia.media"
-  cpp_legacy_callbacks = true
 
   sdk_category = "partner"
 
@@ -25,7 +24,6 @@ fidl("fidl") {
 
 fidl("media_player") {
   name = "fuchsia.mediaplayer"
-  cpp_legacy_callbacks = true
 
   sources = [
     "media_metadata.fidl",
@@ -45,7 +43,6 @@ fidl("media_player") {
 
 fidl("media_codec") {
   name = "fuchsia.mediacodec"
-  cpp_legacy_callbacks = true
 
   sdk_category = "partner"
 

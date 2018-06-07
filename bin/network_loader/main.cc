@@ -26,10 +26,10 @@ namespace http = ::fuchsia::net::oldhttp;
 class RetryingLoader {
  public:
   RetryingLoader(http::URLLoaderPtr url_loader, const std::string& url,
-                 const fuchsia::sys::Loader::LoadComponentCallback& callback)
+                 fuchsia::sys::Loader::LoadComponentCallback callback)
       : url_loader_(std::move(url_loader)),
         url_(url),
-        callback_(callback),
+        callback_(std::move(callback)),
         // TODO(rosswang): deadline support
         quiet_tries_(5),
         // TODO(rosswang): randomness
@@ -141,7 +141,7 @@ class NetworkLoader : public fuchsia::sys::Loader {
     http_->CreateURLLoader(loader.NewRequest());
 
     auto retrying_loader =
-        std::make_unique<RetryingLoader>(std::move(loader), url, callback);
+        std::make_unique<RetryingLoader>(std::move(loader), url, std::move(callback));
     RetryingLoader* ref = retrying_loader.get();
     loaders_.emplace(ref, std::move(retrying_loader));
     ref->SetDeleter([this, ref] { loaders_.erase(ref); });

@@ -6,7 +6,6 @@ import("//build/fidl/fidl.gni")
 
 fidl("services") {
   name = "fuchsia.examples.shadertoy"
-  cpp_legacy_callbacks = true
 
   sources = [
     "shadertoy.fidl",

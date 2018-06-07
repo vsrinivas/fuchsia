@@ -34,7 +34,7 @@ void ImagePipeHandler::PresentImage(uint32_t image_id,
                                     PresentImageCallback callback) {
   image_pipe_->PresentImage(image_id, presentation_time,
                             std::move(acquire_fences),
-                            std::move(release_fences), callback);
+                            std::move(release_fences), std::move(callback));
 }
 
 }  // namespace gfx

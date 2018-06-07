@@ -93,7 +93,7 @@ AudioRenderer1Impl::AudioRenderer1Impl(
 
   timeline_control_point_.SetPrimeRequestedCallback(
       [this](TimelineControlPoint::PrimeCallback callback) {
-        pipe_.PrimeRequested(callback);
+        pipe_.PrimeRequested(std::move(callback));
       });
 }
 
@@ -359,7 +359,7 @@ void AudioRenderer1Impl::OnPacketReceived(fbl::RefPtr<AudioPacketRef> packet) {
 bool AudioRenderer1Impl::OnFlushRequested(
     fuchsia::media::MediaPacketConsumer::FlushCallback cbk) {
   fbl::RefPtr<PendingFlushToken> flush_token =
-      PendingFlushToken::Create(owner_, cbk);
+      PendingFlushToken::Create(owner_, std::move(cbk));
 
   {
     fbl::AutoLock links_lock(&links_lock_);

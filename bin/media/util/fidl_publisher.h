@@ -35,7 +35,7 @@ class FidlPublisher {
     if (version_last_seen < version_) {
       callback_runner_(std::move(callback), version_);
     } else {
-      pending_callbacks_.push_back(callback);
+      pending_callbacks_.push_back(std::move(callback));
     }
   }
 
@@ -50,8 +50,8 @@ class FidlPublisher {
     std::vector<TCallback> pending_callbacks;
     pending_callbacks_.swap(pending_callbacks);
 
-    for (TCallback pending_callback : pending_callbacks) {
-      callback_runner_(pending_callback, version_);
+    for (TCallback& pending_callback : pending_callbacks) {
+      callback_runner_(std::move(pending_callback), version_);
     }
   }
 

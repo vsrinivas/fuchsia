@@ -16,7 +16,7 @@ void ShadertoyImpl::SetPaused(bool paused) { state_->SetPaused(paused); }
 void ShadertoyImpl::SetShaderCode(
     ::fidl::StringPtr glsl,
     fuchsia::examples::shadertoy::Shadertoy::SetShaderCodeCallback callback) {
-  state_->SetShaderCode(std::string(glsl), callback);
+  state_->SetShaderCode(std::string(glsl), std::move(callback));
 }
 
 void ShadertoyImpl::SetResolution(uint32_t width, uint32_t height) {

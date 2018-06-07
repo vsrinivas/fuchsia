@@ -155,10 +155,10 @@ void GfxSystem::GetDisplayInfoImmediately(
 void GfxSystem::GetDisplayInfo(
     fuchsia::ui::scenic::Scenic::GetDisplayInfoCallback callback) {
   if (initialized_) {
-    GetDisplayInfoImmediately(callback);
+    GetDisplayInfoImmediately(std::move(callback));
   } else {
     run_after_initialized_.push_back(
-        [this, callback]() { GetDisplayInfoImmediately(callback); });
+        [this, callback = std::move(callback)]() mutable { GetDisplayInfoImmediately(std::move(callback)); });
   }
 };
 
@@ -166,7 +166,7 @@ void GfxSystem::TakeScreenshot(
     fuchsia::ui::scenic::Scenic::TakeScreenshotCallback callback) {
   FXL_CHECK(initialized_);
   Screenshotter screenshotter(engine_.get());
-  screenshotter.TakeScreenshot(callback);
+  screenshotter.TakeScreenshot(std::move(callback));
 }
 
 void GfxSystem::GetOwnershipEventImmediately(
@@ -188,10 +188,10 @@ void GfxSystem::GetOwnershipEventImmediately(
 void GfxSystem::GetOwnershipEvent(
     fuchsia::ui::scenic::Scenic::GetOwnershipEventCallback callback) {
   if (initialized_) {
-    GetOwnershipEventImmediately(callback);
+    GetOwnershipEventImmediately(std::move(callback));
   } else {
     run_after_initialized_.push_back(
-        [this, callback]() { GetOwnershipEventImmediately(callback); });
+        [this, callback = std::move(callback)]() mutable { GetOwnershipEventImmediately(std::move(callback)); });
   }
 }
 

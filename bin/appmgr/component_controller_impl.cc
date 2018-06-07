@@ -124,7 +124,7 @@ bool ComponentControllerImpl::SendReturnCodeIfTerminated() {
 }
 
 void ComponentControllerImpl::Wait(WaitCallback callback) {
-  wait_callbacks_.push_back(callback);
+  wait_callbacks_.push_back(std::move(callback));
   SendReturnCodeIfTerminated();
 }
 
@@ -185,7 +185,7 @@ void ComponentBridge::SetParentJobId(const std::string& id) {
 void ComponentBridge::Kill() { remote_controller_->Kill(); }
 
 void ComponentBridge::Wait(WaitCallback callback) {
-  remote_controller_->Wait(callback);
+  remote_controller_->Wait(std::move(callback));
 }
 
 }  // namespace sys

@@ -84,7 +84,6 @@ source_set("test_support") {
 
 fidl("fidl_test") {
   name = "fidl.test.misc"
-  cpp_legacy_callbacks = true
 
   testonly = true
 

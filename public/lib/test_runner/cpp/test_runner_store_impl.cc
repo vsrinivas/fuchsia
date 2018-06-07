@@ -14,7 +14,7 @@ void TestRunnerStoreImpl::AddBinding(
 }
 
 void TestRunnerStoreImpl::Get(fidl::StringPtr key, GetCallback cb) {
-  get_queue_[key].push(cb);
+  get_queue_[key].push(std::move(cb));
   MaybeNotify(key);
 }
 

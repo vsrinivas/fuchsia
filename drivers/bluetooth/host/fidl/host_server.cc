@@ -40,7 +40,7 @@ void HostServer::GetInfo(GetInfoCallback callback) {
 void HostServer::SetLocalName(::fidl::StringPtr local_name,
                               SetLocalNameCallback callback) {
   adapter()->SetLocalName(local_name, [self = weak_ptr_factory_.GetWeakPtr(),
-                                       callback](auto status) {
+                                       callback = std::move(callback)](auto status) {
     callback(fidl_helpers::StatusToFidl(status, "Can't Set Local Name"));
   });
 }
@@ -60,8 +60,8 @@ void HostServer::StartDiscovery(StartDiscoveryCallback callback) {
   auto bredr_manager = adapter()->bredr_discovery_manager();
   // TODO(jamuraa): start these in parallel instead of sequence
   bredr_manager->RequestDiscovery([self = weak_ptr_factory_.GetWeakPtr(),
-                                   bredr_manager, callback](
-                                      btlib::hci::Status status, auto session) {
+                                   bredr_manager, callback = std::move(callback)](
+                                      btlib::hci::Status status, auto session) mutable {
     if (!self) {
       callback(
           fidl_helpers::NewFidlError(ErrorCode::FAILED, "Adapter Shutdown"));
@@ -85,7 +85,7 @@ void HostServer::StartDiscovery(StartDiscoveryCallback callback) {
     self->bredr_discovery_session_ = std::move(session);
 
     auto le_manager = self->adapter()->le_discovery_manager();
-    le_manager->StartDiscovery([self, callback](auto session) {
+    le_manager->StartDiscovery([self, callback = std::move(callback)](auto session) {
       // End the new session if this AdapterServer got destroyed in the mean
       // time (e.g. because the client disconnected).
       if (!self) {
@@ -151,7 +151,7 @@ void HostServer::SetConnectable(bool connectable,
   FXL_VLOG(1) << "Adapter SetConnectable(" << connectable << ")";
 
   adapter()->bredr_connection_manager()->SetConnectable(
-      connectable, [callback](const auto& status) {
+      connectable, [callback = std::move(callback)](const auto& status) {
         callback(fidl_helpers::StatusToFidl(status));
       });
 }
@@ -179,7 +179,7 @@ void HostServer::SetDiscoverable(bool discoverable,
   requesting_discoverable_ = true;
   auto bredr_manager = adapter()->bredr_discovery_manager();
   bredr_manager->RequestDiscoverable(
-      [self = weak_ptr_factory_.GetWeakPtr(), callback](
+      [self = weak_ptr_factory_.GetWeakPtr(), callback = std::move(callback)](
           btlib::hci::Status status, auto session) {
         if (!self) {
           callback(fidl_helpers::NewFidlError(ErrorCode::FAILED,

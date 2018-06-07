@@ -138,7 +138,7 @@ void ImagePipe::PresentImage(
 
   frames_.push(Frame{image_id, presentation_time,
                      std::move(acquire_fences_listener),
-                     std::move(release_fences), callback});
+                     std::move(release_fences), std::move(callback)});
 };
 
 bool ImagePipe::Update(uint64_t presentation_time,

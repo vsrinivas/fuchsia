@@ -115,7 +115,7 @@ class AudioCapturerImpl : public AudioObject,
   struct PendingCaptureBuffer : public fbl::SlabAllocated<PcbAllocatorTraits>,
                                 public fbl::DoublyLinkedListable<
                                     fbl::unique_ptr<PendingCaptureBuffer>> {
-    PendingCaptureBuffer(uint32_t of, uint32_t nf, const CaptureAtCallback c)
+    PendingCaptureBuffer(uint32_t of, uint32_t nf, CaptureAtCallback c)
         : offset_frames(of), num_frames(nf), cbk(std::move(c)) {}
 
     static AtomicGenerationId sequence_generator;

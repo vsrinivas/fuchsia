@@ -46,7 +46,7 @@ void Session::Present(uint64_t presentation_time,
   TempSessionDelegate* delegate =
       static_cast<TempSessionDelegate*>(dispatcher.get());
   delegate->Present(presentation_time, std::move(acquire_fences),
-                    std::move(release_fences), callback);
+                    std::move(release_fences), std::move(callback));
 }
 
 void Session::SetCommandDispatchers(
@@ -65,7 +65,7 @@ void Session::HitTest(uint32_t node_id, ::fuchsia::ui::gfx::vec3 ray_origin,
   TempSessionDelegate* delegate =
       static_cast<TempSessionDelegate*>(dispatcher.get());
   delegate->HitTest(node_id, std::move(ray_origin), std::move(ray_direction),
-                    callback);
+                    std::move(callback));
 }
 
 void Session::HitTestDeviceRay(::fuchsia::ui::gfx::vec3 ray_origin,
@@ -76,7 +76,7 @@ void Session::HitTestDeviceRay(::fuchsia::ui::gfx::vec3 ray_origin,
   TempSessionDelegate* delegate =
       reinterpret_cast<TempSessionDelegate*>(dispatcher.get());
   delegate->HitTestDeviceRay(std::move(ray_origin), std::move(ray_direction),
-                             callback);
+                             std::move(callback));
 }
 
 void Session::EnqueueEvent(fuchsia::ui::scenic::Event event) {

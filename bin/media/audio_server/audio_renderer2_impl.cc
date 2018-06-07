@@ -405,7 +405,7 @@ void AudioRenderer2Impl::SendPacket(fuchsia::media::AudioPacket packet,
 
   // Create the packet.
   auto packet_ref = fbl::AdoptRef<AudioPacketRef>(
-      new AudioPacketRefV2(payload_buffer_, callback, std::move(packet), owner_,
+      new AudioPacketRefV2(payload_buffer_, std::move(callback), std::move(packet), owner_,
                            frame_count << kPtsFractionalBits, start_pts));
 
   // The end pts is the value we will use for the next packet's start PTS, if
@@ -435,7 +435,7 @@ void AudioRenderer2Impl::Flush(FlushCallback callback) {
   // invoke the callback at the proper time.
   fbl::RefPtr<PendingFlushToken> flush_token;
   if (callback != nullptr) {
-    flush_token = PendingFlushToken::Create(owner_, callback);
+    flush_token = PendingFlushToken::Create(owner_, std::move(callback));
   }
 
   // Tell each of our link thats they need to flush.  If the links are currently
@@ -671,7 +671,7 @@ AudioRenderer2Impl::AudioPacketRefV2::AudioPacketRefV2(
     uint32_t frac_frame_len, int64_t start_pts)
     : AudioPacketRef(server, frac_frame_len, start_pts),
       vmo_ref_(std::move(vmo_ref)),
-      callback_(callback),
+      callback_(std::move(callback)),
       packet_(std::move(packet)) {
   FXL_DCHECK(vmo_ref_ != nullptr);
 }
@@ -679,7 +679,7 @@ AudioRenderer2Impl::AudioPacketRefV2::AudioPacketRefV2(
 // Shorthand to save horizontal space for the thunks which follow.
 void AudioRenderer2Impl::GainControlBinding::SetGainMute(
     float gain, bool mute, uint32_t flags, SetGainMuteCallback callback) {
-  owner_->SetGainMute(gain, mute, flags, callback);
+  owner_->SetGainMute(gain, mute, flags, std::move(callback));
 }
 
 void AudioRenderer2Impl::GainControlBinding::SetGainMuteNoReply(

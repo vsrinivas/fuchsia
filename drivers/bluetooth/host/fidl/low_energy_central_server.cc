@@ -92,7 +92,7 @@ void LowEnergyCentralServer::StartScan(ScanFilterPtr filter,
   requesting_scan_ = true;
   adapter()->le_discovery_manager()->StartDiscovery(
       [self = weak_ptr_factory_.GetWeakPtr(), filter = std::move(filter),
-       callback](auto session) {
+       callback = std::move(callback)](auto session) {
         if (!self)
           return;
 
@@ -158,7 +158,7 @@ void LowEnergyCentralServer::ConnectPeripheral(
   }
 
   auto self = weak_ptr_factory_.GetWeakPtr();
-  auto conn_cb = [self, callback, peer_id = identifier.get(),
+  auto conn_cb = [self, callback = callback.share(), peer_id = identifier.get(),
                   request = std::move(client_request)](auto status,
                                                        auto conn_ref) mutable {
     if (!self)

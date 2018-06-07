@@ -48,7 +48,7 @@ class MediaPacketProducerBase {
   // Flushes the consumer.
   void FlushConsumer(
       bool hold_frame,
-      const fuchsia::media::MediaPacketConsumer::FlushCallback& callback);
+      fuchsia::media::MediaPacketConsumer::FlushCallback callback);
 
   // Allocates a payload buffer of the specified size.
   void* AllocatePayloadBuffer(size_t size);

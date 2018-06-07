@@ -30,7 +30,6 @@ source_set("test") {
 
 fidl("frobinator") {
   name = "fidl.test.frobinator"
-  cpp_legacy_callbacks = true
 
   sources = [
     "frobinator.fidl"

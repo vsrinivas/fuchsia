@@ -98,7 +98,7 @@ class Session : private fuchsia::ui::scenic::SessionListener {
   // compositor.
   void HitTestDeviceRay(
       const float ray_origin[3], const float ray_direction[3],
-      const fuchsia::ui::scenic::Session::HitTestDeviceRayCallback& callback);
+      fuchsia::ui::scenic::Session::HitTestDeviceRayCallback callback);
 
  private:
   // |fuchsia::ui::scenic::SessionListener|

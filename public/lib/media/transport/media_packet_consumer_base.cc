@@ -145,7 +145,7 @@ void MediaPacketConsumerBase::PullDemandUpdate(
         std::make_unique<fuchsia::media::MediaPacketDemand>(demand_));
   }
 
-  get_demand_update_callback_ = callback;
+  get_demand_update_callback_ = std::move(callback);
 
   MaybeCompletePullDemandUpdate();
 }
@@ -193,7 +193,7 @@ void MediaPacketConsumerBase::SupplyPacket(
   SetPacketPtsRate(&media_packet);
 
   OnPacketSupplied(std::unique_ptr<SuppliedPacket>(new SuppliedPacket(
-      label, std::move(media_packet), payload, callback, counter_)));
+      label, std::move(media_packet), payload, std::move(callback), counter_)));
 }
 
 void MediaPacketConsumerBase::SupplyPacketNoReply(
@@ -209,7 +209,7 @@ void MediaPacketConsumerBase::Flush(bool hold_frame, FlushCallback callback) {
 
   flush_pending_ = true;
 
-  OnFlushRequested(hold_frame, [this, callback]() {
+  OnFlushRequested(hold_frame, [this, callback = std::move(callback)]() {
     flush_pending_ = false;
     callback();
   });
@@ -278,7 +278,7 @@ MediaPacketConsumerBase::SuppliedPacket::SuppliedPacket(
     : label_(label),
       packet_(std::move(packet)),
       payload_(payload),
-      callback_(callback),
+      callback_(std::move(callback)),
       counter_(counter) {
   FXL_DCHECK(counter_);
   counter_->OnPacketArrival();
@@ -288,7 +288,7 @@ MediaPacketConsumerBase::SuppliedPacket::~SuppliedPacket() {
   if (callback_) {
     async::PostTask(
         counter_->async(),
-        [callback = callback_, counter = std::move(counter_),
+        [callback = callback_.share(), counter = std::move(counter_),
          label = label_]() { callback(counter->OnPacketDeparture(label)); });
   }
 }

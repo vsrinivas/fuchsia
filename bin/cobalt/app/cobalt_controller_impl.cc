@@ -4,6 +4,8 @@
 
 #include "garnet/bin/cobalt/app/cobalt_controller_impl.h"
 
+#include "lib/fxl/functional/make_copyable.h"
+
 namespace cobalt {
 
 using encoder::ShippingDispatcher;
@@ -13,11 +15,13 @@ CobaltControllerImpl::CobaltControllerImpl(
     : async_(async), shipping_dispatcher_(shipping_dispatcher) {}
 
 void CobaltControllerImpl::RequestSendSoon(RequestSendSoonCallback callback) {
-  // callback_adapter invokes |callback| on the main thread.
-  auto callback_adapter = [this, callback](bool success) {
-    async::PostTask(async_, [callback, success]() { callback(success); });
-  };
-  shipping_dispatcher_->RequestSendSoon(std::move(callback_adapter));
+  // invokes |callback| on the main thread
+  shipping_dispatcher_->RequestSendSoon(fxl::MakeCopyable(
+      [ async = async_, callback = std::move(callback) ](bool success) mutable {
+        async::PostTask(async, [ callback = std::move(callback), success ] {
+          callback(success);
+        });
+      }));
 }
 
 void CobaltControllerImpl::BlockUntilEmpty(uint32_t max_wait_seconds,

@@ -126,7 +126,7 @@ bool TimelineControlPoint::ReachedEndOfStream() {
 
 void TimelineControlPoint::GetStatus(uint64_t version_last_seen,
                                      GetStatusCallback callback) {
-  status_publisher_.Get(version_last_seen, callback);
+  status_publisher_.Get(version_last_seen, std::move(callback));
 }
 
 void TimelineControlPoint::GetTimelineConsumer(
@@ -148,7 +148,7 @@ void TimelineControlPoint::SetProgramRange(uint64_t program, int64_t min_pts,
 
 void TimelineControlPoint::Prime(PrimeCallback callback) {
   if (prime_requested_callback_) {
-    prime_requested_callback_([this, callback]() { callback(); });
+    prime_requested_callback_([this, callback = std::move(callback)]() { callback(); });
   } else {
     callback();
   }
@@ -161,7 +161,7 @@ void TimelineControlPoint::SetTimelineTransform(
 
   SetTimelineTransformLocked(std::move(timeline_transform));
 
-  set_timeline_transform_callback_ = callback;
+  set_timeline_transform_callback_ = std::move(callback);
 }
 
 void TimelineControlPoint::SetTimelineTransformNoReply(
@@ -221,10 +221,9 @@ void TimelineControlPoint::ClearPendingTimelineFunction(bool completed) {
   pending_timeline_function_ = TimelineFunction(
       fuchsia::media::kUnspecifiedTime, fuchsia::media::kUnspecifiedTime, 0, 1);
   if (set_timeline_transform_callback_) {
-    SetTimelineTransformCallback callback = set_timeline_transform_callback_;
-    set_timeline_transform_callback_ = nullptr;
+    SetTimelineTransformCallback callback = std::move(set_timeline_transform_callback_);
     async::PostTask(async_,
-                    [this, callback, completed]() { callback(completed); });
+                    [this, callback = std::move(callback), completed]() { callback(completed); });
   }
 }
 

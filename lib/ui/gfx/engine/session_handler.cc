@@ -31,7 +31,7 @@ void SessionHandler::Present(
     fuchsia::ui::scenic::Session::PresentCallback callback) {
   if (!session_->ScheduleUpdate(
           presentation_time, std::move(buffered_commands_),
-          std::move(acquire_fences), std::move(release_fences), callback)) {
+          std::move(acquire_fences), std::move(release_fences), std::move(callback))) {
     BeginTearDown();
   }
   buffered_commands_.clear();
@@ -42,14 +42,14 @@ void SessionHandler::HitTest(
     ::fuchsia::ui::gfx::vec3 ray_direction,
     fuchsia::ui::scenic::Session::HitTestCallback callback) {
   session_->HitTest(node_id, std::move(ray_origin), std::move(ray_direction),
-                    callback);
+                    std::move(callback));
 }
 
 void SessionHandler::HitTestDeviceRay(
     ::fuchsia::ui::gfx::vec3 ray_origin, ::fuchsia::ui::gfx::vec3 ray_direction,
     fuchsia::ui::scenic::Session::HitTestDeviceRayCallback callback) {
   session_->HitTestDeviceRay(std::move(ray_origin), std::move(ray_direction),
-                             callback);
+                             std::move(callback));
 }
 
 void SessionHandler::DispatchCommand(fuchsia::ui::scenic::Command command) {

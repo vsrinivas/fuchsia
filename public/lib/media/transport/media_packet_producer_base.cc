@@ -58,7 +58,7 @@ void MediaPacketProducerBase::Reset() {
 
 void MediaPacketProducerBase::FlushConsumer(
     bool hold_frame,
-    const fuchsia::media::MediaPacketConsumer::FlushCallback& callback) {
+    fuchsia::media::MediaPacketConsumer::FlushCallback callback) {
   FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
   FXL_DCHECK(consumer_.is_bound());
 
@@ -73,7 +73,7 @@ void MediaPacketProducerBase::FlushConsumer(
   UpdateDemand(demand);
 
   flush_in_progress_ = true;
-  consumer_->Flush(hold_frame, [this, callback]() {
+  consumer_->Flush(hold_frame, [this, callback = std::move(callback)]() {
     flush_in_progress_ = false;
     callback();
   });

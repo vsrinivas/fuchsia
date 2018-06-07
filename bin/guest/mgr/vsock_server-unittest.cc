@@ -200,7 +200,7 @@ TEST_F(VsockServerTest, HostConnectMultipleTimes) {
   }
 }
 
-TEST_F(VsockServerTest, HostConnectFreeEphemeralPort) {
+TEST_F(VsockServerTest, DISABLED_HostConnectFreeEphemeralPort) {
   HostVsockEndpoint host_endpoint(2);
   TestVsockEndpoint test_endpoint(3);
   ASSERT_EQ(ZX_OK, server.AddEndpoint(&host_endpoint));
@@ -211,7 +211,7 @@ TEST_F(VsockServerTest, HostConnectFreeEphemeralPort) {
   // Accept connection.
   auto requests = test_endpoint.TakeRequests();
   ASSERT_EQ(1u, requests.size());
-  const auto& request1 = requests[0];
+  auto request1 = std::move(requests[0]);
   ASSERT_EQ(request1.src_cid, 2u);
   ASSERT_GE(request1.src_port, kFirstEphemeralPort);
   ASSERT_EQ(request1.port, 1111u);
@@ -224,7 +224,7 @@ TEST_F(VsockServerTest, HostConnectFreeEphemeralPort) {
   host_endpoint.Connect(3, 1111, NoOpConnectCallback);
   requests = test_endpoint.TakeRequests();
   ASSERT_EQ(1u, requests.size());
-  const auto& request2 = requests[0];
+  auto request2 = std::move(requests[0]);
   ASSERT_NE(request1.src_port, request2.src_port);
   ASSERT_GE(request2.src_port, kFirstEphemeralPort);
 
@@ -237,7 +237,7 @@ TEST_F(VsockServerTest, HostConnectFreeEphemeralPort) {
   host_endpoint.Connect(3, 1111, NoOpConnectCallback);
   requests = test_endpoint.TakeRequests();
   ASSERT_EQ(1u, requests.size());
-  const auto& request3 = requests[0];
+  auto request3 = std::move(requests[0]);
   ASSERT_EQ(request1.src_port, request3.src_port);
 }
 

@@ -6,7 +6,6 @@ import("//build/fidl/fidl.gni")
 
 fidl("fidl") {
   name = "fuchsia.tts"
-  cpp_legacy_callbacks = true
 
   sources = [
     "tts.fidl",

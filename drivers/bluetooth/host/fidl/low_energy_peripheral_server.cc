@@ -108,7 +108,7 @@ void LowEnergyPeripheralServer::StartAdvertising(
   }
   // |delegate| is temporarily held by the result callback, which will close the
   // delegate channel if the advertising fails (after returning the status)
-  auto advertising_status_cb = [self, callback, delegate = std::move(delegate)](
+  auto advertising_status_cb = [self, callback = std::move(callback), delegate = std::move(delegate)](
                                    std::string ad_id,
                                    ::btlib::hci::Status status) mutable {
     if (!self)

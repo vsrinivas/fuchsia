@@ -6,7 +6,6 @@ import("//build/fidl/fidl.gni")
 
 fidl("fidl") {
   name = "icu_data"
-  cpp_legacy_callbacks = true
 
   sources = [
     "icu_data.fidl",

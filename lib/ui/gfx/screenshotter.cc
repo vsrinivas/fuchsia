@@ -18,6 +18,7 @@
 #include "lib/escher/impl/image_cache.h"
 #include "lib/fsl/vmo/sized_vmo.h"
 #include "lib/fsl/vmo/vector.h"
+#include "lib/fxl/functional/make_copyable.h"
 
 namespace scenic {
 namespace gfx {
@@ -99,9 +100,12 @@ void Screenshotter::TakeScreenshot(
   vk::Queue queue = escher->command_buffer_pool()->queue();
   auto* command_buffer = escher->command_buffer_pool()->GetCommandBuffer();
 
-  auto submit_callback = std::bind(&OnCommandBufferDone, image, width, height,
-                                   escher->vk_device(), done_callback);
-  command_buffer->Submit(queue, std::move(submit_callback));
+  command_buffer->Submit(queue, fxl::MakeCopyable([
+    image, width, height, device = escher->vk_device(),
+    done_callback = std::move(done_callback)
+  ]() mutable {
+    OnCommandBufferDone(image, width, height, device, std::move(done_callback));
+  }));
   // Force the command buffer to retire so that the submitted commands will run.
   // TODO(SCN-211): Make this a proper wait instead of spinning.
   while (!escher->command_buffer_pool()->Cleanup()) {

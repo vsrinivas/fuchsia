@@ -37,7 +37,7 @@ class EchoServerApp : public Echo {
     if (!forward_to_server->empty()) {
       EchoClientApp app;
       app.Start(forward_to_server.get());
-      app.echo()->EchoStruct(std::move(value), "", callback);
+      app.echo()->EchoStruct(std::move(value), "", std::move(callback));
       const zx_status_t wait_status = app.echo().WaitForResponse();
       if (wait_status != ZX_OK) {
         fprintf(stderr, "Proxy Got error %d waiting for response from %s\n",

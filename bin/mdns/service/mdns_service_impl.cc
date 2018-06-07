@@ -53,7 +53,7 @@ void MdnsServiceImpl::ResolveHostName(fidl::StringPtr host_name,
   mdns_.ResolveHostName(
       host_name,
       fxl::TimePoint::Now() + fxl::TimeDelta::FromMilliseconds(timeout_ms),
-      [this, callback](const std::string& host_name,
+      [this, callback = std::move(callback)](const std::string& host_name,
                        const IpAddress& v4_address,
                        const IpAddress& v6_address) {
         callback(MdnsFidlUtil::CreateSocketAddressIPv4(v4_address),
@@ -94,7 +94,7 @@ void MdnsServiceImpl::PublishServiceInstance(
   }
 
   auto publisher = std::unique_ptr<SimplePublisher>(new SimplePublisher(
-      IpPort::From_uint16_t(port), std::move(text), callback));
+      IpPort::From_uint16_t(port), std::move(text), callback.share()));
 
   if (!mdns_.PublishServiceInstance(service_name, instance_name,
                                     publisher.get())) {
@@ -269,7 +269,7 @@ void MdnsServiceImpl::Subscriber::UpdatesComplete() {
 
 void MdnsServiceImpl::Subscriber::GetInstances(uint64_t version_last_seen,
                                                GetInstancesCallback callback) {
-  instances_publisher_.Get(version_last_seen, callback);
+  instances_publisher_.Get(version_last_seen, std::move(callback));
 }
 
 MdnsServiceImpl::SimplePublisher::SimplePublisher(
@@ -277,7 +277,7 @@ MdnsServiceImpl::SimplePublisher::SimplePublisher(
     PublishServiceInstanceCallback callback)
     : port_(port),
       text_(fxl::To<std::vector<std::string>>(text)),
-      callback_(callback) {}
+      callback_(std::move(callback)) {}
 
 void MdnsServiceImpl::SimplePublisher::ReportSuccess(bool success) {
   callback_(success ? fuchsia::mdns::MdnsResult::OK

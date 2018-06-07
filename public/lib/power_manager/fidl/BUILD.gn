@@ -6,7 +6,6 @@ import("//build/fidl/fidl.gni")
 
 fidl("fidl") {
   name = "fuchsia.power"
-  cpp_legacy_callbacks = true
 
   sources = [
     "power.fidl",

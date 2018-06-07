@@ -8,7 +8,6 @@ import("//build/fidl/fidl.gni")
 
 fidl("test_fidl") {
   name = "fidl.test.gobindings"
-  cpp_legacy_callbacks = true
   sources = [
     "test.fidl",
   ]

@@ -214,7 +214,7 @@ void NetConnectorImpl::GetDeviceServiceProvider(
 
 void NetConnectorImpl::GetKnownDeviceNames(
     uint64_t version_last_seen, GetKnownDeviceNamesCallback callback) {
-  device_names_publisher_.Get(version_last_seen, callback);
+  device_names_publisher_.Get(version_last_seen, std::move(callback));
 }
 
 void NetConnectorImpl::RegisterServiceProvider(

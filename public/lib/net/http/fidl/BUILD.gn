@@ -6,7 +6,6 @@ import("//garnet/public/lib/fidl/build/fidl/fidl.gni")
 
 fidl("fidl") {
   name = "fuchsia.net.http"
-  cpp_legacy_callbacks = true
 
   sources = [
     "client.fidl",
