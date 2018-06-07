@@ -62,7 +62,7 @@ zx_status_t sys_nanosleep(zx_time_t deadline) {
 // update pvclock too.
 fbl::atomic<int64_t> utc_offset;
 
-uint64_t sys_clock_get(uint32_t clock_id) {
+zx_time_t sys_clock_get(uint32_t clock_id) {
     switch (clock_id) {
     case ZX_CLOCK_MONOTONIC:
         return current_time();
@@ -74,6 +74,25 @@ uint64_t sys_clock_get(uint32_t clock_id) {
         //TODO: figure out the best option here
         return 0u;
     }
+}
+
+zx_status_t sys_clock_get_new(uint32_t clock_id, user_out_ptr<zx_time_t> out_time) {
+    zx_time_t time;
+    switch (clock_id) {
+    case ZX_CLOCK_MONOTONIC:
+        time = current_time();
+        break;
+    case ZX_CLOCK_UTC:
+        time = current_time() + utc_offset.load();
+        break;
+    case ZX_CLOCK_THREAD:
+        time = ThreadDispatcher::GetCurrent()->runtime_ns();
+        break;
+    default:
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    return out_time.copy_to_user(time);
 }
 
 zx_status_t sys_clock_adjust(zx_handle_t hrsrc, uint32_t clock_id, int64_t offset) {

@@ -9,13 +9,17 @@ clock_get - Acquire the current time.
 ```
 #include <zircon/syscalls.h>
 
-zx_time_t zx_clock_get(uint32_t clock_id)
+zx_time_t zx_clock_get(uint32_t clock_id);
+zx_status_t zx_clock_get(uint32_t clock_id, zx_time_t* out_time);
 ```
 
 ## DESCRIPTION
 
 **zx_clock_get**() returns the current time of *clock_id*, or 0 if *clock_id* is
 invalid.
+
+**zx_clock_get_new** returns the current time of *clock_id* via
+  *out_time*, and returns whether *clock_id* was valid.
 
 ## SUPPORTED CLOCK IDS
 
@@ -29,6 +33,10 @@ invalid.
 
 On success, **zx_clock_get**() returns the current time according to the given clock ID.
 
+On success, **zx_clock_get_new**() returns *ZX_OK*.
+
 ## ERRORS
 
 On error, **zx_clock_get**() currently returns 0.
+
+**ZX_ERR_INVALID_ARGS**  *clock_id* is not a valid clock id, or *out_time* is an invalid pointer.
