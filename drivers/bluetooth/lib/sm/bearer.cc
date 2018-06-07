@@ -5,6 +5,7 @@
 #include "bearer.h"
 
 #include <lib/async/default.h>
+#include <zircon/status.h>
 
 #include "garnet/drivers/bluetooth/lib/common/slab_allocator.h"
 
@@ -82,7 +83,8 @@ Bearer::Bearer(fbl::RefPtr<l2cap::Channel> chan, hci::Connection::Role role,
 }
 
 bool Bearer::InitiateFeatureExchange() {
-  // TODO(armansito): Check that no other procedure is pending.
+  // TODO(armansito): It should be possible to re-initiate pairing with
+  // different parameters even when it's in progress.
   if (pairing_started() || feature_exchange_pending_) {
     FXL_VLOG(1) << "sm: Feature exchange already pending!";
     return false;
@@ -118,20 +120,16 @@ bool Bearer::InitiateFeatureExchange() {
   payload->auth_req = auth_req;
   payload->max_encryption_key_size = kMaxEncryptionKeySize;
 
-  // TODO(armansito): Set the IdKey bit when we support Privacy.
-  // TODO(armansito): Set the SignKey bit when we support Security Mode 2.
-  // TODO(armansito): Set the EncKey bit for BR/EDR when we support Secure
-  // Connections.
-  // TODO(armansito): Set the LinkKey bit when we support Secure Connections.
-  if (chan_->link_type() == hci::Connection::LinkType::kLE && !sc_supported_) {
-    payload->initiator_key_dist_gen = KeyDistGen::kEncKey;
-    payload->responder_key_dist_gen = KeyDistGen::kEncKey;
-  }
+  // TODO(armansito): Set more bits here when we support more things. Make sure
+  // that the correct bits are set based on |sc_supported_| and the link type
+  // (we currently don't support SC and support SMP on LE links only).
+  payload->initiator_key_dist_gen = KeyDistGen::kEncKey;
+  payload->responder_key_dist_gen = KeyDistGen::kEncKey;
 
   // Cache the pairing request. This will be used as the |preq| parameter for
   // crypto functions later (e.g. during confirm value generation in legacy
   // pairing).
-  pdu->Copy(&preq_);
+  pdu->Copy(&pairing_payload_buffer_);
 
   // Start pairing timer.
   FXL_DCHECK(!timeout_task_.is_pending());
@@ -145,26 +143,26 @@ bool Bearer::InitiateFeatureExchange() {
 
 void Bearer::StopTimer() {
   if (timeout_task_.is_pending()) {
-    timeout_task_.Cancel();
+    zx_status_t status = timeout_task_.Cancel();
+    if (status != ZX_OK) {
+      FXL_VLOG(2) << "smp: Failed to stop timer: "
+                  << zx_status_get_string(status);
+    }
   }
 }
 
 void Bearer::Abort(ErrorCode ecode) {
   // TODO(armansito): Check the states of other procedures once we have them.
   if (!pairing_started()) {
-    FXL_VLOG(1) << "sm: Pairing not started!";
+    FXL_VLOG(1) << "sm: Pairing not started! Nothing to abort.";
     return;
   }
 
+  FXL_LOG(ERROR) << "sm: Abort pairing";
+
   StopTimer();
-
-  // TODO(armansito): Clear other procedure states here.
-  feature_exchange_pending_ = false;
   SendPairingFailed(ecode);
-
-  Status status(ecode);
-  FXL_LOG(ERROR) << "sm: Pairing aborted " << status.ToString();
-  error_callback_(status);
+  OnFailure(Status(ecode));
 }
 
 void Bearer::OnFailure(Status status) {
@@ -172,7 +170,6 @@ void Bearer::OnFailure(Status status) {
 
   // TODO(armansito): Clear other procedure states here.
   feature_exchange_pending_ = false;
-
   error_callback_(status);
 }
 
@@ -182,6 +179,57 @@ void Bearer::OnPairingTimeout() {
   chan_->SignalLinkError();
 
   OnFailure(Status(HostError::kTimedOut));
+}
+
+ErrorCode Bearer::ResolveFeatures(bool local_initiator,
+                                  const PairingRequestParams& preq,
+                                  const PairingResponseParams& pres,
+                                  PairingFeatures* out_features) {
+  FXL_DCHECK(pairing_started());
+  FXL_DCHECK(feature_exchange_pending_);
+
+  // Select the smaller of the initiator and responder max. encryption key size
+  // values (Vol 3, Part H, 2.3.4).
+  uint8_t enc_key_size =
+      std::min(preq.max_encryption_key_size, pres.max_encryption_key_size);
+  if (enc_key_size < kMinEncryptionKeySize) {
+    FXL_VLOG(1) << "sm: Encryption key size too small! (" << enc_key_size
+                << ")";
+    return ErrorCode::kEncryptionKeySize;
+  }
+
+  bool sc = (preq.auth_req & AuthReq::kSC) && (pres.auth_req & AuthReq::kSC);
+  bool mitm =
+      (preq.auth_req & AuthReq::kMITM) || (pres.auth_req & AuthReq::kMITM);
+  bool init_oob = preq.oob_data_flag == OOBDataFlag::kPresent;
+  bool rsp_oob = pres.oob_data_flag == OOBDataFlag::kPresent;
+
+  PairingMethod method = util::SelectPairingMethod(
+      sc, init_oob, rsp_oob, mitm, preq.io_capability, pres.io_capability);
+
+  // If MITM protection is required but the pairing method cannot provide MITM,
+  // then reject the pairing.
+  if (mitm && method == PairingMethod::kJustWorks) {
+    return ErrorCode::kAuthenticationRequirements;
+  }
+
+  // The "Pairing Response" command (i.e. |pres|) determines the keys that shall
+  // be distributed. The keys that will be distributed by us and the peer
+  // depends on whichever one initiated the feature exchange by sending a
+  // "Pairing Request" command.
+  KeyDistGenField local_keys, remote_keys;
+  if (local_initiator) {
+    local_keys = pres.initiator_key_dist_gen;
+    remote_keys = pres.responder_key_dist_gen;
+  } else {
+    local_keys = pres.responder_key_dist_gen;
+    remote_keys = pres.initiator_key_dist_gen;
+  }
+
+  *out_features = PairingFeatures(local_initiator, sc, method, enc_key_size,
+                                  local_keys, remote_keys);
+
+  return ErrorCode::kNoError;
 }
 
 void Bearer::OnPairingFailed(const PacketReader& reader) {
@@ -202,6 +250,93 @@ void Bearer::OnPairingFailed(const PacketReader& reader) {
   OnFailure(status);
 }
 
+void Bearer::OnPairingRequest(const PacketReader& reader) {
+  if (reader.payload_size() != sizeof(PairingRequestParams)) {
+    FXL_VLOG(1) << "sm: Malformed \"Pairing Request\" payload";
+    SendPairingFailed(ErrorCode::kInvalidParameters);
+    return;
+  }
+
+  // Reject the command if we are the master.
+  if (role_ == hci::Connection::Role::kMaster) {
+    SendPairingFailed(ErrorCode::kCommandNotSupported);
+    return;
+  }
+
+  // We shouldn't be in this state when pairing is initiated by the remote.
+  FXL_DCHECK(!feature_exchange_pending_);
+  feature_exchange_pending_ = true;
+
+  const auto& params = reader.payload<PairingRequestParams>();
+  auto pdu = NewPDU(sizeof(PairingResponseParams));
+  if (!pdu) {
+    FXL_LOG(ERROR) << "sm: Out of memory!";
+    SendPairingFailed(ErrorCode::kUnspecifiedReason);
+    return;
+  }
+
+  // "Upon reception of the Pairing Request command, the Security Manager Timer
+  // shall be reset and started" (Vol 3, Part H, 3.4).
+  if (pairing_started()) {
+    StopTimer();
+  }
+
+  // Start pairing timer.
+  FXL_DCHECK(!timeout_task_.is_pending());
+  timeout_task_.PostDelayed(async_get_default(), zx::sec(kPairingTimeout));
+
+  // Always request bonding.
+  AuthReqField auth_req = AuthReq::kBondingFlag;
+  if (sc_supported_) {
+    auth_req |= AuthReq::kSC;
+  }
+  if (mitm_required_) {
+    auth_req |= AuthReq::kMITM;
+  }
+
+  // TODO(armansito): Set the "keypress", and "CT2" flags when they
+  // are supported.
+
+  PacketWriter writer(kPairingResponse, pdu.get());
+  auto* payload = writer.mutable_payload<PairingResponseParams>();
+  payload->io_capability = io_capability_;
+  payload->oob_data_flag =
+      oob_available_ ? OOBDataFlag::kPresent : OOBDataFlag::kNotPresent;
+  payload->auth_req = auth_req;
+  payload->max_encryption_key_size = kMaxEncryptionKeySize;
+
+  // TODO(armansito): Set more bits here when we support more things. Make sure
+  // that the correct bits are set based on |sc_supported_| and the link type
+  // (we currently don't support SC and support SMP on LE links only).
+  KeyDistGenField local_keys = KeyDistGen::kEncKey;
+  KeyDistGenField remote_keys = KeyDistGen::kEncKey;
+
+  // The keys that will be exchanged is the intersection of what the initiator
+  // requests and we support.
+  payload->initiator_key_dist_gen = remote_keys & params.initiator_key_dist_gen;
+  payload->responder_key_dist_gen = local_keys & params.responder_key_dist_gen;
+
+  PairingFeatures features;
+  ErrorCode ecode =
+      ResolveFeatures(false /* local_initiator */, params, *payload, &features);
+  feature_exchange_pending_ = false;
+  if (ecode != ErrorCode::kNoError) {
+    Abort(ecode);
+    return;
+  }
+
+  // Copy the pairing response so that it's available after moving |pdu|. (We
+  // want to make sure that we send the pairing response before calling
+  // |feature_exchange_callback_| which may trigger other SMP transactions.
+  //
+  // This will be used as the |pres| parameter for crypto functions later (e.g.
+  // during confirm value generation in legacy pairing).
+  pdu->Copy(&pairing_payload_buffer_);
+  chan_->Send(std::move(pdu));
+
+  feature_exchange_callback_(features, reader.data(), pairing_payload_buffer_);
+}
+
 void Bearer::OnPairingResponse(const PacketReader& reader) {
   if (reader.payload_size() != sizeof(PairingResponseParams)) {
     FXL_VLOG(1) << "sm: Malformed \"Pairing Response\" payload";
@@ -220,31 +355,19 @@ void Bearer::OnPairingResponse(const PacketReader& reader) {
     return;
   }
 
-  const auto& params = reader.payload<PairingResponseParams>();
+  PairingFeatures features;
+  ErrorCode ecode = ResolveFeatures(
+      true /* local_initiator */,
+      pairing_payload_buffer_.view(sizeof(Code)).As<PairingRequestParams>(),
+      reader.payload<PairingResponseParams>(), &features);
+  feature_exchange_pending_ = false;
 
-  // Select the smaller of the initiator and responder max. encryption key size
-  // values (Vol 3, Part H, 2.3.4).
-  uint8_t encr_key_size =
-      std::min(kMaxEncryptionKeySize, params.max_encryption_key_size);
-  if (encr_key_size < kMinEncryptionKeySize) {
-    FXL_VLOG(1) << "sm: Encryption key size too small! (" << encr_key_size
-                << ")";
-    Abort(ErrorCode::kEncryptionKeySize);
+  if (ecode != ErrorCode::kNoError) {
+    Abort(ecode);
     return;
   }
 
-  bool sc = sc_supported_ && (params.auth_req & AuthReq::kSC);
-  bool mitm = mitm_required_ || (params.auth_req & AuthReq::kMITM);
-  bool peer_oob = params.oob_data_flag == OOBDataFlag::kPresent;
-  PairingMethod method = util::SelectPairingMethod(
-      sc, oob_available_, peer_oob, mitm, io_capability_, params.io_capability);
-
-  feature_exchange_pending_ = false;
-  feature_exchange_callback_(
-      PairingFeatures(true /* initiator */, sc, method, encr_key_size,
-                      params.initiator_key_dist_gen,
-                      params.responder_key_dist_gen),
-      preq_, reader.data());
+  feature_exchange_callback_(features, pairing_payload_buffer_, reader.data());
 }
 
 void Bearer::SendPairingFailed(ErrorCode ecode) {
@@ -285,6 +408,9 @@ void Bearer::OnRxBFrame(const l2cap::SDU& sdu) {
     switch (reader.code()) {
       case kPairingFailed:
         OnPairingFailed(reader);
+        break;
+      case kPairingRequest:
+        OnPairingRequest(reader);
         break;
       case kPairingResponse:
         OnPairingResponse(reader);

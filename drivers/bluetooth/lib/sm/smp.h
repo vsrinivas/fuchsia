@@ -115,6 +115,8 @@ using KeyDistGenField = uint8_t;
 // Possible failure reason codes used in the "Pairing Failed" command.
 // (Vol 3, Part H, 3.5.5).
 enum class ErrorCode : uint8_t {
+  kNoError = 0x00,
+
   // User input of passkey failed, e.g. due to cancelation.
   kPasskeyEntryFailed = 0x01,
 

@@ -131,11 +131,21 @@ class Bearer final {
   // Called when the SMP pairing timer expires.
   void OnPairingTimeout();
 
+  // Called to complete a feature exchange. Returns ErrorCode::kNoError if the
+  // parameters should be accepted and returns the final values in
+  // |out_features|. Returns an error code if the parameters have been rejected
+  // and pairing should be aborted.
+  ErrorCode ResolveFeatures(bool local_initiator,
+                            const PairingRequestParams& preq,
+                            const PairingResponseParams& pres,
+                            PairingFeatures* out_features);
+
   // Called for SMP commands that are sent by the peer.
   void OnPairingFailed(const PacketReader& reader);
+  void OnPairingRequest(const PacketReader& reader);
   void OnPairingResponse(const PacketReader& reader);
 
-  // Called to send SMP commands to the peer.
+  // Sends a Pairing Failed command to the peer.
   void SendPairingFailed(ErrorCode ecode);
 
   // l2cap::Channel callbacks:
@@ -153,11 +163,11 @@ class Bearer final {
   StatusCallback error_callback_;
   FeatureExchangeCallback feature_exchange_callback_;
 
-  // The most recently sent Pairing Request command. We store it here to be
-  // reported in the feature exchange callback.
-  // NOTE: The SMP specification frequently refers to this as "preq" which is
-  // the convention we use here (see Vol 3, Part H, 2.2.3 for example).
-  common::StaticByteBuffer<sizeof(Header) + sizeof(PairingRequestParams)> preq_;
+  // We use this buffer to store pairing request and response PDUs as they are
+  // needed to complete the feature exchange (i.e. the "preq" and "pres"
+  // payloads needed for Phase 2 (see Vol 3, Part H, 2.2.3 for example).
+  common::StaticByteBuffer<sizeof(Header) + sizeof(PairingRequestParams)>
+      pairing_payload_buffer_;
 
   // Task used to drive the "SMP Timeout" (Vol 3, Part H, 3.4). The timer is
   // started when pairing is initiated.
