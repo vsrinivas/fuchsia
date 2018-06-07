@@ -9,6 +9,7 @@
 #include <ostream>
 
 #include <lib/fidl/cpp/array.h>
+#include <lib/fit/function.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/event.h>
 #include <lib/zx/eventpair.h>

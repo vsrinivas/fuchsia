@@ -69,7 +69,7 @@ class {{ .Name }} {
   {{- range .Methods }}
     {{- if .HasResponse }}
   using {{ .CallbackType }} =
-      std::function<void({{ template "ParamTypes" .Response }})>;
+      {{ .CallbackWrapper }}<void({{ template "ParamTypes" .Response }})>;
     {{- end }}
     {{- if .HasRequest }}
   virtual void {{ template "RequestMethodSignature" . }} = 0;

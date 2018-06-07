@@ -7,12 +7,16 @@ package ir
 import (
 	"fidl/compiler/backend/common"
 	"fidl/compiler/backend/types"
+	"flag"
 	"fmt"
 	"io"
 	"log"
 	"strings"
 	"text/template"
 )
+
+var legacyCallbacks = flag.Bool("cpp-legacy-callbacks", false,
+	"use std::function instead of fit::function in C++ callbacks")
 
 type Decl interface {
 	ForwardDeclaration(*template.Template, io.Writer) error
@@ -198,6 +202,13 @@ func (i *Interface) Traits(tmpls *template.Template, wr io.Writer) error {
 
 func (i *Interface) Definition(tmpls *template.Template, wr io.Writer) error {
 	return tmpls.ExecuteTemplate(wr, "InterfaceDefinition", i)
+}
+
+func (m *Method) CallbackWrapper() string {
+	if *legacyCallbacks {
+		return "std::function"
+	}
+	return "fit::function"
 }
 
 var reservedWords = map[string]bool{
