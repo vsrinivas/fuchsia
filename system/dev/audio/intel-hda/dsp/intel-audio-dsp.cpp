@@ -272,7 +272,7 @@ zx_status_t IntelAudioDsp::ParseNhlt() {
         desc_offset += desc->length;
     }
 
-    LOG(INFO, "parse success, found %zu formats\n", i);
+    LOG(TRACE, "parse success, found %zu formats\n", i);
 
     return ZX_OK;
 }
