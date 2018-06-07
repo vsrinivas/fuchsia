@@ -267,6 +267,13 @@ pub enum zx_cache_policy_t {
     ZX_CACHE_POLICY_WRITE_COMBINING = 3,
 }
 
+// Flag bits for zx_cache_flush.
+multiconst!(u32, [
+    ZX_CACHE_FLUSH_INSN         = 1 << 0;
+    ZX_CACHE_FLUSH_DATA         = 1 << 1;
+    ZX_CACHE_FLUSH_INVALIDATE   = 1 << 2;
+]);
+
 #[repr(C)]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub struct zx_wait_item_t {
