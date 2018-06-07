@@ -25,5 +25,5 @@ public:
 
 private:
     int64_t count_;
-    wait_queue_t waitq_;
+    WaitQueue waitq_;
 };

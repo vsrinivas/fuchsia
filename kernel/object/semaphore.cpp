@@ -11,11 +11,9 @@
 #include <zircon/types.h>
 
 Semaphore::Semaphore(int64_t initial_count) : count_(initial_count) {
-    wait_queue_init(&waitq_);
 }
 
 Semaphore::~Semaphore() {
-    wait_queue_destroy(&waitq_);
 }
 
 void Semaphore::Post() {
@@ -23,7 +21,7 @@ void Semaphore::Post() {
     // otherwise it's safe to just increase the count available with no downsides.
     AutoThreadLock lock;
     if (unlikely(++count_ <= 0))
-        wait_queue_wake_one(&waitq_, true, ZX_OK);
+        waitq_.WakeOne(true, ZX_OK);
 }
 
 zx_status_t Semaphore::Wait(zx_time_t deadline) {
@@ -39,7 +37,7 @@ zx_status_t Semaphore::Wait(zx_time_t deadline) {
         bool block = --count_ < 0;
 
         if (unlikely(block)) {
-            ret = wait_queue_block(&waitq_, deadline);
+            ret = waitq_.Block(deadline);
             if (ret < ZX_OK) {
                 if ((ret == ZX_ERR_TIMED_OUT) || (ret == ZX_ERR_INTERNAL_INTR_KILLED))
                     count_++;
