@@ -16,18 +16,19 @@
 namespace cobalt {
 namespace {
 
-bool Equals(const Value& v1, const Value& v2) {
+bool Equals(const fuchsia::cobalt::Value& v1,
+            const fuchsia::cobalt::Value& v2) {
   if (v1.Which() != v2.Which()) {
     return false;
   }
   switch (v1.Which()) {
-    case Value::Tag::Invalid:
+    case fuchsia::cobalt::Value::Tag::Invalid:
       return true;
-    case Value::Tag::kDoubleValue:
+    case fuchsia::cobalt::Value::Tag::kDoubleValue:
       return v1.double_value() == v2.double_value();
-    case Value::Tag::kIndexValue:
+    case fuchsia::cobalt::Value::Tag::kIndexValue:
       return v1.index_value() == v2.index_value();
-    case Value::Tag::kIntBucketDistribution: {
+    case fuchsia::cobalt::Value::Tag::kIntBucketDistribution: {
       const auto& bucket1 = v1.int_bucket_distribution();
       const auto& bucket2 = v2.int_bucket_distribution();
       if (bucket1.is_null() != bucket2.is_null()) {
@@ -48,15 +49,15 @@ bool Equals(const Value& v1, const Value& v2) {
       }
       return true;
     }
-    case Value::Tag::kIntValue:
+    case fuchsia::cobalt::Value::Tag::kIntValue:
       return v1.int_value() == v2.int_value();
-    case Value::Tag::kStringValue:
+    case fuchsia::cobalt::Value::Tag::kStringValue:
       return v1.string_value() == v1.string_value();
   }
 }
 
-bool Equals(const fidl::VectorPtr<ObservationValue>& v1,
-            const fidl::VectorPtr<ObservationValue>& v2) {
+bool Equals(const fidl::VectorPtr<fuchsia::cobalt::ObservationValue>& v1,
+            const fidl::VectorPtr<fuchsia::cobalt::ObservationValue>& v2) {
   if (v1.is_null() != v2.is_null()) {
     return false;
   }
@@ -81,15 +82,15 @@ constexpr int32_t kFakeCobaltProjectId = 1;
 constexpr int32_t kFakeCobaltMetricId = 2;
 constexpr int32_t kFakeCobaltEncodingId = 3;
 
-class FakeCobaltEncoderImpl : public CobaltEncoder {
+class FakeCobaltEncoderImpl : public fuchsia::cobalt::CobaltEncoder {
  public:
   FakeCobaltEncoderImpl() {}
 
   void AddObservation(uint32_t metric_id, uint32_t encoding_id,
-                      Value observation,
+                      fuchsia::cobalt::Value observation,
                       AddObservationCallback callback) override {
     RecordCall("AddObservation", std::move(observation));
-    callback(Status::OK);
+    callback(fuchsia::cobalt::Status::OK);
   };
 
   void AddStringObservation(uint32_t metric_id, uint32_t encoding_id,
@@ -110,7 +111,7 @@ class FakeCobaltEncoderImpl : public CobaltEncoder {
 
   void AddIntBucketDistribution(
       uint32_t metric_id, uint32_t encoding_id,
-      fidl::VectorPtr<BucketDistributionEntry> distribution,
+      fidl::VectorPtr<fuchsia::cobalt::BucketDistributionEntry> distribution,
       AddIntBucketDistributionCallback callback) override {}
 
   void StartTimer(uint32_t metric_id, uint32_t encoding_id,
@@ -120,62 +121,68 @@ class FakeCobaltEncoderImpl : public CobaltEncoder {
   void EndTimer(fidl::StringPtr timer_id, uint64_t timestamp,
                 uint32_t timeout_s, EndTimerCallback callback) override{};
 
-  void EndTimerMultiPart(fidl::StringPtr timer_id, uint64_t timestamp,
-                         fidl::StringPtr part_name,
-                         fidl::VectorPtr<ObservationValue> observations,
-                         uint32_t timeout_s,
-                         EndTimerMultiPartCallback callback) override{};
+  void EndTimerMultiPart(
+      fidl::StringPtr timer_id, uint64_t timestamp, fidl::StringPtr part_name,
+      fidl::VectorPtr<fuchsia::cobalt::ObservationValue> observations,
+      uint32_t timeout_s, EndTimerMultiPartCallback callback) override{};
 
   void AddMultipartObservation(
-      uint32_t metric_id, fidl::VectorPtr<ObservationValue> observation,
+      uint32_t metric_id,
+      fidl::VectorPtr<fuchsia::cobalt::ObservationValue> observation,
       AddMultipartObservationCallback callback) override {
     RecordCall("AddMultipartObservation", std::move(observation));
-    callback(Status::OK);
+    callback(fuchsia::cobalt::Status::OK);
   }
 
   void SendObservations(SendObservationsCallback callback) override{};
 
-  void ExpectCalledOnceWith(const std::string& func, const Value& expected) {
+  void ExpectCalledOnceWith(const std::string& func,
+                            const fuchsia::cobalt::Value& expected) {
     EXPECT_EQ(1U, calls_.count(func));
     if (calls_.count(func) > 0) {
       EXPECT_EQ(1U, calls_[func].size());
-      Value& actual = calls_[func][0];
+      fuchsia::cobalt::Value& actual = calls_[func][0];
       EXPECT_EQ(expected.Which(), actual.Which());
       EXPECT_TRUE(Equals(actual, expected));
     }
   }
 
-  void ExpectCalledOnceWith(const std::string& func,
-                            fidl::VectorPtr<ObservationValue>& expected_parts) {
+  void ExpectCalledOnceWith(
+      const std::string& func,
+      fidl::VectorPtr<fuchsia::cobalt::ObservationValue>& expected_parts) {
     EXPECT_EQ(1U, multipart_calls_.count(func));
     if (multipart_calls_.count(func) > 0) {
       EXPECT_EQ(1U, multipart_calls_[func].size());
-      fidl::VectorPtr<ObservationValue>& actual = multipart_calls_[func][0];
+      fidl::VectorPtr<fuchsia::cobalt::ObservationValue>& actual =
+          multipart_calls_[func][0];
       EXPECT_TRUE(Equals(actual, expected_parts));
     }
   }
 
  private:
-  void RecordCall(const std::string& func, Value value) {
+  void RecordCall(const std::string& func, fuchsia::cobalt::Value value) {
     calls_[func].push_back(std::move(value));
   }
 
   void RecordCall(const std::string& func,
-                  fidl::VectorPtr<ObservationValue> parts) {
+                  fidl::VectorPtr<fuchsia::cobalt::ObservationValue> parts) {
     multipart_calls_[func].push_back(std::move(parts));
   }
 
-  std::map<std::string, std::vector<Value>> calls_;
-  std::map<std::string, std::vector<fidl::VectorPtr<ObservationValue>>>
+  std::map<std::string, std::vector<fuchsia::cobalt::Value>> calls_;
+  std::map<std::string,
+           std::vector<fidl::VectorPtr<fuchsia::cobalt::ObservationValue>>>
       multipart_calls_;
 };
 
-class FakeCobaltEncoderFactoryImpl : public CobaltEncoderFactory {
+class FakeCobaltEncoderFactoryImpl
+    : public fuchsia::cobalt::CobaltEncoderFactory {
  public:
   FakeCobaltEncoderFactoryImpl() {}
 
-  void GetEncoder(int32_t project_id,
-                  fidl::InterfaceRequest<CobaltEncoder> request) override {
+  void GetEncoder(
+      int32_t project_id,
+      fidl::InterfaceRequest<fuchsia::cobalt::CobaltEncoder> request) override {
     cobalt_encoder_.reset(new FakeCobaltEncoderImpl());
     cobalt_encoder_bindings_.AddBinding(cobalt_encoder_.get(),
                                         std::move(request));
@@ -185,7 +192,7 @@ class FakeCobaltEncoderFactoryImpl : public CobaltEncoderFactory {
 
  private:
   std::unique_ptr<FakeCobaltEncoderImpl> cobalt_encoder_;
-  fidl::BindingSet<CobaltEncoder> cobalt_encoder_bindings_;
+  fidl::BindingSet<fuchsia::cobalt::CobaltEncoder> cobalt_encoder_bindings_;
 };
 
 class CobaltTest : public gtest::TestWithMessageLoop {
@@ -202,8 +209,9 @@ class CobaltTest : public gtest::TestWithMessageLoop {
  private:
   std::unique_ptr<fuchsia::sys::StartupContext> InitStartupContext() {
     factory_impl_.reset(new FakeCobaltEncoderFactoryImpl());
-    service_provider.AddService<CobaltEncoderFactory>(
-        [this](fidl::InterfaceRequest<CobaltEncoderFactory> request) {
+    service_provider.AddService<fuchsia::cobalt::CobaltEncoderFactory>(
+        [this](fidl::InterfaceRequest<fuchsia::cobalt::CobaltEncoderFactory>
+                   request) {
           factory_bindings_.AddBinding(factory_impl_.get(), std::move(request));
         });
     service_provider.AddService<fuchsia::sys::Environment>(
@@ -222,7 +230,7 @@ class CobaltTest : public gtest::TestWithMessageLoop {
   std::unique_ptr<FakeCobaltEncoderFactoryImpl> factory_impl_;
   std::unique_ptr<FakeCobaltEncoderImpl> cobalt_encoder_;
   std::unique_ptr<fuchsia::sys::StartupContext> context_;
-  fidl::BindingSet<CobaltEncoderFactory> factory_bindings_;
+  fidl::BindingSet<fuchsia::cobalt::CobaltEncoderFactory> factory_bindings_;
   fidl::InterfaceRequest<fuchsia::sys::Launcher> launcher_request_;
   fidl::InterfaceRequest<fuchsia::sys::Environment> app_environment_request_;
   FXL_DISALLOW_COPY_AND_ASSIGN(CobaltTest);
@@ -238,7 +246,7 @@ TEST_F(CobaltTest, InitializeCobalt) {
 }
 
 TEST_F(CobaltTest, ReportIndexObservation) {
-  Value value;
+  fuchsia::cobalt::Value value;
   value.set_index_value(123);
   CobaltObservation observation(kFakeCobaltMetricId, kFakeCobaltEncodingId,
                                 fidl::Clone(value));
@@ -251,7 +259,7 @@ TEST_F(CobaltTest, ReportIndexObservation) {
 }
 
 TEST_F(CobaltTest, ReportIntObservation) {
-  Value value;
+  fuchsia::cobalt::Value value;
   value.set_int_value(123);
   CobaltObservation observation(kFakeCobaltMetricId, kFakeCobaltEncodingId,
                                 fidl::Clone(value));
@@ -264,7 +272,7 @@ TEST_F(CobaltTest, ReportIntObservation) {
 }
 
 TEST_F(CobaltTest, ReportDoubleObservation) {
-  Value value;
+  fuchsia::cobalt::Value value;
   value.set_double_value(1.5);
   CobaltObservation observation(kFakeCobaltMetricId, kFakeCobaltEncodingId,
                                 fidl::Clone(value));
@@ -277,7 +285,7 @@ TEST_F(CobaltTest, ReportDoubleObservation) {
 }
 
 TEST_F(CobaltTest, ReportStringObservation) {
-  Value value;
+  fuchsia::cobalt::Value value;
   value.set_string_value("test");
   CobaltObservation observation(kFakeCobaltMetricId, kFakeCobaltEncodingId,
                                 fidl::Clone(value));
@@ -290,8 +298,9 @@ TEST_F(CobaltTest, ReportStringObservation) {
 }
 
 TEST_F(CobaltTest, ReportIntBucketObservation) {
-  Value value;
-  auto distribution = fidl::VectorPtr<BucketDistributionEntry>::New(2);
+  fuchsia::cobalt::Value value;
+  auto distribution =
+      fidl::VectorPtr<fuchsia::cobalt::BucketDistributionEntry>::New(2);
   distribution->at(0).index = 1;
   distribution->at(0).count = 2;
   distribution->at(1).index = 2;
@@ -308,7 +317,7 @@ TEST_F(CobaltTest, ReportIntBucketObservation) {
 }
 
 TEST_F(CobaltTest, ReportMultipartObservation) {
-  auto parts = fidl::VectorPtr<cobalt::ObservationValue>::New(2);
+  auto parts = fidl::VectorPtr<fuchsia::cobalt::ObservationValue>::New(2);
   parts->at(0).name = "part1";
   parts->at(0).encoding_id = kFakeCobaltEncodingId;
   parts->at(0).value.set_string_value("test");

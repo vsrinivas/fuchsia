@@ -9,7 +9,7 @@
 #include <string>
 #include <utility>
 
-#include <cobalt/cpp/fidl.h>
+#include <fuchsia/cobalt/cpp/fidl.h>
 
 #include "lib/app/cpp/startup_context.h"
 #include "lib/backoff/exponential_backoff.h"
@@ -22,17 +22,18 @@ namespace cobalt {
 
 class CobaltObservation {
  public:
-  CobaltObservation(uint32_t metric_id, uint32_t encoding_id, Value value);
+  CobaltObservation(uint32_t metric_id, uint32_t encoding_id,
+                    fuchsia::cobalt::Value value);
   CobaltObservation(uint32_t metric_id,
-                    fidl::VectorPtr<cobalt::ObservationValue> parts);
+                    fidl::VectorPtr<fuchsia::cobalt::ObservationValue> parts);
   CobaltObservation(const CobaltObservation&);
   CobaltObservation(CobaltObservation&&);
   ~CobaltObservation();
   std::string ValueRepr();
 
   uint32_t metric_id() const { return metric_id_; }
-  void Report(CobaltEncoderPtr& encoder,
-              std::function<void(Status)> callback) &&;
+  void Report(fuchsia::cobalt::CobaltEncoderPtr& encoder,
+              std::function<void(fuchsia::cobalt::Status)> callback) &&;
 
   CobaltObservation& operator=(const CobaltObservation&);
   CobaltObservation& operator=(CobaltObservation&&);
@@ -40,10 +41,10 @@ class CobaltObservation {
 
  private:
   bool CompareObservationValueLess(
-      const ObservationValue& observationValue,
-      const ObservationValue& rhsObservationValue) const;
+      const fuchsia::cobalt::ObservationValue& observationValue,
+      const fuchsia::cobalt::ObservationValue& rhsObservationValue) const;
   uint32_t metric_id_;
-  fidl::VectorPtr<cobalt::ObservationValue> parts_;
+  fidl::VectorPtr<fuchsia::cobalt::ObservationValue> parts_;
 };
 
 class CobaltContext {

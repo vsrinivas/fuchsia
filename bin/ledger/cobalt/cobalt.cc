@@ -22,7 +22,7 @@ fxl::AutoCall<fxl::Closure> InitializeCobalt(
 }
 
 void ReportEvent(CobaltEvent event) {
-  cobalt::Value value;
+  fuchsia::cobalt::Value value;
   value.set_index_value(static_cast<uint32_t>(event));
   cobalt::CobaltObservation observation(kCobaltMetricId, kCobaltEncodingId,
                                         std::move(value));

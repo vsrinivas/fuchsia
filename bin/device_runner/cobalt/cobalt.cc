@@ -4,7 +4,7 @@
 
 #include "peridot/bin/device_runner/cobalt/cobalt.h"
 
-#include <cobalt/cpp/fidl.h>
+#include <fuchsia/cobalt/cpp/fidl.h>
 #include "peridot/lib/cobalt/cobalt.h"
 
 namespace modular {
@@ -23,7 +23,7 @@ fxl::AutoCall<fxl::Closure> InitializeCobalt(
 }
 
 void ReportEvent(ModularEvent event) {
-  cobalt::Value value;
+  fuchsia::cobalt::Value value;
   value.set_index_value(static_cast<uint32_t>(event));
   cobalt::CobaltObservation observation(
       static_cast<uint32_t>(CobaltMetric::MODULAR_EVENTS),
@@ -32,7 +32,7 @@ void ReportEvent(ModularEvent event) {
 }
 
 void ReportModuleLaunchTime(std::string module_url, zx_time_t time_nanos) {
-  auto parts = fidl::VectorPtr<cobalt::ObservationValue>::New(2);
+  auto parts = fidl::VectorPtr<fuchsia::cobalt::ObservationValue>::New(2);
   const int64_t time_micros = static_cast<int64_t>(time_nanos / ZX_USEC(1));
 
   parts->at(0).name = "module_url";
@@ -51,7 +51,7 @@ void ReportModuleLaunchTime(std::string module_url, zx_time_t time_nanos) {
 
 void ReportStoryLaunchTime(zx_time_t time_nanos) {
   const int64_t time_micros = static_cast<int64_t>(time_nanos / ZX_USEC(1));
-  cobalt::Value value;
+  fuchsia::cobalt::Value value;
   value.set_int_value(time_micros);
   cobalt::CobaltObservation observation(
       static_cast<uint32_t>(CobaltMetric::STORY_LAUNCH_LATENCY),

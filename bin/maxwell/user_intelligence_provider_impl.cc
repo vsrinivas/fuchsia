@@ -5,7 +5,7 @@
 #include "peridot/bin/maxwell/user_intelligence_provider_impl.h"
 
 #include <fuchsia/bluetooth/le/cpp/fidl.h>
-#include <cobalt/cpp/fidl.h>
+#include <fuchsia/cobalt/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <maxwell/cpp/fidl.h>
 #include "lib/app/cpp/connect.h"

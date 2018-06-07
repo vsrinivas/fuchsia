@@ -6,7 +6,7 @@
 
 #include <set>
 
-#include <cobalt/cpp/fidl.h>
+#include <fuchsia/cobalt/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
@@ -20,12 +20,17 @@
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
 
+using fuchsia::cobalt::CobaltEncoderFactory;
+using fuchsia::cobalt::ObservationValue;
+using fuchsia::cobalt::Status;
+using fuchsia::cobalt::Value;
+
 namespace cobalt {
 
 namespace {
-fidl::VectorPtr<cobalt::ObservationValue> CloneObservationValues(
-    const fidl::VectorPtr<cobalt::ObservationValue>& other) {
-  fidl::VectorPtr<cobalt::ObservationValue> result;
+fidl::VectorPtr<ObservationValue> CloneObservationValues(
+    const fidl::VectorPtr<ObservationValue>& other) {
+  fidl::VectorPtr<ObservationValue> result;
   zx_status_t status = fidl::Clone(other, &result);
   FXL_DCHECK(status == ZX_OK);
   return result;
@@ -38,15 +43,15 @@ CobaltObservation::CobaltObservation(uint32_t metric_id, uint32_t encoding_id,
   FXL_DCHECK(value.is_string_value() || value.is_int_value() ||
              value.is_double_value() || value.is_index_value() ||
              value.is_int_bucket_distribution());
-  parts_.push_back(cobalt::ObservationValue());
+  parts_.push_back(ObservationValue());
   parts_->at(0).value = std::move(value);
   parts_->at(0).encoding_id = encoding_id;
 }
 
 CobaltObservation::~CobaltObservation() = default;
 
-CobaltObservation::CobaltObservation(
-    uint32_t metric_id, fidl::VectorPtr<cobalt::ObservationValue> parts)
+CobaltObservation::CobaltObservation(uint32_t metric_id,
+                                     fidl::VectorPtr<ObservationValue> parts)
     : metric_id_(metric_id), parts_(std::move(parts)) {}
 
 CobaltObservation::CobaltObservation(const CobaltObservation& rhs)
@@ -55,7 +60,7 @@ CobaltObservation::CobaltObservation(const CobaltObservation& rhs)
 CobaltObservation::CobaltObservation(CobaltObservation&& rhs)
     : CobaltObservation(rhs.metric_id_, std::move(rhs.parts_)) {}
 
-void CobaltObservation::Report(CobaltEncoderPtr& encoder,
+void CobaltObservation::Report(fuchsia::cobalt::CobaltEncoderPtr& encoder,
                                std::function<void(Status)> callback) && {
   if (parts_->size() == 1) {
     encoder->AddObservation(metric_id_, parts_->at(0).encoding_id,
@@ -197,7 +202,7 @@ class CobaltContextImpl : public CobaltContext {
   backoff::ExponentialBackoff backoff_;
   async_t* const async_;
   fuchsia::sys::StartupContext* context_;
-  CobaltEncoderPtr encoder_;
+  fuchsia::cobalt::CobaltEncoderPtr encoder_;
   const int32_t project_id_;
 
   std::multiset<CobaltObservation> observations_to_send_;
@@ -308,24 +313,24 @@ void CobaltContextImpl::SendObservations() {
 }
 
 void CobaltContextImpl::AddObservationCallback(CobaltObservation observation,
-                                               cobalt::Status status) {
+                                               Status status) {
   switch (status) {
-    case cobalt::Status::INVALID_ARGUMENTS:
-    case cobalt::Status::FAILED_PRECONDITION:
+    case Status::INVALID_ARGUMENTS:
+    case Status::FAILED_PRECONDITION:
       FXL_DCHECK(false) << "Unexpected status: " << status;
-    case cobalt::Status::OBSERVATION_TOO_BIG:  // fall through
+    case Status::OBSERVATION_TOO_BIG:  // fall through
       // Log the failure.
       FXL_LOG(WARNING) << "Cobalt rejected obsevation for metric: "
                        << observation.metric_id()
                        << " with value: " << observation.ValueRepr()
                        << " with status: " << status;
-    case cobalt::Status::OK:  // fall through
+    case Status::OK:  // fall through
       // Remove the observation from the set of observations to send.
       observations_in_transit_.erase(observation);
       break;
-    case cobalt::Status::INTERNAL_ERROR:
-    case cobalt::Status::SEND_FAILED:
-    case cobalt::Status::TEMPORARILY_FULL:
+    case Status::INTERNAL_ERROR:
+    case Status::SEND_FAILED:
+    case Status::TEMPORARILY_FULL:
       // Keep the observation for re-queueing.
       break;
   }
