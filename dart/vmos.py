@@ -9,6 +9,17 @@ import paths
 import subprocess
 import sys
 
+CATEGORIES = [
+  'dart-oldspace',
+  'dart-newspace',
+  'jemalloc-heap',
+  'pthread_t',
+  'magma_create_buffer',
+  'ScudoPrimary',
+  'ScudoSecondary',
+  'lib',
+]
+
 def FxSSH(address, command):
   fx = os.path.join(paths.FUCHSIA_ROOT, 'scripts', 'fx')
   cmd = [fx, 'ssh', address] + command
@@ -46,30 +57,45 @@ def BytesToHuman(num, suffix='B'):
     num /= 1024.0
   return "%.1f%s%s" % (num, 'Yi', suffix)
 
+
 # The output of vmos is:
 # rights  koid parent #chld #map #shr    size   alloc name [app]
 # on each line
 def ParseVmos(vmos, matchers):
   vmo_lines = vmos.strip().split('\n')
   sizes = {}
+  koids = {}
   for vmo in vmo_lines:
-    # 4: sharing, 6: size, 7: alloc, 8: name [9: app]
+    # 1: koid, 5: process sharing, 6: size, 7: alloc, 8: name [9: app]
     data = vmo.split()
     if len(data) < 9:
       continue
     name = data[8]
     if len(data) >= 10:
       name = name + ' ' + data[9]
+    try:
+      b = HumanToBytes(data[7])
+    except:
+      continue
+    koid = int(data[1])
+    if koid in koids:
+      continue
+    koids[koid] = True
+    sharing = int(data[5])
+    if sharing == 0:
+      continue
     for matcher in matchers:
       if matcher not in name:
         continue
-      if int(data[4]) == 0:
-        continue
-      b = HumanToBytes(data[7])
-      if name in sizes:
-        sizes[name] = sizes[name] + (b / int(data[4]))
+      if matcher in sizes:
+        sizes[matcher] = sizes[matcher] + (b / sharing)
       else:
-        sizes[name] = (b / int(data[4]))
+        sizes[matcher] = (b / sharing)
+      break
+    if 'total' in sizes:
+      sizes['total'] = sizes['total'] + (b / sharing)
+    else:
+      sizes['total'] = (b / sharing)
   return sizes
 
 
@@ -84,7 +110,7 @@ def Main():
   args = parser.parse_args()
 
   vmos = FxSSH(args.address, ['vmos', args.pid])
-  sizes = ParseVmos(vmos, ['dart', 'flutter', 'jemalloc', 'magma', 'Scudo'])
+  sizes = ParseVmos(vmos, CATEGORIES)
   for k, v in sizes.iteritems():
     print k + ", " + BytesToHuman(v)
 
