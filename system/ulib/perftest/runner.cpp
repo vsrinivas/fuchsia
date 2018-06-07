@@ -102,10 +102,11 @@ public:
     }
 
     // Returns nullptr on success, or an error string on failure.
-    const char* RunTestFunc(const internal::NamedTest* test) {
-        TRACE_DURATION("perftest", "test_group", "test_name", test->name);
+    const char* RunTestFunc(const char* test_name,
+                            const fbl::Function<TestFunc>& test_func) {
+        TRACE_DURATION("perftest", "test_group", "test_name", test_name);
         overall_start_time_ = zx_ticks_get();
-        bool result = test->test_func(this);
+        bool result = test_func(this);
         overall_end_time_ = zx_ticks_get();
         if (error_) {
             return error_;
@@ -253,6 +254,23 @@ void RegisterTest(const char* name, fbl::Function<TestFunc> test_func) {
     g_tests->push_back(fbl::move(new_test));
 }
 
+bool RunTest(const char* test_name, const fbl::Function<TestFunc>& test_func,
+             uint32_t run_count, ResultsSet* results_set,
+             fbl::String* error_out) {
+    RepeatStateImpl state(run_count);
+    const char* error = state.RunTestFunc(test_name, test_func);
+    if (error) {
+        if (error_out) {
+            *error_out = error;
+        }
+        return false;
+    }
+
+    state.CopyTimeResults(test_name, results_set);
+    state.WriteTraceEvents();
+    return true;
+}
+
 namespace internal {
 
 bool RunTests(TestList* test_list, uint32_t run_count, const char* regex_string,
@@ -285,18 +303,15 @@ bool RunTests(TestList* test_list, uint32_t run_count, const char* regex_string,
         // parse gtest's output.
         fprintf(log_stream, "[ RUN      ] %s\n", test_name);
 
-        RepeatStateImpl state(run_count);
-        const char* error = state.RunTestFunc(&test_case);
-        if (error) {
-            fprintf(log_stream, "Error: %s\n", error);
+        fbl::String error_string;
+        if (!RunTest(test_name, test_case.test_func, run_count, results_set,
+                     &error_string)) {
+            fprintf(log_stream, "Error: %s\n", error_string.c_str());
             fprintf(log_stream, "[  FAILED  ] %s\n", test_name);
             ok = false;
             continue;
         }
         fprintf(log_stream, "[       OK ] %s\n", test_name);
-
-        state.CopyTimeResults(test_name, results_set);
-        state.WriteTraceEvents();
     }
 
     regfree(&regex);

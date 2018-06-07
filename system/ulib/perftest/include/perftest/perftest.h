@@ -7,6 +7,7 @@
 #include <stdint.h>
 
 #include <fbl/function.h>
+#include <fbl/string.h>
 #include <perftest/results.h>
 
 // This is a library for writing performance tests.  It supports
@@ -179,6 +180,18 @@ void RegisterSimpleTest(const char* test_name) {
 // based on the command line arguments.  (See the "--help" output for more
 // details.)
 int PerfTestMain(int argc, char** argv);
+
+// Run a single test |run_count| times, and add the results to
+// |results_set| using the given name, |test_name|.  On error, this returns
+// false and sets |*error_out| to an error string.
+//
+// This function is useful for test suites that don't want to use
+// PerfTestMain() -- e.g. for test cases with complex parameters based on
+// command line arguments, or for test cases that reuse some shared state
+// and must be run in a particular order.
+bool RunTest(const char* test_name, const fbl::Function<TestFunc>& test_func,
+             uint32_t run_count, ResultsSet* results_set,
+             fbl::String* error_out);
 
 }  // namespace perftest
 
