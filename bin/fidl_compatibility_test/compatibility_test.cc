@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#define FIDL_ENABLE_LEGACY_WAIT_FOR_RESPONSE
-
 #include <fidl/test/compatibility/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/default.h>
@@ -927,9 +925,12 @@ class CompatibilityTest
   void SetUp() override {
     proxy_url_ = ::testing::get<0>(GetParam());
     server_url_ = ::testing::get<1>(GetParam());
+    // The FIDL support lib requires async_get_default() to return non-null.
+    loop_.reset(new async::Loop(&kAsyncLoopConfigMakeDefault));
   }
   std::string proxy_url_;
   std::string server_url_;
+  std::unique_ptr<async::Loop> loop_;
 };
 
 TEST_P(CompatibilityTest, EchoStruct) {
@@ -943,16 +944,17 @@ TEST_P(CompatibilityTest, EchoStruct) {
   Struct sent_clone;
   sent.Clone(&sent_clone);
   Struct resp_clone;
+  bool called_back = false;
   app.echo()->EchoStruct(
       std::move(sent), server_url_,
-      [&resp_clone](Struct resp) {
+      [this, &resp_clone, &called_back](Struct resp) {
         ASSERT_EQ(ZX_OK, resp.Clone(&resp_clone));
+        called_back = true;
+        loop_->Quit();
       });
 
-  ASSERT_EQ(ZX_OK, app.echo().WaitForResponse())
-      << "Failed to wait for response from proxy "
-      << files::GetBaseName(proxy_url_) << " and server "
-      << files::GetBaseName(server_url_);
+  loop_->Run();
+  ASSERT_TRUE(called_back);
   ExpectEq(sent_clone, resp_clone);
 }
 
@@ -970,16 +972,15 @@ TEST_P(CompatibilityTest, EchoStructNoRetVal) {
   std::condition_variable cv;
   fidl::test::compatibility::Struct resp_clone;
   bool event_received = false;
-  app.echo().events().EchoEvent = [&m, &cv, &resp_clone,
+  app.echo().events().EchoEvent = [this, &resp_clone,
                                    &event_received](Struct resp) {
-    std::unique_lock<std::mutex> lk(m);
     resp.Clone(&resp_clone);
     event_received = true;
-    cv.notify_one();
+    loop_->Quit();
   };
   app.echo()->EchoStructNoRetVal(std::move(sent), server_url_);
-  std::unique_lock<std::mutex> lk(m);
-  cv.wait(lk, [&event_received]{ return event_received; });
+  loop_->Run();
+  ASSERT_TRUE(event_received);
   ExpectEq(sent_clone, resp_clone);
 }
 
@@ -1005,12 +1006,5 @@ INSTANTIATE_TEST_CASE_P(
 
 int main(int argc, char** argv) {
   testing::InitGoogleTest(&argc, argv);
-  // The FIDL support lib requires async_get_default() to return non-null.
-  async::Loop loop(&kAsyncLoopConfigMakeDefault);
-  // Start another thread so that one can block while the other handles events.
-  const zx_status_t start_thread_status = loop.StartThread();
-  ZX_ASSERT_MSG(start_thread_status == ZX_OK, "start_thread_status = %d",
-                start_thread_status);
-
   return RUN_ALL_TESTS();
 }

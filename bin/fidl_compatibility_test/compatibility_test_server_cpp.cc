@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#define FIDL_ENABLE_LEGACY_WAIT_FOR_RESPONSE
-
 #include <fidl/test/compatibility/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <zx/channel.h>
@@ -21,8 +19,9 @@ namespace compatibility {
 
 class EchoServerApp : public Echo {
  public:
-  EchoServerApp()
-      : context_(fuchsia::sys::StartupContext::CreateFromStartupInfo()) {
+  explicit EchoServerApp(async::Loop* loop)
+      : loop_(loop),
+        context_(fuchsia::sys::StartupContext::CreateFromStartupInfo()) {
     context_->outgoing().AddPublicService<Echo>(
         [this](fidl::InterfaceRequest<Echo> request) {
           bindings_.AddBinding(
@@ -37,12 +36,17 @@ class EchoServerApp : public Echo {
     if (!forward_to_server->empty()) {
       EchoClientApp app;
       app.Start(forward_to_server.get());
-      app.echo()->EchoStruct(std::move(value), "", std::move(callback));
-      const zx_status_t wait_status = app.echo().WaitForResponse();
-      if (wait_status != ZX_OK) {
-        fprintf(stderr, "Proxy Got error %d waiting for response from %s\n",
-                wait_status, forward_to_server->c_str());
+      bool called_back = false;
+      app.echo()->EchoStruct(std::move(value), "",
+                             [this, &called_back, &callback](Struct resp) {
+                               called_back = true;
+                               callback(std::move(resp));
+                               loop_->Quit();
+                             });
+      while (!called_back) {
+        loop_->Run();
       }
+      loop_->ResetQuit();
     } else {
       callback(std::move(value));
     }
@@ -80,6 +84,7 @@ class EchoServerApp : public Echo {
   EchoServerApp(const EchoServerApp&) = delete;
   EchoServerApp& operator=(const EchoServerApp&) = delete;
 
+  async::Loop* loop_;
   std::unique_ptr<fuchsia::sys::StartupContext> context_;
   fidl::BindingSet<Echo> bindings_;
   std::vector<std::unique_ptr<EchoClientApp>> client_apps_;
@@ -93,7 +98,7 @@ int main(int argc, const char** argv) {
   // The FIDL support lib requires async_get_default() to return non-null.
   async::Loop loop(&kAsyncLoopConfigMakeDefault);
 
-  fidl::test::compatibility::EchoServerApp app;
+  fidl::test::compatibility::EchoServerApp app(&loop);
   loop.Run();
   return EXIT_SUCCESS;
 }

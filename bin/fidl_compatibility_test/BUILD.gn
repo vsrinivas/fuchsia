@@ -82,7 +82,6 @@ package("package") {
   tests = [
     {
       name = "run_fidl_compatibility_test_garnet.sh"
-      disabled = true # TODO(FIDL-214): re-enable when not flaky
     },
   ]
 }
