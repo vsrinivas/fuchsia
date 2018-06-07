@@ -68,27 +68,29 @@ get_file_size() {
   echo "${filesize}"
 }
 
-wget_dst() {
-  tmp_file="/tmp/wlan_smoke_wget.tmp"
-  dst="$1"
-  bytes_want="$2"
+curl_md5sum() {
+  url="$1"
+  tmp_file="/tmp/wlan_smoke_md5sum.tmp"
+  md5_wanted="$2"
 
-  # Fuchsia Dash's pipe and redirection is funky when used in $(..)
-  cmd="wget ${dst} > ${tmp_file}"
-  wget "${dst}" > "${tmp_file}"
+  speed=$(curl -sw "%{speed_download}" -o "${tmp_file}" "${url}" | cut -f 1 -d ".")
+  speed=$((speed/1024))
+  md5_download=$(md5sum "${tmp_file}" | cut -f 1 -d " ")
 
-  bytes_got=$(get_file_size "${tmp_file}")
-  if [ "${bytes_got}" -lt "${bytes_want}" ]; then
-    log_fail "${cmd}"
+  msg="curl_md5sum ${speed}kB/s ${url}"
+  if [ "${md5_download}" = "${md5_wanted}" ]; then
+    log_pass "${msg}"
   else
-    log_pass "${cmd}"
+    log_fail "${msg}"
   fi
 }
 
-
-test_wget() {
-  wget_dst www.google.com 40000
-  wget_dst example.com 1400
+test_curl_md5sum() {
+  curl_md5sum http://ovh.net/files/1Mb.dat 62501d556539559fb422943553cd235a
+  # curl_md5sum http://ovh.net/files/1Mio.dat 6cb91af4ed4c60c11613b75cd1fc6116
+  # curl_md5sum http://ovh.net/files/10Mb.dat 241cead4562ebf274f76f2e991750b9d
+  # curl_md5sum http://ovh.net/files/10Mio.dat ecf2a421f46ab33f277fa2aaaf141780
+  # curl_md5sum http://ipv4.download.thinkbroadband.com/5MB.zip b3215c06647bc550406a9c8ccc378756
 }
 
 check_wlan_status() {
@@ -182,7 +184,7 @@ main() {
   log "Starting traffic tests"
   run test_ping "${eth_iface_list}"
   run test_dns
-  run test_wget
+  run test_curl_md5sum
   log "Ending traffic tests"
   run wlan_disconnect "${eth_iface_list}"
   run test_teardown "${eth_iface_list}"
