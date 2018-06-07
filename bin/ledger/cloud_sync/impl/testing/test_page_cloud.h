@@ -43,7 +43,8 @@ class TestPageCloud : public cloud_provider::PageCloud {
 
   // GetCommits().
   unsigned int get_commits_calls = 0u;
-  fidl::VectorPtr<cloud_provider::Commit> commits_to_return;
+  fidl::VectorPtr<cloud_provider::Commit> commits_to_return =
+      fidl::VectorPtr<cloud_provider::Commit>::New(0);
   std::unique_ptr<cloud_provider::Token> position_token_to_return;
 
   // AddObject().

@@ -157,7 +157,8 @@ void PageCloudImpl::GetCommits(
     timestamp_or_null = std::make_unique<google::protobuf::Timestamp>();
     if (!timestamp_or_null->ParseFromString(
             convert::ToString(min_position_token->opaque_id))) {
-      callback(cloud_provider::Status::ARGUMENT_ERROR, nullptr, nullptr);
+      callback(cloud_provider::Status::ARGUMENT_ERROR,
+               fidl::VectorPtr<cloud_provider::Commit>::New(0), nullptr);
       return;
     }
   }
@@ -173,7 +174,8 @@ void PageCloudImpl::GetCommits(
         std::move(request), std::move(call_credentials),
         [callback](auto status, auto result) {
           if (LogGrpcRequestError(status)) {
-            callback(ConvertGrpcStatus(status.error_code()), nullptr, nullptr);
+            callback(ConvertGrpcStatus(status.error_code()),
+                     fidl::VectorPtr<cloud_provider::Commit>::New(0), nullptr);
             return;
           }
 
@@ -186,7 +188,9 @@ void PageCloudImpl::GetCommits(
             if (!response.has_document() ||
                 !DecodeCommitBatch(response.document(), &batch_commits,
                                    &timestamp)) {
-              callback(cloud_provider::Status::PARSE_ERROR, nullptr, nullptr);
+              callback(cloud_provider::Status::PARSE_ERROR,
+                       fidl::VectorPtr<cloud_provider::Commit>::New(0),
+                       nullptr);
             }
 
             std::move(batch_commits->begin(), batch_commits->end(),

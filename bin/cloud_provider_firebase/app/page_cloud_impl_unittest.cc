@@ -167,7 +167,6 @@ TEST_F(PageCloudImplTest, GetCommitsEmpty) {
       callback::Capture(MakeQuitTask(), &status, &commits, &token));
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(cloud_provider::Status::OK, status);
-  EXPECT_TRUE(commits.is_null());
   EXPECT_EQ(0u, commits->size());
   EXPECT_FALSE(token);
 }

@@ -142,7 +142,8 @@ void PageCloudImpl::GetCommits(
                          callback](firebase_auth::AuthStatus auth_status,
                                    std::string auth_token) mutable {
         if (auth_status != firebase_auth::AuthStatus::OK) {
-          callback(cloud_provider::Status::AUTH_ERROR, nullptr, nullptr);
+          callback(cloud_provider::Status::AUTH_ERROR,
+                   fidl::VectorPtr<cloud_provider::Commit>::New(0), nullptr);
           return;
         }
 
@@ -151,11 +152,14 @@ void PageCloudImpl::GetCommits(
             [callback = std::move(callback)](Status status,
                                              std::vector<Record> records) {
               if (status != Status::OK) {
-                callback(ConvertInternalStatus(status), nullptr, nullptr);
+                callback(ConvertInternalStatus(status),
+                         fidl::VectorPtr<cloud_provider::Commit>::New(0),
+                         nullptr);
                 return;
               }
 
-              fidl::VectorPtr<cloud_provider::Commit> commits;
+              fidl::VectorPtr<cloud_provider::Commit> commits =
+                  fidl::VectorPtr<cloud_provider::Commit>::New(0);
               if (records.empty()) {
                 callback(ConvertInternalStatus(status), std::move(commits),
                          nullptr);
