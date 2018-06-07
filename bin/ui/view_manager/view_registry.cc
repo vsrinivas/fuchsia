@@ -913,11 +913,15 @@ void ViewRegistry::DeliverEvent(
     ViewInspector::OnEventDelivered callback) {
   FXL_VLOG(1) << "DeliverEvent: view_token=" << view_token
               << ", event=" << event;
+
+  // TODO(SCN-743) Remove this stub code once there is a proper design for A11y
+  // integration with Scenic.
   if (event.is_pointer()
       && event.pointer().type == fuchsia::ui::input::PointerEventType::TOUCH
       && event.pointer().phase == fuchsia::ui::input::PointerEventPhase::DOWN) {
     A11yNotifyViewSelected(view_token);
   }
+
   auto it = input_connections_by_view_token_.find(view_token.value);
   if (it == input_connections_by_view_token_.end()) {
     FXL_VLOG(1)
