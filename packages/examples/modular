@@ -1,8 +1,5 @@
 {
     "packages": {
-        "hello_app_child": "//peridot/examples/hello_world/hello_world_cpp:hello_app_child",
-        "hello_app_parent": "//peridot/examples/hello_world/hello_world_cpp:hello_app_parent",
-        "hello_world_rust": "//peridot/examples/hello_world/hello_world_rust:hello_world_rust",
         "simple_agent": "//peridot/examples/simple:simple_agent",
         "simple_module": "//peridot/examples/simple:simple_module",
         "swap_module1": "//peridot/examples/swap_cpp:swap_module1",
