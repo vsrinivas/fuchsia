@@ -37,34 +37,30 @@ static zx_status_t handle_dup_replace(
 
     auto up = ProcessDispatcher::GetCurrent();
 
-    {
-        fbl::AutoLock lock(up->handle_table_lock());
-        auto source = up->GetHandleLocked(handle_value);
-        if (!source)
-            return ZX_ERR_BAD_HANDLE;
+    fbl::AutoLock lock(up->handle_table_lock());
+    auto source = up->GetHandleLocked(handle_value);
+    if (!source)
+        return ZX_ERR_BAD_HANDLE;
 
-        if (!is_replace) {
-            if (!source->HasRights(ZX_RIGHT_DUPLICATE))
-                return ZX_ERR_ACCESS_DENIED;
-        }
-
-        if (rights == ZX_RIGHT_SAME_RIGHTS) {
-            rights = source->rights();
-        } else if ((source->rights() & rights) != rights) {
-            if (is_replace)
-                up->RemoveHandleLocked(handle_value);
-            return ZX_ERR_INVALID_ARGS;
-        }
-
-        zx_status_t status = out->dup(source, rights);
-
-        if (is_replace)
-            up->RemoveHandleLocked(handle_value);
-
-        return status;
+    if (!is_replace) {
+        if (!source->HasRights(ZX_RIGHT_DUPLICATE))
+            return ZX_ERR_ACCESS_DENIED;
     }
 
-    return ZX_OK;
+    if (rights == ZX_RIGHT_SAME_RIGHTS) {
+        rights = source->rights();
+    } else if ((source->rights() & rights) != rights) {
+        if (is_replace)
+            up->RemoveHandleLocked(handle_value);
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    zx_status_t status = out->dup(source, rights);
+
+    if (is_replace)
+        up->RemoveHandleLocked(handle_value);
+
+    return status;
 }
 
 zx_status_t sys_handle_duplicate(
