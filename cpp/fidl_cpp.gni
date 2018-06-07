@@ -87,7 +87,7 @@ template("fidl_cpp") {
         "cpp",
       ]
 
-      if (!defined(invoker.cpp_legacy_callbacks) || invoker.cpp_legacy_callbacks) {
+      if (defined(invoker.cpp_legacy_callbacks) && invoker.cpp_legacy_callbacks) {
         args += [ "--cpp-legacy-callbacks" ]
       }
 
