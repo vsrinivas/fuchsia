@@ -188,6 +188,44 @@ static pte_t mmu_flags_to_s1_pte_attr(uint flags) {
     return attr;
 }
 
+static void s1_pte_attr_to_mmu_flags(pte_t pte, uint* mmu_flags) {
+    switch (pte & MMU_PTE_ATTR_ATTR_INDEX_MASK) {
+    case MMU_PTE_ATTR_STRONGLY_ORDERED:
+        *mmu_flags |= ARCH_MMU_FLAG_UNCACHED;
+        break;
+    case MMU_PTE_ATTR_DEVICE:
+        *mmu_flags |= ARCH_MMU_FLAG_UNCACHED_DEVICE;
+        break;
+    case MMU_PTE_ATTR_NORMAL_UNCACHED:
+        *mmu_flags |= ARCH_MMU_FLAG_WRITE_COMBINING;
+        break;
+    case MMU_PTE_ATTR_NORMAL_MEMORY:
+        break;
+    default:
+        PANIC_UNIMPLEMENTED;
+    }
+    *mmu_flags |= ARCH_MMU_FLAG_PERM_READ;
+    switch (pte & MMU_PTE_ATTR_AP_MASK) {
+    case MMU_PTE_ATTR_AP_P_RW_U_NA:
+        *mmu_flags |= ARCH_MMU_FLAG_PERM_WRITE;
+        break;
+    case MMU_PTE_ATTR_AP_P_RW_U_RW:
+        *mmu_flags |= ARCH_MMU_FLAG_PERM_USER | ARCH_MMU_FLAG_PERM_WRITE;
+        break;
+    case MMU_PTE_ATTR_AP_P_RO_U_NA:
+        break;
+    case MMU_PTE_ATTR_AP_P_RO_U_RO:
+        *mmu_flags |= ARCH_MMU_FLAG_PERM_USER;
+        break;
+    }
+    if (!((pte & MMU_PTE_ATTR_UXN) && (pte & MMU_PTE_ATTR_PXN))) {
+        *mmu_flags |= ARCH_MMU_FLAG_PERM_EXECUTE;
+    }
+    if (pte & MMU_PTE_ATTR_NON_SECURE) {
+        *mmu_flags |= ARCH_MMU_FLAG_NS;
+    }
+}
+
 static pte_t mmu_flags_to_s2_pte_attr(uint flags) {
     DEBUG_ASSERT((flags & ARCH_MMU_FLAG_CACHE_MASK) == ARCH_MMU_FLAG_CACHED);
     // Only the inner-shareable, normal memory type is supported.
@@ -204,6 +242,28 @@ static pte_t mmu_flags_to_s2_pte_attr(uint flags) {
     }
 
     return attr;
+}
+
+static void s2_pte_attr_to_mmu_flags(pte_t pte, uint* mmu_flags) {
+    // Only the inner-shareable, normal memory type is supported.
+    if ((pte & MMU_S2_PTE_ATTR_ATTR_INDEX_MASK) != MMU_S2_PTE_ATTR_NORMAL_MEMORY) {
+        PANIC_UNIMPLEMENTED;
+    }
+
+    *mmu_flags |= ARCH_MMU_FLAG_PERM_READ;
+    switch (pte & MMU_PTE_ATTR_AP_MASK) {
+    case MMU_S2_PTE_ATTR_S2AP_RO:
+        break;
+    case MMU_S2_PTE_ATTR_S2AP_RW:
+        *mmu_flags |= ARCH_MMU_FLAG_PERM_WRITE;
+        break;
+    default:
+        PANIC_UNIMPLEMENTED;
+    }
+
+    if (pte & MMU_S2_PTE_ATTR_XN) {
+        *mmu_flags |= ARCH_MMU_FLAG_PERM_EXECUTE;
+    }
 }
 
 zx_status_t ArmArchVmAspace::Query(vaddr_t vaddr, paddr_t* paddr, uint* mmu_flags) {
@@ -289,39 +349,10 @@ zx_status_t ArmArchVmAspace::QueryLocked(vaddr_t vaddr, paddr_t* paddr, uint* mm
         *paddr = pte_addr + vaddr_rem;
     if (mmu_flags) {
         *mmu_flags = 0;
-        if (pte & MMU_PTE_ATTR_NON_SECURE)
-            *mmu_flags |= ARCH_MMU_FLAG_NS;
-        switch (pte & MMU_PTE_ATTR_ATTR_INDEX_MASK) {
-        case MMU_PTE_ATTR_STRONGLY_ORDERED:
-            *mmu_flags |= ARCH_MMU_FLAG_UNCACHED;
-            break;
-        case MMU_PTE_ATTR_DEVICE:
-            *mmu_flags |= ARCH_MMU_FLAG_UNCACHED_DEVICE;
-            break;
-        case MMU_PTE_ATTR_NORMAL_UNCACHED:
-            *mmu_flags |= ARCH_MMU_FLAG_WRITE_COMBINING;
-            break;
-        case MMU_PTE_ATTR_NORMAL_MEMORY:
-            break;
-        default:
-            PANIC_UNIMPLEMENTED;
-        }
-        *mmu_flags |= ARCH_MMU_FLAG_PERM_READ;
-        switch (pte & MMU_PTE_ATTR_AP_MASK) {
-        case MMU_PTE_ATTR_AP_P_RW_U_NA:
-            *mmu_flags |= ARCH_MMU_FLAG_PERM_WRITE;
-            break;
-        case MMU_PTE_ATTR_AP_P_RW_U_RW:
-            *mmu_flags |= ARCH_MMU_FLAG_PERM_USER | ARCH_MMU_FLAG_PERM_WRITE;
-            break;
-        case MMU_PTE_ATTR_AP_P_RO_U_NA:
-            break;
-        case MMU_PTE_ATTR_AP_P_RO_U_RO:
-            *mmu_flags |= ARCH_MMU_FLAG_PERM_USER;
-            break;
-        }
-        if (!((pte & MMU_PTE_ATTR_UXN) && (pte & MMU_PTE_ATTR_PXN))) {
-            *mmu_flags |= ARCH_MMU_FLAG_PERM_EXECUTE;
+        if (flags_ & ARCH_ASPACE_FLAG_GUEST) {
+            s2_pte_attr_to_mmu_flags(pte, mmu_flags);
+        } else {
+            s1_pte_attr_to_mmu_flags(pte, mmu_flags);
         }
     }
     LTRACEF("va 0x%lx, paddr 0x%lx, flags 0x%x\n",
