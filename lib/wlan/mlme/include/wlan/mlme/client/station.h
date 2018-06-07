@@ -139,7 +139,7 @@ class Station : public FrameHandler {
     zx::time signal_report_timeout_;
     zx::time last_seen_;
     uint16_t aid_ = 0;
-    common::MovingAverage<int8_t, int16_t, 20> avg_rssi_dbm_;
+    common::MovingAverageDbm<20> avg_rssi_dbm_;
     AuthAlgorithm auth_alg_ = AuthAlgorithm::kOpenSystem;
     eapol::PortState controlled_port_ = eapol::PortState::kBlocked;
 

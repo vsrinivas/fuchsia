@@ -24,6 +24,7 @@
 namespace wlan {
 
 namespace wlan_mlme = ::fuchsia::wlan::mlme;
+using common::dBm;
 
 // TODO(hahnr): Revisit frame construction to reduce boilerplate code.
 
@@ -375,7 +376,7 @@ zx_status_t Station::HandleBeacon(const MgmtFrame<Beacon>& frame) {
     debugfn();
     ZX_DEBUG_ASSERT(bss_ != nullptr);
 
-    avg_rssi_dbm_.add(frame.rx_info()->rssi_dbm);
+    avg_rssi_dbm_.add(dBm(frame.rx_info()->rssi_dbm));
 
     // TODO(tkilbourn): update any other info (like rolling average of rssi)
     last_seen_ = timer_->Now();
@@ -505,7 +506,7 @@ zx_status_t Station::HandleAssociationResponse(const MgmtFrame<AssociationRespon
     signal_report_timeout_ = deadline_after_bcn_period(kSignalReportBcnCountTimeout);
     timer_->SetTimer(signal_report_timeout_);
     avg_rssi_dbm_.reset();
-    avg_rssi_dbm_.add(frame.rx_info()->rssi_dbm);
+    avg_rssi_dbm_.add(dBm(frame.rx_info()->rssi_dbm));
     service::SendSignalReportIndication(device_, common::dBm(frame.rx_info()->rssi_dbm));
 
     // Open port if user connected to an open network.
@@ -634,7 +635,7 @@ zx_status_t Station::HandleNullDataFrame(const DataFrame<NilHeader>& frame) {
     ZX_DEBUG_ASSERT(state_ == WlanState::kAssociated);
 
     // Take signal strength into account.
-    avg_rssi_dbm_.add(frame.rx_info()->rssi_dbm);
+    avg_rssi_dbm_.add(dBm(frame.rx_info()->rssi_dbm));
 
     // Some AP's such as Netgear Routers send periodic NULL data frames to test whether a client
     // timed out. The client must respond with a NULL data frame itself to not get
@@ -669,7 +670,7 @@ zx_status_t Station::HandleDataFrame(const DataFrame<LlcHeader>& frame) {
     }
 
     // Take signal strength into account.
-    avg_rssi_dbm_.add(frame.rx_info()->rssi_dbm);
+    avg_rssi_dbm_.add(dBm(frame.rx_info()->rssi_dbm));
 
     auto hdr = frame.hdr();
     auto llc = frame.body();
@@ -949,7 +950,7 @@ zx_status_t Station::HandleTimeout() {
         state_ == WlanState::kAssociated) {
         signal_report_timeout_ = deadline_after_bcn_period(kSignalReportBcnCountTimeout);
         timer_->SetTimer(signal_report_timeout_);
-        service::SendSignalReportIndication(device_, common::dBm(avg_rssi_dbm_.avg()));
+        service::SendSignalReportIndication(device_, common::to_dBm(avg_rssi_dbm_.avg()));
     }
 
     return ZX_OK;
