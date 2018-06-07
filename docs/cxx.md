@@ -37,16 +37,20 @@ allowed.
   - Global constructors
     - Currently we have these for global data structures.
 
-## fbl
-We have built our own template library, called *fbl*, to
-address our particular needs. This library is split into two parts:
+## FBL
+
+FBL is the Fuchsia Base Library, which is shared between kernel and userspace.
+As a result, FBL has very strict dependencies.  For example, FBL cannot depend
+on the syscall interface because the syscall interface is not available within
+the kernel.  Similarly, FBL cannot depend on C library features that are not
+available in the kernel.
 
 1. [system/ulib/fbl](../system/ulib/fbl) which is usable from both
    kernel and userspace.
 2. [kernel/lib/fbl](../kernel/lib/fbl) which is usable only from
     the kernel.
 
-*fbl* provides
+FBL provides:
 
 - utility code
   - [basic algorithms](../system/ulib/fbl/include/fbl/algorithm.h)
@@ -67,33 +71,42 @@ address our particular needs. This library is split into two parts:
   - [singly linked list](../system/ulib/fbl/include/fbl/intrusive_single_list.h)
   - [wavl trees](../system/ulib/fbl/include/fbl/intrusive_wavl_tree.h)
 - smart pointers
-  - [intrusive refcounting mixin](../system/ulib/fbl/include/fbl/ref_counted.h)
-  - [intrusive refcounted pointer](../system/ulib/fbl/include/fbl/ref_ptr.h)
+  - [intrusive refcounted mixin](../system/ulib/fbl/include/fbl/ref_counted.h)
+  - [intrusive refcounting pointer](../system/ulib/fbl/include/fbl/ref_ptr.h)
   - [unique pointer](../system/ulib/fbl/include/fbl/unique_ptr.h)
 - raii utilities
   - [auto call](../system/ulib/fbl/include/fbl/auto_call.h) to run
     code upon leaving scope
   - [AutoLock](../system/ulib/fbl/include/fbl/auto_lock.h)
 
-The standard operator new is assumed to either return valid memory or
-to throw std::bad_alloc. This policy is not suitable for the
-kernel. We also want to dynamically enforce that returns are
-explicitly checked. As such, fbl introduces our own operator new
-overload which takes a reference to an `AllocChecker`. If the status
-of the `AllocChecker` is not queried after the new expression, an
-assertion is raised. This lets us enforce that the return value is
-checked without having to reason about optimizations of the standard
-operator new in the presence of -fno-exceptions and so on.
+FBL has strict controls on memory allocation.  Memory allocation should be
+explicit, using an AllocChecker to let clients recover from allocation
+failures.  In some cases, implicit memory allocation is permitted, but
+functions that implicitly allocate memory must be #ifdef'ed to be unavailable
+in the kernel.
 
-## zx
+FBL not available outside the Fuchsia Source Tree.
 
-We have built a minimal C++ library around the various Zircon
-[objects](objects) and [syscalls](syscalls.md) called
-[`zx`](../system/ulib/zx/README.md). `zx` is a minimal layer on top of
-`zx_handle_t` and the system calls, to provide handles with type
-safety and ownership semantics.
+## ZX
 
-## zxcpp
+ZX contains C++ wrappers for the Zircon [objects](objects) and
+[syscalls](syscalls.md).  These wrappers provide type safety and move semantics
+for handles but offer no opinion beyond what's in syscalls.abigen.  At some
+point in the future, we might autogenerate ZX from syscalls.abigen, similar to
+how we autogenerate the syscall wrappers in other languages.
+
+ZX is part of the Fuchsia SDK.
+
+## FZL
+
+FZL is the Fuchsia Zircon Library.  This library provides value-add for common
+operations involving kernel objects and is free to have opinions about how to
+interact with the Zircon syscalls.  If a piece of code has no dependency on
+Zircon syscalls, the code should go in FBL instead.
+
+FZL not available outside the Fuchsia Source Tree.
+
+## ZXCPP
 
 Some of our code runs in an environment which cannot include the
 standard C++ runtime environment. This environment includes symbols
