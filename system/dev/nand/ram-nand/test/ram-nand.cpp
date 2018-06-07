@@ -16,6 +16,7 @@
 namespace {
 
 const int kPageSize = 4096;
+const int kOobSize = 4;
 const int kBlockSize = 4;
 const int kNumBlocks = 5;
 const int kNumPages = kBlockSize * kNumBlocks;
@@ -40,7 +41,7 @@ bool TrivialLifetimeTest() {
 }
 
 fbl::unique_ptr<NandDevice> CreateDevice(size_t* operation_size) {
-    NandParams params(kPageSize, kBlockSize, kNumBlocks, 6, 4);  // 6 bits of ECC, 4 OOB bytes.
+    NandParams params(kPageSize, kBlockSize, kNumBlocks, 6, kOobSize);  // 6 bits of ECC.
     fbl::AllocChecker checker;
     fbl::unique_ptr<NandDevice> device(new (&checker) NandDevice(params));
     if (!checker.check()) {
@@ -143,7 +144,8 @@ class Operation {
     char* buffer() const { return mapped_addr_; }
 
     // Creates a vmo and sets the handle on the nand_op_t.
-    bool SetVmo();
+    bool SetDataVmo();
+    bool SetOobVmo();
 
     nand_op_t* GetOperation();
 
@@ -165,18 +167,27 @@ class Operation {
     NandTest* test_;
     zx_status_t status_ = ZX_ERR_ACCESS_DENIED;
     bool completed_ = false;
-    static constexpr size_t buffer_size_ = kPageSize * kNumPages;
+    static constexpr size_t buffer_size_ = (kPageSize + kOobSize) * kNumPages;
     fbl::unique_ptr<char[]> raw_buffer_;
     DISALLOW_COPY_ASSIGN_AND_MOVE(Operation);
 };
 
-bool Operation::SetVmo() {
+bool Operation::SetDataVmo() {
     nand_op_t* operation = GetOperation();
     if (!operation) {
         return false;
     }
-    operation->rw.vmo = GetVmo();
-    return operation->rw.vmo != ZX_HANDLE_INVALID;
+    operation->rw.data_vmo = GetVmo();
+    return operation->rw.data_vmo != ZX_HANDLE_INVALID;
+}
+
+bool Operation::SetOobVmo() {
+    nand_op_t* operation = GetOperation();
+    if (!operation) {
+        return false;
+    }
+    operation->rw.oob_vmo = GetVmo();
+    return operation->rw.oob_vmo != ZX_HANDLE_INVALID;
 }
 
 nand_op_t* Operation::GetOperation() {
@@ -270,7 +281,7 @@ bool QueueOneTest() {
     nand_op_t* op = operation.GetOperation();
     ASSERT_TRUE(op);
 
-    op->rw.command = NAND_OP_WRITE_DATA;
+    op->rw.command = NAND_OP_WRITE;
     op->completion_cb = &NandTest::CompletionCb;
     device->Queue(op);
 
@@ -287,7 +298,7 @@ bool QueueOneTest() {
     ASSERT_TRUE(test.Wait());
     ASSERT_EQ(ZX_ERR_OUT_OF_RANGE, operation.status());
 
-    ASSERT_TRUE(operation.SetVmo());
+    ASSERT_TRUE(operation.SetDataVmo());
 
     op->rw.offset_nand = kNumPages - 1;
     device->Queue(op);
@@ -312,7 +323,7 @@ bool CheckPattern(uint8_t what, int start, int num_pages, const Operation& opera
 // Prepares the operation to write num_pages starting at offset.
 void SetForWrite(int offset, int num_pages, Operation* operation) {
     nand_op_t* op = operation->GetOperation();
-    op->rw.command = NAND_OP_WRITE_DATA;
+    op->rw.command = NAND_OP_WRITE;
     op->rw.length = num_pages;
     op->rw.offset_nand = offset;
     op->completion_cb = &NandTest::CompletionCb;
@@ -321,7 +332,7 @@ void SetForWrite(int offset, int num_pages, Operation* operation) {
 // Prepares the operation to read num_pages starting at offset.
 void SetForRead(int offset, int num_pages, Operation* operation) {
     nand_op_t* op = operation->GetOperation();
-    op->rw.command = NAND_OP_READ_DATA;
+    op->rw.command = NAND_OP_READ;
     op->rw.length = num_pages;
     op->rw.offset_nand = offset;
     op->completion_cb = &NandTest::CompletionCb;
@@ -336,7 +347,7 @@ bool ReadWriteTest() {
 
     NandTest test;
     Operation operation(op_size, &test);
-    ASSERT_TRUE(operation.SetVmo());
+    ASSERT_TRUE(operation.SetDataVmo());
     memset(operation.buffer(), 0x55, operation.buffer_size());
 
     nand_op_t* op = operation.GetOperation();
@@ -349,7 +360,7 @@ bool ReadWriteTest() {
     ASSERT_EQ(ZX_OK, operation.status());
     ASSERT_EQ(125, op->rw.corrected_bit_flips);  // Doesn't modify the value.
 
-    op->rw.command = NAND_OP_READ_DATA;
+    op->rw.command = NAND_OP_READ;
     memset(operation.buffer(), 0, operation.buffer_size());
 
     device->Queue(op);
@@ -371,13 +382,15 @@ bool NewChipTest() {
 
     NandTest test;
     Operation operation(op_size, &test);
-    ASSERT_TRUE(operation.SetVmo());
+    ASSERT_TRUE(operation.SetDataVmo());
+    ASSERT_TRUE(operation.SetOobVmo());
     memset(operation.buffer(), 0x55, operation.buffer_size());
 
     nand_op_t* op = operation.GetOperation();
     op->rw.corrected_bit_flips = 125;
 
     SetForRead(0, kNumPages, &operation);
+    op->rw.offset_oob_vmo = kNumPages;
     device->Queue(op);
 
     ASSERT_TRUE(test.Wait());
@@ -386,7 +399,11 @@ bool NewChipTest() {
 
     ASSERT_TRUE(CheckPattern(0xff, 0, kNumPages, operation));
 
-    // TODO(rvargas): Verify OOB area.
+    // Verify OOB area.
+    memset(operation.buffer(), 0xff, kOobSize * kNumPages);
+    ASSERT_EQ(0,
+              memcmp(operation.buffer() + kPageSize * kNumPages, operation.buffer(),
+                     kOobSize * kNumPages));
 
     END_TEST;
 }
@@ -406,7 +423,7 @@ bool QueueMultipleTest() {
         operations[i].reset(new (&checker) Operation(op_size, &test));
         ASSERT_TRUE(checker.check());
         Operation& operation = *(operations[i].get());
-        ASSERT_TRUE(operation.SetVmo());
+        ASSERT_TRUE(operation.SetDataVmo());
         memset(operation.buffer(), i + 30, operation.buffer_size());
     }
 
@@ -462,31 +479,31 @@ bool OobLimitsTest() {
     Operation operation(op_size, &test);
 
     nand_op_t* op = operation.GetOperation();
-    op->oob.command = NAND_OP_READ_OOB;
+    op->rw.command = NAND_OP_READ;
     op->completion_cb = &NandTest::CompletionCb;
 
     device->Queue(op);
     ASSERT_TRUE(test.Wait());
     ASSERT_EQ(ZX_ERR_OUT_OF_RANGE, operation.status());
 
-    op->oob.length = 1;
+    op->rw.length = 1;
     device->Queue(op);
     ASSERT_TRUE(test.Wait());
     ASSERT_EQ(ZX_ERR_BAD_HANDLE, operation.status());
 
-    op->oob.page_num = kNumPages;
+    op->rw.offset_nand = kNumPages;
     device->Queue(op);
     ASSERT_TRUE(test.Wait());
     ASSERT_EQ(ZX_ERR_OUT_OF_RANGE, operation.status());
 
-    ASSERT_TRUE(operation.SetVmo());
+    ASSERT_TRUE(operation.SetOobVmo());
 
-    op->oob.page_num = kNumPages - 1;
+    op->rw.offset_nand = kNumPages - 1;
     device->Queue(op);
     ASSERT_TRUE(test.Wait());
     ASSERT_EQ(ZX_OK, operation.status());
 
-    op->oob.length = 5;
+    op->rw.length = 5;
     device->Queue(op);
     ASSERT_TRUE(test.Wait());
     ASSERT_EQ(ZX_ERR_OUT_OF_RANGE, operation.status());
@@ -503,33 +520,77 @@ bool ReadWriteOobTest() {
 
     NandTest test;
     Operation operation(op_size, &test);
-    ASSERT_TRUE(operation.SetVmo());
+    ASSERT_TRUE(operation.SetOobVmo());
 
-    const char desired[4] = { 'a', 'b', 'c', 'd' };
-    memcpy(operation.buffer(), desired, sizeof(desired));
+    const char desired[kOobSize] = { 'a', 'b', 'c', 'd' };
+    memcpy(operation.buffer(), desired, kOobSize);
 
     nand_op_t* op = operation.GetOperation();
-    op->oob.corrected_bit_flips = 125;
+    op->rw.corrected_bit_flips = 125;
 
-    op->oob.command = NAND_OP_WRITE_OOB;
-    op->oob.length = sizeof(desired);
-    op->oob.page_num = 2;
-    op->completion_cb = &NandTest::CompletionCb;
+    SetForWrite(2, 1, &operation);
     device->Queue(op);
 
     ASSERT_TRUE(test.Wait());
     ASSERT_EQ(ZX_OK, operation.status());
-    ASSERT_EQ(125, op->oob.corrected_bit_flips);  // Doesn't modify the value.
+    ASSERT_EQ(125, op->rw.corrected_bit_flips);  // Doesn't modify the value.
 
-    op->oob.command = NAND_OP_READ_OOB;
-    memset(operation.buffer(), 0, sizeof(desired));
+    op->rw.command = NAND_OP_READ;
+    op->rw.length = 2;
+    op->rw.offset_nand = 1;
+    memset(operation.buffer(), 0, kOobSize * 2);
 
     device->Queue(op);
     ASSERT_TRUE(test.Wait());
     ASSERT_EQ(ZX_OK, operation.status());
-    ASSERT_EQ(0, op->oob.corrected_bit_flips);
+    ASSERT_EQ(0, op->rw.corrected_bit_flips);
 
-    ASSERT_EQ(0, memcmp(operation.buffer(), desired, sizeof(desired)));
+    // The "second page" has the data of interest.
+    ASSERT_EQ(0, memcmp(operation.buffer() + kOobSize, desired, kOobSize));
+
+    END_TEST;
+}
+
+bool ReadWriteDataAndOobTest() {
+    BEGIN_TEST;
+
+    size_t op_size;
+    fbl::unique_ptr<NandDevice> device = CreateDevice(&op_size);
+    ASSERT_TRUE(device);
+
+    NandTest test;
+    Operation operation(op_size, &test);
+    ASSERT_TRUE(operation.SetDataVmo());
+    ASSERT_TRUE(operation.SetOobVmo());
+
+    memset(operation.buffer(), 0x55, kPageSize * 2);
+    memset(operation.buffer() + kPageSize * 2, 0xaa, kOobSize * 2);
+
+    nand_op_t* op = operation.GetOperation();
+    op->rw.corrected_bit_flips = 125;
+
+    SetForWrite(2, 2, &operation);
+    op->rw.offset_oob_vmo = 2;  // OOB is right after data.
+    device->Queue(op);
+
+    ASSERT_TRUE(test.Wait());
+    ASSERT_EQ(ZX_OK, operation.status());
+    ASSERT_EQ(125, op->rw.corrected_bit_flips);  // Doesn't modify the value.
+
+    op->rw.command = NAND_OP_READ;
+    memset(operation.buffer(), 0, kPageSize * 4);
+
+    device->Queue(op);
+    ASSERT_TRUE(test.Wait());
+    ASSERT_EQ(ZX_OK, operation.status());
+    ASSERT_EQ(0, op->rw.corrected_bit_flips);
+
+    // Verify data.
+    ASSERT_TRUE(CheckPattern(0x55, 0, 2, operation));
+
+    // Verify OOB.
+    memset(operation.buffer(), 0xaa, kPageSize);
+    ASSERT_EQ(0, memcmp(operation.buffer() + kPageSize * 2, operation.buffer(), kOobSize * 2));
 
     END_TEST;
 }
@@ -543,7 +604,7 @@ bool EraseLimitsTest() {
 
     NandTest test;
     Operation operation(op_size, &test);
-    ASSERT_TRUE(operation.SetVmo());
+    ASSERT_TRUE(operation.SetDataVmo());
 
     nand_op_t* op = operation.GetOperation();
     op->erase.command = NAND_OP_ERASE;
@@ -577,7 +638,6 @@ bool EraseTest() {
 
     NandTest test;
     Operation operation(op_size, &test);
-    ASSERT_TRUE(operation.SetVmo());
 
     nand_op_t* op = operation.GetOperation();
     op->erase.command = NAND_OP_ERASE;
@@ -589,18 +649,22 @@ bool EraseTest() {
     ASSERT_TRUE(test.Wait());
     ASSERT_EQ(ZX_OK, operation.status());
 
-    SetForRead(12, 4, &operation);
-    ASSERT_TRUE(operation.SetVmo());
+    memset(op, 0, sizeof(*op));
+    SetForRead(0, kNumPages, &operation);
+    ASSERT_TRUE(operation.SetDataVmo());
+    ASSERT_TRUE(operation.SetOobVmo());
+    op->rw.offset_oob_vmo = kNumPages;
     device->Queue(op);
-    ASSERT_TRUE(test.Wait());
-    ASSERT_EQ(ZX_OK, operation.status());
-    ASSERT_TRUE(CheckPattern(0xff, 0, 4, operation));
 
-    SetForRead(16, 4, &operation);
-    device->Queue(op);
     ASSERT_TRUE(test.Wait());
     ASSERT_EQ(ZX_OK, operation.status());
-    ASSERT_TRUE(CheckPattern(0xff, 0, 4, operation));
+    ASSERT_TRUE(CheckPattern(0xff, 0, kNumPages, operation));
+
+    // Verify OOB area.
+    memset(operation.buffer(), 0xff, kOobSize * kNumPages);
+    ASSERT_EQ(0,
+              memcmp(operation.buffer() + kPageSize * kNumPages, operation.buffer(),
+                     kOobSize * kNumPages));
 
     END_TEST;
 }
@@ -618,6 +682,7 @@ RUN_TEST_SMALL(ReadWriteTest)
 RUN_TEST_SMALL(QueueMultipleTest)
 RUN_TEST_SMALL(OobLimitsTest)
 RUN_TEST_SMALL(ReadWriteOobTest)
+RUN_TEST_SMALL(ReadWriteDataAndOobTest)
 RUN_TEST_SMALL(EraseLimitsTest)
 RUN_TEST_SMALL(EraseTest)
 END_TEST_CASE(RamNandTests)
