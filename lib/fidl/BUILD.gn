@@ -134,9 +134,9 @@ source_set("message_receiver_client") {
 
 fidl("app_client_unittest_fidl") {
   testonly = true
-
-  name = "modular_test"
   cpp_legacy_callbacks = true
+
+  name = "test.peridot.lib.fidl.appclient"
 
   sources = [
     "app_client_unittest.fidl",

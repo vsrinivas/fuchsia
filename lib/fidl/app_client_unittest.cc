@@ -5,7 +5,7 @@
 #include "peridot/lib/fidl/app_client.h"
 
 #include <fuchsia/sys/cpp/fidl.h>
-#include <modular_test/cpp/fidl.h>
+#include <test/peridot/lib/fidl/appclient/cpp/fidl.h>
 #include "gtest/gtest.h"
 #include "lib/gtest/test_with_message_loop.h"
 #include "peridot/lib/testing/fake_launcher.h"
@@ -13,6 +13,8 @@
 namespace modular {
 namespace testing {
 namespace {
+
+using ::test::peridot::lib::fidl::appclient::TerminateService;
 
 constexpr char kServiceName[] = "service1";
 constexpr char kTestUrl[] = "some/test/url";
@@ -110,8 +112,7 @@ TEST_F(AppClientTest, Run_Success) {
         callback_called = true;
       });
 
-  AppClient<modular_test::TerminateService> app_client(&launcher,
-                                                       GetTestAppConfig());
+  AppClient<TerminateService> app_client(&launcher, GetTestAppConfig());
 
   EXPECT_TRUE(callback_called);
 }
@@ -136,7 +137,7 @@ TEST_F(AppClientTest, RunWithParams_Success) {
         callback_called = true;
       });
 
-  AppClient<modular_test::TerminateService> app_client(
+  AppClient<TerminateService> app_client(
       &launcher, GetTestAppConfig(), "", std::move(additional_services));
 
   EXPECT_TRUE(callback_called);
