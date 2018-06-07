@@ -14,7 +14,7 @@
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/ui/views_v1/cpp/fidl.h>
 #include <fuchsia/ui/views_v1_token/cpp/fidl.h>
-#include <modular_auth/cpp/fidl.h>
+#include <fuchsia/modular/auth/cpp/fidl.h>
 #include <fuchsia/ui/policy/cpp/fidl.h>
 #include "lib/app/cpp/startup_context.h"
 #include "lib/fidl/cpp/array.h"
@@ -188,7 +188,7 @@ class Settings {
 };
 
 class DeviceRunnerApp : DeviceShellContext,
-                        modular_auth::AccountProviderContext {
+                        fuchsia::modular::auth::AccountProviderContext {
  public:
   explicit DeviceRunnerApp(
       const Settings& settings,
@@ -281,7 +281,7 @@ class DeviceRunnerApp : DeviceShellContext,
     // 3. Start OAuth Token Manager App.
     AppConfig token_manager_config;
     token_manager_config.url = settings_.account_provider.url;
-    token_manager_ = std::make_unique<AppClient<modular_auth::AccountProvider>>(
+    token_manager_ = std::make_unique<AppClient<fuchsia::modular::auth::AccountProvider>>(
         context_->launcher().get(), std::move(token_manager_config),
         "/data/modular/ACCOUNT_MANAGER");
     token_manager_->SetAppErrorHandler([] {
@@ -336,7 +336,7 @@ class DeviceRunnerApp : DeviceShellContext,
   // |AccountProviderContext|
   void GetAuthenticationContext(
       fidl::StringPtr account_id,
-      fidl::InterfaceRequest<modular_auth::AuthenticationContext> request)
+      fidl::InterfaceRequest<fuchsia::modular::auth::AuthenticationContext> request)
       override {
     device_shell_->GetAuthenticationContext(account_id, std::move(request));
   }
@@ -349,10 +349,10 @@ class DeviceRunnerApp : DeviceShellContext,
   std::function<void()> on_shutdown_;
 
   fidl::Binding<DeviceShellContext> device_shell_context_binding_;
-  fidl::Binding<modular_auth::AccountProviderContext>
+  fidl::Binding<fuchsia::modular::auth::AccountProviderContext>
       account_provider_context_binding_;
 
-  std::unique_ptr<AppClient<modular_auth::AccountProvider>> token_manager_;
+  std::unique_ptr<AppClient<fuchsia::modular::auth::AccountProvider>> token_manager_;
   std::unique_ptr<AppClient<Lifecycle>> device_shell_app_;
   DeviceShellPtr device_shell_;
 

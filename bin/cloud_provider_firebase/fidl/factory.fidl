@@ -22,7 +22,7 @@ interface Factory {
   // |token_provider| is used to get the appropriate auth tokens
   //     associated with user for whom the cloud provider is running.
   1: GetCloudProvider(Config config,
-                      modular_auth.TokenProvider token_provider,
+                      fuchsia.modular.auth.TokenProvider token_provider,
                       request<fuchsia.ledger.cloud.CloudProvider> cloud_provider)
       -> (fuchsia.ledger.cloud.Status @status);
 };

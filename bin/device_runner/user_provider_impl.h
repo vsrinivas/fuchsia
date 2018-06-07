@@ -6,7 +6,7 @@
 #define PERIDOT_BIN_DEVICE_RUNNER_USER_PROVIDER_IMPL_H_
 
 #include <fuchsia/modular/cpp/fidl.h>
-#include <modular_auth/cpp/fidl.h>
+#include <fuchsia/modular/auth/cpp/fidl.h>
 #include "lib/app/cpp/startup_context.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fidl/cpp/interface_request.h"
@@ -23,7 +23,7 @@ class UserProviderImpl : UserProvider {
                    const AppConfig& user_runner,
                    const AppConfig& default_user_shell,
                    const AppConfig& story_shell,
-                   modular_auth::AccountProvider* account_provider);
+                   fuchsia::modular::auth::AccountProvider* account_provider);
 
   void Connect(fidl::InterfaceRequest<UserProvider> request);
 
@@ -37,7 +37,7 @@ class UserProviderImpl : UserProvider {
   void PreviousUsers(PreviousUsersCallback callback) override;
 
   // |UserProvider|
-  void AddUser(modular_auth::IdentityProvider identity_provider,
+  void AddUser(fuchsia::modular::auth::IdentityProvider identity_provider,
                AddUserCallback callback) override;
 
   // |UserProvider|
@@ -47,7 +47,7 @@ class UserProviderImpl : UserProvider {
   bool WriteUsersDb(const std::string& serialized_users, std::string* error);
   bool Parse(const std::string& serialized_users);
 
-  void LoginInternal(modular_auth::AccountPtr account, UserLoginParams params);
+  void LoginInternal(fuchsia::modular::auth::AccountPtr account, UserLoginParams params);
 
   fidl::BindingSet<UserProvider> bindings_;
 
@@ -55,7 +55,7 @@ class UserProviderImpl : UserProvider {
   const AppConfig& user_runner_;         // Neither owned nor copied.
   const AppConfig& default_user_shell_;  // Neither owned nor copied.
   const AppConfig& story_shell_;         // Neither owned nor copied.
-  modular_auth::AccountProvider* const account_provider_;
+  fuchsia::modular::auth::AccountProvider* const account_provider_;
 
   std::string serialized_users_;
   const fuchsia::modular::UsersStorage* users_storage_ = nullptr;

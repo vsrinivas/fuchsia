@@ -8,7 +8,7 @@
 #include <fuchsia/ledger/cloud/cpp/fidl.h>
 #include <fuchsia/ledger/cloud/firebase/cpp/fidl.h>
 #include <lib/async/dispatcher.h>
-#include <modular_auth/cpp/fidl.h>
+#include <fuchsia/modular/auth/cpp/fidl.h>
 
 #include "lib/callback/auto_cleanable.h"
 #include "lib/callback/cancellable.h"
@@ -30,7 +30,7 @@ class FactoryImpl : public Factory {
   // Factory:
   void GetCloudProvider(
       Config config,
-      fidl::InterfaceHandle<modular_auth::TokenProvider> token_provider,
+      fidl::InterfaceHandle<fuchsia::modular::auth::TokenProvider> token_provider,
       fidl::InterfaceRequest<cloud_provider::CloudProvider> cloud_provider,
       GetCloudProviderCallback callback) override;
 

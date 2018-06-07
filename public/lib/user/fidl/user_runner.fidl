@@ -11,10 +11,10 @@ library fuchsia.modular.internal;
 interface UserRunner {
   // Launches a user runner instance for a user identified by |user_id|.
   // TODO(alhaad): Fold paramters into |UserContext|.
-  1: Initialize(modular_auth.Account? account,
+  1: Initialize(fuchsia.modular.auth.Account? account,
                fuchsia.modular.AppConfig user_shell,
                fuchsia.modular.AppConfig story_shell,
-               modular_auth.TokenProviderFactory token_provider_factory,
+               fuchsia.modular.auth.TokenProviderFactory token_provider_factory,
                UserContext user_context,
                request<fuchsia.ui.views_v1_token.ViewOwner>? view_owner);
 

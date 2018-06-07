@@ -7,7 +7,7 @@
 
 #include <fuchsia/ledger/cloud/cpp/fidl.h>
 #include <fuchsia/ledger/cloud/firebase/cpp/fidl.h>
-#include <modular_auth/cpp/fidl.h>
+#include <fuchsia/modular/auth/cpp/fidl.h>
 
 #include "lib/callback/auto_cleanable.h"
 #include "lib/callback/cancellable.h"

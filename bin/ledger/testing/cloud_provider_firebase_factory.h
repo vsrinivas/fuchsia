@@ -41,7 +41,7 @@ class CloudProviderFirebaseFactory {
   // Thread used to run the fake token manager on.
   async::Loop loop_;
 
-  ledger::fidl_helpers::BoundInterfaceSet<modular_auth::TokenProvider,
+  ledger::fidl_helpers::BoundInterfaceSet<fuchsia::modular::auth::TokenProvider,
                                           firebase_auth::FakeTokenProvider>
       token_provider_;
 

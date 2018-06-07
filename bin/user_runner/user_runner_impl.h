@@ -16,7 +16,7 @@
 #include <fuchsia/modular/internal/cpp/fidl.h>
 #include <fuchsia/ui/policy/cpp/fidl.h>
 #include <fuchsia/ui/views_v1_token/cpp/fidl.h>
-#include <modular_auth/cpp/fidl.h>
+#include <fuchsia/modular/auth/cpp/fidl.h>
 #include <speech/cpp/fidl.h>
 #include "lib/app/cpp/service_provider_impl.h"
 #include "lib/fidl/cpp/binding.h"
@@ -61,9 +61,9 @@ class UserRunnerImpl : modular::internal::UserRunner,
 
  private:
   // |UserRunner|
-  void Initialize(modular_auth::AccountPtr account, AppConfig user_shell,
+  void Initialize(fuchsia::modular::auth::AccountPtr account, AppConfig user_shell,
                   AppConfig story_shell,
-                  fidl::InterfaceHandle<modular_auth::TokenProviderFactory>
+                  fidl::InterfaceHandle<fuchsia::modular::auth::TokenProviderFactory>
                       token_provider_factory,
                   fidl::InterfaceHandle<fuchsia::modular::internal::UserContext>
                       user_context,
@@ -76,8 +76,8 @@ class UserRunnerImpl : modular::internal::UserRunner,
 
   // Sequence of Initialize() broken up into steps for clarity.
   void InitializeUser(
-      modular_auth::AccountPtr account,
-      fidl::InterfaceHandle<modular_auth::TokenProviderFactory>
+      fuchsia::modular::auth::AccountPtr account,
+      fidl::InterfaceHandle<fuchsia::modular::auth::TokenProviderFactory>
           token_provider_factory,
       fidl::InterfaceHandle<fuchsia::modular::internal::UserContext>
           user_context);
@@ -165,7 +165,7 @@ class UserRunnerImpl : modular::internal::UserRunner,
   fidl::BindingSet<fuchsia::modular::internal::UserRunner> bindings_;
   fidl::Binding<UserShellContext> user_shell_context_binding_;
 
-  modular_auth::TokenProviderFactoryPtr token_provider_factory_;
+  fuchsia::modular::auth::TokenProviderFactoryPtr token_provider_factory_;
   modular::internal::UserContextPtr user_context_;
   std::unique_ptr<AppClient<Lifecycle>> cloud_provider_app_;
   fuchsia::ledger::cloud::firebase::FactoryPtr cloud_provider_factory_;
@@ -180,7 +180,7 @@ class UserRunnerImpl : modular::internal::UserRunner,
 
   std::unique_ptr<Scope> user_scope_;
 
-  modular_auth::AccountPtr account_;
+  fuchsia::modular::auth::AccountPtr account_;
 
   std::unique_ptr<AppClient<fuchsia::modular::UserIntelligenceProviderFactory>>
       maxwell_app_;

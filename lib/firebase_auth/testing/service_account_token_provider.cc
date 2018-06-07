@@ -79,9 +79,9 @@ std::string GetHeader() {
       fxl::StringView(string_buffer.GetString(), string_buffer.GetSize()));
 }
 
-modular_auth::AuthErr GetError(modular_auth::Status status,
+fuchsia::modular::auth::AuthErr GetError(fuchsia::modular::auth::Status status,
                                std::string message) {
-  modular_auth::AuthErr error;
+  fuchsia::modular::auth::AuthErr error;
   error.status = status;
   error.message = message;
   return error;
@@ -133,7 +133,7 @@ ServiceAccountTokenProvider::~ServiceAccountTokenProvider() {
   for (const auto& pair : in_progress_callbacks_) {
     ResolveCallbacks(
         pair.first, nullptr,
-        GetError(modular_auth::Status::INTERNAL_ERROR,
+        GetError(fuchsia::modular::auth::Status::INTERNAL_ERROR,
                  "Account provider deleted with requests in flight."));
   }
 }
@@ -182,13 +182,13 @@ void ServiceAccountTokenProvider::GetAccessToken(
     GetAccessTokenCallback callback) {
   FXL_NOTIMPLEMENTED();
   callback(nullptr,
-           GetError(modular_auth::Status::INTERNAL_ERROR, "Not implemented."));
+           GetError(fuchsia::modular::auth::Status::INTERNAL_ERROR, "Not implemented."));
 }
 
 void ServiceAccountTokenProvider::GetIdToken(GetIdTokenCallback callback) {
   FXL_NOTIMPLEMENTED();
   callback(nullptr,
-           GetError(modular_auth::Status::INTERNAL_ERROR, "Not implemented."));
+           GetError(fuchsia::modular::auth::Status::INTERNAL_ERROR, "Not implemented."));
 }
 
 void ServiceAccountTokenProvider::GetFirebaseAuthToken(
@@ -205,7 +205,7 @@ void ServiceAccountTokenProvider::GetFirebaseAuthToken(
     auto& cached_token = cached_tokens_[firebase_api_key];
     if (time(nullptr) < cached_token->expiration_time) {
       callback(GetFirebaseToken(cached_token->id_token),
-               GetError(modular_auth::Status::OK, "OK"));
+               GetError(fuchsia::modular::auth::Status::OK, "OK"));
       return;
     }
 
@@ -217,7 +217,7 @@ void ServiceAccountTokenProvider::GetFirebaseAuthToken(
   std::string custom_token;
   if (!GetCustomToken(&custom_token)) {
     callback(GetFirebaseToken(nullptr),
-             GetError(modular_auth::Status::INTERNAL_ERROR,
+             GetError(fuchsia::modular::auth::Status::INTERNAL_ERROR,
                       "Unable to compute custom authentication token."));
   }
 
@@ -308,9 +308,9 @@ bool ServiceAccountTokenProvider::GetCustomToken(std::string* custom_token) {
   return true;
 }
 
-modular_auth::FirebaseTokenPtr ServiceAccountTokenProvider::GetFirebaseToken(
+fuchsia::modular::auth::FirebaseTokenPtr ServiceAccountTokenProvider::GetFirebaseToken(
     const std::string& id_token) {
-  auto token = modular_auth::FirebaseToken::New();
+  auto token = fuchsia::modular::auth::FirebaseToken::New();
   token->id_token = id_token;
   token->local_id = user_id_;
   token->email = user_id_ + "@example.com";
@@ -372,7 +372,7 @@ void ServiceAccountTokenProvider::HandleIdentityResponse(
     const std::string& api_key, http::URLResponse response) {
   if (response.error) {
     ResolveCallbacks(api_key, nullptr,
-                     GetError(modular_auth::Status::NETWORK_ERROR,
+                     GetError(fuchsia::modular::auth::Status::NETWORK_ERROR,
                               response.error->description));
     return;
   }
@@ -382,7 +382,7 @@ void ServiceAccountTokenProvider::HandleIdentityResponse(
     FXL_DCHECK(response.body->is_sized_buffer());
     if (!fsl::StringFromVmo(response.body->sized_buffer(), &response_body)) {
       ResolveCallbacks(api_key, nullptr,
-                       GetError(modular_auth::Status::INTERNAL_ERROR,
+                       GetError(fuchsia::modular::auth::Status::INTERNAL_ERROR,
                                 "Unable to read from VMO."));
       return;
     }
@@ -391,7 +391,7 @@ void ServiceAccountTokenProvider::HandleIdentityResponse(
   if (response.status_code != 200) {
     ResolveCallbacks(
         api_key, nullptr,
-        GetError(modular_auth::Status::OAUTH_SERVER_ERROR, response_body));
+        GetError(fuchsia::modular::auth::Status::OAUTH_SERVER_ERROR, response_body));
     return;
   }
 
@@ -399,14 +399,14 @@ void ServiceAccountTokenProvider::HandleIdentityResponse(
   document.Parse(response_body.c_str(), response_body.size());
   if (document.HasParseError() || !document.IsObject()) {
     ResolveCallbacks(api_key, nullptr,
-                     GetError(modular_auth::Status::BAD_RESPONSE,
+                     GetError(fuchsia::modular::auth::Status::BAD_RESPONSE,
                               "Unable to parse response: " + response_body));
     return;
   }
 
   if (!ValidateSchema(document, *credentials_->response_schema)) {
     ResolveCallbacks(api_key, nullptr,
-                     GetError(modular_auth::Status::BAD_RESPONSE,
+                     GetError(fuchsia::modular::auth::Status::BAD_RESPONSE,
                               "Malformed response: " + response_body));
     return;
   }
@@ -421,12 +421,12 @@ void ServiceAccountTokenProvider::HandleIdentityResponse(
   const auto& id_token = cached_token->id_token;
   cached_tokens_[api_key] = std::move(cached_token);
   ResolveCallbacks(api_key, GetFirebaseToken(id_token),
-                   GetError(modular_auth::Status::OK, "OK"));
+                   GetError(fuchsia::modular::auth::Status::OK, "OK"));
 }
 
 void ServiceAccountTokenProvider::ResolveCallbacks(
-    const std::string& api_key, modular_auth::FirebaseTokenPtr token,
-    modular_auth::AuthErr error) {
+    const std::string& api_key, fuchsia::modular::auth::FirebaseTokenPtr token,
+    fuchsia::modular::auth::AuthErr error) {
   auto callbacks = std::move(in_progress_callbacks_[api_key]);
   in_progress_callbacks_[api_key].clear();
   for (const auto& callback : callbacks) {

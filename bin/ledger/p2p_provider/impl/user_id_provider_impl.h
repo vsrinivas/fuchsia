@@ -7,7 +7,7 @@
 
 #include <string>
 
-#include <modular_auth/cpp/fidl.h>
+#include <fuchsia/modular/auth/cpp/fidl.h>
 
 #include "peridot/bin/ledger/environment/environment.h"
 #include "peridot/bin/ledger/filesystem/detached_path.h"
@@ -20,7 +20,7 @@ class UserIdProviderImpl : public UserIdProvider {
  public:
   UserIdProviderImpl(ledger::Environment* environment,
                      ledger::DetachedPath user_directory,
-                     modular_auth::TokenProviderPtr token_provider_ptr);
+                     fuchsia::modular::auth::TokenProviderPtr token_provider_ptr);
 
   void GetUserId(std::function<void(Status, std::string)> callback) override;
 

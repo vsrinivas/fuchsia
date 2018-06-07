@@ -11,7 +11,7 @@
 
 namespace firebase_auth {
 TestTokenProvider::TestTokenProvider(async_t* async) : async_(async) {
-  error_to_return.status = modular_auth::Status::OK;
+  error_to_return.status = fuchsia::modular::auth::Status::OK;
   error_to_return.message = "";
 }
 
@@ -28,9 +28,9 @@ void TestTokenProvider::GetIdToken(GetIdTokenCallback /*callback*/) {
 void TestTokenProvider::GetFirebaseAuthToken(
     fidl::StringPtr /*firebase_api_key*/,
     GetFirebaseAuthTokenCallback callback) {
-  modular_auth::FirebaseTokenPtr token_to_return_copy;
+  fuchsia::modular::auth::FirebaseTokenPtr token_to_return_copy;
   fidl::Clone(token_to_return, &token_to_return_copy);
-  modular_auth::AuthErr error_to_return_copy;
+  fuchsia::modular::auth::AuthErr error_to_return_copy;
   fidl::Clone(error_to_return, &error_to_return_copy);
   async::PostTask(async_, fxl::MakeCopyable(
       [token_to_return = std::move(token_to_return_copy),
@@ -46,7 +46,7 @@ void TestTokenProvider::GetClientId(GetClientIdCallback /*callback*/) {
 void TestTokenProvider::Set(std::string id_token,
                             std::string local_id,
                             std::string email) {
-  token_to_return = modular_auth::FirebaseToken::New();
+  token_to_return = fuchsia::modular::auth::FirebaseToken::New();
   token_to_return->id_token = id_token;
   token_to_return->local_id = local_id;
   token_to_return->email = email;

@@ -7,7 +7,7 @@
 
 #include <functional>
 
-#include <modular_auth/cpp/fidl.h>
+#include <fuchsia/modular/auth/cpp/fidl.h>
 #include "lib/fxl/macros.h"
 
 namespace firebase_auth {
@@ -18,7 +18,7 @@ namespace firebase_auth {
 // construction time.
 //
 // Other token values are set to dummy const values.
-class FakeTokenProvider : public modular_auth::TokenProvider {
+class FakeTokenProvider : public fuchsia::modular::auth::TokenProvider {
  public:
   FakeTokenProvider();
   ~FakeTokenProvider() override {}

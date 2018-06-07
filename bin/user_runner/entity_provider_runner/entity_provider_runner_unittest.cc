@@ -9,7 +9,7 @@
 
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
-#include <modular_auth/cpp/fidl.h>
+#include <fuchsia/modular/auth/cpp/fidl.h>
 #include "gtest/gtest.h"
 #include "lib/agent/cpp/agent_impl.h"
 #include "lib/app/cpp/connect.h"
@@ -90,7 +90,7 @@ class EntityProviderRunnerTest : public TestWithLedger, EntityProviderLauncher {
   std::unique_ptr<EntityProviderRunner> entity_provider_runner_;
   std::unique_ptr<AgentRunner> agent_runner_;
 
-  modular_auth::TokenProviderFactoryPtr token_provider_factory_;
+  fuchsia::modular::auth::TokenProviderFactoryPtr token_provider_factory_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(EntityProviderRunnerTest);
 };

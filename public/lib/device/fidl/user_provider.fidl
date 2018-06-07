@@ -20,8 +20,8 @@ interface UserProvider {
   //
   // |account| is NULL if there was an error during identification and
   // |error_code| is set.
-  1: AddUser(modular_auth.IdentityProvider identity_provider) ->
-      (modular_auth.Account? account, string? error_code);
+  1: AddUser(fuchsia.modular.auth.IdentityProvider identity_provider) ->
+      (fuchsia.modular.auth.Account? account, string? error_code);
 
   // Removes information of a user from the local user database.
   //
@@ -36,7 +36,7 @@ interface UserProvider {
   3: Login(UserLoginParams user_login_params);
 
   // List of all users who have authenticated to this device in the past.
-  4: PreviousUsers() -> (vector<modular_auth.Account> accounts);
+  4: PreviousUsers() -> (vector<fuchsia.modular.auth.Account> accounts);
 };
 
 // Used to specify arguments to log into a user session.

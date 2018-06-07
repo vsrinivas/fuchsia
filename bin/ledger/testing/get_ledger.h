@@ -11,7 +11,7 @@
 #include <fuchsia/ledger/cloud/cpp/fidl.h>
 
 #include <lib/async-loop/cpp/loop.h>
-#include <modular_auth/cpp/fidl.h>
+#include <fuchsia/modular/auth/cpp/fidl.h>
 
 #include "lib/app/cpp/startup_context.h"
 #include "lib/fxl/functional/closure.h"

@@ -7,7 +7,7 @@
 
 #include <map>
 
-#include <modular_auth/cpp/fidl.h>
+#include <fuchsia/modular/auth/cpp/fidl.h>
 #include "lib/callback/cancellable.h"
 #include "lib/network_wrapper/network_wrapper.h"
 
@@ -26,7 +26,7 @@ namespace service_account {
 // Console and click on the 'Generate new private key' button. This JSON file
 // must be available on the device, and its path must be passed to the
 // LoadCredentials() method to initialize this class.
-class ServiceAccountTokenProvider : public modular_auth::TokenProvider {
+class ServiceAccountTokenProvider : public fuchsia::modular::auth::TokenProvider {
  public:
   ServiceAccountTokenProvider(network_wrapper::NetworkWrapper* network_wrapper,
                               std::string user_id);
@@ -39,7 +39,7 @@ class ServiceAccountTokenProvider : public modular_auth::TokenProvider {
   // the firebase admin console (see the class-level comment).
   bool LoadCredentials(const std::string& json_file);
 
-  // modular_auth::TokenProvider:
+  // fuchsia::modular::auth::TokenProvider:
   void GetAccessToken(GetAccessTokenCallback callback) override;
   void GetIdToken(GetIdTokenCallback callback) override;
   void GetFirebaseAuthToken(fidl::StringPtr firebase_api_key,
@@ -52,15 +52,15 @@ class ServiceAccountTokenProvider : public modular_auth::TokenProvider {
 
   std::string GetClaims();
   bool GetCustomToken(std::string* custom_token);
-  modular_auth::FirebaseTokenPtr GetFirebaseToken(const std::string& id_token);
+  fuchsia::modular::auth::FirebaseTokenPtr GetFirebaseToken(const std::string& id_token);
   ::fuchsia::net::oldhttp::URLRequest GetIdentityRequest(
       const std::string& api_key, const std::string& custom_token);
   std::string GetIdentityRequestBody(const std::string& custom_token);
   void HandleIdentityResponse(const std::string& api_key,
                               ::fuchsia::net::oldhttp::URLResponse response);
   void ResolveCallbacks(const std::string& api_key,
-                        modular_auth::FirebaseTokenPtr token,
-                        modular_auth::AuthErr error);
+                        fuchsia::modular::auth::FirebaseTokenPtr token,
+                        fuchsia::modular::auth::AuthErr error);
 
   network_wrapper::NetworkWrapper* network_wrapper_;
   const std::string user_id_;

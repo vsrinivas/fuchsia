@@ -16,7 +16,7 @@ constexpr fxl::StringView user_id_filename = "p2p_user_id";
 
 UserIdProviderImpl::UserIdProviderImpl(
     ledger::Environment* environment, ledger::DetachedPath user_directory,
-    modular_auth::TokenProviderPtr token_provider_ptr)
+    fuchsia::modular::auth::TokenProviderPtr token_provider_ptr)
     : user_id_path_(user_directory.SubPath(user_id_filename)) {
   firebase_auth_ = std::make_unique<firebase_auth::FirebaseAuthImpl>(
       environment->async(), fuchsia::modular::kFirebaseApiKey,

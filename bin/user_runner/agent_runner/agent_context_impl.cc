@@ -244,7 +244,7 @@ void AgentContextImpl::GetComponentContext(
 }
 
 void AgentContextImpl::GetTokenProvider(
-    fidl::InterfaceRequest<modular_auth::TokenProvider> request) {
+    fidl::InterfaceRequest<fuchsia::modular::auth::TokenProvider> request) {
   token_provider_factory_->GetTokenProvider(url_, std::move(request));
 }
 

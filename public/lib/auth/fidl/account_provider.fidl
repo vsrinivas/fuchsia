@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-library modular_auth;
+library fuchsia.modular.auth;
 
 // An interface that allows the Framework to talk to the token manager service
 // to add new accounts or be able to get a |TokenProviderFactory| that can be

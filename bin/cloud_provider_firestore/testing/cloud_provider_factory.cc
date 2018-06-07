@@ -28,7 +28,7 @@ class CloudProviderFactory::TokenProviderContainer {
   TokenProviderContainer(
       fuchsia::sys::StartupContext* startup_context, async_t* async,
       std::string credentials_path,
-      fidl::InterfaceRequest<modular_auth::TokenProvider> request)
+      fidl::InterfaceRequest<fuchsia::modular::auth::TokenProvider> request)
       : startup_context_(startup_context),
         network_wrapper_(
             async, std::make_unique<backoff::ExponentialBackoff>(),
@@ -52,7 +52,7 @@ class CloudProviderFactory::TokenProviderContainer {
   fuchsia::sys::StartupContext* const startup_context_;
   network_wrapper::NetworkWrapperImpl network_wrapper_;
   service_account::ServiceAccountTokenProvider token_provider_;
-  fidl::Binding<modular_auth::TokenProvider> binding_;
+  fidl::Binding<fuchsia::modular::auth::TokenProvider> binding_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(TokenProviderContainer);
 };
@@ -82,7 +82,7 @@ void CloudProviderFactory::MakeCloudProvider(
     FXL_LOG(WARNING) << "Empty Firebase API key - this can possibly work "
                      << "only with unauthenticated server instances.";
   }
-  modular_auth::TokenProviderPtr token_provider;
+  fuchsia::modular::auth::TokenProviderPtr token_provider;
   async::PostTask(services_loop_.async(),
                   fxl::MakeCopyable(
                       [this, request = token_provider.NewRequest()]() mutable {

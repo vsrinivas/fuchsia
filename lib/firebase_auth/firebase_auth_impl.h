@@ -10,7 +10,7 @@
 #include <string>
 
 #include <lib/async/dispatcher.h>
-#include <modular_auth/cpp/fidl.h>
+#include <fuchsia/modular/auth/cpp/fidl.h>
 
 #include "lib/backoff/backoff.h"
 #include "lib/callback/cancellable.h"
@@ -33,10 +33,10 @@ namespace firebase_auth {
 class FirebaseAuthImpl : public FirebaseAuth {
  public:
   FirebaseAuthImpl(async_t* async, std::string api_key,
-                   modular_auth::TokenProviderPtr token_provider,
+                   fuchsia::modular::auth::TokenProviderPtr token_provider,
                    std::unique_ptr<backoff::Backoff> backoff);
   FirebaseAuthImpl(async_t* async, std::string api_key,
-                   modular_auth::TokenProviderPtr token_provider,
+                   fuchsia::modular::auth::TokenProviderPtr token_provider,
                    std::unique_ptr<backoff::Backoff> backoff, int max_retries);
 
   // FirebaseAuth:
@@ -56,11 +56,11 @@ class FirebaseAuthImpl : public FirebaseAuth {
   // errors.
   void GetToken(int max_retries,
                 std::function<void(firebase_auth::AuthStatus,
-                                   modular_auth::FirebaseTokenPtr)>
+                                   fuchsia::modular::auth::FirebaseTokenPtr)>
                     callback);
 
   const std::string api_key_;
-  modular_auth::TokenProviderPtr token_provider_;
+  fuchsia::modular::auth::TokenProviderPtr token_provider_;
   const std::unique_ptr<backoff::Backoff> backoff_;
   const int max_retries_;
 

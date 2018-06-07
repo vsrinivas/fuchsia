@@ -78,7 +78,7 @@ fuchsia::ledger::cloud::firebase::Config GetLedgerFirebaseConfig() {
   return firebase_config;
 }
 
-std::string GetAccountId(const modular_auth::AccountPtr& account) {
+std::string GetAccountId(const fuchsia::modular::auth::AccountPtr& account) {
   return !account ? "GUEST" : account->id;
 }
 
@@ -170,9 +170,9 @@ UserRunnerImpl::UserRunnerImpl(fuchsia::sys::StartupContext* const startup_conte
 UserRunnerImpl::~UserRunnerImpl() = default;
 
 void UserRunnerImpl::Initialize(
-    modular_auth::AccountPtr account, AppConfig user_shell,
+    fuchsia::modular::auth::AccountPtr account, AppConfig user_shell,
     AppConfig story_shell,
-    fidl::InterfaceHandle<modular_auth::TokenProviderFactory>
+    fidl::InterfaceHandle<fuchsia::modular::auth::TokenProviderFactory>
         token_provider_factory,
     fidl::InterfaceHandle<fuchsia::modular::internal::UserContext> user_context,
     fidl::InterfaceRequest<fuchsia::ui::views_v1_token::ViewOwner>
@@ -191,8 +191,8 @@ void UserRunnerImpl::Initialize(
 }
 
 void UserRunnerImpl::InitializeUser(
-    modular_auth::AccountPtr account,
-    fidl::InterfaceHandle<modular_auth::TokenProviderFactory>
+    fuchsia::modular::auth::AccountPtr account,
+    fidl::InterfaceHandle<fuchsia::modular::auth::TokenProviderFactory>
         token_provider_factory,
     fidl::InterfaceHandle<fuchsia::modular::internal::UserContext>
         user_context) {
@@ -219,9 +219,9 @@ void UserRunnerImpl::InitializeLedger() {
   fuchsia::sys::ServiceListPtr service_list = nullptr;
   if (account_) {
     service_list = fuchsia::sys::ServiceList::New();
-    service_list->names.push_back(modular_auth::TokenProvider::Name_);
-    ledger_service_provider_.AddService<modular_auth::TokenProvider>(
-        [this](fidl::InterfaceRequest<modular_auth::TokenProvider> request) {
+    service_list->names.push_back(fuchsia::modular::auth::TokenProvider::Name_);
+    ledger_service_provider_.AddService<fuchsia::modular::auth::TokenProvider>(
+        [this](fidl::InterfaceRequest<fuchsia::modular::auth::TokenProvider> request) {
           token_provider_factory_->GetTokenProvider(kLedgerAppUrl,
                                                     std::move(request));
         });
@@ -768,7 +768,7 @@ void UserRunnerImpl::ConnectToEntityProvider(
 
 fuchsia::ledger::cloud::CloudProviderPtr UserRunnerImpl::GetCloudProvider() {
   fuchsia::ledger::cloud::CloudProviderPtr cloud_provider;
-  fidl::InterfaceHandle<modular_auth::TokenProvider> ledger_token_provider;
+  fidl::InterfaceHandle<fuchsia::modular::auth::TokenProvider> ledger_token_provider;
   token_provider_factory_->GetTokenProvider(kLedgerAppUrl,
                                             ledger_token_provider.NewRequest());
   auto firebase_config = GetLedgerFirebaseConfig();

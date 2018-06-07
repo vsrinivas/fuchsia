@@ -18,7 +18,7 @@ FactoryImpl::~FactoryImpl() {}
 
 void FactoryImpl::GetCloudProvider(
     Config config,
-    fidl::InterfaceHandle<modular_auth::TokenProvider> token_provider,
+    fidl::InterfaceHandle<fuchsia::modular::auth::TokenProvider> token_provider,
     fidl::InterfaceRequest<cloud_provider::CloudProvider> cloud_provider,
     GetCloudProviderCallback callback) {
   auto token_provider_ptr = token_provider.Bind();

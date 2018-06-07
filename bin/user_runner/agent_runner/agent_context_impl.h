@@ -9,7 +9,7 @@
 
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
-#include <modular_auth/cpp/fidl.h>
+#include <fuchsia/modular/auth/cpp/fidl.h>
 #include "lib/app/cpp/service_provider_impl.h"
 #include "lib/async/cpp/operation.h"
 #include "lib/fidl/cpp/binding.h"
@@ -27,7 +27,7 @@ class AgentRunner;
 struct AgentContextInfo {
   const ComponentContextInfo component_context_info;
   fuchsia::sys::Launcher* const launcher;
-  modular_auth::TokenProviderFactory* const token_provider_factory;
+  fuchsia::modular::auth::TokenProviderFactory* const token_provider_factory;
   UserIntelligenceProvider* const user_intelligence_provider;
 };
 
@@ -74,7 +74,7 @@ class AgentContextImpl : AgentContext, AgentController {
       fidl::InterfaceRequest<ComponentContext> request) override;
   // |AgentContext|
   void GetTokenProvider(
-      fidl::InterfaceRequest<modular_auth::TokenProvider> request) override;
+      fidl::InterfaceRequest<fuchsia::modular::auth::TokenProvider> request) override;
   // |AgentContext|
   void ScheduleTask(TaskInfo task_info) override;
   // |AgentContext|
@@ -107,7 +107,7 @@ class AgentContextImpl : AgentContext, AgentController {
   // application's namespace.
   fuchsia::sys::ServiceProviderImpl service_provider_impl_;
 
-  modular_auth::TokenProviderFactory* const
+  fuchsia::modular::auth::TokenProviderFactory* const
       token_provider_factory_;                                  // Not owned.
   EntityProviderRunner* const entity_provider_runner_;          // Not owned.
   UserIntelligenceProvider* const user_intelligence_provider_;  // Not owned.

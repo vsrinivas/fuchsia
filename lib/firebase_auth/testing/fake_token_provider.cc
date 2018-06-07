@@ -16,16 +16,16 @@ FakeTokenProvider::FakeTokenProvider()
       client_id_("client_id") {}
 
 void FakeTokenProvider::GetAccessToken(GetAccessTokenCallback callback) {
-  modular_auth::AuthErr error;
-  error.status = modular_auth::Status::OK;
+  fuchsia::modular::auth::AuthErr error;
+  error.status = fuchsia::modular::auth::Status::OK;
   error.message = "";
   FXL_NOTIMPLEMENTED() << "FakeTokenProvider::GetAccessToken not implemented";
   callback(nullptr, std::move(error));
 }
 
 void FakeTokenProvider::GetIdToken(GetIdTokenCallback callback) {
-  modular_auth::AuthErr error;
-  error.status = modular_auth::Status::OK;
+  fuchsia::modular::auth::AuthErr error;
+  error.status = fuchsia::modular::auth::Status::OK;
   error.message = "";
   FXL_NOTIMPLEMENTED() << "FakeTokenProvider::GetIdToken not implemented";
   callback(nullptr, std::move(error));
@@ -34,14 +34,14 @@ void FakeTokenProvider::GetIdToken(GetIdTokenCallback callback) {
 void FakeTokenProvider::GetFirebaseAuthToken(
     fidl::StringPtr /*firebase_api_key*/,
     GetFirebaseAuthTokenCallback callback) {
-  modular_auth::AuthErr error;
-  error.status = modular_auth::Status::OK;
+  fuchsia::modular::auth::AuthErr error;
+  error.status = fuchsia::modular::auth::Status::OK;
   error.message = "";
   if (firebase_local_id_.empty()) {
     callback(nullptr, std::move(error));
     return;
   }
-  modular_auth::FirebaseTokenPtr token = modular_auth::FirebaseToken::New();
+  fuchsia::modular::auth::FirebaseTokenPtr token = fuchsia::modular::auth::FirebaseToken::New();
   token->id_token = firebase_id_token_;
   token->local_id = firebase_local_id_;
   token->email = email_;

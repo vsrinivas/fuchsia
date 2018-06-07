@@ -107,7 +107,7 @@ class DevDeviceShellApp
   // |DeviceShell|
   void GetAuthenticationContext(
       fidl::StringPtr /*username*/,
-      fidl::InterfaceRequest<modular_auth::AuthenticationContext> /*request*/)
+      fidl::InterfaceRequest<fuchsia::modular::auth::AuthenticationContext> /*request*/)
       override {
     FXL_LOG(INFO)
         << "DeviceShell::GetAuthenticationContext() is unimplemented.";
@@ -137,7 +137,7 @@ class DevDeviceShellApp
       }
 
       user_provider_->PreviousUsers(
-          [this](fidl::VectorPtr<modular_auth::Account> accounts) {
+          [this](fidl::VectorPtr<fuchsia::modular::auth::Account> accounts) {
             FXL_LOG(INFO) << "Found " << accounts->size()
                           << " users in the user "
                           << "database";
@@ -156,8 +156,8 @@ class DevDeviceShellApp
             }
             if (account_id.empty()) {
               user_provider_->AddUser(
-                  modular_auth::IdentityProvider::DEV,
-                  [this](modular_auth::AccountPtr account,
+                  fuchsia::modular::auth::IdentityProvider::DEV,
+                  [this](fuchsia::modular::auth::AccountPtr account,
                          fidl::StringPtr status) { Login(account->id); });
             } else {
               Login(account_id);

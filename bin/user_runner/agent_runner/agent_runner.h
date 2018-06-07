@@ -14,7 +14,7 @@
 #include <fuchsia/ledger/internal/cpp/fidl.h>
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
-#include <modular_auth/cpp/fidl.h>
+#include <fuchsia/modular/auth/cpp/fidl.h>
 #include "lib/async/cpp/operation.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fidl/cpp/binding_set.h"
@@ -41,7 +41,7 @@ class AgentRunner : AgentProvider, AgentRunnerStorage::NotificationDelegate {
               MessageQueueManager* message_queue_manager,
               fuchsia::ledger::internal::LedgerRepository* ledger_repository,
               AgentRunnerStorage* agent_runner_storage,
-              modular_auth::TokenProviderFactory* token_provider_factory,
+              fuchsia::modular::auth::TokenProviderFactory* token_provider_factory,
               UserIntelligenceProvider* user_intelligence_provider,
               EntityProviderRunner* const entity_provider_runner);
   ~AgentRunner() override;
@@ -197,7 +197,7 @@ class AgentRunner : AgentProvider, AgentRunnerStorage::NotificationDelegate {
   fuchsia::ledger::internal::LedgerRepository* const ledger_repository_;
   // |agent_runner_storage_| must outlive this class.
   AgentRunnerStorage* const agent_runner_storage_;
-  modular_auth::TokenProviderFactory* const token_provider_factory_;
+  fuchsia::modular::auth::TokenProviderFactory* const token_provider_factory_;
   UserIntelligenceProvider* const user_intelligence_provider_;
   EntityProviderRunner* const entity_provider_runner_;
 

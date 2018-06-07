@@ -26,7 +26,7 @@ interface UserShell {
 interface UserShellContext {
   // The account associated with the currently logged-in user. It's NULL if
   // logged into GUEST mode.
-  1: GetAccount() -> (modular_auth.Account? account);
+  1: GetAccount() -> (fuchsia.modular.auth.Account? account);
   2: GetAgentProvider(request<AgentProvider> @request);
   3: GetComponentContext(request<ComponentContext> @request);
   4: GetDeviceName() -> (string device_name);

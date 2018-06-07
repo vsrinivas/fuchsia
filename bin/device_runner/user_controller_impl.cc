@@ -19,9 +19,9 @@ namespace modular {
 UserControllerImpl::UserControllerImpl(
     fuchsia::sys::Launcher* const launcher, AppConfig user_runner,
     AppConfig user_shell, AppConfig story_shell,
-    fidl::InterfaceHandle<modular_auth::TokenProviderFactory>
+    fidl::InterfaceHandle<fuchsia::modular::auth::TokenProviderFactory>
         token_provider_factory,
-    modular_auth::AccountPtr account,
+    fuchsia::modular::auth::AccountPtr account,
     fidl::InterfaceRequest<fuchsia::ui::views_v1_token::ViewOwner>
         view_owner_request,
     fidl::InterfaceHandle<fuchsia::sys::ServiceProvider> device_shell_services,

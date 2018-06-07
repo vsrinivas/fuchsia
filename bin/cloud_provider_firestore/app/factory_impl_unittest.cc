@@ -28,7 +28,7 @@ class FactoryImplTest : public gtest::TestWithMessageLoop {
   fidl::Binding<Factory> factory_binding_;
 
   firebase_auth::TestTokenProvider token_provider_;
-  fidl::Binding<modular_auth::TokenProvider> token_provider_binding_;
+  fidl::Binding<fuchsia::modular::auth::TokenProvider> token_provider_binding_;
 
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(FactoryImplTest);

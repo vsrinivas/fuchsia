@@ -7,7 +7,7 @@
 
 #include <string>
 
-#include <modular_auth/cpp/fidl.h>
+#include <fuchsia/modular/auth/cpp/fidl.h>
 #include <lib/async/dispatcher.h>
 
 #include "lib/fxl/functional/make_copyable.h"
@@ -15,13 +15,13 @@
 
 namespace firebase_auth {
 
-class TestTokenProvider : public modular_auth::TokenProvider {
+class TestTokenProvider : public fuchsia::modular::auth::TokenProvider {
  public:
   explicit TestTokenProvider(async_t* async);
 
   ~TestTokenProvider() override;
 
-  // modular_auth::TokenProvider:
+  // fuchsia::modular::auth::TokenProvider:
   void GetAccessToken(GetAccessTokenCallback callback) override;
 
   void GetIdToken(GetIdTokenCallback callback) override;
@@ -35,8 +35,8 @@ class TestTokenProvider : public modular_auth::TokenProvider {
 
   void SetNull();
 
-  modular_auth::FirebaseTokenPtr token_to_return;
-  modular_auth::AuthErr error_to_return;
+  fuchsia::modular::auth::FirebaseTokenPtr token_to_return;
+  fuchsia::modular::auth::AuthErr error_to_return;
 
  private:
   async_t* const async_;

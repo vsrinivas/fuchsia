@@ -16,33 +16,33 @@ namespace {
 constexpr int kDefaultMaxRetries = 5;
 
 // Returns true if the authentication failure may be transient.
-bool IsRetriableError(modular_auth::Status status) {
+bool IsRetriableError(fuchsia::modular::auth::Status status) {
   switch (status) {
     // TODO(AUTH-50): update once retriable errors are documented.
-    case modular_auth::Status::BAD_REQUEST:
+    case fuchsia::modular::auth::Status::BAD_REQUEST:
       return false;
     default:
       return true;
   }
 }
 
-// Maps modular_auth error space to firebase_auth one.
-AuthStatus ConvertAuthErr(modular_auth::AuthErr error) {
-  return error.status == modular_auth::Status::OK ? AuthStatus::OK
+// Maps fuchsia::modular::auth error space to firebase_auth one.
+AuthStatus ConvertAuthErr(fuchsia::modular::auth::AuthErr error) {
+  return error.status == fuchsia::modular::auth::Status::OK ? AuthStatus::OK
                                                   : AuthStatus::ERROR;
 }
 }  // namespace
 
 FirebaseAuthImpl::FirebaseAuthImpl(
     async_t* async, std::string api_key,
-    modular_auth::TokenProviderPtr token_provider,
+    fuchsia::modular::auth::TokenProviderPtr token_provider,
     std::unique_ptr<backoff::Backoff> backoff)
     : FirebaseAuthImpl(async, std::move(api_key), std::move(token_provider),
                        std::move(backoff), kDefaultMaxRetries) {}
 
 FirebaseAuthImpl::FirebaseAuthImpl(
     async_t* async, std::string api_key,
-    modular_auth::TokenProviderPtr token_provider,
+    fuchsia::modular::auth::TokenProviderPtr token_provider,
     std::unique_ptr<backoff::Backoff> backoff, int max_retries)
     : api_key_(std::move(api_key)),
       token_provider_(std::move(token_provider)),
@@ -78,13 +78,13 @@ fxl::RefPtr<callback::Cancellable> FirebaseAuthImpl::GetFirebaseUserId(
 
 void FirebaseAuthImpl::GetToken(
     int max_retries,
-    std::function<void(AuthStatus, modular_auth::FirebaseTokenPtr)> callback) {
+    std::function<void(AuthStatus, fuchsia::modular::auth::FirebaseTokenPtr)> callback) {
   token_provider_->GetFirebaseAuthToken(
       api_key_, [this, max_retries, callback = std::move(callback)](
-                    modular_auth::FirebaseTokenPtr token,
-                    modular_auth::AuthErr error) mutable {
-        if (!token || error.status != modular_auth::Status::OK) {
-          if (!token && error.status == modular_auth::Status::OK) {
+                    fuchsia::modular::auth::FirebaseTokenPtr token,
+                    fuchsia::modular::auth::AuthErr error) mutable {
+        if (!token || error.status != fuchsia::modular::auth::Status::OK) {
+          if (!token && error.status == fuchsia::modular::auth::Status::OK) {
             FXL_LOG(ERROR)
                 << "null Firebase token returned from token provider with no "
                 << "error reported. This should never happen. Retrying.";

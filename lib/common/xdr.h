@@ -7,14 +7,18 @@
 
 #include "peridot/lib/fidl/json_xdr.h"
 
-namespace modular_auth {
+namespace fuchsia {
+namespace modular {
+namespace auth {
 class Account;
-}  // namespace modular_auth
+} // namespace fuchsia
+} // namespace modular
+} // namespace auth
 
 namespace fuchsia {
 namespace modular {
 
-extern const XdrFilterType<modular_auth::Account> XdrAccount[];
+extern const XdrFilterType<fuchsia::modular::auth::Account> XdrAccount[];
 
 }  // namespace modular
 }  // namespace fuchsia

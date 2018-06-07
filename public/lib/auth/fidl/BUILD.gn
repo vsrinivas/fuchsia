@@ -8,7 +8,7 @@ import("//build/fidl/fidl.gni")
 # third-party components should only depend on it.
 # TODO(alhaad/ukode): Also move these services to a separate repository.
 fidl("fidl") {
-  name = "modular_auth"
+  name = "fuchsia.modular.auth"
 
   sdk_category = "partner"
 

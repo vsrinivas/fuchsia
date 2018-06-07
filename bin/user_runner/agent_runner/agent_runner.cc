@@ -30,7 +30,7 @@ AgentRunner::AgentRunner(
     MessageQueueManager* const message_queue_manager,
     fuchsia::ledger::internal::LedgerRepository* const ledger_repository,
     AgentRunnerStorage* const agent_runner_storage,
-    modular_auth::TokenProviderFactory* const token_provider_factory,
+    fuchsia::modular::auth::TokenProviderFactory* const token_provider_factory,
     UserIntelligenceProvider* const user_intelligence_provider,
     EntityProviderRunner* const entity_provider_runner)
     : launcher_(launcher),

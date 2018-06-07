@@ -23,16 +23,16 @@ namespace {
 
 constexpr char kUsersConfigurationFile[] = "/data/modular/users-v5.db";
 
-modular_auth::AccountPtr Convert(const UserStorage* const user) {
+fuchsia::modular::auth::AccountPtr Convert(const UserStorage* const user) {
   FXL_DCHECK(user);
-  auto account = modular_auth::Account::New();
+  auto account = fuchsia::modular::auth::Account::New();
   account->id = user->id()->str();
   switch (user->identity_provider()) {
     case IdentityProvider_DEV:
-      account->identity_provider = modular_auth::IdentityProvider::DEV;
+      account->identity_provider = fuchsia::modular::auth::IdentityProvider::DEV;
       break;
     case IdentityProvider_GOOGLE:
-      account->identity_provider = modular_auth::IdentityProvider::GOOGLE;
+      account->identity_provider = fuchsia::modular::auth::IdentityProvider::GOOGLE;
       break;
     default:
       FXL_DCHECK(false) << "Unrecognized IdentityProvider"
@@ -64,7 +64,7 @@ UserProviderImpl::UserProviderImpl(
     std::shared_ptr<fuchsia::sys::StartupContext> context,
     const AppConfig& user_runner, const AppConfig& default_user_shell,
     const AppConfig& story_shell,
-    modular_auth::AccountProvider* const account_provider)
+    fuchsia::modular::auth::AccountProvider* const account_provider)
     : context_(std::move(context)),
       user_runner_(user_runner),
       default_user_shell_(default_user_shell),
@@ -148,7 +148,7 @@ void UserProviderImpl::Login(UserLoginParams params) {
 }
 
 void UserProviderImpl::PreviousUsers(PreviousUsersCallback callback) {
-  fidl::VectorPtr<modular_auth::Account> accounts;
+  fidl::VectorPtr<fuchsia::modular::auth::Account> accounts;
   accounts.resize(0);
   if (users_storage_) {
     for (const auto* user : *users_storage_->users()) {
@@ -158,11 +158,11 @@ void UserProviderImpl::PreviousUsers(PreviousUsersCallback callback) {
   callback(std::move(accounts));
 }
 
-void UserProviderImpl::AddUser(modular_auth::IdentityProvider identity_provider,
+void UserProviderImpl::AddUser(fuchsia::modular::auth::IdentityProvider identity_provider,
                                AddUserCallback callback) {
   account_provider_->AddAccount(
       identity_provider,
-      [this, identity_provider, callback](modular_auth::AccountPtr account,
+      [this, identity_provider, callback](fuchsia::modular::auth::AccountPtr account,
                                           fidl::StringPtr error_code) {
         if (!account) {
           callback(nullptr, error_code);
@@ -186,11 +186,11 @@ void UserProviderImpl::AddUser(modular_auth::IdentityProvider identity_provider,
 
         fuchsia::modular::IdentityProvider flatbuffer_identity_provider;
         switch (account->identity_provider) {
-          case modular_auth::IdentityProvider::DEV:
+          case fuchsia::modular::auth::IdentityProvider::DEV:
             flatbuffer_identity_provider =
                 fuchsia::modular::IdentityProvider::IdentityProvider_DEV;
             break;
-          case modular_auth::IdentityProvider::GOOGLE:
+          case fuchsia::modular::auth::IdentityProvider::GOOGLE:
             flatbuffer_identity_provider =
                 fuchsia::modular::IdentityProvider::IdentityProvider_GOOGLE;
             break;
@@ -222,7 +222,7 @@ void UserProviderImpl::AddUser(modular_auth::IdentityProvider identity_provider,
 
 void UserProviderImpl::RemoveUser(fidl::StringPtr account_id,
                                   RemoveUserCallback callback) {
-  modular_auth::AccountPtr account;
+  fuchsia::modular::auth::AccountPtr account;
   if (users_storage_) {
     for (const auto* user : *users_storage_->users()) {
       if (user->id()->str() == account_id) {
@@ -240,8 +240,8 @@ void UserProviderImpl::RemoveUser(fidl::StringPtr account_id,
   account_provider_->RemoveAccount(
       std::move(*account), false /* disable single logout*/,
       [this, account_id = account_id,
-       callback](modular_auth::AuthErr auth_err) {
-        if (auth_err.status != modular_auth::Status::OK) {
+       callback](fuchsia::modular::auth::AuthErr auth_err) {
+        if (auth_err.status != fuchsia::modular::auth::Status::OK) {
           callback(auth_err.message);
           return;
         }
@@ -317,10 +317,10 @@ bool UserProviderImpl::Parse(const std::string& serialized_users) {
   return true;
 }
 
-void UserProviderImpl::LoginInternal(modular_auth::AccountPtr account,
+void UserProviderImpl::LoginInternal(fuchsia::modular::auth::AccountPtr account,
                                      UserLoginParams params) {
   // Get token provider factory for this user.
-  modular_auth::TokenProviderFactoryPtr token_provider_factory;
+  fuchsia::modular::auth::TokenProviderFactoryPtr token_provider_factory;
   account_provider_->GetTokenProviderFactory(
       account ? account->id.get() : GetRandomId(),
       token_provider_factory.NewRequest());
