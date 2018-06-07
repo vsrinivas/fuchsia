@@ -23,11 +23,11 @@ struct CodingTraits<{{ .Namespace }}::{{ .Name }}> {
   static constexpr size_t encoded_size = sizeof({{ .Namespace }}::{{ .Name }});
   static void Encode(Encoder* encoder, {{ .Namespace }}::{{ .Name }}* value, size_t offset) {
     {{ .Type }} underlying = static_cast<{{ .Type }}>(*value);
-    fidl::Encode(encoder, &underlying, offset);
+    ::fidl::Encode(encoder, &underlying, offset);
   }
   static void Decode(Decoder* decoder, {{ .Namespace }}::{{ .Name }}* value, size_t offset) {
     {{ .Type }} underlying = {};
-    fidl::Decode(decoder, &underlying, offset);
+    ::fidl::Decode(decoder, &underlying, offset);
     *value = static_cast<{{ .Namespace }}::{{ .Name }}>(underlying);
   }
 };
