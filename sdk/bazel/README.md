@@ -5,9 +5,11 @@ The Bazel SDK frontend produces a Bazel workspace.
 
 # Directory structure
 
-The contents of `base/` are copied verbatim into the output SDK. The
-`generate.py` script then generates various files to produce a functional Bazel
-repository.
+- `generate.py`: the script that generates the SDK;
+- `templates`: Mako templates used to produce various SDK files;
+- `base`: SDK contents that are copied verbatim;
+- `generate-tests.py`: script that create a test workspace;
+- `tests`: various SDK tests, copied over to the test workspace.
 
 # Output layout
 

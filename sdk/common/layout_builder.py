@@ -51,7 +51,9 @@ class Builder(object):
         pass
 
     def make_dir(self, file_path):
-        '''Creates the directory hierarchy for the given file.'''
+        '''Creates the directory hierarchy for the given file and returns the
+           given path.
+           '''
         target = os.path.dirname(file_path)
         try:
             os.makedirs(target)
@@ -60,6 +62,7 @@ class Builder(object):
                 pass
             else:
                 raise
+        return file_path
 
 
 def process_manifest(manifest, builder):

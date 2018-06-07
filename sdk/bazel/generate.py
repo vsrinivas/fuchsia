@@ -15,9 +15,9 @@ FUCHSIA_ROOT = os.path.dirname(  # $root
     os.path.dirname(             # sdk
     SCRIPT_DIR)))                # bazel
 
-sys.path += [os.path.join(FUCHSIA_ROOT, "third_party", "mako")]
+sys.path += [os.path.join(FUCHSIA_ROOT, 'third_party', 'mako')]
 from mako.template import Template
-sys.path += [os.path.join(FUCHSIA_ROOT, "scripts", "sdk", "common")]
+sys.path += [os.path.join(FUCHSIA_ROOT, 'scripts', 'sdk', 'common')]
 from layout_builder import Builder, process_manifest
 
 
@@ -34,14 +34,14 @@ class Library(object):
 
 
 def remove_dashes(name):
-    return name.replace("-", "_")
+    return name.replace('-', '_')
 
 
-class CppBuilder(Builder):
+class BazelBuilder(Builder):
 
     def __init__(self, output, overlay, debug):
-        super(CppBuilder, self).__init__(domains=['cpp', 'exe'],
-                                         ignored_domains=['fidl', 'image'])
+        super(BazelBuilder, self).__init__(domains=['cpp', 'exe'],
+                                           ignored_domains=['fidl', 'image'])
         self.output = output
         self.is_overlay = overlay
         self.is_debug = debug
@@ -58,33 +58,28 @@ class CppBuilder(Builder):
         return os.path.join(self.output, *args)
 
 
+    def write_file(self, path, template_name, data):
+        '''Writes a file based on a Mako template.'''
+        self.make_dir(path)
+        template = Template(filename=self.source('templates',
+                                                 template_name + '.mako'))
+        with open(path, 'w') as file:
+            file.write(template.render(data=data))
+
+
     def prepare(self):
-        if not self.is_overlay:
-            shutil.copytree(self.source('base'), self.dest())
-
-        if not self.is_debug:
+        if self.is_overlay:
             return
-
-        # Add the tests.
-        shutil.copytree(self.source('tests'), self.dest('tests'))
-
-        fuchsia_bzl_src = self.source('fuchsia.bzl')
-        fuchsia_bzl_dest = self.dest('fuchsia', 'fuchsia.bzl')
-        self.make_dir(fuchsia_bzl_dest)
-        shutil.copyfile(fuchsia_bzl_src, fuchsia_bzl_dest)
-        with open(self.dest('fuchsia', 'BUILD'), 'w'):
-            pass
+        # Copy the static files.
+        shutil.copytree(self.source('base'), self.dest())
 
 
     def finalize(self):
-        self.write_tools_build_file()
-
-
-    def write_tools_build_file(self):
-        path = os.path.join(self.output, 'tools', 'BUILD')
-        with open(path,'w') as build_file:
-            template = Template(filename=os.path.join(SCRIPT_DIR, 'tools.mako'))
-            build_file.write(template.render(data=self.tools))
+        if self.is_overlay:
+            return
+        if self.tools:
+            # Write the build file for the tools directory.
+            self.write_file(self.dest('tools', 'BUILD'), 'tools', self.tools)
 
 
     def install_cpp_atom(self, atom):
@@ -104,19 +99,20 @@ class CppBuilder(Builder):
         if self.is_debug and type != 'sysroot':
             library.deps.append('//pkg/system:system')
 
-        path = os.path.join(self.output, 'pkg', library.name, 'BUILD')
+        path = self.dest('pkg', library.name, 'BUILD')
         build_file = open(path, 'w')
 
-        # in debug mode we just make the sysroot another cc_library
-        # TODO: (sysroot vs. not sysroot) --> (common method) --> (sysroot vs. not sysroot)
+        # TODO(pylaligand): remove debug mode.
         if type == 'sysroot' and not self.is_debug:
-            template = Template(filename=os.path.join(SCRIPT_DIR, 'sysroot.mako'))
+            template = Template(filename=self.source('templates',
+                                                     'sysroot.mako'))
             build_file.write(template.render(data=library))
         else:
             # TODO: this include should not be needed.
             library.includes.append('.')
-            library.includes.append('./include')
-            template = Template(filename=os.path.join(SCRIPT_DIR, 'cc_library.mako'))
+            library.includes.append('include')
+            template = Template(filename=self.source('templates',
+                                                     'cc_library.mako'))
             build_file.write(template.render(data=library))
 
 
@@ -135,53 +131,46 @@ class CppBuilder(Builder):
             destination = file.destination
             extension = os.path.splitext(destination)[1][1:]
             if extension == 'so' or extension == 'o':
-                dest = os.path.join(self.output, 'pkg', atom_name,'arch',
-                                    self.metadata.target_arch, destination)
+                dest = self.dest('pkg', atom_name, 'arch',
+                                 self.metadata.target_arch, destination)
                 if os.path.isfile(dest):
                     raise Exception('File already exists: %s.' % dest)
                 self.make_dir(dest)
-                shutil.copyfile(file.source, dest)
-                if extension == 'so' and destination.startswith("lib"):
-                    library.srcs.append(os.path.join('arch',
-                                    self.metadata.target_arch, destination))
-
+                shutil.copy2(file.source, dest)
+                if extension == 'so' and destination.startswith('lib'):
+                    src = os.path.join('arch', self.metadata.target_arch,
+                                       destination)
+                    library.srcs.append(src)
             elif self.is_overlay:
                 # Only binaries get installed in overlay mode.
                 continue
             elif (extension == 'h' or extension == 'modulemap' or
                     extension == 'inc' or extension == 'rs'):
-                dest = os.path.join(self.output, 'pkg', atom_name,
-                                    destination)
-                self.make_dir(dest)
-                shutil.copyfile(file.source, dest)
+                dest = self.make_dir(self.dest('pkg', atom_name, destination))
+                shutil.copy2(file.source, dest)
                 if extension == 'h':
                     library.hdrs.append(destination)
             else:
                 raise Exception('Error: unknow file extension "%s" for %s.' %
                                 (extension, atom.id))
         for dep_id in atom.deps:
-            dep_name = remove_dashes(dep_id.name)
-            dep = os.path.join("//pkg/", dep_name)
-            library.deps.append(dep)
+            library.deps.append('//pkg/' + remove_dashes(dep_id.name))
 
         self.write_build_file(library, atom.tags['type'])
 
 
     def install_cpp_source_atom(self, atom):
         '''Installs a source atom from the "cpp" domain.'''
-
-        atom_name = remove_dashes(atom.id.name)
-
-        library = Library(atom_name)
-
         if self.is_overlay:
             return
-        for file in atom.files:
-            dest = os.path.join(self.output, 'pkg', atom_name,
-                                file.destination)
-            self.make_dir(dest)
-            shutil.copyfile(file.source, dest)
 
+        name = remove_dashes(atom.id.name)
+        library = Library(name)
+        base = self.dest('pkg', name)
+
+        for file in atom.files:
+            dest = self.make_dir(os.path.join(base, file.destination))
+            shutil.copy2(file.source, dest)
             extension = os.path.splitext(file.destination)[1][1:]
             if extension == 'h':
                 library.hdrs.append(file.destination)
@@ -192,21 +181,23 @@ class CppBuilder(Builder):
                                 (extension, atom.id))
 
         for dep_id in atom.deps:
-            dep = os.path.join("//pkg/", remove_dashes(dep_id.name))
-            library.deps.append(dep)
+            library.deps.append('//pkg/' + remove_dashes(dep_id.name))
 
-        self.write_build_file(library, atom.tags['type'])
+        library.includes.append('include')
+
+        self.write_file(os.path.join(base, 'BUILD'), 'cc_library', library)
 
 
     def install_sysroot_atom(self, atom):
+        # TODO(pylaligand): use the same sysroot layout as in the foundation
+        # SDK.
         self.install_cpp_prebuilt_atom(atom, check_arch=False)
 
 
     def install_exe_atom(self, atom):
         '''Installs an atom from the "exe" domain.'''
         if atom.tags['arch'] != 'host':
-            print('Only host executables are supported, skipping %s.' %
-                  atom.id)
+            print('Only host executables are supported, skipping %s.' % atom.id)
             return
         if self.is_overlay:
             return
@@ -215,11 +206,8 @@ class CppBuilder(Builder):
             raise Exception('Error: executable with multiple files: %s.'
                             % atom.id)
         file = files[0]
-        destination = os.path.join(self.output, 'tools', file.destination)
-        self.make_dir(destination)
-        shutil.copyfile(file.source, destination)
-        st = os.stat(destination)
-        os.chmod(destination, st.st_mode | stat.S_IXUSR | stat.S_IXGRP)
+        destination = self.make_dir(self.dest('tools', file.destination))
+        shutil.copy2(file.source, destination)
         self.tools.append(atom.id.name)
 
 
@@ -250,7 +238,7 @@ def main():
     else:
         shutil.rmtree(args.output, True)
 
-    builder = CppBuilder(args.output, args.overlay, args.debug)
+    builder = BazelBuilder(args.output, args.overlay, args.debug)
     return 0 if process_manifest(args.manifest, builder) else 1
 
 
