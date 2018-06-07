@@ -22,7 +22,7 @@ QueryProcessor::QueryProcessor(fuchsia::media::AudioPtr audio,
                                std::shared_ptr<SuggestionDebugImpl> debug)
     : debug_(debug),
       media_player_(std::move(audio), debug),
-      has_media_response_(false) {
+      has_audio_response_(false) {
   media_player_.SetSpeechStatusCallback(
       [this](fuchsia::modular::SpeechStatus status) {
         NotifySpeechListeners(status);
@@ -114,7 +114,7 @@ RankedSuggestion* QueryProcessor::GetSuggestion(
 }
 
 void QueryProcessor::CleanUpPreviousQuery() {
-  has_media_response_ = false;
+  has_audio_response_ = false;
   active_query_.reset();
   suggestions_.RemoveAllSuggestions();
 }
@@ -141,8 +141,8 @@ void QueryProcessor::OnQueryResponse(fuchsia::modular::UserInput input,
                                      const std::string& handler_url,
                                      fuchsia::modular::QueryResponse response) {
   // TODO(rosswang): defer selection of "I don't know" responses
-  if (!has_media_response_ && response.media_response) {
-    has_media_response_ = true;
+  if (!has_audio_response_ && response.audio_response) {
+    has_audio_response_ = true;
 
     // TODO(rosswang): Wait for other potential voice responses so that we
     // choose the best one. We don't have criteria for "best" yet, and we only
@@ -159,7 +159,7 @@ void QueryProcessor::OnQueryResponse(fuchsia::modular::UserInput input,
       (*listener)->OnTextResponse(text_response);
     }
 
-    media_player_.PlayMediaResponse(std::move(response.media_response));
+    media_player_.PlayAudioResponse(std::move(response.audio_response));
   }
 
   // Ranking currently happens as each set of proposals are added.
@@ -177,7 +177,7 @@ void QueryProcessor::OnQueryResponse(fuchsia::modular::UserInput input,
 
 void QueryProcessor::OnQueryEndRequest(fuchsia::modular::UserInput input) {
   debug_->OnAskStart(input.text, &suggestions_);
-  if (!has_media_response_) {
+  if (!has_audio_response_) {
     // there was no media response for this query, so idle immediately
     NotifySpeechListeners(fuchsia::modular::SpeechStatus::IDLE);
   }

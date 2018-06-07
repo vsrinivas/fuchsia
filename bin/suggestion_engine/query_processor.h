@@ -109,7 +109,7 @@ class QueryProcessor {
   // When multiple handlers want to play media as part of their responses, we
   // only want to allow one of them to do so. For lack of a better policy, we
   // play the first one we encounter.
-  bool has_media_response_;
+  bool has_audio_response_;
 
   util::IdleWaiter::ActivityToken activity_;
 };

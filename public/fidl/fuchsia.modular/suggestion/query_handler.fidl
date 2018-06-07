@@ -4,20 +4,14 @@
 
 library fuchsia.modular;
 
-// For now, it is expected that the format must be known synchronously at
-// response time, before connecting to the packet producer. If in the future
-// this proves to be a performance bottleneck, we can add a second interface
-// layer.
-struct MediaResponse {
-  fuchsia.media.MediaType media_type;
-  fuchsia.media.MediaPacketProducer media_packet_producer;
-};
 struct QueryResponse {
   vector<Proposal> proposals;
   string? natural_language_response;
-  // An optional voice/audio/media response to the query as answered by this
-  // agent.
-  MediaResponse? media_response;
+  // An optional request for an audio renderer to play the voice/audio response
+  // to the query as answered by this agent. The agent must close this renderer
+  // once the response has ended, unless Suggestion Engine closes it earlier
+  // due to policy.
+  request<fuchsia.media.AudioRenderer2>? audio_response;
 };
 
 // An interface enabling Agents and Modules to contribute Proposals reactively

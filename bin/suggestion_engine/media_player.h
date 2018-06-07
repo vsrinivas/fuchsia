@@ -10,7 +10,7 @@
 #include <fuchsia/media/cpp/fidl.h>
 #include <fuchsia/modular/cpp/fidl.h>
 #include <lib/app/cpp/startup_context.h>
-#include <lib/fidl/cpp/interface_ptr_set.h>
+#include <lib/fidl/cpp/binding.h>
 
 #include "peridot/bin/suggestion_engine/debug.h"
 #include "peridot/lib/util/idle_waiter.h"
@@ -35,21 +35,21 @@ class MediaPlayer {
   // fuchsia::modular::SpeechStatus occurs.
   void SetSpeechStatusCallback(SpeechStatusCallback callback);
 
-  // Plays media response coming from a query response.
-  void PlayMediaResponse(fuchsia::modular::MediaResponsePtr media_response);
+  // Plays audio response coming from a query response.
+  void PlayAudioResponse(
+      fidl::InterfaceRequest<fuchsia::media::AudioRenderer2> audio_response);
 
  private:
-  void HandleMediaUpdates(
-      uint64_t version,
-      fuchsia::media::MediaTimelineControlPointStatusPtr status);
-
-  void OnMediaPacketProducerConnected(util::IdleWaiter::ActivityToken activity);
-
   fuchsia::media::AudioPtr audio_;
-  fuchsia::media::MediaRendererPtr media_renderer_;
-  fuchsia::media::MediaPacketProducerPtr media_packet_producer_;
-  fuchsia::media::MediaTimelineControlPointPtr time_lord_;
-  fuchsia::media::TimelineConsumerPtr media_timeline_consumer_;
+
+  // Suggestion Engine maintains ownership of an |AudioRendererPtr| during
+  // playback to enforce policy and have visibility into playback status (via
+  // whether or not the channel is closed). Only one agent is allowed to play
+  // responses at a time.
+  fuchsia::media::AudioRenderer2Ptr audio_renderer_;
+  std::unique_ptr<fidl::Binding<fuchsia::media::AudioRenderer2>>
+      audio_renderer_binding_;
+
   std::shared_ptr<SuggestionDebugImpl> debug_;
   SpeechStatusCallback speech_status_callback_;
 };
