@@ -156,6 +156,7 @@ func (d *Daemon) AddTUFSource(cfg *amber.SourceConfig) error {
 	}
 
 	blobRepo := BlobRepo{
+		Source:   src,
 		Address:  cfg.BlobRepoUrl,
 		Interval: time.Second * 5,
 	}

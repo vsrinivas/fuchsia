@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"math/rand"
+	"net/http"
 	"os"
 	"sync"
 	"testing"
@@ -47,6 +48,10 @@ func (t *testSrc) GetId() string {
 }
 
 func (t *testSrc) GetConfig() *amber.SourceConfig {
+	return nil
+}
+
+func (t *testSrc) GetHttpClient() *http.Client {
 	return nil
 }
 

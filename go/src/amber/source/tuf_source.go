@@ -78,6 +78,8 @@ type TUFSource struct {
 	// the TUF database.
 	localStore tuf.LocalStore
 
+	httpClient *http.Client
+
 	keys      []*tuf_data.Key
 	tufClient *tuf.Client
 	mu        sync.Mutex
@@ -199,15 +201,13 @@ func oauth2deviceConfig(c *amber.OAuth2Config) *oauth2device.Config {
 // NOTE: It's the responsibility of the caller to hold the mutex before calling
 // this function.
 func (f *TUFSource) updateTUFClientLocked() error {
-	var httpClient *http.Client
-
 	if c := oauth2deviceConfig(f.cfg.Config.Oauth2Config); c == nil {
-		httpClient = http.DefaultClient
+		f.httpClient = http.DefaultClient
 	} else {
-		httpClient = c.Client(nil, f.cfg.Oauth2Token)
+		f.httpClient = c.Client(nil, f.cfg.Oauth2Token)
 	}
 
-	remoteStore, err := tuf.HTTPRemoteStore(f.cfg.Config.RepoUrl, nil, httpClient)
+	remoteStore, err := tuf.HTTPRemoteStore(f.cfg.Config.RepoUrl, nil, f.httpClient)
 	if err != nil {
 		return RemoteStoreError{fmt.Errorf("server address not understood: %s", err)}
 	}
@@ -268,6 +268,10 @@ func (f *TUFSource) GetId() string {
 
 func (f *TUFSource) GetConfig() *amber.SourceConfig {
 	return f.cfg.Config
+}
+
+func (f *TUFSource) GetHttpClient() *http.Client {
+	return f.httpClient
 }
 
 func (f *TUFSource) Login() (*amber.DeviceCode, error) {

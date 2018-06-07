@@ -7,6 +7,7 @@ package daemon
 import (
 	"fmt"
 	"log"
+	"net/http"
 	"os"
 	"sync"
 	"time"
@@ -43,6 +44,10 @@ func (k *SourceKeeper) GetId() string {
 
 func (k *SourceKeeper) GetConfig() *amber.SourceConfig {
 	return k.src.GetConfig()
+}
+
+func (k *SourceKeeper) GetHttpClient() *http.Client {
+	return k.src.GetHttpClient()
 }
 
 func (k *SourceKeeper) Login() (*amber.DeviceCode, error) {

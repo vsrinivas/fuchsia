@@ -6,6 +6,7 @@ package source
 
 import (
 	"errors"
+	"net/http"
 	"os"
 	"time"
 
@@ -33,6 +34,10 @@ type Source interface {
 
 	// The config definition for this source.
 	GetConfig() *amber.SourceConfig
+
+	// TODO(etryzelaar) This is a bit of a hack, but the blob fetcher also
+	// needs an authenticated http.Client. This really ought to be refactored.
+	GetHttpClient() *http.Client
 
 	// AvailableUpdates takes a list of packages and returns update metadata
 	// for any updates available for those packages.

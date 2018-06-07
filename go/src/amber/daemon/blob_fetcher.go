@@ -14,9 +14,12 @@ import (
 	"path/filepath"
 	"sync"
 	"time"
+
+	"amber/source"
 )
 
 type BlobRepo struct {
+	Source   source.Source
 	Address  string
 	Interval time.Duration
 }
@@ -25,10 +28,8 @@ func FetchBlob(repos []BlobRepo, blob string, muRun *sync.Mutex, outputDir strin
 	muRun.Lock()
 	defer muRun.Unlock()
 
-	httpC := &http.Client{}
-
 	for i := range repos {
-		reader, sz, err := FetchBlobFromRepo(repos[i], blob, httpC)
+		reader, sz, err := FetchBlobFromRepo(repos[i], blob)
 		if err != nil {
 			log.Printf("Got error trying to get blob\n")
 			continue
@@ -45,7 +46,15 @@ func FetchBlob(repos []BlobRepo, blob string, muRun *sync.Mutex, outputDir strin
 
 // FetchBlobFromRepo attempts to pull the set of blobs requested from the supplied
 // BlobRepo. FetchBlob returns the list of blobs successfully stored.
-func FetchBlobFromRepo(r BlobRepo, blob string, client *http.Client) (io.ReadCloser, int64, error) {
+func FetchBlobFromRepo(r BlobRepo, blob string) (io.ReadCloser, int64, error) {
+	var client *http.Client
+	if r.Source != nil {
+		client = r.Source.GetHttpClient()
+	}
+	if client == nil {
+		client = http.DefaultClient
+	}
+
 	u, err := url.Parse(r.Address)
 	if err != nil {
 		return nil, -1, err
