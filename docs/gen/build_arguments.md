@@ -74,14 +74,14 @@ No values for `target_cpu = "x64"`.
 **Default value for `target_cpu = "x64"`:** true
 
 
-### build_libvulkan_arm_mali
- This is a list of targets that will be built as drivers. If more than one
+### build_libvulkan
+ This is a list of targets that will be built as vulkan ICDS. If more than one
  target is given then use_vulkan_loader_for_tests must be set to true, as
- otherwise tests won't know which libvulkan to use. Example gn arg:
- build_libvulkan_arm_mali =
- ["//third_party/arm-mali-bifrost:libvulkan_arm"]
+ otherwise tests won't know which libvulkan to use.
 
-**Default value:** []
+**Default value for `target_cpu = "arm64"`:** []
+
+**Default value for `target_cpu = "x64"`:** ["//third_party/mesa:magma_vulkan"]
 
 
 ### build_msd_arm_mali
@@ -91,9 +91,11 @@ No values for `target_cpu = "x64"`.
 **Default value for `target_cpu = "x64"`:** false
 
 
-### build_msd_vsl_gc
+### build_vsl_gc
 
-**Default value:** false
+**Default value for `target_cpu = "arm64"`:** true
+
+**Default value for `target_cpu = "x64"`:** false
 
 
 ### clang_prefix
@@ -409,6 +411,12 @@ No values for `target_cpu = "arm64"`.
 **Default value:** ""
 
 
+### rust_lto
+ Sets the default LTO type for rustc bulids.
+
+**Default value:** "unset"
+
+
 ### rustc_prefix
  Sets a custom base directory for `rustc` and `cargo`.
  This can be used to test custom Rust toolchains.
@@ -587,7 +595,9 @@ No values for `target_cpu = "arm64"`.
 ### thinlto_cache_dir
  ThinLTO cache directory path.
 
-**Default value:** "host_x64/thinlto-cache"
+**Default value for `target_cpu = "arm64"`:** "host_x64/thinlto-cache"
+
+**Default value for `target_cpu = "x64"`:** "x64-shared/thinlto-cache"
 
 
 ### thinlto_jobs
