@@ -8,11 +8,9 @@
 
 #include <inttypes.h>
 
-#include <fbl/function.h>
 #include <fbl/string.h>
 #include <fbl/string_piece.h>
 #include <fbl/vector.h>
-#include <lib/async-loop/cpp/loop.h>
 
 namespace runtests {
 
@@ -21,8 +19,10 @@ enum LaunchStatus {
     SUCCESS,
     FAILED_TO_LAUNCH,
     FAILED_TO_WAIT,
+    FAILED_DURING_IO,
     FAILED_TO_RETURN_CODE,
     FAILED_NONZERO_RETURN_CODE,
+    FAILED_UNKNOWN,
 };
 
 // Represents the result of a single test run.
@@ -42,10 +42,11 @@ struct Result {
 //
 // |argv| is the commandline to use to run the test program.
 // |argc| is the number of strings in argv.
-// |out| is a file stream to which the test binary's output will be written. May be
-//   nullptr, in which output will not be redirected.
-//
-using RunTestFn = fbl::Function<Result(const char* argv[], int argc, FILE* out)>;
+// |output_filename| is the name of the file to which the test binary's output
+//   will be written. May be nullptr, in which case the output will not be
+//   redirected.
+typedef Result (*RunTestFn)(const char* argv[], int argc,
+                            const char* output_filename);
 
 // Splits |input| by ',' and appends the results onto |output|.
 // Empty strings are not put into output.

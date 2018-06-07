@@ -163,10 +163,11 @@ int ResolveGlobs(const char* const* globs, const int num_globs,
     return 0;
 }
 
-bool RunTestsInDir(const RunTestFn& run_test, const fbl::StringPiece dir_path,
-                   const fbl::Vector<fbl::String>& filter_names, const char* output_dir,
-                   const char* output_file_basename, const signed char verbosity,
-                   int* num_failed, fbl::Vector<Result>* results) {
+bool RunTestsInDir(const RunTestFn& RunTest, const fbl::StringPiece dir_path,
+                   const fbl::Vector<fbl::String>& filter_names,
+                   const char* output_dir, const char* output_file_basename,
+                   const signed char verbosity, int* num_failed,
+                   fbl::Vector<Result>* results) {
     if ((output_dir != nullptr) && (output_file_basename == nullptr)) {
         printf("Error: output_file_basename is not null, but output_dir is.\n");
         return false;
@@ -178,7 +179,8 @@ bool RunTestsInDir(const RunTestFn& run_test, const fbl::StringPiece dir_path,
         return false;
     }
 
-    // max value for a signed char is 127, so 2 chars for "v=", 3 for integer, 1 for terminator.
+    // max value for a signed char is 127, so 2 chars for "v=", 3 for integer, 1
+    // for terminator.
     char verbosity_arg[6];
     snprintf(verbosity_arg, sizeof(verbosity_arg), "v=%d", verbosity);
     const int argc = verbosity >= 0 ? 2 : 1;
@@ -191,11 +193,12 @@ bool RunTestsInDir(const RunTestFn& run_test, const fbl::StringPiece dir_path,
     // and executing them via run_test as they're found. Skips over test binaries
     // whose names aren't in filter_names.
     //
-    // TODO(mknyszek): Iterate over these dirents (or just discovered test binaries)
-    // in a deterministic order.
+    // TODO(mknyszek): Iterate over these dirents (or just discovered test
+    // binaries) in a deterministic order.
     while ((de = readdir(dir)) != nullptr) {
         const char* test_name = de->d_name;
-        if (!filter_names.is_empty() && !runtests::IsInWhitelist(test_name, filter_names)) {
+        if (!filter_names.is_empty() &&
+            !runtests::IsInWhitelist(test_name, filter_names)) {
             continue;
         }
 
@@ -205,46 +208,36 @@ bool RunTestsInDir(const RunTestFn& run_test, const fbl::StringPiece dir_path,
         }
 
         if (verbosity > 0) {
-            printf("\n------------------------------------------------\n"
-                   "RUNNING TEST: %s\n\n",
-                   test_name);
+            printf(
+                "\n------------------------------------------------\n"
+                "RUNNING TEST: %s\n\n",
+                test_name);
         }
 
-        // If output_dir was specified, ask run_test to redirect stdout/stderr
+        // If output_dir was specified, ask |RunTest| to redirect stdout/stderr
         // to a file whose name is based on the test name.
-        FILE* out = nullptr;
+        fbl::String output_filename_str;
         if (output_dir != nullptr) {
-            const fbl::String test_output_dir = runtests::JoinPath(output_dir, test_path);
+            const fbl::String test_output_dir =
+                runtests::JoinPath(output_dir, test_path);
             const int error = runtests::MkDirAll(test_output_dir);
             if (error) {
                 printf("Error: Could not output directory for test %s: %s\n", test_name,
                        strerror(error));
                 return false;
             }
-
-            out = fopen(runtests::JoinPath(test_output_dir, output_file_basename).c_str(), "w");
-            if (out == nullptr) {
-                printf("Error: Could not open output file for test %s: %s\n", test_name,
-                       strerror(errno));
-                return false;
-            }
+            output_filename_str = JoinPath(test_output_dir, output_file_basename);
         }
 
         // Execute the test binary.
         const char* argv[] = {test_path.c_str(), verbosity_arg};
-        results->push_back(run_test(argv, argc, out));
+        const char* output_filename =
+            output_filename_str.empty() ? nullptr : output_filename_str.c_str();
+        results->push_back(RunTest(argv, argc, output_filename));
         if ((*results)[results->size() - 1].launch_status != runtests::SUCCESS) {
             failed_count++;
         }
-
-        // Clean up the output file.
-        if (out != nullptr && fclose(out)) {
-            printf("FAILURE: Failed to close output file for test %s: %s\n", de->d_name,
-                   strerror(errno));
-            continue;
-        }
     }
-
     closedir(dir);
     *num_failed = failed_count;
     return failed_count == 0;

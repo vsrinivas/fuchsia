@@ -2,24 +2,23 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "runtests-utils-test-globals.h"
+
+#include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <limits.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <sys/stat.h>
 #include <unistd.h>
 
+#include <fbl/auto_call.h>
 #include <fbl/string.h>
 #include <fbl/unique_ptr.h>
 #include <fbl/vector.h>
 #include <runtests-utils/runtests-utils.h>
 #include <unittest/unittest.h>
-
-#ifdef __Fuchsia__
-#include <lib/async-loop/cpp/loop.h>
-#include <lib/memfs/memfs.h>
-#include <runtests-utils/fuchsia-run-test.h>
-#endif
 
 namespace runtests {
 namespace {
@@ -28,17 +27,6 @@ static constexpr char kOutputFileName[] = "output.txt";
 static constexpr char kEchoSuccessAndArgs[] = "echo Success! $@";
 static constexpr char kEchoFailureAndArgs[] = "echo Failure!  $@ 1>&2\nexit 77";
 static constexpr size_t kOneMegabyte = 1 << 20;
-
-#ifdef __Fuchsia__
-// Filesystem root for testing; for Fuchsia, we use the in-memory memfs.
-static constexpr char kTestFsRoot[] = "/test-memfs";
-// Fuchsia shell script shebang.
-static constexpr char kScriptShebang[] = "#!/boot/bin/sh\n\n";
-// Invokes a Fuchisa test binary and writes its output to a file.
-static constexpr auto PlatformRunTest = &FuchsiaRunTest;
-#else
-#error "runtests-utils-test is not yet ready to run outside of Fuchsia."
-#endif
 
 // Creates a script file with given contents in constructor and deletes it in destructor.
 class ScopedScriptFile {
@@ -60,7 +48,7 @@ ScopedScriptFile::ScopedScriptFile(
     const int fd = open(path_.data(), O_CREAT | O_WRONLY, S_IRWXU);
     ZX_ASSERT_MSG(-1 != fd, "%s", strerror(errno));
     ZX_ASSERT(sizeof(kScriptShebang) == static_cast<size_t>(
-        write(fd, kScriptShebang, sizeof(kScriptShebang))));
+                                            write(fd, kScriptShebang, sizeof(kScriptShebang))));
     ZX_ASSERT(contents.size() == static_cast<size_t>(write(fd, contents.data(), contents.size())));
     ZX_ASSERT_MSG(-1 != close(fd), "%s", strerror(errno));
 }
@@ -154,7 +142,7 @@ bool MkDirAllTooLong() {
 }
 bool MkDirAllAlreadyExists() {
     BEGIN_TEST;
-    const fbl::String already = JoinPath(kTestFsRoot, "already");
+    const fbl::String already = JoinPath(TestFsRoot(), "already");
     const fbl::String exists = JoinPath(already, "exists");
     ASSERT_EQ(0, mkdir(already.c_str(), 0755));
     ASSERT_EQ(0, mkdir(exists.c_str(), 0755));
@@ -163,7 +151,7 @@ bool MkDirAllAlreadyExists() {
 }
 bool MkDirAllParentAlreadyExists() {
     BEGIN_TEST;
-    const fbl::String parent = JoinPath(kTestFsRoot, "existing-parent");
+    const fbl::String parent = JoinPath(TestFsRoot(), "existing-parent");
     const fbl::String child = JoinPath(parent, "child");
     ASSERT_EQ(0, mkdir(parent.c_str(), 0755));
     EXPECT_EQ(0, MkDirAll(child));
@@ -173,7 +161,7 @@ bool MkDirAllParentAlreadyExists() {
 }
 bool MkDirAllParentDoesNotExist() {
     BEGIN_TEST;
-    const fbl::String parent = JoinPath(kTestFsRoot, "not-existing-parent");
+    const fbl::String parent = JoinPath(TestFsRoot(), "not-existing-parent");
     const fbl::String child = JoinPath(parent, "child");
     struct stat s;
     ASSERT_NE(0, stat(parent.c_str(), &s));
@@ -211,7 +199,7 @@ bool WriteSummaryJSONSucceedsWithoutSyslogPath() {
     FILE* buf_file = fmemopen(buf.get(), kOneMegabyte, "w");
     const fbl::Vector<Result> results = {Result("/a", SUCCESS, 0),
                                          Result("b", FAILED_TO_LAUNCH, 0)};
-    ASSERT_EQ(0, WriteSummaryJSON(results, kOutputFileName, /*syslog_path=*/ "", buf_file));
+    ASSERT_EQ(0, WriteSummaryJSON(results, kOutputFileName, /*syslog_path=*/"", buf_file));
     fclose(buf_file);
     // With an empty syslog_path, we expect no values under "outputs" and "syslog_file" to
     // be generated in the JSON output.
@@ -240,7 +228,7 @@ bool WriteSummaryJSONBadTestName() {
 bool ResolveGlobsNoMatches() {
     BEGIN_TEST;
     fbl::Vector<fbl::String> resolved;
-    const fbl::String test_fs_glob = JoinPath(kTestFsRoot, "bar*");
+    const fbl::String test_fs_glob = JoinPath(TestFsRoot(), "bar*");
     const char* globs[] = {"/foo/bar/*", test_fs_glob.c_str()};
     ASSERT_EQ(0, ResolveGlobs(globs, sizeof(globs) / sizeof(globs[0]), &resolved));
     EXPECT_EQ(0, resolved.size());
@@ -249,11 +237,14 @@ bool ResolveGlobsNoMatches() {
 
 bool ResolveGlobsMultipleMatches() {
     BEGIN_TEST;
-    const fbl::String existing_dir_path = JoinPath(kTestFsRoot, "existing-dir/prefix-suffix");
-    const fbl::String existing_file_path = JoinPath(kTestFsRoot, "existing-file");
-    const fbl::String existing_dir_glob = JoinPath(kTestFsRoot, "existing-dir/prefix*");
+    const fbl::String existing_dir_path =
+        JoinPath(TestFsRoot(), "existing-dir/prefix-suffix");
+    const fbl::String existing_file_path =
+        JoinPath(TestFsRoot(), "existing-file");
+    const fbl::String existing_dir_glob =
+        JoinPath(TestFsRoot(), "existing-dir/prefix*");
     const char* globs[] = {"/does/not/exist/*",
-                           existing_dir_glob.c_str(),  // matches existing_dir_path.
+                           existing_dir_glob.c_str(), // matches existing_dir_path.
                            existing_file_path.c_str()};
     ASSERT_EQ(0, MkDirAll(existing_dir_path));
     const int existing_file_fd = open(existing_file_path.c_str(), O_CREAT);
@@ -263,15 +254,15 @@ bool ResolveGlobsMultipleMatches() {
     ASSERT_EQ(0, ResolveGlobs(globs, sizeof(globs) / sizeof(globs[0]), &resolved));
     ASSERT_EQ(2, resolved.size());
     EXPECT_STR_EQ(existing_dir_path.c_str(), resolved[0].c_str());
+
     END_TEST;
 }
 
 bool RunTestSuccess() {
     BEGIN_TEST;
-    fbl::String test_name = JoinPath(kTestFsRoot, "succeed.sh");
+    fbl::String test_name = JoinPath(TestFsRoot(), "succeed.sh");
     const char* argv[] = {test_name.c_str()};
     ScopedScriptFile script(argv[0], "exit 0");
-
     const Result result = PlatformRunTest(argv, 1, nullptr);
     EXPECT_STR_EQ(argv[0], result.name.c_str());
     EXPECT_EQ(SUCCESS, result.launch_status);
@@ -281,20 +272,23 @@ bool RunTestSuccess() {
 
 bool RunTestSuccessWithStdout() {
     BEGIN_TEST;
-    fbl::String test_name = JoinPath(kTestFsRoot, "succeed.sh");
+    fbl::String test_name = JoinPath(TestFsRoot(), "succeed.sh");
     const char* argv[] = {test_name.c_str()};
     const char expected_output[] = "Expect this!\n";
     // Produces expected_output, b/c echo adds newline
     const char script_contents[] = "echo Expect this!";
     ScopedScriptFile script(argv[0], script_contents);
 
-    // A reasonable guess that the process won't output more than this.
+    fbl::String output_filename = JoinPath(TestFsRoot(), "test.out");
+    const Result result = PlatformRunTest(argv, 1, output_filename.c_str());
+
+    FILE* output_file = fopen(output_filename.c_str(), "r");
+    ASSERT_TRUE(output_file);
     char buf[1024];
     memset(buf, 0, sizeof(buf));
-    FILE* buf_file = fmemopen(buf, sizeof(buf), "w");
-    const Result result = PlatformRunTest(argv, 1, buf_file);
-    fclose(buf_file);
-    ASSERT_STR_EQ(expected_output, buf);
+    EXPECT_LT(0, fread(buf, sizeof(buf[0]), sizeof(buf), output_file));
+    fclose(output_file);
+    EXPECT_STR_EQ(expected_output, buf);
     EXPECT_STR_EQ(argv[0], result.name.c_str());
     EXPECT_EQ(SUCCESS, result.launch_status);
     EXPECT_EQ(0, result.return_code);
@@ -303,19 +297,23 @@ bool RunTestSuccessWithStdout() {
 
 bool RunTestFailureWithStderr() {
     BEGIN_TEST;
-    fbl::String test_name = JoinPath(kTestFsRoot, "fail.sh");
+    fbl::String test_name = JoinPath(TestFsRoot(), "fail.sh");
     const char* argv[] = {test_name.c_str()};
     const char expected_output[] = "Expect this!\n";
     // Produces expected_output, b/c echo adds newline
     const char script_contents[] = "echo Expect this! 1>&2\nexit 77";
     ScopedScriptFile script(argv[0], script_contents);
 
+    fbl::String output_filename = JoinPath(TestFsRoot(), "test.out");
+    const Result result = PlatformRunTest(argv, 1, output_filename.c_str());
+
+    FILE* output_file = fopen(output_filename.c_str(), "r");
+    ASSERT_TRUE(output_file);
     char buf[1024];
     memset(buf, 0, sizeof(buf));
-    FILE* buf_file = fmemopen(buf, sizeof(buf), "w");
-    const Result result = PlatformRunTest(argv, 1, buf_file);
-    fclose(buf_file);
-    ASSERT_STR_EQ(expected_output, buf);
+    EXPECT_LT(0, fread(buf, sizeof(buf[0]), sizeof(buf), output_file));
+    fclose(output_file);
+    EXPECT_STR_EQ(expected_output, buf);
     EXPECT_STR_EQ(argv[0], result.name.c_str());
     EXPECT_EQ(FAILED_NONZERO_RETURN_CODE, result.launch_status);
     EXPECT_EQ(77, result.return_code);
@@ -324,7 +322,7 @@ bool RunTestFailureWithStderr() {
 
 bool RunTestFailureToLoadFile() {
     BEGIN_TEST;
-    const char* argv[] = {"i/do/not/exist/"};
+    const char* argv[] = {"i/do/not/exist/", nullptr};
 
     const Result result = PlatformRunTest(argv, 1, nullptr);
     EXPECT_STR_EQ(argv[0], result.name.c_str());
@@ -334,15 +332,15 @@ bool RunTestFailureToLoadFile() {
 
 bool RunTestsInDirBasic() {
     BEGIN_TEST;
-    const fbl::String succeed_file_name = JoinPath(kTestFsRoot, "succeed.sh");
+    const fbl::String succeed_file_name = JoinPath(TestFsRoot(), "succeed.sh");
     ScopedScriptFile succeed_file(succeed_file_name, kEchoSuccessAndArgs);
-    const fbl::String fail_file_name = JoinPath(kTestFsRoot, "fail.sh");
+    const fbl::String fail_file_name = JoinPath(TestFsRoot(), "fail.sh");
     ScopedScriptFile fail_file(fail_file_name, kEchoFailureAndArgs);
     int num_failed;
     fbl::Vector<Result> results;
     const signed char verbosity = -1;
-    EXPECT_FALSE(RunTestsInDir(PlatformRunTest, kTestFsRoot, {}, nullptr, nullptr, verbosity,
-                               &num_failed, &results));
+    EXPECT_FALSE(RunTestsInDir(PlatformRunTest, TestFsRoot(), {}, nullptr,
+                               nullptr, verbosity, &num_failed, &results));
     EXPECT_EQ(1, num_failed);
     EXPECT_EQ(2, results.size());
     bool found_succeed_result = false;
@@ -364,16 +362,17 @@ bool RunTestsInDirBasic() {
 
 bool RunTestsInDirFilter() {
     BEGIN_TEST;
-    const fbl::String succeed_file_name = JoinPath(kTestFsRoot, "succeed.sh");
+    const fbl::String succeed_file_name = JoinPath(TestFsRoot(), "succeed.sh");
     ScopedScriptFile succeed_file(succeed_file_name, kEchoSuccessAndArgs);
-    const fbl::String fail_file_name = JoinPath(kTestFsRoot, "fail.sh");
+    const fbl::String fail_file_name = JoinPath(TestFsRoot(), "fail.sh");
     ScopedScriptFile fail_file(fail_file_name, kEchoFailureAndArgs);
     int num_failed;
     fbl::Vector<Result> results;
     fbl::Vector<fbl::String> filter_names({"succeed.sh"});
     const signed char verbosity = -1;
-    EXPECT_TRUE(RunTestsInDir(PlatformRunTest, kTestFsRoot, filter_names, nullptr, nullptr, verbosity,
-                              &num_failed, &results));
+    EXPECT_TRUE(RunTestsInDir(PlatformRunTest, TestFsRoot(), filter_names,
+                              nullptr, nullptr, verbosity, &num_failed,
+                              &results));
     EXPECT_EQ(0, num_failed);
     EXPECT_EQ(1, results.size());
     EXPECT_STR_EQ(results[0].name.c_str(), succeed_file.path().data());
@@ -382,15 +381,16 @@ bool RunTestsInDirFilter() {
 
 bool RunTestsInDirWithVerbosity() {
     BEGIN_TEST;
-    const fbl::String succeed_file_name = JoinPath(kTestFsRoot, "succeed.sh");
-    ScopedScriptFile succeed_file(succeed_file_name,  kEchoSuccessAndArgs);
+    const fbl::String succeed_file_name = JoinPath(TestFsRoot(), "succeed.sh");
+    ScopedScriptFile succeed_file(succeed_file_name, kEchoSuccessAndArgs);
     int num_failed;
     fbl::Vector<Result> results;
     const signed char verbosity = 77;
-    const fbl::String output_dir = JoinPath(kTestFsRoot, "output");
+    const fbl::String output_dir = JoinPath(TestFsRoot(), "output");
     ASSERT_EQ(0, MkDirAll(output_dir));
-    EXPECT_TRUE(RunTestsInDir(PlatformRunTest, kTestFsRoot, {}, output_dir.c_str(), kOutputFileName,
-                              verbosity, &num_failed, &results));
+    EXPECT_TRUE(RunTestsInDir(PlatformRunTest, TestFsRoot(), {},
+                              output_dir.c_str(), kOutputFileName, verbosity,
+                              &num_failed, &results));
     EXPECT_EQ(0, num_failed);
     EXPECT_EQ(1, results.size());
     FILE* output_file = fopen(
@@ -455,20 +455,3 @@ END_TEST_CASE(RunTestsInDir)
 
 } // namespace
 } // namespace runtests
-
-int main(int argc, char** argv) {
-#ifdef __Fuchsia__
-    // Initialize memfs, for use in tests that touch the file system.
-    async::Loop loop;
-    if (loop.StartThread() != ZX_OK) {
-      fprintf(stderr, "Error: Cannot initialize local memfs loop\n");
-      return -1;
-    }
-    if (memfs_install_at(loop.async(), runtests::kTestFsRoot) != ZX_OK) {
-        fprintf(stderr, "Error: Cannot install local memfs\n");
-        return -1;
-    }
-#endif
-
-    return unittest_run_all_tests(argc, argv) ? EXIT_SUCCESS : EXIT_FAILURE;
-}
