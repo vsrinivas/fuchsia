@@ -8,7 +8,6 @@
 #include <fs/remote-dir.h>
 #include <lib/fdio/spawn.h>
 
-#include "garnet/bin/appmgr/realm.h"
 #include "gtest/gtest.h"
 #include "lib/fsl/handles/object_info.h"
 #include "lib/gtest/test_with_message_loop.h"
@@ -51,7 +50,43 @@ std::unique_ptr<ComponentControllerImpl> RealmMock::ExtractComponent(
   return component;
 }
 
-class ComponentControllerTest : public gtest::TestWithMessageLoop {};
+class ComponentControllerTest : public gtest::TestWithMessageLoop {
+ public:
+  void SetUp() override {
+    gtest::TestWithMessageLoop::SetUp();
+
+    // create process
+    const char* argv[] = {"sh", NULL};
+    char err_msg[FDIO_SPAWN_ERR_MSG_MAX_LENGTH];
+    zx_status_t status = fdio_spawn_etc(
+        ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL, "/boot/bin/sh", argv, NULL, 0,
+        NULL, process_.reset_and_get_address(), err_msg);
+    ASSERT_EQ(status, ZX_OK) << err_msg;
+    process_koid_ = std::to_string(fsl::GetKoid(process_.get()));
+  }
+
+  void TearDown() override {
+    if (process_) {
+      process_.kill();
+    }
+    gtest::TestWithMessageLoop::TearDown();
+  }
+
+ protected:
+  std::unique_ptr<ComponentControllerImpl> create_component(
+      ComponentControllerPtr& controller,
+      ExportedDirType export_dir_type = ExportedDirType::kLegacyFlatLayout,
+      zx::channel export_dir = zx::channel()) {
+    return std::make_unique<ComponentControllerImpl>(
+        controller.NewRequest(), &realm_, realm_.koid(), nullptr,
+        std::move(process_), "test-url", "test-arg", "test-label", nullptr,
+        export_dir_type, std::move(export_dir), zx::channel());
+  }
+
+  RealmMock realm_;
+  std::string process_koid_;
+  zx::process process_;
+};
 
 std::vector<std::string> split(const std::string& s, char delim) {
   std::vector<std::string> tokens;
@@ -111,37 +146,18 @@ bool path_exists(const fbl::RefPtr<fs::PseudoDir>& hub_dir, std::string path,
   return true;
 }
 
-zx::process create_process() {
-  zx::process process;
-  const char* argv[] = {"sh", NULL};
-  char err_msg[FDIO_SPAWN_ERR_MSG_MAX_LENGTH];
-  zx_status_t status = fdio_spawn_etc(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL,
-                                      "/boot/bin/sh", argv, NULL, 0, NULL,
-                                      process.reset_and_get_address(), err_msg);
-  EXPECT_EQ(status, ZX_OK) << err_msg;
-  return process;
-}
-
 TEST_F(ComponentControllerTest, CreateAndKill) {
-  RealmMock realm;
-  zx::process process = create_process();
-  ASSERT_TRUE(process);
-  auto koid = std::to_string(fsl::GetKoid(process.get()));
-
   ComponentControllerPtr component_ptr;
-  auto component = std::make_unique<ComponentControllerImpl>(
-      component_ptr.NewRequest(), &realm, realm.koid(), nullptr,
-      std::move(process), "test-url", "test-arg", "test-label", nullptr,
-      ExportedDirType::kLegacyFlatLayout, zx::channel(), zx::channel());
+  auto component = create_component(component_ptr);
   auto hub_info = component->HubInfo();
 
   EXPECT_EQ(hub_info.label(), "test-label");
-  EXPECT_EQ(hub_info.koid(), koid);
+  EXPECT_EQ(hub_info.koid(), process_koid_);
 
-  ASSERT_EQ(realm.ComponentCount(), 0u);
-  realm.AddComponent(std::move(component));
+  ASSERT_EQ(realm_.ComponentCount(), 0u);
+  realm_.AddComponent(std::move(component));
 
-  ASSERT_EQ(realm.ComponentCount(), 1u);
+  ASSERT_EQ(realm_.ComponentCount(), 1u);
 
   bool wait = false;
   component_ptr->Wait([&wait](int errcode) { wait = true; });
@@ -151,50 +167,37 @@ TEST_F(ComponentControllerTest, CreateAndKill) {
 
   // make sure all messages are processed after wait was called
   RunLoopUntilIdle();
-  EXPECT_EQ(realm.ComponentCount(), 0u);
+  EXPECT_EQ(realm_.ComponentCount(), 0u);
 }
 
 TEST_F(ComponentControllerTest, ControllerScope) {
-  RealmMock realm;
-  zx::process process = create_process();
-  ASSERT_TRUE(process);
-  auto koid = std::to_string(fsl::GetKoid(process.get()));
   bool wait = false;
-  auto hub_path = "c/test-label/" + koid;
+  auto hub_path = "c/test-label/" + process_koid_;
   {
     ComponentControllerPtr component_ptr;
-    auto component = std::make_unique<ComponentControllerImpl>(
-        component_ptr.NewRequest(), &realm, realm.koid(), nullptr,
-        std::move(process), "test-url", "test-arg", "test-label", nullptr,
-        ExportedDirType::kLegacyFlatLayout, zx::channel(), zx::channel());
+    auto component = create_component(component_ptr);
     component->Wait([&wait](int errcode) { wait = true; });
-    realm.AddComponent(std::move(component));
+    realm_.AddComponent(std::move(component));
 
-    ASSERT_EQ(realm.ComponentCount(), 1u);
+    ASSERT_EQ(realm_.ComponentCount(), 1u);
   }
   EXPECT_TRUE(RunLoopUntilWithTimeout([&wait] { return wait; },
                                       fxl::TimeDelta::FromSeconds(5)));
 
   // make sure all messages are processed after wait was called
   RunLoopUntilIdle();
-  EXPECT_EQ(realm.ComponentCount(), 0u);
+  EXPECT_EQ(realm_.ComponentCount(), 0u);
 }
 
 TEST_F(ComponentControllerTest, DetachController) {
-  RealmMock realm;
-  zx::process process = create_process();
-  ASSERT_TRUE(process);
   bool wait = false;
   {
     ComponentControllerPtr component_ptr;
-    auto component = std::make_unique<ComponentControllerImpl>(
-        component_ptr.NewRequest(), &realm, realm.koid(), nullptr,
-        std::move(process), "test-url", "test-arg", "test-label", nullptr,
-        ExportedDirType::kLegacyFlatLayout, zx::channel(), zx::channel());
+    auto component = create_component(component_ptr);
     component->Wait([&wait](int errcode) { wait = true; });
-    realm.AddComponent(std::move(component));
+    realm_.AddComponent(std::move(component));
 
-    ASSERT_EQ(realm.ComponentCount(), 1u);
+    ASSERT_EQ(realm_.ComponentCount(), 1u);
 
     // detach controller before it goes out of scope and then test that our
     // component did not die.
@@ -205,32 +208,26 @@ TEST_F(ComponentControllerTest, DetachController) {
   // make sure all messages are processed if Kill was called.
   RunLoopUntilIdle();
   ASSERT_FALSE(wait);
-  EXPECT_EQ(realm.ComponentCount(), 1u);
+  EXPECT_EQ(realm_.ComponentCount(), 1u);
 }
 
 TEST_F(ComponentControllerTest, Hub) {
-  RealmMock realm;
   zx::channel export_dir, export_dir_req;
   ASSERT_EQ(zx::channel::create(0, &export_dir, &export_dir_req), ZX_OK);
 
-  zx::process process = create_process();
-  auto koid = std::to_string(fsl::GetKoid(process.get()));
-  ASSERT_TRUE(process);
   ComponentControllerPtr component_ptr;
 
-  auto component = std::make_unique<ComponentControllerImpl>(
-      component_ptr.NewRequest(), &realm, realm.koid(), nullptr,
-      std::move(process), "test-url", "test-arg", "test-label", nullptr,
-      ExportedDirType::kPublicDebugCtrlLayout, std::move(export_dir_req),
-      zx::channel());
+  auto component =
+      create_component(component_ptr, ExportedDirType::kPublicDebugCtrlLayout,
+                       std::move(export_dir_req));
 
   EXPECT_STREQ(get_value(component->hub_dir(), "name").c_str(), "test-label");
   EXPECT_STREQ(get_value(component->hub_dir(), "args").c_str(), "test-arg");
   EXPECT_STREQ(get_value(component->hub_dir(), "job-id").c_str(),
-               realm.koid().c_str());
+               realm_.koid().c_str());
   EXPECT_STREQ(get_value(component->hub_dir(), "url").c_str(), "test-url");
   EXPECT_STREQ(get_value(component->hub_dir(), "process-id").c_str(),
-               koid.c_str());
+               process_koid_.c_str());
   fbl::RefPtr<fs::Vnode> out_dir;
   ASSERT_TRUE(path_exists(component->hub_dir(), "out", &out_dir));
   ASSERT_TRUE(out_dir->IsRemote());
