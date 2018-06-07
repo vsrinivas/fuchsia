@@ -29,6 +29,11 @@ namespace impl {
 // returned to it when all GPU-work is finished.
 //
 // Not thread-safe.
+//
+// TODO(ES-77): RenderPass and Framebuffer are deprecated, to be replaced by
+// impl::RenderPass and impl::Framebuffer.  The latter two aren't visible to
+// Escher clients; they are an implementation detail of escher::CommandBuffer
+// (NOTE: NOT escher::impl::CommandBuffer, which is also deprecated).
 class CommandBuffer {
  public:
   ~CommandBuffer();
@@ -94,16 +99,16 @@ class CommandBuffer {
 
   // Convenient way to begin a render-pass that renders to the whole framebuffer
   // (i.e. width/height of viewport and scissors are obtained from framebuffer).
-  void BeginRenderPass(const RenderPassPtr& render_pass,
-                       const FramebufferPtr& framebuffer,
+  void BeginRenderPass(const escher::RenderPassPtr& render_pass,
+                       const escher::FramebufferPtr& framebuffer,
                        const std::vector<vk::ClearValue>& clear_values,
                        const vk::Rect2D viewport);
   void BeginRenderPass(vk::RenderPass render_pass,
-                       const FramebufferPtr& framebuffer,
+                       const escher::FramebufferPtr& framebuffer,
                        const std::vector<vk::ClearValue>& clear_values,
                        const vk::Rect2D viewport);
   void BeginRenderPass(vk::RenderPass render_pass,
-                       const FramebufferPtr& framebuffer,
+                       const escher::FramebufferPtr& framebuffer,
                        const vk::ClearValue* clear_values,
                        size_t clear_value_count, const vk::Rect2D viewport);
 

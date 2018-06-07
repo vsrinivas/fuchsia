@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "lib/escher/vk/descriptor_set_layout.h"
+#include "lib/escher/vk/impl/descriptor_set_layout.h"
 #include "lib/escher/vk/vulkan_limits.h"
 
 #include "gtest/gtest.h"
@@ -13,7 +13,7 @@ namespace {
 using namespace escher;
 
 TEST(DescriptorSetLayout, Validate) {
-  DescriptorSetLayout original_layout = {};
+  impl::DescriptorSetLayout original_layout = {};
   original_layout.sampled_image_mask = 1 << 0U;
   original_layout.storage_image_mask = 1 << 1U;
   original_layout.uniform_buffer_mask = 1 << 2U;
@@ -22,7 +22,7 @@ TEST(DescriptorSetLayout, Validate) {
   original_layout.input_attachment_mask = 1 << 5U;
   original_layout.fp_mask = 0U;
 
-  DescriptorSetLayout layout;
+  impl::DescriptorSetLayout layout;
   uint32_t* integers = &layout.sampled_image_mask;
 
   // Having the same bit appear in two of the masks results in a validation
@@ -35,6 +35,7 @@ TEST(DescriptorSetLayout, Validate) {
     integers[type_index] |= 1 << ((type_index + 1) % 5U);
     EXPECT_FALSE(layout.IsValid());
   }
+  FXL_LOG(INFO) << "==== NOTE: no additional validation warnings are expected";
 
   // No problem to add an additional binding anywhere else, of any type.
   for (size_t bit_index = 6U; bit_index < VulkanLimits::kNumBindings;

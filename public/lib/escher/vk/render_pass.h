@@ -14,6 +14,8 @@ class RenderPass;
 typedef fxl::RefPtr<RenderPass> RenderPassPtr;
 
 // Escher's standard interface to Vulkan render pass objects.
+// TODO(ES-83): deprecated.  Render passes will soon be handled transparently
+// by the new CommandBuffer object.
 class RenderPass : public Resource {
  public:
   static const ResourceTypeInfo kTypeInfo;
@@ -37,11 +39,9 @@ class RenderPass : public Resource {
   // This constructor initializes |create_info_| to point at the attachments,
   // subpasses, and subpass-dependencies.  The subclass is responsible for
   // calling CreateRenderPass() before returning from its constructor.
-  RenderPass(ResourceManager* manager,
-             uint32_t color_attachment_count,
+  RenderPass(ResourceManager* manager, uint32_t color_attachment_count,
              uint32_t depth_attachment_count,
-             uint32_t attachment_reference_count,
-             uint32_t subpass_count,
+             uint32_t attachment_reference_count, uint32_t subpass_count,
              uint32_t subpass_dependency_count);
 
   // Called by subclasses after all subpasses/attachments/etc. have been set up.

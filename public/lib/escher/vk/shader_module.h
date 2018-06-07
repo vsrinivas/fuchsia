@@ -8,7 +8,7 @@
 #include <vulkan/vulkan.hpp>
 
 #include "lib/escher/util/debug_print.h"
-#include "lib/escher/vk/descriptor_set_layout.h"
+#include "lib/escher/vk/impl/descriptor_set_layout.h"
 #include "lib/escher/vk/shader_stage.h"
 #include "lib/escher/vk/vulkan_limits.h"
 #include "lib/fxl/memory/ref_counted.h"
@@ -25,6 +25,7 @@ class ShaderModuleListener {
   virtual void OnShaderModuleUpdated(ShaderModule* shader_module) = 0;
 };
 
+namespace impl {
 struct ShaderModuleResourceLayout {
   uint32_t attribute_mask = 0;
   uint32_t render_target_mask = 0;
@@ -32,7 +33,8 @@ struct ShaderModuleResourceLayout {
   uint32_t push_constant_range = 0;
   DescriptorSetLayout sets[VulkanLimits::kNumDescriptorSets];
 };
-ESCHER_DEBUG_PRINTABLE(ShaderModuleResourceLayout);
+}  // namespace impl
+ESCHER_DEBUG_PRINTABLE(impl::ShaderModuleResourceLayout);
 
 // Base class that knows hows to wrap SPIR-V code into a vk::ShaderModule and
 // notify listeners so that e.g. vk::Pipelines can be invalidated/regenerated.
@@ -62,7 +64,8 @@ class ShaderModule : public fxl::RefCountedThreadSafe<ShaderModule> {
   }
 
   // Return the module's resource layout.
-  const ShaderModuleResourceLayout& shader_module_resource_layout() const {
+  const impl::ShaderModuleResourceLayout& shader_module_resource_layout()
+      const {
     FXL_DCHECK(is_valid());
     return layout_;
   }
@@ -89,7 +92,7 @@ class ShaderModule : public fxl::RefCountedThreadSafe<ShaderModule> {
   ShaderStage stage_;
   vk::ShaderModule module_;
   std::vector<ShaderModuleListener*> listeners_;
-  ShaderModuleResourceLayout layout_;
+  impl::ShaderModuleResourceLayout layout_;
 };
 
 }  // namespace escher

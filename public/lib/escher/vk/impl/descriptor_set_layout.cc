@@ -2,11 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "lib/escher/vk/descriptor_set_layout.h"
+#include "lib/escher/vk/impl/descriptor_set_layout.h"
 
 #include "lib/fxl/logging.h"
 
 namespace escher {
+namespace impl {
 
 bool DescriptorSetLayout::IsValid() {
   uint32_t seen_bits = sampled_image_mask;
@@ -28,4 +29,5 @@ bool DescriptorSetLayout::IsValid() {
   return true;
 }
 
+}  // namespace impl
 }  // namespace escher

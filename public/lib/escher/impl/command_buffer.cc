@@ -301,7 +301,8 @@ void CommandBuffer::TransitionImageLayout(const ImagePtr& image,
 }
 
 void CommandBuffer::BeginRenderPass(
-    const RenderPassPtr& render_pass, const FramebufferPtr& framebuffer,
+    const escher::RenderPassPtr& render_pass,
+    const escher::FramebufferPtr& framebuffer,
     const std::vector<vk::ClearValue>& clear_values,
     const vk::Rect2D viewport) {
   KeepAlive(render_pass);
@@ -310,7 +311,7 @@ void CommandBuffer::BeginRenderPass(
 }
 
 void CommandBuffer::BeginRenderPass(
-    vk::RenderPass render_pass, const FramebufferPtr& framebuffer,
+    vk::RenderPass render_pass, const escher::FramebufferPtr& framebuffer,
     const std::vector<vk::ClearValue>& clear_values,
     const vk::Rect2D viewport) {
   BeginRenderPass(render_pass, framebuffer, clear_values.data(),
@@ -318,7 +319,7 @@ void CommandBuffer::BeginRenderPass(
 }
 
 void CommandBuffer::BeginRenderPass(vk::RenderPass render_pass,
-                                    const FramebufferPtr& framebuffer,
+                                    const escher::FramebufferPtr& framebuffer,
                                     const vk::ClearValue* clear_values,
                                     size_t clear_value_count,
                                     vk::Rect2D viewport) {

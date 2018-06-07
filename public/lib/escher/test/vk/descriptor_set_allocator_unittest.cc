@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "lib/escher/vk/descriptor_set_allocator.h"
+#include "lib/escher/vk/impl/descriptor_set_allocator.h"
 
 #include "garnet/public/lib/escher/test/gtest_escher.h"
 
@@ -10,12 +10,13 @@ namespace {
 using namespace escher;
 
 VK_TEST(DescriptorSetAllocatorTest, General) {
-  DescriptorSetLayout layout = {};
+  impl::DescriptorSetLayout layout = {};
   layout.sampled_image_mask = 0x5;
   layout.storage_image_mask = 0x2;
   layout.input_attachment_mask = 0x8;
 
-  DescriptorSetAllocator allocator(test::GetEscher()->vk_device(), layout);
+  impl::DescriptorSetAllocator allocator(test::GetEscher()->vk_device(),
+                                         layout);
 
   Hash hash1 = {1};
   Hash hash2 = {2};

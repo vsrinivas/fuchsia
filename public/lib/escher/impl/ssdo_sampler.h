@@ -49,9 +49,7 @@ class SsdoSampler {
   static const vk::DescriptorSetLayoutCreateInfo&
   GetDescriptorSetLayoutCreateInfo();
 
-  SsdoSampler(Escher* escher,
-              MeshPtr full_screen,
-              ImagePtr noise_image,
+  SsdoSampler(Escher* escher, MeshPtr full_screen, ImagePtr noise_image,
               ModelData* model_data);
   ~SsdoSampler();
 
@@ -60,7 +58,7 @@ class SsdoSampler {
   // Stochastic sampling to determine obscurance.  The output requires filtering
   // to reduce noise.
   void Sample(CommandBuffer* command_buffer,
-              const FramebufferPtr& framebuffer,
+              const escher::FramebufferPtr& framebuffer,
               const TexturePtr& depth_texture,
               const TexturePtr& accelerator_texture,
               const SamplerConfig* push_constants);
@@ -69,7 +67,7 @@ class SsdoSampler {
   // filter in a horizontal and a vertical direction (the direction is selected
   // by the FilterConfig's 'stride' parameter).
   void Filter(CommandBuffer* command_buffer,
-              const FramebufferPtr& framebuffer,
+              const escher::FramebufferPtr& framebuffer,
               const TexturePtr& unfiltered_illumination,
               const TexturePtr& accelerator_texture,
               const FilterConfig* push_constants);

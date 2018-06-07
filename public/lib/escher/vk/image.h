@@ -29,6 +29,16 @@ struct ImageInfo {
            height == other.height && sample_count == other.sample_count &&
            usage == other.usage && memory_flags == other.memory_flags;
   }
+
+  // Transient images are neither loaded nor stored by render passes.  Instead
+  // they may be rendered into by one subpass and used as an input attachment by
+  // a subsequent pass.  Consequently, it may be possible (not implemented yet,
+  // and depending on the hardware/driver) to avoid allocating any memory for
+  // such images, so that it exists only transiently in tile-local storage.
+  bool is_transient() const {
+    return static_cast<bool>(usage &
+                             vk::ImageUsageFlagBits::eTransientAttachment);
+  }
 };
 #pragma pack(pop)
 
@@ -58,13 +68,26 @@ class Image : public WaitableResource {
   const ImageInfo& info() const { return info_; }
   vk::Image vk() const { return image_; }
   vk::Format format() const { return info_.format; }
+  // TODO(ES-82): decide whether to deprecate format().
+  vk::Format vk_format() const { return info_.format; }
   uint32_t width() const { return info_.width; }
   uint32_t height() const { return info_.height; }
   bool has_depth() const { return has_depth_; }
   bool has_stencil() const { return has_stencil_; }
+  bool is_transient() const { return info_.is_transient(); }
   const GpuMemPtr& memory() const { return mem_; }
   // Offset of the Image within its GpuMem.
   vk::DeviceSize memory_offset() const { return mem_offset_; }
+
+  // Specify the layout that should be transitioned to when this image is used
+  // as a framebuffer attachment.
+  void set_swapchain_layout(vk::ImageLayout layout) {
+    swapchain_layout_ = layout;
+  }
+  vk::ImageLayout swapchain_layout() const { return swapchain_layout_; }
+  bool is_swapchain_image() const {
+    return swapchain_layout_ != vk::ImageLayout::eUndefined;
+  }
 
  protected:
   // Constructor.  In some cases it is necessary to wrap an un-owned vk::Image,
@@ -82,6 +105,7 @@ class Image : public WaitableResource {
   const vk::DeviceSize mem_offset_ = 0;
   bool has_depth_;
   bool has_stencil_;
+  vk::ImageLayout swapchain_layout_ = vk::ImageLayout::eUndefined;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(Image);
 };

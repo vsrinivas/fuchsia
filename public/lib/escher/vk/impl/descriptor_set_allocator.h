@@ -2,16 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_ESCHER_VK_DESCRIPTOR_SET_ALLOCATOR_H_
-#define LIB_ESCHER_VK_DESCRIPTOR_SET_ALLOCATOR_H_
+#ifndef LIB_ESCHER_VK_IMPL_DESCRIPTOR_SET_ALLOCATOR_H_
+#define LIB_ESCHER_VK_IMPL_DESCRIPTOR_SET_ALLOCATOR_H_
 
 #include <map>
 #include <vulkan/vulkan.hpp>
 
 #include "lib/escher/util/hash_cache.h"
-#include "lib/escher/vk/descriptor_set_layout.h"
+#include "lib/escher/vk/impl/descriptor_set_layout.h"
 
 namespace escher {
+namespace impl {
 
 // DescriptorSetAllocator wraps HashCache to provide a frame-based cache for
 // Vulkan descriptor sets.  The eviction semantics are the same as a HashCache
@@ -27,6 +28,7 @@ class DescriptorSetAllocator {
   // element of the pair is true if the descriptor set already contains valid
   // data, and false if new descriptor values must be written.
   std::pair<vk::DescriptorSet, bool> Get(Hash hash) {
+    // TODO(ES-74): track cache hit/miss rates.
     auto pair = cache_.Obtain(hash);
     return std::make_pair(pair.first->set, pair.second);
   }
@@ -55,12 +57,10 @@ class DescriptorSetAllocator {
     PoolPolicy(vk::Device device, DescriptorSetLayout layout);
     ~PoolPolicy();
 
-    void InitializePoolObjectBlock(CacheItem* objects,
-                                   size_t block_index,
+    void InitializePoolObjectBlock(CacheItem* objects, size_t block_index,
                                    size_t num_objects);
 
-    void DestroyPoolObjectBlock(CacheItem* objects,
-                                size_t block_index,
+    void DestroyPoolObjectBlock(CacheItem* objects, size_t block_index,
                                 size_t num_objects);
 
     inline void InitializePoolObject(CacheItem* ptr) {}
@@ -73,8 +73,7 @@ class DescriptorSetAllocator {
    private:
     // Helpers for InitializePoolObjectBlock().
     vk::DescriptorPool CreatePool(size_t block_index, size_t num_objects);
-    void AllocateDescriptorSetBlock(vk::DescriptorPool pool,
-                                    CacheItem* objects,
+    void AllocateDescriptorSetBlock(vk::DescriptorPool pool, CacheItem* objects,
                                     size_t num_objects);
 
     vk::Device vk_device_;
@@ -88,6 +87,7 @@ class DescriptorSetAllocator {
   HashCache<CacheItem, PoolPolicy, 2> cache_;
 };
 
+}  // namespace impl
 }  // namespace escher
 
-#endif  // LIB_ESCHER_VK_DESCRIPTOR_SET_ALLOCATOR_H_
+#endif  // LIB_ESCHER_VK_IMPL_DESCRIPTOR_SET_ALLOCATOR_H_

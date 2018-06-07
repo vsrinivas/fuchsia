@@ -11,8 +11,8 @@
 #include "lib/escher/impl/model_pipeline_spec.h"
 #include "lib/escher/scene/camera.h"
 #include "lib/escher/scene/viewing_volume.h"
-#include "lib/escher/vk/descriptor_set_layout.h"
 #include "lib/escher/vk/image.h"
+#include "lib/escher/vk/impl/descriptor_set_layout.h"
 #include "lib/escher/vk/shader_module.h"
 
 namespace escher {
@@ -192,7 +192,8 @@ std::ostream& operator<<(std::ostream& str, const Camera& camera) {
              << "\nprojection: " << camera.projection() << "]";
 }
 
-std::ostream& operator<<(std::ostream& str, const DescriptorSetLayout& layout) {
+std::ostream& operator<<(std::ostream& str,
+                         const impl::DescriptorSetLayout& layout) {
   return str << "DescriptorSetLayout[\n\tsampled_image_mask: " << std::hex
              << layout.sampled_image_mask
              << "\n\tstorage_image_mask: " << layout.storage_image_mask
@@ -205,7 +206,7 @@ std::ostream& operator<<(std::ostream& str, const DescriptorSetLayout& layout) {
 }
 
 std::ostream& operator<<(std::ostream& str,
-                         const ShaderModuleResourceLayout& layout) {
+                         const impl::ShaderModuleResourceLayout& layout) {
   str << "ShaderModuleResourceLayout[\n\tattribute_mask: " << std::hex
       << layout.attribute_mask
       << "\n\trender_target_mask: " << layout.render_target_mask

@@ -8,8 +8,7 @@ namespace escher {
 namespace impl {
 
 std::vector<vk::Format> GetSupportedDepthFormats(
-    vk::PhysicalDevice device,
-    std::vector<vk::Format> desired_formats) {
+    vk::PhysicalDevice device, std::vector<vk::Format> desired_formats) {
   std::vector<vk::Format> result;
   for (auto& fmt : desired_formats) {
     vk::FormatProperties props = device.getFormatProperties(fmt);
@@ -44,8 +43,7 @@ FormatResult GetSupportedDepthStencilFormat(vk::PhysicalDevice device) {
   }
 }
 
-uint32_t GetMemoryTypeIndex(vk::PhysicalDevice device,
-                            uint32_t type_bits,
+uint32_t GetMemoryTypeIndex(vk::PhysicalDevice device, uint32_t type_bits,
                             vk::MemoryPropertyFlags required_properties) {
   vk::PhysicalDeviceMemoryProperties memory_types =
       device.getMemoryProperties();
@@ -63,22 +61,14 @@ uint32_t GetMemoryTypeIndex(vk::PhysicalDevice device,
 
 // Return the sample-count corresponding to the specified flag-bits.
 uint32_t SampleCountFlagBitsToInt(vk::SampleCountFlagBits bits) {
-  switch (bits) {
-    case vk::SampleCountFlagBits::e1:
-      return 1;
-    case vk::SampleCountFlagBits::e2:
-      return 2;
-    case vk::SampleCountFlagBits::e4:
-      return 4;
-    case vk::SampleCountFlagBits::e8:
-      return 8;
-    case vk::SampleCountFlagBits::e16:
-      return 16;
-    case vk::SampleCountFlagBits::e32:
-      return 32;
-    case vk::SampleCountFlagBits::e64:
-      return 64;
-  }
+  static_assert(VK_SAMPLE_COUNT_1_BIT == 1 && VK_SAMPLE_COUNT_2_BIT == 2 &&
+                    VK_SAMPLE_COUNT_4_BIT == 4 && VK_SAMPLE_COUNT_8_BIT == 8 &&
+                    VK_SAMPLE_COUNT_16_BIT == 16 &&
+                    VK_SAMPLE_COUNT_32_BIT == 32 &&
+                    VK_SAMPLE_COUNT_64_BIT == 64,
+                "unexpected sample count values");
+
+  return static_cast<uint32_t>(bits);
 }
 
 // Return flag-bits corresponding to the specified sample count.  Explode if

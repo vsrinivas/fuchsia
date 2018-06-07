@@ -2,12 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "lib/escher/vk/descriptor_set_allocator.h"
+#include "lib/escher/vk/impl/descriptor_set_allocator.h"
 
 #include "lib/escher/impl/vulkan_utils.h"
 #include "lib/escher/vk/vulkan_limits.h"
 
 namespace escher {
+namespace impl {
 
 DescriptorSetAllocator::DescriptorSetAllocator(vk::Device device,
                                                DescriptorSetLayout layout)
@@ -86,16 +87,13 @@ DescriptorSetAllocator::PoolPolicy::~PoolPolicy() {
 }
 
 void DescriptorSetAllocator::PoolPolicy::InitializePoolObjectBlock(
-    CacheItem* objects,
-    size_t block_index,
-    size_t num_objects) {
+    CacheItem* objects, size_t block_index, size_t num_objects) {
   vk::DescriptorPool pool = CreatePool(block_index, num_objects);
   AllocateDescriptorSetBlock(pool, objects, num_objects);
 }
 
 vk::DescriptorPool DescriptorSetAllocator::PoolPolicy::CreatePool(
-    size_t block_index,
-    size_t num_objects) {
+    size_t block_index, size_t num_objects) {
   FXL_DCHECK(!pools_[block_index]);
   for (auto& sz : pool_sizes_) {
     sz.descriptorCount = num_objects;
@@ -113,9 +111,7 @@ vk::DescriptorPool DescriptorSetAllocator::PoolPolicy::CreatePool(
 }
 
 void DescriptorSetAllocator::PoolPolicy::AllocateDescriptorSetBlock(
-    vk::DescriptorPool pool,
-    CacheItem* objects,
-    size_t num_objects) {
+    vk::DescriptorPool pool, CacheItem* objects, size_t num_objects) {
   constexpr size_t kSetsPerAllocation = 64;
   std::array<vk::DescriptorSetLayout, kSetsPerAllocation> layouts;
   for (auto& layout : layouts) {
@@ -146,9 +142,7 @@ void DescriptorSetAllocator::PoolPolicy::AllocateDescriptorSetBlock(
 }
 
 void DescriptorSetAllocator::PoolPolicy::DestroyPoolObjectBlock(
-    CacheItem* objects,
-    size_t block_index,
-    size_t num_objects) {
+    CacheItem* objects, size_t block_index, size_t num_objects) {
   auto it = pools_.find(block_index);
   if (it == pools_.end()) {
     FXL_DCHECK(false)
@@ -168,4 +162,5 @@ void DescriptorSetAllocator::PoolPolicy::DestroyPoolObjectBlock(
   }
 }
 
+}  // namespace impl
 }  // namespace escher

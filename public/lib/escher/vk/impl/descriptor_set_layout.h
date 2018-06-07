@@ -2,14 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_ESCHER_VK_DESCRIPTOR_SET_LAYOUT_H_
-#define LIB_ESCHER_VK_DESCRIPTOR_SET_LAYOUT_H_
+#ifndef LIB_ESCHER_VK_IMPL_DESCRIPTOR_SET_LAYOUT_H_
+#define LIB_ESCHER_VK_IMPL_DESCRIPTOR_SET_LAYOUT_H_
 
 #include <vulkan/vulkan.hpp>
 
 #include "lib/escher/util/debug_print.h"
 
 namespace escher {
+namespace impl {
 
 // The fields are bitmaps where each bit corresponds to a binding index within
 // the set.  Therefore, there can be at most 32 descriptor bindings per set.
@@ -47,8 +48,10 @@ struct DescriptorSetLayout {
   bool IsValid();
 };
 
-ESCHER_DEBUG_PRINTABLE(DescriptorSetLayout);
+}  // namespace impl
+
+ESCHER_DEBUG_PRINTABLE(impl::DescriptorSetLayout);
 
 }  // namespace escher
 
-#endif  // LIB_ESCHER_VK_DESCRIPTOR_SET_LAYOUT_H_
+#endif  // LIB_ESCHER_VK_IMPL_DESCRIPTOR_SET_LAYOUT_H_

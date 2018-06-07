@@ -13,7 +13,7 @@ namespace escher {
 // used to statically declare array sizes.  The actual Vulkan limits vary from
 // device to device, and must be queried dynamically.
 struct VulkanLimits {
-  static constexpr uint64_t kNumAttachments = 8;
+  static constexpr uint64_t kNumColorAttachments = 8;
   static constexpr uint64_t kNumBindings = 16;
   static constexpr uint64_t kNumDescriptorSets = 4;
   static constexpr uint64_t kNumVertexAttributes = 16;

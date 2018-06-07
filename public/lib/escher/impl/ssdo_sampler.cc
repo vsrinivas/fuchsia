@@ -586,7 +586,7 @@ SsdoSampler::GetDescriptorSetLayoutCreateInfo() {
 }
 
 void SsdoSampler::Sample(CommandBuffer* command_buffer,
-                         const FramebufferPtr& framebuffer,
+                         const escher::FramebufferPtr& framebuffer,
                          const TexturePtr& depth_texture,
                          const TexturePtr& accelerator_texture,
                          const SamplerConfig* push_constants) {
@@ -661,7 +661,7 @@ void SsdoSampler::Sample(CommandBuffer* command_buffer,
 }
 
 void SsdoSampler::Filter(CommandBuffer* command_buffer,
-                         const FramebufferPtr& framebuffer,
+                         const escher::FramebufferPtr& framebuffer,
                          const TexturePtr& unfiltered_illumination,
                          const TexturePtr& accelerator_texture,
                          const FilterConfig* push_constants) {

@@ -39,6 +39,9 @@ class Resource : public Ownable<Resource, ResourceTypeInfo> {
   vk::Device vk_device() const { return vulkan_context().device; }
   Escher* escher() { return escher_; }
 
+  // Return a unique ID, not shared with any other Resource.
+  uint64_t uid() const { return uid_; }
+
  protected:
   explicit Resource(ResourceManager* owner);
 
@@ -52,7 +55,11 @@ class Resource : public Ownable<Resource, ResourceTypeInfo> {
   friend class impl::CommandBuffer;
 
  private:
+  // Each resource gets a unique id.
+  static uint64_t GetUniqueId();
+
   Escher* const escher_;
+  const uint64_t uid_;
   uint64_t sequence_number_ = 0;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(Resource);

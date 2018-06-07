@@ -19,7 +19,7 @@ typedef fxl::RefPtr<ModelRenderPass> ModelRenderPassPtr;
 // Caches the pipelines that are used to render that pass (for example, a model
 // object should be renderer with a different pipeline when rendering a shadow
 // map).
-class ModelRenderPass : public RenderPass {
+class ModelRenderPass : public escher::RenderPass {
  public:
   static constexpr uint32_t kColorAttachmentIndex = 0;
   static constexpr uint32_t kDepthAttachmentIndex = 1;
@@ -56,10 +56,8 @@ class ModelRenderPass : public RenderPass {
  protected:
   virtual std::string GetVertexShaderMainSourceCode() = 0;
 
-  ModelRenderPass(ResourceRecycler* recycler,
-                  vk::Format color_format,
-                  vk::Format depth_format,
-                  uint32_t sample_count);
+  ModelRenderPass(ResourceRecycler* recycler, vk::Format color_format,
+                  vk::Format depth_format, uint32_t sample_count);
 
   void CreateRenderPassAndPipelineCache(ModelDataPtr model_data);
 

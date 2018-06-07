@@ -14,8 +14,6 @@ namespace escher {
 
 class Buffer;
 class Camera;
-class DescriptorSetAllocator;
-struct DescriptorSetLayout;
 class Escher;
 class Frame;
 class Framebuffer;
@@ -36,6 +34,7 @@ class Resource;
 class ResourceRecycler;
 class Renderer;
 class RenderPass;
+struct RenderPassInfo;
 class Semaphore;
 class ShadowMap;
 class ShadowMapRenderer;
@@ -69,6 +68,7 @@ typedef fxl::RefPtr<Texture> TexturePtr;
 typedef fxl::RefPtr<TimestampProfiler> TimestampProfilerPtr;
 
 namespace impl {
+// From deprecated escher/impl directory.
 class CommandBuffer;
 class CommandBufferPool;
 class CommandBufferSequencer;
@@ -95,6 +95,18 @@ typedef fxl::RefPtr<ModelPipelineCache> ModelPipelineCachePtr;
 typedef fxl::RefPtr<ModelRenderer> ModelRendererPtr;
 typedef fxl::RefPtr<ModelRenderPass> ModelRenderPassPtr;
 typedef fxl::RefPtr<Pipeline> PipelinePtr;
+
+// From escher/vk/impl
+class DescriptorSetAllocator;
+struct DescriptorSetLayout;
+class Framebuffer;
+class FramebufferAllocator;
+class RenderPass;
+class RenderPassCache;
+
+typedef fxl::RefPtr<Framebuffer> FramebufferPtr;
+typedef fxl::RefPtr<RenderPass> RenderPassPtr;
+
 }  // namespace impl
 }  // namespace escher
 
