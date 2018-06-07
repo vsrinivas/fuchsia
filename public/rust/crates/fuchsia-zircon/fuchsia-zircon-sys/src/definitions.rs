@@ -823,12 +823,6 @@ extern {
         cmdline_len: u32
         ) -> zx_status_t;
 
-    pub fn zx_job_set_relative_importance(
-        root_resource: zx_handle_t,
-        job: zx_handle_t,
-        less_important_job: zx_handle_t
-        ) -> zx_status_t;
-
     pub fn zx_syscall_test_0(
         ) -> zx_status_t;
 
