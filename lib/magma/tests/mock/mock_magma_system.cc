@@ -192,3 +192,13 @@ void magma_map_buffer_gpu(struct magma_connection_t* connection, magma_buffer_t 
                           uint64_t map_flags)
 {
 }
+
+int32_t magma_get_notification_channel_fd(struct magma_connection_t* connection) { return 0; }
+
+// Read a notification from the channel into |buffer|. Sets |*buffer_size_out| to 0 if there are no
+// messages pending.
+magma_status_t magma_read_notification_channel(struct magma_connection_t* connection, void* buffer,
+                                               uint64_t buffer_size, uint64_t* buffer_size_out)
+{
+    return MAGMA_STATUS_UNIMPLEMENTED;
+}
