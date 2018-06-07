@@ -328,11 +328,11 @@ ModuleSymbolIndex::FindFunctionExact(const std::string& input) const {
   return cur->function_dies();
 }
 
-std::vector<const ModuleSymbolIndex::FilePair*>
-ModuleSymbolIndex::FindFileMatches(const std::string& name) const {
+std::vector<std::string> ModuleSymbolIndex::FindFileMatches(
+    const std::string& name) const {
   fxl::StringView name_last_comp = ExtractLastFileComponent(name);
 
-  std::vector<const FilePair*> result;
+  std::vector<std::string> result;
 
   // Search all files whose last component matches (the input may contain more
   // than one component).
@@ -343,12 +343,20 @@ ModuleSymbolIndex::FindFileMatches(const std::string& name) const {
     if (StringEndsWith(pair.first, name) &&
         (pair.first.size() == name.size() ||
          pair.first[pair.first.size() - name.size() - 1] == '/')) {
-      result.push_back(&pair);
+      result.push_back(pair.first);
     }
     ++iter;
   }
 
   return result;
+}
+
+const std::vector<llvm::DWARFCompileUnit*>* ModuleSymbolIndex::FindFileUnits(
+    const std::string& name) const {
+  auto found = files_.find(name);
+  if (found == files_.end())
+    return nullptr;
+  return &found->second;
 }
 
 void ModuleSymbolIndex::DumpFileIndex(std::ostream& out) {
@@ -382,7 +390,13 @@ void ModuleSymbolIndex::IndexCompileUnit(llvm::DWARFContext* context,
   // This is possible because the nodes store "DieRef" objects which contain
   // the offset necessary to reconstitute the DIE, rather than references to
   // any LLVM structures.
-  unit->clear();
+  //
+  // TODO(brettw) re-enable. This breaks the line lookup unit test. It appears
+  // looking up a unit after it's been cleared in the context doesn't work.
+  // We need to store something other than unit pointers in the file index,
+  // and also index using another set of units than the persistent one in
+  // ModuleSymbolsImpl.
+  // unit->clear();
 }
 
 void ModuleSymbolIndex::IndexCompileUnitSourceFiles(
@@ -405,12 +419,14 @@ void ModuleSymbolIndex::IndexCompileUnitSourceFiles(
   // referenced file names.
   std::string file_name;
   for (size_t i = 0; i < line_table->Rows.size(); i++) {
-    auto file_index = line_table->Rows[i].File;
-    // Watch out: file_index is 1-based.
-    if (!added_file[file_index - 1]) {
-      added_file[file_index - 1] = 1;
+    auto file_id = line_table->Rows[i].File;  // 1-based!
+    FXL_DCHECK(file_id >= 1 && file_id <= added_file.size());
+    auto file_index = file_id - 1;
+
+    if (!added_file[file_index]) {
+      added_file[file_index] = 1;
       if (line_table->getFileNameByIndex(
-              file_index, compilation_dir,
+              file_id, compilation_dir,
               llvm::DILineInfoSpecifier::FileLineInfoKind::AbsoluteFilePath,
               file_name)) {
         // TODO(brettw) the files here can contain relative components like

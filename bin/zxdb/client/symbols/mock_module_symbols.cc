@@ -35,4 +35,14 @@ std::vector<uint64_t> MockModuleSymbols::RelativeAddressesForFunction(
   return found->second;
 }
 
+std::vector<std::string> MockModuleSymbols::FindFileMatches(
+    const std::string& name) const {
+  return std::vector<std::string>();
+}
+
+std::vector<uint64_t> MockModuleSymbols::RelativeAddressesForLine(
+    const FileLine& line) const {
+  return std::vector<uint64_t>();
+}
+
 }  // namespace zxdb

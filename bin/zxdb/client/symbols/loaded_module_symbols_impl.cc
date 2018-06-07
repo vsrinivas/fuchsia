@@ -4,6 +4,7 @@
 
 #include "garnet/bin/zxdb/client/symbols/loaded_module_symbols_impl.h"
 
+#include "garnet/bin/zxdb/client/symbols/file_line.h"
 #include "garnet/bin/zxdb/client/symbols/module_symbols_impl.h"
 
 namespace zxdb {
@@ -46,6 +47,14 @@ uint64_t LoadedModuleSymbolsImpl::AbsoluteToRelative(
     uint64_t absolute_address) const {
   FXL_DCHECK(absolute_address >= load_address_);
   return absolute_address - load_address_;
+}
+
+std::vector<uint64_t> LoadedModuleSymbolsImpl::AddressesForLine(
+    const FileLine& line) const {
+  auto result = module_->module_symbols()->RelativeAddressesForLine(line);
+  for (uint64_t& address : result)
+    address = RelativeToAbsolute(address);
+  return result;
 }
 
 }  // namespace zxdb

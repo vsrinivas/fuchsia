@@ -58,9 +58,7 @@ class ModuleSymbolIndexNode {
   const std::map<std::string, ModuleSymbolIndexNode>& sub() const {
     return sub_;
   }
-  const std::vector<DieRef>& function_dies() const {
-    return function_dies_;
-  }
+  const std::vector<DieRef>& function_dies() const { return function_dies_; }
 
   // Dump functions for debugging. A node does not contain its own name (this
   // is stored in the parent's map. If printing some node other than the root,

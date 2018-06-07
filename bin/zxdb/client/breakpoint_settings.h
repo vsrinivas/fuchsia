@@ -47,6 +47,11 @@ struct BreakpointSettings {
   Thread* scope_thread = nullptr;  // Valid when scope == kThread.
 
   // Where the breakpoint is set.
+  //
+  // For the symbol and file name options, the symbol name and file name
+  // must match exactly the full version of that from the symbol system.
+  // The caller will need to have resolve file names with the symbol system
+  // prior to setting.
   LocationType location_type = LocationType::kAddress;
   FileLine location_line;         // Valid when location_type_ == kLine.
   std::string location_symbol;    // Valid when location_type_ == kSymbol.

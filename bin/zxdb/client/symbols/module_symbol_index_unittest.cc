@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 #include <inttypes.h>
-#include <ostream>
 #include <time.h>
+#include <ostream>
 
 #include "garnet/bin/zxdb/client/string_util.h"
 #include "garnet/bin/zxdb/client/symbols/module_symbol_index.h"
@@ -58,14 +58,14 @@ TEST(ModuleSymbolIndex, FindFileMatches) {
   index.CreateIndex(module.context(), module.compile_units());
 
   // Simple filename-only query that succeeds.
-  std::vector<const ModuleSymbolIndex::FilePair*> result =
+  std::vector<std::string> result =
       index.FindFileMatches("zxdb_symbol_test.cc");
   ASSERT_EQ(1u, result.size());
-  EXPECT_TRUE(StringEndsWith(result[0]->first, "client/test_data/zxdb_symbol_test.cc"));
-  EXPECT_EQ(1u, result[0]->second.size());
+  EXPECT_TRUE(
+      StringEndsWith(result[0], "client/test_data/zxdb_symbol_test.cc"));
 
   // Save the full path for later.
-  std::string full_path = result[0]->first;
+  std::string full_path = result[0];
 
   // Simple filename-only query that fails.
   result = index.FindFileMatches("nonexistant.cc");

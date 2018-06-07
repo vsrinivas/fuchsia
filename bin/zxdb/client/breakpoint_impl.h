@@ -14,6 +14,8 @@
 
 namespace zxdb {
 
+class BreakpointLocationImpl;
+
 class BreakpointImpl : public Breakpoint,
                        public ProcessObserver,
                        public SystemObserver {
@@ -25,8 +27,10 @@ class BreakpointImpl : public Breakpoint,
   BreakpointSettings GetSettings() const override;
   void SetSettings(const BreakpointSettings& settings,
                    std::function<void(const Err&)> callback) override;
+  std::vector<BreakpointLocation*> GetLocations() override;
 
  private:
+  friend BreakpointLocationImpl;
   struct ProcessRecord;
 
   // ProcessObserver.
@@ -46,13 +50,17 @@ class BreakpointImpl : public Breakpoint,
   void SendBackendAddOrChange(std::function<void(const Err&)> callback);
   void SendBackendRemove(std::function<void(const Err&)> callback);
 
+  // Notification from BreakpointLocationImpl that the enabled state has
+  // changed and the breakpoint state needs to be synced.
+  void DidChangeLocation();
+
   // Returns true if the breakpoint could possibly apply to the given process
   // (if things like symbols aren't found, it still may not necessarily apply).
   bool CouldApplyToProcess(Process* process) const;
 
   // Returns true if there are any enabled breakpoint locations that the
   // backend needs to know about.
-  bool HasLocations() const;
+  bool HasEnabledLocation() const;
 
   // Given a process which is new or might apply to us for the first time,
   // Returns true if any addresses were resolved.

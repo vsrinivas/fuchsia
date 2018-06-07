@@ -44,14 +44,19 @@ class ProcessSymbols {
 
   // Attempts to symbolize the given address. If not possible, the returned
   // location will be an address-only location.
-  virtual Location GetLocationForAddress(uint64_t address) const = 0;
+  virtual Location LocationForAddress(uint64_t address) const = 0;
 
   // Returns a vector of addresses correponding to the beginning of the
   // implementation of a given function. Normally this will result in 0 (no
   // match found) or 1 (normal function implementation), but can be more than
   // one if the function is inlined in multiple places.
-  virtual std::vector<uint64_t> GetAddressesForFunction(
+  virtual std::vector<uint64_t> AddressesForFunction(
       const std::string& name) const = 0;
+
+  // See ModuleSymbols::RelativeAddressesForLine(). This returns absolute
+  // addresses for all loaded modules.
+  virtual std::vector<uint64_t> AddressesForLine(
+      const FileLine& line) const = 0;
 
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(ProcessSymbols);

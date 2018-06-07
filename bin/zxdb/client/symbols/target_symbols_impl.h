@@ -44,6 +44,10 @@ class TargetSymbolsImpl : public TargetSymbols {
   void RemoveModule(fxl::RefPtr<SystemSymbols::ModuleRef>& module);
   void RemoveAllModules();
 
+  // TargetSymbols implementation.
+  std::vector<std::string> FindFileMatches(
+      const std::string& name) const override;
+
  private:
   // Comparison functor for ModuleRefs. Does a pointer-identity comparison.
   struct ModuleRefComparePtr {

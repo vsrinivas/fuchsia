@@ -8,6 +8,7 @@ static_library("client") {
   public = [
     "arch_info.h",
     "breakpoint.h",
+    "breakpoint_location.h",
     "breakpoint_observer.h",
     "breakpoint_settings.h",
     "disassembler.h",
@@ -29,6 +30,9 @@ static_library("client") {
     "breakpoint.cc",
     "breakpoint_impl.cc",
     "breakpoint_impl.h",
+    "breakpoint_location.cc",
+    "breakpoint_location_impl.cc",
+    "breakpoint_location_impl.h",
     "disassembler.cc",
     "frame.cc",
     "frame_impl.cc",

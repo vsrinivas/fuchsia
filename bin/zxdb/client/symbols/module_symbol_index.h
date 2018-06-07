@@ -24,7 +24,8 @@ namespace zxdb {
 // Holds the index of symbols for a given module.
 class ModuleSymbolIndex {
  public:
-  using FilePair = std::pair<const std::string, std::vector<llvm::DWARFCompileUnit*>>;
+  using FilePair =
+      std::pair<const std::string, std::vector<llvm::DWARFCompileUnit*>>;
 
   ModuleSymbolIndex();
   ~ModuleSymbolIndex();
@@ -43,9 +44,17 @@ class ModuleSymbolIndex {
   // name is matched from the right side with a left boundary of either a slash
   // or the beginning of the full path. This may match more than one file name,
   // and the caller is left to decide which one(s) it wants.
+  std::vector<std::string> FindFileMatches(const std::string& name) const;
+
+  // Looks up the given exact file path and returns all compile units it
+  // appears in. The file must be an exact match (normally it's one of the
+  // results from FindFileMatches).
   //
-  // The returned pointers will point into the ModuleSymbolIndex.
-  std::vector<const FilePair*> FindFileMatches(const std::string& name) const;
+  // It will return the first instruction associated with that line for
+  // every instantiation. Sometimes expressions are multiple lines or things
+  // can be optimized out.
+  const std::vector<llvm::DWARFCompileUnit*>* FindFileUnits(
+      const std::string& name) const;
 
   // Dumps the file index to the stream for debugging.
   void DumpFileIndex(std::ostream& out);
@@ -78,7 +87,8 @@ class ModuleSymbolIndex {
   // This is a multimap because the name parts will generally be unique so we
   // should get few duplicates. The cost of using a vector for most items
   // containing one element becomes higher in that case.
-  using FileNameIndex = std::multimap<fxl::StringView, FileIndex::const_iterator>;
+  using FileNameIndex =
+      std::multimap<fxl::StringView, FileIndex::const_iterator>;
   FileNameIndex file_name_index_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ModuleSymbolIndex);

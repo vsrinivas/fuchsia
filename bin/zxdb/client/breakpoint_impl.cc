@@ -6,13 +6,17 @@
 
 #include <inttypes.h>
 #include <algorithm>
+#include <map>
 
+#include "garnet/bin/zxdb/client/breakpoint_location_impl.h"
 #include "garnet/bin/zxdb/client/err.h"
 #include "garnet/bin/zxdb/client/process.h"
 #include "garnet/bin/zxdb/client/remote_api.h"
 #include "garnet/bin/zxdb/client/session.h"
 #include "garnet/bin/zxdb/client/symbols/loaded_module_symbols.h"
+#include "garnet/bin/zxdb/client/symbols/module_symbols.h"
 #include "garnet/bin/zxdb/client/symbols/process_symbols.h"
+#include "garnet/bin/zxdb/client/symbols/target_symbols.h"
 #include "garnet/bin/zxdb/client/system.h"
 #include "garnet/bin/zxdb/client/target.h"
 #include "garnet/bin/zxdb/client/thread.h"
@@ -61,11 +65,31 @@ debug_ipc::Stop SettingsStopToIpcStop(BreakpointSettings::StopMode mode) {
 }  // namespace
 
 struct BreakpointImpl::ProcessRecord {
+  // Helper to return whether there are any enabled locations for this process.
+  bool HasEnabledLocation() const {
+    for (const auto& loc : locs) {
+      if (loc.second.IsEnabled())
+        return true;
+    }
+    return false;
+  }
+
+  // Helper to add a list of locations to the locs array. Returns true if
+  // anything was added.
+  bool AddLocations(BreakpointImpl* bp, Process* process,
+                    const std::vector<uint64_t>& addrs) {
+    for (uint64_t addr : addrs) {
+      locs.emplace(std::piecewise_construct, std::forward_as_tuple(addr),
+                   std::forward_as_tuple(bp, process, addr));
+    }
+    return !addrs.empty();
+  }
+
   // Set when we're registered as an observer for this process.
   bool observing = false;
 
-  // All resolved locations stored in sorted order.
-  std::vector<uint64_t> addresses;
+  // All resolved locations indexed by address.
+  std::map<uint64_t, BreakpointLocationImpl> locs;
 };
 
 BreakpointImpl::BreakpointImpl(Session* session)
@@ -112,6 +136,15 @@ void BreakpointImpl::SetSettings(const BreakpointSettings& settings,
   SyncBackend(std::move(callback));
 }
 
+std::vector<BreakpointLocation*> BreakpointImpl::GetLocations() {
+  std::vector<BreakpointLocation*> result;
+  for (auto& proc : procs_) {
+    for (auto& pair : proc.second.locs)
+      result.push_back(&pair.second);
+  }
+  return result;
+}
+
 void BreakpointImpl::WillDestroyThread(Process* process, Thread* thread) {
   if (settings_.scope_thread == thread) {
     // When the thread is destroyed that the breakpoint is associated with,
@@ -132,25 +165,23 @@ void BreakpointImpl::DidLoadModuleSymbols(Process* process,
   FXL_DCHECK(CouldApplyToProcess(process));
 
   // Resolve addresses.
+  bool changed = false;
   if (settings_.location_type == BreakpointSettings::LocationType::kSymbol) {
-    std::vector<uint64_t> new_addrs =
-        module->AddressesForFunction(settings_.location_symbol);
-    if (new_addrs.empty())
-      return;
-
-    // Merge in the new address(s).
-    ProcessRecord& record = procs_[process];
-    record.addresses.insert(record.addresses.end(), new_addrs.begin(),
-                            new_addrs.end());
-    std::sort(record.addresses.begin(), record.addresses.end());
+    changed = procs_[process].AddLocations(
+        this, process, module->AddressesForFunction(settings_.location_symbol));
   } else if (settings_.location_type ==
              BreakpointSettings::LocationType::kLine) {
-    printf("TODO(brettw) implement line-based breakpoints.\n");
-    return;
+    // Need to resolve file names to pass canonical ones to AddressesForLine.
+    for (std::string& file : module->GetModuleSymbols()->FindFileMatches(
+             settings_.location_line.file())) {
+      changed = procs_[process].AddLocations(
+          this, process, module->AddressesForLine(FileLine(
+                             std::move(file), settings_.location_line.line())));
+    }
   }
 
-  // If we get here, something has changed.
-  SyncBackend();
+  if (changed)
+    SyncBackend();
 }
 
 void BreakpointImpl::WillUnloadModuleSymbols(Process* process,
@@ -163,7 +194,7 @@ void BreakpointImpl::WillDestroyTarget(Target* target) {
   if (target == settings_.scope_target) {
     // By the time the target is destroyed, the process should be gone, and
     // all registrations for breakpoints.
-    FXL_DCHECK(!HasLocations());
+    FXL_DCHECK(!HasEnabledLocation());
 
     // As with threads going away, when the target goes away for a
     // target-scoped breakpoint, convert to a disabled system-wide breakpoint.
@@ -189,9 +220,9 @@ void BreakpointImpl::GlobalWillDestroyProcess(Process* process) {
   if (found->second.observing)
     process->RemoveObserver(this);
 
-  // Only need to update the backend if there was an address associated with
-  // this process.
-  bool send_update = !found->second.addresses.empty();
+  // Only need to update the backend if there was an enabled address associated
+  // with this process.
+  bool send_update = found->second.HasEnabledLocation();
 
   // When the process exits, disable breakpoints that are address-based since
   // the addresses will normally change when a process is loaded.
@@ -210,7 +241,7 @@ void BreakpointImpl::GlobalWillDestroyProcess(Process* process) {
 }
 
 void BreakpointImpl::SyncBackend(std::function<void(const Err&)> callback) {
-  bool has_locations = HasLocations();
+  bool has_locations = HasEnabledLocation();
 
   if (backend_id_ && !has_locations) {
     SendBackendRemove(std::move(callback));
@@ -237,14 +268,17 @@ void BreakpointImpl::SendBackendAddOrChange(
   request.breakpoint.stop = SettingsStopToIpcStop(settings_.stop_mode);
 
   for (const auto& proc : procs_) {
-    for (uint64_t addr : proc.second.addresses) {
+    for (const auto& pair : proc.second.locs) {
+      if (!pair.second.IsEnabled())
+        continue;
+
       debug_ipc::ProcessBreakpointSettings addition;
       addition.process_koid = proc.first->GetKoid();
 
       if (settings_.scope == BreakpointSettings::Scope::kThread)
         addition.thread_koid = settings_.scope_thread->GetKoid();
 
-      addition.address = addr;
+      addition.address = pair.second.address();
       request.breakpoint.locations.push_back(addition);
     }
   }
@@ -302,6 +336,8 @@ void BreakpointImpl::SendBackendRemove(
   backend_id_ = 0;
 }
 
+void BreakpointImpl::DidChangeLocation() { SyncBackend(); }
+
 bool BreakpointImpl::CouldApplyToProcess(Process* process) const {
   // When applied to all processes, we need all notifications.
   if (settings_.scope == BreakpointSettings::Scope::kSystem)
@@ -311,43 +347,43 @@ bool BreakpointImpl::CouldApplyToProcess(Process* process) const {
   return settings_.scope_target == process->GetTarget();
 }
 
-bool BreakpointImpl::HasLocations() const {
+bool BreakpointImpl::HasEnabledLocation() const {
   if (!settings_.enabled)
     return false;
-
   for (const auto& proc : procs_) {
-    if (!proc.second.addresses.empty())
+    if (proc.second.HasEnabledLocation())
       return true;
   }
   return false;
 }
 
 bool BreakpointImpl::RegisterProcess(Process* process) {
-  bool changed = false;
-
   if (!procs_[process].observing) {
     procs_[process].observing = true;
     process->AddObserver(this);
   }
 
+  // Clear existing locations for this process.
+  ProcessRecord& record = procs_[process];
+  bool changed = record.locs.empty();
+  record.locs.clear();
+
   // Resolve addresses.
   ProcessSymbols* symbols = process->GetSymbols();
   if (settings_.location_type == BreakpointSettings::LocationType::kSymbol) {
     std::vector<uint64_t> new_addrs =
-        symbols->GetAddressesForFunction(settings_.location_symbol);
-
-    // The ProcessRecord stores sorted addresses (this ensures the comparison
-    // below is valid).
-    std::sort(new_addrs.begin(), new_addrs.end());
-
-    ProcessRecord& record = procs_[process];
-    if (record.addresses != new_addrs) {
-      record.addresses = std::move(new_addrs);
-      changed = true;
-    }
+        symbols->AddressesForFunction(settings_.location_symbol);
+    changed |= record.AddLocations(this, process, new_addrs);
   } else if (settings_.location_type ==
              BreakpointSettings::LocationType::kLine) {
-    printf("TODO(brettw) implement line-based breakpoints.\n");
+    // Need to resolve file names to pass canonical ones to AddressesForLine.
+    for (std::string& file :
+         process->GetTarget()->GetSymbols()->FindFileMatches(
+             settings_.location_line.file())) {
+      changed |= record.AddLocations(
+          this, process, symbols->AddressesForLine(FileLine(
+                             std::move(file), settings_.location_line.line())));
+    }
   }
   return changed;
 }

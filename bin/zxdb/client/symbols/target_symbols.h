@@ -4,6 +4,9 @@
 
 #pragma once
 
+#include <string>
+#include <vector>
+
 #include "garnet/public/lib/fxl/macros.h"
 
 namespace zxdb {
@@ -19,6 +22,11 @@ class TargetSymbols {
  public:
   TargetSymbols();
   virtual ~TargetSymbols();
+
+  // Gets file matches across all known modules. See
+  // ModuleSymbols::FindFileMatches().
+  virtual std::vector<std::string> FindFileMatches(
+      const std::string& name) const = 0;
 
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(TargetSymbols);

@@ -11,7 +11,7 @@ namespace zxdb {
 class FileLine {
  public:
   FileLine();
-  FileLine(const std::string& file, int line);
+  FileLine(std::string file, int line);
   ~FileLine();
 
   bool is_valid() const { return !file_.empty() && line_ > 0; }

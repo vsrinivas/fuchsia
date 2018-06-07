@@ -13,6 +13,7 @@
 
 namespace zxdb {
 
+class FileLine;
 class ModuleSymbols;
 
 // Represents the symbol information for a module that's loaded. Unlike
@@ -44,6 +45,10 @@ class LoadedModuleSymbols {
   // duplicated more than once, there can be multiple results.
   virtual std::vector<uint64_t> AddressesForFunction(
       const std::string& name) const = 0;
+
+  // See ModuleSymbols::AddressesForLine. This returns absolute addresses.
+  virtual std::vector<uint64_t> AddressesForLine(
+      const FileLine& line) const = 0;
 
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(LoadedModuleSymbols);

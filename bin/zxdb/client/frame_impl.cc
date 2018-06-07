@@ -26,7 +26,7 @@ const Location& FrameImpl::GetLocation() const { return location_; }
 void FrameImpl::EnsureSymbolized() {
   if (location_.is_symbolized())
     return;
-  location_ = thread_->process()->GetSymbols()->GetLocationForAddress(
+  location_ = thread_->process()->GetSymbols()->LocationForAddress(
       location_.address());
 }
 

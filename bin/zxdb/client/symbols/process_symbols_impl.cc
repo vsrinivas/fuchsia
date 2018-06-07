@@ -123,24 +123,34 @@ std::vector<ProcessSymbols::ModuleStatus> ProcessSymbolsImpl::GetStatus()
   return result;
 }
 
-Location ProcessSymbolsImpl::GetLocationForAddress(uint64_t address) const {
+Location ProcessSymbolsImpl::LocationForAddress(uint64_t address) const {
   const ModuleInfo* info = InfoForAddress(address);
   if (!info || !info->symbols)
     return Location(Location::State::kSymbolized, address);  // Can't symbolize.
   return info->symbols->LocationForAddress(address);
 }
 
-std::vector<uint64_t> ProcessSymbolsImpl::GetAddressesForFunction(
+std::vector<uint64_t> ProcessSymbolsImpl::AddressesForFunction(
     const std::string& name) const {
   std::vector<uint64_t> result;
-
   for (const auto& pair : modules_) {
     if (pair.second.symbols) {
       for (auto local_addr : pair.second.symbols->AddressesForFunction(name))
         result.push_back(local_addr);
     }
   }
+  return result;
+}
 
+std::vector<uint64_t> ProcessSymbolsImpl::AddressesForLine(
+    const FileLine& line) const {
+  std::vector<uint64_t> result;
+  for (const auto& pair : modules_) {
+    if (pair.second.symbols) {
+      for (auto local_addr : pair.second.symbols->AddressesForLine(line))
+        result.push_back(local_addr);
+    }
+  }
   return result;
 }
 

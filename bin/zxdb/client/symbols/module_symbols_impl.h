@@ -45,6 +45,10 @@ class ModuleSymbolsImpl : public ModuleSymbols {
   Location RelativeLocationForRelativeAddress(uint64_t address) const override;
   std::vector<uint64_t> RelativeAddressesForFunction(
       const std::string& name) const override;
+  std::vector<std::string> FindFileMatches(
+      const std::string& name) const override;
+  std::vector<uint64_t> RelativeAddressesForLine(
+      const FileLine& line) const override;
 
  private:
   const std::string name_;

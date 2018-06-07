@@ -58,9 +58,10 @@ class ProcessSymbolsImpl : public ProcessSymbols {
   // ProcessSymbols implementation.
   TargetSymbols* GetTargetSymbols() override;
   std::vector<ModuleStatus> GetStatus() const override;
-  Location GetLocationForAddress(uint64_t address) const override;
-  std::vector<uint64_t> GetAddressesForFunction(
+  Location LocationForAddress(uint64_t address) const override;
+  std::vector<uint64_t> AddressesForFunction(
       const std::string& name) const override;
+  std::vector<uint64_t> AddressesForLine(const FileLine& line) const override;
 
  private:
   struct ModuleInfo {

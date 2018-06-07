@@ -123,7 +123,7 @@ Err DoSymNear(ConsoleContext* context, const Command& cmd) {
     return err;
 
   Location loc =
-      cmd.target()->GetProcess()->GetSymbols()->GetLocationForAddress(address);
+      cmd.target()->GetProcess()->GetSymbols()->LocationForAddress(address);
   Console::get()->Output(DescribeLocation(loc));
   return Err();
 }

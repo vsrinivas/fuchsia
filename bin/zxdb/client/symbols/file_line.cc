@@ -9,8 +9,8 @@
 namespace zxdb {
 
 FileLine::FileLine() = default;
-FileLine::FileLine(const std::string& file, int line)
-    : file_(file), line_(line) {}
+FileLine::FileLine(std::string file, int line)
+    : file_(std::move(file)), line_(line) {}
 FileLine::~FileLine() = default;
 
 std::string FileLine::GetFileNamePart() const {

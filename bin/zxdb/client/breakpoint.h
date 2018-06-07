@@ -13,6 +13,7 @@
 
 namespace zxdb {
 
+class BreakpointLocation;
 class Err;
 class Target;
 class Thread;
@@ -31,6 +32,15 @@ class Breakpoint : public ClientObject {
   virtual BreakpointSettings GetSettings() const = 0;
   virtual void SetSettings(const BreakpointSettings& settings,
                            std::function<void(const Err&)> callback) = 0;
+
+  // Returns the locations associated with this breakpoint. These are the
+  // actual addresses set. The symbols of these may not match the one in the
+  // settings (for example, the line number might be different due to
+  // optimization for each location).
+  //
+  // The returned pointers are owned by the Breakpoint and will be changed
+  // if the settings or any process or module changes take place. Don't cache.
+  virtual std::vector<BreakpointLocation*> GetLocations() = 0;
 
  protected:
   fxl::ObserverList<BreakpointObserver>& observers() { return observers_; }

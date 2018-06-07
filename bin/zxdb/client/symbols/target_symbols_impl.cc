@@ -4,6 +4,10 @@
 
 #include "garnet/bin/zxdb/client/symbols/target_symbols_impl.h"
 
+#include <set>
+
+#include "garnet/bin/zxdb/client/symbols/module_symbols.h"
+
 namespace zxdb {
 
 // Does a pointer-identity comparison of two ModuleRefs.
@@ -41,5 +45,21 @@ void TargetSymbolsImpl::RemoveModule(
 }
 
 void TargetSymbolsImpl::RemoveAllModules() { modules_.clear(); }
+
+std::vector<std::string> TargetSymbolsImpl::FindFileMatches(
+    const std::string& name) const {
+  // Different modules can each use the same file, but we want to return each
+  // one once.
+  std::set<std::string> result_set;
+  for (const auto& module : modules_) {
+    for (auto& file : module->module_symbols()->FindFileMatches(name))
+      result_set.insert(std::move(file));
+  }
+
+  std::vector<std::string> result;
+  for (auto& cur : result_set)
+    result.push_back(std::move(cur));
+  return result;
+}
 
 }  // namespace zxdb
