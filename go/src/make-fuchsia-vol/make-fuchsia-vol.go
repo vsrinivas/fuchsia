@@ -66,12 +66,50 @@ var (
 
 const grubCoreOffset = 92
 
+// imageManifests contains a list of known manifests produced by the build that contains build-dir relative paths to images.
+var imageManifests = []string{"zedboot_image_paths.sh", "image_paths.sh"}
+
+// imagePaths contains the default image paths that are produced by a build manifest, populated by tryLoadManifests.
+var imagePaths = map[string]string{}
+
+// getImage fetches an image by name or exits fatally
+func getImage(name string) string {
+	if path, ok := imagePaths[name]; ok {
+		return path
+	}
+	log.Fatalf("Missing image path: %q cannot continue", name)
+	return ""
+}
+
 func init() {
 	flag.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Usage: %s disk-path\n", filepath.Base(os.Args[0]))
 		flag.PrintDefaults()
 	}
+}
 
+func tryLoadManifests() {
+	if *fuchsiaBuildDir != "" {
+		for _, manifest := range imageManifests {
+			content, err := ioutil.ReadFile(filepath.Join(*fuchsiaBuildDir, manifest))
+			if err != nil {
+				log.Printf("warning: failed to load %s manifest: %s", manifest, err)
+				continue
+			}
+			lines := strings.Split(string(content), "\n")
+			for _, line := range lines {
+				line = strings.TrimSpace(line)
+				if line == "" {
+					continue
+				}
+				parts := strings.SplitN(line, "=", 2)
+				if len(parts) != 2 {
+					log.Fatalf("Failed to parse %s: line %q contained incorrect number of `=`", manifest, line)
+				}
+				imagePaths[parts[0]] = parts[1]
+			}
+		}
+	}
 }
 
 func needFuchsiaOutDir() {
@@ -100,6 +138,7 @@ func needZirconToolsDir() {
 
 func main() {
 	flag.Parse()
+	tryLoadManifests()
 
 	if *bootloader == "" {
 		needZirconBuildDir()
@@ -112,9 +151,9 @@ func main() {
 	if *ramdisk == "" {
 		needFuchsiaBuildDir()
 		if *ramdiskOnly {
-			*ramdisk = filepath.Join(*fuchsiaBuildDir, "user.bootfs")
+			*ramdisk = filepath.Join(*fuchsiaBuildDir, getImage("IMAGE_NETBOOT_RAM"))
 		} else {
-			*ramdisk = filepath.Join(*fuchsiaBuildDir, fmt.Sprintf("bootdata-blob-%s.bin", *board))
+			*ramdisk = filepath.Join(*fuchsiaBuildDir, getImage("IMAGE_BOOT_RAM"))
 		}
 	}
 	if *cmdline == "" {
@@ -143,29 +182,29 @@ func main() {
 	if *abr {
 		if *zirconA == "" {
 			needFuchsiaBuildDir()
-			*zirconA = filepath.Join(*fuchsiaBuildDir, fmt.Sprintf("zircon-boot-blob-%s.bin", *board))
+			*zirconA = filepath.Join(*fuchsiaBuildDir, getImage("IMAGE_ZIRCONA_ZBI"))
 		}
 		if *zirconB == "" {
 			*zirconB = *zirconA
 		}
 		if *zirconR == "" {
-			*zirconR = filepath.Join(*fuchsiaBuildDir, fmt.Sprintf("images/zedboot-%s.bin", *board))
+			*zirconR = filepath.Join(*fuchsiaBuildDir, getImage("IMAGE_ZIRCONR_ZBI"))
 		}
 	}
 
 	if *zedboot == "" {
 		needFuchsiaBuildDir()
-		*zedboot = filepath.Join(*fuchsiaBuildDir, "images", fmt.Sprintf("zedboot-%s.bin", *board))
+		*zedboot = filepath.Join(*fuchsiaBuildDir, getImage("IMAGE_ZEDBOOT_ZBI"))
 	}
 
 	if !*ramdiskOnly {
 		if *blob == "" {
 			needFuchsiaBuildDir()
-			*blob = filepath.Join(*fuchsiaBuildDir, "images", "blob.blk")
+			*blob = filepath.Join(*fuchsiaBuildDir, getImage("IMAGE_BLOB_RAW"))
 		}
 		if *data == "" {
 			needFuchsiaBuildDir()
-			*data = filepath.Join(*fuchsiaBuildDir, "images", "data.blk")
+			*data = filepath.Join(*fuchsiaBuildDir, getImage("IMAGE_DATA_RAW"))
 		}
 
 		if _, err := os.Stat(*blob); err != nil {
