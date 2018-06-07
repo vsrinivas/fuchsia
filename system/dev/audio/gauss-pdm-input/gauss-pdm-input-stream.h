@@ -81,6 +81,9 @@ private:
     zx_status_t OnPlugDetect(dispatcher::Channel* channel,
                              const audio_proto::PlugDetectReq& req);
 
+    zx_status_t OnGetUniqueId(dispatcher::Channel* channel, const audio_proto::GetUniqueIdReq& req);
+    zx_status_t OnGetString(dispatcher::Channel* channel, const audio_proto::GetStringReq& req);
+
     // Thunks for dispatching ring buffer channel events.
     zx_status_t ProcessRingBufferChannel(dispatcher::Channel* channel);
 

@@ -203,6 +203,8 @@ GaussPdmInputStream::ProcessStreamChannel(dispatcher::Channel* channel,
         audio_proto::GetGainReq get_gain;
         audio_proto::SetGainReq set_gain;
         audio_proto::PlugDetectReq plug_detect;
+        audio_proto::GetUniqueIdReq get_unique_id;
+        audio_proto::GetStringReq get_string;
     } req;
 
     static_assert(
@@ -229,6 +231,8 @@ GaussPdmInputStream::ProcessStreamChannel(dispatcher::Channel* channel,
         HREQ(AUDIO_STREAM_CMD_GET_GAIN, get_gain, OnGetGain, false);
         HREQ(AUDIO_STREAM_CMD_SET_GAIN, set_gain, OnSetGain, true);
         HREQ(AUDIO_STREAM_CMD_PLUG_DETECT, plug_detect, OnPlugDetect, true);
+        HREQ(AUDIO_STREAM_CMD_GET_UNIQUE_ID, get_unique_id, OnGetUniqueId, false);
+        HREQ(AUDIO_STREAM_CMD_GET_STRING, get_string, OnGetString, false);
     default:
         zxlogf(ERROR, "Unrecognized stream command 0x%04x\n", req.hdr.cmd);
         return ZX_ERR_NOT_SUPPORTED;
@@ -515,6 +519,44 @@ GaussPdmInputStream::OnPlugDetect(dispatcher::Channel* channel,
     resp.hdr = req.hdr;
     resp.flags = static_cast<audio_pd_notify_flags_t>(AUDIO_PDNF_HARDWIRED |
                                                       AUDIO_PDNF_PLUGGED);
+    return channel->Write(&resp, sizeof(resp));
+}
+
+zx_status_t GaussPdmInputStream::OnGetUniqueId(dispatcher::Channel* channel,
+                                               const audio_proto::GetUniqueIdReq& req) {
+    audio_proto::GetUniqueIdResp resp;
+
+    static const audio_stream_unique_id_t mic_id = AUDIO_STREAM_UNIQUE_ID_BUILTIN_MICROPHONE;
+    resp.hdr = req.hdr;
+    resp.unique_id = mic_id;
+
+    return channel->Write(&resp, sizeof(resp));
+}
+
+zx_status_t GaussPdmInputStream::OnGetString(dispatcher::Channel* channel,
+                                             const audio_proto::GetStringReq& req) {
+    audio_proto::GetStringResp resp;
+
+    resp.hdr = req.hdr;
+    resp.id = req.id;
+
+    const char* str;
+    switch (req.id) {
+        case AUDIO_STREAM_STR_ID_MANUFACTURER: str = "Gauss"; break;
+        case AUDIO_STREAM_STR_ID_PRODUCT:      str = "Builtin Microphone"; break;
+        default:                               str = nullptr; break;
+    }
+
+    if (str == nullptr) {
+        resp.result = ZX_ERR_NOT_FOUND;
+        resp.strlen = 0;
+    } else {
+        int res = snprintf(reinterpret_cast<char*>(resp.str), sizeof(resp.str), "%s", str);
+        ZX_DEBUG_ASSERT(res >= 0);
+        resp.result = ZX_OK;
+        resp.strlen = fbl::min<uint32_t>(res, sizeof(resp.str) - 1);
+    }
+
     return channel->Write(&resp, sizeof(resp));
 }
 
