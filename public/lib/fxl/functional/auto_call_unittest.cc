@@ -52,6 +52,21 @@ TEST(AutoCallTest, Call) {
   EXPECT_EQ(var, 1);
 }
 
+TEST(AutoCallTest, RecursiveCall) {
+  int var = 0;
+  {
+    auto do_incr = fxl::MakeAutoCall<fxl::Closure>([]() { /* no-op */ });
+    do_incr = fxl::MakeAutoCall<fxl::Closure>([&do_incr, &var]() {
+      incr_arg(&var);
+      do_incr.call();
+    });
+    EXPECT_EQ(var, 0);
+    do_incr.call();
+    EXPECT_EQ(var, 1);
+  }
+  EXPECT_EQ(var, 1);
+}
+
 TEST(AutoCallTest, MoveConstructBasic) {
   int var = 0;
   {
@@ -106,6 +121,32 @@ TEST(AutoCallTest, MoveAssignBasic) {
   EXPECT_EQ(var2, 1);
 }
 
+TEST(AutoCallTest, MoveAssignWiderScope) {
+  int var1 = 0, var2 = 0;
+  {
+    auto do_incr =
+        fxl::MakeAutoCall<fxl::Closure>([&var1]() { incr_arg(&var1); });
+    EXPECT_EQ(var1, 0);
+    EXPECT_EQ(var2, 0);
+    {
+      auto do_incr2 =
+          fxl::MakeAutoCall<fxl::Closure>([&var2]() { incr_arg(&var2); });
+      EXPECT_EQ(var1, 0);
+      EXPECT_EQ(var2, 0);
+      // do_incr is moved-to, so its associated function is called.
+      do_incr = std::move(do_incr2);
+      EXPECT_EQ(var1, 1);
+      EXPECT_EQ(var2, 0);
+    }
+    // do_incr2 is out of scope but has been moved so its function is not
+    // called.
+    EXPECT_EQ(var1, 1);
+    EXPECT_EQ(var2, 0);
+  }
+  EXPECT_EQ(var1, 1);
+  EXPECT_EQ(var2, 1);
+}
+
 TEST(AutoCallTest, MoveAssignFromCancelled) {
   int var1 = 0, var2 = 0;
   {
@@ -153,8 +194,6 @@ TEST(AutoCallTest, MoveAssignFromCalled) {
   EXPECT_EQ(var1, 1);
   EXPECT_EQ(var2, 1);
 }
-
-
 
 }  // namespace
 }  // namespace fxl
