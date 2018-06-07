@@ -13,6 +13,6 @@ fidl("fidl") {
   ]
 
   public_deps = [
-    "//garnet/public/lib/ui/views/fidl:view_token",
+    "//garnet/public/lib/ui/views/fidl:v1",
   ]
 }
