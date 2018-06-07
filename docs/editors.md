@@ -36,11 +36,11 @@ no-op mode and parsing the output. Thus it may be less accurate than bear, but
 it should be able to produce a complete database very quickly and without
 requiring a clean build.
 
-To use it, download it from GitHub and run
+To use it, download it from GitHub and run (ensure that compiledb is in your PATH)
 
 ```bash
 cd "${ZIRCON_DIR}"
-compiledb-gen-make <make args> > compile_commands.json
+compiledb -o compile_commands.json -n make <make args>
 ```
 
 #### Bear
