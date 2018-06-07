@@ -115,14 +115,9 @@ public:
     zx_status_t SetPolicy(uint32_t mode, const zx_policy_basic* in_policy, size_t policy_count);
     pol_cookie_t GetPolicy();
 
-    // Updates a partial ordering between jobs so that this job will be killed
-    // after |other| in low-resource situations. If |other| is null, then this
-    // job becomes the least-important job in the system.
-    zx_status_t MakeMoreImportantThan(fbl::RefPtr<JobDispatcher> other);
-
     // Calls the provided |zx_status_t func(JobDispatcher*)| on every
     // JobDispatcher in the system, from least important to most important,
-    // using the order determined by MakeMoreImportantThan(). Stops if |func|
+    // using the order determined by ZX_PROP_JOB_IMPORTANCE. Stops if |func|
     // returns an error, returning the error value.
     template <typename T>
     static zx_status_t ForEachJobByImportance(T func) {

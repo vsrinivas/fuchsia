@@ -670,39 +670,3 @@ zx_status_t sys_job_set_policy(zx_handle_t job_handle, uint32_t options,
 
     return job->SetPolicy(options, policy.get(), policy.size());
 }
-
-zx_status_t sys_job_set_relative_importance(
-    zx_handle_t resource_handle,
-    zx_handle_t job_handle, zx_handle_t less_important_job_handle) {
-
-    ProcessDispatcher* up = ProcessDispatcher::GetCurrent();
-
-    // If the caller has a valid handle to the root resource, let them perform
-    // this operation no matter the rights on the job handles.
-    {
-        fbl::RefPtr<ResourceDispatcher> resource;
-        zx_status_t status = up->GetDispatcherWithRights(
-            resource_handle, ZX_RIGHT_NONE, &resource);
-        if (status != ZX_OK)
-            return status;
-        // TODO(ZX-971): Check that this is actually the appropriate resource
-    }
-
-    // Get the job to modify.
-    fbl::RefPtr<JobDispatcher> job;
-    zx_status_t status = up->GetDispatcherWithRights(
-        job_handle, ZX_RIGHT_NONE, &job);
-    if (status != ZX_OK)
-        return status;
-
-    // Get its less-important neighbor, or null.
-    fbl::RefPtr<JobDispatcher> li_job;
-    if (less_important_job_handle != ZX_HANDLE_INVALID) {
-        status = up->GetDispatcherWithRights(
-            less_important_job_handle, ZX_RIGHT_NONE, &li_job);
-        if (status != ZX_OK)
-            return status;
-    }
-
-    return job->MakeMoreImportantThan(fbl::move(li_job));
-}

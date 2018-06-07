@@ -517,33 +517,6 @@ zx_status_t JobDispatcher::set_importance(zx_job_importance_t importance) {
 fbl::Mutex JobDispatcher::importance_lock_;
 JobDispatcher::JobImportanceList JobDispatcher::importance_list_;
 
-zx_status_t JobDispatcher::MakeMoreImportantThan(
-    fbl::RefPtr<JobDispatcher> other) {
-
-    canary_.Assert();
-    if (other != nullptr)
-        other->canary_.Assert();
-
-    // Update this job's position in the global job importance list.
-    AutoLock lock(&importance_lock_);
-    DEBUG_ASSERT(dll_importance_.InContainer());
-    DEBUG_ASSERT(other == nullptr || other->dll_importance_.InContainer());
-
-    importance_list_.erase(*this);
-    DEBUG_ASSERT(!dll_importance_.InContainer());
-    if (other == nullptr) {
-        // Make this the least important.
-        importance_list_.push_front(this);
-    } else {
-        // Insert just after the less-important other job.
-        importance_list_.insert_after(
-            importance_list_.make_iterator(*other), this);
-    }
-    DEBUG_ASSERT(dll_importance_.InContainer());
-
-    return ZX_OK;
-}
-
 zx_status_t JobDispatcher::SetExceptionPort(fbl::RefPtr<ExceptionPort> eport) {
     canary_.Assert();
 
