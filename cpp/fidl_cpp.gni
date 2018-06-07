@@ -10,7 +10,8 @@ import("//build/fidl/toolchain.gni")
 # The parameters for this template are defined in //build/fidl/fidl.gni. The
 # relevant parameters in this template are:
 #   - name;
-#   - sources.
+#   - sources;
+#   - cpp_legacy_callbacks.
 
 template("fidl_cpp") {
   assert(is_fuchsia, "This template can only be used in $target_toolchain.")
@@ -85,6 +86,10 @@ template("fidl_cpp") {
         "--generators",
         "cpp",
       ]
+
+      if (!defined(invoker.cpp_legacy_callbacks) || invoker.cpp_legacy_callbacks) {
+        args += [ "--cpp-legacy-callbacks" ]
+      }
 
       deps = [
         ":$main_target_name($fidl_toolchain)",
