@@ -195,7 +195,7 @@ private:
 
 namespace clock {
 
-static inline time get(uint32_t clock_id) {
+static inline time get(zx_clock_t clock_id) {
     return time(zx_clock_get(clock_id));
 }
 

@@ -9,8 +9,8 @@ clock_get - Acquire the current time.
 ```
 #include <zircon/syscalls.h>
 
-zx_time_t zx_clock_get(uint32_t clock_id);
-zx_status_t zx_clock_get(uint32_t clock_id, zx_time_t* out_time);
+zx_status_t zx_clock_get_new(uint32_t clock_id, zx_time_t* out_time);
+zx_time_t zx_clock_get(zx_clock_t clock_id);
 ```
 
 ## DESCRIPTION

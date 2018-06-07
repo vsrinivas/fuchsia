@@ -62,7 +62,7 @@ zx_status_t sys_nanosleep(zx_time_t deadline) {
 // update pvclock too.
 fbl::atomic<int64_t> utc_offset;
 
-zx_time_t sys_clock_get(uint32_t clock_id) {
+zx_time_t sys_clock_get(zx_clock_t clock_id) {
     switch (clock_id) {
     case ZX_CLOCK_MONOTONIC:
         return current_time();
@@ -76,7 +76,7 @@ zx_time_t sys_clock_get(uint32_t clock_id) {
     }
 }
 
-zx_status_t sys_clock_get_new(uint32_t clock_id, user_out_ptr<zx_time_t> out_time) {
+zx_status_t sys_clock_get_new(zx_clock_t clock_id, user_out_ptr<zx_time_t> out_time) {
     zx_time_t time;
     switch (clock_id) {
     case ZX_CLOCK_MONOTONIC:
@@ -95,7 +95,7 @@ zx_status_t sys_clock_get_new(uint32_t clock_id, user_out_ptr<zx_time_t> out_tim
     return out_time.copy_to_user(time);
 }
 
-zx_status_t sys_clock_adjust(zx_handle_t hrsrc, uint32_t clock_id, int64_t offset) {
+zx_status_t sys_clock_adjust(zx_handle_t hrsrc, zx_clock_t clock_id, int64_t offset) {
     // TODO(ZX-971): finer grained validation
     zx_status_t status;
     if ((status = validate_resource(hrsrc, ZX_RSRC_KIND_ROOT)) < 0) {

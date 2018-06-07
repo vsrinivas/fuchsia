@@ -50,7 +50,7 @@
 # Time
 
 syscall clock_get
-    (clock_id: uint32_t)
+    (clock_id: zx_clock_t)
     returns (zx_time_t);
 
 syscall clock_get_new
@@ -74,7 +74,7 @@ syscall deadline_after vdsocall
     returns (zx_time_t);
 
 syscall clock_adjust
-    (handle: zx_handle_t, clock_id: uint32_t, offset: int64_t)
+    (handle: zx_handle_t, clock_id: zx_clock_t, offset: int64_t)
     returns (zx_status_t);
 
 # System information
@@ -371,7 +371,7 @@ syscall port_cancel
 # Timers
 
 syscall timer_create
-    (options: uint32_t, clock_id: uint32_t)
+    (options: uint32_t, clock_id: zx_clock_t)
     returns (zx_status_t, out: zx_handle_t handle_acquire);
 
 syscall timer_set

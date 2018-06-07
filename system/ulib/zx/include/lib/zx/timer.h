@@ -28,7 +28,7 @@ public:
         return *this;
     }
 
-    static zx_status_t create(uint32_t options, uint32_t clock_id, timer* result);
+    static zx_status_t create(uint32_t options, zx_clock_t clock_id, timer* result);
 
     zx_status_t set(zx::time deadline, zx::duration slack) const {
         return zx_timer_set(get(), deadline.get(), slack.get());

@@ -50,6 +50,12 @@ typedef uint64_t zx_ticks_t;
 #define ZX_MIN(n)  (ZX_SEC(n) * 60ULL)
 #define ZX_HOUR(n) (ZX_MIN(n) * 60ULL)
 
+// clock ids
+typedef uint32_t zx_clock_t;
+#define ZX_CLOCK_MONOTONIC        ((zx_clock_t)0)
+#define ZX_CLOCK_UTC              ((zx_clock_t)1)
+#define ZX_CLOCK_THREAD           ((zx_clock_t)2)
+
 typedef uint32_t zx_signals_t;
 
 #define ZX_SIGNAL_NONE              ((zx_signals_t)0u)
@@ -251,11 +257,6 @@ typedef uint32_t zx_rights_t;
 #define ZX_VM_FLAG_CAN_MAP_WRITE      (1u << 8)
 #define ZX_VM_FLAG_CAN_MAP_EXECUTE    (1u << 9)
 #define ZX_VM_FLAG_MAP_RANGE          (1u << 10)
-
-// clock ids
-#define ZX_CLOCK_MONOTONIC        (0u)
-#define ZX_CLOCK_UTC              (1u)
-#define ZX_CLOCK_THREAD           (2u)
 
 // virtual address
 typedef uintptr_t zx_vaddr_t;
