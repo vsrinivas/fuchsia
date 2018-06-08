@@ -16,6 +16,7 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/astro-display.c \
     $(LOCAL_DIR)/astro-touch.c \
     $(LOCAL_DIR)/astro-rawnand.c \
+    $(LOCAL_DIR)/astro-sdio.c \
 
 MODULE_STATIC_LIBS := \
     system/dev/lib/amlogic \

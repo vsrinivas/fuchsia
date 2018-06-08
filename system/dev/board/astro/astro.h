@@ -20,6 +20,7 @@ enum {
     BTI_MALI,
     BTI_VIDEO,
     BTI_AML_RAW_NAND,
+    BTI_SDIO,
 };
 
 typedef struct {
@@ -54,6 +55,7 @@ enum {
 #define I2C_BACKLIGHT_ADDR (0x2C)
 // astro-touch.c
 zx_status_t astro_touch_init(aml_bus_t* bus);
-
 // aml-raw_nand.c
 zx_status_t aml_raw_nand_init(aml_bus_t* bus);
+// astro-sdio.c
+zx_status_t aml_sdio_init(aml_bus_t* bus);

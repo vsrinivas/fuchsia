@@ -49,6 +49,9 @@
 #define S905D2_AOBUS_LENGTH             0x100000
 
 #define S905D2_I2C_AO_0_BASE            (S905D2_AOBUS_BASE + 0x5000)
+//SDIO
+#define S905D2_EMMC_A_SDIO_BASE         0xffe03000
+#define S905D2_EMMC_A_SDIO_LENGTH       0x2000
 
 #define S905D2_RAW_NAND_REG_BASE        (S905D2_AOBUS_BASE + 0x607800)
 #define S905D2_RAW_NAND_CLOCK_BASE      (S905D2_AOBUS_BASE + 0x607000)
@@ -105,3 +108,22 @@
 #define S905D2_MALI_IRQ_PP              194
 #define S905D2_A0_GPIO_IRQ_0            238
 #define S905D2_A0_GPIO_IRQ_1            239
+
+#define S905D2_EMMC_A_SDIO_IRQ          221
+
+
+// Alternate Functions for SDIO
+#define S905D2_WIFI_SDIO_D0           S905D2_GPIOX(0)
+#define S905D2_WIFI_SDIO_D0_FN        1
+#define S905D2_WIFI_SDIO_D1           S905D2_GPIOX(1)
+#define S905D2_WIFI_SDIO_D1_FN        1
+#define S905D2_WIFI_SDIO_D2           S905D2_GPIOX(2)
+#define S905D2_WIFI_SDIO_D2_FN        1
+#define S905D2_WIFI_SDIO_D3           S905D2_GPIOX(3)
+#define S905D2_WIFI_SDIO_D3_FN        1
+#define S905D2_WIFI_SDIO_CLK          S905D2_GPIOX(4)
+#define S905D2_WIFI_SDIO_CLK_FN       1
+#define S905D2_WIFI_SDIO_CMD          S905D2_GPIOX(5)
+#define S905D2_WIFI_SDIO_CMD_FN       1
+#define S905D2_WIFI_SDIO_WAKE_HOST    S905D2_GPIOX(7)
+#define S905D2_WIFI_SDIO_WAKE_HOST_FN 1

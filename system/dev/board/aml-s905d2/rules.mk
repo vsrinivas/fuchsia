@@ -13,6 +13,7 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/aml-gpio.c \
     $(LOCAL_DIR)/aml-i2c.c \
     $(LOCAL_DIR)/aml-usb.c \
+    $(LOCAL_DIR)/aml-sdio.c \
 
 MODULE_STATIC_LIBS := \
     system/dev/lib/amlogic \
