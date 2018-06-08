@@ -4,11 +4,11 @@
 
 #include "peridot/bin/cloud_provider_firestore/grpc/read_stream_drainer.h"
 
-#include <functional>
-#include <vector>
-
 #include <grpc++/grpc++.h>
 #include <grpc++/support/async_stream.h>
+
+#include <functional>
+#include <vector>
 
 #include "lib/callback/capture.h"
 #include "lib/callback/set_when_called.h"

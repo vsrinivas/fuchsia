@@ -5,6 +5,7 @@
 #include "peridot/bin/cloud_provider_firestore/app/device_set_impl.h"
 
 #include <fuchsia/ledger/cloud/cpp/fidl.h>
+
 #include "lib/callback/capture.h"
 #include "lib/callback/set_when_called.h"
 #include "lib/fidl/cpp/binding.h"

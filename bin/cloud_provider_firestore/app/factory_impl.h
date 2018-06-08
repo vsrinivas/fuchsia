@@ -7,8 +7,8 @@
 
 #include <fuchsia/ledger/cloud/cpp/fidl.h>
 #include <fuchsia/ledger/cloud/firestore/cpp/fidl.h>
-#include <lib/async/dispatcher.h>
 #include <fuchsia/modular/auth/cpp/fidl.h>
+#include <lib/async/dispatcher.h>
 
 #include "lib/callback/auto_cleanable.h"
 #include "lib/callback/cancellable.h"

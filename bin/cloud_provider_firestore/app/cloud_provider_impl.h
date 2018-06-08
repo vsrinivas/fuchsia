@@ -7,6 +7,7 @@
 
 #include <fuchsia/ledger/cloud/cpp/fidl.h>
 #include <fuchsia/ledger/cloud/firestore/cpp/fidl.h>
+
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"

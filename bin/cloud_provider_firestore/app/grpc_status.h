@@ -5,9 +5,8 @@
 #ifndef PERIDOT_BIN_CLOUD_PROVIDER_FIRESTORE_APP_GRPC_STATUS_H_
 #define PERIDOT_BIN_CLOUD_PROVIDER_FIRESTORE_APP_GRPC_STATUS_H_
 
-#include <grpc++/grpc++.h>
-
 #include <fuchsia/ledger/cloud/cpp/fidl.h>
+#include <grpc++/grpc++.h>
 
 #include "peridot/bin/cloud_provider_firestore/include/types.h"
 
