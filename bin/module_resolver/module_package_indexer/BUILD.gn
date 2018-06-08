@@ -13,7 +13,7 @@ executable_package("module_package_indexer") {
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//peridot/lib/module_manifest_source:package_util",
-    "//peridot/lib/module_manifest_source/fidl",
+    "//peridot/lib:maxwell_internal",
     "//zircon/public/lib/fdio",
   ]
 

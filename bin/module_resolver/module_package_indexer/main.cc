@@ -11,13 +11,16 @@
 #include <glob.h>
 #include <sys/types.h>
 
-#include <module_manifest_source/cpp/fidl.h>
+#include <fuchsia/maxwell/internal/cpp/fidl.h>
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/files/file.h"
 #include "lib/fxl/log_settings_command_line.h"
 #include "lib/fxl/strings/string_printf.h"
 #include "peridot/lib/module_manifest_source/package_util.h"
+
+using ::fuchsia::maxwell::internal::ModulePackageIndexer;
+using ::fuchsia::maxwell::internal::ModulePackageIndexerPtr;
 
 // This function finds the ModulePackageIndexer fidl service that the
 // module_resolver runs.
@@ -27,8 +30,7 @@ std::string FindModulePackageIndexerService() {
   // /hub/r/sys/<koid>/r/user-<userid>/<koid>/c/module_resolver/<koid>/out/debug
   auto glob_str = fxl::StringPrintf(
       "/hub/r/sys/*/r/user-*/*/c/module_resolver/*/out/"
-      "debug/%s",
-      module_manifest_source::ModulePackageIndexer::Name_);
+      "debug/%s", ModulePackageIndexer::Name_);
 
   glob_t globbuf;
   std::string service_path;
@@ -59,7 +61,7 @@ int main(int argc, const char** argv) {
   FXL_CHECK(!service_path.empty())
       << "Could not find a running module resolver. Is the user logged in?";
 
-  module_manifest_source::ModulePackageIndexerPtr indexer;
+  ModulePackageIndexerPtr indexer;
   auto req_handle = indexer.NewRequest().TakeChannel();
   if (fdio_service_connect(service_path.c_str(), req_handle.get()) != ZX_OK) {
     FXL_LOG(FATAL) << "Could not connect to service " << service_path;

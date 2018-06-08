@@ -10,7 +10,7 @@
 #include <string>
 #include <vector>
 
-#include <module_manifest_source/cpp/fidl.h>
+#include <fuchsia/maxwell/internal/cpp/fidl.h>
 #include "lib/app/cpp/startup_context.h"
 #include "lib/fxl/memory/weak_ptr.h"
 #include "peridot/lib/module_manifest_source/module_manifest_source.h"
@@ -22,7 +22,7 @@ namespace modular {
 // source starts up, it gets its initial set of module packages to index by
 // reading the module package index directory located under /system/data/.
 class ModulePackageSource : public ModuleManifestSource,
-                            module_manifest_source::ModulePackageIndexer {
+                            ::fuchsia::maxwell::internal::ModulePackageIndexer {
  public:
   ModulePackageSource(fuchsia::sys::StartupContext* context);
   ~ModulePackageSource() override;
@@ -38,7 +38,7 @@ class ModulePackageSource : public ModuleManifestSource,
 
   const std::string dir_;
   NewEntryFn new_entry_fn_;
-  fidl::BindingSet<module_manifest_source::ModulePackageIndexer>
+  fidl::BindingSet<::fuchsia::maxwell::internal::ModulePackageIndexer>
       indexer_bindings_;
   async_t* async_;
 

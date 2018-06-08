@@ -28,6 +28,8 @@ constexpr char kInitialModulePackagesIndexDir[] =
     "/system/data/initial_module_packages";
 }  // namespace
 
+using ::fuchsia::maxwell::internal::ModulePackageIndexer;
+
 ModulePackageSource::ModulePackageSource(
     fuchsia::sys::StartupContext* const context)
     : weak_factory_(this) {
@@ -35,9 +37,8 @@ ModulePackageSource::ModulePackageSource(
       ModulePackageIndexer::Name_,
       fbl::AdoptRef(new fs::Service([this](zx::channel channel) {
         indexer_bindings_.AddBinding(
-            this, fidl::InterfaceRequest<
-                      module_manifest_source::ModulePackageIndexer>(
-                      std::move(channel)));
+            this, fidl::InterfaceRequest<ModulePackageIndexer>(
+                std::move(channel)));
         return ZX_OK;
       })));
 }
