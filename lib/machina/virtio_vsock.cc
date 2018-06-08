@@ -344,11 +344,12 @@ void VirtioVsock::OnSocketReady(async_t* async, async::Wait* wait,
     status = WaitOnQueueLocked(key, &readable_, &rx_stream_);
   }
 
-  // If the socket is writable, wait on the Virtio transmit queue.
-  if (signal->observed & ZX_SOCKET_WRITABLE) {
-    // TODO(tjdetwiler): Since space has been made available in the socket
-    // buffer, we should send a credit update to the guest to indicate transmits
-    // may resume.
+  // If the socket is writable and we last reported the buffer as full, send a
+  // credit update message to the guest indicating buffer space is now
+  // available.
+  if (conn->reported_buf_avail == 0 && signal->observed & ZX_SOCKET_WRITABLE) {
+    conn->UpdateOp(VIRTIO_VSOCK_OP_CREDIT_UPDATE);
+    status = WaitOnQueueLocked(key, &readable_, &rx_stream_);
   }
 
   if (status != ZX_OK) {
@@ -359,8 +360,10 @@ void VirtioVsock::OnSocketReady(async_t* async, async::Wait* wait,
   }
 }
 
+// Sets the |buf_alloc| and |fwd_cnt| fields on |header| and return the
+// remaining socket buffer space in |buf_avail|.
 static zx_status_t set_credit(virtio_vsock_hdr_t* header, uint32_t rx_cnt,
-                              const zx::socket& socket) {
+                              const zx::socket& socket, size_t* buf_avail) {
   size_t max = 0;
   zx_status_t status =
       socket.get_property(ZX_PROP_SOCKET_TX_BUF_MAX, &max, sizeof(max));
@@ -375,6 +378,7 @@ static zx_status_t set_credit(virtio_vsock_hdr_t* header, uint32_t rx_cnt,
 
   header->buf_alloc = max;
   header->fwd_cnt = rx_cnt - used;
+  *buf_avail = max - used;
   return ZX_OK;
 }
 
@@ -446,10 +450,13 @@ zx_status_t VirtioVsock::SendMessageForConnectionLocked(
   }
 
   if (op_requires_credit(conn->op())) {
-    zx_status_t status = set_credit(header, conn->rx_cnt, conn->socket);
+    zx_status_t status = set_credit(header, conn->rx_cnt, conn->socket,
+                                    &conn->reported_buf_avail);
     if (status != ZX_OK) {
       conn->UpdateOp(VIRTIO_VSOCK_OP_RST);
       FXL_LOG(ERROR) << "Failed to set credit";
+    } else if (conn->reported_buf_avail == 0) {
+      WaitOnSocketLocked(status, key, &conn->tx_wait);
     }
   }
 
@@ -616,7 +623,7 @@ void VirtioVsock::Demux(zx_status_t status, uint16_t index) {
           status = conn->socket.write(0, desc.addr, len, &actual);
           conn->rx_cnt += actual;
           header->len -= actual;
-          if (status != ZX_OK) {
+          if (status != ZX_OK || actual > conn->reported_buf_avail) {
             // NOTE: this drops some bytes in this data payload. Since we send
             // credit update messages that inform that guest about available
             // buffer space in the socket we don't expect this to happen in
@@ -632,6 +639,11 @@ void VirtioVsock::Demux(zx_status_t status, uint16_t index) {
               status = ZX_OK;
             }
             break;
+          }
+
+          conn->reported_buf_avail -= actual;
+          if (conn->reported_buf_avail == 0) {
+            WaitOnSocketLocked(status, key, &conn->tx_wait);
           }
           if (!desc.has_next || header->len == 0) {
             break;

@@ -620,6 +620,42 @@ TEST_F(VirtioVsockTest, WriteSocketFullDropBytes) {
             connection.socket.read(0, buf.get(), buf_size, &actual_len));
 }
 
+TEST_F(VirtioVsockTest, SendCreditUpdateWhenSocketIsDrained) {
+  TestConnection connection;
+  HostConnectOnPortRequest(kVirtioVsockHostPort, connection.callback());
+  HostConnectOnPortResponse(kVirtioVsockHostPort);
+
+  // Fill socket buffer completely.
+  size_t socket_size = 0;
+  ASSERT_EQ(ZX_OK,
+            connection.socket.get_property(ZX_PROP_SOCKET_TX_BUF_MAX,
+                                           &socket_size, sizeof(socket_size)));
+  size_t buf_size = socket_size + sizeof(virtio_vsock_hdr_t);
+  auto buf = std::make_unique<uint8_t[]>(buf_size);
+  memset(buf.get(), 'a', buf_size);
+  HostQueueWriteOnPort(kVirtioVsockHostPort, buf.get(), buf_size);
+  loop_.RunUntilIdle();
+
+  // No buffers should be available to read.
+  ASSERT_EQ(nullptr, DoReceive());
+
+  // Read a single byte from socket to free up space in the socket buffer and
+  // make the socket writable again.
+  memset(buf.get(), 0, buf_size);
+  uint8_t byte;
+  size_t actual_len = 0;
+  ASSERT_EQ(connection.socket.read(0, &byte, 1, &actual_len), ZX_OK);
+  ASSERT_EQ(1u, actual_len);
+  ASSERT_EQ('a', byte);
+
+  // Verify we get a credit update now that the socket is wirtable.
+  loop_.RunUntilIdle();
+  RxBuffer* credit_update = DoReceive();
+  ASSERT_NE(credit_update, nullptr);
+  ASSERT_EQ(socket_size, credit_update->header.buf_alloc);
+  ASSERT_EQ(actual_len, credit_update->header.fwd_cnt);
+}
+
 TEST_F(VirtioVsockTest, MultipleConnections) {
   TestConnection a_connection;
   HostConnectOnPortRequest(kVirtioVsockHostPort + 1000,

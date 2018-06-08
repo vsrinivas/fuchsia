@@ -76,6 +76,14 @@ class VirtioVsock
    public:
     ~Connection();
 
+    // The number of bytes the guest expects us to have in our socket buffer.
+    // This is the last credit_update sent minus any bytes we've received since
+    // that update was sent.
+    //
+    // When this is 0 we'll need to send a CREDIT_UPDATE once buffer space has
+    // been free'd so that the guest knows it can resume transmitting.
+    size_t reported_buf_avail = 0;
+
     uint32_t flags = 0;
     uint32_t rx_cnt = 0;
     uint32_t tx_cnt = 0;
