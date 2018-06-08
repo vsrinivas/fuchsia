@@ -106,3 +106,17 @@
 #define S912_AO_GPIO_OEN_OUT     0x09   // OEN: [9:0], OUT: [25:16]
 #define S912_AO_GPIO_IN          0x0a
 #define S912_A0_GPIO_OUT_OFFSET  16
+
+// Alternate Functions for SDIO
+#define S912_WIFI_SDIO_D0           S912_GPIOX(0)
+#define S912_WIFI_SDIO_D0_FN        1
+#define S912_WIFI_SDIO_D1           S912_GPIOX(1)
+#define S912_WIFI_SDIO_D1_FN        1
+#define S912_WIFI_SDIO_D2           S912_GPIOX(2)
+#define S912_WIFI_SDIO_D2_FN        1
+#define S912_WIFI_SDIO_D3           S912_GPIOX(3)
+#define S912_WIFI_SDIO_D3_FN        1
+#define S912_WIFI_SDIO_CLK          S912_GPIOX(4)
+#define S912_WIFI_SDIO_CLK_FN       1
+#define S912_WIFI_SDIO_CMD          S912_GPIOX(5)
+#define S912_WIFI_SDIO_CMD_FN       1

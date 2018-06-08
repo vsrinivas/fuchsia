@@ -16,6 +16,7 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/vim-uart.c \
     $(LOCAL_DIR)/vim-usb.c \
     $(LOCAL_DIR)/vim-sd-emmc.c \
+    $(LOCAL_DIR)/vim-sdio.c \
     $(LOCAL_DIR)/vim-eth.c \
     $(LOCAL_DIR)/vim-thermal.c \
     $(LOCAL_DIR)/vim-mailbox.c \

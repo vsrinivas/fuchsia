@@ -25,6 +25,7 @@ enum {
     BTI_DISPLAY,
     BTI_VIDEO,
     BTI_EMMC,
+    BTI_SDIO,
 };
 
 typedef struct {
@@ -53,6 +54,9 @@ zx_status_t vim_usb_init(vim_bus_t* bus);
 
 // vim-sd-emmc.c
 zx_status_t vim_sd_emmc_init(vim_bus_t* bus);
+
+// vim-sd-emmc.c
+zx_status_t vim_sdio_init(vim_bus_t* bus);
 
 // vim-eth.c
 zx_status_t vim_eth_init(vim_bus_t* bus);

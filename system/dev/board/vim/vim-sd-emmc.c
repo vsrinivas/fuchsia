@@ -9,6 +9,7 @@
 #include <soc/aml-s912/s912-hw.h>
 #include <soc/aml-a113/a113-hw.h>
 #include <soc/aml-s912/s912-gpio.h>
+#include <soc/aml-common/aml-sd-emmc.h>
 
 #include "vim.h"
 
@@ -68,7 +69,17 @@ static const pbus_gpio_t emmc_gpios[] = {
     },
 };
 
+static aml_sd_emmc_config_t config = {
+    .supports_dma = true,
+};
+
 static const pbus_boot_metadata_t emmc_metadata[] = {
+    {
+        .type       = DEVICE_METADATA_DRIVER_DATA,
+        .extra      = 0,
+        .data       = &config,
+        .len        = sizeof(config),
+    },
     {
         .type = DEVICE_METADATA_PARTITION_MAP,
         .extra = 0,
