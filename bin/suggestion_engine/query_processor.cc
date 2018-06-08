@@ -19,10 +19,10 @@ constexpr char kQueryContextKey[] = "/suggestion_engine/current_query";
 
 }  // namespace
 
-QueryProcessor::QueryProcessor(fuchsia::media::AudioServerPtr audio_server,
+QueryProcessor::QueryProcessor(fuchsia::media::AudioPtr audio,
                                std::shared_ptr<SuggestionDebugImpl> debug)
     : debug_(debug),
-      media_player_(std::move(audio_server), debug),
+      media_player_(std::move(audio), debug),
       has_media_response_(false) {
   media_player_.SetSpeechStatusCallback(
       [this](fuchsia::modular::SpeechStatus status) {

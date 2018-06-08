@@ -60,7 +60,7 @@ class SuggestionEngineImpl : public fuchsia::modular::ContextListener,
                              public fuchsia::modular::SuggestionEngine,
                              public fuchsia::modular::SuggestionProvider {
  public:
-  SuggestionEngineImpl(fuchsia::media::AudioServerPtr audio_server);
+  SuggestionEngineImpl(fuchsia::media::AudioPtr audio);
   ~SuggestionEngineImpl();
 
   fxl::WeakPtr<SuggestionDebugImpl> debug();

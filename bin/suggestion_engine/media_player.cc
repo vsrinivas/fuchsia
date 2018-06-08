@@ -12,14 +12,14 @@
 
 namespace modular {
 
-MediaPlayer::MediaPlayer(fuchsia::media::AudioServerPtr audio_server,
+MediaPlayer::MediaPlayer(fuchsia::media::AudioPtr audio,
                          std::shared_ptr<SuggestionDebugImpl> debug)
-    : audio_server_(std::move(audio_server)), debug_(debug) {
-  audio_server_.set_error_handler([this] {
+    : audio_(std::move(audio)), debug_(debug) {
+  audio_.set_error_handler([this] {
     // TODO(miguelfrde): better error handling. If we observe this message it
     // means that the underlying channel was closed.
-    FXL_LOG(WARNING) << "Audio server connection error";
-    audio_server_ = nullptr;
+    FXL_LOG(WARNING) << "Audio service connection error";
+    audio_ = nullptr;
     media_packet_producer_ = nullptr;
   });
 }
@@ -32,17 +32,17 @@ void MediaPlayer::SetSpeechStatusCallback(SpeechStatusCallback callback) {
 
 void MediaPlayer::PlayMediaResponse(
     fuchsia::modular::MediaResponsePtr media_response) {
-  if (!audio_server_) {
+  if (!audio_) {
     FXL_LOG(ERROR) << "Not playing query media response because our connection "
-                   << "to the AudioServer died earlier.";
+                   << "to the Audio service died earlier.";
     return;
   }
 
   auto activity = debug_->GetIdleWaiter()->RegisterOngoingActivity();
 
   fuchsia::media::AudioRendererPtr audio_renderer;
-  audio_server_->CreateRenderer(audio_renderer.NewRequest(),
-                                media_renderer_.NewRequest());
+  audio_->CreateRenderer(audio_renderer.NewRequest(),
+                         media_renderer_.NewRequest());
 
   media_packet_producer_ = media_response->media_packet_producer.Bind();
   media_renderer_->SetMediaType(std::move(media_response->media_type));

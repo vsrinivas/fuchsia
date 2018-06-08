@@ -26,7 +26,7 @@ class SuggestionEngineImpl;
 // ranking those suggestions, and then providing them to the user.
 class QueryProcessor {
  public:
-  QueryProcessor(fuchsia::media::AudioServerPtr audio_server,
+  QueryProcessor(fuchsia::media::AudioPtr audio,
                  std::shared_ptr<SuggestionDebugImpl> debug);
   ~QueryProcessor();
 

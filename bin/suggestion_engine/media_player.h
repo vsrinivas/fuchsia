@@ -25,9 +25,9 @@ using SpeechStatusCallback =
 class MediaPlayer {
  public:
   // Instantiates a new MediaPlayer object.
-  // |audio_server| is a binding to the audio server that will be used.
+  // |audio| is a binding to the audio service that will be used.
   // |debug| is used for debugging and testing purposes. Should be provided.
-  MediaPlayer(fuchsia::media::AudioServerPtr audio_server,
+  MediaPlayer(fuchsia::media::AudioPtr audio,
               std::shared_ptr<SuggestionDebugImpl> debug);
   ~MediaPlayer();
 
@@ -45,7 +45,7 @@ class MediaPlayer {
 
   void OnMediaPacketProducerConnected(util::IdleWaiter::ActivityToken activity);
 
-  fuchsia::media::AudioServerPtr audio_server_;
+  fuchsia::media::AudioPtr audio_;
   fuchsia::media::MediaRendererPtr media_renderer_;
   fuchsia::media::MediaPacketProducerPtr media_packet_producer_;
   fuchsia::media::MediaTimelineControlPointPtr time_lord_;

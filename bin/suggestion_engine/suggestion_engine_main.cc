@@ -17,11 +17,11 @@ class SuggestionEngineApp {
   SuggestionEngineApp(fuchsia::sys::StartupContext* const context) {
     context->ConnectToEnvironmentService(intelligence_services_.NewRequest());
 
-    fuchsia::media::AudioServerPtr audio_server;
-    context->ConnectToEnvironmentService(audio_server.NewRequest());
+    fuchsia::media::AudioPtr audio;
+    context->ConnectToEnvironmentService(audio.NewRequest());
 
-    engine_impl_ = std::make_unique<modular::SuggestionEngineImpl>(
-        std::move(audio_server));
+    engine_impl_ =
+        std::make_unique<modular::SuggestionEngineImpl>(std::move(audio));
 
     context->outgoing().AddPublicService<fuchsia::modular::SuggestionEngine>(
         [this](fidl::InterfaceRequest<fuchsia::modular::SuggestionEngine>

@@ -19,7 +19,6 @@
 #include "peridot/bin/suggestion_engine/filters/conjugate_ranked_passive_filter.h"
 #include "peridot/bin/suggestion_engine/filters/ranked_active_filter.h"
 #include "peridot/bin/suggestion_engine/rankers/linear_ranker.h"
-#include "peridot/bin/suggestion_engine/ranking_features/ranking_feature.h"
 #include "peridot/bin/suggestion_engine/ranking_features/annoyance_ranking_feature.h"
 #include "peridot/bin/suggestion_engine/ranking_features/dead_story_ranking_feature.h"
 #include "peridot/bin/suggestion_engine/ranking_features/focused_story_ranking_feature.h"
@@ -27,6 +26,7 @@
 #include "peridot/bin/suggestion_engine/ranking_features/mod_pair_ranking_feature.h"
 #include "peridot/bin/suggestion_engine/ranking_features/proposal_hint_ranking_feature.h"
 #include "peridot/bin/suggestion_engine/ranking_features/query_match_ranking_feature.h"
+#include "peridot/bin/suggestion_engine/ranking_features/ranking_feature.h"
 #include "peridot/lib/fidl/json_xdr.h"
 
 namespace modular {
@@ -42,11 +42,10 @@ constexpr int kQueryActionMaxResults = 1;
 
 }  // namespace
 
-SuggestionEngineImpl::SuggestionEngineImpl(
-    fuchsia::media::AudioServerPtr audio_server)
+SuggestionEngineImpl::SuggestionEngineImpl(fuchsia::media::AudioPtr audio)
     : debug_(std::make_shared<SuggestionDebugImpl>()),
       next_processor_(debug_),
-      query_processor_(std::move(audio_server), debug_),
+      query_processor_(std::move(audio), debug_),
       context_listener_binding_(this),
       auto_select_first_query_listener_(this),
       auto_select_first_query_listener_binding_(
