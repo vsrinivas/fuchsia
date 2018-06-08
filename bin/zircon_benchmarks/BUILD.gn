@@ -70,7 +70,7 @@ source_set("lib") {
 
 fidl("fidl_interface") {
   testonly = true
-  name = "zircon_benchmarks"
+  name = "fuchsia.zircon.benchmarks"
   cpp_legacy_callbacks = true
   sources = [
     "round_trip_service.fidl",
