@@ -1,0 +1,110 @@
+#!/bin/bash
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+### Run fastboot to flash zedboot to device.
+
+## usage: fx flash [-a|-b|-r] [-s <serial>] [--pave] <BOARD>
+##   <BOARD>   Board to flash.
+##   -a        Flash Zircon-A partition (default)
+##   -b        Flash Zircon-B partition
+##   -r        Flash Zircon-R partition
+##   -s        Device you wish to flash to (only necessary if multiple
+##             devices in fastboot mode)
+##   --pave    Pave device after flashing (recommended)
+
+set -e
+
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/lib/image_build_vars.sh
+
+usage() {
+    fx-command-help
+    echo "Available boards:"
+    echo "  vim2"
+    echo "Available devices:"
+    fastboot devices -l
+    exit 1
+}
+
+ZIRCONA="ZIRCON-A"
+ZIRCONB="ZIRCON-B"
+ZIRCONR="ZIRCON-R"
+
+pave=false
+partition=$ZIRCONA
+device=
+while [[ $# -ge 1 ]]; do
+  case "$1" in
+  -h|--help)
+    usage
+    ;;
+  -a)
+    partition=$ZIRCONA
+    ;;
+  -b)
+    partition=$ZIRCONB
+    ;;
+  -r)
+    partition=$ZIRCONR
+    ;;
+  --pave)
+    pave=true
+    ;;
+  --nopave)
+    pave=false
+    ;;
+  -s)
+    shift
+    device="$1"
+    ;;
+  vim2)
+    board="$1"
+    ;;
+  *)
+    break
+  esac
+  shift
+done
+
+case "${board}-${partition}" in
+  "vim2-${ZIRCONA}")
+    partition="boot"
+    ;;
+  "vim2-${ZIRCONB}")
+    partition="misc"
+    ;;
+  "vim2-${ZIRCONR}")
+    partition="recovery"
+    ;;
+  *)
+    echo "Invalid board or partition"
+    usage
+esac
+
+num_devices=$(fastboot devices | wc -l)
+if [[ "${num_devices}" -lt 1 ]]; then
+  echo "Please place device into fastboot mode!"
+  exit 1
+elif [[ "${num_devices}" -gt 1 ]] && [[ -z "${device}" ]]; then
+  echo "More than one device detected, please provide -s <device>!"
+  usage
+  exit 1
+fi
+
+extra_args=()
+if [[ ! -z "${device}" ]]; then
+  if [[ ! "$(fastboot devices -l)" =~ "${device}" ]]; then
+    echo "Device ${device} not found!"
+    usage
+    exit 1
+  fi
+  extra_args=("-s" "${device}")
+fi
+
+fastboot flash "${partition}" "${FUCHSIA_BUILD_DIR}/${IMAGE_ZIRCONR_ZBI}" "${extra_args[@]}"
+fastboot reboot
+
+if [[ "${pave}" == "true" ]]; then
+  fx-command-exec boot arm -1
+fi
