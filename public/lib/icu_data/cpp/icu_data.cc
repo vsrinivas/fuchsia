@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#define FIDL_ENABLE_LEGACY_WAIT_FOR_RESPONSE
+
 #include "lib/icu_data/cpp/icu_data.h"
 
 #include <lib/zx/vmar.h>

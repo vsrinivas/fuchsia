@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#define FIDL_ENABLE_LEGACY_WAIT_FOR_RESPONSE
+
 #include <fidl/test/compatibility/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/default.h>
