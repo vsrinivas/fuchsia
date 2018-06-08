@@ -162,6 +162,11 @@ template <class T> static inline T round_up(T val, uint32_t alignment)
     return ((val - 1) | (alignment - 1)) + 1;
 }
 
+static inline uint64_t ns_to_ms(uint64_t ns)
+{
+    return ns / 1000000ull;
+}
+
 } // namespace magma
 
 #endif  // GARNET_LIB_MAGMA_SRC_MAGMA_UTIL_MACROS_H_

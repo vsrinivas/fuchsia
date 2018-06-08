@@ -76,3 +76,12 @@ TEST(MagmaUtil, Dret)
     EXPECT_EQ(DRETP(nullptr, "see this in a debug build only: the number four [%s]", "four"),
               nullptr);
 }
+
+TEST(MagmaUtil, ns_to_ms)
+{
+    EXPECT_GE(UINT64_MAX / 1000000ULL, magma::ns_to_ms(UINT64_MAX));
+    EXPECT_GE(INT64_MAX / 1000000ULL, magma::ns_to_ms(INT64_MAX));
+    EXPECT_EQ(0u, magma::ns_to_ms(0));
+    EXPECT_EQ(5u, magma::ns_to_ms(5000000ull));
+    EXPECT_EQ(5u, magma::ns_to_ms(5999999ull));
+}
