@@ -4,8 +4,8 @@
 
 #include "lib/app/cpp/outgoing.h"
 
-#include <lib/fdio/util.h>
 #include <lib/async/default.h>
+#include <lib/fdio/util.h>
 #include <zircon/process.h>
 #include <zircon/processargs.h>
 
@@ -27,7 +27,8 @@ Outgoing::Outgoing()
 Outgoing::~Outgoing() = default;
 
 zx_status_t Outgoing::Serve(zx::channel dir_request) {
-  if (!dir_request) return ZX_ERR_BAD_HANDLE;
+  if (!dir_request)
+    return ZX_ERR_BAD_HANDLE;
   return vfs_.ServeDirectory(root_dir_, std::move(dir_request));
 }
 

@@ -1,6 +1,7 @@
 {
     "packages": {
         "fidl_tests": "//garnet/public/lib/fidl/cpp:fidl_tests",
-        "echo2_server_cpp_tests": "//garnet/examples/fidl/echo2_server_cpp:echo2_server_cpp_tests"
+        "echo2_server_cpp_tests": "//garnet/examples/fidl/echo2_server_cpp:echo2_server_cpp_tests",
+        "echo2_client_cpp_tests": "//garnet/examples/fidl/echo2_client_cpp:echo2_client_cpp_tests"
     }
 }

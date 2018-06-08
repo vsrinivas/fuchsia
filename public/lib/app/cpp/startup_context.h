@@ -95,12 +95,13 @@ class StartupContext {
   void ConnectToEnvironmentService(const std::string& interface_name,
                                    zx::channel channel);
 
+ protected:
+  LauncherPtr launcher_;
+
  private:
   Services incoming_services_;
   Outgoing outgoing_;
-
   EnvironmentPtr environment_;
-  LauncherPtr launcher_;
 };
 
 }  // namespace sys

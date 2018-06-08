@@ -6,8 +6,8 @@ import("//build/package.gni")
 
 source_set("lib") {
   sources = [
-    "echo2_server_app.cc",
-    "echo2_server_app.h",
+    "echo_server_app.cc",
+    "echo_server_app.h",
   ]
 
   public_deps = [
@@ -43,7 +43,7 @@ executable("echo2_server_cpp_unittests") {
   testonly = true
 
   sources = [
-    "echo2_server_app_unittest.cc",
+    "echo_server_app_unittest.cc",
   ]
 
   deps = [

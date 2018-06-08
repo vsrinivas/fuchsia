@@ -1,7 +1,8 @@
-// Copyright 2016 The Fuchsia Authors. All rights reserved.
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/async/default.h>
 #include <lib/fdio/util.h>
 #include <lib/fxl/logging.h>
 
@@ -16,13 +17,23 @@ StartupContextForTest::StartupContextForTest(
     zx::channel directory_request_client, zx::channel directory_request_server)
     : StartupContext(std::move(service_root_client),
                      std::move(directory_request_server)),
-      controller_(this) {
-  zx::channel public_dir_client, public_dir_server;
-  FXL_CHECK(zx::channel::create(0, &public_dir_client, &public_dir_server) ==
-            ZX_OK);
-  FXL_CHECK(fdio_service_connect_at(directory_request_client.get(), "public",
-                                    public_dir_server.release()) == ZX_OK);
-  public_services_.Bind(std::move(public_dir_client));
+      controller_(this),
+      service_root_vfs_(async_get_default()),
+      service_root_dir_(fbl::AdoptRef(new fs::PseudoDir())) {
+  outgoing_public_services_.Bind(
+      ChannelConnectAt(directory_request_client.get(), "public"));
+
+  // TODO(CP-57): simplify this
+  service_root_dir_->AddEntry(
+      FakeLauncher::Name_,
+      fbl::AdoptRef(new fs::Service([&](zx::channel channel) {
+        fake_launcher_.Bind(
+            fidl::InterfaceRequest<Launcher>(std::move(channel)));
+        return ZX_OK;
+      })));
+  service_root_vfs_.ServeDirectory(service_root_dir_,
+                                   std::move(service_root_server));
+  incoming_services().ConnectToService(launcher_.NewRequest());
 }
 
 std::unique_ptr<StartupContextForTest> StartupContextForTest::Create() {
@@ -34,6 +45,14 @@ std::unique_ptr<StartupContextForTest> StartupContextForTest::Create() {
   return std::make_unique<StartupContextForTest>(
       std::move(service_root_client), std::move(service_root_server),
       std::move(directory_request_client), std::move(directory_request_server));
+}
+
+zx::channel StartupContextForTest::ChannelConnectAt(zx_handle_t root,
+                                                    const char* path) {
+  zx::channel client, server;
+  FXL_CHECK(zx::channel::create(0, &client, &server) == ZX_OK);
+  FXL_CHECK(fdio_service_connect_at(root, path, server.release()) == ZX_OK);
+  return client;
 }
 
 }  // namespace testing

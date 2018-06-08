@@ -4,8 +4,8 @@
 
 #include "lib/app/cpp/startup_context.h"
 
-#include <lib/fdio/util.h>
 #include <lib/async/default.h>
+#include <lib/fdio/util.h>
 #include <zircon/process.h>
 #include <zircon/processargs.h>
 

@@ -1,12 +1,14 @@
-// Copyright 2016 The Fuchsia Authors. All rights reserved.
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
 #ifndef LIB_APP_CPP_TESTING_STARTUP_CONTEXT_FOR_TEST_H_
 #define LIB_APP_CPP_TESTING_STARTUP_CONTEXT_FOR_TEST_H_
 
+#include <fs/pseudo-dir.h>
 #include <fuchsia/sys/cpp/fidl.h>
 
+#include "fake_launcher.h"
 #include "lib/app/cpp/startup_context.h"
 #include "lib/svc/cpp/services.h"
 
@@ -31,9 +33,11 @@ class StartupContextForTest : public StartupContext {
    public:
     // Returns a |Services| that sees all public services added to the
     // |StartupContextForTest|.
-    const Services& public_services() const {
-      return context_->public_services_;
+    const Services& outgoing_public_services() const {
+      return context_->outgoing_public_services_;
     }
+
+    FakeLauncher& fake_launcher() const { return context_->fake_launcher_; }
 
    protected:
     Controller(StartupContextForTest* context) : context_(context){};
@@ -46,12 +50,18 @@ class StartupContextForTest : public StartupContext {
   // Returns |Controller| for tests.
   // Tests should move the |StartupContextForTest| into the code under test, and
   // use the |Controller| to perform and verify interactions.
-  const Controller& controller() const { return controller_; }
+  Controller& controller() { return controller_; }
 
  private:
-  Controller controller_;
-  fuchsia::sys::Services public_services_;
   friend class Controller;
+  Controller controller_;
+
+  fuchsia::sys::Services outgoing_public_services_;
+  fs::SynchronousVfs service_root_vfs_;
+  fbl::RefPtr<fs::PseudoDir> service_root_dir_;
+  FakeLauncher fake_launcher_;
+
+  static zx::channel ChannelConnectAt(zx_handle_t root, const char* path);
 };
 
 }  // namespace testing

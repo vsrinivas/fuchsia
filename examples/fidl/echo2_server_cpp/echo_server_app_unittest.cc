@@ -2,11 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "echo2_server_app.h"
+#include "echo_server_app.h"
 #include "lib/app/cpp/testing/test_with_context.h"
 
 namespace echo2 {
 namespace testing {
+
+using namespace fidl::examples::echo;
 
 class EchoServerAppForTest : public EchoServerApp {
  public:
@@ -27,9 +29,9 @@ class EchoServerAppTest : public fuchsia::sys::testing::TestWithContext {
   }
 
  protected:
-  fidl::examples::echo::EchoPtr echo() {
-    fidl::examples::echo::EchoPtr echo;
-    controller().public_services().ConnectToService(echo.NewRequest());
+  EchoPtr echo() {
+    EchoPtr echo;
+    controller().outgoing_public_services().ConnectToService(echo.NewRequest());
     return echo;
   }
 
@@ -39,7 +41,7 @@ class EchoServerAppTest : public fuchsia::sys::testing::TestWithContext {
 
 // Answer "Hello World" with "Hello World"
 TEST_F(EchoServerAppTest, EchoString_HelloWorld) {
-  fidl::examples::echo::EchoPtr echo_ = echo();
+  EchoPtr echo_ = echo();
   ::fidl::StringPtr message = "bogus";
   echo_->EchoString("Hello World!",
                     [&](::fidl::StringPtr retval) { message = retval; });
@@ -49,8 +51,8 @@ TEST_F(EchoServerAppTest, EchoString_HelloWorld) {
 
 // Answer "" with ""
 TEST_F(EchoServerAppTest, EchoString_Empty) {
-  fidl::examples::echo::EchoPtr echo_ = echo();
-  ::fidl::StringPtr message = "bogus";
+  EchoPtr echo_ = echo();
+  fidl::StringPtr message = "bogus";
   echo_->EchoString("", [&](::fidl::StringPtr retval) { message = retval; });
   RunLoopUntilIdle();
   EXPECT_EQ("", message);

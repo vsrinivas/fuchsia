@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_EXAMPLES_FIDL_ECHO2_SERVER_CPP_ECHO2_SERVER_APP_H_
-#define GARNET_EXAMPLES_FIDL_ECHO2_SERVER_CPP_ECHO2_SERVER_APP_H_
+#ifndef GARNET_EXAMPLES_FIDL_ECHO2_SERVER_CPP_ECHO_SERVER_APP_H_
+#define GARNET_EXAMPLES_FIDL_ECHO2_SERVER_CPP_ECHO_SERVER_APP_H_
 
 #include <fidl/examples/echo/cpp/fidl.h>
 
@@ -28,4 +28,4 @@ class EchoServerApp : public fidl::examples::echo::Echo {
 
 }  // namespace echo2
 
-#endif  // GARNET_EXAMPLES_FIDL_ECHO2_SERVER_CPP_ECHO2_SERVER_APP_H_
+#endif  // GARNET_EXAMPLES_FIDL_ECHO2_SERVER_CPP_ECHO_SERVER_APP_H_

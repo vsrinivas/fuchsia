@@ -6,6 +6,8 @@ source_set("testing") {
   testonly = true
 
   sources = [
+    "fake_launcher.cc",
+    "fake_launcher.h",
     "startup_context_for_test.cc",
     "startup_context_for_test.h",
     "test_with_context.cc",
