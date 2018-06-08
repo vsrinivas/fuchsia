@@ -12,7 +12,7 @@ DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 BUILD_DIR="${DIR}/../build-arm64"
 BOOT_PART=boot
 
-CMDLINE="TERM=uart"
+CMDLINE=
 
 function HELP {
     echo "help:"

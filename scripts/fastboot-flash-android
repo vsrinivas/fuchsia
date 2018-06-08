@@ -17,7 +17,7 @@ USE_LZ4=0
 BOOT_PART=boot
 
 BUILD_DIR=build-arm64
-CMDLINE="TERM=uart"
+CMDLINE=
 
 function HELP {
     echo "help:"
