@@ -2,12 +2,88 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <vector>
+
+#include <fuchsia/logger/cpp/fidl.h>
 #include <syslog/wire_format.h>
 #include <zircon/syscalls/log.h>
 
-#include "gtest/gtest.h"
+#include "lib/app/cpp/startup_context.h"
+#include "lib/fidl/cpp/binding.h"
+#include "lib/gtest/test_with_message_loop.h"
+#include "lib/syslog/cpp/logger.h"
 
 namespace {
+
+class LogListenerMock : public fuchsia::logger::LogListener {
+ public:
+  LogListenerMock();
+
+  void LogMany(::fidl::VectorPtr<fuchsia::logger::LogMessage> Log) override;
+  void Log(fuchsia::logger::LogMessage Log) override;
+  void Done() override;
+  ~LogListenerMock() override;
+
+  const std::vector<fuchsia::logger::LogMessage>& GetLogs() {
+    return log_messages_;
+  }
+  void CollectLogs(size_t expected_logs);
+  bool ConnectToLogger(fuchsia::sys::StartupContext* startup_context,
+                       zx_koid_t pid);
+
+ private:
+  ::fidl::Binding<fuchsia::logger::LogListener> binding_;
+  fuchsia::logger::LogListenerPtr log_listener_;
+  std::vector<fuchsia::logger::LogMessage> log_messages_;
+};
+
+LogListenerMock::LogListenerMock() : binding_(this) {
+  binding_.Bind(log_listener_.NewRequest());
+}
+
+LogListenerMock::~LogListenerMock() {}
+
+void LogListenerMock::LogMany(
+    ::fidl::VectorPtr<fuchsia::logger::LogMessage> logs) {
+  std::move(logs->begin(), logs->end(), std::back_inserter(log_messages_));
+}
+
+void LogListenerMock::Log(fuchsia::logger::LogMessage log) {
+  log_messages_.push_back(std::move(log));
+}
+
+void LogListenerMock::Done() {}
+
+bool LogListenerMock::ConnectToLogger(
+    fuchsia::sys::StartupContext* startup_context, zx_koid_t pid) {
+  if (!log_listener_) {
+    return false;
+  }
+  auto log_service =
+      startup_context->ConnectToEnvironmentService<fuchsia::logger::Log>();
+  auto options = fuchsia::logger::LogFilterOptions::New();
+  options->filter_by_pid = true;
+  options->pid = pid;
+  // make tags non-null.
+  options->tags.resize(0);
+  log_service->Listen(std::move(log_listener_), std::move(options));
+  return true;
+}
+
+class LoggerTest : public gtest::TestWithMessageLoop {};
+
+zx_koid_t GetKoid(zx_handle_t handle) {
+  zx_info_handle_basic_t info;
+  zx_status_t status = zx_object_get_info(handle, ZX_INFO_HANDLE_BASIC, &info,
+                                          sizeof(info), nullptr, nullptr);
+  return status == ZX_OK ? info.koid : ZX_KOID_INVALID;
+}
+
+zx_koid_t GetCurrentProcessKoid() {
+  auto koid = GetKoid(zx::process::self().get());
+  ZX_DEBUG_ASSERT(koid != ZX_KOID_INVALID);
+  return koid;
+}
 
 // This function will fail to build when zircon ABI changes
 // and we will need to manually roll changes.
@@ -38,6 +114,26 @@ TEST(CAbi, LogRecordAbi) {
   static_assert(offsetof(zx_log_record_t, pid) == 16, "");
   static_assert(offsetof(zx_log_record_t, tid) == 24, "");
   static_assert(offsetof(zx_log_record_t, data) == 32, "");
+}
+
+TEST_F(LoggerTest, Integration) {
+  LogListenerMock log_listener;
+
+  auto pid = GetCurrentProcessKoid();
+
+  auto tag = "logger_integration_cpp_test";
+  ASSERT_EQ(syslog::InitLogger({tag}), ZX_OK);
+  FX_LOGS(INFO) << "my message";
+  auto startup_context = fuchsia::sys::StartupContext::CreateFromStartupInfo();
+  ASSERT_TRUE(log_listener.ConnectToLogger(startup_context.get(), pid));
+  auto& logs = log_listener.GetLogs();
+  EXPECT_TRUE(RunLoopUntilWithTimeout([&logs] { return logs.size() >= 1u; },
+                                      fxl::TimeDelta::FromSeconds(5)));
+  ASSERT_EQ(logs.size(), 1u);
+  ASSERT_EQ(logs[0].tags->size(), 1u);
+  EXPECT_EQ(logs[0].tags.get()[0].get(), tag);
+  EXPECT_EQ(logs[0].severity, FX_LOG_INFO);
+  EXPECT_EQ(logs[0].pid, pid);
 }
 
 }  // namespace
