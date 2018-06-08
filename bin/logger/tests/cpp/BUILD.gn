@@ -1,0 +1,16 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+executable("logger_integration_cpp_tests") {
+  testonly = true
+
+  sources = [
+    "logger_tests.cc",
+  ]
+  deps = [
+    "//garnet/public/lib/fxl/test:gtest_main",
+    "//third_party/gtest",
+    "//zircon/public/lib/syslog",
+  ]
+}

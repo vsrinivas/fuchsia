@@ -24,19 +24,6 @@ rustc_binary("bin") {
   ]
 }
 
-executable("logger_integration_cpp_tests") {
-  testonly = true
-
-  sources = [
-    "test/logger_tests.cc",
-    "test/run_all_tests.cc",
-  ]
-  deps = [
-    "//third_party/gtest",
-    "//zircon/public/lib/syslog",
-  ]
-}
-
 package("logger") {
   deps = [
     ":bin",
@@ -58,8 +45,7 @@ package("logger_tests") {
 
   deps = [
     ":bin",
-    ":logger_integration_cpp_tests",
-    "test/go/src/logger_integration_test:logger_integration_go_tests",
+    "tests",
   ]
 
   tests = [
