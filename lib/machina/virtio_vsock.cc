@@ -402,10 +402,18 @@ void VirtioVsock::Mux(zx_status_t status, uint16_t index) {
       }
     }
     uint32_t used = 0;
-    zx_status_t status = SendMessageForConnectionLocked(*i, conn, index, &used);
+    status = SendMessageForConnectionLocked(*i, conn, index, &used);
     rx_queue()->Return(index, used);
     index_valid = false;
     WaitOnSocketLocked(status, *i, &conn->rx_wait);
+  }
+
+  // Release buffer if we did not have any readable connections to avoid a
+  // descriptor leak.
+  if (index_valid) {
+    FXL_LOG(ERROR) << "Mux called with no readable connections!. Descriptor "
+                   << "will be returned with 0 length.";
+    rx_queue()->Return(index, 0);
   }
 }
 
