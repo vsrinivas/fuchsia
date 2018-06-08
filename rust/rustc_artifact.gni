@@ -343,6 +343,10 @@ template("rustc_artifact") {
       rebase_path(third_party_deps_data),
     ]
 
+    if (with_lto != "none") {
+      args += ["--lto", with_lto]
+    }
+
     # list of paths to info about crate dependencies
     args += dep_info_paths
     outputs = [

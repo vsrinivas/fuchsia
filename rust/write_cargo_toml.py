@@ -55,6 +55,10 @@ def main():
                         help="Type of crate to build",
                         required=True,
                         choices=["bin", "rlib", "staticlib", "proc-macro"])
+    parser.add_argument("--lto",
+                        help="Add lto options to crate",
+                        required=False,
+                        choices=["none", "thin", "fat"])
     parser.add_argument("--third-party-deps-data",
                         help="Path to output of third_party_crates.py",
                         required=True)
@@ -101,6 +105,11 @@ def main():
             "dependencies": deps,
             "patch": { "crates-io": third_party_json["patches"] },
         }))
+
+        if args.lto and args.lto != "none":
+            file.write(pytoml.dumps({
+                "profile": { "release": { "lto" : args.lto } },
+            }))
 
 if __name__ == '__main__':
     sys.exit(main())
