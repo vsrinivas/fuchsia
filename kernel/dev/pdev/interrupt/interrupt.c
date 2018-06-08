@@ -90,6 +90,9 @@ static void default_handle_fiq(iframe* frame) {
 static void default_shutdown(void) {
 }
 
+static void default_shutdown_cpu(void) {
+}
+
 static const struct pdev_interrupt_ops default_ops = {
     .mask = default_mask,
     .unmask = default_unmask,
@@ -103,6 +106,7 @@ static const struct pdev_interrupt_ops default_ops = {
     .handle_irq = default_handle_irq,
     .handle_fiq = default_handle_fiq,
     .shutdown = default_shutdown,
+    .shutdown_cpu = default_shutdown_cpu,
 };
 
 static const struct pdev_interrupt_ops* intr_ops = &default_ops;
@@ -168,6 +172,10 @@ static void interrupt_init_percpu_early(uint level) {
 
 void shutdown_interrupts(void) {
     intr_ops->shutdown();
+}
+
+void shutdown_interrupts_curr_cpu(void) {
+    intr_ops->shutdown_cpu();
 }
 
 LK_INIT_HOOK_FLAGS(interrupt_init_percpu_early, interrupt_init_percpu_early, LK_INIT_LEVEL_PLATFORM_EARLY, LK_INIT_FLAG_SECONDARY_CPUS);

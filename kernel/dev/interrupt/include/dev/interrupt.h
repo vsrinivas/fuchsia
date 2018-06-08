@@ -26,7 +26,13 @@ enum interrupt_polarity {
 
 zx_status_t mask_interrupt(unsigned int vector);
 zx_status_t unmask_interrupt(unsigned int vector);
+
 void shutdown_interrupts(void);
+
+// Shutdown interrupts for the calling CPU.
+//
+// Should be called before powering off the calling CPU.
+void shutdown_interrupts_curr_cpu(void);
 
 // Configure the specified interrupt vector.  If it is invoked, it muust be
 // invoked prior to interrupt registration

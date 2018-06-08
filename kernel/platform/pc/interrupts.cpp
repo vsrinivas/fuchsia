@@ -273,6 +273,11 @@ void shutdown_interrupts(void) {
     pic_disable();
 }
 
+void shutdown_interrupts_curr_cpu(void) {
+    // TODO(maniscalco): Walk interrupt redirection entries and make sure nothing targets this CPU.
+    PANIC_UNIMPLEMENTED;
+}
+
 #ifdef WITH_DEV_PCIE
 zx_status_t x86_alloc_msi_block(uint requested_irqs,
                                 bool can_target_64bit,

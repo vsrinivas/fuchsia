@@ -39,6 +39,7 @@ struct pdev_interrupt_ops {
     void (*handle_irq)(iframe* frame);
     void (*handle_fiq)(iframe* frame);
     void (*shutdown)(void);
+    void (*shutdown_cpu)(void);
 };
 
 void pdev_register_interrupts(const struct pdev_interrupt_ops* ops);

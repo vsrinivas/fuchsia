@@ -384,6 +384,10 @@ static void gic_shutdown(void) {
     GICREG(0, GICD_CTLR) = 0;
 }
 
+static void gic_shutdown_cpu(void) {
+    PANIC_UNIMPLEMENTED;
+}
+
 static const struct pdev_interrupt_ops gic_ops = {
     .mask = gic_mask_interrupt,
     .unmask = gic_unmask_interrupt,
@@ -399,6 +403,7 @@ static const struct pdev_interrupt_ops gic_ops = {
     .handle_irq = gic_handle_irq,
     .handle_fiq = gic_handle_fiq,
     .shutdown = gic_shutdown,
+    .shutdown_cpu = gic_shutdown_cpu,
 };
 
 static void arm_gic_v3_init(const void* driver_data, uint32_t length) {
