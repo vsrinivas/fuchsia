@@ -224,19 +224,19 @@ zx_status_t FvmContainer::Verify() const {
                 return status;
             }
 
-            if (slice->vpart != vpart_index) {
+            if (slice->Vpart() != vpart_index) {
                 break;
             }
 
             end += slice_size_;
 
-            if (slice->vslice == last_vslice + 1) {
+            if (slice->Vslice() == last_vslice + 1) {
                 extent_lengths[extent_lengths.size()-1] += slice_size_;
             } else {
                 extent_lengths.push_back(slice_size_);
             }
 
-            last_vslice = slice->vslice;
+            last_vslice = slice->Vslice();
         }
 
         disk_format_t part;
@@ -320,7 +320,7 @@ zx_status_t FvmContainer::Extend(size_t disk_size) {
             return status;
         }
 
-        if (slice->vpart == FVM_SLICE_FREE) {
+        if (slice->Vpart() == FVM_SLICE_ENTRY_FREE) {
             continue;
         }
 
@@ -634,14 +634,14 @@ zx_status_t FvmContainer::AllocateSlice(uint32_t vpart, uint32_t vslice, uint32_
             return status;
         }
 
-        if (slice->vpart != FVM_SLICE_FREE) {
+        if (slice->Vpart() != FVM_SLICE_ENTRY_FREE) {
             continue;
         }
 
         pslice_hint_ = index + 1;
 
-        slice->vpart = vpart & VPART_MAX;
-        slice->vslice = vslice & VSLICE_MAX;
+        slice->SetVpart(vpart);
+        slice->SetVslice(vslice);
         dirty_ = true;
         *pslice = index;
         return ZX_OK;

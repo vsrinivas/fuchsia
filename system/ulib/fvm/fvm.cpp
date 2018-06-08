@@ -93,6 +93,32 @@ constexpr char kBlockDevPath[] = "/dev/class/block/";
 #endif
 } // namespace anonymous
 
+#ifdef __cplusplus
+
+uint64_t fvm::slice_entry::Vpart() const {
+    uint64_t result = data & VPART_MASK;
+    ZX_DEBUG_ASSERT(result < VPART_MAX);
+    return result;
+}
+
+void fvm::slice_entry::SetVpart(uint64_t vpart) {
+    ZX_DEBUG_ASSERT(vpart < VPART_MAX);
+    data = (data & ~VPART_MASK) | (vpart & VPART_MASK);
+}
+
+uint64_t fvm::slice_entry::Vslice() const {
+    uint64_t result = (data & VSLICE_MASK) >> VPART_BITS;
+    ZX_DEBUG_ASSERT(result < VSLICE_MAX);
+    return result;
+}
+
+void fvm::slice_entry::SetVslice(uint64_t vslice) {
+    ZX_DEBUG_ASSERT(vslice < VSLICE_MAX);
+    data = (data & ~VSLICE_MASK) | ((vslice & VSLICE_MAX) << VPART_BITS);
+}
+
+#endif // __cplusplus
+
 void fvm_update_hash(void* metadata, size_t metadata_size) {
     fvm::fvm_t* header = static_cast<fvm::fvm_t*>(metadata);
     memset(header->hash, 0, sizeof(header->hash));
