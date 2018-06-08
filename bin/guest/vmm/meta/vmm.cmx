@@ -5,7 +5,6 @@
     "sandbox": {
       "dev": [
         "class/block",
-        "class/display-controller",
         "class/ethernet",
         "class/input",
         "misc"

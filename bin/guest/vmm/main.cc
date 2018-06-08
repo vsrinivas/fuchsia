@@ -8,7 +8,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/stat.h>
 #include <unistd.h>
 #include <ios>
 #include <vector>
@@ -159,13 +158,6 @@ static zx_status_t setup_scenic_framebuffer(
     machina::InputDispatcher* input_dispatcher,
     machina::GuestControllerImpl* guest_controller,
     fbl::unique_ptr<machina::GpuScanout>* scanout) {
-  // Check if we have a display. Since this is a device file, many file
-  // detection APIs may not properly detect it. Just verify we can stat
-  // the path to ensure _something_ is there.
-  struct stat buf;
-  if (stat("/dev/class/display-controller/000", &buf)) {
-    return ZX_ERR_NO_RESOURCES;
-  }
   fbl::unique_ptr<ScenicScanout> scenic_scanout;
   zx_status_t status =
       ScenicScanout::Create(startup_context, input_dispatcher, &scenic_scanout);
