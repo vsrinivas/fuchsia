@@ -4,11 +4,11 @@
 
 #include "peridot/bin/ledger/cloud_sync/impl/batch_upload.h"
 
+#include <lib/async/dispatcher.h>
+
 #include <functional>
 #include <map>
 #include <utility>
-
-#include <lib/async/dispatcher.h>
 
 #include "gtest/gtest.h"
 #include "lib/callback/capture.h"

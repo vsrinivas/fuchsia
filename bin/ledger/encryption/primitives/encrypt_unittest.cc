@@ -5,6 +5,7 @@
 #include "peridot/bin/ledger/encryption/primitives/encrypt.h"
 
 #include <gtest/gtest.h>
+
 #include <algorithm>
 
 #include "lib/fxl/random/rand.h"

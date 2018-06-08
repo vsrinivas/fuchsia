@@ -5,8 +5,6 @@
 #ifndef PERIDOT_BIN_LEDGER_STORAGE_IMPL_JOURNAL_IMPL_H_
 #define PERIDOT_BIN_LEDGER_STORAGE_IMPL_JOURNAL_IMPL_H_
 
-#include "peridot/bin/ledger/storage/public/journal.h"
-
 #include <functional>
 #include <memory>
 #include <string>
@@ -16,6 +14,7 @@
 #include "peridot/bin/ledger/coroutine/coroutine.h"
 #include "peridot/bin/ledger/storage/impl/page_storage_impl.h"
 #include "peridot/bin/ledger/storage/public/commit.h"
+#include "peridot/bin/ledger/storage/public/journal.h"
 #include "peridot/bin/ledger/storage/public/types.h"
 
 namespace storage {

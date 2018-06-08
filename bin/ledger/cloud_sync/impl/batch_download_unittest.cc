@@ -4,9 +4,9 @@
 
 #include "peridot/bin/ledger/cloud_sync/impl/batch_download.h"
 
-#include <map>
-
 #include <lib/async/cpp/task.h>
+
+#include <map>
 
 #include "gtest/gtest.h"
 #include "lib/callback/capture.h"

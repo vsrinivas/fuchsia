@@ -5,12 +5,11 @@
 #ifndef PERIDOT_BIN_LEDGER_STORAGE_IMPL_PAGE_STORAGE_IMPL_H_
 #define PERIDOT_BIN_LEDGER_STORAGE_IMPL_PAGE_STORAGE_IMPL_H_
 
-#include "peridot/bin/ledger/storage/public/page_storage.h"
+#include <lib/async/dispatcher.h>
 
 #include <queue>
 #include <set>
-
-#include <lib/async/dispatcher.h>
+#include <vector>
 
 #include "lib/callback/managed_container.h"
 #include "lib/callback/operation_serializer.h"
@@ -20,11 +19,9 @@
 #include "peridot/bin/ledger/coroutine/coroutine.h"
 #include "peridot/bin/ledger/encryption/public/encryption_service.h"
 #include "peridot/bin/ledger/storage/impl/page_db_impl.h"
+#include "peridot/bin/ledger/storage/public/page_storage.h"
 #include "peridot/bin/ledger/storage/public/page_sync_delegate.h"
 #include "peridot/lib/convert/convert.h"
-
-#include <set>
-#include <vector>
 
 namespace storage {
 

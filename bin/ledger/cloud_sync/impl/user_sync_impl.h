@@ -5,17 +5,17 @@
 #ifndef PERIDOT_BIN_LEDGER_CLOUD_SYNC_IMPL_USER_SYNC_IMPL_H_
 #define PERIDOT_BIN_LEDGER_CLOUD_SYNC_IMPL_USER_SYNC_IMPL_H_
 
-#include "peridot/bin/ledger/cloud_sync/public/user_sync.h"
+#include <fuchsia/ledger/cloud/cpp/fidl.h>
 
 #include <memory>
 #include <set>
 
-#include <fuchsia/ledger/cloud/cpp/fidl.h>
 #include "lib/backoff/backoff.h"
 #include "lib/callback/scoped_task_runner.h"
 #include "lib/fidl/cpp/binding.h"
 #include "peridot/bin/ledger/cloud_sync/impl/aggregator.h"
 #include "peridot/bin/ledger/cloud_sync/impl/ledger_sync_impl.h"
+#include "peridot/bin/ledger/cloud_sync/public/user_sync.h"
 #include "peridot/bin/ledger/environment/environment.h"
 
 namespace cloud_sync {

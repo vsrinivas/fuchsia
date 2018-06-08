@@ -6,6 +6,7 @@
 #define PERIDOT_BIN_LEDGER_P2P_SYNC_IMPL_USER_COMMUNICATOR_FACTORY_IMPL_H_
 
 #include <memory>
+
 #include "lib/app/cpp/startup_context.h"
 #include "peridot/bin/ledger/environment/environment.h"
 #include "peridot/bin/ledger/p2p_sync/public/user_communicator.h"

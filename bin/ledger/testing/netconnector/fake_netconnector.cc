@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "peridot/bin/ledger/testing/netconnector/fake_netconnector.h"
+
 #include "lib/fxl/functional/make_copyable.h"
 
 namespace ledger {

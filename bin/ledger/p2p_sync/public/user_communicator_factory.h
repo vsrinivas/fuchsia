@@ -5,9 +5,8 @@
 #ifndef PERIDOT_BIN_LEDGER_P2P_SYNC_PUBLIC_USER_COMMUNICATOR_FACTORY_H_
 #define PERIDOT_BIN_LEDGER_P2P_SYNC_PUBLIC_USER_COMMUNICATOR_FACTORY_H_
 
-#include "peridot/bin/ledger/p2p_sync/public/user_communicator.h"
-
 #include "peridot/bin/ledger/filesystem/detached_path.h"
+#include "peridot/bin/ledger/p2p_sync/public/user_communicator.h"
 
 namespace p2p_sync {
 // Factory for creating UserCommunicators with default configuration.

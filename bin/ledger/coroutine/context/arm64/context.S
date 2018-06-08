@@ -6,7 +6,6 @@
 
 #include "peridot/bin/ledger/coroutine/context/arm64/context.h"
 
-
 #define FUNCTION(x) .global x; .type x,%function; x:
 
 // GetContext

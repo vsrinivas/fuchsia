@@ -6,6 +6,7 @@
 #define PERIDOT_BIN_LEDGER_CLOUD_SYNC_IMPL_BATCH_DOWNLOAD_H_
 
 #include <fuchsia/ledger/cloud/cpp/fidl.h>
+
 #include "lib/fidl/cpp/array.h"
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/memory/weak_ptr.h"

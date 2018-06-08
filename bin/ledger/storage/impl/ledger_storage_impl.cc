@@ -4,10 +4,10 @@
 
 #include "peridot/bin/ledger/storage/impl/ledger_storage_impl.h"
 
+#include <dirent.h>
+
 #include <algorithm>
 #include <iterator>
-
-#include <dirent.h>
 
 #include "lib/callback/trace_callback.h"
 #include "lib/fxl/files/directory.h"

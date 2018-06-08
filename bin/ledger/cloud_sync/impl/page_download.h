@@ -6,6 +6,7 @@
 #define PERIDOT_BIN_LEDGER_CLOUD_SYNC_IMPL_PAGE_DOWNLOAD_H_
 
 #include <fuchsia/ledger/cloud/cpp/fidl.h>
+
 #include "lib/backoff/backoff.h"
 #include "lib/callback/managed_container.h"
 #include "lib/callback/scoped_task_runner.h"

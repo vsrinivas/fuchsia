@@ -5,9 +5,9 @@
 #ifndef PERIDOT_BIN_LEDGER_APP_PAGE_EVICTION_MANAGER_IMPL_H_
 #define PERIDOT_BIN_LEDGER_APP_PAGE_EVICTION_MANAGER_IMPL_H_
 
-#include "peridot/bin/ledger/app/page_eviction_manager.h"
-
 #include <utility>
+
+#include "peridot/bin/ledger/app/page_eviction_manager.h"
 
 namespace ledger {
 

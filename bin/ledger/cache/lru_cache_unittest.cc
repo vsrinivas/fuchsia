@@ -4,10 +4,9 @@
 
 #include "peridot/bin/ledger/cache/lru_cache.h"
 
+#include "gtest/gtest.h"
 #include "lib/callback/capture.h"
 #include "lib/callback/set_when_called.h"
-
-#include "gtest/gtest.h"
 
 namespace cache {
 namespace {

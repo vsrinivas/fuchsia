@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "peridot/bin/ledger/testing/netconnector/netconnector_factory.h"
+
 #include "lib/fidl/cpp/clone.h"
 #include "peridot/lib/convert/convert.h"
 

@@ -5,9 +5,9 @@
 #ifndef PERIDOT_BIN_LEDGER_P2P_PROVIDER_IMPL_USER_ID_PROVIDER_IMPL_H_
 #define PERIDOT_BIN_LEDGER_P2P_PROVIDER_IMPL_USER_ID_PROVIDER_IMPL_H_
 
-#include <string>
-
 #include <fuchsia/modular/auth/cpp/fidl.h>
+
+#include <string>
 
 #include "peridot/bin/ledger/environment/environment.h"
 #include "peridot/bin/ledger/filesystem/detached_path.h"

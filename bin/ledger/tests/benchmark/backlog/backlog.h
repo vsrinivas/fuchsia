@@ -5,10 +5,10 @@
 #ifndef PERIDOT_BIN_LEDGER_TESTS_BENCHMARK_BACKLOG_BACKLOG_H_
 #define PERIDOT_BIN_LEDGER_TESTS_BENCHMARK_BACKLOG_BACKLOG_H_
 
+#include <lib/async-loop/cpp/loop.h>
+
 #include <memory>
 #include <vector>
-
-#include <lib/async-loop/cpp/loop.h>
 
 #include "lib/app/cpp/startup_context.h"
 #include "lib/fxl/files/scoped_temp_dir.h"

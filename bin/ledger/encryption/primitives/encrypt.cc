@@ -3,9 +3,10 @@
 // found in the LICENSE file.
 
 #include "peridot/bin/ledger/encryption/primitives/encrypt.h"
-#include "lib/fxl/random/rand.h"
 
 #include <openssl/aead.h>
+
+#include "lib/fxl/random/rand.h"
 
 namespace encryption {
 

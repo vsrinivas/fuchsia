@@ -4,12 +4,12 @@
 
 #include "peridot/bin/ledger/tests/integration/test_utils.h"
 
+#include <fuchsia/ledger/internal/cpp/fidl.h>
+#include <lib/zx/time.h>
+
 #include <string>
 #include <utility>
 #include <vector>
-
-#include <fuchsia/ledger/internal/cpp/fidl.h>
-#include <lib/zx/time.h>
 
 #include "gtest/gtest.h"
 #include "lib/fidl/cpp/binding.h"

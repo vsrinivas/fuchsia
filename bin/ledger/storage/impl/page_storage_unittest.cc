@@ -2,16 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "peridot/bin/ledger/storage/impl/page_storage_impl.h"
-
 #include <dirent.h>
+#include <lib/async/cpp/task.h>
 
 #include <chrono>
 #include <memory>
 #include <queue>
 #include <set>
-
-#include <lib/async/cpp/task.h>
 
 #include "gtest/gtest.h"
 #include "lib/callback/capture.h"
@@ -36,6 +33,7 @@
 #include "peridot/bin/ledger/storage/impl/journal_impl.h"
 #include "peridot/bin/ledger/storage/impl/object_digest.h"
 #include "peridot/bin/ledger/storage/impl/page_db_empty_impl.h"
+#include "peridot/bin/ledger/storage/impl/page_storage_impl.h"
 #include "peridot/bin/ledger/storage/impl/split.h"
 #include "peridot/bin/ledger/storage/impl/storage_test_utils.h"
 #include "peridot/bin/ledger/storage/public/commit_watcher.h"

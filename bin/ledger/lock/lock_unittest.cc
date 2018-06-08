@@ -3,9 +3,9 @@
 // found in the LICENSE file.
 
 #include "peridot/bin/ledger/lock/lock.h"
-#include "peridot/bin/ledger/coroutine/coroutine_impl.h"
 
 #include "gtest/gtest.h"
+#include "peridot/bin/ledger/coroutine/coroutine_impl.h"
 
 namespace lock {
 namespace {

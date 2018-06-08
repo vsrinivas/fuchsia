@@ -4,11 +4,11 @@
 
 #include "peridot/bin/ledger/filesystem/directory_reader.h"
 
-#include <functional>
-#include <memory>
-
 #include <dirent.h>
 #include <fcntl.h>
+
+#include <functional>
+#include <memory>
 
 #include "lib/fxl/strings/string_view.h"
 

@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "peridot/bin/ledger/app/page_snapshot_impl.h"
+
 #include <algorithm>
 #include <functional>
 #include <limits>
 #include <queue>
 #include <vector>
-
-#include "peridot/bin/ledger/app/page_snapshot_impl.h"
 
 #include "lib/callback/trace_callback.h"
 #include "lib/callback/waiter.h"

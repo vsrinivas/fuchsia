@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "peridot/bin/ledger/storage/public/types.h"
+
 #include "peridot/lib/util/ptr.h"
 
 namespace storage {

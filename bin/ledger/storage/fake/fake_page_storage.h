@@ -5,13 +5,13 @@
 #ifndef PERIDOT_BIN_LEDGER_STORAGE_FAKE_FAKE_PAGE_STORAGE_H_
 #define PERIDOT_BIN_LEDGER_STORAGE_FAKE_FAKE_PAGE_STORAGE_H_
 
+#include <lib/async/dispatcher.h>
+
 #include <map>
 #include <random>
 #include <set>
 #include <string>
 #include <vector>
-
-#include <lib/async/dispatcher.h>
 
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"

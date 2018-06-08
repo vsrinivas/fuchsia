@@ -6,6 +6,7 @@
 #define PERIDOT_BIN_LEDGER_APP_MERGING_LAST_ONE_WINS_MERGE_STRATEGY_H_
 
 #include <memory>
+
 #include "lib/callback/auto_cleanable.h"
 #include "lib/fxl/macros.h"
 #include "peridot/bin/ledger/app/merging/merge_strategy.h"

@@ -7,6 +7,7 @@
 
 #include <map>
 #include <memory>
+
 #include "lib/callback/auto_cleanable.h"
 #include "lib/fxl/macros.h"
 #include "peridot/bin/ledger/app/merging/merge_resolver.h"

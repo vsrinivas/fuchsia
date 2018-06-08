@@ -2,12 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "peridot/bin/ledger/coroutine/coroutine_impl.h"
-
+#include "gtest/gtest.h"
 #include "lib/fxl/functional/auto_call.h"
 #include "lib/fxl/functional/make_copyable.h"
-
-#include "gtest/gtest.h"
+#include "peridot/bin/ledger/coroutine/coroutine_impl.h"
 
 namespace coroutine {
 namespace {

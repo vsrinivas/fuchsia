@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #include "peridot/bin/ledger/cobalt/cobalt.h"
-
 #include "peridot/lib/cobalt/cobalt.h"
 
 namespace ledger {

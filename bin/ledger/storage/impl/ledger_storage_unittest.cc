@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "peridot/bin/ledger/storage/impl/ledger_storage_impl.h"
-
 #include <memory>
 
 #include "gtest/gtest.h"
@@ -13,6 +11,7 @@
 #include "lib/gtest/test_with_message_loop.h"
 #include "peridot/bin/ledger/coroutine/coroutine_impl.h"
 #include "peridot/bin/ledger/encryption/fake/fake_encryption_service.h"
+#include "peridot/bin/ledger/storage/impl/ledger_storage_impl.h"
 #include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"
 
 namespace storage {

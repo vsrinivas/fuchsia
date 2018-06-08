@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "peridot/bin/ledger/tests/integration/integration_test.h"
-
 #include <lib/zx/time.h>
 #include <trace/event.h>
 
@@ -17,6 +15,7 @@
 #include "peridot/bin/ledger/storage/public/types.h"
 #include "peridot/bin/ledger/testing/data_generator.h"
 #include "peridot/bin/ledger/testing/get_ledger.h"
+#include "peridot/bin/ledger/tests/integration/integration_test.h"
 #include "peridot/lib/convert/convert.h"
 
 namespace test {
