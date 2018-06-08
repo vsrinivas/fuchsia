@@ -146,6 +146,8 @@ static void init_uart() {
     // enable FIFO, rx FIFO reset, tx FIFO reset, 16750 64 byte fifo enable,
     // Rx FIFO irq trigger level at 14-bytes
     uart_write(2, 0xe7);
+    // Drive flow control bits high since we don't actively manage them
+    uart_write(4, 0x3);
 
     /* figure out the fifo depth */
     uint8_t fcr = uart_read(2);
