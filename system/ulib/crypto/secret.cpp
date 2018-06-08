@@ -40,6 +40,7 @@ zx_status_t Secret::Allocate(size_t len, uint8_t** out) {
         xprintf("failed to allocate %zu bytes\n", len);
         return ZX_ERR_NO_MEMORY;
     }
+    memset(buf_.get(), 0, len);
     len_ = len;
 
     *out = buf_.get();
