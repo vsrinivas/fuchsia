@@ -613,6 +613,12 @@ void platform_stop_timer(void) {
     apic_timer_stop();
 }
 
+void platform_shutdown_timer(void) {
+    DEBUG_ASSERT(arch_ints_disabled());
+
+    // TODO(maniscalco): What should we do here?  Anything?
+}
+
 static uint64_t saved_hpet_val;
 void pc_prep_suspend_timer(void) {
     if (hpet_is_present()) {

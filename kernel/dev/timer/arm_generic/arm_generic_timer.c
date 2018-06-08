@@ -231,6 +231,12 @@ void platform_stop_timer(void)
     write_ctl(0);
 }
 
+void platform_shutdown_timer(void)
+{
+    DEBUG_ASSERT(arch_ints_disabled());
+    mask_interrupt(timer_irq);
+}
+
 zx_time_t current_time(void)
 {
     return cntpct_to_zx_time(read_ct());

@@ -19,6 +19,13 @@ typedef void(*platform_timer_callback)(zx_time_t now);
 zx_status_t platform_set_oneshot_timer(zx_time_t deadline);
 void        platform_stop_timer(void);
 
+// Shutdown the calling CPU's platform timer.
+//
+// Should be called after |platform_stop_timer|, but before taking the CPU offline.
+//
+// TODO(maniscalco): Provide a "resume" function so we can suspend/resume.
+void platform_shutdown_timer(void);
+
 void timer_tick(zx_time_t now);
 
 __END_CDECLS
