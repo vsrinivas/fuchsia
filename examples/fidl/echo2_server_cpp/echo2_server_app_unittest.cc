@@ -18,7 +18,7 @@ class EchoServerAppTest : public fuchsia::sys::testing::TestWithContext {
  public:
   void SetUp() override {
     TestWithContext::SetUp();
-    echoServerApp_.reset(new EchoServerAppForTest(takeContext()));
+    echoServerApp_.reset(new EchoServerAppForTest(TakeContext()));
   }
 
   void TearDown() override {

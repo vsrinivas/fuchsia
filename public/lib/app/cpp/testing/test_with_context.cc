@@ -24,7 +24,7 @@ void TestWithContext::TearDown() {
   TestWithLoop::TearDown();
 }
 
-std::unique_ptr<StartupContext> TestWithContext::takeContext() {
+std::unique_ptr<StartupContext> TestWithContext::TakeContext() {
   return std::move(context_);
 }
 

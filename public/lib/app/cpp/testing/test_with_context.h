@@ -24,7 +24,7 @@ class TestWithContext : public gtest::TestWithLoop {
   void TearDown() override;
 
  protected:
-  std::unique_ptr<StartupContext> takeContext();
+  std::unique_ptr<StartupContext> TakeContext();
   const Controller& controller() const { return *controller_; }
 
  private:
