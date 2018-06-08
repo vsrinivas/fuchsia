@@ -10,6 +10,7 @@
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
+#include <ddk/metadata.h>
 #include <ddk/io-buffer.h>
 #include <ddk/protocol/platform-bus.h>
 #include <ddk/protocol/platform-defs.h>
@@ -160,10 +161,13 @@ uint32_t get_clk_freq(uint32_t clk_src) {
 
 static void aml_sd_emmc_release(void* ctx) {
     aml_sd_emmc_t* dev = ctx;
-    zx_interrupt_destroy(dev->irq_handle);
-    thrd_join(dev->irq_thread, NULL);
+    if (dev->irq_handle != ZX_HANDLE_INVALID)
+        zx_interrupt_destroy(dev->irq_handle);
+    if (dev->irq_thread)
+        thrd_join(dev->irq_thread, NULL);
     io_buffer_release(&dev->mmio);
     io_buffer_release(&dev->descs_buffer);
+    zx_handle_close(dev->irq_handle);
     zx_handle_close(dev->bti);
     free(dev);
 }
@@ -449,6 +453,7 @@ static void aml_sd_emmc_hw_reset(void* ctx) {
         gpio_write(&dev->gpio, 0, 0);
         usleep(10 * 1000);
         gpio_write(&dev->gpio, 0, 1);
+        usleep(10 * 1000);
     }
     aml_sd_emmc_init_regs(dev);
     mtx_unlock(&dev->mtx);
@@ -572,8 +577,9 @@ static int aml_sd_emmc_irq_thread(void *ctx) {
         if ((!req->use_dma) && (req->cmd_flags & SDMMC_CMD_READ)) {
             volatile uint64_t *dest = (uint64_t *)req->virt;
             uint32_t length = req->blockcount * req->blocksize;
-            volatile uint64_t *src = (uint64_t *)(io_buffer_virt(&dev->mmio) + AML_SD_EMMC_PING_BUFFER_BASE);
             volatile uint64_t *end = (uint64_t *)(req->virt + length);
+            volatile uint64_t *src = (uint64_t *)(io_buffer_virt(&dev->mmio) +
+                                                  AML_SD_EMMC_PING_BUFFER_BASE);
             while (dest < end) {
                 *dest++ = *src++;
             }
@@ -734,9 +740,10 @@ static zx_status_t aml_sd_emmc_setup_data_descs_pio(aml_sd_emmc_t *dev, sdmmc_re
     if (!(req->cmd_flags & SDMMC_CMD_READ)) {
         desc->cmd_info |= AML_SD_EMMC_CMD_INFO_DATA_WR;
         volatile uint64_t *src = (uint64_t *)req->virt;
-        volatile uint64_t *dest = (uint64_t *)(io_buffer_virt(&dev->mmio) + AML_SD_EMMC_PING_BUFFER_BASE);
         volatile uint64_t *end = (uint64_t *)(req->virt + length);
-        while (dest < end) {
+        volatile uint64_t *dest = (uint64_t *)(io_buffer_virt(&dev->mmio) +
+                                               AML_SD_EMMC_PING_BUFFER_BASE);
+        while (src < end) {
             *dest++ = *src++;
         }
         io_buffer_cache_flush(&dev->mmio, AML_SD_EMMC_PING_BUFFER_BASE, length);
@@ -881,9 +888,7 @@ static zx_status_t aml_sd_emmc_bind(void* ctx, zx_device_t* parent) {
         status = ZX_ERR_INVALID_ARGS;
         goto fail;
     }
-
     dev->gpio_count = info.gpio_count;
-    dev->info.caps = SDMMC_HOST_CAP_BUS_WIDTH_8 | SDMMC_HOST_CAP_VOLTAGE_330 | SDMMC_HOST_CAP_ADMA2;
 
     status = pdev_get_bti(&dev->pdev, 0, &dev->bti);
     if (status != ZX_OK) {
@@ -911,6 +916,23 @@ static zx_status_t aml_sd_emmc_bind(void* ctx, zx_device_t* parent) {
         status = thrd_status_to_zx_status(rc);
         goto fail;
     }
+
+    dev->info.caps = SDMMC_HOST_CAP_BUS_WIDTH_8 | SDMMC_HOST_CAP_VOLTAGE_330 | SDMMC_HOST_CAP_ADMA2;
+    // Populate board specific information
+    //TODO(ravoorir) : Uncomment after all the board drivers publish the
+    //metadata
+    /*aml_sd_emmc_config_t dev_config;
+    size_t actual;
+    status = device_get_metadata(parent, DEVICE_METADATA_DRIVER_DATA,
+                                 &dev_config, sizeof(aml_sd_emmc_config_t), &actual);
+    if (status != ZX_OK || actual != sizeof(aml_sd_emmc_config_t)) {
+        zxlogf(ERROR, "aml_sd_emmc_bind: device_get_metadata failed\n");
+        goto fail;
+    }
+    if (dev_config.supports_dma) {
+        dev->info.caps |= SDMMC_HOST_CAP_ADMA2;
+    }*/
+
     dev->regs = (aml_sd_emmc_regs_t*)io_buffer_virt(&dev->mmio);
 
     if (dev->info.caps & SDMMC_HOST_CAP_ADMA2) {
@@ -947,7 +969,6 @@ fail:
     aml_sd_emmc_release(dev);
     return status;
 }
-
 
 static zx_driver_ops_t aml_sd_emmc_driver_ops = {
     .version = DRIVER_OPS_VERSION,
