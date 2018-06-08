@@ -41,7 +41,7 @@ bool RunGivenLoopWithTimeout(fsl::MessageLoop* message_loop,
 }
 
 bool RunGivenLoopUntilWithTimeout(fsl::MessageLoop* message_loop,
-                                  std::function<bool()> condition,
+                                  fit::function<bool()> condition,
                                   fxl::TimeDelta timeout,
                                   fxl::TimeDelta step) {
   const fxl::TimePoint deadline = timeout == fxl::TimeDelta::FromSeconds(0)
@@ -71,14 +71,14 @@ bool TestWithMessageLoop::RunLoopWithTimeout(fxl::TimeDelta timeout) {
 }
 
 bool TestWithMessageLoop::RunLoopUntilWithTimeout(
-    std::function<bool()> condition,
+    fit::function<bool()> condition,
     fxl::TimeDelta timeout,
     fxl::TimeDelta step) {
   return RunGivenLoopUntilWithTimeout(&message_loop_, std::move(condition),
                                       timeout, step);
 }
 
-bool TestWithMessageLoop::RunLoopUntil(std::function<bool()> condition,
+bool TestWithMessageLoop::RunLoopUntil(fit::function<bool()> condition,
                                        fxl::TimeDelta step) {
   return RunGivenLoopUntilWithTimeout(&message_loop_, std::move(condition),
                                       fxl::TimeDelta::FromSeconds(0), step);

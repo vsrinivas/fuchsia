@@ -18,6 +18,7 @@ source_set("gtest") {
     "//garnet/public/lib/fxl",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/async-testutils",
+    "//zircon/public/lib/fit",
   ]
 }
 
