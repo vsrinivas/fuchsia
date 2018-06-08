@@ -108,7 +108,7 @@ func (d *Daemon) loadSourcesFromPath(dir string) error {
 			return err
 		}
 
-		d.addSrc(src)
+		d.addTUFSource(src)
 	}
 
 	return nil
@@ -146,6 +146,15 @@ func (d *Daemon) AddTUFSource(cfg *amber.SourceConfig) error {
 	if err := src.Save(); err != nil {
 		log.Printf("failed to save TUF config: %v: %s", cfg.Id, err)
 		return err
+	}
+
+	return d.addTUFSource(src)
+}
+
+func (d *Daemon) addTUFSource(src *source.TUFSource) error {
+	cfg := src.GetConfig()
+	if cfg == nil {
+		return fmt.Errorf("TUFSource does not have a config")
 	}
 
 	// Add the source's blob repo. If not specified, assume the blobs are
