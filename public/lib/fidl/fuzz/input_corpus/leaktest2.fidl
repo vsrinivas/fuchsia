@@ -1,4 +1,4 @@
-module example_6
+library fuchsia.example_6;
 
 using somethinort.path as othere_6
 
