@@ -14,7 +14,7 @@ If a crate is not available in the vendor directory, it can to be added with
 the following steps:
 
 1. Reference the crates you need in [`rustc_deps/Cargo.toml`][3p-cargo-toml].
-1. Run `fn update-rustc-third-party`.
+1. Run `fx update-rustc-third-party`.
 1. Merge the change into [third_party/rust-crates][3p-crates].
 1. Update the git revision of `third_party/rust-crates` in
    [garnet/manifest/third_party][3p-manifest]:
