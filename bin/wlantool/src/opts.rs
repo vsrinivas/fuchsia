@@ -80,12 +80,19 @@ pub enum IfaceCmd {
     },
 }
 
-#[derive(StructOpt, Copy, Clone, Debug)]
+#[derive(StructOpt, Clone, Debug)]
 pub enum ClientCmd {
     #[structopt(name = "scan")]
     Scan {
         #[structopt(raw(required = "true"))]
         iface_id: u16
+    },
+    #[structopt(name = "connect")]
+    Connect {
+        #[structopt(raw(required = "true"))]
+        iface_id: u16,
+        #[structopt(raw(required = "true"))]
+        ssid: String
     }
 }
 

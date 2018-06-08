@@ -5,9 +5,9 @@
 #![allow(dead_code)]
 #![allow(unused_variables)]
 
-use fidl::{self, endpoints2::RequestStream};
+use fidl::{self, endpoints2::RequestStream, endpoints2::ServerEnd};
 use wlan_sme::{client, Station, MlmeRequest, MlmeStream};
-use wlan_sme::client::{DiscoveryError, DiscoveryResult, DiscoveredEss};
+use wlan_sme::client::{ConnectResult, DiscoveryError, DiscoveryResult, DiscoveredEss};
 use fidl_mlme::MlmeProxy;
 use fidl_sme::{self, ClientSmeRequest};
 use std::sync::{Arc, Mutex};
@@ -20,9 +20,10 @@ struct ClientTokens;
 
 impl client::Tokens for ClientTokens {
     type ScanToken = fidl_sme::ScanTransactionControlHandle;
+    type ConnectToken = Option<fidl_sme::ConnectTransactionControlHandle>;
 }
 
-pub type ClientSmeEndpoint = fidl::endpoints2::ServerEnd<fidl_sme::ClientSmeMarker>;
+pub type ClientSmeEndpoint = ServerEnd<fidl_sme::ClientSmeMarker>;
 type Client = client::ClientSme<ClientTokens>;
 
 pub fn serve_client_sme(proxy: MlmeProxy,
@@ -113,17 +114,33 @@ fn new_client_service(client: Arc<Mutex<Client>>, endpoint: ClientSmeEndpoint)
                     Ok(scan(&client, txn)
                         .unwrap_or_else(|e| eprintln!("Error starting a scan transaction: {:?}", e)))
                 },
+                ClientSmeRequest::Connect { req, txn, control_handle } => {
+                    Ok(connect(&client, req.ssid, txn)
+                        .unwrap_or_else(|e| eprintln!("Error starting a connect transaction: {:?}", e)))
+                }
             })
             .map(|_| ())
         })
 }
 
 fn scan(client: &Arc<Mutex<Client>>,
-        txn: fidl::endpoints2::ServerEnd<fidl_sme::ScanTransactionMarker>)
+        txn: ServerEnd<fidl_sme::ScanTransactionMarker>)
     -> Result<(), failure::Error>
 {
     let handle = txn.into_stream()?.control_handle();
     client.lock().unwrap().on_scan_command(handle);
+    Ok(())
+}
+
+fn connect(client: &Arc<Mutex<Client>>, ssid: Vec<u8>,
+           txn: Option<ServerEnd<fidl_sme::ConnectTransactionMarker>>)
+    -> Result<(), failure::Error>
+{
+    let handle = match txn {
+        None => None,
+        Some(txn) => Some(txn.into_stream()?.control_handle())
+    };
+    client.lock().unwrap().on_connect_command(ssid, handle);
     Ok(())
 }
 
@@ -132,14 +149,18 @@ fn serve_user_stream(stream: client::UserStream<ClientTokens>)
 {
     stream
         .for_each(|e| {
-            match e {
+            Ok(match e {
                 client::UserEvent::ScanFinished{ token, result } => {
                     send_scan_results(token, result).unwrap_or_else(|e| {
-                        eprintln!("Error sending scan results to user: {:?}", e);
+                        eprintln!("Error sending scan results to user: {}", e);
+                    })
+                },
+                client::UserEvent::ConnectFinished { token, result } => {
+                    send_connect_result(token, result).unwrap_or_else(|e| {
+                        eprintln!("Error sending connect result to user: {}", e);
                     })
                 }
-            }
-            Ok(())
+            })
         })
         .map(|_| ())
 }
@@ -172,3 +193,19 @@ fn convert_scan_result(ess: DiscoveredEss) -> fidl_sme::ScanResult {
         ssid: ess.ssid,
     }
 }
+
+fn send_connect_result(token: Option<fidl_sme::ConnectTransactionControlHandle>,
+                       result: ConnectResult)
+                       -> Result<(), fidl::Error>
+{
+    if let Some(token) = token {
+        let code = match result {
+            ConnectResult::Success => fidl_sme::ConnectResultCode::Success,
+            ConnectResult::Canceled => fidl_sme::ConnectResultCode::Canceled,
+            ConnectResult::Failed => fidl_sme::ConnectResultCode::Failed,
+        };
+        token.send_on_finished(code)?;
+    }
+    Ok(())
+}
+

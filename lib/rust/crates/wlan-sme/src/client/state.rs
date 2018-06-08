@@ -4,6 +4,7 @@
 
 use fidl_mlme::{self, BssDescription, MlmeEvent};
 use std::collections::VecDeque;
+use super::{ConnectResult, Tokens};
 use super::super::MlmeRequest;
 
 const DEFAULT_JOIN_FAILURE_TIMEOUT: u32 = 20; // beacon intervals
@@ -14,16 +15,21 @@ pub enum LinkState {
     LinkUp
 }
 
-pub enum State {
+pub struct ConnectCommand<T> {
+    pub bss: Box<BssDescription>,
+    pub token: Option<T>
+}
+
+pub enum State<T: Tokens> {
     Idle,
     Joining {
-        bss: Box<BssDescription>,
+        cmd: ConnectCommand<T::ConnectToken>,
     },
     Authenticating {
-        bss: Box<BssDescription>,
+        cmd: ConnectCommand<T::ConnectToken>,
     },
     Associating {
-        bss: Box<BssDescription>,
+        cmd: ConnectCommand<T::ConnectToken>,
     },
     Associated {
         bss: Box<BssDescription>,
@@ -32,68 +38,74 @@ pub enum State {
     },
     Deauthenticating {
         // Network to join after the deauthentication process is finished
-        next_bss: Option<Box<BssDescription>>,
+        next_cmd: Option<ConnectCommand<T::ConnectToken>>,
     }
 }
 
-impl State {
-    pub fn on_mlme_event(self, event: MlmeEvent, mlme_sink: &super::MlmeSink) -> Self {
+impl<T: Tokens> State<T> {
+    pub fn on_mlme_event(self, event: MlmeEvent, mlme_sink: &super::MlmeSink,
+                         user_sink: &super::UserSink<T>) -> Self {
         match self {
             State::Idle => {
                 eprintln!("Unexpected MLME message while Idle: {:?}", event);
                 State::Idle
             },
-            State::Joining{ bss } => match event {
+            State::Joining{ cmd } => match event {
                 MlmeEvent::JoinConf { resp } => match resp.result_code {
                     fidl_mlme::JoinResultCodes::Success => {
                         mlme_sink.send(MlmeRequest::Authenticate(
                             fidl_mlme::AuthenticateRequest {
-                                peer_sta_address: bss.bssid.clone(),
+                                peer_sta_address: cmd.bss.bssid.clone(),
                                 auth_type: fidl_mlme::AuthenticationTypes::OpenSystem,
                                 auth_failure_timeout: DEFAULT_AUTH_FAILURE_TIMEOUT,
                             }));
-                        State::Authenticating { bss }
+                        State::Authenticating { cmd }
                     },
                     other => {
                         eprintln!("Join request failed with result code {:?}", other);
+                        report_connect_finished(cmd.token, user_sink, ConnectResult::Failed);
                         State::Idle
                     }
                 },
                 other => {
-                    State::Joining{ bss }
+                    State::Joining{ cmd }
                 }
             },
-            State::Authenticating{ bss } => match event {
+            State::Authenticating{ cmd } => match event {
                 MlmeEvent::AuthenticateConf { resp } => match resp.result_code {
                     fidl_mlme::AuthenticateResultCodes::Success => {
-                        Self::send_associate_request(bss, mlme_sink)
+                        to_associating_state(cmd, mlme_sink)
                     },
                     other => {
                         eprintln!("Authenticate request failed with result code {:?}", other);
+                        report_connect_finished(cmd.token, user_sink, ConnectResult::Failed);
                         State::Idle
                     }
                 },
-                _ => State::Authenticating{ bss }
+                _ => State::Authenticating{ cmd }
             },
-            State::Associating{ bss } => match event {
+            State::Associating{ cmd } => match event {
                 MlmeEvent::AssociateConf { resp } => match resp.result_code {
                     fidl_mlme::AssociateResultCodes::Success => {
+                        report_connect_finished(cmd.token, user_sink, ConnectResult::Success);
                         State::Associated {
-                            bss,
+                            bss: cmd.bss,
                             last_rssi: None,
                             link_state: LinkState::LinkUp
                         }
                     },
                     other => {
                         eprintln!("Associate request failed with result code {:?}", other);
+                        report_connect_finished(cmd.token, user_sink, ConnectResult::Failed);
                         State::Idle
                     }
                 },
-                _ => State::Associating{ bss }
+                _ => State::Associating{ cmd }
             },
             State::Associated { bss, last_rssi, link_state } => match event {
                 MlmeEvent::DisassociateInd{ ind } => {
-                    Self::send_associate_request(bss, mlme_sink)
+                    let cmd = ConnectCommand{ bss, token: None };
+                    to_associating_state(cmd, mlme_sink)
                 },
                 MlmeEvent::DeauthenticateInd{ ind } => {
                     State::Idle
@@ -108,66 +120,103 @@ impl State {
                 // TODO(gbonik): Also handle EapolInd and EapolConf
                 _ => State::Associated{ bss, last_rssi, link_state }
             },
-            State::Deauthenticating{ next_bss } => match event {
+            State::Deauthenticating{ next_cmd } => match event {
                 MlmeEvent::DeauthenticateConf{ resp } => {
-                    Self::disconnect_or_join(next_bss, mlme_sink)
+                    disconnect_or_join(next_cmd, mlme_sink)
                 },
-                _ => State::Deauthenticating { next_bss }
+                _ => State::Deauthenticating { next_cmd }
             },
         }
     }
 
-    pub fn disconnect(self, next_bss_to_join: Option<Box<BssDescription>>,
-                      mlme_sink: &super::MlmeSink) -> Self {
+    pub fn disconnect(self, next_bss_to_join: Option<ConnectCommand<T::ConnectToken>>,
+                      mlme_sink: &super::MlmeSink, user_sink: &super::UserSink<T>) -> Self {
         match self {
-            State::Idle | State::Joining {..} | State::Authenticating {..}  => {
-                Self::disconnect_or_join(next_bss_to_join, mlme_sink)
+            State::Idle => {
+                disconnect_or_join(next_bss_to_join, mlme_sink)
             },
-            State::Associating{ bss } | State::Associated { bss, ..} => {
-                mlme_sink.send(MlmeRequest::Deauthenticate(
-                    fidl_mlme::DeauthenticateRequest {
-                        peer_sta_address: bss.bssid.clone(),
-                        reason_code: fidl_mlme::ReasonCode::StaLeaving,
-                    }
-                ));
-                State::Deauthenticating {
-                    next_bss: next_bss_to_join
+            State::Joining { cmd } | State::Authenticating { cmd }  => {
+                report_connect_finished(cmd.token, user_sink, ConnectResult::Canceled);
+                disconnect_or_join(next_bss_to_join, mlme_sink)
+            },
+            State::Associating{ cmd } => {
+                report_connect_finished(cmd.token, user_sink, ConnectResult::Canceled);
+                to_deauthenticating_state(cmd.bss, next_bss_to_join, mlme_sink)
+            },
+            State::Associated { bss, ..} => {
+                to_deauthenticating_state(bss, next_bss_to_join, mlme_sink)
+            },
+            State::Deauthenticating { next_cmd } => {
+                if let Some(next_cmd) = next_cmd {
+                    report_connect_finished(next_cmd.token, user_sink, ConnectResult::Canceled);
                 }
-            },
-            State::Deauthenticating { .. } => {
                 State::Deauthenticating {
-                    next_bss: next_bss_to_join
+                    next_cmd: next_bss_to_join
                 }
             }
         }
     }
+}
 
-    fn disconnect_or_join(next_bss_to_join: Option<Box<BssDescription>>,
-                          mlme_sink: &super::MlmeSink) -> Self {
-        match next_bss_to_join {
-            Some(next_bss) => {
-                mlme_sink.send(MlmeRequest::Join(
-                    fidl_mlme::JoinRequest {
-                        selected_bss: clone_bss_desc(&next_bss),
-                        join_failure_timeout: DEFAULT_JOIN_FAILURE_TIMEOUT,
-                        nav_sync_delay: 0,
-                        op_rate_set: vec![]
-                    }
-                ));
-                State::Joining { bss: next_bss }
-            },
-            None => State::Idle
+fn to_deauthenticating_state<T>(current_bss: Box<BssDescription>,
+                                next_bss_to_join: Option<ConnectCommand<T::ConnectToken>>,
+                                mlme_sink: &super::MlmeSink) -> State<T>
+    where T: Tokens
+{
+    mlme_sink.send(MlmeRequest::Deauthenticate(
+        fidl_mlme::DeauthenticateRequest {
+            peer_sta_address: current_bss.bssid.clone(),
+            reason_code: fidl_mlme::ReasonCode::StaLeaving,
         }
+    ));
+    State::Deauthenticating {
+        next_cmd: next_bss_to_join
     }
+}
 
-    fn send_associate_request(bss: Box<BssDescription>, mlme_sink: &super::MlmeSink) -> State {
-        mlme_sink.send(MlmeRequest::Associate(
-            fidl_mlme::AssociateRequest {
-                peer_sta_address: bss.bssid.clone(),
-                rsn: get_rsn(&bss),
-            }
-        ));
-        State::Associating { bss }
+fn disconnect_or_join<T>(next_bss_to_join: Option<ConnectCommand<T::ConnectToken>>,
+                         mlme_sink: &super::MlmeSink)
+    -> State<T>
+    where T: Tokens
+{
+    match next_bss_to_join {
+        Some(next_cmd) => {
+            mlme_sink.send(MlmeRequest::Join(
+                fidl_mlme::JoinRequest {
+                    selected_bss: clone_bss_desc(&next_cmd.bss),
+                    join_failure_timeout: DEFAULT_JOIN_FAILURE_TIMEOUT,
+                    nav_sync_delay: 0,
+                    op_rate_set: vec![]
+                }
+            ));
+            State::Joining { cmd: next_cmd }
+        },
+        None => State::Idle
+    }
+}
+
+fn to_associating_state<T>(cmd: ConnectCommand<T::ConnectToken>, mlme_sink: &super::MlmeSink)
+    -> State<T>
+    where T: Tokens
+{
+    mlme_sink.send(MlmeRequest::Associate(
+        fidl_mlme::AssociateRequest {
+            peer_sta_address: cmd.bss.bssid.clone(),
+            rsn: get_rsn(&cmd.bss),
+        }
+    ));
+    State::Associating { cmd }
+}
+
+fn report_connect_finished<T>(token: Option<T::ConnectToken>,
+                              user_sink: &super::UserSink<T>, result: ConnectResult)
+    where T: Tokens
+{
+    if let Some(token) = token {
+        user_sink.send(super::UserEvent::ConnectFinished {
+            token,
+            result
+        })
     }
 }
 

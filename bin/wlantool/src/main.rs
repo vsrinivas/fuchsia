@@ -23,7 +23,7 @@ extern crate structopt;
 use component::client::connect_to_service;
 use failure::{Error, Fail, ResultExt};
 use fidl::endpoints2;
-use fidl_sme::ScanTransactionEvent;
+use fidl_sme::{ConnectResultCode, ConnectTransactionEvent, ScanTransactionEvent};
 use futures::prelude::*;
 use structopt::StructOpt;
 use wlan_service::{DeviceServiceMarker, DeviceServiceProxy};
@@ -122,7 +122,21 @@ fn do_client(cmd: opts::ClientCmd, wlan_svc: WlanSvc) -> impl Future<Item = (), 
                 Ok(local)
             })
             .and_then(handle_scan_transaction)
-            .map_err(|e| e.into()),
+            .map_err(|e| e.into())
+            .left_future(),
+        opts::ClientCmd::Connect { iface_id, ssid } => get_client_sme(wlan_svc, iface_id)
+            .and_then(move |sme| {
+                let (local, remote) = endpoints2::create_endpoints()?;
+                let mut req = fidl_sme::ConnectRequest {
+                    ssid: ssid.as_bytes().to_vec()
+                };
+                sme.connect(&mut req, Some(remote))
+                    .map_err(|e| e.context("error sending connect request"))?;
+                Ok(local)
+            })
+            .and_then(handle_connect_transaction)
+            .map_err(|e| e.into())
+            .right_future(),
     }
 }
 
@@ -150,6 +164,33 @@ fn handle_scan_transaction(scan_txn: fidl_sme::ScanTransactionProxy)
         .and_then(|done| {
             if !done {
                 bail!("Failed to fetch all results before the channel was closed");
+            }
+            Ok(())
+        })
+}
+
+fn handle_connect_transaction(connect_txn: fidl_sme::ConnectTransactionProxy)
+    -> impl Future<Item = (), Error = Error>
+{
+    connect_txn.take_event_stream()
+        .map(|e| {
+            match e {
+                ConnectTransactionEvent::OnFinished { code } => {
+                    match code {
+                        ConnectResultCode::Success => println!("Connected successfully"),
+                        ConnectResultCode::Canceled =>
+                            eprintln!("Connecting was canceled or superseded by another command"),
+                        ConnectResultCode::Failed => eprintln!("Failed to connect to network"),
+                    }
+                    true
+                },
+            }
+        })
+        .fold(false, |_prev, done| Ok(done))
+        .err_into::<Error>()
+        .and_then(|done| {
+            if !done {
+                bail!("Failed to receiver a connect result before the channel was closed");
             }
             Ok(())
         })

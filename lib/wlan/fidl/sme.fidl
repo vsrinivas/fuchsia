@@ -29,6 +29,26 @@ struct ScanRequest {
     uint8 timeout; // seconds
 };
 
+enum ConnectResultCode {
+    // Connected successfully
+    SUCCESS = 0;
+    // The request was superseded by another connect or disconnect command
+    CANCELED = 1;
+    // Failed to join for some reason
+    FAILED = 2;
+    // TODO(gbonik): possibly add more granular error codes, e.g. "BAD_CREDENTIALS"
+};
+
+interface ConnectTransaction {
+    // Could add more events here to notify the client of the progress
+    1: -> OnFinished(ConnectResultCode code);
+};
+
+struct ConnectRequest {
+    vector<uint8>:32 ssid;
+};
+
 interface ClientSme {
     1: Scan(ScanRequest req, request<ScanTransaction> txn);
+    2: Connect(ConnectRequest req, request<ConnectTransaction>? txn);
 };

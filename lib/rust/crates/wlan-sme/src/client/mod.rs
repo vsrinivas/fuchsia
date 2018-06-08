@@ -6,8 +6,8 @@ mod scan;
 mod state;
 
 use fidl_mlme::{self, MlmeEvent, ScanRequest};
-use self::scan::{DiscoveryScan, JoinScan, ScanResult, ScanScheduler};
-use self::state::State;
+use self::scan::{DiscoveryScan, JoinScan, JoinScanFailure, ScanResult, ScanScheduler};
+use self::state::{ConnectCommand, State};
 use std::collections::VecDeque;
 use super::MlmeRequest;
 use futures::channel::mpsc;
@@ -19,6 +19,7 @@ pub use self::scan::{DiscoveryError, DiscoveryResult, DiscoveredEss};
 // trait that enables us to group them into a single generic parameter.
 pub trait Tokens {
     type ScanToken;
+    type ConnectToken;
 }
 
 struct UnboundedSink<T> {
@@ -46,17 +47,27 @@ pub type UserStream<T> = mpsc::UnboundedReceiver<UserEvent<T>>;
 
 
 pub struct ClientSme<T: Tokens> {
-    state: Option<State>,
-    scan_sched: ScanScheduler<T::ScanToken>,
+    state: Option<State<T>>,
+    scan_sched: ScanScheduler<T::ScanToken, T::ConnectToken>,
     mlme_sink: MlmeSink,
     user_sink: UserSink<T>,
+}
+
+pub enum ConnectResult {
+    Success,
+    Canceled,
+    Failed
 }
 
 // A message from the Client to a user or a group of listeners
 pub enum UserEvent<T: Tokens> {
     ScanFinished {
         token: T::ScanToken,
-        result: scan::DiscoveryResult,
+        result: DiscoveryResult,
+    },
+    ConnectFinished {
+        token: T::ConnectToken,
+        result: ConnectResult
     }
 }
 
@@ -76,8 +87,15 @@ impl<T: Tokens> ClientSme<T> {
         )
     }
 
-    pub fn on_connect_command(&mut self, ssid: String) {
-        let req = self.scan_sched.enqueue_scan_to_join(JoinScan { ssid });
+    pub fn on_connect_command(&mut self, ssid: Vec<u8>, token: T::ConnectToken) {
+        let (canceled_token, req) = self.scan_sched.enqueue_scan_to_join(JoinScan { ssid, token });
+        // If the new scan replaced an existing pending JoinScan, notify the existing transaction
+        if let Some(t) = canceled_token {
+            self.user_sink.send(UserEvent::ConnectFinished {
+                token: t,
+                result: ConnectResult::Canceled
+            });
+        }
         self.send_scan_request(req);
     }
 
@@ -101,11 +119,19 @@ impl<T: Tokens> super::Station for ClientSme<T> {
                 self.send_scan_request(request);
                 match result {
                     ScanResult::None => state,
-                    ScanResult::ReadyToJoin{ best_bss } => {
-                        state.disconnect(Some(Box::new(best_bss)), &self.mlme_sink)
+                    ScanResult::ReadyToJoin { token, best_bss } => {
+                        let cmd = ConnectCommand { bss: Box::new(best_bss), token: Some(token) };
+                        state.disconnect(Some(cmd), &self.mlme_sink, &self.user_sink)
                     },
-                    ScanResult::CannotJoin(reason) => {
+                    ScanResult::CannotJoin { token, reason } => {
                         eprintln!("Cannot join network because scan failed: {:?}", reason);
+                        self.user_sink.send(UserEvent::ConnectFinished {
+                            token,
+                            result: match reason {
+                                JoinScanFailure::Canceled => ConnectResult::Canceled,
+                                _ => ConnectResult::Failed
+                            }
+                        });
                         state
                     },
                     ScanResult::DiscoveryFinished { token, result } => {
@@ -118,7 +144,7 @@ impl<T: Tokens> super::Station for ClientSme<T> {
                 }
             },
             other => {
-                state.on_mlme_event(other, &self.mlme_sink)
+                state.on_mlme_event(other, &self.mlme_sink, &self.user_sink)
             }
         });
     }
