@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_APP_CPP_STARTUP_CONTEXT_FOR_TEST_H_
-#define LIB_APP_CPP_STARTUP_CONTEXT_FOR_TEST_H_
+#ifndef LIB_APP_CPP_TESTING_STARTUP_CONTEXT_FOR_TEST_H_
+#define LIB_APP_CPP_TESTING_STARTUP_CONTEXT_FOR_TEST_H_
 
 #include <fuchsia/sys/cpp/fidl.h>
 
@@ -36,4 +36,4 @@ class StartupContextForTest : public StartupContext {
 }  // namespace sys
 }  // namespace fuchsia
 
-#endif  // LIB_APP_CPP_STARTUP_CONTEXT_FOR_TEST_H_
+#endif  // LIB_APP_CPP_TESTING_STARTUP_CONTEXT_FOR_TEST_H_
