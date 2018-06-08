@@ -2,7 +2,6 @@
     "imports": [
         "garnet/packages/config/network",
         "garnet/packages/config/openssh_keys",
-        "garnet/packages/prod/cmdutils",
         "garnet/packages/prod/netstack",
         "garnet/packages/prod/openssh",
         "garnet/packages/prod/root_ssl_certificates",
