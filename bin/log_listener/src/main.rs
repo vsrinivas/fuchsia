@@ -5,24 +5,19 @@
 #![deny(warnings)]
 
 extern crate failure;
-extern crate fidl;
-extern crate fuchsia_app as app;
 extern crate fuchsia_async as async;
+extern crate fuchsia_syslog_listener as syslog_listener;
 extern crate fuchsia_zircon as zx;
-extern crate futures;
 
-use app::client::connect_to_service;
 use failure::{Error, ResultExt};
-use fidl::encoding2::OutOfLine;
-use futures::future::ok as fok;
 use std::collections::HashMap;
 use std::env;
 use std::io::{stdout, Write};
+use syslog_listener::LogProcessor;
 
 // Include the generated FIDL bindings for the `Logger` service.
 extern crate fidl_fuchsia_logger;
-use fidl_fuchsia_logger::{LogFilterOptions, LogLevelFilter, LogListener, LogListenerImpl,
-                          LogListenerMarker, LogMarker, LogMessage, MAX_TAGS, MAX_TAG_LEN};
+use fidl_fuchsia_logger::{LogFilterOptions, LogLevelFilter, LogMessage, MAX_TAGS, MAX_TAG_LEN};
 
 fn default_log_filter_options() -> LogFilterOptions {
     LogFilterOptions {
@@ -155,11 +150,11 @@ struct Listener<W: Write + Send> {
     writer: W,
 }
 
-impl<W> Listener<W>
+impl<W> LogProcessor for Listener<W>
 where
     W: Write + Send,
 {
-    fn log(&mut self, message: &LogMessage) {
+    fn log(&mut self, message: LogMessage) {
         let tags = message.tags.join(", ");
         writeln!(
             self.writer,
@@ -191,6 +186,10 @@ where
             self.dropped_logs.insert(message.pid, message.dropped_logs);
         }
     }
+
+    fn done(&mut self) {
+        // ignore as this is not called incase of listener.
+    }
 }
 
 fn get_log_level(level: i32) -> String {
@@ -209,48 +208,14 @@ fn get_log_level(level: i32) -> String {
     }
 }
 
-fn log_listener<W>(listener: Listener<W>) -> impl LogListener
-where
-    W: Send + Write,
-{
-    LogListenerImpl {
-        state: listener,
-        on_open: |_, _| fok(()),
-        done: |_, _| {
-            //ignore, only called when dump_logs is called.
-            fok(())
-        },
-        log: |listener, message, _| {
-            listener.log(&message);
-            fok(())
-        },
-        log_many: |listener, messages, _| {
-            for msg in messages {
-                listener.log(&msg);
-            }
-            fok(())
-        },
-    }
-}
-
 fn run_log_listener(options: Option<&mut LogFilterOptions>) -> Result<(), Error> {
     let mut executor = async::Executor::new().context("Error creating executor")?;
-    let logger = connect_to_service::<LogMarker>()?;
-    let (log_listener_local, log_listener_remote) = zx::Channel::create()?;
-    let log_listener_local = async::Channel::from_channel(log_listener_local)?;
-    let listener_ptr = fidl::endpoints2::ClientEnd::<LogListenerMarker>::new(log_listener_remote);
-
-    let options = options.map(OutOfLine);
-    logger
-        .listen(listener_ptr, options)
-        .context("failed to register listener")?;
-
     let l = Listener {
         dropped_logs: HashMap::new(),
         writer: stdout(),
     };
 
-    let listener_fut = log_listener(l).serve(log_listener_local);
+    let listener_fut = syslog_listener::run_log_listener(l, options, false)?;
     executor
         .run_singlethreaded(listener_fut)
         .map_err(Into::into)
@@ -285,6 +250,18 @@ mod tests {
     use std::fs::File;
     use std::io::Read;
 
+    fn copy_log_message(msg: &LogMessage) -> LogMessage {
+        LogMessage {
+            pid: msg.pid,
+            tid: msg.tid,
+            severity: msg.severity,
+            time: msg.time,
+            msg: msg.msg.clone(),
+            dropped_logs: msg.dropped_logs,
+            tags: msg.tags.clone(),
+        }
+    }
+
     #[test]
     fn test_log_fn() {
         let _executor = async::Executor::new().expect("unable to create executor");
@@ -306,11 +283,11 @@ mod tests {
             dropped_logs: 0,
             tags: vec![],
         };
-        l.log(&message);
+        l.log(copy_log_message(&message));
 
         for level in vec![1, 2, 3, 4, 11, -1, -3] {
             message.severity = level;
-            l.log(&message);
+            l.log(copy_log_message(&message));
         }
         let mut expected = "".to_string();
         for level in &[
@@ -322,41 +299,41 @@ mod tests {
         // test tags
         message.severity = 0;
         message.tags = vec!["tag1".to_string()];
-        l.log(&message);
+        l.log(copy_log_message(&message));
         expected.push_str("[00076.352234][123][321][tag1] INFO: hello\n");
 
         message.tags.push("tag2".to_string());
-        l.log(&message);
+        l.log(copy_log_message(&message));
         expected.push_str("[00076.352234][123][321][tag1, tag2] INFO: hello\n");
 
         // test time
         message.time = 636253000631621;
-        l.log(&message);
+        l.log(copy_log_message(&message));
         let s = "[636253.000631][123][321][tag1, tag2] INFO: hello\n";
         expected.push_str(s);
 
         // test dropped logs
         message.dropped_logs = 1;
-        l.log(&message);
+        l.log(copy_log_message(&message));
         expected.push_str(s);
         expected.push_str("[636253.000631][123][321][tag1, tag2] WARNING: Dropped logs count: 1\n");
-        l.log(&message);
+        l.log(copy_log_message(&message));
         // will not print log count again
         expected.push_str(s);
 
         // change pid and test
         message.pid = 1234;
-        l.log(&message);
+        l.log(copy_log_message(&message));
         expected.push_str("[636253.000631][1234][321][tag1, tag2] INFO: hello\n");
         expected
             .push_str("[636253.000631][1234][321][tag1, tag2] WARNING: Dropped logs count: 1\n");
 
         // switch back pid and test
         message.pid = 123;
-        l.log(&message);
+        l.log(copy_log_message(&message));
         expected.push_str(s);
         message.dropped_logs = 2;
-        l.log(&message);
+        l.log(copy_log_message(&message));
         expected.push_str(s);
         expected.push_str("[636253.000631][123][321][tag1, tag2] WARNING: Dropped logs count: 2\n");
 

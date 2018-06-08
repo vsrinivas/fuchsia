@@ -53,6 +53,9 @@ package("logger_tests") {
       name = "logger_bin_test_rustc"
     },
     {
+      name = "logger_integration_bin_test_rustc"
+    },
+    {
       name = "logger_integration_cpp_tests"
     },
     {
