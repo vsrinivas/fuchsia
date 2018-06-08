@@ -108,35 +108,6 @@ TEST_F(AudioServerTest, CreateCapturer) {
   EXPECT_TRUE(audio_capturer_);
 }
 
-// Test setting and getting of master gain.
-TEST_F(AudioServerTest, MasterGain) {
-  constexpr float kMasterGainVal = -20.0f;
-
-  // Validate that master gain can be retrieved.
-  float gain_db = NAN;
-  audio_->GetMasterGain([this, &gain_db](float current_gain_db) {
-    gain_db = current_gain_db;
-    message_loop_.PostQuitTask();
-  });
-
-  EXPECT_FALSE(RunLoopWithTimeout());
-
-  EXPECT_FALSE(error_occurred_);
-  EXPECT_FALSE(isnan(gain_db));
-  ASSERT_TRUE(audio_);
-
-  // Validate that master gain is set. Correctly wait for its retrieval.
-  // loop.ResetQuit();
-  audio_->SetMasterGain(kMasterGainVal);
-  audio_->GetMasterGain([this, &gain_db](float current_gain_db) {
-    gain_db = current_gain_db;
-    message_loop_.PostQuitTask();
-  });
-
-  EXPECT_FALSE(RunLoopWithTimeout());
-  EXPECT_EQ(kMasterGainVal, gain_db);
-}
-
 //
 // Tests of the synchronous AudioSync interface.
 //
@@ -214,22 +185,6 @@ TEST_F(AudioServerSyncTest, CreateCapturer) {
   audio_->CreateCapturer(audio_capturer_.NewRequest(), false);
   audio_ = nullptr;
   EXPECT_TRUE(audio_capturer_);
-}
-
-// Test setting and getting of master gain.
-TEST_F(AudioServerSyncTest, MasterGain) {
-  // Validate that master gain can be retrieved.
-  float gain_db = NAN;
-  EXPECT_TRUE(audio_->GetMasterGain(&gain_db));
-  EXPECT_FALSE(isnan(gain_db));
-
-  // Validate that master gain can be set.
-  constexpr float kExpectedVal = -5.0f;
-  EXPECT_TRUE(audio_->SetMasterGain(kExpectedVal));
-
-  // Validate that master gain was indeed persistently set.
-  EXPECT_TRUE(audio_->GetMasterGain(&gain_db));
-  EXPECT_EQ(kExpectedVal, gain_db);
 }
 
 // TODO(mpuryear): If there is ever additional functionality associated with

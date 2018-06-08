@@ -6,7 +6,6 @@ import("//build/package.gni")
 
 group("services") {
   public_deps = [
-    "//garnet/bin/media/audio_policy",
     "//garnet/bin/media/media_player",
     "//garnet/bin/media/net_media_service",
   ]

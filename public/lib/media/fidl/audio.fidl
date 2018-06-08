@@ -20,18 +20,20 @@ interface Audio {
   // through the policy manager.
   2: CreateCapturer(request<AudioCapturer> audio_capturer, bool loopback);
 
-  // Sets the master gain/attenuation of the mixer, expressed in dB.  Master
-  // gain is applied to all active outputs.  Legal values are in the range
-  // [-inf, 0.0].  Any value less than or equal to the constant
-  // kMutedGain will result in all outputs becoming explicitly
-  // muted.
-  //
-  // TODO(johngro): Remove this as soon as we have a policy manager in control
-  // of output gain.
-  3: SetMasterGain(float32 db_gain);
+  // Sets the system-wide gain in decibels. |db| values are clamped to the
+  // range -160db to 0db inclusive. Setting gain to -160db implicitly mutes
+  // system audio. Setting gain to a higher values when it's already -160db
+  // implicitly unmutes system audio. Gain and mute are otherwise independent.
+  3: SetSystemGain(float32 gain_db);
 
-  // Get the current value of the master gain for the audio service.
-  4: GetMasterGain() -> (float32 db_gain);
+  // Sets the system-wide 'muted' value. Changing this value has no effect on
+  // the system audio gain value. Calling this method with argument |false|
+  // has no effect if system audio gain is set to -160db. Gain and mute are
+  // otherwise independent.
+  4: SetSystemMute(bool muted);
+
+  // Provides current system gain/mute values.
+  5: -> SystemGainMuteChanged(float32 gain_db, bool muted);
 
   // DEPRECATED
   9: CreateRenderer(request<AudioRenderer> audio_renderer,

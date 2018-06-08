@@ -6,7 +6,7 @@
 #include <iomanip>
 #include <iostream>
 
-#include <audio_policy/cpp/fidl.h>
+#include <fuchsia/media/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/task.h>
 #include <lib/fit/function.h>
@@ -16,8 +16,6 @@
 #include "lib/fsl/tasks/fd_waiter.h"
 #include "lib/fxl/command_line.h"
 #include "lib/media/audio/perceived_level.h"
-
-using audio_policy::AudioPolicyStatus;
 
 namespace media {
 namespace {
@@ -30,28 +28,6 @@ static constexpr char kHideCursor[] = "\x1b[?25l";
 static constexpr char kShowCursor[] = "\x1b[?25h";
 
 }  // namespace
-
-std::ostream& operator<<(std::ostream& os, const AudioPolicyStatus& value) {
-  int level =
-      PerceivedLevel::GainToLevel(value.system_audio_gain_db, kLevelMax);
-
-  os << std::string(level, '=') << "|" << std::string(kLevelMax - level, '-');
-
-  if (value.system_audio_gain_db == fuchsia::media::kMutedGain) {
-    os << " -infinity db";
-  } else if (value.system_audio_gain_db == kUnityGain) {
-    os << " 0.0 db";
-  } else {
-    os << " " << std::fixed << std::setprecision(1)
-       << value.system_audio_gain_db << "db";
-  }
-
-  if (value.system_audio_muted) {
-    os << " muted";
-  }
-
-  return os;
-}
 
 class VolApp {
  public:
@@ -96,30 +72,28 @@ class VolApp {
       interactive_ = false;
     }
 
-    audio_policy_service_ =
-        startup_context_
-            ->ConnectToEnvironmentService<audio_policy::AudioPolicy>();
-    audio_policy_service_.set_error_handler([this]() {
-      std::cout << "System error: audio policy service failure";
+    audio_ =
+        startup_context_->ConnectToEnvironmentService<fuchsia::media::Audio>();
+    audio_.set_error_handler([this]() {
+      std::cout << "System error: audio service failure";
       quit_callback_();
     });
 
+    audio_.events().SystemGainMuteChanged = [this](float gain_db, bool muted) {
+      HandleGainMuteChanged(gain_db, muted);
+    };
+
     if (mute_) {
-      audio_policy_service_->SetSystemAudioMute(true);
+      audio_->SetSystemMute(true);
     }
 
     if (unmute_) {
-      audio_policy_service_->SetSystemAudioMute(false);
+      audio_->SetSystemMute(false);
     }
 
     if (gain_db_ != kGainUnchanged) {
-      audio_policy_service_->SetSystemAudioGain(gain_db_);
+      audio_->SetSystemGain(gain_db_);
     }
-
-    HandleStatus();
-    audio_policy_service_->GetStatus(
-        fuchsia::media::kInitialStatus,
-        [this](uint64_t version, AudioPolicyStatus status) {});
 
     if (interactive_) {
       std::cout << "\ninteractive mode:\n";
@@ -157,29 +131,43 @@ class VolApp {
     return (istream >> *float_out) && istream.eof();
   }
 
-  void HandleStatus(uint64_t version = fuchsia::media::kInitialStatus,
-                    audio_policy::AudioPolicyStatusPtr status = nullptr) {
-    if (status) {
-      system_audio_gain_db_ = status->system_audio_gain_db;
-      system_audio_muted_ = status->system_audio_muted;
+  void HandleGainMuteChanged(float gain_db, bool muted) {
+    system_audio_gain_db_ = gain_db;
+    system_audio_muted_ = muted;
 
-      if (interactive_) {
-        std::cout << "\r" << *status << kClearEol << std::flush;
-        if (first_status_) {
-          first_status_ = false;
-          WaitForKeystroke();
-        }
-      } else {
-        std::cout << *status << std::endl;
-        quit_callback_();
-        return;
+    if (interactive_) {
+      std::cout << "\r";
+      FormatGainMute(std::cout);
+      std::cout << kClearEol << std::flush;
+      if (first_status_) {
+        first_status_ = false;
+        WaitForKeystroke();
       }
+    } else {
+      FormatGainMute(std::cout);
+      std::cout << std::endl;
+      quit_callback_();
+      return;
+    }
+  }
+
+  void FormatGainMute(std::ostream& os) {
+    int level = PerceivedLevel::GainToLevel(system_audio_gain_db_, kLevelMax);
+
+    os << std::string(level, '=') << "|" << std::string(kLevelMax - level, '-');
+
+    if (system_audio_gain_db_ == fuchsia::media::kMutedGain) {
+      os << " -infinity db";
+    } else if (system_audio_gain_db_ == kUnityGain) {
+      os << " 0.0 db";
+    } else {
+      os << " " << std::fixed << std::setprecision(1) << system_audio_gain_db_
+         << "db";
     }
 
-    audio_policy_service_->GetStatus(
-        version, [this](uint64_t version, AudioPolicyStatus status) {
-          HandleStatus(version, fidl::MakeOptional(std::move(status)));
-        });
+    if (system_audio_muted_) {
+      os << " muted";
+    }
   }
 
   // Calls |HandleKeystroke| on the message loop when console input is ready.
@@ -198,20 +186,20 @@ class VolApp {
       case '+':
       case 'A':  // Because <esc>[A is the up key
       case 'C':  // Because <esc>[C is the right key
-        audio_policy_service_->SetSystemAudioGain(PerceivedLevel::LevelToGain(
+        audio_->SetSystemGain(PerceivedLevel::LevelToGain(
             PerceivedLevel::GainToLevel(system_audio_gain_db_, kLevelMax) + 1,
             kLevelMax));
         break;
       case '-':
       case 'B':  // Because <esc>[B is the down key
       case 'D':  // Because <esc>[D is the left key
-        audio_policy_service_->SetSystemAudioGain(PerceivedLevel::LevelToGain(
+        audio_->SetSystemGain(PerceivedLevel::LevelToGain(
             PerceivedLevel::GainToLevel(system_audio_gain_db_, kLevelMax) - 1,
             kLevelMax));
         break;
       case 'm':
       case 'M':
-        audio_policy_service_->SetSystemAudioMute(!system_audio_muted_);
+        audio_->SetSystemMute(!system_audio_muted_);
         break;
       case '\n':
       case 'q':
@@ -228,7 +216,7 @@ class VolApp {
 
   std::unique_ptr<fuchsia::sys::StartupContext> startup_context_;
   fit::closure quit_callback_;
-  audio_policy::AudioPolicyPtr audio_policy_service_;
+  fuchsia::media::AudioPtr audio_;
   bool interactive_ = true;
   bool mute_ = false;
   bool unmute_ = false;

@@ -1,8 +1,7 @@
 {
     "imports": [
         "garnet/packages/prod/media_audio",
-        "garnet/packages/prod/media_player",
-        "garnet/packages/prod/media_policy"
+        "garnet/packages/prod/media_player"
     ],
     "packages": {
         "net_media_service": "//garnet/bin/media/net_media_service",

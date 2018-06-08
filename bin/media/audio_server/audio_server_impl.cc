@@ -20,8 +20,9 @@ AudioServerImpl::AudioServerImpl() : device_manager_(this) {
   auto service =
       fbl::AdoptRef(new fs::Service([this](zx::channel ch) -> zx_status_t {
         bindings_.AddBinding(
-            this,
-            fidl::InterfaceRequest<fuchsia::media::Audio>(std::move(ch)));
+            this, fidl::InterfaceRequest<fuchsia::media::Audio>(std::move(ch)));
+        bindings_.bindings().back()->events().SystemGainMuteChanged(
+            system_gain_db_, system_muted_);
         return ZX_OK;
       }));
   outgoing_.public_dir()->AddEntry(fuchsia::media::Audio::Name_,
@@ -30,6 +31,8 @@ AudioServerImpl::AudioServerImpl() : device_manager_(this) {
   // Stash a pointer to our async object.
   async_ = async_get_default();
   FXL_DCHECK(async_);
+
+  // TODO(dalesat): Load the gain/mute values.
 
   // TODO(johngro) : See MG-940
   //
@@ -95,12 +98,52 @@ void AudioServerImpl::CreateCapturer(
       std::move(audio_capturer_request), this, loopback));
 }
 
-void AudioServerImpl::SetMasterGain(float db_gain) {
+void AudioServerImpl::SetSystemGain(float db_gain) {
+  db_gain = std::max(std::min(db_gain, kMaxSystemAudioGain),
+                     fuchsia::media::kMutedGain);
+
+  if (system_gain_db_ == db_gain) {
+    return;
+  }
+
+  if (db_gain == fuchsia::media::kMutedGain) {
+    // System audio gain is being set to |kMutedGain|. This implicitly mutes
+    // system audio.
+    system_muted_ = true;
+  } else if (system_gain_db_ == fuchsia::media::kMutedGain) {
+    // System audio was muted, because gain was set to |kMutedGain|. We're
+    // raising the gain now, so we unmute.
+    system_muted_ = false;
+  }
+
+  system_gain_db_ = db_gain;
+
   device_manager_.SetMasterGain(db_gain);
+  NotifyGainMuteChanged();
 }
 
-void AudioServerImpl::GetMasterGain(GetMasterGainCallback cbk) {
-  cbk(device_manager_.master_gain());
+void AudioServerImpl::SetSystemMute(bool muted) {
+  if (system_gain_db_ == fuchsia::media::kMutedGain) {
+    // Keep audio muted if system audio gain is set to |kMutedGain|.
+    muted = true;
+  }
+
+  if (system_muted_ == muted) {
+    return;
+  }
+
+  system_muted_ = muted;
+
+  device_manager_.SetMasterGain(fuchsia::media::kMutedGain);
+  NotifyGainMuteChanged();
+}
+
+void AudioServerImpl::NotifyGainMuteChanged() {
+  for (auto& binding : bindings_.bindings()) {
+    binding->events().SystemGainMuteChanged(system_gain_db_, system_muted_);
+  }
+
+  // TODO(dalesat): Save the gain/mute values.
 }
 
 void AudioServerImpl::DoPacketCleanup() {

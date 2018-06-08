@@ -36,13 +36,15 @@ class AudioServerImpl : public fuchsia::media::Audio {
       fidl::InterfaceRequest<fuchsia::media::AudioRenderer> audio_renderer,
       fidl::InterfaceRequest<fuchsia::media::MediaRenderer> media_renderer)
       final;
-  void CreateRendererV2(fidl::InterfaceRequest<fuchsia::media::AudioRenderer2>
-                            audio_renderer) final;
   void CreateCapturer(fidl::InterfaceRequest<fuchsia::media::AudioCapturer>
                           audio_capturer_request,
                       bool loopback) final;
-  void SetMasterGain(float db_gain) final;
-  void GetMasterGain(GetMasterGainCallback cbk) final;
+
+  void CreateRendererV2(fidl::InterfaceRequest<fuchsia::media::AudioRenderer2>
+                            audio_renderer) final;
+
+  void SetSystemGain(float db_gain) final;
+  void SetSystemMute(bool muted) final;
 
   // Called (indirectly) by AudioOutputs to schedule the callback for a
   // packet was queued to an AudioRenderer.
@@ -67,6 +69,11 @@ class AudioServerImpl : public fuchsia::media::Audio {
   AudioDeviceManager& GetDeviceManager() { return device_manager_; }
 
  private:
+  static constexpr float kDefaultSystemGainDb = -12.0f;
+  static constexpr bool kDefaultSystemMuted = false;
+  static constexpr float kMaxSystemAudioGain = 0.0f;
+
+  void NotifyGainMuteChanged();
   void Shutdown();
   void DoPacketCleanup();
 
@@ -89,6 +96,9 @@ class AudioServerImpl : public fuchsia::media::Audio {
       FXL_GUARDED_BY(cleanup_queue_mutex_);
   bool cleanup_scheduled_ FXL_GUARDED_BY(cleanup_queue_mutex_) = false;
   bool shutting_down_ = false;
+
+  float system_gain_db_ = kDefaultSystemGainDb;
+  bool system_muted_ = kDefaultSystemMuted;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(AudioServerImpl);
 };
