@@ -72,10 +72,10 @@ class VirtioVsock
              (key.remote_port << 16);
     }
   };
-  struct Connection {
+  class Connection {
+   public:
     ~Connection();
 
-    uint16_t op = 0;
     uint32_t flags = 0;
     uint32_t rx_cnt = 0;
     uint32_t tx_cnt = 0;
@@ -87,9 +87,15 @@ class VirtioVsock
     async::Wait tx_wait;
     fuchsia::guest::SocketAcceptor::AcceptCallback acceptor;
 
+    uint16_t op() const { return op_; }
+    void UpdateOp(uint16_t op);
+
     uint32_t peer_free() const {
       return peer_buf_alloc - (tx_cnt - peer_fwd_cnt);
     }
+
+   private:
+    uint16_t op_ = VIRTIO_VSOCK_OP_REQUEST;
   };
   using ConnectionMap =
       std::unordered_map<ConnectionKey, fbl::unique_ptr<Connection>,
