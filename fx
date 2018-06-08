@@ -8,7 +8,7 @@ function get_build_dir {
 }
 
 function commands {
-  local cmds="$(ls "${fuchsia_dir}/scripts/devshell" | grep -v lib)"
+  local cmds="$(ls "${fuchsia_dir}/scripts/devshell" | grep -v -e '^lib$' -e '^tests$')"
 
   local newline=$'\n'
   local build_dir=$(get_build_dir)
