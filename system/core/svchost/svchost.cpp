@@ -117,6 +117,8 @@ static constexpr const char* deprecated_services[] = {
     // fdio name for Netstack. Will be removed with the new interfaces defined
     // in NET-863.
     "net.Netstack",
+    // TODO(IN-458): This entry is temporary, until IN-458 is resolved.
+    "fuchsia.tracing.TraceController",
     nullptr,
     // DO NOT ADD MORE ENTRIES TO THIS LIST.
     // Tests should not be accessing services from the environment. Instead,
