@@ -8,7 +8,7 @@
 #include <memory>
 #include <set>
 
-#include <tts/cpp/fidl.h>
+#include <fuchsia/tts/cpp/fidl.h>
 
 #include "lib/app/cpp/startup_context.h"
 
@@ -24,9 +24,10 @@ class TtsServiceImpl {
   zx_status_t Init();
 
  private:
-  class Client : public TtsService {
+  class Client : public fuchsia::tts::TtsService {
    public:
-    Client(TtsServiceImpl* owner, fidl::InterfaceRequest<TtsService> request);
+    Client(TtsServiceImpl* owner,
+           fidl::InterfaceRequest<fuchsia::tts::TtsService> request);
     ~Client();
 
     void Shutdown();

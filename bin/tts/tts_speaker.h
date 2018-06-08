@@ -9,10 +9,10 @@
 #include <thread>
 
 #include <fuchsia/media/cpp/fidl.h>
+#include <fuchsia/tts/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/vmo-utils/vmo_mapper.h>
 #include <lib/fit/function.h>
-#include <tts/cpp/fidl.h>
 #include <zircon/types.h>
 
 #include "lib/app/cpp/startup_context.h"
