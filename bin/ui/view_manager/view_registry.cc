@@ -410,7 +410,9 @@ void ViewRegistry::RequestFocus(ViewContainerState* container_state,
 
   // Set active focus chain for this view tree
   ViewTreeState* tree_state = child_stub->tree();
-  tree_state->RequestFocus(child_stub);
+  if (tree_state) {
+    tree_state->RequestFocus(child_stub);
+  }
 }
 
 void ViewRegistry::OnViewResolved(
@@ -916,9 +918,9 @@ void ViewRegistry::DeliverEvent(
 
   // TODO(SCN-743) Remove this stub code once there is a proper design for A11y
   // integration with Scenic.
-  if (event.is_pointer()
-      && event.pointer().type == fuchsia::ui::input::PointerEventType::TOUCH
-      && event.pointer().phase == fuchsia::ui::input::PointerEventPhase::DOWN) {
+  if (event.is_pointer() &&
+      event.pointer().type == fuchsia::ui::input::PointerEventType::TOUCH &&
+      event.pointer().phase == fuchsia::ui::input::PointerEventPhase::DOWN) {
     A11yNotifyViewSelected(view_token);
   }
 
@@ -1002,14 +1004,16 @@ ViewTreeState* ViewRegistry::FindViewTree(uint32_t view_tree_token_value) {
 }
 
 void ViewRegistry::A11yNotifyViewSelected(
-    ::fuchsia::ui::views_v1_token::ViewToken view_token){
+    ::fuchsia::ui::views_v1_token::ViewToken view_token) {
   auto view_elem = views_by_token_.find(view_token.value);
   if (view_elem != views_by_token_.end()) {
-    fuchsia::sys::ServiceProvider* a11y_provider = view_elem->second->
-        GetServiceProviderIfSupports(fuchsia::ui::a11y::A11yClient::Name_);
+    fuchsia::sys::ServiceProvider* a11y_provider =
+        view_elem->second->GetServiceProviderIfSupports(
+            fuchsia::ui::a11y::A11yClient::Name_);
     if (a11y_provider != nullptr) {
-      auto a11y_client = fuchsia::sys::ConnectToService
-          <fuchsia::ui::a11y::A11yClient>(a11y_provider);
+      auto a11y_client =
+          fuchsia::sys::ConnectToService<fuchsia::ui::a11y::A11yClient>(
+              a11y_provider);
       a11y_client->NotifyViewSelected();
     }
   }
