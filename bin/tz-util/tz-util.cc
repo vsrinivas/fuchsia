@@ -6,7 +6,7 @@
 
 #include <zircon/syscalls.h>
 
-#include <time_zone/cpp/fidl.h>
+#include <fuchsia/timezone/cpp/fidl.h>
 #include "lib/app/cpp/environment_services.h"
 #include "lib/app/cpp/startup_context.h"
 #include "lib/fxl/command_line.h"
@@ -77,7 +77,7 @@ class TzUtil {
     std::cout << std::endl;
   }
 
-  time_zone::TimezoneSyncPtr timezone_;
+  fuchsia::timezone::TimezoneSyncPtr timezone_;
 };
 
 int main(int argc, char** argv) {

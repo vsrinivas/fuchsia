@@ -5,7 +5,7 @@
 import("//build/fidl/fidl.gni")
 
 fidl("fidl") {
-  name = "time_zone"
+  name = "fuchsia.timezone"
 
   sources = [
     "time_zone.fidl"

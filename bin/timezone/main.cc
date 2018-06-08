@@ -14,8 +14,8 @@ class MainService {
  public:
   MainService()
       : app_context_(fuchsia::sys::StartupContext::CreateFromStartupInfo()) {
-    app_context_->outgoing().AddPublicService<Timezone>(
-        [this](fidl::InterfaceRequest<Timezone> request) {
+    app_context_->outgoing().AddPublicService<fuchsia::timezone::Timezone>(
+        [this](fidl::InterfaceRequest<fuchsia::timezone::Timezone> request) {
           timezone_.AddBinding(std::move(request));
         });
   }

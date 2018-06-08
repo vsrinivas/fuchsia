@@ -7,7 +7,7 @@
 
 #include <vector>
 
-#include <time_zone/cpp/fidl.h>
+#include <fuchsia/timezone/cpp/fidl.h>
 #include "lib/fidl/cpp/binding_set.h"
 #include "third_party/icu/source/common/unicode/strenum.h"
 
@@ -25,7 +25,7 @@ namespace time_zone {
 //
 // For information on ICU ID's and timezone information see:
 // http://userguide.icu-project.org/formatparse/datetime
-class TimezoneImpl : public Timezone {
+class TimezoneImpl : public fuchsia::timezone::Timezone {
  public:
   // Constructs the time service with a caller-owned application context.
   TimezoneImpl();
@@ -37,14 +37,14 @@ class TimezoneImpl : public Timezone {
   void SetTimezone(fidl::StringPtr timezone_id,
                    SetTimezoneCallback callback) override;
   void GetTimezoneId(GetTimezoneIdCallback callback) override;
-  void Watch(fidl::InterfaceHandle<TimezoneWatcher> watcher) override;
+  void Watch(fidl::InterfaceHandle<fuchsia::timezone::TimezoneWatcher> watcher) override;
 
-  void AddBinding(fidl::InterfaceRequest<Timezone> request);
+  void AddBinding(fidl::InterfaceRequest<fuchsia::timezone::Timezone> request);
 
  private:
   bool Init();
   // Destroys a watcher proxy (called upon a connection error).
-  void ReleaseWatcher(TimezoneWatcher* watcher);
+  void ReleaseWatcher(fuchsia::timezone::TimezoneWatcher* watcher);
   // Alerts all watchers when an update has occurred.
   void NotifyWatchers(const fidl::StringPtr& new_timezone_id);
   // Returns true if |timezone_id| is a valid timezone.
@@ -56,8 +56,8 @@ class TimezoneImpl : public Timezone {
   // Set to true iff |icu_data_| has been mapped, and the data contained therein
   // is the correct format (when Init() is successful).
   bool valid_;
-  fidl::BindingSet<Timezone> bindings_;
-  std::vector<TimezoneWatcherPtr> watchers_;
+  fidl::BindingSet<fuchsia::timezone::Timezone> bindings_;
+  std::vector<fuchsia::timezone::TimezoneWatcherPtr> watchers_;
 };
 
 }  // namespace time_zone
