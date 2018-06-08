@@ -9,8 +9,8 @@ import (
 	"strings"
 	"sync"
 
-	"fidl/amber"
 	"fidl/bindings"
+	"fidl/fuchsia/amber"
 
 	"amber/daemon"
 	"amber/lg"

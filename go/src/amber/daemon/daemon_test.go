@@ -17,7 +17,7 @@ import (
 	"amber/pkg"
 	"amber/source"
 
-	"fidl/amber"
+	"fidl/fuchsia/amber"
 )
 
 var letters = []rune("1234567890abcdef")

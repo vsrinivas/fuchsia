@@ -20,7 +20,7 @@ import (
 	"amber/pkg"
 	"amber/source"
 
-	"fidl/amber"
+	"fidl/fuchsia/amber"
 )
 
 var DstUpdate = "/pkgfs/install/pkg"

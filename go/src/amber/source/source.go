@@ -12,7 +12,7 @@ import (
 
 	"amber/pkg"
 
-	"fidl/amber"
+	"fidl/fuchsia/amber"
 )
 
 // ErrNoUpdate is returned if no update is available

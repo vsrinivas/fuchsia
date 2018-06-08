@@ -9,7 +9,7 @@ import (
 	"app/context"
 	"encoding/hex"
 	"encoding/json"
-	"fidl/amber"
+	"fidl/fuchsia/amber"
 	"flag"
 	"fmt"
 	"log"

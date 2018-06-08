@@ -6,7 +6,7 @@ package main
 
 import (
 	"app/context"
-	"fidl/amber"
+	"fidl/fuchsia/amber"
 )
 
 func connect(ctx *context.Context) (*amber.ControlInterface, amber.ControlInterfaceRequest) {

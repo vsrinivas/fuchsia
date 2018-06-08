@@ -21,7 +21,7 @@ import (
 	"amber/lg"
 	"amber/pkg"
 
-	"fidl/amber"
+	"fidl/fuchsia/amber"
 
 	tuf "github.com/flynn/go-tuf/client"
 	tuf_data "github.com/flynn/go-tuf/data"

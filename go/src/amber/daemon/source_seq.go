@@ -15,7 +15,7 @@ import (
 	"amber/pkg"
 	"amber/source"
 
-	"fidl/amber"
+	"fidl/fuchsia/amber"
 )
 
 // SourceKeeper wraps a Source and performs admission control for operations on

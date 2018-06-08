@@ -15,7 +15,7 @@ import (
 	"strings"
 
 	"app/context"
-	"fidl/amber"
+	"fidl/fuchsia/amber"
 	"syscall/zx"
 	"syscall/zx/zxwait"
 )
