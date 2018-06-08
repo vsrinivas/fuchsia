@@ -104,7 +104,7 @@ static constexpr const char* deprecated_services[] = {
     "fuchsia.devicesettings.DeviceSettingsManager",
     "fuchsia.logger.Log",
     "fuchsia.logger.LogSink",
-    "fuchsia.media.AudioServer",
+    "fuchsia.media.Audio",
     "fuchsia.mediaplayer.MediaPlayer",
     "fuchsia.netstack.Netstack",
     "fuchsia.power.PowerManager",
