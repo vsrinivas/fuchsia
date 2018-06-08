@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import 'dart:async';
-import 'dart:convert';
-import 'dart:io';
+import "dart:async";
+import "dart:convert";
+import "dart:io";
 
 class Blob {
   String hash;
@@ -25,6 +25,20 @@ class Package {
   Map<String, Blob> blobsByPath;
 }
 
+String pathJoin(String part1,
+                String part2, [
+                String part3]) {
+  var buffer = new StringBuffer();
+  buffer.write(part1);
+  if (!part1.endsWith("/")) buffer.write("/");
+  buffer.write(part2);
+  if (part3 != null) {
+      if (!part2.endsWith("/")) buffer.write("/");
+      buffer.write(part3);
+  }
+  return buffer.toString();
+}
+
 class BlobStats {
   Directory buildDir;
   String suffix;
@@ -38,10 +52,10 @@ class BlobStats {
   BlobStats(Directory this.buildDir, String this.suffix);
 
   Future addManifest(String path) async {
-    var lines = await new File(buildDir.path + path).readAsLines();
+    var lines = await new File(pathJoin(buildDir.path, path)).readAsLines();
     for (var line in lines) {
       var path = line.split("=").last;
-      pendingFiles.add(new File(buildDir.path + path));
+      pendingFiles.add(new File(pathJoin(buildDir.path, path)));
     }
   }
 
@@ -237,53 +251,46 @@ class BlobStats {
 
   void packagesToChromiumBinarySizeTree() async {
     var rootTree = {};
-    rootTree['n'] = 'packages';
-    rootTree['children'] = new List();
-    rootTree['k'] = 'p';  // kind=path
+    rootTree["n"] = "packages";
+    rootTree["children"] = new List();
+    rootTree["k"] = "p";  // kind=path
     for (var pkg in packages) {
-      var parts = pkg.name.split('/');
+      var parts = pkg.name.split("/");
       var pkgName = parts.length > 1 ? parts[parts.length - 2] : parts.last;
       var pkgTree = {};
-      pkgTree['n'] = pkgName;
-      pkgTree['children'] = new List();
-      pkgTree['k'] = 'p';  // kind=path
-      rootTree['children'].add(pkgTree);
+      pkgTree["n"] = pkgName;
+      pkgTree["children"] = new List();
+      pkgTree["k"] = "p";  // kind=path
+      rootTree["children"].add(pkgTree);
       pkg.blobsByPath.forEach((path, blob) {
-        var blobName = path.split('/').last;
+        var blobName = path.split("/").last;
         var blobTree = {};
-        blobTree['n'] = blobName;
-        blobTree['k'] = 's';  // kind=symbol
-        blobTree['t'] = 'T';  // type=global text
-        blobTree['value'] = blob.proportional;
-        pkgTree['children'].add(blobTree);
+        blobTree["n"] = blobName;
+        blobTree["k"] = "s";  // kind=symbol
+        blobTree["t"] = "T";  // type=global text
+        blobTree["value"] = blob.proportional;
+        pkgTree["children"].add(blobTree);
       });
     }
 
-    var sink = new File(buildDir.path + "data.js").openWrite();
-    sink.write('var tree_data=');
+    var sink = new File(pathJoin(buildDir.path, "data.js")).openWrite();
+    sink.write("var tree_data=");
     sink.write(JSON.encode(rootTree));
     await sink.close();
 
-    await new Directory(buildDir.path + 'd3').create(recursive: true);
-    var d3Dir = buildDir.path + "../../third_party/dart/runtime/third_party/d3/src/";
-    for (var file in ['LICENSE', 'd3.js']) {
-      await new File(d3Dir + file).copy(buildDir.path + "d3/" + file);
+    await new Directory(pathJoin(buildDir.path, "d3")).create(recursive: true);
+    var d3Dir = buildDir.path + "/../../third_party/dart/runtime/third_party/d3/src/";
+    for (var file in ["LICENSE", "d3.js"]) {
+      await new File(d3Dir + file).copy(pathJoin(buildDir.path, "d3", file));
     }
-    var templateDir = buildDir.path + "../../third_party/dart/runtime/third_party/binary_size/src/template/";
-    for (var file in ['index.html', 'D3SymbolTreeMap.js']) {
-      await new File(templateDir + file).copy(buildDir.path + file);
+    var templateDir = pathJoin(buildDir.path, "../../third_party/dart/runtime/third_party/binary_size/src/template/");
+    for (var file in ["index.html", "D3SymbolTreeMap.js"]) {
+      await new File(templateDir + file).copy(pathJoin(buildDir.path, file));
     }
 
     print("");
-    print("  Wrote visualization to file://" + buildDir.path + "index.html");
+    print("  Wrote visualization to file://" + pathJoin(buildDir.path, "index.html"));
   }
-}
-
-Future<Directory> getBuildDir() async {
-  var result = await Process.run("fx", ["get-build-dir"]);
-  var path = result.stdout.trim();
-  if (!path.endsWith("/")) path += "/";
-  return new Directory(path);
 }
 
 Future main(List<String> args) async {
@@ -292,7 +299,7 @@ Future main(List<String> args) async {
     suffix = args[0];
   }
 
-  var stats = new BlobStats(await getBuildDir(), suffix);
+  var stats = new BlobStats(Directory.current, suffix);
   await stats.addManifest("blob.manifest");
   await stats.computeBlobsInParallel(Platform.numberOfProcessors);
   await stats.computePackagesInParallel(Platform.numberOfProcessors);
