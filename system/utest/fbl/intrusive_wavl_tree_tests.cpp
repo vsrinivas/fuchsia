@@ -543,7 +543,8 @@ RUN_NAMED_TEST("LowerBound (RefPtr)",            RPTE::LowerBoundTest)
 ////////////////////////////
 // WAVLTree specific tests.
 ////////////////////////////
-RUN_NAMED_TEST("BalanceTest", WAVLBalanceTest)
+// ZX-2230: This can take more than 20 seconds in CI, so mark it medium.
+RUN_NAMED_TEST_MEDIUM("BalanceTest", WAVLBalanceTest)
 
 END_TEST_CASE(wavl_tree_tests);
 

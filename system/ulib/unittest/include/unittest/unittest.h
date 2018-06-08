@@ -307,6 +307,11 @@ void unittest_cancel_timeout(void);
 #define RUN_TEST_LARGE(test) RUN_NAMED_TEST_TYPE(#test, test, TEST_LARGE, false)
 #define RUN_TEST_PERFORMANCE(test) RUN_NAMED_TEST_TYPE(#test, test, TEST_PERFORMANCE, false)
 
+#define RUN_NAMED_TEST_SMALL(name, test) RUN_NAMED_TEST_TYPE(name, test, TEST_SMALL, false)
+#define RUN_NAMED_TEST_MEDIUM(name, test) RUN_NAMED_TEST_TYPE(name, test, TEST_MEDIUM, false)
+#define RUN_NAMED_TEST_LARGE(name, test) RUN_NAMED_TEST_TYPE(name, test, TEST_LARGE, false)
+#define RUN_NAMED_TEST_PERFORMANCE(name, test) RUN_NAMED_TEST_TYPE(name, test, TEST_PERFORMANCE, false)
+
 // "RUN_TEST" implies the test is small
 #define RUN_TEST(test) RUN_NAMED_TEST_TYPE(#test, test, TEST_SMALL, false)
 #define RUN_NAMED_TEST(name, test) RUN_NAMED_TEST_TYPE(name, test, TEST_SMALL, false)
