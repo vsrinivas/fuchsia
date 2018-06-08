@@ -245,7 +245,8 @@ View::View(async::Loop* loop, fuchsia::sys::StartupContext* startup_context,
     video_source_ = std::make_unique<CameraClient>();
   }
 
-  zx_status_t open_status = video_source_->Open(0);
+  zx_status_t open_status =
+      video_source_->Open(0, [this] { this->image_pipe_.Unbind(); });
   if (open_status != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to open the camera. Quitting!";
     // TODO(garratt): This does not actually quit.

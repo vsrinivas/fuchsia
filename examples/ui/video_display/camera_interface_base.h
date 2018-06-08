@@ -15,6 +15,7 @@
 namespace video_display {
 
 using SetFormatCallback = fit::function<zx_status_t(uint64_t)>;
+using OnShutdownCallback = fit::function<void()>;
 using GetFormatCallback = fit::function<zx_status_t(
     const std::vector<camera_video_format_t>& out_formats)>;
 using FrameNotifyCallback =
@@ -33,7 +34,9 @@ class CameraInterfaceBase {
   virtual zx_status_t Start(FrameNotifyCallback frame_notify_callback) = 0;
   virtual zx_status_t ReleaseFrame(uint64_t data_offset) = 0;
   virtual zx_status_t Stop() = 0;
-  virtual zx_status_t Open(uint32_t dev_id) = 0;
+  // The callback on shutdown may be called from an arbitrary thread, depending
+  // on implimentation. See the derived class for more detail.
+  virtual zx_status_t Open(uint32_t dev_id, OnShutdownCallback callback) = 0;
   virtual void Close() = 0;
   virtual ~CameraInterfaceBase() {}
 };

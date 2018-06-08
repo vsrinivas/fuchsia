@@ -34,38 +34,42 @@ namespace video_display {
 CameraClient::CameraClient() = default;
 
 CameraClient::~CameraClient() {
+  // Destruction is the one case where we don't need to notify the caller
+  // about shutting down.
   Close();
 }
 
-zx_status_t CameraClient::Open(uint32_t dev_id) {
+zx_status_t CameraClient::Open(uint32_t dev_id,
+                               OnShutdownCallback shutdown_callback) {
   char dev_path[64] = {0};
   snprintf(dev_path, sizeof(dev_path), "/dev/class/camera/%03u", dev_id);
 
   fxl::UniqueFD dev_node(::open(dev_path, O_RDONLY));
   if (!dev_node.is_valid()) {
     FXL_LOG(ERROR) << "CameraClient failed to open device node at \""
-                     << dev_path << "\". (" << strerror(errno) << " : "
-                     << errno << ")";
+                   << dev_path << "\". (" << strerror(errno) << " : " << errno
+                   << ")";
     return ZX_ERR_IO;
   }
 
-  return OpenChannel(std::move(dev_node));
+  return OpenChannel(std::move(dev_node), std::move(shutdown_callback));
 }
 
-zx_status_t CameraClient::Open(int dir_fd, const std::string& name) {
+zx_status_t CameraClient::Open(int dir_fd, const std::string& name,
+                               OnShutdownCallback shutdown_callback) {
   // Open the device node.
   fxl::UniqueFD dev_node(::openat(dir_fd, name.c_str(), O_RDONLY));
   if (!dev_node.is_valid()) {
-    FXL_LOG(WARNING) << "CameraClient failed to open device node at \""
-                     << name << "\". (" << strerror(errno) << " : " << errno
-                     << ")";
+    FXL_LOG(WARNING) << "CameraClient failed to open device node at \"" << name
+                     << "\". (" << strerror(errno) << " : " << errno << ")";
     return ZX_ERR_BAD_STATE;
   }
 
-  return OpenChannel(std::move(dev_node));
+  return OpenChannel(std::move(dev_node), std::move(shutdown_callback));
 }
 
-zx_status_t CameraClient::OpenChannel(fxl::UniqueFD dev_node) {
+zx_status_t CameraClient::OpenChannel(fxl::UniqueFD dev_node,
+                                      OnShutdownCallback shutdown_callback) {
   if (!IsClosed()) {
     FXL_LOG(ERROR) << "Bad State";
     return ZX_ERR_BAD_STATE;
@@ -74,9 +78,13 @@ zx_status_t CameraClient::OpenChannel(fxl::UniqueFD dev_node) {
     FXL_LOG(ERROR) << "channel has already been opened!";
     return ZX_ERR_BAD_STATE;
   }
+  if (!shutdown_callback) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+  client_shutdown_notifier_ = std::move(shutdown_callback);
 
   ssize_t res = ::fdio_ioctl(dev_node.get(), CAMERA_IOCTL_GET_CHANNEL, nullptr,
-          0, &stream_ch_, sizeof(stream_ch_));
+                             0, &stream_ch_, sizeof(stream_ch_));
 
   if (res != sizeof(stream_ch_)) {
     FXL_LOG(ERROR) << "Failed to obtain channel (res " << res << ")";
@@ -222,8 +230,7 @@ zx_status_t CameraClient::SetFormat(const camera_video_format_t& format,
 }
 
 zx_status_t CameraClient::OnSetFormatResp(
-    camera::camera_proto::SetFormatResp resp,
-    zx::channel resp_handle_out) {
+    camera::camera_proto::SetFormatResp resp, zx::channel resp_handle_out) {
   CHECK_RESP_RESULT(resp, "SetFormat");
 
   zx_status_t status = CheckConfigurationState(CameraState::SetFormatRequested);
@@ -273,7 +280,11 @@ zx_status_t CameraClient::SetBuffer(const zx::vmo& buffer_vmo) {
 }
 
 zx_status_t CameraClient::ReleaseFrame(uint64_t data_offset) {
-  if (!IsStreaming() && !IsShuttingDown()) {
+  if (IsClosed()) {
+    // We shut down, so ignore these notifications.
+    return ZX_OK;
+  }
+  if (!IsStreaming()) {
     FXL_LOG(ERROR) << "ReleaseFrame called while not streaming.";
     return ZX_ERR_BAD_STATE;
   }
@@ -320,15 +331,10 @@ zx_status_t CameraClient::Start(FrameNotifyCallback frame_notify_callback) {
 
 zx_status_t CameraClient::OnFrameNotify(
     camera::camera_proto::VideoBufFrameNotify resp) {
-  if (!IsStreaming() && !IsShuttingDown()) {
+  if (!IsStreaming()) {
     FXL_LOG(ERROR) << "Unexpected message response (cmd " << resp.hdr.cmd
                    << ", FrameNotify)";
     return ZX_ERR_BAD_STATE;
-  }
-  // If we are trying to shut down, immediatly tell the driver to release the
-  // frames.
-  if (IsShuttingDown()) {
-    return ReleaseFrame(resp.data_vb_offset);
   }
   // frame_notify_callback_ is the one callback we don't clear after calling.
   return frame_notify_callback_(resp);
@@ -378,54 +384,6 @@ zx_status_t CameraClient::Stop() {
   }
   SetConfigurationState(state, CameraState::SetBufferRequested);
   return ZX_OK;
-}
-
-// CameraClient's Shutdown prcedure: (Not yet implimented)
-// Several resources need to be dealt with upon shutdown:
-//  - The channel handles
-//  - The Async waiters
-//  - The memory in the VMO, that a consumer may be holding, or the driver
-//  may be writing to.
-//  Clean up order of operations:
-//  1) Set Internal State
-//     Set our state to shutting down, so if we recieve any more frames, we do
-//     not pass them on to the consumer.
-//  2) Signal the driver
-//     Send a Stop command to the driver, so it will stop writing new frames,
-//     and it can put the hardware in a good state. Ideally, This service
-//     should wait for the response before step 4.  A timeout should be given,
-//     in case the driver has died.
-//  3) Signal the Consumer.
-//     The consumer is signalled by closing the image pipe.
-//     (see image_pipe.fidl) The consumer will signal it is done by signalling
-//     all remaining release fences.  This class does not deal with image
-//     pipes, but should call OnShutdown() to signal the next layer to perform
-//     these operations.  The next layer will make sure that all the buffers
-//     are released, and then call Shutdownchannels()
-//  4) Close the channels.
-//     Now that the vmo is not being used by the driver or the consumer, and
-//     the hardware knows it should be stopping the stream, we can shut down
-//     communication with the driver.  We close both channels, and cancel the
-//     AutoWait objects, so we will not get signaled by any remaining messages.
-void CameraClient::Close() {
-  if (IsClosed()) {
-    return;
-  }
-  // 1) Set State to shutting down:
-  SetShuttingDown(true, true);
-  // Signal Driver:
-  zx_status_t write_status = SendStop();
-  if (write_status != ZX_OK) {
-    // We could not send the stop signal!
-    // TODO(garratt): check the return value, maybe we could retry.
-    // If we can't send the signal, we should expect a response from the
-    // driver...
-    SetShuttingDown(false, true);
-  }
-  // Signal Consumer
-  // Set Shutdown timer
-  // Until the above is implemented just call the consumer shutdown ourselves:
-  ShutDown();
 }
 
 struct JustResultResp {
@@ -494,24 +452,10 @@ zx_status_t CameraClient::ProcessBufferChannel() {
       SetStreaming();
       return ZX_OK;
     case CAMERA_VB_CMD_STOP:
-      CHECK_RESP(CAMERA_VB_CMD_STOP, stop, "");
-      // Check if we are shutting down:
-      bool waiting_for_driver, waiting_for_consumer;
-      if (IsShuttingDown(&waiting_for_driver, &waiting_for_consumer)) {
-        // If we are shutting down, we are now done waiting for the
-        // driver.  Even if there was an error, we can't do much about
-        // it at this point.
-        if (!waiting_for_driver) {
-          FXL_LOG(ERROR) << "Unexpected stop response during shutdown.";
-        }
-        SetShuttingDown(false, waiting_for_consumer);
-        return ZX_OK;
-      }
-      // If we are not shutting down, but failed to stop, we will shutdown!
-      if (resp.stop.result != ZX_OK) {
-        FXL_LOG(ERROR) << "Failed to Stop. Shutting down!";
-      }
-      return resp.stop.result;
+      // The driver will close the channel(s) shortly which will trigger a
+      // channel read error soon, so no need to trigger anything here.
+      CHECK_RESP(CAMERA_VB_CMD_STOP, stop, "Stop");
+      return ZX_OK;
     case CAMERA_VB_CMD_FRAME_RELEASE:
       CHECK_RESP(CAMERA_VB_CMD_FRAME_RELEASE, release_frame, "Release");
       return ZX_OK;
@@ -584,7 +528,7 @@ void CameraClient::OnNewCmdMessage(
   if (ret_status != ZX_OK) {
     FXL_LOG(ERROR) << "Error: Got bad status when processing channel ("
                    << ret_status << ")";
-    Close();
+    CloseAndNotify();
     return;
   }
   status = wait->Begin(async);
@@ -608,7 +552,7 @@ void CameraClient::OnNewBufferMessage(
     FXL_LOG(ERROR) << "Error: Got bad status when processing channel ("
                    << ret_status << ")";
     // TODO(garratt): Shut down only this stream, instead of whole process
-    Close();
+    CloseAndNotify();
     return;
   }
   status = wait->Begin(async);
@@ -651,22 +595,6 @@ bool CameraClient::IsStreaming() {
   return state_ == CameraState::Streaming;
 }
 
-bool CameraClient::IsShuttingDown(bool* waiting_for_driver,
-                                  bool* waiting_for_consumer) {
-  fbl::AutoLock lock(&state_lock_);
-  if (state_ & CameraState::ShuttingDown) {
-    uint16_t waits = state_ & ~CameraState::ShuttingDown;
-    if (waiting_for_driver) {
-      *waiting_for_driver = (waits & CameraState::WaitingForDriver);
-    }
-    if (waiting_for_consumer) {
-      *waiting_for_consumer = (waits & CameraState::WaitingForConsumer);
-    }
-    return true;
-  }
-  return false;
-}
-
 bool CameraClient::IsConfiguring() {
   fbl::AutoLock lock(&state_lock_);
   return state_ & CameraState::Configuring;
@@ -680,26 +608,29 @@ void CameraClient::SetStreaming() {
   fbl::AutoLock lock(&state_lock_);
   state_ = CameraState::Streaming;
 }
-void CameraClient::SetShuttingDown(bool waiting_for_driver,
-                                   bool waiting_for_consumer) {
+
+void CameraClient::Close() {
   fbl::AutoLock lock(&state_lock_);
-  if (!waiting_for_driver && !waiting_for_consumer) {
-    state_ = CameraState::ShuttingDown;
-    // Kill the AutoWaiters:
-    cmd_msg_waiter_.Cancel();
-    buff_msg_waiter_.Cancel();
-    // close streams
-    vb_ch_.reset();
-    stream_ch_.reset();
+  state_ = CameraState::Closed;
+  // Kill the AutoWaiters:
+  cmd_msg_waiter_.Cancel();
+  buff_msg_waiter_.Cancel();
+  // close streams
+  vb_ch_.reset();
+  stream_ch_.reset();
+}
+
+void CameraClient::CloseAndNotify() {
+  Close();
+  OnShutdownCallback callback = nullptr;
+  {
+    fbl::AutoLock lock(&state_lock_);
+    if (client_shutdown_notifier_) {
+      callback = std::move(client_shutdown_notifier_);
+    }
   }
-  if (!waiting_for_driver && waiting_for_consumer) {
-    state_ = CameraState::WaitingForConsumer;
-  }
-  if (waiting_for_driver && !waiting_for_consumer) {
-    state_ = CameraState::WaitingForDriver;
-  }
-  if (waiting_for_driver && waiting_for_consumer) {
-    state_ = CameraState::WaitingForBoth;
+  if (callback) {
+    callback();
   }
 }
 

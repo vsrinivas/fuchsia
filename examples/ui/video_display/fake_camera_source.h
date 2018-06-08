@@ -46,7 +46,9 @@ class FakeCameraSource : public CameraInterfaceBase {
 
   // Open the interface.  Does nothing, and ignores the input argument.
   // This function is included for compatibility.
-  zx_status_t Open(uint32_t dev_id) { return ZX_OK; }
+  zx_status_t Open(uint32_t dev_id, OnShutdownCallback shutdown_callback) {
+    return ZX_OK;
+  }
   void Close() {}
 
   // Get the supported formats for the camera.

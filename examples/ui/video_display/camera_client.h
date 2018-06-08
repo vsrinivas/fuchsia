@@ -76,28 +76,25 @@ class CameraClient : public CameraInterfaceBase {
   // Frame notifications may occur after calling this function.
   zx_status_t Stop();
 
+  // Open Functions:
+  // shutdown_callback will be called when this class disconnects from the
+  // device, unless Close() is called, or this class is destructed.
+  // The callback will be called from the async waiter thread.
+
   // Open a device in /dev/class/camera/ with the ID of dev_id.
-  zx_status_t Open(uint32_t dev_id);
+  zx_status_t Open(uint32_t dev_id, OnShutdownCallback shutdown_callback);
 
   // Open a device in by folder decriptor and filename.
-  zx_status_t Open(int dir_fd, const std::string& name);
+  zx_status_t Open(int dir_fd, const std::string& name,
+                   OnShutdownCallback shutdown_callback);
 
-  // Close the stream in a hackish sort of way.
-  // TODO(garratt): Add OnShutdown() callback and ShutdownChannels()
-  // to handle the asyncronous dance of shutting down properly.
-  // See the comment for Close() in camera_client.cc.
+  // Shuts down the interface, by dropping all connections.
+  // It is assumed that the driver will do the right thing when its
+  // channel closes.
+  // Close does not call the OnShutdownCallback passed into Open. It is only
+  // used as a library call, in the destructor, and when things fail in the
+  // Open call.
   void Close();
-
-  // Called by the client when the consumer has released all the handles.
-  void ShutDown() {
-    bool waiting_for_driver = true, waiting_for_consumer;
-    // See if we are shutting down already. If not, we'll call close
-    if (!IsShuttingDown(&waiting_for_driver, &waiting_for_consumer)) {
-      Close();
-    }
-    // either way, we are not waiting for the consumer anymore:
-    SetShuttingDown(waiting_for_driver, false);
-  }
 
  private:
   // The callbacks functions which get called upon incoming messages over the
@@ -122,11 +119,16 @@ class CameraClient : public CameraInterfaceBase {
   zx_status_t ProcessBufferChannel();
 
   // Opens the channel to the device
-  zx_status_t OpenChannel(fxl::UniqueFD dev_node);
+  zx_status_t OpenChannel(fxl::UniqueFD dev_node,
+                          OnShutdownCallback shutdown_callback);
 
   // Send the stop command to the driver.  This differs from the public Stop()
   // which deals with the state of the driver.
   zx_status_t SendStop();
+
+  // Internal Shutdown.  Closes everything and notifies the calling application
+  // that it is shutting down.
+  void CloseAndNotify();
 
   enum CameraState : uint16_t {
       Closed             = 0x0000,
@@ -142,13 +144,7 @@ class CameraClient : public CameraInterfaceBase {
       SetBufferRequested = 0x0231,
       StartRequested     = 0x0251,
       ChannelsMask       = 0x0011,
-
       Streaming          = 0x0400,
-      ShuttingDown       = 0x0800,
-      // The Shutdown states:
-      WaitingForDriver   = 0x0801,
-      WaitingForConsumer = 0x0802,
-      WaitingForBoth     = 0x0803
   };
 
   // ---------  State Machine Functions  ---------------
@@ -168,22 +164,13 @@ class CameraClient : public CameraInterfaceBase {
 
   void SetStreaming();
 
-  // See the description of the Shutdown procedure. When shutting down, we must
-  // wait for the driver and the consumer to release resources.  These
-  // functions break out the two waiting states for easy manipulation.
-  void SetShuttingDown(bool waiting_for_driver = false,
-                       bool waiting_for_consumer = false);
-  // If we are not in a shutting down state, IsShuttingDown will return false,
-  // and the two variables will not be touched.
-  bool IsShuttingDown(bool* waiting_for_driver = nullptr,
-                      bool* waiting_for_consumer = nullptr);
-
   // Callbacks for asyncronous operations.
   // These functions are also used to determine state; if they are defined,
   // then we are waiting for the appropriate response
   SetFormatCallback set_format_callback_ = nullptr;
   GetFormatCallback get_formats_callback_ = nullptr;
   FrameNotifyCallback frame_notify_callback_ = nullptr;
+  OnShutdownCallback client_shutdown_notifier_ = nullptr;
 
   CameraState state_ __TA_GUARDED(state_lock_) = CameraState::Closed;
   fbl::Mutex state_lock_;
