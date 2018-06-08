@@ -82,11 +82,10 @@ func (upMon *SystemUpdateMonitor) Start() {
 		return
 	}
 
-	timerDur := 3 * time.Hour
+	timerDur := time.Hour
 	var timer *time.Timer
 	if upMon.auto {
-		// do the first check almost immediately
-		timer = time.NewTimer(time.Second)
+		timer = time.NewTimer(timerDur)
 	}
 
 	for {

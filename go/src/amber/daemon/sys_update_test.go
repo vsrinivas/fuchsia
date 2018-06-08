@@ -4,7 +4,9 @@
 
 package daemon
 
-import "testing"
+import (
+	"testing"
+)
 
 func TestGreatestIntFromString(t *testing.T) {
 	typicalSet := []string{"0", "1", "2", "3"}
@@ -34,27 +36,23 @@ func TestGreatestIntFromString(t *testing.T) {
 	nan := []string{"1", "2", "red", "blue"}
 	i, s, err = GreatestIntStr(nan)
 	if err == nil {
-		t.Logf("Expected %s to produce NaN error, but no error was produced")
-		t.Fail()
+		t.Errorf("Expected %s to produce NaN error, but no error was produced")
 	} else if _, ok := err.(ErrNan); !ok {
-		t.Logf("Expected %s to produce NaN error, but instead error is %s", nan, err)
-		t.Fail()
+		t.Errorf("Expected %s to produce NaN error, but instead error is %s", nan, err)
 	}
 
 	empty := []string{}
 	i, s, err = GreatestIntStr(empty)
 	if err == nil || err != ErrNoInput {
-		t.Logf("Expected empty set to produce no input error, but instead error is %s", err)
-		t.Fail()
+		t.Errorf("Expected empty set to produce no input error, but instead error is %s", err)
 	}
 }
 
 func checkResults(strs []string, err error, resultInt int, resultStr string, expectedInt int,
 	expectedStr string, t *testing.T) {
 	if err != nil || resultInt != expectedInt || expectedStr != resultStr {
-		t.Logf("Unexpected result, expected integer %d and string %q, but got integer %d and "+
+		t.Errorf("Unexpected result, expected integer %d and string %q, but got integer %d and "+
 			"string %s from strings %s had error", resultInt, resultStr, expectedInt, expectedStr,
 			strs, err)
-		t.Fail()
 	}
 }
