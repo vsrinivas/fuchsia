@@ -275,7 +275,6 @@ void shutdown_interrupts(void) {
 
 void shutdown_interrupts_curr_cpu(void) {
     // TODO(maniscalco): Walk interrupt redirection entries and make sure nothing targets this CPU.
-    PANIC_UNIMPLEMENTED;
 }
 
 #ifdef WITH_DEV_PCIE

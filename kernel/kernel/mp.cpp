@@ -11,6 +11,7 @@
 #include <arch/ops.h>
 #include <assert.h>
 #include <debug.h>
+#include <dev/interrupt.h>
 #include <err.h>
 #include <fbl/algorithm.h>
 #include <inttypes.h>
@@ -25,6 +26,7 @@
 #include <kernel/timer.h>
 #include <lk/init.h>
 #include <platform.h>
+#include <platform/timer.h>
 #include <stdlib.h>
 #include <trace.h>
 #include <zircon/types.h>
@@ -237,10 +239,18 @@ static void mp_unplug_trampoline(void) {
     // should be quick), then this CPU may execute the task.
     mp_set_curr_cpu_online(false);
 
-    spin_unlock(&thread_lock);
-
     // do *not* enable interrupts, we want this CPU to never receive another
     // interrupt
+    spin_unlock(&thread_lock);
+
+    // Stop and then shutdown this CPU's platform timer.
+    platform_stop_timer();
+    platform_shutdown_timer();
+
+    // Shutdown the interrupt controller for this CPU.  On some platforms (arm64 with GIC) receiving
+    // an interrupt at a powered off CPU can result in implementation defined behavior (including
+    // resetting the whole system).
+    shutdown_interrupts_curr_cpu();
 
     // flush all of our caches
     arch_flush_state_and_halt(unplug_done);

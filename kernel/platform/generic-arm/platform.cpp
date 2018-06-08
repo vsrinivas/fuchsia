@@ -20,6 +20,7 @@
 #include <dev/psci.h>
 #include <dev/uart.h>
 #include <kernel/cmdline.h>
+#include <kernel/dpc.h>
 #include <kernel/spinlock.h>
 #include <lk/init.h>
 #include <vm/kstack.h>
@@ -125,71 +126,20 @@ void* platform_get_ramdisk(size_t* size) {
 }
 
 void platform_halt_cpu(void) {
-    psci_cpu_off();
-}
-
-// One of these threads is spun up per CPU and calls halt which does not return.
-static int park_cpu_thread(void* arg) {
-    event_t* shutdown_cplt = (event_t*)arg;
-
-    mp_set_curr_cpu_online(false);
-    mp_set_curr_cpu_active(false);
-
-    arch_disable_ints();
-
-    // Let the thread on the boot CPU know that we're just about done shutting down.
-    event_signal(shutdown_cplt, true);
-
-    // This method will not return because the target cpu has halted.
-    platform_halt_cpu();
-
-    panic("control should never reach here");
-    return -1;
+    uint32_t result = psci_cpu_off();
+    // should have never returned
+    panic("psci_cpu_off returned %u\n", result);
 }
 
 void platform_halt_secondary_cpus(void) {
-    // Make sure that the current thread is pinned to the boot cpu.
-    const thread_t* current_thread = get_current_thread();
-    DEBUG_ASSERT(current_thread->cpu_affinity == (1 << BOOT_CPU_ID));
+    // Ensure the current thread is pinned to the boot CPU.
+    DEBUG_ASSERT(get_current_thread()->cpu_affinity == cpu_num_to_mask(BOOT_CPU_ID));
 
-    // Threads responsible for parking the cores.
-    thread_t* park_thread[SMP_MAX_CPUS];
-
-    // These are signalled when the CPU has almost shutdown.
-    event_t shutdown_cplt[SMP_MAX_CPUS];
-
-    for (uint i = 0; i < arch_max_num_cpus(); i++) {
-        // The boot cpu is going to be performing the remainder of the mexec
-        // for us so we don't want to park that one.
-        if (i == BOOT_CPU_ID) {
-            continue;
-        }
-
-        event_init(&shutdown_cplt[i], false, 0);
-
-        char park_thread_name[20];
-        snprintf(park_thread_name, sizeof(park_thread_name), "park %u", i);
-        park_thread[i] = thread_create(park_thread_name, park_cpu_thread,
-                                       (void*)(&shutdown_cplt[i]), DEFAULT_PRIORITY,
-                                       DEFAULT_STACK_SIZE);
-
-        thread_set_cpu_affinity(park_thread[i], cpu_num_to_mask(i));
-        thread_resume(park_thread[i]);
-    }
-
-    // Wait for all CPUs to signal that they're shutting down.
-    for (uint i = 0; i < arch_max_num_cpus(); i++) {
-        if (i == BOOT_CPU_ID) {
-            continue;
-        }
-        event_wait(&shutdown_cplt[i]);
-    }
-
-    // TODO(gkalsi): Wait for the secondaries to shutdown rather than sleeping.
-    //               After the shutdown thread shuts down the core, we never
-    //               hear from it again, so we wait 1 second to allow each
-    //               thread to shut down. This is somewhat of a hack.
-    thread_sleep_relative(ZX_SEC(1));
+    // "Unplug" online secondary CPUs before halting them.
+    cpu_mask_t primary = cpu_num_to_mask(BOOT_CPU_ID);
+    cpu_mask_t mask = mp_get_online_mask() & ~primary;
+    zx_status_t result = mp_unplug_cpu_mask(mask);
+    DEBUG_ASSERT(result == ZX_OK);
 }
 
 static zx_status_t platform_start_cpu(uint cluster, uint cpu) {

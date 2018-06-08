@@ -29,11 +29,6 @@
 
 static noreturn void do_shutdown(zx_handle_t log, zx_handle_t rroot) {
     printl(log, "Process exited.  Executing \"" SHUTDOWN_COMMAND "\".");
-    // Gracefully shutdown the secondary CPUs first to ensure they release locks that the primary
-    // may attempt to acquire.
-    //
-    // TODO(maniscalco): Have ZX_SYSTEM_POWERCTL_SHUTDOWN cleanly shutdown the secondary CPUs.
-    zx_system_powerctl(rroot, ZX_SYSTEM_POWERCTL_DISABLE_ALL_CPUS_BUT_PRIMARY, NULL);
     zx_system_powerctl(rroot, ZX_SYSTEM_POWERCTL_SHUTDOWN, NULL);
     printl(log, "still here after shutdown!");
     while (true)

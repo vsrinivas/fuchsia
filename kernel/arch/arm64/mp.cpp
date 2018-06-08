@@ -11,6 +11,8 @@
 #include <assert.h>
 #include <dev/interrupt.h>
 #include <err.h>
+#include <kernel/event.h>
+#include <platform.h>
 #include <trace.h>
 #include <zircon/types.h>
 
@@ -103,5 +105,23 @@ void arch_mp_init_percpu(void) {
 }
 
 void arch_flush_state_and_halt(event_t* flush_done) {
-    PANIC_UNIMPLEMENTED;
+    DEBUG_ASSERT(arch_ints_disabled());
+    event_signal(flush_done, false);
+    platform_halt_cpu();
+    panic("control should never reach here\n");
+}
+
+zx_status_t arch_mp_prep_cpu_unplug(uint cpu_id) {
+    if (cpu_id == 0 || cpu_id >= arm_num_cpus) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+    return ZX_OK;
+}
+
+zx_status_t arch_mp_cpu_unplug(uint cpu_id) {
+    // we do not allow unplugging the bootstrap processor
+    if (cpu_id == 0 || cpu_id >= arm_num_cpus) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+    return ZX_OK;
 }

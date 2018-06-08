@@ -25,16 +25,8 @@ typedef enum {
 
 typedef enum {
     HALT_REASON_UNKNOWN = 0,
-    HALT_REASON_POR,            // Cold-boot
-    HALT_REASON_HW_WATCHDOG,    // HW watchdog timer
-    HALT_REASON_LOWVOLTAGE,     // LV/Brownout condition
-    HALT_REASON_HIGHVOLTAGE,    // High voltage condition.
-    HALT_REASON_THERMAL,        // Thermal reason (probably overtemp)
-    HALT_REASON_OTHER_HW,       // Other hardware (platform) specific reason
     HALT_REASON_SW_RESET,       // Generic Software Initiated Reboot
-    HALT_REASON_SW_WATCHDOG,    // Reboot triggered by a SW watchdog timer
     HALT_REASON_SW_PANIC,       // Reboot triggered by a SW panic or ASSERT
-    HALT_REASON_SW_UPDATE,      // SW triggered reboot in order to begin firmware update
 } platform_halt_reason;
 
 /* current time in nanoseconds */
@@ -67,19 +59,13 @@ platform_halt_reason platform_get_reboot_reason(void);
  */
 void platform_panic_start(void);
 
-/* platform_halt is a method which is called from various places in the LK
- * system, and may be implemented by platforms and called by applications.  This
- * call represents the end of the life of SW for a device; there is no returning
- * from this function.  Callers will provide a reason for the halt, and a
- * suggested action for the platform to take, but it is the platform's
- * responsibility to determine the final action taken.  For example, in the case
- * of a failed ASSERT or a panic, LK will call platform halt and suggest a Halt
- * action, but a release build on a platform with no debug channel may choose to
- * reboot instead as there is no one to tell about the ASSERT, and no one
- * waiting to debug the device in its halted state.  If not overloaded by the
- * platform, the default behavior of platform halt will be to dprintf the
- * reason, and then halt execution by turning off interrupts and spinning
- * forever.
+/* platform_halt halts the system and performs the |suggested_action|.
+ *
+ * This function is used in both the graceful shutdown and panic paths so it
+ * does not perform more complex actions like switching to the primary CPU,
+ * unloading the run queue of secondary CPUs, stopping secondary CPUs, etc.
+ *
+ * There is no returning from this function.
  */
 void platform_halt(platform_halt_action suggested_action,
                    platform_halt_reason reason) __NO_RETURN;
@@ -87,9 +73,12 @@ void platform_halt(platform_halt_action suggested_action,
 /* optionally stop the current cpu in a way the platform finds appropriate */
 void platform_halt_cpu(void);
 
-/* optionally stop the secondary cpus in a way the platform finds appropriate.
- * Secondary cpus are defined as cpus that are not the boot cpu (as defined
- * above).
+/* platform_halt_secondary_cpus halts secondary (non-boot) CPUs.
+ *
+ * While the mechanism used is platform dependent, this function attempts to shut them down
+ * gracefully so that secondary CPUs aren't holding any spinlocks.
+ *
+ * This function must be called from the primary (boot) CPU.
  */
 void platform_halt_secondary_cpus(void);
 

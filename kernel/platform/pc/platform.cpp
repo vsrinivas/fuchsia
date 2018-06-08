@@ -716,11 +716,14 @@ void platform_mexec(mexec_asm_func mexec_assembly, memmov_ops_t* ops,
 }
 
 void platform_halt_secondary_cpus(void) {
-    // Migrate this thread to the boot cpu.
-    thread_migrate_to_cpu(BOOT_CPU_ID);
+    // Ensure the current thread is pinned to the boot CPU.
+    DEBUG_ASSERT(get_current_thread()->cpu_affinity == cpu_num_to_mask(BOOT_CPU_ID));
 
-    // Send a shutdown interrupt to all the other cores.
-    apic_send_broadcast_ipi(0x00, DELIVERY_MODE_INIT);
+    // "Unplug" online secondary CPUs before halting them.
+    cpu_mask_t primary = cpu_num_to_mask(BOOT_CPU_ID);
+    cpu_mask_t mask = mp_get_online_mask() & ~primary;
+    zx_status_t result = mp_unplug_cpu_mask(mask);
+    DEBUG_ASSERT(result == ZX_OK);
 }
 
 void platform_early_init(void) {

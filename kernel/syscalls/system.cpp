@@ -351,11 +351,11 @@ zx_status_t sys_system_mexec(zx_handle_t resource, zx_handle_t kernel_vmo, zx_ha
     return ZX_OK;
 }
 
-static void platform_halt_helper(platform_halt_action action,
-                            platform_halt_reason reason) {
+// Gracefully halt and perform |action|.
+static void platform_graceful_halt(platform_halt_action action) {
     thread_migrate_to_cpu(BOOT_CPU_ID);
     platform_halt_secondary_cpus();
-    platform_halt(action, reason);
+    platform_halt(action, HALT_REASON_SW_RESET);
     panic("ERROR: failed to halt the platform\n");
 }
 
@@ -387,16 +387,16 @@ zx_status_t sys_system_powerctl(zx_handle_t root_rsrc, uint32_t cmd,
             return arch_system_powerctl(cmd, &arg);
         }
         case ZX_SYSTEM_POWERCTL_REBOOT:
-            platform_halt_helper(HALT_ACTION_REBOOT, HALT_REASON_SW_RESET);
+            platform_graceful_halt(HALT_ACTION_REBOOT);
             break;
         case ZX_SYSTEM_POWERCTL_REBOOT_BOOTLOADER:
-            platform_halt_helper(HALT_ACTION_REBOOT_BOOTLOADER, HALT_REASON_SW_RESET);
+            platform_graceful_halt(HALT_ACTION_REBOOT_BOOTLOADER);
             break;
         case ZX_SYSTEM_POWERCTL_REBOOT_RECOVERY:
-            platform_halt_helper(HALT_ACTION_REBOOT_RECOVERY, HALT_REASON_SW_RESET);
+            platform_graceful_halt(HALT_ACTION_REBOOT_RECOVERY);
             break;
         case ZX_SYSTEM_POWERCTL_SHUTDOWN:
-            platform_halt_helper(HALT_ACTION_SHUTDOWN, HALT_REASON_SW_RESET);
+            platform_graceful_halt(HALT_ACTION_SHUTDOWN);
             break;
         default: return ZX_ERR_INVALID_ARGS;
     }
