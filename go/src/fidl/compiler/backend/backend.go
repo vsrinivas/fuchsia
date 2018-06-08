@@ -7,7 +7,6 @@ package main
 import (
 	"fidl/compiler/backend/cmdline"
 	"fidl/compiler/backend/cpp"
-	"fidl/compiler/backend/dart"
 	"fidl/compiler/backend/golang"
 	"fidl/compiler/backend/rust"
 	"fidl/compiler/backend/types"
@@ -23,7 +22,6 @@ type GenerateFidl interface {
 var generators = map[string]GenerateFidl{
 	"cpp":  cpp.FidlGenerator{},
 	"go":   golang.FidlGenerator{},
-	"dart": dart.FidlGenerator{},
 	"rust": rust.FidlGenerator{},
 }
 
