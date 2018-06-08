@@ -48,16 +48,17 @@ source_set("suggestion_engine_impl") {
 
   deps = [
     ":debug",
-    ":decision_policies",
-    ":filters",
-    ":interruptions",
+    ":interruption_processor",
     ":models",
-    ":ranking",
     ":state",
     ":timeline_stories_watcher",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/media/fidl",
     "//garnet/public/lib/media/timeline",
+    "//peridot/bin/suggestion_engine/decision_policies:all",
+    "//peridot/bin/suggestion_engine/filters:all",
+    "//peridot/bin/suggestion_engine/rankers:all",
+    "//peridot/bin/suggestion_engine/ranking_features:all",
     "//peridot/lib/bound_set",
     "//peridot/lib/fidl:json_xdr",
     "//peridot/lib/util:rate_limited_retry",
@@ -68,110 +69,32 @@ source_set("suggestion_engine_impl") {
 
 tests_package("suggestion_engine_unittests") {
   deps = [
-    ":decision_policy_unittest",
-    ":filters_unittest",
-    ":ranking_unittest",
+    "//peridot/bin/suggestion_engine/decision_policies:rank_over_threshold_decision_policy_unittest",
+    "//peridot/bin/suggestion_engine/filters:conjugate_ranked_passive_filter_unittest",
+    "//peridot/bin/suggestion_engine/filters:ranked_active_filter_unittest",
+    "//peridot/bin/suggestion_engine/rankers:linear_ranker_unittest",
+    "//peridot/bin/suggestion_engine/ranking_features:annoyance_ranking_feature_unittest",
+    "//peridot/bin/suggestion_engine/ranking_features:dead_story_ranking_feature_unittest",
+    "//peridot/bin/suggestion_engine/ranking_features:focused_story_ranking_feature_unittest",
+    "//peridot/bin/suggestion_engine/ranking_features:kronk_ranking_feature_unittest",
+    "//peridot/bin/suggestion_engine/ranking_features:mod_pair_ranking_feature_unittest",
+    "//peridot/bin/suggestion_engine/ranking_features:proposal_hint_ranking_feature_unittest",
+    "//peridot/bin/suggestion_engine/ranking_features:query_match_ranking_feature_unittest",
   ]
 }
 
-source_set("decision_policies") {
-  sources = [
-    "decision_policy.cc",
-    "decision_policy.h",
-    "decision_policies/rank_over_threshold_decision_policy.cc",
-    "decision_policies/rank_over_threshold_decision_policy.h",
-  ]
 
-  deps = [
-    ":models",
-    ":rankers",
-  ]
-}
-
-source_set("interruptions") {
+source_set("interruption_processor") {
   sources = [
     "interruptions_processor.cc",
     "interruptions_processor.h",
   ]
 
   deps = [
-    ":decision_policies",
     ":models",
-    ":ranking_features",
+    "//peridot/bin/suggestion_engine/decision_policies:all",
+    "//peridot/bin/suggestion_engine/ranking_features:ranking_feature",
     "//peridot/public/lib:fidl",
-  ]
-}
-
-source_set("ranking") {
-  public_deps = [
-    ":rankers",
-    ":ranking_features",
-  ]
-}
-
-source_set("rankers") {
-  sources = [
-    "ranker.cc",
-    "ranker.h",
-    "rankers/linear_ranker.cc",
-    "rankers/linear_ranker.h",
-  ]
-
-  deps = [
-    ":models",
-    ":ranking_features",
-    "//peridot/public/lib:fidl",
-  ]
-}
-
-source_set("filters") {
-  sources = [
-    "filters/conjugate_ranked_passive_filter.cc",
-    "filters/conjugate_ranked_passive_filter.h",
-    "filters/ranked_active_filter.cc",
-    "filters/ranked_active_filter.h",
-    "suggestion_active_filter.cc",
-    "suggestion_active_filter.h",
-    "suggestion_passive_filter.cc",
-    "suggestion_passive_filter.h",
-  ]
-
-  deps = [
-    ":models",
-    ":ranking",
-  ]
-}
-
-source_set("ranking_features") {
-  sources = [
-    "ranking_feature.cc",
-    "ranking_feature.h",
-    "ranking_features/annoyance_ranking_feature.cc",
-    "ranking_features/annoyance_ranking_feature.h",
-    "ranking_features/focused_story_ranking_feature.cc",
-    "ranking_features/focused_story_ranking_feature.h",
-    "ranking_features/kronk_ranking_feature.cc",
-    "ranking_features/kronk_ranking_feature.h",
-    "ranking_features/mod_pair_ranking_feature.cc",
-    "ranking_features/mod_pair_ranking_feature.h",
-    "ranking_features/proposal_hint_ranking_feature.cc",
-    "ranking_features/proposal_hint_ranking_feature.h",
-    "ranking_features/query_match_ranking_feature.cc",
-    "ranking_features/query_match_ranking_feature.h",
-    "ranking_features/dead_story_ranking_feature.cc",
-    "ranking_features/dead_story_ranking_feature.h",
-  ]
-
-  public_deps = [
-    "//garnet/public/lib/fxl",
-  ]
-
-  deps = [
-    ":models",
-    "//garnet/public/lib/fsl",
-    "//peridot/public/lib:fidl",
-    "//peridot/public/lib/context/cpp:context_helper",
-    "//third_party/rapidjson",
   ]
 }
 
@@ -182,10 +105,11 @@ source_set("state") {
   ]
 
   deps = [
-    ":filters",
     ":models",
-    ":ranking",
     "//garnet/public/lib/fxl",
+    "//peridot/bin/suggestion_engine/filters:base",
+    "//peridot/bin/suggestion_engine/rankers:ranker",
+    "//peridot/bin/suggestion_engine/ranking_features:ranking_feature",
     "//peridot/public/lib:fidl",
     "//peridot/public/lib/context/cpp:context_helper",
   ]
@@ -235,60 +159,5 @@ source_set("debug") {
 
   public_deps = [
     "//peridot/lib/util:idle_waiter",
-  ]
-}
-
-executable("decision_policy_unittest") {
-  testonly = true
-
-  sources = [
-    "decision_policies/rank_over_threshold_decision_policy_unittest.cc",
-  ]
-
-  deps = [
-    ":rankers",
-    ":decision_policies",
-    "//garnet/public/lib/gtest",
-    "//peridot/public/lib:fidl",
-    "//third_party/googletest:gtest_main",
-  ]
-}
-
-executable("filters_unittest") {
-  testonly = true
-
-  sources = [
-    "filters/conjugate_ranked_passive_filter_unittest.cc",
-    "filters/ranked_active_filter_unittest.cc",
-  ]
-
-  deps = [
-    ":filters",
-    ":ranking",
-    "//garnet/public/lib/gtest",
-    "//peridot/public/lib:fidl",
-    "//third_party/googletest:gtest_main",
-  ]
-}
-
-executable("ranking_unittest") {
-  testonly = true
-
-  sources = [
-    "rankers/linear_ranker_unittest.cc",
-    "ranking_features/annoyance_ranking_feature_unittest.cc",
-    "ranking_features/focused_story_ranking_feature_unittest.cc",
-    "ranking_features/kronk_ranking_feature_unittest.cc",
-    "ranking_features/mod_pair_ranking_feature_unittest.cc",
-    "ranking_features/proposal_hint_ranking_feature_unittest.cc",
-    "ranking_features/query_match_ranking_feature_unittest.cc",
-    "ranking_features/dead_story_ranking_feature_unittest.cc",
-  ]
-
-  deps = [
-    ":ranking",
-    "//garnet/public/lib/fxl",
-    "//garnet/public/lib/gtest",
-    "//third_party/googletest:gtest_main",
   ]
 }

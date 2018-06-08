@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "peridot/bin/suggestion_engine/ranker.h"
+#include "peridot/bin/suggestion_engine/rankers/ranker.h"
 
 namespace modular {
 

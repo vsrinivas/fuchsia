@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 #include "peridot/bin/suggestion_engine/decision_policies/rank_over_threshold_decision_policy.h"
+#include "peridot/bin/suggestion_engine/rankers/ranker.h"
 #include "gtest/gtest.h"
-#include "peridot/bin/suggestion_engine/ranker.h"
 
 namespace modular {
 namespace {

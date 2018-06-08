@@ -7,7 +7,7 @@
 
 #include <fuchsia/modular/cpp/fidl.h>
 #include "lib/fidl/cpp/interface_ptr_set.h"
-#include "peridot/bin/suggestion_engine/decision_policy.h"
+#include "peridot/bin/suggestion_engine/decision_policies/decision_policy.h"
 #include "peridot/bin/suggestion_engine/ranked_suggestion.h"
 
 namespace modular {

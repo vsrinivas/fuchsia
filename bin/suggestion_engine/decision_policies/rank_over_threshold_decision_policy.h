@@ -5,8 +5,8 @@
 #ifndef PERIDOT_BIN_SUGGESTION_ENGINE_DECISION_POLICIES_RANK_OVER_THRESHOLD_DECISION_POLICY_H_
 #define PERIDOT_BIN_SUGGESTION_ENGINE_DECISION_POLICIES_RANK_OVER_THRESHOLD_DECISION_POLICY_H_
 
-#include "peridot/bin/suggestion_engine/decision_policy.h"
-#include "peridot/bin/suggestion_engine/ranker.h"
+#include "peridot/bin/suggestion_engine/decision_policies/decision_policy.h"
+#include "peridot/bin/suggestion_engine/rankers/ranker.h"
 
 namespace modular {
 

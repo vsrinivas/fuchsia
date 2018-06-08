@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "peridot/bin/suggestion_engine/suggestion_passive_filter.h"
+#include "peridot/bin/suggestion_engine/decision_policies/decision_policy.h"
 
 namespace modular {
 
-SuggestionPassiveFilter::SuggestionPassiveFilter() = default;
+DecisionPolicy::DecisionPolicy() = default;
 
-SuggestionPassiveFilter::~SuggestionPassiveFilter() = default;
+DecisionPolicy::~DecisionPolicy() = default;
 
 }  // namespace modular

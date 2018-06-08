@@ -8,8 +8,8 @@
 #include <fuchsia/modular/cpp/fidl.h>
 
 #include "peridot/bin/suggestion_engine/ranked_suggestion.h"
-#include "peridot/bin/suggestion_engine/ranker.h"
-#include "peridot/bin/suggestion_engine/ranking_feature.h"
+#include "peridot/bin/suggestion_engine/rankers/ranker.h"
+#include "peridot/bin/suggestion_engine/ranking_features/ranking_feature.h"
 
 namespace modular {
 

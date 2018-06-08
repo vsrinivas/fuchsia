@@ -19,7 +19,7 @@
 #include "peridot/bin/suggestion_engine/filters/conjugate_ranked_passive_filter.h"
 #include "peridot/bin/suggestion_engine/filters/ranked_active_filter.h"
 #include "peridot/bin/suggestion_engine/rankers/linear_ranker.h"
-#include "peridot/bin/suggestion_engine/ranking_feature.h"
+#include "peridot/bin/suggestion_engine/ranking_features/ranking_feature.h"
 #include "peridot/bin/suggestion_engine/ranking_features/annoyance_ranking_feature.h"
 #include "peridot/bin/suggestion_engine/ranking_features/dead_story_ranking_feature.h"
 #include "peridot/bin/suggestion_engine/ranking_features/focused_story_ranking_feature.h"

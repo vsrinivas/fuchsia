@@ -11,14 +11,14 @@
 #include "lib/fidl/cpp/binding.h"
 
 #include "peridot/bin/suggestion_engine/debug.h"
-#include "peridot/bin/suggestion_engine/decision_policy.h"
+#include "peridot/bin/suggestion_engine/decision_policies/decision_policy.h"
+#include "peridot/bin/suggestion_engine/filters/suggestion_active_filter.h"
+#include "peridot/bin/suggestion_engine/filters/suggestion_passive_filter.h"
 #include "peridot/bin/suggestion_engine/interruptions_processor.h"
 #include "peridot/bin/suggestion_engine/proposal_publisher_impl.h"
 #include "peridot/bin/suggestion_engine/ranked_suggestion.h"
 #include "peridot/bin/suggestion_engine/ranked_suggestions_list.h"
-#include "peridot/bin/suggestion_engine/ranker.h"
-#include "peridot/bin/suggestion_engine/suggestion_active_filter.h"
-#include "peridot/bin/suggestion_engine/suggestion_passive_filter.h"
+#include "peridot/bin/suggestion_engine/rankers/ranker.h"
 #include "peridot/bin/suggestion_engine/suggestion_prototype.h"
 
 namespace modular {
