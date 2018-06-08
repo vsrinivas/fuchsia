@@ -8,6 +8,7 @@ import (
 	"app/context"
 	"fidl/bindings"
 
+	"fidl/fuchsia/wlan/mlme"
 	wlan_service "fidl/fuchsia/wlan/service"
 	"netstack/watcher"
 	"wlan/wlan"
@@ -150,6 +151,30 @@ func (ws *Wlanstack) StopBss() (wserr wlan_service.Error, err error) {
 		return *resp.Err, nil
 	}
 	return wlan_service.Error{wlan_service.ErrCodeOk, "OK"}, nil
+}
+
+func (ws *Wlanstack) Stats() (result wlan_service.WlanStats, err error) {
+	cli := ws.getCurrentClient()
+	response := mlme.StatsQueryResponse{}
+	if cli == nil {
+		return wlan_service.WlanStats{
+			wlan_service.Error{
+				wlan_service.ErrCodeNotFound,
+				"No wlan interface found"},
+			response,
+		}, nil
+	}
+
+	respC := make(chan *wlan.CommandResult, 1)
+	var noArgs interface{}
+	cli.PostCommand(wlan.CmdStats, noArgs, respC)
+
+	resp := <-respC
+	if resp.Err != nil {
+		return wlan_service.WlanStats{*resp.Err, response}, nil
+	}
+
+	return wlan_service.WlanStats{wlan_service.Error{wlan_service.ErrCodeOk, "OK"}, *resp.Resp.(*mlme.StatsQueryResponse)}, nil
 }
 
 func main() {

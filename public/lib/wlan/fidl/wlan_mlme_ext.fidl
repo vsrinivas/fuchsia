@@ -60,7 +60,7 @@ union MlmeStats {
 
 struct StatsQueryResponse {
     fuchsia.wlan.stats.DispatcherStats dispatcher_stats;
-    MlmeStats mlme_stats;
+    MlmeStats? mlme_stats;
 };
 
 // Method ordinals are defined in wlan_mlme.fidl to prevent error prone overlaps with official

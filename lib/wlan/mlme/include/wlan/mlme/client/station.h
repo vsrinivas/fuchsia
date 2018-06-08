@@ -109,7 +109,7 @@ class Station : public FrameHandler {
 
     const Timer& timer() const { return *timer_; }
 
-    const ::fuchsia::wlan::stats::ClientMlmeStats& stats();
+    ::fuchsia::wlan::stats::ClientMlmeStats stats() const;
 
    private:
     zx_status_t SendAddBaRequestFrame();

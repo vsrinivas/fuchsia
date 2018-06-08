@@ -27,6 +27,7 @@
 namespace wlan {
 
 namespace wlan_mlme = ::fuchsia::wlan::mlme;
+namespace wlan_stats = ::fuchsia::wlan::stats;
 
 ClientMlme::ClientMlme(DeviceInterface* device) : device_(device) {
     debugfn();
@@ -110,8 +111,12 @@ zx_status_t ClientMlme::PostChannelChange() {
     return ZX_OK;
 }
 
-wlan_stats::ClientMlmeStats ClientMlme::GetClientMlmeStats() const {
-    return sta_->stats();
+wlan_mlme::MlmeStats ClientMlme::GetMlmeStats() const {
+    wlan_mlme::MlmeStats mlme_stats;
+    if (sta_) {
+      mlme_stats.set_client_mlme_stats(sta_->stats());
+    }
+    return mlme_stats;
 }
 
 }  // namespace wlan

@@ -69,6 +69,11 @@ struct BssConfig {
   uint8 channel;
 };
 
+struct WlanStats {
+  Error error;
+  fuchsia.wlan.mlme.StatsQueryResponse stats;
+};
+
 // Stub interface; eventually to be replaced by something based on the 802.11
 // SME / MSGCF.
 [Discoverable]
@@ -79,4 +84,5 @@ interface Wlan {
   4: Status() -> (WlanStatus @status);
   5: StartBss(BssConfig cfg) -> (Error error);
   6: StopBss() -> (Error error);
+  7: Stats() -> (WlanStats stats);
 };

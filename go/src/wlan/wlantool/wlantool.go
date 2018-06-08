@@ -23,6 +23,7 @@ const (
 	cmdStatus     = "status"
 	cmdStartBSS   = "start-bss"
 	cmdStopBSS    = "stop-bss"
+	cmdStats      = "stats"
 )
 
 type ToolApp struct {
@@ -190,6 +191,19 @@ func (a *ToolApp) Status() {
 	}
 }
 
+func (a *ToolApp) ShowStats() {
+	result, err := a.wlan.Stats()
+	if err != nil {
+		fmt.Printf("Cannot get stats. Error: %+v\n", err)
+		return
+	}
+	stats := result.Stats
+	fmt.Printf("Dispatcher stats:\n%+v\n", stats.DispatcherStats);
+	if stats.MlmeStats != nil {
+		fmt.Printf("\nMLME stats:\n%+v\n", stats.MlmeStats);
+	}
+}
+
 var Usage = func() {
 	fmt.Printf("Usage: %v %v [-t <timeout>]\n", os.Args[0], cmdScan)
 	fmt.Printf("       %v %v [-p <passphrase>] [-t <timeout>] [-b <bssid>] ssid\n", os.Args[0], cmdConnect)
@@ -197,6 +211,7 @@ var Usage = func() {
 	fmt.Printf("       %v %v\n", os.Args[0], cmdStatus)
 	fmt.Printf("       %v %v [-b <beacon period>] [-d <DTIM period>] [-c channel] ssid\n", os.Args[0], cmdStartBSS)
 	fmt.Printf("       %v %v\n", os.Args[0], cmdStopBSS)
+	fmt.Printf("       %v %v\n", os.Args[0], cmdStats)
 }
 
 func main() {
@@ -291,6 +306,14 @@ func main() {
 			return
 		}
 		a.StopBSS()
+	case cmdStats:
+		statusFlagSet := flag.NewFlagSet(cmdStatus, flag.ExitOnError)
+		statusFlagSet.Parse(os.Args[2:])
+		if statusFlagSet.NArg() != 0 {
+			Usage()
+			return
+		}
+		a.ShowStats()
 	default:
 		Usage()
 	}

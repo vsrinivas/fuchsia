@@ -32,7 +32,7 @@ class ClientMlme : public Mlme {
     zx_status_t HandleTimeout(const ObjectId id) override;
     // MLME-JOIN.request will initialize a Station and starts the association flow.
     zx_status_t HandleMlmeJoinReq(const ::fuchsia::wlan::mlme::JoinRequest& msg) override;
-    ::fuchsia::wlan::stats::ClientMlmeStats GetClientMlmeStats() const override final;
+    ::fuchsia::wlan::mlme::MlmeStats GetMlmeStats() const override final;
 
     bool IsStaValid() const;
 

@@ -52,7 +52,8 @@ type Client struct {
 	eapolC   *eapol.Client
 	wlanInfo *mlme.DeviceQueryConfirm
 
-	state state
+	state            state
+	pendingStatsResp chan *CommandResult
 }
 
 func NewClient(path string, config *Config, apConfig *APConfig) (*Client, error) {
@@ -144,6 +145,16 @@ func (c *Client) Status() wlan_service.WlanStatus {
 	}
 }
 
+func (c *Client) handleQueryStatsCommand(req *commandRequest) {
+	err := c.SendMessage(&mlme.MlmeStatsQueryReqRequest{}, mlme.MlmeStatsQueryReqOrdinal)
+	if err != nil {
+		req.respC <- &CommandResult{nil,
+			&wlan_service.Error{wlan_service.ErrCodeInternal, "Could not send MLME request"}}
+		return
+	}
+	c.pendingStatsResp = req.respC
+}
+
 func (c *Client) PostCommand(cmd Command, arg interface{}, respC chan *CommandResult) {
 	c.cmdC <- &commandRequest{cmd, arg, respC}
 }
@@ -218,7 +229,11 @@ event_loop:
 			if debug {
 				log.Printf("got a command")
 			}
-			nextState, err = c.state.handleCommand(r, c)
+			if r.id == CmdStats {
+				c.handleQueryStatsCommand(r)
+			} else {
+				nextState, err = c.state.handleCommand(r, c)
+			}
 		case <-timerC:
 			nextState, err = c.state.timerExpired(c)
 		}
@@ -272,6 +287,26 @@ func (c *Client) watchMLMEChan(timeout time.Duration) *mlmeResult {
 	return &mlmeResult{obs, err}
 }
 
+func (c *Client) handleMLMEMsg(resp interface{}) (state, error) {
+	nextState := c.state
+	switch resp.(type) {
+	// Query Stats is state-independent so handle it immediately.
+	case *mlme.StatsQueryResponse:
+		if c.pendingStatsResp != nil {
+			c.pendingStatsResp <- &CommandResult{resp, nil}
+			c.pendingStatsResp = nil
+		}
+	// Everything else is state-dependent
+	default:
+		var err error
+		nextState, err = c.state.handleMLMEMsg(resp, c)
+		if err != nil {
+			return nil, fmt.Errorf("error handling message (%T) for \"%v\": %v", resp, c.state, err)
+		}
+	}
+	return nextState, nil
+}
+
 func (c *Client) handleResponse(obs zx.Signals, err error) (state, error) {
 	var nextState state
 	switch mxerror.Status(err) {
@@ -300,10 +335,7 @@ func (c *Client) handleResponse(obs zx.Signals, err error) (state, error) {
 			if resp, err := parseResponse(buf[:]); err != nil {
 				return nil, fmt.Errorf("error parsing message for \"%v\": %v", c.state, err)
 			} else {
-				nextState, err = c.state.handleMLMEMsg(resp, c)
-				if err != nil {
-					return nil, fmt.Errorf("error handling message (%T) for \"%v\": %v", resp, c.state, err)
-				}
+				nextState, err = c.handleMLMEMsg(resp)
 			}
 		}
 	default:
@@ -380,6 +412,12 @@ func parseResponse(buf []byte) (interface{}, error) {
 		var resp mlme.DeviceQueryConfirm
 		if err := bindings.Unmarshal(buf, nil, &resp); err != nil {
 			return nil, fmt.Errorf("could not decode DeviceQueryConfirm: %v", err)
+		}
+		return &resp, nil
+	case mlme.MlmeStatsQueryRespOrdinal:
+		var resp mlme.StatsQueryResponse
+		if err := bindings.Unmarshal(buf, nil, &resp); err != nil {
+			return nil, fmt.Errorf("could not decode StatsQueryResponse: %v", err)
 		}
 		return &resp, nil
 	default:

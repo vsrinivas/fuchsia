@@ -24,6 +24,7 @@
 namespace wlan {
 
 namespace wlan_mlme = ::fuchsia::wlan::mlme;
+namespace wlan_stats = ::fuchsia::wlan::stats;
 using common::dBm;
 
 // TODO(hahnr): Revisit frame construction to reduce boilerplate code.
@@ -1384,7 +1385,7 @@ uint8_t Station::GetTid(const EthFrame& frame) {
     return GetTid();
 }
 
-const wlan_stats::ClientMlmeStats& Station::stats() {
-  return std::move(stats_.ToFidl());
+wlan_stats::ClientMlmeStats Station::stats() const {
+  return stats_.ToFidl();
 }
 }  // namespace wlan

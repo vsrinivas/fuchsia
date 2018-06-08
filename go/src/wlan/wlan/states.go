@@ -35,6 +35,7 @@ const (
 	CmdDisconnect
 	CmdStartBSS
 	CmdStopBSS
+	CmdStats
 )
 
 const InfiniteTimeout = 0 * time.Second

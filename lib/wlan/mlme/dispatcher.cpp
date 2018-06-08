@@ -487,19 +487,10 @@ zx_status_t Dispatcher::HandleMlmeStats(uint32_t ordinal) const {
     ZX_DEBUG_ASSERT(ordinal == fuchsia_wlan_mlme_MLMEStatsQueryReqOrdinal);
 
     wlan_mlme::StatsQueryResponse resp;
-    const wlanmac_info_t& info = device_->GetWlanInfo();
-
     resp.dispatcher_stats = stats_.ToFidl();
-
-    switch (info.mac_role) {
-    case WLAN_MAC_ROLE_CLIENT:
-        resp.mlme_stats.client_mlme_stats() = mlme_->GetClientMlmeStats();
-        break;
-    // TODO: Add stats for AP
-    case WLAN_MAC_ROLE_AP:
-        break;
-    default:
-        break;
+    auto mlme_stats = mlme_->GetMlmeStats();
+    if (!mlme_stats.has_invalid_tag()) {
+      resp.mlme_stats = std::make_unique<wlan_mlme::MlmeStats>(mlme_->GetMlmeStats());
     }
     return SendServiceMessage(fuchsia_wlan_mlme_MLMEStatsQueryRespOrdinal, &resp);
 }
