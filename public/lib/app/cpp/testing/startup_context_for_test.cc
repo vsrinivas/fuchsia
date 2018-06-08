@@ -15,13 +15,14 @@ StartupContextForTest::StartupContextForTest(
     zx::channel service_root_client, zx::channel service_root_server,
     zx::channel directory_request_client, zx::channel directory_request_server)
     : StartupContext(std::move(service_root_client),
-                     std::move(directory_request_server)) {
+                     std::move(directory_request_server)),
+      controller_(this) {
   zx::channel public_dir_client, public_dir_server;
   FXL_CHECK(zx::channel::create(0, &public_dir_client, &public_dir_server) ==
             ZX_OK);
   FXL_CHECK(fdio_service_connect_at(directory_request_client.get(), "public",
                                     public_dir_server.release()) == ZX_OK);
-  services_.Bind(std::move(public_dir_client));
+  public_services_.Bind(std::move(public_dir_client));
 }
 
 std::unique_ptr<StartupContextForTest> StartupContextForTest::Create() {

@@ -3,8 +3,7 @@
 // found in the LICENSE file.
 
 #include "echo2_server_app.h"
-#include "lib/app/cpp/testing/startup_context_for_test.h"
-#include "lib/gtest/test_with_loop.h"
+#include "lib/app/cpp/testing/test_with_context.h"
 
 namespace echo2 {
 namespace testing {
@@ -15,30 +14,27 @@ class EchoServerAppForTest : public EchoServerApp {
       : EchoServerApp(std::move(context)) {}
 };
 
-class EchoServerAppTest : public ::gtest::TestWithLoop {
+class EchoServerAppTest : public fuchsia::sys::testing::TestWithContext {
  public:
   void SetUp() override {
-    TestWithLoop::SetUp();
-    auto context = fuchsia::sys::testing::StartupContextForTest::Create();
-    services_ = &context->services();
-    echoServerApp_.reset(new EchoServerAppForTest(std::move(context)));
+    TestWithContext::SetUp();
+    echoServerApp_.reset(new EchoServerAppForTest(takeContext()));
   }
 
   void TearDown() override {
     echoServerApp_.reset();
-    TestWithLoop::TearDown();
+    TestWithContext::TearDown();
   }
 
  protected:
   fidl::examples::echo::EchoPtr echo() {
     fidl::examples::echo::EchoPtr echo;
-    services_->ConnectToService(echo.NewRequest());
+    controller().public_services().ConnectToService(echo.NewRequest());
     return echo;
   }
 
  private:
   std::unique_ptr<EchoServerAppForTest> echoServerApp_;
-  const fuchsia::sys::Services* services_;
 };
 
 // Answer "Hello World" with "Hello World"

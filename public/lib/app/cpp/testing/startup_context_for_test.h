@@ -16,8 +16,7 @@ namespace testing {
 
 // A fake |StartupContext| for testing.
 // Does not allow publishing or accessing services outside of the test
-// environment. Exposes controllers that can be used by test cases to verify
-// context interactions under test.
+// environment.
 class StartupContextForTest : public StartupContext {
  public:
   StartupContextForTest(zx::channel service_root_client,
@@ -26,10 +25,33 @@ class StartupContextForTest : public StartupContext {
                         zx::channel directory_request_server);
   static std::unique_ptr<StartupContextForTest> Create();
 
-  const Services& services() const { return services_; }
+  // Defines the testing surface to be used in conjunction with
+  // |StartupContextForTest|.
+  class Controller {
+   public:
+    // Returns a |Services| that sees all public services added to the
+    // |StartupContextForTest|.
+    const Services& public_services() const {
+      return context_->public_services_;
+    }
+
+   protected:
+    Controller(StartupContextForTest* context) : context_(context){};
+
+   private:
+    StartupContextForTest* context_;
+    friend class StartupContextForTest;
+  };
+
+  // Returns |Controller| for tests.
+  // Tests should move the |StartupContextForTest| into the code under test, and
+  // use the |Controller| to perform and verify interactions.
+  const Controller& controller() const { return controller_; }
 
  private:
-  fuchsia::sys::Services services_;
+  Controller controller_;
+  fuchsia::sys::Services public_services_;
+  friend class Controller;
 };
 
 }  // namespace testing

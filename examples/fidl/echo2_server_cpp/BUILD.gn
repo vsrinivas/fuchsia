@@ -50,7 +50,6 @@ executable("echo2_server_cpp_unittests") {
     ":lib",
     "//garnet/public/lib/app/cpp/testing",
     "//garnet/public/lib/fxl/test:gtest_main",
-    "//garnet/public/lib/gtest",
   ]
 }
 

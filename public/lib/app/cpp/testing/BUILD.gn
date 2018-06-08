@@ -8,9 +8,15 @@ source_set("testing") {
   sources = [
     "startup_context_for_test.cc",
     "startup_context_for_test.h",
+    "test_with_context.cc",
+    "test_with_context.h",
   ]
 
   deps = [
     "//garnet/public/lib/app/cpp",
+  ]
+
+  public_deps = [
+    "//garnet/public/lib/gtest",
   ]
 }
