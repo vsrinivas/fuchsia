@@ -8,7 +8,7 @@ namespace auth {
 namespace dev_auth_provider {
 
 void FactoryImpl::GetAuthProvider(
-    fidl::InterfaceRequest<auth::AuthProvider> auth_provider,
+    fidl::InterfaceRequest<fuchsia::auth::AuthProvider> auth_provider,
     GetAuthProviderCallback callback) {
   // TODO: Share the DevAuthProviderImpl instance across all connections
   std::unique_ptr<DevAuthProviderImpl> dev_auth_provider_impl =
@@ -17,7 +17,7 @@ void FactoryImpl::GetAuthProvider(
   dev_bindings_.AddBinding(std::move(dev_auth_provider_impl),
                            std::move(auth_provider));
 
-  callback(auth::AuthProviderStatus::OK);
+  callback(fuchsia::auth::AuthProviderStatus::OK);
 }
 
 }  // namespace dev_auth_provider

@@ -5,7 +5,7 @@
 #ifndef GARNET_BIN_AUTH_TOKEN_MANAGER_TOKEN_MANAGER_FACTORY_IMPL_H_
 #define GARNET_BIN_AUTH_TOKEN_MANAGER_TOKEN_MANAGER_FACTORY_IMPL_H_
 
-#include <auth/cpp/fidl.h>
+#include <fuchsia/auth/cpp/fidl.h>
 
 #include "lib/app/cpp/startup_context.h"
 #include "lib/fidl/cpp/binding_set.h"
@@ -15,8 +15,8 @@
 
 namespace auth {
 
-using auth::TokenManager;
-using auth::TokenManagerFactory;
+using fuchsia::auth::TokenManager;
+using fuchsia::auth::TokenManagerFactory;
 
 // TODO: once namespacing happens for persistent storage, remove
 const std::string kAuthDbPath = "/data/auth";
@@ -33,8 +33,8 @@ class TokenManagerFactoryImpl : public TokenManagerFactory {
   // |TokenManagerFactory|
   void GetTokenManager(
       fidl::StringPtr user_id, fidl::StringPtr application_url,
-      fidl::VectorPtr<AuthProviderConfig> auth_provider_configs,
-      fidl::InterfaceHandle<auth::AuthenticationContextProvider>
+      fidl::VectorPtr<fuchsia::auth::AuthProviderConfig> auth_provider_configs,
+      fidl::InterfaceHandle<fuchsia::auth::AuthenticationContextProvider>
           auth_context_provider,
       fidl::InterfaceRequest<TokenManager> request) override;
 

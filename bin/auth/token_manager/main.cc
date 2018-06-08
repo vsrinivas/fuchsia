@@ -4,7 +4,7 @@
 
 #include <memory>
 
-#include <auth/cpp/fidl.h>
+#include <fuchsia/auth/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <trace-provider/provider.h>
 
@@ -26,10 +26,11 @@ class TokenManagerApp {
  public:
   TokenManagerApp(std::unique_ptr<fuchsia::sys::StartupContext> context)
       : app_context_(std::move(context)), factory_impl_(app_context_.get()) {
-    app_context_->outgoing().AddPublicService<auth::TokenManagerFactory>(
-        [this](fidl::InterfaceRequest<auth::TokenManagerFactory> request) {
-          factory_bindings_.AddBinding(&factory_impl_, std::move(request));
-        });
+    app_context_->outgoing()
+        .AddPublicService<fuchsia::auth::TokenManagerFactory>(
+            [this](fidl::InterfaceRequest<auth::TokenManagerFactory> request) {
+              factory_bindings_.AddBinding(&factory_impl_, std::move(request));
+            });
   }
 
  private:

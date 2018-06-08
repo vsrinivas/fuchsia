@@ -14,7 +14,7 @@
 #ifndef GARNET_BIN_AUTH_TOKEN_MANAGER_TEST_DEV_AUTH_PROVIDER_IMPL_H_
 #define GARNET_BIN_AUTH_TOKEN_MANAGER_TEST_DEV_AUTH_PROVIDER_IMPL_H_
 
-#include <auth/cpp/fidl.h>
+#include <fuchsia/auth/cpp/fidl.h>
 
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fxl/macros.h"
@@ -23,7 +23,9 @@
 namespace auth {
 namespace dev_auth_provider {
 
-class DevAuthProviderImpl : public auth::AuthProvider {
+using fuchsia::auth::AuthenticationUIContext;
+
+class DevAuthProviderImpl : public fuchsia::auth::AuthProvider {
  public:
   DevAuthProviderImpl();
 
@@ -32,7 +34,7 @@ class DevAuthProviderImpl : public auth::AuthProvider {
  private:
   // |AuthProvider|
   void GetPersistentCredential(
-      fidl::InterfaceHandle<auth::AuthenticationUIContext> auth_ui_context,
+      fidl::InterfaceHandle<AuthenticationUIContext> auth_ui_context,
       GetPersistentCredentialCallback callback) override;
 
   // |AuthProvider|

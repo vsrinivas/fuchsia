@@ -18,10 +18,10 @@ TokenManagerFactoryImpl::~TokenManagerFactoryImpl() {}
 
 void TokenManagerFactoryImpl::GetTokenManager(
     fidl::StringPtr user_id, fidl::StringPtr application_url,
-    fidl::VectorPtr<AuthProviderConfig> auth_provider_configs,
-    fidl::InterfaceHandle<auth::AuthenticationContextProvider>
+    fidl::VectorPtr<fuchsia::auth::AuthProviderConfig> auth_provider_configs,
+    fidl::InterfaceHandle<fuchsia::auth::AuthenticationContextProvider>
         auth_context_provider,
-    fidl::InterfaceRequest<TokenManager> request) {
+    fidl::InterfaceRequest<fuchsia::auth::TokenManager> request) {
   auto file_name = kAuthDbPath + user_id.get() + kAuthDbPostfix;
 
   auto auth_db_file = std::make_unique<store::AuthDbFileImpl>(file_name);

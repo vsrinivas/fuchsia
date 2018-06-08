@@ -7,7 +7,7 @@
 #include <memory>
 #include <string>
 
-#include <auth/cpp/fidl.h>
+#include <fuchsia/auth/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 
 #include "garnet/bin/auth/store/auth_db_file_impl.h"
@@ -41,18 +41,22 @@ void PrintUsage(const char* executable_name) {
             << " --" << kRefreshTokenFlag << "=<string>" << std::endl;
 }
 
-auth::AppConfig MakeGoogleAppConfig(const std::string& client_id,
-                                    const std::string& client_secret) {
-  auth::AppConfig google_app_config;
-  google_app_config.auth_provider_type = auth::AuthProviderType::GOOGLE;
+fuchsia::auth::AppConfig MakeGoogleAppConfig(const std::string& client_id,
+                                             const std::string& client_secret) {
+  fuchsia::auth::AppConfig google_app_config;
+  google_app_config.auth_provider_type =
+      fuchsia::auth::AuthProviderType::GOOGLE;
   google_app_config.client_id = client_id;
   google_app_config.client_secret = client_secret;
   return google_app_config;
 }
 
+using fuchsia::auth::AuthenticationUIContext;
+using fuchsia::auth::Status;
+
 // This is a sample app demonstrating Google OAuth handshake for minting
 // OAuth tokens.
-class GoogleTokenManagerApp : auth::AuthenticationContextProvider {
+class GoogleTokenManagerApp : fuchsia::auth::AuthenticationContextProvider {
  public:
   GoogleTokenManagerApp(const std::string& user_profile_id,
                         const std::string& refresh_token)
@@ -75,7 +79,7 @@ class GoogleTokenManagerApp : auth::AuthenticationContextProvider {
  private:
   // |AuthenticationContextProvider|
   void GetAuthenticationUIContext(
-      fidl::InterfaceRequest<auth::AuthenticationUIContext> request) override {
+      fidl::InterfaceRequest<AuthenticationUIContext> request) override {
     FXL_LOG(INFO) << "DevTokenManagerAppTest::GetAuthenticationUIContext() is "
                      "unimplemented.";
   }
@@ -98,11 +102,11 @@ class GoogleTokenManagerApp : auth::AuthenticationContextProvider {
 
     services.ConnectToService(token_mgr_factory_.NewRequest());
 
-    auth::AuthProviderConfig google_config;
-    google_config.auth_provider_type = auth::AuthProviderType::GOOGLE;
+    fuchsia::auth::AuthProviderConfig google_config;
+    google_config.auth_provider_type = fuchsia::auth::AuthProviderType::GOOGLE;
     google_config.url = "google_auth_provider";
 
-    fidl::VectorPtr<auth::AuthProviderConfig> auth_provider_configs;
+    fidl::VectorPtr<fuchsia::auth::AuthProviderConfig> auth_provider_configs;
     auth_provider_configs.push_back(std::move(google_config));
 
     token_mgr_factory_->GetTokenManager(
@@ -136,43 +140,43 @@ class GoogleTokenManagerApp : auth::AuthenticationContextProvider {
     scopes.push_back("https://www.googleapis.com/auth/plus.me");
     scopes.push_back("https://www.googleapis.com/auth/userinfo.email");
 
-    auth::Status status;
+    Status status;
     fidl::StringPtr access_token;
 
     token_mgr_->GetAccessToken(MakeGoogleAppConfig("", ""), user_profile_id_,
                                std::move(scopes), &status, &access_token);
-    ASSERT_EQ(auth::Status::OK, status);
+    ASSERT_EQ(Status::OK, status);
     EXPECT_TRUE(access_token.get().find(":at_") != std::string::npos);
   }
 
   void FetchAndVerifyIdToken() {
-    auth::Status status;
+    Status status;
     fidl::StringPtr id_token;
 
     token_mgr_->GetIdToken(MakeGoogleAppConfig("", ""), user_profile_id_, "",
                            &status, &id_token);
-    ASSERT_EQ(auth::Status::OK, status);
+    ASSERT_EQ(Status::OK, status);
     EXPECT_TRUE(id_token.get().find(":idt_") != std::string::npos);
   }
 
   void FetchAndVerifyFirebaseToken() {
-    auth::Status status;
-    auth::FirebaseTokenPtr firebase_token;
+    Status status;
+    fuchsia::auth::FirebaseTokenPtr firebase_token;
 
     // TODO: Wire test firebase api key
     token_mgr_->GetFirebaseToken(MakeGoogleAppConfig("", ""), user_profile_id_,
                                  "", "", &status, &firebase_token);
-    ASSERT_EQ(auth::Status::OK, status);
+    ASSERT_EQ(Status::OK, status);
     EXPECT_FALSE(firebase_token);
   }
 
   void VerifyRevokeToken() {
-    auth::Status status;
-    auth::FirebaseTokenPtr firebase_token;
+    Status status;
+    fuchsia::auth::FirebaseTokenPtr firebase_token;
 
     token_mgr_->DeleteAllTokens(MakeGoogleAppConfig("", ""), user_profile_id_,
                                 &status);
-    ASSERT_EQ(auth::Status::OK, status);
+    ASSERT_EQ(Status::OK, status);
   }
 
   const std::string user_profile_id_;
@@ -180,12 +184,12 @@ class GoogleTokenManagerApp : auth::AuthenticationContextProvider {
   std::unique_ptr<fuchsia::sys::StartupContext> startup_context_;
   fuchsia::sys::ComponentControllerPtr controller_;
 
-  fidl::Binding<auth::AuthenticationContextProvider>
+  fidl::Binding<fuchsia::auth::AuthenticationContextProvider>
       auth_context_provider_binding_;
 
-  auth::TokenManagerSyncPtr token_mgr_;
-  auth::TokenManagerFactorySyncPtr token_mgr_factory_;
-  fidl::BindingSet<auth::AuthenticationUIContext> ui_bindings_;
+  fuchsia::auth::TokenManagerSyncPtr token_mgr_;
+  fuchsia::auth::TokenManagerFactorySyncPtr token_mgr_factory_;
+  fidl::BindingSet<AuthenticationUIContext> ui_bindings_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(GoogleTokenManagerApp);
 };

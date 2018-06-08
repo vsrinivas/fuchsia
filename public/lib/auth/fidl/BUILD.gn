@@ -5,7 +5,7 @@
 import("//build/fidl/fidl.gni")
 
 fidl("fidl") {
-  name = "auth"
+  name = "fuchsia.auth"
   cpp_legacy_callbacks = true
   sources = [
     "auth_provider.fidl",

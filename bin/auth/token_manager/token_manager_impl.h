@@ -7,7 +7,7 @@
 
 #include <map>
 
-#include <auth/cpp/fidl.h>
+#include <fuchsia/auth/cpp/fidl.h>
 
 #include "garnet/bin/auth/cache/token_cache.h"
 #include "garnet/bin/auth/store/auth_db.h"
@@ -20,45 +20,49 @@
 
 namespace auth {
 
-using auth::AuthProviderPtr;
-using auth::AuthProviderType;
+using fuchsia::auth::AuthProviderPtr;
+using fuchsia::auth::AuthProviderType;
 
 constexpr int kMaxCacheSize = 10;
 
-class TokenManagerImpl : public TokenManager {
+class TokenManagerImpl : public fuchsia::auth::TokenManager {
  public:
-  TokenManagerImpl(fuchsia::sys::StartupContext* context,
-                   std::unique_ptr<store::AuthDb> auth_db,
-                   fidl::VectorPtr<AuthProviderConfig> auth_provider_configs,
-                   fidl::InterfaceHandle<auth::AuthenticationContextProvider>
-                       auth_context_provider);
+  TokenManagerImpl(
+      fuchsia::sys::StartupContext* context,
+      std::unique_ptr<store::AuthDb> auth_db,
+      fidl::VectorPtr<fuchsia::auth::AuthProviderConfig> auth_provider_configs,
+      fidl::InterfaceHandle<fuchsia::auth::AuthenticationContextProvider>
+          auth_context_provider);
 
   ~TokenManagerImpl() override;
 
  private:
   // |TokenManager|
-  void Authorize(AppConfig app_config,
+  void Authorize(fuchsia::auth::AppConfig app_config,
                  const fidl::VectorPtr<fidl::StringPtr> app_scopes,
                  fidl::StringPtr user_profile_id,
                  AuthorizeCallback callback) override;
 
-  void GetAccessToken(AppConfig app_config, fidl::StringPtr user_profile_id,
+  void GetAccessToken(fuchsia::auth::AppConfig app_config,
+                      fidl::StringPtr user_profile_id,
                       const fidl::VectorPtr<fidl::StringPtr> app_scopes,
                       GetAccessTokenCallback callback) override;
 
-  void GetIdToken(AppConfig app_config, fidl::StringPtr user_profile_id,
-                  fidl::StringPtr audience,
+  void GetIdToken(fuchsia::auth::AppConfig app_config,
+                  fidl::StringPtr user_profile_id, fidl::StringPtr audience,
                   GetIdTokenCallback callback) override;
 
-  void GetFirebaseToken(AppConfig app_config, fidl::StringPtr user_profile_id,
+  void GetFirebaseToken(fuchsia::auth::AppConfig app_config,
+                        fidl::StringPtr user_profile_id,
                         fidl::StringPtr audience,
                         fidl::StringPtr firebase_api_key,
                         GetFirebaseTokenCallback callback) override;
 
-  void DeleteAllTokens(AppConfig app_config, fidl::StringPtr user_profile_id,
+  void DeleteAllTokens(fuchsia::auth::AppConfig app_config,
+                       fidl::StringPtr user_profile_id,
                        DeleteAllTokensCallback callback) override;
 
-  auth::AuthenticationContextProviderPtr auth_context_provider_;
+  fuchsia::auth::AuthenticationContextProviderPtr auth_context_provider_;
 
   std::map<AuthProviderType, fuchsia::sys::ComponentControllerPtr>
       auth_provider_controllers_;

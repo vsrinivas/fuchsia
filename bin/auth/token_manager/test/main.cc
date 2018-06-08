@@ -4,7 +4,7 @@
 
 #include <memory>
 
-#include <auth/cpp/fidl.h>
+#include <fuchsia/auth/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <trace-provider/provider.h>
 
@@ -17,6 +17,8 @@
 #include "lib/fxl/log_settings_command_line.h"
 
 namespace {
+
+using fuchsia::auth::AuthProviderFactory;
 
 ///////////////////////////////////////////////////////////
 // class DevAuthProviderApp
@@ -32,8 +34,8 @@ class DevAuthProviderApp {
   }
 
   void Run() {
-    app_context_->outgoing().AddPublicService<auth::AuthProviderFactory>(
-        [this](fidl::InterfaceRequest<auth::AuthProviderFactory> request) {
+    app_context_->outgoing().AddPublicService<AuthProviderFactory>(
+        [this](fidl::InterfaceRequest<AuthProviderFactory> request) {
           factory_bindings_.AddBinding(&factory_impl_, std::move(request));
         });
     loop_.Run();
@@ -45,7 +47,7 @@ class DevAuthProviderApp {
   trace::TraceProvider trace_provider_;
 
   auth::dev_auth_provider::FactoryImpl factory_impl_;
-  fidl::BindingSet<auth::AuthProviderFactory> factory_bindings_;
+  fidl::BindingSet<AuthProviderFactory> factory_bindings_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(DevAuthProviderApp);
 };

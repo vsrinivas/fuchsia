@@ -7,7 +7,7 @@
 
 #include <unordered_set>
 
-#include <auth/cpp/fidl.h>
+#include <fuchsia/auth/cpp/fidl.h>
 
 #include "garnet/bin/auth/token_manager/test/dev_auth_provider_impl.h"
 #include "lib/fidl/cpp/binding_set.h"
@@ -17,7 +17,7 @@
 namespace auth {
 namespace dev_auth_provider {
 
-class FactoryImpl : public auth::AuthProviderFactory {
+class FactoryImpl : public fuchsia::auth::AuthProviderFactory {
  public:
   FactoryImpl() {}
 
@@ -25,11 +25,12 @@ class FactoryImpl : public auth::AuthProviderFactory {
 
  private:
   // Factory:
-  void GetAuthProvider(fidl::InterfaceRequest<auth::AuthProvider> auth_provider,
-                       GetAuthProviderCallback callback) override;
+  void GetAuthProvider(
+      fidl::InterfaceRequest<fuchsia::auth::AuthProvider> auth_provider,
+      GetAuthProviderCallback callback) override;
 
   fidl::BindingSet<
-      AuthProvider,
+      fuchsia::auth::AuthProvider,
       std::unique_ptr<auth::dev_auth_provider::DevAuthProviderImpl>>
       dev_bindings_;
 
