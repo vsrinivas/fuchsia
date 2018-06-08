@@ -420,16 +420,20 @@ static int console_starter(void* arg) {
     printf("devmgr: shell startup\n");
 
     // If we got a TERM environment variable (aka a TERM=... argument on
-    // the kernel command line), pass this down.
+    // the kernel command line), pass this down; otherwise pass TERM=uart.
     const char* term = getenv("TERM");
-    if (term != NULL)
+    if (term == NULL) {
+        term = "TERM=uart";
+    } else {
         term -= sizeof("TERM=") - 1;
+    }
+
 
     const char* device = getenv("console.path");
     if (!device)
         device = "/dev/misc/console";
 
-    const char* envp[] = { term ? term : NULL, NULL, };
+    const char* envp[] = { term, NULL, };
     for (unsigned n = 0; n < 30; n++) {
         int fd;
         if ((fd = open(device, O_RDWR)) >= 0) {
