@@ -15,6 +15,12 @@ FILE* __fdopen(int fd, const char* mode) {
         return 0;
     }
 
+    /* Validate fd */
+    int flags = fcntl(fd, F_GETFL);
+    if (flags < 0) {
+        return 0;
+    }
+
     /* Allocate FILE+buffer or fail */
     if (!(f = malloc(sizeof *f + UNGET + BUFSIZ)))
         return 0;
@@ -32,7 +38,6 @@ FILE* __fdopen(int fd, const char* mode) {
 
     /* Set append mode on fd if opened for append */
     if (*mode == 'a') {
-        int flags = fcntl(fd, F_GETFL);
         if (!(flags & O_APPEND))
             fcntl(fd, F_SETFL, flags | O_APPEND);
         f->flags |= F_APP;
