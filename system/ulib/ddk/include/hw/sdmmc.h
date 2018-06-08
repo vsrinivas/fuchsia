@@ -45,7 +45,6 @@ __BEGIN_CDECLS;
 #define SDMMC_RESP_R6   (SDMMC_RESP_LEN_48 | SDMMC_RESP_CMD_IDX_CHECK | SDMMC_RESP_CRC_CHECK)
 #define SDMMC_RESP_R7   (SDMMC_RESP_LEN_48 | SDMMC_RESP_CMD_IDX_CHECK | SDMMC_RESP_CRC_CHECK)
 
-
 // Common SD/MMC commands
 #define SDMMC_GO_IDLE_STATE_FLAGS           SDMMC_RESP_NONE
 #define SDMMC_ALL_SEND_CID_FLAGS            SDMMC_RESP_R2
@@ -81,7 +80,6 @@ __BEGIN_CDECLS;
                                             SDMMC_CMD_READ
 #define MMC_SEND_TUNING_BLOCK_FLAGS         SDMMC_RESP_R1 | SDMMC_RESP_DATA_PRESENT | \
                                             SDMMC_CMD_READ
-
 // Common SD/MMC commands
 #define SDMMC_GO_IDLE_STATE           0
 #define SDMMC_ALL_SEND_CID            2

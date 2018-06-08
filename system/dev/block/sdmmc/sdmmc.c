@@ -384,15 +384,21 @@ static int sdmmc_worker_thread(void* arg) {
         return st;
     }
 
-    // Probe for SD, then MMC
-    if ((st = sdmmc_probe_sd(dev)) != ZX_OK) {
-        if ((st = sdmmc_probe_mmc(dev)) != ZX_OK) {
-            zxlogf(ERROR, "sdmmc: failed to probe\n");
-            device_remove(dev->zxdev);
-            return st;
+    // Probe for SDIO, SD and then MMC
+    if ((st = sdmmc_probe_sdio(dev)) != ZX_OK) {
+        if ((st = sdmmc_probe_sd(dev)) != ZX_OK) {
+            if ((st = sdmmc_probe_mmc(dev)) != ZX_OK) {
+                zxlogf(ERROR, "sdmmc: failed to probe\n");
+                device_remove(dev->zxdev);
+                return st;
+            }
         }
     }
 
+    if (dev->type == SDMMC_TYPE_SDIO) {
+        //TODO: Add devices for each function of SDIO
+        goto exit;
+    }
     // Device must be in TRAN state at this point
     st = sdmmc_wait_for_tran(dev);
     if (st != ZX_OK) {
@@ -433,6 +439,7 @@ static int sdmmc_worker_thread(void* arg) {
         }
     }
 
+exit:
     zxlogf(TRACE, "sdmmc: worker thread terminated\n");
     return 0;
 }
