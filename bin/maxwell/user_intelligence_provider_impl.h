@@ -39,7 +39,7 @@ class UserIntelligenceProviderImpl
       override;
 
   void GetSpeechToText(
-      fidl::InterfaceRequest<speech::SpeechToText> request) override;
+      fidl::InterfaceRequest<fuchsia::speech::SpeechToText> request) override;
 
   void StartAgents(fidl::InterfaceHandle<fuchsia::modular::ComponentContext>
                        component_context) override;

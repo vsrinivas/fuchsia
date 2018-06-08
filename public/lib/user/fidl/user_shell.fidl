@@ -4,6 +4,8 @@
 
 library fuchsia.modular;
 
+using fuchsia.speech;
+
 // This interface is implemented by a user shell. Dependencies are passed to it
 // in Initialize() on startup. The user shell is also expected to implement
 // Lifecycle in order to receive a Terminate() call on teardown.
@@ -35,7 +37,7 @@ interface UserShellContext {
   7: GetIntelligenceServices(request<IntelligenceServices> @request);
   8: GetLink(request<Link> @request);
   9: GetPresentation(request<fuchsia.ui.policy.Presentation> @request);
-  10: GetSpeechToText(request<speech.SpeechToText> @request);
+  10: GetSpeechToText(request<fuchsia.speech.SpeechToText> @request);
   11: GetStoryProvider(request<StoryProvider> @request);
   12: GetSuggestionProvider(request<SuggestionProvider> @request);
   13: GetVisibleStoriesController(request<VisibleStoriesController> @request);

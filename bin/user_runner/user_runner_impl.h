@@ -17,7 +17,7 @@
 #include <fuchsia/ui/policy/cpp/fidl.h>
 #include <fuchsia/ui/views_v1_token/cpp/fidl.h>
 #include <fuchsia/modular/auth/cpp/fidl.h>
-#include <speech/cpp/fidl.h>
+#include <fuchsia/speech/cpp/fidl.h>
 #include "lib/app/cpp/service_provider_impl.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fidl/cpp/interface_ptr.h"
@@ -118,7 +118,7 @@ class UserRunnerImpl : fuchsia::modular::internal::UserRunner,
   void GetPresentation(fidl::InterfaceRequest<fuchsia::ui::policy::Presentation>
                            request) override;
   void GetSpeechToText(
-      fidl::InterfaceRequest<speech::SpeechToText> request) override;
+      fidl::InterfaceRequest<fuchsia::speech::SpeechToText> request) override;
   void GetStoryProvider(
       fidl::InterfaceRequest<fuchsia::modular::StoryProvider> request) override;
   void GetSuggestionProvider(

@@ -750,7 +750,7 @@ void UserRunnerImpl::GetPresentation(
 }
 
 void UserRunnerImpl::GetSpeechToText(
-    fidl::InterfaceRequest<speech::SpeechToText> request) {
+    fidl::InterfaceRequest<fuchsia::speech::SpeechToText> request) {
   user_intelligence_provider_->GetSpeechToText(std::move(request));
 }
 

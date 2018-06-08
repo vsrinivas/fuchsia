@@ -120,7 +120,7 @@ void UserIntelligenceProviderImpl::GetSuggestionProvider(
 }
 
 void UserIntelligenceProviderImpl::GetSpeechToText(
-    fidl::InterfaceRequest<speech::SpeechToText> request) {
+    fidl::InterfaceRequest<fuchsia::speech::SpeechToText> request) {
   if (kronk_services_) {
     fuchsia::sys::ConnectToService(kronk_services_.get(), std::move(request));
   } else {

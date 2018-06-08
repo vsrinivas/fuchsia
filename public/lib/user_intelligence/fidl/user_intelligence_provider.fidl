@@ -4,6 +4,8 @@
 
 library fuchsia.modular;
 
+using fuchsia.speech;
+
 [Discoverable]
 interface UserIntelligenceProviderFactory {
   // Creates and returns a |UserIntelligenceProvider|.
@@ -35,7 +37,7 @@ interface UserIntelligenceProvider {
 
   2: GetSuggestionProvider(request<SuggestionProvider> suggestion_provider);
 
-  3: GetSpeechToText(request<speech.SpeechToText> speech_to_text);
+  3: GetSpeechToText(request<fuchsia.speech.SpeechToText> speech_to_text);
 
   // The |ComponentContext| is used to create agents and use message queues.
   5: StartAgents(ComponentContext user_intelligence_context);
