@@ -4,14 +4,15 @@
 
 #include "peridot/bin/cloud_provider_firebase/page_handler/impl/page_cloud_handler_impl.h"
 
+#include <lib/async/cpp/task.h>
+#include <lib/zx/socket.h>
+#include <lib/zx/vmo.h>
+#include <rapidjson/document.h>
+
 #include <functional>
 #include <memory>
 #include <string>
 #include <vector>
-
-#include <lib/async/cpp/task.h>
-#include <lib/zx/socket.h>
-#include <lib/zx/vmo.h>
 
 #include "gtest/gtest.h"
 #include "lib/callback/capture.h"
@@ -27,8 +28,6 @@
 #include "peridot/lib/firebase/encoding.h"
 #include "peridot/lib/firebase/firebase.h"
 #include "peridot/lib/firebase/status.h"
-
-#include <rapidjson/document.h>
 
 namespace cloud_provider_firebase {
 namespace {

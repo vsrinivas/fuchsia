@@ -6,6 +6,7 @@
 #define PERIDOT_BIN_CLOUD_PROVIDER_FIREBASE_APP_CONVERT_STATUS_H_
 
 #include <fuchsia/ledger/cloud/cpp/fidl.h>
+
 #include "peridot/bin/cloud_provider_firebase/include/types.h"
 #include "peridot/bin/cloud_provider_firebase/page_handler/public/types.h"
 

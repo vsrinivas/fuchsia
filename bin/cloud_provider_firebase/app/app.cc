@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/modular/cpp/fidl.h>
 #include <trace-provider/provider.h>
 
-#include <fuchsia/modular/cpp/fidl.h>
 #include "lib/app/cpp/startup_context.h"
 #include "lib/backoff/exponential_backoff.h"
 #include "lib/fidl/cpp/binding_set.h"

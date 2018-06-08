@@ -5,6 +5,8 @@
 #ifndef PERIDOT_BIN_CLOUD_PROVIDER_FIREBASE_DEVICE_SET_CLOUD_DEVICE_SET_IMPL_H_
 #define PERIDOT_BIN_CLOUD_PROVIDER_FIREBASE_DEVICE_SET_CLOUD_DEVICE_SET_IMPL_H_
 
+#include <rapidjson/document.h>
+
 #include <functional>
 #include <string>
 
@@ -12,8 +14,6 @@
 #include "peridot/bin/cloud_provider_firebase/device_set/cloud_device_set.h"
 #include "peridot/lib/firebase/firebase.h"
 #include "peridot/lib/firebase/watch_client.h"
-
-#include <rapidjson/document.h>
 
 namespace cloud_provider_firebase {
 
