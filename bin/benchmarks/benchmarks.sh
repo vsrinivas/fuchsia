@@ -21,10 +21,11 @@ fi
 OUT_DIR="$1"
 
 # Benchmark example, here for demonstration.
-runbench_exec "${OUT_DIR}/benchmark_example.json" \
-    trace record \
-    --spec-file=/system/data/benchmark_example/benchmark_example.tspec \
-    --benchmark-results-file="${OUT_DIR}/benchmark_example.json"
+# TODO(IN-458): Re-enable after tracing failure is addressed.
+#runbench_exec "${OUT_DIR}/benchmark_example.json" \
+#    trace record \
+#    --spec-file=/system/data/benchmark_example/benchmark_example.tspec \
+#    --benchmark-results-file="${OUT_DIR}/benchmark_example.json"
 
 # Performance tests implemented in the Zircon repo.
 runbench_exec "${OUT_DIR}/zircon.perf_test.json" \
