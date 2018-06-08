@@ -102,7 +102,6 @@ static const struct ath10k_channel ath10k_5ghz_channels[] = {
 static const struct ath10k_band ath10k_supported_bands[] = {
     {
         .name = "2.4 Ghz",
-        .mode = MODE_11G,
         // FIXME: NET-817
         .ht_caps = { .ht_capability_info = 0x01fe,
                      .ampdu_params = 0x00,
@@ -122,7 +121,6 @@ static const struct ath10k_band ath10k_supported_bands[] = {
 
     {
         .name = "5 Ghz",
-        .mode = MODE_11A,
         // FIXME: NET-817
         .ht_caps = { .ht_capability_info = 0x01fe,
                      .ampdu_params = 0x00,
@@ -505,10 +503,10 @@ static int ath10k_clear_vdev_key(struct ath10k_vif* arvif,
 /*********************/
 
 static inline enum wmi_phy_mode
-chan_to_phymode(wlan_channel_t* wlan_chan, const struct ath10k_channel* primary_chan) {
+chan_to_phymode(wlan_channel_t* wlan_chan) {
     enum wmi_phy_mode phymode = MODE_UNKNOWN;
 
-    if (primary_chan->hw_value <= 14) {
+    if (wlan_chan->primary <= 14) {
         switch(wlan_chan->cbw) {
         case CBW20:
             phymode = MODE_11NG_HT20;
@@ -1428,7 +1426,7 @@ static zx_status_t ath10k_vdev_start_restart(struct ath10k_vif* arvif,
         return ZX_ERR_INVALID_ARGS;
     }
 
-    arg.channel.mode = chan_to_phymode(chandef, primary_chan);
+    arg.channel.mode = chan_to_phymode(chandef);
 
     arg.channel.min_power = 0;
     arg.channel.max_power = primary_chan->max_power * 2;
@@ -2235,8 +2233,7 @@ ath10k_peer_assoc_h_vht_masked(const uint16_t vht_mcs_mask[NL80211_VHT_NSS_MAX])
 }
 
 static void ath10k_peer_assoc_h_ht(struct ath10k* ar,
-                                   struct ieee80211_vif* vif,
-                                   struct ieee80211_sta* sta,
+                                   void* assoc_resp_frame,
                                    struct wmi_peer_assoc_complete_arg* arg) {
     const struct ieee80211_sta_ht_cap* ht_cap = &sta->ht_cap;
     struct ath10k_vif* arvif = (void*)vif->drv_priv;
@@ -2835,32 +2832,6 @@ static void ethaddr_sprintf(char* str, uint8_t* addr) {
     }
 }
 
-static void ath10k_mac_parse_ht_caps(uint16_t response_ht_caps, uint32_t* arg_ht_caps) {
-    *arg_ht_caps |= WMI_HT_CAP_ENABLED;
-    if (response_ht_caps & IEEE80211_HT_CAPS_LDPC) {
-        *arg_ht_caps |= WMI_HT_CAP_LDPC;
-    }
-    if ((response_ht_caps & IEEE80211_HT_CAPS_SMPS) == 0x4) {
-        *arg_ht_caps |= WMI_HT_CAP_DYNAMIC_SMPS;
-    }
-    if (response_ht_caps & IEEE80211_HT_CAPS_20_SGI) {
-        *arg_ht_caps |= WMI_HT_CAP_HT20_SGI;
-    }
-    if (response_ht_caps & IEEE80211_HT_CAPS_40_SGI) {
-        *arg_ht_caps |= WMI_HT_CAP_HT40_SGI;
-    }
-    if (response_ht_caps & IEEE80211_HT_CAPS_TX_STBC) {
-        *arg_ht_caps |= WMI_HT_CAP_TX_STBC;
-    }
-    *arg_ht_caps |= (((response_ht_caps & IEEE80211_HT_CAPS_RX_STBC)
-                      >> IEEE80211_HT_CAPS_RX_STBC_SHIFT)
-                      << WMI_HT_CAP_RX_STBC_MASK_SHIFT);
-    if (response_ht_caps & IEEE80211_HT_CAPS_L_SIG_TXOP_PROT) {
-        *arg_ht_caps |= WMI_HT_CAP_L_SIG_TXOP_PROT;
-    }
-
-}
-
 static void ath10k_mac_parse_a_mpdu(uint8_t response_a_mpdu,
                                     struct wmi_peer_assoc_complete_arg* assoc_arg) {
     assoc_arg->peer_max_mpdu = response_a_mpdu & IEEE80211_A_MPDU_MAX_RX_LEN;
@@ -2868,7 +2839,8 @@ static void ath10k_mac_parse_a_mpdu(uint8_t response_a_mpdu,
                                    IEEE80211_A_MPDU_DENSITY_SHIFT;
 }
 
-static void ath10k_mac_parse_assoc_resp(const uint8_t* tagged_data,
+static void ath10k_mac_parse_assoc_resp(struct ath10k* ar,
+                                        const uint8_t* tagged_data,
                                         size_t data_len,
                                         struct wmi_peer_assoc_complete_arg* assoc_arg) {
     size_t legacy_rates_seen = 0;
@@ -2898,9 +2870,70 @@ static void ath10k_mac_parse_assoc_resp(const uint8_t* tagged_data,
             if (tag_len != 26) {
                 goto invalid_data;
             }
+            assoc_arg->peer_flags |= ar->wmi.peer_flags->ht;
             uint16_t ht_caps = tagged_data[0] | ((uint16_t)tagged_data[1] << 8);
-            ath10k_mac_parse_ht_caps(ht_caps, &assoc_arg->peer_ht_caps);
+            assoc_arg->peer_ht_caps = ht_caps;
+            assoc_arg->peer_rate_caps |= WMI_RC_HT_FLAG;
+            if (ht_caps & IEEE80211_HT_CAPS_CHAN_WIDTH) {
+                assoc_arg->peer_flags |= ar->wmi.peer_flags->bw40;
+                assoc_arg->peer_rate_caps |= WMI_RC_CW40_FLAG;
+            }
+            if ((ht_caps & IEEE80211_HT_CAPS_SGI_20) ||
+                (ht_caps & IEEE80211_HT_CAPS_SGI_40)) {
+                assoc_arg->peer_rate_caps |= WMI_RC_SGI_FLAG;
+            }
+            if (ht_caps & IEEE80211_HT_CAPS_LDPC) {
+                assoc_arg->peer_flags |= ar->wmi.peer_flags->ldbc;
+            }
+            if (ht_caps & IEEE80211_HT_CAPS_TX_STBC) {
+                assoc_arg->peer_rate_caps |= WMI_RC_TX_STBC_FLAG;
+                assoc_arg->peer_flags |= ar->wmi.peer_flags->stbc;
+            }
+            if (ht_caps & IEEE80211_HT_CAPS_RX_STBC) {
+                uint16_t stbc = ht_caps & IEEE80211_HT_CAPS_RX_STBC;
+                stbc >>= IEEE80211_HT_CAPS_RX_STBC_SHIFT;
+                stbc <<= WMI_RC_RX_STBC_FLAG_S;
+                assoc_arg->peer_rate_caps |= stbc;
+                assoc_arg->peer_flags |= ar->wmi.peer_flags->stbc;
+            }
             ath10k_mac_parse_a_mpdu(tagged_data[2], assoc_arg);
+            break;
+        case IEEE80211_ASSOC_TAG_HT_INFO:
+            if (tag_len != 22) {
+                goto invalid_data;
+            }
+#if 0 // NEEDS PORTING
+            struct ieee80211_ht_info* ht_info = (void*)tagged_data;
+            unsigned i, n, max_nss;
+            for (i = 0, n = 0, max_nss = 0; i < (10 * 8); i++) {
+                if ((ht_info->rx_mcs[i / 8] & (1U << (i % 8))) &&
+                    (ht_mcs_mask[i / 8] & (1U << (i % 8)))) {
+                    max_nss = (i / 8) + 1;
+                    arg->peer_ht_rates.rates[n++] = i;
+                }
+            }
+            /*
+             * This is a workaround for HT-enabled STAs which break the spec
+             * and have no HT capabilities RX mask (no HT RX MCS map).
+             *
+             * As per spec, in section 20.3.5 Modulation and coding scheme (MCS),
+             * MCS 0 through 7 are mandatory in 20MHz with 800 ns GI at all STAs.
+             *
+             * Firmware asserts if such situation occurs.
+             */
+            if (n == 0) {
+#endif // NEEDS PORTING
+                unsigned i;
+                assoc_arg->peer_ht_rates.num_rates = 8;
+                for (i = 0; i < assoc_arg->peer_ht_rates.num_rates; i++) {
+                    assoc_arg->peer_ht_rates.rates[i] = i;
+                }
+#if 0 // NEEDS PORTING
+            } else {
+                arg->peer_ht_rates.num_rates = n;
+                arg->peer_num_spatial_streams = MIN(sta->rx_nss, max_nss);
+            }
+#endif // NEEDS PORTING
             break;
         case IEEE80211_ASSOC_TAG_EXTENDED_RATES:
             {
@@ -2994,22 +3027,16 @@ int ath10k_mac_bss_assoc(void* thrd_data) {
         assoc_arg.vdev_id = arvif->vdev_id;
         assoc_arg.peer_reassoc = false;
         assoc_arg.peer_aid = arvif->aid;
-        assoc_arg.peer_flags |= ar->wmi.peer_flags->auth;
+        assoc_arg.peer_flags |= ar->wmi.peer_flags->auth | ar->wmi.peer_flags->qos;
         assoc_arg.peer_listen_intval = 1;
         assoc_arg.peer_num_spatial_streams = 1;
         assoc_arg.peer_caps = assoc_resp->capabilities;
 
-        ath10k_mac_parse_assoc_resp(assoc_resp->info, rate_info_size, &assoc_arg);
+        ath10k_mac_parse_assoc_resp(ar, assoc_resp->info, rate_info_size, &assoc_arg);
 
-        // TODO: Ideally we should look this up
-        assoc_arg.peer_phymode = ar->rx_channel.primary <= 14 ? MODE_11G : MODE_11A;
+        assoc_arg.peer_phymode = chan_to_phymode(&ar->rx_channel);
 
-        // TODO: set crypto flags (as per ath10k_peer_assoc_h_crypto
-
-#if 0 // TODO: HT
-        assoc_arg.peer_rate_caps
-        assoc_arg.peer_ht_rates
-#endif
+        // TODO: set crypto flags (as per ath10k_peer_assoc_h_crypto)
 
 #if 0 // TODO: VHT
         assoc_arg.peer_vht_caps

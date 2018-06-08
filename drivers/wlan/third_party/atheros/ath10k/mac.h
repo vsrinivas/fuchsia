@@ -60,7 +60,6 @@ struct ath10k_channel {
 
 struct ath10k_band {
     const char* name;
-    enum wmi_phy_mode mode;
     wlan_ht_caps_t ht_caps;
     bool vht_supported;
     wlan_vht_caps_t vht_caps;

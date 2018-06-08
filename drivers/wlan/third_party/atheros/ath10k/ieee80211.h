@@ -41,6 +41,13 @@ struct ieee80211_assoc_resp {
     uint8_t info[0];
 } __PACKED;
 
+// IEEE Std 802.11-2016, 9.4.2.57
+struct ieee80211_ht_info {
+    uint8_t primary_channel;
+    uint8_t ht_operation_info[5];
+    uint8_t rx_mcs[10];
+} __PACKED;
+
 // IEEE Std 802.11-2016, 9.2.4.1.3
 enum ieee80211_frame_type {
     IEEE80211_FRAME_TYPE_MGMT = 0x0,
@@ -99,27 +106,29 @@ static inline uint8_t* ieee80211_get_bssid(struct ieee80211_frame_header* fh) {
     return fh->addr3;
 }
 
+// IEEE Std 802.11-2016, 9.4.2.1, Table 9-77
 enum ieee80211_assoc_tags {
     IEEE80211_ASSOC_TAG_RATES = 1,
     IEEE80211_ASSOC_TAG_HT_CAPS = 45,
     IEEE80211_ASSOC_TAG_EXTENDED_RATES = 50,
+    IEEE80211_ASSOC_TAG_HT_INFO = 61,
 };
 
+// IEEE Std 802.11-2016, 9.4.2.56.2, Figure 9-332
 enum ieee80211_ht_caps {
     IEEE80211_HT_CAPS_LDPC              = 0x0001,
-    IEEE80211_HT_CAPS_20MHZ_ONLY        = 0x0002,
+    IEEE80211_HT_CAPS_CHAN_WIDTH        = 0x0002,
     IEEE80211_HT_CAPS_SMPS              = 0x000c,
     IEEE80211_HT_CAPS_GF                = 0x0010,
-    IEEE80211_HT_CAPS_20_SGI            = 0x0020,
-    IEEE80211_HT_CAPS_40_SGI            = 0x0040,
+    IEEE80211_HT_CAPS_SGI_20            = 0x0020,
+    IEEE80211_HT_CAPS_SGI_40            = 0x0040,
     IEEE80211_HT_CAPS_TX_STBC           = 0x0080,
     IEEE80211_HT_CAPS_RX_STBC           = 0x0300,
         IEEE80211_HT_CAPS_RX_STBC_SHIFT = 7,
     IEEE80211_HT_CAPS_DELAYED_BLOCK_ACK = 0x0400,
     IEEE80211_HT_CAPS_MAX_AMSDU_LEN     = 0x0800,
-    IEEE80211_HT_CAPS_40_DSSS_CCX       = 0x1000,
-    IEEE80211_HT_CAPS_PSMP              = 0x2000,
-    IEEE80211_HT_CAPS_NO_40MHZ          = 0x4000,
+    IEEE80211_HT_CAPS_DSSS_CCX_40       = 0x1000,
+    IEEE80211_HT_CAPS_40_INTOLERANT     = 0x4000,
     IEEE80211_HT_CAPS_L_SIG_TXOP_PROT   = 0x8000
 };
 
