@@ -16,30 +16,28 @@ namespace fuchsia {
 namespace sys {
 namespace {
 
-class RealmMock : public ComponentContainer<ComponentControllerImpl> {
+template <typename T>
+class ComponentContainerImpl : public ComponentContainer<T> {
  public:
   size_t ComponentCount() { return components_.size(); }
   const std::string koid() { return "5342"; }
 
-  void AddComponent(std::unique_ptr<ComponentControllerImpl> component);
+  void AddComponent(std::unique_ptr<T> component);
 
-  std::unique_ptr<ComponentControllerImpl> ExtractComponent(
-      ComponentControllerImpl* controller) override;
+  std::unique_ptr<T> ExtractComponent(T* controller) override;
 
  private:
-  std::unordered_map<ComponentControllerBase*,
-                     std::unique_ptr<ComponentControllerImpl>>
-      components_;
+  std::unordered_map<T*, std::unique_ptr<T>> components_;
 };
 
-void RealmMock::AddComponent(
-    std::unique_ptr<ComponentControllerImpl> component) {
+template <typename T>
+void ComponentContainerImpl<T>::AddComponent(std::unique_ptr<T> component) {
   auto key = component.get();
   components_.emplace(key, std::move(component));
 }
 
-std::unique_ptr<ComponentControllerImpl> RealmMock::ExtractComponent(
-    ComponentControllerImpl* controller) {
+template <typename T>
+std::unique_ptr<T> ComponentContainerImpl<T>::ExtractComponent(T* controller) {
   auto it = components_.find(controller);
   if (it == components_.end()) {
     return nullptr;
@@ -49,6 +47,9 @@ std::unique_ptr<ComponentControllerImpl> RealmMock::ExtractComponent(
   components_.erase(it);
   return component;
 }
+
+typedef ComponentContainerImpl<ComponentControllerImpl> FakeRealm;
+typedef ComponentContainerImpl<ComponentBridge> FakeRunner;
 
 class ComponentControllerTest : public gtest::TestWithMessageLoop {
  public:
@@ -83,9 +84,63 @@ class ComponentControllerTest : public gtest::TestWithMessageLoop {
         export_dir_type, std::move(export_dir), zx::channel());
   }
 
-  RealmMock realm_;
+  FakeRealm realm_;
   std::string process_koid_;
   zx::process process_;
+};
+
+class ComponentBridgeTest : public gtest::TestWithMessageLoop,
+                            public ComponentController {
+ public:
+  ComponentBridgeTest() : binding_(this) {}
+  void SetUp() override {
+    gtest::TestWithMessageLoop::SetUp();
+    binding_.Bind(remote_controller_.NewRequest());
+    binding_.set_error_handler([this] { Kill(); });
+  }
+
+  void Kill() override {
+    SendReturnCode();
+    binding_.Unbind();
+  }
+
+  void Wait(WaitCallback callback) override {
+    wait_callbacks_.push_back(callback);
+    if (!binding_.is_bound()) {
+      SendReturnCode();
+    }
+  }
+
+  void Detach() override { binding_.set_error_handler(nullptr); }
+
+ protected:
+  std::unique_ptr<ComponentBridge> create_component_bridge(
+      ComponentControllerPtr& controller,
+      ExportedDirType export_dir_type = ExportedDirType::kLegacyFlatLayout,
+      zx::channel export_dir = zx::channel()) {
+    // only allow creation of one component.
+    if (!remote_controller_) {
+      return nullptr;
+    }
+    auto component = std::make_unique<ComponentBridge>(
+        controller.NewRequest(), std::move(remote_controller_), &runner_,
+        nullptr, "test-url", "test-arg", "test-label", "1", nullptr,
+        export_dir_type, std::move(export_dir), zx::channel());
+    component->SetParentJobId(runner_.koid());
+    return component;
+  }
+
+  void SendReturnCode() {
+    for (const auto& iter : wait_callbacks_) {
+      iter(1);
+    }
+    wait_callbacks_.clear();
+  }
+
+  std::vector<WaitCallback> wait_callbacks_;
+  FakeRunner runner_;
+  ::fidl::Binding<ComponentController> binding_;
+  ComponentControllerPtr remote_controller_;
 };
 
 std::vector<std::string> split(const std::string& s, char delim) {
@@ -172,7 +227,6 @@ TEST_F(ComponentControllerTest, CreateAndKill) {
 
 TEST_F(ComponentControllerTest, ControllerScope) {
   bool wait = false;
-  auto hub_path = "c/test-label/" + process_koid_;
   {
     ComponentControllerPtr component_ptr;
     auto component = create_component(component_ptr);
@@ -228,6 +282,101 @@ TEST_F(ComponentControllerTest, Hub) {
   EXPECT_STREQ(get_value(component->hub_dir(), "url").c_str(), "test-url");
   EXPECT_STREQ(get_value(component->hub_dir(), "process-id").c_str(),
                process_koid_.c_str());
+  fbl::RefPtr<fs::Vnode> out_dir;
+  ASSERT_TRUE(path_exists(component->hub_dir(), "out", &out_dir));
+  ASSERT_TRUE(out_dir->IsRemote());
+}
+
+TEST_F(ComponentBridgeTest, CreateAndKill) {
+  ComponentControllerPtr component_ptr;
+  auto component = create_component_bridge(component_ptr);
+  auto hub_info = component->HubInfo();
+
+  EXPECT_EQ(hub_info.label(), "test-label");
+
+  ASSERT_EQ(runner_.ComponentCount(), 0u);
+  runner_.AddComponent(std::move(component));
+
+  ASSERT_EQ(runner_.ComponentCount(), 1u);
+
+  bool wait = false;
+  component_ptr->Wait([&wait](int errcode) { wait = true; });
+  component_ptr->Kill();
+  EXPECT_TRUE(RunLoopUntilWithTimeout([&wait] { return wait; },
+                                      fxl::TimeDelta::FromSeconds(5)));
+
+  // make sure all messages are processed after wait was called
+  RunLoopUntilIdle();
+  EXPECT_EQ(runner_.ComponentCount(), 0u);
+}
+
+TEST_F(ComponentBridgeTest, ControllerScope) {
+  bool wait = false;
+  {
+    ComponentControllerPtr component_ptr;
+    auto component = create_component_bridge(component_ptr);
+    component->Wait([&wait](int errcode) { wait = true; });
+    runner_.AddComponent(std::move(component));
+
+    ASSERT_EQ(runner_.ComponentCount(), 1u);
+  }
+  EXPECT_TRUE(RunLoopUntilWithTimeout([&wait] { return wait; },
+                                      fxl::TimeDelta::FromSeconds(5)));
+
+  // make sure all messages are processed after wait was called
+  RunLoopUntilIdle();
+  EXPECT_EQ(runner_.ComponentCount(), 0u);
+}
+
+TEST_F(ComponentBridgeTest, DetachController) {
+  bool wait = false;
+  ComponentBridge* component_bridge_ptr;
+  {
+    ComponentControllerPtr component_ptr;
+    auto component = create_component_bridge(component_ptr);
+    component->Wait([&wait](int errcode) { wait = true; });
+    component_bridge_ptr = component.get();
+    runner_.AddComponent(std::move(component));
+
+    ASSERT_EQ(runner_.ComponentCount(), 1u);
+
+    // detach controller before it goes out of scope and then test that our
+    // component did not die.
+    component_ptr->Detach();
+    RunLoopUntilIdle();
+  }
+
+  // make sure all messages are processed if Kill was called.
+  RunLoopUntilIdle();
+  ASSERT_FALSE(wait);
+  EXPECT_EQ(runner_.ComponentCount(), 1u);
+
+  // bridge should be still connected, kill that to see if we are able to kill
+  // real component.
+  component_bridge_ptr->Kill();
+  EXPECT_TRUE(RunLoopUntilWithTimeout([&wait] { return wait; },
+                                      fxl::TimeDelta::FromSeconds(5)));
+
+  // make sure all messages are processed after wait was called
+  RunLoopUntilIdle();
+  EXPECT_EQ(runner_.ComponentCount(), 0u);
+}
+
+TEST_F(ComponentBridgeTest, Hub) {
+  zx::channel export_dir, export_dir_req;
+  ASSERT_EQ(zx::channel::create(0, &export_dir, &export_dir_req), ZX_OK);
+
+  ComponentControllerPtr component_ptr;
+
+  auto component = create_component_bridge(
+      component_ptr, ExportedDirType::kPublicDebugCtrlLayout,
+      std::move(export_dir_req));
+
+  EXPECT_STREQ(get_value(component->hub_dir(), "name").c_str(), "test-label");
+  EXPECT_STREQ(get_value(component->hub_dir(), "args").c_str(), "test-arg");
+  EXPECT_STREQ(get_value(component->hub_dir(), "job-id").c_str(),
+               runner_.koid().c_str());
+  EXPECT_STREQ(get_value(component->hub_dir(), "url").c_str(), "test-url");
   fbl::RefPtr<fs::Vnode> out_dir;
   ASSERT_TRUE(path_exists(component->hub_dir(), "out", &out_dir));
   ASSERT_TRUE(out_dir->IsRemote());
