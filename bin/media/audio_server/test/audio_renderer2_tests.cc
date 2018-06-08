@@ -19,16 +19,16 @@ namespace test {
 class AudioRenderer2Test : public gtest::TestWithMessageLoop {
  protected:
   void SetUp() override {
-    fuchsia::sys::ConnectToEnvironmentService(audio_server_.NewRequest());
-    ASSERT_TRUE(audio_server_);
+    fuchsia::sys::ConnectToEnvironmentService(audio_.NewRequest());
+    ASSERT_TRUE(audio_);
 
-    audio_server_.set_error_handler([this]() {
-      FXL_LOG(ERROR) << "AudioServer connection lost. Quitting.";
+    audio_.set_error_handler([this]() {
+      FXL_LOG(ERROR) << "Audio connection lost. Quitting.";
       error_occurred_ = true;
       message_loop_.PostQuitTask();
     });
 
-    audio_server_->CreateRendererV2(audio_renderer_.NewRequest());
+    audio_->CreateRendererV2(audio_renderer_.NewRequest());
     ASSERT_TRUE(audio_renderer_);
 
     audio_renderer_.set_error_handler([this]() {
@@ -39,7 +39,7 @@ class AudioRenderer2Test : public gtest::TestWithMessageLoop {
   }
   void TearDown() override { EXPECT_FALSE(error_occurred_); }
 
-  fuchsia::media::AudioServerPtr audio_server_;
+  fuchsia::media::AudioPtr audio_;
   fuchsia::media::AudioRenderer2Ptr audio_renderer_;
   bool error_occurred_ = false;
 };
@@ -96,14 +96,14 @@ TEST_F(AudioRenderer2Test, SetPcmFormat_Double) {
 class AudioRenderer2SyncTest : public gtest::TestWithMessageLoop {
  protected:
   void SetUp() override {
-    fuchsia::sys::ConnectToEnvironmentService(audio_server_.NewRequest());
-    ASSERT_TRUE(audio_server_);
+    fuchsia::sys::ConnectToEnvironmentService(audio_.NewRequest());
+    ASSERT_TRUE(audio_);
 
-    ASSERT_TRUE(audio_server_->CreateRendererV2(audio_renderer_.NewRequest()));
+    ASSERT_TRUE(audio_->CreateRendererV2(audio_renderer_.NewRequest()));
     ASSERT_TRUE(audio_renderer_);
   }
 
-  fuchsia::media::AudioServerSyncPtr audio_server_;
+  fuchsia::media::AudioSyncPtr audio_;
   fuchsia::media::AudioRenderer2SyncPtr audio_renderer_;
 };
 

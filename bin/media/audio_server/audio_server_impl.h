@@ -24,12 +24,12 @@
 namespace media {
 namespace audio {
 
-class AudioServerImpl : public fuchsia::media::AudioServer {
+class AudioServerImpl : public fuchsia::media::Audio {
  public:
   AudioServerImpl();
   ~AudioServerImpl() override;
 
-  // AudioServer
+  // Audio implementation.
   // TODO(mpuryear): through the codebase, particularly in examples and headers,
   // change 'audio_renderer' variables to 'audio_renderer_request' (media, etc).
   void CreateRenderer(
@@ -71,7 +71,7 @@ class AudioServerImpl : public fuchsia::media::AudioServer {
   void DoPacketCleanup();
 
   fuchsia::sys::Outgoing outgoing_;
-  fidl::BindingSet<fuchsia::media::AudioServer> bindings_;
+  fidl::BindingSet<fuchsia::media::Audio> bindings_;
 
   // A reference to our thread's async object.  Allows us to post events to
   // be handled by our main application thread from things like the output

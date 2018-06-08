@@ -128,11 +128,11 @@ int MediaApp::Run() {
   return 0;
 }
 
-// Connect to the udioServer and get an AudioRenderer.
+// Connect to the Audio service and get an AudioRenderer.
 bool MediaApp::AcquireRenderer() {
-  fuchsia::media::AudioServerSyncPtr audio_server;
-  fuchsia::sys::ConnectToEnvironmentService(audio_server.NewRequest());
-  return audio_server->CreateRendererV2(audio_renderer_.NewRequest());
+  fuchsia::media::AudioSyncPtr audio;
+  fuchsia::sys::ConnectToEnvironmentService(audio.NewRequest());
+  return audio->CreateRendererV2(audio_renderer_.NewRequest());
 }
 
 // Set the AudioRenderer's audio format to stereo 48kHz.

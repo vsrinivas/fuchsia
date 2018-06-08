@@ -21,10 +21,10 @@ AudioServerImpl::AudioServerImpl() : device_manager_(this) {
       fbl::AdoptRef(new fs::Service([this](zx::channel ch) -> zx_status_t {
         bindings_.AddBinding(
             this,
-            fidl::InterfaceRequest<fuchsia::media::AudioServer>(std::move(ch)));
+            fidl::InterfaceRequest<fuchsia::media::Audio>(std::move(ch)));
         return ZX_OK;
       }));
-  outgoing_.public_dir()->AddEntry(fuchsia::media::AudioServer::Name_,
+  outgoing_.public_dir()->AddEntry(fuchsia::media::Audio::Name_,
                                    std::move(service));
 
   // Stash a pointer to our async object.

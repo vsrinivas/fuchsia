@@ -43,15 +43,14 @@ int main(int argc, const char** argv) {
 
   auto startup_context = fuchsia::sys::StartupContext::CreateFromStartupInfo();
 
-  auto audio_server =
-      startup_context
-          ->ConnectToEnvironmentService<fuchsia::media::AudioServer>();
+  auto audio =
+      startup_context->ConnectToEnvironmentService<fuchsia::media::Audio>();
 
   if (set_gain) {
-    audio_server->SetMasterGain(gain_target);
+    audio->SetMasterGain(gain_target);
   }
 
-  audio_server->GetMasterGain([&loop](float db_gain) {
+  audio->GetMasterGain([&loop](float db_gain) {
     std::cout << "Master gain is currently " << std::fixed
               << std::setprecision(2) << db_gain << " dB.\n";
     async::PostTask(loop.async(), [&loop]() { loop.Quit(); });

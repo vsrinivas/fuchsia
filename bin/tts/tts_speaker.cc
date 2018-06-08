@@ -62,11 +62,10 @@ zx_status_t TtsSpeaker::Init(
   }
 
   FXL_DCHECK(startup_context != nullptr);
-  auto audio_server =
-      startup_context
-          ->ConnectToEnvironmentService<fuchsia::media::AudioServer>();
+  auto audio =
+      startup_context->ConnectToEnvironmentService<fuchsia::media::Audio>();
 
-  audio_server->CreateRendererV2(audio_renderer_.NewRequest());
+  audio->CreateRendererV2(audio_renderer_.NewRequest());
 
   fuchsia::media::AudioPcmFormat format;
   format.sample_format = kFliteSampleFormat;

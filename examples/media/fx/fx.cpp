@@ -82,7 +82,7 @@ class FxProcessor {
     FXL_DCHECK(quit_callback_);
   }
 
-  void Startup(fuchsia::media::AudioServerPtr audio_server);
+  void Startup(fuchsia::media::AudioPtr audio);
 
  private:
   using EffectFn = void (FxProcessor::*)(int16_t* src, int16_t* dst,
@@ -160,7 +160,7 @@ class FxProcessor {
   bool lead_time_frames_known_ = false;
 };
 
-void FxProcessor::Startup(fuchsia::media::AudioServerPtr audio_server) {
+void FxProcessor::Startup(fuchsia::media::AudioPtr audio) {
   auto cleanup = fbl::MakeAutoCall([this] { Shutdown("Startup failure"); });
 
   zx_thread_set_priority(24 /* HIGH_PRIORITY in LK */);
@@ -181,7 +181,7 @@ void FxProcessor::Startup(fuchsia::media::AudioServerPtr audio_server) {
   }
 
   // Create a renderer.  Setup connection error handlers.
-  audio_server->CreateRendererV2(audio_renderer_.NewRequest());
+  audio->CreateRendererV2(audio_renderer_.NewRequest());
 
   audio_renderer_.set_error_handler([this]() {
     Shutdown("fuchsia::media::AudioRenderer connection closed");
@@ -733,14 +733,13 @@ int main(int argc, char** argv) {
   std::unique_ptr<fuchsia::sys::StartupContext> startup_context =
       fuchsia::sys::StartupContext::CreateFromStartupInfo();
 
-  fuchsia::media::AudioServerPtr audio_server =
-      startup_context
-          ->ConnectToEnvironmentService<fuchsia::media::AudioServer>();
+  fuchsia::media::AudioPtr audio =
+      startup_context->ConnectToEnvironmentService<fuchsia::media::Audio>();
 
   FxProcessor fx(fbl::move(input), [&loop]() {
     async::PostTask(loop.async(), [&loop]() { loop.Quit(); });
   });
-  fx.Startup(std::move(audio_server));
+  fx.Startup(std::move(audio));
 
   loop.Run();
   return 0;

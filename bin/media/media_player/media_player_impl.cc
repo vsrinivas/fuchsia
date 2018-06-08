@@ -138,11 +138,10 @@ void MediaPlayerImpl::MaybeCreateRenderer(StreamType::Medium medium) {
   switch (medium) {
     case StreamType::Medium::kAudio:
       if (!audio_renderer_) {
-        auto audio_server =
-            startup_context_
-                ->ConnectToEnvironmentService<fuchsia::media::AudioServer>();
+        auto audio = startup_context_
+                         ->ConnectToEnvironmentService<fuchsia::media::Audio>();
         fuchsia::media::AudioRenderer2Ptr audio_renderer;
-        audio_server->CreateRendererV2(audio_renderer.NewRequest());
+        audio->CreateRendererV2(audio_renderer.NewRequest());
         audio_renderer_ = FidlAudioRenderer::Create(std::move(audio_renderer));
         if (gain_ != 1.0f) {
           audio_renderer_->SetGain(gain_);

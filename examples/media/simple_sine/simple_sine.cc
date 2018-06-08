@@ -60,15 +60,15 @@ void MediaApp::Run(fuchsia::sys::StartupContext* app_context) {
                                fuchsia::media::kNoTimestamp);
 }
 
-// Use StartupContext to acquire AudioServerPtr and AudioRenderer2Ptr in
-// turn. Set error handler, in case of channel closure.
+// Use StartupContext to acquire AudioPtr and AudioRenderer2Ptr in turn. Set
+// error handler, in case of channel closure.
 void MediaApp::AcquireRenderer(fuchsia::sys::StartupContext* app_context) {
-  // AudioServer is needed only long enough to create the renderer(s).
-  fuchsia::media::AudioServerPtr audio_server =
-      app_context->ConnectToEnvironmentService<fuchsia::media::AudioServer>();
+  // The Audio interface is needed only long enough to create the renderer(s).
+  fuchsia::media::AudioPtr audio =
+      app_context->ConnectToEnvironmentService<fuchsia::media::Audio>();
 
   // Only one of [AudioRenderer or MediaRenderer] must be kept open for playback
-  audio_server->CreateRendererV2(audio_renderer_.NewRequest());
+  audio->CreateRendererV2(audio_renderer_.NewRequest());
 
   audio_renderer_.set_error_handler([this]() {
     FXL_LOG(ERROR)

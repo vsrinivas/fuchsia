@@ -67,7 +67,7 @@ class AudioPolicyServiceImpl : public AudioPolicy {
   float system_audio_gain_db_ = kDefaultSystemAudioGainDb;
   bool system_audio_muted_ = kDefaultSystemMuted;
   media::FidlPublisher<GetStatusCallback> status_publisher_;
-  fuchsia::media::AudioServerPtr audio_service_;
+  fuchsia::media::AudioPtr audio_service_;
   uint32_t initialize_attempts_remaining_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(AudioPolicyServiceImpl);

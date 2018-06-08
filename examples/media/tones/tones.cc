@@ -102,11 +102,10 @@ Tones::Tones(bool interactive, fit::closure quit_callback)
   // Connect to the audio service and get a renderer.
   auto startup_context = fuchsia::sys::StartupContext::CreateFromStartupInfo();
 
-  fuchsia::media::AudioServerPtr audio_server =
-      startup_context
-          ->ConnectToEnvironmentService<fuchsia::media::AudioServer>();
+  fuchsia::media::AudioPtr audio =
+      startup_context->ConnectToEnvironmentService<fuchsia::media::Audio>();
 
-  audio_server->CreateRendererV2(audio_renderer_.NewRequest());
+  audio->CreateRendererV2(audio_renderer_.NewRequest());
 
   audio_renderer_.set_error_handler([this]() {
     std::cerr << "Unexpected error: channel to audio service closed\n";

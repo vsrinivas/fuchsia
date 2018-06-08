@@ -162,7 +162,7 @@ void AudioPolicyServiceImpl::EnsureAudioService() {
 
   audio_service_ =
       startup_context_
-          ->ConnectToEnvironmentService<fuchsia::media::AudioServer>();
+          ->ConnectToEnvironmentService<fuchsia::media::Audio>();
 
   audio_service_.set_error_handler([this]() {
     audio_service_.set_error_handler(nullptr);

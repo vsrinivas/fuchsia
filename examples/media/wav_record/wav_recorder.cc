@@ -61,11 +61,11 @@ void WavRecorder::Run(fuchsia::sys::StartupContext* app_context) {
 
   filename_ = pos_args[0].c_str();
 
-  // Connect to the mixer and obtain a capturer
-  fuchsia::media::AudioServerPtr audio_server =
-      app_context->ConnectToEnvironmentService<fuchsia::media::AudioServer>();
+  // Connect to the audio service and obtain a capturer
+  fuchsia::media::AudioPtr audio =
+      app_context->ConnectToEnvironmentService<fuchsia::media::Audio>();
 
-  audio_server->CreateCapturer(capturer_.NewRequest(), loopback_);
+  audio->CreateCapturer(capturer_.NewRequest(), loopback_);
   capturer_.set_error_handler([this]() {
     FXL_LOG(ERROR) << "Connection lost unexpectedly, shutting down.";
     Shutdown();

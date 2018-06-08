@@ -5,9 +5,8 @@
 library fuchsia.media;
 
 [Discoverable]
-interface AudioServer {
-  1: CreateRenderer(request<AudioRenderer> audio_renderer, request<MediaRenderer> media_renderer);
-  5: CreateRendererV2(request<AudioRenderer2> audio_renderer);
+interface Audio {
+  1: CreateRendererV2(request<AudioRenderer2> audio_renderer);
 
   // Create an audio capturer which either captures from the current default
   // audio input device, or loops-back from the current default audio output
@@ -33,4 +32,8 @@ interface AudioServer {
 
   // Get the current value of the master gain for the audio service.
   4: GetMasterGain() -> (float32 db_gain);
+
+  // DEPRECATED
+  9: CreateRenderer(request<AudioRenderer> audio_renderer,
+                    request<MediaRenderer> media_renderer);
 };
