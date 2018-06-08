@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef FUCHSIA_A11Y_SERVICE_H
-#define FUCHSIA_A11Y_SERVICE_H
+#ifndef GARNET_EXAMPLES_UI_SHAPES_A11Y_A11Y_CLIENT_APP_H_
+#define GARNET_EXAMPLES_UI_SHAPES_A11Y_A11Y_CLIENT_APP_H_
 
 #include <fuchsia/ui/a11y/cpp/fidl.h>
 
@@ -12,7 +12,7 @@
 
 namespace examples {
 
-class A11yClientApp: public fuchsia::ui::a11y::A11yClient {
+class A11yClientApp : public fuchsia::ui::a11y::A11yClient {
  public:
   A11yClientApp() {}
 
@@ -28,12 +28,11 @@ class A11yClientApp: public fuchsia::ui::a11y::A11yClient {
   }
 
  private:
-
   fidl::BindingSet<fuchsia::ui::a11y::A11yClient> bindings_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(A11yClientApp);
 };
 
-}
+}  // namespace examples
 
-#endif //FUCHSIA_A11Y_SERVICE_H
+#endif  // GARNET_EXAMPLES_UI_SHAPES_A11Y_A11Y_CLIENT_APP_H_

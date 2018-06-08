@@ -11,7 +11,7 @@ fidl("fidl") {
   sdk_category = "partner"
 
   sources = [
-    "a11y_client.fidl"
+    "a11y_client.fidl",
   ]
 
   public_deps = [

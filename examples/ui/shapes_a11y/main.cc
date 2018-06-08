@@ -15,11 +15,9 @@ int main(int argc, const char** argv) {
 
   // Initializing view
   mozart::ViewProviderApp app([](mozart::ViewContext view_context) {
-
     return std::make_unique<examples::ShapesA11yView>(
         std::move(view_context.view_manager),
-        std::move(view_context.view_owner_request)
-      );
+        std::move(view_context.view_owner_request));
   });
   loop.Run();
   return 0;

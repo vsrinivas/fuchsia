@@ -210,8 +210,8 @@ class ViewRegistry : public ViewInspector, public InputOwner {
 
   // Walk up the view tree starting at |view_token| to find a service
   // provider that offers a service named |service_name|.
-  fuchsia::sys::ServiceProvider* FindViewServiceProvider(uint32_t view_token,
-                                                      std::string service_name);
+  fuchsia::sys::ServiceProvider* FindViewServiceProvider(
+      uint32_t view_token, std::string service_name);
 
   ViewState* FindView(uint32_t view_token_value);
   ViewTreeState* FindViewTree(uint32_t view_tree_token_value);

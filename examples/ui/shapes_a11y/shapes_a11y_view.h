@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_EXAMPLES_UI_SHAPES_SHAPES_A11Y_VIEW_H_
-#define GARNET_EXAMPLES_UI_SHAPES_SHAPES_A11Y_VIEW_H_
+#ifndef GARNET_EXAMPLES_UI_SHAPES_A11Y_SHAPES_A11Y_VIEW_H_
+#define GARNET_EXAMPLES_UI_SHAPES_A11Y_SHAPES_A11Y_VIEW_H_
 
 #include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/ui/a11y/cpp/fidl.h>
@@ -22,9 +22,9 @@ namespace examples {
 
 class ShapesA11yView : public mozart::BaseView {
  public:
-  ShapesA11yView(
-      fuchsia::ui::views_v1::ViewManagerPtr view_manager,
-      fidl::InterfaceRequest<fuchsia::ui::views_v1_token::ViewOwner> view_owner_request);
+  ShapesA11yView(fuchsia::ui::views_v1::ViewManagerPtr view_manager,
+                 fidl::InterfaceRequest<fuchsia::ui::views_v1_token::ViewOwner>
+                     view_owner_request);
 
   ~ShapesA11yView() override;
 
@@ -32,7 +32,8 @@ class ShapesA11yView : public mozart::BaseView {
   void StartA11yClient();
 
   // |BaseView|:
-  void OnSceneInvalidated(fuchsia::images::PresentationInfo presentation_info) override;
+  void OnSceneInvalidated(
+      fuchsia::images::PresentationInfo presentation_info) override;
 
   scenic_lib::ShapeNode background_node_;
 
@@ -46,4 +47,4 @@ class ShapesA11yView : public mozart::BaseView {
 
 }  // namespace examples
 
-#endif  // GARNET_EXAMPLES_UI_SHAPES_SHAPES_A11Y_VIEW_H_
+#endif  // GARNET_EXAMPLES_UI_SHAPES_A11Y_SHAPES_A11Y_VIEW_H_
