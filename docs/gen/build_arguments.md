@@ -595,7 +595,9 @@ No values for `target_cpu = "arm64"`.
 ### thinlto_cache_dir
  ThinLTO cache directory path.
 
-**Default value:** "host_x64/thinlto-cache"
+**Default value for `target_cpu = "arm64"`:** "arm64-shared/thinlto-cache"
+
+**Default value for `target_cpu = "x64"`:** "x64-shared/thinlto-cache"
 
 
 ### thinlto_jobs
@@ -608,7 +610,7 @@ No values for `target_cpu = "arm64"`.
  Manifest files describing target libraries from toolchains.
  Can be either // source paths or absolute system paths.
 
-**Default value for `target_cpu = "arm64"`:** ["/b/s/w/ir/kitchen-workdir/buildtools/linux-x64/clang/lib/x86_64-linux.manifest"]
+**Default value for `target_cpu = "arm64"`:** ["/b/s/w/ir/kitchen-workdir/buildtools/linux-x64/clang/lib/aarch64-fuchsia.manifest"]
 
 **Default value for `target_cpu = "x64"`:** ["/b/s/w/ir/kitchen-workdir/buildtools/linux-x64/clang/lib/x86_64-fuchsia.manifest"]
 
