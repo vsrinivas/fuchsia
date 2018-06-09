@@ -7,6 +7,12 @@ library fuchsia.display;
 // Invalid id for displays, images, and events.
 const uint64 invalidId = 0;
 
+enum VirtconMode : uint8 {
+  INACTIVE = 0; // the virtcon is never visible.
+  FALLBACK = 1; // the virtcon is visible if there is no primary client.
+  FORCED = 2; // the virtcon is visible even if there is a primary client.
+};
+
 // A display mode configuration.
 struct Mode {
   // Resolution in pixels.
@@ -242,9 +248,9 @@ interface Controller {
   // CheckConfig.
   13: ApplyConfig();
 
-  // Sets whether or not this client has ownership of the display. This call
-  // will silently fail if called from the primary client.
-  14: SetOwnership(bool active);
+  // Sets the visibility behavior of the virtcon. It is illegal to call this
+  // from the primary client.
+  14: SetVirtconMode(uint8 mode);
 
   // Event fired when the client gains or loses ownership of the displays.
   //

@@ -405,6 +405,11 @@ hardware cycle counters in a hardware-based time unit.  Defaults to false.
 
 Do not launch the virtual console service if this option is present.
 
+## virtcon.hide-on-boot
+
+If this option is present, the virtual console will not take ownership of any
+displays until the user switches to it with a device control key combination.
+
 ## virtcon.keep-log-visible
 
 If this option is present, the virtual console service will keep the

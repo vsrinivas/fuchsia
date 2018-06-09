@@ -38,15 +38,21 @@ static display_info_t* cur_display = nullptr;
 // remember whether the virtual console controls the display
 bool g_vc_owns_display = false;
 
+static zx_status_t vc_set_mode(uint8_t mode) {
+    fuchsia_display_ControllerSetVirtconModeRequest request;
+    request.hdr.ordinal = fuchsia_display_ControllerSetVirtconModeOrdinal;
+    request.mode = mode;
+
+    return zx_channel_write(dc_ph.handle, 0, &request, sizeof(request), nullptr, 0);
+}
+
 void vc_toggle_framebuffer() {
     if (cur_display == nullptr) {
         return;
     }
-    fuchsia_display_ControllerSetOwnershipRequest request;
-    request.hdr.ordinal = fuchsia_display_ControllerSetOwnershipOrdinal;
-    request.active = !g_vc_owns_display;
 
-    zx_status_t status = zx_channel_write(dc_ph.handle, 0, &request, sizeof(request), nullptr, 0);
+    zx_status_t status = vc_set_mode(!g_vc_owns_display ?
+            fuchsia_display_VirtconMode_FORCED : fuchsia_display_VirtconMode_FALLBACK);
     if (status != ZX_OK) {
         printf("vc: Failed to toggle ownership %d\n", status);
     }
@@ -521,7 +527,13 @@ bool vc_display_init() {
         return false;
     }
 
-    zx_status_t status;
+    zx_status_t status = vc_set_mode(getenv("virtcon.hide-on-boot") == nullptr ?
+            fuchsia_display_VirtconMode_FALLBACK : fuchsia_display_VirtconMode_INACTIVE);
+    if (status != ZX_OK) {
+        printf("vc: Failed to set initial ownership %d\n", status);
+        return false;
+    }
+
     dc_ph.waitfor = ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED;
     dc_ph.func = dc_callback_handler;
     if ((status = port_wait(&port, &dc_ph)) != ZX_OK) {

@@ -65,7 +65,7 @@ public:
                            uint64_t* displays_removed, uint32_t removed_count);
     void OnDisplayVsync(uint64_t display_id, void** handles, uint32_t handle_count);
     void OnClientDead(ClientProxy* client);
-    void SetVcOwner(bool vc_is_owner);
+    void SetVcMode(uint8_t mode);
     void ShowActiveDisplay();
 
     void ApplyConfig(DisplayConfig* configs[], int32_t count,
@@ -99,7 +99,7 @@ private:
 
     ClientProxy* vc_client_ __TA_GUARDED(mtx_) = nullptr;
     ClientProxy* primary_client_ __TA_GUARDED(mtx_) = nullptr;
-    bool vc_is_owner_ __TA_GUARDED(mtx_) = false;
+    uint8_t vc_mode_ __TA_GUARDED(mtx_) = fuchsia_display_VirtconMode_INACTIVE;
     ClientProxy* active_client_ __TA_GUARDED(mtx_) = nullptr;
 
     async::Loop loop_;

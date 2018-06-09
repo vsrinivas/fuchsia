@@ -43,7 +43,7 @@ zx_status_t decode_message(fidl::Message* msg) {
     SELECT_TABLE_CASE(fuchsia_display_ControllerSetLayerImage);
     SELECT_TABLE_CASE(fuchsia_display_ControllerCheckConfig);
     SELECT_TABLE_CASE(fuchsia_display_ControllerApplyConfig);
-    SELECT_TABLE_CASE(fuchsia_display_ControllerSetOwnership);
+    SELECT_TABLE_CASE(fuchsia_display_ControllerSetVirtconMode);
     SELECT_TABLE_CASE(fuchsia_display_ControllerComputeLinearImageStride);
     SELECT_TABLE_CASE(fuchsia_display_ControllerAllocateVmo);
     }
@@ -148,7 +148,7 @@ void Client::HandleControllerApi(async_t* async, async::WaitBase* self,
     HANDLE_REQUEST_CASE(SetLayerImage);
     HANDLE_REQUEST_CASE(CheckConfig);
     HANDLE_REQUEST_CASE(ApplyConfig);
-    HANDLE_REQUEST_CASE(SetOwnership);
+    HANDLE_REQUEST_CASE(SetVirtconMode);
     HANDLE_REQUEST_CASE(ComputeLinearImageStride);
     case fuchsia_display_ControllerAllocateVmoOrdinal: {
         auto r = reinterpret_cast<const fuchsia_display_ControllerAllocateVmoRequest*>(msg.bytes().data());
@@ -656,14 +656,14 @@ void Client::HandleApplyConfig(const fuchsia_display_ControllerApplyConfigReques
     ApplyConfig();
 }
 
-void Client::HandleSetOwnership(const fuchsia_display_ControllerSetOwnershipRequest* req,
+void Client::HandleSetVirtconMode(const fuchsia_display_ControllerSetVirtconModeRequest* req,
                                 fidl::Builder* resp_builder, const fidl_type_t** resp_table) {
-    // Only the virtcon can control ownership
     if (!is_vc_) {
-        zxlogf(SPEW, "Ignoring non-virtcon ownership\n");
+        zxlogf(ERROR, "Illegal non-virtcon ownership\n");
+        TearDown();
         return;
     }
-    controller_->SetVcOwner(req->active);
+    controller_->SetVcMode(req->mode);
 }
 
 void Client::HandleComputeLinearImageStride(

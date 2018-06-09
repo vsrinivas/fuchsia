@@ -155,8 +155,8 @@ private:
                            fidl::Builder* resp_builder, const fidl_type_t** resp_table);
     void HandleApplyConfig(const fuchsia_display_ControllerApplyConfigRequest* req,
                            fidl::Builder* resp_builder, const fidl_type_t** resp_table);
-    void HandleSetOwnership(const fuchsia_display_ControllerSetOwnershipRequest* req,
-                            fidl::Builder* resp_builder, const fidl_type_t** resp_table);
+    void HandleSetVirtconMode(const fuchsia_display_ControllerSetVirtconModeRequest* req,
+                              fidl::Builder* resp_builder, const fidl_type_t** resp_table);
     void HandleComputeLinearImageStride(
             const fuchsia_display_ControllerComputeLinearImageStrideRequest* req,
             fidl::Builder* resp_builder, const fidl_type_t** resp_table);

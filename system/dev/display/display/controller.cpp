@@ -293,15 +293,16 @@ void Controller::ReleaseImage(Image* image) {
     ops_.ops->release_image(ops_.ctx, &image->info());
 }
 
-void Controller::SetVcOwner(bool vc_is_owner) {
+void Controller::SetVcMode(uint8_t vc_mode) {
     fbl::AutoLock lock(&mtx_);
-    vc_is_owner_ = vc_is_owner;
+    vc_mode_ = vc_mode;
     HandleClientOwnershipChanges();
 }
 
 void Controller::HandleClientOwnershipChanges() {
     ClientProxy* new_active;
-    if (vc_is_owner_ || primary_client_ == nullptr) {
+    if (vc_mode_ == fuchsia_display_VirtconMode_FORCED
+            || (vc_mode_ == fuchsia_display_VirtconMode_FALLBACK && primary_client_ == nullptr)) {
         new_active = vc_client_;
     } else {
         new_active = primary_client_;
@@ -322,7 +323,7 @@ void Controller::OnClientDead(ClientProxy* client) {
     fbl::AutoLock lock(&mtx_);
     if (client == vc_client_) {
         vc_client_ = nullptr;
-        vc_is_owner_ = false;
+        vc_mode_ = fuchsia_display_VirtconMode_INACTIVE;
     } else if (client == primary_client_) {
         primary_client_ = nullptr;
     }
