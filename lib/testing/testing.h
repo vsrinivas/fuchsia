@@ -7,9 +7,11 @@
 
 #include <string>
 
-#include <test_runner/cpp/fidl.h>
+#include <fuchsia/testing/runner/cpp/fidl.h>
 
 #include "lib/app/cpp/startup_context.h"
+
+using fuchsia::testing::runner::TestRunnerStore;
 
 namespace modular {
 namespace testing {
@@ -61,7 +63,7 @@ void Teardown(const std::function<void()>& ack);
 
 // Returns the TestRunnerStore interface from the caller's
 // Environment. Init() must be called before GetStore().
-test_runner::TestRunnerStore* GetStore();
+TestRunnerStore* GetStore();
 
 // Creates function that invokes the |proceed| callback after being called
 // |limit| times.

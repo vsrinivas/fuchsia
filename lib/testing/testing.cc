@@ -6,16 +6,21 @@
 
 #include <set>
 
-#include <test_runner/cpp/fidl.h>
+#include <fuchsia/testing/runner/cpp/fidl.h>
 
 #include "lib/fxl/logging.h"
+
+using fuchsia::testing::runner::TestRunner;
+using fuchsia::testing::runner::TestRunnerPtr;
+using fuchsia::testing::runner::TestRunnerStore;
+using fuchsia::testing::runner::TestRunnerStorePtr;
 
 namespace modular {
 namespace testing {
 
 namespace {
-test_runner::TestRunnerPtr g_test_runner;
-test_runner::TestRunnerStorePtr g_test_runner_store;
+TestRunnerPtr g_test_runner;
+TestRunnerStorePtr g_test_runner_store;
 std::set<std::string> g_test_points;
 bool g_connected;
 }  // namespace
@@ -26,7 +31,7 @@ void Init(fuchsia::sys::StartupContext* context, const std::string& identity) {
   FXL_CHECK(!g_test_runner_store.is_bound());
 
   g_test_runner =
-      context->ConnectToEnvironmentService<test_runner::TestRunner>();
+      context->ConnectToEnvironmentService<TestRunner>();
   g_test_runner.set_error_handler([] {
     if (g_connected) {
       FXL_LOG(ERROR) << "Lost connection to TestRunner. This indicates that "
@@ -40,7 +45,7 @@ void Init(fuchsia::sys::StartupContext* context, const std::string& identity) {
   g_test_runner->Identify(identity, [] { g_connected = true; });
   g_test_runner->SetTestPointCount(g_test_points.size());
   g_test_runner_store =
-      context->ConnectToEnvironmentService<test_runner::TestRunnerStore>();
+      context->ConnectToEnvironmentService<TestRunnerStore>();
 }
 
 void Fail(const std::string& log_msg) {
@@ -79,7 +84,7 @@ void Teardown(const std::function<void()>& ack) {
   }
 }
 
-test_runner::TestRunnerStore* GetStore() {
+TestRunnerStore* GetStore() {
   FXL_CHECK(g_test_runner_store.is_bound());
   return g_test_runner_store.get();
 }
