@@ -100,7 +100,7 @@ zx_status_t publish_tracelink(const fbl::RefPtr<fs::PseudoDir>& dir) {
 static constexpr const char* deprecated_services[] = {
     // remove amber.Control when CP-50 is resolved
     "amber.Control",
-    "cobalt.CobaltEncoderFactory",
+    "fuchsia.cobalt.CobaltEncoderFactory",
     "fuchsia.devicesettings.DeviceSettingsManager",
     "fuchsia.logger.Log",
     "fuchsia.logger.LogSink",
