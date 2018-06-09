@@ -57,15 +57,14 @@ zx_status_t Secret::Generate(size_t len) {
     }
 
     uint8_t* ptr = buf_.get();
-    size_t actual;
     while (len != 0) {
         size_t n = fbl::min(len, static_cast<size_t>(ZX_CPRNG_DRAW_MAX_LEN));
-        if ((rc = zx_cprng_draw(ptr, n, &actual)) != ZX_OK) {
+        if ((rc = zx_cprng_draw_new(ptr, n)) != ZX_OK) {
             xprintf("zx_cprng_draw of %zu bytes failed: %s", n, zx_status_get_string(rc));
             return rc;
         }
-        ptr += actual;
-        len -= actual;
+        ptr += n;
+        len -= n;
     }
 
     return ZX_OK;

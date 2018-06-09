@@ -1,37 +1,36 @@
-# zx_cprng_draw
+# zx_cprng_draw_new
 
 ## NAME
 
-zx_cprng_draw - Draw from the kernel's CPRNG
+zx_cprng_draw_new - Draw from the kernel's CPRNG
 
 ## SYNOPSIS
 
 ```
 #include <zircon/syscalls.h>
 
-zx_status_t zx_cprng_draw(void* buffer, size_t buffer_size, size_t* actual);
+zx_status_t zx_cprng_draw_new(void* buffer, size_t buffer_size);
 ```
 
 ## DESCRIPTION
 
-**zx_cprng_draw**() draws random bytes from the kernel CPRNG.  This data should be
+**zx_cprng_draw_new**() draws random bytes from the kernel CPRNG.  This data should be
 suitable for cryptographic applications.  It will return at most
 **ZX_CPRNG_DRAW_MAX_LEN** bytes at a time.
 
 ## RETURN VALUE
 
-**zx_cprng_draw**() returns ZX_OK and the number of random bytes
-drawn into *buffer* (via *actual) on success.
+**zx_cprng_draw_new**() returns ZX_OK on success.
 
 ## ERRORS
 
-**ZX_ERR_INVALID_ARGS** *buffer_size* is too large, or *buffer* or *actual* is
-not a valid userspace pointer.
+**ZX_ERR_INVALID_ARGS** *buffer_size* is too large or *buffer* is not a valid
+userspace pointer.
 
 ## NOTES
 
 There are no other error conditions.  If its arguments are valid,
-**zx_cprng_draw**() will succeed.
+**zx_cprng_draw_new**() will succeed.
 
 ## EXAMPLES
 
@@ -40,15 +39,14 @@ There are no other error conditions.  If its arguments are valid,
 // It is not recommended to call this with large lengths.  If you need many
 // bytes, you likely want a usermode CPRNG seeded by this function.
 zx_status_t draw(char* buf, size_t len) {
-    // This loop is necessary to deal with short reads from the kernel.
     while (len > 0) {
-        size_t actual;
-        zx_status_t status = zx_cprng_draw(buf, min(len, ZX_CPRNG_DRAW_MAX_LEN), &actual);
+        size_t n = min(len, ZX_CPRNG_DRAW_MAX_LEN);
+        zx_status_t status = zx_cprng_draw_new(buf, n);
         if (status != ZX_OK) {
             return status;
         }
-        buf += actual;
-        len -= actual;
+        buf += n;
+        len -= n;
     }
     return ZX_OK;
 }

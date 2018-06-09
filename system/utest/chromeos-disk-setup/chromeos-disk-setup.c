@@ -93,13 +93,10 @@ static int prep_gpt(gpt_device_t** device_out, block_info_t* b_info) {
 static bool create_partition(gpt_device_t* d, const char* name, uint8_t* type,
                              partition_t* p) {
     BEGIN_HELPER;
-    size_t rand_sz;
-    size_t exp = GPT_GUID_LEN;
     uint8_t guid_buf[GPT_GUID_LEN];
 
-    zx_status_t rc = zx_cprng_draw(guid_buf, GPT_GUID_LEN, &rand_sz);
+    zx_status_t rc = zx_cprng_draw_new(guid_buf, GPT_GUID_LEN);
     ASSERT_EQ(rc, ZX_OK, "Internal error generating GUID");
-    ASSERT_EQ(rand_sz, exp, "Failure generating GUID, unexpected output length");
     ASSERT_EQ(gpt_partition_add(d, name, type, guid_buf, p->start, p->len, 0),
               0, "Partition could not be added.");
     END_HELPER;
@@ -528,15 +525,11 @@ bool test_is_cros_device(void) {
 
     ASSERT_TRUE(is_cros(dev), "This should be recongized as a chromeos layout");
 
-    size_t rand_sz = 0;
-    size_t expected = GPT_GUID_LEN;
-    zx_status_t rc = zx_cprng_draw(dev->partitions[1]->type, GPT_GUID_LEN, &rand_sz);
+    zx_status_t rc = zx_cprng_draw_new(dev->partitions[1]->type, GPT_GUID_LEN);
     ASSERT_EQ(rc, ZX_OK, "Error creating random GUID");
-    ASSERT_EQ(rand_sz, expected, "Random GUID is the wrong length");
 
-    rc = zx_cprng_draw(dev->partitions[4]->type, GPT_GUID_LEN, &rand_sz);
+    rc = zx_cprng_draw_new(dev->partitions[4]->type, GPT_GUID_LEN);
     ASSERT_EQ(rc, ZX_OK, "Error creating random GUID");
-    ASSERT_EQ(rand_sz, expected, "Random GUID is the wrong length");
     ASSERT_FALSE(is_cros(dev), "This should NOT be recognized as a chromos layout");
     gpt_device_release(dev);
     END_TEST;
@@ -556,9 +549,8 @@ END_TEST_CASE(disk_wizard_tests)
 
 int main(int argc, char** argv) {
     uint64_t seed;
-    size_t rand_sz;
-    zx_status_t rand_rc = zx_cprng_draw(&seed, sizeof(seed), &rand_sz);
-    if (rand_rc != ZX_OK || rand_sz != sizeof(seed)) {
+    zx_status_t rand_rc = zx_cprng_draw_new(&seed, sizeof(seed));
+    if (rand_rc != ZX_OK) {
         fprintf(stderr, "FAILED: Couldn't re-assign GUID\n");
         return -1;
     }

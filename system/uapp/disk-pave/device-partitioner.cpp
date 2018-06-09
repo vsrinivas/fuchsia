@@ -219,9 +219,8 @@ zx_status_t GptDevicePartitioner::FindFirstFit(size_t bytes_requested, size_t* s
 zx_status_t GptDevicePartitioner::CreateGptPartition(const char* name, uint8_t* type,
                                                      uint64_t offset, uint64_t blocks,
                                                      uint8_t* out_guid) {
-    size_t size;
     zx_status_t status;
-    if ((status = zx_cprng_draw(out_guid, GPT_GUID_LEN, &size)) != ZX_OK) {
+    if ((status = zx_cprng_draw_new(out_guid, GPT_GUID_LEN)) != ZX_OK) {
         ERROR("Failed to get random GUID\n");
         return status;
     }

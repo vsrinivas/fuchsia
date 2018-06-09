@@ -12,8 +12,7 @@
 bool cprng_test_draw_buf_too_large(void) {
     uint8_t buf[ZX_CPRNG_DRAW_MAX_LEN + 1];
     BEGIN_TEST;
-    size_t sz;
-    zx_status_t status = zx_cprng_draw(buf, sizeof(buf), &sz);
+    zx_status_t status = zx_cprng_draw_new(buf, sizeof(buf));
     EXPECT_EQ(status, ZX_ERR_INVALID_ARGS, "");
     END_TEST;
 }
@@ -21,8 +20,7 @@ bool cprng_test_draw_buf_too_large(void) {
 bool cprng_test_draw_bad_buf(void) {
     uint8_t buf[ZX_CPRNG_DRAW_MAX_LEN];
     BEGIN_TEST;
-    size_t sz;
-    zx_status_t status = zx_cprng_draw((void*)4, sizeof(buf), &sz);
+    zx_status_t status = zx_cprng_draw_new((void*)4, sizeof(buf));
     EXPECT_EQ(status, ZX_ERR_INVALID_ARGS, "");
     END_TEST;
 }
@@ -30,10 +28,8 @@ bool cprng_test_draw_bad_buf(void) {
 bool cprng_test_draw_success(void) {
     uint8_t buf[ZX_CPRNG_DRAW_MAX_LEN] = { 0 };
     BEGIN_TEST;
-    size_t sz;
-    zx_status_t status = zx_cprng_draw(buf, sizeof(buf), &sz);
+    zx_status_t status = zx_cprng_draw_new(buf, sizeof(buf));
     EXPECT_EQ(status, ZX_OK, "");
-    EXPECT_EQ(sz, sizeof(buf), "");
 
     int num_zeros = 0;
     for (unsigned int i = 0; i < sizeof(buf); ++i) {

@@ -444,6 +444,11 @@ syscall cprng_draw
     (buffer: any[data_size] OUT, data_size: size_t)
     returns (zx_status_t, actual: size_t);
 
+# Rename to cprng_draw once clients are migrated.
+syscall cprng_draw_new
+    (buffer: any[data_size] OUT, data_size: size_t)
+    returns (zx_status_t);
+
 syscall cprng_add_entropy
     (buffer: any[len] IN, len: size_t)
     returns (zx_status_t);

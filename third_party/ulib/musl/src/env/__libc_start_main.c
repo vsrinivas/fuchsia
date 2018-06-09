@@ -56,14 +56,13 @@ __NO_SAFESTACK _Noreturn void __libc_start_main(
     // manglers in the same call to avoid the overhead of two system calls.
     // That means we need a temporary buffer on the stack, which we then
     // want to clear out so the values don't leak there.
-    size_t actual;
     struct randoms {
         uintptr_t stack_guard;
         struct setjmp_manglers setjmp_manglers;
     } randoms;
     static_assert(sizeof(randoms) <= ZX_CPRNG_DRAW_MAX_LEN, "");
-    zx_status_t status = _zx_cprng_draw(&randoms, sizeof(randoms), &actual);
-    if (status != ZX_OK || actual != sizeof(randoms))
+    zx_status_t status = _zx_cprng_draw_new(&randoms, sizeof(randoms));
+    if (status != ZX_OK)
         __builtin_trap();
     __stack_chk_guard = randoms.stack_guard;
     __setjmp_manglers = randoms.setjmp_manglers;

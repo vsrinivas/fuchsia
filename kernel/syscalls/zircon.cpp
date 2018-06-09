@@ -224,13 +224,12 @@ zx_status_t sys_log_read(zx_handle_t log_handle, uint32_t len, user_out_ptr<void
     return sys_debuglog_read(log_handle, options, ptr, len);
 }
 
-zx_status_t sys_cprng_draw(user_out_ptr<void> buffer, size_t len, user_out_ptr<size_t> actual) {
+zx_status_t sys_cprng_draw_new(user_out_ptr<void> buffer, size_t len) {
     if (len > kMaxCPRNGDraw)
         return ZX_ERR_INVALID_ARGS;
 
     uint8_t kernel_buf[kMaxCPRNGDraw];
-    // Ensure we get rid of the stack copy of the random data as this function
-    // returns.
+    // Ensure we get rid of the stack copy of the random data as this function returns.
     explicit_memory::ZeroDtor<uint8_t> zero_guard(kernel_buf, sizeof(kernel_buf));
 
     auto prng = crypto::GlobalPRNG::GetInstance();
@@ -239,6 +238,13 @@ zx_status_t sys_cprng_draw(user_out_ptr<void> buffer, size_t len, user_out_ptr<s
 
     if (buffer.copy_array_to_user(kernel_buf, len) != ZX_OK)
         return ZX_ERR_INVALID_ARGS;
+    return ZX_OK;
+}
+
+zx_status_t sys_cprng_draw(user_out_ptr<void> buffer, size_t len, user_out_ptr<size_t> actual) {
+    zx_status_t status;
+    if ((status = sys_cprng_draw_new(buffer, len)))
+        return status;
     return actual.copy_to_user(len);
 }
 

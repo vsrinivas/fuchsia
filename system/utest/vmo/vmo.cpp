@@ -206,8 +206,7 @@ bool vmo_read_only_map_test() {
     EXPECT_EQ(ZX_OK, status, "vm_map");
     EXPECT_NE(0u, ptr, "vm_map");
 
-    size_t sz;
-    auto sstatus = zx_cprng_draw((void*)ptr, 1, &sz);
+    auto sstatus = zx_cprng_draw_new((void*)ptr, 1);
     EXPECT_LT(sstatus, 0, "write");
 
     status = zx_vmar_unmap(zx_vmar_root_self(), ptr, len);
@@ -247,8 +246,7 @@ bool vmo_no_perm_map_test() {
     EXPECT_EQ(ZX_OK, status, "vm_protect");
 
     // test writing to the mapping
-    size_t sz;
-    status = zx_cprng_draw(reinterpret_cast<void*>(ptr), 1, &sz);
+    status = zx_cprng_draw_new(reinterpret_cast<void*>(ptr), 1);
     EXPECT_NE(status, ZX_OK, "write");
 
     // test reading from the mapping
@@ -289,8 +287,7 @@ bool vmo_no_perm_protect_test() {
     EXPECT_NE(0u, ptr, "vm_map");
 
     // test writing to the mapping
-    size_t sz;
-    status = zx_cprng_draw(reinterpret_cast<void*>(ptr), 1, &sz);
+    status = zx_cprng_draw_new(reinterpret_cast<void*>(ptr), 1);
     EXPECT_NE(status, ZX_OK, "write");
 
     // test reading from the mapping
@@ -302,7 +299,7 @@ bool vmo_no_perm_protect_test() {
     EXPECT_EQ(ZX_OK, status, "vm_protect");
 
     // test writing to the mapping
-    status = zx_cprng_draw(reinterpret_cast<void*>(ptr), 1, &sz);
+    status = zx_cprng_draw_new(reinterpret_cast<void*>(ptr), 1);
     EXPECT_NE(status, ZX_OK, "write");
 
     // test reading from the mapping

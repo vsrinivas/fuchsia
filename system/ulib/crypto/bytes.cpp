@@ -35,16 +35,15 @@ zx_status_t Bytes::Randomize(size_t len) {
         return rc;
     }
     uint8_t* ptr = buf_.get();
-    size_t actual;
     while (len != 0) {
         size_t n = fbl::min(len, static_cast<size_t>(ZX_CPRNG_DRAW_MAX_LEN));
-        if ((rc = zx_cprng_draw(ptr, n, &actual)) != ZX_OK) {
-            xprintf("zx_cprng_draw(%p, %zu, %p) failed: %s", ptr, n, &actual,
+        if ((rc = zx_cprng_draw_new(ptr, n)) != ZX_OK) {
+            xprintf("zx_cprng_draw(%p, %zu) failed: %s", ptr, n,
                     zx_status_get_string(rc));
             return rc;
         }
-        ptr += actual;
-        len -= actual;
+        ptr += n;
+        len -= n;
     }
 
     return ZX_OK;

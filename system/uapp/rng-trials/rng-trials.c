@@ -5,6 +5,7 @@
 #include <inttypes.h>
 #include <stdio.h>
 #include <stdint.h>
+#include <zircon/status.h>
 #include <zircon/syscalls.h>
 
 #define TRIALS 10000
@@ -14,10 +15,10 @@ int main(int argc, char** argv) {
     static uint8_t buf[32];
     uint64_t values[BINS] = { 0 };
 
-    size_t sz = 0;
-    zx_cprng_draw(&buf, sizeof(buf), &sz);
-    if (sz != sizeof(buf)) {
-        printf("zx_cprng_draw had unexpected return: %zu\n", sz);
+    zx_status_t status = zx_cprng_draw_new(&buf, sizeof(buf));
+    if (status != ZX_OK) {
+        printf("zx_cprng_draw had unexpected return: %d (%s)\n", status,
+               zx_status_get_string(status));
         return 1;
     }
     printf("Drew %zd bytes: ", sizeof(buf));
@@ -28,10 +29,10 @@ int main(int argc, char** argv) {
 
     for (unsigned int i = 0; i < TRIALS; ++i) {
         uint8_t byte;
-        size_t sz = 0;
-        zx_cprng_draw(&byte, 1, &sz);
-        if (sz != 1) {
-            printf("zx_cprng_draw returned an error: %zu\n", sz);
+        status = zx_cprng_draw_new(&byte, 1);
+        if (status != ZX_OK) {
+            printf("zx_cprng_draw returned an error: %d (%s)\n", status,
+                   zx_status_get_string(status));
             return 1;
         }
         values[byte % BINS]++;

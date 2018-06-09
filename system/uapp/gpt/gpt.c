@@ -252,8 +252,7 @@ static void init_gpt(const char* dev) {
 
 static void add_partition(const char* dev, uint64_t start, uint64_t end, const char* name) {
     uint8_t guid[GPT_GUID_LEN];
-    size_t sz;
-    if (zx_cprng_draw(guid, GPT_GUID_LEN, &sz) != ZX_OK)
+    if (zx_cprng_draw_new(guid, GPT_GUID_LEN) != ZX_OK)
         return;
 
     int fd;
@@ -836,8 +835,7 @@ static int repartition(int argc, char** argv) {
       }
 
       uint8_t guid[GPT_GUID_LEN];
-      size_t sz;
-      if (zx_cprng_draw(guid, GPT_GUID_LEN, &sz) != ZX_OK) {
+      if (zx_cprng_draw_new(guid, GPT_GUID_LEN) != ZX_OK) {
         printf("rand read error\n");
         rc = 255;
         goto repartition_end;
