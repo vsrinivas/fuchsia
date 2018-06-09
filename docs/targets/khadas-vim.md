@@ -58,26 +58,53 @@ Be sure you've already set up your network before proceeding to the next step.
 
 ## Flashing Zircon
 
-First enter fastboot mode by holding dwon SW3 (leftmost button), pressing SW1 (rightmost button) quickly and keeping pressing SW3 for a few seconds. Then cd to the zircon directory and run: 
+First enter fastboot mode by holding down SW3 (leftmost button), pressing SW1 (rightmost button) quickly and keeping pressing SW3 for a few seconds.
+
+If you are working from the zircon layer, cd to the zircon directory and run:
 
 ```
 scripts/flash-vim2 -m
 ```
-This allows you to enable zedboot.
+
+The device should boot into zedboot by default.
+
+If you are working from the garnet layer of above, run the following:
+
+```
+fx flash vim2 --pave
+```
+
+In order to get into zedboot you can reboot into the recovery:
+
+```
+dm reboot-recovery
+```
+
+Alternatively, you can get to zedboot by reseting your vim2 by pressing SW1(rightmost button) quickly and keeping pressing SW2 for a few seconds.
 
 ### netbooting
 
-To netboot zircon, reset your VIM2 by pressing SW1(rightmost button) and run the following under the zircon directory:
+To netboot zircon, enter zedboot and run the following under the zircon directory:
+
 ```
-./build-arm64/tools/bootserver ./build-arm64/zircon.bin
+scripts/netboot-zircon ./build-arm64
 ```
-You should be able to see "Issued boot command to ..." message printed out if this step is successful.
 
 To netboot garnet, run the following under the fuchsia directory:
+
 ```
-fx set arm64 --netboot; fx build; fx boot
+fx set arm64 --netboot && fx full-build && fx boot --neboot -1
 ```
 
+You should be able to see "Issued boot command to ..." message printed out if this step is successful.
+
+### Paving
+
+Paving is available from garnet layers and above. Run the following under the fuchsia directory:
+
+```
+fx set arm64 && fx full-build && fx boot arm -1
+```
 
 ### Fuchsia logo
 
