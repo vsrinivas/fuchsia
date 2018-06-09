@@ -8,8 +8,8 @@ use byteorder::{BigEndian, ByteOrder};
 use zerocopy::{AsBytes, ByteSlice, FromBytes, LayoutVerified, Unaligned};
 
 use device::ethernet::{EtherType, Mac};
+use error::ParseError;
 use wire::util::extract_slice_range;
-use wire::{Err, ParseErr};
 
 // HeaderPrefix has the same memory layout (thanks to repr(C, packed)) as an
 // Ethernet header prefix. Thus, we can simply reinterpret the bytes of the
@@ -77,17 +77,18 @@ impl<B: ByteSlice> EthernetFrame<B> {
     ///
     /// `parse` parses `bytes` as an Ethernet frame. It is assumed that the
     /// Frame Check Sequence (FCS) footer has already been removed.
-    pub fn parse(bytes: B) -> Result<EthernetFrame<B>, impl ParseErr> {
+    pub fn parse(bytes: B) -> Result<EthernetFrame<B>, ParseError> {
         // See for details: https://en.wikipedia.org/wiki/Ethernet_frame#Frame_%E2%80%93_data_link_layer
 
-        let (hdr_prefix, rest) =
-            LayoutVerified::<B, HeaderPrefix>::new_unaligned_from_prefix(bytes).ok_or(Err::Format)?;
+        let (hdr_prefix, rest) = LayoutVerified::<B, HeaderPrefix>::new_unaligned_from_prefix(
+            bytes,
+        ).ok_or(ParseError::Format)?;
         if rest.len() < 48 {
             // The minimum frame size (not including the Frame Check Sequence
             // (FCS) footer, which we do not handle in this code) is 60 bytes.
             // We've already consumed 12 bytes for the header prefix, so we must
             // have at least 48 bytes left.
-            return Err(Err::Format);
+            return Err(ParseError::Format);
         }
 
         // The tag (either IEEE 802.1Q or 802.1ad) is an optional four-byte
@@ -123,7 +124,7 @@ impl<B: ByteSlice> EthernetFrame<B> {
         if (et > 1500 && et < 1536) || (et <= 1500 && et as usize != frame.body.len()) {
             // EtherType values between 1500 and 1536 are disallowed, and values
             // of 1500 and below are used to indicate the body size.
-            return Err(Err::Format);
+            return Err(ParseError::Format);
         }
         Ok(frame)
     }

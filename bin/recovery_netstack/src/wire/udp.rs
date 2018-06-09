@@ -10,9 +10,9 @@ use std::ops::RangeBounds;
 use byteorder::{BigEndian, ByteOrder};
 use zerocopy::{AsBytes, ByteSlice, FromBytes, LayoutVerified, Unaligned};
 
+use error::ParseError;
 use ip::{Ip, IpAddr, IpProto};
 use wire::util::{extract_slice_range, fits_in_u16, fits_in_u32, Checksum};
-use wire::{Err, ParseErr};
 
 const HEADER_SIZE: usize = 8;
 
@@ -102,12 +102,12 @@ impl<B: ByteSlice> UdpPacket<B> {
     ///   checksum using the last address in the routing header, while the
     ///   receiver will compute the checksum using the destination address in
     ///   the IPv6 header.
-    pub fn parse<A: IpAddr>(bytes: B, src_ip: A, dst_ip: A) -> Result<UdpPacket<B>, impl ParseErr> {
+    pub fn parse<A: IpAddr>(bytes: B, src_ip: A, dst_ip: A) -> Result<UdpPacket<B>, ParseError> {
         // See for details: https://en.wikipedia.org/wiki/User_Datagram_Protocol#Packet_structure
 
         let bytes_len = bytes.len();
-        let (header, body) =
-            LayoutVerified::<B, Header>::new_unaligned_from_prefix(bytes).ok_or(Err::Format)?;
+        let (header, body) = LayoutVerified::<B, Header>::new_unaligned_from_prefix(bytes)
+            .ok_or(ParseError::Format)?;
         let packet = UdpPacket { header, body };
         let len = if packet.header.length() == 0 && A::Version::VERSION.is_v6() {
             // IPv6 supports jumbograms, so a UDP packet may be greater than
@@ -119,10 +119,10 @@ impl<B: ByteSlice> UdpPacket<B> {
             packet.header.length() as usize
         };
         if len != bytes_len {
-            return Err(Err::Format);
+            return Err(ParseError::Format);
         }
         if packet.header.dst_port() == 0 {
-            return Err(Err::Format);
+            return Err(ParseError::Format);
         }
 
         // A 0 checksum indicates that the checksum wasn't computed. In IPv4,
@@ -135,11 +135,14 @@ impl<B: ByteSlice> UdpPacket<B> {
             } else {
                 BigEndian::read_u16(&packet.header.checksum)
             };
-            if packet.compute_checksum(src_ip, dst_ip).ok_or(Err::Format)? != target {
-                return Err(Err::Checksum);
+            if packet
+                .compute_checksum(src_ip, dst_ip)
+                .ok_or(ParseError::Format)? != target
+            {
+                return Err(ParseError::Checksum);
             }
         } else if A::Version::VERSION.is_v6() {
-            return Err(Err::Checksum);
+            return Err(ParseError::Checksum);
         }
 
         Ok(packet)
@@ -357,9 +360,7 @@ mod tests {
         // Test that while a given byte pattern optionally succeeds, zeroing out
         // certain bytes causes failure. `zero` is a list of byte indices to
         // zero out that should cause failure.
-        fn test_zero<I: IpAddr>(
-            src: I, dst: I, succeeds: bool, zero: &[usize], err_is_checksum: bool,
-        ) {
+        fn test_zero<I: IpAddr>(src: I, dst: I, succeeds: bool, zero: &[usize], err: ParseError) {
             // Set checksum to zero so that, in IPV4, it will be ignored. In
             // IPv6, this /is/ the test.
             let mut buf = [1, 2, 3, 4, 0, 8, 0, 0];
@@ -369,21 +370,34 @@ mod tests {
             for idx in zero {
                 buf[*idx] = 0;
             }
-            assert_eq!(
-                UdpPacket::parse(&buf[..], src, dst)
-                    .unwrap_err()
-                    .is_checksum(),
-                err_is_checksum
-            );
+            assert_eq!(UdpPacket::parse(&buf[..], src, dst).unwrap_err(), err);
         }
 
         // destination port of 0 is disallowed
-        test_zero(TEST_SRC_IPV4, TEST_DST_IPV4, true, &[2, 3], false);
+        test_zero(
+            TEST_SRC_IPV4,
+            TEST_DST_IPV4,
+            true,
+            &[2, 3],
+            ParseError::Format,
+        );
         // length of 0 is disallowed in IPv4
-        test_zero(TEST_SRC_IPV4, TEST_DST_IPV4, true, &[4, 5], false);
+        test_zero(
+            TEST_SRC_IPV4,
+            TEST_DST_IPV4,
+            true,
+            &[4, 5],
+            ParseError::Format,
+        );
         // missing checksum is disallowed in IPv6; this won't succeed ahead of
         // time because the checksum bytes are already zero
-        test_zero(TEST_SRC_IPV6, TEST_DST_IPV6, false, &[], true);
+        test_zero(
+            TEST_SRC_IPV6,
+            TEST_DST_IPV6,
+            false,
+            &[],
+            ParseError::Checksum,
+        );
 
         // Total length of 2^32 or greater is disallowed in IPv6. If we created
         // a 4 gigabyte buffer, this test would take a very long time to run.
@@ -392,10 +406,9 @@ mod tests {
         // pretend that it's 2^32 bytes long.
         let buf = vec![0, 0, 1, 2, 0, 0, 0xFF, 0xE4];
         let buf = unsafe { ::std::slice::from_raw_parts(buf.as_ptr(), 1 << 32) };
-        assert!(
-            !UdpPacket::parse(&buf[..], TEST_SRC_IPV6, TEST_DST_IPV6)
-                .unwrap_err()
-                .is_checksum()
+        assert_eq!(
+            UdpPacket::parse(&buf[..], TEST_SRC_IPV6, TEST_DST_IPV6).unwrap_err(),
+            ParseError::Format
         );
     }
 

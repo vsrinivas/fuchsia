@@ -20,31 +20,3 @@ mod util;
 
 pub use self::ethernet::*;
 pub use self::udp::*;
-
-use std::fmt::Debug;
-
-// We use a trait rather than a concrete type (such as the enum Err below) so
-// that we are free to change what error type we use in the future. We may
-// eventually switch from returning 'impl ParseErr' to using a concrete type
-// once we get enough experience with this.
-
-/// Parsing errors.
-///
-/// All errors returned from parsing functions in this module implement
-/// `ParseErr`.
-pub trait ParseErr: Debug {
-    /// Is this a checksum-related error?
-    fn is_checksum(&self) -> bool;
-}
-
-#[derive(Eq, PartialEq, Debug)]
-enum Err {
-    Format,
-    Checksum,
-}
-
-impl ParseErr for Err {
-    fn is_checksum(&self) -> bool {
-        *self == Err::Checksum
-    }
-}

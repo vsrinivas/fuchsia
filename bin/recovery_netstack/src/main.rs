@@ -17,10 +17,13 @@
 #![deny(missing_docs)]
 
 extern crate byteorder;
+#[macro_use]
+extern crate failure;
 extern crate zerocopy;
 
 // mark all modules as public so that deny(missing_docs) will be more powerful
 pub mod device;
+pub mod error;
 pub mod ip;
 pub mod wire;
 
