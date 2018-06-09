@@ -39,13 +39,11 @@ package("rust_tests") {
   deprecated_system_image = true
 
   deps = [
-    "rust/cache:cache",
-    "rust/store:store",
+    "rust/cache:cache"
   ]
 
   tests = [
     { name = "auth_cache_lib_test_rustc" },
-    { name = "auth_store_lib_test_rustc" },
   ]
 }
 
