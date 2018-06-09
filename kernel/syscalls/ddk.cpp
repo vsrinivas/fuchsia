@@ -122,12 +122,16 @@ zx_status_t sys_vmo_create_physical(zx_handle_t hrsrc, uintptr_t paddr, size_t s
     return out->make(fbl::move(dispatcher), rights);
 }
 
-zx_status_t sys_bootloader_fb_get_info(user_out_ptr<uint32_t> format, user_out_ptr<uint32_t> width,
-                                       user_out_ptr<uint32_t> height, user_out_ptr<uint32_t> stride) {
+zx_status_t sys_framebuffer_get_info(zx_handle_t handle, user_out_ptr<uint32_t> format,
+                                     user_out_ptr<uint32_t> width, user_out_ptr<uint32_t> height,
+                                     user_out_ptr<uint32_t> stride) {
+    zx_status_t status;
+    if ((status = validate_resource(handle, ZX_RSRC_KIND_ROOT)) < 0)
+        return status;
 #if ARCH_X86
     if (!bootloader.fb.base)
         return ZX_ERR_INVALID_ARGS;
-    zx_status_t status = format.copy_to_user(bootloader.fb.format);
+    status = format.copy_to_user(bootloader.fb.format);
     if (status != ZX_OK)
         return status;
     status = width.copy_to_user(bootloader.fb.width);

@@ -165,7 +165,8 @@ SimpleDisplay::SimpleDisplay(zx_device_t* parent, zx_handle_t vmo,
 
 zx_status_t bind_simple_pci_display_bootloader(zx_device_t* dev, const char* name, uint32_t bar) {
     uint32_t format, width, height, stride;
-    zx_status_t status = zx_bootloader_fb_get_info(&format, &width, &height, &stride);
+    zx_status_t status = zx_framebuffer_get_info(get_root_resource(), &format,
+                                                 &width, &height, &stride);
     if (status != ZX_OK) {
         printf("%s: failed to get bootloader dimensions: %d\n", name, status);
         return ZX_ERR_NOT_SUPPORTED;

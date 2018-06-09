@@ -914,7 +914,8 @@ void Controller::DdkRelease() {
 zx_status_t Controller::DdkSuspend(uint32_t hint) {
     if ((hint & DEVICE_SUSPEND_REASON_MASK) == DEVICE_SUSPEND_FLAG_MEXEC) {
         uint32_t format, width, height, stride;
-        if (zx_bootloader_fb_get_info(&format, &width, &height, &stride) != ZX_OK) {
+        if (zx_framebuffer_get_info(get_root_resource(), &format, &width,
+                                    &height, &stride) != ZX_OK) {
             return ZX_OK;
         }
 
