@@ -187,7 +187,7 @@ where
     /// to the caller. If either the length or alignment checks fail, it returns
     /// `None`.
     #[inline]
-    pub fn new_from_suffix(bytes: B) -> Option<(LayoutVerified<B, T>, B)> {
+    pub fn new_from_suffix(bytes: B) -> Option<(B, LayoutVerified<B, T>)> {
         let bytes_len = bytes.len();
         if bytes_len < mem::size_of::<T>() {
             return None;
@@ -196,7 +196,7 @@ where
         if !aligned_to(bytes.deref(), mem::align_of::<T>()) {
             return None;
         }
-        Some((LayoutVerified(bytes, PhantomData), prefix))
+        Some((prefix, LayoutVerified(bytes, PhantomData)))
     }
 
     #[inline]
@@ -219,7 +219,7 @@ fn map_zeroed<'a, T>(
     }
 }
 
-fn map_tuple_zeroed<'a, T>(
+fn map_prefix_tuple_zeroed<'a, T>(
     opt: Option<(LayoutVerified<&'a mut [u8], T>, &'a mut [u8])>,
 ) -> Option<(LayoutVerified<&'a mut [u8], T>, &'a mut [u8])> {
     match opt {
@@ -231,6 +231,12 @@ fn map_tuple_zeroed<'a, T>(
         }
         None => None,
     }
+}
+
+fn map_suffix_tuple_zeroed<'a, T>(
+    opt: Option<(&'a mut [u8], LayoutVerified<&'a mut [u8], T>)>,
+) -> Option<(&'a mut [u8], LayoutVerified<&'a mut [u8], T>)> {
+    map_prefix_tuple_zeroed(opt.map(|(a, b)| (b, a))).map(|(a, b)| (b, a))
 }
 
 impl<'a, T> LayoutVerified<&'a mut [u8], T> {
@@ -264,7 +270,7 @@ impl<'a, T> LayoutVerified<&'a mut [u8], T> {
     pub fn new_from_prefix_zeroed(
         bytes: &'a mut [u8],
     ) -> Option<(LayoutVerified<&'a mut [u8], T>, &'a mut [u8])> {
-        map_tuple_zeroed(Self::new_from_prefix(bytes))
+        map_prefix_tuple_zeroed(Self::new_from_prefix(bytes))
     }
 
     /// Construct a new `LayoutVerified` from the suffix of a byte slice,
@@ -283,8 +289,8 @@ impl<'a, T> LayoutVerified<&'a mut [u8], T> {
     #[inline]
     pub fn new_from_suffix_zeroed(
         bytes: &'a mut [u8],
-    ) -> Option<(LayoutVerified<&'a mut [u8], T>, &'a mut [u8])> {
-        map_tuple_zeroed(Self::new_from_suffix(bytes))
+    ) -> Option<(&'a mut [u8], LayoutVerified<&'a mut [u8], T>)> {
+        map_suffix_tuple_zeroed(Self::new_from_suffix(bytes))
     }
 }
 
@@ -331,13 +337,13 @@ where
     /// `bytes` to construct a `LayoutVerified`, and returns the preceding bytes
     /// to the caller. If the length check fails, it returns `None`.
     #[inline]
-    pub fn new_unaligned_from_suffix(bytes: B) -> Option<(LayoutVerified<B, T>, B)> {
+    pub fn new_unaligned_from_suffix(bytes: B) -> Option<(B, LayoutVerified<B, T>)> {
         let bytes_len = bytes.len();
         if bytes_len < mem::size_of::<T>() {
             return None;
         }
         let (prefix, bytes) = bytes.split_at(bytes_len - mem::size_of::<T>());
-        Some((LayoutVerified(bytes, PhantomData), prefix))
+        Some((prefix, LayoutVerified(bytes, PhantomData)))
     }
 }
 
@@ -375,7 +381,7 @@ where
     pub fn new_unaligned_from_prefix_zeroed(
         bytes: &'a mut [u8],
     ) -> Option<(LayoutVerified<&'a mut [u8], T>, &'a mut [u8])> {
-        map_tuple_zeroed(Self::new_unaligned_from_prefix(bytes))
+        map_prefix_tuple_zeroed(Self::new_unaligned_from_prefix(bytes))
     }
 
     /// Construct a new `LayoutVerified` from the suffix of a byte slice for a
@@ -392,8 +398,8 @@ where
     #[inline]
     pub fn new_unaligned_from_suffix_zeroed(
         bytes: &'a mut [u8],
-    ) -> Option<(LayoutVerified<&'a mut [u8], T>, &'a mut [u8])> {
-        map_tuple_zeroed(Self::new_unaligned_from_suffix(bytes))
+    ) -> Option<(&'a mut [u8], LayoutVerified<&'a mut [u8], T>)> {
+        map_suffix_tuple_zeroed(Self::new_unaligned_from_suffix(bytes))
     }
 }
 
@@ -597,13 +603,13 @@ mod tests {
         }
         {
             buf.clear_buf();
-            let (lv, prefix) = LayoutVerified::<_, u64>::new_from_suffix(&mut buf.buf[..]).unwrap();
+            let (prefix, lv) = LayoutVerified::<_, u64>::new_from_suffix(&mut buf.buf[..]).unwrap();
             assert!(prefix.is_empty());
             test_new_helper(lv);
         }
         {
             buf.buf = [0xFFu8; 8];
-            let (lv, prefix) =
+            let (prefix, lv) =
                 LayoutVerified::<_, u64>::new_from_suffix_zeroed(&mut buf.buf[..]).unwrap();
             assert!(prefix.is_empty());
             test_new_helper(lv);
@@ -644,14 +650,14 @@ mod tests {
         }
         {
             buf = [0u8; 8];
-            let (lv, prefix) =
+            let (prefix, lv) =
                 LayoutVerified::<_, [u8; 8]>::new_unaligned_from_suffix(&mut buf[..]).unwrap();
             assert!(prefix.is_empty());
             test_new_helper_unaligned(lv);
         }
         {
             buf = [0xFFu8; 8];
-            let (lv, prefix) = LayoutVerified::<_, [u8; 8]>::new_unaligned_from_suffix_zeroed(
+            let (prefix, lv) = LayoutVerified::<_, [u8; 8]>::new_unaligned_from_suffix_zeroed(
                 &mut buf[..],
             ).unwrap();
             assert!(prefix.is_empty());
@@ -686,14 +692,14 @@ mod tests {
         {
             buf.clear_buf();
             // buf.buf should be aligned to 8, so this should always succeed
-            let (lv, prefix) = LayoutVerified::<_, u64>::new_from_suffix(&mut buf.buf[..]).unwrap();
+            let (prefix, lv) = LayoutVerified::<_, u64>::new_from_suffix(&mut buf.buf[..]).unwrap();
             assert_eq!(prefix.len(), 8);
             test_new_helper(lv);
         }
         {
             buf.buf = [0xFFu8; 16];
             // buf.buf should be aligned to 8, so this should always succeed
-            let (lv, prefix) =
+            let (prefix, lv) =
                 LayoutVerified::<_, u64>::new_from_suffix_zeroed(&mut buf.buf[..]).unwrap();
             // assert that the prefix wasn't zeroed
             assert_eq!(prefix, &[0xFFu8; 8]);
@@ -727,14 +733,14 @@ mod tests {
         }
         {
             buf = [0u8; 16];
-            let (lv, prefix) =
+            let (prefix, lv) =
                 LayoutVerified::<_, [u8; 8]>::new_unaligned_from_suffix(&mut buf[..]).unwrap();
             assert_eq!(prefix.len(), 8);
             test_new_helper_unaligned(lv);
         }
         {
             buf = [0xFFu8; 16];
-            let (lv, prefix) = LayoutVerified::<_, [u8; 8]>::new_unaligned_from_suffix_zeroed(
+            let (prefix, lv) = LayoutVerified::<_, [u8; 8]>::new_unaligned_from_suffix_zeroed(
                 &mut buf[..],
             ).unwrap();
             // assert that the prefix wasn't zeroed

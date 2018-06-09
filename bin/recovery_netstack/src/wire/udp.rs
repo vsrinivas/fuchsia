@@ -247,7 +247,7 @@ impl<'a> UdpPacket<&'a mut [u8]> {
 
         let (header, body, _) =
             extract_slice_range(buffer, body).expect("body range is out of bounds of buffer");
-        let (header, prefix) = LayoutVerified::<_, Header>::new_unaligned_from_suffix(header)
+        let (prefix, header) = LayoutVerified::<_, Header>::new_unaligned_from_suffix(header)
             .expect("too few bytes for UDP header");
         let mut packet = UdpPacket { header, body };
 

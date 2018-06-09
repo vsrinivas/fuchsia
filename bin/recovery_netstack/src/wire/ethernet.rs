@@ -187,10 +187,10 @@ impl<'a> EthernetFrame<&'a mut [u8]> {
         let (header, body, _) =
             extract_slice_range(buffer, body).expect("body range is out of bounds of buffer");
         let (mut frame, prefix_len) = {
-            let (ethertype, prefix) = LayoutVerified::<_, [u8; 2]>::new_unaligned_from_suffix(
+            let (prefix, ethertype) = LayoutVerified::<_, [u8; 2]>::new_unaligned_from_suffix(
                 header,
             ).expect("too few bytes for Ethernet header");
-            let (hdr_prefix, prefix) = LayoutVerified::<_, HeaderPrefix>::new_unaligned_from_suffix(
+            let (prefix, hdr_prefix) = LayoutVerified::<_, HeaderPrefix>::new_unaligned_from_suffix(
                 prefix,
             ).expect("too few bytes for Ethernet header");
             (
