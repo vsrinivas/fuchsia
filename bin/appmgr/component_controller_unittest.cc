@@ -79,9 +79,9 @@ class ComponentControllerTest : public gtest::TestWithMessageLoop {
       ExportedDirType export_dir_type = ExportedDirType::kLegacyFlatLayout,
       zx::channel export_dir = zx::channel()) {
     return std::make_unique<ComponentControllerImpl>(
-        controller.NewRequest(), &realm_, realm_.koid(),
-        std::move(process_), "test-url", "test-arg", "test-label", nullptr,
-        export_dir_type, std::move(export_dir), zx::channel());
+        controller.NewRequest(), &realm_, realm_.koid(), std::move(process_),
+        "test-url", "test-arg", "test-label", nullptr, export_dir_type,
+        std::move(export_dir), zx::channel());
   }
 
   FakeRealm realm_;
@@ -92,11 +92,15 @@ class ComponentControllerTest : public gtest::TestWithMessageLoop {
 class ComponentBridgeTest : public gtest::TestWithMessageLoop,
                             public ComponentController {
  public:
-  ComponentBridgeTest() : binding_(this) {}
+  ComponentBridgeTest()
+      : binding_(this), binding_error_handler_called_(false) {}
   void SetUp() override {
     gtest::TestWithMessageLoop::SetUp();
     binding_.Bind(remote_controller_.NewRequest());
-    binding_.set_error_handler([this] { Kill(); });
+    binding_.set_error_handler([this] {
+      binding_error_handler_called_ = true;
+      Kill();
+    });
   }
 
   void Kill() override {
@@ -124,8 +128,8 @@ class ComponentBridgeTest : public gtest::TestWithMessageLoop,
     }
     auto component = std::make_unique<ComponentBridge>(
         controller.NewRequest(), std::move(remote_controller_), &runner_,
-        "test-url", "test-arg", "test-label", "1", nullptr,
-        export_dir_type, std::move(export_dir), zx::channel());
+        "test-url", "test-arg", "test-label", "1", nullptr, export_dir_type,
+        std::move(export_dir), zx::channel());
     component->SetParentJobId(runner_.koid());
     return component;
   }
@@ -141,6 +145,8 @@ class ComponentBridgeTest : public gtest::TestWithMessageLoop,
   FakeRunner runner_;
   ::fidl::Binding<ComponentController> binding_;
   ComponentControllerPtr remote_controller_;
+
+  bool binding_error_handler_called_;
 };
 
 std::vector<std::string> split(const std::string& s, char delim) {
@@ -380,6 +386,40 @@ TEST_F(ComponentBridgeTest, Hub) {
   fbl::RefPtr<fs::Vnode> out_dir;
   ASSERT_TRUE(path_exists(component->hub_dir(), "out", &out_dir));
   ASSERT_TRUE(out_dir->IsRemote());
+}
+
+TEST_F(ComponentBridgeTest, BindingErrorHandler) {
+  zx::channel export_dir, export_dir_req;
+  ASSERT_EQ(zx::channel::create(0, &export_dir, &export_dir_req), ZX_OK);
+
+  ComponentControllerPtr component_ptr;
+  {
+    // let it go out of scope, that should trigger binding error handler.
+    auto component = create_component_bridge(
+        component_ptr, ExportedDirType::kPublicDebugCtrlLayout,
+        std::move(export_dir_req));
+  }
+  EXPECT_TRUE(RunLoopUntilWithTimeout([this] { return !binding_.is_bound(); },
+                                      fxl::TimeDelta::FromSeconds(5)));
+  EXPECT_TRUE(binding_error_handler_called_);
+}
+
+TEST_F(ComponentBridgeTest, BindingErrorHandlerWhenDetached) {
+  zx::channel export_dir, export_dir_req;
+  ASSERT_EQ(zx::channel::create(0, &export_dir, &export_dir_req), ZX_OK);
+
+  ComponentControllerPtr component_ptr;
+  {
+    // let it go out of scope, that should trigger binding error handler.
+    auto component = create_component_bridge(
+        component_ptr, ExportedDirType::kPublicDebugCtrlLayout,
+        std::move(export_dir_req));
+    component_ptr->Detach();
+    RunLoopUntilIdle();
+  }
+  EXPECT_TRUE(RunLoopUntilWithTimeout([this] { return !binding_.is_bound(); },
+                                      fxl::TimeDelta::FromSeconds(5)));
+  EXPECT_TRUE(binding_error_handler_called_);
 }
 
 }  // namespace
