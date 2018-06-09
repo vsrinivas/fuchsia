@@ -304,9 +304,9 @@ static zx_status_t setup_hdmi(vim2_display_t* display)
     /* OSD2 setup */
     configure_osd2(display, display->fb_canvas_idx);
 
-    zx_set_framebuffer(get_root_resource(), display->fbuffer.vmo_handle,
-                       display->fbuffer.size, display->format,
-                       display->width, display->height, display->stride);
+    zx_framebuffer_set_range(get_root_resource(), display->fbuffer.vmo_handle,
+                             display->fbuffer.size, display->format,
+                             display->width, display->height, display->stride);
 
     return ZX_OK;
 }

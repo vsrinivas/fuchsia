@@ -193,10 +193,10 @@ static zx_status_t setup_hdmi(imx8m_display_t* display)
 
     writel(io_buffer_phys(&display->fbuffer), io_buffer_virt(&display->mmio_dc) +  0x80c0);
 
-    zx_set_framebuffer(get_root_resource(), display->fbuffer.vmo_handle,
-                       display->fbuffer.size, display->disp_info.format,
-                       display->disp_info.width, display->disp_info.height,
-                       display->disp_info.stride);
+    zx_framebuffer_set_range(get_root_resource(), display->fbuffer.vmo_handle,
+                             display->fbuffer.size, display->disp_info.format,
+                             display->disp_info.width, display->disp_info.height,
+                             display->disp_info.stride);
 
     device_add_args_t vc_fbuff_args = {
         .version = DEVICE_ADD_ARGS_VERSION,

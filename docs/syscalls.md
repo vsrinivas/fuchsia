@@ -142,6 +142,6 @@
 + [smc_call](syscalls/smc_call.md) - Make an SMC call from user space
 + acpi_uefi_rsdp
 + mmap_device_io
-+ set_framebuffer
++ framebuffer_set_range
 + vmo_create_contiguous
 + vmo_create_physical

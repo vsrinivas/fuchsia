@@ -409,14 +409,14 @@ void Client::ApplyConfig() {
                                                fb->info().width, fb->info().pixel_format);
                 uint32_t size =
                         fb->info().height * ZX_PIXEL_FORMAT_BYTES(fb->info().pixel_format) * stride;
-                zx_set_framebuffer(get_root_resource(),
-                                   fb->vmo().get(), size, fb->info().pixel_format,
-                                   fb->info().width, fb->info().height, stride);
+                zx_framebuffer_set_range(get_root_resource(),
+                                         fb->vmo().get(), size, fb->info().pixel_format,
+                                         fb->info().width, fb->info().height, stride);
             } else if (console_fb_display_id_ == display_config.id) {
                 // If this display doesnt' have an image but it was the display which had the
                 // kernel's framebuffer, make the kernel drop the reference. Note that this
                 // executes when tearing down the the virtcon client.
-                zx_set_framebuffer(get_root_resource(), ZX_HANDLE_INVALID, 0, 0, 0, 0, 0);
+                zx_framebuffer_set_range(get_root_resource(), ZX_HANDLE_INVALID, 0, 0, 0, 0, 0);
                 console_fb_display_id_ = -1;
             }
         }

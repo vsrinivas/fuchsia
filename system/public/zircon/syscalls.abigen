@@ -608,8 +608,8 @@ syscall bootloader_fb_get_info
     ()
     returns (zx_status_t, format: uint32_t, width: uint32_t, height: uint32_t, stride: uint32_t);
 
-syscall set_framebuffer
-    (handle: zx_handle_t, vmo: zx_handle_t, len: uint32_t, format: uint32_t,
+syscall framebuffer_set_range
+    (resource: zx_handle_t, vmo: zx_handle_t, len: uint32_t, format: uint32_t,
         width: uint32_t, height: uint32_t, stride: uint32_t)
     returns (zx_status_t);
 

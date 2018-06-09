@@ -145,7 +145,7 @@ zx_status_t sys_bootloader_fb_get_info(user_out_ptr<uint32_t> format, user_out_p
 #endif
 }
 
-zx_status_t sys_set_framebuffer(zx_handle_t hrsrc, zx_handle_t vmo_handle, uint32_t len, uint32_t format, uint32_t width, uint32_t height, uint32_t stride) {
+zx_status_t sys_framebuffer_set_range(zx_handle_t hrsrc, zx_handle_t vmo_handle, uint32_t len, uint32_t format, uint32_t width, uint32_t height, uint32_t stride) {
     zx_status_t status;
     if ((status = validate_resource(hrsrc, ZX_RSRC_KIND_ROOT)) < 0)
         return status;
