@@ -4,7 +4,7 @@
 
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
-#include <simple/cpp/fidl.h>
+#include <fuchsia/modular/examples/simple/cpp/fidl.h>
 
 #include "lib/app/cpp/connect.h"
 #include "lib/app/cpp/startup_context.h"
@@ -12,11 +12,13 @@
 #include "lib/fxl/functional/make_copyable.h"
 #include "peridot/lib/fidl/message_receiver_client.h"
 
+using ::fuchsia::modular::examples::simple::SimplePtr;
+
 namespace simple {
 
 class SimpleModule : fuchsia::ui::views_v1::ViewProvider {
  public:
-  SimpleModule(modular::ModuleHost* module_host,
+  SimpleModule(modular::ModuleHost* const module_host,
                fidl::InterfaceRequest<fuchsia::ui::views_v1::ViewProvider>
                    view_provider_request)
       : view_provider_binding_(this) {
@@ -30,7 +32,7 @@ class SimpleModule : fuchsia::ui::views_v1::ViewProvider {
     // Connect to the agent to retrieve it's outgoing services.
     fuchsia::modular::AgentControllerPtr agent_controller;
     fuchsia::sys::ServiceProviderPtr agent_services;
-    component_context->ConnectToAgent("system/bin/simple_agent",
+    component_context->ConnectToAgent("simple_agent",
                                       agent_services.NewRequest(),
                                       agent_controller.NewRequest());
 

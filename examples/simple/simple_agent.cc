@@ -5,12 +5,14 @@
 #include "lib/app_driver/cpp/agent_driver.h"
 #include "peridot/examples/simple/simple_impl.h"
 
+using ::fuchsia::modular::examples::simple::Simple;
+
 namespace simple {
 
 class SimpleAgent {
  public:
   SimpleAgent(modular::AgentHost* const agent_host)
-      : simple_impl_(new SimpleImpl()) {
+      : simple_impl_(new SimpleImpl) {
     services_.AddService<Simple>(
         [this](fidl::InterfaceRequest<Simple> request) {
           simple_impl_->Connect(std::move(request));

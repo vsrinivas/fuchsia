@@ -7,15 +7,17 @@
 
 #include <string>
 
-#include <simple/cpp/fidl.h>
+#include <fuchsia/modular/examples/simple/cpp/fidl.h>
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fxl/macros.h"
 
 namespace simple {
 
 // An implementation of the Simple interface exposed by |SimpleAgent|.
-class SimpleImpl : Simple {
+class SimpleImpl : ::fuchsia::modular::examples::simple::Simple {
  public:
+  using Simple = ::fuchsia::modular::examples::simple::Simple;
+
   SimpleImpl();
   ~SimpleImpl() override;
 

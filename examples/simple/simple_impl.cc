@@ -4,11 +4,13 @@
 
 #include "peridot/examples/simple/simple_impl.h"
 
+using ::fuchsia::modular::examples::simple::Simple;
+
 namespace simple {
 
-SimpleImpl::SimpleImpl() {}
+SimpleImpl::SimpleImpl() = default;
 
-SimpleImpl::~SimpleImpl() {}
+SimpleImpl::~SimpleImpl() = default;
 
 void SimpleImpl::Connect(fidl::InterfaceRequest<Simple> request) {
   bindings_.AddBinding(this, std::move(request));
