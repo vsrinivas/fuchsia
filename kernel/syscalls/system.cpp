@@ -217,8 +217,11 @@ void mexec_stash_crashlog(fbl::RefPtr<VmObject> vmo) {
     stashed_crashlog = fbl::move(vmo);
 }
 
-zx_status_t sys_system_mexec(zx_handle_t kernel_vmo, zx_handle_t bootimage_vmo) {
-    zx_status_t result;
+zx_status_t sys_system_mexec(zx_handle_t resource, zx_handle_t kernel_vmo, zx_handle_t bootimage_vmo) {
+    // TODO(ZX-971): finer grained validation
+    zx_status_t result = validate_resource(resource, ZX_RSRC_KIND_ROOT);
+    if (result != ZX_OK)
+        return result;
 
     paddr_t new_kernel_addr;
     size_t new_kernel_len;

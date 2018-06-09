@@ -1917,7 +1917,7 @@ static void dc_continue_suspend(suspend_context_t* ctx) {
         if (ctx->dh != NULL) {
             process_suspend_list(ctx);
         } else if (ctx->sflags == DEVICE_SUSPEND_FLAG_MEXEC) {
-            zx_system_mexec(ctx->kernel, ctx->bootdata);
+            zx_system_mexec(get_root_resource(), ctx->kernel, ctx->bootdata);
         } else {
             // should never get here on x86
             // on arm, if the platform driver does not implement
