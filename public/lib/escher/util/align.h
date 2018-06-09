@@ -5,6 +5,7 @@
 #ifndef LIB_ESCHER_UTIL_ALIGN_H_
 #define LIB_ESCHER_UTIL_ALIGN_H_
 
+#include <cstdint>
 #include <memory>
 
 #include "lib/fxl/logging.h"
@@ -18,6 +19,11 @@ inline size_t AlignedToNext(size_t position, size_t alignment) {
   FXL_DCHECK(alignment);
   size_t remainder = position % alignment;
   return remainder ? position + (alignment - remainder) : position;
+}
+
+inline uint8_t* AlignedToNext(uint8_t* ptr, size_t alignment) {
+  return reinterpret_cast<uint8_t*>(
+      AlignedToNext(reinterpret_cast<size_t>(ptr), alignment));
 }
 
 template <typename T>

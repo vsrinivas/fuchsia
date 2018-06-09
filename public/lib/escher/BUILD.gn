@@ -276,6 +276,8 @@ source_set("escher") {
     "third_party/granite/vk/shader_utils.h",
     "util/align.h",
     "util/bit_ops.h",
+    "util/block_allocator.cc",
+    "util/block_allocator.h",
     "util/depth_to_color.cc",
     "util/depth_to_color.h",
     "util/enum_cast.h",
