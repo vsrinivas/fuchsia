@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <fuchsia/modular/cpp/fidl.h>
-#include <queue_persistence_test_service/cpp/fidl.h>
+#include <test/peridot/tests/queuepersistence/cpp/fidl.h>
 #include "lib/app_driver/cpp/agent_driver.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/logging.h"
@@ -14,11 +14,12 @@
 #include "peridot/tests/queue_persistence/defs.h"
 
 using modular::testing::TestPoint;
+using namespace test::peridot::tests::queuepersistence;
 
 namespace {
 
 // Cf. README.md for what this test does and how.
-class TestApp : queue_persistence_test_service::QueuePersistenceTestService {
+class TestApp : QueuePersistenceTestService {
  public:
   TestApp(modular::AgentHost* agent_host) {
     modular::testing::Init(agent_host->startup_context(), __FILE__);
@@ -38,9 +39,9 @@ class TestApp : queue_persistence_test_service::QueuePersistenceTestService {
         });
 
     services_.AddService<
-        queue_persistence_test_service::QueuePersistenceTestService>(
+        QueuePersistenceTestService>(
         [this](fidl::InterfaceRequest<
-               queue_persistence_test_service::QueuePersistenceTestService>
+               QueuePersistenceTestService>
                    request) {
           services_bindings_.AddBinding(this, std::move(request));
         });
@@ -85,7 +86,7 @@ class TestApp : queue_persistence_test_service::QueuePersistenceTestService {
   std::unique_ptr<modular::MessageReceiverClient> msg_receiver_;
 
   fuchsia::sys::ServiceNamespace services_;
-  fidl::BindingSet<queue_persistence_test_service::QueuePersistenceTestService>
+  fidl::BindingSet<QueuePersistenceTestService>
       services_bindings_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(TestApp);

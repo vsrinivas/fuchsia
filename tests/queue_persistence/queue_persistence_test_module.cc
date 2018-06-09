@@ -5,7 +5,7 @@
 #include <fuchsia/modular/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
-#include <queue_persistence_test_service/cpp/fidl.h>
+#include <test/peridot/tests/queuepersistence/cpp/fidl.h>
 
 #include "lib/app/cpp/connect.h"
 #include "lib/app_driver/cpp/module_driver.h"
@@ -20,6 +20,7 @@
 using modular::testing::Await;
 using modular::testing::Signal;
 using modular::testing::TestPoint;
+using namespace test::peridot::tests::queuepersistence;
 
 namespace {
 
@@ -122,7 +123,7 @@ class TestApp {
 
   modular::ModuleHost* module_host_;
   fuchsia::modular::AgentControllerPtr agent_controller_;
-  queue_persistence_test_service::QueuePersistenceTestServicePtr agent_service_;
+  QueuePersistenceTestServicePtr agent_service_;
   fuchsia::modular::ComponentContextPtr component_context_;
   fuchsia::modular::MessageQueuePtr msg_queue_;
 
