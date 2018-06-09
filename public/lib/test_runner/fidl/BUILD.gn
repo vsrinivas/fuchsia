@@ -5,7 +5,7 @@
 import("//build/fidl/fidl.gni")
 
 fidl("fidl") {
-  name = "test_runner"
+  name = "fuchsia.testing.runner"
   cpp_legacy_callbacks = true
 
   sources = [

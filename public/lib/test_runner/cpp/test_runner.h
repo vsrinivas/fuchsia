@@ -7,12 +7,15 @@
 
 #include <memory>
 
+#include <fuchsia/testing/runner/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
-#include <test_runner/cpp/fidl.h>
 
 #include "lib/app/cpp/startup_context.h"
 #include "lib/test_runner/cpp/scope.h"
 #include "lib/test_runner/cpp/test_runner_store_impl.h"
+
+using fuchsia::testing::runner::TestResult;
+using fuchsia::testing::runner::TestRunner;
 
 namespace test_runner {
 

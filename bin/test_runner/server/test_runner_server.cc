@@ -40,7 +40,7 @@
 #include <lib/async/cpp/task.h>
 #include <lib/fit/function.h>
 #include <lib/zx/time.h>
-#include <test_runner/cpp/fidl.h>
+#include <fuchsia/testing/runner/cpp/fidl.h>
 
 #include "lib/app/cpp/startup_context.h"
 #include "lib/fxl/logging.h"

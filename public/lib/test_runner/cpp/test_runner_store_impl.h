@@ -8,10 +8,12 @@
 #include <map>
 #include <queue>
 
-#include <test_runner/cpp/fidl.h>
+#include <fuchsia/testing/runner/cpp/fidl.h>
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fidl/cpp/string.h"
 #include "lib/fxl/macros.h"
+
+using fuchsia::testing::runner::TestRunnerStore;
 
 namespace test_runner {
 
@@ -24,9 +26,7 @@ class TestRunnerStoreImpl : public TestRunnerStore {
   // |TestRunnerStore|
   void Get(fidl::StringPtr key, GetCallback cb) override;
   // |TestRunnerStore|
-  void Put(fidl::StringPtr key,
-           fidl::StringPtr value,
-           PutCallback cb) override;
+  void Put(fidl::StringPtr key, fidl::StringPtr value, PutCallback cb) override;
 
   void MaybeNotify(const std::string& key);
 

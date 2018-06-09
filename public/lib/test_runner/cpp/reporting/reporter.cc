@@ -4,10 +4,12 @@
 
 #include "lib/test_runner/cpp/reporting/reporter.h"
 
-#include <test_runner/cpp/fidl.h>
+#include <fuchsia/testing/runner/cpp/fidl.h>
 
 #include "lib/app/cpp/startup_context.h"
 #include "lib/fidl/cpp/synchronous_interface_ptr.h"
+
+using fuchsia::testing::runner::TestRunnerSyncPtr;
 
 namespace test_runner {
 

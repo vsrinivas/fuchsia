@@ -6,8 +6,10 @@
 
 #include <regex>
 
-#include <test_runner/cpp/fidl.h>
+#include <fuchsia/testing/runner/cpp/fidl.h>
 #include "gtest/gtest.h"
+
+using fuchsia::testing::runner::TestResult;
 
 namespace test_runner {
 

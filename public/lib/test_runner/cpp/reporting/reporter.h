@@ -7,8 +7,10 @@
 
 #include <vector>
 
-#include <test_runner/cpp/fidl.h>
+#include <fuchsia/testing/runner/cpp/fidl.h>
 #include "lib/app/cpp/startup_context.h"
+
+using fuchsia::testing::runner::TestResultPtr;
 
 namespace test_runner {
 
