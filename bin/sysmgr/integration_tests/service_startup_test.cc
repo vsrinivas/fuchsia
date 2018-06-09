@@ -4,7 +4,7 @@
 
 #include <lib/fdio/util.h>
 #include <lib/gtest/test_with_message_loop.h>
-#include <sysmgr/test/cpp/fidl.h>
+#include <test/sysmgr/cpp/fidl.h>
 
 #include "garnet/bin/appmgr/appmgr.h"
 #include "gtest/gtest.h"
@@ -23,7 +23,7 @@ TEST_F(TestSysmgr, ServiceStartup) {
 
   fidl::VectorPtr<fidl::StringPtr> sysmgr_args;
   sysmgr_args.push_back(
-      "--config={\"services\": { \"sysmgr.test.Interface\": "
+      "--config={\"services\": { \"test.sysmgr.Interface\": "
       "\"test_sysmgr_service_startup\" } }");
   sysmgr_args.push_back("--test");
   fuchsia::sys::AppmgrArgs args{.pa_directory_request = h2.release(),
@@ -38,9 +38,9 @@ TEST_F(TestSysmgr, ServiceStartup) {
   ASSERT_EQ(ZX_OK,
             fdio_service_connect_at(h1.get(), "svc", svc_server.release()));
 
-  sysmgr::test::InterfacePtr interface_ptr;
+  ::test::sysmgr::InterfacePtr interface_ptr;
   ASSERT_EQ(ZX_OK, fdio_service_connect_at(
-                       svc_client.get(), sysmgr::test::Interface::Name_,
+                       svc_client.get(), ::test::sysmgr::Interface::Name_,
                        interface_ptr.NewRequest(message_loop_.async())
                            .TakeChannel()
                            .release()));

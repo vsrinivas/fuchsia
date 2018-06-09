@@ -4,7 +4,7 @@
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/zx/channel.h>
-#include <sysmgr/test/cpp/fidl.h>
+#include <test/sysmgr/cpp/fidl.h>
 
 #include "lib/app/cpp/startup_context.h"
 
@@ -12,7 +12,7 @@ namespace sysmgr {
 namespace test {
 namespace {
 
-class Service : public Interface {
+class Service : public ::test::sysmgr::Interface {
  public:
   Service() : context_(fuchsia::sys::StartupContext::CreateFromStartupInfo()) {
     context_->outgoing().AddPublicService<Interface>(
@@ -29,7 +29,7 @@ class Service : public Interface {
 
  private:
   std::unique_ptr<fuchsia::sys::StartupContext> context_;
-  fidl::BindingSet<Interface> bindings_;
+  fidl::BindingSet<::test::sysmgr::Interface> bindings_;
 };
 
 }  // namespace
