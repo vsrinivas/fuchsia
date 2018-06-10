@@ -64,8 +64,7 @@ void RunnerHolder::CreateComponentCallback(ComponentControllerImpl* component) {
 }
 
 void RunnerHolder::StartComponent(
-    Package package, StartupInfo startup_info,
-    std::unique_ptr<archive::FileSystem> file_system, fxl::RefPtr<Namespace> ns,
+    Package package, StartupInfo startup_info, fxl::RefPtr<Namespace> ns,
     fidl::InterfaceRequest<ComponentController> controller) {
   auto url = startup_info.launch_info.url;
   const std::string args =
@@ -77,8 +76,8 @@ void RunnerHolder::StartComponent(
 
   // TODO(anmittal): Create better unique instance id, instead of 1,2,3,4,...
   auto component = std::make_unique<ComponentBridge>(
-      std::move(controller), std::move(remote_controller), this,
-      std::move(file_system), url, std::move(args), util::GetLabelFromURL(url),
+      std::move(controller), std::move(remote_controller), this, url,
+      std::move(args), util::GetLabelFromURL(url),
       std::to_string(++component_id_counter_), std::move(ns),
       ExportedDirType::kLegacyFlatLayout, std::move(channels.exported_dir),
       std::move(channels.client_request));

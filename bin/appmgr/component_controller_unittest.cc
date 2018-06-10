@@ -79,7 +79,7 @@ class ComponentControllerTest : public gtest::TestWithMessageLoop {
       ExportedDirType export_dir_type = ExportedDirType::kLegacyFlatLayout,
       zx::channel export_dir = zx::channel()) {
     return std::make_unique<ComponentControllerImpl>(
-        controller.NewRequest(), &realm_, realm_.koid(), nullptr,
+        controller.NewRequest(), &realm_, realm_.koid(),
         std::move(process_), "test-url", "test-arg", "test-label", nullptr,
         export_dir_type, std::move(export_dir), zx::channel());
   }
@@ -124,7 +124,7 @@ class ComponentBridgeTest : public gtest::TestWithMessageLoop,
     }
     auto component = std::make_unique<ComponentBridge>(
         controller.NewRequest(), std::move(remote_controller_), &runner_,
-        nullptr, "test-url", "test-arg", "test-label", "1", nullptr,
+        "test-url", "test-arg", "test-label", "1", nullptr,
         export_dir_type, std::move(export_dir), zx::channel());
     component->SetParentJobId(runner_.koid());
     return component;

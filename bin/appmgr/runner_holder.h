@@ -11,7 +11,6 @@
 #include "garnet/bin/appmgr/component_container.h"
 #include "garnet/bin/appmgr/component_controller_impl.h"
 #include "garnet/bin/appmgr/namespace.h"
-#include "garnet/lib/farfs/file_system.h"
 #include "lib/fxl/files/unique_fd.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/ref_ptr.h"
@@ -30,7 +29,6 @@ class RunnerHolder : public ComponentContainer<ComponentBridge> {
   ~RunnerHolder();
 
   void StartComponent(Package package, StartupInfo startup_info,
-                      std::unique_ptr<archive::FileSystem> file_system,
                       fxl::RefPtr<Namespace> ns,
                       fidl::InterfaceRequest<ComponentController> controller);
 

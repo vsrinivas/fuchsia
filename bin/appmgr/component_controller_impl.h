@@ -14,7 +14,6 @@
 #include "garnet/bin/appmgr/hub/component_hub.h"
 #include "garnet/bin/appmgr/hub/hub_info.h"
 #include "garnet/bin/appmgr/namespace.h"
-#include "garnet/lib/farfs/file_system.h"
 
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fxl/macros.h"
@@ -40,7 +39,6 @@ enum class ExportedDirType {
 class ComponentControllerBase : public ComponentController {
  public:
   ComponentControllerBase(fidl::InterfaceRequest<ComponentController> request,
-                          std::unique_ptr<archive::FileSystem> fs,
                           std::string url, std::string args, std::string label,
                           std::string hub_instance_id,
                           fxl::RefPtr<Namespace> ns,
@@ -61,7 +59,6 @@ class ComponentControllerBase : public ComponentController {
 
  private:
   fidl::Binding<ComponentController> binding_;
-  std::unique_ptr<archive::FileSystem> fs_;
   std::string label_;
   std::string hub_instance_id_;
 
@@ -77,10 +74,10 @@ class ComponentControllerImpl : public ComponentControllerBase {
   ComponentControllerImpl(
       fidl::InterfaceRequest<ComponentController> request,
       ComponentContainer<ComponentControllerImpl>* container,
-      std::string job_id, std::unique_ptr<archive::FileSystem> fs,
-      zx::process process, std::string url, std::string args, std::string label,
-      fxl::RefPtr<Namespace> ns, ExportedDirType export_dir_type,
-      zx::channel exported_dir, zx::channel client_request);
+      std::string job_id, zx::process process, std::string url,
+      std::string args, std::string label, fxl::RefPtr<Namespace> ns,
+      ExportedDirType export_dir_type, zx::channel exported_dir,
+      zx::channel client_request);
   ~ComponentControllerImpl() override;
 
   const std::string& koid() const { return koid_; }
@@ -116,8 +113,7 @@ class ComponentBridge : public ComponentControllerBase {
   ComponentBridge(fidl::InterfaceRequest<ComponentController> request,
                   ComponentControllerPtr remote_controller,
                   ComponentContainer<ComponentBridge>* container,
-                  std::unique_ptr<archive::FileSystem> fs, std::string url,
-                  std::string args, std::string label,
+                  std::string url, std::string args, std::string label,
                   std::string hub_instance_id, fxl::RefPtr<Namespace> ns,
                   ExportedDirType export_dir_type, zx::channel exported_dir,
                   zx::channel client_request);

@@ -45,9 +45,10 @@ source_set("lib") {
   ]
 
   public_deps = [
-    "//garnet/lib/farfs",
+    "//garnet/lib/far",
     "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/app/fidl",
+    "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/svc/cpp",
     "//third_party/rapidjson",

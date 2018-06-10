@@ -22,13 +22,11 @@ namespace fuchsia {
 namespace sys {
 
 ComponentControllerBase::ComponentControllerBase(
-    fidl::InterfaceRequest<ComponentController> request,
-    std::unique_ptr<archive::FileSystem> fs, std::string url, std::string args,
-    std::string label, std::string hub_instance_id, fxl::RefPtr<Namespace> ns,
-    ExportedDirType export_dir_type, zx::channel exported_dir,
-    zx::channel client_request)
+    fidl::InterfaceRequest<ComponentController> request, std::string url,
+    std::string args, std::string label, std::string hub_instance_id,
+    fxl::RefPtr<Namespace> ns, ExportedDirType export_dir_type,
+    zx::channel exported_dir, zx::channel client_request)
     : binding_(this),
-      fs_(std::move(fs)),
       label_(std::move(label)),
       hub_instance_id_(std::move(hub_instance_id)),
       hub_(fbl::AdoptRef(new fs::PseudoDir())),
@@ -77,14 +75,13 @@ void ComponentControllerBase::Detach() { binding_.set_error_handler(nullptr); }
 ComponentControllerImpl::ComponentControllerImpl(
     fidl::InterfaceRequest<ComponentController> request,
     ComponentContainer<ComponentControllerImpl>* container, std::string job_id,
-    std::unique_ptr<archive::FileSystem> fs, zx::process process,
-    std::string url, std::string args, std::string label,
+    zx::process process, std::string url, std::string args, std::string label,
     fxl::RefPtr<Namespace> ns, ExportedDirType export_dir_type,
     zx::channel exported_dir, zx::channel client_request)
     : ComponentControllerBase(
-          std::move(request), std::move(fs), std::move(url), std::move(args),
-          std::move(label), std::to_string(fsl::GetKoid(process.get())),
-          std::move(ns), std::move(export_dir_type), std::move(exported_dir),
+          std::move(request), std::move(url), std::move(args), std::move(label),
+          std::to_string(fsl::GetKoid(process.get())), std::move(ns),
+          std::move(export_dir_type), std::move(exported_dir),
           std::move(client_request)),
       container_(container),
       process_(std::move(process)),
@@ -163,16 +160,14 @@ void ComponentControllerImpl::Handler(async_t* async, async::WaitBase* wait,
 ComponentBridge::ComponentBridge(
     fidl::InterfaceRequest<ComponentController> request,
     ComponentControllerPtr remote_controller,
-    ComponentContainer<ComponentBridge>* container,
-    std::unique_ptr<archive::FileSystem> fs, std::string url, std::string args,
-    std::string label, std::string hub_instance_id, fxl::RefPtr<Namespace> ns,
-    ExportedDirType export_dir_type, zx::channel exported_dir,
-    zx::channel client_request)
+    ComponentContainer<ComponentBridge>* container, std::string url,
+    std::string args, std::string label, std::string hub_instance_id,
+    fxl::RefPtr<Namespace> ns, ExportedDirType export_dir_type,
+    zx::channel exported_dir, zx::channel client_request)
     : ComponentControllerBase(
-          std::move(request), std::move(fs), std::move(url), std::move(args),
-          std::move(label), hub_instance_id, std::move(ns),
-          std::move(export_dir_type), std::move(exported_dir),
-          std::move(client_request)),
+          std::move(request), std::move(url), std::move(args), std::move(label),
+          hub_instance_id, std::move(ns), std::move(export_dir_type),
+          std::move(exported_dir), std::move(client_request)),
       remote_controller_(std::move(remote_controller)),
       container_(std::move(container)) {
   remote_controller_.set_error_handler(

@@ -48,11 +48,6 @@ constexpr char kAppArv0[] = "/pkg/bin/app";
 constexpr char kLegacyFlatExportedDirPath[] = "meta/legacy_flat_exported_dir";
 constexpr char kRuntimePath[] = "meta/runtime";
 
-enum class LaunchType {
-  kProcess,
-  kArchive,
-};
-
 std::vector<const char*> GetArgv(const std::string& argv0,
                                  const LaunchInfo& launch_info) {
   std::vector<const char*> argv;
@@ -140,18 +135,6 @@ zx::process CreateProcess(const zx::job& job, fsl::SizedVmo data,
     return zx::process();
   }
   return zx::process(proc);
-}
-
-LaunchType Classify(const zx::vmo& data, std::string* runner) {
-  if (!data)
-    return LaunchType::kProcess;
-  std::string magic(archive::kMagicLength, '\0');
-  zx_status_t status = data.read(&magic[0], 0, magic.length());
-  if (status != ZX_OK)
-    return LaunchType::kProcess;
-  if (memcmp(magic.data(), &archive::kMagic, sizeof(archive::kMagic)) == 0)
-    return LaunchType::kArchive;
-  return LaunchType::kProcess;
 }
 
 }  // namespace
@@ -281,20 +264,9 @@ void Realm::CreateComponent(
 
         if (package) {
           if (package->data) {
-            std::string runner;
-            LaunchType type = Classify(package->data->vmo, &runner);
-            switch (type) {
-              case LaunchType::kProcess:
-                CreateComponentWithProcess(
-                    std::move(package), std::move(launch_info),
-                    std::move(controller), std::move(ns), fbl::move(callback));
-                break;
-              case LaunchType::kArchive:
-                CreateComponentFromPackage(
-                    std::move(package), std::move(launch_info),
-                    std::move(controller), std::move(ns), fbl::move(callback));
-                break;
-            }
+            CreateComponentWithProcess(
+                std::move(package), std::move(launch_info),
+                std::move(controller), std::move(ns), fbl::move(callback));
           } else if (package->directory) {
             CreateComponentFromPackage(
                 std::move(package), std::move(launch_info),
@@ -394,7 +366,7 @@ void Realm::CreateComponentWithProcess(
 
   if (process) {
     auto application = std::make_unique<ComponentControllerImpl>(
-        std::move(controller), this, koid_, nullptr, std::move(process), url,
+        std::move(controller), this, koid_, std::move(process), url,
         std::move(args), util::GetLabelFromURL(url), std::move(ns),
         ExportedDirType::kPublicDebugCtrlLayout,
         std::move(channels.exported_dir), std::move(channels.client_request));
@@ -416,45 +388,29 @@ void Realm::CreateComponentFromPackage(
   if (!svc)
     return;
 
-  zx::channel pkg;
-  std::unique_ptr<archive::FileSystem> pkg_fs;
+  fxl::UniqueFD fd =
+      fsl::OpenChannelAsFileDescriptor(std::move(package->directory));
+
   std::string cmx_data;
   std::string cmx_path = CmxMetadata::GetCmxPath(package->resolved_url.get());
-  std::string sandbox_data;
-  std::string runtime_data;
-  ExportedDirType exported_dir_layout(ExportedDirType::kPublicDebugCtrlLayout);
-  fsl::SizedVmo app_data;
-  zx::channel loader_service;
+  if (!cmx_path.empty())
+    files::ReadFileToStringAt(fd.get(), cmx_path, &cmx_data);
 
-  if (package->data) {
-    pkg_fs =
-        std::make_unique<archive::FileSystem>(std::move(package->data->vmo));
-    pkg = pkg_fs->OpenAsDirectory();
-    pkg_fs->GetFileAsString(cmx_path, &cmx_data);
-    if (!pkg_fs->GetFileAsString(kRuntimePath, &runtime_data))
-      app_data = pkg_fs->GetFileAsVMO(kAppPath);
-    exported_dir_layout = pkg_fs->IsFile(kLegacyFlatExportedDirPath)
-                              ? ExportedDirType::kLegacyFlatLayout
-                              : ExportedDirType::kPublicDebugCtrlLayout;
-  } else if (package->directory) {
-    fxl::UniqueFD fd =
-        fsl::OpenChannelAsFileDescriptor(std::move(package->directory));
-    if (!cmx_path.empty()) {
-      files::ReadFileToStringAt(fd.get(), cmx_path, &cmx_data);
-    }
-    if (!files::ReadFileToStringAt(fd.get(), kRuntimePath, &runtime_data))
-      VmoFromFilenameAt(fd.get(), kAppPath, &app_data);
-    exported_dir_layout = files::IsFileAt(fd.get(), kLegacyFlatExportedDirPath)
-                              ? ExportedDirType::kLegacyFlatLayout
-                              : ExportedDirType::kPublicDebugCtrlLayout;
-    // TODO(abarth): We shouldn't need to clone the channel here. Instead, we
-    // should be able to tear down the file descriptor in a way that gives us
-    // the channel back.
-    pkg = fsl::CloneChannelFromFileDescriptor(fd.get());
-    if (DynamicLibraryLoader::Start(std::move(fd), &loader_service) != ZX_OK)
-      return;
-  }
-  if (!pkg)
+  std::string runtime_data;
+  fsl::SizedVmo app_data;
+  if (!files::ReadFileToStringAt(fd.get(), kRuntimePath, &runtime_data))
+    VmoFromFilenameAt(fd.get(), kAppPath, &app_data);
+
+  ExportedDirType exported_dir_layout =
+      files::IsFileAt(fd.get(), kLegacyFlatExportedDirPath)
+          ? ExportedDirType::kLegacyFlatLayout
+          : ExportedDirType::kPublicDebugCtrlLayout;
+  // TODO(abarth): We shouldn't need to clone the channel here. Instead, we
+  // should be able to tear down the file descriptor in a way that gives us
+  // the channel back.
+  zx::channel pkg = fsl::CloneChannelFromFileDescriptor(fd.get());
+  zx::channel loader_service;
+  if (DynamicLibraryLoader::Start(std::move(fd), &loader_service) != ZX_OK)
     return;
 
   // Note that |builder| is only used in the else block below. It is left here
@@ -497,9 +453,9 @@ void Realm::CreateComponentFromPackage(
 
     if (process) {
       auto application = std::make_unique<ComponentControllerImpl>(
-          std::move(controller), this, koid_, std::move(pkg_fs),
-          std::move(process), url, std::move(args), util::GetLabelFromURL(url),
-          std::move(ns), exported_dir_layout, std::move(channels.exported_dir),
+          std::move(controller), this, koid_, std::move(process), url,
+          std::move(args), util::GetLabelFromURL(url), std::move(ns),
+          exported_dir_layout, std::move(channels.exported_dir),
           std::move(channels.client_request));
       // update hub
       hub_.AddComponent(application->HubInfo());
@@ -531,8 +487,7 @@ void Realm::CreateComponentFromPackage(
       return;
     }
     runner->StartComponent(std::move(inner_package), std::move(startup_info),
-                           std::move(pkg_fs), std::move(ns),
-                           std::move(controller));
+                           std::move(ns), std::move(controller));
   }
 }
 
