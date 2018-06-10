@@ -595,9 +595,9 @@ No values for `target_cpu = "arm64"`.
 ### thinlto_cache_dir
  ThinLTO cache directory path.
 
-**Default value for `target_cpu = "arm64"`:** "thinlto-cache"
+**Default value for `target_cpu = "arm64"`:** "arm64-shared/thinlto-cache"
 
-**Default value for `target_cpu = "x64"`:** "x64-shared/thinlto-cache"
+**Default value for `target_cpu = "x64"`:** "host_x64/thinlto-cache"
 
 
 ### thinlto_jobs
