@@ -12,9 +12,7 @@ ValidationTest::ValidationTest()
 ValidationTest::~ValidationTest() {}
 
 void ValidationTest::SetUp() {
-  fidl::InterfacePtr<CloudProvider> cloud_provider =
-      startup_context_->ConnectToEnvironmentService<CloudProvider>();
-  cloud_provider_ = std::move(cloud_provider);
+  startup_context_->ConnectToEnvironmentService(cloud_provider_.NewRequest());
 }
 
 }  // namespace cloud_provider
