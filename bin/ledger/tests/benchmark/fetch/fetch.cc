@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#define FIDL_ENABLE_LEGACY_WAIT_FOR_RESPONSE
-
 #include "peridot/bin/ledger/tests/benchmark/fetch/fetch.h"
 
 #include <fuchsia/ledger/cloud/cpp/fidl.h>
@@ -235,10 +233,8 @@ void FetchBenchmark::FetchPart(ledger::PageSnapshotPtr snapshot, size_t i,
 }
 
 void FetchBenchmark::ShutDown() {
-  writer_controller_->Kill();
-  writer_controller_.WaitForResponseUntil(zx::deadline_after(zx::sec(5)));
-  reader_controller_->Kill();
-  reader_controller_.WaitForResponseUntil(zx::deadline_after(zx::sec(5)));
+  test::KillLedgerProcess(&writer_controller_);
+  test::KillLedgerProcess(&reader_controller_);
   loop_->Quit();
 }
 

@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#define FIDL_ENABLE_LEGACY_WAIT_FOR_RESPONSE
-
 #include "peridot/bin/ledger/tests/benchmark/put/put.h"
 
 #include <lib/zx/time.h>
@@ -255,8 +253,7 @@ void PutBenchmark::CommitAndRunNext(
 
 void PutBenchmark::ShutDown() {
   // Shut down the Ledger process first as it relies on |tmp_dir_| storage.
-  component_controller_->Kill();
-  component_controller_.WaitForResponseUntil(zx::deadline_after(zx::sec(5)));
+  test::KillLedgerProcess(&component_controller_);
   loop_->Quit();
 }
 

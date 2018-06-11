@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#define FIDL_ENABLE_LEGACY_WAIT_FOR_RESPONSE
-
 #include "peridot/bin/ledger/tests/benchmark/convergence/convergence.h"
 
 #include <lib/zx/time.h>
@@ -160,9 +158,7 @@ void ConvergenceBenchmark::OnChange(ledger::PageChange page_change,
 
 void ConvergenceBenchmark::ShutDown() {
   for (auto& device_context : devices_) {
-    device_context.controller->Kill();
-    device_context.controller.WaitForResponseUntil(
-        zx::deadline_after(zx::sec(5)));
+    test::KillLedgerProcess(&device_context.controller);
   }
   loop_->Quit();
 }

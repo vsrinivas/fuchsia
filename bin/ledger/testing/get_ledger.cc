@@ -135,4 +135,12 @@ ledger::Status GetPageEnsureInitialized(fsl::MessageLoop* loop,
                                   std::move(requested_id), page, page_id);
 }
 
+void KillLedgerProcess(fuchsia::sys::ComponentControllerPtr* controller) {
+  (*controller)->Kill();
+  auto channel = controller->Unbind().TakeChannel();
+  zx_signals_t observed;
+  channel.wait_one(ZX_CHANNEL_PEER_CLOSED, zx::deadline_after(zx::sec(5)),
+                   &observed);
+}
+
 }  // namespace test

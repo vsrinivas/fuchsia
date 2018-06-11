@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#define FIDL_ENABLE_LEGACY_WAIT_FOR_RESPONSE
-
 #include "peridot/bin/ledger/tests/benchmark/disk_space/disk_space.h"
 
 #include <lib/async/cpp/task.h>
@@ -114,8 +112,7 @@ void DiskSpaceBenchmark::Populate() {
 }
 
 void DiskSpaceBenchmark::ShutDownAndRecord() {
-  component_controller_->Kill();
-  component_controller_.WaitForResponseUntil(zx::deadline_after(zx::sec(5)));
+  test::KillLedgerProcess(&component_controller_);
   loop_->Quit();
 
   uint64_t tmp_dir_size = 0;

@@ -59,6 +59,9 @@ ledger::Status GetPageEnsureInitialized(fsl::MessageLoop* loop,
                                         ledger::PagePtr* page,
                                         ledger::PageId* page_id);
 
+// Kills the remote ledger process controlled by |controller|.
+void KillLedgerProcess(fuchsia::sys::ComponentControllerPtr* controller);
+
 }  // namespace test
 
 #endif  // PERIDOT_BIN_LEDGER_TESTING_GET_LEDGER_H_

@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#define FIDL_ENABLE_LEGACY_WAIT_FOR_RESPONSE
-
 #include "peridot/bin/ledger/tests/benchmark/sync/sync.h"
 
 #include <fuchsia/ledger/cloud/cpp/fidl.h>
@@ -168,10 +166,8 @@ void SyncBenchmark::RunSingleChange(size_t change_number) {
 }
 
 void SyncBenchmark::ShutDown() {
-  alpha_controller_->Kill();
-  alpha_controller_.WaitForResponseUntil(zx::deadline_after(zx::sec(5)));
-  beta_controller_->Kill();
-  beta_controller_.WaitForResponseUntil(zx::deadline_after(zx::sec(5)));
+  test::KillLedgerProcess(&alpha_controller_);
+  test::KillLedgerProcess(&beta_controller_);
   loop_->Quit();
 }
 }  // namespace benchmark
