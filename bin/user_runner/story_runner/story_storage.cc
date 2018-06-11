@@ -23,14 +23,12 @@ StoryStorage::StoryStorage(LedgerClient* ledger_client,
   FXL_DCHECK(ledger_client_ != nullptr);
 }
 
-FuturePtr<> StoryStorage::WriteModuleData(
-    fuchsia::modular::ModuleData module_data) {
+FuturePtr<> StoryStorage::WriteModuleData(ModuleData module_data) {
   auto module_path = fidl::Clone(module_data.module_path);
   return UpdateModuleData(
-      module_path,
-      fxl::MakeCopyable([module_data = std::move(module_data)](
-                            fuchsia::modular::ModuleDataPtr* module_data_ptr) {
-        *module_data_ptr = fuchsia::modular::ModuleData::New();
+      module_path, fxl::MakeCopyable([module_data = std::move(module_data)](
+                                         ModuleDataPtr* module_data_ptr) {
+        *module_data_ptr = ModuleData::New();
         module_data.Clone(module_data_ptr->get());
       }));
 }
@@ -38,7 +36,7 @@ FuturePtr<> StoryStorage::WriteModuleData(
 namespace {
 struct UpdateModuleDataState {
   fidl::VectorPtr<fidl::StringPtr> module_path;
-  std::function<void(fuchsia::modular::ModuleDataPtr*)> mutate_fn;
+  std::function<void(ModuleDataPtr*)> mutate_fn;
   OperationQueue sub_operations;
 };
 
@@ -46,22 +44,21 @@ struct UpdateModuleDataState {
 
 FuturePtr<> StoryStorage::UpdateModuleData(
     const fidl::VectorPtr<fidl::StringPtr>& module_path,
-    std::function<void(fuchsia::modular::ModuleDataPtr*)> mutate_fn) {
+    std::function<void(ModuleDataPtr*)> mutate_fn) {
   auto op_state = std::make_shared<UpdateModuleDataState>();
   op_state->module_path = fidl::Clone(module_path);
   op_state->mutate_fn = std::move(mutate_fn);
 
   auto key = MakeModuleKey(module_path);
   auto op_body = [this, op_state, key](OperationBase* op) {
-    auto did_read = Future<fuchsia::modular::ModuleDataPtr>::Create(
-        "StoryStorage.UpdateModuleData.did_read");
-    op_state->sub_operations.Add(new ReadDataCall<fuchsia::modular::ModuleData>(
-        page(), key, true /* not_found_is_ok */, XdrModuleData,
-        did_read->Completer()));
+    auto did_read =
+        Future<ModuleDataPtr>::Create("StoryStorage.UpdateModuleData.did_read");
+    op_state->sub_operations.Add(
+        new ReadDataCall<ModuleData>(page(), key, true /* not_found_is_ok */,
+                                     XdrModuleData, did_read->Completer()));
 
     auto did_mutate = did_read->AsyncMap(
-        [this, op_state,
-         key](fuchsia::modular::ModuleDataPtr current_module_data) {
+        [this, op_state, key](ModuleDataPtr current_module_data) {
           auto new_module_data = CloneOptional(current_module_data);
           op_state->mutate_fn(&new_module_data);
 
@@ -93,10 +90,8 @@ FuturePtr<> StoryStorage::UpdateModuleData(
           std::string expected_value;
           XdrWrite(&expected_value, &module_data_copy, XdrModuleData);
 
-          op_state->sub_operations.Add(
-              new WriteDataCall<fuchsia::modular::ModuleData>(
-                  page(), key, XdrModuleData, std::move(module_data_copy),
-                  [] {}));
+          op_state->sub_operations.Add(new WriteDataCall<ModuleData>(
+              page(), key, XdrModuleData, std::move(module_data_copy), [] {}));
 
           return WaitForWrite(key, expected_value);
         });
@@ -111,23 +106,21 @@ FuturePtr<> StoryStorage::UpdateModuleData(
 }
 
 // Returns the current ModuleData for |module_path|.
-FuturePtr<fuchsia::modular::ModuleDataPtr> StoryStorage::ReadModuleData(
+FuturePtr<ModuleDataPtr> StoryStorage::ReadModuleData(
     const fidl::VectorPtr<fidl::StringPtr>& module_path) {
   auto key = MakeModuleKey(module_path);
-  auto ret = Future<fuchsia::modular::ModuleDataPtr>::Create(
-      "StoryStorage.ReadModuleData.ret");
-  operation_queue_.Add(new ReadDataCall<fuchsia::modular::ModuleData>(
-      page(), key, true /* not_found_is_ok */, XdrModuleData,
-      ret->Completer()));
+  auto ret = Future<ModuleDataPtr>::Create("StoryStorage.ReadModuleData.ret");
+  operation_queue_.Add(
+      new ReadDataCall<ModuleData>(page(), key, true /* not_found_is_ok */,
+                                   XdrModuleData, ret->Completer()));
   return ret;
 }
 
 // Returns all ModuleData entries for all mods.
-FuturePtr<fidl::VectorPtr<fuchsia::modular::ModuleData>>
-StoryStorage::ReadAllModuleData() {
-  auto ret = Future<fidl::VectorPtr<fuchsia::modular::ModuleData>>::Create(
+FuturePtr<fidl::VectorPtr<ModuleData>> StoryStorage::ReadAllModuleData() {
+  auto ret = Future<fidl::VectorPtr<ModuleData>>::Create(
       "StoryStorage.ReadAllModuleData.ret");
-  operation_queue_.Add(new ReadAllDataCall<fuchsia::modular::ModuleData>(
+  operation_queue_.Add(new ReadAllDataCall<ModuleData>(
       page(), kModuleKeyPrefix, XdrModuleData, ret->Completer()));
   return ret;
 }
@@ -150,7 +143,7 @@ void StoryStorage::OnPageChange(const std::string& key,
 
   // Notify our listener about the updated ModuleData.
   if (on_module_data_updated_) {
-    auto module_data = fuchsia::modular::ModuleData::New();
+    auto module_data = ModuleData::New();
     if (!XdrRead(value, &module_data, XdrModuleData)) {
       FXL_LOG(ERROR) << "Unable to parse ModuleData " << key << " " << value;
       return;

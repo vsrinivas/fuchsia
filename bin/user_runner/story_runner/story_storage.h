@@ -11,6 +11,11 @@
 #include "peridot/lib/ledger_client/page_client.h"
 #include "peridot/lib/ledger_client/page_id.h"
 
+using fuchsia::modular::LinkPath;
+using fuchsia::modular::LinkPathPtr;
+using fuchsia::modular::ModuleData;
+using fuchsia::modular::ModuleDataPtr;
+
 namespace modular {
 
 // This class has the following responsibilities:
@@ -31,24 +36,28 @@ class StoryStorage : public PageClient {
   // |ledger_client| must outlive *this.
   StoryStorage(LedgerClient* ledger_client, fuchsia::ledger::PageId page_id);
 
+  enum Status { OK = 0 };
+
+  // =========================================================================
+  // ModuleData
+
   // Sets the callback that is called whenever ModuleData is added or updated
   // in underlying storage. Excludes notifications for changes (such as with
   // WriteModuleData() or UpdateModuleData()) made on this instance of
   // StoryStorage.
-  void set_on_module_data_updated(
-      std::function<void(fuchsia::modular::ModuleData)> callback) {
+  void set_on_module_data_updated(std::function<void(ModuleData)> callback) {
     on_module_data_updated_ = std::move(callback);
   }
 
   // Returns the current ModuleData for |module_path|. If not found, the
   // returned value is null.
-  FuturePtr<fuchsia::modular::ModuleDataPtr> ReadModuleData(
+  FuturePtr<ModuleDataPtr> ReadModuleData(
       const fidl::VectorPtr<fidl::StringPtr>& module_path);
 
   // Writes |module_data| to storage. The returned future is completed
   // once |module_data| has been written and a notification confirming the
   // write has been received.
-  FuturePtr<> WriteModuleData(fuchsia::modular::ModuleData module_data);
+  FuturePtr<> WriteModuleData(ModuleData module_data);
 
   // Reads the ModuleData for |module_path|, calls |mutate_fn| which may modify
   // the contents, and writes the resulting ModuleData back to storage.
@@ -63,10 +72,68 @@ class StoryStorage : public PageClient {
   // reset to null an otherwise initialized ModuleDataPtr.
   FuturePtr<> UpdateModuleData(
       const fidl::VectorPtr<fidl::StringPtr>& module_path,
-      std::function<void(fuchsia::modular::ModuleDataPtr*)> mutate_fn);
+      std::function<void(ModuleDataPtr*)> mutate_fn);
 
   // Returns all ModuleData entries for all mods.
-  FuturePtr<fidl::VectorPtr<fuchsia::modular::ModuleData>> ReadAllModuleData();
+  FuturePtr<fidl::VectorPtr<ModuleData>> ReadAllModuleData();
+
+  // =========================================================================
+  // Link data
+
+  // Use with AddLinkUpdatedCallback below.
+  //
+  // Called whenever a change occurs to the link(s) specified in
+  // AddLinkUpdatedCallback(). The receiver gets the LinkPath, the current
+  // |value| and whatever |context| was passed into the mutation call.
+  //
+  // The receiver should return true to continue receiving notifications
+  // for the same links, or false to de-register the callback.
+  using LinkUpdatedCallback = std::function<bool(
+      const LinkPath&, const fidl::StringPtr& value, void* context)>;
+
+  // Registers |callback| to be invoked whenever a change to the link value at
+  // |link_path| occurs.  If |link_path| is null, watches all links.
+  void AddLinkUpdatedCallback(LinkPathPtr link_path,
+                              LinkUpdatedCallback callback);
+
+  // Returns the value for |link_path| at |json_path|
+  // (https://tools.ietf.org/html/rfc6901) within the JSON value.  A
+  // |json_path| of "" or nullptr will return the entire value.
+  //
+  // The returned value will be stringified JSON. If no value is found, returns
+  // a null StringPtr.
+  FuturePtr<fidl::StringPtr> GetLinkValue(
+      const LinkPath& link_path, fidl::VectorPtr<fidl::StringPtr> json_path);
+
+  // Sets the value for |link_path| at |json_path| to the JSON encoded
+  // |json_value|.
+  //
+  // |context| is carried with the mutation operation and passed to any
+  // notifications about this change on this instance of StoryStorage.
+  FuturePtr<Status, fidl::StringPtr> SetLinkValue(
+      const LinkPath& link_path, fidl::VectorPtr<fidl::StringPtr> json_path,
+      fidl::StringPtr json_value, void* context);
+
+  // Like SetLinkValue(), but does not completely overwrite the JSON at
+  // |json_path|.
+  //
+  // Recursively, for every attribute in |json_object|, sets or overwrites the
+  // same attribute at |json_path| with the corresponding value in
+  // |json_object|.
+  //
+  // |context| is carried with the mutation operation and passed to any
+  // notifications about this change on this instance of StoryStorage.
+  FuturePtr<Status, fidl::StringPtr> UpdateLinkObject(
+      const LinkPath& link_path, fidl::VectorPtr<fidl::StringPtr> json_path,
+      fidl::StringPtr json_object, void* context);
+
+  // Erases the JSON value for |link_path| at |json_path|.
+  //
+  // |context| is carried with the mutation operation and passed to any
+  // notifications about this change on this instance of StoryStorage.
+  FuturePtr<Status, fidl::StringPtr> EraseLinkValue(
+      const LinkPath& link_path, fidl::VectorPtr<fidl::StringPtr> json_path,
+      void* context);
 
   // TODO(thatguy): Remove users of these and remove. Only used when
   // constructing a LinkImpl in StoryControllerImpl. Bring Link storage
@@ -91,7 +158,7 @@ class StoryStorage : public PageClient {
   const fuchsia::ledger::PageId page_id_;
   OperationQueue operation_queue_;
 
-  std::function<void(fuchsia::modular::ModuleData)> on_module_data_updated_;
+  std::function<void(ModuleData)> on_module_data_updated_;
 
   // A map of ledger (key, value) to (vec of future). When we see a
   // notification in OnPageChange() for a matching (key, value), we complete
