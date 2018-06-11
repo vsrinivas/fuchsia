@@ -26,6 +26,14 @@ func Serve() {
 	d.Serve()
 }
 
+type bindingState int32
+
+const (
+	idle bindingState = iota
+	handling
+	cleanup
+)
+
 // Binding binds the implementation of a Stub to a Channel.
 //
 // A Binding listens for incoming messages on the Channel, decodes them, and
@@ -47,12 +55,34 @@ type Binding struct {
 	// errHandler is an error handler which will be called if a
 	// connection error is encountered.
 	errHandler func(error)
+
+	// handling is an atomically-updated signal which represents the state of the
+	// binding.
+	stateMu sync.Mutex
+	state bindingState
 }
 
 // Init initializes a Binding.
 func (b *Binding) Init(errHandler func(error)) error {
 	// Declare the wait handler as a closure.
-	h := func(d *dispatch.Dispatcher, s zx.Status, sigs *zx.PacketSignal) dispatch.WaitResult {
+	h := func(d *dispatch.Dispatcher, s zx.Status, sigs *zx.PacketSignal) (result dispatch.WaitResult) {
+		b.stateMu.Lock()
+		if b.state == cleanup {
+			b.close()
+			b.stateMu.Unlock()
+			return dispatch.WaitFinished
+		}
+		b.state = handling
+		b.stateMu.Unlock()
+		defer func() {
+			b.stateMu.Lock()
+			defer b.stateMu.Unlock()
+			if b.state == cleanup {
+				b.close()
+				result = dispatch.WaitFinished
+			}
+			b.state = idle
+		}()
 		if s != zx.ErrOk {
 			b.errHandler(zx.Error{Status: s})
 			return dispatch.WaitFinished
@@ -74,6 +104,12 @@ func (b *Binding) Init(errHandler func(error)) error {
 		return dispatch.WaitFinished
 	}
 
+	b.stateMu.Lock()
+	b.state = idle
+	b.stateMu.Unlock()
+
+	b.errHandler = errHandler
+
 	// Start the wait on the Channel.
 	id, err := d.BeginWait(
 		zx.Handle(b.Channel),
@@ -85,7 +121,6 @@ func (b *Binding) Init(errHandler func(error)) error {
 		return err
 	}
 	b.id = &id
-	b.errHandler = errHandler
 	return nil
 }
 
@@ -131,9 +166,27 @@ func (b *Binding) dispatch() (bool, error) {
 	return false, nil
 }
 
-// Close cancels an outstanding waits, resets the Binding's state, and
-// closes the bound Channel.
+// Close cancels any outstanding waits, resets the Binding's state, and closes
+// the bound Channel once any out-standing requests are finished being handled.
 func (b *Binding) Close() error {
+	b.stateMu.Lock()
+	defer b.stateMu.Unlock()
+	if zx.Handle(b.Channel) == zx.HandleInvalid || b.state == cleanup {
+		panic("double binding close")
+	}
+	switch b.state {
+	case idle:
+		return b.close()
+	case handling:
+		b.state = cleanup
+	}
+	return nil
+}
+
+// close cancels any outstanding waits, resets the Binding's state, and
+// closes the bound Channel. This method is not thread-safe, and should be
+// called with the binding's mutex set.
+func (b *Binding) close() error {
 	if err := d.CancelWait(*b.id); err != nil {
 		zxErr, ok := err.(zx.Error)
 		// If it just says that the ID isn't found, there are cases where this is
@@ -146,6 +199,7 @@ func (b *Binding) Close() error {
 		}
 	}
 	b.id = nil
+	b.state = idle
 	return b.Channel.Close()
 }
 
@@ -201,7 +255,10 @@ func (b *BindingSet) ProxyFor(key BindingKey) (*Proxy, bool) {
 	return nil, false
 }
 
-// Remove removes a Binding from the set.
+// Remove removes a Binding from the set when it is next idle.
+//
+// Note that this method invalidates the key, and it will never remove a Binding
+// while it is actively being handled.
 //
 // Returns true if a Binding was found and removed.
 func (b *BindingSet) Remove(key BindingKey) bool {
