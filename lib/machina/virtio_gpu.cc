@@ -24,10 +24,12 @@ VirtioGpu::~VirtioGpu() = default;
 
 zx_status_t VirtioGpu::Init() {
   zx_status_t status = control_queue()->PollAsync(
-      async_, &control_queue_wait_, &VirtioGpu::QueueHandler, this);
+      async_, &control_queue_wait_,
+      fit::bind_member(this, &VirtioGpu::HandleGpuCommand));
   if (status == ZX_OK) {
-    status = cursor_queue()->PollAsync(async_, &cursor_queue_wait_,
-                                       &VirtioGpu::QueueHandler, this);
+    status = cursor_queue()->PollAsync(
+        async_, &cursor_queue_wait_,
+        fit::bind_member(this, &VirtioGpu::HandleGpuCommand));
   }
   return status;
 }
@@ -44,12 +46,6 @@ zx_status_t VirtioGpu::AddScanout(GpuScanout* scanout) {
   }
   scanout_ = scanout;
   return ZX_OK;
-}
-
-zx_status_t VirtioGpu::QueueHandler(VirtioQueue* queue, uint16_t head,
-                                    uint32_t* used, void* ctx) {
-  VirtioGpu* gpu = reinterpret_cast<VirtioGpu*>(ctx);
-  return gpu->HandleGpuCommand(queue, head, used);
 }
 
 namespace {

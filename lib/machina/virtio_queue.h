@@ -68,22 +68,6 @@ typedef zx_status_t (*virtio_queue_fn_t)(void* addr, uint32_t len,
                                          uint16_t flags, uint32_t* used,
                                          void* ctx);
 
-// Callback for virtio_queue_poll.
-//
-// queue    - The queue being polled.
-// head     - Descriptor index of the buffer chain to process.
-// used     - To be incremented by the number of bytes used from addr.
-// ctx      - The same pointer passed to virtio_queue_poll.
-//
-// The queue will continue to be polled as long as this method returns ZX_OK.
-// The error ZX_ERR_STOP will be treated as a special value to indicate queue
-// polling should stop gracefully and terminate the thread.
-//
-// Any other error values will be treated as unexpected errors that will cause
-// the polling thread to be terminated with a non-zero exit value.
-typedef zx_status_t (*virtio_queue_poll_fn_t)(VirtioQueue* queue, uint16_t head,
-                                              uint32_t* used, void* ctx);
-
 // A higher-level API for vring_desc.
 typedef struct virtio_desc {
   // Pointer to the buffer in our address space.
@@ -199,19 +183,32 @@ class VirtioQueue {
   // they've been released with virtio_queue_return.
   zx_status_t ReadDesc(uint16_t index, virtio_desc_t* desc);
 
+  // Callback for |Poll| and |PollAsync|.
+  //
+  // queue    - The queue being polled.
+  // head     - Descriptor index of the buffer chain to process.
+  // used     - The number of bytes written to the descriptor chain must be
+  //            written here.
+  //
+  // The queue will continue to be polled as long as this method returns ZX_OK.
+  // The error ZX_ERR_STOP will be treated as a special value to indicate queue
+  // polling should stop gracefully and (in the case of |Poll|)terminate the
+  // thread.
+  //
+  // Any other error values will be treated as unexpected errors that will cause
+  // the polling thread to be terminated with a non-zero exit value.
+  using QueuePollFn = fit::function<zx_status_t(VirtioQueue* queue,
+                                                uint16_t head, uint32_t* used)>;
+
   // Spawn a thread to wait for descriptors to be available and invoke the
   // provided handler on each available buffer asynchronously.
   //
   // Returns |ZX_ERR_INVALID_ARGS| if |thread_name| is null.
-  zx_status_t Poll(virtio_queue_poll_fn_t handler, void* ctx,
-                   std::string thread_name);
+  zx_status_t Poll(QueuePollFn handler, std::string thread_name);
 
   // Monitors the queue signal for available descriptors and run the callback
   // when one is available.
-  //
-  // TODO(PD-103): Use a c++ style function object here.
-  zx_status_t PollAsync(async_t* async, async::Wait* wait,
-                        virtio_queue_poll_fn_t handler, void* ctx);
+  zx_status_t PollAsync(async_t* async, async::Wait* wait, QueuePollFn handler);
 
   // Handles the next available descriptor in a Virtio queue, calling handler to
   // process individual payload buffers.
@@ -229,7 +226,7 @@ class VirtioQueue {
   uint32_t RingIndexLocked(uint32_t index) const __TA_REQUIRES(mutex_);
 
   void InvokeAsyncHandler(async_t* async, async::Wait* wait, zx_status_t status,
-                          virtio_queue_poll_fn_t handler, void* ctx);
+                          const QueuePollFn& handler);
 
   mutable fbl::Mutex mutex_;
   VirtioDevice* device_;

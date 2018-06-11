@@ -166,9 +166,8 @@ void VirtioQueue::Wait(uint16_t* index) {
 
 struct poll_task_args_t {
   VirtioQueue* queue;
-  virtio_queue_poll_fn_t handler;
+  VirtioQueue::QueuePollFn handler;
   std::string name;
-  void* ctx;
 };
 
 static int virtio_queue_poll_task(void* ctx) {
@@ -179,8 +178,7 @@ static int virtio_queue_poll_task(void* ctx) {
     args->queue->Wait(&descriptor);
 
     uint32_t used = 0;
-    zx_status_t status =
-        args->handler(args->queue, descriptor, &used, args->ctx);
+    zx_status_t status = args->handler(args->queue, descriptor, &used);
     result = args->queue->Return(descriptor, used);
     if (result != ZX_OK) {
       FXL_LOG(ERROR) << "Failed to return descriptor to queue " << result;
@@ -201,9 +199,8 @@ static int virtio_queue_poll_task(void* ctx) {
   return result;
 }
 
-zx_status_t VirtioQueue::Poll(virtio_queue_poll_fn_t handler, void* ctx,
-                              std::string name) {
-  auto args = new poll_task_args_t{this, handler, std::move(name), ctx};
+zx_status_t VirtioQueue::Poll(QueuePollFn handler, std::string name) {
+  auto args = new poll_task_args_t{this, std::move(handler), std::move(name)};
 
   thrd_t thread;
   int ret = thrd_create_with_name(&thread, virtio_queue_poll_task, args,
@@ -224,21 +221,20 @@ zx_status_t VirtioQueue::Poll(virtio_queue_poll_fn_t handler, void* ctx,
 }
 
 zx_status_t VirtioQueue::PollAsync(async_t* async, async::Wait* wait,
-                                   virtio_queue_poll_fn_t handler, void* ctx) {
+                                   QueuePollFn handler) {
   wait->set_object(event_.get());
   wait->set_trigger(SIGNAL_QUEUE_AVAIL);
-  wait->set_handler([this, handler, ctx](async_t* async, async::Wait* wait,
-                                         zx_status_t status,
-                                         const zx_packet_signal_t* signal) {
-    InvokeAsyncHandler(async, wait, status, handler, ctx);
+  wait->set_handler([this, handler = std::move(handler)](
+                        async_t* async, async::Wait* wait, zx_status_t status,
+                        const zx_packet_signal_t* signal) {
+    InvokeAsyncHandler(async, wait, status, handler);
   });
   return wait->Begin(async);
 }
 
 void VirtioQueue::InvokeAsyncHandler(async_t* async, async::Wait* wait,
                                      zx_status_t status,
-                                     virtio_queue_poll_fn_t handler,
-                                     void* ctx) {
+                                     const QueuePollFn& handler) {
   if (status != ZX_OK) {
     return;
   }
@@ -247,7 +243,7 @@ void VirtioQueue::InvokeAsyncHandler(async_t* async, async::Wait* wait,
   uint32_t used = 0;
   status = NextAvail(&head);
   if (status == ZX_OK) {
-    status = handler(this, head, &used, ctx);
+    status = handler(this, head, &used);
     // Try to return the buffer to the queue, even if the handler has failed
     // so we don't leak the descriptor.
     zx_status_t return_status = Return(head, used);

@@ -50,12 +50,8 @@ zx_status_t VirtioBlock::SetDispatcher(
 }
 
 zx_status_t VirtioBlock::Start() {
-  auto poll_func =
-      +[](VirtioQueue* queue, uint16_t head, uint32_t* used, void* ctx) {
-        return static_cast<VirtioBlock*>(ctx)->HandleBlockRequest(queue, head,
-                                                                  used);
-      };
-  return queue(0)->Poll(poll_func, this, "virtio-block");
+  return queue(0)->Poll(
+      fit::bind_member(this, &VirtioBlock::HandleBlockRequest), "virtio-block");
 }
 
 zx_status_t VirtioBlock::HandleBlockRequest(VirtioQueue* queue, uint16_t head,

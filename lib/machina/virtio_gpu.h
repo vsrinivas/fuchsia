@@ -51,9 +51,6 @@ class VirtioGpu : public VirtioDeviceBase<VIRTIO_ID_GPU, VIRTIO_GPU_Q_COUNT,
                                uint32_t* used);
 
  protected:
-  static zx_status_t QueueHandler(VirtioQueue* queue, uint16_t head,
-                                  uint32_t* used, void* ctx);
-
   // VIRTIO_GPU_CMD_GET_DISPLAY_INFO
   void GetDisplayInfo(const virtio_gpu_ctrl_hdr_t* request,
                       virtio_gpu_resp_display_info_t* response);
