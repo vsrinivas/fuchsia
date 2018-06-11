@@ -68,12 +68,12 @@ FramebufferScanout::~FramebufferScanout() { fb_release(); }
 
 void FramebufferScanout::SetResource(GpuResource* res,
                                      const virtio_gpu_set_scanout_t* request) {
-    if (res == nullptr) {
-      uint32_t size = height() * stride() * pixelsize();
-      memset(buf_, 0, size);
-      zx_cache_flush(buf_, size, ZX_CACHE_FLUSH_DATA);
-    }
-    GpuScanout::SetResource(res, request);
+  if (res == nullptr) {
+    uint32_t size = height() * stride() * pixelsize();
+    memset(buf_, 0, size);
+    zx_cache_flush(buf_, size, ZX_CACHE_FLUSH_DATA);
+  }
+  GpuScanout::SetResource(res, request);
 }
 
 void FramebufferScanout::InvalidateRegion(const GpuRect& rect) {

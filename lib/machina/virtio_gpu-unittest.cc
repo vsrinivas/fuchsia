@@ -37,7 +37,8 @@ struct BackingPages
 class VirtioGpuTest {
  public:
   VirtioGpuTest()
-      : loop_(&kAsyncLoopConfigMakeDefault), gpu_(phys_mem_, loop_.async()),
+      : loop_(&kAsyncLoopConfigMakeDefault),
+        gpu_(phys_mem_, loop_.async()),
         control_queue_(gpu_.control_queue()) {}
 
   zx_status_t Init() {

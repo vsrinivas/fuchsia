@@ -10,8 +10,8 @@
 
 #include <fbl/auto_lock.h>
 #include <fbl/unique_fd.h>
-#include <lib/fdio/watcher.h>
 #include <hid/hid.h>
+#include <lib/fdio/watcher.h>
 #include <zircon/compiler.h>
 #include <zircon/device/input.h>
 #include <zircon/types.h>

@@ -13,8 +13,7 @@ namespace {
 
 TEST(InstDecode, failure) {
   zx_vcpu_state_t vcpu_state;
-  ASSERT_EQ(inst_decode(nullptr, 0, 4, &vcpu_state, nullptr),
-            ZX_ERR_BAD_STATE);
+  ASSERT_EQ(inst_decode(nullptr, 0, 4, &vcpu_state, nullptr), ZX_ERR_BAD_STATE);
   ASSERT_EQ(inst_decode(nullptr, 32, 4, &vcpu_state, nullptr),
             ZX_ERR_OUT_OF_RANGE);
 
@@ -575,8 +574,7 @@ TEST(InstDecode, movz_0f_b7) {
             ZX_ERR_OUT_OF_RANGE);
   uint8_t has_h66[] = {0x66, 0x0f, 0xb7,
                        0b00'001'000};  // h66 opcode opcode modrm
-  ASSERT_EQ(inst_decode(has_h66, 4, 4, &vcpu_state, nullptr),
-            ZX_ERR_BAD_STATE);
+  ASSERT_EQ(inst_decode(has_h66, 4, 4, &vcpu_state, nullptr), ZX_ERR_BAD_STATE);
 
   // movzw (%rax), %ecx
   uint8_t movz[] = {0x0f, 0xb7, 0b00'001'000};  // opcode opcode modrm
@@ -691,8 +689,7 @@ TEST(InstDecode, test_f6) {
   ASSERT_EQ(inst_decode(bad_mod_rm, 3, 4, &vcpu_state, nullptr),
             ZX_ERR_INVALID_ARGS);
   uint8_t has_h66[] = {0x66, 0xf6, 0b00'001'000, 0};  // h66 opcode modrm imm
-  ASSERT_EQ(inst_decode(has_h66, 4, 4, &vcpu_state, nullptr),
-            ZX_ERR_BAD_STATE);
+  ASSERT_EQ(inst_decode(has_h66, 4, 4, &vcpu_state, nullptr), ZX_ERR_BAD_STATE);
 
   // test 0x1, (%rax)
   uint8_t test[] = {0xf6, 0b00'000'000, 0x1};  // opcode modrm imm

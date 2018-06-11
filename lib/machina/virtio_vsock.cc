@@ -567,11 +567,10 @@ void VirtioVsock::Demux(zx_status_t status, uint16_t index) {
       // outbound connections. Otherwise send out a request for a socket
       // connection to the remote CID.
       if (connector_) {
-        connector_->Connect(
-            header->src_port, header->dst_cid, header->dst_port,
-            [this, key](zx_status_t status, zx::socket socket) {
-              ConnectCallback(key, status, std::move(socket));
-            });
+        connector_->Connect(header->src_port, header->dst_cid, header->dst_port,
+                            [this, key](zx_status_t status, zx::socket socket) {
+                              ConnectCallback(key, status, std::move(socket));
+                            });
         continue;
       }
     }
