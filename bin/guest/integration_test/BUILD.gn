@@ -1,0 +1,43 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+
+executable("bin") {
+  visibility = [ ":*" ]
+  output_name = "guest_integration_tests"
+  testonly = true
+
+  sources = [
+    "main.cc",
+    "test_serial.cc",
+    "test_serial.h",
+  ]
+
+  deps = [
+    "//garnet/public/lib/component/cpp",
+    "//garnet/public/lib/component/cpp/testing",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/fidl/fuchsia.guest",
+    "//garnet/public/lib/gtest",
+    "//garnet/public/lib/svc/cpp",
+    "//zircon/public/lib/fit",
+    "//zircon/public/lib/pretty",
+    "//third_party/googletest:gtest_main",
+  ]
+}
+
+package("guest_integration_tests") {
+  testonly = true
+
+  deps = [
+    ":bin",
+  ]
+
+  tests = [
+    {
+      name = "guest_integration_tests"
+    },
+  ]
+}
