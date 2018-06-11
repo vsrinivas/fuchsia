@@ -323,6 +323,10 @@ void DriverOutput::OnDriverInfoFetched() {
   wav_writer_.Initialize(nullptr, pref_fmt, pref_chan, pref_fps,
                          driver_->bytes_per_frame() * 8 / pref_chan);
 
+  // Let the AudioDeviceManager that we are ready to be added to the set of
+  // active audio devices.
+  ActivateSelf();
+
   // Success, wait until configuration completes.
   state_ = State::Configuring;
   cleanup.cancel();

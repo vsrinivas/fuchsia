@@ -58,7 +58,7 @@ class AudioDeviceManager {
   // Remove a renderer from the set of active audio renderers.
   void RemoveRenderer(AudioRendererImpl* renderer) {
     FXL_DCHECK(renderer != nullptr);
-    FXL_DCHECK(renderer->in_object_list());
+    FXL_DCHECK(renderer->InContainer());
     renderers_.erase(*renderer);
   }
 
@@ -76,8 +76,17 @@ class AudioDeviceManager {
   // Schedule a closure to run on our encapsulating server's main message loop.
   void ScheduleMainThreadTask(fit::closure task);
 
-  // Attempt to initialize an output and add it to the set of active outputs.
+  // Begin the process of initializing a device and add it to the set of device
+  // which are waiting to be initialized.
+  //
+  // Called from the plug detector when a new stream device shows up for the
+  // first time.
   zx_status_t AddDevice(const fbl::RefPtr<AudioDevice>& device);
+
+  // Move a device from the pending init list to the active device_'s list.
+  // Notify users of the presence of a new device, and re-evaluate policy
+  // decisions.
+  void ActivateDevice(const fbl::RefPtr<AudioDevice>& device);
 
   // Shutdown the specified audio device and remove it from the appropriate set
   // of active devices.
@@ -145,9 +154,10 @@ class AudioDeviceManager {
   //
   // Contents of these collections must only be manipulated on the main message
   // loop thread, so no synchronization should be needed.
-  AudioObject::List devices_;
-  AudioObject::List capturers_;
-  AudioObject::List renderers_;
+  fbl::WAVLTree<uint64_t, fbl::RefPtr<AudioDevice>> devices_pending_init_;
+  fbl::WAVLTree<uint64_t, fbl::RefPtr<AudioDevice>> devices_;
+  fbl::DoublyLinkedList<fbl::RefPtr<AudioCapturerImpl>> capturers_;
+  fbl::DoublyLinkedList<fbl::RefPtr<AudioRendererImpl>> renderers_;
 
   // The special throttle output.  This output always exists, and is always used
   // by all renderers.

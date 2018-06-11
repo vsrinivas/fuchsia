@@ -28,8 +28,10 @@ namespace audio {
 
 class AudioServerImpl;
 
-class AudioCapturerImpl : public AudioObject,
-                          public fuchsia::media::AudioCapturer {
+class AudioCapturerImpl
+    : public AudioObject,
+      public fuchsia::media::AudioCapturer,
+      public fbl::DoublyLinkedListable<fbl::RefPtr<AudioCapturerImpl>> {
  public:
   static fbl::RefPtr<AudioCapturerImpl> Create(
       fidl::InterfaceRequest<fuchsia::media::AudioCapturer>

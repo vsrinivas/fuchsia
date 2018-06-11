@@ -147,7 +147,7 @@ void AudioRenderer1Impl::Shutdown() {
   throttle_output_link_ = nullptr;
 
   FXL_DCHECK(owner_);
-  if (in_object_list()) {
+  if (InContainer()) {
     owner_->GetDeviceManager().RemoveRenderer(this);
   }
 }

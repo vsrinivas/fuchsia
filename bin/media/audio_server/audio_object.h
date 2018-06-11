@@ -6,7 +6,6 @@
 #define GARNET_BIN_MEDIA_AUDIO_SERVER_AUDIO_OBJECT_H_
 
 #include <fbl/auto_lock.h>
-#include <fbl/intrusive_double_list.h>
 #include <fbl/mutex.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
@@ -22,17 +21,8 @@ namespace audio {
 // of these objects is intrusively ref-counted, and remembers its type so that
 // it may be safely downcast from a generic audio object to something more
 // specific.
-//
-// TODO(johngro) : Refactor AudioRenderers so that they derive from AudioObject.
 class AudioObject : public fbl::RefCounted<AudioObject> {
- private:
-  using NodeState = fbl::DoublyLinkedListNodeState<fbl::RefPtr<AudioObject>>;
-  struct ListTraits {
-    static NodeState& node_state(AudioObject& obj) { return obj.node_state_; }
-  };
-
  public:
-  using List = fbl::DoublyLinkedList<fbl::RefPtr<AudioObject>, ListTraits>;
   enum class Type {
     Output,
     Input,
@@ -71,8 +61,6 @@ class AudioObject : public fbl::RefCounted<AudioObject> {
   bool is_input() const { return type() == Type::Input; }
   bool is_renderer() const { return type() == Type::Renderer; }
   bool is_capturer() const { return type() == Type::Capturer; }
-
-  bool in_object_list() const { return node_state_.InContainer(); }
 
  protected:
   friend class fbl::RefPtr<AudioObject>;
@@ -122,7 +110,6 @@ class AudioObject : public fbl::RefCounted<AudioObject> {
 
   const Type type_;
   bool new_links_allowed_ FXL_GUARDED_BY(links_lock_) = true;
-  NodeState node_state_;
 };
 
 }  // namespace audio

@@ -63,21 +63,26 @@ void AudioDeviceManager::Shutdown() {
 
   // Step #2: Shutdown all of the active capturers in the system.
   while (!capturers_.is_empty()) {
-    auto capturer =
-        fbl::RefPtr<AudioCapturerImpl>::Downcast(capturers_.pop_front());
+    auto capturer = capturers_.pop_front();
     capturer->Shutdown();
   }
 
   // Step #3: Shutdown all of the active renderers in the system.
   while (!renderers_.is_empty()) {
-    auto renderer =
-        fbl::RefPtr<AudioRendererImpl>::Downcast(renderers_.pop_front());
+    auto renderer = renderers_.pop_front();
     renderer->Shutdown();
   }
 
-  // Step #4: Shut down each currently active device in the system.
+  // Step #4: Shut down each device which is currently waiting to become
+  // initialized.
+  while (!devices_pending_init_.is_empty()) {
+    auto device = devices_pending_init_.pop_front();
+    device->Shutdown();
+  }
+
+  // Step #5: Shut down each currently active device in the system.
   while (!devices_.is_empty()) {
-    auto device = fbl::RefPtr<AudioDevice>::Downcast(devices_.pop_front());
+    auto device = devices_.pop_front();
     device->Shutdown();
   }
 
@@ -88,34 +93,45 @@ void AudioDeviceManager::Shutdown() {
 zx_status_t AudioDeviceManager::AddDevice(
     const fbl::RefPtr<AudioDevice>& device) {
   FXL_DCHECK(device != nullptr);
-  FXL_DCHECK(!device->in_object_list());
-
-  if (device->is_output()) {
-    auto output = static_cast<AudioOutput*>(device.get());
-    FXL_DCHECK(output != throttle_output_.get());
-    static_cast<AudioOutput*>(device.get())->SetGain(master_gain());
-  }
-  devices_.push_back(device);
+  FXL_DCHECK(device != throttle_output_);
+  FXL_DCHECK(!device->InContainer());
 
   zx_status_t res = device->Startup();
   if (res != ZX_OK) {
-    devices_.erase(*device);
     device->Shutdown();
-  } else if (device->plugged()) {
-    // TODO(johngro): Remove this gross kludge when routing decisions move up to
-    // the policy layer (where they belong).  Right now, OnDevicePlugged will
-    // not bother to re-route if it things that there has been no actual plug
-    // state change (for example, if there was a spurious plug state change sent
-    // by a driver or something).  To work around this, if a device came into
-    // being in the already-plugged-state, we force it into the unplugged state
-    // before calling OnDevicePlugged, just to make sure that OnDevicePlugged
-    // sees a plug state change.
+  }
+
+  devices_pending_init_.insert(device);
+  return res;
+}
+
+void AudioDeviceManager::ActivateDevice(
+    const fbl::RefPtr<AudioDevice>& device) {
+  FXL_DCHECK(device != nullptr);
+  FXL_DCHECK(device != throttle_output_);
+
+  // Have we already been removed from the pending list?  If so, the device is
+  // already shutting down and there is
+  // nothing to be done.
+  if (!device->InContainer()) {
+    return;
+  }
+
+  // Move the deivce over to the set of active devices.
+  devices_.insert(devices_pending_init_.erase(*device));
+  device->SetActivated();
+
+  // TODO(johngro): load and apply persisted settings now
+
+  // TODO(johngro): notify interested users of the new device.
+
+  // Reconsider our current routing policy now that we have a new device present
+  // in the system.
+  if (device->plugged()) {
     zx_time_t plug_time = device->plug_time();
     device->UpdatePlugState(false, plug_time);
     OnDevicePlugged(device, plug_time);
   }
-
-  return res;
 }
 
 void AudioDeviceManager::RemoveDevice(const fbl::RefPtr<AudioDevice>& device) {
@@ -126,10 +142,15 @@ void AudioDeviceManager::RemoveDevice(const fbl::RefPtr<AudioDevice>& device) {
   device->PreventNewLinks();
   device->Unlink();
 
-  if (device->in_object_list()) {
+  if (device->activated()) {
     OnDeviceUnplugged(device, device->plug_time());
-    device->Shutdown();
-    devices_.erase(*device);
+  }
+
+  device->Shutdown();
+
+  if (device->InContainer()) {
+    auto& device_set = device->activated() ? devices_ : devices_pending_init_;
+    device_set.erase(*device);
   }
 }
 
@@ -212,6 +233,7 @@ void AudioDeviceManager::LinkOutputToRenderer(AudioOutput* output,
 
 void AudioDeviceManager::AddCapturer(fbl::RefPtr<AudioCapturerImpl> capturer) {
   FXL_DCHECK(capturer != nullptr);
+  FXL_DCHECK(!capturer->InContainer());
   capturers_.push_back(capturer);
 
   fbl::RefPtr<AudioDevice> source;
@@ -237,7 +259,7 @@ void AudioDeviceManager::AddCapturer(fbl::RefPtr<AudioCapturerImpl> capturer) {
 
 void AudioDeviceManager::RemoveCapturer(AudioCapturerImpl* capturer) {
   FXL_DCHECK(capturer != nullptr);
-  FXL_DCHECK(capturer->in_object_list());
+  FXL_DCHECK(capturer->InContainer());
   capturers_.erase(*capturer);
 }
 
@@ -375,10 +397,8 @@ void AudioDeviceManager::OnDeviceUnplugged(
       if (replacement) {
         if (routing_policy_ ==
             fuchsia::media::AudioOutputRoutingPolicy::kLastPluggedOutput) {
-          for (auto& obj : renderers_) {
-            FXL_DCHECK(obj.is_renderer());
-            auto renderer = static_cast<AudioRendererImpl*>(&obj);
-            LinkOutputToRenderer(replacement.get(), renderer);
+          for (auto& renderer : renderers_) {
+            LinkOutputToRenderer(replacement.get(), &renderer);
           }
         }
 
@@ -400,10 +420,8 @@ void AudioDeviceManager::OnDeviceUnplugged(
   // If the device which was removed was an output, recompute our renderers'
   // minimum lead time requirements.
   if (device->is_output()) {
-    for (auto& obj : renderers_) {
-      FXL_DCHECK(obj.is_renderer());
-      auto renderer = static_cast<AudioRendererImpl*>(&obj);
-      renderer->RecomputeMinClockLeadTime();
+    for (auto& renderer : renderers_) {
+      renderer.RecomputeMinClockLeadTime();
     }
   }
 }
@@ -446,10 +464,8 @@ void AudioDeviceManager::OnDevicePlugged(const fbl::RefPtr<AudioDevice>& device,
       }
     }
     if (is_lp || !lp_policy) {
-      for (auto& obj : renderers_) {
-        FXL_DCHECK(obj.is_renderer());
-        auto renderer = static_cast<AudioRendererImpl*>(&obj);
-        LinkOutputToRenderer(output, renderer);
+      for (auto& renderer : renderers_) {
+        LinkOutputToRenderer(output, &renderer);
 
         // If we are adding a new link (regardless of whether we may or may not
         // have removed old links based on the specific active policy) because
@@ -466,7 +482,7 @@ void AudioDeviceManager::OnDevicePlugged(const fbl::RefPtr<AudioDevice>& device,
         // optimized/specialized logic for computing this value would start to
         // become a real pain as we start to get more complicated in our
         // approach to policy based routing.
-        renderer->RecomputeMinClockLeadTime();
+        renderer.RecomputeMinClockLeadTime();
       }
     }
 
@@ -496,12 +512,10 @@ void AudioDeviceManager::LinkToCapturers(
     const fbl::RefPtr<AudioDevice>& device) {
   bool link_to_loopbacks = device->is_output();
 
-  for (auto& obj : capturers_) {
-    FXL_DCHECK(obj.is_capturer());
-    auto capturer = static_cast<AudioCapturerImpl*>(&obj);
-    if (capturer->loopback() == link_to_loopbacks) {
-      capturer->UnlinkSources();
-      AudioObject::LinkObjects(device, fbl::WrapRefPtr(capturer));
+  for (auto& capturer : capturers_) {
+    if (capturer.loopback() == link_to_loopbacks) {
+      capturer.UnlinkSources();
+      AudioObject::LinkObjects(device, fbl::WrapRefPtr(&capturer));
     }
   }
 }

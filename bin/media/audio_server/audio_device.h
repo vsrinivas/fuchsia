@@ -12,6 +12,7 @@
 
 #include <dispatcher-pool/dispatcher-execution-domain.h>
 #include <dispatcher-pool/dispatcher-wakeup-event.h>
+#include <fbl/intrusive_wavl_tree.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
 
@@ -29,7 +30,8 @@ namespace audio {
 class AudioDriver;
 class DriverRingBuffer;
 
-class AudioDevice : public AudioObject {
+class AudioDevice : public AudioObject,
+                    public fbl::WAVLTreeContainable<fbl::RefPtr<AudioDevice>> {
  public:
   // Wakeup
   //
@@ -57,6 +59,8 @@ class AudioDevice : public AudioObject {
   zx_time_t plug_time() const { return plug_time_; }
   const std::unique_ptr<AudioDriver>& driver() const { return driver_; }
   uint64_t token() const;
+  uint64_t GetKey() const { return token(); }
+  bool activated() const { return activated_; }
 
   // NotifyDestFormatPreference
   //
@@ -97,9 +101,9 @@ class AudioDevice : public AudioObject {
   // Init
   //
   // Called during startup on the AudioServer's main message loop thread.  No
-  // locks are being held at this point.  Derived classes should allocate their
-  // hardware resources and initialize any internal state.  Return ZX_OK if
-  // everything is good and the output is ready to do work.
+  // locks are being held at this point.  Derived classes should begin the
+  // process of driver initialization at this point.  Return ZX_OK if things
+  // have started and we are waitin gfor driver init.
   virtual zx_status_t Init();
 
   // Cleanup
@@ -126,6 +130,12 @@ class AudioDevice : public AudioObject {
   // at startup to get the output running.
   virtual void OnWakeup()
       FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token()) = 0;
+
+  // ActivateSelf
+  //
+  // Send a message to the audio device manager to let it know that we are ready
+  // to be added to the set of active devices.
+  void ActivateSelf() FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token());
 
   // ShutdownSelf
   //
@@ -203,6 +213,7 @@ class AudioDevice : public AudioObject {
   // (including derived classes) should be able to.
   friend class AudioDeviceManager;
   friend class AudioDriver;
+  friend struct PendingInitListTraits;
 
   // DeactivateDomain
   //
@@ -223,12 +234,20 @@ class AudioDevice : public AudioObject {
   // cleaning up all resources.
   void Shutdown();
 
+  // Called from the AudioDeviceManager when it moves an audio device from its
+  // "pending init" set over to its "active" set .
+  void SetActivated() {
+    FXL_DCHECK(!activated());
+    activated_ = true;
+  }
+
   // Plug state is protected by the fact that it is only ever accessed on the
   // main message loop thread.
   bool plugged_ = false;
   zx_time_t plug_time_ = 0;
 
   volatile bool shut_down_ = false;
+  volatile bool activated_ = false;
 };
 
 }  // namespace audio

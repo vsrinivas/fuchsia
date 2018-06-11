@@ -61,6 +61,20 @@ zx_status_t AudioDevice::Init() {
 
 void AudioDevice::Cleanup() {}
 
+void AudioDevice::ActivateSelf() {
+  // If we are not shutting down, send a message to the device manager letting
+  // it know that we are ready to do some work.
+  if (!is_shutting_down()) {
+    // clang-format off
+    FXL_DCHECK(manager_);
+    manager_->ScheduleMainThreadTask(
+      [ manager = manager_, self = fbl::WrapRefPtr(this) ]() {
+        manager->ActivateDevice(self);
+      });
+    // clang-format on
+  }
+}
+
 void AudioDevice::ShutdownSelf() {
   // If we are not already in the process of shutting down, send a message to
   // the main message loop telling it to complete the shutdown process.
