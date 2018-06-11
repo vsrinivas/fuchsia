@@ -89,14 +89,6 @@ private:
                      usb_video_vc_header_desc* control_header,
                      usb_video_vs_input_header_desc* input_header);
 
-    // Deferred initialization of the device via a thread.  Once complete, this
-    // marks the device as visible.
-    static zx_status_t Init(void* device) {
-        return reinterpret_cast<UsbVideoStream*>(device)->Init();
-    }
-    zx_status_t Init();
-    zx_status_t SetFormat();
-
     // Requests the device use the given format and frame descriptor,
     // then finds a streaming setting that supports the required
     // data throughput.

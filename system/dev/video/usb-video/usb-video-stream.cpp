@@ -124,29 +124,7 @@ zx_status_t UsbVideoStream::Bind(const char* devname,
         return status;
     }
 
-    status = UsbVideoStreamBase::DdkAdd(devname, DEVICE_ADD_INVISIBLE);
-    if (status != ZX_OK) {
-        return status;
-    }
-
-    thrd_t thread;
-    int ret = thrd_create_with_name(&thread, Init, this, "usb_video:init");
-    if (ret != thrd_success) {
-        DdkRemove();
-        return ZX_ERR_INTERNAL;
-    }
-    thrd_detach(thread);
-    return ZX_OK;
-}
-
-zx_status_t UsbVideoStream::Init() {
-    zx_status_t status = SetFormat();
-    if (status != ZX_OK) {
-        DdkRemove();
-        return status;
-    }
-    DdkMakeVisible();
-    return ZX_OK;
+    return UsbVideoStreamBase::DdkAdd(devname);
 }
 
 UsbVideoStream::FormatMapping::FormatMapping(const UsbVideoFormat* format,
@@ -219,54 +197,6 @@ zx_status_t UsbVideoStream::GenerateFormatMappings() {
         for (const auto& frame : format.frame_descs) {
             format_mappings_.push_back(FormatMapping(&format, &frame));
         }
-    }
-    return ZX_OK;
-}
-
-zx_status_t UsbVideoStream::SetFormat() {
-    fbl::AutoLock lock(&lock_);
-
-    if (streaming_state_ != StreamingState::STOPPED) {
-        // TODO(jocelyndang): stop the video buffer rather than returning an error.
-        return ZX_ERR_BAD_STATE;
-    }
-
-    // TODO(jocelyndang): add a way for the client to select the format and
-    // frame type. Just use the first format for now.
-    UsbVideoFormat* format = formats_.get();
-    if (!format) {
-        return ZX_ERR_NOT_SUPPORTED;
-    }
-    const UsbVideoFrameDesc* try_frame = NULL;
-    // Try the recommended frame descriptor, if any.
-    if (format->default_frame_index != 0) {
-        for (const auto& frame : format->frame_descs) {
-            if (frame.index == format->default_frame_index) {
-                try_frame = &frame;
-            }
-        }
-        if (!try_frame) {
-            return ZX_ERR_INTERNAL;
-        }
-    }
-    zx_status_t status = TryFormatLocked(format, try_frame);
-    if (status != ZX_OK) {
-        // Negotiation failed. Try a different frame descriptor.
-        for (const auto& frame : format->frame_descs) {
-            if (frame.index == format->default_frame_index) {
-                // Already tried this setting.
-                continue;
-            }
-            try_frame = &frame;
-            status = TryFormatLocked(format, try_frame);
-            if (status == ZX_OK) {
-                break;
-            }
-        }
-    }
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "failed to set format %u: error %d\n", format->index, status);
-        return status;
     }
     return ZX_OK;
 }
