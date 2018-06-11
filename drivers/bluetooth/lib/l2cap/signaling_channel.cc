@@ -21,6 +21,7 @@ SignalingChannel::SignalingChannel(fbl::RefPtr<Channel> chan,
     : is_open_(true),
       chan_(std::move(chan)),
       role_(role),
+      next_cmd_id_(0x01),
       weak_ptr_factory_(this) {
   FXL_DCHECK(chan_);
   FXL_DCHECK(chan_->id() == kSignalingChannelId ||
@@ -103,6 +104,17 @@ bool SignalingChannel::SendCommandReject(uint8_t identifier,
 
   return SendPacket(kCommandRejectCode, identifier,
                     common::BufferView(&reject, length));
+}
+
+CommandId SignalingChannel::GetNextCommandId() {
+  // Recycling identifiers is permitted and only 0x00 is invalid (v5.0 Vol 3,
+  // Part A, Section 4).
+  const auto cmd = next_cmd_id_++;
+  if (next_cmd_id_ == kInvalidCommandId) {
+    next_cmd_id_ = 0x01;
+  }
+
+  return cmd;
 }
 
 void SignalingChannel::OnChannelClosed() {

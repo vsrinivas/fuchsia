@@ -77,17 +77,17 @@ enum LECreditBasedConnectionResult : uint16_t {
   kUnacceptableParameters = 0x000B,
 };
 
+// Identifier assigned to each signaling transaction. This is used to match each
+// signaling channel request with a response.
+using CommandId = uint8_t;
+
+constexpr CommandId kInvalidCommandId = 0x00;
+
 // Signaling command header.
 struct CommandHeader {
-  // Command code
   CommandCode code;
-
-  // Identifier assigned to each signaling transaction. This is used to match each signaling channel
-  // request with a response.
-  uint8_t id;
-
-  // Length of the remaining payload
-  uint16_t length;
+  CommandId id;
+  uint16_t length;  // Length of the remaining payload
 } __PACKED;
 
 // ACL-U & LE-U

@@ -29,6 +29,9 @@ class TestSignalingChannel : public SignalingChannel {
   using PacketCallback = fit::function<void(const SignalingPacket& packet)>;
   void set_packet_callback(PacketCallback cb) { packet_cb_ = std::move(cb); }
 
+  // Expose GetNextCommandId() as public so it can be called by tests below.
+  using SignalingChannel::GetNextCommandId;
+
  private:
   // SignalingChannel overrides
   void DecodeRxUnit(const SDU& sdu, const PacketDispatchCallback& cb) override {
@@ -208,6 +211,13 @@ TEST_F(L2CAP_SignalingChannelTest, UseChannelAfterSignalFree) {
   fake_chan()->Close();
 
   RunUntilIdle();
+}
+
+TEST_F(L2CAP_SignalingChannelTest, ValidRequestCommandIds) {
+  EXPECT_EQ(0x01, sig()->GetNextCommandId());
+  for (int i = 0; i < 256; i++) {
+    EXPECT_NE(0x00, sig()->GetNextCommandId());
+  }
 }
 
 }  // namespace

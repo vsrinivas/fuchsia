@@ -77,6 +77,11 @@ class SignalingChannel {
   // Returns the logical link that signaling channel is operating on.
   hci::Connection::Role role() const { return role_; }
 
+  // Generates a command identifier in sequential order that is never
+  // kInvalidId. The caller is responsible for bookkeeping when reusing command
+  // IDs to prevent collisions with pending commands.
+  CommandId GetNextCommandId();
+
  private:
   // Sends out the given signaling packet directly via |chan_| after running
   // debug-mode assertions for validity. Packet must correspond to exactly one
@@ -109,6 +114,7 @@ class SignalingChannel {
   l2cap::ScopedChannel chan_;
   hci::Connection::Role role_;
   uint16_t mtu_;
+  uint8_t next_cmd_id_;
 
   fxl::WeakPtrFactory<SignalingChannel> weak_ptr_factory_;
 
