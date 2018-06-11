@@ -17,6 +17,9 @@ bool MallocFreeTest(perftest::RepeatState* state) {
     state->DeclareStep("free");
     while (state->KeepRunning()) {
         void* block = malloc(100);
+        // Clang can optimize away pairs of malloc() and free() calls;
+        // prevent it from doing that.
+        perftest::DoNotOptimize(block);
         if (!block) {
             return false;
         }

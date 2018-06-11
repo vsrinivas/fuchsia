@@ -193,6 +193,17 @@ bool RunTest(const char* test_name, const fbl::Function<TestFunc>& test_func,
              uint32_t run_count, ResultsSet* results_set,
              fbl::String* error_out);
 
+// DoNotOptimize() can be used to prevent the computation of |value| from
+// being optimized away by the compiler.  It also prevents the compiler
+// from optimizing away reads or writes to memory that |value| points to
+// (if |value| is a pointer).
+template <typename Type>
+inline void DoNotOptimize(const Type& value) {
+    // The "memory" constraint tells the compiler that the inline assembly
+    // must be assumed to access memory that |value| points to.
+    asm volatile("" : : "g"(value) : "memory");
+}
+
 }  // namespace perftest
 
 // This calls func() at startup time as a global constructor.  This is
