@@ -47,7 +47,6 @@ source_set("unittests") {
 
   deps = [
     ":firebase",
-    "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/gtest",
     "//garnet/public/lib/network_wrapper:fake",

@@ -16,5 +16,6 @@ executable("validation") {
     "//garnet/public/lib/fxl",
     "//peridot/bin/ledger/testing:lib",
     "//peridot/public/lib/cloud_provider/validation/launcher",
+    "//zircon/public/lib/async-loop-cpp",
   ]
 }

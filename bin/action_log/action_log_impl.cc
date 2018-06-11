@@ -6,7 +6,6 @@
 
 #include <fuchsia/modular/cpp/fidl.h>
 
-#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/time/time_delta.h"
 #include "peridot/bin/action_log/action_log_data.h"

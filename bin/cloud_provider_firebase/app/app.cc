@@ -3,12 +3,12 @@
 // found in the LICENSE file.
 
 #include <fuchsia/modular/cpp/fidl.h>
+#include <lib/async-loop/cpp/loop.h>
 #include <trace-provider/provider.h>
 
 #include "lib/app/cpp/startup_context.h"
 #include "lib/backoff/exponential_backoff.h"
 #include "lib/fidl/cpp/binding_set.h"
-#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/log_settings_command_line.h"
 #include "lib/network_wrapper/network_wrapper_impl.h"
@@ -22,7 +22,8 @@ namespace http = ::fuchsia::net::oldhttp;
 class App : public fuchsia::modular::Lifecycle {
  public:
   App()
-      : startup_context_(fuchsia::sys::StartupContext::CreateFromStartupInfo()),
+      : loop_(&kAsyncLoopConfigMakeDefault),
+        startup_context_(fuchsia::sys::StartupContext::CreateFromStartupInfo()),
         trace_provider_(loop_.async()),
         network_wrapper_(
             loop_.async(), std::make_unique<backoff::ExponentialBackoff>(),
@@ -46,10 +47,10 @@ class App : public fuchsia::modular::Lifecycle {
     loop_.Run();
   }
 
-  void Terminate() override { loop_.PostQuitTask(); }
+  void Terminate() override { loop_.Quit(); }
 
  private:
-  fsl::MessageLoop loop_;
+  async::Loop loop_;
   std::unique_ptr<fuchsia::sys::StartupContext> startup_context_;
   trace::TraceProvider trace_provider_;
 

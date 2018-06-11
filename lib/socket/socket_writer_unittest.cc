@@ -6,14 +6,15 @@
 
 #include <utility>
 
-#include "gtest/gtest.h"
-#include "lib/fsl/tasks/message_loop.h"
+#include "lib/gtest/test_with_loop.h"
 #include "lib/fxl/macros.h"
 #include "peridot/lib/socket/socket_drainer_client.h"
 #include "peridot/lib/socket/socket_pair.h"
 
 namespace socket {
 namespace {
+
+using SocketWriterTest = gtest::TestWithLoop;
 
 class StringClient : public SocketWriter::Client {
  public:
@@ -35,8 +36,7 @@ class StringClient : public SocketWriter::Client {
   bool completed_ = false;
 };
 
-TEST(SocketWriter, WriteAndRead) {
-  fsl::MessageLoop message_loop;
+TEST_F(SocketWriterTest, WriteAndRead) {
   SocketPair socket;
   StringClient client("bazinga\n");
   SocketWriter writer(&client);
@@ -45,18 +45,16 @@ TEST(SocketWriter, WriteAndRead) {
   std::string value;
   auto drainer = std::make_unique<SocketDrainerClient>();
   drainer->Start(std::move(socket.socket2),
-                 [&value, &message_loop](const std::string& v) {
+                 [&value](const std::string& v) {
                    value = v;
-                   message_loop.PostQuitTask();
                  });
-  message_loop.Run();
+  RunLoopUntilIdle();
 
   EXPECT_EQ("bazinga\n", value);
   EXPECT_TRUE(client.completed());
 }
 
-TEST(SocketWriter, ClientClosedTheirEnd) {
-  fsl::MessageLoop message_loop;
+TEST_F(SocketWriterTest, ClientClosedTheirEnd) {
   SocketPair socket;
   StringClient client("bazinga\n");
   SocketWriter writer(&client);
@@ -65,8 +63,7 @@ TEST(SocketWriter, ClientClosedTheirEnd) {
   EXPECT_TRUE(client.completed());
 }
 
-TEST(SocketWriter, StringSocketWriter) {
-  fsl::MessageLoop message_loop;
+TEST_F(SocketWriterTest, StringSocketWriter) {
   SocketPair socket;
   StringSocketWriter* writer = new StringSocketWriter();
   writer->Start("bazinga\n", std::move(socket.socket1));
@@ -74,11 +71,10 @@ TEST(SocketWriter, StringSocketWriter) {
   std::string value;
   auto drainer = std::make_unique<SocketDrainerClient>();
   drainer->Start(std::move(socket.socket2),
-                 [&value, &message_loop](const std::string& v) {
+                 [&value](const std::string& v) {
                    value = v;
-                   message_loop.PostQuitTask();
                  });
-  message_loop.Run();
+  RunLoopUntilIdle();
 
   EXPECT_EQ("bazinga\n", value);
 }

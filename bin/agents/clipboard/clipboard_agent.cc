@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/async-loop/cpp/loop.h>
+
 #include "lib/app_driver/cpp/agent_driver.h"
 #include "peridot/bin/agents/clipboard/clipboard_impl.h"
 #include "peridot/bin/agents/clipboard/clipboard_storage.h"
@@ -64,10 +66,10 @@ class ClipboardAgent {
 }  // namespace modular
 
 int main(int /*argc*/, const char** /*argv*/) {
-  fsl::MessageLoop loop;
+  async::Loop loop(&kAsyncLoopConfigMakeDefault);
   auto context = fuchsia::sys::StartupContext::CreateFromStartupInfo();
   modular::AgentDriver<modular::ClipboardAgent> driver(
-      context.get(), [&loop] { loop.QuitNow(); });
+      context.get(), [&loop] { loop.Quit(); });
   loop.Run();
   return 0;
 }

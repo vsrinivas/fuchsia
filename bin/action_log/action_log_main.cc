@@ -5,10 +5,10 @@
 #include <memory>
 
 #include <fuchsia/modular/cpp/fidl.h>
+#include <lib/async-loop/cpp/loop.h>
 
 #include "lib/app/cpp/startup_context.h"
 #include "lib/fidl/cpp/binding.h"
-#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
 #include "peridot/bin/action_log/action_log_impl.h"
@@ -72,7 +72,7 @@ class UserActionLogFactoryApp {
 }  // namespace
 
 int main(int argc, const char** argv) {
-  fsl::MessageLoop loop;
+  async::Loop loop(&kAsyncLoopConfigMakeDefault);
   UserActionLogFactoryApp app;
   loop.Run();
   return 0;

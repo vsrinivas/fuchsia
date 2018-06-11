@@ -3,10 +3,10 @@
 // found in the LICENSE file.
 
 #include <lib/async/cpp/task.h>
+#include <lib/async-loop/cpp/loop.h>
 
 #include <iostream>
 
-#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/string_view.h"
@@ -34,7 +34,7 @@ int main(int argc, char** argv) {
     return -1;
   }
 
-  fsl::MessageLoop message_loop;
+  async::Loop loop(&kAsyncLoopConfigMakeDefault);
   std::unique_ptr<fuchsia::sys::StartupContext> startup_context =
       fuchsia::sys::StartupContext::CreateFromStartupInfo();
   test::CloudProviderFirebaseFactory factory(startup_context.get());
@@ -46,13 +46,13 @@ int main(int argc, char** argv) {
 
   int32_t return_code = -1;
   async::PostTask(
-      message_loop.async(), [&factory, &launcher, &return_code, &message_loop] {
+      loop.async(), [&factory, &launcher, &return_code, &loop] {
         factory.Init();
-        launcher.Run({}, [&return_code, &message_loop](int32_t result) {
+        launcher.Run({}, [&return_code, &loop](int32_t result) {
           return_code = result;
-          message_loop.PostQuitTask();
+          loop.Quit();
         });
       });
-  message_loop.Run();
+  loop.Run();
   return return_code;
 }

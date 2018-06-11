@@ -10,8 +10,8 @@ executable_package("swap_module1") {
   ]
   deps = [
     ":module",
-    "//garnet/public/lib/fsl",
     "//peridot/public/lib/app_driver/cpp:app_driver",
+    "//zircon/public/lib/async-loop-cpp",
   ]
 }
 
@@ -21,8 +21,8 @@ executable_package("swap_module2") {
   ]
   deps = [
     ":module",
-    "//garnet/public/lib/fsl",
     "//peridot/public/lib/app_driver/cpp:app_driver",
+    "//zircon/public/lib/async-loop-cpp",
   ]
 }
 
@@ -48,10 +48,10 @@ executable_package("swap_recipe") {
     "swap_recipe.cc",
   ]
   deps = [
-    "//garnet/public/lib/fsl",
     "//garnet/public/lib/ui/view_framework",
     "//peridot/lib/fidl:single_service_app",
     "//peridot/public/lib:fidl",
     "//peridot/public/lib/app_driver/cpp",
+    "//zircon/public/lib/async-loop-cpp",
   ]
 }

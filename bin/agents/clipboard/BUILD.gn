@@ -27,11 +27,11 @@ source_set("clipboard_sources") {
 
   deps = [
     "//garnet/public/lib/fidl/cpp",
-    "//garnet/public/lib/fsl",
     "//peridot/lib/fidl:array_to_string",
     "//peridot/lib/ledger_client:page_client",
     "//peridot/public/lib:fidl",
     "//peridot/public/lib/async/cpp:operation",
+    "//zircon/public/lib/async-loop-cpp",
   ]
 }
 

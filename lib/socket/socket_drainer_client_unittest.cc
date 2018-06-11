@@ -4,16 +4,16 @@
 
 #include "peridot/lib/socket/socket_drainer_client.h"
 
-#include "gtest/gtest.h"
-#include "lib/fsl/tasks/message_loop.h"
+#include "lib/gtest/test_with_loop.h"
 #include "peridot/lib/socket/socket_pair.h"
 
 namespace socket {
 namespace {
 
+using SocketDrainerClientTest = gtest::TestWithLoop;
+
 // Regression test for LE-229.
-TEST(SocketDrainerClient, DoNotCallOnDelete) {
-  fsl::MessageLoop message_loop;
+TEST_F(SocketDrainerClientTest, DoNotCallOnDelete) {
   socket::SocketPair socket;
   socket.socket1.reset();
 
@@ -21,11 +21,10 @@ TEST(SocketDrainerClient, DoNotCallOnDelete) {
   bool called = false;
   drainer->set_on_empty([&called] { called = true; });
   drainer->Start(std::move(socket.socket2),
-                 [&drainer, &message_loop](const std::string& v) {
+                 [&drainer](const std::string& v) {
                    drainer.reset();
-                   message_loop.PostQuitTask();
                  });
-  message_loop.Run();
+  RunLoopUntilIdle();
   EXPECT_FALSE(called);
 }
 

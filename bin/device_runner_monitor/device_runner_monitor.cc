@@ -5,9 +5,10 @@
 #include <memory>
 
 #include <fuchsia/modular/cpp/fidl.h>
+#include <lib/async-loop/cpp/loop.h>
+
 #include "lib/app/cpp/startup_context.h"
 #include "lib/fidl/cpp/binding_set.h"
-#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
 
@@ -41,7 +42,7 @@ class DeviceRunnerMonitorApp : fuchsia::modular::DeviceRunnerMonitor {
 }  // namespace modular
 
 int main(int /*argc*/, const char** /*argv*/) {
-  fsl::MessageLoop loop;
+  async::Loop loop(&kAsyncLoopConfigMakeDefault);
   modular::DeviceRunnerMonitorApp app;
   loop.Run();
   return 0;

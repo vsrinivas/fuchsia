@@ -7,7 +7,7 @@
 #include <string>
 
 #include <fs/pseudo-file.h>
-#include <lib/async/dispatcher.h>
+#include <lib/async-loop/cpp/loop.h>
 #include <trace-provider/provider.h>
 
 #include <fuchsia/modular/cpp/fidl.h>
@@ -23,7 +23,6 @@
 #include "lib/fidl/cpp/interface_handle.h"
 #include "lib/fidl/cpp/interface_request.h"
 #include "lib/fidl/cpp/string.h"
-#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
@@ -383,7 +382,7 @@ int main(int argc, const char** argv) {
   }
 
   modular::Settings settings(command_line);
-  fsl::MessageLoop loop;
+  async::Loop loop(&kAsyncLoopConfigMakeDefault);;
   trace::TraceProvider trace_provider(loop.async());
   auto context = std::shared_ptr<fuchsia::sys::StartupContext>(
       fuchsia::sys::StartupContext::CreateFromStartupInfo());
@@ -392,7 +391,7 @@ int main(int argc, const char** argv) {
 
   modular::DeviceRunnerApp app(settings, context, [&loop, &cobalt_cleanup] {
     cobalt_cleanup.call();
-    loop.QuitNow();
+    loop.Quit();
   });
   loop.Run();
 

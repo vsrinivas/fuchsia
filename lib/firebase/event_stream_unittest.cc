@@ -10,15 +10,14 @@
 
 #include <lib/async/cpp/task.h>
 
-#include "gtest/gtest.h"
 #include "lib/fsl/socket/strings.h"
-#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/macros.h"
+#include "lib/gtest/test_with_loop.h"
 #include "peridot/lib/socket/socket_pair.h"
 
 namespace firebase {
 
-class EventStreamTest : public ::testing::Test {
+class EventStreamTest : public ::gtest::TestWithLoop {
  public:
   EventStreamTest() {}
   ~EventStreamTest() override {}
@@ -54,7 +53,6 @@ class EventStreamTest : public ::testing::Test {
 
   void Done() { event_stream_->OnDataComplete(); }
 
-  fsl::MessageLoop message_loop_;
   zx::socket producer_socket_;
   std::unique_ptr<EventStream> event_stream_;
   std::vector<Status> status_;
@@ -181,9 +179,8 @@ TEST_F(EventStreamTest, DeleteOnEvent) {
   delete_on_event_ = true;
   fsl::BlockingCopyFromString("event: abc\ndata: bazinga\n\n",
                               producer_socket_);
-  async::PostTask(message_loop_.async(),
-                  [this]() { message_loop_.PostQuitTask(); });
-  message_loop_.Run();
+
+  RunLoopUntilIdle();
 
   EXPECT_EQ(1u, status_.size());
   EXPECT_EQ(Status::OK, status_[0]);
