@@ -211,7 +211,7 @@ int tftp_xfer(struct sockaddr_in6* addr, const char* fn, const char* name) {
     if (!strcmp(fn, "(cmdline)")) {
         xd.data = name;
         xd.datalen = strlen(name) + 1;
-        name = use_filename_prefix ? NB_CMDLINE_FILENAME : "cmdline";
+        name = NB_CMDLINE_FILENAME;
     }
 
     void* session_data = NULL;

@@ -50,7 +50,6 @@
 
 char* appname;
 int64_t us_between_packets = DEFAULT_US_BETWEEN_PACKETS;
-bool use_filename_prefix = true;
 
 static bool use_tftp = true;
 static bool use_color = true;
@@ -555,11 +554,7 @@ int main(int argc, char** argv) {
         if (strcmp(BOOTLOADER_VERSION, adv_version)) {
             log("%sWARNING: Bootserver version '%s' != remote bootloader '%s'. Please Upgrade%s",
                 ANSI(RED), BOOTLOADER_VERSION, adv_version, ANSI(RESET));
-            if (!strcmp(adv_version, "0.5.5")) {
-                use_filename_prefix = false;
-            }
-        } else {
-            use_filename_prefix = true;
+            return -1;
         }
 
         if (cmdline[0]) {
@@ -569,38 +564,31 @@ int main(int argc, char** argv) {
         }
         if (status == 0) {
             if (ramdisk_fn) {
-                status = xfer(&ra, ramdisk_fn,
-                              use_filename_prefix ? NB_RAMDISK_FILENAME : "ramdisk.bin");
+                status = xfer(&ra, ramdisk_fn, NB_RAMDISK_FILENAME);
             }
         }
         for (size_t i = 0; i < num_fvms; i++) {
             if (status == 0 && fvm_images[i]) {
-                status = xfer(&ra, fvm_images[i],
-                              use_filename_prefix ? NB_FVM_FILENAME : NB_FVM_HOST_FILENAME);
+                status = xfer(&ra, fvm_images[i], NB_FVM_FILENAME);
             }
         }
         if (status == 0 && efi_image) {
-            status = xfer(&ra, efi_image,
-                          use_filename_prefix ? NB_EFI_FILENAME : NB_EFI_HOST_FILENAME);
+            status = xfer(&ra, efi_image, NB_EFI_FILENAME);
         }
         if (status == 0 && kernc_image) {
-            status = xfer(&ra, kernc_image,
-                          use_filename_prefix ? NB_KERNC_FILENAME : NB_KERNC_HOST_FILENAME);
+            status = xfer(&ra, kernc_image, NB_KERNC_FILENAME);
         }
         if (status == 0 && zircona_image) {
-            status = xfer(&ra, zircona_image,
-                          use_filename_prefix ? NB_ZIRCONA_FILENAME : NB_ZIRCONA_HOST_FILENAME);
+            status = xfer(&ra, zircona_image, NB_ZIRCONA_FILENAME);
         }
         if (status == 0 && zirconb_image) {
-            status = xfer(&ra, zirconb_image,
-                          use_filename_prefix ? NB_ZIRCONB_FILENAME : NB_ZIRCONB_HOST_FILENAME);
+            status = xfer(&ra, zirconb_image, NB_ZIRCONB_FILENAME);
         }
         if (status == 0 && zirconr_image) {
-            status = xfer(&ra, zirconr_image,
-                          use_filename_prefix ? NB_ZIRCONR_FILENAME : NB_ZIRCONR_HOST_FILENAME);
+            status = xfer(&ra, zirconr_image, NB_ZIRCONR_FILENAME);
         }
         if (status == 0 && kernel_fn) {
-            status = xfer(&ra, kernel_fn, use_filename_prefix ? NB_KERNEL_FILENAME : "kernel.bin");
+            status = xfer(&ra, kernel_fn, NB_KERNEL_FILENAME);
         }
         if (status == 0) {
             if (kernel_fn) {
