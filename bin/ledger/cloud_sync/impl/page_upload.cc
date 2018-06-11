@@ -131,7 +131,6 @@ void PageUpload::VerifyUnsyncedCommits(
 void PageUpload::HandleUnsyncedCommits(
     std::vector<std::unique_ptr<const storage::Commit>> commits) {
   FXL_DCHECK(!batch_upload_);
-  FXL_DCHECK(commits_to_upload_);
   SetState(UPLOAD_IN_PROGRESS);
   batch_upload_ = std::make_unique<BatchUpload>(
       storage_, encryption_service_, page_cloud_, std::move(commits),

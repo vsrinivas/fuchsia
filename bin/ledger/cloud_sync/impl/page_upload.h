@@ -8,7 +8,6 @@
 #include <fuchsia/ledger/cloud/cpp/fidl.h>
 
 #include <memory>
-#include <queue>
 #include <vector>
 
 #include "lib/backoff/backoff.h"
@@ -96,8 +95,6 @@ class PageUpload : public storage::CommitWatcher {
   // Work queue:
   // Current batch of local commits being uploaded.
   std::unique_ptr<BatchUpload> batch_upload_;
-  // Set to true when there are new commits to upload.
-  bool commits_to_upload_ = true;
   // Internal state.
   PageUploadState internal_state_ = PageUploadState::NO_COMMIT;
 
