@@ -22,18 +22,18 @@ AudioInput::AudioInput(zx::channel channel, AudioDeviceManager* manager)
     : AudioDevice(Type::Input, manager),
       initial_stream_channel_(std::move(channel)) {}
 
-fuchsia::media::MediaResult AudioInput::Init() {
-  fuchsia::media::MediaResult init_res = AudioDevice::Init();
-  if (init_res != fuchsia::media::MediaResult::OK) {
-    return init_res;
+zx_status_t AudioInput::Init() {
+  zx_status_t res = AudioDevice::Init();
+  if (res != ZX_OK) {
+    return res;
   }
 
-  if (driver_->Init(fbl::move(initial_stream_channel_)) != ZX_OK) {
-    return fuchsia::media::MediaResult::INTERNAL_ERROR;
+  res = driver_->Init(fbl::move(initial_stream_channel_));
+  if (res == ZX_OK) {
+    state_ = State::Initialized;
   }
 
-  state_ = State::Initialized;
-  return fuchsia::media::MediaResult::OK;
+  return res;
 }
 
 void AudioInput::OnWakeup() {

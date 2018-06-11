@@ -97,9 +97,9 @@ class AudioDevice : public AudioObject {
   //
   // Called during startup on the AudioServer's main message loop thread.  No
   // locks are being held at this point.  Derived classes should allocate their
-  // hardware resources and initialize any internal state.  Return
-  // MediaResult::OK if everything is good and the output is ready to do work.
-  virtual fuchsia::media::MediaResult Init();
+  // hardware resources and initialize any internal state.  Return ZX_OK if
+  // everything is good and the output is ready to do work.
+  virtual zx_status_t Init();
 
   // Cleanup
   //
@@ -213,7 +213,7 @@ class AudioDevice : public AudioObject {
   // Gives derived classes a chance to set up hardware, then sets up the
   // machinery needed for scheduling processing tasks and schedules the first
   // processing callback immediately in order to get the process running.
-  fuchsia::media::MediaResult Startup();
+  zx_status_t Startup();
 
   // Called from the AudioDeviceManager on the main message loop
   // thread.  Makes certain that the process of shutdown has started,

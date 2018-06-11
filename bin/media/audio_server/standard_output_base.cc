@@ -35,15 +35,15 @@ StandardOutputBase::StandardOutputBase(AudioDeviceManager* manager)
 
 StandardOutputBase::~StandardOutputBase() {}
 
-fuchsia::media::MediaResult StandardOutputBase::Init() {
-  fuchsia::media::MediaResult res = AudioOutput::Init();
-  if (res != fuchsia::media::MediaResult::OK) {
+zx_status_t StandardOutputBase::Init() {
+  zx_status_t res = AudioOutput::Init();
+  if (res != ZX_OK) {
     return res;
   }
 
   mix_timer_ = ::dispatcher::Timer::Create();
   if (mix_timer_ == nullptr) {
-    return fuchsia::media::MediaResult::INSUFFICIENT_RESOURCES;
+    return ZX_ERR_NO_MEMORY;
   }
 
   // clang-format off
@@ -56,14 +56,12 @@ fuchsia::media::MediaResult StandardOutputBase::Init() {
     });
   // clang-format on
 
-  zx_status_t zx_res =
-      mix_timer_->Activate(mix_domain_, fbl::move(process_handler));
-  if (zx_res != ZX_OK) {
+  res = mix_timer_->Activate(mix_domain_, fbl::move(process_handler));
+  if (res != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to activate mix_timer_ (res " << res << ")";
-    return fuchsia::media::MediaResult::INTERNAL_ERROR;
   }
 
-  return fuchsia::media::MediaResult::OK;
+  return res;
 }
 
 void StandardOutputBase::Process() {

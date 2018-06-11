@@ -26,7 +26,7 @@ class DriverOutput : public StandardOutputBase {
   ~DriverOutput();
 
   // AudioOutput implementation
-  fuchsia::media::MediaResult Init() override;
+  zx_status_t Init() override;
   void OnWakeup() FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token()) override;
 
   void Cleanup() override;

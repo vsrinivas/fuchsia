@@ -26,14 +26,14 @@ void AudioDevice::Wakeup() {
   mix_wakeup_->Signal();
 }
 
-fuchsia::media::MediaResult AudioDevice::Init() {
+zx_status_t AudioDevice::Init() {
   // TODO(johngro) : See MG-940.  Eliminate this priority boost as soon as we
   // have a more official way of meeting real-time latency requirements.
   mix_domain_ = ::dispatcher::ExecutionDomain::Create(24);
   mix_wakeup_ = ::dispatcher::WakeupEvent::Create();
 
   if ((mix_domain_ == nullptr) || (mix_wakeup_ == nullptr)) {
-    return fuchsia::media::MediaResult::INSUFFICIENT_RESOURCES;
+    return ZX_ERR_NO_MEMORY;
   }
 
   // clang-format off
@@ -51,10 +51,10 @@ fuchsia::media::MediaResult AudioDevice::Init() {
   if (res != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to activate wakeup event for AudioDevice!  "
                    << "(res " << res << ")";
-    return fuchsia::media::MediaResult::INTERNAL_ERROR;
+    return res;
   }
 
-  return fuchsia::media::MediaResult::OK;
+  return ZX_OK;
 }
 
 void AudioDevice::Cleanup() {}
@@ -84,12 +84,12 @@ void AudioDevice::DeactivateDomain() {
   }
 }
 
-fuchsia::media::MediaResult AudioDevice::Startup() {
+zx_status_t AudioDevice::Startup() {
   // If our derived class failed to initialize, Just get out.  We are being
   // called by the output manager, and they will remove us from the set of
   // active outputs as a result of us failing to initialize.
-  fuchsia::media::MediaResult res = Init();
-  if (res != fuchsia::media::MediaResult::OK) {
+  zx_status_t res = Init();
+  if (res != ZX_OK) {
     DeactivateDomain();
     return res;
   }
@@ -97,7 +97,7 @@ fuchsia::media::MediaResult AudioDevice::Startup() {
   // Poke the output once so it gets a chance to actually start running.
   Wakeup();
 
-  return fuchsia::media::MediaResult::OK;
+  return ZX_OK;
 }
 
 void AudioDevice::Shutdown() {

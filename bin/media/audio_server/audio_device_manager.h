@@ -35,7 +35,7 @@ class AudioDeviceManager {
   // 2) Instantiate all of the built-in audio output devices.
   // 3) Being monitoring for plug/unplug events for pluggable audio output
   //    devices.
-  fuchsia::media::MediaResult Init();
+  zx_status_t Init();
 
   // Blocking call.  Called by the service, once, when it is time to shutdown
   // the service implementation.  While this function is blocking, it must never
@@ -77,7 +77,7 @@ class AudioDeviceManager {
   void ScheduleMainThreadTask(fit::closure task);
 
   // Attempt to initialize an output and add it to the set of active outputs.
-  fuchsia::media::MediaResult AddDevice(const fbl::RefPtr<AudioDevice>& device);
+  zx_status_t AddDevice(const fbl::RefPtr<AudioDevice>& device);
 
   // Shutdown the specified audio device and remove it from the appropriate set
   // of active devices.

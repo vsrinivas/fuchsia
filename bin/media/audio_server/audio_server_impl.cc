@@ -49,9 +49,9 @@ AudioServerImpl::AudioServerImpl() : device_manager_(this) {
       async_, []() { zx_thread_set_priority(24 /* HIGH_PRIORITY in LK */); });
 
   // Set up our output manager.
-  fuchsia::media::MediaResult res = device_manager_.Init();
+  zx_status_t res = device_manager_.Init();
   // TODO(johngro): Do better at error handling than this weak check.
-  FXL_DCHECK(res == fuchsia::media::MediaResult::OK);
+  FXL_DCHECK(res == ZX_OK);
 
   // Wait for 50 mSec before we export our services and start to process client
   // requests.  This will give the device manager layer time to discover the

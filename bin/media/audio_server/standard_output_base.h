@@ -73,7 +73,7 @@ class StandardOutputBase : public AudioOutput {
 
   explicit StandardOutputBase(AudioDeviceManager* manager);
 
-  fuchsia::media::MediaResult Init() override;
+  zx_status_t Init() override;
 
   void Process() FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token());
 

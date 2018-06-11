@@ -36,8 +36,7 @@ static const struct {
 
 AudioPlugDetector::~AudioPlugDetector() { FXL_DCHECK(manager_ == nullptr); }
 
-fuchsia::media::MediaResult AudioPlugDetector::Start(
-    AudioDeviceManager* manager) {
+zx_status_t AudioPlugDetector::Start(AudioDeviceManager* manager) {
   FXL_DCHECK(manager != nullptr);
 
   // If we fail to set up monitoring for any of our target directories,
@@ -49,7 +48,7 @@ fuchsia::media::MediaResult AudioPlugDetector::Start(
   if (manager_ != nullptr) {
     FXL_DLOG(WARNING) << "Attempted to start the AudioPlugDetector twice!";
     error_cleanup.cancel();
-    return fuchsia::media::MediaResult::OK;
+    return ZX_OK;
   }
 
   // Record our new manager
@@ -67,7 +66,7 @@ fuchsia::media::MediaResult AudioPlugDetector::Start(
       FXL_LOG(ERROR)
           << "AudioPlugDetector failed to create DeviceWatcher for \""
           << devnode.path << "\".";
-      return fuchsia::media::MediaResult::INSUFFICIENT_RESOURCES;
+      return ZX_ERR_NO_MEMORY;
     }
 
     watchers_.emplace_back(std::move(watcher));
@@ -75,7 +74,7 @@ fuchsia::media::MediaResult AudioPlugDetector::Start(
 
   error_cleanup.cancel();
 
-  return fuchsia::media::MediaResult::OK;
+  return ZX_OK;
 }
 
 void AudioPlugDetector::Stop() {

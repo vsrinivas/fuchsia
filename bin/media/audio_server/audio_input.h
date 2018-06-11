@@ -21,8 +21,7 @@ class AudioInput : public AudioDevice {
                                         AudioDeviceManager* manager);
 
  protected:
-  fuchsia::media::MediaResult Init() override
-      FXL_LOCKS_EXCLUDED(mix_domain_->token());
+  zx_status_t Init() override FXL_LOCKS_EXCLUDED(mix_domain_->token());
 
   void OnWakeup() override FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token());
 

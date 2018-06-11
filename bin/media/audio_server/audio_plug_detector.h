@@ -25,7 +25,7 @@ class AudioPlugDetector {
   AudioPlugDetector() {}
   ~AudioPlugDetector();
 
-  fuchsia::media::MediaResult Start(AudioDeviceManager* manager);
+  zx_status_t Start(AudioDeviceManager* manager);
   void Stop();
 
  private:

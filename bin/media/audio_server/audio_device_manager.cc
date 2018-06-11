@@ -26,17 +26,17 @@ AudioDeviceManager::~AudioDeviceManager() {
   FXL_DCHECK(devices_.is_empty());
 }
 
-fuchsia::media::MediaResult AudioDeviceManager::Init() {
+zx_status_t AudioDeviceManager::Init() {
   // Step #1: Instantiate and initialize the default throttle output.
   auto throttle_output = ThrottleOutput::Create(this);
   if (throttle_output == nullptr) {
     FXL_LOG(WARNING)
         << "AudioDeviceManager failed to create default throttle output!";
-    return fuchsia::media::MediaResult::INSUFFICIENT_RESOURCES;
+    return ZX_ERR_NO_MEMORY;
   }
 
-  fuchsia::media::MediaResult res = throttle_output->Startup();
-  if (res != fuchsia::media::MediaResult::OK) {
+  zx_status_t res = throttle_output->Startup();
+  if (res != ZX_OK) {
     FXL_LOG(WARNING)
         << "AudioDeviceManager failed to initalize the throttle output (res "
         << res << ")";
@@ -47,13 +47,13 @@ fuchsia::media::MediaResult AudioDeviceManager::Init() {
   // Step #2: Being monitoring for plug/unplug events for pluggable audio
   // output devices.
   res = plug_detector_.Start(this);
-  if (res != fuchsia::media::MediaResult::OK) {
+  if (res != ZX_OK) {
     FXL_LOG(WARNING) << "AudioDeviceManager failed to start plug detector (res "
                      << res << ")";
     return res;
   }
 
-  return fuchsia::media::MediaResult::OK;
+  return ZX_OK;
 }
 
 void AudioDeviceManager::Shutdown() {
@@ -85,7 +85,7 @@ void AudioDeviceManager::Shutdown() {
   throttle_output_ = nullptr;
 }
 
-fuchsia::media::MediaResult AudioDeviceManager::AddDevice(
+zx_status_t AudioDeviceManager::AddDevice(
     const fbl::RefPtr<AudioDevice>& device) {
   FXL_DCHECK(device != nullptr);
   FXL_DCHECK(!device->in_object_list());
@@ -97,13 +97,11 @@ fuchsia::media::MediaResult AudioDeviceManager::AddDevice(
   }
   devices_.push_back(device);
 
-  fuchsia::media::MediaResult res = device->Startup();
-  if (res != fuchsia::media::MediaResult::OK) {
+  zx_status_t res = device->Startup();
+  if (res != ZX_OK) {
     devices_.erase(*device);
     device->Shutdown();
-  }
-
-  if (device->plugged()) {
+  } else if (device->plugged()) {
     // TODO(johngro): Remove this gross kludge when routing decisions move up to
     // the policy layer (where they belong).  Right now, OnDevicePlugged will
     // not bother to re-route if it things that there has been no actual plug

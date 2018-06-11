@@ -47,23 +47,22 @@ DriverOutput::DriverOutput(AudioDeviceManager* manager,
 
 DriverOutput::~DriverOutput() { wav_writer_.Close(); }
 
-fuchsia::media::MediaResult DriverOutput::Init() {
+zx_status_t DriverOutput::Init() {
   FXL_DCHECK(state_ == State::Uninitialized);
 
-  fuchsia::media::MediaResult init_res = StandardOutputBase::Init();
-  if (init_res != fuchsia::media::MediaResult::OK) {
-    return init_res;
+  zx_status_t res = StandardOutputBase::Init();
+  if (res != ZX_OK) {
+    return res;
   }
 
-  zx_status_t zx_res = driver_->Init(fbl::move(initial_stream_channel_));
-  if (zx_res != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to initialize driver object (res " << zx_res
-                   << ")";
-    return fuchsia::media::MediaResult::INTERNAL_ERROR;
+  res = driver_->Init(fbl::move(initial_stream_channel_));
+  if (res != ZX_OK) {
+    FXL_LOG(ERROR) << "Failed to initialize driver object (res " << res << ")";
+    return res;
   }
 
   state_ = State::FormatsUnknown;
-  return fuchsia::media::MediaResult::OK;
+  return res;
 }
 
 void DriverOutput::OnWakeup() {
