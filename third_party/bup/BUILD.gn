@@ -26,7 +26,7 @@ executable("bupsplit_unittest") {
 
   deps = [
     ":bup",
-    "//garnet/public/lib/test_runner/cpp:gtest_main",
+    "//third_party/googletest:gtest_main",
   ]
 }
 

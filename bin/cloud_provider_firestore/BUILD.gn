@@ -25,10 +25,10 @@ executable("unittests") {
   output_name = "cloud_provider_firestore_unittests"
 
   deps = [
-    "//garnet/public/lib/test_runner/cpp:gtest_main",
     "//peridot/bin/cloud_provider_firestore/app:unittests",
     "//peridot/bin/cloud_provider_firestore/firestore:unittests",
     "//peridot/bin/cloud_provider_firestore/grpc:unittests",
+    "//third_party/googletest:gtest_main",
   ]
 }
 

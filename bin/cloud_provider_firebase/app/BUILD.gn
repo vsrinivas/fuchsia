@@ -69,7 +69,6 @@ source_set("unittests") {
     "//garnet/public/lib/fidl/cpp",
     "//garnet/public/lib/fxl:fxl_printers",
     "//garnet/public/lib/network_wrapper:fake",
-    "//garnet/public/lib/test_runner/cpp:gtest_main",
     "//peridot/bin/cloud_provider_firebase/device_set/testing",
     "//peridot/bin/cloud_provider_firebase/fidl",
     "//peridot/bin/cloud_provider_firebase/page_handler/testing",
@@ -77,5 +76,6 @@ source_set("unittests") {
     "//peridot/lib/firebase_auth/testing",
     "//peridot/public/lib/auth/fidl",
     "//peridot/public/lib/cloud_provider/fidl",
+    "//third_party/googletest:gtest_main",
   ]
 }

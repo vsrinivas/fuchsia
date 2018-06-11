@@ -23,7 +23,6 @@ executable("integration") {
     "//garnet/public/lib/callback",
     "//garnet/public/lib/fidl/cpp",
     "//garnet/public/lib/fsl",
-    "//garnet/public/lib/test_runner/cpp:gtest_main",
     "//peridot/bin/ledger/app:lib",
     "//peridot/bin/ledger/fidl",
     "//peridot/bin/ledger/p2p_provider/impl",
@@ -42,6 +41,7 @@ executable("integration") {
     "//peridot/lib/socket",
     "//peridot/public/lib/auth/fidl",
     "//peridot/public/lib/ledger/fidl",
+    "//third_party/googletest:gtest_main",
   ]
 
   configs += [ "//peridot/bin/ledger:ledger_config" ]

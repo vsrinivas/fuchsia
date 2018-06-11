@@ -21,8 +21,7 @@ executable("validation") {
     "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/gtest",
-    "//garnet/public/lib/test_runner/cpp:gtest_main",
     "//peridot/public/lib/cloud_provider/fidl",
-    "//third_party/googletest:gtest",
+    "//third_party/googletest:gtest_main",
   ]
 }
