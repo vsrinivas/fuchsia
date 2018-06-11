@@ -5,8 +5,9 @@
 #include <iostream>
 
 #include <fuchsia/modular/cpp/fidl.h>
+#include <lib/async-loop/cpp/loop.h>
+
 #include "lib/app/cpp/startup_context.h"
-#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/files/file.h"
 #include "lib/fxl/strings/split_string.h"
@@ -163,7 +164,7 @@ int main(int argc, const char** argv) {
 
   FXL_LOG(INFO) << "Starting Maxwell with config: \n" << config;
 
-  fsl::MessageLoop loop;
+  async::Loop loop(&kAsyncLoopConfigMakeDefault);
   auto context = fuchsia::sys::StartupContext::CreateFromStartupInfo();
   maxwell::App app(context.get(), config);
   loop.Run();

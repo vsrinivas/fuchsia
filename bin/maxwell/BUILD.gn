@@ -24,9 +24,9 @@ executable_package("maxwell") {
     ":config",
     ":user_intelligence_provider",
     "//garnet/public/lib/app/cpp",
-    "//garnet/public/lib/fsl",
     "//peridot/public/lib:fidl",
     "//third_party/rapidjson",
+    "//zircon/public/lib/async-loop-cpp",
   ]
 }
 

@@ -31,6 +31,7 @@ executable_package("simple_module") {
     "//garnet/public/lib/app/cpp",
     "//peridot/lib/fidl:message_receiver_client",
     "//peridot/public/lib/app_driver/cpp:module_driver",
+    "//zircon/public/lib/async-loop-cpp",
   ]
 }
 

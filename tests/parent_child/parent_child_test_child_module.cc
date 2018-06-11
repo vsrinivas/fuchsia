@@ -4,8 +4,9 @@
 
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/ui/views_v1/cpp/fidl.h>
+#include <lib/async-loop/cpp/loop.h>
+
 #include "lib/app_driver/cpp/module_driver.h"
-#include "lib/fsl/tasks/message_loop.h"
 #include "peridot/lib/testing/reporting.h"
 #include "peridot/lib/testing/testing.h"
 #include "peridot/tests/common/defs.h"
@@ -42,10 +43,10 @@ class TestApp {
 }  // namespace
 
 int main(int /*argc*/, const char** /*argv*/) {
-  fsl::MessageLoop loop;
+  async::Loop loop(&kAsyncLoopConfigMakeDefault);
   auto context = fuchsia::sys::StartupContext::CreateFromStartupInfo();
   modular::ModuleDriver<TestApp> driver(context.get(),
-                                        [&loop] { loop.QuitNow(); });
+                                        [&loop] { loop.Quit(); });
   loop.Run();
   return 0;
 }

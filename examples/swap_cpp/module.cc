@@ -6,8 +6,6 @@
 
 #include <utility>
 
-#include "lib/fsl/tasks/message_loop.h"
-
 namespace modular_example {
 
 ModuleView::ModuleView(

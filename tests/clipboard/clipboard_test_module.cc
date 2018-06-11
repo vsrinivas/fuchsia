@@ -4,6 +4,7 @@
 
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/ui/views_v1/cpp/fidl.h>
+#include <lib/async-loop/cpp/loop.h>
 
 #include "lib/app/cpp/connect.h"
 #include "lib/app_driver/cpp/module_driver.h"
@@ -73,10 +74,10 @@ class TestApp {
 }  // namespace
 
 int main(int /*argc*/, const char** /*argv*/) {
-  fsl::MessageLoop loop;
+  async::Loop loop(&kAsyncLoopConfigMakeDefault);
   auto context = fuchsia::sys::StartupContext::CreateFromStartupInfo();
   modular::ModuleDriver<TestApp> driver(context.get(),
-                                        [&loop] { loop.QuitNow(); });
+                                        [&loop] { loop.Quit(); });
   loop.Run();
   return 0;
 }

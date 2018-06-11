@@ -15,7 +15,6 @@
 #include "lib/app/cpp/startup_context.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fidl/cpp/interface_request.h"
-#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/memory/weak_ptr.h"
 #include "lib/lifecycle/cpp/lifecycle_impl.h"
@@ -51,12 +50,12 @@ namespace modular {
 // };
 //
 // int main(int argc, const char** argv) {
-//   fsl::MessageLoop loop;
+//   async::Loop loop(&kAsyncLoopConfigMakeDefault);
 //   auto context = fuchsia::sys::StartupContext::CreateFromStartupInfo();
 //   modular::AppDriver<HelloWorldApp> driver(
 //       context->outgoing().deprecated_services(),
 //       std::make_unique<HelloWorldApp>(context.get()),
-//       [&loop] { loop.QuitNow(); });
+//       [&loop] { loop.Quit(); });
 //   loop.Run();
 //   return 0;
 // }

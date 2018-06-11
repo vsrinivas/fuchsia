@@ -10,7 +10,6 @@
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fidl/cpp/clone.h"
 #include "lib/fidl/cpp/optional.h"
-#include "lib/fsl/tasks/message_loop.h"
 #include "peridot/bin/context_engine/scope_utils.h"
 #include "peridot/tests/maxwell_integration/context_engine_test_base.h"
 

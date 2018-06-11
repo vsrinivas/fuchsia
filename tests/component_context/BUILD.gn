@@ -16,12 +16,12 @@ executable_package("component_context_test_module") {
     ":component_context_test_service",
     ":defs",
     "//garnet/public/lib/callback",
-    "//garnet/public/lib/fsl",
     "//peridot/lib/fidl:message_receiver_client",
     "//peridot/lib/testing",
     "//peridot/public/lib:fidl",
     "//peridot/public/lib/app_driver/cpp:module_driver",
     "//peridot/tests/common:defs",
+    "//zircon/public/lib/async-loop-cpp",
   ]
 }
 
@@ -52,11 +52,11 @@ executable_package("component_context_test_two_agent") {
 
   deps = [
     ":defs",
-    "//garnet/public/lib/fsl",
     "//peridot/lib/testing",
     "//peridot/public/lib:fidl",
     "//peridot/public/lib/app_driver/cpp:agent_driver",
     "//peridot/tests/common:defs",
+    "//zircon/public/lib/async-loop-cpp",
   ]
 }
 
@@ -69,11 +69,11 @@ executable_package("component_context_test_unstoppable_agent") {
 
   deps = [
     ":defs",
-    "//garnet/public/lib/fsl",
     "//peridot/lib/testing",
     "//peridot/public/lib:fidl",
     "//peridot/public/lib/app_driver/cpp:agent_driver",
     "//peridot/tests/common:defs",
+    "//zircon/public/lib/async-loop-cpp",
   ]
 }
 

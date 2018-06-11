@@ -7,6 +7,7 @@
 #include <fuchsia/ledger/cloud/cpp/fidl.h>
 
 #include "gtest/gtest.h"
+#include "lib/fxl/logging.h"
 #include "peridot/public/lib/cloud_provider/validation/convert.h"
 #include "peridot/public/lib/cloud_provider/validation/types.h"
 #include "peridot/public/lib/cloud_provider/validation/validation_test.h"

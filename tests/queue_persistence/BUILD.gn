@@ -24,11 +24,11 @@ executable_package("queue_persistence_test_module") {
     ":defs",
     ":queue_persistence_test_service",
     "//garnet/public/lib/callback",
-    "//garnet/public/lib/fsl",
     "//peridot/lib/testing",
     "//peridot/public/lib:fidl",
     "//peridot/public/lib/app_driver/cpp:module_driver",
     "//peridot/tests/common:defs",
+    "//zircon/public/lib/async-loop-cpp",
   ]
 }
 
@@ -42,12 +42,12 @@ executable_package("queue_persistence_test_agent") {
   deps = [
     ":defs",
     ":queue_persistence_test_service",
-    "//garnet/public/lib/fsl",
     "//peridot/lib/fidl:message_receiver_client",
     "//peridot/lib/testing",
     "//peridot/public/lib:fidl",
     "//peridot/public/lib/app_driver/cpp:agent_driver",
     "//peridot/tests/common:defs",
+    "//zircon/public/lib/async-loop-cpp",
   ]
 }
 

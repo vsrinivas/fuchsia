@@ -22,12 +22,12 @@ executable_package("suggestion_test_module") {
   deps = [
     ":defs",
     "//garnet/public/lib/callback",
-    "//garnet/public/lib/fsl",
     "//peridot/lib/testing",
     "//peridot/lib/testing:component_base",
     "//peridot/public/lib:fidl",
     "//peridot/public/lib/app_driver/cpp:module_driver",
     "//peridot/tests/common:defs",
+    "//zircon/public/lib/async-loop-cpp",
   ]
 }
 
@@ -40,7 +40,6 @@ executable_package("suggestion_test_user_shell") {
 
   deps = [
     ":defs",
-    "//garnet/public/lib/fsl",
     "//peridot/lib/testing",
     "//peridot/lib/testing:component_base",
     "//peridot/public/lib:fidl",

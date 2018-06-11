@@ -5,13 +5,13 @@
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/net/oldhttp/cpp/fidl.h>
 #include <lib/async/default.h>
+#include <lib/async-loop/cpp/loop.h>
 
 #include "lib/app/cpp/connect.h"
 #include "lib/app/cpp/startup_context.h"
 #include "lib/app_driver/cpp/app_driver.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fidl/cpp/optional.h"
-#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
@@ -298,7 +298,7 @@ class ModuleResolverApp : fuchsia::modular::ContextListener {
 const char kUsage[] = R"USAGE(%s [--test])USAGE";
 
 int main(int argc, const char** argv) {
-  fsl::MessageLoop loop;
+  async::Loop loop(&kAsyncLoopConfigMakeDefault);
   auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
   if (command_line.HasOption("help")) {
     printf(kUsage, argv[0]);
@@ -309,7 +309,7 @@ int main(int argc, const char** argv) {
   modular::AppDriver<modular::ModuleResolverApp> driver(
       context->outgoing().deprecated_services(),
       std::make_unique<modular::ModuleResolverApp>(context.get(), is_test),
-      [&loop] { loop.QuitNow(); });
+      [&loop] { loop.Quit(); });
   loop.Run();
   return 0;
 }

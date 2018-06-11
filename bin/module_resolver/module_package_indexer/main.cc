@@ -2,17 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <dirent.h>
+#include <glob.h>
+#include <sys/types.h>
+
 #include <iostream>
 #include <string>
 #include <vector>
 
-#include <dirent.h>
-#include <lib/fdio/util.h>
-#include <glob.h>
-#include <sys/types.h>
-
 #include <fuchsia/maxwell/internal/cpp/fidl.h>
-#include "lib/fsl/tasks/message_loop.h"
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/fdio/util.h>
+
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/files/file.h"
 #include "lib/fxl/log_settings_command_line.h"
@@ -46,7 +47,7 @@ std::string FindModulePackageIndexerService() {
 }
 
 int main(int argc, const char** argv) {
-  fsl::MessageLoop loop;
+  async::Loop loop(&kAsyncLoopConfigMakeDefault);
 
   const auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
   fxl::SetLogSettingsFromCommandLine(command_line);

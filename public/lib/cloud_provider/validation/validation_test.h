@@ -9,13 +9,13 @@
 
 #include "gtest/gtest.h"
 #include "lib/app/cpp/startup_context.h"
-#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/macros.h"
+#include "lib/gtest/test_with_loop.h"
 #include "peridot/public/lib/cloud_provider/validation/types.h"
 
 namespace cloud_provider {
 
-class ValidationTest : public ::testing::Test {
+class ValidationTest : public ::gtest::TestWithLoop {
  public:
   ValidationTest();
   ~ValidationTest() override;
@@ -26,7 +26,6 @@ class ValidationTest : public ::testing::Test {
   CloudProviderPtr cloud_provider_;
 
  private:
-  fsl::MessageLoop message_loop_;
   std::unique_ptr<fuchsia::sys::StartupContext> startup_context_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ValidationTest);

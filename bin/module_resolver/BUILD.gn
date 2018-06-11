@@ -21,7 +21,6 @@ executable_package("module_resolver") {
   deps = [
     ":local_module_resolver",
     "//garnet/public/lib/app/cpp",
-    "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/net/oldhttp/fidl",
     "//peridot/lib/module_manifest_source:firebase_source",
@@ -29,6 +28,7 @@ executable_package("module_resolver") {
     "//peridot/public/lib:fidl",
     "//peridot/public/lib/app_driver/cpp:app_driver",
     "//peridot/public/lib/entity/cpp:json",
+    "//zircon/public/lib/async-loop-cpp",
   ]
 }
 

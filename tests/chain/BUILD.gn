@@ -38,13 +38,13 @@ executable_package("chain_test_module") {
 
   deps = [
     ":defs",
-    "//garnet/public/lib/fsl",
     "//garnet/public/lib/ui/views/fidl:v1",
     "//peridot/lib/testing",
     "//peridot/lib/testing:component_base",
     "//peridot/public/lib:fidl",
     "//peridot/public/lib/app_driver/cpp:module_driver",
     "//peridot/tests/common:defs",
+    "//zircon/public/lib/async-loop-cpp",
   ]
 }
 

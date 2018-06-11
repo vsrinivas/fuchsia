@@ -5,9 +5,10 @@
 #ifndef PERIDOT_LIB_TESTING_COMPONENT_BASE_H_
 #define PERIDOT_LIB_TESTING_COMPONENT_BASE_H_
 
+#include <lib/async-loop/cpp/loop.h>
+
 #include "lib/app/cpp/connect.h"
 #include "lib/app_driver/cpp/app_driver.h"
-#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/memory/weak_ptr.h"
 #include "peridot/lib/fidl/single_service_app.h"
 #include "peridot/lib/testing/reporting.h"
@@ -98,13 +99,13 @@ class ComponentBase : protected SingleServiceApp<Component> {
 //
 template <typename Impl, typename... Args>
 void ComponentMain(Args... args) {
-  fsl::MessageLoop loop;
+  async::Loop loop(&kAsyncLoopConfigMakeDefault);
 
   auto context = fuchsia::sys::StartupContext::CreateFromStartupInfo();
   modular::AppDriver<Impl> driver(
       context->outgoing().deprecated_services(),
       std::make_unique<Impl>(context.get(), std::move(args)...),
-      [&loop] { loop.QuitNow(); });
+      [&loop] { loop.Quit(); });
 
   loop.Run();
 }

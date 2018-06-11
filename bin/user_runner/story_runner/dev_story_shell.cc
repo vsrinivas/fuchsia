@@ -11,9 +11,10 @@
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/ui/views_v1/cpp/fidl.h>
 #include <fuchsia/ui/views_v1_token/cpp/fidl.h>
+#include <lib/async-loop/cpp/loop.h>
+
 #include "lib/app/cpp/startup_context.h"
 #include "lib/app_driver/cpp/app_driver.h"
-#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
@@ -109,13 +110,13 @@ class DevStoryShellApp
 }  // namespace
 
 int main(int /*argc*/, const char** /*argv*/) {
-  fsl::MessageLoop loop;
+  async::Loop loop(&kAsyncLoopConfigMakeDefault);
 
   auto context = fuchsia::sys::StartupContext::CreateFromStartupInfo();
   modular::AppDriver<DevStoryShellApp> driver(
       context->outgoing().deprecated_services(),
       std::make_unique<DevStoryShellApp>(context.get()),
-      [&loop] { loop.QuitNow(); });
+      [&loop] { loop.Quit(); });
 
   loop.Run();
   return 0;

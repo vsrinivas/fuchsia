@@ -21,12 +21,12 @@ executable_package("parent_child_test_child_module") {
 
   deps = [
     ":defs",
-    "//garnet/public/lib/fsl",
     "//garnet/public/lib/ui/views/fidl:v1",
     "//peridot/lib/testing",
     "//peridot/public/lib:fidl",
     "//peridot/public/lib/app_driver/cpp:module_driver",
     "//peridot/tests/common:defs",
+    "//zircon/public/lib/async-loop-cpp",
   ]
 }
 
@@ -40,11 +40,11 @@ executable_package("parent_child_test_parent_module") {
   deps = [
     ":defs",
     "//garnet/public/lib/callback",
-    "//garnet/public/lib/fsl",
     "//garnet/public/lib/ui/views/fidl:v1",
     "//peridot/lib/testing",
     "//peridot/public/lib:fidl",
     "//peridot/public/lib/app_driver/cpp:module_driver",
     "//peridot/tests/common:defs",
+    "//zircon/public/lib/async-loop-cpp",
   ]
 }

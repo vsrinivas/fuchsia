@@ -26,7 +26,6 @@ executable_package("user_runner") {
     ":presentation_provider",
     "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/fidl/cpp",
-    "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/net/oldhttp/fidl",
     "//garnet/public/lib/ui/policy/fidl",
@@ -68,6 +67,7 @@ executable_package("user_runner") {
     "//peridot/public/lib/cloud_provider/fidl",
     "//peridot/public/lib/ledger/fidl",
     "//peridot/public/lib/speech/fidl",
+    "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/trace-provider",
   ]
 }
@@ -79,7 +79,6 @@ executable_package("dev_user_shell") {
 
   deps = [
     "//garnet/public/lib/fidl/cpp",
-    "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/ui/view_framework",
     "//garnet/public/lib/ui/views/fidl:v1",
@@ -89,6 +88,7 @@ executable_package("dev_user_shell") {
     "//peridot/lib/rapidjson",
     "//peridot/public/lib:fidl",
     "//peridot/public/lib/app_driver/cpp",
+    "//zircon/public/lib/async-loop-cpp",
   ]
 }
 
