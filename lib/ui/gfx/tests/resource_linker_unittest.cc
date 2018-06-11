@@ -303,6 +303,7 @@ TEST_F(ResourceLinkerTest,
       }));
 
   EXPECT_TRUE(RunLoopUntilIdle());
+  ASSERT_TRUE(called);
 }
 
 TEST_F(ResourceLinkerTest,
