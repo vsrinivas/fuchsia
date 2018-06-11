@@ -67,6 +67,16 @@ static bool gic_is_valid_interrupt(unsigned int vector, uint32_t flags) {
     return (vector < gic_max_int);
 }
 
+static uint32_t gic_get_base_vector(void) {
+    // ARM Generic Interrupt Controller v3&4 chapter 2.2
+    // INTIDs 0-15 are local CPU interrupts
+    return 16;
+}
+
+static uint32_t gic_get_max_vector(void) {
+    return gic_max_int;
+}
+
 static void gic_wait_for_rwp(uint64_t reg) {
     int count = 1000000;
     while (GICREG(0, reg) & (1 << 31)) {
@@ -380,6 +390,8 @@ static const struct pdev_interrupt_ops gic_ops = {
     .configure = gic_configure_interrupt,
     .get_config = gic_get_interrupt_config,
     .is_valid = gic_is_valid_interrupt,
+    .get_base_vector = gic_get_base_vector,
+    .get_max_vector = gic_get_max_vector,
     .remap = gic_remap_interrupt,
     .send_ipi = gic_send_ipi,
     .init_percpu_early = gic_init_percpu_early,

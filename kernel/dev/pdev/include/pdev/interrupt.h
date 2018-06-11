@@ -30,6 +30,8 @@ struct pdev_interrupt_ops {
                               enum interrupt_trigger_mode* tm,
                               enum interrupt_polarity* pol);
     bool (*is_valid)(unsigned int vector, uint32_t flags);
+    uint32_t (*get_base_vector)(void);
+    uint32_t (*get_max_vector)(void);
     unsigned int (*remap)(unsigned int vector);
     zx_status_t (*send_ipi)(cpu_mask_t target, mp_ipi_t ipi);
     void (*init_percpu_early)(void);

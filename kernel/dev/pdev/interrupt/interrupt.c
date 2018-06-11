@@ -125,6 +125,14 @@ zx_status_t get_interrupt_config(unsigned int vector, enum interrupt_trigger_mod
     return intr_ops->get_config(vector, tm, pol);
 }
 
+uint32_t interrupt_get_base_vector(void) {
+    return intr_ops->get_base_vector();
+}
+
+uint32_t interrupt_get_max_vector(void) {
+    return intr_ops->get_max_vector();
+}
+
 bool is_valid_interrupt(unsigned int vector, uint32_t flags) {
     return intr_ops->is_valid(vector, flags);
 }

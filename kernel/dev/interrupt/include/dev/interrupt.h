@@ -42,6 +42,11 @@ typedef void (*int_handler)(void* arg);
 
 zx_status_t register_int_handler(unsigned int vector, int_handler handler, void* arg);
 
+// These return the [base, max] range of vectors that can be used with zx_interrupt syscalls
+// This api will need to evolve if valid vector ranges later are not contiguous
+uint32_t interrupt_get_base_vector(void);
+uint32_t interrupt_get_max_vector(void);
+
 bool is_valid_interrupt(unsigned int vector, uint32_t flags);
 
 unsigned int remap_interrupt(unsigned int vector);

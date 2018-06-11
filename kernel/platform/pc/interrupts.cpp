@@ -247,6 +247,17 @@ zx_status_t register_int_handler(unsigned int vector, int_handler handler, void*
     return ZX_OK;
 }
 
+uint32_t interrupt_get_base_vector(void) {
+    // Intel Software Developer's Manual v3 chapter 6.2
+    // 0-31 are reserved for architecture defined interrupts & exceptions
+    return 32;
+}
+
+uint32_t interrupt_get_max_vector(void) {
+    // x64 APIC supports 256 total vectors
+    return 255;
+}
+
 bool is_valid_interrupt(unsigned int vector, uint32_t flags) {
     return apic_io_is_valid_irq(vector);
 }
