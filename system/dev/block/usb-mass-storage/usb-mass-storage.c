@@ -695,10 +695,17 @@ static zx_status_t ums_bind(void* ctx, zx_device_t* device) {
     zx_status_t status = usb_control(&usb, USB_DIR_IN | USB_TYPE_CLASS | USB_RECIP_INTERFACE,
                                      USB_REQ_GET_MAX_LUN, 0x00, 0x00, &max_lun, sizeof(max_lun),
                                      ZX_TIME_INFINITE, &out_length);
-    if (status != ZX_OK) {
+
+    if (status == ZX_ERR_IO_REFUSED) {
+        // Devices that do not support multiple LUNS may stall this command.
+        // See USB Mass Storage Class Spec. 3.2 Get Max LUN.
+        // Clear the stall.
+        usb_reset_endpoint(&usb, 0);
+        zxlogf(INFO, "Device does not support multiple LUNs\n");
+        max_lun = 0;
+    } else if (status != ZX_OK) {
         return status;
-    }
-    if (out_length != sizeof(max_lun)) {
+    } else if (out_length != sizeof(max_lun)) {
         return ZX_ERR_BAD_STATE;
     }
 
