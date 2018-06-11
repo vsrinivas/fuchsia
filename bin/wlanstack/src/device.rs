@@ -8,7 +8,7 @@ use futures::prelude::*;
 use futures::{future, stream};
 use futures::channel::mpsc;
 use parking_lot::Mutex;
-use watchable_map::{MapWatcher, WatchableMap, WatcherResult};
+use watchable_map::WatchableMap;
 use wlan;
 use wlan_dev;
 use wlan_service;
@@ -16,86 +16,36 @@ use zx;
 
 use std::sync::Arc;
 
-struct PhyDevice {
+pub struct PhyDevice {
     proxy: wlan::PhyProxy,
     device: wlan_dev::Device,
 }
 
 pub type ClientSmeServer = mpsc::UnboundedSender<super::station::ClientSmeEndpoint>;
 
-struct IfaceDevice {
+pub struct IfaceDevice {
     client_sme_server: Option<ClientSmeServer>,
     _device: wlan_dev::Device,
 }
 
-/// Called by the `DeviceManager` in response to device events.
-pub trait EventListener: Send + Sync {
-    /// Called when a phy device is added. On error, the listener is removed from the
-    /// `DeviceManager`.
-    fn on_phy_added(&self, id: u16) -> Result<(), Error>;
-
-    /// Called when a phy device is removed. On error, the listener is removed from the
-    /// `DeviceManager`.
-    fn on_phy_removed(&self, id: u16) -> Result<(), Error>;
-
-    /// Called when an iface device is added. On error, the listener is removed from the
-    /// `DeviceManager`.
-    fn on_iface_added(&self, id: u16) -> Result<(), Error>;
-
-    /// Called when an iface device is removed. On error, the listener is removed from
-    /// the `DeviceManager`.
-    fn on_iface_removed(&self, id: u16) -> Result<(), Error>;
-}
-
 pub type DevMgrRef = Arc<Mutex<DeviceManager>>;
 
-struct PhyWatcher(Arc<EventListener>);
-impl MapWatcher<u16> for PhyWatcher {
-    fn on_add_key(&self, key: &u16) -> WatcherResult {
-        handle_notification_error("on_phy_added", self.0.on_phy_added(*key))
-    }
-    fn on_remove_key(&self, key: &u16) -> WatcherResult {
-        handle_notification_error("on_phy_removed", self.0.on_phy_removed(*key))
-    }
-}
-
-struct IfaceWatcher(Arc<EventListener>);
-impl MapWatcher<u16> for IfaceWatcher {
-    fn on_add_key(&self, key: &u16) -> WatcherResult {
-        handle_notification_error("on_iface_added", self.0.on_iface_added(*key))
-    }
-    fn on_remove_key(&self, key: &u16) -> WatcherResult {
-        handle_notification_error("on_iface_removed", self.0.on_iface_removed(*key))
-    }
-}
-
-fn handle_notification_error(event_name: &str, r: Result<(), Error>) -> WatcherResult {
-    match r {
-        Ok(()) => WatcherResult::KeepWatching,
-        Err(e) => {
-            eprintln!("Failed to notify a watcher of {} event: {}", event_name, e);
-            WatcherResult::StopWatching
-        }
-    }
-}
+pub type PhyMap = WatchableMap<u16, PhyDevice>;
+pub type IfaceMap = WatchableMap<u16, IfaceDevice>;
 
 /// Manages the wlan devices used by the wlanstack.
 pub struct DeviceManager {
-    phys: WatchableMap<u16, PhyDevice, PhyWatcher>,
-    ifaces: WatchableMap<u16, IfaceDevice, IfaceWatcher>,
+    phys: Arc<PhyMap>,
+    ifaces: Arc<IfaceMap>,
 }
 
 impl DeviceManager {
     /// Create a new `DeviceManager`.
-    pub fn new() -> Self {
-        DeviceManager {
-            phys: WatchableMap::new(),
-            ifaces: WatchableMap::new(),
-        }
+    pub fn new(phys: Arc<PhyMap>, ifaces: Arc<IfaceMap>) -> Self {
+        DeviceManager { phys, ifaces }
     }
 
     fn add_phy(&mut self, id: u16, phy: PhyDevice) {
-
         self.phys.insert(id, phy);
     }
 
@@ -125,6 +75,7 @@ impl DeviceManager {
     /// Retrieves information about all the phy devices managed by this `DeviceManager`.
     pub fn list_phys(&self) -> Vec<wlan_service::PhyListItem> {
         self.phys
+            .get_snapshot()
             .iter()
             .map(|(phy_id, phy)| {
                 wlan_service::PhyListItem {
@@ -193,13 +144,6 @@ impl DeviceManager {
             .map_err(|_| zx::Status::IO)
             .and_then(|resp| zx::Status::ok(resp.status).into_future())
             .right_future()
-    }
-
-    /// Adds an `EventListener`. The event methods will be called for each existing object tracked
-    /// by this device manager.
-    pub fn add_listener(&mut self, listener: Arc<EventListener>) {
-        self.phys.add_watcher(PhyWatcher(listener.clone()));
-        self.ifaces.add_watcher(IfaceWatcher(listener));
     }
 
     pub fn get_client_sme(&mut self, iface_id: u16) -> Option<ClientSmeServer> {

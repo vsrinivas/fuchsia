@@ -36,6 +36,7 @@ mod logger;
 mod service;
 mod station;
 mod watchable_map;
+mod watcher_service;
 
 use component::server::ServicesServer;
 use failure::{Error, ResultExt};
@@ -57,20 +58,28 @@ fn main() -> Result<(), Error> {
 
     let mut exec = async::Executor::new().context("error creating event loop")?;
 
-    let devmgr = Arc::new(Mutex::new(device::DeviceManager::new()));
+    let (phys, phy_events) = device::PhyMap::new();
+    let (ifaces, iface_events) = device::IfaceMap::new();
+    let phys = Arc::new(phys);
+    let ifaces = Arc::new(ifaces);
+
+    let devmgr = Arc::new(Mutex::new(device::DeviceManager::new(phys.clone(), ifaces.clone())));
 
     let phy_server = device::serve_phys(devmgr.clone())?
         .and_then(|()| Err(format_err!("Phy server exited unexpectedly")));
     let iface_server = device::serve_ifaces(devmgr.clone())?
         .and_then(|()| Err(format_err!("Iface server exited unexpectedly")));
 
+    let (watcher_service, watcher_fut) = watcher_service::serve_watchers(
+        phys, ifaces, phy_events, iface_events);
+
     let services_server = ServicesServer::new()
         .add_service((DeviceServiceMarker::NAME, move |channel| {
-            async::spawn(service::device_service(devmgr.clone(), channel))
+            async::spawn(service::device_service(devmgr.clone(), channel, watcher_service.clone()))
         }))
         .start()
         .context("error configuring device service")?;
 
-    exec.run_singlethreaded(services_server.join3(phy_server, iface_server))
-        .map(|((), (), ())| ())
+    exec.run_singlethreaded(services_server.join4(phy_server, iface_server, watcher_fut))
+        .map(|_: ((), Never, Never, Never)| ())
 }

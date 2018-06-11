@@ -4,174 +4,156 @@
 
 #![allow(dead_code)]
 
-use std::collections::{hash_map, HashMap};
+use futures::channel::mpsc::{self, UnboundedReceiver, UnboundedSender};
+use parking_lot::Mutex;
+use std::collections::{HashMap};
 use std::hash::Hash;
+use std::sync::Arc;
 
-pub enum WatcherResult {
-    KeepWatching,
-    StopWatching
+/// A synchronized hash map that serializes all mutations into
+/// an unbounded queue of events.
+///
+/// Also supports taking snapshots of its current state and pushing
+/// them into the queue.
+///
+/// All mutations and snapshots are totally ordered, and events in the
+/// queue are guaranteed to follow the same order.
+pub struct WatchableMap<K, V> where K: Hash + Eq {
+    inner: Mutex<Inner<K, V>>
 }
 
-impl WatcherResult {
-    fn should_keep_watching(self) -> bool {
-        match self {
-            WatcherResult::KeepWatching => true,
-            WatcherResult::StopWatching => false,
-        }
-    }
+#[derive(Debug)]
+pub enum MapEvent<K, V> where K: Hash + Eq {
+    KeyInserted(K),
+    KeyRemoved(K),
+    Snapshot(Arc<HashMap<K, Arc<V>>>)
 }
 
-pub trait MapWatcher<K> {
-    fn on_add_key(&self, key: &K) -> WatcherResult;
-    fn on_remove_key(&self, key: &K) -> WatcherResult;
+struct Inner<K, V> where K: Hash + Eq {
+    // Storing the map in an Arc allows us to use copy-on-write:
+    // taking a snapshot is simply cloning an Arc, and all mutations
+    // use Arc::make_mut() which avoids a copy if no snapshots
+    // of the current state are alive.
+    map: Arc<HashMap<K, Arc<V>>>,
+    sender: UnboundedSender<MapEvent<K, V>>,
 }
 
-pub struct WatchableMap<K, V, W> {
-    map: HashMap<K, V>,
-    watchers: HashMap<u64, W>,
-    next_watcher_id: u64,
-}
-
-impl<K, V, W> WatchableMap<K, V, W>
-    where K: Clone + Hash + Eq, W: MapWatcher<K>
+impl<K, V> WatchableMap<K, V>
+    where K: Clone + Hash + Eq
 {
-    pub fn new() -> Self {
-        WatchableMap {
-            map: HashMap::new(),
-            watchers: HashMap::new(),
-            next_watcher_id: 0,
-        }
+    /// Returns an empty map and the receiving end of the event queue
+    pub fn new() -> (Self, UnboundedReceiver<MapEvent<K, V>>) {
+        let (sender, receiver) = mpsc::unbounded();
+        let map = WatchableMap {
+            inner: Mutex::new(Inner {
+                map: Arc::new(HashMap::new()),
+                sender
+            })
+        };
+        (map, receiver)
     }
 
-    pub fn insert(&mut self, key: K, value: V) {
-        self.map.insert(key.clone(), value);
-        self.watchers.retain(|_, w| w.on_add_key(&key).should_keep_watching());
+    // Insert an element and push a KeyInserted event to the queue
+    pub fn insert(&self, key: K, value: V) {
+        let mut inner = self.inner.lock();
+        Arc::make_mut(&mut inner.map).insert(key.clone(), Arc::new(value));
+        inner.sender.unbounded_send(MapEvent::KeyInserted(key))
+            .expect("failed to enqueue KeyInserted");
     }
 
-    pub fn remove(&mut self, key: &K) {
-        if self.map.remove(key).is_some() {
-            self.watchers.retain(|_, w| w.on_remove_key(&key).should_keep_watching());
-        }
+    // Remove an element and push a KeyRemoved event to the queue
+    pub fn remove(&self, key: &K) {
+        let mut inner = self.inner.lock();
+        Arc::make_mut(&mut inner.map).remove(key);
+        inner.sender.unbounded_send(MapEvent::KeyRemoved(key.clone()))
+            .expect("failed to enqueue KeyRemoved");
     }
 
-    pub fn add_watcher(&mut self, watcher: W) -> Option<u64> {
-        for key in self.map.keys() {
-            if !watcher.on_add_key(key).should_keep_watching() {
-                return None;
-            }
-        }
-        let watcher_id = self.next_watcher_id;
-        self.next_watcher_id += 1;
-        self.watchers.insert(watcher_id, watcher);
-        Some(watcher_id)
+    /// Take a snapshot and push it to the queue
+    pub fn request_snapshot(&self) {
+        let inner = self.inner.lock();
+        inner.sender.unbounded_send(MapEvent::Snapshot(inner.map.clone()))
+            .expect("failed to enqueue Snapshot");
     }
 
-    pub fn remove_watcher(&mut self, id: u64) {
-        self.watchers.remove(&id);
+    /// Get a snapshot without pushing it to the queue
+    pub fn get_snapshot(&self) -> Arc<HashMap<K, Arc<V>>> {
+        self.inner.lock().map.clone()
     }
 
-    pub fn iter(&self) -> hash_map::Iter<K, V> {
-        self.map.iter()
-    }
-
-    pub fn get<Q: ?Sized>(&self, k: &Q) -> Option<&V>
+    pub fn get<Q: ?Sized>(&self, k: &Q) -> Option<Arc<V>>
         where K: ::std::borrow::Borrow<Q>, Q: Hash + Eq
     {
-        self.map.get(k)
+        self.inner.lock().map.get(k).map(|v| v.clone())
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::cell::RefCell;
-    use std::rc::Rc;
-
-    #[derive(Debug, Eq, PartialEq)]
-    enum Event {
-        Add(u16),
-        Remove(u16)
-    }
-
-    impl MapWatcher<u16> for Rc<RefCell<Vec<Event>>> {
-        fn on_add_key(&self, key: &u16) -> WatcherResult {
-            self.borrow_mut().push(Event::Add(*key));
-            return if key % 2 == 1 { WatcherResult::KeepWatching } else { WatcherResult::StopWatching };
-        }
-        fn on_remove_key(&self, key: &u16) -> WatcherResult {
-            self.borrow_mut().push(Event::Remove(*key));
-            return if key % 2 == 1 { WatcherResult::KeepWatching } else { WatcherResult::StopWatching };
-        }
-    }
 
     #[test]
-    fn insert_get_remove() {
-        let mut map = WatchableMap::<_, _, Rc<RefCell<Vec<Event>>>>::new();
+    fn insert_remove_get() {
+        let (map, _recv) = WatchableMap::new();
         map.insert(3u16, "foo");
-        assert_eq!(Some(&"foo"), map.get(&3u16));
+        assert_eq!("foo", *map.get(&3u16).expect("expected a value"));
         map.remove(&3u16);
         assert_eq!(None, map.get(&3u16));
     }
 
     #[test]
-    fn notified_on_insert_and_remove() {
-        let mut map = WatchableMap::new();
-        let watcher = Rc::new(RefCell::new(Vec::<Event>::new()));
-        map.add_watcher(watcher.clone());
+    fn get_snapshot() {
+        let (map, _recv) = WatchableMap::new();
         map.insert(3u16, "foo");
-        map.insert(7u16, "bar");
+        let snapshot_one = map.get_snapshot();
         map.remove(&3u16);
-        assert_eq!(*watcher.borrow(), vec![Event::Add(3u16), Event::Add(7u16), Event::Remove(3u16)]);
-    }
-
-    #[test]
-    fn not_notified_after_returning_stop() {
-        let mut map = WatchableMap::new();
-        let watcher = Rc::new(RefCell::new(Vec::<Event>::new()));
-        map.add_watcher(watcher.clone());
-        map.insert(3u16, "foo");
-        // Our watcher returns 'StopWatching' for even numbers
         map.insert(4u16, "bar");
-        map.insert(7u16, "baz");
-        // 7 should not be recorded
-        assert_eq!(*watcher.borrow(), vec![Event::Add(3u16), Event::Add(4u16)]);
+        let snapshot_two = map.get_snapshot();
+
+        assert_eq!(vec![(3u16, "foo")],
+                   snapshot_one.iter().map(|(k, v)| (*k, **v)).collect::<Vec<_>>());
+        assert_eq!(vec![(4u16, "bar")],
+                   snapshot_two.iter().map(|(k, v)| (*k, **v)).collect::<Vec<_>>());
     }
 
     #[test]
-    fn not_notified_after_removing_watcher() {
-        let mut map = WatchableMap::new();
-        let watcher = Rc::new(RefCell::new(Vec::<Event>::new()));
-        let watcher_id = map.add_watcher(watcher.clone()).expect("add_watcher returned None");
+    fn events() {
+        let (map, mut recv) = WatchableMap::new();
         map.insert(3u16, "foo");
-        map.insert(5u16, "bar");
-        map.remove_watcher(watcher_id);
-        map.insert(7u16, "baz");
-        // 7 should not be recorded
-        assert_eq!(*watcher.borrow(), vec![Event::Add(3u16), Event::Add(5u16)]);
-    }
+        match recv.try_next() {
+            Ok(Some(MapEvent::KeyInserted(3u16))) => {},
+            other => panic!("expected KeyInserted(3), got {:?}", other)
+        }
 
-    #[test]
-    fn notified_of_existing_keys() {
-        let mut map = WatchableMap::new();
-        map.insert(3u16, "foo");
-        map.insert(5u16, "bar");
-        let watcher = Rc::new(RefCell::new(Vec::<Event>::new()));
-        map.add_watcher(watcher.clone()).expect("add_watcher returned None");
-        let mut sorted = watcher.borrow().iter().map(|e| {
-            match e {
-                Event::Add(id) => *id,
-                Event::Remove(id) => panic!("Unexpected Remove event with id {}", id),
-            }
-        }).collect::<Vec<_>>();
-        sorted.sort();
-        assert_eq!(sorted, vec![3u16, 5u16]);
-    }
+        map.request_snapshot();
+        let snapshot_one = match recv.try_next() {
+            Ok(Some(MapEvent::Snapshot(s))) => s,
+            other => panic!("expected Snapshot, got {:?}", other)
+        };
 
-    #[test]
-    fn watcher_not_added_if_returned_stop() {
-        let mut map = WatchableMap::new();
-        map.insert(4u16, "foo");
-        let watcher = Rc::new(RefCell::new(Vec::<Event>::new()));
-        assert_eq!(None, map.add_watcher(watcher.clone()));
+        map.remove(&3u16);
+        match recv.try_next() {
+            Ok(Some(MapEvent::KeyRemoved(3u16))) => {},
+            other => panic!("expected KeyRemoved(3), got {:?}", other)
+        }
+
+        map.insert(4u16, "bar");
+        match recv.try_next() {
+            Ok(Some(MapEvent::KeyInserted(4u16))) => {},
+            other => panic!("expected KeyInserted(4), got {:?}", other)
+        }
+
+        map.request_snapshot();
+        let snapshot_two = match recv.try_next() {
+            Ok(Some(MapEvent::Snapshot(s))) => s,
+            other => panic!("expected Snapshot, got {:?}", other)
+        };
+
+        assert!(recv.try_next().is_err());
+
+        assert_eq!(vec![(3u16, "foo")],
+                   snapshot_one.iter().map(|(k, v)| (*k, **v)).collect::<Vec<_>>());
+        assert_eq!(vec![(4u16, "bar")],
+                   snapshot_two.iter().map(|(k, v)| (*k, **v)).collect::<Vec<_>>());
     }
 }

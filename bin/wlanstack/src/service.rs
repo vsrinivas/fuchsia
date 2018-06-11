@@ -7,11 +7,10 @@ use device::{self, DevMgrRef};
 use failure::Error;
 use fidl;
 use fidl::encoding2::OutOfLine;
-use fidl::endpoints2::RequestStream;
 use futures::future::{self, FutureResult};
 use futures::{Future, FutureExt, Never};
-use std::sync::Arc;
-use wlan_service::{self, DeviceService, DeviceServiceImpl, DeviceWatcherControlHandle};
+use watcher_service::WatcherService;
+use wlan_service::{self, DeviceService, DeviceServiceImpl};
 use zx;
 
 fn catch_and_log_err<F>(ctx: &'static str, f: F) -> FutureResult<(), Never>
@@ -27,6 +26,7 @@ where
 
 pub fn device_service(
     devmgr: DevMgrRef, channel: async::Channel,
+    watcher_service: WatcherService<device::PhyDevice, device::IfaceDevice>,
 ) -> impl Future<Item = (), Error = Never> {
 
     DeviceServiceImpl {
@@ -102,10 +102,8 @@ pub fn device_service(
             future::ok(())
         },
 
-        watch_devices: |state, watcher, _c| catch_and_log_err("watch_devices", || {
-            let control_handle = watcher.into_stream()?.control_handle();
-            state.lock().add_listener(Arc::new(control_handle));
-            Ok(())
+        watch_devices: move |_, watcher, _c| catch_and_log_err("watch_devices", || {
+            watcher_service.add_watcher(watcher)
         }),
 
     }.serve(channel)
@@ -122,22 +120,4 @@ fn connect_client_sme(server: Option<super::device::ClientSmeServer>,
     }
     c.send(server.is_some())?;
     Ok(())
-}
-
-impl device::EventListener for DeviceWatcherControlHandle {
-    fn on_phy_added(&self, id: u16) -> Result<(), Error> {
-        self.send_on_phy_added(id).map_err(Into::into)
-    }
-
-    fn on_phy_removed(&self, id: u16) -> Result<(), Error> {
-        self.send_on_phy_removed(id).map_err(Into::into)
-    }
-
-    fn on_iface_added(&self, id: u16) -> Result<(), Error> {
-        self.send_on_iface_added(id).map_err(Into::into)
-    }
-
-    fn on_iface_removed(&self, id: u16) -> Result<(), Error> {
-        self.send_on_iface_removed(id).map_err(Into::into)
-    }
 }
