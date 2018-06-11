@@ -197,7 +197,7 @@ int GatherReports(const char* test_bin, fbl::Array<ReportInfo>* reports) {
 
 int TestRunMain(int argc, char** argv) {
     zx_handle_t report_pipe =
-        zx_get_startup_handle(PA_HND(PA_USER1, 0));
+        zx_take_startup_handle(PA_HND(PA_USER1, 0));
 
     ReportInfo report;
 

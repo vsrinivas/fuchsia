@@ -521,7 +521,7 @@ int main(int argc, char** argv) {
         inspector_dso_free_list(dso_list);
     }
 
-    subject = zx_get_startup_handle(PA_HND(PA_USER0, 0));
+    subject = zx_take_startup_handle(PA_HND(PA_USER0, 0));
     if (subject == ZX_HANDLE_INVALID) {
         fprintf(stderr, "error: unable to find a task to monitor in PA_USER0.\n");
         return 1;
@@ -575,7 +575,7 @@ int main(int argc, char** argv) {
 
     // The exception port may be passed in from the parent process.  If it
     // wasn't, we bind the subject exception port.
-    zx_handle_t ex_port = zx_get_startup_handle(PA_HND(PA_USER0, 1));
+    zx_handle_t ex_port = zx_take_startup_handle(PA_HND(PA_USER0, 1));
     if (ex_port == ZX_HANDLE_INVALID) {
         if ((status = zx_port_create(0, &ex_port)) < 0) {
             print_zx_error("zx_port_create failed", status);

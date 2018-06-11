@@ -404,9 +404,9 @@ static int thread_func(void* arg) {
 
 static void __NO_RETURN test_child(void) {
     unittest_printf("Test child starting.\n");
-    zx_handle_t channel = zx_get_startup_handle(PA_USER0);
+    zx_handle_t channel = zx_take_startup_handle(PA_USER0);
     if (channel == ZX_HANDLE_INVALID)
-        tu_fatal("zx_get_startup_handle", ZX_ERR_BAD_HANDLE - 1000);
+        tu_fatal("zx_take_startup_handle", ZX_ERR_BAD_HANDLE - 1000);
     msg_loop(channel);
     unittest_printf("Test child exiting.\n");
     exit(0);

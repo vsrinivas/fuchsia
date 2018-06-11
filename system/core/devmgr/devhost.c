@@ -965,13 +965,13 @@ __EXPORT int device_host_main(int argc, char** argv) {
 
     log(TRACE, "devhost: main()\n");
 
-    root_ios.ph.handle = zx_get_startup_handle(PA_HND(PA_USER0, 0));
+    root_ios.ph.handle = zx_take_startup_handle(PA_HND(PA_USER0, 0));
     if (root_ios.ph.handle == ZX_HANDLE_INVALID) {
         log(ERROR, "devhost: rpc handle invalid\n");
         return -1;
     }
 
-    root_resource_handle = zx_get_startup_handle(PA_HND(PA_RESOURCE, 0));
+    root_resource_handle = zx_take_startup_handle(PA_HND(PA_RESOURCE, 0));
     if (root_resource_handle == ZX_HANDLE_INVALID) {
         log(ERROR, "devhost: no root resource handle!\n");
     }

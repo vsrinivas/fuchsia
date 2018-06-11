@@ -37,7 +37,7 @@ static void start_main(const struct start_params* p) {
         __libc_extensions_init(p->nhandles, p->handles, p->handle_info,
                                p->namec, p->names);
 
-    // Give any unclaimed handles to zx_get_startup_handle(). This function
+    // Give any unclaimed handles to zx_take_startup_handle(). This function
     // takes ownership of the data, but not the memory: it assumes that the
     // arrays are valid as long as the process is alive.
     __libc_startup_handles_init(p->nhandles, p->handles, p->handle_info);

@@ -1173,7 +1173,7 @@ bool msg_loop(zx_handle_t channel) {
 }
 
 void test_inferior() {
-    zx_handle_t channel = zx_get_startup_handle(PA_USER0);
+    zx_handle_t channel = zx_take_startup_handle(PA_USER0);
     unittest_printf("test_inferior: got handle %d\n", channel);
 
     if (!msg_loop(channel))

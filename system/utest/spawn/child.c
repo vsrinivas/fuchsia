@@ -39,7 +39,7 @@ static bool has_ns(const char* path) {
 }
 
 static bool has_arg(uint32_t arg) {
-    return zx_get_startup_handle(arg) != ZX_HANDLE_INVALID;
+    return zx_take_startup_handle(arg) != ZX_HANDLE_INVALID;
 }
 
 static int check_flags(uint32_t flags, int success) {

@@ -100,8 +100,8 @@ bool vdso_unmap_test(void) {
 bool vdso_map_test(void) {
     BEGIN_TEST;
 
-    zx_handle_t vmo = zx_get_startup_handle(PA_HND(PA_VMO_VDSO, 0));
-    ASSERT_NE(vmo, ZX_HANDLE_INVALID, "zx_get_startup_handle(PA_HND(PA_VMO_VDSO, 0))");
+    zx_handle_t vmo = zx_take_startup_handle(PA_HND(PA_VMO_VDSO, 0));
+    ASSERT_NE(vmo, ZX_HANDLE_INVALID, "zx_take_startup_handle(PA_HND(PA_VMO_VDSO, 0))");
 
     // Since we already have a vDSO mapping, loading it again should fail.
     void* h = dlopen_vmo(vmo, RTLD_LOCAL);

@@ -394,7 +394,7 @@ int main(int argc, char** argv) {
     log_ph.func = log_reader_cb;
     log_ph.waitfor = ZX_LOG_READABLE;
 
-    if ((new_vc_ph.handle = zx_get_startup_handle(PA_HND(PA_USER0, 0))) != ZX_HANDLE_INVALID) {
+    if ((new_vc_ph.handle = zx_take_startup_handle(PA_HND(PA_USER0, 0))) != ZX_HANDLE_INVALID) {
         new_vc_ph.func = new_vc_cb;
         new_vc_ph.waitfor = ZX_CHANNEL_READABLE;
         port_wait(&port, &new_vc_ph);

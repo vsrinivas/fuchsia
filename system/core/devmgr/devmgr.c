@@ -571,7 +571,7 @@ int main(int argc, char** argv) {
 
     devmgr_io_init();
 
-    root_resource_handle = zx_get_startup_handle(PA_HND(PA_RESOURCE, 0));
+    root_resource_handle = zx_take_startup_handle(PA_HND(PA_RESOURCE, 0));
     root_job_handle = zx_job_default();
 
     printf("devmgr: main()\n");
@@ -659,7 +659,7 @@ static loader_service_t* loader_service;
 #define MAXHND ZX_CHANNEL_MAX_MSG_HANDLES
 
 void bootfs_create_from_startup_handle(void) {
-    zx_handle_t bootfs_vmo = zx_get_startup_handle(PA_HND(PA_VMO_BOOTFS, 0));
+    zx_handle_t bootfs_vmo = zx_take_startup_handle(PA_HND(PA_VMO_BOOTFS, 0));
     if ((bootfs_vmo == ZX_HANDLE_INVALID) ||
         (bootfs_create(&bootfs, bootfs_vmo) != ZX_OK)) {
         printf("devmgr: cannot find and open bootfs\n");
@@ -716,7 +716,7 @@ void fshost_start(void) {
     // pass bootdata VMOs to fshost
     for (size_t m = 0; n < MAXHND; m++) {
         uint32_t type = PA_HND(PA_VMO_BOOTDATA, m);
-        if ((handles[n] = zx_get_startup_handle(type)) != ZX_HANDLE_INVALID) {
+        if ((handles[n] = zx_take_startup_handle(type)) != ZX_HANDLE_INVALID) {
             devmgr_set_bootdata(handles[n]);
             types[n++] = type;
         } else {
@@ -732,7 +732,7 @@ void fshost_start(void) {
             handles[n] = ZX_HANDLE_INVALID;
             launchpad_get_vdso_vmo(&handles[n]);
         } else {
-            handles[n] = zx_get_startup_handle(type);
+            handles[n] = zx_take_startup_handle(type);
         }
 
         if (handles[n] != ZX_HANDLE_INVALID) {
@@ -745,7 +745,7 @@ void fshost_start(void) {
     // pass KERNEL FILE VMOS to fsboot
     for (size_t m = 0; n < MAXHND; m++) {
         uint32_t type = PA_HND(PA_VMO_KERNEL_FILE, m);
-        if ((handles[n] = zx_get_startup_handle(type)) != ZX_HANDLE_INVALID) {
+        if ((handles[n] = zx_take_startup_handle(type)) != ZX_HANDLE_INVALID) {
             types[n++] = type;
         } else {
             break;

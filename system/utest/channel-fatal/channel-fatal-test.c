@@ -65,8 +65,8 @@ static void bad_channel_call(void) {
     uint32_t act_bytes = UINT32_MAX;
     uint32_t act_handles = UINT32_MAX;
 
-    zx_handle_t chan = zx_get_startup_handle(PA_HND(PA_USER0, 0));
-    zx_handle_t event = zx_get_startup_handle(PA_HND(PA_USER0, 1));
+    zx_handle_t chan = zx_take_startup_handle(PA_HND(PA_USER0, 0));
+    zx_handle_t event = zx_take_startup_handle(PA_HND(PA_USER0, 1));
 
     // Send a copy of the thread handle to the parent, so the parent can suspend
     // this thread.

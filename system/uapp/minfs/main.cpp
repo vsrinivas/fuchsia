@@ -33,7 +33,7 @@ int do_minfs_check(fbl::unique_ptr<minfs::Bcache> bc) {
 
 int do_minfs_mount(fbl::unique_ptr<minfs::Bcache> bc,
                    minfs::minfs_options_t* options) {
-    zx_handle_t h = zx_get_startup_handle(PA_HND(PA_USER0, 0));
+    zx_handle_t h = zx_take_startup_handle(PA_HND(PA_USER0, 0));
     if (h == ZX_HANDLE_INVALID) {
         FS_TRACE_ERROR("minfs: Could not access startup handle to mount point\n");
         return ZX_ERR_BAD_STATE;

@@ -363,7 +363,7 @@ zx_handle_t launchpad_use_loader_service(launchpad_t* lp, zx_handle_t svc);
 // launchpad_set_vdso_vmo has been called with a valid handle, this
 // just duplicates the handle passed in the last call.  Otherwise,
 // the first time the system vDSO is needed it's fetched with
-// zx_get_startup_handle.
+// zx_take_startup_handle.
 zx_status_t launchpad_get_vdso_vmo(zx_handle_t* out);
 
 // Replace the globally-held VM object handle for the system vDSO.
@@ -371,7 +371,7 @@ zx_status_t launchpad_get_vdso_vmo(zx_handle_t* out);
 // handle, of which the caller takes ownership.  It does not check
 // the handle for validity.  If ZX_HANDLE_INVALID is passed here,
 // then the next time the system vDSO is needed it will be fetched
-// with zx_get_startup_handle as if it were the first time.  If
+// with zx_take_startup_handle as if it were the first time.  If
 // the system vDSO has not been needed before this call, then the
 // return value will be ZX_HANDLE_INVALID.
 zx_handle_t launchpad_set_vdso_vmo(zx_handle_t vmo);

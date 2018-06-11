@@ -787,7 +787,7 @@ static void vdso_unlock(void) __TA_RELEASE(&vdso_mutex) {
 }
 static zx_handle_t vdso_get_vmo(void) {
     if (vdso_vmo == ZX_HANDLE_INVALID)
-        vdso_vmo = zx_get_startup_handle(PA_HND(PA_VMO_VDSO, 0));
+        vdso_vmo = zx_take_startup_handle(PA_HND(PA_VMO_VDSO, 0));
     return vdso_vmo;
 }
 

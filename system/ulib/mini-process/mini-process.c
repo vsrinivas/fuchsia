@@ -98,7 +98,7 @@ zx_status_t start_mini_process_etc(zx_handle_t process, zx_handle_t thread,
         // startup handle).
         static zx_handle_t vdso_vmo = ZX_HANDLE_INVALID;
         if (vdso_vmo == ZX_HANDLE_INVALID) {
-            vdso_vmo = zx_get_startup_handle(PA_HND(PA_VMO_VDSO, 0));
+            vdso_vmo = zx_take_startup_handle(PA_HND(PA_VMO_VDSO, 0));
             if (vdso_vmo == ZX_HANDLE_INVALID) {
                 status = ZX_ERR_INTERNAL;
                 goto exit;

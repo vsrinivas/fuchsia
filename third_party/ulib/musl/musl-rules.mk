@@ -950,9 +950,9 @@ LOCAL_SRCS := \
     $(LOCAL_DIR)/third_party/tre/regerror.c \
     $(LOCAL_DIR)/third_party/tre/regexec.c \
     $(LOCAL_DIR)/third_party/tre/tre-mem.c \
-    $(LOCAL_DIR)/zircon/get_startup_handle.c \
     $(LOCAL_DIR)/zircon/getentropy.c \
     $(LOCAL_DIR)/zircon/internal.c \
+    $(LOCAL_DIR)/zircon/take_startup_handle.c \
     $(LOCAL_DIR)/zircon/thrd_get_zx_handle.c \
 
 # These refer to access.

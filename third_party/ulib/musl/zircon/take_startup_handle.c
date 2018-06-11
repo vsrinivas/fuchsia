@@ -40,7 +40,7 @@ void __libc_startup_handles_init(
     shave_back();
 }
 
-zx_handle_t zx_get_startup_handle(uint32_t hnd_info) {
+zx_handle_t zx_take_startup_handle(uint32_t hnd_info) {
     zx_handle_t result = ZX_HANDLE_INVALID;
     mtx_lock(&startup_handles_lock);
     for (uint32_t i = 0; i < startup_handles_num; ++i) {
@@ -57,4 +57,8 @@ zx_handle_t zx_get_startup_handle(uint32_t hnd_info) {
     }
     mtx_unlock(&startup_handles_lock);
     return result;
+}
+
+zx_handle_t zx_get_startup_handle(uint32_t hnd_info) {
+    return zx_take_startup_handle(hnd_info);
 }

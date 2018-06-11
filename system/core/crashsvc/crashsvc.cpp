@@ -122,17 +122,17 @@ int main(int argc, char** argv) {
     // - the root job handle
     // - the exception port handle, already bound
     // - a channel on which to write messages when exceptions are encountered
-    zx::handle root_job(zx_get_startup_handle(PA_HND(PA_USER0, 0)));
+    zx::handle root_job(zx_take_startup_handle(PA_HND(PA_USER0, 0)));
     if (!root_job.is_valid()) {
         fprintf(stderr, "crashsvc: no root job\n");
         return 1;
     }
-    zx::port exception_port(zx_get_startup_handle(PA_HND(PA_USER0, 1)));
+    zx::port exception_port(zx_take_startup_handle(PA_HND(PA_USER0, 1)));
     if (!exception_port.is_valid()) {
         fprintf(stderr, "crashsvc: no exception port\n");
         return 1;
     }
-    zx::channel channel(zx_get_startup_handle(PA_HND(PA_USER0, 2)));
+    zx::channel channel(zx_take_startup_handle(PA_HND(PA_USER0, 2)));
     if (!channel.is_valid()) {
         fprintf(stderr, "crashsvc: no channel\n");
         return 1;

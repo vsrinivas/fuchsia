@@ -15,7 +15,7 @@
 #include <string.h>
 #include <unittest/unittest.h>
 
-static const zx::vmo vdso_vmo{zx_get_startup_handle(PA_HND(PA_VMO_VDSO, 0))};
+static const zx::vmo vdso_vmo{zx_take_startup_handle(PA_HND(PA_VMO_VDSO, 0))};
 
 class ScratchPad {
 public:

@@ -15,6 +15,9 @@ __BEGIN_CDECLS
 // |hnd_info|.  If one is found, atomically returns it and removes it from the
 // set available to future calls.
 // |hnd_info| is a value returned by PA_HND().
+zx_handle_t zx_take_startup_handle(uint32_t hnd_info);
+
+// DEPRECATED: Remove once clients migrate to zx_take_startup_handle.
 zx_handle_t zx_get_startup_handle(uint32_t hnd_info);
 
 zx_handle_t _zx_thread_self(void);

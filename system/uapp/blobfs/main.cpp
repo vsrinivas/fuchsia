@@ -41,7 +41,7 @@ int do_blobfs_mount(fbl::unique_fd fd, blobfs::blob_options_t* options) {
         options->readonly = block_info.flags & BLOCK_FLAG_READONLY;
     }
 
-    zx::channel root = zx::channel(zx_get_startup_handle(PA_HND(PA_USER0, 0)));
+    zx::channel root = zx::channel(zx_take_startup_handle(PA_HND(PA_USER0, 0)));
     if (!root.is_valid()) {
         FS_TRACE_ERROR("blobfs: Could not access startup handle to mount point\n");
         return -1;

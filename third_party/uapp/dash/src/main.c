@@ -147,7 +147,7 @@ main(int argc, char **argv)
 	init();
 	setstackmark(&smark);
 
-	zx_handle_t ast_vmo = zx_get_startup_handle(PA_HND(PA_USER0, 0));
+	zx_handle_t ast_vmo = zx_take_startup_handle(PA_HND(PA_USER0, 0));
 
 	login = procargs(argc, argv, ast_vmo != ZX_HANDLE_INVALID);
 

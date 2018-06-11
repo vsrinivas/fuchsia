@@ -26,7 +26,7 @@ static zx_handle_t sysinfo_job_root;
 static zx_handle_t get_sysinfo_job_root(void) {
     mtx_lock(&sysinfo_lock);
     if (sysinfo_job_root == ZX_HANDLE_INVALID) {
-        sysinfo_job_root = zx_get_startup_handle(PA_HND(PA_USER0, ID_HJOBROOT));
+        sysinfo_job_root = zx_take_startup_handle(PA_HND(PA_USER0, ID_HJOBROOT));
     }
     mtx_unlock(&sysinfo_lock);
 

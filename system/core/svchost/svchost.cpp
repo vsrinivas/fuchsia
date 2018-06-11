@@ -139,7 +139,7 @@ int main(int argc, char** argv) {
     async_t* async = loop.async();
     svc::Outgoing outgoing(async);
 
-    appmgr_svc = zx_get_startup_handle(PA_HND(PA_USER0, 0));
+    appmgr_svc = zx_take_startup_handle(PA_HND(PA_USER0, 0));
 
     zx_status_t status = outgoing.ServeFromStartupInfo();
     if (status != ZX_OK) {

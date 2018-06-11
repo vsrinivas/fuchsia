@@ -168,13 +168,13 @@ static void setup_bootfs(void) {
     zx_handle_t vmo;
     unsigned idx = 0;
 
-    if ((vmo = zx_get_startup_handle(HND_BOOTFS(0)))) {
+    if ((vmo = zx_take_startup_handle(HND_BOOTFS(0)))) {
         setup_bootfs_vmo(idx++, BOOTDATA_BOOTFS_BOOT, vmo);
     } else {
         printf("devmgr: missing primary bootfs?!\n");
     }
 
-    for (unsigned n = 0; (vmo = zx_get_startup_handle(HND_BOOTDATA(n))); n++) {
+    for (unsigned n = 0; (vmo = zx_take_startup_handle(HND_BOOTDATA(n))); n++) {
         bootdata_t bootdata;
         zx_status_t status = zx_vmo_read(vmo, &bootdata, 0, sizeof(bootdata));
         if (status < 0) {
@@ -259,7 +259,7 @@ done:
 // the filesystem under the path /boot/VMO_SUBDIR_LEN/<vmo-name>.
 static void fetch_vmos(uint_fast8_t type, const char* debug_type_name) {
     for (uint_fast16_t i = 0; true; ++i) {
-        zx_handle_t vmo = zx_get_startup_handle(PA_HND(type, i));
+        zx_handle_t vmo = zx_take_startup_handle(PA_HND(type, i));
         if (vmo == ZX_HANDLE_INVALID)
             break;
 
@@ -382,11 +382,11 @@ int main(int argc, char** argv) {
         argv++;
     }
 
-    zx_handle_t _fs_root = zx_get_startup_handle(PA_HND(PA_USER0, 0));
-    devfs_root = zx_get_startup_handle(PA_HND(PA_USER0, 1));
-    svc_root = zx_get_startup_handle(PA_HND(PA_USER0, 2));
-    zx_handle_t devmgr_loader = zx_get_startup_handle(PA_HND(PA_USER0, 3));
-    fshost_event = zx_get_startup_handle(PA_HND(PA_USER1, 0));
+    zx_handle_t _fs_root = zx_take_startup_handle(PA_HND(PA_USER0, 0));
+    devfs_root = zx_take_startup_handle(PA_HND(PA_USER0, 1));
+    svc_root = zx_take_startup_handle(PA_HND(PA_USER0, 2));
+    zx_handle_t devmgr_loader = zx_take_startup_handle(PA_HND(PA_USER0, 3));
+    fshost_event = zx_take_startup_handle(PA_HND(PA_USER1, 0));
 
     fshost_start();
 

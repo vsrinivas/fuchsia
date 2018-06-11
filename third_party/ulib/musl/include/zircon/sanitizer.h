@@ -91,7 +91,7 @@ zx_status_t __sanitizer_get_configuration(const char* config_name,
 // This is called at program startup, with the arguments that will be
 // passed to main.  This is called before any other application code,
 // including both static constructors and initialization of things like
-// fdio and zx_get_startup_handle.  It's basically the first thing called
+// fdio and zx_take_startup_handle.  It's basically the first thing called
 // after libc's most basic internal global initialization is complete and
 // the initial thread has switched to its real thread stack.  Since not
 // even all of libc's own constructors have run yet, this should not call
