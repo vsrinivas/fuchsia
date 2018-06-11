@@ -745,7 +745,7 @@ static int aml_raw_nand_irq_thread(void *arg) {
     aml_raw_nand_t* raw_nand = arg;
 
     while (1) {
-        uint64_t slots;
+        zx_time_t slots;
 
         zx_status_t result = zx_interrupt_wait(raw_nand->irq_handle, &slots);
         if (result != ZX_OK) {
