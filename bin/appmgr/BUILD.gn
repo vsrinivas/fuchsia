@@ -38,6 +38,8 @@ source_set("lib") {
     "runtime_metadata.h",
     "sandbox_metadata.cc",
     "sandbox_metadata.h",
+    "service_provider_dir_impl.cc",
+    "service_provider_dir_impl.h",
     "url_resolver.cc",
     "url_resolver.h",
     "util.cc",
@@ -108,12 +110,14 @@ executable("tests") {
     "namespace_builder_unittest.cc",
     "runtime_metadata_unittest.cc",
     "sandbox_metadata_unittest.cc",
+    "service_provider_dir_unittest.cc",
     "util_unittest.cc",
   ]
 
   deps = [
     ":appmgr_for_test",
     ":lib",
+    "//garnet/examples/fidl/services:echo2",
     "//garnet/public/lib/fxl/test:gtest_main",
     "//garnet/public/lib/gtest",
   ]

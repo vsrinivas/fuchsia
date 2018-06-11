@@ -4,8 +4,9 @@
 
 #include "garnet/bin/appmgr/namespace.h"
 
-#include <lib/fdio/util.h>
 #include <fuchsia/process/cpp/fidl.h>
+#include <lib/async/default.h>
+#include <lib/fdio/util.h>
 
 #include <utility>
 
@@ -17,34 +18,46 @@ namespace sys {
 
 Namespace::Namespace(fxl::RefPtr<Namespace> parent, Realm* realm,
                      ServiceListPtr service_list)
-    : parent_(parent), realm_(realm) {
-  fuchsia::sys::ServiceProviderPtr services_backend;
+    : vfs_(async_get_default()),
+      services_(fbl::AdoptRef(new ServiceProviderDirImpl())),
+      parent_(parent),
+      realm_(realm) {
   if (parent_) {
-    parent_->services().AddBinding(services_backend.NewRequest());
+    services_->set_parent(parent_->services());
   }
-  services_.set_backend(std::move(services_backend));
 
-  services_.AddService<Environment>(
-      [this](fidl::InterfaceRequest<Environment> request) {
-        environment_bindings_.AddBinding(this, std::move(request));
-      });
-  services_.AddService<Launcher>(
-      [this](fidl::InterfaceRequest<Launcher> request) {
-        launcher_bindings_.AddBinding(this, std::move(request));
-      });
-  services_.AddService<fuchsia::process::Launcher>(
-      [this](fidl::InterfaceRequest<fuchsia::process::Launcher> request) {
-        ConnectToEnvironmentService(std::move(request));
-      });
+  services_->AddService(
+      fbl::AdoptRef(new fs::Service([this](zx::channel channel) {
+        environment_bindings_.AddBinding(
+            this, fidl::InterfaceRequest<Environment>(std::move(channel)));
+        return ZX_OK;
+      })),
+      Environment::Name_);
+  services_->AddService(
+      fbl::AdoptRef(new fs::Service([this](zx::channel channel) {
+        launcher_bindings_.AddBinding(
+            this, fidl::InterfaceRequest<Launcher>(std::move(channel)));
+        return ZX_OK;
+      })),
+      Launcher::Name_);
+  services_->AddService(
+      fbl::AdoptRef(new fs::Service([this](zx::channel channel) {
+        ConnectToEnvironmentService(
+            fidl::InterfaceRequest<fuchsia::process::Launcher>(
+                std::move(channel)));
+        return ZX_OK;
+      })),
+      fuchsia::process::Launcher::Name_);
 
   if (service_list) {
     auto& names = service_list->names;
     additional_services_ = service_list->provider.Bind();
     for (auto& name : *names) {
-      services_.AddServiceForName(
-          [this, name](zx::channel channel) {
+      services_->AddService(
+          fbl::AdoptRef(new fs::Service([this, name](zx::channel channel) {
             additional_services_->ConnectToService(name, std::move(channel));
-          },
+            return ZX_OK;
+          })),
           name);
     }
   }
@@ -69,17 +82,26 @@ void Namespace::GetLauncher(fidl::InterfaceRequest<Launcher> launcher) {
 }
 
 void Namespace::GetServices(fidl::InterfaceRequest<ServiceProvider> services) {
-  services_.AddBinding(std::move(services));
+  services_->AddBinding(std::move(services));
 }
 
-void Namespace::GetDirectory(zx::channel directory_request) {
-  services_.ServeDirectory(std::move(directory_request));
+zx_status_t Namespace::ServeServiceDirectory(zx::channel directory_request) {
+  return vfs_.ServeDirectory(services_, std::move(directory_request));
 }
 
 void Namespace::CreateComponent(
     LaunchInfo launch_info,
     fidl::InterfaceRequest<ComponentController> controller) {
   realm_->CreateComponent(std::move(launch_info), std::move(controller));
+}
+
+zx::channel Namespace::OpenServicesAsDirectory() {
+  zx::channel h1, h2;
+  if (zx::channel::create(0, &h1, &h2) != ZX_OK)
+    return zx::channel();
+  if (ServeServiceDirectory(std::move(h1)) != ZX_OK)
+    return zx::channel();
+  return h2;
 }
 
 }  // namespace sys

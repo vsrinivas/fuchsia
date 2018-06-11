@@ -9,12 +9,13 @@
 #include <string>
 #include <unordered_map>
 
+#include <fs/synchronous-vfs.h>
 #include <fuchsia/sys/cpp/fidl.h>
+#include "garnet/bin/appmgr/service_provider_dir_impl.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/ref_counted.h"
 #include "lib/fxl/strings/string_view.h"
-#include "lib/svc/cpp/service_provider_bridge.h"
 
 namespace fuchsia {
 namespace sys {
@@ -24,9 +25,13 @@ class Namespace : public Environment,
                   public Launcher,
                   public fxl::RefCountedThreadSafe<Namespace> {
  public:
-  ServiceProviderBridge& services() { return services_; }
+  fbl::RefPtr<ServiceProviderDirImpl>& services() { return services_; }
 
   void AddBinding(fidl::InterfaceRequest<Environment> environment);
+
+  zx_status_t ServeServiceDirectory(zx::channel request);
+
+  zx::channel OpenServicesAsDirectory();
 
   // Environment implementation:
 
@@ -40,7 +45,9 @@ class Namespace : public Environment,
 
   void GetServices(fidl::InterfaceRequest<ServiceProvider> services) override;
 
-  void GetDirectory(zx::channel directory_request) override;
+  void GetDirectory(zx::channel directory_request) override {
+    ServeServiceDirectory(std::move(directory_request));
+  }
 
   // Launcher implementation:
 
@@ -59,7 +66,8 @@ class Namespace : public Environment,
   fidl::BindingSet<Environment> environment_bindings_;
   fidl::BindingSet<Launcher> launcher_bindings_;
 
-  ServiceProviderBridge services_;
+  fs::SynchronousVfs vfs_;
+  fbl::RefPtr<ServiceProviderDirImpl> services_;
 
   fxl::RefPtr<Namespace> parent_;
   Realm* realm_;

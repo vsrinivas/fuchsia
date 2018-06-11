@@ -1,0 +1,65 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+#include "garnet/bin/appmgr/service_provider_dir_impl.h"
+
+#include <lib/async/default.h>
+#include <lib/fdio/util.h>
+#include "lib/fxl/logging.h"
+
+namespace fuchsia {
+namespace sys {
+
+ServiceProviderDirImpl::ServiceProviderDirImpl()
+    : vfs_(async_get_default()), root_(fbl::AdoptRef(new fs::PseudoDir())), weak_factory_(this) {}
+
+ServiceProviderDirImpl::~ServiceProviderDirImpl() {}
+
+void ServiceProviderDirImpl::AddService(fbl::RefPtr<fs::Service> service,
+                                        const std::string& service_name) {
+  root_->AddEntry(service_name, std::move(service));
+}
+
+void ServiceProviderDirImpl::AddBinding(
+    fidl::InterfaceRequest<ServiceProvider> request) {
+  bindings_.AddBinding(this, std::move(request));
+}
+
+void ServiceProviderDirImpl::ConnectToService(fidl::StringPtr service_name,
+                                              zx::channel channel) {
+  fbl::RefPtr<fs::Vnode> child;
+  zx_status_t status = root_->Lookup(&child, service_name.get());
+  if (status == ZX_OK) {
+    status = child->Serve(&vfs_, std::move(channel), 0);
+    if (status != ZX_OK) {
+      FXL_LOG(ERROR) << "Could not serve " << service_name << ": " << status;
+    }
+  } else if (parent_) {
+    parent_->ConnectToService(std::move(service_name), std::move(channel));
+  } else if (backing_dir_) {
+    fdio_service_connect_at(backing_dir_.get(), service_name->c_str(),
+                            channel.release());
+  }
+}
+
+zx_status_t ServiceProviderDirImpl::Getattr(vnattr_t* a) {
+  return root_->Getattr(a);
+}
+
+zx_status_t ServiceProviderDirImpl::Lookup(fbl::RefPtr<fs::Vnode>* out,
+                                           fbl::StringPiece name) {
+  *out = fbl::AdoptRef(
+      new fs::Service([name = std::string(name.data(), name.length()),
+                       ptr = weak_factory_.GetWeakPtr()](zx::channel channel) {
+        if(ptr) {
+          ptr->ConnectToService(name, std::move(channel));
+          return ZX_OK;
+        }
+        return ZX_ERR_NOT_FOUND;
+      }));
+  return ZX_OK;
+}
+
+}  // namespace sys
+}  // namespace fuchsia

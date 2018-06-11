@@ -171,11 +171,11 @@ Realm::Realm(RealmArgs args)
   hub_.SetName(label_);
   hub_.SetJobId(koid_);
 
-  default_namespace_->services().set_backing_dir(
+  default_namespace_->services()->set_backing_dir(
       std::move(args.host_directory));
 
   ServiceProviderPtr service_provider;
-  default_namespace_->services().AddBinding(service_provider.NewRequest());
+  default_namespace_->services()->AddBinding(service_provider.NewRequest());
   loader_ = ConnectToService<Loader>(service_provider.get());
 }
 
@@ -221,7 +221,7 @@ void Realm::CreateNestedJob(
   while (root_realm->parent() != nullptr) {
     root_realm = root_realm->parent();
   }
-  child->default_namespace_->services().ServeDirectory(
+  child->default_namespace_->ServeServiceDirectory(
       std::move(root_realm->svc_channel_server_));
 
   if (run_virtual_console_) {
@@ -277,7 +277,7 @@ void Realm::CreateComponent(
 }
 
 void Realm::CreateShell(const std::string& path) {
-  zx::channel svc = default_namespace_->services().OpenAsDirectory();
+  zx::channel svc = default_namespace_->OpenServicesAsDirectory();
   if (!svc)
     return;
 
@@ -336,7 +336,7 @@ void Realm::CreateComponentWithProcess(
     PackagePtr package, LaunchInfo launch_info,
     fidl::InterfaceRequest<ComponentController> controller,
     fxl::RefPtr<Namespace> ns, ComponentObjectCreatedCallback callback) {
-  zx::channel svc = ns->services().OpenAsDirectory();
+  zx::channel svc = ns->OpenServicesAsDirectory();
   if (!svc)
     return;
 
@@ -384,7 +384,7 @@ void Realm::CreateComponentFromPackage(
     PackagePtr package, LaunchInfo launch_info,
     fidl::InterfaceRequest<ComponentController> controller,
     fxl::RefPtr<Namespace> ns, ComponentObjectCreatedCallback callback) {
-  zx::channel svc = ns->services().OpenAsDirectory();
+  zx::channel svc = ns->OpenServicesAsDirectory();
   if (!svc)
     return;
 
