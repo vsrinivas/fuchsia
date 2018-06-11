@@ -24,7 +24,7 @@ executable("fake_failing_test") {
   testonly = true
 
   deps = [
-    "//garnet/public/lib/test_runner/cpp:gtest_main",
+    "//third_party/googletest:gtest_main",
   ]
 
   sources = [
@@ -36,7 +36,7 @@ executable("fake_passing_test") {
   testonly = true
 
   deps = [
-    "//garnet/public/lib/test_runner/cpp:gtest_main",
+    "//third_party/googletest:gtest_main",
   ]
 
   sources = [

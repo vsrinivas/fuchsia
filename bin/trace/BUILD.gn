@@ -95,7 +95,7 @@ executable("trace_tests_bin") {
   deps = [
     "//garnet/bin/trace:unittests",
     "//garnet/lib/measure:unittests",
-    "//garnet/public/lib/test_runner/cpp:gtest_main",
+    "//third_party/googletest:gtest_main",
   ]
 }
 

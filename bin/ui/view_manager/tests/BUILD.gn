@@ -25,7 +25,7 @@ executable("view_manager_apptests") {
     "//garnet/bin/ui/view_manager/input",
     "//garnet/public/lib/fidl/cpp",
     "//garnet/public/lib/gtest",
-    "//garnet/public/lib/test_runner/cpp:gtest_main",
     "//garnet/public/lib/ui/tests/mocks",
+    "//third_party/googletest:gtest_main",
   ]
 }
