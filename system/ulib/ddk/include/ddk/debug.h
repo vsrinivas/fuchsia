@@ -121,13 +121,4 @@ static inline uint32_t driver_get_log_flags(void) {
     return __zircon_driver_rec__.log_flags;
 }
 
-typedef uint32_t DPRINTF_IS_DEPRECATED_USE_ZXLOGF __attribute__((deprecated));
-#define dprintf(flag, fmt...) \
-    do { \
-        if (zxlog_level_enabled_etc(DDK_LOG_##flag)) { \
-            driver_printf((DPRINTF_IS_DEPRECATED_USE_ZXLOGF)(DDK_LOG_##flag), fmt); \
-        } \
-    } while (0)
-
-
 __END_CDECLS
