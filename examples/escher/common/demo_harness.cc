@@ -22,9 +22,7 @@ DemoHarness::DemoHarness(WindowParams window_params)
   // Init() is called by DemoHarness::New().
 }
 
-DemoHarness::~DemoHarness() {
-  FXL_DCHECK(shutdown_complete_);
-}
+DemoHarness::~DemoHarness() { FXL_DCHECK(shutdown_complete_); }
 
 void DemoHarness::Init(InstanceParams instance_params) {
   FXL_LOG(INFO) << "Initializing " << window_params_.window_name
@@ -189,6 +187,13 @@ void DemoHarness::CreateSwapchain() {
   // resizing the window.
   vk::SwapchainKHR old_swapchain = nullptr;
 
+  // Using eTransferDst allows us to blit debug info onto the surface.
+  // Using eSampled allows us to save memory by using the color attachment
+  // for intermediate computation.
+  const vk::ImageUsageFlags kImageUsageFlags =
+      vk::ImageUsageFlagBits::eColorAttachment |
+      vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eSampled;
+
   // Create the swapchain.
   vk::SwapchainKHR swapchain;
   {
@@ -199,12 +204,7 @@ void DemoHarness::CreateSwapchain() {
     info.imageColorSpace = color_space;
     info.imageExtent = swapchain_extent;
     info.imageArrayLayers = 1;  // TODO: what is this?
-    // Using eTransferDst allows us to blit debug info onto the surface.
-    // Using eSampled allows us to save memory by using the color attachment
-    // for intermediate computation.
-    info.imageUsage = vk::ImageUsageFlagBits::eColorAttachment |
-                      vk::ImageUsageFlagBits::eTransferDst |
-                      vk::ImageUsageFlagBits::eSampled;
+    info.imageUsage = kImageUsageFlags;
     info.queueFamilyIndexCount = 1;
     uint32_t queue_family_index = device_queues_->vk_main_queue_family();
     info.pQueueFamilyIndices = &queue_family_index;
@@ -237,7 +237,7 @@ void DemoHarness::CreateSwapchain() {
       image_info.format = format;
       image_info.width = swapchain_extent.width;
       image_info.height = swapchain_extent.height;
-      image_info.usage = vk::ImageUsageFlagBits::eColorAttachment;
+      image_info.usage = kImageUsageFlags;
 
       auto escher_image = escher::Image::New(swapchain_image_owner_.get(),
                                              image_info, im, nullptr);
@@ -275,13 +275,9 @@ void DemoHarness::DestroyInstance() {
 }
 
 VkBool32 DemoHarness::HandleDebugReport(
-    VkDebugReportFlagsEXT flags_in,
-    VkDebugReportObjectTypeEXT object_type_in,
-    uint64_t object,
-    size_t location,
-    int32_t message_code,
-    const char* pLayerPrefix,
-    const char* pMessage) {
+    VkDebugReportFlagsEXT flags_in, VkDebugReportObjectTypeEXT object_type_in,
+    uint64_t object, size_t location, int32_t message_code,
+    const char* pLayerPrefix, const char* pMessage) {
   vk::DebugReportFlagsEXT flags(
       static_cast<vk::DebugReportFlagBitsEXT>(flags_in));
   vk::DebugReportObjectTypeEXT object_type(

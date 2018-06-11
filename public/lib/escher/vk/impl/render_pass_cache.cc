@@ -5,10 +5,10 @@
 #include "lib/escher/vk/impl/render_pass_cache.h"
 
 #include "lib/escher/resources/resource_recycler.h"
+#include "lib/escher/third_party/granite/vk/render_pass.h"
 #include "lib/escher/util/enum_cast.h"
 #include "lib/escher/util/hasher.h"
 #include "lib/escher/util/trace_macros.h"
-#include "lib/escher/vk/impl/render_pass.h"
 #include "lib/escher/vk/render_pass_info.h"
 #include "lib/escher/vk/vulkan_limits.h"
 

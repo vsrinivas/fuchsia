@@ -9,11 +9,15 @@ package("escher_examples") {
 
   deps = [
     "waterfall",
+    "waterfall2",
   ]
 
   binaries = [
     {
       name = "waterfall"
+    },
+    {
+      name = "waterfall2"
     },
   ]
 }

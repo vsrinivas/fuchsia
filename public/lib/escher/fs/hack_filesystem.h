@@ -48,7 +48,9 @@ class HackFilesystem : public fxl::RefCountedThreadSafe<HackFilesystem> {
   // is prepended to each path.  On Linux, the files are assumed to be in a
   // subdirectory of $FUCHSIA_DIR/garnet/public/lib/escher/, and we furthermore
   // assume that $PWD == $FUCHSIA_DIR.
-  bool InitializeWithRealFiles(std::vector<HackFilePath> paths);
+  bool InitializeWithRealFiles(
+      std::vector<HackFilePath> paths,
+      const char* linux_prefix = "garnet/public/lib/escher/");
 
  private:
   friend class HackFilesystemWatcher;

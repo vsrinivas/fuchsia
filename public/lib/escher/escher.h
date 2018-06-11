@@ -10,6 +10,8 @@
 #include "lib/escher/forward_declarations.h"
 #include "lib/escher/shape/mesh_builder_factory.h"
 #include "lib/escher/status.h"
+#include "lib/escher/util/hash.h"
+#include "lib/escher/util/hash_map.h"
 #include "lib/escher/vk/vulkan_context.h"
 #include "lib/escher/vk/vulkan_device_queues.h"
 #include "lib/fxl/macros.h"
@@ -78,6 +80,9 @@ class Escher : public MeshBuilderFactory {
 
   uint64_t GetNumGpuBytesAllocated();
 
+  impl::DescriptorSetAllocator* GetDescriptorSetAllocator(
+      const impl::DescriptorSetLayout& layout);
+
   // Do periodic housekeeping.  This is called by Renderer::EndFrame(), so you
   // don't need to call it if your application is constantly renderering.
   // However, if your app enters a "quiet period" then you might want to
@@ -104,6 +109,15 @@ class Escher : public MeshBuilderFactory {
   shaderc::Compiler* shaderc_compiler() { return shaderc_compiler_.get(); }
   impl::ImageCache* image_cache() { return image_cache_.get(); }
   impl::MeshManager* mesh_manager() { return mesh_manager_.get(); }
+  impl::PipelineLayoutCache* pipeline_layout_cache() {
+    return pipeline_layout_cache_.get();
+  }
+  impl::RenderPassCache* render_pass_cache() const {
+    return render_pass_cache_.get();
+  }
+  impl::FramebufferAllocator* framebuffer_allocator() const {
+    return framebuffer_allocator_.get();
+  }
 
   // Pool for CommandBuffers submitted on the main queue.
   impl::CommandBufferPool* command_buffer_pool() {
@@ -140,6 +154,13 @@ class Escher : public MeshBuilderFactory {
   std::unique_ptr<impl::MeshManager> mesh_manager_;
 
   std::unique_ptr<impl::PipelineCache> pipeline_cache_;
+  std::unique_ptr<impl::PipelineLayoutCache> pipeline_layout_cache_;
+
+  std::unique_ptr<impl::RenderPassCache> render_pass_cache_;
+  std::unique_ptr<impl::FramebufferAllocator> framebuffer_allocator_;
+
+  HashMap<Hash, std::unique_ptr<impl::DescriptorSetAllocator>>
+      descriptor_set_allocators_;
 
   std::atomic<uint32_t> renderer_count_;
 

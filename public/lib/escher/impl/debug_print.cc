@@ -11,8 +11,10 @@
 #include "lib/escher/impl/model_pipeline_spec.h"
 #include "lib/escher/scene/camera.h"
 #include "lib/escher/scene/viewing_volume.h"
+#include "lib/escher/third_party/granite/vk/descriptor_set_layout.h"
+#include "lib/escher/third_party/granite/vk/pipeline_layout.h"
+#include "lib/escher/util/bit_ops.h"
 #include "lib/escher/vk/image.h"
-#include "lib/escher/vk/impl/descriptor_set_layout.h"
 #include "lib/escher/vk/shader_module.h"
 
 namespace escher {
@@ -235,6 +237,21 @@ std::ostream& operator<<(std::ostream& str, const ShaderStage& stage) {
     case ShaderStage::kEnumCount:
       return str << "ShaderStage::kEnumCount (INVALID)";
   }
+}
+
+std::ostream& operator<<(std::ostream& str,
+                         const impl::PipelineLayoutSpec& spec) {
+  str << "==============PipelineLayoutSpec[\n\tattribute_mask: " << std::hex
+      << spec.attribute_mask
+      << "\n\trender_target_mask: " << spec.render_target_mask
+      << "\n\tnum_push_constant_ranges: " << spec.num_push_constant_ranges
+      << "\n\tdescriptor_set_mask: " << spec.descriptor_set_mask;
+  ForEachBitIndex(spec.descriptor_set_mask, [&](uint32_t index) {
+    str << "\n=== index: " << index << " "
+        << spec.descriptor_set_layouts[index];
+  });
+
+  return str << "\n]";
 }
 
 }  // namespace escher

@@ -13,6 +13,7 @@
 
 namespace escher {
 
+// Encapsulate a VkSwapchain along with associated metadata.
 struct VulkanSwapchain {
   vk::SwapchainKHR swapchain;
   std::vector<ImagePtr> images;
@@ -22,19 +23,11 @@ struct VulkanSwapchain {
   vk::ColorSpaceKHR color_space;
 
   VulkanSwapchain(vk::SwapchainKHR swapchain_in,
-                  std::vector<ImagePtr> images_in,
-                  uint32_t width_in,
-                  uint32_t height_in,
-                  vk::Format format_in,
-                  vk::ColorSpaceKHR color_space_in)
-      : swapchain(swapchain_in),
-        images(std::move(images_in)),
-        width(width_in),
-        height(height_in),
-        format(format_in),
-        color_space(color_space_in) {}
+                  std::vector<ImagePtr> images_in, uint32_t width_in,
+                  uint32_t height_in, vk::Format format_in,
+                  vk::ColorSpaceKHR color_space_in);
 
-  VulkanSwapchain() : width(UINT32_MAX), height(UINT32_MAX) {}
+  VulkanSwapchain();
 };
 
 }  // namespace escher

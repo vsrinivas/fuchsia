@@ -1,9 +1,30 @@
-// Copyright 2018 The Fuchsia Authors. All rights reserved.
-// Use of this source code is governed by a BSD-style license that can be
-// found in the LICENSE file.
+/* Copyright (c) 2017 Hans-Kristian Arntzen
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining
+ * a copy of this software and associated documentation files (the
+ * "Software"), to deal in the Software without restriction, including
+ * without limitation the rights to use, copy, modify, merge, publish,
+ * distribute, sublicense, and/or sell copies of the Software, and to
+ * permit persons to whom the Software is furnished to do so, subject to
+ * the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be
+ * included in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+ * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+ * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+ * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
 
-#ifndef LIB_ESCHER_VK_IMPL_RENDER_PASS_H_
-#define LIB_ESCHER_VK_IMPL_RENDER_PASS_H_
+// Based on the following files from the Granite rendering engine:
+// - vulkan/render_pass.hpp
+
+#ifndef LIB_ESCHER_THIRD_PARTY_GRANITE_VK_RENDER_PASS_H_
+#define LIB_ESCHER_THIRD_PARTY_GRANITE_VK_RENDER_PASS_H_
 
 #include <vulkan/vulkan.hpp>
 
@@ -138,4 +159,4 @@ inline bool RenderPass::SubpassHasStencil(uint32_t subpass) const {
 }  // namespace impl
 }  // namespace escher
 
-#endif  // LIB_ESCHER_VK_IMPL_RENDER_PASS_H_
+#endif  // LIB_ESCHER_THIRD_PARTY_GRANITE_VK_RENDER_PASS_H_

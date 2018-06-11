@@ -6,7 +6,7 @@
 
 #include "lib/escher/impl/vulkan_utils.h"
 #include "lib/escher/resources/resource_recycler.h"
-#include "lib/escher/vk/impl/render_pass.h"
+#include "lib/escher/third_party/granite/vk/render_pass.h"
 #include "lib/escher/vk/vulkan_limits.h"
 
 namespace escher {

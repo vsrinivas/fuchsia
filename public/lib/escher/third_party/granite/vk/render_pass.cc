@@ -21,9 +21,9 @@
  */
 
 // Based on the following files from the Granite rendering engine:
-// - vulkan/render_pass.cc
+// - vulkan/render_pass.cpp
 
-#include "lib/escher/vk/impl/render_pass.h"
+#include "lib/escher/third_party/granite/vk/render_pass.h"
 
 #include "lib/escher/impl/vulkan_utils.h"
 #include "lib/escher/resources/resource_recycler.h"

@@ -72,11 +72,12 @@ DescriptorSetAllocator::PoolPolicy::PoolPolicy(vk::Device device,
       continue;
     }
   }
-  FXL_DCHECK(num_bindings);
 
   vk::DescriptorSetLayoutCreateInfo info;
-  info.bindingCount = num_bindings;
-  info.pBindings = bindings.data();
+  if (num_bindings) {
+    info.bindingCount = num_bindings;
+    info.pBindings = bindings.data();
+  }
 
   vk_layout_ = ESCHER_CHECKED_VK_RESULT(device.createDescriptorSetLayout(info));
 }

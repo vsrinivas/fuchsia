@@ -11,8 +11,14 @@
 #include "lib/escher/profiling/timestamp_profiler.h"
 #include "lib/escher/renderer/frame.h"
 #include "lib/escher/resources/resource_recycler.h"
+#include "lib/escher/util/hasher.h"
 #include "lib/escher/util/image_utils.h"
+#include "lib/escher/util/trace_macros.h"
 #include "lib/escher/vk/gpu_allocator.h"
+#include "lib/escher/vk/impl/descriptor_set_allocator.h"
+#include "lib/escher/vk/impl/framebuffer_allocator.h"
+#include "lib/escher/vk/impl/pipeline_layout_cache.h"
+#include "lib/escher/vk/impl/render_pass_cache.h"
 #include "lib/escher/vk/naive_gpu_allocator.h"
 #include "lib/escher/vk/texture.h"
 #include "third_party/shaderc/libshaderc/include/shaderc/shaderc.hpp"
@@ -82,6 +88,12 @@ Escher::Escher(VulkanDeviceQueuesPtr device)
           NewMeshManager(command_buffer_pool(), transfer_command_buffer_pool(),
                          gpu_allocator(), gpu_uploader(), resource_recycler())),
       pipeline_cache_(std::make_unique<impl::PipelineCache>()),
+      pipeline_layout_cache_(
+          std::make_unique<impl::PipelineLayoutCache>(resource_recycler())),
+      render_pass_cache_(
+          std::make_unique<impl::RenderPassCache>(resource_recycler())),
+      framebuffer_allocator_(std::make_unique<impl::FramebufferAllocator>(
+          resource_recycler(), render_pass_cache_.get())),
       renderer_count_(0) {
   FXL_DCHECK(vulkan_context_.instance);
   FXL_DCHECK(vulkan_context_.physical_device);
@@ -143,6 +155,7 @@ ImagePtr Escher::NewNoiseImage(uint32_t width, uint32_t height) {
 TexturePtr Escher::NewTexture(ImagePtr image, vk::Filter filter,
                               vk::ImageAspectFlags aspect_mask,
                               bool use_unnormalized_coordinates) {
+  TRACE_DURATION("gfx", "Escher::NewTexture (from image)");
   return fxl::MakeRefCounted<Texture>(resource_recycler(), std::move(image),
                                       filter, aspect_mask,
                                       use_unnormalized_coordinates);
@@ -154,6 +167,7 @@ TexturePtr Escher::NewTexture(vk::Format format, uint32_t width,
                               vk::Filter filter,
                               vk::ImageAspectFlags aspect_flags,
                               bool use_unnormalized_coordinates) {
+  TRACE_DURATION("gfx", "Escher::NewTexture (new image)");
   ImageInfo image_info{.format = format,
                        .width = width,
                        .height = height,
@@ -188,6 +202,12 @@ TexturePtr Escher::NewAttachmentTexture(vk::Format format, uint32_t width,
 }
 
 FramePtr Escher::NewFrame(const char* trace_literal, bool enable_gpu_logging) {
+  TRACE_DURATION("gfx", "escher::Escher::NewFrame ");
+  for (auto& pair : descriptor_set_allocators_) {
+    pair.second->BeginFrame();
+  }
+  framebuffer_allocator_->BeginFrame();
+
   auto frame = fxl::AdoptRef<Frame>(
       new Frame(this, ++next_frame_number_, trace_literal, enable_gpu_logging));
   frame->BeginFrame();
@@ -196,6 +216,34 @@ FramePtr Escher::NewFrame(const char* trace_literal, bool enable_gpu_logging) {
 
 uint64_t Escher::GetNumGpuBytesAllocated() {
   return gpu_allocator()->total_slab_bytes();
+}
+
+impl::DescriptorSetAllocator* Escher::GetDescriptorSetAllocator(
+    const impl::DescriptorSetLayout& layout) {
+  TRACE_DURATION("gfx", "escher::Escher::GetDescriptorSetAllocator");
+  static_assert(sizeof(impl::DescriptorSetLayout) == 32,
+                "hash code below must be updated");
+  Hasher h;
+  h.u32(layout.sampled_image_mask);
+  h.u32(layout.storage_image_mask);
+  h.u32(layout.uniform_buffer_mask);
+  h.u32(layout.storage_buffer_mask);
+  h.u32(layout.sampled_buffer_mask);
+  h.u32(layout.input_attachment_mask);
+  h.u32(layout.fp_mask);
+  h.u32(static_cast<uint32_t>(layout.stages));
+  Hash hash = h.value();
+
+  auto it = descriptor_set_allocators_.find(hash);
+  if (it != descriptor_set_allocators_.end()) {
+    FXL_DCHECK(layout == it->second->layout()) << "hash collision.";
+    return it->second.get();
+  }
+
+  TRACE_DURATION("gfx", "escher::Escher::GetDescriptorSetAllocator[creation]");
+  auto new_allocator = new impl::DescriptorSetAllocator(vk_device(), layout);
+  descriptor_set_allocators_.emplace_hint(it, hash, new_allocator);
+  return new_allocator;
 }
 
 }  // namespace escher

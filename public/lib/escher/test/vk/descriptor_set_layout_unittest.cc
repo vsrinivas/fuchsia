@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "lib/escher/vk/impl/descriptor_set_layout.h"
+#include "lib/escher/third_party/granite/vk/descriptor_set_layout.h"
 #include "lib/escher/vk/vulkan_limits.h"
 
 #include "gtest/gtest.h"

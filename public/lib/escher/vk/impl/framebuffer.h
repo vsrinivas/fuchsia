@@ -8,7 +8,7 @@
 #include <vulkan/vulkan.hpp>
 
 #include "lib/escher/forward_declarations.h"
-#include "lib/escher/vk/impl/render_pass.h"
+#include "lib/escher/third_party/granite/vk/render_pass.h"
 #include "lib/escher/vk/render_pass_info.h"
 
 namespace escher {
@@ -50,6 +50,7 @@ class Framebuffer : public Resource {
 
   uint32_t width() const { return width_; }
   uint32_t height() const { return height_; }
+  vk::Extent2D extent() const { return {width_, height_}; }
 
  private:
   vk::Framebuffer framebuffer_;

@@ -7,7 +7,7 @@
 
 #include "lib/escher/forward_declarations.h"
 #include "lib/escher/util/hash_cache.h"
-#include "lib/escher/vk/framebuffer.h"
+#include "lib/escher/vk/impl/framebuffer.h"
 
 namespace escher {
 namespace impl {

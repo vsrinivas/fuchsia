@@ -4,9 +4,11 @@
 
 #include "lib/escher/vk/image_view.h"
 
+#include "lib/escher/escher.h"
 #include "lib/escher/impl/command_buffer.h"
 #include "lib/escher/impl/vulkan_utils.h"
 #include "lib/escher/resources/resource_recycler.h"
+#include "lib/escher/util/image_utils.h"
 #include "lib/escher/vk/image.h"
 
 namespace escher {
@@ -21,6 +23,21 @@ ImageView::ImageView(ResourceRecycler* resource_recycler, ImagePtr image,
       image_(std::move(image)),
       width_(image_->width()),
       height_(image_->height()) {
+  if (!aspect_mask) {
+    auto pair = image_utils::IsDepthStencilFormat(image_->format());
+    if (!pair.first && !pair.second) {
+      // Assume color.
+      aspect_mask = vk::ImageAspectFlagBits::eColor;
+    } else {
+      if (pair.first) {
+        aspect_mask |= vk::ImageAspectFlagBits::eDepth;
+      }
+      if (pair.second) {
+        aspect_mask |= vk::ImageAspectFlagBits::eStencil;
+      }
+    }
+  }
+
   vk::ImageViewCreateInfo view_info;
   view_info.viewType = vk::ImageViewType::e2D;
   view_info.subresourceRange.baseMipLevel = 0;
@@ -36,9 +53,15 @@ ImageView::ImageView(ResourceRecycler* resource_recycler, ImagePtr image,
 
 ImageView::~ImageView() { vk_device().destroyImageView(image_view_); }
 
-ImageViewPtr ImageView::New(ResourceRecycler* resource_recycler, ImagePtr image,
+ImageViewPtr ImageView::New(ImagePtr image, vk::ImageAspectFlags aspect_mask) {
+  FXL_CHECK(image && image->escher());
+  return fxl::MakeRefCounted<ImageView>(image->escher()->resource_recycler(),
+                                        std::move(image), aspect_mask);
+}
+
+ImageViewPtr ImageView::New(ResourceRecycler* recycler, ImagePtr image,
                             vk::ImageAspectFlags aspect_mask) {
-  return fxl::MakeRefCounted<ImageView>(resource_recycler, std::move(image),
+  return fxl::MakeRefCounted<ImageView>(recycler, std::move(image),
                                         aspect_mask);
 }
 

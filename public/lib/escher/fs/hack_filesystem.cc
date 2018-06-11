@@ -11,9 +11,7 @@ namespace escher {
 
 HackFilesystem::HackFilesystem() = default;
 
-HackFilesystem::~HackFilesystem() {
-  FXL_DCHECK(watchers_.size() == 0);
-}
+HackFilesystem::~HackFilesystem() { FXL_DCHECK(watchers_.size() == 0); }
 
 HackFileContents HackFilesystem::ReadFile(const HackFilePath& path) const {
   auto it = files_.find(path);
@@ -51,8 +49,7 @@ HackFilesystemWatcher::~HackFilesystemWatcher() {
   FXL_DCHECK(erased == 1);
 }
 
-static bool LoadFile(HackFilesystem* fs,
-                     const HackFilePath& prefix,
+static bool LoadFile(HackFilesystem* fs, const HackFilePath& prefix,
                      const HackFilePath& path) {
   std::string contents;
   if (files::ReadFileToString(prefix + path, &contents)) {
@@ -63,14 +60,15 @@ static bool LoadFile(HackFilesystem* fs,
   return false;
 }
 
-bool HackFilesystem::InitializeWithRealFiles(std::vector<HackFilePath> paths) {
+bool HackFilesystem::InitializeWithRealFiles(std::vector<HackFilePath> paths,
+                                             const char* linux_prefix) {
 #ifdef __Fuchsia__
   const std::string kPrefix("/pkg/data/");
 #else
-  const std::string kPrefix("garnet/public/lib/escher/");
+  const std::string kPrefix(linux_prefix);
   if (!files::IsDirectory(kPrefix)) {
-    FXL_LOG(ERROR) << "Cannot find garnet/public/lib/escher/.  Are you running "
-                      "from $FUCHSIA_DIR?";
+    FXL_LOG(ERROR) << "Cannot find " << linux_prefix
+                   << ".  Are you running from $FUCHSIA_DIR?";
     return false;
   }
 #endif

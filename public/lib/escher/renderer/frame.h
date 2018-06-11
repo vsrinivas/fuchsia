@@ -32,10 +32,18 @@ class Frame : public Reffable {
   void EndFrame(const SemaphorePtr& frame_done,
                 FrameRetiredCallback frame_retired_callback);
 
-  void AddTimestamp(const char* name);
+  // If profiling is enabled, inserts a Vulkan timestamp query into the frame's
+  // current CommandBuffer; the result will be inserted into the trace log.
+  // |stages| denotes the set of pipeline stages that must be completed by all
+  // previously-issued commands; see TimestampProfiler docs for more details.
+  void AddTimestamp(const char* name,
+                    vk::PipelineStageFlagBits stages =
+                        vk::PipelineStageFlagBits::eBottomOfPipe);
 
   Escher* escher() const { return escher_; }
   uint64_t frame_number() const { return frame_number_; }
+
+  CommandBuffer* cmds() const { return new_command_buffer_.get(); }
   impl::CommandBuffer* command_buffer() const { return command_buffer_; }
   vk::CommandBuffer vk_command_buffer() const { return vk_command_buffer_; }
   GpuAllocator* gpu_allocator();
@@ -43,9 +51,7 @@ class Frame : public Reffable {
  private:
   // Constructor called by Escher::NewFrame().
   friend class Escher;
-  Frame(Escher* escher,
-        uint64_t frame_number,
-        const char* trace_literal,
+  Frame(Escher* escher, uint64_t frame_number, const char* trace_literal,
         bool enable_gpu_logging);
   void BeginFrame();
 
@@ -63,7 +69,8 @@ class Frame : public Reffable {
   const char* trace_literal_;
   bool enable_gpu_logging_;
   vk::Queue queue_;
-  impl::CommandBufferPool* pool_;
+
+  CommandBufferPtr new_command_buffer_;
   impl::CommandBuffer* command_buffer_ = nullptr;
   vk::CommandBuffer vk_command_buffer_;
 

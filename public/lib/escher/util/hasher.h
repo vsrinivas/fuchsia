@@ -29,12 +29,33 @@ class Hasher {
     return {value_};
   }
 
-  template <typename T>
+  template <typename T, class Enable = void>
   inline void data(const T* data, size_t count) {
     static_assert(std::is_integral<T>::value, "data must be integral.");
     while (count--) {
       value_ = (value_ ^ *data) * kHashFnv1Prime64;
       ++data;
+    }
+  }
+
+  // Treat the structure as if it were an array of uint32_t.  Caller must be
+  // careful not to have any padding bits.  The current implementation is
+  // limited to structure that are multiples of 4 bytes, because that's what
+  // was needed at the time; this should be extended when necessary to handle
+  // the remaining 1-3 bytes.
+  //
+  // NOTE: The name "struc" is short for "struct"; we'd use that, except that
+  // it's a reserved word in C++.
+  template <typename T>
+  inline void struc(const T& t) {
+    // Implementation detail.  Can relax at some point.
+    static_assert(sizeof(T) % 4 == 0, "struct must be multiple of 4 bytes");
+
+    int count = sizeof(T) / 4;
+    const uint32_t* as_ints = reinterpret_cast<const uint32_t*>(&t);
+    while (count--) {
+      u32(*as_ints);
+      ++as_ints;
     }
   }
 

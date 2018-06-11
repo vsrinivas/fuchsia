@@ -7,9 +7,9 @@
 #include <vector>
 
 #include "garnet/public/lib/escher/resources/resource_recycler.h"
+#include "garnet/public/lib/escher/third_party/granite/vk/render_pass.h"
 #include "garnet/public/lib/escher/vk/impl/framebuffer.h"
 #include "garnet/public/lib/escher/vk/impl/framebuffer_allocator.h"
-#include "garnet/public/lib/escher/vk/impl/render_pass.h"
 #include "garnet/public/lib/escher/vk/impl/render_pass_cache.h"
 #include "garnet/public/lib/escher/vk/render_pass_info.h"
 #include "garnet/public/lib/escher/vk/texture.h"

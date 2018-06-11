@@ -7,6 +7,7 @@
 #include "lib/escher/impl/vulkan_utils.h"
 #include "lib/escher/resources/resource_manager.h"
 #include "lib/escher/util/image_utils.h"
+#include "lib/escher/util/trace_macros.h"
 #include "lib/escher/vk/gpu_allocator.h"
 #include "lib/escher/vk/gpu_mem.h"
 
@@ -19,6 +20,7 @@ const ResourceTypeInfo Image::kTypeInfo("Image", ResourceType::kResource,
 ImagePtr Image::New(ResourceManager* image_owner, ImageInfo info,
                     vk::Image vk_image, GpuMemPtr mem,
                     vk::DeviceSize mem_offset, bool bind_image_memory) {
+  TRACE_DURATION("gfx", "escher::Image::New (from VkImage)");
   if (mem && bind_image_memory) {
     auto bind_result = image_owner->vk_device().bindImageMemory(
         vk_image, mem->base(), mem->offset() + mem_offset);
@@ -33,6 +35,8 @@ ImagePtr Image::New(ResourceManager* image_owner, ImageInfo info,
 
 ImagePtr Image::New(ResourceManager* image_owner, const ImageInfo& info,
                     GpuAllocator* allocator) {
+  TRACE_DURATION("gfx", "escher::Image::New (from ImageInfo)");
+
   auto vk_device = image_owner->vk_device();
   vk::Image image = image_utils::CreateVkImage(vk_device, info);
   vk::MemoryRequirements reqs = vk_device.getImageMemoryRequirements(image);

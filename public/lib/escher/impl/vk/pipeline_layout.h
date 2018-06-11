@@ -13,6 +13,9 @@ namespace escher {
 namespace impl {
 
 // Manages the lifecycle of a Vulkan PipelineLayout.
+//
+// TODO(ES-83): deprecated.  PipelineLayouts will be an implementation detail
+// hidden within the new vk/command_buffer.h CommandBuffer.
 class PipelineLayout : public fxl::RefCountedThreadSafe<PipelineLayout> {
  public:
   // The vk::PipelineLayout becomes owned by this PipelineLayout instance, and

@@ -14,8 +14,7 @@
 namespace escher {
 
 VulkanSwapchainHelper::VulkanSwapchainHelper(VulkanSwapchain swapchain,
-                                             vk::Device device,
-                                             vk::Queue queue)
+                                             vk::Device device, vk::Queue queue)
     : swapchain_(swapchain), device_(device), queue_(queue) {
   for (size_t i = 0; i < swapchain_.images.size(); ++i) {
     image_available_semaphores_.push_back(Semaphore::New(device_));
@@ -27,13 +26,20 @@ VulkanSwapchainHelper::~VulkanSwapchainHelper() {}
 
 void VulkanSwapchainHelper::DrawFrame(const FramePtr& frame,
                                       PaperRenderer* renderer,
-                                      const Stage& stage,
-                                      const Model& model,
+                                      const Stage& stage, const Model& model,
                                       const Camera& camera,
                                       const ShadowMapPtr& shadow_map,
                                       const Model* overlay_model) {
   FXL_DCHECK(renderer);
+  DrawFrame([&](const ImagePtr& color_image_out,
+                const SemaphorePtr& render_finished_semaphore) {
+    renderer->DrawFrame(frame, stage, model, camera, color_image_out,
+                        shadow_map, overlay_model);
+    frame->EndFrame(render_finished_semaphore, nullptr);
+  });
+}
 
+void VulkanSwapchainHelper::DrawFrame(DrawFrameCallback draw_callback) {
   auto& image_available_semaphore =
       image_available_semaphores_[next_semaphore_index_];
   auto& render_finished_semaphore =
@@ -64,9 +70,7 @@ void VulkanSwapchainHelper::DrawFrame(const FramePtr& frame,
   // signal the semaphore.
   auto& color_image_out = swapchain_.images[swapchain_index];
   color_image_out->SetWaitSemaphore(image_available_semaphore);
-  renderer->DrawFrame(frame, stage, model, camera, color_image_out, shadow_map,
-                      overlay_model);
-  frame->EndFrame(render_finished_semaphore, nullptr);
+  draw_callback(color_image_out, render_finished_semaphore);
 
   // When the image is completely rendered, present it.
   TRACE_DURATION("gfx", "escher::VulkanSwapchain::Present");

@@ -79,6 +79,13 @@ class Image : public WaitableResource {
   // Offset of the Image within its GpuMem.
   vk::DeviceSize memory_offset() const { return mem_offset_; }
 
+  // TODO(ES-83): how does this interact with swapchain_layout_?
+  // Should this be automatically set when various transitions are made, e.g.
+  // finishing a render-pass?  Should it be locked so that the layout can't be
+  // changed during a render-pass where it is used as an attachment?
+  void set_layout(vk::ImageLayout new_layout) { layout_ = new_layout; }
+  vk::ImageLayout layout() const { return layout_; }
+
   // Specify the layout that should be transitioned to when this image is used
   // as a framebuffer attachment.
   void set_swapchain_layout(vk::ImageLayout layout) {
@@ -105,6 +112,10 @@ class Image : public WaitableResource {
   const vk::DeviceSize mem_offset_ = 0;
   bool has_depth_;
   bool has_stencil_;
+
+  // TODO(ES-83): consider allowing image to have an initial layout.
+  vk::ImageLayout layout_ = vk::ImageLayout::eUndefined;
+
   vk::ImageLayout swapchain_layout_ = vk::ImageLayout::eUndefined;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(Image);

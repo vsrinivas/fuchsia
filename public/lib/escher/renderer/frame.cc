@@ -9,29 +9,24 @@
 #endif
 
 #include "lib/escher/escher.h"
-#include "lib/escher/impl/command_buffer_pool.h"
 #include "lib/escher/util/trace_macros.h"
+#include "lib/escher/vk/command_buffer.h"
 #include "lib/fxl/macros.h"
 
 namespace escher {
 
-Frame::Frame(Escher* escher,
-             uint64_t frame_number,
-             const char* trace_literal,
+Frame::Frame(Escher* escher, uint64_t frame_number, const char* trace_literal,
              bool enable_gpu_logging)
     : escher_(escher),
       frame_number_(frame_number),
       trace_literal_(trace_literal),
       enable_gpu_logging_(enable_gpu_logging),
       queue_(escher->device()->vk_main_queue()),
-      pool_(escher->command_buffer_pool()),
       profiler_(escher->supports_timer_queries()
                     ? fxl::MakeRefCounted<TimestampProfiler>(
-                          escher->vk_device(),
-                          escher->timestamp_period())
+                          escher->vk_device(), escher->timestamp_period())
                     : TimestampProfilerPtr()) {
   FXL_DCHECK(queue_);
-  FXL_DCHECK(pool_);
 }
 
 Frame::~Frame() = default;
@@ -40,7 +35,8 @@ void Frame::BeginFrame() {
   TRACE_DURATION("gfx", "escher::Frame::BeginFrame", "frame_number",
                  frame_number_);
   FXL_DCHECK(!command_buffer_);
-  command_buffer_ = pool_->GetCommandBuffer();
+  new_command_buffer_ = CommandBuffer::NewForGraphics(escher());
+  command_buffer_ = new_command_buffer_->impl();
   vk_command_buffer_ = command_buffer_->vk();
   AddTimestamp("start of frame");
 }
@@ -52,7 +48,8 @@ void Frame::SubmitPartialFrame(const SemaphorePtr& frame_done) {
   FXL_DCHECK(command_buffer_);
   command_buffer_->AddSignalSemaphore(frame_done);
   command_buffer_->Submit(queue_, nullptr);
-  command_buffer_ = pool_->GetCommandBuffer();
+  new_command_buffer_ = CommandBuffer::NewForGraphics(escher());
+  command_buffer_ = new_command_buffer_->impl();
   vk_command_buffer_ = command_buffer_->vk();
 }
 
@@ -68,31 +65,30 @@ void Frame::EndFrame(const SemaphorePtr& frame_done,
   if (!profiler_) {
     command_buffer_->Submit(queue_, std::move(frame_retired_callback));
   } else {
-    command_buffer_->Submit(queue_, [
-      frame_retired_callback, profiler{std::move(profiler_)},
-      frame_number = frame_number_, trace_literal = trace_literal_,
-      enable_gpu_logging = enable_gpu_logging_
-    ]() {
-      if (frame_retired_callback) {
-        frame_retired_callback();
-      }
+    command_buffer_->Submit(
+        queue_, [frame_retired_callback, profiler{std::move(profiler_)},
+                 frame_number = frame_number_, trace_literal = trace_literal_,
+                 enable_gpu_logging = enable_gpu_logging_]() {
+          if (frame_retired_callback) {
+            frame_retired_callback();
+          }
 
-      auto timestamps = profiler->GetQueryResults();
-      TraceGpuQueryResults(frame_number, timestamps, trace_literal);
-      if (enable_gpu_logging) {
-        LogGpuQueryResults(frame_number, timestamps);
-      }
-    });
+          auto timestamps = profiler->GetQueryResults();
+          TraceGpuQueryResults(frame_number, timestamps, trace_literal);
+          if (enable_gpu_logging) {
+            LogGpuQueryResults(frame_number, timestamps);
+          }
+        });
   }
+  new_command_buffer_ = nullptr;
   command_buffer_ = nullptr;
   vk_command_buffer_ = vk::CommandBuffer();
   escher()->Cleanup();
 }
 
-void Frame::AddTimestamp(const char* name) {
+void Frame::AddTimestamp(const char* name, vk::PipelineStageFlagBits stages) {
   if (profiler_)
-    profiler_->AddTimestamp(command_buffer_,
-                            vk::PipelineStageFlagBits::eBottomOfPipe, name);
+    profiler_->AddTimestamp(command_buffer_, stages, name);
 }
 
 void Frame::LogGpuQueryResults(
@@ -120,8 +116,7 @@ void Frame::TraceGpuQueryResults(
     const char* trace_literal) {}
 #else
 // TODO: precision issues here?
-static inline uint64_t NanosToTicks(zx_time_t nanoseconds,
-                                    zx_time_t now_nanos,
+static inline uint64_t NanosToTicks(zx_time_t nanoseconds, zx_time_t now_nanos,
                                     uint64_t now_ticks,
                                     double ticks_per_nanosecond) {
   double now_ticks_from_nanos = now_nanos * ticks_per_nanosecond;
@@ -202,8 +197,6 @@ void Frame::TraceGpuQueryResults(
 }
 #endif
 
-GpuAllocator* Frame::gpu_allocator() {
-  return escher_->gpu_allocator();
-}
+GpuAllocator* Frame::gpu_allocator() { return escher_->gpu_allocator(); }
 
 }  // namespace escher

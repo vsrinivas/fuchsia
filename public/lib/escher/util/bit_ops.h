@@ -51,6 +51,7 @@ inline int32_t CountTrailingOnes(uint32_t value) {
   return CountTrailingZeros(~value);
 }
 
+// Invoke |func| with the index of each non-zero bit in |value|.
 template <typename T>
 inline void ForEachBitIndex(uint32_t value, const T& func) {
   while (value) {
@@ -58,6 +59,30 @@ inline void ForEachBitIndex(uint32_t value, const T& func) {
     func(bit);
     value &= ~(1u << bit);
   }
+}
+
+// Invoke |func| for each contiguous range of non-zero bits in |value|.  Two
+// arguments are passed to each invocation of |func|:
+// - the index of the initial bit of the range
+// - the number of bits in the range
+template <typename T>
+inline void ForEachBitRange(uint32_t value, const T& func) {
+  while (value) {
+    // Find the first non-zero bit.
+    uint32_t bit = CountTrailingZeros(value);
+    // Starting with that bit, count the number of contiguous non-zero bits.
+    uint32_t range = CountTrailingOnes(value >> bit);
+    func(bit, range);
+    // Prepare for the next iteration by zeroing out the non-zero range that
+    // was just found.
+    value &= ~((1u << (bit + range)) - 1);
+  }
+}
+
+// Set to 1 all bits in |input| at and above |index|.
+template <typename T>
+inline void SetBitsAtAndAboveIndex(T* input, uint32_t index) {
+  *input |= ~((T{1} << index) - 1);
 }
 
 }  // namespace escher

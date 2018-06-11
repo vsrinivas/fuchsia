@@ -95,5 +95,22 @@ vk::SampleCountFlagBits SampleCountFlagBitsFromInt(uint32_t sample_count) {
   }
 }
 
+void ClipToRect(vk::Rect2D* clippee, const vk::Rect2D& clipper) {
+  int32_t min_x = std::max(clippee->offset.x, clipper.offset.x);
+  int32_t max_x = std::min((clippee->offset.x + clippee->extent.width),
+                           (clipper.offset.x + clipper.extent.width));
+  int32_t min_y = std::max(clippee->offset.y, clipper.offset.y);
+  int32_t max_y = std::min((clippee->offset.y + clippee->extent.height),
+                           (clipper.offset.y + clipper.extent.height));
+
+  // Detect overflow.
+  FXL_DCHECK(max_x >= min_x && max_y >= min_y);
+
+  clippee->offset.x = min_x;
+  clippee->offset.y = min_y;
+  clippee->extent.width = max_x - min_x;
+  clippee->extent.height = max_y - min_y;
+}
+
 }  // namespace impl
 }  // namespace escher

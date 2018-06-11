@@ -22,7 +22,7 @@ enum class ShaderStage : uint8_t {
 };
 ESCHER_DEBUG_PRINTABLE(ShaderStage);
 
-inline vk::ShaderStageFlags ShaderStageToFlags(ShaderStage stage) {
+inline vk::ShaderStageFlagBits ShaderStageToFlags(ShaderStage stage) {
   switch (stage) {
     case ShaderStage::kVertex:
       return vk::ShaderStageFlagBits::eVertex;
@@ -37,7 +37,7 @@ inline vk::ShaderStageFlags ShaderStageToFlags(ShaderStage stage) {
     case ShaderStage::kCompute:
       return vk::ShaderStageFlagBits::eCompute;
     case ShaderStage::kEnumCount:
-      return vk::ShaderStageFlags();
+      return vk::ShaderStageFlagBits();
   }
 }
 

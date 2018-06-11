@@ -39,4 +39,35 @@ TEST(BitOps, CountLeadingZeros) {
   }
 }
 
+template <typename T>
+void TestSetBitsAtAndAboveIndex() {
+  size_t kNumBits = sizeof(T) * 8;
+
+  const T kZeros = 0u;
+  const T kOnes = ~kZeros;
+
+  for (size_t i = 0; i < kNumBits; ++i) {
+    const T kAtAndAboveBits = kOnes << i;
+    const T kBelowBits = ~kAtAndAboveBits;
+
+    T bits = kZeros;
+    SetBitsAtAndAboveIndex(&bits, i);
+    EXPECT_EQ(bits & kAtAndAboveBits, kAtAndAboveBits);
+    EXPECT_EQ(bits & kBelowBits, kZeros);
+
+    bits = kOnes;
+    SetBitsAtAndAboveIndex(&bits, i);
+    EXPECT_EQ(bits, kOnes);
+  }
+}
+
+TEST(BitOps, SetBitsAtAndAboveIndex) {
+  TestSetBitsAtAndAboveIndex<uint16_t>();
+  TestSetBitsAtAndAboveIndex<uint32_t>();
+  TestSetBitsAtAndAboveIndex<uint64_t>();
+  TestSetBitsAtAndAboveIndex<int16_t>();
+  TestSetBitsAtAndAboveIndex<int32_t>();
+  TestSetBitsAtAndAboveIndex<int64_t>();
+}
+
 }  // namespace

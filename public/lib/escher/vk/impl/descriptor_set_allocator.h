@@ -8,8 +8,8 @@
 #include <map>
 #include <vulkan/vulkan.hpp>
 
+#include "lib/escher/third_party/granite/vk/descriptor_set_layout.h"
 #include "lib/escher/util/hash_cache.h"
-#include "lib/escher/vk/impl/descriptor_set_layout.h"
 
 namespace escher {
 namespace impl {
