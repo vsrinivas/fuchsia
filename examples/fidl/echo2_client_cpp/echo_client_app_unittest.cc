@@ -2,9 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/async/default.h>
-#include <lib/fdio/util.h>
-
 #include "echo_client_app.h"
 #include "lib/app/cpp/testing/fake_service.h"
 #include "lib/app/cpp/testing/test_with_context.h"

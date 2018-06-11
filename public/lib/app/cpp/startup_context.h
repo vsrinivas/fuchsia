@@ -7,8 +7,6 @@
 
 #include <fuchsia/sys/cpp/fidl.h>
 
-#include <memory>
-
 #include "lib/app/cpp/outgoing.h"
 #include "lib/app/cpp/service_provider_impl.h"
 #include "lib/svc/cpp/services.h"

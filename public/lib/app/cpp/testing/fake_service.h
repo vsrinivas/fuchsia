@@ -5,13 +5,11 @@
 #ifndef LIB_APP_CPP_TESTING_FAKE_SERVICE_H_
 #define LIB_APP_CPP_TESTING_FAKE_SERVICE_H_
 
-#include "fake_launcher.h"
-
 #include <fs/pseudo-dir.h>
 #include <fs/synchronous-vfs.h>
 #include <lib/async/default.h>
-#include <lib/fdio/util.h>
 
+#include "lib/app/cpp/testing/fake_launcher.h"
 #include "lib/fidl/cpp/binding.h"
 
 namespace fuchsia {
