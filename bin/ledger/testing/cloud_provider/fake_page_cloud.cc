@@ -191,7 +191,8 @@ void FakePageCloud::GetCommits(
              fidl::VectorPtr<cloud_provider::Commit>::New(0), nullptr);
     return;
   }
-  fidl::VectorPtr<cloud_provider::Commit> result;
+  fidl::VectorPtr<cloud_provider::Commit> result =
+      fidl::VectorPtr<cloud_provider::Commit>::New(0);
   size_t start = 0u;
   if (!TokenToPosition(min_position_token, &start)) {
     callback(cloud_provider::Status::ARGUMENT_ERROR,
