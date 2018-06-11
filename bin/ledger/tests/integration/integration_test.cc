@@ -32,6 +32,10 @@ BaseIntegrationTest::BaseIntegrationTest() = default;
 
 BaseIntegrationTest::~BaseIntegrationTest() = default;
 
+void BaseIntegrationTest::RunLoop() { message_loop_.Run(); }
+
+void BaseIntegrationTest::StopLoop() { message_loop_.QuitNow(); }
+
 void BaseIntegrationTest::SetUp() {
   ::testing::Test::SetUp();
   trace_provider_ =
@@ -60,7 +64,7 @@ zx::socket BaseIntegrationTest::StreamDataToSocket(std::string data) {
 
 std::unique_ptr<LedgerAppInstanceFactory::LedgerAppInstance>
 BaseIntegrationTest::NewLedgerAppInstance() {
-  return GetAppFactory()->NewLedgerAppInstance();
+  return GetAppFactory()->NewLedgerAppInstance(this);
 }
 
 IntegrationTest::IntegrationTest() = default;

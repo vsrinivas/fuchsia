@@ -58,6 +58,7 @@ class LedgerAppInstanceImpl final
     : public LedgerAppInstanceFactory::LedgerAppInstance {
  public:
   LedgerAppInstanceImpl(
+      LedgerAppInstanceFactory::LoopController* loop_controller,
       async_t* services_dispatcher,
       fidl::InterfaceRequest<ledger_internal::LedgerRepositoryFactory>
           repository_factory_request,
@@ -103,6 +104,7 @@ class LedgerAppInstanceImpl final
 };
 
 LedgerAppInstanceImpl::LedgerAppInstanceImpl(
+    LedgerAppInstanceFactory::LoopController* loop_controller,
     async_t* services_dispatcher,
     fidl::InterfaceRequest<ledger_internal::LedgerRepositoryFactory>
         repository_factory_request,
@@ -114,7 +116,8 @@ LedgerAppInstanceImpl::LedgerAppInstanceImpl(
     std::unique_ptr<p2p_sync::UserCommunicatorFactory>
         user_communicator_factory)
     : test::LedgerAppInstanceFactory::LedgerAppInstance(
-          integration::RandomArray(1), std::move(repository_factory_ptr)),
+          loop_controller, integration::RandomArray(1),
+          std::move(repository_factory_ptr)),
       services_dispatcher_(services_dispatcher),
       cloud_provider_(cloud_provider) {
   loop_.StartThread();
@@ -197,7 +200,8 @@ class LedgerAppInstanceFactoryImpl : public LedgerAppInstanceFactory {
 
   void SetServerId(std::string server_id) override;
 
-  std::unique_ptr<LedgerAppInstance> NewLedgerAppInstance() override;
+  std::unique_ptr<LedgerAppInstance> NewLedgerAppInstance(
+      LoopController* loop_controller) override;
 
  private:
   // Loop on which to run services.
@@ -223,7 +227,8 @@ void LedgerAppInstanceFactoryImpl::SetServerId(std::string server_id) {
 }
 
 std::unique_ptr<LedgerAppInstanceFactory::LedgerAppInstance>
-LedgerAppInstanceFactoryImpl::NewLedgerAppInstance() {
+LedgerAppInstanceFactoryImpl::NewLedgerAppInstance(
+    LoopController* loop_controller) {
   ledger_internal::LedgerRepositoryFactoryPtr repository_factory_ptr;
   fidl::InterfaceRequest<ledger_internal::LedgerRepositoryFactory>
       repository_factory_request = repository_factory_ptr.NewRequest();
@@ -235,9 +240,9 @@ LedgerAppInstanceFactoryImpl::NewLedgerAppInstance() {
         services_loop_.async(), &netconnector_factory_, std::move(host_name));
   }
   auto result = std::make_unique<LedgerAppInstanceImpl>(
-      services_loop_.async(), std::move(repository_factory_request),
-      std::move(repository_factory_ptr), &cloud_provider_,
-      std::move(user_communicator_factory));
+      loop_controller, services_loop_.async(),
+      std::move(repository_factory_request), std::move(repository_factory_ptr),
+      &cloud_provider_, std::move(user_communicator_factory));
   app_instance_counter_++;
   return result;
 }

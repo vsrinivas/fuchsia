@@ -25,7 +25,8 @@ namespace integration {
 // Integration tests verify interactions with client-facing FIDL services
 // exposed by Ledger. The FIDL services are run within the test process, on a
 // separate thread.
-class BaseIntegrationTest : public gtest::TestWithMessageLoop {
+class BaseIntegrationTest : public gtest::TestWithMessageLoop,
+                            public LedgerAppInstanceFactory::LoopController {
  public:
   BaseIntegrationTest();
   ~BaseIntegrationTest() override;
@@ -34,6 +35,10 @@ class BaseIntegrationTest : public gtest::TestWithMessageLoop {
   BaseIntegrationTest(BaseIntegrationTest&&) = delete;
   BaseIntegrationTest& operator=(const BaseIntegrationTest&) = delete;
   BaseIntegrationTest& operator=(BaseIntegrationTest&&) = delete;
+
+  // LoopController:
+  void RunLoop() override;
+  void StopLoop() override;
 
  protected:
   // ::testing::Test:

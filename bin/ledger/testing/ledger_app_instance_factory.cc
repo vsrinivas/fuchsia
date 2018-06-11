@@ -2,13 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#define FIDL_ENABLE_LEGACY_WAIT_FOR_RESPONSE
-
 #include "peridot/bin/ledger/testing/ledger_app_instance_factory.h"
 
 #include <lib/fidl/cpp/clone.h>
 #include <lib/zx/time.h>
 
+#include "garnet/public/lib/callback/capture.h"
 #include "gtest/gtest.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/memory/ref_ptr.h"
@@ -17,9 +16,10 @@
 namespace test {
 
 LedgerAppInstanceFactory::LedgerAppInstance::LedgerAppInstance(
-    fidl::VectorPtr<uint8_t> test_ledger_name,
+    LoopController* loop_controller, fidl::VectorPtr<uint8_t> test_ledger_name,
     ledger_internal::LedgerRepositoryFactoryPtr ledger_repository_factory)
-    : test_ledger_name_(std::move(test_ledger_name)),
+    : loop_controller_(loop_controller),
+      test_ledger_name_(std::move(test_ledger_name)),
       ledger_repository_factory_(std::move(ledger_repository_factory)) {}
 
 LedgerAppInstanceFactory::LedgerAppInstance::~LedgerAppInstance() {}
@@ -35,8 +35,8 @@ LedgerAppInstanceFactory::LedgerAppInstance::GetTestLedgerRepository() {
   ledger::Status status;
   ledger_repository_factory_->GetRepository(
       dir_.path(), MakeCloudProvider(), repository.NewRequest(),
-      [&status](ledger::Status s) { status = s; });
-  ledger_repository_factory_.WaitForResponse();
+      callback::Capture([this] { loop_controller_->StopLoop(); }, &status));
+  loop_controller_->RunLoop();
   EXPECT_EQ(ledger::Status::OK, status);
   return repository;
 }
@@ -46,9 +46,10 @@ ledger::LedgerPtr LedgerAppInstanceFactory::LedgerAppInstance::GetTestLedger() {
 
   ledger_internal::LedgerRepositoryPtr repository = GetTestLedgerRepository();
   ledger::Status status;
-  repository->GetLedger(fidl::Clone(test_ledger_name_), ledger.NewRequest(),
-                        [&status](ledger::Status s) { status = s; });
-  repository.WaitForResponse();
+  repository->GetLedger(
+      fidl::Clone(test_ledger_name_), ledger.NewRequest(),
+      callback::Capture([this] { loop_controller_->StopLoop(); }, &status));
+  loop_controller_->RunLoop();
   EXPECT_EQ(ledger::Status::OK, status);
   return ledger;
 }
@@ -57,9 +58,10 @@ ledger::PagePtr LedgerAppInstanceFactory::LedgerAppInstance::GetTestPage() {
   fidl::InterfaceHandle<ledger::Page> page;
   ledger::Status status;
   ledger::LedgerPtr ledger = GetTestLedger();
-  ledger->GetPage(nullptr, page.NewRequest(),
-                  [&status](ledger::Status s) { status = s; });
-  ledger.WaitForResponse();
+  ledger->GetPage(
+      nullptr, page.NewRequest(),
+      callback::Capture([this] { loop_controller_->StopLoop(); }, &status));
+  loop_controller_->RunLoop();
   EXPECT_EQ(ledger::Status::OK, status);
 
   return page.Bind();
@@ -70,9 +72,10 @@ ledger::PagePtr LedgerAppInstanceFactory::LedgerAppInstance::GetPage(
   ledger::PagePtr page_ptr;
   ledger::Status status;
   ledger::LedgerPtr ledger = GetTestLedger();
-  ledger->GetPage(fidl::Clone(page_id), page_ptr.NewRequest(),
-                  [&status](ledger::Status s) { status = s; });
-  ledger.WaitForResponse();
+  ledger->GetPage(
+      fidl::Clone(page_id), page_ptr.NewRequest(),
+      callback::Capture([this] { loop_controller_->StopLoop(); }, &status));
+  loop_controller_->RunLoop();
   EXPECT_EQ(expected_status, status);
 
   return page_ptr;
@@ -83,9 +86,10 @@ void LedgerAppInstanceFactory::LedgerAppInstance::DeletePage(
   fidl::InterfaceHandle<ledger::Page> page;
   ledger::Status status;
   ledger::LedgerPtr ledger = GetTestLedger();
-  ledger->DeletePage(fidl::Clone(page_id),
-                     [&status](ledger::Status s) { status = s; });
-  ledger.WaitForResponse();
+  ledger->DeletePage(
+      fidl::Clone(page_id),
+      callback::Capture([this] { loop_controller_->StopLoop(); }, &status));
+  loop_controller_->RunLoop();
   EXPECT_EQ(expected_status, status);
 }
 

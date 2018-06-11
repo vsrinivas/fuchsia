@@ -24,10 +24,20 @@ namespace test {
 // are integration tests or end-to-end tests (apptests).
 class LedgerAppInstanceFactory {
  public:
+  // Controller for the main run loop. This allows to control the loop that will
+  // call the factory and the multiple instances.
+  class LoopController {
+   public:
+    // Runs the loop.
+    virtual void RunLoop() = 0;
+    // Stops the loop.
+    virtual void StopLoop() = 0;
+  };
   // A Ledger app instance
   class LedgerAppInstance {
    public:
     LedgerAppInstance(
+        LoopController* loop_controller,
         fidl::VectorPtr<uint8_t> test_ledger_name,
         ledger_internal::LedgerRepositoryFactoryPtr ledger_repository_factory);
     virtual ~LedgerAppInstance();
@@ -53,6 +63,7 @@ class LedgerAppInstanceFactory {
    private:
     virtual cloud_provider::CloudProviderPtr MakeCloudProvider() = 0;
 
+    LoopController* loop_controller_;
     fidl::VectorPtr<uint8_t> test_ledger_name_;
     ledger_internal::LedgerRepositoryFactoryPtr ledger_repository_factory_;
 
@@ -67,7 +78,10 @@ class LedgerAppInstanceFactory {
   // Sets a custom server id for synchronization.
   virtual void SetServerId(std::string server_id) = 0;
 
-  virtual std::unique_ptr<LedgerAppInstance> NewLedgerAppInstance() = 0;
+  // Starts a new instance of the Ledger. The |loop_controller| must allow to
+  // control the loop that is used to access the LedgerAppInstance.
+  virtual std::unique_ptr<LedgerAppInstance> NewLedgerAppInstance(
+      LoopController* loop_controller) = 0;
 };
 
 std::vector<LedgerAppInstanceFactory*> GetLedgerAppInstanceFactories();

@@ -28,6 +28,7 @@ class LedgerAppInstanceImpl final
     : public LedgerAppInstanceFactory::LedgerAppInstance {
  public:
   LedgerAppInstanceImpl(
+      LedgerAppInstanceFactory::LoopController* loop_controller,
       fuchsia::sys::ComponentControllerPtr controller,
       ledger_internal::LedgerRepositoryFactoryPtr ledger_repository_factory,
       CloudProviderFirebaseFactory* cloud_provider_firebase_factory,
@@ -42,12 +43,14 @@ class LedgerAppInstanceImpl final
 };
 
 LedgerAppInstanceImpl::LedgerAppInstanceImpl(
+    LedgerAppInstanceFactory::LoopController* loop_controller,
     fuchsia::sys::ComponentControllerPtr controller,
     ledger_internal::LedgerRepositoryFactoryPtr ledger_repository_factory,
     CloudProviderFirebaseFactory* cloud_provider_firebase_factory,
     std::string server_id)
     : test::LedgerAppInstanceFactory::LedgerAppInstance(
-          convert::ToArray(kLedgerName), std::move(ledger_repository_factory)),
+          loop_controller, convert::ToArray(kLedgerName),
+          std::move(ledger_repository_factory)),
       controller_(std::move(controller)),
       cloud_provider_firebase_factory_(cloud_provider_firebase_factory),
       server_id_(std::move(server_id)) {}
@@ -70,7 +73,8 @@ class LedgerAppInstanceFactoryImpl : public LedgerAppInstanceFactory {
 
   void SetServerId(std::string server_id) override;
 
-  std::unique_ptr<LedgerAppInstance> NewLedgerAppInstance() override;
+  std::unique_ptr<LedgerAppInstance> NewLedgerAppInstance(
+      LoopController* loop_controller) override;
 
  private:
   std::unique_ptr<fuchsia::sys::StartupContext> startup_context_;
@@ -90,7 +94,8 @@ void LedgerAppInstanceFactoryImpl::SetServerId(std::string server_id) {
 }
 
 std::unique_ptr<LedgerAppInstanceFactory::LedgerAppInstance>
-LedgerAppInstanceFactoryImpl::NewLedgerAppInstance() {
+LedgerAppInstanceFactoryImpl::NewLedgerAppInstance(
+    LedgerAppInstanceFactory::LoopController* loop_controller) {
   fuchsia::sys::ComponentControllerPtr controller;
   ledger_internal::LedgerRepositoryFactoryPtr repository_factory;
   fuchsia::sys::Services child_services;
@@ -105,7 +110,7 @@ LedgerAppInstanceFactoryImpl::NewLedgerAppInstance() {
   child_services.ConnectToService(repository_factory.NewRequest());
 
   auto result = std::make_unique<LedgerAppInstanceImpl>(
-      std::move(controller), std::move(repository_factory),
+      loop_controller, std::move(controller), std::move(repository_factory),
       &cloud_provider_firebase_factory_, server_id_);
   return result;
 }
