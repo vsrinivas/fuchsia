@@ -45,5 +45,20 @@ TEST(SynchronousInterfacePtr, Control) {
   client.join();
 }
 
+TEST(SynchronousInterfacePtr, Unbind) {
+  fidl::test::frobinator::FrobinatorSyncPtr ptr;
+  auto request = ptr.NewRequest();
+
+  fidl::test::AsyncLoopForTest loop;
+
+  test::FrobinatorImpl impl;
+  Binding<fidl::test::frobinator::Frobinator> binding(&impl);
+
+  EXPECT_EQ(ZX_OK, binding.Bind(std::move(request)));
+
+  auto handle = ptr.Unbind();
+  EXPECT_TRUE(handle.is_valid());
+}
+
 }  // namespace
 }  // namespace fidl

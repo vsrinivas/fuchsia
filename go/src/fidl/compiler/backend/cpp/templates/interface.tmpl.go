@@ -149,6 +149,8 @@ class {{ .SyncProxyName }} : public {{ .SyncName }} {
   explicit {{ .SyncProxyName }}(::zx::channel channel);
   ~{{ .SyncProxyName }}() override;
 
+  ::fidl::internal::SynchronousProxy& proxy() { return proxy_; }
+
   {{- range .Methods }}
     {{- if .HasRequest }}
   bool {{ template "SyncRequestMethodSignature" . }} override;
