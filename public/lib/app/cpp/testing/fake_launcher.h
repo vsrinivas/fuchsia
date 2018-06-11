@@ -1,4 +1,4 @@
-// Copyright 2016 The Fuchsia Authors. All rights reserved.
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -8,7 +8,7 @@
 #include <fs/service.h>
 #include <fuchsia/sys/cpp/fidl.h>
 
-#include "lib/fidl/cpp/binding_set.h"
+#include "lib/fidl/cpp/binding.h"
 
 namespace fuchsia {
 namespace sys {
@@ -31,12 +31,12 @@ class FakeLauncher : public fuchsia::sys::Launcher {
   // The connector may implement the |LaunchInfo.services| and
   // |ComponentController| interfaces to communicate with its connector and
   // listen for component signals.
-  // TODO(CP-57): make this easier to use.
   void RegisterComponent(std::string url, ComponentConnectorFn connector);
 
   // Forwards this |CreateComponent| request to a registered connector, if an
   // associated one exists. If one is not registered for |launch_info.url|, then
   // this call is dropped.
+  // TODO(CP-57): this needs to be idempotent.
   void CreateComponent(fuchsia::sys::LaunchInfo launch_info,
                        fidl::InterfaceRequest<fuchsia::sys::ComponentController>
                            controller) override;

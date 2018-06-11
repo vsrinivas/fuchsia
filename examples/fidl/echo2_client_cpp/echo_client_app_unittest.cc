@@ -6,6 +6,7 @@
 #include <lib/fdio/util.h>
 
 #include "echo_client_app.h"
+#include "lib/app/cpp/testing/fake_service.h"
 #include "lib/app/cpp/testing/test_with_context.h"
 
 namespace echo2 {
@@ -13,14 +14,11 @@ namespace testing {
 
 using namespace fidl::examples::echo;
 
-class FakeEcho : public Echo {
+class FakeEcho : public Echo, public fuchsia::sys::testing::FakeService<Echo> {
  public:
   static const std::string URL_;
 
-  FakeEcho()
-      : binding_(this),
-        directory_vfs_(async_get_default()),
-        directory_(fbl::AdoptRef(new fs::PseudoDir())){};
+  FakeEcho() : FakeService(this){};
 
   void EchoString(fidl::StringPtr value, EchoStringCallback callback) {
     callback(answer_);
@@ -29,27 +27,11 @@ class FakeEcho : public Echo {
   void SetAnswer(fidl::StringPtr answer) { answer_ = answer; }
 
   void Register(fuchsia::sys::testing::FakeLauncher& fake_launcher) {
-    fake_launcher.RegisterComponent(
-        URL_,
-        // TODO(CP-57): pull this to a base class
-        [&](fuchsia::sys::LaunchInfo launch_info,
-            fidl::InterfaceRequest<fuchsia::sys::ComponentController> ctrl) {
-          directory_->AddEntry(
-              FakeEcho::Name_,
-              fbl::AdoptRef(new fs::Service([&](zx::channel channel) {
-                binding_.Bind(fidl::InterfaceRequest<Echo>(std::move(channel)));
-                return ZX_OK;
-              })));
-          directory_vfs_.ServeDirectory(
-              directory_, std::move(launch_info.directory_request));
-        });
+    FakeService<Echo>::Register(URL_, fake_launcher);
   }
 
  private:
   fidl::StringPtr answer_;
-  fidl::Binding<Echo> binding_;
-  fs::SynchronousVfs directory_vfs_;
-  fbl::RefPtr<fs::PseudoDir> directory_;
 };
 
 const std::string FakeEcho::URL_ = "fake-echo";

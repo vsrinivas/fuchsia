@@ -8,6 +8,7 @@ source_set("testing") {
   sources = [
     "fake_launcher.cc",
     "fake_launcher.h",
+    "fake_service.h",
     "startup_context_for_test.cc",
     "startup_context_for_test.h",
     "test_with_context.cc",
