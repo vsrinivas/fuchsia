@@ -22,19 +22,6 @@ fuchsia::modular::Suggestion CreateSuggestion(
   fuchsia::modular::Suggestion suggestion;
   suggestion.uuid = prototype.suggestion_id;
   fidl::Clone(prototype.proposal.display, &suggestion.display);
-  if (!prototype.proposal.on_selected->empty()) {
-    const auto& selected_action = prototype.proposal.on_selected->at(0);
-    switch (selected_action.Which()) {
-      case fuchsia::modular::Action::Tag::kFocusStory:
-        suggestion.story_id = selected_action.focus_story().story_id;
-        break;
-      case fuchsia::modular::Action::Tag::kAddModule:
-        suggestion.story_id = selected_action.add_module().story_id;
-        break;
-      default:
-        break;
-    }
-  }
   return suggestion;
 }
 
