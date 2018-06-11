@@ -46,7 +46,6 @@ class LedgerRepositoryImpl : public ledger_internal::LedgerRepository,
   // Releases all handles bound to this repository impl.
   std::vector<fidl::InterfaceRequest<LedgerRepository>> Unbind();
 
- private:
   // LedgerRepository:
   void GetLedger(fidl::VectorPtr<uint8_t> ledger_name,
                  fidl::InterfaceRequest<Ledger> ledger_request,
@@ -56,13 +55,12 @@ class LedgerRepositoryImpl : public ledger_internal::LedgerRepository,
       DuplicateCallback callback) override;
   void SetSyncStateWatcher(fidl::InterfaceHandle<SyncWatcher> watcher,
                            SetSyncStateWatcherCallback callback) override;
-
   void GetLedgerRepositoryDebug(
       fidl::InterfaceRequest<ledger_internal::LedgerRepositoryDebug> request,
       GetLedgerRepositoryDebugCallback callback) override;
-
   void DiskCleanUp(DiskCleanUpCallback callback) override;
 
+private:
   void CheckEmpty();
 
   // LedgerRepositoryDebug:
@@ -87,6 +85,8 @@ class LedgerRepositoryImpl : public ledger_internal::LedgerRepository,
 
   fidl::BindingSet<ledger_internal::LedgerRepositoryDebug>
       ledger_repository_debug_bindings_;
+
+  bool clean_up_in_progress_ = false;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(LedgerRepositoryImpl);
 };

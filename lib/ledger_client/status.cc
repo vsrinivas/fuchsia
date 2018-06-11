@@ -41,6 +41,8 @@ std::string LedgerStatusToString(fuchsia::ledger::Status status) {
       return "INTERNAL_ERROR";
     case fuchsia::ledger::Status::VALUE_TOO_LARGE:
       return "VALUE_TOO_LARGE";
+    case fuchsia::ledger::Status::ILLEGAL_STATE:
+      return "ILLEGAL_STATE";
     case fuchsia::ledger::Status::UNKNOWN_ERROR:
       return "UNKNOWN_ERROR";
   }

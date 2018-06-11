@@ -117,6 +117,21 @@ void LedgerRepositoryImpl::GetLedgerRepositoryDebug(
   callback(Status::OK);
 }
 
+void LedgerRepositoryImpl::DiskCleanUp(DiskCleanUpCallback callback) {
+  if (clean_up_in_progress_) {
+    callback(Status::ILLEGAL_STATE);
+    return;
+  }
+  clean_up_in_progress_ = true;
+  page_eviction_manager_->TryCleanUp(
+      [this, callback = std::move(callback)](Status status) {
+        FXL_DCHECK(clean_up_in_progress_);
+
+        clean_up_in_progress_ = false;
+        callback(status);
+      });
+}
+
 void LedgerRepositoryImpl::GetInstancesList(GetInstancesListCallback callback) {
   fidl::VectorPtr<fidl::VectorPtr<uint8_t>> result =
       fidl::VectorPtr<fidl::VectorPtr<uint8_t>>::New(0);
@@ -137,10 +152,6 @@ void LedgerRepositoryImpl::GetLedgerDebug(
     it->second.BindLedgerDebug(std::move(request));
     callback(Status::OK);
   }
-}
-
-void LedgerRepositoryImpl::DiskCleanUp(DiskCleanUpCallback callback) {
-  page_eviction_manager_->TryCleanUp(std::move(callback));
 }
 
 }  // namespace ledger
