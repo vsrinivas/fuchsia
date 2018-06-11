@@ -9,11 +9,12 @@
 #include <stddef.h>
 #include <stdint.h>
 
-// fbl::atomic<T> provides typesafe C++ atomics on integral
-// types and enums. It does not support:
-// - pointer types, though they could be easily added
+// fbl::atomic<T> provides typesafe C++ atomics on integral types,
+// enums, and pointers (including function pointers). It does not
+// support:
 // - wide characters
 // - memory_order_consume
+// - member function pointers
 
 // The interface closely matches the underlying builtins and the
 // standard C and C++ interfaces. Member function and nonmember
@@ -62,7 +63,7 @@ enum memory_order : int {
 template <typename T>
 struct atomic {
     static_assert(is_integral<T>::value || is_enum<T>::value,
-                  "fbl::atomic only support integral and enum types");
+                  "fbl::atomic only support integral, enum, and pointer types");
     static_assert(!is_same<T, wchar_t>::value, "fbl::atomic does not support wide characters");
     static_assert(!is_same<T, char16_t>::value, "fbl::atomic does not support wide characters");
     static_assert(!is_same<T, char32_t>::value, "fbl::atomic does not support wide characters");
@@ -194,6 +195,111 @@ private:
     T value_;
 };
 
+// An overload of the struct for pointer types. This is identical to
+// the integral version with the following exceptions.
+// - There are no |fetch_and|, |fetch_or|, or |fetch_xor| operations.
+// - |fetch_add| and |fetch_sub| are in terms of ptrdiff_t, just like
+//   an ordinary pointer.
+template <typename T>
+struct atomic<T*> {
+    // The default constructor does not initialize the value! This is
+    // the same as plain old pointer types.
+    atomic() = default;
+    constexpr atomic(T* value)
+        : value_(value) {}
+
+    // Don't copy, move, or operator= atomic values. Use store instead
+    // of operator=.
+    atomic(const atomic& value) = delete;
+    atomic(atomic&& value) = delete;
+    void operator=(atomic value) = delete;
+    void operator=(atomic value) volatile = delete;
+    atomic& operator=(const atomic& value) = delete;
+    atomic& operator=(const atomic& value) volatile = delete;
+    atomic& operator=(atomic&& value) = delete;
+    atomic& operator=(atomic&& value) volatile = delete;
+
+    void store(T* value, memory_order order = memory_order_seq_cst) {
+        __atomic_store_n(&value_, value, order);
+    };
+    void store(T* value, memory_order order = memory_order_seq_cst) volatile {
+        __atomic_store_n(&value_, value, order);
+    }
+
+    T* load(memory_order order = memory_order_seq_cst) const {
+        return __atomic_load_n(&value_, order);
+    }
+    T* load(memory_order order = memory_order_seq_cst) const volatile {
+        return __atomic_load_n(&value_, order);
+    }
+
+    T* exchange(T* value, memory_order order = memory_order_seq_cst) {
+        return __atomic_exchange_n(&value_, value, order);
+    }
+    T* exchange(T* value, memory_order order = memory_order_seq_cst) volatile {
+        return __atomic_exchange_n(&value_, value, order);
+    }
+
+    // Note that the std:: versions take a mutable _reference_ to
+    // expected, not a pointer. In addition, it provides overloads like
+    //    compare_exchange_weak(T** expected, T* desired,
+    //                          memory_order order = memory_order_seq_cst);
+    // which are rather magic in that the release orders imply
+    // different success and failure orders, which feels nonobvious
+    // enough to not provide them.
+    bool compare_exchange_weak(T** expected, T* desired,
+                               memory_order success_order,
+                               memory_order failure_order) {
+        return __atomic_compare_exchange_n(&value_, expected, desired, /* weak */ true,
+                                           success_order, failure_order);
+    }
+    bool compare_exchange_weak(T** expected, T* desired,
+                               memory_order success_order,
+                               memory_order failure_order) volatile {
+        return __atomic_compare_exchange_n(&value_, expected, desired, /* weak */ true,
+                                           success_order, failure_order);
+    }
+
+    bool compare_exchange_strong(T** expected, T* desired,
+                                 memory_order success_order,
+                                 memory_order failure_order) {
+        return __atomic_compare_exchange_n(&value_, expected, desired, /* weak */ false,
+                                           success_order, failure_order);
+    }
+    bool compare_exchange_strong(T** expected, T* desired,
+                                 memory_order success_order,
+                                 memory_order failure_order) volatile {
+        return __atomic_compare_exchange_n(&value_, expected, desired, /* weak */ false,
+                                           success_order, failure_order);
+    }
+
+    T* fetch_add(ptrdiff_t value, memory_order order = memory_order_seq_cst) {
+        static_assert(!is_same<T, void>::value, "Cannot perform arithmetic on pointer to void");
+        return __atomic_fetch_add(&value_, value * sizeof(T), order);
+    }
+    T* fetch_add(ptrdiff_t value, memory_order order = memory_order_seq_cst) volatile {
+        static_assert(!is_same<T, void>::value, "Cannot perform arithmetic on pointer to void");
+        return __atomic_fetch_add(&value_, value * sizeof(T), order);
+    }
+
+    T* fetch_sub(ptrdiff_t value, memory_order order = memory_order_seq_cst) {
+        static_assert(!is_same<T, void>::value, "Cannot perform arithmetic on pointer to void");
+        return __atomic_fetch_sub(&value_, value * sizeof(T), order);
+    }
+    T* fetch_sub(ptrdiff_t value, memory_order order = memory_order_seq_cst) volatile {
+        static_assert(!is_same<T, void>::value, "Cannot perform arithmetic on pointer to void");
+        return __atomic_fetch_sub(&value_, value * sizeof(T), order);
+    }
+
+private:
+    template <typename U>
+    friend void atomic_init(atomic<U>* atomic_ptr, U value);
+    template <typename U>
+    friend void atomic_init(volatile atomic<U>* atomic_ptr, U value);
+
+    T* value_;
+};
+
 // Non-member function versions.
 template <typename T>
 void atomic_store(atomic<T>* atomic_ptr, T value, memory_order order = memory_order_seq_cst) {
@@ -250,20 +356,40 @@ bool atomic_compare_exchange_strong(volatile atomic<T>* atomic_ptr, T* expected,
 }
 
 template <typename T>
-T atomic_fetch_add(atomic<T>* atomic_ptr, T value, memory_order order = memory_order_seq_cst) {
+typename enable_if<!is_pointer<T>::value, T>::type
+atomic_fetch_add(atomic<T>* atomic_ptr, T value, memory_order order = memory_order_seq_cst) {
     return atomic_ptr->fetch_add(value, order);
 }
 template <typename T>
-T atomic_fetch_add(volatile atomic<T>* atomic_ptr, T value, memory_order order = memory_order_seq_cst) {
+typename enable_if<!is_pointer<T>::value, T>::type
+atomic_fetch_add(volatile atomic<T>* atomic_ptr, T value, memory_order order = memory_order_seq_cst) {
+    return atomic_ptr->fetch_add(value, order);
+}
+template <typename T>
+T* atomic_fetch_add(atomic<T*>* atomic_ptr, ptrdiff_t value, memory_order order = memory_order_seq_cst) {
+    return atomic_ptr->fetch_add(value, order);
+}
+template <typename T>
+T* atomic_fetch_add(volatile atomic<T*>* atomic_ptr, ptrdiff_t value, memory_order order = memory_order_seq_cst) {
     return atomic_ptr->fetch_add(value, order);
 }
 
 template <typename T>
-T atomic_fetch_sub(atomic<T>* atomic_ptr, T value, memory_order order = memory_order_seq_cst) {
+typename enable_if<!is_pointer<T>::value, T>::type
+atomic_fetch_sub(atomic<T>* atomic_ptr, T value, memory_order order = memory_order_seq_cst) {
     return atomic_ptr->fetch_sub(value, order);
 }
 template <typename T>
-T atomic_fetch_sub(volatile atomic<T>* atomic_ptr, T value, memory_order order = memory_order_seq_cst) {
+typename enable_if<!is_pointer<T>::value, T>::type
+atomic_fetch_sub(volatile atomic<T>* atomic_ptr, T value, memory_order order = memory_order_seq_cst) {
+    return atomic_ptr->fetch_sub(value, order);
+}
+template <typename T>
+T* atomic_fetch_sub(atomic<T*>* atomic_ptr, ptrdiff_t value, memory_order order = memory_order_seq_cst) {
+    return atomic_ptr->fetch_sub(value, order);
+}
+template <typename T>
+T* atomic_fetch_sub(volatile atomic<T*>* atomic_ptr, ptrdiff_t value, memory_order order = memory_order_seq_cst) {
     return atomic_ptr->fetch_sub(value, order);
 }
 

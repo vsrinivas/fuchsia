@@ -9,6 +9,13 @@
 
 namespace {
 
+// A struct with an interesting size for pointer arithmetic tests.
+struct S {
+    char bytes[48];
+};
+
+using function_pointer = void(*)();
+
 bool atomic_explicit_declarations_test() {
     BEGIN_TEST;
 
@@ -58,6 +65,20 @@ bool atomic_explicit_declarations_test() {
     [[gnu::unused]] fbl::atomic<uint_fast64_t> zero_uint_fast64_t(0);
 
     [[gnu::unused]] fbl::atomic<bool> zero_bool(false);
+
+    [[gnu::unused]] fbl::atomic<void*> zero_void_pointer(nullptr);
+    [[gnu::unused]] fbl::atomic<const void*> zero_const_void_pointer(nullptr);
+    [[gnu::unused]] fbl::atomic<volatile void*> zero_volatile_void_pointer(nullptr);
+    [[gnu::unused]] fbl::atomic<const volatile void*> zero_const_volatile_void_pointer(nullptr);
+    [[gnu::unused]] fbl::atomic<int*> zero_int_pointer(nullptr);
+    [[gnu::unused]] fbl::atomic<const int*> zero_const_int_pointer(nullptr);
+    [[gnu::unused]] fbl::atomic<volatile int*> zero_volatile_int_pointer(nullptr);
+    [[gnu::unused]] fbl::atomic<const volatile int*> zero_const_volatile_int_pointer(nullptr);
+    [[gnu::unused]] fbl::atomic<S*> zero_S_pointer(nullptr);
+    [[gnu::unused]] fbl::atomic<const S*> zero_const_S_pointer(nullptr);
+    [[gnu::unused]] fbl::atomic<volatile S*> zero_volatile_S_pointer(nullptr);
+    [[gnu::unused]] fbl::atomic<const volatile S*> zero_const_volatile_S_pointer(nullptr);
+    [[gnu::unused]] fbl::atomic<function_pointer> zero_function_pointer(nullptr);
 
     END_TEST;
 }
@@ -304,7 +325,7 @@ __UNUSED fbl::atomic<specified_struct_enum_bool> atomic_specified_struct_enum_bo
 bool atomic_wont_compile_test() {
     BEGIN_TEST;
 
-    // fbl::atomic only supports integer types.
+    // fbl::atomic only supports integer, enum, and pointer types.
 
 #if TEST_WILL_NOT_COMPILE || 0
     struct not_integral {};
@@ -319,12 +340,16 @@ bool atomic_wont_compile_test() {
     fbl::atomic<double> not_integral;
 #endif
 
-#if TEST_WILL_NOT_COMPILE || 0
-    fbl::atomic<void*> not_integral;
-#endif
-
     END_TEST;
 }
+
+fbl::memory_order orders[] = {
+    fbl::memory_order_relaxed,
+    fbl::memory_order_acquire,
+    fbl::memory_order_release,
+    fbl::memory_order_acq_rel,
+    fbl::memory_order_seq_cst,
+};
 
 // Bunch of machinery for arithmetic tests.
 template <typename T>
@@ -361,6 +386,130 @@ bool test_values<bool>[] = {
     true,
     false,
     true,
+};
+
+template <>
+void* test_values<void*>[] = {
+    &test_values<int>[0],
+    &test_values<int>[1],
+    &test_values<int>[2],
+    &test_values<int>[3],
+    &test_values<int>[4],
+};
+
+template <>
+const void* test_values<const void*>[] = {
+    &test_values<int>[0],
+    &test_values<int>[1],
+    &test_values<int>[2],
+    &test_values<int>[3],
+    &test_values<int>[4],
+};
+
+template <>
+volatile void* test_values<volatile void*>[] = {
+    &test_values<int>[0],
+    &test_values<int>[1],
+    &test_values<int>[2],
+    &test_values<int>[3],
+    &test_values<int>[4],
+};
+
+template <>
+const volatile void* test_values<const volatile void*>[] = {
+    &test_values<int>[0],
+    &test_values<int>[1],
+    &test_values<int>[2],
+    &test_values<int>[3],
+    &test_values<int>[4],
+};
+
+template <>
+int* test_values<int*>[] = {
+    &test_values<int>[0],
+    &test_values<int>[1],
+    &test_values<int>[2],
+    &test_values<int>[3],
+    &test_values<int>[4],
+};
+
+template <>
+const int* test_values<const int*>[] = {
+    &test_values<int>[0],
+    &test_values<int>[1],
+    &test_values<int>[2],
+    &test_values<int>[3],
+    &test_values<int>[4],
+};
+
+template <>
+volatile int* test_values<volatile int*>[] = {
+    &test_values<int>[0],
+    &test_values<int>[1],
+    &test_values<int>[2],
+    &test_values<int>[3],
+    &test_values<int>[4],
+};
+
+template <>
+const volatile int* test_values<const volatile int*>[] = {
+    &test_values<int>[0],
+    &test_values<int>[1],
+    &test_values<int>[2],
+    &test_values<int>[3],
+    &test_values<int>[4],
+};
+
+S test_values_of_S[] = { {}, {}, {}, {} };
+
+template <>
+S* test_values<S*>[] = {
+    &test_values_of_S[0],
+    &test_values_of_S[1],
+    &test_values_of_S[2],
+    &test_values_of_S[3],
+    nullptr,
+};
+
+template <>
+const S* test_values<const S*>[] = {
+    &test_values_of_S[0],
+    &test_values_of_S[1],
+    &test_values_of_S[2],
+    &test_values_of_S[3],
+    nullptr,
+};
+
+template <>
+volatile S* test_values<volatile S*>[] = {
+    &test_values_of_S[0],
+    &test_values_of_S[1],
+    &test_values_of_S[2],
+    &test_values_of_S[3],
+    nullptr,
+};
+
+template <>
+const volatile S* test_values<const volatile S*>[] = {
+    &test_values_of_S[0],
+    &test_values_of_S[1],
+    &test_values_of_S[2],
+    &test_values_of_S[3],
+    nullptr,
+};
+
+void nothing_0() {}
+void nothing_1() {}
+void nothing_2() {}
+void nothing_3() {}
+
+template <>
+function_pointer test_values<function_pointer>[] = {
+    &nothing_0,
+    &nothing_1,
+    &nothing_2,
+    &nothing_3,
+    nullptr,
 };
 
 template <typename T>
@@ -444,14 +593,6 @@ TestCase<T> subtraction_test_case = {
     },
 };
 
-fbl::memory_order orders[] = {
-    fbl::memory_order_relaxed,
-    fbl::memory_order_acquire,
-    fbl::memory_order_release,
-    fbl::memory_order_acq_rel,
-    fbl::memory_order_seq_cst,
-};
-
 template <typename T>
 bool math_test() {
     for (const T original_left : test_values<T>) {
@@ -528,6 +669,160 @@ bool math_test() {
                 }
             }
         }
+    }
+
+    return true;
+}
+
+template <typename T>
+using ordinary_pointer_op = T (*)(T*, ptrdiff_t);
+
+template <typename T>
+using atomic_pointer_op = T (*)(fbl::atomic<T>*, ptrdiff_t, fbl::memory_order);
+
+template <typename T>
+using volatile_pointer_op = T (*)(volatile fbl::atomic<T>*, ptrdiff_t, fbl::memory_order);
+
+template <typename T>
+struct PointerTestCase {
+    ordinary_pointer_op<T> ordinary;
+    atomic_pointer_op<T> nonmember_atomic;
+    atomic_pointer_op<T> member_atomic;
+    volatile_pointer_op<T> nonmember_volatile;
+    volatile_pointer_op<T> member_volatile;
+};
+
+template <typename T>
+PointerTestCase<T> pointer_add_test_case = {
+    [](T* ptr_to_a, ptrdiff_t d) -> T {
+        T a = *ptr_to_a;
+        *ptr_to_a = a + d;
+        return a;
+    },
+    [](fbl::atomic<T>* ptr_to_atomic_a, ptrdiff_t d, fbl::memory_order order) -> T {
+        return fbl::atomic_fetch_add(ptr_to_atomic_a, d, order);
+    },
+    [](fbl::atomic<T>* ptr_to_atomic_a, ptrdiff_t d, fbl::memory_order order) -> T {
+        return ptr_to_atomic_a->fetch_add(d, order);
+    },
+    [](volatile fbl::atomic<T>* ptr_to_atomic_a, ptrdiff_t d, fbl::memory_order order) -> T {
+        return fbl::atomic_fetch_add(ptr_to_atomic_a, d, order);
+    },
+    [](volatile fbl::atomic<T>* ptr_to_atomic_a, ptrdiff_t d, fbl::memory_order order) -> T {
+        return ptr_to_atomic_a->fetch_add(d, order);
+    },
+};
+
+template <typename T>
+PointerTestCase<T> pointer_sub_test_case = {
+    [](T* ptr_to_a, ptrdiff_t d) -> T {
+        T a = *ptr_to_a;
+        *ptr_to_a = a - d;
+        return a;
+    },
+    [](fbl::atomic<T>* ptr_to_atomic_a, ptrdiff_t d, fbl::memory_order order) -> T {
+        return fbl::atomic_fetch_sub(ptr_to_atomic_a, d, order);
+    },
+    [](fbl::atomic<T>* ptr_to_atomic_a, ptrdiff_t d, fbl::memory_order order) -> T {
+        return ptr_to_atomic_a->fetch_sub(d, order);
+    },
+    [](volatile fbl::atomic<T>* ptr_to_atomic_a, ptrdiff_t d, fbl::memory_order order) -> T {
+        return fbl::atomic_fetch_sub(ptr_to_atomic_a, d, order);
+    },
+    [](volatile fbl::atomic<T>* ptr_to_atomic_a, ptrdiff_t d, fbl::memory_order order) -> T {
+        return ptr_to_atomic_a->fetch_sub(d, order);
+    },
+};
+
+template <typename T>
+bool pointer_add_test() {
+    static_assert(fbl::is_pointer<T>::value, "");
+    ptrdiff_t right = 2;
+    const auto& test_case = pointer_add_test_case<T>;
+    for (const T original_left : test_values<T>) {
+        for (const auto& order : orders) {
+            {
+                fbl::atomic<T> atomic_left(original_left);
+                T left = original_left;
+                ASSERT_EQ(test_case.ordinary(&left, right),
+                          test_case.member_atomic(&atomic_left, right, order),
+                          "Atomic and ordinary math differ");
+                ASSERT_EQ(left, atomic_load(&atomic_left), "Atomic and ordinary math differ");
+            }
+            {
+                fbl::atomic<T> atomic_left(original_left);
+                T left = original_left;
+                ASSERT_EQ(test_case.ordinary(&left, right),
+                          test_case.nonmember_atomic(&atomic_left, right, order),
+                          "Atomic and ordinary math differ");
+                ASSERT_EQ(left, atomic_load(&atomic_left), "Atomic and ordinary math differ");
+            }
+            {
+                volatile fbl::atomic<T> atomic_left(original_left);
+                T left = original_left;
+                ASSERT_EQ(test_case.ordinary(&left, right),
+                          test_case.member_volatile(&atomic_left, right, order),
+                          "Atomic and ordinary math differ");
+                ASSERT_EQ(left, atomic_load(&atomic_left), "Atomic and ordinary math differ");
+            }
+            {
+                volatile fbl::atomic<T> atomic_left(original_left);
+                T left = original_left;
+                ASSERT_EQ(test_case.ordinary(&left, right),
+                          test_case.nonmember_volatile(&atomic_left, right, order),
+                          "Atomic and ordinary math differ");
+                ASSERT_EQ(left, atomic_load(&atomic_left), "Atomic and ordinary math differ");
+            }
+        }
+
+        right -= 1;
+    }
+
+    return true;
+}
+
+template <typename T>
+bool pointer_sub_test() {
+    static_assert(fbl::is_pointer<T>::value, "");
+    ptrdiff_t right = -2;
+    const auto& test_case = pointer_sub_test_case<T>;
+    for (const T original_left : test_values<T>) {
+        for (const auto& order : orders) {
+            {
+                fbl::atomic<T> atomic_left(original_left);
+                T left = original_left;
+                ASSERT_EQ(test_case.ordinary(&left, right),
+                          test_case.member_atomic(&atomic_left, right, order),
+                          "Atomic and ordinary math differ");
+                ASSERT_EQ(left, atomic_load(&atomic_left), "Atomic and ordinary math differ");
+            }
+            {
+                fbl::atomic<T> atomic_left(original_left);
+                T left = original_left;
+                ASSERT_EQ(test_case.ordinary(&left, right),
+                          test_case.nonmember_atomic(&atomic_left, right, order),
+                          "Atomic and ordinary math differ");
+                ASSERT_EQ(left, atomic_load(&atomic_left), "Atomic and ordinary math differ");
+            }
+            {
+                volatile fbl::atomic<T> atomic_left(original_left);
+                T left = original_left;
+                ASSERT_EQ(test_case.ordinary(&left, right),
+                          test_case.member_volatile(&atomic_left, right, order),
+                          "Atomic and ordinary math differ");
+                ASSERT_EQ(left, atomic_load(&atomic_left), "Atomic and ordinary math differ");
+            }
+            {
+                volatile fbl::atomic<T> atomic_left(original_left);
+                T left = original_left;
+                ASSERT_EQ(test_case.ordinary(&left, right),
+                          test_case.nonmember_volatile(&atomic_left, right, order),
+                          "Atomic and ordinary math differ");
+                ASSERT_EQ(left, atomic_load(&atomic_left), "Atomic and ordinary math differ");
+            }
+        }
+
+        right += 1;
     }
 
     return true;
@@ -668,6 +963,99 @@ bool cas_test_values<bool>[] = {
     false,
 };
 
+template <>
+void* cas_test_values<void*>[] = {
+    &cas_test_values<int>[0],
+    &cas_test_values<int>[1],
+    &cas_test_values<int>[2],
+};
+
+template <>
+const void* cas_test_values<const void*>[] = {
+    &cas_test_values<int>[0],
+    &cas_test_values<int>[1],
+    &cas_test_values<int>[2],
+};
+
+template <>
+volatile void* cas_test_values<volatile void*>[] = {
+    &cas_test_values<int>[0],
+    &cas_test_values<int>[1],
+    &cas_test_values<int>[2],
+};
+
+template <>
+const volatile void* cas_test_values<const volatile void*>[] = {
+    &cas_test_values<int>[0],
+    &cas_test_values<int>[1],
+    &cas_test_values<int>[2],
+};
+
+template <>
+int* cas_test_values<int*>[] = {
+    &cas_test_values<int>[0],
+    &cas_test_values<int>[1],
+    &cas_test_values<int>[2],
+};
+
+template <>
+const int* cas_test_values<const int*>[] = {
+    &cas_test_values<int>[0],
+    &cas_test_values<int>[1],
+    &cas_test_values<int>[2],
+};
+
+template <>
+volatile int* cas_test_values<volatile int*>[] = {
+    &cas_test_values<int>[0],
+    &cas_test_values<int>[1],
+    &cas_test_values<int>[2],
+};
+
+template <>
+const volatile int* cas_test_values<const volatile int*>[] = {
+    &cas_test_values<int>[0],
+    &cas_test_values<int>[1],
+    &cas_test_values<int>[2],
+};
+
+S cas_test_values_of_S[] = { {}, {} };
+
+template <>
+S* cas_test_values<S*>[] = {
+    &cas_test_values_of_S[0],
+    &cas_test_values_of_S[1],
+    nullptr,
+};
+
+template <>
+const S* cas_test_values<const S*>[] = {
+    &cas_test_values_of_S[0],
+    &cas_test_values_of_S[1],
+    nullptr,
+};
+
+template <>
+volatile S* cas_test_values<volatile S*>[] = {
+    &cas_test_values_of_S[0],
+    &cas_test_values_of_S[1],
+    nullptr,
+};
+
+template <>
+const volatile S* cas_test_values<const volatile S*>[] = {
+    &cas_test_values_of_S[0],
+    &cas_test_values_of_S[1],
+    nullptr,
+};
+
+template <>
+function_pointer cas_test_values<function_pointer>[] = {
+    &nothing_0,
+    &nothing_1,
+    nullptr,
+};
+
 template <typename T>
 bool compare_exchange_test() {
     for (auto cas : cas_functions<T>) {
@@ -757,6 +1145,33 @@ bool atomic_math_test() {
     END_TEST;
 }
 
+bool atomic_pointer_math_test() {
+    BEGIN_TEST;
+
+    ASSERT_TRUE(pointer_add_test<int*>());
+    ASSERT_TRUE(pointer_add_test<const int*>());
+    ASSERT_TRUE(pointer_add_test<volatile int*>());
+    ASSERT_TRUE(pointer_add_test<const volatile int*>());
+    ASSERT_TRUE(pointer_add_test<S*>());
+    ASSERT_TRUE(pointer_add_test<const S*>());
+    ASSERT_TRUE(pointer_add_test<volatile S*>());
+    ASSERT_TRUE(pointer_add_test<const volatile S*>());
+
+    ASSERT_TRUE(pointer_sub_test<int*>());
+    ASSERT_TRUE(pointer_sub_test<const int*>());
+    ASSERT_TRUE(pointer_sub_test<volatile int*>());
+    ASSERT_TRUE(pointer_sub_test<const volatile int*>());
+    ASSERT_TRUE(pointer_sub_test<S*>());
+    ASSERT_TRUE(pointer_sub_test<const S*>());
+    ASSERT_TRUE(pointer_sub_test<volatile S*>());
+    ASSERT_TRUE(pointer_sub_test<const volatile S*>());
+
+    // Note that there is no void pointer or function pointer math,
+    // and so no tests of them.
+
+    END_TEST;
+}
+
 bool atomic_load_store_test() {
     BEGIN_TEST;
 
@@ -772,6 +1187,16 @@ bool atomic_load_store_test() {
     ASSERT_TRUE(load_store_test<long long>());
     ASSERT_TRUE(load_store_test<unsigned long long>());
     ASSERT_TRUE(load_store_test<bool>());
+
+    ASSERT_TRUE(load_store_test<void*>());
+    ASSERT_TRUE(load_store_test<const void*>());
+    ASSERT_TRUE(load_store_test<volatile void*>());
+    ASSERT_TRUE(load_store_test<const volatile void*>());
+    ASSERT_TRUE(load_store_test<int*>());
+    ASSERT_TRUE(load_store_test<const int*>());
+    ASSERT_TRUE(load_store_test<volatile int*>());
+    ASSERT_TRUE(load_store_test<const volatile int*>());
+    ASSERT_TRUE(load_store_test<function_pointer>());
 
     END_TEST;
 }
@@ -792,6 +1217,20 @@ bool atomic_exchange_test() {
     ASSERT_TRUE(exchange_test<unsigned long long>());
     ASSERT_TRUE(exchange_test<bool>());
 
+    ASSERT_TRUE(exchange_test<void*>());
+    ASSERT_TRUE(exchange_test<const void*>());
+    ASSERT_TRUE(exchange_test<volatile void*>());
+    ASSERT_TRUE(exchange_test<const volatile void*>());
+    ASSERT_TRUE(exchange_test<int*>());
+    ASSERT_TRUE(exchange_test<const int*>());
+    ASSERT_TRUE(exchange_test<volatile int*>());
+    ASSERT_TRUE(exchange_test<const volatile int*>());
+    ASSERT_TRUE(exchange_test<S*>());
+    ASSERT_TRUE(exchange_test<const S*>());
+    ASSERT_TRUE(exchange_test<volatile S*>());
+    ASSERT_TRUE(exchange_test<const volatile S*>());
+    ASSERT_TRUE(exchange_test<function_pointer>());
+
     END_TEST;
 }
 
@@ -810,6 +1249,20 @@ bool atomic_compare_exchange_test() {
     ASSERT_TRUE(compare_exchange_test<long long>());
     ASSERT_TRUE(compare_exchange_test<unsigned long long>());
     ASSERT_TRUE(compare_exchange_test<bool>());
+
+    ASSERT_TRUE(compare_exchange_test<void*>());
+    ASSERT_TRUE(compare_exchange_test<const void*>());
+    ASSERT_TRUE(compare_exchange_test<volatile void*>());
+    ASSERT_TRUE(compare_exchange_test<const volatile void*>());
+    ASSERT_TRUE(compare_exchange_test<int*>());
+    ASSERT_TRUE(compare_exchange_test<const int*>());
+    ASSERT_TRUE(compare_exchange_test<volatile int*>());
+    ASSERT_TRUE(compare_exchange_test<const volatile int*>());
+    ASSERT_TRUE(compare_exchange_test<S*>());
+    ASSERT_TRUE(compare_exchange_test<const S*>());
+    ASSERT_TRUE(compare_exchange_test<volatile S*>());
+    ASSERT_TRUE(compare_exchange_test<const volatile S*>());
+    ASSERT_TRUE(compare_exchange_test<function_pointer>());
 
     END_TEST;
 }
@@ -830,6 +1283,19 @@ static_assert(sizeof(fbl::atomic<unsigned long>) == sizeof(unsigned long), "");
 static_assert(sizeof(fbl::atomic<long long>) == sizeof(long long), "");
 static_assert(sizeof(fbl::atomic<unsigned long long>) == sizeof(unsigned long long), "");
 static_assert(sizeof(fbl::atomic<bool>) == sizeof(bool), "");
+static_assert(sizeof(fbl::atomic<void*>) == sizeof(void*), "");
+static_assert(sizeof(fbl::atomic<const void*>) == sizeof(const void*), "");
+static_assert(sizeof(fbl::atomic<volatile void*>) == sizeof(volatile void*), "");
+static_assert(sizeof(fbl::atomic<const volatile void*>) == sizeof(const volatile void*), "");
+static_assert(sizeof(fbl::atomic<int*>) == sizeof(int*), "");
+static_assert(sizeof(fbl::atomic<const int*>) == sizeof(const int*), "");
+static_assert(sizeof(fbl::atomic<volatile int*>) == sizeof(volatile int*), "");
+static_assert(sizeof(fbl::atomic<const volatile int*>) == sizeof(const volatile int*), "");
+static_assert(sizeof(fbl::atomic<S*>) == sizeof(S*), "");
+static_assert(sizeof(fbl::atomic<const S*>) == sizeof(const S*), "");
+static_assert(sizeof(fbl::atomic<volatile S*>) == sizeof(volatile S*), "");
+static_assert(sizeof(fbl::atomic<const volatile S*>) == sizeof(const volatile S*), "");
+static_assert(sizeof(fbl::atomic<function_pointer>) == sizeof(function_pointer), "");
 
 static_assert(alignof(fbl::atomic<char>) == alignof(char), "");
 static_assert(alignof(fbl::atomic<signed char>) == alignof(signed char), "");
@@ -843,6 +1309,19 @@ static_assert(alignof(fbl::atomic<unsigned long>) == alignof(unsigned long), "")
 static_assert(alignof(fbl::atomic<long long>) == alignof(long long), "");
 static_assert(alignof(fbl::atomic<unsigned long long>) == alignof(unsigned long long), "");
 static_assert(alignof(fbl::atomic<bool>) == alignof(bool), "");
+static_assert(alignof(fbl::atomic<void*>) == alignof(void*), "");
+static_assert(alignof(fbl::atomic<const void*>) == alignof(const void*), "");
+static_assert(alignof(fbl::atomic<volatile void*>) == alignof(volatile void*), "");
+static_assert(alignof(fbl::atomic<const volatile void*>) == alignof(const volatile void*), "");
+static_assert(alignof(fbl::atomic<int*>) == alignof(int*), "");
+static_assert(alignof(fbl::atomic<const int*>) == alignof(const int*), "");
+static_assert(alignof(fbl::atomic<volatile int*>) == alignof(volatile int*), "");
+static_assert(alignof(fbl::atomic<const volatile int*>) == alignof(const volatile int*), "");
+static_assert(alignof(fbl::atomic<S*>) == alignof(S*), "");
+static_assert(alignof(fbl::atomic<const S*>) == alignof(const S*), "");
+static_assert(alignof(fbl::atomic<volatile S*>) == alignof(volatile S*), "");
+static_assert(alignof(fbl::atomic<const volatile S*>) == alignof(const volatile S*), "");
+static_assert(alignof(fbl::atomic<function_pointer>) == alignof(function_pointer), "");
 
 static_assert(fbl::is_standard_layout<fbl::atomic<char>>::value, "");
 static_assert(fbl::is_standard_layout<fbl::atomic<signed char>>::value, "");
@@ -856,6 +1335,19 @@ static_assert(fbl::is_standard_layout<fbl::atomic<unsigned long>>::value, "");
 static_assert(fbl::is_standard_layout<fbl::atomic<long long>>::value, "");
 static_assert(fbl::is_standard_layout<fbl::atomic<unsigned long long>>::value, "");
 static_assert(fbl::is_standard_layout<fbl::atomic<bool>>::value, "");
+static_assert(fbl::is_standard_layout<fbl::atomic<void*>>::value, "");
+static_assert(fbl::is_standard_layout<fbl::atomic<const void*>>::value, "");
+static_assert(fbl::is_standard_layout<fbl::atomic<volatile void*>>::value, "");
+static_assert(fbl::is_standard_layout<fbl::atomic<const volatile void*>>::value, "");
+static_assert(fbl::is_standard_layout<fbl::atomic<void*>>::value, "");
+static_assert(fbl::is_standard_layout<fbl::atomic<const int*>>::value, "");
+static_assert(fbl::is_standard_layout<fbl::atomic<volatile int*>>::value, "");
+static_assert(fbl::is_standard_layout<fbl::atomic<const volatile int*>>::value, "");
+static_assert(fbl::is_standard_layout<fbl::atomic<S*>>::value, "");
+static_assert(fbl::is_standard_layout<fbl::atomic<const S*>>::value, "");
+static_assert(fbl::is_standard_layout<fbl::atomic<volatile S*>>::value, "");
+static_assert(fbl::is_standard_layout<fbl::atomic<const volatile S*>>::value, "");
+static_assert(fbl::is_standard_layout<fbl::atomic<function_pointer>>::value, "");
 
 bool atomic_fence_test() {
     BEGIN_TEST;
@@ -890,6 +1382,7 @@ RUN_NAMED_TEST("Atomic explicit declarations test", atomic_explicit_declarations
 RUN_NAMED_TEST("Atomic using declarations test", atomic_using_declarations_test)
 RUN_NAMED_TEST("Atomic won't compile test", atomic_wont_compile_test)
 RUN_NAMED_TEST("Atomic math test", atomic_math_test)
+RUN_NAMED_TEST("Atomic pointer math test", atomic_pointer_math_test)
 RUN_NAMED_TEST("Atomic load/store test", atomic_load_store_test)
 RUN_NAMED_TEST("Atomic exchange test", atomic_exchange_test)
 RUN_NAMED_TEST("Atomic compare-exchange test", atomic_compare_exchange_test)
