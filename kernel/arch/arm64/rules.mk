@@ -22,6 +22,7 @@ MODULE_SRCS += \
 	$(LOCAL_DIR)/mexec.S \
 	$(LOCAL_DIR)/mmu.cpp \
 	$(LOCAL_DIR)/periphmap.cpp \
+	$(LOCAL_DIR)/smccc.S \
 	$(LOCAL_DIR)/spinlock.cpp \
 	$(LOCAL_DIR)/start.S \
 	$(LOCAL_DIR)/sysreg.cpp \

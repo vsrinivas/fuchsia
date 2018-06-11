@@ -12,6 +12,7 @@
 #include <soc/imx8m/imx8m-sip.h>
 #include <limits.h>
 #include <hw/reg.h>
+#include <zircon/syscalls/smc.h>
 #include "imx8mevk.h"
 
 static const pbus_mmio_t dwc3_mmios[] = {
@@ -83,16 +84,23 @@ zx_status_t imx_usb_init(imx8mevk_bus_t* bus) {
     zx_status_t status;
     zx_handle_t bti;
 
-    uint64_t smc_return = 0;
     // turn on usb via smc calls
-    status = zx_smc_call(get_root_resource(), IMX8M_SIP_GPC, IMX8M_SIP_CONFIG_GPC_PM_DOMAIN,
-        IMX8M_PD_USB_OTG1, 1, &smc_return);
+    zx_smc_parameters_t otg1_en_params = {.func_id = IMX8M_SIP_GPC,
+                                          .arg1 = IMX8M_SIP_CONFIG_GPC_PM_DOMAIN,
+                                          .arg2 = IMX8M_PD_USB_OTG1,
+                                          .arg3 = 1};
+    zx_smc_result_t smc_result;
+    status = zx_smc_call(get_root_resource(), &otg1_en_params, &smc_result);
     if (status != ZX_OK) {
         zxlogf(ERROR, "%s: SMC call to turn USB on failed %d\n", __FUNCTION__, status);
         return status;
     }
-    status = zx_smc_call(get_root_resource(), IMX8M_SIP_GPC, IMX8M_SIP_CONFIG_GPC_PM_DOMAIN,
-        IMX8M_PD_USB_OTG2, 1, &smc_return);
+
+    zx_smc_parameters_t otg2_en_params = {.func_id = IMX8M_SIP_GPC,
+                                          .arg1 = IMX8M_SIP_CONFIG_GPC_PM_DOMAIN,
+                                          .arg2 = IMX8M_PD_USB_OTG2,
+                                          .arg3 = 1};
+    status = zx_smc_call(get_root_resource(), &otg2_en_params, &smc_result);
     if (status != ZX_OK) {
         zxlogf(ERROR, "%s: SMC call to turn USB on failed %d\n", __FUNCTION__, status);
         return status;

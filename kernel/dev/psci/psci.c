@@ -4,6 +4,7 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include <arch/arm64/smccc.h>
 #include <dev/psci.h>
 
 #include <pdev/driver.h>
@@ -15,9 +16,13 @@ static uint64_t reboot_args[3] = { 0, 0, 0 };
 static uint64_t reboot_bootloader_args[3] = { 0, 0, 0 };
 static uint64_t reboot_recovery_args[3] = { 0, 0, 0 };
 
-// in psci.S
-extern uint64_t psci_smc_call(uint64_t arg0, uint64_t arg1, uint64_t arg2, uint64_t arg3);
-extern uint64_t psci_hvc_call(uint64_t arg0, uint64_t arg1, uint64_t arg2, uint64_t arg3);
+static uint64_t psci_smc_call(uint64_t arg0, uint64_t arg1, uint64_t arg2, uint64_t arg3) {
+    return arm_smccc_smc(arg0, arg1, arg2, arg3, 0, 0, 0, 0).x0;
+}
+
+static uint64_t psci_hvc_call(uint64_t arg0, uint64_t arg1, uint64_t arg2, uint64_t arg3) {
+    return arm_smccc_hvc(arg0, arg1, arg2, arg3, 0, 0, 0, 0).x0;
+}
 
 #if PSCI_USE_HVC
 psci_call_proc do_psci_call = psci_hvc_call;

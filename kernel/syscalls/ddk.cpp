@@ -15,9 +15,6 @@
 #include <dev/interrupt.h>
 #include <dev/iommu.h>
 #include <dev/udisplay.h>
-#if ARCH_ARM64
-#include <dev/psci.h>
-#endif
 #include <vm/vm.h>
 #include <vm/vm_object_paged.h>
 #include <vm/vm_object_physical.h>
@@ -40,9 +37,11 @@
 
 #include <zircon/syscalls/iommu.h>
 #include <zircon/syscalls/pci.h>
+#include <zircon/syscalls/smc.h>
 #include <fbl/auto_call.h>
 #include <fbl/inline_array.h>
 
+#include "ddk_priv.h"
 #include "priv.h"
 
 #define LOCAL_TRACE 0
@@ -524,22 +523,27 @@ zx_status_t sys_interrupt_trigger(zx_handle_t handle,
     return interrupt->Trigger(timestamp);
 }
 
-zx_status_t sys_smc_call(zx_handle_t rsrc_handle,
-                            uint64_t arg0,
-                            uint64_t arg1,
-                            uint64_t arg2,
-                            uint64_t arg3,
-                            user_out_ptr<uint64_t> out_smc_status) {
-#if ARCH_X86
-    return ZX_ERR_NOT_SUPPORTED;
-#else
+zx_status_t sys_smc_call(zx_handle_t handle,
+                         user_in_ptr<const zx_smc_parameters_t> parameters,
+                         user_out_ptr<zx_smc_result_t> out_smc_result) {
     zx_status_t status;
-    if ((status = validate_resource(rsrc_handle, ZX_RSRC_KIND_ROOT)) < 0) {
+    // TODO(ZX-971): finer grained validation
+    if ((status = validate_resource(handle, ZX_RSRC_KIND_ROOT)) < 0) {
         return status;
     }
-    if (out_smc_status.get() == nullptr) {
+    if (!parameters || !out_smc_result) {
         return ZX_ERR_INVALID_ARGS;
     }
-    return out_smc_status.copy_to_user(static_cast<uint64_t>(psci_smc_call(arg0, arg1, arg2, arg3)));
-#endif
+
+    zx_smc_parameters_t params;
+    zx_smc_result_t result;
+
+    status = parameters.copy_from_user(&params);
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    arch_smc_call(&params, &result);
+
+    return out_smc_result.copy_to_user(result);
 }

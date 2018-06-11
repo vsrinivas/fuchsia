@@ -77,6 +77,4 @@ void psci_system_off(void);
 
 void psci_system_reset(enum reboot_flags flags);
 
-uint64_t psci_smc_call(uint64_t arg0, uint64_t arg1, uint64_t arg2, uint64_t arg3);
-
 __END_CDECLS

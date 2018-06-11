@@ -682,9 +682,8 @@ syscall pc_firmware_tables
 # DDK Syscalls: SMC Calls
 
 syscall smc_call
-    (resource: zx_handle_t, arg0: uint64_t, arg1: uint64_t,
-        arg2: uint64_t, arg3: uint64_t, out_smc_status: uint64_t[1] OUT)
-    returns (zx_status_t);
+    (handle: zx_handle_t, parameters: zx_smc_parameters_t[1] IN)
+    returns (zx_status_t, out_smc_result: zx_smc_result_t OUT);
 
 # Resources
 

@@ -9,6 +9,7 @@
 #include <soc/imx8m/imx8m-hw.h>
 #include <soc/imx8m/imx8m-sip.h>
 #include <soc/imx8m/imx8m.h>
+#include <zircon/syscalls/smc.h>
 
 #include "imx8mevk.h"
 
@@ -185,9 +186,12 @@ static zx_status_t clock_init(imx8mevk_bus_t* bus, volatile uint8_t* ccm_regs) {
 
 zx_status_t imx_gpu_init(imx8mevk_bus_t* bus) {
     // Enable power domain.
-    uint64_t smc_return = 0;
-    zx_status_t status = zx_smc_call(get_root_resource(), IMX8M_SIP_GPC,
-                                     IMX8M_SIP_CONFIG_GPC_PM_DOMAIN, IMX8M_PD_GPU, 1, &smc_return);
+    zx_smc_parameters_t smc_params = {.func_id = IMX8M_SIP_GPC,
+                                      .arg1 = IMX8M_SIP_CONFIG_GPC_PM_DOMAIN,
+                                      .arg2 = IMX8M_PD_GPU,
+                                      .arg3 = 1};
+    zx_smc_result_t smc_result;
+    zx_status_t status = zx_smc_call(get_root_resource(), &smc_params, &smc_result);
     if (status != ZX_OK) {
         zxlogf(ERROR, "%s: SMC power on failed %d\n", __FUNCTION__, status);
         return status;

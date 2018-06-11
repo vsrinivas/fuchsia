@@ -10,10 +10,10 @@
 #include <string.h>
 #include <lib/cbuf.h>
 #include <arch/arm64/periphmap.h>
+#include <arch/arm64/smccc.h>
 #include <kernel/thread.h>
 #include <dev/interrupt.h>
 #include <pdev/driver.h>
-#include <dev/psci.h>
 #include <zircon/boot/driver-config.h>
 
 static vaddr_t preset_base;
@@ -117,7 +117,7 @@ static void s912_hdcp_init(const void* driver_data, uint32_t length) {
 
     hdmitx_writereg(HDMITX_DWC_A_OESSWCFG, 0x40);
 
-    psci_smc_call(0x82000012, 0, 0, 0);
+    arm_smccc_smc(0x82000012, 0, 0, 0, 0, 0, 0, 0);
 }
 
 LK_PDEV_INIT(s912_hdcp_init, KDRV_AMLOGIC_HDCP, s912_hdcp_init, LK_INIT_LEVEL_PLATFORM);

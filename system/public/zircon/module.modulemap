@@ -97,6 +97,10 @@ module Zircon [system] [extern_c] {
       header "syscalls/profile.h"
       export *
     }
+    module smc {
+      header "syscalls/smc.h"
+      export *
+    }
     module system {
       header "syscalls/system.h"
       export *
