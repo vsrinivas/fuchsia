@@ -1,8 +1,0 @@
-{
-    "imports": [
-        "garnet/packages/config/network"
-    ],
-    "packages": {
-        "test_runner_config": "//garnet/bin/sysmgr:test_runner_config"
-    }
-}

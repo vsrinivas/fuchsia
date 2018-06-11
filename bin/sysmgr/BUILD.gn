@@ -62,7 +62,3 @@ config_package("network_config") {
 config_package("services_config") {
   name = "services.config"
 }
-
-config_package("test_runner_config") {
-  name = "test_runner.config"
-}
