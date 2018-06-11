@@ -18,7 +18,7 @@
 
 #include <list>
 
-namespace media_codec {
+namespace codec_runner {
 
 // The OmxCodecRunner is an implementation of CodecRunner (and of Codec) which
 // loads and uses an OMX codec .so lib to perform processing.
@@ -198,8 +198,8 @@ class OmxCodecRunner : public CodecRunner {
 
   // Only one of these is called, corresponding to which codec type was
   // requested via CodecFactory.
-  void SetAudioDecoderParams(
-      CreateAudioDecoder_Params audio_decoder_params) override;
+  void SetAudioDecoderParams(fuchsia::mediacodec::CreateAudioDecoder_Params
+                                 audio_decoder_params) override;
   // TODO:
   // virtual void SetAudioEncoderParams(...) override;
   // virtual void SetVideoDecoderParams(...) override;
@@ -215,15 +215,16 @@ class OmxCodecRunner : public CodecRunner {
   //
 
   void EnableOnStreamFailed() override;
-  void SetInputBufferSettings(CodecPortBufferSettings input_settings) override;
+  void SetInputBufferSettings(
+      fuchsia::mediacodec::CodecPortBufferSettings input_settings) override;
   void SetInputBufferSettings_StreamControl(
-      CodecPortBufferSettings input_settings);
+      fuchsia::mediacodec::CodecPortBufferSettings input_settings);
 
-  void AddInputBuffer(CodecBuffer buffer) override;
-  void AddInputBuffer_StreamControl(CodecBuffer buffer);
+  void AddInputBuffer(fuchsia::mediacodec::CodecBuffer buffer) override;
+  void AddInputBuffer_StreamControl(fuchsia::mediacodec::CodecBuffer buffer);
   void SetOutputBufferSettings(
-      CodecPortBufferSettings output_settings) override;
-  void AddOutputBuffer(CodecBuffer buffer) override;
+      fuchsia::mediacodec::CodecPortBufferSettings output_settings) override;
+  void AddOutputBuffer(fuchsia::mediacodec::CodecBuffer buffer) override;
   void FlushEndOfStreamAndCloseStream(
       uint64_t stream_lifetime_ordinal) override;
   void FlushEndOfStreamAndCloseStream_StreamControl(
@@ -235,13 +236,16 @@ class OmxCodecRunner : public CodecRunner {
                                         bool release_input_buffers,
                                         bool release_output_buffers);
   void Sync(SyncCallback callback) override;
-  void RecycleOutputPacket(CodecPacketHeader available_output_packet) override;
-  void QueueInputFormatDetails(uint64_t stream_lifetime_ordinal,
-                               CodecFormatDetails format_details) override;
-  void QueueInputFormatDetails_StreamControl(uint64_t stream_lifetime_ordinal,
-                                             CodecFormatDetails format_details);
-  void QueueInputPacket(CodecPacket packet) override;
-  void QueueInputPacket_StreamControl(media_codec::CodecPacket packet);
+  void RecycleOutputPacket(
+      fuchsia::mediacodec::CodecPacketHeader available_output_packet) override;
+  void QueueInputFormatDetails(
+      uint64_t stream_lifetime_ordinal,
+      fuchsia::mediacodec::CodecFormatDetails format_details) override;
+  void QueueInputFormatDetails_StreamControl(
+      uint64_t stream_lifetime_ordinal,
+      fuchsia::mediacodec::CodecFormatDetails format_details);
+  void QueueInputPacket(fuchsia::mediacodec::CodecPacket packet) override;
+  void QueueInputPacket_StreamControl(fuchsia::mediacodec::CodecPacket packet);
   void QueueInputEndOfStream(uint64_t stream_lifetime_ordinal) override;
   void QueueInputEndOfStream_StreamControl(uint64_t stream_lifetime_ordinal);
 
@@ -263,7 +267,8 @@ class OmxCodecRunner : public CodecRunner {
   // "buffers".
   class Buffer {
    public:
-    Buffer(OmxCodecRunner* parent, Port port, media_codec::CodecBuffer buffer);
+    Buffer(OmxCodecRunner* parent, Port port,
+           fuchsia::mediacodec::CodecBuffer buffer);
     ~Buffer();
     bool Init(bool input_require_write = false);
 
@@ -281,7 +286,7 @@ class OmxCodecRunner : public CodecRunner {
     OmxCodecRunner* parent_;
     Port port_ = 0;
     // This msg still has the live vmo_handle.
-    media_codec::CodecBuffer buffer_;
+    fuchsia::mediacodec::CodecBuffer buffer_;
     // This accounts for vmo_offset_begin.  The content bytes are not part of
     // a Buffer instance from a const-ness point of view.
     uint8_t* buffer_base_ = nullptr;
@@ -376,13 +381,14 @@ class OmxCodecRunner : public CodecRunner {
     // This can be called 0-N times for a given stream, and each call replaces
     // any previously-set details.
     void SetInputFormatDetails(
-        std::unique_ptr<media_codec::CodecFormatDetails> input_format_details);
+        std::unique_ptr<fuchsia::mediacodec::CodecFormatDetails>
+            input_format_details);
     // Can be nullptr if no per-stream details have been set, in which case the
     // caller should look at OmxCodecRunner::initial_input_format_details_
     // instead.  The returned pointer is only valid up until the next call to to
     // SetInputFormatDetails() or when the stream is deleted, whichever comes
     // first.  This is only meant to be called on stream_control_thread_.
-    const CodecFormatDetails* input_format_details();
+    const fuchsia::mediacodec::CodecFormatDetails* input_format_details();
     // We send codec_oob_bytes (if any) to the OMX codec just before sending a
     // packet to the OMX codec, but only when the stream has OOB data pending.
     // A new stream has OOB data initially pending, and it becomes pending again
@@ -403,7 +409,8 @@ class OmxCodecRunner : public CodecRunner {
     // Starts as nullptr for each new stream with implicit fallback to
     // initial_input_format_details_, but can be overriden on a per-stream basis
     // with QueueInputFormatDetails().
-    std::unique_ptr<CodecFormatDetails> input_format_details_;
+    std::unique_ptr<fuchsia::mediacodec::CodecFormatDetails>
+        input_format_details_;
     // This defaults to _true_, so that we send a OMX_BUFFERFLAG_CODECCONFIG
     // buffer to OMX for each stream, if we have any codec_oob_bytes to send.
     bool oob_config_pending_ = true;
@@ -519,13 +526,13 @@ class OmxCodecRunner : public CodecRunner {
   // Some common handling for SetOutputBufferSettings() and
   // SetInputBufferSettings()
   void SetBufferSettingsCommonLocked(
-      Port port, const media_codec::CodecPortBufferSettings& settings,
-      const media_codec::CodecBufferConstraints& constraints);
+      Port port, const fuchsia::mediacodec::CodecPortBufferSettings& settings,
+      const fuchsia::mediacodec::CodecBufferConstraints& constraints);
 
   // Returns true if adding this buffer completed the input or output
   // configuration.  For output we need to know this so we can wake up the
   // StreamControl ordering domain.
-  bool AddBufferCommon(Port port, CodecBuffer buffer);
+  bool AddBufferCommon(Port port, fuchsia::mediacodec::CodecBuffer buffer);
 
   void EnsureFutureStreamSeenLocked(uint64_t stream_lifetime_ordinal);
   void EnsureFutureStreamCloseSeenLocked(uint64_t stream_lifetime_ordinal);
@@ -537,7 +544,7 @@ class OmxCodecRunner : public CodecRunner {
   bool IsInputConfiguredLocked();
   bool IsOutputConfiguredLocked();
   bool IsPortConfiguredCommonLocked(Port port);
-  void SendFreeInputPacketLocked(media_codec::CodecPacketHeader header);
+  void SendFreeInputPacketLocked(fuchsia::mediacodec::CodecPacketHeader header);
   // During processing of a buffer_constraints_action_required true server-side,
   // the server will be de-configuring output buffers unilaterally.  Meanwhile,
   // the client can concurrently be trying to configure output with an old
@@ -547,12 +554,14 @@ class OmxCodecRunner : public CodecRunner {
   void StartIgnoringClientOldOutputConfigLocked();
 
   void ValidateBufferSettingsVsConstraints(
-      uint32_t port, const media_codec::CodecPortBufferSettings& settings,
-      const media_codec::CodecBufferConstraints& constraints);
+      uint32_t port,
+      const fuchsia::mediacodec::CodecPortBufferSettings& settings,
+      const fuchsia::mediacodec::CodecBufferConstraints& constraints);
 
   bool enable_on_stream_failed_ = false;
 
-  std::unique_ptr<CreateAudioDecoder_Params> audio_decoder_params_;
+  std::unique_ptr<fuchsia::mediacodec::CreateAudioDecoder_Params>
+      audio_decoder_params_;
   // TODO: Add these - consider whether/how to factor out strategy, consistent
   // with overall factoring to compensate for particular OMX codec quirks.
   // audio_encoder_params_
@@ -572,12 +581,14 @@ class OmxCodecRunner : public CodecRunner {
   // This field must not be nullptr beyond the codec-type-specific method such
   // as SetAudioDecoderParams().  The codec_oob_bytes field can be null if the
   // codec type or specific format does not require codec_oob_bytes.
-  std::unique_ptr<CodecFormatDetails> initial_input_format_details_;
+  std::unique_ptr<fuchsia::mediacodec::CodecFormatDetails>
+      initial_input_format_details_;
 
   // This is the most recent settings recieved from the client and accepted,
   // received via SetInputBufferSettings() or SetOutputBufferSettings().  The
   // settings are as-received from the client.
-  std::unique_ptr<const CodecPortBufferSettings> port_settings_[kPortCount];
+  std::unique_ptr<const fuchsia::mediacodec::CodecPortBufferSettings>
+      port_settings_[kPortCount];
   // The server's buffer_lifetime_ordinal, per port.  In contrast to
   // port_settings_[port].buffer_lifetime_ordinal, this value is allowed to be
   // even when the previous odd buffer_lifetime_ordinal is over, due to buffer
@@ -626,7 +637,7 @@ class OmxCodecRunner : public CodecRunner {
   // For OmxCodecRunner, the initial CodecOutputConfig is sent immediately after
   // the input CodecBufferConstraints.  The CodecOutputConfig is likely to
   // change again before any output data is emitted, but it _may not_.
-  std::unique_ptr<const CodecOutputConfig> output_config_;
+  std::unique_ptr<const fuchsia::mediacodec::CodecOutputConfig> output_config_;
 
   // We ignore the part of the OMX spec where it says we should free the
   // underlying buffer "before" calling OMX FreeBuffer().  For one thing there's
@@ -703,12 +714,12 @@ class OmxCodecRunner : public CodecRunner {
   void GenerateAndSendNewOutputConfig(std::unique_lock<std::mutex>& lock,
                                       bool buffer_constraints_action_required);
 
-  std::unique_ptr<const media_codec::CodecOutputConfig> BuildNewOutputConfig(
-      uint64_t stream_lifetime_ordinal,
-      uint64_t new_output_buffer_constraints_version_ordinal,
-      uint64_t new_output_format_details_version_ordinal,
-      bool buffer_constraints_action_required);
-  std::unique_ptr<const media_codec::CodecOutputConfig>
+  std::unique_ptr<const fuchsia::mediacodec::CodecOutputConfig>
+  BuildNewOutputConfig(uint64_t stream_lifetime_ordinal,
+                       uint64_t new_output_buffer_constraints_version_ordinal,
+                       uint64_t new_output_format_details_version_ordinal,
+                       bool buffer_constraints_action_required);
+  std::unique_ptr<const fuchsia::mediacodec::CodecOutputConfig>
   CreateNewOutputConfigFromOmxOutputFormat(
       std::unique_ptr<const OmxCodecRunner::OMX_GENERIC_PORT_FORMAT>
           omx_output_format,
@@ -718,11 +729,11 @@ class OmxCodecRunner : public CodecRunner {
       bool buffer_constraints_action_required);
   void PopulateFormatDetailsFromOmxOutputFormat_Audio(
       const OmxCodecRunner::OMX_GENERIC_PORT_FORMAT& omx_output_format,
-      media_codec::CodecFormatDetails* format_details);
+      fuchsia::mediacodec::CodecFormatDetails* format_details);
 
   void EnsureBuffersNotConfiguredLocked(Port port);
 
-  media_codec::AudioChannelId AudioChannelIdFromOmxAudioChannelType(
+  fuchsia::mediacodec::AudioChannelId AudioChannelIdFromOmxAudioChannelType(
       OMX_AUDIO_CHANNELTYPE omx_audio_channeltype);
 
   // These Packet(s) are both Codec packets and OMX "buffers".
@@ -822,7 +833,7 @@ class OmxCodecRunner : public CodecRunner {
   std::unique_ptr<const OMX_GENERIC_PORT_FORMAT> OmxGetOutputFormat();
 
   void OmxTryRecycleOutputPacketLocked(OMX_BUFFERHEADERTYPE* header);
-  void OmxQueueInputPacket(const media_codec::CodecPacket& packet);
+  void OmxQueueInputPacket(const fuchsia::mediacodec::CodecPacket& packet);
   void EnsureOmxStateExecuting(std::unique_lock<std::mutex>& lock);
   void EnsureOmxBufferCountCurrent(std::unique_lock<std::mutex>& lock);
   void EnsureOmxStateLoaded(std::unique_lock<std::mutex>& lock);
@@ -926,6 +937,6 @@ class OmxCodecRunner : public CodecRunner {
   FXL_DISALLOW_IMPLICIT_CONSTRUCTORS(OmxCodecRunner);
 };
 
-}  // namespace media_codec
+}  // namespace codec_runner
 
 #endif  // GARNET_BIN_MEDIA_CODECS_SW_OMX_CODEC_RUNNER_SW_OMX_OMX_CODEC_RUNNER_H_

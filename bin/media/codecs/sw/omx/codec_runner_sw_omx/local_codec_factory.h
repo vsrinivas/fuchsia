@@ -43,25 +43,31 @@
 // CodecFactory and built-in SW codec isolates is something that only needs to
 // handle the same build version on both sides.
 
-namespace media_codec {
-
+namespace codec_runner {
 class CodecRunner;
+}  // namespace codec_runner
 
-class LocalCodecFactory : public CodecFactory {
+namespace codec_factory {
+
+class LocalCodecFactory : public fuchsia::mediacodec::CodecFactory {
  public:
   using BindAudioDecoderCallback = std::function<void(
-      fidl::InterfaceRequest<Codec>, CreateAudioDecoder_Params audio_params)>;
+      fidl::InterfaceRequest<fuchsia::mediacodec::Codec>,
+      fuchsia::mediacodec::CreateAudioDecoder_Params audio_params)>;
 
   // This creates a self-owned CodecFactory instance that knows how to create
   // any of the codecs supported by this isolate process, regardless of which
   // codec type.
-  static void CreateSelfOwned(async_t* fidl_async, thrd_t fidl_thread,
-                              fidl::InterfaceRequest<CodecFactory> request);
+  static void CreateSelfOwned(
+      async_t* fidl_async, thrd_t fidl_thread,
+      fidl::InterfaceRequest<fuchsia::mediacodec::CodecFactory> request);
 
   virtual void CreateAudioDecoder_Begin_Params(
-      CreateAudioDecoder_Params audio_decoder_params_1) override;
+      fuchsia::mediacodec::CreateAudioDecoder_Params audio_decoder_params_1)
+      override;
   virtual void CreateAudioDecoder_Go(
-      ::fidl::InterfaceRequest<Codec> audio_decoder) override;
+      ::fidl::InterfaceRequest<fuchsia::mediacodec::Codec> audio_decoder)
+      override;
 
   // TODO: Implement interface methods for:
   // audio encoder
@@ -84,9 +90,10 @@ class LocalCodecFactory : public CodecFactory {
 
   void Common_Begin(CodecType codec_type);
   void Common_Go(
-      ::fidl::InterfaceRequest<Codec> codec_request,
+      ::fidl::InterfaceRequest<fuchsia::mediacodec::Codec> codec_request,
       CodecType expected_codec_type, std::string mime_type,
-      std::function<void(CodecRunner* codec_runner)> set_type_specific_params);
+      std::function<void(codec_runner::CodecRunner* codec_runner)>
+          set_type_specific_params);
 
   // Some combinations of mime type and codec lib need a wrapper to compensate
   // for the OMX lib's behavior - to ensure that the overall Codec served by
@@ -97,7 +104,7 @@ class LocalCodecFactory : public CodecFactory {
     CodecType codec_type;
     std::string_view mime_type;
     std::string_view lib_filename;
-    std::function<std::unique_ptr<CodecRunner>(
+    std::function<std::unique_ptr<codec_runner::CodecRunner>(
         async_t* async, thrd_t fidl_thread,
         const CodecStrategy& codec_strategy)>
         create_runner;
@@ -105,14 +112,13 @@ class LocalCodecFactory : public CodecFactory {
 
   // Appropriate for use with any mime_type where the raw OMX codec doesn't have
   // any known open issues.
-  static std::unique_ptr<CodecRunner> CreateRawOmxRunner(
+  static std::unique_ptr<codec_runner::CodecRunner> CreateRawOmxRunner(
       async_t* fidl_async, thrd_t fidl_thread,
       const CodecStrategy& codec_strategy);
 
-  static std::unique_ptr<CodecRunner> CreateCodec(async_t* fidl_async,
-                                                  thrd_t fidl_thread,
-                                                  CodecType codec_type,
-                                                  std::string mime_type);
+  static std::unique_ptr<codec_runner::CodecRunner> CreateCodec(
+      async_t* fidl_async, thrd_t fidl_thread, CodecType codec_type,
+      std::string mime_type);
 
   async_t* fidl_async_;
   thrd_t fidl_thread_ = 0;
@@ -124,7 +130,8 @@ class LocalCodecFactory : public CodecFactory {
 
   CodecType codec_type_;
 
-  std::unique_ptr<CreateAudioDecoder_Params> audio_decoder_params_;
+  std::unique_ptr<fuchsia::mediacodec::CreateAudioDecoder_Params>
+      audio_decoder_params_;
   // TODO: CreateAudioEncoder_Params1 audio_encoder_params_;
   // TODO: CreateVideoDecoder_Params1 video_decoder_params_;
   // TODO: CreateVideoEncoder_Params1 video_encoder_params_;
@@ -132,6 +139,6 @@ class LocalCodecFactory : public CodecFactory {
   static CodecStrategy codec_strategies[];
 };
 
-}  // namespace media_codec
+}  // namespace codec_factory
 
 #endif  // GARNET_BIN_MEDIA_CODECS_SW_OMX_CODEC_RUNNER_SW_OMX_LOCAL_CODEC_FACTORY_H_

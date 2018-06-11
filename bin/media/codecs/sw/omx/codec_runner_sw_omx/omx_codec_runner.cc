@@ -110,29 +110,30 @@ constexpr uint32_t kBestFirstBufferLifetimeOrdinal = 1;
 // has no way of knowing at any given instant.
 constexpr uint32_t kInvalidDefaultBufferLifetimeOrdinal = 0;
 
-constexpr media_codec::AudioChannelId kOmxAudioChannelTypeToAudioChannelId[] = {
-    media_codec::AudioChannelId::SKIP,  // OMX_AUDIO_ChannelNone
-    media_codec::AudioChannelId::LF,    // OMX_AUDIO_ChannelLF
-    media_codec::AudioChannelId::RF,    // OMX_AUDIO_ChannelRF
-    media_codec::AudioChannelId::CF,    // OMX_AUDIO_ChannelCF
-    media_codec::AudioChannelId::LS,    // OMX_AUDIO_ChannelLS
-    media_codec::AudioChannelId::RS,    // OMX_AUDIO_ChannelRS
-    media_codec::AudioChannelId::LFE,   // OMX_AUDIO_ChannelLFE
-    media_codec::AudioChannelId::CS,    // OMX_AUDIO_ChannelCS
-    media_codec::AudioChannelId::LR,    // OMX_AUDIO_ChannelLR
-    media_codec::AudioChannelId::RR,    // OMX_AUDIO_ChannelRR
+constexpr fuchsia::mediacodec::AudioChannelId
+    kOmxAudioChannelTypeToAudioChannelId[] = {
+        fuchsia::mediacodec::AudioChannelId::SKIP,  // OMX_AUDIO_ChannelNone
+        fuchsia::mediacodec::AudioChannelId::LF,    // OMX_AUDIO_ChannelLF
+        fuchsia::mediacodec::AudioChannelId::RF,    // OMX_AUDIO_ChannelRF
+        fuchsia::mediacodec::AudioChannelId::CF,    // OMX_AUDIO_ChannelCF
+        fuchsia::mediacodec::AudioChannelId::LS,    // OMX_AUDIO_ChannelLS
+        fuchsia::mediacodec::AudioChannelId::RS,    // OMX_AUDIO_ChannelRS
+        fuchsia::mediacodec::AudioChannelId::LFE,   // OMX_AUDIO_ChannelLFE
+        fuchsia::mediacodec::AudioChannelId::CS,    // OMX_AUDIO_ChannelCS
+        fuchsia::mediacodec::AudioChannelId::LR,    // OMX_AUDIO_ChannelLR
+        fuchsia::mediacodec::AudioChannelId::RR,    // OMX_AUDIO_ChannelRR
 };
 // We do allow translating OMX_AUDIO_ChannelNone ("unused or empty") to Skip.
 constexpr uint32_t kOmxAudioChannelTypeSupportedMin = 0;
 constexpr uint32_t kOmxAudioChannelTypeSupportedMax = 9;
 
 uint32_t PacketCountFromPortSettings(
-    const media_codec::CodecPortBufferSettings& settings) {
+    const fuchsia::mediacodec::CodecPortBufferSettings& settings) {
   return settings.packet_count_for_codec + settings.packet_count_for_client;
 }
 
 uint32_t BufferCountFromPortSettings(
-    const media_codec::CodecPortBufferSettings& settings) {
+    const fuchsia::mediacodec::CodecPortBufferSettings& settings) {
   if (settings.single_buffer_mode) {
     return 1;
   }
@@ -168,7 +169,7 @@ void InitOmxStruct(OMX_STRUCT* omx_struct) {
 
 }  // namespace
 
-namespace media_codec {
+namespace codec_runner {
 
 OmxCodecRunner::OmxCodecRunner(async_t* fidl_async, thrd_t fidl_thread,
                                std::string_view mime_type,
@@ -337,7 +338,7 @@ bool OmxCodecRunner::Load() {
 // belongs in CodecFactory and Codec interfaces (if anywhere), but not here for
 // now.
 void OmxCodecRunner::SetAudioDecoderParams(
-    CreateAudioDecoder_Params audio_decoder_params) {
+    fuchsia::mediacodec::CreateAudioDecoder_Params audio_decoder_params) {
   struct AudioDecoder {
     std::string_view codec_mime_type;
     std::string_view omx_mime_type;
@@ -364,9 +365,11 @@ void OmxCodecRunner::SetAudioDecoderParams(
     Exit("SetAudioDecoderParams() couldn't find a suitable decoder");
   }
 
-  audio_decoder_params_ = std::make_unique<CreateAudioDecoder_Params>(
-      std::move(audio_decoder_params));
-  initial_input_format_details_ = media_codec::CodecFormatDetails::New();
+  audio_decoder_params_ =
+      std::make_unique<fuchsia::mediacodec::CreateAudioDecoder_Params>(
+          std::move(audio_decoder_params));
+  initial_input_format_details_ =
+      fuchsia::mediacodec::CodecFormatDetails::New();
   zx_status_t clone_result = audio_decoder_params_->input_details.Clone(
       initial_input_format_details_.get());
   if (clone_result != ZX_OK) {
@@ -493,49 +496,50 @@ void OmxCodecRunner::ComputeInputConstraints() {
   uint32_t per_packet_buffer_bytes_recommended =
       kOmxRecommendedBufferVsMinBufferFactor * omx_min_buffer_size;
   input_constraints_ =
-      std::make_unique<CodecBufferConstraints>(CodecBufferConstraints{
-          .buffer_constraints_version_ordinal =
-              kInputBufferConstraintsVersionOrdinal,
-          .per_packet_buffer_bytes_min = omx_min_buffer_size,
-          .per_packet_buffer_bytes_recommended =
-              per_packet_buffer_bytes_recommended,
-          .per_packet_buffer_bytes_max =
-              kOmxMaxBufferVsMinBufferFactor * omx_min_buffer_size,
-          .packet_count_for_codec_min =
-              omx_initial_port_def_[kInput].nBufferCountMin,
-          .packet_count_for_codec_recommended =
-              packet_count_for_codec_recommended,
-          .packet_count_for_codec_recommended_max =
-              kOmxRecommendedMaxBufferCountVsMinBufferCountFactor *
-              omx_initial_port_def_[kInput].nBufferCountMin,
-          .packet_count_for_codec_max =
-              kOmxMaxBufferCountVsMinBufferCountFactor *
-              omx_initial_port_def_[kInput].nBufferCountMin,
-          // TODO(dustingreen): verify that this works end to end for the
-          // OmxCodecRunner...
-          .single_buffer_mode_allowed = true,
+      std::make_unique<fuchsia::mediacodec::CodecBufferConstraints>(
+          fuchsia::mediacodec::CodecBufferConstraints{
+              .buffer_constraints_version_ordinal =
+                  kInputBufferConstraintsVersionOrdinal,
+              .per_packet_buffer_bytes_min = omx_min_buffer_size,
+              .per_packet_buffer_bytes_recommended =
+                  per_packet_buffer_bytes_recommended,
+              .per_packet_buffer_bytes_max =
+                  kOmxMaxBufferVsMinBufferFactor * omx_min_buffer_size,
+              .packet_count_for_codec_min =
+                  omx_initial_port_def_[kInput].nBufferCountMin,
+              .packet_count_for_codec_recommended =
+                  packet_count_for_codec_recommended,
+              .packet_count_for_codec_recommended_max =
+                  kOmxRecommendedMaxBufferCountVsMinBufferCountFactor *
+                  omx_initial_port_def_[kInput].nBufferCountMin,
+              .packet_count_for_codec_max =
+                  kOmxMaxBufferCountVsMinBufferCountFactor *
+                  omx_initial_port_def_[kInput].nBufferCountMin,
+              // TODO(dustingreen): verify that this works end to end for the
+              // OmxCodecRunner...
+              .single_buffer_mode_allowed = true,
 
-          // default_settings
-          //
-          // Inititial input buffer_lifetime_ordinal of 1 is ok.  It's also ok
-          // if it's any larger odd number, but 1 is the best choice.
-          .default_settings.buffer_lifetime_ordinal =
-              kBestFirstBufferLifetimeOrdinal,
-          // The buffer_constraints_version_ordinal is a pass-through value so
-          // clients will have no reason to change this - it's just so the
-          // server knows what version of constraints the client was aware of
-          // so far.
-          .default_settings.buffer_constraints_version_ordinal =
-              kInputBufferConstraintsVersionOrdinal,
-          .default_settings.packet_count_for_codec =
-              packet_count_for_codec_recommended,
-          .default_settings.packet_count_for_client =
-              ::media_codec::kDefaultInputPacketCountForClient,
-          .default_settings.per_packet_buffer_bytes =
-              per_packet_buffer_bytes_recommended,
-          .default_settings.single_buffer_mode =
-              ::media_codec::kDefaultInputIsSingleBufferMode,
-      });
+              // default_settings
+              //
+              // Inititial input buffer_lifetime_ordinal of 1 is ok.  It's also
+              // ok if it's any larger odd number, but 1 is the best choice.
+              .default_settings.buffer_lifetime_ordinal =
+                  kBestFirstBufferLifetimeOrdinal,
+              // The buffer_constraints_version_ordinal is a pass-through value
+              // so clients will have no reason to change this - it's just so
+              // the server knows what version of constraints the client was
+              // aware of so far.
+              .default_settings.buffer_constraints_version_ordinal =
+                  kInputBufferConstraintsVersionOrdinal,
+              .default_settings.packet_count_for_codec =
+                  packet_count_for_codec_recommended,
+              .default_settings.packet_count_for_client =
+                  ::fuchsia::mediacodec::kDefaultInputPacketCountForClient,
+              .default_settings.per_packet_buffer_bytes =
+                  per_packet_buffer_bytes_recommended,
+              .default_settings.single_buffer_mode =
+                  ::fuchsia::mediacodec::kDefaultInputIsSingleBufferMode,
+          });
 
   // We're about to be bound to the Codec channel, then we'll expect to see
   // SetEventSink() which will immediately send the input_constraints_ to the
@@ -601,7 +605,7 @@ void OmxCodecRunner::GenerateAndSendNewOutputConfig(
   // new_output_buffer_constraints_version_ordinal,
   // buffer_constraints_action_required);
 
-  std::unique_ptr<const media_codec::CodecOutputConfig> output_config;
+  std::unique_ptr<const fuchsia::mediacodec::CodecOutputConfig> output_config;
   {  // scope unlock
     ScopedUnlock unlock(lock);
     // Don't call OMX under the lock_, because we can avoid doing so, and
@@ -643,10 +647,10 @@ void OmxCodecRunner::GenerateAndSendNewOutputConfig(
   sent_format_details_version_ordinal_[kOutput] =
       new_output_format_details_version_ordinal;
 
-  // Intentional copy of media_codec::OutputConfig output_config_ here, as we
-  // want output_config_ to remain valid (at least for debugging reasons for
-  // now).
-  media_codec::CodecOutputConfig config_copy;
+  // Intentional copy of fuchsia::mediacodec::OutputConfig output_config_ here,
+  // as we want output_config_ to remain valid (at least for debugging reasons
+  // for now).
+  fuchsia::mediacodec::CodecOutputConfig config_copy;
   zx_status_t clone_status = output_config_->Clone(&config_copy);
   if (clone_status != ZX_OK) {
     Exit("CodecOutputConfig::Clone() failed - exiting - status: %d\n",
@@ -786,7 +790,7 @@ void OmxCodecRunner::EnsureFutureStreamFlushSeenLocked(
 }
 
 // Caller must ensure that this is called only on one thread at a time.
-std::unique_ptr<const media_codec::CodecOutputConfig>
+std::unique_ptr<const fuchsia::mediacodec::CodecOutputConfig>
 OmxCodecRunner::BuildNewOutputConfig(
     uint64_t stream_lifetime_ordinal,
     uint64_t new_output_buffer_constraints_version_ordinal,
@@ -800,7 +804,7 @@ OmxCodecRunner::BuildNewOutputConfig(
 }
 
 // Caller must ensure that this is called only on one thread at a time.
-std::unique_ptr<const media_codec::CodecOutputConfig>
+std::unique_ptr<const fuchsia::mediacodec::CodecOutputConfig>
 OmxCodecRunner::CreateNewOutputConfigFromOmxOutputFormat(
     std::unique_ptr<const OmxCodecRunner::OMX_GENERIC_PORT_FORMAT>
         omx_output_format,
@@ -822,52 +826,57 @@ OmxCodecRunner::CreateNewOutputConfigFromOmxOutputFormat(
       kOmxRecommendedBufferVsMinBufferFactor * per_packet_buffer_bytes_min;
   uint32_t packet_count_for_codec_recommended =
       kOmxRecommendedBufferCountVsMinBufferCountFactor * port.nBufferCountMin;
-  std::unique_ptr<media_codec::CodecOutputConfig> result = std::make_unique<
-      media_codec::CodecOutputConfig>(media_codec::CodecOutputConfig{
-      .stream_lifetime_ordinal = stream_lifetime_ordinal_,
-      .buffer_constraints_action_required = buffer_constraints_action_required,
-      .buffer_constraints.buffer_constraints_version_ordinal =
-          new_output_buffer_constraints_version_ordinal,
-      .buffer_constraints.per_packet_buffer_bytes_min =
-          per_packet_buffer_bytes_min,
-      .buffer_constraints.per_packet_buffer_bytes_recommended =
-          per_packet_buffer_bytes_recommended,
-      .buffer_constraints.per_packet_buffer_bytes_max =
-          kOmxMaxBufferVsMinBufferFactor * per_packet_buffer_bytes_min,
-      .buffer_constraints.packet_count_for_codec_min = port.nBufferCountMin,
-      .buffer_constraints.packet_count_for_codec_recommended =
-          packet_count_for_codec_recommended,
-      .buffer_constraints.packet_count_for_codec_recommended_max =
-          kOmxRecommendedMaxBufferCountVsMinBufferCountFactor *
-          port.nBufferCountMin,
-      .buffer_constraints.packet_count_for_codec_max =
-          kOmxMaxBufferCountVsMinBufferCountFactor * port.nBufferCountMin,
-      .buffer_constraints.single_buffer_mode_allowed = false,
+  std::unique_ptr<fuchsia::mediacodec::CodecOutputConfig> result =
+      std::make_unique<fuchsia::mediacodec::CodecOutputConfig>(
+          fuchsia::mediacodec::CodecOutputConfig{
+              .stream_lifetime_ordinal = stream_lifetime_ordinal_,
+              .buffer_constraints_action_required =
+                  buffer_constraints_action_required,
+              .buffer_constraints.buffer_constraints_version_ordinal =
+                  new_output_buffer_constraints_version_ordinal,
+              .buffer_constraints.per_packet_buffer_bytes_min =
+                  per_packet_buffer_bytes_min,
+              .buffer_constraints.per_packet_buffer_bytes_recommended =
+                  per_packet_buffer_bytes_recommended,
+              .buffer_constraints.per_packet_buffer_bytes_max =
+                  kOmxMaxBufferVsMinBufferFactor * per_packet_buffer_bytes_min,
+              .buffer_constraints.packet_count_for_codec_min =
+                  port.nBufferCountMin,
+              .buffer_constraints.packet_count_for_codec_recommended =
+                  packet_count_for_codec_recommended,
+              .buffer_constraints.packet_count_for_codec_recommended_max =
+                  kOmxRecommendedMaxBufferCountVsMinBufferCountFactor *
+                  port.nBufferCountMin,
+              .buffer_constraints.packet_count_for_codec_max =
+                  kOmxMaxBufferCountVsMinBufferCountFactor *
+                  port.nBufferCountMin,
+              .buffer_constraints.single_buffer_mode_allowed = false,
 
-      // default_settings
-      //
-      // Can't/won't help the client pick the client's buffer_lifetime_ordinal
-      // for output.
-      .buffer_constraints.default_settings.buffer_lifetime_ordinal =
-          kInvalidDefaultBufferLifetimeOrdinal,
-      // The buffer_constraints_version_ordinal is a pass-through value so
-      // clients will have no reason to change this - it's just so the
-      // server knows what version of constraints the client was aware of
-      // so far.
-      .buffer_constraints.default_settings.buffer_constraints_version_ordinal =
-          new_output_buffer_constraints_version_ordinal,
-      .buffer_constraints.default_settings.packet_count_for_codec =
-          packet_count_for_codec_recommended,
-      .buffer_constraints.default_settings.packet_count_for_client =
-          ::media_codec::kDefaultOutputPacketCountForClient,
-      .buffer_constraints.default_settings.per_packet_buffer_bytes =
-          per_packet_buffer_bytes_recommended,
-      .buffer_constraints.default_settings.single_buffer_mode =
-          ::media_codec::kDefaultOutputIsSingleBufferMode,
+              // default_settings
+              //
+              // Can't/won't help the client pick the client's
+              // buffer_lifetime_ordinal for output.
+              .buffer_constraints.default_settings.buffer_lifetime_ordinal =
+                  kInvalidDefaultBufferLifetimeOrdinal,
+              // The buffer_constraints_version_ordinal is a pass-through value
+              // so clients will have no reason to change this - it's just so
+              // the server knows what version of constraints the client was
+              // aware of so far.
+              .buffer_constraints.default_settings
+                  .buffer_constraints_version_ordinal =
+                  new_output_buffer_constraints_version_ordinal,
+              .buffer_constraints.default_settings.packet_count_for_codec =
+                  packet_count_for_codec_recommended,
+              .buffer_constraints.default_settings.packet_count_for_client =
+                  ::fuchsia::mediacodec::kDefaultOutputPacketCountForClient,
+              .buffer_constraints.default_settings.per_packet_buffer_bytes =
+                  per_packet_buffer_bytes_recommended,
+              .buffer_constraints.default_settings.single_buffer_mode =
+                  ::fuchsia::mediacodec::kDefaultOutputIsSingleBufferMode,
 
-      .format_details.format_details_version_ordinal =
-          new_output_format_details_version_ordinal,
-  });
+              .format_details.format_details_version_ordinal =
+                  new_output_format_details_version_ordinal,
+          });
   switch (omx_output_format->definition.eDomain) {
     case OMX_PortDomainAudio:
       PopulateFormatDetailsFromOmxOutputFormat_Audio(*omx_output_format.get(),
@@ -893,7 +902,7 @@ OmxCodecRunner::CreateNewOutputConfigFromOmxOutputFormat(
 // codec_oob_config based on the first output data, if available.
 void OmxCodecRunner::PopulateFormatDetailsFromOmxOutputFormat_Audio(
     const OmxCodecRunner::OMX_GENERIC_PORT_FORMAT& omx_output_format,
-    media_codec::CodecFormatDetails* format_details) {
+    fuchsia::mediacodec::CodecFormatDetails* format_details) {
   assert(omx_output_format.definition.eDir == OMX_DirOutput);
   assert(omx_output_format.definition.eDomain == OMX_PortDomainAudio);
   const OMX_AUDIO_PORTDEFINITIONTYPE& omx_audio_port_def =
@@ -905,14 +914,14 @@ void OmxCodecRunner::PopulateFormatDetailsFromOmxOutputFormat_Audio(
     Exit("inconsistent eEncoding from OMX - exiting");
   }
   assert(omx_audio_port_def.eEncoding == omx_audio_param_port_format.eEncoding);
-  media_codec::AudioFormat audio_format{};
+  fuchsia::mediacodec::AudioFormat audio_format{};
   switch (omx_audio_param_port_format.eEncoding) {
     case OMX_AUDIO_CodingPCM: {
       const OMX_AUDIO_PARAM_PCMMODETYPE& omx_pcm = omx_output_format.audio.pcm;
-      media_codec::PcmFormat pcm{};
+      fuchsia::mediacodec::PcmFormat pcm{};
       switch (omx_pcm.ePCMMode) {
         case OMX_AUDIO_PCMModeLinear:
-          pcm.pcm_mode = media_codec::AudioPcmMode::LINEAR;
+          pcm.pcm_mode = fuchsia::mediacodec::AudioPcmMode::LINEAR;
           break;
         default:
           Exit("unhandled OMX_AUDIO_PARAM_PCMMODETYPE.ePCMMode value: %d",
@@ -921,13 +930,14 @@ void OmxCodecRunner::PopulateFormatDetailsFromOmxOutputFormat_Audio(
       }
       pcm.bits_per_sample = omx_pcm.nBitPerSample;
       pcm.frames_per_second = omx_pcm.nSamplingRate;
-      std::vector<media_codec::AudioChannelId> channel_map(omx_pcm.nChannels);
+      std::vector<fuchsia::mediacodec::AudioChannelId> channel_map(
+          omx_pcm.nChannels);
       for (uint32_t i = 0; i < omx_pcm.nChannels; i++) {
         channel_map[i] =
             AudioChannelIdFromOmxAudioChannelType(omx_pcm.eChannelMapping[i]);
       }
       pcm.channel_map.reset(channel_map);
-      media_codec::AudioUncompressedFormat uncompressed{};
+      fuchsia::mediacodec::AudioUncompressedFormat uncompressed{};
       uncompressed.set_pcm(std::move(pcm));
       audio_format.set_uncompressed(std::move(uncompressed));
     } break;
@@ -939,7 +949,7 @@ void OmxCodecRunner::PopulateFormatDetailsFromOmxOutputFormat_Audio(
            omx_audio_param_port_format.eEncoding);
       break;
   }
-  format_details->domain = DomainFormat::New();
+  format_details->domain = fuchsia::mediacodec::DomainFormat::New();
   format_details->domain->set_audio(std::move(audio_format));
 }
 
@@ -1010,14 +1020,14 @@ void OmxCodecRunner::EnableOnStreamFailed() {
 }
 
 void OmxCodecRunner::SetInputBufferSettings(
-    CodecPortBufferSettings input_settings) {
+    fuchsia::mediacodec::CodecPortBufferSettings input_settings) {
   PostSerial(stream_control_async_, [this, input_settings = input_settings] {
     SetInputBufferSettings_StreamControl(input_settings);
   });
 }
 
 void OmxCodecRunner::SetInputBufferSettings_StreamControl(
-    CodecPortBufferSettings input_settings) {
+    fuchsia::mediacodec::CodecPortBufferSettings input_settings) {
   assert(thrd_current() == stream_control_thread_);
   {  // scope lock
     std::unique_lock<std::mutex> lock(lock_);
@@ -1038,21 +1048,22 @@ void OmxCodecRunner::SetInputBufferSettings_StreamControl(
   }  // ~lock
 }
 
-void OmxCodecRunner::AddInputBuffer(CodecBuffer buffer) {
+void OmxCodecRunner::AddInputBuffer(fuchsia::mediacodec::CodecBuffer buffer) {
   PostSerial(stream_control_async_,
              [this, buffer = std::move(buffer)]() mutable {
                AddInputBuffer_StreamControl(std::move(buffer));
              });
 }
 
-void OmxCodecRunner::AddInputBuffer_StreamControl(CodecBuffer buffer) {
+void OmxCodecRunner::AddInputBuffer_StreamControl(
+    fuchsia::mediacodec::CodecBuffer buffer) {
   assert(thrd_current() == stream_control_thread_);
   AddBufferCommon(kInput, std::move(buffer));
 }
 
 void OmxCodecRunner::SetBufferSettingsCommonLocked(
-    Port port, const media_codec::CodecPortBufferSettings& settings,
-    const media_codec::CodecBufferConstraints& constraints) {
+    Port port, const fuchsia::mediacodec::CodecPortBufferSettings& settings,
+    const fuchsia::mediacodec::CodecBufferConstraints& constraints) {
   // Invariant
   assert((!port_settings_[port] && buffer_lifetime_ordinal_[port] == 0) ||
          (buffer_lifetime_ordinal_[port] >=
@@ -1115,13 +1126,14 @@ void OmxCodecRunner::SetBufferSettingsCommonLocked(
 
   // This also starts the new buffer_lifetime_ordinal.
   port_settings_[port] =
-      std::make_unique<CodecPortBufferSettings>(std::move(settings));
+      std::make_unique<fuchsia::mediacodec::CodecPortBufferSettings>(
+          std::move(settings));
   buffer_lifetime_ordinal_[port] =
       port_settings_[port]->buffer_lifetime_ordinal;
 }
 
 void OmxCodecRunner::SetOutputBufferSettings(
-    CodecPortBufferSettings output_settings) {
+    fuchsia::mediacodec::CodecPortBufferSettings output_settings) {
   {  // scope lock
     std::unique_lock<std::mutex> lock(lock_);
 
@@ -1161,7 +1173,7 @@ void OmxCodecRunner::SetOutputBufferSettings(
   }  // ~lock
 }
 
-void OmxCodecRunner::AddOutputBuffer(CodecBuffer buffer) {
+void OmxCodecRunner::AddOutputBuffer(fuchsia::mediacodec::CodecBuffer buffer) {
   bool output_done_configuring = AddBufferCommon(kOutput, std::move(buffer));
   if (output_done_configuring) {
     // The StreamControl domain _might_ be waiting for output to be configured.
@@ -1170,7 +1182,7 @@ void OmxCodecRunner::AddOutputBuffer(CodecBuffer buffer) {
 }
 
 bool OmxCodecRunner::AddBufferCommon(Port port,
-                                     media_codec::CodecBuffer buffer) {
+                                     fuchsia::mediacodec::CodecBuffer buffer) {
   bool done_configuring = false;
   {  // scope lock
     std::unique_lock<std::mutex> lock(lock_);
@@ -1283,17 +1295,17 @@ bool OmxCodecRunner::AddBufferCommon(Port port,
         // here.
         assert(!omx_input_buffer_oob_);
         assert(!omx_input_packet_oob_);
-        static_assert(
-            media_codec::kMaxCodecOobBytesSize <= ZX_CHANNEL_MAX_MSG_BYTES,
-            "media_codec::kMaxCodecOobBytesSize must be <= "
-            "ZX_CHANNEL_MAX_MSG_BYTES");
+        static_assert(fuchsia::mediacodec::kMaxCodecOobBytesSize <=
+                          ZX_CHANNEL_MAX_MSG_BYTES,
+                      "fuchsia::mediacodec::kMaxCodecOobBytesSize must be <= "
+                      "ZX_CHANNEL_MAX_MSG_BYTES");
         zx::vmo oob_vmo;
-        zx_status_t vmo_create_status =
-            zx::vmo::create(media_codec::kMaxCodecOobBytesSize, 0, &oob_vmo);
+        zx_status_t vmo_create_status = zx::vmo::create(
+            fuchsia::mediacodec::kMaxCodecOobBytesSize, 0, &oob_vmo);
         if (vmo_create_status != ZX_OK) {
           Exit("zx::vmo::create() failed for omx_input_buffer_oob_");
         }
-        media_codec::CodecBuffer oob_buffer{
+        fuchsia::mediacodec::CodecBuffer oob_buffer{
             .buffer_lifetime_ordinal =
                 port_settings_[port]->buffer_lifetime_ordinal,
             // We don't really use this for anything, so just set it to one
@@ -1301,10 +1313,10 @@ bool OmxCodecRunner::AddBufferCommon(Port port,
             // ambiguity with any real buffer_index.
             .buffer_index = required_buffer_count,
         };
-        oob_buffer.data.set_vmo(media_codec::CodecBufferDataVmo{
+        oob_buffer.data.set_vmo(fuchsia::mediacodec::CodecBufferDataVmo{
             .vmo_handle = std::move(oob_vmo),
             .vmo_usable_start = 0,
-            .vmo_usable_size = media_codec::kMaxCodecOobBytesSize,
+            .vmo_usable_size = fuchsia::mediacodec::kMaxCodecOobBytesSize,
         });
         omx_input_buffer_oob_ =
             std::make_unique<Buffer>(this, kInput, std::move(oob_buffer));
@@ -1459,7 +1471,7 @@ void OmxCodecRunner::Sync(SyncCallback callback) {
 }
 
 void OmxCodecRunner::RecycleOutputPacket(
-    CodecPacketHeader available_output_packet) {
+    fuchsia::mediacodec::CodecPacketHeader available_output_packet) {
   std::unique_lock<std::mutex> lock(lock_);
   CheckOldBufferLifetimeOrdinalLocked(
       kOutput, available_output_packet.buffer_lifetime_ordinal);
@@ -1506,7 +1518,8 @@ void OmxCodecRunner::RecycleOutputPacket(
 // stash it temporarily, and convert to CODECCONFIG (instead of the codec
 // creation format details).
 void OmxCodecRunner::QueueInputFormatDetails(
-    uint64_t stream_lifetime_ordinal, CodecFormatDetails format_details) {
+    uint64_t stream_lifetime_ordinal,
+    fuchsia::mediacodec::CodecFormatDetails format_details) {
   assert(false &&
          "QueueInputFormatDetails() not implemented for omx_codec_runner yet");
 
@@ -1524,7 +1537,8 @@ void OmxCodecRunner::QueueInputFormatDetails(
 }
 
 void OmxCodecRunner::QueueInputFormatDetails_StreamControl(
-    uint64_t stream_lifetime_ordinal, CodecFormatDetails format_details) {
+    uint64_t stream_lifetime_ordinal,
+    fuchsia::mediacodec::CodecFormatDetails format_details) {
   // Need to finish the implementation of this method - it's not super far from
   // done, but need to do another pass over it, as it may be missing things.
   assert(false && "not implemented");
@@ -1548,7 +1562,7 @@ void OmxCodecRunner::QueueInputFormatDetails_StreamControl(
     return;
   }
   stream_->SetInputFormatDetails(
-      std::make_unique<media_codec::CodecFormatDetails>(
+      std::make_unique<fuchsia::mediacodec::CodecFormatDetails>(
           std::move(format_details)));
   // SetOobConfigPending(true) to ensure oob_config_pending() is true.
   //
@@ -1561,7 +1575,7 @@ void OmxCodecRunner::QueueInputFormatDetails_StreamControl(
   stream_->SetOobConfigPending(true);
 }
 
-void OmxCodecRunner::QueueInputPacket(media_codec::CodecPacket packet) {
+void OmxCodecRunner::QueueInputPacket(fuchsia::mediacodec::CodecPacket packet) {
   {  // scope lock
     std::unique_lock<std::mutex> lock(lock_);
     EnsureFutureStreamSeenLocked(packet.stream_lifetime_ordinal);
@@ -1573,14 +1587,14 @@ void OmxCodecRunner::QueueInputPacket(media_codec::CodecPacket packet) {
 }
 
 void OmxCodecRunner::QueueInputPacket_StreamControl(
-    media_codec::CodecPacket packet) {
+    fuchsia::mediacodec::CodecPacket packet) {
   // Unless we cancel this cleanup, we'll free the input packet back to the
   // client.
   //
   // This is an example of where not being able to copy a FIDL struct using
   // language-level copy can be a bit verbose, but overall it's probably worth
   // forcing copy to be explicit.
-  media_codec::CodecPacketHeader temp_header_copy;
+  fuchsia::mediacodec::CodecPacketHeader temp_header_copy;
   zx_status_t clone_result = packet.header.Clone(&temp_header_copy);
   if (clone_result != ZX_OK) {
     Exit("CodecPacketHeader::Clone() failed");
@@ -2142,7 +2156,7 @@ void OmxCodecRunner::QueueInputEndOfStream_StreamControl(
 }
 
 void OmxCodecRunner::OmxQueueInputPacket(
-    const media_codec::CodecPacket& packet) {
+    const fuchsia::mediacodec::CodecPacket& packet) {
   assert(thrd_current() == stream_control_thread_);
   // The OMX codec can report an error unilaterally, but it can't change state
   // unilaterally.  So on the StreamControl ordering domain it's ok to check the
@@ -2218,10 +2232,10 @@ void OmxCodecRunner::OmxQueueInputOOB() {
     Exit("codec_oob_bytes was non-null but empty - exiting\n");
   }
   assert(omx_input_packet_oob_->buffer().buffer_size() >=
-         media_codec::kMaxCodecOobBytesSize);
-  if (codec_oob_bytes->size() > media_codec::kMaxCodecOobBytesSize) {
+         fuchsia::mediacodec::kMaxCodecOobBytesSize);
+  if (codec_oob_bytes->size() > fuchsia::mediacodec::kMaxCodecOobBytesSize) {
     Exit(
-        "codec_oob_bytes.size() > media_codec::kMaxCodecOobBytesSize - "
+        "codec_oob_bytes.size() > fuchsia::mediacodec::kMaxCodecOobBytesSize - "
         "exiting\n");
   }
   assert(codec_oob_bytes->size() <=
@@ -2952,7 +2966,7 @@ OMX_ERRORTYPE OmxCodecRunner::EmptyBufferDone(
     // the client, so assert we're doing it right server-side.
     assert(!packet_free_bits_[kInput][packet->packet_index()]);
     packet_free_bits_[kInput][packet->packet_index()] = true;
-    SendFreeInputPacketLocked(CodecPacketHeader{
+    SendFreeInputPacketLocked(fuchsia::mediacodec::CodecPacketHeader{
         .buffer_lifetime_ordinal = packet->buffer_lifetime_ordinal(),
         .packet_index = packet->packet_index()});
   }
@@ -2963,7 +2977,7 @@ oob_free_notify_outside_lock:;
 }
 
 void OmxCodecRunner::SendFreeInputPacketLocked(
-    media_codec::CodecPacketHeader header) {
+    fuchsia::mediacodec::CodecPacketHeader header) {
   // We allow calling this method on StreamControl or InputData ordering domain.
   // Because the InputData ordering domain thread isn't visible to this code,
   // if this isn't the StreamControl then we can only assert that this thread
@@ -3076,7 +3090,7 @@ OMX_ERRORTYPE OmxCodecRunner::FillBufferDone(
       PostSerial(
           fidl_async_,
           [this,
-           p = CodecPacket{
+           p = fuchsia::mediacodec::CodecPacket{
                .header.buffer_lifetime_ordinal =
                    packet->buffer_lifetime_ordinal(),
                .header.packet_index = packet->packet_index(),
@@ -3269,7 +3283,7 @@ void OmxCodecRunner::OmxTryRecycleOutputPacketLocked(
   OmxFillThisBufferLocked(header);
 }
 
-media_codec::AudioChannelId
+fuchsia::mediacodec::AudioChannelId
 OmxCodecRunner::AudioChannelIdFromOmxAudioChannelType(
     OMX_AUDIO_CHANNELTYPE omx_audio_channeltype) {
   uint32_t input_channeltype = omx_audio_channeltype;
@@ -3284,8 +3298,8 @@ OmxCodecRunner::AudioChannelIdFromOmxAudioChannelType(
 // The port parameter is only for debugging, so we don't expose the Port typedef
 // just for that.
 void OmxCodecRunner::ValidateBufferSettingsVsConstraints(
-    uint32_t port, const media_codec::CodecPortBufferSettings& settings,
-    const media_codec::CodecBufferConstraints& constraints) {
+    uint32_t port, const fuchsia::mediacodec::CodecPortBufferSettings& settings,
+    const fuchsia::mediacodec::CodecBufferConstraints& constraints) {
   if (settings.packet_count_for_codec <
       constraints.packet_count_for_codec_min) {
     Exit("packet_count_for_codec < packet_count_for_codec_min");
@@ -3319,7 +3333,7 @@ void OmxCodecRunner::ValidateBufferSettingsVsConstraints(
 }
 
 OmxCodecRunner::Buffer::Buffer(OmxCodecRunner* parent, Port port,
-                               media_codec::CodecBuffer buffer)
+                               fuchsia::mediacodec::CodecBuffer buffer)
     : parent_(parent), port_(port), buffer_(std::move(buffer)) {
   // nothing else to do here
 }
@@ -3432,12 +3446,14 @@ OmxCodecRunner::Stream::~Stream() {
 }
 
 void OmxCodecRunner::Stream::SetInputFormatDetails(
-    std::unique_ptr<media_codec::CodecFormatDetails> input_format_details) {
+    std::unique_ptr<fuchsia::mediacodec::CodecFormatDetails>
+        input_format_details) {
   // This is allowed to happen multiple times per stream.
   input_format_details_ = std::move(input_format_details);
 }
 
-const CodecFormatDetails* OmxCodecRunner::Stream::input_format_details() {
+const fuchsia::mediacodec::CodecFormatDetails*
+OmxCodecRunner::Stream::input_format_details() {
   return input_format_details_.get();
 }
 
@@ -3470,4 +3486,4 @@ bool OmxCodecRunner::Stream::output_end_of_stream() {
   return output_end_of_stream_;
 }
 
-}  // namespace media_codec
+}  // namespace codec_runner

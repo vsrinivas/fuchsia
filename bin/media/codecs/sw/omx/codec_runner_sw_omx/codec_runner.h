@@ -7,17 +7,16 @@
 
 #include <fuchsia/mediacodec/cpp/fidl.h>
 
-//#include "lib/app/cpp/startup_context.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/synchronization/thread_annotations.h"
 
-namespace media_codec {
+namespace codec_runner {
 
 // This is an abstract base class whose main purpose is to prevent us from
 // assuming that all codecs run locally will be OMX codecs.
-class CodecRunner : public Codec {
+class CodecRunner : public fuchsia::mediacodec::Codec {
  public:
   // needs a virtual destructor because unique_ptr will be deleting via vtable
   // entry instead of direct call to destructor
@@ -33,7 +32,7 @@ class CodecRunner : public Codec {
   // complete CodecFactory implementation, nor does this class implement
   // CodecFactory.
   virtual void SetAudioDecoderParams(
-      CreateAudioDecoder_Params audio_decoder_params) = 0;
+      fuchsia::mediacodec::CreateAudioDecoder_Params audio_decoder_params) = 0;
   // TODO:
   // virtual void SetAudioEncoderParams(...) = 0;
   // virtual void SetVideoDecoderParams(...) = 0;
@@ -50,12 +49,14 @@ class CodecRunner : public Codec {
   // essentially makes "this" self-owned (roughly speaking), or slightly more
   // precisely, owned by the Codec channel via ImplPtr of the binding being
   // std::unique_ptr<CodecRunner> here (instead of the default Codec*).
-  void BindAndOwnSelf(fidl::InterfaceRequest<Codec> codec_request,
-                      std::unique_ptr<CodecRunner> self);
+  void BindAndOwnSelf(
+      fidl::InterfaceRequest<fuchsia::mediacodec::Codec> codec_request,
+      std::unique_ptr<CodecRunner> self);
 
   // We handle this here in the base class since it's essentially part of
   // finishing the binding.
-  void SetEventSink(fidl::InterfaceHandle<CodecEvents> event_sink) override;
+  void SetEventSink(fidl::InterfaceHandle<fuchsia::mediacodec::CodecEvents>
+                        event_sink) override;
 
   // Some sub-classes want to send initial output constraints very early,
   // instead of waiting for any input data.  This can be because the codec
@@ -95,11 +96,12 @@ class CodecRunner : public Codec {
 
   async_t* const fidl_async_;
   const thrd_t fidl_thread_;
-  using BindingType = fidl::Binding<Codec, std::unique_ptr<CodecRunner>>;
+  using BindingType =
+      fidl::Binding<fuchsia::mediacodec::Codec, std::unique_ptr<CodecRunner>>;
   std::unique_ptr<BindingType> binding_;
   // TODO(dustingreen): replace with FIDL events once the C++ codegen for those
   // works.
-  CodecEventsPtr event_sink_;
+  fuchsia::mediacodec::CodecEventsPtr event_sink_;
 
   bool input_constraints_sent_ = false;
 
@@ -111,11 +113,12 @@ class CodecRunner : public Codec {
   //
   // This remains valid after CodecRunner sends OnInputConstraints(), in case
   // a derived class wants to refer to the input constraints.
-  std::unique_ptr<const CodecBufferConstraints> input_constraints_;
+  std::unique_ptr<const fuchsia::mediacodec::CodecBufferConstraints>
+      input_constraints_;
 
   FXL_DISALLOW_IMPLICIT_CONSTRUCTORS(CodecRunner);
 };
 
-}  // namespace media_codec
+}  // namespace codec_runner
 
 #endif  // GARNET_BIN_MEDIA_CODECS_SW_OMX_CODEC_RUNNER_SW_OMX_CODEC_RUNNER_H_

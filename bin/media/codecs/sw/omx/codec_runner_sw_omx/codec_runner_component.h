@@ -11,7 +11,7 @@
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fsl/tasks/message_loop.h"
 
-namespace media_codec {
+namespace codec_runner {
 
 class CodecRunnerComponent {
  public:
@@ -25,6 +25,6 @@ class CodecRunnerComponent {
   std::unique_ptr<fuchsia::sys::StartupContext> startup_context_;
 };
 
-}  // namespace media_codec
+}  // namespace codec_runner
 
 #endif  // GARNET_BIN_MEDIA_CODECS_SW_OMX_CODEC_RUNNER_SW_OMX_CODEC_RUNNER_COMPONENT_H_

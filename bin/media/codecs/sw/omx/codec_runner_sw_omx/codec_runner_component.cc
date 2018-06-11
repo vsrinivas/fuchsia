@@ -15,7 +15,7 @@ bool is_factory_created = false;
 
 }  // namespace
 
-namespace media_codec {
+namespace codec_runner {
 
 CodecRunnerComponent::CodecRunnerComponent(
     async_t* fidl_async, thrd_t fidl_thread,
@@ -36,11 +36,12 @@ CodecRunnerComponent::CodecRunnerComponent(
         // We use the self-owned pattern rather than a singleton, in case we
         // later allow more than one, since the CodecFactory interface is
         // stateful by design.
-        LocalCodecFactory::CreateSelfOwned(
+        codec_factory::LocalCodecFactory::CreateSelfOwned(
             fidl_async_, fidl_thread_,
-            fidl::InterfaceRequest<CodecFactory>(std::move(request)));
+            fidl::InterfaceRequest<fuchsia::mediacodec::CodecFactory>(
+                std::move(request)));
       },
-      CodecFactory::Name_);
+      fuchsia::mediacodec::CodecFactory::Name_);
 }
 
-}  // namespace media_codec
+}  // namespace codec_runner

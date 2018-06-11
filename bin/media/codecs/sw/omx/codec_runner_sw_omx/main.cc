@@ -51,8 +51,8 @@ int main(int argc, char* argv[]) {
   std::unique_ptr<fuchsia::sys::StartupContext> startup_context =
       fuchsia::sys::StartupContext::CreateFromStartupInfo();
 
-  media_codec::CodecRunnerComponent codec_runner(loop.async(), thrd_current(),
-                                                 std::move(startup_context));
+  codec_runner::CodecRunnerComponent codec_runner(loop.async(), thrd_current(),
+                                                  std::move(startup_context));
 
   loop.Run();
 

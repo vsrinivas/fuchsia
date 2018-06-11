@@ -12,13 +12,13 @@
 #include <list>
 #include <map>
 
-using namespace media_codec;
-
 namespace {
 
 char kLibDecoderAac[] = "libcodec_sw_omx_dec_aac.so";
 
 }  // namespace
+
+namespace codec_factory {
 
 LocalCodecFactory::CodecStrategy LocalCodecFactory::codec_strategies[] = {
     CodecStrategy{kCodecTypeAudioDecoder, "audio/aac", kLibDecoderAac,
@@ -57,18 +57,20 @@ LocalCodecFactory::LocalCodecFactory(async_t* fidl_async, thrd_t fidl_thread)
 // AudioDecoder:
 
 void LocalCodecFactory::CreateAudioDecoder_Begin_Params(
-    CreateAudioDecoder_Params audio_decoder_params_1) {
+    fuchsia::mediacodec::CreateAudioDecoder_Params audio_decoder_params_1) {
   Common_Begin(kCodecTypeAudioDecoder);
-  audio_decoder_params_ = std::make_unique<CreateAudioDecoder_Params>(
-      std::move(audio_decoder_params_1));
+  audio_decoder_params_ =
+      std::make_unique<fuchsia::mediacodec::CreateAudioDecoder_Params>(
+          std::move(audio_decoder_params_1));
 }
 
 void LocalCodecFactory::CreateAudioDecoder_Go(
-    ::fidl::InterfaceRequest<Codec> audio_decoder_request) {
+    ::fidl::InterfaceRequest<fuchsia::mediacodec::Codec>
+        audio_decoder_request) {
   Common_Go(
       std::move(audio_decoder_request), kCodecTypeAudioDecoder,
       audio_decoder_params_->input_details.mime_type,
-      [this](CodecRunner* codec_runner) {
+      [this](codec_runner::CodecRunner* codec_runner) {
         assert(audio_decoder_params_);
         codec_runner->SetAudioDecoderParams(std::move(*audio_decoder_params_));
         audio_decoder_params_.reset();
@@ -91,9 +93,10 @@ void LocalCodecFactory::Common_Begin(CodecType codec_type) {
 }
 
 void LocalCodecFactory::Common_Go(
-    ::fidl::InterfaceRequest<Codec> codec_request,
+    ::fidl::InterfaceRequest<fuchsia::mediacodec::Codec> codec_request,
     CodecType expected_codec_type, std::string mime_type,
-    std::function<void(CodecRunner* codec_runner)> set_type_specific_params) {
+    std::function<void(codec_runner::CodecRunner* codec_runner)>
+        set_type_specific_params) {
   if (codec_type_ != expected_codec_type) {
     // TODO: epitaph, log
     codec_request.TakeChannel();  // ~zx::channel
@@ -101,7 +104,7 @@ void LocalCodecFactory::Common_Go(
     assert(codec_type_ == expected_codec_type);
     exit(-1);
   }
-  std::unique_ptr<CodecRunner> codec_runner =
+  std::unique_ptr<codec_runner::CodecRunner> codec_runner =
       CreateCodec(fidl_async_, fidl_thread_, codec_type_, mime_type);
   if (!codec_runner) {
     // TODO: epitaph, log
@@ -112,7 +115,7 @@ void LocalCodecFactory::Common_Go(
   }
   set_type_specific_params(codec_runner.get());
   codec_runner->ComputeInputConstraints();
-  CodecRunner& codec_runner_ref = *codec_runner;
+  codec_runner::CodecRunner& codec_runner_ref = *codec_runner;
   codec_runner_ref.BindAndOwnSelf(std::move(codec_request),
                                   std::move(codec_runner));
   // This CodecFactory instance is done creating the one Codec that this factory
@@ -130,15 +133,15 @@ void LocalCodecFactory::Common_Go(
 // client to pass it down.  TBD whether we use a wrapper for that or a more
 // targetted behavior override.  Either this method needs to know or another
 // method to create a different way needs to exist.
-std::unique_ptr<CodecRunner> LocalCodecFactory::CreateRawOmxRunner(
-    async_t* fidl_async, thrd_t fidl_thread,
-    const CodecStrategy& codec_strategy) {
-  return std::make_unique<OmxCodecRunner>(fidl_async, fidl_thread,
-                                          codec_strategy.mime_type,
-                                          codec_strategy.lib_filename);
+std::unique_ptr<codec_runner::CodecRunner>
+LocalCodecFactory::CreateRawOmxRunner(async_t* fidl_async, thrd_t fidl_thread,
+                                      const CodecStrategy& codec_strategy) {
+  return std::make_unique<codec_runner::OmxCodecRunner>(
+      fidl_async, fidl_thread, codec_strategy.mime_type,
+      codec_strategy.lib_filename);
 }
 
-std::unique_ptr<CodecRunner> LocalCodecFactory::CreateCodec(
+std::unique_ptr<codec_runner::CodecRunner> LocalCodecFactory::CreateCodec(
     async_t* fidl_async, thrd_t fidl_thread, CodecType codec_type,
     std::string mime_type) {
   const CodecStrategy* strategy = nullptr;
@@ -152,7 +155,7 @@ std::unique_ptr<CodecRunner> LocalCodecFactory::CreateCodec(
   if (!strategy) {
     return nullptr;
   }
-  std::unique_ptr<CodecRunner> codec_runner =
+  std::unique_ptr<codec_runner::CodecRunner> codec_runner =
       strategy->create_runner(fidl_async, fidl_thread, *strategy);
   if (!codec_runner) {
     return nullptr;
@@ -162,3 +165,5 @@ std::unique_ptr<CodecRunner> LocalCodecFactory::CreateCodec(
   }
   return codec_runner;
 }
+
+}  // namespace codec_factory

@@ -6,7 +6,7 @@
 
 #include <lib/async/cpp/task.h>
 
-namespace media_codec {
+namespace codec_runner {
 
 CodecRunner::CodecRunner(async_t* fidl_async, thrd_t fidl_thread)
     : fidl_async_(fidl_async), fidl_thread_(fidl_thread) {
@@ -17,8 +17,9 @@ CodecRunner::~CodecRunner() {
   // nothing to do here
 }
 
-void CodecRunner::BindAndOwnSelf(fidl::InterfaceRequest<Codec> codec_request,
-                                 std::unique_ptr<CodecRunner> self) {
+void CodecRunner::BindAndOwnSelf(
+    fidl::InterfaceRequest<fuchsia::mediacodec::Codec> codec_request,
+    std::unique_ptr<CodecRunner> self) {
   binding_ = std::make_unique<BindingType>(std::move(self));
   binding_->set_error_handler([this] {
     // No point in trying to send an epitaph here since the reason we're here
@@ -32,7 +33,8 @@ void CodecRunner::BindAndOwnSelf(fidl::InterfaceRequest<Codec> codec_request,
   binding_->Bind(std::move(codec_request), fidl_async_);
 }
 
-void CodecRunner::SetEventSink(fidl::InterfaceHandle<CodecEvents> event_sink) {
+void CodecRunner::SetEventSink(
+    fidl::InterfaceHandle<fuchsia::mediacodec::CodecEvents> event_sink) {
   {  // scope lock
     std::unique_lock<std::mutex> lock(lock_);
     // If the client closes the event simulation channel, force sharing fate
@@ -118,4 +120,4 @@ void CodecRunner::Exit(const char* format, ...) {
   exit(-1);
 }
 
-}  // namespace media_codec
+}  // namespace codec_runner
