@@ -20,19 +20,3 @@ source_set("cpp") {
     "//third_party/rapidjson",
   ]
 }
-
-# Drop this into a gtest executable target as a dependency and it will run all
-# of the tests and report results to the TestRunner service.
-source_set("gtest_main") {
-  testonly = true
-  sources = [
-    "gtest_main.cc",
-  ]
-  deps = [
-    "//garnet/public/lib/test_runner/cpp/reporting",
-  ]
-  public_deps = [
-    "//garnet/public/lib/fsl",
-    "//third_party/googletest:gtest",
-  ]
-}
