@@ -63,15 +63,14 @@ void UpdateEntryBenchmark::Run() {
   FXL_LOG(INFO) << "--entry-count=" << entry_count_
                 << " --transaction-size=" << transaction_size_;
   ledger::LedgerPtr ledger;
-  ledger::Status status = test::GetLedger(
-      [this] { loop_->Quit(); }, startup_context_.get(), &component_controller_,
-      nullptr, "update_entry", tmp_dir_.path(), &ledger);
+  ledger::Status status =
+      test::GetLedger(loop_, startup_context_.get(), &component_controller_,
+                      nullptr, "update_entry", tmp_dir_.path(), &ledger);
   QuitOnError([this] { loop_->Quit(); }, status, "GetLedger");
 
   fidl::VectorPtr<uint8_t> key = generator_.MakeKey(0, key_size_);
   ledger::PageId id;
-  status = test::GetPageEnsureInitialized([this] { loop_->Quit(); }, &ledger,
-                                          nullptr, &page_, &id);
+  status = test::GetPageEnsureInitialized(loop_, &ledger, nullptr, &page_, &id);
   QuitOnError([this] { loop_->Quit(); }, status, "GetPageEnsureInitialized");
   if (transaction_size_ > 0) {
     page_->StartTransaction(fxl::MakeCopyable(

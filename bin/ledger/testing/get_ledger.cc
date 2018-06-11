@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#define FIDL_ENABLE_LEGACY_WAIT_FOR_RESPONSE
-
 #include "peridot/bin/ledger/testing/get_ledger.h"
 
 #include <fuchsia/ledger/cloud/firebase/cpp/fidl.h>
@@ -21,10 +19,7 @@
 
 namespace test {
 namespace {
-constexpr zx::duration kTimeout = zx::sec(10);
-}  // namespace
-
-ledger::Status GetLedger(fxl::Closure quit_callback,
+ledger::Status GetLedger(fxl::Closure run_loop, fxl::Closure stop_loop,
                          fuchsia::sys::StartupContext* context,
                          fuchsia::sys::ComponentControllerPtr* controller,
                          cloud_provider::CloudProviderPtr cloud_provider,
@@ -48,59 +43,96 @@ ledger::Status GetLedger(fxl::Closure quit_callback,
 
   repository_factory->GetRepository(
       ledger_repository_path, std::move(cloud_provider),
-      repository.NewRequest(), callback::Capture([] {}, &status));
-  if (repository_factory.WaitForResponseUntil(zx::deadline_after(kTimeout)) !=
-      ZX_OK) {
-    FXL_LOG(ERROR) << "Unable to get repository.";
-    return ledger::Status::INTERNAL_ERROR;
-  }
+      repository.NewRequest(), callback::Capture(stop_loop, &status));
+  run_loop();
   if (status != ledger::Status::OK) {
     FXL_LOG(ERROR) << "Failure while getting repository.";
     return status;
   }
 
   repository->GetLedger(convert::ToArray(ledger_name), ledger_ptr->NewRequest(),
-                        callback::Capture([] {}, &status));
-  if (repository.WaitForResponseUntil(zx::deadline_after(kTimeout)) != ZX_OK) {
-    FXL_LOG(ERROR) << "Unable to get ledger.";
-    return ledger::Status::INTERNAL_ERROR;
-  }
+                        callback::Capture(stop_loop, &status));
+  run_loop();
   if (status != ledger::Status::OK) {
     FXL_LOG(ERROR) << "Failure while getting ledger.";
     return status;
   }
-  ledger_ptr->set_error_handler([quit_callback = std::move(quit_callback)] {
+  ledger_ptr->set_error_handler([stop_loop = std::move(stop_loop)] {
     FXL_LOG(ERROR) << "The ledger connection was closed, quitting.";
-    quit_callback();
+    stop_loop();
   });
 
   return status;
 }
 
-ledger::Status GetPageEnsureInitialized(fxl::Closure quit_callback,
+ledger::Status GetPageEnsureInitialized(fxl::Closure run_loop,
+                                        fxl::Closure stop_loop,
                                         ledger::LedgerPtr* ledger,
                                         ledger::PageIdPtr requested_id,
                                         ledger::PagePtr* page,
                                         ledger::PageId* page_id) {
   ledger::Status status;
   (*ledger)->GetPage(std::move(requested_id), page->NewRequest(),
-                     callback::Capture([] {}, &status));
-  if (ledger->WaitForResponseUntil(zx::deadline_after(kTimeout)) != ZX_OK) {
-    FXL_LOG(ERROR) << "Unable to get page.";
-    return ledger::Status::INTERNAL_ERROR;
-  }
+                     callback::Capture(stop_loop, &status));
+  run_loop();
   if (status != ledger::Status::OK) {
     return status;
   }
 
-  page->set_error_handler([quit_callback = std::move(quit_callback)] {
+  page->set_error_handler([stop_loop] {
     FXL_LOG(ERROR) << "The page connection was closed, quitting.";
-    quit_callback();
+    stop_loop();
   });
 
-  (*page)->GetId(callback::Capture([] {}, page_id));
-  page->WaitForResponseUntil(zx::deadline_after(kTimeout));
+  (*page)->GetId(callback::Capture(std::move(stop_loop), page_id));
   return status;
+}
+}  // namespace
+
+ledger::Status GetLedger(async::Loop* loop,
+                         fuchsia::sys::StartupContext* context,
+                         fuchsia::sys::ComponentControllerPtr* controller,
+                         cloud_provider::CloudProviderPtr cloud_provider,
+                         std::string ledger_name,
+                         std::string ledger_repository_path,
+                         ledger::LedgerPtr* ledger_ptr) {
+  return GetLedger([loop] { loop->Run(); }, [loop] { loop->Quit(); }, context,
+                   controller, std::move(cloud_provider),
+                   std::move(ledger_name), std::move(ledger_repository_path),
+                   ledger_ptr);
+}
+
+ledger::Status GetLedger(fsl::MessageLoop* loop,
+                         fuchsia::sys::StartupContext* context,
+                         fuchsia::sys::ComponentControllerPtr* controller,
+                         cloud_provider::CloudProviderPtr cloud_provider,
+                         std::string ledger_name,
+                         std::string ledger_repository_path,
+                         ledger::LedgerPtr* ledger_ptr) {
+  return GetLedger([loop] { loop->Run(); }, [loop] { loop->QuitNow(); },
+                   context, controller, std::move(cloud_provider),
+                   std::move(ledger_name), std::move(ledger_repository_path),
+                   ledger_ptr);
+}
+
+ledger::Status GetPageEnsureInitialized(async::Loop* loop,
+                                        ledger::LedgerPtr* ledger,
+                                        ledger::PageIdPtr requested_id,
+                                        ledger::PagePtr* page,
+                                        ledger::PageId* page_id) {
+  return GetPageEnsureInitialized([loop] { loop->Run(); },
+                                  [loop] { loop->Quit(); }, ledger,
+                                  std::move(requested_id), page, page_id);
+}
+
+ledger::Status GetPageEnsureInitialized(fsl::MessageLoop* loop,
+                                        ledger::LedgerPtr* ledger,
+                                        ledger::PageIdPtr requested_id,
+                                        ledger::PagePtr* page,
+                                        ledger::PageId* page_id) {
+  return GetPageEnsureInitialized([loop] { loop->Run(); },
+                                  [loop] { loop->QuitNow(); }, ledger,
+                                  std::move(requested_id), page, page_id);
 }
 
 }  // namespace test

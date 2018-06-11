@@ -13,6 +13,7 @@
 #include <string>
 
 #include "lib/app/cpp/startup_context.h"
+#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/memory/ref_ptr.h"
 #include "lib/fxl/strings/string_view.h"
@@ -25,7 +26,16 @@ namespace test {
 //
 // TODO(ppi): take the server_id as std::optional<std::string> and drop bool
 // sync once we're on C++17.
-ledger::Status GetLedger(fxl::Closure quit_callback,
+ledger::Status GetLedger(async::Loop* loop,
+                         fuchsia::sys::StartupContext* context,
+                         fuchsia::sys::ComponentControllerPtr* controller,
+                         cloud_provider::CloudProviderPtr cloud_provider,
+                         std::string ledger_name,
+                         std::string ledger_repository_path,
+                         ledger::LedgerPtr* ledger_ptr);
+// Deprecated version of |GetLedger| using a fsl::MessageLoop.
+// TODO(qsr): Remove when all usage are removed.
+ledger::Status GetLedger(fsl::MessageLoop* loop,
                          fuchsia::sys::StartupContext* context,
                          fuchsia::sys::ComponentControllerPtr* controller,
                          cloud_provider::CloudProviderPtr cloud_provider,
@@ -33,11 +43,17 @@ ledger::Status GetLedger(fxl::Closure quit_callback,
                          std::string ledger_repository_path,
                          ledger::LedgerPtr* ledger_ptr);
 
-// Retrieves the requested page of the given Ledger instance and calls the
-// callback only after executing a GetId() call on the page, ensuring that it is
-// already initialized. If |id| is nullptr, a new page with a unique id is
-// created.
-ledger::Status GetPageEnsureInitialized(fxl::Closure quit_callback,
+// Retrieves the requested page of the given Ledger instance amd returns after
+// ensuring that it is initialized. If |id| is nullptr, a new page with a unique
+// id is created.
+ledger::Status GetPageEnsureInitialized(async::Loop* loop,
+                                        ledger::LedgerPtr* ledger,
+                                        ledger::PageIdPtr requested_id,
+                                        ledger::PagePtr* page,
+                                        ledger::PageId* page_id);
+// Deprecated version of |GetPageEnsureInitialized| using a fsl::MessageLoop.
+// TODO(qsr): Remove when all usage are removed.
+ledger::Status GetPageEnsureInitialized(fsl::MessageLoop* loop,
                                         ledger::LedgerPtr* ledger,
                                         ledger::PageIdPtr requested_id,
                                         ledger::PagePtr* page,

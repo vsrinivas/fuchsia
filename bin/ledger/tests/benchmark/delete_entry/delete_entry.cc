@@ -64,14 +64,13 @@ DeleteEntryBenchmark::DeleteEntryBenchmark(async::Loop* loop,
 
 void DeleteEntryBenchmark::Run() {
   ledger::LedgerPtr ledger;
-  ledger::Status status = test::GetLedger(
-      [this] { loop_->Quit(); }, startup_context_.get(), &component_controller_,
-      nullptr, "delete_entry", tmp_dir_.path(), &ledger);
+  ledger::Status status =
+      test::GetLedger(loop_, startup_context_.get(), &component_controller_,
+                      nullptr, "delete_entry", tmp_dir_.path(), &ledger);
   QuitOnError([this] { loop_->Quit(); }, status, "GetLedger");
 
   ledger::PageId id;
-  status = test::GetPageEnsureInitialized([this] { loop_->Quit(); }, &ledger,
-                                          nullptr, &page_, &id);
+  status = test::GetPageEnsureInitialized(loop_, &ledger, nullptr, &page_, &id);
   QuitOnError([this] { loop_->Quit(); }, status, "Page initialization");
 
   Populate();

@@ -66,15 +66,15 @@ DiskSpaceBenchmark::DiskSpaceBenchmark(async::Loop* loop, size_t page_count,
 
 void DiskSpaceBenchmark::Run() {
   ledger::LedgerPtr ledger;
-  ledger::Status status = test::GetLedger(
-      [this] { loop_->Quit(); }, startup_context_.get(), &component_controller_,
-      nullptr, "disk_space", tmp_dir_.path(), &ledger);
+  ledger::Status status =
+      test::GetLedger(loop_, startup_context_.get(), &component_controller_,
+                      nullptr, "disk_space", tmp_dir_.path(), &ledger);
   QuitOnError([this] { loop_->Quit(); }, status, "GetLedger");
 
   for (size_t page_number = 0; page_number < page_count_; page_number++) {
     ledger::PagePtr page;
-    status = test::GetPageEnsureInitialized([this] { loop_->Quit(); }, &ledger,
-                                            nullptr, &page, nullptr);
+    status =
+        test::GetPageEnsureInitialized(loop_, &ledger, nullptr, &page, nullptr);
     pages_.push_back(std::move(page));
   }
   if (benchmark::QuitOnError([this] { loop_->Quit(); }, status,
