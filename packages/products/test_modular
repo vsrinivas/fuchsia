@@ -1,6 +1,5 @@
 {
     "imports": [
-        "garnet/packages/config/test_runner",
         "garnet/packages/garnet",
         "peridot/packages/all"
     ]
