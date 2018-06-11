@@ -8,7 +8,7 @@
 #include <fuchsia/ledger/cloud/cpp/fidl.h>
 #include <fuchsia/ledger/internal/cpp/fidl.h>
 #include <fuchsia/modular/auth/cpp/fidl.h>
-#include <netconnector/cpp/fidl.h>
+#include <fuchsia/netconnector/cpp/fidl.h>
 
 #include <memory>
 #include <string>

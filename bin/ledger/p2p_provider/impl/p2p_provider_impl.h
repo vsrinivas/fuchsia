@@ -5,7 +5,7 @@
 #ifndef PERIDOT_BIN_LEDGER_P2P_PROVIDER_IMPL_P2P_PROVIDER_IMPL_H_
 #define PERIDOT_BIN_LEDGER_P2P_PROVIDER_IMPL_P2P_PROVIDER_IMPL_H_
 
-#include <netconnector/cpp/fidl.h>
+#include <fuchsia/netconnector/cpp/fidl.h>
 
 #include <memory>
 #include <set>
@@ -40,7 +40,8 @@ namespace p2p_provider {
 class P2PProviderImpl : public P2PProvider {
  public:
   P2PProviderImpl(
-      std::string host_name, netconnector::NetConnectorPtr net_connector,
+      std::string host_name,
+      fuchsia::netconnector::NetConnectorPtr net_connector,
       std::unique_ptr<p2p_provider::UserIdProvider> user_id_provider);
   ~P2PProviderImpl() override;
 
@@ -89,7 +90,7 @@ class P2PProviderImpl : public P2PProvider {
 
   fuchsia::sys::ServiceProviderImpl network_service_provider_;
   std::string const host_name_;
-  netconnector::NetConnectorPtr const net_connector_;
+  fuchsia::netconnector::NetConnectorPtr const net_connector_;
   std::unique_ptr<p2p_provider::UserIdProvider> const user_id_provider_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(P2PProviderImpl);

@@ -5,7 +5,7 @@
 #ifndef PERIDOT_BIN_LEDGER_TESTING_NETCONNECTOR_FAKE_NETCONNECTOR_H_
 #define PERIDOT_BIN_LEDGER_TESTING_NETCONNECTOR_FAKE_NETCONNECTOR_H_
 
-#include <netconnector/cpp/fidl.h>
+#include <fuchsia/netconnector/cpp/fidl.h>
 
 #include "lib/app/cpp/service_provider_impl.h"
 #include "lib/fxl/macros.h"
@@ -14,7 +14,7 @@ namespace ledger {
 
 // FakeNetConnector implements NetConnector. It acts as the singleton
 // NetConnector for a (virtual) host.
-class FakeNetConnector : public netconnector::NetConnector {
+class FakeNetConnector : public fuchsia::netconnector::NetConnector {
  public:
   class Delegate {
    public:
@@ -42,9 +42,10 @@ class FakeNetConnector : public netconnector::NetConnector {
 
  private:
   // NetConnector implementation:
-  void RegisterServiceProvider(fidl::StringPtr name,
-                               fidl::InterfaceHandle<fuchsia::sys::ServiceProvider>
-                                   service_provider) override;
+  void RegisterServiceProvider(
+      fidl::StringPtr name,
+      fidl::InterfaceHandle<fuchsia::sys::ServiceProvider> service_provider)
+      override;
   void GetDeviceServiceProvider(
       fidl::StringPtr device_name,
       fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> service_provider)

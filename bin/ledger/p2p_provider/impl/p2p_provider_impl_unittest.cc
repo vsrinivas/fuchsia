@@ -82,7 +82,7 @@ class P2PProviderImplTest : public gtest::TestWithLoop {
 
   std::unique_ptr<P2PProvider> GetProvider(std::string host_name,
                                            std::string user_name = "user") {
-    netconnector::NetConnectorPtr netconnector;
+    fuchsia::netconnector::NetConnectorPtr netconnector;
     net_connector_factory_.AddBinding(host_name, netconnector.NewRequest());
     return std::make_unique<p2p_provider::P2PProviderImpl>(
         std::move(host_name), std::move(netconnector),

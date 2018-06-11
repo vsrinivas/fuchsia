@@ -11,7 +11,7 @@ namespace ledger {
 class NetConnectorFactory::Holder {
  public:
   Holder(FakeNetConnector::Delegate* delegate,
-         fidl::InterfaceRequest<netconnector::NetConnector> request,
+         fidl::InterfaceRequest<fuchsia::netconnector::NetConnector> request,
          std::string device_name, fxl::Closure on_disconnect);
 
   void set_on_empty(fxl::Closure on_empty);
@@ -22,7 +22,7 @@ class NetConnectorFactory::Holder {
   void OnEmpty();
 
   const std::string device_name_;
-  ledger::fidl_helpers::BoundInterface<netconnector::NetConnector,
+  ledger::fidl_helpers::BoundInterface<fuchsia::netconnector::NetConnector,
                                        FakeNetConnector>
       interface_;
   fxl::Closure on_empty_;
@@ -31,7 +31,7 @@ class NetConnectorFactory::Holder {
 
 NetConnectorFactory::Holder::Holder(
     FakeNetConnector::Delegate* delegate,
-    fidl::InterfaceRequest<netconnector::NetConnector> request,
+    fidl::InterfaceRequest<fuchsia::netconnector::NetConnector> request,
     std::string device_name, fxl::Closure on_disconnect)
     : device_name_(std::move(device_name)),
       interface_(std::move(request), delegate),
@@ -67,7 +67,7 @@ NetConnectorFactory::~NetConnectorFactory() {}
 
 void NetConnectorFactory::AddBinding(
     std::string host_name,
-    fidl::InterfaceRequest<netconnector::NetConnector> request) {
+    fidl::InterfaceRequest<fuchsia::netconnector::NetConnector> request) {
   net_connectors_.emplace(
       std::piecewise_construct, std::forward_as_tuple(host_name),
       std::forward_as_tuple(this, std::move(request), host_name,

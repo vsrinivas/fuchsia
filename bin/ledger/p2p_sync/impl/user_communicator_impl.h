@@ -5,7 +5,7 @@
 #ifndef PERIDOT_BIN_LEDGER_P2P_SYNC_IMPL_USER_COMMUNICATOR_IMPL_H_
 #define PERIDOT_BIN_LEDGER_P2P_SYNC_IMPL_USER_COMMUNICATOR_IMPL_H_
 
-#include <netconnector/cpp/fidl.h>
+#include <fuchsia/netconnector/cpp/fidl.h>
 
 #include <memory>
 #include <set>

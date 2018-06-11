@@ -65,7 +65,7 @@ class UserCommunicatorImplTest : public gtest::TestWithLoop {
 
   std::unique_ptr<UserCommunicator> GetUserCommunicator(
       std::string host_name, std::string user_name = "user") {
-    netconnector::NetConnectorPtr netconnector;
+    fuchsia::netconnector::NetConnectorPtr netconnector;
     net_connector_factory_.AddBinding(host_name, netconnector.NewRequest());
     std::unique_ptr<p2p_provider::P2PProvider> provider =
         std::make_unique<p2p_provider::P2PProviderImpl>(

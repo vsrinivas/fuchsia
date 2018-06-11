@@ -162,7 +162,7 @@ class FakeUserCommunicatorFactory : public p2p_sync::UserCommunicatorFactory {
 
   std::unique_ptr<p2p_sync::UserCommunicator> GetUserCommunicator(
       ledger::DetachedPath /*user_directory*/) override {
-    netconnector::NetConnectorPtr netconnector;
+    fuchsia::netconnector::NetConnectorPtr netconnector;
     async::PostTask(services_dispatcher_,
                     fxl::MakeCopyable(
                         [this, request = netconnector.NewRequest()]() mutable {

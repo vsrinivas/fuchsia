@@ -5,7 +5,7 @@
 #include "peridot/bin/ledger/p2p_sync/impl/user_communicator_factory_impl.h"
 
 #include <fuchsia/modular/auth/cpp/fidl.h>
-#include <netconnector/cpp/fidl.h>
+#include <fuchsia/netconnector/cpp/fidl.h>
 
 #include "lib/fxl/logging.h"
 #include "peridot/bin/ledger/p2p_provider/impl/p2p_provider_impl.h"
@@ -36,9 +36,9 @@ UserCommunicatorFactoryImpl::GetUserCommunicator(
   fuchsia::modular::auth::TokenProviderPtr token_provider =
       startup_context_->ConnectToEnvironmentService<
           fuchsia::modular::auth::TokenProvider>();
-  netconnector::NetConnectorPtr net_connector =
+  fuchsia::netconnector::NetConnectorPtr net_connector =
       startup_context_
-          ->ConnectToEnvironmentService<netconnector::NetConnector>();
+          ->ConnectToEnvironmentService<fuchsia::netconnector::NetConnector>();
   std::unique_ptr<p2p_provider::UserIdProviderImpl> user_id_provider =
       std::make_unique<p2p_provider::UserIdProviderImpl>(
           environment_, startup_context_, std::move(user_directory),

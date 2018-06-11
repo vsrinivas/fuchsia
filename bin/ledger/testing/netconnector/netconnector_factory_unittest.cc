@@ -4,7 +4,7 @@
 
 #include "peridot/bin/ledger/testing/netconnector/netconnector_factory.h"
 
-#include <netconnector/cpp/fidl.h>
+#include <fuchsia/netconnector/cpp/fidl.h>
 
 #include <memory>
 
@@ -37,21 +37,21 @@ class NetConnectorFactoryTest : public gtest::TestWithMessageLoop {
 
 // Verifies that the host list is correct for one host.
 TEST_F(NetConnectorFactoryTest, HostList_OneHost) {
-  netconnector::NetConnectorPtr netconnector1;
+  fuchsia::netconnector::NetConnectorPtr netconnector1;
   factory_.AddBinding("host1", netconnector1.NewRequest());
 
   bool called = false;
   uint64_t version = 0;
   fidl::VectorPtr<fidl::StringPtr> host_list;
   netconnector1->GetKnownDeviceNames(
-      netconnector::kInitialKnownDeviceNames,
+      fuchsia::netconnector::kInitialKnownDeviceNames,
       callback::Capture(callback::SetWhenCalled(&called), &version,
                         &host_list));
 
   RunLoopUntilIdle();
 
   EXPECT_TRUE(called);
-  EXPECT_NE(netconnector::kInitialKnownDeviceNames, version);
+  EXPECT_NE(fuchsia::netconnector::kInitialKnownDeviceNames, version);
   ASSERT_GE(1u, host_list->size());
   EXPECT_EQ(1u, host_list->size());
   EXPECT_EQ("host1", host_list->at(0));
@@ -67,14 +67,14 @@ TEST_F(NetConnectorFactoryTest, HostList_OneHost) {
 
 // Verifies that the host list is correct for two hosts.
 TEST_F(NetConnectorFactoryTest, HostList_TwoHosts_Sequence) {
-  netconnector::NetConnectorPtr netconnector1;
+  fuchsia::netconnector::NetConnectorPtr netconnector1;
   factory_.AddBinding("host1", netconnector1.NewRequest());
 
   bool called = false;
   uint64_t version = 0;
   fidl::VectorPtr<fidl::StringPtr> host_list;
   netconnector1->GetKnownDeviceNames(
-      netconnector::kInitialKnownDeviceNames,
+      fuchsia::netconnector::kInitialKnownDeviceNames,
       callback::Capture(callback::SetWhenCalled(&called), &version,
                         &host_list));
 
@@ -90,7 +90,7 @@ TEST_F(NetConnectorFactoryTest, HostList_TwoHosts_Sequence) {
   RunLoopUntilIdle();
   EXPECT_FALSE(called);
 
-  netconnector::NetConnectorPtr netconnector2;
+  fuchsia::netconnector::NetConnectorPtr netconnector2;
   factory_.AddBinding("host2", netconnector2.NewRequest());
 
   RunLoopUntilIdle();
@@ -103,7 +103,7 @@ TEST_F(NetConnectorFactoryTest, HostList_TwoHosts_Sequence) {
 
   called = false;
   netconnector2->GetKnownDeviceNames(
-      netconnector::kInitialKnownDeviceNames,
+      fuchsia::netconnector::kInitialKnownDeviceNames,
       callback::Capture(callback::SetWhenCalled(&called), &new_version,
                         &host_list));
 
@@ -130,14 +130,14 @@ TEST_F(NetConnectorFactoryTest, HostList_TwoHosts_Sequence) {
 // ie. when we have a pending call for a new host list waiting when a host
 // connects or disconnects.
 TEST_F(NetConnectorFactoryTest, HostList_TwoHosts_Chained) {
-  netconnector::NetConnectorPtr netconnector1;
+  fuchsia::netconnector::NetConnectorPtr netconnector1;
   factory_.AddBinding("host1", netconnector1.NewRequest());
 
   bool called = false;
   uint64_t version = 0;
   fidl::VectorPtr<fidl::StringPtr> host_list;
   netconnector1->GetKnownDeviceNames(
-      netconnector::kInitialKnownDeviceNames,
+      fuchsia::netconnector::kInitialKnownDeviceNames,
       callback::Capture(callback::SetWhenCalled(&called), &version,
                         &host_list));
 
@@ -153,7 +153,7 @@ TEST_F(NetConnectorFactoryTest, HostList_TwoHosts_Chained) {
   RunLoopUntilIdle();
   EXPECT_FALSE(called);
 
-  netconnector::NetConnectorPtr netconnector2;
+  fuchsia::netconnector::NetConnectorPtr netconnector2;
   factory_.AddBinding("host2", netconnector2.NewRequest());
 
   RunLoopUntilIdle();
@@ -181,14 +181,14 @@ TEST_F(NetConnectorFactoryTest, HostList_TwoHosts_Chained) {
 }
 
 TEST_F(NetConnectorFactoryTest, HostList_TwoHosts_Callback) {
-  netconnector::NetConnectorPtr netconnector1;
+  fuchsia::netconnector::NetConnectorPtr netconnector1;
   factory_.AddBinding("host1", netconnector1.NewRequest());
 
   bool called = false;
   uint64_t version = 0;
   fidl::VectorPtr<fidl::StringPtr> host_list;
   netconnector1->GetKnownDeviceNames(
-      netconnector::kInitialKnownDeviceNames,
+      fuchsia::netconnector::kInitialKnownDeviceNames,
       callback::Capture(callback::SetWhenCalled(&called), &version,
                         &host_list));
 
@@ -204,7 +204,7 @@ TEST_F(NetConnectorFactoryTest, HostList_TwoHosts_Callback) {
   RunLoopUntilIdle();
   EXPECT_FALSE(called);
 
-  netconnector::NetConnectorPtr netconnector2;
+  fuchsia::netconnector::NetConnectorPtr netconnector2;
   factory_.AddBinding("host2", netconnector2.NewRequest());
 
   RunLoopUntilIdle();
@@ -240,7 +240,7 @@ TEST_F(NetConnectorFactoryTest, HostList_TwoHosts_Callback) {
 // Tests that two "hosts" can talk to each other through the NetConnector
 TEST_F(NetConnectorFactoryTest, ServiceProvider) {
   // Sets up the first host (server).
-  netconnector::NetConnectorPtr netconnector1;
+  fuchsia::netconnector::NetConnectorPtr netconnector1;
   factory_.AddBinding("host1", netconnector1.NewRequest());
 
   fidl::InterfaceHandle<fuchsia::sys::ServiceProvider> handle;
@@ -259,7 +259,7 @@ TEST_F(NetConnectorFactoryTest, ServiceProvider) {
   RunLoopUntilIdle();
 
   // Sets up the second host (client).
-  netconnector::NetConnectorPtr netconnector2;
+  fuchsia::netconnector::NetConnectorPtr netconnector2;
   factory_.AddBinding("host2", netconnector2.NewRequest());
   zx::channel local;
   zx::channel remote;

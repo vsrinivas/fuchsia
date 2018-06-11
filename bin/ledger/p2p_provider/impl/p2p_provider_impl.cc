@@ -33,7 +33,7 @@ bool ValidateHandshake(const Envelope* envelope, const Handshake** message) {
 }  // namespace
 
 P2PProviderImpl::P2PProviderImpl(
-    std::string host_name, netconnector::NetConnectorPtr net_connector,
+    std::string host_name, fuchsia::netconnector::NetConnectorPtr net_connector,
     std::unique_ptr<p2p_provider::UserIdProvider> user_id_provider)
     : host_name_(std::move(host_name)),
       net_connector_(std::move(net_connector)),
@@ -95,7 +95,7 @@ void P2PProviderImpl::StartService() {
   net_connector_->RegisterServiceProvider(kRespondingServiceName + user_id_,
                                           std::move(handle));
 
-  ListenForNewDevices(netconnector::kInitialKnownDeviceNames);
+  ListenForNewDevices(fuchsia::netconnector::kInitialKnownDeviceNames);
 }
 
 void P2PProviderImpl::ProcessHandshake(RemoteConnection* connection,

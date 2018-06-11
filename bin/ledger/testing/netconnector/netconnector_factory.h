@@ -5,7 +5,7 @@
 #ifndef PERIDOT_BIN_LEDGER_TESTING_NETCONNECTOR_NETCONNECTOR_FACTORY_H_
 #define PERIDOT_BIN_LEDGER_TESTING_NETCONNECTOR_NETCONNECTOR_FACTORY_H_
 
-#include <netconnector/cpp/fidl.h>
+#include <fuchsia/netconnector/cpp/fidl.h>
 
 #include "lib/callback/auto_cleanable.h"
 #include "lib/fxl/functional/closure.h"
@@ -26,8 +26,9 @@ class NetConnectorFactory : public FakeNetConnector::Delegate {
 
   // Creates a new virtual host with the given host name, and connects to its
   // NetConnector.
-  void AddBinding(std::string host_name,
-                  fidl::InterfaceRequest<netconnector::NetConnector> request);
+  void AddBinding(
+      std::string host_name,
+      fidl::InterfaceRequest<fuchsia::netconnector::NetConnector> request);
 
  private:
   // Holder holds a NetConnector.
