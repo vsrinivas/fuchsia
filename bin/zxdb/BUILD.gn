@@ -4,7 +4,6 @@
 
 import("//build/host.gni")
 import("//build/package.gni")
-import("//build/test.gni")
 
 # ZXDB currently only compiles for the host.
 if (current_toolchain == host_toolchain) {
@@ -19,8 +18,14 @@ if (current_toolchain == host_toolchain) {
     ]
   }
 
-  test("zxdb_unittests") {
-  deps = [
+  executable("zxdb_tests") {
+    testonly = true
+    output_name = "zxdb_tests"
+
+    sources = [
+    ]
+
+    deps = [
       "//garnet/bin/zxdb/client:tests",
       "//garnet/bin/zxdb/console:tests",
       "//garnet/lib/debug_ipc:tests",
@@ -37,5 +42,16 @@ install_host_tools("zxdb_host") {
   ]
   outputs = [
     "zxdb"
+  ]
+}
+
+
+install_host_tools("zxdb_tests_host") {
+  testonly = true
+  deps = [
+    ":zxdb_tests",
+  ]
+  outputs = [
+    "zxdb_tests",
   ]
 }
