@@ -159,9 +159,9 @@ void DumpProcessList() {
 }
 
 void DumpJobList() {
-    printf("All jobs from least to most important:\n");
+    printf("All jobs:\n");
     printf("%7s %s\n", "koid", "name");
-    JobDispatcher::ForEachJobByImportance([&](JobDispatcher* job) {
+    JobDispatcher::ForEachJob([&](JobDispatcher* job) {
         char name[ZX_MAX_NAME_LEN];
         job->get_name(name);
         printf("%7" PRIu64 " '%s'\n", job->get_koid(), name);

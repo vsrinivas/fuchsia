@@ -149,17 +149,15 @@ JobDispatcher::JobDispatcher(uint32_t /*flags*/,
       state_(State::READY),
       process_count_(0u),
       job_count_(0u),
-      importance_(parent != nullptr
-                      ? ZX_JOB_IMPORTANCE_INHERITED
-                      : ZX_JOB_IMPORTANCE_MAX),
       policy_(policy) {
 
-    // Set the initial relative importance.
-    // Tries to make older jobs closer to the root more important.
+    // Set the initial job order, and try to make older jobs closer to
+    // the root (both hierarchically and temporally) show up earlier
+    // in enumeration.
     if (parent_ == nullptr) {
         // Root job is the most important.
-        AutoLock lock(&importance_lock_);
-        importance_list_.push_back(this);
+        AutoLock lock(&all_jobs_lock_);
+        all_jobs_list_.push_back(this);
     } else {
         AutoLock plock(parent_->get_lock());
         JobDispatcher* neighbor;
@@ -182,10 +180,9 @@ JobDispatcher::JobDispatcher(uint32_t /*flags*/,
             neighbor = parent_.get();
         }
 
-        // Make ourselves slightly less important than our neighbor.
-        AutoLock lock(&importance_lock_);
-        importance_list_.insert( // insert before
-            importance_list_.make_iterator(*neighbor), this);
+        // Make ourselves appear after our next-youngest neighbor.
+        AutoLock lock(&all_jobs_lock_);
+        all_jobs_list_.insert(all_jobs_list_.make_iterator(*neighbor), this);
     }
 }
 
@@ -194,9 +191,9 @@ JobDispatcher::~JobDispatcher() {
         parent_->RemoveChildJob(this);
 
     {
-        AutoLock lock(&importance_lock_);
-        DEBUG_ASSERT(dll_importance_.InContainer());
-        importance_list_.erase(*this);
+        AutoLock lock(&all_jobs_lock_);
+        DEBUG_ASSERT(dll_all_jobs_.InContainer());
+        all_jobs_list_.erase(*this);
     }
 }
 
@@ -461,61 +458,10 @@ zx_status_t JobDispatcher::set_name(const char* name, size_t len) {
     return name_.set(name, len);
 }
 
-zx_status_t JobDispatcher::get_importance(zx_job_importance_t* out) const {
-    canary_.Assert();
-    DEBUG_ASSERT(out != nullptr);
 
-    // Find the importance value that we inherit.
-    const JobDispatcher* job = this;
-    do {
-        zx_job_importance_t imp = job->GetRawImportance();
-        if (imp != ZX_JOB_IMPORTANCE_INHERITED) {
-            *out = imp;
-            return ZX_OK;
-        }
-        // Don't need to use RefPtrs or grab locks: our caller has a reference
-        // to |this|, and there's a const RefPtr chain from |this| to all
-        // ancestors.
-        job = job->parent_.get();
-    } while (job != nullptr);
-
-    // The root job should always have a non-INHERITED importance.
-    PANIC("Could not find inherited importance of job %" PRIu64 "\n",
-          get_koid());
-}
-
-// Does not resolve ZX_JOB_IMPORTANCE_INHERITED.
-zx_job_importance_t JobDispatcher::GetRawImportance() const {
-    canary_.Assert();
-    AutoLock lock(get_lock());
-    return importance_;
-}
-
-zx_status_t JobDispatcher::set_importance(zx_job_importance_t importance) {
-    canary_.Assert();
-
-    if ((importance < ZX_JOB_IMPORTANCE_MIN ||
-         importance > ZX_JOB_IMPORTANCE_MAX) &&
-        importance != ZX_JOB_IMPORTANCE_INHERITED) {
-        return ZX_ERR_OUT_OF_RANGE;
-    }
-    AutoLock lock(get_lock());
-    // No-one is allowed to change the importance of the root job.  Note that
-    // the actual root job ("<superroot>") typically isn't seen by userspace, so
-    // no userspace program should see this error.  The job that userspace calls
-    // "root" is actually a child of the real (super) root job.
-    if (parent_ == nullptr) {
-        return ZX_ERR_ACCESS_DENIED;
-    }
-    importance_ = importance;
-    return ZX_OK;
-}
-
-// Global importance ranking. Note that this is independent of
-// zx_task_importance_t-style importance as far as JobDispatcher is concerned;
-// some other entity will choose how to order importance_list_.
-fbl::Mutex JobDispatcher::importance_lock_;
-JobDispatcher::JobImportanceList JobDispatcher::importance_list_;
+// Global list of all jobs.
+fbl::Mutex JobDispatcher::all_jobs_lock_;
+JobDispatcher::AllJobsList JobDispatcher::all_jobs_list_;
 
 zx_status_t JobDispatcher::SetExceptionPort(fbl::RefPtr<ExceptionPort> eport) {
     canary_.Assert();

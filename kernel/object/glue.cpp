@@ -124,7 +124,7 @@ static void oom_lowmem(size_t shortfall_bytes) {
 
     bool killed = false;
     int next = 3; // Used to print a few "up next" jobs.
-    JobDispatcher::ForEachJobByImportance([&](JobDispatcher* job) {
+    JobDispatcher::ForEachJob([&](JobDispatcher* job) {
         // TODO(dbort): Consider adding an "immortal" bit on jobs and skip them
         // here if they (and and all of their ancestors) have it set.
         bool kill = false;

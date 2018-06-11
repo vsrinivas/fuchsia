@@ -104,8 +104,4 @@ wakes up, potentially killing a job.
 
 ### OOM-ranker driver
 
-TODO(dbort/maniscalco): Implement and document. This will be a driver that picks which job
-should be killed if the system hits a low-memory condition. It combines
-[ZX_PROP_JOB_IMPORTANCE](syscalls/object_get_property.md#ZX_PROP_JOB_IMPORTANCE)
-hints with other heuristics to generate a total ordering of all jobs in the
-system.
+TODO(dbort/maniscalco): Implement and document.

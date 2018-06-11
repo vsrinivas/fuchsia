@@ -370,9 +370,6 @@ typedef struct zx_info_resource {
 // Argument is the base address of the vDSO mapping (or zero), a uintptr_t.
 #define ZX_PROP_PROCESS_VDSO_BASE_ADDRESS   6u
 
-// Argument is a zx_job_importance_t value.
-#define ZX_PROP_JOB_IMPORTANCE              7u
-
 // Argument is a size_t.
 #define ZX_PROP_SOCKET_RX_BUF_MAX           8u
 #define ZX_PROP_SOCKET_RX_BUF_SIZE          9u
@@ -382,23 +379,6 @@ typedef struct zx_info_resource {
 // Argument is a size_t, describing the number of packets a channel
 // endpoint can have pending in its tx direction.
 #define ZX_PROP_CHANNEL_TX_MSG_MAX          12u
-
-// Describes how important a job is.
-typedef int32_t zx_job_importance_t;
-
-// Valid zx_job_importance_t values and range.
-// The non-negative values must fit in 8 bits.
-
-// A job with this importance will inherit its actual importance from
-// the closest ancestor with a non-INHERITED importance property value.
-#define ZX_JOB_IMPORTANCE_INHERITED ((zx_job_importance_t)-1)
-
-// The lowest importance. Jobs with this importance value are likely to be
-// killed first in an out-of-memory situation.
-#define ZX_JOB_IMPORTANCE_MIN       ((zx_job_importance_t)0)
-
-// The highest importance.
-#define ZX_JOB_IMPORTANCE_MAX       ((zx_job_importance_t)255)
 
 // Basic thread states, in zx_info_thread_t.state.
 #define ZX_THREAD_STATE_NEW                 0x0000u

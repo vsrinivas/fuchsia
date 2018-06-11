@@ -625,24 +625,6 @@ zx_status_t sys_object_get_property(zx_handle_t handle_value, uint32_t property,
             uintptr_t value = process->aspace()->vdso_base_address();
             return _value.reinterpret<uintptr_t>().copy_to_user(value);
         }
-        case ZX_PROP_JOB_IMPORTANCE: {
-            if (size != sizeof(zx_job_importance_t))
-                return ZX_ERR_BUFFER_TOO_SMALL;
-            auto job = DownCastDispatcher<JobDispatcher>(&dispatcher);
-            if (!job)
-                return ZX_ERR_WRONG_TYPE;
-            zx_job_importance_t value;
-            zx_status_t status = job->get_importance(&value);
-            if (status != ZX_OK) {
-                // Usually a problem resolving inherited importance,
-                // like racing with task death.
-                return status;
-            }
-            status = _value.reinterpret<zx_job_importance_t>().copy_to_user(value);
-            if (status != ZX_OK)
-                return status;
-            return ZX_OK;
-        }
         case ZX_PROP_SOCKET_RX_BUF_MAX: {
             if (size < sizeof(size_t))
                 return ZX_ERR_BUFFER_TOO_SMALL;
@@ -790,20 +772,6 @@ zx_status_t sys_object_set_property(zx_handle_t handle_value, uint32_t property,
             if (status != ZX_OK)
                 return status;
             return process->set_debug_addr(value);
-        }
-        case ZX_PROP_JOB_IMPORTANCE: {
-            if (size != sizeof(zx_job_importance_t))
-                return ZX_ERR_BUFFER_TOO_SMALL;
-            auto job = DownCastDispatcher<JobDispatcher>(&dispatcher);
-            if (!job)
-                return ZX_ERR_WRONG_TYPE;
-            int32_t value = 0;
-            zx_status_t status = _value.reinterpret<const zx_job_importance_t>()
-                .copy_from_user(&value);
-            if (status != ZX_OK)
-                return status;
-            return job->set_importance(
-                static_cast<zx_job_importance_t>(value));
         }
     }
 

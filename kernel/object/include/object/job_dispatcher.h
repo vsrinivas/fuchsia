@@ -92,20 +92,6 @@ public:
     zx_status_t set_name(const char* name, size_t len) final;
     uint32_t max_height() const { return max_height_; }
 
-    // "Importance" is a userspace-settable hint that is used to rank jobs for
-    // OOM killing. See ZX_PROP_JOB_IMPORTANCE.
-    // Note: if the importance is set to ZX_JOB_IMPORTANCE_INHERITED (which is
-    // the default for all jobs except the root job), get_importance() will
-    // return the inherited value.
-    zx_status_t get_importance(zx_job_importance_t* out) const;
-    zx_status_t set_importance(zx_job_importance_t importance);
-
-    // TODO(dbort): Consider adding a get_capped_importance() so that userspace
-    // doesn't need to check all ancestor jobs to find the value (which is the
-    // minimum importance value of this job and its ancestors). Could also be
-    // used by the killer thread to avoid jobs whose capped importance is
-    // IMMORTAL.
-
     bool AddChildProcess(const fbl::RefPtr<ProcessDispatcher>& process);
     void RemoveChildProcess(ProcessDispatcher* process);
     void Kill();
@@ -116,13 +102,12 @@ public:
     pol_cookie_t GetPolicy();
 
     // Calls the provided |zx_status_t func(JobDispatcher*)| on every
-    // JobDispatcher in the system, from least important to most important,
-    // using the order determined by ZX_PROP_JOB_IMPORTANCE. Stops if |func|
-    // returns an error, returning the error value.
+    // JobDispatcher in the system. Stops if |func| returns an error,
+    // returning the error value.
     template <typename T>
-    static zx_status_t ForEachJobByImportance(T func) {
-        fbl::AutoLock lock(&importance_lock_);
-        for (auto &job : importance_list_) {
+    static zx_status_t ForEachJob(T func) {
+        fbl::AutoLock lock(&all_jobs_lock_);
+        for (auto &job : all_jobs_list_) {
             zx_status_t s = func(&job);
             if (s != ZX_OK)
                 return s;
@@ -155,10 +140,6 @@ private:
 
     JobDispatcher(uint32_t flags, fbl::RefPtr<JobDispatcher> parent, pol_cookie_t policy);
 
-    // Like get_importance(), but does not resolve inheritance; i.e., this
-    // method may return ZX_JOB_IMPORTANCE_INHERITED.
-    zx_job_importance_t GetRawImportance() const;
-
     bool AddChildJob(const fbl::RefPtr<JobDispatcher>& job);
     void RemoveChildJob(JobDispatcher* job);
 
@@ -188,7 +169,6 @@ private:
     State state_ TA_GUARDED(get_lock());
     uint32_t process_count_ TA_GUARDED(get_lock());
     uint32_t job_count_ TA_GUARDED(get_lock());
-    zx_job_importance_t importance_ TA_GUARDED(get_lock());
 
     using RawJobList =
         fbl::DoublyLinkedList<JobDispatcher*, ListTraitsRaw>;
@@ -211,21 +191,22 @@ private:
 
     fbl::RefPtr<ExceptionPort> exception_port_ TA_GUARDED(get_lock());
 
-    // Global list of JobDispatchers, ordered by relative importance. Used to
-    // find victims in low-resource situations.
-    fbl::DoublyLinkedListNodeState<JobDispatcher*> dll_importance_;
-    struct ListTraitsImportance {
+    // Global list of JobDispatchers, ordered by hierarchy and
+    // creation order. Used to find victims in low-resource
+    // situations.
+    fbl::DoublyLinkedListNodeState<JobDispatcher*> dll_all_jobs_;
+    struct ListTraitsAllJobs {
         static fbl::DoublyLinkedListNodeState<JobDispatcher*>& node_state(
             JobDispatcher& obj) {
-            return obj.dll_importance_;
+            return obj.dll_all_jobs_;
         }
     };
-    using JobImportanceList =
-        fbl::DoublyLinkedList<JobDispatcher*, ListTraitsImportance>;
+    using AllJobsList =
+        fbl::DoublyLinkedList<JobDispatcher*, ListTraitsAllJobs>;
 
-    static fbl::Mutex importance_lock_;
-    // Jobs, ordered by importance, with the least-important job at the front.
-    static JobImportanceList importance_list_ TA_GUARDED(importance_lock_);
+    static fbl::Mutex all_jobs_lock_;
+    // All jobs in the system.
+    static AllJobsList all_jobs_list_ TA_GUARDED(all_jobs_lock_);
 };
 
 // Returns the job that is the ancestor of all other tasks.
