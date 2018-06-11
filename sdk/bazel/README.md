@@ -46,11 +46,10 @@ $root/
 
 # Testing
 
-The `--debug` flag of the frontend script turns the generated repository into
-an actual Bazel workspace where build commands can be run. This also copied the
-contents of `tests/` into the workspace, so that smoke tests can be run with:
+The `generate-tests.py` script creates a workspace for testing the generated
+SDK. From within that workspace, run:
 ```
-bazel build //tests/...
+bazel build --config=fuchsia //...
 ```
 
 # Consuming

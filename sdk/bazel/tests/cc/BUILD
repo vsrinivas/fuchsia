@@ -17,6 +17,6 @@ cc_binary(
     "pkg_dep.cc",
   ],
   deps = [
-    "//pkg/fdio",
+    "@fuchsia_sdk//pkg/fdio",
   ],
 )

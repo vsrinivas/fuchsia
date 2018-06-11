@@ -12,8 +12,8 @@ import sys
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 FUCHSIA_ROOT = os.path.dirname(  # $root
     os.path.dirname(             # scripts
-    os.path.dirname(             # bazel
-    SCRIPT_DIR)))                # sdk
+    os.path.dirname(             # sdk
+    SCRIPT_DIR)))                # bazel
 
 sys.path += [os.path.join(FUCHSIA_ROOT, "third_party", "mako")]
 from mako.template import Template
