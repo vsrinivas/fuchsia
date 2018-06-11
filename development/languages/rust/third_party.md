@@ -1,9 +1,9 @@
 # Third-party Rust Crates
 
 Third-party crates depended on by `rustc_binary` and `rustc_library` targets
-are stored in [`//third-party/rust-crates/rustc_deps/vendor`][].
+are stored in [`//third-party/rust-crates/rustc_deps/vendor`][3p-vendor].
 This set of crates is based on the dependencies listed in
-[`//third_party/rust-crates/rustc_deps/Cargo.toml][3p-cargo-toml],
+[`//third_party/rust-crates/rustc_deps/Cargo.toml`][3p-cargo-toml],
 and is updated by running `fx update-rustc-third-party`, which will update
 the precise versions of the crates used in the `Cargo.lock` file and download
 any necessary crates into the `vendor` dir.
@@ -14,7 +14,10 @@ If a crate is not available in the vendor directory, it can to be added with
 the following steps:
 
 1. Reference the crates you need in [`rustc_deps/Cargo.toml`][3p-cargo-toml].
-1. Run `fx update-rustc-third-party`.
+1. Run `fn update-rustc-third-party`. This will download all crates listed in
+   [`rustc_deps/Cargo.toml`][3p-cargo-toml] as well as their dependencies and
+   place them in the `vendor` directory.
+1. `git add` the `Cargo.toml`, `Cargo.lock` and `vendor` directory.
 1. Merge the change into [third_party/rust-crates][3p-crates].
 1. Update the git revision of `third_party/rust-crates` in
    [garnet/manifest/third_party][3p-manifest]:
