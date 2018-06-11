@@ -18,6 +18,23 @@ BrEdrSignalingChannel::BrEdrSignalingChannel(fbl::RefPtr<Channel> chan,
   set_mtu(kDefaultMTU);
 }
 
+// This is implemented as v5.0 Vol 3, Part A Section 4.8: "These requests may be
+// used for testing the link or for passing vendor specific information using
+// the optional data field."
+bool BrEdrSignalingChannel::TestLink(const common::ByteBuffer& data,
+                                     BrEdrSignalingChannel::DataCallback cb) {
+  const CommandId id = EnqueueResponse(
+      kEchoResponse, [cb = std::move(cb)](const SignalingPacket& packet) {
+        cb(packet.payload_data());
+      });
+
+  if (id == kInvalidCommandId) {
+    return false;
+  }
+
+  return SendPacket(kEchoRequest, id, data);
+}
+
 void BrEdrSignalingChannel::DecodeRxUnit(const SDU& sdu,
                                          const PacketDispatchCallback& cb) {
   // "Multiple commands may be sent in a single C-frame over Fixed Channel CID
@@ -71,6 +88,11 @@ void BrEdrSignalingChannel::DecodeRxUnit(const SDU& sdu,
 }
 
 bool BrEdrSignalingChannel::HandlePacket(const SignalingPacket& packet) {
+  if (IsSupportedResponse(packet.header().code)) {
+    OnRxResponse(packet);
+    return true;
+  }
+
   // Handle request commands from remote.
   switch (packet.header().code) {
     case kEchoRequest:
@@ -84,6 +106,81 @@ bool BrEdrSignalingChannel::HandlePacket(const SignalingPacket& packet) {
   }
 
   return false;
+}
+
+CommandId BrEdrSignalingChannel::EnqueueResponse(
+    CommandCode expected_code, BrEdrSignalingChannel::ResponseHandler handler) {
+  FXL_DCHECK(IsSupportedResponse(expected_code));
+
+  // Command identifiers for pending requests are assumed to be unique across
+  // all types of requests and reused by order of least recent use. See v5.0
+  // Vol 3, Part A Section 4.
+  //
+  // Uniqueness across different command types: "Within each signaling channel a
+  // different Identifier shall be used for each successive command"
+  // Reuse order: "the Identifier may be recycled if all other Identifiers have
+  // subsequently been used"
+  const CommandId initial_id = GetNextCommandId();
+  CommandId id;
+  for (id = initial_id; IsCommandPending(id);) {
+    id = GetNextCommandId();
+
+    if (id == initial_id) {
+      FXL_LOG(ERROR) << fxl::StringPrintf(
+          "l2cap: BR/EDR sig: all valid command IDs in use for pending "
+          " requests; can't queue expected response command %#04x",
+          expected_code);
+      return kInvalidCommandId;
+    }
+  }
+
+  pending_commands_[id] = std::make_pair(expected_code, std::move(handler));
+  return id;
+}
+
+bool BrEdrSignalingChannel::IsSupportedResponse(CommandCode code) const {
+  switch (code) {
+    case kConnectionResponse:
+    case kConfigurationResponse:
+    case kDisconnectResponse:
+    case kEchoResponse:
+    case kInformationResponse:
+      return true;
+  }
+
+  // Other response-type commands are for AMP and are not supported.
+  return false;
+}
+
+bool BrEdrSignalingChannel::IsCommandPending(CommandId id) const {
+  return pending_commands_.find(id) != pending_commands_.end();
+}
+
+void BrEdrSignalingChannel::OnRxResponse(const SignalingPacket& packet) {
+  auto iter = pending_commands_.find(packet.header().id);
+  if (iter == pending_commands_.end()) {
+    FXL_VLOG(2) << fxl::StringPrintf(
+        "l2cap: BR/EDR sig: Ignoring unexpected response, id %#04x",
+        packet.header().id);
+
+    SendCommandReject(packet.header().id, RejectReason::kNotUnderstood,
+                      common::BufferView());
+    return;
+  }
+
+  if (packet.header().code != iter->second.first) {
+    FXL_LOG(ERROR) << fxl::StringPrintf(
+        "l2cap: BR/EDR sig: Response (id %#04x) has unexpected code %#04x",
+        packet.header().id, packet.header().code);
+
+    SendCommandReject(packet.header().id, RejectReason::kNotUnderstood,
+                      common::BufferView());
+    return;
+  }
+
+  auto handler = std::move(iter->second.second);
+  pending_commands_.erase(iter);
+  handler(packet);
 }
 
 }  // namespace internal

@@ -210,6 +210,199 @@ TEST_F(L2CAP_BrEdrSignalingChannelTest, HandleMultipleCommands) {
   EXPECT_EQ(3, cb_times_called);
 }
 
+TEST_F(L2CAP_BrEdrSignalingChannelTest, SendAndReceiveEcho) {
+  const common::ByteBuffer& expected_req = common::CreateStaticByteBuffer(
+      // Echo request with 3-byte payload.
+      0x08, 0x01, 0x03, 0x00,
+
+      // Payload
+      'P', 'W', 'N');
+  const common::BufferView req_data = expected_req.view(4, 3);
+
+  // Check the request sent.
+  bool tx_success = false;
+  fake_chan()->SetSendCallback(
+      [&expected_req, &tx_success](auto cb_packet) {
+        tx_success = common::ContainersEqual(expected_req, *cb_packet);
+      },
+      dispatcher());
+
+  const common::ByteBuffer& expected_rsp = common::CreateStaticByteBuffer(
+      // Echo response with 4-byte payload.
+      0x09, 0x01, 0x04, 0x00,
+
+      // Payload
+      'L', '3', '3', 'T');
+  const common::BufferView rsp_data = expected_rsp.view(4, 4);
+
+  bool rx_success = false;
+  EXPECT_TRUE(
+      sig()->TestLink(req_data, [&rx_success, &rsp_data](const auto& data) {
+        rx_success = common::ContainersEqual(rsp_data, data);
+      }));
+
+  RunUntilIdle();
+  EXPECT_TRUE(tx_success);
+
+  // Remote sends back an echo response with a different payload than in local
+  // request (this is allowed).
+  if (tx_success) {
+    fake_chan()->Receive(expected_rsp);
+  }
+
+  RunUntilIdle();
+  EXPECT_TRUE(rx_success);
+}
+
+TEST_F(L2CAP_BrEdrSignalingChannelTest, RejectUnhandledResponseCommand) {
+  auto cmd = common::CreateStaticByteBuffer(
+      // Command header (Information Response, length 4)
+      0x0B, kTestCmdId, 0x04, 0x00,
+
+      // InfoType (Connectionless MTU)
+      0x01, 0x00,
+
+      // Result (Not supported)
+      0x01, 0x00);
+
+  auto expected = common::CreateStaticByteBuffer(
+      // Command header (Command rejected, length 2)
+      0x01, kTestCmdId, 0x02, 0x00,
+
+      // Reason (Command not understood)
+      0x00, 0x00);
+
+  EXPECT_TRUE(ReceiveAndExpect(cmd, expected));
+}
+
+TEST_F(L2CAP_BrEdrSignalingChannelTest, RejectRemoteResponseInvalidId) {
+  // Remote's echo response that has a different ID to what will be in the
+  // request header (see SendAndReceiveEcho).
+  const common::ByteBuffer& rsp_invalid_id = common::CreateStaticByteBuffer(
+      // Echo response with 4-byte payload.
+      0x09, 0x02, 0x04, 0x00,
+
+      // Payload
+      'L', '3', '3', 'T');
+  const common::BufferView req_data = rsp_invalid_id.view(4, 4);
+
+  bool tx_success = false;
+  fake_chan()->SetSendCallback([&tx_success](auto) { tx_success = true; },
+                               dispatcher());
+
+  bool echo_cb_called = false;
+  EXPECT_TRUE(sig()->TestLink(
+      req_data, [&echo_cb_called](auto&) { echo_cb_called = true; }));
+
+  RunUntilIdle();
+  EXPECT_TRUE(tx_success);
+
+  const common::ByteBuffer& reject_rsp = common::CreateStaticByteBuffer(
+      // Command header (Command Rejected)
+      0x01, 0x02, 0x02, 0x00,
+
+      // Reason (Command not understood)
+      0x00, 0x00);
+  bool reject_sent = false;
+  fake_chan()->SetSendCallback(
+      [&reject_rsp, &reject_sent](auto cb_packet) {
+        reject_sent = common::ContainersEqual(reject_rsp, *cb_packet);
+      },
+      dispatcher());
+
+  fake_chan()->Receive(rsp_invalid_id);
+
+  RunUntilIdle();
+  EXPECT_FALSE(echo_cb_called);
+  EXPECT_TRUE(reject_sent);
+}
+
+TEST_F(L2CAP_BrEdrSignalingChannelTest, RejectRemoteResponseWrongType) {
+  // Remote's response with the correct ID but wrong type of response.
+  const common::ByteBuffer& rsp_invalid_id = common::CreateStaticByteBuffer(
+      // Disconnection Response with plausible 4-byte payload.
+      0x07, 0x01, 0x04, 0x00,
+
+      // Payload
+      0x0A, 0x00, 0x08, 0x00);
+  const common::ByteBuffer& req_data =
+      common::CreateStaticByteBuffer('P', 'W', 'N');
+
+  bool tx_success = false;
+  fake_chan()->SetSendCallback([&tx_success](auto) { tx_success = true; },
+                               dispatcher());
+
+  bool echo_cb_called = false;
+  EXPECT_TRUE(sig()->TestLink(
+      req_data, [&echo_cb_called](auto&) { echo_cb_called = true; }));
+
+  RunUntilIdle();
+  EXPECT_TRUE(tx_success);
+
+  const common::ByteBuffer& reject_rsp = common::CreateStaticByteBuffer(
+      // Command header (Command Rejected)
+      0x01, 0x01, 0x02, 0x00,
+
+      // Reason (Command not understood)
+      0x00, 0x00);
+  bool reject_sent = false;
+  fake_chan()->SetSendCallback(
+      [&reject_rsp, &reject_sent](auto cb_packet) {
+        reject_sent = common::ContainersEqual(reject_rsp, *cb_packet);
+      },
+      dispatcher());
+
+  fake_chan()->Receive(rsp_invalid_id);
+
+  RunUntilIdle();
+  EXPECT_FALSE(echo_cb_called);
+  EXPECT_TRUE(reject_sent);
+}
+
+// Ensure that the signaling channel can reuse outgoing command IDs. In the case
+// that it's expecting a response on every single valid command ID, requests
+// should fail.
+TEST_F(L2CAP_BrEdrSignalingChannelTest, ReuseCommandIds) {
+  int req_count = 0;
+  auto check_header_id = [&req_count](auto cb_packet) {
+    req_count++;
+    SignalingPacket sent_sig_pkt(cb_packet.get());
+    if (req_count == 256) {
+      EXPECT_EQ(0x0c, sent_sig_pkt.header().id);
+    } else {
+      EXPECT_EQ(req_count, sent_sig_pkt.header().id);
+    }
+  };
+  fake_chan()->SetSendCallback(std::move(check_header_id), dispatcher());
+
+  const common::ByteBuffer& req_data =
+      common::CreateStaticByteBuffer('y', 'o', 'o', 'o', 'o', '\0');
+
+  for (int i = 0; i < 255; i++) {
+    EXPECT_TRUE(sig()->TestLink(req_data, [](auto&) {}));
+  }
+
+  // All command IDs should be exhausted at this point, so no commands of this
+  // type should be allowed to be sent.
+  EXPECT_FALSE(sig()->TestLink(req_data, [](auto&) {}));
+
+  RunUntilIdle();
+  EXPECT_EQ(255, req_count);
+
+  // Remote finally responds to a request, but not in order requests were sent.
+  const common::ByteBuffer& echo_rsp = common::CreateStaticByteBuffer(
+      // Echo response with no payload.
+      0x09, 0x0c, 0x00, 0x00);
+  fake_chan()->Receive(echo_rsp);
+
+  RunUntilIdle();
+
+  EXPECT_TRUE(sig()->TestLink(req_data, [](auto&) {}));
+
+  RunUntilIdle();
+  EXPECT_EQ(256, req_count);
+}
+
 }  // namespace
 }  // namespace internal
 }  // namespace l2cap
