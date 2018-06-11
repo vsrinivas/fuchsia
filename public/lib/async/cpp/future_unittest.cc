@@ -7,6 +7,9 @@
 #include "gtest/gtest-spi.h"
 #include "gtest/gtest.h"
 
+#include <memory>
+#include <string>
+
 namespace modular {
 
 namespace {
@@ -83,9 +86,15 @@ TEST(AsyncExpectationTest, TestMoreThanExpectedCountFails) {
 // properly befriend this test.
 class FutureTest : public ::testing::Test {
  protected:
-  template <typename... Args>
-  const std::tuple<Args...>& get(const FuturePtr<Args...>& future) const {
+  template <typename... Result>
+  const std::tuple<Result...>& get(const FuturePtr<Result...>& future) const {
     return future->get();
+  }
+
+  template <typename... Result>
+  fxl::WeakPtrFactory<Future<Result...>>& weak_factory(
+      const FuturePtr<Result...>& future) const {
+    return future->weak_factory_;
   }
 };
 
@@ -462,6 +471,96 @@ TEST_F(FutureTest, WaitOnZeroFutures) {
   EXPECT_EQ(1, async_expectations.count());
 }
 
+TEST_F(FutureTest, Wait2) {
+  auto f1 = Future<int, std::string>::Create(std::string(__PRETTY_FUNCTION__) +
+                                             std::string("1"));
+  auto f2 = Future<int, std::string>::Create(std::string(__PRETTY_FUNCTION__) +
+                                             std::string("2"));
+  auto f3 = Future<int, std::string>::Create(std::string(__PRETTY_FUNCTION__) +
+                                             std::string("3"));
+
+  AsyncExpectations async_expectations;
+
+  auto f = Future<int, std::string>::Wait2(
+      std::string(__PRETTY_FUNCTION__) + std::string("4"),
+      std::vector<FuturePtr<int, std::string>>{f1, f2, f3});
+  f->Then([&](std::vector<std::tuple<int, std::string>> v) {
+    EXPECT_EQ(v.size(), 3ul);
+
+    EXPECT_EQ(v[0], std::make_tuple(10, "10"));
+    EXPECT_EQ(v[1], std::make_tuple(20, "20"));
+    EXPECT_EQ(v[2], std::make_tuple(30, "30"));
+
+    async_expectations.Signal();
+  });
+
+  f1->Complete(10, "10");
+  EXPECT_EQ(0, async_expectations.count());
+  f2->Complete(20, "20");
+  EXPECT_EQ(0, async_expectations.count());
+  f3->Complete(30, "30");
+
+  EXPECT_EQ(1, async_expectations.count());
+}
+
+TEST_F(FutureTest, Wait2OnZeroFutures) {
+  auto f =
+      Future<int>::Wait2(__PRETTY_FUNCTION__, std::vector<FuturePtr<int>>{});
+
+  AsyncExpectations async_expectations;
+
+  f->Then([&](std::vector<std::tuple<int>> v) {
+    EXPECT_EQ(v.size(), 0ul);
+    async_expectations.Signal();
+  });
+
+  EXPECT_EQ(1, async_expectations.count());
+}
+
+TEST_F(FutureTest, Wait2RetainsFuturesBeforeCompletion) {
+  FuturePtr<std::vector<std::tuple<int>>> f;
+  fxl::WeakPtr<Future<int>> weak_f1;
+
+  AsyncExpectations async_expectations;
+
+  {
+    auto f1 = Future<int>::Create(__PRETTY_FUNCTION__);
+    weak_f1 = weak_factory(f1).GetWeakPtr();
+
+    f = Future<int>::Wait2(__PRETTY_FUNCTION__ + std::string("1"),
+                           std::vector<FuturePtr<int>>{f1});
+  }
+
+  EXPECT_TRUE(weak_f1);
+
+  if (weak_f1) {
+    weak_f1->Complete(5);
+  }
+
+  f->Then([&](std::vector<std::tuple<int>>) { async_expectations.Signal(); });
+
+  EXPECT_EQ(1, async_expectations.count());
+}
+
+TEST_F(FutureTest, Wait2DoesNotOverRetainFutures) {
+  fxl::WeakPtr<Future<int>> weak_f1;
+
+  {
+    auto f1 = Future<int>::Create(__PRETTY_FUNCTION__);
+    weak_f1 = weak_factory(f1).GetWeakPtr();
+
+    auto f = Future<int>::Wait2(__PRETTY_FUNCTION__ + std::string("1"),
+                                std::vector<FuturePtr<int>>{f1});
+    f1->Complete(5);
+
+    AsyncExpectations async_expectations;
+    f->Then([&](std::vector<std::tuple<int>>) { async_expectations.Signal(); });
+    EXPECT_EQ(1, async_expectations.count());
+  }
+
+  EXPECT_FALSE(bool(weak_f1));
+}
+
 TEST_F(FutureTest, Completer) {
   auto f = Future<int>::Create(__PRETTY_FUNCTION__);
 
@@ -543,6 +642,36 @@ TEST_F(FutureTest, Map) {
 TEST_F(FutureTest, trace_name) {
   auto f = Future<>::Create("test");
   EXPECT_EQ(f->trace_name(), "test");
+}
+
+TEST_F(FutureTest, ThenCallbackDestroysFuture) {
+  struct S {
+    FuturePtr<> f;
+  };
+  S* s = new S;
+
+  AsyncExpectations async_expectations;
+
+  s->f = Future<>::Create(__PRETTY_FUNCTION__);
+
+  // Explicitly retain the subfuture returned by Then() to keep it alive. This
+  // tests whether the original future will still complete its subfuture if the
+  // original future is destroyed, but the subfuture is still kept alive. (That
+  // should not happen, as per documentation for Then().)
+  auto subfuture = s->f->Then([&] {
+    delete s;
+    async_expectations.Signal();
+  });
+
+  subfuture->Then([&] {
+    // This lambda shouldn't be executed because s--and therefore s->f--was
+    // deleted in the Then() callback above.
+    async_expectations.Signal();
+  });
+
+  s->f->Complete();
+
+  EXPECT_EQ(1, async_expectations.count());  // not 2!
 }
 
 }  // namespace

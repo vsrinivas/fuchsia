@@ -49,7 +49,9 @@ namespace modular {
 // Producer:
 //
 // FuturePtr<Bytes> MakeNetworkRequest(NetworkRequest& request) {
-//   auto f = Future<Bytes>::Create();
+//   auto f = Future<Bytes>::Create("NetworkRequest");  // a "trace_name" that's
+//                                                      // logged when things go
+//                                                      // wrong
 //   auto network_request_callback = [f] (Bytes bytes) {
 //     f->Complete(bytes);
 //   };
@@ -94,6 +96,33 @@ namespace modular {
 //   ShowProgressSpinner(false);
 // });
 //
+// ## Memory Management & Ownership
+//
+// FuturePtr is a fxl::RefPtr, which is a smart pointer similar to
+// std::shared_ptr that holds a reference count (refcount). When you call
+// Future::Create(), you are expected to maintain a reference to it. When the
+// Future is deleted, its result and callbacks are also deleted.
+//
+// Each method documents how it affects the future's refcount. To summarize:
+//
+// * Calling Then() on a future does not affect its refcount. This applies to
+//   all methods that returns a chained future, such as AsyncMap() and Map().
+// * However, calling Then() on a future will cause that future to maintain a
+//   reference to the returned chained future. So, you do not need to maintain a
+//   reference to the returned future.
+// * Calling Complete() does not affect the future's refcount.
+// * Unlike Complete(), the closure returned by Completer() _does own_ the
+//   future, so you do not need to maintain a reference to the future after
+//   calling Completer(). (You do need to maintain a reference to the closure,
+//   however.)
+// * Wait(futures) returns a future that every future in |futures| owns, so you
+//   do not need to maintain a reference to the returned future. The callback
+//   attached to each future in |futures| will also keep a reference to
+//   themselves, so that if a future that is Wait()ed on otherwise goes out of
+//   scope, the future itself is kept alive.
+//
+// See each method's documentation for more details on memory management.
+//
 // ## Use Weak*() variants to cancel callback chains
 //
 // "Weak" variants exist for all chain/sequence methods (WeakThen(),
@@ -135,7 +164,7 @@ namespace modular {
 // Without Completer():
 //
 // FuturePtr<Bytes> MakeNetworkRequest(NetworkRequest& request) {
-//   auto f = Future<Bytes>::Create();
+//   auto f = Future<Bytes>::Create("NetworkRequest");
 //   auto network_request_callback = [f] (Bytes bytes) {
 //     f->Complete(bytes);
 //   };
@@ -146,7 +175,7 @@ namespace modular {
 // With Completer():
 //
 // FuturePtr<Bytes> MakeNetworkRequest(NetworkRequest& request) {
-//   auto f = Future<Bytes>::Create();
+//   auto f = Future<Bytes>::Create("NetworkRequest");
 //   PerformAsyncNetworkRequest(request, f->Completer());
 //   return f;
 // }
@@ -216,9 +245,12 @@ using FuturePtr = fxl::RefPtr<Future<Result...>>;
 
 namespace {
 
-// Useful type_traits function, ported from C++17.
+// type_traits functions, ported from C++17.
 template <typename From, typename To>
 constexpr bool is_convertible_v = std::is_convertible<From, To>::value;
+
+template <class T>
+constexpr bool is_void_v = std::is_void<T>::value;
 
 }  // namespace
 
@@ -227,7 +259,9 @@ class Future : public fxl::RefCountedThreadSafe<Future<Result...>> {
  public:
   using result_tuple_type = std::tuple<Result...>;
 
-  // Creates a FuturePtr<Result...>.
+  // Creates a FuturePtr<Result...>. |trace_name| is used solely for debugging
+  // purposes, and is logged when something goes wrong (e.g. Complete() is
+  // called twice.)
   static FuturePtr<Result...> Create(std::string trace_name) {
     auto f = fxl::AdoptRef(new Future<Result...>);
     f->trace_name_ = std::move(trace_name);
@@ -236,7 +270,7 @@ class Future : public fxl::RefCountedThreadSafe<Future<Result...>> {
 
   // Creates a FuturePtr<Result...> that's already completed. For example:
   //
-  //   FuturePtr<int> f = Future<int>::CreateCompleted(5);
+  //   FuturePtr<int> f = Future<int>::CreateCompleted("MyFuture", 5);
   //   f->Then([] (int i) {
   //     // this lambda executes immediately
   //     assert(i == 5);
@@ -249,18 +283,71 @@ class Future : public fxl::RefCountedThreadSafe<Future<Result...>> {
   }
 
   // Returns a Future that completes when every future in |futures| is complete.
+  // A strong reference is kept to every future in |futures|, so each future
+  // will be kept alive if they otherwise go out of scope. The future returned
+  // by Wait2() will also be kept alive until every future in |futures|
+  // completes.
+  //
   // For example:
   //
   // FuturePtr<Bytes> f1 = MakeNetworkRequest(request1);
   // FuturePtr<Bytes> f2 = MakeNetworkRequest(request2);
   // FuturePtr<Bytes> f3 = MakeNetworkRequest(request3);
   // std::vector<FuturePtr<Bytes>> requests{f1, f2, f3};
-  // Future<Bytes>::Wait(requests)->Then([] {
-  //   AllNetworkRequestsAreComplete();
+  // Future<Bytes>::Wait2("NetworkRequests", requests)->Then([](
+  //     std::vector<std::tuple<Bytes>> bytes_vector) {
+  //   // Note that bytes_vector is an std::vector<std::tuple<Bytes>>, not
+  //   // std::vector<Bytes>. This is because Future is a variadic template, but
+  //   // std::vector isn't, so each result must be wrapped in a std::tuple.
+  //   Bytes f1_bytes = std::get<0>(bytes_vector[0]);
+  //   Bytes f2_bytes = std::get<0>(bytes_vector[1]);
+  //   Bytes f3_bytes = std::get<0>(bytes_vector[2]);
   // });
   //
   // This is similar to Promise.All() in JavaScript, or Join() in Rust.
-  // TODO: Return a FuturePtr<std::vector<Result>> instead of FuturePtr<>.
+  template <typename Results = std::vector<std::tuple<Result...>>>
+  static FuturePtr<Results> Wait2(
+      std::string trace_name,
+      const std::vector<FuturePtr<Result...>>& futures) {
+    auto results = std::make_shared<Results>();
+    results->reserve(futures.size());
+
+    if (futures.empty()) {
+      return Future<Results>::CreateCompleted(trace_name + "(Completed)",
+                                              std::move(*results));
+    }
+
+    FuturePtr<Results> all_futures_completed =
+        Future<Results>::Create(trace_name + "(WillWait2)");
+
+    const auto futures_count = futures.size();
+    for (auto future : futures) {
+      // Note that |future| is captured by the callback, to ensure that it'll be
+      // completed even if its refcount drops to zero. The callback will be
+      // reset after it's run to prevent a retain cycle.
+      future->SetCallback([future, all_futures_completed, results,
+                           futures_count](Result&&... result) {
+        results->emplace_back(
+            std::forward_as_tuple(std::forward<Result&&>(result)...));
+
+        if (results->size() == futures_count) {
+          all_futures_completed->Complete(std::move(*results));
+        }
+
+        // null out the callback, otherwise there'll be a retain cycle
+        // (because |future| is on this callback's capture list).
+        future->SetCallback(nullptr);
+      });
+    }
+
+    return all_futures_completed;
+  }
+
+  // DEPRECATED: Use Wait2() instead. This is an older Wait() method that
+  // returns a void subfuture rather than a future with results.
+  //
+  // TODO(MI4-1101): Convert existing uses of Wait() to Wait2(), and remove this
+  // method.
   static FuturePtr<> Wait(std::string trace_name,
                           const std::vector<FuturePtr<Result...>>& futures) {
     if (futures.size() == 0) {
@@ -285,6 +372,17 @@ class Future : public fxl::RefCountedThreadSafe<Future<Result...>> {
   // Completes a future with |result|. This causes any callbacks registered
   // with Then(), ConstThen(), etc to be invoked with |result| passed to them
   // as a parameter.
+  //
+  // Calling Complete() does not affect this future's refcount. This is because:
+  //
+  // 1. Any callbacks that are registered are called immediately and
+  //    synchronously, so the future's lifetime does not need to be extended
+  //    before callbacks are invoked.
+  // 2. Then() correctly handles cases where the future may be deleted by their
+  //    callbacks.
+  // 3. There is no danger of the future being deleted before Complete() is
+  //    called, because if Complete() is called, the code that calls Complete()
+  //    must have a reference to the future.
   void Complete(Result&&... result) {
     CompleteWithTuple(std::forward_as_tuple(std::forward<Result&&>(result)...));
   }
@@ -297,6 +395,19 @@ class Future : public fxl::RefCountedThreadSafe<Future<Result...>> {
   //   PerformAsyncNetworkRequest(request, f->Completer());
   //   return f;
   // }
+  //
+  // The returned closure will maintain a reference to the future, so that the
+  // closure can call Complete() on it correctly later. In other words, calling
+  // Completer() will increase this future's refcount, and you do not need to
+  // maintain a reference to it. After the closure is called, the future's
+  // refcount will drop by 1. This enables you to write code like
+  //
+  //   {
+  //     auto f = Future<>::Create();
+  //     CallAsyncMethod(f->Completer());
+  //     // f will now go out of scope, but f->Completer() owns it, so it's
+  //     // still kept alive.
+  //   }
   std::function<void(Result...)> Completer() {
     return [shared_this = FuturePtr<Result...>(this)](Result&&... result) {
       shared_this->Complete(std::forward<Result&&>(result)...);
@@ -307,32 +418,32 @@ class Future : public fxl::RefCountedThreadSafe<Future<Result...>> {
   // Complete(), and returns a Future that is complete once |callback| has
   // finished executing.
   //
-  // * The callback is invoked immedately, on the same thread as the code that
-  //   calls Complete().
+  // * The callback is invoked immediately (synchronously); it is not scheduled
+  //   on the event loop.
+  // * The callback is invoked on the same thread as the code that calls
+  //   Complete().
   // * Only one callback can be attached: any callback that was previously
   //   attached with Then() is discarded.
   // * |callback| is called after callbacks attached with ConstThen().
-  // * |callback| is reset to nullptr immediately after it's called.
+  // * It is safe for |callback| to delete the future that Then() is invoked on.
+  //   If this occurs, any chained futures returned by Then(), Map() etc will be
+  //   de-referenced by this future and not be completed, even if a reference to
+  //   the chained future is maintained elsewhere.
+  // * It is also safe for |callback| to delete the chained future that Then()
+  //   returns.
+  // * The future returned by Then() will be owned by this future, so you do not
+  //   need to maintain a reference to it.
   //
   // The type of this function looks complex, but is basically:
   //
   //   FuturePtr<> Then(std::function<void(Result...)> callback);
-  //
-  // The is_convertible_v in the type signature ensures that |callback| has a
-  // void return type; see
-  // <https://stackoverflow.com/questions/25385876/should-stdfunction-assignment-ignore-return-type>
-  // for more info.
-  template <typename Callback,
-            typename = typename std::enable_if_t<
-                is_convertible_v<std::result_of_t<Callback(Result...)>, void>>>
+  template <typename Callback, typename = typename std::enable_if_t<is_void_v<
+                                   std::result_of_t<Callback(Result...)>>>>
   FuturePtr<> Then(Callback callback) {
-    FuturePtr<> subfuture = Future<>::Create(trace_name_ + "(Then)");
-    SetCallback([trace_name = trace_name_, subfuture,
-                 callback = std::move(callback)](Result&&... result) {
-      callback(std::forward<Result>(result)...);
-      subfuture->Complete();
-    });
-    return subfuture;
+    return SubfutureCreate(
+        Future<>::Create(trace_name_ + "(Then)"),
+        SubfutureVoidCallback<Result...>(std::move(callback)),
+        SubfutureCompleter<>(), [] { return true; });
   }
 
   // Equivalent to Then(), but guards execution of |callback| with a WeakPtr.
@@ -341,17 +452,12 @@ class Future : public fxl::RefCountedThreadSafe<Future<Result...>> {
   // completed.
   template <typename Callback, typename T,
             typename = typename std::enable_if_t<
-                is_convertible_v<std::result_of_t<Callback(Result...)>, void>>>
+                is_void_v<std::result_of_t<Callback(Result...)>>>>
   FuturePtr<> WeakThen(fxl::WeakPtr<T> weak_ptr, Callback callback) {
-    FuturePtr<> subfuture = Future<>::Create(trace_name_ + "(WeakThen)");
-    SetCallback([weak_ptr, trace_name = trace_name_, subfuture,
-                 callback = std::move(callback)](Result&&... result) {
-      if (!weak_ptr)
-        return;
-      callback(std::forward<Result>(result)...);
-      subfuture->Complete();
-    });
-    return subfuture;
+    return SubfutureCreate(
+        Future<>::Create(trace_name_ + "(WeakThen)"),
+        SubfutureVoidCallback<Result...>(std::move(callback)),
+        SubfutureCompleter<>(), [weak_ptr] { return !!weak_ptr; });
   }
 
   // Similar to Then(), except that:
@@ -361,12 +467,10 @@ class Future : public fxl::RefCountedThreadSafe<Future<Result...>> {
   // * |const_callback| is called _before_ the Then() callback.
   FuturePtr<> ConstThen(std::function<void(const Result&...)> const_callback) {
     FuturePtr<> subfuture = Future<>::Create(trace_name_ + "(ConstThen)");
-    AddConstCallback(
-        [trace_name = trace_name_, subfuture,
-         const_callback = std::move(const_callback)](const Result&... result) {
-          const_callback(result...);
-          subfuture->Complete();
-        });
+    AddConstCallback(SubfutureCallback<const Result&...>(
+        subfuture,
+        SubfutureVoidCallback<const Result&...>(std::move(const_callback)),
+        SubfutureCompleter<>(), [] { return true; }));
     return subfuture;
   }
 
@@ -376,14 +480,10 @@ class Future : public fxl::RefCountedThreadSafe<Future<Result...>> {
       fxl::WeakPtr<T> weak_ptr,
       std::function<void(const Result&...)> const_callback) {
     FuturePtr<> subfuture = Future<>::Create(trace_name_ + "(WeakConstThen)");
-    AddConstCallback(
-        [weak_ptr, trace_name = trace_name_, subfuture,
-         const_callback = std::move(const_callback)](const Result&... result) {
-          if (!weak_ptr)
-            return;
-          const_callback(result...);
-          subfuture->Complete();
-        });
+    AddConstCallback(SubfutureCallback<const Result&...>(
+        subfuture,
+        SubfutureVoidCallback<const Result&...>(std::move(const_callback)),
+        SubfutureCompleter<>(), [weak_ptr] { return !!weak_ptr; }));
     return subfuture;
   }
 
@@ -417,20 +517,10 @@ class Future : public fxl::RefCountedThreadSafe<Future<Result...>> {
             typename = typename std::enable_if_t<
                 is_convertible_v<FuturePtr<MapResult>, AsyncMapResult>>>
   AsyncMapResult AsyncMap(Callback callback) {
-    AsyncMapResult subfuture =
-        AsyncMapResult::element_type::Create(trace_name_ + "(AsyncMap)");
-
-    SetCallback([trace_name = trace_name_, subfuture,
-                 callback = std::move(callback)](Result&&... result) {
-      AsyncMapResult future_result = callback(std::forward<Result>(result)...);
-
-      future_result->SetCallbackWithTuple(
-          [subfuture](MapResult&& transformed_result) {
-            subfuture->CompleteWithTuple(
-                std::forward<MapResult>(transformed_result));
-          });
-    });
-    return subfuture;
+    return SubfutureCreate(
+        AsyncMapResult::element_type::Create(trace_name_ + "(AsyncMap)"),
+        SubfutureMapCallback(callback),
+        SubfutureAsyncMapCompleter<AsyncMapResult>(), [] { return true; });
   }
 
   template <typename Callback, typename T,
@@ -440,22 +530,11 @@ class Future : public fxl::RefCountedThreadSafe<Future<Result...>> {
             typename = typename std::enable_if_t<
                 is_convertible_v<FuturePtr<MapResult>, AsyncMapResult>>>
   AsyncMapResult WeakAsyncMap(fxl::WeakPtr<T> weak_ptr, Callback callback) {
-    AsyncMapResult subfuture =
-        AsyncMapResult::element_type::Create(trace_name_ + "(WeakAsyncMap)");
-
-    SetCallback([weak_ptr, trace_name = trace_name_, subfuture,
-                 callback = std::move(callback)](Result&&... result) {
-      if (!weak_ptr)
-        return;
-      AsyncMapResult future_result = callback(std::forward<Result>(result)...);
-
-      future_result->SetCallbackWithTuple(
-          [subfuture](MapResult&& transformed_result) {
-            subfuture->CompleteWithTuple(
-                std::forward<MapResult>(transformed_result));
-          });
-    });
-    return subfuture;
+    return SubfutureCreate(
+        AsyncMapResult::element_type::Create(trace_name_ + "(WeakAsyncMap)"),
+        SubfutureMapCallback(callback),
+        SubfutureAsyncMapCompleter<AsyncMapResult>(),
+        [weak_ptr] { return !!weak_ptr; });
   }
 
   // Attaches a |callback| that is invoked when this future is completed with
@@ -464,44 +543,26 @@ class Future : public fxl::RefCountedThreadSafe<Future<Result...>> {
   template <typename Callback,
             typename MapResult = std::result_of_t<Callback(Result...)>>
   FuturePtr<MapResult> Map(Callback callback) {
-    FuturePtr<MapResult> subfuture =
-        Future<MapResult>::Create(trace_name_ + "(Map)");
-    SetCallback([trace_name = trace_name_, subfuture,
-                 callback = std::move(callback)](Result&&... result) {
-      MapResult&& callback_result = callback(std::forward<Result>(result)...);
-      subfuture->Complete(std::forward<MapResult>(callback_result));
-    });
-    return subfuture;
+    return SubfutureCreate(Future<MapResult>::Create(trace_name_ + "(Map)"),
+                           SubfutureMapCallback(std::move(callback)),
+                           SubfutureCompleter<MapResult>(),
+                           [] { return true; });
   }
 
   template <typename Callback, typename T,
             typename MapResult = std::result_of_t<Callback(Result...)>>
   FuturePtr<MapResult> WeakMap(fxl::WeakPtr<T> weak_ptr, Callback callback) {
-    FuturePtr<MapResult> subfuture =
-        Future<MapResult>::Create(trace_name_ + "(WeakMap)");
-    SetCallback([weak_ptr, trace_name = trace_name_, subfuture,
-                 callback = std::move(callback)](Result&&... result) {
-      if (!weak_ptr)
-        return;
-      MapResult&& callback_result = callback(std::forward<Result>(result)...);
-      subfuture->Complete(std::forward<MapResult>(callback_result));
-    });
-    return subfuture;
+    return SubfutureCreate(Future<MapResult>::Create(trace_name_ + "(WeakMap)"),
+                           SubfutureMapCallback(std::move(callback)),
+                           SubfutureCompleter<MapResult>(),
+                           [weak_ptr] { return !!weak_ptr; });
   }
 
   const std::string& trace_name() const { return trace_name_; }
 
  private:
-  Future() = default;
+  Future() : result_{}, weak_factory_(this) {}
   FRIEND_REF_COUNTED_THREAD_SAFE(Future);
-
-  std::string trace_name_;
-
-  bool has_result_ = false;
-  std::tuple<Result...> result_;
-
-  std::function<void(Result...)> callback_;
-  std::vector<std::function<void(const Result&...)>> const_callbacks_;
 
   // For unit tests only.
   friend class FutureTest;
@@ -512,26 +573,16 @@ class Future : public fxl::RefCountedThreadSafe<Future<Result...>> {
   }
 
   void SetCallback(std::function<void(Result...)>&& callback) {
-    if (!callback) {
-      return;
-    }
-
-    callback_ = std::move(callback);
+    callback_ = callback;
 
     MaybeInvokeCallbacks();
   }
 
   void SetCallbackWithTuple(
       std::function<void(std::tuple<Result...>)>&& callback) {
-    if (!callback) {
-      return;
-    }
-
-    callback_ = [callback = std::move(callback)](Result&&... result) {
+    SetCallback([callback](Result&&... result) {
       callback(std::forward_as_tuple(std::forward<Result&&>(result)...));
-    };
-
-    MaybeInvokeCallbacks();
+    });
   }
 
   void AddConstCallback(std::function<void(const Result&...)>&& callback) {
@@ -550,7 +601,7 @@ class Future : public fxl::RefCountedThreadSafe<Future<Result...>> {
              "already moved into Then() callback.";
     }
 
-    const_callbacks_.emplace_back(std::move(callback));
+    const_callbacks_.emplace_back(callback);
 
     MaybeInvokeCallbacks();
   }
@@ -589,8 +640,124 @@ class Future : public fxl::RefCountedThreadSafe<Future<Result...>> {
     }
   }
 
+  // The "subfuture" methods below are private helper functions designed to be
+  // used with the futures that are returned by the public API (Then(), Map(),
+  // etc); those returned futures are named "subfutures" in the code, which is
+  // why the methods are named likewise.
+
+  // A convenience method to call this->SetCallback() with the lambda returned
+  // by SubfutureCallback().
+  template <typename Subfuture, typename SubfutureCompleter, typename Callback,
+            typename Guard>
+  Subfuture SubfutureCreate(Subfuture subfuture, Callback&& callback,
+                            SubfutureCompleter&& subfuture_completer,
+                            Guard&& guard) {
+    SetCallback(SubfutureCallback<Result...>(subfuture, callback,
+                                             subfuture_completer, guard));
+    return subfuture;
+  }
+
+  // Returns a lambda that:
+  //
+  // 1. calls |guard| before calling |callback|, and only calls |callback| if
+  //    |guard| returns true;
+  // 2. will not call |subfuture_completer| if either |this| or |subfuture| are
+  //    destroyed by |callback|.
+  template <typename... CoercedResult, typename Subfuture,
+            typename SubfutureCompleter, typename Callback, typename Guard>
+  auto SubfutureCallback(Subfuture subfuture, Callback&& callback,
+                         SubfutureCompleter&& subfuture_completer,
+                         Guard&& guard) {
+    return [this, subfuture, callback, subfuture_completer,
+            guard](CoercedResult&&... result) {
+      if (!guard())
+        return;
+
+      auto weak_future = weak_factory_.GetWeakPtr();
+      auto weak_subfuture = subfuture->weak_factory_.GetWeakPtr();
+      auto subfuture_result = callback(std::forward<CoercedResult>(result)...);
+
+      // |callback| above may delete this future or the returned subfuture when
+      // it finishes executing, so check if |weak_future| and |weak_subfuture|
+      // are still valid before attempting to complete the subfuture.
+      if (weak_future && weak_subfuture)
+        subfuture_completer(subfuture, std::move(subfuture_result));
+    };
+  }
+
+  // Returns a lambda that calls |callback|, and returns an empty tuple. This is
+  // designed to be used with the SubfutureMapCallback() method (below), which
+  // returns a one-element tuple, so that calling either function will always
+  // return a std::tuple<T...>. The consistent return type enables generic
+  // programming techniques to be applied to |callback| since the return type is
+  // consistent (it's always a std::tuple<T...>).
+  template <typename... CoercedResult, typename Callback>
+  auto SubfutureVoidCallback(Callback&& callback) {
+    return [callback](CoercedResult&&... result) {
+      callback(std::forward<CoercedResult>(result)...);
+      return std::make_tuple();
+    };
+  }
+
+  // See the documentation for SubfutureVoidCallback() above.
+  template <typename Callback>
+  auto SubfutureMapCallback(Callback&& callback) {
+    return [callback](Result&&... result) {
+      return std::make_tuple(callback(std::forward<Result>(result)...));
+    };
+  }
+
+  // Returns a lambda that, when called with a subfuture and a std::tuple, will
+  // complete the subfuture with the values from the tuple elements. This method
+  // is designed to be used with SubfutureAsyncMapCompleter(), which will do
+  // the same thing but can be passed Futures for the std::tuple values.
+  // Together, this enables generic programming techniques to be applied to the
+  // returned lambda, since the lambda presents a consistent API for callers.
+  template <typename... SubfutureResult>
+  auto SubfutureCompleter() {
+    return [](FuturePtr<SubfutureResult...> subfuture,
+              std::tuple<SubfutureResult...> subfuture_result) {
+      subfuture->CompleteWithTuple(std::move(subfuture_result));
+    };
+  }
+
+  // See the documentation for SubfutureCompleter() above.
+  template <typename AsyncMapResult>
+  auto SubfutureAsyncMapCompleter() {
+    return [](AsyncMapResult subfuture,
+              std::tuple<AsyncMapResult> subfuture_result) {
+      std::get<0>(subfuture_result)
+          ->SetCallbackWithTuple(
+              [subfuture](
+                  std::tuple<
+                      typename AsyncMapResult::element_type::result_tuple_type>
+                      transformed_result) {
+                subfuture->CompleteWithTuple(
+                    std::move(std::get<0>(transformed_result)));
+              });
+    };
+  }
+
   template <typename... Args>
   friend class Future;
+
+  std::string trace_name_;
+
+  bool has_result_ = false;
+  std::tuple<Result...> result_;
+
+  // TODO(MI4-1102): Convert std::function to fit::function here & everywhere.
+
+  // The callback attached to this future.
+  std::function<void(Result...)> callback_;
+
+  // Callbacks that have attached with the Const*() methods, such as
+  // ConstThen().
+  std::vector<std::function<void(const Result&...)>> const_callbacks_;
+
+  // Keep this last in the list of members. (See WeakPtrFactory documentation
+  // for more info.)
+  fxl::WeakPtrFactory<Future<Result...>> weak_factory_;
 
   FXL_DISALLOW_COPY_ASSIGN_AND_MOVE(Future);
 };

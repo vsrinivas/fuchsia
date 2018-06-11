@@ -727,10 +727,6 @@ void StoryProviderImpl::OnFocusChange(fuchsia::modular::FocusInfoPtr info) {
   // Last focus time is recorded in the ledger, and story provider watchers
   // are notified through watching SessionStorage.
   auto on_run = Future<>::Create("StoryProviderImpl.OnFocusChange.on_run");
-  // TODO(apang): Using AsyncMap() here is a hack to work around a problem
-  // where FutureOperation will destroy |done| and lead to a crash; AsyncMap
-  // happens to increase the future's refcount, which avoids this. We still
-  // need a proper fix. See MI4-1028 for the details.
   auto done = on_run->AsyncMap([this, story_id = info->focused_story_id] {
     return session_storage_->UpdateLastFocusedTimestamp(
         story_id, zx_clock_get(ZX_CLOCK_UTC));

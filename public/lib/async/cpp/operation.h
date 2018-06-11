@@ -425,6 +425,7 @@ class FutureOperation : public Operation<Args...> {
     // callback must be protected against invocation after delete of this.
     done_->WeakThen(this->GetWeakPtr(), [this](Args&&... args) {
       this->Done(std::forward<Args>(args)...);
+      // Can no longer refer to |this|.
     });
     on_run_->Complete();
   }
