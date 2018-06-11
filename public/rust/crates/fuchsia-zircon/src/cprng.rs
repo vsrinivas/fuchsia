@@ -6,12 +6,11 @@ use {Status, ok, sys};
 /// The buffer must have length less than `ZX_CPRNG_DRAW_MAX_LEN`.
 ///
 /// Wraps the
-/// [zx_cprng_draw](https://fuchsia.googlesource.com/zircon/+/HEAD/docs/syscalls/cprng_draw.md)
+/// [zx_cprng_draw_new](https://fuchsia.googlesource.com/zircon/+/HEAD/docs/syscalls/cprng_draw.md)
 /// syscall.
 pub fn cprng_draw(buffer: &mut [u8]) -> Result<usize, Status> {
-    let mut actual = 0;
-    let status = unsafe { sys::zx_cprng_draw(buffer.as_mut_ptr(), buffer.len(), &mut actual) };
-    ok(status).map(|()| actual)
+    let status = unsafe { sys::zx_cprng_draw_new(buffer.as_mut_ptr(), buffer.len()) };
+    ok(status).map(|()| buffer.len())
 }
 
 /// Mix the given entropy into the kernel CPRNG.

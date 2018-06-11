@@ -7,11 +7,8 @@
 namespace {
 std::string GenerateRandomString() {
   uint32_t random_number;
-  size_t random_size;
-  zx_status_t status =
-      zx_cprng_draw(&random_number, sizeof random_number, &random_size);
+  zx_status_t status = zx_cprng_draw_new(&random_number, sizeof random_number);
   FXL_CHECK(status == ZX_OK);
-  FXL_CHECK(sizeof random_number == random_size);
   return std::to_string(random_number);
 }
 
