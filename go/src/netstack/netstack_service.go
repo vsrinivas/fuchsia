@@ -12,9 +12,12 @@ import (
 
 	"app/context"
 	"fidl/bindings"
+	"netstack/connectivity"
+	"netstack/fidlconv"
 	"netstack/link/eth"
 	"syscall/zx"
 
+	"fidl/fuchsia/net"
 	nsfidl "fidl/fuchsia/netstack"
 
 	"github.com/google/netstack/tcpip"
@@ -27,37 +30,11 @@ type netstackImpl struct {
 	listener nsfidl.NotificationListenerInterface
 }
 
-func toTCPIPAddress(addr nsfidl.NetAddress) tcpip.Address {
-	out := tcpip.Address("")
-	switch addr.Family {
-	case nsfidl.NetAddressFamilyIpv4:
-		out = tcpip.Address(addr.Ipv4.Addr[:])
-	case nsfidl.NetAddressFamilyIpv6:
-		out = tcpip.Address(addr.Ipv6.Addr[:])
-	}
-	return out
-}
-
-func toNetAddress(addr tcpip.Address) nsfidl.NetAddress {
-	out := nsfidl.NetAddress{Family: nsfidl.NetAddressFamilyUnspecified}
-	switch len(addr) {
-	case 4:
-		out.Family = nsfidl.NetAddressFamilyIpv4
-		out.Ipv4 = &nsfidl.Ipv4Address{Addr: [4]uint8{}}
-		copy(out.Ipv4.Addr[:], addr[:])
-	case 16:
-		out.Family = nsfidl.NetAddressFamilyIpv6
-		out.Ipv6 = &nsfidl.Ipv6Address{Addr: [16]uint8{}}
-		copy(out.Ipv6.Addr[:], addr[:])
-	}
-	return out
-}
-
 func toSubnets(addrs []tcpip.Address) []nsfidl.Subnet {
 	out := make([]nsfidl.Subnet, len(addrs))
 	for i := range addrs {
 		// TODO: prefix len?
-		out[i] = nsfidl.Subnet{Addr: toNetAddress(addrs[i]), PrefixLen: 64}
+		out[i] = nsfidl.Subnet{Addr: fidlconv.ToNetAddress(addrs[i]), PrefixLen: 64}
 	}
 	return out
 }
@@ -82,15 +59,18 @@ func getInterfaces() (out []nsfidl.NetInterface) {
 		if ifs.state == eth.StateStarted {
 			flags |= nsfidl.NetInterfaceFlagUp
 		}
+		if ifs.dhcpState.enabled {
+			flags |= nsfidl.NetInterfaceFlagDhcp
+		}
 
 		outif := nsfidl.NetInterface{
 			Id:        uint32(nicid),
 			Flags:     flags,
 			Features:  ifs.nic.Features,
 			Name:      ifs.nic.Name,
-			Addr:      toNetAddress(ifs.nic.Addr),
-			Netmask:   toNetAddress(tcpip.Address(ifs.nic.Netmask)),
-			Broadaddr: toNetAddress(tcpip.Address(broadaddr)),
+			Addr:      fidlconv.ToNetAddress(ifs.nic.Addr),
+			Netmask:   fidlconv.ToNetAddress(tcpip.Address(ifs.nic.Netmask)),
+			Broadaddr: fidlconv.ToNetAddress(tcpip.Address(broadaddr)),
 			Hwaddr:    []uint8(ifs.nic.Mac[:]),
 			Ipv6addrs: toSubnets(ifs.nic.Ipv6addrs),
 		}
@@ -135,7 +115,7 @@ func (ni *netstackImpl) GetAddress(name string, port uint16) (out []nsfidl.Socke
 		for i, addr := range addrs {
 			switch len(addr) {
 			case 4, 16:
-				out[i].Addr = toNetAddress(addr)
+				out[i].Addr = fidlconv.ToNetAddress(addr)
 				out[i].Port = port
 			}
 		}
@@ -179,9 +159,9 @@ func (ni *netstackImpl) GetRouteTable() (out []nsfidl.RouteTableEntry, err error
 		}
 
 		out = append(out, nsfidl.RouteTableEntry{
-			Destination: toNetAddress(dest),
-			Netmask:     toNetAddress(mask),
-			Gateway:     toNetAddress(gateway),
+			Destination: fidlconv.ToNetAddress(dest),
+			Netmask:     fidlconv.ToNetAddress(mask),
+			Gateway:     fidlconv.ToNetAddress(gateway),
 			Nicid:       uint32(route.NIC),
 		})
 	}
@@ -192,9 +172,9 @@ func (ni *netstackImpl) SetRouteTable(rt []nsfidl.RouteTableEntry) error {
 	routes := []tcpip.Route{}
 	for _, r := range rt {
 		route := tcpip.Route{
-			Destination: toTCPIPAddress(r.Destination),
-			Mask:        toTCPIPAddress(r.Netmask),
-			Gateway:     toTCPIPAddress(r.Gateway),
+			Destination: fidlconv.NetAddressToTCPIPAddress(r.Destination),
+			Mask:        fidlconv.NetAddressToTCPIPAddress(r.Netmask),
+			Gateway:     fidlconv.NetAddressToTCPIPAddress(r.Gateway),
 			NIC:         tcpip.NICID(r.Nicid),
 		}
 		routes = append(routes, route)
@@ -209,7 +189,7 @@ func (ni *netstackImpl) SetRouteTable(rt []nsfidl.RouteTableEntry) error {
 
 func toSubnet(address nsfidl.NetAddress, prefixLen uint8) (tcpip.Subnet, error) {
 	// TODO: use tcpip.Address#mask after fuchsia/third_party/netstack and github/third_party/netstack are unified and #mask can be made public.
-	a := []byte(toTCPIPAddress(address))
+	a := []byte(fidlconv.NetAddressToTCPIPAddress(address))
 	m := tcpip.CIDRMask(int(prefixLen), int(len(a)*8))
 	for i, _ := range a {
 		a[i] = a[i] & m[i]
@@ -229,7 +209,7 @@ func (ni *netstackImpl) SetInterfaceAddress(nicid uint32, address nsfidl.NetAddr
 	}
 
 	nic := tcpip.NICID(nicid)
-	addr := toTCPIPAddress(address)
+	addr := fidlconv.NetAddressToTCPIPAddress(address)
 	sn, err := toSubnet(address, prefixLen)
 	if err != nil {
 		result = nsfidl.NetErr{nsfidl.StatusParseError, "Error applying subnet mask to interface address"}
@@ -362,12 +342,18 @@ func AddNetstackService(ctx *context.Context) error {
 		return nil
 	})
 
+	ctx.OutgoingService.AddService(net.ConnectivityName, func(c zx.Channel) error {
+		_, err := connectivity.Service.Add(struct{}{}, c, nil)
+		return err
+	})
+
 	return nil
 }
 
 func OnInterfacesChanged() {
 	if netstackService != nil {
 		interfaces := getInterfaces()
+		connectivity.InferAndNotify(interfaces)
 		for key, client := range netstackService.Bindings {
 			if p, ok := netstackService.EventProxyFor(key); ok {
 				p.InterfacesChanged(interfaces)

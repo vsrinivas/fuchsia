@@ -5,6 +5,8 @@
 package netiface
 
 import (
+	"fidl/fuchsia/netstack"
+	"netstack/fidlconv"
 	"reflect"
 	"sort"
 	"strings"
@@ -389,5 +391,31 @@ func TestSpecificMaskFirst(t *testing.T) {
 
 	if !reflect.DeepEqual(expected, routes) {
 		t.Fatalf("Expected:\n  %v\nActual:\n  %v", expected, routes)
+	}
+}
+
+func NewV4Address(b [4]uint8) netstack.NetAddress {
+	return netstack.NetAddress{Family: netstack.NetAddressFamilyIpv4, Ipv4: &netstack.Ipv4Address{Addr: b}}
+}
+
+var isAnyTests = []struct {
+	addr netstack.NetAddress
+	res  bool
+}{
+	{
+		addr: NewV4Address([4]uint8{0, 0, 0, 0}),
+		res:  true,
+	},
+	{
+		addr: NewV4Address([4]uint8{127, 0, 0, 1}),
+		res:  false,
+	},
+}
+
+func TestIsAny(t *testing.T) {
+	for _, tst := range isAnyTests {
+		if res := IsAny(fidlconv.NetAddressToTCPIPAddress(tst.addr)); res != tst.res {
+			t.Errorf("expected netiface.IsAny(%+v) to be %v, got %v", tst.addr, tst.res, res)
+		}
 	}
 }

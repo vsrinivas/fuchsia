@@ -57,6 +57,7 @@ package("netstack_gotests") {
   testonly = true
 
   deps = [
+    ":netstack_connectivity_test",
     ":netstack_fidlconv_test",
     ":netstack_filter_test",
     ":netstack_netiface_test",
@@ -90,14 +91,14 @@ go_library("netstack_lib") {
   name = "netstack"
 
   deps = [
-    "//garnet/public/fidl/fuchsia.sys($go_toolchain)",
-    "//garnet/public/fidl/fuchsia.netstack($go_toolchain)",
     "//garnet/public/fidl/fuchsia.devicesettings($go_toolchain)",
+    "//garnet/public/fidl/fuchsia.netstack($go_toolchain)",
+    "//garnet/public/fidl/fuchsia.sys($go_toolchain)",
+    "//garnet/public/go/third_party:github.com/google/netstack",
     "//garnet/public/lib/component/go/src/app",
     "//garnet/public/lib/fidl/go/src/fidl/bindings",
     "//zircon/public/fidl/fuchsia-net($go_toolchain)",
     "//zircon/public/fidl/fuchsia-net-stack($go_toolchain)",
-    "//garnet/public/go/third_party:github.com/google/netstack",
   ]
 }
 
@@ -105,10 +106,7 @@ go_binary("netstack_bin") {
   output_name = "netstack"
 
   gopackage = "netstack"
-
-  extra_dependencies = [
-    ":netstack_lib"
-  ]
+  extra_dependencies = [ ":netstack_lib" ]
 }
 
 go_test("netstack_fidlconv_test") {
@@ -118,10 +116,15 @@ go_test("netstack_fidlconv_test") {
 
 go_test("netstack_netiface_test") {
   gopackage = "netstack/netiface"
-  extra_dependencies = [":netstack_lib"]
+  extra_dependencies = [ ":netstack_lib" ]
 }
 
 go_test("netstack_filter_test") {
   gopackage = "netstack/filter"
-  extra_dependencies = [":netstack_lib"]
+  extra_dependencies = [ ":netstack_lib" ]
+}
+
+go_test("netstack_connectivity_test") {
+  gopackage = "netstack/connectivity"
+  extra_dependencies = [ ":netstack_lib" ]
 }

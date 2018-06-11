@@ -11,6 +11,7 @@ import (
 	"math/big"
 
 	"fidl/fuchsia/net"
+	"fidl/fuchsia/netstack"
 
 	"github.com/google/netstack/tcpip"
 )
@@ -37,6 +38,38 @@ func ToNetIpAddress(addr tcpip.Address) net.IpAddress {
 		copy(out.Ipv6.Addr[:], addr[:])
 	default:
 		panic("invalid tcpip.Address length")
+	}
+	return out
+}
+
+// TODO: remove when we port from fidl/fuchsia/netstack to fidl/fuchsia/net
+// NetAddress type is restated in the name to prevent a name collision with `ToTCPIPAddress(net.IpAddress)`
+func NetAddressToTCPIPAddress(addr netstack.NetAddress) tcpip.Address {
+	out := tcpip.Address("")
+	switch addr.Family {
+	case netstack.NetAddressFamilyIpv4:
+		out = tcpip.Address(addr.Ipv4.Addr[:])
+	case netstack.NetAddressFamilyIpv6:
+		out = tcpip.Address(addr.Ipv6.Addr[:])
+	}
+	return out
+}
+
+// TODO: remove when we port from fidl/fuchsia/netstack to fidl/fuchsia/net
+func ToNetAddress(addr tcpip.Address) netstack.NetAddress {
+	out := netstack.NetAddress{Family: netstack.NetAddressFamilyUnspecified}
+	switch len(addr) {
+	case 4:
+		out.Family = netstack.NetAddressFamilyIpv4
+		out.Ipv4 = &netstack.Ipv4Address{Addr: [4]uint8{}}
+		copy(out.Ipv4.Addr[:], addr[:])
+	case 16:
+		out.Family = netstack.NetAddressFamilyIpv6
+		out.Ipv6 = &netstack.Ipv6Address{Addr: [16]uint8{}}
+		copy(out.Ipv6.Addr[:], addr[:])
+	case 0: // assume ipv4 for now; perhaps ipv6-encoded-ipv4 later
+		out.Family = netstack.NetAddressFamilyIpv4
+		out.Ipv4 = &netstack.Ipv4Address{Addr: [4]uint8{0, 0, 0, 0}}
 	}
 	return out
 }

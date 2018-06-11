@@ -89,6 +89,7 @@ struct NetInterface {
   uint32 id;
   uint32 flags;
   uint32 features;
+  uint32 configuration;
   string name;
   NetAddress addr;
   NetAddress netmask;
@@ -99,6 +100,7 @@ struct NetInterface {
 
 // Flags for NetInterface.flags.
 const uint32 NetInterfaceFlagUp = 0x1;  // Set if the interface is up.
+const uint32 NetInterfaceFlagDhcp = 0x02; // Set if DHCP is enabled.
 
 // Features for Netinterface.features.
 // LINT.IfChange

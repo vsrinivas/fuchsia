@@ -20,7 +20,7 @@ type NIC struct {
 	Mac        [6]byte
 }
 
-func isAny(a tcpip.Address) bool {
+func IsAny(a tcpip.Address) bool {
 	for i := 0; i < len(a); i++ {
 		if a[i] != 0 {
 			return false
@@ -51,8 +51,8 @@ func Less(ri, rj *tcpip.Route, nics map[tcpip.NICID]*NIC) bool {
 	ni, nj := nics[ri.NIC], nics[rj.NIC]
 	// If only one of them has a route for specific address (i.e. not a route
 	// for Any destination), that element should sort before the other.
-	if isAny(ri.Destination) != isAny(rj.Destination) {
-		return !isAny(ri.Destination)
+	if IsAny(ri.Destination) != IsAny(rj.Destination) {
+		return !IsAny(ri.Destination)
 	}
 	// If only one of them has a gateway, that element should sort before
 	// the other.
@@ -61,8 +61,8 @@ func Less(ri, rj *tcpip.Route, nics map[tcpip.NICID]*NIC) bool {
 	}
 	// If both have gateways and only one is for a specific address, that
 	// element should sort before the other.
-	if isAny(ri.Gateway) != isAny(rj.Gateway) {
-		return !isAny(ri.Gateway)
+	if IsAny(ri.Gateway) != IsAny(rj.Gateway) {
+		return !IsAny(ri.Gateway)
 	}
 	// If only one them has a NIC with an IP address, that element should sort
 	// before the other.
