@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <media_codec/cpp/fidl.h>
+#include <fuchsia/mediacodec/cpp/fidl.h>
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/time.h>

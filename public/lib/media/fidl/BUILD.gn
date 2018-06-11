@@ -44,7 +44,7 @@ fidl("media_player") {
 }
 
 fidl("media_codec") {
-  name = "media_codec"
+  name = "fuchsia.mediacodec"
   cpp_legacy_callbacks = true
 
   sdk_category = "partner"

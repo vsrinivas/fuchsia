@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-library media_codec;
+library fuchsia.mediacodec;
 
 // See codec.md for detailed interface documentation.  The comments here are a
 // summary only.  Client implementers should see codec.md for more detail on any
@@ -330,7 +330,7 @@ struct CodecOutputConfig {
   CodecFormatDetails format_details;
 };
 
-// Default values for input and output 
+// Default values for input and output
 // CodecBufferConstraints.default_settings.packet_count_for_codec.
 //
 // These are defined as "const" in FIDL to avoid all server implementations

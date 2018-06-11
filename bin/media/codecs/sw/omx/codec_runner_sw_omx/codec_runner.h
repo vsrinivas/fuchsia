@@ -5,7 +5,7 @@
 #ifndef GARNET_BIN_MEDIA_CODECS_SW_OMX_CODEC_RUNNER_SW_OMX_CODEC_RUNNER_H_
 #define GARNET_BIN_MEDIA_CODECS_SW_OMX_CODEC_RUNNER_SW_OMX_CODEC_RUNNER_H_
 
-#include <media_codec/cpp/fidl.h>
+#include <fuchsia/mediacodec/cpp/fidl.h>
 
 //#include "lib/app/cpp/startup_context.h"
 #include "lib/fidl/cpp/binding.h"
