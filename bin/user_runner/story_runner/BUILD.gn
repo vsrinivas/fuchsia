@@ -10,8 +10,6 @@ tests_package("story_runner_unittests") {
     ":chain_impl_unittest",
     ":key_generator_unittest",
     ":link_impl_unittest",
-    ":session_storage_unittest",
-    ":story_storage_unittest",
   ]
 }
 
@@ -70,110 +68,10 @@ source_set("story_runner") {
   ]
 
   deps = [
-    ":session_storage",
-    ":session_storage_xdr",
-    ":story_storage",
+    "//peridot/bin/user_runner/storage",
     "//peridot/lib/fidl:clone",
     "//peridot/public/lib:fidl",
     "//zircon/public/lib/async-loop-cpp",
-  ]
-}
-
-source_set("session_storage") {
-  sources = [
-    "session_storage.cc",
-    "session_storage.h",
-  ]
-
-  deps = [
-    ":session_storage_xdr",
-    "//peridot/lib/fidl:clone",
-    "//peridot/lib/ledger_client:operations",
-    "//peridot/lib/ledger_client:page_client",
-    "//peridot/lib/ledger_client:storage",
-    "//peridot/public/lib:fidl",
-    "//peridot/public/lib:fidl_internal",
-    "//peridot/public/lib/async/cpp:future",
-    "//peridot/public/lib/ledger/fidl",
-  ]
-}
-
-source_set("session_storage_xdr") {
-  sources = [
-    "session_storage_xdr.cc",
-    "session_storage_xdr.h",
-  ]
-
-  deps = [
-    "//peridot/lib/base64url",
-    "//peridot/lib/fidl:json_xdr",
-    "//peridot/public/lib:fidl",
-    "//peridot/public/lib:fidl_internal",
-  ]
-}
-
-executable("session_storage_unittest") {
-  testonly = true
-
-  sources = [
-    "session_storage_unittest.cc",
-  ]
-
-  deps = [
-    ":session_storage",
-    "//peridot/lib/testing:test_with_ledger",
-    "//peridot/public/lib/async/cpp:future",
-    "//peridot/public/lib/ledger/fidl",
-    "//third_party/googletest:gtest_main",
-  ]
-}
-
-source_set("story_storage") {
-  sources = [
-    "story_storage.cc",
-    "story_storage.h",
-  ]
-
-  deps = [
-    ":story_storage_xdr",
-    "//peridot/lib/fidl:clone",
-    "//peridot/lib/ledger_client:operations",
-    "//peridot/lib/ledger_client:page_client",
-    "//peridot/lib/ledger_client:storage",
-    "//peridot/public/lib:fidl",
-    "//peridot/public/lib:fidl_internal",
-    "//peridot/public/lib/async/cpp:future",
-    "//peridot/public/lib/ledger/fidl",
-  ]
-}
-
-source_set("story_storage_xdr") {
-  sources = [
-    "story_storage_xdr.cc",
-    "story_storage_xdr.h",
-  ]
-
-  deps = [
-    "//peridot/lib/base64url",
-    "//peridot/lib/fidl:json_xdr",
-    "//peridot/public/lib:fidl",
-    "//peridot/public/lib:fidl_internal",
-  ]
-}
-
-executable("story_storage_unittest") {
-  testonly = true
-
-  sources = [
-    "story_storage_unittest.cc",
-  ]
-
-  deps = [
-    ":story_storage",
-    "//peridot/lib/testing:test_with_ledger",
-    "//peridot/public/lib/async/cpp:future",
-    "//peridot/public/lib/ledger/fidl",
-    "//third_party/googletest:gtest_main",
   ]
 }
 
@@ -202,10 +100,10 @@ executable("chain_impl_unittest") {
 
   deps = [
     ":story_runner",
-    "//peridot/bin/user_runner/agent_runner",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/gtest",
+    "//peridot/bin/user_runner/agent_runner",
     "//peridot/lib/testing:story_controller_mock",
     "//third_party/googletest:gtest_main",
   ]

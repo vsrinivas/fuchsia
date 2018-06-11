@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef PERIDOT_BIN_USER_RUNNER_STORY_RUNNER_SESSION_STORAGE_H_
-#define PERIDOT_BIN_USER_RUNNER_STORY_RUNNER_SESSION_STORAGE_H_
+#ifndef PERIDOT_BIN_USER_RUNNER_STORAGE_SESSION_STORAGE_H_
+#define PERIDOT_BIN_USER_RUNNER_STORAGE_SESSION_STORAGE_H_
 
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/modular/internal/cpp/fidl.h>
@@ -118,4 +118,4 @@ class SessionStorage : public PageClient {
 
 }  // namespace modular
 
-#endif  // PERIDOT_BIN_USER_RUNNER_STORY_RUNNER_SESSION_STORAGE_H_
+#endif  // PERIDOT_BIN_USER_RUNNER_STORAGE_SESSION_STORAGE_H_

@@ -26,8 +26,8 @@
 #include "peridot/bin/user_runner/puppet_master/make_production_impl.h"
 #include "peridot/bin/user_runner/puppet_master/puppet_master_impl.h"
 #include "peridot/bin/user_runner/puppet_master/story_command_executor.h"
+#include "peridot/bin/user_runner/storage/session_storage.h"
 #include "peridot/bin/user_runner/story_runner/link_impl.h"
-#include "peridot/bin/user_runner/story_runner/session_storage.h"
 #include "peridot/bin/user_runner/story_runner/story_provider_impl.h"
 #include "peridot/lib/common/names.h"
 #include "peridot/lib/common/teardown.h"
@@ -172,7 +172,8 @@ UserRunnerImpl::UserRunnerImpl(
 UserRunnerImpl::~UserRunnerImpl() = default;
 
 void UserRunnerImpl::Initialize(
-    fuchsia::modular::auth::AccountPtr account, fuchsia::modular::AppConfig user_shell,
+    fuchsia::modular::auth::AccountPtr account,
+    fuchsia::modular::AppConfig user_shell,
     fuchsia::modular::AppConfig story_shell,
     fidl::InterfaceHandle<fuchsia::modular::auth::TokenProviderFactory>
         token_provider_factory,
@@ -223,7 +224,8 @@ void UserRunnerImpl::InitializeLedger() {
     service_list = fuchsia::sys::ServiceList::New();
     service_list->names.push_back(fuchsia::modular::auth::TokenProvider::Name_);
     ledger_service_provider_.AddService<fuchsia::modular::auth::TokenProvider>(
-        [this](fidl::InterfaceRequest<fuchsia::modular::auth::TokenProvider> request) {
+        [this](fidl::InterfaceRequest<fuchsia::modular::auth::TokenProvider>
+                   request) {
           token_provider_factory_->GetTokenProvider(kLedgerAppUrl,
                                                     std::move(request));
         });
@@ -787,7 +789,8 @@ void UserRunnerImpl::ConnectToEntityProvider(
 
 fuchsia::ledger::cloud::CloudProviderPtr UserRunnerImpl::GetCloudProvider() {
   fuchsia::ledger::cloud::CloudProviderPtr cloud_provider;
-  fidl::InterfaceHandle<fuchsia::modular::auth::TokenProvider> ledger_token_provider;
+  fidl::InterfaceHandle<fuchsia::modular::auth::TokenProvider>
+      ledger_token_provider;
   token_provider_factory_->GetTokenProvider(kLedgerAppUrl,
                                             ledger_token_provider.NewRequest());
   auto firebase_config = GetLedgerFirebaseConfig();

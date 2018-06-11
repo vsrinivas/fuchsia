@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "peridot/bin/user_runner/story_runner/story_storage_xdr.h"
+#include "peridot/bin/user_runner/storage/story_storage_xdr.h"
 
 #include "lib/fidl/cpp/clone.h"
 

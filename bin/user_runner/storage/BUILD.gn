@@ -1,0 +1,117 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//peridot/build/tests_package.gni")
+
+tests_package("storage_unittests") {
+  deps = [
+    ":session_storage_unittest",
+    ":story_storage_unittest",
+  ]
+}
+
+group("storage") {
+  public_deps = [
+    ":session_storage",
+    ":story_storage",
+  ]
+}
+
+source_set("session_storage") {
+  sources = [
+    "session_storage.cc",
+    "session_storage.h",
+  ]
+
+  deps = [
+    ":session_storage_xdr",
+    "//peridot/lib/fidl:clone",
+    "//peridot/lib/ledger_client:operations",
+    "//peridot/lib/ledger_client:page_client",
+    "//peridot/lib/ledger_client:storage",
+    "//peridot/public/lib:fidl",
+    "//peridot/public/lib:fidl_internal",
+    "//peridot/public/lib/async/cpp:future",
+    "//peridot/public/lib/ledger/fidl",
+  ]
+}
+
+source_set("session_storage_xdr") {
+  sources = [
+    "session_storage_xdr.cc",
+    "session_storage_xdr.h",
+  ]
+
+  deps = [
+    "//peridot/lib/base64url",
+    "//peridot/lib/fidl:json_xdr",
+    "//peridot/public/lib:fidl",
+    "//peridot/public/lib:fidl_internal",
+  ]
+}
+
+executable("session_storage_unittest") {
+  testonly = true
+
+  sources = [
+    "session_storage_unittest.cc",
+  ]
+
+  deps = [
+    ":session_storage",
+    "//peridot/lib/testing:test_with_ledger",
+    "//peridot/public/lib/async/cpp:future",
+    "//peridot/public/lib/ledger/fidl",
+    "//third_party/googletest:gtest_main",
+  ]
+}
+
+source_set("story_storage") {
+  sources = [
+    "story_storage.cc",
+    "story_storage.h",
+  ]
+
+  deps = [
+    ":story_storage_xdr",
+    "//peridot/lib/fidl:clone",
+    "//peridot/lib/ledger_client:operations",
+    "//peridot/lib/ledger_client:page_client",
+    "//peridot/lib/ledger_client:storage",
+    "//peridot/public/lib:fidl",
+    "//peridot/public/lib:fidl_internal",
+    "//peridot/public/lib/async/cpp:future",
+    "//peridot/public/lib/ledger/fidl",
+  ]
+}
+
+source_set("story_storage_xdr") {
+  sources = [
+    "story_storage_xdr.cc",
+    "story_storage_xdr.h",
+  ]
+
+  deps = [
+    "//peridot/lib/base64url",
+    "//peridot/lib/fidl:json_xdr",
+    "//peridot/public/lib:fidl",
+    "//peridot/public/lib:fidl_internal",
+  ]
+}
+
+executable("story_storage_unittest") {
+  testonly = true
+
+  sources = [
+    "story_storage_unittest.cc",
+  ]
+
+  deps = [
+    ":story_storage",
+    "//peridot/lib/testing:test_with_ledger",
+    "//peridot/public/lib/async/cpp:future",
+    "//peridot/public/lib/ledger/fidl",
+    "//third_party/googletest:gtest_main",
+  ]
+}

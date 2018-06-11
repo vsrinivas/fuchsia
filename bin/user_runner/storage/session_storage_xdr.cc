@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "peridot/bin/user_runner/story_runner/session_storage_xdr.h"
+#include "peridot/bin/user_runner/storage/session_storage_xdr.h"
 
 #include "peridot/lib/base64url/base64url.h"
 

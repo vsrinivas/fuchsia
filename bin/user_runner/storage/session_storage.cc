@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "peridot/bin/user_runner/story_runner/session_storage.h"
+#include "peridot/bin/user_runner/storage/session_storage.h"
 
 #include <fuchsia/modular/internal/cpp/fidl.h>
 
 #include "lib/fidl/cpp/clone.h"
 #include "lib/fxl/functional/make_copyable.h"
-#include "peridot/bin/user_runner/story_runner/session_storage_xdr.h"
+#include "peridot/bin/user_runner/storage/session_storage_xdr.h"
 #include "peridot/lib/fidl/clone.h"
 #include "peridot/lib/ledger_client/operations.h"
 #include "peridot/lib/ledger_client/storage.h"
