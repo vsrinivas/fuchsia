@@ -104,6 +104,8 @@ source_set("connection") {
     "$zircon_build_root/public/lib/driver",
     "$zircon_build_root/public/lib/fdio",
     "$zircon_build_root/public/lib/zx",
+    "$zircon_build_root/public/lib/async-loop-cpp",
+    "$zircon_build_root/public/lib/async",
   ]
 
   libs = [ "zircon" ]

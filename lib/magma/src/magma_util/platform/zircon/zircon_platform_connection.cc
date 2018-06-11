@@ -7,6 +7,8 @@
 
 #include <list>
 
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/async/wait.h>
 #include <lib/fdio/io.h>
 #include <lib/zx/channel.h>
 #include <zircon/syscalls.h>
@@ -162,20 +164,63 @@ ExecuteImmediateCommandsOp* OpCast<ExecuteImmediateCommandsOp>(uint8_t* bytes, u
 class ZirconPlatformConnection : public PlatformConnection,
                                   public std::enable_shared_from_this<ZirconPlatformConnection> {
 public:
+    struct AsyncWait : public async_wait {
+        AsyncWait(ZirconPlatformConnection* connection, zx_handle_t object, zx_signals_t trigger)
+        {
+            this->state = ASYNC_STATE_INIT;
+            this->handler = AsyncWaitHandlerStatic;
+            this->object = object;
+            this->trigger = trigger;
+            this->connection = connection;
+        }
+        ZirconPlatformConnection* connection;
+    };
+
     ZirconPlatformConnection(std::unique_ptr<Delegate> delegate, zx::channel local_endpoint,
                              zx::channel remote_endpoint, zx::channel local_notification_endpoint,
                              zx::channel remote_notification_endpoint,
-                             std::unique_ptr<magma::PlatformEvent> shutdown_event)
-        : magma::PlatformConnection(std::move(shutdown_event)), delegate_(std::move(delegate)),
+                             std::shared_ptr<magma::PlatformEvent> shutdown_event)
+        : magma::PlatformConnection(shutdown_event), delegate_(std::move(delegate)),
           local_endpoint_(std::move(local_endpoint)), remote_endpoint_(std::move(remote_endpoint)),
           local_notification_endpoint_(std::move(local_notification_endpoint)),
-          remote_notification_endpoint_(std::move(remote_notification_endpoint))
+          remote_notification_endpoint_(std::move(remote_notification_endpoint)),
+          async_wait_channel_(this, local_endpoint_.get(),
+                              ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED),
+          async_wait_shutdown_(
+              this, static_cast<magma::ZirconPlatformEvent*>(shutdown_event.get())->zx_handle(),
+              ZX_EVENT_SIGNALED)
     {
     }
 
     ~ZirconPlatformConnection() { delegate_->SetNotificationChannel(nullptr, 0); }
 
     bool HandleRequest() override
+    {
+        zx_status_t status = async_loop_.Run(zx::time::infinite(), true); // Once
+        if (status != ZX_OK) {
+            DLOG("Run returned %d", status);
+            return false;
+        }
+        return true;
+    }
+
+    bool BeginChannelWait()
+    {
+        zx_status_t status = async_begin_wait(async_loop()->async(), &async_wait_channel_);
+        if (status != ZX_OK)
+            return DRETF(false, "Couldn't begin wait on channel: %d", status);
+        return true;
+    }
+
+    bool BeginShutdownWait()
+    {
+        zx_status_t status = async_begin_wait(async_loop()->async(), &async_wait_shutdown_);
+        if (status != ZX_OK)
+            return DRETF(false, "Couldn't begin wait on shutdown: %d", status);
+        return true;
+    }
+
+    bool ReadChannel()
     {
         constexpr uint32_t num_bytes = kReceiveBufferSize;
         constexpr uint32_t kNumHandles = 1;
@@ -186,99 +231,74 @@ public:
         uint8_t bytes[num_bytes];
         zx_handle_t handles[kNumHandles];
 
-        auto shutdown_event = static_cast<ZirconPlatformEvent*>(ShutdownEvent().get());
+        zx_status_t status = local_endpoint_.read(0, bytes, num_bytes, &actual_bytes, handles,
+                                                  kNumHandles, &actual_handles);
+        if (status != ZX_OK)
+            return DRETF(false, "failed to read from channel");
 
-        constexpr uint32_t kIndexChannel = 0;
-        constexpr uint32_t kIndexShutdown = 1;
+        if (actual_bytes < sizeof(OpCode))
+            return DRETF(false, "malformed message");
 
-        constexpr uint32_t wait_item_count = 2;
-        zx_wait_item_t wait_items[wait_item_count];
-        wait_items[kIndexChannel] = {local_endpoint_.get(),
-                                      ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED, 0};
-        wait_items[kIndexShutdown] = {shutdown_event->zx_handle(), shutdown_event->zx_signal(), 0};
-
-        if (zx_object_wait_many(wait_items, wait_item_count, ZX_TIME_INFINITE) != ZX_OK)
-            return DRETF(false, "wait_many failed");
-
-        if (wait_items[kIndexShutdown].pending & shutdown_event->zx_signal())
-            return DRETF(false, "shutdown event signalled");
-
-        if (wait_items[kIndexChannel].pending & ZX_CHANNEL_PEER_CLOSED)
-            return false; // No DRET because this happens on the normal connection closed path
-
-        if (wait_items[kIndexChannel].pending & ZX_CHANNEL_READABLE) {
-            auto status = local_endpoint_.read(0, bytes, num_bytes, &actual_bytes, handles,
-                                               kNumHandles, &actual_handles);
-            if (status != ZX_OK)
-                return DRETF(false, "failed to read from channel");
-
-            if (actual_bytes < sizeof(OpCode))
-                return DRETF(false, "malformed message");
-
-            OpCode* opcode = reinterpret_cast<OpCode*>(bytes);
-            bool success = false;
-            switch (*opcode) {
-                case OpCode::ImportBuffer:
-                    success = ImportBuffer(
-                        OpCast<ImportBufferOp>(bytes, actual_bytes, handles, actual_handles),
-                        handles);
-                    break;
-                case OpCode::ReleaseBuffer:
-                    success = ReleaseBuffer(
-                        OpCast<ReleaseBufferOp>(bytes, actual_bytes, handles, actual_handles));
-                    break;
-                case OpCode::ImportObject:
-                    success = ImportObject(
-                        OpCast<ImportObjectOp>(bytes, actual_bytes, handles, actual_handles),
-                        handles);
-                    break;
-                case OpCode::ReleaseObject:
-                    success = ReleaseObject(
-                        OpCast<ReleaseObjectOp>(bytes, actual_bytes, handles, actual_handles));
-                    break;
-                case OpCode::CreateContext:
-                    success = CreateContext(
-                        OpCast<CreateContextOp>(bytes, actual_bytes, handles, actual_handles));
-                    break;
-                case OpCode::DestroyContext:
-                    success = DestroyContext(
-                        OpCast<DestroyContextOp>(bytes, actual_bytes, handles, actual_handles));
-                    break;
-                case OpCode::ExecuteCommandBuffer:
-                    success =
-                        ExecuteCommandBuffer(OpCast<ExecuteCommandBufferOp>(
-                                                 bytes, actual_bytes, handles, actual_handles),
-                                             handles);
-                    break;
-                case OpCode::WaitRendering:
-                    success = WaitRendering(
-                        OpCast<WaitRenderingOp>(bytes, actual_bytes, handles, actual_handles));
-                    break;
-                case OpCode::ExecuteImmediateCommands:
-                    success = ExecuteImmediateCommands(OpCast<ExecuteImmediateCommandsOp>(
-                        bytes, actual_bytes, handles, actual_handles));
-                    break;
-                case OpCode::GetError:
-                    success =
-                        GetError(OpCast<GetErrorOp>(bytes, actual_bytes, handles, actual_handles));
-                    break;
-                case OpCode::MapBufferGpu:
-                    success = MapBufferGpu(
-                        OpCast<MapBufferGpuOp>(bytes, actual_bytes, handles, actual_handles));
-                    break;
-                case OpCode::UnmapBufferGpu:
-                    success = UnmapBufferGpu(
-                        OpCast<UnmapBufferGpuOp>(bytes, actual_bytes, handles, actual_handles));
-                    break;
-                case OpCode::CommitBuffer:
-                    success = CommitBuffer(
-                        OpCast<CommitBufferOp>(bytes, actual_bytes, handles, actual_handles));
-                    break;
-            }
-
-            if (!success)
-                return DRETF(false, "failed to interpret message");
+        OpCode* opcode = reinterpret_cast<OpCode*>(bytes);
+        bool success = false;
+        switch (*opcode) {
+            case OpCode::ImportBuffer:
+                success = ImportBuffer(
+                    OpCast<ImportBufferOp>(bytes, actual_bytes, handles, actual_handles), handles);
+                break;
+            case OpCode::ReleaseBuffer:
+                success = ReleaseBuffer(
+                    OpCast<ReleaseBufferOp>(bytes, actual_bytes, handles, actual_handles));
+                break;
+            case OpCode::ImportObject:
+                success = ImportObject(
+                    OpCast<ImportObjectOp>(bytes, actual_bytes, handles, actual_handles), handles);
+                break;
+            case OpCode::ReleaseObject:
+                success = ReleaseObject(
+                    OpCast<ReleaseObjectOp>(bytes, actual_bytes, handles, actual_handles));
+                break;
+            case OpCode::CreateContext:
+                success = CreateContext(
+                    OpCast<CreateContextOp>(bytes, actual_bytes, handles, actual_handles));
+                break;
+            case OpCode::DestroyContext:
+                success = DestroyContext(
+                    OpCast<DestroyContextOp>(bytes, actual_bytes, handles, actual_handles));
+                break;
+            case OpCode::ExecuteCommandBuffer:
+                success = ExecuteCommandBuffer(
+                    OpCast<ExecuteCommandBufferOp>(bytes, actual_bytes, handles, actual_handles),
+                    handles);
+                break;
+            case OpCode::WaitRendering:
+                success = WaitRendering(
+                    OpCast<WaitRenderingOp>(bytes, actual_bytes, handles, actual_handles));
+                break;
+            case OpCode::ExecuteImmediateCommands:
+                success = ExecuteImmediateCommands(OpCast<ExecuteImmediateCommandsOp>(
+                    bytes, actual_bytes, handles, actual_handles));
+                break;
+            case OpCode::GetError:
+                success =
+                    GetError(OpCast<GetErrorOp>(bytes, actual_bytes, handles, actual_handles));
+                break;
+            case OpCode::MapBufferGpu:
+                success = MapBufferGpu(
+                    OpCast<MapBufferGpuOp>(bytes, actual_bytes, handles, actual_handles));
+                break;
+            case OpCode::UnmapBufferGpu:
+                success = UnmapBufferGpu(
+                    OpCast<UnmapBufferGpuOp>(bytes, actual_bytes, handles, actual_handles));
+                break;
+            case OpCode::CommitBuffer:
+                success = CommitBuffer(
+                    OpCast<CommitBufferOp>(bytes, actual_bytes, handles, actual_handles));
+                break;
         }
+
+        if (!success)
+            return DRETF(false, "failed to interpret message");
 
         if (error_)
             return DRETF(false, "PlatformConnection encountered fatal error");
@@ -298,7 +318,42 @@ public:
         return remote_notification_endpoint_.release();
     }
 
+    async::Loop* async_loop() { return &async_loop_; }
+
 private:
+    static void AsyncWaitHandlerStatic(async_t* async, async_wait_t* async_wait, zx_status_t status,
+                                       const zx_packet_signal_t* signal)
+    {
+        auto wait = static_cast<AsyncWait*>(async_wait);
+        wait->connection->AsyncWaitHandler(async, wait, status, signal);
+    }
+
+    void AsyncWaitHandler(async_t* async, AsyncWait* wait, zx_status_t status,
+                          const zx_packet_signal_t* signal)
+    {
+        if (status != ZX_OK)
+            return;
+
+        bool quit = false;
+        if (wait == &async_wait_shutdown_) {
+            DASSERT(signal->observed == ZX_EVENT_SIGNALED);
+            quit = true;
+            DLOG("got shutdown event");
+        } else if (wait == &async_wait_channel_ && signal->observed & ZX_CHANNEL_PEER_CLOSED) {
+            quit = true;
+        } else if (wait == &async_wait_channel_ && signal->observed & ZX_CHANNEL_READABLE) {
+            if (!ReadChannel() || !BeginChannelWait()) {
+                quit = true;
+            }
+        } else {
+            DASSERT(false);
+        }
+
+        if (quit) {
+            async_loop()->Quit();
+        }
+    }
+
     bool ImportBuffer(ImportBufferOp* op, zx_handle_t* handle)
     {
         DLOG("Operation: ImportBuffer");
@@ -465,6 +520,9 @@ private:
     magma_status_t error_{};
     zx::channel local_notification_endpoint_;
     zx::channel remote_notification_endpoint_;
+    async::Loop async_loop_;
+    AsyncWait async_wait_channel_;
+    AsyncWait async_wait_shutdown_;
 };
 
 class ZirconPlatformIpcConnection : public PlatformIpcConnection {
@@ -812,7 +870,7 @@ PlatformConnection::Create(std::unique_ptr<PlatformConnection::Delegate> delegat
 
     zx::channel local_endpoint;
     zx::channel remote_endpoint;
-    auto status = zx::channel::create(0, &local_endpoint, &remote_endpoint);
+    zx_status_t status = zx::channel::create(0, &local_endpoint, &remote_endpoint);
     if (status != ZX_OK)
         return DRETP(nullptr, "zx::channel::create failed");
 
@@ -824,12 +882,21 @@ PlatformConnection::Create(std::unique_ptr<PlatformConnection::Delegate> delegat
     delegate->SetNotificationChannel(&channel_send_callback, local_notification_endpoint.get());
 
     auto shutdown_event = magma::PlatformEvent::Create();
-    DASSERT(shutdown_event);
+    if (!shutdown_event)
+        return DRETP(nullptr, "Failed to create shutdown event");
 
-    return std::shared_ptr<ZirconPlatformConnection>(new ZirconPlatformConnection(
+    auto connection = std::make_shared<ZirconPlatformConnection>(
         std::move(delegate), std::move(local_endpoint), std::move(remote_endpoint),
         std::move(local_notification_endpoint), std::move(remote_notification_endpoint),
-        std::move(shutdown_event)));
+        std::shared_ptr<magma::PlatformEvent>(std::move(shutdown_event)));
+
+    if (!connection->BeginChannelWait())
+        return DRETP(nullptr, "Failed to begin channel wait");
+
+    if (!connection->BeginShutdownWait())
+        return DRETP(nullptr, "Failed to begin shutdown wait");
+
+    return connection;
 }
 
 } // namespace magma

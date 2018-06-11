@@ -110,7 +110,7 @@ public:
                                                        uint64_t* semaphore_ids) = 0;
     };
 
-    PlatformConnection(std::unique_ptr<magma::PlatformEvent> shutdown_event)
+    PlatformConnection(std::shared_ptr<magma::PlatformEvent> shutdown_event)
         : shutdown_event_(std::move(shutdown_event))
     {
     }
