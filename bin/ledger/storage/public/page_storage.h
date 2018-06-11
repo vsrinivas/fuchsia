@@ -93,6 +93,11 @@ class PageStorage : public PageSyncClient {
   // Unregisters the given CommitWatcher.
   virtual Status RemoveCommitWatcher(CommitWatcher* watcher) = 0;
 
+  // Checks whether there are any unsynced commits or pieces in this page. Note
+  // that since the result is computed asynchronously, the caller must have
+  // exclusive access to the page to ensure a correct result.
+  virtual void IsSynced(std::function<void(Status, bool)> callback) = 0;
+
   // Finds the commits that have not yet been synced.
   //
   // The commits passed in the callback are sorted in a non-decreasing order of

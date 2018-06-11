@@ -1329,6 +1329,99 @@ TEST_F(PageStorageTest, UnsyncedPieces) {
                         data_array[2].object_identifier) != objects.end());
 }
 
+TEST_F(PageStorageTest, PageIsSynced) {
+  ObjectData data_array[] = {
+      ObjectData("Some data", InlineBehavior::PREVENT),
+      ObjectData("Some more data", InlineBehavior::PREVENT),
+      ObjectData("Even more data", InlineBehavior::PREVENT),
+  };
+  constexpr size_t size = arraysize(data_array);
+  for (auto& data : data_array) {
+    TryAddFromLocal(data.value, data.object_identifier);
+    EXPECT_TRUE(ObjectIsUntracked(data.object_identifier, true));
+  }
+
+  // The objects have not been added in a commit: there is nothing to sync and
+  // the page is considered synced.
+  bool called;
+  Status status;
+  bool is_synced;
+  storage_->IsSynced(
+      callback::Capture(callback::SetWhenCalled(&called), &status, &is_synced));
+  RunLoopUntilIdle();
+  ASSERT_TRUE(called);
+  EXPECT_EQ(Status::OK, status);
+  EXPECT_EQ(true, is_synced);
+
+  // Add all objects in one commit.
+  called = false;
+  std::unique_ptr<Journal> journal;
+  storage_->StartCommit(
+      GetFirstHead()->GetId(), JournalType::IMPLICIT,
+      callback::Capture(callback::SetWhenCalled(&called), &status, &journal));
+  RunLoopUntilIdle();
+  ASSERT_TRUE(called);
+  EXPECT_EQ(Status::OK, status);
+  for (size_t i = 0; i < size; ++i) {
+    EXPECT_TRUE(PutInJournal(journal.get(), fxl::StringPrintf("key%lu", i),
+                             data_array[i].object_identifier,
+                             KeyPriority::LAZY));
+  }
+  EXPECT_TRUE(TryCommitJournal(std::move(journal), Status::OK));
+  CommitId commit_id = GetFirstHead()->GetId();
+
+  // After commiting, the page is unsynced.
+  called = false;
+  storage_->IsSynced(
+      callback::Capture(callback::SetWhenCalled(&called), &status, &is_synced));
+  RunLoopUntilIdle();
+  ASSERT_TRUE(called);
+  EXPECT_EQ(Status::OK, status);
+  EXPECT_FALSE(is_synced);
+  // Mark objects (and the root tree node) as synced and expect that the page is
+  // still unsynced.
+  for (size_t i = 0; i < size; ++i) {
+    called = false;
+    storage_->MarkPieceSynced(
+        data_array[i].object_identifier,
+        callback::Capture(callback::SetWhenCalled(&called), &status));
+    RunLoopUntilIdle();
+    ASSERT_TRUE(called);
+    EXPECT_EQ(Status::OK, status);
+  }
+
+  called = false;
+  storage_->MarkPieceSynced(
+      GetFirstHead()->GetRootIdentifier(),
+      callback::Capture(callback::SetWhenCalled(&called), &status));
+  RunLoopUntilIdle();
+  ASSERT_TRUE(called);
+  EXPECT_EQ(Status::OK, status);
+
+  called = false;
+  storage_->IsSynced(
+      callback::Capture(callback::SetWhenCalled(&called), &status, &is_synced));
+  RunLoopUntilIdle();
+  ASSERT_TRUE(called);
+  EXPECT_EQ(Status::OK, status);
+  EXPECT_FALSE(is_synced);
+
+  // Mark the commit as synced and expect that the page is synced.
+  called = false;
+  storage_->MarkCommitSynced(
+      commit_id, callback::Capture(callback::SetWhenCalled(&called), &status));
+  RunLoopUntilIdle();
+  ASSERT_TRUE(called);
+  EXPECT_EQ(Status::OK, status);
+  called = false;
+  storage_->IsSynced(
+      callback::Capture(callback::SetWhenCalled(&called), &status, &is_synced));
+  RunLoopUntilIdle();
+  ASSERT_TRUE(called);
+  EXPECT_EQ(Status::OK, status);
+  EXPECT_TRUE(is_synced);
+}
+
 TEST_F(PageStorageTest, UntrackedObjectsSimple) {
   ObjectData data("Some data", InlineBehavior::PREVENT);
 

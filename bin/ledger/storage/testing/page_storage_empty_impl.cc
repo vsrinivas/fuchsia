@@ -76,6 +76,11 @@ Status PageStorageEmptyImpl::RemoveCommitWatcher(CommitWatcher* /*watcher*/) {
   return Status::NOT_IMPLEMENTED;
 }
 
+void PageStorageEmptyImpl::IsSynced(std::function<void(Status, bool)> callback) {
+  FXL_NOTIMPLEMENTED();
+  callback(Status::NOT_IMPLEMENTED, false);
+}
+
 void PageStorageEmptyImpl::GetUnsyncedCommits(
     std::function<void(Status, std::vector<std::unique_ptr<const Commit>>)>
         callback) {

@@ -277,6 +277,45 @@ Status PageStorageImpl::RemoveCommitWatcher(CommitWatcher* watcher) {
   return Status::OK;
 }
 
+void PageStorageImpl::IsSynced(std::function<void(Status, bool)> callback) {
+  auto waiter = callback::Waiter<Status, bool>::Create(Status::OK);
+
+  // Check for unsynced commits.
+  coroutine_service_->StartCoroutine(
+      [this, commits_callback =
+                 waiter->NewCallback()](CoroutineHandler* handler) mutable {
+        auto callback =
+            UpdateActiveHandlersCallback(handler, std::move(commits_callback));
+        std::vector<CommitId> commit_ids;
+        Status status = db_->GetUnsyncedCommitIds(handler, &commit_ids);
+        if (status != Status::OK) {
+          callback(status, false);
+        } else {
+          callback(Status::OK, commit_ids.empty());
+        }
+      });
+
+  // Check for unsynced pieces.
+  GetUnsyncedPieces([pieces_callback = waiter->NewCallback()](
+                        Status status, std::vector<ObjectIdentifier> pieces) {
+    if (status != Status::OK) {
+      pieces_callback(status, false);
+    } else {
+      pieces_callback(Status::OK, pieces.empty());
+    }
+  });
+
+  waiter->Finalize([callback = std::move(callback)](
+                       Status status, std::vector<bool> is_synced) {
+    if (status != Status::OK) {
+      callback(status, false);
+      return;
+    }
+    FXL_DCHECK(is_synced.size() == 2);
+    callback(Status::OK, is_synced[0] && is_synced[1]);
+  });
+}
+
 void PageStorageImpl::GetUnsyncedCommits(
     std::function<void(Status, std::vector<std::unique_ptr<const Commit>>)>
         callback) {
