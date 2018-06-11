@@ -11,11 +11,6 @@
 namespace escher {
 namespace test {
 
-// How long to run the message loop when we want to allow a task in the
-// task queue to run.
-constexpr fxl::TimeDelta kPumpMessageLoopDuration =
-    fxl::TimeDelta::FromMilliseconds(16);
-
 // Synchronously checks whether the event has signalled any of the bits in
 // |signal|.
 bool IsEventSignalled(const zx::event& event, zx_signals_t signal);

@@ -4,7 +4,6 @@
 
 group("tests") {
   testonly = true
-
   public_deps = [
     ":apptests",
     ":unittests",
@@ -29,6 +28,7 @@ source_set("testing_deps") {
 }
 
 source_set("util") {
+  testonly = true
   sources = [
     "util.cc",
     "util.h",
@@ -36,6 +36,8 @@ source_set("util") {
   public_deps = [
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
+    "//garnet/public/lib/gtest",
+    "//garnet/lib/ui/scenic/util",
   ]
 }
 
@@ -43,7 +45,6 @@ executable("unittests") {
   output_name = "gfx_unittests"
 
   testonly = true
-
   sources = [
     "escher_vulkan_smoke_test.cc",
     "event_timestamper_unittest.cc",
@@ -61,11 +62,9 @@ executable("unittests") {
     "vk_session_test.cc",
     "vk_session_test.h",
   ]
-
   deps = [
     ":testing_deps",
   ]
-
   include_dirs = [
     "//garnet/public/lib/escher",
     "//third_party/glm",
@@ -76,12 +75,10 @@ executable("apptests") {
   output_name = "gfx_apptests"
 
   testonly = true
-
   sources = [
     "gfx_apptest.cc",
     "gfx_test.h",
   ]
-
   deps = [
     ":testing_deps",
     "//garnet/lib/ui/scenic/tests:testing_deps",

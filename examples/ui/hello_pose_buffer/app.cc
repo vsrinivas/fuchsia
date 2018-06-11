@@ -29,7 +29,6 @@
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
 
-#include "garnet/lib/ui/gfx/tests/util.h"
 #include "lib/escher/hmd/pose_buffer.h"
 #include "lib/ui/scenic/client/host_memory.h"
 #include "lib/ui/scenic/fidl_helpers.h"

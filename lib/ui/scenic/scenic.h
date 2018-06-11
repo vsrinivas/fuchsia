@@ -5,10 +5,9 @@
 #ifndef GARNET_LIB_UI_SCENIC_SCENIC_H_
 #define GARNET_LIB_UI_SCENIC_SCENIC_H_
 
-#include <set>
-
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <lib/fit/function.h>
+#include <set>
 
 #include "garnet/lib/ui/scenic/session.h"
 #include "garnet/lib/ui/scenic/system.h"

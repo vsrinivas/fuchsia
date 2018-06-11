@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "garnet/lib/ui/scenic/command_dispatcher.h"
+
 #include "garnet/lib/ui/scenic/session.h"
 
 namespace scenic {

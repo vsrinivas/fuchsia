@@ -6,6 +6,8 @@
 
 #include <lib/zx/vmo.h>
 
+#include "gtest/gtest.h"
+
 namespace scenic {
 namespace gfx {
 namespace test {
@@ -77,6 +79,35 @@ fxl::RefPtr<fsl::SharedVmo> CreateSharedVmo(size_t size) {
 
   uint32_t map_flags = ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE;
   return fxl::MakeRefCounted<fsl::SharedVmo>(std::move(vmo), map_flags);
+}
+
+TestErrorReporter::~TestErrorReporter() {
+  // This check is required so we don't fail if a test doesn't use the
+  // TestErrorReporter.
+  if (initialized_) {
+    const size_t errors_reported = error_strings_.size();
+
+    EXPECT_EQ(errors_reported, errors_expected_)
+        << "Expected " << errors_expected_ << " Scenic errors but got "
+        << errors_reported;
+
+    if (errors_reported != errors_expected_) {
+      FXL_LOG(INFO) << "Errors: ";
+      for (const std::string& str : error_strings_) {
+        FXL_LOG(INFO) << " *   " << str;
+      }
+    }
+  }
+}
+
+void TestErrorReporter::InitExpectedErrorCount(uint32_t errors_expected) {
+  errors_expected_ = errors_expected;
+  initialized_ = true;
+}
+
+void TestErrorReporter::ReportError(fxl::LogSeverity severity,
+                                     std::string error_string) {
+  error_strings_.push_back(std::move(error_string));
 }
 
 }  // namespace test

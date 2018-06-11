@@ -5,16 +5,13 @@
 #ifndef GARNET_LIB_UI_SCENIC_SYSTEM_H_
 #define GARNET_LIB_UI_SCENIC_SYSTEM_H_
 
+// TODO(MZ-453): Don't support GetDisplayInfo in scenic fidl API.
+#include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <lib/fit/function.h>
 
 #include "garnet/lib/ui/scenic/command_dispatcher.h"
-
-#include <lib/fit/function.h>
-
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/ref_counted.h"
-// TODO(MZ-453): Don't support GetDisplayInfo in scenic fidl API.
-#include <fuchsia/ui/scenic/cpp/fidl.h>
 
 namespace fuchsia {
 namespace sys {

@@ -20,7 +20,6 @@
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtx/quaternion.hpp>
 
-#include "garnet/lib/ui/gfx/tests/util.h"
 #include "lib/app/cpp/connect.h"
 #include "lib/escher/util/image_utils.h"
 #include "lib/fxl/functional/make_copyable.h"

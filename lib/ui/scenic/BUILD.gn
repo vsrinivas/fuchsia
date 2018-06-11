@@ -14,13 +14,10 @@ source_set("scenic") {
     "session.h",
     "system.cc",
     "system.h",
-    "util/error_reporter.cc",
-    "util/error_reporter.h",
-    "util/print_command.cc",
-    "util/print_command.h",
   ]
 
   public_deps = [
+    "//garnet/lib/ui/scenic/util",
     "//garnet/public/lib/ui/gfx/fidl",
     "//garnet/public/lib/ui/scenic/fidl",
     "//zircon/public/lib/fit",
