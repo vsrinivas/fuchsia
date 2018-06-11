@@ -20,8 +20,8 @@ bool PlatformFutex::Wake(uint32_t* value_ptr, int32_t wake_count)
 bool PlatformFutex::Wait(uint32_t* value_ptr, int32_t current_value, uint64_t timeout_ns,
                          WaitResult* result_out)
 {
-    const zx_time_t deadline = (timeout_ns != ZX_TIME_INFINITE) ? zx_deadline_after(timeout_ns) :
-            ZX_TIME_INFINITE;
+    const zx_time_t deadline =
+        (timeout_ns == UINT64_MAX) ? ZX_TIME_INFINITE : zx_deadline_after(timeout_ns);
     zx_status_t status =
         zx_futex_wait(reinterpret_cast<zx_futex_t*>(value_ptr), current_value, deadline);
     switch (status) {
