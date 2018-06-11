@@ -6,9 +6,6 @@
 
 #include <soc/aml-s905d2/s905d2-hw.h>
 
-#define CALCULATE_CLOCK(enabled, base, divisor) \
-        ((!!(enabled) << 8) | (base << 9) | (divisor - 1))
-
 enum {
     S905D2_XTAL        = 0,    // 24MHz
     S905D2_GP0         = 1,
@@ -26,5 +23,12 @@ static aml_gpu_block_t s905d2_gpu_blocks = {
     .reset2_level_offset        = S905D2_RESET2_LEVEL,
     .reset2_mask_offset         = S905D2_RESET2_MASK,
     .hhi_clock_cntl_offset      = 0x6C,
-    .mhz500                     = CALCULATE_CLOCK(true, S905D2_FCLK_DIV4, 1),
+    .gpu_clk_freq               =
+    {
+        S905D2_FCLK_DIV7,
+        S905D2_FCLK_DIV5,
+        S905D2_FCLK_DIV4,
+        S905D2_FCLK_DIV3,
+        S905D2_FCLK_DIV2P5,
+    },
 };

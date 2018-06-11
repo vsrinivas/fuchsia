@@ -6,8 +6,6 @@
 
 #include <soc/aml-s912/s912-hw.h>
 
-#define CALCULATE_CLOCK(enabled, base, divisor) \
-        ((!!(enabled) << 8) | (base << 9) | (divisor - 1))
 
 enum {
     S912_XTAL        = 0, // 25MHz
@@ -26,5 +24,11 @@ static aml_gpu_block_t s912_gpu_blocks = {
     .reset2_level_offset        = S912_RESET2_LEVEL,
     .reset2_mask_offset         = S912_RESET2_MASK,
     .hhi_clock_cntl_offset      = 0x6C,
-    .mhz500                     = CALCULATE_CLOCK(true, S912_FCLK_DIV4, 1),
+    .gpu_clk_freq               =
+    {
+        S912_FCLK_DIV7,
+        S912_FCLK_DIV5,
+        S912_FCLK_DIV4,
+        S912_FCLK_DIV3,
+    },
 };

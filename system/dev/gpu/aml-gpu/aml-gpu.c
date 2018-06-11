@@ -19,9 +19,33 @@
 #include <soc/aml-common/aml-gpu.h>
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
-
+#include <zircon/device/gpu.h>
 #include "s912-gpu.h"
 #include "s905d2-gpu.h"
+
+static void aml_gpu_set_clk_freq_source(aml_gpu_t* gpu, int32_t clk_source) {
+    aml_gpu_block_t* gpu_block = gpu->gpu_block;
+    uint32_t current_clk_cntl = READ32_HIU_REG(gpu_block->hhi_clock_cntl_offset);
+    uint32_t enabled_mux = current_clk_cntl & (1 << FINAL_MUX_BIT_SHIFT);
+    uint32_t new_mux = enabled_mux == 0;
+    uint32_t mux_shift = new_mux ? 16 : 0;
+
+    // clear existing values
+    current_clk_cntl &= ~(CLOCK_MUX_MASK << mux_shift);
+    // set the divisor, enable & source for the unused mux
+    current_clk_cntl |= CALCULATE_CLOCK_MUX(true,
+                        gpu_block->gpu_clk_freq[clk_source], 1) << mux_shift;
+
+    // Write the new values to the unused mux
+    WRITE32_HIU_REG(gpu_block->hhi_clock_cntl_offset, current_clk_cntl);
+    zx_nanosleep(zx_deadline_after(ZX_USEC(10)));
+
+    // Toggle current mux selection
+    current_clk_cntl ^= (1 << FINAL_MUX_BIT_SHIFT);
+
+    // Select the unused input mux
+    WRITE32_HIU_REG(gpu_block->hhi_clock_cntl_offset, current_clk_cntl);
+}
 
 static void aml_gpu_init(aml_gpu_t* gpu) {
     uint32_t temp;
@@ -43,8 +67,11 @@ static void aml_gpu_init(aml_gpu_t* gpu) {
     temp &= ~(1 << 14);
     WRITE32_PRESET_REG(gpu_block->reset2_level_offset, temp);
 
-    WRITE32_HIU_REG(gpu_block->hhi_clock_cntl_offset, gpu_block->mhz500);
-    zx_nanosleep(zx_deadline_after(ZX_USEC(500)));
+    // Currently the index 2 corresponds to the default
+    // value of GPU clock freq which is 500Mhz.
+    // In future, the GPU driver in garnet
+    // can make an IOCTL to set the default freq
+    aml_gpu_set_clk_freq_source(gpu, 2);
 
     temp = READ32_PRESET_REG(gpu_block->reset0_level_offset);
     temp |= 1 << 20;
@@ -74,14 +101,38 @@ static zx_status_t aml_gpu_get_protocol(void* ctx, uint32_t proto_id, void* out_
     // Forward the underlying ops.
     gpu_proto->ops = gpu->pdev.ops;
     gpu_proto->ctx = gpu->pdev.ctx;
-
     return ZX_OK;
+}
+
+static zx_status_t aml_gpu_ioctl(void* ctx, uint32_t op,
+                                 const void* in_buf, size_t in_len,
+                                 void* out_buf, size_t out_len,
+                                 size_t* out_actual) {
+    aml_gpu_t* gpu = ctx;
+    switch(op) {
+        case IOCTL_GPU_SET_CLK_FREQ_SOURCE: {
+            if (in_len != sizeof(int32_t)) {
+                return ZX_ERR_INVALID_ARGS;
+            }
+            int32_t *clk_source = (int32_t*)in_buf;
+
+            if (*clk_source >= MAX_GPU_CLK_FREQ) {
+                GPU_ERROR("Invalid clock freq source index\n");
+                return ZX_ERR_NOT_SUPPORTED;
+            }
+            aml_gpu_set_clk_freq_source(gpu, *clk_source);
+            return ZX_OK;
+        }
+        default:
+            return ZX_ERR_NOT_SUPPORTED;
+    }
 }
 
 static zx_protocol_device_t aml_gpu_protocol = {
     .version        = DEVICE_OPS_VERSION,
     .release        = aml_gpu_release,
     .get_protocol   = aml_gpu_get_protocol,
+    .ioctl          = aml_gpu_ioctl,
 };
 
 static zx_status_t aml_gpu_bind(void* ctx, zx_device_t* parent) {

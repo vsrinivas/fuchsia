@@ -34,8 +34,13 @@
 #define WRITE32_PRESET_REG(offset, value)  writel(value, io_buffer_virt(&gpu->preset_buffer) \
                                            + offset*4)
 
-#define CALCULATE_CLOCK(enabled, base, divisor) \
+#define CALCULATE_CLOCK_MUX(enabled, base, divisor) \
         ((!!(enabled) << 8) | (base << 9) | (divisor - 1))
+
+#define CLOCK_MUX_MASK                  0xFFF
+
+#define MAX_GPU_CLK_FREQ                5
+#define FINAL_MUX_BIT_SHIFT             31
 
 enum {
     MMIO_GPU,
@@ -49,7 +54,7 @@ typedef struct {
     uint32_t reset2_level_offset;
     uint32_t reset2_mask_offset;
     uint32_t hhi_clock_cntl_offset;
-    uint32_t mhz500;
+    uint32_t gpu_clk_freq[MAX_GPU_CLK_FREQ];
 }aml_gpu_block_t;
 
 typedef struct {
