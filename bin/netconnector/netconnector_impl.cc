@@ -41,7 +41,7 @@ NetConnectorImpl::NetConnectorImpl(NetConnectorParams* params,
 
   if (!params->listen()) {
     // Start the listener.
-    NetConnectorSyncPtr net_connector;
+    fuchsia::netconnector::NetConnectorSyncPtr net_connector;
     startup_context_->ConnectToEnvironmentService(net_connector.NewRequest());
     fuchsia::mdns::MdnsServicePtr mdns_service =
         startup_context_
@@ -54,8 +54,9 @@ NetConnectorImpl::NetConnectorImpl(NetConnectorParams* params,
     if (params_->show_devices()) {
       uint64_t version;
       fidl::VectorPtr<fidl::StringPtr> device_names;
-      net_connector->GetKnownDeviceNames(kInitialKnownDeviceNames, &version,
-                                         &device_names);
+      net_connector->GetKnownDeviceNames(
+          fuchsia::netconnector::kInitialKnownDeviceNames, &version,
+          &device_names);
 
       if (device_names->size() == 0) {
         std::cout << "No remote devices found\n";
@@ -71,10 +72,12 @@ NetConnectorImpl::NetConnectorImpl(NetConnectorParams* params,
   }
 
   // Running as listener.
-  startup_context_->outgoing().AddPublicService<NetConnector>(
-      [this](fidl::InterfaceRequest<NetConnector> request) {
-        bindings_.AddBinding(this, std::move(request));
-      });
+  startup_context_->outgoing()
+      .AddPublicService<fuchsia::netconnector::NetConnector>(
+          [this](fidl::InterfaceRequest<fuchsia::netconnector::NetConnector>
+                     request) {
+            bindings_.AddBinding(this, std::move(request));
+          });
 
   device_names_publisher_.SetCallbackRunner(
       [this](const GetKnownDeviceNamesCallback& callback, uint64_t version) {

@@ -6,7 +6,7 @@
 
 #include <lib/async/default.h>
 #include <lib/zx/channel.h>
-#include <netconnector/cpp/fidl.h>
+#include <fuchsia/netconnector/cpp/fidl.h>
 
 #include "garnet/examples/netconnector/netconnector_example/netconnector_example_params.h"
 #include "lib/fxl/logging.h"
@@ -58,9 +58,9 @@ NetConnectorExampleImpl::NetConnectorExampleImpl(
     if (params->register_provider()) {
       // Register our provider with netconnector.
       FXL_LOG(INFO) << "Registering provider";
-      netconnector::NetConnectorPtr connector =
+      fuchsia::netconnector::NetConnectorPtr connector =
           startup_context_
-              ->ConnectToEnvironmentService<netconnector::NetConnector>();
+              ->ConnectToEnvironmentService<fuchsia::netconnector::NetConnector>();
 
       fidl::InterfaceHandle<fuchsia::sys::ServiceProvider> handle;
       startup_context_->outgoing_services()->AddBinding(handle.NewRequest());
@@ -73,9 +73,9 @@ NetConnectorExampleImpl::NetConnectorExampleImpl(
   } else {
     // Params say we should be a requestor.
     FXL_LOG(INFO) << "Running as requestor";
-    netconnector::NetConnectorPtr connector =
+    fuchsia::netconnector::NetConnectorPtr connector =
         startup_context_
-            ->ConnectToEnvironmentService<netconnector::NetConnector>();
+            ->ConnectToEnvironmentService<fuchsia::netconnector::NetConnector>();
 
     // Create a pair of channels.
     zx::channel local;

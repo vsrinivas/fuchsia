@@ -7,7 +7,7 @@
 #include <vector>
 
 #include <lib/zx/channel.h>
-#include <netconnector/cpp/fidl.h>
+#include <fuchsia/netconnector/cpp/fidl.h>
 
 #include "lib/fidl/cpp/clone.h"
 #include "lib/fxl/logging.h"
@@ -42,8 +42,8 @@ MediaPlayerNetProxy::MediaPlayerNetProxy(
   message_relay_.SetChannelClosedCallback(
       [this]() { UnbindAndReleaseFromOwner(); });
 
-  netconnector::NetConnectorPtr connector =
-      owner->ConnectToEnvironmentService<netconnector::NetConnector>();
+  fuchsia::netconnector::NetConnectorPtr connector =
+      owner->ConnectToEnvironmentService<fuchsia::netconnector::NetConnector>();
 
   // Create a pair of channels.
   zx::channel local;

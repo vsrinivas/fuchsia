@@ -11,9 +11,9 @@
 #include <vector>
 
 #include <fuchsia/mdns/cpp/fidl.h>
+#include <fuchsia/netconnector/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/fit/function.h>
-#include <netconnector/cpp/fidl.h>
 
 #include "garnet/bin/media/util/fidl_publisher.h"
 #include "garnet/bin/netconnector/device_service_provider.h"
@@ -30,7 +30,7 @@
 
 namespace netconnector {
 
-class NetConnectorImpl : public NetConnector {
+class NetConnectorImpl : public fuchsia::netconnector::NetConnector {
  public:
   NetConnectorImpl(NetConnectorParams* params, fit::closure quit_callback);
 
@@ -85,7 +85,7 @@ class NetConnectorImpl : public NetConnector {
   fit::closure quit_callback_;
   std::unique_ptr<fuchsia::sys::StartupContext> startup_context_;
   std::string host_name_;
-  fidl::BindingSet<NetConnector> bindings_;
+  fidl::BindingSet<fuchsia::netconnector::NetConnector> bindings_;
   Listener listener_;
   RespondingServiceHost responding_service_host_;
   std::unordered_map<DeviceServiceProvider*,

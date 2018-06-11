@@ -4,7 +4,7 @@
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/task.h>
-#include <netconnector/cpp/fidl.h>
+#include <fuchsia/netconnector/cpp/fidl.h>
 
 #include "garnet/examples/netconnector/netconnector_example/netconnector_example_impl.h"
 #include "garnet/examples/netconnector/netconnector_example/netconnector_example_params.h"

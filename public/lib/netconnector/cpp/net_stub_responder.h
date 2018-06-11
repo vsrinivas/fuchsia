@@ -8,7 +8,7 @@
 #include <memory>
 #include <unordered_set>
 
-#include <netconnector/cpp/fidl.h>
+#include <fuchsia/netconnector/cpp/fidl.h>
 
 #include "lib/app/cpp/startup_context.h"
 #include "lib/fxl/logging.h"
@@ -38,9 +38,9 @@ class NetStubResponder {
         },
         service_name);
 
-    netconnector::NetConnectorPtr connector =
-        startup_context
-            ->ConnectToEnvironmentService<netconnector::NetConnector>();
+    fuchsia::netconnector::NetConnectorPtr connector =
+        startup_context->ConnectToEnvironmentService<
+            fuchsia::netconnector::NetConnector>();
 
     fidl::InterfaceHandle<fuchsia::sys::ServiceProvider> handle;
     service_namespace_.AddBinding(handle.NewRequest());

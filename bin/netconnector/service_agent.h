@@ -7,7 +7,7 @@
 
 #include <memory>
 
-#include <netconnector/cpp/fidl.h>
+#include <fuchsia/netconnector/cpp/fidl.h>
 
 #include "garnet/bin/netconnector/message_transceiver.h"
 #include "lib/fxl/files/unique_fd.h"
