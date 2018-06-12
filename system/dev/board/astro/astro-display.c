@@ -22,7 +22,10 @@ static const pbus_mmio_t display_mmios[] = {
 };
 
 static const pbus_irq_t display_irqs[] = {
-    // empty for now
+    {
+        .irq = S905D2_VIU1_VSYNC_IRQ,
+        .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
+    },
 };
 
 static const pbus_gpio_t display_gpios[] = {

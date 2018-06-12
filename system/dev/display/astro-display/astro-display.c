@@ -228,8 +228,13 @@ static void display_release(void* ctx) {
     astro_display_t* display = ctx;
 
     if (display) {
+        zx_interrupt_destroy(display->vsync_interrupt);
+        int res;
+        thrd_join(display->vsync_thread, &res);
+        io_buffer_release(&display->mmio_dmc);
         io_buffer_release(&display->fbuffer);
         zx_handle_close(display->bti);
+        zx_handle_close(display->vsync_interrupt);
     }
     free(display);
 }
@@ -320,6 +325,34 @@ static int main_astro_display_thread(void *arg) {
     return ZX_OK;
 }
 
+static zx_status_t vsync_thread(void *arg) {
+    zx_status_t status = ZX_OK;
+    astro_display_t* display = arg;
+
+    while(1) {
+        status = zx_interrupt_wait(display->vsync_interrupt, NULL);
+        if (status != ZX_OK) {
+            DISP_ERROR("VSync Interrupt Wait failed\n");
+            break;
+        }
+
+        mtx_lock(&display->cb_lock);
+        mtx_lock(&display->display_lock);
+
+        void* live = (void*)(uint64_t) display->current_image;
+        uint8_t is_client_handle = display->current_image != display->fb_canvas_idx;
+        mtx_unlock(&display->display_lock);
+
+        if (display->dc_cb) {
+            display->dc_cb->on_display_vsync(display->dc_cb_ctx, PANEL_DISPLAY_ID, &live,
+                                                is_client_handle);
+        }
+        mtx_unlock(&display->cb_lock);
+    }
+
+    return status;
+}
+
 zx_status_t astro_display_bind(void* ctx, zx_device_t* parent) {
     astro_display_t* display = calloc(1, sizeof(astro_display_t));
     if (!display) {
@@ -364,6 +397,13 @@ zx_status_t astro_display_bind(void* ctx, zx_device_t* parent) {
         goto fail;
     }
 
+    // Map VSync Interrupt
+    status = pdev_map_interrupt(&display->pdev, 0, &display->vsync_interrupt);
+    if (status  != ZX_OK) {
+        DISP_ERROR("Could not map vsync interrupt\n");
+        goto fail;
+    }
+
     device_add_args_t add_args = {
         .version = DEVICE_ADD_ARGS_VERSION,
         .name = "astro-display",
@@ -386,6 +426,7 @@ zx_status_t astro_display_bind(void* ctx, zx_device_t* parent) {
 
     thrd_create_with_name(&display->main_thread, main_astro_display_thread, display,
                                                     "main_astro_display_thread");
+    thrd_create_with_name(&display->vsync_thread, vsync_thread, display, "vsync_thread");
     return ZX_OK;
 
 fail:

@@ -63,6 +63,7 @@ typedef struct {
     gpio_protocol_t                     gpio;
     i2c_protocol_t                      i2c;
     thrd_t                              main_thread;
+    thrd_t                              vsync_thread;
     // Lock for general display state, in particular display_id.
     mtx_t                               display_lock;
     // Lock for imported images.

@@ -88,6 +88,7 @@
 #define S905D2_I2C_AO_0_IRQ             227
 
 // Datasheet has incorrect number, but linux device tree seems correct.
+#define S905D2_VIU1_VSYNC_IRQ           35
 #define S905D2_DEMUX_IRQ                55
 #define S905D2_USB0_IRQ                 62
 #define S905D2_PARSER_IRQ               64
