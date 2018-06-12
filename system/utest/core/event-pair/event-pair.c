@@ -121,11 +121,11 @@ static bool signal_peer_test(void) {
     END_TEST;
 }
 
-BEGIN_TEST_CASE(event_pair_tests)
+BEGIN_TEST_CASE(eventpair_tests)
 RUN_TEST(create_test)
 RUN_TEST(signal_test)
 RUN_TEST(signal_peer_test)
-END_TEST_CASE(event_pair_tests)
+END_TEST_CASE(eventpair_tests)
 
 #ifndef BUILD_COMBINED_TESTS
 int main(int argc, char** argv) {

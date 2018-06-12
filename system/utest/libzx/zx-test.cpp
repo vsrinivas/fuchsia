@@ -139,15 +139,15 @@ static bool channel_test() {
 
 static bool channel_rw_test() {
     BEGIN_TEST;
-    zx::eventpair evpair[2];
-    ASSERT_EQ(zx::eventpair::create(0u, &evpair[0], &evpair[1]), ZX_OK);
+    zx::eventpair eventpair[2];
+    ASSERT_EQ(zx::eventpair::create(0u, &eventpair[0], &eventpair[1]), ZX_OK);
 
     zx::channel channel[2];
     ASSERT_EQ(zx::channel::create(0u, &channel[0], &channel[1]), ZX_OK);
 
     zx_handle_t handles[2] = {
-        evpair[0].release(),
-        evpair[1].release()
+        eventpair[0].release(),
+        eventpair[1].release()
     };
 
     zx_handle_t recv[2] = {0};
@@ -162,15 +162,15 @@ static bool channel_rw_test() {
 
 static bool channel_rw_etc_test() {
     BEGIN_TEST;
-    zx::eventpair evpair[2];
-    ASSERT_EQ(zx::eventpair::create(0u, &evpair[0], &evpair[1]), ZX_OK);
+    zx::eventpair eventpair[2];
+    ASSERT_EQ(zx::eventpair::create(0u, &eventpair[0], &eventpair[1]), ZX_OK);
 
     zx::channel channel[2];
     ASSERT_EQ(zx::channel::create(0u, &channel[0], &channel[1]), ZX_OK);
 
     zx_handle_t handles[2] = {
-        evpair[0].release(),
-        evpair[1].release()
+        eventpair[0].release(),
+        eventpair[1].release()
     };
 
     zx_handle_info_t recv[2] = {{}};
@@ -200,10 +200,10 @@ static bool socket_test() {
 
 static bool eventpair_test() {
     BEGIN_TEST;
-    zx::eventpair evpair[2];
-    ASSERT_EQ(zx::eventpair::create(0u, &evpair[0], &evpair[1]), ZX_OK);
-    ASSERT_EQ(validate_handle(evpair[0].get()), ZX_OK);
-    ASSERT_EQ(validate_handle(evpair[1].get()), ZX_OK);
+    zx::eventpair eventpair[2];
+    ASSERT_EQ(zx::eventpair::create(0u, &eventpair[0], &eventpair[1]), ZX_OK);
+    ASSERT_EQ(validate_handle(eventpair[0].get()), ZX_OK);
+    ASSERT_EQ(validate_handle(eventpair[1].get()), ZX_OK);
     // TODO(cpu): test more.
     END_TEST;
 }

@@ -116,11 +116,6 @@ typedef uint32_t zx_signals_t;
 #define ZX_EVENTPAIR_PEER_CLOSED    __ZX_OBJECT_PEER_CLOSED
 #define ZX_EVENTPAIR_SIGNAL_MASK    (ZX_USER_SIGNAL_ALL | __ZX_OBJECT_SIGNALED | __ZX_OBJECT_PEER_CLOSED)
 
-// DEPRECATED: Use ZX_EVENTPAIR_* instead.
-#define ZX_EPAIR_SIGNALED           ZX_EVENTPAIR_SIGNALED
-#define ZX_EPAIR_PEER_CLOSED        ZX_EVENTPAIR_PEER_CLOSED
-#define ZX_EPAIR_SIGNAL_MASK        ZX_EVENTPAIR_SIGNAL_MASK
-
 // Channel
 #define ZX_CHANNEL_READABLE         __ZX_OBJECT_READABLE
 #define ZX_CHANNEL_WRITABLE         __ZX_OBJECT_WRITABLE
@@ -374,9 +369,6 @@ typedef uint32_t zx_obj_type_t;
 #define ZX_OBJ_TYPE_PMT             ((zx_obj_type_t)26u)
 #define ZX_OBJ_TYPE_SUSPEND_TOKEN   ((zx_obj_type_t)27u)
 #define ZX_OBJ_TYPE_LAST            ((zx_obj_type_t)28u)
-
-// DEPRECATED: Use ZX_OBJ_TYPE_EVENTPAIR instead.
-#define ZX_OBJ_TYPE_EVENT_PAIR      ZX_OBJ_TYPE_EVENTPAIR
 
 typedef struct {
     zx_handle_t handle;

@@ -38,7 +38,7 @@ union Encoding {
         uint64_t new_vmo         :  4;
         uint64_t new_channel     :  4;
         uint64_t new_event       :  4;
-        uint64_t new_evpair      :  4;
+        uint64_t new_eventpair   :  4;
         uint64_t new_port        :  4;
         uint64_t new_socket      :  4;
         uint64_t new_fifo        :  4;
@@ -146,7 +146,7 @@ uint32_t PolicyManager::QueryBasicPolicy(pol_cookie_t policy, uint32_t condition
     case ZX_POL_NEW_VMO: return GetEffectiveAction(existing.new_vmo);
     case ZX_POL_NEW_CHANNEL: return GetEffectiveAction(existing.new_channel);
     case ZX_POL_NEW_EVENT: return GetEffectiveAction(existing.new_event);
-    case ZX_POL_NEW_EVENTPAIR: return GetEffectiveAction(existing.new_evpair);
+    case ZX_POL_NEW_EVENTPAIR: return GetEffectiveAction(existing.new_eventpair);
     case ZX_POL_NEW_PORT: return GetEffectiveAction(existing.new_port);
     case ZX_POL_NEW_SOCKET: return GetEffectiveAction(existing.new_socket);
     case ZX_POL_NEW_FIFO: return GetEffectiveAction(existing.new_fifo);
@@ -205,7 +205,7 @@ zx_status_t PolicyManager::AddPartial(uint32_t mode, pol_cookie_t existing_polic
         POLMAN_SET_ENTRY(mode, existing.new_event, policy, result.new_event);
         break;
     case ZX_POL_NEW_EVENTPAIR:
-        POLMAN_SET_ENTRY(mode, existing.new_evpair, policy, result.new_evpair);
+        POLMAN_SET_ENTRY(mode, existing.new_eventpair, policy, result.new_eventpair);
         break;
     case ZX_POL_NEW_PORT:
         POLMAN_SET_ENTRY(mode, existing.new_port, policy, result.new_port);

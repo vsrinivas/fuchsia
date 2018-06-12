@@ -54,7 +54,7 @@ const char* obj_type_get_name(zx_obj_type_t type) {
     case ZX_OBJ_TYPE_RESOURCE:
         return "resource";
     case ZX_OBJ_TYPE_EVENTPAIR:
-        return "event_pair";
+        return "eventpair";
     case ZX_OBJ_TYPE_JOB:
         return "job";
     case ZX_OBJ_TYPE_VMAR:
