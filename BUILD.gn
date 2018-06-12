@@ -5,6 +5,7 @@
 import("//build/package.gni")
 
 package("build_info") {
+  deprecated_system_image = true
   resources = [
     {
       dest = "build/last-update"
