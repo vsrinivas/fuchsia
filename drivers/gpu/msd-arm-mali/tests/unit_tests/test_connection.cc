@@ -58,16 +58,17 @@ private:
     std::vector<std::shared_ptr<MsdArmAtom>> atoms_list_;
 };
 
-uint32_t g_test_channel;
-uint64_t g_test_data_size;
+void* g_test_token;
+uint32_t g_test_data_size;
 magma_arm_mali_status g_status;
 
-magma_status_t TestSendCallback(msd_channel_t channel, void* data, uint64_t data_size)
+void TestCallback(void* token, msd_notification_t* notification)
 {
-    g_test_channel = channel;
-    g_test_data_size = data_size;
-    memcpy(&g_status, data, data_size);
-    return MAGMA_STATUS_OK;
+    g_test_token = token;
+    if (notification->type == MSD_CONNECTION_NOTIFICATION_CHANNEL_SEND) {
+        g_test_data_size = notification->u.channel_send.size;
+        memcpy(&g_status, notification->u.channel_send.data, g_test_data_size);
+    }
 }
 }
 
@@ -307,17 +308,18 @@ public:
         // Shouldn't do anything.
         connection->SendNotificationData(&atom, static_cast<ArmMaliResultCode>(10));
 
-        connection->SetNotificationChannel(&TestSendCallback, 100);
+        uint32_t token;
+        connection->SetNotificationCallback(&TestCallback, &token);
         connection->SendNotificationData(&atom, static_cast<ArmMaliResultCode>(20));
         EXPECT_EQ(sizeof(g_status), g_test_data_size);
-        EXPECT_EQ(100u, g_test_channel);
+        EXPECT_EQ(&token, g_test_token);
 
         EXPECT_EQ(7u, g_status.data.data[0]);
         EXPECT_EQ(8u, g_status.data.data[1]);
         EXPECT_EQ(20u, g_status.result_code);
         EXPECT_EQ(5u, g_status.atom_number);
 
-        connection->SetNotificationChannel(nullptr, 0);
+        connection->SetNotificationCallback(nullptr, nullptr);
         connection->SendNotificationData(&atom, static_cast<ArmMaliResultCode>(20));
 
         EXPECT_EQ(20u, g_status.result_code);
@@ -328,11 +330,13 @@ public:
         FakeConnectionOwner owner;
         auto connection = MsdArmConnection::Create(0, &owner);
         EXPECT_TRUE(connection);
-        connection->SetNotificationChannel(&TestSendCallback, 100);
+
+        uint32_t token;
+        connection->SetNotificationCallback(&TestCallback, &token);
         connection->MarkDestroyed();
 
         EXPECT_EQ(sizeof(g_status), g_test_data_size);
-        EXPECT_EQ(100u, g_test_channel);
+        EXPECT_EQ(&token, g_test_token);
 
         EXPECT_EQ(0u, g_status.data.data[0]);
         EXPECT_EQ(0u, g_status.data.data[1]);
@@ -344,7 +348,7 @@ public:
         connection->SendNotificationData(&atom, static_cast<ArmMaliResultCode>(10));
         EXPECT_EQ(kArmMaliResultTerminated, g_status.result_code);
 
-        connection->SetNotificationChannel(nullptr, 0);
+        connection->SetNotificationCallback(nullptr, 0);
 
         EXPECT_EQ(1u, owner.cancel_atoms_list().size());
         EXPECT_EQ(connection.get(), owner.cancel_atoms_list()[0]);

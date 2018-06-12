@@ -145,8 +145,8 @@ magma_status_t msd_connection_commit_buffer(struct msd_connection_t* connection,
     return MAGMA_STATUS_OK;
 }
 
-void msd_connection_set_notification_channel(msd_connection_t* abi_connection,
-                                             msd_channel_send_callback_t callback,
-                                             msd_channel_t channel)
+void msd_connection_set_notification_callback(struct msd_connection_t* connection,
+                                              msd_connection_notification_callback_t callback,
+                                              void* token)
 {
 }

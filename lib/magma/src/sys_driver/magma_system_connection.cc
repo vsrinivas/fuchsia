@@ -235,10 +235,10 @@ bool MagmaSystemConnection::CommitBuffer(uint64_t id, uint64_t page_offset, uint
     return true;
 }
 
-void MagmaSystemConnection::SetNotificationChannel(msd_channel_send_callback_t callback,
-                                                   msd_channel_t channel)
+void MagmaSystemConnection::SetNotificationCallback(msd_connection_notification_callback_t callback,
+                                                    void* token)
 {
-    msd_connection_set_notification_channel(msd_connection(), callback, channel);
+    msd_connection_set_notification_callback(msd_connection(), callback, token);
 }
 
 bool MagmaSystemConnection::ImportObject(uint32_t handle, magma::PlatformObject::Type object_type)

@@ -90,7 +90,7 @@ bool MsdArmConnection::ExecuteAtom(
 
     {
         // Hold lock for using outstanding_atoms_.
-        std::lock_guard<std::mutex> lock(channel_lock_);
+        std::lock_guard<std::mutex> lock(callback_lock_);
 
         MsdArmAtom::DependencyList dependencies;
         for (size_t i = 0; i < arraysize(atom->dependencies); i++) {
@@ -381,42 +381,56 @@ bool MsdArmConnection::CommitMemoryForBuffer(MsdArmAbiBuffer* buffer, uint64_t p
     return GetBuffer(buffer)->SetCommittedPages(page_offset, page_count);
 }
 
-void MsdArmConnection::SetNotificationChannel(msd_channel_send_callback_t send_callback,
-                                              msd_channel_t channel)
+void MsdArmConnection::SetNotificationCallback(msd_connection_notification_callback_t callback,
+                                               void* token)
 {
-    std::lock_guard<std::mutex> lock(channel_lock_);
-    send_callback_ = send_callback;
-    return_channel_ = channel;
+    std::lock_guard<std::mutex> lock(callback_lock_);
+    callback_ = callback;
+    token_ = token;
 }
 
-void MsdArmConnection::SendNotificationData(MsdArmAtom* atom, ArmMaliResultCode status)
+void MsdArmConnection::SendNotificationData(MsdArmAtom* atom, ArmMaliResultCode result_code)
 {
-    std::lock_guard<std::mutex> lock(channel_lock_);
+    std::lock_guard<std::mutex> lock(callback_lock_);
     // It may already have been destroyed on the main thread.
-    if (!return_channel_)
+    if (!token_)
         return;
-    magma_arm_mali_status data;
-    data.data = atom->user_data();
-    data.result_code = status;
-    data.atom_number = atom->atom_number();
 
-    send_callback_(return_channel_, &data, sizeof(data));
+    msd_notification_t notification = {.type = MSD_CONNECTION_NOTIFICATION_CHANNEL_SEND};
+    static_assert(sizeof(magma_arm_mali_status) <= MSD_CHANNEL_SEND_MAX_SIZE,
+                  "notification too large");
+    notification.u.channel_send.size = sizeof(magma_arm_mali_status);
+
+    auto status = reinterpret_cast<magma_arm_mali_status*>(notification.u.channel_send.data);
+    status->result_code = result_code;
+    status->atom_number = atom->atom_number();
+    status->data = atom->user_data();
+
+    callback_(token_, &notification);
 }
 
 void MsdArmConnection::MarkDestroyed()
 {
     owner_->CancelAtoms(shared_from_this());
 
-    std::lock_guard<std::mutex> lock(channel_lock_);
-    if (!return_channel_)
+    std::lock_guard<std::mutex> lock(callback_lock_);
+    if (!token_)
         return;
-    struct magma_arm_mali_status data = {};
-    data.result_code = kArmMaliResultTerminated;
 
-    send_callback_(return_channel_, &data, sizeof(data));
+    msd_notification_t notification = {.type = MSD_CONNECTION_NOTIFICATION_CHANNEL_SEND};
+    static_assert(sizeof(magma_arm_mali_status) <= MSD_CHANNEL_SEND_MAX_SIZE,
+                  "notification too large");
+    notification.u.channel_send.size = sizeof(magma_arm_mali_status);
+
+    auto status = reinterpret_cast<magma_arm_mali_status*>(notification.u.channel_send.data);
+    status->result_code = kArmMaliResultTerminated;
+    status->atom_number = {};
+    status->data = {};
+
+    callback_(token_, &notification);
 
     // Don't send any completion messages after termination.
-    return_channel_ = 0;
+    token_ = 0;
 }
 
 std::shared_ptr<MsdArmBuffer> MsdArmConnection::GetBuffer(MsdArmAbiBuffer* buffer)
@@ -473,12 +487,11 @@ magma_status_t msd_connection_commit_buffer(msd_connection_t* abi_connection,
     return MAGMA_STATUS_OK;
 }
 
-void msd_connection_set_notification_channel(msd_connection_t* abi_connection,
-                                             msd_channel_send_callback_t send_callback,
-                                             msd_channel_t notification_channel)
+void msd_connection_set_notification_callback(msd_connection_t* abi_connection,
+                                              msd_connection_notification_callback_t callback,
+                                              void* token)
 {
-    auto connection = MsdArmAbiConnection::cast(abi_connection)->ptr();
-    connection->SetNotificationChannel(send_callback, notification_channel);
+    MsdArmAbiConnection::cast(abi_connection)->ptr()->SetNotificationCallback(callback, token);
 }
 
 void msd_connection_release_buffer(msd_connection_t* abi_connection,

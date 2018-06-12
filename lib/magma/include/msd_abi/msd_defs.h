@@ -9,17 +9,13 @@
 #include <stdint.h>
 
 #define MSD_DRIVER_CONFIG_TEST_NO_DEVICE_THREAD 1
+#define MSD_CHANNEL_SEND_MAX_SIZE 64
 
 #if defined(__cplusplus)
 extern "C" {
 #endif
 
 typedef uint64_t msd_client_id_t;
-typedef uint32_t msd_channel_t;
-
-// |data| is vendor-specific.
-typedef magma_status_t (*msd_channel_send_callback_t)(msd_channel_t channel, void* data,
-                                                      uint64_t data_size);
 
 // The magma system driver... driver :)
 struct msd_driver_t {
@@ -49,6 +45,23 @@ struct msd_context_t {
 struct msd_semaphore_t {
     int32_t magic_;
 };
+
+enum MSD_CONNECTION_NOTIFICATION_TYPE {
+    MSD_CONNECTION_NOTIFICATION_CHANNEL_SEND = 1,
+};
+
+struct msd_notification_t {
+    uint32_t type;
+    union {
+        struct {
+            uint8_t data[MSD_CHANNEL_SEND_MAX_SIZE];
+            uint32_t size;
+        } channel_send;
+    } u;
+};
+
+typedef void (*msd_connection_notification_callback_t)(void* token,
+                                                       struct msd_notification_t* notification);
 
 #if defined(__cplusplus)
 }

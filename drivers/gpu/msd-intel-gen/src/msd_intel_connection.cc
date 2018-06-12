@@ -36,11 +36,10 @@ magma_status_t msd_connection_wait_rendering(msd_connection_t* abi_connection, m
     return MAGMA_STATUS_OK;
 }
 
-void msd_connection_set_notification_channel(msd_connection_t* connection,
-                                             msd_channel_send_callback_t callback,
-                                             msd_channel_t channel)
+void msd_connection_set_notification_callback(struct msd_connection_t* connection,
+                                              msd_connection_notification_callback_t callback,
+                                              void* token)
 {
-    // The channel isn't used for anything.
 }
 
 magma_status_t msd_connection_map_buffer_gpu(msd_connection_t* connection, msd_buffer_t* buffer,

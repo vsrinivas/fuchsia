@@ -103,8 +103,8 @@ public:
         virtual bool UnmapBufferGpu(uint64_t buffer_id, uint64_t gpu_va) = 0;
         virtual bool CommitBuffer(uint64_t buffer_id, uint64_t page_offset,
                                   uint64_t page_count) = 0;
-        virtual void SetNotificationChannel(msd_channel_send_callback_t callback,
-                                            msd_channel_t channel) = 0;
+        virtual void SetNotificationCallback(msd_connection_notification_callback_t callback,
+                                             void* token) = 0;
         virtual magma::Status ExecuteImmediateCommands(uint32_t context_id, uint64_t commands_size,
                                                        void* commands, uint64_t semaphore_count,
                                                        uint64_t* semaphore_ids) = 0;

@@ -64,8 +64,8 @@ public:
     bool ExecuteAtom(volatile magma_arm_mali_atom* atom,
                      std::deque<std::shared_ptr<magma::PlatformSemaphore>>* signal_semaphores);
 
-    void SetNotificationChannel(msd_channel_send_callback_t send_callback, msd_channel_t channel);
-    void SendNotificationData(MsdArmAtom* atom, ArmMaliResultCode status);
+    void SetNotificationCallback(msd_connection_notification_callback_t callback, void* token);
+    void SendNotificationData(MsdArmAtom* atom, ArmMaliResultCode result_code);
     void MarkDestroyed();
 
     // Called only on device thread.
@@ -108,9 +108,9 @@ private:
     // Modified and accessed only from device thread.
     bool address_space_lost_ = false;
 
-    std::mutex channel_lock_;
-    msd_channel_send_callback_t send_callback_;
-    msd_channel_t return_channel_ = {};
+    std::mutex callback_lock_;
+    msd_connection_notification_callback_t callback_;
+    void* token_ = {};
     std::shared_ptr<MsdArmAtom> outstanding_atoms_[256];
 };
 

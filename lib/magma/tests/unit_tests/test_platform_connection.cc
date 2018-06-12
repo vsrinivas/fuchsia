@@ -5,6 +5,7 @@
 #include "platform_connection.h"
 #include "gtest/gtest.h"
 #include <chrono>
+#include <poll.h>
 #include <thread>
 
 class TestPlatformConnection {
@@ -109,6 +110,11 @@ public:
 
     void TestNotificationChannel()
     {
+        pollfd pfd = {.fd = ipc_connection_->GetNotificationChannelFd(), .events = POLLIN};
+
+        int poll_status = poll(&pfd, 1, 5000);
+        EXPECT_EQ(1, poll_status);
+
         uint32_t out_data;
         uint64_t out_data_size;
         // Data was written when the channel was created, so it should be
@@ -251,14 +257,17 @@ public:
         return true;
     }
 
-    void SetNotificationChannel(msd_channel_send_callback_t callback,
-                                msd_channel_t channel) override
+    void SetNotificationCallback(msd_connection_notification_callback_t callback,
+                                 void* token) override
     {
-        if (!channel) {
+        if (!token) {
             TestPlatformConnection::test_complete = true;
         } else {
             uint32_t data = 5;
-            callback(channel, &data, sizeof(data));
+            msd_notification_t n = {.type = MSD_CONNECTION_NOTIFICATION_CHANNEL_SEND};
+            *reinterpret_cast<uint32_t*>(n.u.channel_send.data) = data;
+            n.u.channel_send.size = sizeof(data);
+            callback(token, &n);
         }
     }
 
