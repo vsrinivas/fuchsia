@@ -439,8 +439,8 @@ static zx_status_t block_driver_bind(void* ctx, zx_device_t* dev) {
     bdev->bp.ops->query(bdev->bp.ctx, &bdev->info, &bdev->block_op_size);
 
     if (bdev->info.max_transfer_size < bdev->info.block_size) {
-        printf("ERROR: block device '%s': has smaller max transfer size than block size\n",
-               device_get_name(dev));
+        printf("ERROR: block device '%s': has smaller max xfer (0x%x) than block size (0x%x)\n",
+               device_get_name(dev), bdev->info.max_transfer_size, bdev->info.block_size);
         free(bdev);
         return ZX_ERR_NOT_SUPPORTED;
     }
