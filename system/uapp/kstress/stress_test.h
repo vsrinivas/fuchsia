@@ -4,6 +4,8 @@
 
 #pragma once
 
+#include <stdarg.h>
+
 #include <fbl/intrusive_single_list.h>
 #include <fbl/macros.h>
 #include <fbl/unique_ptr.h>
@@ -21,7 +23,9 @@ public:
     // the test here.
     //
     // If overridden in a subclass, call through to this version first.
-    virtual zx_status_t Init(const zx_info_kmem_stats& stats) {
+    virtual zx_status_t Init(bool verbose, const zx_info_kmem_stats& stats) {
+        verbose_ = verbose;
+
         // gather some info about the system
         kmem_stats_ = stats;
         num_cpus_ = zx_system_get_num_cpus();
@@ -36,6 +40,30 @@ public:
     virtual zx_status_t Stop() = 0;
 
 protected:
+    // wrapper around printf that enables/disables based on verbose flag
+    void Printf(const char *fmt, ...) {
+        if (!verbose_) {
+            return;
+        }
+
+        va_list ap;
+        va_start(ap, fmt);
+
+        vprintf(fmt, ap);
+
+        va_end(ap);
+    }
+
+    void PrintfAlways(const char *fmt, ...) {
+        va_list ap;
+        va_start(ap, fmt);
+
+        vprintf(fmt, ap);
+
+        va_end(ap);
+    }
+
+    bool verbose_{false};
     zx_info_kmem_stats_t kmem_stats_{};
     uint32_t num_cpus_{};
 };

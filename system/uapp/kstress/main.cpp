@@ -74,6 +74,9 @@ zx_status_t get_kmem_stats(zx_info_kmem_stats_t* kmem_stats) {
 void print_help(char** argv, FILE* f) {
     fprintf(f, "Usage: %s [options]\n", argv[0]);
     fprintf(f, "No options currently defined\n");
+    fprintf(f, "options:\n");
+    fprintf(f, "\t-h:           This help\n");
+    fprintf(f, "\t-v:           verbose, status output\n");
 }
 
 } // namespace
@@ -81,12 +84,17 @@ void print_help(char** argv, FILE* f) {
 int main(int argc, char** argv) {
     zx_status_t status;
 
+    bool verbose = false;
+
     int c;
-    while ((c = getopt(argc, argv, "h")) > 0) {
+    while ((c = getopt(argc, argv, "hv")) > 0) {
         switch (c) {
         case 'h':
-            print_help(argv, stderr);
+            print_help(argv, stdout);
             return 0;
+        case 'v':
+            verbose = true;
+            break;
         default:
             fprintf(stderr, "Unknown option\n");
             print_help(argv, stderr);
@@ -118,7 +126,7 @@ int main(int argc, char** argv) {
 
     // initialize all the tests
     for (auto& test : test_list) {
-        status = test.Init(kmem_stats);
+        status = test.Init(verbose, kmem_stats);
         if (status != ZX_OK) {
             fprintf(stderr, "error initializing test\n");
             return 1;

@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fbl/algorithm.h>
 #include <fbl/atomic.h>
 #include <fbl/auto_call.h>
 #include <fbl/ref_ptr.h>
@@ -36,6 +37,8 @@ public:
     virtual zx_status_t Stop();
 
 private:
+    int stress_thread();
+
     thrd_t threads_[16]{};
 
     // used by the worker threads at runtime
@@ -59,34 +62,48 @@ fbl::unique_ptr<StressTest> CreateVmStressTest() {
 //
 // Will evolve over time to use multiple VMOs simultaneously along with cloned vmos.
 
-namespace {
-int stress_thread(const fbl::atomic<bool>& shutdown, const zx::vmo& vmo) {
+int VmStressTest::stress_thread() {
     zx_status_t status;
 
     uintptr_t ptr = 0;
-    uint64_t size = 0;
-    status = vmo.get_size(&size);
-    ZX_ASSERT(size > 0);
+    uint64_t vmo_size = 0;
+    status = vmo_.get_size(&vmo_size);
+    ZX_ASSERT(vmo_size > 0);
 
     // allocate a local buffer
-    const size_t bufsize = PAGE_SIZE * 16;
-    fbl::unique_ptr<uint8_t[]> buf{new uint8_t[bufsize]};
+    const size_t buf_size = PAGE_SIZE * 16;
+    fbl::unique_ptr<uint8_t[]> buf{new uint8_t[buf_size]};
 
-    ZX_ASSERT(bufsize < size);
+    // local helper routines to calculate a random range within a vmo and
+    // a range appropriate to read into the local buffer above
+    auto rand_vmo_range = [vmo_size](uint64_t *out_offset, uint64_t *out_size) {
+        *out_offset = rand() % vmo_size;
+        *out_size = fbl::min(rand() % vmo_size, vmo_size - *out_offset);
+    };
+    auto rand_buffer_range = [vmo_size](uint64_t *out_offset, uint64_t *out_size) {
+        *out_size = rand() % buf_size;
+        *out_offset = rand() % (vmo_size - *out_size);
+    };
 
-    while (!shutdown.load()) {
+    ZX_ASSERT(buf_size < vmo_size);
+
+    while (!shutdown_.load()) {
+        uint64_t off, len;
+
         int r = rand() % 100;
         switch (r) {
         case 0 ... 9: // commit a range of the vmo
-            printf("c");
-            status = vmo.op_range(ZX_VMO_OP_COMMIT, rand() % size, rand() % size, nullptr, 0);
+            Printf("c");
+            rand_vmo_range(&off, &len);
+            status = vmo_.op_range(ZX_VMO_OP_COMMIT, off, len, nullptr, 0);
             if (status != ZX_OK) {
                 fprintf(stderr, "failed to commit range, error %d (%s)\n", status, zx_status_get_string(status));
             }
             break;
         case 10 ... 19: // decommit a range of the vmo
-            printf("d");
-            status = vmo.op_range(ZX_VMO_OP_DECOMMIT, rand() % size, rand() % size, nullptr, 0);
+            Printf("d");
+            rand_vmo_range(&off, &len);
+            status = vmo_.op_range(ZX_VMO_OP_DECOMMIT, off, len, nullptr, 0);
             if (status != ZX_OK) {
                 fprintf(stderr, "failed to decommit range, error %d (%s)\n", status, zx_status_get_string(status));
             }
@@ -94,34 +111,53 @@ int stress_thread(const fbl::atomic<bool>& shutdown, const zx::vmo& vmo) {
         case 20 ... 29:
             if (ptr) {
                 // unmap the vmo if it already was
-                printf("u");
-                status = zx::vmar::root_self().unmap(ptr, size);
+                Printf("u");
+                status = zx::vmar::root_self().unmap(ptr, vmo_size);
                 if (status != ZX_OK) {
                     fprintf(stderr, "failed to unmap range, error %d (%s)\n", status, zx_status_get_string(status));
                 }
+                ptr = 0;
             }
             // map it somewhere
-            printf("m");
-            status = zx::vmar::root_self().map(0, vmo, 0, size,
+            Printf("m");
+            status = zx::vmar::root_self().map(0, vmo_, 0, vmo_size,
                                                ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE, &ptr);
             if (status != ZX_OK) {
                 fprintf(stderr, "failed to map range, error %d (%s)\n", status, zx_status_get_string(status));
             }
             break;
-        case 30 ... 59:
+        case 30 ... 39:
             // read from a random range of the vmo
-            printf("r");
-            status = vmo.read(buf.get(), rand() % (size - bufsize), rand() % bufsize);
+            Printf("r");
+            rand_buffer_range(&off, &len);
+            status = vmo_.read(buf.get(), off, len);
             if (status != ZX_OK) {
                 fprintf(stderr, "error reading from vmo\n");
             }
             break;
-        case 60 ... 99:
+        case 40 ... 49:
             // write to a random range of the vmo
-            printf("w");
-            status = vmo.write(buf.get(), rand() % (size - bufsize), rand() % bufsize);
+            Printf("w");
+            rand_buffer_range(&off, &len);
+            status = vmo_.write(buf.get(), off, len);
             if (status != ZX_OK) {
                 fprintf(stderr, "error writing to vmo\n");
+            }
+            break;
+        case 50 ... 74:
+            // read from a random range of the vmo via a direct memory reference
+            if (ptr) {
+                Printf("R");
+                rand_buffer_range(&off, &len);
+                memcpy(buf.get(), reinterpret_cast<const void *>(ptr + off), len);
+            }
+            break;
+        case 75 ... 99:
+            // write to a random range of the vmo via a direct memory reference
+            if (ptr) {
+                Printf("W");
+                rand_buffer_range(&off, &len);
+                memcpy(reinterpret_cast<void *>(ptr + off), buf.get(), len);
             }
             break;
         }
@@ -130,12 +166,11 @@ int stress_thread(const fbl::atomic<bool>& shutdown, const zx::vmo& vmo) {
     }
 
     if (ptr) {
-        status = zx::vmar::root_self().unmap(ptr, size);
+        status = zx::vmar::root_self().unmap(ptr, vmo_size);
     }
 
     return 0;
 }
-} // namespace
 
 zx_status_t VmStressTest::Start() {
     const uint64_t free_bytes = kmem_stats_.free_bytes;
@@ -144,9 +179,7 @@ zx_status_t VmStressTest::Start() {
     // 1/64th the size of total memory generates a fairly sizeable vmo (16MB per 1GB)
     const uint64_t vmo_test_size = free_bytes / 64;
 
-    printf("starting stress test: free bytes %" PRIu64 "\n", free_bytes);
-
-    printf("creating test vmo of size %" PRIu64 "\n", vmo_test_size);
+    PrintfAlways("VM stress test: using vmo of size %" PRIu64 "\n", vmo_test_size);
 
     // create a test vmo
     auto status = zx::vmo::create(vmo_test_size, 0, &vmo_);
@@ -158,7 +191,7 @@ zx_status_t VmStressTest::Start() {
     auto worker = [](void* arg) -> int {
         VmStressTest* test = static_cast<VmStressTest*>(arg);
 
-        return stress_thread(test->shutdown_, test->vmo_);
+        return test->stress_thread();
     };
 
     for (auto& t : threads_) {
