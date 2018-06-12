@@ -293,6 +293,31 @@ void ImportNode::BindAsRequest(zx::eventpair* out_export_token) {
   is_bound_ = true;
 }
 
+SpaceHolder::SpaceHolder(Session* session, zx::eventpair token,
+                         const std::string& debug_name)
+    : Resource(session) {
+  session->Enqueue(NewCreateSpaceHolderCmd(id(), std::move(token), debug_name));
+}
+
+SpaceHolder::~SpaceHolder() = default;
+
+void SpaceHolder::SetSpaceProperties(const float bounding_box_min[3],
+                                     const float bounding_box_max[3],
+                                     const float inset_from_min[3],
+                                     const float inset_from_max[3]) {
+  session()->Enqueue(NewSetSpacePropertiesCmd(id(), bounding_box_min,
+                                              bounding_box_max, inset_from_min,
+                                              inset_from_max));
+}
+
+Space::Space(Session* session, zx::eventpair token,
+             const std::string& debug_name)
+    : Resource(session) {
+  session->Enqueue(NewCreateSpaceCmd(id(), std::move(token), debug_name));
+}
+
+Space::~Space() = default;
+
 ClipNode::ClipNode(Session* session) : ContainerNode(session) {
   session->Enqueue(NewCreateClipNodeCmd(id()));
 }
@@ -386,8 +411,8 @@ StereoCamera::~StereoCamera() = default;
 
 void StereoCamera::SetStereoProjection(const float left_projection[16],
                                        const float right_projection[16]) {
-  session()->Enqueue(NewSetStereoCameraProjectionCmd(id(), left_projection,
-                                                         right_projection));
+  session()->Enqueue(
+      NewSetStereoCameraProjectionCmd(id(), left_projection, right_projection));
 }
 
 Renderer::Renderer(Session* session) : Resource(session) {

@@ -41,10 +41,9 @@ class Session : private fuchsia::ui::scenic::SessionListener {
                    fidl::InterfaceRequest<fuchsia::ui::scenic::SessionListener>
                        session_listener = nullptr);
 
-  // Creates a new session using the provided scene manager and binds the
-  // session listener to this object.
-  // The scene manager itself is not retained after construction.
-  explicit Session(fuchsia::ui::scenic::Scenic* mozart);
+  // Creates a new session using the provided Scenic and binds the listener to
+  // this object. The Scenic itself is not retained after construction.
+  explicit Session(fuchsia::ui::scenic::Scenic* scenic);
 
   // Destroys the session.
   // All resources must be released prior to destruction.
