@@ -9,6 +9,7 @@ import (
 	"fidl/compiler/backend/rust/templates"
 	"fidl/compiler/backend/types"
 	"os"
+	"path/filepath"
 	"text/template"
 )
 
@@ -18,6 +19,9 @@ func writeFile(outputFilename string,
 	templateName string,
 	tmpls *template.Template,
 	tree ir.Root) error {
+	if err := os.MkdirAll(filepath.Dir(outputFilename), os.ModePerm); err != nil {
+		return err
+	}
 	f, err := os.Create(outputFilename)
 	if err != nil {
 		return err

@@ -16,6 +16,10 @@ import (
 type FidlGenerator struct{}
 
 func generateHeader(headerPath string, tmpls *template.Template, tree ir.Root) error {
+	if err := os.MkdirAll(filepath.Dir(headerPath), os.ModePerm); err != nil {
+		return err
+	}
+
 	f, err := os.Create(headerPath)
 	if err != nil {
 		return err
@@ -58,6 +62,10 @@ func generateHeader(headerPath string, tmpls *template.Template, tree ir.Root) e
 }
 
 func generateImplementation(implementationPath string, tmpls *template.Template, tree ir.Root) error {
+	if err := os.MkdirAll(filepath.Dir(implementationPath), os.ModePerm); err != nil {
+		return err
+	}
+
 	f, err := os.Create(implementationPath)
 	if err != nil {
 		return err
