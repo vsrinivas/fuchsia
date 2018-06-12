@@ -39,9 +39,8 @@ template <typename Header, typename Body = UnknownBody> class Frame {
         ZX_DEBUG_ASSERT(pkt_ != nullptr);
     }
 
-    Frame(size_t offset, fbl::unique_ptr<Packet> pkt) : pkt_(fbl::move(pkt)) {
+    Frame(size_t offset, fbl::unique_ptr<Packet> pkt) : data_offset_(offset), pkt_(fbl::move(pkt)) {
         ZX_DEBUG_ASSERT(pkt_ != nullptr);
-        data_offset_ = offset;
     }
 
     Frame() : pkt_(nullptr) {}
@@ -155,12 +154,30 @@ template <typename Header, typename Body = UnknownBody> class Frame {
 
     // Consumes the frame and returns its body as a typed frame.
     // By default, the current frame's Body will be the next frame's Header, and
-    // a `uint8_t[]` will be used for the next frame's body.
+    // a `UnknownBody` will be used for the next frame's body.
     // The current frame will be considered `taken` after this call.
-    template <typename NextH = Body, typename NextB = UnknownBody>
-    Frame<NextH, NextB> NextFrame() {
+    template <typename NextH = Body, typename NextB = UnknownBody> Frame<NextH, NextB> NextFrame() {
         size_t offset = body_offset<Header>();
         return Frame<NextH, NextB>(offset, Take());
+    }
+
+    // Allows to change the representation of the frame's body. The resulting frame's length should
+    // be verified before working with it. One would typically use this method after verifying that
+    // an "unknown" body is supposed to be of a certain type. Because this method takes a frame's
+    // offset into account, it should be used when specializing frames, rather than taking the
+    // frame's Packet and constructing a new Frame yourself which can be error prone when working
+    // with advanced frames. For example, avoid doing this:
+    //     Frame<LlcHeader, UnknownBody> llc_frame = data_frame.NextFrame();
+    //     Frame<LlcHeader, EapolHeader> llc_eapol_frame(llc_frame.take());
+    //     PROBLEM: llc_eapol_frame.body() is *NOT* pointing to the EAPOL header
+    //              because the frame's offset got lost
+    //
+    // Instead use this method:
+    //     Frame<LlcHeader, UnknownBody> llc_frame = data_frame.NextFrame();
+    //     Frame<LlcHeader, EapolHeader> llc_eapol_frame = llc_frame.Specialize<EapolHeader>();
+    //     ...
+    template <typename NewBody> Frame<Header, NewBody> Specialize() {
+        return Frame<Header, NewBody>(data_offset_, Take());
     }
 
     // Returns the Frame's underlying Packet. The Frame will no longer own the Packet and

@@ -400,5 +400,44 @@ TEST(Frame, ConstructEmptyFrame) {
     ASSERT_FALSE(frame.HasValidLen());
 }
 
+TEST(Frame, Specialize) {
+    // Construct initial frame
+    auto pkt = GetPacket(DefaultTripleHdrFrame::len());
+    auto test_frame = pkt->mut_field<DefaultTripleHdrFrame>(0);
+    test_frame->hdr1.a = 42;
+    test_frame->hdr2.b = 24;
+
+    // Verify frame's accessors and length.
+    Frame<TestHdr1> frame(fbl::move(pkt));
+    Frame<TestHdr1, TestHdr2> specialized_frame = frame.Specialize<TestHdr2>();
+    ASSERT_TRUE(specialized_frame.HasValidLen());
+    ASSERT_FALSE(specialized_frame.IsTaken());
+    ASSERT_TRUE(frame.IsTaken());
+    ASSERT_EQ(specialized_frame.len(), DefaultTripleHdrFrame::len());
+    ASSERT_EQ(specialized_frame.hdr()->a, 42);
+    ASSERT_EQ(specialized_frame.body_len(), DefaultTripleHdrFrame::body_len());
+    ASSERT_EQ(specialized_frame.body()->b, 24);
+}
+
+TEST(Frame, Specialize_ProgressedFrame) {
+    // Construct initial frame
+    auto pkt = GetPacket(DefaultTripleHdrFrame::len());
+    auto test_frame = pkt->mut_field<DefaultTripleHdrFrame>(0);
+    test_frame->hdr1.a = 42;
+    test_frame->hdr2.b = 24;
+    test_frame->hdr3.b = 1337;
+
+    // Verify frame's accessors and length.
+    Frame<TestHdr1> frame(fbl::move(pkt));
+    Frame<TestHdr2, UnknownBody> second_frame = frame.NextFrame<TestHdr2>();
+    Frame<TestHdr2, TestHdr3> specialized_frame = second_frame.Specialize<TestHdr3>();
+    ASSERT_TRUE(specialized_frame.HasValidLen());
+    ASSERT_FALSE(specialized_frame.IsTaken());
+    ASSERT_TRUE(second_frame.IsTaken());
+    ASSERT_EQ(specialized_frame.hdr()->b, 24);
+    ASSERT_EQ(specialized_frame.body_len(), DefaultTripleHdrFrame::second_frame_body_len());
+    ASSERT_EQ(specialized_frame.body()->b, 1337);
+}
+
 }  // namespace
 }  // namespace wlan
