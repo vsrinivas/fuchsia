@@ -1,30 +1,16 @@
 dists:
-  - jessie
-  - jessie-updates
+  - testing 
+  - testing-updates
 components:
   - main
-keyring: debian-archive-jessie-stable.gpg
+keyring: debian-archive-keyring.gpg
 packages:
   - package: libc6
-  - package: libc6-i386
-    arch:
-      - amd64
   - package: libc6-dev
-  - package: libc6-dev-i386
-    arch:
-      - amd64
   - package: libedit2
   - package: libedit-dev
   - package: libegl1-mesa
   - package: libegl1-mesa-dev
-  - package: libgcc-4.8-dev
-  - package: lib32gcc-4.8-dev
-    arch:
-      - amd64
-  - package: libgcc1
-  - package: lib32gcc1
-    arch:
-      - amd64
   - package: libgl1-mesa-dev
   - package: libgl1-mesa-glx
   - package: libglapi-mesa
@@ -32,14 +18,12 @@ packages:
   - package: libglib2.0-dev
   - package: libglu1-mesa
   - package: libglu1-mesa-dev
-  - package: libicu52
+  - package: libicu60
   - package: libicu-dev
   - package: libncurses5
   - package: libncurses5-dev
   - package: libpython2.7
   - package: libpython2.7-dev
-  - package: libstdc++6
-  - package: libstdc++-4.8-dev
   - package: libx11-6
   - package: libx11-dev
   - package: libxml2
