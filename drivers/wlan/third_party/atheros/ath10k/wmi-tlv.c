@@ -478,8 +478,7 @@ static void ath10k_wmi_tlv_op_rx(struct ath10k* ar, struct ath10k_msg_buf* msg_b
         ath10k_wmi_event_vdev_start_resp(ar, msg_buf);
         break;
     case WMI_TLV_VDEV_STOPPED_EVENTID:
-        ath10k_err("WMI_TLV_VDEV_STOPPED_EVENTID unimplemented\n");
-        // ath10k_wmi_event_vdev_stopped(ar, skb);
+        ath10k_wmi_event_vdev_stopped(ar, msg_buf);
         break;
     case WMI_TLV_PEER_STA_KICKOUT_EVENTID:
         ath10k_err("WMI_TLV_PEER_STA_KICKOUT_EVENTID unimplemented\n");

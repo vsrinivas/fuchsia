@@ -3162,12 +3162,12 @@ void ath10k_wmi_event_vdev_start_resp(struct ath10k* ar, struct ath10k_msg_buf* 
     completion_signal(&ar->vdev_setup_done);
 }
 
-#if 0 // NEEDS PORTING
-void ath10k_wmi_event_vdev_stopped(struct ath10k* ar, struct sk_buff* skb) {
+void ath10k_wmi_event_vdev_stopped(struct ath10k* ar, struct ath10k_msg_buf* buf) {
     ath10k_dbg(ar, ATH10K_DBG_WMI, "WMI_VDEV_STOPPED_EVENTID\n");
     completion_signal(&ar->vdev_setup_done);
 }
 
+#if 0 // NEEDS PORTING
 static int
 ath10k_wmi_op_pull_peer_kick_ev(struct ath10k* ar, struct sk_buff* skb,
                                 struct wmi_peer_kick_ev_arg* arg) {

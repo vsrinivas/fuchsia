@@ -3119,9 +3119,7 @@ static zx_status_t ath10k_pci_configure_bss(void* ctx, uint32_t options,
         return ZX_ERR_BAD_STATE;
     }
 
-    struct ath10k_vif* arvif = &ar->arvif;
-    memcpy(&arvif->bssid, config->bssid, ETH_ALEN);
-    return ZX_OK;
+    return ath10k_mac_set_bss(ar, config);
 }
 
 static zx_status_t ath10k_pci_set_key(void* ctx, uint32_t options, wlan_key_config_t* key_config) {

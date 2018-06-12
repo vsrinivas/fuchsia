@@ -1486,11 +1486,11 @@ static zx_status_t ath10k_vdev_start(struct ath10k_vif* arvif, wlan_channel_t* d
     return ath10k_vdev_start_restart(arvif, def, false);
 }
 
-#if 0 // NEEDS PORTING
 static zx_status_t ath10k_vdev_restart(struct ath10k_vif* arvif, wlan_channel_t* def) {
     return ath10k_vdev_start_restart(arvif, def, true);
 }
 
+#if 0 // NEEDS PORTING
 static int ath10k_mac_setup_bcn_p2p_ie(struct ath10k_vif* arvif,
                                        struct sk_buff* bcn) {
     struct ath10k* ar = arvif->ar;
@@ -2958,6 +2958,48 @@ invalid_data:
     ath10k_info("improperly formatted association response seen\n");
 }
 
+// Take the vdev down, and tell the firmware to forget about the previous association.
+static zx_status_t ath10k_mac_bss_disassoc(struct ath10k* ar) {
+    struct ath10k_vif* arvif = &ar->arvif;
+
+    ASSERT_MTX_HELD(&ar->conf_mutex);
+
+    if (!arvif->is_up) {
+        return ZX_ERR_BAD_STATE;
+    }
+
+    zx_status_t ret = ath10k_wmi_peer_delete(ar, arvif->vdev_id, arvif->bssid);
+    if (ret != ZX_OK) {
+        char ethaddr_str[ETH_ALEN * 3];
+        ethaddr_sprintf(ethaddr_str, arvif->bssid);
+        ath10k_err("Failed to delete peer %s in vdev %i: %s\n",
+                   ethaddr_str, arvif->vdev_id, zx_status_get_string(ret));
+        return ret;
+    }
+
+    ret = ath10k_wmi_vdev_down(ar, arvif->vdev_id);
+    if (ret != ZX_OK) {
+        ath10k_err("Failed to take vdev %i down: %s\n", arvif->vdev_id, zx_status_get_string(ret));
+        return ret;
+    }
+    arvif->is_up = false;
+
+    return ZX_OK;
+}
+
+zx_status_t ath10k_mac_set_bss(struct ath10k* ar, wlan_bss_config_t* config) {
+    struct ath10k_vif* arvif = &ar->arvif;
+    zx_status_t ret = ZX_OK;
+
+    mtx_lock(&ar->conf_mutex);
+    memcpy(&arvif->bssid, config->bssid, ETH_ALEN);
+    mtx_unlock(&ar->conf_mutex);
+    return ret;
+}
+
+// Loop for waiting on an association event (triggered by the receipt of a association
+// response). Eventually, this function should not be a loop, and should be invoked by
+// wlanmac.
 int ath10k_mac_bss_assoc(void* thrd_data) {
     struct ath10k* ar = thrd_data;
     zx_status_t status;
@@ -2979,31 +3021,13 @@ int ath10k_mac_bss_assoc(void* thrd_data) {
         struct ieee80211_frame_header* frame_hdr;
         struct ieee80211_assoc_resp* assoc_resp;
 
-        if (arvif->is_up) {
-            // TODO -- figure out why we can't disassociate
-            goto done;
-#if 0
-            ath10k_info("disassociating from bss\n");
-            status = ath10k_wmi_vdev_down(ar, arvif->vdev_id);
-            if (status != ZX_OK) {
-                ath10k_err("failed to disassociate from bss: %s\n", zx_status_get_string(status));
-                return status;
-            }
-            arvif->is_up = false;
-#endif
-        }
+        ZX_DEBUG_ASSERT(arvif->is_started);
+        ZX_DEBUG_ASSERT(!arvif->is_up);
 
         void* frame_ptr = ath10k_msg_buf_get_payload(buf) + buf->rx.frame_offset;
         frame_hdr = frame_ptr;
         assoc_resp = frame_ptr + sizeof(*frame_hdr);
         arvif->aid = (assoc_resp->assoc_id & 0x3fff);
-
-        uint8_t* frame_bssid = ieee80211_get_bssid(frame_hdr);
-        status = ath10k_wmi_peer_create(ar, arvif->vdev_id, frame_bssid, WMI_PEER_TYPE_BSS);
-        if (status != ZX_OK) {
-            ath10k_warn("failed to create peer: %s\n", zx_status_get_string(status));
-            goto done;
-        }
 
         size_t total_size = buf->rx.frame_size;
         size_t rate_info_size = total_size - (sizeof(*frame_hdr) + sizeof(*assoc_resp));
@@ -3012,6 +3036,7 @@ int ath10k_mac_bss_assoc(void* thrd_data) {
             goto done;
         }
 
+        uint8_t* frame_bssid = ieee80211_get_bssid(frame_hdr);
         memset(&assoc_arg, 0, sizeof(assoc_arg));
         if (memcmp(frame_bssid, arvif->bssid, ETH_ALEN)) {
             char bssid_expected[ETH_ALEN * 3];
@@ -3047,10 +3072,17 @@ int ath10k_mac_bss_assoc(void* thrd_data) {
         char bssid_str[ETH_ALEN * 3];
         ethaddr_sprintf(bssid_str, arvif->bssid);
 
+        status = ath10k_wmi_peer_create(ar, arvif->vdev_id, frame_bssid, WMI_PEER_TYPE_BSS);
+        if (status != ZX_OK) {
+            ath10k_warn("failed to create peer: %s\n", zx_status_get_string(status));
+            goto done;
+        }
+
         status = ath10k_wmi_peer_assoc(ar, &assoc_arg);
         if (status != ZX_OK) {
             ath10k_warn("failed to run peer assoc for %pM vdev %i: %s\n",
                         arvif->bssid, arvif->vdev_id, zx_status_get_string(status));
+            ath10k_wmi_peer_delete(ar, arvif->vdev_id, frame_bssid);
             goto done;
         }
 
@@ -7618,9 +7650,14 @@ unlock:
 }
 #endif // NEEDS PORTING
 
+// (Re-)start vif on the specified channel. A different flow will be needed if we
+// want to support continued association transferring to a new channel (likely
+// ath10k_mac_update_vif_channel). Upon successful completion, we will be in a started,
+// but not up, state.
 zx_status_t
 ath10k_mac_assign_vif_chanctx(struct ath10k* ar, wlan_channel_t* chan) {
     struct ath10k_vif* arvif = &ar->arvif;
+    zx_status_t ret;
 
     mtx_lock(&ar->conf_mutex);
 
@@ -7628,14 +7665,19 @@ ath10k_mac_assign_vif_chanctx(struct ath10k* ar, wlan_channel_t* chan) {
                "mac chanctx assign ptr %pK vdev_id %i\n",
                chan, arvif->vdev_id);
 
-#if 0 // NEEDS PORTING
-    if (COND_WARN(arvif->is_started)) {
-        mtx_unlock(&ar->conf_mutex);
-        return ZX_ERR_BAD_STATE;
+    if (arvif->is_started) {
+        if (arvif->is_up) {
+            ret = ath10k_mac_bss_disassoc(ar);
+            if (ret != ZX_OK) {
+                ath10k_warn("failed to disassociate vdev %i: %s\n",
+                            arvif->vdev_id, zx_status_get_string(ret));
+            }
+        }
+        ret = ath10k_vdev_restart(arvif, chan);
+    } else {
+        ret = ath10k_vdev_start(arvif, chan);
     }
-#endif // NEEDS PORTING
 
-    zx_status_t ret = ath10k_vdev_start(arvif, chan);
     if (ret != ZX_OK) {
         if (chan->cbw == CBW80P80) {
             ath10k_warn("failed to start vdev %i on channels %d + %d: %s\n",
