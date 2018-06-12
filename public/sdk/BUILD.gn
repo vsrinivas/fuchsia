@@ -19,24 +19,6 @@ sdk("zircon_sysroot") {
   ]
 }
 
-# TODO(DX-134): Remove these once the toolchain can consume SDKs with libraries outside the sysroot.
-sdk("zircon_sysroot_for_toolchain") {
-  category = "internal"
-
-  export = true
-
-  old_school = true
-
-  domains = [ "c-pp" ]
-
-  deps = [
-    "//zircon/public/lib/backtrace:backtrace_sdk",
-    "//zircon/public/lib/fdio:fdio_sdk",
-    "//zircon/public/lib/launchpad:launchpad_sdk",
-    "//zircon/public/sysroot:sysroot_sdk",
-  ]
-}
-
 sdk("garnet") {
   category = "partner"
 
