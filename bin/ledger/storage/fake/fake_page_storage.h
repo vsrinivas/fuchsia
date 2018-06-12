@@ -24,6 +24,10 @@
 namespace storage {
 namespace fake {
 
+// The delay for which tasks are posted by the FakePageStorage methods
+// GetCommit() and GetPiece().
+constexpr zx::duration kFakePageStorageDelay = zx::msec(5);
+
 class FakePageStorage : public PageStorageEmptyImpl {
  public:
   explicit FakePageStorage(PageId page_id);

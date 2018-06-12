@@ -24,8 +24,6 @@
 namespace storage {
 namespace fake {
 
-static constexpr zx::duration kTaskDelay = zx::msec(5);
-
 namespace {
 
 storage::ObjectDigest ComputeDigest(fxl::StringView value) {
@@ -74,7 +72,7 @@ void FakePageStorage::GetCommit(
         callback(Status::OK,
                  std::make_unique<FakeCommit>(journals_[commit_id].get()));
       },
-      kTaskDelay);
+      kFakePageStorageDelay);
 }
 
 void FakePageStorage::StartCommit(
@@ -197,7 +195,8 @@ void FakePageStorage::GetPiece(
         callback(Status::OK,
                  std::make_unique<FakeObject>(object_identifier, it->second));
       });
-  async::PostDelayedTask(async_, [this] { SendNextObject(); }, kTaskDelay);
+  async::PostDelayedTask(async_, [this] { SendNextObject(); },
+                         kFakePageStorageDelay);
 }
 
 void FakePageStorage::GetCommitContents(const Commit& commit,
