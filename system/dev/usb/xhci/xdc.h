@@ -6,6 +6,7 @@
 
 #include <ddk/device.h>
 #include <ddk/usb-request.h>
+#include <xdc-server-utils/packet.h>
 
 #include "xdc-hw.h"
 #include "xhci-transfer-common.h"
@@ -60,18 +61,6 @@ typedef struct {
     xdc_str_desc_t product_desc;
     xdc_str_desc_t serial_num_desc;
 } xdc_str_descs_t;
-
-typedef struct {
-    uint32_t stream_id;
-    size_t total_length;
-} xdc_packet_header_t;
-
-typedef struct {
-    xdc_packet_header_t header;
-    // Number of bytes received for this packet so far.
-    // Once this equals header.total_length, the packet has been fully received.
-    size_t bytes_received;
-} xdc_packet_state_t;
 
 // This is used by the xdc_poll thread to monitors changes in the debug capability register state,
 // and handle completed requests.

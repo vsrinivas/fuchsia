@@ -316,32 +316,6 @@ static void xdc_queue_read_locked(xdc_t* xdc, usb_request_t* req) __TA_REQUIRES(
     }
 }
 
-// Updates the packet state with the completed usb request.
-// If out_new_packet is not NULL, it will be populated with whether this request starts
-// a new xdc packet and hence contains a header.
-//
-// Returns ZX_OK if successful, or an error if the request was malformed.
-static zx_status_t xdc_update_packet_state(xdc_packet_state_t* packet_state, usb_request_t* req,
-                                           bool* out_new_packet) {
-    // If we've received all the bytes for a packet, this usb request must be the start
-    // of a new xdc packet, and contain the xdc packet header.
-    bool new_packet = packet_state->bytes_received >= packet_state->header.total_length;
-    if (new_packet) {
-        if (req->response.actual < sizeof(xdc_packet_header_t)) {
-            zxlogf(ERROR, "malformed header, only received %zu bytes\n", req->response.actual);
-            return ZX_ERR_BAD_STATE;
-        }
-        usb_request_copyfrom(req, &packet_state->header,
-                             sizeof(xdc_packet_header_t), 0 /* offset */);
-        packet_state->bytes_received = 0;
-    }
-    packet_state->bytes_received += req->response.actual;
-    if (out_new_packet) {
-        *out_new_packet = new_packet;
-    }
-    return ZX_OK;
-}
-
 static void xdc_update_instance_read_signal_locked(xdc_instance_t* inst)
                                                    __TA_REQUIRES(inst->lock) {
     if (list_length(&inst->completed_reads) > 0) {
@@ -382,8 +356,16 @@ static zx_status_t xdc_read_instance(void* ctx, void* buf, size_t count,
            (req = list_peek_head_type(&inst->completed_reads, usb_request_t, node)) != NULL) {
         if (inst->cur_req_read_offset == 0) {
             bool is_new_packet;
-            zx_status_t status = xdc_update_packet_state(&inst->cur_read_packet,
-                                                         req, &is_new_packet);
+            void* data;
+            zx_status_t status = usb_request_mmap(req, &data);
+             if (status != ZX_OK) {
+                 zxlogf(ERROR, "usb_request_mmap failed, err: %d\n", status);
+                 mtx_unlock(&inst->lock);
+                 return ZX_ERR_BAD_STATE;
+            }
+
+            status = xdc_update_packet_state(&inst->cur_read_packet,
+                                             data, req->response.actual, &is_new_packet);
             if (status != ZX_OK) {
                 mtx_unlock(&inst->lock);
                 return ZX_ERR_BAD_STATE;
@@ -721,7 +703,14 @@ static void xdc_read_complete(usb_request_t* req, void* cookie) {
         goto out;
     }
 
-    zx_status_t status = xdc_update_packet_state(&xdc->cur_read_packet, req, NULL);
+    void* data;
+    zx_status_t status = usb_request_mmap(req, &data);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "usb_request_mmap failed, err: %d\n", status);
+        xdc_queue_read_locked(xdc, req);
+        goto out;
+    }
+    status = xdc_update_packet_state(&xdc->cur_read_packet, data, req->response.actual, NULL);
     if (status != ZX_OK) {
         xdc_queue_read_locked(xdc, req);
         goto out;
