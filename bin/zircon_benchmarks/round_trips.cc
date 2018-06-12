@@ -396,11 +396,11 @@ class EventPortSignaler {
   // by Signal() and false if the peer event object was closed.
   bool Wait() {
     FXL_CHECK(event_.wait_async(port_, 0,
-                                ZX_USER_SIGNAL_0 | ZX_EPAIR_PEER_CLOSED,
+                                ZX_USER_SIGNAL_0 | ZX_EVENTPAIR_PEER_CLOSED,
                                 ZX_WAIT_ASYNC_ONCE) == ZX_OK);
     zx_port_packet_t packet;
     FXL_CHECK(port_.wait(zx::time::infinite(), &packet) == ZX_OK);
-    if (packet.signal.observed & ZX_EPAIR_PEER_CLOSED)
+    if (packet.signal.observed & ZX_EVENTPAIR_PEER_CLOSED)
       return false;
     // Clear the signal bit.
     FXL_CHECK(event_.signal(ZX_USER_SIGNAL_0, 0) == ZX_OK);

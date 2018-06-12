@@ -12,7 +12,7 @@
 namespace scenic {
 namespace gfx {
 
-static zx_signals_t kEventPairDeathSignals = ZX_EPAIR_PEER_CLOSED;
+static zx_signals_t kEventPairDeathSignals = ZX_EVENTPAIR_PEER_CLOSED;
 
 #define ASSERT_INTERNAL_EXPORTS_CONSISTENCY                \
   FXL_DCHECK(exported_resources_to_import_koids_.size() == \

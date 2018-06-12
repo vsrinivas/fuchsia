@@ -118,7 +118,7 @@ bool Tracee::Start(size_t buffer_size,
   wait_.set_object(fence_.get());
   wait_.set_trigger(TRACE_PROVIDER_SIGNAL_STARTED |
                     TRACE_PROVIDER_SIGNAL_BUFFER_OVERFLOW |
-                    ZX_EPAIR_PEER_CLOSED);
+                    ZX_EVENTPAIR_PEER_CLOSED);
   async_ = async_get_default();
   status = wait_.Begin(async_);
   FXL_CHECK(status == ZX_OK) << "Failed to add handler: status=" << status;
@@ -152,7 +152,7 @@ void Tracee::OnHandleReady(async_t* async,
   FXL_VLOG(2) << *bundle_ << ": pending=0x" << std::hex << pending;
   FXL_DCHECK(pending &
              (TRACE_PROVIDER_SIGNAL_STARTED |
-              TRACE_PROVIDER_SIGNAL_BUFFER_OVERFLOW | ZX_EPAIR_PEER_CLOSED));
+              TRACE_PROVIDER_SIGNAL_BUFFER_OVERFLOW | ZX_EVENTPAIR_PEER_CLOSED));
   FXL_DCHECK(state_ == State::kStartPending || state_ == State::kStarted ||
              state_ == State::kStopping);
 
@@ -194,7 +194,7 @@ void Tracee::OnHandleReady(async_t* async,
     }
   }
 
-  if (pending & ZX_EPAIR_PEER_CLOSED) {
+  if (pending & ZX_EVENTPAIR_PEER_CLOSED) {
     wait_.set_object(ZX_HANDLE_INVALID);
     async_ = nullptr;
     TransitionToState(State::kStopped);

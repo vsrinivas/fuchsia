@@ -104,7 +104,7 @@ void ObjectLinkerBase::WaitForPeerDeath(
   zx_koid_t entry_koid = pending_entry->first;
   zx_handle_t entry_handle = pending_entry->second.token.get();
   pending_entry->second.peer_waiter = std::make_unique<async::Wait>(
-      entry_handle, ZX_EPAIR_PEER_CLOSED,
+      entry_handle, ZX_EVENTPAIR_PEER_CLOSED,
       std::bind([this, entry_koid, import]() {
         auto pending_entry_iter = pending_entries_.find(entry_koid);
         FXL_DCHECK(pending_entry_iter != pending_entries_.end());

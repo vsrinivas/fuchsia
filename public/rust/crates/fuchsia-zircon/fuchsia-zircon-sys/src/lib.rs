@@ -177,8 +177,8 @@ multiconst!(zx_signals_t, [
     ZX_EVENT_SIGNALED           = ZX_OBJECT_SIGNAL_3;
 
     // EventPair
-    ZX_EPAIR_SIGNALED           = ZX_OBJECT_SIGNAL_3;
-    ZX_EPAIR_CLOSED             = ZX_OBJECT_SIGNAL_2;
+    ZX_EVENTPAIR_SIGNALED       = ZX_OBJECT_SIGNAL_3;
+    ZX_EVENTPAIR_CLOSED         = ZX_OBJECT_SIGNAL_2;
 
     // Task signals (process, thread, job)
     ZX_TASK_TERMINATED          = ZX_OBJECT_SIGNAL_3;
@@ -235,7 +235,7 @@ multiconst!(zx_obj_type_t, [
     ZX_OBJ_TYPE_LOG                 = 12;
     ZX_OBJ_TYPE_SOCKET              = 14;
     ZX_OBJ_TYPE_RESOURCE            = 15;
-    ZX_OBJ_TYPE_EVENT_PAIR          = 16;
+    ZX_OBJ_TYPE_EVENTPAIR           = 16;
     ZX_OBJ_TYPE_JOB                 = 17;
     ZX_OBJ_TYPE_VMAR                = 18;
     ZX_OBJ_TYPE_FIFO                = 19;
