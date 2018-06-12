@@ -519,8 +519,9 @@ zx_status_t vim2_display_bind(void* ctx, zx_device_t* parent) {
         DISP_ERROR("Could not map vsync interrupt\n");
         goto fail;
     }
-    // Enable vsync interupts
-    *((uint32_t*)(display->mmio_vpu.virt + VPU_VIU_MISC_CTRL0)) |= (1 << 8);
+    // For some reason the vsync interrupt enable bit needs to be cleared for
+    // vsync interrupts to occur at the correct rate.
+    *((uint32_t*)(display->mmio_vpu.virt + VPU_VIU_MISC_CTRL0)) &= ~(1 << 8);
 
     // Create EDID Buffer
     display->edid_buf = calloc(1, EDID_BUF_SIZE);
