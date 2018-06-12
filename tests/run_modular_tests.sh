@@ -5,5 +5,5 @@
 
 set -e
 
-run_integration_tests --test_file=/system/test/modular_tests/modular_tests.json "$@"
+run_integration_tests --test_file=/pkgfs/packages/modular_tests/0/data/modular_tests.json "$@"
 

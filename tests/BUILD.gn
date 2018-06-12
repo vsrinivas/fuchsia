@@ -51,16 +51,18 @@ import("//build/package.gni")
 
 package("modular_tests") {
   testonly = true
-  deprecated_system_image = true
 
   tests = [
     {
-      name = rebase_path("modular_tests.json")
-      dest = "modular_tests/modular_tests.json"
-    },
-    {
       name = rebase_path("run_modular_tests.sh")
       dest = "run_modular_tests.sh"
+    },
+  ]
+
+  resources = [
+    {
+      path = rebase_path("modular_tests.json")
+      dest = "modular_tests.json"
     },
   ]
 }
