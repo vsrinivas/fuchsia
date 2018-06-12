@@ -5,14 +5,15 @@
 #include "peridot/lib/firebase_auth/testing/test_token_provider.h"
 
 #include <lib/async/cpp/task.h>
+#include <lib/fxl/logging.h>
 
 #include "lib/fidl/cpp/clone.h"
 #include "lib/fidl/cpp/optional.h"
 
 namespace firebase_auth {
 TestTokenProvider::TestTokenProvider(async_t* async) : async_(async) {
-  error_to_return.status = fuchsia::modular::auth::Status::OK;
-  error_to_return.message = "";
+  error_to_return_.status = fuchsia::modular::auth::Status::OK;
+  error_to_return_.message = "";
 }
 
 TestTokenProvider::~TestTokenProvider() {}
@@ -29,12 +30,14 @@ void TestTokenProvider::GetFirebaseAuthToken(
     fidl::StringPtr /*firebase_api_key*/,
     GetFirebaseAuthTokenCallback callback) {
   fuchsia::modular::auth::FirebaseTokenPtr token_to_return_copy;
-  fidl::Clone(token_to_return, &token_to_return_copy);
+  fidl::Clone(token_to_return_, &token_to_return_copy);
   fuchsia::modular::auth::AuthErr error_to_return_copy;
-  fidl::Clone(error_to_return, &error_to_return_copy);
-  async::PostTask(async_, fxl::MakeCopyable(
-      [token_to_return = std::move(token_to_return_copy),
-       error_to_return = std::move(error_to_return_copy), callback]() mutable {
+  fidl::Clone(error_to_return_, &error_to_return_copy);
+  async::PostTask(
+      async_,
+      fxl::MakeCopyable([token_to_return = std::move(token_to_return_copy),
+                         error_to_return = std::move(error_to_return_copy),
+                         callback]() mutable {
         callback(std::move(token_to_return), std::move(error_to_return));
       }));
 }
@@ -43,16 +46,19 @@ void TestTokenProvider::GetClientId(GetClientIdCallback /*callback*/) {
   FXL_NOTIMPLEMENTED();
 }
 
-void TestTokenProvider::Set(std::string id_token,
-                            std::string local_id,
+void TestTokenProvider::Set(std::string id_token, std::string local_id,
                             std::string email) {
-  token_to_return = fuchsia::modular::auth::FirebaseToken::New();
-  token_to_return->id_token = id_token;
-  token_to_return->local_id = local_id;
-  token_to_return->email = email;
+  token_to_return_ = fuchsia::modular::auth::FirebaseToken::New();
+  token_to_return_->id_token = id_token;
+  token_to_return_->local_id = local_id;
+  token_to_return_->email = email;
+  error_to_return_.status = fuchsia::modular::auth::Status::OK;
+  error_to_return_.message = "";
 }
 
-void TestTokenProvider::SetNull() {
-  token_to_return = nullptr;
+void TestTokenProvider::SetError(fuchsia::modular::auth::Status error) {
+  FXL_CHECK(error != fuchsia::modular::auth::Status::OK);
+  token_to_return_ = nullptr;
+  error_to_return_.status = error;
 }
 }  // namespace firebase_auth

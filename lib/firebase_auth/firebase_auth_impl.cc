@@ -65,18 +65,20 @@ fxl::RefPtr<callback::Cancellable> FirebaseAuthImpl::GetFirebaseToken(
                         "may be unauthenticated.";
   }
   auto cancellable = callback::CancellableImpl::Create([] {});
-  GetToken(max_retries_,
-           [callback = cancellable->WrapCallback(callback)](
-               auto status, auto token) { callback(status, token->id_token); });
+  GetToken(max_retries_, [callback = cancellable->WrapCallback(callback)](
+                             auto status, auto token) {
+    callback(status, token ? token->id_token : "");
+  });
   return cancellable;
 }
 
 fxl::RefPtr<callback::Cancellable> FirebaseAuthImpl::GetFirebaseUserId(
     std::function<void(AuthStatus, std::string)> callback) {
   auto cancellable = callback::CancellableImpl::Create([] {});
-  GetToken(max_retries_,
-           [callback = cancellable->WrapCallback(callback)](
-               auto status, auto token) { callback(status, token->local_id); });
+  GetToken(max_retries_, [callback = cancellable->WrapCallback(callback)](
+                             auto status, auto token) {
+    callback(status, token ? token->local_id : "");
+  });
   return cancellable;
 }
 

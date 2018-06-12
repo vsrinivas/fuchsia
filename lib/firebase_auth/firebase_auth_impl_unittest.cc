@@ -80,12 +80,9 @@ TEST_F(FirebaseAuthImplTest, GetFirebaseToken) {
 }
 
 TEST_F(FirebaseAuthImplTest, GetFirebaseTokenRetryOnError) {
-  token_provider_.Set("this is a token", "some id", "me@example.com");
-
   AuthStatus auth_status;
   std::string firebase_token;
-  token_provider_.error_to_return.status =
-      fuchsia::modular::auth::Status::NETWORK_ERROR;
+  token_provider_.SetError(fuchsia::modular::auth::Status::NETWORK_ERROR);
   backoff_->SetOnGetNext(MakeQuitTask());
   bool called = false;
   firebase_auth_.GetFirebaseToken(
@@ -101,7 +98,7 @@ TEST_F(FirebaseAuthImplTest, GetFirebaseTokenRetryOnError) {
   EXPECT_EQ(0, backoff_->reset_count);
   EXPECT_EQ(0, report_observation_count_);
 
-  token_provider_.error_to_return.status = fuchsia::modular::auth::Status::OK;
+  token_provider_.Set("this is a token", "some id", "me@example.com");
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_TRUE(called);
   EXPECT_EQ(AuthStatus::OK, auth_status);
@@ -125,12 +122,9 @@ TEST_F(FirebaseAuthImplTest, GetFirebaseUserId) {
 }
 
 TEST_F(FirebaseAuthImplTest, GetFirebaseUserIdRetryOnError) {
-  token_provider_.Set("this is a token", "some id", "me@example.com");
-
   AuthStatus auth_status;
   std::string firebase_id;
-  token_provider_.error_to_return.status =
-      fuchsia::modular::auth::Status::NETWORK_ERROR;
+  token_provider_.SetError(fuchsia::modular::auth::Status::NETWORK_ERROR);
   backoff_->SetOnGetNext(MakeQuitTask());
   bool called = false;
   firebase_auth_.GetFirebaseUserId(
@@ -146,7 +140,7 @@ TEST_F(FirebaseAuthImplTest, GetFirebaseUserIdRetryOnError) {
   EXPECT_EQ(0, backoff_->reset_count);
   EXPECT_EQ(0, report_observation_count_);
 
-  token_provider_.error_to_return.status = fuchsia::modular::auth::Status::OK;
+  token_provider_.Set("this is a token", "some id", "me@example.com");
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_TRUE(called);
   EXPECT_EQ(AuthStatus::OK, auth_status);
@@ -157,11 +151,8 @@ TEST_F(FirebaseAuthImplTest, GetFirebaseUserIdRetryOnError) {
 }
 
 TEST_F(FirebaseAuthImplTest, GetFirebaseUserIdMaxRetry) {
-  token_provider_.Set("this is a token", "some id", "me@example.com");
-
   AuthStatus auth_status;
-  token_provider_.error_to_return.status =
-      fuchsia::modular::auth::Status::NETWORK_ERROR;
+  token_provider_.SetError(fuchsia::modular::auth::Status::NETWORK_ERROR);
   backoff_->SetOnGetNext(MakeQuitTask());
   bool called = false;
   firebase_auth_.GetFirebaseUserId(
@@ -177,8 +168,7 @@ TEST_F(FirebaseAuthImplTest, GetFirebaseUserIdMaxRetry) {
   EXPECT_EQ(0, report_observation_count_);
 
   // Exceeding the maximum number of retriable errors returns an error.
-  token_provider_.error_to_return.status =
-      fuchsia::modular::auth::Status::INTERNAL_ERROR;
+  token_provider_.SetError(fuchsia::modular::auth::Status::INTERNAL_ERROR);
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_TRUE(called);
   EXPECT_EQ(AuthStatus::ERROR, auth_status);
@@ -188,11 +178,8 @@ TEST_F(FirebaseAuthImplTest, GetFirebaseUserIdMaxRetry) {
 }
 
 TEST_F(FirebaseAuthImplTest, GetFirebaseUserIdNonRetriableError) {
-  token_provider_.Set("this is a token", "some id", "me@example.com");
-
   AuthStatus auth_status;
-  token_provider_.error_to_return.status =
-      fuchsia::modular::auth::Status::BAD_REQUEST;
+  token_provider_.SetError(fuchsia::modular::auth::Status::BAD_REQUEST);
   backoff_->SetOnGetNext(MakeQuitTask());
   bool called = false;
   firebase_auth_.GetFirebaseUserId(

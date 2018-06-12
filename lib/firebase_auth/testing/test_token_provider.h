@@ -31,15 +31,18 @@ class TestTokenProvider : public fuchsia::modular::auth::TokenProvider {
 
   void GetClientId(GetClientIdCallback /*callback*/) override;
 
+  // Sets the token to return with the provided parameters, and status to OK.
   void Set(std::string id_token, std::string local_id, std::string email);
 
-  void SetNull();
-
-  fuchsia::modular::auth::FirebaseTokenPtr token_to_return;
-  fuchsia::modular::auth::AuthErr error_to_return;
+  // Sets the token to return to null, and status to |error|.
+  // |error| must not be OK.
+  void SetError(fuchsia::modular::auth::Status error);
 
  private:
   async_t* const async_;
+  fuchsia::modular::auth::FirebaseTokenPtr token_to_return_;
+  fuchsia::modular::auth::AuthErr error_to_return_;
+
   FXL_DISALLOW_COPY_AND_ASSIGN(TestTokenProvider);
 };
 
