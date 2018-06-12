@@ -3,6 +3,6 @@
         "binary": "bin/app"
     },
     "sandbox": {
-        "dev": [ "misc", "class/thermal" ]
+        "dev": [ "misc", "class/thermal", "class/gpu-thermal" ]
     }
 }

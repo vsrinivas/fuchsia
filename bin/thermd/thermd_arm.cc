@@ -4,6 +4,7 @@
 
 #include <zircon/device/sysinfo.h>
 #include <zircon/device/thermal.h>
+#include <zircon/device/gpu.h>
 #include <zircon/syscalls/system.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/port.h>
@@ -33,7 +34,7 @@ int main(int argc, char** argv) {
     printf("thermd: started\n");
 
     // TODO(braval): This sleep is not needed here but leaving it here
-    // since the Interl thermd has it. Clean up when both deamons are
+    // since the Intel thermd has it. Clean up when both deamons are
     // unified
     zx_nanosleep(zx_deadline_after(ZX_SEC(3)));
 
@@ -54,7 +55,14 @@ int main(int argc, char** argv) {
     // first device is the one we are interested
     int fd = open("/dev/class/thermal/000", O_RDWR);
     if (fd < 0) {
-        fprintf(stderr, "ERROR: Failed to open sensor: %d\n", fd);
+        fprintf(stderr, "ERROR: Failed to open sensor: %d (errno %d) \n", fd, errno);
+        return -1;
+    }
+
+    // first device is the one we are interested
+    int fd_gpu = open("/dev/class/gpu-thermal/000", O_RDONLY);
+    if (fd_gpu < 0) {
+        fprintf(stderr, "ERROR: Failed to open gpu: %d (errno %d) \n", fd_gpu, errno);
         return -1;
     }
 
@@ -129,6 +137,17 @@ int main(int argc, char** argv) {
                 rc = ioctl_thermal_set_fan_level(fd, &fan_level);
                 if (rc) {
                     fprintf(stderr, "ERROR: Failed to set fan level: %zd\n", rc);
+                    return rc;
+                }
+            }
+        }
+
+        if (info.gpu_throttling) {
+            int gpu_clk_freq_source = info.trip_point_info[trip_idx].gpu_clk_freq_source;
+            if (gpu_clk_freq_source != -1) {
+                rc = ioctl_gpu_set_clk_freq_source(fd_gpu, &gpu_clk_freq_source);
+                if (rc) {
+                    fprintf(stderr, "ERROR: Failed to change gpu clock freq source: %zd\n", rc);
                     return rc;
                 }
             }
