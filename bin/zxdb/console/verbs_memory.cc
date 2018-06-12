@@ -20,6 +20,7 @@
 #include "garnet/bin/zxdb/console/command.h"
 #include "garnet/bin/zxdb/console/command_utils.h"
 #include "garnet/bin/zxdb/console/console.h"
+#include "garnet/bin/zxdb/console/format_table.h"
 #include "garnet/bin/zxdb/console/memory_format.h"
 #include "garnet/bin/zxdb/console/output_buffer.h"
 
@@ -154,7 +155,7 @@ void CompleteDisassemble(const Err& err, MemoryDump dump, uint64_t num_instr,
   spec[0].pad_left = 2;
 
   OutputBuffer out;
-  FormatColumns(spec, rows, &out);
+  FormatTable(spec, rows, &out);
   console->Output(std::move(out));
 }
 

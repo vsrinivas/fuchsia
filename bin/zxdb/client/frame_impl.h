@@ -23,9 +23,9 @@ class FrameImpl : public Frame {
   Thread* GetThread() const override;
   const Location& GetLocation() const override;
 
+ private:
   void EnsureSymbolized();
 
- private:
   ThreadImpl* thread_;
 
   debug_ipc::StackFrame stack_frame_;

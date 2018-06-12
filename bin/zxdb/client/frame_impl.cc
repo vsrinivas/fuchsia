@@ -21,13 +21,17 @@ FrameImpl::~FrameImpl() = default;
 
 Thread* FrameImpl::GetThread() const { return thread_; }
 
-const Location& FrameImpl::GetLocation() const { return location_; }
+const Location& FrameImpl::GetLocation() const {
+  // This function is externally const but the symbols are populated lazily.
+  const_cast<FrameImpl*>(this)->EnsureSymbolized();
+  return location_;
+}
 
 void FrameImpl::EnsureSymbolized() {
   if (location_.is_symbolized())
     return;
-  location_ = thread_->process()->GetSymbols()->LocationForAddress(
-      location_.address());
+  location_ =
+      thread_->process()->GetSymbols()->LocationForAddress(location_.address());
 }
 
 }  // namespace zxdb

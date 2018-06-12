@@ -121,49 +121,4 @@ TEST(CommandUtils, ParseHostPort) {
   EXPECT_TRUE(ParseHostPort("google.com:0", &host, &port).has_error());
   EXPECT_TRUE(ParseHostPort("google.com:99999999", &host, &port).has_error());
 }
-
-TEST(CommandUtils, FormatColumns) {
-  // Test with no data.
-  OutputBuffer out;
-  std::vector<std::vector<std::string>> rows;
-  FormatColumns({ColSpec(), ColSpec()}, rows, &out);
-  EXPECT_EQ("", out.AsString());
-
-  // Heading only.
-  out = OutputBuffer();
-  FormatColumns(
-      {ColSpec(Align::kLeft, 0, "One"), ColSpec(Align::kLeft, 0, "Two")}, rows,
-      &out);
-  EXPECT_EQ("One Two\n", out.AsString());
-
-  // Two rows for all tests below.
-  rows.push_back(std::vector<std::string>{"0", "Hello, world"});
-  rows.push_back(std::vector<std::string>{"12345", "Hello"});
-
-  // Left align.
-  out = OutputBuffer();
-  FormatColumns({ColSpec(), ColSpec()}, rows, &out);
-  EXPECT_EQ("0     Hello, world\n12345 Hello\n", out.AsString());
-
-  // Right align with padding.
-  out = OutputBuffer();
-  FormatColumns(
-      {ColSpec(Align::kRight), ColSpec(Align::kRight, 0, std::string(), 2)},
-      rows, &out);
-  EXPECT_EQ("    0   Hello, world\n12345          Hello\n", out.AsString());
-
-  // Max width + heading.
-  out = OutputBuffer();
-  FormatColumns(
-      {ColSpec(Align::kRight, 3, "One"), ColSpec(Align::kLeft, 3, "Two")}, rows,
-      &out);
-  EXPECT_EQ("One Two\n  0 Hello, world\n12345 Hello\n", out.AsString());
-
-  // Overflowing cells shouldn't force the whole column to max width.
-  out = OutputBuffer();
-  FormatColumns({ColSpec(Align::kRight, 1), ColSpec(Align::kLeft, 0)}, rows,
-                &out);
-  EXPECT_EQ("0 Hello, world\n12345 Hello\n", out.AsString());
-}
-
 }  // namespace zxdb

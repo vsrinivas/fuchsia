@@ -11,9 +11,12 @@
 namespace zxdb {
 
 struct BreakpointSettings;
+class Frame;
 
-// Reads the location string and fills in the BreakpointSettings co
-Err ParseBreakpointLocation(const std::string& input,
+// Reads the location string and fills in the BreakpointSettings. The frame
+// is used for implied file names based on the current frame, and can be null
+// if there is no current frame.
+Err ParseBreakpointLocation(const Frame* frame, const std::string& input,
                             BreakpointSettings* settings);
 
 }  // namespace zxdb

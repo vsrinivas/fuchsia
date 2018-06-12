@@ -6,7 +6,9 @@
 
 #include "garnet/bin/zxdb/client/breakpoint.h"
 #include "garnet/bin/zxdb/client/breakpoint_settings.h"
+#include "garnet/bin/zxdb/client/frame.h"
 #include "garnet/bin/zxdb/client/session.h"
+#include "garnet/bin/zxdb/client/symbols/location.h"
 #include "garnet/bin/zxdb/console/command.h"
 #include "garnet/bin/zxdb/console/command_utils.h"
 #include "garnet/bin/zxdb/console/console.h"
@@ -67,7 +69,7 @@ Err CreateOrEditBreakpoint(ConsoleContext* context, const Command& cmd,
     if (!breakpoint)
       return Err(ErrType::kInput, "New breakpoints must specify a location.");
   } else if (cmd.args().size() == 1u) {
-    Err err = ParseBreakpointLocation(cmd.args()[0], &settings);
+    Err err = ParseBreakpointLocation(cmd.frame(), cmd.args()[0], &settings);
     if (err.has_error())
       return err;
   } else {
@@ -187,9 +189,23 @@ See also
 
 Examples
 
+  break MyClass::MyFunc
+      Breakpoint in all processes that have a function with this name.
+
   break *0x123c9df
+      Process-specific breakpoint at the given address.
+
   process 3 break MyClass::MyFunc
+      Process-specific breakpoint at the given function.
+
   thread 1 break foo.cpp:34
+      Thread-specific breakpoint at the give file/line.
+
+  break 23
+      Break at line 23 of the file referenced by the current frame.
+
+  frame 3 break 23
+      Break at line 23 of the file referenced by frame 3.
 )";
 Err DoBreak(ConsoleContext* context, const Command& cmd) {
   Err err =
@@ -320,7 +336,7 @@ Err DoEdit(ConsoleContext* context, const Command& cmd) {
 
 }  // namespace
 
-Err ParseBreakpointLocation(const std::string& input,
+Err ParseBreakpointLocation(const Frame* frame, const std::string& input,
                             BreakpointSettings* settings) {
   if (input.empty())
     return Err("Passed empty breakpoint location.");
@@ -362,10 +378,22 @@ Err ParseBreakpointLocation(const std::string& input,
     return Err();
   }
 
-  // Number, assume line number in current file.
-  return Err(
-      "TODO(brettw): Need to get the current source file to interpret "
-      "this line number inside of.");
+  // Just a number, use the file name from the specified frame.
+  if (!frame) {
+    return Err(
+        "There is no current frame to get a file name, you'll have to "
+        "specify one.");
+  }
+  const Location& location = frame->GetLocation();
+  if (location.file_line().file().empty()) {
+    return Err(
+        "The current frame doesn't have a file name to use, you'll "
+        "have to specify one.");
+  }
+  settings->location_type = BreakpointSettings::LocationType::kLine;
+  settings->location_line =
+      FileLine(location.file_line().file(), static_cast<int>(line));
+  return Err();
 }
 
 void AppendBreakpointVerbs(std::map<Verb, VerbRecord>* verbs) {

@@ -167,12 +167,15 @@ Location ModuleSymbolsImpl::RelativeLocationForRelativeAddress(
   // Currently this just uses the main helper functions on DWARFContext that
   // retrieve the line information.
   //
-  // In the future, we will ahve more advanced needs, like understanding the
+  // In the future, we will have more advanced needs, like understanding the
   // local variables at a given address, and detailed information about the
   // function they're part of. For this, we'll need the nested sequence of
   // scope DIEs plus the function declaration DIE. In that case, we'll need to
   // make this more advanced and extract the information ourselves.
-  llvm::DILineInfo line_info = context_->getLineInfoForAddress(address);
+  llvm::DILineInfo line_info = context_->getLineInfoForAddress(
+      address,
+      llvm::DILineInfoSpecifier(
+          llvm::DILineInfoSpecifier::FileLineInfoKind::AbsoluteFilePath));
   if (!line_info)
     return Location(Location::State::kSymbolized, address);  // No symbol.
   return Location(address,

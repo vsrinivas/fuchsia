@@ -23,33 +23,6 @@
 
 namespace zxdb {
 
-namespace {
-
-// Appends the given string to the output, padding with spaces to the width
-// as necessary.
-void AppendPadded(const std::string& str, int width, Align align, Syntax syntax,
-                  bool is_last_col, OutputBuffer* out) {
-  std::string text;
-
-  int pad = std::max(0, width - static_cast<int>(str.size()));
-  if (align == Align::kRight)
-    text.append(pad, ' ');
-
-  text.append(str);
-
-  // Padding on the right. Don't add for the last col.
-  if (!is_last_col && align == Align::kLeft)
-    text.append(pad, ' ');
-
-  // Separator after columns for all but the last.
-  if (!is_last_col)
-    text.push_back(' ');
-
-  out->Append(syntax, std::move(text));
-}
-
-}  // namespace
-
 Err AssertRunningTarget(ConsoleContext* context, const char* command_name,
                         Target* target) {
   Target::State state = target->GetState();
@@ -331,57 +304,11 @@ std::string DescribeLocation(const Location& loc) {
                            DescribeFileLine(loc.file_line()).c_str());
 }
 
-std::string DescribeFileLine(const FileLine& file_line) {
-  return fxl::StringPrintf("%s:%d", file_line.file().c_str(), file_line.line());
-}
-
-void FormatColumns(const std::vector<ColSpec>& spec,
-                   const std::vector<std::vector<std::string>>& rows,
-                   OutputBuffer* out) {
-  std::vector<int> max;  // Max width of each column.
-
-  // Max widths of headings.
-  bool has_head = false;
-  for (const auto& col : spec) {
-    max.push_back(col.head.size());
-    has_head |= !col.head.empty();
-  }
-
-  // Max widths of contents.
-  for (const auto& row : rows) {
-    FXL_DCHECK(row.size() == max.size()) << "Column spec size doesn't match.";
-    for (size_t i = 0; i < row.size(); i++) {
-      // Only count the ones that don't overflow.
-      int cell_size = static_cast<int>(row[i].size());
-      if (spec[i].max_width == 0 || cell_size <= spec[i].max_width)
-        max[i] = std::max(max[i], cell_size);
-    }
-  }
-
-  // Print heading.
-  if (has_head) {
-    for (size_t i = 0; i < max.size(); i++) {
-      const ColSpec& col = spec[i];
-      if (col.pad_left)
-        out->Append(Syntax::kNormal, std::string(col.pad_left, ' '));
-      AppendPadded(col.head, max[i], col.align, Syntax::kHeading,
-                   i == max.size() - 1, out);
-    }
-    out->Append("\n");
-  }
-
-  // Print rows.
-  for (const auto& row : rows) {
-    std::string text;
-    for (size_t i = 0; i < row.size(); i++) {
-      const ColSpec& col = spec[i];
-      if (col.pad_left)
-        out->Append(Syntax::kNormal, std::string(col.pad_left, ' '));
-      AppendPadded(row[i], max[i], col.align, col.syntax, i == max.size() - 1,
-                   out);
-    }
-    out->Append("\n");
-  }
+std::string DescribeFileLine(const FileLine& file_line, bool show_path) {
+  return fxl::StringPrintf("%s:%d",
+                           show_path ? file_line.file().c_str()
+                                     : file_line.GetFileNamePart().c_str(),
+                           file_line.line());
 }
 
 }  // namespace zxdb

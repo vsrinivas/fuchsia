@@ -15,6 +15,7 @@
 #include "garnet/bin/zxdb/console/command.h"
 #include "garnet/bin/zxdb/console/command_utils.h"
 #include "garnet/bin/zxdb/console/console.h"
+#include "garnet/bin/zxdb/console/format_table.h"
 #include "garnet/bin/zxdb/console/output_buffer.h"
 #include "garnet/public/lib/fxl/strings/string_printf.h"
 
@@ -320,9 +321,9 @@ void OnLibsComplete(const Err& err, std::vector<debug_ipc::Module> modules) {
   }
 
   OutputBuffer out;
-  FormatColumns({ColSpec(Align::kRight, 0, "Load address", 2),
-                 ColSpec(Align::kLeft, 0, "Name", 1)},
-                rows, &out);
+  FormatTable({ColSpec(Align::kRight, 0, "Load address", 2),
+               ColSpec(Align::kLeft, 0, "Name", 1)},
+              rows, &out);
   console->Output(std::move(out));
 }
 
@@ -410,11 +411,11 @@ void OnAspaceComplete(const Err& err,
   }
 
   OutputBuffer out;
-  FormatColumns({ColSpec(Align::kRight, 0, "Start", 2),
-                 ColSpec(Align::kRight, 0, "End", 2),
-                 ColSpec(Align::kRight, 0, "Size", 2),
-                 ColSpec(Align::kLeft, 0, "Name", 1)},
-                rows, &out);
+  FormatTable({ColSpec(Align::kRight, 0, "Start", 2),
+               ColSpec(Align::kRight, 0, "End", 2),
+               ColSpec(Align::kRight, 0, "Size", 2),
+               ColSpec(Align::kLeft, 0, "Name", 1)},
+              rows, &out);
 
   console->Output(std::move(out));
 }

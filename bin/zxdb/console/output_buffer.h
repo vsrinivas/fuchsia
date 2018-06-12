@@ -27,9 +27,14 @@ class OutputBuffer {
   OutputBuffer();
   ~OutputBuffer();
 
-  // Appends a string.
+  // Helpers to construct an OutputBuffer with one substring in it.
+  static OutputBuffer WithContents(std::string str);
+  static OutputBuffer WithContents(Syntax syntax, std::string str);
+
+  // Appends a string or another OutputBuffer.
   void Append(std::string str);
   void Append(Syntax syntax, std::string str);
+  void Append(OutputBuffer buffer);
 
   // Outputs the given help string, applying help-style formatting.
   void FormatHelp(const std::string& str);
@@ -42,6 +47,10 @@ class OutputBuffer {
 
   // Concatenates to a single string with no formatting.
   std::string AsString() const;
+
+  // Returns the number of Unicode characters in the buffer. Backed by the
+  // version in string_util.h, see that for documentation.
+  size_t UnicodeCharWidth() const;
 
  private:
   struct Span {

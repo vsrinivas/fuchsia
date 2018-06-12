@@ -60,10 +60,8 @@ void ThreadImpl::StepInstruction() {
 std::vector<Frame*> ThreadImpl::GetFrames() const {
   std::vector<Frame*> frames;
   frames.reserve(frames_.size());
-  for (const auto& cur : frames_) {
-    cur->EnsureSymbolized();
+  for (const auto& cur : frames_)
     frames.push_back(cur.get());
-  }
   return frames;
 }
 

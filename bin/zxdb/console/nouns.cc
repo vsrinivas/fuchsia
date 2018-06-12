@@ -18,6 +18,7 @@
 #include "garnet/bin/zxdb/console/command_utils.h"
 #include "garnet/bin/zxdb/console/console.h"
 #include "garnet/bin/zxdb/console/console_context.h"
+#include "garnet/bin/zxdb/console/format_table.h"
 #include "garnet/bin/zxdb/console/output_buffer.h"
 #include "garnet/public/lib/fxl/logging.h"
 #include "garnet/public/lib/fxl/strings/string_printf.h"
@@ -111,7 +112,7 @@ void ListThreads(ConsoleContext* context, Process* process) {
   }
 
   OutputBuffer out;
-  FormatColumns(
+  FormatTable(
       {ColSpec(Align::kLeft), ColSpec(Align::kRight, 0, "#"),
        ColSpec(Align::kLeft, 0, "State"), ColSpec(Align::kRight, 0, "Koid"),
        ColSpec(Align::kLeft, 0, "Name")},
@@ -198,7 +199,7 @@ void ListProcesses(ConsoleContext* context) {
   }
 
   OutputBuffer out;
-  FormatColumns(
+  FormatTable(
       {ColSpec(Align::kLeft), ColSpec(Align::kRight, 0, "#"),
        ColSpec(Align::kLeft, 0, "State"), ColSpec(Align::kRight, 0, "Koid"),
        ColSpec(Align::kLeft, 0, "Name")},
@@ -263,7 +264,7 @@ void ListBreakpoints(ConsoleContext* context) {
   }
 
   OutputBuffer out;
-  FormatColumns(
+  FormatTable(
       {ColSpec(Align::kLeft), ColSpec(Align::kRight, 0, "#"),
        ColSpec(Align::kLeft, 0, "Scope"), ColSpec(Align::kLeft, 0, "Stop"),
        ColSpec(Align::kLeft, 0, "Enabled"),

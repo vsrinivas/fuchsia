@@ -14,6 +14,10 @@ static_library("console") {
     "console.h",
     "console_context.cc",
     "console_context.h",
+    "format_file_context.cc",
+    "format_file_context.h",
+    "format_table.cc",
+    "format_table.h",
     "line_input.cc",
     "line_input.h",
     "memory_format.cc",
@@ -22,6 +26,8 @@ static_library("console") {
     "output_buffer.h",
     "nouns.cc",
     "nouns.h",
+    "string_util.cc",
+    "string_util.h",
     "verbs.h",
     "verbs_breakpoint.cc",
     "verbs_control.cc",
@@ -50,11 +56,14 @@ static_library("console") {
 source_set("tests") {
   testonly = true
   sources = [
-    "verbs_breakpoint_unittest.cc",
     "command_parser_unittest.cc",
     "command_utils_unittest.cc",
+    "format_file_context_unittest.cc",
+    "format_table_unittest.cc",
     "line_input_unittest.cc",
     "memory_format_unittest.cc",
+    "string_util_unittest.cc",
+    "verbs_breakpoint_unittest.cc",
   ]
 
   deps = [

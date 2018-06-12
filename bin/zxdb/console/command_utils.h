@@ -69,44 +69,9 @@ std::string DescribeBreakpoint(const ConsoleContext* context,
 
 std::string DescribeBreakpointLocation(const BreakpointSettings& settings);
 std::string DescribeLocation(const Location& loc);
-std::string DescribeFileLine(const FileLine& file_line);
 
-enum class Align { kLeft, kRight };
-
-struct ColSpec {
-  explicit ColSpec(Align align = Align::kLeft, int max_width = 0,
-                   const std::string& head = std::string(), int pad_left = 0)
-      : align(align), max_width(max_width), head(head), pad_left(pad_left) {}
-
-  Align align = Align::kLeft;
-
-  // If anything is above the max width, we'll give up and push the remaining
-  // cells for that row to the right as necessary.
-  //
-  // 0 means no maximum.
-  int max_width = 0;
-
-  // Empty string means no heading.
-  std::string head;
-
-  // Extra padding to the left of this column.
-  int pad_left = 0;
-
-  Syntax syntax = Syntax::kNormal;
-};
-
-// Formats the given rows in the output as a series of horizontally aligned (if
-// possible) columns. The number of columns in the spec vector and in each row
-// must match.
-void FormatColumns(const std::vector<ColSpec>& spec,
-                   const std::vector<std::vector<std::string>>& rows,
-                   OutputBuffer* out);
-
-// Helper function to save some typing for static column specs.
-inline void FormatColumns(std::initializer_list<ColSpec> spec,
-                          const std::vector<std::vector<std::string>>& rows,
-                          OutputBuffer* out) {
-  return FormatColumns(std::vector<ColSpec>(spec), rows, out);
-}
+// If show_path is set, the path to the file will be included, otherwise only
+// the last file component will be printed.
+std::string DescribeFileLine(const FileLine& file_line, bool show_path = false);
 
 }  // namespace zxdb

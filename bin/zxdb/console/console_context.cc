@@ -14,6 +14,7 @@
 #include "garnet/bin/zxdb/console/command.h"
 #include "garnet/bin/zxdb/console/command_utils.h"
 #include "garnet/bin/zxdb/console/console.h"
+#include "garnet/bin/zxdb/console/format_file_context.h"
 #include "garnet/bin/zxdb/console/output_buffer.h"
 #include "garnet/public/lib/fxl/logging.h"
 #include "garnet/public/lib/fxl/strings/string_printf.h"
@@ -427,7 +428,11 @@ void ConsoleContext::OnThreadStopped(Thread* thread,
   // Frame (current position will always be frame 0).
   const auto& frames = thread->GetFrames();
   FXL_DCHECK(!frames.empty());
-  out.Append(DescribeLocation(frames[0]->GetLocation()));
+
+  const Location& location = frames[0]->GetLocation();
+  out.Append(DescribeLocation(location));
+  out.Append("\n");
+  FormatFileContext(location, &out);
 
   console->Output(std::move(out));
 }

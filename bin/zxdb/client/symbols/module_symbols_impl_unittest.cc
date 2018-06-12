@@ -83,12 +83,14 @@ TEST(ModuleSymbols, AddressesForLine) {
   ASSERT_EQ(1u, addrs.size());
   Location location = module.RelativeLocationForRelativeAddress(addrs[0]);
   EXPECT_EQ(27, location.file_line().line());
+  EXPECT_EQ(file_name, location.file_line().file());
 
   // Line 26 is a comment line, looking it up should get the following line.
   addrs = module.RelativeAddressesForLine(FileLine(file_name, 26));
   ASSERT_EQ(1u, addrs.size());
   location = module.RelativeLocationForRelativeAddress(addrs[0]);
   EXPECT_EQ(27, location.file_line().line());
+  EXPECT_EQ(file_name, location.file_line().file());
 
   // Line 15 is the beginning of the templatized function. There should be
   // two matches since its instantiated twice.
@@ -96,8 +98,10 @@ TEST(ModuleSymbols, AddressesForLine) {
   ASSERT_EQ(2u, addrs.size());
   location = module.RelativeLocationForRelativeAddress(addrs[0]);
   EXPECT_EQ(15, location.file_line().line());
+  EXPECT_EQ(file_name, location.file_line().file());
   location = module.RelativeLocationForRelativeAddress(addrs[1]);
   EXPECT_EQ(15, location.file_line().line());
+  EXPECT_EQ(file_name, location.file_line().file());
 
   // Line 17 is only present in one of the two template instantiations.
   // We should only find it once (see note below about case #2).
