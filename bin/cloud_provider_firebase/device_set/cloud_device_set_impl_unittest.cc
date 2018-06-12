@@ -6,10 +6,10 @@
 
 #include <map>
 
-#include "gtest/gtest.h"
 #include "lib/callback/capture.h"
+#include "lib/callback/set_when_called.h"
 #include "lib/fxl/logging.h"
-#include "lib/gtest/test_with_message_loop.h"
+#include "lib/gtest/test_with_loop.h"
 
 namespace cloud_provider_firebase {
 namespace {
@@ -81,7 +81,7 @@ class FakeFirebase : public firebase::Firebase {
   int unwatch_calls = 0;
 };
 
-class CloudDeviceSetImplTest : public gtest::TestWithMessageLoop {
+class CloudDeviceSetImplTest : public gtest::TestWithLoop {
  public:
   CloudDeviceSetImplTest() : cloud_device_set_(InitFirebase()) {}
 
@@ -98,11 +98,13 @@ class CloudDeviceSetImplTest : public gtest::TestWithMessageLoop {
 
 TEST_F(CloudDeviceSetImplTest, CheckFingerprintOk) {
   firebase_->returned_value = "true";
+  bool called;
   CloudDeviceSet::Status status;
   cloud_device_set_.CheckFingerprint(
       "some-token", "some-fingerprint",
-      callback::Capture(MakeQuitTask(), &status));
-  EXPECT_FALSE(RunLoopWithTimeout());
+      callback::Capture(callback::SetWhenCalled(&called), &status));
+  RunLoopUntilIdle();
+  EXPECT_TRUE(called);
   EXPECT_EQ(CloudDeviceSet::Status::OK, status);
   EXPECT_EQ((std::vector<std::vector<std::string>>{{"auth=some-token"}}),
             firebase_->get_query_params);
@@ -110,11 +112,13 @@ TEST_F(CloudDeviceSetImplTest, CheckFingerprintOk) {
 
 TEST_F(CloudDeviceSetImplTest, CheckFingerprintErased) {
   firebase_->returned_value = "null";
+  bool called;
   CloudDeviceSet::Status status;
   cloud_device_set_.CheckFingerprint(
       "some-token", "some-fingerprint",
-      callback::Capture(MakeQuitTask(), &status));
-  EXPECT_FALSE(RunLoopWithTimeout());
+      callback::Capture(callback::SetWhenCalled(&called), &status));
+  RunLoopUntilIdle();
+  EXPECT_TRUE(called);
   EXPECT_EQ(CloudDeviceSet::Status::ERASED, status);
   EXPECT_EQ((std::vector<std::vector<std::string>>{{"auth=some-token"}}),
             firebase_->get_query_params);
@@ -122,24 +126,29 @@ TEST_F(CloudDeviceSetImplTest, CheckFingerprintErased) {
 
 TEST_F(CloudDeviceSetImplTest, CheckFingerprintDeleteInCallback) {
   firebase_->returned_value = "null";
+  bool called;
   CloudDeviceSet::Status status;
   auto checker = std::make_unique<CloudDeviceSetImpl>(InitFirebase());
   checker->CheckFingerprint("some-token", "some-fingerprint",
-                            [this, &checker, &status](auto s) {
+                            [&checker, &status, &called](auto s) {
                               checker.reset();
                               status = s;
-                              message_loop_.PostQuitTask();
+                              called = true;
                             });
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoopUntilIdle();
+  EXPECT_TRUE(called);
   EXPECT_FALSE(checker);
   EXPECT_EQ(CloudDeviceSet::Status::ERASED, status);
 }
 
 TEST_F(CloudDeviceSetImplTest, SetFingerprintOk) {
+  bool called;
   CloudDeviceSet::Status status;
-  cloud_device_set_.SetFingerprint("some-token", "some-fingerprint",
-                                   callback::Capture(MakeQuitTask(), &status));
-  EXPECT_FALSE(RunLoopWithTimeout());
+  cloud_device_set_.SetFingerprint(
+      "some-token", "some-fingerprint",
+      callback::Capture(callback::SetWhenCalled(&called), &status));
+  RunLoopUntilIdle();
+  EXPECT_TRUE(called);
   EXPECT_EQ(CloudDeviceSet::Status::OK, status);
   EXPECT_EQ((std::vector<std::vector<std::string>>{{"auth=some-token"}}),
             firebase_->put_query_params);
@@ -191,10 +200,13 @@ TEST_F(CloudDeviceSetImplTest, WatchUnwatchOnDelete) {
 }
 
 TEST_F(CloudDeviceSetImplTest, EraseAllFingerprints) {
+  bool called;
   CloudDeviceSet::Status status;
   cloud_device_set_.EraseAllFingerprints(
-      "some-token", callback::Capture(MakeQuitTask(), &status));
-  EXPECT_FALSE(RunLoopWithTimeout());
+      "some-token",
+      callback::Capture(callback::SetWhenCalled(&called), &status));
+  RunLoopUntilIdle();
+  EXPECT_TRUE(called);
   EXPECT_EQ(CloudDeviceSet::Status::OK, status);
   EXPECT_EQ((std::vector<std::vector<std::string>>{{"auth=some-token"}}),
             firebase_->delete_query_params);

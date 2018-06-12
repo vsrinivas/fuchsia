@@ -12,14 +12,14 @@
 
 #include "gtest/gtest.h"
 #include "lib/callback/capture.h"
+#include "lib/callback/set_when_called.h"
 #include "lib/fsl/socket/strings.h"
-#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fsl/vmo/strings.h"
 #include "lib/fxl/files/file.h"
 #include "lib/fxl/files/scoped_temp_dir.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/strings/string_number_conversions.h"
-#include "lib/gtest/test_with_message_loop.h"
+#include "lib/gtest/test_with_loop.h"
 #include "lib/network_wrapper/fake_network_wrapper.h"
 
 namespace gcs {
@@ -40,10 +40,10 @@ http::HttpHeaderPtr GetHeader(const fidl::VectorPtr<http::HttpHeader>& headers,
   return nullptr;
 }
 
-class CloudStorageImplTest : public gtest::TestWithMessageLoop {
+class CloudStorageImplTest : public gtest::TestWithLoop {
  public:
   CloudStorageImplTest()
-      : fake_network_wrapper_(message_loop_.async()),
+      : fake_network_wrapper_(dispatcher()),
         gcs_(&fake_network_wrapper_, "project", "prefix") {}
   ~CloudStorageImplTest() override {}
 
@@ -84,11 +84,13 @@ TEST_F(CloudStorageImplTest, TestUpload) {
   ASSERT_TRUE(fsl::VmoFromString(content, &data));
 
   SetResponse("", 0, 200);
+  bool called;
   Status status;
   gcs_.UploadObject("", "hello-world", std::move(data),
-                    callback::Capture(MakeQuitTask(), &status));
-  ASSERT_FALSE(RunLoopWithTimeout());
-
+                    callback::Capture(callback::SetWhenCalled(&called),
+                                      &status));
+  RunLoopUntilIdle();
+  EXPECT_TRUE(called);
   EXPECT_EQ(Status::OK, status);
   EXPECT_EQ(
       "https://firebasestorage.googleapis.com"
@@ -116,11 +118,13 @@ TEST_F(CloudStorageImplTest, TestUploadAuth) {
   ASSERT_TRUE(fsl::VmoFromString(content, &data));
 
   SetResponse("", 0, 200);
+  bool called;
   Status status;
   gcs_.UploadObject("this-is-a-token", "hello-world", std::move(data),
-                    callback::Capture(MakeQuitTask(), &status));
-  ASSERT_FALSE(RunLoopWithTimeout());
-
+                    callback::Capture(callback::SetWhenCalled(&called),
+                                      &status));
+  RunLoopUntilIdle();
+  EXPECT_TRUE(called);
   http::HttpHeaderPtr authorization_header =
       GetHeader(fake_network_wrapper_.GetRequest()->headers, "authorization");
   EXPECT_TRUE(authorization_header);
@@ -133,11 +137,13 @@ TEST_F(CloudStorageImplTest, TestUploadWhenObjectAlreadyExists) {
   ASSERT_TRUE(fsl::VmoFromString(content, &data));
   SetResponse("", 0, 412);
 
+  bool called;
   Status status;
   gcs_.UploadObject("", "hello-world", std::move(data),
-                    callback::Capture(MakeQuitTask(), &status));
-  ASSERT_FALSE(RunLoopWithTimeout());
-
+                    callback::Capture(callback::SetWhenCalled(&called),
+                                      &status));
+  RunLoopUntilIdle();
+  EXPECT_TRUE(called);
   EXPECT_EQ(Status::OBJECT_ALREADY_EXISTS, status);
 }
 
@@ -145,13 +151,15 @@ TEST_F(CloudStorageImplTest, TestDownload) {
   const std::string content = "Hello World\n";
   SetResponse(content, content.size(), 200);
 
+  bool called;
   Status status;
   uint64_t size;
   zx::socket data;
   gcs_.DownloadObject("", "hello-world",
-                      callback::Capture(MakeQuitTask(), &status, &size, &data));
-  ASSERT_FALSE(RunLoopWithTimeout());
-
+                      callback::Capture(callback::SetWhenCalled(&called),
+                                        &status, &size, &data));
+  RunLoopUntilIdle();
+  EXPECT_TRUE(called);
   EXPECT_EQ(Status::OK, status);
   EXPECT_EQ(
       "https://firebasestorage.googleapis.com"
@@ -169,13 +177,15 @@ TEST_F(CloudStorageImplTest, TestDownloadAuth) {
   const std::string content = "Hello World\n";
   SetResponse(content, content.size(), 200);
 
+  bool called;
   Status status;
   uint64_t size;
   zx::socket data;
   gcs_.DownloadObject("this-is-a-token", "hello-world",
-                      callback::Capture(MakeQuitTask(), &status, &size, &data));
-  ASSERT_FALSE(RunLoopWithTimeout());
-
+                      callback::Capture(callback::SetWhenCalled(&called),
+                                        &status, &size, &data));
+  RunLoopUntilIdle();
+  EXPECT_TRUE(called);
   http::HttpHeaderPtr authorization_header =
       GetHeader(fake_network_wrapper_.GetRequest()->headers, "authorization");
   EXPECT_TRUE(authorization_header);
@@ -185,13 +195,15 @@ TEST_F(CloudStorageImplTest, TestDownloadAuth) {
 TEST_F(CloudStorageImplTest, TestDownloadNotFound) {
   SetResponse("", 0, 404);
 
+  bool called;
   Status status;
   uint64_t size;
   zx::socket data;
   gcs_.DownloadObject("", "whoa",
-                      callback::Capture(MakeQuitTask(), &status, &size, &data));
-  ASSERT_FALSE(RunLoopWithTimeout());
-
+                      callback::Capture(callback::SetWhenCalled(&called),
+                                        &status, &size, &data));
+  RunLoopUntilIdle();
+  EXPECT_TRUE(called);
   EXPECT_EQ(Status::NOT_FOUND, status);
   EXPECT_EQ(
       "https://firebasestorage.googleapis.com"
@@ -204,18 +216,20 @@ TEST_F(CloudStorageImplTest, TestDownloadWithResponseBodyTooShort) {
   const std::string content = "abc";
   SetResponse(content, content.size() + 1, 200);
 
+  bool called;
   Status status;
   uint64_t size;
   zx::socket data;
   gcs_.DownloadObject("", "hello-world",
-                      callback::Capture(MakeQuitTask(), &status, &size, &data));
-  ASSERT_FALSE(RunLoopWithTimeout());
-
+                      callback::Capture(callback::SetWhenCalled(&called),
+                                        &status, &size, &data));
+  RunLoopUntilIdle();
   std::string downloaded_content;
   EXPECT_TRUE(fsl::BlockingCopyToString(std::move(data), &downloaded_content));
 
   // As the result is returned in a socket, we pass the expected size to the
   // client so that they can verify if the response is complete.
+  EXPECT_TRUE(called);
   EXPECT_EQ(Status::OK, status);
   EXPECT_EQ(4u, size);
   EXPECT_EQ(3u, downloaded_content.size());

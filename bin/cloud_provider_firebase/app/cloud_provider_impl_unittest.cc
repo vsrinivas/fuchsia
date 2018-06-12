@@ -6,9 +6,10 @@
 
 #include <fuchsia/ledger/cloud/cpp/fidl.h>
 
+#include "lib/callback/set_when_called.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fxl/macros.h"
-#include "lib/gtest/test_with_message_loop.h"
+#include "lib/gtest/test_with_loop.h"
 #include "lib/network_wrapper/fake_network_wrapper.h"
 #include "peridot/lib/firebase_auth/testing/fake_token_provider.h"
 #include "peridot/lib/firebase_auth/testing/test_firebase_auth.h"
@@ -34,15 +35,15 @@ std::unique_ptr<firebase_auth::FirebaseAuth> InitFirebaseAuth(
 
 }  // namespace
 
-class CloudProviderImplTest : public gtest::TestWithMessageLoop {
+class CloudProviderImplTest : public gtest::TestWithLoop {
  public:
   CloudProviderImplTest()
-      : network_wrapper_(message_loop_.async()),
+      : network_wrapper_(dispatcher()),
         cloud_provider_impl_(
             &network_wrapper_,
             "user_id",
             GetFirebaseConfig(),
-            InitFirebaseAuth(message_loop_.async(), &firebase_auth_),
+            InitFirebaseAuth(dispatcher(), &firebase_auth_),
             cloud_provider_.NewRequest()) {}
   ~CloudProviderImplTest() override {}
 
@@ -59,23 +60,17 @@ class CloudProviderImplTest : public gtest::TestWithMessageLoop {
 
 TEST_F(CloudProviderImplTest, EmptyWhenClientDisconnected) {
   bool on_empty_called = false;
-  cloud_provider_impl_.set_on_empty([this, &on_empty_called] {
-    on_empty_called = true;
-    message_loop_.PostQuitTask();
-  });
+  cloud_provider_impl_.set_on_empty(callback::SetWhenCalled(&on_empty_called));
   cloud_provider_.Unbind();
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoopUntilIdle();
   EXPECT_TRUE(on_empty_called);
 }
 
 TEST_F(CloudProviderImplTest, EmptyWhenFirebaseAuthDisconnected) {
   bool on_empty_called = false;
-  cloud_provider_impl_.set_on_empty([this, &on_empty_called] {
-    on_empty_called = true;
-    message_loop_.PostQuitTask();
-  });
+  cloud_provider_impl_.set_on_empty(callback::SetWhenCalled(&on_empty_called));
   firebase_auth_->TriggerConnectionErrorHandler();
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoopUntilIdle();
   EXPECT_TRUE(on_empty_called);
 }
 

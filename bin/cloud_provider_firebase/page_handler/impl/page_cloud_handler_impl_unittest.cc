@@ -16,13 +16,13 @@
 
 #include "gtest/gtest.h"
 #include "lib/callback/capture.h"
+#include "lib/callback/set_when_called.h"
 #include "lib/fsl/socket/strings.h"
-#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fsl/vmo/strings.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/ref_ptr.h"
-#include "lib/gtest/test_with_message_loop.h"
+#include "lib/gtest/test_with_loop.h"
 #include "peridot/bin/cloud_provider_firebase/gcs/cloud_storage.h"
 #include "peridot/bin/cloud_provider_firebase/page_handler/impl/timestamp_conversions.h"
 #include "peridot/lib/firebase/encoding.h"
@@ -32,7 +32,7 @@
 namespace cloud_provider_firebase {
 namespace {
 
-class PageCloudHandlerImplTest : public gtest::TestWithMessageLoop,
+class PageCloudHandlerImplTest : public gtest::TestWithLoop,
                                  public gcs::CloudStorage,
                                  public firebase::Firebase,
                                  public CommitWatcher {
@@ -49,7 +49,7 @@ class PageCloudHandlerImplTest : public gtest::TestWithMessageLoop,
     upload_auth_tokens_.push_back(std::move(auth_token));
     upload_keys_.push_back(key);
     upload_data_.push_back(std::move(data));
-    async::PostTask(message_loop_.async(), [callback = std::move(callback)] {
+    async::PostTask(dispatcher(), [callback = std::move(callback)] {
       callback(gcs::Status::OK);
     });
   }
@@ -61,7 +61,7 @@ class PageCloudHandlerImplTest : public gtest::TestWithMessageLoop,
           callback) override {
     download_auth_tokens_.push_back(std::move(auth_token));
     download_keys_.push_back(key);
-    async::PostTask(message_loop_.async(),
+    async::PostTask(dispatcher(),
                     [this, callback = std::move(callback)] {
                       callback(download_status_, download_response_size_,
                                std::move(download_response_));
@@ -76,10 +76,9 @@ class PageCloudHandlerImplTest : public gtest::TestWithMessageLoop,
                          const rapidjson::Value& value)> callback) override {
     get_keys_.push_back(key);
     get_queries_.push_back(query_params);
-    async::PostTask(message_loop_.async(),
+    async::PostTask(dispatcher(),
                     [this, callback = std::move(callback)] {
                       callback(firebase::Status::OK, *get_response_);
-                      message_loop_.PostQuitTask();
                     });
   }
 
@@ -89,10 +88,9 @@ class PageCloudHandlerImplTest : public gtest::TestWithMessageLoop,
            std::function<void(firebase::Status status)> callback) override {
     put_keys_.push_back(key);
     put_data_.push_back(data);
-    async::PostTask(message_loop_.async(),
-                    [this, callback = std::move(callback)] {
+    async::PostTask(dispatcher(),
+                    [callback = std::move(callback)] {
                       callback(firebase::Status::OK);
-                      message_loop_.PostQuitTask();
                     });
   }
 
@@ -103,10 +101,9 @@ class PageCloudHandlerImplTest : public gtest::TestWithMessageLoop,
     patch_keys_.push_back(key);
     patch_queries_.push_back(query_params);
     patch_data_.push_back(data);
-    async::PostTask(message_loop_.async(),
-                    [this, callback = std::move(callback)] {
+    async::PostTask(dispatcher(),
+                    [callback = std::move(callback)] {
                       callback(firebase::Status::OK);
-                      message_loop_.PostQuitTask();
                     });
   }
 
@@ -197,11 +194,14 @@ TEST_F(PageCloudHandlerImplTest, AddCommit) {
   std::vector<Commit> commits;
   commits.push_back(std::move(commit));
 
+  bool called;
   Status status;
-  cloud_provider_->AddCommits("this-is-a-token", std::move(commits),
-                              callback::Capture(MakeQuitTask(), &status));
-  EXPECT_FALSE(RunLoopWithTimeout());
+  cloud_provider_->AddCommits(
+      "this-is-a-token", std::move(commits),
+      callback::Capture(callback::SetWhenCalled(&called), &status));
+  RunLoopUntilIdle();
 
+  EXPECT_TRUE(called);
   EXPECT_EQ(Status::OK, status);
   ASSERT_EQ(1u, patch_keys_.size());
   EXPECT_EQ("commits", patch_keys_[0]);
@@ -228,10 +228,12 @@ TEST_F(PageCloudHandlerImplTest, AddMultipleCommits) {
   commits.push_back(std::move(commit1));
   commits.push_back(std::move(commit2));
 
+  bool called;
   Status status;
-  cloud_provider_->AddCommits("", std::move(commits),
-                              callback::Capture(MakeQuitTask(), &status));
-  EXPECT_FALSE(RunLoopWithTimeout());
+  cloud_provider_->AddCommits(
+      "", std::move(commits),
+      callback::Capture(callback::SetWhenCalled(&called), &status));
+  RunLoopUntilIdle();
 
   EXPECT_EQ(Status::OK, status);
   ASSERT_EQ(1u, patch_keys_.size());
@@ -556,12 +558,14 @@ TEST_F(PageCloudHandlerImplTest, GetCommits) {
   get_response_->Parse(get_response_content.c_str(),
                        get_response_content.size());
 
+  bool called;
   Status status;
   std::vector<Record> records;
   cloud_provider_->GetCommits(
       "this-is-a-token", ServerTimestampToBytes(42),
-      callback::Capture(MakeQuitTask(), &status, &records));
-  EXPECT_FALSE(RunLoopWithTimeout());
+      callback::Capture(callback::SetWhenCalled(&called), &status, &records));
+  RunLoopUntilIdle();
+  EXPECT_TRUE(called);
   EXPECT_EQ(Status::OK, status);
   const Commit expected_commit_1("id1", "xyz");
   const Commit expected_commit_2("id2", "bazinga");
@@ -603,12 +607,14 @@ TEST_F(PageCloudHandlerImplTest, GetCommitsBatch) {
   get_response_->Parse(get_response_content.c_str(),
                        get_response_content.size());
 
+  bool called;
   Status status;
   std::vector<Record> records;
   cloud_provider_->GetCommits(
       "", ServerTimestampToBytes(42),
-      callback::Capture(MakeQuitTask(), &status, &records));
-  EXPECT_FALSE(RunLoopWithTimeout());
+      callback::Capture(callback::SetWhenCalled(&called), &status, &records));
+  RunLoopUntilIdle();
+  EXPECT_TRUE(called);
   EXPECT_EQ(Status::OK, status);
   const Commit expected_commit_0("id_0", "some_content");
   const Commit expected_commit_1("id_1", "other_content");
@@ -626,13 +632,15 @@ TEST_F(PageCloudHandlerImplTest, GetCommitsWhenThereAreNone) {
   get_response_->Parse(get_response_content.c_str(),
                        get_response_content.size());
 
+  bool called;
   Status status;
   std::vector<Record> records;
   cloud_provider_->GetCommits(
       "", ServerTimestampToBytes(42),
-      callback::Capture(MakeQuitTask(), &status, &records));
-  EXPECT_FALSE(RunLoopWithTimeout());
+      callback::Capture(callback::SetWhenCalled(&called), &status, &records));
+  RunLoopUntilIdle();
 
+  EXPECT_TRUE(called);
   EXPECT_EQ(Status::OK, status);
   EXPECT_TRUE(records.empty());
 }
@@ -641,12 +649,14 @@ TEST_F(PageCloudHandlerImplTest, AddObject) {
   fsl::SizedVmo data;
   ASSERT_TRUE(fsl::VmoFromString("bazinga", &data));
 
+  bool called;
   Status status;
-  cloud_provider_->AddObject("this-is-a-token", "object_digest",
-                             std::move(data),
-                             callback::Capture(MakeQuitTask(), &status));
-  EXPECT_FALSE(RunLoopWithTimeout());
+  cloud_provider_->AddObject(
+      "this-is-a-token", "object_digest", std::move(data),
+      callback::Capture(callback::SetWhenCalled(&called), &status));
+  RunLoopUntilIdle();
 
+  EXPECT_TRUE(called);
   EXPECT_EQ(Status::OK, status);
   EXPECT_EQ(upload_keys_.size(), upload_data_.size());
   EXPECT_EQ(std::vector<std::string>{"this-is-a-token"}, upload_auth_tokens_);
@@ -662,14 +672,17 @@ TEST_F(PageCloudHandlerImplTest, GetObject) {
   download_response_ = fsl::WriteStringToSocket(content);
   download_response_size_ = content.size();
 
+  bool called;
   Status status;
   uint64_t size;
   zx::socket data;
   cloud_provider_->GetObject(
       "this-is-a-token", "object_digest",
-      callback::Capture(MakeQuitTask(), &status, &size, &data));
-  EXPECT_FALSE(RunLoopWithTimeout());
+      callback::Capture(callback::SetWhenCalled(&called),
+                        &status, &size, &data));
+  RunLoopUntilIdle();
 
+  EXPECT_TRUE(called);
   EXPECT_EQ(Status::OK, status);
   std::string data_str;
   EXPECT_TRUE(fsl::BlockingCopyToString(std::move(data), &data_str));
@@ -685,14 +698,16 @@ TEST_F(PageCloudHandlerImplTest, GetObjectNotFound) {
   download_response_ = fsl::WriteStringToSocket("");
   download_status_ = gcs::Status::NOT_FOUND;
 
+  bool called;
   Status status;
   uint64_t size;
   zx::socket data;
   cloud_provider_->GetObject(
       "", "object_digest",
-      callback::Capture(MakeQuitTask(), &status, &size, &data));
-  EXPECT_FALSE(RunLoopWithTimeout());
-
+      callback::Capture(callback::SetWhenCalled(&called), &status, &size,
+                        &data));
+  RunLoopUntilIdle();
+  EXPECT_TRUE(called);
   EXPECT_EQ(Status::NOT_FOUND, status);
   EXPECT_EQ(0u, size);
 }
