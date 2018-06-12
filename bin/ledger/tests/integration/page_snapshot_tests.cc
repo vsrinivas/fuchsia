@@ -30,6 +30,66 @@ class PageSnapshotIntegrationTest : public IntegrationTest {
   PageSnapshotIntegrationTest() {}
   ~PageSnapshotIntegrationTest() override {}
 
+  // Returns a snapshot of |page|, checking success.
+  ledger::PageSnapshotPtr PageGetSnapshot(
+      ledger::PagePtr* page,
+      fidl::VectorPtr<uint8_t> prefix = fidl::VectorPtr<uint8_t>::New(0)) {
+    ledger::Status status;
+    ledger::PageSnapshotPtr snapshot;
+    (*page)->GetSnapshot(
+        snapshot.NewRequest(), std::move(prefix), nullptr,
+        callback::Capture([this] { message_loop_.QuitNow(); }, &status));
+    EXPECT_EQ(ledger::Status::OK, status);
+    return snapshot;
+  }
+
+  // Returns all keys from |snapshot|, starting at |start|. If |num_queries| is
+  // not null, stores the number of calls to GetKeys.
+  std::vector<fidl::VectorPtr<uint8_t>> SnapshotGetKeys(
+      ledger::PageSnapshotPtr* snapshot,
+      fidl::VectorPtr<uint8_t> start = fidl::VectorPtr<uint8_t>::New(0),
+      int* num_queries = nullptr) {
+    std::vector<fidl::VectorPtr<uint8_t>> result;
+    std::unique_ptr<ledger::Token> token;
+    if (num_queries) {
+      *num_queries = 0;
+    }
+    do {
+      ledger::Status status;
+      fidl::VectorPtr<fidl::VectorPtr<uint8_t>> keys;
+      (*snapshot)->GetKeys(
+          start.Clone(), std::move(token),
+          callback::Capture([this] { message_loop_.QuitNow(); }, &status, &keys,
+                            &token));
+      message_loop_.Run();
+      EXPECT_TRUE(status == ledger::Status::OK ||
+                  status == ledger::Status::PARTIAL_RESULT);
+      if (num_queries) {
+        (*num_queries)++;
+      }
+      for (auto& key : keys.take()) {
+        result.push_back(std::move(key));
+      }
+    } while (token);
+    return result;
+  }
+
+  std::string SnapshotFetchPartial(ledger::PageSnapshotPtr* snapshot,
+                                   fidl::VectorPtr<uint8_t> key, int64_t offset,
+                                   int64_t max_size) {
+    ledger::Status status;
+    fuchsia::mem::BufferPtr buffer;
+    (*snapshot)->FetchPartial(
+        std::move(key), offset, max_size,
+        callback::Capture([this] { message_loop_.QuitNow(); }, &status,
+                          &buffer));
+    message_loop_.Run();
+    EXPECT_EQ(ledger::Status::OK, status);
+    std::string result;
+    EXPECT_TRUE(fsl::StringFromVmo(*buffer, &result));
+    return result;
+  }
+
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(PageSnapshotIntegrationTest);
 };
@@ -165,9 +225,8 @@ TEST_P(PageSnapshotIntegrationTest, PageSnapshotGetKeys) {
   // Grab a snapshot before adding any entries and verify that GetKeys()
   // returns empty results.
   ledger::PageSnapshotPtr snapshot = PageGetSnapshot(&page);
-  fidl::VectorPtr<fidl::VectorPtr<uint8_t>> result =
-      SnapshotGetKeys(&snapshot, fidl::VectorPtr<uint8_t>::New(0));
-  EXPECT_EQ(0u, result->size());
+  std::vector<fidl::VectorPtr<uint8_t>> result = SnapshotGetKeys(&snapshot);
+  EXPECT_EQ(0u, result.size());
 
   // Add entries and grab a new snapshot.
   const size_t N = 4;
@@ -186,49 +245,49 @@ TEST_P(PageSnapshotIntegrationTest, PageSnapshotGetKeys) {
   snapshot = PageGetSnapshot(&page);
 
   // Get all keys.
-  result = SnapshotGetKeys(&snapshot, fidl::VectorPtr<uint8_t>::New(0));
-  EXPECT_EQ(N, result->size());
+  result = SnapshotGetKeys(&snapshot);
+  EXPECT_EQ(N, result.size());
   for (size_t i = 0; i < N; ++i) {
-    EXPECT_EQ(keys[i], result->at(i));
+    EXPECT_EQ(keys[i], result.at(i));
   }
 
   // Get keys matching the prefix "0".
   snapshot =
       PageGetSnapshot(&page, fidl::VectorPtr<uint8_t>(std::vector<uint8_t>{0}));
-  result = SnapshotGetKeys(&snapshot, fidl::VectorPtr<uint8_t>::New(0));
-  EXPECT_EQ(N, result->size());
+  result = SnapshotGetKeys(&snapshot);
+  EXPECT_EQ(N, result.size());
   for (size_t i = 0; i < N; ++i) {
-    EXPECT_EQ(keys[i], result->at(i));
+    EXPECT_EQ(keys[i], result.at(i));
   }
 
   // Get keys matching the prefix "00".
   snapshot = PageGetSnapshot(
       &page, fidl::VectorPtr<uint8_t>(std::vector<uint8_t>{0, 0}));
-  result = SnapshotGetKeys(&snapshot, fidl::VectorPtr<uint8_t>::New(0));
-  ASSERT_EQ(2u, result->size());
+  result = SnapshotGetKeys(&snapshot);
+  ASSERT_EQ(2u, result.size());
   for (size_t i = 0; i < 2u; ++i) {
-    EXPECT_EQ(keys[i], result->at(i));
+    EXPECT_EQ(keys[i], result.at(i));
   }
 
   // Get keys matching the prefix "010".
   snapshot = PageGetSnapshot(
       &page, fidl::VectorPtr<uint8_t>(std::vector<uint8_t>{0, 1, 0}));
-  result = SnapshotGetKeys(&snapshot, fidl::VectorPtr<uint8_t>::New(0));
-  ASSERT_EQ(1u, result->size());
-  EXPECT_EQ(keys[2], result->at(0));
+  result = SnapshotGetKeys(&snapshot);
+  ASSERT_EQ(1u, result.size());
+  EXPECT_EQ(keys[2], result.at(0));
 
   // Get keys matching the prefix "5".
   snapshot =
       PageGetSnapshot(&page, fidl::VectorPtr<uint8_t>(std::vector<uint8_t>{5}));
-  result = SnapshotGetKeys(&snapshot, fidl::VectorPtr<uint8_t>::New(0));
-  EXPECT_EQ(0u, result->size());
+  result = SnapshotGetKeys(&snapshot);
+  EXPECT_EQ(0u, result.size());
 
   // Get keys matching the prefix "0" and starting with the key "010".
   snapshot =
       PageGetSnapshot(&page, fidl::VectorPtr<uint8_t>(std::vector<uint8_t>{0}));
   result = SnapshotGetKeys(
       &snapshot, fidl::VectorPtr<uint8_t>(std::vector<uint8_t>{0, 1, 0}));
-  EXPECT_EQ(2u, result->size());
+  EXPECT_EQ(2u, result.size());
 }
 
 TEST_P(PageSnapshotIntegrationTest, PageSnapshotGetKeysMultiPart) {
@@ -239,9 +298,9 @@ TEST_P(PageSnapshotIntegrationTest, PageSnapshotGetKeysMultiPart) {
   // returns empty results.
   ledger::PageSnapshotPtr snapshot = PageGetSnapshot(&page);
   int num_queries;
-  fidl::VectorPtr<fidl::VectorPtr<uint8_t>> result = SnapshotGetKeys(
+  std::vector<fidl::VectorPtr<uint8_t>> result = SnapshotGetKeys(
       &snapshot, fidl::VectorPtr<uint8_t>::New(0), &num_queries);
-  EXPECT_EQ(0u, result->size());
+  EXPECT_EQ(0u, result.size());
   EXPECT_EQ(1, num_queries);
 
   // Add entries and grab a new snapshot.
@@ -270,9 +329,9 @@ TEST_P(PageSnapshotIntegrationTest, PageSnapshotGetKeysMultiPart) {
   result = SnapshotGetKeys(&snapshot, fidl::VectorPtr<uint8_t>::New(0),
                            &num_queries);
   EXPECT_TRUE(num_queries > 1);
-  ASSERT_EQ(N, result->size());
+  ASSERT_EQ(N, result.size());
   for (size_t i = 0; i < N; ++i) {
-    EXPECT_EQ(keys[i], result->at(i));
+    EXPECT_EQ(keys[i], result.at(i));
   }
 }
 
@@ -283,9 +342,8 @@ TEST_P(PageSnapshotIntegrationTest, PageSnapshotGetEntries) {
   // Grab a snapshot before adding any entries and verify that GetEntries()
   // returns empty results.
   ledger::PageSnapshotPtr snapshot = PageGetSnapshot(&page);
-  fidl::VectorPtr<ledger::Entry> entries =
-      SnapshotGetEntries(&snapshot, fidl::VectorPtr<uint8_t>::New(0));
-  EXPECT_EQ(0u, entries->size());
+  auto entries = SnapshotGetEntries(this, &snapshot);
+  EXPECT_EQ(0u, entries.size());
 
   // Add entries and grab a new snapshot.
   const size_t N = 4;
@@ -310,55 +368,47 @@ TEST_P(PageSnapshotIntegrationTest, PageSnapshotGetEntries) {
   snapshot = PageGetSnapshot(&page);
 
   // Get all entries.
-  entries = SnapshotGetEntries(&snapshot, fidl::VectorPtr<uint8_t>::New(0));
-  EXPECT_EQ(N, entries->size());
+  entries = SnapshotGetEntries(this, &snapshot);
+  EXPECT_EQ(N, entries.size());
   for (size_t i = 0; i < N; ++i) {
-    EXPECT_EQ(keys[i], entries->at(i).key);
-    EXPECT_EQ(values[i], ToArray(entries->at(i).value));
+    EXPECT_EQ(keys[i], entries.at(i).key);
+    EXPECT_EQ(values[i], ToArray(entries.at(i).value));
   }
 
   // Get entries matching the prefix "0".
   snapshot =
       PageGetSnapshot(&page, fidl::VectorPtr<uint8_t>(std::vector<uint8_t>{0}));
-  entries = SnapshotGetEntries(&snapshot, fidl::VectorPtr<uint8_t>::New(0));
-  EXPECT_EQ(N, entries->size());
+  entries = SnapshotGetEntries(this, &snapshot);
+  EXPECT_EQ(N, entries.size());
   for (size_t i = 0; i < N; ++i) {
-    EXPECT_EQ(keys[i], entries->at(i).key);
-    EXPECT_EQ(values[i], ToArray(entries->at(i).value));
+    EXPECT_EQ(keys[i], entries.at(i).key);
+    EXPECT_EQ(values[i], ToArray(entries.at(i).value));
   }
 
   // Get entries matching the prefix "00".
   snapshot = PageGetSnapshot(
       &page, fidl::VectorPtr<uint8_t>(std::vector<uint8_t>{0, 0}));
-  entries = SnapshotGetEntries(&snapshot, fidl::VectorPtr<uint8_t>::New(0));
-  ASSERT_EQ(2u, entries->size());
+  entries = SnapshotGetEntries(this, &snapshot);
+  ASSERT_EQ(2u, entries.size());
   for (size_t i = 0; i < 2; ++i) {
-    EXPECT_EQ(keys[i], entries->at(i).key);
-    EXPECT_EQ(values[i], ToArray(entries->at(i).value));
+    EXPECT_EQ(keys[i], entries.at(i).key);
+    EXPECT_EQ(values[i], ToArray(entries.at(i).value));
   }
 
   // Get keys matching the prefix "010".
   snapshot = PageGetSnapshot(
       &page, fidl::VectorPtr<uint8_t>(std::vector<uint8_t>{0, 1, 0}));
-  entries = SnapshotGetEntries(&snapshot, fidl::VectorPtr<uint8_t>::New(0));
-  ASSERT_EQ(1u, entries->size());
-  EXPECT_EQ(keys[2], entries->at(0).key);
-  EXPECT_EQ(values[2], ToArray(entries->at(0).value));
+  entries = SnapshotGetEntries(this, &snapshot);
+  ASSERT_EQ(1u, entries.size());
+  EXPECT_EQ(keys[2], entries.at(0).key);
+  EXPECT_EQ(values[2], ToArray(entries.at(0).value));
 
   // Get keys matching the prefix "5".
   snapshot =
       PageGetSnapshot(&page, fidl::VectorPtr<uint8_t>(std::vector<uint8_t>{5}));
 
-  snapshot->GetEntries(
-      fidl::VectorPtr<uint8_t>::New(0), nullptr,
-      [&entries](ledger::Status status, fidl::VectorPtr<ledger::Entry> e,
-                 std::unique_ptr<ledger::Token> next_token) {
-        EXPECT_EQ(ledger::Status::OK, status);
-        EXPECT_FALSE(next_token);
-        entries = std::move(e);
-      });
-  EXPECT_EQ(ZX_OK, snapshot.WaitForResponse());
-  EXPECT_EQ(0u, entries->size());
+  entries = SnapshotGetEntries(this, &snapshot);
+  EXPECT_EQ(0u, entries.size());
 }
 
 TEST_P(PageSnapshotIntegrationTest, PageSnapshotGetEntriesMultiPartSize) {
@@ -369,9 +419,8 @@ TEST_P(PageSnapshotIntegrationTest, PageSnapshotGetEntriesMultiPartSize) {
   // returns empty results.
   ledger::PageSnapshotPtr snapshot = PageGetSnapshot(&page);
   int num_queries;
-  auto entries = SnapshotGetEntries(&snapshot, fidl::VectorPtr<uint8_t>::New(0),
-                                    &num_queries)
-                     .take();
+  auto entries = SnapshotGetEntries(
+      this, &snapshot, fidl::VectorPtr<uint8_t>::New(0), &num_queries);
   EXPECT_EQ(0u, entries.size());
   EXPECT_EQ(1, num_queries);
 
@@ -402,9 +451,8 @@ TEST_P(PageSnapshotIntegrationTest, PageSnapshotGetEntriesMultiPartSize) {
   snapshot = PageGetSnapshot(&page);
 
   // Get all entries.
-  entries = SnapshotGetEntries(&snapshot, fidl::VectorPtr<uint8_t>::New(0),
-                               &num_queries)
-                .take();
+  entries = SnapshotGetEntries(this, &snapshot,
+                               fidl::VectorPtr<uint8_t>::New(0), &num_queries);
   EXPECT_TRUE(num_queries > 1);
   ASSERT_EQ(N, entries.size());
   for (size_t i = 0; i < N; ++i) {
@@ -421,9 +469,8 @@ TEST_P(PageSnapshotIntegrationTest, PageSnapshotGetEntriesMultiPartHandles) {
   // returns empty results.
   ledger::PageSnapshotPtr snapshot = PageGetSnapshot(&page);
   int num_queries;
-  auto entries = SnapshotGetEntries(&snapshot, fidl::VectorPtr<uint8_t>::New(0),
-                                    &num_queries)
-                     .take();
+  auto entries = SnapshotGetEntries(
+      this, &snapshot, fidl::VectorPtr<uint8_t>::New(0), &num_queries);
   EXPECT_EQ(0u, entries.size());
   EXPECT_EQ(1, num_queries);
 
@@ -448,9 +495,8 @@ TEST_P(PageSnapshotIntegrationTest, PageSnapshotGetEntriesMultiPartHandles) {
   snapshot = PageGetSnapshot(&page);
 
   // Get all entries.
-  entries = SnapshotGetEntries(&snapshot, fidl::VectorPtr<uint8_t>::New(0),
-                               &num_queries)
-                .take();
+  entries = SnapshotGetEntries(this, &snapshot,
+                               fidl::VectorPtr<uint8_t>::New(0), &num_queries);
   EXPECT_TRUE(num_queries > 1);
   ASSERT_EQ(N, entries.size());
   for (size_t i = 0; i < N; ++i) {
@@ -487,16 +533,14 @@ TEST_P(PageSnapshotIntegrationTest, PageSnapshotGettersReturnSortedEntries) {
   ledger::PageSnapshotPtr snapshot = PageGetSnapshot(&page);
 
   // Verify that GetKeys() results are sorted.
-  fidl::VectorPtr<fidl::VectorPtr<uint8_t>> result =
-      SnapshotGetKeys(&snapshot, fidl::VectorPtr<uint8_t>::New(0));
-  EXPECT_EQ(keys[3], result->at(0));
-  EXPECT_EQ(keys[0], result->at(1));
-  EXPECT_EQ(keys[2], result->at(2));
-  EXPECT_EQ(keys[1], result->at(3));
+  std::vector<fidl::VectorPtr<uint8_t>> result = SnapshotGetKeys(&snapshot);
+  EXPECT_EQ(keys[3], result.at(0));
+  EXPECT_EQ(keys[0], result.at(1));
+  EXPECT_EQ(keys[2], result.at(2));
+  EXPECT_EQ(keys[1], result.at(3));
 
   // Verify that GetEntries() results are sorted.
-  auto entries =
-      SnapshotGetEntries(&snapshot, fidl::VectorPtr<uint8_t>::New(0)).take();
+  auto entries = SnapshotGetEntries(this, &snapshot);
   EXPECT_EQ(keys[3], entries[0].key);
   EXPECT_EQ(values[3], ToArray(entries[0].value));
   EXPECT_EQ(keys[0], entries[1].key);

@@ -29,6 +29,14 @@ class PageIntegrationTest : public IntegrationTest {
   PageIntegrationTest() {}
   ~PageIntegrationTest() override {}
 
+  // Returns the id of the given page.
+  ledger::PageId PageGetId(ledger::PagePtr* page) {
+    ledger::PageId id;
+    (*page)->GetId(callback::Capture([this] { message_loop_.QuitNow(); }, &id));
+    message_loop_.Run();
+    return id;
+  }
+
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(PageIntegrationTest);
 };

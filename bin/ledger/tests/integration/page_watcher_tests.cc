@@ -344,9 +344,7 @@ TEST_P(PageWatcherIntegrationTest, PageWatcherSnapshot) {
 
   EXPECT_EQ(1u, watcher.changes_seen);
   EXPECT_EQ(ledger::ResultState::COMPLETED, watcher.last_result_state_);
-  auto entries =
-      SnapshotGetEntries(&(watcher.last_snapshot_), convert::ToArray(""))
-          .take();
+  auto entries = SnapshotGetEntries(this, &(watcher.last_snapshot_));
   ASSERT_EQ(1u, entries.size());
   EXPECT_EQ("name", convert::ToString(entries[0].key));
   EXPECT_EQ("Alice", ToString(entries[0].value));

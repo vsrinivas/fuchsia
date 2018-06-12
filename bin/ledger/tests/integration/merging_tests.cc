@@ -731,9 +731,8 @@ TEST_P(MergingIntegrationTest, CustomConflictResolutionNoConflict) {
   // Common ancestor is empty.
   ledger::PageSnapshotPtr snapshot =
       resolver_impl->requests[0].common_version.Bind();
-  fidl::VectorPtr<ledger::Entry> entries =
-      SnapshotGetEntries(&snapshot, fidl::VectorPtr<uint8_t>::New(0));
-  EXPECT_EQ(0u, entries->size());
+  auto entries = SnapshotGetEntries(this, &snapshot);
+  EXPECT_EQ(0u, entries.size());
 
   // Prepare the merged values
   fidl::VectorPtr<ledger::MergedValue> merged_values;
@@ -775,9 +774,7 @@ TEST_P(MergingIntegrationTest, CustomConflictResolutionNoConflict) {
   // Wait for the watcher to be called.
   RunLoop();
 
-  auto final_entries = SnapshotGetEntries(&watcher.last_snapshot_,
-                                          fidl::VectorPtr<uint8_t>::New(0))
-                           .take();
+  auto final_entries = SnapshotGetEntries(this, &watcher.last_snapshot_);
   ASSERT_EQ(3u, final_entries.size());
   EXPECT_EQ("name", convert::ExtendedStringView(final_entries[0].key));
   EXPECT_EQ("pager", convert::ExtendedStringView(final_entries[1].key));
@@ -1232,9 +1229,7 @@ TEST_P(MergingIntegrationTest, CustomConflictResolutionMultipartMerge) {
   // Wait for the watcher to be called.
   RunLoop();
 
-  auto final_entries = SnapshotGetEntries(&watcher.last_snapshot_,
-                                          fidl::VectorPtr<uint8_t>::New(0))
-                           .take();
+  auto final_entries = SnapshotGetEntries(this, &watcher.last_snapshot_);
   ASSERT_EQ(2u, final_entries.size());
   EXPECT_EQ("name", convert::ExtendedStringView(final_entries[0].key));
   EXPECT_EQ("pager", convert::ExtendedStringView(final_entries[1].key));
@@ -1322,9 +1317,7 @@ TEST_P(MergingIntegrationTest, AutoConflictResolutionNoConflict) {
 
   EXPECT_EQ(2u, watcher.changes_seen);
 
-  auto final_entries = SnapshotGetEntries(&watcher.last_snapshot_,
-                                          fidl::VectorPtr<uint8_t>::New(0))
-                           .take();
+  auto final_entries = SnapshotGetEntries(this, &watcher.last_snapshot_);
   ASSERT_EQ(4u, final_entries.size());
   EXPECT_EQ("city", convert::ExtendedStringView(final_entries[0].key));
   EXPECT_EQ("email", convert::ExtendedStringView(final_entries[1].key));
@@ -1406,9 +1399,8 @@ TEST_P(MergingIntegrationTest, AutoConflictResolutionWithConflict) {
   // Common ancestor is empty.
   ledger::PageSnapshotPtr snapshot =
       resolver_impl->requests[0].common_version.Bind();
-  fidl::VectorPtr<ledger::Entry> entries =
-      SnapshotGetEntries(&snapshot, fidl::VectorPtr<uint8_t>::New(0));
-  EXPECT_EQ(0u, entries->size());
+  auto entries = SnapshotGetEntries(this, &snapshot);
+  EXPECT_EQ(0u, entries.size());
 
   // Prepare the merged values
   fidl::VectorPtr<ledger::MergedValue> merged_values =
@@ -1436,9 +1428,7 @@ TEST_P(MergingIntegrationTest, AutoConflictResolutionWithConflict) {
   // Wait for the watcher to be called.
   RunLoop();
 
-  auto final_entries = SnapshotGetEntries(&watcher.last_snapshot_,
-                                          fidl::VectorPtr<uint8_t>::New(0))
-                           .take();
+  auto final_entries = SnapshotGetEntries(this, &watcher.last_snapshot_);
   ASSERT_EQ(2u, final_entries.size());
   EXPECT_EQ("city", convert::ExtendedStringView(final_entries[0].key));
   EXPECT_EQ("name", convert::ExtendedStringView(final_entries[1].key));
@@ -1538,9 +1528,7 @@ TEST_P(MergingIntegrationTest, AutoConflictResolutionMultipartMerge) {
   // Wait for the watcher to be called.
   RunLoop();
 
-  auto final_entries = SnapshotGetEntries(&watcher.last_snapshot_,
-                                          fidl::VectorPtr<uint8_t>::New(0))
-                           .take();
+  auto final_entries = SnapshotGetEntries(this, &watcher.last_snapshot_);
   ASSERT_EQ(3u, final_entries.size());
   EXPECT_EQ("city", convert::ExtendedStringView(final_entries[0].key));
   EXPECT_EQ("name", convert::ExtendedStringView(final_entries[1].key));
@@ -1644,9 +1632,7 @@ TEST_P(MergingIntegrationTest, AutoConflictResolutionNoRightChange) {
 
   EXPECT_EQ(3u, watcher.changes_seen);
 
-  auto final_entries = SnapshotGetEntries(&watcher.last_snapshot_,
-                                          fidl::VectorPtr<uint8_t>::New(0))
-                           .take();
+  auto final_entries = SnapshotGetEntries(this, &watcher.last_snapshot_);
   ASSERT_EQ(1u, final_entries.size());
   EXPECT_EQ("email", convert::ExtendedStringView(final_entries[0].key));
 }
@@ -1900,9 +1886,7 @@ TEST_P(MergingIntegrationTest, CustomConflictResolutionConflictingMerge) {
   // Wait for the watcher to be called.
   RunLoop();
 
-  auto final_entries = SnapshotGetEntries(&watcher.last_snapshot_,
-                                          fidl::VectorPtr<uint8_t>::New(0))
-                           .take();
+  auto final_entries = SnapshotGetEntries(this, &watcher.last_snapshot_);
   ASSERT_EQ(3u, final_entries.size());
   EXPECT_EQ("city", convert::ExtendedStringView(final_entries[0].key));
   EXPECT_EQ("Paris", ToString(final_entries[0].value));

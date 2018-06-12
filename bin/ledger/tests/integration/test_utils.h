@@ -10,39 +10,30 @@
 
 #include "lib/fsl/vmo/sized_vmo.h"
 #include "peridot/bin/ledger/fidl/include/types.h"
+#include "peridot/bin/ledger/testing/ledger_app_instance_factory.h"
 
 namespace test {
 namespace integration {
 
+// Builds an array of length |size|, starting with |prefix| and completed with
+// random data.
 fidl::VectorPtr<uint8_t> RandomArray(size_t size,
-                                     const std::vector<uint8_t>& prefix);
+                                     const std::vector<uint8_t>& prefix = {});
 
-fidl::VectorPtr<uint8_t> RandomArray(int size);
-
-ledger::PageId PageGetId(ledger::PagePtr* page);
-
-ledger::PageSnapshotPtr PageGetSnapshot(
-    ledger::PagePtr* page,
-    fidl::VectorPtr<uint8_t> prefix = fidl::VectorPtr<uint8_t>::New(0));
-
-fidl::VectorPtr<fidl::VectorPtr<uint8_t>> SnapshotGetKeys(
-    ledger::PageSnapshotPtr* snapshot, fidl::VectorPtr<uint8_t> start);
-fidl::VectorPtr<fidl::VectorPtr<uint8_t>> SnapshotGetKeys(
-    ledger::PageSnapshotPtr* snapshot, fidl::VectorPtr<uint8_t> start,
-    int* num_queries);
-
-fidl::VectorPtr<ledger::Entry> SnapshotGetEntries(
-    ledger::PageSnapshotPtr* snapshot, fidl::VectorPtr<uint8_t> start);
-fidl::VectorPtr<ledger::Entry> SnapshotGetEntries(
-    ledger::PageSnapshotPtr* snapshot, fidl::VectorPtr<uint8_t> start,
-    int* num_queries);
-
-std::string SnapshotFetchPartial(ledger::PageSnapshotPtr* snapshot,
-                                 fidl::VectorPtr<uint8_t> key, int64_t offset,
-                                 int64_t max_size);
-
+// Extracts the content of |vmo| as a std::string.
 std::string ToString(const fuchsia::mem::BufferPtr& vmo);
+
+// Extracts the content of |vmo| as a FIDL vector.
 fidl::VectorPtr<uint8_t> ToArray(const fuchsia::mem::BufferPtr& vmo);
+
+// Retrieves all entries from the snapshot with a key greater of equals to
+// |start|. If |num_queries| is not null, returns the number of calls to
+// |GetEntries|. If any call fails, this function will fail the current test.
+std::vector<ledger::Entry> SnapshotGetEntries(
+    LedgerAppInstanceFactory::LoopController* loop_controller,
+    ledger::PageSnapshotPtr* snapshot,
+    fidl::VectorPtr<uint8_t> start = fidl::VectorPtr<uint8_t>::New(0),
+    int* num_queries = nullptr);
 
 }  // namespace integration
 }  // namespace test

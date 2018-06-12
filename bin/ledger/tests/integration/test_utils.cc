@@ -13,6 +13,7 @@
 #include <utility>
 #include <vector>
 
+#include "garnet/public/lib/callback/capture.h"
 #include "gtest/gtest.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fsl/vmo/strings.h"
@@ -42,105 +43,6 @@ fidl::VectorPtr<uint8_t> RandomArray(size_t size,
   return array;
 }
 
-fidl::VectorPtr<uint8_t> RandomArray(int size) {
-  return RandomArray(size, std::vector<uint8_t>());
-}
-
-ledger::PageId PageGetId(ledger::PagePtr* page) {
-  ledger::PageId page_id;
-  (*page)->GetId([&page_id](ledger::PageId id) { page_id = std::move(id); });
-  EXPECT_EQ(ZX_OK, page->WaitForResponseUntil(zx::deadline_after(zx::sec(1))));
-  return page_id;
-}
-
-ledger::PageSnapshotPtr PageGetSnapshot(ledger::PagePtr* page,
-                                        fidl::VectorPtr<uint8_t> prefix) {
-  ledger::PageSnapshotPtr snapshot;
-  (*page)->GetSnapshot(
-      snapshot.NewRequest(), std::move(prefix), nullptr,
-      [](ledger::Status status) { EXPECT_EQ(ledger::Status::OK, status); });
-  EXPECT_EQ(ZX_OK, page->WaitForResponseUntil(zx::deadline_after(zx::sec(1))));
-  return snapshot;
-}
-
-fidl::VectorPtr<fidl::VectorPtr<uint8_t>> SnapshotGetKeys(
-    ledger::PageSnapshotPtr* snapshot, fidl::VectorPtr<uint8_t> start) {
-  return SnapshotGetKeys(snapshot, std::move(start), nullptr);
-}
-
-fidl::VectorPtr<fidl::VectorPtr<uint8_t>> SnapshotGetKeys(
-    ledger::PageSnapshotPtr* snapshot, fidl::VectorPtr<uint8_t> start,
-    int* num_queries) {
-  fidl::VectorPtr<fidl::VectorPtr<uint8_t>> result;
-  std::unique_ptr<ledger::Token> token = nullptr;
-  std::unique_ptr<ledger::Token> next_token = nullptr;
-  if (num_queries) {
-    *num_queries = 0;
-  }
-  do {
-    (*snapshot)->GetKeys(
-        start.Clone(), std::move(token),
-        [&result, &next_token, &num_queries](
-            ledger::Status status,
-            fidl::VectorPtr<fidl::VectorPtr<uint8_t>> keys,
-            std::unique_ptr<ledger::Token> new_next_token) {
-          EXPECT_TRUE(status == ledger::Status::OK ||
-                      status == ledger::Status::PARTIAL_RESULT);
-          if (num_queries) {
-            (*num_queries)++;
-          }
-          for (auto& key : keys.take()) {
-            result.push_back(std::move(key));
-          }
-          next_token = std::move(new_next_token);
-        });
-    EXPECT_EQ(ZX_OK,
-              snapshot->WaitForResponseUntil(zx::deadline_after(zx::sec(1))));
-    token = std::move(next_token);
-    next_token = nullptr;  // Suppress misc-use-after-move.
-  } while (token);
-  return result;
-}
-
-fidl::VectorPtr<ledger::Entry> SnapshotGetEntries(
-    ledger::PageSnapshotPtr* snapshot, fidl::VectorPtr<uint8_t> start) {
-  return SnapshotGetEntries(snapshot, std::move(start), nullptr);
-}
-
-fidl::VectorPtr<ledger::Entry> SnapshotGetEntries(
-    ledger::PageSnapshotPtr* snapshot, fidl::VectorPtr<uint8_t> start,
-    int* num_queries) {
-  fidl::VectorPtr<ledger::Entry> result;
-  std::unique_ptr<ledger::Token> token = nullptr;
-  std::unique_ptr<ledger::Token> next_token = nullptr;
-  if (num_queries) {
-    *num_queries = 0;
-  }
-  do {
-    (*snapshot)->GetEntries(
-        start.Clone(), std::move(token),
-        [&result, &next_token, &num_queries](
-            ledger::Status status, fidl::VectorPtr<ledger::Entry> entries,
-            std::unique_ptr<ledger::Token> new_next_token) {
-          EXPECT_TRUE(status == ledger::Status::OK ||
-                      status == ledger::Status::PARTIAL_RESULT)
-              << "Actual status: " << status;
-          if (num_queries) {
-            (*num_queries)++;
-          }
-          for (auto& entry : entries.take()) {
-            result.push_back(std::move(entry));
-          }
-          next_token = std::move(new_next_token);
-        });
-    EXPECT_EQ(ZX_OK,
-              snapshot->WaitForResponseUntil(zx::deadline_after(zx::sec(1))));
-    token = std::move(next_token);
-    next_token = nullptr;  // Suppress misc-use-after-move.
-  } while (token);
-  return result;
-}
-
 std::string ToString(const fuchsia::mem::BufferPtr& vmo) {
   std::string value;
   bool status = fsl::StringFromVmo(*vmo, &value);
@@ -152,18 +54,33 @@ fidl::VectorPtr<uint8_t> ToArray(const fuchsia::mem::BufferPtr& vmo) {
   return convert::ToArray(ToString(vmo));
 }
 
-std::string SnapshotFetchPartial(ledger::PageSnapshotPtr* snapshot,
-                                 fidl::VectorPtr<uint8_t> key, int64_t offset,
-                                 int64_t max_size) {
-  std::string result;
-  (*snapshot)->FetchPartial(
-      std::move(key), offset, max_size,
-      [&result](ledger::Status status, fuchsia::mem::BufferPtr buffer) {
-        EXPECT_EQ(ledger::Status::OK, status);
-        EXPECT_TRUE(fsl::StringFromVmo(*buffer, &result));
-      });
-  EXPECT_EQ(ZX_OK,
-            snapshot->WaitForResponseUntil(zx::deadline_after(zx::sec(1))));
+std::vector<ledger::Entry> SnapshotGetEntries(
+    LedgerAppInstanceFactory::LoopController* loop_controller,
+    ledger::PageSnapshotPtr* snapshot, fidl::VectorPtr<uint8_t> start,
+    int* num_queries) {
+  std::vector<ledger::Entry> result;
+  std::unique_ptr<ledger::Token> token;
+  if (num_queries) {
+    *num_queries = 0;
+  }
+  do {
+    ledger::Status status;
+    fidl::VectorPtr<ledger::Entry> entries;
+    (*snapshot)->GetEntries(
+        start.Clone(), std::move(token),
+        callback::Capture([loop_controller] { loop_controller->StopLoop(); },
+                          &status, &entries, &token));
+    loop_controller->RunLoop();
+    EXPECT_TRUE(status == ledger::Status::OK ||
+                status == ledger::Status::PARTIAL_RESULT)
+        << "Actual status: " << status;
+    if (num_queries) {
+      (*num_queries)++;
+    }
+    for (auto& entry : entries.take()) {
+      result.push_back(std::move(entry));
+    }
+  } while (token);
   return result;
 }
 
