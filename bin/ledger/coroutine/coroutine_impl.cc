@@ -4,6 +4,10 @@
 
 #include "peridot/bin/ledger/coroutine/coroutine_impl.h"
 
+#if __has_feature(address_sanitizer)
+#include <sanitizer/common_interface_defs.h>
+#endif
+
 #include "lib/fxl/logging.h"
 #include "peridot/bin/ledger/coroutine/context/context.h"
 #include "peridot/bin/ledger/coroutine/context/stack.h"
@@ -40,6 +44,10 @@ class CoroutineServiceImpl::CoroutineHandlerImpl : public CoroutineHandler {
   context::Context routine_context_;
   bool interrupted_ = false;
   bool finished_ = false;
+#if __has_feature(address_sanitizer)
+  const void* origin_stack_ = nullptr;
+  size_t origin_stacksize_ = 0;
+#endif
 
   FXL_DISALLOW_COPY_AND_ASSIGN(CoroutineHandlerImpl);
 };
@@ -71,7 +79,16 @@ void CoroutineServiceImpl::CoroutineHandlerImpl::Continue(
   FXL_DCHECK(!finished_);
 
   interrupted_ = interrupted_ || (status == ContinuationStatus::INTERRUPTED);
+#if __has_feature(address_sanitizer)
+  void* fake_stack_save;
+  __sanitizer_start_switch_fiber(
+      &fake_stack_save, reinterpret_cast<const void*>(stack_->safe_stack()),
+      stack_->stack_size());
+#endif
   context::SwapContext(&main_context_, &routine_context_);
+#if __has_feature(address_sanitizer)
+  __sanitizer_finish_switch_fiber(fake_stack_save, nullptr, nullptr);
+#endif
 
   if (finished_) {
     cleanup_(std::move(stack_));
@@ -92,6 +109,9 @@ void CoroutineServiceImpl::CoroutineHandlerImpl::StaticRun(void* data) {
 }
 
 void CoroutineServiceImpl::CoroutineHandlerImpl::Run() {
+#if __has_feature(address_sanitizer)
+  __sanitizer_finish_switch_fiber(nullptr, &origin_stack_, &origin_stacksize_);
+#endif
   runnable_(this);
   // Delete |runnable_|, as it can have side effects that should be run inside
   // the co-routine.
@@ -102,7 +122,19 @@ void CoroutineServiceImpl::CoroutineHandlerImpl::Run() {
 }
 
 ContinuationStatus CoroutineServiceImpl::CoroutineHandlerImpl::DoYield() {
+#if __has_feature(address_sanitizer)
+  FXL_DCHECK(origin_stack_);
+  FXL_DCHECK(origin_stacksize_);
+  void* fake_stack_save = nullptr;
+  __sanitizer_start_switch_fiber(finished_ ? nullptr : &fake_stack_save,
+                                 origin_stack_, origin_stacksize_);
+#endif
   context::SwapContext(&routine_context_, &main_context_);
+#if __has_feature(address_sanitizer)
+  __sanitizer_finish_switch_fiber(fake_stack_save, &origin_stack_,
+                                  &origin_stacksize_);
+#endif
+
   return interrupted_ ? ContinuationStatus::INTERRUPTED
                       : ContinuationStatus::OK;
 }

@@ -27,18 +27,12 @@ class Stack {
 
   size_t stack_size() const { return stack_size_; }
 
- private:
-  friend void MakeContext(context::Context* context, Stack* stack,
-                          void (*func)(void*), void* data);
-#if __has_feature(safe_stack)
-  friend char* GetUnsafeStackForTest(const Stack& stack);
-#endif
-
   uintptr_t safe_stack() const { return safe_stack_; }
 #if __has_feature(safe_stack)
   uintptr_t unsafe_stack() const { return unsafe_stack_; };
 #endif
 
+ private:
   const size_t stack_size_;
   zx::vmo vmo_;
   zx::vmar safe_stack_mapping_;
