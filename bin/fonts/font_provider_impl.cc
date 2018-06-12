@@ -103,11 +103,11 @@ void FontProviderImpl::Reset() {
 }
 
 void FontProviderImpl::AddBinding(
-    fidl::InterfaceRequest<FontProvider> request) {
+    fidl::InterfaceRequest<fuchsia::fonts::FontProvider> request) {
   bindings_.AddBinding(this, std::move(request));
 }
 
-void FontProviderImpl::GetFont(FontRequest request, GetFontCallback callback) {
+void FontProviderImpl::GetFont(fuchsia::fonts::FontRequest request, GetFontCallback callback) {
   if (families_.empty()) {
     callback(nullptr);
     return;
@@ -134,9 +134,9 @@ void FontProviderImpl::GetFont(FontRequest request, GetFontCallback callback) {
     return;
   }
 
-  FontData data;
+  fuchsia::fonts::FontData data;
   data.buffer = std::move(duplicated_data).ToTransport();
-  auto response = FontResponse::New();
+  auto response = fuchsia::fonts::FontResponse::New();
   response->data = std::move(data);
   callback(std::move(response));
 }

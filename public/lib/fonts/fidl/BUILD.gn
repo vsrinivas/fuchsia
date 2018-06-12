@@ -5,7 +5,7 @@
 import("//build/fidl/fidl.gni")
 
 fidl("fidl") {
-  name = "fonts"
+  name = "fuchsia.fonts"
 
   sources = [
     "font_provider.fidl",

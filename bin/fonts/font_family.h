@@ -7,7 +7,7 @@
 
 #include <vector>
 
-#include <fonts/cpp/fidl.h>
+#include <fuchsia/fonts/cpp/fidl.h>
 #include "lib/fsl/vmo/sized_vmo.h"
 #include "lib/fxl/macros.h"
 #include "third_party/rapidjson/rapidjson/document.h"
@@ -23,7 +23,7 @@ class FontFamily {
   bool Load(const rapidjson::Document::ValueType& family);
 
   const std::string& name() const { return name_; }
-  fsl::SizedVmo* GetFontData(const FontRequest& request);
+  fsl::SizedVmo* GetFontData(const fuchsia::fonts::FontRequest& request);
 
   class Font {
    public:
@@ -31,7 +31,7 @@ class FontFamily {
     Font(Font&& other);
 
     std::string asset;
-    FontSlant slant;
+    fuchsia::fonts::FontSlant slant;
     int weight;
     fsl::SizedVmo data;
   };

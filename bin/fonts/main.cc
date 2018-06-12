@@ -17,8 +17,8 @@ class App {
   App() : context_(fuchsia::sys::StartupContext::CreateFromStartupInfo()) {
     if (!font_provider_.LoadFonts())
       exit(ZX_ERR_UNAVAILABLE);
-    context_->outgoing().AddPublicService<FontProvider>(
-        [this](fidl::InterfaceRequest<FontProvider> request) {
+    context_->outgoing().AddPublicService<fuchsia::fonts::FontProvider>(
+        [this](fidl::InterfaceRequest<fuchsia::fonts::FontProvider> request) {
           font_provider_.AddBinding(std::move(request));
         });
   }
