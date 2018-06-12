@@ -20,6 +20,7 @@ int display_enable(bool enable);
 void display_pre_freq_change(void);
 void display_post_freq_change(void);
 
+// Has no effect if DISPLAY_FLAG_CRASH_FRAMEBUFFER is set
 #define DISPLAY_FLAG_HW_FRAMEBUFFER    (1<<0)
 #define DISPLAY_FLAG_NEEDS_CACHE_FLUSH (1<<1)
 

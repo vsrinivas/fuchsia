@@ -162,6 +162,8 @@ static void gfxconsole_print_callback(print_callback_t *cb, const char *str, siz
                 0, gfxconsole.y * font->height);
         }
         gfx_flush(gfxconsole.hw_surface);
+    } else {
+        gfx_flush(gfxconsole.surface);
     }
 }
 
@@ -332,4 +334,13 @@ void gfxconsole_bind_display(struct display_info *info, void *raw_sw_fb) {
     memcpy(&dispinfo, info, sizeof(*info));
     register_print_callback(&cb);
     active = true;
+}
+
+void gfxconsole_flush() {
+    if (gfxconsole.surface != gfxconsole.hw_surface) {
+        gfx_surface_blend(gfxconsole.hw_surface, gfxconsole.surface, 0, 0);
+        gfx_flush(gfxconsole.hw_surface);
+    } else {
+        gfx_flush(gfxconsole.surface);
+    }
 }

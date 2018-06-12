@@ -20,8 +20,7 @@
 
 #define LOCAL_TRACE 0
 
-constexpr uint kFramebufferArchMmuFlags = ARCH_MMU_FLAG_WRITE_COMBINING | ARCH_MMU_FLAG_PERM_READ |
-    ARCH_MMU_FLAG_PERM_WRITE;
+constexpr uint kFramebufferArchMmuFlags = ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE;
 
 static qrcodegen::QrCode qrcode;
 
@@ -96,7 +95,7 @@ void dlog_bluescreen_halt(void) {
             }
         }
     }
-
+    gfxconsole_flush();
 }
 
 void udisplay_clear_framebuffer_vmo() {
@@ -144,7 +143,7 @@ zx_status_t udisplay_bind_gfxconsole(void) {
 
     // bind the display to the gfxconsole
     g_udisplay.info.framebuffer = g_udisplay.framebuffer_virt;
-    g_udisplay.info.flags = DISPLAY_FLAG_HW_FRAMEBUFFER | DISPLAY_FLAG_CRASH_FRAMEBUFFER;
+    g_udisplay.info.flags = DISPLAY_FLAG_NEEDS_CACHE_FLUSH | DISPLAY_FLAG_CRASH_FRAMEBUFFER;
     gfxconsole_bind_display(&g_udisplay.info, nullptr);
 
     return ZX_OK;
