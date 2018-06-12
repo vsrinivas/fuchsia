@@ -21,10 +21,42 @@ static const pbus_gpio_t fanctl_gpios[] = {
     }
 };
 
+/* ACTIVE COOLING - For VIM2, we assume that all devices
+ * are connected with a GPIO-controlled fan.
+ * The GPIO controlled fan has 3 levels of speed (1-3)
+ *
+ * PASSIVE COOLING - For VIM2, we have DVFS support added
+ * Below is the operating point information for Big cluster
+ * Operating point 0 - Freq 0.1000 Ghz Voltage 0.9100 V
+ * Operating point 1 - Freq 0.2500 Ghz Voltage 0.9100 V
+ * Operating point 2 - Freq 0.5000 Ghz Voltage 0.9100 V
+ * Operating point 3 - Freq 0.6670 Ghz Voltage 0.9500 V
+ * Operating point 4 - Freq 1.0000 Ghz Voltage 0.9900 V
+ * Operating point 5 - Freq 1.2000 Ghz Voltage 1.0700 V
+ * Operating point 6 - Freq 1.2960 Ghz Voltage 1.1000 V
+ *
+ * Below is the operating point information for Little cluster
+ * Operating point 0 - Freq 0.1000 Ghz Voltage 0.9100 V
+ * Operating point 1 - Freq 0.2500 Ghz Voltage 0.9100 V
+ * Operating point 2 - Freq 0.5000 Ghz Voltage 0.9100 V
+ * Operating point 3 - Freq 0.6670 Ghz Voltage 0.9500 V
+ * Operating point 4 - Freq 1.0000 Ghz Voltage 0.9900 V
+ *
+ * GPU_CLK_FREQUENCY_SOURCE - For VIM2, we support GPU
+ * throttling. Currently we have pre-defined frequencies
+ * we can set the GPU clock to, but we can always add more
+ * One's we support now are below
+ * Operating point  0 - 285.7 MHz
+ * Operating point  1 - 400.0 MHz
+ * Operating point  2 - 500.0 MHz
+ * Operating point  3 - 666.0 MHz
+ * Operating point -1 - INVALID/No throttling needed
+ */
+
 static aml_thermal_config_t aml_vim2_config = {
     .active_cooling                 = true,
     .passive_cooling                = true,
-    .gpu_throttling                 = false,
+    .gpu_throttling                 = true,
     .trip_point_count               = 8,
     .critical_temp                  = 81,
     .trip_point_info = {
@@ -35,55 +67,63 @@ static aml_thermal_config_t aml_vim2_config = {
             .fan_level                  = 0,
             .big_cluster_dvfs_opp       = 6,
             .little_cluster_dvfs_opp    = 4,
+            .gpu_clk_freq_source        = 2,
         },
         {
             .fan_level                  = 1,
             .up_temp                    = 45,
             .down_temp                  = 43,
-            .big_cluster_dvfs_opp       = -1,
-            .little_cluster_dvfs_opp    = -1,
+            .big_cluster_dvfs_opp       = 6,
+            .little_cluster_dvfs_opp    = 4,
+            .gpu_clk_freq_source        = 2,
         },
         {
             .fan_level                  = 2,
             .up_temp                    = 55,
             .down_temp                  = 53,
-            .big_cluster_dvfs_opp       = -1,
-            .little_cluster_dvfs_opp    = -1,
+            .big_cluster_dvfs_opp       = 6,
+            .little_cluster_dvfs_opp    = 4,
+            .gpu_clk_freq_source        = 2,
         },
         {
             .fan_level                  = 3,
             .up_temp                    = 60,
             .down_temp                  = 58,
-            .big_cluster_dvfs_opp       = -1,
-            .little_cluster_dvfs_opp    = -1,
+            .big_cluster_dvfs_opp       = 6,
+            .little_cluster_dvfs_opp    = 4,
+            .gpu_clk_freq_source        = 2,
         },
         {
-            .fan_level                  = -1,
+            .fan_level                  = 3,
             .up_temp                    = 70,
             .down_temp                  = 68,
             .big_cluster_dvfs_opp       = 5,
             .little_cluster_dvfs_opp    = 4,
+            .gpu_clk_freq_source        = 2,
         },
         {
-            .fan_level                  = -1,
+            .fan_level                  = 3,
             .up_temp                    = 74,
             .down_temp                  = 73,
             .big_cluster_dvfs_opp       = 4,
             .little_cluster_dvfs_opp    = 4,
+            .gpu_clk_freq_source        = 2,
         },
         {
-            .fan_level                  = -1,
+            .fan_level                  = 3,
             .up_temp                    = 77,
             .down_temp                  = 75,
             .big_cluster_dvfs_opp       = 3,
             .little_cluster_dvfs_opp    = 3,
+            .gpu_clk_freq_source        = 1,
         },
         {
-            .fan_level                  = -1,
+            .fan_level                  = 3,
             .up_temp                    = 79,
             .down_temp                  = 76,
             .big_cluster_dvfs_opp       = 2,
             .little_cluster_dvfs_opp    = 2,
+            .gpu_clk_freq_source        = 0,
         }
     }
 };
@@ -123,3 +163,4 @@ zx_status_t vim2_thermal_init(vim_bus_t* bus) {
     }
     return ZX_OK;
 }
+

@@ -203,6 +203,7 @@ static zx_status_t aml_gpu_bind(void* ctx, zx_device_t* parent) {
         .ops = &aml_gpu_protocol,
         .props = props,
         .prop_count = countof(props),
+        .proto_id = ZX_PROTOCOL_GPU_THERMAL,
     };
 
     status = device_add(parent, &args, &gpu->zxdev);
