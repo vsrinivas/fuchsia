@@ -217,13 +217,21 @@ namespace {
 
 std::string GenerateQueueToken() {
   // Get 256 bits of pseudo-randomness.
-  uint8_t randomness[256 / 8];
-  size_t random_size;
-  zx_cprng_draw(&randomness, sizeof randomness, &random_size);
-  // TODO(alhaad): is there a more efficient way to do this?
-  std::string token;
-  for (uint8_t byte : randomness) {
-    fxl::StringAppendf(&token, "%X", byte);
+  constexpr size_t kBitCount = 256;
+  constexpr size_t kBitsPerByte = 8;
+  constexpr size_t kCharsPerByte = 2;
+  constexpr size_t kByteCount = kBitCount / kBitsPerByte;
+  constexpr char kHex[] = "0123456789ABCDEF";
+  static_assert(kByteCount <= ZX_CPRNG_DRAW_MAX_LEN,
+                "Cannot draw more than ZX_CPRNG_DRAW_MAX_LEN at once.");
+  uint8_t bytes[kByteCount];
+  zx_status_t status = zx_cprng_draw_new(bytes, kByteCount);
+  FXL_CHECK(status == ZX_OK);
+  std::string token(kByteCount * kCharsPerByte, '\0');
+  for (size_t i = 0; i < kByteCount; ++i) {
+    uint8_t byte = bytes[i];
+    token[2 * i] = kHex[byte & 0x0F];
+    token[2 * i + 1] = kHex[byte / 0x10];
   }
   return token;
 }
