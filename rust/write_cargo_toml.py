@@ -106,10 +106,11 @@ def main():
             "patch": { "crates-io": third_party_json["patches"] },
         }))
 
+        profile = { "profile": { "release": { "panic" : "abort", "opt-level": "z" } } }
         if args.lto and args.lto != "none":
-            file.write(pytoml.dumps({
-                "profile": { "release": { "lto" : args.lto } },
-            }))
+            profile["profile"]["release"]["lto"] = args.lto
+
+        file.write(pytoml.dumps(profile))
 
 if __name__ == '__main__':
     sys.exit(main())
