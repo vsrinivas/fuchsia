@@ -40,7 +40,7 @@ class Settings {
 
     module_url = command_line.GetOptionValueWithDefault(
         "module_url",
-        "file:///system/test/modular_tests/modular_benchmark_story_module");
+        "modular_benchmark_story_module");
   }
 
   int story_count{0};

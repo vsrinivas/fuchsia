@@ -2,19 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-visibility = [ "//peridot/tests/benchmark/*" ]
+import("//peridot/build/executable_package.gni")
 
-group("story") {
-  testonly = true
-
-  public_deps = [
-    ":modular_benchmark_story_module",
-    ":modular_benchmark_story_tspec",
-    ":modular_benchmark_story_user_shell",
-  ]
-}
-
-executable("modular_benchmark_story_module") {
+executable_package("modular_benchmark_story_module") {
   testonly = true
 
   sources = [
@@ -29,7 +19,7 @@ executable("modular_benchmark_story_module") {
   ]
 }
 
-executable("modular_benchmark_story_user_shell") {
+executable_package("modular_benchmark_story_user_shell") {
   testonly = true
 
   deps = [
@@ -47,17 +37,6 @@ executable("modular_benchmark_story_user_shell") {
 
   sources = [
     "modular_benchmark_story_user_shell.cc",
-  ]
-}
-
-copy("modular_benchmark_story_tspec") {
-  testonly = true
-
-  sources = [
-    "modular_benchmark_story.tspec",
-  ]
-  outputs = [
-    "$root_out_dir/modular_benchmark_story.tspec",
   ]
 }
 

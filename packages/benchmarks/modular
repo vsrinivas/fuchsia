@@ -4,6 +4,7 @@
     ],
     "packages": {
         "modular_benchmarks": "//peridot/tests/benchmark:modular_benchmarks",
-        "run_modular_benchmarks": "//peridot/tests/benchmark:run_modular_benchmarks"
+        "modular_benchmark_story_module": "//peridot/tests/benchmark/story:modular_benchmark_story_module",
+        "modular_benchmark_story_user_shell": "//peridot/tests/benchmark/story:modular_benchmark_story_user_shell"
     }
 }

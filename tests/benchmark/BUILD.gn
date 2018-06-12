@@ -4,66 +4,63 @@
 
 import("//build/package.gni")
 
+# We follow the conventions of ../BUILD.gn for the organization of the sources,
+# build rules, and packages, with the following modifications:
+#
+# 1. All the binaries used in tests are run through a device_runner invocation
+#    configured in the .tspec file of the benchmark subdirectory.
+#
+# 2. The component binary as well as its package is named with a prefix that
+#    tells the benchmark it belongs to, followed by "_benchmark", followed by
+#    more name components as described in ../BUILD.gn. The tspec file is also
+#    named like the benchmark, followed by "_benchmark", followed by ".tspec".
+#
+# 3. [unchanged]
+#
+# 4. [unchanged]
+#
+# 5. [unchanged]
+#
+#
+# HOW TO ADD A NEW BENCHMARK
+#
+# 1. Add a new subdirectory with rules for the test components (user shells,
+#    modules, agents). Define all test components as executable_package()s.
+#
+# 2. Add the newly defined packages for all test components to
+#    //peridot/packages/benchmarks/modular.
+#
+# 3. Add a tspec file for the benchmark in the newly added subdirectory.
+#
+# 4. Add an entry for the tspec file to the resources = field of the
+#    modular_benchmarks build rule.
+#
+# 5. Add an entry for the test to run_modular_benchmarks.sh.
+
 package("modular_benchmarks") {
   testonly = true
-  deprecated_system_image = true
-  visibility = [ "//peridot/*" ]
 
-  deps = [
-    ":run_modular_benchmarks",
-    "story",
+  binaries = [
+    {
+      name = rebase_path("run_modular_benchmarks.sh")
+      dest = "run_modular_benchmarks.sh"
+    },
   ]
 
-  tests = [
+  resources = [
     {
-      name = "modular_benchmark_story_module"
-      dest = "modular_tests/modular_benchmark_story_module"
-    },
-    {
-      name = "modular_benchmark_story.tspec"
-      dest = "modular_tests/modular_benchmark_story.tspec"
-    },
-    {
-      name = "modular_benchmark_story_user_shell"
-      dest = "modular_tests/modular_benchmark_story_user_shell"
+      path = rebase_path("story/modular_benchmark_story.tspec")
+      dest = "modular_benchmark_story.tspec"
     },
   ]
 }
 
-copy("run_modular_benchmarks.sh") {
-  visibility = [ ":*" ]
-  sources = [
-    "run_modular_benchmarks.sh",
-  ]
-  outputs = [
-    "$root_out_dir/run_modular_benchmarks.sh",
-  ]
-}
-
-package("run_modular_benchmarks") {
-  deprecated_system_image = true
-  testonly = true
-  deps = [ ":run_modular_benchmarks.sh" ]
-  tests = [
-    {
-      name = "run_modular_benchmarks.sh"
-      dest = "modular_tests/$name"
-    },
-  ]
-}
-
-copy("copy_peridot_benchmarks") {
-  sources = ["peridot_benchmarks.sh"]
-  outputs = ["$root_out_dir/{{source_file_part}}"]
-}
 
 package("peridot_benchmarks") {
   testonly = true
 
-  deps = [":copy_peridot_benchmarks"]
-
   binaries = [ {
-        name = "peridot_benchmarks.sh"
+        name = rebase_path("peridot_benchmarks.sh")
         dest = "benchmarks.sh"
       } ]
 }
