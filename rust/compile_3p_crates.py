@@ -144,6 +144,13 @@ def main():
         crate_id = pathless_crate_id(data["package_id"])
         assert len(data["filenames"]) == 1
         lib_path = data["filenames"][0]
+
+        # For libraries built for both the host and the target, pick
+        # the one being built for the target.
+        # If we've already seen a lib with the given ID and the new one doesn't
+        # contain our target, discard it and keep the current entry.
+        if (crate_id in crate_id_to_info) and (args.target not in lib_path):
+            continue
         crate_name = data["target"]["name"]
         if crate_name != "fuchsia-third-party":
             # go from e.g. target/debug/deps/libfoo.rlib to target/debug/deps
