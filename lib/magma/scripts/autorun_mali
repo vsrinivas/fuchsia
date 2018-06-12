@@ -10,11 +10,7 @@ echo [UNIT TEST START=]
 echo [UNIT TEST END===]
 echo [INTEGRATION TEST START=]
 /system/test/magma_abi_conformance_tests --gtest_filter=-*Display*:MagmaAbi.WaitRendering
-if [ -e /system/test/magma_arm_integration_tests ]; then
-  /system/test/magma_arm_integration_tests
-else
-  echo SKIPPED /system/test/magma_arm_integration_tests
-fi
+/system/test/msd_arm_mali_integration_tests
 if [ -e /system/test/vkext ]; then
   /system/test/vkext --gtest_filter=-VulkanExtension.Scanout
   /system/test/vkreadback
