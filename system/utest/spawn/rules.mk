@@ -21,9 +21,9 @@ MODULE_STATIC_LIBS := \
     system/ulib/zx \
 
 MODULE_LIBS := \
-    system/ulib/c \
     system/ulib/fdio \
     system/ulib/unittest \
+    system/ulib/c \
     system/ulib/zircon \
 
 include make/module.mk
@@ -43,8 +43,30 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/child.c \
 
 MODULE_LIBS := \
-    system/ulib/c \
     system/ulib/fdio \
+    system/ulib/c \
+    system/ulib/zircon \
+
+include make/module.mk
+
+#
+# spawn-launcher
+#
+
+MODULE := $(LOCAL_DIR).launcher
+
+MODULE_TYPE := userapp
+MODULE_GROUP := test
+
+MODULE_NAME := spawn-launcher
+
+MODULE_SRCS := \
+    $(LOCAL_DIR)/launcher.c \
+
+MODULE_LIBS := \
+    system/ulib/launchpad \
+    system/ulib/fdio \
+    system/ulib/c \
     system/ulib/zircon \
 
 include make/module.mk

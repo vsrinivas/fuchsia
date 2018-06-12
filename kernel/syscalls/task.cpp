@@ -329,20 +329,25 @@ zx_status_t sys_process_create(zx_handle_t job_handle,
     if (options != 0)
         return ZX_ERR_INVALID_ARGS;
 
+    auto up = ProcessDispatcher::GetCurrent();
+
+    // We check the policy against the process calling zx_process_create, which
+    // is the operative policy, rather than against |job_handle|. Access to
+    // |job_handle| is controlled by the rights associated with the handle.
+    zx_status_t result = up->QueryPolicy(ZX_POL_NEW_PROCESS);
+    if (result != ZX_OK)
+        return result;
+
     // copy out the name
     char buf[ZX_MAX_NAME_LEN];
     fbl::StringPiece sp;
     // Silently truncate the given name.
     if (name_len > sizeof(buf))
         name_len = sizeof(buf);
-    zx_status_t result = copy_user_string(_name, name_len,
-                                          buf, sizeof(buf), &sp);
+    result = copy_user_string(_name, name_len, buf, sizeof(buf), &sp);
     if (result != ZX_OK)
         return result;
     LTRACEF("name %s\n", buf);
-
-    // convert job handle to job dispatcher
-    auto up = ProcessDispatcher::GetCurrent();
 
     fbl::RefPtr<JobDispatcher> job;
     // TODO(ZX-968): define process creation job rights.
@@ -354,11 +359,11 @@ zx_status_t sys_process_create(zx_handle_t job_handle,
     fbl::RefPtr<Dispatcher> proc_dispatcher;
     fbl::RefPtr<VmAddressRegionDispatcher> vmar_dispatcher;
     zx_rights_t proc_rights, vmar_rights;
-    zx_status_t res = ProcessDispatcher::Create(fbl::move(job), sp, options,
-                                                &proc_dispatcher, &proc_rights,
-                                                &vmar_dispatcher, &vmar_rights);
-    if (res != ZX_OK)
-        return res;
+    result = ProcessDispatcher::Create(fbl::move(job), sp, options,
+                                       &proc_dispatcher, &proc_rights,
+                                       &vmar_dispatcher, &vmar_rights);
+    if (result != ZX_OK)
+        return result;
 
     uint32_t koid = (uint32_t)proc_dispatcher->get_koid();
     ktrace(TAG_PROC_CREATE, koid, 0, 0, 0);

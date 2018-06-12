@@ -16,8 +16,10 @@
 #include <unistd.h>
 #include <zircon/limits.h>
 #include <zircon/processargs.h>
+#include <zircon/syscalls/policy.h>
 
 static constexpr char kSpawnChild[] = "/boot/bin/spawn-child";
+static constexpr char kSpawnLauncher[] = "/boot/bin/spawn-launcher";
 
 static bool has_fd(int fd) {
     zx_handle_t handles[FDIO_MAX_HANDLES];
@@ -69,6 +71,47 @@ static bool spawn_control_test(void) {
                             kSpawnChild, argv, process.reset_and_get_address());
         ASSERT_EQ(ZX_OK, status);
         EXPECT_EQ(5, join(process));
+    }
+
+    END_TEST;
+}
+
+static bool spawn_launcher_test(void) {
+    BEGIN_TEST;
+
+    zx_status_t status;
+    zx::process process;
+    const char* argv[] = {kSpawnLauncher, kSpawnChild, nullptr};
+
+    // Check that we can spawn the lancher process in a job and that the
+    // launcher process can launch the child.
+    {
+        zx::job job;
+        ASSERT_EQ(ZX_OK, zx::job::create(zx_job_default(), 0, &job));
+
+        status = fdio_spawn(job.get(), FDIO_SPAWN_CLONE_ALL, kSpawnLauncher,
+                            argv, process.reset_and_get_address());
+        ASSERT_EQ(ZX_OK, status);
+        EXPECT_EQ(43, join(process));
+        ASSERT_EQ(ZX_OK, job.kill());
+    }
+
+    // Check that setting |ZX_POL_NEW_PROCESS| to |ZX_POL_ACTION_DENY| prevents
+    // the launcher from launching the child.
+    {
+        zx::job job;
+        ASSERT_EQ(ZX_OK, zx::job::create(zx_job_default(), 0, &job));
+        zx_policy_basic_t policy = {
+            .condition = ZX_POL_NEW_PROCESS,
+            .policy = ZX_POL_ACTION_DENY,
+        };
+        ASSERT_EQ(ZX_OK, job.set_policy(ZX_JOB_POL_RELATIVE, ZX_JOB_POL_BASIC, &policy, 1));
+
+        status = fdio_spawn(job.get(), FDIO_SPAWN_CLONE_ALL, kSpawnLauncher,
+                            argv, process.reset_and_get_address());
+        ASSERT_EQ(ZX_OK, status);
+        EXPECT_EQ(401, join(process));
+        ASSERT_EQ(ZX_OK, job.kill());
     }
 
     END_TEST;
@@ -550,6 +593,7 @@ static bool spawn_errors_test(void) {
 
 BEGIN_TEST_CASE(spawn_tests)
 RUN_TEST(spawn_control_test)
+RUN_TEST(spawn_launcher_test)
 RUN_TEST(spawn_invalid_args_test)
 RUN_TEST(spawn_flags_test)
 RUN_TEST(spawn_environ_test)
