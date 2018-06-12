@@ -60,14 +60,14 @@ func (b *Binary) Verify() error {
 	}
 	binBuild, err := hex.DecodeString(build)
 	if err != nil {
-		return newBuildIDError(fmt.Errorf("build id `%s` is not a hex string: %v", build, err), filename)
+		return newBuildIDError(fmt.Errorf("build ID `%s` is not a hex string: %v", build, err), filename)
 	}
 	for _, buildID := range buildIDs {
 		if bytes.Equal(buildID, binBuild) {
 			return nil
 		}
 	}
-	return newBuildIDError(fmt.Errorf("build id `%s` could not be found", build), filename)
+	return newBuildIDError(fmt.Errorf("build ID `%s` could not be found", build), filename)
 }
 
 // TODO(jakehehrlich): Document what this is for.
@@ -170,18 +170,18 @@ func (s *SymbolizerRepo) readInfo(buildid string) (*buildInfo, bool) {
 	return info, ok
 }
 
-// GetBuildObject lets you get the build object associated with a build id.
+// GetBuildObject lets you get the build object associated with a build ID.
 func (s *SymbolizerRepo) GetBuildObject(buildid string) (string, error) {
 	// No defer is used here because we don't want to hold the read lock
 	// for very long.
 	info, ok := s.readInfo(buildid)
 	if !ok {
-		// If we don't recognize that build id, reload all sources.
+		// If we don't recognize that build ID, reload all sources.
 		s.reloadSources()
 		info, ok = s.readInfo(buildid)
 		if !ok {
 			// If we still don't know about that build, return an error.
-			return "", fmt.Errorf("unrecognized buildid %s", buildid)
+			return "", fmt.Errorf("unrecognized build ID %s", buildid)
 		}
 	}
 	return info.filepath, nil

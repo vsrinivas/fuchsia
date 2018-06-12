@@ -46,10 +46,10 @@ func TestGoBug(t *testing.T) {
 		t.Fatal(err)
 	}
 	if len(buildids) != 3 {
-		t.Error("expected", 3, "build ids but got", len(buildids))
+		t.Error("expected", 3, "build IDs but got", len(buildids))
 		return
 	}
-	// Test that we get exactly the build ids we expect
+	// Test that we get exactly the build IDs we expect
 	bins, err := source.GetBinaries()
 	if err != nil {
 		t.Fatal(err)

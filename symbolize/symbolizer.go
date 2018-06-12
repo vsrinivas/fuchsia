@@ -64,7 +64,8 @@ func (s *LLVMSymbolizer) handle(ctx context.Context) {
 				return
 			}
 			if len(strings.TrimSpace(args.file)) == 0 {
-				args.output <- LLVMSymbolizeResult{nil, fmt.Errorf("Attempt to request code location of unnamed file")}
+				args.output <- LLVMSymbolizeResult{
+					nil, fmt.Errorf("Attempt to request code location of unnamed file with build ID %x", args.build)}
 				continue
 			}
 			// Before sending a binary off to llvm-symbolizer, veryify the binary
