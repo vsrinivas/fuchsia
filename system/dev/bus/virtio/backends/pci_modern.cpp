@@ -35,6 +35,40 @@ void MmioRead(const volatile T* addr, T* value) {
     *value = *addr;
 }
 
+#ifdef __aarch64__
+// TODO(ZX-2238): Work around Linux KVM not supporting load/store instructions
+// with writeback, which the compiler might decide to generate.
+template <>
+void MmioWrite<uint32_t>(volatile uint32_t* addr, uint32_t value) {
+    __asm__("str %w1, %0" : "=m" (*addr) : "r" (value));
+}
+
+template <>
+void MmioRead<uint32_t>(const volatile uint32_t* addr, uint32_t* value) {
+    __asm__("ldr %w0, %1" : "=r" (*value) : "m" (*addr));
+}
+
+template <>
+void MmioWrite<uint16_t>(volatile uint16_t* addr, uint16_t value) {
+    __asm__("strh %w1, %0" : "=m" (*addr) : "r" (value));
+}
+
+template <>
+void MmioRead<uint16_t>(const volatile uint16_t* addr, uint16_t* value) {
+    __asm__("ldrh %w0, %1" : "=r" (*value) : "m" (*addr));
+}
+
+template <>
+void MmioWrite<uint8_t>(volatile uint8_t* addr, uint8_t value) {
+    __asm__("strb %w1, %0" : "=m" (*addr) : "r" (value));
+}
+
+template <>
+void MmioRead<uint8_t>(const volatile uint8_t* addr, uint8_t* value) {
+    __asm__("ldrb %w0, %1" : "=r" (*value) : "m" (*addr));
+}
+#endif
+
 // Virtio 1.0 Section 4.1.3:
 // 64-bit fields are to be treated as two 32-bit fields, with low 32 bit
 // part followed by the high 32 bit part.
