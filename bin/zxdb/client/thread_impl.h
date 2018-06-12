@@ -26,6 +26,7 @@ class ThreadImpl : public Thread {
   debug_ipc::ThreadRecord::State GetState() const override;
   void Pause() override;
   void Continue() override;
+  Err Step() override;
   void StepInstruction() override;
   std::vector<Frame*> GetFrames() const override;
   bool HasAllFrames() const override;

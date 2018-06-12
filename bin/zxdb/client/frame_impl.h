@@ -22,6 +22,7 @@ class FrameImpl : public Frame {
   // Frame implementation.
   Thread* GetThread() const override;
   const Location& GetLocation() const override;
+  uint64_t GetAddress() const override;
 
  private:
   void EnsureSymbolized();

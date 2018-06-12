@@ -4,10 +4,14 @@
 
 #include "garnet/bin/zxdb/client/thread_impl.h"
 
+#include <inttypes.h>  // ERSASEMME(brettw)
+#include <iostream>
+
 #include "garnet/bin/zxdb/client/frame_impl.h"
 #include "garnet/bin/zxdb/client/process_impl.h"
 #include "garnet/bin/zxdb/client/remote_api.h"
 #include "garnet/bin/zxdb/client/session.h"
+#include "garnet/bin/zxdb/client/symbols/line_details.h"
 #include "garnet/public/lib/fxl/logging.h"
 
 namespace zxdb {
@@ -46,6 +50,31 @@ void ThreadImpl::Continue() {
   request.how = debug_ipc::ResumeRequest::How::kContinue;
   session()->remote_api()->Resume(
       request, [](const Err& err, debug_ipc::ResumeReply) {});
+}
+
+Err ThreadImpl::Step() {
+  if (frames_.empty())
+    return Err("Thread has no current address to step.");
+
+  debug_ipc::ResumeRequest request;
+  request.process_koid = process_->GetKoid();
+  request.thread_koid = koid_;
+  request.how = debug_ipc::ResumeRequest::How::kStepInRange;
+
+  LineDetails line_details =
+      process_->GetSymbols()->LineDetailsForAddress(frames_[0]->GetAddress());
+  if (line_details.entries().empty()) {
+    // When there are no symbols, fall back to step instruction.
+    StepInstruction();
+    return Err();
+  }
+
+  request.range_begin = line_details.entries()[0].range.begin();
+  request.range_end = line_details.entries().back().range.end();
+
+  session()->remote_api()->Resume(
+      request, [](const Err& err, debug_ipc::ResumeReply) {});
+  return Err();
 }
 
 void ThreadImpl::StepInstruction() {

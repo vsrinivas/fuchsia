@@ -21,6 +21,7 @@ class LoadedModuleSymbolsImpl : public LoadedModuleSymbols {
   ModuleSymbols* GetModuleSymbols() override;
   uint64_t GetLoadAddress() const override;
   Location LocationForAddress(uint64_t address) const override;
+  LineDetails LineDetailsForAddress(uint64_t address) const override;
   std::vector<uint64_t> AddressesForFunction(
       const std::string& name) const override;
   std::vector<uint64_t> AddressesForLine(const FileLine& line) const override;

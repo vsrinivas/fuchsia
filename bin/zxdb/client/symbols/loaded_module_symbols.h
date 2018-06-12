@@ -14,6 +14,7 @@
 namespace zxdb {
 
 class FileLine;
+class LineDetails;
 class ModuleSymbols;
 
 // Represents the symbol information for a module that's loaded. Unlike
@@ -38,6 +39,12 @@ class LoadedModuleSymbols {
   // process' address space. The location will be of type kAddress if there is
   // no symbol for this location.
   virtual Location LocationForAddress(uint64_t address) const = 0;
+
+  // Computes the line that corresponds to the given address. Unlike
+  // LocationForAddress (which just returns the current source line), this
+  // returns the entire set of contiguous line table entries with code ranges
+  // with the same line as the given address.
+  virtual LineDetails LineDetailsForAddress(uint64_t address) const = 0;
 
   // Returns the addresses in the process' address space for the given function
   // name. The function name must be an exact match. The addresses will

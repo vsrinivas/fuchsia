@@ -43,6 +43,7 @@ class ModuleSymbolsImpl : public ModuleSymbols {
   // ModuleSymbols implementation.
   const std::string& GetLocalFileName() const override;
   Location RelativeLocationForRelativeAddress(uint64_t address) const override;
+  LineDetails LineDetailsForRelativeAddress(uint64_t address) const override;
   std::vector<uint64_t> RelativeAddressesForFunction(
       const std::string& name) const override;
   std::vector<std::string> FindFileMatches(
@@ -51,6 +52,8 @@ class ModuleSymbolsImpl : public ModuleSymbols {
       const FileLine& line) const override;
 
  private:
+  llvm::DWARFCompileUnit* CompileUnitForAddress(uint64_t address) const;
+
   const std::string name_;
 
   std::unique_ptr<llvm::MemoryBuffer> binary_buffer_;  // Backing for binary_.

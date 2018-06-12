@@ -6,6 +6,7 @@
 #include <string.h>
 #include <unistd.h>
 
+#include "garnet/bin/zxdb/client/symbols/line_details.h"
 #include "garnet/bin/zxdb/client/symbols/module_symbols_impl.h"
 #include "garnet/bin/zxdb/client/symbols/test_symbol_module.h"
 #include "gtest/gtest.h"
@@ -67,6 +68,52 @@ TEST(ModuleSymbols, Basic) {
   EXPECT_EQ(TestSymbolModule::kMyFunctionLine, loc.file_line().line());
 }
 
+TEST(ModuleSymbols, LineDetailsForRelativeAddress) {
+  ModuleSymbolsImpl module(TestSymbolModule::GetTestFileName());
+  Err err = module.Load();
+  EXPECT_FALSE(err.has_error()) << err.msg();
+
+  // Get the canonical file name to test.
+  auto file_matches = module.FindFileMatches("line_lookup_symbol_test.cc");
+  ASSERT_EQ(1u, file_matches.size());
+  const std::string file_name = file_matches[0];
+
+  // Get address of line 28 which is a normal line with code on both sides.
+  int const kLineToQuery = 28;
+  std::vector<uint64_t> addrs;
+  addrs = module.RelativeAddressesForLine(FileLine(file_name, kLineToQuery));
+  ASSERT_LE(1u, addrs.size());
+  Location location = module.RelativeLocationForRelativeAddress(addrs[0]);
+  EXPECT_EQ(kLineToQuery, location.file_line().line());
+  EXPECT_EQ(file_name, location.file_line().file());
+
+  // Lookup the line info. Normally we expect one line table entry for this but
+  // don't want to assume that since the compiler could emit multiple entries
+  // for it.
+  LineDetails line_details = module.LineDetailsForRelativeAddress(addrs[0]);
+  EXPECT_EQ(file_name, line_details.file_line().file());
+  EXPECT_EQ(kLineToQuery, line_details.file_line().line());
+  ASSERT_FALSE(line_details.entries().empty());
+  uint64_t begin_range = line_details.entries().front().range.begin();
+  uint64_t end_range = line_details.entries().back().range.end();
+  EXPECT_LT(begin_range, end_range);
+
+  // The address before the beginning of the range should be the previous line.
+  LineDetails prev_details =
+      module.LineDetailsForRelativeAddress(begin_range - 1);
+  EXPECT_EQ(kLineToQuery - 1, prev_details.file_line().line());
+  EXPECT_EQ(file_name, prev_details.file_line().file());
+  ASSERT_FALSE(prev_details.entries().empty());
+  EXPECT_EQ(begin_range, prev_details.entries().back().range.end());
+
+  // The end of the range (which is non-inclusive) should be the next line.
+  LineDetails next_details = module.LineDetailsForRelativeAddress(end_range);
+  EXPECT_EQ(kLineToQuery + 1, next_details.file_line().line());
+  EXPECT_EQ(file_name, next_details.file_line().file());
+  ASSERT_FALSE(next_details.entries().empty());
+  EXPECT_EQ(end_range, next_details.entries().front().range.begin());
+}
+
 TEST(ModuleSymbols, AddressesForLine) {
   ModuleSymbolsImpl module(TestSymbolModule::GetTestFileName());
   Err err = module.Load();
@@ -80,14 +127,14 @@ TEST(ModuleSymbols, AddressesForLine) {
   // Basic one, look for line 27 which is a normal statement.
   std::vector<uint64_t> addrs;
   addrs = module.RelativeAddressesForLine(FileLine(file_name, 27));
-  ASSERT_EQ(1u, addrs.size());
+  ASSERT_LE(1u, addrs.size());
   Location location = module.RelativeLocationForRelativeAddress(addrs[0]);
   EXPECT_EQ(27, location.file_line().line());
   EXPECT_EQ(file_name, location.file_line().file());
 
   // Line 26 is a comment line, looking it up should get the following line.
   addrs = module.RelativeAddressesForLine(FileLine(file_name, 26));
-  ASSERT_EQ(1u, addrs.size());
+  ASSERT_LE(1u, addrs.size());
   location = module.RelativeLocationForRelativeAddress(addrs[0]);
   EXPECT_EQ(27, location.file_line().line());
   EXPECT_EQ(file_name, location.file_line().file());

@@ -14,6 +14,7 @@
 namespace zxdb {
 
 class FileLine;
+class LineDetails;
 
 // Represents the symbols for a module (executable or shared library).
 //
@@ -37,6 +38,12 @@ class ModuleSymbols {
   // symbol for this location.
   virtual Location RelativeLocationForRelativeAddress(
       uint64_t address) const = 0;
+
+  // Computes the line that corresponds to the given address. Unlike
+  // RelativeLocationForRelativeAddress (which just returns the current source
+  // line), this returns the entire set of contiguous line table entries with
+  // code ranges with the same line as the given address.
+  virtual LineDetails LineDetailsForRelativeAddress(uint64_t address) const = 0;
 
   // Returns the addresses (relative to the base of this module) for the given
   // function name. The function name must be an exact match. The addresses

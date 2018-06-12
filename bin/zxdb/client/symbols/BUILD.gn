@@ -12,6 +12,7 @@ static_library("symbols") {
 
   public = [
     "file_line.h",
+    "line_details.h",
     "loaded_module_symbols.h",
     "location.h",
     "module_symbols.h",
@@ -23,6 +24,7 @@ static_library("symbols") {
     "dwarf_die_decoder.cc",
     "dwarf_die_decoder.h",
     "file_line.cc",
+    "line_details.cc",
     "loaded_module_symbols.cc",
     "loaded_module_symbols_impl.cc",
     "loaded_module_symbols_impl.h",

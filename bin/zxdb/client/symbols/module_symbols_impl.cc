@@ -6,6 +6,7 @@
 
 #include <algorithm>
 
+#include "garnet/bin/zxdb/client/symbols/line_details.h"
 #include "llvm/DebugInfo/DIContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFUnit.h"
@@ -18,6 +19,11 @@ namespace zxdb {
 namespace {
 
 enum class FileChecked { kUnchecked = 0, kMatch, kNoMatch };
+
+bool SameFileLine(const llvm::DWARFDebugLine::Row& a,
+                  const llvm::DWARFDebugLine::Row& b) {
+  return a.File == b.File && a.Line == b.Line;
+}
 
 struct LineMatch {
   uint64_t address = 0;
@@ -62,15 +68,18 @@ std::vector<LineMatch> GetBestLineTableMatchesInUnit(
     auto file_id = row.File;  // 1-based!
     FXL_DCHECK(file_id >= 1 && file_id <= checked.size());
     auto file_index = file_id - 1;  // 0-based for indexing into array.
-    if (!file_match_found &&
-        checked[file_index - 1] == FileChecked::kUnchecked) {
+    if (!file_match_found && checked[file_index] == FileChecked::kUnchecked) {
       // Look up effective file name and see if it's a match.
       if (line_table->getFileNameByIndex(
               file_id, compilation_dir,
               llvm::DILineInfoSpecifier::FileLineInfoKind::AbsoluteFilePath,
               file_name)) {
-        checked[file_index] = full_path == file_name ? FileChecked::kMatch
-                                                     : FileChecked::kNoMatch;
+        if (full_path == file_name) {
+          file_match_found = true;
+          checked[file_index] = FileChecked::kMatch;
+        } else {
+          checked[file_index] = FileChecked::kNoMatch;
+        }
       } else {
         checked[file_index] = FileChecked::kNoMatch;
       }
@@ -191,6 +200,82 @@ Location ModuleSymbolsImpl::RelativeLocationForRelativeAddress(
                   line_info.Column, line_info.FunctionName);
 }
 
+// By policy this function decides that line table entries with a "0" line
+// index count with the previous non-zero entry. The compiler will generate
+// a row with a 0 line number to indicate an instruction range that isn't
+// associated with a source line.
+LineDetails ModuleSymbolsImpl::LineDetailsForRelativeAddress(
+    uint64_t address) const {
+  llvm::DWARFCompileUnit* unit = CompileUnitForAddress(address);
+  if (!unit)
+    return LineDetails();
+  const llvm::DWARFDebugLine::LineTable* line_table =
+      context_->getLineTableForUnit(unit);
+  if (!line_table && line_table->Rows.empty())
+    return LineDetails();
+
+  const auto& rows = line_table->Rows;
+  uint32_t found_row_index = line_table->lookupAddress(address);
+
+  // The row could be not found or it could be in a "nop" range indicated by
+  // an "end sequence" marker. For padding between functions, the compiler will
+  // insert a row with this marker to indicate everything until the next
+  // address isn't an instruction. With this flag, the other information on the
+  // line will be irrelevant (in practice it will be the same as for the
+  // previous entry).
+  if (found_row_index == line_table->UnknownRowIndex ||
+      rows[found_row_index].EndSequence)
+    return LineDetails();
+
+  // Might have landed on a "0" line (see function comment above). Back up.
+  while (found_row_index > 0 && rows[found_row_index].Line == 0)
+    found_row_index--;
+  if (rows[found_row_index].Line == 0)
+    return LineDetails();  // Nothing has a real line number, give up.
+
+  // Back up to the first row matching the file/line of the found one for the
+  // address.
+  uint32_t first_row_index = found_row_index;
+  while (first_row_index > 0 &&
+         SameFileLine(rows[found_row_index], rows[first_row_index - 1])) {
+    first_row_index--;
+  }
+
+  // Search forward for the end of the sequence. Also include entries with
+  // a "0" line number as descrived above.
+  uint32_t last_row_index = found_row_index;
+  while (last_row_index < rows.size() - 1 &&
+         SameFileLine(rows[found_row_index], rows[last_row_index + 1])) {
+    last_row_index++;
+  }
+
+  // Resolve the file name.
+  const char* compilation_dir = unit->getCompilationDir();
+  std::string file_name;
+  line_table->getFileNameByIndex(
+      rows[first_row_index].File, compilation_dir,
+      llvm::DILineInfoSpecifier::FileLineInfoKind::AbsoluteFilePath, file_name);
+
+  LineDetails result(FileLine(file_name, rows[first_row_index].Line));
+
+  // Add entries for each row. The last row doesn't count because it should be
+  // an end_sequence marker to provide the ending size of the previous entry.
+  // So never include that.
+  for (uint32_t i = first_row_index; i <= last_row_index && i < rows.size() - 1;
+       i++) {
+    // With loop bounds we can always dereference @ i + 1.
+    if (rows[i + 1].Address < rows[i].Address)
+      break;  // Going backwards, corrupted so give up.
+
+    LineDetails::LineEntry entry;
+    entry.column = rows[i].Column;
+    entry.range = AddressRange(rows[i].Address, rows[i + 1].Address);
+    result.entries().push_back(entry);
+  }
+
+  return result;
+}
+
 std::vector<uint64_t> ModuleSymbolsImpl::RelativeAddressesForFunction(
     const std::string& name) const {
   const std::vector<ModuleSymbolIndexNode::DieRef>& entries =
@@ -275,6 +360,12 @@ std::vector<uint64_t> ModuleSymbolsImpl::RelativeAddressesForLine(
       result.push_back(match.address);
   }
   return result;
+}
+
+llvm::DWARFCompileUnit* ModuleSymbolsImpl::CompileUnitForAddress(
+    uint64_t address) const {
+  return compile_units_.getUnitForOffset(
+      context_->getDebugAranges()->findAddress(address));
 }
 
 }  // namespace zxdb

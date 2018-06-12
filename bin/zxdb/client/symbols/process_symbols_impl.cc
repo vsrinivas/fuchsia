@@ -4,6 +4,7 @@
 
 #include "garnet/bin/zxdb/client/symbols/process_symbols_impl.h"
 
+#include "garnet/bin/zxdb/client/symbols/line_details.h"
 #include "garnet/bin/zxdb/client/symbols/loaded_module_symbols_impl.h"
 #include "garnet/bin/zxdb/client/symbols/module_symbols_impl.h"
 #include "garnet/bin/zxdb/client/symbols/system_symbols.h"
@@ -128,6 +129,13 @@ Location ProcessSymbolsImpl::LocationForAddress(uint64_t address) const {
   if (!info || !info->symbols)
     return Location(Location::State::kSymbolized, address);  // Can't symbolize.
   return info->symbols->LocationForAddress(address);
+}
+
+LineDetails ProcessSymbolsImpl::LineDetailsForAddress(uint64_t address) const {
+  const ModuleInfo* info = InfoForAddress(address);
+  if (!info || !info->symbols)
+    return LineDetails();
+  return info->symbols->LineDetailsForAddress(address);
 }
 
 std::vector<uint64_t> ProcessSymbolsImpl::AddressesForFunction(

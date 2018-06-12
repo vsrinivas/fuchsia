@@ -16,6 +16,7 @@
 
 namespace zxdb {
 
+class Err;
 class Frame;
 class Process;
 
@@ -42,6 +43,7 @@ class Thread : public ClientObject {
   // as they were previously).
   virtual void Pause() = 0;
   virtual void Continue() = 0;
+  virtual Err Step() = 0;
   virtual void StepInstruction() = 0;
 
   // Access to the stack frames for this thread at its current stopped

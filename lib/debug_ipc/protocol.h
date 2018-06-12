@@ -122,6 +122,7 @@ struct ResumeRequest {
   enum class How : uint32_t {
     kContinue = 0,     // Continue execution without stopping.
     kStepInstruction,  // Step one machine instruction.
+    kStepInRange,      // Step until control exits an address range.
 
     kLast  // Not a real state, used for validation.
   };
@@ -129,10 +130,17 @@ struct ResumeRequest {
   // If 0, all threads of all debugged processes will be continued.
   uint64_t process_koid = 0;
 
-  // If 0, all threads in the given process will be continued.
+  // If 0, all threads in the given process will be continued. Not compatible
+  // with kStepInRange.
   uint64_t thread_koid = 0;
 
   How how = How::kContinue;
+
+  // When how == kStepInRange, these variables define the address range to
+  // step in. As long as the instruction pointer is inside
+  // [range_begin, range_end), execution will continue.
+  uint64_t range_begin = 0;
+  uint64_t range_end = 0;
 };
 struct ResumeReply {};
 

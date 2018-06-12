@@ -13,6 +13,7 @@
 
 namespace zxdb {
 
+class LineDetails;
 class TargetSymbols;
 
 class ProcessSymbols {
@@ -45,6 +46,12 @@ class ProcessSymbols {
   // Attempts to symbolize the given address. If not possible, the returned
   // location will be an address-only location.
   virtual Location LocationForAddress(uint64_t address) const = 0;
+
+  // Computes the line that corresponds to the given address. Unlike
+  // LocationForAddress (which just returns the current source line), this
+  // returns the entire set of contiguous line table entries with code ranges
+  // with the same line as the given address.
+  virtual LineDetails LineDetailsForAddress(uint64_t address) const = 0;
 
   // Returns a vector of addresses correponding to the beginning of the
   // implementation of a given function. Normally this will result in 0 (no

@@ -23,7 +23,8 @@ bool SerializeDeserializeRequest(const RequestType& in, RequestType* out) {
 
   MessageReader reader(std::move(serialized));
   uint32_t out_transaction_id = 0;
-  if (!ReadRequest(&reader, out, &out_transaction_id)) return false;
+  if (!ReadRequest(&reader, out, &out_transaction_id))
+    return false;
   EXPECT_EQ(in_transaction_id, out_transaction_id);
   return true;
 }
@@ -38,7 +39,8 @@ bool SerializeDeserializeReply(const ReplyType& in, ReplyType* out) {
 
   MessageReader reader(std::move(serialized));
   uint32_t out_transaction_id = 0;
-  if (!ReadReply(&reader, out, &out_transaction_id)) return false;
+  if (!ReadReply(&reader, out, &out_transaction_id))
+    return false;
   EXPECT_EQ(in_transaction_id, out_transaction_id);
   return true;
 }
@@ -181,13 +183,17 @@ TEST(Protocol, ResumeRequest) {
   ResumeRequest initial;
   initial.process_koid = 3746234;
   initial.thread_koid = 123523;
-  initial.how = ResumeRequest::How::kStepInstruction;
+  initial.how = ResumeRequest::How::kStepInRange;
+  initial.range_begin = 0x12345;
+  initial.range_end = 0x123456;
 
   ResumeRequest second;
   ASSERT_TRUE(SerializeDeserializeRequest(initial, &second));
   EXPECT_EQ(initial.process_koid, second.process_koid);
   EXPECT_EQ(initial.thread_koid, second.thread_koid);
   EXPECT_EQ(initial.how, second.how);
+  EXPECT_EQ(initial.range_begin, second.range_begin);
+  EXPECT_EQ(initial.range_end, second.range_end);
 }
 
 // ProcessTree -----------------------------------------------------------------
@@ -314,11 +320,15 @@ TEST(Protocol, AddOrChangeBreakpointRequest) {
 
   EXPECT_EQ(initial.breakpoint.breakpoint_id, second.breakpoint.breakpoint_id);
   EXPECT_EQ(initial.breakpoint.stop, second.breakpoint.stop);
-  ASSERT_EQ(initial.breakpoint.locations.size(), second.breakpoint.locations.size());
+  ASSERT_EQ(initial.breakpoint.locations.size(),
+            second.breakpoint.locations.size());
 
-  EXPECT_EQ(initial.breakpoint.locations[0].process_koid, second.breakpoint.locations[0].process_koid);
-  EXPECT_EQ(initial.breakpoint.locations[0].thread_koid, second.breakpoint.locations[0].thread_koid);
-  EXPECT_EQ(initial.breakpoint.locations[0].address, second.breakpoint.locations[0].address);
+  EXPECT_EQ(initial.breakpoint.locations[0].process_koid,
+            second.breakpoint.locations[0].process_koid);
+  EXPECT_EQ(initial.breakpoint.locations[0].thread_koid,
+            second.breakpoint.locations[0].thread_koid);
+  EXPECT_EQ(initial.breakpoint.locations[0].address,
+            second.breakpoint.locations[0].address);
 }
 
 TEST(Protocol, AddOrChangeBreakpointReply) {

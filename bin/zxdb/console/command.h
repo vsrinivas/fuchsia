@@ -61,6 +61,7 @@ enum class Verb {
   kPause,
   kQuit,
   kRun,
+  kStep,
   kStepi,
   kSymNear,
   kSymStat,

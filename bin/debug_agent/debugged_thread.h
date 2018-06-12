@@ -56,7 +56,7 @@ class DebuggedThread {
 
   // Resumes execution of the thread. The thead should currently be in a
   // stopped state. If it's not stopped, this will be ignored.
-  void Resume(debug_ipc::ResumeRequest::How how);
+  void Resume(const debug_ipc::ResumeRequest& request);
 
   // Fills in the backtrace if available. Otherwise fills in nothing.
   void GetBacktrace(std::vector<debug_ipc::StackFrame>* frames) const;
@@ -65,12 +65,10 @@ class DebuggedThread {
   void SendThreadNotification() const;
 
  private:
-  enum class AfterBreakpointStep {
-    kContinue,  // Resume execution.
-    kBreak      // Send the client the exception and keep stopped.
-  };
-
   void UpdateForSoftwareBreakpoint(zx_thread_state_general_regs* regs);
+
+  // Resumes the thread according to the current run mode.
+  void ResumeForRunMode();
 
   // Sets or clears the single step bit on the thread.
   void SetSingleStep(bool single_step);
@@ -79,6 +77,15 @@ class DebuggedThread {
   DebuggedProcess* process_;  // Non-owning.
   zx::thread thread_;
   zx_koid_t koid_;
+
+  // The main thing we're doing. When automatically resuming, this will be
+  // what happens.
+  debug_ipc::ResumeRequest::How run_mode_ =
+      debug_ipc::ResumeRequest::How::kContinue;
+
+  // When run_mode_ == kStepInRange, this defines the range (end non-inclusive).
+  uint64_t step_in_range_begin_ = 0;
+  uint64_t step_in_range_end_ = 0;
 
   // This is the reason for the thread suspend. This controls how the thread
   // will be resumed. Note that when a breakpoint is hit and other threads
@@ -93,8 +100,6 @@ class DebuggedThread {
   // - When single-stepping over a breakpoint, this will be the breakpoint
   //   being stepped over.
   ProcessBreakpoint* current_breakpoint_ = nullptr;
-
-  AfterBreakpointStep after_breakpoint_step_ = AfterBreakpointStep::kContinue;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(DebuggedThread);
 };

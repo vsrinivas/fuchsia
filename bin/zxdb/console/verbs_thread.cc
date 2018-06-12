@@ -175,6 +175,42 @@ Err DoPause(ConsoleContext* context, const Command& cmd) {
   return Err();
 }
 
+// step ------------------------------------------------------------------------
+
+const char kStepShortHelp[] =
+    "step / s: Step one source line, going into subroutines.";
+const char kStepHelp[] =
+    R"(step
+
+  When a thread is stopped, "step" will execute one source line and stop the
+  thread again. This will follow execution into subroutines. If the thread is
+  running it will issue an error.
+
+  By default, "step" will single-step the current thread. If a thread context
+  is given, the specified thread will be stepped. You can't step a process.
+  Other threads in the process will be unchanged so will remain running or
+  stopped.
+
+  See also "stepi".
+
+Examples
+
+  s
+  step
+      Step the current thread.
+
+  t 2 s
+  thread 2 step
+      Steps thread 2 in the current process.
+)";
+Err DoStep(ConsoleContext* context, const Command& cmd) {
+  Err err = AssertStoppedThreadCommand(context, cmd, "stepi");
+  if (err.has_error())
+    return err;
+
+  return cmd.thread()->Step();
+}
+
 // stepi -----------------------------------------------------------------------
 
 const char kStepiShortHelp[] =
@@ -209,14 +245,9 @@ Examples
       Steps thread 2 in process 3.
 )";
 Err DoStepi(ConsoleContext* context, const Command& cmd) {
-  Err err = cmd.ValidateNouns({Noun::kProcess, Noun::kThread});
+  Err err = AssertStoppedThreadCommand(context, cmd, "stepi");
   if (err.has_error())
     return err;
-
-  if (!cmd.thread() ||
-      (cmd.thread()->GetState() != debug_ipc::ThreadRecord::State::kBlocked &&
-       cmd.thread()->GetState() != debug_ipc::ThreadRecord::State::kSuspended))
-    return Err("\"stepi\" requires a suspended or blocked thread to step.");
 
   cmd.thread()->StepInstruction();
   return Err();
@@ -229,6 +260,8 @@ void AppendThreadVerbs(std::map<Verb, VerbRecord>* verbs) {
                                          kContinueShortHelp, kContinueHelp);
   (*verbs)[Verb::kPause] =
       VerbRecord(&DoPause, {"pause", "pa"}, kPauseShortHelp, kPauseHelp);
+  (*verbs)[Verb::kStep] =
+      VerbRecord(&DoStep, {"step", "s"}, kStepShortHelp, kStepHelp);
   (*verbs)[Verb::kStepi] =
       VerbRecord(&DoStepi, {"stepi", "si"}, kStepiShortHelp, kStepiHelp);
 }

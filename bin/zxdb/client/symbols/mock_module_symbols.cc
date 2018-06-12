@@ -4,6 +4,7 @@
 
 #include "garnet/bin/zxdb/client/symbols/mock_module_symbols.h"
 
+#include "garnet/bin/zxdb/client/symbols/line_details.h"
 #include "garnet/bin/zxdb/client/symbols/location.h"
 
 namespace zxdb {
@@ -25,6 +26,11 @@ Location MockModuleSymbols::RelativeLocationForRelativeAddress(
     uint64_t address) const {
   // Currently only name -> address mappings are supported by this mock.
   return Location(Location::State::kAddress, address);
+}
+
+LineDetails MockModuleSymbols::LineDetailsForRelativeAddress(
+    uint64_t address) const {
+  return LineDetails();
 }
 
 std::vector<uint64_t> MockModuleSymbols::RelativeAddressesForFunction(

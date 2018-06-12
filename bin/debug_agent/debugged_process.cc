@@ -55,13 +55,13 @@ void DebuggedProcess::OnResume(const debug_ipc::ResumeRequest& request) {
   if (request.thread_koid) {
     DebuggedThread* thread = GetThread(request.thread_koid);
     if (thread)
-      thread->Resume(request.how);
+      thread->Resume(request);
     // Could be not found if there is a race between the thread exiting and
     // the client sending the request.
   } else {
     // 0 thread ID means resume all in process.
     for (const auto& pair : threads_)
-      pair.second->Resume(request.how);
+      pair.second->Resume(request);
   }
 }
 

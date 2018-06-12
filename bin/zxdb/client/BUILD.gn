@@ -76,6 +76,7 @@ static_library("client") {
 # Shared low-level stuff between "client" and "symbols".
 static_library("common") {
   public = [
+    "address_range.h",
     "client_object.h",
     "err.h",
     "file_util.h",
@@ -83,6 +84,7 @@ static_library("common") {
     "string_util.h",
   ]
   sources = [
+    "address_range.cc",
     "client_object.cc",
     "err.cc",
     "file_util.cc",

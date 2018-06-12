@@ -36,6 +36,29 @@ Err AssertRunningTarget(ConsoleContext* context, const char* command_name,
                         TargetStateToString(state).c_str()));
 }
 
+Err AssertStoppedThreadCommand(ConsoleContext* context, const Command& cmd,
+                               const char* command_name) {
+  Err err = cmd.ValidateNouns({Noun::kProcess, Noun::kThread});
+  if (err.has_error())
+    return err;
+
+  if (!cmd.thread()) {
+    return Err(fxl::StringPrintf(
+        "\"%s\" requires a thread but there is no current thread.",
+        command_name));
+  }
+  if (cmd.thread()->GetState() != debug_ipc::ThreadRecord::State::kBlocked &&
+      cmd.thread()->GetState() != debug_ipc::ThreadRecord::State::kSuspended) {
+    return Err(fxl::StringPrintf(
+        "\"%s\" requires a suspended thread but thread %d is %s.\n"
+        "To view and sync thread state with the remote system, type "
+        "\"thread\".",
+        command_name, context->IdForThread(cmd.thread()),
+        ThreadStateToString(cmd.thread()->GetState()).c_str()));
+  }
+  return Err();
+}
+
 Err StringToUint64(const std::string& s, uint64_t* out) {
   *out = 0;
   if (s.empty())
@@ -173,8 +196,9 @@ std::string BreakpointScopeToString(const ConsoleContext* context,
                                context->IdForTarget(settings.scope_target));
     case BreakpointSettings::Scope::kThread:
       return fxl::StringPrintf(
-          "pr %d t %d", context->IdForTarget(
-                            settings.scope_thread->GetProcess()->GetTarget()),
+          "pr %d t %d",
+          context->IdForTarget(
+              settings.scope_thread->GetProcess()->GetTarget()),
           context->IdForThread(settings.scope_thread));
   }
   FXL_NOTREACHED();

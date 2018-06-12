@@ -22,6 +22,7 @@ class MockModuleSymbols : public ModuleSymbols {
   // ModuleSymbols implementation.
   const std::string& GetLocalFileName() const override;
   Location RelativeLocationForRelativeAddress(uint64_t address) const override;
+  LineDetails LineDetailsForRelativeAddress(uint64_t address) const override;
   std::vector<uint64_t> RelativeAddressesForFunction(
       const std::string& name) const override;
   std::vector<std::string> FindFileMatches(

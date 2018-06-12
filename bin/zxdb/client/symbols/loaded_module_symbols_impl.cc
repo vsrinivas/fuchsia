@@ -5,6 +5,7 @@
 #include "garnet/bin/zxdb/client/symbols/loaded_module_symbols_impl.h"
 
 #include "garnet/bin/zxdb/client/symbols/file_line.h"
+#include "garnet/bin/zxdb/client/symbols/line_details.h"
 #include "garnet/bin/zxdb/client/symbols/module_symbols_impl.h"
 
 namespace zxdb {
@@ -28,6 +29,19 @@ Location LoadedModuleSymbolsImpl::LocationForAddress(uint64_t address) const {
           AbsoluteToRelative(address));
   location.AddAddressOffset(load_address_);
   return location;
+}
+
+LineDetails LoadedModuleSymbolsImpl::LineDetailsForAddress(
+    uint64_t address) const {
+  LineDetails result = module_->module_symbols()->LineDetailsForRelativeAddress(
+      AbsoluteToRelative(address));
+  for (auto& entry : result.entries()) {
+    if (!entry.range.empty()) {
+      entry.range = AddressRange(RelativeToAbsolute(entry.range.begin()),
+                                 RelativeToAbsolute(entry.range.end()));
+    }
+  }
+  return result;
 }
 
 std::vector<uint64_t> LoadedModuleSymbolsImpl::AddressesForFunction(

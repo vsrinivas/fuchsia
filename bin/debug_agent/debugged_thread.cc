@@ -49,11 +49,12 @@ void DebuggedThread::OnException(uint32_t type) {
         current_breakpoint_->BreakpointStepHasException(koid_, type);
     current_breakpoint_ = nullptr;
     if (completes_bp_step &&
-        after_breakpoint_step_ == AfterBreakpointStep::kContinue) {
+        run_mode_ == debug_ipc::ResumeRequest::How::kContinue) {
       // This step was an internal thing to step over the breakpoint in service
       // of continuing from a breakpoint. Transparently resume the thread since
-      // the client didn't request the step.
-      Resume(debug_ipc::ResumeRequest::How::kContinue);
+      // the client didn't request the step. The step (non-continue) cases will
+      // be handled below in the normal flow since we just finished a step.
+      ResumeForRunMode();
       return;
     }
     // Something else went wrong while stepping (the instruction with the
@@ -72,6 +73,16 @@ void DebuggedThread::OnException(uint32_t type) {
       UpdateForSoftwareBreakpoint(&regs);
       break;
     case ZX_EXCP_HW_BREAKPOINT:
+      // When stepping in a range, automatically continue as long as we're
+      // still in range.
+      if (run_mode_ == debug_ipc::ResumeRequest::How::kStepInRange &&
+          *arch::IPInRegs(&regs) >= step_in_range_begin_ &&
+          *arch::IPInRegs(&regs) < step_in_range_end_) {
+        ResumeForRunMode();
+        return;
+      }
+
+      // Non-internal single-step, notify client.
       notify.type = debug_ipc::NotifyException::Type::kHardware;
       break;
     default:
@@ -102,32 +113,12 @@ void DebuggedThread::Pause() {
   }
 }
 
-void DebuggedThread::Resume(debug_ipc::ResumeRequest::How how) {
-  if (suspend_reason_ == SuspendReason::kException) {
-    if (current_breakpoint_) {
-      // Going over a breakpoint always requires a single-step first. Then we
-      // either continue or break.
-      SetSingleStep(true);
-      if (how == debug_ipc::ResumeRequest::How::kStepInstruction)
-        after_breakpoint_step_ = AfterBreakpointStep::kBreak;
-      else
-        after_breakpoint_step_ = AfterBreakpointStep::kContinue;
+void DebuggedThread::Resume(const debug_ipc::ResumeRequest& request) {
+  run_mode_ = request.how;
+  step_in_range_begin_ = request.range_begin;
+  step_in_range_end_ = request.range_end;
 
-      current_breakpoint_->BeginStepOver(koid_);
-    } else {
-      SetSingleStep(how == debug_ipc::ResumeRequest::How::kStepInstruction);
-    }
-    suspend_reason_ = SuspendReason::kNone;
-    thread_.resume(ZX_RESUME_EXCEPTION);
-  } else if (suspend_reason_ == SuspendReason::kOther) {
-    // A breakpoint should only be current when it was hit which will be
-    // caused by an exception.
-    FXL_DCHECK(!current_breakpoint_);
-
-    SetSingleStep(how == debug_ipc::ResumeRequest::How::kStepInstruction);
-    suspend_reason_ = SuspendReason::kNone;
-    thread_.resume(0);
-  }
+  ResumeForRunMode();
 }
 
 void DebuggedThread::GetBacktrace(
@@ -207,6 +198,31 @@ void DebuggedThread::UpdateForSoftwareBreakpoint(
       // we're not set up to handle. Err on the side of telling the user about
       // the exception.
     }
+  }
+}
+
+void DebuggedThread::ResumeForRunMode() {
+  if (suspend_reason_ == SuspendReason::kException) {
+    if (current_breakpoint_) {
+      // Going over a breakpoint always requires a single-step first. Then we
+      // continue according to run_mode_.
+      SetSingleStep(true);
+      current_breakpoint_->BeginStepOver(koid_);
+    } else {
+      // All non-continue resumptions require single stepping.
+      SetSingleStep(run_mode_ != debug_ipc::ResumeRequest::How::kContinue);
+    }
+    suspend_reason_ = SuspendReason::kNone;
+    thread_.resume(ZX_RESUME_EXCEPTION);
+  } else if (suspend_reason_ == SuspendReason::kOther) {
+    // A breakpoint should only be current when it was hit which will be
+    // caused by an exception.
+    FXL_DCHECK(!current_breakpoint_);
+
+    // All non-continue resumptions require single stepping.
+    SetSingleStep(run_mode_ != debug_ipc::ResumeRequest::How::kContinue);
+    suspend_reason_ = SuspendReason::kNone;
+    thread_.resume(0);
   }
 }
 
