@@ -22,6 +22,9 @@ static const pbus_gpio_t fanctl_gpios[] = {
 };
 
 static aml_thermal_config_t aml_vim2_config = {
+    .active_cooling                 = true,
+    .passive_cooling                = true,
+    .gpu_throttling                 = false,
     .trip_point_count               = 8,
     .critical_temp                  = 81,
     .trip_point_info = {

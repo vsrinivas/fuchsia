@@ -135,8 +135,9 @@ static zx_status_t aml_thermal_set_dvfs_opp(aml_thermal_t* dev,
 
 static void aml_thermal_get_device_info(aml_thermal_t* dev,
                                         thermal_device_info_t* info) {
-    info->active_cooling        = true;
-    info->passive_cooling       = true;
+    info->active_cooling        = dev->device->active_cooling;
+    info->passive_cooling       = dev->device->passive_cooling;
+    info->gpu_throttling        = dev->device->gpu_throttling;
     info->num_trip_points       = dev->device->trip_point_count;
     memcpy(&info->trip_point_info, &dev->device->trip_point_info,
            sizeof(dev->device->trip_point_info));

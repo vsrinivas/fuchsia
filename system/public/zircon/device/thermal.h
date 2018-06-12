@@ -48,6 +48,9 @@ typedef struct {
     // passive cooling support
     bool passive_cooling;
 
+    // gpu throttling support
+    bool gpu_throttling;
+
     // number of trip points
     uint32_t num_trip_points;
 

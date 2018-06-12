@@ -35,6 +35,10 @@ typedef struct {
     thermal_temperature_info_t          trip_point_info[MAX_TRIP_POINTS];
 
     uint32_t                            critical_temp;
+
+    bool                                active_cooling;
+    bool                                passive_cooling;
+    bool                                gpu_throttling;
 } aml_thermal_config_t;
 
 typedef struct {
