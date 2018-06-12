@@ -62,7 +62,7 @@ multiconst!(zx_rights_t, [
     ZX_RIGHT_GET_POLICY   = 1 << 11;
     ZX_RIGHT_SIGNAL       = 1 << 12;
     ZX_RIGHT_SIGNAL_PEER  = 1 << 13;
-    ZX_RIGHT_WAIT         = 0 << 14; // Coming Soon!
+    ZX_RIGHT_WAIT         = 1 << 14;
     ZX_RIGHT_SAME_RIGHTS  = 1 << 31;
 ]);
 
