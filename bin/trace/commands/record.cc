@@ -269,7 +269,7 @@ void Record::Start(const fxl::CommandLine& command_line) {
 
   tracing_ = true;
 
-  TraceOptions trace_options;
+  fuchsia::tracing::TraceOptions trace_options;
   trace_options.categories =
       fxl::To<fidl::VectorPtr<fidl::StringPtr>>(options_.categories);
   trace_options.buffer_size_megabytes_hint =

@@ -11,7 +11,7 @@
 #include <string>
 
 #include <lib/fit/function.h>
-#include <tracing/cpp/fidl.h>
+#include <fuchsia/tracing/cpp/fidl.h>
 
 #include "lib/app/cpp/startup_context.h"
 #include "lib/fxl/command_line.h"
@@ -63,12 +63,12 @@ class CommandWithTraceController : public Command {
  protected:
   explicit CommandWithTraceController(fuchsia::sys::StartupContext* context);
 
-  TraceControllerPtr& trace_controller();
-  const TraceControllerPtr& trace_controller() const;
+  fuchsia::tracing::TraceControllerPtr& trace_controller();
+  const fuchsia::tracing::TraceControllerPtr& trace_controller() const;
 
  private:
   std::unique_ptr<fuchsia::sys::StartupContext> context_;
-  TraceControllerPtr trace_controller_;
+  fuchsia::tracing::TraceControllerPtr trace_controller_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(CommandWithTraceController);
 };

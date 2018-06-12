@@ -5,7 +5,7 @@
 import("//build/fidl/fidl.gni")
 
 fidl("fidl") {
-  name = "tracing"
+  name = "fuchsia.tracing"
 
   sources = [
     "trace_controller.fidl",

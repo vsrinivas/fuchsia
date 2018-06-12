@@ -17,8 +17,8 @@ TraceManagerApp::TraceManagerApp(const Config& config)
                                             std::move(request));
       });
 
-  context_->outgoing().AddPublicService<TraceController>(
-      [this](fidl::InterfaceRequest<TraceController> request) {
+  context_->outgoing().AddPublicService<fuchsia::tracing::TraceController>(
+      [this](fidl::InterfaceRequest<fuchsia::tracing::TraceController> request) {
         trace_controller_bindings_.AddBinding(&trace_manager_,
                                               std::move(request));
       });

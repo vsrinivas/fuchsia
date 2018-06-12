@@ -44,18 +44,18 @@ CommandWithTraceController::CommandWithTraceController(
     fuchsia::sys::StartupContext* context)
     : Command(context),
       trace_controller_(
-          context->ConnectToEnvironmentService<TraceController>()) {
+          context->ConnectToEnvironmentService<fuchsia::tracing::TraceController>()) {
   trace_controller_.set_error_handler([this] {
     FXL_LOG(ERROR) << "Trace controller disconnected unexpectedly";
     Done(1);
   });
 }
 
-TraceControllerPtr& CommandWithTraceController::trace_controller() {
+fuchsia::tracing::TraceControllerPtr& CommandWithTraceController::trace_controller() {
   return trace_controller_;
 }
 
-const TraceControllerPtr& CommandWithTraceController::trace_controller() const {
+const fuchsia::tracing::TraceControllerPtr& CommandWithTraceController::trace_controller() const {
   return trace_controller_;
 }
 

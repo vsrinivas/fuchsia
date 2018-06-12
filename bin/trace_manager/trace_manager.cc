@@ -33,7 +33,8 @@ TraceManager::TraceManager(fuchsia::sys::StartupContext* context,
 
 TraceManager::~TraceManager() = default;
 
-void TraceManager::StartTracing(TraceOptions options, zx::socket output,
+void TraceManager::StartTracing(fuchsia::tracing::TraceOptions options,
+                                zx::socket output,
                                 StartTracingCallback start_callback) {
   if (session_) {
     FXL_LOG(ERROR) << "Trace already in progress";
@@ -72,9 +73,10 @@ void TraceManager::StopTracing() {
 }
 
 void TraceManager::GetKnownCategories(GetKnownCategoriesCallback callback) {
-  fidl::VectorPtr<KnownCategory> known_categories;
+  fidl::VectorPtr<fuchsia::tracing::KnownCategory> known_categories;
   for (const auto& it : config_.known_categories()) {
-    known_categories.push_back(KnownCategory{it.first, it.second});
+    known_categories.push_back(
+        fuchsia::tracing::KnownCategory{it.first, it.second});
   }
   callback(std::move(known_categories));
 }

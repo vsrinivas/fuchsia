@@ -8,7 +8,7 @@
 #include <string>
 #include <vector>
 
-#include <tracing/cpp/fidl.h>
+#include <fuchsia/tracing/cpp/fidl.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/fit/function.h>
 #include <lib/zx/socket.h>
@@ -24,13 +24,13 @@ class Tracer {
   using RecordConsumer = trace::TraceReader::RecordConsumer;
   using ErrorHandler = trace::TraceReader::ErrorHandler;
 
-  explicit Tracer(TraceController* controller);
+  explicit Tracer(fuchsia::tracing::TraceController* controller);
   ~Tracer();
 
   // Starts tracing.
   // Streams records |record_consumer| and errors to |error_handler|.
   // Invokes |done_callback| when tracing stops.
-  void Start(TraceOptions options,
+  void Start(fuchsia::tracing::TraceOptions options,
              RecordConsumer record_consumer,
              ErrorHandler error_handler,
              fit::closure start_callback,
@@ -51,7 +51,7 @@ class Tracer {
   void CloseSocket();
   void Done();
 
-  TraceController* const controller_;
+  fuchsia::tracing::TraceController* const controller_;
 
   enum class State { kStopped, kStarted, kStopping };
 
