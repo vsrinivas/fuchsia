@@ -2,12 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "peridot/bin/ledger/testing/e2e/e2e_test.h"
+#include "gtest/gtest.h"
 #include "peridot/bin/ledger/tests/integration/integration_test.h"
 
 int main(int argc, char** argv) {
   if (!test::integration::ProcessCommandLine(argc, argv)) {
     return -1;
   }
-  return test::TestMain(argc, argv);
+  testing::InitGoogleTest(&argc, argv);
+  return RUN_ALL_TESTS();
 }

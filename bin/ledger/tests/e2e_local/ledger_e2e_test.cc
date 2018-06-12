@@ -20,7 +20,6 @@
 #include "peridot/bin/ledger/fidl/include/types.h"
 #include "peridot/bin/ledger/testing/cloud_provider/fake_cloud_provider.h"
 #include "peridot/bin/ledger/testing/cloud_provider/types.h"
-#include "peridot/bin/ledger/testing/e2e/e2e_test.h"
 
 namespace test {
 namespace e2e_local {

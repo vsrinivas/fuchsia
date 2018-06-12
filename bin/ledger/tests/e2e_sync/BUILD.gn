@@ -23,7 +23,6 @@ executable("e2e_sync") {
     "//peridot/bin/ledger/fidl_helpers",
     "//peridot/bin/ledger/testing:ledger_instance_factory",
     "//peridot/bin/ledger/testing:lib",
-    "//peridot/bin/ledger/testing/e2e:e2e_test",
     "//peridot/bin/ledger/tests/integration/sync",
     "//peridot/lib/convert",
     "//peridot/lib/firebase_auth/testing",

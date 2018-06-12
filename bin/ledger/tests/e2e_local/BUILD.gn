@@ -20,10 +20,8 @@ executable("e2e_local") {
     "//peridot/bin/ledger/fidl",
     "//peridot/bin/ledger/testing:lib",
     "//peridot/bin/ledger/testing/cloud_provider",
-    "//peridot/bin/ledger/testing/e2e:e2e_test",
-    "//peridot/bin/ledger/testing/e2e:e2e_test_main",
     "//peridot/public/lib/ledger/fidl",
-    "//third_party/googletest:gtest",
+    "//third_party/googletest:gtest_main",
   ]
 
   data_deps = [
