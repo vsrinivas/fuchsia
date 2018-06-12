@@ -264,11 +264,8 @@ zx_status_t sys_cprng_draw_new(user_out_ptr<void> buffer, size_t len) {
     return ZX_OK;
 }
 
-zx_status_t sys_cprng_draw(user_out_ptr<void> buffer, size_t len, user_out_ptr<size_t> actual) {
-    zx_status_t status;
-    if ((status = sys_cprng_draw_new(buffer, len)))
-        return status;
-    return actual.copy_to_user(len);
+zx_status_t sys_cprng_draw_once(user_out_ptr<void> buffer, size_t len) {
+    return sys_cprng_draw_new(buffer, len);
 }
 
 zx_status_t sys_cprng_add_entropy(user_in_ptr<const void> buffer, size_t len) {

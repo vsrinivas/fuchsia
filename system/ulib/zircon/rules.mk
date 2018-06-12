@@ -17,6 +17,7 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/data.S \
     $(LOCAL_DIR)/zx_cache_flush.cpp \
     $(LOCAL_DIR)/zx_channel_call.cpp \
+    $(LOCAL_DIR)/zx_cprng_draw.cpp \
     $(LOCAL_DIR)/zx_deadline_after.cpp \
     $(LOCAL_DIR)/zx_status_get_string.cpp \
     $(LOCAL_DIR)/zx_system_get_dcache_line_size.cpp \
