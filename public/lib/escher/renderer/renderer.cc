@@ -37,6 +37,7 @@ void Renderer::RunOffscreenBenchmark(
   constexpr uint64_t kSecondsToNanoseconds = 1000000000;
   const char* kTraceLiteral = "RunOffscreenBenchmark";
 
+  uint64_t frame_number = 0;
   // Create the images that we will render into, and the semaphores that will
   // prevent us from rendering into the same image concurrently.  At the same
   // time, draw a few throwaway frames, to warm things up before beginning the
@@ -55,7 +56,7 @@ void Renderer::RunOffscreenBenchmark(
       images[i] = std::move(im);
       semaphores[i] = Semaphore::New(context_.device);
 
-      auto frame = escher()->NewFrame(kTraceLiteral);
+      auto frame = escher()->NewFrame(kTraceLiteral, ++frame_number);
       draw_func(frame, images[i]);
       frame->EndFrame(semaphores[i], nullptr);
     }
@@ -92,8 +93,8 @@ void Renderer::RunOffscreenBenchmark(
       throttle = command_buffer;
     }
 
-    auto frame =
-        escher()->NewFrame(kTraceLiteral, current_frame == frame_count - 1);
+    auto frame = escher()->NewFrame(
+        kTraceLiteral, ++frame_number, current_frame == frame_count - 1);
     draw_func(frame, images[image_index]);
     frame->EndFrame(semaphores[image_index], nullptr);
   }

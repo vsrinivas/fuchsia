@@ -153,7 +153,7 @@ void Renderer::DrawFrame(const escher::FramebufferPtr& framebuffer,
                          escher::SemaphorePtr frame_done) {
   TRACE_DURATION("gfx", "fuchsia::examples::shadertoy::Renderer::DrawFrame");
 
-  auto frame = escher()->NewFrame("Shadertoy Renderer");
+  auto frame = escher()->NewFrame("Shadertoy Renderer", ++frame_number_);
   auto command_buffer = frame->command_buffer();
   auto vk_command_buffer = frame->vk_command_buffer();
 

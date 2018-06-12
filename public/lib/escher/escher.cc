@@ -201,7 +201,8 @@ TexturePtr Escher::NewAttachmentTexture(vk::Format format, uint32_t width,
                     use_unnormalized_coordinates);
 }
 
-FramePtr Escher::NewFrame(const char* trace_literal, bool enable_gpu_logging) {
+FramePtr Escher::NewFrame(const char* trace_literal, uint64_t frame_number,
+                          bool enable_gpu_logging) {
   TRACE_DURATION("gfx", "escher::Escher::NewFrame ");
   for (auto& pair : descriptor_set_allocators_) {
     pair.second->BeginFrame();
@@ -209,7 +210,7 @@ FramePtr Escher::NewFrame(const char* trace_literal, bool enable_gpu_logging) {
   framebuffer_allocator_->BeginFrame();
 
   auto frame = fxl::AdoptRef<Frame>(
-      new Frame(this, ++next_frame_number_, trace_literal, enable_gpu_logging));
+      new Frame(this, frame_number, trace_literal, enable_gpu_logging));
   frame->BeginFrame();
   return frame;
 }

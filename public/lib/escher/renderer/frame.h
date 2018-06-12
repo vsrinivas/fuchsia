@@ -65,7 +65,12 @@ class Frame : public Reffable {
       const char* trace_literal);
 
   Escher* const escher_;
+  // The frame number associated with this frame. Used to correlate work across
+  // threads for tracing events.
   const uint64_t frame_number_;
+  // A unique number to identify this escher frame. It can diverge from
+  // frame_number_ as frame_number_ is used by the client for its own tracking.
+  const uint64_t escher_frame_number_;
   const char* trace_literal_;
   bool enable_gpu_logging_;
   vk::Queue queue_;

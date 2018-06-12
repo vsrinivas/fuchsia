@@ -15,10 +15,23 @@
 
 namespace escher {
 
-Frame::Frame(Escher* escher, uint64_t frame_number, const char* trace_literal,
+namespace {
+
+// Generates a unique frame count for each created frame.
+static uint64_t NextFrameNumber() {
+    static std::atomic<uint64_t> counter(0);
+    return ++counter;
+}
+
+}  // anonymous namespace
+
+Frame::Frame(Escher* escher,
+             uint64_t frame_number,
+             const char* trace_literal,
              bool enable_gpu_logging)
     : escher_(escher),
       frame_number_(frame_number),
+      escher_frame_number_(NextFrameNumber()),
       trace_literal_(trace_literal),
       enable_gpu_logging_(enable_gpu_logging),
       queue_(escher->device()->vk_main_queue()),
@@ -33,7 +46,7 @@ Frame::~Frame() = default;
 
 void Frame::BeginFrame() {
   TRACE_DURATION("gfx", "escher::Frame::BeginFrame", "frame_number",
-                 frame_number_);
+                 frame_number_, "escher_frame_number", escher_frame_number_);
   FXL_DCHECK(!command_buffer_);
   new_command_buffer_ = CommandBuffer::NewForGraphics(escher());
   command_buffer_ = new_command_buffer_->impl();

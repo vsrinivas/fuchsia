@@ -27,8 +27,6 @@ class Renderer : public fxl::RefCountedThreadSafe<Renderer> {
 
   Escher* escher() const { return escher_; }
 
-  uint64_t frame_number() const { return frame_number_; }
-
  protected:
   explicit Renderer(Escher* escher);
   virtual ~Renderer();
@@ -37,7 +35,6 @@ class Renderer : public fxl::RefCountedThreadSafe<Renderer> {
 
  private:
   Escher* const escher_;
-  uint64_t frame_number_ = 0;
 
   FRIEND_REF_COUNTED_THREAD_SAFE(Renderer);
   FXL_DISALLOW_COPY_AND_ASSIGN(Renderer);

@@ -65,7 +65,7 @@ VK_TEST(PoseBuffer, ComputeShaderLatching) {
   auto vulkan_device = escher::VulkanDeviceQueues::New(vulkan_instance, {});
 
   auto escher = std::make_unique<escher::Escher>(vulkan_device);
-  escher::FramePtr frame = escher->NewFrame("PoseBufferLatchingTest");
+  escher::FramePtr frame = escher->NewFrame("PoseBufferLatchingTest", 0);
 
   uint32_t num_entries = 8;
   uint64_t base_time = 42L;              // Choose an arbitrary, non-zero time.

@@ -296,7 +296,8 @@ void WaterfallDemo::DrawFrame() {
       escher::vec2(light_azimuth_radians_, kLightElevationRadians),
       kLightDispersion, vec3(kLightIntensity)));
 
-  auto frame = escher()->NewFrame("Waterfall Demo", profile_one_frame_);
+  auto frame = escher()->NewFrame(
+      "Waterfall Demo", ++frame_count_, profile_one_frame_);
 
   escher::ShadowMapPtr shadow_map;
   if (shadow_mode_ == kShadowMap || shadow_mode_ == kMomentShadowMap) {
@@ -311,7 +312,7 @@ void WaterfallDemo::DrawFrame() {
   swapchain_helper_.DrawFrame(frame, renderer_.get(), stage_, *model, camera,
                               shadow_map, overlay_model);
 
-  if (++frame_count_ == 1) {
+  if (frame_count_ == 1) {
     first_frame_microseconds_ = stopwatch_.GetElapsedMicroseconds();
     stopwatch_.Reset();
   } else if (frame_count_ % 200 == 0) {

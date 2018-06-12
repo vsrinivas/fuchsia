@@ -70,6 +70,8 @@ class Renderer : public escher::Renderer {
   escher::MeshPtr full_screen_;
   escher::TexturePtr white_texture_;
   escher::impl::DescriptorSetPool descriptor_set_pool_;
+
+  uint64_t frame_number_ = 0;
 };
 
 }  // namespace shadertoy
