@@ -29,44 +29,6 @@
 **Default value for `target_cpu = "x64"`:** "//out/x64/amber-files"
 
 
-### arm_float_abi
- The ARM floating point mode. This is either the string "hard", "soft", or
- "softfp". An empty string means to use the default one for the
- arm_version.
-
-**Default value for `target_cpu = "arm64"`:** ""
-
-No values for `target_cpu = "x64"`.
-
-### arm_optionally_use_neon
- Whether to enable optional NEON code paths.
-
-**Default value for `target_cpu = "arm64"`:** false
-
-No values for `target_cpu = "x64"`.
-
-### arm_tune
- The ARM variant-specific tuning mode. This will be a string like "armv6"
- or "cortex-a15". An empty string means to use the default for the
- arm_version.
-
-**Default value for `target_cpu = "arm64"`:** ""
-
-No values for `target_cpu = "x64"`.
-
-### arm_use_neon
- Whether to use the neon FPU instruction set or not.
-
-**Default value for `target_cpu = "arm64"`:** true
-
-No values for `target_cpu = "x64"`.
-
-### arm_version
-
-**Default value for `target_cpu = "arm64"`:** 8
-
-No values for `target_cpu = "x64"`.
-
 ### build_intel_gen
 
 **Default value for `target_cpu = "arm64"`:** false
@@ -168,13 +130,6 @@ No values for `target_cpu = "x64"`.
  This is just added to `known_variants`, which see.
 
 **Default value:** []
-
-
-### ffmpeg_profile
-
-**Default value for `target_cpu = "arm64"`:** "default"
-
-**Default value for `target_cpu = "x64"`:** "max"
 
 
 ### fuchsia_packages
@@ -595,7 +550,9 @@ No values for `target_cpu = "arm64"`.
 ### thinlto_cache_dir
  ThinLTO cache directory path.
 
-**Default value:** "host_x64/thinlto-cache"
+**Default value for `target_cpu = "arm64"`:** "thinlto-cache"
+
+**Default value for `target_cpu = "x64"`:** "x64-shared/thinlto-cache"
 
 
 ### thinlto_jobs
