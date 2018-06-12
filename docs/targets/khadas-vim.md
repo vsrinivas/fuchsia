@@ -13,6 +13,13 @@ Before you start, you need a heat sink. A passive chip heat sink will allow you
 to run 2 cores out of 8 at full speed before reaching 80C, the critical
 temperature at which cores have to be throttled down.
 
+## Setup
+
+- USB C port: Connect to host. Provides power and `fastboot`.
+- Ethernet: Connect cable directly to board (do not use a USB ethernet adapter).
+- HDMI: Optional. Connects to display.
+- Serial Console: Optional but very useful. See next section.
+
 ## Serial Console
 
 The debug UART for the serial console is exposed on the 40 pin header at the back of the board.
@@ -40,7 +47,7 @@ The VIM2 has 3 buttons on the left side of the board. On the board schematic, SW
 
 Booting Zircon on the VIM2 requires a custom bootloader.
 
-### [Googlers only] 
+### [Googlers only]
 Within Google, this can be found at [go/vim2-bootloader](http://go/vim2-bootloader). Download the .bin file and follow the instructions in the document.
 
 If you are not at Google, hang on until we make this publicly available.
