@@ -28,7 +28,7 @@ void CodecRunner::BindAndOwnSelf(
     // This class is only used for running one Codec instance per process.
     //
     // Since the channel failed, the client probably won't see this message.
-    Exit("The Codec channel failed from server's point of view.");
+    Exit("The Codec channel failed server-side.  Normal if client is done.");
   });
   binding_->Bind(std::move(codec_request), fidl_async_);
 }
@@ -43,7 +43,7 @@ void CodecRunner::SetEventSink(
     // event_sink_ is part of the CodecRunner instance.
     event_sink_.set_error_handler([this] {
       binding_.reset();
-      Exit("event_sink_ failed server-side.");
+      Exit("event_sink_ failed server-side.  Normal if client is done.");
     });
     event_sink_.Bind(std::move(event_sink), fidl_async_);
     // We have input_constraints_ by now thanks to our behavior (server-side),
@@ -106,7 +106,7 @@ void CodecRunner::Exit(const char* format, ...) {
   // TODO(dustingreen): It might be worth wiring this up to the log in a more
   // official way, especially if doing so would print a timestamp automatically
   // and/or provide filtering goodness etc.
-  printf("%s - exiting\n", buffer.get());
+  printf("%s  --  Codec server isolate will exit(-1)\n", buffer.get());
 
   // TODO(dustingreen): Send string in buffer via epitaph, when possible.  First
   // we should switch to events so we'll only have the Codec channel not the
