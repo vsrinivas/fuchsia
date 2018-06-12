@@ -95,6 +95,7 @@ class CreateStoryCall
     story_id_ = to_hex_string(story_page_id_.id);
 
     story_data_ = fuchsia::modular::internal::StoryData::New();
+    story_data_->is_kind_of_proto_story = false;
     story_data_->story_page_id = CloneOptional(story_page_id_);
     story_data_->story_info.id = story_id_;
     story_data_->story_info.last_focus_time = 0;

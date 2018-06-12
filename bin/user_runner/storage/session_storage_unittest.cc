@@ -69,6 +69,7 @@ TEST_F(SessionStorageTest, Create_VerifyData) {
   future_data->Then([&](fuchsia::modular::internal::StoryDataPtr data) {
     ASSERT_TRUE(data);
 
+    EXPECT_FALSE(data->is_kind_of_proto_story);
     EXPECT_EQ(story_id, data->story_info.id);
     ASSERT_TRUE(data->story_page_id);
     EXPECT_EQ(page_id, *data->story_page_id);

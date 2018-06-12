@@ -8,6 +8,9 @@ struct StoryData {
   // Metadata available to the UserShell.
   fuchsia.modular.StoryInfo story_info;
 
+  // If true, excludes the story from StoryProvider.PreviousStories().
+  bool is_kind_of_proto_story;
+
   // Page id on the user's ledger which stores story information. It
   // might be NULL until the story is being started.
   fuchsia.ledger.PageId? story_page_id;

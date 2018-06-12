@@ -160,9 +160,23 @@ void XdrStoryData_v3(XdrContext* const xdr,
   xdr->Field("story_page_id", &data->story_page_id, XdrPageId_v2);
 }
 
+// Version 4: Includes is_kind_of_proto_story field.
+void XdrStoryData_v4(XdrContext* const xdr,
+                     fuchsia::modular::internal::StoryData* const data) {
+  if (!xdr->Version(4)) {
+    return;
+  }
+  // NOTE(mesch): We reuse subsidiary filters of previous versions as long as we
+  // can. Only when they change too we create new versions of them.
+  xdr->Field("story_info", &data->story_info, XdrStoryInfo_v2);
+  xdr->Field("is_kind_of_proto_story", &data->is_kind_of_proto_story);
+  xdr->Field("story_page_id", &data->story_page_id, XdrPageId_v2);
+}
+
 }  // namespace
 
 XdrFilterType<fuchsia::modular::internal::StoryData> XdrStoryData[] = {
+    XdrStoryData_v4,
     XdrStoryData_v3,
     XdrStoryData_v2,
     XdrStoryData_v1,

@@ -602,7 +602,9 @@ void StoryProviderImpl::PreviousStories(PreviousStoriesCallback callback) {
             auto result = fidl::VectorPtr<fuchsia::modular::StoryInfo>::New(0);
 
             for (auto& story_data : *all_story_data) {
-              result.push_back(std::move(story_data.story_info));
+              if (!story_data.is_kind_of_proto_story) {
+                result.push_back(std::move(story_data.story_info));
+              }
             }
             return result;
           });
