@@ -469,11 +469,11 @@ zx_status_t FsCreator::ResizeFile(off_t requested_size, struct stat stats) {
     }
 
     if (command_ == Command::kMkfs && !is_block &&
-        (stats.st_size < required_size || requested_size)) {
+        (stats.st_size != required_size || requested_size)) {
         // Only truncate the file size under the following conditions:
         // 1.  We are creating the fs store for the first time.
         // 2.  We are not operating on a block device.
-        // 3a. The current file size is smaller than the size required for the specified files, OR
+        // 3a. The current file size is different than the size required for the specified files, OR
         // 3b. The user has requested a particular size using the @ argument.
         off_t truncate_size = requested_size ? requested_size : required_size;
 
