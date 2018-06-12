@@ -25,6 +25,7 @@
 #include <kernel/align.h>
 #include <kernel/mp.h>
 #include <kernel/percpu.h>
+#include <kernel/sched.h>
 #include <kernel/spinlock.h>
 #include <kernel/stats.h>
 #include <kernel/thread.h>
@@ -42,6 +43,21 @@ static spin_lock_t timer_lock __CPU_ALIGN_EXCLUSIVE = SPIN_LOCK_INITIAL_VALUE;
 
 void timer_init(timer_t* timer) {
     *timer = (timer_t)TIMER_INITIAL_VALUE(*timer);
+}
+
+// Set the platform's oneshot timer to the minimum of its current deadline and |new_deadline|.
+//
+// Call this when the timer queue's head changes.
+//
+// Can only be called when interrupts are disabled and current CPU is |cpu|.
+static void update_platform_timer(uint cpu, zx_time_t new_deadline) {
+    DEBUG_ASSERT(arch_ints_disabled());
+    DEBUG_ASSERT(cpu == arch_curr_cpu_num());
+    if (new_deadline < percpu[cpu].next_timer_deadline) {
+        LTRACEF("rescheduling timer for %" PRIu64 " nsecs\n", new_deadline);
+        platform_set_oneshot_timer(new_deadline);
+        percpu[cpu].next_timer_deadline = new_deadline;
+    }
 }
 
 static void insert_timer_in_queue(uint cpu, timer_t* timer,
@@ -223,57 +239,36 @@ void timer_set(timer_t* timer, zx_time_t deadline,
 
     if (list_peek_head_type(&percpu[cpu].timer_queue, timer_t, node) == timer) {
         // we just modified the head of the timer queue
-        LTRACEF("setting new timer for %" PRIu64 " nsecs\n", deadline);
-        platform_set_oneshot_timer(deadline);
+        update_platform_timer(cpu, deadline);
     }
 
 out:
     spin_unlock_irqrestore(&timer_lock, state);
 }
 
-// similar to timer_set_oneshot, with additional features/constraints:
-// - will reset a currently active timer
-// - must be called with interrupts disabled
-// - must be running on the cpu that the timer is set to fire on (if currently set)
-// - cannot be called from the timer itself
-void timer_reset_oneshot_local(timer_t* timer, zx_time_t deadline, timer_callback callback, void* arg) {
-    LTRACEF("timer %p, deadline %" PRIu64 ", callback %p, arg %p\n", timer, deadline, callback, arg);
-
-    DEBUG_ASSERT(timer->magic == TIMER_MAGIC);
+void timer_preempt_reset(zx_time_t deadline) {
     DEBUG_ASSERT(arch_ints_disabled());
 
     uint cpu = arch_curr_cpu_num();
 
-    // no need to disable interrupts when acquiring this lock
-    spin_lock(&timer_lock);
+    LTRACEF("preempt timer cpu %u deadline %" PRIu64 "\n", cpu, deadline);
 
-    if (unlikely(timer->active_cpu >= 0)) {
-        panic("timer %p currently active\n", timer);
-    }
+    percpu[cpu].preempt_timer_deadline = deadline;
 
-    // remove it from the queue if it was present
-    if (list_in_list(&timer->node))
-        list_delete(&timer->node);
+    update_platform_timer(cpu, deadline);
+}
 
-    // set up the structure
-    timer->scheduled_time = deadline;
-    timer->slack = 0;
-    timer->callback = callback;
-    timer->arg = arg;
-    timer->cancel = false;
-    timer->active_cpu = -1;
+void timer_preempt_cancel() {
+    DEBUG_ASSERT(arch_ints_disabled());
 
-    LTRACEF("scheduled time %" PRIu64 "\n", timer->scheduled_time);
+    uint cpu = arch_curr_cpu_num();
 
-    insert_timer_in_queue(cpu, timer, 0u, 0u);
+    percpu[cpu].preempt_timer_deadline = ZX_TIME_INFINITE;
 
-    if (list_peek_head_type(&percpu[cpu].timer_queue, timer_t, node) == timer) {
-        // we just modified the head of the timer queue
-        LTRACEF("setting new timer for %" PRIu64 " nsecs\n", deadline);
-        platform_set_oneshot_timer(deadline);
-    }
-
-    spin_unlock(&timer_lock);
+    // Note, we're not updating the platform timer. It's entirely possible the timer queue is empty
+    // and the preemption timer is the only reason the platform timer is set. To know that, we'd
+    // need to acquire a lock and look at the queue. Rather than pay that cost, leave the platform
+    // timer as is and expect the recipient to handle spurious wakeups.
 }
 
 bool timer_cancel(timer_t* timer) {
@@ -308,7 +303,7 @@ bool timer_cancel(timer_t* timer) {
     if (list_in_list(&timer->node)) {
         callback_not_running = true;
 
-        // save a copy of the old head of the queue
+        // save a copy of the old head of the queue so later we can see if we modified the head
         timer_t* oldhead = list_peek_head_type(&percpu[cpu].timer_queue, timer_t, node);
 
         // remove our timer from the queue
@@ -321,12 +316,12 @@ bool timer_cancel(timer_t* timer) {
         // see if we've just modified the head of this cpu's timer queue.
         // if we modified another cpu's queue, we'll just let it fire and sort itself out
         if (unlikely(oldhead == timer)) {
+            // timer we're canceling was at head of queue, see if we should update platform timer
             timer_t* newhead = list_peek_head_type(&percpu[cpu].timer_queue, timer_t, node);
             if (newhead) {
-                LTRACEF("setting new timer to %" PRIu64 "\n", newhead->scheduled_time);
-                platform_set_oneshot_timer(newhead->scheduled_time);
-            } else {
-                LTRACEF("clearing old hw timer, nothing in the queue\n");
+                update_platform_timer(cpu, newhead->scheduled_time);
+            } else if (percpu[cpu].next_timer_deadline == ZX_TIME_INFINITE) {
+                LTRACEF("clearing old hw timer, preempt timer not set, nothing in the queue\n");
                 platform_stop_timer();
             }
         }
@@ -359,6 +354,15 @@ void timer_tick(zx_time_t now) {
     uint cpu = arch_curr_cpu_num();
 
     LTRACEF("cpu %u now %" PRIu64 ", sp %p\n", cpu, now, __GET_FRAME());
+
+    // platform timer has fired, no deadline is set
+    percpu[cpu].next_timer_deadline = ZX_TIME_INFINITE;
+
+    // service preempt timer before acquiring the timer_lock
+    if (now >= percpu[cpu].preempt_timer_deadline) {
+        percpu[cpu].preempt_timer_deadline = ZX_TIME_INFINITE;
+        sched_preempt_timer_tick(now);
+    }
 
     spin_lock(&timer_lock);
 
@@ -405,19 +409,25 @@ void timer_tick(zx_time_t now) {
         arch_spinloop_signal();
     }
 
-    // reset the timer to the next event
+
+    // get the deadline of the event at the head of the queue (if any)
+    zx_time_t deadline = ZX_TIME_INFINITE;
     timer = list_peek_head_type(&percpu[cpu].timer_queue, timer_t, node);
     if (timer) {
-        // has to be the case or it would have fired already
-        DEBUG_ASSERT(timer->scheduled_time > now);
+        deadline = timer->scheduled_time;
 
-        LTRACEF("setting new timer for %" PRIu64 " nsecs for event %p\n", timer->scheduled_time,
-                timer);
-        platform_set_oneshot_timer(timer->scheduled_time);
+        // has to be the case or it would have fired already
+        DEBUG_ASSERT(deadline > now);
     }
 
     // we're done manipulating the timer queue
     spin_unlock(&timer_lock);
+
+    // set the platform timer to the *soonest* of queue event and preempt timer
+    if (percpu[cpu].preempt_timer_deadline < deadline) {
+        deadline = percpu[cpu].preempt_timer_deadline;
+    }
+    update_platform_timer(cpu, deadline);
 }
 
 zx_status_t timer_trylock_or_cancel(timer_t* t, spin_lock_t* lock) {
@@ -456,8 +466,7 @@ void timer_transition_off_cpu(uint old_cpu) {
     timer_t* new_head = list_peek_head_type(&percpu[cpu].timer_queue, timer_t, node);
     if (new_head != NULL && new_head != old_head) {
         // we just modified the head of the timer queue
-        LTRACEF("setting new timer for %" PRIu64 " nsecs\n", new_head->scheduled_time);
-        platform_set_oneshot_timer(new_head->scheduled_time);
+        update_platform_timer(cpu, new_head->scheduled_time);
     }
 
     spin_unlock_irqrestore(&timer_lock, state);
@@ -469,18 +478,25 @@ void timer_thaw_percpu(void) {
 
     uint cpu = arch_curr_cpu_num();
 
+    zx_time_t deadline = percpu[cpu].preempt_timer_deadline;
+
     timer_t* t = list_peek_head_type(&percpu[cpu].timer_queue, timer_t, node);
     if (t) {
-        LTRACEF("rescheduling timer for %" PRIu64 " nsecs\n", t->scheduled_time);
-        platform_set_oneshot_timer(t->scheduled_time);
+        if (t->scheduled_time < deadline) {
+            deadline = t->scheduled_time;
+        }
     }
 
     spin_unlock(&timer_lock);
+
+    update_platform_timer(cpu, deadline);
 }
 
 void timer_queue_init(void) {
     for (uint i = 0; i < SMP_MAX_CPUS; i++) {
         list_initialize(&percpu[i].timer_queue);
+        percpu[i].preempt_timer_deadline = ZX_TIME_INFINITE;
+        percpu[i].next_timer_deadline = ZX_TIME_INFINITE;
     }
 }
 

@@ -41,4 +41,9 @@ bool sched_unblock_list(struct list_node* list) __WARN_UNUSED_RESULT TA_REQ(thre
 
 void sched_transition_off_cpu(cpu_num_t old_cpu) TA_REQ(thread_lock);
 
+// sched_preempt_timer_tick is called when the preemption timer for a CPU has fired.
+//
+// This function is logically private and should only be called by timer.cpp.
+void sched_preempt_timer_tick(zx_time_t now);
+
 __END_CDECLS

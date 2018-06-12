@@ -226,7 +226,6 @@ typedef struct thread {
 
 // functions
 void thread_init_early(void);
-void thread_init(void);
 void thread_become_idle(void) __NO_RETURN;
 void thread_secondary_cpu_init_early(thread_t* t);
 void thread_secondary_cpu_entry(void) __NO_RETURN;

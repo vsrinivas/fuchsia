@@ -21,8 +21,11 @@ struct percpu {
     // per cpu timer queue
     struct list_node timer_queue;
 
-    // per cpu preemption timer
-    timer_t preempt_timer;
+    // per cpu preemption timer; ZX_TIME_INFINITE means not set
+    zx_time_t preempt_timer_deadline;
+
+    // deadline of this cpu's platform timer or ZX_TIME_INFINITE if not set
+    zx_time_t next_timer_deadline;
 
     // per cpu run queue and bitmap to indicate which queues are non empty
     struct list_node run_queue[NUM_PRIORITIES];

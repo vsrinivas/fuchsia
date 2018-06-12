@@ -105,18 +105,34 @@ static inline void timer_set_oneshot(
     return timer_set(timer, deadline, TIMER_SLACK_CENTER, 0ull, callback, arg);
 }
 
-// Similar to timer_set_oneshot, with additional constraints:
-// - Will reset a currently active timer
-// - Must be called with interrupts disabled
-// - Must be running on the cpu that the timer is set to fire on (if currently set)
-// - Cannot be called from the timer itself
+
+// Preemption Timers
 //
-// NOTE: internal api that is needed probably only by the scheduler
-void timer_reset_oneshot_local(timer_t* timer, zx_time_t deadline, timer_callback callback, void* arg);
+// Each CPU has a dedicated preemption timer that's managed using specialized functions (prefixed
+// with timer_preempt_).
+//
+// Preemption timers are different from general timers. Preemption timers:
+//
+// - are reset frequently by the scheduler so performance is important
+// - should not be migrated off their CPU when the CPU is shutdown
+//
+// Note: A preemption timer may fire even after it has been canceled.
+//
+
+//
+// Set/reset the current CPU's preemption timer.
+//
+// When the preemption timer fires, sched_preempt_timer_tick is called.
+void timer_preempt_reset(zx_time_t deadline);
+
+//
+// Cancel the current CPU's preemption timer.
+void timer_preempt_cancel(void);
+
 
 // Internal routines used when bringing cpus online/offline
 
-// Moves timers from |old_cpu| to the current cpu
+// Moves |old_cpu|'s timers (except its preemption timer) to the current cpu
 void timer_transition_off_cpu(uint old_cpu);
 
 // This function is to be invoked after resume on each CPU that may have

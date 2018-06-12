@@ -270,7 +270,7 @@ zx_status_t thread_set_real_time(thread_t* t) {
     THREAD_LOCK(state);
     if (t == get_current_thread()) {
         // if we're currently running, cancel the preemption timer.
-        timer_cancel(&percpu[arch_curr_cpu_num()].preempt_timer);
+        timer_preempt_cancel();
     }
     t->flags |= THREAD_FLAG_REAL_TIME;
     THREAD_UNLOCK(state);
@@ -1008,17 +1008,6 @@ void thread_init_early(void) {
     thread_construct_first(t, "bootstrap");
 
     sched_init_early();
-}
-
-/**
- * @brief Complete thread initialization
- *
- * This function is called once at boot time
- */
-void thread_init(void) {
-    for (uint i = 0; i < SMP_MAX_CPUS; i++) {
-        timer_init(&percpu[i].preempt_timer);
-    }
 }
 
 /**
