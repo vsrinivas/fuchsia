@@ -11,6 +11,7 @@ group("tests") {
     ":dispatcher_tests",
     ":mac_tests",
     ":scanner_tests",
+    ":service_tests",
   ]
 }
 
@@ -90,6 +91,25 @@ executable("dispatcher_tests") {
   configs += [ "//garnet/lib/wlan/mlme:wlan_mlme_config" ]
 }
 
+executable("service_tests") {
+  output_name = "wlan_service_unittest"
+
+  testonly = true
+
+  sources = [
+    "service_unittest.cpp",
+  ]
+
+  deps = [
+    ":test_main",
+    "//garnet/lib/wlan/mlme",
+    "//third_party/googletest:gtest",
+    "//zircon/public/lib/fit",
+  ]
+
+  configs += [ "//garnet/lib/wlan/mlme:wlan_mlme_config" ]
+}
+
 executable("common_tests") {
   output_name = "wlan_common_unittest"
 
@@ -135,6 +155,10 @@ package("wlan_tests") {
 
     {
       name = "wlan_scanner_unittest"
+    },
+
+    {
+      name = "wlan_service_unittest"
     },
 
     {

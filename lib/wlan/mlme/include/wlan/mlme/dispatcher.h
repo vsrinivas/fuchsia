@@ -5,10 +5,13 @@
 #pragma once
 
 #include <fbl/unique_ptr.h>
+#include <fuchsia/wlan/mlme/c/fidl.h>
+#include <fuchsia/wlan/mlme/cpp/fidl.h>
 #include <fuchsia/wlan/stats/cpp/fidl.h>
 #include <wlan/common/stats.h>
 #include <wlan/mlme/mac_frame.h>
 #include <wlan/mlme/mlme.h>
+#include <wlan/mlme/service.h>
 #include <wlan/protocol/mac.h>
 #include <zircon/types.h>
 
@@ -42,7 +45,8 @@ class Dispatcher {
     zx_status_t HandleEthPacket(fbl::unique_ptr<Packet> packet);
     zx_status_t HandleSvcPacket(fbl::unique_ptr<Packet> packet);
     template <typename Message>
-    zx_status_t HandleMlmeMethod(fbl::unique_ptr<Packet> packet, uint32_t ordinal);
+    zx_status_t HandleMlmeMessage(fbl::unique_ptr<Packet> packet, uint32_t ordinal);
+    zx_status_t HandleDeviceQueryRequest();
     zx_status_t HandleActionPacket(MgmtFrame<ActionFrame> action, const wlan_rx_info_t* rxinfo);
     zx_status_t HandleMlmeStats(uint32_t ordinal) const;
     template <typename T>

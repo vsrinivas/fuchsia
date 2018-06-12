@@ -22,6 +22,7 @@
 #include <fuchsia/wlan/mlme/c/fidl.h>
 #include <fuchsia/wlan/mlme/cpp/fidl.h>
 
+#include <zircon/fidl.h>
 #include <atomic>
 #include <cinttypes>
 #include <cstring>
@@ -38,10 +39,6 @@ Dispatcher::Dispatcher(DeviceInterface* device, fbl::unique_ptr<Mlme> mlme)
 }
 
 Dispatcher::~Dispatcher() {}
-
-template <>
-zx_status_t Dispatcher::HandleMlmeMethod<wlan_mlme::DeviceQueryRequest>(
-    fbl::unique_ptr<Packet> packet, uint32_t ordinal);
 
 zx_status_t Dispatcher::HandlePacket(fbl::unique_ptr<Packet> packet) {
     debugfn();
@@ -366,7 +363,13 @@ zx_status_t Dispatcher::HandleSvcPacket(fbl::unique_ptr<Packet> packet) {
     debughdr("service packet txid=%u flags=%u ordinal=%u\n", hdr->txid, hdr->flags, hdr->ordinal);
 
     if (hdr->ordinal == fuchsia_wlan_mlme_MLMEDeviceQueryReqOrdinal) {
-        return HandleMlmeMethod<wlan_mlme::DeviceQueryRequest>(fbl::move(packet), hdr->ordinal);
+        MlmeMsg<wlan_mlme::DeviceQueryRequest> msg;
+        auto status = MlmeMsg<wlan_mlme::DeviceQueryRequest>::FromPacket(fbl::move(packet), &msg);
+        if (status != ZX_OK) {
+            errorf("could not deserialize custom MLME-DeviceQueryRequest primitive\n");
+            return status;
+        }
+        return HandleDeviceQueryRequest();
     }
 
     if (hdr->ordinal == fuchsia_wlan_mlme_MLMEStatsQueryReqOrdinal) {
@@ -376,30 +379,30 @@ zx_status_t Dispatcher::HandleSvcPacket(fbl::unique_ptr<Packet> packet) {
     switch (hdr->ordinal) {
     case fuchsia_wlan_mlme_MLMEResetReqOrdinal:
         infof("resetting MLME\n");
-        HandleMlmeMethod<wlan_mlme::ResetRequest>(fbl::move(packet), hdr->ordinal);
+        HandleMlmeMessage<wlan_mlme::ResetRequest>(fbl::move(packet), hdr->ordinal);
         return ZX_OK;
     case fuchsia_wlan_mlme_MLMEStartReqOrdinal:
-        return HandleMlmeMethod<wlan_mlme::StartRequest>(fbl::move(packet), hdr->ordinal);
+        return HandleMlmeMessage<wlan_mlme::StartRequest>(fbl::move(packet), hdr->ordinal);
     case fuchsia_wlan_mlme_MLMEStopReqOrdinal:
-        return HandleMlmeMethod<wlan_mlme::StopRequest>(fbl::move(packet), hdr->ordinal);
+        return HandleMlmeMessage<wlan_mlme::StopRequest>(fbl::move(packet), hdr->ordinal);
     case fuchsia_wlan_mlme_MLMEScanReqOrdinal:
-        return HandleMlmeMethod<wlan_mlme::ScanRequest>(fbl::move(packet), hdr->ordinal);
+        return HandleMlmeMessage<wlan_mlme::ScanRequest>(fbl::move(packet), hdr->ordinal);
     case fuchsia_wlan_mlme_MLMEJoinReqOrdinal:
-        return HandleMlmeMethod<wlan_mlme::JoinRequest>(fbl::move(packet), hdr->ordinal);
+        return HandleMlmeMessage<wlan_mlme::JoinRequest>(fbl::move(packet), hdr->ordinal);
     case fuchsia_wlan_mlme_MLMEAuthenticateReqOrdinal:
-        return HandleMlmeMethod<wlan_mlme::AuthenticateRequest>(fbl::move(packet), hdr->ordinal);
+        return HandleMlmeMessage<wlan_mlme::AuthenticateRequest>(fbl::move(packet), hdr->ordinal);
     case fuchsia_wlan_mlme_MLMEAuthenticateRespOrdinal:
-        return HandleMlmeMethod<wlan_mlme::AuthenticateResponse>(fbl::move(packet), hdr->ordinal);
+        return HandleMlmeMessage<wlan_mlme::AuthenticateResponse>(fbl::move(packet), hdr->ordinal);
     case fuchsia_wlan_mlme_MLMEDeauthenticateReqOrdinal:
-        return HandleMlmeMethod<wlan_mlme::DeauthenticateRequest>(fbl::move(packet), hdr->ordinal);
+        return HandleMlmeMessage<wlan_mlme::DeauthenticateRequest>(fbl::move(packet), hdr->ordinal);
     case fuchsia_wlan_mlme_MLMEAssociateReqOrdinal:
-        return HandleMlmeMethod<wlan_mlme::AssociateRequest>(fbl::move(packet), hdr->ordinal);
+        return HandleMlmeMessage<wlan_mlme::AssociateRequest>(fbl::move(packet), hdr->ordinal);
     case fuchsia_wlan_mlme_MLMEAssociateRespOrdinal:
-        return HandleMlmeMethod<wlan_mlme::AssociateResponse>(fbl::move(packet), hdr->ordinal);
+        return HandleMlmeMessage<wlan_mlme::AssociateResponse>(fbl::move(packet), hdr->ordinal);
     case fuchsia_wlan_mlme_MLMEEapolReqOrdinal:
-        return HandleMlmeMethod<wlan_mlme::EapolRequest>(fbl::move(packet), hdr->ordinal);
+        return HandleMlmeMessage<wlan_mlme::EapolRequest>(fbl::move(packet), hdr->ordinal);
     case fuchsia_wlan_mlme_MLMESetKeysReqOrdinal:
-        return HandleMlmeMethod<wlan_mlme::SetKeysRequest>(fbl::move(packet), hdr->ordinal);
+        return HandleMlmeMessage<wlan_mlme::SetKeysRequest>(fbl::move(packet), hdr->ordinal);
     default:
         warnf("unknown MLME method %u\n", hdr->ordinal);
         return ZX_ERR_NOT_SUPPORTED;
@@ -407,14 +410,14 @@ zx_status_t Dispatcher::HandleSvcPacket(fbl::unique_ptr<Packet> packet) {
 }
 
 template <typename Message>
-zx_status_t Dispatcher::HandleMlmeMethod(fbl::unique_ptr<Packet> packet, uint32_t ordinal) {
-    Message msg;
-    auto status = DeserializeServiceMsg<Message>(*packet, ordinal, &msg);
+zx_status_t Dispatcher::HandleMlmeMessage(fbl::unique_ptr<Packet> packet, uint32_t ordinal) {
+    MlmeMsg<Message> msg;
+    auto status = MlmeMsg<Message>::FromPacket(fbl::move(packet), &msg);
     if (status != ZX_OK) {
-        errorf("could not deserialize MLME Method %d: %d\n", ordinal, status);
+        errorf("could not deserialize MLME primitive %d: \n", ordinal);
         return status;
     }
-    return mlme_->HandleFrame(ordinal, msg);
+    return mlme_->HandleFrame(ordinal, *msg.body());
 }
 
 template <typename T> zx_status_t Dispatcher::SendServiceMessage(uint32_t ordinal, T* msg) const {
@@ -429,17 +432,14 @@ template <typename T> zx_status_t Dispatcher::SendServiceMessage(uint32_t ordina
   packet->set_peer(Packet::Peer::kService);
   zx_status_t status = SerializeServiceMsg(packet.get(), ordinal, msg);
   if (status != ZX_OK) {
-    errorf("could not serialize message with ordinal %d: %d\n", ordinal, status);
-    return status;
+      errorf("could not serialize MLME primitive: %d\n", ordinal);
+      return status;
   }
-  return device_->SendService(std::move(packet));
+  return device_->SendService(fbl::move(packet));
 }
 
-template <>
-zx_status_t Dispatcher::HandleMlmeMethod<wlan_mlme::DeviceQueryRequest>(fbl::unique_ptr<Packet> _,
-                                                                        uint32_t ordinal) {
+zx_status_t Dispatcher::HandleDeviceQueryRequest() {
     debugfn();
-    ZX_DEBUG_ASSERT(ordinal == fuchsia_wlan_mlme_MLMEDeviceQueryReqOrdinal);
 
     wlan_mlme::DeviceQueryConfirm resp;
     const wlanmac_info_t& info = device_->GetWlanInfo();

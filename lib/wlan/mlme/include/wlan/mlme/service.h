@@ -17,6 +17,8 @@
 
 namespace wlan {
 
+namespace wlan_mlme = ::fuchsia::wlan::mlme;
+
 class DeviceInterface;
 
 template <typename T>
@@ -77,22 +79,71 @@ template <typename T> zx_status_t SerializeServiceMsg(Packet* packet, uint32_t o
     return status;
 }
 
+template <typename M> class MlmeMsg;
+
+class BaseMlmeMsg {
+   public:
+    BaseMlmeMsg() = default;
+    virtual ~BaseMlmeMsg() = default;
+
+    template <typename M> MlmeMsg<M>* As() {
+        return get_type_id() == MlmeMsg<M>::type_id() ? static_cast<MlmeMsg<M>*>(this) : nullptr;
+    }
+
+   protected:
+    virtual const void* get_type_id() = 0;
+
+   private:
+    BaseMlmeMsg(BaseMlmeMsg const&) = delete;
+    BaseMlmeMsg& operator=(BaseMlmeMsg const&) = delete;
+};
+
+template <typename M> class MlmeMsg : public BaseMlmeMsg {
+   public:
+    static const uint8_t kTypeId = 0;
+    ~MlmeMsg() override = default;
+
+    static zx_status_t FromPacket(fbl::unique_ptr<Packet> pkt, MlmeMsg<M>* out_msg) {
+        ZX_DEBUG_ASSERT(pkt != nullptr);
+
+        auto hdr = FromBytes<fidl_message_header_t>(pkt->data(), pkt->len());
+        if (hdr == nullptr) { return ZX_ERR_NOT_SUPPORTED; }
+
+        auto status = DeserializeServiceMsg(*pkt, hdr->ordinal, &out_msg->msg_);
+        if (status != ZX_OK) { return status; }
+
+        return ZX_OK;
+    }
+
+    const M* body() {
+        return &msg_;
+    }
+
+    static const void* type_id() { return &MlmeMsg<M>::kTypeId; }
+    const void* get_type_id() override { return type_id(); }
+
+   private:
+    M msg_;
+};
+
+template <typename T> const uint8_t MlmeMsg<T>::kTypeId;
+
 namespace service {
 
-zx_status_t SendJoinConfirm(DeviceInterface* device, ::fuchsia::wlan::mlme::JoinResultCodes result_code);
+zx_status_t SendJoinConfirm(DeviceInterface* device, wlan_mlme::JoinResultCodes result_code);
 zx_status_t SendAuthConfirm(DeviceInterface* device, const common::MacAddr& peer_sta,
-                            ::fuchsia::wlan::mlme::AuthenticateResultCodes code);
+                            wlan_mlme::AuthenticateResultCodes code);
 zx_status_t SendDeauthConfirm(DeviceInterface* device, const common::MacAddr& peer_sta);
 zx_status_t SendDeauthIndication(DeviceInterface* device, const common::MacAddr& peer_sta,
-                                 ::fuchsia::wlan::mlme::ReasonCode code);
-zx_status_t SendAssocConfirm(DeviceInterface* device, ::fuchsia::wlan::mlme::AssociateResultCodes code,
+                                 wlan_mlme::ReasonCode code);
+zx_status_t SendAssocConfirm(DeviceInterface* device, wlan_mlme::AssociateResultCodes code,
                              uint16_t aid = 0);
 zx_status_t SendDisassociateIndication(DeviceInterface* device, const common::MacAddr& peer_sta,
                                        uint16_t code);
 
 zx_status_t SendSignalReportIndication(DeviceInterface* device, common::dBm rssi_dbm);
 
-zx_status_t SendEapolConfirm(DeviceInterface* device, ::fuchsia::wlan::mlme::EapolResultCodes result_code);
+zx_status_t SendEapolConfirm(DeviceInterface* device, wlan_mlme::EapolResultCodes result_code);
 zx_status_t SendEapolIndication(DeviceInterface* device, const EapolFrame& eapol,
                                 const common::MacAddr& src, const common::MacAddr& dst);
 }  // namespace service
