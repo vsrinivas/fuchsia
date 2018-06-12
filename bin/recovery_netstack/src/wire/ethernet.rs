@@ -78,8 +78,11 @@ impl<B: ByteSlice> EthernetFrame<B> {
     /// Parse an Ethernet frame.
     ///
     /// `parse` parses `bytes` as an Ethernet frame. It is assumed that the
-    /// Frame Check Sequence (FCS) footer has already been removed.
-    pub fn parse(bytes: B) -> Result<EthernetFrame<B>, ParseError> {
+    /// Frame Check Sequence (FCS) footer has already been removed. It returns
+    /// the byte range corresponding to the body within `bytes`. This can be
+    /// useful when extracting the encapsulated payload to send to another layer
+    /// of the stack.
+    pub fn parse(bytes: B) -> Result<(EthernetFrame<B>, Range<usize>), ParseError> {
         // See for details: https://en.wikipedia.org/wiki/Ethernet_frame#Frame_%E2%80%93_data_link_layer
 
         let (hdr_prefix, rest) = LayoutVerified::<B, HeaderPrefix>::new_unaligned_from_prefix(
@@ -129,7 +132,11 @@ impl<B: ByteSlice> EthernetFrame<B> {
             return Err(ParseError::Format);
         }
 
-        Ok(frame)
+        let hdr_len = frame.hdr_prefix.bytes().len()
+            + frame.tag.as_ref().map(|tag| tag.bytes().len()).unwrap_or(0)
+            + frame.ethertype.bytes().len();
+        let total_len = hdr_len + frame.body.len();
+        Ok((frame, hdr_len..total_len))
     }
 
     /// The frame body.
@@ -270,12 +277,13 @@ mod tests {
     #[test]
     fn test_parse() {
         let buf = new_buf();
-        let frame = EthernetFrame::parse(&buf[..]).unwrap();
+        let (frame, body_range) = EthernetFrame::parse(&buf[..]).unwrap();
+        assert_eq!(body_range, 14..60);
         assert_eq!(frame.hdr_prefix.dst_mac, DEFAULT_DST_MAC.bytes());
         assert_eq!(frame.hdr_prefix.src_mac, DEFAULT_SRC_MAC.bytes());
         assert!(frame.tag.is_none());
         assert_eq!(frame.ethertype(), Some(Ok(EtherType::Arp)));
-        assert_eq!(frame.body, &buf[14..]);
+        assert_eq!(frame.body, &buf[body_range]);
 
         // For both of the TPIDs that imply the existence of a tag, make sure
         // that the tag is present and correct (and that all of the normal
@@ -288,7 +296,8 @@ mod tests {
             // write a valid EtherType
             NetworkEndian::write_u16(&mut buf[TPID_OFFSET + 4..], EtherType::Arp as u16);
 
-            let frame = EthernetFrame::parse(&buf[..]).unwrap();
+            let (frame, body_range) = EthernetFrame::parse(&buf[..]).unwrap();
+            assert_eq!(body_range, 18..60);
             assert_eq!(frame.hdr_prefix.dst_mac, DEFAULT_DST_MAC.bytes());
             assert_eq!(frame.hdr_prefix.src_mac, DEFAULT_SRC_MAC.bytes());
             assert_eq!(frame.ethertype(), Some(Ok(EtherType::Arp)));
@@ -299,7 +308,7 @@ mod tests {
             let want_tag =
                 (*tpid as u32) << 16 | ((TPID_OFFSET as u32 + 2) << 8) | (TPID_OFFSET as u32 + 3);
             assert_eq!(got_tag, want_tag);
-            assert_eq!(frame.body, &buf[18..]);
+            assert_eq!(frame.body, &buf[body_range]);
         }
     }
 
@@ -313,14 +322,14 @@ mod tests {
 
         // a correct length results in success
         NetworkEndian::write_u16(&mut buf[12..], 1000);
-        let frame = EthernetFrame::parse(&buf[..]).unwrap();
+        let (frame, _) = EthernetFrame::parse(&buf[..]).unwrap();
         // there's no EtherType available
         assert_eq!(frame.ethertype(), None);
 
         // an unrecognized EtherType is returned numerically
         let mut buf = [0u8; 1014];
         NetworkEndian::write_u16(&mut buf[12..], 1536);
-        let frame = EthernetFrame::parse(&buf[..]).unwrap();
+        let (frame, _) = EthernetFrame::parse(&buf[..]).unwrap();
         assert_eq!(frame.ethertype(), Some(Err(1536)));
     }
 

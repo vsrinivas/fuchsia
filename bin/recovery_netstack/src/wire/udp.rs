@@ -94,7 +94,10 @@ pub struct UdpPacket<B> {
 impl<B: ByteSlice> UdpPacket<B> {
     /// Parse a UDP packet.
     ///
-    /// `parse` parses `bytes` as a UDP packet and validates the checksum.
+    /// `parse` parses `bytes` as a UDP packet and validates the checksum. It
+    /// returns the byte range corresponding to the body within `bytes`. This
+    /// can be useful when extracting the encapsulated payload to send to
+    /// another layer of the stack.
     ///
     /// `src_ip` is the source address in the IP header. In IPv4, `dst_ip` is
     /// the destination address in the IPv4 header. In IPv6, it's more
@@ -105,7 +108,9 @@ impl<B: ByteSlice> UdpPacket<B> {
     ///   checksum using the last address in the routing header, while the
     ///   receiver will compute the checksum using the destination address in
     ///   the IPv6 header.
-    pub fn parse<A: IpAddr>(bytes: B, src_ip: A, dst_ip: A) -> Result<UdpPacket<B>, ParseError> {
+    pub fn parse<A: IpAddr>(
+        bytes: B, src_ip: A, dst_ip: A,
+    ) -> Result<(UdpPacket<B>, Range<usize>), ParseError> {
         // See for details: https://en.wikipedia.org/wiki/User_Datagram_Protocol#Packet_structure
 
         let bytes_len = bytes.len();
@@ -148,7 +153,9 @@ impl<B: ByteSlice> UdpPacket<B> {
             return Err(ParseError::Checksum);
         }
 
-        Ok(packet)
+        let hdr_len = packet.header.bytes().len();
+        let total_len = hdr_len + packet.body.len();
+        Ok((packet, hdr_len..total_len))
     }
 }
 
@@ -335,12 +342,14 @@ mod tests {
     fn test_parse_full() {
         use wire::testdata::dns_request::*;
 
-        let frame = EthernetFrame::parse(ETHERNET_FRAME_BYTES).unwrap();
+        let (frame, body_range) = EthernetFrame::parse(ETHERNET_FRAME_BYTES).unwrap();
+        assert_eq!(body_range, ETHERNET_BODY_RANGE);
         assert_eq!(frame.src_mac(), ETHERNET_SRC_MAC);
         assert_eq!(frame.dst_mac(), ETHERNET_DST_MAC);
         assert_eq!(frame.ethertype(), Some(Ok(EtherType::Ipv4)));
 
-        let packet = Ipv4Packet::parse(frame.body()).unwrap();
+        let (packet, body_range) = Ipv4Packet::parse(frame.body()).unwrap();
+        assert_eq!(body_range, IP_BODY_RANGE);
         assert_eq!(packet.proto(), Ok(IpProto::Udp));
         assert_eq!(packet.dscp(), IP_DSCP);
         assert_eq!(packet.ecn(), IP_ECN);
@@ -352,7 +361,9 @@ mod tests {
         assert_eq!(packet.src_ip(), IP_SRC_IP);
         assert_eq!(packet.dst_ip(), IP_DST_IP);
 
-        let packet = UdpPacket::parse(packet.body(), packet.src_ip(), packet.dst_ip()).unwrap();
+        let (packet, body_range) =
+            UdpPacket::parse(packet.body(), packet.src_ip(), packet.dst_ip()).unwrap();
+        assert_eq!(body_range, UDP_BODY_RANGE);
         assert_eq!(
             packet.src_port().map(|p| p.get()).unwrap_or(0),
             UDP_SRC_PORT
@@ -365,7 +376,9 @@ mod tests {
     fn test_parse() {
         // source port of 0 (meaning none) is allowed, as is a missing checksum
         let buf = [0, 0, 1, 2, 0, 8, 0, 0];
-        let packet = UdpPacket::parse(&buf[..], TEST_SRC_IPV4, TEST_DST_IPV4).unwrap();
+        let (packet, body_range) =
+            UdpPacket::parse(&buf[..], TEST_SRC_IPV4, TEST_DST_IPV4).unwrap();
+        assert_eq!(body_range, 8..8);
         assert!(packet.src_port().is_none());
         assert_eq!(packet.dst_port().get(), NetworkEndian::read_u16(&[1, 2]));
         assert!(!packet.checksummed());
@@ -373,7 +386,9 @@ mod tests {
 
         // length of 0 is allowed in IPv6
         let buf = [0, 0, 1, 2, 0, 0, 0xFD, 0xD3];
-        let packet = UdpPacket::parse(&buf[..], TEST_SRC_IPV6, TEST_DST_IPV6).unwrap();
+        let (packet, body_range) =
+            UdpPacket::parse(&buf[..], TEST_SRC_IPV6, TEST_DST_IPV6).unwrap();
+        assert_eq!(body_range, 8..8);
         assert!(packet.src_port().is_none());
         assert_eq!(packet.dst_port().get(), NetworkEndian::read_u16(&[1, 2]));
         assert!(packet.checksummed());

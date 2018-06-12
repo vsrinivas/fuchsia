@@ -40,10 +40,13 @@ pub const ETHERNET_DST_MAC: Mac = Mac::new([0x0f, 0x41, 0xf1, 0xda, 0xaf, 0x6c])
 pub mod dns_request {
     #![allow(missing_docs)]
 
+    use std::ops::Range;
+
     use ip::Ipv4Addr;
 
     pub use super::ETHERNET_DST_MAC;
     pub use super::ETHERNET_SRC_MAC;
+    pub const ETHERNET_BODY_RANGE: Range<usize> = 14..77;
 
     pub const IP_DSCP: u8 = 0;
     pub const IP_ECN: u8 = 0;
@@ -54,9 +57,11 @@ pub mod dns_request {
     pub const IP_TTL: u8 = 64;
     pub const IP_SRC_IP: Ipv4Addr = Ipv4Addr::new([192, 168, 1, 15]);
     pub const IP_DST_IP: Ipv4Addr = Ipv4Addr::new([192, 168, 1, 1]);
+    pub const IP_BODY_RANGE: Range<usize> = 20..63;
 
     pub const UDP_SRC_PORT: u16 = 35658;
     pub const UDP_DST_PORT: u16 = 53;
+    pub const UDP_BODY_RANGE: Range<usize> = 8..43;
     pub const UDP_BODY: &[u8] = &[
         0x47, 0xb5, 0x01, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x30, 0x04,
         0x64, 0x6f, 0x63, 0x73, 0x06, 0x67, 0x6f, 0x6f, 0x67, 0x6c, 0x65, 0x03, 0x63, 0x6f, 0x6d,
@@ -80,11 +85,14 @@ pub mod dns_request {
 pub mod tls_client_hello {
     #![allow(missing_docs)]
 
+    use std::ops::Range;
+
     use ip::Ipv4Addr;
     use transport::tcp::TcpOption;
 
     pub use super::ETHERNET_DST_MAC;
     pub use super::ETHERNET_SRC_MAC;
+    pub const ETHERNET_BODY_RANGE: Range<usize> = 14..591;
 
     pub const IP_DSCP: u8 = 0;
     pub const IP_ECN: u8 = 0;
@@ -95,6 +103,7 @@ pub mod tls_client_hello {
     pub const IP_TTL: u8 = 64;
     pub const IP_SRC_IP: Ipv4Addr = Ipv4Addr::new([192, 168, 1, 15]);
     pub const IP_DST_IP: Ipv4Addr = Ipv4Addr::new([104, 237, 191, 1]);
+    pub const IP_BODY_RANGE: Range<usize> = 20..577;
 
     pub const TCP_SRC_PORT: u16 = 50772;
     pub const TCP_DST_PORT: u16 = 443;
@@ -107,6 +116,7 @@ pub mod tls_client_hello {
         ts_val: 644726309,
         ts_echo_reply: 2960127454,
     }];
+    pub const TCP_BODY_RANGE: Range<usize> = 32..557;
     pub const TCP_BODY: &[u8] = &[
         0x16, 0x03, 0x01, 0x02, 0x08, 0x01, 0x00, 0x02, 0x04, 0x03, 0x03, 0x0f, 0x88, 0xf6, 0x67,
         0x08, 0x84, 0x41, 0xa3, 0xbf, 0x0b, 0x7c, 0x61, 0xd7, 0x57, 0x58, 0xa9, 0x5e, 0x77, 0xee,

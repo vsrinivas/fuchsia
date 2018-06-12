@@ -93,8 +93,13 @@ pub struct TcpSegment<B> {
 impl<B: ByteSlice> TcpSegment<B> {
     /// Parse a TCP segment.
     ///
-    /// `parse` parses `bytes` as a TCP segment and validates the checksum.
-    pub fn parse<A: IpAddr>(bytes: B, src_ip: A, dst_ip: A) -> Result<TcpSegment<B>, ParseError> {
+    /// `parse` parses `bytes` as a TCP segment and validates the checksum. It
+    /// returns the byte range corresponding to the body within `bytes`. This
+    /// can be useful when extracting the encapsulated payload to send to
+    /// another layer of the stack.
+    pub fn parse<A: IpAddr>(
+        bytes: B, src_ip: A, dst_ip: A,
+    ) -> Result<(TcpSegment<B>, Range<usize>), ParseError> {
         // See for details: https://en.wikipedia.org/wiki/Transmission_Control_Protocol#TCP_segment_structure
 
         let (hdr_prefix, rest) =
@@ -123,7 +128,10 @@ impl<B: ByteSlice> TcpSegment<B> {
         {
             return Err(ParseError::Checksum);
         }
-        Ok(segment)
+
+        let hdr_len = segment.hdr_prefix.bytes().len() + segment.options.bytes().len();
+        let total_len = hdr_len + segment.body.len();
+        Ok((segment, hdr_len..total_len))
     }
 
     /// Iterate over the TCP header options.
@@ -472,12 +480,14 @@ mod tests {
     fn test_parse_full() {
         use wire::testdata::tls_client_hello::*;
 
-        let frame = EthernetFrame::parse(ETHERNET_FRAME_BYTES).unwrap();
+        let (frame, body_range) = EthernetFrame::parse(ETHERNET_FRAME_BYTES).unwrap();
+        assert_eq!(body_range, ETHERNET_BODY_RANGE);
         assert_eq!(frame.src_mac(), ETHERNET_SRC_MAC);
         assert_eq!(frame.dst_mac(), ETHERNET_DST_MAC);
         assert_eq!(frame.ethertype(), Some(Ok(EtherType::Ipv4)));
 
-        let packet = Ipv4Packet::parse(frame.body()).unwrap();
+        let (packet, body_range) = Ipv4Packet::parse(frame.body()).unwrap();
+        assert_eq!(body_range, IP_BODY_RANGE);
         assert_eq!(packet.proto(), Ok(IpProto::Tcp));
         assert_eq!(packet.dscp(), IP_DSCP);
         assert_eq!(packet.ecn(), IP_ECN);
@@ -489,7 +499,9 @@ mod tests {
         assert_eq!(packet.src_ip(), IP_SRC_IP);
         assert_eq!(packet.dst_ip(), IP_DST_IP);
 
-        let segment = TcpSegment::parse(packet.body(), packet.src_ip(), packet.dst_ip()).unwrap();
+        let (segment, body_range) =
+            TcpSegment::parse(packet.body(), packet.src_ip(), packet.dst_ip()).unwrap();
+        assert_eq!(body_range, TCP_BODY_RANGE);
         assert_eq!(segment.src_port().get(), TCP_SRC_PORT);
         assert_eq!(segment.dst_port().get(), TCP_DST_PORT);
         assert_eq!(segment.ack_num().is_some(), TCP_ACK_FLAG);
@@ -527,7 +539,9 @@ mod tests {
     #[test]
     fn test_parse() {
         let bytes = hdr_prefix_to_bytes(new_hdr_prefix());
-        let segment = TcpSegment::parse(&bytes[..], TEST_SRC_IPV4, TEST_DST_IPV4).unwrap();
+        let (segment, body_range) =
+            TcpSegment::parse(&bytes[..], TEST_SRC_IPV4, TEST_DST_IPV4).unwrap();
+        assert_eq!(body_range, 20..20);
         assert_eq!(segment.src_port().get(), 1);
         assert_eq!(segment.dst_port().get(), 2);
         assert_eq!(segment.body(), []);
@@ -625,9 +639,11 @@ mod tests {
                 5, 7, 8, 9
             ]
         );
-        let segment = TcpSegment::parse(&buf[..], TEST_SRC_IPV4, TEST_DST_IPV4).unwrap();
+        let (segment, body_range) =
+            TcpSegment::parse(&buf[..], TEST_SRC_IPV4, TEST_DST_IPV4).unwrap();
         // assert that when we parse those bytes, we get the values we set in
         // the builder
+        assert_eq!(body_range, 20..30);
         assert_eq!(segment.src_port().get(), 1);
         assert_eq!(segment.dst_port().get(), 2);
         assert_eq!(segment.seq_num(), 3);

@@ -99,8 +99,11 @@ pub struct Ipv4Packet<B> {
 impl<B: ByteSlice> Ipv4Packet<B> {
     /// Parse an IPv4 packet.
     ///
-    /// `parse` parses `bytes` as an IPv4 packet and validates the checksum.
-    pub fn parse(bytes: B) -> Result<Ipv4Packet<B>, ParseError> {
+    /// `parse` parses `bytes` as an IPv4 packet and validates the checksum. It
+    /// returns the byte range corresponding to the body within `bytes`. This
+    /// can be useful when extracting the encapsulated payload to send to
+    /// another layer of the stack.
+    pub fn parse(bytes: B) -> Result<(Ipv4Packet<B>, Range<usize>), ParseError> {
         // See for details: https://en.wikipedia.org/wiki/IPv4#Header
 
         let total_len = bytes.len();
@@ -128,7 +131,8 @@ impl<B: ByteSlice> Ipv4Packet<B> {
             return Err(ParseError::NotSupported);
         }
 
-        Ok(packet)
+        let hdr_len = packet.hdr_prefix.bytes().len() + packet.options.bytes().len();
+        Ok((packet, hdr_len..total_len))
     }
 
     /// Iterate over the IPv4 header options.
@@ -456,12 +460,14 @@ mod tests {
     fn test_parse_full_tcp() {
         use wire::testdata::tls_client_hello::*;
 
-        let frame = EthernetFrame::parse(ETHERNET_FRAME_BYTES).unwrap();
+        let (frame, body_range) = EthernetFrame::parse(ETHERNET_FRAME_BYTES).unwrap();
+        assert_eq!(body_range, ETHERNET_BODY_RANGE);
         assert_eq!(frame.src_mac(), ETHERNET_SRC_MAC);
         assert_eq!(frame.dst_mac(), ETHERNET_DST_MAC);
         assert_eq!(frame.ethertype(), Some(Ok(EtherType::Ipv4)));
 
-        let packet = Ipv4Packet::parse(frame.body()).unwrap();
+        let (packet, body_range) = Ipv4Packet::parse(frame.body()).unwrap();
+        assert_eq!(body_range, IP_BODY_RANGE);
         assert_eq!(packet.proto(), Ok(IpProto::Tcp));
         assert_eq!(packet.dscp(), IP_DSCP);
         assert_eq!(packet.ecn(), IP_ECN);
@@ -478,12 +484,14 @@ mod tests {
     fn test_parse_full_udp() {
         use wire::testdata::dns_request::*;
 
-        let frame = EthernetFrame::parse(ETHERNET_FRAME_BYTES).unwrap();
+        let (frame, body_range) = EthernetFrame::parse(ETHERNET_FRAME_BYTES).unwrap();
+        assert_eq!(body_range, ETHERNET_BODY_RANGE);
         assert_eq!(frame.src_mac(), ETHERNET_SRC_MAC);
         assert_eq!(frame.dst_mac(), ETHERNET_DST_MAC);
         assert_eq!(frame.ethertype(), Some(Ok(EtherType::Ipv4)));
 
-        let packet = Ipv4Packet::parse(frame.body()).unwrap();
+        let (packet, body_range) = Ipv4Packet::parse(frame.body()).unwrap();
+        assert_eq!(body_range, IP_BODY_RANGE);
         assert_eq!(packet.proto(), Ok(IpProto::Udp));
         assert_eq!(packet.dscp(), IP_DSCP);
         assert_eq!(packet.ecn(), IP_ECN);
@@ -523,7 +531,8 @@ mod tests {
     #[test]
     fn test_parse() {
         let bytes = hdr_prefix_to_bytes(new_hdr_prefix());
-        let packet = Ipv4Packet::parse(&bytes[..]).unwrap();
+        let (packet, body_range) = Ipv4Packet::parse(&bytes[..]).unwrap();
+        assert_eq!(body_range, 20..20);
         assert_eq!(packet.id(), 0x0102);
         assert_eq!(packet.ttl(), 0x03);
         assert_eq!(packet.proto(), Ok(IpProto::Tcp));
@@ -538,7 +547,7 @@ mod tests {
         let mut hdr_prefix = new_hdr_prefix();
         hdr_prefix.version_ihl = (5 << 4) | 5;
         assert_eq!(
-            Ipv4Packet::parse(&hdr_prefix_to_bytes(hdr_prefix)[..],).unwrap_err(),
+            Ipv4Packet::parse(&hdr_prefix_to_bytes(hdr_prefix)[..]).unwrap_err(),
             ParseError::Format
         );
 
@@ -547,7 +556,7 @@ mod tests {
         let mut hdr_prefix = new_hdr_prefix();
         hdr_prefix.version_ihl = (4 << 4) | 4;
         assert_eq!(
-            Ipv4Packet::parse(&hdr_prefix_to_bytes(hdr_prefix)[..],).unwrap_err(),
+            Ipv4Packet::parse(&hdr_prefix_to_bytes(hdr_prefix)[..]).unwrap_err(),
             ParseError::Format
         );
 
@@ -556,7 +565,7 @@ mod tests {
         let mut hdr_prefix = new_hdr_prefix();
         hdr_prefix.version_ihl = (4 << 4) | 6;
         assert_eq!(
-            Ipv4Packet::parse(&hdr_prefix_to_bytes(hdr_prefix)[..],).unwrap_err(),
+            Ipv4Packet::parse(&hdr_prefix_to_bytes(hdr_prefix)[..]).unwrap_err(),
             ParseError::Format
         );
     }
@@ -597,9 +606,10 @@ mod tests {
                 3, 4, 5, 7, 8, 9
             ],
         );
-        let packet = Ipv4Packet::parse(&buf[..]).unwrap();
+        let (packet, body_range) = Ipv4Packet::parse(&buf[..]).unwrap();
         // assert that when we parse those bytes, we get the values we set in
         // the builder
+        assert_eq!(body_range, 20..30);
         assert_eq!(packet.dscp(), 0x12);
         assert_eq!(packet.ecn(), 3);
         assert_eq!(packet.id(), 0x0405);

@@ -563,8 +563,8 @@ mod range {
     pub fn extract_slice_range<B: ByteSlice, R: RangeBounds<usize>>(
         bytes: B, range: R,
     ) -> Option<(B, B, B)> {
-        let lower = resolve_lower_bound(range.start_bound());
-        let upper = resolve_upper_bound(bytes.len(), range.end_bound())?;
+        let lower = canonicalize_lower_bound(range.start_bound());
+        let upper = canonicalize_upper_bound(bytes.len(), range.end_bound())?;
         if lower > upper {
             return None;
         }
@@ -574,7 +574,15 @@ mod range {
     }
 
     // return the inclusive equivalent of the bound
-    fn resolve_lower_bound(bound: Bound<&usize>) -> usize {
+
+    /// Return the canonical, inclusive version of a lower bound.
+    ///
+    /// `canonicalize_lower_bound` converts a lower bound into the equivalent
+    /// inclusive lower bound. It follows the following rules:
+    /// - For an inclusive bound, return the bound directly
+    /// - For an exclusive bound, return the bound plus one
+    /// - For an unbounded bound, return zero
+    pub fn canonicalize_lower_bound(bound: Bound<&usize>) -> usize {
         match bound {
             Bound::Included(x) => *x,
             Bound::Excluded(x) => *x + 1,
@@ -582,9 +590,10 @@ mod range {
         }
     }
 
-    // return the exclusive equivalent of the bound, verifying that it is in
-    // range of len
-    fn resolve_upper_bound(len: usize, bound: Bound<&usize>) -> Option<usize> {
+    // Return the exclusive equivalent of the bound, verifying that it is in
+    // range of len. This is of less use to other modules than
+    // canonicalize_lower_bound, so it is not public.
+    fn canonicalize_upper_bound(len: usize, bound: Bound<&usize>) -> Option<usize> {
         let bound = match bound {
             Bound::Included(x) => *x + 1,
             Bound::Excluded(x) => *x,
