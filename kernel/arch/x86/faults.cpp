@@ -363,6 +363,7 @@ static void handle_exception_types(x86_iframe_t* frame) {
 
     case X86_INT_PAGE_FAULT:
         kcounter_add(exceptions_page, 1);
+        CPU_STATS_INC(page_faults);
         if (x86_pfe_handler(frame) != ZX_OK)
             x86_fatal_pfe_handler(frame, x86_get_cr2());
         break;

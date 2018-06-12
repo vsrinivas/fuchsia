@@ -156,6 +156,7 @@ static void arm64_instruction_abort_handler(struct arm64_iframe_long* iframe, ui
 
     arch_enable_ints();
     kcounter_add(exceptions_page, 1);
+    CPU_STATS_INC(page_faults);
     zx_status_t err = vmm_page_fault_handler(far, pf_flags);
     arch_disable_ints();
     if (err >= 0)

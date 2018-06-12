@@ -26,6 +26,7 @@ struct cpu_stats {
     ulong timers;      // timer callbacks
     ulong perf_ints;   // performance monitor interrupts
     ulong syscalls;
+    ulong page_faults;
 
     // inter-processor interrupts
     ulong reschedule_ipis;
