@@ -67,30 +67,9 @@ while [[ "$1" =~ ^- ]]; do
     zircon_dir="${1}"
     zircon_tools="${zircon_dir}/tools"
 
-    # TODO(INTK-377): Remove this check and the fallback definitions once the
-    # CI system is including the image_paths manifests.
-    if [[ -f "${fuchsia_dir}"/{,zedboot_}image_paths.sh ]]; then
-      # Source the image paths from the artifacts directory, so we can find them.
-      source "${fuchsia_dir}"/{,zedboot_}image_paths.sh
-    else
-      IMAGE_BLOB_RAW=images/blob.blk
-      IMAGE_FVM_RAW=images/fvm.blk
-      IMAGE_FVM_SPARSE=images/fvm.sparse.blk
-      IMAGE_DATA_RAW=obj/build/images/data.blk
-      IMAGE_DATA_FVM_RAW=images/fvm.data.sparse.blk
-      IMAGE_BOOT_RAM=bootdata-blob.bin
-      IMAGE_ZIRCON_ZBI=zircon-boot-blob.bin
-      IMAGE_NETBOOT_RAM=netboot.bin
-      IMAGE_NETBOOT_ZBI=zircon-netboot.bin
-      IMAGE_ZIRCON_VBOOT=images/zircon.vboot
-      IMAGE_ESP_RAW=images/local.esp.blk
-      IMAGE_INSTALLER_RAW=images/installer.blk
-      IMAGE_ZEDBOOT_ZBI=zedboot.bin
-      IMAGE_ZEDBOOT_VBOOT=images/zedboot.vboot
-      IMAGE_ZEDBOOT_ESP=images/zedboot.esp.blk
-      IMAGE_ZIRCONA_ZBI=images/zircon.zbi
-      IMAGE_ZIRCONR_ZBI=images/zedboot.zbi
-    fi
+    # Source the image paths from the artifacts directory, so we can find them.
+    source "${fuchsia_dir}"/zedboot_image_paths.sh
+    source "${fuchsia_dir}"/image_paths.sh
     ;;
   *)
     break
