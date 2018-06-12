@@ -31,7 +31,7 @@ void MmioWrite(volatile T* addr, T value) {
 }
 
 template <typename T>
-void MmioRead(volatile T* addr, T* value) {
+void MmioRead(const volatile T* addr, T* value) {
     *value = *addr;
 }
 
@@ -41,17 +41,17 @@ void MmioRead(volatile T* addr, T* value) {
 template <>
 void MmioWrite<uint64_t>(volatile uint64_t* addr, uint64_t value) {
     auto words = reinterpret_cast<volatile uint32_t*>(addr);
-    words[0] = static_cast<uint32_t>(value & UINT32_MAX);
-    words[1] = static_cast<uint32_t>(value >> 32);
+    MmioWrite(&words[0], static_cast<uint32_t>(value));
+    MmioWrite(&words[1], static_cast<uint32_t>(value >> 32));
 }
 
 template <>
-void MmioRead<uint64_t>(volatile uint64_t* addr, uint64_t* value) {
-    auto words = reinterpret_cast<volatile uint32_t*>(addr);
-    auto val = reinterpret_cast<uint32_t*>(value);
-
-    val[0] = words[0];
-    val[1] = words[1];
+void MmioRead<uint64_t>(const volatile uint64_t* addr, uint64_t* value) {
+    auto words = reinterpret_cast<const volatile uint32_t*>(addr);
+    uint32_t lo, hi;
+    MmioRead(&words[0], &lo);
+    MmioRead(&words[1], &hi);
+    *value = static_cast<uint64_t>(lo) | (static_cast<uint64_t>(hi) << 32);
 }
 
 } // anonymous namespace
