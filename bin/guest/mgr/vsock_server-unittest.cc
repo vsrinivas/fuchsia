@@ -200,7 +200,7 @@ TEST_F(VsockServerTest, HostConnectMultipleTimes) {
   }
 }
 
-TEST_F(VsockServerTest, DISABLED_HostConnectFreeEphemeralPort) {
+TEST_F(VsockServerTest, HostConnectFreeEphemeralPort) {
   HostVsockEndpoint host_endpoint(2);
   TestVsockEndpoint test_endpoint(3);
   ASSERT_EQ(ZX_OK, server.AddEndpoint(&host_endpoint));
