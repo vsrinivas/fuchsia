@@ -11,9 +11,7 @@ static zbi_result_t for_each_check_entry(zbi_header_t* hdr, void* payload,
 
     if (hdr->magic != ZBI_ITEM_MAGIC) { result = ZBI_RESULT_BAD_MAGIC; }
 
-    // TODO(gkalsi): This is disabled for now because it seems like a bunch of
-    // our bootitems don't conform to this for some reason.
-    // if ((hdr->flags & ZBI_FLAG_VERSION) == 0) { result = ZBI_RESULT_BAD_VERSION; }
+    if ((hdr->flags & ZBI_FLAG_VERSION) == 0) { result = ZBI_RESULT_BAD_VERSION; }
 
     // If we found a problem, try to report it back up to the caller.
     if (cookie && result != ZBI_RESULT_OK) {
