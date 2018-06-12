@@ -434,13 +434,14 @@ not necessary to understand all of this before you move on.
 1.  **Server Creation:**  At this point in our example,
     `|chan| spawn_echo_server(chan)` is called with the channel that wants to
     be connected to an `Echo` service. `spawn_echo_server` creates a new
-    `Echo` service instance and spawns it onto the global executor, at which
-    point the `on_open` function is called.
+    future which loops over each value in the incoming stream of requests.
+    It spawns that future to be run on the thread-local `async::Executor`.
 1.  **API Request:** An `echo_string` request is sent on the channel.
     This makes the channel the `Echo` service is running on readable, which
     wakes up the `Echo` service. The `Echo` service reads the request off of
-    the channel and passes it to the `echo_string` function.
-1.  **API Response:** The `echo_string` function calls `res.send`, which
+    the channel. It's read by the `for_each` future and given to the provided
+    `for_each` handler.
+1.  **API Response:** The `for_each` handler calls `responder.send`, which
     causes a response to be written back into the channel.
 
 Now let's go through the code and see how this works.
@@ -456,14 +457,14 @@ extern crate fuchsia_app as component;
 extern crate fuchsia_async as async;
 extern crate fuchsia_zircon as zx;
 extern crate futures;
-extern crate fidl_echo2;
+extern crate fidl_fidl_examples_echo;
 
 use component::server::ServicesServer;
 use failure::{Error, ResultExt};
 use futures::future;
 use futures::prelude::*;
-use fidl::endpoints2::ServiceMarker;
-use fidl_echo2::{Echo, EchoMarker, EchoImpl};
+use fidl::endpoints2::{ServiceMarker, RequestStream};
+use fidl_echo2::{EchoMarker, EchoRequest, EchoRequestStream};
 ```
 
 -   `ServicesServer` links service requests to service launcher functions.
@@ -486,17 +487,20 @@ use fidl_echo2::{Echo, EchoMarker, EchoImpl};
     for managing asynchronous tasks.
 -   `fidl::endpoints2::ServiceMarker` is the trait implemented by `XXXMarker`
     types. It provides the associated string `NAME`.
--   `fidl_echo2` contains bindings for the `Echo` interface. This file is
-    generated from the interface defined in `echo2.fidl`. These bindings
-    include:
+-   `fidl_fidl_examples_echo` contains bindings for the `Echo` interface.
+    This file is generated from the interface defined in `echo2.fidl`.
+    These bindings include:
     -   The `Echo` trait, an interface which is implemented by all types
         that can serve `Echo` requests
     -   The `EchoMarker` type, a [zero-sized type] used to hold compile-time
         metadata about the `Echo` service (such as `NAME`)
-    -   The `EchoImpl` struct, which implements the `Echo` trait by delegating
-        methods to its members.
+    -   The `EchoRequest` type, an enum over all of the different request types
+        that can be received.
+    -   The `EchoRequestStream` type, a [`Stream`] of incoming requests for the
+        server to handle.
 
 [docs]: https://docs.rs/futures/*/futures/
+[`Stream`]: https://docs.rs/futures/0.2.0/futures/stream/trait.Stream.html
 [Tokio internals]: https://cafbit.com/post/tokio_internals/
 [zero-sized type]: https://doc.rust-lang.org/nomicon/exotic-sizes.html#zero-sized-types-zsts
 
@@ -540,39 +544,29 @@ requests until a protocol error occurs or the startup handle is closed.
 
 ```rust
 fn spawn_echo_server(chan: async::Channel) {
-    async::spawn(EchoImpl {
-        state: (),
-        on_open: |_,_| future::ok(()),
-        echo_string: |_, s, res| {
-            println!("Received echo request for string {:?}", s);
-            res.send(s.as_ref().map(|s| &**s))
-               .into_future()
-               .map(|_| println!("echo response sent successfully"))
-               .recover(|e| eprintln!("error sending response: {:?}", e))
-       }
-    }
-    .serve(chan)
-    .recover(|e| eprintln!("error running echo server: {:?}", e)))
+    async::spawn(EchoRequestStream::from_channel(chan)
+        .for_each(|EchoRequest::EchoString { value, responder }| {
+            println!("Received echo request for string {:?}", value);
+            responder.send(value.as_ref().map(|s| &**s))
+                .into_future()
+                .map(|_| println!("echo response sent successfully"))
+                .recover(|e| eprintln!("error sending response: {:?}", e))
+        })
+        .map(|_| ())
+        .recover(|e| eprintln!("error running echo server: {:?}", e)))
 }
 ```
 
 When a request for an echo service is received, `spawn_echo_server` is called
-with the channel to host the `Echo` service on. This function creates a new
-implementation of the `Echo` trait by using the `EchoImpl` struct which
-delegates methods of the `Echo` trait to fields. Persistent state between
-requests can be stored in the `state` field, which is passed as the first
-argument to every function. The last argument to every function is a control
-handle which can be used to send FIDL events or to control behavior of the
-currently running service. In the case of methods with responses, this
-control handle also allows sending responses back on the channel.
+with the channel to host the `Echo` service on. 
 
-For the echo service, we have no persistent state, so the `state` value is
-`()`, the "unit" type. We don't have any special behavior that has to happen
-when the echo service is started, so our `on_open` function returns
-`futures::ok(())`, a `Future` which resolves immediately to `()`. When an
-`echo_string` request is received, we get three arguments: the state
-(which we ignore), an optional string, and a control handle with a `send`
-method for sending a response. We log the request using `println!`, and
+When a request is received, the closure inside `for_each` is called. It
+uses pattern-matching to extract the contents of the `EchoString` variant
+of the `EchoRequest` enum. For an interface with more than one type of request,
+we would instead write `|x| match x { MyServiceRequest::Req1 { ... } => ... }`.
+In our case, we receive `value`, an optional string, and `responder`, a control
+handle with a `send` method for sending a response.
+We log the request using `println!`, and
 then do a bit of complicated-looking nonsense. :)
 The `as_ref().map(|s| &**s)` trick isn't related to FIDL, but is a specific
 issue with converting `Option<String>` into `Option<&str>`. If you're not
@@ -595,11 +589,8 @@ Once we've done the conversion from `Option<String>` to `Option<&str>`, we call
 `send`, which returns a `Result<(), Error>`, which we convert into a
 `Future<Item = (), Error = Error>` using the `into_future` method. We map the
 success case to one log message, and `recover` from error cases by logging a
-different message. At last, we have a complete `EchoImpl` struct which can
-handle `Echo` service requests.
-
-In order to run our handlers on the provided channel, we `serve` the server
-on the provided channel, and `recover` from any errors in serving by printing
+different message. `for_each` returns a `Future<Item = YourStreamType>`,
+so we have to `map` it away and `recover` from any errors in by printing
 an error message.
 
 All of this put together gives us our `Future` for handling incoming requests
