@@ -52,6 +52,32 @@ std::string PageIdToBase64(const fuchsia::ledger::PageId& page_id) {
 // and fuchsia::modular::StoryInfo to and from JSON. We have different versions
 // for backwards compatibilty.
 //
+// Version 0: Before FIDL2 conversion. ExtraInfo fields are stored as "key"
+// and "value", page ids are stored as vector.
+void XdrStoryInfoExtraEntry_v0(
+    XdrContext* const xdr, fuchsia::modular::StoryInfoExtraEntry* const data) {
+  xdr->Field("key", &data->key);
+  xdr->Field("value", &data->value);
+}
+
+void XdrStoryInfo_v0(XdrContext* const xdr,
+                     fuchsia::modular::StoryInfo* const data) {
+  xdr->Field("last_focus_time", &data->last_focus_time);
+  xdr->Field("url", &data->url);
+  xdr->Field("id", &data->id);
+  xdr->Field("extra", &data->extra, XdrStoryInfoExtraEntry_v0);
+}
+
+void XdrStoryData_v0(XdrContext* const xdr,
+                     fuchsia::modular::internal::StoryData* const data) {
+  FXL_CHECK(xdr->op() == XdrOp::FROM_JSON)
+      << "A back version is never used for writing.";
+  data->story_page_id = fuchsia::ledger::PageId::New();
+
+  xdr->Field("story_info", &data->story_info, XdrStoryInfo_v0);
+  xdr->Field("story_page_id", &data->story_page_id->id);
+}
+
 // Version 1: During FIDL2 conversion. ExtraInfo fields are stored as "key"
 // and "value", page ids are stored as base64 string.
 void XdrStoryInfoExtraEntry_v1(
@@ -95,9 +121,8 @@ void XdrStoryData_v1(XdrContext* const xdr,
   }
 }
 
-// Version 2: Before FIDL2 conversion, and again after FIDL2 conversion was
-// complete. ExtraInfo fields are stored as @k and @v, page ids are stored as
-// array.
+// Version 2: After FIDL2 conversion was complete. ExtraInfo fields are stored
+// as @k and @v, page ids are stored as array wrapped in a struct.
 void XdrStoryInfoExtraEntry_v2(
     XdrContext* const xdr, fuchsia::modular::StoryInfoExtraEntry* const data) {
   xdr->Field("@k", &data->key);
@@ -122,6 +147,8 @@ void XdrStoryData_v2(XdrContext* const xdr,
   xdr->Field("story_page_id", &data->story_page_id, XdrPageId_v2);
 }
 
+// Version 3: ExtraInfo fields are stored as @k and @v, page ids are stored as
+// array, and we set an explicit @version field.
 void XdrStoryData_v3(XdrContext* const xdr,
                      fuchsia::modular::internal::StoryData* const data) {
   if (!xdr->Version(3)) {
@@ -139,6 +166,7 @@ XdrFilterType<fuchsia::modular::internal::StoryData> XdrStoryData[] = {
     XdrStoryData_v3,
     XdrStoryData_v2,
     XdrStoryData_v1,
+    XdrStoryData_v0,
     nullptr,
 };
 
