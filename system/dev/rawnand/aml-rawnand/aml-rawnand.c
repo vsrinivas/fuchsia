@@ -776,6 +776,10 @@ static zx_status_t aml_get_nand_info(void *ctx, struct nand_info *nand_info)
     capacity /= raw_nand->erasesize;
     nand_info->num_blocks = (uint32_t)capacity;
     nand_info->ecc_bits = raw_nand->controller_params.ecc_strength;
+
+    nand_info->nand_class = NAND_CLASS_PARTMAP;
+    memset(&nand_info->partition_guid, 0, sizeof(nand_info->partition_guid));
+
     if (raw_nand->controller_params.user_mode == 2)
         nand_info->oob_size =
             (raw_nand->writesize /

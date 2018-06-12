@@ -23,7 +23,8 @@ struct NandParams : public nand_info_t {
 
     NandParams(uint32_t page_size, uint32_t pages_per_block, uint32_t num_blocks, uint32_t ecc_bits,
                uint32_t oob_size)
-        : NandParams(nand_info_t {page_size, pages_per_block, num_blocks, ecc_bits, oob_size}) {}
+        : NandParams(nand_info_t {page_size, pages_per_block, num_blocks, ecc_bits, oob_size,
+                     NAND_CLASS_FTL, {}}) {}
 
     NandParams(const nand_info_t& base) {
         // NandParams has no data members.

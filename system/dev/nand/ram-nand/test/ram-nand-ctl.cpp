@@ -16,7 +16,7 @@ namespace {
 class NandDevice {
   public:
     NandDevice() {
-        nand_info_t config = {4096, 4, 5, 6, 0};
+        nand_info_t config = {4096, 4, 5, 6, 0, NAND_CLASS_FTL, {}};
         if (!create_ram_nand(&config, path_)) {
             device_.reset(open(path_, O_RDWR));
         }
