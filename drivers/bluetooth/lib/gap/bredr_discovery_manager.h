@@ -166,6 +166,9 @@ class BrEdrDiscoveryManager final {
   // Removes |session_| from the active sessions.
   void RemoveDiscoverableSession(BrEdrDiscoverableSession* session);
 
+  // Sends a RemoteNameRequest for the device |id|
+  void RequestRemoteDeviceName(const std::string& device_id);
+
   // The HCI Transport
   fxl::RefPtr<hci::Transport> hci_;
 

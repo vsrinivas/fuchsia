@@ -244,6 +244,9 @@ void BrEdrDiscoveryManager::InquiryResult(const hci::EventPacket& event) {
   }
 
   for (RemoteDevice* device : devices) {
+    if (!device->name()) {
+      RequestRemoteDeviceName(device->identifier());
+    }
     for (const auto& session : discovering_) {
       session->NotifyDiscoveryResult(*device);
     }
@@ -274,9 +277,62 @@ void BrEdrDiscoveryManager::ExtendedInquiryResult(
 
   device->SetInquiryData(result);
 
+  if (!device->name()) {
+    RequestRemoteDeviceName(device->identifier());
+  }
   for (const auto& session : discovering_) {
     session->NotifyDiscoveryResult(*device);
   }
+}
+
+void BrEdrDiscoveryManager::RequestRemoteDeviceName(const std::string& id) {
+  RemoteDevice* device = cache_->FindDeviceById(id);
+  if (!device) {
+    FXL_LOG(WARNING) << "gap (BR/EDR): cannot request name, unknown id: " << id;
+    return;
+  }
+  auto packet = hci::CommandPacket::New(
+      hci::kRemoteNameRequest, sizeof(hci::RemoteNameRequestCommandParams));
+  packet->mutable_view()->mutable_payload_data().SetToZeros();
+  auto params = packet->mutable_view()
+                    ->mutable_payload<hci::RemoteNameRequestCommandParams>();
+  params->bd_addr = device->address().value();
+  params->page_scan_repetition_mode = *(device->page_scan_repetition_mode());
+  if (device->clock_offset()) {
+    params->clock_offset = *(device->clock_offset());
+  }
+
+  auto cb = [id, self = weak_ptr_factory_.GetWeakPtr()](auto,
+                                                        const auto& event) {
+    if (!self ||
+        BTEV_TEST_LOG(event, INFO, "gap (BR/EDR): RemoteNameRequest failed")) {
+      return;
+    }
+
+    if (event.event_code() == hci::kCommandStatusEventCode) {
+      return;
+    }
+
+    FXL_DCHECK(event.event_code() == hci::kRemoteNameRequestCompleteEventCode);
+
+    const auto& params =
+        event.view()
+            .template payload<hci::RemoteNameRequestCompleteEventParams>();
+    for (size_t len = 0; len <= hci::kMaxNameLength; len++) {
+      if (params.remote_name[len] == 0 || len == hci::kMaxNameLength) {
+        RemoteDevice* device = self->cache_->FindDeviceById(id);
+        if (device) {
+          device->SetName(
+              std::string(params.remote_name, params.remote_name + len));
+        }
+        return;
+      }
+    }
+  };
+
+  hci_->command_channel()->SendCommand(
+      std::move(packet), dispatcher_, std::move(cb),
+      hci::kRemoteNameRequestCompleteEventCode);
 }
 
 void BrEdrDiscoveryManager::RequestDiscoverable(DiscoverableCallback callback) {
