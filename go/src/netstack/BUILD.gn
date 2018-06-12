@@ -30,6 +30,7 @@ package("netstack_tools") {
   deprecated_system_image = true
 
   deps = [
+    "filter/netfilter",
     "ifconfig",
     "ifinfo",
     "netstat",
@@ -44,6 +45,9 @@ package("netstack_tools") {
     },
     {
       name = "netstat"
+    },
+    {
+      name = "netfilter"
     },
   ]
 }

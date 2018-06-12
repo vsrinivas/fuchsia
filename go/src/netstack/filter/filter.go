@@ -7,6 +7,7 @@ package filter
 
 import (
 	"log"
+	"sync/atomic"
 
 	"github.com/google/netstack/tcpip"
 	"github.com/google/netstack/tcpip/header"
@@ -16,9 +17,8 @@ import (
 const debugFilter = false
 const debugFilter2 = false
 
-var Enabled = false
-
 type Filter struct {
+	enabled     atomic.Value // bool
 	portManager *ports.PortManager
 	rulesetMain RulesetMain
 	rulesetNAT  RulesetNAT
@@ -27,16 +27,38 @@ type Filter struct {
 }
 
 func New(pm *ports.PortManager) *Filter {
-	return &Filter{
+	f := &Filter{
 		portManager: pm,
 		states:      NewStates(),
 	}
+	f.enabled.Store(true)
+	return f
+}
+
+// Enable enables or disables the packet filter.
+func (f *Filter) Enable(b bool) {
+	if b {
+		log.Printf("packet filter: enabled")
+	} else {
+		log.Printf("packet filter: disabled")
+	}
+	f.enabled.Store(b)
+}
+
+// IsEnabled returns true if the packet filter is currently enabled.
+func (f *Filter) IsEnabled() bool {
+	return f.enabled.Load().(bool)
 }
 
 // Run is the entry point to the packet filter. It should be called from
 // two hook locations in the network stack: one for incoming packets, another
 // for outgoing packets.
 func (f *Filter) Run(dir Direction, netProto tcpip.NetworkProtocolNumber, b, plb []byte) Action {
+	if f.enabled.Load().(bool) == false {
+		// The filter is disabled.
+		return Pass
+	}
+
 	// Lock the state maps.
 	// TODO: Improve concurrency with more granular locking.
 	f.states.mu.Lock()

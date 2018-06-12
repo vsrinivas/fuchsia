@@ -48,6 +48,8 @@ type netstack struct {
 	ifStates map[tcpip.NICID]*ifState
 
 	countNIC tcpip.NICID
+
+	filter   *filter.Filter
 }
 
 type dhcpState struct {
@@ -393,10 +395,11 @@ func (ns *netstack) addEth(path string) error {
 		// and manifest itself to 3rd party netstack.
 		linkID = sniffer.New(linkID)
 	}
-	if filter.Enabled {
-		f := filter.New(ns.stack.PortManager)
-		linkID = filter.NewEndpoint(f, linkID)
-	}
+
+	f := filter.New(ns.stack.PortManager)
+	linkID = filter.NewEndpoint(f, linkID)
+	ns.filter = f
+
 	linkID = ifs.statsEP.Wrap(linkID)
 
 	ns.mu.Lock()

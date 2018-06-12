@@ -254,6 +254,15 @@ func (ni *netstackImpl) BridgeInterfaces(nicids []uint32) (nsfidl.NetErr, error)
 	return nsfidl.NetErr{Status: nsfidl.StatusOk}, nil
 }
 
+func (ni *netstackImpl) SetFilterStatus(enabled bool) (result nsfidl.NetErr, err error) {
+	ns.filter.Enable(enabled)
+	return nsfidl.NetErr{nsfidl.StatusOk, ""}, nil
+}
+
+func (ni *netstackImpl) GetFilterStatus() (enabled bool, err error) {
+	return ns.filter.IsEnabled(), nil
+}
+
 func (ni *netstackImpl) GetAggregateStats() (stats nsfidl.AggregateStats, err error) {
 	s := ns.stack.Stats()
 	return nsfidl.AggregateStats{
