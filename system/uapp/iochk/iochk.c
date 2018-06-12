@@ -305,7 +305,7 @@ int iochk(int argc, char** argv) {
     fd = open(device, O_RDONLY);
     if (fd < 0) {
         fprintf(stderr, "error: cannot open '%s'\n", device);
-        return -1;
+        return usage();
     }
 
     ioctl_block_get_info(fd, &info);
@@ -336,9 +336,12 @@ int iochk(int argc, char** argv) {
         } else if (strcmp(argv[i], "--live-dangerously") == 0) {
             confirmed = true;
             i++;
+        } else if (strcmp(argv[i], "-h") == 0 ||
+                   strcmp(argv[i], "--help") == 0) {
+            return usage();
         } else {
             fprintf(stderr, "Invalid arg %s\n", argv[i]);
-            return -1;
+            return usage();
         }
     }
 
