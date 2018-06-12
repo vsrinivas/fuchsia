@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use crossbeam::sync::SegQueue;
-use futures::{Async, Future, FutureExt, Never, task};
+use futures::{Async, Future, FutureExt, Never, Poll, task};
 use futures::executor::{Executor as FutureExecutor, SpawnError};
 use futures::task::AtomicWaker;
 use parking_lot::{Mutex, Condvar};
@@ -141,16 +141,7 @@ impl Executor {
         where F: Future
     {
         let local_map = &mut task::LocalMap::new();
-
-        // Since there are no other threads running, we don't have to use the EMPTY_WAKEUP_ID,
-        // so instead we save it for use as the main task wakeup id.
-        struct MainTaskWake(Arc<Inner>);
-        impl task::Wake for MainTaskWake {
-            fn wake(arc_self: &Arc<Self>) {
-                arc_self.0.notify_empty();
-            }
-        }
-        let waker = task::Waker::from(Arc::new(MainTaskWake(self.inner.clone())));
+        let waker = task::Waker::from(Arc::new(SingleThreadedMainTaskWake(self.inner.clone())));
 
         let executor = EHandle { inner: self.inner.clone() };
         let executor_one = &mut &executor;
@@ -198,6 +189,52 @@ impl Executor {
                     receiver_key => {
                         self.inner.deliver_packet(receiver_key as usize, packet);
                     }
+                }
+            }
+        }
+    }
+
+    /// Poll the future. If it is not ready, dispatch available packets and possibly try again.
+    /// Timers will not fire. Never blocks.
+    ///
+    /// Task-local data will not be persisted across different calls to this method.
+    ///
+    /// This is mainly intended for testing.
+    pub fn run_until_stalled<F>(&mut self, main_future: &mut F) -> Poll<F::Item, F::Error>
+        where F: Future
+    {
+        let local_map = &mut task::LocalMap::new();
+        let waker = task::Waker::from(Arc::new(SingleThreadedMainTaskWake(self.inner.clone())));
+
+        let executor = EHandle { inner: self.inner.clone() };
+        let executor_one = &mut &executor;
+        let executor_two = &mut &executor;
+
+        let cx = &mut task::Context::new(local_map, &waker, executor_one);
+        let mut res = main_future.poll(cx)?;
+
+        loop {
+            if res.is_ready() {
+                return Ok(res);
+            }
+
+            let packet = match self.inner.port.wait(zx::Time::from_nanos(0)) {
+                Ok(packet) => packet,
+                Err(zx::Status::TIMED_OUT) => return Ok(Async::Pending),
+                Err(status) => panic!("Error calling port wait: {:?}", status),
+            };
+
+            match packet.key() {
+                EMPTY_WAKEUP_ID => {
+                    res = main_future.poll(cx)?;
+                }
+                TASK_READY_WAKEUP_ID => {
+                    if let Some(task) = self.inner.ready_tasks.try_pop() {
+                        task.future.try_poll(&task.clone().into(), executor_two);
+                    }
+                }
+                receiver_key => {
+                    self.inner.deliver_packet(receiver_key as usize, packet);
                 }
             }
         }
@@ -311,6 +348,15 @@ impl Executor {
                 }
             }
         }
+    }
+}
+
+// Since there are no other threads running, we don't have to use the EMPTY_WAKEUP_ID,
+// so instead we save it for use as the main task wakeup id.
+struct SingleThreadedMainTaskWake(Arc<Inner>);
+impl task::Wake for SingleThreadedMainTaskWake {
+    fn wake(arc_self: &Arc<Self>) {
+        arc_self.0.notify_empty();
     }
 }
 
