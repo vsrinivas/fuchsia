@@ -166,10 +166,12 @@ zx_status_t PciModernBackend::MapBar(uint8_t bar) {
     // Store the base as a uintptr_t due to the amount of math done on it later
     bar_[bar].mmio_base = reinterpret_cast<uintptr_t>(base);
     bar_[bar].mmio_handle.reset(handle);
+    zxlogf(TRACE, "%s: bar %u mapped to %#" PRIxPTR "\n", tag(), bar, bar_[bar].mmio_base);
     return ZX_OK;
 }
 
 void PciModernBackend::CommonCfgCallbackLocked(const virtio_pci_cap_t& cap) {
+    zxlogf(TRACE, "%s: common cfg found in bar %u offset %#x\n", tag(), cap.bar, cap.offset);
     if (MapBar(cap.bar) != ZX_OK) {
         return;
     }
@@ -183,6 +185,7 @@ void PciModernBackend::CommonCfgCallbackLocked(const virtio_pci_cap_t& cap) {
 }
 
 void PciModernBackend::NotifyCfgCallbackLocked(const virtio_pci_cap_t& cap) {
+    zxlogf(TRACE, "%s: notify cfg found in bar %u offset %#x\n", tag(), cap.bar, cap.offset);
     if (MapBar(cap.bar) != ZX_OK) {
         return;
     }
@@ -191,6 +194,7 @@ void PciModernBackend::NotifyCfgCallbackLocked(const virtio_pci_cap_t& cap) {
 }
 
 void PciModernBackend::IsrCfgCallbackLocked(const virtio_pci_cap_t& cap) {
+    zxlogf(TRACE, "%s: isr cfg found in bar %u offset %#x\n", tag(), cap.bar, cap.offset);
     if (MapBar(cap.bar) != ZX_OK) {
         return;
     }
@@ -200,6 +204,7 @@ void PciModernBackend::IsrCfgCallbackLocked(const virtio_pci_cap_t& cap) {
 }
 
 void PciModernBackend::DeviceCfgCallbackLocked(const virtio_pci_cap_t& cap) {
+    zxlogf(TRACE, "%s: device cfg found in bar %u offset %#x\n", tag(), cap.bar, cap.offset);
     if (MapBar(cap.bar) != ZX_OK) {
         return;
     }
@@ -265,7 +270,7 @@ bool PciModernBackend::ReadFeature(uint32_t feature) {
     MmioWrite(&common_cfg_->device_feature_select, select);
     MmioRead(&common_cfg_->device_feature, &val);
     bool is_set = (val & (1u << bit)) != 0;
-    zxlogf(SPEW, "%s: read feature bit %u = %u\n", tag(), feature, is_set);
+    zxlogf(TRACE, "%s: read feature bit %u = %u\n", tag(), feature, is_set);
     return is_set;
 }
 
@@ -278,7 +283,7 @@ void PciModernBackend::SetFeature(uint32_t feature) {
     MmioWrite(&common_cfg_->driver_feature_select, select);
     MmioRead(&common_cfg_->driver_feature, &val);
     MmioWrite(&common_cfg_->driver_feature, val | (1u << bit));
-    zxlogf(SPEW, "%s: feature bit %u now set\n", tag(), feature);
+    zxlogf(TRACE, "%s: feature bit %u now set\n", tag(), feature);
 }
 
 zx_status_t PciModernBackend::ConfirmFeatures() {
