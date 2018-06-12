@@ -126,6 +126,9 @@ __BEGIN_CDECLS;
 // NAND binding variables at 0x07XX
 #define BIND_NAND_CLASS             0x0700
 
+// Bluetooth binding variables at 0x08XX
+#define BIND_BT_GATT_SVC_UUID16     0x0800
+
 // TEMPORARY binding variables at 0xfXX
 // I2C_ADDR is a temporary way to bind the i2c touchscreen on the Acer12. This
 // binding will eventually be made via some sort of ACPI device enumeration.
