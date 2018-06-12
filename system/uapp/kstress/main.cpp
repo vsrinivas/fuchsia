@@ -73,10 +73,10 @@ zx_status_t get_kmem_stats(zx_info_kmem_stats_t* kmem_stats) {
 
 void print_help(char** argv, FILE* f) {
     fprintf(f, "Usage: %s [options]\n", argv[0]);
-    fprintf(f, "No options currently defined\n");
     fprintf(f, "options:\n");
-    fprintf(f, "\t-h:           This help\n");
-    fprintf(f, "\t-v:           verbose, status output\n");
+    fprintf(f, "\t-h:                   This help\n");
+    fprintf(f, "\t-t [time in seconds]: stop all tests after the time has elapsed\n");
+    fprintf(f, "\t-v:                   verbose, status output\n");
 }
 
 } // namespace
@@ -85,13 +85,24 @@ int main(int argc, char** argv) {
     zx_status_t status;
 
     bool verbose = false;
+    zx::duration run_duration = zx::duration::infinite();
 
     int c;
-    while ((c = getopt(argc, argv, "hv")) > 0) {
+    while ((c = getopt(argc, argv, "ht:v")) > 0) {
         switch (c) {
         case 'h':
             print_help(argv, stdout);
             return 0;
+        case 't': {
+            long t = atol(optarg);
+            if (t <= 0) {
+                fprintf(stderr, "bad time argument\n");
+                print_help(argv, stderr);
+                return 1;
+            }
+            run_duration = zx::sec(t);
+            break;
+        }
         case 'v':
             verbose = true;
             break;
@@ -110,6 +121,12 @@ int main(int argc, char** argv) {
         return 1;
     }
 
+    if (run_duration != zx::duration::infinite()) {
+        printf("Running stress tests for %" PRIu64 " seconds\n", run_duration.to_secs());
+    } else {
+        printf("Running stress tests continually\n");
+    }
+
     fbl::SinglyLinkedList<fbl::unique_ptr<StressTest>> test_list;
 
     // create a single test and run it
@@ -126,6 +143,7 @@ int main(int argc, char** argv) {
 
     // initialize all the tests
     for (auto& test : test_list) {
+        printf("Initializing %s test\n", test.name());
         status = test.Init(verbose, kmem_stats);
         if (status != ZX_OK) {
             fprintf(stderr, "error initializing test\n");
@@ -135,6 +153,7 @@ int main(int argc, char** argv) {
 
     // start all of them
     for (auto& test : test_list) {
+        printf("Starting %s test\n", test.name());
         status = test.Start();
         if (status != ZX_OK) {
             fprintf(stderr, "error initializing test\n");
@@ -142,13 +161,38 @@ int main(int argc, char** argv) {
         }
     }
 
-    // run forever for now
+    // set stdin to non blocking
+    fcntl(STDIN_FILENO, F_SETFL, O_NONBLOCK);
+
+    zx::time start_time = zx::clock::get(ZX_CLOCK_MONOTONIC);
+    bool stop = false;
     for (;;) {
-        zx_nanosleep(zx_deadline_after(ZX_SEC(5)));
+        // look for ctrl-c for terminals that do not support it
+        char c;
+        while (read(STDIN_FILENO, &c, 1) > 0) {
+            if (c == 0x3) {
+                stop = true;
+                break;
+            }
+        }
+        if (stop) {
+            break;
+        }
+
+        // wait for a second to try again
+        zx::nanosleep(zx::deadline_after(zx::sec(1)));
+
+        if (run_duration != zx::duration::infinite()) {
+            zx::time now = zx::clock::get(ZX_CLOCK_MONOTONIC);
+            if (now - start_time >= run_duration) {
+                break;
+            }
+        }
     }
 
     // shut them down
     for (auto& test : test_list) {
+        printf("Stopping %s test\n", test.name());
         status = test.Stop();
         if (status != ZX_OK) {
             fprintf(stderr, "error stopping test\n");

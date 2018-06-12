@@ -39,6 +39,9 @@ public:
     // been shut down.
     virtual zx_status_t Stop() = 0;
 
+    // Return the name of the test in C string format
+    virtual const char* name() const = 0;
+
 protected:
     // wrapper around printf that enables/disables based on verbose flag
     void Printf(const char *fmt, ...) {

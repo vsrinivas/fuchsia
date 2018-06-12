@@ -36,6 +36,8 @@ public:
     virtual zx_status_t Start();
     virtual zx_status_t Stop();
 
+    virtual const char* name() const { return "VM Stress"; }
+
 private:
     int stress_thread();
 
