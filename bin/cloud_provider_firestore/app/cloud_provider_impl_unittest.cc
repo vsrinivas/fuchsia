@@ -8,17 +8,17 @@
 
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fxl/macros.h"
-#include "lib/gtest/test_with_message_loop.h"
+#include "lib/gtest/test_with_loop.h"
 #include "peridot/bin/cloud_provider_firestore/firestore/testing/test_firestore_service.h"
 #include "peridot/lib/firebase_auth/testing/test_firebase_auth.h"
 
 namespace cloud_provider_firestore {
 
-class CloudProviderImplTest : public gtest::TestWithMessageLoop {
+class CloudProviderImplTest : public gtest::TestWithLoop {
  public:
   CloudProviderImplTest() {
     auto firebase_auth = std::make_unique<firebase_auth::TestFirebaseAuth>(
-        message_loop_.async());
+        dispatcher());
     firebase_auth_ = firebase_auth.get();
     auto firestore_service = std::make_unique<TestFirestoreService>();
     firestore_service_ = firestore_service.get();

@@ -4,7 +4,7 @@
 
 #include "peridot/bin/cloud_provider_firestore/firestore/listen_call.h"
 
-#include "lib/gtest/test_with_message_loop.h"
+#include "gtest/gtest.h"
 
 namespace cloud_provider_firestore {
 
@@ -43,7 +43,7 @@ class TestListenStream : public ListenStream {
   FXL_DISALLOW_COPY_AND_ASSIGN(TestListenStream);
 };
 
-class ListenCallTest : public gtest::TestWithMessageLoop,
+class ListenCallTest : public ::testing::Test,
                        public ListenCallClient {
  public:
   ListenCallTest() {

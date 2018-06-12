@@ -8,18 +8,18 @@
 
 #include "lib/callback/capture.h"
 #include "lib/fidl/cpp/binding.h"
-#include "lib/gtest/test_with_message_loop.h"
+#include "lib/gtest/test_with_loop.h"
 #include "peridot/lib/firebase_auth/testing/test_token_provider.h"
 
 namespace cloud_provider_firestore {
 
-class FactoryImplTest : public gtest::TestWithMessageLoop {
+class FactoryImplTest : public gtest::TestWithLoop {
  public:
   FactoryImplTest()
-      : factory_impl_(message_loop_.async(), /*startup_context=*/nullptr,
+      : factory_impl_(dispatcher(), /*startup_context=*/nullptr,
                       /*cobalt_client_name=*/""),
         factory_binding_(&factory_impl_, factory_.NewRequest()),
-        token_provider_(message_loop_.async()),
+        token_provider_(dispatcher()),
         token_provider_binding_(&token_provider_) {}
   ~FactoryImplTest() override {}
 

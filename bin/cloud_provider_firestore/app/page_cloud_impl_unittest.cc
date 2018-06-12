@@ -13,7 +13,7 @@
 #include "lib/fsl/socket/strings.h"
 #include "lib/fsl/vmo/sized_vmo.h"
 #include "lib/fsl/vmo/strings.h"
-#include "lib/gtest/test_with_message_loop.h"
+#include "lib/gtest/test_with_loop.h"
 #include "peridot/bin/cloud_provider_firestore/app/testing/test_credentials_provider.h"
 #include "peridot/bin/cloud_provider_firestore/firestore/encoding.h"
 #include "peridot/bin/cloud_provider_firestore/firestore/testing/test_firestore_service.h"
@@ -31,10 +31,10 @@ void SetTimestamp(google::firestore::v1beta1::Document* document,
   timestamp.set_nanos(nanos);
 }
 
-class PageCloudImplTest : public gtest::TestWithMessageLoop {
+class PageCloudImplTest : public gtest::TestWithLoop {
  public:
   PageCloudImplTest()
-      : test_credentials_provider_(message_loop_.async()),
+      : test_credentials_provider_(dispatcher()),
         page_cloud_impl_("page_path",
                          &test_credentials_provider_,
                          &firestore_service_,
@@ -53,12 +53,9 @@ class PageCloudImplTest : public gtest::TestWithMessageLoop {
 
 TEST_F(PageCloudImplTest, EmptyWhenDisconnected) {
   bool on_empty_called = false;
-  page_cloud_impl_.set_on_empty([this, &on_empty_called] {
-    on_empty_called = true;
-    message_loop_.PostQuitTask();
-  });
+  page_cloud_impl_.set_on_empty(callback::SetWhenCalled(&on_empty_called));
   page_cloud_.Unbind();
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoopUntilIdle();
   EXPECT_TRUE(on_empty_called);
 }
 

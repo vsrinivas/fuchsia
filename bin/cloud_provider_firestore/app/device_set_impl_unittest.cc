@@ -10,7 +10,7 @@
 #include "lib/callback/set_when_called.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fxl/macros.h"
-#include "lib/gtest/test_with_message_loop.h"
+#include "lib/gtest/test_with_loop.h"
 #include "peridot/bin/cloud_provider_firestore/app/testing/test_credentials_provider.h"
 #include "peridot/bin/cloud_provider_firestore/firestore/testing/test_firestore_service.h"
 #include "peridot/lib/convert/convert.h"
@@ -18,11 +18,11 @@
 namespace cloud_provider_firestore {
 namespace {
 
-class DeviceSetImplTest : public gtest::TestWithMessageLoop,
+class DeviceSetImplTest : public gtest::TestWithLoop,
                           public cloud_provider::DeviceSetWatcher {
  public:
   DeviceSetImplTest()
-      : test_credentials_provider_(message_loop_.async()),
+      : test_credentials_provider_(dispatcher()),
         device_set_impl_("user_path",
                          &test_credentials_provider_,
                          &firestore_service_,
@@ -32,12 +32,10 @@ class DeviceSetImplTest : public gtest::TestWithMessageLoop,
   // cloud_provider::DeviceSetWatcher:
   void OnCloudErased() override {
     on_cloud_erased_calls_++;
-    message_loop_.PostQuitTask();
   }
 
   void OnNetworkError() override {
     on_network_error_calls_++;
-    message_loop_.PostQuitTask();
   }
 
  protected:

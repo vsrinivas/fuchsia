@@ -10,9 +10,9 @@
 #include <functional>
 #include <vector>
 
+#include "gtest/gtest.h"
 #include "lib/callback/capture.h"
 #include "lib/callback/set_when_called.h"
-#include "lib/gtest/test_with_message_loop.h"
 
 namespace cloud_provider_firestore {
 namespace {
@@ -49,7 +49,7 @@ class TestIntegerStream : public IntegerStream {
   FXL_DISALLOW_COPY_AND_ASSIGN(TestIntegerStream);
 };
 
-class ReadStreamDrainerTest : public gtest::TestWithMessageLoop {
+class ReadStreamDrainerTest : public ::testing::Test {
  public:
   ReadStreamDrainerTest() {
     auto stream = std::make_unique<TestIntegerStream>();
