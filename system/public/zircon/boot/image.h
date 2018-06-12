@@ -116,7 +116,9 @@ typedef struct {
     macro(ZBI_TYPE_DEBUG_UART, "DEBUG_UART", ".bin") \
     macro(ZBI_TYPE_FRAMEBUFFER, "FRAMEBUFFER", ".bin") \
     macro(ZBI_TYPE_DRV_MAC_ADDRESS, "DRV_MAC_ADDRESS", ".bin") \
-    macro(ZBI_TYPE_DRV_PARTITION_MAP, "DRV_PARTITION_MAP", ".bin")
+    macro(ZBI_TYPE_DRV_PARTITION_MAP, "DRV_PARTITION_MAP", ".bin") \
+    macro(ZBI_TYPE_BOOT_CONFIG, "BOOT_CONFIG", ".bin") \
+    macro(ZBI_TYPE_BOOT_VERSION, "BOOT_VERSION", ".bin")
 
 // Each ZBI starts with a container header.
 //     length:          Total size of the image after this header.
@@ -440,6 +442,15 @@ typedef struct {
 
 // Framebuffer parameters, a zbi_swfb_t entry.
 #define ZBI_TYPE_FRAMEBUFFER            (0x42465753) // SWFB
+
+// A copy of the boot configuration stored as a kvstore
+// within the sysconfig partition.
+#define ZBI_TYPE_BOOT_CONFIG        (0x47464342) // BCFG
+
+// A copy of the boot version stored within the sysconfig
+// partition
+#define ZBI_TYPE_BOOT_VERSION       (0x53525642) // BVRS
+
 #ifndef __ASSEMBLER__
 typedef struct {
     // Physical memory address.

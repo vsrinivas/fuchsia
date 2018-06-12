@@ -10,29 +10,48 @@ set -eo pipefail
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 BUILD_DIR="${DIR}/../build-arm64"
-BOOT_PART=boot
-
+SYSCFG_A_BIN="${DIR}/../prebuilt/images/syscfg_a.bin"
+SYSCFG_B_BIN="${DIR}/../prebuilt/images/syscfg_b.bin"
+SYSCFG_R_BIN="${DIR}/../prebuilt/images/syscfg_r.bin"
+SYSCFG_BIN=${SYSCFG_A_BIN}
+FLASH_PART=a
+BOOT_PART=a
+REBOOT=yes
 CMDLINE=
+
+# To be provided by board-specific flash script
+ZIRCON_PARTITION=
+PARTITION_A=
+PARTITION_B=
+PARTITION_R=
+PARTITION_SYSCFG=
+
 
 function HELP {
     echo "help:"
-    echo "-b <board>     : Board to flash"
-    echo "-c <cmd line>  : Extra command line options"
-    echo "-m             : Add mexec option to command line"
-    echo "-o <dir>       : Build directory"
-    echo "-P             : Boot partition name"
+    echo "-b <board>            : Board to flash"
+    echo "-c <cmd line>         : Extra command line options"
+    echo "-m                    : Add mexec option to command line"
+    echo "-o <dir>              : Build directory"
+    echo "-B <partition>        : Partition to boot from (a, b, r) (x to skip)"
+    echo "-P <partition>        : Partition to flash (a, b, r) (x to skip)(A for all)"
+    echo "-N                    : Don't reboot"
+    echo "-Z <partition name>   : Zircon partition names <comma separated> (a,b,r,syscfg)"
     echo "-h for help"
     exit 1
 }
 
-while getopts "b:c:d:mo:P:h" FLAG; do
+while getopts "b:c:d:mo:NP:B:hZ:" FLAG; do
     case $FLAG in
         b) BOARD="${OPTARG}";;
         c) CMDLINE+=" ${OPTARG}";;
         d) RAMDISK="${OPTARG}";;
         m) CMDLINE+=" netsvc.netboot=true";;
         o) BUILD_DIR="${OPTARG}";;
-        P) BOOT_PART="${OPTARG}";;
+        B) BOOT_PART="${OPTARG}";;
+        P) FLASH_PART="${OPTARG}";;
+        Z) ZIRCON_PARTITION="${OPTARG}";;
+        N) REBOOT="no";;
         h) HELP;;
         \?)
             echo unrecognized option
@@ -47,6 +66,80 @@ if [[ -z "${BOARD}" ]]; then
     HELP
 fi
 
+# process partitions names. We are either allowed 1 or 4 partitions
+IFS=',' read -ra PART_NAMES <<< "${ZIRCON_PARTITION}"    #Convert string to array
+
+if [[ ${#PART_NAMES[@]} != 4 ]] && [[ ${#PART_NAMES[@]} != 1 ]]; then
+    echo Invalid partition names provided
+    HELP
+fi
+
+# Make sure none of the entries are empty
+for i in "${PART_NAMES[@]}"; do
+    if [[ -z ${i} ]]; then
+        echo empty partition name provided
+        HELP
+    fi
+done
+
+if [[ ${#PART_NAMES[@]} == 4 ]]; then
+    PARTITION_A=${PART_NAMES[0]}
+    PARTITION_B=${PART_NAMES[1]}
+    PARTITION_R=${PART_NAMES[2]}
+    PARTITION_SYSCFG=${PART_NAMES[3]}
+else
+    PARTITION_A=${PART_NAMES[0]}
+fi
+
+# At this point we have the partition names
+
+if  [[ "${BOOT_PART}" != "a" ]] &&
+    [[ "${BOOT_PART}" != "b" ]] &&
+    [[ "${BOOT_PART}" != "r" ]] &&
+    [[ "${BOOT_PART}" != "x" ]]; then
+    echo Invalid Boot Partition selected ${BOOT_PART}
+    HELP
+else
+    if [[ "${BOOT_PART}" == "a" ]]; then
+        SYSCFG_BIN="${SYSCFG_A_BIN}"
+    elif [[ "${BOOT_PART}" == "b" ]]; then
+        SYSCFG_BIN="${SYSCFG_B_BIN}"
+    elif [[ "${BOOT_PART}" == "r" ]]; then
+        SYSCFG_BIN="${SYSCFG_R_BIN}"
+    else
+        SYSCFG_BIN=""
+    fi
+fi
+
+if  [[ "${FLASH_PART}" != "a" ]] &&
+    [[ "${FLASH_PART}" != "b" ]] &&
+    [[ "${FLASH_PART}" != "r" ]] &&
+    [[ "${FLASH_PART}" != "x" ]] &&
+    [[ "${FLASH_PART}" != "A" ]]; then
+    echo Invalid Boot Partition selected ${FLASH_PART}
+    HELP
+else
+    if [[ "${FLASH_PART}" == "a" ]]; then
+        FLASH_PART="${PARTITION_A}"
+    elif [[ "${FLASH_PART}" == "b" ]]; then
+        FLASH_PART="${PARTITION_B}"
+    elif [[ "${FLASH_PART}" == "r" ]]; then
+        FLASH_PART="${PARTITION_R}"
+        # Add netboot option to recovery
+        CMDLINE+=" netsvc.netboot=true"
+    elif [[ "${FLASH_PART}" == "A" ]]; then
+        FLASH_PART="all"
+    else
+        FLASH_PART=""
+    fi
+fi
+
+if [[ ! -z "${SYSCFG_BIN}" ]]; then
+    echo Flashing sysconfig partition
+    fastboot flash tee ${SYSCFG_BIN}
+fi
+
+
 ZBI="${BUILD_DIR}/tools/zbi"
 BOOTDATA_BIN="${BUILD_DIR}/zircon-bootimage.bin"
 CMDLINE_FILE="${BUILD_DIR}/${BOARD}-cmdline.txt"
@@ -55,5 +148,22 @@ OUT_IMAGE="${BUILD_DIR}/${BOARD}-boot.img"
 echo ${CMDLINE} > ${CMDLINE_FILE}
 ${ZBI} -o ${OUT_IMAGE} ${BOOTDATA_BIN} -T cmdline ${CMDLINE_FILE}
 
-fastboot flash "${BOOT_PART}" "${OUT_IMAGE}"
-fastboot reboot
+# At this point we either flash all or flash one
+
+if [[ ! -z "${FLASH_PART}" ]]; then
+    if [[ "${FLASH_PART}" == "all" ]]; then
+        fastboot flash "${PARTITION_A}" "${OUT_IMAGE}"
+        fastboot flash "${PARTITION_B}" "${OUT_IMAGE}"
+        # Add netboot option to recovery
+        CMDLINE+=" netsvc.netboot=true"
+        echo ${CMDLINE} > ${CMDLINE_FILE}
+        ${ZBI} -o ${OUT_IMAGE} ${BOOTDATA_BIN} -T cmdline ${CMDLINE_FILE}
+        fastboot flash "${PARTITION_R}" "${OUT_IMAGE}"
+    else
+        fastboot flash "${FLASH_PART}" "${OUT_IMAGE}"
+    fi
+fi
+
+if [[ "${REBOOT}" == "yes" ]]; then
+    fastboot reboot
+fi

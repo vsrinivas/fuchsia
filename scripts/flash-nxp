@@ -6,5 +6,34 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 
+ZIRCON_PARTITION="boot_a"
+FLASH_PART=a
+BOOT_PART=x
+
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-exec $DIR/fastboot-flash -b imx8mevk -P boot_a "$@"
+
+CMDLINE=
+
+function HELP {
+    echo "help:"
+    echo "-c <cmd line>     : Extra command line options"
+    echo "-m                : Add mexec option to command line"
+    echo "-h for help"
+    exit 1
+}
+
+while getopts "c:m" FLAG; do
+    case $FLAG in
+        c) CMDLINE+="-c ${OPTARG}";;
+        m) CMDLINE+="-m";;
+        h) HELP;;
+        \?)
+            echo unrecognized option
+            HELP
+            ;;
+    esac
+done
+shift $((OPTIND-1))
+
+
+exec $DIR/fastboot-flash -b imx8mevk -P ${FLASH_PART} -B ${BOOT_PART} ${CMDLINE} -Z ${ZIRCON_PARTITION} "$@"
