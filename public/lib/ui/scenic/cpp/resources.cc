@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "lib/ui/scenic/client/resources.h"
+#include "lib/ui/scenic/cpp/resources.h"
 
 #include "lib/fxl/logging.h"
-#include "lib/ui/scenic/fidl_helpers.h"
+#include "lib/ui/scenic/cpp/fidl_helpers.h"
 
-namespace scenic_lib {
+namespace scenic {
 
 Resource::Resource(Session* session)
     : session_(session), id_(session->AllocResourceId()) {}
@@ -378,8 +378,8 @@ void CameraBase::SetTransform(const float eye_position[3],
 
 void CameraBase::SetPoseBuffer(const Buffer& buffer, uint32_t num_entries,
                                uint64_t base_time, uint64_t time_interval) {
-  session()->Enqueue(scenic_lib::NewSetCameraPoseBufferCmd(
-      id(), buffer.id(), num_entries, base_time, time_interval));
+  session()->Enqueue(NewSetCameraPoseBufferCmd(id(), buffer.id(), num_entries,
+                                               base_time, time_interval));
 }
 
 Camera::Camera(const Scene& scene) : Camera(scene.session(), scene.id()) {}
@@ -531,4 +531,4 @@ void DirectionalLight::SetDirection(uint32_t variable_id) {
   session()->Enqueue(NewSetLightDirectionCmd(id(), variable_id));
 }
 
-}  // namespace scenic_lib
+}  // namespace scenic

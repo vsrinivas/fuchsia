@@ -4,20 +4,20 @@
 
 group("scenic") {
   deps = [
+    "cpp",
     ":client",
     ":fidl_helpers",
   ]
 }
 
+# TODO(SCN-607): delete when no longer needed.
 source_set("fidl_helpers") {
   sources = [
-    "fidl_helpers.cc",
     "fidl_helpers.h",
   ]
 
   public_deps = [
-    "//garnet/public/lib/ui/gfx/fidl",
-    "//garnet/public/lib/ui/scenic/fidl",
+    "cpp:fidl_helpers",
   ]
 
   deps = [
@@ -25,19 +25,17 @@ source_set("fidl_helpers") {
   ]
 }
 
+# TODO(SCN-607): delete when no longer needed.
 source_set("client") {
   sources = [
-    "client/host_image_cycler.cc",
     "client/host_image_cycler.h",
-    "client/host_memory.cc",
     "client/host_memory.h",
-    "client/resources.cc",
     "client/resources.h",
-    "client/session.cc",
     "client/session.h",
   ]
 
   public_deps = [
+    "cpp",
     ":fidl_helpers",
     "//zircon/public/lib/fit",
   ]

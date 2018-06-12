@@ -29,11 +29,11 @@
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
 
-#include "lib/ui/scenic/client/host_memory.h"
-#include "lib/ui/scenic/fidl_helpers.h"
+#include "lib/ui/scenic/cpp/fidl_helpers.h"
+#include "lib/ui/scenic/cpp/host_memory.h"
 #include "lib/ui/scenic/types.h"
 
-using namespace scenic_lib;
+using namespace scenic;
 
 namespace hello_scenic {
 
@@ -199,7 +199,7 @@ void App::Init(fuchsia::ui::gfx::DisplayInfo display_info) {
   FXL_LOG(INFO) << "Creating new Session";
 
   // TODO: set up SessionListener.
-  session_ = std::make_unique<scenic_lib::Session>(scenic_.get());
+  session_ = std::make_unique<scenic::Session>(scenic_.get());
   session_->set_error_handler([this] {
     FXL_LOG(INFO) << "Session terminated.";
     loop_->Quit();

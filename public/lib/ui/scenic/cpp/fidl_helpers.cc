@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "lib/ui/scenic/fidl_helpers.h"
+#include "lib/ui/scenic/cpp/fidl_helpers.h"
 
 #include <array>
 
 #include "lib/fxl/logging.h"
 
-namespace scenic_lib {
+namespace scenic {
 
 // TODO(mikejurka): this should be in an images util file
 bool ImageInfoEquals(const fuchsia::images::ImageInfo& a,
@@ -1221,4 +1221,4 @@ fuchsia::ui::gfx::ColorRgbaValue NewColorRgbaValue(uint32_t variable_id) {
   return val;
 }
 
-}  // namespace scenic_lib
+}  // namespace scenic

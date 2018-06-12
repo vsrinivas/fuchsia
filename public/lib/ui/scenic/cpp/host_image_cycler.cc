@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "lib/ui/scenic/client/host_image_cycler.h"
+#include "lib/ui/scenic/cpp/host_image_cycler.h"
 
 #include "lib/fxl/logging.h"
 
-namespace scenic_lib {
+namespace scenic {
 
 HostImageCycler::HostImageCycler(Session* session)
     : EntityNode(session),
@@ -62,4 +62,4 @@ void HostImageCycler::ReleaseAndSwapImage() {
   image_index_ = (image_index_ + 1) % kNumBuffers;
 }
 
-}  // namespace scenic_lib
+}  // namespace scenic

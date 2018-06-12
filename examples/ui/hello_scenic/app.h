@@ -8,8 +8,8 @@
 #include <lib/async-loop/cpp/loop.h>
 
 #include "lib/app/cpp/startup_context.h"
-#include "lib/ui/scenic/client/resources.h"
-#include "lib/ui/scenic/client/session.h"
+#include "lib/ui/scenic/cpp/resources.h"
+#include "lib/ui/scenic/cpp/session.h"
 
 namespace hello_scenic {
 
@@ -30,19 +30,19 @@ class App {
 
   void ReleaseSessionResources();
 
-  void InitCheckerboardMaterial(scenic_lib::Material* uninitialized_material);
+  void InitCheckerboardMaterial(scenic::Material* uninitialized_material);
 
   std::unique_ptr<fuchsia::sys::StartupContext> startup_context_;
   async::Loop* const loop_;
   fuchsia::ui::scenic::ScenicPtr scenic_;
 
-  std::unique_ptr<scenic_lib::Session> session_;
-  std::unique_ptr<scenic_lib::DisplayCompositor> compositor_;
-  std::unique_ptr<scenic_lib::Camera> camera_;
+  std::unique_ptr<scenic::Session> session_;
+  std::unique_ptr<scenic::DisplayCompositor> compositor_;
+  std::unique_ptr<scenic::Camera> camera_;
 
-  std::unique_ptr<scenic_lib::ShapeNode> rrect_node_;
-  std::unique_ptr<scenic_lib::ShapeNode> clipper_1_;
-  std::unique_ptr<scenic_lib::ShapeNode> clipper_2_;
+  std::unique_ptr<scenic::ShapeNode> rrect_node_;
+  std::unique_ptr<scenic::ShapeNode> clipper_1_;
+  std::unique_ptr<scenic::ShapeNode> clipper_2_;
 
   // Time of the first update.  Animation of the "pane" content is based on the
   // time elapsed since this time.

@@ -2,15 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "lib/ui/scenic/client/host_memory.h"
+#include "lib/ui/scenic/cpp/host_memory.h"
 
 #include <lib/zx/vmar.h>
 #include <lib/zx/vmo.h>
 
 #include "lib/fxl/logging.h"
-#include "lib/ui/scenic/fidl_helpers.h"
+#include "lib/ui/scenic/cpp/fidl_helpers.h"
 
-namespace scenic_lib {
+namespace scenic {
 namespace {
 
 // Returns true if a memory object is of an appropriate size to recycle.
@@ -144,4 +144,4 @@ void HostImagePool::DiscardImage(uint32_t index) {
   image_ptrs_[index].reset();
 }
 
-}  // namespace scenic_lib
+}  // namespace scenic

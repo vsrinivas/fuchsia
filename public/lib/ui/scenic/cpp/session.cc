@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "lib/ui/scenic/client/session.h"
+#include "lib/ui/scenic/cpp/session.h"
 
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
-#include "lib/ui/scenic/fidl_helpers.h"
+#include "lib/ui/scenic/cpp/fidl_helpers.h"
 
-namespace scenic_lib {
+namespace scenic {
 
 constexpr size_t kCommandsPerMessage =
     (ZX_CHANNEL_MAX_MSG_BYTES - sizeof(fidl_message_header_t) -
@@ -129,4 +129,4 @@ void Session::OnEvent(fidl::VectorPtr<fuchsia::ui::scenic::Event> events) {
     event_handler_(std::move(events));
 }
 
-}  // namespace scenic_lib
+}  // namespace scenic
