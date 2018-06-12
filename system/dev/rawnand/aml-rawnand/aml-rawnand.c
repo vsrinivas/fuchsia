@@ -942,6 +942,14 @@ static zx_status_t aml_nand_init(aml_raw_nand_t* raw_nand)
     raw_nand->controller_params.rand_mode = aml_params.rand_mode;
     raw_nand->controller_params.options = NAND_USE_BOUNCE_BUFFER;
     raw_nand->controller_params.bch_mode = aml_params.bch_mode;
+    /*
+     * TODO: Controller Delay Tuning.
+     * Experimentally, a 20us controller delay works, but need to
+     * 1) Test this across all Amlogic controlers/NAND combinations.
+     * 2) Check with Amlogic if this should be controller specific, and
+     * if so, find out what the delays should be for the different controllers,
+     * and make this a controller-based parameter.
+     */
     raw_nand->controller_delay = 200;
 
     /*
