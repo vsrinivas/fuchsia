@@ -101,7 +101,7 @@ zx_status_t publish_tracelink(const fbl::RefPtr<fs::PseudoDir>& dir) {
 // remove the dependencies on these services.
 static constexpr const char* deprecated_services[] = {
     // remove amber.Control when CP-50 is resolved
-    "amber.Control",
+    "fuchsia.amber.Control",
     "fuchsia.cobalt.CobaltEncoderFactory",
     "fuchsia.devicesettings.DeviceSettingsManager",
     "fuchsia.logger.Log",
