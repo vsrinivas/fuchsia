@@ -29,7 +29,7 @@ to use as they see fit: *ZX_USER_SIGNAL_0* through *ZX_USER_SIGNAL_7*.
 
 *Event* objects also allow control over the *ZX_EVENT_SIGNALED* bit.
 
-*Eventpair* objects also allow control over the *ZX_EPAIR_SIGNALED* bit.
+*Eventpair* objects also allow control over the *ZX_EVENTPAIR_SIGNALED* bit.
 
 The *clear_mask* is first used to clear any bits indicated, and then the *set_mask*
 is used to set any bits indicated.

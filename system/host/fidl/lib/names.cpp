@@ -232,7 +232,7 @@ std::string NameHandleZXObjType(types::HandleSubtype subtype) {
     case types::HandleSubtype::kResource:
         return "ZX_OBJ_TYPE_RESOURCE";
     case types::HandleSubtype::kEventpair:
-        return "ZX_OBJ_TYPE_EVENT_PAIR";
+        return "ZX_OBJ_TYPE_EVENTPAIR";
     case types::HandleSubtype::kJob:
         return "ZX_OBJ_TYPE_JOB";
     case types::HandleSubtype::kVmar:

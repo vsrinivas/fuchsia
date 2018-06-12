@@ -347,11 +347,11 @@ bool encode_array_of_present_handles_error_closes_handles() {
     for (uint32_t i = 0; i < ArrayCount(handle_pairs); ++i) {
         zx_signals_t observed_signals;
         EXPECT_EQ(zx_object_wait_one(handle_pairs[i][1],
-                                     ZX_EPAIR_PEER_CLOSED,
+                                     ZX_EVENTPAIR_PEER_CLOSED,
                                      1, // deadline shouldn't matter, should return immediately.
                                      &observed_signals),
                    ZX_OK);
-        EXPECT_EQ(observed_signals & ZX_EPAIR_PEER_CLOSED, ZX_EPAIR_PEER_CLOSED);
+        EXPECT_EQ(observed_signals & ZX_EVENTPAIR_PEER_CLOSED, ZX_EVENTPAIR_PEER_CLOSED);
         EXPECT_EQ(zx_handle_close(handle_pairs[i][1]), ZX_OK); // [i][0] was closed by fidl_encode.
     }
 

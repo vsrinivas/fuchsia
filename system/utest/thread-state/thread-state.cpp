@@ -255,7 +255,7 @@ static void do_msg_wait_one_test(zx_handle_t channel, const Message* msg) {
     send_msg(channel, MSG_PROCEED);
 
     zx_signals_t observed = 0u;
-    auto status = zx_object_wait_one(msg->handles[0], ZX_EPAIR_PEER_CLOSED,
+    auto status = zx_object_wait_one(msg->handles[0], ZX_EVENTPAIR_PEER_CLOSED,
                                      ZX_TIME_INFINITE, &observed);
     tu_handle_close(msg->handles[0]);
     if (status != ZX_OK) {
@@ -265,8 +265,8 @@ static void do_msg_wait_one_test(zx_handle_t channel, const Message* msg) {
         return;
     }
 
-    if (!(observed & ZX_EPAIR_PEER_CLOSED)) {
-        unittest_printf("ERROR: ZX_EPAIR_PEER_CLOSED not observed\n");
+    if (!(observed & ZX_EVENTPAIR_PEER_CLOSED)) {
+        unittest_printf("ERROR: ZX_EVENTPAIR_PEER_CLOSED not observed\n");
         send_msg(channel, MSG_FAIL);
         return;
     }
@@ -290,7 +290,7 @@ static void do_msg_wait_many_test(zx_handle_t channel, const Message* msg) {
     zx_wait_item_t items[num_handles];
     for (uint32_t i = 0; i < num_handles; ++i) {
         items[i].handle = msg->handles[i];
-        items[i].waitfor = ZX_EPAIR_PEER_CLOSED;
+        items[i].waitfor = ZX_EVENTPAIR_PEER_CLOSED;
     }
     auto status = zx_object_wait_many(&items[0], num_handles, ZX_TIME_INFINITE);
     for (uint32_t i = 0; i < num_handles; ++i) {
@@ -306,13 +306,13 @@ static void do_msg_wait_many_test(zx_handle_t channel, const Message* msg) {
     // At least one of the handles should have gotten PEER_CLOSED.
     bool got_peer_closed = false;
     for (uint32_t i = 0; i < num_handles; ++i) {
-        if (items[i].pending & ZX_EPAIR_PEER_CLOSED) {
+        if (items[i].pending & ZX_EVENTPAIR_PEER_CLOSED) {
             got_peer_closed = true;
             break;
         }
     }
     if (!got_peer_closed) {
-        unittest_printf("ERROR: ZX_EPAIR_PEER_CLOSED not observed\n");
+        unittest_printf("ERROR: ZX_EVENTPAIR_PEER_CLOSED not observed\n");
         send_msg(channel, MSG_FAIL);
         return;
     }

@@ -34,7 +34,7 @@ typedef struct zx_policy_basic {
 #define ZX_POL_NEW_VMO                       4u
 #define ZX_POL_NEW_CHANNEL                   5u
 #define ZX_POL_NEW_EVENT                     6u
-#define ZX_POL_NEW_EVPAIR                    7u
+#define ZX_POL_NEW_EVENTPAIR                 7u
 #define ZX_POL_NEW_PORT                      8u
 #define ZX_POL_NEW_SOCKET                    9u
 #define ZX_POL_NEW_FIFO                     10u

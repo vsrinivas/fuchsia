@@ -112,9 +112,14 @@ typedef uint32_t zx_signals_t;
 #define ZX_EVENT_SIGNAL_MASK        (ZX_USER_SIGNAL_ALL | __ZX_OBJECT_SIGNALED)
 
 // EventPair
-#define ZX_EPAIR_SIGNALED           __ZX_OBJECT_SIGNALED
-#define ZX_EPAIR_PEER_CLOSED        __ZX_OBJECT_PEER_CLOSED
-#define ZX_EPAIR_SIGNAL_MASK        (ZX_USER_SIGNAL_ALL | __ZX_OBJECT_SIGNALED | __ZX_OBJECT_PEER_CLOSED)
+#define ZX_EVENTPAIR_SIGNALED       __ZX_OBJECT_SIGNALED
+#define ZX_EVENTPAIR_PEER_CLOSED    __ZX_OBJECT_PEER_CLOSED
+#define ZX_EVENTPAIR_SIGNAL_MASK    (ZX_USER_SIGNAL_ALL | __ZX_OBJECT_SIGNALED | __ZX_OBJECT_PEER_CLOSED)
+
+// DEPRECATED: Use ZX_EVENTPAIR_* instead.
+#define ZX_EPAIR_SIGNALED           ZX_EVENTPAIR_SIGNALED
+#define ZX_EPAIR_PEER_CLOSED        ZX_EVENTPAIR_PEER_CLOSED
+#define ZX_EPAIR_SIGNAL_MASK        ZX_EVENTPAIR_SIGNAL_MASK
 
 // Channel
 #define ZX_CHANNEL_READABLE         __ZX_OBJECT_READABLE
@@ -356,7 +361,7 @@ typedef uint32_t zx_obj_type_t;
 #define ZX_OBJ_TYPE_LOG             ((zx_obj_type_t)12u)
 #define ZX_OBJ_TYPE_SOCKET          ((zx_obj_type_t)14u)
 #define ZX_OBJ_TYPE_RESOURCE        ((zx_obj_type_t)15u)
-#define ZX_OBJ_TYPE_EVENT_PAIR      ((zx_obj_type_t)16u)
+#define ZX_OBJ_TYPE_EVENTPAIR       ((zx_obj_type_t)16u)
 #define ZX_OBJ_TYPE_JOB             ((zx_obj_type_t)17u)
 #define ZX_OBJ_TYPE_VMAR            ((zx_obj_type_t)18u)
 #define ZX_OBJ_TYPE_FIFO            ((zx_obj_type_t)19u)
@@ -369,6 +374,9 @@ typedef uint32_t zx_obj_type_t;
 #define ZX_OBJ_TYPE_PMT             ((zx_obj_type_t)26u)
 #define ZX_OBJ_TYPE_SUSPEND_TOKEN   ((zx_obj_type_t)27u)
 #define ZX_OBJ_TYPE_LAST            ((zx_obj_type_t)28u)
+
+// DEPRECATED: Use ZX_OBJ_TYPE_EVENTPAIR instead.
+#define ZX_OBJ_TYPE_EVENT_PAIR      ZX_OBJ_TYPE_EVENTPAIR
 
 typedef struct {
     zx_handle_t handle;

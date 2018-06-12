@@ -14,7 +14,7 @@ extern "C" {
 
 static const fidl_type_t HandlevmononnullableTable = fidl_type_t(::fidl::FidlCodedHandle(ZX_OBJ_TYPE_VMO, ::fidl::kNonnullable));
 
-static const fidl_type_t HandleeventpairnonnullableTable = fidl_type_t(::fidl::FidlCodedHandle(ZX_OBJ_TYPE_EVENT_PAIR, ::fidl::kNonnullable));
+static const fidl_type_t HandleeventpairnonnullableTable = fidl_type_t(::fidl::FidlCodedHandle(ZX_OBJ_TYPE_EVENTPAIR, ::fidl::kNonnullable));
 
 static const fidl_type_t String100nonnullableTable = fidl_type_t(::fidl::FidlCodedString(100, ::fidl::kNonnullable));
 

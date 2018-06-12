@@ -140,7 +140,7 @@ zx_status_t sys_eventpair_create(uint32_t options,
         return ZX_ERR_NOT_SUPPORTED;
 
     auto up = ProcessDispatcher::GetCurrent();
-    zx_status_t res = up->QueryPolicy(ZX_POL_NEW_EVPAIR);
+    zx_status_t res = up->QueryPolicy(ZX_POL_NEW_EVENTPAIR);
     if (res != ZX_OK)
         return res;
 

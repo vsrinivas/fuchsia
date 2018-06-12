@@ -17,7 +17,7 @@ interface Provider {
     // and close both |buffer| and |fence| to indicate to the trace manager
     // that tracing is finished.
     //
-    // When the trace provider observes |ZX_EPAIR_CLOSED| on |fence|, it must
+    // When the trace provider observes |ZX_EVENTPAIR_CLOSED| on |fence|, it must
     // assume the trace manager has terminated abnormally (since |Stop| was
     // not received as usual) and stop tracing automatically.
     //

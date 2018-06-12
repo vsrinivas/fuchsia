@@ -33,7 +33,7 @@ zx_status_t EventPairDispatcher::Create(fbl::RefPtr<Dispatcher>* dispatcher0,
     disp0->Init(disp1);
     disp1->Init(disp0);
 
-    *rights = ZX_DEFAULT_EVENT_PAIR_RIGHTS;
+    *rights = ZX_DEFAULT_EVENTPAIR_RIGHTS;
     *dispatcher0 = fbl::move(disp0);
     *dispatcher1 = fbl::move(disp1);
 
@@ -50,7 +50,7 @@ void EventPairDispatcher::on_zero_handles()
     DEBUG_ASSERT(peer_);
 
     peer_->InvalidateCookieLocked(peer_->get_cookie_jar());
-    peer_->UpdateStateLocked(0u, ZX_EPAIR_PEER_CLOSED);
+    peer_->UpdateStateLocked(0u, ZX_EVENTPAIR_PEER_CLOSED);
     peer_.reset();
 }
 

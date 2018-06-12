@@ -53,7 +53,7 @@ const char* obj_type_get_name(zx_obj_type_t type) {
         return "socket";
     case ZX_OBJ_TYPE_RESOURCE:
         return "resource";
-    case ZX_OBJ_TYPE_EVENT_PAIR:
+    case ZX_OBJ_TYPE_EVENTPAIR:
         return "event_pair";
     case ZX_OBJ_TYPE_JOB:
         return "job";

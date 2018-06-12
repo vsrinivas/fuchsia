@@ -30,14 +30,14 @@ static bool create_test(void) {
                   ZX_RIGHTS_BASIC | ZX_RIGHT_READ |
                   ZX_RIGHT_WRITE | ZX_RIGHT_SIGNAL | ZX_RIGHT_SIGNAL_PEER,
                   "wrong rights");
-        EXPECT_EQ(info[0].type, (uint32_t)ZX_OBJ_TYPE_EVENT_PAIR, "wrong type");
+        EXPECT_EQ(info[0].type, (uint32_t)ZX_OBJ_TYPE_EVENTPAIR, "wrong type");
         status = zx_object_get_info(h[1], ZX_INFO_HANDLE_BASIC, &info[1], sizeof(info[1]), NULL, NULL);
         ASSERT_EQ(status, ZX_OK, "");
         EXPECT_EQ(info[1].rights,
                   ZX_RIGHTS_BASIC | ZX_RIGHT_READ |
                   ZX_RIGHT_WRITE | ZX_RIGHT_SIGNAL | ZX_RIGHT_SIGNAL_PEER,
                   "wrong rights");
-        EXPECT_EQ(info[1].type, (uint32_t)ZX_OBJ_TYPE_EVENT_PAIR, "wrong type");
+        EXPECT_EQ(info[1].type, (uint32_t)ZX_OBJ_TYPE_EVENTPAIR, "wrong type");
 
 
         // Check that koids line up.
@@ -82,7 +82,7 @@ static bool signal_test(void) {
     check_signals_state(h[0], 0u);
 
     EXPECT_EQ(zx_handle_close(h[0]), ZX_OK, "failed to close event pair handle");
-    check_signals_state(h[1], ZX_EPAIR_PEER_CLOSED);
+    check_signals_state(h[1], ZX_EVENTPAIR_PEER_CLOSED);
     EXPECT_EQ(zx_handle_close(h[1]), ZX_OK, "failed to close event pair handle");
     END_TEST;
 }
@@ -114,7 +114,7 @@ static bool signal_peer_test(void) {
     // Signaled flags should remain satisfied but now should now also get peer closed (and
     // unsignaled flags should be unsatisfiable).
     check_signals_state(h[1],
-        ZX_EPAIR_PEER_CLOSED | ZX_USER_SIGNAL_3 | ZX_USER_SIGNAL_4);
+        ZX_EVENTPAIR_PEER_CLOSED | ZX_USER_SIGNAL_3 | ZX_USER_SIGNAL_4);
 
     EXPECT_EQ(zx_handle_close(h[1]), ZX_OK, "failed to close event pair handle");
 

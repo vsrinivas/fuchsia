@@ -57,7 +57,7 @@ Where *condition* is one of
   a new channel.
 + **ZX_POL_NEW_EVENT** a process under this job is attempting to create
   a new event.
-+ **ZX_POL_NEW_EVPAIR** a process under this job is attempting to create
++ **ZX_POL_NEW_EVENTPAIR** a process under this job is attempting to create
   a new event pair.
 + **ZX_POL_NEW_PORT** a process under this job is attempting to create
   a new port.
@@ -69,7 +69,7 @@ Where *condition* is one of
   a new timer.
 + **ZX_POL_NEW_ANY** is a special *condition* that stands for all of
   the above **ZX_NEW** condtions such as **ZX_POL_NEW_VMO**,
-  **ZX_POL_NEW_CHANNEL**, **ZX_POL_NEW_EVENT**, **ZX_POL_NEW_EVPAIR**,
+  **ZX_POL_NEW_CHANNEL**, **ZX_POL_NEW_EVENT**, **ZX_POL_NEW_EVENTPAIR**,
   **ZX_POL_NEW_PORT**, **ZX_POL_NEW_SOCKET**, **ZX_POL_NEW_FIFO**,
   and any future ZX_NEW policy. This will include any new
   kernel objects which do not require a parent object for creation.

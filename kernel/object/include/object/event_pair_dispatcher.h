@@ -20,7 +20,7 @@ public:
                               zx_rights_t* rights);
 
     ~EventPairDispatcher() final;
-    zx_obj_type_t get_type() const final { return ZX_OBJ_TYPE_EVENT_PAIR; }
+    zx_obj_type_t get_type() const final { return ZX_OBJ_TYPE_EVENTPAIR; }
     bool has_state_tracker() const final { return true; }
     CookieJar* get_cookie_jar() final { return &cookie_jar_; }
     void on_zero_handles() final;
