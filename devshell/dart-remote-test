@@ -1,0 +1,60 @@
+#!/bin/bash
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+### Runs a single remote test target through //scripts/run-dart-action.py
+
+## usage: fx dart-remote-test
+##            [-h|--help] [-d|--device <device>] <target-pattern>
+##
+## Attempts to run a test targeting a remote fuchsia device.
+##
+## This command requires Topaz in order to run. An example would be to run
+## this command against //topaz/example/test/driver_mod_example/* to run
+## all dart_remote_test targets.
+##
+## Arguments:
+##   -h|--help    Print out this message.
+##   -d|--device  Fuchsia link-local name of the device. If not
+##                specified, will connect to the only available
+##                device on the link-local network.
+
+DEVSHELL_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+VERBOSE=false
+source "${DEVSHELL_DIR}"/lib/vars.sh
+fx-config-read
+
+case $1 in
+  -h|--help)
+  fx-command-help
+  exit 0
+  ;;
+  -d|--device)
+  shift  # name
+  if [[ -z "$1" ]]; then
+      echo "Missing parameter: <device>" >&2
+      fx-command-help
+      exit 1
+  fi
+  device="$1"
+  shift  # value
+  ;;
+esac
+
+TARGET_PATTERN="$1"
+shift
+if [ -z "$TARGET_PATTERN" ]; then
+  echo "Expected a target pattern"
+  fx-command-help
+  exit 1
+fi
+
+IP_ADDR_LINK_LOCAL="$(fx-command-run netaddr --fuchsia "${device}")"
+SSH_CONFIG="${FUCHSIA_BUILD_DIR}/ssh-keys/ssh_config"
+RUN_DART_ACTION="${FUCHSIA_DIR}/scripts/run-dart-action.py"
+"${RUN_DART_ACTION}" target-test \
+  --tree="${TARGET_PATTERN}" \
+  --out="${FUCHSIA_BUILD_DIR}" \
+  "${IP_ADDR_LINK_LOCAL}" \
+  "${SSH_CONFIG}"

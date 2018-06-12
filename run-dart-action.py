@@ -54,8 +54,8 @@ class WorkerThread(threading.Thread):
 
 def main():
     parser = argparse.ArgumentParser(
-        '''Run Dart actions (analysis, tests) for Dart build targets.
-Extra flags will be passed to the supporting Dart tool if applicable.
+        '''Run Dart actions (analysis, test, target-test) for Dart build
+targets. Extra flags will be passed to the supporting Dart tool if applicable.
 ''')
     parser.add_argument(
         '--out',
@@ -77,7 +77,7 @@ Extra flags will be passed to the supporting Dart tool if applicable.
     parser.add_argument(
         'action',
         help='Action to perform on the targets',
-        choices=('analyze', 'test'))
+        choices=('analyze', 'test', 'target-test'))
     args, extras = parser.parse_known_args()
 
     if not os.path.isdir(os.path.join(paths.FUCHSIA_ROOT, args.out)):
@@ -94,14 +94,28 @@ Extra flags will be passed to the supporting Dart tool if applicable.
     if not targets:
         print 'No targets found...'
         exit(1)
-    target_script = ('//build/dart/gen_analyzer_invocation.py'
-                     if args.action == 'analyze'
-                     else '//build/dart/gen_test_invocation.py')
+
     for target_name, properties in targets.items():
+        if args.action == 'analyze':
+          script_valid = (
+              'script' in properties and properties['script'] ==
+              '//build/dart/gen_analyzer_invocation.py'
+          )
+        elif args.action == 'test':
+          script_valid = (
+              'script' in properties and
+              properties['script'] == '//build/dart/gen_test_invocation.py'
+          )
+        else:  # 'target-test'
+          script_valid = (
+              'script' in properties and
+              properties['script'] ==
+              '//build/dart/gen_remote_test_invocation.py'
+          )
         if ('type' not in properties or
                 properties['type'] != 'action' or
                 'script' not in properties or
-                properties['script'] != target_script or
+                not script_valid or
                 'outputs' not in properties or
                 not len(properties['outputs'])):
             continue
