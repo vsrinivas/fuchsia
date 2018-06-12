@@ -5,8 +5,26 @@
 package bindings
 
 import (
+	"sync"
+
 	"syscall/zx"
 )
+
+// messageBytesPool is a pool of buffers that can fit the data part of any
+// FIDL message.
+var messageBytesPool = sync.Pool{
+	New: func() interface{} {
+		return make([]byte, zx.ChannelMaxMessageBytes)
+	},
+}
+
+// messageHandlesPool is a pool of buffers that can fit the handles part of
+// any FIDL message.
+var messageHandlesPool = sync.Pool{
+	New: func() interface{} {
+		return make([]zx.Handle, zx.ChannelMaxMessageHandles)
+	},
+}
 
 // MessageHeaderSize is the size of the encoded message header.
 const MessageHeaderSize int = 16

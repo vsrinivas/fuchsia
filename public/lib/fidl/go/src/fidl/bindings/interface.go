@@ -52,9 +52,11 @@ func (p Proxy) IsValid() bool {
 // Send sends the request payload over the channel with the specified ordinal
 // without a response.
 func (p *Proxy) Send(ordinal uint32, req Payload) error {
-	// Allocate maximum size of a message on the stack.
-	var respb [zx.ChannelMaxMessageBytes]byte
-	var resph [zx.ChannelMaxMessageHandles]zx.Handle
+	respb := messageBytesPool.Get().([]byte)
+	resph := messageHandlesPool.Get().([]zx.Handle)
+
+	defer messageBytesPool.Put(respb)
+	defer messageHandlesPool.Put(resph)
 
 	// Marshal the message into the buffer.
 	header := MessageHeader{
@@ -72,9 +74,11 @@ func (p *Proxy) Send(ordinal uint32, req Payload) error {
 
 // Recv waits for an event and writes the response into the response payload.
 func (p *Proxy) Recv(ordinal uint32, resp Payload) error {
-	// Allocate maximum size of a message on the stack.
-	var respb [zx.ChannelMaxMessageBytes]byte
-	var resph [zx.ChannelMaxMessageHandles]zx.Handle
+	respb := messageBytesPool.Get().([]byte)
+	resph := messageHandlesPool.Get().([]zx.Handle)
+
+	defer messageBytesPool.Put(respb)
+	defer messageHandlesPool.Put(resph)
 
 	// Wait on the channel to be readable or close.
 	h := zx.Handle(p.Channel)
@@ -110,9 +114,11 @@ func (p *Proxy) Recv(ordinal uint32, resp Payload) error {
 // and synchronously waits for a response. It then writes the response into the
 // response payload.
 func (p *Proxy) Call(ordinal uint32, req Payload, resp Payload) error {
-	// Allocate maximum size of a message on the stack.
-	var respb [zx.ChannelMaxMessageBytes]byte
-	var resph [zx.ChannelMaxMessageHandles]zx.Handle
+	respb := messageBytesPool.Get().([]byte)
+	resph := messageHandlesPool.Get().([]zx.Handle)
+
+	defer messageBytesPool.Put(respb)
+	defer messageHandlesPool.Put(resph)
 
 	// Marshal the message into the buffer
 	header := MessageHeader{

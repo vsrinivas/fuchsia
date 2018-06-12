@@ -94,9 +94,12 @@ func (b *Binding) Init(errHandler func(error)) error {
 // Returns whether we should continue to wait before reading more from the Channel,
 // and potentially an error.
 func (b *Binding) dispatch() (bool, error) {
-	// Allocate maximum size of a message on the stack.
-	var respb [zx.ChannelMaxMessageBytes]byte
-	var resph [zx.ChannelMaxMessageHandles]zx.Handle
+	respb := messageBytesPool.Get().([]byte)
+	resph := messageHandlesPool.Get().([]zx.Handle)
+
+	defer messageBytesPool.Put(respb)
+	defer messageHandlesPool.Put(resph)
+
 	nb, nh, err := b.Channel.Read(respb[:], resph[:], 0)
 	if err != nil {
 		zxErr, ok := err.(zx.Error)
@@ -110,7 +113,7 @@ func (b *Binding) dispatch() (bool, error) {
 		return false, err
 	}
 	start := MessageHeaderSize
-	p, err := b.Stub.Dispatch(header.Ordinal, respb[start:start+int(nb)], resph[:nh])
+	p, err := b.Stub.Dispatch(header.Ordinal, respb[start:int(nb)], resph[:nh])
 	if err != nil {
 		return false, err
 	}
