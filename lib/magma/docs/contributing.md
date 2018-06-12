@@ -24,60 +24,69 @@ often these are built from third party projects, such as third_party/mesa.
 * Use the **[Google style guide](https://google.github.io/styleguide/cppguide.html)** for source code (except 4 spaces for indent).
 * Run **clang-format** on your changes to maintain consistent formatting.
 
-### Pre-submit Testing
+### Testing Pre-Submit
 
-Magma adheres to a philosophy of multi-level testing.  Unit testing should accompany all units of implementation.
-Unit tests can be found:
+For details on the testing strategy for magma, see [test_strategy.md](test_strategy.md).
 
-* [lib/magma/tests/unit_tests](../../../lib/magma/tests/unit_tests)
-* [drivers/gpu/msd-intel-gen/tests/unit_tests](../../../drivers/gpu/msd-intel-gen/tests/unit_tests)
+There are multiple levels for magma TPS.  Each level includes all previous levels.
 
-Integration tests are the next level of testing:
+When submitting a change you must indicate the TPS level tested, preface by the hardware
+on which the testing was performed:
 
-* [lib/magma/tests/integration](../../../lib/magma/tests/integration)
+TEST:  
+nuc,vim2:go/magma-tps#L2  
+nuc,vim2:go/magma-tps#S1  
+nuc,vim2:go/magma-tps#C0  
+nuc,vim2:go/magma-tps#P0  
 
-Particularly, for each of the magma abis, there should be adequate coverage from unit and/or integration tests:
+#### L0
 
-* [include/magma_abi/magma.h](../include/magma_abi/magma.h)
-* [include/msd_abi/msd.h](../include/msd_abi/msd.h)
+Includes all unit tests and integration tests.  There are 2 steps at this tps level:
 
-Tests that exercise the vulkan api should also be run on most changes.
-Many of these can be executed on a running system using the script:
+1. Build with --arg magma_enable_developer_mode=true; this will run unit tests that require hardware,
+then present the device as usual for general applications.  Inspect the syslog for test results.
 
-* [lib/magma/scripts/test.sh](../../../lib/magma/scripts/test.sh)
+2. Run the test script [lib/magma/scripts/test.sh](../../../lib/magma/scripts/test.sh) and inspect the test results.
 
-Which executes the tests defined in:
+#### L1
 
-* [lib/magma/scripts/autorun](../../../lib/magma/scripts/autorun)
+If you have an attached display, execute the spinning [vkcube](../../../lib/vulkan/tests/vkcube).
+This test uses an imagepipe swapchain to pass frames to the system compositor.  
+Build with --packages garnet/packages/examples/vkcube_image_pipe_swapchain.  
+Run the test with 'set_root_view vkcube_image_pipe_swapchain'.
 
-The vulkan cube is a good simple, single vulkan application test case:
+#### L2
 
-* [lib/magma/tests/vkcube](../../../lib/magma/tests/vkcube)
+A full UI 'smoke' test. Build the entire product including your change.  
+Login, start a few apps, move them around, and dismiss them.
+For details, refer to top level project documentation.
+
+#### S0
+
+For stress testing, run the test script [lib/magma/scripts/stress.sh](../../../lib/magma/scripts/stress.sh)
+and ensure that the driver does not leak resources over time.
+
+#### S1
+
+A full UI stress test.  Launch the spinning_cube example and the infinite_scroller, and let them run overnight.
+
+#### C0
 
 For some changes, it's appropriate to run the vulkan conformance test suite before submitting.
 See [Conformance](#conformance).
 
-For some changes, it's appropriate to run benchmarks to validate performance metrics. See [Benchmarking](#benchmarking).
+#### P0
 
-For some changes, it's appropriate to build and exercise the full ui to validate functionality and performance.
-For details, refer to top level project documentation.
+For some changes, it's appropriate to run benchmarks to validate performance metrics. See [Benchmarking](#benchmarking).
 
 ### Conformance ###
 
 For details on the Vulkan conformance test suite, see
 
-* [../third_party/vulkan_loader_and_validation_layers](../../../../third_party/vulkan_loader_and_validation_layers)
-
-See helper scripts:
-
-* [lib/magma/scripts/vulkancts](../../../lib/magma/scripts/vulkancts)
+* [../third_party/vulkan-cts](../../../../third_party/vulkan-cts)
 
 ### Benchmarking ###
 
 The source to Vulkan gfxbench is access-restricted. It should be cloned into third_party.
 
 * https://fuchsia-vendor-internal.git.corp.google.com/gfxbench
-
-See helper build script:
-
-* [lib/magma/scripts/build-gfxbench.sh](../../../lib/magma/scripts/build-gfxbench.sh)
