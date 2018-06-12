@@ -65,7 +65,7 @@ zx_status_t vim_mali_init(vim_bus_t* bus, uint32_t bti_index) {
     mali_btis[0].iommu_index = 0;
     mali_btis[0].bti_id      = bti_index;
 
-    zx_status_t status = pbus_device_add(&bus->pbus, &mali_dev, PDEV_ADD_PBUS_DEVHOST);
+    zx_status_t status = pbus_device_add(&bus->pbus, &mali_dev, 0);
     if (status != ZX_OK) {
         zxlogf(ERROR, "vim_mali_init: pbus_device_add failed: %d\n", status);
         return status;
