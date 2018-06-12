@@ -40,9 +40,11 @@ static void ums_block_queue(void* ctx, block_op_t* op) {
 
 static void ums_get_info(void* ctx, block_info_t* info) {
     ums_block_t* dev = ctx;
+    ums_t* ums = block_to_ums(dev);
     memset(info, 0, sizeof(*info));
     info->block_size = dev->block_size;
     info->block_count = dev->total_blocks;
+    info->max_transfer_size = ums->max_transfer;
     info->flags = dev->flags;
 }
 
