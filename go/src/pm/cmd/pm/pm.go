@@ -12,6 +12,7 @@ import (
 
 	"fuchsia.googlesource.com/pm/build"
 	"fuchsia.googlesource.com/pm/cmd/pm/archive"
+	"fuchsia.googlesource.com/pm/cmd/pm/expand"
 	"fuchsia.googlesource.com/pm/cmd/pm/genkey"
 	initcmd "fuchsia.googlesource.com/pm/cmd/pm/init"
 	"fuchsia.googlesource.com/pm/cmd/pm/install"
@@ -34,6 +35,7 @@ Commands
 
 	Dev Only:
     archive - construct a single .far representation of the package
+    expand  - expand a single .far representation of a package into a repository
     install - install a single .far representation of the package
 
 TODO:
@@ -88,6 +90,9 @@ func main() {
 
 	case "archive":
 		err = archive.Run(cfg)
+
+	case "expand":
+		err = expand.Run(cfg)
 
 	case "install":
 		err = install.Run(cfg)
