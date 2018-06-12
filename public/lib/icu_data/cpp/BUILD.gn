@@ -2,40 +2,14 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-action("generate_icu_constants") {
-  visibility = [ ":cpp" ]
-
-  script = "generate_icu_constants.py"
-
-  inputs = [
-    "$root_out_dir/icudtl.dat",
-  ]
-
-  outputs = [
-    "$root_gen_dir/garnet/public/icu_data/cpp/constants.cc",
-  ]
-
-  args = rebase_path(inputs + outputs, root_build_dir)
-
-  deps = [
-    "//third_party/icu:icudata",
-  ]
-}
-
 source_set("cpp") {
   sources = [
-    "$root_gen_dir/garnet/public/icu_data/cpp/constants.cc",
-    "constants.h",
     "icu_data.cc",
     "icu_data.h",
   ]
 
   deps = [
-    ":generate_icu_constants",
-    "//garnet/public/lib/app/cpp",
-    "//garnet/public/lib/app/fidl",
     "//garnet/public/lib/fsl",
-    "//garnet/public/lib/icu_data/fidl",
     "//third_party/icu",
   ]
 }

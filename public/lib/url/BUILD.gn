@@ -45,10 +45,6 @@ static_library("url") {
     "//garnet/public/lib/fxl",
     "//third_party/icu",
   ]
-
-  public_deps = [
-    "//garnet/public/lib/icu_data/cpp",
-  ]
 }
 
 # TODO(kulakowski) Restore app tests. Adding a dummy target means not
