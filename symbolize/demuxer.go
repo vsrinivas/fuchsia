@@ -11,6 +11,8 @@ import (
 	"fuchsia.googlesource.com/tools/logger"
 )
 
+// TODO (jakehehrlich): Make as much of this private as possible.
+
 type remuxer struct {
 	seq chan (<-chan OutputLine)
 	out chan<- OutputLine

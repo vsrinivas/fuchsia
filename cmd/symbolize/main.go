@@ -110,8 +110,12 @@ func main() {
 	}
 	inputLines := symbolize.StartParsing(ctx, os.Stdin)
 	outputLines := demuxer.Start(ctx, inputLines)
-	postTapOutputLines := tap.Start(ctx, outputLines)
-	presenter.Start(postTapOutputLines)
+	trash := symbolize.ComposePostProcessors(ctx, outputLines,
+		tap,
+		&symbolize.FilterContextElements{},
+		&symbolize.OptimizeColor{},
+		presenter)
+	symbolize.Consume(trash)
 
 	// Once the pipeline has finished output all triggers
 	if jsonTriggerHandler != nil {

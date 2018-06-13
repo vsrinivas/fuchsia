@@ -139,8 +139,6 @@ func NewFilter(repo *SymbolizerRepo, symbo Symbolizer) *Filter {
 	}
 }
 
-// TODO (jakehehrlich): Consider making some of these methods private.
-
 // Reset resets the filter so that it can work for a new process
 func (s *Filter) reset() {
 	s.modules = make(map[uint64]Module)

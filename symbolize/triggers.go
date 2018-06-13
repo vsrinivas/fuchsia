@@ -4,10 +4,6 @@
 
 package symbolize
 
-import (
-	"context"
-)
-
 // TriggerHandler is a visitor for Node types that can trigger actions
 type TriggerContext struct {
 	Source LineSource
@@ -17,7 +13,6 @@ type TriggerContext struct {
 
 // TriggerTap is a nop on the pipeline that reads trigger information out
 type TriggerTap struct {
-	dumps    []*DumpfileElement
 	handlers []func(*DumpfileElement)
 }
 
@@ -29,30 +24,13 @@ func (t *TriggerTap) AddHandler(handler func(*DumpfileElement)) {
 	t.handlers = append(t.handlers, handler)
 }
 
-func (t *TriggerTap) Start(ctx context.Context, input <-chan OutputLine) <-chan OutputLine {
-	out := make(chan OutputLine)
-	go func() {
-		defer func() {
-			close(out)
-		}()
-		for {
-			select {
-			case <-ctx.Done():
-				return
-			case elem, ok := <-input:
-				if !ok {
-					return
-				}
-				for _, node := range elem.line {
-					if dump, ok := node.(*DumpfileElement); ok {
-						for _, handler := range t.handlers {
-							handler(dump)
-						}
-					}
-				}
-				out <- elem
+func (t *TriggerTap) Process(line OutputLine, out chan<- OutputLine) {
+	for _, node := range line.line {
+		if dumpElem, ok := node.(*DumpfileElement); ok {
+			for _, handler := range t.handlers {
+				handler(dumpElem)
 			}
 		}
-	}()
-	return out
+	}
+	out <- line
 }

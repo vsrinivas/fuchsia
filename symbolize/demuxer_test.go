@@ -57,10 +57,8 @@ func TestDumpfile(t *testing.T) {
 	ctx := context.Background()
 	in := StartParsing(ctx, strings.NewReader(msg))
 	out := demuxer.Start(ctx, in)
-	tout := tap.Start(ctx, out)
 	buf := new(bytes.Buffer)
-	presenter := NewBasicPresenter(buf, true)
-	presenter.Start(tout)
+	Consume(ComposePostProcessors(ctx, out, tap, &FilterContextElements{}, &OptimizeColor{}, NewBasicPresenter(buf, true)))
 
 	expectedSrc := Process(1234)
 	expectedMod := Module{
@@ -115,8 +113,7 @@ func TestSyslog(t *testing.T) {
 	in := StartParsing(ctx, strings.NewReader(msg))
 	out := demuxer.Start(ctx, in)
 	buf := new(bytes.Buffer)
-	presenter := NewBasicPresenter(buf, true)
-	presenter.Start(out)
+	Consume(ComposePostProcessors(ctx, out, &FilterContextElements{}, &OptimizeColor{}, NewBasicPresenter(buf, true)))
 	expected := "[00123.456000][1234][5678][klog] Blarg\n"
 	actual := buf.String()
 	if actual != expected {
@@ -129,7 +126,7 @@ func TestColor(t *testing.T) {
 	msg := "[0.0] 01234.5678> \033[1mThis is bold \033[31mThis is red and bold \033[37mThis is bold white\n" +
 		"[0.0] 1234.05678> This is just normal and has no trailing ANSI code\n" +
 		"[0.0] 1234.5678> \033[1m\033[31m this line tests adjacent state changes\n" +
-		"[0.0] 01234.5678> \033[1m\033[31m this line will eventully test non-redundent reset \033[1m\033\n"
+		"[0.0] 01234.5678> \033[1m\033[31m this line will eventully test non-redundent reset \033[1m\n"
 	symbo := newMockSymbolizer([]mockModule{})
 	repo := NewRepo()
 	demuxer := NewDemuxer(repo, symbo)
@@ -137,15 +134,14 @@ func TestColor(t *testing.T) {
 	in := StartParsing(ctx, strings.NewReader(msg))
 	out := demuxer.Start(ctx, in)
 	buf := new(bytes.Buffer)
-	presenter := NewBasicPresenter(buf, true)
-	presenter.Start(out)
-	expected := "[0.000] 01234.05678> \033[1mThis is bold \033[31mThis is red and bold \033[37mThis is bold white\n\033[0m" +
+	Consume(ComposePostProcessors(ctx, out, &FilterContextElements{}, &OptimizeColor{}, NewBasicPresenter(buf, true)))
+	expected := "[0.000] 01234.05678> \033[1mThis is bold \033[31mThis is red and bold \033[37mThis is bold white\033[0m\n" +
 		"[0.000] 01234.05678> This is just normal and has no trailing ANSI code\n" +
-		"[0.000] 01234.05678> \033[1m\033[31m this line tests adjacent state changes\n\033[0m" +
-		"[0.000] 01234.05678> \033[1m\033[31m this line will eventully test non-redundent reset \033[1m\033\n\033[0m"
+		"[0.000] 01234.05678> \033[31m\033[1m this line tests adjacent state changes\033[0m\n" +
+		"[0.000] 01234.05678> \033[31m\033[1m this line will eventully test non-redundent reset \033[0m\n"
 	actual := buf.String()
 	if actual != expected {
-		t.Error("expected", expected, "got", actual)
+		t.Errorf("expected %#v got %#v", expected, actual)
 	}
 }
 
@@ -176,8 +172,7 @@ func ExampleDummyProcess() {
 	// start the demuxer which will cause filters to send output lines to 'out'
 	out := demuxer.Start(ctx, in)
 
-	presenter := NewBasicPresenter(os.Stdout, false)
-	presenter.Start(out)
+	Consume(ComposePostProcessors(ctx, out, &FilterContextElements{}, &OptimizeColor{}, NewBasicPresenter(os.Stdout, false)))
 
 	//Output:
 	//atan2 at atan2.c:33
@@ -220,8 +215,7 @@ func ExampleDemux() {
 	// start the demuxer which will cause filters to send output lines to 'out'
 	out := demuxer.Start(ctx, in)
 
-	presenter := NewBasicPresenter(os.Stdout, false)
-	presenter.Start(out)
+	Consume(ComposePostProcessors(ctx, out, &FilterContextElements{}, &OptimizeColor{}, NewBasicPresenter(os.Stdout, false)))
 
 	//Output:
 	//[131.200] 01234.05678> keep {{{module:4fcb712aa6387724a9f465a32cd8c14b:libc.so:1}}}
@@ -259,8 +253,7 @@ func ExampleBadAddr() {
 	// start the demuxer which will cause filters to send output lines to 'out'
 	out := demuxer.Start(ctx, in)
 
-	presenter := NewBasicPresenter(os.Stdout, false)
-	presenter.Start(out)
+	Consume(ComposePostProcessors(ctx, out, &FilterContextElements{}, &OptimizeColor{}, NewBasicPresenter(os.Stdout, true)))
 
 	//Output:
 	//[131.604] 01234.05678> <libc.so>+0x429ff

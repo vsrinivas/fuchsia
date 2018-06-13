@@ -12,6 +12,8 @@ import (
 	"fuchsia.googlesource.com/tools/elflib"
 )
 
+// TODO(jakehehrlich): Make this private.
+
 // BinaryFileSource is a source of binary files that can be reloaded. It might
 // be an ids.txt file, it might just be a single binary file, or it might be
 // another list of binaries coming from somewhere else. Currently the interface
