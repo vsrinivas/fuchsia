@@ -58,7 +58,7 @@ The produced Bazel SDK can be consumed by adding those lines to a Bazel
 `WORKSPACE`:
 
 ```
-http_repository(
+http_archive(
   name = "fuchsia_sdk",
   path = "<FUCHSIA_SDK_URL>",
 )
