@@ -401,6 +401,11 @@ static zx_status_t nand_bind(void* ctx, zx_device_t* parent) {
         goto fail;
     }
 
+    zx_device_prop_t props[] = {
+        { BIND_PROTOCOL, 0, ZX_PROTOCOL_NAND },
+        { BIND_NAND_CLASS, 0, NAND_CLASS_PARTMAP },
+    };
+
     device_add_args_t args = {
         .version = DEVICE_ADD_ARGS_VERSION,
         .name = "nand",
@@ -408,6 +413,8 @@ static zx_status_t nand_bind(void* ctx, zx_device_t* parent) {
         .ops = &nand_device_proto,
         .proto_id = ZX_PROTOCOL_NAND,
         .proto_ops = &nand_proto,
+        .props = props,
+        .prop_count = countof(props),
     };
 
     if (dev->host.ops->get_nand_info == NULL) {
