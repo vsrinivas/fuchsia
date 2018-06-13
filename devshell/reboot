@@ -5,17 +5,39 @@
 
 ### reboot a target fuchsia system
 
+## usage: fx reboot [-r|--recovery] [-b|--bootloader] [HOST]
+##   -r|--recovery   Reboot into recovery image
+##   -b|--bootloader Reboot into bootloader
+##   HOST            Fuchsia link-local name of the device. If not
+##                   specified, will connect to the only available
+##                   device on the link-local network.
+
 set -e
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/lib/vars.sh
 fx-config-read
 
-function usage {
-  cat <<END
-usage: fx reboot [HOST]
-Reboots the attached device.
-END
+function usage() {
+    fx-command-help
 }
+
+reboot_type="reboot"
+while [[ "$1" =~ ^- ]]; do
+  case "$1" in
+  -h|--help)
+    usage
+    ;;
+  -r|--recovery)
+    reboot_type="reboot-recovery"
+    ;;
+  -b|--bootloader)
+    reboot_type="reboot-bootloader"
+    ;;
+  *)
+    break
+  esac
+  shift
+done
 
 if [[ $# -gt 1 ]]; then
   usage
@@ -32,4 +54,4 @@ fi
 
 host=${1:-":"}
 echo "Rebooting system..."
-"${ZIRCON_TOOLS_DIR}/netruncmd" "${timeout_flag}" "${host}" "dm reboot"
+"${ZIRCON_TOOLS_DIR}/netruncmd" "${timeout_flag}" "${host}" "dm ${reboot_type}"
