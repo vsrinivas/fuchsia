@@ -12,7 +12,9 @@ namespace fuchsia {
 namespace sys {
 
 ServiceProviderDirImpl::ServiceProviderDirImpl()
-    : vfs_(async_get_default()), root_(fbl::AdoptRef(new fs::PseudoDir())), weak_factory_(this) {}
+    : vfs_(async_get_default()),
+      root_(fbl::AdoptRef(new fs::PseudoDir())),
+      weak_factory_(this) {}
 
 ServiceProviderDirImpl::~ServiceProviderDirImpl() {}
 
@@ -47,12 +49,18 @@ zx_status_t ServiceProviderDirImpl::Getattr(vnattr_t* a) {
   return root_->Getattr(a);
 }
 
+zx_status_t ServiceProviderDirImpl::Readdir(fs::vdircookie_t* cookie,
+                                            void* dirents, size_t len,
+                                            size_t* out_actual) {
+  return root_->Readdir(cookie, dirents, len, out_actual);
+}
+
 zx_status_t ServiceProviderDirImpl::Lookup(fbl::RefPtr<fs::Vnode>* out,
                                            fbl::StringPiece name) {
   *out = fbl::AdoptRef(
       new fs::Service([name = std::string(name.data(), name.length()),
                        ptr = weak_factory_.GetWeakPtr()](zx::channel channel) {
-        if(ptr) {
+        if (ptr) {
           ptr->ConnectToService(name, std::move(channel));
           return ZX_OK;
         }

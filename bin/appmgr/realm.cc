@@ -170,6 +170,7 @@ Realm::Realm(RealmArgs args)
   fsl::SetObjectName(job_.get(), label_);
   hub_.SetName(label_);
   hub_.SetJobId(koid_);
+  hub_.AddServices(default_namespace_->services());
 
   default_namespace_->services()->set_backing_dir(
       std::move(args.host_directory));

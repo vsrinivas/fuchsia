@@ -11,8 +11,8 @@
 #include <fuchsia/sys/cpp/fidl.h>
 
 #include "lib/fidl/cpp/binding_set.h"
-#include "lib/fxl/memory/weak_ptr.h"
 #include "lib/fxl/macros.h"
+#include "lib/fxl/memory/weak_ptr.h"
 
 namespace fuchsia {
 namespace sys {
@@ -20,7 +20,7 @@ namespace sys {
 // A directory-like object which dynamically creates Service vnodes
 // for any file lookup. It also exposes service provider interface.
 //
-//  TODO(anmittal): Support enumeration for first level of services.
+// It supports enumeration for only first level of services.
 class ServiceProviderDirImpl : public ServiceProvider, public fs::Vnode {
  public:
   ServiceProviderDirImpl();
@@ -51,6 +51,9 @@ class ServiceProviderDirImpl : public ServiceProvider, public fs::Vnode {
   zx_status_t Lookup(fbl::RefPtr<fs::Vnode>* out, fbl::StringPiece name) final;
 
   zx_status_t Getattr(vnattr_t* a) final;
+
+  zx_status_t Readdir(fs::vdircookie_t* cookie, void* dirents, size_t len,
+                      size_t* out_actual) final;
 
  private:
   // Overridden from |ServiceProvider|:

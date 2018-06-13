@@ -25,7 +25,7 @@ class Namespace : public Environment,
                   public Launcher,
                   public fxl::RefCountedThreadSafe<Namespace> {
  public:
-  fbl::RefPtr<ServiceProviderDirImpl>& services() { return services_; }
+  const fbl::RefPtr<ServiceProviderDirImpl>& services() { return services_; }
 
   void AddBinding(fidl::InterfaceRequest<Environment> environment);
 

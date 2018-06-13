@@ -28,6 +28,10 @@ class RealmHub : public Hub {
   zx_status_t AddRealm(const HubInfo& hub_info);
   zx_status_t RemoveRealm(const HubInfo& hub_info);
 
+  zx_status_t AddServices(fbl::RefPtr<fs::Vnode> svc) {
+    return AddEntry("svc", fbl::move(svc));
+  }
+
   ~RealmHub();
 
  private:

@@ -40,6 +40,14 @@ TEST(RealmHub, Simple) {
   fbl::RefPtr<fs::Vnode> test_dir;
   ASSERT_EQ(koid_dir->Lookup(&test_dir, "test-dir"), ZX_OK);
 
+  // test adding services
+  auto svc = fbl::AdoptRef(new fs::PseudoDir());
+  svc->AddEntry("testentry", fbl::AdoptRef(new fs::PseudoDir()));
+  hub.AddServices(svc);
+  fbl::RefPtr<fs::Vnode> tmp_dir;
+  ASSERT_EQ(hub.dir()->Lookup(&tmp_dir, "svc"), ZX_OK);
+  ASSERT_EQ(tmp_dir->Lookup(&tmp_dir, "testentry"), ZX_OK);
+
   // test realm removal
   ASSERT_EQ(hub.RemoveRealm(hub_info), ZX_OK);
   ASSERT_EQ(realm_dir->Lookup(&name_dir, test_realm_name), ZX_ERR_NOT_FOUND);

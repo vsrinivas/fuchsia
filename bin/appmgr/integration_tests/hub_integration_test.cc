@@ -29,6 +29,15 @@ TEST(ProbeHub, Realm) {
   globfree(&globbuf);
 }
 
+TEST(ProbeHub, RealmSvc) {
+  auto glob_str = fxl::StringPrintf("/hub/r/sys/*/svc/fuchsia.sys.Environment");
+  glob_t globbuf;
+  ASSERT_EQ(glob(glob_str.data(), 0, NULL, &globbuf), 0)
+      << glob_str << " does not exist.";
+  ASSERT_EQ(globbuf.gl_pathc, 1u);
+  globfree(&globbuf);
+}
+
 }  // namespace
 }  // namespace sys
 }  // namespace fuchsia
