@@ -131,6 +131,15 @@ TEST(Waiter, Promise) {
   EXPECT_EQ(2, result);
 }
 
+TEST(Waiter, DeleteInFinalize) {
+  auto promise = Promise<int, int>::Create(0);
+  promise->NewCallback()(1, 2);
+  promise->Finalize([&](int status, int result) {
+    // Delete the callback.
+    promise = nullptr;
+  });
+}
+
 TEST(StatusWaiter, MixedInitialize) {
   auto waiter = StatusWaiter<int>::Create(0);
 

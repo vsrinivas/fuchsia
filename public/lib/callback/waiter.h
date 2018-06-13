@@ -195,11 +195,14 @@ class BaseWaiter : public fxl::RefCountedThreadSafe<BaseWaiter<A, R, Args...>> {
 
   void ExecuteCallbackIfFinished() {
     FXL_DCHECK(!finished_) << "Waiter already finished.";
-    if (finalized_ && !pending_callbacks_) {
-      if (!cancelled_) {
-        result_callback_(accumulator_.Result());
-      }
-      finished_ = true;
+    if (!finalized_ || pending_callbacks_) {
+      return;
+    }
+    finished_ = true;
+    if (!cancelled_) {
+      result_callback_(accumulator_.Result());
+      // The callback might delete this class. 
+      return;
     }
   }
 
