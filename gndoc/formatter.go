@@ -124,15 +124,15 @@ func (a *ArgValue) isPresent() bool {
 func (a *ArgValue) write(out io.Writer, sources *SourceMap) {
 	if a.File == "" {
 		// If there is no declaration file, emit just the value.
-		fmt.Fprintf(out, "%v\n\n", a.Val)
+		fmt.Fprintf(out, "`%v`\n\n", a.Val)
 	} else {
 		// Otherwise, emit the value with a link to the declaration.
 		link := sources.GetSourceLink(a.File, a.Line)
 		if link == "" {
-			fmt.Fprintf(out, "%v\n\n", a.Val)
+			fmt.Fprintf(out, "`%v`\n\n", a.Val)
 			return
 		}
-		fmt.Fprintf(out, "[%v](%s)\n\n", a.Val, link)
+		fmt.Fprintf(out, "`[%v](%s)`\n\n", a.Val, link)
 	}
 }
 

@@ -119,7 +119,7 @@ func TestDefault(t *testing.T) {
 ### default
 Description of default arg.
 
-**Default value:** [false](http://fuchsia.com/build/.gn#2)
+**Default value:** ` + "`" + `[false](http://fuchsia.com/build/.gn#2)` + "`" + `
 
 `
 	if expected != actual {
@@ -146,13 +146,13 @@ func TestDefaultWithCurrent(t *testing.T) {
 ### default_current
 Description of default_current arg.
 
-**Default value for ` + "`" + `target_cpu = x64` + "`" + `:** [4](http://fuchsia.com/base/.gn#2)
+**Default value for ` + "`target_cpu = x64`:** `[4](http://fuchsia.com/base/.gn#2)`" + `
 
-**Default value for ` + "`" + `target_cpu = arm64` + "`" + `:** [[3, 4]](http://fuchsia.com/base/.gn#2)
+**Default value for ` + "`target_cpu = arm64`:** `[[3, 4]](http://fuchsia.com/base/.gn#2)`" + `
 
-**Current value for ` + "`" + `target_cpu = x64` + "`" + `:** [3](http://fuchsia.com/build/.gn#24)
+**Current value for ` + "`target_cpu = x64`:** `[3](http://fuchsia.com/build/.gn#24)`" + `
 
-**Current value for ` + "`" + `target_cpu = arm64` + "`" + `:** [[1, 2]](http://fuchsia.com/build/.gn#24)
+**Current value for ` + "`target_cpu = arm64`:** `[[1, 2]](http://fuchsia.com/build/.gn#24)`" + `
 
 `
 
@@ -180,20 +180,20 @@ func TestUnique(t *testing.T) {
 ### arm64
 Description of arm64 arg.
 
-**Default value for ` + "`" + `target_cpu = arm64` + "`" + `:** value
+**Default value for ` + "`target_cpu = arm64`:** `value`" + `
 
-**Current value for ` + "`" + `target_cpu = arm64` + "`" + `:** arg
+**Current value for ` + "`target_cpu = arm64`:** `arg`" + `
 
-No values for ` + "`" + `target_cpu = x64` + "`" + `.
+No values for ` + "`target_cpu = x64`" + `.
 
 ### x64
 Description of x64 arg that references [//build/path.py](http://fuchsia.com/build/path.py), //sources, and [//base](http://fuchsia.com/base).
 
-**Default value for ` + "`" + `target_cpu = x64` + "`" + `:** 2
+**Default value for ` + "`target_cpu = x64`:** `2`" + `
 
-**Current value for ` + "`" + `target_cpu = x64` + "`" + `:** 1
+**Current value for ` + "`target_cpu = x64`:** `1`" + `
 
-No values for ` + "`" + `target_cpu = arm64` + "`" + `.
+No values for ` + "`target_cpu = arm64`" + `.
 `
 	if expected != actual {
 		t.Fatalf("In TestUnique, expected \n%s but got \n%s", expected, actual)
