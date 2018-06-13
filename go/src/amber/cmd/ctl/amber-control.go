@@ -107,36 +107,30 @@ func addSource(a *amber.ControlInterface) error {
 	if len(*pkgFile) == 0 {
 		name := strings.TrimSpace(*name)
 		if len(name) == 0 {
-			fmt.Println("No source id provided")
-			return os.ErrInvalid
+			return fmt.Errorf("no source id provided")
 		}
 
 		srcUrl := strings.TrimSpace(*srcUrl)
 		if len(srcUrl) == 0 {
-			fmt.Println("No repository URL provided")
-			return os.ErrInvalid
+			return fmt.Errorf("no repository URL provided")
 		}
 		if _, err := url.ParseRequestURI(srcUrl); err != nil {
-			fmt.Printf("Provided URL %q is not valid\n", srcUrl)
-			return err
+			return fmt.Errorf("provided URL %q is not valid: %s", srcUrl, err)
 		}
 
 		blobUrl := strings.TrimSpace(*blobUrl)
 		if blobUrl != "" {
 			if _, err := url.ParseRequestURI(blobUrl); err != nil {
-				fmt.Printf("Provided URL %q is not valid\n", blobUrl)
-				return err
+				return fmt.Errorf("provided URL %q is not valid: %s", blobUrl, err)
 			}
 		}
 
 		srcKey := strings.TrimSpace(*srcKey)
 		if len(srcKey) == 0 {
-			fmt.Println("No repository key provided")
-			return os.ErrInvalid
+			return fmt.Errorf("No repository key provided")
 		}
 		if _, err := hex.DecodeString(srcKey); err != nil {
-			fmt.Printf("Provided repository key %q contains invalid characters\n", srcKey)
-			return os.ErrInvalid
+			return fmt.Errorf("Provided repository key %q contains invalid characters", srcKey)
 		}
 
 		cfg = amber.SourceConfig{
@@ -155,24 +149,24 @@ func addSource(a *amber.ControlInterface) error {
 	} else {
 		f, err := os.Open(*pkgFile)
 		if err != nil {
-			log.Fatalf("failed to open file: %v", err)
+			return fmt.Errorf("failed to open file: %v", err)
 		}
 		defer f.Close()
 
 		if err := json.NewDecoder(f).Decode(&cfg); err != nil {
-			log.Fatalf("failed to parse source config: %v", err)
+			return fmt.Errorf("failed to parse source config: %v", err)
 		}
 	}
 
 	added, err := a.AddSrc(cfg)
 	if !added {
-		fmt.Println("Call succeeded, but source not added")
-		return fmt.Errorf("Request arguments properly formatted, but possibly otherwise invalid")
+		return fmt.Errorf("request arguments properly formatted, but possibly otherwise invalid")
 	}
 	if err != nil {
-		fmt.Printf("IPC encountered an error: %s\n", err)
+		return fmt.Errorf("IPC encountered an error: %s", err)
 	}
-	return err
+
+	return nil
 }
 
 func getUp(a *amber.ControlInterface) error {
@@ -246,35 +240,39 @@ func main() {
 	switch os.Args[1] {
 	case "get_up":
 		if err := getUp(proxy); err != nil {
+			log.Printf("error getting an update: %s", err)
 			os.Exit(1)
 		}
 	case "get_blob":
 		if err := proxy.GetBlob(*blobID); err != nil {
-			fmt.Printf("Error getting content blob %s\n", err)
+			log.Printf("error getting content blob: %s", err)
 			os.Exit(1)
 		}
 	case "add_src":
 		if err := addSource(proxy); err != nil {
+			log.Printf("error adding source: %s", err)
 			os.Exit(1)
 		}
 	case "rm_src":
-		fmt.Printf("%q not yet supported\n", os.Args[1])
+		log.Printf("%q not yet supported", os.Args[1])
 		os.Exit(1)
 	case "list_srcs":
 		if err := listSources(proxy); err != nil {
+			log.Printf("error listing sources: %s", err)
 			os.Exit(1)
 		}
 	case "check":
-		fmt.Printf("%q not yet supported\n", os.Args[1])
+		log.Printf("%q not yet supported\n", os.Args[1])
 		os.Exit(1)
 	case "test":
 		if err := doTest(proxy); err != nil {
+			log.Printf("error testing connection to amber: %s", err)
 			os.Exit(1)
 		}
 	case "system_update":
 		configured, err := proxy.CheckForSystemUpdate()
 		if err != nil {
-			fmt.Printf("error checking for system update: %s\n", err)
+			log.Printf("error checking for system update: %s", err)
 			os.Exit(1)
 		}
 
@@ -286,12 +284,12 @@ func main() {
 	case "login":
 		device, err := proxy.Login(*name)
 		if err != nil {
-			fmt.Printf("failed to login: %s", err)
+			log.Printf("failed to login: %s", err)
 			os.Exit(1)
 		}
 		fmt.Printf("On your computer go to:\n\n\t%v\n\nand enter\n\n\t%v\n\n", device.VerificationUrl, device.UserCode)
 	default:
-		fmt.Printf("Error, %q is not a recognized command\n%s",
+		log.Printf("Error, %q is not a recognized command\n%s",
 			os.Args[1], usage)
 		os.Exit(-1)
 	}
