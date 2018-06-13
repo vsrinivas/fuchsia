@@ -6,6 +6,7 @@
 
 #include <lib/zx/vmar.h>
 
+#include "lib/fsl/vmo/file.h"
 #include "lib/fsl/vmo/sized_vmo.h"
 #include "third_party/icu/source/common/unicode/udata.h"
 
