@@ -3,6 +3,7 @@
         "garnet/packages/prod/scenic"
     ],
     "packages": [
+        "//garnet/examples/ui:hello_base_view",
         "//garnet/examples/ui:hello_pose_buffer",
         "//garnet/examples/ui:hello_scenic",
         "//garnet/examples/ui:hello_views",

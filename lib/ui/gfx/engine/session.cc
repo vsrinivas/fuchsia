@@ -492,7 +492,11 @@ bool Session::ApplySetHitTestBehaviorCmd(
 
 bool Session::ApplySetViewPropertiesCmd(
     ::fuchsia::ui::gfx::SetViewPropertiesCmd command) {
-  error_reporter()->ERROR() << "SetViewPropertiesCmd not implemented.";
+  if (auto view_holder =
+          resources_.FindResource<ViewHolder>(command.view_holder_id)) {
+    view_holder->SetViewProperties(std::move(command.properties));
+    return true;
+  }
   return false;
 }
 
@@ -1493,10 +1497,15 @@ bool Session::ApplyScheduledUpdates(uint64_t presentation_time,
 }
 
 void Session::EnqueueEvent(::fuchsia::ui::gfx::Event event) {
-  if (is_valid() && event_reporter_) {
+  if (!is_valid())
+    return;
+
+  if (event_reporter_) {
     fuchsia::ui::scenic::Event scenic_event;
     scenic_event.set_gfx(std::move(event));
     event_reporter_->EnqueueEvent(std::move(scenic_event));
+  } else {
+    FXL_LOG(WARNING) << "Session::EnqueueEvent: no EventReporter is available";
   }
 }
 

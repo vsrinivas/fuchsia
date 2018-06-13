@@ -267,6 +267,10 @@ EntityNode::EntityNode(Session* session) : ContainerNode(session) {
   session->Enqueue(NewCreateEntityNodeCmd(id()));
 }
 
+void EntityNode::Attach(const ViewHolder& view_holder) {
+  session()->Enqueue(NewAddChildCmd(id(), view_holder.id()));
+}
+
 EntityNode::~EntityNode() = default;
 
 void EntityNode::SetClip(uint32_t clip_id, bool clip_to_self) {
@@ -296,7 +300,7 @@ void ImportNode::BindAsRequest(zx::eventpair* out_export_token) {
 }
 
 ViewHolder::ViewHolder(Session* session, zx::eventpair token,
-                         const std::string& debug_name)
+                       const std::string& debug_name)
     : Resource(session) {
   session->Enqueue(NewCreateViewHolderCmd(id(), std::move(token), debug_name));
 }
@@ -312,13 +316,22 @@ void ViewHolder::SetViewProperties(const float bounding_box_min[3],
                                              inset_from_max));
 }
 
-View::View(Session* session, zx::eventpair token,
-             const std::string& debug_name)
+void ViewHolder::SetViewProperties(
+    const fuchsia::ui::gfx::ViewProperties& props) {
+  session()->Enqueue(NewSetViewPropertiesCmd(id(), props));
+}
+
+View::View(Session* session, zx::eventpair token, const std::string& debug_name)
     : Resource(session) {
   session->Enqueue(NewCreateViewCmd(id(), std::move(token), debug_name));
 }
 
 View::~View() = default;
+
+void View::AddChild(const Node& child) const {
+  FXL_DCHECK(session() == child.session());
+  session()->Enqueue(NewAddChildCmd(id(), child.id()));
+}
 
 ClipNode::ClipNode(Session* session) : ContainerNode(session) {
   session->Enqueue(NewCreateClipNodeCmd(id()));

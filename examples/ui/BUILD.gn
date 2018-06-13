@@ -6,6 +6,7 @@ import("//build/package.gni")
 
 group("ui") {
   public_deps = [
+    "hello_base_view",
     "hello_pose_buffer",
     "hello_scenic",
     "hello_stereo",
@@ -18,6 +19,23 @@ group("ui") {
     "spinning_square",
     "tile",
     "video_display",
+  ]
+}
+
+# NOTE: this depends on the shadertoy_client example, which is launched by
+# the hello_base_view binary.
+package("hello_base_view") {
+  deps = [
+    "hello_base_view",
+  ]
+
+  binary = "hello_base_view"
+
+  meta = [
+    {
+      path = rebase_path("meta/ui_example.cmx")
+      dest = "ui_example.cmx"
+    },
   ]
 }
 

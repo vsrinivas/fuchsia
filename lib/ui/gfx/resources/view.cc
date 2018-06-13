@@ -20,7 +20,7 @@ View::View(Session* session, scenic::ResourceId id,
   ViewLinker* view_linker = session->engine()->view_linker();
 
   import_handle_ = view_linker->RegisterImport(this, std::move(args.token),
-                                                session->error_reporter());
+                                               session->error_reporter());
 }
 
 View::~View() {

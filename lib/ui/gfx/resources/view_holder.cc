@@ -21,7 +21,7 @@ ViewHolder::ViewHolder(Session* session, scenic::ResourceId id,
   ViewLinker* view_linker = session->engine()->view_linker();
 
   export_handle_ = view_linker->RegisterExport(this, std::move(args.token),
-                                                session->error_reporter());
+                                               session->error_reporter());
 }
 
 ViewHolder::~ViewHolder() {
@@ -37,8 +37,13 @@ ViewHolder::~ViewHolder() {
 void ViewHolder::LinkResolved(ViewLinker* linker, View* child) {
   // The child will also receive a LinkResolved call, and it will take care of
   // linking up the Nodes.
-  FXL_DCHECK(!child_);
+  FXL_DCHECK(!child_ && child);
   child_ = child;
+
+  // This guarantees that the View is notified of any previously-set
+  // ViewProperties.  Otherwise, e.g. if the ViewHolder properties were set
+  // only once before the link was resolved, the View would never be notified.
+  SendViewPropertiesChangedEvent();
 }
 
 void ViewHolder::PeerDestroyed() {
@@ -67,6 +72,24 @@ void ViewHolder::SetParent(NodePtr parent) {
       }
     }
   }
+}
+
+void ViewHolder::SetViewProperties(fuchsia::ui::gfx::ViewProperties props) {
+  if (props != view_properties_) {
+    view_properties_ = std::move(props);
+    if (child_ != nullptr) {
+      SendViewPropertiesChangedEvent();
+    }
+  }
+}
+
+void ViewHolder::SendViewPropertiesChangedEvent() {
+  FXL_DCHECK(child_);
+
+  fuchsia::ui::gfx::Event event;
+  event.set_view_properties_changed(
+      {.view_id = child_->id(), .properties = view_properties_});
+  child_->session()->EnqueueEvent(std::move(event));
 }
 
 }  // namespace gfx

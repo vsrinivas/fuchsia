@@ -68,6 +68,7 @@ class Session : public fxl::RefCountedThreadSafe<Session> {
   bool is_valid() const { return is_valid_; }
 
   ErrorReporter* error_reporter() const;
+  EventReporter* event_reporter() const;
 
   ResourceMap* resources() { return &resources_; }
 

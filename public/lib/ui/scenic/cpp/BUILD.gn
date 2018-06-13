@@ -64,3 +64,25 @@ source_set("cpp") {
     "//zircon/public/lib/fbl",
   ]
 }
+
+source_set("base_view") {
+  sources = [
+    "base_view.cc",
+    "base_view.h",
+    "view_factory.h",
+    "view_provider_service.cc",
+    "view_provider_service.h",
+  ]
+
+  public_deps = [
+    ":cpp",
+    "//garnet/public/lib/app/cpp",
+    "//garnet/public/lib/ui/app/fidl",
+    "//zircon/public/lib/fit",
+  ]
+
+  deps = [
+    "//garnet/public/lib/fxl",
+    "//zircon/public/lib/trace",
+  ]
+}

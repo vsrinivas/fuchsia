@@ -212,6 +212,9 @@ struct BoundingBox {
 //
 // The View's bounding box extents can be defined as:
 //    { extents.min - inset_from_min, extents.max + inset_from_max }
+//
+// TODO(SCN-819): should we just have a vec3 extent instead of a bounding box
+// with a potentially non-zero min?
 struct ViewProperties {
   BoundingBox extents;
   vec3 inset_from_min;

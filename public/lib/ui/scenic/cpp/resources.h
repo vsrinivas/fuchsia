@@ -308,6 +308,9 @@ class ContainerNode : public Node {
   FXL_DISALLOW_COPY_AND_ASSIGN(ContainerNode);
 };
 
+// Required by EntityNode::Attach().
+class ViewHolder;
+
 // Represents an entity node resource in a session.
 // TODO(MZ-268): Make this class final, and add public move constructor.
 class EntityNode : public ContainerNode {
@@ -316,6 +319,8 @@ class EntityNode : public ContainerNode {
   ~EntityNode();
 
   void SetClip(uint32_t clip_id, bool clip_to_self);
+
+  void Attach(const ViewHolder& view_holder);
 
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(EntityNode);
@@ -359,11 +364,22 @@ class ViewHolder final : public Resource {
              const std::string& debug_name);
   ~ViewHolder();
 
-  // Set properties of the attached space.
+  // Set properties of the attached view.
+
+  void SetViewProperties(float min_x, float min_y, float min_z, float max_x,
+                         float max_y, float max_z, float in_min_x,
+                         float in_min_y, float in_min_z, float in_max_x,
+                         float in_max_y, float in_max_z) {
+    SetViewProperties((float[3]){min_x, min_y, min_z},
+                      (float[3]){max_x, max_y, max_z},
+                      (float[3]){in_min_x, in_min_y, in_min_z},
+                      (float[3]){in_max_x, in_max_y, in_max_z});
+  }
   void SetViewProperties(const float bounding_box_min[3],
                          const float bounding_box_max[3],
                          const float inset_from_min[3],
                          const float inset_from_max[3]);
+  void SetViewProperties(const fuchsia::ui::gfx::ViewProperties& props);
 };
 
 // Represents a transform space which serves as a container for Nodes.  The
@@ -373,6 +389,8 @@ class View final : public Resource {
  public:
   View(Session* session, zx::eventpair token, const std::string& debug_name);
   ~View();
+
+  void AddChild(const Node& child) const;
 };
 
 // Creates a node that clips the contents of its hierarchy to the specified clip

@@ -15,6 +15,17 @@ constexpr size_t kCommandsPerMessage =
      sizeof(fidl_vector_t)) /
     sizeof(fuchsia::ui::scenic::Command);
 
+SessionPtrAndListenerRequest CreateScenicSessionPtrAndListenerRequest(
+    fuchsia::ui::scenic::Scenic* scenic) {
+  fuchsia::ui::scenic::SessionPtr session;
+  fidl::InterfaceHandle<fuchsia::ui::scenic::SessionListener> listener_handle;
+  auto listener_request = listener_handle.NewRequest();
+
+  scenic->CreateSession(session.NewRequest(), listener_handle.Bind());
+
+  return {std::move(session), std::move(listener_request)};
+}
+
 Session::Session(fuchsia::ui::scenic::SessionPtr session,
                  fidl::InterfaceRequest<fuchsia::ui::scenic::SessionListener>
                      session_listener)
@@ -30,6 +41,10 @@ Session::Session(fuchsia::ui::scenic::Scenic* scenic)
   scenic->CreateSession(session_.NewRequest(),
                         session_listener_binding_.NewBinding());
 }
+
+Session::Session(SessionPtrAndListenerRequest session_and_listener)
+    : Session(std::move(session_and_listener.first),
+              std::move(session_and_listener.second)) {}
 
 Session::~Session() {
   FXL_DCHECK(resource_count_ == 0)

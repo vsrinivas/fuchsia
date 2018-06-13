@@ -19,6 +19,9 @@ namespace mozart {
 class ViewProviderApp {
  public:
   explicit ViewProviderApp(ViewFactory factory);
+  // Does not take ownership of |startup_context|.
+  ViewProviderApp(fuchsia::sys::StartupContext* startup_context,
+                  ViewFactory factory);
   ~ViewProviderApp();
 
  private:

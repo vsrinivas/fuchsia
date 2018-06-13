@@ -17,6 +17,14 @@
 
 namespace scenic {
 
+// Connect to Scenic and establish a new Session, as well as an InterfaceRequest
+// for a SessionListener that can be hooked up as desired.
+using SessionPtrAndListenerRequest =
+    std::pair<fuchsia::ui::scenic::SessionPtr,
+              fidl::InterfaceRequest<fuchsia::ui::scenic::SessionListener>>;
+SessionPtrAndListenerRequest CreateScenicSessionPtrAndListenerRequest(
+    fuchsia::ui::scenic::Scenic* scenic);
+
 // Wraps a Scenic session.
 // Maintains a queue of pending operations and assists with allocation of
 // resource ids.
@@ -44,6 +52,8 @@ class Session : private fuchsia::ui::scenic::SessionListener {
   // Creates a new session using the provided Scenic and binds the listener to
   // this object. The Scenic itself is not retained after construction.
   explicit Session(fuchsia::ui::scenic::Scenic* scenic);
+
+  explicit Session(SessionPtrAndListenerRequest session_and_listener);
 
   // Destroys the session.
   // All resources must be released prior to destruction.

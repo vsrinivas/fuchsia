@@ -46,13 +46,19 @@ class ViewHolder final : public Resource {
   void SetParent(NodePtr parent);
   const NodePtr& parent() { return parent_; }
 
+  void SetViewProperties(fuchsia::ui::gfx::ViewProperties props);
+
  private:
+  // Send an event to the view's SessionListener.
+  void SendViewPropertiesChangedEvent();
+
   // TODO(SCN-794): The unofficial Scenic Style Guide sez:
   // "Strong-ref your children and weak-ref your parents".
   // Following this uniformly prevents reference cycles.
   NodePtr parent_;
   View* child_ = nullptr;
   ViewLinker::ObjectId export_handle_ = 0;
+  fuchsia::ui::gfx::ViewProperties view_properties_;
 };
 using ViewHolderPtr = fxl::RefPtr<ViewHolder>;
 

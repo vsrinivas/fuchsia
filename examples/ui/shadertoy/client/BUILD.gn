@@ -21,7 +21,7 @@ executable("client") {
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/ui/gfx/fidl",
     "//garnet/public/lib/ui/scenic:client",
-    "//garnet/public/lib/ui/scenic:fidl_helpers",
+    "//garnet/public/lib/ui/scenic/cpp:base_view",
     "//garnet/public/lib/ui/view_framework:view_provider",
     "//garnet/public/lib/ui/views/fidl:v1",
     "//zircon/public/lib/trace-provider",

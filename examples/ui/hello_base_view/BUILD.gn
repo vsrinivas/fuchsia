@@ -1,0 +1,21 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+executable("hello_base_view") {
+  output_name = "hello_base_view"
+
+  sources = [
+    "example_presenter.h",
+    "example_presenter.cc",
+    "main.cc",
+    "view.h",
+    "view.cc",
+  ]
+
+  deps = [
+    "//garnet/public/lib/ui/policy/fidl",
+    "//garnet/public/lib/ui/scenic/cpp:base_view",
+    "//zircon/public/lib/async-loop-cpp",
+  ]
+}

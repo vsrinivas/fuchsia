@@ -10,6 +10,10 @@ ViewProviderApp::ViewProviderApp(ViewFactory factory)
     : startup_context_(fuchsia::sys::StartupContext::CreateFromStartupInfo()),
       service_(startup_context_.get(), std::move(factory)) {}
 
+ViewProviderApp::ViewProviderApp(fuchsia::sys::StartupContext* startup_context,
+                                 ViewFactory factory)
+    : service_(startup_context, std::move(factory)) {}
+
 ViewProviderApp::~ViewProviderApp() {}
 
 }  // namespace mozart

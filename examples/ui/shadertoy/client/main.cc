@@ -8,6 +8,7 @@
 #include "garnet/examples/ui/shadertoy/client/view.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/log_settings_command_line.h"
+#include "lib/ui/scenic/cpp/view_provider_service.h"
 #include "lib/ui/view_framework/view_provider_app.h"
 
 int main(int argc, const char** argv) {
@@ -15,15 +16,34 @@ int main(int argc, const char** argv) {
   if (!fxl::SetLogSettingsFromCommandLine(command_line))
     return 1;
 
-  async::Loop loop;
+  async::Loop loop(&kAsyncLoopConfigMakeDefault);
   trace::TraceProvider trace_provider(loop.async());
 
-  mozart::ViewProviderApp app([&loop](mozart::ViewContext view_context) {
-    return std::make_unique<shadertoy_client::View>(
-        &loop, view_context.startup_context,
-        std::move(view_context.view_manager),
-        std::move(view_context.view_owner_request));
+  auto startup_context = fuchsia::sys::StartupContext::CreateFromStartupInfo();
+
+  // Export deprecated |fuchsia.ui.views_v1.ViewProvider| service.
+  mozart::ViewProviderApp mozart_app(
+      startup_context.get(), [](mozart::ViewContext view_context) {
+        return std::make_unique<shadertoy_client::OldView>(
+            view_context.startup_context, std::move(view_context.view_manager),
+            std::move(view_context.view_owner_request));
+      });
+
+  auto scenic =
+      startup_context
+          ->ConnectToEnvironmentService<fuchsia::ui::scenic::Scenic>();
+  scenic.set_error_handler([&loop] {
+    FXL_LOG(INFO) << "Lost connection to Scenic.";
+    loop.Quit();
   });
+
+  // Export |fuchsia.ui.app.ViewProvider| service, so that this app can be
+  // attached to the Scenic view tree.
+  auto view_provider = std::make_unique<scenic::ViewProviderService>(
+      startup_context.get(), scenic.get(), [](scenic::ViewFactoryArgs args) {
+        return std::make_unique<shadertoy_client::NewView>(
+            std::move(args), "Shadertoy Client Example");
+      });
 
   loop.Run();
   return 0;
