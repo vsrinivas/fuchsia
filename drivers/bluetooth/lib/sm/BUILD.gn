@@ -27,6 +27,7 @@ static_library("sm") {
   public_deps = [
     ":definitions",
     "//garnet/drivers/bluetooth/lib/l2cap",
+    "//third_party/boringssl",
   ]
 }
 

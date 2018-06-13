@@ -6,7 +6,15 @@
 
 #include "gtest/gtest.h"
 
+#include "garnet/drivers/bluetooth/lib/common/test_helpers.h"
+
 namespace btlib {
+
+using common::ContainersEqual;
+using common::CreateStaticByteBuffer;
+using common::DeviceAddress;
+using common::UInt128;
+
 namespace sm {
 namespace util {
 namespace {
@@ -229,6 +237,28 @@ TEST(SMP_UtilTest, SelectPairingMethodNumericComparison) {
                                 false /* peer_oob */, true /* mitm */,
                                 IOCapability::kKeyboardDisplay /* local */,
                                 IOCapability::kKeyboardDisplay /* peer */));
+}
+
+// Tests "c1" using the sample data from Vol 3, Part H, 2.2.3.
+TEST(SMP_UtilTest, C1) {
+  const UInt128 tk{{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}};
+  const UInt128 r{{0xE0, 0x2E, 0x70, 0xC6, 0x4E, 0x27, 0x88, 0x63, 0x0E, 0x6F,
+                   0xAD, 0x56, 0x21, 0xD5, 0x83, 0x57}};
+  const auto preq =
+      CreateStaticByteBuffer(0x01, 0x01, 0x00, 0x00, 0x10, 0x07, 0x07);
+  const auto pres =
+      CreateStaticByteBuffer(0x02, 0x03, 0x00, 0x00, 0x08, 0x00, 0x05);
+  const DeviceAddress initiator_addr(DeviceAddress::Type::kLERandom,
+                                     "A1:A2:A3:A4:A5:A6");
+  const DeviceAddress responder_addr(DeviceAddress::Type::kLEPublic,
+                                     "B1:B2:B3:B4:B5:B6");
+
+  const UInt128 kExpected{{0x86, 0x3B, 0xF1, 0xBE, 0xC5, 0x4D, 0xA7, 0xD2, 0xEA,
+                           0x88, 0x89, 0x87, 0xEF, 0x3F, 0x1E, 0x1E}};
+
+  UInt128 result;
+  C1(tk, r, preq, pres, initiator_addr, responder_addr, &result);
+  EXPECT_TRUE(ContainersEqual(kExpected, result));
 }
 
 }  // namespace

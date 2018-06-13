@@ -24,8 +24,12 @@ std::string StatusCodeToString(hci::StatusCode code);
 bool DeviceAddressFromAdvReport(const hci::LEAdvertisingReportData& report,
                                 common::DeviceAddress* out_address);
 
+// Convert HCI LE device address type to our stack type.
 common::DeviceAddress::Type AddressTypeFromHCI(LEAddressType type);
 common::DeviceAddress::Type AddressTypeFromHCI(LEPeerAddressType type);
+
+// Convert our stack LE address type to HCI type. |type| cannot be kBREDR.
+LEAddressType AddressTypeToHCI(common::DeviceAddress::Type type);
 
 }  // namespace hci
 }  // namespace btlib

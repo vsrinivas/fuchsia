@@ -8,6 +8,8 @@
 #include <initializer_list>
 #include <string>
 
+#include "garnet/drivers/bluetooth/lib/common/byte_buffer.h"
+
 namespace btlib {
 namespace common {
 
@@ -40,6 +42,11 @@ class DeviceAddressBytes {
 
   // Sets all bits of the BD_ADDR to 0.
   void SetToZero();
+
+  // Returns a view over the raw bytes of this address.
+  inline BufferView bytes() const {
+    return BufferView(bytes_.data(), bytes_.size());
+  }
 
   // Comparison operators.
   inline bool operator==(const DeviceAddressBytes& other) const {
