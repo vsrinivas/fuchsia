@@ -113,7 +113,7 @@ class LedgerManagerTest : public gtest::TestWithLoop {
   LedgerManagerTest()
       : environment_(EnvironmentBuilder().SetAsync(dispatcher()).Build()) {}
 
-  // gtest::TestWithMessageLoop:
+  // gtest::TestWithLoop:
   void SetUp() override {
     gtest::TestWithLoop::SetUp();
     std::unique_ptr<FakeLedgerStorage> storage =

@@ -8,7 +8,7 @@
 #include "lib/callback/capture.h"
 #include "lib/callback/set_when_called.h"
 #include "lib/fxl/macros.h"
-#include "lib/gtest/test_with_message_loop.h"
+#include "lib/gtest/test_with_loop.h"
 #include "peridot/bin/ledger/coroutine/coroutine_impl.h"
 #include "peridot/bin/ledger/encryption/fake/fake_encryption_service.h"
 #include "peridot/bin/ledger/storage/impl/ledger_storage_impl.h"
@@ -17,11 +17,11 @@
 namespace storage {
 namespace {
 
-class LedgerStorageTest : public gtest::TestWithMessageLoop {
+class LedgerStorageTest : public gtest::TestWithLoop {
  public:
   LedgerStorageTest()
-      : encryption_service_(message_loop_.async()),
-        storage_(message_loop_.async(), &coroutine_service_,
+      : encryption_service_(dispatcher()),
+        storage_(dispatcher(), &coroutine_service_,
                  &encryption_service_, ledger::DetachedPath(tmpfs_.root_fd()),
                  "test_app") {}
 
