@@ -48,9 +48,8 @@ private:
     zx::vmo vmo_{};
 };
 
-fbl::unique_ptr<StressTest> CreateVmStressTest() {
-    return fbl::unique_ptr<StressTest>{new VmStressTest()};
-}
+// our singleton
+VmStressTest vmstress;
 
 // VM Stresser
 //

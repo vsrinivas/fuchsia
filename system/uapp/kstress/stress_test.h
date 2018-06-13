@@ -6,15 +6,18 @@
 
 #include <stdarg.h>
 
-#include <fbl/intrusive_single_list.h>
 #include <fbl/macros.h>
+#include <fbl/vector.h>
 #include <fbl/unique_ptr.h>
 #include <zircon/status.h>
-#include <zircon/syscalls/object.h>
+#include <zircon/syscalls.h>
 
-class StressTest : public fbl::SinglyLinkedListable<fbl::unique_ptr<StressTest>> {
+class StressTest {
 public:
-    StressTest() = default;
+    StressTest() {
+        tests_.push_back(this);
+    }
+
     virtual ~StressTest() = default;
 
     DISALLOW_COPY_ASSIGN_AND_MOVE(StressTest);
@@ -42,7 +45,13 @@ public:
     // Return the name of the test in C string format
     virtual const char* name() const = 0;
 
+    // get a ref to the master test list
+    static fbl::Vector<StressTest*>& tests() { return tests_; }
+
 protected:
+    // global list of all the stress tests, registered at app start
+    static fbl::Vector<StressTest*> tests_;
+
     // wrapper around printf that enables/disables based on verbose flag
     void Printf(const char *fmt, ...) {
         if (!verbose_) {

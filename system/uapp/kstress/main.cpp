@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <fbl/unique_ptr.h>
+#include <fbl/vector.h>
 #include <lib/zx/resource.h>
 #include <zircon/device/sysinfo.h>
 #include <zircon/status.h>
@@ -127,24 +128,10 @@ int main(int argc, char** argv) {
         printf("Running stress tests continually\n");
     }
 
-    fbl::SinglyLinkedList<fbl::unique_ptr<StressTest>> test_list;
-
-    // create a single test and run it
-    //
-    // TODO: allow selecting more than one test and the timeout
-    {
-        auto test = CreateVmStressTest();
-        if (!test) {
-            fprintf(stderr, "error creating test\n");
-            return 1;
-        }
-        test_list.push_front(fbl::move(test));
-    }
-
     // initialize all the tests
-    for (auto& test : test_list) {
-        printf("Initializing %s test\n", test.name());
-        status = test.Init(verbose, kmem_stats);
+    for (auto& test : StressTest::tests()) {
+        printf("Initializing %s test\n", test->name());
+        status = test->Init(verbose, kmem_stats);
         if (status != ZX_OK) {
             fprintf(stderr, "error initializing test\n");
             return 1;
@@ -152,9 +139,9 @@ int main(int argc, char** argv) {
     }
 
     // start all of them
-    for (auto& test : test_list) {
-        printf("Starting %s test\n", test.name());
-        status = test.Start();
+    for (auto& test : StressTest::tests()) {
+        printf("Starting %s test\n", test->name());
+        status = test->Start();
         if (status != ZX_OK) {
             fprintf(stderr, "error initializing test\n");
             return 1;
@@ -191,9 +178,9 @@ int main(int argc, char** argv) {
     }
 
     // shut them down
-    for (auto& test : test_list) {
-        printf("Stopping %s test\n", test.name());
-        status = test.Stop();
+    for (auto& test : StressTest::tests()) {
+        printf("Stopping %s test\n", test->name());
+        status = test->Stop();
         if (status != ZX_OK) {
             fprintf(stderr, "error stopping test\n");
             return 1;

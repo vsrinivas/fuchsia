@@ -11,6 +11,7 @@ MODULE_GROUP := usertest
 
 MODULE_SRCS += \
     $(LOCAL_DIR)/main.cpp \
+    $(LOCAL_DIR)/stress_test.cpp \
     $(LOCAL_DIR)/vmstress.cpp
 
 MODULE_LIBS := \
