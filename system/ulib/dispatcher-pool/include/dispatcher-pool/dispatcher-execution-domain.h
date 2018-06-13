@@ -24,7 +24,7 @@ class ThreadPool;
 // In the dispatcher framework, ExecutionDomains represent a context which
 // specific types of EventSources become bound to during activation.  While many
 // EventSources may have interesting things happening on them simultaniously,
-// the ExecutionDomain they are bound to guarantees that only EventSource's
+// the ExecutionDomain they are bound to guarantees that only one EventSource's
 // handler will be executed at any given point in time.
 //
 // Once created using the static Create method, an ExecutionDomain is
@@ -172,7 +172,7 @@ private:
     fbl::DoublyLinkedListNodeState<fbl::RefPtr<ExecutionDomain>> thread_pool_node_state_;
 };
 
-// A helper macro which can ease so of the namespace pain of establishing the
+// A helper macro which can ease some of the namespace pain of establishing the
 // fact that you are running in a particular execution domain.  Instead of
 // saying something like this...
 //
