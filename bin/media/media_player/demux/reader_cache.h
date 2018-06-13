@@ -7,6 +7,7 @@
 
 #include <atomic>
 #include <map>
+#include <memory>
 #include <mutex>
 #include <vector>
 
@@ -41,10 +42,13 @@ namespace media_player {
 // shuts down.
 // TODO(dalesat): Provide methods for discovering what parts of the asset are
 // cached.
-class ReaderCache : public Reader {
+class ReaderCache : public Reader,
+                    public std::enable_shared_from_this<ReaderCache> {
  public:
   static std::shared_ptr<ReaderCache> Create(
       std::shared_ptr<Reader> upstream_reader);
+
+  ReaderCache(std::shared_ptr<Reader> upstream_reader);
 
   ~ReaderCache() override;
 
@@ -151,17 +155,16 @@ class ReaderCache : public Reader {
 
     ~Intake();
 
-    void Start(Store* store, std::shared_ptr<Reader> upstream_reader);
+    void Start(std::weak_ptr<ReaderCache> owner,
+               std::shared_ptr<Reader> upstream_reader);
 
    private:
     void Continue();
 
-    Store* store_;
+    std::weak_ptr<ReaderCache> owner_;
     std::shared_ptr<Reader> upstream_reader_;
     std::vector<uint8_t> buffer_;
   };
-
-  ReaderCache(std::shared_ptr<Reader> upstream_reader);
 
   ReadAtRequest read_at_request_;
   Store store_;

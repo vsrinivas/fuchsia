@@ -8,6 +8,7 @@
 #include <mutex>
 #include <vector>
 
+#include <lib/async/dispatcher.h>
 #include <lib/fit/function.h>
 
 #include "lib/fxl/synchronization/thread_annotations.h"
@@ -32,8 +33,13 @@
 //
 // The behavior of the When method depends on the incident's state. In initial
 // state, the consequence is added to a list to be executed when the incident
-// occurs. In occurred state, When executes the consequence immediately (before
-// When returns).
+// occurs. In occurred state, When executes the consequence.
+//
+// If an async is provided in the constructor, all consequences are posted to
+// that async. If no async is provided, consequences queued prior to the Occur
+// call are called synchronously from the Occur call, and consequences for
+// When calls in the occurred state are called synchronously from the When
+// calls.
 //
 // An Incident occurs when its Occur (or Run) method is invoked and the Incident
 // is in the initial state. All registered consequences of the Incident are
@@ -44,7 +50,7 @@
 // the list of consequences is cleared (without running the consequences).
 class Incident {
  public:
-  Incident();
+  Incident(async_t* async = nullptr);
 
   ~Incident();
 
@@ -58,7 +64,7 @@ class Incident {
   // of the consequence is held.
   void When(fit::closure consequence) {
     if (occurred_) {
-      consequence();
+      InvokeConsequence(std::move(consequence));
     } else {
       consequences_.push_back(std::move(consequence));
     }
@@ -76,6 +82,9 @@ class Incident {
   }
 
  private:
+  void InvokeConsequence(fit::closure consequence);
+
+  async_t* async_;
   bool occurred_ = false;
   std::vector<fit::closure> consequences_;
 };

@@ -2,9 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/async/cpp/task.h>
+
 #include "garnet/bin/media/media_player/util/incident.h"
 
-Incident::Incident() {}
+Incident::Incident(async_t* async) : async_(async) {}
 
 Incident::~Incident() {}
 
@@ -20,8 +22,17 @@ void Incident::Occur() {
   consequences_.swap(consequences);
 
   for (auto& consequence : consequences) {
-    consequence();
+    InvokeConsequence(std::move(consequence));
   }
+}
+
+void Incident::InvokeConsequence(fit::closure consequence) {
+  if (!async_) {
+    consequence();
+    return;
+  }
+
+  async::PostTask(async_, std::move(consequence));
 }
 
 ThreadsafeIncident::ThreadsafeIncident() {}

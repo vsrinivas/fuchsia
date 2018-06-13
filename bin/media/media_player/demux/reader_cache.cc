@@ -11,7 +11,7 @@ namespace media_player {
 // static
 std::shared_ptr<ReaderCache> ReaderCache::Create(
     std::shared_ptr<Reader> upstream_reader) {
-  return std::shared_ptr<ReaderCache>(new ReaderCache(upstream_reader));
+  return std::make_shared<ReaderCache>(upstream_reader);
 }
 
 ReaderCache::ReaderCache(std::shared_ptr<Reader> upstream_reader) {
@@ -22,7 +22,8 @@ ReaderCache::ReaderCache(std::shared_ptr<Reader> upstream_reader) {
         describe_is_complete_.Occur();
 
         if (result == Result::kOk) {
-          intake_.Start(&store_, upstream_reader);
+          intake_.Start(std::weak_ptr<ReaderCache>(shared_from_this()),
+                        upstream_reader);
         }
       });
 }
@@ -249,19 +250,21 @@ ReaderCache::Intake::Intake() {}
 
 ReaderCache::Intake::~Intake() {}
 
-void ReaderCache::Intake::Start(Store* store,
+void ReaderCache::Intake::Start(std::weak_ptr<ReaderCache> owner,
                                 std::shared_ptr<Reader> upstream_reader) {
-  FXL_DCHECK(store != nullptr);
   FXL_DCHECK(upstream_reader);
 
-  store_ = store;
+  owner_ = owner;
   upstream_reader_ = upstream_reader;
   Continue();
 }
 
 void ReaderCache::Intake::Continue() {
+  auto shared_owner = owner_.lock();
+  FXL_DCHECK(shared_owner);
+
   size_t size;
-  size_t position = store_->GetIntakePositionAndSize(&size);
+  size_t position = shared_owner->store_.GetIntakePositionAndSize(&size);
   if (position == kUnknownSize) {
     return;
   }
@@ -271,22 +274,27 @@ void ReaderCache::Intake::Continue() {
   FXL_DCHECK(buffer_.size() == 0);
   buffer_.resize(size);
 
-  upstream_reader_->ReadAt(position, buffer_.data(), size,
-                           [this, position](Result result, size_t bytes_read) {
-                             if (result != Result::kOk) {
-                               FXL_LOG(ERROR) << "ReadAt failed";
-                               store_->ReportIntakeError(result);
-                               return;
-                             }
+  upstream_reader_->ReadAt(
+      position, buffer_.data(), size,
+      [this, weak_owner = owner_, position](Result result, size_t bytes_read) {
+        auto shared_owner = weak_owner.lock();
+        if (!shared_owner) {
+          return;
+        }
 
-                             FXL_DCHECK(bytes_read != 0);
+        if (result != Result::kOk) {
+          FXL_LOG(ERROR) << "ReadAt failed";
+          shared_owner->store_.ReportIntakeError(result);
+          return;
+        }
 
-                             store_->PutIntakeBuffer(position,
-                                                     std::move(buffer_));
-                             FXL_DCHECK(buffer_.size() == 0);
+        FXL_DCHECK(bytes_read != 0);
 
-                             Continue();
-                           });
+        shared_owner->store_.PutIntakeBuffer(position, std::move(buffer_));
+        FXL_DCHECK(buffer_.size() == 0);
+
+        Continue();
+      });
 }
 
 }  // namespace media_player

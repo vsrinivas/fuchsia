@@ -58,8 +58,8 @@ class FidlReader : public Reader,
   Result result_ = Result::kOk;
   size_t size_ = kUnknownSize;
   bool can_seek_ = false;
-  Incident ready_;
   async_t* async_;
+  Incident ready_;
 
   std::atomic_bool read_in_progress_;
   size_t read_at_position_;

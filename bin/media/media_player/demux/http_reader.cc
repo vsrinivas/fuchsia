@@ -36,7 +36,7 @@ std::shared_ptr<HttpReader> HttpReader::Create(
 
 HttpReader::HttpReader(fuchsia::sys::StartupContext* startup_context,
                        const std::string& url)
-    : url_(url) {
+    : url_(url), ready_(async_get_default()) {
   http::HttpServicePtr network_service =
       startup_context->ConnectToEnvironmentService<http::HttpService>();
 

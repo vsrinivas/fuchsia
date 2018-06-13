@@ -18,7 +18,9 @@ namespace media_player {
 
 FidlReader::FidlReader(
     fidl::InterfaceHandle<fuchsia::mediaplayer::SeekingReader> seeking_reader)
-    : seeking_reader_(seeking_reader.Bind()), async_(async_get_default()) {
+    : seeking_reader_(seeking_reader.Bind()),
+      async_(async_get_default()),
+      ready_(async_) {
   FXL_DCHECK(async_);
 
   read_in_progress_ = false;
