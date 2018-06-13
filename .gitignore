@@ -28,4 +28,5 @@ last-update
 tools/cipd.gni
 .idea/
 *.iml
+**/Cargo.lock
 **/Cargo.toml

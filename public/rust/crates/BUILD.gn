@@ -12,6 +12,7 @@ package("rust-crates-tests") {
     "fdio",
     "fuchsia-async",
     "fuchsia-syslog",
+    "fuchsia-framebuffer",
     "fuchsia-trace",
     "fuchsia-zircon",
     "shared-buffer",

@@ -1,0 +1,5 @@
+{
+    "packages": {
+        "recovery_ui": "//garnet/bin/ui/recovery_ui"
+    }
+}
