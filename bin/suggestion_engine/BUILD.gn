@@ -51,7 +51,6 @@ source_set("suggestion_engine_impl") {
     ":interruption_processor",
     ":models",
     ":state",
-    ":timeline_stories_watcher",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/media/fidl",
     "//garnet/public/lib/media/timeline",
@@ -128,18 +127,6 @@ source_set("models") {
   ]
 
   public_deps = [
-    "//peridot/public/lib:fidl",
-  ]
-}
-
-source_set("timeline_stories_watcher") {
-  sources = [
-    "timeline_stories_watcher.cc",
-    "timeline_stories_watcher.h",
-  ]
-
-  deps = [
-    "//garnet/public/lib/fxl",
     "//peridot/public/lib:fidl",
   ]
 }

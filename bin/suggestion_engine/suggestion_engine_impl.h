@@ -20,7 +20,6 @@
 #include "peridot/bin/suggestion_engine/proposal_publisher_impl.h"
 #include "peridot/bin/suggestion_engine/query_processor.h"
 #include "peridot/bin/suggestion_engine/ranked_suggestions_list.h"
-#include "peridot/bin/suggestion_engine/timeline_stories_watcher.h"
 #include "peridot/lib/bound_set/bound_set.h"
 
 namespace modular {
@@ -232,14 +231,6 @@ class SuggestionEngineImpl : public fuchsia::modular::ContextListener,
   // Story.
   fuchsia::modular::StoryProviderPtr story_provider_;
   fidl::InterfacePtr<fuchsia::modular::FocusProvider> focus_provider_ptr_;
-
-  // Watches for changes in fuchsia::modular::StoryInfo from the
-  // fuchsia::modular::StoryProvider, acts as a filter for Proposals on all
-  // channels, and notifies when there are changes so that we can re-filter
-  // Proposals.
-  //
-  // Initialized late in Initialize().
-  std::unique_ptr<TimelineStoriesWatcher> timeline_stories_watcher_;
 
   // The debugging interface for all Suggestions.
   std::shared_ptr<SuggestionDebugImpl> debug_;

@@ -188,7 +188,6 @@ void SuggestionEngineImpl::Initialize(
   context_reader_.Bind(std::move(context_reader));
   query_processor_.Initialize(std::move(context_writer));
   RegisterRankingFeatures();
-  timeline_stories_watcher_.reset(new TimelineStoriesWatcher(&story_provider_));
 }
 
 // end fuchsia::modular::SuggestionEngine
