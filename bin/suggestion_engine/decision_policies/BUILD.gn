@@ -18,7 +18,7 @@ source_set("decision_policy") {
   ]
 
   deps = [
-    "//peridot/bin/suggestion_engine:models",
+    "//peridot/bin/suggestion_engine:ranked_suggestion",
   ]
 }
 

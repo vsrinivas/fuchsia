@@ -124,7 +124,7 @@ void SuggestionEngineImpl::NotifyInteraction(
   // If it exists (and it should), perform the action and clean up
   if (suggestion) {
     std::string log_detail = suggestion->prototype
-                                 ? short_proposal_str(*suggestion->prototype)
+                                 ? suggestion->prototype->ShortRepr()
                                  : "invalid";
 
     FXL_LOG(INFO) << (interaction.type ==

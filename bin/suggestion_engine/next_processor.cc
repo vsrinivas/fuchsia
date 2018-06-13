@@ -4,8 +4,6 @@
 
 #include "peridot/bin/suggestion_engine/next_processor.h"
 
-#include "peridot/bin/suggestion_engine/suggestion_engine_helper.h"
-
 namespace modular {
 
 NextProcessor::NextProcessor(std::shared_ptr<SuggestionDebugImpl> debug)
@@ -50,8 +48,8 @@ void NextProcessor::AddProposal(const std::string& component_url,
   // If one already exists, remove it before adding the new one.
   RemoveProposal(component_url, proposal.id);
 
-  auto prototype = CreateSuggestionPrototype(&prototypes_, component_url,
-                                             story_id, std::move(proposal));
+  auto prototype = SuggestionPrototype::CreateInMap(
+      &prototypes_, component_url, story_id, std::move(proposal));
   auto ranked_suggestion = RankedSuggestion::New(prototype);
 
   // TODO(miguelfrde): Make NextProcessor not depend on InterruptionsProcessor.

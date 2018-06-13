@@ -40,8 +40,6 @@ source_set("suggestion_engine_impl") {
     "query_processor.h",
     "query_runner.cc",
     "query_runner.h",
-    "suggestion_engine_helper.cc",
-    "suggestion_engine_helper.h",
     "suggestion_engine_impl.cc",
     "suggestion_engine_impl.h",
   ]
@@ -49,8 +47,8 @@ source_set("suggestion_engine_impl") {
   deps = [
     ":debug",
     ":interruption_processor",
-    ":models",
     ":state",
+    ":suggestion_prototype",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/media/fidl",
     "//garnet/public/lib/media/timeline",
@@ -90,7 +88,7 @@ source_set("interruption_processor") {
   ]
 
   deps = [
-    ":models",
+    ":ranked_suggestion",
     "//peridot/bin/suggestion_engine/decision_policies:all",
     "//peridot/bin/suggestion_engine/ranking_features:ranking_feature",
     "//peridot/public/lib:fidl",
@@ -104,7 +102,7 @@ source_set("state") {
   ]
 
   deps = [
-    ":models",
+    ":suggestion_prototype",
     "//garnet/public/lib/fxl",
     "//peridot/bin/suggestion_engine/filters:base",
     "//peridot/bin/suggestion_engine/rankers:ranker",
@@ -114,16 +112,29 @@ source_set("state") {
   ]
 }
 
-source_set("models") {
+source_set("suggestion_prototype") {
   sources = [
-    "ranked_suggestion.cc",
-    "ranked_suggestion.h",
     "suggestion_prototype.cc",
     "suggestion_prototype.h",
   ]
 
   deps = [
     "//garnet/public/lib/fxl",
+  ]
+
+  public_deps = [
+    "//peridot/public/lib:fidl",
+  ]
+}
+
+source_set("ranked_suggestion") {
+  sources = [
+    "ranked_suggestion.cc",
+    "ranked_suggestion.h",
+  ]
+
+  deps = [
+    ":suggestion_prototype",
   ]
 
   public_deps = [
@@ -138,8 +149,8 @@ source_set("debug") {
   ]
 
   deps = [
-    ":models",
     ":state",
+    ":suggestion_prototype",
     "//garnet/public/lib/fxl",
     "//peridot/public/lib:fidl",
   ]

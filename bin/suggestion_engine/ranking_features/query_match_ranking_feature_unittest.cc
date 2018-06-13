@@ -18,8 +18,8 @@ TEST_F(QueryMatchRankingFeatureTest, TestComputeFeatureRelated) {
   display.headline = "play bar by foo";
   fuchsia::modular::Proposal proposal;
   proposal.display = std::move(display);
-  SuggestionPrototype prototype;
-  prototype.proposal = std::move(proposal);
+  SuggestionPrototype prototype("" /* source_url */, "" /* story_id */,
+                                std::move(proposal));
   RankedSuggestion suggestion;
   suggestion.prototype = &prototype;
 
@@ -35,7 +35,8 @@ TEST_F(QueryMatchRankingFeatureTest, TestComputeFeatureUnrelated) {
   display.headline = "play bar by foo";
   fuchsia::modular::Proposal proposal;
   proposal.display = std::move(display);
-  SuggestionPrototype prototype;
+  SuggestionPrototype prototype("" /* source_url */, "" /* story_id */,
+                                std::move(proposal));
   prototype.proposal = std::move(proposal);
   RankedSuggestion suggestion;
   suggestion.prototype = &prototype;
