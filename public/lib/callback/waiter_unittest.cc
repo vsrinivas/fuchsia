@@ -11,7 +11,7 @@ namespace callback {
 namespace {
 
 TEST(Waiter, NoCallback) {
-  auto waiter = Waiter<int, int>::Create(0);
+  auto waiter = fxl::MakeRefCounted<Waiter<int, int>>(0);
 
   int result = -1;
   std::vector<int> data;
@@ -22,7 +22,7 @@ TEST(Waiter, NoCallback) {
 }
 
 TEST(Waiter, DataPreInitialize) {
-  auto waiter = Waiter<int, int>::Create(0);
+  auto waiter = fxl::MakeRefCounted<Waiter<int, int>>(0);
 
   waiter->NewCallback()(0, 0);
   waiter->NewCallback()(0, 1);
@@ -37,7 +37,7 @@ TEST(Waiter, DataPreInitialize) {
 }
 
 TEST(Waiter, DataPostInitialize) {
-  auto waiter = Waiter<int, int>::Create(0);
+  auto waiter = fxl::MakeRefCounted<Waiter<int, int>>(0);
 
   auto c1 = waiter->NewCallback();
   auto c2 = waiter->NewCallback();
@@ -59,7 +59,7 @@ TEST(Waiter, DataPostInitialize) {
 }
 
 TEST(Waiter, DataMixedInitialize) {
-  auto waiter = Waiter<int, int>::Create(0);
+  auto waiter = fxl::MakeRefCounted<Waiter<int, int>>(0);
 
   waiter->NewCallback()(0, 0);
   waiter->NewCallback()(0, 1);
@@ -79,7 +79,7 @@ TEST(Waiter, DataMixedInitialize) {
 }
 
 TEST(Waiter, UnorderedCalls) {
-  auto waiter = Waiter<int, int>::Create(0);
+  auto waiter = fxl::MakeRefCounted<Waiter<int, int>>(0);
 
   auto c1 = waiter->NewCallback();
   auto c2 = waiter->NewCallback();
@@ -98,7 +98,7 @@ TEST(Waiter, UnorderedCalls) {
 }
 
 TEST(Waiter, EarlyReturnOnError) {
-  auto waiter = Waiter<int, int>::Create(0);
+  auto waiter = fxl::MakeRefCounted<Waiter<int, int>>(0);
 
   waiter->NewCallback();
   waiter->NewCallback()(1, 2);
@@ -113,7 +113,7 @@ TEST(Waiter, EarlyReturnOnError) {
 }
 
 TEST(Waiter, CallbackSurviveWaiter) {
-  auto waiter = Waiter<int, int>::Create(0);
+  auto waiter = fxl::MakeRefCounted<Waiter<int, int>>(0);
   auto c1 = waiter->NewCallback();
 
   waiter = nullptr;
@@ -122,7 +122,7 @@ TEST(Waiter, CallbackSurviveWaiter) {
 }
 
 TEST(Waiter, Promise) {
-  auto promise = Promise<int, int>::Create(0);
+  auto promise = fxl::MakeRefCounted<Promise<int, int>>(0);
 
   promise->NewCallback()(1, 2);
   int status, result;
@@ -132,7 +132,7 @@ TEST(Waiter, Promise) {
 }
 
 TEST(Waiter, DeleteInFinalize) {
-  auto promise = Promise<int, int>::Create(0);
+  auto promise = fxl::MakeRefCounted<Promise<int, int>>(0);
   promise->NewCallback()(1, 2);
   promise->Finalize([&](int status, int result) {
     // Delete the callback.
@@ -141,7 +141,7 @@ TEST(Waiter, DeleteInFinalize) {
 }
 
 TEST(StatusWaiter, MixedInitialize) {
-  auto waiter = StatusWaiter<int>::Create(0);
+  auto waiter = fxl::MakeRefCounted<StatusWaiter<int>>(0);
 
   waiter->NewCallback()(0);
   waiter->NewCallback()(0);
@@ -157,7 +157,7 @@ TEST(StatusWaiter, MixedInitialize) {
 }
 
 TEST(StatusWaiter, EarlyReturnOnError) {
-  auto waiter = StatusWaiter<int>::Create(0);
+  auto waiter = fxl::MakeRefCounted<StatusWaiter<int>>(0);
 
   waiter->NewCallback()(0);
   waiter->NewCallback()(1);
@@ -172,7 +172,7 @@ TEST(StatusWaiter, EarlyReturnOnError) {
 }
 
 TEST(CompletionWaiter, MixedInitialize) {
-  auto waiter = CompletionWaiter::Create();
+  auto waiter = fxl::MakeRefCounted<CompletionWaiter>();
 
   waiter->NewCallback()();
   waiter->NewCallback()();
@@ -189,7 +189,7 @@ TEST(CompletionWaiter, MixedInitialize) {
 }
 
 TEST(Waiter, Cancel) {
-  auto waiter = CompletionWaiter::Create();
+  auto waiter = fxl::MakeRefCounted<CompletionWaiter>();
 
   auto callback = waiter->NewCallback();
 
@@ -203,7 +203,7 @@ TEST(Waiter, Cancel) {
 }
 
 TEST(AnyWaiter, FailureThenSuccess) {
-  auto waiter = AnyWaiter<bool, int>::Create(true, false);
+  auto waiter = fxl::MakeRefCounted<AnyWaiter<bool, int>>(true, false);
 
   auto cb1 = waiter->NewCallback();
   auto cb2 = waiter->NewCallback();
@@ -225,7 +225,7 @@ TEST(AnyWaiter, FailureThenSuccess) {
 }
 
 TEST(AnyWaiter, AllFailure) {
-  auto waiter = AnyWaiter<bool, int>::Create(true, false, -1);
+  auto waiter = fxl::MakeRefCounted<AnyWaiter<bool, int>>(true, false, -1);
 
   auto cb1 = waiter->NewCallback();
   auto cb2 = waiter->NewCallback();
@@ -245,7 +245,7 @@ TEST(AnyWaiter, AllFailure) {
 }
 
 TEST(AnyWaiter, Default) {
-  auto waiter = AnyWaiter<bool, int>::Create(true, false, -1);
+  auto waiter = fxl::MakeRefCounted<AnyWaiter<bool, int>>(true, false, -1);
 
   bool called;
   int status, result;

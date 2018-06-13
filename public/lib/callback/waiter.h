@@ -201,7 +201,7 @@ class BaseWaiter : public fxl::RefCountedThreadSafe<BaseWaiter<A, R, Args...>> {
     finished_ = true;
     if (!cancelled_) {
       result_callback_(accumulator_.Result());
-      // The callback might delete this class. 
+      // The callback might delete this class.
       return;
     }
   }
@@ -219,8 +219,8 @@ class BaseWaiter : public fxl::RefCountedThreadSafe<BaseWaiter<A, R, Args...>> {
 
 // Waiter can be used to collate the results of many asynchronous calls into one
 // callback. A typical usage example would be:
-// auto waiter = callback::Waiter<Status,
-//                                std::unique_ptr<Object>>::Create(Status::OK);
+// auto waiter = fxl::MakeRefCounted<callback::Waiter<Status,
+//                                   std::unique_ptr<Object>>>(Status::OK);
 // storage->GetObject(object_digest1, waiter->NewCallback());
 // storage->GetObject(object_digest2, waiter->NewCallback());
 // storage->GetObject(object_digest3, waiter->NewCallback());
@@ -306,10 +306,9 @@ class AnyWaiter
   FRIEND_REF_COUNTED_THREAD_SAFE(AnyWaiter);
   FRIEND_MAKE_REF_COUNTED(AnyWaiter);
 
-  AnyWaiter(S success_status, S default_status, V default_value)
+  AnyWaiter(S success_status, S default_status, V default_value = V())
       : BaseWaiter<internal::AnyAccumulator<S, V>, std::pair<S, V>, S, V>(
-            internal::AnyAccumulator<S, V>(success_status,
-                                           default_status,
+            internal::AnyAccumulator<S, V>(success_status, default_status,
                                            std::move(default_value))) {}
   ~AnyWaiter() override{};
 };
@@ -317,7 +316,7 @@ class AnyWaiter
 // Promise is used to wait on a single asynchronous call. A typical usage
 // example is:
 // auto promise =
-//     callback::Promise<Status, std::unique_ptr<Object>>::Create(
+//     fxl::MakeRefCounted<callback::Promise<Status, std::unique_ptr<Object>>>(
 //         Status::ILLEGAL_STATE);
 // storage->GetObject(object_digest1, promise->NewCallback());
 // ...
@@ -351,7 +350,7 @@ class Promise : public BaseWaiter<internal::PromiseAccumulator<S, V>,
   FRIEND_REF_COUNTED_THREAD_SAFE(Promise);
   FRIEND_MAKE_REF_COUNTED(Promise);
 
-  Promise(S default_status, V default_value)
+  Promise(S default_status, V default_value = V())
       : BaseWaiter<internal::PromiseAccumulator<S, V>, std::pair<S, V>, S, V>(
             internal::PromiseAccumulator<S, V>(default_status,
                                                std::move(default_value))) {}
