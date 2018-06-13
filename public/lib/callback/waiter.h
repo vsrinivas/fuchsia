@@ -234,10 +234,6 @@ class Waiter : public BaseWaiter<internal::ResultAccumulator<S, T>,
                                  S,
                                  T> {
  public:
-  static fxl::RefPtr<Waiter<S, T>> Create(S success_status) {
-    return fxl::MakeRefCounted<Waiter<S, T>>(success_status);
-  }
-
   void Finalize(std::function<void(S, std::vector<T>)> callback) {
     BaseWaiter<internal::ResultAccumulator<S, T>, std::pair<S, std::vector<T>>,
                S, T>::Finalize([callback =
@@ -264,11 +260,6 @@ class Waiter : public BaseWaiter<internal::ResultAccumulator<S, T>,
 // S (e.g. storage::Status) as an argument.
 template <class S>
 class StatusWaiter : public BaseWaiter<internal::StatusAccumulator<S>, S, S> {
- public:
-  static fxl::RefPtr<StatusWaiter<S>> Create(S success_status) {
-    return fxl::MakeRefCounted<StatusWaiter<S>>(success_status);
-  }
-
  private:
   FRIEND_REF_COUNTED_THREAD_SAFE(StatusWaiter);
   FRIEND_MAKE_REF_COUNTED(StatusWaiter);
@@ -286,15 +277,6 @@ template <class S, class V>
 class AnyWaiter
     : public BaseWaiter<internal::AnyAccumulator<S, V>, std::pair<S, V>, S, V> {
  public:
-  // Creates a new waiter. |success_status| and |default_value| will be
-  // returned to the callback in |Finalize| if |NewCallback| is not called.
-  static fxl::RefPtr<AnyWaiter<S, V>> Create(S success_status,
-                                             S default_status,
-                                             V default_value = V()) {
-    return fxl::MakeRefCounted<AnyWaiter<S, V>>(success_status, default_status,
-                                                std::move(default_value));
-  }
-
   void Finalize(std::function<void(S, V)> callback) {
     BaseWaiter<internal::AnyAccumulator<S, V>, std::pair<S, V>, S, V>::Finalize(
         [callback = std::move(callback)](std::pair<S, V> result) {
@@ -306,6 +288,8 @@ class AnyWaiter
   FRIEND_REF_COUNTED_THREAD_SAFE(AnyWaiter);
   FRIEND_MAKE_REF_COUNTED(AnyWaiter);
 
+  // Creates a new waiter. |success_status| and |default_value| will be
+  // returned to the callback in |Finalize| if |NewCallback| is not called.
   AnyWaiter(S success_status, S default_status, V default_value = V())
       : BaseWaiter<internal::AnyAccumulator<S, V>, std::pair<S, V>, S, V>(
             internal::AnyAccumulator<S, V>(success_status, default_status,
@@ -330,14 +314,6 @@ class Promise : public BaseWaiter<internal::PromiseAccumulator<S, V>,
                                   S,
                                   V> {
  public:
-  // Creates a new promise. |default_status| and |default_value| will be
-  // returned to the callback in |Finalize| if |NewCallback| is not called.
-  static fxl::RefPtr<Promise<S, V>> Create(S default_status,
-                                           V default_value = V()) {
-    return fxl::MakeRefCounted<Promise<S, V>>(default_status,
-                                              std::move(default_value));
-  }
-
   void Finalize(std::function<void(S, V)> callback) {
     BaseWaiter<internal::PromiseAccumulator<S, V>, std::pair<S, V>, S,
                V>::Finalize([callback =
@@ -350,6 +326,8 @@ class Promise : public BaseWaiter<internal::PromiseAccumulator<S, V>,
   FRIEND_REF_COUNTED_THREAD_SAFE(Promise);
   FRIEND_MAKE_REF_COUNTED(Promise);
 
+  // Creates a new promise. |default_status| and |default_value| will be
+  // returned to the callback in |Finalize| if |NewCallback| is not called.
   Promise(S default_status, V default_value = V())
       : BaseWaiter<internal::PromiseAccumulator<S, V>, std::pair<S, V>, S, V>(
             internal::PromiseAccumulator<S, V>(default_status,
@@ -361,10 +339,6 @@ class Promise : public BaseWaiter<internal::PromiseAccumulator<S, V>,
 class CompletionWaiter
     : public BaseWaiter<internal::CompletionAccumulator, bool> {
  public:
-  static fxl::RefPtr<CompletionWaiter> Create() {
-    return fxl::MakeRefCounted<CompletionWaiter>();
-  }
-
   void Finalize(std::function<void()> callback) {
     BaseWaiter<internal::CompletionAccumulator, bool>::Finalize(
         [callback = std::move(callback)](bool result) { callback(); });
