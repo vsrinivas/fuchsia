@@ -24,14 +24,14 @@ namespace zxdb {
 // Holds the index of symbols for a given module.
 class ModuleSymbolIndex {
  public:
-  using FilePair =
-      std::pair<const std::string, std::vector<llvm::DWARFCompileUnit*>>;
-
   ModuleSymbolIndex();
   ~ModuleSymbolIndex();
 
-  void CreateIndex(llvm::DWARFContext* context,
-                   llvm::DWARFUnitSection<llvm::DWARFCompileUnit>& units);
+  // This function takes an object file rather than a context so it can create
+  // its own context, and then discard the context when it's done. Since most
+  // debugging information is not needed after indexing, this saves a lot of
+  // memory.
+  void CreateIndex(llvm::object::ObjectFile* object_file);
 
   const ModuleSymbolIndexNode& root() const { return root_; }
 
@@ -50,10 +50,9 @@ class ModuleSymbolIndex {
   // appears in. The file must be an exact match (normally it's one of the
   // results from FindFileMatches).
   //
-  // It will return the first instruction associated with that line for
-  // every instantiation. Sometimes expressions are multiple lines or things
-  // can be optimized out.
-  const std::vector<llvm::DWARFCompileUnit*>* FindFileUnits(
+  // The contents of the vector are indices into the compilation unit array.
+  // (see llvm::DWARFContext::getCompileUnitAtIndex).
+  const std::vector<unsigned>* FindFileUnitIndices(
       const std::string& name) const;
 
   // Dumps the file index to the stream for debugging.
@@ -61,10 +60,12 @@ class ModuleSymbolIndex {
 
  private:
   void IndexCompileUnit(llvm::DWARFContext* context,
-                        llvm::DWARFCompileUnit* unit);
+                        llvm::DWARFCompileUnit* unit,
+                        unsigned unit_index);
 
   void IndexCompileUnitSourceFiles(llvm::DWARFContext* context,
-                                   llvm::DWARFCompileUnit* unit);
+                                   llvm::DWARFCompileUnit* unit,
+                                   unsigned unit_index);
 
   // Populates the file_name_index_ given a now-unchanging files_ map.
   void IndexFileNames();
@@ -74,11 +75,15 @@ class ModuleSymbolIndex {
   // Maps full path names to compile units that reference them. This must not
   // be mutated once the file_name_index_ is built.
   //
+  // The contents of the vector are indices into the compilation unit array.
+  // (see llvm::DWARFContext::getCompileUnitAtIndex). These are "unsigned"
+  // type because that's what LLVM uses for these indices.
+  //
   // This is a map, not a multimap, because some files will appear in many
   // compilation units. I suspect it's better to avoid duplicating the names
   // (like a multimap would) and eating the cost of indirect heap allocations
   // for vectors in the single-item case.
-  using FileIndex = std::map<std::string, std::vector<llvm::DWARFCompileUnit*>>;
+  using FileIndex = std::map<std::string, std::vector<unsigned>>;
   FileIndex files_;
 
   // Maps the last file name component (the part following the last slash) to

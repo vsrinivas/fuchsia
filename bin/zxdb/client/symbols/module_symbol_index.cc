@@ -274,22 +274,24 @@ class FunctionImplIndexer {
 ModuleSymbolIndex::ModuleSymbolIndex() = default;
 ModuleSymbolIndex::~ModuleSymbolIndex() = default;
 
-void ModuleSymbolIndex::CreateIndex(
-    llvm::DWARFContext* context,
-    llvm::DWARFUnitSection<llvm::DWARFCompileUnit>& units) {
-  for (const std::unique_ptr<llvm::DWARFCompileUnit>& unit : units)
-    IndexCompileUnit(context, unit.get());
+void ModuleSymbolIndex::CreateIndex(llvm::object::ObjectFile* object_file) {
+  std::unique_ptr<llvm::DWARFContext> context =
+      llvm::DWARFContext::create(
+      *object_file, nullptr, llvm::DWARFContext::defaultErrorHandler);
+
+  llvm::DWARFUnitSection<llvm::DWARFCompileUnit> compile_units;
+  compile_units.parse(*context, context->getDWARFObj().getInfoSection());
+
+  for (unsigned i = 0; i < compile_units.size(); i++) {
+    IndexCompileUnit(context.get(), compile_units[i].get(), i);
+
+    // Free all compilation units as we process them. They will hold all of
+    // the parsed DIE data that we don't need any more which can be mutliple
+    // GB's for large programs.
+    compile_units[i].reset();
+  }
 
   IndexFileNames();
-
-  // TODO(brettw) LLVM creates a memory mapped file (the MemoryBuffer) to back
-  // the context. The indexing process pages it all in. We likely won't use
-  // most of it again so we could save substantial memory by somehow resetting
-  // the memory region so it will get paged back in as needed.
-  //
-  // The LLVM APIs don't seem to support exactly what we need. We may have to
-  // get creative in supplying our own MemoryBuffer to the llvm::object::Binary
-  // or closing and reopening everything (which may be slow).
 }
 
 const std::vector<ModuleSymbolIndexNode::DieRef>&
@@ -339,7 +341,7 @@ std::vector<std::string> ModuleSymbolIndex::FindFileMatches(
   FileNameIndex::const_iterator iter =
       file_name_index_.lower_bound(name_last_comp);
   while (iter != file_name_index_.end() && iter->first == name_last_comp) {
-    const FilePair& pair = *iter->second;
+    const auto& pair = *iter->second;
     if (StringEndsWith(pair.first, name) &&
         (pair.first.size() == name.size() ||
          pair.first[pair.first.size() - name.size() - 1] == '/')) {
@@ -351,7 +353,7 @@ std::vector<std::string> ModuleSymbolIndex::FindFileMatches(
   return result;
 }
 
-const std::vector<llvm::DWARFCompileUnit*>* ModuleSymbolIndex::FindFileUnits(
+const std::vector<unsigned>* ModuleSymbolIndex::FindFileUnitIndices(
     const std::string& name) const {
   auto found = files_.find(name);
   if (found == files_.end())
@@ -361,14 +363,15 @@ const std::vector<llvm::DWARFCompileUnit*>* ModuleSymbolIndex::FindFileUnits(
 
 void ModuleSymbolIndex::DumpFileIndex(std::ostream& out) {
   for (const auto& name_pair : file_name_index_) {
-    const FilePair& full_pair = *name_pair.second;
+    const auto& full_pair = *name_pair.second;
     out << name_pair.first << " -> " << full_pair.first << " -> "
         << full_pair.second.size() << " units\n";
   }
 }
 
 void ModuleSymbolIndex::IndexCompileUnit(llvm::DWARFContext* context,
-                                         llvm::DWARFCompileUnit* unit) {
+                                         llvm::DWARFCompileUnit* unit,
+                                         unsigned unit_index) {
   // Find the things to index.
   std::vector<FunctionImpl> function_impls;
   function_impls.reserve(256);
@@ -381,26 +384,11 @@ void ModuleSymbolIndex::IndexCompileUnit(llvm::DWARFContext* context,
   for (const FunctionImpl& impl : function_impls)
     indexer.AddFunction(impl);
 
-  IndexCompileUnitSourceFiles(context, unit);
-
-  // Clear the cached unit information. It will be holding a lot of parsed DIE
-  // information that likely isn't needed and it will get lazily repopulated if
-  // it is. This saves 7GB of memory for Chrome, for example.
-  //
-  // This is possible because the nodes store "DieRef" objects which contain
-  // the offset necessary to reconstitute the DIE, rather than references to
-  // any LLVM structures.
-  //
-  // TODO(brettw) re-enable. This breaks the line lookup unit test. It appears
-  // looking up a unit after it's been cleared in the context doesn't work.
-  // We need to store something other than unit pointers in the file index,
-  // and also index using another set of units than the persistent one in
-  // ModuleSymbolsImpl.
-  // unit->clear();
+  IndexCompileUnitSourceFiles(context, unit, unit_index);
 }
 
 void ModuleSymbolIndex::IndexCompileUnitSourceFiles(
-    llvm::DWARFContext* context, llvm::DWARFCompileUnit* unit) {
+    llvm::DWARFContext* context, llvm::DWARFCompileUnit* unit, unsigned unit_index) {
   const llvm::DWARFDebugLine::LineTable* line_table =
       context->getLineTableForUnit(unit);
   const char* compilation_dir = unit->getCompilationDir();
@@ -429,10 +417,11 @@ void ModuleSymbolIndex::IndexCompileUnitSourceFiles(
               file_id, compilation_dir,
               llvm::DILineInfoSpecifier::FileLineInfoKind::AbsoluteFilePath,
               file_name)) {
-        // TODO(brettw) the files here can contain relative components like
-        // "/foo/bar/../baz". We should canonicalize those (in a second pass
-        // once the unique names are known).
-        files_[file_name].push_back(unit);
+        // The files here can contain relative components like
+        // "/foo/bar/../baz". This is OK because we want it to match other
+        // places in the symbol code that do a similar computation to get a
+        // file name.
+        files_[file_name].push_back(unit_index);
       }
     }
   }

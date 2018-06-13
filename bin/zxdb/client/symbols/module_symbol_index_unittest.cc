@@ -19,7 +19,7 @@ TEST(ModuleSymbolIndex, FindFunctionExact) {
   ASSERT_TRUE(module.Load(&err)) << err;
 
   ModuleSymbolIndex index;
-  index.CreateIndex(module.context(), module.compile_units());
+  index.CreateIndex(module.object_file());
 
 #if 0
   // Enable to dump the found index for debugging purposes.
@@ -55,7 +55,7 @@ TEST(ModuleSymbolIndex, FindFileMatches) {
   ASSERT_TRUE(module.Load(&err)) << err;
 
   ModuleSymbolIndex index;
-  index.CreateIndex(module.context(), module.compile_units());
+  index.CreateIndex(module.object_file());
 
   // Simple filename-only query that succeeds.
   std::vector<std::string> result =
@@ -115,7 +115,7 @@ TEST(ModuleSymbolIndex, BenchmarkIndexing) {
   int64_t load_complete_us = GetTickMicroseconds();
 
   ModuleSymbolIndex index;
-  index.CreateIndex(module.context(), module.compile_units());
+  index.CreateIndex(module.object_file());
 
   int64_t index_complete_us = GetTickMicroseconds();
 

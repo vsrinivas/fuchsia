@@ -9,7 +9,6 @@
 #include "llvm/DebugInfo/DWARF/DWARFUnit.h"
 #include "llvm/Object/Binary.h"
 #include "llvm/Object/ELFObjectFile.h"
-#include "llvm/Object/ObjectFile.h"
 
 namespace zxdb {
 

@@ -9,6 +9,7 @@
 
 #include "garnet/public/lib/fxl/macros.h"
 #include "llvm/DebugInfo/DWARF/DWARFCompileUnit.h"
+#include "llvm/Object/ObjectFile.h"
 
 namespace llvm {
 
@@ -50,6 +51,9 @@ class TestSymbolModule {
   // Loads a file at the given path. See Load().
   bool LoadSpecific(const std::string& path, std::string* err_msg);
 
+  llvm::object::ObjectFile* object_file() {
+    return static_cast<llvm::object::ObjectFile*>(binary_.get());
+  }
   llvm::DWARFContext* context() { return context_.get(); }
   llvm::DWARFUnitSection<llvm::DWARFCompileUnit>& compile_units() {
     return compile_units_;

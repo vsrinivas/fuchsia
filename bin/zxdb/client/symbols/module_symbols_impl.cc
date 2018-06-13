@@ -158,7 +158,14 @@ Err ModuleSymbolsImpl::Load() {
 
   compile_units_.parse(*context_, context_->getDWARFObj().getInfoSection());
 
-  index_.CreateIndex(context_.get(), compile_units_);
+  // We could consider creating a new binary/object file just for indexing.
+  // The indexing will page all of the binary in, and most of it won't be
+  // needed again (it will be paged back in slowl savings may make
+  // such a change worth it for large programs.y as needed).
+  //
+  // Although it will be slightly slower to create, the memory savings may make
+  // such a change worth it for large programs.
+  index_.CreateIndex(obj);
   return Err();
 }
 
@@ -236,13 +243,14 @@ std::vector<std::string> ModuleSymbolsImpl::FindFileMatches(
 std::vector<uint64_t> ModuleSymbolsImpl::RelativeAddressesForLine(
     const FileLine& line) const {
   std::vector<uint64_t> result;
-  const std::vector<llvm::DWARFCompileUnit*>* units =
-      index_.FindFileUnits(line.file());
+  const std::vector<unsigned>* units = index_.FindFileUnitIndices(line.file());
   if (!units)
     return result;
 
   std::vector<LineMatch> matches;
-  for (llvm::DWARFCompileUnit* unit : *units) {
+  for (unsigned index : *units) {
+    llvm::DWARFCompileUnit* unit = context_->getCompileUnitAtIndex(index);
+
     // Complication 1 above: find all matches for this line in the unit.
     std::vector<LineMatch> unit_matches = GetBestLineTableMatchesInUnit(
         context_.get(), unit, line.file(), line.line());
