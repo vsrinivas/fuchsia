@@ -17,3 +17,7 @@ fuchsia_internal/firmware/bluetooth/intel git_revision:2451bb228f6401ca3f2ecd498
 # Atheros wlan firmware
 @Subdir drivers/wlan/third_party/atheros/ath10k/firmware
 fuchsia_internal/firmware/wlan/atheros/ath10k git_revision:7518922bd5b98b137af7aaf3c836f5a498e91609
+
+# Amlogic video decoder firmware
+@Subdir drivers/video/amlogic-decoder/firmware
+fuchsia_internal/firmware/amlogic-video 21de4e7661973554287f571d3a0affb72b62283b
