@@ -149,7 +149,7 @@ to a kernel object.  They can be passed to other processes over [Channel](#Chann
 The hub is a portal for introspection.  It enables tools to access detailed
 structural information about realms and component instances at runtime,
 such as their names, job and process ids, and published services.
-- [Hub](https://fuchsia.googlesource.com/zircon/+/master/docs/the-book/hub.md)
+- [Hub](the-book/hub.md)
 
 #### **Jiri**
 
