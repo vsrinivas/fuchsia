@@ -63,7 +63,7 @@ Appmgr::Appmgr(async_t* async, AppmgrArgs args)
     run_sysmgr();
     return;
   }
-  async::PostTask(async, [this, &run_sysmgr] {
+  async::PostTask(async, [this, run_sysmgr] {
     run_sysmgr();
     sysmgr_.set_error_handler(run_sysmgr);
   });
