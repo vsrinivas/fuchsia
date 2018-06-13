@@ -27,14 +27,17 @@ class LockImpl : public Lock {
       serializer->Serialize<>(
           [] {},
           [weak_this, sync_callback = std::move(sync_callback)](
-              fxl::Closure serialization_callback) {
+              fxl::Closure serialization_callback) mutable {
+            // Moving sync_callback to the stack as the serialization_callback
+            // might delete this closure.
+            auto sync_callback_local = std::move(sync_callback);
             if (weak_this) {
               weak_this->serialization_callback_ =
                   std::move(serialization_callback);
             } else {
               serialization_callback();
             }
-            sync_callback();
+            sync_callback_local();
           });
     });
   }
