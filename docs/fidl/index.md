@@ -11,6 +11,7 @@ This document is a description of the Fuchsia Interface Definition Language
 *   [FIDL: C Language Bindings]
 *   [FIDL: C++ Language Bindings]
 *   [FIDL Examples]: Some small example code used during development
+*   [FIDL Tutorial]: A tutorial on using FIDL services in several languages
 
 <!-- Reference links because these are used again below. -->
 
@@ -20,6 +21,7 @@ This document is a description of the Fuchsia Interface Definition Language
 [FIDL: C Language Bindings]: c-language-bindings.md
 [FIDL: C++ Language Bindings]: c++-language-bindings.md
 [FIDL Examples]: ../../system/host/fidl/examples
+[FIDL Tutorial]: https://fuchsia.googlesource.com/docs/+/master/development/languages/fidl/tutorial.md
 
 [TOC]
 
