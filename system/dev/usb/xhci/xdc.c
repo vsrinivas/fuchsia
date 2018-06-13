@@ -445,6 +445,8 @@ static zx_status_t xdc_close_instance(void* ctx, uint32_t flags) {
     }
     mtx_unlock(&xdc->read_lock);
 
+    atomic_fetch_add(&xdc->num_instances, -1);
+
     return ZX_OK;
 }
 
@@ -494,6 +496,9 @@ static zx_status_t xdc_open(void* ctx, zx_device_t** dev_out, uint32_t flags) {
     mtx_unlock(&xdc->instance_list_lock);
 
     *dev_out = inst->zxdev;
+
+    atomic_fetch_add(&xdc->num_instances, 1);
+    completion_signal(&xdc->has_instance_completion);
     return ZX_OK;
 
 }
@@ -502,6 +507,8 @@ static void xdc_shutdown(xdc_t* xdc) {
     zxlogf(TRACE, "xdc_shutdown\n");
 
     atomic_store(&xdc->suspended, true);
+    // The poll thread will be waiting on this completion if no instances are open.
+    completion_signal(&xdc->has_instance_completion);
 
     int res;
     thrd_join(xdc->start_thread, &res);
@@ -956,40 +963,58 @@ zx_status_t xdc_poll(xdc_t* xdc) {
     list_initialize(&poll_state.completed_reqs);
 
     for (;;) {
-        if (atomic_load(&xdc->suspended)) {
-            zxlogf(INFO, "suspending xdc, exiting poll loop");
-            break;
-        }
+        zxlogf(TRACE, "xdc_poll: waiting for a new instance\n");
+        // Wait for at least one active instance before polling.
+        completion_wait(&xdc->has_instance_completion, ZX_TIME_INFINITE);
+        zxlogf(TRACE, "xdc_poll: instance completion signaled, about to enter poll loop\n");
+        completion_reset(&xdc->has_instance_completion);
 
-        bool entered_configured = xdc_update_state(xdc, &poll_state);
-
-        // Check if any EP has halted or recovered.
-        for (int i = 0; i < NUM_EPS; i++) {
-            xdc_endpoint_t* ep = &xdc->eps[i];
-            xdc_update_endpoint_state(xdc, &poll_state, ep);
-        }
-
-        // If we just entered the configured state, we should schedule the read requests.
-        if (entered_configured) {
-            mtx_lock(&xdc->read_lock);
-            usb_request_t* req;
-            while ((req = list_remove_tail_type(&xdc->free_read_reqs,
-                                                usb_request_t, node)) != NULL) {
-                xdc_queue_read_locked(xdc, req);
+        for (;;) {
+            if (atomic_load(&xdc->suspended)) {
+                zxlogf(INFO, "xdc_poll: suspending xdc, shutting down poll thread\n");
+                return ZX_OK;
             }
-            mtx_unlock(&xdc->read_lock);
+            if (atomic_load(&xdc->num_instances) == 0) {
+                // If all pending writes have completed, exit the poll loop.
+                mtx_lock(&xdc->lock);
+                if (list_is_empty(&xdc->eps[OUT_EP_IDX].pending_reqs)) {
+                    zxlogf(TRACE, "xdc_poll: no active instances, exiting inner poll loop\n");
+                    mtx_unlock(&xdc->lock);
+                    // Wait for a new instance to be active.
+                    break;
+                }
+                mtx_unlock(&xdc->lock);
+            }
+            bool entered_configured = xdc_update_state(xdc, &poll_state);
 
-            mtx_lock(&xdc->write_lock);
-            xdc_update_write_signal_locked(xdc, true /* online */);
-            mtx_unlock(&xdc->write_lock);
-        }
+            // Check if any EP has halted or recovered.
+            for (int i = 0; i < NUM_EPS; i++) {
+                xdc_endpoint_t* ep = &xdc->eps[i];
+                xdc_update_endpoint_state(xdc, &poll_state, ep);
+            }
 
-        // Call complete callbacks out of the lock.
-        // TODO(jocelyndang): might want a separate thread for this.
-        usb_request_t* req;
-        while ((req = list_remove_head_type(&poll_state.completed_reqs,
-                                            usb_request_t, node)) != NULL) {
-            usb_request_complete(req, req->response.status, req->response.actual);
+            // If we just entered the configured state, we should schedule the read requests.
+            if (entered_configured) {
+                mtx_lock(&xdc->read_lock);
+                usb_request_t* req;
+                while ((req = list_remove_tail_type(&xdc->free_read_reqs,
+                                                    usb_request_t, node)) != NULL) {
+                    xdc_queue_read_locked(xdc, req);
+                }
+                mtx_unlock(&xdc->read_lock);
+
+                mtx_lock(&xdc->write_lock);
+                xdc_update_write_signal_locked(xdc, true /* online */);
+                mtx_unlock(&xdc->write_lock);
+            }
+
+            // Call complete callbacks out of the lock.
+            // TODO(jocelyndang): might want a separate thread for this.
+            usb_request_t* req;
+            while ((req = list_remove_head_type(&poll_state.completed_reqs,
+                                                usb_request_t, node)) != NULL) {
+                usb_request_complete(req, req->response.status, req->response.actual);
+            }
         }
     }
     return ZX_OK;
@@ -1010,6 +1035,11 @@ static zx_status_t xdc_init_internal(xdc_t* xdc) {
 
     list_initialize(&xdc->instance_list);
     mtx_init(&xdc->instance_list_lock, mtx_plain);
+
+    atomic_init(&xdc->suspended, false);
+
+    completion_reset(&xdc->has_instance_completion);
+    atomic_init(&xdc->num_instances, 0);
 
     usb_request_pool_init(&xdc->free_write_reqs);
     mtx_init(&xdc->write_lock, mtx_plain);

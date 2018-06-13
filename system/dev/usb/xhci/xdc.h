@@ -6,6 +6,7 @@
 
 #include <ddk/device.h>
 #include <ddk/usb-request.h>
+#include <sync/completion.h>
 #include <xdc-server-utils/packet.h>
 
 #include "xdc-hw.h"
@@ -124,6 +125,10 @@ typedef struct {
 
     struct list_node instance_list;
     mtx_t instance_list_lock;
+
+    // At least one xdc instance has been opened.
+    completion_t has_instance_completion;
+    atomic_int num_instances;
 } xdc_t;
 
 // TODO(jocelyndang): we should get our own handles rather than borrowing them from XHCI.
