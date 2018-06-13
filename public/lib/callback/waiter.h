@@ -172,8 +172,12 @@ class BaseWaiter : public fxl::RefCountedThreadSafe<BaseWaiter<A, R, Args...>> {
 
  protected:
   explicit BaseWaiter(A&& accumulator) : accumulator_(std::move(accumulator)) {}
+  virtual ~BaseWaiter() {}
 
  private:
+  FRIEND_REF_COUNTED_THREAD_SAFE(BaseWaiter);
+  FRIEND_MAKE_REF_COUNTED(BaseWaiter);
+
   template <typename T>
   void ReturnResult(T token, Args... args) {
     if (done_) {
@@ -228,7 +232,7 @@ class Waiter : public BaseWaiter<internal::ResultAccumulator<S, T>,
                                  T> {
  public:
   static fxl::RefPtr<Waiter<S, T>> Create(S success_status) {
-    return fxl::AdoptRef(new Waiter<S, T>(success_status));
+    return fxl::MakeRefCounted<Waiter<S, T>>(success_status);
   }
 
   void Finalize(std::function<void(S, std::vector<T>)> callback) {
@@ -241,6 +245,10 @@ class Waiter : public BaseWaiter<internal::ResultAccumulator<S, T>,
   }
 
  private:
+  FRIEND_REF_COUNTED_THREAD_SAFE(Waiter);
+  FRIEND_MAKE_REF_COUNTED(Waiter);
+  ~Waiter() override{};
+
   explicit Waiter(S success_status)
       : BaseWaiter<internal::ResultAccumulator<S, T>,
                    std::pair<S, std::vector<T>>,
@@ -255,13 +263,17 @@ template <class S>
 class StatusWaiter : public BaseWaiter<internal::StatusAccumulator<S>, S, S> {
  public:
   static fxl::RefPtr<StatusWaiter<S>> Create(S success_status) {
-    return fxl::AdoptRef(new StatusWaiter<S>(success_status));
+    return fxl::MakeRefCounted<StatusWaiter<S>>(success_status);
   }
 
  private:
+  FRIEND_REF_COUNTED_THREAD_SAFE(StatusWaiter);
+  FRIEND_MAKE_REF_COUNTED(StatusWaiter);
+
   explicit StatusWaiter(S success_status)
       : BaseWaiter<internal::StatusAccumulator<S>, S, S>(
             internal::StatusAccumulator<S>(success_status)) {}
+  ~StatusWaiter() override{};
 };
 
 // AnyWaiter is used to wait many asynchronous calls and returns the first
@@ -276,8 +288,8 @@ class AnyWaiter
   static fxl::RefPtr<AnyWaiter<S, V>> Create(S success_status,
                                              S default_status,
                                              V default_value = V()) {
-    return fxl::AdoptRef(new AnyWaiter<S, V>(success_status, default_status,
-                                             std::move(default_value)));
+    return fxl::MakeRefCounted<AnyWaiter<S, V>>(success_status, default_status,
+                                                std::move(default_value));
   }
 
   void Finalize(std::function<void(S, V)> callback) {
@@ -288,11 +300,15 @@ class AnyWaiter
   }
 
  private:
+  FRIEND_REF_COUNTED_THREAD_SAFE(AnyWaiter);
+  FRIEND_MAKE_REF_COUNTED(AnyWaiter);
+
   AnyWaiter(S success_status, S default_status, V default_value)
       : BaseWaiter<internal::AnyAccumulator<S, V>, std::pair<S, V>, S, V>(
             internal::AnyAccumulator<S, V>(success_status,
                                            default_status,
                                            std::move(default_value))) {}
+  ~AnyWaiter() override{};
 };
 
 // Promise is used to wait on a single asynchronous call. A typical usage
@@ -316,8 +332,8 @@ class Promise : public BaseWaiter<internal::PromiseAccumulator<S, V>,
   // returned to the callback in |Finalize| if |NewCallback| is not called.
   static fxl::RefPtr<Promise<S, V>> Create(S default_status,
                                            V default_value = V()) {
-    return fxl::AdoptRef(
-        new Promise<S, V>(default_status, std::move(default_value)));
+    return fxl::MakeRefCounted<Promise<S, V>>(default_status,
+                                              std::move(default_value));
   }
 
   void Finalize(std::function<void(S, V)> callback) {
@@ -329,10 +345,14 @@ class Promise : public BaseWaiter<internal::PromiseAccumulator<S, V>,
   }
 
  private:
+  FRIEND_REF_COUNTED_THREAD_SAFE(Promise);
+  FRIEND_MAKE_REF_COUNTED(Promise);
+
   Promise(S default_status, V default_value)
       : BaseWaiter<internal::PromiseAccumulator<S, V>, std::pair<S, V>, S, V>(
             internal::PromiseAccumulator<S, V>(default_status,
                                                std::move(default_value))) {}
+  ~Promise() override{};
 };
 
 // CompletionWaiter can be used to be notified on completion of a computation.
@@ -340,7 +360,7 @@ class CompletionWaiter
     : public BaseWaiter<internal::CompletionAccumulator, bool> {
  public:
   static fxl::RefPtr<CompletionWaiter> Create() {
-    return fxl::AdoptRef(new CompletionWaiter());
+    return fxl::MakeRefCounted<CompletionWaiter>();
   }
 
   void Finalize(std::function<void()> callback) {
@@ -349,9 +369,13 @@ class CompletionWaiter
   }
 
  private:
+  FRIEND_REF_COUNTED_THREAD_SAFE(CompletionWaiter);
+  FRIEND_MAKE_REF_COUNTED(CompletionWaiter);
+
   CompletionWaiter()
       : BaseWaiter<internal::CompletionAccumulator, bool>(
             internal::CompletionAccumulator()) {}
+  ~CompletionWaiter() override{};
 };
 
 }  // namespace callback
