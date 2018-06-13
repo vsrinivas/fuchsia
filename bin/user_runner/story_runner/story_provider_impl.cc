@@ -21,6 +21,7 @@
 #include "peridot/bin/device_runner/cobalt/cobalt.h"
 #include "peridot/bin/user_runner/focus.h"
 #include "peridot/bin/user_runner/presentation_provider.h"
+#include "peridot/bin/user_runner/storage/constants_and_utils.h"
 #include "peridot/bin/user_runner/storage/session_storage.h"
 #include "peridot/bin/user_runner/storage/story_storage.h"
 #include "peridot/bin/user_runner/story_runner/link_impl.h"
@@ -32,7 +33,6 @@
 #include "peridot/lib/fidl/proxy.h"
 #include "peridot/lib/ledger_client/operations.h"
 #include "peridot/lib/ledger_client/page_id.h"
-#include "peridot/lib/ledger_client/storage.h"
 #include "peridot/lib/rapidjson/rapidjson.h"
 
 namespace modular {

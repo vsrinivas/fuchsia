@@ -7,7 +7,6 @@ group("ledger_client") {
     ":constants",
     ":operations",
     ":page_client",
-    ":storage",
     ":types",
   ]
 }
@@ -70,24 +69,6 @@ source_set("status") {
   ]
 }
 
-source_set("storage") {
-  sources = [
-    "storage.cc",
-    "storage.h",
-  ]
-
-  deps = [
-    "//garnet/public/lib/fidl/cpp",
-    "//garnet/public/lib/fxl",
-    "//peridot/lib/util",
-  ]
-
-  public_deps = [
-    "//peridot/public/lib:fidl",
-    "//peridot/public/lib:fidl_internal",
-  ]
-}
-
 source_set("types") {
   sources = [
     "types.h",
@@ -103,7 +84,6 @@ group("unittests") {
 
   deps = [
     ":page_client_unittest",
-    ":storage_unittest",
   ]
 }
 
@@ -121,21 +101,6 @@ source_set("page_client_unittest") {
     "//peridot/lib/fidl:array_to_string",
     "//peridot/lib/testing:test_with_ledger",
     "//peridot/public/lib/async/cpp:operation",
-    "//third_party/googletest:gtest",
-  ]
-}
-
-source_set("storage_unittest") {
-  testonly = true
-
-  sources = [
-    "storage_unittest.cc",
-  ]
-
-  deps = [
-    ":storage",
-    "//garnet/public/lib/fsl",
-    "//garnet/public/lib/fxl",
     "//third_party/googletest:gtest",
   ]
 }

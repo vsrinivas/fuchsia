@@ -7,10 +7,10 @@
 #include <fuchsia/modular/internal/cpp/fidl.h>
 #include "lib/fidl/cpp/clone.h"
 #include "lib/fxl/functional/make_copyable.h"
+#include "peridot/bin/user_runner/storage/constants_and_utils.h"
 #include "peridot/bin/user_runner/storage/story_storage_xdr.h"
 #include "peridot/lib/fidl/clone.h"
 #include "peridot/lib/ledger_client/operations.h"
-#include "peridot/lib/ledger_client/storage.h"
 
 namespace modular {
 

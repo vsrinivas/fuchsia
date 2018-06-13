@@ -10,7 +10,7 @@
 #include "lib/fxl/functional/make_copyable.h"
 #include "peridot/bin/acquirers/story_info/link_watcher_impl.h"
 #include "peridot/bin/acquirers/story_info/story_info.h"
-#include "peridot/lib/ledger_client/storage.h"
+#include "peridot/bin/user_runner/storage/constants_and_utils.h"  // MakeLinkKey, EncodeModulePath
 
 namespace maxwell {
 

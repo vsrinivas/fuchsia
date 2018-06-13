@@ -6,13 +6,13 @@
 // solely to implement the history of change operations for Links.
 
 #include <fuchsia/modular/cpp/fidl.h>
+#include "peridot/bin/user_runner/storage/constants_and_utils.h"
 #include "peridot/bin/user_runner/story_runner/link_impl.h"
 #include "peridot/lib/fidl/array_to_string.h"
 #include "peridot/lib/fidl/clone.h"
 #include "peridot/lib/fidl/json_xdr.h"
 #include "peridot/lib/ledger_client/operations.h"
 #include "peridot/lib/ledger_client/page_client.h"
-#include "peridot/lib/ledger_client/storage.h"
 #include "peridot/lib/util/debug.h"
 
 namespace modular {

@@ -27,6 +27,7 @@
 #include "lib/fxl/strings/join_strings.h"
 #include "lib/fxl/type_converter.h"
 #include "peridot/bin/device_runner/cobalt/cobalt.h"
+#include "peridot/bin/user_runner/storage/constants_and_utils.h"
 #include "peridot/bin/user_runner/storage/story_storage.h"
 #include "peridot/bin/user_runner/story_runner/chain_impl.h"
 #include "peridot/bin/user_runner/story_runner/link_impl.h"
@@ -38,7 +39,6 @@
 #include "peridot/lib/fidl/array_to_string.h"
 #include "peridot/lib/fidl/clone.h"
 #include "peridot/lib/ledger_client/operations.h"
-#include "peridot/lib/ledger_client/storage.h"
 
 namespace modular {
 

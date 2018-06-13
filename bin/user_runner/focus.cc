@@ -7,11 +7,11 @@
 #include "lib/fidl/cpp/array.h"
 #include "lib/fsl/vmo/strings.h"
 #include "lib/fxl/time/time_point.h"
+#include "peridot/bin/user_runner/storage/constants_and_utils.h"
 #include "peridot/lib/fidl/array_to_string.h"
 #include "peridot/lib/fidl/clone.h"
 #include "peridot/lib/fidl/json_xdr.h"
 #include "peridot/lib/ledger_client/operations.h"
-#include "peridot/lib/ledger_client/storage.h"
 #include "peridot/lib/rapidjson/rapidjson.h"
 
 namespace modular {

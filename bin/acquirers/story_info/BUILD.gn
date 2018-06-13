@@ -20,9 +20,11 @@ executable_package("story_info") {
     "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/svc/cpp",
+
+    # TODO(thatguy): Do not depend on constants_and_utils.
+    "//peridot/bin/user_runner/storage:constants_and_utils",
     "//peridot/lib:maxwell_internal",
     "//peridot/lib/fidl:json_xdr",
-    "//peridot/lib/ledger_client:storage",
     "//peridot/lib/rapidjson",
     "//peridot/public/lib:fidl",
     "//peridot/public/lib/app_driver/cpp:agent_driver",

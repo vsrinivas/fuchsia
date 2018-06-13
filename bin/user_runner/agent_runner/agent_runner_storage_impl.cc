@@ -10,9 +10,9 @@
 #include <fuchsia/ledger/cpp/fidl.h>
 #include "lib/async/cpp/operation.h"
 #include "lib/fsl/vmo/strings.h"
+#include "peridot/bin/user_runner/storage/constants_and_utils.h"
 #include "peridot/lib/fidl/array_to_string.h"
 #include "peridot/lib/fidl/json_xdr.h"
-#include "peridot/lib/ledger_client/storage.h"
 
 namespace modular {
 namespace {

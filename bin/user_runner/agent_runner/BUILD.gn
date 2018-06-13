@@ -25,12 +25,12 @@ source_set("agent_runner") {
     "//garnet/public/lib/fxl",
     "//peridot/bin/user_runner:component_context",
     "//peridot/bin/user_runner/message_queue",
+    "//peridot/bin/user_runner/storage:constants_and_utils",
     "//peridot/lib/common:teardown",
     "//peridot/lib/fidl:app_client",
     "//peridot/lib/fidl:array_to_string",
     "//peridot/lib/fidl:json_xdr",
     "//peridot/lib/ledger_client:page_client",
-    "//peridot/lib/ledger_client:storage",
     "//peridot/lib/ledger_client:types",
     "//peridot/public/lib:fidl",
     "//peridot/public/lib/async/cpp:operation",
@@ -70,7 +70,7 @@ executable("agent_runner_unittest") {
 
 tests_package("agent_runner_unittests") {
   deps = [
-    ":agent_runner_unittest"
+    ":agent_runner_unittest",
   ]
 }
 

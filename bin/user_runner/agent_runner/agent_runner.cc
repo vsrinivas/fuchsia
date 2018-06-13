@@ -16,9 +16,9 @@
 #include "lib/fxl/functional/make_copyable.h"
 #include "peridot/bin/user_runner/agent_runner/agent_context_impl.h"
 #include "peridot/bin/user_runner/agent_runner/agent_runner_storage_impl.h"
+#include "peridot/bin/user_runner/storage/constants_and_utils.h"
 #include "peridot/lib/fidl/array_to_string.h"
 #include "peridot/lib/fidl/json_xdr.h"
-#include "peridot/lib/ledger_client/storage.h"
 
 namespace modular {
 

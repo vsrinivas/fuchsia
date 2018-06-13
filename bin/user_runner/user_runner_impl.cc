@@ -26,6 +26,7 @@
 #include "peridot/bin/user_runner/puppet_master/make_production_impl.h"
 #include "peridot/bin/user_runner/puppet_master/puppet_master_impl.h"
 #include "peridot/bin/user_runner/puppet_master/story_command_executor.h"
+#include "peridot/bin/user_runner/storage/constants_and_utils.h"
 #include "peridot/bin/user_runner/storage/session_storage.h"
 #include "peridot/bin/user_runner/story_runner/link_impl.h"
 #include "peridot/bin/user_runner/story_runner/story_provider_impl.h"
@@ -40,7 +41,6 @@
 #include "peridot/lib/ledger_client/ledger_client.h"
 #include "peridot/lib/ledger_client/page_id.h"
 #include "peridot/lib/ledger_client/status.h"
-#include "peridot/lib/ledger_client/storage.h"
 
 namespace modular {
 
