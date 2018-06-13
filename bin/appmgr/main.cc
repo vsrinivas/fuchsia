@@ -13,7 +13,7 @@ int main(int argc, char** argv) {
   auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
 
   async::Loop loop(&kAsyncLoopConfigMakeDefault);
-  auto request = zx_get_startup_handle(PA_DIRECTORY_REQUEST);
+  auto request = zx_take_startup_handle(PA_DIRECTORY_REQUEST);
 
   fuchsia::sys::AppmgrArgs args{.pa_directory_request = std::move(request),
                                 .sysmgr_url = "sysmgr",

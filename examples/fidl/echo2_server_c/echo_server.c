@@ -18,7 +18,7 @@ static void connect(void* context, const char* service_name, zx_handle_t service
 }
 
 int main(int argc, char** argv) {
-  zx_handle_t directory_request = zx_get_startup_handle(PA_DIRECTORY_REQUEST);
+  zx_handle_t directory_request = zx_take_startup_handle(PA_DIRECTORY_REQUEST);
   if (directory_request == ZX_HANDLE_INVALID) {
     printf("error: directory_request was ZX_HANDLE_INVALID\n");
     return -1;

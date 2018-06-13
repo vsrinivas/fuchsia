@@ -763,7 +763,7 @@ void RunSubprocess(const char* func_name) {
   std::vector<zx_handle_t> handles;
   for (;;) {
     zx_handle_t handle =
-        zx_get_startup_handle(PA_HND(PA_USER0, handles.size()));
+        zx_take_startup_handle(PA_HND(PA_USER0, handles.size()));
     if (handle == ZX_HANDLE_INVALID)
       break;
     handles.push_back(handle);

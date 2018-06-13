@@ -72,7 +72,7 @@ pub const PA_USER2: u32 = 0xF2;
 
 #[link(name="fdio")]
 extern {
-    pub fn zx_get_startup_handle(id: u32) -> zx_handle_t;
+    pub fn zx_take_startup_handle(id: u32) -> zx_handle_t;
     pub fn fdio_service_connect(svcpath: *const c_char, h: zx_handle_t) -> zx_status_t;
     pub fn fdio_service_connect_at(dir: zx_handle_t, path: *const c_char, h: zx_handle_t) -> zx_status_t;
 }

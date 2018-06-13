@@ -196,7 +196,7 @@ int main(int argc, const char** argv) {
   //
   // TODO(abarth): Instead of closing this handle, we should offer some
   // introspection services for debugging.
-  zx_handle_close(zx_get_startup_handle(PA_DIRECTORY_REQUEST));
+  zx_handle_close(zx_take_startup_handle(PA_DIRECTORY_REQUEST));
 
   async::Loop loop;
   async_set_default(loop.async());

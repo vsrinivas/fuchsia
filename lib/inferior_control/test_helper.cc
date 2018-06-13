@@ -11,7 +11,7 @@
 #include <zircon/syscalls.h>
 
 static int test_attach() {
-  auto channel = zx_get_startup_handle(PA_HND(PA_USER0, 0));
+  auto channel = zx_take_startup_handle(PA_HND(PA_USER0, 0));
   auto status = zx_object_wait_one(channel, ZX_CHANNEL_PEER_CLOSED,
                                    ZX_TIME_INFINITE, nullptr);
   if (status != ZX_OK) {

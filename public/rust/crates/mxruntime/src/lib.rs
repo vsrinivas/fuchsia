@@ -34,7 +34,7 @@ pub enum HandleType {
 /// Get a startup handle of the given type, if available.
 pub fn get_startup_handle(htype: HandleType) -> Option<Handle> {
     unsafe {
-        let raw = mxruntime_sys::zx_get_startup_handle(htype as u32);
+        let raw = mxruntime_sys::zx_take_startup_handle(htype as u32);
         if raw == mxruntime_sys::ZX_HANDLE_INVALID {
             None
         } else {

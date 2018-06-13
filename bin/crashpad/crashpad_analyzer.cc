@@ -135,8 +135,8 @@ int main(int argc, char* const argv[]) {
       static_cast<crashpad::CrashReportUploadThread*>(upload_thread.Get()),
       &annotations, &attachments, nullptr);
 
-  zx_handle_t process = zx_get_startup_handle(PA_HND(PA_USER0, 0));
-  zx_handle_t thread = zx_get_startup_handle(PA_HND(PA_USER0, 1));
+  zx_handle_t process = zx_take_startup_handle(PA_HND(PA_USER0, 0));
+  zx_handle_t thread = zx_take_startup_handle(PA_HND(PA_USER0, 1));
   return exception_handler.HandleExceptionHandles(process, thread)
              ? EXIT_SUCCESS
              : EXIT_FAILURE;

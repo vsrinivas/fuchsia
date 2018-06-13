@@ -43,7 +43,7 @@ std::unique_ptr<StartupContext> StartupContext::CreateFromStartupInfo() {
 
 std::unique_ptr<StartupContext>
 StartupContext::CreateFromStartupInfoNotChecked() {
-  zx_handle_t directory_request = zx_get_startup_handle(PA_DIRECTORY_REQUEST);
+  zx_handle_t directory_request = zx_take_startup_handle(PA_DIRECTORY_REQUEST);
   return std::make_unique<StartupContext>(
       subtle::CreateStaticServiceRootHandle(), zx::channel(directory_request));
 }
