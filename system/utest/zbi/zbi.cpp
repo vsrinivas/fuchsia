@@ -40,6 +40,8 @@ typedef struct test_zbi {
     char bootfs_payload[kBootfsPayloadLen];
 } __PACKED test_zbi_t;
 
+static_assert(sizeof(test_zbi_t) % ZBI_ALIGNMENT == 0, "");
+
 static void init_zbi_header(zbi_header_t* hdr) {
     hdr->flags = ZBI_FLAG_VERSION;
     hdr->reserved0 = 0;
@@ -80,16 +82,12 @@ static uint8_t* get_test_zbi_extra(const size_t extra_bytes) {
     strcpy(result->bootfs_payload, kTestBootfs);
     result->bootfs_hdr.length = static_cast<uint32_t>(sizeof(kTestBootfs));
 
-    // We have to be a little bit careful about setting the length of the
-    // container itself since its length should not contain the padding of the
-    // last boot item but will likely contain the padding of all internal
-    // boot items.
-    result->header.length = static_cast<uint32_t>(
-        sizeof(*result)
-        - sizeof(result->header)          // Don't count container header.
-        - sizeof(result->bootfs_payload)  // Subtract the last entry...
-        + sizeof(kTestBootfs)             // ... and add back non-padding bytes.
-    );
+    // The container's length is always kept aligned, though each item
+    // header within the container might have an unaligned length and
+    // padding bytes after that item's payload so that the following header
+    // (or the end of the container) is aligned.
+    result->header.length =
+        static_cast<uint32_t>(sizeof(*result) - sizeof(zbi_header_t));
     return reinterpret_cast<uint8_t*>(result);
 }
 
@@ -196,7 +194,7 @@ static bool zbi_test_truncated(void) {
     zbi::Zbi image(test_zbi);
 
     zbi_header_t* bootdata_header = reinterpret_cast<zbi_header_t*>(test_zbi);
-    bootdata_header->length -= 1;   // Truncate the image.
+    bootdata_header->length -= 8;   // Truncate the image.
 
     zbi_header_t* trace = nullptr;
     ASSERT_NE(image.Check(&trace), ZBI_RESULT_OK,
@@ -265,7 +263,7 @@ static bool zbi_test_append_full(void) {
     BEGIN_TEST;
 
     // Enough space for a small payload
-    const size_t kMaxAppendPayloadSize = 5;
+    const size_t kMaxAppendPayloadSize = ZBI_ALIGN(5);
     const size_t kExtraBytes = sizeof(zbi_header_t) + kMaxAppendPayloadSize;
     const size_t kZbiSize = sizeof(test_zbi_t) + kExtraBytes;
     const size_t kExtraSentinelLength = 64;
@@ -332,7 +330,7 @@ static bool zbi_test_append_multi(void) {
     });
 
 
-    uint8_t test_zbi[sizeof(test_zbi_t)];
+    alignas(ZBI_ALIGNMENT) uint8_t test_zbi[sizeof(test_zbi_t)];
     zbi_header_t* hdr = reinterpret_cast<zbi_header_t*>(test_zbi);
 
     // Create an empty container.

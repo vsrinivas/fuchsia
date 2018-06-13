@@ -214,9 +214,7 @@ typedef struct {
     zbi_header_t hdr_file;
     zbi_header_t hdr_kernel;
     zbi_kernel_t data_kernel;
-    // Some unspecified amount of available memory follows.
-    // TODO(mcgrathr): Make it hdr_kernel.extra bytes?
-    uint8_t reserved[];
+    uint8_t reserved[/*data_kernel.reserve_memory_size*/];
 } zircon_kernel_t;
 #endif
 
