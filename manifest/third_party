@@ -120,7 +120,7 @@
     <project name="third_party/go"
              remote="https://fuchsia.googlesource.com/third_party/go"
              gerrithost="https://fuchsia-review.googlesource.com"
-             revision="91e62a7934f86b176b4f56ebc617d5dcb8bedda6"
+             revision="e04a589c4fa1da88b21189ed5c126217d3c285d0"
              path="third_party/go"/>
     <project name="go_x_crypto"
              path="third_party/golang/crypto"
@@ -287,7 +287,7 @@
     <project name="third_party/sbase"
              path="third_party/sbase"
              remote="https://fuchsia.googlesource.com/third_party/sbase"
-             revision="65e6e6592687767594450ef14cb934630bb46e4e"
+             revision="1a8d14e4550a2f45291f299d3e4124eef03feb76"
              gerrithost="https://fuchsia-review.googlesource.com"/>
     <project name="third_party/shaderc"
              path="third_party/shaderc"
@@ -323,7 +323,7 @@
              path="third_party/openssh-portable"
              remote="https://fuchsia.googlesource.com/third_party/openssh-portable"
              gerrithost="https://fuchsia-review.googlesource.com"
-             revision="539314429b59eac392d640acc3f3245de56c5b1d"/>
+             revision="9760683b0c33d2e2943f7565137f53ba2a00755d"/>
     <project name="third_party/vim"
              path="third_party/vim"
              remote="https://fuchsia.googlesource.com/third_party/vim"
