@@ -541,9 +541,8 @@ void OmxCodecRunner::ComputeInputConstraints() {
                   ::fuchsia::mediacodec::kDefaultInputIsSingleBufferMode,
           });
 
-  // We're about to be bound to the Codec channel, then we'll expect to see
-  // SetEventSink() which will immediately send the input_constraints_ to the
-  // client as the first server to client message.
+  // We're about to be bound to the Codec channel, which will immediately send
+  // the input_constraints_ to the client as the first server to client message.
 }
 
 //
@@ -565,8 +564,8 @@ void OmxCodecRunner::ComputeInputConstraints() {
 //
 // This is called on the FIDL thread, but we post any sent messages back to the
 // FIDL thread to be sent on a clean thread without lock_ held anyway.
-void OmxCodecRunner::onInputConstraintsReady(
-    std::unique_lock<std::mutex>& lock) {
+void OmxCodecRunner::onInputConstraintsReady() {
+  std::unique_lock<std::mutex> lock(lock_);
   StartIgnoringClientOldOutputConfigLocked();
   GenerateAndSendNewOutputConfig(lock, true);
 
@@ -659,7 +658,7 @@ void OmxCodecRunner::GenerateAndSendNewOutputConfig(
   VLOGF("GenerateAndSendNewOutputConfig() - fidl_async_: %p\n", fidl_async_);
   PostSerial(fidl_async_,
              [this, output_config = std::move(config_copy)]() mutable {
-               event_sink_->OnOutputConfig(std::move(output_config));
+               binding_->events().OnOutputConfig(std::move(output_config));
              });
 }
 
@@ -2903,7 +2902,7 @@ void OmxCodecRunner::onOmxStreamFailed(uint64_t stream_lifetime_ordinal) {
           "EnableOnOmxStreamFailed(), so closing the Codec channel instead.");
     }
     PostSerial(fidl_async_, [this, stream_lifetime_ordinal] {
-      event_sink_->OnStreamFailed(stream_lifetime_ordinal);
+      binding_->events().OnStreamFailed(stream_lifetime_ordinal);
     });
   }  // ~lock
 }
@@ -2987,7 +2986,7 @@ void OmxCodecRunner::SendFreeInputPacketLocked(
          thrd_current() != fidl_thread_);
   // We only send using the FIDL thread.
   PostSerial(fidl_async_, [this, header = std::move(header)] {
-    event_sink_->OnFreeInputPacket(std::move(header));
+    binding_->events().OnFreeInputPacket(std::move(header));
   });
 }
 
@@ -3106,7 +3105,9 @@ OMX_ERRORTYPE OmxCodecRunner::FillBufferDone(
                // output for OMX, hopefully.
                .start_access_unit = audio_decoder_params_ ? true : false,
                .known_end_access_unit = audio_decoder_params_ ? true : false,
-           }] { event_sink_->OnOutputPacket(std::move(p), false, false); });
+           }] {
+            binding_->events().OnOutputPacket(std::move(p), false, false);
+          });
     }
     if (is_eos) {
       VLOGF("sending OnOutputEndOfStream()\n");
@@ -3138,8 +3139,8 @@ OMX_ERRORTYPE OmxCodecRunner::FillBufferDone(
                    // had been queued to a failed OMX stream, hide the stream
                    // failure from the Codec interface, etc.
                    bool error_detected_before = false;
-                   event_sink_->OnOutputEndOfStream(stream_lifetime_ordinal,
-                                                    error_detected_before);
+                   binding_->events().OnOutputEndOfStream(
+                       stream_lifetime_ordinal, error_detected_before);
                  });
     }
     // ~recycle_packet may recycle if not already cancelled - this happens if

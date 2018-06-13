@@ -20,6 +20,11 @@ CodecRunner::~CodecRunner() {
 void CodecRunner::BindAndOwnSelf(
     fidl::InterfaceRequest<fuchsia::mediacodec::Codec> codec_request,
     std::unique_ptr<CodecRunner> self) {
+  assert(thrd_current() == fidl_thread_);
+  // We have input_constraints_ by now thanks to our behavior (server-side),
+  // so this can be an assert().
+  assert(input_constraints_);
+
   binding_ = std::make_unique<BindingType>(std::move(self));
   binding_->set_error_handler([this] {
     // No point in trying to send an epitaph here since the reason we're here
@@ -31,51 +36,37 @@ void CodecRunner::BindAndOwnSelf(
     Exit("The Codec channel failed server-side.  Normal if client is done.");
   });
   binding_->Bind(std::move(codec_request), fidl_async_);
-}
 
-void CodecRunner::SetEventSink(
-    fidl::InterfaceHandle<fuchsia::mediacodec::CodecEvents> event_sink) {
-  {  // scope lock
-    std::unique_lock<std::mutex> lock(lock_);
-    // If the client closes the event simulation channel, force sharing fate
-    // with the main channel.  The other direction is already true since
-    // CodecRunner is essentially owned by the server end of Codec and
-    // event_sink_ is part of the CodecRunner instance.
-    event_sink_.set_error_handler([this] {
-      binding_.reset();
-      Exit("event_sink_ failed server-side.  Normal if client is done.");
-    });
-    event_sink_.Bind(std::move(event_sink), fidl_async_);
-    // We have input_constraints_ by now thanks to our behavior (server-side),
-    // so this can be an assert().
-    assert(input_constraints_);
+  // Some sub-classes already want to convey some output constraints as early
+  // as possible - this is a place for those sub-classes to do so.  Sending
+  // before input constraints encourages the client to configure output before
+  // delivering input that starts the first stream, to try to avoid extra
+  // output re-configs.
+  onInputConstraintsReady();
 
-    // Some sub-classes already want to convey some output constraints as early
-    // as possible - this is a place for those sub-classes to do so.  Sending
-    // before input constraints encourages the client to configure output before
-    // delivering input that starts the first stream, to try to avoid extra
-    // output re-configs.
-    onInputConstraintsReady(lock);
+  // Now we can tell the client about the input constraints.  We do this as an
+  // event because the client has no choice re. whether the client needs
+  // these. These are _always_ needed by the client.  Also, as an event it
+  // would be easier to have the CodecFactory potentially send these instead
+  // of the Codec to save a bit on latency.
+  //
+  // Intentional copy, in case a derived class wants to refer to
+  // input_constraints_.
+  //
+  // TODO(dustingreen): Make these serial, make the serial context be the same
+  // one and be visible to all the places that need to send, probably serial
+  // context in CodecRunner as a protected field.  OR, ask and confirm that
+  // async::PostTask() is guaranteed to remain serial (like it was before, and
+  // like it seems to be the vast majority of the time currently).
+  input_constraints_sent_ = true;
 
-    // Now we can tell the client about the input constraints.  We do this as an
-    // event because the client has no choice re. whether the client needs
-    // these. These are _always_ needed by the client.  Also, as an event it
-    // would be easier to have the CodecFactory potentially send these instead
-    // of the Codec to save a bit on latency.
-    //
-    // Intentional copy, in case a derived class wants to refer to
-    // input_constraints_.
-    //
-    // TODO(dustingreen): Make these serial, make the serial context be the same
-    // one and be visible to all the places that need to send, probably serial
-    // context in CodecRunner as a protected field.  OR, ask and confirm that
-    // async::PostTask() is guaranteed to remain serial (like it was before, and
-    // like it seems to be the vast majority of the time currently).
-    input_constraints_sent_ = true;
-    async::PostTask(fidl_async_, [this] {
-      event_sink_->OnInputConstraints(*input_constraints_);
-    });
-  }
+  // We post here so that we're ordered after similar posting done in
+  // onInputConstraintsReady() above, so that the derived class has every chance
+  // to send output constraints before input constraints to encourage client to
+  // configure output before starting to deliver input data.
+  async::PostTask(fidl_async_, [this] {
+    binding_->events().OnInputConstraints(*input_constraints_);
+  });
 
   onSetupDone();
 }

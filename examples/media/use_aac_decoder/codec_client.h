@@ -35,10 +35,7 @@
 // the Codec interface.  There is no requirement that a Codec client use
 // dedicated threads to achieve a permitted and useful ordering. The client does
 // of course need to stay within the sequencing rules of the interface.
-//
-// TODO(dustingreen): When FIDL events are usable, switch to those instead of
-// directly implementing a callback interface here.
-class CodecClient : fuchsia::mediacodec::CodecEvents {
+class CodecClient {
  public:
   // loop - The loop that all the FIDL work will run on.  We configure this
   // explicitly instead of using the default loop per thread mechanism, because
@@ -114,11 +111,16 @@ class CodecClient : fuchsia::mediacodec::CodecEvents {
 
   void CallSyncAndWaitForResponse();
 
-  // Codec-wide events.
+  //
+  // Events:
+  //
+
+  void OnStreamFailed(uint64_t stream_lifetime_ordinal);
+
   void OnInputConstraints(
-      fuchsia::mediacodec::CodecBufferConstraints input_constraints) override;
+      fuchsia::mediacodec::CodecBufferConstraints input_constraints);
   void OnFreeInputPacket(
-      fuchsia::mediacodec::CodecPacketHeader free_input_packet) override;
+      fuchsia::mediacodec::CodecPacketHeader free_input_packet);
 
   // This example ignores any buffer constraints with
   // buffer_constraints_action_required false.
@@ -132,18 +134,14 @@ class CodecClient : fuchsia::mediacodec::CodecEvents {
   // more than one of this message per Codec instance (though not quite to the
   // degree needed to fully cover client handling of true mid-stream format
   // changes).
-  void OnOutputConfig(
-      fuchsia::mediacodec::CodecOutputConfig output_config) override;
+  void OnOutputConfig(fuchsia::mediacodec::CodecOutputConfig output_config);
 
   // Every output packet is stream-specific with stream_lifetime_ordinal set.
   void OnOutputPacket(fuchsia::mediacodec::CodecPacket output_packet,
-                      bool error_detected_before,
-                      bool error_detected_during) override;
+                      bool error_detected_before, bool error_detected_during);
 
   void OnOutputEndOfStream(uint64_t stream_lifetime_ordinal,
-                           bool error_detected_before) override;
-  void OnStreamFailed(uint64_t stream_lifetime_ordinal) override;
-
+                           bool error_detected_before);
   std::mutex lock_;
   async::Loop* loop_ = nullptr;  // must override
   async_t* async_ = nullptr;     // must override
@@ -152,8 +150,6 @@ class CodecClient : fuchsia::mediacodec::CodecEvents {
   // constructor.  If the caller asks for this more than once, the subsequent
   // requests give back a !is_valid() request.
   fidl::InterfaceRequest<fuchsia::mediacodec::Codec> temp_codec_request_;
-  // TODO(dustingreen): remove this once FIDL events are available.
-  fidl::Binding<fuchsia::mediacodec::CodecEvents> codec_events_binding_;
 
   // We're use unique_ptr<> here only for it's optional-ness.
   std::unique_ptr<fuchsia::mediacodec::CodecBufferConstraints>

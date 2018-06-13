@@ -752,194 +752,6 @@ struct CodecPacket {
   bool known_end_access_unit;
 };
 
-// TODO(dustingreen): This interface is temporary, and represents events that
-// will become FIDL events soon.
-interface CodecEvents {
-  // OnInputConstraints()
-  //
-  // The server sends this shortly after Codec creation to indicate input
-  // buffer constraints.  The "min" and "max" input constraints don't change
-  // for the life of the Codec.
-  //
-  // The "max" values for buffer size and count are large enough to support the
-  // most demanding format the server supports on input.  The "recommended"
-  // values should be workable for use with the input CodecFormatDetails
-  // conveyed during Codec creation.  The "recommended" values are not
-  // necessarily suitable if the client uses QueueInputFormatDetails() to
-  // change the input format.  In that case it's up to the client to determine
-  // suitable values, either by creating a new Codec instance instead, or
-  // knowing suitable values outside the scope of this protocol.
-  //
-  // See comments on CodecBufferConstraints.
-  //
-  // This message is guaranteed to be sent unsolicited to the Codec client
-  // during or shortly after Codec creation.  Clients should not depend on this
-  // being the very first message to arrive at the client.  OnOutputConfig()
-  // may be sent first by some codecs that already know their initial output
-  // config without any input data, to encourage (but not stictly require) the
-  // client to configure output buffers before feeding the first input, to
-  // avoid a wasteful OnOutputConfig() being generated for that first stream if
-  // the client has started configuring output but isn't done configuring
-  // output before the client sends the first input data for the first stream.
-  // A client is free to ignore OnOutputConfig() with a stale
-  // stream_lifetime_ordinal, but handling OnOutputConfig() with
-  // stream_lifetime_ordinal 0 (if any are sent) can help reduce latency to
-  // first output.  See OnOutputConfig() for more details.
-  //
-  // The "min" and "max" input constraints are guaranteed not to change for a
-  // given Codec instance.  The "recommended" values may effectively change
-  // when the server processes QueueInputFormatDetails().  There is not any way
-  // in the protocol short of creating a new Codec instance for the client to
-  // get those new "recommended" values.
-  //
-  // TODO(dustingreen): Maybe provide a way for the client to get updated
-  // "recommended" values for input, maybe only on request rather than via this
-  // event, to keep things simpler for simpler clients.  Maybe separate the
-  // recommendations from the constraints.
-  1 : OnInputConstraints(CodecBufferConstraints input_constraints);
-
-  // OnFreeInputPacket()
-  //
-  // The server sends this message when the codec is done consuming this packet
-  // and the packet can be re-filled by the client.
-  //
-  // This is not sent for all packets when a new buffer_lifetime_ordinal starts
-  // as in that case all the packets are initially free with the client.
-  //
-  // See comments on QueueInputBuffer() and "packet lifetime" in codec.md for
-  // for description of buffer lifetime and packet lifetime.
-  //
-  // After receiving the available input buffer via this event, the codec
-  // client can call later call QueueInputBuffer with appropriate offset and
-  // length set.
-  2 : OnFreeInputPacket(CodecPacketHeader free_input_packet);
-
-  //
-  // Stream-specific events:
-  //
-
-  // OnOutputConfig()
-  //
-  // This event informs the client of new output config.  The server will send
-  // at least one of these messages before the first output packet of a stream,
-  // but that message might not have buffer_constraints_action_required true.
-  //
-  // If buffer_constraints_action_required is true and the
-  // stream_lifetime_ordinal matches the current stream, the client must react
-  // by configuring or re-configuring output buffers.
-  //
-  // Some clients may prefer not to support mid-stream output config changes,
-  // but even those clients are required to process OnOutputConfig() messages
-  // up to the first output packet of each stream, as OnOutputConfig() is used
-  // for stream format detection as well as for potential mid-stream output
-  // config changes.
-  //
-  // For more on OnOutputConfig(), see cocec.md.
-  3 : OnOutputConfig(CodecOutputConfig output_config);
-
-  // OnOutputPacket()
-  //
-  // This is how the codec emits an output packet to the codec client.
-  //
-  // Order is significant.
-  //
-  // The client should eventually call RecycleOutputPacket() (possibly after
-  // switching streams multiple times), unless the buffer_lifetime_ordinal has
-  // moved on.  A stream change doesn't change which packets are busy with
-  // the client vs. free with the server.  See "packet lifetime" in codec.md for
-  // more.
-  //
-  // The relevant buffer is buffer 0 if running in single-buffer mode, or the
-  // buffer index is the same as packet_index if running in buffer-per-packet
-  // mode.
-  //
-  // For low-level buffer types that support it, a Codec is free to emit an
-  // output packet before the low-level buffer actually has any usable data in
-  // the buffer, with the mechanism for signalling the presence of data
-  // separate from the OnOutputPacket() message.  For such low-level buffer
-  // types, downstream consumers of data from the emitted packet must
-  // participate in the low-level buffer signalling mechanism to know when it's
-  // safe to consume the data.  This is most likely to be relevant when using a
-  // video decoder and gralloc-style buffers.
-  //
-  // The error_ bool(s) allow (but do not require) a Codec server to report
-  // errors that happen during an AU or between AUs.
-  //
-  // The scope of error_detected_before starts at the end of the last delivered
-  // output packet on this stream, or the start of stream if there were no
-  // previous output packets on this stream.  The scope ends at the start of
-  // the output_packet.
-  //
-  // The error_detected_before bool is separate so that discontinuities can be
-  // indicated separately from whether the current packet is damaged.
-  //
-  // The scope of error_detected_during is from the start to the end of this
-  // output_packet.
-  4 : OnOutputPacket(
-    CodecPacket output_packet,
-    bool error_detected_before,
-    bool error_detected_during);
-
-  // OnOutputEndOfStream()
-  //
-  // After QueueInputEndOfStream() is sent by the Codec client, within a
-  // reasonable duration the corresponding OnOutputEndOfStream() will be sent by
-  // the Codec server.  Similar to QueueInputEndOfStream(),
-  // OnOutputEndOfStream() is sent a maximum of once per stream.
-  //
-  // No more stream data for this stream will be sent after this message.  All
-  // input data for this stream was processed.
-  //
-  // While a Codec client is not required to QueueInputEndOfStream() (unless
-  // the client wants to use FlushEndOfStreamAndCloseStream()), if a Codec
-  // server receives QueueInputEndOfStream(), and the client hasn't closed the
-  // stream, the Codec server must generate a corresponding
-  // OnOutputEndOfStream() if nothing went wrong, or must send
-  // OnStreamFailed(), or must close the server end of the Codec channel.  An
-  // ideal Codec server would handle and report stream errors via the error_
-  // flags and complete stream processing without sending OnStreamFailed(), but
-  // in any case, the above-listed options are the only ways that an
-  // OnOutputEndOfStream() won't happen after QueueInputEndOfStream().
-  //
-  // There will be no more OnOutputPacket() or OnOutputConfig() messages for
-  // this stream_lifetime_ordinal after this message - if a server doesn't
-  // follow this rule, a client should close the Codec channel.
-  //
-  // The error_detected_before bool has the same semantics as the
-  // error_detected_before bool in OnOutputPacket().
-  5 : OnOutputEndOfStream(
-    uint64 stream_lifetime_ordinal,
-    bool error_detected_before);
-
-  // OnStreamFailed()
-  //
-  // The stream has failed, but the Codec instance is still usable for a new
-  // stream.
-  //
-  // This message is only ever sent by the server if the client previously sent
-  // EnableOnStreamFailed().  If the client didn't send EnableOnStreamFailed()
-  // then the server closes the Codec channel instead.
-  //
-  // Codec server implementations are encouraged to handle stream errors (and
-  // ideally to also report them via error_ bools of OnOutputPacket() and
-  // OnOutputEndOfStream()) without failing the whole stream, but if a codec
-  // server is unable to do that, but still can cleanly contain the failure to
-  // the stream, the codec server can (assuming EnableOnStreamFailed() was
-  // called) use OnStreamFailed() to indicate the stream failure to the client
-  // without closing the Codec channel.
-  //
-  // An ideal Codec server handles problems with input data without sending
-  // this message, but sending this message is preferred vs. closing the server
-  // end of the Codec channel if the Codec server can 100% reliably contain the
-  // stream failure to the stream, without any adverse impact to any later
-  // stream.
-  //
-  // No further messages will arrive from the server regarding the failed
-  // stream.  This includes any OnOutputEndOfStream() that the client would
-  // have otherwise expected.
-  6 : OnStreamFailed(uint64 stream_lifetime_ordinal);
-};
-
 // Codec
 //
 // The Codec interface exists to anchor the configuration of input and output
@@ -985,12 +797,6 @@ interface CodecEvents {
 // Codec instances for security-separate client-side contexts.
 [ServiceName="media::Codec"]
 interface Codec {
-  // This should be the first message from the client to the server and isn't
-  // really considered to be in any ordering domain.
-  //
-  // TODO(dustingreen): Convert to FIDL events instead.
-  999 : SetEventSink(CodecEvents event_sink);
-
   // EnableOnStreamFailed()
   //
   // Permit the server to use OnStreamFailed() instead of the server just
@@ -998,7 +804,78 @@ interface Codec {
   //
   // If the server hasn't seen this message by the time a stream fails, the
   // server will close the Codec channel instead of sending OnStreamFailed().
-  1 : EnableOnStreamFailed();
+  1: EnableOnStreamFailed();
+
+  // OnStreamFailed()
+  //
+  // The stream has failed, but the Codec instance is still usable for a new
+  // stream.
+  //
+  // This message is only ever sent by the server if the client previously sent
+  // EnableOnStreamFailed().  If the client didn't send EnableOnStreamFailed()
+  // then the server closes the Codec channel instead.
+  //
+  // Codec server implementations are encouraged to handle stream errors (and
+  // ideally to also report them via error_ bools of OnOutputPacket() and
+  // OnOutputEndOfStream()) without failing the whole stream, but if a codec
+  // server is unable to do that, but still can cleanly contain the failure to
+  // the stream, the codec server can (assuming EnableOnStreamFailed() was
+  // called) use OnStreamFailed() to indicate the stream failure to the client
+  // without closing the Codec channel.
+  //
+  // An ideal Codec server handles problems with input data without sending
+  // this message, but sending this message is preferred vs. closing the server
+  // end of the Codec channel if the Codec server can 100% reliably contain the
+  // stream failure to the stream, without any adverse impact to any later
+  // stream.
+  //
+  // No further messages will arrive from the server regarding the failed
+  // stream.  This includes any OnOutputEndOfStream() that the client would
+  // have otherwise expected.
+  2: -> OnStreamFailed(uint64 stream_lifetime_ordinal);
+
+  // OnInputConstraints()
+  //
+  // The server sends this shortly after Codec creation to indicate input
+  // buffer constraints.  The "min" and "max" input constraints don't change
+  // for the life of the Codec.
+  //
+  // The "max" values for buffer size and count are large enough to support the
+  // most demanding format the server supports on input.  The "recommended"
+  // values should be workable for use with the input CodecFormatDetails
+  // conveyed during Codec creation.  The "recommended" values are not
+  // necessarily suitable if the client uses QueueInputFormatDetails() to
+  // change the input format.  In that case it's up to the client to determine
+  // suitable values, either by creating a new Codec instance instead, or
+  // knowing suitable values outside the scope of this protocol.
+  //
+  // See comments on CodecBufferConstraints.
+  //
+  // This message is guaranteed to be sent unsolicited to the Codec client
+  // during or shortly after Codec creation.  Clients should not depend on this
+  // being the very first message to arrive at the client.  OnOutputConfig()
+  // may be sent first by some codecs that already know their initial output
+  // config without any input data, to encourage (but not stictly require) the
+  // client to configure output buffers before feeding the first input, to
+  // avoid a wasteful OnOutputConfig() being generated for that first stream if
+  // the client has started configuring output but isn't done configuring
+  // output before the client sends the first input data for the first stream.
+  // A client is free to ignore OnOutputConfig() with a stale
+  // stream_lifetime_ordinal, but handling OnOutputConfig() with
+  // stream_lifetime_ordinal 0 (if any are sent) can help reduce latency to
+  // first output.  See OnOutputConfig() for more details.
+  //
+  // The "min" and "max" input constraints are guaranteed not to change for a
+  // given Codec instance.  The "recommended" values may effectively change
+  // when the server processes QueueInputFormatDetails().  There is not any way
+  // in the protocol short of creating a new Codec instance for the client to
+  // get those new "recommended" values.
+  //
+  // TODO(dustingreen): Maybe provide a way for the client to get updated
+  // "recommended" values for input, maybe only on request rather than via this
+  // event, to keep things simpler for simpler clients.  Maybe separate the
+  // recommendations from the constraints.
+  3: -> OnInputConstraints(CodecBufferConstraints input_constraints);
 
   // SetInputBufferSettings() and AddInputBuffer()
   //
@@ -1025,7 +902,7 @@ interface Codec {
   // low-level buffers is outside the scope of this interface.
   //
   // This call ends any previous buffer_lifetime_ordinal, and starts a new one.
-  2 : SetInputBufferSettings(CodecPortBufferSettings input_settings);
+  4: SetInputBufferSettings(CodecPortBufferSettings input_settings);
 
   // The client is required to add all the input buffers before sending any
   // message that starts a new stream else the codec will close the Codec
@@ -1036,7 +913,26 @@ interface Codec {
   // will not generate an OnFreeInputPacket() for each new input packet.  The
   // client can immediately start sending QueueInputPacket() after sending the
   // last AddInputBuffer().
-  3 : AddInputBuffer(CodecBuffer buffer);
+  5: AddInputBuffer(CodecBuffer buffer);
+
+  // OnOutputConfig()
+  //
+  // This event informs the client of new output config.  The server will send
+  // at least one of these messages before the first output packet of a stream,
+  // but that message might not have buffer_constraints_action_required true.
+  //
+  // If buffer_constraints_action_required is true and the
+  // stream_lifetime_ordinal matches the current stream, the client must react
+  // by configuring or re-configuring output buffers.
+  //
+  // Some clients may prefer not to support mid-stream output config changes,
+  // but even those clients are required to process OnOutputConfig() messages
+  // up to the first output packet of each stream, as OnOutputConfig() is used
+  // for stream format detection as well as for potential mid-stream output
+  // config changes.
+  //
+  // For more on OnOutputConfig(), see cocec.md.
+  6: -> OnOutputConfig(CodecOutputConfig output_config);
 
   // SetOutputBufferSettings() and AddOutputBuffer()
   //
@@ -1057,8 +953,8 @@ interface Codec {
   // _permitted_ any time there is no current stream.
   //
   // For more on SetOutputBufferSettings() and AddOutputBuffer(), see codec.md.
-  4 : SetOutputBufferSettings(CodecPortBufferSettings output_settings);
-  5 : AddOutputBuffer(CodecBuffer buffer);
+  7: SetOutputBufferSettings(CodecPortBufferSettings output_settings);
+  8: AddOutputBuffer(CodecBuffer buffer);
 
   // FlushEndOfStreamAndCloseStream()
   //
@@ -1102,7 +998,7 @@ interface Codec {
   // OnOutputEndOfStream(), OnStreamFailed(), or the Codec channel closes.
   //
   // For more on FlushEndOfStreamAndCloseStream(), see codec.md.
-  6 : FlushEndOfStreamAndCloseStream(uint64 stream_lifetime_ordinal);
+  9: FlushEndOfStreamAndCloseStream(uint64 stream_lifetime_ordinal);
 
   // CloseCurrentStream()
   //
@@ -1127,7 +1023,7 @@ interface Codec {
   // See also Sync().
   //
   // For more on CloseCurrentStream(), see codec.md.
-  7 : CloseCurrentStream(
+  10: CloseCurrentStream(
       uint64 stream_lifetime_ordinal,
       bool release_input_buffers,
       bool release_output_buffers);
@@ -1161,7 +1057,50 @@ interface Codec {
   // SetInputBufferSettings() and the like, a client that spams the channel
   // can expect that the channel will just close if the server or the channel
   // itself gets too far behind.
-  8 : Sync() -> ();
+  11: Sync() -> ();
+
+  // OnOutputPacket()
+  //
+  // This is how the codec emits an output packet to the codec client.
+  //
+  // Order is significant.
+  //
+  // The client should eventually call RecycleOutputPacket() (possibly after
+  // switching streams multiple times), unless the buffer_lifetime_ordinal has
+  // moved on.  A stream change doesn't change which packets are busy with
+  // the client vs. free with the server.  See "packet lifetime" in codec.md for
+  // more.
+  //
+  // The relevant buffer is buffer 0 if running in single-buffer mode, or the
+  // buffer index is the same as packet_index if running in buffer-per-packet
+  // mode.
+  //
+  // For low-level buffer types that support it, a Codec is free to emit an
+  // output packet before the low-level buffer actually has any usable data in
+  // the buffer, with the mechanism for signalling the presence of data
+  // separate from the OnOutputPacket() message.  For such low-level buffer
+  // types, downstream consumers of data from the emitted packet must
+  // participate in the low-level buffer signalling mechanism to know when it's
+  // safe to consume the data.  This is most likely to be relevant when using a
+  // video decoder and gralloc-style buffers.
+  //
+  // The error_ bool(s) allow (but do not require) a Codec server to report
+  // errors that happen during an AU or between AUs.
+  //
+  // The scope of error_detected_before starts at the end of the last delivered
+  // output packet on this stream, or the start of stream if there were no
+  // previous output packets on this stream.  The scope ends at the start of
+  // the output_packet.
+  //
+  // The error_detected_before bool is separate so that discontinuities can be
+  // indicated separately from whether the current packet is damaged.
+  //
+  // The scope of error_detected_during is from the start to the end of this
+  // output_packet.
+  12: -> OnOutputPacket(
+    CodecPacket output_packet,
+    bool error_detected_before,
+    bool error_detected_during);
 
   // RecycleOutputPacket()
   //
@@ -1176,7 +1115,38 @@ interface Codec {
   // A server must ignore any such stale RecycleOutputPacket() calls.
   //
   // For more on RecycleOutputPacket(), see codec.md.
-  9 : RecycleOutputPacket(CodecPacketHeader available_output_packet);
+  13: RecycleOutputPacket(CodecPacketHeader available_output_packet);
+
+  // OnOutputEndOfStream()
+  //
+  // After QueueInputEndOfStream() is sent by the Codec client, within a
+  // reasonable duration the corresponding OnOutputEndOfStream() will be sent by
+  // the Codec server.  Similar to QueueInputEndOfStream(),
+  // OnOutputEndOfStream() is sent a maximum of once per stream.
+  //
+  // No more stream data for this stream will be sent after this message.  All
+  // input data for this stream was processed.
+  //
+  // While a Codec client is not required to QueueInputEndOfStream() (unless
+  // the client wants to use FlushEndOfStreamAndCloseStream()), if a Codec
+  // server receives QueueInputEndOfStream(), and the client hasn't closed the
+  // stream, the Codec server must generate a corresponding
+  // OnOutputEndOfStream() if nothing went wrong, or must send
+  // OnStreamFailed(), or must close the server end of the Codec channel.  An
+  // ideal Codec server would handle and report stream errors via the error_
+  // flags and complete stream processing without sending OnStreamFailed(), but
+  // in any case, the above-listed options are the only ways that an
+  // OnOutputEndOfStream() won't happen after QueueInputEndOfStream().
+  //
+  // There will be no more OnOutputPacket() or OnOutputConfig() messages for
+  // this stream_lifetime_ordinal after this message - if a server doesn't
+  // follow this rule, a client should close the Codec channel.
+  //
+  // The error_detected_before bool has the same semantics as the
+  // error_detected_before bool in OnOutputPacket().
+  14: -> OnOutputEndOfStream(
+    uint64 stream_lifetime_ordinal,
+    bool error_detected_before);
 
   //
   // Stream specific messages:
@@ -1208,7 +1178,7 @@ interface Codec {
   // the start of any stream).  The format specified need not match what was
   // specified during codec creation, but if it doesn't match, the Codec channel
   // might close as described above.
-  10 : QueueInputFormatDetails(
+  15: QueueInputFormatDetails(
       uint64 stream_lifetime_ordinal, CodecFormatDetails format_details);
 
   // QueueInputPacket()
@@ -1229,7 +1199,23 @@ interface Codec {
   // OnOutputConfig().
   //
   // For more on QueueInputPacket(), see codec.md.
-  11 : QueueInputPacket(CodecPacket packet);
+  16: QueueInputPacket(CodecPacket packet);
+
+  // OnFreeInputPacket()
+  //
+  // The server sends this message when the codec is done consuming this packet
+  // and the packet can be re-filled by the client.
+  //
+  // This is not sent for all packets when a new buffer_lifetime_ordinal starts
+  // as in that case all the packets are initially free with the client.
+  //
+  // See comments on QueueInputBuffer() and "packet lifetime" in codec.md for
+  // for description of buffer lifetime and packet lifetime.
+  //
+  // After receiving the available input buffer via this event, the codec
+  // client can call later call QueueInputBuffer with appropriate offset and
+  // length set.
+  17: -> OnFreeInputPacket(CodecPacketHeader free_input_packet);
 
   // Inform the server that all QueueInputPacket() messages for this stream
   // have been sent.
@@ -1267,5 +1253,5 @@ interface Codec {
   // QueueInputEndOfStream() for this stream after the first
   // QueueInputEndOfStream() for this stream, a server should close the Codec
   // channel.
-  12 : QueueInputEndOfStream(uint64 stream_lifetime_ordinal);
+  18: QueueInputEndOfStream(uint64 stream_lifetime_ordinal);
 };

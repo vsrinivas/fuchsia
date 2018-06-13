@@ -207,7 +207,7 @@ class OmxCodecRunner : public CodecRunner {
 
   // These are called by CodecRunner at the appropriate times.
   void ComputeInputConstraints() override;
-  void onInputConstraintsReady(std::unique_lock<std::mutex>& lock) override;
+  void onInputConstraintsReady() override;
   void onSetupDone() override;
 
   //

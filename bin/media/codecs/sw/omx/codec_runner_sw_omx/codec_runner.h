@@ -39,10 +39,10 @@ class CodecRunner : public fuchsia::mediacodec::Codec {
   // virtual void SetVideoEncoderParams(...) = 0;
 
   // Now that type-specific params are set, input_constraints_ can be computed.
-  // We want this done before binding the Codec channel so that when
-  // SetEventSink() arrives we can immediately send the input constraints, to
-  // ensure that input constraints get sent first from server to client, per the
-  // Codec protocol.
+  // We want this done before binding the Codec channel so we can immediately
+  // send the input constraints as soon as BindAndOwnSelf(), to ensure that
+  // input constraints get sent first from server to client, per the Codec
+  // protocol.
   virtual void ComputeInputConstraints() = 0;
 
   // This call causes ownership of "this" to transfer to binding_, which
@@ -52,11 +52,6 @@ class CodecRunner : public fuchsia::mediacodec::Codec {
   void BindAndOwnSelf(
       fidl::InterfaceRequest<fuchsia::mediacodec::Codec> codec_request,
       std::unique_ptr<CodecRunner> self);
-
-  // We handle this here in the base class since it's essentially part of
-  // finishing the binding.
-  void SetEventSink(fidl::InterfaceHandle<fuchsia::mediacodec::CodecEvents>
-                        event_sink) override;
 
   // Some sub-classes want to send initial output constraints very early,
   // instead of waiting for any input data.  This can be because the codec
@@ -72,7 +67,7 @@ class CodecRunner : public fuchsia::mediacodec::Codec {
   // input data.
   //
   // The default implementation does nothing.
-  virtual void onInputConstraintsReady(std::unique_lock<std::mutex>& lock){};
+  virtual void onInputConstraintsReady(){};
 
   // The Setup ordering domain is done.  This allows the items in the Setup
   // ordering domain to be completely separate from the StreamControl ordering
@@ -99,17 +94,13 @@ class CodecRunner : public fuchsia::mediacodec::Codec {
   using BindingType =
       fidl::Binding<fuchsia::mediacodec::Codec, std::unique_ptr<CodecRunner>>;
   std::unique_ptr<BindingType> binding_;
-  // TODO(dustingreen): replace with FIDL events once the C++ codegen for those
-  // works.
-  fuchsia::mediacodec::CodecEventsPtr event_sink_;
 
   bool input_constraints_sent_ = false;
 
   // This must be set by derived class no later than the end of
   // SetAudioDecoderParams() or analogous method, so that this will be
-  // guaranteed to be set before Codec binding occurs, so that
-  // SetEventSink() (even when run as early as possible) can send these
-  // constraints.
+  // guaranteed to be set before Codec binding occurs, so we can send these
+  // constraints during BindAndOwnSelf().
   //
   // This remains valid after CodecRunner sends OnInputConstraints(), in case
   // a derived class wants to refer to the input constraints.
