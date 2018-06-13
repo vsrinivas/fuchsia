@@ -12,6 +12,7 @@
 #include <queue>
 #include <vector>
 
+#include "garnet/public/lib/callback/destruction_sentinel.h"
 #include "lib/fxl/macros.h"
 
 namespace netconnector {
@@ -60,6 +61,8 @@ class MessageRelayBase {
   async::WaitMethod<MessageRelayBase, &MessageRelayBase::WriteChannelMessages>
       write_wait_{this};
   std::queue<std::vector<uint8_t>> messages_to_write_;
+
+  callback::DestructionSentinel destruction_sentinel_;
 };
 
 // Moves data-only (no handles) messages across an zx::channel.

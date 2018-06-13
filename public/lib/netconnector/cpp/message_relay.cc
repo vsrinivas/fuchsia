@@ -103,7 +103,10 @@ void MessageRelayBase::ReadChannelMessages(async_t* async,
 
     FXL_DCHECK(actual_byte_count == message.size());
 
-    OnMessageReceived(std::move(message));
+    if (destruction_sentinel_.DestructedWhile(
+            [this, &message] { OnMessageReceived(std::move(message)); })) {
+      return;
+    }
   }
 }
 
