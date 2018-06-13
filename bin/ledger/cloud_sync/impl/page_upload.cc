@@ -184,7 +184,12 @@ void PageUpload::SetState(UploadSyncState new_state) {
     return;
   }
   external_state_ = new_state;
-  delegate_->SetUploadState(external_state_);
+  // Posting to the run loop to handle the case where the delegate will delete
+  // this class in the SetUploadState method.
+  // TODO(qsr): Aggregate changed state, so that a change from A -> B -> A do
+  //            not send any signal.
+  task_runner_->PostTask(
+      [this] { delegate_->SetUploadState(external_state_); });
 }
 
 bool PageUpload::IsIdle() {

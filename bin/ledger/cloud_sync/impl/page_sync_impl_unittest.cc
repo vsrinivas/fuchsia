@@ -141,25 +141,22 @@ TEST_F(PageSyncImplTest, UploadBacklog) {
   EXPECT_EQ(1u, storage_.commits_marked_as_synced.count("id1"));
   EXPECT_EQ(1u, storage_.commits_marked_as_synced.count("id2"));
 
-  ASSERT_EQ(8u, state_watcher_->states.size());
+  ASSERT_EQ(7u, state_watcher_->states.size());
   EXPECT_EQ(DOWNLOAD_BACKLOG, state_watcher_->states[0].download);
   EXPECT_EQ(DOWNLOAD_BACKLOG, state_watcher_->states[1].download);
-  EXPECT_EQ(DOWNLOAD_BACKLOG, state_watcher_->states[2].download);
   EXPECT_EQ(DOWNLOAD_SETTING_REMOTE_WATCHER,
-            state_watcher_->states[3].download);
-  EXPECT_EQ(DOWNLOAD_SETTING_REMOTE_WATCHER,
-            state_watcher_->states[4].download);
+            state_watcher_->states[2].download);
+  EXPECT_EQ(DOWNLOAD_IDLE, state_watcher_->states[3].download);
+  EXPECT_EQ(DOWNLOAD_IDLE, state_watcher_->states[4].download);
   EXPECT_EQ(DOWNLOAD_IDLE, state_watcher_->states[5].download);
   EXPECT_EQ(DOWNLOAD_IDLE, state_watcher_->states[6].download);
-  EXPECT_EQ(DOWNLOAD_IDLE, state_watcher_->states[7].download);
 
   EXPECT_EQ(UPLOAD_STOPPED, state_watcher_->states[0].upload);
-  EXPECT_EQ(UPLOAD_SETUP, state_watcher_->states[1].upload);
+  EXPECT_EQ(UPLOAD_WAIT_REMOTE_DOWNLOAD, state_watcher_->states[1].upload);
   EXPECT_EQ(UPLOAD_WAIT_REMOTE_DOWNLOAD, state_watcher_->states[2].upload);
-  EXPECT_EQ(UPLOAD_WAIT_REMOTE_DOWNLOAD, state_watcher_->states[3].upload);
-  EXPECT_EQ(UPLOAD_PENDING, state_watcher_->states[5].upload);
-  EXPECT_EQ(UPLOAD_IN_PROGRESS, state_watcher_->states[6].upload);
-  EXPECT_EQ(UPLOAD_IDLE, state_watcher_->states[7].upload);
+  EXPECT_EQ(UPLOAD_PENDING, state_watcher_->states[4].upload);
+  EXPECT_EQ(UPLOAD_IN_PROGRESS, state_watcher_->states[5].upload);
+  EXPECT_EQ(UPLOAD_IDLE, state_watcher_->states[6].upload);
 }
 
 // Verifies that the backlog of commits to upload returned from
@@ -176,26 +173,24 @@ TEST_F(PageSyncImplTest, PageWatcher) {
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
 
-  ASSERT_EQ(9u, watcher.states.size());
+  ASSERT_EQ(8u, watcher.states.size());
   EXPECT_EQ(DOWNLOAD_STOPPED, watcher.states[0].download);
   EXPECT_EQ(DOWNLOAD_BACKLOG, watcher.states[1].download);
   EXPECT_EQ(DOWNLOAD_BACKLOG, watcher.states[2].download);
-  EXPECT_EQ(DOWNLOAD_BACKLOG, watcher.states[3].download);
-  EXPECT_EQ(DOWNLOAD_SETTING_REMOTE_WATCHER, watcher.states[4].download);
-  EXPECT_EQ(DOWNLOAD_SETTING_REMOTE_WATCHER, watcher.states[5].download);
+  EXPECT_EQ(DOWNLOAD_SETTING_REMOTE_WATCHER, watcher.states[3].download);
+  EXPECT_EQ(DOWNLOAD_IDLE, watcher.states[4].download);
+  EXPECT_EQ(DOWNLOAD_IDLE, watcher.states[5].download);
   EXPECT_EQ(DOWNLOAD_IDLE, watcher.states[6].download);
   EXPECT_EQ(DOWNLOAD_IDLE, watcher.states[7].download);
-  EXPECT_EQ(DOWNLOAD_IDLE, watcher.states[8].download);
 
   EXPECT_EQ(UPLOAD_STOPPED, watcher.states[0].upload);
   EXPECT_EQ(UPLOAD_STOPPED, watcher.states[1].upload);
-  EXPECT_EQ(UPLOAD_SETUP, watcher.states[2].upload);
+  EXPECT_EQ(UPLOAD_WAIT_REMOTE_DOWNLOAD, watcher.states[2].upload);
   EXPECT_EQ(UPLOAD_WAIT_REMOTE_DOWNLOAD, watcher.states[3].upload);
   EXPECT_EQ(UPLOAD_WAIT_REMOTE_DOWNLOAD, watcher.states[4].upload);
   EXPECT_EQ(UPLOAD_PENDING, watcher.states[5].upload);
-  EXPECT_EQ(UPLOAD_PENDING, watcher.states[6].upload);
-  EXPECT_EQ(UPLOAD_IN_PROGRESS, watcher.states[7].upload);
-  EXPECT_EQ(UPLOAD_IDLE, watcher.states[8].upload);
+  EXPECT_EQ(UPLOAD_IN_PROGRESS, watcher.states[6].upload);
+  EXPECT_EQ(UPLOAD_IDLE, watcher.states[7].upload);
 }
 
 // Verifies that sync pauses uploading commits when it is downloading a commit.
