@@ -82,6 +82,9 @@ class DisplayManager {
   DisplayWatcher display_watcher_;
   fit::closure display_available_cb_;
   std::unique_ptr<Display> default_display_;
+  // A boolean indicating whether or not we have ownership of the display
+  // controller (not just individual displays). The default is no.
+  bool owns_display_controller_ = false;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(DisplayManager);
 };

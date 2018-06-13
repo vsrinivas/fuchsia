@@ -97,10 +97,7 @@ void DisplayManager::DisplaysChanged(
     auto& mode = display.modes.get()[0];
     default_display_ = std::make_unique<Display>(
         display.id, mode.horizontal_resolution, mode.vertical_resolution);
-    // By default we don't own the display
-    default_display_->ownership_event().signal(
-        fuchsia::ui::scenic::displayOwnedSignal,
-        fuchsia::ui::scenic::displayNotOwnedSignal);
+    ClientOwnershipChange(owns_display_controller_);
 
     // See declare_args() in lib/ui/gfx/BUILD.gn.
 #if SCENIC_VULKAN_SWAPCHAIN != 0
@@ -126,14 +123,17 @@ void DisplayManager::DisplaysChanged(
 }
 
 void DisplayManager::ClientOwnershipChange(bool has_ownership) {
-  if (has_ownership) {
-    default_display_->ownership_event().signal(
-        fuchsia::ui::scenic::displayNotOwnedSignal,
-        fuchsia::ui::scenic::displayOwnedSignal);
-  } else {
-    default_display_->ownership_event().signal(
-        fuchsia::ui::scenic::displayOwnedSignal,
-        fuchsia::ui::scenic::displayNotOwnedSignal);
+  owns_display_controller_ = has_ownership;
+  if (default_display_) {
+    if (has_ownership) {
+      default_display_->ownership_event().signal(
+          fuchsia::ui::scenic::displayNotOwnedSignal,
+          fuchsia::ui::scenic::displayOwnedSignal);
+    } else {
+      default_display_->ownership_event().signal(
+          fuchsia::ui::scenic::displayOwnedSignal,
+          fuchsia::ui::scenic::displayNotOwnedSignal);
+    }
   }
 }
 
