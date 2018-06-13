@@ -117,7 +117,7 @@ TEST_P(PageIntegrationTest, DeletePage) {
   instance->DeletePage(id, ledger::Status::OK);
 
   // Verify that deletion of the page closed the page connection.
-  EXPECT_EQ(ZX_ERR_PEER_CLOSED, page.WaitForResponse());
+  EXPECT_FALSE(page);
   EXPECT_TRUE(page_closed);
 
   // Delete the same page again and expect a PAGE_NOT_FOUND result.
