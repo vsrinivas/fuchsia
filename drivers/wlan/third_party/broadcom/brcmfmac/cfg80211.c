@@ -99,7 +99,7 @@
 #define BRCMF_ASSOC_PARAMS_FIXED_SIZE (sizeof(struct brcmf_assoc_params_le) - sizeof(uint16_t))
 
 static bool check_vif_up(struct brcmf_cfg80211_vif* vif) {
-    if (!test_bit(BRCMF_VIF_STATUS_READY, &vif->sme_state)) {
+    if (!brcmf_test_bit_in_array(BRCMF_VIF_STATUS_READY, &vif->sme_state)) {
         brcmf_dbg(INFO, "device is not ready : status (%lu)\n", vif->sme_state);
         return false;
     }
@@ -760,7 +760,7 @@ zx_status_t brcmf_notify_escan_complete(struct brcmf_cfg80211_info* cfg, struct 
         brcmf_dbg(SCAN, "ESCAN Completed scan: %s\n", aborted ? "Aborted" : "Done");
         cfg80211_scan_done(scan_request, &info);
     }
-    if (!test_and_clear_bit(BRCMF_SCAN_STATUS_BUSY, &cfg->scan_status)) {
+    if (!brcmf_test_and_clear_bit_in_array(BRCMF_SCAN_STATUS_BUSY, &cfg->scan_status)) {
         brcmf_dbg(SCAN, "Scan complete, probably P2P scan\n");
     }
 
@@ -811,7 +811,7 @@ static int brcmf_cfg80211_del_iface(struct wiphy* wiphy, struct wireless_dev* wd
     }
 
     if (ndev) {
-        if (test_bit(BRCMF_SCAN_STATUS_BUSY, &cfg->scan_status) &&
+        if (brcmf_test_bit_in_array(BRCMF_SCAN_STATUS_BUSY, &cfg->scan_status) &&
                 cfg->escan_info.ifp == netdev_priv(ndev)) {
             brcmf_notify_escan_complete(cfg, netdev_priv(ndev), true, true);
         }
@@ -1074,19 +1074,19 @@ static zx_status_t brcmf_cfg80211_scan(struct wiphy* wiphy, struct cfg80211_scan
         return ZX_ERR_IO;
     }
 
-    if (test_bit(BRCMF_SCAN_STATUS_BUSY, &cfg->scan_status)) {
+    if (brcmf_test_bit_in_array(BRCMF_SCAN_STATUS_BUSY, &cfg->scan_status)) {
         brcmf_err("Scanning already: status (%lu)\n", cfg->scan_status);
         return ZX_ERR_UNAVAILABLE;
     }
-    if (test_bit(BRCMF_SCAN_STATUS_ABORT, &cfg->scan_status)) {
+    if (brcmf_test_bit_in_array(BRCMF_SCAN_STATUS_ABORT, &cfg->scan_status)) {
         brcmf_err("Scanning being aborted: status (%lu)\n", cfg->scan_status);
         return ZX_ERR_UNAVAILABLE;
     }
-    if (test_bit(BRCMF_SCAN_STATUS_SUPPRESS, &cfg->scan_status)) {
+    if (brcmf_test_bit_in_array(BRCMF_SCAN_STATUS_SUPPRESS, &cfg->scan_status)) {
         brcmf_err("Scanning suppressed: status (%lu)\n", cfg->scan_status);
         return ZX_ERR_UNAVAILABLE;
     }
-    if (test_bit(BRCMF_VIF_STATUS_CONNECTING, &vif->sme_state)) {
+    if (brcmf_test_bit_in_array(BRCMF_VIF_STATUS_CONNECTING, &vif->sme_state)) {
         brcmf_err("Connecting: status (%lu)\n", vif->sme_state);
         return ZX_ERR_UNAVAILABLE;
     }
@@ -1099,7 +1099,7 @@ static zx_status_t brcmf_cfg80211_scan(struct wiphy* wiphy, struct cfg80211_scan
     brcmf_dbg(SCAN, "START ESCAN\n");
 
     cfg->scan_request = request;
-    set_bit(BRCMF_SCAN_STATUS_BUSY, &cfg->scan_status);
+    brcmf_set_bit_in_array(BRCMF_SCAN_STATUS_BUSY, &cfg->scan_status);
 
     cfg->escan_info.run = brcmf_run_escan;
     err = brcmf_p2p_scan_prep(wiphy, request, vif);
@@ -1124,7 +1124,7 @@ static zx_status_t brcmf_cfg80211_scan(struct wiphy* wiphy, struct cfg80211_scan
 
 scan_out:
     brcmf_err("scan error (%d)\n", err);
-    clear_bit(BRCMF_SCAN_STATUS_BUSY, &cfg->scan_status);
+    brcmf_clear_bit_in_array(BRCMF_SCAN_STATUS_BUSY, &cfg->scan_status);
     cfg->scan_request = NULL;
     return err;
 }
@@ -1259,7 +1259,7 @@ static void brcmf_link_down(struct brcmf_cfg80211_vif* vif, uint16_t reason) {
 
     brcmf_dbg(TRACE, "Enter\n");
 
-    if (test_and_clear_bit(BRCMF_VIF_STATUS_CONNECTED, &vif->sme_state)) {
+    if (brcmf_test_and_clear_bit_in_array(BRCMF_VIF_STATUS_CONNECTED, &vif->sme_state)) {
         brcmf_dbg(INFO, "Call WLC_DISASSOC to stop excess roaming\n ");
         err = brcmf_fil_cmd_data_set(vif->ifp, BRCMF_C_DISASSOC, NULL, 0);
         if (err != ZX_OK) {
@@ -1270,8 +1270,8 @@ static void brcmf_link_down(struct brcmf_cfg80211_vif* vif, uint16_t reason) {
             cfg80211_disconnected(vif->wdev.netdev, reason, NULL, 0, true, GFP_KERNEL);
         }
     }
-    clear_bit(BRCMF_VIF_STATUS_CONNECTING, &vif->sme_state);
-    clear_bit(BRCMF_SCAN_STATUS_SUPPRESS, &cfg->scan_status);
+    brcmf_clear_bit_in_array(BRCMF_VIF_STATUS_CONNECTING, &vif->sme_state);
+    brcmf_clear_bit_in_array(BRCMF_SCAN_STATUS_SUPPRESS, &cfg->scan_status);
     brcmf_btcoex_set_mode(vif, BRCMF_BTCOEX_ENABLED, 0);
     if (vif->profile.use_fwsup != BRCMF_PROFILE_FWSUP_NONE) {
         brcmf_set_pmk(vif->ifp, NULL, 0);
@@ -1305,7 +1305,7 @@ static zx_status_t brcmf_cfg80211_join_ibss(struct wiphy* wiphy, struct net_devi
         return ZX_ERR_NOT_SUPPORTED;
     }
 
-    set_bit(BRCMF_VIF_STATUS_CONNECTING, &ifp->vif->sme_state);
+    brcmf_set_bit_in_array(BRCMF_VIF_STATUS_CONNECTING, &ifp->vif->sme_state);
 
     if (params->bssid) {
         brcmf_dbg(CONN, "BSSID: %pM\n", params->bssid);
@@ -1426,7 +1426,7 @@ static zx_status_t brcmf_cfg80211_join_ibss(struct wiphy* wiphy, struct net_devi
 
 done:
     if (err != ZX_OK) {
-        clear_bit(BRCMF_VIF_STATUS_CONNECTING, &ifp->vif->sme_state);
+        brcmf_clear_bit_in_array(BRCMF_VIF_STATUS_CONNECTING, &ifp->vif->sme_state);
     }
     brcmf_dbg(TRACE, "Exit\n");
     return err;
@@ -1872,7 +1872,7 @@ static zx_status_t brcmf_cfg80211_connect(struct wiphy* wiphy, struct net_device
         brcmf_dbg(TRACE, "Applied Vndr IEs for Assoc request\n");
     }
 
-    set_bit(BRCMF_VIF_STATUS_CONNECTING, &ifp->vif->sme_state);
+    brcmf_set_bit_in_array(BRCMF_VIF_STATUS_CONNECTING, &ifp->vif->sme_state);
 
     if (chan) {
         cfg->channel = ieee80211_frequency_to_channel(chan->center_freq);
@@ -2027,7 +2027,7 @@ static zx_status_t brcmf_cfg80211_connect(struct wiphy* wiphy, struct net_device
 
 done:
     if (err != ZX_OK) {
-        clear_bit(BRCMF_VIF_STATUS_CONNECTING, &ifp->vif->sme_state);
+        brcmf_clear_bit_in_array(BRCMF_VIF_STATUS_CONNECTING, &ifp->vif->sme_state);
     }
     brcmf_dbg(TRACE, "Exit\n");
     return err;
@@ -2045,8 +2045,8 @@ static zx_status_t brcmf_cfg80211_disconnect(struct wiphy* wiphy, struct net_dev
         return ZX_ERR_IO;
     }
 
-    clear_bit(BRCMF_VIF_STATUS_CONNECTED, &ifp->vif->sme_state);
-    clear_bit(BRCMF_VIF_STATUS_CONNECTING, &ifp->vif->sme_state);
+    brcmf_clear_bit_in_array(BRCMF_VIF_STATUS_CONNECTED, &ifp->vif->sme_state);
+    brcmf_clear_bit_in_array(BRCMF_VIF_STATUS_CONNECTING, &ifp->vif->sme_state);
     cfg80211_disconnected(ndev, reason_code, NULL, 0, true, GFP_KERNEL);
 
     memcpy(&scbval.ea, &profile->bssid, ETH_ALEN);
@@ -2609,7 +2609,7 @@ static zx_status_t brcmf_cfg80211_get_station(struct wiphy* wiphy, struct net_de
             sinfo->filled |= BIT(NL80211_STA_INFO_SIGNAL);
             total_rssi /= count_rssi;
             sinfo->signal = total_rssi;
-        } else if (test_bit(BRCMF_VIF_STATUS_CONNECTED, &ifp->vif->sme_state)) {
+        } else if (brcmf_test_bit_in_array(BRCMF_VIF_STATUS_CONNECTED, &ifp->vif->sme_state)) {
             memset(&scb_val, 0, sizeof(scb_val));
             err = brcmf_fil_cmd_data_get(ifp, BRCMF_C_GET_RSSI, &scb_val, sizeof(scb_val));
             if (err != ZX_OK) {
@@ -2923,13 +2923,13 @@ update_bss_info_out:
 void brcmf_abort_scanning(struct brcmf_cfg80211_info* cfg) {
     struct escan_info* escan = &cfg->escan_info;
 
-    set_bit(BRCMF_SCAN_STATUS_ABORT, &cfg->scan_status);
+    brcmf_set_bit_in_array(BRCMF_SCAN_STATUS_ABORT, &cfg->scan_status);
     if (cfg->int_escan_map || cfg->scan_request) {
         escan->escan_state = WL_ESCAN_STATE_IDLE;
         brcmf_notify_escan_complete(cfg, escan->ifp, true, true);
     }
-    clear_bit(BRCMF_SCAN_STATUS_BUSY, &cfg->scan_status);
-    clear_bit(BRCMF_SCAN_STATUS_ABORT, &cfg->scan_status);
+    brcmf_clear_bit_in_array(BRCMF_SCAN_STATUS_BUSY, &cfg->scan_status);
+    brcmf_clear_bit_in_array(BRCMF_SCAN_STATUS_ABORT, &cfg->scan_status);
 }
 
 static void brcmf_cfg80211_escan_timeout_worker(struct work_struct* work) {
@@ -3007,7 +3007,7 @@ static zx_status_t brcmf_cfg80211_escan_handler(struct brcmf_if* ifp,
         goto exit;
     }
 
-    if (!test_bit(BRCMF_SCAN_STATUS_BUSY, &cfg->scan_status)) {
+    if (!brcmf_test_bit_in_array(BRCMF_SCAN_STATUS_BUSY, &cfg->scan_status)) {
         brcmf_err("scan not ready, bsscfgidx=%d\n", ifp->bsscfgidx);
         return ZX_ERR_UNAVAILABLE;
     }
@@ -3163,7 +3163,7 @@ static zx_status_t brcmf_start_internal_escan(struct brcmf_if* ifp, uint32_t fwm
     struct brcmf_cfg80211_info* cfg = ifp->drvr->config;
     zx_status_t err;
 
-    if (test_bit(BRCMF_SCAN_STATUS_BUSY, &cfg->scan_status)) {
+    if (brcmf_test_bit_in_array(BRCMF_SCAN_STATUS_BUSY, &cfg->scan_status)) {
         if (cfg->int_escan_map) {
             brcmf_dbg(SCAN, "aborting internal scan: map=%u\n", cfg->int_escan_map);
         }
@@ -3172,11 +3172,11 @@ static zx_status_t brcmf_start_internal_escan(struct brcmf_if* ifp, uint32_t fwm
     }
 
     brcmf_dbg(SCAN, "start internal scan: map=%u\n", fwmap);
-    set_bit(BRCMF_SCAN_STATUS_BUSY, &cfg->scan_status);
+    brcmf_set_bit_in_array(BRCMF_SCAN_STATUS_BUSY, &cfg->scan_status);
     cfg->escan_info.run = brcmf_run_escan;
     err = brcmf_do_escan(ifp, request);
     if (err != ZX_OK) {
-        clear_bit(BRCMF_SCAN_STATUS_BUSY, &cfg->scan_status);
+        brcmf_clear_bit_in_array(BRCMF_SCAN_STATUS_BUSY, &cfg->scan_status);
         return err;
     }
     cfg->int_escan_map = fwmap;
@@ -3305,7 +3305,7 @@ static zx_status_t brcmf_cfg80211_sched_scan_start(struct wiphy* wiphy, struct n
 
     brcmf_dbg(SCAN, "Enter: n_match_sets=%d n_ssids=%d\n", req->n_match_sets, req->n_ssids);
 
-    if (test_bit(BRCMF_SCAN_STATUS_SUPPRESS, &cfg->scan_status)) {
+    if (brcmf_test_bit_in_array(BRCMF_SCAN_STATUS_SUPPRESS, &cfg->scan_status)) {
         brcmf_err("Scanning suppressed: status=%lu\n", cfg->scan_status);
         return ZX_ERR_UNAVAILABLE;
     }
@@ -3554,7 +3554,7 @@ static void brcmf_configure_wowl(struct brcmf_cfg80211_info* cfg, struct brcmf_i
     if (wowl->gtk_rekey_failure) {
         wowl_config |= BRCMF_WOWL_GTK_FAILURE;
     }
-    if (!test_bit(BRCMF_VIF_STATUS_CONNECTED, &ifp->vif->sme_state)) {
+    if (!brcmf_test_bit_in_array(BRCMF_VIF_STATUS_CONNECTED, &ifp->vif->sme_state)) {
         wowl_config |= BRCMF_WOWL_UNASSOC;
     }
 
@@ -3587,14 +3587,14 @@ static zx_status_t brcmf_cfg80211_suspend(struct wiphy* wiphy, struct cfg80211_w
     }
 
     /* end any scanning */
-    if (test_bit(BRCMF_SCAN_STATUS_BUSY, &cfg->scan_status)) {
+    if (brcmf_test_bit_in_array(BRCMF_SCAN_STATUS_BUSY, &cfg->scan_status)) {
         brcmf_abort_scanning(cfg);
     }
 
     if (wowl == NULL) {
         brcmf_bus_wowl_config(cfg->pub->bus_if, false);
         list_for_each_entry(vif, &cfg->vif_list, list) {
-            if (!test_bit(BRCMF_VIF_STATUS_READY, &vif->sme_state)) {
+            if (!brcmf_test_bit_in_array(BRCMF_VIF_STATUS_READY, &vif->sme_state)) {
                 continue;
             }
             /* While going to suspend if associated with AP
@@ -3619,7 +3619,7 @@ static zx_status_t brcmf_cfg80211_suspend(struct wiphy* wiphy, struct cfg80211_w
 exit:
     brcmf_dbg(TRACE, "Exit\n");
     /* clear any scanning activity */
-    cfg->scan_status = 0;
+    atomic_store(&cfg->scan_status, 0);
     return ZX_OK;
 }
 
@@ -4476,7 +4476,7 @@ static zx_status_t brcmf_cfg80211_start_ap(struct wiphy* wiphy, struct net_devic
     }
 
     brcmf_config_ap_mgmt_ie(ifp->vif, &settings->beacon);
-    set_bit(BRCMF_VIF_STATUS_AP_CREATED, &ifp->vif->sme_state);
+    brcmf_set_bit_in_array(BRCMF_VIF_STATUS_AP_CREATED, &ifp->vif->sme_state);
     brcmf_net_setcarrier(ifp, true);
 
 exit:
@@ -4544,7 +4544,7 @@ static zx_status_t brcmf_cfg80211_stop_ap(struct wiphy* wiphy, struct net_device
     }
     brcmf_set_mpc(ifp, 1);
     brcmf_configure_arp_nd_offload(ifp, true);
-    clear_bit(BRCMF_VIF_STATUS_AP_CREATED, &ifp->vif->sme_state);
+    brcmf_clear_bit_in_array(BRCMF_VIF_STATUS_AP_CREATED, &ifp->vif->sme_state);
     brcmf_net_setcarrier(ifp, false);
 
     return err;
@@ -4834,7 +4834,7 @@ static zx_status_t brcmf_cfg80211_crit_proto_start(struct wiphy* wiphy, struct w
     }
 
     /* suppress and abort scanning */
-    set_bit(BRCMF_SCAN_STATUS_SUPPRESS, &cfg->scan_status);
+    brcmf_set_bit_in_array(BRCMF_SCAN_STATUS_SUPPRESS, &cfg->scan_status);
     brcmf_abort_scanning(cfg);
 
     return brcmf_btcoex_set_mode(vif, BRCMF_BTCOEX_DISABLED, duration);
@@ -4847,7 +4847,7 @@ static void brcmf_cfg80211_crit_proto_stop(struct wiphy* wiphy, struct wireless_
     vif = container_of(wdev, struct brcmf_cfg80211_vif, wdev);
 
     brcmf_btcoex_set_mode(vif, BRCMF_BTCOEX_ENABLED, 0);
-    clear_bit(BRCMF_SCAN_STATUS_SUPPRESS, &cfg->scan_status);
+    brcmf_clear_bit_in_array(BRCMF_SCAN_STATUS_SUPPRESS, &cfg->scan_status);
 }
 
 static zx_status_t brcmf_notify_tdls_peer_event(struct brcmf_if* ifp,
@@ -5098,7 +5098,7 @@ static bool brcmf_is_linkup(struct brcmf_cfg80211_vif* vif, const struct brcmf_e
 
     if (vif->profile.use_fwsup == BRCMF_PROFILE_FWSUP_PSK && event == BRCMF_E_PSK_SUP &&
             status == BRCMF_E_STATUS_FWSUP_COMPLETED) {
-        set_bit(BRCMF_VIF_STATUS_EAP_SUCCESS, &vif->sme_state);
+        brcmf_set_bit_in_array(BRCMF_VIF_STATUS_EAP_SUCCESS, &vif->sme_state);
     }
     if (event == BRCMF_E_SET_SSID && status == BRCMF_E_STATUS_SUCCESS) {
         brcmf_dbg(CONN, "Processing set ssid\n");
@@ -5107,13 +5107,13 @@ static bool brcmf_is_linkup(struct brcmf_cfg80211_vif* vif, const struct brcmf_e
             return true;
         }
 
-        set_bit(BRCMF_VIF_STATUS_ASSOC_SUCCESS, &vif->sme_state);
+        brcmf_set_bit_in_array(BRCMF_VIF_STATUS_ASSOC_SUCCESS, &vif->sme_state);
     }
 
-    if (test_bit(BRCMF_VIF_STATUS_EAP_SUCCESS, &vif->sme_state) &&
-            test_bit(BRCMF_VIF_STATUS_ASSOC_SUCCESS, &vif->sme_state)) {
-        clear_bit(BRCMF_VIF_STATUS_EAP_SUCCESS, &vif->sme_state);
-        clear_bit(BRCMF_VIF_STATUS_ASSOC_SUCCESS, &vif->sme_state);
+    if (brcmf_test_bit_in_array(BRCMF_VIF_STATUS_EAP_SUCCESS, &vif->sme_state) &&
+            brcmf_test_bit_in_array(BRCMF_VIF_STATUS_ASSOC_SUCCESS, &vif->sme_state)) {
+        brcmf_clear_bit_in_array(BRCMF_VIF_STATUS_EAP_SUCCESS, &vif->sme_state);
+        brcmf_clear_bit_in_array(BRCMF_VIF_STATUS_ASSOC_SUCCESS, &vif->sme_state);
         return true;
     }
     return false;
@@ -5273,7 +5273,7 @@ done:
     cfg80211_roamed(ndev, &roam_info, GFP_KERNEL);
     brcmf_dbg(CONN, "Report roaming result\n");
 
-    set_bit(BRCMF_VIF_STATUS_CONNECTED, &ifp->vif->sme_state);
+    brcmf_set_bit_in_array(BRCMF_VIF_STATUS_CONNECTED, &ifp->vif->sme_state);
     brcmf_dbg(TRACE, "Exit\n");
     return err;
 }
@@ -5287,12 +5287,12 @@ static zx_status_t brcmf_bss_connect_done(struct brcmf_cfg80211_info* cfg, struc
 
     brcmf_dbg(TRACE, "Enter\n");
 
-    if (test_and_clear_bit(BRCMF_VIF_STATUS_CONNECTING, &ifp->vif->sme_state)) {
+    if (brcmf_test_and_clear_bit_in_array(BRCMF_VIF_STATUS_CONNECTING, &ifp->vif->sme_state)) {
         memset(&conn_params, 0, sizeof(conn_params));
         if (completed) {
             brcmf_get_assoc_ies(cfg, ifp);
             brcmf_update_bss_info(cfg, ifp);
-            set_bit(BRCMF_VIF_STATUS_CONNECTED, &ifp->vif->sme_state);
+            brcmf_set_bit_in_array(BRCMF_VIF_STATUS_CONNECTED, &ifp->vif->sme_state);
             conn_params.status = WLAN_STATUS_SUCCESS;
         } else {
             conn_params.status = WLAN_STATUS_AUTH_TIMEOUT;
@@ -5368,8 +5368,8 @@ static zx_status_t brcmf_notify_connect_status(struct brcmf_if* ifp, const struc
             chan = ieee80211_get_channel(cfg->wiphy, cfg->channel);
             memcpy(profile->bssid, e->addr, ETH_ALEN);
             cfg80211_ibss_joined(ndev, e->addr, chan, GFP_KERNEL);
-            clear_bit(BRCMF_VIF_STATUS_CONNECTING, &ifp->vif->sme_state);
-            set_bit(BRCMF_VIF_STATUS_CONNECTED, &ifp->vif->sme_state);
+            brcmf_clear_bit_in_array(BRCMF_VIF_STATUS_CONNECTING, &ifp->vif->sme_state);
+            brcmf_set_bit_in_array(BRCMF_VIF_STATUS_CONNECTED, &ifp->vif->sme_state);
         } else {
             brcmf_bss_connect_done(cfg, ndev, e, true);
         }
@@ -5387,7 +5387,7 @@ static zx_status_t brcmf_notify_connect_status(struct brcmf_if* ifp, const struc
         }
     } else if (brcmf_is_nonetwork(cfg, e)) {
         if (brcmf_is_ibssmode(ifp->vif)) {
-            clear_bit(BRCMF_VIF_STATUS_CONNECTING, &ifp->vif->sme_state);
+            brcmf_clear_bit_in_array(BRCMF_VIF_STATUS_CONNECTING, &ifp->vif->sme_state);
         } else {
             brcmf_bss_connect_done(cfg, ndev, e, false);
         }
@@ -5403,7 +5403,7 @@ static zx_status_t brcmf_notify_roaming_status(struct brcmf_if* ifp, const struc
     uint32_t status = e->status;
 
     if (event == BRCMF_E_ROAM && status == BRCMF_E_STATUS_SUCCESS) {
-        if (test_bit(BRCMF_VIF_STATUS_CONNECTED, &ifp->vif->sme_state)) {
+        if (brcmf_test_bit_in_array(BRCMF_VIF_STATUS_CONNECTED, &ifp->vif->sme_state)) {
             brcmf_bss_roaming_done(cfg, ifp->ndev, e);
         } else {
             brcmf_bss_connect_done(cfg, ifp->ndev, e, true);
@@ -6402,7 +6402,7 @@ default_conf_out:
 }
 
 static zx_status_t __brcmf_cfg80211_up(struct brcmf_if* ifp) {
-    set_bit(BRCMF_VIF_STATUS_READY, &ifp->vif->sme_state);
+    brcmf_set_bit_in_array(BRCMF_VIF_STATUS_READY, &ifp->vif->sme_state);
 
     return brcmf_config_dongle(ifp->drvr->config);
 }
@@ -6425,7 +6425,7 @@ static zx_status_t __brcmf_cfg80211_down(struct brcmf_if* ifp) {
     }
 
     brcmf_abort_scanning(cfg);
-    clear_bit(BRCMF_VIF_STATUS_READY, &ifp->vif->sme_state);
+    brcmf_clear_bit_in_array(BRCMF_VIF_STATUS_READY, &ifp->vif->sme_state);
 
     return ZX_OK;
 }
@@ -6464,7 +6464,7 @@ bool brcmf_get_vif_state_any(struct brcmf_cfg80211_info* cfg, unsigned long stat
     struct brcmf_cfg80211_vif* vif;
 
     list_for_each_entry(vif, &cfg->vif_list, list) {
-        if (test_bit(state, &vif->sme_state)) {
+        if (brcmf_test_bit_in_array(state, &vif->sme_state)) {
             return true;
         }
     }

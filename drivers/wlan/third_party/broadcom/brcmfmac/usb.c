@@ -172,7 +172,7 @@ struct brcmf_usbdev_info {
     int ctl_urb_status;
     int ctl_completed;
     wait_queue_head_t ioctl_resp_wait;
-    ulong ctl_op;
+    atomic_ulong ctl_op;
     uint8_t ifnum;
 
     struct urb* bulk_urb; /* used for FW download */
@@ -311,7 +311,7 @@ static zx_status_t brcmf_usb_tx_ctlpkt(struct brcmf_device* dev, uint8_t* buf, u
         return ZX_ERR_IO;
     }
 
-    if (test_and_set_bit(0, &devinfo->ctl_op)) {
+    if (brcmf_test_and_set_bit_in_array(0, &devinfo->ctl_op)) {
         return ZX_ERR_IO;
     }
 
@@ -319,11 +319,11 @@ static zx_status_t brcmf_usb_tx_ctlpkt(struct brcmf_device* dev, uint8_t* buf, u
     err = brcmf_usb_send_ctl(devinfo, buf, len);
     if (err != ZX_OK) {
         brcmf_err("fail %d bytes: %d\n", err, len);
-        clear_bit(0, &devinfo->ctl_op);
+        brcmf_clear_bit_in_array(0, &devinfo->ctl_op);
         return err;
     }
     time_left = brcmf_usb_ioctl_resp_wait(devinfo);
-    clear_bit(0, &devinfo->ctl_op);
+    brcmf_clear_bit_in_array(0, &devinfo->ctl_op);
     if (time_left == 0) {
         brcmf_err("Txctl wait timed out\n");
         err = ZX_ERR_IO;
@@ -342,7 +342,7 @@ static zx_status_t brcmf_usb_rx_ctlpkt(struct brcmf_device* dev, uint8_t* buf, u
         return ZX_ERR_IO;
     }
 
-    if (test_and_set_bit(0, &devinfo->ctl_op)) {
+    if (brcmf_test_and_set_bit_in_array(0, &devinfo->ctl_op)) {
         return ZX_ERR_IO;
     }
 
@@ -350,12 +350,12 @@ static zx_status_t brcmf_usb_rx_ctlpkt(struct brcmf_device* dev, uint8_t* buf, u
     err = brcmf_usb_recv_ctl(devinfo, buf, len);
     if (err != ZX_OK) {
         brcmf_err("fail %d bytes: %d\n", err, len);
-        clear_bit(0, &devinfo->ctl_op);
+        brcmf_clear_bit_in_array(0, &devinfo->ctl_op);
         return err;
     }
     time_left = brcmf_usb_ioctl_resp_wait(devinfo);
     err = devinfo->ctl_urb_status;
-    clear_bit(0, &devinfo->ctl_op);
+    brcmf_clear_bit_in_array(0, &devinfo->ctl_op);
     if (time_left == 0) {
         brcmf_err("rxctl wait timed out\n");
         err = ZX_ERR_IO;

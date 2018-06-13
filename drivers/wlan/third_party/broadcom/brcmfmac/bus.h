@@ -122,8 +122,8 @@ struct brcmf_bus_msgbuf {
  * @pktcow_failed: packets dropped due to failed cow-ing.
  */
 struct brcmf_bus_stats {
-    atomic_t pktcowed;
-    atomic_t pktcow_failed;
+    atomic_int pktcowed;
+    atomic_int pktcow_failed;
 };
 
 /**

@@ -64,8 +64,8 @@
 #define BRCMF_DEFAULT_RXGLOM_SIZE 32 /* max rx frames in glom chain */
 
 struct brcmf_sdiod_freezer {
-    atomic_t freezing;
-    atomic_t thread_count;
+    atomic_int freezing;
+    atomic_int thread_count;
     uint32_t frozen_count;
     wait_queue_head_t thread_freeze;
     completion_t resumed;
@@ -776,8 +776,8 @@ static zx_status_t brcmf_sdiod_freezer_attach(struct brcmf_sdio_dev* sdiodev) {
     if (!sdiodev->freezer) {
         return ZX_ERR_NO_MEMORY;
     }
-    atomic_set(&sdiodev->freezer->thread_count, 0);
-    atomic_set(&sdiodev->freezer->freezing, 0);
+    atomic_store(&sdiodev->freezer->thread_count, 0);
+    atomic_store(&sdiodev->freezer->freezing, 0);
     init_waitqueue_head(&sdiodev->freezer->thread_freeze);
     sdiodev->freezer->resumed = COMPLETION_INIT;
     return ZX_OK;
@@ -785,21 +785,21 @@ static zx_status_t brcmf_sdiod_freezer_attach(struct brcmf_sdio_dev* sdiodev) {
 
 static void brcmf_sdiod_freezer_detach(struct brcmf_sdio_dev* sdiodev) {
     if (sdiodev->freezer) {
-        WARN_ON(atomic_read(&sdiodev->freezer->freezing));
+        WARN_ON(atomic_load(&sdiodev->freezer->freezing));
         free(sdiodev->freezer);
     }
 }
 
 static zx_status_t brcmf_sdiod_freezer_on(struct brcmf_sdio_dev* sdiodev) {
-    atomic_t* expect = &sdiodev->freezer->thread_count;
+    atomic_int* expect = &sdiodev->freezer->thread_count;
     zx_status_t res = ZX_OK;
 
     sdiodev->freezer->frozen_count = 0;
     completion_reset(&sdiodev->freezer->resumed);
-    atomic_set(&sdiodev->freezer->freezing, 1);
+    atomic_store(&sdiodev->freezer->freezing, 1);
     brcmf_sdio_trigger_dpc(sdiodev->bus);
     wait_event(sdiodev->freezer->thread_freeze,
-               atomic_read(expect) == sdiodev->freezer->frozen_count);
+               atomic_load(expect) == sdiodev->freezer->frozen_count);
     sdio_claim_host(sdiodev->func1);
     res = brcmf_sdio_sleep(sdiodev->bus, true);
     sdio_release_host(sdiodev->func1);
@@ -810,12 +810,12 @@ static void brcmf_sdiod_freezer_off(struct brcmf_sdio_dev* sdiodev) {
     sdio_claim_host(sdiodev->func1);
     brcmf_sdio_sleep(sdiodev->bus, false);
     sdio_release_host(sdiodev->func1);
-    atomic_set(&sdiodev->freezer->freezing, 0);
+    atomic_store(&sdiodev->freezer->freezing, 0);
     complete_all(&sdiodev->freezer->resumed);
 }
 
 bool brcmf_sdiod_freezing(struct brcmf_sdio_dev* sdiodev) {
-    return atomic_read(&sdiodev->freezer->freezing);
+    return atomic_load(&sdiodev->freezer->freezing);
 }
 
 void brcmf_sdiod_try_freeze(struct brcmf_sdio_dev* sdiodev) {
@@ -828,11 +828,11 @@ void brcmf_sdiod_try_freeze(struct brcmf_sdio_dev* sdiodev) {
 }
 
 void brcmf_sdiod_freezer_count(struct brcmf_sdio_dev* sdiodev) {
-    atomic_inc(&sdiodev->freezer->thread_count);
+    atomic_fetch_add(&sdiodev->freezer->thread_count, 1);
 }
 
 void brcmf_sdiod_freezer_uncount(struct brcmf_sdio_dev* sdiodev) {
-    atomic_dec(&sdiodev->freezer->thread_count);
+    atomic_fetch_sub(&sdiodev->freezer->thread_count, 1);
 }
 #else
 static zx_status_t brcmf_sdiod_freezer_attach(struct brcmf_sdio_dev* sdiodev) {

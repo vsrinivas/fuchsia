@@ -257,11 +257,11 @@ static netdev_tx_t brcmf_netdev_start_xmit(struct sk_buff* skb, struct net_devic
         head_delta = max_t(int, drvr->hdrlen - skb_headroom(skb), 0);
 
         brcmf_dbg(INFO, "%s: insufficient headroom (%d)\n", brcmf_ifname(ifp), head_delta);
-        atomic_inc(&drvr->bus_if->stats.pktcowed);
+        atomic_fetch_add(&drvr->bus_if->stats.pktcowed, 1);
         ret = pskb_expand_head(skb, ALIGN(head_delta, NET_SKB_PAD), 0, GFP_ATOMIC);
         if (ret != ZX_OK) {
             brcmf_err("%s: failed to expand headroom\n", brcmf_ifname(ifp));
-            atomic_inc(&drvr->bus_if->stats.pktcow_failed);
+            atomic_fetch_add(&drvr->bus_if->stats.pktcow_failed, 1);
             goto done;
         }
     }
@@ -276,7 +276,7 @@ static netdev_tx_t brcmf_netdev_start_xmit(struct sk_buff* skb, struct net_devic
     eh = (struct ethhdr*)(skb->data);
 
     if (eh->h_proto == htons(ETH_P_PAE)) {
-        atomic_inc(&ifp->pend_8021x_cnt);
+        atomic_fetch_add(&ifp->pend_8021x_cnt, 1);
     }
 
     /* determine the priority */
@@ -417,7 +417,7 @@ void brcmf_txfinalize(struct brcmf_if* ifp, struct sk_buff* txp, bool success) {
     type = ntohs(eh->h_proto);
 
     if (type == ETH_P_PAE) {
-        atomic_dec(&ifp->pend_8021x_cnt);
+        atomic_fetch_sub(&ifp->pend_8021x_cnt, 1);
         if (waitqueue_active(&ifp->pend_8021x_wait)) {
             wake_up(&ifp->pend_8021x_wait);
         }
@@ -476,7 +476,7 @@ static zx_status_t brcmf_netdev_open(struct net_device* ndev) {
         return ZX_ERR_UNAVAILABLE;
     }
 
-    atomic_set(&ifp->pend_8021x_cnt, 0);
+    atomic_store(&ifp->pend_8021x_cnt, 0);
 
     /* Get current TOE mode from dongle */
     if (brcmf_fil_iovar_int_get(ifp, "toe_ol", &toe_ol) == ZX_OK && (toe_ol & TOE_TX_CSUM_OL) != 0) {
@@ -1168,7 +1168,7 @@ zx_status_t brcmf_iovar_data_set(struct brcmf_device* dev, char* name, void* dat
 }
 
 static int brcmf_get_pend_8021x_cnt(struct brcmf_if* ifp) {
-    return atomic_read(&ifp->pend_8021x_cnt);
+    return atomic_load(&ifp->pend_8021x_cnt);
 }
 
 bool brcmf_netdev_wait_pend8021x(struct brcmf_if* ifp) {

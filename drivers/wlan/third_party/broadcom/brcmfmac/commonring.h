@@ -36,7 +36,7 @@ struct brcmf_commonring {
     bool inited;
     bool was_full;
 
-    atomic_t outstanding_tx;
+    atomic_int outstanding_tx;
 };
 
 void brcmf_commonring_register_cb(struct brcmf_commonring* commonring,

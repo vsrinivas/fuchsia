@@ -449,8 +449,8 @@ struct brcmf_sdio {
     struct brcmf_core* sdio_core;   /* sdio core info struct */
 
     uint32_t hostintmask;    /* Copy of Host Interrupt Mask */
-    atomic_t intstatus; /* Intstatus bits (events) pending */
-    atomic_t fcstate;   /* State of dongle flow-control */
+    atomic_int intstatus; /* Intstatus bits (events) pending */
+    atomic_int fcstate;   /* State of dongle flow-control */
 
     uint blocksize; /* Block size of SDIO transfers */
     uint roundup;   /* Max roundup limit */
@@ -486,7 +486,7 @@ struct brcmf_sdio {
 
     bool intr;      /* Use interrupts */
     bool poll;      /* Use polling */
-    atomic_t ipend; /* Device interrupt is pending */
+    atomic_int ipend; /* Device interrupt is pending */
     uint spurious;  /* Count of spurious interrupts */
     uint pollrate;  /* Ticks between device polls */
     uint polltick;  /* Tick counter */
@@ -1950,9 +1950,9 @@ static zx_status_t brcmf_sdio_txpkt_hdalign(struct brcmf_sdio* bus, struct sk_bu
     if (head_pad) {
         if (skb_headroom(pkt) < head_pad) {
             stats = &bus->sdiodev->bus_if->stats;
-            atomic_inc(&stats->pktcowed);
+            atomic_fetch_add(&stats->pktcowed, 1);
             if (skb_cow_head(pkt, head_pad)) {
-                atomic_inc(&stats->pktcow_failed);
+                atomic_fetch_add(&stats->pktcow_failed, 1);
                 return ZX_ERR_NO_MEMORY;
             }
             head_pad = 0;
@@ -2242,7 +2242,7 @@ static uint brcmf_sdio_sendfromq(struct brcmf_sdio* bus, uint maxframes) {
                 break;
             }
             if (intstatus & bus->hostintmask) {
-                atomic_set(&bus->ipend, 1);
+                atomic_store(&bus->ipend, 1);
             }
         }
     }
@@ -2393,7 +2393,7 @@ static inline void brcmf_sdio_clrintr(struct brcmf_sdio* bus) {
     if (sdiodev->oob_irq_requested) {
         //spin_lock_irqsave(&sdiodev->irq_en_lock, flags);
         pthread_mutex_lock(&irq_callback_lock);
-        if (!sdiodev->irq_en && !atomic_read(&bus->ipend)) {
+        if (!sdiodev->irq_en && !atomic_load(&bus->ipend)) {
             enable_irq(sdiodev->settings->bus.sdio.oob_irq_nr);
             sdiodev->irq_en = true;
         }
@@ -2417,13 +2417,13 @@ static zx_status_t brcmf_sdio_intr_rstatus(struct brcmf_sdio* bus) {
     }
 
     val &= bus->hostintmask;
-    atomic_set(&bus->fcstate, !!(val & I_HMB_FC_STATE));
+    atomic_store(&bus->fcstate, !!(val & I_HMB_FC_STATE));
 
     /* Clear interrupts */
     if (val) {
         brcmf_sdiod_writel(bus->sdiodev, addr, val, &ret);
         bus->sdcnt.f1regdata++;
-        atomic_or(val, &bus->intstatus);
+        atomic_fetch_or(&bus->intstatus, val);
     }
 
     return ret;
@@ -2469,13 +2469,13 @@ static void brcmf_sdio_dpc(struct brcmf_sdio* bus) {
     brcmf_sdio_bus_sleep(bus, false, true);
 
     /* Pending interrupt indicates new device status */
-    if (atomic_read(&bus->ipend) > 0) {
-        atomic_set(&bus->ipend, 0);
+    if (atomic_load(&bus->ipend) > 0) {
+        atomic_store(&bus->ipend, 0);
         err = brcmf_sdio_intr_rstatus(bus);
     }
 
     /* Start with leftover status bits */
-    intstatus = atomic_xchg(&bus->intstatus, 0);
+    intstatus = atomic_exchange(&bus->intstatus, 0);
 
     /* Handle flow-control change: read new state in case our ack
      * crossed another change interrupt.  If change still set, assume
@@ -2488,7 +2488,7 @@ static void brcmf_sdio_dpc(struct brcmf_sdio* bus) {
         newstatus = brcmf_sdiod_readl(sdiod, intstat_addr, &err);
 
         bus->sdcnt.f1regdata += 2;
-        atomic_set(&bus->fcstate, !!(newstatus & (I_HMB_FC_STATE | I_HMB_FC_CHANGE)));
+        atomic_store(&bus->fcstate, !!(newstatus & (I_HMB_FC_STATE | I_HMB_FC_CHANGE)));
         intstatus |= (newstatus & bus->hostintmask);
     }
 
@@ -2537,7 +2537,7 @@ static void brcmf_sdio_dpc(struct brcmf_sdio* bus) {
 
     /* Keep still-pending events for next scheduling */
     if (intstatus) {
-        atomic_or(intstatus, &bus->intstatus);
+        atomic_fetch_or(&bus->intstatus, intstatus);
     }
 
     brcmf_sdio_clrintr(bus);
@@ -2554,7 +2554,7 @@ static void brcmf_sdio_dpc(struct brcmf_sdio* bus) {
         brcmf_sdio_wait_event_wakeup(bus);
     }
     /* Send queued frames (limit 1 if rx may still be pending) */
-    if ((bus->clkstate == CLK_AVAIL) && !atomic_read(&bus->fcstate) &&
+    if ((bus->clkstate == CLK_AVAIL) && !atomic_load(&bus->fcstate) &&
             brcmu_pktq_mlen(&bus->txq, ~bus->flowcontrol) && txlimit && data_ok(bus)) {
         framecnt = bus->rxpending ? min(txlimit, bus->txminmax) : txlimit;
         brcmf_sdio_sendfromq(bus, framecnt);
@@ -2562,7 +2562,7 @@ static void brcmf_sdio_dpc(struct brcmf_sdio* bus) {
 
     if ((bus->sdiodev->state != BRCMF_SDIOD_DATA) || (err != ZX_OK)) {
         brcmf_err("failed backplane access over SDIO, halting operation\n");
-        atomic_set(&bus->intstatus, 0);
+        atomic_store(&bus->intstatus, 0);
         if (bus->ctrl_frame_stat) {
             sdio_claim_host(bus->sdiodev->func1);
             if (bus->ctrl_frame_stat) {
@@ -2573,8 +2573,8 @@ static void brcmf_sdio_dpc(struct brcmf_sdio* bus) {
             }
             sdio_release_host(bus->sdiodev->func1);
         }
-    } else if (atomic_read(&bus->intstatus) || atomic_read(&bus->ipend) > 0 ||
-               (!atomic_read(&bus->fcstate) && brcmu_pktq_mlen(&bus->txq, ~bus->flowcontrol) &&
+    } else if (atomic_load(&bus->intstatus) || atomic_load(&bus->ipend) > 0 ||
+               (!atomic_load(&bus->fcstate) && brcmu_pktq_mlen(&bus->txq, ~bus->flowcontrol) &&
                 data_ok(bus))) {
         bus->dpc_triggered = true;
     }
@@ -3408,7 +3408,7 @@ void brcmf_sdio_isr(struct brcmf_sdio* bus) {
     /* Count the interrupt call */
     bus->sdcnt.intrcount++;
     if (in_interrupt()) {
-        atomic_set(&bus->ipend, 1);
+        atomic_store(&bus->ipend, 1);
     } else if (brcmf_sdio_intr_rstatus(bus) != ZX_OK) {
         brcmf_err("failed backplane access\n");
     }
@@ -3447,7 +3447,7 @@ static void brcmf_sdio_bus_watchdog(struct brcmf_sdio* bus) {
                      schedule the DPC */
             if (intstatus) {
                 bus->sdcnt.pollcnt++;
-                atomic_set(&bus->ipend, 1);
+                atomic_store(&bus->ipend, 1);
 
                 bus->dpc_triggered = true;
                 workqueue_schedule(bus->brcmf_wq, &bus->datawork);

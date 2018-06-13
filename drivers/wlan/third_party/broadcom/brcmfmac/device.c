@@ -16,7 +16,7 @@
 
 #include "device.h"
 
-#include <threads.h>
+#include <stdatomic.h>
 
 #include "debug.h"
 
@@ -79,4 +79,34 @@ void brcmf_timer_stop(brcmf_timer_info_t* timer) {
     if (result != ZX_OK) {
         completion_wait(&timer->finished, ZX_TIME_INFINITE);
     }
+}
+
+// This is a kill-flies-with-sledgehammers, just-get-it-working version; TODO(NET-805) for
+// efficiency.
+
+bool brcmf_test_and_set_bit_in_array(size_t bit_number, atomic_ulong* addr) {
+    size_t index = bit_number >> 6;
+    uint64_t bit = 1 << (bit_number & 0x3f);
+    return !!(atomic_fetch_or(&addr[index], bit) & bit);
+}
+
+bool brcmf_test_and_clear_bit_in_array(size_t bit_number, atomic_ulong* addr) {
+    uint32_t index = bit_number >> 6;
+    uint64_t bit = 1 << (bit_number & 0x3f);
+    return !!(atomic_fetch_and(&addr[index], ~bit) & bit);
+}
+
+bool brcmf_test_bit_in_array(size_t bit_number, atomic_ulong* addr) {
+    uint32_t index = bit_number >> 6;
+    uint64_t bit = 1 << (bit_number & 0x3f);
+    return !!(atomic_load(&addr[index]) & bit);
+}
+
+
+void brcmf_clear_bit_in_array(size_t bit_number, atomic_ulong* addr) {
+    (void)brcmf_test_and_clear_bit_in_array(bit_number, addr);
+}
+
+void brcmf_set_bit_in_array(size_t bit_number, atomic_ulong* addr) {
+    (void)brcmf_test_and_set_bit_in_array(bit_number, addr);
 }

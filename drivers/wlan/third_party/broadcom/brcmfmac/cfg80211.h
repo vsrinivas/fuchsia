@@ -198,7 +198,7 @@ struct brcmf_cfg80211_vif {
     struct brcmf_if* ifp;
     struct wireless_dev wdev;
     struct brcmf_cfg80211_profile profile;
-    unsigned long sme_state;
+    atomic_ulong sme_state;
     struct vif_saved_ie saved_ie;
     struct list_head list;
     uint16_t mgmt_rx_reg;
@@ -315,7 +315,7 @@ struct brcmf_cfg80211_info {
     struct wl_cfg80211_bss_info* bss_info;
     struct brcmf_cfg80211_connect_info conn_info;
     struct brcmf_pmk_list_le pmk_list;
-    unsigned long scan_status;
+    atomic_ulong scan_status;
     struct brcmf_pub* pub;
     uint32_t channel;
     uint32_t int_escan_map;

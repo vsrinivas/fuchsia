@@ -111,4 +111,14 @@ struct brcmfmac_platform_data* dev_get_platdata(struct brcmf_device* dev);
 // Note: This is a pthread_mutex_t instead of mtx_t because mtx_t doesn't implement recursive.
 extern pthread_mutex_t irq_callback_lock;
 
+bool brcmf_test_and_set_bit_in_array(size_t bit_number, atomic_ulong* addr);
+
+bool brcmf_test_and_clear_bit_in_array(size_t bit_number, atomic_ulong* addr);
+
+bool brcmf_test_bit_in_array(size_t bit_number, atomic_ulong* addr);
+
+void brcmf_clear_bit_in_array(size_t bit_number, atomic_ulong* addr);
+
+void brcmf_set_bit_in_array(size_t bit_number, atomic_ulong* addr);
+
 #endif /* BRCMF_DEVICE_H */

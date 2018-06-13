@@ -199,7 +199,7 @@ struct brcmf_if {
     uint8_t mac_addr[ETH_ALEN];
     uint8_t netif_stop;
     //spinlock_t netif_stop_lock;
-    atomic_t pend_8021x_cnt;
+    atomic_int pend_8021x_cnt;
     wait_queue_head_t pend_8021x_wait;
     struct in6_addr ipv6_addr_tbl[NDOL_MAX_ENTRIES];
     uint8_t ipv6addr_idx;

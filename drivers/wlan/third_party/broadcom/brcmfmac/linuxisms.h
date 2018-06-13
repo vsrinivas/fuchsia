@@ -57,9 +57,6 @@
 typedef uint16_t __be16;
 typedef uint32_t __be32;
 typedef uint64_t __be64;
-typedef struct {
-    int counter;
-} atomic_t;
 
 // FROM Josh's linuxisms.h
 
@@ -230,12 +227,6 @@ LINUX_FUNCVV(netdev_priv)
 LINUX_FUNCVI(free_netdev)
 LINUX_FUNCcVI(is_zero_ether_addr)
 LINUX_FUNCII(trace_brcmf_sdpcm_hdr)
-LINUX_FUNCVI(atomic_inc)
-LINUX_FUNCVI(atomic_set)
-LINUX_FUNCVI(atomic_read)
-LINUX_FUNCII(atomic_or)
-LINUX_FUNCVI(atomic_xchg)
-LINUX_FUNCVI(atomic_dec)
 LINUX_FUNCUU(cpu_to_be16)
 LINUX_FUNCUU(cpu_to_be32)
 LINUX_FUNCUU(be16_to_cpu)
@@ -319,10 +310,6 @@ LINUX_FUNCVI(request_firmware)
 // platform_driver_probe() is checked for return ENODEV / ZX_ERR_IO_NOT_PRESENT (just for logging)
 LINUX_FUNCVI(platform_driver_probe)
 LINUX_FUNCVI(platform_driver_unregister)
-LINUX_FUNCII(set_bit)
-LINUX_FUNCII(clear_bit)
-LINUX_FUNCII(test_bit)
-LINUX_FUNCII(test_and_clear_bit)
 LINUX_FUNCVI(cfg80211_ready_on_channel)
 LINUX_FUNCVI(cfg80211_sched_scan_results)
 LINUX_FUNCcVS(cfg80211_get_p2p_attr) // TODO(cphoenix): Can this return >0? If so, adjust usage.
@@ -420,7 +407,6 @@ LINUX_FUNCVV(bcm47xx_nvram_get_contents)
 LINUX_FUNCVI(bcm47xx_nvram_release_contents)
 LINUX_FUNCVI(dma_map_single)
 LINUX_FUNCVI(dma_mapping_error)
-LINUX_FUNCVI(atomic_cmpxchg)
 LINUX_FUNCVI(dma_unmap_single)
 LINUX_FUNCVI(skb_orphan)
 LINUX_FUNCVI(__skb_insert)
@@ -433,7 +419,6 @@ LINUX_FUNCVI(usb_sndctrlpipe)
 LINUX_FUNCVI(usb_rcvctrlpipe)
 LINUX_FUNCVI(sdio_claim_irq)
 LINUX_FUNCVI(is_valid_ether_addr)
-LINUX_FUNCVI(test_and_set_bit)
 LINUX_FUNCII(disable_irq_nosync)
 LINUX_FUNCII(request_irq)
 LINUX_FUNCII(enable_irq_wake)
