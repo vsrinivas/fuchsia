@@ -6,14 +6,14 @@
 
 #[cfg(test)]
 use std::fmt::{self, Debug, Formatter};
-use std::ops::{Range, RangeBounds};
+use std::ops::Range;
 
 use byteorder::{ByteOrder, NetworkEndian};
 use zerocopy::{AsBytes, ByteSlice, FromBytes, LayoutVerified, Unaligned};
 
 use error::ParseError;
 use ip::{IpProto, Ipv4Addr, Ipv4Option};
-use wire::util::{extract_slice_range, Checksum, Options};
+use wire::util::{BufferAndRange, Checksum, Options};
 
 use self::options::Ipv4OptionImpl;
 
@@ -56,7 +56,7 @@ struct HeaderPrefix {
 /// The maximum length of an IPv4 header in bytes.
 ///
 /// When calling `Ipv4PacketBuilder::build`, provide at least `MAX_HEADER_LEN`
-/// bytes for the header in order to guarantee that `build` will not panic.
+/// bytes for the header in order to guarantee that `serialize` will not panic.
 pub const MAX_HEADER_LEN: usize = 60;
 
 unsafe impl FromBytes for HeaderPrefix {}
@@ -212,10 +212,15 @@ impl<B: ByteSlice> Ipv4Packet<B> {
         Ipv4Addr::new(self.hdr_prefix.dst_ip)
     }
 
+    // The size of the header prefix and options.
+    fn header_len(&self) -> usize {
+        self.hdr_prefix.bytes().len() + self.options.bytes().len()
+    }
+
     // The size of the packet as calculated from the header prefix, options, and
     // body. This is not the same as the total length field in the header.
-    fn total_packet_length(&self) -> usize {
-        self.hdr_prefix.bytes().len() + self.options.bytes().len() + self.body.len()
+    fn total_packet_len(&self) -> usize {
+        self.header_len() + self.body.len()
     }
 }
 
@@ -325,12 +330,13 @@ impl Ipv4PacketBuilder {
 
     /// Serialize an IPv4 packet in an existing buffer.
     ///
-    /// `build` creates an `Ipv4Packet` which uses the provided `buffer` for its
+    /// `serialize` creates an `Ipv4Packet` which uses the provided `buffer` for its
     /// storage, initializing all header fields from the present configuration.
-    /// It treats the range identified by `body` as being the packet body. It
-    /// uses the last bytes of `buffer` before the body to store the header, and
-    /// returns the range of bytes consumed by the new packet. This range can be
-    /// used to indicate the range for encapsulation in another packet.
+    /// It treats `buffer.range()` as the packet body. It uses the last bytes of
+    /// `buffer` before the body to store the header, and returns a new
+    /// `BufferAndRange` with a range equal to the bytes of the IPv4 packet
+    /// (including the header). This range can be used to indicate the range for
+    /// encapsulation in another packet.
     ///
     /// # Examples
     ///
@@ -338,61 +344,62 @@ impl Ipv4PacketBuilder {
     /// let mut buffer = [0u8; 1024];
     /// (&mut buffer[512..]).copy_from_slice(body);
     /// let builder = Ipv4PacketBuilder::new(src_ip, dst_ip, ttl, proto);
-    /// let (_, range) = builder.build(&mut buffer[..], 512..);
-    /// send_ipv4_frame(device, &mut buffer[..], range);
+    /// let buffer = builder.serialize(BufferAndRange::new(&mut buffer[..], 512..));
+    /// send_ip_frame(device, buffer);
     /// ```
     ///
     /// # Panics
     ///
-    /// `build` panics if there is insufficient room preceding the body to store
-    /// the IPv4 header, or if `body` is not in range of `buffer`. The caller
-    /// can guarantee that there will be enough room by providing at least
-    /// `MAX_HEADER_LEN` pre-body bytes.
-    pub fn build<'a, R: RangeBounds<usize>>(
-        self, buffer: &'a mut [u8], body: R,
-    ) -> (Ipv4Packet<&'a mut [u8]>, Range<usize>) {
-        let (header, body, _) =
-            extract_slice_range(buffer, body).expect("body range is out of bounds of buffer");
-        // create a 0-byte slice for the options since we don't support
-        // serializing options yet (NET-955)
-        let (options, body) = body.split_at_mut(0);
-        // SECURITY: Use _zeroed constructor to ensure we zero memory to prevent
-        // leaking information from packets previously stored in this buffer.
-        let (prefix, hdr_prefix) =
-            LayoutVerified::<_, HeaderPrefix>::new_unaligned_from_suffix_zeroed(header)
-                .expect("too few bytes for IPv4 header");
-        let options =
-            Options::parse(options).expect("parsing an empty options slice should not fail");
-        let mut packet = Ipv4Packet {
-            hdr_prefix,
-            options,
-            body,
+    /// `serialize` panics if there is insufficient room preceding the body to store
+    /// the IPv4 header. The caller can guarantee that there will be enough room
+    /// by providing at least `MAX_HEADER_LEN` pre-body bytes.
+    pub fn serialize<B: AsMut<[u8]>>(self, mut buffer: BufferAndRange<B>) -> BufferAndRange<B> {
+        let extend_backwards = {
+            let (header, body, _) = buffer.parts_mut();
+            // create a 0-byte slice for the options since we don't support
+            // serializing options yet (NET-955)
+            let (options, body) = body.split_at_mut(0);
+            // SECURITY: Use _zeroed constructor to ensure we zero memory to prevent
+            // leaking information from packets previously stored in this buffer.
+            let (_, hdr_prefix) =
+                LayoutVerified::<_, HeaderPrefix>::new_unaligned_from_suffix_zeroed(header)
+                    .expect("too few bytes for IPv4 header");
+            let options =
+                Options::parse(options).expect("parsing an empty options slice should not fail");
+            let mut packet = Ipv4Packet {
+                hdr_prefix,
+                options,
+                body,
+            };
+
+            packet.hdr_prefix.version_ihl = (4u8 << 4) | 5;
+            packet.hdr_prefix.dscp_ecn = (self.dscp << 2) | self.ecn;
+            let total_len = packet.total_packet_len();
+            if total_len >= 1 << 16 {
+                panic!(
+                    "packet length of {} exceeds maximum of {}",
+                    total_len,
+                    1 << 16 - 1,
+                );
+            }
+            NetworkEndian::write_u16(&mut packet.hdr_prefix.total_len, total_len as u16);
+            NetworkEndian::write_u16(&mut packet.hdr_prefix.id, self.id);
+            NetworkEndian::write_u16(
+                &mut packet.hdr_prefix.flags_frag_off,
+                ((self.flags as u16) << 13) | self.frag_off,
+            );
+            packet.hdr_prefix.ttl = self.ttl;
+            packet.hdr_prefix.proto = self.proto;
+            packet.hdr_prefix.src_ip = self.src_ip.ipv4_bytes();
+            packet.hdr_prefix.dst_ip = self.dst_ip.ipv4_bytes();
+            let checksum = packet.compute_header_checksum();
+            NetworkEndian::write_u16(&mut packet.hdr_prefix.hdr_checksum, checksum);
+
+            packet.header_len()
         };
 
-        packet.hdr_prefix.version_ihl = (4u8 << 4) | 5;
-        packet.hdr_prefix.dscp_ecn = (self.dscp << 2) | self.ecn;
-        let total_len = packet.total_packet_length();
-        if total_len > 1 << 16 {
-            panic!(
-                "packet length of {} exceeds maximum of {}",
-                total_len,
-                1 << 16
-            );
-        }
-        NetworkEndian::write_u16(&mut packet.hdr_prefix.total_len, total_len as u16);
-        NetworkEndian::write_u16(&mut packet.hdr_prefix.id, self.id);
-        NetworkEndian::write_u16(
-            &mut packet.hdr_prefix.flags_frag_off,
-            ((self.flags as u16) << 13) | self.frag_off,
-        );
-        packet.hdr_prefix.ttl = self.ttl;
-        packet.hdr_prefix.proto = self.proto;
-        packet.hdr_prefix.src_ip = self.src_ip.ipv4_bytes();
-        packet.hdr_prefix.dst_ip = self.dst_ip.ipv4_bytes();
-        let checksum = packet.compute_header_checksum();
-        NetworkEndian::write_u16(&mut packet.hdr_prefix.hdr_checksum, checksum);
-
-        (packet, prefix.len()..(prefix.len() + total_len))
+        buffer.extend_backwards(extend_backwards);
+        buffer
     }
 }
 
@@ -576,7 +583,7 @@ mod tests {
     }
 
     #[test]
-    fn test_build() {
+    fn test_serialize() {
         let mut buf = [0; 30];
         let mut builder = new_builder();
         builder.dscp(0x12);
@@ -588,14 +595,8 @@ mod tests {
         {
             // set the body
             (&mut buf[20..]).copy_from_slice(&[0, 1, 2, 3, 3, 4, 5, 7, 8, 9]);
-            let (packet, _) = builder.build(&mut buf[..], 20..);
-            // assert that we get the values we set in the builder
-            assert_eq!(packet.dscp(), 0x12);
-            assert_eq!(packet.ecn(), 3);
-            assert_eq!(packet.id(), 0x0405);
-            assert!(packet.df_flag());
-            assert!(packet.mf_flag());
-            assert_eq!(packet.fragment_offset(), 0x0607);
+            let buffer = builder.serialize(BufferAndRange::new(&mut buf[..], 20..));
+            assert_eq!(buffer.range(), 0..30);
         }
 
         // assert that we get the literal bytes we expected
@@ -619,29 +620,28 @@ mod tests {
     }
 
     #[test]
-    fn test_build_zeroes() {
+    fn test_serialize_zeroes() {
         // Test that Ipv4PacketBuilder::build properly zeroes memory before
         // serializing the header.
         let mut buf_0 = [0; 20];
-        new_builder().build(&mut buf_0[..], 20..);
+        new_builder().serialize(BufferAndRange::new(&mut buf_0[..], 20..));
         let mut buf_1 = [0xFF; 20];
-        new_builder().build(&mut buf_1[..], 20..);
+        new_builder().serialize(BufferAndRange::new(&mut buf_1[..], 20..));
         assert_eq!(buf_0, buf_1);
     }
 
     #[test]
     #[should_panic]
-    fn test_build_panic_body_range() {
-        // Test that a body range which is out of bounds of the buffer is
-        // rejected.
-        new_builder().build(&mut [0; 20], ..21);
+    fn test_serialize_panic_packet_length() {
+        // Test that a packet which is longer than 2^16 - 1 bytes is rejected.
+        new_builder().serialize(BufferAndRange::new(&mut [0; 1 << 16][..], 20..));
     }
 
     #[test]
     #[should_panic]
-    fn test_build_panic_insufficient_header_space() {
+    fn test_serialize_panic_insufficient_header_space() {
         // Test that a body range which doesn't leave enough room for the header
         // is rejected.
-        new_builder().build(&mut [0; 20], ..);
+        new_builder().serialize(BufferAndRange::new(&mut [0; 20], ..));
     }
 }

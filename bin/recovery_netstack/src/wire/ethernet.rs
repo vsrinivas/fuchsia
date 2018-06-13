@@ -4,14 +4,14 @@
 
 //! Parsing and serialization of Ethernet frames.
 
-use std::ops::{Range, RangeBounds};
+use std::ops::Range;
 
 use byteorder::{ByteOrder, NetworkEndian};
 use zerocopy::{AsBytes, ByteSlice, FromBytes, LayoutVerified, Unaligned};
 
 use device::ethernet::{EtherType, Mac};
 use error::ParseError;
-use wire::util::extract_slice_range;
+use wire::util::BufferAndRange;
 
 // HeaderPrefix has the same memory layout (thanks to repr(C, packed)) as an
 // Ethernet header prefix. Thus, we can simply reinterpret the bytes of the
@@ -47,8 +47,8 @@ const TPID_8021AD: u16 = 0x88a8;
 
 /// The maximum length of an Ethernet header in bytes.
 ///
-/// When calling `EthernetFrame::create`, provide at least `MAX_HEADER_LEN`
-/// bytes for the header in order to guarantee that `create` will not panic.
+/// When calling `EthernetFrame::serialize`, provide at least `MAX_HEADER_LEN`
+/// bytes for the header in order to guarantee that `serialize` will not panic.
 pub const MAX_HEADER_LEN: usize = 18;
 
 // NOTE(joshlf): MIN_BODY_LEN assumes no 802.1Q or 802.1ad tag. We don't support
@@ -58,7 +58,7 @@ pub const MAX_HEADER_LEN: usize = 18;
 
 /// The minimum length of an Ethernet body in bytes.
 ///
-/// When calling `EthernetFrame::create`, provide at least `MIN_BODY_LEN` bytes
+/// When calling `EthernetFrame::serialize`, provide at least `MIN_BODY_LEN` bytes
 /// for the body in order to guarantee that `create` will not panic.
 pub const MIN_BODY_LEN: usize = 46;
 
@@ -172,87 +172,98 @@ impl<B: ByteSlice> EthernetFrame<B> {
         Some(EtherType::from_u16(et).ok_or(et))
     }
 
+    // The size of the frame header.
+    fn header_len(&self) -> usize {
+        self.hdr_prefix.bytes().len()
+            + self.tag.as_ref().map(|t| t.bytes().len()).unwrap_or(0)
+            + self.ethertype.bytes().len()
+    }
+
     // Total frame length including header prefix, tag, EtherType, and body.
     // This is not the same as the length as optionally encoded in the
     // EtherType.
     fn total_frame_len(&self) -> usize {
-        self.hdr_prefix.bytes().len()
-            + self.tag.as_ref().map(|t| t.bytes().len()).unwrap_or(0)
-            + self.ethertype.bytes().len()
-            + self.body.len()
+        self.header_len() + self.body.len()
     }
 }
 
 impl<'a> EthernetFrame<&'a mut [u8]> {
     /// Serialize an Ethernet frame in an existing buffer.
     ///
-    /// `create` creates an `EthernetFrame` which uses the provided `buffer` for
-    /// its storage, initializing all header fields. It treats the range
-    /// identified by `body` as being the frame body. It uses the last bytes of
-    /// `buffer` before the body to store the header, and returns the range of
-    /// bytes consumed by the new frame. This range can be used to indicate the
-    /// range for encapsulation in another packet.
+    /// `serialize` serializes an `EthernetFrame` which uses the provided
+    /// `buffer` for its storage, initializing all header fields. It treats
+    /// `buffer.range()` as the frame body. It uses the last bytes of `buffer`
+    /// before the body to store the header, and returns a new `BufferAndRange`
+    /// with a range equal to the bytes of the Ethernet frame (including the
+    /// header). This range can be used to indicate the range for encapsulation
+    /// in another packet.
     ///
     /// # Examples
     ///
     /// ```rust
     /// let mut buffer = [0u8; 1024];
     /// (&mut buffer[512..]).copy_from_slice(body);
-    /// let (frame, range) = EthernetFrame::create(&mut buffer[..], 512.., src_mac, dst_mac, ethertype);
+    /// let buffer = EthernetFrame::serialize(
+    ///     BufferAndRange::new(&mut buffer[..], 512..),
+    ///     src_mac,
+    ///     dst_mac,
+    ///     ethertype,
+    /// );
     /// ```
     ///
     /// # Panics
     ///
-    /// `create` panics if there is insufficient room preceding the body to
-    /// store the Ethernet header, or if `body` is not in range of `buffer`. The
-    /// caller can guarantee that there will be enough room by providing at
-    /// least `MAX_HEADER_LEN` pre-body bytes.
+    /// `serialize` panics if there is insufficient room preceding the body to
+    /// store the Ethernet header. The caller can guarantee that there will be
+    /// enough room by providing at least `MAX_HEADER_LEN` pre-body bytes.
     ///
-    /// `create` also panics if the total frame length is less than the minimum
-    /// of 60 bytes. The caller can guarantee that the frame will be large
-    /// enough by providing a body of at least `MIN_BODY_LEN` bytes.
-    pub fn create<R: RangeBounds<usize>>(
-        buffer: &'a mut [u8], body: R, src_mac: Mac, dst_mac: Mac, ethertype: EtherType,
-    ) -> (EthernetFrame<&'a mut [u8]>, Range<usize>) {
+    /// `serialize` also panics if the total frame length is less than the
+    /// minimum of 60 bytes. The caller can guarantee that the frame will be
+    /// large enough by providing a body of at least `MIN_BODY_LEN` bytes.
+    pub fn serialize(
+        mut buffer: BufferAndRange<&'a mut [u8]>, src_mac: Mac, dst_mac: Mac, ethertype: EtherType,
+    ) -> BufferAndRange<&'a mut [u8]> {
         // NOTE: EtherType values of 1500 and below are used to indicate the
         // length of the body in bytes. We don't need to validate this because
         // the EtherType enum has no variants with values in that range.
 
-        // SECURITY: Use _zeroed constructors to ensure we zero memory to
-        // prevent leaking information from packets previously stored in this
-        // buffer.
-        let (header, body, _) =
-            extract_slice_range(buffer, body).expect("body range is out of bounds of buffer");
-        let (mut frame, prefix_len) = {
-            let (prefix, ethertype) =
-                LayoutVerified::<_, [u8; 2]>::new_unaligned_from_suffix_zeroed(header)
-                    .expect("too few bytes for Ethernet header");
-            let (prefix, hdr_prefix) =
-                LayoutVerified::<_, HeaderPrefix>::new_unaligned_from_suffix_zeroed(prefix)
-                    .expect("too few bytes for Ethernet header");
-            (
+        let extend_backwards = {
+            let (header, body, _) = buffer.parts_mut();
+            let mut frame = {
+                // SECURITY: Use _zeroed constructors to ensure we zero memory
+                // to prevent leaking information from packets previously stored
+                // in this buffer.
+                let (prefix, ethertype) =
+                    LayoutVerified::<_, [u8; 2]>::new_unaligned_from_suffix_zeroed(header)
+                        .expect("too few bytes for Ethernet header");
+                let (_, hdr_prefix) =
+                    LayoutVerified::<_, HeaderPrefix>::new_unaligned_from_suffix_zeroed(prefix)
+                        .expect("too few bytes for Ethernet header");
                 EthernetFrame {
                     hdr_prefix,
                     tag: None,
                     ethertype,
                     body,
-                },
-                prefix.len(),
-            )
+                }
+            };
+
+            let total_len = frame.total_frame_len();
+            if total_len < 60 {
+                panic!(
+                    "total frame size of {} bytes is below minimum frame size of 60",
+                    total_len
+                );
+            }
+
+            frame.hdr_prefix.src_mac = src_mac.bytes();
+            frame.hdr_prefix.dst_mac = dst_mac.bytes();
+            NetworkEndian::write_u16(&mut frame.ethertype[..], ethertype as u16);
+
+            frame.header_len()
         };
 
-        let total_len = frame.total_frame_len();
-        if total_len < 60 {
-            panic!(
-                "total frame size of {} bytes is below minimum frame size of 60",
-                total_len
-            );
-        }
-
-        frame.hdr_prefix.src_mac = src_mac.bytes();
-        frame.hdr_prefix.dst_mac = dst_mac.bytes();
-        NetworkEndian::write_u16(&mut frame.ethertype[..], ethertype as u16);
-        (frame, prefix_len..(prefix_len + total_len))
+        buffer.extend_backwards(extend_backwards);
+        buffer
     }
 }
 
@@ -334,17 +345,13 @@ mod tests {
     }
 
     #[test]
-    fn test_create() {
+    fn test_serialize() {
         let mut buf = new_buf();
         {
-            let (_, range) = EthernetFrame::create(
-                &mut buf,
-                (MAX_HEADER_LEN - 4)..,
-                DEFAULT_DST_MAC,
-                DEFAULT_SRC_MAC,
-                EtherType::Arp,
-            );
-            assert_eq!(range, 0..60);
+            let buffer = BufferAndRange::new(&mut buf[..], (MAX_HEADER_LEN - 4)..);
+            let buffer =
+                EthernetFrame::serialize(buffer, DEFAULT_DST_MAC, DEFAULT_SRC_MAC, EtherType::Arp);
+            assert_eq!(buffer.range(), 0..60);
         }
         assert_eq!(
             &buf[..MAX_HEADER_LEN - 4],
@@ -353,22 +360,20 @@ mod tests {
     }
 
     #[test]
-    fn test_create_zeroes() {
-        // Test that EthernetFrame::create properly zeroes memory before
+    fn test_serialize_zeroes() {
+        // Test that EthernetFrame::serialize properly zeroes memory before
         // serializing the header.
         let mut buf_0 = [0; 60];
-        EthernetFrame::create(
-            &mut buf_0[..],
-            14..,
+        EthernetFrame::serialize(
+            BufferAndRange::new(&mut buf_0[..], 14..),
             DEFAULT_SRC_MAC,
             DEFAULT_DST_MAC,
             EtherType::Arp,
         );
         let mut buf_1 = [0; 60];
         (&mut buf_1[..14]).copy_from_slice(&[0xFF; 14]);
-        EthernetFrame::create(
-            &mut buf_1[..],
-            14..,
+        EthernetFrame::serialize(
+            BufferAndRange::new(&mut buf_1[..], 14..),
             DEFAULT_SRC_MAC,
             DEFAULT_DST_MAC,
             EtherType::Arp,
@@ -400,12 +405,11 @@ mod tests {
 
     #[test]
     #[should_panic]
-    fn test_create_panic() {
+    fn test_serialize_panic() {
         // create with a body which is below the minimum length
         let mut buf = [0u8; 60];
-        EthernetFrame::create(
-            &mut buf,
-            (60 - (MIN_BODY_LEN - 1))..,
+        EthernetFrame::serialize(
+            BufferAndRange::new(&mut buf, (60 - (MIN_BODY_LEN - 1))..),
             Mac::new([0, 1, 2, 3, 4, 5]),
             Mac::new([6, 7, 8, 9, 10, 11]),
             EtherType::Arp,

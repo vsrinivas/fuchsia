@@ -6,6 +6,7 @@
 
 #![feature(const_fn)]
 #![feature(nonzero)]
+#![feature(try_from)]
 // In case we roll the toolchain and something we're using as a feature has been
 // stabilized.
 #![allow(stable_features)]

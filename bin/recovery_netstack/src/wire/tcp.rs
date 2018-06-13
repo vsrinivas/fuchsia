@@ -7,7 +7,7 @@
 #[cfg(test)]
 use std::fmt::{self, Debug, Formatter};
 use std::num::NonZeroU16;
-use std::ops::{Range, RangeBounds};
+use std::ops::Range;
 
 use byteorder::{ByteOrder, NetworkEndian};
 use zerocopy::{AsBytes, ByteSlice, FromBytes, LayoutVerified, Unaligned};
@@ -15,14 +15,15 @@ use zerocopy::{AsBytes, ByteSlice, FromBytes, LayoutVerified, Unaligned};
 use error::ParseError;
 use ip::{Ip, IpAddr, IpProto};
 use transport::tcp::TcpOption;
-use wire::util::{extract_slice_range, fits_in_u16, fits_in_u32, Checksum, Options};
+use wire::util::{fits_in_u16, fits_in_u32, BufferAndRange, Checksum, Options};
 
 use self::options::TcpOptionImpl;
 
 /// The maximum length of a TCP header in bytes.
 ///
-/// When calling `TcpSegmentBuilder::build`, provide at least `MAX_HEADER_LEN`
-/// bytes for the header in order to guarantee that `build` will not panic.
+/// When calling `TcpSegmentBuilder::serialize`, provide at least
+/// `MAX_HEADER_LEN` bytes for the header in order to guarantee that `serialize`
+/// will not panic.
 pub const MAX_HEADER_LEN: usize = 60;
 
 // HeaderPrefix has the same memory layout (thanks to repr(C, packed)) as TCP
@@ -146,7 +147,7 @@ impl<B: ByteSlice> TcpSegment<B> {
         let mut checksum = Checksum::new();
         checksum.add_bytes(src_ip.bytes());
         checksum.add_bytes(dst_ip.bytes());
-        let total_len = self.total_segment_length();
+        let total_len = self.total_segment_len();
         if A::Version::VERSION.is_v4() {
             checksum.add_bytes(&[0, IpProto::Tcp as u8]);
             // For IPv4, the "TCP length" field in the pseudo-header is 16 bits.
@@ -229,10 +230,15 @@ impl<B: ByteSlice> TcpSegment<B> {
         NetworkEndian::read_u16(&self.hdr_prefix.window_size)
     }
 
-    // The size of the segment as calculated from the header prefix, options,
+    // The length of the header prefix and options.
+    fn header_len(&self) -> usize {
+        self.hdr_prefix.bytes().len() + self.options.bytes().len()
+    }
+
+    // The length of the segment as calculated from the header prefix, options,
     // and body.
-    fn total_segment_length(&self) -> usize {
-        self.hdr_prefix.bytes().len() + self.options.bytes().len() + self.body.len()
+    fn total_segment_len(&self) -> usize {
+        self.header_len() + self.body.len()
     }
 }
 
@@ -297,13 +303,13 @@ impl TcpSegmentBuilder {
 
     /// Serialize a TCP segment in an existing buffer.
     ///
-    /// `build` creates a `TcpSegment` which uses the provided `buffer` for its
-    /// storage, initializing all header fields and calculating the checksum
-    /// from the present configuration. It treats the range identified by `body`
-    /// as being the packet body. It uses the last bytes of `buffer` before the
-    /// body to store the header, and returns the range of bytes consumed by the
-    /// new segment. This range can be used to indicate the range for
-    /// encapsulation in another packet.
+    /// `serialize` creates a `TcpSegment` which uses the provided `buffer` for
+    /// its storage, initializing all header fields and calculating the checksum
+    /// from the present configuration. It treats `buffer.range()` as the
+    /// segment body. It uses the last bytes of `buffer` before the body to
+    /// store the header, and returns a new `BufferAndRange` with a range equal
+    /// to the bytes of the TCP segment (including the header). This range can
+    /// be used to indicate the range for encapsulation in another packet.
     ///
     /// # Examples
     ///
@@ -311,60 +317,63 @@ impl TcpSegmentBuilder {
     /// let mut buffer = [0u8; 1024];
     /// (&mut buffer[512..]).copy_from_slice(body);
     /// let builder = TcpSegmentBuilder::new(src_port, dst_port, seq_num, ack_num, window_size);
-    /// let (_, range) = builder.build(&mut buffer[..], 512.., src_ip, dst_ip);
-    /// send_ipv4_packet(dst_ip, &mut buffer[..], range);
+    /// let buffer = builder.serialize(BufferAndRange::new(&mut buffer[..], 512..), src_ip, dst_ip);
+    /// send_ip_packet(dst_ip, buffer);
     /// ```
     ///
     /// # Panics
     ///
-    /// `build` panics if there is insufficient room preceding the body to store
-    /// the TCP header, or if `body` is not in range of `buffer`. The caller can
-    /// guarantee that there will be enough room by providing at least
-    /// `MAX_HEADER_LEN` pre-body bytes.
-    pub fn build<'a, R: RangeBounds<usize>, A: IpAddr>(
-        self, buffer: &'a mut [u8], body: R, src_ip: A, dst_ip: A,
-    ) -> (TcpSegment<&'a mut [u8]>, Range<usize>) {
-        let (header, body, _) =
-            extract_slice_range(buffer, body).expect("body range is out of bounds of buffer");
-        // create a 0-byte slice for the options since we don't support
-        // serializing options yet (NET-955)
-        let (options, body) = body.split_at_mut(0);
-        // SECURITY: Use _zeroed constructor to ensure we zero memory to prevent
-        // leaking information from packets previously stored in this buffer.
-        let (prefix, hdr_prefix) =
-            LayoutVerified::<_, HeaderPrefix>::new_unaligned_from_suffix_zeroed(header)
-                .expect("too few bytes for TCP header");
-        let options =
-            Options::parse(options).expect("parsing an empty options slice should not fail");
-        let mut segment = TcpSegment {
-            hdr_prefix,
-            options,
-            body,
+    /// `serialize` panics if there is insufficient room preceding the body to
+    /// store the TCP header. The caller can guarantee that there will be enough
+    /// room by providing at least `MAX_HEADER_LEN` pre-body bytes.
+    pub fn serialize<B: AsMut<[u8]>, A: IpAddr>(
+        self, mut buffer: BufferAndRange<B>, src_ip: A, dst_ip: A,
+    ) -> BufferAndRange<B> {
+        let extend_backwards = {
+            let (header, body, _) = buffer.parts_mut();
+            // create a 0-byte slice for the options since we don't support
+            // serializing options yet (NET-955)
+            let (options, body) = body.split_at_mut(0);
+            // SECURITY: Use _zeroed constructor to ensure we zero memory to prevent
+            // leaking information from packets previously stored in this buffer.
+            let (_, hdr_prefix) =
+                LayoutVerified::<_, HeaderPrefix>::new_unaligned_from_suffix_zeroed(header)
+                    .expect("too few bytes for TCP header");
+            let options =
+                Options::parse(options).expect("parsing an empty options slice should not fail");
+            let mut segment = TcpSegment {
+                hdr_prefix,
+                options,
+                body,
+            };
+
+            NetworkEndian::write_u16(&mut segment.hdr_prefix.src_port, self.src_port);
+            NetworkEndian::write_u16(&mut segment.hdr_prefix.dst_port, self.dst_port);
+            NetworkEndian::write_u32(&mut segment.hdr_prefix.seq_num, self.seq_num);
+            NetworkEndian::write_u32(&mut segment.hdr_prefix.ack, self.ack_num);
+            // Data Offset is hard-coded to 5 until we support serializing options
+            NetworkEndian::write_u16(
+                &mut segment.hdr_prefix.data_offset_reserved_flags,
+                (5u16 << 12) | self.flags,
+            );
+            NetworkEndian::write_u16(&mut segment.hdr_prefix.window_size, self.window_size);
+            // we don't support setting the Urgent Pointer
+            NetworkEndian::write_u16(&mut segment.hdr_prefix.urg_ptr, 0);
+
+            let segment_len = segment.total_segment_len();
+            // This ignores the checksum field in the header, so it's fine that we
+            // haven't set it yet, and so it could be filled with arbitrary bytes.
+            let checksum = segment.compute_checksum(src_ip, dst_ip).expect(&format!(
+                "total TCP segment length of {} bytes overflows length field of pseudo-header",
+                segment_len
+            ));
+            NetworkEndian::write_u16(&mut segment.hdr_prefix.checksum, checksum);
+
+            segment.header_len()
         };
 
-        NetworkEndian::write_u16(&mut segment.hdr_prefix.src_port, self.src_port);
-        NetworkEndian::write_u16(&mut segment.hdr_prefix.dst_port, self.dst_port);
-        NetworkEndian::write_u32(&mut segment.hdr_prefix.seq_num, self.seq_num);
-        NetworkEndian::write_u32(&mut segment.hdr_prefix.ack, self.ack_num);
-        // Data Offset is hard-coded to 5 until we support serializing options
-        NetworkEndian::write_u16(
-            &mut segment.hdr_prefix.data_offset_reserved_flags,
-            (5u16 << 12) | self.flags,
-        );
-        NetworkEndian::write_u16(&mut segment.hdr_prefix.window_size, self.window_size);
-        // we don't support setting the Urgent Pointer
-        NetworkEndian::write_u16(&mut segment.hdr_prefix.urg_ptr, 0);
-
-        let segment_len = segment.total_segment_length();
-        // This ignores the checksum field in the header, so it's fine that we
-        // haven't set it yet, and so it could be filled with arbitrary bytes.
-        let checksum = segment.compute_checksum(src_ip, dst_ip).expect(&format!(
-            "total TCP segment length of {} bytes overflows length field of pseudo-header",
-            segment_len
-        ));
-        NetworkEndian::write_u16(&mut segment.hdr_prefix.checksum, checksum);
-
-        (segment, prefix.len()..(prefix.len() + segment_len))
+        buffer.extend_backwards(extend_backwards);
+        buffer
     }
 }
 
@@ -612,7 +621,7 @@ mod tests {
     }
 
     #[test]
-    fn test_build() {
+    fn test_serialize() {
         let mut buf = [0; 30];
         let mut builder = new_builder();
         builder.fin(true);
@@ -621,14 +630,12 @@ mod tests {
         {
             // set the body
             (&mut buf[20..]).copy_from_slice(&[0, 1, 2, 3, 3, 4, 5, 7, 8, 9]);
-            let (segment, _) = builder.build(&mut buf[..], 20.., TEST_SRC_IPV4, TEST_DST_IPV4);
-            // assert that we get the values we set in the builder
-            assert_eq!(segment.src_port().get(), 1);
-            assert_eq!(segment.dst_port().get(), 2);
-            assert_eq!(segment.seq_num(), 3);
-            assert_eq!(segment.ack_num(), Some(4));
-            assert_eq!(segment.window_size(), 5);
-            assert_eq!(segment.body(), [0, 1, 2, 3, 3, 4, 5, 7, 8, 9]);
+            let buffer = builder.serialize(
+                BufferAndRange::new(&mut buf[..], 20..),
+                TEST_SRC_IPV4,
+                TEST_DST_IPV4,
+            );
+            assert_eq!(buffer.range(), 0..30);
         }
 
         // assert that we get the literal bytes we expected
@@ -653,47 +660,71 @@ mod tests {
     }
 
     #[test]
-    fn test_build_zeroes() {
+    fn test_serialize_zeroes() {
         // Test that TcpSegmentBuilder::build properly zeroes memory before
         // serializing the header.
         let mut buf_0 = [0; 20];
-        new_builder().build(&mut buf_0[..], 20.., TEST_SRC_IPV4, TEST_DST_IPV4);
+        new_builder().serialize(
+            BufferAndRange::new(&mut buf_0[..], 20..),
+            TEST_SRC_IPV4,
+            TEST_DST_IPV4,
+        );
         let mut buf_1 = [0xFF; 20];
-        new_builder().build(&mut buf_1[..], 20.., TEST_SRC_IPV4, TEST_DST_IPV4);
+        new_builder().serialize(
+            BufferAndRange::new(&mut buf_1[..], 20..),
+            TEST_SRC_IPV4,
+            TEST_DST_IPV4,
+        );
         assert_eq!(buf_0, buf_1);
     }
 
     #[test]
     #[should_panic]
-    fn test_build_panic_body_range() {
+    fn test_serialize_panic_body_range() {
         // Test that a body range which is out of bounds of the buffer is
         // rejected.
-        new_builder().build(&mut [0; 20], ..21, TEST_SRC_IPV4, TEST_DST_IPV4);
+        new_builder().serialize(
+            BufferAndRange::new(&mut [0; 20][..], ..21),
+            TEST_SRC_IPV4,
+            TEST_DST_IPV4,
+        );
     }
 
     #[test]
     #[should_panic]
-    fn test_build_panic_insufficient_header_space() {
+    fn test_serialize_panic_insufficient_header_space() {
         // Test that a body range which doesn't leave enough room for the header
         // is rejected.
-        new_builder().build(&mut [0; 20], .., TEST_SRC_IPV4, TEST_DST_IPV4);
+        new_builder().serialize(
+            BufferAndRange::new(&mut [0; 20][..], ..),
+            TEST_SRC_IPV4,
+            TEST_DST_IPV4,
+        );
     }
 
     #[test]
     #[should_panic]
-    fn test_build_panic_segment_too_long_ipv4() {
+    fn test_serialize_panic_segment_too_long_ipv4() {
         // Test that a segment length which overflows u16 is rejected because it
         // can't fit in the length field in the IPv4 pseudo-header.
-        new_builder().build(&mut [0; 1 << 16], 20.., TEST_SRC_IPV4, TEST_DST_IPV4);
+        new_builder().serialize(
+            BufferAndRange::new(&mut [0; 1 << 16][..], 20..),
+            TEST_SRC_IPV4,
+            TEST_DST_IPV4,
+        );
     }
 
     #[test]
     #[ignore] // this test panics with stack overflow; TODO(joshlf): Fix
     #[should_panic]
     #[cfg(target_pointer_width = "64")] // 2^32 overflows on 32-bit platforms
-    fn test_build_panic_segment_too_long_ipv6() {
+    fn test_serialize_panic_segment_too_long_ipv6() {
         // Test that a segment length which overflows u32 is rejected because it
         // can't fit in the length field in the IPv4 pseudo-header.
-        new_builder().build(&mut [0; 1 << 32], 20.., TEST_SRC_IPV6, TEST_DST_IPV6);
+        new_builder().serialize(
+            BufferAndRange::new(&mut [0; 1 << 32][..], 20..),
+            TEST_SRC_IPV6,
+            TEST_DST_IPV6,
+        );
     }
 }

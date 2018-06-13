@@ -548,41 +548,11 @@ mod options {
 }
 
 mod range {
-    use std::ops::{Bound, RangeBounds};
-
-    use zerocopy::ByteSlice;
-
-    /// Extract a range from a slice of bytes.
-    ///
-    /// `extract_slice_range` extracts the given range from the given slice of
-    /// bytes. It also returns the byte slices before and after the range.
-    ///
-    /// If the provided range is out of bounds of the slice, or if the range
-    /// itself is nonsensical (if the upper bound precedes the lower bound),
-    /// `extract_slice_range` returns `None`.
-    pub fn extract_slice_range<B: ByteSlice, R: RangeBounds<usize>>(
-        bytes: B, range: R,
-    ) -> Option<(B, B, B)> {
-        let lower = canonicalize_lower_bound(range.start_bound());
-        let upper = canonicalize_upper_bound(bytes.len(), range.end_bound())?;
-        if lower > upper {
-            return None;
-        }
-        let (a, rest) = bytes.split_at(lower);
-        let (b, c) = rest.split_at(upper - lower);
-        Some((a, b, c))
-    }
+    use std::convert::TryFrom;
+    use std::ops::{Bound, Range, RangeBounds};
 
     // return the inclusive equivalent of the bound
-
-    /// Return the canonical, inclusive version of a lower bound.
-    ///
-    /// `canonicalize_lower_bound` converts a lower bound into the equivalent
-    /// inclusive lower bound. It follows the following rules:
-    /// - For an inclusive bound, return the bound directly
-    /// - For an exclusive bound, return the bound plus one
-    /// - For an unbounded bound, return zero
-    pub fn canonicalize_lower_bound(bound: Bound<&usize>) -> usize {
+    fn canonicalize_lower_bound(bound: Bound<&usize>) -> usize {
         match bound {
             Bound::Included(x) => *x,
             Bound::Excluded(x) => *x + 1,
@@ -590,9 +560,8 @@ mod range {
         }
     }
 
-    // Return the exclusive equivalent of the bound, verifying that it is in
-    // range of len. This is of less use to other modules than
-    // canonicalize_lower_bound, so it is not public.
+    // return the exclusive equivalent of the bound, verifying that it is in
+    // range of len
     fn canonicalize_upper_bound(len: usize, bound: Bound<&usize>) -> Option<usize> {
         let bound = match bound {
             Bound::Included(x) => *x + 1,
@@ -603,5 +572,358 @@ mod range {
             return None;
         }
         Some(bound)
+    }
+
+    // return the inclusive-exclusive equivalent of the bound, verifying that it
+    // is in range of len, and panicking if it is not or if the range is
+    // nonsensical
+    fn canonicalize_range_infallible<R: RangeBounds<usize>>(len: usize, range: &R) -> Range<usize> {
+        let lower = canonicalize_lower_bound(range.start_bound());
+        let upper = canonicalize_upper_bound(len, range.end_bound()).expect("range out of bounds");
+        assert!(lower <= upper, "invalid range");
+        lower..upper
+    }
+
+    /// A buffer and a range into that buffer.
+    ///
+    /// A `BufferAndRange` stores a pair of a buffer and a range which
+    /// represents a subset of the buffer. It implements `AsRef<[u8]>` and
+    /// `AsMut<[u8]>` for the range of the buffer.
+    ///
+    /// `BufferAndRange` is useful for passing nested payloads up the stack
+    /// while still maintaining access to the entire buffer in case it is needed
+    /// again in the future, such as to serialize new packets.
+    pub struct BufferAndRange<B> {
+        buffer: B,
+        range: Range<usize>,
+    }
+
+    impl<B> BufferAndRange<B>
+    where
+        B: AsRef<[u8]>,
+    {
+        /// Construct a new `BufferAndRange`.
+        ///
+        /// # Panics
+        ///
+        /// `new` panics if `range` is out of bounds of `buffer` or is
+        /// nonsensical (i.e., the upper bound precedes the lower bound).
+        pub fn new<R: RangeBounds<usize>>(buffer: B, range: R) -> BufferAndRange<B> {
+            let len = buffer.as_ref().len();
+            BufferAndRange {
+                buffer,
+                range: canonicalize_range_infallible(len, &range),
+            }
+        }
+    }
+
+    impl<B> BufferAndRange<B> {
+        /// Shrink the buffer range.
+        ///
+        /// `slice` shrinks the buffer's range to be equal to the provided
+        /// range. It interprets `range` as relative to the current range. For
+        /// example, if, in a 10-byte buffer, the current range is `[2, 8)`, and
+        /// the `range` argument is `[2, 6)`, then after `slice` returns, the
+        /// beginning of the buffer's range will be `2 + 2 = 4`. Since `range`
+        /// has a length of 4, the end of the buffer's range will be `4 + 4 =
+        /// 8`.
+        ///
+        /// # Examples
+        ///
+        /// ```rust
+        /// let buf = [0; 10];
+        /// let mut buf = BufferAndRange::new(&buf, 2..8);
+        /// assert_eq!(buf.as_ref().len(), 6);
+        /// buf.slice(2..6);
+        /// assert_eq!(buf.as_ref().len(), 4);
+        /// ```
+        ///
+        /// # Panics
+        ///
+        /// `slice` panics if `range` is out of bounds for the existing buffer
+        /// range, or if it nonsensical (i.e., the upper bound precedes the
+        /// lower bound).
+        pub fn slice<R: RangeBounds<usize>>(&mut self, range: R) {
+            let cur_range_len = self.range.end - self.range.start;
+            let range = canonicalize_range_infallible(cur_range_len, &range);
+            self.range = translate_range(range, isize::try_from(self.range.start).unwrap());
+        }
+
+        /// Extend the beginning of the range backwards towards the beginning of
+        /// the buffer.
+        ///
+        /// `extend_backwards` subtracts `bytes` from the beginning index of the
+        /// buffer's range, resulting in the range being `bytes` bytes closer to
+        /// the beginning of the buffer than it was before.
+        ///
+        /// # Panics
+        ///
+        /// `extend_backwards` panics if there are fewer than `bytes` bytes
+        /// preceding the existing range.
+        pub fn extend_backwards(&mut self, bytes: usize) {
+            assert!(
+                bytes <= self.range.start,
+                "cannot extend range starting at {} backwards by {} bytes",
+                self.range.start,
+                bytes
+            );
+            self.range.start -= bytes;
+        }
+
+        /// Get the range.
+        pub fn range(&self) -> Range<usize> {
+            self.range.clone()
+        }
+
+        /// Consume the `BufferAndRange` and return the contained buffer and range.
+        pub fn into_buffer_and_range(self) -> (B, Range<usize>) {
+            let BufferAndRange { buffer, range } = self;
+            (buffer, range)
+        }
+    }
+
+    impl<B> BufferAndRange<B>
+    where
+        B: AsMut<[u8]>,
+    {
+        /// Extract the prefix, range, and suffix from the buffer.
+        ///
+        /// `parts_mut` returns the region of the buffer preceding the range,
+        /// the range itself, and the region of the buffer following the range.
+        pub fn parts_mut(&mut self) -> (&mut [u8], &mut [u8], &mut [u8]) {
+            let (prefix, rest) = (&mut self.buffer.as_mut()[..]).split_at_mut(self.range.start);
+            let (mid, suffix) = rest.split_at_mut(self.range.end - self.range.start);
+            (prefix, mid, suffix)
+        }
+    }
+
+    impl<B> AsRef<[u8]> for BufferAndRange<B>
+    where
+        B: AsRef<[u8]>,
+    {
+        fn as_ref(&self) -> &[u8] {
+            &self.buffer.as_ref()[self.range.clone()]
+        }
+    }
+
+    impl<B> AsMut<[u8]> for BufferAndRange<B>
+    where
+        B: AsMut<[u8]>,
+    {
+        fn as_mut(&mut self) -> &mut [u8] {
+            &mut self.buffer.as_mut()[self.range.clone()]
+        }
+    }
+
+    /// Create a `BufferAndRange` with a guranteed prefix size.
+    ///
+    /// Given a buffer and a range, `ensure_prefix` returns a `BufferAndRange`
+    /// with  at least `prefix` bytes preceding the range. If `buf` already has
+    /// enough prefix bytes, then the returned `BufferAndRange` simply wraps a
+    /// reference to `buf`, and the range is left as is. Otherwise, a new buffer
+    /// is allocated, the original range bytes are copied into the new buffer,
+    /// and the range is adjusted so that it matches the location of the bytes
+    /// in the new buffer.
+    pub fn ensure_prefix<B: AsRef<[u8]>>(
+        buffer: BufferAndRange<B>, prefix: usize,
+    ) -> BufferAndRange<RefOrOwned<B>> {
+        let (buffer, range) = buffer.into_buffer_and_range();
+        if prefix <= range.start {
+            BufferAndRange::new(
+                RefOrOwned {
+                    inner: RefOrOwnedInner::Ref(buffer),
+                },
+                range,
+            )
+        } else {
+            let range_len = range.end - range.start;
+            let mut vec = Vec::with_capacity(prefix + range_len);
+            vec.resize(prefix + range_len, 0);
+            vec[prefix..].copy_from_slice(slice(buffer.as_ref(), &range));
+            // adjust the range given the new prefix length
+            let offset = isize::try_from(prefix - range.start).unwrap();
+            let range = translate_range(range, offset);
+            BufferAndRange::new(
+                RefOrOwned {
+                    inner: RefOrOwnedInner::Owned(vec),
+                },
+                range,
+            )
+        }
+    }
+
+    /// Either a reference or an owned allocated buffer.
+    pub struct RefOrOwned<B> {
+        inner: RefOrOwnedInner<B>,
+    }
+
+    enum RefOrOwnedInner<B> {
+        Ref(B),
+        Owned(Vec<u8>),
+    }
+
+    impl<B: AsRef<[u8]>> AsRef<[u8]> for RefOrOwned<B> {
+        fn as_ref(&self) -> &[u8] {
+            match &self.inner {
+                &RefOrOwnedInner::Ref(ref r) => r.as_ref(),
+                &RefOrOwnedInner::Owned(ref v) => v.as_slice(),
+            }
+        }
+    }
+
+    impl<'a> AsMut<[u8]> for RefOrOwned<&'a mut [u8]> {
+        fn as_mut(&mut self) -> &mut [u8] {
+            match &mut self.inner {
+                &mut RefOrOwnedInner::Ref(ref mut r) => r,
+                &mut RefOrOwnedInner::Owned(ref mut v) => v.as_mut_slice(),
+            }
+        }
+    }
+
+    /// Translate a `Range<usize>` left or right.
+    ///
+    /// Translate a `Range<usize>` by a fixed offset. This function is
+    /// equivalent to the following code, except with overflow explicitly
+    /// checked:
+    ///
+    /// ```rust
+    /// Range {
+    ///     start: ((range.start as isize) + offset) as usize,
+    ///     end: ((range.end as isize) + offset) as usize,
+    /// }
+    /// ```
+    ///
+    /// # Panics
+    ///
+    /// `translate_range` panics if any addition overflows or any conversion
+    /// between signed and unsigned types fails.
+    fn translate_range(range: Range<usize>, offset: isize) -> Range<usize> {
+        let start = isize::try_from(range.start).unwrap();
+        let end = isize::try_from(range.end).unwrap();
+        Range {
+            start: usize::try_from(start.checked_add(offset).unwrap()).unwrap(),
+            end: usize::try_from(end.checked_add(offset).unwrap()).unwrap(),
+        }
+    }
+
+    /// Get an immutable slice from a range.
+    ///
+    /// This is a temporary replacement for the syntax `&slc[range]` until this
+    /// [issue] is fixed.
+    ///
+    /// [issue]: https://github.com/rust-lang/rust/issues/35729#issuecomment-394200339
+    fn slice<'a, T, R: RangeBounds<usize>>(slc: &'a [T], range: &R) -> &'a [T] {
+        let len = slc.len();
+        &slc[canonicalize_range_infallible(len, range)]
+    }
+
+    #[cfg(test)]
+    mod tests {
+        use super::*;
+
+        #[test]
+        fn test_buffer_and_range_slice() {
+            let mut buf = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
+            let mut buf = BufferAndRange::new(&mut buf, ..);
+            assert_eq!(buf.range(), 0..10);
+            assert_eq!(buf.as_ref(), [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
+            assert_eq!(
+                buf.parts_mut(),
+                (
+                    &mut [][..],
+                    &mut [0, 1, 2, 3, 4, 5, 6, 7, 8, 9][..],
+                    &mut [][..]
+                )
+            );
+
+            buf.slice(..);
+            assert_eq!(buf.range(), 0..10);
+            assert_eq!(buf.as_ref(), [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
+            assert_eq!(
+                buf.parts_mut(),
+                (
+                    &mut [][..],
+                    &mut [0, 1, 2, 3, 4, 5, 6, 7, 8, 9][..],
+                    &mut [][..]
+                )
+            );
+
+            buf.slice(2..);
+            assert_eq!(buf.range(), 2..10);
+            assert_eq!(buf.as_ref(), [2, 3, 4, 5, 6, 7, 8, 9]);
+            assert_eq!(
+                buf.parts_mut(),
+                (
+                    &mut [0, 1][..],
+                    &mut [2, 3, 4, 5, 6, 7, 8, 9][..],
+                    &mut [][..]
+                )
+            );
+
+            buf.slice(..8);
+            assert_eq!(buf.range(), 2..10);
+            assert_eq!(buf.as_ref(), [2, 3, 4, 5, 6, 7, 8, 9]);
+            assert_eq!(
+                buf.parts_mut(),
+                (
+                    &mut [0, 1][..],
+                    &mut [2, 3, 4, 5, 6, 7, 8, 9][..],
+                    &mut [][..]
+                )
+            );
+
+            buf.slice(..6);
+            assert_eq!(buf.range(), 2..8);
+            assert_eq!(buf.as_ref(), [2, 3, 4, 5, 6, 7]);
+            assert_eq!(
+                buf.parts_mut(),
+                (
+                    &mut [0, 1][..],
+                    &mut [2, 3, 4, 5, 6, 7][..],
+                    &mut [8, 9][..]
+                )
+            );
+
+            buf.slice(2..4);
+            assert_eq!(buf.range(), 4..6);
+            assert_eq!(buf.as_ref(), [4, 5]);
+            assert_eq!(
+                buf.parts_mut(),
+                (
+                    &mut [0, 1, 2, 3][..],
+                    &mut [4, 5][..],
+                    &mut [6, 7, 8, 9][..]
+                )
+            );
+
+            let (buf, range) = buf.into_buffer_and_range();
+            assert_eq!(buf, &[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
+            assert_eq!(range, 4..6);
+        }
+
+        #[test]
+        fn test_buffer_and_range_extend_backwards() {
+            let buf = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
+            let mut buf = BufferAndRange::new(&buf, 2..8);
+            assert_eq!(buf.range(), 2..8);
+            assert_eq!(buf.as_ref(), [2, 3, 4, 5, 6, 7]);
+            buf.extend_backwards(1);
+            assert_eq!(buf.range(), 1..8);
+            assert_eq!(buf.as_ref(), [1, 2, 3, 4, 5, 6, 7]);
+            buf.extend_backwards(1);
+            assert_eq!(buf.range(), 0..8);
+            assert_eq!(buf.as_ref(), [0, 1, 2, 3, 4, 5, 6, 7]);
+        }
+
+        #[test]
+        #[should_panic]
+        fn test_buffer_and_range_extend_backwards_panics() {
+            let buf = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
+            let mut buf = BufferAndRange::new(&buf, 2..8);
+            assert_eq!(buf.as_ref(), [2, 3, 4, 5, 6, 7]);
+            buf.extend_backwards(1);
+            assert_eq!(buf.as_ref(), [1, 2, 3, 4, 5, 6, 7]);
+            buf.extend_backwards(2);
+        }
     }
 }

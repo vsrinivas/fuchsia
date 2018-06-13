@@ -7,14 +7,14 @@
 #[cfg(test)]
 use std::fmt::{self, Debug, Formatter};
 use std::num::NonZeroU16;
-use std::ops::{Range, RangeBounds};
+use std::ops::Range;
 
 use byteorder::{ByteOrder, NetworkEndian};
 use zerocopy::{AsBytes, ByteSlice, FromBytes, LayoutVerified, Unaligned};
 
 use error::ParseError;
 use ip::{Ip, IpAddr, IpProto};
-use wire::util::{extract_slice_range, fits_in_u16, fits_in_u32, Checksum};
+use wire::util::{fits_in_u16, fits_in_u32, BufferAndRange, Checksum};
 
 // Header has the same memory layout (thanks to repr(C, packed)) as a UDP
 // header. Thus, we can simply reinterpret the bytes of the UDP header as a
@@ -44,8 +44,8 @@ struct Header {
 
 /// The length of a UDP header in bytes.
 ///
-/// When calling `UdpPacket::create`, provide at least `HEADER_LEN` bytes for
-/// the header in order to guarantee that `create` will not panic.
+/// When calling `UdpPacket::serialize`, provide at least `HEADER_LEN` bytes for
+/// the header in order to guarantee that `serialize` will not panic.
 pub const HEADER_LEN: usize = 8;
 
 unsafe impl FromBytes for Header {}
@@ -84,7 +84,7 @@ impl Header {
 /// from or serialized to, meaning that no copying or extra allocation is
 /// necessary.
 ///
-/// A `UdpPacket` - whether parsed using `parse` or created using `create` -
+/// A `UdpPacket` - whether parsed using `parse` or created using `serialize` -
 /// maintains the invariant that the checksum is always valid.
 pub struct UdpPacket<B> {
     header: LayoutVerified<B, Header>,
@@ -171,7 +171,7 @@ impl<B: ByteSlice> UdpPacket<B> {
             c.add_bytes(&[0, IpProto::Udp as u8]);
             c.add_bytes(&self.header.length);
         } else {
-            let len = self.total_packet_length();
+            let len = self.total_packet_len();
             // For IPv6, the "UDP length" field in the pseudo-header is 32 bits.
             if !fits_in_u32(len) {
                 return None;
@@ -218,98 +218,112 @@ impl<B: ByteSlice> UdpPacket<B> {
         self.header.checksum() != 0
     }
 
-    // The size of the packet as calculated from the header and body. This is
+    // The length of the header.
+    fn header_len(&self) -> usize {
+        self.header.bytes().len()
+    }
+
+    // The length of the packet as calculated from the header and body. This is
     // not the same as the length field in the header.
-    fn total_packet_length(&self) -> usize {
-        self.header.bytes().len() + self.body.len()
+    fn total_packet_len(&self) -> usize {
+        self.header_len() + self.body.len()
     }
 }
 
 // NOTE(joshlf): In order to ensure that the checksum is always valid, we don't
 // expose any setters for the fields of the UDP packet; the only way to set them
-// is via UdpPacket::create. This, combined with checksum validation performed
+// is via UdpPacket::serialize. This, combined with checksum validation performed
 // in UdpPacket::parse, provides the invariant that a UdpPacket always has a
 // valid checksum.
 
 impl<'a> UdpPacket<&'a mut [u8]> {
     /// Serialize a UDP packet in an existing buffer.
     ///
-    /// `create` creates a `UdpPacket` which uses the provided `buffer` for its
-    /// storage, initializing all header fields and calculating the checksum. It
-    /// treats the range identified by `body` as being the frame body. It uses
-    /// the last bytes of `header` before the body to store the header, and
-    /// returns the range of bytes consumed by the new packet. This range can be
-    /// used to indicate the range for encapsulation in another packet.
+    /// `serialize` creates a `UdpPacket` which uses the provided `buffer` for
+    /// its storage, initializing all header fields and calculating the
+    /// checksum. It treats `buffer.range()` as the packet body. It uses the
+    /// last bytes of `buffer` before the body to store the header, and returns
+    /// a new `BufferAndRange` with a range equal to the bytes of the UDP packet
+    /// (including the header). This range can be used to indicate the range for
+    /// encapsulation in another packet.
     ///
     /// # Examples
     ///
     /// ```rust
     /// let mut buffer = [0u8; 1024];
     /// (&mut buffer[512..]).copy_from_slice(body);
-    /// let (_, range) = UdpPacket::create(&mut buffer[..], 512.., src_ip, dst_ip, src_port, dst_port);
-    /// send_ipv4_packet(dst_ip, &mut buffer[..], range);
+    /// let buffer = UdpPacket::serialize(
+    ///     BufferAndRange::new(&mut buffer[..], 512..),
+    ///     src_ip,
+    ///     dst_ip,
+    ///     src_port,
+    ///     dst_port,
+    /// );
+    /// send_ip_packet(dst_ip, buffer);
     /// ```
     ///
     /// # Panics
     ///
-    /// `create` panics if there is insufficient room preceding the body to
-    /// store the UDP header, or if `body` is not in range of `buffer`. The
-    /// caller can guarantee that there will be enough room by providing at
-    /// least `HEADER_LEN` pre-body bytes.
-    ///
-    /// When encapsulating in IPv4,
-    pub fn create<R: RangeBounds<usize>, A: IpAddr>(
-        buffer: &'a mut [u8], body: R, src_ip: A, dst_ip: A, src_port: Option<NonZeroU16>,
+    /// `serialize` panics if there is insufficient room preceding the body to
+    /// store the UDP header. The caller can guarantee that there will be enough
+    /// room by providing at least `MAX_HEADER_LEN` pre-body bytes.
+    pub fn serialize<B: AsMut<[u8]>, A: IpAddr>(
+        mut buffer: BufferAndRange<B>, src_ip: A, dst_ip: A, src_port: Option<NonZeroU16>,
         dst_port: NonZeroU16,
-    ) -> (UdpPacket<&'a mut [u8]>, Range<usize>) {
+    ) -> BufferAndRange<B> {
         // See for details: https://en.wikipedia.org/wiki/User_Datagram_Protocol#Packet_structure
 
-        let (header, body, _) =
-            extract_slice_range(buffer, body).expect("body range is out of bounds of buffer");
-        // SECURITY: Use _zeroed constructor to ensure we zero memory to prevent
-        // leaking information from packets previously stored in this buffer.
-        let (prefix, header) = LayoutVerified::<_, Header>::new_unaligned_from_suffix_zeroed(
-            header,
-        ).expect("too few bytes for UDP header");
-        let mut packet = UdpPacket { header, body };
+        let extend_backwards = {
+            let (header, body, _) = buffer.parts_mut();
+            // SECURITY: Use _zeroed constructor to ensure we zero memory to prevent
+            // leaking information from packets previously stored in this buffer.
+            let (_, header) = LayoutVerified::<_, Header>::new_unaligned_from_suffix_zeroed(header)
+                .expect("too few bytes for UDP header");
+            let mut packet = UdpPacket { header, body };
 
-        packet
-            .header
-            .set_src_port(src_port.map(|port| port.get()).unwrap_or(0));
-        packet.header.set_dst_port(dst_port.get());
-        let total_len = packet.total_packet_length();
-        let len_field = if fits_in_u16(total_len) {
-            total_len as u16
-        } else if A::Version::VERSION.is_v6() {
-            // IPv6 supports jumbograms, so a UDP packet may be greater than
-            // 2^16 bytes in size. In this case, the size doesn't fit in the
-            // 16-bit length field in the header, and so the length field is set
-            // to zero to indicate this.
-            0u16
-        } else {
-            panic!(
-                "total UDP packet length of {} bytes overflows 16-bit length field of UDP header",
-                total_len
-            );
-        };
-        NetworkEndian::write_u16(&mut packet.header.length, len_field);
-
-        // This ignores the checksum field in the header, so it's fine that we
-        // haven't set it yet, and so it could be filled with arbitrary bytes.
-        let c = packet.compute_checksum(src_ip, dst_ip).expect(&format!(
-            "total UDP packet length of {} bytes overflow 32-bit length field of pseudo-header",
-            total_len
-        ));
-        NetworkEndian::write_u16(
-            &mut packet.header.checksum,
-            if c == 0 {
-                // When computing the checksum, a checksum of 0 is sent as 0xFFFF.
-                0xFFFF
+            packet
+                .header
+                .set_src_port(src_port.map(|port| port.get()).unwrap_or(0));
+            packet.header.set_dst_port(dst_port.get());
+            let total_len = packet.total_packet_len();
+            let len_field = if fits_in_u16(total_len) {
+                total_len as u16
+            } else if A::Version::VERSION.is_v6() {
+                // IPv6 supports jumbograms, so a UDP packet may be greater than
+                // 2^16 bytes in size. In this case, the size doesn't fit in the
+                // 16-bit length field in the header, and so the length field is set
+                // to zero to indicate this.
+                0u16
             } else {
-                c
-            },
-        );
-        (packet, prefix.len()..(prefix.len() + total_len))
+                panic!(
+                    "total UDP packet length of {} bytes overflows 16-bit length field of UDP \
+                     header",
+                    total_len
+                );
+            };
+            NetworkEndian::write_u16(&mut packet.header.length, len_field);
+
+            // This ignores the checksum field in the header, so it's fine that we
+            // haven't set it yet, and so it could be filled with arbitrary bytes.
+            let c = packet.compute_checksum(src_ip, dst_ip).expect(&format!(
+                "total UDP packet length of {} bytes overflow 32-bit length field of pseudo-header",
+                total_len
+            ));
+            NetworkEndian::write_u16(
+                &mut packet.header.checksum,
+                if c == 0 {
+                    // When computing the checksum, a checksum of 0 is sent as 0xFFFF.
+                    0xFFFF
+                } else {
+                    c
+                },
+            );
+
+            packet.header_len()
+        };
+
+        buffer.extend_backwards(extend_backwards);
+        buffer
     }
 }
 
@@ -396,42 +410,43 @@ mod tests {
     }
 
     #[test]
-    fn test_create() {
+    fn test_serialize() {
         let mut buf = [0; 8];
         {
-            let (packet, range) = UdpPacket::create(
-                &mut buf,
-                8..,
+            let buffer = UdpPacket::serialize(
+                BufferAndRange::new(&mut buf, 8..),
                 TEST_SRC_IPV4,
                 TEST_DST_IPV4,
                 NonZeroU16::new(1),
                 NonZeroU16::new(2).unwrap(),
             );
-            assert_eq!(range, 0..8);
-            assert_eq!(packet.src_port().unwrap().get(), 1);
-            assert_eq!(packet.dst_port().get(), 2);
-            assert!(packet.checksummed());
+            assert_eq!(buffer.range(), 0..8);
         }
+        // assert that we get the literal bytes we expected
         assert_eq!(buf, [0, 1, 0, 2, 0, 8, 239, 199]);
+        let (packet, _) = UdpPacket::parse(&buf[..], TEST_SRC_IPV4, TEST_DST_IPV4).unwrap();
+        // assert that when we parse those bytes, we get the values we set in
+        // the builder
+        assert_eq!(packet.src_port().unwrap().get(), 1);
+        assert_eq!(packet.dst_port().get(), 2);
+        assert!(packet.checksummed());
     }
 
     #[test]
-    fn test_create_zeroes() {
-        // Test that UdpPacket::create properly zeroes memory before serializing
+    fn test_serialize_zeroes() {
+        // Test that UdpPacket::serialize properly zeroes memory before serializing
         // the header.
         let mut buf_0 = [0; 8];
-        UdpPacket::create(
-            &mut buf_0[..],
-            8..,
+        UdpPacket::serialize(
+            BufferAndRange::new(&mut buf_0[..], 8..),
             TEST_SRC_IPV4,
             TEST_DST_IPV4,
             NonZeroU16::new(1),
             NonZeroU16::new(2).unwrap(),
         );
         let mut buf_1 = [0xFF; 8];
-        UdpPacket::create(
-            &mut buf_1[..],
-            8..,
+        UdpPacket::serialize(
+            BufferAndRange::new(&mut buf_1[..], 8..),
             TEST_SRC_IPV4,
             TEST_DST_IPV4,
             NonZeroU16::new(1),
@@ -499,11 +514,10 @@ mod tests {
 
     #[test]
     #[should_panic]
-    fn test_create_fail_header_too_short() {
+    fn test_serialize_fail_header_too_short() {
         let mut buf = [0; 7];
-        UdpPacket::create(
-            &mut buf,
-            7..,
+        UdpPacket::serialize(
+            BufferAndRange::new(&mut buf[..], 7..),
             TEST_SRC_IPV4,
             TEST_DST_IPV4,
             None,
@@ -513,11 +527,10 @@ mod tests {
 
     #[test]
     #[should_panic]
-    fn test_create_fail_packet_too_long_ipv4() {
+    fn test_serialize_fail_packet_too_long_ipv4() {
         let mut buf = [0; 1 << 16];
-        UdpPacket::create(
-            &mut buf,
-            8..,
+        UdpPacket::serialize(
+            BufferAndRange::new(&mut buf[..], 8..),
             TEST_SRC_IPV4,
             TEST_DST_IPV4,
             None,
@@ -528,12 +541,11 @@ mod tests {
     #[test]
     #[should_panic]
     #[cfg(target_pointer_width = "64")] // 2^32 overflows on 32-bit platforms
-    fn test_create_fail_packet_too_long_ipv6() {
+    fn test_serialize_fail_packet_too_long_ipv6() {
         // total length of 2^32 or greater is disallowed in IPv6
         let mut buf = vec![0u8; 1 << 32];
-        UdpPacket::create(
-            &mut buf,
-            8..,
+        UdpPacket::serialize(
+            BufferAndRange::new(&mut buf[..], 8..),
             TEST_SRC_IPV4,
             TEST_DST_IPV4,
             None,
