@@ -8,4 +8,4 @@ set -e
 fuchsia_root=`pwd`
 scripts/fx shell 'k zx hwd'
 scripts/fx shell 'k zx mwd'
-scripts/fx shell 'while [ true ]; /system/test/vkreadback; k zx ps; done'
+scripts/fx shell 'while [ true ]; do /system/test/vkreadback; k zx ps; done'
