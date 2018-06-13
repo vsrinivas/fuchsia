@@ -101,6 +101,9 @@ class LedgerAppInstanceImpl final
   ledger::fidl_helpers::BoundInterfaceSet<cloud_provider::CloudProvider,
                                           ledger::FakeCloudProvider>* const
       cloud_provider_;
+
+  // This must be the last field of this class.
+  fxl::WeakPtrFactory<LedgerAppInstanceImpl> weak_ptr_factory_;
 };
 
 LedgerAppInstanceImpl::LedgerAppInstanceImpl(
@@ -119,7 +122,8 @@ LedgerAppInstanceImpl::LedgerAppInstanceImpl(
           loop_controller, integration::RandomArray(1),
           std::move(repository_factory_ptr)),
       services_dispatcher_(services_dispatcher),
-      cloud_provider_(cloud_provider) {
+      cloud_provider_(cloud_provider),
+      weak_ptr_factory_(this) {
   loop_.StartThread();
   async::PostTask(
       loop_.async(),
@@ -135,10 +139,10 @@ LedgerAppInstanceImpl::LedgerAppInstanceImpl(
 cloud_provider::CloudProviderPtr LedgerAppInstanceImpl::MakeCloudProvider() {
   cloud_provider::CloudProviderPtr cloud_provider;
   async::PostTask(services_dispatcher_,
-                  fxl::MakeCopyable(
+                  fxl::MakeCopyable(callback::MakeScoped(weak_ptr_factory_.GetWeakPtr(),
                       [this, request = cloud_provider.NewRequest()]() mutable {
                         cloud_provider_->AddBinding(std::move(request));
-                      }));
+                      })));
   return cloud_provider;
 }
 
@@ -157,18 +161,21 @@ class FakeUserCommunicatorFactory : public p2p_sync::UserCommunicatorFactory {
                               std::string host_name)
       : services_dispatcher_(services_dispatcher),
         netconnector_factory_(netconnector_factory),
-        host_name_(std::move(host_name)) {}
+        host_name_(std::move(host_name)),
+        weak_ptr_factory_(this) {}
   ~FakeUserCommunicatorFactory() override {}
 
   std::unique_ptr<p2p_sync::UserCommunicator> GetUserCommunicator(
       ledger::DetachedPath /*user_directory*/) override {
     fuchsia::netconnector::NetConnectorPtr netconnector;
-    async::PostTask(services_dispatcher_,
-                    fxl::MakeCopyable(
-                        [this, request = netconnector.NewRequest()]() mutable {
-                          netconnector_factory_->AddBinding(host_name_,
-                                                            std::move(request));
-                        }));
+    async::PostTask(
+        services_dispatcher_,
+        callback::MakeScoped(
+            weak_ptr_factory_.GetWeakPtr(),
+            fxl::MakeCopyable([this,
+                               request = netconnector.NewRequest()]() mutable {
+              netconnector_factory_->AddBinding(host_name_, std::move(request));
+            })));
     std::unique_ptr<p2p_provider::P2PProvider> provider =
         std::make_unique<p2p_provider::P2PProviderImpl>(
             host_name_, std::move(netconnector),
@@ -181,6 +188,9 @@ class FakeUserCommunicatorFactory : public p2p_sync::UserCommunicatorFactory {
   async_t* const services_dispatcher_;
   ledger::NetConnectorFactory* const netconnector_factory_;
   std::string host_name_;
+
+  // This must be the last field of this class.
+  fxl::WeakPtrFactory<FakeUserCommunicatorFactory> weak_ptr_factory_;
 };
 
 }  // namespace
