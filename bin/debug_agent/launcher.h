@@ -8,8 +8,8 @@
 #include <string>
 #include <vector>
 
-#include <launchpad/launchpad.h>
 #include <lib/zx/process.h>
+#include "garnet/lib/process/process_builder.h"
 
 #include "lib/fxl/macros.h"
 
@@ -40,7 +40,7 @@ class Launcher {
   zx_status_t Start();
 
  private:
-  launchpad_t* lp_ = nullptr;
+  process::ProcessBuilder builder_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(Launcher);
 };

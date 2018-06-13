@@ -23,10 +23,10 @@ static_library("lib") {
     "launcher.h",
     "object_util.cc",
     "object_util.h",
-    "process_info.cc",
-    "process_info.h",
     "process_breakpoint.cc",
     "process_breakpoint.h",
+    "process_info.cc",
+    "process_info.h",
     "process_memory_accessor.h",
     "remote_api.h",
     "remote_api_adapter.cc",
@@ -54,7 +54,7 @@ static_library("lib") {
   public_deps = [
     "//garnet/lib/debug_ipc:agent",
     "//garnet/lib/debug_ipc/helper",
-    "//garnet/public/lib/app/cpp",
+    "//garnet/lib/process",
     "//garnet/public/lib/fxl",
     "//zircon/public/lib/launchpad",
     "//zircon/public/lib/ngunwind",
@@ -102,8 +102,8 @@ executable("unittests") {
 
   sources = [
     "breakpoint_unittest.cc",
-    "process_info_unittests.cc",
     "process_breakpoint_unittest.cc",
+    "process_info_unittests.cc",
     "system_info_unittests.cc",
   ]
 
@@ -133,6 +133,10 @@ package("debug_agent_tests") {
 
   if (include_test_app) {
     deps += [ ":zxdb_test_app" ]
-    tests += [ { name = "zxdb_test_app" } ]
+    tests += [
+      {
+        name = "zxdb_test_app"
+      },
+    ]
   }
 }
