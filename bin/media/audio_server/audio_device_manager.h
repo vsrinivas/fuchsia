@@ -117,9 +117,7 @@ class AudioDeviceManager : public ::fuchsia::media::AudioDeviceEnumerator {
     return false;
   }
 
-  // Master gain control.  Only safe to access via the main message loop thread.
-  void SetMasterGain(float db_gain);
-  float master_gain() const { return master_gain_; }
+  void OnSystemGainChanged();
 
   // Implementation of the AudioDeviceEnumerator FIDL interface.
   void GetDevices(GetDevicesCallback cbk) final;
@@ -160,9 +158,19 @@ class AudioDeviceManager : public ::fuchsia::media::AudioDeviceEnumerator {
 
   void LinkToCapturers(const fbl::RefPtr<AudioDevice>& device);
 
+  // Send a notification to users that a given device's gain settings have
+  // changed.
+  void NotifyDeviceGainChanged(const AudioDevice& device);
+
   // Re-evaluate which device should be the default device, and send
   // notifications to users if the default device has changed.
   void UpdateDefaultDevice(bool input);
+
+  // Update a device's gain the the current "system" gain as exposed by the top
+  // level server.
+  //
+  // TODO(johngro) : Remove this when we remove system gain entirely.
+  void UpdateDeviceToSystemGain(AudioDevice* device);
 
   // A pointer to the server which encapsulates us.  It is not possible for
   // this pointer to be bad while we still exist.
@@ -186,12 +194,6 @@ class AudioDeviceManager : public ::fuchsia::media::AudioDeviceEnumerator {
 
   // A helper class we will use to detect plug/unplug events for audio devices
   AudioPlugDetector plug_detector_;
-
-  // Current master gain setting (in dB).
-  //
-  // TODO(johngro): remove this when we have a policy manager which controls
-  // gain on a per-output basis.
-  float master_gain_ = -20.0;
 
   // State which affects routing policy.
   fuchsia::media::AudioOutputRoutingPolicy routing_policy_ =

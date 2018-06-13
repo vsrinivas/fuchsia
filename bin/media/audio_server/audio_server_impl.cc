@@ -128,7 +128,7 @@ void AudioServerImpl::SetSystemGain(float db_gain) {
 
   system_gain_db_ = db_gain;
 
-  device_manager_.SetMasterGain(db_gain);
+  device_manager_.OnSystemGainChanged();
   NotifyGainMuteChanged();
 }
 
@@ -144,7 +144,7 @@ void AudioServerImpl::SetSystemMute(bool muted) {
 
   system_muted_ = muted;
 
-  device_manager_.SetMasterGain(fuchsia::media::kMutedGain);
+  device_manager_.OnSystemGainChanged();
   NotifyGainMuteChanged();
 }
 

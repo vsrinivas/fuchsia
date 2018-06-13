@@ -39,6 +39,9 @@ class StandardOutputBase : public AudioOutput {
     bool accumulate;
     const TimelineFunction* local_to_output;
 
+    float sw_output_db_gain;
+    bool sw_output_muted;
+
     // State for the job which is set up for each renderer during SetupMix
     uint32_t frames_produced;
   };

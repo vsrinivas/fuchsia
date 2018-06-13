@@ -70,6 +70,9 @@ class AudioServerImpl : public fuchsia::media::Audio {
   // Accessor for our encapsulated device manager.
   AudioDeviceManager& GetDeviceManager() { return device_manager_; }
 
+  float system_gain_db() const { return system_gain_db_; }
+  bool system_muted() const { return system_muted_; }
+
  private:
   static constexpr float kDefaultSystemGainDb = -12.0f;
   static constexpr bool kDefaultSystemMuted = false;
@@ -100,6 +103,9 @@ class AudioServerImpl : public fuchsia::media::Audio {
   bool cleanup_scheduled_ FXL_GUARDED_BY(cleanup_queue_mutex_) = false;
   bool shutting_down_ = false;
 
+  // TODO(johngro): remove this state.  Move users over to using the
+  // AudioDeviceEnumerator interface to control gain on a per input/output
+  // basis.
   float system_gain_db_ = kDefaultSystemGainDb;
   bool system_muted_ = kDefaultSystemMuted;
 

@@ -22,14 +22,6 @@ class DriverRingBuffer;
 
 class AudioOutput : public AudioDevice {
  public:
-  // Accessor for the current value of the dB gain for the output.
-  float db_gain() const { return db_gain_.load(std::memory_order_acquire); }
-
-  // Set the gain for this output.
-  void SetGain(float db_gain) {
-    db_gain_.store(db_gain, std::memory_order_release);
-  }
-
   // Minimum clock lead time (in nanoseconds) for this output
   int64_t min_clock_lead_time_nsec() const { return min_clock_lead_time_nsec_; }
 
@@ -37,12 +29,6 @@ class AudioOutput : public AudioDevice {
   explicit AudioOutput(AudioDeviceManager* manager);
 
   int64_t min_clock_lead_time_nsec_ = 0;
-
- private:
-  // TODO(johngro): Someday, when we expose output enumeration and control from
-  // the audio service, add the ability to change this value and update the
-  // associated renderer-to-output-link amplitude scale factors.
-  std::atomic<float> db_gain_;
 };
 
 }  // namespace audio

@@ -13,7 +13,7 @@ namespace media {
 namespace audio {
 
 AudioOutput::AudioOutput(AudioDeviceManager* manager)
-    : AudioDevice(Type::Output, manager), db_gain_(0.0f) {}
+    : AudioDevice(Type::Output, manager) {}
 
 }  // namespace audio
 }  // namespace media

@@ -46,6 +46,8 @@ void AudioInput::OnWakeup() {
     }
     return;
   }
+
+  UpdateDriverGainState();
 }
 
 void AudioInput::OnDriverInfoFetched() {
@@ -65,6 +67,23 @@ void AudioInput::OnDriverInfoFetched() {
         << std::hex << static_cast<uint32_t>(pref_fmt) << ")";
     ShutdownSelf();
     return;
+  }
+
+  const auto& hw_gain = driver()->hw_gain_state();
+  if (hw_gain.min_gain > hw_gain.max_gain) {
+    FXL_LOG(ERROR) << "Audio input has invalid gain limits ["
+                   << hw_gain.min_gain << ", " << hw_gain.max_gain << "].";
+    ShutdownSelf();
+    return;
+  }
+
+  // Synchronize our current gain state as reported by hardware with our current
+  // internal state.
+  {
+    fbl::AutoLock lock(&gain_state_lock_);
+    gain_state_.db_gain = hw_gain.cur_gain;
+    gain_state_.muted = hw_gain.can_mute && hw_gain.cur_mute;
+    gain_state_.agc_enabled = hw_gain.can_agc && hw_gain.cur_agc;
   }
 
   FXL_LOG(INFO) << "AudioInput Configuring for " << pref_fps << " Hz "
@@ -116,6 +135,65 @@ void AudioInput::OnDriverPlugStateChange(bool plugged, zx_time_t plug_time) {
                                     plug_time]() {
     manager->HandlePlugStateChange(output, plugged, plug_time);
   });
+}
+
+void AudioInput::ApplyGainLimits(::fuchsia::media::AudioGainInfo* in_out_info,
+                                 uint32_t set_flags) {
+  // By the time anyone is calling "ApplyGainLimits", we need to have our basic
+  // audio gain control capabilities established.
+  ZX_DEBUG_ASSERT(driver()->state() != AudioDriver::State::Uninitialized);
+  ZX_DEBUG_ASSERT(driver()->state() != AudioDriver::State::MissingDriverInfo);
+
+  const auto& caps = driver()->hw_gain_state();
+
+  // If someone is trying to enable mute, but our hardware does not support
+  // enabling mute, clear the flag.
+  //
+  // TODO(johngro): It should always be possible to mute.  We should maintain a
+  // SW flag for implementing mute in case the hardware cannot.
+  if (!caps.can_mute) {
+    in_out_info->flags &= ~(::fuchsia::media::AudioGainInfoFlag_Mute);
+  }
+
+  // Don't allow AGC unless HW supports it.
+  if (!caps.can_agc) {
+    in_out_info->flags &= ~(::fuchsia::media::AudioGainInfoFlag_AgcEnabled);
+  }
+
+  // If the user is attempting to set gain, enforce the gain limits.
+  if (set_flags & fuchsia::media::SetAudioGainFlag_GainValid) {
+    // This should have been enforced in OnDriverInfoFetched.
+    FXL_DCHECK(caps.min_gain <= caps.max_gain);
+
+    // If the hardware has not supplied a valid gain step size, or an
+    // ridiculously small step size, just apply a clamp based on min/max.
+    constexpr float kStepSizeLimit = 1e-6;
+    if (caps.gain_step <= kStepSizeLimit) {
+      in_out_info->db_gain =
+          fbl::clamp(in_out_info->db_gain, caps.min_gain, caps.max_gain);
+    } else {
+      int32_t min_steps = static_cast<int32_t>(caps.min_gain / caps.gain_step);
+      int32_t max_steps = static_cast<int32_t>(caps.max_gain / caps.gain_step);
+      int32_t steps = fbl::clamp(
+          static_cast<int32_t>(in_out_info->db_gain / caps.gain_step),
+          min_steps, max_steps);
+      in_out_info->db_gain = static_cast<float>(steps) * caps.gain_step;
+    }
+  }
+}
+
+void AudioInput::UpdateDriverGainState() {
+  if (state_ != State::Idle) {
+    return;
+  }
+
+  GainState state;
+  audio_set_gain_flags_t dirty_flags = SnapshotGainState(&state);
+  if (!dirty_flags) {
+    return;
+  }
+
+  driver()->SendSetGain(state, dirty_flags);
 }
 
 }  // namespace audio

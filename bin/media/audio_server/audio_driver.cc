@@ -1032,5 +1032,23 @@ zx_status_t AudioDriver::OnDriverInfoFetched(uint32_t info) {
   return ZX_OK;
 }
 
+zx_status_t AudioDriver::SendSetGain(const AudioDevice::GainState& gain_state,
+                                     audio_set_gain_flags_t set_flags) {
+  audio_stream_cmd_set_gain_req_t req;
+  req.hdr.cmd =
+      static_cast<audio_cmd_t>(AUDIO_STREAM_CMD_SET_GAIN | AUDIO_FLAG_NO_ACK);
+  req.hdr.transaction_id = TXID;
+
+  // clang-format off
+  req.flags = static_cast<audio_set_gain_flags_t>(
+      set_flags |
+      (gain_state.muted ? AUDIO_SGF_MUTE : 0) |
+      (gain_state.agc_enabled ? AUDIO_SGF_AGC : 0));
+  // clang-format on
+  req.gain = gain_state.db_gain;
+
+  return stream_channel_->Write(&req, sizeof(req));
+}
+
 }  // namespace audio
 }  // namespace media

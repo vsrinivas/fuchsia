@@ -93,6 +93,27 @@ bool DriverOutput::StartMixJob(MixJob* job, fxl::TimePoint process_start) {
     return false;
   }
 
+  // TODO(johngro): Depending on policy, use send appropriate commands to the
+  // driver to control gain as well.  Some policy settings which might be useful
+  // include...
+  //
+  // ++ Never use HW gain, even if it supports it.
+  // ++ Always use HW gain when present, regarless of its limitations.
+  // ++ Use HW gain when present, but only if it reaches a minimum bar of
+  //    functionality.
+  // ++ Implement a hybrid of HW/SW gain.  IOW - Get as close as possible to our
+  //    target using HW, and then get the rest of the way there using SW
+  //    scaling.  This approach may end up being unreasonably tricky as we may
+  //    not be able to synchronize the HW and SW changes in gain well enough to
+  //    avoid strange situations where the jumps in one direction (because of
+  //    the SW component), and then in the other (as the HW gain command takes
+  //    affect).
+  //
+  GainState cur_gain_state;
+  SnapshotGainState(&cur_gain_state);
+  job->sw_output_db_gain = cur_gain_state.db_gain;
+  job->sw_output_muted = cur_gain_state.muted;
+
   FXL_DCHECK(driver_ring_buffer() != nullptr);
   int64_t now = process_start.ToEpochDelta().ToNanoseconds();
   const auto& cm2rd_pos = clock_mono_to_ring_buf_pos_frames_;
@@ -236,6 +257,22 @@ bool DriverOutput::FinishMixJob(const MixJob& job) {
   }
 
   return true;
+}
+
+void DriverOutput::ApplyGainLimits(::fuchsia::media::AudioGainInfo* in_out_info,
+                                   uint32_t set_flags) {
+  // See the comment at the start of StartMixJob.  The actual limits we set here
+  // are going to eventually depend on what our HW gain control capabilities
+  // are, and how we choose to apply them (based on policy)
+  FXL_DCHECK(in_out_info != nullptr);
+
+  // We do not currently allow more than unity gain for audio outputs.
+  if (in_out_info->db_gain > 0.0) {
+    in_out_info->db_gain = 0;
+  }
+
+  // Audio outputs should never support AGC
+  in_out_info->flags &= ~(::fuchsia::media::AudioGainInfoFlag_AgcEnabled);
 }
 
 void DriverOutput::ScheduleNextLowWaterWakeup() {

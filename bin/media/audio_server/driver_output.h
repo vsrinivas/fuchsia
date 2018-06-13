@@ -37,6 +37,11 @@ class DriverOutput : public StandardOutputBase {
   bool FinishMixJob(const MixJob& job)
       FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token()) override;
 
+ protected:
+  // AudioDevice impl
+  void ApplyGainLimits(::fuchsia::media::AudioGainInfo* in_out_info,
+                       uint32_t set_flags) override;
+
  private:
   enum class State {
     Uninitialized,

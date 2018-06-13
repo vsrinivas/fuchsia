@@ -95,18 +95,27 @@ void StandardOutputBase::Process() {
       FXL_DCHECK(output_formatter_);
       FXL_DCHECK(cur_mix_job_.buf_frames <= mix_buf_frames_);
 
-      // Fill the intermediate buffer with silence.
-      size_t bytes_to_zero = sizeof(int32_t) * cur_mix_job_.buf_frames *
-                             output_formatter_->channels();
-      ::memset(mix_buf_.get(), 0, bytes_to_zero);
+      // If we are not muted, actually do the mix.  Otherwise, just fill the
+      // final buffer with silence.  Do not set the 'mixed' flag if we are
+      // muted.  This is our signal that we still need to trim our sources
+      // (something that happens automatically if we mix).
+      if (!cur_mix_job_.sw_output_muted) {
+        // Fill the intermediate buffer with silence.
+        size_t bytes_to_zero = sizeof(int32_t) * cur_mix_job_.buf_frames *
+                               output_formatter_->channels();
+        ::memset(mix_buf_.get(), 0, bytes_to_zero);
 
-      // Mix each renderer into the intermediate buffer, then clip/format into
-      // the final buffer.
-      ForeachLink(TaskType::Mix);
-      output_formatter_->ProduceOutput(mix_buf_.get(), cur_mix_job_.buf,
-                                       cur_mix_job_.buf_frames);
+        // Mix each renderer into the intermediate buffer, then clip/format into
+        // the final buffer.
+        ForeachLink(TaskType::Mix);
+        output_formatter_->ProduceOutput(mix_buf_.get(), cur_mix_job_.buf,
+                                         cur_mix_job_.buf_frames);
+        mixed = true;
+      } else {
+        output_formatter_->FillWithSilence(cur_mix_job_.buf,
+                                           cur_mix_job_.buf_frames);
+      }
 
-      mixed = true;
     } while (FinishMixJob(cur_mix_job_));
   }
 
@@ -273,7 +282,10 @@ void StandardOutputBase::ForeachLink(TaskType task_type) {
 
       // Capture the amplitude to apply for the next bit of audio, recomputing
       // as needed.
-      info->amplitude_scale = packet_link->gain().GetGainScale(db_gain());
+      if (task_type == TaskType::Mix) {
+        info->amplitude_scale =
+            packet_link->gain().GetGainScale(cur_mix_job_.sw_output_db_gain);
+      }
 
       // Now process the packet which is at the front of the renderer's queue.
       // If the packet has been entirely consumed, pop it off the front and

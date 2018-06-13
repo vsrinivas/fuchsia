@@ -41,7 +41,6 @@ bool ThrottleOutput::StartMixJob(MixJob* job, fxl::TimePoint process_start) {
     // TODO(johngro): We are falling behind on our trimming.  We should
     // probably tell someone.
     last_sched_time_ = process_start + TRIM_PERIOD;
-    ;
   }
 
   // TODO(johngro): We could optimize this trim operation by scheduling our

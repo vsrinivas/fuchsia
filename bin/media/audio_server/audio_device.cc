@@ -168,6 +168,83 @@ const TimelineFunction& AudioDevice::driver_clock_mono_to_ring_pos_bytes()
   return driver_->clock_mono_to_ring_pos_bytes();
 };
 
+audio_set_gain_flags_t AudioDevice::SnapshotGainState(GainState* out_state) {
+  FXL_DCHECK(out_state != nullptr);
+  audio_set_gain_flags_t ret;
+
+  {
+    fbl::AutoLock lock(&gain_state_lock_);
+    *out_state = gain_state_;
+    ret = gain_state_dirty_flags_;
+    gain_state_dirty_flags_ = static_cast<audio_set_gain_flags_t>(0);
+  }
+
+  return ret;
+}
+
+void AudioDevice::SetGainInfo(const ::fuchsia::media::AudioGainInfo& req,
+                              uint32_t set_flags) {
+  bool needs_wake;
+
+  fuchsia::media::AudioGainInfo info = req;
+  ApplyGainLimits(&info, set_flags);
+
+  {
+    fbl::AutoLock lock(&gain_state_lock_);
+    audio_set_gain_flags_t dirtied = static_cast<audio_set_gain_flags_t>(0);
+    namespace fm = ::fuchsia::media;
+
+    if ((set_flags & fm::SetAudioGainFlag_GainValid) &&
+        (gain_state_.db_gain != info.db_gain)) {
+      gain_state_.db_gain = info.db_gain;
+      dirtied =
+          static_cast<audio_set_gain_flags_t>(dirtied | AUDIO_SGF_GAIN_VALID);
+    }
+
+    bool mute_tgt = (info.flags & fm::AudioGainInfoFlag_Mute) != 0;
+    if ((set_flags & fm::SetAudioGainFlag_MuteValid) &&
+        (gain_state_.muted != mute_tgt)) {
+      gain_state_.muted = mute_tgt;
+      dirtied =
+          static_cast<audio_set_gain_flags_t>(dirtied | AUDIO_SGF_MUTE_VALID);
+    }
+
+    bool agc_tgt = (info.flags & fm::AudioGainInfoFlag_AgcEnabled) != 0;
+    if ((set_flags & fm::SetAudioGainFlag_AgcValid) &&
+        (gain_state_.agc_enabled != agc_tgt)) {
+      gain_state_.agc_enabled = agc_tgt;
+      dirtied =
+          static_cast<audio_set_gain_flags_t>(dirtied | AUDIO_SGF_AGC_VALID);
+    }
+
+    needs_wake = (!gain_state_dirty_flags_ && dirtied);
+    gain_state_dirty_flags_ = dirtied;
+  }
+
+  if (needs_wake) {
+    Wakeup();
+  }
+}
+
+void AudioDevice::GetGainInfo(::fuchsia::media::AudioGainInfo* out_info) const {
+  FXL_DCHECK(out_info != nullptr);
+  fbl::AutoLock lock(&gain_state_lock_);
+
+  out_info->db_gain = gain_state_.db_gain;
+  out_info->flags = 0;
+
+  if (gain_state_.muted) {
+    out_info->flags |= ::fuchsia::media::AudioGainInfoFlag_Mute;
+  }
+
+  if (driver()->hw_gain_state().can_agc) {
+    out_info->flags |= ::fuchsia::media::AudioGainInfoFlag_AgcSupported;
+    if (gain_state_.agc_enabled) {
+      out_info->flags |= ::fuchsia::media::AudioGainInfoFlag_AgcEnabled;
+    }
+  }
+}
+
 void AudioDevice::GetDeviceInfo(
     ::fuchsia::media::AudioDeviceInfo* out_info) const {
   const auto& drv = *driver();
@@ -177,8 +254,7 @@ void AudioDevice::GetDeviceInfo(
   out_info->is_input = is_input();
   out_info->is_default = false;
 
-  // TODO(johngro): fill this out
-  ::memset(&out_info->gain_info, 0, sizeof(out_info->gain_info));
+  GetGainInfo(&out_info->gain_info);
 }
 
 }  // namespace audio

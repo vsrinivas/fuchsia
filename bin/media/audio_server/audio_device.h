@@ -15,6 +15,7 @@
 #include <fbl/intrusive_wavl_tree.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
+#include <zircon/device/audio.h>
 
 #include "garnet/bin/media/audio_server/audio_object.h"
 #include "garnet/bin/media/audio_server/audio_pipe.h"
@@ -33,6 +34,12 @@ class DriverRingBuffer;
 class AudioDevice : public AudioObject,
                     public fbl::WAVLTreeContainable<fbl::RefPtr<AudioDevice>> {
  public:
+  struct GainState {
+    float db_gain = 0.0f;
+    bool muted = false;
+    bool agc_enabled = false;
+  };
+
   // Wakeup
   //
   // Called from outside the mixing ExecutionDomain to cause an
@@ -87,14 +94,26 @@ class AudioDevice : public AudioObject,
     return nullptr;
   }
 
+  // Gain settings
+  void SetGainInfo(const ::fuchsia::media::AudioGainInfo& info,
+                   uint32_t set_flags) FXL_LOCKS_EXCLUDED(gain_state_lock_);
+  void GetGainInfo(::fuchsia::media::AudioGainInfo* out_info) const
+      FXL_LOCKS_EXCLUDED(gain_state_lock_);
+
   // Device info which can be used during device enumeration and
   // add-notifications.
   void GetDeviceInfo(::fuchsia::media::AudioDeviceInfo* out_info) const;
 
  protected:
   friend class fbl::RefPtr<AudioDevice>;
+
   ~AudioDevice() override;
   AudioDevice(Type type, AudioDeviceManager* manager);
+
+  // Snapshot the current gain state and clear the dirty flag.  Returns the
+  // state of the dirty flags at snapshot time.
+  audio_set_gain_flags_t SnapshotGainState(GainState* out_state)
+      FXL_LOCKS_EXCLUDED(gain_state_lock_);
 
   //////////////////////////////////////////////////////////////////////////////
   //
@@ -107,7 +126,7 @@ class AudioDevice : public AudioObject,
   // Called during startup on the AudioServer's main message loop thread.  No
   // locks are being held at this point.  Derived classes should begin the
   // process of driver initialization at this point.  Return ZX_OK if things
-  // have started and we are waitin gfor driver init.
+  // have started and we are waiting for driver init.
   virtual zx_status_t Init();
 
   // Cleanup
@@ -118,6 +137,14 @@ class AudioDevice : public AudioObject,
   // audio other objects have been disconnected/unlinked.  No locks are being
   // held.
   virtual void Cleanup();
+
+  // ApplyGainLimits
+  //
+  // Modify the contents of a user request to change the gain state to reflect
+  // the actual gain that we are going to end up setting.  This may differ from
+  // the requested gain due to hardware limitations or general policy.
+  virtual void ApplyGainLimits(::fuchsia::media::AudioGainInfo* in_out_info,
+                               uint32_t set_flags) = 0;
 
   //////////////////////////////////////////////////////////////////////////////
   //
@@ -210,6 +237,19 @@ class AudioDevice : public AudioObject,
   // Driver object which will manage most interactions with the low level driver
   // for us.
   std::unique_ptr<AudioDriver> driver_;
+
+  // Gain state
+  // TODO(johngro): It would be great if we didn't need to use a lock to
+  // synchronize gain state.  A lock-less triple buffer structure suitable for a
+  // single writer (the device manager) single reader (the device) would be
+  // perfect.  I have such a templated class left over from a previous project,
+  // but no time to integrate at the moment to integrate it with fuchsia.  Some
+  // day, I should make the time to move it and its tests over, and then switch
+  // this code over to using it.
+  mutable fbl::Mutex gain_state_lock_;
+  GainState gain_state_ FXL_GUARDED_BY(gain_state_lock_);
+  audio_set_gain_flags_t gain_state_dirty_flags_
+      FXL_GUARDED_BY(gain_state_lock_) = static_cast<audio_set_gain_flags_t>(0);
 
  private:
   // It's always nice when you manager is also your friend.  Seriously though,

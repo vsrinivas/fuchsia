@@ -128,6 +128,12 @@ void AudioDeviceManager::ActivateDevice(
   device->SetActivated();
 
   // TODO(johngro): load and apply persisted settings now
+  //
+  // For now, if this is an output device, update its gain to be whatever the
+  // current "system" gain is set to.
+  if (device->is_output()) {
+    UpdateDeviceToSystemGain(device.get());
+  }
 
   // Notify interested users of the new device.  We need to check to see if this
   // is going to become the new default device so that we can fill out
@@ -206,13 +212,12 @@ void AudioDeviceManager::HandlePlugStateChange(
   UpdateDefaultDevice(device->is_input());
 }
 
-void AudioDeviceManager::SetMasterGain(float db_gain) {
-  master_gain_ = fbl::clamp(db_gain, fuchsia::media::kMutedGain, 0.0f);
+void AudioDeviceManager::OnSystemGainChanged() {
   for (auto& device : devices_) {
-    if (device.is_input()) {
-      continue;
+    if (device.is_output()) {
+      UpdateDeviceToSystemGain(&device);
+      NotifyDeviceGainChanged(device);
     }
-    static_cast<AudioOutput*>(&device)->SetGain(master_gain_);
   }
 }
 
@@ -237,15 +242,11 @@ void AudioDeviceManager::GetDeviceGain(uint64_t device_token,
                                        GetDeviceGainCallback cbk) {
   auto dev = devices_.find(device_token);
 
-  ::fuchsia::media::AudioGainInfo info;
+  ::fuchsia::media::AudioGainInfo info = {0};
   if (dev.IsValid()) {
-    // TODO(johngro): get this from the actual device.
-    info.db_gain = 0.0;
-    info.flags = 0;
+    dev->GetGainInfo(&info);
     cbk(device_token, std::move(info));
   } else {
-    info.db_gain = 0.0;
-    info.flags = 0;
     cbk(ZX_KOID_INVALID, std::move(info));
   }
 }
@@ -258,7 +259,9 @@ void AudioDeviceManager::SetDeviceGain(
     return;
   }
 
-  // TODO(johngro): Implement
+  // Change the gain and then report the new settings to our clients.
+  dev->SetGainInfo(gain_info, set_flags);
+  NotifyDeviceGainChanged(*dev);
 }
 
 void AudioDeviceManager::GetDefaultInputDevice(
@@ -611,6 +614,15 @@ void AudioDeviceManager::LinkToCapturers(
   }
 }
 
+void AudioDeviceManager::NotifyDeviceGainChanged(const AudioDevice& device) {
+  ::fuchsia::media::AudioGainInfo info;
+  device.GetGainInfo(&info);
+
+  for (auto& client : bindings_.bindings()) {
+    client->events().OnDeviceGainChanged(device.token(), info);
+  }
+}
+
 void AudioDeviceManager::UpdateDefaultDevice(bool input) {
   const auto new_dev = FindLastPlugged(input ? AudioObject::Type::Input
                                              : AudioObject::Type::Output);
@@ -623,6 +635,17 @@ void AudioDeviceManager::UpdateDefaultDevice(bool input) {
     }
     old_id = new_id;
   }
+}
+
+void AudioDeviceManager::UpdateDeviceToSystemGain(AudioDevice* device) {
+  constexpr uint32_t set_flags = ::fuchsia::media::SetAudioGainFlag_GainValid |
+                                 ::fuchsia::media::SetAudioGainFlag_MuteValid;
+  ::fuchsia::media::AudioGainInfo set_cmd = {
+      server_->system_gain_db(),
+      server_->system_muted() ? ::fuchsia::media::AudioGainInfoFlag_Mute : 0u};
+
+  FXL_DCHECK(device != nullptr);
+  device->SetGainInfo(set_cmd, set_flags);
 }
 
 }  // namespace audio

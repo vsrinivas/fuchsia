@@ -123,6 +123,8 @@ class AudioDriver {
   zx_status_t Start();
   zx_status_t Stop();
   zx_status_t SetPlugDetectEnabled(bool enabled);
+  zx_status_t SendSetGain(const AudioDevice::GainState& gain_state,
+                          audio_set_gain_flags_t set_flags);
 
  private:
   friend class AudioDevice;
