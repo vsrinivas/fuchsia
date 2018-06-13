@@ -565,7 +565,7 @@ No values for `target_cpu = "arm64"`.
 
 **Default value for `target_cpu = "arm64"`:** ["/b/s/w/ir/kitchen-workdir/buildtools/linux-x64/clang/lib/aarch64-fuchsia.manifest"]
 
-**Default value for `target_cpu = "x64"`:** ["/b/s/w/ir/kitchen-workdir/buildtools/linux-x64/clang/lib/x86_64-fuchsia.manifest"]
+**Default value for `target_cpu = "x64"`:** ["/b/s/w/ir/kitchen-workdir/buildtools/linux-x64/clang/lib/x86_64-linux.manifest"]
 
 
 ### toolchain_variant
