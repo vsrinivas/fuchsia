@@ -14,13 +14,25 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/txn-group.cpp \
 
 MODULE_STATIC_LIBS := \
+    system/ulib/trace-provider \
+    system/ulib/trace \
     system/ulib/ddk \
     system/ulib/sync \
     system/ulib/zx \
     system/ulib/zxcpp \
+    system/ulib/async.cpp \
+    system/ulib/async \
+    system/ulib/async-loop.cpp \
+    system/ulib/async-loop \
     system/ulib/fbl \
     system/ulib/fzl \
+    system/ulib/zxcpp
 
-MODULE_LIBS := system/ulib/c system/ulib/driver system/ulib/zircon
+MODULE_LIBS := system/ulib/c \
+    system/ulib/driver \
+    system/ulib/zircon \
+    system/ulib/async.default \
+    system/ulib/fdio \
+    system/ulib/trace-engine
 
 include make/module.mk

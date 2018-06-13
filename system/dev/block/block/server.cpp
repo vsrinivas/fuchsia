@@ -7,8 +7,12 @@
 #include <stdbool.h>
 #include <string.h>
 
+// DDK Includes
 #include <ddk/device.h>
 #include <ddk/protocol/block.h>
+#include <ddk/debug.h>
+
+// fbl Includes
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>
@@ -16,10 +20,19 @@
 #include <fbl/limits.h>
 #include <fbl/new.h>
 #include <fbl/ref_ptr.h>
+
+// Zircon Includes
 #include <zircon/compiler.h>
 #include <zircon/device/block.h>
 #include <zircon/syscalls.h>
 #include <lib/zx/fifo.h>
+
+// Tracing Includes
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/async/cpp/task.h>
+#include <lib/async/cpp/time.h>
+#include <trace-provider/provider.h>
+#include <trace/event.h>
 
 #include "server.h"
 
@@ -67,6 +80,13 @@ void BlockCompleteCb(block_op_t* bop, zx_status_t status) {
     ZX_DEBUG_ASSERT(bop != nullptr);
     BlockMsg msg(static_cast<block_msg_t*>(bop->cookie));
     BlockComplete(&msg, status);
+    TRACE_ASYNC_END("block","blockblock", msg.extra()->async_id,
+        "command", bop->rw.command,
+        "extra", bop->rw.extra,
+        "length", bop->rw.length,
+        "offset_vmo", bop->rw.offset_vmo,
+        "offset_dev", bop->rw.offset_dev,
+        "pages", bop->rw.pages);
 }
 
 uint32_t OpcodeToCommand(uint32_t opcode) {
@@ -84,6 +104,16 @@ uint32_t OpcodeToCommand(uint32_t opcode) {
 void InQueueAdd(zx_handle_t vmo, uint64_t length, uint64_t vmo_offset,
                 uint64_t dev_offset, block_msg_t* msg, BlockMsgQueue* queue) {
     block_op_t* bop = &msg->op;
+
+    msg->extra.async_id = TRACE_NONCE();
+    TRACE_ASYNC_BEGIN("block","blockblock", msg->extra.async_id,
+        "command", bop->rw.command,
+        "extra", bop->rw.extra,
+        "length", bop->rw.length,
+        "offset_vmo", bop->rw.offset_vmo,
+        "offset_dev", bop->rw.offset_dev,
+        "pages", bop->rw.pages);
+
     bop->rw.length = (uint32_t) length;
     bop->rw.vmo = vmo;
     bop->rw.offset_dev = dev_offset;
