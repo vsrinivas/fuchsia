@@ -128,6 +128,10 @@ void CompleteDisassemble(const Err& err, MemoryDump dump, uint64_t num_instr,
     return;
   }
 
+  // TODO(brettw) Mark the current frame's address if it exists in the dump.
+  // The disassembly formatting code should probably be moved to the source
+  // code dumping stuff in format_file_context.cc and this function sets up
+  // the call with the appropriate parameters.
   std::vector<std::vector<std::string>> rows;
   disassembler.DisassembleDump(dump, options, num_instr, &rows);
 
@@ -208,9 +212,17 @@ Err DoDisassemble(ConsoleContext* context, const Command& cmd) {
   if (err.has_error())
     return err;
 
+  // TODO(brettw) This should take any kind of location like symbols and
+  // line numbers. The breakpoint location code should be factored out into
+  // something more general and shared here.
   uint64_t address = 0;
   if (cmd.args().empty()) {
     // No args: implicitly read the frame's instruction pointer.
+    //
+    // TODO(brettw) by default it would be nice if this showed a few lines
+    // of disassembly before the given address. Going backwards in x86 can be
+    // dicy though, the formatter may have to guess-and-check about a good
+    // starting boundary for the dump.
     Frame* frame = cmd.frame();
     if (!frame) {
       return Err(

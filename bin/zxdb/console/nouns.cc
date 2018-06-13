@@ -20,6 +20,7 @@
 #include "garnet/bin/zxdb/console/console_context.h"
 #include "garnet/bin/zxdb/console/format_table.h"
 #include "garnet/bin/zxdb/console/output_buffer.h"
+#include "garnet/bin/zxdb/console/string_util.h"
 #include "garnet/public/lib/fxl/logging.h"
 #include "garnet/public/lib/fxl/strings/string_printf.h"
 
@@ -32,14 +33,20 @@ void ListFrames(ConsoleContext* context, Thread* thread) {
 
   OutputBuffer out;
 
+  // This doesn't use table output since the format of the stack frames is
+  // usually so unpredictable.
   const auto& frames = thread->GetFrames();
-  for (int i = 0; i < static_cast<int>(frames.size()); i++) {
-    if (i == active_frame_id)
-      out.Append(">");
-    else
-      out.Append(" ");
-    out.Append(DescribeFrame(frames[i], i));
-    out.Append("\n");
+  if (frames.empty()) {
+    out.Append("No stack frames.\n");
+  } else {
+    for (int i = 0; i < static_cast<int>(frames.size()); i++) {
+      if (i == active_frame_id)
+        out.Append(GetRightArrow() + " ");
+      else
+        out.Append("  ");
+      out.Append(DescribeFrame(frames[i], i));
+      out.Append("\n");
+    }
   }
   Console::get()->Output(std::move(out));
 }
@@ -101,7 +108,7 @@ void ListThreads(ConsoleContext* context, Process* process) {
 
     // "Current thread" marker.
     if (pair.first == active_thread_id)
-      row.push_back(">");
+      row.push_back(GetRightArrow());
     else
       row.emplace_back();
 
@@ -179,7 +186,7 @@ void ListProcesses(ConsoleContext* context) {
 
     // "Current process" marker (or nothing).
     if (pair.first == active_target_id)
-      row.emplace_back(">");
+      row.emplace_back(GetRightArrow());
     else
       row.emplace_back();
 
@@ -251,7 +258,7 @@ void ListBreakpoints(ConsoleContext* context) {
 
     // "Current breakpoint" marker.
     if (pair.first == active_breakpoint_id)
-      row.emplace_back(">");
+      row.emplace_back(GetRightArrow());
     else
       row.emplace_back();
 

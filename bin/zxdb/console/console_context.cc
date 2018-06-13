@@ -10,6 +10,7 @@
 #include "garnet/bin/zxdb/client/frame.h"
 #include "garnet/bin/zxdb/client/process.h"
 #include "garnet/bin/zxdb/client/session.h"
+#include "garnet/bin/zxdb/client/symbols/location.h"
 #include "garnet/bin/zxdb/client/thread.h"
 #include "garnet/bin/zxdb/console/command.h"
 #include "garnet/bin/zxdb/console/command_utils.h"
@@ -149,10 +150,11 @@ int ConsoleContext::GetActiveFrameIdForThread(const Thread* thread) {
     return 0;
   }
 
-  // Should be a valid frame index in the thread.
-  FXL_DCHECK(record->active_frame_id >= 0 &&
-             record->active_frame_id <
-                 static_cast<int>(thread->GetFrames().size()));
+  // Should be a valid frame index in the thread (or no frames and == 0).
+  FXL_DCHECK((thread->GetFrames().empty() && record->active_frame_id == 0) ||
+             (record->active_frame_id >= 0 &&
+              record->active_frame_id <
+                  static_cast<int>(thread->GetFrames().size())));
   return record->active_frame_id;
 }
 
@@ -410,29 +412,32 @@ void ConsoleContext::OnThreadStopped(Thread* thread,
   OutputBuffer out;
 
   // Only print out the process when there's more than one.
-  if (id_to_target_.size() > 1) {
-    out.Append(DescribeTarget(this, target));
-    out.Append("\n");
-  }
+  if (id_to_target_.size() > 1)
+    out.Append(fxl::StringPrintf("Process %d ", IdForTarget(target)));
+  out.Append(fxl::StringPrintf("Thread %d stopped ", IdForThread(thread)));
 
-  // Only print out the thread when there's more than one.
-  TargetRecord* target_record = GetTargetRecord(target);
-  if (target_record->id_to_thread.size() > 1) {
-    out.Append(DescribeThread(this, thread));
-    out.Append("\n");
+  // Skip the exception reason for the debugger breakpoints because they
+  // mostly add noise.
+  //
+  // TODO(brettw) when we know this was a breakpoint, add "on breakpoint 3".
+  if (type != debug_ipc::NotifyException::Type::kHardware &&
+      type != debug_ipc::NotifyException::Type::kSoftware) {
+    out.Append(fxl::StringPrintf("on %s exception ",
+                                 ExceptionTypeToString(type).c_str()));
   }
-
-  out.Append(fxl::StringPrintf("Stopped on %s exception\n",
-                               ExceptionTypeToString(type).c_str()));
 
   // Frame (current position will always be frame 0).
   const auto& frames = thread->GetFrames();
   FXL_DCHECK(!frames.empty());
-
   const Location& location = frames[0]->GetLocation();
-  out.Append(DescribeLocation(location));
-  out.Append("\n");
-  FormatFileContext(location, &out);
+  out.Append("at ");
+  out.Append(DescribeLocation(location, false));
+  if (location.file_line().file().empty()) {
+    out.Append(" (no symbol info)\n");
+  } else {
+    out.Append("\n");
+    FormatFileContext(location, &out);
+  }
 
   console->Output(std::move(out));
 }

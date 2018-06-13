@@ -68,7 +68,7 @@ std::string DescribeBreakpoint(const ConsoleContext* context,
                                const Breakpoint* breakpoint);
 
 std::string DescribeBreakpointLocation(const BreakpointSettings& settings);
-std::string DescribeLocation(const Location& loc);
+std::string DescribeLocation(const Location& loc, bool always_show_address);
 
 // If show_path is set, the path to the file will be included, otherwise only
 // the last file component will be printed.

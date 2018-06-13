@@ -336,6 +336,10 @@ Err DoEdit(ConsoleContext* context, const Command& cmd) {
 
 }  // namespace
 
+// This probably needs to be factored out into a separate location parser
+// so it can be shared with other code that wants to take locations, like
+// "disassemble" or "list". We'll have to translate those generic settings
+// to a BreakpointSettings for the breakpoint case.
 Err ParseBreakpointLocation(const Frame* frame, const std::string& input,
                             BreakpointSettings* settings) {
   if (input.empty())

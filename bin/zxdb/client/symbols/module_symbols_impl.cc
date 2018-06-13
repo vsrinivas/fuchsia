@@ -175,12 +175,13 @@ Location ModuleSymbolsImpl::RelativeLocationForRelativeAddress(
   llvm::DILineInfo line_info = context_->getLineInfoForAddress(
       address,
       llvm::DILineInfoSpecifier(
-          llvm::DILineInfoSpecifier::FileLineInfoKind::AbsoluteFilePath));
+          llvm::DILineInfoSpecifier::FileLineInfoKind::AbsoluteFilePath,
+          llvm::DILineInfoSpecifier::FunctionNameKind::ShortName));
   if (!line_info)
     return Location(Location::State::kSymbolized, address);  // No symbol.
   return Location(address,
                   FileLine(std::move(line_info.FileName), line_info.Line),
-                  line_info.Column);
+                  line_info.Column, line_info.FunctionName);
 }
 
 std::vector<uint64_t> ModuleSymbolsImpl::RelativeAddressesForFunction(

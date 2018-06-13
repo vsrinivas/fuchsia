@@ -9,11 +9,13 @@ namespace zxdb {
 Location::Location() = default;
 Location::Location(State state, uint64_t address)
     : state_(state), address_(address) {}
-Location::Location(uint64_t address, FileLine&& file_line, int column)
+Location::Location(uint64_t address, FileLine&& file_line, int column,
+                   std::string function)
     : state_(State::kSymbolized),
       address_(address),
       file_line_(std::move(file_line)),
-      column_(column) {}
+      column_(column),
+      function_(std::move(function)) {}
 Location::~Location() = default;
 
 void Location::AddAddressOffset(uint64_t offset) {

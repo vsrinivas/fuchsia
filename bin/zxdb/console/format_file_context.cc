@@ -10,15 +10,13 @@
 #include "garnet/bin/zxdb/client/symbols/location.h"
 #include "garnet/bin/zxdb/console/format_table.h"
 #include "garnet/bin/zxdb/console/output_buffer.h"
+#include "garnet/bin/zxdb/console/string_util.h"
 #include "lib/fxl/files/file.h"
 #include "lib/fxl/strings/string_printf.h"
 
 namespace zxdb {
 
 namespace {
-
-// U+25B6 BLACK RIGHT-POINTING TRIANGLE.
-static const char kRightArrow[] = "\xe2\x96\xb6";
 
 using LineInfo = std::pair<int, std::string>;  // Line #, Line contents.
 using LineVector = std::vector<LineInfo>;
@@ -123,7 +121,7 @@ bool FormatFileContext(const std::string& file_contents, int line, int column,
     std::string number = fxl::StringPrintf("%d", info.first);
     if (info.first == line) {
       // This is the line to mark.
-      row.push_back(OutputBuffer::WithContents(Syntax::kHeading, kRightArrow));
+      row.push_back(OutputBuffer::WithContents(Syntax::kHeading, GetRightArrow()));
       row.push_back(
           OutputBuffer::WithContents(Syntax::kHeading, std::move(number)));
       row.push_back(HighlightLine(std::move(info.second), column));

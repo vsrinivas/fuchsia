@@ -18,6 +18,7 @@
 #include "garnet/bin/zxdb/console/command.h"
 #include "garnet/bin/zxdb/console/console_context.h"
 #include "garnet/bin/zxdb/console/output_buffer.h"
+#include "garnet/bin/zxdb/console/string_util.h"
 #include "garnet/public/lib/fxl/logging.h"
 #include "garnet/public/lib/fxl/strings/string_printf.h"
 
@@ -263,7 +264,7 @@ std::string DescribeThread(const ConsoleContext* context,
 std::string DescribeFrame(const Frame* frame, int id) {
   // This will need symbols hooked up.
   return fxl::StringPrintf("Frame %d ", id) +
-         DescribeLocation(frame->GetLocation());
+         DescribeLocation(frame->GetLocation(), false);
 }
 
 std::string DescribeBreakpoint(const ConsoleContext* context,
@@ -295,13 +296,20 @@ std::string DescribeBreakpointLocation(const BreakpointSettings& settings) {
   return std::string();
 }
 
-std::string DescribeLocation(const Location& loc) {
+std::string DescribeLocation(const Location& loc, bool always_show_address) {
   if (!loc.is_valid())
     return "<invalid address>";
   if (!loc.has_symbols())
     return fxl::StringPrintf("0x%" PRIx64, loc.address());
-  return fxl::StringPrintf("0x%" PRIx64 " @ %s", loc.address(),
-                           DescribeFileLine(loc.file_line()).c_str());
+
+  std::string result;
+  if (always_show_address)
+    result = fxl::StringPrintf("0x%" PRIx64 ", ", loc.address());
+
+  if (!loc.function().empty())
+    result += loc.function() + "() " + GetBullet() + " ";
+  result += DescribeFileLine(loc.file_line());
+  return result;
 }
 
 std::string DescribeFileLine(const FileLine& file_line, bool show_path) {

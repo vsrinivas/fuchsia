@@ -9,6 +9,14 @@
 
 namespace zxdb {
 
+// Returns a string containing the right arrow marker for narking the current
+// line. May be UTF-8 so size() could be > 1, but it will only be one Unicode
+// character.
+std::string GetRightArrow();
+
+// Returns a Unicode bullet in UTF-8.
+std::string GetBullet();
+
 // Returns the number of Unicode characters in the given UTF-8 string. This
 // attempts to predict how many spaces the given string will take up when
 // printed to a Unicode-aware text console.

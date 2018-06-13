@@ -52,7 +52,9 @@ class ConsoleContext : public ProcessObserver,
 
   // Frames are a little bit different than threads and targets since they
   // have an intrinsic numbering supplied by the Thread object (the index into
-  // the backtrace).
+  // the backtrace). If there are no frames on the thread, the return value
+  // will be 0 (so the return value can't be blindly indexed into the frames
+  // list).
   void SetActiveFrameForThread(const Frame* frame);
   int GetActiveFrameIdForThread(const Thread* thread);
 

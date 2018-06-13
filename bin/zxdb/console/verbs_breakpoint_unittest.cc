@@ -68,14 +68,14 @@ TEST(VerbsBreakpoint, ParseLocation) {
   EXPECT_TRUE(err.has_error());
 
   // Implicit file name and valid frame but the location has no file name.
-  DummyFrame frame_no_file(Location(0x1234, FileLine(), 0));
+  DummyFrame frame_no_file(Location(0x1234, FileLine(), 0, "Func"));
   settings = BreakpointSettings();
   err = ParseBreakpointLocation(&frame_no_file, "21", &settings);
   EXPECT_TRUE(err.has_error());
 
   // Valid implicit file name.
   std::string file = "foo.cc";
-  DummyFrame frame_valid(Location(0x1234, FileLine(file, 12), 0));
+  DummyFrame frame_valid(Location(0x1234, FileLine(file, 12), 0, "Func"));
   settings = BreakpointSettings();
   err = ParseBreakpointLocation(&frame_valid, "21", &settings);
   EXPECT_FALSE(err.has_error()) << err.msg();

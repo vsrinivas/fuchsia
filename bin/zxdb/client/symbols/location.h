@@ -23,7 +23,8 @@ class Location {
 
   Location();
   Location(State state, uint64_t address);
-  Location(uint64_t address, FileLine&& file_line, int column);
+  Location(uint64_t address, FileLine&& file_line, int column,
+           std::string function);
   ~Location();
 
   bool is_valid() const { return state_ != State::kInvalid; }
@@ -36,7 +37,7 @@ class Location {
   uint64_t address() const { return address_; }
   const FileLine& file_line() const { return file_line_; }
   int column() const { return column_; }
-  // TODO(brettw) function goes here.
+  const std::string& function() const { return function_; }
 
   // Offsets the code addresses in this by adding an amount. This is used to
   // convert module-relative addresses to global ones by adding the module
@@ -48,6 +49,7 @@ class Location {
   uint64_t address_ = 0;
   FileLine file_line_;
   int column_ = 0;
+  std::string function_;
 };
 
 }  // namespace zxdb
