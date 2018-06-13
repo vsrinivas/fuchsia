@@ -62,13 +62,24 @@ type OutputLine struct {
 	line Node
 }
 
+type missingObjError struct {
+	name    string
+	buildid string
+	err     error
+}
+
+func (m *missingObjError) Error() string {
+	return fmt.Sprintf("could not find file for module %s with build ID %s: %v", m.name, m.buildid, m.err)
+}
+
 // Filter represents the state needed to process a log.
 type Filter struct {
 	// handles for llvm-symbolizer
 	symbolizer Symbolizer
 	// Symbolizer context
-	symContext MappingStore
-	modules    map[uint64]Module
+	symContext        MappingStore
+	modules           map[uint64]Module
+	modNamesByBuildID map[string]string
 	// Symbolizer repository
 	repo *SymbolizerRepo
 }
@@ -93,7 +104,8 @@ func (s *Filter) FindInfoForAddress(vaddr uint64) (AddressInfo, error) {
 	}
 	modPath, err := s.repo.GetBuildObject(mod.build)
 	if err != nil {
-		return info, fmt.Errorf("could not find module %s with build ID %s: %v", mod.name, mod.build, err)
+		out := &missingObjError{mod.name, mod.build, err}
+		return info, out
 	}
 	result := <-s.symbolizer.FindSrcLoc(modPath, mod.build, modRelAddr)
 	if result.Err != nil {
@@ -106,9 +118,10 @@ func (s *Filter) FindInfoForAddress(vaddr uint64) (AddressInfo, error) {
 // NewFilter creates a new filter
 func NewFilter(repo *SymbolizerRepo, symbo Symbolizer) *Filter {
 	return &Filter{
-		modules:    make(map[uint64]Module),
-		repo:       repo,
-		symbolizer: symbo,
+		modules:           make(map[uint64]Module),
+		modNamesByBuildID: make(map[string]string),
+		repo:              repo,
+		symbolizer:        symbo,
 	}
 }
 
@@ -120,6 +133,14 @@ func (s *Filter) Reset() {
 
 // AddModule updates the filter state to inform it of a new module
 func (s *Filter) AddModule(m Module) {
+	// Flag odd build IDs.
+	if modName, ok := s.modNamesByBuildID[m.build]; ok {
+		if modName != m.name {
+			log.Printf("found two modules named %s and %s with the same build ID of %s", modName, m.name, m.build)
+		}
+	}
+	// Keep track of modules by build ID.
+	s.modNamesByBuildID[m.build] = m.name
 	s.modules[m.id] = m
 }
 
@@ -143,7 +164,6 @@ func (f *Filter) Start(ctx context.Context, input <-chan InputLine) <-chan Outpu
 				var res OutputLine
 				if res.line = ParseLine(elem.msg); res.line == nil {
 					res.line = &Text{text: elem.msg}
-					log.Printf("warning malformed input %s on line %d", elem.msg, elem.lineno)
 				}
 				// Update AST with source locations.
 				res.line.Accept(&FilterVisitor{filter: f, lineno: elem.lineno})
@@ -163,7 +183,10 @@ type FilterVisitor struct {
 func (f *FilterVisitor) VisitBt(elem *BacktraceElement) {
 	info, err := f.filter.FindInfoForAddress(elem.vaddr)
 	if err != nil {
-		log.Printf("warning on line %d: %v", f.lineno, err)
+		// Don't be noisy about missing objects.
+		if _, ok := err.(*missingObjError); !ok {
+			log.Printf("warning on line %d: %v", f.lineno, err)
+		}
 	}
 	elem.info = info
 }
@@ -171,7 +194,10 @@ func (f *FilterVisitor) VisitBt(elem *BacktraceElement) {
 func (f *FilterVisitor) VisitPc(elem *PCElement) {
 	info, err := f.filter.FindInfoForAddress(elem.vaddr)
 	if err != nil {
-		log.Printf("warning on line %d: %v", f.lineno, err)
+		// Don't be noisy about missing objects.
+		if _, ok := err.(*missingObjError); !ok {
+			log.Printf("warning on line %d: %v", f.lineno, err)
+		}
 	}
 	elem.info = info
 }
