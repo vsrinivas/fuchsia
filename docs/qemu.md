@@ -7,7 +7,7 @@ locally.
 
 ## Install Prebuilt QEMU
 
-QEMU is download by the script that is used to download all Zircon
+QEMU is downloaded by the script that is used to download all Zircon
 prebuilts, including toolchains:
 
 ```
