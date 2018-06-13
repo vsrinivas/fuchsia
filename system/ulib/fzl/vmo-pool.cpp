@@ -30,7 +30,7 @@ zx_status_t VmoPool::Init(const zx::vmo* vmos, size_t num_vmos) {
     zx_status_t status;
     for (size_t i = 0; i < num_vmos; ++i) {
         free_buffers_.push_front(&buffers_[i]);
-        status = buffers_[i].buffer.Map(vmos[i], 0, 0, ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE);
+        status = buffers_[i].buffer.Map(vmos[i], 0, 0, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE);
         if (status != ZX_OK) {
             free_buffers_.clear_unsafe();
             buffers_.reset();

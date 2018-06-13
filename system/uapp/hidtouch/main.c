@@ -222,14 +222,14 @@ static void clear_screen(void* buf, display_info_t* info) {
             (CLEAR_BTN_SIZE / 2), CLEAR_BTN_SIZE, CLEAR_BTN_SIZE, info->stride,
             info->height);
         draw_points((uint32_t*)buf, 0x0000ff, (CLEAR_BTN_SIZE / 2),
-            info->height - (CLEAR_BTN_SIZE / 2), CLEAR_BTN_SIZE, CLEAR_BTN_SIZE, info->stride, 
+            info->height - (CLEAR_BTN_SIZE / 2), CLEAR_BTN_SIZE, CLEAR_BTN_SIZE, info->stride,
             info->height);
     } else if (ZX_PIXEL_FORMAT_BYTES(info->format) == 2) {
         draw_points16((uint32_t*)buf, 0xf00f, info->stride - (CLEAR_BTN_SIZE / 2),
             (CLEAR_BTN_SIZE / 2), CLEAR_BTN_SIZE, CLEAR_BTN_SIZE, info->stride,
             info->height);
         draw_points16((uint32_t*)buf, 0x001f, (CLEAR_BTN_SIZE / 2),
-            info->height - (CLEAR_BTN_SIZE / 2), CLEAR_BTN_SIZE, CLEAR_BTN_SIZE, info->stride, 
+            info->height - (CLEAR_BTN_SIZE / 2), CLEAR_BTN_SIZE, CLEAR_BTN_SIZE, info->stride,
             info->height);
     }
 }
@@ -481,8 +481,9 @@ int main(int argc, char* argv[]) {
 
     size_t size = info.stride * ZX_PIXEL_FORMAT_BYTES(info.format) * info.height;
     uintptr_t fbo;
-    status = _zx_vmar_map(zx_vmar_root_self(), 0, vmo, 0, size,
-                          ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE, &fbo);
+    status = _zx_vmar_map(zx_vmar_root_self(),
+                          ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
+                          0, vmo, 0, size, &fbo);
     if (status < 0) {
         printf("couldn't map fb: %d\n", status);
         return -1;

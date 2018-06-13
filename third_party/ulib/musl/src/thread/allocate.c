@@ -97,18 +97,19 @@ __NO_SAFESTACK static bool map_block(zx_handle_t parent_vmar,
     region->iov_len = before + size + after;
     zx_handle_t vmar;
     uintptr_t addr;
-    zx_status_t status = _zx_vmar_allocate(parent_vmar, 0, region->iov_len,
-                                           ZX_VM_FLAG_CAN_MAP_READ |
-                                           ZX_VM_FLAG_CAN_MAP_WRITE |
-                                           ZX_VM_FLAG_CAN_MAP_SPECIFIC,
-                                           &vmar, &addr);
+    zx_status_t status = _zx_vmar_allocate(parent_vmar,
+                                           ZX_VM_CAN_MAP_READ |
+                                           ZX_VM_CAN_MAP_WRITE |
+                                           ZX_VM_CAN_MAP_SPECIFIC,
+                                            0, region->iov_len, &vmar, &addr);
     if (status != ZX_OK)
         return true;
     region->iov_base = (void*)addr;
-    status = _zx_vmar_map(vmar, before, vmo, vmo_offset, size,
-                          ZX_VM_FLAG_PERM_READ |
-                          ZX_VM_FLAG_PERM_WRITE |
-                          ZX_VM_FLAG_SPECIFIC, &addr);
+    status = _zx_vmar_map(vmar,
+                          ZX_VM_PERM_READ |
+                          ZX_VM_PERM_WRITE |
+                          ZX_VM_SPECIFIC,
+                          before, vmo, vmo_offset, size, &addr);
     if (status != ZX_OK)
         _zx_vmar_destroy(vmar);
     _zx_handle_close(vmar);

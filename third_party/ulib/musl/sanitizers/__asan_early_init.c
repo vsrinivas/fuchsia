@@ -48,10 +48,10 @@ __NO_SAFESTACK NO_ASAN void __asan_early_init(void) {
     zx_handle_t shadow_vmar;
     uintptr_t shadow_addr;
     status = _zx_vmar_allocate(
-        __zircon_vmar_root_self, 0, shadow_virtual_size - info.base,
-        ZX_VM_FLAG_SPECIFIC | ZX_VM_FLAG_CAN_MAP_SPECIFIC |
-        ZX_VM_FLAG_CAN_MAP_READ | ZX_VM_FLAG_CAN_MAP_WRITE,
-        &shadow_vmar, &shadow_addr);
+        __zircon_vmar_root_self,
+        ZX_VM_SPECIFIC | ZX_VM_CAN_MAP_SPECIFIC |
+        ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE,
+        0, shadow_virtual_size - info.base, &shadow_vmar, &shadow_addr);
     if (status != ZX_OK || shadow_addr != info.base)
         __builtin_trap();
 
@@ -72,9 +72,9 @@ __NO_SAFESTACK NO_ASAN void __asan_early_init(void) {
                             SHADOW_VMO_NAME, sizeof(SHADOW_VMO_NAME) - 1);
 
     status = _zx_vmar_map(
-        shadow_vmar, shadow_shadow_size - info.base, vmo, 0, shadow_used_size,
-        ZX_VM_FLAG_SPECIFIC | ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE,
-        &shadow_addr);
+        shadow_vmar,
+        ZX_VM_SPECIFIC | ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
+        shadow_shadow_size - info.base, vmo, 0, shadow_used_size, &shadow_addr);
     if (status != ZX_OK || shadow_addr != shadow_shadow_size)
         __builtin_trap();
 

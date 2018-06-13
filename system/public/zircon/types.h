@@ -250,19 +250,21 @@ typedef uint32_t zx_rights_t;
 #define ZX_VMO_CLONE_COPY_ON_WRITE        ((uint32_t)1u << 0)
 #define ZX_VMO_CLONE_NON_RESIZEABLE       ((uint32_t)1u << 1)
 
+typedef uint32_t zx_vm_option_t;
 // Mapping flags to vmar routines
-#define ZX_VM_FLAG_PERM_READ              ((uint32_t)1u << 0)
-#define ZX_VM_FLAG_PERM_WRITE             ((uint32_t)1u << 1)
-#define ZX_VM_FLAG_PERM_EXECUTE           ((uint32_t)1u << 2)
-#define ZX_VM_FLAG_COMPACT                ((uint32_t)1u << 3)
-#define ZX_VM_FLAG_SPECIFIC               ((uint32_t)1u << 4)
-#define ZX_VM_FLAG_SPECIFIC_OVERWRITE     ((uint32_t)1u << 5)
-#define ZX_VM_FLAG_CAN_MAP_SPECIFIC       ((uint32_t)1u << 6)
-#define ZX_VM_FLAG_CAN_MAP_READ           ((uint32_t)1u << 7)
-#define ZX_VM_FLAG_CAN_MAP_WRITE          ((uint32_t)1u << 8)
-#define ZX_VM_FLAG_CAN_MAP_EXECUTE        ((uint32_t)1u << 9)
-#define ZX_VM_FLAG_MAP_RANGE              ((uint32_t)1u << 10)
-#define ZX_VM_FLAG_REQUIRE_NON_RESIZABLE  ((uint32_t)1u << 11)
+#define ZX_VM_PERM_READ             ((zx_vm_option_t)(1u << 0))
+#define ZX_VM_PERM_WRITE            ((zx_vm_option_t)(1u << 1))
+#define ZX_VM_PERM_EXECUTE          ((zx_vm_option_t)(1u << 2))
+#define ZX_VM_COMPACT               ((zx_vm_option_t)(1u << 3))
+#define ZX_VM_SPECIFIC              ((zx_vm_option_t)(1u << 4))
+#define ZX_VM_SPECIFIC_OVERWRITE    ((zx_vm_option_t)(1u << 5))
+#define ZX_VM_CAN_MAP_SPECIFIC      ((zx_vm_option_t)(1u << 6))
+#define ZX_VM_CAN_MAP_READ          ((zx_vm_option_t)(1u << 7))
+#define ZX_VM_CAN_MAP_WRITE         ((zx_vm_option_t)(1u << 8))
+#define ZX_VM_CAN_MAP_EXECUTE       ((zx_vm_option_t)(1u << 9))
+#define ZX_VM_MAP_RANGE             ((zx_vm_option_t)(1u << 10))
+#define ZX_VM_REQUIRE_NON_RESIZABLE ((zx_vm_option_t)(1u << 11))
+
 
 // virtual address
 typedef uintptr_t zx_vaddr_t;
@@ -383,6 +385,21 @@ typedef struct zx_handle_info {
     zx_rights_t rights;
     uint32_t unused;
 } zx_handle_info_t;
+
+// The ZX_VM_FLAG_* constants are to be deprecated in favor of the ZX_VM_*
+// versions.
+#define ZX_VM_FLAG_PERM_READ              ((uint32_t)1u << 0)
+#define ZX_VM_FLAG_PERM_WRITE             ((uint32_t)1u << 1)
+#define ZX_VM_FLAG_PERM_EXECUTE           ((uint32_t)1u << 2)
+#define ZX_VM_FLAG_COMPACT                ((uint32_t)1u << 3)
+#define ZX_VM_FLAG_SPECIFIC               ((uint32_t)1u << 4)
+#define ZX_VM_FLAG_SPECIFIC_OVERWRITE     ((uint32_t)1u << 5)
+#define ZX_VM_FLAG_CAN_MAP_SPECIFIC       ((uint32_t)1u << 6)
+#define ZX_VM_FLAG_CAN_MAP_READ           ((uint32_t)1u << 7)
+#define ZX_VM_FLAG_CAN_MAP_WRITE          ((uint32_t)1u << 8)
+#define ZX_VM_FLAG_CAN_MAP_EXECUTE        ((uint32_t)1u << 9)
+#define ZX_VM_FLAG_MAP_RANGE              ((uint32_t)1u << 10)
+#define ZX_VM_FLAG_REQUIRE_NON_RESIZABLE  ((uint32_t)1u << 11)
 
 #ifdef __cplusplus
 // We cannot use <stdatomic.h> with C++ code as _Atomic qualifier defined by

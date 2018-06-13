@@ -59,7 +59,7 @@ zx_status_t VmoMapper::CreateAndMap(uint64_t size,
 zx_status_t VmoMapper::Map(const zx::vmo& vmo,
                            uint64_t offset,
                            uint64_t size,
-                           uint32_t map_flags,
+                           zx_vm_option_t map_options,
                            fbl::RefPtr<VmarManager> vmar_manager) {
     zx_status_t res;
 
@@ -87,7 +87,7 @@ zx_status_t VmoMapper::Map(const zx::vmo& vmo,
         size = vmo_size - offset;
     }
 
-    return InternalMap(vmo, offset, size, map_flags, vmar_manager);
+    return InternalMap(vmo, offset, size, map_options, vmar_manager);
 }
 
 void VmoMapper::Unmap() {
@@ -122,7 +122,7 @@ zx_status_t VmoMapper::CheckReadyToMap(const fbl::RefPtr<VmarManager>& vmar_mana
 zx_status_t VmoMapper::InternalMap(const zx::vmo& vmo,
                                    uint64_t offset,
                                    uint64_t size,
-                                   uint32_t map_flags,
+                                   zx_vm_option_t map_options,
                                    fbl::RefPtr<VmarManager> vmar_manager) {
     ZX_DEBUG_ASSERT(vmo.is_valid());
     ZX_DEBUG_ASSERT(start_ == nullptr);
@@ -134,7 +134,7 @@ zx_status_t VmoMapper::InternalMap(const zx::vmo& vmo,
         ? zx::vmar::root_self()->get()
         : vmar_manager->vmar().get();
 
-    zx_status_t res = zx_vmar_map(vmar_handle, 0, vmo.get(), offset, size, map_flags, &tmp);
+    zx_status_t res = zx_vmar_map(vmar_handle, map_options, 0, vmo.get(), offset, size, &tmp);
     if (res != ZX_OK) {
         return res;
     }

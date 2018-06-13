@@ -30,9 +30,9 @@ zx_status_t MappedVmo::Create(size_t size, const char* name, fbl::unique_ptr<Map
     zx_status_t status;
     if ((status = zx_vmo_create(size, 0, &vmo)) != ZX_OK) {
         return status;
-    } else if ((status = zx_vmar_map(zx_vmar_root_self(), 0, vmo, 0,
-                                     size, ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE,
-                                     &addr)) != ZX_OK) {
+    } else if ((status = zx_vmar_map(zx_vmar_root_self(),
+                                     ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
+                                     0, vmo, 0, size, &addr)) != ZX_OK) {
         zx_handle_close(vmo);
         return status;
     }
@@ -93,14 +93,14 @@ zx_status_t MappedVmo::Grow(size_t len) {
     }
 
     // Try to extend mapping
-    if ((status = zx_vmar_map(zx_vmar_root_self(), addr_ + len_ -
-                              vmar_info.base, vmo_, len_, len - len_,
-                              ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE |
-                              ZX_VM_FLAG_SPECIFIC, &addr)) != ZX_OK) {
+    if ((status = zx_vmar_map(zx_vmar_root_self(),
+                              ZX_VM_PERM_READ | ZX_VM_PERM_WRITE |
+                              ZX_VM_SPECIFIC, addr_ + len_ -
+                              vmar_info.base, vmo_, len_, len - len_, &addr)) != ZX_OK) {
         // If extension fails, create entirely new mapping and unmap the old one
-        if ((status = zx_vmar_map(zx_vmar_root_self(), 0, vmo_, 0, len,
-                                  ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE,
-                                  &addr)) != ZX_OK) {
+        if ((status = zx_vmar_map(zx_vmar_root_self(),
+                                  ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
+                                  0, vmo_, 0, len, &addr)) != ZX_OK) {
             return status;
         }
 

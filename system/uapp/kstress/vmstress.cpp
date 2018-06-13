@@ -122,7 +122,7 @@ int VmStressTest::stress_thread() {
             // map it somewhere
             Printf("m");
             status = zx::vmar::root_self()->map(0, vmo_, 0, vmo_size,
-                                               ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE, &ptr);
+                                                ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, &ptr);
             if (status != ZX_OK) {
                 fprintf(stderr, "failed to map range, error %d (%s)\n", status, zx_status_get_string(status));
             }

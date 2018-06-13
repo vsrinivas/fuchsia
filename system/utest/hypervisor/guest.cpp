@@ -21,9 +21,9 @@
 
 #include "constants_priv.h"
 
-static constexpr uint32_t kGuestMapFlags = ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE |
-                                           ZX_VM_FLAG_PERM_EXECUTE | ZX_VM_FLAG_SPECIFIC;
-static constexpr uint32_t kHostMapFlags = ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE;
+static constexpr uint32_t kGuestMapFlags = ZX_VM_PERM_READ | ZX_VM_PERM_WRITE |
+                                           ZX_VM_PERM_EXECUTE | ZX_VM_SPECIFIC;
+static constexpr uint32_t kHostMapFlags = ZX_VM_PERM_READ | ZX_VM_PERM_WRITE;
 static constexpr uint64_t kTrapKey = 0x1234;
 static constexpr char kResourcePath[] = "/dev/misc/sysinfo";
 

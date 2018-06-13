@@ -73,7 +73,7 @@ static zx_status_t setup_bootfs_vmo(uint32_t n, uint32_t type, zx_handle_t vmo) 
     // map the vmo so that ps will account for it
     // NOTE: will leak the mapping in case the bootfs is thrown away later
     uintptr_t address;
-    zx_vmar_map(zx_vmar_root_self(), 0, vmo, 0, size, ZX_VM_FLAG_PERM_READ, &address);
+    zx_vmar_map(zx_vmar_root_self(), ZX_VM_PERM_READ, 0, vmo, 0, size, &address);
 
     struct callback_data cd = {
         .vmo = vmo,

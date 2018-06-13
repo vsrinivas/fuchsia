@@ -30,16 +30,16 @@ public:
     }
 
     zx_status_t map(size_t vmar_offset, const vmo& vmo_handle, uint64_t vmo_offset,
-                    size_t len, uint32_t flags, uintptr_t* ptr) const {
-        return zx_vmar_map(get(), vmar_offset, vmo_handle.get(), vmo_offset, len, flags, ptr);
+                    size_t len, zx_vm_option_t options, uintptr_t* ptr) const {
+        return zx_vmar_map(get(), options, vmar_offset, vmo_handle.get(), vmo_offset, len, ptr);
     }
 
     zx_status_t unmap(uintptr_t address, size_t len) const {
         return zx_vmar_unmap(get(), address, len);
     }
 
-    zx_status_t protect(uintptr_t address, size_t len, uint32_t prot) const {
-        return zx_vmar_protect(get(), address, len, prot);
+    zx_status_t protect(uintptr_t address, size_t len, zx_vm_option_t prot) const {
+        return zx_vmar_protect(get(), prot, address, len);
     }
 
     zx_status_t destroy() const {

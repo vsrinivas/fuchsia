@@ -28,9 +28,9 @@ zx_status_t bootfs_create(bootfs_t* bfs, zx_handle_t vmo) {
         return ZX_ERR_IO;
     }
     zx_vaddr_t addr;
-    if ((r = zx_vmar_map(zx_vmar_root_self(), 0, vmo, 0,
+    if ((r = zx_vmar_map(zx_vmar_root_self(), ZX_VM_PERM_READ, 0, vmo, 0,
                          sizeof(hdr) + hdr.dirsize,
-                         ZX_VM_FLAG_PERM_READ, &addr)) < 0) {
+                         &addr)) < 0) {
         printf("boofts_create: couldn't map directory: %d\n", r);
         zx_handle_close(vmo);
         return r;

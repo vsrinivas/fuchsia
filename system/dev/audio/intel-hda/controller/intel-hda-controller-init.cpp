@@ -221,7 +221,7 @@ zx_status_t IntelHDAController::SetupPCIDevice(zx_device_t* pci_dev) {
 
     // Map the VMO in, make sure to put it in the same VMAR as the rest of our
     // registers.
-    constexpr uint32_t CPU_MAP_FLAGS = ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE;
+    constexpr uint32_t CPU_MAP_FLAGS = ZX_VM_PERM_READ | ZX_VM_PERM_WRITE;
     res = mapped_regs_.Map(bar_vmo, 0, bar_info.size, CPU_MAP_FLAGS, DriverVmars::registers());
     if (res != ZX_OK) {
         LOG(ERROR, "Error attempting to map registers (res %d)\n", res);
@@ -342,7 +342,7 @@ zx_status_t IntelHDAController::SetupCommandBuffer() {
     // Allocate our command buffer memory and map it into our address space.
     // Even the largest buffers permissible should fit within a single 4k page.
     zx::vmo cmd_buf_vmo;
-    constexpr uint32_t CPU_MAP_FLAGS = ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE;
+    constexpr uint32_t CPU_MAP_FLAGS = ZX_VM_PERM_READ | ZX_VM_PERM_WRITE;
     static_assert(PAGE_SIZE >= (HDA_CORB_MAX_BYTES + HDA_RIRB_MAX_BYTES),
                   "PAGE_SIZE to small to hold CORB and RIRB buffers!");
     res = cmd_buf_cpu_mem_.CreateAndMap(PAGE_SIZE,

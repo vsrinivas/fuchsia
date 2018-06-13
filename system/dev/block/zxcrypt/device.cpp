@@ -138,7 +138,7 @@ zx_status_t Device::Init() {
         zxlogf(ERROR, "zx::vmo::create failed: %s\n", zx_status_get_string(rc));
         return rc;
     }
-    constexpr uint32_t flags = ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE;
+    constexpr uint32_t flags = ZX_VM_PERM_READ | ZX_VM_PERM_WRITE;
     uintptr_t address;
     if ((rc = zx::vmar::root_self()->map(0, info->vmo, 0, Volume::kBufferSize, flags, &address)) !=
         ZX_OK) {

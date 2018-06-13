@@ -74,7 +74,7 @@ zx_status_t IntelHDAStream::Initialize() {
 
     // Create a VMO made of a single page and map it for read/write so the CPU
     // has access to it.
-    constexpr uint32_t CPU_MAP_FLAGS = ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE;
+    constexpr uint32_t CPU_MAP_FLAGS = ZX_VM_PERM_READ | ZX_VM_PERM_WRITE;
     zx::vmo bdl_vmo;
     zx_status_t res;
     res = bdl_cpu_mem_.CreateAndMap(PAGE_SIZE,

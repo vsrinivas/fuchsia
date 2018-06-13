@@ -214,7 +214,7 @@ static bool vmar_test() {
     zx::vmar vmar;
     const size_t size = getpagesize();
     uintptr_t addr;
-    ASSERT_EQ(zx::vmar::root_self()->allocate(0u, size, ZX_VM_FLAG_CAN_MAP_READ, &vmar, &addr),
+    ASSERT_EQ(zx::vmar::root_self()->allocate(0u, size, ZX_VM_CAN_MAP_READ, &vmar, &addr),
               ZX_OK);
     ASSERT_EQ(validate_handle(vmar.get()), ZX_OK);
     ASSERT_EQ(vmar.destroy(), ZX_OK);

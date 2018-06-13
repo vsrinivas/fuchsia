@@ -70,9 +70,9 @@ static void* fuchsia_pages_map(void* start, size_t len) {
 		// allocate and destroy under a lock.
 		zx_handle_t subvmar;
 		uintptr_t subvmar_base;
-		zx_status_t status = _zx_vmar_allocate(pages_vmar, 0u, len,
-		    ZX_VM_FLAG_CAN_MAP_READ | ZX_VM_FLAG_CAN_MAP_WRITE,
-		    &subvmar, &subvmar_base);
+		zx_status_t status = _zx_vmar_allocate(pages_vmar,
+		    ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE,
+			  0u, len, &subvmar, &subvmar_base);
 		if (status != ZX_OK)
 			abort();
 		_zx_vmar_destroy(subvmar);
@@ -81,10 +81,10 @@ static void* fuchsia_pages_map(void* start, size_t len) {
 	}
 
 	uintptr_t ptr = 0;
-	uint32_t zx_flags = ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE |
-	    ZX_VM_FLAG_SPECIFIC;
-	zx_status_t status = _zx_vmar_map(pages_vmar, offset, pages_vmo,
-	    offset, len, zx_flags, &ptr);
+	zx_vm_option_t zx_options = ZX_VM_PERM_READ | ZX_VM_PERM_WRITE |
+	    ZX_VM_SPECIFIC;
+	zx_status_t status = _zx_vmar_map(pages_vmar, zx_options, offset, pages_vmo,
+	    offset, len, &ptr);
 	if (status != ZX_OK) {
 		ptr = 0u;
 	}
@@ -390,10 +390,10 @@ pages_boot(void)
 #endif
 
 #if defined(__Fuchsia__)
-	uint32_t vmar_flags = ZX_VM_FLAG_CAN_MAP_SPECIFIC | ZX_VM_FLAG_CAN_MAP_READ |
-	    ZX_VM_FLAG_CAN_MAP_WRITE;
-	zx_status_t status = _zx_vmar_allocate(_zx_vmar_root_self(), 0, VMAR_SIZE,
-					       vmar_flags, &pages_vmar, &pages_base);
+	zx_vm_option_t vmar_flags = ZX_VM_CAN_MAP_SPECIFIC | ZX_VM_CAN_MAP_READ |
+	    ZX_VM_CAN_MAP_WRITE;
+	zx_status_t status = _zx_vmar_allocate(_zx_vmar_root_self(), vmar_flags, 0,
+	                        VMAR_SIZE, &pages_vmar, &pages_base);
 	if (status != ZX_OK)
 		abort();
 	status = _zx_vmo_create(VMAR_SIZE, 0, &pages_vmo);

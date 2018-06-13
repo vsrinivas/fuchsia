@@ -49,8 +49,8 @@ bool probe_verify_region(void* start, size_t size, uint32_t access) {
 
     unittest_printf("prove_verify_region for addr: %lu, size: %lu\n", (size_t)start, size);
     for (void* probe_point : probe_points) {
-        ASSERT_TRUE(probe_access(probe_point, AccessType::Rd, access & ZX_VM_FLAG_PERM_READ));
-        ASSERT_TRUE(probe_access(probe_point, AccessType::Wr, access & ZX_VM_FLAG_PERM_WRITE));
+        ASSERT_TRUE(probe_access(probe_point, AccessType::Rd, access & ZX_VM_PERM_READ));
+        ASSERT_TRUE(probe_access(probe_point, AccessType::Wr, access & ZX_VM_PERM_WRITE));
     }
 
     END_HELPER;

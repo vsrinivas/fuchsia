@@ -28,10 +28,10 @@ namespace {
 
 const char kProcessName[] = "test-proc-vmar";
 
-const uint32_t kRwxMapPerm =
-        ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE | ZX_VM_FLAG_PERM_EXECUTE;
-const uint32_t kRwxAllocPerm =
-        ZX_VM_FLAG_CAN_MAP_READ | ZX_VM_FLAG_CAN_MAP_WRITE | ZX_VM_FLAG_CAN_MAP_EXECUTE;
+const zx_vm_option_t kRwxMapPerm =
+        ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_PERM_EXECUTE;
+const zx_vm_option_t kRwxAllocPerm =
+        ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE | ZX_VM_CAN_MAP_EXECUTE;
 
 
 // Helper routine for other tests.  If bit i (< *page_count*) in *bitmap* is set, then
@@ -181,9 +181,9 @@ bool destroy_root_test() {
 
     zx_handle_t region;
     uintptr_t region_addr;
-    EXPECT_EQ(zx_vmar_allocate(vmar, 0, 10 * PAGE_SIZE,
-                               ZX_VM_FLAG_CAN_MAP_READ | ZX_VM_FLAG_CAN_MAP_WRITE,
-                               &region, &region_addr),
+    EXPECT_EQ(zx_vmar_allocate(vmar,
+                               ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE,
+                               0, 10 * PAGE_SIZE, &region, &region_addr),
               ZX_ERR_BAD_STATE);
 
     EXPECT_EQ(zx_handle_close(vmar), ZX_OK);
@@ -206,14 +206,14 @@ bool basic_allocate_test() {
     const size_t region1_size = PAGE_SIZE * 10;
     const size_t region2_size = PAGE_SIZE;
 
-    ASSERT_EQ(zx_vmar_allocate(vmar, 0, region1_size,
-                               ZX_VM_FLAG_CAN_MAP_READ | ZX_VM_FLAG_CAN_MAP_WRITE,
-                               &region1, &region1_addr),
+    ASSERT_EQ(zx_vmar_allocate(vmar,
+                               ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE,
+                                0, region1_size, &region1, &region1_addr),
               ZX_OK);
 
-    ASSERT_EQ(zx_vmar_allocate(region1, 0, region2_size,
-                               ZX_VM_FLAG_CAN_MAP_READ | ZX_VM_FLAG_CAN_MAP_WRITE,
-                               &region2, &region2_addr),
+    ASSERT_EQ(zx_vmar_allocate(region1,
+                               ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE,
+                               0, region2_size, &region2, &region2_addr),
               ZX_OK);
     EXPECT_GE(region2_addr, region1_addr);
     EXPECT_LE(region2_addr + region2_size, region1_addr + region1_size);
@@ -243,20 +243,20 @@ bool map_in_compact_test() {
 
     ASSERT_EQ(zx_vmo_create(map_size, 0, &vmo), ZX_OK);
 
-    ASSERT_EQ(zx_vmar_allocate(vmar, 0, region_size,
-                               ZX_VM_FLAG_CAN_MAP_READ | ZX_VM_FLAG_CAN_MAP_WRITE | ZX_VM_FLAG_COMPACT,
-                               &region, &region_addr),
+    ASSERT_EQ(zx_vmar_allocate(vmar,
+                               ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE | ZX_VM_COMPACT,
+                               0, region_size, &region, &region_addr),
               ZX_OK);
 
-    ASSERT_EQ(zx_vmar_map(region, 0, vmo, 0, map_size,
-                          ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE, &map_addr),
+    ASSERT_EQ(zx_vmar_map(region, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
+                          0, vmo, 0, map_size, &map_addr),
               ZX_OK);
     EXPECT_GE(map_addr, region_addr);
     EXPECT_LE(map_addr + map_size, region_addr + region_size);
 
     // Make a second allocation
-    ASSERT_EQ(zx_vmar_map(region, 0, vmo, 0, map_size,
-                          ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE, &map_addr),
+    ASSERT_EQ(zx_vmar_map(region, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
+                          0, vmo, 0, map_size, &map_addr),
               ZX_OK);
     EXPECT_GE(map_addr, region_addr);
     EXPECT_LE(map_addr + map_size, region_addr + region_size);
@@ -282,20 +282,22 @@ bool allocate_oob_test() {
 
     const size_t region1_size = PAGE_SIZE * 10;
 
-    ASSERT_EQ(zx_vmar_allocate(vmar, 0, region1_size,
-                               ZX_VM_FLAG_CAN_MAP_READ | ZX_VM_FLAG_CAN_MAP_WRITE |
-                               ZX_VM_FLAG_CAN_MAP_SPECIFIC,
-                               &region1, &region1_addr),
+    ASSERT_EQ(zx_vmar_allocate(vmar,
+                               ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE |
+                               ZX_VM_CAN_MAP_SPECIFIC,
+                               0, region1_size, &region1, &region1_addr),
               ZX_OK);
 
-    EXPECT_EQ(zx_vmar_allocate(region1, region1_size, PAGE_SIZE,
-                               ZX_VM_FLAG_CAN_MAP_READ | ZX_VM_FLAG_CAN_MAP_WRITE |
-                               ZX_VM_FLAG_SPECIFIC, &region2, &region2_addr),
+    EXPECT_EQ(zx_vmar_allocate(region1,
+                               ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE |
+                               ZX_VM_SPECIFIC, region1_size, PAGE_SIZE,
+                               &region2, &region2_addr),
               ZX_ERR_INVALID_ARGS);
 
-    EXPECT_EQ(zx_vmar_allocate(region1, region1_size - PAGE_SIZE, PAGE_SIZE * 2,
-                               ZX_VM_FLAG_CAN_MAP_READ | ZX_VM_FLAG_CAN_MAP_WRITE |
-                               ZX_VM_FLAG_SPECIFIC,
+    EXPECT_EQ(zx_vmar_allocate(region1,
+                               ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE |
+                               ZX_VM_SPECIFIC,
+                               region1_size - PAGE_SIZE, PAGE_SIZE * 2,
                                &region2, &region2_addr),
               ZX_ERR_INVALID_ARGS);
 
@@ -320,29 +322,29 @@ bool allocate_unsatisfiable_test() {
 
     const size_t region1_size = PAGE_SIZE * 10;
 
-    ASSERT_EQ(zx_vmar_allocate(vmar, 0, region1_size,
-                               ZX_VM_FLAG_CAN_MAP_READ | ZX_VM_FLAG_CAN_MAP_WRITE |
-                               ZX_VM_FLAG_CAN_MAP_SPECIFIC,
-                               &region1, &region1_addr),
+    ASSERT_EQ(zx_vmar_allocate(vmar,
+                               ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE |
+                               ZX_VM_CAN_MAP_SPECIFIC,
+                               0, region1_size, &region1, &region1_addr),
               ZX_OK);
 
     // Too large to fit in the region should get ZX_ERR_INVALID_ARGS
-    EXPECT_EQ(zx_vmar_allocate(region1, 0, region1_size + PAGE_SIZE,
-                               ZX_VM_FLAG_CAN_MAP_READ | ZX_VM_FLAG_CAN_MAP_WRITE,
-                               &region2, &region2_addr),
+    EXPECT_EQ(zx_vmar_allocate(region1,
+                               ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE,
+                               0, region1_size + PAGE_SIZE, &region2, &region2_addr),
               ZX_ERR_INVALID_ARGS);
 
     // Allocate the whole range, should work
-    ASSERT_EQ(zx_vmar_allocate(region1, 0, region1_size,
-                               ZX_VM_FLAG_CAN_MAP_READ | ZX_VM_FLAG_CAN_MAP_WRITE,
-                               &region2, &region2_addr),
+    ASSERT_EQ(zx_vmar_allocate(region1,
+                               ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE,
+                               0, region1_size, &region2, &region2_addr),
               ZX_OK);
     EXPECT_EQ(region2_addr, region1_addr);
 
     // Attempt to allocate a page inside of the full region
-    EXPECT_EQ(zx_vmar_allocate(region1, 0, PAGE_SIZE,
-                               ZX_VM_FLAG_CAN_MAP_READ | ZX_VM_FLAG_CAN_MAP_WRITE,
-                               &region3, &region3_addr),
+    EXPECT_EQ(zx_vmar_allocate(region1,
+                               ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE,
+                               0, PAGE_SIZE, &region3, &region3_addr),
               ZX_ERR_NO_MEMORY);
 
     EXPECT_EQ(zx_handle_close(region2), ZX_OK);
@@ -370,25 +372,26 @@ bool destroyed_vmar_test() {
 
     ASSERT_EQ(zx_vmo_create(PAGE_SIZE, 0, &vmo), ZX_OK);
 
-    ASSERT_EQ(zx_vmar_allocate(vmar, 0, 10 * PAGE_SIZE,
-                               ZX_VM_FLAG_CAN_MAP_READ | ZX_VM_FLAG_CAN_MAP_WRITE,
-                               &region[0], &region_addr[0]),
+    ASSERT_EQ(zx_vmar_allocate(vmar,
+                               ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE,
+                               0, 10 * PAGE_SIZE, &region[0], &region_addr[0]),
               ZX_OK);
 
     // Create a mapping in region[0], so we can try to unmap it later
-    ASSERT_EQ(zx_vmar_map(region[0], 0, vmo, 0, PAGE_SIZE,
-                          ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE, &map_addr[0]),
+    ASSERT_EQ(zx_vmar_map(region[0], ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
+                          0, vmo, 0, PAGE_SIZE, &map_addr[0]),
               ZX_OK);
 
     // Create a subregion in region[0], so we can try to operate on it later
-    ASSERT_EQ(zx_vmar_allocate(region[0], 0, PAGE_SIZE,
-                               ZX_VM_FLAG_CAN_MAP_READ | ZX_VM_FLAG_CAN_MAP_WRITE,
-                               &region[1], &region_addr[1]),
+    ASSERT_EQ(zx_vmar_allocate(region[0],
+                               ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE,
+                               0, PAGE_SIZE, &region[1], &region_addr[1]),
               ZX_OK);
 
     // Create a mapping in region[1], so we can try to unmap it later
-    ASSERT_EQ(zx_vmar_map(region[1], 0, vmo, 0, PAGE_SIZE,
-                          ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE, &map_addr[1]),
+    ASSERT_EQ(zx_vmar_map(region[1],
+                          ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
+                          0, vmo, 0, PAGE_SIZE, &map_addr[1]),
               ZX_OK);
 
     // Check that both mappings work
@@ -424,22 +427,22 @@ bool destroyed_vmar_test() {
 
         // All operations on region[0] and region[1] should fail with ZX_ERR_BAD_STATE
         EXPECT_EQ(zx_vmar_destroy(region[i]), ZX_ERR_BAD_STATE);
-        EXPECT_EQ(zx_vmar_allocate(region[i], 0, PAGE_SIZE,
-                                   ZX_VM_FLAG_CAN_MAP_READ | ZX_VM_FLAG_CAN_MAP_WRITE,
-                                   &region[1], &region_addr[2]),
+        EXPECT_EQ(zx_vmar_allocate(region[i],
+                                   ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE,
+                                   0, PAGE_SIZE, &region[1], &region_addr[2]),
                   ZX_ERR_BAD_STATE);
         EXPECT_EQ(zx_vmar_unmap(region[i], map_addr[i], PAGE_SIZE),
                   ZX_ERR_BAD_STATE);
-        EXPECT_EQ(zx_vmar_protect(region[i], map_addr[i], PAGE_SIZE, ZX_VM_FLAG_PERM_READ),
+        EXPECT_EQ(zx_vmar_protect(region[i], ZX_VM_PERM_READ, map_addr[i], PAGE_SIZE),
                   ZX_ERR_BAD_STATE);
-        EXPECT_EQ(zx_vmar_map(region[i], 0, vmo, 0, PAGE_SIZE, ZX_VM_FLAG_PERM_READ, &map_addr[i]),
+        EXPECT_EQ(zx_vmar_map(region[i], ZX_VM_PERM_READ, 0, vmo, 0, PAGE_SIZE, &map_addr[i]),
                   ZX_ERR_BAD_STATE);
     }
 
     // Make sure we can still operate on the parent of region[0]
-    ASSERT_EQ(zx_vmar_allocate(vmar, 0, PAGE_SIZE,
-                               ZX_VM_FLAG_CAN_MAP_READ | ZX_VM_FLAG_CAN_MAP_WRITE,
-                               &region[2], &region_addr[2]),
+    ASSERT_EQ(zx_vmar_allocate(vmar,
+                               ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE,
+                               0, PAGE_SIZE, &region[2], &region_addr[2]),
               ZX_OK);
 
 
@@ -473,21 +476,22 @@ bool map_over_destroyed_test() {
     ASSERT_EQ(zx_vmo_create(PAGE_SIZE, 0, &vmo), ZX_OK);
     ASSERT_EQ(zx_vmo_create(PAGE_SIZE, 0, &vmo2), ZX_OK);
 
-    ASSERT_EQ(zx_vmar_allocate(vmar, 0, 10 * PAGE_SIZE,
-                               ZX_VM_FLAG_CAN_MAP_READ | ZX_VM_FLAG_CAN_MAP_WRITE |
-                               ZX_VM_FLAG_CAN_MAP_SPECIFIC,
-                               &region[0], &region_addr[0]),
+    ASSERT_EQ(zx_vmar_allocate(vmar,
+                               ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE |
+                               ZX_VM_CAN_MAP_SPECIFIC,
+                               0, 10 * PAGE_SIZE, &region[0], &region_addr[0]),
               ZX_OK);
 
     // Create a subregion in region[0], so we can try to operate on it later
-    ASSERT_EQ(zx_vmar_allocate(region[0], 0, PAGE_SIZE,
-                               ZX_VM_FLAG_CAN_MAP_READ | ZX_VM_FLAG_CAN_MAP_WRITE,
-                               &region[1], &region_addr[1]),
+    ASSERT_EQ(zx_vmar_allocate(region[0],
+                               ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE,
+                               0, PAGE_SIZE,&region[1], &region_addr[1]),
               ZX_OK);
 
     // Create a mapping in region[1], so we can try to unmap it later
-    ASSERT_EQ(zx_vmar_map(region[1], 0, vmo, 0, PAGE_SIZE,
-                          ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE, &map_addr),
+    ASSERT_EQ(zx_vmar_map(region[1],
+                          ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
+                          0, vmo, 0, PAGE_SIZE, &map_addr),
               ZX_OK);
 
     // Check that the mapping worked
@@ -514,9 +518,10 @@ bool map_over_destroyed_test() {
     }
 
     uintptr_t new_map_addr;
-    EXPECT_EQ(zx_vmar_map(region[0], map_addr - region_addr[0], vmo2, 0, PAGE_SIZE,
-                          ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE |
-                          ZX_VM_FLAG_SPECIFIC, &new_map_addr),
+    EXPECT_EQ(zx_vmar_map(region[0],
+                          ZX_VM_PERM_READ | ZX_VM_PERM_WRITE |
+                          ZX_VM_SPECIFIC,
+                          map_addr - region_addr[0], vmo2, 0, PAGE_SIZE, &new_map_addr),
               ZX_OK);
     EXPECT_EQ(new_map_addr, map_addr);
 
@@ -560,41 +565,44 @@ bool overmapping_test() {
     ASSERT_EQ(zx_vmo_create(PAGE_SIZE, 0, &vmo), ZX_OK);
     ASSERT_EQ(zx_vmo_create(PAGE_SIZE * 4, 0, &vmo2), ZX_OK);
 
-    ASSERT_EQ(zx_vmar_allocate(vmar, 0, 10 * PAGE_SIZE,
-                               ZX_VM_FLAG_CAN_MAP_READ | ZX_VM_FLAG_CAN_MAP_WRITE |
-                               ZX_VM_FLAG_CAN_MAP_SPECIFIC,
-                               &region[0], &region_addr[0]),
+    ASSERT_EQ(zx_vmar_allocate(vmar,
+                               ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE |
+                               ZX_VM_CAN_MAP_SPECIFIC,
+                               0, 10 * PAGE_SIZE, &region[0], &region_addr[0]),
               ZX_OK);
 
     // Create a mapping, and try to map on top of it
-    ASSERT_EQ(zx_vmar_map(region[0], PAGE_SIZE, vmo, 0, 2 * PAGE_SIZE,
-                          ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE | ZX_VM_FLAG_SPECIFIC,
-                          &map_addr[0]),
+    ASSERT_EQ(zx_vmar_map(region[0],
+                          ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_SPECIFIC,
+                          PAGE_SIZE, vmo, 0, 2 * PAGE_SIZE, &map_addr[0]),
               ZX_OK);
 
     // Attempt a full overmapping
-    EXPECT_EQ(zx_vmar_map(region[0], map_addr[0] - region_addr[0], vmo2, 0, 2 * PAGE_SIZE,
-                          ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE |
-                          ZX_VM_FLAG_SPECIFIC, &map_addr[1]),
+    EXPECT_EQ(zx_vmar_map(region[0],
+                          ZX_VM_PERM_READ | ZX_VM_PERM_WRITE |
+                          ZX_VM_SPECIFIC,
+                          map_addr[0] - region_addr[0], vmo2, 0, 2 * PAGE_SIZE, &map_addr[1]),
               ZX_ERR_NO_MEMORY);
 
     // Attempt a partial overmapping
-    EXPECT_EQ(zx_vmar_map(region[0], map_addr[0] - region_addr[0], vmo2, 0, PAGE_SIZE,
-                          ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE |
-                          ZX_VM_FLAG_SPECIFIC, &map_addr[1]),
+    EXPECT_EQ(zx_vmar_map(region[0],
+                          ZX_VM_PERM_READ | ZX_VM_PERM_WRITE |
+                          ZX_VM_SPECIFIC,
+                          map_addr[0] - region_addr[0], vmo2, 0, PAGE_SIZE,&map_addr[1]),
               ZX_ERR_NO_MEMORY);
 
     // Attempt an overmapping that is larger than the original mapping
-    EXPECT_EQ(zx_vmar_map(region[0], map_addr[0] - region_addr[0], vmo2, 0,
-                          4 * PAGE_SIZE, ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE |
-                          ZX_VM_FLAG_SPECIFIC, &map_addr[1]),
+    EXPECT_EQ(zx_vmar_map(region[0], ZX_VM_PERM_READ | ZX_VM_PERM_WRITE |
+                          ZX_VM_SPECIFIC,
+                          map_addr[0] - region_addr[0], vmo2, 0,
+                          4 * PAGE_SIZE, &map_addr[1]),
               ZX_ERR_NO_MEMORY);
 
     // Attempt to allocate a region on top
-    EXPECT_EQ(zx_vmar_allocate(region[0], map_addr[0] - region_addr[0], PAGE_SIZE,
-                               ZX_VM_FLAG_CAN_MAP_READ | ZX_VM_FLAG_CAN_MAP_WRITE |
-                               ZX_VM_FLAG_SPECIFIC,
-                               &region[1], &region_addr[1]),
+    EXPECT_EQ(zx_vmar_allocate(region[0],
+                               ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE |
+                               ZX_VM_SPECIFIC,
+                               map_addr[0] - region_addr[0], PAGE_SIZE, &region[1], &region_addr[1]),
               ZX_ERR_NO_MEMORY);
 
     // Unmap the mapping
@@ -602,34 +610,37 @@ bool overmapping_test() {
 
 
     // Create a region, and try to map on top of it
-    ASSERT_EQ(zx_vmar_allocate(region[0], PAGE_SIZE, 2 * PAGE_SIZE,
-                               ZX_VM_FLAG_CAN_MAP_READ | ZX_VM_FLAG_CAN_MAP_WRITE |
-                               ZX_VM_FLAG_SPECIFIC,
-                               &region[1], &region_addr[1]),
+    ASSERT_EQ(zx_vmar_allocate(region[0],
+                               ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE |
+                               ZX_VM_SPECIFIC,
+                               PAGE_SIZE, 2 * PAGE_SIZE, &region[1], &region_addr[1]),
               ZX_OK);
 
     // Attempt a full overmapping
-    EXPECT_EQ(zx_vmar_map(region[0], region_addr[1] - region_addr[0], vmo2, 0, 2 * PAGE_SIZE,
-                          ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE |
-                          ZX_VM_FLAG_SPECIFIC, &map_addr[1]),
+    EXPECT_EQ(zx_vmar_map(region[0],
+                          ZX_VM_PERM_READ | ZX_VM_PERM_WRITE |
+                          ZX_VM_SPECIFIC,
+                          region_addr[1] - region_addr[0], vmo2, 0, 2 * PAGE_SIZE, &map_addr[1]),
               ZX_ERR_NO_MEMORY);
 
     // Attempt a partial overmapping
-    EXPECT_EQ(zx_vmar_map(region[0], region_addr[1] - region_addr[0], vmo2, 0, PAGE_SIZE,
-                          ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE |
-                          ZX_VM_FLAG_SPECIFIC, &map_addr[1]),
+    EXPECT_EQ(zx_vmar_map(region[0],
+                          ZX_VM_PERM_READ | ZX_VM_PERM_WRITE |
+                          ZX_VM_SPECIFIC, region_addr[1] - region_addr[0],
+                          vmo2, 0, PAGE_SIZE,&map_addr[1]),
               ZX_ERR_NO_MEMORY);
 
     // Attempt an overmapping that is larger than the original region
-    EXPECT_EQ(zx_vmar_map(region[0], region_addr[1] - region_addr[0], vmo2, 0,
-                          4 * PAGE_SIZE, ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE |
-                          ZX_VM_FLAG_SPECIFIC, &map_addr[1]),
+    EXPECT_EQ(zx_vmar_map(region[0], ZX_VM_PERM_READ | ZX_VM_PERM_WRITE |
+                          ZX_VM_SPECIFIC, region_addr[1] - region_addr[0],
+                          vmo2, 0, 4 * PAGE_SIZE, &map_addr[1]),
               ZX_ERR_NO_MEMORY);
 
     // Attempt to allocate a region on top
-    EXPECT_EQ(zx_vmar_allocate(region[0], region_addr[1] - region_addr[0], PAGE_SIZE,
-                               ZX_VM_FLAG_CAN_MAP_READ | ZX_VM_FLAG_CAN_MAP_WRITE |
-                               ZX_VM_FLAG_SPECIFIC,
+    EXPECT_EQ(zx_vmar_allocate(region[0],
+                               ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE |
+                               ZX_VM_SPECIFIC,
+                               region_addr[1] - region_addr[0], PAGE_SIZE,
                                &region[2], &region_addr[2]),
               ZX_ERR_NO_MEMORY);
 
@@ -659,183 +670,168 @@ bool invalid_args_test() {
 
     // Bad handle
     EXPECT_EQ(zx_vmar_destroy(vmo), ZX_ERR_WRONG_TYPE);
-    EXPECT_EQ(zx_vmar_allocate(vmo, 0, 10 * PAGE_SIZE,
-                               ZX_VM_FLAG_CAN_MAP_READ | ZX_VM_FLAG_CAN_MAP_WRITE,
-                               &region, &region_addr),
+    EXPECT_EQ(zx_vmar_allocate(vmo,
+                               ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE,
+                               0, 10 * PAGE_SIZE, &region, &region_addr),
               ZX_ERR_WRONG_TYPE);
-    EXPECT_EQ(zx_vmar_map(vmo, 0, vmo, 0,
-                          4 * PAGE_SIZE, ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE,
-                          &map_addr),
+    EXPECT_EQ(zx_vmar_map(vmo, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
+                          0, vmo, 0, 4 * PAGE_SIZE, &map_addr),
               ZX_ERR_WRONG_TYPE);
-    EXPECT_EQ(zx_vmar_map(vmar, 0, process, 0,
-                          4 * PAGE_SIZE, ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE,
-                          &map_addr),
+    EXPECT_EQ(zx_vmar_map(vmar, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
+                         0, process, 0, 4 * PAGE_SIZE,  &map_addr),
               ZX_ERR_WRONG_TYPE);
     EXPECT_EQ(zx_vmar_unmap(vmo, 0, 0), ZX_ERR_WRONG_TYPE);
-    EXPECT_EQ(zx_vmar_protect(vmo, 0, 0, ZX_VM_FLAG_PERM_READ), ZX_ERR_WRONG_TYPE);
+    EXPECT_EQ(zx_vmar_protect(vmo, ZX_VM_PERM_READ, 0, 0), ZX_ERR_WRONG_TYPE);
 
     // Allocating with non-zero offset and without FLAG_SPECIFIC
-    EXPECT_EQ(zx_vmar_allocate(vmar, PAGE_SIZE, 10 * PAGE_SIZE,
-                               ZX_VM_FLAG_CAN_MAP_READ | ZX_VM_FLAG_CAN_MAP_WRITE,
-                               &region, &region_addr),
+    EXPECT_EQ(zx_vmar_allocate(vmar,
+                               ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE,
+                               PAGE_SIZE, 10 * PAGE_SIZE, &region, &region_addr),
               ZX_ERR_INVALID_ARGS);
-    EXPECT_EQ(zx_vmar_map(vmar, PAGE_SIZE, vmo, 0,
-                          4 * PAGE_SIZE, ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE,
-                          &map_addr),
+    EXPECT_EQ(zx_vmar_map(vmar, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
+                          PAGE_SIZE, vmo, 0, 4 * PAGE_SIZE, &map_addr),
               ZX_ERR_INVALID_ARGS);
 
-    // Allocate with ZX_VM_FLAG_PERM_READ.
-    EXPECT_EQ(zx_vmar_allocate(vmar, PAGE_SIZE, 10 * PAGE_SIZE,
-                               ZX_VM_FLAG_CAN_MAP_READ | ZX_VM_FLAG_PERM_READ,
-                               &region, &region_addr),
+    // Allocate with ZX_VM_PERM_READ.
+    EXPECT_EQ(zx_vmar_allocate(vmar, ZX_VM_CAN_MAP_READ | ZX_VM_PERM_READ,
+                               PAGE_SIZE, 10 * PAGE_SIZE, &region, &region_addr),
               ZX_ERR_INVALID_ARGS);
 
     // Using MAP_RANGE with SPECIFIC_OVERWRITE
-    EXPECT_EQ(zx_vmar_map(vmar, PAGE_SIZE, vmo, 0, 4 * PAGE_SIZE,
-                          ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_SPECIFIC_OVERWRITE |
-                          ZX_VM_FLAG_MAP_RANGE,
-                          &map_addr),
+    EXPECT_EQ(zx_vmar_map(vmar,
+                          ZX_VM_PERM_READ | ZX_VM_SPECIFIC_OVERWRITE |
+                          ZX_VM_MAP_RANGE,
+                          PAGE_SIZE, vmo, 0, 4 * PAGE_SIZE, &map_addr),
               ZX_ERR_INVALID_ARGS);
 
     // Bad OUT pointers
     uintptr_t *bad_addr_ptr = reinterpret_cast<uintptr_t*>(1);
     zx_handle_t *bad_handle_ptr = reinterpret_cast<zx_handle_t*>(1);
-    EXPECT_EQ(zx_vmar_allocate(vmar, 0, 10 * PAGE_SIZE,
-                               ZX_VM_FLAG_CAN_MAP_READ | ZX_VM_FLAG_CAN_MAP_WRITE,
-                               &region, bad_addr_ptr),
+    EXPECT_EQ(zx_vmar_allocate(vmar,
+                               ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE,
+                               0, 10 * PAGE_SIZE, &region, bad_addr_ptr),
               ZX_ERR_INVALID_ARGS);
-    EXPECT_EQ(zx_vmar_allocate(vmar, 0, 10 * PAGE_SIZE,
-                               ZX_VM_FLAG_CAN_MAP_READ | ZX_VM_FLAG_CAN_MAP_WRITE,
-                               bad_handle_ptr, &region_addr),
+    EXPECT_EQ(zx_vmar_allocate(vmar,
+                               ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE,
+                               0, 10 * PAGE_SIZE, bad_handle_ptr, &region_addr),
               ZX_ERR_INVALID_ARGS);
-    EXPECT_EQ(zx_vmar_map(vmar, 0, vmo, 0,
-                          4 * PAGE_SIZE, ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE,
-                          bad_addr_ptr),
+    EXPECT_EQ(zx_vmar_map(vmar, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
+                          0, vmo, 0, 4 * PAGE_SIZE, bad_addr_ptr),
               ZX_ERR_INVALID_ARGS);
 
     // Non-page-aligned arguments
-    EXPECT_EQ(zx_vmar_allocate(vmar, 0, PAGE_SIZE - 1,
-                               ZX_VM_FLAG_CAN_MAP_READ | ZX_VM_FLAG_CAN_MAP_WRITE,
-                               &region, &region_addr),
+    EXPECT_EQ(zx_vmar_allocate(vmar,
+                               ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE,
+                               0, PAGE_SIZE - 1,&region, &region_addr),
               ZX_ERR_INVALID_ARGS);
-    EXPECT_EQ(zx_vmar_allocate(vmar, PAGE_SIZE - 1, PAGE_SIZE,
-                               ZX_VM_FLAG_CAN_MAP_READ | ZX_VM_FLAG_CAN_MAP_WRITE |
-                               ZX_VM_FLAG_CAN_MAP_SPECIFIC,
-                               &region, &region_addr),
+    EXPECT_EQ(zx_vmar_allocate(vmar,
+                               ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE |
+                               ZX_VM_CAN_MAP_SPECIFIC,
+                               PAGE_SIZE - 1, PAGE_SIZE, &region, &region_addr),
               ZX_ERR_INVALID_ARGS);
-    // Try the invalid maps with and without ZX_VM_FLAG_MAP_RANGE.
+    // Try the invalid maps with and without ZX_VM_MAP_RANGE.
     for (size_t i = 0; i < 2; ++i) {
-        const uint32_t map_range = i ? ZX_VM_FLAG_MAP_RANGE : 0;
+        const uint32_t map_range = i ? ZX_VM_MAP_RANGE : 0;
         // Specific, misaligned vmar offset
-        EXPECT_EQ(zx_vmar_map(vmar, PAGE_SIZE - 1, vmo, 0,
-                              4 * PAGE_SIZE,
-                              ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE | ZX_VM_FLAG_SPECIFIC | map_range,
-                              &map_addr),
+        EXPECT_EQ(zx_vmar_map(vmar,
+                              ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_SPECIFIC | map_range,
+                              PAGE_SIZE - 1, vmo, 0, 4 * PAGE_SIZE,&map_addr),
                   ZX_ERR_INVALID_ARGS);
         // Specific, misaligned vmo offset
-        EXPECT_EQ(zx_vmar_map(vmar, PAGE_SIZE, vmo, PAGE_SIZE - 1,
-                              3 * PAGE_SIZE,
-                              ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE | ZX_VM_FLAG_SPECIFIC | map_range,
-                              &map_addr),
+        EXPECT_EQ(zx_vmar_map(vmar,
+                              ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_SPECIFIC | map_range,
+                              PAGE_SIZE, vmo, PAGE_SIZE - 1, 3 * PAGE_SIZE, &map_addr),
                   ZX_ERR_INVALID_ARGS);
         // Non-specific, misaligned vmo offset
-        EXPECT_EQ(zx_vmar_map(vmar, 0, vmo, PAGE_SIZE - 1,
-                              3 * PAGE_SIZE,
-                              ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE | map_range,
-                              &map_addr),
+        EXPECT_EQ(zx_vmar_map(vmar,
+                              ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | map_range,
+                              0, vmo, PAGE_SIZE - 1, 3 * PAGE_SIZE, &map_addr),
                   ZX_ERR_INVALID_ARGS);
     }
-    EXPECT_EQ(zx_vmar_map(vmar, 0, vmo, 0,
-                          4 * PAGE_SIZE, ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE,
-                          &map_addr),
+    EXPECT_EQ(zx_vmar_map(vmar, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
+                          0, vmo, 0, 4 * PAGE_SIZE, &map_addr),
               ZX_OK);
     EXPECT_EQ(zx_vmar_unmap(vmar, map_addr + 1, PAGE_SIZE), ZX_ERR_INVALID_ARGS);
-    EXPECT_EQ(zx_vmar_protect(vmar, map_addr + 1, PAGE_SIZE, ZX_VM_FLAG_PERM_READ),
+    EXPECT_EQ(zx_vmar_protect(vmar, ZX_VM_PERM_READ, map_addr + 1, PAGE_SIZE),
               ZX_ERR_INVALID_ARGS);
     EXPECT_EQ(zx_vmar_unmap(vmar, map_addr, 4 * PAGE_SIZE), ZX_OK);
 
     // Overflowing vmo_offset
-    EXPECT_EQ(zx_vmar_map(vmar, 0, vmo, UINT64_MAX + 1 - PAGE_SIZE,
-                          PAGE_SIZE,
-                          ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE,
-                          &map_addr),
+    EXPECT_EQ(zx_vmar_map(vmar,
+                          ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
+                          0, vmo, UINT64_MAX + 1 - PAGE_SIZE, PAGE_SIZE,&map_addr),
               ZX_ERR_INVALID_ARGS);
-    EXPECT_EQ(zx_vmar_map(vmar, 0, vmo, UINT64_MAX + 1 - 2 * PAGE_SIZE,
-                          PAGE_SIZE,
-                          ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE,
+    EXPECT_EQ(zx_vmar_map(vmar, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
+                          0, vmo, UINT64_MAX + 1 - 2 * PAGE_SIZE, PAGE_SIZE,
                           &map_addr),
               ZX_OK);
     EXPECT_EQ(zx_vmar_unmap(vmar, map_addr, PAGE_SIZE), ZX_OK);
 
     // size=0
-    EXPECT_EQ(zx_vmar_allocate(vmar, 0, 0,
-                               ZX_VM_FLAG_CAN_MAP_READ | ZX_VM_FLAG_CAN_MAP_WRITE,
-                               &region, &region_addr),
+    EXPECT_EQ(zx_vmar_allocate(vmar,
+                               ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE,
+                               0, 0, &region, &region_addr),
               ZX_ERR_INVALID_ARGS);
-    EXPECT_EQ(zx_vmar_map(vmar, 0, vmo, 0, 0, ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE,
-                          &map_addr),
+    EXPECT_EQ(zx_vmar_map(vmar, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
+                          0, vmo, 0, 0, &map_addr),
               ZX_ERR_INVALID_ARGS);
-    EXPECT_EQ(zx_vmar_map(vmar, 0, vmo, 0,
-                          4 * PAGE_SIZE, ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE,
-                          &map_addr),
+    EXPECT_EQ(zx_vmar_map(vmar, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
+                          0, vmo, 0, 4 * PAGE_SIZE, &map_addr),
               ZX_OK);
     EXPECT_EQ(zx_vmar_unmap(vmar, map_addr, 0), ZX_ERR_INVALID_ARGS);
-    EXPECT_EQ(zx_vmar_protect(vmar, map_addr, 0, ZX_VM_FLAG_PERM_READ),
+    EXPECT_EQ(zx_vmar_protect(vmar, ZX_VM_PERM_READ, map_addr, 0),
               ZX_ERR_INVALID_ARGS);
     EXPECT_EQ(zx_vmar_unmap(vmar, map_addr, 4 * PAGE_SIZE), ZX_OK);
 
     // size rounds up to 0
     constexpr size_t bad_size = fbl::numeric_limits<size_t>::max() - PAGE_SIZE + 2;
     static_assert(((bad_size + PAGE_SIZE - 1) & ~(PAGE_SIZE - 1)) == 0, "");
-    EXPECT_EQ(zx_vmar_allocate(vmar, 0, bad_size,
-                               ZX_VM_FLAG_CAN_MAP_READ | ZX_VM_FLAG_CAN_MAP_WRITE,
-                               &region, &region_addr),
+    EXPECT_EQ(zx_vmar_allocate(vmar,
+                               ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE,
+                               0, bad_size, &region, &region_addr),
               ZX_ERR_INVALID_ARGS);
-    EXPECT_EQ(zx_vmar_map(vmar, 0, vmo, 0, bad_size, ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE,
+    EXPECT_EQ(zx_vmar_map(vmar, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0, vmo, 0, bad_size,
                           &map_addr),
               ZX_ERR_INVALID_ARGS);
-    EXPECT_EQ(zx_vmar_map(vmar, 0, vmo, 0, bad_size, ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_MAP_RANGE,
+    EXPECT_EQ(zx_vmar_map(vmar, ZX_VM_PERM_READ | ZX_VM_MAP_RANGE, 0, vmo, 0, bad_size,
                           &map_addr),
               ZX_ERR_INVALID_ARGS);
     // Attempt bad protect/unmaps
-    EXPECT_EQ(zx_vmar_map(vmar, PAGE_SIZE, vmo, 0,
-                          4 * PAGE_SIZE,
-                          ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE | ZX_VM_FLAG_SPECIFIC,
-                          &map_addr),
+    EXPECT_EQ(zx_vmar_map(vmar, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_SPECIFIC,
+                          PAGE_SIZE, vmo, 0, 4 * PAGE_SIZE, &map_addr),
               ZX_OK);
     for (ssize_t i = -1; i < 2; ++i) {
-        EXPECT_EQ(zx_vmar_protect(vmar, map_addr + PAGE_SIZE * i, bad_size, ZX_VM_FLAG_PERM_READ),
+        EXPECT_EQ(zx_vmar_protect(vmar, ZX_VM_PERM_READ, map_addr + PAGE_SIZE * i, bad_size),
                   ZX_ERR_INVALID_ARGS);
         EXPECT_EQ(zx_vmar_unmap(vmar, map_addr + PAGE_SIZE * i, bad_size), ZX_ERR_INVALID_ARGS);
     }
     EXPECT_EQ(zx_vmar_unmap(vmar, map_addr, 4 * PAGE_SIZE), ZX_OK);
 
     // Flags with invalid bits set
-    EXPECT_EQ(zx_vmar_allocate(vmar, 0, 4 * PAGE_SIZE,
-                               ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_CAN_MAP_READ |
-                               ZX_VM_FLAG_CAN_MAP_WRITE, &region, &region_addr),
+    EXPECT_EQ(zx_vmar_allocate(vmar,
+                               ZX_VM_PERM_READ | ZX_VM_CAN_MAP_READ |
+                               ZX_VM_CAN_MAP_WRITE, 0, 4 * PAGE_SIZE, &region, &region_addr),
               ZX_ERR_INVALID_ARGS);
-    EXPECT_EQ(zx_vmar_allocate(vmar, 0, 4 * PAGE_SIZE,
-                               ZX_VM_FLAG_CAN_MAP_READ | (1<<31),
-                               &region, &region_addr),
+    EXPECT_EQ(zx_vmar_allocate(vmar,
+                               ZX_VM_CAN_MAP_READ | (1<<31),
+                               0, 4 * PAGE_SIZE,&region, &region_addr),
               ZX_ERR_INVALID_ARGS);
-    EXPECT_EQ(zx_vmar_map(vmar, 0, vmo, 0, 4 * PAGE_SIZE,
-                          ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE | ZX_VM_FLAG_CAN_MAP_EXECUTE,
-                          &map_addr),
+    EXPECT_EQ(zx_vmar_map(vmar, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_CAN_MAP_EXECUTE,
+                          0, vmo, 0, 4 * PAGE_SIZE, &map_addr),
               ZX_ERR_INVALID_ARGS);
-    EXPECT_EQ(zx_vmar_map(vmar, 0, vmo, 0, 4 * PAGE_SIZE,
-                          ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE | (1<<31),
-                          &map_addr),
+    EXPECT_EQ(zx_vmar_map(vmar,
+                          ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | (1<<31),
+                          0, vmo, 0, 4 * PAGE_SIZE, &map_addr),
               ZX_ERR_INVALID_ARGS);
-    EXPECT_EQ(zx_vmar_map(vmar, 0, vmo, 0, 4 * PAGE_SIZE,
-                          ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE,
-                          &map_addr),
+    EXPECT_EQ(zx_vmar_map(vmar,
+                          ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
+                          0, vmo, 0, 4 * PAGE_SIZE, &map_addr),
               ZX_OK);
-    EXPECT_EQ(zx_vmar_protect(vmar, map_addr, 4 * PAGE_SIZE,
-                              ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_CAN_MAP_WRITE),
+    EXPECT_EQ(zx_vmar_protect(vmar, ZX_VM_PERM_READ | ZX_VM_CAN_MAP_WRITE,
+                              map_addr, 4 * PAGE_SIZE),
               ZX_ERR_INVALID_ARGS);
-    EXPECT_EQ(zx_vmar_protect(vmar, map_addr, 4 * PAGE_SIZE,
-                              ZX_VM_FLAG_PERM_READ | (1<<31)),
+    EXPECT_EQ(zx_vmar_protect(vmar, ZX_VM_PERM_READ | (1<<31), map_addr,
+                              4 * PAGE_SIZE),
               ZX_ERR_INVALID_ARGS);
     EXPECT_EQ(zx_vmar_unmap(vmar, map_addr, 4 * PAGE_SIZE), ZX_OK);
 
@@ -859,10 +855,10 @@ bool unaligned_len_test() {
                                 0, &process, &vmar), ZX_OK);
     ASSERT_EQ(zx_vmo_create(4 * PAGE_SIZE, 0, &vmo), ZX_OK);
 
-    ASSERT_EQ(zx_vmar_map(vmar, 0, vmo, 0, 4 * PAGE_SIZE, ZX_VM_FLAG_PERM_READ, &map_addr),
+    ASSERT_EQ(zx_vmar_map(vmar, ZX_VM_PERM_READ, 0, vmo, 0, 4 * PAGE_SIZE, &map_addr),
               ZX_OK);
-    EXPECT_EQ(zx_vmar_protect(vmar, map_addr, 4 * PAGE_SIZE - 1,
-                              ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE),
+    EXPECT_EQ(zx_vmar_protect(vmar, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
+                              map_addr, 4 * PAGE_SIZE - 1),
               ZX_OK);
     EXPECT_EQ(zx_vmar_unmap(vmar, map_addr, 4 * PAGE_SIZE - 1), ZX_OK);
 
@@ -895,8 +891,8 @@ bool unaligned_len_map_test() {
     ASSERT_EQ(zx_vmo_create(4 * PAGE_SIZE, 0, &vmo), ZX_OK);
 
     for (size_t i = 0; i < 2; ++i) {
-        const uint32_t map_range = i ? ZX_VM_FLAG_MAP_RANGE : 0;
-        ASSERT_EQ(zx_vmar_map(vmar, 0, vmo, 0, 4 * PAGE_SIZE - 1, ZX_VM_FLAG_PERM_READ | map_range,
+        const uint32_t map_range = i ? ZX_VM_MAP_RANGE : 0;
+        ASSERT_EQ(zx_vmar_map(vmar, ZX_VM_PERM_READ | map_range, 0, vmo, 0, 4 * PAGE_SIZE - 1,
                               &map_addr),
                  ZX_OK);
 
@@ -941,9 +937,9 @@ bool rights_drop_test() {
     ASSERT_EQ(zx_vmo_create(PAGE_SIZE, 0, &vmo), ZX_OK);
 
     const uint32_t test_rights[][3] = {
-        { ZX_RIGHT_READ, ZX_VM_FLAG_PERM_READ },
-        { ZX_RIGHT_READ | ZX_RIGHT_WRITE, ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE },
-        { ZX_RIGHT_READ | ZX_RIGHT_EXECUTE, ZX_VM_FLAG_PERM_READ |  ZX_VM_FLAG_PERM_EXECUTE },
+        { ZX_RIGHT_READ, ZX_VM_PERM_READ },
+        { ZX_RIGHT_READ | ZX_RIGHT_WRITE, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE },
+        { ZX_RIGHT_READ | ZX_RIGHT_EXECUTE, ZX_VM_PERM_READ |  ZX_VM_PERM_EXECUTE },
     };
     for (size_t i = 0; i < fbl::count_of(test_rights); ++i) {
         uint32_t right = test_rights[i][0];
@@ -953,22 +949,22 @@ bool rights_drop_test() {
         ASSERT_EQ(zx_handle_duplicate(vmar, right, &new_h), ZX_OK);
 
         // Try to create a mapping with permissions we don't have
-        EXPECT_EQ(zx_vmar_map(new_h, 0, vmo, 0, PAGE_SIZE, kRwxMapPerm, &map_addr),
+        EXPECT_EQ(zx_vmar_map(new_h, kRwxMapPerm, 0, vmo, 0, PAGE_SIZE, &map_addr),
                   ZX_ERR_ACCESS_DENIED);
 
         // Try to create a mapping with permissions we do have
-        ASSERT_EQ(zx_vmar_map(new_h, 0, vmo, 0, PAGE_SIZE, perm, &map_addr),
+        ASSERT_EQ(zx_vmar_map(new_h, perm, 0, vmo, 0, PAGE_SIZE, &map_addr),
                   ZX_OK);
 
         // Attempt to use protect to increase privileges
-        EXPECT_EQ(zx_vmar_protect(new_h, map_addr, PAGE_SIZE, kRwxMapPerm),
+        EXPECT_EQ(zx_vmar_protect(new_h, kRwxMapPerm, map_addr, PAGE_SIZE),
                   ZX_ERR_ACCESS_DENIED);
 
         EXPECT_EQ(zx_vmar_unmap(new_h, map_addr, PAGE_SIZE), ZX_OK);
 
         // Attempt to create a region that can map write (this would allow us to
         // then make writeable mappings inside of it).
-        EXPECT_EQ(zx_vmar_allocate(new_h, 0, 10 * PAGE_SIZE, kRwxAllocPerm, &region, &region_addr),
+        EXPECT_EQ(zx_vmar_allocate(new_h, kRwxAllocPerm, 0, 10 * PAGE_SIZE, &region, &region_addr),
                   ZX_ERR_ACCESS_DENIED);
 
         EXPECT_EQ(zx_handle_close(new_h), ZX_OK);
@@ -996,34 +992,34 @@ bool protect_test() {
     ASSERT_EQ(zx_vmo_create(PAGE_SIZE, 0, &vmo), ZX_OK);
 
     const uint32_t test_rights[][3] = {
-        { ZX_RIGHT_READ, ZX_VM_FLAG_PERM_READ },
-        { ZX_RIGHT_READ | ZX_RIGHT_WRITE, ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE },
-        { ZX_RIGHT_READ | ZX_RIGHT_EXECUTE, ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_EXECUTE },
+        { ZX_RIGHT_READ, ZX_VM_PERM_READ },
+        { ZX_RIGHT_READ | ZX_RIGHT_WRITE, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE },
+        { ZX_RIGHT_READ | ZX_RIGHT_EXECUTE, ZX_VM_PERM_READ | ZX_VM_PERM_EXECUTE },
     };
     for (size_t i = 0; i < fbl::count_of(test_rights); ++i) {
         uint32_t right = test_rights[i][0];
-        uint32_t perm = test_rights[i][1];
+        zx_vm_option_t perm = test_rights[i][1];
 
         zx_handle_t new_h;
         ASSERT_EQ(zx_handle_duplicate(vmo, right | ZX_RIGHT_MAP, &new_h), ZX_OK);
 
         // Try to create a mapping with permissions we don't have
-        EXPECT_EQ(zx_vmar_map(vmar, 0, new_h, 0, PAGE_SIZE, kRwxMapPerm, &map_addr),
+        EXPECT_EQ(zx_vmar_map(vmar, kRwxMapPerm, 0, new_h, 0, PAGE_SIZE, &map_addr),
                   ZX_ERR_ACCESS_DENIED);
 
         // Try to create a mapping with permissions we do have
-        ASSERT_EQ(zx_vmar_map(vmar, 0, new_h, 0, PAGE_SIZE, perm, &map_addr),
+        ASSERT_EQ(zx_vmar_map(vmar, perm, 0, new_h, 0, PAGE_SIZE, &map_addr),
                   ZX_OK);
 
         // Attempt to use protect to increase privileges to a level allowed by
         // the VMAR but not by the VMO handle
-        EXPECT_EQ(zx_vmar_protect(vmar, map_addr, PAGE_SIZE, kRwxMapPerm),
+        EXPECT_EQ(zx_vmar_protect(vmar, kRwxMapPerm, map_addr, PAGE_SIZE),
                   ZX_ERR_ACCESS_DENIED);
 
         EXPECT_EQ(zx_handle_close(new_h), ZX_OK);
 
         // Try again now that we closed the VMO handle
-        EXPECT_EQ(zx_vmar_protect(vmar, map_addr, PAGE_SIZE, kRwxMapPerm),
+        EXPECT_EQ(zx_vmar_protect(vmar, kRwxMapPerm, map_addr, PAGE_SIZE),
                   ZX_ERR_ACCESS_DENIED);
 
         EXPECT_EQ(zx_vmar_unmap(vmar, map_addr, PAGE_SIZE), ZX_OK);
@@ -1054,43 +1050,42 @@ bool nested_region_perms_test() {
     ASSERT_EQ(zx_vmo_create(PAGE_SIZE, 0, &vmo), ZX_OK);
 
     // List of pairs of alloc/map perms to try to exclude
-    const uint32_t test_perm[][2] = {
-        { ZX_VM_FLAG_CAN_MAP_READ, ZX_VM_FLAG_PERM_READ },
-        { ZX_VM_FLAG_CAN_MAP_WRITE, ZX_VM_FLAG_PERM_WRITE },
-        { ZX_VM_FLAG_CAN_MAP_EXECUTE, ZX_VM_FLAG_PERM_EXECUTE },
+    const zx_vm_option_t test_perm[][2] = {
+        { ZX_VM_CAN_MAP_READ, ZX_VM_PERM_READ },
+        { ZX_VM_CAN_MAP_WRITE, ZX_VM_PERM_WRITE },
+        { ZX_VM_CAN_MAP_EXECUTE, ZX_VM_PERM_EXECUTE },
     };
 
     for (size_t i = 0; i < fbl::count_of(test_perm); ++i) {
-        const uint32_t excluded_alloc_perm = test_perm[i][0];
-        const uint32_t excluded_map_perm = test_perm[i][1];
+        const zx_vm_option_t excluded_alloc_perm = test_perm[i][0];
+        const zx_vm_option_t excluded_map_perm = test_perm[i][1];
 
-        ASSERT_EQ(zx_vmar_allocate(vmar, 0, 10 * PAGE_SIZE,
+        ASSERT_EQ(zx_vmar_allocate(vmar,
                                    kRwxAllocPerm ^ excluded_alloc_perm,
-                                   &region[0], &region_addr[0]),
+                                   0, 10 * PAGE_SIZE, &region[0], &region_addr[0]),
                   ZX_OK);
 
         // Should fail since region[0] does not have the right perms
-        EXPECT_EQ(zx_vmar_allocate(region[0], 0, PAGE_SIZE, kRwxAllocPerm,
+        EXPECT_EQ(zx_vmar_allocate(region[0], kRwxAllocPerm, 0, PAGE_SIZE,
                                    &region[1], &region_addr[1]),
                   ZX_ERR_ACCESS_DENIED);
 
         // Try to create a mapping in region[0] with the dropped rights
-        EXPECT_EQ(zx_vmar_map(region[0], 0, vmo, 0, PAGE_SIZE, kRwxMapPerm, &map_addr),
+        EXPECT_EQ(zx_vmar_map(region[0], kRwxMapPerm, 0, vmo, 0, PAGE_SIZE, &map_addr),
                   ZX_ERR_ACCESS_DENIED);
 
         // Successfully create a mapping in region[0] (skip if we excluded READ,
         // since all mappings must be readable on most CPUs)
-        if (excluded_map_perm != ZX_VM_FLAG_PERM_READ) {
-            EXPECT_EQ(zx_vmar_map(region[0], 0, vmo, 0, PAGE_SIZE,
-                                  kRwxMapPerm ^ excluded_map_perm, &map_addr),
+        if (excluded_map_perm != ZX_VM_PERM_READ) {
+            EXPECT_EQ(zx_vmar_map(region[0], kRwxMapPerm ^ excluded_map_perm, 0,
+                                  vmo, 0, PAGE_SIZE, &map_addr),
                       ZX_OK);
             EXPECT_EQ(zx_vmar_unmap(region[0], map_addr, PAGE_SIZE), ZX_OK);
         }
 
         // Successfully create a subregion in region[0]
-        EXPECT_EQ(zx_vmar_allocate(region[0], 0, PAGE_SIZE,
-                                   kRwxAllocPerm ^ excluded_alloc_perm,
-                                   &region[1], &region_addr[1]),
+        EXPECT_EQ(zx_vmar_allocate(region[0], kRwxAllocPerm ^ excluded_alloc_perm,
+                                   0, PAGE_SIZE, &region[1], &region_addr[1]),
                   ZX_OK);
         EXPECT_EQ(zx_vmar_destroy(region[1]), ZX_OK);
         EXPECT_EQ(zx_handle_close(region[1]), ZX_OK);
@@ -1100,16 +1095,16 @@ bool nested_region_perms_test() {
     }
 
     // Make sure we can't use SPECIFIC in a region without CAN_MAP_SPECIFIC
-    ASSERT_EQ(zx_vmar_allocate(vmar, 0, 10 * PAGE_SIZE,
-                               kRwxAllocPerm,
+    ASSERT_EQ(zx_vmar_allocate(vmar, kRwxAllocPerm, 0, 10 * PAGE_SIZE,
                                &region[0], &region_addr[0]),
               ZX_OK);
-    EXPECT_EQ(zx_vmar_map(region[0], PAGE_SIZE, vmo, 0, PAGE_SIZE,
-                          ZX_VM_FLAG_SPECIFIC | ZX_VM_FLAG_PERM_READ, &map_addr),
+    EXPECT_EQ(zx_vmar_map(region[0],
+                          ZX_VM_SPECIFIC | ZX_VM_PERM_READ,
+                          PAGE_SIZE, vmo, 0, PAGE_SIZE, &map_addr),
               ZX_ERR_ACCESS_DENIED);
-    EXPECT_EQ(zx_vmar_map(region[0], PAGE_SIZE, vmo, 0, PAGE_SIZE,
-                          ZX_VM_FLAG_SPECIFIC_OVERWRITE | ZX_VM_FLAG_PERM_READ,
-                          &map_addr),
+    EXPECT_EQ(zx_vmar_map(region[0],
+                          ZX_VM_SPECIFIC_OVERWRITE | ZX_VM_PERM_READ,
+                          PAGE_SIZE, vmo, 0, PAGE_SIZE, &map_addr),
               ZX_ERR_ACCESS_DENIED);
     EXPECT_EQ(zx_vmar_destroy(region[0]), ZX_OK);
     EXPECT_EQ(zx_handle_close(region[0]), ZX_OK);
@@ -1133,9 +1128,8 @@ bool object_info_test() {
 
     const size_t region_size = PAGE_SIZE * 10;
 
-    ASSERT_EQ(zx_vmar_allocate(vmar, 0, region_size,
-                               ZX_VM_FLAG_CAN_MAP_READ | ZX_VM_FLAG_CAN_MAP_WRITE,
-                               &region, &region_addr),
+    ASSERT_EQ(zx_vmar_allocate(vmar, ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE,
+                               0, region_size,&region, &region_addr),
               ZX_OK);
 
     zx_info_vmar_t info;
@@ -1167,9 +1161,8 @@ bool unmap_split_test() {
 
     // Set up mappings to test on
     for (uintptr_t& addr : mapping_addr) {
-        EXPECT_EQ(zx_vmar_map(vmar, 0, vmo, 0, 4 * PAGE_SIZE,
-                              ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE,
-                              &addr),
+        EXPECT_EQ(zx_vmar_map(vmar, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
+                              0, vmo, 0, 4 * PAGE_SIZE, &addr),
                   ZX_OK);
     }
 
@@ -1202,9 +1195,9 @@ bool unmap_split_test() {
     // Make sure we can map over these again
     for (uintptr_t addr : mapping_addr) {
         const size_t offset = addr - info.base;
-        EXPECT_EQ(zx_vmar_map(vmar, offset, vmo, 0, 4 * PAGE_SIZE,
-                              ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE | ZX_VM_FLAG_SPECIFIC,
-                              &addr),
+        EXPECT_EQ(zx_vmar_map(vmar,
+                              ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_SPECIFIC,
+                              offset, vmo, 0, 4 * PAGE_SIZE, &addr),
                   ZX_OK);
         EXPECT_TRUE(check_pages_mapped(process, addr, 0b1111, 4));
         EXPECT_EQ(zx_vmar_unmap(vmar, addr, 4 * PAGE_SIZE), ZX_OK);
@@ -1236,9 +1229,9 @@ bool unmap_multiple_test() {
 
     // Create two mappings
     for (size_t i = 0; i < 2; ++i) {
-        ASSERT_EQ(zx_vmar_map(vmar, i * mapping_size, vmo, 0, mapping_size,
-                              ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE | ZX_VM_FLAG_SPECIFIC,
-                              &mapping_addr[i]),
+        ASSERT_EQ(zx_vmar_map(vmar,
+                              ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_SPECIFIC,
+                              i * mapping_size, vmo, 0, mapping_size, &mapping_addr[i]),
                   ZX_OK);
     }
     EXPECT_EQ(mapping_addr[0] + mapping_size, mapping_addr[1]);
@@ -1252,9 +1245,9 @@ bool unmap_multiple_test() {
 
     // Create two mappings with a gap, and verify we can unmap them
     for (size_t i = 0; i < 2; ++i) {
-        ASSERT_EQ(zx_vmar_map(vmar, 2 * i * mapping_size, vmo, 0, mapping_size,
-                              ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE | ZX_VM_FLAG_SPECIFIC,
-                              &mapping_addr[i]),
+        ASSERT_EQ(zx_vmar_map(vmar,
+                              ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_SPECIFIC,
+                              2 * i * mapping_size, vmo, 0, mapping_size, &mapping_addr[i]),
                   ZX_OK);
     }
     EXPECT_EQ(mapping_addr[0] + 2 * mapping_size, mapping_addr[1]);
@@ -1268,19 +1261,19 @@ bool unmap_multiple_test() {
     // Create two mappings with a subregion between, should be able to unmap
     // them (and destroy the subregion in the process).
     for (size_t i = 0; i < 2; ++i) {
-        ASSERT_EQ(zx_vmar_map(vmar, 2 * i * mapping_size, vmo, 0, mapping_size,
-                              ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE | ZX_VM_FLAG_SPECIFIC,
-                              &mapping_addr[i]),
+        ASSERT_EQ(zx_vmar_map(vmar,
+                              ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_SPECIFIC,
+                              2 * i * mapping_size, vmo, 0, mapping_size, &mapping_addr[i]),
                   ZX_OK);
     }
-    ASSERT_EQ(zx_vmar_allocate(vmar, mapping_size, mapping_size,
-                               ZX_VM_FLAG_CAN_MAP_READ | ZX_VM_FLAG_CAN_MAP_WRITE |
-                               ZX_VM_FLAG_CAN_MAP_SPECIFIC | ZX_VM_FLAG_SPECIFIC,
-                               &subregion, &subregion_addr),
+    ASSERT_EQ(zx_vmar_allocate(vmar,
+                               ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE |
+                               ZX_VM_CAN_MAP_SPECIFIC | ZX_VM_SPECIFIC,
+                               mapping_size, mapping_size, &subregion, &subregion_addr),
               ZX_OK);
-    ASSERT_EQ(zx_vmar_map(subregion, 0, vmo, 0, PAGE_SIZE,
-                          ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE | ZX_VM_FLAG_SPECIFIC,
-                          &mapping_addr[2]),
+    ASSERT_EQ(zx_vmar_map(subregion,
+                          ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_SPECIFIC,
+                          0, vmo, 0, PAGE_SIZE, &mapping_addr[2]),
               ZX_OK);
     EXPECT_EQ(mapping_addr[0] + 2 * mapping_size, mapping_addr[1]);
     EXPECT_EQ(mapping_addr[0] + mapping_size, mapping_addr[2]);
@@ -1289,9 +1282,9 @@ bool unmap_multiple_test() {
     EXPECT_EQ(zx_vmar_unmap(vmar, mapping_addr[0], 2 * mapping_size + PAGE_SIZE), ZX_OK);
     EXPECT_TRUE(check_pages_mapped(process, mapping_addr[0], 0b1110'0000'0000, 12));
     // Try to map in the subregion again, should fail due to being destroyed
-    ASSERT_EQ(zx_vmar_map(subregion, PAGE_SIZE, vmo, 0, PAGE_SIZE,
-                          ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE | ZX_VM_FLAG_SPECIFIC,
-                          &mapping_addr[2]),
+    ASSERT_EQ(zx_vmar_map(subregion,
+                          ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_SPECIFIC,
+                          PAGE_SIZE, vmo, 0, PAGE_SIZE, &mapping_addr[2]),
               ZX_ERR_BAD_STATE);
     // Unmap the rest
     EXPECT_EQ(zx_vmar_unmap(vmar, mapping_addr[1] + 1 * PAGE_SIZE, 3 * PAGE_SIZE), ZX_OK);
@@ -1301,19 +1294,19 @@ bool unmap_multiple_test() {
     // Create two mappings with a subregion after.  Partial unmap of the
     // subregion should fail, full unmap should succeed.
     for (size_t i = 0; i < 2; ++i) {
-        ASSERT_EQ(zx_vmar_map(vmar, i * mapping_size, vmo, 0, mapping_size,
-                              ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE | ZX_VM_FLAG_SPECIFIC,
-                              &mapping_addr[i]),
+        ASSERT_EQ(zx_vmar_map(vmar,
+                              ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_SPECIFIC,
+                              i * mapping_size, vmo, 0, mapping_size, &mapping_addr[i]),
                   ZX_OK);
     }
-    ASSERT_EQ(zx_vmar_allocate(vmar, 2 * mapping_size, mapping_size,
-                               ZX_VM_FLAG_CAN_MAP_READ | ZX_VM_FLAG_CAN_MAP_WRITE |
-                               ZX_VM_FLAG_CAN_MAP_SPECIFIC | ZX_VM_FLAG_SPECIFIC,
-                               &subregion, &subregion_addr),
+    ASSERT_EQ(zx_vmar_allocate(vmar,
+                               ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE |
+                               ZX_VM_CAN_MAP_SPECIFIC | ZX_VM_SPECIFIC,
+                               2 * mapping_size, mapping_size, &subregion, &subregion_addr),
               ZX_OK);
-    ASSERT_EQ(zx_vmar_map(subregion, 0, vmo, 0, PAGE_SIZE,
-                          ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE | ZX_VM_FLAG_SPECIFIC,
-                          &mapping_addr[2]),
+    ASSERT_EQ(zx_vmar_map(subregion,
+                          ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_SPECIFIC,
+                          0, vmo, 0, PAGE_SIZE, &mapping_addr[2]),
               ZX_OK);
     EXPECT_EQ(mapping_addr[0] + mapping_size, mapping_addr[1]);
     EXPECT_EQ(mapping_addr[0] + 2 * mapping_size, mapping_addr[2]);
@@ -1327,9 +1320,9 @@ bool unmap_multiple_test() {
               ZX_OK);
     EXPECT_TRUE(check_pages_mapped(process, mapping_addr[0], 0b0000'0000'0001, 12));
     // Try to map in the subregion again, should fail due to being destroyed
-    ASSERT_EQ(zx_vmar_map(subregion, PAGE_SIZE, vmo, 0, PAGE_SIZE,
-                          ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE | ZX_VM_FLAG_SPECIFIC,
-                          &mapping_addr[2]),
+    ASSERT_EQ(zx_vmar_map(subregion,
+                          ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_SPECIFIC,
+                          PAGE_SIZE, vmo, 0, PAGE_SIZE, &mapping_addr[2]),
               ZX_ERR_BAD_STATE);
     // Unmap the rest
     EXPECT_EQ(zx_vmar_unmap(vmar, mapping_addr[0], PAGE_SIZE), ZX_OK);
@@ -1339,19 +1332,19 @@ bool unmap_multiple_test() {
     // Create two mappings with a subregion before.  Partial unmap of the
     // subregion should fail, full unmap should succeed.
     for (size_t i = 0; i < 2; ++i) {
-        ASSERT_EQ(zx_vmar_map(vmar, (i + 1) * mapping_size, vmo, 0, mapping_size,
-                              ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE | ZX_VM_FLAG_SPECIFIC,
-                              &mapping_addr[i]),
+        ASSERT_EQ(zx_vmar_map(vmar,
+                              ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_SPECIFIC,
+                              (i + 1) * mapping_size, vmo, 0, mapping_size, &mapping_addr[i]),
                   ZX_OK);
     }
-    ASSERT_EQ(zx_vmar_allocate(vmar, 0, mapping_size,
-                               ZX_VM_FLAG_CAN_MAP_READ | ZX_VM_FLAG_CAN_MAP_WRITE |
-                               ZX_VM_FLAG_CAN_MAP_SPECIFIC | ZX_VM_FLAG_SPECIFIC,
-                               &subregion, &subregion_addr),
+    ASSERT_EQ(zx_vmar_allocate(vmar,
+                               ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE |
+                               ZX_VM_CAN_MAP_SPECIFIC | ZX_VM_SPECIFIC,
+                               0, mapping_size, &subregion, &subregion_addr),
               ZX_OK);
-    ASSERT_EQ(zx_vmar_map(subregion, mapping_size - PAGE_SIZE, vmo, 0, PAGE_SIZE,
-                          ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE | ZX_VM_FLAG_SPECIFIC,
-                          &mapping_addr[2]),
+    ASSERT_EQ(zx_vmar_map(subregion,
+                          ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_SPECIFIC,
+                          mapping_size - PAGE_SIZE, vmo, 0, PAGE_SIZE, &mapping_addr[2]),
               ZX_OK);
     EXPECT_EQ(subregion_addr + mapping_size, mapping_addr[0]);
     EXPECT_EQ(subregion_addr + 2 * mapping_size, mapping_addr[1]);
@@ -1364,9 +1357,9 @@ bool unmap_multiple_test() {
     EXPECT_EQ(zx_vmar_unmap(vmar, subregion_addr, 3 * mapping_size), ZX_OK);
     EXPECT_TRUE(check_pages_mapped(process, subregion_addr, 0b0000'0000'0000, 12));
     // Try to map in the subregion again, should fail due to being destroyed
-    ASSERT_EQ(zx_vmar_map(subregion, PAGE_SIZE, vmo, 0, PAGE_SIZE,
-                          ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE | ZX_VM_FLAG_SPECIFIC,
-                          &mapping_addr[2]),
+    ASSERT_EQ(zx_vmar_map(subregion,
+                          ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_SPECIFIC,
+                          PAGE_SIZE, vmo, 0, PAGE_SIZE, &mapping_addr[2]),
               ZX_ERR_BAD_STATE);
     EXPECT_EQ(zx_handle_close(subregion), ZX_OK);
 
@@ -1392,22 +1385,22 @@ bool unmap_base_not_mapped_test() {
     const size_t mapping_size = 4 * PAGE_SIZE;
     ASSERT_EQ(zx_vmo_create(mapping_size, 0, &vmo), ZX_OK);
 
-    ASSERT_EQ(zx_vmar_map(vmar, PAGE_SIZE, vmo, 0, mapping_size,
-                          ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE | ZX_VM_FLAG_SPECIFIC,
-                          &mapping_addr),
+    ASSERT_EQ(zx_vmar_map(vmar,
+                          ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_SPECIFIC,
+                          PAGE_SIZE, vmo, 0, mapping_size, &mapping_addr),
               ZX_OK);
     ASSERT_EQ(zx_vmar_unmap(vmar, mapping_addr - PAGE_SIZE, mapping_size + PAGE_SIZE),
               ZX_OK);
 
     // Try again, but this time with a mapping below where base is
-    ASSERT_EQ(zx_vmar_map(vmar, 0, vmo, 0, mapping_size,
-                          ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE | ZX_VM_FLAG_SPECIFIC,
-                          &mapping_addr),
+    ASSERT_EQ(zx_vmar_map(vmar,
+                          ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_SPECIFIC,
+                          0, vmo, 0, mapping_size, &mapping_addr),
               ZX_OK);
     for (size_t gap = PAGE_SIZE; gap < 3 * PAGE_SIZE; gap += PAGE_SIZE) {
-        ASSERT_EQ(zx_vmar_map(vmar, mapping_size + gap, vmo, 0, mapping_size,
-                              ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE | ZX_VM_FLAG_SPECIFIC,
-                              &mapping_addr),
+        ASSERT_EQ(zx_vmar_map(vmar,
+                              ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_SPECIFIC,
+                              mapping_size + gap, vmo, 0, mapping_size, &mapping_addr),
                   ZX_OK);
         ASSERT_EQ(zx_vmar_unmap(vmar, mapping_addr - PAGE_SIZE, mapping_size + PAGE_SIZE),
                   ZX_OK);
@@ -1450,19 +1443,21 @@ bool map_specific_overwrite_test() {
     }
 
     // Create a single mapping and overwrite it
-    ASSERT_EQ(zx_vmar_map(vmar, PAGE_SIZE, vmo, 0, mapping_size,
-                          ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE | ZX_VM_FLAG_SPECIFIC,
-                          &mapping_addr[0]),
+    ASSERT_EQ(zx_vmar_map(vmar,
+                          ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_SPECIFIC,
+                          PAGE_SIZE, vmo, 0, mapping_size, &mapping_addr[0]),
               ZX_OK);
     // Try over mapping with SPECIFIC but not SPECIFIC_OVERWRITE
-    EXPECT_EQ(zx_vmar_map(vmar, PAGE_SIZE, vmo2, 0, mapping_size,
-                          ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE |
-                          ZX_VM_FLAG_SPECIFIC, &mapping_addr[1]),
+    EXPECT_EQ(zx_vmar_map(vmar,
+                          ZX_VM_PERM_READ | ZX_VM_PERM_WRITE |
+                          ZX_VM_SPECIFIC,
+                          PAGE_SIZE, vmo2, 0, mapping_size, &mapping_addr[1]),
               ZX_ERR_NO_MEMORY);
     // Try again with SPECIFIC_OVERWRITE
-    EXPECT_EQ(zx_vmar_map(vmar, PAGE_SIZE, vmo2, 0, mapping_size,
-                          ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE |
-                          ZX_VM_FLAG_SPECIFIC_OVERWRITE, &mapping_addr[1]),
+    EXPECT_EQ(zx_vmar_map(vmar,
+                          ZX_VM_PERM_READ | ZX_VM_PERM_WRITE |
+                          ZX_VM_SPECIFIC_OVERWRITE,
+                          PAGE_SIZE, vmo2, 0, mapping_size, &mapping_addr[1]),
               ZX_OK);
     EXPECT_EQ(mapping_addr[0], mapping_addr[1]);
     for (size_t i = 0; i < mapping_size / PAGE_SIZE; ++i) {
@@ -1472,9 +1467,10 @@ bool map_specific_overwrite_test() {
     }
 
     // Overmap the middle of it
-    EXPECT_EQ(zx_vmar_map(vmar, 2 * PAGE_SIZE, vmo, 0, 2 * PAGE_SIZE,
-                          ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE |
-                          ZX_VM_FLAG_SPECIFIC_OVERWRITE, &mapping_addr[0]),
+    EXPECT_EQ(zx_vmar_map(vmar,
+                          ZX_VM_PERM_READ | ZX_VM_PERM_WRITE |
+                          ZX_VM_SPECIFIC_OVERWRITE,
+                          2 * PAGE_SIZE, vmo, 0, 2 * PAGE_SIZE, &mapping_addr[0]),
               ZX_OK);
     EXPECT_EQ(mapping_addr[0], mapping_addr[1] + PAGE_SIZE);
     for (size_t i = 0; i < mapping_size / PAGE_SIZE; ++i) {
@@ -1484,15 +1480,16 @@ bool map_specific_overwrite_test() {
     }
 
     // Create an adjacent sub-region, try to overmap it
-    ASSERT_EQ(zx_vmar_allocate(vmar, PAGE_SIZE + mapping_size, mapping_size,
-                               ZX_VM_FLAG_CAN_MAP_READ | ZX_VM_FLAG_CAN_MAP_WRITE |
-                               ZX_VM_FLAG_SPECIFIC,
-                               &subregion, &subregion_addr),
+    ASSERT_EQ(zx_vmar_allocate(vmar,
+                               ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE |
+                               ZX_VM_SPECIFIC,
+                               PAGE_SIZE + mapping_size, mapping_size, &subregion, &subregion_addr),
               ZX_OK);
     EXPECT_EQ(subregion_addr, mapping_addr[1] + mapping_size);
-    EXPECT_EQ(zx_vmar_map(vmar, PAGE_SIZE, vmo2, 0, 2 * mapping_size,
-                          ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE |
-                          ZX_VM_FLAG_SPECIFIC_OVERWRITE, &mapping_addr[0]),
+    EXPECT_EQ(zx_vmar_map(vmar,
+                          ZX_VM_PERM_READ | ZX_VM_PERM_WRITE |
+                          ZX_VM_SPECIFIC_OVERWRITE,
+                          PAGE_SIZE, vmo2, 0, 2 * mapping_size, &mapping_addr[0]),
               ZX_ERR_INVALID_ARGS);
     // Tear it all down
     EXPECT_EQ(zx_vmar_unmap(vmar, mapping_addr[1], 2 * mapping_size),
@@ -1523,11 +1520,11 @@ bool protect_split_test() {
     ASSERT_EQ(zx_vmo_create(4 * PAGE_SIZE, 0, &vmo), ZX_OK);
 
     // Protect from the left
-    ASSERT_EQ(zx_vmar_map(vmar, 0, vmo, 0, 4 * PAGE_SIZE,
-                          ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE,
-                          &mapping_addr),
+    ASSERT_EQ(zx_vmar_map(vmar,
+                          ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
+                          0, vmo, 0, 4 * PAGE_SIZE, &mapping_addr),
               ZX_OK);
-    EXPECT_EQ(zx_vmar_protect(vmar, mapping_addr, 2 * PAGE_SIZE, ZX_VM_FLAG_PERM_READ),
+    EXPECT_EQ(zx_vmar_protect(vmar, ZX_VM_PERM_READ, mapping_addr, 2 * PAGE_SIZE),
               ZX_OK);
     // TODO(teisenbe): Test to validate perms changed, need to export more debug
     // info
@@ -1536,12 +1533,12 @@ bool protect_split_test() {
     EXPECT_TRUE(check_pages_mapped(process, mapping_addr, 0b0000, 4));
 
     // Protect from the right
-    ASSERT_EQ(zx_vmar_map(vmar, 0, vmo, 0, 4 * PAGE_SIZE,
-                          ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE,
-                          &mapping_addr),
+    ASSERT_EQ(zx_vmar_map(vmar,
+                          ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
+                          0, vmo, 0, 4 * PAGE_SIZE, &mapping_addr),
               ZX_OK);
-    EXPECT_EQ(zx_vmar_protect(vmar, mapping_addr + 2 * PAGE_SIZE,
-                              2 * PAGE_SIZE, ZX_VM_FLAG_PERM_READ),
+    EXPECT_EQ(zx_vmar_protect(vmar, ZX_VM_PERM_READ, mapping_addr + 2 * PAGE_SIZE,
+                              2 * PAGE_SIZE),
               ZX_OK);
     // TODO(teisenbe): Test to validate perms changed, need to export more debug
     // info
@@ -1550,12 +1547,12 @@ bool protect_split_test() {
     EXPECT_TRUE(check_pages_mapped(process, mapping_addr, 0b0000, 4));
 
     // Protect from the center
-    ASSERT_EQ(zx_vmar_map(vmar, 0, vmo, 0, 4 * PAGE_SIZE,
-                          ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE,
-                          &mapping_addr),
+    ASSERT_EQ(zx_vmar_map(vmar,
+                          ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
+                          0, vmo, 0, 4 * PAGE_SIZE, &mapping_addr),
               ZX_OK);
-    EXPECT_EQ(zx_vmar_protect(vmar, mapping_addr + PAGE_SIZE,
-                              2 * PAGE_SIZE, ZX_VM_FLAG_PERM_READ),
+    EXPECT_EQ(zx_vmar_protect(vmar, ZX_VM_PERM_READ, mapping_addr + PAGE_SIZE,
+                              2 * PAGE_SIZE),
               ZX_OK);
     // TODO(teisenbe): Test to validate perms changed, need to export more debug
     // info
@@ -1590,20 +1587,20 @@ bool protect_multiple_test() {
 
     // Protect from the right on the first mapping, all of the second mapping,
     // and from the left on the third mapping.
-    ASSERT_EQ(zx_vmar_map(vmar, 0, vmo, 0, mapping_size,
-                          ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE | ZX_VM_FLAG_SPECIFIC,
-                          &mapping_addr[0]),
+    ASSERT_EQ(zx_vmar_map(vmar,
+                          ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_SPECIFIC,
+                          0, vmo, 0, mapping_size, &mapping_addr[0]),
               ZX_OK);
-    ASSERT_EQ(zx_vmar_map(vmar, mapping_size, vmo, 0, mapping_size,
-                          ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE | ZX_VM_FLAG_SPECIFIC,
-                          &mapping_addr[1]),
+    ASSERT_EQ(zx_vmar_map(vmar,
+                          ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_SPECIFIC,
+                          mapping_size, vmo, 0, mapping_size, &mapping_addr[1]),
               ZX_OK);
-    ASSERT_EQ(zx_vmar_map(vmar, 2 * mapping_size, vmo, 0, mapping_size,
-                          ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE | ZX_VM_FLAG_SPECIFIC,
-                          &mapping_addr[2]),
+    ASSERT_EQ(zx_vmar_map(vmar,
+                          ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_SPECIFIC,
+                          2 * mapping_size, vmo, 0, mapping_size, &mapping_addr[2]),
               ZX_OK);
-    EXPECT_EQ(zx_vmar_protect(vmar, mapping_addr[0] + PAGE_SIZE,
-                              3 * mapping_size - 2 * PAGE_SIZE, ZX_VM_FLAG_PERM_READ),
+    EXPECT_EQ(zx_vmar_protect(vmar, ZX_VM_PERM_READ, mapping_addr[0] + PAGE_SIZE,
+                              3 * mapping_size - 2 * PAGE_SIZE),
               ZX_OK);
     // TODO(teisenbe): Test to validate perms changed, need to export more debug
     // info
@@ -1612,21 +1609,21 @@ bool protect_multiple_test() {
     EXPECT_TRUE(check_pages_mapped(process, mapping_addr[0], 0b0000'0000'0000, 12));
 
     // Same thing, but map middle region with a VMO without the WRITE right
-    ASSERT_EQ(zx_vmar_map(vmar, 0, vmo, 0, mapping_size,
-                          ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE | ZX_VM_FLAG_SPECIFIC,
-                          &mapping_addr[0]),
+    ASSERT_EQ(zx_vmar_map(vmar,
+                          ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_SPECIFIC,
+                          0, vmo, 0, mapping_size, &mapping_addr[0]),
               ZX_OK);
-    ASSERT_EQ(zx_vmar_map(vmar, mapping_size, vmo2, 0, mapping_size,
-                          ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_SPECIFIC,
-                          &mapping_addr[1]),
+    ASSERT_EQ(zx_vmar_map(vmar,
+                          ZX_VM_PERM_READ | ZX_VM_SPECIFIC,
+                          mapping_size, vmo2, 0, mapping_size, &mapping_addr[1]),
               ZX_OK);
-    ASSERT_EQ(zx_vmar_map(vmar, 2 * mapping_size, vmo, 0, mapping_size,
-                          ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE | ZX_VM_FLAG_SPECIFIC,
-                          &mapping_addr[2]),
+    ASSERT_EQ(zx_vmar_map(vmar,
+                          ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_SPECIFIC,
+                          2 * mapping_size, vmo, 0, mapping_size, &mapping_addr[2]),
               ZX_OK);
-    EXPECT_EQ(zx_vmar_protect(vmar, mapping_addr[0] + PAGE_SIZE,
-                              3 * mapping_size - 2 * PAGE_SIZE,
-                              ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE),
+    EXPECT_EQ(zx_vmar_protect(vmar, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
+                              mapping_addr[0] + PAGE_SIZE,
+                              3 * mapping_size - 2 * PAGE_SIZE),
               ZX_ERR_ACCESS_DENIED);
     // TODO(teisenbe): Test to validate no perms changed, need to export more debug
     // info
@@ -1635,16 +1632,16 @@ bool protect_multiple_test() {
     EXPECT_TRUE(check_pages_mapped(process, mapping_addr[0], 0b0000'0000'0000, 12));
 
     // Try to protect across a gap
-    ASSERT_EQ(zx_vmar_map(vmar, 0, vmo, 0, mapping_size,
-                          ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE | ZX_VM_FLAG_SPECIFIC,
-                          &mapping_addr[0]),
+    ASSERT_EQ(zx_vmar_map(vmar,
+                          ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_SPECIFIC,
+                          0, vmo, 0, mapping_size, &mapping_addr[0]),
               ZX_OK);
-    ASSERT_EQ(zx_vmar_map(vmar, 2 * mapping_size, vmo, 0, mapping_size,
-                          ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE | ZX_VM_FLAG_SPECIFIC,
-                          &mapping_addr[2]),
+    ASSERT_EQ(zx_vmar_map(vmar,
+                          ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_SPECIFIC,
+                          2 * mapping_size, vmo, 0, mapping_size, &mapping_addr[2]),
               ZX_OK);
-    EXPECT_EQ(zx_vmar_protect(vmar, mapping_addr[0] + PAGE_SIZE,
-                              3 * mapping_size - 2 * PAGE_SIZE, ZX_VM_FLAG_PERM_READ),
+    EXPECT_EQ(zx_vmar_protect(vmar, ZX_VM_PERM_READ, mapping_addr[0] + PAGE_SIZE,
+                              3 * mapping_size - 2 * PAGE_SIZE),
               ZX_ERR_NOT_FOUND);
     // TODO(teisenbe): Test to validate no perms changed, need to export more debug
     // info
@@ -1653,21 +1650,21 @@ bool protect_multiple_test() {
     EXPECT_TRUE(check_pages_mapped(process, mapping_addr[0], 0b0000'0000'0000, 12));
 
     // Try to protect across an empty subregion
-    ASSERT_EQ(zx_vmar_map(vmar, 0, vmo, 0, mapping_size,
-                          ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE | ZX_VM_FLAG_SPECIFIC,
-                          &mapping_addr[0]),
+    ASSERT_EQ(zx_vmar_map(vmar,
+                          ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_SPECIFIC,
+                          0, vmo, 0, mapping_size, &mapping_addr[0]),
               ZX_OK);
-    ASSERT_EQ(zx_vmar_allocate(vmar, mapping_size, mapping_size,
-                               ZX_VM_FLAG_CAN_MAP_READ | ZX_VM_FLAG_CAN_MAP_WRITE |
-                               ZX_VM_FLAG_SPECIFIC,
-                               &subregion, &subregion_addr),
+    ASSERT_EQ(zx_vmar_allocate(vmar,
+                               ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE |
+                               ZX_VM_SPECIFIC,
+                               mapping_size, mapping_size, &subregion, &subregion_addr),
               ZX_OK);
-    ASSERT_EQ(zx_vmar_map(vmar, 2 * mapping_size, vmo, 0, mapping_size,
-                          ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE | ZX_VM_FLAG_SPECIFIC,
-                          &mapping_addr[2]),
+    ASSERT_EQ(zx_vmar_map(vmar,
+                          ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_SPECIFIC,
+                          2 * mapping_size, vmo, 0, mapping_size, &mapping_addr[2]),
               ZX_OK);
-    EXPECT_EQ(zx_vmar_protect(vmar, mapping_addr[0] + PAGE_SIZE,
-                              3 * mapping_size - 2 * PAGE_SIZE, ZX_VM_FLAG_PERM_READ),
+    EXPECT_EQ(zx_vmar_protect(vmar, ZX_VM_PERM_READ, mapping_addr[0] + PAGE_SIZE,
+                              3 * mapping_size - 2 * PAGE_SIZE),
               ZX_ERR_INVALID_ARGS);
     // TODO(teisenbe): Test to validate no perms changed, need to export more debug
     // info
@@ -1677,25 +1674,25 @@ bool protect_multiple_test() {
     EXPECT_EQ(zx_handle_close(subregion), ZX_OK);
 
     // Try to protect across a subregion filled with mappings
-    ASSERT_EQ(zx_vmar_map(vmar, 0, vmo, 0, mapping_size,
-                          ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE | ZX_VM_FLAG_SPECIFIC,
-                          &mapping_addr[0]),
+    ASSERT_EQ(zx_vmar_map(vmar,
+                          ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_SPECIFIC,
+                          0, vmo, 0, mapping_size, &mapping_addr[0]),
               ZX_OK);
-    ASSERT_EQ(zx_vmar_allocate(vmar, mapping_size, mapping_size,
-                               ZX_VM_FLAG_CAN_MAP_READ | ZX_VM_FLAG_CAN_MAP_WRITE |
-                               ZX_VM_FLAG_SPECIFIC | ZX_VM_FLAG_CAN_MAP_SPECIFIC,
-                               &subregion, &subregion_addr),
+    ASSERT_EQ(zx_vmar_allocate(vmar,
+                               ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE |
+                               ZX_VM_SPECIFIC | ZX_VM_CAN_MAP_SPECIFIC,
+                               mapping_size, mapping_size, &subregion, &subregion_addr),
               ZX_OK);
-    ASSERT_EQ(zx_vmar_map(subregion, 0, vmo, 0, mapping_size,
-                          ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE | ZX_VM_FLAG_SPECIFIC,
-                          &mapping_addr[1]),
+    ASSERT_EQ(zx_vmar_map(subregion,
+                          ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_SPECIFIC,
+                          0, vmo, 0, mapping_size, &mapping_addr[1]),
               ZX_OK);
-    ASSERT_EQ(zx_vmar_map(vmar, 2 * mapping_size, vmo, 0, mapping_size,
-                          ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE | ZX_VM_FLAG_SPECIFIC,
-                          &mapping_addr[2]),
+    ASSERT_EQ(zx_vmar_map(vmar,
+                          ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_SPECIFIC,
+                          2 * mapping_size, vmo, 0, mapping_size, &mapping_addr[2]),
               ZX_OK);
-    EXPECT_EQ(zx_vmar_protect(vmar, mapping_addr[0] + PAGE_SIZE,
-                              3 * mapping_size - 2 * PAGE_SIZE, ZX_VM_FLAG_PERM_READ),
+    EXPECT_EQ(zx_vmar_protect(vmar, ZX_VM_PERM_READ, mapping_addr[0] + PAGE_SIZE,
+                              3 * mapping_size - 2 * PAGE_SIZE),
               ZX_ERR_INVALID_ARGS);
     // TODO(teisenbe): Test to validate no perms changed, need to export more debug
     // info
@@ -1723,9 +1720,9 @@ bool protect_over_demand_paged_test() {
     // TODO(teisenbe): Move this into a separate process; currently we don't
     // have an easy way to run a small test routine in another process.
     uintptr_t mapping_addr;
-    ASSERT_EQ(zx_vmar_map(zx_vmar_root_self(), 0, vmo, 0, size,
-                          ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE,
-                          &mapping_addr),
+    ASSERT_EQ(zx_vmar_map(zx_vmar_root_self(),
+                          ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
+                          0, vmo, 0, size, &mapping_addr),
               ZX_OK);
     EXPECT_EQ(zx_handle_close(vmo), ZX_OK);
 
@@ -1735,8 +1732,8 @@ bool protect_over_demand_paged_test() {
     target[size / 2].store(6);
     target[size - 1].store(7);
 
-    ASSERT_EQ(zx_vmar_protect(zx_vmar_root_self(), mapping_addr, size,
-                              ZX_VM_FLAG_PERM_READ),
+    ASSERT_EQ(zx_vmar_protect(zx_vmar_root_self(), ZX_VM_PERM_READ,
+                              mapping_addr, size),
               ZX_OK);
 
     // Attempt to write to the mapping again
@@ -1767,9 +1764,9 @@ bool protect_large_uncommitted_test() {
     // TODO(teisenbe): Move this into a separate process; currently we don't
     // have an easy way to run a small test routine in another process.
     uintptr_t mapping_addr;
-    ASSERT_EQ(zx_vmar_map(zx_vmar_root_self(), 0, vmo, 0, size,
-                          ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE,
-                          &mapping_addr),
+    ASSERT_EQ(zx_vmar_map(zx_vmar_root_self(),
+                          ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
+                          0, vmo, 0, size, &mapping_addr),
               ZX_OK);
     EXPECT_EQ(zx_handle_close(vmo), ZX_OK);
 
@@ -1784,8 +1781,8 @@ bool protect_large_uncommitted_test() {
     // TODO(teisenbe): Would be nice for this to be more arch aware.
     const uintptr_t base = ROUNDUP(mapping_addr, 512 * PAGE_SIZE) + PAGE_SIZE;
     const size_t protect_size = mapping_addr + size - base;
-    ASSERT_EQ(zx_vmar_protect(zx_vmar_root_self(), base, protect_size,
-                              ZX_VM_FLAG_PERM_READ),
+    ASSERT_EQ(zx_vmar_protect(zx_vmar_root_self(), ZX_VM_PERM_READ, base,
+                              protect_size),
               ZX_OK);
 
     // Attempt to write to the mapping again
@@ -1816,9 +1813,9 @@ bool unmap_large_uncommitted_test() {
     // TODO(teisenbe): Move this into a separate process; currently we don't
     // have an easy way to run a small test routine in another process.
     uintptr_t mapping_addr;
-    ASSERT_EQ(zx_vmar_map(zx_vmar_root_self(), 0, vmo, 0, size,
-                          ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE,
-                          &mapping_addr),
+    ASSERT_EQ(zx_vmar_map(zx_vmar_root_self(),
+                          ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
+                          0, vmo, 0, size, &mapping_addr),
               ZX_OK);
     EXPECT_EQ(zx_handle_close(vmo), ZX_OK);
 
@@ -1858,9 +1855,9 @@ bool partial_unmap_and_read() {
     zx_handle_t vmo;
     ASSERT_EQ(zx_vmo_create(PAGE_SIZE * 2, 0, &vmo), ZX_OK);
     uintptr_t mapping_addr;
-    ASSERT_EQ(zx_vmar_map(zx_vmar_root_self(), 0, vmo, 0, PAGE_SIZE * 2,
-                          ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE,
-                          &mapping_addr),
+    ASSERT_EQ(zx_vmar_map(zx_vmar_root_self(),
+                          ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
+                          0, vmo, 0, PAGE_SIZE * 2, &mapping_addr),
               ZX_OK);
     EXPECT_EQ(zx_handle_close(vmo), ZX_OK);
 
@@ -1904,9 +1901,9 @@ bool partial_unmap_and_write() {
     zx_handle_t vmo;
     ASSERT_EQ(zx_vmo_create(PAGE_SIZE * 2, 0, &vmo), ZX_OK);
     uintptr_t mapping_addr;
-    ASSERT_EQ(zx_vmar_map(zx_vmar_root_self(), 0, vmo, 0, PAGE_SIZE * 2,
-                          ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE,
-                          &mapping_addr),
+    ASSERT_EQ(zx_vmar_map(zx_vmar_root_self(),
+                          ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
+                          0, vmo, 0, PAGE_SIZE * 2, &mapping_addr),
               ZX_OK);
     EXPECT_EQ(zx_handle_close(vmo), ZX_OK);
 
@@ -1953,9 +1950,9 @@ bool partial_unmap_with_vmar_offset() {
     zx_handle_t vmo;
     ASSERT_EQ(zx_vmo_create(kVmoSize, 0, &vmo), ZX_OK);
     uintptr_t mapping_addr;
-    ASSERT_EQ(zx_vmar_map(zx_vmar_root_self(), 0, vmo, kOffset, kVmoSize - kOffset,
-                          ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE,
-                          &mapping_addr),
+    ASSERT_EQ(zx_vmar_map(zx_vmar_root_self(),
+                          ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
+                          0, vmo, kOffset, kVmoSize - kOffset, &mapping_addr),
               ZX_OK);
     EXPECT_EQ(zx_handle_close(vmo), ZX_OK);
 

@@ -226,8 +226,8 @@ static int try_read_skip_blk(int fd, off_t offset, size_t count) {
         fprintf(stderr, "No memory\n");
         return -1;
     }
-    if (zx_vmar_map(zx_vmar_root_self(), 0, vmo, 0, count,
-                ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE, (uintptr_t*) &buf) != ZX_OK) {
+    if (zx_vmar_map(zx_vmar_root_self(), ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
+                    0, vmo, 0, count, (uintptr_t*) &buf) != ZX_OK) {
         fprintf(stderr, "Failed to map vmo\n");
         rc = -1;
         goto out;

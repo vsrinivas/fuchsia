@@ -64,8 +64,8 @@ zx_status_t start_mini_process_etc(zx_handle_t process, zx_handle_t thread,
         goto exit;
 
     zx_vaddr_t stack_base;
-    uint32_t perms = ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE | ZX_VM_FLAG_PERM_EXECUTE;
-    status = zx_vmar_map(vmar, 0, stack_vmo, 0, stack_size, perms, &stack_base);
+    zx_vm_option_t perms = ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_PERM_EXECUTE;
+    status = zx_vmar_map(vmar, perms, 0, stack_vmo, 0, stack_size, &stack_base);
     if (status != ZX_OK)
         goto exit;
 

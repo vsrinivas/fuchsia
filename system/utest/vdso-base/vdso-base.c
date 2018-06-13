@@ -122,8 +122,8 @@ bool vdso_map_test(void) {
     // segment can be mapped executable.
     uintptr_t addr;
     zx_status_t status = zx_vmar_map(
-        vmar, 0, vmo, 0, PAGE_SIZE,
-        ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_EXECUTE, &addr);
+        vmar, ZX_VM_PERM_READ | ZX_VM_PERM_EXECUTE, 0, vmo, 0,
+        PAGE_SIZE, &addr);
     EXPECT_EQ(status, ZX_ERR_ACCESS_DENIED, "map vDSO data as executable");
 
     zx_handle_close(proc);

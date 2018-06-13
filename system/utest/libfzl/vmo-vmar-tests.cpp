@@ -64,13 +64,13 @@ bool vmar_vmo_core_test(uint32_t vmar_levels, bool test_create) {
         size_t test_size;
         void* start;
     } kVmoTests[] = {
-        { .access_flags = ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE,
+        { .access_flags = ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
           .vmo_rights = ZX_RIGHT_SAME_RIGHTS,
           .test_offset = 0,
           .test_size = kVmoTestSize >> 1,
           .start = nullptr,
         },
-        { .access_flags = ZX_VM_FLAG_PERM_READ,
+        { .access_flags = ZX_VM_PERM_READ,
           .vmo_rights = ZX_RIGHT_READ | ZX_RIGHT_MAP,
           .test_offset = 0,
           .test_size = kVmoTestSize,
@@ -79,7 +79,7 @@ bool vmar_vmo_core_test(uint32_t vmar_levels, bool test_create) {
         // TODO(johngro): We are not allowed to map pages as write-only.  Need
         // to determine if this is WAI or not.
 #if 0
-        { .access_flags = ZX_VM_FLAG_PERM_WRITE,
+        { .access_flags = ZX_VM_PERM_WRITE,
           .vmo_rights = ZX_RIGHT_WRITE | ZX_RIGHT_MAP,
           .test_offset = 0,
           .test_size = 0,
@@ -288,7 +288,7 @@ bool vmo_map_sub_sub_vmar_test() {
 bool vmo_mapper_move_test() {
     BEGIN_TEST;
 
-    constexpr uint32_t ACCESS_FLAGS = ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE;
+    constexpr uint32_t ACCESS_FLAGS = ZX_VM_PERM_READ | ZX_VM_PERM_WRITE;
     void* addr;
     size_t size;
     {

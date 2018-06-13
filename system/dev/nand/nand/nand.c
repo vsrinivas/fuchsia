@@ -101,10 +101,9 @@ static zx_status_t nand_read_op(nand_device_t* dev, nand_op_t* nand_op) {
         const size_t offset_bytes = nand_op->rw.offset_data_vmo * dev->nand_info.page_size;
         page_offset_bytes_data = offset_bytes & (PAGE_SIZE - 1);
         const size_t aligned_offset_bytes = offset_bytes - page_offset_bytes_data;
-        status = zx_vmar_map(zx_vmar_root_self(), 0, nand_op->rw.data_vmo,
-                             aligned_offset_bytes,
+        status = zx_vmar_map(zx_vmar_root_self(), ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
+                             0, nand_op->rw.data_vmo, aligned_offset_bytes,
                              nand_op->rw.length * dev->nand_info.page_size + page_offset_bytes_data,
-                             ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE,
                              (uintptr_t*)&aligned_vaddr_data);
         if (status != ZX_OK) {
             zxlogf(ERROR, "nand read page: Cannot map data vmo\n");
@@ -118,10 +117,9 @@ static zx_status_t nand_read_op(nand_device_t* dev, nand_op_t* nand_op) {
         const size_t offset_bytes = nand_op->rw.offset_oob_vmo * dev->nand_info.page_size;
         page_offset_bytes_oob = offset_bytes & (PAGE_SIZE - 1);
         const size_t aligned_offset_bytes = offset_bytes - page_offset_bytes_oob;
-        status = zx_vmar_map(zx_vmar_root_self(), 0, nand_op->rw.oob_vmo,
-                             aligned_offset_bytes,
+        status = zx_vmar_map(zx_vmar_root_self(), ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
+                             0, nand_op->rw.oob_vmo, aligned_offset_bytes,
                              nand_op->rw.length * dev->nand_info.oob_size + page_offset_bytes_oob,
-                             ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE,
                              (uintptr_t*)&aligned_vaddr_oob);
         if (status != ZX_OK) {
             zxlogf(ERROR, "nand read page: Cannot map oob vmo\n");
@@ -191,10 +189,9 @@ static zx_status_t nand_write_op(nand_device_t* dev, nand_op_t* nand_op) {
         const size_t offset_bytes = nand_op->rw.offset_data_vmo * dev->nand_info.page_size;
         page_offset_bytes_data = offset_bytes & (PAGE_SIZE - 1);
         const size_t aligned_offset_bytes = offset_bytes - page_offset_bytes_data;
-        status = zx_vmar_map(zx_vmar_root_self(), 0, nand_op->rw.data_vmo,
-                             aligned_offset_bytes,
+        status = zx_vmar_map(zx_vmar_root_self(), ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
+                             0, nand_op->rw.data_vmo, aligned_offset_bytes,
                              nand_op->rw.length * dev->nand_info.page_size + page_offset_bytes_data,
-                             ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE,
                              (uintptr_t*)&aligned_vaddr_data);
         if (status != ZX_OK) {
             zxlogf(ERROR, "nand write page: Cannot map data vmo\n");
@@ -208,10 +205,9 @@ static zx_status_t nand_write_op(nand_device_t* dev, nand_op_t* nand_op) {
         const size_t offset_bytes = nand_op->rw.offset_oob_vmo * dev->nand_info.page_size;
         page_offset_bytes_oob = offset_bytes & (PAGE_SIZE - 1);
         const size_t aligned_offset_bytes = offset_bytes - page_offset_bytes_oob;
-        status = zx_vmar_map(zx_vmar_root_self(), 0, nand_op->rw.oob_vmo,
-                             aligned_offset_bytes,
+        status = zx_vmar_map(zx_vmar_root_self(), ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
+                             0, nand_op->rw.oob_vmo, aligned_offset_bytes,
                              nand_op->rw.length * dev->nand_info.oob_size + page_offset_bytes_oob,
-                             ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE,
                              (uintptr_t*)&aligned_vaddr_oob);
         if (status != ZX_OK) {
             zxlogf(ERROR, "nand write page: Cannot map oob vmo\n");

@@ -214,9 +214,9 @@ int main(int argc, char** argv) {
         return -1;
     }
     char* iobuf;
-    if ((status = zx_vmar_map(zx_vmar_root_self(), 0, iovmo, 0, count * BUFSIZE,
-                              ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE,
-                              (uintptr_t*)&iobuf)) < 0) {
+    if ((status = zx_vmar_map(zx_vmar_root_self(),
+                              ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
+                              0, iovmo, 0, count * BUFSIZE, (uintptr_t*)&iobuf)) < 0) {
         return -1;
     }
 

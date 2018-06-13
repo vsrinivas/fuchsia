@@ -445,13 +445,13 @@ unsigned int arch_mmu_flags_to_vm_flags(unsigned int arch_mmu_flags) {
     }
     unsigned int ret = 0;
     if (arch_mmu_flags & ARCH_MMU_FLAG_PERM_READ) {
-        ret |= ZX_VM_FLAG_PERM_READ;
+        ret |= ZX_VM_PERM_READ;
     }
     if (arch_mmu_flags & ARCH_MMU_FLAG_PERM_WRITE) {
-        ret |= ZX_VM_FLAG_PERM_WRITE;
+        ret |= ZX_VM_PERM_WRITE;
     }
     if (arch_mmu_flags & ARCH_MMU_FLAG_PERM_EXECUTE) {
-        ret |= ZX_VM_FLAG_PERM_EXECUTE;
+        ret |= ZX_VM_PERM_EXECUTE;
     }
     return ret;
 }

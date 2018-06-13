@@ -74,9 +74,9 @@ static zx_handle_t reserve_low_address_space(zx_handle_t log,
     uintptr_t addr;
     size_t reserve_size =
         (((info.base + info.len) / 2) + PAGE_SIZE - 1) & -PAGE_SIZE;
-    zx_status_t status = zx_vmar_allocate(root_vmar, 0,
-                                          reserve_size - info.base,
-                                          ZX_VM_FLAG_SPECIFIC, &vmar, &addr);
+    zx_status_t status = zx_vmar_allocate(root_vmar, ZX_VM_SPECIFIC,
+                                          0, reserve_size - info.base,
+                                          &vmar, &addr);
     check(log, status,
           "zx_vmar_allocate failed for low address space reservation");
     if (addr != info.base)
@@ -259,9 +259,8 @@ static noreturn void bootstrap(zx_handle_t log, zx_handle_t bootstrap_pipe) {
     zx_object_set_property(stack_vmo, ZX_PROP_NAME,
                            STACK_VMO_NAME, sizeof(STACK_VMO_NAME) - 1);
     zx_vaddr_t stack_base;
-    status = zx_vmar_map(vmar, 0, stack_vmo, 0, stack_size,
-                         ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE,
-                         &stack_base);
+    status = zx_vmar_map(vmar, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0,
+                         stack_vmo, 0, stack_size, &stack_base);
     check(log, status, "zx_vmar_map failed for child stack");
     uintptr_t sp = compute_initial_stack_pointer(stack_base, stack_size);
     if (stack_vmo_handle_loc != NULL) {

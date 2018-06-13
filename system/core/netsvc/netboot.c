@@ -85,8 +85,8 @@ static zx_status_t nbfilecontainer_init(size_t size,
     zx_object_set_property(target->data, ZX_PROP_NAME, "netboot", 7);
 
     uintptr_t buffer;
-    st = zx_vmar_map(zx_vmar_root_self(), 0, target->data, 0, size,
-                     ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE, &buffer);
+    st = zx_vmar_map(zx_vmar_root_self(), ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
+                     0, target->data, 0, size, &buffer);
     if (st != ZX_OK) {
         printf("netbootloader: failed to map data vmo for buffer, st = %d\n", st);
         zx_handle_close(target->data);

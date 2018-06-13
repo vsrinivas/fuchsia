@@ -57,7 +57,7 @@ zx_status_t TraceHandlerImpl::StartEngine(async_dispatcher_t* dispatcher,
     uintptr_t buffer_ptr;
     status = zx::vmar::root_self()->map(
         0u, buffer, 0u, buffer_num_bytes,
-        ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE, &buffer_ptr);
+        ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, &buffer_ptr);
     if (status != ZX_OK)
         return status;
 

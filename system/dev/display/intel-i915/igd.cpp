@@ -357,7 +357,7 @@ zx_status_t IgdOpRegion::Init(pci_protocol_t* pci) {
     igd_opregion_pages_ = zx::vmo(vmo);
 
     status = zx::vmar::root_self()->map(0, igd_opregion_pages_, 0, igd_opregion_pages_len_,
-                                       ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE,
+                                       ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
                                        &igd_opregion_pages_base_);
     if (status != ZX_OK) {
         LOG_ERROR("Failed to map IGD OpRegion (%d)\n", status);

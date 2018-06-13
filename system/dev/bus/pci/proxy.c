@@ -226,10 +226,10 @@ static zx_status_t pci_op_map_bar(void* ctx,
     // Map the config/bar passed in. Mappings require PAGE_SIZE alignment for
     // both base and size
     void* vaddr_tmp;
-    uint32_t map_flags = ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE | ZX_VM_FLAG_MAP_RANGE;
-    status = zx_vmar_map(zx_vmar_root_self(), 0, bar.handle, 0,
+    zx_vm_option_t map_options = ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_MAP_RANGE;
+    status = zx_vmar_map(zx_vmar_root_self(), map_options, 0, bar.handle, 0,
                          ROUNDUP(bar.size, PAGE_SIZE),
-                         map_flags, (uintptr_t*)&vaddr_tmp);
+                         (uintptr_t*)&vaddr_tmp);
     if (status != ZX_OK) {
         zx_handle_close(bar.handle);
         return status;

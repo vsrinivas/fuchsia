@@ -445,7 +445,7 @@ syscall vmar_protect_old
     returns (zx_status_t);
 
 syscall vmar_allocate
-    (parent_vmar: zx_handle_t, offset: uint64_t, size: uint64_t, map_flags: uint32_t)
+    (parent_vmar: zx_handle_t, options: zx_vm_option_t, offset: uint64_t, size: uint64_t)
     returns (zx_status_t,
         child_vmar: zx_handle_t handle_acquire, child_addr: zx_vaddr_t);
 
@@ -454,9 +454,9 @@ syscall vmar_destroy
     returns (zx_status_t);
 
 syscall vmar_map
-    (handle: zx_handle_t, vmar_offset: uint64_t,
+    (handle: zx_handle_t, options: zx_vm_option_t, vmar_offset: uint64_t,
         vmo: zx_handle_t, vmo_offset: uint64_t,
-        len: uint64_t, map_flags: uint32_t)
+        len: uint64_t)
     returns (zx_status_t, mapped_addr: zx_vaddr_t);
 
 syscall vmar_unmap
@@ -464,7 +464,7 @@ syscall vmar_unmap
     returns (zx_status_t);
 
 syscall vmar_protect
-    (handle: zx_handle_t, addr: zx_vaddr_t, len: uint64_t, prot_flags: uint32_t)
+    (handle: zx_handle_t, options: zx_vm_option_t, addr: zx_vaddr_t, len: uint64_t)
     returns (zx_status_t);
 
 # Random Number generator

@@ -573,7 +573,7 @@ zx_status_t PlatformDevice::Start() {
     if (dr->protocol_count() > 0) {
         // PlatformDevice::Start with protocols
         status = DdkAdd(name, device_add_flags, nullptr, 0, ZX_PROTOCOL_PLATFORM_PROXY, argstr);
-    
+
     } else {
         status = DdkAdd(name, device_add_flags, props, countof(props), ZX_PROTOCOL_PLATFORM_DEV,
                         argstr);

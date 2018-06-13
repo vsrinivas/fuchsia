@@ -102,7 +102,7 @@ zx_status_t nhlt_publish_metadata(zx_device_t* dev, int bbn, uint64_t adr, ACPI_
 
     // We cannot read physical VMOs directly and must map it
     zx_vaddr_t vaddr = 0;
-    status = zx_vmar_map(zx_vmar_root_self(), 0, vmo, 0, page_size, ZX_VM_FLAG_PERM_READ, &vaddr);
+    status = zx_vmar_map(zx_vmar_root_self(), ZX_VM_PERM_READ, 0, vmo, 0, page_size, &vaddr);
     if (status != ZX_OK) {
         zxlogf(ERROR, "acpi: failed to map NHLT blob (res %d)\n", status);
         goto out;

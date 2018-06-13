@@ -29,55 +29,55 @@ namespace {
 zx_status_t split_syscall_flags(uint32_t flags, uint32_t* vmar_flags, uint* arch_mmu_flags) {
     // Figure out arch_mmu_flags
     uint mmu_flags = 0;
-    switch (flags & (ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE)) {
-        case ZX_VM_FLAG_PERM_READ:
+    switch (flags & (ZX_VM_PERM_READ | ZX_VM_PERM_WRITE)) {
+        case ZX_VM_PERM_READ:
             mmu_flags |= ARCH_MMU_FLAG_PERM_READ;
             break;
-        case ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE:
+        case ZX_VM_PERM_READ | ZX_VM_PERM_WRITE:
             mmu_flags |= ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE;
             break;
     }
 
-    if (flags & ZX_VM_FLAG_PERM_EXECUTE) {
+    if (flags & ZX_VM_PERM_EXECUTE) {
         mmu_flags |= ARCH_MMU_FLAG_PERM_EXECUTE;
     }
 
     // Mask out arch_mmu_flags options
-    flags &= ~(ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE | ZX_VM_FLAG_PERM_EXECUTE);
+    flags &= ~(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_PERM_EXECUTE);
 
     // Figure out vmar flags
     uint32_t vmar = 0;
-    if (flags & ZX_VM_FLAG_COMPACT) {
+    if (flags & ZX_VM_COMPACT) {
         vmar |= VMAR_FLAG_COMPACT;
-        flags &= ~ZX_VM_FLAG_COMPACT;
+        flags &= ~ZX_VM_COMPACT;
     }
-    if (flags & ZX_VM_FLAG_SPECIFIC) {
+    if (flags & ZX_VM_SPECIFIC) {
         vmar |= VMAR_FLAG_SPECIFIC;
-        flags &= ~ZX_VM_FLAG_SPECIFIC;
+        flags &= ~ZX_VM_SPECIFIC;
     }
-    if (flags & ZX_VM_FLAG_SPECIFIC_OVERWRITE) {
+    if (flags & ZX_VM_SPECIFIC_OVERWRITE) {
         vmar |= VMAR_FLAG_SPECIFIC_OVERWRITE;
-        flags &= ~ZX_VM_FLAG_SPECIFIC_OVERWRITE;
+        flags &= ~ZX_VM_SPECIFIC_OVERWRITE;
     }
-    if (flags & ZX_VM_FLAG_CAN_MAP_SPECIFIC) {
+    if (flags & ZX_VM_CAN_MAP_SPECIFIC) {
         vmar |= VMAR_FLAG_CAN_MAP_SPECIFIC;
-        flags &= ~ZX_VM_FLAG_CAN_MAP_SPECIFIC;
+        flags &= ~ZX_VM_CAN_MAP_SPECIFIC;
     }
-    if (flags & ZX_VM_FLAG_CAN_MAP_READ) {
+    if (flags & ZX_VM_CAN_MAP_READ) {
         vmar |= VMAR_FLAG_CAN_MAP_READ;
-        flags &= ~ZX_VM_FLAG_CAN_MAP_READ;
+        flags &= ~ZX_VM_CAN_MAP_READ;
     }
-    if (flags & ZX_VM_FLAG_CAN_MAP_WRITE) {
+    if (flags & ZX_VM_CAN_MAP_WRITE) {
         vmar |= VMAR_FLAG_CAN_MAP_WRITE;
-        flags &= ~ZX_VM_FLAG_CAN_MAP_WRITE;
+        flags &= ~ZX_VM_CAN_MAP_WRITE;
     }
-    if (flags & ZX_VM_FLAG_CAN_MAP_EXECUTE) {
+    if (flags & ZX_VM_CAN_MAP_EXECUTE) {
         vmar |= VMAR_FLAG_CAN_MAP_EXECUTE;
-        flags &= ~ZX_VM_FLAG_CAN_MAP_EXECUTE;
+        flags &= ~ZX_VM_CAN_MAP_EXECUTE;
     }
-    if (flags & ZX_VM_FLAG_REQUIRE_NON_RESIZABLE) {
+    if (flags & ZX_VM_REQUIRE_NON_RESIZABLE) {
         vmar |= VMAR_FLAG_REQUIRE_NON_RESIZABLE;
-        flags &= ~ZX_VM_FLAG_REQUIRE_NON_RESIZABLE;
+        flags &= ~ZX_VM_REQUIRE_NON_RESIZABLE;
     }
 
     if (flags != 0)
@@ -235,10 +235,10 @@ zx_status_t VmAddressRegionDispatcher::Unmap(vaddr_t base, size_t len) {
 }
 
 bool VmAddressRegionDispatcher::is_valid_mapping_protection(uint32_t flags) {
-    if (!(flags & ZX_VM_FLAG_PERM_READ)) {
+    if (!(flags & ZX_VM_PERM_READ)) {
         // No way to express non-readable mappings that are also writeable or
         // executable.
-        if (flags & (ZX_VM_FLAG_PERM_WRITE | ZX_VM_FLAG_PERM_EXECUTE)) {
+        if (flags & (ZX_VM_PERM_WRITE | ZX_VM_PERM_EXECUTE)) {
             return false;
         }
     }

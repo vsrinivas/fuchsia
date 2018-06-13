@@ -67,9 +67,9 @@ zx_status_t sdio_rw_data(void *ctx, uint8_t fn_idx, sdio_rw_txn_t *txn) {
 
     if (txn->use_dma && !dma_supported) {
         // host does not support dma
-        st = zx_vmar_map(zx_vmar_root_self(), 0, txn->dma_vmo,
-                         txn->buf_offset, data_size,
-                         ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE,
+        st = zx_vmar_map(zx_vmar_root_self(),
+                         ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
+                         0, txn->dma_vmo, txn->buf_offset, data_size,
                          (uintptr_t*)&buf);
         if (st != ZX_OK) {
             zxlogf(TRACE, "sdio_rw_data: vmo map error %d\n", st);

@@ -33,9 +33,9 @@ public:
     // flags  : creation flags to pass to vmar_allocate
     static fbl::RefPtr<VmarManager> Create(size_t size,
                                       fbl::RefPtr<VmarManager> parent = nullptr,
-                                      uint32_t flags = ZX_VM_FLAG_COMPACT |
-                                                       ZX_VM_FLAG_CAN_MAP_READ |
-                                                       ZX_VM_FLAG_CAN_MAP_WRITE);
+                                      zx_vm_option_t options = ZX_VM_COMPACT |
+                                                       ZX_VM_CAN_MAP_READ |
+                                                       ZX_VM_CAN_MAP_WRITE);
 
     const zx::vmar& vmar() const { return vmar_; }
     void* start() const { return start_; }

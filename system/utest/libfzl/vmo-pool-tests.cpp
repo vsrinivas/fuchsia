@@ -116,7 +116,7 @@ public:
         ASSERT_NONNULL(addr);
         size_t mem_size = pool_.CurrentBufferSize();
         ASSERT_EQ(mem_size, kVmoTestSize);
-        uint32_t rw_access = ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE;
+        uint32_t rw_access = ZX_VM_PERM_READ | ZX_VM_PERM_WRITE;
         ASSERT_TRUE(vmo_probe::probe_verify_region(addr, mem_size, rw_access));
         END_TEST;
     }

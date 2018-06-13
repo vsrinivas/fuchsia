@@ -134,7 +134,7 @@ zx_status_t IntelAudioDsp::SetupDspDevice() {
 
     // Map the VMO in, make sure to put it in the same VMAR as the rest of our
     // registers.
-    constexpr uint32_t CPU_MAP_FLAGS = ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE;
+    constexpr uint32_t CPU_MAP_FLAGS = ZX_VM_PERM_READ | ZX_VM_PERM_WRITE;
     res = mapped_regs_.Map(bar_vmo, 0, bar_size, CPU_MAP_FLAGS);
     if (res != ZX_OK) {
         LOG(ERROR, "Error attempting to map registers (res %d)\n", res);
@@ -506,7 +506,7 @@ zx_status_t IntelAudioDsp::LoadFirmware() {
     // of the extended manifest header will guarantee un-alignment.
     // This VMO is mapped once and thrown away after firmware loading, so map it
     // into the root VMAR so we don't need to allocate more space in DriverVmars::registers().
-    constexpr uint32_t CPU_MAP_FLAGS = ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE;
+    constexpr uint32_t CPU_MAP_FLAGS = ZX_VM_PERM_READ | ZX_VM_PERM_WRITE;
     zx::vmo stripped_vmo;
     fzl::VmoMapper stripped_fw;
     st = stripped_fw.CreateAndMap(fw_size, CPU_MAP_FLAGS, nullptr, &stripped_vmo);

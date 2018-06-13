@@ -391,9 +391,9 @@ static void sdmmc_do_txn(sdmmc_device_t* dev, sdmmc_txn_t* txn) {
         req->buf_offset = txn->bop.rw.offset_vmo;
     } else {
         req->use_dma = false;
-        st = zx_vmar_map(zx_vmar_root_self(), 0, txn->bop.rw.vmo,
-                         txn->bop.rw.offset_vmo, txn->bop.rw.length,
-                         ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE, (uintptr_t*)&req->virt);
+        st = zx_vmar_map(zx_vmar_root_self(), ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
+                         0, txn->bop.rw.vmo, txn->bop.rw.offset_vmo, txn->bop.rw.length,
+                         (uintptr_t*)&req->virt);
         if (st != ZX_OK) {
             zxlogf(TRACE, "sdmmc: do_txn vmo map error %d\n", st);
             block_complete(&txn->bop, st, dev);

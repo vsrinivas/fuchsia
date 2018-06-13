@@ -107,7 +107,7 @@ bool vdso_map_change_test() {
     // Changing protections on the code pages is forbidden.
     EXPECT_EQ(vdso_vmar.protect(scratch.vdso_code_address(),
                                 scratch.vdso_code_size(),
-                                ZX_VM_FLAG_PERM_READ),
+                                ZX_VM_PERM_READ),
               ZX_ERR_ACCESS_DENIED, "zx_vmar_protect on vDSO code");
 
     zx::vmo vmo;
@@ -117,8 +117,8 @@ bool vdso_map_change_test() {
     // Implicit unmapping by overwriting the mapping is forbidden.
     uintptr_t addr = 0;
     EXPECT_EQ(vdso_vmar.map(0, vmo, 0, scratch.vdso_total_size(),
-                            ZX_VM_FLAG_PERM_READ |
-                            ZX_VM_FLAG_SPECIFIC_OVERWRITE,
+                            ZX_VM_PERM_READ |
+                            ZX_VM_SPECIFIC_OVERWRITE,
                             &addr),
               ZX_ERR_ACCESS_DENIED, "zx_vmar_map to overmap vDSO");
     EXPECT_EQ(addr, 0, "zx_vmar_map to overmap vDSO");
@@ -132,7 +132,7 @@ bool vdso_map_change_test() {
     EXPECT_EQ(scratch.root_vmar().
               map(scratch.vdso_base() - root_vmar_info.base, vmo,
                   0, scratch.vdso_total_size(),
-                  ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_SPECIFIC_OVERWRITE,
+                  ZX_VM_PERM_READ | ZX_VM_SPECIFIC_OVERWRITE,
                   &addr),
               ZX_ERR_ACCESS_DENIED, "zx_vmar_map to overmap vDSO from root");
     EXPECT_EQ(addr, 0, "zx_vmar_map to overmap vDSO from root");
@@ -163,7 +163,7 @@ bool vdso_map_code_wrong_test() {
     uintptr_t addr;
     EXPECT_EQ(scratch.root_vmar().
               map(0, vdso_vmo, 0, PAGE_SIZE,
-                  ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_EXECUTE, &addr),
+                  ZX_VM_PERM_READ | ZX_VM_PERM_EXECUTE, &addr),
               ZX_ERR_ACCESS_DENIED, "executable mapping of wrong part of vDSO");
 
     // Try to map only part of the code, not the whole code segment.
@@ -172,7 +172,7 @@ bool vdso_map_code_wrong_test() {
         ASSERT_EQ(scratch.vdso_code_size() % PAGE_SIZE, 0);
         EXPECT_EQ(scratch.root_vmar().
                   map(0, vdso_vmo, scratch.vdso_code_offset(), PAGE_SIZE,
-                      ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_EXECUTE, &addr),
+                      ZX_VM_PERM_READ | ZX_VM_PERM_EXECUTE, &addr),
                   ZX_ERR_ACCESS_DENIED,
                   "executable mapping of subset of vDSO code");
     }

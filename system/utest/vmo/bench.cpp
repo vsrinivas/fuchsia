@@ -76,7 +76,7 @@ int vmo_run_benchmark() {
     zx_handle_t vmo;
     zx_vmo_create(size, 0, &vmo);
 
-    zx_vmar_map(zx_vmar_root_self(), 0, vmo, 0, size, ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE, &ptr);
+    zx_vmar_map(zx_vmar_root_self(), ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0, vmo, 0, size, &ptr);
 
     t = time_it([&](){
         for (size_t i = 0; i < size; i += PAGE_SIZE) {
@@ -113,7 +113,7 @@ int vmo_run_benchmark() {
     printf("\ttook %" PRIu64 " nsecs to unmap the vmo %zu (%zu pages)\n", t, size, size / PAGE_SIZE);
 
     // map it a again and time read faulting it
-    zx_vmar_map(zx_vmar_root_self(), 0, vmo, 0, size, ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE, &ptr);
+    zx_vmar_map(zx_vmar_root_self(), ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0, vmo, 0, size, &ptr);
 
     t = time_it([&](){
         for (size_t i = 0; i < size; i += PAGE_SIZE) {
@@ -125,7 +125,7 @@ int vmo_run_benchmark() {
     zx_vmar_unmap(zx_vmar_root_self(), ptr, size);
 
     // map it a again and time write faulting it
-    zx_vmar_map(zx_vmar_root_self(), 0, vmo, 0, size, ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE, &ptr);
+    zx_vmar_map(zx_vmar_root_self(), ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0, vmo, 0, size, &ptr);
 
     t = time_it([&](){
         for (size_t i = 0; i < size; i += PAGE_SIZE) {
@@ -145,7 +145,7 @@ int vmo_run_benchmark() {
     // create a second vmo and write fault it in directly
     zx_vmo_create(size, 0, &vmo);
 
-    zx_vmar_map(zx_vmar_root_self(), 0, vmo, 0, size, ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE, &ptr);
+    zx_vmar_map(zx_vmar_root_self(), ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0, vmo, 0, size, &ptr);
 
     t = time_it([&](){
         for (size_t i = 0; i < size; i += PAGE_SIZE) {

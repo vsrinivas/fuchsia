@@ -89,7 +89,7 @@ zx_status_t NandDevice::Bind(const ram_nand_info_t& info) {
                    info.extra_partition_config[i].type_guid, ZBI_PARTITION_GUID_LEN);
             config.extra_partition_config[i].copy_count =
                     info.extra_partition_config[i].copy_count;
-            config.extra_partition_config[i].copy_byte_offset = 
+            config.extra_partition_config[i].copy_byte_offset =
                     info.extra_partition_config[i].copy_byte_offset;
         }
         status = DdkAddMetadata(DEVICE_METADATA_PRIVATE, &config, sizeof(config));
@@ -134,9 +134,8 @@ zx_status_t NandDevice::Init(char name[NAME_MAX], zx::vmo vmo) {
         }
     }
 
-    status = zx_vmar_map(zx_vmar_root_self(), 0, vmo_.get(), 0, DdkGetSize(),
-                         ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE,
-                         &mapped_addr_);
+    status = zx_vmar_map(zx_vmar_root_self(), ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
+                         0, vmo_.get(), 0, DdkGetSize(), &mapped_addr_);
     if (status != ZX_OK) {
         return status;
     }

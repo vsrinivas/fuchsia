@@ -36,13 +36,13 @@ By default, all allocations of address space are randomized.  At VMAR
 creation time, the caller can choose which randomization algorithm is used.
 The default allocator attempts to spread allocations widely across the full
 width of the VMAR.  The alternate allocator, selected with
-*ZX_VM_FLAG_COMPACT*, attempts to keep allocations close together within the
+*ZX_VM_COMPACT*, attempts to keep allocations close together within the
 VMAR, but at a random location within the range.  It is recommended to use
 the default allocator.
 
 VMARs optionally support a fixed-offset mapping mode (called specific mapping).
 This mode can be used to create guard pages or ensure the relative locations of
-mappings.  Each VMAR may have the *ZX_VM_FLAG_CAN_MAP_SPECIFIC* permission,
+mappings.  Each VMAR may have the *ZX_VM_CAN_MAP_SPECIFIC* permission,
 regardless of whether or not its parent VMAR had that permission.
 
 ## EXAMPLE
@@ -59,24 +59,25 @@ zx_status_t map_with_guard(zx_handle_t vmar, size_t before, size_t after,
 
     /* wrap around check elided */
     const size_t child_vmar_size = before + after + mapping_len;
-    const uint32_t child_vmar_flags = ZX_VM_FLAG_CAN_MAP_READ |
-                                      ZX_VM_FLAG_CAN_MAP_WRITE |
-                                      ZX_VM_FLAG_CAN_MAP_SPECIFIC;
-    const uint32_t mapping_flags = ZX_VM_FLAG_SPECIFIC |
-                                   ZX_VM_FLAG_PERM_READ |
-                                   ZX_VM_FLAG_PERM_WRITE;
+    const zx_vm_option_t child_vmar_options = ZX_VM_CAN_MAP_READ |
+                                              ZX_VM_CAN_MAP_WRITE |
+                                              ZX_VM_CAN_MAP_SPECIFIC;
+    const zx_vm_option_t mapping_options = ZX_VM_SPECIFIC |
+                                           ZX_VM_PERM_READ |
+                                           ZX_VM_PERM_WRITE;
 
     uintptr_t child_vmar_addr;
     zx_handle_t child_vmar;
-    zx_status_t status = zx_vmar_allocate(vmar, 0, child_vmar_size,
-                                          child_vmar_flags, &child_vmar,
+    zx_status_t status = zx_vmar_allocate(vmar, child_vmar_options, 0,
+                                          child_vmar_size,
+                                          &child_vmar,
                                           &child_vmar_addr);
     if (status != ZX_OK) {
         return status;
     }
 
-    status = zx_vmar_map(child_vmar, before, vmo, vmo_offset, mapping_len,
-                         mapping_flags, mapped_addr);
+    status = zx_vmar_map(child_vmar, mapping_options, before, vmo, vmo_offset,
+                         mapping_len, mapped_addr);
     if (status != ZX_OK) {
         zx_vmar_destroy(child_vmar);
         zx_handle_close(child_vmar);

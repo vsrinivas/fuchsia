@@ -237,9 +237,9 @@ zx_handle_t Operation::GetVmo() {
     }
 
     uintptr_t address;
-    status = zx_vmar_map(zx_vmar_root_self(), 0, vmo_.get(), 0, buffer_size_,
-                         ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE,
-                         &address);
+    status = zx_vmar_map(zx_vmar_root_self(),
+                         ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
+                         0, vmo_.get(), 0, buffer_size_, &address);
     if (status != ZX_OK) {
         return ZX_HANDLE_INVALID;
     }

@@ -72,7 +72,7 @@ zx_status_t AmlBadBlock::Create(Config config, fbl::RefPtr<BadBlock>* out) {
     }
 
     // Map them.
-    constexpr uint32_t kPermissions = ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE;
+    constexpr uint32_t kPermissions = ZX_VM_PERM_READ | ZX_VM_PERM_WRITE;
     uintptr_t vaddr_table;
     status = zx::vmar::root_self()->map(0, data_vmo, 0, table_len, kPermissions, &vaddr_table);
     if (status != ZX_OK) {

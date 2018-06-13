@@ -72,9 +72,8 @@ zx_status_t usb_request_alloc(usb_request_t** out, zx_handle_t bti_handle, uint6
         }
 
         zx_vaddr_t mapped_addr;
-        status = zx_vmar_map(zx_vmar_root_self(), 0, req->vmo_handle, 0, data_size,
-                             ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE,
-                             &mapped_addr);
+        status = zx_vmar_map(zx_vmar_root_self(), ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
+                             0, req->vmo_handle, 0, data_size, &mapped_addr);
 
         if (status != ZX_OK) {
             zxlogf(ERROR, "usb_request_alloc: Failed to map the vmo: %d\n", status);
@@ -119,8 +118,8 @@ zx_status_t usb_request_alloc_vmo(usb_request_t** out, zx_handle_t bti_handle,
     }
 
     zx_vaddr_t mapped_addr;
-    status = zx_vmar_map(zx_vmar_root_self(), 0, dup_handle, 0, size,
-                         ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE, &mapped_addr);
+    status = zx_vmar_map(zx_vmar_root_self(), ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
+                         0, dup_handle, 0, size, &mapped_addr);
     if (status != ZX_OK) {
         zxlogf(ERROR, "usb_request_alloc_vmo: zx_vmar_map failed %d size: %zu\n", status, size);
         zx_handle_close(dup_handle);
@@ -165,8 +164,8 @@ zx_status_t usb_request_init(usb_request_t* req, zx_handle_t bti_handle, zx_hand
 
     //TODO(ravoorir): Do not map the entire vmo. Map only what is needed.
     zx_vaddr_t mapped_addr;
-    status = zx_vmar_map(zx_vmar_root_self(), 0, dup_handle, 0, size,
-                         ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE, &mapped_addr);
+    status = zx_vmar_map(zx_vmar_root_self(), ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
+                         0, dup_handle, 0, size, &mapped_addr);
     if (status != ZX_OK) {
         zxlogf(ERROR, "usb_request_init: zx_vmar_map failed %d size: %zu\n", status, size);
         zx_handle_close(dup_handle);

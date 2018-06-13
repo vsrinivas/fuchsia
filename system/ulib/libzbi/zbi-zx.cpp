@@ -43,7 +43,7 @@ ZbiVMO::~ZbiVMO() {
 zx_status_t ZbiVMO::Map() {
     uintptr_t mapping;
     auto status = zx::vmar::root_self()->map(
-        0, vmo_, 0, capacity_, ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE,
+        0, vmo_, 0, capacity_, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
         &mapping);
     if (status == ZX_OK) {
         base_ = reinterpret_cast<uint8_t*>(mapping);

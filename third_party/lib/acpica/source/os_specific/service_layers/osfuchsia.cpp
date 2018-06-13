@@ -122,9 +122,9 @@ static zx_status_t mmap_physical(zx_paddr_t phys, size_t size, uint32_t cache_po
         zx_handle_close(vmo);
         return st;
     }
-    st = zx_vmar_map(zx_vmar_root_self(), 0, vmo, 0, size,
-                     ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE | ZX_VM_FLAG_MAP_RANGE,
-                     &vaddr);
+    st = zx_vmar_map(zx_vmar_root_self(),
+                     ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_MAP_RANGE,
+                     0, vmo, 0, size, &vaddr);
     if (st != ZX_OK) {
         zx_handle_close(vmo);
         return st;

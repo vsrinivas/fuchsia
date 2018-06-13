@@ -125,8 +125,8 @@ static bool start_thread(zxr_thread_entry_t entry, void* arg,
     ASSERT_NE(thread_stack_vmo, ZX_HANDLE_INVALID);
 
     uintptr_t stack = 0u;
-    ASSERT_EQ(zx_vmar_map(zx_vmar_root_self(), 0, thread_stack_vmo, 0, stack_size,
-                          ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE, &stack),
+    ASSERT_EQ(zx_vmar_map(zx_vmar_root_self(), ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
+                          0, thread_stack_vmo, 0, stack_size, &stack),
               ZX_OK);
     ASSERT_EQ(zx_handle_close(thread_stack_vmo), ZX_OK);
 

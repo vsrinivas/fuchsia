@@ -254,9 +254,9 @@ zx_status_t ProxyDevice::MapMmio(uint32_t index, uint32_t cache_policy, void** o
     }
 
     uintptr_t virt;
-    status = zx_vmar_map(zx_vmar_root_self(), 0, vmo_handle, 0, vmo_size,
-                         ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE | ZX_VM_FLAG_MAP_RANGE,
-                         &virt);
+    status = zx_vmar_map(zx_vmar_root_self(),
+                         ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_MAP_RANGE,
+                         0, vmo_handle, 0, vmo_size, &virt);
     if (status != ZX_OK) {
         zxlogf(ERROR, "%s %s: mapping vmar failed %d\n", name_, __FUNCTION__, status);
         goto fail;

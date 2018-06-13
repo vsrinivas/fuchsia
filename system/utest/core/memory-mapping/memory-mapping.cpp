@@ -54,9 +54,9 @@ bool address_space_limits_test() {
     size_t offset = noncanon_addr - page_size - vmar_info.base;
     uintptr_t addr;
     status = zx_vmar_map(
-        zx_vmar_root_self(), offset, vmo, 0, page_size,
-        ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE | ZX_VM_FLAG_SPECIFIC,
-        &addr);
+        zx_vmar_root_self(),
+        ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_SPECIFIC,
+        offset, vmo, 0, page_size, &addr);
     EXPECT_EQ(ZX_ERR_INVALID_ARGS, status, "vm_map");
 
     // Check that we can map at the next address down.  This helps to
@@ -64,18 +64,18 @@ bool address_space_limits_test() {
     // reason.
     offset = noncanon_addr - page_size * 2 - vmar_info.base;
     status = zx_vmar_map(
-        zx_vmar_root_self(), offset, vmo, 0, page_size,
-        ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE | ZX_VM_FLAG_SPECIFIC,
-        &addr);
+        zx_vmar_root_self(),
+        ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_SPECIFIC,
+        offset, vmo, 0, page_size, &addr);
     EXPECT_EQ(ZX_OK, status, "vm_map");
 
-    // Check that ZX_VM_FLAG_SPECIFIC fails on already-mapped locations.
+    // Check that ZX_VM_SPECIFIC fails on already-mapped locations.
     // Otherwise, the previous mapping could have overwritten
     // something that was in use, which could cause problems later.
     status = zx_vmar_map(
-        zx_vmar_root_self(), offset, vmo, 0, page_size,
-        ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE | ZX_VM_FLAG_SPECIFIC,
-        &addr);
+        zx_vmar_root_self(),
+        ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_SPECIFIC,
+        offset, vmo, 0, page_size, &addr);
     EXPECT_EQ(ZX_ERR_NO_MEMORY, status, "vm_map");
 
     // Clean up.

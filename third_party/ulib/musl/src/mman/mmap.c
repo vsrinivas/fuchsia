@@ -37,15 +37,15 @@ void* __mmap(void* start, size_t len, int prot, int flags, int fd, off_t fd_off)
     len = (len + PAGE_SIZE - 1) & ~(PAGE_SIZE - 1);
 
     // build zircon flags for this
-    uint32_t zx_flags = 0;
-    zx_flags |= (prot & PROT_READ) ? ZX_VM_FLAG_PERM_READ : 0;
-    zx_flags |= (prot & PROT_WRITE) ? ZX_VM_FLAG_PERM_WRITE : 0;
-    zx_flags |= (prot & PROT_EXEC) ? ZX_VM_FLAG_PERM_EXECUTE : 0;
+    zx_vm_option_t zx_options = 0;
+    zx_options |= (prot & PROT_READ) ? ZX_VM_PERM_READ : 0;
+    zx_options |= (prot & PROT_WRITE) ? ZX_VM_PERM_WRITE : 0;
+    zx_options |= (prot & PROT_EXEC) ? ZX_VM_PERM_EXECUTE : 0;
 
     size_t offset = 0;
     zx_status_t status = ZX_OK;
     if (flags & MAP_FIXED) {
-        zx_flags |= ZX_VM_FLAG_SPECIFIC;
+        zx_options |= ZX_VM_SPECIFIC;
 
         zx_info_vmar_t info;
         status = _zx_object_get_info(_zx_vmar_root_self(), ZX_INFO_VMAR, &info,
@@ -65,14 +65,14 @@ void* __mmap(void* start, size_t len, int prot, int flags, int fd, off_t fd_off)
         }
         _zx_object_set_property(vmo, ZX_PROP_NAME, mmap_vmo_name, strlen(mmap_vmo_name));
     } else {
-        status = _mmap_file(offset, len, zx_flags, flags, fd, fd_off, &ptr);
+        status = _mmap_file(offset, len, zx_options, flags, fd, fd_off, &ptr);
         if (status < 0) {
             goto fail;
         }
         return (void*) ptr;
     }
 
-    status = _zx_vmar_map(_zx_vmar_root_self(), offset, vmo, fd_off, len, zx_flags, &ptr);
+    status = _zx_vmar_map(_zx_vmar_root_self(), zx_options, offset, vmo, fd_off, len, &ptr);
     _zx_handle_close(vmo);
     // TODO: map this as shared if we ever implement forking
     if (status < 0) {

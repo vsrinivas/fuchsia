@@ -121,7 +121,7 @@ void Vim2Audio::OnDisplayAdded(const vim2_display_t* display, uint64_t display_i
     // Pin our VMO so that HW can access it.
     fzl::PinnedVmo pinned_spdif_rb;
     zx_status_t res;
-    res = pinned_spdif_rb.Pin(spdif_rb_vmo_->vmo(), audio_bti_, ZX_VM_FLAG_PERM_READ);
+    res = pinned_spdif_rb.Pin(spdif_rb_vmo_->vmo(), audio_bti_, ZX_VM_PERM_READ);
     if (res != ZX_OK) {
         DISP_ERROR("Failed to pin %zu byte ring buffer! (res = %d)\n", SPDIF_RB_SIZE, res);
         return;

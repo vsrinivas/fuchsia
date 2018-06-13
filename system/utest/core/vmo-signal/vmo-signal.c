@@ -99,7 +99,7 @@ static bool vmo_child_signal_map_test(void) {
 
     zx_handle_t clone = ZX_HANDLE_INVALID;
 
-    uint32_t flags = ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE;
+    zx_vm_option_t options = ZX_VM_PERM_READ | ZX_VM_PERM_WRITE;
 
     for (int ix = 0; ix != 10; ++ix) {
         ASSERT_EQ(vmo_has_no_children(vmo), ZX_OK, "");
@@ -109,7 +109,7 @@ static bool vmo_child_signal_map_test(void) {
 
         uintptr_t addr = 0;
         ASSERT_EQ(zx_vmar_map(
-            zx_vmar_root_self(), 0u, clone, 0, 4096u, flags, &addr), ZX_OK, "");
+            zx_vmar_root_self(), options, 0u, clone, 0, 4096u, &addr), ZX_OK, "");
 
         ASSERT_EQ(vmo_has_children(vmo), ZX_OK, "");
 

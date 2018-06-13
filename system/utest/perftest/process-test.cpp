@@ -115,12 +115,12 @@ void ProcessFixture::Init() {
 
     // The child process needs a stack for the vDSO code to use.
     constexpr uint32_t stack_perm =
-        ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE;
+        ZX_VM_PERM_READ | ZX_VM_PERM_WRITE;
     constexpr uint64_t stack_size = PAGE_SIZE;
     ZX_ASSERT(zx_vmo_create(stack_size, 0, &stack_vmo_) == ZX_OK);
     uintptr_t stack_base;
-    ZX_ASSERT(zx_vmar_map(vmar_handle_, 0, stack_vmo_, 0, stack_size,
-                          stack_perm, &stack_base) == ZX_OK);
+    ZX_ASSERT(zx_vmar_map(vmar_handle_, stack_perm, 0, stack_vmo_, 0, stack_size,
+                          &stack_base) == ZX_OK);
     sp_ = compute_stack_pointer(stack_base, stack_size);
 
     // The child process needs a thread.

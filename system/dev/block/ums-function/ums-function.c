@@ -552,8 +552,8 @@ zx_status_t usb_ums_bind(void* ctx, zx_device_t* parent) {
     if (status != ZX_OK) {
         goto fail;
     }
-    status = zx_vmar_map(zx_vmar_root_self(), 0, ums->storage_handle, 0, STORAGE_SIZE,
-                         ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE, (zx_vaddr_t *)&ums->storage);
+    status = zx_vmar_map(zx_vmar_root_self(), ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
+                         0, ums->storage_handle, 0, STORAGE_SIZE, (zx_vaddr_t *)&ums->storage);
     if (status != ZX_OK) {
         goto fail;
     }

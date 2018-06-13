@@ -794,9 +794,9 @@ zx_status_t UsbAudioStream::OnGetBufferLocked(dispatcher::Channel* channel,
     //
     // TODO(johngro): skip this step when APIs in the USB bus driver exist to
     // DMA directly from the VMO.
-    map_flags = ZX_VM_FLAG_PERM_READ;
+    map_flags = ZX_VM_PERM_READ;
     if (is_input())
-        map_flags |= ZX_VM_FLAG_PERM_WRITE;
+        map_flags |= ZX_VM_PERM_WRITE;
 
     resp.result = zx::vmar::root_self()->map(0, ring_buffer_vmo_,
                                              0, ring_buffer_size_,

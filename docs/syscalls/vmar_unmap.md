@@ -21,7 +21,7 @@ be fully in the range (i.e. partial overlaps are an error).  If a mapping is
 only partially in the range, the mapping is split and the requested portion is
 unmapped.
 
-If *len* is not page-aligned, it will be rounded up the next page boundary.
+*len* must be page-aligned.
 
 ## RIGHTS
 
@@ -37,8 +37,8 @@ TODO(ZX-2399)
 
 **ZX_ERR_WRONG_TYPE**  *vmar_handle* is not a VMAR handle.
 
-**ZX_ERR_INVALID_ARGS**  *addr* is not page-aligned, *len* is 0, or the
-requested range partially overlaps a sub-region.
+**ZX_ERR_INVALID_ARGS**  *addr* is not page-aligned, *len* is 0 or not page-aligned,
+or the requested range partially overlaps a sub-region.
 
 **ZX_ERR_BAD_STATE**  *vmar_handle* refers to a destroyed handle.
 

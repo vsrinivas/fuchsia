@@ -77,9 +77,9 @@ public:
         zx_status_t status;
         if ((status = zx::vmo::create(size_, 0, &vmo_)) != ZX_OK) {
             return status;
-        } else if ((status = zx_vmar_map(zx_vmar_root_self(), 0, vmo_.get(), 0,
-                                         size_, ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE,
-                                         &mapped_addr_)) != ZX_OK) {
+        } else if ((status = zx_vmar_map(zx_vmar_root_self(),
+                                         ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
+                                         0, vmo_.get(), 0, size_, &mapped_addr_)) != ZX_OK) {
             vmo_.reset();
             return status;
         }
@@ -108,14 +108,16 @@ public:
 
         // Try to extend mapping
         uintptr_t addr;
-        if ((status = zx_vmar_map(zx_vmar_root_self(), mapped_addr_ + size_ -
+        if ((status = zx_vmar_map(zx_vmar_root_self(),
+                                  ZX_VM_PERM_READ | ZX_VM_PERM_WRITE |
+                                  ZX_VM_SPECIFIC,
+                                  mapped_addr_ + size_ -
                                   vmar_info.base, vmo_.get(), size_, size - size_,
-                                  ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE |
-                                  ZX_VM_FLAG_SPECIFIC, &addr)) != ZX_OK) {
+                                  &addr)) != ZX_OK) {
             // If extension fails, create entirely new mapping and unmap the old one
-            if ((status = zx_vmar_map(zx_vmar_root_self(), 0, vmo_.get(), 0, size,
-                                      ZX_VM_FLAG_PERM_READ |
-                                      ZX_VM_FLAG_PERM_WRITE, &addr)) != ZX_OK) {
+            if ((status = zx_vmar_map(zx_vmar_root_self(),
+                                      ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
+                                      0, vmo_.get(), 0, size, &addr)) != ZX_OK) {
                 return status;
             }
 

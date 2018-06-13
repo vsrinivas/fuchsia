@@ -951,9 +951,9 @@ int main(int argc, char* argv[]) {
         }
         zx_object_signal(buffer.wait_event, 0, ZX_EVENT_SIGNALED);
 
-        status = zx_vmar_map(zx_vmar_root_self(), 0, buffer.vmo, 0, buffer_size,
-                             ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE,
-                             &buffer.data);
+        status = zx_vmar_map(zx_vmar_root_self(),
+                             ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
+                             0, buffer.vmo, 0, buffer_size, &buffer.data);
         ZX_ASSERT(status == ZX_OK);
         copy_rect((uint32_t*)buffer.data,
                   (const uint32_t*)surface->ptr + origin.y * canvas_width +
@@ -987,9 +987,9 @@ int main(int argc, char* argv[]) {
         }
         zx_object_signal(sprite.wait_event, 0, ZX_EVENT_SIGNALED);
 
-        status = zx_vmar_map(zx_vmar_root_self(), 0, sprite.vmo, 0, sprite_size,
-                             ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE,
-                             &sprite.data);
+        status = zx_vmar_map(zx_vmar_root_self(),
+                             ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
+                             0, sprite.vmo, 0, sprite_size, &sprite.data);
         ZX_ASSERT(status == ZX_OK);
         memset((void*)sprite.data, 0, sprite_size);
         memset(&sprite.damage, 0, sizeof(sprite.damage));

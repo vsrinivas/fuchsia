@@ -225,7 +225,7 @@ The kernel enforces correct use of the vDSO in two ways:
  1. It constrains how the vDSO VMO can be mapped into a process.
 
     When a [**vmar_map**()](syscalls/vmar_map.md) call is made using the
-    vDSO VMO and requesting `ZX_VM_FLAG_PERM_EXECUTE`, the kernel
+    vDSO VMO and requesting `ZX_VM_PERM_EXECUTE`, the kernel
     requires that the offset and size of the mapping exactly match the
     vDSO's executable segment.  It also allows only one such mapping.
     Once the valid vDSO mapping has been established in a process, it

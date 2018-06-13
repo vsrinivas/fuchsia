@@ -94,8 +94,8 @@ zx_status_t ProtocolDevice::MapMmio(uint32_t index, uint32_t cache_policy, void*
     }
 
     uintptr_t virt;
-    status = zx::vmar::root_self()->map(0, vmo, 0, vmo_size, ZX_VM_FLAG_PERM_READ |
-                                        ZX_VM_FLAG_PERM_WRITE | ZX_VM_FLAG_MAP_RANGE, &virt);
+    status = zx::vmar::root_self()->map(0, vmo, 0, vmo_size, ZX_VM_PERM_READ |
+                                        ZX_VM_PERM_WRITE | ZX_VM_MAP_RANGE, &virt);
     if (status != ZX_OK) {
         zxlogf(ERROR, "platform_dev_map_mmio: zx_vmar_map failed %d\n", status);
         return status;

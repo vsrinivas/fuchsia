@@ -18,7 +18,7 @@ void bootfs_mount(zx_handle_t vmar, zx_handle_t log, zx_handle_t vmo, struct boo
     zx_status_t status = zx_vmo_get_size(vmo, &size);
     check(log, status, "zx_vmo_get_size failed on bootfs vmo\n");
     uintptr_t addr = 0;
-    status = zx_vmar_map(vmar, 0, vmo, 0, size, ZX_VM_FLAG_PERM_READ, &addr);
+    status = zx_vmar_map(vmar, ZX_VM_PERM_READ, 0, vmo, 0, size, &addr);
     check(log, status, "zx_vmar_map failed on bootfs vmo\n");
     fs->contents = (const void*)addr;
     fs->len = size;

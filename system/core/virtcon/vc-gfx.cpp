@@ -121,8 +121,8 @@ zx_status_t vc_init_gfx(zx_handle_t fb_vmo, int32_t width, int32_t height,
     vc_gfx_size = stride * ZX_PIXEL_FORMAT_BYTES(format) * height;
 
     zx_status_t r;
-    if ((r = zx_vmar_map(zx_vmar_root_self(), 0, vc_gfx_vmo, 0, vc_gfx_size,
-                         ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE, &vc_gfx_mem)) < 0) {
+    if ((r = zx_vmar_map(zx_vmar_root_self(), ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
+                         0, vc_gfx_vmo, 0, vc_gfx_size, &vc_gfx_mem)) < 0) {
         goto fail;
     }
 

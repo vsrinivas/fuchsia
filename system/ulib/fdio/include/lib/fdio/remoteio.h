@@ -158,9 +158,9 @@ typedef struct {
 // May not be supplied with FDIO_MMAP_FLAG_PRIVATE.
 #define FDIO_MMAP_FLAG_EXACT   (1u << 17)
 
-static_assert(FDIO_MMAP_FLAG_READ == ZX_VM_FLAG_PERM_READ, "Vmar / Mmap flags should be aligned");
-static_assert(FDIO_MMAP_FLAG_WRITE == ZX_VM_FLAG_PERM_WRITE, "Vmar / Mmap flags should be aligned");
-static_assert(FDIO_MMAP_FLAG_EXEC == ZX_VM_FLAG_PERM_EXECUTE, "Vmar / Mmap flags should be aligned");
+static_assert(FDIO_MMAP_FLAG_READ == ZX_VM_PERM_READ, "Vmar / Mmap flags should be aligned");
+static_assert(FDIO_MMAP_FLAG_WRITE == ZX_VM_PERM_WRITE, "Vmar / Mmap flags should be aligned");
+static_assert(FDIO_MMAP_FLAG_EXEC == ZX_VM_PERM_EXECUTE, "Vmar / Mmap flags should be aligned");
 
 typedef struct zxrio_mmap_data {
     size_t offset;

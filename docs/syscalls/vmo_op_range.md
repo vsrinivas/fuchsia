@@ -1,4 +1,4 @@
-# zx_vmo_op_range
+# zx_vmo_modify_range
 
 ## NAME
 
@@ -9,15 +9,14 @@ vmo_op_range - perform an operation on a range of a VMO
 ```
 #include <zircon/syscalls.h>
 
-zx_status_t zx_vmo_op_range(zx_handle_t handle, uint32_t op,
-                            uint64_t offset, uint64_t size,
-                            void* buffer, size_t buffer_size);
+zx_status_t zx_vmo_modify_range(zx_handle_t handle, uint32_t op,
+                                uint64_t offset, uint64_t size);
 
 ```
 
 ## DESCRIPTION
 
-**vmo_op_range()** performs cache and memory operations against pages held by the VMO.
+**vmo_modify_range()** performs cache and memory operations against pages held by the VMO.
 
 *offset* byte offset specifying the starting location for *op* in the VMO's held memory.
 
@@ -25,18 +24,12 @@ zx_status_t zx_vmo_op_range(zx_handle_t handle, uint32_t op,
 
 *op* the operation to perform:
 
-*buffer* and *buffer_size* are currently unused.
-
 **ZX_VMO_OP_COMMIT** - Commit *size* bytes worth of pages starting at byte *offset* for the VMO.
 More information can be found in the [vm object documentation](../objects/vm_object.md).
 Requires the *ZX_RIGHT_WRITE* right.
 
 **ZX_VMO_OP_DECOMMIT** - Release a range of pages previously commited to the VMO from *offset* to *offset*+*size*.
 Requires the *ZX_RIGHT_WRITE* right.
-
-**ZX_VMO_OP_LOCK** - Presently unsupported.
-
-**ZX_VMO_OP_UNLOCK** - Presently unsupported.
 
 **ZX_VMO_OP_CACHE_SYNC** - Performs a cache sync operation.
 Requires the *ZX_RIGHT_READ* right.
@@ -57,7 +50,7 @@ TODO(ZX-2399)
 
 ## RETURN VALUE
 
-**vmo_op_range**() returns **ZX_OK** on success. In the event of failure, a negative error
+**vmo_modify_range**() returns **ZX_OK** on success. In the event of failure, a negative error
 value is returned.
 
 ## ERRORS
@@ -73,7 +66,8 @@ value is returned.
 **ZX_ERR_ACCESS_DENIED**  *handle* does not have sufficient rights to perform the operation.
 
 **ZX_ERR_INVALID_ARGS**  *out* is an invalid pointer, *op* is not a valid
-operation, or *size* is zero and *op* is a cache operation.
+operation, *size* is not page-aligned or *size* is  zero and *op* is a cache
+operation.
 
 **ZX_ERR_NOT_SUPPORTED**  *op* was *ZX_VMO_OP_LOCK* or *ZX_VMO_OP_UNLOCK*, or
 *op* was *ZX_VMO_OP_DECOMMIT* and the underlying VMO does not allow decommiting.

@@ -192,11 +192,12 @@ zx_handle_t get_test_process_etc(const test_mapping_info_t** info) {
         // Big enough to fit all of the mappings with some slop.
         ti->vmar_size = PAGE_SIZE * kNumMappings * 16;
         zx_handle_t sub_vmar;
-        s = zx_vmar_allocate(vmar, /* offset */ 0,
+        s = zx_vmar_allocate(vmar,
+                             ZX_VM_CAN_MAP_READ |
+                                 ZX_VM_CAN_MAP_WRITE |
+                                 ZX_VM_CAN_MAP_EXECUTE,
+                             /* offset */ 0,
                              ti->vmar_size,
-                             ZX_VM_FLAG_CAN_MAP_READ |
-                                 ZX_VM_FLAG_CAN_MAP_WRITE |
-                                 ZX_VM_FLAG_CAN_MAP_EXECUTE,
                              &sub_vmar, &ti->vmar_base);
         if (s != ZX_OK) {
             EXPECT_EQ(s, ZX_OK, "zx_vmar_allocate");
@@ -238,18 +239,17 @@ zx_handle_t get_test_process_etc(const test_mapping_info_t** info) {
             // Pick flags for this mapping; cycle through different
             // combinations for the test. Must always have READ set
             // to be mapped.
-            m->flags = ZX_VM_FLAG_PERM_READ;
+            m->flags = ZX_VM_PERM_READ;
             if (i & 1) {
-                m->flags |= ZX_VM_FLAG_PERM_WRITE;
+                m->flags |= ZX_VM_PERM_WRITE;
             }
             if (i & 2) {
-                m->flags |= ZX_VM_FLAG_PERM_EXECUTE;
+                m->flags |= ZX_VM_PERM_EXECUTE;
             }
 
-            s = zx_vmar_map(sub_vmar, /* vmar_offset (ignored) */ 0,
+            s = zx_vmar_map(sub_vmar, m->flags, /* vmar_offset (ignored) */ 0,
                             vmo, /* vmo_offset */ i * PAGE_SIZE,
                             /* len */ PAGE_SIZE,
-                            m->flags,
                             &m->base);
             if (s != ZX_OK) {
                 char msg[32];
@@ -569,10 +569,10 @@ bool partially_unmapped_buffer_fails() {
     zx_handle_t vmar;
     uintptr_t vmar_addr;
     ASSERT_EQ(zx_vmar_allocate(zx_vmar_root_self(),
+                               ZX_VM_CAN_MAP_READ |
+                                   ZX_VM_CAN_MAP_WRITE |
+                                   ZX_VM_CAN_MAP_SPECIFIC,
                                0, 2 * PAGE_SIZE,
-                               ZX_VM_FLAG_CAN_MAP_READ |
-                                   ZX_VM_FLAG_CAN_MAP_WRITE |
-                                   ZX_VM_FLAG_CAN_MAP_SPECIFIC,
                                &vmar, &vmar_addr),
               ZX_OK);
 
@@ -582,11 +582,11 @@ bool partially_unmapped_buffer_fails() {
 
     // Map the first page of the VMAR.
     uintptr_t vmo_addr;
-    ASSERT_EQ(zx_vmar_map(vmar, 0, vmo, 0, PAGE_SIZE,
-                          ZX_VM_FLAG_SPECIFIC |
-                              ZX_VM_FLAG_PERM_READ |
-                              ZX_VM_FLAG_PERM_WRITE,
-                          &vmo_addr),
+    ASSERT_EQ(zx_vmar_map(vmar,
+                          ZX_VM_SPECIFIC |
+                              ZX_VM_PERM_READ |
+                              ZX_VM_PERM_WRITE,
+                          0, vmo, 0, PAGE_SIZE, &vmo_addr),
               ZX_OK);
     ASSERT_EQ(vmar_addr, vmo_addr);
 

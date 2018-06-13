@@ -384,7 +384,7 @@ fbl::unique_ptr<Result> FuchsiaRunTest(const char* argv[],
 
         uintptr_t mapping;
         status = zx::vmar::root_self()->map(0, data.file_data, 0, size,
-                                            ZX_VM_FLAG_PERM_READ, &mapping);
+                                            ZX_VM_PERM_READ, &mapping);
         if (status != ZX_OK) {
             fprintf(stderr, "FAILURE: Cannot map VMO of %" PRIu64 " for data-sink \"%s\": %s\n",
                     size, data.sink_name.c_str(), zx_status_get_string(status));

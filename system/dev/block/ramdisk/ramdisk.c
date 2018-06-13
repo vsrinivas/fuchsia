@@ -422,9 +422,8 @@ static zx_status_t ramctl_config(ramctl_device_t* ramctl, zx_handle_t vmo,
     snprintf(ramdev->name, sizeof(ramdev->name),
              "ramdisk-%" PRIu64, ramdisk_count++);
 
-    status = zx_vmar_map(zx_vmar_root_self(), 0, ramdev->vmo, 0, sizebytes(ramdev),
-                         ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE,
-                         &ramdev->mapped_addr);
+    status = zx_vmar_map(zx_vmar_root_self(), ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
+                         0, ramdev->vmo, 0, sizebytes(ramdev), &ramdev->mapped_addr);
     if (status != ZX_OK) {
         goto fail_mtx;
     }

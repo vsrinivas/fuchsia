@@ -23,7 +23,7 @@
 #include "worker.h"
 
 namespace zxcrypt {
-    
+
 Worker::Worker() : device_(nullptr) {
     LOG_ENTRY();
 }
@@ -162,8 +162,8 @@ zx_status_t Worker::DecryptRead(block_op_t* block) {
     // Map the ciphertext
     zx_handle_t root = zx_vmar_root_self();
     uintptr_t address;
-    constexpr uint32_t flags = ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE;
-    if ((rc = zx_vmar_map(root, 0, block->rw.vmo, offset_vmo, length, flags, &address)) != ZX_OK) {
+    constexpr uint32_t flags = ZX_VM_PERM_READ | ZX_VM_PERM_WRITE;
+    if ((rc = zx_vmar_map(root, flags, 0, block->rw.vmo, offset_vmo, length, &address)) != ZX_OK) {
         zxlogf(ERROR, "zx::vmar::root_self()->map() failed: %s\n", zx_status_get_string(rc));
         return rc;
     }

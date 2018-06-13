@@ -67,17 +67,17 @@ void print_range(zx_vaddr_t addr, size_t size) {
 }
 
 void print_mmu_flags(unsigned int mmu_flags) {
-    if (mmu_flags & ZX_VM_FLAG_PERM_READ) {
+    if (mmu_flags & ZX_VM_PERM_READ) {
         printf("r");
     } else {
         printf("-");
     }
-    if (mmu_flags & ZX_VM_FLAG_PERM_WRITE) {
+    if (mmu_flags & ZX_VM_PERM_WRITE) {
         printf("w");
     } else {
         printf("-");
     }
-    if (mmu_flags & ZX_VM_FLAG_PERM_EXECUTE) {
+    if (mmu_flags & ZX_VM_PERM_EXECUTE) {
         printf("x");
     } else {
         printf("-");

@@ -59,9 +59,9 @@ zx_status_t RoDso::MapSegment(fbl::RefPtr<VmAddressRegionDispatcher> vmar,
                               size_t start_offset,
                               size_t end_offset) const {
 
-    uint32_t flags = ZX_VM_FLAG_SPECIFIC | ZX_VM_FLAG_PERM_READ;
+    uint32_t flags = ZX_VM_SPECIFIC | ZX_VM_PERM_READ;
     if (code)
-        flags |= ZX_VM_FLAG_PERM_EXECUTE;
+        flags |= ZX_VM_PERM_EXECUTE;
 
     size_t len = end_offset - start_offset;
 

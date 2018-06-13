@@ -115,7 +115,7 @@ void MockQueue(void* ctx, nand_op_t* op) {
     zx_status_t status = zx::vmar::root_self()->map(0, data_vmo,
                                                     op->rw.offset_data_vmo,
                                                     op->rw.length * kPageSize,
-                                                    ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE,
+                                                    ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
                                                     &data_buf);
     __UNUSED auto unused = data_vmo.release();
     if (status != ZX_OK) {
@@ -129,7 +129,7 @@ void MockQueue(void* ctx, nand_op_t* op) {
     zx::vmo oob_vmo(op->rw.oob_vmo);
     status = zx::vmar::root_self()->map(0, oob_vmo, op->rw.offset_oob_vmo,
                                         op->rw.length * kOobSize,
-                                        ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE, &oob_buf);
+                                        ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, &oob_buf);
     __UNUSED auto __ = oob_vmo.release();
     if (status != ZX_OK) {
         op->completion_cb(op, status);

@@ -34,12 +34,12 @@ static zx_status_t io_buffer_init_common(io_buffer_t* buffer, zx_handle_t bti_ha
                                          zx_off_t offset, uint32_t flags) {
     zx_vaddr_t virt;
 
-    uint32_t map_flags = ZX_VM_FLAG_PERM_READ;
+    zx_vm_option_t map_options = ZX_VM_PERM_READ;
     if (flags & IO_BUFFER_RW) {
-        map_flags = ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE;
+        map_options = ZX_VM_PERM_READ | ZX_VM_PERM_WRITE;
     }
 
-    zx_status_t status = zx_vmar_map(zx_vmar_root_self(), 0, vmo_handle, 0, size, map_flags, &virt);
+    zx_status_t status = zx_vmar_map(zx_vmar_root_self(), map_options, 0, vmo_handle, 0, size, &virt);
     if (status != ZX_OK) {
         zxlogf(ERROR, "io_buffer: zx_vmar_map failed %d size: %zu\n", status, size);
         zx_handle_close(vmo_handle);
@@ -171,9 +171,9 @@ zx_status_t io_buffer_init_physical(io_buffer_t* buffer, zx_handle_t bti, zx_pad
         return status;
     }
 
-    uint32_t flags = ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE | ZX_VM_FLAG_MAP_RANGE;
+    zx_vm_option_t options = ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_MAP_RANGE;
     zx_vaddr_t virt;
-    status = zx_vmar_map(zx_vmar_root_self(), 0, vmo_handle, 0, size, flags, &virt);
+    status = zx_vmar_map(zx_vmar_root_self(), options, 0, vmo_handle, 0, size, &virt);
     if (status != ZX_OK) {
         zxlogf(ERROR, "io_buffer: zx_vmar_map failed %d size: %zu\n", status, size);
         zx_handle_close(vmo_handle);

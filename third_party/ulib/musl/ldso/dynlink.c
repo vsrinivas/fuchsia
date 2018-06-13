@@ -214,9 +214,9 @@ static void* dl_alloc(size_t size) {
         _zx_object_set_property(vmo, ZX_PROP_NAME,
                                 VMO_NAME_DL_ALLOC, sizeof(VMO_NAME_DL_ALLOC));
         uintptr_t chunk;
-        status = _zx_vmar_map(_zx_vmar_root_self(), 0, vmo, 0, chunk_size,
-                              ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE,
-                              &chunk);
+        status = _zx_vmar_map(_zx_vmar_root_self(),
+                              ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
+                              0, vmo, 0, chunk_size, &chunk);
         _zx_handle_close(vmo);
         if (status != ZX_OK)
             return NULL;
@@ -947,12 +947,12 @@ __NO_SAFESTACK NO_ASAN static zx_status_t map_library(zx_handle_t vmo,
     // the new VMAR's handle until relocation has finished, because
     // we need it to adjust page protections for RELRO.
     uintptr_t vmar_base;
-    status = _zx_vmar_allocate(__zircon_vmar_root_self, 0, map_len,
-                               ZX_VM_FLAG_CAN_MAP_READ |
-                                   ZX_VM_FLAG_CAN_MAP_WRITE |
-                                   ZX_VM_FLAG_CAN_MAP_EXECUTE |
-                                   ZX_VM_FLAG_CAN_MAP_SPECIFIC,
-                               &dso->vmar, &vmar_base);
+    status = _zx_vmar_allocate(__zircon_vmar_root_self,
+                               ZX_VM_CAN_MAP_READ |
+                                   ZX_VM_CAN_MAP_WRITE |
+                                   ZX_VM_CAN_MAP_EXECUTE |
+                                   ZX_VM_CAN_MAP_SPECIFIC,
+                                0, map_len, &dso->vmar, &vmar_base);
     if (status != ZX_OK) {
         error("failed to reserve %zu bytes of address space: %d\n",
               map_len, status);
@@ -984,10 +984,10 @@ __NO_SAFESTACK NO_ASAN static zx_status_t map_library(zx_handle_t vmo,
         this_min = ph->p_vaddr & -PAGE_SIZE;
         this_max = (ph->p_vaddr + ph->p_memsz + PAGE_SIZE - 1) & -PAGE_SIZE;
         size_t off_start = ph->p_offset & -PAGE_SIZE;
-        uint32_t zx_flags = ZX_VM_FLAG_SPECIFIC;
-        zx_flags |= (ph->p_flags & PF_R) ? ZX_VM_FLAG_PERM_READ : 0;
-        zx_flags |= (ph->p_flags & PF_W) ? ZX_VM_FLAG_PERM_WRITE : 0;
-        zx_flags |= (ph->p_flags & PF_X) ? ZX_VM_FLAG_PERM_EXECUTE : 0;
+        zx_vm_option_t zx_options = ZX_VM_SPECIFIC;
+        zx_options |= (ph->p_flags & PF_R) ? ZX_VM_PERM_READ : 0;
+        zx_options |= (ph->p_flags & PF_W) ? ZX_VM_PERM_WRITE : 0;
+        zx_options |= (ph->p_flags & PF_X) ? ZX_VM_PERM_EXECUTE : 0;
         uintptr_t mapaddr = (uintptr_t)base + this_min;
         zx_handle_t map_vmo = vmo;
         size_t map_size = this_max - this_min;
@@ -1038,8 +1038,8 @@ __NO_SAFESTACK NO_ASAN static zx_status_t map_library(zx_handle_t vmo,
             goto noexec;
         }
 
-        status = _zx_vmar_map(dso->vmar, mapaddr - vmar_base, map_vmo,
-                              off_start, map_size, zx_flags, &mapaddr);
+        status = _zx_vmar_map(dso->vmar, zx_options, mapaddr - vmar_base, map_vmo,
+                              off_start, map_size, &mapaddr);
         if (map_vmo != vmo)
             _zx_handle_close(map_vmo);
         if (status != ZX_OK)
@@ -1462,9 +1462,9 @@ __NO_SAFESTACK NO_ASAN static void reloc_all(struct dso* p) {
         if (head != &ldso && p->relro_start != p->relro_end) {
             zx_status_t status =
                 _zx_vmar_protect(p->vmar,
+                                 ZX_VM_PERM_READ,
                                  saddr(p, p->relro_start),
-                                 p->relro_end - p->relro_start,
-                                 ZX_VM_FLAG_PERM_READ);
+                                 p->relro_end - p->relro_start);
             if (status == ZX_ERR_BAD_HANDLE &&
                 p == &ldso && p->vmar == ZX_HANDLE_INVALID) {
                 debugmsg("No VMAR_LOADED handle received;"

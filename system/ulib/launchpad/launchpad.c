@@ -496,8 +496,9 @@ static zx_status_t reserve_low_address_space(launchpad_t* lp) {
     uintptr_t addr;
     size_t reserve_size =
         (((info.base + info.len) / 2) + PAGE_SIZE - 1) & -PAGE_SIZE;
-    status = zx_vmar_allocate(lp_vmar(lp), 0, reserve_size - info.base,
-                              ZX_VM_FLAG_SPECIFIC, &lp->reserve_vmar, &addr);
+    status = zx_vmar_allocate(lp_vmar(lp), ZX_VM_SPECIFIC, 0,
+                              reserve_size - info.base,
+                              &lp->reserve_vmar, &addr);
     if (status != ZX_OK) {
         return lp_error(
             lp, status,
@@ -1120,9 +1121,9 @@ static zx_status_t prepare_start(launchpad_t* lp, launchpad_start_data_t* result
         zx_object_set_property(stack_vmo, ZX_PROP_NAME,
                                stack_vmo_name, strlen(stack_vmo_name));
         zx_vaddr_t stack_base;
-        status = zx_vmar_map(lp_vmar(lp), 0, stack_vmo, 0, stack_size,
-                              ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE,
-                              &stack_base);
+        status = zx_vmar_map(lp_vmar(lp),
+                              ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
+                              0, stack_vmo, 0, stack_size, &stack_base);
         if (status == ZX_OK) {
             ZX_DEBUG_ASSERT(stack_size % PAGE_SIZE == 0);
             sp = compute_initial_stack_pointer(stack_base, stack_size);

@@ -9,8 +9,8 @@ vmar_allocate - allocate a new subregion
 ```
 #include <zircon/syscalls.h>
 
-zx_status_t zx_vmar_allocate(zx_handle_t parent_vmar, uint64_t offset,
-                             uint64_t size, uint32_t map_flags,
+zx_status_t zx_vmar_allocate(zx_handle_t parent_vmar, zx_vm_option_t options,
+                             uint64_t offset, uint64_t size,
                              zx_handle_t* child_vmar, zx_vaddr_t* child_addr)
 ```
 
@@ -18,25 +18,25 @@ zx_status_t zx_vmar_allocate(zx_handle_t parent_vmar, uint64_t offset,
 
 Creates a new VMAR within the one specified by *parent_vmar*.
 
-*map_flags* is a bit vector of the following flags:
-- **ZX_VM_FLAG_COMPACT**  A hint to the kernel that allocations and mappings
+*options* is a bit vector that contains one more of the following:
+- **ZX_VM_COMPACT**  A hint to the kernel that allocations and mappings
   within the newly created subregion should be kept close together.   See the
   NOTES section below for discussion.
-- **ZX_VM_FLAG_SPECIFIC**  Use the *offset* to place the mapping, invalid if
-  vmar does not have the **ZX_VM_FLAG_CAN_MAP_SPECIFIC** permission.  *offset*
+- **ZX_VM_SPECIFIC**  Use the *offset* to place the mapping, invalid if
+  vmar does not have the **ZX_VM_CAN_MAP_SPECIFIC** permission.  *offset*
   is an offset relative to the base address of the parent region.  It is an error
   to specify an address range that overlaps with another VMAR or mapping.
-- **ZX_VM_FLAG_CAN_MAP_SPECIFIC**  The new VMAR can have subregions/mappings
-  created with **ZX_VM_FLAG_SPECIFIC**.  It is NOT an error if the parent does
-  not have *ZX_VM_FLAG_CAN_MAP_SPECIFIC* permissions.
-- **ZX_VM_FLAG_CAN_MAP_READ**  The new VMAR can contain readable mappings.
-  It is an error if the parent does not have *ZX_VM_FLAG_CAN_MAP_READ* permissions.
-- **ZX_VM_FLAG_CAN_MAP_WRITE**  The new VMAR can contain writable mappings.
-  It is an error if the parent does not have *ZX_VM_FLAG_CAN_MAP_WRITE* permissions.
-- **ZX_VM_FLAG_CAN_MAP_EXECUTE**  The new VMAR can contain executable mappings.
-  It is an error if the parent does not have *ZX_VM_FLAG_CAN_MAP_EXECUTE* permissions.
+- **ZX_VM_CAN_MAP_SPECIFIC**  The new VMAR can have subregions/mappings
+  created with **ZX_VM_SPECIFIC**.  It is NOT an error if the parent does
+  not have *ZX_VM_CAN_MAP_SPECIFIC* permissions.
+- **ZX_VM_CAN_MAP_READ**  The new VMAR can contain readable mappings.
+  It is an error if the parent does not have *ZX_VM_CAN_MAP_READ* permissions.
+- **ZX_VM_CAN_MAP_WRITE**  The new VMAR can contain writable mappings.
+  It is an error if the parent does not have *ZX_VM_CAN_MAP_WRITE* permissions.
+- **ZX_VM_CAN_MAP_EXECUTE**  The new VMAR can contain executable mappings.
+  It is an error if the parent does not have *ZX_VM_CAN_MAP_EXECUTE* permissions.
 
-*offset* must be 0 if *map_flags* does not have **ZX_VM_FLAG_SPECIFIC** set.
+*offset* must be 0 if *options* does not have **ZX_VM_SPECIFIC** set.
 
 ## RIGHTS
 
@@ -58,7 +58,7 @@ In the event of failure, a negative error value is returned.
 **ZX_ERR_BAD_STATE**  *parent_vmar* refers to a destroyed VMAR.
 
 **ZX_ERR_INVALID_ARGS**  *child_vmar* or *child_addr* are not valid, *offset* is
-non-zero when *ZX_VM_FLAG_SPECIFIC* is not given, *offset* and *size* describe
+non-zero when *ZX_VM_SPECIFIC* is not given, *offset* and *size* describe
 an unsatisfiable allocation due to exceeding the region bounds, *offset*
 or *size* is not page-aligned, or *size* is 0.
 

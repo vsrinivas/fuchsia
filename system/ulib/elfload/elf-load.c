@@ -119,12 +119,12 @@ static zx_status_t choose_load_bias(zx_handle_t root_vmar,
         return ZX_OK;
 
     // Allocate a VMAR to reserve the whole address range.
-    zx_status_t status = zx_vmar_allocate(root_vmar, 0, span,
-                                          ZX_VM_FLAG_CAN_MAP_READ |
-                                          ZX_VM_FLAG_CAN_MAP_WRITE |
-                                          ZX_VM_FLAG_CAN_MAP_EXECUTE |
-                                          ZX_VM_FLAG_CAN_MAP_SPECIFIC,
-                                          vmar, vmar_base);
+    zx_status_t status = zx_vmar_allocate(root_vmar,
+                                          ZX_VM_CAN_MAP_READ |
+                                          ZX_VM_CAN_MAP_WRITE |
+                                          ZX_VM_CAN_MAP_EXECUTE |
+                                          ZX_VM_CAN_MAP_SPECIFIC,
+                                          0, span, vmar, vmar_base);
     if (status == ZX_OK)
         *bias = *vmar_base - low;
     return status;
@@ -134,15 +134,15 @@ static zx_status_t finish_load_segment(
     zx_handle_t vmar, zx_handle_t vmo, const char vmo_name[ZX_MAX_NAME_LEN],
     const elf_phdr_t* ph, size_t start_offset, size_t size,
     uintptr_t file_start, uintptr_t file_end, size_t partial_page) {
-    const uint32_t flags = ZX_VM_FLAG_SPECIFIC |
-        ((ph->p_flags & PF_R) ? ZX_VM_FLAG_PERM_READ : 0) |
-        ((ph->p_flags & PF_W) ? ZX_VM_FLAG_PERM_WRITE : 0) |
-        ((ph->p_flags & PF_X) ? ZX_VM_FLAG_PERM_EXECUTE : 0);
+    const zx_vm_option_t options = ZX_VM_SPECIFIC |
+        ((ph->p_flags & PF_R) ? ZX_VM_PERM_READ : 0) |
+        ((ph->p_flags & PF_W) ? ZX_VM_PERM_WRITE : 0) |
+        ((ph->p_flags & PF_X) ? ZX_VM_PERM_EXECUTE : 0);
 
     uintptr_t start;
     if (ph->p_filesz == ph->p_memsz)
         // Straightforward segment, map all the whole pages from the file.
-        return zx_vmar_map(vmar, start_offset, vmo, file_start, size, flags,
+        return zx_vmar_map(vmar, options, start_offset, vmo, file_start, size,
                            &start);
 
     const size_t file_size = file_end - file_start;
@@ -150,8 +150,8 @@ static zx_status_t finish_load_segment(
     // This segment has some bss, so things are more complicated.
     // Only the leading portion is directly mapped in from the file.
     if (file_size > 0) {
-        zx_status_t status = zx_vmar_map(vmar, start_offset, vmo, file_start,
-                                         file_size, flags, &start);
+        zx_status_t status = zx_vmar_map(vmar, options, start_offset, vmo,
+                                         file_start, file_size, &start);
         if (status != ZX_OK)
             return status;
 
@@ -192,7 +192,7 @@ static zx_status_t finish_load_segment(
         }
     }
 
-    status = zx_vmar_map(vmar, start_offset, bss_vmo, 0, size, flags, &start);
+    status = zx_vmar_map(vmar, options, start_offset, bss_vmo, 0, size, &start);
     zx_handle_close(bss_vmo);
 
     return status;

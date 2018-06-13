@@ -311,9 +311,9 @@ static zx_status_t netifc_open_cb(int dirfd, int event, const char* fn, void* co
             goto fail_close_fd;
         }
         zx_object_set_property(iovmo, ZX_PROP_NAME, "eth-buffers", 11);
-        if ((status = zx_vmar_map(zx_vmar_root_self(), 0, iovmo, 0, iosize,
-                                  ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE,
-                                  (uintptr_t*)&iobuf)) < 0) {
+        if ((status = zx_vmar_map(zx_vmar_root_self(),
+                                  ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
+                                  0, iovmo, 0, iosize, (uintptr_t*)&iobuf)) < 0) {
             zx_handle_close(iovmo);
             iovmo = ZX_HANDLE_INVALID;
             goto fail_close_fd;
