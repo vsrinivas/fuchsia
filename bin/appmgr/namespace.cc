@@ -11,6 +11,7 @@
 #include <utility>
 
 #include "garnet/bin/appmgr/realm.h"
+#include "garnet/bin/appmgr/util.h"
 #include "lib/app/cpp/environment_services.h"
 
 namespace component {
@@ -99,12 +100,7 @@ void Namespace::CreateComponent(
 }
 
 zx::channel Namespace::OpenServicesAsDirectory() {
-  zx::channel h1, h2;
-  if (zx::channel::create(0, &h1, &h2) != ZX_OK)
-    return zx::channel();
-  if (ServeServiceDirectory(std::move(h1)) != ZX_OK)
-    return zx::channel();
-  return h2;
+  return Util::OpenAsDirectory(&vfs_, services_);
 }
 
 }  // namespace component

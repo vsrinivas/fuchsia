@@ -17,24 +17,24 @@ TEST(UtilTests, GetLabelFromURL) {
   for (auto value : values) {
     auto& url = value[0];
     auto& expected = value[1];
-    EXPECT_EQ(component_util::GetLabelFromURL(url), expected) << "for url: " << url;
+    EXPECT_EQ(Util::GetLabelFromURL(url), expected) << "for url: " << url;
   }
 }
 
 TEST(UtilTests, GetArgsString) {
   ::fidl::VectorPtr<::fidl::StringPtr> null_vec;
-  EXPECT_EQ(component_util::GetArgsString(null_vec), "");
+  EXPECT_EQ(Util::GetArgsString(null_vec), "");
 
   ::fidl::VectorPtr<::fidl::StringPtr> empty_vec(3);
-  EXPECT_EQ(component_util::GetArgsString(empty_vec), "  ");
+  EXPECT_EQ(Util::GetArgsString(empty_vec), "  ");
 
   ::fidl::VectorPtr<::fidl::StringPtr> vec;
   vec.push_back("foo");
-  EXPECT_EQ(component_util::GetArgsString(vec), "foo");
+  EXPECT_EQ(Util::GetArgsString(vec), "foo");
   vec.push_back("bar");
-  EXPECT_EQ(component_util::GetArgsString(vec), "foo bar");
+  EXPECT_EQ(Util::GetArgsString(vec), "foo bar");
   vec.push_back("blah");
-  EXPECT_EQ(component_util::GetArgsString(vec), "foo bar blah");
+  EXPECT_EQ(Util::GetArgsString(vec), "foo bar blah");
 }
 
 TEST(UtilTests, BindDirectory) {
@@ -42,7 +42,7 @@ TEST(UtilTests, BindDirectory) {
   ASSERT_EQ(zx::channel::create(0, &dir, &dir_req), ZX_OK);
   fuchsia::sys::LaunchInfo launchInfo;
   launchInfo.directory_request = std::move(dir_req);
-  auto channels = component_util::BindDirectory(&launchInfo);
+  auto channels = Util::BindDirectory(&launchInfo);
   ASSERT_TRUE(channels.exported_dir.is_valid());
   ASSERT_TRUE(channels.client_request.is_valid());
 

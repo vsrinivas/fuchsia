@@ -5,11 +5,12 @@
 #ifndef GARNET_BIN_APPMGR_UTIL_H_
 #define GARNET_BIN_APPMGR_UTIL_H_
 
+#include <fs/vfs.h>
 #include <fuchsia/sys/cpp/fidl.h>
 
 #include <string>
 
-namespace component_util {
+namespace component {
 
 struct ExportedDirChannels {
   // The client side of the channel serving connected application's exported
@@ -21,13 +22,19 @@ struct ExportedDirChannels {
   zx::channel client_request;
 };
 
-std::string GetLabelFromURL(const std::string& url);
+class Util {
+ public:
+  static std::string GetLabelFromURL(const std::string& url);
 
-ExportedDirChannels BindDirectory(fuchsia::sys::LaunchInfo* launch_info);
+  static ExportedDirChannels BindDirectory(
+      fuchsia::sys::LaunchInfo* launch_info);
 
-std::string GetArgsString(
-    const ::fidl::VectorPtr<::fidl::StringPtr>& arguments);
+  static std::string GetArgsString(
+      const ::fidl::VectorPtr<::fidl::StringPtr>& arguments);
 
-}  // namespace component_util
+  static zx::channel OpenAsDirectory(fs::Vfs* vfs, fbl::RefPtr<fs::Vnode> node);
+};
+
+}  // namespace component
 
 #endif  // GARNET_BIN_APPMGR_UTIL_H_

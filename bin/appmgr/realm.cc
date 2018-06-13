@@ -98,7 +98,7 @@ zx::process CreateProcess(const zx::job& job, fsl::SizedVmo data,
   if (status != ZX_OK)
     return zx::process();
 
-  std::string label = component_util::GetLabelFromURL(launch_info.url);
+  std::string label = Util::GetLabelFromURL(launch_info.url);
   std::vector<const char*> argv = GetArgv(argv0, launch_info);
 
   // TODO(abarth): We probably shouldn't pass environ, but currently this
@@ -206,15 +206,7 @@ zx::channel Realm::OpenRootInfoDir() {
   while (root_realm->parent() != nullptr) {
     root_realm = root_realm->parent();
   }
-  zx::channel h1, h2;
-  if (zx::channel::create(0, &h1, &h2) < 0) {
-    return zx::channel();
-  }
-
-  if (info_vfs_.ServeDirectory(root_realm->hub_dir(), std::move(h1)) != ZX_OK) {
-    return zx::channel();
-  }
-  return h2;
+  return Util::OpenAsDirectory(&info_vfs_, root_realm->hub_dir());
 }
 
 HubInfo Realm::HubInfo() {
@@ -379,9 +371,9 @@ void Realm::CreateComponentWithProcess(
   if (!fsl::SizedVmo::FromTransport(std::move(*package->data), &executable))
     return;
 
-  const std::string args = component_util::GetArgsString(launch_info.arguments);
+  const std::string args = Util::GetArgsString(launch_info.arguments);
   const std::string url = launch_info.url;  // Keep a copy before moving it.
-  auto channels = component_util::BindDirectory(&launch_info);
+  auto channels = Util::BindDirectory(&launch_info);
   zx::process process =
       CreateProcess(job_for_child_, std::move(executable), url,
                     std::move(launch_info), zx::channel(), builder.Build());
@@ -389,7 +381,7 @@ void Realm::CreateComponentWithProcess(
   if (process) {
     auto application = std::make_unique<ComponentControllerImpl>(
         std::move(controller), this, koid_, std::move(process), url,
-        std::move(args), component_util::GetLabelFromURL(url), std::move(ns),
+        std::move(args), Util::GetLabelFromURL(url), std::move(ns),
         ExportedDirType::kPublicDebugCtrlLayout,
         std::move(channels.exported_dir), std::move(channels.client_request));
     // update hub
@@ -466,10 +458,9 @@ void Realm::CreateComponentFromPackage(
   builder.AddFlatNamespace(std::move(launch_info.flat_namespace));
 
   if (app_data) {
-    const std::string args =
-        component_util::GetArgsString(launch_info.arguments);
+    const std::string args = Util::GetArgsString(launch_info.arguments);
     const std::string url = launch_info.url;  // Keep a copy before moving it.
-    auto channels = component_util::BindDirectory(&launch_info);
+    auto channels = Util::BindDirectory(&launch_info);
     zx::process process = CreateProcess(
         job_for_child_, std::move(app_data), kAppArv0, std::move(launch_info),
         std::move(loader_service), builder.Build());
@@ -477,7 +468,7 @@ void Realm::CreateComponentFromPackage(
     if (process) {
       auto application = std::make_unique<ComponentControllerImpl>(
           std::move(controller), this, koid_, std::move(process), url,
-          std::move(args), component_util::GetLabelFromURL(url), std::move(ns),
+          std::move(args), Util::GetLabelFromURL(url), std::move(ns),
           exported_dir_layout, std::move(channels.exported_dir),
           std::move(channels.client_request));
       // update hub

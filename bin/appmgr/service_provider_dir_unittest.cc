@@ -9,6 +9,7 @@
 #include <fs/synchronous-vfs.h>
 
 #include "lib/gtest/test_with_message_loop.h"
+#include "garnet/bin/appmgr/util.h"
 
 namespace component {
 namespace {
@@ -78,12 +79,7 @@ class ServiceProviderTest : public gtest::TestWithMessageLoop {
   }
 
   zx::channel OpenAsDirectory(fbl::RefPtr<ServiceProviderDirImpl> service) {
-    zx::channel h1, h2;
-    if (zx::channel::create(0, &h1, &h2) != ZX_OK)
-      return zx::channel();
-    if (vfs_.ServeDirectory(service, std::move(h1)) != ZX_OK)
-      return zx::channel();
-    return h2;
+    return Util::OpenAsDirectory(&vfs_, service);
   }
 
  protected:

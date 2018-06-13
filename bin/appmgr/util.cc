@@ -4,6 +4,8 @@
 
 #include "garnet/bin/appmgr/util.h"
 
+#include <fs/vfs.h>
+#include <fs/vnode.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <zx/channel.h>
 
@@ -11,16 +13,16 @@
 
 #include "lib/fxl/logging.h"
 
-namespace component_util {
+namespace component {
 
-std::string GetLabelFromURL(const std::string& url) {
+std::string Util::GetLabelFromURL(const std::string& url) {
   size_t last_slash = url.rfind('/');
   if (last_slash == std::string::npos || last_slash + 1 == url.length())
     return url;
   return url.substr(last_slash + 1);
 }
 
-ExportedDirChannels BindDirectory(fuchsia::sys::LaunchInfo* launch_info) {
+ExportedDirChannels Util::BindDirectory(fuchsia::sys::LaunchInfo* launch_info) {
   zx::channel exported_dir_server, exported_dir_client;
   zx_status_t status =
       zx::channel::create(0u, &exported_dir_server, &exported_dir_client);
@@ -35,7 +37,7 @@ ExportedDirChannels BindDirectory(fuchsia::sys::LaunchInfo* launch_info) {
   return {std::move(exported_dir_client), std::move(client_request)};
 }
 
-std::string GetArgsString(
+std::string Util::GetArgsString(
     const ::fidl::VectorPtr<::fidl::StringPtr>& arguments) {
   std::string args = "";
   if (!arguments->empty()) {
@@ -46,6 +48,15 @@ std::string GetArgsString(
     args = buf.str();
   }
   return args;
+}
+
+zx::channel Util::OpenAsDirectory(fs::Vfs* vfs, fbl::RefPtr<fs::Vnode> node) {
+  zx::channel h1, h2;
+  if (zx::channel::create(0, &h1, &h2) != ZX_OK)
+    return zx::channel();
+  if (vfs->ServeDirectory(std::move(node), std::move(h1)) != ZX_OK)
+    return zx::channel();
+  return h2;
 }
 
 }  // namespace component

@@ -69,8 +69,8 @@ void RunnerHolder::StartComponent(
     fidl::InterfaceRequest<fuchsia::sys::ComponentController> controller) {
   auto url = startup_info.launch_info.url;
   const std::string args =
-      component_util::GetArgsString(startup_info.launch_info.arguments);
-  auto channels = component_util::BindDirectory(&startup_info.launch_info);
+      Util::GetArgsString(startup_info.launch_info.arguments);
+  auto channels = Util::BindDirectory(&startup_info.launch_info);
 
   fuchsia::sys::ComponentControllerPtr remote_controller;
   auto remote_controller_request = remote_controller.NewRequest();
@@ -78,7 +78,7 @@ void RunnerHolder::StartComponent(
   // TODO(anmittal): Create better unique instance id, instead of 1,2,3,4,...
   auto component = std::make_unique<ComponentBridge>(
       std::move(controller), std::move(remote_controller), this, url,
-      std::move(args), component_util::GetLabelFromURL(url),
+      std::move(args), Util::GetLabelFromURL(url),
       std::to_string(++component_id_counter_), std::move(ns),
       ExportedDirType::kLegacyFlatLayout, std::move(channels.exported_dir),
       std::move(channels.client_request));
