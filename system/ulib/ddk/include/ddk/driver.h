@@ -33,7 +33,7 @@ typedef struct zx_driver_ops {
     zx_status_t (*init)(void** out_ctx);
 
     // Requests that the driver bind to the provided device,
-    // initialize it, and publish and children.
+    // initialize it, and publish any children.
     zx_status_t (*bind)(void* ctx, zx_device_t* device);
 
     // Only provided by bus manager drivers, create() is invoked to
