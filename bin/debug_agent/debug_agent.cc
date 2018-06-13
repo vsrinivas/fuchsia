@@ -19,8 +19,8 @@
 #include "garnet/lib/debug_ipc/helper/stream_buffer.h"
 #include "garnet/lib/debug_ipc/message_reader.h"
 #include "garnet/lib/debug_ipc/message_writer.h"
-#include "garnet/public/lib/fxl/logging.h"
-#include "garnet/public/lib/fxl/strings/string_printf.h"
+#include "lib/fxl/logging.h"
+#include "lib/fxl/strings/string_printf.h"
 
 namespace debug_agent {
 

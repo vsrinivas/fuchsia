@@ -2,12 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_BIN_DEBUG_AGENT_DEBUGGED_THREAD_H_
+#define GARNET_BIN_DEBUG_AGENT_DEBUGGED_THREAD_H_
 
 #include <zx/thread.h>
 
 #include "garnet/lib/debug_ipc/protocol.h"
-#include "garnet/public/lib/fxl/macros.h"
+#include "lib/fxl/macros.h"
 
 struct zx_thread_state_general_regs;
 
@@ -39,10 +40,8 @@ class DebuggedThread {
   // will be suspended, but when we attach to a process with existing threads
   // it won't in in this state. The |starting| flag indicates that this is
   // a thread discoverd via a debug notification.
-  DebuggedThread(DebuggedProcess* process,
-                 zx::thread thread,
-                 zx_koid_t thread_koid,
-                 bool starting);
+  DebuggedThread(DebuggedProcess* process, zx::thread thread,
+                 zx_koid_t thread_koid, bool starting);
   ~DebuggedThread();
 
   zx::thread& thread() { return thread_; }
@@ -101,3 +100,5 @@ class DebuggedThread {
 };
 
 }  // namespace debug_agent
+
+#endif  // GARNET_BIN_DEBUG_AGENT_DEBUGGED_THREAD_H_

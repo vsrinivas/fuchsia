@@ -2,9 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_BIN_DEBUG_AGENT_REMOTE_API_ADAPTER_H_
+#define GARNET_BIN_DEBUG_AGENT_REMOTE_API_ADAPTER_H_
 
-#include "garnet/public/lib/fxl/macros.h"
+#include "lib/fxl/macros.h"
 
 namespace debug_ipc {
 class StreamBuffer;
@@ -41,3 +42,5 @@ class RemoteAPIAdapter {
 };
 
 }  // namespace debug_agent
+
+#endif  // GARNET_BIN_DEBUG_AGENT_REMOTE_API_ADAPTER_H_

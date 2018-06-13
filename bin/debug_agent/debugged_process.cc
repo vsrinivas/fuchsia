@@ -10,7 +10,6 @@
 
 #include "garnet/bin/debug_agent/debug_agent.h"
 #include "garnet/bin/debug_agent/debugged_thread.h"
-#include "garnet/bin/debug_agent/debugged_thread.h"
 #include "garnet/bin/debug_agent/object_util.h"
 #include "garnet/bin/debug_agent/process_breakpoint.h"
 #include "garnet/bin/debug_agent/process_info.h"
@@ -19,7 +18,7 @@
 #include "garnet/lib/debug_ipc/helper/message_loop_zircon.h"
 #include "garnet/lib/debug_ipc/message_reader.h"
 #include "garnet/lib/debug_ipc/message_writer.h"
-#include "garnet/public/lib/fxl/logging.h"
+#include "lib/fxl/logging.h"
 
 namespace debug_agent {
 
@@ -41,24 +40,28 @@ bool DebuggedProcess::Init() {
 void DebuggedProcess::OnPause(const debug_ipc::PauseRequest& request) {
   if (request.thread_koid) {
     DebuggedThread* thread = GetThread(request.thread_koid);
-    if (thread) thread->Pause();
+    if (thread)
+      thread->Pause();
     // Could be not found if there is a race between the thread exiting and
     // the client sending the request.
   } else {
     // 0 thread ID means resume all in process.
-    for (const auto& pair : threads_) pair.second->Pause();
+    for (const auto& pair : threads_)
+      pair.second->Pause();
   }
 }
 
 void DebuggedProcess::OnResume(const debug_ipc::ResumeRequest& request) {
   if (request.thread_koid) {
     DebuggedThread* thread = GetThread(request.thread_koid);
-    if (thread) thread->Resume(request.how);
+    if (thread)
+      thread->Resume(request.how);
     // Could be not found if there is a race between the thread exiting and
     // the client sending the request.
   } else {
     // 0 thread ID means resume all in process.
-    for (const auto& pair : threads_) pair.second->Resume(request.how);
+    for (const auto& pair : threads_)
+      pair.second->Resume(request.how);
   }
 }
 
@@ -92,7 +95,8 @@ void DebuggedProcess::OnKill(const debug_ipc::KillRequest& request,
 
 DebuggedThread* DebuggedProcess::GetThread(zx_koid_t thread_koid) {
   auto found_thread = threads_.find(thread_koid);
-  if (found_thread == threads_.end()) return nullptr;
+  if (found_thread == threads_.end())
+    return nullptr;
   return found_thread->second.get();
 }
 
@@ -115,7 +119,8 @@ void DebuggedProcess::PopulateCurrentThreads() {
 ProcessBreakpoint* DebuggedProcess::FindProcessBreakpointForAddr(
     uint64_t address) {
   auto found = breakpoints_.find(address);
-  if (found == breakpoints_.end()) return nullptr;
+  if (found == breakpoints_.end())
+    return nullptr;
   return found->second.get();
 }
 
@@ -126,7 +131,8 @@ zx_status_t DebuggedProcess::RegisterBreakpoint(Breakpoint* bp,
     auto process_breakpoint =
         std::make_unique<ProcessBreakpoint>(bp, this, koid_, address);
     zx_status_t status = process_breakpoint->Init();
-    if (status != ZX_OK) return status;
+    if (status != ZX_OK)
+      return status;
 
     breakpoints_[address] = std::move(process_breakpoint);
   } else {
@@ -143,7 +149,8 @@ void DebuggedProcess::UnregisterBreakpoint(Breakpoint* bp, uint64_t address) {
   }
 
   bool still_used = found->second->UnregisterBreakpoint(bp);
-  if (!still_used) breakpoints_.erase(found);
+  if (!still_used)
+    breakpoints_.erase(found);
 }
 
 void DebuggedProcess::OnProcessTerminated(zx_koid_t process_koid) {

@@ -5,13 +5,13 @@
 #include "garnet/bin/debug_agent/process_info.h"
 
 #include <elf.h>
-#include <link.h>
 #include <lib/zx/thread.h>
+#include <link.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/object.h>
 
 #include "garnet/bin/debug_agent/object_util.h"
-#include "garnet/public/lib/fxl/logging.h"
+#include "lib/fxl/logging.h"
 
 namespace debug_agent {
 
@@ -49,8 +49,7 @@ debug_ipc::ThreadRecord::State ThreadStateToEnum(uint32_t state) {
 
 // Reads a null-terminated string from the given address of the given process.
 zx_status_t ReadNullTerminatedString(const zx::process& process,
-                                     zx_vaddr_t vaddr,
-                                     std::string* dest) {
+                                     zx_vaddr_t vaddr, std::string* dest) {
   // Max size of string we'll load as a sanity check.
   constexpr size_t kMaxString = 32768;
 

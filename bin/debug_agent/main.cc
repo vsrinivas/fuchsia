@@ -6,18 +6,18 @@
 
 #include <arpa/inet.h>
 #include <fcntl.h>
-#include <memory>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/socket.h>
 #include <unistd.h>
+#include <memory>
 
 #include "garnet/bin/debug_agent/debug_agent.h"
 #include "garnet/bin/debug_agent/remote_api_adapter.h"
 #include "garnet/lib/debug_ipc/helper/buffered_fd.h"
 #include "garnet/lib/debug_ipc/helper/message_loop_zircon.h"
-#include "garnet/public/lib/fxl/command_line.h"
-#include "garnet/public/lib/fxl/files/unique_fd.h"
+#include "lib/fxl/command_line.h"
+#include "lib/fxl/files/unique_fd.h"
 
 namespace debug_agent {
 namespace {
@@ -46,8 +46,8 @@ bool SocketConnection::Accept(int server_fd) {
   memset(&addr, 0, sizeof(addr));
 
   socklen_t addrlen = sizeof(addr);
-  fxl::UniqueFD client(accept(server_fd, reinterpret_cast<sockaddr*>(&addr),
-                              &addrlen));
+  fxl::UniqueFD client(
+      accept(server_fd, reinterpret_cast<sockaddr*>(&addr), &addrlen));
   if (!client.is_valid()) {
     fprintf(stderr, "Couldn't accept connection.\n");
     return false;
@@ -64,10 +64,10 @@ bool SocketConnection::Accept(int server_fd) {
 
   // Route data from the router_buffer -> RemoteAPIAdapter -> DebugAgent.
   agent_ = std::make_unique<debug_agent::DebugAgent>(&buffer_.stream());
-  adapter_ = std::make_unique<debug_agent::RemoteAPIAdapter>(
-      agent_.get(), &buffer_.stream());
+  adapter_ = std::make_unique<debug_agent::RemoteAPIAdapter>(agent_.get(),
+                                                             &buffer_.stream());
   buffer_.set_data_available_callback(
-      [adapter = adapter_.get()](){ adapter->OnStreamReadable(); });
+      [adapter = adapter_.get()]() { adapter->OnStreamReadable(); });
 
   printf("Accepted connection.\n");
   return true;
@@ -96,13 +96,9 @@ class SocketServer {
   FXL_DISALLOW_COPY_AND_ASSIGN(SocketServer);
 };
 
-SocketServer::SocketServer() {
-  message_loop_.Init();
-}
+SocketServer::SocketServer() { message_loop_.Init(); }
 
-SocketServer::~SocketServer() {
-  message_loop_.Cleanup();
-}
+SocketServer::~SocketServer() { message_loop_.Cleanup(); }
 
 bool SocketServer::Run(int port) {
   server_socket_.reset(socket(AF_INET, SOCK_STREAM, 0));

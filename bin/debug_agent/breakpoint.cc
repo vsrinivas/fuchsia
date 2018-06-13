@@ -5,7 +5,7 @@
 #include "garnet/bin/debug_agent/breakpoint.h"
 
 #include "garnet/bin/debug_agent/process_breakpoint.h"
-#include "garnet/public/lib/fxl/strings/string_printf.h"
+#include "lib/fxl/strings/string_printf.h"
 
 namespace debug_agent {
 
@@ -34,7 +34,8 @@ zx_status_t Breakpoint::SetSettings(
     if (locations_.find(loc) == locations_.end()) {
       zx_status_t process_status =
           process_delegate_->RegisterBreakpoint(this, loc.first, loc.second);
-      if (process_status != ZX_OK) result = process_status;
+      if (process_status != ZX_OK)
+        result = process_status;
     }
   }
 

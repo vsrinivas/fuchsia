@@ -2,14 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_BIN_DEBUG_AGENT_BREAKPOINT_H_
+#define GARNET_BIN_DEBUG_AGENT_BREAKPOINT_H_
 
+#include <zircon/types.h>
 #include <set>
 #include <string>
-#include <zircon/types.h>
 
 #include "garnet/lib/debug_ipc/records.h"
-#include "garnet/public/lib/fxl/macros.h"
+#include "lib/fxl/macros.h"
 
 namespace debug_agent {
 
@@ -29,10 +30,12 @@ class Breakpoint {
     // Called to register a new ProcessBreakpoint with the appropriate
     // location. If this fails, the breakpoint has not been set.
     virtual zx_status_t RegisterBreakpoint(Breakpoint* bp,
-                                    zx_koid_t process_koid, uint64_t address) = 0;
+                                           zx_koid_t process_koid,
+                                           uint64_t address) = 0;
 
     // Called When the breakpoint no longer applies to this location.
-    virtual void UnregisterBreakpoint(Breakpoint* bp, zx_koid_t process_koid, uint64_t address) = 0;
+    virtual void UnregisterBreakpoint(Breakpoint* bp, zx_koid_t process_koid,
+                                      uint64_t address) = 0;
   };
 
   explicit Breakpoint(ProcessDelegate* process_delegate);
@@ -55,3 +58,5 @@ class Breakpoint {
 };
 
 }  // namespace debug_agent
+
+#endif  // GARNET_BIN_DEBUG_AGENT_BREAKPOINT_H_

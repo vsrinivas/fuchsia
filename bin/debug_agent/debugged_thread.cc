@@ -19,7 +19,7 @@
 #include "garnet/lib/debug_ipc/helper/stream_buffer.h"
 #include "garnet/lib/debug_ipc/message_reader.h"
 #include "garnet/lib/debug_ipc/message_writer.h"
-#include "garnet/public/lib/fxl/logging.h"
+#include "lib/fxl/logging.h"
 
 namespace debug_agent {
 
@@ -29,7 +29,8 @@ DebuggedThread::DebuggedThread(DebuggedProcess* process, zx::thread thread,
       process_(process),
       thread_(std::move(thread)),
       koid_(koid) {
-  if (starting) thread_.resume(ZX_RESUME_EXCEPTION);
+  if (starting)
+    thread_.resume(ZX_RESUME_EXCEPTION);
 }
 
 DebuggedThread::~DebuggedThread() {}
@@ -96,7 +97,8 @@ void DebuggedThread::OnException(uint32_t type) {
 
 void DebuggedThread::Pause() {
   if (suspend_reason_ == SuspendReason::kNone) {
-    if (thread_.suspend() == ZX_OK) suspend_reason_ = SuspendReason::kOther;
+    if (thread_.suspend() == ZX_OK)
+      suspend_reason_ = SuspendReason::kOther;
   }
 }
 
@@ -134,7 +136,8 @@ void DebuggedThread::GetBacktrace(
   zx_thread_state_general_regs regs;
   zx_status_t status =
       thread_.read_state(ZX_THREAD_STATE_GENERAL_REGS, &regs, sizeof(regs));
-  if (status != ZX_OK) return;
+  if (status != ZX_OK)
+    return;
 
   constexpr size_t kMaxStackDepth = 256;
   UnwindStack(process_->process(), thread_, *arch::IPInRegs(&regs),

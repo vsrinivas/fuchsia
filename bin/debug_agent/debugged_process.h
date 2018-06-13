@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_BIN_DEBUG_AGENT_DEBUGGED_PROCESS_H_
+#define GARNET_BIN_DEBUG_AGENT_DEBUGGED_PROCESS_H_
 
 #include <lib/zx/process.h>
 #include <lib/zx/thread.h>
@@ -11,11 +12,11 @@
 #include <vector>
 
 #include "garnet/bin/debug_agent/process_memory_accessor.h"
-#include "garnet/lib/debug_ipc/protocol.h"
 #include "garnet/lib/debug_ipc/helper/message_loop.h"
 #include "garnet/lib/debug_ipc/helper/zircon_exception_watcher.h"
+#include "garnet/lib/debug_ipc/protocol.h"
 
-#include "garnet/public/lib/fxl/macros.h"
+#include "lib/fxl/macros.h"
 
 namespace debug_agent {
 
@@ -29,8 +30,7 @@ class DebuggedProcess : public debug_ipc::ZirconExceptionWatcher,
  public:
   // Caller must call Init immediately after construction and delete the
   // object if that fails.
-  DebuggedProcess(DebugAgent* debug_agent,
-                  zx_koid_t process_koid,
+  DebuggedProcess(DebugAgent* debug_agent, zx_koid_t process_koid,
                   zx::process proc);
   virtual ~DebuggedProcess();
 
@@ -71,20 +71,16 @@ class DebuggedProcess : public debug_ipc::ZirconExceptionWatcher,
  private:
   // ZirconExceptionWatcher implementation.
   void OnProcessTerminated(zx_koid_t process_koid) override;
-  void OnThreadStarting(zx_koid_t process_koid,
-                        zx_koid_t thread_koid) override;
-  void OnThreadExiting(zx_koid_t process_koid,
-                       zx_koid_t thread_koid) override;
-  void OnException(zx_koid_t process_koid,
-                   zx_koid_t thread_koid,
+  void OnThreadStarting(zx_koid_t process_koid, zx_koid_t thread_koid) override;
+  void OnThreadExiting(zx_koid_t process_koid, zx_koid_t thread_koid) override;
+  void OnException(zx_koid_t process_koid, zx_koid_t thread_koid,
                    uint32_t type) override;
 
   // ProcessMemoryAccessor implementation.
-  zx_status_t ReadProcessMemory(
-      uintptr_t address, void* buffer, size_t len, size_t* actual) override;
-  zx_status_t WriteProcessMemory(
-      uintptr_t address, const void* buffer, size_t len, size_t* actual)
-    override;
+  zx_status_t ReadProcessMemory(uintptr_t address, void* buffer, size_t len,
+                                size_t* actual) override;
+  zx_status_t WriteProcessMemory(uintptr_t address, const void* buffer,
+                                 size_t len, size_t* actual) override;
 
   DebugAgent* debug_agent_;  // Non-owning.
   zx_koid_t koid_;
@@ -103,3 +99,5 @@ class DebuggedProcess : public debug_ipc::ZirconExceptionWatcher,
 };
 
 }  // namespace debug_agent
+
+#endif  // GARNET_BIN_DEBUG_AGENT_DEBUGGED_PROCESS_H_

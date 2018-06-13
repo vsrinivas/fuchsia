@@ -13,7 +13,7 @@
 #include <zircon/syscalls/object.h>
 
 #include "garnet/bin/debug_agent/object_util.h"
-#include "garnet/public/lib/fxl/logging.h"
+#include "lib/fxl/logging.h"
 
 namespace debug_agent {
 
@@ -40,8 +40,7 @@ zx::job GetRootJob() {
 }
 
 debug_ipc::ProcessTreeRecord GetProcessTreeRecord(
-    const zx::object_base& object,
-    debug_ipc::ProcessTreeRecord::Type type) {
+    const zx::object_base& object, debug_ipc::ProcessTreeRecord::Type type) {
   debug_ipc::ProcessTreeRecord result;
   result.type = type;
   result.koid = KoidForObject(object);

@@ -2,16 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_BIN_DEBUG_AGENT_DEBUG_AGENT_H_
+#define GARNET_BIN_DEBUG_AGENT_DEBUG_AGENT_H_
 
+#include <zircon/types.h>
 #include <map>
 #include <memory>
-#include <zircon/types.h>
 #include "garnet/bin/debug_agent/breakpoint.h"
 #include "garnet/bin/debug_agent/debugged_process.h"
 #include "garnet/bin/debug_agent/remote_api.h"
 #include "garnet/lib/debug_ipc/helper/stream_buffer.h"
-#include "garnet/public/lib/fxl/macros.h"
+#include "lib/fxl/macros.h"
 
 namespace debug_agent {
 
@@ -64,8 +65,10 @@ class DebugAgent : public RemoteAPI, public Breakpoint::ProcessDelegate {
                       debug_ipc::AddressSpaceReply* reply) override;
 
   // Breakpoint::ProcessDelegate implementation.
-  zx_status_t RegisterBreakpoint(Breakpoint* bp, zx_koid_t process_koid, uint64_t address) override;
-  void UnregisterBreakpoint(Breakpoint* bp, zx_koid_t process_koid, uint64_t address) override;
+  zx_status_t RegisterBreakpoint(Breakpoint* bp, zx_koid_t process_koid,
+                                 uint64_t address) override;
+  void UnregisterBreakpoint(Breakpoint* bp, zx_koid_t process_koid,
+                            uint64_t address) override;
 
   // Returns the debugged process/thread for the given koid(s) or null if not
   // found.
@@ -87,3 +90,5 @@ class DebugAgent : public RemoteAPI, public Breakpoint::ProcessDelegate {
 };
 
 }  // namespace debug_agent
+
+#endif  // GARNET_BIN_DEBUG_AGENT_DEBUG_AGENT_H_

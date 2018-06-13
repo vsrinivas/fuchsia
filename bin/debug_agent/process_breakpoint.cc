@@ -8,7 +8,7 @@
 #include <zircon/syscalls/exception.h>
 #include <algorithm>
 
-#include "garnet/public/lib/fxl/logging.h"
+#include "lib/fxl/logging.h"
 
 namespace debug_agent {
 
@@ -43,7 +43,8 @@ bool ProcessBreakpoint::UnregisterBreakpoint(Breakpoint* breakpoint) {
 }
 
 void ProcessBreakpoint::FixupMemoryBlock(debug_ipc::MemoryBlock* block) {
-  if (block->data.empty()) return;  // Nothing to do.
+  if (block->data.empty())
+    return;  // Nothing to do.
   FXL_DCHECK(static_cast<size_t>(block->size) == block->data.size());
 
   size_t src_size = sizeof(arch::BreakInstructionType);
@@ -96,7 +97,8 @@ bool ProcessBreakpoint::BreakpointStepHasException(zx_koid_t thread_koid,
 
 bool ProcessBreakpoint::CurrentlySteppingOver() const {
   for (const auto& pair : thread_step_over_) {
-    if (pair.second == StepStatus::kCurrent) return true;
+    if (pair.second == StepStatus::kCurrent)
+      return true;
   }
   return false;
 }
@@ -108,22 +110,27 @@ zx_status_t ProcessBreakpoint::Install() {
   size_t actual = 0;
   zx_status_t status = memory_accessor_->ReadProcessMemory(
       address(), &previous_data_, sizeof(arch::BreakInstructionType), &actual);
-  if (status != ZX_OK) return status;
-  if (actual != sizeof(arch::BreakInstructionType)) return ZX_ERR_UNAVAILABLE;
+  if (status != ZX_OK)
+    return status;
+  if (actual != sizeof(arch::BreakInstructionType))
+    return ZX_ERR_UNAVAILABLE;
 
   // Replace with breakpoint instruction.
   status = memory_accessor_->WriteProcessMemory(
       address(), &arch::kBreakInstruction, sizeof(arch::BreakInstructionType),
       &actual);
-  if (status != ZX_OK) return status;
-  if (actual != sizeof(arch::BreakInstructionType)) return ZX_ERR_UNAVAILABLE;
+  if (status != ZX_OK)
+    return status;
+  if (actual != sizeof(arch::BreakInstructionType))
+    return ZX_ERR_UNAVAILABLE;
 
   installed_ = true;
   return ZX_OK;
 }
 
 void ProcessBreakpoint::Uninstall() {
-  if (!installed_) return;  // Not installed.
+  if (!installed_)
+    return;  // Not installed.
 
   // If the breakpoint was previously installed it means the memory address
   // was valid and writable, so we generally expect to be able to do the same
