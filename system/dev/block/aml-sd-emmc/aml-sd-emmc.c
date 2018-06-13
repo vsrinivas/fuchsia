@@ -658,6 +658,18 @@ static zx_status_t aml_sd_emmc_setup_data_descs_dma(aml_sd_emmc_t *dev, sdmmc_re
         zxlogf(ERROR, "aml-sd-emmc: bti-pin failed with error %d\n", st);
         return st;
     }
+    if (req->cmd_flags & SDMMC_CMD_READ) {
+        st = zx_vmo_op_range(bop->rw.vmo, ZX_VMO_OP_CACHE_CLEAN_INVALIDATE,
+                             bop->rw.offset_vmo, bop->rw.length, NULL, 0);
+    } else {
+        st = zx_vmo_op_range(bop->rw.vmo, ZX_VMO_OP_CACHE_CLEAN,
+                             bop->rw.offset_vmo, bop->rw.length, NULL, 0);
+    }
+    if (st != ZX_OK) {
+        zxlogf(ERROR, "aml-sd-emmc: cache clean failed with error  %d\n", st);
+        return st;
+    }
+
     // cache this for zx_pmt_unpin() later
     req->pmt = pmt;
 
@@ -775,6 +787,20 @@ static zx_status_t aml_sd_emmc_setup_data_descs(aml_sd_emmc_t *dev, sdmmc_req_t 
 static zx_status_t aml_sd_emmc_finish_req(aml_sd_emmc_t* dev, sdmmc_req_t* req) {
     zx_status_t st = ZX_OK;
     if (req->use_dma && req->pmt != ZX_HANDLE_INVALID) {
+        /*
+         * Clean the cache one more time after the DMA operation because there
+         * might be a possibility of cpu prefetching while the DMA operation is
+         * going on.
+         */
+        block_op_t* bop = &req->txn->bop;
+        if ((req->cmd_flags & SDMMC_CMD_READ) && req->use_dma) {
+            st = zx_vmo_op_range(bop->rw.vmo, ZX_VMO_OP_CACHE_CLEAN_INVALIDATE,
+                                       bop->rw.offset_vmo, bop->rw.length, NULL, 0);
+            if (st != ZX_OK) {
+                zxlogf(ERROR, "aml-sd-emmc: cache clean failed with error  %d\n", st);
+            }
+        }
+
         st = zx_pmt_unpin(req->pmt);
         if (st != ZX_OK) {
             zxlogf(ERROR, "aml-sd-emmc: error %d in pmt_unpin\n", st);

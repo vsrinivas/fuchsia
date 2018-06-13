@@ -249,7 +249,6 @@ static zx_status_t sdmmc_wait_for_tran(sdmmc_device_t* dev) {
 }
 
 static void sdmmc_do_txn(sdmmc_device_t* dev, sdmmc_txn_t* txn) {
-    bool is_read = true;
     uint32_t cmd_idx = 0;
     uint32_t cmd_flags = 0;
 
@@ -263,7 +262,6 @@ static void sdmmc_do_txn(sdmmc_device_t* dev, sdmmc_txn_t* txn) {
             cmd_idx = SDMMC_READ_BLOCK;
             cmd_flags = SDMMC_READ_BLOCK_FLAGS;
         }
-        is_read = true;
         break;
     case BLOCK_OP_WRITE:
         if (txn->bop.rw.length > 1) {
@@ -273,7 +271,6 @@ static void sdmmc_do_txn(sdmmc_device_t* dev, sdmmc_txn_t* txn) {
             cmd_idx = SDMMC_WRITE_BLOCK;
             cmd_flags = SDMMC_WRITE_BLOCK_FLAGS;
         }
-        is_read = false;
         break;
     case BLOCK_OP_FLUSH:
         block_complete(&txn->bop, ZX_OK);
@@ -306,19 +303,6 @@ static void sdmmc_do_txn(sdmmc_device_t* dev, sdmmc_txn_t* txn) {
 
     zx_status_t st = ZX_OK;
     if (sdmmc_use_dma(dev)) {
-        if (is_read) {
-            st = zx_vmo_op_range(txn->bop.rw.vmo, ZX_VMO_OP_CACHE_CLEAN_INVALIDATE,
-                                 txn->bop.rw.offset_vmo, txn->bop.rw.length, NULL, 0);
-        } else {
-            st = zx_vmo_op_range(txn->bop.rw.vmo, ZX_VMO_OP_CACHE_CLEAN,
-                                 txn->bop.rw.offset_vmo, txn->bop.rw.length, NULL, 0);
-        }
-        if (st != ZX_OK) {
-            zxlogf(TRACE, "sdmmc: do_txn cacheop error %d\n", st);
-            block_complete(&txn->bop, st);
-            return;
-        }
-
         req->use_dma = true;
         req->virt = NULL;
         req->pmt = ZX_HANDLE_INVALID;
