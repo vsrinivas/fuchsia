@@ -1,0 +1,5 @@
+{
+    "packages": {
+        "sl4f": "//garnet/bin/sl4f"
+    }
+}

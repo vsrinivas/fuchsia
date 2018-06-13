@@ -1,0 +1,30 @@
+# Copyright 2018 The  Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/rust/rustc_binary.gni")
+import("//build/package.gni")
+
+rustc_binary("bin") {
+  name = "sl4f"
+
+  deps = [
+      "//third_party/rust-crates/rustc_deps:rouille",
+      "//third_party/rust-crates/rustc_deps:serde_json",
+  ]
+}
+
+package("sl4f") {
+  deps = [
+    ":bin",
+  ]
+
+  binary = "rust_crates/sl4f"
+
+  meta = [
+    {
+      path = rebase_path("//garnet/bin/appmgr/legacy_flat_exported_dir")
+      dest = "legacy_flat_exported_dir"
+    },
+  ]
+}
