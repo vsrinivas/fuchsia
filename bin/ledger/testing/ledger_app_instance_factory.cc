@@ -14,6 +14,46 @@
 #include "peridot/lib/convert/convert.h"
 
 namespace test {
+namespace {
+class CallbackWaiterImpl : public LedgerAppInstanceFactory::CallbackWaiter {
+ public:
+  CallbackWaiterImpl(LedgerAppInstanceFactory::LoopController* loop_controller)
+      : loop_controller_(loop_controller) {}
+  CallbackWaiterImpl(const CallbackWaiterImpl&) = delete;
+  CallbackWaiterImpl& operator=(const CallbackWaiterImpl&) = delete;
+  virtual ~CallbackWaiterImpl() = default;
+
+  std::function<void()> GetCallback() override {
+    FXL_DCHECK(!get_callback_called_)
+        << "GetCallback must only be called once.";
+    get_callback_called_ = true;
+    return [this] {
+      callback_called_ = true;
+      if (waiting_) {
+        loop_controller_->StopLoop();
+      }
+    };
+  }
+
+  void RunUntilCalled() override {
+    waiting_ = true;
+    while (!callback_called_) {
+      loop_controller_->RunLoop();
+    }
+  }
+
+ private:
+  LedgerAppInstanceFactory::LoopController* loop_controller_;
+  bool get_callback_called_ = false;
+  bool callback_called_ = false;
+  bool waiting_ = false;
+};
+}  // namespace
+
+std::unique_ptr<LedgerAppInstanceFactory::CallbackWaiter>
+LedgerAppInstanceFactory::LoopController::NewWaiter() {
+  return std::make_unique<CallbackWaiterImpl>(this);
+}
 
 LedgerAppInstanceFactory::LedgerAppInstance::LedgerAppInstance(
     LoopController* loop_controller, fidl::VectorPtr<uint8_t> test_ledger_name,
@@ -33,10 +73,11 @@ ledger_internal::LedgerRepositoryPtr
 LedgerAppInstanceFactory::LedgerAppInstance::GetTestLedgerRepository() {
   ledger_internal::LedgerRepositoryPtr repository;
   ledger::Status status;
+  auto waiter = loop_controller_->NewWaiter();
   ledger_repository_factory_->GetRepository(
       dir_.path(), MakeCloudProvider(), repository.NewRequest(),
-      callback::Capture([this] { loop_controller_->StopLoop(); }, &status));
-  loop_controller_->RunLoop();
+      callback::Capture(waiter->GetCallback(), &status));
+  waiter->RunUntilCalled();
   EXPECT_EQ(ledger::Status::OK, status);
   return repository;
 }
@@ -46,10 +87,10 @@ ledger::LedgerPtr LedgerAppInstanceFactory::LedgerAppInstance::GetTestLedger() {
 
   ledger_internal::LedgerRepositoryPtr repository = GetTestLedgerRepository();
   ledger::Status status;
-  repository->GetLedger(
-      fidl::Clone(test_ledger_name_), ledger.NewRequest(),
-      callback::Capture([this] { loop_controller_->StopLoop(); }, &status));
-  loop_controller_->RunLoop();
+  auto waiter = loop_controller_->NewWaiter();
+  repository->GetLedger(fidl::Clone(test_ledger_name_), ledger.NewRequest(),
+                        callback::Capture(waiter->GetCallback(), &status));
+  waiter->RunUntilCalled();
   EXPECT_EQ(ledger::Status::OK, status);
   return ledger;
 }
@@ -58,10 +99,10 @@ ledger::PagePtr LedgerAppInstanceFactory::LedgerAppInstance::GetTestPage() {
   fidl::InterfaceHandle<ledger::Page> page;
   ledger::Status status;
   ledger::LedgerPtr ledger = GetTestLedger();
-  ledger->GetPage(
-      nullptr, page.NewRequest(),
-      callback::Capture([this] { loop_controller_->StopLoop(); }, &status));
-  loop_controller_->RunLoop();
+  auto waiter = loop_controller_->NewWaiter();
+  ledger->GetPage(nullptr, page.NewRequest(),
+                  callback::Capture(waiter->GetCallback(), &status));
+  waiter->RunUntilCalled();
   EXPECT_EQ(ledger::Status::OK, status);
 
   return page.Bind();
@@ -72,10 +113,10 @@ ledger::PagePtr LedgerAppInstanceFactory::LedgerAppInstance::GetPage(
   ledger::PagePtr page_ptr;
   ledger::Status status;
   ledger::LedgerPtr ledger = GetTestLedger();
-  ledger->GetPage(
-      fidl::Clone(page_id), page_ptr.NewRequest(),
-      callback::Capture([this] { loop_controller_->StopLoop(); }, &status));
-  loop_controller_->RunLoop();
+  auto waiter = loop_controller_->NewWaiter();
+  ledger->GetPage(fidl::Clone(page_id), page_ptr.NewRequest(),
+                  callback::Capture(waiter->GetCallback(), &status));
+  waiter->RunUntilCalled();
   EXPECT_EQ(expected_status, status);
 
   return page_ptr;
@@ -86,10 +127,10 @@ void LedgerAppInstanceFactory::LedgerAppInstance::DeletePage(
   fidl::InterfaceHandle<ledger::Page> page;
   ledger::Status status;
   ledger::LedgerPtr ledger = GetTestLedger();
-  ledger->DeletePage(
-      fidl::Clone(page_id),
-      callback::Capture([this] { loop_controller_->StopLoop(); }, &status));
-  loop_controller_->RunLoop();
+  auto waiter = loop_controller_->NewWaiter();
+  ledger->DeletePage(fidl::Clone(page_id),
+                     callback::Capture(waiter->GetCallback(), &status));
+  waiter->RunUntilCalled();
   EXPECT_EQ(expected_status, status);
 }
 

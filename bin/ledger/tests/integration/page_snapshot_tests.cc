@@ -36,9 +36,10 @@ class PageSnapshotIntegrationTest : public IntegrationTest {
       fidl::VectorPtr<uint8_t> prefix = fidl::VectorPtr<uint8_t>::New(0)) {
     ledger::Status status;
     ledger::PageSnapshotPtr snapshot;
-    (*page)->GetSnapshot(
-        snapshot.NewRequest(), std::move(prefix), nullptr,
-        callback::Capture([this] { message_loop_.QuitNow(); }, &status));
+    auto waiter = NewWaiter();
+    (*page)->GetSnapshot(snapshot.NewRequest(), std::move(prefix), nullptr,
+                         callback::Capture(waiter->GetCallback(), &status));
+    waiter->RunUntilCalled();
     EXPECT_EQ(ledger::Status::OK, status);
     return snapshot;
   }
@@ -57,11 +58,11 @@ class PageSnapshotIntegrationTest : public IntegrationTest {
     do {
       ledger::Status status;
       fidl::VectorPtr<fidl::VectorPtr<uint8_t>> keys;
+      auto waiter = NewWaiter();
       (*snapshot)->GetKeys(
           start.Clone(), std::move(token),
-          callback::Capture([this] { message_loop_.QuitNow(); }, &status, &keys,
-                            &token));
-      message_loop_.Run();
+          callback::Capture(waiter->GetCallback(), &status, &keys, &token));
+      waiter->RunUntilCalled();
       EXPECT_TRUE(status == ledger::Status::OK ||
                   status == ledger::Status::PARTIAL_RESULT);
       if (num_queries) {
@@ -79,11 +80,11 @@ class PageSnapshotIntegrationTest : public IntegrationTest {
                                    int64_t max_size) {
     ledger::Status status;
     fuchsia::mem::BufferPtr buffer;
+    auto waiter = NewWaiter();
     (*snapshot)->FetchPartial(
         std::move(key), offset, max_size,
-        callback::Capture([this] { message_loop_.QuitNow(); }, &status,
-                          &buffer));
-    message_loop_.Run();
+        callback::Capture(waiter->GetCallback(), &status, &buffer));
+    waiter->RunUntilCalled();
     EXPECT_EQ(ledger::Status::OK, status);
     std::string result;
     EXPECT_TRUE(fsl::StringFromVmo(*buffer, &result));
@@ -98,25 +99,26 @@ TEST_P(PageSnapshotIntegrationTest, PageSnapshotGet) {
   auto instance = NewLedgerAppInstance();
   ledger::PagePtr page = instance->GetTestPage();
   ledger::Status status;
+  auto waiter = NewWaiter();
   page->Put(convert::ToArray("name"), convert::ToArray("Alice"),
-            callback::Capture([this] { message_loop_.QuitNow(); }, &status));
-  message_loop_.Run();
+            callback::Capture(waiter->GetCallback(), &status));
+  waiter->RunUntilCalled();
   EXPECT_EQ(ledger::Status::OK, status);
 
   ledger::PageSnapshotPtr snapshot = PageGetSnapshot(&page);
   fuchsia::mem::BufferPtr value;
-  snapshot->Get(
-      convert::ToArray("name"),
-      callback::Capture([this] { message_loop_.QuitNow(); }, &status, &value));
-  message_loop_.Run();
+  waiter = NewWaiter();
+  snapshot->Get(convert::ToArray("name"),
+                callback::Capture(waiter->GetCallback(), &status, &value));
+  waiter->RunUntilCalled();
   EXPECT_EQ(ledger::Status::OK, status);
   EXPECT_EQ("Alice", ToString(value));
 
   // Attempt to get an entry that is not in the page.
-  snapshot->Get(
-      convert::ToArray("favorite book"),
-      callback::Capture([this] { message_loop_.QuitNow(); }, &status, &value));
-  message_loop_.Run();
+  waiter = NewWaiter();
+  snapshot->Get(convert::ToArray("favorite book"),
+                callback::Capture(waiter->GetCallback(), &status, &value));
+  waiter->RunUntilCalled();
   // People don't read much these days.
   EXPECT_EQ(ledger::Status::KEY_NOT_FOUND, status);
 }
@@ -147,9 +149,9 @@ TEST_P(PageSnapshotIntegrationTest, PageSnapshotGetPipeline) {
         value = std::move(received_value);
         status_callback(status);
       });
-  status_waiter->Finalize(
-      callback::Capture([this] { message_loop_.QuitNow(); }, &status));
-  message_loop_.Run();
+  auto waiter = NewWaiter();
+  status_waiter->Finalize(callback::Capture(waiter->GetCallback(), &status));
+  waiter->RunUntilCalled();
   EXPECT_EQ(ledger::Status::OK, status);
   ASSERT_TRUE(value);
   EXPECT_EQ(expected_value, ToString(value));
@@ -171,17 +173,17 @@ TEST_P(PageSnapshotIntegrationTest, PageSnapshotPutOrder) {
   page->Put(convert::ToArray("name"), convert::ToArray(value2),
             status_waiter->NewCallback());
   ledger::Status status;
-  status_waiter->Finalize(
-      callback::Capture([this] { message_loop_.QuitNow(); }, &status));
-  message_loop_.Run();
+  auto waiter = NewWaiter();
+  status_waiter->Finalize(callback::Capture(waiter->GetCallback(), &status));
+  waiter->RunUntilCalled();
   EXPECT_EQ(ledger::Status::OK, status);
 
   ledger::PageSnapshotPtr snapshot = PageGetSnapshot(&page);
   fuchsia::mem::BufferPtr value;
-  snapshot->Get(
-      convert::ToArray("name"),
-      callback::Capture([this] { message_loop_.QuitNow(); }, &status, &value));
-  message_loop_.Run();
+  waiter = NewWaiter();
+  snapshot->Get(convert::ToArray("name"),
+                callback::Capture(waiter->GetCallback(), &status, &value));
+  waiter->RunUntilCalled();
   EXPECT_EQ(ledger::Status::OK, status);
   EXPECT_EQ(value2, ToString(value));
 }
@@ -190,8 +192,10 @@ TEST_P(PageSnapshotIntegrationTest, PageSnapshotFetchPartial) {
   auto instance = NewLedgerAppInstance();
   ledger::PagePtr page = instance->GetTestPage();
   ledger::Status status;
+  auto waiter = NewWaiter();
   page->Put(convert::ToArray("name"), convert::ToArray("Alice"),
-            callback::Capture([this] { message_loop_.QuitNow(); }, &status));
+            callback::Capture(waiter->GetCallback(), &status));
+  waiter->RunUntilCalled();
   EXPECT_EQ(ledger::Status::OK, status);
 
   ledger::PageSnapshotPtr snapshot = PageGetSnapshot(&page);
@@ -220,10 +224,11 @@ TEST_P(PageSnapshotIntegrationTest, PageSnapshotFetchPartial) {
 
   // Attempt to get an entry that is not in the page.
   fuchsia::mem::BufferPtr value;
+  waiter = NewWaiter();
   snapshot->FetchPartial(
       convert::ToArray("favorite book"), 0, -1,
-      callback::Capture([this] { message_loop_.QuitNow(); }, &status, &value));
-  message_loop_.Run();
+      callback::Capture(waiter->GetCallback(), &status, &value));
+  waiter->RunUntilCalled();
   // People don't read much these days.
   EXPECT_EQ(ledger::Status::KEY_NOT_FOUND, status);
 }
@@ -248,9 +253,10 @@ TEST_P(PageSnapshotIntegrationTest, PageSnapshotGetKeys) {
   };
   ledger::Status status;
   for (auto& key : keys) {
+    auto waiter = NewWaiter();
     page->Put(key.Clone(), RandomArray(50),
-              callback::Capture([this] { message_loop_.QuitNow(); }, &status));
-    message_loop_.Run();
+              callback::Capture(waiter->GetCallback(), &status));
+    waiter->RunUntilCalled();
     EXPECT_EQ(ledger::Status::OK, status);
   }
   snapshot = PageGetSnapshot(&page);
@@ -330,9 +336,10 @@ TEST_P(PageSnapshotIntegrationTest, PageSnapshotGetKeysMultiPart) {
 
   ledger::Status status;
   for (auto& key : keys) {
+    auto waiter = NewWaiter();
     page->Put(key.Clone(), RandomArray(10),
-              callback::Capture([this] { message_loop_.QuitNow(); }, &status));
-    message_loop_.Run();
+              callback::Capture(waiter->GetCallback(), &status));
+    waiter->RunUntilCalled();
     EXPECT_EQ(ledger::Status::OK, status);
   }
   snapshot = PageGetSnapshot(&page);
@@ -373,9 +380,10 @@ TEST_P(PageSnapshotIntegrationTest, PageSnapshotGetEntries) {
   };
   ledger::Status status;
   for (size_t i = 0; i < N; ++i) {
+    auto waiter = NewWaiter();
     page->Put(keys[i].Clone(), values[i].Clone(),
-              callback::Capture([this] { message_loop_.QuitNow(); }, &status));
-    message_loop_.Run();
+              callback::Capture(waiter->GetCallback(), &status));
+    waiter->RunUntilCalled();
     EXPECT_EQ(ledger::Status::OK, status);
   }
   snapshot = PageGetSnapshot(&page);
@@ -457,10 +465,11 @@ TEST_P(PageSnapshotIntegrationTest, PageSnapshotGetEntriesMultiPartSize) {
 
   ledger::Status status;
   for (size_t i = 0; i < N; ++i) {
+    auto waiter = NewWaiter();
     page->Put(keys[i].Clone(), values[i].Clone(),
-              callback::Capture([this] { message_loop_.QuitNow(); }, &status));
+              callback::Capture(waiter->GetCallback(), &status));
 
-    message_loop_.Run();
+    waiter->RunUntilCalled();
 
     EXPECT_EQ(ledger::Status::OK, status);
   }
@@ -504,10 +513,11 @@ TEST_P(PageSnapshotIntegrationTest, PageSnapshotGetEntriesMultiPartHandles) {
 
   for (size_t i = 0; i < N; ++i) {
     ledger::Status status;
+    auto waiter = NewWaiter();
     page->Put(keys[i].Clone(), values[i].Clone(),
-              callback::Capture([this] { message_loop_.QuitNow(); }, &status));
+              callback::Capture(waiter->GetCallback(), &status));
+    waiter->RunUntilCalled();
     EXPECT_EQ(ledger::Status::OK, status);
-    message_loop_.Run();
   }
   snapshot = PageGetSnapshot(&page);
 
@@ -541,10 +551,11 @@ TEST_P(PageSnapshotIntegrationTest, PageSnapshotGettersReturnSortedEntries) {
   };
   for (size_t i = 0; i < N; ++i) {
     ledger::Status status;
+    auto waiter = NewWaiter();
     page->Put(keys[i].Clone(), values[i].Clone(),
-              callback::Capture([this] { message_loop_.QuitNow(); }, &status));
+              callback::Capture(waiter->GetCallback(), &status));
+    waiter->RunUntilCalled();
     EXPECT_EQ(ledger::Status::OK, status);
-    message_loop_.Run();
   }
 
   // Get a snapshot.
@@ -577,11 +588,11 @@ TEST_P(PageSnapshotIntegrationTest, PageCreateReferenceFromSocketWrongSize) {
 
   ledger::Status status;
   ledger::ReferencePtr reference;
+  auto waiter = NewWaiter();
   page->CreateReferenceFromSocket(
       123, StreamDataToSocket(big_data),
-      callback::Capture([this] { message_loop_.QuitNow(); }, &status,
-                        &reference));
-  message_loop_.Run();
+      callback::Capture(waiter->GetCallback(), &status, &reference));
+  waiter->RunUntilCalled();
   EXPECT_EQ(ledger::Status::IO_ERROR, status);
 }
 
@@ -594,28 +605,28 @@ TEST_P(PageSnapshotIntegrationTest, PageCreatePutLargeReferenceFromSocket) {
   // Stream the data into the reference.
   ledger::Status status;
   ledger::ReferencePtr reference;
+  auto waiter = NewWaiter();
   page->CreateReferenceFromSocket(
       big_data.size(), StreamDataToSocket(big_data),
-      callback::Capture([this] { message_loop_.QuitNow(); }, &status,
-                        &reference));
-  message_loop_.Run();
+      callback::Capture(waiter->GetCallback(), &status, &reference));
+  waiter->RunUntilCalled();
   EXPECT_EQ(ledger::Status::OK, status);
 
   // Set the reference under a key.
-  page->PutReference(
-      convert::ToArray("big data"), std::move(*reference),
-      ledger::Priority::EAGER,
-      callback::Capture([this] { message_loop_.QuitNow(); }, &status));
-  message_loop_.Run();
+  waiter = NewWaiter();
+  page->PutReference(convert::ToArray("big data"), std::move(*reference),
+                     ledger::Priority::EAGER,
+                     callback::Capture(waiter->GetCallback(), &status));
+  waiter->RunUntilCalled();
   EXPECT_EQ(ledger::Status::OK, status);
 
   // Get a snapshot and read the value.
   ledger::PageSnapshotPtr snapshot = PageGetSnapshot(&page);
   fuchsia::mem::BufferPtr value;
-  snapshot->Get(
-      convert::ToArray("big data"),
-      callback::Capture([this] { message_loop_.QuitNow(); }, &status, &value));
-  message_loop_.Run();
+  waiter = NewWaiter();
+  snapshot->Get(convert::ToArray("big data"),
+                callback::Capture(waiter->GetCallback(), &status, &value));
+  waiter->RunUntilCalled();
 
   EXPECT_EQ(ledger::Status::OK, status);
   EXPECT_EQ(big_data, ToString(value));
@@ -632,28 +643,28 @@ TEST_P(PageSnapshotIntegrationTest, PageCreatePutLargeReferenceFromVmo) {
   // Stream the data into the reference.
   ledger::Status status;
   ledger::ReferencePtr reference;
+  auto waiter = NewWaiter();
   page->CreateReferenceFromVmo(
       std::move(vmo).ToTransport(),
-      callback::Capture([this] { message_loop_.QuitNow(); }, &status,
-                        &reference));
-  message_loop_.Run();
+      callback::Capture(waiter->GetCallback(), &status, &reference));
+  waiter->RunUntilCalled();
   EXPECT_EQ(ledger::Status::OK, status);
 
   // Set the reference under a key.
-  page->PutReference(
-      convert::ToArray("big data"), std::move(*reference),
-      ledger::Priority::EAGER,
-      callback::Capture([this] { message_loop_.QuitNow(); }, &status));
-  message_loop_.Run();
+  waiter = NewWaiter();
+  page->PutReference(convert::ToArray("big data"), std::move(*reference),
+                     ledger::Priority::EAGER,
+                     callback::Capture(waiter->GetCallback(), &status));
+  waiter->RunUntilCalled();
   EXPECT_EQ(ledger::Status::OK, status);
 
   // Get a snapshot and read the value.
   ledger::PageSnapshotPtr snapshot = PageGetSnapshot(&page);
   fuchsia::mem::BufferPtr value;
-  snapshot->Get(
-      convert::ToArray("big data"),
-      callback::Capture([this] { message_loop_.QuitNow(); }, &status, &value));
-  message_loop_.Run();
+  waiter = NewWaiter();
+  snapshot->Get(convert::ToArray("big data"),
+                callback::Capture(waiter->GetCallback(), &status, &value));
+  waiter->RunUntilCalled();
 
   EXPECT_EQ(ledger::Status::OK, status);
   EXPECT_EQ(big_data, ToString(value));
@@ -663,9 +674,10 @@ TEST_P(PageSnapshotIntegrationTest, PageSnapshotClosePageGet) {
   auto instance = NewLedgerAppInstance();
   ledger::PagePtr page = instance->GetTestPage();
   ledger::Status status;
+  auto waiter = NewWaiter();
   page->Put(convert::ToArray("name"), convert::ToArray("Alice"),
-            callback::Capture([this] { message_loop_.QuitNow(); }, &status));
-  message_loop_.Run();
+            callback::Capture(waiter->GetCallback(), &status));
+  waiter->RunUntilCalled();
   EXPECT_EQ(ledger::Status::OK, status);
 
   ledger::PageSnapshotPtr snapshot = PageGetSnapshot(&page);
@@ -674,18 +686,18 @@ TEST_P(PageSnapshotIntegrationTest, PageSnapshotClosePageGet) {
   page.Unbind();
 
   fuchsia::mem::BufferPtr value;
-  snapshot->Get(
-      convert::ToArray("name"),
-      callback::Capture([this] { message_loop_.QuitNow(); }, &status, &value));
-  message_loop_.Run();
+  waiter = NewWaiter();
+  snapshot->Get(convert::ToArray("name"),
+                callback::Capture(waiter->GetCallback(), &status, &value));
+  waiter->RunUntilCalled();
   EXPECT_EQ(ledger::Status::OK, status);
   EXPECT_EQ("Alice", ToString(value));
 
   // Attempt to get an entry that is not in the page.
-  snapshot->Get(
-      convert::ToArray("favorite book"),
-      callback::Capture([this] { message_loop_.QuitNow(); }, &status, &value));
-  message_loop_.Run();
+  waiter = NewWaiter();
+  snapshot->Get(convert::ToArray("favorite book"),
+                callback::Capture(waiter->GetCallback(), &status, &value));
+  waiter->RunUntilCalled();
   // People don't read much these days.
   EXPECT_EQ(ledger::Status::KEY_NOT_FOUND, status);
 }
@@ -694,14 +706,15 @@ TEST_P(PageSnapshotIntegrationTest, PageGetById) {
   auto instance = NewLedgerAppInstance();
   ledger::PagePtr page = instance->GetTestPage();
   ledger::PageId test_page_id;
-  page->GetId(
-      callback::Capture([this] { message_loop_.QuitNow(); }, &test_page_id));
-  message_loop_.Run();
+  auto waiter = NewWaiter();
+  page->GetId(callback::Capture(waiter->GetCallback(), &test_page_id));
+  waiter->RunUntilCalled();
 
   ledger::Status status;
+  waiter = NewWaiter();
   page->Put(convert::ToArray("name"), convert::ToArray("Alice"),
-            callback::Capture([this] { message_loop_.QuitNow(); }, &status));
-  message_loop_.Run();
+            callback::Capture(waiter->GetCallback(), &status));
+  waiter->RunUntilCalled();
   EXPECT_EQ(ledger::Status::OK, status);
 
   page.Unbind();
@@ -709,16 +722,17 @@ TEST_P(PageSnapshotIntegrationTest, PageGetById) {
   page =
       instance->GetPage(fidl::MakeOptional(test_page_id), ledger::Status::OK);
   ledger::PageId page_id;
-  page->GetId(callback::Capture([this] { message_loop_.QuitNow(); }, &page_id));
-  message_loop_.Run();
+  waiter = NewWaiter();
+  page->GetId(callback::Capture(waiter->GetCallback(), &page_id));
+  waiter->RunUntilCalled();
   EXPECT_EQ(test_page_id.id, page_id.id);
 
   ledger::PageSnapshotPtr snapshot = PageGetSnapshot(&page);
   fuchsia::mem::BufferPtr value;
-  snapshot->Get(
-      convert::ToArray("name"),
-      callback::Capture([this] { message_loop_.QuitNow(); }, &status, &value));
-  message_loop_.Run();
+  waiter = NewWaiter();
+  snapshot->Get(convert::ToArray("name"),
+                callback::Capture(waiter->GetCallback(), &status, &value));
+  waiter->RunUntilCalled();
   EXPECT_EQ(ledger::Status::OK, status);
   EXPECT_EQ("Alice", ToString(value));
 }

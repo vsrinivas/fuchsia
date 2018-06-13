@@ -66,11 +66,11 @@ std::vector<ledger::Entry> SnapshotGetEntries(
   do {
     ledger::Status status;
     fidl::VectorPtr<ledger::Entry> entries;
+    auto waiter = loop_controller->NewWaiter();
     (*snapshot)->GetEntries(
         start.Clone(), std::move(token),
-        callback::Capture([loop_controller] { loop_controller->StopLoop(); },
-                          &status, &entries, &token));
-    loop_controller->RunLoop();
+        callback::Capture(waiter->GetCallback(), &status, &entries, &token));
+    waiter->RunUntilCalled();
     EXPECT_TRUE(status == ledger::Status::OK ||
                 status == ledger::Status::PARTIAL_RESULT)
         << "Actual status: " << status;

@@ -24,6 +24,18 @@ namespace test {
 // are integration tests or end-to-end tests (apptests).
 class LedgerAppInstanceFactory {
  public:
+  // Helper class for waiting to FIDL call. A new CallbackWaiter needs to be
+  // created for each call. The GetCallback returned function needs to be called
+  // when the FIDL call returns, and RunUntilCalled will run the loop until it
+  // happens.
+  class CallbackWaiter {
+   public:
+    CallbackWaiter() {}
+    virtual ~CallbackWaiter() {}
+    virtual std::function<void()> GetCallback() = 0;
+    virtual void RunUntilCalled() = 0;
+  };
+
   // Controller for the main run loop. This allows to control the loop that will
   // call the factory and the multiple instances.
   class LoopController {
@@ -32,6 +44,9 @@ class LedgerAppInstanceFactory {
     virtual void RunLoop() = 0;
     // Stops the loop.
     virtual void StopLoop() = 0;
+    // Returns a waiter that can be used to run the loop until a callback has
+    // been called.
+    std::unique_ptr<CallbackWaiter> NewWaiter();
   };
   // A Ledger app instance
   class LedgerAppInstance {
