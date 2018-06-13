@@ -49,9 +49,9 @@ storage::Status FindCommonAncestorSync(
   while (commits.size() > 1) {
     // Pop the newest commits and retrieve their parents.
     uint64_t expected_generation = (*commits.rbegin())->GetGeneration();
-    auto waiter = callback::
-        Waiter<storage::Status, std::unique_ptr<const storage::Commit>>::Create(
-            storage::Status::OK);
+    auto waiter = fxl::MakeRefCounted<callback::Waiter<
+        storage::Status, std::unique_ptr<const storage::Commit>>>(
+        storage::Status::OK);
     while (commits.size() > 1 &&
            expected_generation == (*commits.rbegin())->GetGeneration()) {
       // Pop the newest commit.

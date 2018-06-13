@@ -32,9 +32,8 @@ Status SynchronousStorage::TreeNodeFromIdentifier(
 Status SynchronousStorage::TreeNodesFromIdentifiers(
     std::vector<ObjectIdentifier> object_identifiers,
     std::vector<std::unique_ptr<const TreeNode>>* result) {
-  auto waiter =
-      callback::Waiter<Status, std::unique_ptr<const TreeNode>>::Create(
-          Status::OK);
+  auto waiter = fxl::MakeRefCounted<
+      callback::Waiter<Status, std::unique_ptr<const TreeNode>>>(Status::OK);
   for (const auto& object_identifier : object_identifiers) {
     TreeNode::FromIdentifier(page_storage_, object_identifier,
                              waiter->NewCallback());

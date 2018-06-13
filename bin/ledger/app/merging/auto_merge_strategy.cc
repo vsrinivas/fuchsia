@@ -243,8 +243,8 @@ void AutoMergeStrategy::AutoMerger::OnComparisonDone(
 void AutoMergeStrategy::AutoMerger::ApplyDiffOnJournal(
     std::unique_ptr<storage::Journal> journal,
     std::unique_ptr<std::vector<storage::EntryChange>> diff) {
-  auto waiter =
-      callback::StatusWaiter<storage::Status>::Create(storage::Status::OK);
+  auto waiter = fxl::MakeRefCounted<callback::StatusWaiter<storage::Status>>(
+      storage::Status::OK);
   for (const storage::EntryChange& change : *diff) {
     if (change.deleted) {
       journal->Delete(change.entry.key, waiter->NewCallback());

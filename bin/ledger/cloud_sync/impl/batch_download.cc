@@ -40,9 +40,9 @@ BatchDownload::~BatchDownload() {
 void BatchDownload::Start() {
   FXL_DCHECK(!started_);
   started_ = true;
-  auto waiter = callback::Waiter<
-      encryption::Status,
-      storage::PageStorage::CommitIdAndBytes>::Create(encryption::Status::OK);
+  auto waiter = fxl::MakeRefCounted<callback::Waiter<
+      encryption::Status, storage::PageStorage::CommitIdAndBytes>>(
+      encryption::Status::OK);
   for (auto& commit : *commits_) {
     encryption_service_->DecryptCommit(
         convert::ToString(commit.data),

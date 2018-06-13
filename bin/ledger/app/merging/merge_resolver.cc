@@ -166,9 +166,9 @@ void MergeResolver::ResolveConflicts(DelayedStatus delayed_status,
   auto tracing =
       fxl::MakeAutoCall([id] { TRACE_ASYNC_END("ledger", "merge", id); });
 
-  auto waiter = callback::
-      Waiter<storage::Status, std::unique_ptr<const storage::Commit>>::Create(
-          storage::Status::OK);
+  auto waiter = fxl::MakeRefCounted<callback::Waiter<
+      storage::Status, std::unique_ptr<const storage::Commit>>>(
+      storage::Status::OK);
   for (const storage::CommitId& id : heads) {
     storage_->GetCommit(id, waiter->NewCallback());
   }

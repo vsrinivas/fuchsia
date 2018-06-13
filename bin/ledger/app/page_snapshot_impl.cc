@@ -130,9 +130,9 @@ void FillEntries(storage::PageStorage* page_storage,
   auto timed_callback =
       TRACE_CALLBACK(std::move(callback), "ledger", "snapshot_get_entries");
 
-  auto waiter = callback::
-      Waiter<storage::Status, std::unique_ptr<const storage::Object>>::Create(
-          storage::Status::OK);
+  auto waiter = fxl::MakeRefCounted<callback::Waiter<
+      storage::Status, std::unique_ptr<const storage::Object>>>(
+      storage::Status::OK);
 
   auto context = std::make_unique<Context>();
   // Use |token| for the first key if present.

@@ -76,8 +76,8 @@ ConvergenceBenchmark::ConvergenceBenchmark(async::Loop* loop, int entry_count,
 }
 
 void ConvergenceBenchmark::Run() {
-  auto waiter =
-      callback::StatusWaiter<ledger::Status>::Create(ledger::Status::OK);
+  auto waiter = fxl::MakeRefCounted<callback::StatusWaiter<ledger::Status>>(
+      ledger::Status::OK);
   for (auto& device_context : devices_) {
     // Initialize ledgers in different paths to emulate separate devices,
     // but with the same lowest-level directory name, so they correspond to the

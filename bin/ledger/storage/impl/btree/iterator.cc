@@ -182,24 +182,23 @@ void GetObjectsFromSync(coroutine::CoroutineService* coroutine_service,
                         PageStorage* page_storage,
                         ObjectIdentifier root_identifier,
                         std::function<void(Status)> callback) {
-  fxl::RefPtr<callback::Waiter<Status, std::unique_ptr<const Object>>> waiter_ =
-      callback::Waiter<Status, std::unique_ptr<const Object>>::Create(
-          Status::OK);
-  auto on_next = [page_storage, waiter_](EntryAndNodeIdentifier e) {
+  auto waiter = fxl::MakeRefCounted<
+      callback::Waiter<Status, std::unique_ptr<const Object>>>(Status::OK);
+  auto on_next = [page_storage, waiter](EntryAndNodeIdentifier e) {
     if (e.entry.priority == KeyPriority::EAGER) {
       page_storage->GetObject(e.entry.object_identifier,
                               PageStorage::Location::NETWORK,
-                              waiter_->NewCallback());
+                              waiter->NewCallback());
     }
     return true;
   };
   auto on_done = [callback = std::move(callback),
-                  waiter_](Status status) mutable {
+                  waiter](Status status) mutable {
     if (status != Status::OK) {
       callback(status);
       return;
     }
-    waiter_->Finalize(
+    waiter->Finalize(
         [callback = std::move(callback)](
             Status s, std::vector<std::unique_ptr<const Object>> objects) {
           callback(s);

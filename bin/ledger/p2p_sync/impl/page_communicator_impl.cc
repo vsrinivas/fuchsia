@@ -398,9 +398,9 @@ void PageCommunicatorImpl::BuildCommitBuffer(
 
 void PageCommunicatorImpl::ProcessObjectRequest(fxl::StringView source,
                                                 const ObjectRequest* request) {
-  auto waiter = callback::Waiter<
+  auto waiter = fxl::MakeRefCounted<callback::Waiter<
       bool, std::pair<storage::ObjectIdentifier,
-                      std::unique_ptr<const storage::Object>>>::Create(true);
+                      std::unique_ptr<const storage::Object>>>>(true);
   for (const ObjectId* object_id : *request->object_ids()) {
     storage::ObjectIdentifier identifier{
         object_id->key_index(), object_id->deletion_scope_id(),

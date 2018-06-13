@@ -148,9 +148,9 @@ void JournalImpl::GetParents(
     std::function<void(Status,
                        std::vector<std::unique_ptr<const storage::Commit>>)>
         callback) {
-  auto waiter =
-      callback::Waiter<Status, std::unique_ptr<const storage::Commit>>::Create(
-          Status::OK);
+  auto waiter = fxl::MakeRefCounted<
+      callback::Waiter<Status, std::unique_ptr<const storage::Commit>>>(
+      Status::OK);
   page_storage_->GetCommit(base_, waiter->NewCallback());
   if (other_) {
     page_storage_->GetCommit(*other_, waiter->NewCallback());
@@ -258,7 +258,8 @@ void JournalImpl::GetObjectsToSync(
               }
               entries->Next();
             }
-            auto waiter = callback::Waiter<Status, bool>::Create(Status::OK);
+            auto waiter =
+                fxl::MakeRefCounted<callback::Waiter<Status, bool>>(Status::OK);
             for (const auto& key_value : key_values) {
               page_storage_->ObjectIsUntracked(key_value.second,
                                                waiter->NewCallback());

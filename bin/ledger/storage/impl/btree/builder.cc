@@ -302,7 +302,8 @@ Status NodeBuilder::Build(SynchronousStorage* page_storage,
 
   std::vector<NodeBuilder*> to_build;
   while (CollectNodesToBuild(&to_build)) {
-    auto waiter = callback::StatusWaiter<Status>::Create(Status::OK);
+    auto waiter =
+        fxl::MakeRefCounted<callback::StatusWaiter<Status>>(Status::OK);
     for (NodeBuilder* child : to_build) {
       std::map<size_t, ObjectIdentifier> children;
       for (size_t index = 0; index < child->children_.size(); ++index) {

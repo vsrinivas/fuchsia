@@ -127,7 +127,8 @@ TEST_P(PageSnapshotIntegrationTest, PageSnapshotGetPipeline) {
   expected_value.resize(100);
 
   auto status_waiter =
-      callback::StatusWaiter<ledger::Status>::Create(ledger::Status::OK);
+      fxl::MakeRefCounted<callback::StatusWaiter<ledger::Status>>(
+          ledger::Status::OK);
 
   ledger::PagePtr page = instance->GetTestPage();
   page->Put(convert::ToArray("name"), convert::ToArray(expected_value),
@@ -163,7 +164,8 @@ TEST_P(PageSnapshotIntegrationTest, PageSnapshotPutOrder) {
   // Put the 2 values without waiting for the callbacks.
   ledger::PagePtr page = instance->GetTestPage();
   auto status_waiter =
-      callback::StatusWaiter<ledger::Status>::Create(ledger::Status::OK);
+      fxl::MakeRefCounted<callback::StatusWaiter<ledger::Status>>(
+          ledger::Status::OK);
   page->Put(convert::ToArray("name"), convert::ToArray(value1),
             status_waiter->NewCallback());
   page->Put(convert::ToArray("name"), convert::ToArray(value2),

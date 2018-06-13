@@ -288,7 +288,7 @@ TEST_F(LedgerManagerTest, CallGetPagesList) {
 
   EXPECT_EQ(0u, actual_pages_list->size());
 
-  auto waiter = callback::StatusWaiter<Status>::Create(Status::OK);
+  auto waiter = fxl::MakeRefCounted<callback::StatusWaiter<Status>>(Status::OK);
   for (size_t i = 0; i < pages.size(); ++i) {
     ledger_->GetPage(fidl::MakeOptional(ids[i]), pages[i].NewRequest(),
                      waiter->NewCallback());

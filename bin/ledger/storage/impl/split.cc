@@ -323,7 +323,7 @@ void CollectPiecesInternal(ObjectIdentifier root,
       return;
     }
 
-    auto waiter = callback::CompletionWaiter::Create();
+    auto waiter = fxl::MakeRefCounted<callback::CompletionWaiter>();
     status = ForEachPiece(data, [&](ObjectIdentifier identifier) {
       CollectPiecesInternal(std::move(identifier), state,
                             waiter->NewCallback());

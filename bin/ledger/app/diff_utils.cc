@@ -84,7 +84,8 @@ void ComputePageChange(
     std::string next_token = "";
   };
 
-  auto waiter = callback::Waiter<Status, fsl::SizedVmo>::Create(Status::OK);
+  auto waiter =
+      fxl::MakeRefCounted<callback::Waiter<Status, fsl::SizedVmo>>(Status::OK);
 
   auto context = std::make_unique<Context>();
   context->page_change->timestamp = other.GetTimestamp();
@@ -212,7 +213,8 @@ void ComputeThreeWayDiff(
   // returned. As each |DiffEntry| struct has three values, we ensure that
   // values are always returned in a specific order (base, left, right). Some
   // values may be empty, to denote a lack of diff.
-  auto waiter = callback::Waiter<Status, fsl::SizedVmo>::Create(Status::OK);
+  auto waiter =
+      fxl::MakeRefCounted<callback::Waiter<Status, fsl::SizedVmo>>(Status::OK);
 
   auto context = std::make_unique<Context>();
 

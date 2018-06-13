@@ -47,14 +47,12 @@ class GrpcStatusAccumulator {
 class GrpcStatusWaiter : public callback::BaseWaiter<GrpcStatusAccumulator,
                                                      grpc::Status,
                                                      grpc::Status> {
- public:
+ private:
   GrpcStatusWaiter()
       : callback::BaseWaiter<GrpcStatusAccumulator, grpc::Status, grpc::Status>(
             GrpcStatusAccumulator()) {}
-
-  static fxl::RefPtr<GrpcStatusWaiter> Create() {
-    return fxl::MakeRefCounted<GrpcStatusWaiter>();
-  }
+  FRIEND_REF_COUNTED_THREAD_SAFE(GrpcStatusWaiter);
+  FRIEND_MAKE_REF_COUNTED(GrpcStatusWaiter);
 };
 }  // namespace
 
@@ -184,7 +182,7 @@ void DeviceSetImpl::OnGotDocumentsToErase(
     return;
   }
 
-  auto waiter = GrpcStatusWaiter::Create();
+  auto waiter = fxl::MakeRefCounted<GrpcStatusWaiter>();
   for (const auto& document : documents_response.documents()) {
     auto request = google::firestore::v1beta1::DeleteDocumentRequest();
     request.set_name(document.name());

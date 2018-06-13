@@ -277,7 +277,7 @@ void CobaltContextImpl::SendObservations() {
   observations_in_transit_ = std::move(observations_to_send_);
   observations_to_send_.clear();
 
-  auto waiter = callback::CompletionWaiter::Create();
+  auto waiter = fxl::MakeRefCounted<callback::CompletionWaiter>();
   for (auto observation : observations_in_transit_) {
     auto callback = waiter->NewCallback();
     std::move(observation)

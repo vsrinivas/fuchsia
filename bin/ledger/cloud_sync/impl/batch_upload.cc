@@ -253,9 +253,9 @@ void BatchUpload::FilterAndUploadCommits() {
 void BatchUpload::UploadCommits() {
   FXL_DCHECK(!errored_);
   std::vector<storage::CommitId> ids;
-  auto waiter =
-      callback::Waiter<encryption::Status, cloud_provider::Commit>::Create(
-          encryption::Status::OK);
+  auto waiter = fxl::MakeRefCounted<
+      callback::Waiter<encryption::Status, cloud_provider::Commit>>(
+      encryption::Status::OK);
   for (auto& storage_commit : commits_) {
     storage::CommitId id = storage_commit->GetId();
     encryption_service_->EncryptCommit(
@@ -300,9 +300,9 @@ void BatchUpload::UploadCommits() {
                         on_error_(ErrorType::TEMPORARY);
                         return;
                       }
-                      auto waiter =
-                          callback::StatusWaiter<storage::Status>::Create(
-                              storage::Status::OK);
+                      auto waiter = fxl::MakeRefCounted<
+                          callback::StatusWaiter<storage::Status>>(
+                          storage::Status::OK);
 
                       for (auto& id : commit_ids) {
                         storage_->MarkCommitSynced(id, waiter->NewCallback());

@@ -92,8 +92,8 @@ void DiskSpaceBenchmark::Populate() {
   int insertions = std::max(unique_key_count_, commit_count_);
   FXL_LOG(INFO) << "Transaction size: " << transaction_size
                 << ", insertions: " << insertions << ".";
-  auto waiter =
-      callback::StatusWaiter<ledger::Status>::Create(ledger::Status::OK);
+  auto waiter = fxl::MakeRefCounted<callback::StatusWaiter<ledger::Status>>(
+      ledger::Status::OK);
   for (auto& page : pages_) {
     auto keys = generator_.MakeKeys(insertions, key_size_, unique_key_count_);
     page_data_generator_.Populate(

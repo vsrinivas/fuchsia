@@ -218,9 +218,9 @@ void ConflictResolverClient::Merge(fidl::VectorPtr<MergedValue> merged_values,
         if (!weak_this->IsInValidStateAndNotify(callback)) {
           return;
         }
-        auto waiter =
-            callback::Waiter<storage::Status, storage::ObjectIdentifier>::
-                Create(storage::Status::OK);
+        auto waiter = fxl::MakeRefCounted<
+            callback::Waiter<storage::Status, storage::ObjectIdentifier>>(
+            storage::Status::OK);
         for (const MergedValue& merged_value : *merged_values) {
           weak_this->OnNextMergeResult(merged_value, waiter);
         }
@@ -237,8 +237,9 @@ void ConflictResolverClient::Merge(fidl::VectorPtr<MergedValue> merged_values,
                 return;
               }
 
-              auto waiter = callback::StatusWaiter<storage::Status>::Create(
-                  storage::Status::OK);
+              auto waiter =
+                  fxl::MakeRefCounted<callback::StatusWaiter<storage::Status>>(
+                      storage::Status::OK);
               for (size_t i = 0; i < object_identifiers.size(); ++i) {
                 if (object_identifiers[i].object_digest.empty()) {
                   continue;
@@ -259,8 +260,8 @@ void ConflictResolverClient::Merge(fidl::VectorPtr<MergedValue> merged_values,
 
 void ConflictResolverClient::MergeNonConflictingEntries(
     MergeNonConflictingEntriesCallback callback) {
-  auto waiter =
-      callback::StatusWaiter<storage::Status>::Create(storage::Status::OK);
+  auto waiter = fxl::MakeRefCounted<callback::StatusWaiter<storage::Status>>(
+      storage::Status::OK);
 
   auto on_next = [this, waiter](storage::ThreeWayChange change) {
     // When |MergeNonConflictingEntries| is called first, we know that the base

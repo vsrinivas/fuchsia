@@ -118,9 +118,9 @@ void PageDelegate::PutWithPriority(fidl::VectorPtr<uint8_t> key,
                                    Priority priority,
                                    Page::PutWithPriorityCallback callback) {
   FXL_DCHECK(key->size() <= kMaxKeySize);
-  auto promise =
-      callback::Promise<storage::Status, storage::ObjectIdentifier>::Create(
-          storage::Status::ILLEGAL_STATE);
+  auto promise = fxl::MakeRefCounted<
+      callback::Promise<storage::Status, storage::ObjectIdentifier>>(
+      storage::Status::ILLEGAL_STATE);
   storage_->AddObjectFromLocal(storage::DataSource::Create(std::move(value)),
                                promise->NewCallback());
 
@@ -161,9 +161,9 @@ void PageDelegate::PutReference(fidl::VectorPtr<uint8_t> key,
     return;
   }
 
-  auto promise = callback::
-      Promise<storage::Status, std::unique_ptr<const storage::Object>>::Create(
-          storage::Status::ILLEGAL_STATE);
+  auto promise = fxl::MakeRefCounted<callback::Promise<
+      storage::Status, std::unique_ptr<const storage::Object>>>(
+      storage::Status::ILLEGAL_STATE);
 
   storage_->GetObject(object_identifier, storage::PageStorage::Location::LOCAL,
                       promise->NewCallback());

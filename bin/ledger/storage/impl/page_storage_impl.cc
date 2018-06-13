@@ -278,7 +278,7 @@ Status PageStorageImpl::RemoveCommitWatcher(CommitWatcher* watcher) {
 }
 
 void PageStorageImpl::IsSynced(std::function<void(Status, bool)> callback) {
-  auto waiter = callback::Waiter<Status, bool>::Create(Status::OK);
+  auto waiter = fxl::MakeRefCounted<callback::Waiter<Status, bool>>(Status::OK);
 
   // Check for unsynced commits.
   coroutine_service_->StartCoroutine(
@@ -377,7 +377,7 @@ void PageStorageImpl::AddObjectFromLocal(
       TRACE_CALLBACK(std::move(callback), "ledger", "page_storage_add_object");
 
   auto managed_data_source = managed_container_.Manage(std::move(data_source));
-  auto waiter = callback::StatusWaiter<Status>::Create(Status::OK);
+  auto waiter = fxl::MakeRefCounted<callback::StatusWaiter<Status>>(Status::OK);
   SplitDataSource(
       managed_data_source->get(),
       fxl::MakeCopyable(
@@ -473,7 +473,8 @@ void PageStorageImpl::GetObject(
 
         fsl::SizedVmo vmo(std::move(raw_vmo), file_index->size());
         size_t offset = 0;
-        auto waiter = callback::StatusWaiter<Status>::Create(Status::OK);
+        auto waiter =
+            fxl::MakeRefCounted<callback::StatusWaiter<Status>>(Status::OK);
         for (const auto* child : *file_index->children()) {
           if (offset + child->size() > file_index->size()) {
             callback(Status::FORMAT_ERROR, nullptr);
@@ -818,7 +819,8 @@ void PageStorageImpl::DownloadFullObject(ObjectIdentifier object_identifier,
                 return;
               }
 
-              auto waiter = callback::StatusWaiter<Status>::Create(Status::OK);
+              auto waiter = fxl::MakeRefCounted<callback::StatusWaiter<Status>>(
+                  Status::OK);
               Status status =
                   ForEachPiece(chunk->Get(), [&](ObjectIdentifier identifier) {
                     if (GetObjectDigestType(identifier.object_digest) ==
@@ -962,7 +964,8 @@ void PageStorageImpl::FillBufferWithObjectContent(
              }
 
              size_t sub_offset = 0;
-             auto waiter = callback::StatusWaiter<Status>::Create(Status::OK);
+             auto waiter = fxl::MakeRefCounted<callback::StatusWaiter<Status>>(
+                 Status::OK);
              for (const auto* child : *file_index->children()) {
                if (sub_offset + child->size() > file_index->size()) {
                  callback(Status::FORMAT_ERROR);
@@ -1021,7 +1024,7 @@ Status PageStorageImpl::SynchronousInit(CoroutineHandler* handler) {
     return s;
   }
 
-  auto waiter = callback::StatusWaiter<Status>::Create(Status::OK);
+  auto waiter = fxl::MakeRefCounted<callback::StatusWaiter<Status>>(Status::OK);
   for (JournalId& id : journal_ids) {
     CommitId base;
     s = db_->GetBaseCommitForJournal(handler, id, &base);
@@ -1154,7 +1157,7 @@ Status PageStorageImpl::SynchronousAddCommitsFromSync(
 
   lock.reset();
 
-  auto waiter = callback::StatusWaiter<Status>::Create(Status::OK);
+  auto waiter = fxl::MakeRefCounted<callback::StatusWaiter<Status>>(Status::OK);
   // Get all objects from sync and then add the commit objects.
   for (const auto& leaf : leaves) {
     btree::GetObjectsFromSync(coroutine_service_, this,
@@ -1188,8 +1191,8 @@ Status PageStorageImpl::SynchronousGetUnsyncedCommits(
     return s;
   }
 
-  auto waiter = callback::Waiter<Status, std::unique_ptr<const Commit>>::Create(
-      Status::OK);
+  auto waiter = fxl::MakeRefCounted<
+      callback::Waiter<Status, std::unique_ptr<const Commit>>>(Status::OK);
   for (const auto& commit_id : commit_ids) {
     GetCommit(commit_id, waiter->NewCallback());
   }

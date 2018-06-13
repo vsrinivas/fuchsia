@@ -99,8 +99,8 @@ void LastOneWinsMergeStrategy::LastOneWinsMerger::Done(Status status) {
 }
 
 void LastOneWinsMergeStrategy::LastOneWinsMerger::BuildAndCommitJournal() {
-  auto waiter =
-      callback::StatusWaiter<storage::Status>::Create(storage::Status::OK);
+  auto waiter = fxl::MakeRefCounted<callback::StatusWaiter<storage::Status>>(
+      storage::Status::OK);
   auto on_next = [weak_this = weak_factory_.GetWeakPtr(),
                   waiter = waiter.get()](storage::EntryChange change) {
     if (!weak_this || weak_this->cancelled_) {

@@ -186,13 +186,13 @@ void PageSyncImpl::GetObject(
   // example, if P2P returns before cloud with a NOT_FOUND status, then we will
   // wait for Cloud to return; if P2P returns with an OK status, we will pass
   // the P2P-returned value immediately.
-  auto waiter = callback::AnyWaiter<
+  auto waiter = fxl::MakeRefCounted<callback::AnyWaiter<
       storage::Status,
       std::pair<storage::ChangeSource,
-                std::unique_ptr<storage::DataSource::DataChunk>>>::
-      Create(storage::Status::OK, storage::Status::NOT_FOUND,
-             std::pair<storage::ChangeSource,
-                       std::unique_ptr<storage::DataSource::DataChunk>>());
+                std::unique_ptr<storage::DataSource::DataChunk>>>>(
+      storage::Status::OK, storage::Status::NOT_FOUND,
+      std::pair<storage::ChangeSource,
+                std::unique_ptr<storage::DataSource::DataChunk>>());
   if (cloud_sync_) {
     cloud_sync_->GetObject(
         object_identifier,

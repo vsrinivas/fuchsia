@@ -362,7 +362,8 @@ TEST_P(ConvergenceTest, DISABLED_NLedgersConverge) {
   }
 
   auto commit_waiter =
-      callback::StatusWaiter<ledger::Status>::Create(ledger::Status::OK);
+      fxl::MakeRefCounted<callback::StatusWaiter<ledger::Status>>(
+          ledger::Status::OK);
   ledger::Status status = ledger::Status::UNKNOWN_ERROR;
   for (int i = 0; i < num_ledgers_; i++) {
     pages_[i]->Commit(commit_waiter->NewCallback());
@@ -426,8 +427,9 @@ TEST_P(ConvergenceTest, DISABLED_NLedgersConverge) {
         return true;
       }
       if (!waiter) {
-        waiter = callback::StatusWaiter<ledger::ConflictResolutionWaitStatus>::
-            Create(ledger::ConflictResolutionWaitStatus::NO_CONFLICTS);
+        waiter = fxl::MakeRefCounted<
+            callback::StatusWaiter<ledger::ConflictResolutionWaitStatus>>(
+            ledger::ConflictResolutionWaitStatus::NO_CONFLICTS);
         for (int i = 0; i < num_ledgers_; i++) {
           pages_[i]->WaitForConflictResolution(waiter->NewCallback());
         }

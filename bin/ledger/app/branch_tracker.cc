@@ -342,7 +342,7 @@ void BranchTracker::OnNewCommits(
 void BranchTracker::StartTransaction(fxl::Closure watchers_drained_callback) {
   FXL_DCHECK(!transaction_in_progress_);
   transaction_in_progress_ = true;
-  auto waiter = callback::CompletionWaiter::Create();
+  auto waiter = fxl::MakeRefCounted<callback::CompletionWaiter>();
   for (auto& watcher : watchers_) {
     watcher.SetOnDrainedCallback(waiter->NewCallback());
   }
