@@ -120,8 +120,9 @@ func (d *Daemon) addSrc(s source.Source) {
 
 	id := s.GetId()
 
-	if _, ok := d.srcs[id]; ok {
+	if oldSource, ok := d.srcs[id]; ok {
 		log.Printf("overwriting source: %s", id)
+		oldSource.Close()
 	}
 
 	d.srcs[id] = NewSourceKeeper(s)

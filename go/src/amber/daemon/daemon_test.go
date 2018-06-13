@@ -110,6 +110,10 @@ func (t *testSrc) Save() error {
 	return nil
 }
 
+func (t *testSrc) Close() {
+	return
+}
+
 type testTicker struct {
 	i    time.Duration
 	last time.Time

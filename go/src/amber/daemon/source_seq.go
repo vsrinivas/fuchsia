@@ -105,3 +105,7 @@ func (k *SourceKeeper) CheckLimit() uint64 {
 func (k *SourceKeeper) Save() error {
 	return k.src.Save()
 }
+
+func (k *SourceKeeper) Close() {
+	k.src.Close()
+}

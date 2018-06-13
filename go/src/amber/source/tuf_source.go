@@ -228,11 +228,7 @@ func (f *TUFSource) updateTUFClientLocked() error {
 	// We got our tuf client ready to go. Before we store the client in our
 	// source, make sure to close the old client's transport's idle
 	// connections so we don't leave a bunch of sockets open.
-	if f.httpClient != nil {
-		if transport, ok := f.httpClient.Transport.(*http.Transport); ok {
-			transport.CloseIdleConnections()
-		}
-	}
+	f.closeIdleConnections()
 
 	// We're done! Save the clients for the next time we update our source.
 	f.httpClient = httpClient
@@ -541,8 +537,20 @@ func (f *TUFSource) Save() error {
 	return f.saveLocked()
 }
 
-// Actually save the config.
+func (f *TUFSource) Close() {
+	f.closeIdleConnections()
+}
 
+func (f *TUFSource) closeIdleConnections() {
+	if f.httpClient != nil {
+		if transport, ok := f.httpClient.Transport.(*http.Transport); ok {
+			transport.CloseIdleConnections()
+		}
+	}
+}
+
+// Actually save the config.
+//
 // NOTE: It's the responsibility of the caller to hold the mutex before calling
 // this function.
 func (f *TUFSource) saveLocked() error {

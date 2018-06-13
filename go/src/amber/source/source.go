@@ -64,4 +64,7 @@ type Source interface {
 	// Log into the TUF remote server and return the oauth2 device flow
 	// code to complete the authentication process.
 	Login() (*amber.DeviceCode, error)
+
+	// Close any resources we might have open.
+	Close()
 }
