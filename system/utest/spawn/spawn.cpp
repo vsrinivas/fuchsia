@@ -126,10 +126,6 @@ static bool spawn_invalid_args_test(void) {
     const char* argv[] = {kSpawnChild, nullptr};
 
     status = fdio_spawn(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL,
-                        nullptr, argv, process.reset_and_get_address());
-    ASSERT_EQ(ZX_ERR_INVALID_ARGS, status);
-
-    status = fdio_spawn(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL,
                         "/bogus/not/a/file", argv, process.reset_and_get_address());
     ASSERT_EQ(ZX_ERR_IO, status);
 
@@ -460,10 +456,6 @@ static bool spawn_errors_test(void) {
     const char* argv[] = {kSpawnChild, nullptr};
 
     ASSERT_EQ(ZX_ERR_INVALID_ARGS,
-              fdio_spawn(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL, nullptr,
-                         argv, process.reset_and_get_address()));
-
-    ASSERT_EQ(ZX_ERR_INVALID_ARGS,
               fdio_spawn(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL, kSpawnChild,
                          nullptr, process.reset_and_get_address()));
 
@@ -591,6 +583,30 @@ static bool spawn_errors_test(void) {
     END_TEST;
 }
 
+static bool spawn_vmo_test(void) {
+    BEGIN_TEST;
+
+    zx_status_t status;
+    zx::process process;
+
+    {
+        int fd = open(kSpawnChild, O_RDONLY);
+        ASSERT_GE(fd, 0);
+        zx_handle_t vmo;
+        ASSERT_EQ(ZX_OK, fdio_get_vmo_clone(fd, &vmo));
+        close(fd);
+
+        const char* argv[] = {kSpawnChild, nullptr};
+        status = fdio_spawn_vmo(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL,
+                                vmo, argv, nullptr, 0, nullptr,
+                                process.reset_and_get_address(), nullptr);
+        ASSERT_EQ(ZX_OK, status);
+        EXPECT_EQ(43, join(process));
+    }
+
+    END_TEST;
+}
+
 BEGIN_TEST_CASE(spawn_tests)
 RUN_TEST(spawn_control_test)
 RUN_TEST(spawn_launcher_test)
@@ -602,6 +618,7 @@ RUN_TEST(spawn_actions_ns_test)
 RUN_TEST(spawn_actions_h_test)
 RUN_TEST(spawn_actions_name_test)
 RUN_TEST(spawn_errors_test)
+RUN_TEST(spawn_vmo_test)
 END_TEST_CASE(spawn_tests)
 
 int main(int argc, char** argv) {

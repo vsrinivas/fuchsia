@@ -356,12 +356,41 @@ zx_status_t fdio_spawn_etc(zx_handle_t job,
                            const fdio_spawn_action_t* actions,
                            zx_handle_t* process_out,
                            char* err_msg) {
+    zx_handle_t executable_vmo = ZX_HANDLE_INVALID;
+
+    zx_status_t status = load_path(path, &executable_vmo);
+    if (status != ZX_OK) {
+        report_error(err_msg, "failed to load executable from %s", path);
+        // Set |err_msg| to NULL to prevent |fdio_spawn_vmo| from generating
+        // a less useful error message.
+        err_msg = NULL;
+    }
+
+    // Always call fdio_spawn_vmo to clean up arguments. If |executable_vmo| is
+    // |ZX_HANDLE_INVALID|, then |fdio_spawn_vmo| will generate an error.
+    zx_status_t spawn_status = fdio_spawn_vmo(job, flags, executable_vmo, argv, explicit_environ,
+                                              action_count, actions, process_out, err_msg);
+
+    // Use |status| if we already had an error before calling |fdio_spawn_vmo|.
+    // Otherwise, we'll always return |ZX_ERR_INVALID_ARGS| rather than the more
+    // useful status from |load_path|.
+    return status != ZX_OK ? status : spawn_status;
+}
+
+zx_status_t fdio_spawn_vmo(zx_handle_t job,
+                           uint32_t flags,
+                           zx_handle_t executable_vmo,
+                           const char* const* argv,
+                           const char* const* explicit_environ,
+                           size_t action_count,
+                           const fdio_spawn_action_t* actions,
+                           zx_handle_t* process_out,
+                           char* err_msg) {
     zx_status_t status = ZX_OK;
     fdio_flat_namespace_t* flat = NULL;
     size_t name_count = 0;
     size_t name_len = 0;
     size_t handle_capacity = 0;
-    zx_handle_t vmo = ZX_HANDLE_INVALID;
     zx_handle_t launcher = ZX_HANDLE_INVALID;
     zx_handle_t launcher_request = ZX_HANDLE_INVALID;
     zx_handle_t msg_handles[FDIO_SPAWN_LAUNCH_HANDLE_COUNT];
@@ -371,7 +400,7 @@ zx_status_t fdio_spawn_etc(zx_handle_t job,
     if (err_msg)
         err_msg[0] = '\0';
 
-    if (!path || !argv || (action_count != 0 && !actions)) {
+    if (executable_vmo == ZX_HANDLE_INVALID || !argv || (action_count != 0 && !actions)) {
         status = ZX_ERR_INVALID_ARGS;
         goto cleanup;
     }
@@ -388,7 +417,7 @@ zx_status_t fdio_spawn_etc(zx_handle_t job,
             handle_capacity += FDIO_MAX_HANDLES_FOR_CLONE_OR_TRANSFER;
             break;
         case FDIO_SPAWN_ACTION_ADD_NS_ENTRY:
-            if (!actions[i].ns.handle || !actions[i].ns.prefix) {
+            if (actions[i].ns.handle == ZX_HANDLE_INVALID || !actions[i].ns.prefix) {
                 status = ZX_ERR_INVALID_ARGS;
                 goto cleanup;
             }
@@ -396,14 +425,14 @@ zx_status_t fdio_spawn_etc(zx_handle_t job,
             name_len += FIDL_ALIGN(strlen(actions[i].ns.prefix));
             break;
         case FDIO_SPAWN_ACTION_ADD_HANDLE:
-            if (!actions[i].h.handle) {
+            if (actions[i].h.handle == ZX_HANDLE_INVALID) {
                 status = ZX_ERR_INVALID_ARGS;
                 goto cleanup;
             }
             ++handle_capacity;
             break;
         case FDIO_SPAWN_ACTION_SET_NAME:
-            if (!actions[i].name.data) {
+            if (actions[i].name.data == ZX_HANDLE_INVALID) {
                 status = ZX_ERR_INVALID_ARGS;
                 goto cleanup;
             }
@@ -434,12 +463,6 @@ zx_status_t fdio_spawn_etc(zx_handle_t job,
         for (size_t i = 0; i < flat->count; ++i) {
             name_len += FIDL_ALIGN(strlen(flat->path[i]));
         }
-    }
-
-    status = load_path(path, &vmo);
-    if (status != ZX_OK) {
-        report_error(err_msg, "failed to load executable from %s", path);
-        goto cleanup;
     }
 
     status = zx_channel_create(0, &launcher, &launcher_request);
@@ -529,8 +552,8 @@ zx_status_t fdio_spawn_etc(zx_handle_t job,
         msg.req.info.name.data = (void*)FIDL_ALLOC_PRESENT;
         memcpy(msg.process_name, process_name, process_name_size);
 
-        msg_handles[FDIO_SPAWN_LAUNCH_HANDLE_EXECUTABLE] = vmo;
-        vmo = ZX_HANDLE_INVALID;
+        msg_handles[FDIO_SPAWN_LAUNCH_HANDLE_EXECUTABLE] = executable_vmo;
+        executable_vmo = ZX_HANDLE_INVALID;
 
         status = zx_handle_duplicate(job, ZX_RIGHT_SAME_RIGHTS, &msg_handles[FDIO_SPAWN_LAUNCH_HANDLE_JOB]);
         if (status != ZX_OK) {
@@ -619,6 +642,17 @@ cleanup:
             }
         }
     }
+
+    free(flat);
+
+    if (executable_vmo != ZX_HANDLE_INVALID)
+        zx_handle_close(executable_vmo);
+
+    if (launcher != ZX_HANDLE_INVALID)
+        zx_handle_close(launcher);
+
+    if (launcher_request != ZX_HANDLE_INVALID)
+        zx_handle_close(launcher_request);
 
     if (msg_handles[FDIO_SPAWN_LAUNCH_HANDLE_EXECUTABLE] != ZX_HANDLE_INVALID)
         zx_handle_close(msg_handles[FDIO_SPAWN_LAUNCH_HANDLE_EXECUTABLE]);

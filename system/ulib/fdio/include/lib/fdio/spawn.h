@@ -192,4 +192,21 @@ zx_status_t fdio_spawn_etc(zx_handle_t job,
                            zx_handle_t* process_out,
                            char err_msg_out[FDIO_SPAWN_ERR_MSG_MAX_LENGTH]);
 
+// Spawn a process using the given executable in the given job.
+//
+// See |fdio_spawn_etc| for details. Rather than loading the binary for the
+// process from a path, this function receives the binary as the contents of a
+// vmo.
+//
+// Always consumes |executable_vmo|.
+zx_status_t fdio_spawn_vmo(zx_handle_t job,
+                           uint32_t flags,
+                           zx_handle_t executable_vmo,
+                           const char* const* argv,
+                           const char* const* environ,
+                           size_t action_count,
+                           const fdio_spawn_action_t* actions,
+                           zx_handle_t* process_out,
+                           char err_msg_out[FDIO_SPAWN_ERR_MSG_MAX_LENGTH]);
+
 __END_CDECLS
