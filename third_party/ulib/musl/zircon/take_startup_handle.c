@@ -58,7 +58,3 @@ zx_handle_t zx_take_startup_handle(uint32_t hnd_info) {
     mtx_unlock(&startup_handles_lock);
     return result;
 }
-
-zx_handle_t zx_get_startup_handle(uint32_t hnd_info) {
-    return zx_take_startup_handle(hnd_info);
-}
