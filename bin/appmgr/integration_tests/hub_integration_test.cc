@@ -7,8 +7,7 @@
 #include "gtest/gtest.h"
 #include "lib/fxl/strings/string_printf.h"
 
-namespace fuchsia {
-namespace sys {
+namespace component {
 namespace {
 
 TEST(ProbeHub, Component) {
@@ -39,5 +38,4 @@ TEST(ProbeHub, RealmSvc) {
 }
 
 }  // namespace
-}  // namespace sys
-}  // namespace fuchsia
+}  // namespace component

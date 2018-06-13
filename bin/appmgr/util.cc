@@ -11,9 +11,7 @@
 
 #include "lib/fxl/logging.h"
 
-namespace fuchsia {
-namespace sys {
-namespace util {
+namespace component_util {
 
 std::string GetLabelFromURL(const std::string& url) {
   size_t last_slash = url.rfind('/');
@@ -22,7 +20,7 @@ std::string GetLabelFromURL(const std::string& url) {
   return url.substr(last_slash + 1);
 }
 
-ExportedDirChannels BindDirectory(LaunchInfo* launch_info) {
+ExportedDirChannels BindDirectory(fuchsia::sys::LaunchInfo* launch_info) {
   zx::channel exported_dir_server, exported_dir_client;
   zx_status_t status =
       zx::channel::create(0u, &exported_dir_server, &exported_dir_client);
@@ -50,6 +48,4 @@ std::string GetArgsString(
   return args;
 }
 
-}  // namespace util
-}  // namespace sys
-}  // namespace fuchsia
+}  // namespace component

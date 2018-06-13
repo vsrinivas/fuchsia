@@ -10,8 +10,7 @@
 
 #include "lib/gtest/test_with_message_loop.h"
 
-namespace fuchsia {
-namespace sys {
+namespace component {
 namespace {
 
 class FakeEcho : public fidl::examples::echo::Echo {
@@ -185,5 +184,4 @@ TEST_F(ServiceProviderTest, ParentAndBackingDirTogther) {
 }
 
 }  // namespace
-}  // namespace sys
-}  // namespace fuchsia
+}  // namespace component

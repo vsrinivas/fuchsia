@@ -14,14 +14,14 @@
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/weak_ptr.h"
 
-namespace fuchsia {
-namespace sys {
+namespace component {
 
 // A directory-like object which dynamically creates Service vnodes
 // for any file lookup. It also exposes service provider interface.
 //
 // It supports enumeration for only first level of services.
-class ServiceProviderDirImpl : public ServiceProvider, public fs::Vnode {
+class ServiceProviderDirImpl : public fuchsia::sys::ServiceProvider,
+                               public fs::Vnode {
  public:
   ServiceProviderDirImpl();
   ~ServiceProviderDirImpl() override;
@@ -45,7 +45,8 @@ class ServiceProviderDirImpl : public ServiceProvider, public fs::Vnode {
   void AddService(fbl::RefPtr<fs::Service> service,
                   const std::string& service_name);
 
-  void AddBinding(fidl::InterfaceRequest<ServiceProvider> request);
+  void AddBinding(
+      fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> request);
 
   // Overridden from |fs::Vnode|:
   zx_status_t Lookup(fbl::RefPtr<fs::Vnode>* out, fbl::StringPiece name) final;
@@ -56,11 +57,11 @@ class ServiceProviderDirImpl : public ServiceProvider, public fs::Vnode {
                       size_t* out_actual) final;
 
  private:
-  // Overridden from |ServiceProvider|:
+  // Overridden from |fuchsia::sys::ServiceProvider|:
   void ConnectToService(fidl::StringPtr service_name,
                         zx::channel channel) override;
 
-  fidl::BindingSet<ServiceProvider> bindings_;
+  fidl::BindingSet<fuchsia::sys::ServiceProvider> bindings_;
   fs::SynchronousVfs vfs_;
   fbl::RefPtr<fs::PseudoDir> root_;
   fbl::RefPtr<ServiceProviderDirImpl> parent_;
@@ -70,7 +71,6 @@ class ServiceProviderDirImpl : public ServiceProvider, public fs::Vnode {
   FXL_DISALLOW_COPY_AND_ASSIGN(ServiceProviderDirImpl);
 };
 
-}  // namespace sys
-}  // namespace fuchsia
+}  // namespace component
 
 #endif  // GARNET_BIN_APPMGR_SERVICE_PROVIDER_DIR_IMPL_H_

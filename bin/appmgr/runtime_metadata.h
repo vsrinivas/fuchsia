@@ -7,8 +7,7 @@
 
 #include <string>
 
-namespace fuchsia {
-namespace sys {
+namespace component {
 
 class RuntimeMetadata {
  public:
@@ -23,7 +22,6 @@ class RuntimeMetadata {
   std::string runner_;
 };
 
-}  // namespace sys
-}  // namespace fuchsia
+}  // namespace component
 
 #endif  // GARNET_BIN_APPMGR_RUNTIME_METADATA_H_

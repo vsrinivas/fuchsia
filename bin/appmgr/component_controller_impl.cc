@@ -18,14 +18,14 @@
 #include "garnet/bin/appmgr/namespace.h"
 #include "lib/fsl/handles/object_info.h"
 
-namespace fuchsia {
-namespace sys {
+namespace component {
 
 ComponentControllerBase::ComponentControllerBase(
-    fidl::InterfaceRequest<ComponentController> request, std::string url,
-    std::string args, std::string label, std::string hub_instance_id,
-    fxl::RefPtr<Namespace> ns, ExportedDirType export_dir_type,
-    zx::channel exported_dir, zx::channel client_request)
+    fidl::InterfaceRequest<fuchsia::sys::ComponentController> request,
+    std::string url, std::string args, std::string label,
+    std::string hub_instance_id, fxl::RefPtr<Namespace> ns,
+    ExportedDirType export_dir_type, zx::channel exported_dir,
+    zx::channel client_request)
     : binding_(this),
       label_(std::move(label)),
       hub_instance_id_(std::move(hub_instance_id)),
@@ -67,13 +67,13 @@ ComponentControllerBase::ComponentControllerBase(
 ComponentControllerBase::~ComponentControllerBase() {}
 
 HubInfo ComponentControllerBase::HubInfo() {
-  return fuchsia::sys::HubInfo(label_, hub_instance_id_, hub_.dir());
+  return component::HubInfo(label_, hub_instance_id_, hub_.dir());
 }
 
 void ComponentControllerBase::Detach() { binding_.set_error_handler(nullptr); }
 
 ComponentControllerImpl::ComponentControllerImpl(
-    fidl::InterfaceRequest<ComponentController> request,
+    fidl::InterfaceRequest<fuchsia::sys::ComponentController> request,
     ComponentContainer<ComponentControllerImpl>* container, std::string job_id,
     zx::process process, std::string url, std::string args, std::string label,
     fxl::RefPtr<Namespace> ns, ExportedDirType export_dir_type,
@@ -129,13 +129,13 @@ void ComponentControllerImpl::Wait(WaitCallback callback) {
 }
 
 zx_status_t ComponentControllerImpl::AddSubComponentHub(
-    const fuchsia::sys::HubInfo& hub_info) {
+    const component::HubInfo& hub_info) {
   hub()->EnsureComponentDir();
   return hub()->AddComponent(hub_info);
 }
 
 zx_status_t ComponentControllerImpl::RemoveSubComponentHub(
-    const fuchsia::sys::HubInfo& hub_info) {
+    const component::HubInfo& hub_info) {
   return hub()->RemoveComponent(hub_info);
 }
 
@@ -158,8 +158,8 @@ void ComponentControllerImpl::Handler(async_t* async, async::WaitBase* wait,
 }
 
 ComponentBridge::ComponentBridge(
-    fidl::InterfaceRequest<ComponentController> request,
-    ComponentControllerPtr remote_controller,
+    fidl::InterfaceRequest<fuchsia::sys::ComponentController> request,
+    fuchsia::sys::ComponentControllerPtr remote_controller,
     ComponentContainer<ComponentBridge>* container, std::string url,
     std::string args, std::string label, std::string hub_instance_id,
     fxl::RefPtr<Namespace> ns, ExportedDirType export_dir_type,
@@ -188,5 +188,4 @@ void ComponentBridge::Wait(WaitCallback callback) {
   remote_controller_->Wait(std::move(callback));
 }
 
-}  // namespace sys
-}  // namespace fuchsia
+}  // namespace component

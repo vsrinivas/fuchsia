@@ -11,8 +11,7 @@
 #include <fs/pseudo-dir.h>
 #include <zircon/types.h>
 
-namespace fuchsia {
-namespace sys {
+namespace component {
 
 RealmHub::RealmHub(fbl::RefPtr<fs::PseudoDir> root)
     : Hub(root), realm_dir_(fbl::AdoptRef(new fs::PseudoDir())) {
@@ -53,5 +52,4 @@ zx_status_t RealmHub::RemoveRealm(const HubInfo& hub_info) {
 
 RealmHub::~RealmHub() = default;
 
-}  // namespace sys
-}  // namespace fuchsia
+}  // namespace component

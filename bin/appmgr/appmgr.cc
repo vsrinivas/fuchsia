@@ -4,8 +4,7 @@
 
 #include "garnet/bin/appmgr/appmgr.h"
 
-namespace fuchsia {
-namespace sys {
+namespace component {
 namespace {
 constexpr char kRootLabel[] = "app";
 }  // namespace
@@ -19,9 +18,10 @@ Appmgr::Appmgr(async_t* async, AppmgrArgs args)
       sysmgr_args_(std::move(args.sysmgr_args)) {
   // 1. Serve loader.
   loader_dir_->AddEntry(
-      Loader::Name_, fbl::AdoptRef(new fs::Service([this](zx::channel channel) {
+      fuchsia::sys::Loader::Name_,
+      fbl::AdoptRef(new fs::Service([this](zx::channel channel) {
         root_loader_.AddBinding(
-            fidl::InterfaceRequest<Loader>(std::move(channel)));
+            fidl::InterfaceRequest<fuchsia::sys::Loader>(std::move(channel)));
         return ZX_OK;
       })));
 
@@ -53,7 +53,7 @@ Appmgr::Appmgr(async_t* async, AppmgrArgs args)
 
   // 3. Run sysmgr
   auto run_sysmgr = [this] {
-    LaunchInfo launch_info;
+    fuchsia::sys::LaunchInfo launch_info;
     launch_info.url = sysmgr_url_;
     launch_info.arguments.reset(sysmgr_args_);
     root_realm_->CreateComponent(std::move(launch_info), sysmgr_.NewRequest());
@@ -71,5 +71,4 @@ Appmgr::Appmgr(async_t* async, AppmgrArgs args)
 
 Appmgr::~Appmgr() = default;
 
-}  // namespace sys
-}  // namespace fuchsia
+}  // namespace component

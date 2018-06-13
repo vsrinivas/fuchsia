@@ -7,8 +7,7 @@
 #include <fbl/string.h>
 #include <fs/pseudo-dir.h>
 
-namespace fuchsia {
-namespace sys {
+namespace component {
 
 HubInfo::HubInfo(fbl::String label, fbl::String koid,
                  fbl::RefPtr<fs::PseudoDir> hub_dir)
@@ -18,5 +17,4 @@ HubInfo::HubInfo(fbl::String label, fbl::String koid,
 
 HubInfo::~HubInfo() = default;
 
-}  // namespace sys
-}  // namespace fuchsia
+}  // namespace component

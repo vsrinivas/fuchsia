@@ -17,15 +17,14 @@
 
 #include <fuchsia/sys/cpp/fidl.h>
 
-namespace fuchsia {
-namespace sys {
+namespace component {
 
 class NamespaceBuilder {
  public:
   NamespaceBuilder();
   ~NamespaceBuilder();
 
-  void AddFlatNamespace(FlatNamespacePtr flat_namespace);
+  void AddFlatNamespace(fuchsia::sys::FlatNamespacePtr flat_namespace);
   void AddPackage(zx::channel package);
   void AddDirectoryIfNotPresent(const std::string& path, zx::channel directory);
   void AddServices(zx::channel services);
@@ -54,7 +53,7 @@ class NamespaceBuilder {
 
   // Similar to Build() but returns a FIDL struct with ownership of all
   // zx:channel that are part of this namespace.
-  FlatNamespace BuildForRunner();
+  fuchsia::sys::FlatNamespace BuildForRunner();
 
  private:
   void PushDirectoryFromPath(std::string path);
@@ -74,7 +73,6 @@ class NamespaceBuilder {
   FXL_DISALLOW_COPY_AND_ASSIGN(NamespaceBuilder);
 };
 
-}  // namespace sys
-}  // namespace fuchsia
+}  // namespace component
 
 #endif  // GARNET_BIN_APPMGR_NAMESPACE_BUILDER_H_

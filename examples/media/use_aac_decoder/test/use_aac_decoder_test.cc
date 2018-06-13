@@ -69,10 +69,10 @@ int main(int argc, char* argv[]) {
       "--config={\"services\": { \"fuchsia.mediacodec.CodecFactory\": "
       "\"codec_factory\" } }");
   sysmgr_args.push_back("--test");
-  std::unique_ptr<fuchsia::sys::Appmgr> appmgr =
-      std::make_unique<fuchsia::sys::Appmgr>(
+  std::unique_ptr<component::Appmgr> appmgr =
+      std::make_unique<component::Appmgr>(
           main_loop.async(),
-          fuchsia::sys::AppmgrArgs{
+          component::AppmgrArgs{
               .pa_directory_request = appmgr_pa_directory_server.release(),
               .sysmgr_url = "sysmgr",
               .sysmgr_args = std::move(sysmgr_args),

@@ -16,21 +16,22 @@
 #include "lib/fxl/memory/ref_ptr.h"
 #include "lib/svc/cpp/services.h"
 
-namespace fuchsia {
-namespace sys {
+namespace component {
 
 class Realm;
 
 class RunnerHolder : public ComponentContainer<ComponentBridge> {
  public:
-  RunnerHolder(Services services, ComponentControllerPtr controller,
-               LaunchInfo launch_info, Realm* realm,
+  RunnerHolder(fuchsia::sys::Services services,
+               fuchsia::sys::ComponentControllerPtr controller,
+               fuchsia::sys::LaunchInfo launch_info, Realm* realm,
                std::function<void()> error_handler = nullptr);
   ~RunnerHolder();
 
-  void StartComponent(Package package, StartupInfo startup_info,
-                      fxl::RefPtr<Namespace> ns,
-                      fidl::InterfaceRequest<ComponentController> controller);
+  void StartComponent(
+      fuchsia::sys::Package package, fuchsia::sys::StartupInfo startup_info,
+      fxl::RefPtr<Namespace> ns,
+      fidl::InterfaceRequest<fuchsia::sys::ComponentController> controller);
 
   std::unique_ptr<ComponentBridge> ExtractComponent(
       ComponentBridge* controller) override;
@@ -39,9 +40,9 @@ class RunnerHolder : public ComponentContainer<ComponentBridge> {
   void CreateComponentCallback(ComponentControllerImpl* component);
   void Cleanup();
 
-  Services services_;
-  ComponentControllerPtr controller_;
-  RunnerPtr runner_;
+  fuchsia::sys::Services services_;
+  fuchsia::sys::ComponentControllerPtr controller_;
+  fuchsia::sys::RunnerPtr runner_;
   ComponentControllerImpl* impl_object_;
   std::function<void()> error_handler_;
   std::unordered_map<ComponentBridge*, std::unique_ptr<ComponentBridge>>
@@ -52,7 +53,6 @@ class RunnerHolder : public ComponentContainer<ComponentBridge> {
   FXL_DISALLOW_COPY_AND_ASSIGN(RunnerHolder);
 };
 
-}  // namespace sys
-}  // namespace fuchsia
+}  // namespace component
 
 #endif  // GARNET_BIN_APPMGR_RUNNER_HOLDER_H_

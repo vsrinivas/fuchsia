@@ -13,8 +13,7 @@
 #include <fs/pseudo-dir.h>
 #include <zircon/types.h>
 
-namespace fuchsia {
-namespace sys {
+namespace component {
 
 class ComponentHub : public Hub {
  public:
@@ -40,7 +39,6 @@ class ComponentHub : public Hub {
   FXL_DISALLOW_COPY_AND_ASSIGN(ComponentHub);
 };
 
-}  // namespace sys
-}  // namespace fuchsia
+}  // namespace component
 
 #endif  // GARNET_BIN_APPMGR_HUB_COMPONENT_HUB_H_

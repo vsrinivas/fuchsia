@@ -13,11 +13,10 @@
 #include "garnet/bin/appmgr/realm.h"
 #include "lib/app/cpp/environment_services.h"
 
-namespace fuchsia {
-namespace sys {
+namespace component {
 
 Namespace::Namespace(fxl::RefPtr<Namespace> parent, Realm* realm,
-                     ServiceListPtr service_list)
+                     fuchsia::sys::ServiceListPtr service_list)
     : vfs_(async_get_default()),
       services_(fbl::AdoptRef(new ServiceProviderDirImpl())),
       parent_(parent),
@@ -29,10 +28,11 @@ Namespace::Namespace(fxl::RefPtr<Namespace> parent, Realm* realm,
   services_->AddService(
       fbl::AdoptRef(new fs::Service([this](zx::channel channel) {
         environment_bindings_.AddBinding(
-            this, fidl::InterfaceRequest<Environment>(std::move(channel)));
+            this, fidl::InterfaceRequest<fuchsia::sys::Environment>(
+                      std::move(channel)));
         return ZX_OK;
       })),
-      Environment::Name_);
+      fuchsia::sys::Environment::Name_);
   services_->AddService(
       fbl::AdoptRef(new fs::Service([this](zx::channel channel) {
         launcher_bindings_.AddBinding(
@@ -42,7 +42,7 @@ Namespace::Namespace(fxl::RefPtr<Namespace> parent, Realm* realm,
       Launcher::Name_);
   services_->AddService(
       fbl::AdoptRef(new fs::Service([this](zx::channel channel) {
-        ConnectToEnvironmentService(
+        fuchsia::sys::ConnectToEnvironmentService(
             fidl::InterfaceRequest<fuchsia::process::Launcher>(
                 std::move(channel)));
         return ZX_OK;
@@ -65,13 +65,15 @@ Namespace::Namespace(fxl::RefPtr<Namespace> parent, Realm* realm,
 
 Namespace::~Namespace() {}
 
-void Namespace::AddBinding(fidl::InterfaceRequest<Environment> environment) {
+void Namespace::AddBinding(
+    fidl::InterfaceRequest<fuchsia::sys::Environment> environment) {
   environment_bindings_.AddBinding(this, std::move(environment));
 }
 
 void Namespace::CreateNestedEnvironment(
-    zx::channel host_directory, fidl::InterfaceRequest<Environment> environment,
-    fidl::InterfaceRequest<EnvironmentController> controller,
+    zx::channel host_directory,
+    fidl::InterfaceRequest<fuchsia::sys::Environment> environment,
+    fidl::InterfaceRequest<fuchsia::sys::EnvironmentController> controller,
     fidl::StringPtr label) {
   realm_->CreateNestedJob(std::move(host_directory), std::move(environment),
                           std::move(controller), label);
@@ -81,7 +83,8 @@ void Namespace::GetLauncher(fidl::InterfaceRequest<Launcher> launcher) {
   launcher_bindings_.AddBinding(this, std::move(launcher));
 }
 
-void Namespace::GetServices(fidl::InterfaceRequest<ServiceProvider> services) {
+void Namespace::GetServices(
+    fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> services) {
   services_->AddBinding(std::move(services));
 }
 
@@ -90,8 +93,8 @@ zx_status_t Namespace::ServeServiceDirectory(zx::channel directory_request) {
 }
 
 void Namespace::CreateComponent(
-    LaunchInfo launch_info,
-    fidl::InterfaceRequest<ComponentController> controller) {
+    fuchsia::sys::LaunchInfo launch_info,
+    fidl::InterfaceRequest<fuchsia::sys::ComponentController> controller) {
   realm_->CreateComponent(std::move(launch_info), std::move(controller));
 }
 
@@ -104,5 +107,4 @@ zx::channel Namespace::OpenServicesAsDirectory() {
   return h2;
 }
 
-}  // namespace sys
-}  // namespace fuchsia
+}  // namespace component

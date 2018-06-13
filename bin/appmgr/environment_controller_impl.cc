@@ -10,11 +10,10 @@
 
 #include "garnet/bin/appmgr/realm.h"
 
-namespace fuchsia {
-namespace sys {
+namespace component {
 
 EnvironmentControllerImpl::EnvironmentControllerImpl(
-    fidl::InterfaceRequest<EnvironmentController> request,
+    fidl::InterfaceRequest<fuchsia::sys::EnvironmentController> request,
     std::unique_ptr<Realm> realm)
     : binding_(this), realm_(std::move(realm)) {
   if (request.is_valid()) {
@@ -27,8 +26,7 @@ EnvironmentControllerImpl::EnvironmentControllerImpl(
   }
 }
 
-EnvironmentControllerImpl::~EnvironmentControllerImpl() =
-    default;
+EnvironmentControllerImpl::~EnvironmentControllerImpl() = default;
 
 void EnvironmentControllerImpl::Kill(KillCallback callback) {
   std::unique_ptr<EnvironmentControllerImpl> self =
@@ -42,5 +40,4 @@ void EnvironmentControllerImpl::Detach() {
   binding_.set_error_handler(nullptr);
 }
 
-}  // namespace sys
-}  // namespace fuchsia
+}  // namespace component

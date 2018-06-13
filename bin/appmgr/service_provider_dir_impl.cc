@@ -8,8 +8,7 @@
 #include <lib/fdio/util.h>
 #include "lib/fxl/logging.h"
 
-namespace fuchsia {
-namespace sys {
+namespace component {
 
 ServiceProviderDirImpl::ServiceProviderDirImpl()
     : vfs_(async_get_default()),
@@ -24,7 +23,7 @@ void ServiceProviderDirImpl::AddService(fbl::RefPtr<fs::Service> service,
 }
 
 void ServiceProviderDirImpl::AddBinding(
-    fidl::InterfaceRequest<ServiceProvider> request) {
+    fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> request) {
   bindings_.AddBinding(this, std::move(request));
 }
 
@@ -69,5 +68,4 @@ zx_status_t ServiceProviderDirImpl::Lookup(fbl::RefPtr<fs::Vnode>* out,
   return ZX_OK;
 }
 
-}  // namespace sys
-}  // namespace fuchsia
+}  // namespace component

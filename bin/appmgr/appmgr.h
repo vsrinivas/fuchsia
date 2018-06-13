@@ -13,8 +13,7 @@
 #include "garnet/bin/appmgr/root_loader.h"
 #include "lib/fxl/macros.h"
 
-namespace fuchsia {
-namespace sys {
+namespace component {
 
 struct AppmgrArgs {
   zx_handle_t pa_directory_request;
@@ -38,14 +37,13 @@ class Appmgr {
   fs::SynchronousVfs publish_vfs_;
   fbl::RefPtr<fs::PseudoDir> publish_dir_;
 
-  ComponentControllerPtr sysmgr_;
+  fuchsia::sys::ComponentControllerPtr sysmgr_;
   std::string sysmgr_url_;
   fidl::VectorPtr<fidl::StringPtr> sysmgr_args_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(Appmgr);
 };
 
-}  // namespace sys
-}  // namespace fuchsia
+}  // namespace component
 
 #endif  // GARNET_BIN_APPMGR_APPMGR_H_

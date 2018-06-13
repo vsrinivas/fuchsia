@@ -12,8 +12,7 @@
 #include "gtest/gtest.h"
 #include "third_party/rapidjson/rapidjson/document.h"
 
-namespace fuchsia {
-namespace sys {
+namespace component {
 namespace {
 
 TEST(NamespaceBuilder, Control) {
@@ -102,5 +101,4 @@ TEST(NamespaceBuilder, Shell) {
 }
 
 }  // namespace
-}  // namespace sys
-}  // namespace fuchsia
+}  // namespace component

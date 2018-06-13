@@ -26,12 +26,12 @@ TEST_F(TestSysmgr, ServiceStartup) {
       "--config={\"services\": { \"test.sysmgr.Interface\": "
       "\"test_sysmgr_service_startup\" } }");
   sysmgr_args.push_back("--test");
-  fuchsia::sys::AppmgrArgs args{.pa_directory_request = h2.release(),
-                                .sysmgr_url = "sysmgr",
-                                .sysmgr_args = std::move(sysmgr_args),
-                                .run_virtual_console = false,
-                                .retry_sysmgr_crash = false};
-  fuchsia::sys::Appmgr appmgr(message_loop_.async(), std::move(args));
+  component::AppmgrArgs args{.pa_directory_request = h2.release(),
+                             .sysmgr_url = "sysmgr",
+                             .sysmgr_args = std::move(sysmgr_args),
+                             .run_virtual_console = false,
+                             .retry_sysmgr_crash = false};
+  component::Appmgr appmgr(message_loop_.async(), std::move(args));
 
   zx::channel svc_client, svc_server;
   ASSERT_EQ(ZX_OK, zx::channel::create(0, &svc_client, &svc_server));

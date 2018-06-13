@@ -8,8 +8,7 @@
 
 #include "third_party/rapidjson/rapidjson/document.h"
 
-namespace fuchsia {
-namespace sys {
+namespace component {
 namespace {
 
 TEST(CmxMetadata, ParseSandboxMetadata) {
@@ -29,5 +28,4 @@ TEST(CmxMetadata, GetCmxPath) {
 }
 
 }  // namespace
-}  // namespace sys
-}  // namespace fuchsia
+}  // namespace component

@@ -15,14 +15,13 @@
 #include "lib/fsl/io/fd.h"
 #include "lib/fxl/files/unique_fd.h"
 
-namespace fuchsia {
-namespace sys {
+namespace component {
 
 NamespaceBuilder::NamespaceBuilder() = default;
 
 NamespaceBuilder::~NamespaceBuilder() = default;
 
-void NamespaceBuilder::AddFlatNamespace(FlatNamespacePtr ns) {
+void NamespaceBuilder::AddFlatNamespace(fuchsia::sys::FlatNamespacePtr ns) {
   if (ns && ns->paths->size() == ns->directories->size()) {
     for (size_t i = 0; i < ns->paths->size(); ++i) {
       AddDirectoryIfNotPresent(ns->paths->at(i),
@@ -69,7 +68,8 @@ void NamespaceBuilder::AddSandbox(
       PushDirectoryFromPath("/data");
     } else if (feature == "root-ssl-certificates" || feature == "shell") {
       // "shell" implies "root-ssl-certificates"
-      PushDirectoryFromPathAs("/pkgfs/packages/root_ssl_certificates/0/data", "/config/ssl");
+      PushDirectoryFromPathAs("/pkgfs/packages/root_ssl_certificates/0/data",
+                              "/config/ssl");
 
       if (feature == "shell") {
         // TODO(abarth): These permissions should depend on the envionment
@@ -105,7 +105,8 @@ void NamespaceBuilder::AddDeprecatedDefaultDirectories() {
   PushDirectoryFromPathIfNotPresent("/data");
   PushDirectoryFromPathIfNotPresent("/system");
   PushDirectoryFromPathIfNotPresent("/tmp");
-  PushDirectoryFromPathAs("/pkgfs/packages/root_ssl_certificates/0/data", "/config/ssl");
+  PushDirectoryFromPathAs("/pkgfs/packages/root_ssl_certificates/0/data",
+                          "/config/ssl");
 }
 
 void NamespaceBuilder::PushDirectoryFromPath(std::string path) {
@@ -156,8 +157,8 @@ fdio_flat_namespace_t* NamespaceBuilder::Build() {
   return &flat_ns_;
 }
 
-FlatNamespace NamespaceBuilder::BuildForRunner() {
-  FlatNamespace flat_namespace;
+fuchsia::sys::FlatNamespace NamespaceBuilder::BuildForRunner() {
+  fuchsia::sys::FlatNamespace flat_namespace;
 
   for (auto& path : paths_) {
     flat_namespace.paths.push_back(std::move(path));
@@ -175,5 +176,4 @@ void NamespaceBuilder::Release() {
   handle_pool_.clear();
 }
 
-}  // namespace sys
-}  // namespace fuchsia
+}  // namespace component

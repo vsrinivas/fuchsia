@@ -13,8 +13,7 @@
 #include <fs/pseudo-dir.h>
 #include <fs/vnode.h>
 
-namespace fuchsia {
-namespace sys {
+namespace component {
 
 class Hub {
  public:
@@ -45,7 +44,6 @@ class Hub {
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(Hub);
 };
-}  // namespace sys
-}  // namespace fuchsia
+}  // namespace component
 
 #endif  // GARNET_BIN_APPMGR_HUB_HUB_H_

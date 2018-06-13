@@ -17,67 +17,68 @@
 #include "lib/fxl/memory/ref_counted.h"
 #include "lib/fxl/strings/string_view.h"
 
-namespace fuchsia {
-namespace sys {
+namespace component {
 class Realm;
 
-class Namespace : public Environment,
-                  public Launcher,
+class Namespace : public fuchsia::sys::Environment,
+                  public fuchsia::sys::Launcher,
                   public fxl::RefCountedThreadSafe<Namespace> {
  public:
   const fbl::RefPtr<ServiceProviderDirImpl>& services() { return services_; }
 
-  void AddBinding(fidl::InterfaceRequest<Environment> environment);
+  void AddBinding(
+      fidl::InterfaceRequest<fuchsia::sys::Environment> environment);
 
   zx_status_t ServeServiceDirectory(zx::channel request);
 
   zx::channel OpenServicesAsDirectory();
 
-  // Environment implementation:
+  // fuchsia::sys::Environment implementation:
 
   void CreateNestedEnvironment(
       zx::channel host_directory,
-      fidl::InterfaceRequest<Environment> environment,
-      fidl::InterfaceRequest<EnvironmentController> controller,
+      fidl::InterfaceRequest<fuchsia::sys::Environment> environment,
+      fidl::InterfaceRequest<fuchsia::sys::EnvironmentController> controller,
       fidl::StringPtr label) override;
 
-  void GetLauncher(fidl::InterfaceRequest<Launcher> launcher) override;
+  void GetLauncher(
+      fidl::InterfaceRequest<fuchsia::sys::Launcher> launcher) override;
 
-  void GetServices(fidl::InterfaceRequest<ServiceProvider> services) override;
+  void GetServices(
+      fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> services) override;
 
   void GetDirectory(zx::channel directory_request) override {
     ServeServiceDirectory(std::move(directory_request));
   }
 
-  // Launcher implementation:
+  // fuchsia::sys::Launcher implementation:
 
-  void CreateComponent(
-      LaunchInfo launch_info,
-      fidl::InterfaceRequest<ComponentController> controller) override;
+  void CreateComponent(fuchsia::sys::LaunchInfo launch_info,
+                       fidl::InterfaceRequest<fuchsia::sys::ComponentController>
+                           controller) override;
 
  private:
   FRIEND_MAKE_REF_COUNTED(Namespace);
   Namespace(fxl::RefPtr<Namespace> parent, Realm* realm,
-            ServiceListPtr service_list);
+            fuchsia::sys::ServiceListPtr service_list);
 
   FRIEND_REF_COUNTED_THREAD_SAFE(Namespace);
   ~Namespace() override;
 
-  fidl::BindingSet<Environment> environment_bindings_;
-  fidl::BindingSet<Launcher> launcher_bindings_;
+  fidl::BindingSet<fuchsia::sys::Environment> environment_bindings_;
+  fidl::BindingSet<fuchsia::sys::Launcher> launcher_bindings_;
 
   fs::SynchronousVfs vfs_;
   fbl::RefPtr<ServiceProviderDirImpl> services_;
 
   fxl::RefPtr<Namespace> parent_;
   Realm* realm_;
-  ServiceProviderPtr additional_services_;
-  LoaderPtr loader_;
+  fuchsia::sys::ServiceProviderPtr additional_services_;
+  fuchsia::sys::LoaderPtr loader_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(Namespace);
 };
 
-}  // namespace sys
-}  // namespace fuchsia
+}  // namespace component
 
 #endif  // GARNET_BIN_APPMGR_NAMESPACE_H_
