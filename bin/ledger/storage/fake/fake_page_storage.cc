@@ -149,6 +149,10 @@ Status FakePageStorage::RemoveCommitWatcher(CommitWatcher* watcher) {
   return Status::OK;
 }
 
+void FakePageStorage::IsSynced(std::function<void(Status, bool)> callback) {
+  callback(Status::OK, is_synced_);
+}
+
 void FakePageStorage::AddObjectFromLocal(
     std::unique_ptr<DataSource> data_source,
     std::function<void(Status, ObjectIdentifier)> callback) {

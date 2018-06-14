@@ -19,8 +19,8 @@
 #include "lib/fxl/strings/string_view.h"
 #include "peridot/bin/ledger/app/ledger_impl.h"
 #include "peridot/bin/ledger/app/merging/ledger_merge_manager.h"
-#include "peridot/bin/ledger/app/page_eviction_manager.h"
 #include "peridot/bin/ledger/app/page_manager.h"
+#include "peridot/bin/ledger/app/types.h"
 #include "peridot/bin/ledger/encryption/public/encryption_service.h"
 #include "peridot/bin/ledger/environment/environment.h"
 #include "peridot/bin/ledger/storage/public/types.h"
@@ -28,6 +28,7 @@
 #include "peridot/lib/convert/convert.h"
 
 namespace ledger {
+class PageUsageListener;
 
 // Manages a ledger instance. A ledger instance represents the data scoped to a
 // particular user and a particular client app.
@@ -49,6 +50,14 @@ class LedgerManager : public LedgerImpl::Delegate,
   // Creates a new proxy for the LedgerImpl managed by this LedgerManager.
   void BindLedger(fidl::InterfaceRequest<Ledger> ledger_request);
 
+  // Checks whether the given page is closed and synced. The result returned in
+  // the callback will be |PageClosedAndSynced:UNKNOWN| if the page is opened
+  // after calling this method and before the callback is called. Otherwise it
+  // will be |YES| or |NO| depending on whether the page is synced or not.
+  void PageIsClosedAndSynced(
+      storage::PageIdView page_id,
+      std::function<void(Status, PageClosedAndSynced)> callback);
+
   // LedgerImpl::Delegate:
   void GetPage(convert::ExtendedStringView page_id, PageState page_state,
                fidl::InterfaceRequest<Page> page_request,
@@ -67,6 +76,12 @@ class LedgerManager : public LedgerImpl::Delegate,
  private:
   class PageManagerContainer;
 
+  // Requests a PageStorage object for the given |container|. If the page is not
+  // locally available, the |callback| is called with |PAGE_NOT_FOUND|.
+  void InitPageManagerContainer(PageManagerContainer* container,
+                                convert::ExtendedStringView page_id,
+                                std::function<void(Status)> callback);
+
   // Creates a page storage for the given |page_id| and completes the
   // PageManagerContainer.
   void CreatePageStorage(storage::PageId page_id, PageState page_state,
@@ -81,6 +96,10 @@ class LedgerManager : public LedgerImpl::Delegate,
   std::unique_ptr<PageManager> NewPageManager(
       std::unique_ptr<storage::PageStorage> page_storage,
       PageManager::PageStorageState state);
+
+  // If the page is among the ones whose usage is being tracked, marks this page
+  // as opened. See also |page_was_opened_map_|.
+  void MaybeMarkPageOpened(storage::PageIdView page_id);
 
   void CheckEmpty();
 
@@ -111,6 +130,14 @@ class LedgerManager : public LedgerImpl::Delegate,
   fxl::Closure on_empty_callback_;
 
   fidl::BindingSet<LedgerDebug> ledger_debug_bindings_;
+
+  // |page_was_opened_map_| is used to track whether pages checked for their
+  // sync state were opened during the operation: When |PageIsClosedAndSynced()|
+  // is called this map is updated with the id of the page being checked as key
+  // and false as value. Until the callback of that operation is called, all
+  // calls to external requests for that page are tracked and the map entry is
+  // updated if necessary.
+  std::map<storage::PageId, bool> page_was_opened_map_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(LedgerManager);
 };

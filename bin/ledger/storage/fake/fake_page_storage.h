@@ -55,6 +55,7 @@ class FakePageStorage : public PageStorageEmptyImpl {
                        std::function<void(Status)> callback) override;
   Status AddCommitWatcher(CommitWatcher* watcher) override;
   Status RemoveCommitWatcher(CommitWatcher* watcher) override;
+  void IsSynced(std::function<void(Status, bool)> callback) override;
   void AddObjectFromLocal(
       std::unique_ptr<DataSource> data_source,
       std::function<void(Status, ObjectIdentifier)> callback) override;
@@ -72,6 +73,7 @@ class FakePageStorage : public PageStorageEmptyImpl {
 
   // For testing:
   void set_autocommit(bool autocommit) { autocommit_ = autocommit; }
+  void set_syned(bool is_synced) { is_synced_ = is_synced; }
   const std::map<std::string, std::unique_ptr<FakeJournalDelegate>>&
   GetJournals() const;
   const std::map<ObjectIdentifier, std::string>& GetObjects() const;
@@ -86,6 +88,7 @@ class FakePageStorage : public PageStorageEmptyImpl {
 
   bool autocommit_ = true;
   bool drop_commit_notifications_ = false;
+  bool is_synced_ = false;
 
   std::default_random_engine rng_;
   std::map<std::string, std::unique_ptr<FakeJournalDelegate>> journals_;

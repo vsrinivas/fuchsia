@@ -199,7 +199,8 @@ void LedgerRepositoryFactoryImpl::GetRepository(
     callback(Status::IO_ERROR);
     return;
   }
-  auto page_eviction_manager = std::make_unique<PageEvictionManagerImpl>();
+  auto page_eviction_manager = std::make_unique<PageEvictionManagerImpl>(
+      environment_->coroutine_service());
   Status status = page_eviction_manager->Init();
   if (status != Status::OK) {
     callback(status);
@@ -224,9 +225,12 @@ void LedgerRepositoryFactoryImpl::GetRepository(
     container->BindRepository(std::move(repository_request), callback);
     std::unique_ptr<SyncWatcherSet> watchers =
         std::make_unique<SyncWatcherSet>();
+    PageEvictionManagerImpl* page_eviction_manager_ptr =
+        page_eviction_manager.get();
     auto repository = std::make_unique<LedgerRepositoryImpl>(
         repository_information.content_path, environment_, std::move(watchers),
         nullptr, std::move(page_eviction_manager));
+    page_eviction_manager_ptr->SetPageStateReader(repository.get());
     container->SetRepository(Status::OK, std::move(repository));
     return;
   }
@@ -259,7 +263,7 @@ void LedgerRepositoryFactoryImpl::CreateRepository(
     LedgerRepositoryContainer* container,
     const RepositoryInformation& repository_information,
     cloud_sync::UserConfig user_config,
-    std::unique_ptr<PageEvictionManager> page_eviction_manager) {
+    std::unique_ptr<PageEvictionManagerImpl> page_eviction_manager) {
   std::unique_ptr<SyncWatcherSet> watchers = std::make_unique<SyncWatcherSet>();
   fxl::Closure on_version_mismatch = [this, repository_information]() mutable {
     OnVersionMismatch(repository_information);
@@ -274,9 +278,12 @@ void LedgerRepositoryFactoryImpl::CreateRepository(
       std::move(cloud_sync), std::move(p2p_sync));
   user_sync->SetWatcher(watchers.get());
   user_sync->Start();
+  PageEvictionManagerImpl* page_eviction_manager_ptr =
+      page_eviction_manager.get();
   auto repository = std::make_unique<LedgerRepositoryImpl>(
       repository_information.content_path, environment_, std::move(watchers),
       std::move(user_sync), std::move(page_eviction_manager));
+  page_eviction_manager_ptr->SetPageStateReader(repository.get());
   container->SetRepository(Status::OK, std::move(repository));
 }
 

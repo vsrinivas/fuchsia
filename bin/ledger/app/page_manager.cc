@@ -121,11 +121,21 @@ Status PageManager::ResolveReference(
   return Status::OK;
 }
 
+void PageManager::IsSynced(std::function<void(Status, bool)> callback) {
+  page_storage_->IsSynced(
+      [callback = std::move(callback)](storage::Status status, bool is_synced) {
+        callback(PageUtils::ConvertStatus(status), is_synced);
+      });
+}
+
+bool PageManager::IsEmpty() {
+  return pages_.empty() && snapshots_.empty() && page_requests_.empty() &&
+         merge_resolver_->IsEmpty() && (!page_sync_ || page_sync_->IsIdle()) &&
+         page_debug_bindings_.size() == 0;
+}
+
 void PageManager::CheckEmpty() {
-  if (on_empty_callback_ && pages_.empty() && snapshots_.empty() &&
-      page_requests_.empty() && merge_resolver_->IsEmpty() &&
-      (!page_sync_ || page_sync_->IsIdle()) &&
-      page_debug_bindings_.size() == 0) {
+  if (on_empty_callback_ && IsEmpty()) {
     on_empty_callback_();
   }
 }

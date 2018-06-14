@@ -16,6 +16,8 @@
 #include "lib/fxl/macros.h"
 #include "peridot/bin/ledger/app/ledger_manager.h"
 #include "peridot/bin/ledger/app/page_eviction_manager.h"
+#include "peridot/bin/ledger/app/page_state_reader.h"
+#include "peridot/bin/ledger/app/types.h"
 #include "peridot/bin/ledger/app/sync_watcher_set.h"
 #include "peridot/bin/ledger/encryption/impl/encryption_service_factory_impl.h"
 #include "peridot/bin/ledger/environment/environment.h"
@@ -28,7 +30,8 @@
 namespace ledger {
 
 class LedgerRepositoryImpl : public ledger_internal::LedgerRepository,
-                             public ledger_internal::LedgerRepositoryDebug {
+                             public ledger_internal::LedgerRepositoryDebug,
+                             public PageStateReader {
  public:
   LedgerRepositoryImpl(
       DetachedPath content_path, Environment* environment,
@@ -47,6 +50,11 @@ class LedgerRepositoryImpl : public ledger_internal::LedgerRepository,
   // Releases all handles bound to this repository impl.
   std::vector<fidl::InterfaceRequest<LedgerRepository>> Unbind();
 
+  // PageStateReader:
+  void PageIsClosedAndSynced(
+      fxl::StringView ledger_name, storage::PageIdView page_id,
+      std::function<void(Status, PageClosedAndSynced)> callback) override;
+
   // LedgerRepository:
   void GetLedger(fidl::VectorPtr<uint8_t> ledger_name,
                  fidl::InterfaceRequest<Ledger> ledger_request,
@@ -62,6 +70,14 @@ class LedgerRepositoryImpl : public ledger_internal::LedgerRepository,
   void DiskCleanUp(DiskCleanUpCallback callback) override;
 
  private:
+  enum CreateIfMissing { YES, NO };
+
+  // Retrieves the existing, or creates a new LedgerManager object with the
+  // given |ledger_name|. Returns a pointer to the LedgerManager instance, or
+  // nullptr if it is not found and |create_if_missing| is |NO|.
+  LedgerManager* GetLedgerManager(convert::ExtendedStringView ledger_name,
+                                  CreateIfMissing create_if_missing);
+
   void CheckEmpty();
 
   // LedgerRepositoryDebug:

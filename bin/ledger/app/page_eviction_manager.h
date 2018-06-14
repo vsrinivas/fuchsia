@@ -29,6 +29,7 @@ class PageUsageListener {
   // Called when the connection to a page closes. In case of concurrent
   // connections to the same page, this should only be called once, when the
   // last connection closes.
+  // TODO(nellyv): Add argument on whether the page is synced and and cache it.
   virtual void OnPageClosed(fxl::StringView ledger_name,
                             storage::PageIdView page_id) = 0;
 

@@ -5,20 +5,25 @@
 #ifndef PERIDOT_BIN_LEDGER_APP_PAGE_EVICTION_MANAGER_IMPL_H_
 #define PERIDOT_BIN_LEDGER_APP_PAGE_EVICTION_MANAGER_IMPL_H_
 
+#include "peridot/bin/ledger/app/page_eviction_manager.h"
+
 #include <utility>
 
-#include "peridot/bin/ledger/app/page_eviction_manager.h"
+#include "peridot/bin/ledger/app/page_state_reader.h"
+#include "peridot/bin/ledger/coroutine/coroutine.h"
 
 namespace ledger {
 
 class PageEvictionManagerImpl : public PageEvictionManager {
  public:
-  PageEvictionManagerImpl();
+  PageEvictionManagerImpl(coroutine::CoroutineService* coroutine_service);
   ~PageEvictionManagerImpl();
 
   // Initializes this PageEvictionManager. |IO_ERROR| will be returned in case
   // of an error while initializing the underlying database.
   Status Init();
+
+  void SetPageStateReader(PageStateReader* state_reader);
 
   // PageEvictionManager:
   void TryCleanUp(std::function<void(Status)> callback) override;
@@ -32,8 +37,14 @@ class PageEvictionManagerImpl : public PageEvictionManager {
  private:
   Status EvictPage(fxl::StringView ledger_name, storage::PageIdView page_id);
 
-  Status PageIsSynced(fxl::StringView ledger_name, storage::PageIdView page_id,
-                      bool* is_synced);
+  // Checks whether a page can be evicted. We can evict pages that are not
+  // currently used and have no unsynced commits or objects.
+  Status CanEvictPage(coroutine::CoroutineHandler* handler,
+                      fxl::StringView ledger_name, storage::PageIdView page_id,
+                      bool* can_evict);
+
+  PageStateReader* state_reader_ = nullptr;
+  coroutine::CoroutineService* coroutine_service_;
 
   // For each page, stores the timestamp from when it was last used. The key is
   // a pair containing the ledger name and page id respectively, while the value

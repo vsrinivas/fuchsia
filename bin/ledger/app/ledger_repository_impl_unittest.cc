@@ -63,7 +63,7 @@ class LedgerRepositoryImplTest : public gtest::TestLoopFixture {
 
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(LedgerRepositoryImplTest);
-};  // namespace
+};
 
 TEST_F(LedgerRepositoryImplTest, DiskCleanUpError) {
   // Make a first call to DiskCleanUp.

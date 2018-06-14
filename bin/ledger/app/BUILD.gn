@@ -77,10 +77,12 @@ source_set("lib") {
     "page_manager.h",
     "page_snapshot_impl.cc",
     "page_snapshot_impl.h",
+    "page_state_reader.h",
     "page_utils.cc",
     "page_utils.h",
     "sync_watcher_set.cc",
     "sync_watcher_set.h",
+    "types.h",
   ]
 
   deps = [

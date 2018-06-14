@@ -126,6 +126,7 @@ TEST_F(PageManagerTest, OnEmptyCallback) {
   page2.Unbind();
   DrainLoop();
   EXPECT_TRUE(on_empty_called);
+  EXPECT_TRUE(page_manager.IsEmpty());
 
   on_empty_called = false;
   PagePtr page3;
@@ -135,15 +136,20 @@ TEST_F(PageManagerTest, OnEmptyCallback) {
   DrainLoop();
   ASSERT_TRUE(called);
   ASSERT_EQ(Status::OK, status);
+  EXPECT_FALSE(page_manager.IsEmpty());
+
   page3.Unbind();
   DrainLoop();
   EXPECT_TRUE(on_empty_called);
+  EXPECT_TRUE(page_manager.IsEmpty());
 
   on_empty_called = false;
   PageSnapshotPtr snapshot;
   page_manager.BindPageSnapshot(
       std::make_unique<const storage::CommitEmptyImpl>(), snapshot.NewRequest(),
       "");
+  DrainLoop();
+  EXPECT_FALSE(page_manager.IsEmpty());
   snapshot.Unbind();
   DrainLoop();
   EXPECT_TRUE(on_empty_called);
@@ -182,7 +188,9 @@ TEST_F(PageManagerTest, OnEmptyCallbackWithWatcher) {
                            PageManager::PageStorageState::NEEDS_SYNC);
   page_manager.set_on_empty(callback::SetWhenCalled(&on_empty_called));
   DrainLoop();
+  // PageManager is empty, but on_empty should not have be called, yet.
   EXPECT_FALSE(on_empty_called);
+  EXPECT_TRUE(page_manager.IsEmpty());
 
   bool called;
   Status status;
@@ -223,10 +231,12 @@ TEST_F(PageManagerTest, OnEmptyCallbackWithWatcher) {
   page2.Unbind();
   snapshot.Unbind();
   DrainLoop();
+  EXPECT_FALSE(page_manager.IsEmpty());
   EXPECT_FALSE(on_empty_called);
 
   watcher_request.TakeChannel();
   DrainLoop();
+  EXPECT_TRUE(page_manager.IsEmpty());
   EXPECT_TRUE(on_empty_called);
 }
 
@@ -343,6 +353,7 @@ TEST_F(PageManagerTest, ExitWhenSyncFinishes) {
 
   DrainLoop();
   EXPECT_TRUE(called);
+  EXPECT_TRUE(page_manager.IsEmpty());
 }
 
 TEST_F(PageManagerTest, DontDelayBindingWithLocalPageStorage) {

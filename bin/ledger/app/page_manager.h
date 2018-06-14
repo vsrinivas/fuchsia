@@ -79,6 +79,13 @@ class PageManager : public ledger_internal::PageDebug {
   Status ResolveReference(Reference reference,
                           storage::ObjectIdentifier* object_identifier);
 
+  // Checks whether there are any unsynced commits or pieces in this page.
+  void IsSynced(std::function<void(Status, bool)> callback);
+
+  // Returns true if this PageManager can be deleted without interrupting
+  // syncing, merging, or requests related to this page.
+  bool IsEmpty();
+
   void set_on_empty(const fxl::Closure& on_empty_callback) {
     on_empty_callback_ = on_empty_callback;
   }

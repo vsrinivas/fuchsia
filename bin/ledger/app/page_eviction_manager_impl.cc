@@ -8,10 +8,17 @@
 
 #include "lib/fxl/strings/concatenate.h"
 #include "peridot/bin/ledger/app/constants.h"
+#include "peridot/bin/ledger/app/ledger_repository_impl.h"
+#include "peridot/bin/ledger/app/types.h"
+#include "peridot/bin/ledger/coroutine/coroutine.h"
+#include "peridot/bin/ledger/storage/public/page_storage.h"
+#include "peridot/bin/ledger/storage/public/types.h"
 
 namespace ledger {
 
-PageEvictionManagerImpl::PageEvictionManagerImpl() {}
+PageEvictionManagerImpl::PageEvictionManagerImpl(
+    coroutine::CoroutineService* coroutine_service)
+    : coroutine_service_(coroutine_service) {}
 
 PageEvictionManagerImpl::~PageEvictionManagerImpl() {}
 
@@ -25,6 +32,13 @@ Status PageEvictionManagerImpl::Init() {
     }
   }
   return Status::OK;
+}
+
+void PageEvictionManagerImpl::SetPageStateReader(
+    PageStateReader* state_reader) {
+  FXL_DCHECK(state_reader);
+  FXL_DCHECK(!state_reader_);
+  state_reader_ = state_reader;
 }
 
 void PageEvictionManagerImpl::TryCleanUp(std::function<void(Status)> callback) {
@@ -46,20 +60,26 @@ void PageEvictionManagerImpl::TryCleanUp(std::function<void(Status)> callback) {
 
   // Find and evict the LRU page that is synced to the cloud.
   // TODO(nellyv): we should define some way to chose eviction policies.
-  for (const auto& entry : by_timestamp_map) {
-    bool is_synced;
-    Status status =
-        PageIsSynced(entry.second->first, entry.second->second, &is_synced);
-    if (status != Status::OK) {
-      callback(status);
-      return;
-    }
-    if (is_synced) {
-      callback(EvictPage(entry.second->first, entry.second->second));
-      return;
-    }
-  }
-  callback(Status::OK);
+  coroutine_service_->StartCoroutine(
+      [this, by_timestamp_map = std::move(by_timestamp_map),
+       callback = std::move(callback)](coroutine::CoroutineHandler* handler) {
+        for (const auto& entry : by_timestamp_map) {
+          const std::pair<std::string, std::string>* ledger_page_id =
+              entry.second;
+          bool can_evict;
+          Status status = CanEvictPage(handler, ledger_page_id->first,
+                                       ledger_page_id->second, &can_evict);
+          if (status != Status::OK) {
+            callback(status);
+            return;
+          }
+          if (can_evict) {
+            callback(EvictPage(ledger_page_id->first, ledger_page_id->second));
+            return;
+          }
+        }
+        callback(Status::OK);
+      });
 }
 
 void PageEvictionManagerImpl::OnPageOpened(fxl::StringView ledger_name,
@@ -80,11 +100,26 @@ Status PageEvictionManagerImpl::EvictPage(fxl::StringView /*ledger_name*/,
   return Status::UNKNOWN_ERROR;
 }
 
-Status PageEvictionManagerImpl::PageIsSynced(fxl::StringView /*ledger_name*/,
-                                             storage::PageIdView /*page_id*/,
-                                             bool* is_synced) {
-  FXL_NOTIMPLEMENTED();
-  return Status::UNKNOWN_ERROR;
+Status PageEvictionManagerImpl::CanEvictPage(
+    coroutine::CoroutineHandler* handler, fxl::StringView ledger_name,
+    storage::PageIdView page_id, bool* can_evict) {
+  FXL_DCHECK(state_reader_);
+
+  Status status;
+  PageClosedAndSynced sync_state;
+  auto sync_call_status = coroutine::SyncCall(
+      handler,
+      [this, ledger_name = ledger_name.ToString(),
+       page_id = page_id.ToString()](auto callback) {
+        state_reader_->PageIsClosedAndSynced(ledger_name, page_id, callback);
+      },
+      &status, &sync_state);
+  if (sync_call_status == coroutine::ContinuationStatus::INTERRUPTED) {
+    return Status::INTERNAL_ERROR;
+  }
+  *can_evict = (sync_state == PageClosedAndSynced::YES);
+
+  return Status::OK;
 }
 
 }  // namespace ledger

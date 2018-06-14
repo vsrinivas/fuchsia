@@ -39,6 +39,16 @@ void LedgerRepositoryImpl::BindRepository(
   bindings_.AddBinding(this, std::move(repository_request));
 }
 
+void LedgerRepositoryImpl::PageIsClosedAndSynced(
+    fxl::StringView ledger_name, storage::PageIdView page_id,
+    std::function<void(Status, PageClosedAndSynced)> callback) {
+  LedgerManager* ledger_manager =
+      GetLedgerManager(ledger_name, CreateIfMissing::YES);
+  FXL_DCHECK(ledger_manager);
+
+  ledger_manager->PageIsClosedAndSynced(page_id, std::move(callback));
+}
+
 std::vector<fidl::InterfaceRequest<ledger_internal::LedgerRepository>>
 LedgerRepositoryImpl::Unbind() {
   std::vector<fidl::InterfaceRequest<ledger_internal::LedgerRepository>>
@@ -50,41 +60,55 @@ LedgerRepositoryImpl::Unbind() {
   return handles;
 }
 
+LedgerManager* LedgerRepositoryImpl::GetLedgerManager(
+    convert::ExtendedStringView ledger_name,
+    CreateIfMissing create_if_missing) {
+  FXL_DCHECK(!ledger_name.empty());
+
+  // If the Ledger instance is already open return it directly.
+  auto it = ledger_managers_.find(ledger_name);
+  if (it != ledger_managers_.end()) {
+    return &(it->second);
+  }
+
+  if (create_if_missing == CreateIfMissing::NO) {
+    return nullptr;
+  }
+
+  std::string name_as_string = convert::ToString(ledger_name);
+  std::unique_ptr<encryption::EncryptionService> encryption_service =
+      encryption_service_factory_.MakeEncryptionService(name_as_string);
+  auto ledger_storage = std::make_unique<storage::LedgerStorageImpl>(
+      environment_->async(), environment_->coroutine_service(),
+      encryption_service.get(), content_path_, name_as_string);
+  std::unique_ptr<sync_coordinator::LedgerSync> ledger_sync;
+  if (user_sync_) {
+    ledger_sync =
+        user_sync_->CreateLedgerSync(name_as_string, encryption_service.get());
+  }
+  auto result = ledger_managers_.emplace(
+      std::piecewise_construct, std::forward_as_tuple(name_as_string),
+      std::forward_as_tuple(environment_, std::move(name_as_string),
+                            std::move(encryption_service),
+                            std::move(ledger_storage), std::move(ledger_sync),
+                            page_eviction_manager_.get()));
+  FXL_DCHECK(result.second);
+  return &(result.first->second);
+}
+
 void LedgerRepositoryImpl::GetLedger(
     fidl::VectorPtr<uint8_t> ledger_name,
     fidl::InterfaceRequest<Ledger> ledger_request, GetLedgerCallback callback) {
   TRACE_DURATION("ledger", "repository_get_ledger");
-
   if (ledger_name->empty()) {
     callback(Status::INVALID_ARGUMENT);
     return;
   }
 
-  auto it = ledger_managers_.find(ledger_name);
-  if (it == ledger_managers_.end()) {
-    std::string name_as_string = convert::ToString(ledger_name);
-    std::unique_ptr<encryption::EncryptionService> encryption_service =
-        encryption_service_factory_.MakeEncryptionService(name_as_string);
-    std::unique_ptr<storage::LedgerStorage> ledger_storage =
-        std::make_unique<storage::LedgerStorageImpl>(
-            environment_->async(), environment_->coroutine_service(),
-            encryption_service.get(), content_path_, name_as_string);
-    std::unique_ptr<sync_coordinator::LedgerSync> ledger_sync;
-    if (user_sync_) {
-      ledger_sync = user_sync_->CreateLedgerSync(name_as_string,
-                                                 encryption_service.get());
-    }
-    auto result = ledger_managers_.emplace(
-        std::piecewise_construct, std::forward_as_tuple(name_as_string),
-        std::forward_as_tuple(environment_, std::move(name_as_string),
-                              std::move(encryption_service),
-                              std::move(ledger_storage), std::move(ledger_sync),
-                              page_eviction_manager_.get()));
-    FXL_DCHECK(result.second);
-    it = result.first;
-  }
-
-  it->second.BindLedger(std::move(ledger_request));
+  LedgerManager* ledger_manager =
+      GetLedgerManager(ledger_name, CreateIfMissing::YES);
+  FXL_DCHECK(ledger_manager);
+  ledger_manager->BindLedger(std::move(ledger_request));
   callback(Status::OK);
 }
 
