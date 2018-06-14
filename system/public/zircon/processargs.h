@@ -88,8 +88,12 @@ struct zx_proc_args {
 // --- Loader Service and VMO Handles ---
 // Used by libc init (or equivalent) and dynamic loader
 
-// Channel for dynamic loader service
-#define PA_SVC_LOADER            0x10
+// Service for loading shared libraries.
+// See |fuchsia.ldsvc.Loader| for the interface definition.
+#define PA_LDSVC_LOADER          0x10
+
+// DEPRECATED: Use PA_LDSVC instead.
+#define PA_SVC_LOADER PA_LDSVC_LOADER
 
 // Handle to the VMO containing the ELF image of the system vDSO.  This
 // handle is duplicable, transferable, readable, and executable, but not

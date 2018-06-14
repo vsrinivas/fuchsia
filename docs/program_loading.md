@@ -316,7 +316,7 @@ not have access to nontrivial library facilities.
 
 An ELF interpreter receives a channel handle for its loader service in its
 `processargs` bootstrap message, identified by the *handle info entry*
-`PA_HND(PA_SVC_LOADER, 0)`.  All requests are synchronous RPCs made
+`PA_HND(PA_LDSVC_LOADER, 0)`.  All requests are synchronous RPCs made
 with [**channel_call**()](syscalls/channel_call.md).  Both requests and
 replies start with the `zx_loader_svc_msg_t` header; some contain
 additional data; some contain a VMO handle.  Request opcodes are:

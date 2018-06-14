@@ -26,7 +26,7 @@ __BEGIN_CDECLS
 // Provides the spawned process with the shared library loader used by this
 // process.
 //
-// The shared library loader is passed as |PA_SVC_LOADER|.
+// The shared library loader is passed as |PA_LDSVC_LOADER|.
 #define FDIO_SPAWN_CLONE_LDSVC ((uint32_t)0x0002u)
 
 // Clones the filesystem namespace into the spawned process.

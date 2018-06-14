@@ -1921,7 +1921,7 @@ __NO_SAFESTACK NO_ASAN static dl_start_return_t __dls3(void* start_arg) {
     zx_handle_t exec_vmo = ZX_HANDLE_INVALID;
     for (int i = 0; i < nhandles; ++i) {
         switch (PA_HND_TYPE(handle_info[i])) {
-        case PA_SVC_LOADER:
+        case PA_LDSVC_LOADER:
             if (loader_svc != ZX_HANDLE_INVALID ||
                 handles[i] == ZX_HANDLE_INVALID) {
                 error("bootstrap message bad LOADER_SVC %#x vs %#x",

@@ -25,7 +25,7 @@
 #include <threads.h>
 
 enum special_handles {
-    HND_LOADER_SVC,
+    HND_LDSVC_LOADER,
     HND_EXEC_VMO,
     HND_SEGMENTS_VMAR,
     HND_SPECIAL_COUNT
@@ -473,7 +473,7 @@ static zx_status_t loader_svc_rpc(zx_handle_t loader_svc, uint32_t ordinal,
 }
 
 static zx_status_t setup_loader_svc(launchpad_t* lp) {
-    if (lp->special_handles[HND_LOADER_SVC] != ZX_HANDLE_INVALID)
+    if (lp->special_handles[HND_LDSVC_LOADER] != ZX_HANDLE_INVALID)
         return ZX_OK;
 
     zx_handle_t loader_svc;
@@ -481,7 +481,7 @@ static zx_status_t setup_loader_svc(launchpad_t* lp) {
     if (status < 0)
         return status;
 
-    lp->special_handles[HND_LOADER_SVC] = loader_svc;
+    lp->special_handles[HND_LDSVC_LOADER] = loader_svc;
     return ZX_OK;
 }
 
@@ -532,7 +532,7 @@ static zx_status_t handle_interp(launchpad_t* lp, zx_handle_t vmo,
 
     zx_handle_t interp_vmo;
     status = loader_svc_rpc(
-        lp->special_handles[HND_LOADER_SVC], LDMSG_OP_LOAD_OBJECT,
+        lp->special_handles[HND_LDSVC_LOADER], LDMSG_OP_LOAD_OBJECT,
         interp, interp_len, &interp_vmo);
     if (status != ZX_OK)
         return status;
@@ -754,7 +754,7 @@ zx_status_t launchpad_file_load(launchpad_t* lp, zx_handle_t vmo) {
         if (status != ZX_OK)
             return lp_error(lp, status, "file_load: setup_loader_svc() failed");
 
-        status = loader_svc_rpc(lp->special_handles[HND_LOADER_SVC],
+        status = loader_svc_rpc(lp->special_handles[HND_LDSVC_LOADER],
                              LDMSG_OP_LOAD_SCRIPT_INTERPRETER,
                              interp_start, interp_len, &vmo);
         if (status != ZX_OK)
@@ -855,8 +855,8 @@ zx_handle_t launchpad_use_loader_service(launchpad_t* lp, zx_handle_t svc) {
         zx_handle_close(svc);
         return lp->error;
     }
-    zx_handle_t result = lp->special_handles[HND_LOADER_SVC];
-    lp->special_handles[HND_LOADER_SVC] = svc;
+    zx_handle_t result = lp->special_handles[HND_LDSVC_LOADER];
+    lp->special_handles[HND_LDSVC_LOADER] = svc;
     return result;
 }
 
@@ -978,8 +978,8 @@ static zx_status_t send_loader_message(launchpad_t* lp,
             nhandles += HND_LOADER_COUNT;
             continue;
 
-        case HND_LOADER_SVC:
-            id = PA_SVC_LOADER;
+        case HND_LDSVC_LOADER:
+            id = PA_LDSVC_LOADER;
             break;
 
         case HND_EXEC_VMO:

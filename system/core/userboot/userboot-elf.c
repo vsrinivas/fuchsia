@@ -106,7 +106,7 @@ static void stuff_loader_bootstrap(zx_handle_t log,
             [BOOTSTRAP_ROOT_VMAR] = PA_HND(PA_VMAR_ROOT, 0),
             [BOOTSTRAP_SEGMENTS_VMAR] = PA_HND(PA_VMAR_LOADED, 0),
             [BOOTSTRAP_THREAD] = PA_HND(PA_THREAD_SELF, 0),
-            [BOOTSTRAP_LOADER_SVC] = PA_HND(PA_SVC_LOADER, 0),
+            [BOOTSTRAP_LOADER_SVC] = PA_HND(PA_LDSVC_LOADER, 0),
         },
         .env = LOADER_BOOTSTRAP_ENVIRON,
     };

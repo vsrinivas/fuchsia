@@ -144,7 +144,7 @@ handles with those for the new process rather than for `userboot` itself).
 Following the standard program loading protocol, when `userboot` loads a
 program via `PT_INTERP`, it sends an additional `processargs` message
 before the main message, intended for the use of the dynamic linker.  This
-message includes a `PA_SVC_LOADER` handle for a channel on which `userboot`
+message includes a `PA_LDSVC_LOADER` handle for a channel on which `userboot`
 provides a minimal implementation of the
 standard [loader service](program_loading.md#the-loader-service).
 

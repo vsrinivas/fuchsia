@@ -171,7 +171,7 @@ static zx_status_t send_handles(zx_handle_t launcher, size_t handle_capacity,
 
     if ((flags & FDIO_SPAWN_CLONE_LDSVC) != 0) {
         handle_infos[h].handle = FIDL_HANDLE_PRESENT;
-        handle_infos[h].id = PA_SVC_LOADER;
+        handle_infos[h].id = PA_LDSVC_LOADER;
         status = dl_clone_loader_service(&handles[h++]);
         if (status != ZX_OK) {
             report_error(err_msg, "failed to clone library loader service: %d", status);

@@ -246,8 +246,8 @@ zx_status_t LauncherImpl::AddHandles(fidl::Message message) {
     fidl_vector_t* payload = message.GetPayloadAs<fidl_vector_t>();
     fuchsia_process_HandleInfo* handles = static_cast<fuchsia_process_HandleInfo*>(payload->data);
     for (size_t i = 0; i < payload->count; ++i) {
-        if (handles[i].id == PA_SVC_LOADER) {
-            // We need to feed PA_SVC_LOADER to launchpad through a different API.
+        if (handles[i].id == PA_LDSVC_LOADER) {
+            // We need to feed PA_LDSVC_LOADER to launchpad through a different API.
             ldsvc_.reset(handles[i].handle);
         } else {
             ids_.push_back(handles[i].id);
