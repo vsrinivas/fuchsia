@@ -45,6 +45,8 @@
 #include <vm/vm.h>
 #include <zircon/types.h>
 
+#include <lockdep/lockdep.h>
+
 // kernel counters. TODO(cpu): remove LK-era counters
 // The counters below never decrease.
 //
@@ -67,11 +69,19 @@ spin_lock_t thread_lock __CPU_ALIGN_EXCLUSIVE = SPIN_LOCK_INITIAL_VALUE;
 static void thread_exit_locked(thread_t* current_thread, int retcode) __NO_RETURN;
 static void thread_do_suspend(void);
 
+static void init_thread_lock_state(thread_t* t) {
+#if WITH_LOCK_DEP
+    auto* state = reinterpret_cast<lockdep::ThreadLockState*>(&t->lock_state);
+    lockdep::SystemInitThreadLockState(state);
+#endif
+}
+
 static void init_thread_struct(thread_t* t, const char* name) {
     memset(t, 0, sizeof(thread_t));
     t->magic = THREAD_MAGIC;
     strlcpy(t->name, name, sizeof(t->name));
     wait_queue_init(&t->retcode_wait_queue);
+    init_thread_lock_state(t);
 }
 
 static void initial_thread_func(void) TA_REQ(thread_lock) __NO_RETURN;
@@ -1007,6 +1017,14 @@ void thread_init_early(void) {
     thread_t* t = &percpu[0].idle_thread;
     thread_construct_first(t, "bootstrap");
 
+#if WITH_LOCK_DEP
+    // Initialize the lockdep tracking state for irq context.
+    for (unsigned int cpu = 0; cpu < SMP_MAX_CPUS; cpu++) {
+        auto* state = reinterpret_cast<lockdep::ThreadLockState*>(&percpu[cpu].lock_state);
+        lockdep::SystemInitThreadLockState(state);
+    }
+#endif
+
     sched_init_early();
 }
 
@@ -1392,6 +1410,11 @@ size_t thread_append_current_backtrace(char* out, const size_t out_len) {
     buf += len;
 
     return out_len - remain;
+}
+
+// print the backtrace of the current thread, at the given spot
+void thread_print_current_backtrace_at_frame(void* caller_frame) {
+    _thread_print_backtrace(get_current_thread(), caller_frame);
 }
 
 // print the backtrace of a passed in thread, if possible

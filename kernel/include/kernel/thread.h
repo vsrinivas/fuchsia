@@ -78,6 +78,16 @@ typedef void (*thread_tls_callback_t)(void* tls_value);
 
 struct vmm_aspace;
 
+// This is a parallel structure to lockdep::ThreadLockState to work around the
+// fact that this header is included by C code and cannot reference C++ types
+// directly. This structure MUST NOT be touched by code outside of the lockdep
+// implementation and MUST be kept in sync with the C++ counterpart.
+typedef struct lockdep_state {
+    uintptr_t acquired_locks;
+    uint16_t reporting_disabled_count;
+    uint8_t last_result;
+} lockdep_state_t;
+
 typedef struct thread {
     int magic;
     struct list_node thread_list_node;
@@ -126,6 +136,11 @@ typedef struct thread {
 
     // number of mutexes we currently hold
     int mutexes_held;
+
+#if WITH_LOCK_DEP
+    // state for runtime lock validation when in thread context
+    lockdep_state_t lock_state;
+#endif
 
     // pointer to the kernel address space this thread is associated with
     struct vmm_aspace* aspace;
@@ -269,6 +284,9 @@ void thread_print_current_backtrace(void);
 // to `len' characters.
 // return the number of chars appended.
 size_t thread_append_current_backtrace(char* out, size_t len);
+
+// print the backtrace on the current thread at the given frame
+void thread_print_current_backtrace_at_frame(void* caller_frame);
 
 // print the backtrace of the passed in thread, if possible
 zx_status_t thread_print_backtrace(thread_t* t);

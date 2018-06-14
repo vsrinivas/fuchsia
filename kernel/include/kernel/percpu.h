@@ -31,6 +31,11 @@ struct percpu {
     struct list_node run_queue[NUM_PRIORITIES];
     uint32_t run_queue_bitmap;
 
+#if WITH_LOCK_DEP
+    // state for runtime lock validation when in irq context
+    lockdep_state_t lock_state;
+#endif
+
     // thread/cpu level statistics
     struct cpu_stats stats;
 

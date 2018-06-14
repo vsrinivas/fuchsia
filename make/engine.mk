@@ -25,6 +25,8 @@ ENABLE_BUILD_LISTFILES := $(call TOBOOL,$(ENABLE_BUILD_LISTFILES))
 ENABLE_BUILD_SYSROOT := $(call TOBOOL,$(ENABLE_BUILD_SYSROOT))
 ENABLE_DDK_DEPRECATIONS ?= false
 ENABLE_NEW_BOOTDATA := true
+ENABLE_LOCK_DEP ?= false
+ENABLE_LOCK_DEP_TESTS ?= $(ENABLE_LOCK_DEP)
 DISABLE_UTEST ?= false
 ENABLE_ULIB_ONLY ?= false
 USE_ASAN ?= false
@@ -387,6 +389,19 @@ SYSROOT_DEPS :=
 # ZX-623
 KERNEL_DEFINES += WITH_PANIC_BACKTRACE=1 WITH_FRAME_POINTERS=1
 KERNEL_COMPILEFLAGS += $(KEEP_FRAME_POINTER_COMPILEFLAGS)
+
+# Kernel lock dependency tracking.
+ifeq ($(call TOBOOL,$(ENABLE_LOCK_DEP)),true)
+KERNEL_DEFINES += WITH_LOCK_DEP=1
+KERNEL_DEFINES += LOCK_DEP_ENABLE_VALIDATION=1
+endif
+
+# Kernel lock dependency tracking tests. By default this is enabled when
+# tracking is enabled, but can also be eanbled independently to assess whether
+# the tests build and *fail correctly* when lockdep is disabled.
+ifeq ($(call TOBOOL,$(ENABLE_LOCK_DEP_TESTS)),true)
+KERNEL_DEFINES += WITH_LOCK_DEP_TESTS=1
+endif
 
 # additional bootdata items to be included to bootdata.bin
 ADDITIONAL_BOOTDATA_ITEMS :=

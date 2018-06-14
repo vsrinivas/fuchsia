@@ -78,6 +78,10 @@ static inline void spin_unlock_restore(spin_lock_t* lock, spin_lock_saved_state_
 __END_CDECLS
 
 #ifdef __cplusplus
+
+#include <lockdep/lock_policy.h>
+#include <lockdep/lock_traits.h>
+
 class TA_CAP("mutex") SpinLock {
 public:
     SpinLock() { spin_lock_init(&spinlock_); }
@@ -88,13 +92,13 @@ public:
 
     void AcquireIrqSave(spin_lock_saved_state_t& state,
                         spin_lock_save_flags_t flags = SPIN_LOCK_FLAG_INTERRUPTS)
-            TA_ACQ() {
+        TA_ACQ() {
         spin_lock_save(&spinlock_, &state, flags);
     }
 
     void ReleaseIrqRestore(spin_lock_saved_state_t state,
                            spin_lock_save_flags_t flags = SPIN_LOCK_FLAG_INTERRUPTS)
-            TA_REL() {
+        TA_REL() {
         spin_unlock_restore(&spinlock_, state, flags);
     }
 
@@ -109,4 +113,199 @@ public:
 private:
     spin_lock_t spinlock_;
 };
+
+// Declares a SpinLock member of the struct or class |containing_type|
+// with instrumentation for runtime lock validation.
+//
+// Example usage:
+//
+// struct MyType {
+//     DECLARE_SPINLOCK(MyType) lock;
+// };
+//
+#define DECLARE_SPINLOCK(containing_type) \
+    LOCK_DEP_INSTRUMENT(containing_type, SpinLock)
+
+// Declares a singleton SpinLock with the name |name|.
+//
+// Example usage:
+//
+//  DECLARE_SINGLETON_SPINLOCK(MyGlobalLock [, LockFlags]);
+//
+#define DECLARE_SINGLETON_SPINLOCK(name, ...) \
+    LOCK_DEP_SINGLETON_LOCK(name, SpinLock, ##__VA_ARGS__)
+
+//
+// Configure lockdep flags and wrappers for SpinLock.
+//
+
+// Configure lockdep to check irq-safety rules for SpinLock.
+LOCK_DEP_TRAITS(SpinLock, lockdep::LockFlagsIrqSafe);
+
+// Configure lockdep to check irq-safety rules for spin_lock_t.
+LOCK_DEP_TRAITS(spin_lock_t, lockdep::LockFlagsIrqSafe);
+
+// Option tag for acquiring a SpinLock WITHOUT saving irq state.
+struct NoIrqSave {};
+
+// Option tag for acquiring a SpinLock WITH saving irq state.
+struct IrqSave {};
+
+// Option tag for try-acquiring a SpinLock WITHOUT saving irq state.
+struct TryLockNoIrqSave {};
+
+// Base type for spinlock policies that do not save irq state.
+template <typename LockType>
+struct NoIrqSavePolicy;
+
+// Lock policy for acquiring a SpinLock WITHOUT saving irq state.
+template <>
+struct NoIrqSavePolicy<SpinLock> {
+    // No extra state required when not saving irq state.
+    struct State {};
+
+    static bool Acquire(SpinLock* lock, State*) TA_ACQ(lock) {
+        lock->Acquire();
+        return true;
+    }
+    static void Release(SpinLock* lock, State*) TA_REL(lock) {
+        lock->Release();
+    }
+};
+
+// Configure Guard<SpinLock, NoIrqSave> to use the above policy to acquire and
+// release a SpinLock.
+LOCK_DEP_POLICY_OPTION(SpinLock, NoIrqSave, NoIrqSavePolicy<SpinLock>);
+
+// Lock policy for acquiring a SpinLock WITHOUT saving irq state.
+template <>
+struct NoIrqSavePolicy<spin_lock_t> {
+    // No extra state required when not saving irq state.
+    struct State {};
+
+    static bool Acquire(spin_lock_t* lock, State*) TA_ACQ(lock) {
+        spin_lock(lock);
+        return true;
+    }
+    static void Release(spin_lock_t* lock, State*) TA_REL(lock) {
+        spin_unlock(lock);
+    }
+};
+
+// Configure Guard<spin_lock_t, NoIrqSave> to use the above policy to acquire and
+// release a spin_lock_t.
+LOCK_DEP_POLICY_OPTION(spin_lock_t, NoIrqSave, NoIrqSavePolicy<spin_lock_t>);
+
+// Base type for spinlock policies that save irq state.
+template <typename LockType>
+struct IrqSavePolicy;
+
+// Lock policy for acquiring a SpinLock WITH saving irq state.
+template <>
+struct IrqSavePolicy<SpinLock> {
+    // State and flags required to save irq state.
+    struct State {
+        // This constructor receives the extra arguments passed to Guard when
+        // locking an instrumented SpinLock like this:
+        //
+        //     Guard<SpinLock, IrqSave> guard{&a_spin_lock, |flags|};
+        //
+        // The extra argument to Guard is optional because this constructor has
+        // a default value.
+        State(spin_lock_save_flags_t flags = SPIN_LOCK_FLAG_INTERRUPTS)
+            : flags{flags} {}
+
+        spin_lock_save_flags_t flags;
+        spin_lock_saved_state_t state;
+    };
+
+    static bool Acquire(SpinLock* lock, State* state) TA_ACQ(lock) {
+        lock->AcquireIrqSave(state->state, state->flags);
+        return true;
+    }
+    static void Release(SpinLock* lock, State* state) TA_REL(lock) {
+        lock->ReleaseIrqRestore(state->state, state->flags);
+    }
+};
+
+// Configure Guard<SpinLock, IrqSave> to use the above policy to acquire and
+// release a SpinLock.
+LOCK_DEP_POLICY_OPTION(SpinLock, IrqSave, IrqSavePolicy<SpinLock>);
+
+// Lock policy for acquiring a spin_lock_t WITH saving irq state.
+template <>
+struct IrqSavePolicy<spin_lock_t> {
+    // State and flags required to save irq state.
+    struct State {
+        // This constructor receives the extra arguments passed to Guard when
+        // locking an instrumented spin_lock_t like this:
+        //
+        //     Guard<spin_lock_t, IrqSave> guard{&a_spin_lock, |flags|};
+        //
+        // The extra argument to Guard is optional because this constructor has
+        // a default value.
+        State(spin_lock_save_flags_t flags = SPIN_LOCK_FLAG_INTERRUPTS)
+            : flags{flags} {}
+
+        spin_lock_save_flags_t flags;
+        spin_lock_saved_state_t state;
+    };
+
+    static bool Acquire(spin_lock_t* lock, State* state) TA_ACQ(lock) {
+        spin_lock_save(lock, &state->state, state->flags);
+        return true;
+    }
+    static void Release(spin_lock_t* lock, State* state) TA_REL(lock) {
+        spin_unlock_restore(lock, state->state, state->flags);
+    }
+};
+
+// Configure Guard<SpinLock, IrqSave> to use the above policy to acquire and
+// release a SpinLock.
+LOCK_DEP_POLICY_OPTION(spin_lock_t, IrqSave, IrqSavePolicy<spin_lock_t>);
+
+// Base type for spinlock policies that try-acquire without saving irq state.
+template <typename LockType>
+struct TryLockNoIrqSavePolicy;
+
+// Lock policy for try-acquiring a SpinLock WITHOUT saving irq state.
+template <>
+struct TryLockNoIrqSavePolicy<SpinLock> {
+    // No extra state required when not saving irq state.
+    struct State {};
+
+    static bool Acquire(SpinLock* lock, State*) TA_TRY_ACQ(true, lock) {
+        const bool failed = lock->TryAcquire();
+        return !failed; // Guard uses true to indicate success.
+    }
+    static void Release(SpinLock* lock, State*) TA_REL(lock) {
+        lock->Release();
+    }
+};
+
+// Configure Guard<SpinLock, TryLockNoIrqSave> to use the above policy to
+// acquire and release a SpinLock.
+LOCK_DEP_POLICY_OPTION(SpinLock, TryLockNoIrqSave,
+                       TryLockNoIrqSavePolicy<SpinLock>);
+
+// Lock policy for try-acquiring a spin_lock_t WITHOUT saving irq state.
+template <>
+struct TryLockNoIrqSavePolicy<spin_lock_t> {
+    // No extra state required when not saving irq state.
+    struct State {};
+
+    static bool Acquire(spin_lock_t* lock, State*) TA_TRY_ACQ(true, lock) {
+        const bool failed = spin_trylock(lock);
+        return !failed; // Guard uses true to indicate success.
+    }
+    static void Release(spin_lock_t* lock, State*) TA_REL(lock) {
+        spin_unlock(lock);
+    }
+};
+
+// Configure Guard<spin_lock_t, TryLockNoIrqSave> to use the above policy to
+// acquire and release a spin_lock_t.
+LOCK_DEP_POLICY_OPTION(spin_lock_t, TryLockNoIrqSave,
+                       TryLockNoIrqSavePolicy<spin_lock_t>);
+
 #endif // ifdef __cplusplus

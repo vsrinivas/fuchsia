@@ -67,3 +67,104 @@ static inline bool is_mutex_held(const mutex_t* m) {
 }
 
 __END_CDECLS
+
+#ifdef __cplusplus
+
+#include <lockdep/lock_policy.h>
+#include <lockdep/lock_traits.h>
+
+// Declares a fbl::Mutex member of the struct or class |containing_type|.
+//
+// Example usage:
+//
+// struct MyType {
+//     DECLARE_MUTEX(MyType) lock;
+// };
+//
+#define DECLARE_MUTEX(containing_type) \
+    LOCK_DEP_INSTRUMENT(containing_type, fbl::Mutex)
+
+// Declares a |lock_type| member of the struct or class |containing_type|.
+//
+// Example usage:
+//
+// struct MyType {
+//     DECLARE_LOCK(MyType, LockType) lock;
+// };
+//
+#define DECLARE_LOCK(containing_type, lock_type) \
+    LOCK_DEP_INSTRUMENT(containing_type, lock_type)
+
+// Declares a singleton fbl::Mutex with the name |name|.
+//
+// Example usage:
+//
+//  DECLARE_SINGLETON_MUTEX(MyGlobalLock [, LockFlags]);
+//
+#define DECLARE_SINGLETON_MUTEX(name, ...) \
+    LOCK_DEP_SINGLETON_LOCK(name, fbl::Mutex, ##__VA_ARGS__)
+
+// Declares a singleton |lock_type| with the name |name|.
+//
+// Example usage:
+//
+//  DECLARE_SINGLETON_LOCK(MyGlobalLock, LockType, [, LockFlags]);
+//
+#define DECLARE_SINGLETON_LOCK(name, lock_type, ...) \
+    LOCK_DEP_SINGLETON_LOCK(name, lock_type, ##__VA_ARGS__)
+
+// Forward declaration.
+struct MutexPolicy;
+
+namespace fbl {
+
+// Forward declaration. In the kernel this header is included by fbl/mutext.h.
+class Mutex;
+
+// Configure Guard<fbl::Mutex> to use the following policy. This must be done
+// in the same namespace as the mutex type.
+LOCK_DEP_POLICY(Mutex, MutexPolicy);
+
+} // namespace fbl
+
+// Lock policy for acquiring an fbl::Mutex.
+struct MutexPolicy {
+    // No extra state required for mutexes.
+    struct State {};
+
+    // Basic acquire and release operations.
+    template <typename LockType>
+    static bool Acquire(LockType* lock, State*) TA_ACQ(lock) {
+        lock->Acquire();
+        return true;
+    }
+    template <typename LockType>
+    static void Release(LockType* lock, State*) TA_REL(lock) {
+        lock->Release();
+    }
+
+    // A enum tag that can be passed to Guard<fbl::Mutex>::Release(...) to
+    // select the special-case release method below.
+    enum SelectThreadLockHeld { ThreadLockHeld };
+
+    // Specifies whether the special-case release method below should
+    // reschedule.
+    enum RescheduleOption : bool {
+        NoReschedule = false,
+        Reschedule = true,
+    };
+
+    // Releases the lock using the special mutex release operation. This
+    // is selected by calling:
+    //
+    //  Guard<fbl::Mutex>::Release(ThreadLockHeld [, Reschedule | NoReschedule])
+    //
+    template <typename LockType>
+    static void Release(LockType* lock, State*, SelectThreadLockHeld,
+                        RescheduleOption reschedule = Reschedule)
+        TA_NO_THREAD_SAFETY_ANALYSIS {
+        mutex_release_thread_locked(lock->GetInternal(), reschedule);
+    }
+};
+
+#endif // __cplusplus
