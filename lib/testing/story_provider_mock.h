@@ -49,6 +49,12 @@ class StoryProviderMock : public fuchsia::modular::StoryProvider {
   }
 
   // |fuchsia::modular::StoryProvider|
+  void CreateKindOfProtoStory(CreateKindOfProtoStoryCallback callback)
+      override {
+    callback("foo");
+  }
+
+  // |fuchsia::modular::StoryProvider|
   void Watch(fidl::InterfaceHandle<fuchsia::modular::StoryProviderWatcher>
                  watcher) override {
     watchers_.AddInterfacePtr(watcher.Bind());

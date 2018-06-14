@@ -69,6 +69,11 @@ interface StoryProvider {
   // there is only developer mode, i.e. this is always available.
   12: GetLinkPeer(string story_id, vector<string>? module_path, string link_name,
                   request<Link> @request);
+
+  // Creates a "kind-of" proto story. The story won't be returned by
+  // PreviousStories().
+  // EXPERIMENTAL
+  13: CreateKindOfProtoStory() -> (string story_id);
 };
 
 // Implemented by clients of StoryProvider.

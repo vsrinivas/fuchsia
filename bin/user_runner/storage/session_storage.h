@@ -60,7 +60,8 @@ class SessionStorage : public PageClient {
   // id) on completion. |extra_info| may be null. If set, populates
   // StoryData.story_info.extra with the entries given.
   FuturePtr<fidl::StringPtr, fuchsia::ledger::PageId> CreateStory(
-      fidl::VectorPtr<fuchsia::modular::StoryInfoExtraEntry> extra_info);
+      fidl::VectorPtr<fuchsia::modular::StoryInfoExtraEntry> extra_info,
+      bool is_kind_of_proto_story);
 
   // Deletes the |story_id| from the list of known stories and completes the
   // returned Future when done.

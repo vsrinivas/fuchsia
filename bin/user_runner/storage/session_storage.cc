@@ -57,10 +57,12 @@ class CreateStoryCall
       fuchsia::ledger::Ledger* const ledger,
       fuchsia::ledger::Page* const root_page,
       fidl::VectorPtr<fuchsia::modular::StoryInfoExtraEntry> extra_info,
+      bool is_kind_of_proto_story,
       ResultCall result_call)
       : LedgerOperation("SessionStorage::CreateStoryCall", ledger, root_page,
                         std::move(result_call)),
-        extra_info_(std::move(extra_info)) {}
+        extra_info_(std::move(extra_info)),
+        is_kind_of_proto_story_(is_kind_of_proto_story) {}
 
  private:
   void Run() override {
@@ -95,7 +97,7 @@ class CreateStoryCall
     story_id_ = to_hex_string(story_page_id_.id);
 
     story_data_ = fuchsia::modular::internal::StoryData::New();
-    story_data_->is_kind_of_proto_story = false;
+    story_data_->is_kind_of_proto_story = is_kind_of_proto_story_;
     story_data_->story_page_id = CloneOptional(story_page_id_);
     story_data_->story_info.id = story_id_;
     story_data_->story_info.last_focus_time = 0;
@@ -106,6 +108,7 @@ class CreateStoryCall
   }
 
   fidl::VectorPtr<fuchsia::modular::StoryInfoExtraEntry> extra_info_;
+  bool is_kind_of_proto_story_;
 
   fuchsia::ledger::PagePtr story_page_;
   fuchsia::modular::internal::StoryDataPtr story_data_;
@@ -122,11 +125,13 @@ class CreateStoryCall
 }  // namespace
 
 FuturePtr<fidl::StringPtr, fuchsia::ledger::PageId> SessionStorage::CreateStory(
-    fidl::VectorPtr<fuchsia::modular::StoryInfoExtraEntry> extra_info) {
+    fidl::VectorPtr<fuchsia::modular::StoryInfoExtraEntry> extra_info,
+    bool is_kind_of_proto_story) {
   auto ret = Future<fidl::StringPtr, fuchsia::ledger::PageId>::Create(
       "SessionStorage.CreateStory.ret");
   operation_queue_.Add(new CreateStoryCall(ledger_client_->ledger(), page(),
                                            std::move(extra_info),
+                                           is_kind_of_proto_story,
                                            ret->Completer()));
   return ret;
 }

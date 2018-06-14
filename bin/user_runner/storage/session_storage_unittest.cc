@@ -23,7 +23,8 @@ class SessionStorageTest : public testing::TestWithLedger {
   // Convenience method to create a story for the test cases where
   // we're not testing CreateStory().
   fidl::StringPtr CreateStory(SessionStorage* storage) {
-    auto future_story = storage->CreateStory(nullptr /* extra */);
+    auto future_story = storage->CreateStory(
+        nullptr /* extra */, false /* is_kind_of_proto_story */);
     bool done{};
     fidl::StringPtr story_id;
     future_story->Then([&](fidl::StringPtr id, fuchsia::ledger::PageId) {
@@ -51,7 +52,8 @@ TEST_F(SessionStorageTest, Create_VerifyData) {
   entry.value = "value2";
   extra_entries->push_back(std::move(entry));
 
-  auto future_story = storage->CreateStory(std::move(extra_entries));
+  auto future_story = storage->CreateStory(std::move(extra_entries),
+                                           true /* is_kind_of_proto_story */);
   bool done{};
   fidl::StringPtr story_id;
   fuchsia::ledger::PageId page_id;
@@ -69,7 +71,7 @@ TEST_F(SessionStorageTest, Create_VerifyData) {
   future_data->Then([&](fuchsia::modular::internal::StoryDataPtr data) {
     ASSERT_TRUE(data);
 
-    EXPECT_FALSE(data->is_kind_of_proto_story);
+    EXPECT_TRUE(data->is_kind_of_proto_story);
     EXPECT_EQ(story_id, data->story_info.id);
     ASSERT_TRUE(data->story_page_id);
     EXPECT_EQ(page_id, *data->story_page_id);
@@ -106,7 +108,8 @@ TEST_F(SessionStorageTest, CreateGetAllDelete) {
   // Pipeline all the calls such to show that we data consistency based on call
   // order.
   auto storage = CreateStorage("page");
-  auto future_story = storage->CreateStory(nullptr);
+  auto future_story = storage->CreateStory(nullptr /* extra_info */,
+                                           false /* is_kind_of_proto_story */);
 
   // Immediately after creation is complete, delete it.
   FuturePtr<> delete_done;
@@ -145,8 +148,10 @@ TEST_F(SessionStorageTest, CreateMultipleAndDeleteOne) {
   // * If we GetAllStoryData() we should see both of them.
   auto storage = CreateStorage("page");
 
-  auto future_story1 = storage->CreateStory(nullptr);
-  auto future_story2 = storage->CreateStory(nullptr);
+  auto future_story1 = storage->CreateStory(nullptr /* extra_info */,
+                                            false /* is_kind_of_proto_story */);
+  auto future_story2 = storage->CreateStory(nullptr /* extra_info */,
+                                            false /* is_kind_of_proto_story */);
 
   auto wait = Future<fidl::StringPtr, fuchsia::ledger::PageId>::Wait(
       "SessionStorageTest.CreateMultipleAndDeleteOne.wait",
@@ -241,13 +246,13 @@ TEST_F(SessionStorageTest, ObserveCreateUpdateDelete_Local) {
   });
 
   auto created_story_id = CreateStory(storage.get());
+  storage->UpdateLastFocusedTimestamp(created_story_id, 42);
+  updated = false;
   RunLoopUntil([&] { return updated; });
   EXPECT_EQ(created_story_id, updated_story_id);
   EXPECT_EQ(created_story_id, updated_story_data.story_info.id);
 
   // Update something and see a new notification.
-  storage->UpdateLastFocusedTimestamp(created_story_id, 42);
-  updated = false;
   RunLoopUntil([&] { return updated; });
   EXPECT_EQ(created_story_id, updated_story_id);
   EXPECT_EQ(42, updated_story_data.story_info.last_focus_time);

@@ -130,6 +130,9 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider,
       fidl::StringPtr root_json, CreateStoryWithInfoCallback callback) override;
 
   // |fuchsia::modular::StoryProvider|
+  void CreateKindOfProtoStory(CreateKindOfProtoStoryCallback callback) override;
+
+  // |fuchsia::modular::StoryProvider|
   void DeleteStory(fidl::StringPtr story_id,
                    DeleteStoryCallback callback) override;
 
