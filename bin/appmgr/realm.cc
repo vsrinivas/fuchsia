@@ -5,9 +5,9 @@
 #include "garnet/bin/appmgr/realm.h"
 
 #include <fcntl.h>
-#include <launchpad/launchpad.h>
 #include <lib/async/default.h>
 #include <lib/fdio/namespace.h>
+#include <lib/fdio/spawn.h>
 #include <lib/fdio/util.h>
 #include <lib/zx/process.h>
 #include <unistd.h>
@@ -50,29 +50,38 @@ constexpr char kRuntimePath[] = "meta/runtime";
 std::vector<const char*> GetArgv(const std::string& argv0,
                                  const fuchsia::sys::LaunchInfo& launch_info) {
   std::vector<const char*> argv;
-  argv.reserve(launch_info.arguments->size() + 1);
+  argv.reserve(launch_info.arguments->size() + 2);
   argv.push_back(argv0.c_str());
   for (const auto& argument : *launch_info.arguments)
-    argv.push_back(argument.get().c_str());
+    argv.push_back(argument->c_str());
+  argv.push_back(nullptr);
   return argv;
 }
 
-void PushFileDescriptor(fuchsia::sys::FileDescriptorPtr fd, int new_fd,
-                        std::vector<uint32_t>* ids,
-                        std::vector<zx_handle_t>* handles) {
-  if (!fd)
+void PushHandle(uint32_t id, zx_handle_t handle,
+                std::vector<fdio_spawn_action_t>* actions) {
+  actions->push_back({.action = FDIO_SPAWN_ACTION_ADD_HANDLE,
+                      .h = {.id = id, .handle = handle}});
+}
+
+void PushFileDescriptor(fuchsia::sys::FileDescriptorPtr fd, int target_fd,
+                        std::vector<fdio_spawn_action_t>* actions) {
+  if (!fd) {
+    actions->push_back({.action = FDIO_SPAWN_ACTION_CLONE_FD,
+                        .fd = {.local_fd = target_fd, .target_fd = target_fd}});
     return;
+  }
   if (fd->type0) {
-    ids->push_back(PA_HND(PA_HND_TYPE(fd->type0), new_fd));
-    handles->push_back(fd->handle0.release());
+    uint32_t id = PA_HND(PA_HND_TYPE(fd->type0), target_fd);
+    PushHandle(id, fd->handle0.release(), actions);
   }
   if (fd->type1) {
-    ids->push_back(PA_HND(PA_HND_TYPE(fd->type1), new_fd));
-    handles->push_back(fd->handle1.release());
+    uint32_t id = PA_HND(PA_HND_TYPE(fd->type1), target_fd);
+    PushHandle(id, fd->handle1.release(), actions);
   }
   if (fd->type2) {
-    ids->push_back(PA_HND(PA_HND_TYPE(fd->type2), new_fd));
-    handles->push_back(fd->handle2.release());
+    uint32_t id = PA_HND(PA_HND_TYPE(fd->type2), target_fd);
+    PushHandle(id, fd->handle2.release(), actions);
   }
 }
 
@@ -84,57 +93,65 @@ zx::process CreateProcess(const zx::job& job, fsl::SizedVmo data,
   if (!data)
     return zx::process();
 
+  zx::job duplicate_job;
+  zx_status_t status = job.duplicate(ZX_RIGHT_SAME_RIGHTS, &duplicate_job);
+  if (status != ZX_OK)
+    return zx::process();
+
   std::string label = component_util::GetLabelFromURL(launch_info.url);
   std::vector<const char*> argv = GetArgv(argv0, launch_info);
-
-  std::vector<uint32_t> ids;
-  std::vector<zx_handle_t> handles;
-
-  zx::channel directory_request = std::move(launch_info.directory_request);
-  if (directory_request) {
-    ids.push_back(PA_DIRECTORY_REQUEST);
-    handles.push_back(directory_request.release());
-  }
-
-  PushFileDescriptor(std::move(launch_info.out), STDOUT_FILENO, &ids, &handles);
-  PushFileDescriptor(std::move(launch_info.err), STDERR_FILENO, &ids, &handles);
-
-  for (size_t i = 0; i < flat->count; ++i) {
-    ids.push_back(flat->type[i]);
-    handles.push_back(flat->handle[i]);
-  }
-
-  data.vmo().set_property(ZX_PROP_NAME, label.data(), label.size());
 
   // TODO(abarth): We probably shouldn't pass environ, but currently this
   // is very useful as a way to tell the loader in the child process to
   // print out load addresses so we can understand crashes.
-  launchpad_t* lp = nullptr;
-  launchpad_create(job.get(), label.c_str(), &lp);
+  uint32_t flags = FDIO_SPAWN_CLONE_ENVIRON;
 
-  launchpad_clone(lp, LP_CLONE_ENVIRON);
-  launchpad_clone_fd(lp, STDIN_FILENO, STDIN_FILENO);
-  if (!launch_info.out)
-    launchpad_clone_fd(lp, STDOUT_FILENO, STDOUT_FILENO);
-  if (!launch_info.err)
-    launchpad_clone_fd(lp, STDERR_FILENO, STDERR_FILENO);
-  if (loader_service)
-    launchpad_use_loader_service(lp, loader_service.release());
-  launchpad_set_args(lp, argv.size(), argv.data());
-  launchpad_set_nametable(lp, flat->count, flat->path);
-  launchpad_add_handles(lp, handles.size(), handles.data(), ids.data());
-  launchpad_load_from_vmo(lp, data.vmo().release());
+  std::vector<fdio_spawn_action_t> actions;
 
-  zx_handle_t proc;
-  const char* errmsg;
-  zx_handle_t status = launchpad_go(lp, &proc, &errmsg);
+  PushHandle(PA_JOB_DEFAULT, duplicate_job.release(), &actions);
+
+  if (loader_service) {
+    PushHandle(PA_SVC_LOADER, loader_service.release(), &actions);
+  } else {
+    // TODO(CP-62): Processes that don't have their own package use the appmgr's
+    // dynamic library loader, which doesn't make much sense. We need to find an
+    // appropriate loader service for each executable.
+    flags |= FDIO_SPAWN_CLONE_LDSVC;
+  }
+
+  zx::channel directory_request = std::move(launch_info.directory_request);
+  if (directory_request)
+    PushHandle(PA_DIRECTORY_REQUEST, directory_request.release(), &actions);
+
+  PushFileDescriptor(nullptr, STDIN_FILENO, &actions);
+  PushFileDescriptor(std::move(launch_info.out), STDOUT_FILENO, &actions);
+  PushFileDescriptor(std::move(launch_info.err), STDERR_FILENO, &actions);
+
+  actions.push_back(
+      {.action = FDIO_SPAWN_ACTION_SET_NAME, .name = {.data = label.c_str()}});
+
+  for (size_t i = 0; i < flat->count; ++i) {
+    actions.push_back(
+        {.action = FDIO_SPAWN_ACTION_ADD_NS_ENTRY,
+         .ns = {.prefix = flat->path[i], .handle = flat->handle[i]}});
+  }
+
+  data.vmo().set_property(ZX_PROP_NAME, label.data(), label.size());
+
+  zx::process process;
+  char err_msg[FDIO_SPAWN_ERR_MSG_MAX_LENGTH];
+
+  status = fdio_spawn_vmo(job.get(), flags, data.vmo().release(), argv.data(),
+                          nullptr, actions.size(), actions.data(),
+                          process.reset_and_get_address(), err_msg);
+
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Cannot run executable " << label << " due to error "
                    << status << " (" << zx_status_get_string(status)
-                   << "): " << errmsg;
-    return zx::process();
+                   << "): " << err_msg;
   }
-  return zx::process(proc);
+
+  return process;
 }
 
 }  // namespace
@@ -449,7 +466,8 @@ void Realm::CreateComponentFromPackage(
   builder.AddFlatNamespace(std::move(launch_info.flat_namespace));
 
   if (app_data) {
-    const std::string args = component_util::GetArgsString(launch_info.arguments);
+    const std::string args =
+        component_util::GetArgsString(launch_info.arguments);
     const std::string url = launch_info.url;  // Keep a copy before moving it.
     auto channels = component_util::BindDirectory(&launch_info);
     zx::process process = CreateProcess(
