@@ -242,6 +242,20 @@ SessionStorage::GetAllStoryData() {
   return ret;
 }
 
+FuturePtr<> SessionStorage::PromoteKindOfProtoStory(fidl::StringPtr story_id) {
+  auto mutate = [](fuchsia::modular::internal::StoryData* const story_data) {
+    if (story_data->is_kind_of_proto_story) {
+      story_data->is_kind_of_proto_story = false;
+      return true;
+    }
+    return false;
+  };
+  auto ret = Future<>::Create("SessionStorage.PromoteKindOfProtoStory.ret");
+  operation_queue_.Add(
+      new MutateStoryDataCall(page(), story_id, mutate, ret->Completer()));
+  return ret;
+}
+
 void SessionStorage::OnPageChange(const std::string& key,
                                   const std::string& value) {
   auto story_data = fuchsia::modular::internal::StoryData::New();

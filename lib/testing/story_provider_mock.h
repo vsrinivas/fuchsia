@@ -110,6 +110,9 @@ class StoryProviderMock : public fuchsia::modular::StoryProvider {
     FXL_LOG(FATAL) << "StoryProviderMock::GetLinkPeer() not implemented.";
   }
 
+  void PromoteKindOfProtoStory(fidl::StringPtr story_id) override {
+  }
+
   std::string last_created_story_;
   StoryControllerMock controller_mock_;
   fidl::BindingSet<fuchsia::modular::StoryController> binding_set_;

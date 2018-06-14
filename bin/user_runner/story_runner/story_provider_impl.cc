@@ -643,6 +643,18 @@ void StoryProviderImpl::RunningStories(RunningStoriesCallback callback) {
   callback(std::move(stories));
 }
 
+// |fuchsia::modular::StoryProvider|
+void StoryProviderImpl::PromoteKindOfProtoStory(fidl::StringPtr story_id) {
+  auto on_run = Future<>::Create(
+      "StoryProviderImpl.PromoteKindOfProtoStory.on_run");
+  auto done = on_run->AsyncMap([this, story_id] {
+    return session_storage_->PromoteKindOfProtoStory(story_id);
+  });
+  std::function<void()> callback = [] {};
+  operation_queue_.Add(WrapFutureAsOperation(
+      on_run, done, callback, "StoryProviderImpl::PromoteKindOfProtoStory"));
+}
+
 void StoryProviderImpl::OnStoryStorageUpdated(
     fidl::StringPtr story_id,
     fuchsia::modular::internal::StoryData story_data) {

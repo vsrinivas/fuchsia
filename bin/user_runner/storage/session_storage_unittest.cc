@@ -22,9 +22,10 @@ class SessionStorageTest : public testing::TestWithLedger {
 
   // Convenience method to create a story for the test cases where
   // we're not testing CreateStory().
-  fidl::StringPtr CreateStory(SessionStorage* storage) {
-    auto future_story = storage->CreateStory(
-        nullptr /* extra */, false /* is_kind_of_proto_story */);
+  fidl::StringPtr CreateStory(SessionStorage* storage,
+                              bool is_kind_of_proto_story = false) {
+    auto future_story = storage->CreateStory(nullptr /* extra */,
+                                             is_kind_of_proto_story);
     bool done{};
     fidl::StringPtr story_id;
     future_story->Then([&](fidl::StringPtr id, fuchsia::ledger::PageId) {
@@ -219,6 +220,20 @@ TEST_F(SessionStorageTest, UpdateLastFocusedTimestamp) {
   bool done{};
   future_data->Then([&](fuchsia::modular::internal::StoryDataPtr data) {
     EXPECT_EQ(10, data->story_info.last_focus_time);
+    done = true;
+  });
+  RunLoopUntil([&] { return done; });
+}
+
+TEST_F(SessionStorageTest, PromoteKindOfProtoStory) {
+  auto storage = CreateStorage("page");
+  auto story_id = CreateStory(storage.get(), true /* is_kind_of_proto_story */);
+
+  storage->PromoteKindOfProtoStory(story_id);
+  auto future_data = storage->GetStoryData(story_id);
+  bool done{};
+  future_data->Then([&](fuchsia::modular::internal::StoryDataPtr data) {
+    EXPECT_FALSE(data->is_kind_of_proto_story);
     done = true;
   });
   RunLoopUntil([&] { return done; });
