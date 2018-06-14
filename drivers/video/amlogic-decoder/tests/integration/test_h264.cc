@@ -9,6 +9,7 @@
 
 #include "bear.h264.h"
 #include "macros.h"
+#include "vdec1.h"
 
 class TestH264 {
  public:
@@ -19,7 +20,8 @@ class TestH264 {
     zx_status_t status = video->InitRegisters(TestSupport::parent_device());
     EXPECT_EQ(ZX_OK, status);
 
-    video->EnableVideoPower();
+    video->core_ = std::make_unique<Vdec1>(video.get());
+    video->core_->PowerOn();
     status = video->InitializeStreamBuffer(true);
     video->InitializeInterrupts();
     EXPECT_EQ(ZX_OK, status);
@@ -55,7 +57,8 @@ class TestH264 {
     zx_status_t status = video->InitRegisters(TestSupport::parent_device());
     EXPECT_EQ(ZX_OK, status);
 
-    video->EnableVideoPower();
+    video->core_ = std::make_unique<Vdec1>(video.get());
+    video->core_->PowerOn();
     status = video->InitializeStreamBuffer(false);
     video->InitializeInterrupts();
     EXPECT_EQ(ZX_OK, status);
@@ -75,7 +78,7 @@ class TestH264 {
             wait_valid.set_value();
         });
 
-    video->InitializeDecoderInput();
+    video->core_->InitializeDirectInput();
     video->ProcessVideoNoParser(bear_h264, bear_h264_len);
 
     EXPECT_EQ(std::future_status::ready,

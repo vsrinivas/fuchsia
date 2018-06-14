@@ -7,6 +7,7 @@
 #include "amlogic-video.h"
 #include "gtest/gtest.h"
 #include "tests/test_support.h"
+#include "vdec1.h"
 
 #include "bear.mpeg2.h"
 #include "mpeg12_decoder.h"
@@ -19,7 +20,9 @@ class TestMpeg2 {
 
     EXPECT_EQ(ZX_OK, video->InitRegisters(TestSupport::parent_device()));
 
-    video->EnableVideoPower();
+    video->core_ = std::make_unique<Vdec1>(video.get());
+    video->core_->PowerOn();
+
     EXPECT_EQ(ZX_OK, video->InitializeStreamBuffer(true));
 
     video->InitializeInterrupts();
@@ -53,7 +56,9 @@ class TestMpeg2 {
 
     EXPECT_EQ(ZX_OK, video->InitRegisters(TestSupport::parent_device()));
 
-    video->EnableVideoPower();
+    video->core_ = std::make_unique<Vdec1>(video.get());
+    video->core_->PowerOn();
+
     EXPECT_EQ(ZX_OK, video->InitializeStreamBuffer(false));
 
     video->InitializeInterrupts();
@@ -72,8 +77,8 @@ class TestMpeg2 {
         });
     EXPECT_EQ(ZX_OK, video->video_decoder_->Initialize());
 
-    video->InitializeDecoderInput();
-    EXPECT_EQ(ZX_OK, video->ProcessVideoNoParser(bear_mpeg2, bear_mpeg2_len));
+    video->core_->InitializeDirectInput();
+    video->ProcessVideoNoParser(bear_mpeg2, bear_mpeg2_len);
 
     EXPECT_EQ(std::future_status::ready,
               wait_valid.get_future().wait_for(std::chrono::seconds(1)));

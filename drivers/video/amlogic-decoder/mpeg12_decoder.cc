@@ -33,8 +33,8 @@ using MregWaitBuffer = AvScratchE;
 using MregFatalError = AvScratchF;
 
 Mpeg12Decoder::~Mpeg12Decoder() {
-  owner_->StopDecoding();
-  owner_->PowerDownDecoder();
+  owner_->core()->StopDecoding();
+  owner_->core()->WaitForIdle();
   io_buffer_release(&cc_buffer_);
 }
 
@@ -81,7 +81,7 @@ zx_status_t Mpeg12Decoder::Initialize() {
       FirmwareBlob::FirmwareType::kMPEG12, &data, &firmware_size);
   if (status != ZX_OK)
     return status;
-  status = owner_->LoadDecoderFirmware(data, firmware_size);
+  status = owner_->core()->LoadFirmware(data, firmware_size);
   if (status != ZX_OK)
     return status;
 
@@ -121,7 +121,7 @@ zx_status_t Mpeg12Decoder::Initialize() {
       .set_nv12_output(true)
       .WriteTo(owner_->dosbus());
 
-  owner_->StartDecoding();
+  owner_->core()->StartDecoding();
 
   return ZX_OK;
 }

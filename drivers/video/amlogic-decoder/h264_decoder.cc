@@ -108,8 +108,8 @@ static uint32_t GetMaxDpbSize(uint32_t level_idc, uint32_t width_in_mbs,
 }
 
 H264Decoder::~H264Decoder() {
-  owner_->StopDecoding();
-  owner_->PowerDownDecoder();
+  owner_->core()->StopDecoding();
+  owner_->core()->WaitForIdle();
   io_buffer_release(&reference_mv_buffer_);
   io_buffer_release(&codec_data_);
   io_buffer_release(&sei_data_buffer_);
@@ -183,7 +183,7 @@ zx_status_t H264Decoder::Initialize() {
       FirmwareBlob::FirmwareType::kH264, &data, &firmware_size);
   if (status != ZX_OK)
     return status;
-  status = owner_->LoadDecoderFirmware(data, firmware_size);
+  status = owner_->core()->LoadFirmware(data, firmware_size);
   if (status != ZX_OK)
     return status;
 
@@ -270,7 +270,7 @@ zx_status_t H264Decoder::Initialize() {
   AvScratchJ::Get().FromValue(0).WriteTo(owner_->dosbus());
   MdecPicDcThresh::Get().FromValue(0x404038aa).WriteTo(owner_->dosbus());
 
-  owner_->StartDecoding();
+  owner_->core()->StartDecoding();
   return ZX_OK;
 }
 

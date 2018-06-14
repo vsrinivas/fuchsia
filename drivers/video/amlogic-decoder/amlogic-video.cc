@@ -98,13 +98,19 @@ AmlogicVideo::~AmlogicVideo() {
     if (parser_interrupt_thread_.joinable())
       parser_interrupt_thread_.join();
   }
+  if (vdec0_interrupt_handle_) {
+    zx_interrupt_destroy(vdec0_interrupt_handle_.get());
+    if (vdec0_interrupt_thread_.joinable())
+      vdec0_interrupt_thread_.join();
+  }
   if (vdec1_interrupt_handle_) {
     zx_interrupt_destroy(vdec1_interrupt_handle_.get());
     if (vdec1_interrupt_thread_.joinable())
       vdec1_interrupt_thread_.join();
   }
   video_decoder_.reset();
-  DisableVideoPower();
+  if (core_)
+    core_->PowerOff();
   io_buffer_release(&mmio_cbus_);
   io_buffer_release(&mmio_dosbus_);
   io_buffer_release(&mmio_hiubus_);
@@ -113,7 +119,7 @@ AmlogicVideo::~AmlogicVideo() {
   io_buffer_release(&stream_buffer_);
 }
 
-void AmlogicVideo::EnableClockGate() {
+void AmlogicVideo::UngateClocks() {
   HhiGclkMpeg0::Get()
       .ReadFrom(hiubus_.get())
       .set_dos(true)
@@ -131,7 +137,7 @@ void AmlogicVideo::EnableClockGate() {
       .WriteTo(hiubus_.get());
 }
 
-void AmlogicVideo::DisableClockGate() {
+void AmlogicVideo::GateClocks() {
   // Keep VPU interrupt enabled, as it's used for vsync by the display.
   HhiGclkMpeg1::Get()
       .ReadFrom(hiubus_.get())
@@ -146,97 +152,6 @@ void AmlogicVideo::DisableClockGate() {
       .WriteTo(hiubus_.get());
 }
 
-void AmlogicVideo::EnableVideoPower() {
-  {
-    auto temp = AoRtiGenPwrSleep0::Get().ReadFrom(aobus_.get());
-    temp.set_reg_value(temp.reg_value() & ~0xc);
-    temp.WriteTo(aobus_.get());
-  }
-  zx_nanosleep(zx_deadline_after(ZX_USEC(10)));
-
-  DosSwReset0::Get().FromValue(0xfffffffc).WriteTo(dosbus_.get());
-  DosSwReset0::Get().FromValue(0).WriteTo(dosbus_.get());
-
-  EnableClockGate();
-
-  HhiVdecClkCntl::Get().FromValue(0).set_vdec_en(true).set_vdec_sel(3).WriteTo(
-      hiubus_.get());
-  DosGclkEn::Get().FromValue(0x3ff).WriteTo(dosbus_.get());
-  DosMemPdVdec::Get().FromValue(0).WriteTo(dosbus_.get());
-  {
-    auto temp = AoRtiGenPwrIso0::Get().ReadFrom(aobus_.get());
-    temp.set_reg_value(temp.reg_value() & ~0xc0);
-    temp.WriteTo(aobus_.get());
-  }
-  DosVdecMcrccStallCtrl::Get().FromValue(0).WriteTo(dosbus_.get());
-  DmcReqCtrl::Get().ReadFrom(dmc_.get()).set_vdec(true).WriteTo(dmc_.get());
-
-  MdecPicDcCtrl::Get()
-      .ReadFrom(dosbus_.get())
-      .set_bit31(false)
-      .WriteTo(dosbus_.get());
-  video_power_enabled_ = true;
-}
-
-void AmlogicVideo::DisableVideoPower() {
-  if (!video_power_enabled_)
-    return;
-  video_power_enabled_ = false;
-  DmcReqCtrl::Get().ReadFrom(dmc_.get()).set_vdec(false).WriteTo(dmc_.get());
-  zx_nanosleep(zx_deadline_after(ZX_USEC(10)));
-  {
-    auto temp = AoRtiGenPwrIso0::Get().ReadFrom(aobus_.get());
-    temp.set_reg_value(temp.reg_value() | 0xc0);
-    temp.WriteTo(aobus_.get());
-  }
-  DosMemPdVdec::Get().FromValue(~0u).WriteTo(dosbus_.get());
-  HhiVdecClkCntl::Get().FromValue(0).set_vdec_en(false).set_vdec_sel(3).WriteTo(
-      hiubus_.get());
-
-  {
-    auto temp = AoRtiGenPwrSleep0::Get().ReadFrom(aobus_.get());
-    temp.set_reg_value(temp.reg_value() | 0xc);
-    temp.WriteTo(aobus_.get());
-  }
-  DisableClockGate();
-}
-
-zx_status_t AmlogicVideo::LoadDecoderFirmware(uint8_t* data, uint32_t size) {
-  Mpsr::Get().FromValue(0).WriteTo(dosbus_.get());
-  Cpsr::Get().FromValue(0).WriteTo(dosbus_.get());
-  io_buffer_t firmware_buffer;
-  const uint32_t kFirmwareSize = 4 * 4096;
-  zx_status_t status = io_buffer_init_aligned(&firmware_buffer, bti_.get(),
-                                              kFirmwareSize, kBufferAlignShift,
-                                              IO_BUFFER_RW | IO_BUFFER_CONTIG);
-  if (status != ZX_OK) {
-    DECODE_ERROR("Failed to make firmware buffer");
-    return status;
-  }
-
-  memcpy(io_buffer_virt(&firmware_buffer), data, std::min(size, kFirmwareSize));
-  io_buffer_cache_flush(&firmware_buffer, 0, kFirmwareSize);
-
-  ImemDmaAdr::Get()
-      .FromValue(static_cast<uint32_t>(io_buffer_phys(&firmware_buffer)))
-      .WriteTo(dosbus_.get());
-  ImemDmaCount::Get()
-      .FromValue(kFirmwareSize / sizeof(uint32_t))
-      .WriteTo(dosbus_.get());
-  ImemDmaCtrl::Get().FromValue(0x8000 | (7 << 16)).WriteTo(dosbus_.get());
-
-  if (!WaitForRegister(std::chrono::milliseconds(100), [this] {
-        return (ImemDmaCtrl::Get().ReadFrom(dosbus_.get()).reg_value() &
-                0x8000) == 0;
-      })) {
-    DECODE_ERROR("Failed to load microcode.");
-    return ZX_ERR_TIMED_OUT;
-  }
-
-  io_buffer_release(&firmware_buffer);
-  return ZX_OK;
-}
-
 zx_status_t AmlogicVideo::InitializeStreamBuffer(bool use_parser) {
   zx_status_t status = io_buffer_init_aligned(
       &stream_buffer_, bti_.get(), kStreamBufferSize, kBufferAlignShift,
@@ -247,46 +162,10 @@ zx_status_t AmlogicVideo::InitializeStreamBuffer(bool use_parser) {
   }
 
   io_buffer_cache_flush(&stream_buffer_, 0, kStreamBufferSize);
-  VldMemVififoControl::Get().FromValue(0).WriteTo(dosbus_.get());
-  VldMemVififoWrapCount::Get().FromValue(0).WriteTo(dosbus_.get());
 
-  DosSwReset0::Get().FromValue(1 << 4).WriteTo(dosbus_.get());
-  DosSwReset0::Get().FromValue(0).WriteTo(dosbus_.get());
-
-  Reset0Register::Get().ReadFrom(reset_.get());
-  PowerCtlVld::Get().FromValue(1 << 4).WriteTo(dosbus_.get());
   uint32_t buffer_address =
       static_cast<uint32_t>(io_buffer_phys(&stream_buffer_));
-
-  VldMemVififoStartPtr::Get().FromValue(buffer_address).WriteTo(dosbus_.get());
-  VldMemVififoCurrPtr::Get().FromValue(buffer_address).WriteTo(dosbus_.get());
-  VldMemVififoEndPtr::Get()
-      .FromValue(buffer_address + kStreamBufferSize - 8)
-      .WriteTo(dosbus_.get());
-  VldMemVififoControl::Get().FromValue(0).set_init(true).WriteTo(dosbus_.get());
-  VldMemVififoControl::Get().FromValue(0).WriteTo(dosbus_.get());
-  VldMemVififoBufCntl::Get().FromValue(0).set_manual(true).WriteTo(
-      dosbus_.get());
-  VldMemVififoWP::Get().FromValue(buffer_address).WriteTo(dosbus_.get());
-  VldMemVififoBufCntl::Get()
-      .FromValue(0)
-      .set_manual(true)
-      .set_init(true)
-      .WriteTo(dosbus_.get());
-  VldMemVififoBufCntl::Get().FromValue(0).set_manual(true).WriteTo(
-      dosbus_.get());
-  auto fifo_control =
-      VldMemVififoControl::Get().FromValue(0).set_upper(0x11).set_fill_on_level(
-          true);
-  if (use_parser) {
-    fifo_control.set_fill_en(true).set_empty_en(true);
-    // Parser will do 64-bit endianness conversion.
-    fifo_control.set_endianness(0);
-  } else {
-    // Expect input to be in normal byte order.
-    fifo_control.set_endianness(7);
-  }
-  fifo_control.WriteTo(dosbus_.get());
+  core_->InitializeStreamInput(use_parser, buffer_address, kStreamBufferSize);
 
   return ZX_OK;
 }
@@ -370,19 +249,17 @@ zx_status_t AmlogicVideo::InitializeEsParser() {
 
   // Set up output fifo.
   uint32_t buffer_address = truncate_to_32(io_buffer_phys(&stream_buffer_));
-
   ParserVideoStartPtr::Get().FromValue(buffer_address).WriteTo(parser_.get());
   ParserVideoEndPtr::Get()
       .FromValue(buffer_address + kStreamBufferSize - 8)
       .WriteTo(parser_.get());
+
   ParserEsControl::Get()
       .ReadFrom(parser_.get())
       .set_video_manual_read_ptr_update(false)
       .WriteTo(parser_.get());
-  VldMemVififoBufCntl::Get().FromValue(0).set_init(true).WriteTo(dosbus_.get());
-  VldMemVififoBufCntl::Get().FromValue(0).WriteTo(dosbus_.get());
 
-  DosGenCtrl0::Get().FromValue(0).WriteTo(dosbus_.get());
+  core_->InitializeParserInput();
 
   parser_interrupt_thread_ = std::thread([this]() {
     DLOG("Starting parser thread\n");
@@ -410,16 +287,6 @@ zx_status_t AmlogicVideo::InitializeEsParser() {
       parser_.get());
 
   return ZX_OK;
-}
-
-void AmlogicVideo::InitializeDecoderInput() {
-  VldMemVififoBufCntl::Get()
-      .FromValue(0)
-      .set_init(true)
-      .set_manual(true)
-      .WriteTo(dosbus_.get());
-  VldMemVififoBufCntl::Get().FromValue(0).set_manual(true).WriteTo(
-      dosbus_.get());
 }
 
 zx_status_t AmlogicVideo::ParseVideo(void* data, uint32_t len) {
@@ -483,93 +350,6 @@ zx_status_t AmlogicVideo::ProcessVideoNoParser(void* data, uint32_t len) {
       .set_empty_en(true)
       .WriteTo(dosbus_.get());
   return ZX_OK;
-}
-
-void AmlogicVideo::StartDecoding() {
-  // Delay to ensure previous writes have executed.
-  for (uint32_t i = 0; i < 3; i++) {
-    DosSwReset0::Get().ReadFrom(dosbus_.get());
-  }
-
-  DosSwReset0::Get().FromValue((1 << 12) | (1 << 11)).WriteTo(dosbus_.get());
-  DosSwReset0::Get().FromValue(0).WriteTo(dosbus_.get());
-
-  // Delay to ensure previous writes have executed.
-  for (uint32_t i = 0; i < 3; i++) {
-    DosSwReset0::Get().ReadFrom(dosbus_.get());
-  }
-
-  Mpsr::Get().FromValue(1).WriteTo(dosbus_.get());
-  decoding_started_ = true;
-}
-
-void AmlogicVideo::StopDecoding() {
-  if (!decoding_started_)
-    return;
-  decoding_started_ = false;
-  Mpsr::Get().FromValue(0).WriteTo(dosbus_.get());
-  Cpsr::Get().FromValue(0).WriteTo(dosbus_.get());
-
-  if (!WaitForRegister(std::chrono::milliseconds(100), [this] {
-        return (ImemDmaCtrl::Get().ReadFrom(dosbus_.get()).reg_value() &
-                0x8000) == 0;
-      })) {
-    DECODE_ERROR("Failed to wait for DMA completion");
-    return;
-  }
-  // Delay to ensure previous writes have executed.
-  for (uint32_t i = 0; i < 3; i++) {
-    DosSwReset0::Get().ReadFrom(dosbus_.get());
-  }
-
-  DosSwReset0::Get().FromValue((1 << 12) | (1 << 11)).WriteTo(dosbus_.get());
-  DosSwReset0::Get().FromValue(0).WriteTo(dosbus_.get());
-
-  // Delay to ensure previous write have executed.
-  for (uint32_t i = 0; i < 3; i++) {
-    DosSwReset0::Get().ReadFrom(dosbus_.get());
-  }
-}
-
-void AmlogicVideo::PowerDownDecoder() {
-  auto timeout = std::chrono::milliseconds(100);
-  if (!WaitForRegister(timeout, [this] {
-        return MdecPicDcStatus::Get().ReadFrom(dosbus_.get()).reg_value() == 0;
-      })) {
-    auto temp = MdecPicDcCtrl::Get().ReadFrom(dosbus_.get());
-    temp.set_reg_value(1 | temp.reg_value());
-    temp.WriteTo(dosbus_.get());
-    temp.set_reg_value(~1 & temp.reg_value());
-    temp.WriteTo(dosbus_.get());
-    for (uint32_t i = 0; i < 3; i++) {
-      MdecPicDcStatus::Get().ReadFrom(dosbus_.get());
-    }
-  }
-  if (!WaitForRegister(timeout, [this] {
-        return DblkStatus::Get().ReadFrom(dosbus_.get()).reg_value() == 0;
-      })) {
-    DblkCtrl::Get().FromValue(3).WriteTo(dosbus_.get());
-    DblkCtrl::Get().FromValue(0).WriteTo(dosbus_.get());
-    for (uint32_t i = 0; i < 3; i++) {
-      DblkStatus::Get().ReadFrom(dosbus_.get());
-    }
-  }
-
-  if (!WaitForRegister(timeout, [this] {
-        return McStatus0::Get().ReadFrom(dosbus_.get()).reg_value() == 0;
-      })) {
-    auto temp = McCtrl1::Get().ReadFrom(dosbus_.get());
-    temp.set_reg_value(0x9 | temp.reg_value());
-    temp.WriteTo(dosbus_.get());
-    temp.set_reg_value(~0x9 & temp.reg_value());
-    temp.WriteTo(dosbus_.get());
-    for (uint32_t i = 0; i < 3; i++) {
-      McStatus0::Get().ReadFrom(dosbus_.get());
-    }
-  }
-  WaitForRegister(timeout, [this] {
-    return !(DcacDmaCtrl::Get().ReadFrom(dosbus_.get()).reg_value() & 0x8000);
-  });
 }
 
 zx_status_t AmlogicVideo::InitRegisters(zx_device_t* parent) {
@@ -636,6 +416,12 @@ zx_status_t AmlogicVideo::InitRegisters(zx_device_t* parent) {
     DECODE_ERROR("Failed get parser interrupt");
     return ZX_ERR_NO_MEMORY;
   }
+  status = pdev_map_interrupt(&pdev_, kDosMbox0Irq,
+                              vdec0_interrupt_handle_.reset_and_get_address());
+  if (status != ZX_OK) {
+    DECODE_ERROR("Failed get vdec0 interrupt");
+    return ZX_ERR_NO_MEMORY;
+  }
   status = pdev_map_interrupt(&pdev_, kDosMbox1Irq,
                               vdec1_interrupt_handle_.reset_and_get_address());
   if (status != ZX_OK) {
@@ -667,6 +453,8 @@ zx_status_t AmlogicVideo::InitRegisters(zx_device_t* parent) {
   parser_ =
       std::make_unique<ParserRegisterIo>(cbus_base + parser_register_offset);
   demux_ = std::make_unique<DemuxRegisterIo>(cbus_base + demux_register_offset);
+  registers_ = std::unique_ptr<MmioRegisters>(new MmioRegisters{
+      dosbus_.get(), aobus_.get(), dmc_.get(), hiubus_.get(), reset_.get()});
 
   firmware_ = std::make_unique<FirmwareBlob>();
   status = firmware_->LoadFirmware(parent_);
@@ -701,6 +489,17 @@ zx_status_t AmlogicVideo::Bind() {
 }
 
 void AmlogicVideo::InitializeInterrupts() {
+  vdec0_interrupt_thread_ = std::thread([this]() {
+    while (true) {
+      zx_time_t time;
+      zx_status_t status =
+          zx_interrupt_wait(vdec0_interrupt_handle_.get(), &time);
+      if (status != ZX_OK)
+        return;
+      video_decoder_->HandleInterrupt();
+    }
+  });
+
   vdec1_interrupt_thread_ = std::thread([this]() {
     while (true) {
       zx_time_t time;
@@ -731,11 +530,6 @@ void AmlogicVideo::InitializeInterrupts() {
 }
 
 zx_status_t AmlogicVideo::InitDecoder() {
-  EnableVideoPower();
-  zx_status_t status = InitializeStreamBuffer(true);
-  if (status != ZX_OK)
-    return status;
-
   InitializeInterrupts();
 
   return ZX_OK;
