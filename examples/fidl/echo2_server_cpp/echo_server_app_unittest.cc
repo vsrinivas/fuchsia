@@ -12,6 +12,7 @@ using namespace fidl::examples::echo;
 
 class EchoServerAppForTest : public EchoServerApp {
  public:
+  // Expose injecting constructor so we can pass an instrumented Context
   EchoServerAppForTest(std::unique_ptr<fuchsia::sys::StartupContext> context)
       : EchoServerApp(std::move(context)) {}
 };

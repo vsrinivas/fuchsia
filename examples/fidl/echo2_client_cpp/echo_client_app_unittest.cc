@@ -14,18 +14,21 @@ namespace testing {
 
 using namespace fidl::examples::echo;
 
+// Fake server, which the client under test will be used against
 class FakeEcho : public Echo, public fuchsia::sys::testing::FakeService<Echo> {
  public:
   static const std::string URL_;
 
   FakeEcho() : FakeService(this){};
 
+  // Fake implementation of server-side logic
   void EchoString(fidl::StringPtr value, EchoStringCallback callback) {
     callback(answer_);
   }
 
   void SetAnswer(fidl::StringPtr answer) { answer_ = answer; }
 
+  // Register to be launched with a fake URL
   void Register(fuchsia::sys::testing::FakeLauncher& fake_launcher) {
     FakeService<Echo>::Register(URL_, fake_launcher);
   }
@@ -38,6 +41,7 @@ const std::string FakeEcho::URL_ = "fake-echo";
 
 class EchoClientAppForTest : public EchoClientApp {
  public:
+  // Expose injecting constructor so we can pass an instrumented Context
   EchoClientAppForTest(std::unique_ptr<fuchsia::sys::StartupContext> context)
       : EchoClientApp(std::move(context)) {}
 };
@@ -64,7 +68,7 @@ class EchoClientAppTest : public fuchsia::sys::testing::TestWithContext {
  private:
   std::unique_ptr<EchoClientAppForTest> echoClientApp_;
   std::unique_ptr<FakeEcho> fake_echo_;
-};  // namespace testing
+};
 
 // Answer "Hello World" with "Goodbye World"
 TEST_F(EchoClientAppTest, EchoString_HelloWorld_GoodbyeWorld) {
