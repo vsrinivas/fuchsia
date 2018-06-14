@@ -39,12 +39,11 @@ def remove_dashes(name):
 
 class BazelBuilder(Builder):
 
-    def __init__(self, output, overlay, debug):
+    def __init__(self, output, overlay):
         super(BazelBuilder, self).__init__(domains=['cpp', 'exe'],
                                            ignored_domains=['fidl', 'image'])
         self.output = output
         self.is_overlay = overlay
-        self.is_debug = debug
         self.tools = []
 
 
@@ -90,30 +89,9 @@ class BazelBuilder(Builder):
         elif type == 'sources':
             self.install_cpp_source_atom(atom)
         elif type == 'sysroot':
-            self.install_sysroot_atom(atom)
+            self.install_cpp_sysroot_atom(atom)
         else:
             print('Atom type "%s" not handled, skipping %s.' % (type, atom.id))
-
-
-    def write_build_file(self, library, type):
-        if self.is_debug and type != 'sysroot':
-            library.deps.append('//pkg/system:system')
-
-        path = self.dest('pkg', library.name, 'BUILD')
-        build_file = open(path, 'w')
-
-        # TODO(pylaligand): remove debug mode.
-        if type == 'sysroot' and not self.is_debug:
-            template = Template(filename=self.source('templates',
-                                                     'sysroot.mako'))
-            build_file.write(template.render(data=library))
-        else:
-            # TODO: this include should not be needed.
-            library.includes.append('.')
-            library.includes.append('include')
-            template = Template(filename=self.source('templates',
-                                                     'cc_library.mako'))
-            build_file.write(template.render(data=library))
 
 
     def install_cpp_prebuilt_atom(self, atom, check_arch=True):
@@ -123,16 +101,16 @@ class BazelBuilder(Builder):
                   'skipping %s.' % atom.id)
             return
 
-        atom_name = remove_dashes(atom.id.name)
-
-        library = Library(atom_name)
+        name = remove_dashes(atom.id.name)
+        library = Library(name)
+        base = self.dest('pkg', name)
 
         for file in atom.files:
             destination = file.destination
             extension = os.path.splitext(destination)[1][1:]
             if extension == 'so' or extension == 'o':
-                dest = self.dest('pkg', atom_name, 'arch',
-                                 self.metadata.target_arch, destination)
+                dest = os.path.join(base, 'arch',
+                                    self.metadata.target_arch, destination)
                 if os.path.isfile(dest):
                     raise Exception('File already exists: %s.' % dest)
                 self.make_dir(dest)
@@ -146,7 +124,7 @@ class BazelBuilder(Builder):
                 continue
             elif (extension == 'h' or extension == 'modulemap' or
                     extension == 'inc' or extension == 'rs'):
-                dest = self.make_dir(self.dest('pkg', atom_name, destination))
+                dest = self.make_dir(os.path.join(base, destination))
                 shutil.copy2(file.source, dest)
                 if extension == 'h':
                     library.hdrs.append(destination)
@@ -156,7 +134,9 @@ class BazelBuilder(Builder):
         for dep_id in atom.deps:
             library.deps.append('//pkg/' + remove_dashes(dep_id.name))
 
-        self.write_build_file(library, atom.tags['type'])
+        library.includes.append('include')
+
+        self.write_file(os.path.join(base, 'BUILD'), 'cc_library', library)
 
 
     def install_cpp_source_atom(self, atom):
@@ -188,10 +168,13 @@ class BazelBuilder(Builder):
         self.write_file(os.path.join(base, 'BUILD'), 'cc_library', library)
 
 
-    def install_sysroot_atom(self, atom):
-        # TODO(pylaligand): use the same sysroot layout as in the foundation
-        # SDK.
-        self.install_cpp_prebuilt_atom(atom, check_arch=False)
+    def install_cpp_sysroot_atom(self, atom):
+        '''Installs a sysroot atom from the "cpp" domain.'''
+        base = self.dest('arch', self.metadata.target_arch, 'sysroot')
+        for file in atom.files:
+            dest = self.make_dir(os.path.join(base, file.destination))
+            shutil.copy2(file.source, dest)
+        self.write_file(os.path.join(base, 'BUILD'), 'sysroot', [])
 
 
     def install_exe_atom(self, atom):
@@ -220,9 +203,6 @@ def main():
     parser.add_argument('--output',
                         help='Path to the directory where to install the SDK',
                         required=True)
-    parser.add_argument('--debug',
-                        help='Set up generated build files for standalone building',
-                        action='store_true')
     parser.add_argument('--overlay',
                         help='Whether to overlay target binaries on top of an '
                              'existing layout',
@@ -238,7 +218,7 @@ def main():
     else:
         shutil.rmtree(args.output, True)
 
-    builder = BazelBuilder(args.output, args.overlay, args.debug)
+    builder = BazelBuilder(args.output, args.overlay)
     return 0 if process_manifest(args.manifest, builder) else 1
 
 

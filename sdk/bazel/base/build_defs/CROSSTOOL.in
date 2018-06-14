@@ -61,15 +61,9 @@ toolchain {
   # The following are to make the various files in runtimes/sdk available
 
   # Implicit dependencies for Fuchsia system functionality
-  cxx_builtin_include_directory: "%{SYSROOT_INCLUDE}" # Platform parts of libc.
+  cxx_builtin_include_directory: "%{SYSROOT}/include" # Platform parts of libc.
   cxx_builtin_include_directory: "%{CROSSTOOL_ROOT}/clang/lib/x86_64-fuchsia/include/c++/v1" # Platform libc++.
   cxx_builtin_include_directory: "%{CROSSTOOL_ROOT}/clang/lib/clang/7.0.0/include" # Platform libc++.
-
-  compiler_flag: "-isystem"
-  compiler_flag: "%{SYSROOT_INCLUDE}"
-
-  compiler_flag: "-cxx-isystem"
-  compiler_flag: "%{SYSROOT_INCLUDE}"
   ### end
 
   #### Common compiler options. ####

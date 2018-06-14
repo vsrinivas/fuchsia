@@ -83,8 +83,8 @@ class CppBuilder(Builder):
 
     def install_cpp_sysroot_atom(self, atom):
         '''Installs a sysroot atom from the "cpp" domain.'''
-        base =  os.path.join(self.output, 'arch', self.metadata.target_arch,
-                             'sysroot')
+        base = os.path.join(self.output, 'arch', self.metadata.target_arch,
+                            'sysroot')
         for file in atom.files:
             dest = os.path.join(base, file.destination)
             self.make_dir(dest)

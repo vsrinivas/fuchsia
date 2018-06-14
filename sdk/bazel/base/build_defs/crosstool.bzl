@@ -29,15 +29,14 @@ def _configure_crosstool_impl(repository_ctx):
         Label("@fuchsia_sdk//build_defs:BUILD.crosstool"), "BUILD")
     # Hack to get the path to the sysroot directory, see
     # https://github.com/bazelbuild/bazel/issues/3901
-    system_pkg = repository_ctx.path(
-        Label("@fuchsia_sdk//pkg/system:BUILD")).dirname
+    sysroot = repository_ctx.path(
+        Label("@fuchsia_sdk//arch/x64/sysroot:BUILD")).dirname
     # Set up the CROSSTOOL file from the template.
     repository_ctx.template(
         "CROSSTOOL",
         Label("@fuchsia_sdk//build_defs:CROSSTOOL.in"),
         {
-            "%{SYSROOT}": str(system_pkg.get_child("arch").get_child("x64")),
-            "%{SYSROOT_INCLUDE}": str(system_pkg.get_child("include")),
+            "%{SYSROOT}": str(sysroot),
             "%{CROSSTOOL_ROOT}": str(repository_ctx.path("."))
         })
 
