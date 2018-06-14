@@ -75,6 +75,7 @@ class LogicalLink final {
 
   hci::Connection::LinkType type() const { return type_; }
   hci::Connection::Role role() const { return role_; }
+  hci::ConnectionHandle handle() const { return handle_; }
 
   // Returns the LE signaling channel implementation or nullptr if this is not a
   // LE-U link.

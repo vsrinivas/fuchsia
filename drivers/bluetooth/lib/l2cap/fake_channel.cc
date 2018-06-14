@@ -10,10 +10,9 @@ namespace btlib {
 namespace l2cap {
 namespace testing {
 
-FakeChannel::FakeChannel(ChannelId id,
-                         hci::ConnectionHandle handle,
+FakeChannel::FakeChannel(ChannelId id, hci::ConnectionHandle handle,
                          hci::Connection::LinkType link_type)
-    : Channel(id, link_type),
+    : Channel(id, link_type, handle),
       handle_(handle),
       fragmenter_(handle),
       dispatcher_(nullptr),

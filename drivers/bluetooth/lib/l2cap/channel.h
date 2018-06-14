@@ -104,16 +104,21 @@ class Channel : public fbl::RefCounted<Channel> {
   // The type of the logical link this channel operates on.
   hci::Connection::LinkType link_type() const { return link_type_; }
 
+  // The connection handle of the underlying logical link.
+  hci::ConnectionHandle link_handle() const { return link_handle_; }
+
   uint16_t tx_mtu() const { return tx_mtu_; }
   uint16_t rx_mtu() const { return rx_mtu_; }
 
  protected:
   friend class fbl::RefPtr<Channel>;
-  Channel(ChannelId id, hci::Connection::LinkType link_type);
+  Channel(ChannelId id, hci::Connection::LinkType link_type,
+          hci::ConnectionHandle link_handle);
   virtual ~Channel() = default;
 
   ChannelId id_;
   hci::Connection::LinkType link_type_;
+  hci::ConnectionHandle link_handle_;
 
   // The maximum SDU sizes for this channel.
   uint16_t tx_mtu_;

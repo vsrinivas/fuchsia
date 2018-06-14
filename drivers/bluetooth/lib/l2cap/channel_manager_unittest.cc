@@ -126,6 +126,7 @@ TEST_F(L2CAP_ChannelManagerTest, OpenFixedChannelAndUnregisterLink) {
 
   auto chan = ActivateNewFixedChannel(kATTChannelId, kTestHandle1, closed_cb);
   ASSERT_TRUE(chan);
+  EXPECT_EQ(kTestHandle1, chan->link_handle());
 
   // This should notify the channel.
   chanmgr()->Unregister(kTestHandle1);

@@ -12,9 +12,11 @@
 namespace btlib {
 namespace l2cap {
 
-Channel::Channel(ChannelId id, hci::Connection::LinkType link_type)
+Channel::Channel(ChannelId id, hci::Connection::LinkType link_type,
+                 hci::ConnectionHandle link_handle)
     : id_(id),
       link_type_(link_type),
+      link_handle_(link_handle),
 
       // TODO(armansito): IWBN if the MTUs could be specified dynamically
       // instead (see NET-308).
@@ -35,10 +37,9 @@ void RunTask(async_t* dispatcher, fit::closure task) {
   task();
 }
 
-ChannelImpl::ChannelImpl(ChannelId id,
-                         fxl::WeakPtr<internal::LogicalLink> link,
+ChannelImpl::ChannelImpl(ChannelId id, fxl::WeakPtr<internal::LogicalLink> link,
                          std::list<PDU> buffered_pdus)
-    : Channel(id, link->type()),
+    : Channel(id, link->type(), link->handle()),
       active_(false),
       dispatcher_(nullptr),
       link_(link),
