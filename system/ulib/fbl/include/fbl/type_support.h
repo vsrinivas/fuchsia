@@ -341,4 +341,17 @@ public:                                                                         
     static constexpr bool value = decltype(test<T>(nullptr))::value;              \
 }
 
+namespace internal {
+
+template <typename...>
+struct make_void {
+    using type = void;
+};
+
+} // namespace internal
+
+// Utility type for SFINAE expression evaluation, equivalent to C++17 std::void_t.
+template <typename... Ts>
+using void_t = typename internal::make_void<Ts...>::type;
+
 }  // namespace fbl
