@@ -432,7 +432,7 @@ zx_status_t fdio_spawn_vmo(zx_handle_t job,
             ++handle_capacity;
             break;
         case FDIO_SPAWN_ACTION_SET_NAME:
-            if (actions[i].name.data == ZX_HANDLE_INVALID) {
+            if (actions[i].name.data == NULL) {
                 status = ZX_ERR_INVALID_ARGS;
                 goto cleanup;
             }
