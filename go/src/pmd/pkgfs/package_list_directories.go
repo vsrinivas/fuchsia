@@ -124,6 +124,10 @@ func (pld *packageListDir) Open(name string, flags fs.OpenFlags) (fs.File, fs.Di
 	name = clean(name)
 	debugLog("pkgfs:packageListDir:open %q %s", pld.packageName, name)
 
+	if name == "" {
+		return nil, pld, nil, nil
+	}
+
 	parts := strings.Split(name, "/")
 
 	d, err := newPackageDir(pld.packageName, parts[0], pld.fs)
