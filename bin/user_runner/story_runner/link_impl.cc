@@ -149,28 +149,6 @@ class LinkImpl::FlushWatchersCall : public PageOperation<> {
   FXL_DISALLOW_COPY_AND_ASSIGN(FlushWatchersCall);
 };
 
-class LinkImpl::ReadCall : public Operation<> {
- public:
-  ReadCall(LinkImpl* const impl, ResultCall result_call)
-      : Operation("LinkImpl::ReadCall", std::move(result_call)), impl_(impl) {}
-
- private:
-  void Run() override {
-    FlowToken flow{this};
-    operation_queue_.Add(new ReadLinkDataCall(
-        impl_->page(), impl_->link_path_, [this, flow](fidl::StringPtr json) {
-          if (!json.is_null()) {
-            impl_->doc_.Parse(json.get());
-          }
-        }));
-  }
-
-  LinkImpl* const impl_;  // not owned
-  OperationQueue operation_queue_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(ReadCall);
-};
-
 class LinkImpl::WriteCall : public Operation<> {
  public:
   WriteCall(LinkImpl* const impl, const uint32_t src, ResultCall result_call)
@@ -181,9 +159,15 @@ class LinkImpl::WriteCall : public Operation<> {
  private:
   void Run() override {
     FlowToken flow{this};
+    auto json_value = JsonValueToString(impl_->doc_);
+    impl_->pending_writes_.push_back(
+        std::make_pair(MakeLinkKey(impl_->link_path_), json_value));
+
+    fuchsia::modular::LinkPath cloned;
+    impl_->link_path_.Clone(&cloned);
     operation_queue_.Add(new WriteLinkDataCall(
-        impl_->page(), fidl::MakeOptional(std::move(impl_->link_path_)),
-        JsonValueToString(impl_->doc_), [this, flow] { Cont1(flow); }));
+        impl_->page(), fidl::MakeOptional(std::move(cloned)), json_value,
+        [this, flow] { Cont1(flow); }));
   }
 
   void Cont1(FlowToken flow) {
@@ -198,6 +182,46 @@ class LinkImpl::WriteCall : public Operation<> {
   OperationQueue operation_queue_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(WriteCall);
+};
+
+class LinkImpl::ReadCall : public Operation<> {
+ public:
+  ReadCall(LinkImpl* const impl, ResultCall result_call)
+      : Operation("LinkImpl::ReadCall", std::move(result_call)), impl_(impl) {}
+
+ private:
+  void Run() override {
+    FlowToken flow{this};
+    operation_queue_.Add(new ReadLinkDataCall(
+        impl_->page(), impl_->link_path_, [this, flow](fidl::StringPtr json) {
+          if (!json.is_null()) {
+            impl_->doc_.Parse(json.get());
+          } else {
+            // NOTE(mesch): Initial link data must be applied only at the time
+            // the Intent is originally issued, not when the story is resumed
+            // and modules are restarted from the Intent stored in the story
+            // record. Therefore, initial data from create_link_info are
+            // ignored if there are increments to replay.
+            //
+            // Presumably, it is possible that at the time the Intent is issued
+            // with initial data for a link, a link of the same name already
+            // exists. In that case the initial data are not applied either.
+            // Unclear whether that should be considered wrong or not.
+            if (impl_->create_link_info_ &&
+                !impl_->create_link_info_->initial_data.is_null() &&
+                !impl_->create_link_info_->initial_data->empty()) {
+              impl_->doc_.Parse(impl_->create_link_info_->initial_data);
+              operation_queue_.Add(
+                  new WriteCall(impl_, kWatchAllConnectionId, [flow] {}));
+            }
+          }
+        }));
+  }
+
+  LinkImpl* const impl_;  // not owned
+  OperationQueue operation_queue_;
+
+  FXL_DISALLOW_COPY_AND_ASSIGN(ReadCall);
 };
 
 class LinkImpl::GetCall : public Operation<fidl::StringPtr> {
@@ -244,7 +268,6 @@ class LinkImpl::SetCall : public Operation<> {
     const bool success = impl_->ApplySetOp(ptr, json_);
     if (success) {
       operation_queue_.Add(new WriteCall(impl_, src_, [flow] {}));
-      impl_->NotifyWatchers(src_);
     } else {
       FXL_LOG(WARNING) << "LinkImpl::SetCall failed " << json_;
     }
@@ -279,7 +302,6 @@ class LinkImpl::UpdateObjectCall : public Operation<> {
     const bool success = impl_->ApplyUpdateOp(ptr, json_);
     if (success) {
       operation_queue_.Add(new WriteCall(impl_, src_, [flow] {}));
-      impl_->NotifyWatchers(src_);
     } else {
       FXL_LOG(WARNING) << "LinkImpl::UpdateObjectCall failed " << json_;
     }
@@ -313,7 +335,6 @@ class LinkImpl::EraseCall : public Operation<> {
     const bool success = impl_->ApplyEraseOp(ptr);
     if (success) {
       operation_queue_.Add(new WriteCall(impl_, src_, [flow] {}));
-      impl_->NotifyWatchers(src_);
     } else {
       FXL_LOG(WARNING) << "LinkImpl::EraseCall failed ";
     }
@@ -395,40 +416,6 @@ class LinkImpl::WatchCall : public Operation<> {
   FXL_DISALLOW_COPY_AND_ASSIGN(WatchCall);
 };
 
-class LinkImpl::ChangeCall : public Operation<> {
- public:
-  ChangeCall(LinkImpl* const impl, fidl::StringPtr json)
-      : Operation("LinkImpl::ChangeCall", [] {}), impl_(impl), json_(json) {}
-
- private:
-  void Run() override {
-    FlowToken flow{this};
-
-    // NOTE(jimbe) With rapidjson, the opposite check is more expensive, O(n^2),
-    // so we won't do it for now. See case kObjectType in operator==() in
-    // include/rapidjson/document.h.
-    //
-    //  if (doc_.Equals(json)) {
-    //    return;
-    //  }
-    //
-    // Since all json in a link was written by the same serializer, this check
-    // is mostly accurate. This test has false negatives when only order
-    // differs.
-    if (json_ == JsonValueToString(impl_->doc_)) {
-      return;
-    }
-
-    impl_->doc_.Parse(json_);
-    impl_->NotifyWatchers(kOnChangeConnectionId);
-  }
-
-  LinkImpl* const impl_;  // not owned
-  const fidl::StringPtr json_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(ChangeCall);
-};
-
 LinkImpl::LinkImpl(LedgerClient* const ledger_client, LedgerPageId page_id,
                    const fuchsia::modular::LinkPath& link_path,
                    fuchsia::modular::CreateLinkInfoPtr create_link_info)
@@ -436,13 +423,19 @@ LinkImpl::LinkImpl(LedgerClient* const ledger_client, LedgerPageId page_id,
                  MakeLinkKey(link_path)),
       create_link_info_(std::move(create_link_info)) {
   link_path.Clone(&link_path_);
-  MakeReloadCall([this] {
+
+  auto reload_done = [this] {
     for (auto& request : requests_) {
       LinkConnection::New(this, next_connection_id_++, std::move(request));
     }
     requests_.clear();
     ready_ = true;
-  });
+  };
+  if (kEnableIncrementalLinks) {
+    MakeReloadCall(reload_done);
+  } else {
+    operation_queue_.Add(new ReadCall(this, reload_done));
+  }
 }
 
 LinkImpl::~LinkImpl() = default;
@@ -665,6 +658,12 @@ void LinkImpl::Watch(
 void LinkImpl::WatchAll(
     fidl::InterfaceHandle<fuchsia::modular::LinkWatcher> watcher) {
   Watch(std::move(watcher), kWatchAllConnectionId);
+}
+
+void LinkImpl::OnPageConflict(Conflict* conflict) {
+  // TODO(thatguy): Add basic conflict resolution.
+  FXL_LOG(WARNING) << "LinkImpl::OnPageConflict() for link key "
+                   << MakeLinkKey(link_path_);
 }
 
 LinkConnection::LinkConnection(

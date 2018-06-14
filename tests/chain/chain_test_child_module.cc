@@ -49,7 +49,7 @@ class TestApp {
   }
 
  private:
-  TestPoint link_one_correct_{"fuchsia::modular::Link one value is correct."};
+  TestPoint link_one_correct_{"Link one value is correct."};
 
   void VerifyLinkOne() {
     module_context_->GetLink("one", link_one_.NewRequest());
@@ -69,7 +69,7 @@ class TestApp {
     });
   }
 
-  TestPoint link_two_correct_{"fuchsia::modular::Link two value is correct."};
+  TestPoint link_two_correct_{"Link two value is correct."};
 
   void VerifyLinkTwo() {
     module_context_->GetLink("two", link_two_.NewRequest());
@@ -82,8 +82,7 @@ class TestApp {
     });
   }
 
-  TestPoint link_three_correct_{
-      "fuchsia::modular::Link three value is correct."};
+  TestPoint link_three_correct_{"Link three value is correct."};
 
   void VerifyLinkThree() {
     module_context_->GetLink("three", link_three_.NewRequest());
@@ -96,8 +95,7 @@ class TestApp {
     });
   }
 
-  TestPoint default_link_correct_{
-      "Default fuchsia::modular::Link value is correct."};
+  TestPoint default_link_correct_{"Default Link value is correct."};
 
   void VerifyDefaultLink() {
     // Check that we did get a default link as specified by the

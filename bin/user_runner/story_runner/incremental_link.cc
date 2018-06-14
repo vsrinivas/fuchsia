@@ -105,6 +105,52 @@ class LinkImpl::IncrementalWriteCall : public Operation<> {
   FXL_DISALLOW_COPY_AND_ASSIGN(IncrementalWriteCall);
 };
 
+class LinkImpl::ChangeCall : public Operation<> {
+ public:
+  ChangeCall(LinkImpl* const impl, fidl::StringPtr json)
+      : Operation("LinkImpl::ChangeCall", [] {}), impl_(impl), json_(json) {}
+
+ private:
+  void Run() override {
+    FlowToken flow{this};
+
+    auto change =
+        std::make_pair(MakeLinkKey(impl_->link_path_), std::string(json_));
+    auto it = std::find_if(
+        impl_->pending_writes_.begin(), impl_->pending_writes_.end(),
+        [&change](const std::pair<std::string, std::string>& entry) {
+          return entry == change;
+        });
+    if (it != impl_->pending_writes_.end()) {
+      impl_->pending_writes_.erase(it);
+      return;
+    }
+
+    // NOTE(jimbe) With rapidjson, the opposite check is more expensive, O(n^2),
+    // so we won't do it for now. See case kObjectType in operator==() in
+    // include/rapidjson/document.h.
+    //
+    //  if (doc_.Equals(json)) {
+    //    return;
+    //  }
+    //
+    // Since all json in a link was written by the same serializer, this check
+    // is mostly accurate. This test has false negatives when only order
+    // differs.
+    if (json_ == JsonValueToString(impl_->doc_)) {
+      return;
+    }
+
+    impl_->doc_.Parse(json_);
+    impl_->NotifyWatchers(kOnChangeConnectionId);
+  }
+
+  LinkImpl* const impl_;  // not owned
+  const fidl::StringPtr json_;
+
+  FXL_DISALLOW_COPY_AND_ASSIGN(ChangeCall);
+};
+
 class LinkImpl::IncrementalChangeCall : public Operation<> {
  public:
   IncrementalChangeCall(LinkImpl* const impl,
@@ -321,15 +367,19 @@ void LinkImpl::MakeIncrementalChangeCall(
 }
 
 void LinkImpl::OnPageChange(const std::string& key, const std::string& value) {
-  fuchsia::modular::internal::LinkChangePtr data;
-  if (!XdrRead(value, &data, XdrLinkChange)) {
-    FXL_LOG(ERROR) << EncodeLinkPath(link_path_)
-                   << "LinkImpl::OnChange() XdrRead failed: " << key << " "
-                   << value;
-    return;
-  }
+  if (kEnableIncrementalLinks) {
+    fuchsia::modular::internal::LinkChangePtr data;
+    if (!XdrRead(value, &data, XdrLinkChange)) {
+      FXL_LOG(ERROR) << EncodeLinkPath(link_path_)
+                     << "LinkImpl::OnChange() XdrRead failed: " << key << " "
+                     << value;
+      return;
+    }
 
-  MakeIncrementalChangeCall(std::move(data), kOnChangeConnectionId);
+    MakeIncrementalChangeCall(std::move(data), kOnChangeConnectionId);
+  } else {
+    operation_queue_.Add(new ChangeCall(this, value));
+  }
 }
 
 }  // namespace modular

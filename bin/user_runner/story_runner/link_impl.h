@@ -36,32 +36,29 @@ using CrtJsonPointer = rapidjson::GenericPointer<CrtJsonValue>;
 class LinkConnection;
 class LinkWatcherConnection;
 
-// A fuchsia::modular::Link is a mutable and observable value that is persistent
-// across story restarts, synchronized across devices, and can be shared between
-// modules.
+// A Link is a mutable and observable value that is persistent across story
+// restarts, synchronized across devices, and can be shared between modules.
 //
 // When a module requests to run more modules using
-// fuchsia::modular::ModuleContext::StartModule(), one or more
-// fuchsia::modular::Link instances are associated with each such request (as
-// specified in the fuchsia::modular::Intent). fuchsia::modular::Link instances
-// can be shared between multiple modules. The same fuchsia::modular::Link
-// instance can be used in multiple StartModule() requests, so it can be shared
-// between more than two modules. fuchsia::modular::Link instances have names
-// that are local to each Module, and can be accessed by calling
-// fuchsia::modular::ModuleContext.GetLink(name).
+// ModuleContext::StartModule(), one or more Link instances are associated with
+// each such request (as specified in the Intent). Link instances can be shared
+// between multiple modules. The same Link instance can be used in multiple
+// StartModule() requests, so it can be shared between more than two modules.
+// Link instances have names that are local to each Module, and can be accessed
+// by calling ModuleContext.GetLink(name).
 //
 // If a watcher is registered through one handle using the Watch() method, it
-// only receives notifications for changes by requests through other handles. To
-// make this possible, each fuchsia::modular::Link connection is bound to a
-// separate LinkConnection instance rather than to LinkImpl directly. LinkImpl
-// owns all its LinkConnection instances.
+// only receives notifications for changes by requests through other handles.
+// To make this possible, each Link connection is bound to a separate
+// LinkConnection instance rather than to LinkImpl directly. LinkImpl owns all
+// its LinkConnection instances.
 //
 // This implementation of LinkImpl works by storing the history of change
-// operations made by the callers. Each change operation is stored as a separate
-// key/value pair, which can be reconciled by the Ledger without conflicts. The
-// ordering is determined by KeyGenerator, which orders changes based on time as
-// well as a random nonce that's a tie breaker in the case of changes made at
-// the same time on different devices.
+// operations made by the callers. Each change operation is stored as a
+// separate key/value pair, which can be reconciled by the Ledger without
+// conflicts. The ordering is determined by KeyGenerator, which orders changes
+// based on time as well as a random nonce that's a tie breaker in the case of
+// changes made at the same time on different devices.
 //
 // New changes are placed on the pending_ops_ queue within the class and also
 // written to the Ledger. Because the state of the Snapshot can float, the
@@ -76,10 +73,10 @@ class LinkWatcherConnection;
 // one.
 class LinkImpl : PageClient {
  public:
-  // The |link_path| contains the series of module names (where the last element
-  // is the module that created this fuchsia::modular::Link) that this
-  // fuchsia::modular::Link is namespaced under. If |create_link_info| is null,
-  // then this is a request to connect to an existing link.
+  // The |link_path| contains the series of module names (where the last
+  // element is the module that created this Link) that this Link is namespaced
+  // under. If |create_link_info| is null, then this is a request to connect to
+  // an existing link.
   LinkImpl(LedgerClient* ledger_client, LedgerPageId page_id,
            const fuchsia::modular::LinkPath& link_path,
            fuchsia::modular::CreateLinkInfoPtr create_link_info);
@@ -120,6 +117,9 @@ class LinkImpl : PageClient {
  private:
   // |PageClient|
   void OnPageChange(const std::string& key, const std::string& value) override;
+
+  // |PageClient|
+  void OnPageConflict(Conflict* conflict) override;
 
   // Applies the given |changes| to the current document. The current list of
   // pending operations is merged into the change stream. Implemented in
@@ -196,8 +196,15 @@ class LinkImpl : PageClient {
   // Ordered key generator for incremental fuchsia::modular::Link values
   KeyGenerator key_generator_;
 
-  // Track changes that have been saved to the Ledger but not confirmed
+  // For incremental links: Track changes that have been saved to the Ledger
+  // but not confirmed
   std::vector<fuchsia::modular::internal::LinkChange> pending_ops_;
+
+  // For non-incremental links: Track what writes we have made here. We use
+  // these to ignore Ledger notifications about changes we ourselves made.
+  //
+  // Map of: ledger key -> ledger value.
+  std::vector<std::pair<std::string, std::string>> pending_writes_;
 
   // The latest key that's been applied to this fuchsia::modular::Link. If we
   // receive an earlier key in OnChange, then replay the history.

@@ -58,23 +58,24 @@ class TestApp {
   }
 
  private:
-  TestPoint start_intent_{"Started child fuchsia::modular::Intent"};
+  TestPoint start_intent_{"Started child Intent"};
 
   void EmbedModule() {
     intent_.action.handler = kChildModuleUrl;
     intent_.parameters.resize(4);
 
     // We'll put three parameters "one", "two" and "three" on the
-    // fuchsia::modular::Intent. The first is used to match the Module, because
-    // we know that it expectes a parameter named "one". The other two are extra
-    // and are going to be passed on to the Module regardless.
+    // fuchsia::modular::Intent.
     //
-    // The second parameter is set to a fuchsia::modular::Link that we own with
-    // regular JSON content.
+    // The first is used to match the Module, because we know that it expects
+    // a parameter named "one". The other two are extra and are going to be
+    // passed on to the Module regardless.
     //
-    // The third parameter we expect to reference a fuchsia::modular::Link
-    // created on our behalf by the Framework. We don't get access to that
-    // fuchsia::modular::Link.
+    // The second parameter is set to a Link that we own with regular JSON
+    // content.
+    //
+    // The third parameter we expect to reference a Link created on our behalf
+    // by the Framework. We don't get access to that Link.
     module_context_->GetLink("foo", link_one_.NewRequest());
     link_one_->SetEntity(entity_one_reference_);
     fuchsia::modular::IntentParameterData parameter_data;

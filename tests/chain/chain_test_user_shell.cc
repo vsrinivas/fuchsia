@@ -52,7 +52,7 @@ class TestApp
     CreateStory();
   }
 
-  TestPoint create_story_{"fuchsia::modular::CreateStory()"};
+  TestPoint create_story_{"CreateStory()"};
 
   void CreateStory() {
     // Create an empty Story. Once it has been created, add our first Module.
