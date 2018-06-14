@@ -389,6 +389,13 @@ public:
         return internal_swap(*iter, fbl::move(ptr));
     }
 
+    // replace (copy and move)
+    //
+    // Replaces the target member of the list with the given replacement.
+    PtrType replace(typename PtrTraits::RefType target, PtrType replacement) {
+        return internal_swap(target, fbl::move(replacement));
+    }
+
 private:
     // The traits of a non-const iterator
     struct iterator_traits {

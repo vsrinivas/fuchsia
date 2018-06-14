@@ -171,6 +171,16 @@ RUN_NAMED_TEST("ReplaceIfMove (unmanaged)",     UMTE::ReplaceIfMoveTest)
 RUN_NAMED_TEST("ReplaceIfMove (unique)",        UPTE::ReplaceIfMoveTest)
 RUN_NAMED_TEST("ReplaceIfMove (RefPtr)",        RPTE::ReplaceIfMoveTest)
 
+RUN_NAMED_TEST("ReplaceCopy (unmanaged)",       UMTE::ReplaceCopyTest)
+#if TEST_WILL_NOT_COMPILE || 0
+RUN_NAMED_TEST("ReplaceCopy (unique)",          UPTE::ReplaceCopyTest)
+#endif
+RUN_NAMED_TEST("ReplaceCopy (RefPtr)",          RPTE::ReplaceCopyTest)
+
+RUN_NAMED_TEST("ReplaceMove (unmanaged)",       UMTE::ReplaceMoveTest)
+RUN_NAMED_TEST("ReplaceMove (unique)",          UPTE::ReplaceMoveTest)
+RUN_NAMED_TEST("ReplaceMove (RefPtr)",          RPTE::ReplaceMoveTest)
+
 END_TEST_CASE(double_linked_list_tests);
 
 }  // namespace intrusive_containers

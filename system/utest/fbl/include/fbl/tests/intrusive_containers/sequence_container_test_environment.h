@@ -976,6 +976,121 @@ public:
         END_TEST;
     }
 
+    bool ReplaceCopy() {
+        BEGIN_TEST;
+
+        EXPECT_TRUE(ContainerChecker::SanityCheck(container()), "");
+
+        // Populate our container.
+        for (size_t i = 0; i < OBJ_COUNT; ++i) {
+            EXPECT_EQ(i, ObjType::live_obj_count(), "");
+
+            PtrType new_obj = TestEnvTraits::CreateObject(OBJ_COUNT - i - 1);
+            ASSERT_NONNULL(new_obj, "");
+            EXPECT_EQ(i + 1, ObjType::live_obj_count(), "");
+
+            container().push_front(fbl::move(new_obj));
+        }
+        EXPECT_TRUE(ContainerChecker::SanityCheck(container()), "");
+
+        // Replace all of the members of the contianer with new members which
+        // have a value never created during the populate phase.
+        for (size_t i = 0; i < OBJ_COUNT; ++i) {
+            EXPECT_EQ(OBJ_COUNT, ObjType::live_obj_count(), "");
+
+            PtrType new_obj = TestEnvTraits::CreateObject(OBJ_COUNT + i);
+            ASSERT_NONNULL(new_obj, "");
+
+            auto iter = container().find_if(
+                [i](const ObjType& obj) -> bool {
+                    return (obj.value() == i);
+                });
+
+            ASSERT_TRUE(iter.IsValid(), "");
+            EXPECT_EQ(i, iter->value(), "");
+
+            PtrType replaced = container().replace(*iter, new_obj);
+
+            EXPECT_TRUE(ContainerChecker::SanityCheck(container()), "");
+            ASSERT_NONNULL(replaced, "");
+            EXPECT_TRUE(new_obj->InContainer());
+            EXPECT_FALSE(replaced->InContainer());
+            EXPECT_EQ(i, replaced->value());
+            EXPECT_EQ(OBJ_COUNT + 1, ObjType::live_obj_count(), "");
+
+            TestEnvTraits::ReleaseObject(replaced);
+            EXPECT_EQ(OBJ_COUNT, ObjType::live_obj_count(), "");
+        }
+
+        // Make sure that the object are in order and have the values we expect.
+        size_t i = 0;
+        while (!container().is_empty()) {
+            PtrType ptr = container().pop_front();
+            EXPECT_EQ(OBJ_COUNT + i, ptr->value(), "");
+            TestEnvTraits::ReleaseObject(ptr);
+            ++i;
+        }
+        EXPECT_EQ(0, ObjType::live_obj_count(), "");
+        EXPECT_TRUE(ContainerChecker::SanityCheck(container()), "");
+
+        END_TEST;
+    }
+
+    bool ReplaceMove() {
+        BEGIN_TEST;
+
+        // Populate our container.
+        for (size_t i = 0; i < OBJ_COUNT; ++i) {
+            EXPECT_EQ(i, ObjType::live_obj_count(), "");
+
+            PtrType new_obj = TestEnvTraits::CreateObject(OBJ_COUNT - i - 1);
+            ASSERT_NONNULL(new_obj, "");
+            EXPECT_EQ(i + 1, ObjType::live_obj_count(), "");
+
+            container().push_front(fbl::move(new_obj));
+        }
+
+        // Replace all of the members of the contianer with new members which
+        // have a value never created during Populate().
+        for (size_t i = 0; i < OBJ_COUNT; ++i) {
+            EXPECT_EQ(OBJ_COUNT, ObjType::live_obj_count(), "");
+
+            PtrType new_obj = TestEnvTraits::CreateObject(OBJ_COUNT + i);
+            ASSERT_NONNULL(new_obj, "");
+
+            auto iter = container().find_if(
+                [i](const ObjType& obj) -> bool {
+                    return (obj.value() == i);
+                });
+
+            ASSERT_TRUE(iter.IsValid(), "");
+            EXPECT_EQ(i, iter->value(), "");
+
+            PtrType replaced = container().replace(*iter, PtrTraits::Take(new_obj));
+
+            EXPECT_NULL(new_obj, "");
+            ASSERT_NONNULL(replaced, "");
+            EXPECT_FALSE(replaced->InContainer());
+            EXPECT_EQ(i, replaced->value());
+            EXPECT_EQ(OBJ_COUNT + 1, ObjType::live_obj_count(), "");
+
+            TestEnvTraits::ReleaseObject(replaced);
+            EXPECT_EQ(OBJ_COUNT, ObjType::live_obj_count(), "");
+        }
+
+        // Make sure that the object are in order and have the values we expect.
+        size_t i = 0;
+        while (!container().is_empty()) {
+            PtrType ptr = container().pop_front();
+            EXPECT_EQ(OBJ_COUNT + i, ptr->value(), "");
+            TestEnvTraits::ReleaseObject(ptr);
+            ++i;
+        }
+        EXPECT_EQ(0, ObjType::live_obj_count(), "");
+
+        END_TEST;
+    }
+
 private:
     // Accessors for base class members so we don't have to type
     // this->base_member all of the time.
