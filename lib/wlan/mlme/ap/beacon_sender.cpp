@@ -160,7 +160,7 @@ zx_status_t BeaconSender::UpdateBeacon(const PsCfg& ps_cfg) {
         return status;
     }
 
-    status = device_->ConfigureBeacon(frame.take());
+    status = device_->ConfigureBeacon(frame.Take());
     if (status != ZX_OK) {
         errorf("[bcn-sender] [%s] could not send beacon packet: %d\n", bssid.ToString().c_str(),
                status);
@@ -231,7 +231,7 @@ zx_status_t BeaconSender::SendProbeResponse(const MgmtFrame<ProbeRequest>& probe
         return status;
     }
 
-    status = device_->SendWlan(frame.take());
+    status = device_->SendWlan(frame.Take());
     if (status != ZX_OK) {
         errorf("[bcn-sender] [%s] could not send ProbeResponse packet: %d\n",
                bssid.ToString().c_str(), status);

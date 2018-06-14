@@ -346,7 +346,7 @@ zx_status_t JoinedState::HandleMlmeAuthReq(const wlan_mlme::AuthenticateRequest&
     auth->status_code = 0;  // Reserved: set to 0
 
     finspect("Outbound Mgmt Frame(Auth): %s\n", debug::Describe(*hdr).c_str());
-    status = ap_->device()->SendWlan(frame.take());
+    status = ap_->device()->SendWlan(frame.Take());
     if (status != ZX_OK) {
         errorf("[ap] [%s] could not send auth packet: %d\n", ap_->bssid_str(), status);
         service::SendAuthConfirm(ap_->device(), ap_->bssid(),
@@ -529,7 +529,7 @@ zx_status_t AuthenticatedState::HandleMlmeAssocReq(const wlan_mlme::AssociateReq
     }
 
     finspect("Outbound Mgmt Frame (AssocReq): %s\n", debug::Describe(*hdr).c_str());
-    status = ap_->device()->SendWlan(frame.take());
+    status = ap_->device()->SendWlan(frame.Take());
     if (status != ZX_OK) {
         errorf("could not send assoc packet: %d\n", status);
         service::SendAssocConfirm(ap_->device(),

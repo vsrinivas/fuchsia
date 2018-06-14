@@ -48,7 +48,6 @@ template <typename Header, typename Body = UnknownBody> class Frame {
 
     const Header* hdr() const {
         ZX_DEBUG_ASSERT(!IsTaken());
-        if (IsTaken()) { return nullptr; }
 
         auto hdr = pkt_->field<Header>(data_offset_);
         ZX_DEBUG_ASSERT(hdr != nullptr);
@@ -57,7 +56,6 @@ template <typename Header, typename Body = UnknownBody> class Frame {
 
     Header* hdr() {
         ZX_DEBUG_ASSERT(!IsTaken());
-        if (IsTaken()) { return nullptr; }
 
         auto hdr = pkt_->mut_field<Header>(data_offset_);
         ZX_DEBUG_ASSERT(hdr != nullptr);
@@ -66,7 +64,6 @@ template <typename Header, typename Body = UnknownBody> class Frame {
 
     const Body* body() const {
         ZX_DEBUG_ASSERT(!IsTaken());
-        if (IsTaken()) { return nullptr; }
 
         auto body = pkt_->field<Body>(body_offset<Header>());
         ZX_DEBUG_ASSERT(body != nullptr);
@@ -75,7 +72,6 @@ template <typename Header, typename Body = UnknownBody> class Frame {
 
     Body* body() {
         ZX_DEBUG_ASSERT(!IsTaken());
-        if (IsTaken()) { return nullptr; }
 
         auto body = pkt_->mut_field<Body>(body_offset<Header>());
         ZX_DEBUG_ASSERT(body != nullptr);
@@ -83,7 +79,6 @@ template <typename Header, typename Body = UnknownBody> class Frame {
     }
 
     size_t body_len() const {
-        ZX_DEBUG_ASSERT(!IsTaken());
         if (IsTaken()) { return 0; }
 
         size_t offset = body_offset<Header>();
@@ -94,14 +89,12 @@ template <typename Header, typename Body = UnknownBody> class Frame {
 
     zx_status_t set_body_len(size_t len) {
         ZX_DEBUG_ASSERT(!IsTaken());
-        if (IsTaken()) { return ZX_ERR_NO_RESOURCES; }
         ZX_DEBUG_ASSERT(len <= pkt_->len());
 
         return pkt_->set_len(body_offset<Header>() + len);
     }
 
     size_t len() const {
-        ZX_DEBUG_ASSERT(!IsTaken());
         if (IsTaken()) { return 0; }
 
         if (pkt_->len() < data_offset_) { return 0; }
@@ -109,7 +102,6 @@ template <typename Header, typename Body = UnknownBody> class Frame {
     }
 
     bool has_rx_info() const {
-        ZX_DEBUG_ASSERT(!IsTaken());
         // Only Data, Mgmt and Ctrl frames can carry an rx_info field.
         if (!CanCarryRxInfo<Header>()) { return false; }
         if (IsTaken()) { return false; }
@@ -130,6 +122,7 @@ template <typename Header, typename Body = UnknownBody> class Frame {
 
     zx_status_t FillTxInfo() {
         static_assert(CanCarryTxInfo<Header>(), "only MAC frame can carry tx_info");
+        ZX_DEBUG_ASSERT(!IsTaken());
 
         wlan_tx_info_t txinfo = {
             // Outgoing management frame
@@ -167,12 +160,12 @@ template <typename Header, typename Body = UnknownBody> class Frame {
     template <typename NextH = Body, typename NextB = UnknownBody>
     Frame<NextH, NextB> NextFrame() {
         size_t offset = body_offset<Header>();
-        return Frame<NextH, NextB>(offset, take());
+        return Frame<NextH, NextB>(offset, Take());
     }
 
     // Returns the Frame's underlying Packet. The Frame will no longer own the Packet and
     // will be `empty` from that moment on and should no longer be used.
-    fbl::unique_ptr<Packet> take() {
+    fbl::unique_ptr<Packet> Take() {
         ZX_DEBUG_ASSERT(!IsTaken());
         return fbl::move(pkt_);
     }
@@ -217,9 +210,9 @@ template <typename Header, typename Body = UnknownBody> class Frame {
 
 // Frame which contains a known header but unknown payload.
 using EthFrame = Frame<EthernetII>;
-template <typename T> using MgmtFrame = Frame<MgmtFrameHeader, T>;
-template <typename T> using CtrlFrame = Frame<T, NilHeader>;
-template <typename T> using DataFrame = Frame<DataFrameHeader, T>;
+template <typename T = UnknownBody> using MgmtFrame = Frame<MgmtFrameHeader, T>;
+template <typename T = UnknownBody> using CtrlFrame = Frame<T, NilHeader>;
+template <typename T = UnknownBody> using DataFrame = Frame<DataFrameHeader, T>;
 
 // TODO(hahnr): This isn't a great location for these definitions.
 using aid_t = size_t;

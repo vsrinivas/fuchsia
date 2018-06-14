@@ -175,7 +175,7 @@ zx_status_t Station::HandleMlmeAuthReq(const wlan_mlme::AuthenticateRequest& req
     auth->status_code = 0;  // Reserved, so set to 0
 
     finspect("Outbound Mgmt Frame(Auth): %s\n", debug::Describe(*hdr).c_str());
-    status = device_->SendWlan(frame.take());
+    status = device_->SendWlan(frame.Take());
     if (status != ZX_OK) {
         errorf("could not send auth packet: %d\n", status);
         service::SendAuthConfirm(device_, bssid_, wlan_mlme::AuthenticateResultCodes::REFUSED);
@@ -224,7 +224,7 @@ zx_status_t Station::HandleMlmeDeauthReq(const wlan_mlme::DeauthenticateRequest&
     deauth->reason_code = static_cast<uint16_t>(req.reason_code);
 
     finspect("Outbound Mgmt Frame(Deauth): %s\n", debug::Describe(*hdr).c_str());
-    status = device_->SendWlan(frame.take());
+    status = device_->SendWlan(frame.Take());
     if (status != ZX_OK) {
         errorf("could not send deauth packet: %d\n", status);
         // Deauthenticate nevertheless. IEEE isn't clear on what we are supposed to do.
@@ -339,7 +339,7 @@ zx_status_t Station::HandleMlmeAssocReq(const wlan_mlme::AssociateRequest& req) 
     }
 
     finspect("Outbound Mgmt Frame (AssocReq): %s\n", debug::Describe(*hdr).c_str());
-    status = device_->SendWlan(frame.take());
+    status = device_->SendWlan(frame.Take());
     if (status != ZX_OK) {
         errorf("could not send assoc packet: %d\n", status);
         service::SendAssocConfirm(device_,
@@ -601,7 +601,7 @@ zx_status_t Station::HandleAddBaRequestFrame(const MgmtFrame<AddBaRequestFrame>&
     finspect("Outbound ADDBA Resp frame: len %zu\n", frame.len());
     finspect("Outbound Mgmt Frame(ADDBA Resp): %s\n", debug::Describe(*hdr).c_str());
 
-    status = device_->SendWlan(frame.take());
+    status = device_->SendWlan(frame.Take());
     if (status != ZX_OK) {
         errorf("could not send AddBaResponse: %d\n", status);
         return status;
@@ -1030,7 +1030,7 @@ zx_status_t Station::SendAddBaRequestFrame() {
     finspect("  addba req: %s\n", debug::Describe(*req).c_str());
     finspect("Outbound Mgmt Frame(ADDBA Req): %s\n", debug::Describe(*hdr).c_str());
 
-    status = device_->SendWlan(frame.take());
+    status = device_->SendWlan(frame.Take());
     if (status != ZX_OK) {
         errorf("could not send AddBaRequest: %d\n", status);
         return status;

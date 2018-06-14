@@ -133,16 +133,16 @@ zx_status_t Dispatcher::HandleCtrlPacket(fbl::unique_ptr<Packet> packet) {
 
     Frame<FrameControl> ctrl_frame(fbl::move(packet));
     if (!ctrl_frame.HasValidLen()) {
-        errorf("short control frame len=%zu\n", ctrl_frame.take()->len());
+        errorf("short control frame len=%zu\n", ctrl_frame.Take()->len());
         return ZX_OK;
     }
 
     auto fc = ctrl_frame.hdr();
     switch (fc->subtype()) {
     case ControlSubtype::kPsPoll: {
-        CtrlFrame<PsPollFrame> ps_poll(ctrl_frame.take());
+        CtrlFrame<PsPollFrame> ps_poll(ctrl_frame.Take());
         if (!ps_poll.HasValidLen()) {
-            errorf("short ps poll frame len=%zu\n", ps_poll.take()->len());
+            errorf("short ps poll frame len=%zu\n", ps_poll.Take()->len());
             return ZX_OK;
         }
         return mlme_->HandleFrame(ps_poll);
@@ -161,7 +161,7 @@ zx_status_t Dispatcher::HandleDataPacket(fbl::unique_ptr<Packet> packet) {
 
     DataFrame<UnknownBody> data_frame(fbl::move(packet));
     if (!data_frame.HasValidLen()) {
-        errorf("short data packet len=%zu\n", data_frame.take()->len());
+        errorf("short data packet len=%zu\n", data_frame.Take()->len());
         return ZX_OK;
     }
 
@@ -170,7 +170,7 @@ zx_status_t Dispatcher::HandleDataPacket(fbl::unique_ptr<Packet> packet) {
     case DataSubtype::kNull:
         // Fall-through
     case DataSubtype::kQosnull: {
-        DataFrame<NilHeader> null_frame(data_frame.take());
+        DataFrame<NilHeader> null_frame(data_frame.Take());
         return mlme_->HandleFrame(null_frame);
     }
     case DataSubtype::kDataSubtype:
@@ -182,9 +182,9 @@ zx_status_t Dispatcher::HandleDataPacket(fbl::unique_ptr<Packet> packet) {
         return ZX_OK;
     }
 
-    DataFrame<LlcHeader> llc(data_frame.take());
+    DataFrame<LlcHeader> llc(data_frame.Take());
     if (!llc.HasValidLen()) {
-        errorf("short data packet len=%zu\n", llc.take()->len());
+        errorf("short data packet len=%zu\n", llc.Take()->len());
         return ZX_ERR_IO;
     }
     return mlme_->HandleFrame(llc);
@@ -198,7 +198,7 @@ zx_status_t Dispatcher::HandleMgmtPacket(fbl::unique_ptr<Packet> packet) {
 
     MgmtFrame<UnknownBody> mgmt_frame(fbl::move(packet));
     if (!mgmt_frame.HasValidLen()) {
-        errorf("short mgmt packet len=%zu\n", mgmt_frame.take()->len());
+        errorf("short mgmt packet len=%zu\n", mgmt_frame.Take()->len());
         return ZX_OK;
     }
 
@@ -214,73 +214,73 @@ zx_status_t Dispatcher::HandleMgmtPacket(fbl::unique_ptr<Packet> packet) {
 
     switch (hdr->fc.subtype()) {
     case ManagementSubtype::kBeacon: {
-        MgmtFrame<Beacon> frame(mgmt_frame.take());
+        MgmtFrame<Beacon> frame(mgmt_frame.Take());
         if (!frame.HasValidLen()) {
-            errorf("beacon packet too small (len=%zd)\n", frame.take()->len());
+            errorf("beacon packet too small (len=%zd)\n", frame.Take()->len());
             return ZX_ERR_IO;
         }
         return mlme_->HandleFrame(frame);
     }
     case ManagementSubtype::kProbeResponse: {
-        MgmtFrame<ProbeResponse> frame(mgmt_frame.take());
+        MgmtFrame<ProbeResponse> frame(mgmt_frame.Take());
         if (!frame.HasValidLen()) {
-            errorf("probe response packet too small (len=%zd)\n", frame.take()->len());
+            errorf("probe response packet too small (len=%zd)\n", frame.Take()->len());
             return ZX_ERR_IO;
         }
         return mlme_->HandleFrame(frame);
     }
     case ManagementSubtype::kProbeRequest: {
-        MgmtFrame<ProbeRequest> frame(mgmt_frame.take());
+        MgmtFrame<ProbeRequest> frame(mgmt_frame.Take());
         if (!frame.HasValidLen()) {
-            errorf("probe request packet too small (len=%zd)\n", frame.take()->len());
+            errorf("probe request packet too small (len=%zd)\n", frame.Take()->len());
             return ZX_ERR_IO;
         }
         return mlme_->HandleFrame(frame);
     }
     case ManagementSubtype::kAuthentication: {
-        MgmtFrame<Authentication> frame(mgmt_frame.take());
+        MgmtFrame<Authentication> frame(mgmt_frame.Take());
         if (!frame.HasValidLen()) {
-            errorf("authentication packet too small (len=%zd)\n", frame.take()->len());
+            errorf("authentication packet too small (len=%zd)\n", frame.Take()->len());
             return ZX_ERR_IO;
         }
         return mlme_->HandleFrame(frame);
     }
     case ManagementSubtype::kDeauthentication: {
-        MgmtFrame<Deauthentication> frame(mgmt_frame.take());
+        MgmtFrame<Deauthentication> frame(mgmt_frame.Take());
         if (!frame.HasValidLen()) {
-            errorf("deauthentication packet too small (len=%zd)\n", frame.take()->len());
+            errorf("deauthentication packet too small (len=%zd)\n", frame.Take()->len());
             return ZX_ERR_IO;
         }
         return mlme_->HandleFrame(frame);
     }
     case ManagementSubtype::kAssociationRequest: {
-        MgmtFrame<AssociationRequest> frame(mgmt_frame.take());
+        MgmtFrame<AssociationRequest> frame(mgmt_frame.Take());
         if (!frame.HasValidLen()) {
-            errorf("assocation request packet too small (len=%zd)\n", frame.take()->len());
+            errorf("assocation request packet too small (len=%zd)\n", frame.Take()->len());
             return ZX_ERR_IO;
         }
         return mlme_->HandleFrame(frame);
     }
     case ManagementSubtype::kAssociationResponse: {
-        MgmtFrame<AssociationResponse> frame(mgmt_frame.take());
+        MgmtFrame<AssociationResponse> frame(mgmt_frame.Take());
         if (!frame.HasValidLen()) {
-            errorf("assocation response packet too small (len=%zd)\n", frame.take()->len());
+            errorf("assocation response packet too small (len=%zd)\n", frame.Take()->len());
             return ZX_ERR_IO;
         }
         return mlme_->HandleFrame(frame);
     }
     case ManagementSubtype::kDisassociation: {
-        MgmtFrame<Disassociation> frame(mgmt_frame.take());
+        MgmtFrame<Disassociation> frame(mgmt_frame.Take());
         if (!frame.HasValidLen()) {
-            errorf("disassociation packet too small (len=%zd)\n", frame.take()->len());
+            errorf("disassociation packet too small (len=%zd)\n", frame.Take()->len());
             return ZX_ERR_IO;
         }
         return mlme_->HandleFrame(frame);
     }
     case ManagementSubtype::kAction: {
-        MgmtFrame<ActionFrame> frame(mgmt_frame.take());
+        MgmtFrame<ActionFrame> frame(mgmt_frame.Take());
         if (!frame.HasValidLen()) {
-            errorf("action packet too small (len=%zd)\n", frame.take()->len());
+            errorf("action packet too small (len=%zd)\n", frame.Take()->len());
             return ZX_ERR_IO;
         }
         if (!frame.hdr()->IsAction()) {
@@ -307,17 +307,17 @@ zx_status_t Dispatcher::HandleActionPacket(MgmtFrame<ActionFrame> action_frame,
         return ZX_OK;
     }
 
-    MgmtFrame<ActionFrameBlockAck> ba_frame(action_frame.take());
+    MgmtFrame<ActionFrameBlockAck> ba_frame(action_frame.Take());
     if (!ba_frame.HasValidLen()) {
-        errorf("bloackack packet too small (len=%zd)\n", ba_frame.take()->len());
+        errorf("bloackack packet too small (len=%zd)\n", ba_frame.Take()->len());
         return ZX_ERR_IO;
     }
 
     switch (ba_frame.body()->action) {
     case action::BaAction::kAddBaRequest: {
-        MgmtFrame<AddBaRequestFrame> addbar(ba_frame.take());
+        MgmtFrame<AddBaRequestFrame> addbar(ba_frame.Take());
         if (!addbar.HasValidLen()) {
-            errorf("addbar packet too small (len=%zd)\n", addbar.take()->len());
+            errorf("addbar packet too small (len=%zd)\n", addbar.Take()->len());
             return ZX_ERR_IO;
         }
 
@@ -327,9 +327,9 @@ zx_status_t Dispatcher::HandleActionPacket(MgmtFrame<ActionFrame> action_frame,
         return mlme_->HandleFrame(addbar);
     }
     case action::BaAction::kAddBaResponse: {
-        MgmtFrame<AddBaResponseFrame> addba_resp(ba_frame.take());
+        MgmtFrame<AddBaResponseFrame> addba_resp(ba_frame.Take());
         if (!addba_resp.HasValidLen()) {
-            errorf("addba_resp packet too small (len=%zd)\n", addba_resp.take()->len());
+            errorf("addba_resp packet too small (len=%zd)\n", addba_resp.Take()->len());
             return ZX_ERR_IO;
         }
         return mlme_->HandleFrame(addba_resp);
@@ -348,7 +348,7 @@ zx_status_t Dispatcher::HandleEthPacket(fbl::unique_ptr<Packet> packet) {
 
     EthFrame eth_frame(fbl::move(packet));
     if (!eth_frame.HasValidLen()) {
-        errorf("short ethernet frame len=%zu\n", eth_frame.take()->len());
+        errorf("short ethernet frame len=%zu\n", eth_frame.Take()->len());
         return ZX_ERR_IO;
     }
     return mlme_->HandleFrame(eth_frame);

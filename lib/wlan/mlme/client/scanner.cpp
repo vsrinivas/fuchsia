@@ -330,7 +330,7 @@ zx_status_t Scanner::SendProbeRequest() {
         return status;
     }
 
-    status = device_->SendWlan(frame.take());
+    status = device_->SendWlan(frame.Take());
     if (status != ZX_OK) { errorf("could not send probe request packet: %d\n", status); }
 
     return status;

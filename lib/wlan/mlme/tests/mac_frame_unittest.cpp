@@ -152,7 +152,7 @@ TEST(Frame, Take) {
     // Derive frame with unknown body...
     Frame<TestHdr1> frame(fbl::move(pkt));
     // ... and take the frame's underlying Packet to construct a new, specialized frame.
-    Frame<TestHdr1, TestHdr2> specialized_frame(frame.take());
+    Frame<TestHdr1, TestHdr2> specialized_frame(frame.Take());
     // Verify the first frame is considered "taken" and that the new specialized one is valid.
     ASSERT_TRUE(frame.IsTaken());
     ASSERT_FALSE(frame.HasValidLen());
@@ -280,7 +280,7 @@ TEST(Frame, TooShortBuffer_Hdr_NoBody) {
     Frame<TestHdr1> frame(fbl::move(pkt));
     ASSERT_TRUE(frame.HasValidLen());
 
-    Frame<TestHdr1, FixedSizedPayload> specialized_frame(frame.take());
+    Frame<TestHdr1, FixedSizedPayload> specialized_frame(frame.Take());
     ASSERT_FALSE(specialized_frame.HasValidLen());
 }
 
@@ -304,7 +304,7 @@ TEST(Frame, TrimExcessBodyLength) {
     ASSERT_EQ(next_frame.body_len(), static_cast<size_t>(0));
 
     // Verify the frame which originally had sufficient space doesn't fit anymore.
-    Frame<TestHdr2, TestHdr3> specialized_next_frame(sizeof(TestHdr1), next_frame.take());
+    Frame<TestHdr2, TestHdr3> specialized_next_frame(sizeof(TestHdr1), next_frame.Take());
     ASSERT_FALSE(specialized_next_frame.HasValidLen());
 }
 
@@ -315,15 +315,15 @@ TEST(Frame, RxInfo_MacFrame) {
     pkt->CopyCtrlFrom(rx_info);
 
     // Only MAC frames can hold rx_info;
-    MgmtFrame<UnknownBody> mgmt_frame(fbl::move(pkt));
+    MgmtFrame<> mgmt_frame(fbl::move(pkt));
     ASSERT_TRUE(mgmt_frame.has_rx_info());
     ASSERT_EQ(memcmp(mgmt_frame.rx_info(), &rx_info, sizeof(wlan_rx_info_t)), 0);
 
-    CtrlFrame<PsPollFrame> ctrl_frame(mgmt_frame.take());
+    CtrlFrame<PsPollFrame> ctrl_frame(mgmt_frame.Take());
     ASSERT_TRUE(ctrl_frame.has_rx_info());
     ASSERT_EQ(memcmp(ctrl_frame.rx_info(), &rx_info, sizeof(wlan_rx_info_t)), 0);
 
-    MgmtFrame<UnknownBody> data_frame(ctrl_frame.take());
+    MgmtFrame<> data_frame(ctrl_frame.Take());
     ASSERT_TRUE(data_frame.has_rx_info());
     ASSERT_EQ(memcmp(data_frame.rx_info(), &rx_info, sizeof(wlan_rx_info_t)), 0);
 
@@ -341,13 +341,13 @@ TEST(Frame, RxInfo_OtherFrame) {
     // Only MAC frames can hold rx_info. Test some others.
     Frame<TestHdr1> frame1(fbl::move(pkt));
     ASSERT_FALSE(frame1.has_rx_info());
-    Frame<TestHdr1> frame2(frame1.take());
+    Frame<TestHdr1> frame2(frame1.Take());
     ASSERT_FALSE(frame2.has_rx_info());
-    Frame<Beacon> frame3(frame2.take());
+    Frame<Beacon> frame3(frame2.Take());
     ASSERT_FALSE(frame3.has_rx_info());
-    Frame<FrameControl> frame4(frame3.take());
+    Frame<FrameControl> frame4(frame3.Take());
     ASSERT_FALSE(frame4.has_rx_info());
-    Frame<uint8_t> frame5(frame4.take());
+    Frame<uint8_t> frame5(frame4.Take());
     ASSERT_FALSE(frame5.has_rx_info());
 }
 
@@ -366,7 +366,7 @@ TEST(Frame, RxInfo_PaddingAlignedBody) {
     auto data = pkt->mut_field<uint8_t>(hdr->len() + 2);
     data[0] = 42;
 
-    DataFrame<UnknownBody> data_frame(fbl::move(pkt));
+    DataFrame<> data_frame(fbl::move(pkt));
     ASSERT_TRUE(data_frame.has_rx_info());
     ASSERT_EQ(memcmp(data_frame.rx_info(), &rx_info, sizeof(wlan_rx_info_t)), 0);
     ASSERT_EQ(data_frame.body()->data[0], 42);
@@ -388,7 +388,7 @@ TEST(Frame, RxInfo_NoPaddingAlignedBody) {
     auto data = pkt->mut_field<uint8_t>(hdr->len());
     data[0] = 42;
 
-    DataFrame<UnknownBody> data_frame(fbl::move(pkt));
+    DataFrame<> data_frame(fbl::move(pkt));
     ASSERT_TRUE(data_frame.has_rx_info());
     ASSERT_EQ(memcmp(data_frame.rx_info(), &rx_info, sizeof(wlan_rx_info_t)), 0);
     ASSERT_EQ(data_frame.body()->data[0], 42);

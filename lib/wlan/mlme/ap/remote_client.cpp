@@ -659,7 +659,7 @@ zx_status_t RemoteClient::SendAuthentication(status_code::StatusCode result) {
     // track seq number.
     auth->auth_txn_seq_number = 2;
 
-    status = bss_->SendMgmtFrame(frame.take());
+    status = bss_->SendMgmtFrame(frame.Take());
     if (status != ZX_OK) {
         errorf("[client] [%s] could not send auth response packet: %d\n", addr_.ToString().c_str(),
                status);
@@ -721,7 +721,7 @@ zx_status_t RemoteClient::SendAssociationResponse(aid_t aid, status_code::Status
         return status;
     }
 
-    status = bss_->SendMgmtFrame(frame.take());
+    status = bss_->SendMgmtFrame(frame.Take());
     if (status != ZX_OK) {
         errorf("[client] [%s] could not send auth response packet: %d\n", addr_.ToString().c_str(),
                status);
@@ -746,7 +746,7 @@ zx_status_t RemoteClient::SendDeauthentication(reason_code::ReasonCode reason_co
     auto deauth = frame.body();
     deauth->reason_code = static_cast<uint16_t>(reason_code);
 
-    status = bss_->SendMgmtFrame(frame.take());
+    status = bss_->SendMgmtFrame(frame.Take());
     if (status != ZX_OK) {
         errorf("[client] [%s] could not send dauthentication packet: %d\n",
                addr_.ToString().c_str(), status);
@@ -862,7 +862,7 @@ zx_status_t RemoteClient::SendAddBaRequest() {
     finspect("  addba req: %s\n", debug::Describe(*req).c_str());
     finspect("Outbound Mgmt Frame(ADDBA Req): %s\n", debug::Describe(*hdr).c_str());
 
-    status = bss_->SendMgmtFrame(tx_frame.take());
+    status = bss_->SendMgmtFrame(tx_frame.Take());
     if (status != ZX_OK) {
         errorf("[client] [%s] could not send AddbaRequest: %d\n", addr_.ToString().c_str(), status);
     }
@@ -908,7 +908,7 @@ zx_status_t RemoteClient::SendAddBaResponse(const MgmtFrame<AddBaRequestFrame>& 
     finspect("Outbound ADDBA Resp frame: len %zu\n", tx_frame.len());
     finspect("Outbound Mgmt Frame(ADDBA Resp): %s\n", debug::Describe(*hdr).c_str());
 
-    status = bss_->SendMgmtFrame(tx_frame.take());
+    status = bss_->SendMgmtFrame(tx_frame.Take());
     if (status != ZX_OK) {
         errorf("[client] [%s] could not send AddBaResponse: %d\n", addr_.ToString().c_str(),
                status);
