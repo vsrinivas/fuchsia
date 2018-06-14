@@ -684,7 +684,16 @@ zx_status_t Minfs::Create(fbl::unique_ptr<Bcache> bc, const minfs_info_t* info,
         raw_fs->WriteInfo(txn);
     };
 
+#ifdef __Fuchsia__
     blk_t abm_start_block = fs->Info().abm_block;
+    blk_t ibm_start_block = fs->Info().ibm_block;
+    blk_t ino_start_block = fs->Info().ino_block;
+#else
+    blk_t abm_start_block = fs->abm_start_block_;
+    blk_t ibm_start_block = fs->ibm_start_block_;
+    blk_t ino_start_block = fs->ino_start_block_;
+#endif
+
     size_t blocks_used = fs->Info().alloc_block_count;
     size_t total_blocks = fs->Info().block_count;
     if ((status = fs->block_allocator_.Initialize(fs->bc_.get(), &txn, abm_grow_cb,
@@ -702,7 +711,6 @@ zx_status_t Minfs::Create(fbl::unique_ptr<Bcache> bc, const minfs_info_t* info,
         raw_fs->WriteInfo(txn);
     };
 
-    blk_t ibm_start_block = fs->Info().ibm_block;
     size_t inodes_used = fs->Info().alloc_inode_count;
     size_t total_inodes = fs->Info().inode_count;
     if ((status = fs->inode_allocator_.Initialize(fs->bc_.get(), &txn, ibm_grow_cb,
@@ -713,7 +721,7 @@ zx_status_t Minfs::Create(fbl::unique_ptr<Bcache> bc, const minfs_info_t* info,
 
     uint32_t inodes = info->inode_count;
     if ((status = fs->inodes_.Initialize(fs->bc_.get(), &txn,
-                                         fs->Info().ino_block, inodes)) != ZX_OK) {
+                                         ino_start_block, inodes)) != ZX_OK) {
         FS_TRACE_ERROR("Minfs::Create failed to initialize inodes: %d\n", status);
         return status;
     }
