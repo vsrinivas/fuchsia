@@ -58,7 +58,7 @@ static_library("inferior_control") {
   ]
 
   public_deps = [
-    "//zircon/public/lib/launchpad",
+    "//garnet/lib/process",
     "//zircon/public/lib/fit"
   ]
 

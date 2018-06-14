@@ -4,17 +4,17 @@
 
 #pragma once
 
+#include <memory>
 #include <string>
 #include <unordered_map>
 
-#include <launchpad/launchpad.h>
 #include <zircon/syscalls/exception.h>
 #include <zircon/types.h>
 
-#include "lib/fxl/macros.h"
-
 #include "garnet/lib/debugger_utils/dso_list.h"
 #include "garnet/lib/debugger_utils/util.h"
+#include "garnet/lib/process/process_builder.h"
+#include "lib/fxl/macros.h"
 
 #include "breakpoint.h"
 #include "exception_port.h"
@@ -71,7 +71,10 @@ class Process final {
   const util::Argv& argv() { return argv_; }
   void set_argv(const util::Argv& argv) { argv_ = argv; }
 
-  launchpad_t* launchpad() const { return launchpad_; }
+  // Add extra handles to the process.
+  //
+  // Must be called before |Initialize|.
+  void AddStartupHandle(fuchsia::process::HandleInfo handle);
 
   // Returns the current state of this process.
   State state() const { return state_; }
@@ -81,7 +84,7 @@ class Process final {
 
   static const char* StateName(Process::State state);
 
-  // Creates and initializes the inferior process, via launchpad, but does
+  // Creates and initializes the inferior process, via ProcessBuilder, but does
   // not start it. set_argv() must have already been called.
   // This also "attaches" to the inferior: A debug-capable process handle is
   // obtained and the debugger exception port is bound to.
@@ -214,7 +217,7 @@ class Process final {
                            const zx_exception_context_t& context);
 
   // Debug handle mgmt.
-  bool AllocDebugHandle(launchpad_t* lp);
+  bool AllocDebugHandle(process::ProcessBuilder* builder);
   bool AllocDebugHandle(zx_koid_t pid);
   void CloseDebugHandle();
 
@@ -238,9 +241,11 @@ class Process final {
   // The argv that this process was initialized with.
   util::Argv argv_;
 
-  // The launchpad_t instance used to bootstrap and run the process. The Process
-  // owns this instance and holds on to it until it gets destroyed.
-  launchpad_t* launchpad_ = nullptr;
+  // Extra handles to pass to process during creation.
+  std::vector<fuchsia::process::HandleInfo> extra_handles_;
+
+  // The process::ProcessBuilder instance used to bootstrap and run the process.
+  std::unique_ptr<process::ProcessBuilder> builder_;
 
   // The debug-capable handle that we use to invoke zx_debug_* syscalls.
   zx_handle_t handle_ = ZX_HANDLE_INVALID;

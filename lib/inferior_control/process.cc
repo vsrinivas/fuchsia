@@ -4,20 +4,18 @@
 
 #include "process.h"
 
-#include <link.h>
-#include <cinttypes>
-
+#include <fcntl.h>
 #include <lib/fdio/io.h>
-#include <launchpad/vmo.h>
 #include <lib/fit/function.h>
+#include <link.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/object.h>
-
-#include "lib/fxl/logging.h"
-#include "lib/fxl/strings/string_printf.h"
+#include <cinttypes>
 
 #include "garnet/lib/debugger_utils/jobs.h"
 #include "garnet/lib/debugger_utils/util.h"
+#include "lib/fxl/logging.h"
+#include "lib/fxl/strings/string_printf.h"
 
 #include "server.h"
 
@@ -26,85 +24,64 @@ namespace {
 
 constexpr zx_time_t kill_timeout = ZX_MSEC(10 * 1000);
 
-bool SetupLaunchpad(zx_handle_t job, launchpad_t** out_lp,
-                    const util::Argv& argv) {
-  FXL_DCHECK(out_lp);
+std::unique_ptr<process::ProcessBuilder> CreateProcessBuilder(
+    zx_handle_t job, const util::Argv& argv) {
   FXL_DCHECK(argv.size() > 0);
+  zx::job builder_job;
+  zx_status_t status = zx_handle_duplicate(job, ZX_RIGHT_SAME_RIGHTS,
+                                           builder_job.reset_and_get_address());
+  if (status != ZX_OK)
+    return nullptr;
 
-  // Construct the argument array.
-  const char* c_args[argv.size()];
-  for (size_t i = 0; i < argv.size(); ++i) c_args[i] = argv[i].c_str();
-  const char* name = util::basename(c_args[0]);
-  const char* failed_func = "";
+  auto builder =
+      std::make_unique<process::ProcessBuilder>(std::move(builder_job));
 
-  launchpad_t* lp = nullptr;
-  zx_status_t status = launchpad_create(job, name, &lp);
-  if (status != ZX_OK) {
-    failed_func = "launchpad_create";
-    goto fail;
-  }
-
-  status = launchpad_set_args(lp, argv.size(), c_args);
-  if (status != ZX_OK) {
-    failed_func = "launchpad_set_args";
-    goto fail;
-  }
-
-  status = launchpad_add_vdso_vmo(lp);
-  if (status != ZX_OK) {
-    failed_func = "launchpad_add_vdso_vmo";
-    goto fail;
-  }
-
-  // Clone root, cwd, stdio, and environ.
-  status = launchpad_clone(lp, LP_CLONE_FDIO_ALL | LP_CLONE_ENVIRON);
-  if (status != ZX_OK) {
-    failed_func = "launchpad_clone";
-    goto fail;
-  }
-
-  *out_lp = lp;
-  return true;
-
-fail:
-  FXL_LOG(ERROR) << "Process setup failed: "
-                 << failed_func << ", " << util::ZxErrorString(status);
-  if (lp) {
-    launchpad_destroy(lp);
-  }
-  return false;
+  builder->AddArgs(argv);
+  builder->CloneAll();
+  return builder;
 }
 
-bool LoadBinary(launchpad_t* lp, const std::string& binary_path) {
-  FXL_DCHECK(lp);
+zx_status_t LoadPath(const char* path, zx_handle_t* vmo) {
+  int fd = open(path, O_RDONLY);
+  if (fd < 0)
+    return ZX_ERR_IO;
+  zx_status_t status = fdio_get_vmo_clone(fd, vmo);
+  close(fd);
 
-  zx_handle_t vmo;
-  zx_status_t status = launchpad_vmo_from_file(binary_path.c_str(), &vmo);
+  if (status == ZX_OK) {
+    if (strlen(path) >= ZX_MAX_NAME_LEN) {
+      const char* p = strrchr(path, '/');
+      if (p != NULL) {
+        path = p + 1;
+      }
+    }
+
+    zx_object_set_property(*vmo, ZX_PROP_NAME, path, strlen(path));
+  }
+
+  return status;
+}
+
+bool LoadBinary(process::ProcessBuilder* builder,
+                const std::string& binary_path) {
+  FXL_DCHECK(builder);
+
+  zx::vmo vmo;
+  zx_status_t status =
+      LoadPath(binary_path.c_str(), vmo.reset_and_get_address());
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Could not load binary: " << util::ZxErrorString(status);
     return false;
   }
 
-  status = launchpad_elf_load(lp, vmo);
-  if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Could not load binary: " << util::ZxErrorString(status);
-    return false;
-  }
-
-  status = launchpad_load_vdso(lp, ZX_HANDLE_INVALID);
-  if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Could not load vDSO: " << util::ZxErrorString(status);
-    return false;
-  }
-
+  builder->LoadVMO(std::move(vmo));
   return true;
 }
 
 zx_koid_t GetProcessId(zx_handle_t process) {
   zx_info_handle_basic_t info;
-  zx_status_t status =
-      zx_object_get_info(process, ZX_INFO_HANDLE_BASIC, &info,
-                         sizeof(info), nullptr, nullptr);
+  zx_status_t status = zx_object_get_info(process, ZX_INFO_HANDLE_BASIC, &info,
+                                          sizeof(info), nullptr, nullptr);
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "zx_object_get_info_failed: "
                    << util::ZxErrorString(status);
@@ -163,6 +140,10 @@ std::string Process::GetName() const {
   return fxl::StringPrintf("%" PRId64, id());
 }
 
+void Process::AddStartupHandle(fuchsia::process::HandleInfo handle) {
+  extra_handles_.push_back(std::move(handle));
+}
+
 bool Process::Initialize() {
   if (IsAttached()) {
     FXL_LOG(ERROR) << "Cannot initialize, already attached to a process";
@@ -180,7 +161,7 @@ bool Process::Initialize() {
     return false;
   }
 
-  FXL_DCHECK(!launchpad_);
+  FXL_DCHECK(!builder_);
   FXL_DCHECK(!handle_);
   FXL_DCHECK(!eport_key_);
 
@@ -206,11 +187,29 @@ bool Process::Initialize() {
 
   FXL_LOG(INFO) << "argv: " << util::ArgvToString(argv_);
 
-  if (!SetupLaunchpad(job, &launchpad_, argv_)) {
+  std::string error_message;
+  builder_ = CreateProcessBuilder(job, argv_);
+
+  if (!builder_) {
     return false;
   }
 
-  if (!AllocDebugHandle(launchpad_)) {
+  builder_->AddHandles(std::move(extra_handles_));
+
+  if (!LoadBinary(builder_.get(), argv_[0])) {
+    goto fail;
+  }
+
+  FXL_VLOG(1) << "Binary loaded";
+
+  status = builder_->Prepare(&error_message);
+  if (status != ZX_OK) {
+    FXL_LOG(ERROR) << "Failed to start inferior process: "
+                   << util::ZxErrorString(status) << ": " << error_message;
+    goto fail;
+  }
+
+  if (!AllocDebugHandle(builder_.get())) {
     goto fail;
   }
 
@@ -220,25 +219,8 @@ bool Process::Initialize() {
 
   FXL_LOG(INFO) << fxl::StringPrintf("Process created: pid %" PRIu64, id_);
 
-  if (!LoadBinary(launchpad_, argv_[0])) goto fail;
-
-  FXL_VLOG(1) << "Binary loaded";
-
-  status = launchpad_get_base_address(launchpad_, &base_address_);
-  if (status != ZX_OK) {
-    FXL_LOG(ERROR)
-        << "Failed to obtain the dynamic linker base address for process: "
-        << util::ZxErrorString(status);
-    goto fail;
-  }
-
-  status = launchpad_get_entry_address(launchpad_, &entry_address_);
-  if (status != ZX_OK) {
-    FXL_LOG(ERROR)
-        << "Failed to obtain the dynamic linker entry address for process: "
-        << util::ZxErrorString(status);
-    goto fail;
-  }
+  base_address_ = builder_->data().base;
+  entry_address_ = builder_->data().entry;
 
   FXL_DCHECK(IsAttached());
 
@@ -257,8 +239,7 @@ fail:
     UnbindExceptionPort();
   }
   id_ = ZX_KOID_INVALID;
-  launchpad_destroy(launchpad_);
-  launchpad_ = nullptr;
+  builder_.reset();
   return false;
 }
 
@@ -274,7 +255,7 @@ bool Process::Attach(zx_koid_t pid) {
     return false;
   }
 
-  FXL_DCHECK(!launchpad_);
+  FXL_DCHECK(!builder_);
   FXL_DCHECK(!handle_);
   FXL_DCHECK(!eport_key_);
 
@@ -311,19 +292,19 @@ bool Process::Attach(zx_koid_t pid) {
   return true;
 }
 
-bool Process::AllocDebugHandle(launchpad_t* lp) {
-  FXL_DCHECK(lp);
+bool Process::AllocDebugHandle(process::ProcessBuilder* builder) {
+  FXL_DCHECK(builder);
 
-  zx_handle_t process = launchpad_get_process_handle(lp);
+  zx_handle_t process = builder->data().process.get();
   FXL_DCHECK(process);
 
-  // |process| is owned by |lp|.
-  // We need our own copy, and launchpad_go will give us one, but we need
-  // it before we call launchpad_go in order to attach to the debugging
+  // |process| is owned by |builder|.
+  // We need our own copy, and ProcessBuilder will give us one, but we need
+  // it before we call ProcessBuilder::Start in order to attach to the debugging
   // exception port.
   zx_handle_t debug_process;
-  auto status = zx_handle_duplicate(process, ZX_RIGHT_SAME_RIGHTS,
-                                    &debug_process);
+  auto status =
+      zx_handle_duplicate(process, ZX_RIGHT_SAME_RIGHTS, &debug_process);
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "zx_handle_duplicate failed: "
                    << util::ZxErrorString(status);
@@ -369,7 +350,8 @@ void Process::CloseDebugHandle() {
 bool Process::BindExceptionPort() {
   ExceptionPort::Key key = server_->exception_port().Bind(
       handle_, fit::bind_member(this, &Process::OnExceptionOrSignal));
-  if (!key) return false;
+  if (!key)
+    return false;
   eport_key_ = key;
   return true;
 }
@@ -405,7 +387,7 @@ bool Process::Detach() {
 }
 
 bool Process::Start() {
-  FXL_DCHECK(launchpad_);
+  FXL_DCHECK(builder_);
   FXL_DCHECK(handle_);
 
   if (state_ != State::kNew) {
@@ -413,21 +395,14 @@ bool Process::Start() {
     return false;
   }
 
-  // launchpad_go returns a dup of the process handle (owned by
-  // |launchpad_|), where the original handle is given to the child. We have to
-  // close the dup handle to avoid leaking it.
-  zx_handle_t dup_handle;
-  zx_status_t status = launchpad_go(launchpad_, &dup_handle, nullptr);
-
-  // Launchpad is no longer needed after launchpad_go returns.
-  launchpad_ = nullptr;
+  zx_status_t status = builder_->Start(nullptr);
+  builder_.reset();
 
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to start inferior process: "
                    << util::ZxErrorString(status);
     return false;
   }
-  zx_handle_close(dup_handle);
 
   set_state(State::kStarting);
   return true;
@@ -516,8 +491,7 @@ void Process::Clear() {
   dsos_ = nullptr;
   dsos_build_failed_ = false;
 
-  if (launchpad_) launchpad_destroy(launchpad_);
-  launchpad_ = nullptr;
+  builder_.reset();
 
   // The process may just exited or whatever. Force the state to kGone.
   set_state(State::kGone);
@@ -571,8 +545,8 @@ Thread* Process::FindThreadById(zx_koid_t thread_id) {
   if (status != ZX_OK) {
     // If the process just exited then the thread will be gone. So this is
     // just a debug message, not a warning or error.
-    FXL_VLOG(1) << "Could not obtain a debug handle to thread "
-                << thread_id << ": " << util::ZxErrorString(status);
+    FXL_VLOG(1) << "Could not obtain a debug handle to thread " << thread_id
+                << ": " << util::ZxErrorString(status);
     return nullptr;
   }
 
@@ -584,7 +558,8 @@ Thread* Process::FindThreadById(zx_koid_t thread_id) {
 Thread* Process::PickOneThread() {
   EnsureThreadMapFresh();
 
-  if (threads_.empty()) return nullptr;
+  if (threads_.empty())
+    return nullptr;
 
   return threads_.begin()->second.get();
 }
@@ -642,7 +617,8 @@ bool Process::RefreshAllThreads() {
 void Process::ForEachThread(const ThreadCallback& callback) {
   EnsureThreadMapFresh();
 
-  for (const auto& iter : threads_) callback(iter.second.get());
+  for (const auto& iter : threads_)
+    callback(iter.second.get());
 }
 
 void Process::ForEachLiveThread(const ThreadCallback& callback) {
@@ -650,7 +626,8 @@ void Process::ForEachLiveThread(const ThreadCallback& callback) {
 
   for (const auto& iter : threads_) {
     Thread* thread = iter.second.get();
-    if (thread->state() != Thread::State::kGone) callback(thread);
+    if (thread->state() != Thread::State::kGone)
+      callback(thread);
   }
 }
 

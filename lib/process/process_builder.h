@@ -45,6 +45,16 @@ class ProcessBuilder {
   // Safe to call mutliple times.
   void AddArgs(const std::vector<std::string>& argv);
 
+  // Adds the given handle to the handle list for the process.
+  //
+  // Safe to call mutliple times.
+  void AddHandle(uint32_t id, zx::handle handle);
+
+  // Adds the given handles to the handle list for the process.
+  //
+  // Safe to call mutliple times.
+  void AddHandles(std::vector<fuchsia::process::HandleInfo> handles);
+
   // Provide |job| to the process as PA_JOB_DEFAULT.
   //
   // By default, the created process will use this job when creating more
@@ -66,8 +76,11 @@ class ProcessBuilder {
   // this function to set a name for the process.
   void SetName(std::string name);
 
-  // Clone the zx_job_default() for this process as the |PA_JOB_DEFAULT| for the
-  // created process.
+  // Passes the job in which the process will be created as the |PA_JOB_DEFAULT|
+  // for the created process.
+  //
+  // Defaults to zx_job_default() unless you passed a job explicitly when
+  // constructing this object.
   void CloneJob();
 
   // Clone the ldsvc for this process as the |PA_LOADER_SVC| for the created

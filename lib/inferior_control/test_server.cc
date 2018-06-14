@@ -12,7 +12,6 @@
 #include <string>
 #include <vector>
 
-#include <launchpad/launchpad.h>
 #include <zircon/processargs.h>
 #include <zircon/syscalls.h>
 
@@ -28,9 +27,7 @@
 
 namespace debugserver {
 
-TestServer::TestServer()
-  : Server(util::GetRootJob(), util::GetDefaultJob()) {
-}
+TestServer::TestServer() : Server(util::GetRootJob(), util::GetDefaultJob()) {}
 
 void TestServer::SetUp() {
   ASSERT_TRUE(exception_port_.Run());
@@ -71,18 +68,16 @@ bool TestServer::RunHelperProgram(zx::channel channel) {
 
   FXL_LOG(INFO) << "Starting program: " << argv[0];
 
+  if (channel.is_valid()) {
+    process->AddStartupHandle({
+      .id = PA_HND(PA_USER0, 0),
+      .handle = std::move(channel),
+    });
+  }
+
   if (!process->Initialize()) {
     FXL_LOG(ERROR) << "failed to set up inferior";
     return false;
-  }
-
-  if (channel.get() != ZX_HANDLE_INVALID) {
-    launchpad_t* lp = process->launchpad();
-    auto status = launchpad_add_handle(lp, channel.release(), PA_HND(PA_USER0, 0));
-    if (status != ZX_OK) {
-      FXL_LOG(ERROR) << "unable to pass channel to process";
-      return false;
-    }
   }
 
   FXL_DCHECK(!process->IsLive());
@@ -122,8 +117,7 @@ bool TestServer::TestSuccessfulExit() {
   return true;
 }
 
-void TestServer::OnThreadStarting(Process* process,
-                                  Thread* thread,
+void TestServer::OnThreadStarting(Process* process, Thread* thread,
                                   const zx_exception_context_t& context) {
   FXL_DCHECK(process);
   FXL_DCHECK(thread);
@@ -131,18 +125,17 @@ void TestServer::OnThreadStarting(Process* process,
   PrintException(stdout, thread, ZX_EXCP_THREAD_STARTING, context);
 
   switch (process->state()) {
-  case Process::State::kStarting:
-  case Process::State::kRunning:
-    break;
-  default:
-    FXL_DCHECK(false);
+    case Process::State::kStarting:
+    case Process::State::kRunning:
+      break;
+    default:
+      FXL_DCHECK(false);
   }
 
   thread->Resume();
 }
 
-void TestServer::OnThreadExiting(Process* process,
-                                 Thread* thread,
+void TestServer::OnThreadExiting(Process* process, Thread* thread,
                                  const zx_exception_context_t& context) {
   FXL_DCHECK(process);
   FXL_DCHECK(thread);
@@ -161,17 +154,15 @@ void TestServer::OnProcessExit(Process* process) {
   exit_code_ = process->ExitCode();
   exit_code_set_ = true;
 
-  printf("Process %s is gone, rc %d\n",
-         process->GetName().c_str(), exit_code_);
+  printf("Process %s is gone, rc %d\n", process->GetName().c_str(), exit_code_);
 
   // If the process is gone exit main loop.
   QuitMessageLoop(true);
 }
 
-void TestServer::OnArchitecturalException(Process* process,
-                                          Thread* thread,
-                                          const zx_excp_type_t type,
-                                          const zx_exception_context_t& context) {
+void TestServer::OnArchitecturalException(
+    Process* process, Thread* thread, const zx_excp_type_t type,
+    const zx_exception_context_t& context) {
   FXL_DCHECK(process);
   FXL_DCHECK(thread);
 

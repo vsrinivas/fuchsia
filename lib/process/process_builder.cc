@@ -72,6 +72,19 @@ void ProcessBuilder::AddArgs(const std::vector<std::string>& argv) {
   launcher_->AddArgs(std::move(args));
 }
 
+void ProcessBuilder::AddHandle(uint32_t id, zx::handle handle) {
+  handles_.push_back(fuchsia::process::HandleInfo{
+      .id = id,
+      .handle = std::move(handle),
+  });
+}
+
+void ProcessBuilder::AddHandles(
+    std::vector<fuchsia::process::HandleInfo> handles) {
+  handles_->insert(handles_->end(), std::make_move_iterator(handles.begin()),
+                   std::make_move_iterator(handles.end()));
+}
+
 void ProcessBuilder::SetDefaultJob(zx::job job) {
   handles_.push_back(fuchsia::process::HandleInfo{
       .id = PA_JOB_DEFAULT,
@@ -84,9 +97,12 @@ void ProcessBuilder::SetName(std::string name) {
 }
 
 void ProcessBuilder::CloneJob() {
-  zx::job job;
-  zx::job::default_job().duplicate(ZX_RIGHT_SAME_RIGHTS, &job);
-  SetDefaultJob(std::move(job));
+  zx::job duplicate_job;
+  if (launch_info_.job)
+    launch_info_.job.duplicate(ZX_RIGHT_SAME_RIGHTS, &duplicate_job);
+  else
+    zx::job::default_job().duplicate(ZX_RIGHT_SAME_RIGHTS, &duplicate_job);
+  SetDefaultJob(std::move(duplicate_job));
 }
 
 void ProcessBuilder::CloneLdsvc() {
