@@ -18,10 +18,20 @@
     },
     "packages": {
       "description": "A map of Fuchsia packages; each entry's key must match exactly the name of the package in the entry's value",
-      "type": "object",
-      "additionalProperties": {
-        "$ref": "#/definitions/gnLabel"
-      }
+      "anyOf": [
+        {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/definitions/gnLabel"
+          }
+        },
+        {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/gnLabel"
+          }
+        }
+      ]
     },
     "host_tests": {
       "description": "A list of GN labels to build, each representing a host test",
