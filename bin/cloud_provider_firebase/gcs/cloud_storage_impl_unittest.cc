@@ -224,12 +224,12 @@ TEST_F(CloudStorageImplTest, TestDownloadWithResponseBodyTooShort) {
                       callback::Capture(callback::SetWhenCalled(&called),
                                         &status, &size, &data));
   RunLoopUntilIdle();
+  ASSERT_TRUE(called);
   std::string downloaded_content;
   EXPECT_TRUE(fsl::BlockingCopyToString(std::move(data), &downloaded_content));
 
   // As the result is returned in a socket, we pass the expected size to the
   // client so that they can verify if the response is complete.
-  EXPECT_TRUE(called);
   EXPECT_EQ(Status::OK, status);
   EXPECT_EQ(4u, size);
   EXPECT_EQ(3u, downloaded_content.size());

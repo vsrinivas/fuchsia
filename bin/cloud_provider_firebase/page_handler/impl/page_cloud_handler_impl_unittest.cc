@@ -235,6 +235,7 @@ TEST_F(PageCloudHandlerImplTest, AddMultipleCommits) {
       callback::Capture(callback::SetWhenCalled(&called), &status));
   RunLoopUntilIdle();
 
+  EXPECT_TRUE(called);
   EXPECT_EQ(Status::OK, status);
   ASSERT_EQ(1u, patch_keys_.size());
   ASSERT_EQ(patch_keys_.size(), patch_data_.size());
