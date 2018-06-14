@@ -109,8 +109,10 @@ bool PerspectiveDemoMode::UpdateAnimation(Presentation* presenter,
     return false;
   }
 
-  const float half_width = presenter->display_metrics_.width_in_px() * 0.5f;
-  const float half_height = presenter->display_metrics_.height_in_px() * 0.5f;
+  const float half_width =
+      presenter->display_model_actual_.display_info().width_in_px * 0.5f;
+  const float half_height =
+      presenter->display_model_actual_.display_info().height_in_px * 0.5f;
 
   // Always look at the middle of the stage.
   float target[3] = {half_width, half_height, 0};
