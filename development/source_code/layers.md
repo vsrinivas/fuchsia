@@ -15,7 +15,7 @@ platform for low-level software development.
 
 For example, Zircon contains the kernel, device manager, most core and
 first-party device drivers, and low-level system libraries, such as libc and
-launchpad. Zircon also defines the Fuchsia IDL (FIDL), which is the protocol
+fdio. Zircon also defines the Fuchsia IDL (FIDL), which is the protocol
 spoken between processes in the system, as well as backends for C and C++. The
 backends for other languages will be added by other layers.
 

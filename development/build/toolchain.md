@@ -102,12 +102,12 @@ cmake -GNinja \
   -DLLVM_ENABLE_PROJECTS="clang;lld" \
   -DLLVM_ENABLE_RUNTIMES="compiler-rt;libcxx;libcxxabi;libunwind" \
   -DSTAGE2_FUCHSIA_x86_64_SYSROOT=${SDK_DIR}/arch/x64/sysroot \
-  -DSTAGE2_FUCHSIA_x86_64_C_FLAGS=-I${SDK_DIR}/pkg/launchpad/include \
-  -DSTAGE2_FUCHSIA_x86_64_CXX_FLAGS=-I${SDK_DIR}/pkg/launchpad/include \
+  -DSTAGE2_FUCHSIA_x86_64_C_FLAGS=-I${SDK_DIR}/pkg/fdio/include \
+  -DSTAGE2_FUCHSIA_x86_64_CXX_FLAGS=-I${SDK_DIR}/pkg/fdio/include \
   -DSTAGE2_FUCHSIA_x86_64_LINKER_FLAGS=-L${SDK_DIR}/arch/x64/lib \
   -DSTAGE2_FUCHSIA_aarch64_SYSROOT=${SDK_DIR}/arch/arm64/sysroot \
-  -DSTAGE2_FUCHSIA_aarch64_C_FLAGS=-I${SDK_DIR}/pkg/launchpad/include \
-  -DSTAGE2_FUCHSIA_aarch64_CXX_FLAGS=-I${SDK_DIR}/pkg/launchpad/include \
+  -DSTAGE2_FUCHSIA_aarch64_C_FLAGS=-I${SDK_DIR}/pkg/fdio/include \
+  -DSTAGE2_FUCHSIA_aarch64_CXX_FLAGS=-I${SDK_DIR}/pkg/fdio/include \
   -DSTAGE2_FUCHSIA_aarch64_LINKER_FLAGS=-L${SDK_DIR}/arch/arm64/lib \
   -C ${LLVM_SRCDIR}/clang/cmake/caches/Fuchsia.cmake \
   ${LLVM_SRCDIR}/llvm
@@ -302,12 +302,12 @@ cmake -G Ninja -DCMAKE_BUILD_TYPE=Debug \
   -DLLVM_ENABLE_PROJECTS="clang;lld" \
   -DLLVM_ENABLE_RUNTIMES="compiler-rt;libcxx;libcxxabi;libunwind" \
   -DFUCHSIA_x86_64_SYSROOT=${SDK_DIR}/arch/x64/sysroot \
-  -DFUCHSIA_x86_64_C_FLAGS=-I${SDK_DIR}/pkg/launchpad/include \
-  -DFUCHSIA_x86_64_CXX_FLAGS=-I${SDK_DIR}/pkg/launchpad/include \
+  -DFUCHSIA_x86_64_C_FLAGS=-I${SDK_DIR}/pkg/fdio/include \
+  -DFUCHSIA_x86_64_CXX_FLAGS=-I${SDK_DIR}/pkg/fdio/include \
   -DFUCHSIA_x86_64_LINKER_FLAGS=-L${SDK_DIR}/arch/x64/lib \
   -DFUCHSIA_aarch64_SYSROOT=${SDK_DIR}/arch/arm64/sysroot \
-  -DFUCHSIA_aarch64_C_FLAGS=-I${SDK_DIR}/pkg/launchpad/include \
-  -DFUCHSIA_aarch64_CXX_FLAGS=-I${SDK_DIR}/pkg/launchpad/include \
+  -DFUCHSIA_aarch64_C_FLAGS=-I${SDK_DIR}/pkg/fdio/include \
+  -DFUCHSIA_aarch64_CXX_FLAGS=-I${SDK_DIR}/pkg/fdio/include \
   -DFUCHSIA_aarch64_LINKER_FLAGS=-L${SDK_DIR}/arch/arm64/lib \
   -C ${LLVM_SRCDIR}/clang/cmake/caches/Fuchsia-stage2.cmake \
   ${LLVM_SRCDIR}
@@ -329,12 +329,12 @@ cmake -G Ninja -DCMAKE_BUILD_TYPE=Debug \
   -DLLVM_ENABLE_PROJECTS="clang;lld" \
   -DLLVM_ENABLE_RUNTIMES="compiler-rt;libcxx;libcxxabi;libunwind" \
   -DFUCHSIA_x86_64_SYSROOT=${SDK_DIR}/arch/x64/sysroot \
-  -DFUCHSIA_x86_64_C_FLAGS=-I${SDK_DIR}/pkg/launchpad/include \
-  -DFUCHSIA_x86_64_CXX_FLAGS=-I${SDK_DIR}/pkg/launchpad/include \
+  -DFUCHSIA_x86_64_C_FLAGS=-I${SDK_DIR}/pkg/fdio/include \
+  -DFUCHSIA_x86_64_CXX_FLAGS=-I${SDK_DIR}/pkg/fdio/include \
   -DFUCHSIA_x86_64_LINKER_FLAGS=-L${SDK_DIR}/arch/x64/lib \
   -DFUCHSIA_aarch64_SYSROOT=${SDK_DIR}/arch/arm64/sysroot \
-  -DFUCHSIA_aarch64_C_FLAGS=-I${SDK_DIR}/pkg/launchpad/include \
-  -DFUCHSIA_aarch64_CXX_FLAGS=-I${SDK_DIR}/pkg/launchpad/include \
+  -DFUCHSIA_aarch64_C_FLAGS=-I${SDK_DIR}/pkg/fdio/include \
+  -DFUCHSIA_aarch64_CXX_FLAGS=-I${SDK_DIR}/pkg/fdio/include \
   -DFUCHSIA_aarch64_LINKER_FLAGS=-L${SDK_DIR}/arch/arm64/lib \
   -C ${LLVM_SRCDIR}/clang/cmake/caches/Fuchsia-stage2.cmake \
   ${LLVM_SRCDIR}

@@ -21,7 +21,6 @@ also provides core drivers and Fuchsia's libc implementation.
  - [Device Driver Model (DDK)][zircon-ddk]
  - [C Library (libc)](libc.md)
  - [POSIX I/O (libfdio)](life_of_an_open.md)
- - [Process Start / ELF Loading (liblaunchpad)](launchpad.md)
 
 ## Framework
 

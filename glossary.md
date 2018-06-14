@@ -165,15 +165,6 @@ manage their local checkouts.
 
 TODO(cpu): add definition
 
-#### **Launchpad**
-
-[Launchpad](the-book/launchpad.md) is a library provided by Zircon that provides the
-functionality to create and start new processes (including loading ELF binaries,
-passing initial RPC messages needed by runtime init, etc).  It is a low-level
-library and over time it is expected that few pieces of code will make direct
-use of it.
-- [Launchpad API (launchpad.h)](https://fuchsia.googlesource.com/zircon/+/master/system/ulib/launchpad/include/launchpad/launchpad.h)
-
 #### **Ledger**
 
 [Ledger](https://fuchsia.googlesource.com/peridot/+/master/docs/ledger/README.md)

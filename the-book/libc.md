@@ -85,10 +85,10 @@ and code written for both Posix and Fuchsia may still have
 #### fork and exec
 
 Zircon does not have fork or exec. Instead, process creation is
-provided by [launchpad](launchpad.md). While Zircon has Process and
+provided by [fdio](fdio.md). While Zircon has Process and
 Thread objects, these are pretty raw and know nothing about
-ELF. Launchpad knows how to turn an ELF and some initial state into a
-running process.
+ELF. The `fdio_spawn` function family knows how to turn an ELF and some initial
+state into a running process.
 
 
 [zircon-concepts-message-passing]: https://fuchsia.googlesource.com/zircon/+/master/docs/concepts.md#message-passing-sockets-and-channels
