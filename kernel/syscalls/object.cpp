@@ -611,10 +611,7 @@ zx_status_t sys_object_get_property(zx_handle_t handle_value, uint32_t property,
             if (!process)
                 return ZX_ERR_WRONG_TYPE;
             uintptr_t value = process->get_debug_addr();
-            zx_status_t status = _value.reinterpret<uintptr_t>().copy_to_user(value);
-            if (status != ZX_OK)
-                return status;
-            return ZX_OK;
+            return _value.reinterpret<uintptr_t>().copy_to_user(value);
         }
         case ZX_PROP_PROCESS_VDSO_BASE_ADDRESS: {
             if (size < sizeof(uintptr_t))
@@ -632,10 +629,7 @@ zx_status_t sys_object_get_property(zx_handle_t handle_value, uint32_t property,
             if (!socket)
                 return ZX_ERR_WRONG_TYPE;
             size_t value = socket->ReceiveBufferMax();
-            zx_status_t status = _value.reinterpret<size_t>().copy_to_user(value);
-            if (status != ZX_OK)
-                return status;
-            return ZX_OK;
+            return _value.reinterpret<size_t>().copy_to_user(value);
         }
         case ZX_PROP_SOCKET_RX_BUF_SIZE: {
             if (size < sizeof(size_t))
@@ -644,10 +638,7 @@ zx_status_t sys_object_get_property(zx_handle_t handle_value, uint32_t property,
             if (!socket)
                 return ZX_ERR_WRONG_TYPE;
             size_t value = socket->ReceiveBufferSize();
-            zx_status_t status = _value.reinterpret<size_t>().copy_to_user(value);
-            if (status != ZX_OK)
-                return status;
-            return ZX_OK;
+            return _value.reinterpret<size_t>().copy_to_user(value);
         }
         case ZX_PROP_SOCKET_TX_BUF_MAX: {
             if (size < sizeof(size_t))
@@ -656,10 +647,7 @@ zx_status_t sys_object_get_property(zx_handle_t handle_value, uint32_t property,
             if (!socket)
                 return ZX_ERR_WRONG_TYPE;
             size_t value = socket->TransmitBufferMax();
-            zx_status_t status = _value.reinterpret<size_t>().copy_to_user(value);
-            if (status != ZX_OK)
-                return status;
-            return ZX_OK;
+            return _value.reinterpret<size_t>().copy_to_user(value);
         }
         case ZX_PROP_SOCKET_TX_BUF_SIZE: {
             if (size < sizeof(size_t))
@@ -668,10 +656,7 @@ zx_status_t sys_object_get_property(zx_handle_t handle_value, uint32_t property,
             if (!socket)
                 return ZX_ERR_WRONG_TYPE;
             size_t value = socket->TransmitBufferSize();
-            zx_status_t status = _value.reinterpret<size_t>().copy_to_user(value);
-            if (status != ZX_OK)
-                return status;
-            return ZX_OK;
+            return _value.reinterpret<size_t>().copy_to_user(value);
         }
         case ZX_PROP_CHANNEL_TX_MSG_MAX: {
             if (size < sizeof(size_t)) {
@@ -682,11 +667,7 @@ zx_status_t sys_object_get_property(zx_handle_t handle_value, uint32_t property,
                 return ZX_ERR_WRONG_TYPE;
             }
             size_t depth = channel->TxMessageMax();
-            zx_status_t status = _value.reinterpret<size_t>().copy_to_user(depth);
-            if (status != ZX_OK) {
-                return status;
-            }
-            return ZX_OK;
+            return _value.reinterpret<size_t>().copy_to_user(depth);
         }
         default:
             return ZX_ERR_INVALID_ARGS;
