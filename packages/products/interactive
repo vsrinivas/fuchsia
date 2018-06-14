@@ -11,6 +11,7 @@
         "garnet/packages/prod/fonts",
         "garnet/packages/prod/image_pipe_swapchain",
         "garnet/packages/prod/logger",
+        "garnet/packages/prod/log_listener",
         "garnet/packages/prod/mdns_service",
         "garnet/packages/prod/media_audio",
         "garnet/packages/prod/media_codec",
