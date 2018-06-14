@@ -140,7 +140,7 @@ void Mpeg12Decoder::HandleInterrupt() {
   auto offset = MregFrameOffset::Get().ReadFrom(owner_->dosbus());
 
   // Assume frame is progressive.
-  uint32_t index = bufferout.reg_value() & (kBuffers - 1);
+  uint32_t index = ((bufferout.reg_value() & 0xf) - 1) & (kBuffers - 1);
 
   uint32_t width = MregPicWidth::Get().ReadFrom(owner_->dosbus()).reg_value();
   uint32_t height = MregPicHeight::Get().ReadFrom(owner_->dosbus()).reg_value();
