@@ -91,7 +91,6 @@ qualities suitable for user interfaces.
 #### **FAR**
 
 The Fuchsia Archive Format is a container for files to be used by Zircon and Fuchsia.
-It will replace Zircon's older BootFS container and be used in Fuchsia Packages.
 - [FAR Spec](the-book/archive_format.md)
 
 #### **fdio**
@@ -115,6 +114,10 @@ approach lets system components written in a variety of languages interact seaml
 optimized for Fuchsia and is used by many system components. Flutter also runs on
 a variety of other platform, including Android and iOS. Fuchsia itself does not
 require you to use any particular language or user interface framework.
+
+#### **Fuchsia Package**
+
+A Fuchsia Package is a collection of files (a manifest and other metadata, and zero or more executables and assets), possibly delivered as a [Fuchsia Archive](#FAR).
 
 #### **FVM**
 

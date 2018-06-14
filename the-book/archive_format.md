@@ -1,6 +1,6 @@
 # Fuchsia Archive Format
 
-An archive is a sequence of chunks:
+An archive is a sequence of bytes, divided into chunks:
 
  * The first chunk is the index chunk, which describes where other chunks are
    located in the archive.
