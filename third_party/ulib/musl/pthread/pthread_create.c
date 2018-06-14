@@ -29,7 +29,7 @@ static void start_pthread(void* arg) {
 
 static void start_c11(void* arg) {
     pthread_t self = prestart(arg);
-    int (*start)(void*) = (int (*)(void*))self->start;
+    int (*start)(void*) = (int (*)(void*))(uintptr_t)self->start;
     __pthread_exit((void*)(intptr_t)start(self->start_arg));
 }
 
