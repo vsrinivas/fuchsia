@@ -55,6 +55,7 @@ toolchain {
   cxx_flag: "-xc++"
 
   linker_flag: "--driver-mode=g++"
+  linker_flag: "-lzircon"
 
   ### start 'sdk' portion
   # The following are to make the various files in runtimes/sdk available
