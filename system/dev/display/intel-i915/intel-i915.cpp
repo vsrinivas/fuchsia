@@ -35,7 +35,6 @@
 #include "registers-pipe.h"
 #include "registers-transcoder.h"
 #include "registers.h"
-#include "tiling.h"
 
 #define INTEL_I915_BROADWELL_DID (0x1616)
 
@@ -640,20 +639,14 @@ zx_status_t Controller::ImportVmoImage(image_t* image, const zx::vmo& vmo, size_
         return ZX_ERR_NO_MEMORY;
     }
 
-    uint32_t length = width_in_tiles(image->type, image->width, image->pixel_format) *
-            height_in_tiles(image->type, image->height, image->pixel_format) *
-            get_tile_byte_size(image->type);
-
-    uint32_t align;
-    if (image->type == IMAGE_TYPE_SIMPLE) {
-        align = registers::PlaneSurface::kLinearAlignment;
-    } else if (image->type == IMAGE_TYPE_X_TILED) {
-        align = registers::PlaneSurface::kXTilingAlignment;
-    } else {
-        align = registers::PlaneSurface::kYTilingAlignment;
-    }
+    uint32_t length = image->height * ZX_PIXEL_FORMAT_BYTES(image->pixel_format) *
+            registers::PlaneSurfaceStride::compute_pixel_stride(image->type, image->width,
+                                                                image->pixel_format);
     fbl::unique_ptr<GttRegion> gtt_region;
-    zx_status_t status = gtt_.AllocRegion(length, align, &gtt_region);
+    zx_status_t status = gtt_.AllocRegion(length,
+                                          registers::PlaneSurface::kLinearAlignment,
+                                          registers::PlaneSurface::kTrailingPtePadding,
+                                          &gtt_region);
     if (status != ZX_OK) {
         return status;
     }
@@ -661,7 +654,10 @@ zx_status_t Controller::ImportVmoImage(image_t* image, const zx::vmo& vmo, size_
     // The vsync logic requires that images not have base == 0
     if (gtt_region->base() == 0) {
         fbl::unique_ptr<GttRegion> alt_gtt_region;
-        zx_status_t status = gtt_.AllocRegion(length, align, &alt_gtt_region);
+        zx_status_t status = gtt_.AllocRegion(length,
+                                              registers::PlaneSurface::kLinearAlignment,
+                                              registers::PlaneSurface::kTrailingPtePadding,
+                                              &alt_gtt_region);
         if (status != ZX_OK) {
             return status;
         }
@@ -686,16 +682,6 @@ void Controller::ReleaseImage(image_t* image) {
             return;
         }
     }
-}
-
-const fbl::unique_ptr<GttRegion>& Controller::GetGttRegion(void* handle) {
-    fbl::AutoLock lock(&gtt_lock_);
-    for (auto& region : imported_images_) {
-        if (region->base() == reinterpret_cast<uint64_t>(handle)) {
-            return region;
-        }
-    }
-    ZX_ASSERT(false);
 }
 
 bool Controller::GetLayer(registers::Pipe pipe, uint32_t plane,
@@ -1072,34 +1058,11 @@ void Controller::CheckConfiguration(const display_config_t** display_config,
                 continue;
             }
             primary_layer_t* primary = &config->layers[j]->cfg.primary;
-            if (primary->transform_mode == FRAME_TRANSFORM_ROT_90
-                    || primary->transform_mode == FRAME_TRANSFORM_ROT_270) {
-                // Linear and x tiled images don't support 90/270 rotation
-                if (primary->image.type == IMAGE_TYPE_SIMPLE
-                        || primary->image.type == IMAGE_TYPE_X_TILED) {
-                    layer_cfg_result[i][j] |= CLIENT_TRANSFORM;
-                }
-            } else if (primary->transform_mode != FRAME_TRANSFORM_IDENTITY
-                    && primary->transform_mode != FRAME_TRANSFORM_ROT_180) {
-                // Cover unsupported rotations
+            if (primary->transform_mode != FRAME_TRANSFORM_IDENTITY) {
                 layer_cfg_result[i][j] |= CLIENT_TRANSFORM;
             }
-
-            uint32_t src_width;
-            uint32_t src_height;
-            if (primary->transform_mode == FRAME_TRANSFORM_IDENTITY
-                    || primary->transform_mode == FRAME_TRANSFORM_ROT_180
-                    || primary->transform_mode == FRAME_TRANSFORM_REFLECT_X
-                    || primary->transform_mode == FRAME_TRANSFORM_REFLECT_Y) {
-                src_width = primary->src_frame.width;
-                src_height = primary->src_frame.height;
-            } else {
-                src_width = primary->src_frame.height;
-                src_height = primary->src_frame.width;
-            }
-
-            if (primary->dest_frame.width != src_width
-                    || primary->dest_frame.height != src_height) {
+            if (primary->dest_frame.width != primary->src_frame.width
+                    || primary->dest_frame.height != primary->src_frame.height) {
                 layer_cfg_result[i][j] |= CLIENT_FRAME_SCALE;
             }
         }
@@ -1178,8 +1141,7 @@ void Controller::ApplyConfiguration(const display_config_t** display_config,
 }
 
 uint32_t Controller::ComputeLinearStride(uint32_t width, zx_pixel_format_t format) {
-    return fbl::round_up(width,
-            get_tile_byte_width(IMAGE_TYPE_SIMPLE, format) / ZX_PIXEL_FORMAT_BYTES(format));
+    return registers::PlaneSurfaceStride::compute_pixel_stride(IMAGE_TYPE_SIMPLE, width, format);
 }
 
 zx_status_t Controller::AllocateVmo(uint64_t size, zx_handle_t* vmo_out) {
@@ -1256,7 +1218,7 @@ zx_status_t Controller::GttAlloc(uint64_t page_count, uint64_t* addr_out) {
     }
     fbl::unique_ptr<GttRegion> region;
     zx_status_t status = gtt_.AllocRegion(static_cast<uint32_t>(page_count * PAGE_SIZE),
-                                          PAGE_SIZE, &region);
+                                          PAGE_SIZE, 0, &region);
     if (status != ZX_OK) {
         return status;
     }
@@ -1349,7 +1311,7 @@ zx_status_t Controller::DdkSuspend(uint32_t hint) {
 
         {
             fbl::AutoLock lock(&gtt_lock_);
-            gtt_.SetupForMexec(fb, fb_size);
+            gtt_.SetupForMexec(fb, fb_size, registers::PlaneSurface::kTrailingPtePadding);
         }
 
         // Try to map the framebuffer and clear it. If not, oh well.
@@ -1369,7 +1331,7 @@ zx_status_t Controller::DdkSuspend(uint32_t hint) {
                 registers::PipeRegs pipe_regs(display->pipe());
 
                 auto plane_stride = pipe_regs.PlaneSurfaceStride(0).ReadFrom(mmio_space_.get());
-                plane_stride.set_stride(stride);
+                plane_stride.set_stride(IMAGE_TYPE_SIMPLE, stride, format);
                 plane_stride.WriteTo(mmio_space_.get());
 
                 auto plane_surface = pipe_regs.PlaneSurface(0).ReadFrom(mmio_space_.get());
