@@ -17,7 +17,6 @@ executable("bin") {
 
   deps = [
     "//garnet/public/lib/netstack/c",
-    "//zircon/public/lib/launchpad",
   ]
 }
 

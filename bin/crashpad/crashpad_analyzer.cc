@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #include <lib/fdio/io.h>
-#include <launchpad/launchpad.h>
 #include <lib/zx/handle.h>
 #include <lib/zx/log.h>
 #include <lib/zx/time.h>

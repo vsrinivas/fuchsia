@@ -31,9 +31,6 @@ executable("syz-executor") {
   sources = [
     "//third_party/syzkaller/executor/executor_fuchsia.cc",
   ]
-  deps = [
-    "//zircon/public/lib/launchpad",
-  ]
   libs = [ "zircon" ]
 }
 

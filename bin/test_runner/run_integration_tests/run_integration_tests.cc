@@ -6,7 +6,6 @@
 // starts a test and exits with success or failure based on the success or
 // failure of the test.
 
-#include <launchpad/launchpad.h>
 #include <zircon/processargs.h>
 #include <zircon/status.h>
 

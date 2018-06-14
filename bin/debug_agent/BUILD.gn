@@ -56,7 +56,6 @@ static_library("lib") {
     "//garnet/lib/debug_ipc/helper",
     "//garnet/lib/process",
     "//garnet/public/lib/fxl",
-    "//zircon/public/lib/launchpad",
     "//zircon/public/lib/ngunwind",
   ]
 }

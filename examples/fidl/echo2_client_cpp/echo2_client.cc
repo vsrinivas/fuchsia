@@ -5,7 +5,6 @@
 #define FIDL_ENABLE_LEGACY_WAIT_FOR_RESPONSE
 
 #include <fidl/examples/echo/cpp/fidl.h>
-#include <launchpad/launchpad.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/default.h>
 #include <lib/zx/process.h>

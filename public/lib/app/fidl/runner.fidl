@@ -9,7 +9,7 @@ using fuchsia.mem;
 // Information given to components at startup.
 //
 // For ELF binaries, this information is provided in the initialization message
-// given to libc by launchpad.
+// given to libc by fuchsia.process.Launcher.
 struct StartupInfo {
   // The launch info for the to start.
   LaunchInfo launch_info;

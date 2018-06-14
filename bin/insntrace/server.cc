@@ -12,7 +12,6 @@
 #include <string>
 #include <vector>
 
-#include <launchpad/launchpad.h>
 #include <zircon/syscalls.h>
 
 #include "lib/fxl/arraysize.h"
