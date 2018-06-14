@@ -97,6 +97,7 @@ Session::Session(SessionId id, Engine* engine, EventReporter* event_reporter,
 Session::~Session() { FXL_DCHECK(!is_valid_); }
 
 bool Session::ApplyCommand(::fuchsia::ui::gfx::Command command) {
+  TRACE_DURATION("gfx", "Session::ApplyCommand");
   switch (command.Which()) {
     case ::fuchsia::ui::gfx::Command::Tag::kCreateResource:
       return ApplyCreateResourceCmd(std::move(command.create_resource()));

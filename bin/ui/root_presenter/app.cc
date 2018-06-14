@@ -151,6 +151,9 @@ void App::HACK_SetRendererParams(
         continue;
     }
   }
+  for (const auto& presentation : presentations_) {
+    presentation->OverrideRendererParams(renderer_params_);
+  }
 }
 
 void App::SwitchToPresentation(const size_t presentation_idx) {

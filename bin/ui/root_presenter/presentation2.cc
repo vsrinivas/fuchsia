@@ -58,8 +58,8 @@ Presentation2::Presentation2(fuchsia::ui::scenic::Scenic* scenic,
       cursor_shape_(session_, kCursorWidth, kCursorHeight, 0u, kCursorRadius,
                     kCursorRadius, kCursorRadius),
       cursor_material_(session_),
-      presentation_binding_(this),
       renderer_params_override_(renderer_params),
+      presentation_binding_(this),
       weak_factory_(this) {
   renderer_.SetCamera(camera_);
   layer_.SetRenderer(renderer_);
@@ -83,6 +83,13 @@ Presentation2::Presentation2(fuchsia::ui::scenic::Scenic* scenic,
   session_->set_event_handler(
       fit::bind_member(this, &Presentation2::HandleScenicEvents));
 
+  OverrideRendererParams(renderer_params, false);
+}
+
+void Presentation2::OverrideRendererParams(RendererParams renderer_params,
+                                           bool present_changes) {
+  renderer_params_override_ = renderer_params;
+
   if (renderer_params_override_.clipping_enabled.has_value()) {
     presentation_clipping_enabled_ =
         renderer_params_override_.clipping_enabled.value();
@@ -98,6 +105,9 @@ Presentation2::Presentation2(fuchsia::ui::scenic::Scenic* scenic,
     param.set_shadow_technique(
         renderer_params_override_.shadow_technique.value());
     renderer_.SetParam(std::move(param));
+  }
+  if (present_changes) {
+    PresentScene();
   }
 }
 

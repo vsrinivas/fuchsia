@@ -164,6 +164,10 @@ class Presentation1 : private ::fuchsia::ui::viewsv1::ViewTreeListener,
   void SetRendererParams(
       ::fidl::VectorPtr<fuchsia::ui::gfx::RendererParam> params) override;
 
+  // Used internally by Presenter. Allows overriding of renderer params.
+  void OverrideRendererParams(RendererParams renderer_params,
+                              bool present_changes = true) override;
+
   void InitializeDisplayModel(fuchsia::ui::gfx::DisplayInfo display_info);
 
   // |Presentation|
@@ -248,12 +252,14 @@ class Presentation1 : private ::fuchsia::ui::viewsv1::ViewTreeListener,
 
   SessionPresentState session_present_state_ = kNoPresentPending;
 
-  bool presentation_clipping_enabled_ = true;
-
   bool display_model_initialized_ = false;
 
   DisplayModel display_model_actual_;
   DisplayModel display_model_simulated_;
+
+  // Stores values that, if set, override any renderer params.
+  bool presentation_clipping_enabled_ = true;
+  RendererParams renderer_params_override_;
 
   // When |display_model_simulated_| or |display_rotation_desired_| changes:
   //   * |display_metrics_| must be recalculated.
@@ -308,9 +314,6 @@ class Presentation1 : private ::fuchsia::ui::viewsv1::ViewTreeListener,
 
   // Toggles through different presentations.
   PresentationSwitcher presentation_switcher_;
-
-  // Stores values that, if set, override any renderer params.
-  RendererParams renderer_params_override_;
 
   struct CursorState {
     bool created;

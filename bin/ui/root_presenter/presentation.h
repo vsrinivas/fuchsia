@@ -9,6 +9,7 @@
 #include <fuchsia/ui/policy/cpp/fidl.h>
 
 #include "garnet/bin/ui/root_presenter/displays/display_model.h"
+#include "garnet/bin/ui/root_presenter/renderer_params.h"
 #include "lib/ui/input/input_device_impl.h"
 #include "lib/ui/scenic/cpp/resources.h"
 
@@ -32,6 +33,9 @@ class Presentation : protected fuchsia::ui::policy::Presentation {
                         fuchsia::ui::input::InputReport report) = 0;
   virtual void OnDeviceAdded(mozart::InputDeviceImpl* input_device) = 0;
   virtual void OnDeviceRemoved(uint32_t device_id) = 0;
+
+  virtual void OverrideRendererParams(RendererParams renderer_params,
+                                      bool present_changes = true) = 0;
 
  protected:
   virtual float display_rotation_desired() const = 0;

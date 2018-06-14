@@ -8,6 +8,7 @@
 OUT_DIR=$1
 OUT_FILE=$2
 BENCHMARK_LABEL=$3
+DATE=`date +%Y-%m-%dT%H:%M:%S`
 CMD=$4
 shift # swallow first argument
 shift # swallow second argument
@@ -24,7 +25,6 @@ echo "== $BENCHMARK_LABEL: Configuring scenic renderer params..."
 set_renderer_params --render_continuously $RENDERER_PARAMS
 
 echo "== $BENCHMARK_LABEL: Tracing..."
-DATE=`date +%Y-%m-%dT%H:%M:%S`
 echo $TRACE_FILE
 $CMD &
 trace record --duration=10 --buffer-size=12 --output-file=$TRACE_FILE

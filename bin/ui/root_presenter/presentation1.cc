@@ -67,13 +67,13 @@ Presentation1::Presentation1(::fuchsia::ui::viewsv1::ViewManager* view_manager,
       cursor_shape_(session_, kCursorWidth, kCursorHeight, 0u, kCursorRadius,
                     kCursorRadius, kCursorRadius),
       cursor_material_(session_),
+      renderer_params_override_(renderer_params),
       display_startup_rotation_adjustment_(display_startup_rotation_adjustment),
       presentation_binding_(this),
       tree_listener_binding_(this),
       tree_container_listener_binding_(this),
       view_container_listener_binding_(this),
       view_listener_binding_(this),
-      renderer_params_override_(renderer_params),
       startup_context_(startup_context),
       weak_factory_(this) {
   renderer_.SetCamera(camera_);
@@ -94,6 +94,39 @@ Presentation1::Presentation1(::fuchsia::ui::viewsv1::ViewManager* view_manager,
   content_view_host_node_.ExportAsRequest(&content_view_host_import_token_);
   cursor_material_.SetColor(0xff, 0x00, 0xff, 0xff);
 
+  // Set up |a11y_toggle_| to listen for turning on/off a11y support.
+  {
+    a11y_toggle_.events().OnAccessibilityToggle =
+        fit::bind_member(this, &Presentation1::OnAccessibilityToggle);
+    a11y_toggle_.set_error_handler([this]() {
+      FXL_LOG(INFO) << "Disconnected from a11y toggle broadcaster.";
+      // If we disconnect from the a11y toggler, we have no way of turning on or
+      // off accessibility support, so we just force it to stay disabled.
+      accessibility_mode_ = false;
+    });
+    startup_context_->ConnectToEnvironmentService(a11y_toggle_.NewRequest());
+  }
+
+  // Set up |a11y_input_connection_| to listen for simulated events when a11y is
+  // turned on.
+  {
+    a11y_input_connection_.events().OnReturnInputEvent =
+        fit::bind_member(this, &Presentation1::OnEvent);
+    a11y_input_connection_.set_error_handler(
+        [this] { a11y_input_connection_.Unbind(); });
+  }
+
+  FXL_CHECK(display_startup_rotation_adjustment_ % 90 == 0)
+      << "Rotation adjustments must be in (+/-) 90 deg increments; received: "
+      << display_startup_rotation_adjustment_;
+
+  OverrideRendererParams(renderer_params, false);
+}
+
+void Presentation1::OverrideRendererParams(RendererParams renderer_params,
+                                           bool present_changes) {
+  renderer_params_override_ = renderer_params;
+
   if (renderer_params_override_.clipping_enabled.has_value()) {
     presentation_clipping_enabled_ =
         renderer_params_override_.clipping_enabled.value();
@@ -111,31 +144,9 @@ Presentation1::Presentation1(::fuchsia::ui::viewsv1::ViewManager* view_manager,
     renderer_.SetParam(std::move(param));
   }
 
-  // Set up |a11y_toggle_| to listen for turning on/off a11y support.
-  {
-    a11y_toggle_.events().OnAccessibilityToggle =
-        fit::bind_member(this, &Presentation1::OnAccessibilityToggle);
-    a11y_toggle_.set_error_handler([this]() {
-      FXL_LOG(INFO) << "Disconnected from a11y toggle broadcaster.";
-      // If we disconnect from the a11y toggler, we have no way of turning on or
-      // off accessibility support, so we just force it to stay disabled.
-      accessibility_mode_ = false;
-    });
-    startup_context->ConnectToEnvironmentService(a11y_toggle_.NewRequest());
+  if (present_changes) {
+    PresentScene();
   }
-
-  // Set up |a11y_input_connection_| to listen for simulated events when a11y is
-  // turned on.
-  {
-    a11y_input_connection_.events().OnReturnInputEvent =
-        fit::bind_member(this, &Presentation1::OnEvent);
-    a11y_input_connection_.set_error_handler(
-        [this] { a11y_input_connection_.Unbind(); });
-  }
-
-  FXL_CHECK(display_startup_rotation_adjustment_ % 90 == 0)
-      << "Rotation adjustments must be in (+/-) 90 deg increments; received: "
-      << display_startup_rotation_adjustment_;
 }
 
 Presentation1::~Presentation1() {}

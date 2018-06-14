@@ -1,3 +1,19 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+// process_scenic_trace.go
+//
+// Usage:
+//
+// /pkgfs/packages/scenic_benchmarks/0/bin/process_scenic_trace test_label trace_filename benchmarks_out_filename
+//
+// test_label = test title (used in output file)
+// trace_filename = filename for the trace (input)
+// bencharks_out_filename = filename for benchmarks file (output)
+//
+// The output is a JSON file with benchmark statistics.
+
 package main
 
 import (
@@ -27,6 +43,7 @@ func check(e error) {
 	}
 }
 
+// Structs for parsing trace files (JSON).
 type Trace struct {
 	TraceEvents     []TraceEvent
 	DisplayTimeUnit string
@@ -61,7 +78,7 @@ func printTraceEvent(e TraceEvent) {
 }
 
 // Returns a list with only one event per duration event.
-// The |Dur| member is populated with duration.
+// The |Dur| member of the event is populated with its duration.
 func calculateEventDurations(events []TraceEvent) []TraceEvent {
 	durations := make([]TraceEvent, 0)
 	eventStacks := make(map[Thread][]TraceEvent)
@@ -129,6 +146,10 @@ func calculateEventDurations(events []TraceEvent) []TraceEvent {
 	return durations
 }
 
+// Takes the 'args' of event1 and writes all its values to the 'args' of event2,
+// and vice versa.
+// If event2's 'args' already has a value for a given key, it does not get
+// overwritten.
 func mergeArgs(event1 *TraceEvent, event2 *TraceEvent) {
 	// Merge 'Args' maps of both events.
 	if event1.Args != nil && event2.Args == nil {
@@ -142,6 +163,8 @@ func mergeArgs(event1 *TraceEvent, event2 *TraceEvent) {
 
 }
 
+// Returns the overall fps and an arrays of fps (one per one second window) for
+// the given events, which must be sorted.
 func calculateFps(sortedEvents []TraceEvent) (fps float64, fpsPerWindow []float64) {
 	baseTime := sortedEvents[0].Ts
 	lastEventTime := sortedEvents[len(sortedEvents)-1].Ts
@@ -178,6 +201,8 @@ func calculateFps(sortedEvents []TraceEvent) (fps float64, fpsPerWindow []float6
 	return fps, fpsPerWindow
 }
 
+// For the given set of |events|, find the average duration of all instances of
+// events with matching |cat| and |name|.
 func avgDuration(events []TraceEvent, cat string, name string) float64 {
 
 	totalTime := 0.0
@@ -193,6 +218,8 @@ func avgDuration(events []TraceEvent, cat string, name string) float64 {
 
 }
 
+// For the given set of |events|, find the average duration between event
+// (cat1, name1) and event (cat2, name2).
 func avgDurationBetween(events []TraceEvent, cat1 string, name1 string, cat2 string, name2 string) float64 {
 	lastEventEndTs := 0.0
 	totalTime := 0.0
@@ -216,6 +243,7 @@ func avgDurationBetween(events []TraceEvent, cat1 string, name1 string, cat2 str
 	return totalTime / numEvents
 }
 
+// Sorting helpers.
 type ByTimestamp []TraceEvent
 
 func (a ByTimestamp) Len() int           { return len(a) }
@@ -234,6 +262,7 @@ func jsonFloat(num float64) float64 {
 
 func main() {
 
+	// Argument handling.
 	verbosePtr := flag.Bool("v", false, "verbose mode")
 	flag.Parse()
 
@@ -248,6 +277,7 @@ func main() {
 	traceFile, err := ioutil.ReadFile(inputFilename)
 	check(err)
 
+	// Parsing input.
 	var trace Trace
 	err = json.Unmarshal([]byte(traceFile), &trace)
 	check(err)
@@ -265,8 +295,18 @@ func main() {
 	// Sort in order of increasing timestamp.
 	sort.Sort(ByTimestamp(events))
 
+	// Scrub events with title 'log'; they mess up the total timeline duration
+	// because they include events that happen way past the tracing duration.
+	filteredEvents := make([]TraceEvent, 0)
+	for _, event := range events {
+		if !(event.Cat == "" && event.Name == "log") {
+			filteredEvents = append(filteredEvents, event)
+		}
+	}
+	events = filteredEvents
+
+	// Calculate FPS. Requires sorted list of events.
 	fmt.Printf("== FPS ==\n")
-	// Requires sorted list of events.
 	fps, fpsPerTimeWindow := calculateFps(events)
 	fmt.Printf("%.4gfps\nfps per one-second window: %v\n", fps, fpsPerTimeWindow)
 
@@ -280,6 +320,13 @@ func main() {
 		Values:    []float64{jsonFloat(fps)},
 	})
 
+	results.Add(&benchmarking.TestCaseResults{
+		Label:     "fps_per_one_second_time_window",
+		TestSuite: testSuite,
+		Unit:      benchmarking.Unit(unitName),
+		Values:    fpsPerTimeWindow,
+	})
+
 	fmt.Printf("\n== Average times ==\n")
 	type AverageEvent struct {
 		IndentLevel int
@@ -287,15 +334,19 @@ func main() {
 		Label       string
 	}
 	averageEvents := []AverageEvent{
-		{0, "RenderFrame", "RenderFrame"},
-		{1, "ApplyScheduledSessionUpdates", "ApplyScheduledSessionUpdates"},
-		{1, "UpdateAndDeliverMetrics", "UpdateAndDeliverMetrics"},
-		{1, "Compositor::DrawFrame", "Compositor::DrawFrame"},
+		{0, "RenderFrame", ""},
+		{1, "ApplyScheduledSessionUpdates", ""},
+		{2, "escher::CommandBuffer::Submit", "CommandBuffer::Submit"},
+		{1, "UpdateAndDeliverMetrics", ""},
+		{1, "Compositor::DrawFrame", ""},
 		{0, "Scenic Compositor", "Escher GPU time"},
 	}
 
 	for _, e := range averageEvents {
 		avgDuration := jsonFloat(avgDuration(durations, "gfx", e.Name) / OneMsecInUsecs)
+		if e.Label == "" {
+			e.Label = e.Name
+		}
 		fmt.Printf("%-35s %.4gms\n", strings.Repeat("  ", e.IndentLevel)+e.Label,
 			avgDuration)
 		results.Add(&benchmarking.TestCaseResults{
