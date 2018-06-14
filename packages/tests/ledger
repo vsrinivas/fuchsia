@@ -2,7 +2,7 @@
     "imports": [
         "peridot/packages/prod/ledger"
     ],
-    "packages": {
-        "ledger_tests": "//peridot/bin/ledger:ledger_tests"
-    }
+    "packages": [
+        "//peridot/bin/ledger:ledger_tests"
+    ]
 }

@@ -1,5 +1,5 @@
 {
-    "packages": {
-        "leveldb_tests": "//third_party/leveldb:leveldb_tests"
-    }
+    "packages": [
+        "//third_party/leveldb:leveldb_tests"
+    ]
 }

@@ -2,9 +2,9 @@
     "imports": [
         "garnet/packages/prod/cobalt_client"
     ],
-    "packages": {
-        "cloud_provider_firebase": "//peridot/bin/cloud_provider_firebase",
-        "cloud_provider_firestore": "//peridot/bin/cloud_provider_firestore",
-        "ledger": "//peridot/bin/ledger"
-    }
+    "packages": [
+        "//peridot/bin/cloud_provider_firebase",
+        "//peridot/bin/cloud_provider_firestore",
+        "//peridot/bin/ledger"
+    ]
 }

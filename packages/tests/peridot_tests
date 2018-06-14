@@ -1,5 +1,5 @@
 {
-    "packages": {
-        "peridot_tests": "//peridot:peridot_tests"
-    }
+    "packages": [
+        "//peridot:peridot_tests"
+    ]
 }

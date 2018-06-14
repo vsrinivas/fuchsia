@@ -1,12 +1,12 @@
 {
-    "packages": {
-        "action_log": "//peridot/bin/action_log",
-        "context_engine": "//peridot/bin/context_engine",
-        "clipboard_agent": "//peridot/bin/agents/clipboard:clipboard_agent",
-        "maxwell": "//peridot/bin/maxwell",
-        "module_resolver": "//peridot/bin/module_resolver",
-        "module_package_indexer": "//peridot/bin/module_resolver/module_package_indexer",
-        "story_info": "//peridot/bin/acquirers/story_info",
-        "suggestion_engine": "//peridot/bin/suggestion_engine"
-    }
+    "packages": [
+        "//peridot/bin/action_log",
+        "//peridot/bin/context_engine",
+        "//peridot/bin/agents/clipboard:clipboard_agent",
+        "//peridot/bin/maxwell",
+        "//peridot/bin/module_resolver",
+        "//peridot/bin/module_resolver/module_package_indexer",
+        "//peridot/bin/acquirers/story_info",
+        "//peridot/bin/suggestion_engine"
+    ]
 }
