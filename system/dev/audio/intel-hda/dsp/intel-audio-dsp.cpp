@@ -531,7 +531,8 @@ zx_status_t IntelAudioDsp::LoadFirmware() {
     // Wait for firwmare boot
     st = ipc_.WaitForFirmwareReady(INTEL_ADSP_BASE_FW_INIT_TIMEOUT_NSEC);
     if (st != ZX_OK) {
-        LOG(ERROR, "Error waiting for DSP base firmware entry (err %d)\n", st);
+        LOG(ERROR, "Error waiting for DSP base firmware entry (err %d, fw_status = 0x%08x)\n",
+                   st, REG_RD(&fw_regs()->fw_status));
         return st;
     }
     st = WaitCondition(INTEL_ADSP_BASE_FW_INIT_TIMEOUT_NSEC,
