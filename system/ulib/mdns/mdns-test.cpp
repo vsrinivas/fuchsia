@@ -24,8 +24,8 @@ struct test_data {
         strcpy(rr.name, kRrName);
         rr.type = RR_TYPE_AAAA;
         rr.clazz = RR_CLASS_IN;
-        rr.rdata = (uint8_t*)kRdata;
-        rr.rdlength = sizeof(rr.rdata) / sizeof(uint8_t);
+        rr.rdata = const_cast<uint8_t*>(kRdata);
+        rr.rdlength = sizeof(kRdata);
         rr.ttl = 42;
         return true;
     }
