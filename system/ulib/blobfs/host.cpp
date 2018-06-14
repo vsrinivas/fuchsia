@@ -481,18 +481,66 @@ blobfs_inode_t* Blobfs::GetNode(size_t index) {
 zx_status_t Blobfs::VerifyBlob(size_t node_index) {
     blobfs_inode_t inode = *GetNode(node_index);
 
-    fbl::AllocChecker ac;
-    fbl::unique_ptr<uint8_t[]> data(new (&ac) uint8_t[inode.num_blocks * kBlobfsBlockSize]);
-    if (!ac.check()) {
-        return ZX_ERR_NO_MEMORY;
+    // Determine size for (uncompressed) data buffer.
+    uint64_t data_blocks = BlobDataBlocks(inode);
+    uint64_t merkle_blocks = MerkleTreeBlocks(inode);
+    uint64_t num_blocks = data_blocks + merkle_blocks;
+    size_t target_size;
+    if (mul_overflow(num_blocks, kBlobfsBlockSize, &target_size)) {
+        fprintf(stderr, "Multiplication overflow");
+        return ZX_ERR_OUT_OF_RANGE;
     }
 
-    for (unsigned i = 0; i < inode.num_blocks; i++) {
-        ReadBlock(data_start_block_ + inode.start_block + i);
-        memcpy(data.get() + (i * kBlobfsBlockSize), cache_.blk, kBlobfsBlockSize);
+    // Create data buffer.
+    fbl::unique_ptr<uint8_t[]> data(new uint8_t[target_size]);
+
+    if (inode.flags & kBlobFlagLZ4Compressed) {
+        // Read in uncompressed merkle blocks.
+        for (unsigned i = 0; i < merkle_blocks; i++) {
+            ReadBlock(data_start_block_ + inode.start_block + i);
+            memcpy(data.get() + (i * kBlobfsBlockSize), cache_.blk, kBlobfsBlockSize);
+        }
+
+        // Determine size for compressed data buffer.
+        size_t compressed_blocks = (inode.num_blocks - merkle_blocks);
+        size_t compressed_size;
+        if (mul_overflow(compressed_blocks, kBlobfsBlockSize, &compressed_size)) {
+            fprintf(stderr, "Multiplication overflow");
+            return ZX_ERR_OUT_OF_RANGE;
+        }
+
+        // Create compressed data buffer.
+        fbl::unique_ptr<uint8_t[]> compressed_data(new uint8_t[compressed_size]);
+
+        // Read in all compressed blob data.
+        for (unsigned i = 0; i < compressed_blocks; i++) {
+            ReadBlock(data_start_block_ + inode.start_block + i + merkle_blocks);
+            memcpy(compressed_data.get() + (i * kBlobfsBlockSize), cache_.blk, kBlobfsBlockSize);
+        }
+
+        // Decompress the compressed data into the target buffer.
+        zx_status_t status;
+        target_size = inode.blob_size;
+        uint8_t* data_ptr = data.get() + (merkle_blocks * kBlobfsBlockSize);
+        if ((status = Decompressor::Decompress(data_ptr, &target_size, compressed_data.get(),
+                                               &compressed_size)) != ZX_OK) {
+            return status;
+        }
+        if (target_size != inode.blob_size) {
+            fprintf(stderr, "Failed to fully decompress blob (%zu of %zu expected)\n",
+                    target_size, inode.blob_size);
+            return ZX_ERR_IO_DATA_INTEGRITY;
+        }
+    } else {
+        // For uncompressed blobs, read entire blob straight into the data buffer.
+        for (unsigned i = 0; i < inode.num_blocks; i++) {
+            ReadBlock(data_start_block_ + inode.start_block + i);
+            memcpy(data.get() + (i * kBlobfsBlockSize), cache_.blk, kBlobfsBlockSize);
+        }
     }
 
-    uint8_t* data_ptr = data.get() + (MerkleTreeBlocks(inode) * kBlobfsBlockSize);
+    // Verify the contents of the blob.
+    uint8_t* data_ptr = data.get() + (merkle_blocks * kBlobfsBlockSize);
     Digest digest(&inode.merkle_root_hash[0]);
     return MerkleTree::Verify(data_ptr, inode.blob_size, data.get(),
                               MerkleTree::GetTreeLength(inode.blob_size), 0,
