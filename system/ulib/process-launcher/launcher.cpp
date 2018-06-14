@@ -179,6 +179,7 @@ zx_status_t LauncherImpl::CreateWithoutStarting(fidl::MessageBuffer* buffer, fid
         result->data->sp = data.sp;
         result->data->bootstrap = data.bootstrap;
         result->data->vdso_base = data.vdso_base;
+        result->data->base = data.base;
     } else if (error_msg) {
         uint32_t len = static_cast<uint32_t>(strlen(error_msg));
         result->error_message.size = len;

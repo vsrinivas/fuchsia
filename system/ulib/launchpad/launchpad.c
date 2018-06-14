@@ -1221,6 +1221,7 @@ zx_handle_close failed on low address space reservation VMAR");
     result->sp = sp;
     result->bootstrap = bootstrap;
     result->vdso_base = lp->vdso_base;
+    result->base = lp->base;
     return ZX_OK;
 
 cleanup:

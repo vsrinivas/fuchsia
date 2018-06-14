@@ -85,6 +85,11 @@ struct ProcessStartData {
     //
     // Should be passed to |zx_process_start| when starting the process.
     uint64 vdso_base;
+
+    // The base load address of the the ELF file loaded.
+    //
+    // Most often used by debuggers or other tools that inspect the process.
+    uint64 base;
 };
 
 struct CreateWithoutStartingResult {

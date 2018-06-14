@@ -126,6 +126,9 @@ typedef struct launchpad_start_data {
 
     // The base address of the vDSO to pass to the process on startup.
     zx_vaddr_t vdso_base;
+
+    // The base load address of the the ELF file loaded.
+    zx_vaddr_t base;
 } launchpad_start_data_t;
 
 // If none of the launchpad_*() calls against this launchpad have failed,
