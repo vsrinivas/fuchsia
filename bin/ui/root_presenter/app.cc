@@ -213,7 +213,7 @@ void App::InitializeServices() {
     compositor_->SetLayerStack(*layer_stack_.get());
     session_->Present(0, [](fuchsia::images::PresentationInfo info) {});
 
-    scenic_->GetOwnershipEvent([this](zx::event event) {
+    scenic_->GetDisplayOwnershipEvent([this](zx::event event) {
       input_reader_.SetOwnershipEvent(std::move(event));
     });
   }

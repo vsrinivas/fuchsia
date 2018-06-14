@@ -97,12 +97,12 @@ void Scenic::TakeScreenshot(
   delegate->TakeScreenshot(std::move(callback));
 }
 
-void Scenic::GetOwnershipEvent(
-    fuchsia::ui::scenic::Scenic::GetOwnershipEventCallback callback) {
+void Scenic::GetDisplayOwnershipEvent(
+    fuchsia::ui::scenic::Scenic::GetDisplayOwnershipEventCallback callback) {
   FXL_DCHECK(systems_[System::kGfx]);
   TempSystemDelegate* delegate =
       reinterpret_cast<TempSystemDelegate*>(systems_[System::kGfx].get());
-  delegate->GetOwnershipEvent(std::move(callback));
+  delegate->GetDisplayOwnershipEvent(std::move(callback));
 }
 
 }  // namespace scenic

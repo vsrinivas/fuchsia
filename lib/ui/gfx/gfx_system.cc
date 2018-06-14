@@ -169,8 +169,8 @@ void GfxSystem::TakeScreenshot(
   screenshotter.TakeScreenshot(std::move(callback));
 }
 
-void GfxSystem::GetOwnershipEventImmediately(
-    fuchsia::ui::scenic::Scenic::GetOwnershipEventCallback callback) {
+void GfxSystem::GetDisplayOwnershipEventImmediately(
+    fuchsia::ui::scenic::Scenic::GetDisplayOwnershipEventCallback callback) {
   FXL_DCHECK(initialized_);
   Display* display = engine_->display_manager()->default_display();
   FXL_CHECK(display) << "There must be a default display.";
@@ -185,13 +185,13 @@ void GfxSystem::GetOwnershipEventImmediately(
   callback(std::move(dup));
 }
 
-void GfxSystem::GetOwnershipEvent(
-    fuchsia::ui::scenic::Scenic::GetOwnershipEventCallback callback) {
+void GfxSystem::GetDisplayOwnershipEvent(
+    fuchsia::ui::scenic::Scenic::GetDisplayOwnershipEventCallback callback) {
   if (initialized_) {
-    GetOwnershipEventImmediately(std::move(callback));
+    GetDisplayOwnershipEventImmediately(std::move(callback));
   } else {
     run_after_initialized_.push_back(
-        [this, callback = std::move(callback)]() mutable { GetOwnershipEventImmediately(std::move(callback)); });
+        [this, callback = std::move(callback)]() mutable { GetDisplayOwnershipEventImmediately(std::move(callback)); });
   }
 }
 

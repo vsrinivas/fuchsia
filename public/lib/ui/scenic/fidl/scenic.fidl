@@ -24,7 +24,7 @@ interface Scenic {
   2: GetDisplayInfo() -> (fuchsia.ui.gfx.DisplayInfo info);
   // Gets an event signaled with displayOwnedSignal or displayNotOwnedSignal
   // when display ownership changes.
-  3: GetOwnershipEvent() -> (handle<event> ownership_event);
+  3: GetDisplayOwnershipEvent() -> (handle<event> ownership_event);
 
   // Take a screenshot and return the data in |img_data|. |img_data| will
   // not contain BGRA data if |success| is false.

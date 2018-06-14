@@ -37,7 +37,7 @@ class Display {
   uint32_t height_in_px() { return height_in_px_; };
 
   // Event signaled by DisplayManager when ownership of the display
-  // changes. This event backs Scenic's GetOwnershipEvent API.
+  // changes. This event backs Scenic's GetDisplayOwnershipEvent API.
   const zx::event& ownership_event() { return ownership_event_; };
 
  private:
