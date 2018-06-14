@@ -606,6 +606,11 @@ No values for `target_cpu = "arm64"`.
 }]`
 
 
+### use_boringssl_for_http_transport_socket
+
+**Default value:** `true`
+
+
 ### use_ccache
  Set to true to enable compiling with ccache
 
