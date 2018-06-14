@@ -21,14 +21,17 @@ typedef struct {
 ## DESCRIPTION
 
 **object_wait_many**() is a blocking syscall which causes the caller to
-wait until at least one of the specified signals is pending on one of
-the specified *items*, or until *deadline* passes, whichever comes first.
+wait until either the *deadline* passes or at least one of the specified
+signals is asserted by the object to which the associated handle refers.
+If an object is already asserting at least one of the specified signals,
+the wait ends immediately.
 
 The caller must provide *count* zx_wait_item_ts in the *items* array,
 containing the handle and signals bitmask to wait for for each item.
 
 The *deadline* parameter specifies a deadline with respect to
-**ZX_CLOCK_MONOTONIC**.  **ZX_TIME_INFINITE** is a special value meaning wait forever.
+**ZX_CLOCK_MONOTONIC**.  **ZX_TIME_INFINITE** is a special value meaning wait
+forever.
 
 Upon return, the *pending* field of *items* is filled with bitmaps indicating
 which signals are pending for each item.
