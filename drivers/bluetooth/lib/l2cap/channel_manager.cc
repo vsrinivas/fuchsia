@@ -130,6 +130,8 @@ internal::LogicalLink* ChannelManager::RegisterInternal(
     hci::Connection::Role role) {
   FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
 
+  // TODO(armansito): Return nullptr instead of asserting. Callers shouldn't
+  // assume this will succeed.
   auto iter = ll_map_.find(handle);
   FXL_DCHECK(iter == ll_map_.end()) << fxl::StringPrintf(
       "l2cap: Connection handle re-used! (handle=0x%04x)", handle);

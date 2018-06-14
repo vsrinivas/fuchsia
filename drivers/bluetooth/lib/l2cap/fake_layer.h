@@ -37,20 +37,16 @@ class FakeLayer final : public L2CAP {
   }
 
  protected:
-  void RegisterACL(hci::ConnectionHandle handle,
-                  hci::Connection::Role role,
-                  LinkErrorCallback link_error_callback,
-                  async_t* dispatcher) override;
-  void RegisterLE(hci::ConnectionHandle handle,
-                  hci::Connection::Role role,
-                  LEConnectionParameterUpdateCallback conn_param_callback,
-                  LinkErrorCallback link_error_callback,
-                  async_t* dispatcher) override;
-  void Unregister(hci::ConnectionHandle handle) override;
-  void OpenFixedChannel(hci::ConnectionHandle handle,
-                        ChannelId id,
-                        ChannelCallback callback,
+  void AddACLConnection(hci::ConnectionHandle handle,
+                        hci::Connection::Role role,
+                        LinkErrorCallback link_error_callback,
                         async_t* dispatcher) override;
+  void AddLEConnection(hci::ConnectionHandle handle, hci::Connection::Role role,
+                       LEConnectionParameterUpdateCallback conn_param_callback,
+                       LinkErrorCallback link_error_callback,
+                       AddLEConnectionCallback channel_callback,
+                       async_t* dispatcher) override;
+  void RemoveConnection(hci::ConnectionHandle handle) override;
 
  private:
   friend class fbl::RefPtr<FakeLayer>;
@@ -76,6 +72,7 @@ class FakeLayer final : public L2CAP {
                              hci::Connection::LinkType link_type,
                              LinkErrorCallback link_error_callback,
                              async_t* dispatcher);
+  fbl::RefPtr<Channel> OpenFakeChannel(LinkData* link, ChannelId id);
 
   bool initialized_ = false;
   std::unordered_map<hci::ConnectionHandle, LinkData> links_;

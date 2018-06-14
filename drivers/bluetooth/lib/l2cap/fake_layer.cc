@@ -34,10 +34,10 @@ void FakeLayer::TriggerLEConnectionParameterUpdate(
                   [params, cb = link_data.le_conn_param_cb.share()] { cb(params); });
 }
 
-void FakeLayer::RegisterACL(hci::ConnectionHandle handle,
-                            hci::Connection::Role role,
-                            LinkErrorCallback link_error_cb,
-                            async_t* dispatcher) {
+void FakeLayer::AddACLConnection(hci::ConnectionHandle handle,
+                                 hci::Connection::Role role,
+                                 LinkErrorCallback link_error_cb,
+                                 async_t* dispatcher) {
   if (!initialized_)
     return;
 
@@ -45,11 +45,11 @@ void FakeLayer::RegisterACL(hci::ConnectionHandle handle,
                    std::move(link_error_cb), dispatcher);
 }
 
-void FakeLayer::RegisterLE(hci::ConnectionHandle handle,
-                           hci::Connection::Role role,
-                           LEConnectionParameterUpdateCallback conn_param_cb,
-                           LinkErrorCallback link_error_cb,
-                           async_t* dispatcher) {
+void FakeLayer::AddLEConnection(
+    hci::ConnectionHandle handle, hci::Connection::Role role,
+    LEConnectionParameterUpdateCallback conn_param_cb,
+    LinkErrorCallback link_error_cb, AddLEConnectionCallback channel_callback,
+    async_t* dispatcher) {
   if (!initialized_)
     return;
 
@@ -57,32 +57,29 @@ void FakeLayer::RegisterLE(hci::ConnectionHandle handle,
                                     hci::Connection::LinkType::kLE,
                                     std::move(link_error_cb), dispatcher);
   data->le_conn_param_cb = std::move(conn_param_cb);
+
+  // Open the ATT and SMP fixed channels.
+  auto att = OpenFakeChannel(data, kATTChannelId);
+  auto smp = OpenFakeChannel(data, kLESMPChannelId);
+  async::PostTask(dispatcher, [att = std::move(att), smp = std::move(smp),
+                               cb = std::move(channel_callback)]() mutable {
+    cb(std::move(att), std::move(smp));
+  });
 }
 
-void FakeLayer::Unregister(hci::ConnectionHandle handle) {
+void FakeLayer::RemoveConnection(hci::ConnectionHandle handle) {
   links_.erase(handle);
 }
 
-void FakeLayer::OpenFixedChannel(hci::ConnectionHandle handle,
-                                 ChannelId id,
-                                 ChannelCallback callback,
-                                 async_t* dispatcher) {
-  // TODO(armansito): Add a failure mechanism for testing.
-  FXL_DCHECK(initialized_);
-  auto iter = links_.find(handle);
-  if (iter == links_.end()) {
-    FXL_VLOG(1) << "l2cap: Cannot open fake channel on unknown link";
-    return;
+fbl::RefPtr<Channel> FakeLayer::OpenFakeChannel(LinkData* link, ChannelId id) {
+  auto chan = fbl::AdoptRef(new FakeChannel(id, link->handle, link->type));
+  chan->SetLinkErrorCallback(link->link_error_cb.share(), link->dispatcher);
+
+  if (chan_cb_) {
+    chan_cb_(chan);
   }
 
-  auto& link = iter->second;
-  auto chan = fbl::AdoptRef(new FakeChannel(id, handle, iter->second.type));
-  chan->SetLinkErrorCallback(link.link_error_cb.share(), link.dispatcher);
-
-  async::PostTask(dispatcher, [chan, cb = std::move(callback)] { cb(chan); });
-
-  if (chan_cb_)
-    chan_cb_(chan);
+  return chan;
 }
 
 FakeLayer::LinkData* FakeLayer::RegisterInternal(

@@ -43,10 +43,10 @@ class Impl final : public L2CAP, public common::TaskDomain<Impl, L2CAP> {
     chanmgr_ = nullptr;
   }
 
-  void RegisterACL(hci::ConnectionHandle handle,
-                   hci::Connection::Role role,
-                   LinkErrorCallback link_error_callback,
-                   async_t* dispatcher) override {
+  void AddACLConnection(hci::ConnectionHandle handle,
+                        hci::Connection::Role role,
+                        LinkErrorCallback link_error_callback,
+                        async_t* dispatcher) override {
     PostMessage([this, handle, role, lec = std::move(link_error_callback),
                  dispatcher]() mutable {
       if (chanmgr_) {
@@ -55,42 +55,36 @@ class Impl final : public L2CAP, public common::TaskDomain<Impl, L2CAP> {
     });
   }
 
-  void RegisterLE(hci::ConnectionHandle handle,
-                  hci::Connection::Role role,
-                  LEConnectionParameterUpdateCallback conn_param_callback,
-                  LinkErrorCallback link_error_callback,
-                  async_t* dispatcher) override {
-    PostMessage([this, handle, role, cpc = std::move(conn_param_callback),
-                 lec = std::move(link_error_callback), dispatcher]() mutable {
+  void AddLEConnection(hci::ConnectionHandle handle, hci::Connection::Role role,
+                       LEConnectionParameterUpdateCallback conn_param_callback,
+                       LinkErrorCallback link_error_callback,
+                       AddLEConnectionCallback channel_callback,
+                       async_t* dispatcher) override {
+    PostMessage([this, handle, role, cp_cb = std::move(conn_param_callback),
+                 link_err_cb = std::move(link_error_callback),
+                 chan_cb = std::move(channel_callback), dispatcher]() mutable {
       if (chanmgr_) {
-        chanmgr_->RegisterLE(handle, role, std::move(cpc), std::move(lec),
-                             dispatcher);
+        chanmgr_->RegisterLE(handle, role, std::move(cp_cb),
+                             std::move(link_err_cb), dispatcher);
+
+        auto att = chanmgr_->OpenFixedChannel(handle, kATTChannelId);
+        auto smp = chanmgr_->OpenFixedChannel(handle, kLESMPChannelId);
+        FXL_DCHECK(att);
+        FXL_DCHECK(smp);
+        async::PostTask(dispatcher, [att = std::move(att), smp = std::move(smp),
+                                     cb = std::move(chan_cb)]() mutable {
+          cb(std::move(att), std::move(smp));
+        });
       }
     });
   }
 
-  void Unregister(hci::ConnectionHandle handle) override {
+  void RemoveConnection(hci::ConnectionHandle handle) override {
     PostMessage([this, handle] {
       if (chanmgr_) {
         chanmgr_->Unregister(handle);
       }
     });
-  }
-
-  void OpenFixedChannel(hci::ConnectionHandle handle,
-                        ChannelId id,
-                        ChannelCallback callback,
-                        async_t* dispatcher) override {
-    FXL_DCHECK(dispatcher);
-
-    PostMessage(
-        [this, handle, id, cb = std::move(callback), dispatcher]() mutable {
-          if (!chanmgr_)
-            return;
-
-          auto chan = chanmgr_->OpenFixedChannel(handle, id);
-          async::PostTask(dispatcher, [chan, cb = std::move(cb)] { cb(chan); });
-        });
   }
 
  private:
