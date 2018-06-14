@@ -68,10 +68,6 @@ void* BlockAllocator::AllocateFromBlock(BlockList::iterator it, size_t size,
   uint8_t* end_of_next = next + size;
   if (end_of_next <= block.end) {
     // Enough free space for allocation.
-    FXL_LOG(INFO) << "*** size: " << size
-                  << "  current: " << uintptr_t(block.current_ptr)
-                  << "  next: " << uintptr_t(next)
-                  << "  end_of_next: " << uintptr_t(end_of_next);
     block.current_ptr = end_of_next;
     return next;
   }
