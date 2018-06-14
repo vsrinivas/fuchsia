@@ -273,7 +273,6 @@ template("rustc_artifact") {
         # These libraries are required by libstd.
         "//zircon/public/lib/backtrace",
         "//zircon/public/lib/fdio",
-        "//zircon/public/lib/launchpad",
       ]
       args += [
         "--clang_prefix",
