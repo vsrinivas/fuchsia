@@ -62,7 +62,8 @@ library name other than the last are also referred to as namespaces.
 
 - All Fuchsia code should be in the `fuchsia` top-level namespace. For
   example, `fuchsia.ui`.
-- Each component of the name is in `lowerCamelCase`.
+- Each component of the name is in lowercase, and special characters such as
+  underscore are disallowed.
 
 ### Interfaces and Methods
 - Interface declarations, like all top level type declarations, should
