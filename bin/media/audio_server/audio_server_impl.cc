@@ -146,6 +146,11 @@ void AudioServerImpl::NotifyGainMuteChanged() {
   // TODO(dalesat): Save the gain/mute values.
 }
 
+void AudioServerImpl::SetRoutingPolicy(
+    fuchsia::media::AudioOutputRoutingPolicy policy) {
+  device_manager_.SetRoutingPolicy(policy);
+}
+
 void AudioServerImpl::DoPacketCleanup() {
   // In order to minimize the time we spend in the lock we obtain the lock, swap
   // the contents of the cleanup queue with a local queue and clear the sched

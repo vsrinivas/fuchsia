@@ -35,7 +35,25 @@ interface Audio {
   // Provides current system gain/mute values.
   5: -> SystemGainMuteChanged(float32 gain_db, bool muted);
 
+  6: SetRoutingPolicy(AudioOutputRoutingPolicy policy);
+
   // DEPRECATED
   9: CreateRenderer(request<AudioRenderer> audio_renderer,
                     request<MediaRenderer> media_renderer);
+
+};
+
+// A placeholder for various types of simple routing policies.  This should be
+// replaced when routing policy moves to a more centralized policy manager.
+enum AudioOutputRoutingPolicy {
+  // AudioRenderers are always connected to all audio outputs which currently
+  // in the plugged state (eg; have a connector attached to them)
+  kAllPluggedOutputs = 0;
+
+  // AudioRenderers are only connected to the output stream which most
+  // recently entered the plugged state.  Renderers move around from output to
+  // output as streams are published/unpublished and become plugged/unplugged.
+  //
+  // This is the initial setting for audio output routing.
+  kLastPluggedOutput = 1;
 };

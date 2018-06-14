@@ -120,7 +120,7 @@ test("tests") {
 
   sources = [
     "test/audio_renderer2_tests.cc",
-    "test/main.cc",
+    "test/audio_server_tests.cc",
   ]
 
   deps = [

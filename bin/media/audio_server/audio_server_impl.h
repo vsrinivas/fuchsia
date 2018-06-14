@@ -46,6 +46,8 @@ class AudioServerImpl : public fuchsia::media::Audio {
   void SetSystemGain(float db_gain) final;
   void SetSystemMute(bool muted) final;
 
+  void SetRoutingPolicy(fuchsia::media::AudioOutputRoutingPolicy policy) final;
+
   // Called (indirectly) by AudioOutputs to schedule the callback for a
   // packet was queued to an AudioRenderer.
   //

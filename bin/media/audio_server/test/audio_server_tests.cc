@@ -108,6 +108,19 @@ TEST_F(AudioServerTest, CreateCapturer) {
   EXPECT_TRUE(audio_capturer_);
 }
 
+// Test setting (and re-setting) the audio output routing policy.
+TEST_F(AudioServerTest, SetRoutingPolicy) {
+  audio_->SetRoutingPolicy(
+      fuchsia::media::AudioOutputRoutingPolicy::kAllPluggedOutputs);
+  // Setting policy again should have no effect.
+  audio_->SetRoutingPolicy(
+      fuchsia::media::AudioOutputRoutingPolicy::kAllPluggedOutputs);
+
+  // This is a persistent systemwide setting. Leave system in the default state!
+  audio_->SetRoutingPolicy(
+      fuchsia::media::AudioOutputRoutingPolicy::kLastPluggedOutput);
+}
+
 //
 // Tests of the synchronous AudioSync interface.
 //
@@ -187,9 +200,23 @@ TEST_F(AudioServerSyncTest, CreateCapturer) {
   EXPECT_TRUE(audio_capturer_);
 }
 
-// TODO(mpuryear): If there is ever additional functionality associated with
-// main (such as parameter parsing), relocate all of the Audio and
-// AudioSync tests to a separate audio_server_tests.cc file.
+// Test the setting of audio output routing policy.
+TEST_F(AudioServerSyncTest, SetRoutingPolicy) {
+  // Validate Audio can set last-plugged routing policy synchronously.
+  EXPECT_TRUE(audio_->SetRoutingPolicy(
+      fuchsia::media::AudioOutputRoutingPolicy::kLastPluggedOutput));
+
+  // Validate Audio can set all-outputs routing policy synchronously.
+  EXPECT_TRUE(audio_->SetRoutingPolicy(
+      fuchsia::media::AudioOutputRoutingPolicy::kAllPluggedOutputs));
+
+  // This is a persistent systemwide setting. Leave system in the default state!
+  EXPECT_TRUE(audio_->SetRoutingPolicy(
+      fuchsia::media::AudioOutputRoutingPolicy::kLastPluggedOutput));
+}
+
+// TODO(mpuryear): If we ever add functionality such as parameter parsing,
+// relocate the below along with it, to a separate main.cc file.
 //
 int main(int argc, char** argv) {
   testing::InitGoogleTest(&argc, argv);

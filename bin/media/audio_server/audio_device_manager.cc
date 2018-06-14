@@ -158,6 +158,7 @@ void AudioDeviceManager::SetMasterGain(float db_gain) {
 void AudioDeviceManager::SelectOutputsForRenderer(AudioRendererImpl* renderer) {
   FXL_DCHECK(renderer);
   FXL_DCHECK(renderer->format_info_valid());
+  FXL_DCHECK(ValidateRoutingPolicy(routing_policy_));
 
   // TODO(johngro): Add some way to assert that we are executing on the main
   // message loop thread.
@@ -167,7 +168,7 @@ void AudioDeviceManager::SelectOutputsForRenderer(AudioRendererImpl* renderer) {
   LinkOutputToRenderer(throttle_output_.get(), renderer);
 
   switch (routing_policy_) {
-    case RoutingPolicy::ALL_PLUGGED_OUTPUTS: {
+    case fuchsia::media::AudioOutputRoutingPolicy::kAllPluggedOutputs: {
       for (auto& obj : devices_) {
         FXL_DCHECK(obj.is_input() || obj.is_output());
         auto device = static_cast<AudioDevice*>(&obj);
@@ -177,7 +178,7 @@ void AudioDeviceManager::SelectOutputsForRenderer(AudioRendererImpl* renderer) {
       }
     } break;
 
-    case RoutingPolicy::LAST_PLUGGED_OUTPUT: {
+    case fuchsia::media::AudioOutputRoutingPolicy::kLastPluggedOutput: {
       fbl::RefPtr<AudioOutput> last_plugged = FindLastPluggedOutput();
       if (last_plugged != nullptr) {
         LinkOutputToRenderer(last_plugged.get(), renderer);
@@ -277,9 +278,73 @@ fbl::RefPtr<AudioDevice> AudioDeviceManager::FindLastPlugged(
   return fbl::WrapRefPtr(best);
 }
 
+// Our policy governing the routing of audio outputs has changed. For the output
+// considered "preferred" (because it was most-recently-added), nothing changes;
+// all other outputs will toggle on or off, depending on the policy chosen.
+void AudioDeviceManager::SetRoutingPolicy(
+    fuchsia::media::AudioOutputRoutingPolicy routing_policy) {
+  if (!ValidateRoutingPolicy(routing_policy)) {
+    FXL_LOG(ERROR) << "Out-of-range RoutingPolicy(" << routing_policy << ")";
+    // TODO(mpuryear) Once AudioServer has a way to know which connection made
+    // this request, terminate that connection now rather than doing nothing.
+    return;
+  }
+
+  if (routing_policy == routing_policy_) {
+    return;
+  }
+
+  routing_policy_ = routing_policy;
+  fbl::RefPtr<AudioOutput> last_plugged_output = FindLastPluggedOutput();
+
+  // Iterate thru all of our audio devices -- only a subset are affected.
+  for (auto& dev_obj : devices_) {
+    // If device is an input, it is unaffected by this change in output-routing.
+    if (dev_obj.is_input()) {
+      continue;
+    }
+
+    // If (output) device is not plugged-in, it is unaffected by output-routing.
+    auto output = static_cast<AudioOutput*>(&dev_obj);
+    if (!output->plugged()) {
+      continue;
+    }
+
+    // If device is most-recently plugged, it is unaffected by this change in
+    // policy (either way, it will continue to be attached to all renderers).
+    FXL_DCHECK(output != throttle_output_.get());
+    if (output == last_plugged_output.get()) {
+      continue;
+    }
+
+    // We've excluded inputs, unplugged outputs and the most-recently-plugged
+    // output. For each remaining output (based on the new policy), we ...
+    if (routing_policy ==
+        fuchsia::media::AudioOutputRoutingPolicy::kLastPluggedOutput) {
+      // ...disconnect it (i.e. link renderers to Last-Plugged only), or...
+      dev_obj.UnlinkSources();
+    } else {
+      // ...attach it (i.e. link renderers to All Outputs).
+      for (auto& obj : renderers_) {
+        FXL_DCHECK(obj.is_renderer());
+        auto renderer = static_cast<AudioRendererImpl*>(&obj);
+        LinkOutputToRenderer(output, renderer);
+      }
+    }
+  }
+
+  // After changing routing, determine new minimum clock lead time requirements.
+  for (auto& obj : renderers_) {
+    FXL_DCHECK(obj.is_renderer());
+    auto renderer = static_cast<AudioRendererImpl*>(&obj);
+    renderer->RecomputeMinClockLeadTime();
+  }
+}
+
 void AudioDeviceManager::OnDeviceUnplugged(
     const fbl::RefPtr<AudioDevice>& device, zx_time_t plug_time) {
   FXL_DCHECK(device);
+  FXL_DCHECK(ValidateRoutingPolicy(routing_policy_));
 
   // Start by checking to see if this device was the last plugged device (before
   // we update the plug state).
@@ -310,7 +375,8 @@ void AudioDeviceManager::OnDeviceUnplugged(
 
       fbl::RefPtr<AudioOutput> replacement = FindLastPluggedOutput();
       if (replacement) {
-        if (routing_policy_ == RoutingPolicy::LAST_PLUGGED_OUTPUT) {
+        if (routing_policy_ ==
+            fuchsia::media::AudioOutputRoutingPolicy::kLastPluggedOutput) {
           for (auto& obj : renderers_) {
             FXL_DCHECK(obj.is_renderer());
             auto renderer = static_cast<AudioRendererImpl*>(&obj);
@@ -367,10 +433,11 @@ void AudioDeviceManager::OnDevicePlugged(const fbl::RefPtr<AudioDevice>& device,
     fbl::RefPtr<AudioOutput> last_plugged = FindLastPluggedOutput();
     auto output = static_cast<AudioOutput*>(device.get());
 
-    FXL_DCHECK((routing_policy_ == RoutingPolicy::LAST_PLUGGED_OUTPUT) ||
-               (routing_policy_ == RoutingPolicy::ALL_PLUGGED_OUTPUTS));
+    FXL_DCHECK(ValidateRoutingPolicy(routing_policy_));
 
-    bool lp_policy = (routing_policy_ == RoutingPolicy::LAST_PLUGGED_OUTPUT);
+    bool lp_policy =
+        (routing_policy_ ==
+         fuchsia::media::AudioOutputRoutingPolicy::kLastPluggedOutput);
     bool is_lp = (output == last_plugged.get());
 
     if (is_lp && lp_policy) {

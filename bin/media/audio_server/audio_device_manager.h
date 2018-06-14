@@ -87,24 +87,27 @@ class AudioDeviceManager {
   void HandlePlugStateChange(const fbl::RefPtr<AudioDevice>& device,
                              bool plugged, zx_time_t plug_time);
 
+  void SetRoutingPolicy(fuchsia::media::AudioOutputRoutingPolicy policy);
+
+  static inline bool ValidateRoutingPolicy(
+      fuchsia::media::AudioOutputRoutingPolicy policy) {
+    switch (policy) {
+      case fuchsia::media::AudioOutputRoutingPolicy::kLastPluggedOutput:
+      case fuchsia::media::AudioOutputRoutingPolicy::kAllPluggedOutputs:
+        return true;
+        // Note: no default: handler here.  If someone adds a new policy to the
+        // enum but forgets to update this code, we want a Build Break, to
+        // notify us that we need to handle the new policy.
+    }
+
+    return false;
+  }
+
   // Master gain control.  Only safe to access via the main message loop thread.
   void SetMasterGain(float db_gain);
   float master_gain() const { return master_gain_; }
 
  private:
-  // A placeholder for various types of simple routing policies.  This should be
-  // replaced when routing policy moves to a more centralized policy manager.
-  enum class RoutingPolicy {
-    // AudioRenderers are always connected to all audio outputs which currently
-    // in the plugged state (eg; have a connector attached to them)
-    ALL_PLUGGED_OUTPUTS,
-
-    // AudioRenderers are only connected to the output stream which most
-    // recently entered the plugged state.  Renderers move around from output to
-    // output as streams are published/unpublished and become plugged/unplugged.
-    LAST_PLUGGED_OUTPUT,
-  };
-
   // Find the last plugged input or output (excluding the throttle_output) in
   // the system.  If allow_unplugged is true, the most recently unplugged
   // input/output will be returned if no plugged outputs can be found.
@@ -159,7 +162,8 @@ class AudioDeviceManager {
   // gain on a per-output basis.
   float master_gain_ = -20.0;
 
-  RoutingPolicy routing_policy_ = RoutingPolicy::LAST_PLUGGED_OUTPUT;
+  fuchsia::media::AudioOutputRoutingPolicy routing_policy_ =
+      fuchsia::media::AudioOutputRoutingPolicy::kLastPluggedOutput;
 };
 
 }  // namespace audio
