@@ -113,7 +113,6 @@ fidl("fidl_internal") {
   cpp_legacy_callbacks = true
 
   sources = [
-    "story/fidl/link_change.fidl",
     "story/fidl/story_data.fidl",
     "user/fidl/user_runner.fidl",
   ]

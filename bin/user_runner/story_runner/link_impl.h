@@ -121,21 +121,6 @@ class LinkImpl : PageClient {
   // |PageClient|
   void OnPageConflict(Conflict* conflict) override;
 
-  // Applies the given |changes| to the current document. The current list of
-  // pending operations is merged into the change stream. Implemented in
-  // incremental_link.cc.
-  void Replay(fidl::VectorPtr<fuchsia::modular::internal::LinkChange> changes);
-
-  // Applies a single LinkChange. Implemented in incremental_link.cc.
-  bool ApplyChange(fuchsia::modular::internal::LinkChange* change);
-
-  // Implemented in incremental_link.cc.
-  void MakeReloadCall(std::function<void()> done);
-  void MakeIncrementalWriteCall(fuchsia::modular::internal::LinkChangePtr data,
-                                std::function<void()> done);
-  void MakeIncrementalChangeCall(fuchsia::modular::internal::LinkChangePtr data,
-                                 uint32_t src);
-
   bool ApplySetOp(const CrtJsonPointer& ptr, fidl::StringPtr json);
   bool ApplyUpdateOp(const CrtJsonPointer& ptr, fidl::StringPtr json);
   bool ApplyEraseOp(const CrtJsonPointer& ptr);
@@ -193,22 +178,11 @@ class LinkImpl : PageClient {
   // (through their connection error handler).
   std::function<void()> orphaned_handler_;
 
-  // Ordered key generator for incremental fuchsia::modular::Link values
-  KeyGenerator key_generator_;
-
-  // For incremental links: Track changes that have been saved to the Ledger
-  // but not confirmed
-  std::vector<fuchsia::modular::internal::LinkChange> pending_ops_;
-
-  // For non-incremental links: Track what writes we have made here. We use
-  // these to ignore Ledger notifications about changes we ourselves made.
+  // Track what writes we have made here. We use these to ignore Ledger
+  // notifications about changes we ourselves made.
   //
   // Map of: ledger key -> ledger value.
   std::vector<std::pair<std::string, std::string>> pending_writes_;
-
-  // The latest key that's been applied to this fuchsia::modular::Link. If we
-  // receive an earlier key in OnChange, then replay the history.
-  std::string latest_key_;
 
   OperationQueue operation_queue_;
 
@@ -225,11 +199,6 @@ class LinkImpl : PageClient {
   class GetEntityCall;
   class WatchCall;
   class ChangeCall;
-  // Calls below are for incremental links, which can be found in
-  // incremental_link.cc.
-  class ReloadCall;
-  class IncrementalWriteCall;
-  class IncrementalChangeCall;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(LinkImpl);
 };

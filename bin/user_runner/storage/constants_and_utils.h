@@ -16,9 +16,6 @@
 
 namespace modular {
 
-// If this value is changed, the version in kLinkKeyPrefix must be changed too.
-constexpr bool kEnableIncrementalLinks{false};
-
 // There are four kinds of pages used by the modular runtime:
 //
 // 1. The user root page contains a list of all stories and of all devices.
@@ -56,7 +53,7 @@ constexpr char kTriggerKeyPrefix[] = "Trigger/";
 //
 //    Story page:
 constexpr char kLinkKeyPrefix[] =
-    "fuchsia::modular::Link|3/";  // version 3: disable kEnableIncrementalLinks
+    "fuchsia::modular::Link|3/";  // version 3: no more incremental links
 constexpr char kModuleKeyPrefix[] = "Module/";
 
 // 2. ID values, separated by slashes, to identify the data item under this

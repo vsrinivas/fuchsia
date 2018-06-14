@@ -395,11 +395,6 @@ class LinkImpl::WatchCall : public Operation<> {
   void Run() override {
     FlowToken flow{this};
 
-    // TODO(jimbe): We need to send an initial notification of state until there
-    // is snapshot information that can be used by clients to query the state at
-    // this instant. Otherwise there is no sequence information about total
-    // state versus incremental changes.
-    //
     // TODO(mesch): We should adopt the pattern from ledger to read the value
     // and register a watcher for subsequent changes in the same operation, so
     // that we don't have to send the current value to the watcher.
@@ -414,6 +409,52 @@ class LinkImpl::WatchCall : public Operation<> {
   const uint32_t conn_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(WatchCall);
+};
+
+class LinkImpl::ChangeCall : public Operation<> {
+ public:
+  ChangeCall(LinkImpl* const impl, fidl::StringPtr json)
+      : Operation("LinkImpl::ChangeCall", [] {}), impl_(impl), json_(json) {}
+
+ private:
+  void Run() override {
+    FlowToken flow{this};
+
+    auto change =
+        std::make_pair(MakeLinkKey(impl_->link_path_), std::string(json_));
+    auto it = std::find_if(
+        impl_->pending_writes_.begin(), impl_->pending_writes_.end(),
+        [&change](const std::pair<std::string, std::string>& entry) {
+          return entry == change;
+        });
+    if (it != impl_->pending_writes_.end()) {
+      impl_->pending_writes_.erase(it);
+      return;
+    }
+
+    // NOTE(jimbe) With rapidjson, the opposite check is more expensive, O(n^2),
+    // so we won't do it for now. See case kObjectType in operator==() in
+    // include/rapidjson/document.h.
+    //
+    //  if (doc_.Equals(json)) {
+    //    return;
+    //  }
+    //
+    // Since all json in a link was written by the same serializer, this check
+    // is mostly accurate. This test has false negatives when only order
+    // differs.
+    if (json_ == JsonValueToString(impl_->doc_)) {
+      return;
+    }
+
+    impl_->doc_.Parse(json_);
+    impl_->NotifyWatchers(kOnChangeConnectionId);
+  }
+
+  LinkImpl* const impl_;  // not owned
+  const fidl::StringPtr json_;
+
+  FXL_DISALLOW_COPY_AND_ASSIGN(ChangeCall);
 };
 
 LinkImpl::LinkImpl(LedgerClient* const ledger_client, LedgerPageId page_id,
@@ -431,11 +472,7 @@ LinkImpl::LinkImpl(LedgerClient* const ledger_client, LedgerPageId page_id,
     requests_.clear();
     ready_ = true;
   };
-  if (kEnableIncrementalLinks) {
-    MakeReloadCall(reload_done);
-  } else {
-    operation_queue_.Add(new ReadCall(this, reload_done));
-  }
+  operation_queue_.Add(new ReadCall(this, reload_done));
 }
 
 LinkImpl::~LinkImpl() = default;
@@ -466,18 +503,7 @@ void LinkImpl::Set(fidl::VectorPtr<fidl::StringPtr> path, fidl::StringPtr json,
                    const uint32_t src) {
   // TODO(jimbe, mesch): This method needs a success status, otherwise clients
   // have no way to know they sent bogus data.
-
-  if (kEnableIncrementalLinks) {
-    fuchsia::modular::internal::LinkChangePtr data =
-        fuchsia::modular::internal::LinkChange::New();
-    // Leave data->key null to signify a new entry
-    data->op = fuchsia::modular::internal::LinkChangeOp::SET;
-    data->pointer = std::move(path);
-    data->json = json;
-    MakeIncrementalChangeCall(std::move(data), src);
-  } else {
-    operation_queue_.Add(new SetCall(this, std::move(path), json, src));
-  }
+  operation_queue_.Add(new SetCall(this, std::move(path), json, src));
 }
 
 void LinkImpl::UpdateObject(fidl::VectorPtr<fidl::StringPtr> path,
@@ -485,34 +511,13 @@ void LinkImpl::UpdateObject(fidl::VectorPtr<fidl::StringPtr> path,
   // TODO(jimbe, mesch): This method needs a success status,
   // otherwise clients have no way to know they sent bogus data.
 
-  if (kEnableIncrementalLinks) {
-    fuchsia::modular::internal::LinkChangePtr data =
-        fuchsia::modular::internal::LinkChange::New();
-    // Leave data->key empty to signify a new entry
-    data->op = fuchsia::modular::internal::LinkChangeOp::UPDATE;
-    data->pointer = std::move(path);
-    data->json = json;
-    MakeIncrementalChangeCall(std::move(data), src);
-  } else {
-    operation_queue_.Add(
-        new UpdateObjectCall(this, std::move(path), json, src));
-  }
+  operation_queue_.Add(
+      new UpdateObjectCall(this, std::move(path), json, src));
 }
 
 void LinkImpl::Erase(fidl::VectorPtr<fidl::StringPtr> path,
                      const uint32_t src) {
-  if (kEnableIncrementalLinks) {
-    fuchsia::modular::internal::LinkChangePtr data =
-        fuchsia::modular::internal::LinkChange::New();
-    // Leave data->key empty to signify a new entry
-    data->op = fuchsia::modular::internal::LinkChangeOp::ERASE;
-    data->pointer = std::move(path);
-    // Leave data->json null for ERASE.
-
-    MakeIncrementalChangeCall(std::move(data), src);
-  } else {
-    operation_queue_.Add(new EraseCall(this, std::move(path), src));
-  }
+  operation_queue_.Add(new EraseCall(this, std::move(path), src));
 }
 
 void LinkImpl::GetEntity(
@@ -658,6 +663,11 @@ void LinkImpl::Watch(
 void LinkImpl::WatchAll(
     fidl::InterfaceHandle<fuchsia::modular::LinkWatcher> watcher) {
   Watch(std::move(watcher), kWatchAllConnectionId);
+}
+
+
+void LinkImpl::OnPageChange(const std::string& key, const std::string& value) {
+  operation_queue_.Add(new ChangeCall(this, value));
 }
 
 void LinkImpl::OnPageConflict(Conflict* conflict) {

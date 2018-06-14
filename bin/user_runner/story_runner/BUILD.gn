@@ -17,7 +17,6 @@ source_set("story_runner") {
   sources = [
     "chain_impl.cc",
     "chain_impl.h",
-    "incremental_link.cc",
     "key_generator.cc",
     "key_generator.h",
     "link_impl.cc",
