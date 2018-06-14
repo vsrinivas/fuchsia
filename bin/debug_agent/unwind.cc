@@ -4,10 +4,10 @@
 
 #include "garnet/bin/debug_agent/unwind.h"
 
-#include <algorithm>
 #include <inttypes.h>
-#include <ngunwind/libunwind.h>
 #include <ngunwind/fuchsia.h>
+#include <ngunwind/libunwind.h>
+#include <algorithm>
 
 #include "garnet/bin/debug_agent/process_info.h"
 
@@ -18,9 +18,7 @@ namespace {
 using ModuleVector = std::vector<debug_ipc::Module>;
 
 // Callback for libunwind.
-int LookupDso(void* context,
-              unw_word_t pc,
-              unw_word_t* base,
+int LookupDso(void* context, unw_word_t pc, unw_word_t* base,
               const char** name) {
   // Context is a ModuleVector sorted by load address.
   // TODO(brettw) could use lower_bound for better perf with lots of modules.
@@ -37,11 +35,8 @@ int LookupDso(void* context,
 
 }  // namespace
 
-zx_status_t UnwindStack(const zx::process& process,
-                        const zx::thread& thread,
-                        uint64_t ip,
-                        uint64_t sp,
-                        size_t max_depth,
+zx_status_t UnwindStack(const zx::process& process, const zx::thread& thread,
+                        uint64_t ip, uint64_t sp, size_t max_depth,
                         std::vector<debug_ipc::StackFrame>* stack) {
   // Get the modules sorted by load address.
   ModuleVector modules;

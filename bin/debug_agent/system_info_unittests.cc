@@ -15,8 +15,7 @@ namespace {
 // Recursively walks the process tree and returns true if there is a process
 // with the given name and koid.
 bool FindProcess(const debug_ipc::ProcessTreeRecord& record,
-                 const std::string& name_to_find,
-                 zx_koid_t koid_to_find) {
+                 const std::string& name_to_find, zx_koid_t koid_to_find) {
   if (record.name == name_to_find && record.koid == koid_to_find)
     return true;
   for (const auto& child : record.children) {

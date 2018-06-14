@@ -66,8 +66,9 @@ bool SocketConnection::Accept(int server_fd) {
   agent_ = std::make_unique<debug_agent::DebugAgent>(&buffer_.stream());
   adapter_ = std::make_unique<debug_agent::RemoteAPIAdapter>(agent_.get(),
                                                              &buffer_.stream());
-  buffer_.set_data_available_callback(
-      [adapter = adapter_.get()]() { adapter->OnStreamReadable(); });
+  buffer_.set_data_available_callback([adapter = adapter_.get()]() {
+    adapter->OnStreamReadable();
+  });
 
   printf("Accepted connection.\n");
   return true;

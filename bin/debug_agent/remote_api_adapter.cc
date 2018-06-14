@@ -6,10 +6,10 @@
 
 #include "garnet/bin/debug_agent/remote_api.h"
 #include "garnet/lib/debug_ipc/agent_protocol.h"
+#include "garnet/lib/debug_ipc/helper/stream_buffer.h"
 #include "garnet/lib/debug_ipc/message_reader.h"
 #include "garnet/lib/debug_ipc/message_writer.h"
 #include "garnet/lib/debug_ipc/protocol.h"
-#include "garnet/lib/debug_ipc/helper/stream_buffer.h"
 
 namespace debug_agent {
 
@@ -20,8 +20,7 @@ namespace {
 template <typename RequestMsg, typename ReplyMsg>
 void DispatchMessage(RemoteAPIAdapter* adapter,
                      void (RemoteAPI::*handler)(const RequestMsg&, ReplyMsg*),
-                     std::vector<char> data,
-                     const char* type_string) {
+                     std::vector<char> data, const char* type_string) {
   debug_ipc::MessageReader reader(std::move(data));
 
   RequestMsg request;

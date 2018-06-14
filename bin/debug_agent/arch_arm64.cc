@@ -45,16 +45,10 @@ bool IsBreakpointInstruction(zx::process& process, uint64_t address) {
   return (data & kMask) == kBreakInstruction;
 }
 
-uint64_t* IPInRegs(zx_thread_state_general_regs* regs) {
-  return &regs->pc;
-}
-uint64_t* SPInRegs(zx_thread_state_general_regs* regs) {
-  return &regs->sp;
-}
+uint64_t* IPInRegs(zx_thread_state_general_regs* regs) { return &regs->pc; }
+uint64_t* SPInRegs(zx_thread_state_general_regs* regs) { return &regs->sp; }
 
-::debug_ipc::Arch GetArch() {
-  return ::debug_ipc::Arch::kArm64;
-}
+::debug_ipc::Arch GetArch() { return ::debug_ipc::Arch::kArm64; }
 
 }  // namespace arch
 }  // namespace debug_agent
