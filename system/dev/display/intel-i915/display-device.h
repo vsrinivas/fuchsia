@@ -20,6 +20,16 @@
 namespace i915 {
 
 class Controller;
+class DisplayDevice;
+
+// Thread safe weak-ref to the DisplayDevice, because the backlight device
+// lifecycle is managed by devmgr but the DisplayDevice lifecycle is managed
+// by the display controller class.
+typedef struct display_ref {
+    mtx_t mtx;
+    DisplayDevice* display_device __TA_GUARDED(mtx);
+} display_ref_t;
+
 
 class DisplayDevice {
 public:
@@ -46,6 +56,9 @@ public:
     uint32_t width() const { return info_.v_addressable; }
     uint32_t height() const { return info_.h_addressable; }
     uint32_t format() const { return ZX_PIXEL_FORMAT_ARGB_8888; }
+
+    virtual bool HasBacklight() { return false; }
+    virtual void SetBacklightState(bool power, uint8_t brightness) {}
 
 protected:
     // Queries the DisplayDevice to see if there is a supported display attached. If
@@ -76,6 +89,9 @@ private:
     bool inited_ = false;
     display_mode_t info_ = {};
     edid::Edid edid_;
+
+    zx_device_t* backlight_device_ = nullptr;
+    display_ref_t* display_ref_ = nullptr;
 };
 
 } // namespace i915

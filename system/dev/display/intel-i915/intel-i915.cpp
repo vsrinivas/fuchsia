@@ -1313,6 +1313,9 @@ void Controller::GpuRelease() {
 void Controller::DdkUnbind() {
     device_remove(zxdev());
     device_remove(zx_gpu_dev_);
+
+    fbl::AutoLock lock(&display_lock_);
+    display_devices_.reset();
 }
 
 void Controller::DdkRelease() {
@@ -1510,14 +1513,6 @@ zx_status_t Controller::Bind(fbl::unique_ptr<i915::Controller>* controller_ptr) 
         }
     }
 
-    thrd_t init_thread;
-    status = thrd_create_with_name(&init_thread, finish_init, this, "i915-init-thread");
-    if (status != ZX_OK) {
-        LOG_ERROR("Failed to create init thread\n");
-        return status;
-    }
-    init_thrd_started_ = true;
-
     status = DdkAdd("intel_i915");
     if (status != ZX_OK) {
         LOG_ERROR("Failed to add controller device\n");
@@ -1547,6 +1542,15 @@ zx_status_t Controller::Bind(fbl::unique_ptr<i915::Controller>* controller_ptr) 
     }
 
     LOG_TRACE("bind done\n");
+
+    thrd_t init_thread;
+    status = thrd_create_with_name(&init_thread, finish_init, this, "i915-init-thread");
+    if (status != ZX_OK) {
+        LOG_ERROR("Failed to create init thread\n");
+        device_remove(zxdev());
+        return status;
+    }
+    init_thrd_started_ = true;
 
     return ZX_OK;
 }

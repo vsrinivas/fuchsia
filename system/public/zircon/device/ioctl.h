@@ -75,6 +75,7 @@
 #define IOCTL_FAMILY_DISPLAY_CONTROLLER 0x37
 #define IOCTL_FAMILY_DEBUG          0x38
 #define IOCTL_FAMILY_AUDIO_CODEC    0x39
+#define IOCTL_FAMILY_BACKLIGHT      0x3A
 
 // IOCTL constructor
 // --K-FFNN

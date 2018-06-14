@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/zx/vmo.h>
+#include <zircon/device/backlight.h>
 
 #include "display-device.h"
 #include "intel-i915.h"
@@ -11,6 +12,38 @@
 #include "registers-dpll.h"
 #include "registers-transcoder.h"
 #include "tiling.h"
+
+namespace {
+
+zx_status_t backlight_ioctl(void* ctx, uint32_t op,
+                            const void* in_buf, size_t in_len,
+                            void* out_buf, size_t out_len, size_t* out_actual) {
+    if (op == IOCTL_BACKLIGHT_SET_BRIGHTNESS) {
+        if (in_len != sizeof(backlight_state_t) || out_len != 0) {
+            return ZX_ERR_INVALID_ARGS;
+        }
+        const auto args = static_cast<const backlight_state_t*>(in_buf);
+
+        auto ref = static_cast<i915::display_ref_t*>(ctx);
+        fbl::AutoLock lock(&ref->mtx);
+
+        if (ref->display_device) {
+            ref->display_device->SetBacklightState(args->on, args->brightness);
+            return ZX_OK;
+        } else {
+            return ZX_ERR_PEER_CLOSED;
+        }
+    }
+    return ZX_ERR_NOT_SUPPORTED;
+}
+
+void backlight_release(void* ctx) {
+    delete static_cast<i915::display_ref_t*>(ctx);
+}
+
+static zx_protocol_device_t backlight_ops = {};
+
+} // namespace
 
 namespace i915 {
 
@@ -23,6 +56,11 @@ DisplayDevice::~DisplayDevice() {
         ResetPipe();
         ResetTrans();
         ResetDdi();
+    }
+    if (display_ref_) {
+        fbl::AutoLock lock(&display_ref_->mtx);
+        device_remove(backlight_device_);
+        display_ref_->display_device = nullptr;
     }
 }
 
@@ -81,6 +119,37 @@ bool DisplayDevice::Init() {
     controller_->interrupts()->EnablePipeVsync(pipe_, true);
 
     inited_ = true;
+
+    if (HasBacklight()) {
+        fbl::AllocChecker ac;
+        auto display_ref = fbl::make_unique_checked<display_ref_t>(&ac);
+        zx_status_t status = ZX_ERR_NO_MEMORY;
+        if (ac.check()) {
+            mtx_init(&display_ref->mtx, mtx_plain);
+            {
+                fbl::AutoLock lock(&display_ref->mtx);
+                display_ref->display_device = this;
+            }
+
+            backlight_ops.version = DEVICE_OPS_VERSION;
+            backlight_ops.ioctl = backlight_ioctl;
+            backlight_ops.release = backlight_release;
+
+            device_add_args_t args = {};
+            args.version = DEVICE_ADD_ARGS_VERSION;
+            args.name = "backlight";
+            args.ctx = display_ref.get();
+            args.ops = &backlight_ops;
+            args.proto_id = ZX_PROTOCOL_BACKLIGHT;
+
+            if ((status = device_add(controller_->zxdev(), &args, &backlight_device_)) == ZX_OK) {
+                display_ref_ = display_ref.release();
+            }
+        }
+        if (display_ref_ == nullptr) {
+            LOG_WARN("Failed to add backlight (%d)\n", status);
+        }
+    }
 
     return true;
 }

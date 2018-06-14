@@ -49,6 +49,8 @@ private:
     bool SetBacklightBrightness(double val);
 
     bool HandleHotplug(bool long_pulse) override;
+    bool HasBacklight() override;
+    void SetBacklightState(bool power, uint8_t brightness) override;
 
     uint8_t dp_lane_count_;
     uint32_t dp_link_rate_mhz_;

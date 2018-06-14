@@ -1278,4 +1278,18 @@ bool DpDisplay::HandleHotplug(bool long_pulse) {
     }
     return false;
 }
+
+bool DpDisplay::HasBacklight() {
+    return controller()->igd_opregion().IsEdp(ddi());
+}
+
+void DpDisplay::SetBacklightState(bool power, uint8_t brightness) {
+    SetBacklightOn(power);
+
+    double range = 1.0f - controller()->igd_opregion().GetMinBacklightBrightness();
+    double percent = static_cast<double>(brightness) / 255.0f;
+    SetBacklightBrightness(
+            (range * percent) + controller()->igd_opregion().GetMinBacklightBrightness());
+}
+
 } // namespace i915
