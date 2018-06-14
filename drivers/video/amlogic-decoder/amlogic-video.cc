@@ -232,7 +232,7 @@ zx_status_t AmlogicVideo::LoadDecoderFirmware(uint8_t* data, uint32_t size) {
   return ZX_OK;
 }
 
-zx_status_t AmlogicVideo::InitializeStreamBuffer() {
+zx_status_t AmlogicVideo::InitializeStreamBuffer(bool use_parser) {
   zx_status_t status = io_buffer_init_aligned(
       &stream_buffer_, bti_.get(), kStreamBufferSize, kBufferAlignShift,
       IO_BUFFER_RW | IO_BUFFER_CONTIG);
@@ -270,13 +270,18 @@ zx_status_t AmlogicVideo::InitializeStreamBuffer() {
       .WriteTo(dosbus_.get());
   VldMemVififoBufCntl::Get().FromValue(0).set_manual(true).WriteTo(
       dosbus_.get());
-  VldMemVififoControl::Get()
-      .FromValue(0)
-      .set_upper(0x11)
-      .set_fill_on_level(true)
-      .set_fill_en(true)
-      .set_empty_en(true)
-      .WriteTo(dosbus_.get());
+  auto fifo_control =
+      VldMemVififoControl::Get().FromValue(0).set_upper(0x11).set_fill_on_level(
+          true);
+  if (use_parser) {
+    fifo_control.set_fill_en(true).set_empty_en(true);
+    // Parser will do 64-bit endianness conversion.
+    fifo_control.set_endianness(0);
+  } else {
+    // Expect input to be in normal byte order.
+    fifo_control.set_endianness(7);
+  }
+  fifo_control.WriteTo(dosbus_.get());
 
   return ZX_OK;
 }
@@ -402,6 +407,16 @@ zx_status_t AmlogicVideo::InitializeEsParser() {
   return ZX_OK;
 }
 
+void AmlogicVideo::InitializeDecoderInput() {
+  VldMemVififoBufCntl::Get()
+      .FromValue(0)
+      .set_init(true)
+      .set_manual(true)
+      .WriteTo(dosbus_.get());
+  VldMemVififoBufCntl::Get().FromValue(0).set_manual(true).WriteTo(
+      dosbus_.get());
+}
+
 zx_status_t AmlogicVideo::ParseVideo(void* data, uint32_t len) {
   io_buffer_t input_file;
   zx_status_t status = io_buffer_init(&input_file, bti_.get(), len,
@@ -444,6 +459,24 @@ zx_status_t AmlogicVideo::ParseVideo(void* data, uint32_t len) {
   }
   io_buffer_release(&input_file);
 
+  return ZX_OK;
+}
+
+zx_status_t AmlogicVideo::ProcessVideoNoParser(void* data, uint32_t len) {
+  if (len > kStreamBufferSize) {
+    DECODE_ERROR("Video too large\n");
+    return ZX_ERR_OUT_OF_RANGE;
+  }
+  memcpy(io_buffer_virt(&stream_buffer_), data, len);
+  io_buffer_cache_flush(&stream_buffer_, 0, len);
+  VldMemVififoWP::Get()
+      .FromValue(len + io_buffer_phys(&stream_buffer_))
+      .WriteTo(dosbus_.get());
+  VldMemVififoControl::Get()
+      .ReadFrom(dosbus_.get())
+      .set_fill_en(true)
+      .set_empty_en(true)
+      .WriteTo(dosbus_.get());
   return ZX_OK;
 }
 
@@ -670,7 +703,7 @@ void AmlogicVideo::InitializeInterrupts() {
 
 zx_status_t AmlogicVideo::InitDecoder() {
   EnableVideoPower();
-  zx_status_t status = InitializeStreamBuffer();
+  zx_status_t status = InitializeStreamBuffer(true);
   if (status != ZX_OK) return status;
 
   InitializeInterrupts();

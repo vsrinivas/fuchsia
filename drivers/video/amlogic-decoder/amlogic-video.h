@@ -56,9 +56,11 @@ class AmlogicVideo final : public VideoDecoder::Owner {
   void DisableClockGate();
   void EnableVideoPower();
   void DisableVideoPower();
-  zx_status_t InitializeStreamBuffer();
+  zx_status_t InitializeStreamBuffer(bool use_parser);
   zx_status_t InitializeEsParser();
+  void InitializeDecoderInput();
   zx_status_t ParseVideo(void* data, uint32_t len);
+  zx_status_t ProcessVideoNoParser(void* data, uint32_t len);
   void InitializeInterrupts();
 
   zx_device_t* parent_ = nullptr;

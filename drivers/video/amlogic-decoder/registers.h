@@ -120,11 +120,12 @@ DEFINE_REGISTER(VldMemVififoEndPtr, DosRegisterIo, 0x0c42)
 DEFINE_REGISTER(VldMemVififoBytesAvail, DosRegisterIo, 0x0c43)
 
 REGISTER_NAME(VldMemVififoControl, DosRegisterIo, 0x0c44)
-    DEF_FIELD(23, 16, upper)
-    DEF_BIT(10, fill_on_level)
-    DEF_BIT(2, empty_en)
-    DEF_BIT(1, fill_en)
-    DEF_BIT(0, init)
+  DEF_FIELD(23, 16, upper)
+  DEF_BIT(10, fill_on_level)
+  DEF_FIELD(6, 3, endianness)
+  DEF_BIT(2, empty_en)
+  DEF_BIT(1, fill_en)
+  DEF_BIT(0, init)
 };
 
 DEFINE_REGISTER(VldMemVififoWP, DosRegisterIo, 0x0c45)
