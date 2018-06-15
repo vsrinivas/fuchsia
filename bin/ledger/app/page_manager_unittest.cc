@@ -11,10 +11,12 @@
 
 #include "gtest/gtest.h"
 #include "lib/backoff/exponential_backoff.h"
+#include "lib/callback/capture.h"
+#include "lib/callback/set_when_called.h"
 #include "lib/fidl/cpp/clone.h"
 #include "lib/fsl/vmo/strings.h"
 #include "lib/fxl/macros.h"
-#include "lib/gtest/test_with_message_loop.h"
+#include "lib/gtest/test_with_loop.h"
 #include "peridot/bin/ledger/app/constants.h"
 #include "peridot/bin/ledger/app/merging/merge_resolver.h"
 #include "peridot/bin/ledger/coroutine/coroutine_impl.h"
@@ -66,11 +68,10 @@ class FakePageSync : public sync_coordinator::PageSyncEmptyImpl {
   fxl::Closure on_idle;
 };
 
-class PageManagerTest : public gtest::TestWithMessageLoop {
+class PageManagerTest : public gtest::TestWithLoop {
  public:
   PageManagerTest()
-      : environment_(
-            EnvironmentBuilder().SetAsync(message_loop_.async()).Build()) {}
+      : environment_(EnvironmentBuilder().SetAsync(dispatcher()).Build()) {}
   ~PageManagerTest() override {}
 
  protected:
@@ -78,6 +79,10 @@ class PageManagerTest : public gtest::TestWithMessageLoop {
   void SetUp() override {
     ::testing::Test::SetUp();
     page_id_ = storage::PageId(kPageIdSize, 'a');
+  }
+
+  void DrainLoop() {
+    RunLoopRepeatedlyFor(storage::fake::kFakePageStorageDelay);
   }
 
   storage::PageId page_id_;
@@ -94,37 +99,43 @@ TEST_F(PageManagerTest, OnEmptyCallback) {
   PageManager page_manager(&environment_, std::move(storage), nullptr,
                            std::move(merger),
                            PageManager::PageStorageState::NEEDS_SYNC);
-  page_manager.set_on_empty([this, &on_empty_called] {
-    on_empty_called = true;
-    message_loop_.PostQuitTask();
-  });
-
+  page_manager.set_on_empty(callback::SetWhenCalled(&on_empty_called));
+  DrainLoop();
   EXPECT_FALSE(on_empty_called);
+
+  bool called;
   Status status;
   PagePtr page1;
   PagePtr page2;
-  page_manager.BindPage(page1.NewRequest(),
-                        callback::Capture(MakeQuitTask(), &status));
-  RunLoop();
+  page_manager.BindPage(
+      page1.NewRequest(),
+      callback::Capture(callback::SetWhenCalled(&called), &status));
+  DrainLoop();
+  ASSERT_TRUE(called);
   ASSERT_EQ(Status::OK, status);
 
-  page_manager.BindPage(page2.NewRequest(),
-                        callback::Capture(MakeQuitTask(), &status));
-  RunLoop();
+  page_manager.BindPage(
+      page2.NewRequest(),
+      callback::Capture(callback::SetWhenCalled(&called), &status));
+  DrainLoop();
+  ASSERT_TRUE(called);
   ASSERT_EQ(Status::OK, status);
+
   page1.Unbind();
   page2.Unbind();
-  RunLoop();
+  DrainLoop();
   EXPECT_TRUE(on_empty_called);
 
   on_empty_called = false;
   PagePtr page3;
-  page_manager.BindPage(page3.NewRequest(),
-                        callback::Capture(MakeQuitTask(), &status));
-  RunLoop();
+  page_manager.BindPage(
+      page3.NewRequest(),
+      callback::Capture(callback::SetWhenCalled(&called), &status));
+  DrainLoop();
+  ASSERT_TRUE(called);
   ASSERT_EQ(Status::OK, status);
   page3.Unbind();
-  RunLoop();
+  DrainLoop();
   EXPECT_TRUE(on_empty_called);
 
   on_empty_called = false;
@@ -133,7 +144,7 @@ TEST_F(PageManagerTest, OnEmptyCallback) {
       std::make_unique<const storage::CommitEmptyImpl>(), snapshot.NewRequest(),
       "");
   snapshot.Unbind();
-  RunLoop();
+  DrainLoop();
   EXPECT_TRUE(on_empty_called);
 }
 
@@ -144,20 +155,20 @@ TEST_F(PageManagerTest, DeletingPageManagerClosesConnections) {
       &environment_, std::move(storage), nullptr, std::move(merger),
       PageManager::PageStorageState::NEEDS_SYNC);
 
+  bool called;
   Status status;
   PagePtr page;
-  page_manager->BindPage(page.NewRequest(),
-                         callback::Capture(MakeQuitTask(), &status));
-  RunLoop();
+  page_manager->BindPage(
+      page.NewRequest(),
+      callback::Capture(callback::SetWhenCalled(&called), &status));
+  DrainLoop();
+  ASSERT_TRUE(called);
   ASSERT_EQ(Status::OK, status);
-  bool page_closed = false;
-  page.set_error_handler([this, &page_closed] {
-    page_closed = true;
-    message_loop_.PostQuitTask();
-  });
+  bool page_closed;
+  page.set_error_handler(callback::SetWhenCalled(&page_closed));
 
   page_manager.reset();
-  RunLoop();
+  DrainLoop();
   EXPECT_TRUE(page_closed);
 }
 
@@ -168,48 +179,53 @@ TEST_F(PageManagerTest, OnEmptyCallbackWithWatcher) {
   PageManager page_manager(&environment_, std::move(storage), nullptr,
                            std::move(merger),
                            PageManager::PageStorageState::NEEDS_SYNC);
-  page_manager.set_on_empty([this, &on_empty_called] {
-    on_empty_called = true;
-    message_loop_.PostQuitTask();
-  });
-
+  page_manager.set_on_empty(callback::SetWhenCalled(&on_empty_called));
+  DrainLoop();
   EXPECT_FALSE(on_empty_called);
+
+  bool called;
   Status status;
   PagePtr page1;
   PagePtr page2;
-  page_manager.BindPage(page1.NewRequest(),
-                        callback::Capture(MakeQuitTask(), &status));
-  RunLoop();
+  page_manager.BindPage(
+      page1.NewRequest(),
+      callback::Capture(callback::SetWhenCalled(&called), &status));
+  DrainLoop();
+  ASSERT_TRUE(called);
   ASSERT_EQ(Status::OK, status);
-  page_manager.BindPage(page2.NewRequest(),
-                        callback::Capture(MakeQuitTask(), &status));
-  RunLoop();
+
+  page_manager.BindPage(
+      page2.NewRequest(),
+      callback::Capture(callback::SetWhenCalled(&called), &status));
+  DrainLoop();
+  ASSERT_TRUE(called);
   ASSERT_EQ(Status::OK, status);
+
   page1->Put(convert::ToArray("key1"), convert::ToArray("value1"),
-             [this](Status status) {
-               EXPECT_EQ(Status::OK, status);
-               message_loop_.PostQuitTask();
-             });
-  RunLoop();
+             callback::Capture(callback::SetWhenCalled(&called), &status));
+  DrainLoop();
+  EXPECT_TRUE(called);
+  EXPECT_EQ(Status::OK, status);
 
   PageWatcherPtr watcher;
   fidl::InterfaceRequest<PageWatcher> watcher_request = watcher.NewRequest();
   PageSnapshotPtr snapshot;
-  page1->GetSnapshot(snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
-                     std::move(watcher), [this](Status status) {
-                       EXPECT_EQ(Status::OK, status);
-                       message_loop_.PostQuitTask();
-                     });
-  RunLoop();
+  page1->GetSnapshot(
+      snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
+      std::move(watcher),
+      callback::Capture(callback::SetWhenCalled(&called), &status));
+  DrainLoop();
+  EXPECT_TRUE(called);
+  EXPECT_EQ(Status::OK, status);
 
   page1.Unbind();
   page2.Unbind();
   snapshot.Unbind();
-  EXPECT_TRUE(RunLoopWithTimeout());
+  DrainLoop();
   EXPECT_FALSE(on_empty_called);
 
   watcher_request.TakeChannel();
-  RunLoop();
+  DrainLoop();
   EXPECT_TRUE(on_empty_called);
 }
 
@@ -231,42 +247,40 @@ TEST_F(PageManagerTest, DelayBindingUntilSyncBacklogDownloaded) {
   EXPECT_TRUE(fake_page_sync_ptr->start_called);
   EXPECT_TRUE(fake_page_sync_ptr->on_backlog_downloaded_callback);
 
-  bool called = false;
+  bool called;
   Status status;
   PagePtr page;
-  page_manager.BindPage(page.NewRequest(),
-                        callback::Capture(MakeQuitTask(), &status));
+  page_manager.BindPage(
+      page.NewRequest(),
+      callback::Capture(callback::SetWhenCalled(&called), &status));
   // The page shouldn't be bound until sync backlog is downloaded.
-  EXPECT_TRUE(RunLoopWithTimeout(fxl::TimeDelta::FromMilliseconds(200)));
+  DrainLoop();
+  EXPECT_FALSE(called);
 
-  page->GetId([this, &called](ledger::PageId id) {
-    called = true;
-    message_loop_.PostQuitTask();
-  });
-
-  EXPECT_TRUE(RunLoopWithTimeout(fxl::TimeDelta::FromMilliseconds(200)));
+  page->GetId(callback::Capture(callback::SetWhenCalled(&called),
+                                static_cast<PageId*>(nullptr)));
+  DrainLoop();
   EXPECT_FALSE(called);
 
   fake_page_sync_ptr->on_backlog_downloaded_callback();
 
-  // BindPage callback can now be executed.
-  RunLoop();
-  // GetId callback should then be called.
-  RunLoop();
+  // BindPage callback can now be executed; GetId callback should then be
+  // called.
+  DrainLoop();
   EXPECT_TRUE(called);
 
   // Check that a second call on the same manager is not delayed.
-  called = false;
   page.Unbind();
-  page_manager.BindPage(page.NewRequest(),
-                        callback::Capture(MakeQuitTask(), &status));
-  RunLoop();
+  page_manager.BindPage(
+      page.NewRequest(),
+      callback::Capture(callback::SetWhenCalled(&called), &status));
+  DrainLoop();
+  ASSERT_TRUE(called);
   ASSERT_EQ(Status::OK, status);
-  page->GetId([this, &called](ledger::PageId id) {
-    called = true;
-    message_loop_.PostQuitTask();
-  });
-  RunLoop();
+
+  page->GetId(callback::Capture(callback::SetWhenCalled(&called),
+                                static_cast<PageId*>(nullptr)));
+  DrainLoop();
   EXPECT_TRUE(called);
 }
 
@@ -288,19 +302,19 @@ TEST_F(PageManagerTest, DelayBindingUntilSyncTimeout) {
   EXPECT_TRUE(fake_page_sync_ptr->start_called);
   EXPECT_TRUE(fake_page_sync_ptr->on_backlog_downloaded_callback);
 
-  bool called = false;
+  bool called;
   Status status;
   PagePtr page;
-  page_manager.BindPage(page.NewRequest(),
-                        callback::Capture(MakeQuitTask(), &status));
-  RunLoop();
+  page_manager.BindPage(
+      page.NewRequest(),
+      callback::Capture(callback::SetWhenCalled(&called), &status));
+  DrainLoop();
+  ASSERT_TRUE(called);
   ASSERT_EQ(Status::OK, status);
-  page->GetId([this, &called](ledger::PageId id) {
-    called = true;
-    message_loop_.PostQuitTask();
-  });
 
-  RunLoop();
+  page->GetId(callback::Capture(callback::SetWhenCalled(&called),
+                                static_cast<PageId*>(nullptr)));
+  DrainLoop();
   EXPECT_TRUE(called);
 }
 
@@ -320,17 +334,14 @@ TEST_F(PageManagerTest, ExitWhenSyncFinishes) {
 
   EXPECT_NE(nullptr, fake_page_sync_ptr->watcher);
 
-  bool called = false;
+  bool called;
+  page_manager.set_on_empty(callback::SetWhenCalled(&called));
 
-  page_manager.set_on_empty([this, &called] {
-    called = true;
-    message_loop_.PostQuitTask();
-  });
-
-  async::PostTask(message_loop_.async(),
+  async::PostTask(dispatcher(),
                   [fake_page_sync_ptr] { fake_page_sync_ptr->on_idle(); });
 
-  RunLoop();
+  DrainLoop();
+  EXPECT_TRUE(called);
 }
 
 TEST_F(PageManagerTest, DontDelayBindingWithLocalPageStorage) {
@@ -353,20 +364,20 @@ TEST_F(PageManagerTest, DontDelayBindingWithLocalPageStorage) {
   EXPECT_TRUE(fake_page_sync_ptr->start_called);
   EXPECT_TRUE(fake_page_sync_ptr->on_backlog_downloaded_callback);
 
-  bool called = false;
+  bool called;
   Status status;
   PagePtr page;
-  page_manager.BindPage(page.NewRequest(),
-                        callback::Capture(MakeQuitTask(), &status));
+  page_manager.BindPage(
+      page.NewRequest(),
+      callback::Capture(callback::SetWhenCalled(&called), &status));
   // The page should be bound immediately.
-  RunLoop();
+  DrainLoop();
+  ASSERT_TRUE(called);
   ASSERT_EQ(Status::OK, status);
-  page->GetId([this, &called](ledger::PageId id) {
-    called = true;
-    message_loop_.PostQuitTask();
-  });
 
-  RunLoop();
+  page->GetId(callback::Capture(callback::SetWhenCalled(&called),
+                                static_cast<PageId*>(nullptr)));
+  DrainLoop();
   EXPECT_TRUE(called);
 }
 
@@ -376,31 +387,38 @@ TEST_F(PageManagerTest, GetHeadCommitEntries) {
   PageManager page_manager(&environment_, std::move(storage), nullptr,
                            std::move(merger),
                            PageManager::PageStorageState::NEEDS_SYNC);
+  bool called;
   Status status;
   PagePtr page;
-  page_manager.BindPage(page.NewRequest(),
-                        callback::Capture(MakeQuitTask(), &status));
-  RunLoop();
+  page_manager.BindPage(
+      page.NewRequest(),
+      callback::Capture(callback::SetWhenCalled(&called), &status));
+  DrainLoop();
+  EXPECT_TRUE(called);
   EXPECT_EQ(Status::OK, status);
 
   ledger_internal::PageDebugPtr page_debug;
-  page_manager.BindPageDebug(page_debug.NewRequest(),
-                             callback::Capture(MakeQuitTask(), &status));
-  RunLoop();
+  page_manager.BindPageDebug(
+      page_debug.NewRequest(),
+      callback::Capture(callback::SetWhenCalled(&called), &status));
+  DrainLoop();
+  EXPECT_TRUE(called);
   EXPECT_EQ(Status::OK, status);
 
   std::string key1("001-some_key");
   std::string value1("a small value");
 
   page->Put(convert::ToArray(key1), convert::ToArray(value1),
-            callback::Capture(MakeQuitTask(), &status));
-  RunLoop();
+            callback::Capture(callback::SetWhenCalled(&called), &status));
+  DrainLoop();
+  EXPECT_TRUE(called);
   EXPECT_EQ(Status::OK, status);
 
   fidl::VectorPtr<ledger_internal::CommitId> heads1;
   page_debug->GetHeadCommitsIds(
-      callback::Capture(MakeQuitTask(), &status, &heads1));
-  RunLoop();
+      callback::Capture(callback::SetWhenCalled(&called), &status, &heads1));
+  DrainLoop();
+  EXPECT_TRUE(called);
   EXPECT_EQ(Status::OK, status);
   EXPECT_EQ(1u, heads1->size());
 
@@ -408,14 +426,16 @@ TEST_F(PageManagerTest, GetHeadCommitEntries) {
   std::string value2("another value");
 
   page->Put(convert::ToArray(key2), convert::ToArray(value2),
-            callback::Capture(MakeQuitTask(), &status));
-  RunLoop();
+            callback::Capture(callback::SetWhenCalled(&called), &status));
+  DrainLoop();
+  EXPECT_TRUE(called);
   EXPECT_EQ(Status::OK, status);
 
   fidl::VectorPtr<ledger_internal::CommitId> heads2;
   page_debug->GetHeadCommitsIds(
-      callback::Capture(MakeQuitTask(), &status, &heads2));
-  RunLoop();
+      callback::Capture(callback::SetWhenCalled(&called), &status, &heads2));
+  DrainLoop();
+  EXPECT_TRUE(called);
   EXPECT_EQ(Status::OK, status);
   EXPECT_EQ(1u, heads2->size());
 
@@ -423,33 +443,41 @@ TEST_F(PageManagerTest, GetHeadCommitEntries) {
             convert::ToString(heads2->at(0).id));
 
   PageSnapshotPtr snapshot1;
-  page_debug->GetSnapshot(std::move(heads1->at(0)), snapshot1.NewRequest(),
-                          callback::Capture(MakeQuitTask(), &status));
-  RunLoop();
+  page_debug->GetSnapshot(
+      std::move(heads1->at(0)), snapshot1.NewRequest(),
+      callback::Capture(callback::SetWhenCalled(&called), &status));
+  DrainLoop();
+  EXPECT_TRUE(called);
   EXPECT_EQ(Status::OK, status);
 
   PageSnapshotPtr snapshot2;
-  page_debug->GetSnapshot(std::move(heads2->at(0)), snapshot2.NewRequest(),
-                          callback::Capture(MakeQuitTask(), &status));
-  RunLoop();
+  page_debug->GetSnapshot(
+      std::move(heads2->at(0)), snapshot2.NewRequest(),
+      callback::Capture(callback::SetWhenCalled(&called), &status));
+  DrainLoop();
+  EXPECT_TRUE(called);
   EXPECT_EQ(Status::OK, status);
 
   fidl::VectorPtr<Entry> expected_entries1;
   std::unique_ptr<Token> next_token;
-  snapshot1->GetEntries(fidl::VectorPtr<uint8_t>::New(0), nullptr,
-                        callback::Capture(MakeQuitTask(), &status,
-                                          &expected_entries1, &next_token));
-  RunLoop();
+  snapshot1->GetEntries(
+      fidl::VectorPtr<uint8_t>::New(0), nullptr,
+      callback::Capture(callback::SetWhenCalled(&called), &status,
+                        &expected_entries1, &next_token));
+  DrainLoop();
+  EXPECT_TRUE(called);
   EXPECT_EQ(Status::OK, status);
   EXPECT_EQ(1u, expected_entries1->size());
   EXPECT_EQ(key1, convert::ToString(expected_entries1->at(0).key));
   EXPECT_EQ(value1, ToString(expected_entries1->at(0).value));
 
   fidl::VectorPtr<Entry> expected_entries2;
-  snapshot2->GetEntries(fidl::VectorPtr<uint8_t>::New(0), nullptr,
-                        callback::Capture(MakeQuitTask(), &status,
-                                          &expected_entries2, &next_token));
-  RunLoop();
+  snapshot2->GetEntries(
+      fidl::VectorPtr<uint8_t>::New(0), nullptr,
+      callback::Capture(callback::SetWhenCalled(&called), &status,
+                        &expected_entries2, &next_token));
+  DrainLoop();
+  EXPECT_TRUE(called);
   EXPECT_EQ(Status::OK, status);
   EXPECT_EQ(2u, expected_entries2->size());
   EXPECT_EQ(key1, convert::ToString(expected_entries2->at(0).key));
@@ -464,31 +492,38 @@ TEST_F(PageManagerTest, GetCommit) {
   PageManager page_manager(&environment_, std::move(storage), nullptr,
                            std::move(merger),
                            PageManager::PageStorageState::NEEDS_SYNC);
+  bool called;
   Status status;
   PagePtr page;
-  page_manager.BindPage(page.NewRequest(),
-                        callback::Capture(MakeQuitTask(), &status));
-  RunLoop();
+  page_manager.BindPage(
+      page.NewRequest(),
+      callback::Capture(callback::SetWhenCalled(&called), &status));
+  DrainLoop();
+  EXPECT_TRUE(called);
   EXPECT_EQ(Status::OK, status);
 
   ledger_internal::PageDebugPtr page_debug;
-  page_manager.BindPageDebug(page_debug.NewRequest(),
-                             callback::Capture(MakeQuitTask(), &status));
-  RunLoop();
+  page_manager.BindPageDebug(
+      page_debug.NewRequest(),
+      callback::Capture(callback::SetWhenCalled(&called), &status));
+  DrainLoop();
+  EXPECT_TRUE(called);
   EXPECT_EQ(Status::OK, status);
 
   std::string key1("001-some_key");
   std::string value1("a small value");
 
   page->Put(convert::ToArray(key1), convert::ToArray(value1),
-            callback::Capture(MakeQuitTask(), &status));
-  RunLoop();
+            callback::Capture(callback::SetWhenCalled(&called), &status));
+  DrainLoop();
+  EXPECT_TRUE(called);
   EXPECT_EQ(Status::OK, status);
 
   fidl::VectorPtr<ledger_internal::CommitId> heads1;
   page_debug->GetHeadCommitsIds(
-      callback::Capture(MakeQuitTask(), &status, &heads1));
-  RunLoop();
+      callback::Capture(callback::SetWhenCalled(&called), &status, &heads1));
+  DrainLoop();
+  EXPECT_TRUE(called);
   EXPECT_EQ(Status::OK, status);
   EXPECT_EQ(1u, heads1->size());
 
@@ -496,23 +531,26 @@ TEST_F(PageManagerTest, GetCommit) {
   std::string value2("another value");
 
   page->Put(convert::ToArray(key2), convert::ToArray(value2),
-            callback::Capture(MakeQuitTask(), &status));
-  RunLoop();
+            callback::Capture(callback::SetWhenCalled(&called), &status));
+  DrainLoop();
+  EXPECT_TRUE(called);
   EXPECT_EQ(Status::OK, status);
 
   fidl::VectorPtr<ledger_internal::CommitId> heads2;
   page_debug->GetHeadCommitsIds(
-      callback::Capture(MakeQuitTask(), &status, &heads2));
-  RunLoop();
+      callback::Capture(callback::SetWhenCalled(&called), &status, &heads2));
+  DrainLoop();
+  EXPECT_TRUE(called);
   EXPECT_EQ(Status::OK, status);
   EXPECT_EQ(1u, heads2->size());
 
   ledger_internal::CommitPtr commit_struct;
   ledger_internal::CommitId currHeadCommit = fidl::Clone(heads2->at(0));
-  page_debug->GetCommit(
-      std::move(currHeadCommit),
-      callback::Capture(MakeQuitTask(), &status, &commit_struct));
-  RunLoop();
+  page_debug->GetCommit(std::move(currHeadCommit),
+                        callback::Capture(callback::SetWhenCalled(&called),
+                                          &status, &commit_struct));
+  DrainLoop();
+  EXPECT_TRUE(called);
   EXPECT_EQ(Status::OK, status);
   EXPECT_EQ(heads2->at(0).id, commit_struct->commit_id.id);
   EXPECT_EQ(1u, commit_struct->parents_ids->size());
@@ -526,24 +564,30 @@ TEST_F(PageManagerTest, GetCommitError) {
   PageManager page_manager(&environment_, std::move(storage), nullptr,
                            std::move(merger),
                            PageManager::PageStorageState::NEEDS_SYNC);
+  bool called;
   Status status;
   PagePtr page;
-  page_manager.BindPage(page.NewRequest(),
-                        callback::Capture(MakeQuitTask(), &status));
-  RunLoop();
+  page_manager.BindPage(
+      page.NewRequest(),
+      callback::Capture(callback::SetWhenCalled(&called), &status));
+  DrainLoop();
+  EXPECT_TRUE(called);
   EXPECT_EQ(Status::OK, status);
 
   ledger_internal::PageDebugPtr page_debug;
-  page_manager.BindPageDebug(page_debug.NewRequest(),
-                             callback::Capture(MakeQuitTask(), &status));
-  RunLoop();
+  page_manager.BindPageDebug(
+      page_debug.NewRequest(),
+      callback::Capture(callback::SetWhenCalled(&called), &status));
+  DrainLoop();
+  EXPECT_TRUE(called);
   EXPECT_EQ(Status::OK, status);
 
   ledger_internal::CommitPtr commit_struct;
-  page_debug->GetCommit(
-      {convert::ToArray("fake_commit_id")},
-      callback::Capture(MakeQuitTask(), &status, &commit_struct));
-  RunLoop();
+  page_debug->GetCommit({convert::ToArray("fake_commit_id")},
+                        callback::Capture(callback::SetWhenCalled(&called),
+                                          &status, &commit_struct));
+  DrainLoop();
+  EXPECT_TRUE(called);
   EXPECT_EQ(Status::INVALID_ARGUMENT, status);
 }
 
