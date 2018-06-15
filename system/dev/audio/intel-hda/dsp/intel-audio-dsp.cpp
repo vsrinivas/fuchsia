@@ -24,12 +24,22 @@ constexpr size_t ADSP_MAILBOX_IN_OFFSET = 0x1000; // Section 5.5 Offset from SRA
 
 constexpr const char* ADSP_FIRMWARE_PATH = "/boot/lib/firmware/dsp_fw_kbl_v3266.bin";
 
+constexpr uint32_t EXT_MANIFEST_HDR_MAGIC = 0x31454124;
+
 constexpr zx_time_t INTEL_ADSP_TIMEOUT_NSEC              = ZX_MSEC( 50); // 50mS Arbitrary
 constexpr zx_time_t INTEL_ADSP_POLL_NSEC                 = ZX_USEC(500); // 500uS Arbitrary
 constexpr zx_time_t INTEL_ADSP_ROM_INIT_TIMEOUT_NSEC     = ZX_SEC (  1); // 1S Arbitrary
 constexpr zx_time_t INTEL_ADSP_BASE_FW_INIT_TIMEOUT_NSEC = ZX_SEC (  3); // 3S Arbitrary
 constexpr zx_time_t INTEL_ADSP_POLL_FW_NSEC              = ZX_MSEC(  1); //.1mS Arbitrary
 }  // anon namespace
+
+struct skl_adspfw_ext_manifest_hdr_t {
+    uint32_t id;
+    uint32_t len;
+    uint32_t version_major;
+    uint32_t version_minor;
+    uint32_t entries;
+} __PACKED;
 
 fbl::RefPtr<IntelAudioDsp> IntelAudioDsp::Create() {
     fbl::AllocChecker ac;
@@ -428,6 +438,34 @@ zx_status_t IntelAudioDsp::GetModulesInfo() {
     return txn.success() ? ZX_OK : ZX_ERR_INTERNAL;
 }
 
+zx_status_t IntelAudioDsp::StripFirmware(const zx::vmo& fw, void* out, size_t* size_inout) {
+    ZX_DEBUG_ASSERT(out != nullptr);
+    ZX_DEBUG_ASSERT(size_inout != nullptr);
+
+    // Check for extended manifest
+    skl_adspfw_ext_manifest_hdr_t hdr;
+    zx_status_t st = fw.read(&hdr, 0, sizeof(hdr));
+    if (st != ZX_OK) {
+        return st;
+    }
+
+    // If the firmware contains an extended manifest, it must be stripped
+    // before loading to the DSP.
+    uint32_t offset = 0;
+    if (hdr.id == EXT_MANIFEST_HDR_MAGIC) {
+        offset = hdr.len;
+    }
+
+    // Always copy the firmware to simplify the code.
+    size_t bytes = *size_inout - offset;
+    if (*size_inout < bytes) {
+        return ZX_ERR_BUFFER_TOO_SMALL;
+    }
+
+    *size_inout = bytes;
+    return fw.read(out, offset, bytes);
+}
+
 zx_status_t IntelAudioDsp::LoadFirmware() {
     IntelDspCodeLoader loader(&regs()->cldma, hda_bti_);
     zx_status_t st = loader.Initialize();
@@ -446,8 +484,46 @@ zx_status_t IntelAudioDsp::LoadFirmware() {
         return st;
     }
 
+    // The max length of the firmware is 256 pages, assuming a fully distinguous VMO.
+    constexpr size_t MAX_FW_BYTES = PAGE_SIZE * IntelDspCodeLoader::MAX_BDL_LENGTH;
+    if (fw_size > MAX_FW_BYTES) {
+        LOG(ERROR, "DSP firmware is too big (0x%zx bytes > 0x%zx bytes)\n", fw_size, MAX_FW_BYTES);
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    // Create and map a VMO to copy the firmware into. The firmware must be copied to
+    // a new VMO because BDL addresses must be 128-byte aligned, and the presence
+    // of the extended manifest header will guarantee un-alignment.
+    // This VMO is mapped once and thrown away after firmware loading, so map it
+    // into the root VMAR so we don't need to allocate more space in DriverVmars::registers().
+    constexpr uint32_t CPU_MAP_FLAGS = ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE;
+    zx::vmo stripped_vmo;
+    vmo_utils::VmoMapper stripped_fw;
+    st = stripped_fw.CreateAndMap(fw_size, CPU_MAP_FLAGS, nullptr, &stripped_vmo);
+    if (st != ZX_OK) {
+        LOG(ERROR, "Error creating DSP firmware VMO (err %d)\n", st);
+        return st;
+    }
+
+    size_t stripped_size = fw_size;
+    st = StripFirmware(fw_vmo, stripped_fw.start(), &stripped_size);
+    if (st != ZX_OK) {
+        LOG(ERROR, "Error stripping DSP firmware (err %d)\n", st);
+        return st;
+    }
+
+    // Pin this VMO and grant the controller access to it.  The controller
+    // should only need read access to the firmware.
+    constexpr uint32_t DSP_MAP_FLAGS = ZX_BTI_PERM_READ;
+    PinnedVmo pinned_fw;
+    st = pinned_fw.Pin(stripped_vmo, hda_bti_->initiator(), DSP_MAP_FLAGS);
+    if (st != ZX_OK) {
+        LOG(ERROR, "Failed to pin pages for DSP firmware (res %d)\n", st);
+        return st;
+    }
+
     // Transfer firmware to DSP
-    st = loader.TransferFirmware(fw_vmo, fw_size);
+    st = loader.TransferFirmware(pinned_fw, stripped_size);
     if (st != ZX_OK) {
         return st;
     }

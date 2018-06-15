@@ -77,6 +77,7 @@ private:
     int InitThread();
 
     zx_status_t Boot();
+    zx_status_t StripFirmware(const zx::vmo& fw, void* out, size_t* size_inout);
     zx_status_t LoadFirmware();
 
     zx_status_t GetI2SBlob(uint8_t bus_id, uint8_t direction, const AudioDataFormat& format,

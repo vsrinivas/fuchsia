@@ -31,11 +31,9 @@ public:
     void DumpRegisters();
 
     zx_status_t Initialize() __WARN_UNUSED_RESULT;
-    zx_status_t TransferFirmware(const zx::vmo& fw, size_t fw_size);
+    zx_status_t TransferFirmware(const PinnedVmo& pinned_fw, size_t fw_size);
 
 private:
-    zx_status_t StripFirmware(const zx::vmo& fw, void* out, size_t* size_inout);
-
     // Log prefix storage
     char log_prefix_[LOG_PREFIX_STORAGE] = { 0 };
 

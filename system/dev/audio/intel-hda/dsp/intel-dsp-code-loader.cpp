@@ -19,18 +19,9 @@ namespace intel_hda {
 
 namespace {
 constexpr uint32_t ADSP_CLDMA_STREAM_TAG = 1;
-constexpr uint32_t EXT_MANIFEST_HDR_MAGIC = 0x31454124;
 constexpr uint32_t DMA_ALIGN = 128;
 constexpr uint32_t DMA_ALIGN_MASK = DMA_ALIGN - 1;
 }  // anon namespace
-
-struct skl_adspfw_ext_manifest_hdr_t {
-    uint32_t id;
-    uint32_t len;
-    uint32_t version_major;
-    uint32_t version_minor;
-    uint32_t entries;
-} __PACKED;
 
 void IntelDspCodeLoader::DumpRegisters() {
     LOG(INFO, "CTL_STS=0x%08x\n", REG_RD(&regs_->stream.ctl_sts.w));
@@ -99,73 +90,7 @@ zx_status_t IntelDspCodeLoader::Initialize() {
     return ZX_OK;
 }
 
-zx_status_t IntelDspCodeLoader::StripFirmware(const zx::vmo& fw, void* out, size_t* size_inout) {
-    ZX_DEBUG_ASSERT(out != nullptr);
-    ZX_DEBUG_ASSERT(size_inout != nullptr);
-
-    // Check for extended manifest
-    skl_adspfw_ext_manifest_hdr_t hdr;
-    zx_status_t st = fw.read(&hdr, 0, sizeof(hdr));
-    if (st != ZX_OK) {
-        return st;
-    }
-
-    // If the firmware contains an extended manifest, it must be stripped
-    // before loading to the DSP.
-    uint32_t offset = 0;
-    if (hdr.id == EXT_MANIFEST_HDR_MAGIC) {
-        offset = hdr.len;
-    }
-
-    // Always copy the firmware to simplify the code.
-    size_t bytes = *size_inout - offset;
-    if (*size_inout < bytes) {
-        return ZX_ERR_BUFFER_TOO_SMALL;
-    }
-
-    *size_inout = bytes;
-    return fw.read(out, offset, bytes);
-}
-
-zx_status_t IntelDspCodeLoader::TransferFirmware(const zx::vmo& fw, size_t fw_size) {
-    // The max length of the firmware is 256 pages, assuming a fully distinguous VMO.
-    constexpr size_t MAX_FW_BYTES = PAGE_SIZE * MAX_BDL_LENGTH;
-    if (fw_size > MAX_FW_BYTES) {
-        LOG(ERROR, "DSP firmware is too big (0x%zx bytes > 0x%zx bytes)\n", fw_size, MAX_FW_BYTES);
-        return ZX_ERR_INVALID_ARGS;
-    }
-
-    // Create and map a VMO to copy the firmware into. The firmware must be copied to
-    // a new VMO because BDL addresses must be 128-byte aligned, and the presence
-    // of the extended manifest header will guarantee un-alignment.
-    // This VMO is mapped once and thrown away after firmware loading, so map it
-    // into the root VMAR so we don't need to allocate more space in DriverVmars::registers().
-    constexpr uint32_t CPU_MAP_FLAGS = ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE;
-    zx::vmo stripped_vmo;
-    vmo_utils::VmoMapper stripped_fw;
-    zx_status_t st = stripped_fw.CreateAndMap(fw_size, CPU_MAP_FLAGS, nullptr, &stripped_vmo);
-    if (st != ZX_OK) {
-        LOG(ERROR, "Error creating DSP firmware VMO (err %d)\n", st);
-        return st;
-    }
-
-    size_t stripped_size = fw_size;
-    st = StripFirmware(fw, stripped_fw.start(), &stripped_size);
-    if (st != ZX_OK) {
-        LOG(ERROR, "Error stripping DSP firmware (err %d)\n", st);
-        return st;
-    }
-
-    // Pin this VMO and grant the controller access to it.  The controller
-    // should only need read access to the firmware.
-    constexpr uint32_t DSP_MAP_FLAGS = ZX_BTI_PERM_READ;
-    PinnedVmo pinned_fw;
-    ZX_DEBUG_ASSERT(pci_bti_ != nullptr);
-    st = pinned_fw.Pin(stripped_vmo, pci_bti_->initiator(), DSP_MAP_FLAGS);
-    if (st != ZX_OK) {
-        LOG(ERROR, "Failed to pin pages for DSP firmware (res %d)\n", st);
-        return st;
-    }
+zx_status_t IntelDspCodeLoader::TransferFirmware(const PinnedVmo& pinned_fw, size_t fw_size) {
 
     uint32_t region_count = pinned_fw.region_count();
 
@@ -174,9 +99,9 @@ zx_status_t IntelDspCodeLoader::TransferFirmware(const zx::vmo& fw, size_t fw_si
 
     // Build BDL to transfer the firmware
     IntelHDABDLEntry* bdl = reinterpret_cast<IntelHDABDLEntry*>(bdl_cpu_mem_.start());
-    size_t remaining = stripped_size;
+    size_t remaining = fw_size;
     uint32_t num_region;
-    for (num_region = 0; num_region < region_count; num_region++) {
+    for (num_region = 0; (num_region < region_count) && (remaining > 0); num_region++) {
         const auto& r = pinned_fw.region(num_region);
 
         if (r.size > fbl::numeric_limits<uint32_t>::max()) {
@@ -201,11 +126,11 @@ zx_status_t IntelDspCodeLoader::TransferFirmware(const zx::vmo& fw, size_t fw_si
     REG_WR(&regs_->stream.ctl_sts.w, ctl_val);
     REG_WR(&regs_->stream.bdpl, static_cast<uint32_t>(bdl_phys & 0xFFFFFFFFu));
     REG_WR(&regs_->stream.bdpu, static_cast<uint32_t>((bdl_phys >> 32) & 0xFFFFFFFFu));
-    REG_WR(&regs_->stream.cbl, stripped_size);
+    REG_WR(&regs_->stream.cbl, fw_size);
     REG_WR(&regs_->stream.lvi, region_count - 1);
 
     REG_WR(&regs_->spbfctl, ADSP_REG_CL_SPBFCTL_SPIBE);
-    REG_WR(&regs_->spib, stripped_size);
+    REG_WR(&regs_->spib, fw_size);
 
     hw_wmb();
 
