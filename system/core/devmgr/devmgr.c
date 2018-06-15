@@ -223,34 +223,32 @@ int analyzer_starter(void* arg) {
 
         printf("devmgr: analyzer_starter: analyzing exception type 0x%x\n", exception_type);
 
-        const char* analyzer_command = getenv("crashsvc.analyzer");
-        if (analyzer_command) {
-            // If we have an analyzer_command, attempt that first.
-            const char* argv_crashanalyzer[] = {analyzer_command};
-            uint32_t handle_types[] = {PA_HND(PA_USER0, 0), PA_HND(PA_USER0, 1)};
-            // The FS_* flags that grant access should be reduced to a minimal
-            // set, or potentially configured per analyzer. ZX-2151 tracks this.
-            status = devmgr_launch(svcs_job_handle, "analyzer",
-                                   countof(argv_crashanalyzer), argv_crashanalyzer,
-                                   NULL, -1, handles, handle_types, countof(handles),
-                                   NULL, FS_SVC | FS_DATA);
-            if (status == ZX_OK) {
-                zx_handle_close(thread_handle);
-                continue;
-            }
 
-            printf("devmgr: analyzer_starter: launch failed: %d (%s)\n",
-                   status, zx_status_get_string(status));
-
-            // Fall through to fuchsia.crash.Analyzer.
-        }
+        zx_handle_t appmgr_svc_request = ZX_HANDLE_INVALID;
+        zx_handle_t appmgr_svc = ZX_HANDLE_INVALID;
 
         zx_handle_t analyzer_request = ZX_HANDLE_INVALID;
         zx_handle_t analyzer = ZX_HANDLE_INVALID;
         status = zx_channel_create(0, &analyzer_request, &analyzer);
         if (status != ZX_OK)
             goto cleanup;
-        status = fdio_service_connect_at(svchost_outgoing, "public/fuchsia.crash.Analyzer", analyzer_request);
+
+        const char* analyzer_command = getenv("crashsvc.analyzer");
+        if (analyzer_command && strcmp(analyzer_command, "from-appmgr") == 0) {
+            // TODO(abarth|scottmg): Appmgr appears to fail at lookups
+            // containing /, so do lookup in two steps ("svc", then "Analyzer")
+            // for now. ZX-2265.
+            status = zx_channel_create(0, &appmgr_svc_request, &appmgr_svc);
+            if (status != ZX_OK)
+                goto cleanup;
+            status = fdio_service_connect_at(appmgr_req_cli, "svc", appmgr_svc_request);
+            if (status != ZX_OK)
+                goto cleanup;
+            appmgr_svc_request = ZX_HANDLE_INVALID;
+            status = fdio_service_connect_at(appmgr_svc, "fuchsia.crash.Analyzer", analyzer_request);
+        } else {
+            status = fdio_service_connect_at(svchost_outgoing, "public/fuchsia.crash.Analyzer", analyzer_request);
+        }
         analyzer_request = ZX_HANDLE_INVALID;
         if (status != ZX_OK)
             goto cleanup;
@@ -283,6 +281,8 @@ int analyzer_starter(void* arg) {
 cleanup:
         if (analyzer)
             zx_handle_close(analyzer);
+        if (appmgr_svc)
+            zx_handle_close(appmgr_svc);
         if (handles[0])
             zx_handle_close(handles[0]);
         if (handles[1])
