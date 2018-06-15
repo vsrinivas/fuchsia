@@ -112,6 +112,9 @@ void InterruptDispatcher::InterruptHandler() {
         SendPacketLocked(timestamp_);
         state_ = InterruptState::NEEDACK;
     } else {
+        if (flags_ & INTERRUPT_MASK_POSTWAIT) {
+            MaskInterrupt();
+        }
         Signal();
         state_ = InterruptState::TRIGGERED;
     }
