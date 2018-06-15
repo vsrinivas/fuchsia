@@ -25,13 +25,7 @@ magma_status_t msd_connection_wait_rendering(msd_connection_t* abi_connection, m
 {
     auto connection = MsdIntelAbiConnection::cast(abi_connection)->ptr();
 
-    if (connection->context_killed())
-        return DRET(MAGMA_STATUS_CONTEXT_KILLED);
-
     MsdIntelAbiBuffer::cast(buffer)->ptr()->WaitRendering();
-
-    if (connection->context_killed())
-        return DRET(MAGMA_STATUS_CONTEXT_KILLED);
 
     return MAGMA_STATUS_OK;
 }

@@ -536,9 +536,8 @@ magma::Status MsdIntelDevice::ProcessCommandBuffer(std::unique_ptr<CommandBuffer
     auto context = command_buffer->GetContext().lock();
     DASSERT(context);
 
-    auto connection = context->connection().lock();
-    if (connection && connection->context_killed())
-        return DRET_MSG(MAGMA_STATUS_CONTEXT_KILLED, "Connection context killed");
+    if (context->killed())
+        return DRET_MSG(MAGMA_STATUS_CONTEXT_KILLED, "Context killed");
 
     TRACE_DURATION_BEGIN("magma", "PrepareForExecution",
                          "id", command_buffer->GetBatchBufferId());

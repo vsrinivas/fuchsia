@@ -124,11 +124,7 @@ magma::Status ClientContext::SubmitCommandBuffer(std::unique_ptr<CommandBuffer> 
     uint64_t ATTRIBUTE_UNUSED buffer_id = command_buffer->GetBatchBufferId();
     TRACE_FLOW_STEP("magma", "command_buffer", buffer_id);
 
-    auto connection = connection_.lock();
-    if (!connection)
-        return DRET_MSG(MAGMA_STATUS_CONNECTION_LOST, "couldn't lock reference to connection");
-
-    if (connection->context_killed())
+    if (killed())
         return DRET(MAGMA_STATUS_CONTEXT_KILLED);
 
     if (!semaphore_port_) {
@@ -177,7 +173,7 @@ magma::Status ClientContext::SubmitPendingCommandBuffer(bool have_lock)
                 return DRET_MSG(MAGMA_STATUS_CONNECTION_LOST,
                                 "couldn't lock reference to connection");
 
-            if (connection->context_killed())
+            if (killed())
                 return DRET(MAGMA_STATUS_CONTEXT_KILLED);
 
             {
@@ -204,6 +200,16 @@ magma::Status ClientContext::SubmitPendingCommandBuffer(bool have_lock)
     }
 
     return MAGMA_STATUS_OK;
+}
+
+void ClientContext::Kill()
+{
+    if (killed_)
+        return;
+    killed_ = true;
+    auto connection = connection_.lock();
+    if (connection)
+        connection->SendContextKilled();
 }
 
 //////////////////////////////////////////////////////////////////////////////

@@ -41,6 +41,10 @@ public:
         return std::weak_ptr<MsdIntelConnection>();
     }
 
+    virtual bool killed() { return false; }
+
+    virtual void Kill() { magma::log(magma::LOG_WARNING, "Attemping to kill the global context"); }
+
     // Gets the gpu address of the context buffer if mapped.
     bool GetGpuAddress(EngineCommandStreamerId id, gpu_addr_t* addr_out);
     bool GetRingbufferGpuAddress(EngineCommandStreamerId id, gpu_addr_t* addr_out);
@@ -95,6 +99,10 @@ public:
 
     std::weak_ptr<MsdIntelConnection> connection() override { return connection_; }
 
+    bool killed() override { return killed_; }
+
+    void Kill() override;
+
 private:
     magma::Status SubmitPendingCommandBuffer(bool have_lock);
 
@@ -103,6 +111,7 @@ private:
     std::thread wait_thread_;
     std::mutex pending_command_buffer_mutex_;
     std::queue<std::unique_ptr<CommandBuffer>> pending_command_buffer_queue_;
+    bool killed_ = false;
 };
 
 class MsdIntelAbiContext : public msd_context_t {

@@ -48,6 +48,7 @@ struct msd_semaphore_t {
 
 enum MSD_CONNECTION_NOTIFICATION_TYPE {
     MSD_CONNECTION_NOTIFICATION_CHANNEL_SEND = 1,
+    MSD_CONNECTION_NOTIFICATION_CONTEXT_KILLED = 2,
 };
 
 struct msd_notification_t {

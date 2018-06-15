@@ -402,6 +402,10 @@ private:
                                  status);
                 return true;
             }
+            case MSD_CONNECTION_NOTIFICATION_CONTEXT_KILLED:
+                // Kill the connection.
+                ShutdownEvent()->Signal();
+                return true;
         }
         return DRETF(false, "Unhandled notification type: %d", task->notification.type);
     }

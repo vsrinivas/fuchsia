@@ -720,14 +720,9 @@ void RenderEngineCommandStreamer::ResetCurrentContext()
     DASSERT(!inflight_command_sequences_.empty());
 
     auto context = inflight_command_sequences_.front().GetContext().lock();
+    DASSERT(context);
 
-    // Do this before releasing any connection threads block in wait rendering
-    auto connection = context->connection().lock();
-    if (connection) {
-        connection->set_context_killed();
-    } else {
-        magma::log(magma::LOG_WARNING, "Attempting to reset global context");
-    }
+    context->Kill();
 
     // Cleanup resources for any inflight command sequences on this context
     while (!inflight_command_sequences_.empty()) {
