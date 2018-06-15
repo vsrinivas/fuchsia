@@ -6,9 +6,6 @@
 
 #include <zircon/types.h>
 
-// ask clang format not to mess up the indentation:
-// clang-format off
-
 __BEGIN_CDECLS
 
 // Defines and structures for zx_log_*()
@@ -19,8 +16,11 @@ typedef struct zx_log_record {
     zx_time_t timestamp;
     uint64_t pid;
     uint64_t tid;
-    char data[0];
+    char data[];
 } zx_log_record_t;
+
+// ask clang format not to mess up the indentation:
+// clang-format off
 
 #define ZX_LOG_RECORD_MAX     256
 
