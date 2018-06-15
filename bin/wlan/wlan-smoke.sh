@@ -15,6 +15,13 @@
 TEST_LOG="$1"
 [ -z ${TEST_LOG} ] && TEST_LOG="/tmp/wlan-doctor.log"
 
+WLAN_DISCONNECT_QUERY_PERIOD=2 # seconds
+WLAN_DISCONNECT_QUERY_RETRY_MAX=10
+WLAN_CONNECT_QUERY_PERIOD=5 # seconds
+WLAN_CONNECT_QUERY_RETRY_MAX=10
+DHCP_QUERY_RETRY_PERIOD=1 # seconds
+DHCP_QUERY_RETRY_MAX=5
+
 log () {
   msg="$*"
   now=$(date)
@@ -98,38 +105,33 @@ check_wlan_status() {
 }
 
 wlan_disconnect() {
-  WLAN_STATUS_QUERY_PERIOD=2
-  WLAN_STATUS_QUERY_RETRY_MAX=10
-  for i in $(seq 1 ${WLAN_STATUS_QUERY_RETRY_MAX}); do
+  for i in $(seq 1 ${WLAN_DISCONNECT_QUERY_RETRY_MAX}); do
     status=$(check_wlan_status)
     if [ "${status}" = "scanning" ]; then
       log_pass "disconnect"
       return 0
     fi
 
-    log "attempting to disconnect (${i} / ${WLAN_STATUS_QUERY_RETRY_MAX})"
+    log "attempting to disconnect (${i} / ${WLAN_DISCONNECT_QUERY_RETRY_MAX})"
     wlan disconnect > /dev/null
-    sleep ${WLAN_STATUS_QUERY_PERIOD}
+    sleep ${WLAN_DISCONNECT_QUERY_PERIOD}
   done
   log_fail "fails to disconnect"
   return 1
 }
 
 wlan_connect() {
-  WLAN_STATUS_QUERY_PERIOD=5
-  WLAN_STATUS_QUERY_RETRY_MAX=10
-
   ssid=$1
-  for i in $(seq 1 ${WLAN_STATUS_QUERY_RETRY_MAX}); do
+  for i in $(seq 1 ${WLAN_CONNECT_QUERY_RETRY_MAX}); do
     status=$(check_wlan_status)
     if [ "${status}" = "associated" ]; then
       log_pass "connect to ${ssid}"
       return 0
     fi
 
-    log "attempting to connect to ${ssid} (${i} / ${WLAN_STATUS_QUERY_RETRY_MAX})"
+    log "attempting to connect to ${ssid} (${i} / ${WLAN_CONNECT_QUERY_RETRY_MAX})"
     wlan connect "${ssid}" > /dev/null
-    sleep ${WLAN_STATUS_QUERY_PERIOD}
+    sleep ${WLAN_CONNECT_QUERY_PERIOD}
   done
 
   log_fail "fails to connect to ${ssid}"
@@ -137,8 +139,20 @@ wlan_connect() {
 }
 
 wait_for_dhcp() {
-  DHCP_WAIT_PERIOD=3
-  sleep "${DHCP_WAIT_PERIOD}"
+  for i in $(seq 1 ${DHCP_QUERY_RETRY_MAX}); do
+    inet_addr=$(get_wlan_inet_addr)
+    if [ ! -z "${inet_addr}" ]; then
+      log_pass "dhcp address: ${inet_addr}"
+      return 0
+    fi
+    sleep "${DHCP_QUERY_RETRY_PERIOD}"
+  done
+}
+
+get_wlan_inet_addr() {
+  wlan_iface=$(ifconfig | grep ^wlan | tr '[:blank:]' ' ' | cut -f1 -d' ')
+  wlan_inet_addr=$(ifconfig $wlan_iface | grep "inet addr" | cut -f2 -d':' | cut -f1 -d' ' | grep ".")
+  echo "${wlan_inet_addr}"
 }
 
 get_eth_iface_list() {
