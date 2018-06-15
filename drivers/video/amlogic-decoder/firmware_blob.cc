@@ -110,6 +110,9 @@ zx_status_t FirmwareBlob::GetFirmwareData(FirmwareType firmware_type,
     case FirmwareType::kH264:
       format_name = "h264";
       break;
+    case FirmwareType::kVp9Mmu:
+      format_name = "vp9_mmu";
+      break;
     default:
       DECODE_ERROR("Invalid firmware type: %d\n", firmware_type);
       return ZX_ERR_INVALID_ARGS;

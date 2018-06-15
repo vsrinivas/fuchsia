@@ -214,6 +214,32 @@ class AncNCanvasAddr : public TypedRegisterBase<DosRegisterIo, AncNCanvasAddr, u
     static auto Get(uint32_t i) { return AddrType((0x0990 + i) * 4); }
 };
 
+DEFINE_REGISTER(HevcAssistMmuMapAddr, DosRegisterIo, 0x3009);
+DEFINE_REGISTER(HevcAssistScratch0, DosRegisterIo, 0x30c0);
+DEFINE_REGISTER(HevcAssistScratch1, DosRegisterIo, 0x30c1);
+DEFINE_REGISTER(HevcAssistScratch2, DosRegisterIo, 0x30c2);
+DEFINE_REGISTER(HevcAssistScratch3, DosRegisterIo, 0x30c3);
+DEFINE_REGISTER(HevcAssistScratch4, DosRegisterIo, 0x30c4);
+DEFINE_REGISTER(HevcAssistScratch5, DosRegisterIo, 0x30c5);
+DEFINE_REGISTER(HevcAssistScratch6, DosRegisterIo, 0x30c6);
+DEFINE_REGISTER(HevcAssistScratch7, DosRegisterIo, 0x30c7);
+DEFINE_REGISTER(HevcAssistScratch8, DosRegisterIo, 0x30c8);
+DEFINE_REGISTER(HevcAssistScratch9, DosRegisterIo, 0x30c9);
+DEFINE_REGISTER(HevcAssistScratchA, DosRegisterIo, 0x30ca);
+DEFINE_REGISTER(HevcAssistScratchB, DosRegisterIo, 0x30cb);
+DEFINE_REGISTER(HevcAssistScratchC, DosRegisterIo, 0x30cc);
+DEFINE_REGISTER(HevcAssistScratchD, DosRegisterIo, 0x30cd);
+DEFINE_REGISTER(HevcAssistScratchE, DosRegisterIo, 0x30ce);
+DEFINE_REGISTER(HevcAssistScratchF, DosRegisterIo, 0x30cf);
+DEFINE_REGISTER(HevcAssistScratchG, DosRegisterIo, 0x30d0);
+DEFINE_REGISTER(HevcAssistScratchH, DosRegisterIo, 0x30d1);
+DEFINE_REGISTER(HevcAssistScratchI, DosRegisterIo, 0x30d2);
+DEFINE_REGISTER(HevcAssistScratchJ, DosRegisterIo, 0x30d3);
+DEFINE_REGISTER(HevcAssistScratchK, DosRegisterIo, 0x30d4);
+DEFINE_REGISTER(HevcAssistScratchL, DosRegisterIo, 0x30d5);
+DEFINE_REGISTER(HevcAssistScratchM, DosRegisterIo, 0x30d6);
+DEFINE_REGISTER(HevcAssistScratchN, DosRegisterIo, 0x30d7);
+
 REGISTER_NAME(HevcStreamControl, DosRegisterIo, 0x3101)
   enum {
     kBigEndian64 = 0,
@@ -237,6 +263,39 @@ DEFINE_REGISTER(HevcCpsr, DosRegisterIo, 0x3321);
 DEFINE_REGISTER(HevcImemDmaCtrl, DosRegisterIo, 0x3340);
 DEFINE_REGISTER(HevcImemDmaAdr, DosRegisterIo, 0x3341);
 DEFINE_REGISTER(HevcImemDmaCount, DosRegisterIo, 0x3342);
+
+DEFINE_REGISTER(HevcdIppLinebuffBase, DosRegisterIo, 0x3409);
+DEFINE_REGISTER(HevcdMppAnc2AxiTblConfAddr, DosRegisterIo, 0x3460);
+DEFINE_REGISTER(HevcdMppAnc2AxiTblData, DosRegisterIo, 0x3464);
+DEFINE_REGISTER(HevcdMppAncCanvasAccconfigAddr, DosRegisterIo, 0x34c0);
+DEFINE_REGISTER(HevcdMppAncCanvasDataAddr, DosRegisterIo, 0x34c1);
+
+REGISTER_NAME(HevcdMppDecompCtl1, DosRegisterIo, 0x34c2)
+  DEF_BIT(4, paged_mode); // Allocate compressed pages on demand.
+  DEF_BIT(3, smem_mode);
+};
+
+DEFINE_REGISTER(HevcdMppDecompCtl2, DosRegisterIo, 0x34c3);
+
+DEFINE_REGISTER(HevcDblkCfg4, DosRegisterIo, 0x3504);
+DEFINE_REGISTER(HevcDblkCfg5, DosRegisterIo, 0x3505);
+DEFINE_REGISTER(HevcDblkCfg9, DosRegisterIo, 0x3509);
+DEFINE_REGISTER(HevcDblkCfgA, DosRegisterIo, 0x350a);
+REGISTER_NAME(HevcDblkCfgB, DosRegisterIo, 0x350b)
+  DEF_BIT(0, vp9_mode);
+  DEF_FIELD(5, 4, pipeline_mode);
+  DEF_BIT(8, compressed_write_enable);
+  DEF_BIT(9, uncompressed_write_enable);
+};
+DEFINE_REGISTER(HevcDblkCfgE, DosRegisterIo, 0x350e)
+
+REGISTER_NAME(HevcSaoCtrl5, DosRegisterIo, 0x3623)
+  DEF_BIT(9, mode_8_bits);
+  DEF_BIT(10, use_compressed_header);
+};
+
+DEFINE_REGISTER(HevcSaoMmuVh0Addr, DosRegisterIo, 0x363a)
+DEFINE_REGISTER(HevcSaoMmuVh1Addr, DosRegisterIo, 0x363b)
 
 DEFINE_REGISTER(HevcDblkCtrl, DosRegisterIo, 0x3951);
 DEFINE_REGISTER(HevcDblkStatus, DosRegisterIo, 0x3953);

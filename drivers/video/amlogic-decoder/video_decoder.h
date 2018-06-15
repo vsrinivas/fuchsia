@@ -20,6 +20,12 @@
 
 class FirmwareBlob;
 
+enum class DeviceType {
+  kUnknown,
+  kGXM,   // S912
+  kG12A,  // S905D2
+};
+
 class VideoDecoder {
  public:
   using FrameReadyNotifier = std::function<void(VideoFrame*)>;
@@ -27,6 +33,7 @@ class VideoDecoder {
    public:
     virtual DosRegisterIo* dosbus() = 0;
     virtual zx_handle_t bti() = 0;
+    virtual DeviceType device_type() = 0;
     virtual FirmwareBlob* firmware_blob() = 0;
     virtual zx_status_t ConfigureCanvas(uint32_t id, uint32_t addr,
                                         uint32_t width, uint32_t height,

@@ -6,6 +6,7 @@
 #include "gtest/gtest.h"
 #include "hevcdec.h"
 #include "tests/test_support.h"
+#include "vp9_decoder.h"
 
 class TestVP9 {
  public:
@@ -23,6 +24,9 @@ class TestVP9 {
     video->InitializeInterrupts();
 
     EXPECT_EQ(ZX_OK, video->InitializeEsParser());
+
+    video->video_decoder_ = std::make_unique<Vp9Decoder>(video.get());
+    EXPECT_EQ(ZX_OK, video->video_decoder_->Initialize());
 
     video.reset();
   }

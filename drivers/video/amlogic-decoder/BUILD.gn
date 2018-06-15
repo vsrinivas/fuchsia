@@ -63,6 +63,8 @@ source_set("sources") {
     "video_decoder.h",
     "video_frame.cc",
     "video_frame.h",
+    "vp9_decoder.cc",
+    "vp9_decoder.h",
 
     # CodecFactory+Codec interface handling:
     "codec_impl.cc",

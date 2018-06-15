@@ -17,6 +17,7 @@ class FirmwareBlob {
   enum class FirmwareType {
     kMPEG12,
     kH264,
+    kVp9Mmu,
   };
 
   ~FirmwareBlob();

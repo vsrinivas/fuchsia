@@ -28,12 +28,6 @@
 class AmlogicVideo final : public VideoDecoder::Owner,
                            public DecoderCore::Owner {
  public:
-  enum class DeviceType {
-    kUnknown,
-    kGXM,   // S912
-    kG12A,  // S905D2
-  };
-
   ~AmlogicVideo();
 
   zx_status_t InitRegisters(zx_device_t* parent);
@@ -42,6 +36,7 @@ class AmlogicVideo final : public VideoDecoder::Owner,
   // VideoDecoder::Owner implementation.
   DosRegisterIo* dosbus() override { return dosbus_.get(); }
   zx_handle_t bti() override { return bti_.get(); }
+  DeviceType device_type() override { return device_type_; }
   FirmwareBlob* firmware_blob() override { return firmware_.get(); }
   zx_status_t ConfigureCanvas(uint32_t id, uint32_t addr, uint32_t width,
                               uint32_t height, uint32_t wrap,
