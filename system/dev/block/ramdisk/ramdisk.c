@@ -267,6 +267,7 @@ static void ramdisk_queue(void* ctx, block_op_t* bop) {
     switch ((txn->op.command &= BLOCK_OP_MASK)) {
     case BLOCK_OP_READ:
         read = true;
+        __FALLTHROUGH;
     case BLOCK_OP_WRITE:
         if ((txn->op.rw.offset_dev >= ramdev->blk_count) ||
             ((ramdev->blk_count - txn->op.rw.offset_dev) < txn->op.rw.length)) {
