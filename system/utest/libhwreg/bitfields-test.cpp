@@ -39,17 +39,20 @@ void compilation_test() {
 }
 
 template <typename IntType>
+struct LastBit {
+    static constexpr const unsigned int value = sizeof(IntType) * CHAR_BIT - 1;
+};
+
+template <typename IntType>
 static bool struct_sub_bit_test() {
     BEGIN_TEST;
-
-    constexpr unsigned kLastBit = sizeof(IntType) * CHAR_BIT - 1;
 
     struct StructSubBitTest {
         IntType field;
 
         DEF_SUBBIT(field, 0, first_bit);
         DEF_SUBBIT(field, 1, mid_bit);
-        DEF_SUBBIT(field, kLastBit, last_bit);
+        DEF_SUBBIT(field, LastBit<IntType>::value, last_bit);
     };
 
     StructSubBitTest val = {};
@@ -72,7 +75,7 @@ static bool struct_sub_bit_test() {
     val.set_mid_bit(0);
 
     val.set_last_bit(1);
-    EXPECT_EQ(1ull << kLastBit, val.field);
+    EXPECT_EQ(1ull << LastBit<IntType>::value, val.field);
     EXPECT_EQ(0u, val.first_bit());
     EXPECT_EQ(0u, val.mid_bit());
     EXPECT_EQ(1u, val.last_bit());
@@ -85,11 +88,9 @@ template <typename IntType>
 static bool struct_sub_field_test() {
     BEGIN_TEST;
 
-    constexpr unsigned kLastBit = sizeof(IntType) * CHAR_BIT - 1;
-
     struct StructSubFieldTest {
         IntType field1;
-        DEF_SUBFIELD(field1, kLastBit, 0, whole_length);
+        DEF_SUBFIELD(field1, LastBit<IntType>::value, 0, whole_length);
 
         IntType field2;
         DEF_SUBFIELD(field2, 2, 2, single_bit);
