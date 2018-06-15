@@ -1,1 +1,1 @@
-crashsvc.analyzer=/system/bin/crashpad_analyzer
+crashsvc.analyzer=from-appmgr

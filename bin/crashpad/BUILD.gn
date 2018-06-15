@@ -8,9 +8,12 @@ executable("bin") {
   output_name = "crashpad_analyzer"
 
   deps = [
+    "//garnet/public/lib/app/cpp",
     "//third_party/crashpad/client",
     "//third_party/crashpad/handler",
     "//third_party/crashpad/third_party/mini_chromium/mini_chromium/base",
+    "//zircon/public/fidl/crash:crash",
+    "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/zx",
   ]
@@ -23,15 +26,16 @@ executable("bin") {
 }
 
 package("crashpad_analyzer") {
-  deprecated_system_image = true
-
   deps = [
     ":bin",
   ]
 
-  binaries = [
+  binary = "crashpad_analyzer"
+
+  meta = [
     {
-      name = "crashpad_analyzer"
+      path = rebase_path("meta/crashpad_analyzer.cmx")
+      dest = "crashpad_analyzer.cmx"
     },
   ]
 }

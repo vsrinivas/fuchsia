@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/async-loop/cpp/loop.h>
 #include <lib/fdio/io.h>
 #include <lib/zx/handle.h>
 #include <lib/zx/log.h>
@@ -12,6 +13,10 @@
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/log.h>
 
+#include <utility>
+
+#include <fuchsia/crash/cpp/fidl.h>
+#include "lib/app/cpp/startup_context.h"
 #include "third_party/crashpad/client/settings.h"
 #include "third_party/crashpad/handler/fuchsia/crash_report_exception_handler.h"
 #include "third_party/crashpad/third_party/mini_chromium/mini_chromium/base/files/scoped_file.h"
@@ -88,7 +93,7 @@ std::string GetSystemLogToFile() {
 
 }  // namespace
 
-int main(int argc, char* const argv[]) {
+int HandleException(zx::process process, zx::thread thread) {
   // On Fuchsia, the crash reporter does not stay resident, so we don't run
   // crashpad_handler here. Instead, directly use CrashReportExceptionHandler
   // and terminate when it has completed.
@@ -111,7 +116,7 @@ int main(int argc, char* const argv[]) {
   upload_thread_options.watch_pending_reports = true;
 
   upload_thread.Reset(new crashpad::CrashReportUploadThread(
-      database.get(), "http://clients2.google.com/cr/report",
+      database.get(), "https://clients2.google.com/cr/report",
       upload_thread_options));
   upload_thread.Get()->Start();
 
@@ -134,9 +139,37 @@ int main(int argc, char* const argv[]) {
       static_cast<crashpad::CrashReportUploadThread*>(upload_thread.Get()),
       &annotations, &attachments, nullptr);
 
-  zx_handle_t process = zx_take_startup_handle(PA_HND(PA_USER0, 0));
-  zx_handle_t thread = zx_take_startup_handle(PA_HND(PA_USER0, 1));
-  return exception_handler.HandleExceptionHandles(process, thread)
+  return exception_handler.HandleExceptionHandles(process.get(), thread.get())
              ? EXIT_SUCCESS
              : EXIT_FAILURE;
+}
+
+class AnalyzerImpl : public fuchsia::crash::Analyzer {
+ public:
+  // fuchsia::crash::Analyzer:
+  void Analyze(::zx::process process, ::zx::thread thread,
+               AnalyzeCallback callback) override {
+    callback();
+    HandleException(std::move(process), std::move(thread));
+  }
+};
+
+int main(int argc, const char** argv) {
+  async::Loop loop(&kAsyncLoopConfigMakeDefault);
+  std::unique_ptr<fuchsia::sys::StartupContext> app_context(
+      fuchsia::sys::StartupContext::CreateFromStartupInfo());
+
+  AnalyzerImpl analyzer;
+
+  fidl::BindingSet<fuchsia::crash::Analyzer> bindings;
+
+  app_context->outgoing().AddPublicService<fuchsia::crash::Analyzer>(
+      [&analyzer,
+       &bindings](fidl::InterfaceRequest<fuchsia::crash::Analyzer> request) {
+        bindings.AddBinding(&analyzer, std::move(request));
+      });
+
+  loop.Run();
+
+  return 0;
 }
