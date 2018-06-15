@@ -5,13 +5,65 @@
 package elflib
 
 import (
+	"bufio"
+	"bytes"
 	"debug/elf"
 	"encoding/binary"
+	"encoding/hex"
 	"fmt"
 	"io"
+	"os"
+	"strings"
 )
 
 const NT_GNU_BUILD_ID uint32 = 3
+
+// BinaryFileRef represents a reference to an ELF file. The build id
+// and filepath are stored here. BinaryFileRefs can verify that their
+// build id matches their contents.
+type BinaryFileRef struct {
+	BuildID  string
+	Filepath string
+}
+
+func NewBinaryFileRef(filepath, build string) BinaryFileRef {
+	return BinaryFileRef{BuildID: build, Filepath: filepath}
+}
+
+type buildIDError struct {
+	err      error
+	filename string
+}
+
+func newBuildIDError(err error, filename string) *buildIDError {
+	return &buildIDError{err: err, filename: filename}
+}
+
+func (b buildIDError) Error() string {
+	return fmt.Sprintf("error reading %s: %v", b.filename, b.err)
+}
+
+// Verify verifies that the build id of b matches the build id found in the file.
+func (b BinaryFileRef) Verify() error {
+	file, err := os.Open(b.Filepath)
+	if err != nil {
+		return newBuildIDError(err, b.Filepath)
+	}
+	buildIDs, err := GetBuildIDs(b.Filepath, file)
+	if err != nil {
+		return newBuildIDError(err, b.Filepath)
+	}
+	binBuild, err := hex.DecodeString(b.BuildID)
+	if err != nil {
+		return newBuildIDError(fmt.Errorf("build ID `%s` is not a hex string: %v", b.BuildID, err), b.Filepath)
+	}
+	for _, buildID := range buildIDs {
+		if bytes.Equal(buildID, binBuild) {
+			return nil
+		}
+	}
+	return newBuildIDError(fmt.Errorf("build ID `%s` could not be found", b.BuildID), b.Filepath)
+}
 
 // rounds 'x' up to the next 'to' aligned value
 func alignTo(x, to uint32) uint32 {
@@ -90,6 +142,22 @@ func GetBuildIDs(filename string, file io.ReaderAt) ([][]byte, error) {
 		if err != nil {
 			return out, err
 		}
+	}
+	return out, nil
+}
+
+func ReadIDsFile(file io.Reader) ([]BinaryFileRef, error) {
+	scanner := bufio.NewScanner(file)
+	out := []BinaryFileRef{}
+	for line := 1; scanner.Scan(); line++ {
+		text := scanner.Text()
+		parts := strings.SplitN(text, " ", 2)
+		if len(parts) != 2 {
+			return nil, fmt.Errorf("error parsing on line %d: found `%s`", line, text)
+		}
+		build := parts[0]
+		filename := parts[1]
+		out = append(out, BinaryFileRef{Filepath: filename, BuildID: build})
 	}
 	return out, nil
 }

@@ -11,6 +11,7 @@ import (
 	"io/ioutil"
 	"testing"
 
+	"fuchsia.googlesource.com/tools/elflib"
 	"fuchsia.googlesource.com/tools/symbolize"
 )
 
@@ -34,7 +35,7 @@ func NewTestReadWriteCloser() io.ReadWriteCloser {
 func TestRunCommand(t *testing.T) {
 	// Expects dump_breakpad_symbols to produce the specified summary and
 	// ninja depfile from the given input sources.
-	expectOutputs := func(inputSources []symbolize.Source, expectedSummary string, expectedDepFile string) {
+	expectOutputs := func(inputSources []symbolize.BinaryFileSource, expectedSummary string, expectedDepFile string) {
 		// The dep file to write.
 		depFile := NewTestReadWriteCloser()
 
@@ -83,9 +84,9 @@ func TestRunCommand(t *testing.T) {
 	}
 
 	t.Run("should produce an emtpy summary if no data is provided", func(t *testing.T) {
-		inputSources := []symbolize.Source{
-			symbolize.NewMockSource("idsA.txt", []symbolize.Binary{}),
-			symbolize.NewMockSource("idsB.txt", []symbolize.Binary{}),
+		inputSources := []symbolize.BinaryFileSource{
+			symbolize.NewMockSource("idsA.txt", []elflib.BinaryFileRef{}),
+			symbolize.NewMockSource("idsB.txt", []elflib.BinaryFileRef{}),
 		}
 		expectedSummary := "{}"
 		expectedDepFile := fmt.Sprintf("summary.json: %s %s\n", "idsA.txt", "idsB.txt")
@@ -95,11 +96,11 @@ func TestRunCommand(t *testing.T) {
 
 	t.Run("should handle a single input file", func(t *testing.T) {
 		// Create a testing input file with fake hash values and binary paths.
-		inputSources := []symbolize.Source{
-			symbolize.NewMockSource("ids.txt", []symbolize.Binary{
-				{BuildID: "01634b09", Name: "/path/to/binaryA.elf"},
-				{BuildID: "02298167", Name: "/path/to/binaryB"},
-				{BuildID: "025abbbc", Name: "/path/to/binaryC.so"},
+		inputSources := []symbolize.BinaryFileSource{
+			symbolize.NewMockSource("ids.txt", []elflib.BinaryFileRef{
+				{BuildID: "01634b09", Filepath: "/path/to/binaryA.elf"},
+				{BuildID: "02298167", Filepath: "/path/to/binaryB"},
+				{BuildID: "025abbbc", Filepath: "/path/to/binaryC.so"},
 			}),
 		}
 		expectedSummary, err := json.MarshalIndent(map[string]string{
@@ -116,16 +117,16 @@ func TestRunCommand(t *testing.T) {
 	})
 
 	t.Run("should handle multiple input files", func(t *testing.T) {
-		inputSources := []symbolize.Source{
-			symbolize.NewMockSource("idsA.txt", []symbolize.Binary{
-				{BuildID: "01634b09", Name: "/path/to/binaryA.elf"},
-				{BuildID: "02298167", Name: "/path/to/binaryB"},
-				{BuildID: "025abbbc", Name: "/path/to/binaryC.so"},
+		inputSources := []symbolize.BinaryFileSource{
+			symbolize.NewMockSource("idsA.txt", []elflib.BinaryFileRef{
+				{BuildID: "01634b09", Filepath: "/path/to/binaryA.elf"},
+				{BuildID: "02298167", Filepath: "/path/to/binaryB"},
+				{BuildID: "025abbbc", Filepath: "/path/to/binaryC.so"},
 			}),
-			symbolize.NewMockSource("idsB.txt", []symbolize.Binary{
-				{BuildID: "01634b09", Name: "/path/to/binaryD"},
-				{BuildID: "02298167", Name: "/path/to/binaryE"},
-				{BuildID: "025abbbc", Name: "/path/to/binaryF"},
+			symbolize.NewMockSource("idsB.txt", []elflib.BinaryFileRef{
+				{BuildID: "01634b09", Filepath: "/path/to/binaryD"},
+				{BuildID: "02298167", Filepath: "/path/to/binaryE"},
+				{BuildID: "025abbbc", Filepath: "/path/to/binaryF"},
 			}),
 		}
 		expectedSummary, err := json.MarshalIndent(map[string]string{
@@ -145,21 +146,21 @@ func TestRunCommand(t *testing.T) {
 	})
 
 	t.Run("should skip duplicate binary paths", func(t *testing.T) {
-		inputSources := []symbolize.Source{
-			symbolize.NewMockSource("idsA.txt", []symbolize.Binary{
-				{BuildID: "01634b09", Name: "/path/to/binaryA"},
-				{BuildID: "02298167", Name: "/path/to/binaryB"},
-				{BuildID: "asdf87fs", Name: "/path/to/binaryC"},
+		inputSources := []symbolize.BinaryFileSource{
+			symbolize.NewMockSource("idsA.txt", []elflib.BinaryFileRef{
+				{BuildID: "01634b09", Filepath: "/path/to/binaryA"},
+				{BuildID: "02298167", Filepath: "/path/to/binaryB"},
+				{BuildID: "asdf87fs", Filepath: "/path/to/binaryC"},
 			}),
-			symbolize.NewMockSource("idsB.txt", []symbolize.Binary{
-				{BuildID: "01634b09", Name: "/path/to/binaryA"},
-				{BuildID: "02298167", Name: "/path/to/binaryB"},
-				{BuildID: "asdf87fs", Name: "/path/to/binaryC"},
+			symbolize.NewMockSource("idsB.txt", []elflib.BinaryFileRef{
+				{BuildID: "01634b09", Filepath: "/path/to/binaryA"},
+				{BuildID: "02298167", Filepath: "/path/to/binaryB"},
+				{BuildID: "asdf87fs", Filepath: "/path/to/binaryC"},
 			}),
-			symbolize.NewMockSource("idsC.txt", []symbolize.Binary{
-				{BuildID: "01634b09", Name: "/path/to/binaryA"},
-				{BuildID: "02298167", Name: "/path/to/binaryB"},
-				{BuildID: "asdf87fs", Name: "/path/to/binaryC"},
+			symbolize.NewMockSource("idsC.txt", []elflib.BinaryFileRef{
+				{BuildID: "01634b09", Filepath: "/path/to/binaryA"},
+				{BuildID: "02298167", Filepath: "/path/to/binaryB"},
+				{BuildID: "asdf87fs", Filepath: "/path/to/binaryC"},
 			}),
 		}
 		expectedSummary, err := json.MarshalIndent(map[string]string{

@@ -5,102 +5,44 @@
 package symbolize
 
 import (
-	"bufio"
-	"bytes"
-	"encoding/hex"
 	"fmt"
 	"os"
-	"strings"
 	"sync"
 
 	"fuchsia.googlesource.com/tools/elflib"
 )
 
-// TODO(jakehehrlich): Document what this is for.
-// TODO(jakehehrlich): Consider giving this a more descriptive name.
-type Source interface {
-	// The name of this source which is usually the path to its backing file.
+// BinaryFileSource is a source of binary files that can be reloaded. It might
+// be an ids.txt file, it might just be a single binary file, or it might be
+// another list of binaries coming from somewhere else. Currently the interface
+// assumes that all binaries from a source will be files on the same system.
+// Eventully we might relax this assumption.
+type BinaryFileSource interface {
+	// Name is deprecated. Do not use.
 	Name() string
 	// Extracts the set of binaries from this source.
-	GetBinaries() ([]Binary, error)
+	GetBinaries() ([]elflib.BinaryFileRef, error)
 }
 
-type buildIDError struct {
-	err      error
-	filename string
-}
-
-func newBuildIDError(err error, filename string) *buildIDError {
-	return &buildIDError{err: err, filename: filename}
-}
-
-func (b buildIDError) Error() string {
-	return fmt.Sprintf("error reading %s: %v", b.filename, b.err)
-}
-
-// TODO(jakehehrlich): Document what this is for.
-// TODO(jakehehrlich): Consider giving this a more accurate name.
-type Binary struct {
-	BuildID string
-	Name    string
-}
-
-// Verify ensures this Binary's build ID is derived from its contents.
-func (b *Binary) Verify() error {
-	filename := b.Name
-	build := b.BuildID
-
-	file, err := os.Open(filename)
-	if err != nil {
-		return newBuildIDError(err, filename)
-	}
-	buildIDs, err := elflib.GetBuildIDs(filename, file)
-	if err != nil {
-		return newBuildIDError(err, filename)
-	}
-	binBuild, err := hex.DecodeString(build)
-	if err != nil {
-		return newBuildIDError(fmt.Errorf("build ID `%s` is not a hex string: %v", build, err), filename)
-	}
-	for _, buildID := range buildIDs {
-		if bytes.Equal(buildID, binBuild) {
-			return nil
-		}
-	}
-	return newBuildIDError(fmt.Errorf("build ID `%s` could not be found", build), filename)
-}
-
-// TODO(jakehehrlich): Document what this is for.
-// TODO(jakehehrlich): Consider giving this a more descriptive name.
-type IDsSource struct {
+// IDsSource is a BinaryFileSource parsed from ids.txt
+type idsSource struct {
 	pathToIDs string
 }
 
-func NewIDsSource(pathToIDs string) Source {
-	return &IDsSource{pathToIDs}
+func NewIDsSource(pathToIDs string) BinaryFileSource {
+	return &idsSource{pathToIDs}
 }
 
-func (i *IDsSource) Name() string {
+func (i *idsSource) Name() string {
 	return i.pathToIDs
 }
 
-func (i *IDsSource) GetBinaries() ([]Binary, error) {
+func (i *idsSource) GetBinaries() ([]elflib.BinaryFileRef, error) {
 	file, err := os.Open(i.pathToIDs)
 	if err != nil {
 		return nil, err
 	}
-	scanner := bufio.NewScanner(file)
-	out := []Binary{}
-	for line := 0; scanner.Scan(); line++ {
-		parts := strings.SplitN(scanner.Text(), " ", 2)
-		if len(parts) != 2 {
-			return nil, fmt.Errorf("error parsing %s at line %d", i.pathToIDs, line)
-		}
-		build := parts[0]
-		filename := parts[1]
-		out = append(out, Binary{Name: filename, BuildID: build})
-	}
-	return out, nil
+	return elflib.ReadIDsFile(file)
 }
 
 type buildInfo struct {
@@ -111,11 +53,12 @@ type buildInfo struct {
 // SymbolizerRepo keeps track of build objects and source files used in those build objects.
 type SymbolizerRepo struct {
 	lock    sync.RWMutex
-	sources []Source
-	builds  map[string]*buildInfo
+	sources []BinaryFileSource
+	// TODO (jakehehrlich): give 'builds' a more descriptive name
+	builds map[string]*buildInfo
 }
 
-func (s *SymbolizerRepo) AddObject(build, filename string) {
+func (s *SymbolizerRepo) addObject(build, filename string) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 	s.builds[build] = &buildInfo{
@@ -130,26 +73,26 @@ func NewRepo() *SymbolizerRepo {
 	}
 }
 
-func (s *SymbolizerRepo) loadSource(source Source) error {
+func (s *SymbolizerRepo) loadSource(source BinaryFileSource) error {
 	bins, err := source.GetBinaries()
 	if err != nil {
 		return err
 	}
+	// TODO: Do this in paralell.
 	// Verify each binary
 	for _, bin := range bins {
 		if err := bin.Verify(); err != nil {
 			return err
 		}
 	}
-	// TODO: Do this in parallel
 	for _, bin := range bins {
-		s.AddObject(bin.BuildID, bin.Name)
+		s.addObject(bin.BuildID, bin.Filepath)
 	}
 	return nil
 }
 
 // AddSource adds a source of binaries and all contained binaries.
-func (s *SymbolizerRepo) AddSource(source Source) error {
+func (s *SymbolizerRepo) AddSource(source BinaryFileSource) error {
 	s.sources = append(s.sources, source)
 	return s.loadSource(source)
 }

@@ -12,6 +12,8 @@ import (
 	"os/exec"
 	"strconv"
 	"strings"
+
+	"fuchsia.googlesource.com/tools/elflib"
 )
 
 // Symbolizer is an interface to an object that maps addresses in a bianry to source locations
@@ -19,6 +21,7 @@ type Symbolizer interface {
 	FindSrcLoc(file, build string, modRelAddr uint64) <-chan LLVMSymbolizeResult
 }
 
+// TODO (jakehehrlich): Consider add BinaryFileRef here.
 type llvmSymboArgs struct {
 	file       string
 	build      string
@@ -68,9 +71,8 @@ func (s *LLVMSymbolizer) handle(ctx context.Context) {
 					nil, fmt.Errorf("Attempt to request code location of unnamed file with build ID %x", args.build)}
 				continue
 			}
-			// Before sending a binary off to llvm-symbolizer, veryify the binary
-			binary := &Binary{args.file, args.build}
-			if err := binary.Verify(); err != nil {
+			// Before sending a binary off to llvm-symbolizer, verify the binary
+			if err := elflib.NewBinaryFileRef(args.file, args.build).Verify(); err != nil {
 				args.output <- LLVMSymbolizeResult{nil, err}
 				continue
 			}

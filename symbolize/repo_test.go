@@ -20,11 +20,11 @@ func hexEqual(a []byte, b string) bool {
 
 type gobugMockSource struct{}
 
-func (g *gobugMockSource) GetBinaries() ([]Binary, error) {
-	out := []Binary{
-		Binary{BuildID: "5bf6a28a259b95b4f20ffbcea0cbb149", Name: "testdata/gobug.elf"},
-		Binary{BuildID: "4FCB712AA6387724A9F465A3DEADBEEF", Name: "testdata/gobug.elf"},
-		Binary{BuildID: "DEADBEEFA6387724A9F465A32CD8C14B", Name: "testdata/gobug.elf"},
+func (g *gobugMockSource) GetBinaries() ([]elflib.BinaryFileRef, error) {
+	out := []elflib.BinaryFileRef{
+		{BuildID: "5bf6a28a259b95b4f20ffbcea0cbb149", Filepath: "testdata/gobug.elf"},
+		{BuildID: "4FCB712AA6387724A9F465A3DEADBEEF", Filepath: "testdata/gobug.elf"},
+		{BuildID: "DEADBEEFA6387724A9F465A32CD8C14B", Filepath: "testdata/gobug.elf"},
 	}
 	for _, bin := range out {
 		if err := bin.Verify(); err != nil {
@@ -34,6 +34,9 @@ func (g *gobugMockSource) GetBinaries() ([]Binary, error) {
 	return out, nil
 }
 
+// The current go toolchain used in Fuchsia has a bug that causes multiple build ids
+// to wind up in go binaries. This tests to make sure we can handle that case and
+// still ensure that our mentioned build id matches any of the build ids in the file.
 func TestGoBug(t *testing.T) {
 	source := &gobugMockSource{}
 	data, err := os.Open("testdata/gobug.elf")
