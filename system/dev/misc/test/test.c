@@ -143,10 +143,11 @@ static zx_status_t test_ioctl(void* ctx, uint32_t op, const void* in, size_t inl
 
     char devname[ZX_DEVICE_NAME_MAX + 1];
     if (inlen > 0) {
-        strncpy(devname, in, sizeof(devname));
+        strncpy(devname, in, sizeof(devname) - 1);
     } else {
-        strncpy(devname, "testdev", sizeof(devname));
+        strncpy(devname, "testdev", sizeof(devname) - 1);
     }
+    devname[sizeof(devname) - 1] = '\0';
 
     if (outlen < strlen(devname) + sizeof(TEST_CONTROL_DEVICE) + 1) {
         return ZX_ERR_BUFFER_TOO_SMALL;

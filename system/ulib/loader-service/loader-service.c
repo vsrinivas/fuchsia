@@ -224,7 +224,7 @@ static zx_status_t loader_service_rpc(zx_handle_t h, session_state_t* session_st
             status = ZX_ERR_INVALID_ARGS;
             break;
         }
-        strncpy(session_state->config_prefix, data, len + 1);
+        memcpy(session_state->config_prefix, data, len + 1);
         session_state->config_exclusive = false;
         if (session_state->config_prefix[len - 1] == '!') {
             --len;

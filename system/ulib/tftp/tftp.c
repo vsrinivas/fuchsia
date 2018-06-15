@@ -324,7 +324,8 @@ tftp_status tftp_generate_request(tftp_session* session,
     memcpy(body, remote_filename, remote_filename_len);
     body += remote_filename_len + 1;
     left -= remote_filename_len + 1;
-    strncpy(session->filename, local_filename, sizeof(session->filename));
+    strncpy(session->filename, local_filename, sizeof(session->filename) - 1);
+    session->filename[sizeof(session->filename) - 1] = '\0';
     switch (mode) {
     case MODE_NETASCII:
         append_option_name(&body, &left, kNetascii);
@@ -443,7 +444,8 @@ tftp_status tftp_handle_request(tftp_session* session,
 
     xprintf("filename = '%s', mode = '%s'\n", option, value);
 
-    strncpy(session->filename, option, sizeof(session->filename));
+    strncpy(session->filename, option, sizeof(session->filename) - 1);
+    session->filename[sizeof(session->filename) - 1] = '\0';
     char* mode = value;
     if (!strncasecmp(mode, kNetascii, strlen(kNetascii))) {
         session->mode = MODE_NETASCII;
@@ -1307,4 +1309,3 @@ tftp_status tftp_handle_msg(tftp_session* session,
     }
     return ret;
 }
-
