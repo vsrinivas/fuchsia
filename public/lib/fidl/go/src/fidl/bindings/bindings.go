@@ -149,7 +149,15 @@ func (b *Binding) dispatch() (bool, error) {
 	}
 	start := MessageHeaderSize
 	p, err := b.Stub.Dispatch(header.Ordinal, respb[start:int(nb)], resph[:nh])
-	if err != nil {
+	switch {
+	case err == ErrUnknownOrdinal:
+		// If we couldn't determine the ordinal, we still own the
+		// handles, so we should close them all.
+		for _, h := range resph[:nh] {
+			h.Close()
+		}
+		fallthrough
+	case err != nil:
 		return false, err
 	}
 	// Message has no response.
