@@ -30,7 +30,7 @@ class FakeLoopController : public LedgerAppInstanceFactory::LoopController {
   fit::function<void()> on_stop_;
 };
 
-TEST(LedgerAppInstanceFactoryTest_CallbackWaiterTest, PreCall) {
+TEST(CallbackWaiterTest, PreCall) {
   size_t nb_run = 0;
   size_t nb_stop = 0;
   FakeLoopController loop_controller([&] { ++nb_run; }, [&] { ++nb_stop; });
@@ -45,7 +45,7 @@ TEST(LedgerAppInstanceFactoryTest_CallbackWaiterTest, PreCall) {
   EXPECT_EQ(0u, nb_stop);
 }
 
-TEST(LedgerAppInstanceFactoryTest_CallbackWaiterTest, MultipleGetCallback) {
+TEST(CallbackWaiterTest, MultipleGetCallback) {
   size_t nb_run = 0;
   size_t nb_stop = 0;
   FakeLoopController loop_controller([&] { ++nb_run; }, [&] { ++nb_stop; });
@@ -62,7 +62,7 @@ TEST(LedgerAppInstanceFactoryTest_CallbackWaiterTest, MultipleGetCallback) {
   EXPECT_EQ(0u, nb_stop);
 }
 
-TEST(LedgerAppInstanceFactoryTest_CallbackWaiterTest, PostCall) {
+TEST(CallbackWaiterTest, PostCall) {
   size_t nb_run = 0;
   size_t nb_stop = 0;
   std::unique_ptr<fit::closure> callback;
@@ -83,7 +83,7 @@ TEST(LedgerAppInstanceFactoryTest_CallbackWaiterTest, PostCall) {
   EXPECT_EQ(1u, nb_stop);
 }
 
-TEST(LedgerAppInstanceFactoryTest_CallbackWaiterTest, MultipleRunUntilCalled) {
+TEST(CallbackWaiterTest, MultipleRunUntilCalled) {
   size_t nb_run = 0;
   size_t nb_stop = 0;
   std::unique_ptr<fit::closure> callback;
@@ -105,7 +105,7 @@ TEST(LedgerAppInstanceFactoryTest_CallbackWaiterTest, MultipleRunUntilCalled) {
   EXPECT_EQ(2u, nb_stop);
 }
 
-TEST(LedgerAppInstanceFactoryTest_CallbackWaiterTest, InterleaveRunUntilCalledAndCall) {
+TEST(CallbackWaiterTest, InterleaveRunUntilCalledAndCall) {
   size_t nb_run = 0;
   size_t nb_stop = 0;
   std::unique_ptr<fit::closure> callback;
@@ -131,7 +131,7 @@ TEST(LedgerAppInstanceFactoryTest_CallbackWaiterTest, InterleaveRunUntilCalledAn
   EXPECT_EQ(1u, nb_stop);
 }
 
-TEST(LedgerAppInstanceFactoryTest_CallbackWaiterTest, NotCalledYet) {
+TEST(CallbackWaiterTest, NotCalledYet) {
   FakeLoopController loop_controller([] {}, [] {});
   auto waiter = loop_controller.NewWaiter();
   auto callback = waiter->GetCallback();
