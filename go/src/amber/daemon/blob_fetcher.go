@@ -31,7 +31,7 @@ func FetchBlob(repos []BlobRepo, blob string, muRun *sync.Mutex, outputDir strin
 	for i := range repos {
 		reader, sz, err := FetchBlobFromRepo(repos[i], blob)
 		if err != nil {
-			log.Printf("Got error trying to get blob\n")
+			log.Printf("got error trying to get blob: %s", err)
 			continue
 		}
 		err = WriteBlob(filepath.Join(outputDir, blob), sz, reader)

@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strconv"
 	"sync/atomic"
@@ -14,6 +13,7 @@ import (
 
 	"app/context"
 	"fidl/fuchsia/amber"
+	"fidl/fuchsia/sys"
 	"syscall/zx"
 	"syscall/zx/zxwait"
 
@@ -126,14 +126,39 @@ func (upMon *SystemUpdateMonitor) Start() {
 
 		if !bytes.Equal(newMerkle, merkle) {
 			log.Println("System update starting...")
-			// TODO(jmatt) find a way to invoke the new updater directly
-			c := exec.Command("run", "system_updater")
-			c.Start()
+			launchDesc := sys.LaunchInfo{Url: "system_updater"}
+			if err = runProgram(&launchDesc); err != nil {
+				log.Printf("sys_upd_mon: updater failed to start: %s", err)
+			}
 		} else {
 			log.Println("sys_upd_mon: no newer system version available")
 		}
 		merkle = newMerkle
 	}
+}
+
+func runProgram(info *sys.LaunchInfo) error {
+	context := context.CreateFromStartupInfo()
+	req, pxy, err := sys.NewLauncherInterfaceRequest()
+	if err != nil {
+		return fmt.Errorf("could not make launcher request object: %s", err)
+	}
+	context.ConnectToEnvService(req)
+	defer func() {
+		c := req.ToChannel()
+		(&c).Close()
+	}()
+	contReq, _, err := sys.NewComponentControllerInterfaceRequest()
+	if err != nil {
+		return fmt.Errorf("error creating component controller request: %s", err)
+	}
+
+	err = pxy.CreateComponent(*info, contReq)
+	if err != nil {
+		return fmt.Errorf("error starting system updater: %s", err)
+	}
+
+	return nil
 }
 
 func connectToUpdateSrvc() (*amber.ControlInterface, error) {
