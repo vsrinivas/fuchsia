@@ -1362,12 +1362,14 @@ static bool test_tftp_receive_data_windowsize_skipped_block(void) {
     END_TEST;
 }
 
+namespace {
+
+constexpr const unsigned long kWrapAt = 0x3ffff;
+constexpr const int kBlockSize = 8;
+constexpr const unsigned long kFileSize = (kWrapAt + 2) * kBlockSize;
+
 static bool test_tftp_receive_data_block_wrapping(void) {
     BEGIN_TEST;
-
-    constexpr unsigned long kWrapAt = 0x3ffff;
-    constexpr int kBlockSize = 8;
-    constexpr unsigned long kFileSize = (kWrapAt + 2) * kBlockSize;
 
     test_state ts;
     static bool write_called;
@@ -1432,6 +1434,8 @@ static bool test_tftp_receive_data_block_wrapping(void) {
     EXPECT_EQ(0, memcmp(expected_ack, ts.out, sizeof(expected_ack)), "bad response");
 
     END_TEST;
+}
+
 }
 
 static bool test_tftp_send_data_receive_ack(void) {
