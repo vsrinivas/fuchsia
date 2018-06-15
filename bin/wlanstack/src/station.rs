@@ -69,11 +69,11 @@ fn serve_client_sme_fidl(client_arc: Arc<Mutex<Client>>,
 fn serve_mlme_sme<S: Station>(proxy: MlmeProxy, station: Arc<Mutex<S>>, mlme_stream: MlmeStream)
      -> impl Future<Item = (), Error = failure::Error>
 {
-    let sme_to_mlme_fut = proxy.take_event_stream().for_each(move |e| {
+    let mlme_to_sme_fut = proxy.take_event_stream().for_each(move |e| {
         station.lock().unwrap().on_mlme_event(e);
         Ok(())
     }).map(|_| ()).err_into::<failure::Error>();
-    let mlme_to_sme_fut = mlme_stream
+    let sme_to_mlme_fut = mlme_stream
         // Map 'Never' to 'fidl::Error'
         .map_err(|e| e.never_into())
         .for_each(move |e| {
@@ -98,7 +98,7 @@ fn serve_mlme_sme<S: Station>(proxy: MlmeProxy, station: Arc<Mutex<S>>, mlme_str
             Err(other) => Err(other.into()),
         });
     // Select, not join: terminate as soon as one of the futures terminates
-    sme_to_mlme_fut.select(mlme_to_sme_fut)
+    mlme_to_sme_fut.select(sme_to_mlme_fut)
         .map(|_| ())
         .map_err(|e| e.either(|(x, _)| x.context("MLME->SME").into(),
                               |(x, _)| x.context("SME->MLME").into()))
