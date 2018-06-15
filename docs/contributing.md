@@ -11,33 +11,42 @@ incomplete and will be expanded over time.
 
 ## Process
 
-* GitHub pull requests are not accepted.  Patches are handled via
-  Gerrit Code Review at: https://fuchsia-review.googlesource.com/#/q/project:zircon
+*   GitHub pull requests are not accepted. Patches are handled via Gerrit Code
+    Review at: https://fuchsia-review.googlesource.com/#/q/project:zircon
 
-* The #fuchsia channel on the freenode irc network is a good place to ask
-questions.
+*   The #fuchsia channel on the freenode irc network is a good place to ask
+    questions.
 
-* Include [tags] in the commit subject flagging which module, library,
-app, etc, is affected by the change.  The style here is somewhat informal.
-Look at past changes to get a feel for how these are used.  Gerrit will flag
-your change with `Needs Label: Commit-Message-has-tags` if these are missing.
+*   Include [tags] in the commit subject flagging which module, library, app,
+    etc, is affected by the change. The style here is somewhat informal. Look at
+    past changes to get a feel for how these are used. Gerrit will flag your
+    change with `Needs Label: Commit-Message-has-tags` if these are missing.
 
-* [Googlers only] Commit messages may reference issue IDs, which will be
-turned into links in the Gerrit UI. Issues may also be automatically closed
-using the syntax `BUG-123 #done`.  *Note*: Zircon's issue tracker is not open
-to external contributors at this time.
+*   Include a line like `Test: <how this was tested>` in the commit message, or
+    else Gerrit will flag your change with `Needs Label:
+    Commit-Message-has-TEST-line`.
 
-* Zircon should be buildable for all major targets (x86-64, arm64)
-at every change.  ./scripts/build-all-zircon can help with this.
+    *   The full (Java-style) regex is `(?i:test|tests|tested|testing)[
+        \t]*[=:]`, so lines like `TESTED=asdf` or `Testing : 1234` are also
+        valid, along with lines that only contain `Test:` with the details on
+        the following lines.
 
-* Avoid breaking the unit tests.  Boot Zircon and run "runtests" to
-verify that they're all passing.
+*   [Googlers only] Commit messages may reference issue IDs, which will be
+    turned into links in the Gerrit UI. Issues may also be automatically closed
+    using the syntax `BUG-123 #done`. *Note*: Zircon's issue tracker is not open
+    to external contributors at this time.
 
-* Avoid whitespace or style changes.  Especially do not mix style changes
-with patches that do other things as the style changes are a distraction.
+*   Zircon should be buildable for all major targets (x86-64, arm64) at every
+    change. ./scripts/build-all-zircon can help with this.
 
-* Avoid changes that touch multiple modules at once if possible.  Most
-changes should be to a single library, driver, app, etc.
+*   Avoid breaking the unit tests. Boot Zircon and run "runtests" to verify that
+    they're all passing.
+
+*   Avoid whitespace or style changes. Especially do not mix style changes with
+    patches that do other things as the style changes are a distraction.
+
+*   Avoid changes that touch multiple modules at once if possible. Most changes
+    should be to a single library, driver, app, etc.
 
 ## Style
 
