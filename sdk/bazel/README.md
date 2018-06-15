@@ -1,14 +1,14 @@
 Bazel SDK
 =========
 
-The Bazel SDK frontend produces a Bazel workspace.
+The Bazel SDK frontend produces a [Bazel](https://bazel.build/) workspace.
 
 # Directory structure
 
 - `generate.py`: the script that generates the SDK;
 - `templates`: Mako templates used to produce various SDK files;
 - `base`: SDK contents that are copied verbatim;
-- `generate-tests.py`: script that create a test workspace;
+- `generate-tests.py`: a script that creates a test workspace;
 - `tests`: various SDK tests, copied over to the test workspace.
 
 # Output layout
@@ -17,14 +17,9 @@ The Bazel SDK frontend produces a Bazel workspace.
 $root/
     tools/                                 # host tools
     pkg/                                   # package contents
-        system/                            # libc, libzircon, and friends
-            include/
-            arch/                          # prebuilt binary artifacts
-            BUILD                          # generated Bazel build file for this package
         foo/
+            BUILD                          # generated Bazel build file for this package
             include/                       # headers
-            docs/                          # documentation
-            meta/                          # metadata, e.g. build plan
             arch                           # target-independent prebuilts
                 x64/
                     lib/
@@ -32,7 +27,7 @@ $root/
                     dist/
                         libfoo.so          # to include in Fuchsia packages
                     debug/
-                        libfoo.so          # unstripped versions
+                        libfoo.so          # unstripped version
                 arm64/
                     lib/
                     dist/
@@ -41,9 +36,12 @@ $root/
         bar/
             include/
             src/                           # sources for a C++ library
-            docs/
-            meta/
             BUILD
+    arch/
+        x64/
+            sysroot/                       # x64 sysroot (libc, libzircon, and friends)
+        arm64/
+            sysroot/                       # arm64 sysroot
 ```
 
 # Testing

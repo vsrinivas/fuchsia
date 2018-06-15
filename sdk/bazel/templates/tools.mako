@@ -8,7 +8,7 @@ package(default_visibility = ["//visibility:public"])
 licenses(["unencumbered"])
 
 exports_files([
-  % for tool in sorted(data):
-  "${tool}",
-  % endfor
+    % for tool in sorted(data):
+    "${tool}",
+    % endfor
 ])

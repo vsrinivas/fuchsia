@@ -35,13 +35,13 @@ def main():
         workspace_file.write('''# This is a generated file.
 
 local_repository(
-  name = "fuchsia_sdk",
-  path = "%s",
+    name = "fuchsia_sdk",
+    path = "%s",
 )
 
 load("@fuchsia_sdk//build_defs:crosstool.bzl", "install_fuchsia_crosstool")
 install_fuchsia_crosstool(
-  name = "fuchsia_crosstool",
+    name = "fuchsia_crosstool",
 )
 ''' % os.path.relpath(args.sdk, args.output))
 

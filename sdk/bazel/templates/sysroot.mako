@@ -3,5 +3,5 @@
 # found in the LICENSE file.
 
 exports_files([
-  glob(["**"]),
+    glob(["**"]),
 ])

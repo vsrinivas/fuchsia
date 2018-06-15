@@ -4,19 +4,19 @@
 
 # Vanilla C++ program.
 cc_binary(
-  name = "compilation",
-  srcs = [
-    "compilation.cc",
-  ],
+    name = "compilation",
+    srcs = [
+        "compilation.cc",
+    ],
 )
 
 # C++ program with dependency on a Fuchsia library.
 cc_binary(
-  name = "pkg_dep",
-  srcs = [
-    "pkg_dep.cc",
-  ],
-  deps = [
-    "@fuchsia_sdk//pkg/fdio",
-  ],
+    name = "pkg_dep",
+    srcs = [
+        "pkg_dep.cc",
+    ],
+    deps = [
+        "@fuchsia_sdk//pkg/fdio",
+    ],
 )
