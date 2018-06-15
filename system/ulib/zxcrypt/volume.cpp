@@ -209,15 +209,14 @@ zx_status_t Volume::Open(const zx::duration& timeout, fbl::unique_fd* out) {
     ssize_t res;
 
     // Get the full device path
-    const char* kZxcryptSuffix = "/zxcrypt/block";
-    char path[PATH_MAX];
-    size_t max = sizeof(path) - (strlen(kZxcryptSuffix) + 1);
-    if ((res = ioctl_device_get_topo_path(fd_.get(), path, max)) < 0) {
+    char base[PATH_MAX/2];
+    char path[PATH_MAX/2];
+    if ((res = ioctl_device_get_topo_path(fd_.get(), base, sizeof(base))) < 0) {
         rc = static_cast<zx_status_t>(res);
         xprintf("could not find parent device: %s\n", zx_status_get_string(rc));
         return rc;
     }
-    strncat(path, kZxcryptSuffix, strlen(kZxcryptSuffix));
+    snprintf(path, sizeof(path), "%s/zxcrypt/block", base);
 
     // Early return if already bound
     fbl::unique_fd fd(open(path, O_RDWR));
