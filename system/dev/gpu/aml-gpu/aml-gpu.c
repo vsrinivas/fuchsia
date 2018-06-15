@@ -23,7 +23,14 @@
 #include "s912-gpu.h"
 #include "s905d2-gpu.h"
 
+static int32_t current_clk_source;
+
 static void aml_gpu_set_clk_freq_source(aml_gpu_t* gpu, int32_t clk_source) {
+
+    if (current_clk_source == clk_source) {
+        return;
+    }
+
     aml_gpu_block_t* gpu_block = gpu->gpu_block;
     uint32_t current_clk_cntl = READ32_HIU_REG(gpu_block->hhi_clock_cntl_offset);
     uint32_t enabled_mux = current_clk_cntl & (1 << FINAL_MUX_BIT_SHIFT);
@@ -45,6 +52,8 @@ static void aml_gpu_set_clk_freq_source(aml_gpu_t* gpu, int32_t clk_source) {
 
     // Select the unused input mux
     WRITE32_HIU_REG(gpu_block->hhi_clock_cntl_offset, current_clk_cntl);
+
+    current_clk_source = clk_source;
 }
 
 static void aml_gpu_init(aml_gpu_t* gpu) {

@@ -130,6 +130,17 @@ static int aml_thermal_notify_thread(void* ctx) {
 
 static zx_status_t aml_thermal_set_dvfs_opp(aml_thermal_t* dev,
                                      dvfs_info_t* info) {
+    uint16_t op_idx;
+    zx_status_t status = scpi_get_dvfs_idx(&dev->scpi, info->power_domain, &op_idx);
+    if (status != ZX_OK) {
+        THERMAL_ERROR("Unable to get current dvfs info");
+        return status;
+    }
+
+    if (op_idx == info->op_idx) {
+        return ZX_OK;
+    }
+
     return scpi_set_dvfs_idx(&dev->scpi, info->power_domain, info->op_idx);
 }
 
