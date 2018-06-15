@@ -10,7 +10,7 @@
 // <x86intrin.h> are incompatible with -mno-sse.
 // When https://gcc.gnu.org/bugzilla/show_bug.cgi?id=80298 is fixed,
 // these #define hacks can be removed.
-#ifndef __clang__
+#if !defined(__clang__) && __GNUC__ < 7
 #define _AVX512VLINTRIN_H_INCLUDED
 #define _AVX512BWINTRIN_H_INCLUDED
 #define _AVX512DQINTRIN_H_INCLUDED

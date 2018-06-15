@@ -3,8 +3,8 @@
 
 clang/linux-amd64 bce995173b8748b2728c8f97f36ad1667c1b21e0
 clang/mac-amd64 4397cd6c90682fe7235b72ede946d79757e659c4
-gcc/linux-amd64 d1d9edff39e1c206b8d5050116724c10228f6e08
-gcc/mac-amd64 5fbe47110c48b47ccd802b5e4e2686dd5a51432c
+gcc/linux-amd64 caef03ee989e8122c002dc898ab99bd9b91d7c58
+gcc/mac-amd64 91ce4adeea757742fe77183cff9c246dd190dd97
 sysroot/linux-amd64 ae0677829357edb199c21e76b1ea31eb8ef62817
 sysroot/linux-arm64 f116a841ddf6d1755bde918b8f07763bdee5e06d
 tools/symbolize/linux-amd64 11c1fbe6d82df4228e456900c8b73e5cc38afc3f

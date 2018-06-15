@@ -153,6 +153,8 @@ GLOBAL_COMPILEFLAGS += -Wthread-safety
 GLOBAL_COMPILEFLAGS += -Wimplicit-fallthrough
 else
 GLOBAL_COMPILEFLAGS += -Wno-nonnull-compare
+# TODO(mcgrathr): New warning in GCC 7 biting a lot of code; figure it out.
+GLOBAL_COMPILEFLAGS += -Wno-format-truncation
 endif
 GLOBAL_CFLAGS := -std=c11 -Werror-implicit-function-declaration -Wstrict-prototypes -Wwrite-strings
 GLOBAL_CPPFLAGS := -std=c++14 -fno-exceptions -fno-rtti -fno-threadsafe-statics -Wconversion -Wno-sign-conversion
