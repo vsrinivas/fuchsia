@@ -11,6 +11,7 @@ executable("unittests") {
   deps = [
     "//garnet/public/lib/backoff:unittests",
     "//garnet/public/lib/callback:unittests",
+    "//garnet/public/lib/cobalt/cpp:unittests",
     "//garnet/public/lib/gtest:unittests",
     "//garnet/public/lib/netconnector/cpp:unittests",
     "//garnet/public/lib/network_wrapper:unittests",
