@@ -113,6 +113,19 @@ def check_all(directory, dep_map, layer, is_root=True):
         return has_all_files
 
 
+def check_no_fuchsia_packages_in_all(packages):
+    allowed_keys = {'imports'}
+    all_clear = True
+    for package in [p for p in packages if os.path.basename(p) == 'all']:
+        with open(package, 'r') as file:
+            data = json.load(file)
+            keys = set(data.keys())
+            if not keys.issubset(allowed_keys):
+                all_clear = False
+                print('"all" should only contain imports: %s.' % package)
+    return all_clear
+
+
 def check_root(base, layer):
     '''Verifies that all canonical packages are present at the root.'''
     all_there = True
@@ -164,6 +177,9 @@ def main():
         return False
 
     if not check_all(base, deps, layer):
+        return False
+
+    if not check_no_fuchsia_packages_in_all(packages):
         return False
 
     if not check_root(base, layer):
