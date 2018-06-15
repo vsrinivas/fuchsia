@@ -5,8 +5,11 @@
 #ifndef PERIDOT_BIN_USER_RUNNER_STORAGE_STORY_STORAGE_H_
 #define PERIDOT_BIN_USER_RUNNER_STORAGE_STORY_STORAGE_H_
 
+#include <map>
+
 #include <fuchsia/modular/cpp/fidl.h>
 #include "lib/async/cpp/future.h"
+#include "lib/fxl/functional/auto_call.h"
 #include "peridot/lib/ledger_client/ledger_client.h"
 #include "peridot/lib/ledger_client/page_client.h"
 #include "peridot/lib/ledger_client/page_id.h"
@@ -36,7 +39,12 @@ class StoryStorage : public PageClient {
   // |ledger_client| must outlive *this.
   StoryStorage(LedgerClient* ledger_client, fuchsia::ledger::PageId page_id);
 
-  enum Status { OK = 0 };
+  enum class Status {
+    OK = 0,
+    LEDGER_ERROR = 1,
+    VMO_COPY_ERROR = 2,
+    LINK_INVALID_JSON = 3,
+  };
 
   // =========================================================================
   // ModuleData
@@ -80,60 +88,42 @@ class StoryStorage : public PageClient {
   // =========================================================================
   // Link data
 
-  // Use with AddLinkUpdatedCallback below.
+  // Use with WatchLink below.
   //
-  // Called whenever a change occurs to the link(s) specified in
-  // AddLinkUpdatedCallback(). The receiver gets the LinkPath, the current
-  // |value| and whatever |context| was passed into the mutation call.
-  //
-  // The receiver should return true to continue receiving notifications
-  // for the same links, or false to de-register the callback.
-  using LinkUpdatedCallback = std::function<bool(
-      const LinkPath&, const fidl::StringPtr& value, void* context)>;
+  // Called whenever a change occurs to the link specified in
+  // WatchLink(). The receiver gets the LinkPath, the current
+  // |value| and whatever |context| was passed into the mutation call. If
+  // the new value did not originate from a call on *this, |context| will be
+  // given the special value of nullptr.
+  using LinkUpdatedCallback =
+      std::function<void(const fidl::StringPtr& value, const void* context)>;
+  using LinkWatcherAutoCancel = fxl::AutoCall<std::function<void()>>;
 
   // Registers |callback| to be invoked whenever a change to the link value at
-  // |link_path| occurs.  If |link_path| is null, watches all links.
-  void AddLinkUpdatedCallback(LinkPathPtr link_path,
-                              LinkUpdatedCallback callback);
+  // |link_path| occurs. See documentation for LinkUpdatedCallback above. The
+  // returned LinkWatcherAutoCancel must be kept alive as long as the callee
+  // wishes to receive link updates on |callback|.
+  LinkWatcherAutoCancel WatchLink(const LinkPath& link_path,
+                                  LinkUpdatedCallback callback);
 
-  // Returns the value for |link_path| at |json_path|
-  // (https://tools.ietf.org/html/rfc6901) within the JSON value.  A
-  // |json_path| of "" or nullptr will return the entire value.
+  // Returns the value for |link_path|.
   //
   // The returned value will be stringified JSON. If no value is found, returns
-  // a null StringPtr.
-  FuturePtr<fidl::StringPtr> GetLinkValue(
-      const LinkPath& link_path, fidl::VectorPtr<fidl::StringPtr> json_path);
+  // "null", the JSON string for a null value. The returned value will never be
+  // a null StringPtr: ie, retval.is_null() == false always.
+  FuturePtr<Status, fidl::StringPtr> GetLinkValue(const LinkPath& link_path);
 
-  // Sets the value for |link_path| at |json_path| to the JSON encoded
-  // |json_value|.
+  // Fetches the link value at |link_path| and passes it to |mutate_fn|.
+  // |mutate_fn| must synchronously update the StringPtr with the desired new
+  // value for the link and return. The new value will be written to storage
+  // and the returned future completed with the status.
   //
   // |context| is carried with the mutation operation and passed to any
-  // notifications about this change on this instance of StoryStorage.
-  FuturePtr<Status, fidl::StringPtr> SetLinkValue(
-      const LinkPath& link_path, fidl::VectorPtr<fidl::StringPtr> json_path,
-      fidl::StringPtr json_value, void* context);
-
-  // Like SetLinkValue(), but does not completely overwrite the JSON at
-  // |json_path|.
-  //
-  // Recursively, for every attribute in |json_object|, sets or overwrites the
-  // same attribute at |json_path| with the corresponding value in
-  // |json_object|.
-  //
-  // |context| is carried with the mutation operation and passed to any
-  // notifications about this change on this instance of StoryStorage.
-  FuturePtr<Status, fidl::StringPtr> UpdateLinkObject(
-      const LinkPath& link_path, fidl::VectorPtr<fidl::StringPtr> json_path,
-      fidl::StringPtr json_object, void* context);
-
-  // Erases the JSON value for |link_path| at |json_path|.
-  //
-  // |context| is carried with the mutation operation and passed to any
-  // notifications about this change on this instance of StoryStorage.
-  FuturePtr<Status, fidl::StringPtr> EraseLinkValue(
-      const LinkPath& link_path, fidl::VectorPtr<fidl::StringPtr> json_path,
-      void* context);
+  // notifications about this change on this instance of StoryStorage. A value
+  // of nullptr for |context| is illegal.
+  FuturePtr<Status> UpdateLinkValue(
+      const LinkPath& link_path,
+      std::function<void(fidl::StringPtr*)> mutate_fn, const void* context);
 
   // TODO(thatguy): Remove users of these and remove. Only used when
   // constructing a LinkImpl in StoryControllerImpl. Bring Link storage
@@ -148,6 +138,16 @@ class StoryStorage : public PageClient {
   // |PageClient|
   void OnPageDelete(const std::string& key) override;
 
+  // |PageClient|
+  void OnPageConflict(Conflict* conflict) override;
+
+  // Notifies any watchers in |link_watchers_|.
+  //
+  // |value| will never be a null StringPtr. |value| is always a JSON-encoded
+  // string, so a null value will be presented as the string "null".
+  void NotifyLinkWatchers(const std::string& key, fidl::StringPtr value,
+                          const void* context);
+
   // Completes the returned Future when the ledger notifies us (through
   // OnPageChange()) of a write for |key| with |value|.
   FuturePtr<> WaitForWrite(const std::string& key, const std::string& value);
@@ -158,11 +158,19 @@ class StoryStorage : public PageClient {
   const fuchsia::ledger::PageId page_id_;
   OperationQueue operation_queue_;
 
+  // Called when new ModuleData is encountered from the Ledger.
   std::function<void(ModuleData)> on_module_data_updated_;
+
+  // A map of link ledger key -> watcher callback. Multiple clients can watch
+  // the same Link.
+  std::multimap<std::string, LinkUpdatedCallback> link_watchers_;
 
   // A map of ledger (key, value) to (vec of future). When we see a
   // notification in OnPageChange() for a matching (key, value), we complete
   // all the respective futures.
+  //
+  // NOTE: we use a map<> of vector<> here instead of a multimap<> because we
+  // complete all the Futures for a given key/value pair at once.
   std::map<std::pair<std::string, std::string>, std::vector<FuturePtr<>>>
       pending_writes_;
 

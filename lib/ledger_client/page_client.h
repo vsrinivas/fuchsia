@@ -62,7 +62,7 @@ class PageClient : fuchsia::ledger::PageWatcher {
   // snapshot might be replaced by a new one from an incoming page watcher
   // notification, but the client needs to hold onto the previous one until its
   // operation completes.
-  //
+
   // CAVEAT. To use this snapshot does not make sense for most clients (in fact
   // it's no longer used in the modular code base). If the client implements
   // page write operations and page read operations, an invariant normally
@@ -78,6 +78,19 @@ class PageClient : fuchsia::ledger::PageWatcher {
   std::shared_ptr<fuchsia::ledger::PageSnapshotPtr> page_snapshot() {
     return page_snapshot_;
   }
+
+  // Returns a snapshot of the Ledger page under |prefix| at the most recent
+  // timepoint.
+  //
+  // If |on_error| is provided, it will be called if there was a Ledger error
+  // trying to get the snapshot.
+  //
+  // NOTE: There is no guaranteed timing for writes made to the returned
+  // PageSnapshot and notifications of changes through OnPageChange(). The
+  // ordering is guaranteed to be the same, ignoring changes to the writes
+  // caused by conflict resolution which can cause some writes to disappear.
+  fuchsia::ledger::PageSnapshotPtr NewSnapshot(
+      std::function<void()> on_error = nullptr);
 
   const fuchsia::ledger::PageId& page_id() const { return page_id_; }
   const std::string& prefix() const { return prefix_; }

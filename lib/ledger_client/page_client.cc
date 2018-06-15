@@ -36,6 +36,20 @@ PageClient::~PageClient() {
   ledger_client_->DropPageClient(this);
 }
 
+fuchsia::ledger::PageSnapshotPtr PageClient::NewSnapshot(
+      std::function<void()> on_error) {
+  fuchsia::ledger::PageSnapshotPtr ptr;
+  page_->GetSnapshot(
+      ptr.NewRequest(), to_array(prefix_), nullptr /* page_watcher */,
+      [this, on_error = std::move(on_error)](fuchsia::ledger::Status status) {
+        if (status != fuchsia::ledger::Status::OK) {
+          FXL_LOG(ERROR) << context_ << " Page.GetSnapshot() " << status;
+          on_error();
+        }
+      });
+  return ptr;
+}
+
 fidl::InterfaceRequest<fuchsia::ledger::PageSnapshot> PageClient::NewRequest() {
   page_snapshot_ = std::make_shared<fuchsia::ledger::PageSnapshotPtr>();
   auto ret = (*page_snapshot_).NewRequest();
