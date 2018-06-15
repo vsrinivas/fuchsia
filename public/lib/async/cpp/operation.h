@@ -153,11 +153,6 @@ class OperationBase {
   // passed along the asynchronous flow of control of the Operation.
   virtual void Run() = 0;
 
-  // For tests only.
-  static void set_observer(std::function<void(const char*)> observer) {
-    observer_ = std::move(observer);
-  }
-
   // Needed to guard callbacks to methods on FIDL pointers that are not owned by
   // this Operation instance.
   //
@@ -240,9 +235,6 @@ class OperationBase {
 
   // Additional information added to trace events for this operation.
   const std::string trace_info_;
-
-  // For tests only.
-  static std::function<void(const char*)> observer_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(OperationBase);
 };
