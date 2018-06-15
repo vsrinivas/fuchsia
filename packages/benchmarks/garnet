@@ -1,0 +1,5 @@
+{
+    "packages": [
+        "//garnet/bin/benchmarks:garnet_benchmarks"
+    ]
+}
