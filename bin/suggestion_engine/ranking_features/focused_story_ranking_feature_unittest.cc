@@ -27,8 +27,9 @@ void SetFocusedStoryContextUpdate(
 TEST_F(FocusedStoryRankingFeatureTest, ComputeFeatureFocusedStory) {
   fuchsia::modular::Proposal proposal;
   proposal.story_affinity = true;
-  SuggestionPrototype prototype("" /* source_url */, "focused_story",
-                                std::move(proposal));
+  SuggestionPrototype prototype;
+  prototype.story_id = "focused_story";
+  prototype.proposal = std::move(proposal);
   RankedSuggestion suggestion;
   suggestion.prototype = &prototype;
 
@@ -43,8 +44,9 @@ TEST_F(FocusedStoryRankingFeatureTest, ComputeFeatureNonFocusedStory) {
   fuchsia::modular::Proposal proposal;
   proposal.story_id = "other_story";
   proposal.story_affinity = true;
-  SuggestionPrototype prototype("" /* source_url */, "other_story",
-                                std::move(proposal));
+  SuggestionPrototype prototype;
+  prototype.story_id = "other_story";
+  prototype.proposal = std::move(proposal);
   RankedSuggestion suggestion;
   suggestion.prototype = &prototype;
 
@@ -60,8 +62,9 @@ TEST_F(FocusedStoryRankingFeatureTest,
   fuchsia::modular::Proposal proposal;
   proposal.story_id = "other_story";
   proposal.story_affinity = false;
-  SuggestionPrototype prototype("" /* source_url */, "other_story",
-                                std::move(proposal));
+  SuggestionPrototype prototype;
+  prototype.story_id = "other_story";
+  prototype.proposal = std::move(proposal);
   RankedSuggestion suggestion;
   suggestion.prototype = &prototype;
 

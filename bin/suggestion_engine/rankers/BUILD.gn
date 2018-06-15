@@ -23,7 +23,7 @@ source_set("ranker") {
   ]
 
   public_deps = [
-    "//peridot/bin/suggestion_engine:ranked_suggestion",
+    "//peridot/bin/suggestion_engine:models",
   ]
 }
 

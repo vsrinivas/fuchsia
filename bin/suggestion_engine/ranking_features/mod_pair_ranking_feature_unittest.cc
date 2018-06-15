@@ -71,8 +71,8 @@ TEST_F(ModPairRankingFeatureTest, ComputeFeatureCreateStoryAction) {
 
   fuchsia::modular::Proposal proposal;
   proposal.on_selected.push_back(std::move(action));
-  SuggestionPrototype prototype("" /* source_url */, "" /* story_id */,
-                                std::move(proposal));
+  SuggestionPrototype prototype;
+  prototype.proposal = std::move(proposal);
   RankedSuggestion suggestion;
   suggestion.prototype = &prototype;
 
@@ -93,8 +93,8 @@ TEST_F(ModPairRankingFeatureTest, ComputeFeatureAddModuleAction) {
   action.set_add_module(std::move(add_module));
   fuchsia::modular::Proposal proposal;
   proposal.on_selected.push_back(std::move(action));
-  SuggestionPrototype prototype("" /* source_url */, "" /* story_id */,
-                                std::move(proposal));
+  SuggestionPrototype prototype;
+  prototype.proposal = std::move(proposal);
   RankedSuggestion suggestion;
   suggestion.prototype = &prototype;
 
@@ -114,8 +114,8 @@ TEST_F(ModPairRankingFeatureTest, ComputeFeatureNoModule) {
   action.set_add_module(std::move(add_module));
   fuchsia::modular::Proposal proposal;
   proposal.on_selected.push_back(std::move(action));
-  SuggestionPrototype prototype("" /* source_url */, "" /* story_id */,
-                                std::move(proposal));
+  SuggestionPrototype prototype;
+  prototype.proposal = std::move(proposal);
   RankedSuggestion suggestion;
   suggestion.prototype = &prototype;
 
@@ -133,8 +133,8 @@ TEST_F(ModPairRankingFeatureTest, ComputeFeatureMultipleActions) {
   action.set_add_module(std::move(add_module));
   fuchsia::modular::Proposal proposal;
   proposal.on_selected.push_back(std::move(action));
-  SuggestionPrototype prototype("" /* source_url */, "" /* story_id */,
-                                std::move(proposal));
+  SuggestionPrototype prototype;
+  prototype.proposal = std::move(proposal);
   RankedSuggestion suggestion;
   suggestion.prototype = &prototype;
 

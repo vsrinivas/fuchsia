@@ -15,9 +15,8 @@ class KronkRankingFeatureTest : public ::testing::Test {
 };
 
 TEST_F(KronkRankingFeatureTest, TestComputeFeatureKronk) {
-  fuchsia::modular::Proposal proposal;
-  SuggestionPrototype prototype("kronk", "" /* story_id */,
-                                std::move(proposal));
+  SuggestionPrototype prototype;
+  prototype.source_url = "kronk";
   RankedSuggestion suggestion;
   suggestion.prototype = &prototype;
   double value = kronk_ranking_feature.ComputeFeature(query, suggestion);
@@ -25,9 +24,8 @@ TEST_F(KronkRankingFeatureTest, TestComputeFeatureKronk) {
 }
 
 TEST_F(KronkRankingFeatureTest, TestComputeFeatureNonKronk) {
-  fuchsia::modular::Proposal proposal;
-  SuggestionPrototype prototype("chat", "" /* story_id */,
-                                std::move(proposal));
+  SuggestionPrototype prototype;
+  prototype.source_url = "chat";
   RankedSuggestion suggestion;
   suggestion.prototype = &prototype;
   double value = kronk_ranking_feature.ComputeFeature(query, suggestion);

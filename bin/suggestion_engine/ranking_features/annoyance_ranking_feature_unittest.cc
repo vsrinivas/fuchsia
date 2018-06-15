@@ -15,8 +15,8 @@ class AnnoyanceRankingFeatureTest : public ::testing::Test {
     display.annoyance = annoyance;
     fuchsia::modular::Proposal proposal;
     proposal.display = std::move(display);
-    SuggestionPrototype prototype("" /* source_url */, "" /* story_id */,
-                                  std::move(proposal));
+    SuggestionPrototype prototype;
+    prototype.proposal = std::move(proposal);
     RankedSuggestion suggestion;
     suggestion.prototype = &prototype;
     return suggestion;

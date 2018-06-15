@@ -17,7 +17,9 @@ class ProposalHintRankingFeatureTest : public ::testing::Test {
 TEST_F(ProposalHintRankingFeatureTest, TestComputeFeature) {
   fuchsia::modular::Proposal proposal;
   proposal.confidence = 0.5;
-  SuggestionPrototype prototype("chat", "" /* story_id */, std::move(proposal));
+  SuggestionPrototype prototype;
+  prototype.proposal = std::move(proposal);
+  prototype.source_url = "chat";
   RankedSuggestion suggestion;
   suggestion.prototype = &prototype;
   double value = proposal_hint_feature.ComputeFeature(query, suggestion);

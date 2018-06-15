@@ -8,6 +8,7 @@
 #include <lib/async/default.h>
 
 #include "lib/fsl/tasks/message_loop.h"
+#include "peridot/bin/suggestion_engine/suggestion_engine_helper.h"
 #include "peridot/lib/fidl/json_xdr.h"
 
 namespace modular {
@@ -123,10 +124,10 @@ void QueryProcessor::AddProposal(const std::string& source_url,
                                  fuchsia::modular::Proposal proposal) {
   suggestions_.RemoveProposal(source_url, proposal.id);
 
-  auto prototype = SuggestionPrototype::CreateInMap(
-      &query_prototypes_, source_url, "" /* Emtpy story_id */,
-      std::move(proposal));
-  suggestions_.AddSuggestion(std::move(prototype));
+  auto suggestion =
+      CreateSuggestionPrototype(&query_prototypes_, source_url,
+                                "" /* Emtpy story_id */, std::move(proposal));
+  suggestions_.AddSuggestion(std::move(suggestion));
 }
 
 void QueryProcessor::NotifySpeechListeners(

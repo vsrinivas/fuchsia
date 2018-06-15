@@ -18,7 +18,7 @@ std::unique_ptr<RankedSuggestion> RankedSuggestion::New(
 fuchsia::modular::Suggestion CreateSuggestion(
     const RankedSuggestion& suggestion_data) {
   fuchsia::modular::Suggestion suggestion =
-      suggestion_data.prototype->MakeSuggestion();
+      CreateSuggestion(*suggestion_data.prototype);
   suggestion.confidence = suggestion_data.confidence;
   return suggestion;
 }

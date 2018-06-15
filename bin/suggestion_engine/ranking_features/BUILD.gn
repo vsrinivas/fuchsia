@@ -25,7 +25,7 @@ source_set("ranking_feature") {
 
   deps = [
     "//garnet/public/lib/fxl",
-    "//peridot/bin/suggestion_engine:ranked_suggestion",
+    "//peridot/bin/suggestion_engine:models",
     "//peridot/public/lib:fidl",
     "//peridot/public/lib/context/cpp:context_helper",
     "//third_party/rapidjson",

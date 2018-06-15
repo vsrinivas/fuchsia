@@ -12,35 +12,23 @@
 
 namespace modular {
 
-class SuggestionPrototype {
- public:
-  // (proposer ID, proposal ID) => suggestion prototype
-  using SuggestionPrototypeMap = std::map<std::pair<std::string, std::string>,
-                                          std::unique_ptr<SuggestionPrototype>>;
-
-  SuggestionPrototype(std::string source_url, std::string story_id,
-                      fuchsia::modular::Proposal proposal);
-  ~SuggestionPrototype();
-
-  static SuggestionPrototype* CreateInMap(
-      SuggestionPrototypeMap* owner, const std::string& source_url,
-      const std::string& story_id, fuchsia::modular::Proposal proposal);
-
-  // Used for debugging and INFO logs.
-  std::string ShortRepr();
-
-  fuchsia::modular::Suggestion MakeSuggestion() const;
-
-  const std::string suggestion_id;
-  const fxl::TimePoint timestamp;
+struct SuggestionPrototype {
+  std::string suggestion_id;
   // Story ID is set when the proposal came with a name.
   // fuchsia::modular::SuggestionEngine maps this name namespaced by the source
   // to this ID and propagates it here. If this story id was not set, it can be
   // set to the (deprecated) proposal.story_id.
-  const std::string story_id;
-  const std::string source_url;
+  std::string story_id;
+  std::string source_url;
+  fxl::TimePoint timestamp;
   fuchsia::modular::Proposal proposal;
 };
+
+std::string short_proposal_str(const SuggestionPrototype& prototype);
+
+// Creates a partial suggestion from a prototype. Confidence will not be set.
+fuchsia::modular::Suggestion CreateSuggestion(
+    const SuggestionPrototype& prototype);
 
 }  // namespace modular
 

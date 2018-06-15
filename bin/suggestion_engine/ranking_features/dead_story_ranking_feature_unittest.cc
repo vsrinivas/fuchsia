@@ -27,8 +27,9 @@ void SetRunningStoryContextUpdate(
 TEST_F(DeadStoryRankingFeatureTest, RunningStoryAndAffinity) {
   fuchsia::modular::Proposal proposal;
   proposal.story_affinity = true;
-  SuggestionPrototype prototype("" /* source_url */, "running_story",
-                                std::move(proposal));
+  SuggestionPrototype prototype;
+  prototype.story_id = "running_story";
+  prototype.proposal = std::move(proposal);
   RankedSuggestion suggestion;
   suggestion.prototype = &prototype;
 
@@ -41,8 +42,9 @@ TEST_F(DeadStoryRankingFeatureTest, RunningStoryAndAffinity) {
 
 TEST_F(DeadStoryRankingFeatureTest, RunningButNoAffinity) {
   fuchsia::modular::Proposal proposal;
-  SuggestionPrototype prototype("" /* source_url */, "running_story",
-                                std::move(proposal));
+  SuggestionPrototype prototype;
+  prototype.story_id = "running_story";
+  prototype.proposal = std::move(proposal);
   RankedSuggestion suggestion;
   suggestion.prototype = &prototype;
 
@@ -55,8 +57,9 @@ TEST_F(DeadStoryRankingFeatureTest, RunningButNoAffinity) {
 
 TEST_F(DeadStoryRankingFeatureTest, NotRunningAndNoAffinity) {
   fuchsia::modular::Proposal proposal;
-  SuggestionPrototype prototype("" /* source_url */, "other_story",
-                                std::move(proposal));
+  SuggestionPrototype prototype;
+  prototype.story_id = "other_story";
+  prototype.proposal = std::move(proposal);
   RankedSuggestion suggestion;
   suggestion.prototype = &prototype;
 
@@ -70,8 +73,9 @@ TEST_F(DeadStoryRankingFeatureTest, NotRunningAndNoAffinity) {
 TEST_F(DeadStoryRankingFeatureTest, NotRunningStoryAndAffinity) {
   fuchsia::modular::Proposal proposal;
   proposal.story_affinity = true;
-  SuggestionPrototype prototype("" /* source_url */, "other_story",
-                                std::move(proposal));
+  SuggestionPrototype prototype;
+  prototype.story_id = "other_story";
+  prototype.proposal = std::move(proposal);
   RankedSuggestion suggestion;
   suggestion.prototype = &prototype;
 

@@ -27,7 +27,7 @@ source_set("suggestion_passive_filter") {
 
   deps = [
     "//peridot/public/lib:fidl",
-    "//peridot/bin/suggestion_engine:ranked_suggestion",
+    "//peridot/bin/suggestion_engine:models",
   ]
 }
 
@@ -39,7 +39,7 @@ source_set("suggestion_active_filter") {
 
   deps = [
     "//peridot/public/lib:fidl",
-    "//peridot/bin/suggestion_engine:ranked_suggestion",
+    "//peridot/bin/suggestion_engine:models",
   ]
 }
 
