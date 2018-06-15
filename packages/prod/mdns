@@ -1,5 +1,5 @@
 {
-    "packages": {
-        "mdns": "//garnet/bin/mdns/tool"
-    }
+    "packages": [
+        "//garnet/bin/mdns/tool"
+    ]
 }

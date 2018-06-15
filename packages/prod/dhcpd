@@ -1,5 +1,5 @@
 {
-    "packages": {
-        "dhcpd": "//garnet/bin/dhcpd"
-    }
+    "packages": [
+        "//garnet/bin/dhcpd"
+    ]
 }

@@ -2,7 +2,7 @@
     "labels": [
         "//garnet/bin/auth:token_manager"
     ],
-    "packages": {
-        "token_manager": "//garnet/bin/auth:token_manager"
-    }
+    "packages": [
+        "//garnet/bin/auth:token_manager"
+    ]
 }

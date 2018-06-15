@@ -2,10 +2,10 @@
     "imports": [
         "garnet/packages/prod/sbase"
     ],
-    "packages": {
-        "magma-nonhardware-tests": "//garnet/lib/magma/tests:nonhardware-tests",
-        "magma-intel-gen-nonhardware-tests": "//garnet/lib/magma/gnbuild/magma-intel-gen:nonhardware-tests",
-        "magma-arm-mali-nonhardware-tests": "//garnet/lib/magma/gnbuild/magma-arm-mali:nonhardware-tests",
-        "magma-vsl-gc-nonhardware-tests": "//garnet/lib/magma/gnbuild/magma-vsl-gc:nonhardware-tests"
-    }
+    "packages": [
+        "//garnet/lib/magma/tests:nonhardware-tests",
+        "//garnet/lib/magma/gnbuild/magma-intel-gen:nonhardware-tests",
+        "//garnet/lib/magma/gnbuild/magma-arm-mali:nonhardware-tests",
+        "//garnet/lib/magma/gnbuild/magma-vsl-gc:nonhardware-tests"
+    ]
 }

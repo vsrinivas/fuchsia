@@ -2,7 +2,7 @@
     "imports": [
        "garnet/packages/prod/sysmgr"
     ],
-    "packages": {
-        "sysmgr_tests": "//garnet/bin/sysmgr/integration_tests"
-    }
+    "packages": [
+        "//garnet/bin/sysmgr/integration_tests"
+    ]
 }

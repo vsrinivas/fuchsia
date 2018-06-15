@@ -2,7 +2,7 @@
     "imports": [
         "garnet/packages/prod/guest_runner"
     ],
-    "packages": {
-        "zircon_guest": "//garnet/bin/guest/pkg/zircon_guest"
-    }
+    "packages": [
+        "//garnet/bin/guest/pkg/zircon_guest"
+    ]
 }

@@ -1,5 +1,5 @@
 {
-    "packages": {
-        "vkcube" : "//garnet/lib/magma:vkcube"
-    }
+    "packages": [
+        "//garnet/lib/magma:vkcube"
+    ]
 }

@@ -1,5 +1,5 @@
 {
-    "packages": {
-        "ota_config": "//garnet/go/src/amber/ota_config:amber_flags"
-    }
+    "packages": [
+        "//garnet/go/src/amber/ota_config:amber_flags"
+    ]
 }

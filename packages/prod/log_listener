@@ -1,5 +1,5 @@
 {
-    "packages": {
-        "log_listener": "//garnet/bin/log_listener:log_listener"
-    }
+    "packages": [
+        "//garnet/bin/log_listener:log_listener"
+    ]
 }

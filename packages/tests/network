@@ -2,8 +2,8 @@
     "imports": [
         "garnet/packages/prod/network"
     ],
-    "packages": {
-        "mwget": "//garnet/bin/http/tests/manual/mwget",
-        "network_service_tests": "//garnet/bin/http:http_service_tests"
-    }
+    "packages": [
+        "//garnet/bin/http/tests/manual/mwget",
+        "//garnet/bin/http:http_service_tests"
+    ]
 }

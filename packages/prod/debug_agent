@@ -1,5 +1,5 @@
 {
-    "packages": {
-        "debug_agent": "//garnet/bin/debug_agent"
-    }
+    "packages": [
+        "//garnet/bin/debug_agent"
+    ]
 }

@@ -1,5 +1,5 @@
 {
-    "packages": {
-        "media_examples": "//garnet/examples/media"
-    }
+    "packages": [
+        "//garnet/examples/media"
+    ]
 }

@@ -1,5 +1,5 @@
 {
-    "packages": {
-        "fortune": "//garnet/bin/fortune"
-    }
+    "packages": [
+        "//garnet/bin/fortune"
+    ]
 }

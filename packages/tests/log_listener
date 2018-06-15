@@ -2,7 +2,7 @@
     "imports": [
         "garnet/packages/prod/log_listener"
     ],
-    "packages": {
-        "log_listener_tests": "//garnet/bin/log_listener:log_listener_tests"
-    }
+    "packages": [
+        "//garnet/bin/log_listener:log_listener_tests"
+    ]
 }

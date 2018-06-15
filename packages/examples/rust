@@ -1,5 +1,5 @@
 {
-    "packages": {
-        "garnet-rust-examples": "//garnet/examples/rust:garnet-rust-examples"
-    }
+    "packages": [
+        "//garnet/examples/rust:garnet-rust-examples"
+    ]
 }

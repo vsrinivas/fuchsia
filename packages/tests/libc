@@ -1,5 +1,5 @@
 {
-    "packages": {
-        "libc-tests": "//third_party/libc-tests"
-    }
+    "packages": [
+        "//third_party/libc-tests"
+    ]
 }

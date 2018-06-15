@@ -1,5 +1,5 @@
 {
-    "packages": {
-        "wlantap": "//garnet/drivers/wlan/wlantap"
-    }
+    "packages": [
+        "//garnet/drivers/wlan/wlantap"
+    ]
 }

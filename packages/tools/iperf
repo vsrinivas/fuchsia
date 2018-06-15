@@ -1,5 +1,5 @@
 {
-    "packages": {
-        "iperf": "//third_party/iperf"
-    }
+    "packages": [
+        "//third_party/iperf"
+    ]
 }

@@ -2,7 +2,7 @@
     "imports": [
         "garnet/packages/prod/scenic"
     ],
-    "packages": {
-        "scenic_tools": "//garnet/bin/ui:scenic_tools"
-    }
+    "packages": [
+        "//garnet/bin/ui:scenic_tools"
+    ]
 }

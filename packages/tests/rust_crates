@@ -1,5 +1,5 @@
 {
-    "packages": {
-        "rust-crates-tests": "//garnet/public/rust/crates:rust-crates-tests"
-    }
+    "packages": [
+        "//garnet/public/rust/crates:rust-crates-tests"
+    ]
 }

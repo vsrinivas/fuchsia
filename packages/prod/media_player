@@ -1,5 +1,5 @@
 {
-    "packages": {
-        "media_player": "//garnet/bin/media/media_player"
-    }
+    "packages": [
+        "//garnet/bin/media/media_player"
+    ]
 }

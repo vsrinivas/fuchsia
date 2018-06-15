@@ -1,5 +1,5 @@
 {
-    "packages": {
-        "mdns_service": "//garnet/bin/mdns/service"
-    }
+    "packages": [
+        "//garnet/bin/mdns/service"
+    ]
 }

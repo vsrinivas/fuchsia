@@ -2,7 +2,7 @@
     "imports": [
         "garnet/packages/prod/tracing"
     ],
-    "packages": {
-        "trace_tests": "//garnet/bin/trace:trace_tests"
-    }
+    "packages": [
+        "//garnet/bin/trace:trace_tests"
+    ]
 }

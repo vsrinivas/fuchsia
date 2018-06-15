@@ -2,7 +2,7 @@
     "imports": [
         "garnet/packages/prod/netstack"
     ],
-    "packages": {
-        "network": "//garnet/bin/http"
-    }
+    "packages": [
+        "//garnet/bin/http"
+    ]
 }

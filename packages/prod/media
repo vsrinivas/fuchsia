@@ -4,9 +4,9 @@
         "garnet/packages/prod/media_codec",
         "garnet/packages/prod/media_player"
     ],
-    "packages": {
-        "net_media_service": "//garnet/bin/media/net_media_service",
-        "tts_service": "//garnet/bin/tts:tts_service",
-        "vol": "//garnet/bin/media/vol"
-    }
+    "packages": [
+        "//garnet/bin/media/net_media_service",
+        "//garnet/bin/tts:tts_service",
+        "//garnet/bin/media/vol"
+    ]
 }

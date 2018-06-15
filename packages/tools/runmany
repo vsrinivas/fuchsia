@@ -1,5 +1,5 @@
 {
-    "packages": {
-        "runmany": "//garnet/bin/runmany"
-    }
+    "packages": [
+        "//garnet/bin/runmany"
+    ]
 }

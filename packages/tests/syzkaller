@@ -2,7 +2,7 @@
     "imports": [
         "garnet/packages/kitchen_sink"
     ],
-    "packages": {
-        "syzkaller": "//garnet/testing/syzkaller"
-    }
+    "packages": [
+        "//garnet/testing/syzkaller"
+    ]
 }

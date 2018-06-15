@@ -2,19 +2,19 @@
     "imports": [
         "garnet/packages/prod/scenic"
     ],
-    "packages": {
-        "hello_pose_buffer": "//garnet/examples/ui:hello_pose_buffer",
-        "hello_scenic": "//garnet/examples/ui:hello_scenic",
-        "hello_spaces": "//garnet/examples/ui:hello_spaces",
-        "hello_stereo": "//garnet/examples/ui:hello_stereo",
-        "shadertoy_client": "//garnet/examples/ui:shadertoy_client",
-        "shadertoy_service": "//garnet/examples/ui:shadertoy_service",
-        "shapes_a11y_view": "//garnet/examples/ui:shapes_a11y_view",
-        "shapes_view": "//garnet/examples/ui:shapes_view",
-        "sketchy_client": "//garnet/examples/ui:sketchy_client",
-        "sketchy_service": "//garnet/bin/ui/sketchy:sketchy_service",
-        "spinning_square_view": "//garnet/examples/ui:spinning_square_view",
-        "tile_view": "//garnet/examples/ui:tile_view",
-        "video_display": "//garnet/examples/ui:video_display"
-    }
+    "packages": [
+        "//garnet/examples/ui:hello_pose_buffer",
+        "//garnet/examples/ui:hello_scenic",
+        "//garnet/examples/ui:hello_spaces",
+        "//garnet/examples/ui:hello_stereo",
+        "//garnet/examples/ui:shadertoy_client",
+        "//garnet/examples/ui:shadertoy_service",
+        "//garnet/examples/ui:shapes_a11y_view",
+        "//garnet/examples/ui:shapes_view",
+        "//garnet/examples/ui:sketchy_client",
+        "//garnet/bin/ui/sketchy:sketchy_service",
+        "//garnet/examples/ui:spinning_square_view",
+        "//garnet/examples/ui:tile_view",
+        "//garnet/examples/ui:video_display"
+    ]
 }

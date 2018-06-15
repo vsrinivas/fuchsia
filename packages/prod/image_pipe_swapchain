@@ -2,7 +2,7 @@
     "imports": [
         "garnet/packages/prod/vulkan"
     ],
-    "packages": {
-        "image-pipe-swapchain": "//garnet/lib/vulkan:image-pipe-swapchain"
-    }
+    "packages": [
+        "//garnet/lib/vulkan:image-pipe-swapchain"
+    ]
 }

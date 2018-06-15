@@ -1,5 +1,5 @@
 {
-    "packages": {
-        "netconnector_examples": "//garnet/examples/netconnector"
-    }
+    "packages": [
+        "//garnet/examples/netconnector"
+    ]
 }

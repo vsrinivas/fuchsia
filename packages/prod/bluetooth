@@ -1,10 +1,10 @@
 {
-    "packages": {
-        "bt-gap": "//garnet/bin/bluetooth/bt-gap",
-        "bt-tools": "//garnet/bin/bluetooth/tools:bt-tools",
-        "bthci_fake": "//garnet/drivers/bluetooth/hci/fake:bthci_fake",
-        "bthci_passthrough": "//garnet/drivers/bluetooth/hci/passthrough:bthci_passthrough",
-        "bthost": "//garnet/drivers/bluetooth/host:bthost",
-        "btintel": "//garnet/drivers/bluetooth/hci/intel:btintel"
-    }
+    "packages": [
+        "//garnet/bin/bluetooth/bt-gap",
+        "//garnet/bin/bluetooth/tools:bt-tools",
+        "//garnet/drivers/bluetooth/hci/fake:bthci_fake",
+        "//garnet/drivers/bluetooth/hci/passthrough:bthci_passthrough",
+        "//garnet/drivers/bluetooth/host:bthost",
+        "//garnet/drivers/bluetooth/hci/intel:btintel"
+    ]
 }

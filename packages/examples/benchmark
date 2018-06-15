@@ -1,5 +1,5 @@
 {
-    "packages": {
-        "benchmark": "//garnet/examples/benchmark"
-    }
+    "packages": [
+        "//garnet/examples/benchmark"
+    ]
 }

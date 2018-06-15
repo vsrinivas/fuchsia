@@ -2,8 +2,8 @@
     "imports": [
         "garnet/packages/prod/auth"
     ],
-    "packages": {
-        "token_manager_tests": "//garnet/bin/auth:tests",
-        "rust_tests" : "//garnet/bin/auth:rust_tests"
-    }
+    "packages": [
+        "//garnet/bin/auth:tests",
+        "//garnet/bin/auth:rust_tests"
+    ]
 }

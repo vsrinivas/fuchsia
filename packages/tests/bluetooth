@@ -2,7 +2,7 @@
     "imports": [
         "garnet/packages/prod/bluetooth"
     ],
-    "packages": {
-        "bluetooth_tests": "//garnet/bin/bluetooth/tests:bluetooth_tests"
-    }
+    "packages": [
+        "//garnet/bin/bluetooth/tests:bluetooth_tests"
+    ]
 }

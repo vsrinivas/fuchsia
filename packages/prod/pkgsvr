@@ -1,5 +1,5 @@
 {
-    "packages": {
-        "pkgsvr": "//garnet/go/src/pmd:pkgsvr"
-    }
+    "packages": [
+        "//garnet/go/src/pmd:pkgsvr"
+    ]
 }

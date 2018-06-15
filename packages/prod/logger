@@ -1,5 +1,5 @@
 {
-    "packages": {
-        "logger": "//garnet/bin/logger"
-    }
+    "packages": [
+        "//garnet/bin/logger"
+    ]
 }

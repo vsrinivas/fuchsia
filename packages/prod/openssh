@@ -3,7 +3,7 @@
         "garnet/packages/prod/boringssl",
         "garnet/packages/prod/listen"
     ],
-    "packages": {
-        "openssh-portable": "//third_party/openssh-portable"
-    }
+    "packages": [
+        "//third_party/openssh-portable"
+    ]
 }

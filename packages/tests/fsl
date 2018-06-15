@@ -1,5 +1,5 @@
 {
-    "packages": {
-        "fsl": "//garnet/public/lib/fsl:package"
-    }
+    "packages": [
+        "//garnet/public/lib/fsl:package"
+    ]
 }

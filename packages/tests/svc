@@ -1,5 +1,5 @@
 {
-    "packages": {
-        "svc": "//garnet/public/lib/svc:package"
-    }
+    "packages": [
+        "//garnet/public/lib/svc:package"
+    ]
 }

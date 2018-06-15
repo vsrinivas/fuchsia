@@ -1,5 +1,5 @@
 {
-    "packages": {
-        "garnet_bluetooth_examples": "//garnet/examples/bluetooth:garnet_bluetooth_examples"
-    }
+    "packages": [
+        "//garnet/examples/bluetooth:garnet_bluetooth_examples"
+    ]
 }

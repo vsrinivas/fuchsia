@@ -2,7 +2,7 @@
     "imports": [
         "garnet/packages/config/services"
     ],
-    "packages": {
-        "netcfg_config": "//garnet/bin/netcfg:config"
-    }
+    "packages": [
+        "//garnet/bin/netcfg:config"
+    ]
 }

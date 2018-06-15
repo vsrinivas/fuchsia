@@ -1,6 +1,6 @@
 {
-    "packages": {
-        "wlanstack": "//garnet/go/src/wlan:wlanstack",
-        "wlanstack2": "//garnet/bin/wlanstack:wlanstack2"
-    }
+    "packages": [
+        "//garnet/go/src/wlan:wlanstack",
+        "//garnet/bin/wlanstack:wlanstack2"
+    ]
 }

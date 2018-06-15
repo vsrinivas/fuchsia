@@ -2,8 +2,8 @@
     "imports": [
         "garnet/packages/prod/device_settings"
     ],
-    "packages": {
-        "device_settings_manager_tests": "//garnet/bin/device_settings:device_settings_manager_tests",
-        "device_settings_gotests": "//garnet/go/src/device_settings:device_settings_gotests"
-    }
+    "packages": [
+        "//garnet/bin/device_settings:device_settings_manager_tests",
+        "//garnet/go/src/device_settings:device_settings_gotests"
+    ]
 }

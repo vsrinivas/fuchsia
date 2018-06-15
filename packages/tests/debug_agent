@@ -2,7 +2,7 @@
     "imports": [
         "garnet/packages/prod/debug_agent"
     ],
-    "packages": {
-        "debug_agent_tests": "//garnet/bin/debug_agent:debug_agent_tests"
-    }
+    "packages": [
+        "//garnet/bin/debug_agent:debug_agent_tests"
+    ]
 }

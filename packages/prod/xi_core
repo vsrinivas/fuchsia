@@ -1,5 +1,5 @@
 {
-    "packages": {
-        "xi_core": "//garnet/bin/xi_core"
-    }
+    "packages": [
+        "//garnet/bin/xi_core"
+    ]
 }

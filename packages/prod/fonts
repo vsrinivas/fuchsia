@@ -1,5 +1,5 @@
 {
-    "packages": {
-        "fonts": "//garnet/bin/fonts"
-    }
+    "packages": [
+        "//garnet/bin/fonts"
+    ]
 }

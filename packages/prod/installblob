@@ -1,5 +1,5 @@
 {
-    "packages": {
-        "installblob": "//garnet/go/src/pmd:installblob"
-    }
+    "packages": [
+        "//garnet/go/src/pmd:installblob"
+    ]
 }

@@ -1,5 +1,5 @@
 {
-    "packages": {
-        "oauth_examples": "//garnet/bin/auth:oauth_examples"
-    }
+    "packages": [
+        "//garnet/bin/auth:oauth_examples"
+    ]
 }

@@ -1,5 +1,5 @@
 {
-    "packages": {
-        "timezone": "//garnet/bin/timezone"
-    }
+    "packages": [
+        "//garnet/bin/timezone"
+    ]
 }

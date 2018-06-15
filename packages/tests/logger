@@ -2,7 +2,7 @@
     "imports": [
         "garnet/packages/prod/logger"
     ],
-    "packages": {
-        "logger_tests": "//garnet/bin/logger:logger_tests"
-    }
+    "packages": [
+        "//garnet/bin/logger:logger_tests"
+    ]
 }

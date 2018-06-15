@@ -1,6 +1,6 @@
 {
-    "packages": {
-        "magma-test-build-only": "//garnet/lib/magma/tests:magma-test-build-only",
-        "magma-tools": "//garnet/lib/magma:magma-tools"
-    }
+    "packages": [
+        "//garnet/lib/magma/tests:magma-test-build-only",
+        "//garnet/lib/magma:magma-tools"
+    ]
 }

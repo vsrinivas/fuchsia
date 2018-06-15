@@ -1,5 +1,5 @@
 {
-    "packages": {
-        "escher_tests": "//garnet/public/lib/escher:escher_tests"
-    }
+    "packages": [
+        "//garnet/public/lib/escher:escher_tests"
+    ]
 }

@@ -1,7 +1,7 @@
 {
-    "packages": {
-        "guestmgr_tests": "//garnet/bin/guest/mgr:guestmgr_tests",
-        "machina_tests": "//garnet/lib/machina:machina_tests",
-        "vmm_tests": "//garnet/bin/guest/vmm:vmm_tests"
-    }
+    "packages": [
+        "//garnet/bin/guest/mgr:guestmgr_tests",
+        "//garnet/lib/machina:machina_tests",
+        "//garnet/bin/guest/vmm:vmm_tests"
+    ]
 }

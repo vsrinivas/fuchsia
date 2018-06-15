@@ -1,5 +1,5 @@
 {
-    "packages": {
-        "wlan-hw-sim": "//garnet/bin/wlan-hw-sim"
-    }
+    "packages": [
+        "//garnet/bin/wlan-hw-sim"
+    ]
 }

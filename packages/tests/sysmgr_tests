@@ -1,5 +1,5 @@
 {
-    "packages": {
-        "sysmgr_tests": "//garnet/bin/sysmgr/test:sysmgr_tests"
-    }
+    "packages": [
+        "//garnet/bin/sysmgr/test:sysmgr_tests"
+    ]
 }

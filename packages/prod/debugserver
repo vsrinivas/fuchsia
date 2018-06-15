@@ -1,5 +1,5 @@
 {
-    "packages": {
-        "debugserver": "//garnet/bin/debugserver"
-    }
+    "packages": [
+        "//garnet/bin/debugserver"
+    ]
 }

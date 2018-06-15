@@ -1,5 +1,5 @@
 {
-    "packages": {
-        "sbase": "//third_party/sbase"
-    }
+    "packages": [
+        "//third_party/sbase"
+    ]
 }

@@ -1,5 +1,5 @@
 {
-    "packages": {
-        "netconnector": "//garnet/bin/netconnector"
-    }
+    "packages": [
+        "//garnet/bin/netconnector"
+    ]
 }

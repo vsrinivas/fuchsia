@@ -1,5 +1,5 @@
 {
-    "packages": {
-        "test_runner_tests": "//garnet/bin/test_runner:test_runner_tests"
-    }
+    "packages": [
+        "//garnet/bin/test_runner:test_runner_tests"
+    ]
 }

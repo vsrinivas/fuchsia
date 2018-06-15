@@ -2,7 +2,7 @@
     "imports": [
         "garnet/packages/prod/guest_runner"
     ],
-    "packages": {
-        "debian_guest": "//garnet/bin/guest/pkg/debian_guest"
-    }
+    "packages": [
+        "//garnet/bin/guest/pkg/debian_guest"
+    ]
 }

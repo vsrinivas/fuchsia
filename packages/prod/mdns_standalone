@@ -1,5 +1,5 @@
 {
-    "packages": {
-        "mdns_standalone": "//garnet/bin/mdns/standalone"
-    }
+    "packages": [
+        "//garnet/bin/mdns/standalone"
+    ]
 }

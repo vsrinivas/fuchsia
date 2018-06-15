@@ -5,7 +5,7 @@
         "garnet/packages/prod/ralink",
         "garnet/packages/prod/wlantap"
     ],
-    "packages": {
-        "wlan": "//garnet/drivers/wlan/wlan"
-    }
+    "packages": [
+        "//garnet/drivers/wlan/wlan"
+    ]
 }

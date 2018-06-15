@@ -1,5 +1,5 @@
 {
-    "packages": {
-        "gralloc": "//garnet/bin/gralloc"
-    }
+    "packages": [
+        "//garnet/bin/gralloc"
+    ]
 }

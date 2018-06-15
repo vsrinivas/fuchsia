@@ -1,5 +1,5 @@
 {
-    "packages": {
-        "recovery_netstack": "//garnet/bin/recovery_netstack"
-    }
+    "packages": [
+        "//garnet/bin/recovery_netstack"
+    ]
 }

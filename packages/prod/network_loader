@@ -2,7 +2,7 @@
     "imports": [
         "garnet/packages/prod/network"
     ],
-    "packages": {
-        "network_loader": "//garnet/bin/network_loader"
-    }
+    "packages": [
+        "//garnet/bin/network_loader"
+    ]
 }

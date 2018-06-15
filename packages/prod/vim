@@ -1,5 +1,5 @@
 {
-    "packages": {
-        "vim": "//third_party/vim"
-    }
+    "packages": [
+        "//third_party/vim"
+    ]
 }

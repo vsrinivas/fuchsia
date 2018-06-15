@@ -1,5 +1,5 @@
 {
-    "packages": {
-        "device_settings_manager": "//garnet/bin/device_settings:device_settings_manager"
-    }
+    "packages": [
+        "//garnet/bin/device_settings:device_settings_manager"
+    ]
 }

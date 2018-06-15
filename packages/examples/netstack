@@ -1,5 +1,5 @@
 {
-    "packages": {
-        "nc": "//garnet/examples/network:nc"
-    }
+    "packages": [
+        "//garnet/examples/network:nc"
+    ]
 }

@@ -2,7 +2,7 @@
     "imports": [
         "garnet/packages/config/services"
     ],
-    "packages": {
-        "network_config": "//garnet/bin/sysmgr:network_config"
-    }
+    "packages": [
+        "//garnet/bin/sysmgr:network_config"
+    ]
 }

@@ -1,5 +1,5 @@
 {
-    "packages": {
-        "asio_unittests": "//third_party/asio:asio_unittests"
-    }
+    "packages": [
+        "//third_party/asio:asio_unittests"
+    ]
 }

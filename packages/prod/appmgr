@@ -1,5 +1,5 @@
 {
-    "packages": {
-        "appmgr": "//garnet/bin/appmgr"
-    }
+    "packages": [
+        "//garnet/bin/appmgr"
+    ]
 }
