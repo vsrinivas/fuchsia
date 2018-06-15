@@ -33,6 +33,8 @@ _fx() {
 
   _arguments \
     "--config[config file]:filename:_files" \
+    "--dir[build directory]:directory:_files -/" \
+    "-x[print commands]" \
     "1: :{_describe 'command' commands}" \
     "*:: :->args"
 
