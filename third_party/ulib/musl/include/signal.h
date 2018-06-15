@@ -216,12 +216,8 @@ void psignal(int, const char*);
 #if defined(_XOPEN_SOURCE) || defined(_BSD_SOURCE) || defined(_GNU_SOURCE)
 int killpg(pid_t, int);
 int sigaltstack(const stack_t* __restrict, stack_t* __restrict);
-int sighold(int);
-int sigignore(int);
 int siginterrupt(int, int);
 int sigpause(int);
-int sigrelse(int);
-void (*sigset(int, void (*)(int)))(int);
 #define TRAP_BRKPT 1
 #define TRAP_TRACE 2
 #define POLL_IN 1

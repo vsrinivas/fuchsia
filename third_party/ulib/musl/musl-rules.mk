@@ -610,8 +610,6 @@ LOCAL_SRCS := \
     $(LOCAL_DIR)/src/signal/sigdelset.c \
     $(LOCAL_DIR)/src/signal/sigemptyset.c \
     $(LOCAL_DIR)/src/signal/sigfillset.c \
-    $(LOCAL_DIR)/src/signal/sighold.c \
-    $(LOCAL_DIR)/src/signal/sigignore.c \
     $(LOCAL_DIR)/src/signal/siginterrupt.c \
     $(LOCAL_DIR)/src/signal/sigisemptyset.c \
     $(LOCAL_DIR)/src/signal/sigismember.c \
@@ -621,10 +619,8 @@ LOCAL_SRCS := \
     $(LOCAL_DIR)/src/signal/sigpending.c \
     $(LOCAL_DIR)/src/signal/sigprocmask.c \
     $(LOCAL_DIR)/src/signal/sigqueue.c \
-    $(LOCAL_DIR)/src/signal/sigrelse.c \
     $(LOCAL_DIR)/src/signal/sigrtmax.c \
     $(LOCAL_DIR)/src/signal/sigrtmin.c \
-    $(LOCAL_DIR)/src/signal/sigset.c \
     $(LOCAL_DIR)/src/signal/sigsuspend.c \
     $(LOCAL_DIR)/src/signal/sigtimedwait.c \
     $(LOCAL_DIR)/src/signal/sigwait.c \
