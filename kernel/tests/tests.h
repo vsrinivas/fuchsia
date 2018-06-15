@@ -12,26 +12,12 @@
 
 __BEGIN_CDECLS
 
-void uart_tests(void);
-int thread_tests(void);
-int sleep_tests(void);
-int port_tests(void);
-void clock_tests(void);
-void timer_tests(void);
-void benchmarks(void);
-int fibo(int argc, const cmd_args* argv);
-int spinner(int argc, const cmd_args* argv);
-int ref_counted_tests(int argc, const cmd_args* argv);
-int ref_ptr_tests(int argc, const cmd_args* argv);
-int unique_ptr_tests(int argc, const cmd_args* argv);
-int forward_tests(int argc, const cmd_args* argv);
-int list_tests(int argc, const cmd_args* argv);
-int hash_tests(int argc, const cmd_args* argv);
-int vm_tests(int argc, const cmd_args* argv);
-int auto_call_tests(int argc, const cmd_args* argv);
-int arena_tests(int argc, const cmd_args* argv);
-int fifo_tests(int argc, const cmd_args* argv);
-int alloc_checker_tests(int argc, const cmd_args* argv);
+console_cmd uart_tests, thread_tests, sleep_tests, port_tests;
+console_cmd clock_tests, timer_tests, benchmarks, fibo;
+console_cmd spinner, ref_counted_tests, ref_ptr_tests;
+console_cmd unique_ptr_tests, forward_tests, list_tests;
+console_cmd hash_tests, vm_tests, auto_call_tests;
+console_cmd arena_tests, fifo_tests, alloc_checker_tests;
 void unittests(void);
 
 __END_CDECLS

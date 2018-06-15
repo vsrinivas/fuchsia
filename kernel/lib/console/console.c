@@ -727,7 +727,7 @@ int console_run_script_locked(const char *string)
     return console_run_script_etc(string, true);
 }
 
-console_cmd console_get_command_handler(const char *commandstr)
+console_cmd *console_get_command_handler(const char *commandstr)
 {
     const cmd *command = match_command(commandstr, CMD_AVAIL_NORMAL);
 

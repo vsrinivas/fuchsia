@@ -23,7 +23,7 @@ typedef struct {
     bool b;
 } cmd_args;
 
-typedef int (*console_cmd)(int argc, const cmd_args *argv, uint32_t flags);
+typedef int console_cmd(int argc, const cmd_args *argv, uint32_t flags);
 
 #define CMD_AVAIL_NORMAL (0x1 << 0)
 #define CMD_AVAIL_PANIC  (0x1 << 1)
@@ -36,7 +36,7 @@ typedef int (*console_cmd)(int argc, const cmd_args *argv, uint32_t flags);
 typedef struct {
     const char *cmd_str;
     const char *help_str;
-    const console_cmd cmd_callback;
+    console_cmd *cmd_callback;
     uint8_t availability_mask;
 } cmd;
 
@@ -68,7 +68,7 @@ typedef struct {
 /* external api */
 int console_run_script(const char *string);
 int console_run_script_locked(const char *string); // special case from inside a command
-console_cmd console_get_command_handler(const char *command);
+console_cmd *console_get_command_handler(const char *command);
 void console_abort_script(void);
 
 /* panic shell api */

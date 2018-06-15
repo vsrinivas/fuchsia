@@ -52,7 +52,7 @@ static int fibo_thread(void* argv) {
     return retcode0 + retcode1;
 }
 
-int fibo(int argc, const cmd_args* argv) {
+int fibo(int argc, const cmd_args* argv, uint32_t) {
 
     if (argc < 2) {
         printf("not enough args\n");

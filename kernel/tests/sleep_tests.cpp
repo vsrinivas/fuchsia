@@ -27,6 +27,7 @@ static int thread_sleep_test(void) {
     return early;
 }
 
-int sleep_tests(void) {
-    return thread_sleep_test();
+int sleep_tests(int, const cmd_args*, uint32_t) {
+    thread_sleep_test();
+    return 0;
 }

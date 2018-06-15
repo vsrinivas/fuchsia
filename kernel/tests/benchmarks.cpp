@@ -270,7 +270,7 @@ __NO_INLINE static void bench_mutex() {
     printf("%" PRIu64 " cycles to acquire/release uncontended mutex %u times (%" PRIu64 " cycles per)\n", c, count, c / count);
 }
 
-void benchmarks() {
+int benchmarks(int, const cmd_args*, uint32_t) {
     bench_set_overhead();
     bench_memcpy();
     bench_memset();
@@ -286,4 +286,6 @@ void benchmarks() {
 
     bench_spinlock();
     bench_mutex();
+
+    return 0;
 }

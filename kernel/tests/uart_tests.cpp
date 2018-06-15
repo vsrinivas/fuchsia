@@ -78,7 +78,7 @@ static void uart_print_lots_of_lines(bool block)
     }
 }
 
-void uart_tests(void) {
+int uart_tests(int, const cmd_args*, uint32_t) {
     // Print out a few short lines, to test '\n' behavior
     uart_blocking_print_test();
     uart_nonblocking_print_test();
@@ -91,4 +91,6 @@ void uart_tests(void) {
         uart_print_lots_of_lines(false);
         printf("Printed Count = %d\n", 100 - i);
     }
+
+    return 0;
 }

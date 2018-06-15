@@ -1,4 +1,4 @@
-// Copyright 2016 The Fuchsia Authors
+// Copyright 2016, 2018 The Fuchsia Authors
 // Copyright (c) 2008-2015 Travis Geiselbrecht
 //
 // Use of this source code is governed by a MIT-style
@@ -905,7 +905,7 @@ __NO_INLINE static void priority_test() {
 }
 
 
-int thread_tests(void) {
+int thread_tests(int, const cmd_args*, uint32_t) {
     kill_tests();
 
     mutex_test();
@@ -938,7 +938,7 @@ static int spinner_thread(void* arg) {
     return 0;
 }
 
-int spinner(int argc, const cmd_args* argv) {
+int spinner(int argc, const cmd_args* argv, uint32_t) {
     if (argc < 2) {
         printf("not enough args\n");
         printf("usage: %s <priority> <rt>\n", argv[0].str);

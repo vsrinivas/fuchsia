@@ -18,7 +18,7 @@
 #include <stdio.h>
 #include <zircon/types.h>
 
-void clock_tests(void) {
+int clock_tests(int, const cmd_args*, uint32_t) {
     uint64_t c;
     zx_time_t t2;
 
@@ -74,4 +74,6 @@ void clock_tests(void) {
     }
 
     thread_set_cpu_affinity(get_current_thread(), old_affinity);
+
+    return 0;
 }

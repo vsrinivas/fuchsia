@@ -190,10 +190,11 @@ static void timer_far_deadline(void) {
     event_destroy(&event);
 }
 
-void timer_tests(void) {
+int timer_tests(int, const cmd_args*, uint32_t) {
     timer_test_coalescing_center();
     timer_test_coalescing_late();
     timer_test_coalescing_early();
     timer_test_all_cpus();
     timer_far_deadline();
+    return 0;
 }
