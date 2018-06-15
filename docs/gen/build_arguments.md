@@ -372,11 +372,10 @@ No values for `target_cpu = "arm64"`.
 
 
 ### scenic_vulkan_swapchain
- 0 - use normal swapchain
- 1 - use vulkan swapchain, but wait for real display
- 2 - use vulkan swapchain with fixed-size fake display
 
-**Default value:** `0`
+**Default value for `target_cpu = "arm64"`:** `1`
+
+**Default value for `target_cpu = "x64"`:** `0`
 
 
 ### scudo_default_options
@@ -542,9 +541,7 @@ No values for `target_cpu = "arm64"`.
 ### thinlto_cache_dir
  ThinLTO cache directory path.
 
-**Default value for `target_cpu = "arm64"`:** `"host_x64/thinlto-cache"`
-
-**Default value for `target_cpu = "x64"`:** `"thinlto-cache"`
+**Default value:** `"host_x64/thinlto-cache"`
 
 
 ### thinlto_jobs
