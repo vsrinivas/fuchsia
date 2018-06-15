@@ -24,10 +24,17 @@ namespace test {
 // are integration tests or end-to-end tests (apptests).
 class LedgerAppInstanceFactory {
  public:
-  // Helper class for waiting to FIDL call. A new CallbackWaiter needs to be
-  // created for each call. The GetCallback returned function needs to be called
-  // when the FIDL call returns, and RunUntilCalled will run the loop until it
-  // happens.
+  // Helper class for waiting for asynchronous event.
+  // For a given |CallbackWaiter|, one can retrieve a callback through
+  // |GetCallback|. The callback must be called when the asynchronous event
+  // ends.
+  // When |RunUntilCalled| is called, it will run the event loop, until the
+  // callback from |GetCallback| is called.
+  // If one is waiting for the callback to be called multiple times, one can
+  // execute |RunUntilCalled| multiple times. The |n|th run of |RunUntilCalled|
+  // will return once the callback have been called at least |n| time.
+  // |GetCallback| can be called multiple time, and all the returned callback
+  // will be equivalent.
   class CallbackWaiter {
    public:
     CallbackWaiter() {}
