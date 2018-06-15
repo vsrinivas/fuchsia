@@ -308,7 +308,7 @@ static zx_status_t dh_handle_rpc_read(zx_handle_t h, iostate_t* ios) {
             break;
         }
         zx_device_t* dev = newios->dev;
-        memcpy(dev->name, "proxy", 7);
+        strcpy(dev->name, "proxy");
         dev->protocol_id = msg.protocol_id;
         dev->ops = &device_default_ops;
         dev->rpc = hin[0];
