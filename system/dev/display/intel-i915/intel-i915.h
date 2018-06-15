@@ -59,6 +59,8 @@ public:
     uint32_t ComputeLinearStride(uint32_t width, zx_pixel_format_t format);
     zx_status_t AllocateVmo(uint64_t size, zx_handle_t* vmo_out);
 
+    const fbl::unique_ptr<GttRegion>& GetGttRegion(void* handle);
+
     zx_status_t ReadPciConfig16(uint16_t addr, uint16_t* value_out);
     zx_status_t MapPciMmio(uint32_t pci_bar, void** addr_out, uint64_t* size_out);
     zx_status_t UnmapPciMmio(uint32_t pci_bar);

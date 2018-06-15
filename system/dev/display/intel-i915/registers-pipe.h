@@ -46,8 +46,6 @@ public:
     static constexpr uint32_t kLinearAlignment = 256 * 1024;
     static constexpr uint32_t kXTilingAlignment = 256 * 1024;
     static constexpr uint32_t kYTilingAlignment = 1024 * 1024;
-    static constexpr uint32_t kTrailingPtePadding = 136;
-    static constexpr uint32_t kHeaderPtePaddingFor180Or270 = 136;
 
     DEF_BIT(3, ring_flip_source);
 };
@@ -69,30 +67,6 @@ public:
     static constexpr uint32_t kBaseAddr = 0x70188;
 
     DEF_FIELD(9, 0, stride);
-
-    void set_stride(uint32_t tiling, uint32_t width, zx_pixel_format_t format) {
-        uint32_t chunk_size = get_chunk_size(tiling, format);
-        set_stride(fbl::round_up(width * ZX_PIXEL_FORMAT_BYTES(format), chunk_size) / chunk_size);
-    }
-
-    static uint32_t compute_pixel_stride(uint32_t tiling, uint32_t width,
-                                         zx_pixel_format_t format) {
-        uint32_t chunk_size = get_chunk_size(tiling, format);
-        return fbl::round_up(width, chunk_size / ZX_PIXEL_FORMAT_BYTES(format));
-    }
-
-private:
-    static uint32_t get_chunk_size(uint32_t tiling, zx_pixel_format_t format) {
-        switch (tiling) {
-        case IMAGE_TYPE_SIMPLE: return 64;
-        case IMAGE_TYPE_X_TILED: return 512;
-        case IMAGE_TYPE_Y_LEGACY_TILED: return 128;
-        case IMAGE_TYPE_YF_TILED: return ZX_PIXEL_FORMAT_BYTES(format) == 1 ? 64 : 128;
-        default:
-            ZX_ASSERT(false);
-            return 0;
-        }
-    }
 };
 
 // PLANE_SIZE
@@ -138,6 +112,10 @@ public:
     DEF_FIELD(5, 4, alpha_mode);
     DEF_BIT(3, allow_double_buffer_update_disable);
     DEF_FIELD(1, 0, plane_rotation);
+    static constexpr uint32_t kIdentity = 0;
+    static constexpr uint32_t k90deg = 1;
+    static constexpr uint32_t k180deg = 2;
+    static constexpr uint32_t k270deg = 3;
 };
 
 // PLANE_BUF_CFG

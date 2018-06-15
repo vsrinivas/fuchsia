@@ -98,8 +98,9 @@ enum ClientCompositionOp : uint8 {
 };
 
 enum ConfigError : uint8 {
+  OK = 0;
   // The requested layer configuration is invalid.
-  INVALID_CONFIG = 0;
+  INVALID_CONFIG = 1;
 };
 
 struct ConfigResult {
