@@ -16,7 +16,7 @@
 namespace netconnector {
 namespace {
 
-static const std::string kFuchsia = "fuchsia";
+static const std::string kFuchsia = "fuchsia-unset-device-name";
 
 class NetstackClient {
  public:
