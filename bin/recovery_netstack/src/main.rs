@@ -5,7 +5,10 @@
 //! A networking stack.
 
 #![feature(const_fn)]
+#![feature(never_type)]
+#![feature(nll)]
 #![feature(nonzero)]
+#![feature(specialization)]
 #![feature(try_from)]
 #![feature(repr_transparent)]
 // In case we roll the toolchain and something we're using as a feature has been
@@ -25,6 +28,9 @@ extern crate failure;
 extern crate rand;
 extern crate zerocopy;
 
+#[macro_use]
+mod macros;
+
 // mark all modules as public so that deny(missing_docs) will be more powerful
 pub mod device;
 pub mod error;
@@ -34,4 +40,16 @@ pub mod testutil;
 pub mod transport;
 pub mod wire;
 
+use device::DeviceLayerState;
+use ip::IpLayerState;
+use transport::TransportLayerState;
+
 fn main() {}
+
+/// The state associated with the network stack.
+#[allow(missing_docs)]
+pub struct StackState {
+    pub transport: TransportLayerState,
+    pub ip: IpLayerState,
+    pub device: DeviceLayerState,
+}

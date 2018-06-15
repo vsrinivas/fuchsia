@@ -234,7 +234,7 @@ mod checksum {
             for _ in 0..2048 {
                 // use an odd length so we test the odd length logic
                 const BUF_LEN: usize = 31;
-                let mut buf: [u8; BUF_LEN] = rng.gen();
+                let buf: [u8; BUF_LEN] = rng.gen();
                 let mut c = Checksum::new();
                 c.add_bytes(&buf);
 
@@ -548,6 +548,7 @@ mod options {
 }
 
 mod range {
+    use std::cmp;
     use std::convert::TryFrom;
     use std::ops::{Bound, Range, RangeBounds};
 
@@ -715,20 +716,33 @@ mod range {
         }
     }
 
-    /// Create a `BufferAndRange` with a guranteed prefix size.
+    /// Create a `BufferAndRange` with a guranteed prefix and padding size.
     ///
-    /// Given a buffer and a range, `ensure_prefix` returns a `BufferAndRange`
-    /// with  at least `prefix` bytes preceding the range. If `buf` already has
-    /// enough prefix bytes, then the returned `BufferAndRange` simply wraps a
+    /// Given a buffer and a range, `ensure_prefix_padding` returns a
+    /// `BufferAndRange` with  at least `prefix` bytes preceding the range and
+    /// at least `range_plus_padding` bytes in the range plus any padding bytes
+    /// following the range. If `buf` already has enough prefix and
+    /// range/padding bytes, then the returned `BufferAndRange` simply wraps a
     /// reference to `buf`, and the range is left as is. Otherwise, a new buffer
     /// is allocated, the original range bytes are copied into the new buffer,
     /// and the range is adjusted so that it matches the location of the bytes
     /// in the new buffer.
-    pub fn ensure_prefix<B: AsRef<[u8]>>(
-        buffer: BufferAndRange<B>, prefix: usize,
+    ///
+    /// The "range plus padding" construction is useful when a packet format
+    /// requires a minimum body length, and the upper layers of the stack which
+    /// are producing the body to be encapsulated do not have enough bytes to
+    /// meet that minimum. In that case, it is necessary to add extra padding
+    /// bytes after the body in order to meet the minimum.
+    pub fn ensure_prefix_padding<B: AsRef<[u8]>>(
+        buffer: BufferAndRange<B>, prefix: usize, range_plus_padding: usize,
     ) -> BufferAndRange<RefOrOwned<B>> {
         let (buffer, range) = buffer.into_buffer_and_range();
-        if prefix <= range.start {
+        let range_len = range.end - range.start;
+        // normalize to guarantee that range_plus_padding >= range_len
+        let range_plus_padding = cmp::max(range_plus_padding, range_len);
+        if prefix <= range.start && range_plus_padding <= buffer.as_ref().len() - range.start {
+            // The constraints are already satisfied, so we don't have to
+            // reallocate.
             BufferAndRange::new(
                 RefOrOwned {
                     inner: RefOrOwnedInner::Ref(buffer),
@@ -736,12 +750,20 @@ mod range {
                 range,
             )
         } else {
+            // TODO(joshlf): There's a third case, in which the constraints
+            // aren't satisfied, but the buffer is large enough to satisfy the
+            // constraints. In that case, we can avoid reallocating by simply
+            // moving the range within the existing buffer.
+
+            // The constraints aren't satisfied, and the buffer isn't large
+            // enough to satisfy the constraints, so we have to reallocate.
             let range_len = range.end - range.start;
-            let mut vec = Vec::with_capacity(prefix + range_len);
-            vec.resize(prefix + range_len, 0);
-            vec[prefix..].copy_from_slice(slice(buffer.as_ref(), &range));
+            let total_len = prefix + range_plus_padding;
+            let mut vec = Vec::with_capacity(total_len);
+            vec.resize(total_len, 0);
+            vec[prefix..prefix + range_len].copy_from_slice(slice(buffer.as_ref(), &range));
             // adjust the range given the new prefix length
-            let offset = isize::try_from(prefix - range.start).unwrap();
+            let offset = isize::try_from(prefix).unwrap() - isize::try_from(range.start).unwrap();
             let range = translate_range(range, offset);
             BufferAndRange::new(
                 RefOrOwned {
@@ -771,10 +793,10 @@ mod range {
         }
     }
 
-    impl<'a> AsMut<[u8]> for RefOrOwned<&'a mut [u8]> {
+    impl<B: AsMut<[u8]>> AsMut<[u8]> for RefOrOwned<B> {
         fn as_mut(&mut self) -> &mut [u8] {
             match &mut self.inner {
-                &mut RefOrOwnedInner::Ref(ref mut r) => r,
+                &mut RefOrOwnedInner::Ref(ref mut r) => r.as_mut(),
                 &mut RefOrOwnedInner::Owned(ref mut v) => v.as_mut_slice(),
             }
         }
@@ -924,6 +946,59 @@ mod range {
             buf.extend_backwards(1);
             assert_eq!(buf.as_ref(), [1, 2, 3, 4, 5, 6, 7]);
             buf.extend_backwards(2);
+        }
+
+        #[test]
+        fn test_ensure_prefix_padding() {
+            fn verify<B: AsRef<[u8]> + AsMut<[u8]>>(
+                buffer: BufferAndRange<B>, prefix: usize, range_plus_padding: usize,
+            ) {
+                let range_len_old = {
+                    let range = buffer.range();
+                    range.end - range.start
+                };
+                let mut range_old = Vec::with_capacity(range_len_old);
+                range_old.extend_from_slice(buffer.as_ref());
+
+                let mut buffer = ensure_prefix_padding(buffer, prefix, range_plus_padding);
+                let range_len_new = {
+                    let range = buffer.range();
+                    range.end - range.start
+                };
+                assert_eq!(range_len_old, range_len_new);
+                let (pfx, range, suffix) = buffer.parts_mut();
+                assert!(pfx.len() >= prefix);
+                assert_eq!(range.len(), range_len_new);
+                assert_eq!(range_old.as_slice(), range);
+                assert!(range.len() + suffix.len() >= range_plus_padding);
+            }
+
+            // Test for every valid combination of buf_len, range_start,
+            // range_end, prefix, and range_plus_padding within [0, 8).
+            for buf_len in 0..8 {
+                for range_start in 0..buf_len {
+                    for range_end in range_start..buf_len {
+                        for prefix in 0..8 {
+                            for range_plus_padding in 0..8 {
+                                let mut vec = Vec::with_capacity(buf_len);
+                                vec.resize(buf_len, 0);
+                                // Initialize the vector with values 0, 1, 2,
+                                // ... so that we can check to make sure that
+                                // the range bytes have been properly copied if
+                                // the buffer is reallocated.
+                                for i in 0..vec.len() {
+                                    vec[i] = i as u8;
+                                }
+                                verify(
+                                    BufferAndRange::new(vec.as_mut_slice(), range_start..range_end),
+                                    prefix,
+                                    range_plus_padding,
+                                );
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 }

@@ -87,3 +87,6 @@ impl EtherType {
         }
     }
 }
+
+/// The state associated with an Ethernet device.
+pub struct EthernetDeviceState;

@@ -59,6 +59,9 @@ struct HeaderPrefix {
 /// bytes for the header in order to guarantee that `serialize` will not panic.
 pub const MAX_HEADER_LEN: usize = 60;
 
+/// The minimum length of an IPv4 header in bytes.
+pub const MIN_HEADER_LEN: usize = 20;
+
 unsafe impl FromBytes for HeaderPrefix {}
 unsafe impl AsBytes for HeaderPrefix {}
 unsafe impl Unaligned for HeaderPrefix {}
