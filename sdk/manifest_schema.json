@@ -215,10 +215,19 @@
           "enum": [
             "dart"
           ]
+        },
+        "type": {
+          "description": "The type of Dart artifact represented by this atom",
+          "type": "string",
+          "enum": [
+            "library",
+            "tool"
+          ]
         }
       },
       "required": [
-        "domain"
+        "domain",
+        "type"
       ],
       "additionalProperties": false
     },
