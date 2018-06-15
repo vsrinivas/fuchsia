@@ -7,13 +7,9 @@
 
 #include "runtests-utils-test-globals.h"
 
-#include <dirent.h>
 #include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
 
 #include <fbl/auto_call.h>
-
 #include <runtests-utils/posix-run-test.h>
 #include <unittest/unittest.h>
 
@@ -36,33 +32,6 @@ const char* TestFsRoot() {
     return TmpDirRoot->c_str();
 }
 
-// Removes the directory at |dir_path| and its contents.
-void CleanUpDir(const char* dir_path) {
-    struct dirent* entry;
-    DIR* dp;
-
-    dp = opendir(dir_path);
-    if (dp == nullptr) {
-        // File found; remove it.
-        remove(dir_path);
-        closedir(dp);
-        return;
-    }
-
-    while ((entry = readdir(dp))) {
-        // Skip "." and "..".
-        if (!strcmp(entry->d_name, ".") || !strcmp(entry->d_name, "..")) {
-            continue;
-        }
-        fbl::String sub_dir_name = JoinPath(dir_path, entry->d_name);
-        CleanUpDir(sub_dir_name.c_str());
-    }
-    closedir(dp);
-
-    // Directory is now empty: remove it.
-    rmdir(dir_path);
-}
-
 } // namespace runtests
 
 int main(int argc, char** argv) {
@@ -70,8 +39,9 @@ int main(int argc, char** argv) {
            runtests::TestFsRoot());
 
     auto auto_test_fs_clean_up = fbl::MakeAutoCall([&] {
-        runtests::CleanUpDir(runtests::TestFsRoot());
-        delete runtests::TmpDirRoot;
+        // Since all subdirectories created will be scoped, at the end of the
+        // test TestFsRoot() should be empty.
+        remove(runtests::TestFsRoot());
     });
     return unittest_run_all_tests(argc, argv) ? EXIT_SUCCESS : EXIT_FAILURE;
 }
