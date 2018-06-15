@@ -131,5 +131,26 @@ TEST(LedgerAppInstanceFactoryTest_CallbackWaiterTest, InterleaveRunUntilCalledAn
   EXPECT_EQ(1u, nb_stop);
 }
 
+TEST(LedgerAppInstanceFactoryTest_CallbackWaiterTest, NotCalledYet) {
+  FakeLoopController loop_controller([] {}, [] {});
+  auto waiter = loop_controller.NewWaiter();
+  auto callback = waiter->GetCallback();
+
+  EXPECT_TRUE(waiter->NotCalledYet());
+
+  callback();
+  EXPECT_FALSE(waiter->NotCalledYet());
+  waiter->RunUntilCalled();
+  EXPECT_TRUE(waiter->NotCalledYet());
+
+  callback();
+  callback();
+  EXPECT_FALSE(waiter->NotCalledYet());
+  waiter->RunUntilCalled();
+  EXPECT_FALSE(waiter->NotCalledYet());
+  waiter->RunUntilCalled();
+  EXPECT_TRUE(waiter->NotCalledYet());
+}
+
 }  // namespace
 }  // namespace test

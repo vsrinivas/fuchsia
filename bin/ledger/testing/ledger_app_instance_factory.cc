@@ -26,23 +26,29 @@ class CallbackWaiterImpl : public LedgerAppInstanceFactory::CallbackWaiter {
   std::function<void()> GetCallback() override {
     return [this] {
       ++callback_called_;
-      if (waiting_ >= callback_called_) {
+      if (waiting_) {
         loop_controller_->StopLoop();
       }
     };
   }
 
   void RunUntilCalled() override {
-    ++waiting_;
-    while (waiting_ > callback_called_) {
+    FXL_DCHECK(!waiting_);
+    waiting_ = true;
+    while (NotCalledYet()) {
       loop_controller_->RunLoop();
     }
+    waiting_ = false;
+    ++run_until_called_;
   }
+
+  bool NotCalledYet() override { return callback_called_ <= run_until_called_; }
 
  private:
   LedgerAppInstanceFactory::LoopController* loop_controller_;
   size_t callback_called_ = 0;
-  size_t waiting_ = 0;
+  size_t run_until_called_ = 0;
+  bool waiting_ = false;
 };
 }  // namespace
 

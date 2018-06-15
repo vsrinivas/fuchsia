@@ -41,6 +41,9 @@ class LedgerAppInstanceFactory {
     virtual ~CallbackWaiter() {}
     virtual std::function<void()> GetCallback() = 0;
     virtual void RunUntilCalled() = 0;
+    // Returns whether the next expected calback has not already been called. If
+    // |false|, |RunUntilCalled| will return immediately.
+    virtual bool NotCalledYet() = 0;
   };
 
   // Controller for the main run loop. This allows to control the loop that will
