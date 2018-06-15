@@ -12,6 +12,10 @@
 
 namespace fxl {
 
+inline bool IsAsciiWhitespace(char c) {
+  return c == ' ' || c == '\r' || c == '\n' || c == '\t';
+}
+
 inline char ToLowerASCII(char c) {
   return (c >= 'A' && c <= 'Z') ? (c + ('a' - 'A')) : c;
 }
