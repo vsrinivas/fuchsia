@@ -24,6 +24,8 @@ source_set("input_reader") {
     "//zircon/public/lib/zx",
   ]
 
+  configs += [ "//garnet/lib/ui/gfx:swapchain" ]
+
   public_deps = [
     "//zircon/public/lib/hid",
   ]

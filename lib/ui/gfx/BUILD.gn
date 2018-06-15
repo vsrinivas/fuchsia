@@ -20,6 +20,10 @@ config("common_include_dirs") {
   ]
 }
 
+config("swapchain") {
+  defines = [ "SCENIC_VULKAN_SWAPCHAIN=$scenic_vulkan_swapchain" ]
+}
+
 source_set("gfx") {
   sources = [
     "displays/display.cc",
@@ -37,8 +41,8 @@ source_set("gfx") {
     "engine/hit.h",
     "engine/hit_tester.cc",
     "engine/hit_tester.h",
-    "engine/object_linker.h",
     "engine/object_linker.cc",
+    "engine/object_linker.h",
     "engine/resource_linker.cc",
     "engine/resource_linker.h",
     "engine/resource_map.cc",
@@ -147,9 +151,9 @@ source_set("gfx") {
     "util/wrap.h",
   ]
 
-  defines = [ "SCENIC_VULKAN_SWAPCHAIN=$scenic_vulkan_swapchain" ]
-
   public_configs = [ ":common_include_dirs" ]
+
+  configs += [ ":swapchain" ]
 
   public_deps = [
     "//garnet/lib/ui/scenic",
