@@ -4,7 +4,8 @@
 
 // Helper functions for running test binaries and recording their results.
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_ULIB_RUNTESTS_UTILS_INCLUDE_RUNTESTS_UTILS_RUNTESTS_UTILS_H_
+#define ZIRCON_SYSTEM_ULIB_RUNTESTS_UTILS_INCLUDE_RUNTESTS_UTILS_RUNTESTS_UTILS_H_
 
 #include <inttypes.h>
 
@@ -48,6 +49,19 @@ struct Result {
 typedef Result (*RunTestFn)(const char* argv[], int argc,
                             const char* output_filename);
 
+// A means of measuring how long it takes to run tests.
+class Stopwatch {
+public:
+    virtual ~Stopwatch() = default;
+
+    // Starts timing.
+    virtual void Start() = 0;
+
+    // Returns the elapsed time in milliseconds since invoking Start(), or else
+    // since initialization if Start() has not yet been called.
+    virtual int64_t DurationInMsecs() = 0;
+};
+
 // Splits |input| by ',' and appends the results onto |output|.
 // Empty strings are not put into output.
 void ParseTestNames(fbl::StringPiece input, fbl::Vector<fbl::String>* output);
@@ -81,11 +95,11 @@ int WriteSummaryJSON(const fbl::Vector<Result>& results,
 // Resolves a set of globs.
 //
 // |globs| is an array of glob patterns.
-// |num_globs| is the number of strings in |globs|.
 // |resolved| will hold the results of resolving |globs|.
 //
 // Returns 0 on success, else an error code from glob.h.
-int ResolveGlobs(const char* const* globs, int num_globs, fbl::Vector<fbl::String>* resolved);
+int ResolveGlobs(const fbl::Vector<fbl::String>& globs,
+                 fbl::Vector<fbl::String>* resolved);
 
 // Executes all test binaries in a directory (non-recursive).
 //
@@ -112,4 +126,24 @@ bool RunTestsInDir(const RunTestFn& run_test, const fbl::StringPiece dir_path,
                    const char* output_file_basename, signed char verbosity,
                    int* num_failed, fbl::Vector<Result>* results);
 
+// Conditionally runs all tests within given directories, with the option
+// of writing an aggregated summary file.
+//
+// |RunTest|: function to run each test.
+// |argc|: length of |argv|.
+// |argv|: see //system/ulib/runtests-utils/run-all-tests.cpp,
+//    specifically the 'Usage()' function, for documentation.
+// |default_test_dirs|: directories in which to look for tests if no test
+//    directory globs are specified.
+// |stopwatch|: for timing how long all tests took to run.
+// |syslog_file_name|: if an output directory is specified ("-o"), syslog ouput
+//    will be written to a file under that directory and this name.
+//
+// Returns EXIT_SUCCESS if all tests passed; else, returns EXIT_FAILURE.
+int RunAllTests(const RunTestFn& RunTest, int argc, const char* const* argv,
+                const fbl::Vector<fbl::String>& default_test_dirs,
+                Stopwatch* stopwatch, const fbl::StringPiece syslog_file_name);
+
 } // namespace runtests
+
+#endif // ZIRCON_SYSTEM_ULIB_RUNTESTS_UTILS_INCLUDE_RUNTESTS_UTILS_RUNTESTS_UTILS_H_

@@ -133,7 +133,7 @@ int WriteSummaryJSON(const fbl::Vector<Result>& results,
     }
     fprintf(summary_json, "\n]");
     if (!syslog_path.empty()) {
-        fprintf(summary_json, ",\n\"outputs\": {\n");
+        fprintf(summary_json, ",\n\"outputs\":{\n");
         fprintf(summary_json, "\"syslog_file\":\"%.*s\"",
                 static_cast<int>(syslog_path.length()),
                 syslog_path.data());
@@ -143,18 +143,19 @@ int WriteSummaryJSON(const fbl::Vector<Result>& results,
     return 0;
 }
 
-int ResolveGlobs(const char* const* globs, const int num_globs,
+int ResolveGlobs(const fbl::Vector<fbl::String>& globs,
                  fbl::Vector<fbl::String>* resolved) {
     glob_t resolved_glob;
     auto auto_call_glob_free = fbl::MakeAutoCall([&resolved_glob] { globfree(&resolved_glob); });
-    for (int i = 0; i < num_globs; i++) {
-        const int flags = i > 0 ? GLOB_APPEND : 0;
-        int err = glob(globs[i], flags, nullptr, &resolved_glob);
+    int flags = 0;
+    for (const auto& test_dir_glob : globs) {
+        int err = glob(test_dir_glob.c_str(), flags, nullptr, &resolved_glob);
 
         // Ignore a lack of matches.
         if (err && err != GLOB_NOMATCH) {
             return err;
         }
+        flags = GLOB_APPEND;
     }
     resolved->reserve(resolved_glob.gl_pathc);
     for (size_t i = 0; i < resolved_glob.gl_pathc; ++i) {

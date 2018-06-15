@@ -19,6 +19,7 @@ HOSTAPPS := \
 	$(LOCAL_DIR)/mkfs-msdosfs/rules.mk \
 	$(LOCAL_DIR)/mkkdtb/rules.mk \
 	$(LOCAL_DIR)/netprotocol/rules.mk \
+        $(LOCAL_DIR)/runtests/rules.mk \
 	$(LOCAL_DIR)/zbi/rules.mk \
 
 include $(HOSTAPPS)
