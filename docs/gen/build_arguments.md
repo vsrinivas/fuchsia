@@ -3,20 +3,18 @@
 ### always_zedboot
  Build boot images that prefer Zedboot over local boot.
 
-**Default value:** false
+**Default value:** `false`
 
 
 ### amber_keys_dir
  Directory containing signing keys used by amber-publish.
 
-**Default value:** "//garnet/go/src/amber/keys"
+**Default value:** `"//garnet/go/src/amber/keys"`
 
 
 ### amber_repository_blobs_dir
 
-**Default value for `target_cpu = "arm64"`:** "//out/arm64/amber-files/repository/blobs"
-
-**Default value for `target_cpu = "x64"`:** "//out/x64/amber-files/repository/blobs"
+**Default value:** `"//root_build_dir/amber-files/repository/blobs"`
 
 
 ### amber_repository_dir
@@ -24,16 +22,14 @@
  ASCII hex.  The [//build/image](https://fuchsia.googlesource.com/build/+/master/image):amber_publish_blobs target populates
  this with copies of build products, but never removes old files.
 
-**Default value for `target_cpu = "arm64"`:** "//out/arm64/amber-files"
-
-**Default value for `target_cpu = "x64"`:** "//out/x64/amber-files"
+**Default value:** `"//root_build_dir/amber-files"`
 
 
 ### build_intel_gen
 
-**Default value for `target_cpu = "arm64"`:** false
+**Default value for `target_cpu = "arm64"`:** `false`
 
-**Default value for `target_cpu = "x64"`:** true
+**Default value for `target_cpu = "x64"`:** `true`
 
 
 ### build_libvulkan
@@ -41,28 +37,28 @@
  target is given then use_vulkan_loader_for_tests must be set to true, as
  otherwise tests won't know which libvulkan to use.
 
-**Default value for `target_cpu = "arm64"`:** []
+**Default value for `target_cpu = "arm64"`:** `[]`
 
-**Default value for `target_cpu = "x64"`:** ["//third_party/mesa:magma_vulkan"]
+**Default value for `target_cpu = "x64"`:** `["//third_party/mesa:magma_vulkan"]`
 
 
 ### build_msd_arm_mali
 
-**Default value for `target_cpu = "arm64"`:** true
+**Default value for `target_cpu = "arm64"`:** `true`
 
-**Default value for `target_cpu = "x64"`:** false
+**Default value for `target_cpu = "x64"`:** `false`
 
 
 ### build_vsl_gc
 
-**Default value for `target_cpu = "arm64"`:** true
+**Default value for `target_cpu = "arm64"`:** `true`
 
-**Default value for `target_cpu = "x64"`:** false
+**Default value for `target_cpu = "x64"`:** `false`
 
 
 ### clang_prefix
 
-**Default value:** "../../buildtools/linux-x64/clang/bin"
+**Default value:** `"../buildtools/linux-x64/clang/bin"`
 
 
 ### crashpad_dependencies
@@ -71,17 +67,17 @@
  "chromium", and "fuchsia". Defaulted to "fuchsia" because
  "is_fuchsia_tree" is set.
 
-**Default value:** "fuchsia"
+**Default value:** `"fuchsia"`
 
 
 ### current_cpu
 
-**Default value:** ""
+**Default value:** `""`
 
 
 ### current_os
 
-**Default value:** ""
+**Default value:** `""`
 
 
 ### data_image_size
@@ -89,32 +85,32 @@
  is added to FVM, and can therefore expand as needed. It must be at least
  10mb (the default) in order to be succesfully initialized.
 
-**Default value:** "10m"
+**Default value:** `"10m"`
 
 
 ### enable_gfx_subsystem
 
-**Default value:** true
+**Default value:** `true`
 
 
 ### enable_sketchy_subsystem
 
-**Default value:** true
+**Default value:** `true`
 
 
 ### enable_value_subsystem
 
-**Default value:** false
+**Default value:** `false`
 
 
 ### enable_views_subsystem
 
-**Default value:** true
+**Default value:** `true`
 
 
 ### expat_build_root
 
-**Default value:** "//third_party/expat"
+**Default value:** `"//third_party/expat"`
 
 
 ### extra_authorized_keys_file
@@ -122,25 +118,23 @@
  For example:
    extra_authorized_keys_file=\"$HOME/.ssh/id_rsa.pub\"
 
-**Default value:** ""
+**Default value:** `""`
 
 
 ### extra_variants
  Additional variant toolchain configs to support.
  This is just added to `known_variants`, which see.
 
-**Default value:** []
+**Default value:** `[]`
 
 
 ### fuchsia_packages
  List of packages (a GN list of strings).  If unset, guessed based
  on which layer is found in the //.jiri_manifest file.
 
-**Default value:** [[]](https://fuchsia.googlesource.com/build/+/master/gn/packages.gni#8)
+**Default value:** `[[]](https://fuchsia.googlesource.com/build/+/master/gn/packages.gni#8)`
 
-**Current value for `target_cpu = "arm64"`:** ["garnet/packages/buildbot"]
-
-**Current value for `target_cpu = "x64"`:** ["garnet/packages/buildbot"]
+**Current value:** `["garnet/packages/buildbot"]`
 
 
 ### fvm_image_size
@@ -149,33 +143,33 @@
  default value is "", which means to size based on inputs. Specifying a size
  that is too small will result in build failure.
 
-**Default value:** ""
+**Default value:** `""`
 
 
 ### glm_build_root
 
-**Default value:** "//third_party/glm"
+**Default value:** `"//third_party/glm"`
 
 
 ### goma_dir
  Absolute directory containing the Goma source code.
 
-**Default value:** "/home/swarming/goma"
+**Default value:** `"/home/swarming/goma"`
 
 
 ### host_byteorder
 
-**Default value:** "undefined"
+**Default value:** `"undefined"`
 
 
 ### host_cpu
 
-**Default value:** "x64"
+**Default value:** `"x64"`
 
 
 ### host_os
 
-**Default value:** "linux"
+**Default value:** `"linux"`
 
 
 ### host_tools_dir
@@ -187,9 +181,7 @@
  whatnot outside of the GN build itself.  These are only installed
  by an explicit install_host_tools() rule (see [//build/host.gni](https://fuchsia.googlesource.com/build/+/master/host.gni)).
 
-**Default value for `target_cpu = "arm64"`:** "//out/arm64/tools"
-
-**Default value for `target_cpu = "x64"`:** "//out/x64/tools"
+**Default value:** `"//root_build_dir/tools"`
 
 
 ### icu_use_data_file
@@ -203,20 +195,20 @@
  TODO(GYP) We'll probably need to enhance this logic to set the value to
  true or false in similar circumstances.
 
-**Default value:** true
+**Default value:** `true`
 
 
 ### is_debug
  Debug build.
 
-**Default value:** true
+**Default value:** `true`
 
 
 ### kernel_cmdline_file
  File containing kernel command line arguments to roll into the
  bootdata image used for booting.
 
-**Default value:** ""
+**Default value:** `""`
 
 
 ### known_variants
@@ -274,7 +266,7 @@
        Any fields included here should not also be in the outer scope.
 
 
-**Default value:** [{
+**Default value:** `[{
   configs = ["//build/config/lto"]
 }, {
   configs = ["//build/config/lto:thinlto"]
@@ -303,42 +295,42 @@
   host_only = {
   remove_shared_configs = ["//build/config:symbol_no_undefined"]
 }
-}]
+}]`
 
 
 ### magma_build_root
 
-**Default value:** "//garnet/lib/magma"
+**Default value:** `"//garnet/lib/magma"`
 
 
 ### magma_enable_developer_build
  Enable this to have the msd include a suite of tests and invoke them
  automatically when the driver starts.
 
-**Default value:** false
+**Default value:** `false`
 
 
 ### magma_enable_tracing
  Enable this to include fuchsia tracing capability
 
-**Default value:** true
+**Default value:** `true`
 
 
 ### magma_python_path
 
-**Default value:** "/b/s/w/ir/kitchen-workdir/third_party/mako"
+**Default value:** `"/b/s/w/ir/kitchen-workdir/third_party/mako"`
 
 
 ### mesa_build_root
 
-**Default value for `target_cpu = "x64"`:** "//third_party/mesa"
+**Default value for `target_cpu = "x64"`:** `"//third_party/mesa"`
 
 No values for `target_cpu = "arm64"`.
 
 ### msd_arm_enable_all_cores
  Enable all 8 cores, which is faster but emits more heat.
 
-**Default value for `target_cpu = "arm64"`:** true
+**Default value for `target_cpu = "arm64"`:** `true`
 
 No values for `target_cpu = "x64"`.
 
@@ -346,45 +338,44 @@ No values for `target_cpu = "x64"`.
  With this flag set the system tries to use cache coherent memory if the
  GPU supports it.
 
-**Default value for `target_cpu = "arm64"`:** true
+**Default value for `target_cpu = "arm64"`:** `true`
 
 No values for `target_cpu = "x64"`.
 
 ### msd_intel_enable_mapping_cache
 
-**Default value for `target_cpu = "x64"`:** false
+**Default value for `target_cpu = "x64"`:** `false`
 
 No values for `target_cpu = "arm64"`.
 
 ### msd_intel_gen_build_root
 
-**Default value:** "//garnet/drivers/gpu/msd-intel-gen"
+**Default value:** `"//garnet/drivers/gpu/msd-intel-gen"`
 
 
 ### prebuilt_libvulkan_arm_path
 
-**Default value:** ""
+**Default value:** `""`
 
 
 ### rust_lto
  Sets the default LTO type for rustc bulids.
 
-**Default value:** "unset"
+**Default value:** `"unset"`
 
 
 ### rustc_prefix
  Sets a custom base directory for `rustc` and `cargo`.
  This can be used to test custom Rust toolchains.
 
-**Default value:** "//buildtools/linux-x64/rust/bin"
+**Default value:** `"//buildtools/linux-x64/rust/bin"`
 
 
 ### scenic_vulkan_swapchain
- 0 - use normal swapchain
- 1 - use vulkan swapchain, but wait for real display
- 2 - use vulkan swapchain with fixed-size fake display
 
-**Default value:** 0
+**Default value for `target_cpu = "arm64"`:** `1`
+
+**Default value for `target_cpu = "x64"`:** `0`
 
 
 ### scudo_default_options
@@ -394,7 +385,7 @@ No values for `target_cpu = "arm64"`.
  variant (see GN build argument `select_variant`), and does not affect
  anything when the `use_scudo` build flag is set instead.
 
-**Default value:** ["abort_on_error=1", "QuarantineSizeKb=0", "ThreadLocalQuarantineSizeKb=0"]
+**Default value:** `["abort_on_error=1", "QuarantineSizeKb=0", "ThreadLocalQuarantineSizeKb=0"]`
 
 
 ### sdk_dirs
@@ -403,7 +394,7 @@ No values for `target_cpu = "arm64"`.
  By default, we search the public directories for the various layers.
  In the future, we'll search a pre-built SDK as well.
 
-**Default value:** ["//garnet/public", "//peridot/public", "//topaz/public"]
+**Default value:** `["//garnet/public", "//peridot/public", "//topaz/public"]`
 
 
 ### select_variant
@@ -471,7 +462,7 @@ No values for `target_cpu = "arm64"`.
      dir
          [strings]: target's label directory (`//dir` for `//dir:name`).
 
-**Default value:** []
+**Default value:** `[]`
 
 
 ### select_variant_canonical
@@ -479,7 +470,7 @@ No values for `target_cpu = "arm64"`.
  It exists only to be set in `toolchain_args`.
  See [//build/toolchain/clang_toolchain.gni](https://fuchsia.googlesource.com/build/+/master/toolchain/clang_toolchain.gni) for details.
 
-**Default value:** []
+**Default value:** `[]`
 
 
 ### select_variant_shortcuts
@@ -489,7 +480,7 @@ No values for `target_cpu = "arm64"`.
  is a scope where `.name` is the short name and `.select_variant` is a
  a list that can be spliced into `select_variant`, which see.
 
-**Default value:** [{
+**Default value:** `[{
   select_variant = [{
   variant = "asan_no_detect_leaks"
   host = true
@@ -499,7 +490,7 @@ No values for `target_cpu = "arm64"`.
   host = true
 }]
   name = "host_asan"
-}]
+}]`
 
 
 ### synthesize_packages
@@ -515,7 +506,7 @@ No values for `target_cpu = "arm64"`.
  in the package() target written in a GN file.  This must be unique
  among all package names.
 
-**Default value:** []
+**Default value:** `[]`
 
 
 ### system_package_key
@@ -524,48 +515,50 @@ No values for `target_cpu = "arm64"`.
  doesn't exist yet when it's needed, it will be generated.  New
  keys can be generated with the `pm -k FILE genkey` host command.
 
-**Default value:** "//build/development.key"
+**Default value:** `"//build/development.key"`
 
 
 ### target_cpu
 
-**Default value:** ""
+**Default value:** `""`
 
-**Current value for `target_cpu = "arm64"`:** "arm64"
+**Current value for `target_cpu = "arm64"`:** `"arm64"`
 
-**Current value for `target_cpu = "x64"`:** "x64"
+**Current value for `target_cpu = "x64"`:** `"x64"`
 
 
 ### target_os
 
-**Default value:** ""
+**Default value:** `""`
 
 
 ### target_sysroot
  The absolute path of the sysroot that is used with the target toolchain.
 
-**Default value:** ""
+**Default value:** `""`
 
 
 ### thinlto_cache_dir
  ThinLTO cache directory path.
 
-**Default value:** "host_x64/thinlto-cache"
+**Default value for `target_cpu = "arm64"`:** `"thinlto-cache"`
+
+**Default value for `target_cpu = "x64"`:** `"host_x64/thinlto-cache"`
 
 
 ### thinlto_jobs
  Number of parallel ThinLTO jobs.
 
-**Default value:** 8
+**Default value:** `8`
 
 
 ### toolchain_manifests
  Manifest files describing target libraries from toolchains.
  Can be either // source paths or absolute system paths.
 
-**Default value for `target_cpu = "arm64"`:** ["/b/s/w/ir/kitchen-workdir/buildtools/linux-x64/clang/lib/aarch64-fuchsia.manifest"]
+**Default value for `target_cpu = "arm64"`:** `["/b/s/w/ir/kitchen-workdir/buildtools/linux-x64/clang/lib/aarch64-fuchsia.manifest"]`
 
-**Default value for `target_cpu = "x64"`:** ["/b/s/w/ir/kitchen-workdir/buildtools/linux-x64/clang/lib/x86_64-linux.manifest"]
+**Default value for `target_cpu = "x64"`:** `["/b/s/w/ir/kitchen-workdir/buildtools/linux-x64/clang/lib/x86_64-fuchsia.manifest"]`
 
 
 ### toolchain_variant
@@ -594,47 +587,52 @@ No values for `target_cpu = "arm64"`.
          [bool] This is true in `shlib_toolchain`.
  The other fields are the variant's effects as defined in `known_variants`.
 
-**Default value for `target_cpu = "arm64"`:** {
+**Default value for `target_cpu = "arm64"`:** `{
   base = "//build/toolchain/fuchsia:arm64"
-}
+}`
 
-**Default value for `target_cpu = "x64"`:** {
+**Default value for `target_cpu = "x64"`:** `{
   base = "//build/toolchain/fuchsia:x64"
-}
+}`
 
 
 ### universal_variants
 
-**Default value:** [{
+**Default value:** `[{
   toolchain_args = {
   is_debug = false
 }
   configs = []
   name = "release"
-}]
+}]`
+
+
+### use_boringssl_for_http_transport_socket
+
+**Default value:** `true`
 
 
 ### use_ccache
  Set to true to enable compiling with ccache
 
-**Default value:** false
+**Default value:** `false`
 
 
 ### use_goma
  Set to true to enable distributed compilation using Goma.
 
-**Default value:** false
+**Default value:** `false`
 
 
 ### use_lto
  Use link time optimization (LTO).
 
-**Default value:** false
+**Default value:** `false`
 
 
 ### use_mock_magma
 
-**Default value for `target_cpu = "x64"`:** false
+**Default value for `target_cpu = "x64"`:** `false`
 
 No values for `target_cpu = "arm64"`.
 
@@ -642,13 +640,13 @@ No values for `target_cpu = "arm64"`.
  Enable the [Scudo](https://llvm.org/docs/ScudoHardenedAllocator.html)
  memory allocator.
 
-**Default value:** false
+**Default value:** `false`
 
 
 ### use_thinlto
  Use ThinLTO variant of LTO if use_lto = true.
 
-**Default value:** true
+**Default value:** `true`
 
 
 ### use_vulkan_loader_for_tests
@@ -657,24 +655,24 @@ No values for `target_cpu = "arm64"`.
  On ARM there may be multiple libvulkan_arms, so they can't all be linked
  to.
 
-**Default value:** true
+**Default value:** `true`
 
 
 ### vk_loader_debug
 
-**Default value:** "warn,error"
+**Default value:** `"warn,error"`
 
 
 ### zedboot_cmdline_file
  File containing kernel command line arguments to roll into the
  bootdata image used for zedboot.
 
-**Default value:** ""
+**Default value:** `""`
 
 
 ### zircon_asserts
 
-**Default value:** true
+**Default value:** `true`
 
 
 ### zircon_aux_manifests
@@ -690,9 +688,9 @@ No values for `target_cpu = "arm64"`.
  TODO(mcgrathr): Make Zircon manifests self-relative too and then
  merge this and toolchain_manifests into generic aux_manifests.
 
-**Default value for `target_cpu = "arm64"`:** ["//out/build-zircon/build-arm64-ulib/bootfs.manifest"]
+**Default value for `target_cpu = "arm64"`:** `["//out/build-zircon/build-arm64-ulib/bootfs.manifest"]`
 
-**Default value for `target_cpu = "x64"`:** ["//out/build-zircon/build-x64-ulib/bootfs.manifest"]
+**Default value for `target_cpu = "x64"`:** `["//out/build-zircon/build-x64-ulib/bootfs.manifest"]`
 
 
 ### zircon_boot_groups
@@ -702,7 +700,7 @@ No values for `target_cpu = "arm64"`.
    misc -- utilities in /bin
    test -- test binaries in /bin and /test
 
-**Default value:** "core"
+**Default value:** `"core"`
 
 
 ### zircon_boot_manifests
@@ -716,23 +714,23 @@ No values for `target_cpu = "arm64"`.
  Zircon source directory and thus their contents can be taken as
  relative to `get_path_info(entry, "dir") + "/.."`.
 
-**Default value for `target_cpu = "arm64"`:** ["//out/build-zircon/build-arm64/bootfs.manifest"]
+**Default value for `target_cpu = "arm64"`:** `["//out/build-zircon/build-arm64/bootfs.manifest"]`
 
-**Default value for `target_cpu = "x64"`:** ["//out/build-zircon/build-x64/bootfs.manifest"]
+**Default value for `target_cpu = "x64"`:** `["//out/build-zircon/build-x64/bootfs.manifest"]`
 
 
 ### zircon_build_dir
  Zircon build directory for `target_cpu`, containing `.manifest` and
  `.bin` files for Zircon's BOOTFS, BOOTDATA, and kernel image.
 
-**Default value for `target_cpu = "arm64"`:** "//out/build-zircon/build-arm64"
+**Default value for `target_cpu = "arm64"`:** `"//out/build-zircon/build-arm64"`
 
-**Default value for `target_cpu = "x64"`:** "//out/build-zircon/build-x64"
+**Default value for `target_cpu = "x64"`:** `"//out/build-zircon/build-x64"`
 
 
 ### zircon_build_root
 
-**Default value:** "//zircon"
+**Default value:** `"//zircon"`
 
 
 ### zircon_system_groups
@@ -741,11 +739,11 @@ No values for `target_cpu = "arm64"`.
  into /system/test, which means that Fuchsia bots run those tests
  too.
 
-**Default value:** "misc,test"
+**Default value:** `"misc,test"`
 
 
 ### zircon_tools_dir
  Where to find Zircon's host-side tools that are run as part of the build.
 
-**Default value:** "//out/build-zircon/tools"
+**Default value:** `"//out/build-zircon/tools"`
 
