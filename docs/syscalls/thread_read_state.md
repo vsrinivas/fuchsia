@@ -43,14 +43,20 @@ is empty.
 
 The buffer must point to a **zx_thread_state_vector_regs_t** structure.
 
-### ZX_THREAD_STATE_EXTRA_REGS
-
-The buffer must point to a **zx_thread_state_extra_regs_t** structure.
-
 ### ZX_THREAD_STATE_SINGLE_STEP
 
 The buffer must point to a **zx_thread_state_single_step_t** value which
 may contain either 0 (normal running), or 1 (single stepping enabled).
+
+### ZX_THREAD_X86_REGISTER_FS
+
+The buffer must point to a **zx_thread_x86_register_fs_t** structure which contains
+a uint64. This is only relevant on x86 platforms.
+
+### ZX_THREAD_X86_REGISTER_GS
+
+The buffer must point to a **zx_thread_x86_register_gs_t** structure which contains
+a uint64. This is only relevant on x86 platforms.
 
 ## RETURN VALUE
 

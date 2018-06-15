@@ -145,14 +145,26 @@ zx_status_t arch_set_vector_regs(struct thread* thread, const zx_thread_state_ve
     return ZX_OK;
 }
 
-zx_status_t arch_get_extra_regs(struct thread* thread, zx_thread_state_extra_regs* out) {
-    // There are no ARM extra regs.
+zx_status_t arch_get_x86_register_fs(struct thread* thread, uint64_t* out) {
+    // There are no FS register on ARM.
     (void)out;
-    return ZX_OK;
+    return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t arch_set_extra_regs(struct thread* thread, const zx_thread_state_extra_regs* in) {
-    // There are no ARM extra regs.
+zx_status_t arch_set_x86_register_fs(struct thread* thread, const uint64_t* in) {
+    // There are no FS register on ARM.
     (void)in;
-    return ZX_OK;
+    return ZX_ERR_NOT_SUPPORTED;
+}
+
+zx_status_t arch_get_x86_register_gs(struct thread* thread, uint64_t* out) {
+    // There are no GS register on ARM.
+    (void)out;
+    return ZX_ERR_NOT_SUPPORTED;
+}
+
+zx_status_t arch_set_x86_register_gs(struct thread* thread, const uint64_t* in) {
+    // There are no GS register on ARM.
+    (void)in;
+    return ZX_ERR_NOT_SUPPORTED;
 }

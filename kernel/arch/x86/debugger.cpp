@@ -372,24 +372,42 @@ zx_status_t arch_set_vector_regs(struct thread* thread, const zx_thread_state_ve
                                    RegAccess::kSet);
 }
 
-zx_status_t arch_get_extra_regs(struct thread* thread, zx_thread_state_extra_regs* out) {
+zx_status_t arch_get_x86_register_fs(struct thread* thread, uint64_t* out) {
     AutoThreadLock lock;
     if (thread->state == THREAD_RUNNING) {
         return ZX_ERR_BAD_STATE;
     }
 
-    out->fs = thread->arch.fs_base;
-    out->gs = thread->arch.gs_base;
+    *out = thread->arch.fs_base;
     return ZX_OK;
 }
 
-zx_status_t arch_set_extra_regs(struct thread* thread, const zx_thread_state_extra_regs* in) {
+zx_status_t arch_set_x86_register_fs(struct thread* thread, const uint64_t* in) {
     AutoThreadLock lock;
     if (thread->state == THREAD_RUNNING) {
         return ZX_ERR_BAD_STATE;
     }
 
-    thread->arch.fs_base = in->fs;
-    thread->arch.gs_base = in->gs;
+    thread->arch.fs_base = *in;
+    return ZX_OK;
+}
+
+zx_status_t arch_get_x86_register_gs(struct thread* thread, uint64_t* out) {
+    AutoThreadLock lock;
+    if (thread->state == THREAD_RUNNING) {
+        return ZX_ERR_BAD_STATE;
+    }
+
+    *out = thread->arch.gs_base;
+    return ZX_OK;
+}
+
+zx_status_t arch_set_x86_register_gs(struct thread* thread, const uint64_t* in) {
+    AutoThreadLock lock;
+    if (thread->state == THREAD_RUNNING) {
+        return ZX_ERR_BAD_STATE;
+    }
+
+    thread->arch.gs_base = *in;
     return ZX_OK;
 }

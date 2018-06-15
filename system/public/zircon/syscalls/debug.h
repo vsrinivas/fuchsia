@@ -70,13 +70,6 @@ typedef struct zx_thread_state_vector_regs {
     uint32_t mxcsr;
 } zx_thread_state_vector_regs_t;
 
-// Value for ZX_THREAD_STATE_EXTRA_REGS on x64.
-// TODO(brettw) reading and writing this is currently unimplemented.
-typedef struct zx_thread_state_extra_regs {
-    uint64_t fs;
-    uint64_t gs;
-} zx_thread_state_extra_regs_t;
-
 #elif defined(__aarch64__)
 
 // Value for ZX_THREAD_STATE_GENERAL_REGS on ARM64 platforms.
@@ -105,25 +98,24 @@ typedef struct zx_thread_state_vector_regs {
     } v[32];
 } zx_thread_state_vector_regs_t;
 
-// Value for ZX_THREAD_STATE_EXTRA_REGS on ARM64 platforms. Currently unused.
-typedef struct zx_thread_state_extra_regs {
-    // Avoids sizing differences for empty structs between C and C++.
-    uint32_t unused;
-} zx_thread_state_extra_regs_t;
-
 #endif
 
 // Value for ZX_THREAD_STATE_SINGLE_STEP. The value can be 0 (not single-stepping), or 1
 // (single-stepping). Other values will give ZX_ERR_INVALID_ARGS.
 typedef uint32_t zx_thread_state_single_step_t;
 
+// Values for ZX_THREAD_X86_REGISTER_FS and ZX_THREAD_X86_REGISTER_GS;
+typedef uint64_t zx_thread_x86_register_fs_t;
+typedef uint64_t zx_thread_x86_register_gs_t;
+
 // Possible values for "kind" in zx_thread_read_state and zx_thread_write_state.
 typedef enum {
     ZX_THREAD_STATE_GENERAL_REGS = 0, // zx_thread_state_general_regs_t value.
     ZX_THREAD_STATE_FP_REGS = 1,      // zx_thread_state_fp_regs_t value.
     ZX_THREAD_STATE_VECTOR_REGS = 2,  // zx_thread_state_vector_regs_t value.
-    ZX_THREAD_STATE_EXTRA_REGS = 3,   // zx_thread_state_extra_regs_t value.
-    ZX_THREAD_STATE_SINGLE_STEP = 4   // zx_thread_state_single_step_t value.
+    ZX_THREAD_STATE_SINGLE_STEP = 4,  // zx_thread_state_single_step_t value.
+    ZX_THREAD_X86_REGISTER_FS = 5,    // zx_thread_x86_register_fs_t value.
+    ZX_THREAD_X86_REGISTER_GS = 6     // zx_thread_x86_register_gs_t value.
 } zx_thread_state_topic_t;
 
 __END_CDECLS

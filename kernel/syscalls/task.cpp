@@ -101,8 +101,9 @@ union thread_state_local_buffer_t {
     zx_thread_state_general_regs_t general_regs; // ZX_THREAD_STATE_GENERAL_REGS
     zx_thread_state_fp_regs_t fp_regs;           // ZX_THREAD_STATE_FP_REGS
     zx_thread_state_vector_regs_t vector_regs;   // ZX_THREAD_STATE_VECTOR_REGS
-    zx_thread_state_extra_regs_t extra_regs;     // ZX_THREAD_STATE_EXTRA_REGS
     uint32_t single_step;                        // ZX_THREAD_STATE_SINGLE_STEP
+    uint64_t x86_register_fs;                    // ZX_THREAD_X86_REGISTER_FS;
+    uint64_t x86_register_gs;                    // ZX_THREAD_X86_REGISTER_GS;
 };
 
 // Validates the input topic to thread_read_state and thread_write_state is a valid value, and
@@ -119,11 +120,14 @@ zx_status_t validate_thread_state_input(uint32_t in_topic, size_t in_len, size_t
     case ZX_THREAD_STATE_VECTOR_REGS:
         *out_len = sizeof(zx_thread_state_vector_regs_t);
         break;
-    case ZX_THREAD_STATE_EXTRA_REGS:
-        *out_len = sizeof(zx_thread_state_extra_regs_t);
-        break;
     case ZX_THREAD_STATE_SINGLE_STEP:
         *out_len = sizeof(zx_thread_state_single_step_t);
+        break;
+    case ZX_THREAD_X86_REGISTER_FS:
+        *out_len = sizeof(zx_thread_x86_register_fs_t);
+        break;
+    case ZX_THREAD_X86_REGISTER_GS:
+        *out_len = sizeof(zx_thread_x86_register_gs_t);
         break;
     default:
         return ZX_ERR_INVALID_ARGS;
