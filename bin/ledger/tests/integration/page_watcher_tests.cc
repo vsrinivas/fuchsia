@@ -10,6 +10,7 @@
 #include <utility>
 #include <vector>
 
+#include "garnet/public/lib/callback/capture.h"
 #include "gtest/gtest.h"
 #include "lib/callback/capture.h"
 #include "lib/fidl/cpp/binding.h"
@@ -40,7 +41,7 @@ class PageWatcherIntegrationTest : public IntegrationTest {
 class Watcher : public ledger::PageWatcher {
  public:
   Watcher(fidl::InterfaceRequest<PageWatcher> request,
-          fxl::Closure change_callback)
+          fxl::Closure change_callback = [] {})
       : binding_(this, std::move(request)),
         change_callback_(std::move(change_callback)) {}
 
@@ -70,22 +71,25 @@ TEST_P(PageWatcherIntegrationTest, PageWatcherSimple) {
   auto instance = NewLedgerAppInstance();
   ledger::PagePtr page = instance->GetTestPage();
   ledger::PageWatcherPtr watcher_ptr;
-  Watcher watcher(watcher_ptr.NewRequest(),
-                  [this] { message_loop_.QuitNow(); });
+  auto watcher_waiter = NewWaiter();
+  Watcher watcher(watcher_ptr.NewRequest(), watcher_waiter->GetCallback());
 
   ledger::PageSnapshotPtr snapshot;
+  auto waiter = NewWaiter();
+  ledger::Status status;
   page->GetSnapshot(snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
-                    std::move(watcher_ptr), [](ledger::Status status) {
-                      EXPECT_EQ(ledger::Status::OK, status);
-                    });
-  EXPECT_EQ(ZX_OK, page.WaitForResponse());
+                    std::move(watcher_ptr),
+                    callback::Capture(waiter->GetCallback(), &status));
+  waiter->RunUntilCalled();
+  EXPECT_EQ(ledger::Status::OK, status);
 
-  page->Put(
-      convert::ToArray("name"), convert::ToArray("Alice"),
-      [](ledger::Status status) { EXPECT_EQ(ledger::Status::OK, status); });
-  EXPECT_EQ(ZX_OK, page.WaitForResponse());
-  RunLoop();
+  waiter = NewWaiter();
+  page->Put(convert::ToArray("name"), convert::ToArray("Alice"),
+            callback::Capture(waiter->GetCallback(), &status));
+  waiter->RunUntilCalled();
+  EXPECT_EQ(ledger::Status::OK, status);
 
+  watcher_waiter->RunUntilCalled();
   EXPECT_EQ(1u, watcher.changes_seen);
   EXPECT_EQ(ledger::ResultState::COMPLETED, watcher.last_result_state_);
   ledger::PageChange change = std::move(watcher.last_page_change_);
@@ -99,47 +103,53 @@ TEST_P(PageWatcherIntegrationTest, PageWatcherDisconnectClient) {
   ledger::Status status;
   ledger::PagePtr page = instance->GetTestPage();
   ledger::PageWatcherPtr watcher_ptr;
-  auto watcher = std::make_unique<Watcher>(watcher_ptr.NewRequest(), [this] {
-    message_loop_.PostQuitTask();
-  });
+  auto watcher_waiter = NewWaiter();
+  auto watcher = std::make_unique<Watcher>(watcher_ptr.NewRequest(),
+                                           watcher_waiter->GetCallback());
 
   ledger::PageSnapshotPtr snapshot;
+  auto waiter = NewWaiter();
   page->GetSnapshot(snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
-                    std::move(watcher_ptr), [](ledger::Status status) {
-                      EXPECT_EQ(ledger::Status::OK, status);
-                    });
-  EXPECT_EQ(ZX_OK, page.WaitForResponse());
+                    std::move(watcher_ptr),
+                    callback::Capture(waiter->GetCallback(), &status));
+  waiter->RunUntilCalled();
+  EXPECT_EQ(ledger::Status::OK, status);
 
   // Make a change on the page and verify that it was received.
-  page->Put(
-      convert::ToArray("name"), convert::ToArray("Alice"),
-      [](ledger::Status status) { EXPECT_EQ(ledger::Status::OK, status); });
-  EXPECT_EQ(ZX_OK, page.WaitForResponse());
-  RunLoop();
+  waiter = NewWaiter();
+  page->Put(convert::ToArray("name"), convert::ToArray("Alice"),
+            callback::Capture(waiter->GetCallback(), &status));
+  waiter->RunUntilCalled();
+  EXPECT_EQ(ledger::Status::OK, status);
+
+  watcher_waiter->RunUntilCalled();
   EXPECT_EQ(1u, watcher->changes_seen);
 
   // Make another change and disconnect the watcher immediately.
+  waiter = NewWaiter();
   page->Put(convert::ToArray("name"), convert::ToArray("Bob"),
-            callback::Capture(MakeQuitTask(), &status));
+            callback::Capture(waiter->GetCallback(), &status));
   watcher.reset();
-  RunLoop();
+  waiter->RunUntilCalled();
   EXPECT_EQ(ledger::Status::OK, status);
 }
 
 TEST_P(PageWatcherIntegrationTest, PageWatcherDisconnectPage) {
   auto instance = NewLedgerAppInstance();
   ledger::PageWatcherPtr watcher_ptr;
-  Watcher watcher(watcher_ptr.NewRequest(),
-                  [this] { message_loop_.QuitNow(); });
+  auto watcher_waiter = NewWaiter();
+  Watcher watcher(watcher_ptr.NewRequest(), watcher_waiter->GetCallback());
 
   {
     ledger::PagePtr page = instance->GetTestPage();
     ledger::PageSnapshotPtr snapshot;
+    ledger::Status status;
+    auto waiter = NewWaiter();
     page->GetSnapshot(snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
-                      std::move(watcher_ptr), [](ledger::Status status) {
-                        EXPECT_EQ(ledger::Status::OK, status);
-                      });
-    EXPECT_EQ(ZX_OK, page.WaitForResponse());
+                      std::move(watcher_ptr),
+                      callback::Capture(waiter->GetCallback(), &status));
+    waiter->RunUntilCalled();
+    EXPECT_EQ(ledger::Status::OK, status);
 
     // Queue many put operations on the page.
     for (int i = 0; i < 1000; i++) {
@@ -150,35 +160,39 @@ TEST_P(PageWatcherIntegrationTest, PageWatcherDisconnectPage) {
   }
   // Page is out of scope now, but watcher is not. Verify that we don't crash
   // and a change notification is still delivered.
-  RunLoop();
+  watcher_waiter->RunUntilCalled();
   EXPECT_EQ(1u, watcher.changes_seen);
 }
 
 TEST_P(PageWatcherIntegrationTest, PageWatcherDelete) {
   auto instance = NewLedgerAppInstance();
   ledger::PagePtr page = instance->GetTestPage();
-  page->Put(
-      convert::ToArray("foo"), convert::ToArray("bar"),
-      [](ledger::Status status) { EXPECT_EQ(ledger::Status::OK, status); });
-  EXPECT_EQ(ZX_OK, page.WaitForResponse());
+  auto waiter = NewWaiter();
+  ledger::Status status;
+  page->Put(convert::ToArray("foo"), convert::ToArray("bar"),
+            callback::Capture(waiter->GetCallback(), &status));
+  waiter->RunUntilCalled();
+  EXPECT_EQ(ledger::Status::OK, status);
 
+  auto watcher_waiter = NewWaiter();
   ledger::PageWatcherPtr watcher_ptr;
-  Watcher watcher(watcher_ptr.NewRequest(),
-                  [this] { message_loop_.QuitNow(); });
+  Watcher watcher(watcher_ptr.NewRequest(), watcher_waiter->GetCallback());
 
   ledger::PageSnapshotPtr snapshot;
+  waiter = NewWaiter();
   page->GetSnapshot(snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
-                    std::move(watcher_ptr), [](ledger::Status status) {
-                      EXPECT_EQ(ledger::Status::OK, status);
-                    });
-  EXPECT_EQ(ZX_OK, page.WaitForResponse());
+                    std::move(watcher_ptr),
+                    callback::Capture(waiter->GetCallback(), &status));
+  waiter->RunUntilCalled();
+  EXPECT_EQ(ledger::Status::OK, status);
 
-  page->Delete(convert::ToArray("foo"), [](ledger::Status status) {
-    EXPECT_EQ(ledger::Status::OK, status);
-  });
-  EXPECT_EQ(ZX_OK, page.WaitForResponse());
-  RunLoop();
+  waiter = NewWaiter();
+  page->Delete(convert::ToArray("foo"),
+               callback::Capture(waiter->GetCallback(), &status));
+  waiter->RunUntilCalled();
+  EXPECT_EQ(ledger::Status::OK, status);
 
+  watcher_waiter->RunUntilCalled();
   ASSERT_EQ(1u, watcher.changes_seen);
   EXPECT_EQ(ledger::ResultState::COMPLETED, watcher.last_result_state_);
   ledger::PageChange change = std::move(watcher.last_page_change_);
@@ -206,35 +220,40 @@ TEST_P(PageWatcherIntegrationTest, PageWatcherBigChangeSize) {
   };
   ledger::PagePtr page = instance->GetTestPage();
   ledger::PageWatcherPtr watcher_ptr;
-  Watcher watcher(watcher_ptr.NewRequest(),
-                  [this] { message_loop_.QuitNow(); });
+  auto watcher_waiter = NewWaiter();
+  Watcher watcher(watcher_ptr.NewRequest(), watcher_waiter->GetCallback());
 
   ledger::PageSnapshotPtr snapshot;
+  auto waiter = NewWaiter();
+  ledger::Status status;
   page->GetSnapshot(snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
-                    std::move(watcher_ptr), [](ledger::Status status) {
-                      EXPECT_EQ(ledger::Status::OK, status);
-                    });
-  EXPECT_EQ(ZX_OK, page.WaitForResponse());
+                    std::move(watcher_ptr),
+                    callback::Capture(waiter->GetCallback(), &status));
+  waiter->RunUntilCalled();
+  EXPECT_EQ(ledger::Status::OK, status);
 
-  page->StartTransaction(
-      [](ledger::Status status) { EXPECT_EQ(ledger::Status::OK, status); });
-  EXPECT_EQ(ZX_OK, page.WaitForResponse());
+  waiter = NewWaiter();
+  page->StartTransaction(callback::Capture(waiter->GetCallback(), &status));
+  waiter->RunUntilCalled();
+  EXPECT_EQ(ledger::Status::OK, status);
   for (size_t i = 0; i < entry_count; ++i) {
-    page->Put(
-        convert::ToArray(key_generator(i)), convert::ToArray("value"),
-        [](ledger::Status status) { EXPECT_EQ(ledger::Status::OK, status); });
-    EXPECT_EQ(ZX_OK, page.WaitForResponse());
+    waiter = NewWaiter();
+    page->Put(convert::ToArray(key_generator(i)), convert::ToArray("value"),
+              callback::Capture(waiter->GetCallback(), &status));
+    waiter->RunUntilCalled();
+    EXPECT_EQ(ledger::Status::OK, status);
   }
 
   EXPECT_TRUE(RunLoopWithTimeout(fxl::TimeDelta::FromMilliseconds(100)));
   EXPECT_EQ(0u, watcher.changes_seen);
 
-  page->Commit(
-      [](ledger::Status status) { EXPECT_EQ(ledger::Status::OK, status); });
-  EXPECT_EQ(ZX_OK, page.WaitForResponse());
+  waiter = NewWaiter();
+  page->Commit(callback::Capture(waiter->GetCallback(), &status));
+  waiter->RunUntilCalled();
+  EXPECT_EQ(ledger::Status::OK, status);
 
   // Get the first OnChagne call.
-  RunLoop();
+  watcher_waiter->RunUntilCalled();
   EXPECT_EQ(1u, watcher.changes_seen);
   EXPECT_EQ(watcher.last_result_state_, ledger::ResultState::PARTIAL_STARTED);
   ledger::PageChange change = std::move(watcher.last_page_change_);
@@ -247,7 +266,7 @@ TEST_P(PageWatcherIntegrationTest, PageWatcherBigChangeSize) {
   }
 
   // Get the second OnChagne call.
-  RunLoop();
+  watcher_waiter->RunUntilCalled();
   EXPECT_EQ(2u, watcher.changes_seen);
   EXPECT_EQ(ledger::ResultState::PARTIAL_COMPLETED, watcher.last_result_state_);
   change = std::move(watcher.last_page_change_);
@@ -266,36 +285,41 @@ TEST_P(PageWatcherIntegrationTest, PageWatcherBigChangeHandles) {
   size_t entry_count = 70;
   ledger::PagePtr page = instance->GetTestPage();
   ledger::PageWatcherPtr watcher_ptr;
-  Watcher watcher(watcher_ptr.NewRequest(),
-                  [this] { message_loop_.QuitNow(); });
+  auto watcher_waiter = NewWaiter();
+  Watcher watcher(watcher_ptr.NewRequest(), watcher_waiter->GetCallback());
 
   ledger::PageSnapshotPtr snapshot;
+  auto waiter = NewWaiter();
+  ledger::Status status;
   page->GetSnapshot(snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
-                    std::move(watcher_ptr), [](ledger::Status status) {
-                      EXPECT_EQ(ledger::Status::OK, status);
-                    });
-  EXPECT_EQ(ZX_OK, page.WaitForResponse());
+                    std::move(watcher_ptr),
+                    callback::Capture(waiter->GetCallback(), &status));
+  waiter->RunUntilCalled();
+  EXPECT_EQ(ledger::Status::OK, status);
 
-  page->StartTransaction(
-      [](ledger::Status status) { EXPECT_EQ(ledger::Status::OK, status); });
-  EXPECT_EQ(ZX_OK, page.WaitForResponse());
+  waiter = NewWaiter();
+  page->StartTransaction(callback::Capture(waiter->GetCallback(), &status));
+  waiter->RunUntilCalled();
+  EXPECT_EQ(ledger::Status::OK, status);
   for (size_t i = 0; i < entry_count; ++i) {
+    waiter = NewWaiter();
     page->Put(convert::ToArray(fxl::StringPrintf("key%02" PRIuMAX, i)),
-              convert::ToArray("value"), [](ledger::Status status) {
-                EXPECT_EQ(ledger::Status::OK, status);
-              });
-    EXPECT_EQ(ZX_OK, page.WaitForResponse());
+              convert::ToArray("value"),
+              callback::Capture(waiter->GetCallback(), &status));
+    waiter->RunUntilCalled();
+    EXPECT_EQ(ledger::Status::OK, status);
   }
 
   EXPECT_TRUE(RunLoopWithTimeout(fxl::TimeDelta::FromMilliseconds(100)));
   EXPECT_EQ(0u, watcher.changes_seen);
 
-  page->Commit(
-      [](ledger::Status status) { EXPECT_EQ(ledger::Status::OK, status); });
-  EXPECT_EQ(ZX_OK, page.WaitForResponse());
+  waiter = NewWaiter();
+  page->Commit(callback::Capture(waiter->GetCallback(), &status));
+  waiter->RunUntilCalled();
+  EXPECT_EQ(ledger::Status::OK, status);
 
   // Get the first OnChagne call.
-  RunLoop();
+  watcher_waiter->RunUntilCalled();
   EXPECT_EQ(1u, watcher.changes_seen);
   EXPECT_EQ(watcher.last_result_state_, ledger::ResultState::PARTIAL_STARTED);
   ledger::PageChange change = std::move(watcher.last_page_change_);
@@ -308,7 +332,7 @@ TEST_P(PageWatcherIntegrationTest, PageWatcherBigChangeHandles) {
   }
 
   // Get the second OnChagne call.
-  RunLoop();
+  watcher_waiter->RunUntilCalled();
   EXPECT_EQ(2u, watcher.changes_seen);
   EXPECT_EQ(ledger::ResultState::PARTIAL_COMPLETED, watcher.last_result_state_);
   change = std::move(watcher.last_page_change_);
@@ -326,22 +350,25 @@ TEST_P(PageWatcherIntegrationTest, PageWatcherSnapshot) {
   auto instance = NewLedgerAppInstance();
   ledger::PagePtr page = instance->GetTestPage();
   ledger::PageWatcherPtr watcher_ptr;
-  Watcher watcher(watcher_ptr.NewRequest(),
-                  [this] { message_loop_.QuitNow(); });
+  auto watcher_waiter = NewWaiter();
+  Watcher watcher(watcher_ptr.NewRequest(), watcher_waiter->GetCallback());
 
   ledger::PageSnapshotPtr snapshot;
+  ledger::Status status;
+  auto waiter = NewWaiter();
   page->GetSnapshot(snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
-                    std::move(watcher_ptr), [](ledger::Status status) {
-                      EXPECT_EQ(ledger::Status::OK, status);
-                    });
-  EXPECT_EQ(ZX_OK, page.WaitForResponse());
+                    std::move(watcher_ptr),
+                    callback::Capture(waiter->GetCallback(), &status));
+  waiter->RunUntilCalled();
+  EXPECT_EQ(ledger::Status::OK, status);
 
-  page->Put(
-      convert::ToArray("name"), convert::ToArray("Alice"),
-      [](ledger::Status status) { EXPECT_EQ(ledger::Status::OK, status); });
-  EXPECT_EQ(ZX_OK, page.WaitForResponse());
-  RunLoop();
+  waiter = NewWaiter();
+  page->Put(convert::ToArray("name"), convert::ToArray("Alice"),
+            callback::Capture(waiter->GetCallback(), &status));
+  waiter->RunUntilCalled();
+  EXPECT_EQ(ledger::Status::OK, status);
 
+  watcher_waiter->RunUntilCalled();
   EXPECT_EQ(1u, watcher.changes_seen);
   EXPECT_EQ(ledger::ResultState::COMPLETED, watcher.last_result_state_);
   auto entries = SnapshotGetEntries(this, &(watcher.last_snapshot_));
@@ -355,32 +382,37 @@ TEST_P(PageWatcherIntegrationTest, PageWatcherTransaction) {
   auto instance = NewLedgerAppInstance();
   ledger::PagePtr page = instance->GetTestPage();
   ledger::PageWatcherPtr watcher_ptr;
-  Watcher watcher(watcher_ptr.NewRequest(),
-                  [this] { message_loop_.QuitNow(); });
+  auto watcher_waiter = NewWaiter();
+  Watcher watcher(watcher_ptr.NewRequest(), watcher_waiter->GetCallback());
 
   ledger::PageSnapshotPtr snapshot;
+  ledger::Status status;
+  auto waiter = NewWaiter();
   page->GetSnapshot(snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
-                    std::move(watcher_ptr), [](ledger::Status status) {
-                      EXPECT_EQ(ledger::Status::OK, status);
-                    });
-  EXPECT_EQ(ZX_OK, page.WaitForResponse());
+                    std::move(watcher_ptr),
+                    callback::Capture(waiter->GetCallback(), &status));
+  waiter->RunUntilCalled();
+  EXPECT_EQ(ledger::Status::OK, status);
 
-  page->StartTransaction(
-      [](ledger::Status status) { EXPECT_EQ(ledger::Status::OK, status); });
-  EXPECT_EQ(ZX_OK, page.WaitForResponse());
-  page->Put(
-      convert::ToArray("name"), convert::ToArray("Alice"),
-      [](ledger::Status status) { EXPECT_EQ(ledger::Status::OK, status); });
-  EXPECT_EQ(ZX_OK, page.WaitForResponse());
+  waiter = NewWaiter();
+  page->StartTransaction(callback::Capture(waiter->GetCallback(), &status));
+  waiter->RunUntilCalled();
+  EXPECT_EQ(ledger::Status::OK, status);
+  waiter = NewWaiter();
+  page->Put(convert::ToArray("name"), convert::ToArray("Alice"),
+            callback::Capture(waiter->GetCallback(), &status));
+  waiter->RunUntilCalled();
+  EXPECT_EQ(ledger::Status::OK, status);
 
-  EXPECT_TRUE(RunLoopWithTimeout());
+  EXPECT_TRUE(RunLoopWithTimeout(fxl::TimeDelta::FromMilliseconds(100)));
   EXPECT_EQ(0u, watcher.changes_seen);
 
-  page->Commit(
-      [](ledger::Status status) { EXPECT_EQ(ledger::Status::OK, status); });
-  EXPECT_EQ(ZX_OK, page.WaitForResponse());
-  RunLoop();
+  waiter = NewWaiter();
+  page->Commit(callback::Capture(waiter->GetCallback(), &status));
+  waiter->RunUntilCalled();
+  EXPECT_EQ(ledger::Status::OK, status);
 
+  watcher_waiter->RunUntilCalled();
   EXPECT_EQ(1u, watcher.changes_seen);
   EXPECT_EQ(ledger::ResultState::COMPLETED, watcher.last_result_state_);
   ledger::PageChange change = std::move(watcher.last_page_change_);
@@ -392,54 +424,64 @@ TEST_P(PageWatcherIntegrationTest, PageWatcherTransaction) {
 TEST_P(PageWatcherIntegrationTest, PageWatcherParallel) {
   auto instance = NewLedgerAppInstance();
   ledger::PagePtr page1 = instance->GetTestPage();
+  auto waiter = NewWaiter();
   ledger::PageId test_page_id;
-  page1->GetId(callback::Capture([] {}, &test_page_id));
-  EXPECT_EQ(ZX_OK, page1.WaitForResponse());
+  page1->GetId(callback::Capture(waiter->GetCallback(), &test_page_id));
+  waiter->RunUntilCalled();
 
   ledger::PagePtr page2 =
       instance->GetPage(fidl::MakeOptional(test_page_id), ledger::Status::OK);
 
   ledger::PageWatcherPtr watcher1_ptr;
-  Watcher watcher1(watcher1_ptr.NewRequest(),
-                   [this] { message_loop_.QuitNow(); });
+  auto watcher_waiter1 = NewWaiter();
+  Watcher watcher1(watcher1_ptr.NewRequest(), watcher_waiter1->GetCallback());
   ledger::PageSnapshotPtr snapshot1;
+  ledger::Status status;
+  waiter = NewWaiter();
   page1->GetSnapshot(snapshot1.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
-                     std::move(watcher1_ptr), [](ledger::Status status) {
-                       EXPECT_EQ(ledger::Status::OK, status);
-                     });
-  EXPECT_EQ(ZX_OK, page1.WaitForResponse());
+                     std::move(watcher1_ptr),
+                     callback::Capture(waiter->GetCallback(), &status));
+  waiter->RunUntilCalled();
+  EXPECT_EQ(ledger::Status::OK, status);
 
   ledger::PageWatcherPtr watcher2_ptr;
-  Watcher watcher2(watcher2_ptr.NewRequest(),
-                   [this] { message_loop_.QuitNow(); });
+  auto watcher_waiter2 = NewWaiter();
+  Watcher watcher2(watcher2_ptr.NewRequest(), watcher_waiter2->GetCallback());
   ledger::PageSnapshotPtr snapshot2;
+  waiter = NewWaiter();
   page2->GetSnapshot(snapshot2.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
-                     std::move(watcher2_ptr), [](ledger::Status status) {
-                       EXPECT_EQ(ledger::Status::OK, status);
-                     });
-  EXPECT_EQ(ZX_OK, page2.WaitForResponse());
+                     std::move(watcher2_ptr),
+                     callback::Capture(waiter->GetCallback(), &status));
+  waiter->RunUntilCalled();
+  EXPECT_EQ(ledger::Status::OK, status);
 
-  page1->StartTransaction(
-      [](ledger::Status status) { EXPECT_EQ(ledger::Status::OK, status); });
-  EXPECT_EQ(ZX_OK, page1.WaitForResponse());
-  page1->Put(
-      convert::ToArray("name"), convert::ToArray("Alice"),
-      [](ledger::Status status) { EXPECT_EQ(ledger::Status::OK, status); });
-  EXPECT_EQ(ZX_OK, page1.WaitForResponse());
+  waiter = NewWaiter();
+  page1->StartTransaction(callback::Capture(waiter->GetCallback(), &status));
+  waiter->RunUntilCalled();
+  EXPECT_EQ(ledger::Status::OK, status);
+  waiter = NewWaiter();
+  page1->Put(convert::ToArray("name"), convert::ToArray("Alice"),
+             callback::Capture(waiter->GetCallback(), &status));
+  waiter->RunUntilCalled();
+  EXPECT_EQ(ledger::Status::OK, status);
 
-  page2->StartTransaction(
-      [](ledger::Status status) { EXPECT_EQ(ledger::Status::OK, status); });
-  EXPECT_EQ(ZX_OK, page2.WaitForResponse());
-  page2->Put(
-      convert::ToArray("name"), convert::ToArray("Bob"),
-      [](ledger::Status status) { EXPECT_EQ(ledger::Status::OK, status); });
-  EXPECT_EQ(ZX_OK, page2.WaitForResponse());
+  waiter = NewWaiter();
+  page2->StartTransaction(callback::Capture(waiter->GetCallback(), &status));
+  waiter->RunUntilCalled();
+  EXPECT_EQ(ledger::Status::OK, status);
+  waiter = NewWaiter();
+  page2->Put(convert::ToArray("name"), convert::ToArray("Bob"),
+             callback::Capture(waiter->GetCallback(), &status));
+  waiter->RunUntilCalled();
+  EXPECT_EQ(ledger::Status::OK, status);
 
   // Verify that each change is seen by the right watcher.
-  page1->Commit(
-      [](ledger::Status status) { EXPECT_EQ(ledger::Status::OK, status); });
-  EXPECT_EQ(ZX_OK, page1.WaitForResponse());
-  RunLoop();
+  waiter = NewWaiter();
+  page1->Commit(callback::Capture(waiter->GetCallback(), &status));
+  waiter->RunUntilCalled();
+  EXPECT_EQ(ledger::Status::OK, status);
+
+  watcher_waiter1->RunUntilCalled();
   EXPECT_EQ(1u, watcher1.changes_seen);
   EXPECT_EQ(ledger::ResultState::COMPLETED, watcher1.last_result_state_);
   ledger::PageChange change = std::move(watcher1.last_page_change_);
@@ -447,11 +489,12 @@ TEST_P(PageWatcherIntegrationTest, PageWatcherParallel) {
   EXPECT_EQ("name", convert::ToString(change.changed_entries->at(0).key));
   EXPECT_EQ("Alice", ToString(change.changed_entries->at(0).value));
 
-  page2->Commit(
-      [](ledger::Status status) { EXPECT_EQ(ledger::Status::OK, status); });
-  EXPECT_EQ(ZX_OK, page2.WaitForResponse());
-  RunLoop();
+  waiter = NewWaiter();
+  page2->Commit(callback::Capture(waiter->GetCallback(), &status));
+  waiter->RunUntilCalled();
+  EXPECT_EQ(ledger::Status::OK, status);
 
+  watcher_waiter2->RunUntilCalled();
   EXPECT_EQ(1u, watcher2.changes_seen);
   EXPECT_EQ(ledger::ResultState::COMPLETED, watcher2.last_result_state_);
   change = std::move(watcher2.last_page_change_);
@@ -459,10 +502,10 @@ TEST_P(PageWatcherIntegrationTest, PageWatcherParallel) {
   EXPECT_EQ("name", convert::ToString(change.changed_entries->at(0).key));
   EXPECT_EQ("Bob", ToString(change.changed_entries->at(0).value));
 
-  async::PostDelayedTask(async_get_default(),
-                         [this] { message_loop_.QuitNow(); }, zx::sec(1));
-  RunLoop();
+  EXPECT_TRUE(RunLoopWithTimeout(fxl::TimeDelta::FromMilliseconds(100)));
+
   // A merge happens now. Only the first watcher should see a change.
+  watcher_waiter1->RunUntilCalled();
   EXPECT_EQ(2u, watcher1.changes_seen);
   EXPECT_EQ(ledger::ResultState::COMPLETED, watcher2.last_result_state_);
   EXPECT_EQ(1u, watcher2.changes_seen);
@@ -478,64 +521,73 @@ TEST_P(PageWatcherIntegrationTest, PageWatcherEmptyTransaction) {
   auto instance = NewLedgerAppInstance();
   ledger::PagePtr page = instance->GetTestPage();
   ledger::PageWatcherPtr watcher_ptr;
-  Watcher watcher(watcher_ptr.NewRequest(),
-                  [this] { message_loop_.QuitNow(); });
+  Watcher watcher(watcher_ptr.NewRequest());
 
   ledger::PageSnapshotPtr snapshot;
+  auto waiter = NewWaiter();
+  ledger::Status status;
   page->GetSnapshot(snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
-                    std::move(watcher_ptr), [](ledger::Status status) {
-                      EXPECT_EQ(ledger::Status::OK, status);
-                    });
-  EXPECT_EQ(ZX_OK, page.WaitForResponse());
+                    std::move(watcher_ptr),
+                    callback::Capture(waiter->GetCallback(), &status));
+  waiter->RunUntilCalled();
+  EXPECT_EQ(ledger::Status::OK, status);
 
-  page->StartTransaction(
-      [](ledger::Status status) { EXPECT_EQ(ledger::Status::OK, status); });
-  EXPECT_EQ(ZX_OK, page.WaitForResponse());
+  waiter = NewWaiter();
+  page->StartTransaction(callback::Capture(waiter->GetCallback(), &status));
+  waiter->RunUntilCalled();
+  EXPECT_EQ(ledger::Status::OK, status);
 
-  page->Commit(
-      [](ledger::Status status) { EXPECT_EQ(ledger::Status::OK, status); });
-  EXPECT_EQ(ZX_OK, page.WaitForResponse());
-  EXPECT_TRUE(RunLoopWithTimeout());
+  waiter = NewWaiter();
+  page->Commit(callback::Capture(waiter->GetCallback(), &status));
+  waiter->RunUntilCalled();
+  EXPECT_EQ(ledger::Status::OK, status);
+
+  EXPECT_TRUE(RunLoopWithTimeout(fxl::TimeDelta::FromMilliseconds(100)));
   EXPECT_EQ(0u, watcher.changes_seen);
 }
 
 TEST_P(PageWatcherIntegrationTest, PageWatcher1Change2Pages) {
   auto instance = NewLedgerAppInstance();
   ledger::PagePtr page1 = instance->GetTestPage();
+  auto waiter = NewWaiter();
   ledger::PageId test_page_id;
-  page1->GetId(callback::Capture([] {}, &test_page_id));
-  EXPECT_EQ(ZX_OK, page1.WaitForResponse());
+  page1->GetId(callback::Capture(waiter->GetCallback(), &test_page_id));
+  waiter->RunUntilCalled();
 
   ledger::PagePtr page2 =
       instance->GetPage(fidl::MakeOptional(test_page_id), ledger::Status::OK);
 
   ledger::PageWatcherPtr watcher1_ptr;
-  Watcher watcher1(watcher1_ptr.NewRequest(),
-                   [this] { message_loop_.QuitNow(); });
+  auto watcher1_waiter = NewWaiter();
+  Watcher watcher1(watcher1_ptr.NewRequest(), watcher1_waiter->GetCallback());
   ledger::PageSnapshotPtr snapshot1;
+  waiter = NewWaiter();
+  ledger::Status status;
   page1->GetSnapshot(snapshot1.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
-                     std::move(watcher1_ptr), [](ledger::Status status) {
-                       EXPECT_EQ(ledger::Status::OK, status);
-                     });
-  EXPECT_EQ(ZX_OK, page1.WaitForResponse());
+                     std::move(watcher1_ptr),
+                     callback::Capture(waiter->GetCallback(), &status));
+  waiter->RunUntilCalled();
+  EXPECT_EQ(ledger::Status::OK, status);
 
+  auto watcher2_waiter = NewWaiter();
   ledger::PageWatcherPtr watcher2_ptr;
-  Watcher watcher2(watcher2_ptr.NewRequest(),
-                   [this] { message_loop_.QuitNow(); });
+  Watcher watcher2(watcher2_ptr.NewRequest(), watcher2_waiter->GetCallback());
   ledger::PageSnapshotPtr snapshot2;
+  waiter = NewWaiter();
   page2->GetSnapshot(snapshot2.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
-                     std::move(watcher2_ptr), [](ledger::Status status) {
-                       EXPECT_EQ(ledger::Status::OK, status);
-                     });
-  EXPECT_EQ(ZX_OK, page2.WaitForResponse());
+                     std::move(watcher2_ptr),
+                     callback::Capture(waiter->GetCallback(), &status));
+  waiter->RunUntilCalled();
+  EXPECT_EQ(ledger::Status::OK, status);
 
-  page1->Put(
-      convert::ToArray("name"), convert::ToArray("Alice"),
-      [](ledger::Status status) { EXPECT_EQ(ledger::Status::OK, status); });
-  EXPECT_EQ(ZX_OK, page1.WaitForResponse());
+  waiter = NewWaiter();
+  page1->Put(convert::ToArray("name"), convert::ToArray("Alice"),
+             callback::Capture(waiter->GetCallback(), &status));
+  waiter->RunUntilCalled();
+  EXPECT_EQ(ledger::Status::OK, status);
 
-  RunLoop();
-  RunLoop();
+  watcher1_waiter->RunUntilCalled();
+  watcher2_waiter->RunUntilCalled();
 
   ASSERT_EQ(1u, watcher1.changes_seen);
   EXPECT_EQ(ledger::ResultState::COMPLETED, watcher1.last_result_state_);
@@ -588,64 +640,62 @@ TEST_P(PageWatcherIntegrationTest, PageWatcherConcurrentTransaction) {
   auto instance = NewLedgerAppInstance();
   ledger::PagePtr page = instance->GetTestPage();
   ledger::PageWatcherPtr watcher_ptr;
-  WaitingWatcher watcher(watcher_ptr.NewRequest(), [this]() {
-    message_loop_.PostQuitTask();
-  });
+  auto watcher_waiter = NewWaiter();
+  WaitingWatcher watcher(watcher_ptr.NewRequest(),
+                         watcher_waiter->GetCallback());
 
   ledger::PageSnapshotPtr snapshot;
+  auto waiter = NewWaiter();
+  ledger::Status status;
   page->GetSnapshot(snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
-                    std::move(watcher_ptr), [](ledger::Status status) {
-                      EXPECT_EQ(ledger::Status::OK, status);
-                    });
-  EXPECT_EQ(ZX_OK, page.WaitForResponse());
+                    std::move(watcher_ptr),
+                    callback::Capture(waiter->GetCallback(), &status));
+  waiter->RunUntilCalled();
+  EXPECT_EQ(ledger::Status::OK, status);
 
-  page->Put(
-      convert::ToArray("name"), convert::ToArray("Alice"),
-      [](ledger::Status status) { EXPECT_EQ(ledger::Status::OK, status); });
-  EXPECT_EQ(ZX_OK, page.WaitForResponse());
-  RunLoop();
+  waiter = NewWaiter();
+  page->Put(convert::ToArray("name"), convert::ToArray("Alice"),
+            callback::Capture(waiter->GetCallback(), &status));
+  waiter->RunUntilCalled();
+  EXPECT_EQ(ledger::Status::OK, status);
 
+  watcher_waiter->RunUntilCalled();
   EXPECT_EQ(1u, watcher.changes.size());
 
-  page->Put(
-      convert::ToArray("foo"), convert::ToArray("bar"),
-      [](ledger::Status status) { EXPECT_EQ(ledger::Status::OK, status); });
-  EXPECT_EQ(ZX_OK, page.WaitForResponse());
+  waiter = NewWaiter();
+  page->Put(convert::ToArray("foo"), convert::ToArray("bar"),
+            callback::Capture(waiter->GetCallback(), &status));
+  waiter->RunUntilCalled();
+  EXPECT_EQ(ledger::Status::OK, status);
 
-  bool start_transaction_callback_called = false;
+  auto transaction_waiter = NewWaiter();
   ledger::Status start_transaction_status;
-  page->StartTransaction([this, &start_transaction_callback_called,
-                          &start_transaction_status](ledger::Status status) {
-    start_transaction_callback_called = true;
-    start_transaction_status = status;
-    message_loop_.PostQuitTask();
-  });
+  page->StartTransaction(callback::Capture(transaction_waiter->GetCallback(),
+                                           &start_transaction_status));
 
-  EXPECT_TRUE(RunLoopWithTimeout());
+  EXPECT_TRUE(RunLoopWithTimeout(fxl::TimeDelta::FromMilliseconds(100)));
 
   // We haven't sent the callback of the first change, so nothing should have
   // happened.
   EXPECT_EQ(1u, watcher.changes.size());
-  EXPECT_FALSE(start_transaction_callback_called);
+  EXPECT_TRUE(transaction_waiter->NotCalledYet());
 
   watcher.changes[0].callback(nullptr);
 
-  RunLoop();
-
+  watcher_waiter->RunUntilCalled();
   EXPECT_EQ(2u, watcher.changes.size());
-  EXPECT_FALSE(start_transaction_callback_called);
+  EXPECT_TRUE(transaction_waiter->NotCalledYet());
 
-  EXPECT_TRUE(RunLoopWithTimeout());
+  EXPECT_TRUE(RunLoopWithTimeout(fxl::TimeDelta::FromMilliseconds(100)));
 
   // We haven't sent the callback of the first change, so nothing should have
   // happened.
   EXPECT_EQ(2u, watcher.changes.size());
-  EXPECT_FALSE(start_transaction_callback_called);
+  EXPECT_TRUE(transaction_waiter->NotCalledYet());
 
   watcher.changes[1].callback(nullptr);
 
-  RunLoop();
-  EXPECT_TRUE(start_transaction_callback_called);
+  transaction_waiter->RunUntilCalled();
   EXPECT_EQ(ledger::Status::OK, start_transaction_status);
 }
 
@@ -653,33 +703,46 @@ TEST_P(PageWatcherIntegrationTest, PageWatcherPrefix) {
   auto instance = NewLedgerAppInstance();
   ledger::PagePtr page = instance->GetTestPage();
   ledger::PageWatcherPtr watcher_ptr;
-  Watcher watcher(watcher_ptr.NewRequest(),
-                  [this] { message_loop_.QuitNow(); });
+  auto watcher_waiter = NewWaiter();
+  Watcher watcher(watcher_ptr.NewRequest(), watcher_waiter->GetCallback());
 
-  auto callback_statusok = [](ledger::Status status) {
-    EXPECT_EQ(ledger::Status::OK, status);
-  };
   ledger::PageSnapshotPtr snapshot;
+  auto waiter = NewWaiter();
+  ledger::Status status;
   page->GetSnapshot(snapshot.NewRequest(), convert::ToArray("01"),
-                    std::move(watcher_ptr), callback_statusok);
-  EXPECT_EQ(ZX_OK, page.WaitForResponse());
+                    std::move(watcher_ptr),
+                    callback::Capture(waiter->GetCallback(), &status));
+  waiter->RunUntilCalled();
+  EXPECT_EQ(ledger::Status::OK, status);
 
-  page->StartTransaction(callback_statusok);
-  EXPECT_EQ(ZX_OK, page.WaitForResponse());
+  waiter = NewWaiter();
+  page->StartTransaction(callback::Capture(waiter->GetCallback(), &status));
+  waiter->RunUntilCalled();
+  EXPECT_EQ(ledger::Status::OK, status);
+  waiter = NewWaiter();
   page->Put(convert::ToArray("00-key"), convert::ToArray("value-00"),
-            callback_statusok);
-  EXPECT_EQ(ZX_OK, page.WaitForResponse());
+
+            callback::Capture(waiter->GetCallback(), &status));
+  waiter->RunUntilCalled();
+  EXPECT_EQ(ledger::Status::OK, status);
+  waiter = NewWaiter();
   page->Put(convert::ToArray("01-key"), convert::ToArray("value-01"),
-            callback_statusok);
-  EXPECT_EQ(ZX_OK, page.WaitForResponse());
+
+            callback::Capture(waiter->GetCallback(), &status));
+  waiter->RunUntilCalled();
+  EXPECT_EQ(ledger::Status::OK, status);
+  waiter = NewWaiter();
   page->Put(convert::ToArray("02-key"), convert::ToArray("value-02"),
-            callback_statusok);
-  EXPECT_EQ(ZX_OK, page.WaitForResponse());
-  page->Commit(callback_statusok);
-  EXPECT_EQ(ZX_OK, page.WaitForResponse());
 
-  RunLoop();
+            callback::Capture(waiter->GetCallback(), &status));
+  waiter->RunUntilCalled();
+  EXPECT_EQ(ledger::Status::OK, status);
+  waiter = NewWaiter();
+  page->Commit(callback::Capture(waiter->GetCallback(), &status));
+  waiter->RunUntilCalled();
+  EXPECT_EQ(ledger::Status::OK, status);
 
+  watcher_waiter->RunUntilCalled();
   EXPECT_EQ(1u, watcher.changes_seen);
   EXPECT_EQ(ledger::ResultState::COMPLETED, watcher.last_result_state_);
   ledger::PageChange change = std::move(watcher.last_page_change_);
@@ -691,26 +754,28 @@ TEST_P(PageWatcherIntegrationTest, PageWatcherPrefixNoChange) {
   auto instance = NewLedgerAppInstance();
   ledger::PagePtr page = instance->GetTestPage();
   ledger::PageWatcherPtr watcher_ptr;
-  Watcher watcher(watcher_ptr.NewRequest(),
-                  [this] { message_loop_.QuitNow(); });
+  auto watcher_waiter = NewWaiter();
+  Watcher watcher(watcher_ptr.NewRequest(), watcher_waiter->GetCallback());
 
-  auto callback_statusok = [](ledger::Status status) {
-    EXPECT_EQ(ledger::Status::OK, status);
-  };
   ledger::PageSnapshotPtr snapshot;
+  auto waiter = NewWaiter();
+  ledger::Status status;
   page->GetSnapshot(snapshot.NewRequest(), convert::ToArray("01"),
-                    std::move(watcher_ptr), callback_statusok);
-  EXPECT_EQ(ZX_OK, page.WaitForResponse());
+                    std::move(watcher_ptr),
+                    callback::Capture(waiter->GetCallback(), &status));
+  waiter->RunUntilCalled();
+  EXPECT_EQ(ledger::Status::OK, status);
 
+  waiter = NewWaiter();
   page->Put(convert::ToArray("00-key"), convert::ToArray("value-00"),
-            callback_statusok);
-  EXPECT_EQ(ZX_OK, page.WaitForResponse());
 
-  page->StartTransaction([this](ledger::Status status) {
-    EXPECT_EQ(ledger::Status::OK, status);
-    message_loop_.PostQuitTask();
-  });
-  RunLoop();
+            callback::Capture(waiter->GetCallback(), &status));
+  waiter->RunUntilCalled();
+  EXPECT_EQ(ledger::Status::OK, status);
+
+  waiter = NewWaiter();
+  page->StartTransaction(callback::Capture(waiter->GetCallback(), &status));
+  EXPECT_EQ(ledger::Status::OK, status);
 
   // Starting a transaction drains all watcher notifications, so if we were to
   // be called, we would know at this point.
