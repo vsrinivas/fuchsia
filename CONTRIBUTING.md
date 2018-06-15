@@ -43,7 +43,7 @@ git branch -d branch_name
 See the Gerrit documentation for more detail:
 [https://gerrit-documentation.storage.googleapis.com/Documentation/2.12.3/intro-user.html#upload-change](https://gerrit-documentation.storage.googleapis.com/Documentation/2.12.3/intro-user.html#upload-change)
 
-### Change description tags
+### Commit message tags
 
 If submitting a change to Zircon, Garnet, Peridot or Topaz, include [tags] in
 the commit subject flagging which module, library, app, etc, is affected by the
@@ -62,9 +62,52 @@ Example:
 ```
 # Ready to submit
 [parent][component] Update component in Topaz.
+Test: Added test X
 
 # Needs Label: Commit-Message-has-tags
 Update component in Topaz.
+Test: Added test X
+```
+
+### Commit message "Test:" labels
+
+Changes to Zircon, Garnet, Peridot, and Topaz require a "Test:" line in the
+commit message.
+
+Specifically, commit messages must contain one of {test, tests, tested, testing}
+followed by ':' or '='. Any case (e.g., "TEST" or "Test") works.
+
+All of these are valid:
+
+```
+TEST=msg
+
+Test:msg
+
+Testing : msg
+
+  Tested = msg
+
+Tests:
+- test a
+- test b
+```
+
+(See https://fuchsia.googlesource.com/All-Projects/+/refs/meta/config/rules.pl
+for the exact regex.)
+
+Gerrit will flag your change with `Needs Label: Commit-Message-has-TEST-line` if
+these are missing.
+
+Example:
+
+```
+# Ready to submit
+[parent][component] Update component in Topaz.
+Test: Added test X
+
+# Needs Label: Commit-Message-has-TEST-line
+[parent][component] Update component in Topaz.
 ```
 
 ## [Non-Googlers only] Sign the Google CLA
