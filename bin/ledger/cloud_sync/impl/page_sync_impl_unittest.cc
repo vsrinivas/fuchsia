@@ -17,7 +17,7 @@
 #include "lib/fsl/socket/strings.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/macros.h"
-#include "lib/gtest/test_with_message_loop.h"
+#include "lib/gtest/test_with_loop.h"
 #include "peridot/bin/ledger/cloud_sync/impl/constants.h"
 #include "peridot/bin/ledger/cloud_sync/impl/testing/test_page_cloud.h"
 #include "peridot/bin/ledger/cloud_sync/impl/testing/test_page_storage.h"
@@ -70,23 +70,22 @@ class TestSyncStateWatcher : public SyncStateWatcher {
   std::vector<SyncStateContainer> states;
 };
 
-class PageSyncImplTest : public gtest::TestWithMessageLoop {
+class PageSyncImplTest : public gtest::TestWithLoop {
  public:
   PageSyncImplTest()
-      : storage_(message_loop_.async()),
-        encryption_service_(message_loop_.async()),
+      : storage_(dispatcher()),
+        encryption_service_(dispatcher()),
         page_cloud_(page_cloud_ptr_.NewRequest()) {
     std::unique_ptr<TestSyncStateWatcher> watcher =
         std::make_unique<TestSyncStateWatcher>();
     state_watcher_ = watcher.get();
     page_sync_ = std::make_unique<PageSyncImpl>(
-        message_loop_.async(), &storage_, &storage_, &encryption_service_,
+        dispatcher(), &storage_, &storage_, &encryption_service_,
         std::move(page_cloud_ptr_),
         std::make_unique<TestBackoff>(&download_backoff_get_next_calls_),
         std::make_unique<TestBackoff>(&upload_backoff_get_next_calls_),
         [this] {
           error_callback_calls_++;
-          message_loop_.PostQuitTask();
         },
         std::move(watcher));
   }
@@ -265,7 +264,7 @@ TEST_F(PageSyncImplTest, UploadExistingAndNewCommits) {
   storage_.NewCommit("id1", "content1");
 
   page_sync_->SetOnBacklogDownloaded([this] {
-    async::PostTask(message_loop_.async(), [this] {
+    async::PostTask(dispatcher(), [this] {
       auto commit = storage_.NewCommit("id2", "content2");
       storage_.new_commits_to_return["id2"] = commit->Clone();
       storage_.watcher_->OnNewCommits(commit->AsList(),

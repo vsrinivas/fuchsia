@@ -12,14 +12,13 @@
 #include <vector>
 
 #include "gtest/gtest.h"
-#include "lib/backoff/backoff.h"
 #include "lib/backoff/testing/test_backoff.h"
 #include "lib/callback/capture.h"
 #include "lib/callback/set_when_called.h"
 #include "lib/fsl/socket/strings.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/macros.h"
-#include "lib/gtest/test_with_message_loop.h"
+#include "lib/gtest/test_with_loop.h"
 #include "peridot/bin/ledger/cloud_sync/impl/constants.h"
 #include "peridot/bin/ledger/cloud_sync/impl/testing/test_page_cloud.h"
 #include "peridot/bin/ledger/cloud_sync/impl/testing/test_page_storage.h"
@@ -40,18 +39,27 @@ std::unique_ptr<cloud_provider::Token> MakeToken(
   return token;
 }
 
+constexpr zx::duration kTestBackoffInterval = zx::msec(50);
+std::unique_ptr<backoff::TestBackoff> NewTestBackoff() {
+  auto result = std::make_unique<backoff::TestBackoff>();
+  result->backoff_to_return = kTestBackoffInterval;
+  return result;
+}
+
+// Dummy implementation of a backoff policy, which always returns zero backoff
+// time.
 template <typename E>
-class BasePageDownloadTest : public gtest::TestWithMessageLoop,
+class BasePageDownloadTest : public gtest::TestWithLoop,
                              public PageDownload::Delegate {
  public:
   BasePageDownloadTest()
-      : storage_(message_loop_.async()),
-        encryption_service_(message_loop_.async()),
+      : storage_(dispatcher()),
+        encryption_service_(dispatcher()),
         page_cloud_(page_cloud_ptr_.NewRequest()),
-        task_runner_(message_loop_.async()) {
+        task_runner_(dispatcher()) {
     page_download_ = std::make_unique<PageDownload>(
         &task_runner_, &storage_, &storage_, &encryption_service_,
-        &page_cloud_ptr_, this, std::make_unique<backoff::TestBackoff>());
+        &page_cloud_ptr_, this, NewTestBackoff());
   }
   ~BasePageDownloadTest() override {}
 
@@ -67,7 +75,6 @@ class BasePageDownloadTest : public gtest::TestWithMessageLoop,
     SetOnNewStateCallback([this, &on_idle_called] {
       if (states_.back() == DOWNLOAD_IDLE) {
         on_idle_called = true;
-        message_loop_.PostQuitTask();
       }
     });
     page_download_->StartDownload();
@@ -85,7 +92,6 @@ class BasePageDownloadTest : public gtest::TestWithMessageLoop,
   E encryption_service_;
   cloud_provider::PageCloudPtr page_cloud_ptr_;
   TestPageCloud page_cloud_;
-  int backoff_get_next_calls_ = 0;
   std::vector<DownloadSyncState> states_;
   std::unique_ptr<PageDownload> page_download_;
   int error_callback_calls_ = 0;
@@ -184,11 +190,11 @@ TEST_F(PageDownloadTest, RetryRemoteWatcher) {
   EXPECT_EQ(1u, page_cloud_.set_watcher_position_tokens.size());
 
   page_cloud_.set_watcher->OnError(cloud_provider::Status::NETWORK_ERROR);
-  RunLoopUntilIdle();
+  RunLoopFor(kTestBackoffInterval);
   EXPECT_EQ(2u, page_cloud_.set_watcher_position_tokens.size());
 
   page_cloud_.set_watcher->OnError(cloud_provider::Status::AUTH_ERROR);
-  RunLoopUntilIdle();
+  RunLoopFor(kTestBackoffInterval);
   EXPECT_EQ(3u, page_cloud_.set_watcher_position_tokens.size());
 }
 
@@ -236,6 +242,7 @@ TEST_F(PageDownloadTest, CoalesceMultipleNotifications) {
   EXPECT_EQ(2u, storage_.add_commits_from_sync_calls);
 }
 
+// TODO(LE-497): The following should not pass. Investigate why.
 // Verifies that failing attempts to download the backlog of unsynced commits
 // are retried.
 TEST_F(PageDownloadTest, RetryDownloadBacklog) {
@@ -245,7 +252,7 @@ TEST_F(PageDownloadTest, RetryDownloadBacklog) {
   // Loop through five attempts to download the backlog.
   SetOnNewStateCallback([this] {
     if (page_cloud_.get_commits_calls >= 5u) {
-      message_loop_.PostQuitTask();
+      QuitLoop();
     }
   });
   RunLoopUntilIdle();
@@ -257,7 +264,7 @@ TEST_F(PageDownloadTest, RetryDownloadBacklog) {
   page_cloud_.commits_to_return.push_back(
       MakeTestCommit(&encryption_service_, "id1", "content1"));
   page_cloud_.position_token_to_return = MakeToken("42");
-  RunLoopUntilIdle();
+  RunLoopFor(kTestBackoffInterval);
   EXPECT_TRUE(page_download_->IsIdle());
 
   EXPECT_EQ(1u, storage_.received_commits.size());
@@ -296,7 +303,6 @@ TEST_F(PageDownloadTest, DownloadIdleCallback) {
   SetOnNewStateCallback([this, &on_idle_calls] {
     if (states_.back() == DOWNLOAD_IDLE) {
       on_idle_calls++;
-      message_loop_.PostQuitTask();
     }
   });
   page_download_->StartDownload();
@@ -359,20 +365,12 @@ TEST_F(PageDownloadTest, RetryGetObject) {
   page_cloud_.status_to_return = cloud_provider::Status::NETWORK_ERROR;
   SetOnNewStateCallback([this] {
     if (states_.back() == DOWNLOAD_PERMANENT_ERROR) {
-      message_loop_.PostQuitTask();
+      QuitLoop();
     }
   });
 
   page_download_->StartDownload();
 
-  message_loop_.SetAfterTaskCallback([this, &object_name] {
-    // Allow the operation to succeed after looping through five attempts.
-    if (page_cloud_.get_object_calls == 5u) {
-      page_cloud_.status_to_return = cloud_provider::Status::OK;
-      page_cloud_.objects_to_return[object_name] =
-          encryption_service_.EncryptObjectSynchronous("content");
-    }
-  });
   bool called;
   storage::Status status;
   storage::ChangeSource source;
@@ -380,7 +378,13 @@ TEST_F(PageDownloadTest, RetryGetObject) {
   storage_.page_sync_delegate_->GetObject(
       object_identifier, callback::Capture(callback::SetWhenCalled(&called),
                                            &status, &source, &data_chunk));
-  RunLoopUntilIdle();
+
+  // Allow the operation to succeed after looping through five attempts.
+  RunLoopFor(kTestBackoffInterval * 4);
+  page_cloud_.status_to_return = cloud_provider::Status::OK;
+  page_cloud_.objects_to_return[object_name] =
+      encryption_service_.EncryptObjectSynchronous("content");
+  RunLoopFor(kTestBackoffInterval);
 
   EXPECT_TRUE(called);
   EXPECT_EQ(6u, page_cloud_.get_object_calls);
