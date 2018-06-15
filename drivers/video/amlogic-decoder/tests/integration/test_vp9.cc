@@ -8,6 +8,8 @@
 #include "tests/test_support.h"
 #include "vp9_decoder.h"
 
+#include "bear-vp9.aml.h"
+
 class TestVP9 {
  public:
   static void Decode() {
@@ -27,6 +29,8 @@ class TestVP9 {
 
     video->video_decoder_ = std::make_unique<Vp9Decoder>(video.get());
     EXPECT_EQ(ZX_OK, video->video_decoder_->Initialize());
+
+    video->ParseVideo(bear_vp9_aml, bear_vp9_aml_len);
 
     video.reset();
   }

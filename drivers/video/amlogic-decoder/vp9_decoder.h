@@ -73,10 +73,27 @@ class Vp9Decoder : public VideoDecoder {
 #undef DEF_BUFFER
   };
 
+  struct Frame {
+    ~Frame();
+
+    // Allocated on demand.
+    std::unique_ptr<VideoFrame> frame;
+    // With the MMU enabled the compressed frame header is stored separately
+    // from the data itself, allowing the data to be allocated in noncontiguous
+    // memory.
+    io_buffer_t compressed_header = {};
+  };
+
+  zx_status_t AllocateFrames();
+  void InitializeHardwarePictureList();
+  void InitializeParser();
+
   Owner* owner_;
 
   WorkingBuffers working_buffers_;
   FrameReadyNotifier notifier_;
+
+  std::vector<std::unique_ptr<Frame>> frames_;
 };
 
 #endif  // VP9_DECODER_H_

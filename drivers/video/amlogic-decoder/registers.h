@@ -215,6 +215,10 @@ class AncNCanvasAddr : public TypedRegisterBase<DosRegisterIo, AncNCanvasAddr, u
 };
 
 DEFINE_REGISTER(HevcAssistMmuMapAddr, DosRegisterIo, 0x3009);
+DEFINE_REGISTER(HevcAssistMbox0IrqReg, DosRegisterIo, 0x3070);
+DEFINE_REGISTER(HevcAssistMbox0ClrReg, DosRegisterIo, 0x3071);
+DEFINE_REGISTER(HevcAssistMbox0Mask, DosRegisterIo, 0x3072);
+
 DEFINE_REGISTER(HevcAssistScratch0, DosRegisterIo, 0x30c0);
 DEFINE_REGISTER(HevcAssistScratch1, DosRegisterIo, 0x30c1);
 DEFINE_REGISTER(HevcAssistScratch2, DosRegisterIo, 0x30c2);
@@ -257,6 +261,56 @@ DEFINE_REGISTER(HevcStreamRdPtr, DosRegisterIo, 0x3105);
 REGISTER_NAME(HevcStreamFifoCtl, DosRegisterIo, 0x3107)
   DEF_BIT(29, stream_fifo_hole);
 };
+REGISTER_NAME(HevcShiftControl, DosRegisterIo, 0x3108)
+  DEF_BIT(14, start_code_protect);
+  DEF_BIT(10, length_zero_startcode);
+  DEF_BIT(9, length_valid_startcode);
+  DEF_FIELD(7, 6, sft_valid_wr_position);
+  DEF_FIELD(5, 4, emulate_code_length_minus1);
+  DEF_FIELD(2, 1, start_code_length_minus1);
+  DEF_BIT(0, stream_shift_enable);
+};
+DEFINE_REGISTER(HevcShiftStartCode, DosRegisterIo, 0x3109);
+DEFINE_REGISTER(HevcShiftEmulateCode, DosRegisterIo, 0x310a);
+REGISTER_NAME(HevcShiftStatus, DosRegisterIo, 0x310b)
+  DEF_BIT(1, emulation_check);
+  DEF_BIT(0, startcode_check);
+};
+DEFINE_REGISTER(HevcShiftByteCount, DosRegisterIo, 0x310d);
+
+REGISTER_NAME(HevcParserIntControl, DosRegisterIo, 0x3120)
+  DEF_FIELD(31, 29, fifo_ctl);
+  DEF_BIT(24, stream_buffer_empty_amrisc_enable);
+  DEF_BIT(22, stream_fifo_empty_amrisc_enable);
+  DEF_BIT(7, dec_done_int_cpu_enable);
+  DEF_BIT(4, startcode_found_int_cpu_enable);
+  DEF_BIT(3, startcode_found_int_amrisc_enable);
+  DEF_BIT(0, parser_int_enable);
+};
+DEFINE_REGISTER(HevcParserIntStatus, DosRegisterIo, 0x3121);
+DEFINE_REGISTER(HevcParserPictureSize, DosRegisterIo, 0x3123);
+
+DEFINE_REGISTER(HevcStreamLevel, DosRegisterIo, 0x3106);
+REGISTER_NAME(HevcCabacControl, DosRegisterIo, 0x3110)
+  DEF_BIT(0, enable);
+};
+
+REGISTER_NAME(HevcParserCoreControl, DosRegisterIo, 0x3113)
+  DEF_BIT(0, clock_enable);
+};
+DEFINE_REGISTER(HevcIqitScalelutWrAddr, DosRegisterIo, 0x3702);
+DEFINE_REGISTER(HevcIqitScalelutData, DosRegisterIo, 0x3704);
+DEFINE_REGISTER(HevcParserCmdWrite, DosRegisterIo, 0x3112);
+REGISTER_NAME(HevcParserIfControl, DosRegisterIo, 0x3122)
+  DEF_BIT(8, sao_sw_pred_enable);
+  DEF_BIT(5, parser_sao_if_enable);
+  DEF_BIT(2, parser_mpred_if_enable);
+  DEF_BIT(0, parser_scaler_if_enable);
+};
+
+DEFINE_REGISTER(HevcParserCmdSkip0, DosRegisterIo, 0x3128);
+DEFINE_REGISTER(HevcParserCmdSkip1, DosRegisterIo, 0x3129);
+DEFINE_REGISTER(HevcParserCmdSkip2, DosRegisterIo, 0x312a);
 
 DEFINE_REGISTER(HevcMpsr, DosRegisterIo, 0x3301);
 DEFINE_REGISTER(HevcCpsr, DosRegisterIo, 0x3321);
@@ -264,6 +318,10 @@ DEFINE_REGISTER(HevcImemDmaCtrl, DosRegisterIo, 0x3340);
 DEFINE_REGISTER(HevcImemDmaAdr, DosRegisterIo, 0x3341);
 DEFINE_REGISTER(HevcImemDmaCount, DosRegisterIo, 0x3342);
 
+REGISTER_NAME(HevcdIppTopCntl, DosRegisterIo, 0x3400)
+  DEF_BIT(1, enable_ipp)
+  DEF_BIT(0, reset_ipp_and_mpp)
+};
 DEFINE_REGISTER(HevcdIppLinebuffBase, DosRegisterIo, 0x3409);
 DEFINE_REGISTER(HevcdMppAnc2AxiTblConfAddr, DosRegisterIo, 0x3460);
 DEFINE_REGISTER(HevcdMppAnc2AxiTblData, DosRegisterIo, 0x3464);
@@ -297,6 +355,7 @@ REGISTER_NAME(HevcSaoCtrl5, DosRegisterIo, 0x3623)
 DEFINE_REGISTER(HevcSaoMmuVh0Addr, DosRegisterIo, 0x363a)
 DEFINE_REGISTER(HevcSaoMmuVh1Addr, DosRegisterIo, 0x363b)
 
+DEFINE_REGISTER(HevcPscaleCtrl, DosRegisterIo, 0x3911);
 DEFINE_REGISTER(HevcDblkCtrl, DosRegisterIo, 0x3951);
 DEFINE_REGISTER(HevcDblkStatus, DosRegisterIo, 0x3953);
 DEFINE_REGISTER(HevcMdecPicDcCtrl, DosRegisterIo, 0x398e);
