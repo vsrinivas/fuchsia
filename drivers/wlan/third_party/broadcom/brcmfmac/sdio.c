@@ -511,8 +511,8 @@ struct brcmf_sdio {
     zx_status_t ctrl_frame_err;
 
     // spinlock_t txq_lock; /* protect bus->txq */
-    wait_queue_head_t ctrl_wait;
-    wait_queue_head_t dcmd_resp_wait;
+    completion_t ctrl_wait;
+    completion_t dcmd_resp_wait;
 
     brcmf_timer_info_t timer;
     completion_t watchdog_wait;
@@ -1598,30 +1598,14 @@ static uint8_t brcmf_sdio_rxglom(struct brcmf_sdio* bus, uint8_t rxseq) {
     return num;
 }
 
-static int brcmf_sdio_dcmd_resp_wait(struct brcmf_sdio* bus, uint* condition, bool* pending) {
-    DECLARE_WAITQUEUE(wait, current);
-    int timeout = DCMD_RESP_TIMEOUT_MSEC;
-
+static int brcmf_sdio_dcmd_resp_wait(struct brcmf_sdio* bus, bool* pending) {
     /* Wait until control frame is available */
-    add_wait_queue(&bus->dcmd_resp_wait, &wait);
-    set_current_state(TASK_INTERRUPTIBLE);
-
-    while (!(*condition) && (!signal_pending(current) && timeout)) {
-        timeout = schedule_timeout(timeout);
-    }
-
-    if (signal_pending(current)) {
-        *pending = true;
-    }
-
-    set_current_state(TASK_RUNNING);
-    remove_wait_queue(&bus->dcmd_resp_wait, &wait);
-
-    return timeout;
+    *pending = false; // TODO(cphoenix): Does signal_pending() have meaning in Garnet?
+    return completion_wait(&bus->dcmd_resp_wait, ZX_MSEC(DCMD_RESP_TIMEOUT_MSEC));
 }
 
 static zx_status_t brcmf_sdio_dcmd_resp_wake(struct brcmf_sdio* bus) {
-    wake_up_interruptible(&bus->dcmd_resp_wait);
+    completion_signal(&bus->dcmd_resp_wait);
 
     return ZX_OK;
 }
@@ -1716,7 +1700,9 @@ gotpkt:
 
 done:
     /* Awake any waiters */
-    brcmf_sdio_dcmd_resp_wake(bus);
+    if (bus->rxlen) {
+        brcmf_sdio_dcmd_resp_wake(bus);
+    }
 }
 
 /* Pad read to blocksize for efficiency */
@@ -1933,7 +1919,7 @@ static uint brcmf_sdio_readframes(struct brcmf_sdio* bus, uint maxframes) {
 }
 
 static void brcmf_sdio_wait_event_wakeup(struct brcmf_sdio* bus) {
-    wake_up_interruptible(&bus->ctrl_wait);
+    completion_signal(&bus->ctrl_wait);
     return;
 }
 
@@ -2379,6 +2365,11 @@ static void brcmf_sdio_bus_stop(struct brcmf_device* dev) {
     bus->rxlen = 0;
     //spin_unlock_bh(&bus->rxctl_lock);
     pthread_mutex_unlock(&irq_callback_lock);
+    // TODO(cphoenix): I think the original Linux code in brcmf_sdio_dcmd_resp_wait() would have
+    // gone right back to sleep, since rxlen is 0. In the current code, it will exit;
+    // brcmf_sdio_bus_rxctl() will return ZX_ERR_SHOULD_WAIT; the loop in brcmf_proto_bcdc_cmplt
+    // will terminate. Check once we're supporting SDIO: Is this what we want? Why was this an
+    // apparent NOP in Linux?
     brcmf_sdio_dcmd_resp_wake(bus);
 
     /* Reset some F2 state stuff */
@@ -2793,7 +2784,7 @@ static zx_status_t brcmf_sdio_bus_txctl(struct brcmf_device* dev, unsigned char*
     bus->ctrl_frame_stat = true;
 
     brcmf_sdio_trigger_dpc(bus);
-    wait_event_interruptible_timeout(bus->ctrl_wait, !bus->ctrl_frame_stat, CTL_DONE_TIMEOUT_MSEC);
+    completion_wait(&bus->ctrl_wait, ZX_MSEC(CTL_DONE_TIMEOUT_MSEC));
     ret = ZX_OK;
     if (bus->ctrl_frame_stat) {
         sdio_claim_host(bus->sdiodev->func1);
@@ -3053,7 +3044,7 @@ static void brcmf_sdio_debugfs_create(struct brcmf_sdio* bus) {}
 
 static zx_status_t brcmf_sdio_bus_rxctl(struct brcmf_device* dev, unsigned char* msg, uint msglen,
                                         int* rxlen_out) {
-    int timeleft;
+    bool timeout;
     uint rxlen = 0;
     bool pending;
     uint8_t* buf;
@@ -3067,7 +3058,7 @@ static zx_status_t brcmf_sdio_bus_rxctl(struct brcmf_device* dev, unsigned char*
     }
 
     /* Wait until control frame is available */
-    timeleft = brcmf_sdio_dcmd_resp_wait(bus, &bus->rxlen, &pending);
+    timeout = (brcmf_sdio_dcmd_resp_wait(bus, &pending) != ZX_OK);
 
     //spin_lock_bh(&bus->rxctl_lock);
     pthread_mutex_lock(&irq_callback_lock);
@@ -3083,7 +3074,7 @@ static zx_status_t brcmf_sdio_bus_rxctl(struct brcmf_device* dev, unsigned char*
 
     if (rxlen) {
         brcmf_dbg(CTL, "resumed on rxctl frame, got %d expected %d\n", rxlen, msglen);
-    } else if (timeleft == 0) {
+    } else if (timeout) {
         brcmf_err("resumed on timeout\n");
         brcmf_sdio_checkdied(bus);
     } else if (pending) {
@@ -4044,8 +4035,8 @@ struct brcmf_sdio* brcmf_sdio_probe(struct brcmf_sdio_dev* sdiodev) {
 
     //spin_lock_init(&bus->rxctl_lock);
     //spin_lock_init(&bus->txq_lock);
-    init_waitqueue_head(&bus->ctrl_wait);
-    init_waitqueue_head(&bus->dcmd_resp_wait);
+    bus->ctrl_wait = COMPLETION_INIT;
+    bus->dcmd_resp_wait = COMPLETION_INIT;
 
     /* Set up the watchdog timer */
     brcmf_timer_init(&bus->timer, brcmf_sdio_watchdog);

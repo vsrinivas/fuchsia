@@ -67,7 +67,7 @@ struct brcmf_sdiod_freezer {
     atomic_int freezing;
     atomic_int thread_count;
     uint32_t frozen_count;
-    wait_queue_head_t thread_freeze;
+    completion_t thread_freeze;
     completion_t resumed;
 };
 
@@ -778,7 +778,7 @@ static zx_status_t brcmf_sdiod_freezer_attach(struct brcmf_sdio_dev* sdiodev) {
     }
     atomic_store(&sdiodev->freezer->thread_count, 0);
     atomic_store(&sdiodev->freezer->freezing, 0);
-    init_waitqueue_head(&sdiodev->freezer->thread_freeze);
+    sdiodev->freezer->thread_freeze = COMPLETION_INIT;
     sdiodev->freezer->resumed = COMPLETION_INIT;
     return ZX_OK;
 }
@@ -791,15 +791,14 @@ static void brcmf_sdiod_freezer_detach(struct brcmf_sdio_dev* sdiodev) {
 }
 
 static zx_status_t brcmf_sdiod_freezer_on(struct brcmf_sdio_dev* sdiodev) {
-    atomic_int* expect = &sdiodev->freezer->thread_count;
     zx_status_t res = ZX_OK;
 
     sdiodev->freezer->frozen_count = 0;
     completion_reset(&sdiodev->freezer->resumed);
+    completion_reset(&sdiodev->freezer->thread_freeze);
     atomic_store(&sdiodev->freezer->freezing, 1);
     brcmf_sdio_trigger_dpc(sdiodev->bus);
-    wait_event(sdiodev->freezer->thread_freeze,
-               atomic_load(expect) == sdiodev->freezer->frozen_count);
+    completion_wait(&sdiodev->freezer->thread_freeze, ZX_TIME_INFINITE);
     sdio_claim_host(sdiodev->func1);
     res = brcmf_sdio_sleep(sdiodev->bus, true);
     sdio_release_host(sdiodev->func1);
@@ -811,7 +810,7 @@ static void brcmf_sdiod_freezer_off(struct brcmf_sdio_dev* sdiodev) {
     brcmf_sdio_sleep(sdiodev->bus, false);
     sdio_release_host(sdiodev->func1);
     atomic_store(&sdiodev->freezer->freezing, 0);
-    complete_all(&sdiodev->freezer->resumed);
+    completion_signal(&sdiodev->freezer->resumed);
 }
 
 bool brcmf_sdiod_freezing(struct brcmf_sdio_dev* sdiodev) {
@@ -823,7 +822,9 @@ void brcmf_sdiod_try_freeze(struct brcmf_sdio_dev* sdiodev) {
         return;
     }
     sdiodev->freezer->frozen_count++;
-    wake_up(&sdiodev->freezer->thread_freeze);
+    if (atomic_load(&sdiodev->freezer->thread_count) == sdiodev->freezer->frozen_count) {
+        completion_signal(&sdiodev->freezer->thread_freeze);
+    }
     completion_wait(&sdiodev->freezer->resumed, ZX_TIME_INFINITE);
 }
 

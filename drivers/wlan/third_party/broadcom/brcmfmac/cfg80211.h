@@ -235,14 +235,13 @@ struct escan_info {
 /**
  * struct brcmf_cfg80211_vif_event - virtual interface event information.
  *
- * @vif_wq: waitqueue awaiting interface event from firmware.
+ * @vif_event_wait: Completion awaiting interface event from firmware.
  * @vif_event_lock: protects other members in this structure.
- * @vif_complete: completion for net attach.
  * @action: either add, change, or delete.
  * @vif: virtual interface object related to the event.
  */
 struct brcmf_cfg80211_vif_event {
-    wait_queue_head_t vif_wq;
+    completion_t vif_event_wait;
     mtx_t vif_event_lock;
     uint8_t action;
     struct brcmf_cfg80211_vif* vif;
@@ -255,8 +254,7 @@ struct brcmf_cfg80211_vif_event {
  * @pre_pmmode: firmware PM mode at entering suspend.
  * @nd: net dectect data.
  * @nd_info: helper struct to pass to cfg80211.
- * @nd_data_wait: wait queue to sync net detect data.
- * @nd_data_completed: completion for net detect data.
+ * @nd_data_wait: Completion to sync net detect data.
  * @nd_enabled: net detect enabled.
  */
 struct brcmf_cfg80211_wowl {
@@ -264,8 +262,7 @@ struct brcmf_cfg80211_wowl {
     uint32_t pre_pmmode;
     struct cfg80211_wowlan_nd_match* nd;
     struct cfg80211_wowlan_nd_info* nd_info;
-    wait_queue_head_t nd_data_wait;
-    bool nd_data_completed;
+    completion_t nd_data_wait;
     bool nd_enabled;
 };
 
@@ -301,6 +298,7 @@ struct brcmf_cfg80211_wowl {
  * @vif_list: linked list of vif instances.
  * @vif_cnt: number of vif instances.
  * @vif_event: vif event signalling.
+ * @vif_event_pending_action: If vif_event is set, this is what it's waiting for.
  * @wowl: wowl related information.
  * @pno: information of pno module.
  */
@@ -331,6 +329,7 @@ struct brcmf_cfg80211_info {
     struct work_struct escan_timeout_work;
     struct list_head vif_list;
     struct brcmf_cfg80211_vif_event vif_event;
+    uint8_t vif_event_pending_action;
     completion_t vif_disabled;
     struct brcmu_d11inf d11inf;
     struct brcmf_assoclist_le assoclist;
@@ -404,10 +403,11 @@ zx_status_t brcmf_vif_set_mgmt_ie(struct brcmf_cfg80211_vif* vif, int32_t pktfla
 zx_status_t brcmf_vif_clear_mgmt_ies(struct brcmf_cfg80211_vif* vif);
 uint16_t channel_to_chanspec(struct brcmu_d11inf* d11inf, struct ieee80211_channel* ch);
 bool brcmf_get_vif_state_any(struct brcmf_cfg80211_info* cfg, unsigned long state);
-void brcmf_cfg80211_arm_vif_event(struct brcmf_cfg80211_info* cfg, struct brcmf_cfg80211_vif* vif);
+void brcmf_cfg80211_arm_vif_event(struct brcmf_cfg80211_info* cfg, struct brcmf_cfg80211_vif* vif,
+                                  uint8_t pending_action);
+void brcmf_cfg80211_disarm_vif_event(struct brcmf_cfg80211_info* cfg);
 bool brcmf_cfg80211_vif_event_armed(struct brcmf_cfg80211_info* cfg);
-uint32_t brcmf_cfg80211_wait_vif_event(struct brcmf_cfg80211_info* cfg, uint8_t action,
-                                       ulong timeout);
+zx_status_t brcmf_cfg80211_wait_vif_event(struct brcmf_cfg80211_info* cfg, zx_duration_t timeout);
 zx_status_t brcmf_notify_escan_complete(struct brcmf_cfg80211_info* cfg, struct brcmf_if* ifp,
                                         bool aborted, bool fw_abort);
 void brcmf_set_mpc(struct brcmf_if* ndev, int mpc);

@@ -252,8 +252,7 @@ struct brcmf_msgbuf {
     uint16_t data_seq_no;
     uint16_t ioctl_seq_no;
     uint32_t reqid;
-    wait_queue_head_t ioctl_resp_wait;
-    bool ctl_completed;
+    completion_t ioctl_resp_wait;
 
     struct brcmf_msgbuf_pktids* tx_pktids;
     struct brcmf_msgbuf_pktids* rx_pktids;
@@ -453,33 +452,30 @@ static zx_status_t brcmf_msgbuf_tx_ioctl(struct brcmf_pub* drvr, int ifidx, uint
     return err;
 }
 
-static uint32_t brcmf_msgbuf_ioctl_resp_wait(struct brcmf_msgbuf* msgbuf) {
-    return wait_event_timeout(msgbuf->ioctl_resp_wait, msgbuf->ctl_completed,
-                              MSGBUF_IOCTL_RESP_TIMEOUT_MSEC);
+static zx_status_t brcmf_msgbuf_ioctl_resp_wait(struct brcmf_msgbuf* msgbuf) {
+    return completion_wait(&msgbuf->ioctl_resp_wait, ZX_MSEC(MSGBUF_IOCTL_RESP_TIMEOUT_MSEC));
 }
 
 static void brcmf_msgbuf_ioctl_resp_wake(struct brcmf_msgbuf* msgbuf) {
-    msgbuf->ctl_completed = true;
-    wake_up(&msgbuf->ioctl_resp_wait);
+    completion_signal(&msgbuf->ioctl_resp_wait);
 }
 
 static zx_status_t brcmf_msgbuf_query_dcmd(struct brcmf_pub* drvr, int ifidx, uint cmd, void* buf,
                                            uint len, zx_status_t* fwerr) {
     struct brcmf_msgbuf* msgbuf = (struct brcmf_msgbuf*)drvr->proto->pd;
     struct sk_buff* skb = NULL;
-    uint32_t time_left;
     zx_status_t err;
 
     brcmf_dbg(MSGBUF, "ifidx=%d, cmd=%d, len=%d\n", ifidx, cmd, len);
     *fwerr = ZX_OK;
-    msgbuf->ctl_completed = false;
+    completion_reset(&msgbuf->ioctl_resp_wait);
     err = brcmf_msgbuf_tx_ioctl(drvr, ifidx, cmd, buf, len);
     if (err != ZX_OK) {
         return err;
     }
 
-    time_left = brcmf_msgbuf_ioctl_resp_wait(msgbuf);
-    if (time_left == 0) {
+    err = brcmf_msgbuf_ioctl_resp_wait(msgbuf);
+    if (err != ZX_OK) {
         brcmf_err("Timeout on response for query command\n");
         return ZX_ERR_IO;
     }
@@ -1366,7 +1362,7 @@ zx_status_t brcmf_proto_msgbuf_attach(struct brcmf_pub* drvr) {
     drvr->proto->rxreorder = brcmf_msgbuf_rxreorder;
     drvr->proto->pd = msgbuf;
 
-    init_waitqueue_head(&msgbuf->ioctl_resp_wait);
+    msgbuf->ioctl_resp_wait = COMPLETION_INIT;
 
     msgbuf->commonrings = (struct brcmf_commonring**)if_msgbuf->commonrings;
     msgbuf->flowrings = (struct brcmf_commonring**)if_msgbuf->flowrings;

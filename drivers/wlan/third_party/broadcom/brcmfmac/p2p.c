@@ -1861,7 +1861,6 @@ zx_status_t brcmf_p2p_ifchange(struct brcmf_cfg80211_info* cfg,
     struct brcmf_cfg80211_vif* vif;
     struct brcmf_fil_p2p_if_le if_request;
     zx_status_t err;
-    uint32_t time_left;
     uint16_t chanspec;
 
     brcmf_dbg(TRACE, "Enter\n");
@@ -1888,17 +1887,26 @@ zx_status_t brcmf_p2p_ifchange(struct brcmf_cfg80211_info* cfg,
     if_request.chspec = chanspec;
     memcpy(if_request.addr, p2p->int_addr, sizeof(if_request.addr));
 
-    brcmf_cfg80211_arm_vif_event(cfg, vif);
+    // Every code path but this one returns ZX_ERR_UNAVAILBLE if another event was left armed.
+    // It may be a bug that the test was omitted here, or maybe this is a special case that
+    // needs to be concurrent (but I doubt it, because the code doesn't support concurrency
+    // at all). After we get the wlan-generic driver, and see whether we need to support
+    // concurrency, either put in a paranoid-test like in all the other code paths, or support
+    // it properly.
+    if (brcmf_cfg80211_vif_event_armed(cfg)) {
+        brcmf_err("TODO(cphoenix): Concurrent vif events should never happen.");
+    }
+
+    brcmf_cfg80211_arm_vif_event(cfg, vif, BRCMF_E_IF_CHANGE);
     err = brcmf_fil_iovar_data_set(vif->ifp, "p2p_ifupd", &if_request, sizeof(if_request));
     if (err != ZX_OK) {
         brcmf_err("p2p_ifupd FAILED, err=%d\n", err);
-        brcmf_cfg80211_arm_vif_event(cfg, NULL);
+        brcmf_cfg80211_disarm_vif_event(cfg);
         return err;
     }
-    time_left = brcmf_cfg80211_wait_vif_event(cfg, BRCMF_E_IF_CHANGE,
-                                              BRCMF_VIF_EVENT_TIMEOUT_MSEC);
-    brcmf_cfg80211_arm_vif_event(cfg, NULL);
-    if (time_left == 0) {
+    err = brcmf_cfg80211_wait_vif_event(cfg, ZX_MSEC(BRCMF_VIF_EVENT_TIMEOUT_MSEC));
+    brcmf_cfg80211_disarm_vif_event(cfg);
+    if (err != ZX_OK) {
         brcmf_err("No BRCMF_E_IF_CHANGE event received\n");
         return ZX_ERR_IO;
     }
@@ -1959,7 +1967,6 @@ static zx_status_t brcmf_p2p_create_p2pdev(struct brcmf_p2p_info* p2p, struct wi
     struct brcmf_if* p2p_ifp;
     struct brcmf_if* pri_ifp;
     zx_status_t err;
-    uint32_t time_left;
     uint32_t bsscfgidx;
 
     if (dev_out) {
@@ -1980,7 +1987,7 @@ static zx_status_t brcmf_p2p_create_p2pdev(struct brcmf_p2p_info* p2p, struct wi
     brcmf_p2p_generate_bss_mac(p2p, addr);
     brcmf_p2p_set_firmware(pri_ifp, p2p->dev_addr);
 
-    brcmf_cfg80211_arm_vif_event(p2p->cfg, p2p_vif);
+    brcmf_cfg80211_arm_vif_event(p2p->cfg, p2p_vif, BRCMF_E_IF_ADD);
     brcmf_fweh_p2pdev_setup(pri_ifp, true);
 
     /* Initialize P2P Discovery in the firmware */
@@ -1988,15 +1995,15 @@ static zx_status_t brcmf_p2p_create_p2pdev(struct brcmf_p2p_info* p2p, struct wi
     if (err != ZX_OK) {
         brcmf_err("set p2p_disc error\n");
         brcmf_fweh_p2pdev_setup(pri_ifp, false);
-        brcmf_cfg80211_arm_vif_event(p2p->cfg, NULL);
+        brcmf_cfg80211_disarm_vif_event(p2p->cfg);
         goto fail;
     }
 
     /* wait for firmware event */
-    time_left = brcmf_cfg80211_wait_vif_event(p2p->cfg, BRCMF_E_IF_ADD, BRCMF_VIF_EVENT_TIMEOUT_MSEC);
-    brcmf_cfg80211_arm_vif_event(p2p->cfg, NULL);
+    err = brcmf_cfg80211_wait_vif_event(p2p->cfg, ZX_MSEC(BRCMF_VIF_EVENT_TIMEOUT_MSEC));
+    brcmf_cfg80211_disarm_vif_event(p2p->cfg);
     brcmf_fweh_p2pdev_setup(pri_ifp, false);
-    if (time_left == 0) {
+    if (err != ZX_OK) {
         brcmf_err("timeout occurred\n");
         err = ZX_ERR_IO;
         goto fail;
@@ -2049,7 +2056,6 @@ zx_status_t brcmf_p2p_add_vif(struct wiphy* wiphy, const char* name,
     struct brcmf_cfg80211_vif* vif;
     enum brcmf_fil_p2p_if_types iftype;
     zx_status_t err;
-    uint32_t time_left;
 
     if (vif_out) {
         *vif_out = NULL;
@@ -2079,18 +2085,18 @@ zx_status_t brcmf_p2p_add_vif(struct wiphy* wiphy, const char* name,
     if (err != ZX_OK) {
         return err;
     }
-    brcmf_cfg80211_arm_vif_event(cfg, vif);
+    brcmf_cfg80211_arm_vif_event(cfg, vif, BRCMF_E_IF_ADD);
 
     err = brcmf_p2p_request_p2p_if(&cfg->p2p, ifp, cfg->p2p.int_addr, iftype);
     if (err != ZX_OK) {
-        brcmf_cfg80211_arm_vif_event(cfg, NULL);
+        brcmf_cfg80211_disarm_vif_event(cfg);
         goto fail;
     }
 
     /* wait for firmware event */
-    time_left = brcmf_cfg80211_wait_vif_event(cfg, BRCMF_E_IF_ADD, BRCMF_VIF_EVENT_TIMEOUT_MSEC);
-    brcmf_cfg80211_arm_vif_event(cfg, NULL);
-    if (time_left == 0) {
+    err = brcmf_cfg80211_wait_vif_event(cfg, ZX_MSEC(BRCMF_VIF_EVENT_TIMEOUT_MSEC));
+    brcmf_cfg80211_disarm_vif_event(cfg);
+    if (err != ZX_OK) {
         brcmf_err("timeout occurred\n");
         err = ZX_ERR_IO;
         goto fail;
@@ -2143,13 +2149,12 @@ zx_status_t brcmf_p2p_del_vif(struct wiphy* wiphy, struct wireless_dev* wdev) {
     enum nl80211_iftype iftype;
     bool wait_for_disable = false;
     zx_status_t err;
-    uint32_t time_left;
 
     brcmf_dbg(TRACE, "delete P2P vif\n");
     vif = container_of(wdev, struct brcmf_cfg80211_vif, wdev);
 
     iftype = vif->wdev.iftype;
-    brcmf_cfg80211_arm_vif_event(cfg, vif);
+    brcmf_cfg80211_arm_vif_event(cfg, vif, BRCMF_E_IF_DEL);
     switch (iftype) {
     case NL80211_IFTYPE_P2P_CLIENT:
         if (brcmf_test_bit_in_array(BRCMF_VIF_STATUS_DISCONNECTING, &vif->sme_state)) {
@@ -2189,16 +2194,14 @@ zx_status_t brcmf_p2p_del_vif(struct wiphy* wiphy, struct wireless_dev* wdev) {
     }
     if (err == ZX_OK) {
         /* wait for firmware event */
-        time_left = brcmf_cfg80211_wait_vif_event(cfg, BRCMF_E_IF_DEL, BRCMF_VIF_EVENT_TIMEOUT_MSEC);
-        if (time_left == 0) {
+        err = brcmf_cfg80211_wait_vif_event(cfg, ZX_MSEC(BRCMF_VIF_EVENT_TIMEOUT_MSEC));
+        if (err != ZX_OK) {
             err = ZX_ERR_IO;
-        } else {
-            err = ZX_OK;
         }
     }
     brcmf_remove_interface(vif->ifp, true);
 
-    brcmf_cfg80211_arm_vif_event(cfg, NULL);
+    brcmf_cfg80211_disarm_vif_event(cfg);
     if (iftype != NL80211_IFTYPE_P2P_DEVICE) {
         p2p->bss_idx[P2PAPI_BSSCFG_CONNECTION].vif = NULL;
     }

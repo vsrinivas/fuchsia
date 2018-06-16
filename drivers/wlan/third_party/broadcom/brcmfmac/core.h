@@ -200,12 +200,12 @@ struct brcmf_if {
     uint8_t netif_stop;
     //spinlock_t netif_stop_lock;
     atomic_int pend_8021x_cnt;
-    wait_queue_head_t pend_8021x_wait;
+    completion_t pend_8021x_wait;
     struct in6_addr ipv6_addr_tbl[NDOL_MAX_ENTRIES];
     uint8_t ipv6addr_idx;
 };
 
-bool brcmf_netdev_wait_pend8021x(struct brcmf_if* ifp);
+void brcmf_netdev_wait_pend8021x(struct brcmf_if* ifp);
 
 /* Return pointer to interface name */
 char* brcmf_ifname(struct brcmf_if* ifp);
