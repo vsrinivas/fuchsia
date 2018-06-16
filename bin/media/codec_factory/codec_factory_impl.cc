@@ -41,9 +41,7 @@ void CodecFactoryImpl::CreateSelfOwned(
 
 CodecFactoryImpl::CodecFactoryImpl(
     fuchsia::sys::StartupContext* startup_context, zx::channel channel)
-    : startup_context_(startup_context),
-      channel_temp_(std::move(channel)),
-      current_request_(kRequest_None) {}
+    : startup_context_(startup_context), channel_temp_(std::move(channel)) {}
 
 // TODO(dustingreen): Seems simpler to avoid channel_temp_ and OwnSelf() and
 // just have CreateSelfOwned() directly create the binding.
@@ -52,35 +50,9 @@ void CodecFactoryImpl::OwnSelf(std::unique_ptr<CodecFactoryImpl> self) {
       std::make_unique<BindingType>(std::move(self), std::move(channel_temp_));
 }
 
-void CodecFactoryImpl::CreateAudioDecoder_Begin_Params(
-    fuchsia::mediacodec::CreateAudioDecoder_Params params1) {
-  if (params_CreateAudioDecoder_ || current_request_ != kRequest_None) {
-    // TODO(dustingreen): Send Epitaph when possible.  Probably separate the
-    // state checks to be able to give better string in the epitaph.  Same goes
-    // for other instances of binding_.reset();
-    binding_.reset();
-    return;
-  }
-  // This is a copy of some parts of the struct and a move of other parts...
-  params_CreateAudioDecoder_ =
-      std::make_unique<fuchsia::mediacodec::CreateAudioDecoder_Params>(
-          std::move(params1));
-  current_request_ = kRequest_CreateAudioDecoder;
-}
-
-void CodecFactoryImpl::CreateAudioDecoder_Go(
-    ::fidl::InterfaceRequest<fuchsia::mediacodec::Codec> audio_decoder) {
-  if (!params_CreateAudioDecoder_ ||
-      current_request_ != kRequest_CreateAudioDecoder) {
-    binding_.reset();
-    return;
-  }
-  // Set current_request_ to kRequest_None early since we're on a single thread
-  // anyway and this is just for enforcing request burst rules.
-  current_request_ = kRequest_None;
-  std::unique_ptr<fuchsia::mediacodec::CreateAudioDecoder_Params> params =
-      std::move(params_CreateAudioDecoder_);
-
+void CodecFactoryImpl::CreateDecoder(
+    fuchsia::mediacodec::CreateDecoder_Params params,
+    ::fidl::InterfaceRequest<fuchsia::mediacodec::Codec> decoder) {
   // We don't have any need to bind the codec_request locally to this process.
   // Instead, we find where to delegate the request to.
 
@@ -112,33 +84,7 @@ void CodecFactoryImpl::CreateAudioDecoder_Go(
   // confusion re. why we have several implementations of CodecFactory, but we
   // can comment why.  The presently-running implementation is the main
   // implementation that clients use directly.
-  //
-  // TODO(dustingreen): The CodecFactory will need to know (or detect) what
-  // version interface can be handled by a given codec, and potentially convert
-  // the incoming request down to an older version, or if not possible, refuse
-  // to pick that codec.  In this context, older version can mean not calling a
-  // method to set an optional non-critical hint parameter if it's not
-  // implemented by the codec, or not selecting that codec if a critical
-  // parameter method is not implemented by that codec and the client did use
-  // that critical parameter method.  A critical parameter method can be a
-  // _Begin_ method that's newer than the codec and has some critical fields in
-  // it, or can be an optional but critical-if-used method that the codec server
-  // doesn't implement.  Or we could just rip this message burst stuff out and
-  // assume versions will always match for now, or add a better way to FIDL
-  // itself.  If we want to handle versions, the factory will typically want to
-  // already know what interface version each codec is at, to avoid false
-  // starts.  Most likely a codec will only be expected to implement the latest
-  // version, not old deprecated versions, and the CodecFactory will be
-  // responsible for converting to the codec's implemented version.  The only
-  // case that doesn't handle is a codec that's too new for the OS, but a codec
-  // could be built targetting an older OS version and be usable from that older
-  // version forward (unless a client demands a new critical thing that the old
-  // version can't do), or could choose to implement an old version _and_ the
-  // newest version at the time it is written/updated.
-  //
-  // Send the message burst of this request.
-  factory_delegate->CreateAudioDecoder_Begin_Params(std::move(*params));
-  factory_delegate->CreateAudioDecoder_Go(std::move(audio_decoder));
+  factory_delegate->CreateDecoder(std::move(params), std::move(decoder));
 
   // We don't want to be forced to keep app_controller around.  When using an
   // isolate, we trust that the ApplicationController will kill the app if we

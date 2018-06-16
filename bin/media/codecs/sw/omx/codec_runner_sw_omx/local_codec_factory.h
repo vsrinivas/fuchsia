@@ -12,8 +12,7 @@
 
 #include <functional>
 
-// The LocalCodecFactory implements CodecFactory, but it's a very limited
-// implementation that isn't expected to ever grow into a full-fledged
+// The LocalCodecFactory implements CodecFactory, but it's a very limited local
 // implementation.  The main implementation of CodecFactory is in
 // codec_codec_factory_impl.h/cc.
 //
@@ -24,11 +23,9 @@
 // the owner wants.
 //
 // This class does not need to deal with every potential version of a codec
-// creation request.  Instead, this class only needs to deal with the latest
-// parameter set, as the main CodecFactory will have already converted any older
-// parameter set to the latest parameter set.  At the moment there's only one
-// parameter set, but it's still important to avoid this class becoming more
-// than was really intended.
+// creation request.  Instead, this class only needs to deal with requests made
+// by the latest main CodecFactory implementation, as the main CodecFactory will
+// have already converted any older-style requests to the latest style.
 //
 // Any given instance of this class is only capable of creating the codec type
 // for which it was instantiated, based on which constructor was called.  This
@@ -36,12 +33,8 @@
 // mechanical which is why it's a separate class to deal with the de-fan without
 // really applying any real strategy in this class.
 //
-// TODO: We could consider using a different interface for this which only ever
-// knows how to convey the latest parameter set, maybe all at once, but ... to
-// some degree that seems like a pointless re-stating of part of the
-// CodecFactory interface.  In any case, the interaction between the main
-// CodecFactory and built-in SW codec isolates is something that only needs to
-// handle the same build version on both sides.
+// The interaction between the main CodecFactory and built-in SW codec isolates
+// is something that only needs to handle the same build version on both sides.
 
 namespace codec_runner {
 class CodecRunner;
@@ -53,7 +46,7 @@ class LocalCodecFactory : public fuchsia::mediacodec::CodecFactory {
  public:
   using BindAudioDecoderCallback = std::function<void(
       fidl::InterfaceRequest<fuchsia::mediacodec::Codec>,
-      fuchsia::mediacodec::CreateAudioDecoder_Params audio_params)>;
+      fuchsia::mediacodec::CreateDecoder_Params audio_params)>;
 
   // This creates a self-owned CodecFactory instance that knows how to create
   // any of the codecs supported by this isolate process, regardless of which
@@ -62,17 +55,15 @@ class LocalCodecFactory : public fuchsia::mediacodec::CodecFactory {
       async_t* fidl_async, thrd_t fidl_thread,
       fidl::InterfaceRequest<fuchsia::mediacodec::CodecFactory> request);
 
-  virtual void CreateAudioDecoder_Begin_Params(
-      fuchsia::mediacodec::CreateAudioDecoder_Params audio_decoder_params_1)
-      override;
-  virtual void CreateAudioDecoder_Go(
+  virtual void CreateDecoder(
+      fuchsia::mediacodec::CreateDecoder_Params audio_decoder_params,
       ::fidl::InterfaceRequest<fuchsia::mediacodec::Codec> audio_decoder)
       override;
 
-  // TODO: Implement interface methods for:
+  // TODO(dustingreen): Implement interface methods for:
   // audio encoder
-  // video decoder
   // video encoder
+  // (or combined)
 
  private:
   enum CodecType {
@@ -88,11 +79,11 @@ class LocalCodecFactory : public fuchsia::mediacodec::CodecFactory {
   // InterfaceRequest<CodecFactory>
   LocalCodecFactory(async_t* fidl_async, thrd_t fidl_thread);
 
-  void Common_Begin(CodecType codec_type);
-  void Common_Go(
+  void CreateCommon(
+      CodecType codec_type,
       ::fidl::InterfaceRequest<fuchsia::mediacodec::Codec> codec_request,
-      CodecType expected_codec_type, std::string mime_type,
-      std::function<void(codec_runner::CodecRunner* codec_runner)>
+      std::string mime_type,
+      fit::function<void(codec_runner::CodecRunner* codec_runner)>
           set_type_specific_params);
 
   // Some combinations of mime type and codec lib need a wrapper to compensate
@@ -127,14 +118,6 @@ class LocalCodecFactory : public fuchsia::mediacodec::CodecFactory {
   typedef fidl::Binding<CodecFactory, std::unique_ptr<LocalCodecFactory>>
       BindingType;
   std::unique_ptr<BindingType> binding_;
-
-  CodecType codec_type_;
-
-  std::unique_ptr<fuchsia::mediacodec::CreateAudioDecoder_Params>
-      audio_decoder_params_;
-  // TODO: CreateAudioEncoder_Params1 audio_encoder_params_;
-  // TODO: CreateVideoDecoder_Params1 video_decoder_params_;
-  // TODO: CreateVideoEncoder_Params1 video_encoder_params_;
 
   static CodecStrategy codec_strategies[];
 };

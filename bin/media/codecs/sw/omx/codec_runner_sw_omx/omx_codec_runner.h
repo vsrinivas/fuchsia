@@ -110,10 +110,10 @@ namespace codec_runner {
 // thread by posting a lambda (ordered with respect to others posted the same
 // way), then that posted lambda sends an output message to the channel.
 //
-// TODO: We may be able to avoid posting emitted output over to the async_t
-// thread for sending once we know how event sending works and what it does or
-// doesn't guarantee.  For now we post over there to avoid being fragile across
-// any event-related changes.
+// TODO(dustingreen): We may be able to avoid posting emitted output over to the
+// async_t thread for sending once we know how event sending works and what it
+// does or doesn't guarantee.  For now we post over there to avoid being fragile
+// across any event-related changes.
 
 // Handling of OMX_EventPortSettingsChanged:
 //
@@ -198,12 +198,12 @@ class OmxCodecRunner : public CodecRunner {
 
   // Only one of these is called, corresponding to which codec type was
   // requested via CodecFactory.
-  void SetAudioDecoderParams(fuchsia::mediacodec::CreateAudioDecoder_Params
-                                 audio_decoder_params) override;
-  // TODO:
+  void SetDecoderParams(
+      fuchsia::mediacodec::CreateDecoder_Params decoder_params) override;
+  // TODO(dustingreen):
   // virtual void SetAudioEncoderParams(...) override;
-  // virtual void SetVideoDecoderParams(...) override;
   // virtual void SetVideoEncoderParams(...) override;
+  // (or combined)
 
   // These are called by CodecRunner at the appropriate times.
   void ComputeInputConstraints() override;
@@ -257,8 +257,8 @@ class OmxCodecRunner : public CodecRunner {
   static constexpr uint32_t kOutput = 1;
   static constexpr uint32_t kPortCount = 2;
 
-  // TODO: maybe supporting non-VMO buffers would justify having a base class +
-  // a factory method in OmxCodecRunner maybe.
+  // TODO(dustingreen): maybe supporting non-VMO buffers would justify having a
+  // base class + a factory method in OmxCodecRunner maybe.
   //
   // These are tracked via shared_ptr<const Buffer>, to homogenize
   // buffer-per-packet mode vs. single-buffer mode.
@@ -418,11 +418,11 @@ class OmxCodecRunner : public CodecRunner {
     bool output_end_of_stream_ = false;
   };
 
-  // TODO: For now this is essentially just a combined version of the OMX format
-  // structures for audio and video, but this is not how we want the codec
-  // interface to describe format (at least not in terms of the field names and
-  // inner struct names if nothing else), so this won't be the way the client
-  // sees the format.
+  // TODO(dustingreen): For now this is essentially just a combined version of
+  // the OMX format structures for audio and video, but this is not how we want
+  // the codec interface to describe format (at least not in terms of the field
+  // names and inner struct names if nothing else), so this won't be the way the
+  // client sees the format.
   struct OMX_GENERIC_PORT_FORMAT {
     // While this is the same structure as out_port_def_, for uncompressed video
     // output at least, it's important that this copy is filled out after the
@@ -448,13 +448,13 @@ class OmxCodecRunner : public CodecRunner {
         // OMX_AUDIO_WMAPROFILETYPE depending on "context" which is presumably
         // depending on format.eEncoding.
         //
-        // TODO: We'll need to have a list of eProfile values here if we really
-        // want to plumb all the info - we're not currently sweeping
-        // nProfileIndex until we hit OMX_ErrorNoMore.
+        // TODO(dustingreen): We'll need to have a list of eProfile values here
+        // if we really want to plumb all the info - we're not currently
+        // sweeping nProfileIndex until we hit OMX_ErrorNoMore.
         // OMX_AUDIO_PARAM_ANDROID_PROFILETYPE android_profile;
       } audio;
       struct {
-        // TODO: video
+        // TODO(dustingreen): video
       } video;
     };
   };
@@ -498,17 +498,18 @@ class OmxCodecRunner : public CodecRunner {
   // We separate state into two chunks - one for Codec-related state and one for
   // OMX-related state.
   //
-  // TODO: Decide whether to split this class into two classes.  However, it's
-  // likely more fruitful to treat the Codec client as if it will always behave
-  // perfectly, and move any Codec interface usage validation into a separate
-  // process that sits in between a Codec client and each Codec implementation.
-  // Once we do that, the hope is that there would remain little point in a
-  // separate class to handle Codec interface aspects since those aspects would
-  // be pretty much 1:1 with incoming Codec method calls, and there's not really
-  // any fundamentally better middle interface with any better representation
-  // than the Codec interface itself is already providing.  The fact is, the
-  // translation between Codec interface and OMX interface isn't super simple,
-  // and it has to happen somewhere.  This class is that somewhere.
+  // TODO(dustingreen): Decide whether to split this class into two classes.
+  // However, it's likely more fruitful to treat the Codec client as if it will
+  // always behave perfectly, and move any Codec interface usage validation into
+  // a separate process that sits in between a Codec client and each Codec
+  // implementation. Once we do that, the hope is that there would remain little
+  // point in a separate class to handle Codec interface aspects since those
+  // aspects would be pretty much 1:1 with incoming Codec method calls, and
+  // there's not really any fundamentally better middle interface with any
+  // better representation than the Codec interface itself is already providing.
+  // The fact is, the translation between Codec interface and OMX interface
+  // isn't super simple, and it has to happen somewhere.  This class is that
+  // somewhere.
   //
 
   //
@@ -560,13 +561,10 @@ class OmxCodecRunner : public CodecRunner {
 
   bool enable_on_stream_failed_ = false;
 
-  std::unique_ptr<fuchsia::mediacodec::CreateAudioDecoder_Params>
-      audio_decoder_params_;
-  // TODO: Add these - consider whether/how to factor out strategy, consistent
-  // with overall factoring to compensate for particular OMX codec quirks.
-  // audio_encoder_params_
-  // video_decoder_params_
-  // video_encoder_params_
+  std::unique_ptr<fuchsia::mediacodec::CreateDecoder_Params> decoder_params_;
+  // TODO(dustingreen): Add these - consider whether/how to factor out strategy,
+  // consistent with overall factoring to compensate for particular OMX codec
+  // quirks. audio_encoder_params_ video_encoder_params_ (or combined)
 
   // Regardless of which type of codec was created, these track the input
   // CodecFormatDetails.
@@ -607,7 +605,8 @@ class OmxCodecRunner : public CodecRunner {
   // need to associate this with the buffer_constraints_ordinal that OMX said
   // meh to.
   //
-  // TODO: Prove that this is needed or not needed, and keep or remove.
+  // TODO(dustingreen): Prove that this is needed or not needed, and keep or
+  // remove.
   uint64_t omx_meh_output_buffer_constraints_version_ordinal_ = 0;
 
   // Allocating these values and sending these values are tracked separately,
@@ -685,8 +684,8 @@ class OmxCodecRunner : public CodecRunner {
   // level.  A size of 0 means not-allocated at protocol level.  This is used
   // to check for nonsense from the client.
   //
-  // TODO: Consider moving these into Packet, despite probably losing on
-  // packing efficiency.
+  // TODO(dustingreen): Consider moving these into Packet, despite probably
+  // losing on packing efficiency.
   std::vector<bool> packet_free_bits_[kPortCount];
 
   // This is the buffer_lifetime_ordinal from SetOutputBufferSettings() or
@@ -914,9 +913,9 @@ class OmxCodecRunner : public CodecRunner {
   // still can change up or down based on other parameters being set.  See above
   // re. how we smooth over any such input nBufferSize changes.
   //
-  // TODO: We should only really be using this for asserts to do with the input
-  // buffer sizes - if that remains true then we could replace this with OMX_U32
-  // omx_initial_input_nBufferSize_ or similar.
+  // TODO(dustingreen): We should only really be using this for asserts to do
+  // with the input buffer sizes - if that remains true then we could replace
+  // this with OMX_U32 omx_initial_input_nBufferSize_ or similar.
   OMX_PARAM_PORTDEFINITIONTYPE omx_initial_port_def_[kPortCount] = {};
 
   // This isn't the latest we've seen from OMX via any GetParameter call.

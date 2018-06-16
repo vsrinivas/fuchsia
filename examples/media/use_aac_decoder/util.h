@@ -36,12 +36,15 @@ std::unique_ptr<uint8_t[]> read_whole_file(const char* filename, size_t* size);
 // Post to async in a way that's guaranteed to run the posted work in the same
 // order as the posting order (is the intent - if async::PostTask ever changes
 // to not guarantee order, we'll need to work around that here).
+//
+// TODO(dustingreen): Determine if async::PostTask() intends to strictly
+// guarantee order.
 template <typename L>
 void PostSerial(async_t* async, L&& to_run) {
-  // TODO(dustingreen): This should just forward to
-  // async::PostTask(async, to_run, ZX_TIME_INFINITE) without any wrapping
-  // needed, once I figure out why attempts to use async::PostTask() directly
-  // didn't work before.
+  // TODO(dustingreen): This should just forward to async::PostTask(async,
+  // to_run) without any wrapping needed, once I figure out why attempts to use
+  // async::PostTask() directly didn't work before.  Hopefully this can just
+  // switch to fit::function soon.
   std::shared_ptr<L> shared = std::make_shared<L>(std::move(to_run));
   std::function<void(void)> copyable = [shared]() {
     L foo = std::move(*shared.get());

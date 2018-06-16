@@ -213,7 +213,7 @@ void use_aac_decoder(fuchsia::mediacodec::CodecFactoryPtr codec_factory,
   }
 
   // Set all fields to 0 / default.
-  fuchsia::mediacodec::CreateAudioDecoder_Params params = {};
+  fuchsia::mediacodec::CreateDecoder_Params params = {};
   // TODO(dustingreen): Remove need for ADTS to specify any codec config since
   // it's in-band, and maybe switch this program over to using .mp4 with
   // AudioSpecificConfig() from the .mp4 file.
@@ -232,11 +232,9 @@ void use_aac_decoder(fuchsia::mediacodec::CodecFactoryPtr codec_factory,
   // CodecClient in advance of the channel potentially being closed.
   VLOGF("before CodecClient::CodecClient()...\n");
   CodecClient codec_client(&loop);
-  VLOGF("before codec_factory->CreateAudioDecoder_Begin_Params()...\n");
-  codec_factory->CreateAudioDecoder_Begin_Params(std::move(params));
-  VLOGF("before codec_factory->CreateAudioDecoder_Go()...\n");
-  codec_factory->CreateAudioDecoder_Go(codec_client.GetTheRequestOnce());
-
+  VLOGF("before codec_factory->CreateAudioDecoder().\n");
+  codec_factory->CreateDecoder(std::move(params),
+                               codec_client.GetTheRequestOnce());
   VLOGF("before codec_client.Start()...\n");
   codec_client.Start();
 

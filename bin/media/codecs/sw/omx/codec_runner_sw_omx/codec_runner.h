@@ -31,12 +31,12 @@ class CodecRunner : public fuchsia::mediacodec::Codec {
   // parameters to the CodecRunner.  As such they are not intended to be a
   // complete CodecFactory implementation, nor does this class implement
   // CodecFactory.
-  virtual void SetAudioDecoderParams(
-      fuchsia::mediacodec::CreateAudioDecoder_Params audio_decoder_params) = 0;
-  // TODO:
+  virtual void SetDecoderParams(
+      fuchsia::mediacodec::CreateDecoder_Params decoder_params) = 0;
+  // TODO(dustingreen):
   // virtual void SetAudioEncoderParams(...) = 0;
-  // virtual void SetVideoDecoderParams(...) = 0;
   // virtual void SetVideoEncoderParams(...) = 0;
+  // (or combined)
 
   // Now that type-specific params are set, input_constraints_ can be computed.
   // We want this done before binding the Codec channel so we can immediately

@@ -4,11 +4,13 @@
 
 library fuchsia.mediacodec;
 
-// CreateAudioDecoder_Params
+// CreateDecoder_Params
 //
-// Input parameters for creating an audio decoder.
-struct CreateAudioDecoder_Params {
-  // Input mime type for an audio decoder.
+// Input parameters for creating a decoder (audio or video).
+//
+// TODO(dustingreen): Switch this to a FIDL table instead when possible.
+struct CreateDecoder_Params {
+  // Input mime type for a decoder.
   //
   // The recognized mime types for now:
   // audio/aac
@@ -165,94 +167,40 @@ struct CreateAudioDecoder_Params {
 // instances.
 //
 // The interface methods don't attempt to homogenize all codec types, preferring
-// to have separate dedicated calls for creating audio decoders, audio encoders,
-// video decoders, video encoders.
-//
-// TODO(dustingreen): media::CodecFactory, now that rest of media has moved to
-// fidl2.
+// to have separate dedicated calls for decoders.  TBD whether calls for
+// creating encoders will split up audio vs. video encoders, or be combined.
 [Discoverable]
 interface CodecFactory {
-  // For now, we split requests into separate messages, so that interface
-  // evolution in future is possible given current FIDL constraints.  If FIDL
-  // constraints change, we can change the approach here to more natively use
-  // whatever more convenient mechanism gets added to FIDL.
+  // Rough sequence to create a decoder:
   //
-  // TODO(dustingreen): Move to something more convenient if/when available.
-
-  // Clients should ensure that the sequence of messages that makes up a
-  // request is sent as a burst of adjacent messages. The interface is
-  // intentionally stateful.  Optional additional _Params() style methods can
-  // be added in future even after the interface is locked re. binary
-  // compatibility for old clients, and these new _Params() methods can be
-  // optionally called by new clients to set additional optional parameters,
-  // without breaking old clients.
+  // factory = ConnectToEnvironmentService(CodecFactory);
+  // CreateDecoder_Params params;
+  // [fill out params]
+  // CreateDecoder(params, decoder_request);
   //
-  // A client must place the messages of a request-burst immediately adjacent to
-  // each other, without other messages in between.  This is slightly more
-  // restrictive than is strictly necessary, but is easier to describe and
-  // implement.
+  // See use_aac_decoder code for more detail.
   //
-  // The _Go() message uses the server's parameter state and implicitly resets
-  // the server's incoming parameter state prior to the next received message.
-  // There is no "_Begin()" message to explicitly reset the server's parameter
-  // state.  Therefore, the client should, before sending any message in a
-  // request burst, fully determine what messages and parameters will be sent,
-  // then send them in a burst.  That way if the client errors-out and doesn't
-  // want to make the request after all, no part of the request has yet been
-  // sent.
-  //
-  // "parameter set" - a valid set of _Params()-style messages that together
-  //   give the server a valid set of parameters to use by the time the server
-  //   receives the _Go() message.  Typically these sets would be organized as
-  //   Params1 + Params1_OptionalParam vs. Params2 + Params2_OptionalParam,
-  //   where exactly one base params gets sent + 0 or more optional params.
-  //
-  // Example sequence for an audio decoder:
-  // 1. CreateAudioDecoder_Begin_Params()
-  // 2. CreateAudioDecoder_Go()
+  // TODO(dustingreen): More detail in this comment block.
 
   // Requests:
 
-  // CreateAudioDecoder:
+  // CreateDecoder:
   //
-  // See CreateAudioDecoder_Go() for the request<Codec>.  The
-  // CreateAudioDecoder_Begin_Params() message must be immediately before
-  // CreateAudioDecoder_Go().
+  // decoder_params - See CreateDecoder_Params comments for required
+  // and optional parameters for creating a decoder.
   //
-  // Valid parameter sets:
-  //   * _Params1 - the version 1 parameter set, which so far doesn't have any
-  //     additional optional parameters or any alternate sets.  Currently these
-  //     are just "the parameters" - see the struct comments.
-  //     * So far there is no _Params1_OptionalFoo yet.
-  //   * So far there is no _Params2 yet.
-  1 : CreateAudioDecoder_Begin_Params(
-    CreateAudioDecoder_Params audio_decoder_params);
-
-  // CreateAudioDecoder_Go
-  //
-  // This message must be immediately preceded by
-  // CreateAudioDecoder_Begin_Params().
-  //
-  // audio_decoder is a Codec.NewRequest() which will hopefully be connected to
+  // decoder - a Codec.NewRequest() which will hopefully be connected to
   // a Codec server, or the Codec channel will get closed if no suitable codec
   // can be found.  We don't return any additional Codec-specific status here
   // because finding the Codec is allowed to be fully async, so we don't
   // necessarily yet know on return from this method which Codec will be
   // selected, if any.
-  2 : CreateAudioDecoder_Go(
-    request<Codec> audio_decoder);
+  1: CreateDecoder(
+    CreateDecoder_Params decoder_params,
+    request<Codec> decoder);
 
   // TODO(dustingreen):
-
-  // CreateAudioEncoder:
-  //
-  // TODO
-
-  // CreateVideoDecoder:
-  //
-  // TODO
-
-  // CreateVideoEncoder:
-  //
-  // TODO
+  // CreateAudioEncoder
+  // CreateVideoEncoder
+  // (or combined)
 };

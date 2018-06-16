@@ -327,7 +327,7 @@ bool OmxCodecRunner::Load() {
   return true;
 }
 
-// TODO(dustingreen): this mehod needs to understand how to translate between
+// TODO(dustingreen): this method needs to understand how to translate between
 // Codec and OMX for every entry in local_codec_factory.cc.  That means this
 // method and similar AudioEncoder/VideoDecoder/VideoEncoder methods will likely
 // involve more fan-out to deal with all the formats.
@@ -337,8 +337,8 @@ bool OmxCodecRunner::Load() {
 // handle any format beyond what OMX can describe.  Any format future-proofing
 // belongs in CodecFactory and Codec interfaces (if anywhere), but not here for
 // now.
-void OmxCodecRunner::SetAudioDecoderParams(
-    fuchsia::mediacodec::CreateAudioDecoder_Params audio_decoder_params) {
+void OmxCodecRunner::SetDecoderParams(
+    fuchsia::mediacodec::CreateDecoder_Params audio_decoder_params) {
   struct AudioDecoder {
     std::string_view codec_mime_type;
     std::string_view omx_mime_type;
@@ -365,13 +365,12 @@ void OmxCodecRunner::SetAudioDecoderParams(
     Exit("SetAudioDecoderParams() couldn't find a suitable decoder");
   }
 
-  audio_decoder_params_ =
-      std::make_unique<fuchsia::mediacodec::CreateAudioDecoder_Params>(
-          std::move(audio_decoder_params));
+  decoder_params_ = std::make_unique<fuchsia::mediacodec::CreateDecoder_Params>(
+      std::move(audio_decoder_params));
   initial_input_format_details_ =
       fuchsia::mediacodec::CodecFormatDetails::New();
-  zx_status_t clone_result = audio_decoder_params_->input_details.Clone(
-      initial_input_format_details_.get());
+  zx_status_t clone_result =
+      decoder_params_->input_details.Clone(initial_input_format_details_.get());
   if (clone_result != ZX_OK) {
     Exit("CodecFormatDetails::Clone() failed - exiting");
   }
@@ -2163,7 +2162,7 @@ void OmxCodecRunner::OmxQueueInputPacket(
   assert(omx_state_ == OMX_StateExecuting);
   // We only modify all_packets_[kInput] on StreamControl, so it's ok to read
   // from it outside lock_.
-  if (!audio_decoder_params_->promise_separate_access_units_on_input &&
+  if (!decoder_params_->promise_separate_access_units_on_input &&
       packet.timestamp_ish != 0) {
     Exit(
         "timestamp_ish must be 0 unless promise_separate_access_units_on_input "
@@ -3082,30 +3081,29 @@ OMX_ERRORTYPE OmxCodecRunner::FillBufferDone(
       // The output packet gets recycled later by the client.
       recycle_packet.cancel();
       uint64_t timestamp_ish = 0;
-      if (audio_decoder_params_->promise_separate_access_units_on_input) {
+      if (decoder_params_->promise_separate_access_units_on_input) {
         timestamp_ish = pBuffer->nTimeStamp;
       }
       packet_free_bits_[kOutput][packet->packet_index()] = false;
       PostSerial(
           fidl_async_,
-          [this,
-           p = fuchsia::mediacodec::CodecPacket{
-               .header.buffer_lifetime_ordinal =
-                   packet->buffer_lifetime_ordinal(),
-               .header.packet_index = packet->packet_index(),
-               .stream_lifetime_ordinal = stream_lifetime_ordinal_,
-               .start_offset = pBuffer->nOffset,
-               .valid_length_bytes = pBuffer->nFilledLen,
-               // TODO(dustingreen): verify whether other relevant codecs mess
-               // with this value - set to zero if codec wasn't created with
-               // promise_separate_access_units_on_input.
-               .timestamp_ish = timestamp_ish,
-               // TODO(dustingreen): Figure out what to do for other codec types
-               // here, especially encoders.  Might be able to be true always on
-               // output for OMX, hopefully.
-               .start_access_unit = audio_decoder_params_ ? true : false,
-               .known_end_access_unit = audio_decoder_params_ ? true : false,
-           }] {
+          [this, p = fuchsia::mediacodec::CodecPacket{
+                     .header.buffer_lifetime_ordinal =
+                         packet->buffer_lifetime_ordinal(),
+                     .header.packet_index = packet->packet_index(),
+                     .stream_lifetime_ordinal = stream_lifetime_ordinal_,
+                     .start_offset = pBuffer->nOffset,
+                     .valid_length_bytes = pBuffer->nFilledLen,
+                     // TODO(dustingreen): verify whether other relevant codecs
+                     // mess with this value - set to zero if codec wasn't
+                     // created with promise_separate_access_units_on_input.
+                     .timestamp_ish = timestamp_ish,
+                     // TODO(dustingreen): Figure out what to do for other codec
+                     // types here, especially encoders.  Might be able to be
+                     // true always on output for OMX, hopefully.
+                     .start_access_unit = decoder_params_ ? true : false,
+                     .known_end_access_unit = decoder_params_ ? true : false,
+                 }] {
             binding_->events().OnOutputPacket(std::move(p), false, false);
           });
     }

@@ -14,21 +14,16 @@
 namespace codec_factory {
 
 // There's an instance of CodecFactoryImpl per interface instance, to allow the
-// implementation of this class to be stateful, since that makes it possible to
-// evolve the interface in future, by permitting multiple steps to set up
-// requirements, followed by another call to actually get a codec that meets
-// those requirements.
+// implementation of this class to be stateful.
 class CodecFactoryImpl : public fuchsia::mediacodec::CodecFactory {
  public:
   static void CreateSelfOwned(fuchsia::sys::StartupContext* startup_context,
                               zx::channel request);
 
   // See .fidl file comments.
-  void CreateAudioDecoder_Begin_Params(
-      fuchsia::mediacodec::CreateAudioDecoder_Params params) override;
-  void CreateAudioDecoder_Go(
-      ::fidl::InterfaceRequest<fuchsia::mediacodec::Codec> audio_decoder)
-      override;
+  void CreateDecoder(
+      fuchsia::mediacodec::CreateDecoder_Params params,
+      ::fidl::InterfaceRequest<fuchsia::mediacodec::Codec> decoder) override;
 
  private:
   CodecFactoryImpl(fuchsia::sys::StartupContext* startup_context,
@@ -57,21 +52,6 @@ class CodecFactoryImpl : public fuchsia::mediacodec::CodecFactory {
                         std::unique_ptr<CodecFactoryImpl>>
       BindingType;
   std::unique_ptr<BindingType> binding_;
-
-  // This exists to enforce that each request's message burst is separate from
-  // other requests' message bursts.
-  enum CurrentRequest {
-    kRequest_None,
-    kRequest_CreateAudioDecoder,
-  };
-  CurrentRequest current_request_;
-
-  // If we add a newer separate parameter set like "Params2", we'll need to also
-  // verify that the client is staying within a single parameter set for a
-  // request, not mixing parameter sets.
-
-  std::unique_ptr<fuchsia::mediacodec::CreateAudioDecoder_Params>
-      params_CreateAudioDecoder_;
 };
 
 }  // namespace codec_factory

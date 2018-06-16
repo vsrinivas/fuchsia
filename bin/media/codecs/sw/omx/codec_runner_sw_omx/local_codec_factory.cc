@@ -23,12 +23,12 @@ namespace codec_factory {
 LocalCodecFactory::CodecStrategy LocalCodecFactory::codec_strategies[] = {
     CodecStrategy{kCodecTypeAudioDecoder, "audio/aac", kLibDecoderAac,
                   CreateRawOmxRunner},
-    // TODO: Instead of CreateRawOmxRunner, create a wrapper that deals with the
-    // lack of kLibDecoderAac support for split ADTS headers, which so far is
-    // unique to this mime type.  Until we get the rest working we'll just use
-    // the CreateRawOmxRunner without any wrapper and avoid annoying the broken
-    // Codec in the client code, but the Codec for this mime type should be made
-    // to work correctly one way or another before too long.
+    // TODO(dustingreen): Instead of CreateRawOmxRunner, create a wrapper that
+    // deals with the lack of kLibDecoderAac support for split ADTS headers,
+    // which so far is unique to this mime type.  Until we get the rest working
+    // we'll just use the CreateRawOmxRunner without any wrapper and avoid
+    // annoying the broken Codec in the client code, but the Codec for this mime
+    // type should be made to work correctly one way or another before too long.
     CodecStrategy{kCodecTypeAudioDecoder, "audio/aac-adts", kLibDecoderAac,
                   CreateRawOmxRunner},
 };
@@ -48,66 +48,39 @@ void LocalCodecFactory::CreateSelfOwned(
 }
 
 LocalCodecFactory::LocalCodecFactory(async_t* fidl_async, thrd_t fidl_thread)
-    : fidl_async_(fidl_async),
-      fidl_thread_(fidl_thread),
-      codec_type_(kCodecTypeUnknown) {
+    : fidl_async_(fidl_async), fidl_thread_(fidl_thread) {
   // nothing else to do here
 }
 
 // AudioDecoder:
 
-void LocalCodecFactory::CreateAudioDecoder_Begin_Params(
-    fuchsia::mediacodec::CreateAudioDecoder_Params audio_decoder_params_1) {
-  Common_Begin(kCodecTypeAudioDecoder);
-  audio_decoder_params_ =
-      std::make_unique<fuchsia::mediacodec::CreateAudioDecoder_Params>(
-          std::move(audio_decoder_params_1));
-}
-
-void LocalCodecFactory::CreateAudioDecoder_Go(
+void LocalCodecFactory::CreateDecoder(
+    fuchsia::mediacodec::CreateDecoder_Params decoder_params,
     ::fidl::InterfaceRequest<fuchsia::mediacodec::Codec>
         audio_decoder_request) {
-  Common_Go(
-      std::move(audio_decoder_request), kCodecTypeAudioDecoder,
-      audio_decoder_params_->input_details.mime_type,
-      [this](codec_runner::CodecRunner* codec_runner) {
-        assert(audio_decoder_params_);
-        codec_runner->SetAudioDecoderParams(std::move(*audio_decoder_params_));
-        audio_decoder_params_.reset();
-      });
+  CreateCommon(kCodecTypeAudioDecoder, std::move(audio_decoder_request),
+               decoder_params.input_details.mime_type,
+               [this, decoder_params = std::move(decoder_params)](
+                   codec_runner::CodecRunner* codec_runner) mutable {
+                 codec_runner->SetDecoderParams(std::move(decoder_params));
+               });
 }
 
-// TODO:
+// TODO(dustingreen):
 // AudioEncoder:
-// VideoDecoder:
 // VideoEncoder:
+// (or combined)
 
-void LocalCodecFactory::Common_Begin(CodecType codec_type) {
-  if (codec_type_ != kCodecTypeUnknown) {
-    // TODO: epitaph, log
-    binding_.reset();
-    assert(codec_type_ == kCodecTypeUnknown);
-    exit(-1);
-  }
-  codec_type_ = codec_type;
-}
-
-void LocalCodecFactory::Common_Go(
+void LocalCodecFactory::CreateCommon(
+    CodecType codec_type,
     ::fidl::InterfaceRequest<fuchsia::mediacodec::Codec> codec_request,
-    CodecType expected_codec_type, std::string mime_type,
-    std::function<void(codec_runner::CodecRunner* codec_runner)>
+    std::string mime_type,
+    fit::function<void(codec_runner::CodecRunner* codec_runner)>
         set_type_specific_params) {
-  if (codec_type_ != expected_codec_type) {
-    // TODO: epitaph, log
-    codec_request.TakeChannel();  // ~zx::channel
-    binding_.reset();
-    assert(codec_type_ == expected_codec_type);
-    exit(-1);
-  }
   std::unique_ptr<codec_runner::CodecRunner> codec_runner =
-      CreateCodec(fidl_async_, fidl_thread_, codec_type_, mime_type);
+      CreateCodec(fidl_async_, fidl_thread_, codec_type, mime_type);
   if (!codec_runner) {
-    // TODO: epitaph, log
+    // TODO(dustingreen): epitaph, log
     codec_request.TakeChannel();  // ~zx::channel
     binding_.reset();
     assert(codec_runner);
