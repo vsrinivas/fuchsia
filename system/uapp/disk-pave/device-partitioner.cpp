@@ -7,12 +7,12 @@
 
 #include <chromeos-disk-setup/chromeos-disk-setup.h>
 #include <fbl/auto_call.h>
+#include <fs-management/fvm.h>
 #include <gpt/cros.h>
 #include <zircon/device/device.h>
 #include <zxcrypt/volume.h>
 
 #include "device-partitioner.h"
-#include "fvm/fvm.h"
 #include "pave-logging.h"
 
 namespace paver {

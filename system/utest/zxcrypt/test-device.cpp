@@ -20,6 +20,7 @@
 #include <fbl/unique_fd.h>
 #include <lib/fdio/debug.h>
 #include <lib/fdio/watcher.h>
+#include <fs-management/fvm.h>
 #include <fs-management/mount.h>
 #include <fs-management/ramdisk.h>
 #include <fvm/fvm.h>

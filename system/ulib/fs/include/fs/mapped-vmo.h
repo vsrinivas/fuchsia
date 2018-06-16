@@ -14,10 +14,14 @@
 #include <fbl/algorithm.h>
 #include <fbl/unique_ptr.h>
 
+#ifdef __Fuchsia__
+
+namespace fs {
+
 class MappedVmo {
 public:
     DISALLOW_COPY_ASSIGN_AND_MOVE(MappedVmo);
-    virtual ~MappedVmo();
+    ~MappedVmo();
 
     static zx_status_t Create(size_t size, const char* name, fbl::unique_ptr<MappedVmo>* out);
 
@@ -52,3 +56,7 @@ private:
     uintptr_t addr_;
     size_t len_;
 };
+
+} // namespace fs
+
+#endif  // __Fuchsia__

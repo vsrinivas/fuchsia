@@ -7,7 +7,7 @@
 #include <unistd.h>
 
 #include <fbl/unique_fd.h>
-#include <fvm/fvm.h>
+#include <fs-management/fvm.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/memfs/memfs.h>
 #include <unittest/unittest.h>

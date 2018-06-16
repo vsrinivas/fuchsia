@@ -26,8 +26,8 @@ bool test_mapped_vmo() {
     }
 
     // Create MappedVmo
-    fbl::unique_ptr<MappedVmo> mvmo;
-    ASSERT_EQ(MappedVmo::Create(init_size, "test-vmo", &mvmo), ZX_OK);
+    fbl::unique_ptr<fs::MappedVmo> mvmo;
+    ASSERT_EQ(fs::MappedVmo::Create(init_size, "test-vmo", &mvmo), ZX_OK);
 
     // Verify size & data
     ASSERT_EQ(mvmo->GetSize(), init_size);

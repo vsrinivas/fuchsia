@@ -20,7 +20,6 @@ MODULE_LIBS := \
     system/ulib/bitmap \
     system/ulib/crypto \
     system/ulib/driver \
-    system/ulib/fdio \
     system/ulib/zxcrypt \
 
 MODULE_STATIC_LIBS := \

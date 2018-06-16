@@ -259,7 +259,7 @@ private:
     // The blob_ here consists of:
     // 1) The Merkle Tree
     // 2) The Blob itself, aligned to the nearest kBlobfsBlockSize
-    fbl::unique_ptr<MappedVmo> blob_ = {};
+    fbl::unique_ptr<fs::MappedVmo> blob_ = {};
     vmoid_t vmoid_ = {};
 
     // Watches any clones of "blob_" provided to clients.
@@ -283,7 +283,7 @@ private:
     struct WritebackInfo {
         uint64_t bytes_written = {};
         Compressor compressor;
-        fbl::unique_ptr<MappedVmo> compressed_blob = {};
+        fbl::unique_ptr<fs::MappedVmo> compressed_blob = {};
     };
 
     fbl::unique_ptr<WritebackInfo> write_info_ = {};
@@ -566,9 +566,9 @@ private:
 
     RawBitmap block_map_ = {};
     vmoid_t block_map_vmoid_ = {};
-    fbl::unique_ptr<MappedVmo> node_map_ = {};
+    fbl::unique_ptr<fs::MappedVmo> node_map_ = {};
     vmoid_t node_map_vmoid_ = {};
-    fbl::unique_ptr<MappedVmo> info_vmo_= {};
+    fbl::unique_ptr<fs::MappedVmo> info_vmo_= {};
     vmoid_t info_vmoid_= {};
 
     // The reserved_blocks_ and reserved_nodes_ bitmaps only hold in-flight reservations.

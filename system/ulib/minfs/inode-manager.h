@@ -46,7 +46,7 @@ public:
 private:
     blk_t start_block_;
 #ifdef __Fuchsia__
-    fbl::unique_ptr<MappedVmo> inode_table_{};
+    fbl::unique_ptr<fs::MappedVmo> inode_table_{};
 #else
     Bcache* bc_;
 #endif

@@ -8,13 +8,13 @@
 #include <string.h>
 #include <threads.h>
 
+#include <ddk/debug.h>
 #include <ddk/device.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 #include <fbl/unique_ptr.h>
-#include <lib/fdio/debug.h>
 #include <lib/zx/port.h>
 #include <lib/zx/vmar.h>
 #include <lib/zx/vmo.h>
@@ -29,8 +29,6 @@
 #include "device.h"
 #include "extra.h"
 #include "worker.h"
-
-#define ZXDEBUG 0
 
 namespace zxcrypt {
 namespace {
@@ -61,13 +59,13 @@ zx_status_t Device::Bind() {
 
     // Launch the init thread.
     if (thrd_create(&init_, InitThread, this) != thrd_success) {
-        xprintf("zxcrypt device %p initialization aborted: failed to start thread\n", this);
+        zxlogf(ERROR, "zxcrypt device %p initialization aborted: failed to start thread\n", this);
         return ZX_ERR_INTERNAL;
     }
 
     // Add the (invisible) device to devmgr
     if ((rc = DdkAdd("zxcrypt", DEVICE_ADD_INVISIBLE)) != ZX_OK) {
-        xprintf("DdkAdd('zxcrypt', DEVICE_ADD_INVISIBLE) failed: %s\n", zx_status_get_string(rc));
+        zxlogf(ERROR, "DdkAdd('zxcrypt', DEVICE_ADD_INVISIBLE) failed: %s\n", zx_status_get_string(rc));
         return rc;
     }
 
@@ -77,7 +75,7 @@ zx_status_t Device::Bind() {
 zx_status_t Device::Init() {
     zx_status_t rc;
 
-    xprintf("zxcrypt device %p initializing\n", this);
+    zxlogf(INFO, "zxcrypt device %p initializing\n", this);
     fbl::AutoLock lock(&mtx_);
     // We make an extra call to |AddTask| to ensure the counter never goes to zero before the
     // corresponding extra call to |FinishTask| in |DdkUnbind|.
@@ -86,7 +84,7 @@ zx_status_t Device::Init() {
 
     // Clang gets confused and thinks the thread isn't holding the lock
     auto cleanup = fbl::MakeAutoCall([&]() TA_NO_THREAD_SAFETY_ANALYSIS {
-        xprintf("zxcrypt device %p failed to initialize\n", this);
+        zxlogf(ERROR, "zxcrypt device %p failed to initialize\n", this);
         lock.release();
         DdkUnbind();
     });
@@ -94,7 +92,7 @@ zx_status_t Device::Init() {
     fbl::AllocChecker ac;
     fbl::unique_ptr<DeviceInfo> info(new (&ac) DeviceInfo);
     if (!ac.check()) {
-        xprintf("allocation failed: %zu bytes\n", sizeof(DeviceInfo));
+        zxlogf(ERROR, "allocation failed: %zu bytes\n", sizeof(DeviceInfo));
         return ZX_ERR_NO_MEMORY;
     }
 
@@ -115,7 +113,7 @@ zx_status_t Device::Init() {
     // Get the parent device's block interface
     block_info_t blk;
     if ((rc = device_get_protocol(parent(), ZX_PROTOCOL_BLOCK, &info->proto)) != ZX_OK) {
-        xprintf("failed to get block protocol: %s\n", zx_status_get_string(rc));
+        zxlogf(ERROR, "failed to get block protocol: %s\n", zx_status_get_string(rc));
         return rc;
     }
     info->proto.ops->query(info->proto.ctx, &blk, &info->op_size);
@@ -128,23 +126,23 @@ zx_status_t Device::Init() {
 
     // Reserve space for shadow I/O transactions
     if ((rc = zx::vmo::create(Volume::kBufferSize, 0, &info->vmo)) != ZX_OK) {
-        xprintf("zx::vmo::create failed: %s\n", zx_status_get_string(rc));
+        zxlogf(ERROR, "zx::vmo::create failed: %s\n", zx_status_get_string(rc));
         return rc;
     }
     if ((rc = zx::vmar::root_self().map(0, info->vmo, 0, Volume::kBufferSize,
                                         ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE, &mapped_)) !=
         ZX_OK) {
-        xprintf("zx::vmar::map failed: %s\n", zx_status_get_string(rc));
+        zxlogf(ERROR, "zx::vmar::map failed: %s\n", zx_status_get_string(rc));
         return rc;
     }
     base_ = reinterpret_cast<uint8_t*>(mapped_);
     if ((rc = map_.Reset(Volume::kBufferSize / info->block_size)) != ZX_OK) {
-        xprintf("bitmap allocation failed: %s\n", zx_status_get_string(rc));
+        zxlogf(ERROR, "bitmap allocation failed: %s\n", zx_status_get_string(rc));
         return rc;
     }
     // TODO(aarongreen): Investigate performance implications of adding more workers.
     if ((rc = zx::port::create(0, &port_)) != ZX_OK) {
-        xprintf("zx::port::create failed: %s\n", zx_status_get_string(rc));
+        zxlogf(ERROR, "zx::port::create failed: %s\n", zx_status_get_string(rc));
         return rc;
     }
     for (size_t i = 0; i < kNumWorkers; ++i) {
@@ -156,7 +154,7 @@ zx_status_t Device::Init() {
     // Make the pointer const
     info_ = info.release();
     DdkMakeVisible();
-    xprintf("zxcrypt device %p initialized\n", this);
+    zxlogf(INFO, "zxcrypt device %p initialized\n", this);
 
     cleanup.cancel();
     return ZX_OK;
@@ -176,7 +174,7 @@ zx_status_t Device::DdkIoctl(uint32_t op, const void* in, size_t in_len, void* o
     case IOCTL_BLOCK_FVM_SHRINK: {
         extend_request_t mod;
         if (!in || in_len < sizeof(mod)) {
-            xprintf("bad parameter(s): in=%p, in_len=%zu\n", in, in_len);
+            zxlogf(ERROR, "bad parameter(s): in=%p, in_len=%zu\n", in, in_len);
             return ZX_ERR_INVALID_ARGS;
         }
         memcpy(&mod, in, sizeof(mod));
@@ -187,7 +185,7 @@ zx_status_t Device::DdkIoctl(uint32_t op, const void* in, size_t in_len, void* o
     case IOCTL_BLOCK_FVM_VSLICE_QUERY: {
         query_request_t mod;
         if (!in || in_len < sizeof(mod)) {
-            xprintf("bad parameter(s): in=%p, in_len=%zu\n", in, in_len);
+            zxlogf(ERROR, "bad parameter(s): in=%p, in_len=%zu\n", in, in_len);
             return ZX_ERR_INVALID_ARGS;
         }
         memcpy(&mod, in, sizeof(mod));
@@ -202,8 +200,8 @@ zx_status_t Device::DdkIoctl(uint32_t op, const void* in, size_t in_len, void* o
         break;
     }
     if (rc < 0) {
-        xprintf("parent device returned failure for ioctl %" PRIu32 ": %s\n", op,
-                zx_status_get_string(rc));
+        zxlogf(ERROR, "parent device returned failure for ioctl %" PRIu32 ": %s\n", op,
+               zx_status_get_string(rc));
         return rc;
     }
 
@@ -238,7 +236,7 @@ zx_off_t Device::DdkGetSize() {
 // TODO(aarongreen): See ZX-1138.  Currently, there's no good way to trigger
 // this on demand.
 void Device::DdkUnbind() {
-    xprintf("zxcrypt device %p unbinding\n", this);
+    zxlogf(INFO, "zxcrypt device %p unbinding\n", this);
     fbl::AutoLock lock(&mtx_);
     active_ = false;
     if (port_.is_valid()) {
@@ -260,18 +258,18 @@ void Device::DdkRelease() {
     fbl::AutoLock lock(&mtx_);
     thrd_join(init_, &rc);
     if (rc != ZX_OK) {
-        xprintf("WARNING: init thread returned %s\n", zx_status_get_string(rc));
+        zxlogf(ERROR, "WARNING: init thread returned %s\n", zx_status_get_string(rc));
     }
     for (size_t i = 0; i < kNumWorkers; ++i) {
         workers_[i].Stop();
     }
     if (mapped_ != 0 && (rc = zx::vmar::root_self().unmap(mapped_, Volume::kBufferSize)) != ZX_OK) {
-        xprintf("WARNING: failed to unmap %" PRIu32 " bytes at %" PRIuPTR ": %s\n",
-                Volume::kBufferSize, mapped_, zx_status_get_string(rc));
+        zxlogf(ERROR, "WARNING: failed to unmap %" PRIu32 " bytes at %" PRIuPTR ": %s\n",
+               Volume::kBufferSize, mapped_, zx_status_get_string(rc));
     }
     fbl::unique_ptr<DeviceInfo> info(const_cast<DeviceInfo*>(info_));
     info_ = nullptr;
-    xprintf("zxcrypt device %p released\n", this);
+    zxlogf(INFO, "zxcrypt device %p released\n", this);
     lock.release();
     delete this;
 }
@@ -371,7 +369,7 @@ void Device::BlockRelease(block_op_t* block, zx_status_t rc) {
 
 zx_status_t Device::AddTaskLocked() {
     if (!active_) {
-        xprintf("device %p is not active\n", this);
+        zxlogf(ERROR, "device %p is not active\n", this);
         return ZX_ERR_BAD_STATE;
     }
     ++tasks_;
@@ -428,7 +426,7 @@ zx_status_t Device::BlockAcquireLocked(uint64_t len, extra_op_t* extra) {
 
     // Reserve space in the map
     if (rc != ZX_OK || (rc = map_.Set(off, off + len)) != ZX_OK) {
-        xprintf("failed to find available op: %s\n", zx_status_get_string(rc));
+        zxlogf(ERROR, "failed to find available op: %s\n", zx_status_get_string(rc));
         return rc;
     }
     last_ = off + len;
@@ -500,8 +498,8 @@ void Device::ReleaseBlock(extra_op_t* extra) {
     uint64_t off = (extra->data - base_) / info_->block_size;
     uint64_t len = extra->length;
     if ((rc = map_.Clear(off, off + len)) != ZX_OK) {
-        xprintf("warning: could not clear [%zu, %zu]: %s\n", off, off + len,
-                zx_status_get_string(rc));
+        zxlogf(ERROR, "warning: could not clear [%zu, %zu]: %s\n", off, off + len,
+               zx_status_get_string(rc));
     }
     FinishTaskLocked();
 }
@@ -513,7 +511,7 @@ extern "C" zx_status_t zxcrypt_device_bind(void* ctx, zx_device_t* parent) {
     fbl::AllocChecker ac;
     auto dev = fbl::make_unique_checked<zxcrypt::Device>(&ac, parent);
     if (!ac.check()) {
-        xprintf("allocation failed: %zu bytes\n", sizeof(zxcrypt::Device));
+        zxlogf(ERROR, "allocation failed: %zu bytes\n", sizeof(zxcrypt::Device));
         return ZX_ERR_NO_MEMORY;
     }
     if ((rc = dev->Bind()) != ZX_OK) {

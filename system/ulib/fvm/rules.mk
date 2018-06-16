@@ -15,7 +15,6 @@ MODULE_SRCS += \
 MODULE_STATIC_LIBS := \
     system/ulib/digest \
     system/ulib/fbl \
-    system/ulib/fs \
     system/ulib/gpt \
     system/ulib/sync \
     system/ulib/zx \

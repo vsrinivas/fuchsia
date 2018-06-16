@@ -237,8 +237,10 @@ private:
 
     // Global information about the filesystem.
     minfs_info_t info_{};
-    fbl::unique_ptr<MappedVmo> info_vmo_{};
+#ifdef __Fuchsia__
+    fbl::unique_ptr<fs::MappedVmo> info_vmo_{};
     vmoid_t info_vmoid_{};
+#endif
 
     // Vnodes exist in the hash table as long as one or more reference exists;
     // when the Vnode is deleted, it is immediately removed from the map.
@@ -617,7 +619,7 @@ private:
     // Next kMinfsDoublyIndirect blocks                           - doubly indirect blocks
     // Next kMinfsDoublyIndirect * kMinfsDirectPerIndirect blocks - indirect blocks pointed to
     //                                                              by doubly indirect blocks
-    fbl::unique_ptr<MappedVmo> vmo_indirect_{};
+    fbl::unique_ptr<fs::MappedVmo> vmo_indirect_{};
 
     vmoid_t vmoid_{};
     vmoid_t vmoid_indirect_{};

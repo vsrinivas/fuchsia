@@ -7,7 +7,7 @@
 #include <threads.h>
 
 #include <crypto/cipher.h>
-#include <lib/fdio/debug.h>
+#include <ddk/debug.h>
 #include <lib/zx/port.h>
 #include <zircon/listnode.h>
 #include <zircon/status.h>
@@ -18,8 +18,6 @@
 #include "device.h"
 #include "extra.h"
 #include "worker.h"
-
-#define ZXDEBUG 0
 
 namespace zxcrypt {
 namespace {
@@ -38,7 +36,7 @@ zx_status_t Worker::Start(Device* device, const Volume& volume, const zx::port& 
     zx_status_t rc;
 
     if (!device) {
-        xprintf("bad parameters: device=%p\n", device);
+        zxlogf(ERROR, "bad parameters: device=%p\n", device);
         return ZX_ERR_INVALID_ARGS;
     }
     if ((rc = volume.Bind(crypto::Cipher::kEncrypt, &encrypt_)) != ZX_OK ||
@@ -49,7 +47,7 @@ zx_status_t Worker::Start(Device* device, const Volume& volume, const zx::port& 
     port.duplicate(ZX_RIGHT_SAME_RIGHTS, &port_);
 
     if (thrd_create(&thrd_, Thread, this) != thrd_success) {
-        xprintf("failed to start thread\n");
+        zxlogf(ERROR, "failed to start thread\n");
         return ZX_ERR_INTERNAL;
     }
 
@@ -64,7 +62,7 @@ zx_status_t Worker::Loop() {
     // Use the first request as a signal that the device is ready
     if ((rc = port_.wait(zx::time::infinite(), &packet)) != ZX_OK ||
         packet.status != ZX_ERR_NEXT) {
-        xprintf("failed to start worker: %s\n", zx_status_get_string(rc));
+        zxlogf(ERROR, "failed to start worker: %s\n", zx_status_get_string(rc));
         return rc;
     }
 

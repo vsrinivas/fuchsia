@@ -13,6 +13,7 @@
 #include <unistd.h>
 
 #include <fvm/fvm.h>
+#include <fs-management/fvm.h>
 #include <fs-management/mount.h>
 #include <fs-management/ramdisk.h>
 #include <zircon/device/block.h>

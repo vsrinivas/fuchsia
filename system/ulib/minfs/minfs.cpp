@@ -728,8 +728,8 @@ zx_status_t Minfs::Create(fbl::unique_ptr<Bcache> bc, const minfs_info_t* info,
 
 #ifdef __Fuchsia__
     // Create the info vmo
-    if ((status = MappedVmo::Create(kMinfsBlockSize, "minfs-superblock",
-                                    &fs->info_vmo_)) != ZX_OK) {
+    if ((status = fs::MappedVmo::Create(kMinfsBlockSize, "minfs-superblock",
+                                        &fs->info_vmo_)) != ZX_OK) {
         return status;
     }
 
@@ -744,13 +744,13 @@ zx_status_t Minfs::Create(fbl::unique_ptr<Bcache> bc, const minfs_info_t* info,
         return status;
     }
 
-    fbl::unique_ptr<MappedVmo> buffer;
+    fbl::unique_ptr<fs::MappedVmo> buffer;
     // TODO(smklein): Create max buffer size relative to total RAM size.
     constexpr size_t kWriteBufferSize = 64 * (1LU << 20);
     static_assert(kWriteBufferSize % kMinfsBlockSize == 0,
                   "Buffer Size must be a multiple of the MinFS Block Size");
-    if ((status = MappedVmo::Create(kWriteBufferSize, "minfs-writeback",
-                                    &buffer)) != ZX_OK) {
+    if ((status = fs::MappedVmo::Create(kWriteBufferSize, "minfs-writeback",
+                                        &buffer)) != ZX_OK) {
         return status;
     }
 

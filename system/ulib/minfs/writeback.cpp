@@ -149,7 +149,7 @@ void WritebackWork::PinVnode(fbl::RefPtr<VnodeMinfs> vn) {
 
 #ifdef __Fuchsia__
 
-zx_status_t WritebackBuffer::Create(Bcache* bc, fbl::unique_ptr<MappedVmo> buffer,
+zx_status_t WritebackBuffer::Create(Bcache* bc, fbl::unique_ptr<fs::MappedVmo> buffer,
                                     fbl::unique_ptr<WritebackBuffer>* out) {
     fbl::unique_ptr<WritebackBuffer> wb(new WritebackBuffer(bc, fbl::move(buffer)));
     if (wb->buffer_->GetSize() % kMinfsBlockSize != 0) {
@@ -172,7 +172,7 @@ zx_status_t WritebackBuffer::Create(Bcache* bc, fbl::unique_ptr<MappedVmo> buffe
     return ZX_OK;
 }
 
-WritebackBuffer::WritebackBuffer(Bcache* bc, fbl::unique_ptr<MappedVmo> buffer) :
+WritebackBuffer::WritebackBuffer(Bcache* bc, fbl::unique_ptr<fs::MappedVmo> buffer) :
     bc_(bc), unmounting_(false), buffer_(fbl::move(buffer)),
     cap_(buffer_->GetSize() / kMinfsBlockSize) {}
 

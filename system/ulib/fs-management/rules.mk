@@ -10,6 +10,7 @@ MODULE_TYPE := userlib
 
 MODULE_SRCS += \
     $(LOCAL_DIR)/fsck.cpp \
+    $(LOCAL_DIR)/fvm.cpp \
     $(LOCAL_DIR)/launch.cpp \
     $(LOCAL_DIR)/mkfs.cpp \
     $(LOCAL_DIR)/mount.cpp \
@@ -18,10 +19,15 @@ MODULE_SRCS += \
 
 MODULE_STATIC_LIBS := \
     system/ulib/fbl \
+    system/ulib/fvm \
+    system/ulib/fs \
+    system/ulib/digest \
     system/ulib/ddk \
+    system/ulib/gpt \
     system/ulib/fs \
     system/ulib/zx \
     system/ulib/zxcpp \
+    third_party/ulib/uboringssl \
 
 MODULE_LIBS := \
     system/ulib/launchpad \
