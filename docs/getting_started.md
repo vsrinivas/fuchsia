@@ -114,33 +114,66 @@ See [QEMU](qemu.md) for information on building and using QEMU with zircon.
 
 ## Build Toolchains (Optional)
 
-If the prebuilt toolchain binaries do not work for you, there are a
-set of scripts which will download and build suitable gcc toolchains
-for building Zircon for the ARM64 and x86-64 architectures:
+If the prebuilt toolchain binaries do not work for you, you can build your
+own from vanilla upstream sources.
 
-```
-cd $SRC
-git clone https://fuchsia.googlesource.com/third_party/gcc_none_toolchains toolchains
-cd toolchains.
-./do-build --target arm-none
-./do-build --target aarch64-none
-./do-build --target x86_64-none
-```
+### GCC Toolchain
 
-### Configure PATH for toolchains
+We use GNU `binutils` 2.30(`*`) and GCC 8.2(`**`), configured with
+`--target=x86_64-elf` or `--target=aarch64-elf` and `--enable-initfini-array`.
+
+For `binutils`, we recommend `--enable-deterministic-archives` but that switch
+is not necessary to get a working build.
+
+For GCC, it's necessary to pass `MAKEOVERRIDES=USE_GCC_STDINT=provide` on the
+`make` command line.  Only the C and C++ language support is required and no
+target libraries other than `libgcc` are required, so you can use various
+`configure` switches to disable other things and make your build of GCC itself
+go more quickly and use less storage.  See the GCC installation documentation
+for details.
+
+You may need various other `configure` switches or other prerequisites to
+build on your particular host system.  See the GNU documentation.
+
+(`*`) The `binutils` 2.30 release has some harmless `make check` failures in
+the `aarch64-elf` and `x86_64-elf` configurations.  These are fixed on the
+upstream `binutils-2_30-branch` git branch, which is what we actually build.
+But the 2.30 release version works fine for building Zircon; it just has some
+spurious failures in its own test suite.
+
+(`**`) As of 2008-6-15, GCC 8.2 has not been released yet.  There is no
+released version of GCC that works for building Zircon without backporting
+some fixes.  What we actually use is the upstream `gcc-8-branch` git branch.
+
+### Clang/LLVM Toolchain
+
+We use a trunk snapshot of Clang and update to new snapshots frequently.  Any
+build of recent-enough Clang with support for `x86_64` and `aarch64` compiled
+in should work.  You'll need a toolchain that also includes the runtime
+libraries.  We normally also use the same build of Clang for the host as well
+as for the `*-fuchsia` targets.  See
+[here](https://fuchsia.googlesource.com/docs/+/master/development/build/toolchain.md)
+for details on how we build Clang.
+
+### Set up `local.mk` for toolchains
 
 If you're using the prebuilt toolchains, you can skip this step, since
 the build will find them automatically.
 
-```
-# on Linux
-export PATH=$PATH:$SRC/toolchains/aarch64-elf-5.3.0-Linux-x86_64/bin
-export PATH=$PATH:$SRC/toolchains/x86_64-elf-5.3.0-Linux-x86_64/bin
+Create a GNU makefile fragment in `local.mk` that points to where you
+installed the toolchains:
 
-# on Mac
-export PATH=$PATH:$SRC/toolchains/aarch64-elf-5.3.0-Darwin-x86_64/bin
-export PATH=$PATH:$SRC/toolchains/x86_64-elf-5.3.0-Darwin-x86_64/bin
+```makefile
+CLANG_TOOLCHAIN_PREFIX := .../clang-install/bin/
+ARCH_x86_64_TOOLCHAIN_PREFIX := .../gnu-install/bin/x86_64-elf-
+ARCH_arm64_TOOLCHAIN_PREFIX := .../gnu-install/bin/aarch64-elf-
 ```
+
+Note that `CLANG_TOOLCHAIN_PREFIX` should have a trailing slash, and the
+`ARCH_*_TOOLCHAIN_PREFIX` variables for the GNU toolchains should include the
+`${target_alias}-` prefix, so that simple command names like `gcc`, `ld`, or
+`clang` can be appended to the prefix with no separator.  If the `clang` or
+`gcc` in your `PATH` works for Zircon, you can just use empty prefixes.
 
 ## Copying files to and from Zircon
 
