@@ -5,14 +5,14 @@
 #include "pci.h"
 
 #include <assert.h>
-#include <lib/fdio/debug.h>
 #include <stdio.h>
 
 #include <acpica/acpi.h>
+#include <ddk/debug.h>
 
 #include "resources.h"
 
-#define ZXDEBUG 0
+#define xprintf(fmt...) zxlogf(SPEW, fmt)
 
 #define PCIE_MAX_LEGACY_IRQ_PINS 4
 #define PCIE_MAX_DEVICES_PER_BUS 32

@@ -5,15 +5,15 @@
 #include "dev.h"
 
 #include <hw/inout.h>
+#include <ddk/debug.h>
 #include <ddk/driver.h>
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
-#include <lib/fdio/debug.h>
 #include <threads.h>
 
 #include "errors.h"
 
-#define ZXDEBUG 0
+#define xprintf(fmt...) zxlogf(SPEW, fmt)
 
 /* EC commands */
 #define EC_CMD_READ 0x80

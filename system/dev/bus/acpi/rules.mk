@@ -54,7 +54,6 @@ MODULE_LIBS := \
     system/ulib/driver \
     system/ulib/zircon \
     system/ulib/c \
-    system/ulib/fdio \
 
 else # !ARCH=x86
 
@@ -68,7 +67,6 @@ MODULE_SRCS += $(LOCAL_DIR)/dummy.c
 MODULE_LIBS := \
     system/ulib/zircon \
     system/ulib/c \
-    system/ulib/fdio \
 
 endif # ARCH=x86
 

@@ -10,7 +10,6 @@
 #include <zircon/types.h>
 #include <zircon/syscalls.h>
 #include <zircon/device/power.h>
-#include <lib/fdio/debug.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <threads.h>

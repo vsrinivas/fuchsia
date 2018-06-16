@@ -10,6 +10,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <threads.h>
+#include <unistd.h>
 
 // DDK Includes
 #include <ddk/binding.h>
@@ -28,7 +29,6 @@
 
 
 // Zircon Includes
-#include <lib/fdio/watcher.h>
 #include <zircon/threads.h>
 #include <zircon/assert.h>
 #include <sync/completion.h>
