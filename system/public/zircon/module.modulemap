@@ -205,6 +205,10 @@ module Zircon [system] [extern_c] {
       header "device/ktrace.h"
       export *
     }
+    module media_codec {
+      header "device/media-codec.h"
+      export *
+    }
     module midi {
       header "device/midi.h"
       export *
