@@ -110,6 +110,11 @@ union Union1 {
     float32 d;
 };
 
+union Union2 {
+    array<int8>:4 a;
+    array<int8>:16 b;
+};
+
 struct TestUnion1 {
     Union1 a;
     Union1? b;
@@ -118,6 +123,11 @@ struct TestUnion1 {
 struct TestUnion2 {
     vector<Union1> a;
     vector<Union1?> b;
+};
+
+struct TestUnion3 {
+    Union2 a;
+    int32 b;
 };
 
 struct TestHandle1 {

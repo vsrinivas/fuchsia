@@ -369,6 +369,8 @@ func (e *encoder) marshalUnion(t reflect.Type, v reflect.Value, alignment int) e
 	if fieldIndex >= t.NumField() {
 		return newValueError(ErrInvalidUnionTag, kind)
 	}
+	// Save the head for proper padding.
+	head := e.head
 	e.writeUint(kind, 4)
 
 	f := t.Field(fieldIndex)
@@ -378,7 +380,15 @@ func (e *encoder) marshalUnion(t reflect.Type, v reflect.Value, alignment int) e
 	}
 	// Re-align to the union's alignment before writing its field.
 	e.head = align(e.head, alignment)
-	return e.marshal(f.Type, v.Field(fieldIndex), n)
+	if err := e.marshal(f.Type, v.Field(fieldIndex), n); err != nil {
+		return err
+	}
+	s, err := getPayloadSize(t, v)
+	if err != nil {
+		return err
+	}
+	e.head = head + s
+	return nil
 }
 
 // marshalArray marshals a FIDL array inline.
@@ -721,6 +731,8 @@ func (d *decoder) unmarshalStructFields(t reflect.Type, v reflect.Value) error {
 // Expects the Type t and Value v to refer to a golang struct value, not a pointer.
 // The alignment field is used to align to the union's field before reading.
 func (d *decoder) unmarshalUnion(t reflect.Type, v reflect.Value, alignment int) error {
+	// Save the head for proper padding.
+	head := d.head
 	kind := d.readUint(4)
 
 	// Index into the fields of the struct, adding 1 for the tag.
@@ -736,7 +748,15 @@ func (d *decoder) unmarshalUnion(t reflect.Type, v reflect.Value, alignment int)
 		return err
 	}
 	d.head = align(d.head, alignment)
-	return d.unmarshal(f.Type, v.Field(fieldIndex), n)
+	if err := d.unmarshal(f.Type, v.Field(fieldIndex), n); err != nil {
+		return err
+	}
+	s, err := getPayloadSize(t, v)
+	if err != nil {
+		return err
+	}
+	d.head = head + s
+	return nil
 }
 
 // unmarshalArray unmarshals an array inline based on Type t into Value v, taking into account

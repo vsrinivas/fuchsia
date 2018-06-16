@@ -149,6 +149,12 @@ func TestEncodingIdentity(t *testing.T) {
 			A: []Union1{u1, u1, u1},
 			B: []*Union1{&u1, nil, nil},
 		}, 120, &TestUnion2{})
+		u2 := Union2{}
+		u2.SetA([4]int8{1, 77, 2, 4})
+		testIdentity(t, &TestUnion3{
+			A: u2,
+			B: 1842,
+		}, 24, &TestUnion3{})
 	})
 	t.Run("Handles", func(t *testing.T) {
 		vmo, err := zx.NewVMO(10, 0)
