@@ -11,7 +11,7 @@
 #ifndef VP9_COMMON_VP9_SEG_COMMON_H_
 #define VP9_COMMON_VP9_SEG_COMMON_H_
 
-#include "vpx_dsp/prob.h"
+#include "vp9_enums.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -41,8 +41,11 @@ struct segmentation {
   uint8_t abs_delta;
   uint8_t temporal_update;
 
+// These aren't used in the loop filter, so they've been commented out.
+#if 0
   vpx_prob tree_probs[SEG_TREE_PROBS];
   vpx_prob pred_probs[PREDICTION_PROBS];
+#endif
 
   int16_t feature_data[MAX_SEGMENTS][SEG_LVL_MAX];
   uint32_t feature_mask[MAX_SEGMENTS];
@@ -71,8 +74,6 @@ static INLINE int get_segdata(const struct segmentation *seg, int segment_id,
                               SEG_LVL_FEATURES feature_id) {
   return seg->feature_data[segment_id][feature_id];
 }
-
-extern const vpx_tree_index vp9_segment_tree[TREE_SIZE(MAX_SEGMENTS)];
 
 #ifdef __cplusplus
 }  // extern "C"

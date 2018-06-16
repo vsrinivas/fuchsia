@@ -84,6 +84,7 @@ source_set("sources") {
   ]
   deps = [
     ":test_support",
+    "third_party/libvpx",
     "//garnet/public/lib/fidl/cpp",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/media/fidl:media_codec",

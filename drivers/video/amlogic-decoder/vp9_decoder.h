@@ -10,9 +10,15 @@
 #include "registers.h"
 #include "video_decoder.h"
 
+// From libvpx
+struct loop_filter_info_n;
+struct loopfilter;
+struct segmentation;
+
 class Vp9Decoder : public VideoDecoder {
  public:
-  Vp9Decoder(Owner* owner) : owner_(owner) {}
+  explicit Vp9Decoder(Owner* owner);
+  Vp9Decoder(const Vp9Decoder&) = delete;
 
   ~Vp9Decoder() override;
 
@@ -82,11 +88,31 @@ class Vp9Decoder : public VideoDecoder {
     // from the data itself, allowing the data to be allocated in noncontiguous
     // memory.
     io_buffer_t compressed_header = {};
+
+    io_buffer_t compressed_data = {};
+
+    // This is decoded_frame_count_ when this frame was decoded into.
+    uint32_t decoded_index = 0xffffffff;
   };
+
+  struct PictureData {
+    bool keyframe;
+  };
+
+  union HardwareRenderParams;
 
   zx_status_t AllocateFrames();
   void InitializeHardwarePictureList();
   void InitializeParser();
+  void FindNewFrameBuffer(HardwareRenderParams* params);
+  void InitLoopFilter();
+  void UpdateLoopFilter(HardwareRenderParams* params);
+  void ProcessCompletedFrames();
+  void PrepareNewFrame();
+  void ConfigureFrameOutput(uint32_t width, uint32_t height);
+  void ConfigureMcrcc();
+  void UpdateLoopFilterThresholds();
+  void ConfigureMotionPrediction();
 
   Owner* owner_;
 
@@ -94,6 +120,17 @@ class Vp9Decoder : public VideoDecoder {
   FrameReadyNotifier notifier_;
 
   std::vector<std::unique_ptr<Frame>> frames_;
+  int current_frame_idx_ = -1;
+  Frame* current_frame_ = nullptr;
+  std::unique_ptr<loop_filter_info_n> loop_filter_info_;
+  std::unique_ptr<loopfilter> loop_filter_;
+  std::unique_ptr<segmentation> segmentation_ = {};
+
+  // This is the count of frames decoded since this object was created.
+  uint32_t decoded_frame_count_ = 0;
+
+  PictureData last_frame_data_;
+  PictureData current_frame_data_;
 };
 
 #endif  // VP9_DECODER_H_

@@ -312,6 +312,11 @@ DEFINE_REGISTER(HevcParserCmdSkip0, DosRegisterIo, 0x3128);
 DEFINE_REGISTER(HevcParserCmdSkip1, DosRegisterIo, 0x3129);
 DEFINE_REGISTER(HevcParserCmdSkip2, DosRegisterIo, 0x312a);
 
+DEFINE_REGISTER(HevcMpredCtrl3, DosRegisterIo, 0x321d);
+REGISTER_NAME(HevcMpredCtrl4, DosRegisterIo, 0x324c)
+  DEF_BIT(6, use_prev_frame_mvs);
+};
+
 DEFINE_REGISTER(HevcMpsr, DosRegisterIo, 0x3301);
 DEFINE_REGISTER(HevcCpsr, DosRegisterIo, 0x3321);
 DEFINE_REGISTER(HevcImemDmaCtrl, DosRegisterIo, 0x3340);
@@ -323,6 +328,17 @@ REGISTER_NAME(HevcdIppTopCntl, DosRegisterIo, 0x3400)
   DEF_BIT(0, reset_ipp_and_mpp)
 };
 DEFINE_REGISTER(HevcdIppLinebuffBase, DosRegisterIo, 0x3409);
+REGISTER_NAME(HevcdIppAxiifConfig, DosRegisterIo, 0x340b)
+  enum {
+    kMemMapModeLinear = 0,
+    kMemMapMode32x32 = 1,
+    kMemMapMode64x32 = 2,
+    kBigEndian64 = 0xf,
+  };
+  DEF_FIELD(5, 4, mem_map_mode);
+  DEF_FIELD(3, 0, double_write_endian);
+};
+
 DEFINE_REGISTER(HevcdMppAnc2AxiTblConfAddr, DosRegisterIo, 0x3460);
 DEFINE_REGISTER(HevcdMppAnc2AxiTblData, DosRegisterIo, 0x3464);
 DEFINE_REGISTER(HevcdMppAncCanvasAccconfigAddr, DosRegisterIo, 0x34c0);
@@ -334,6 +350,12 @@ REGISTER_NAME(HevcdMppDecompCtl1, DosRegisterIo, 0x34c2)
 };
 
 DEFINE_REGISTER(HevcdMppDecompCtl2, DosRegisterIo, 0x34c3);
+
+REGISTER_NAME(HevcdMcrccCtl1, DosRegisterIo, 0x34f0)
+  DEF_BIT(1, reset);
+};
+DEFINE_REGISTER(HevcdMcrccCtl2, DosRegisterIo, 0x34f1);
+DEFINE_REGISTER(HevcdMcrccCtl3, DosRegisterIo, 0x34f2);
 
 DEFINE_REGISTER(HevcDblkCfg4, DosRegisterIo, 0x3504);
 DEFINE_REGISTER(HevcDblkCfg5, DosRegisterIo, 0x3505);
@@ -347,10 +369,37 @@ REGISTER_NAME(HevcDblkCfgB, DosRegisterIo, 0x350b)
 };
 DEFINE_REGISTER(HevcDblkCfgE, DosRegisterIo, 0x350e)
 
+REGISTER_NAME(HevcSaoCtrl1, DosRegisterIo, 0x3602)
+  enum {
+    kMemMapModeLinear = 0,
+    kMemMapMode32x32 = 1,
+    kMemMapMode64x32 = 2,
+
+    kBigEndian64 = 0xff,
+  };
+
+  DEF_FIELD(13, 12, mem_map_mode);
+  DEF_FIELD(11, 4, endianness);
+  DEF_BIT(1, double_write_disable);
+  DEF_BIT(0, compressed_write_disable);
+};
+
+DEFINE_REGISTER(HevcSaoYStartAddr, DosRegisterIo, 0x360b);
+DEFINE_REGISTER(HevcSaoYLength, DosRegisterIo, 0x360c);
+DEFINE_REGISTER(HevcSaoCStartAddr, DosRegisterIo, 0x360d);
+DEFINE_REGISTER(HevcSaoCLength, DosRegisterIo, 0x360e);
+DEFINE_REGISTER(HevcSaoYWptr, DosRegisterIo, 0x360f);
+DEFINE_REGISTER(HevcSaoCWptr, DosRegisterIo, 0x3610);
+
 REGISTER_NAME(HevcSaoCtrl5, DosRegisterIo, 0x3623)
   DEF_BIT(9, mode_8_bits);
   DEF_BIT(10, use_compressed_header);
 };
+DEFINE_REGISTER(HevcCmBodyStartAddr, DosRegisterIo, 0x3626);
+DEFINE_REGISTER(HevcCmBodyLength, DosRegisterIo, 0x3627);
+DEFINE_REGISTER(HevcCmHeaderStartAddr, DosRegisterIo, 0x3628);
+DEFINE_REGISTER(HevcCmHeaderLength, DosRegisterIo, 0x3629);
+DEFINE_REGISTER(HevcCmHeaderOffset, DosRegisterIo, 0x362b);
 
 DEFINE_REGISTER(HevcSaoMmuVh0Addr, DosRegisterIo, 0x363a)
 DEFINE_REGISTER(HevcSaoMmuVh1Addr, DosRegisterIo, 0x363b)
