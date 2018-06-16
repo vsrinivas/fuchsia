@@ -8,6 +8,8 @@
 #include "runtests-utils-test-globals.h"
 
 #include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
 
 #include <fbl/auto_call.h>
 #include <runtests-utils/posix-run-test.h>
