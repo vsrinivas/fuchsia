@@ -6,10 +6,31 @@
 
 #include <stdint.h>
 
-#define REG8(addr) ((volatile uint8_t *)(uintptr_t)(addr))
-#define REG16(addr) ((volatile uint16_t *)(uintptr_t)(addr))
-#define REG32(addr) ((volatile uint32_t *)(uintptr_t)(addr))
-#define REG64(addr) ((volatile uint64_t *)(uintptr_t)(addr))
+static inline void writeb(uint8_t v, volatile void* a) {
+    *(volatile uint8_t*)a = v;
+}
+static inline void writew(uint16_t v, volatile void* a) {
+    *(volatile uint16_t*)a = v;
+}
+static inline void writel(uint32_t v, volatile void* a) {
+    *(volatile uint32_t*)a = v;
+}
+static inline void writell(uint64_t v, volatile void* a) {
+    *(volatile uint64_t*)a = v;
+}
+
+static inline uint8_t readb(const volatile void* a) {
+    return *(const volatile uint8_t*)a;
+}
+static inline uint16_t readw(const volatile void* a) {
+    return *(const volatile uint16_t*)a;
+}
+static inline uint32_t readl(const volatile void* a) {
+    return *(const volatile uint32_t*)a;
+}
+static inline uint64_t readll(const volatile void* a) {
+    return *(const volatile uint64_t*)a;
+}
 
 #define RMWREG8(addr, startbit, width, val) \
     writeb((readb(addr) & ~(((1 << (width)) - 1) << (startbit))) | ((val) << (startbit)), (addr))
@@ -20,22 +41,14 @@
 #define RMWREG64(addr, startbit, width, val) \
     writell((readll(addr) & ~(((1ull << (width)) - 1) << (startbit))) | ((val) << (startbit)), (addr))
 
-#define writeb(v, a) (*REG8(a) = (v))
-#define readb(a) (*REG8(a))
 #define set_bitsb(v, a) writeb(readb(a) | (v), (a))
 #define clr_bitsb(v, a) writeb(readb(a) & ~(v), (a))
 
-#define writew(v, a) (*REG16(a) = (v))
-#define readw(a) (*REG16(a))
 #define set_bitsw(v, a) writew(readw(a) | (v), (a))
 #define clr_bitsw(v, a) writew(readw(a) & ~(v), (a))
 
-#define writel(v, a) (*REG32(a) = (v))
-#define readl(a) (*REG32(a))
 #define set_bitsl(v, a) writel(readl(a) | (v), (a))
 #define clr_bitsl(v, a) writel(readl(a) & ~(v), (a))
 
-#define writell(v, a) (*REG64(a) = (v))
-#define readll(a) (*REG64(a))
 #define set_bitsll(v, a) writell(readll(a) | (v), (a))
 #define clr_bitsll(v, a) writell(readll(a) & ~(v), (a))
