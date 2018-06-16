@@ -37,9 +37,10 @@ const HEADER_PREFIX_SIZE: usize = 20;
 //     as a u16 or other multi-byte number would not necessarily be correct.
 //     Instead, we use the NetworkEndian type and its reader and writer methods
 //     to correctly access these fields.
+#[allow(missing_docs)]
 #[derive(Default)]
 #[repr(C, packed)]
-struct HeaderPrefix {
+pub struct HeaderPrefix {
     version_ihl: u8,
     dscp_ecn: u8,
     total_len: [u8; 2],

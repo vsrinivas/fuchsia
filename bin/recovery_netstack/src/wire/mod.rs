@@ -42,6 +42,7 @@ macro_rules! debug_err_fn {
 
 pub mod arp;
 pub mod ethernet;
+pub mod icmp;
 pub mod ipv4;
 pub mod tcp;
 #[cfg(test)]
