@@ -2,7 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <string.h>
 #include <cstdio>
+#include <deque>
 #include <iomanip>
 #include <iostream>
 
@@ -20,14 +22,61 @@
 namespace media {
 namespace {
 
-static constexpr float kGainUnchanged = 1.0f;
-static constexpr float kUnityGain = 0.0f;
 static constexpr int kLevelMax = 25;
 static constexpr char kClearEol[] = "\x1b[K";
 static constexpr char kHideCursor[] = "\x1b[?25l";
 static constexpr char kShowCursor[] = "\x1b[?25h";
 
 }  // namespace
+
+using AudioGainInfo = ::fuchsia::media::AudioGainInfo;
+using AudioDeviceInfo = ::fuchsia::media::AudioDeviceInfo;
+
+class EscapeDecoder {
+ public:
+  static constexpr int kUpArrow = -10;
+  static constexpr int kDownArrow = -11;
+  static constexpr int kRightArrow = -12;
+  static constexpr int kLeftArrow = -13;
+
+  EscapeDecoder() = default;
+  EscapeDecoder(const EscapeDecoder&) = delete;
+  EscapeDecoder(EscapeDecoder&&) = delete;
+  EscapeDecoder& operator=(const EscapeDecoder&) = delete;
+  EscapeDecoder& operator=(EscapeDecoder&&);
+
+  int Decode(int c) {
+    if (state_ == 2) {
+      state_ = 0;
+      // clang-format off
+      switch (c) {
+        case 'A': return kUpArrow;
+        case 'B': return kDownArrow;
+        case 'C': return kRightArrow;
+        case 'D': return kLeftArrow;
+        default: return 0;
+      }
+      // clang-format on
+    }
+
+    if (state_ == 1) {
+      state_ = (c == kBracketChar) ? 2 : 0;
+      return 0;
+    }
+
+    if (c == kEscChar) {
+      state_ = 1;
+      return 0;
+    }
+
+    return c;
+  }
+
+ private:
+  static constexpr int kEscChar = 0x1b;
+  static constexpr int kBracketChar = '[';
+  uint32_t state_ = 0;
+};
 
 class VolApp {
  public:
@@ -43,82 +92,118 @@ class VolApp {
       return;
     }
 
-    if (command_line.HasOption("show")) {
-      interactive_ = false;
-    }
-
-    if (command_line.HasOption("mute")) {
-      mute_ = true;
-      interactive_ = false;
-    }
-
-    if (command_line.HasOption("unmute")) {
-      if (mute_) {
-        Usage();
-        return;
-      }
-
-      unmute_ = true;
-      interactive_ = false;
-    }
-
+    bool uid_set = false;
+    bool token_set = false;
     std::string string_value;
-    if (command_line.GetOptionValue("gain", &string_value)) {
-      if (!Parse(string_value, &gain_db_)) {
+    if (command_line.GetOptionValue("uid", &string_value)) {
+      if (!string_value.length()) {
         Usage();
         return;
       }
 
-      interactive_ = false;
+      selected_uid_ = string_value;
+      uid_set = true;
     }
 
-    audio_ =
-        startup_context_->ConnectToEnvironmentService<fuchsia::media::Audio>();
+    if (command_line.GetOptionValue("token", &string_value)) {
+      if (uid_set || !Parse(string_value, &selected_token_) ||
+          (selected_token_ == ZX_KOID_INVALID)) {
+        Usage();
+        return;
+      }
+
+      token_set = true;
+    }
+
+    if (command_line.HasOption("input")) {
+      if (uid_set || token_set) {
+        Usage();
+        return;
+      }
+      input_ = true;
+    }
+
+    if (command_line.HasOption("show")) {
+      non_interactive_actions_.emplace_back([this]() { ShowAllDevices(); });
+    }
+
+    if (command_line.GetOptionValue("mute", &string_value)) {
+      BoolAction val;
+
+      if (!Parse(string_value, &val)) {
+        Usage();
+        return;
+      }
+
+      non_interactive_actions_.emplace_back(
+          [this, val]() { SetDeviceMute(val); });
+    }
+
+    if (command_line.GetOptionValue("agc", &string_value)) {
+      BoolAction val;
+
+      if (!Parse(string_value, &val)) {
+        Usage();
+        return;
+      }
+
+      non_interactive_actions_.emplace_back(
+          [this, val]() { SetDeviceAgc(val); });
+    }
+
+    if (command_line.GetOptionValue("gain", &string_value)) {
+      float val;
+
+      if (!Parse(string_value, &val)) {
+        Usage();
+        return;
+      }
+
+      non_interactive_actions_.emplace_back(
+          [this, val]() { SetDeviceGain(val, false); });
+    }
+
+    audio_ = startup_context_->ConnectToEnvironmentService<
+        fuchsia::media::AudioDeviceEnumerator>();
     audio_.set_error_handler([this]() {
       std::cout << "System error: audio service failure";
       quit_callback_();
     });
 
-    audio_.events().SystemGainMuteChanged = [this](float gain_db, bool muted) {
-      HandleGainMuteChanged(gain_db, muted);
-    };
-
-    if (mute_) {
-      audio_->SetSystemMute(true);
-    }
-
-    if (unmute_) {
-      audio_->SetSystemMute(false);
-    }
-
-    if (gain_db_ != kGainUnchanged) {
-      audio_->SetSystemGain(gain_db_);
-    }
-
-    if (interactive_) {
-      std::cout << "\ninteractive mode:\n";
-      std::cout << "    +            increase system gain\n";
-      std::cout << "    -            decrease system gain\n";
-      std::cout << "    m            toggle mute\n";
-      std::cout << "    enter        quit\n\n" << kHideCursor;
-
-      setbuf(stdin, nullptr);
-    }
+    // Get this party started by fetching the current list of audio devices.
+    audio_->GetDevices([this](std::vector<AudioDeviceInfo> devices) {
+      OnGetDevices(std::move(devices));
+    });
   }
 
  private:
-  void Usage() {
-    std::cout << "\n";
-    std::cout << "vol <args>\n";
-    std::cout << "    --show       show system audio status\n";
-    std::cout << "    --gain=<db>  set system audio gain\n";
-    std::cout << "    --mute       mute system audio\n";
-    std::cout << "    --unmute     unmute system audio\n\n";
-    std::cout << "Given no arguments, vol waits for the following keystrokes\n";
+  enum class BoolAction {
+    kTrue,
+    kFalse,
+    kToggle,
+  };
+
+  void InteractiveUsage() {
+    std::cout << "\ninteractive mode:\n";
     std::cout << "    +            increase system gain\n";
     std::cout << "    -            decrease system gain\n";
     std::cout << "    m            toggle mute\n";
+    std::cout << "    a            toggle agc\n";
     std::cout << "    enter        quit\n";
+  }
+
+  void Usage() {
+    std::cout << "\n";
+    std::cout << "vol <args>\n";
+    std::cout << "    --show           show system audio status\n";
+    std::cout << "    --token=<id>     select the device by token\n";
+    std::cout << "    --uid=<uid>      select the device by partial UID\n";
+    std::cout << "    --input          select the default input device\n";
+    std::cout << "    --gain=<db>      set system audio gain\n";
+    std::cout << "    --mute=(on|off)  mute/unmute system audio\n";
+    std::cout << "    --agc=(on|off)   enable/disable AGC\n\n";
+    std::cout << "Given no arguments, vol waits for the following keystrokes\n";
+    InteractiveUsage();
     std::cout << "\n";
 
     quit_callback_();
@@ -131,43 +216,47 @@ class VolApp {
     return (istream >> *float_out) && istream.eof();
   }
 
-  void HandleGainMuteChanged(float gain_db, bool muted) {
-    system_audio_gain_db_ = gain_db;
-    system_audio_muted_ = muted;
+  bool Parse(const std::string& string_value, uint64_t* uint_out) {
+    FXL_DCHECK(uint_out);
 
-    if (interactive_) {
-      std::cout << "\r";
-      FormatGainMute(std::cout);
-      std::cout << kClearEol << std::flush;
-      if (first_status_) {
-        first_status_ = false;
-        WaitForKeystroke();
-      }
-    } else {
-      FormatGainMute(std::cout);
-      std::cout << std::endl;
-      quit_callback_();
-      return;
-    }
+    std::istringstream istream(string_value);
+    return (istream >> *uint_out) && istream.eof();
   }
 
-  void FormatGainMute(std::ostream& os) {
-    int level = PerceivedLevel::GainToLevel(system_audio_gain_db_, kLevelMax);
+  bool Parse(const std::string& string_value, BoolAction* bool_out) {
+    FXL_DCHECK(bool_out);
 
-    os << std::string(level, '=') << "|" << std::string(kLevelMax - level, '-');
-
-    if (system_audio_gain_db_ == fuchsia::media::kMutedGain) {
-      os << " -infinity db";
-    } else if (system_audio_gain_db_ == kUnityGain) {
-      os << " 0.0 db";
-    } else {
-      os << " " << std::fixed << std::setprecision(1) << system_audio_gain_db_
-         << "db";
+    static const char* TRUE_STRINGS[] = {"yes", "on", "true"};
+    for (const char* s : TRUE_STRINGS) {
+      if (!strcasecmp(string_value.c_str(), s)) {
+        *bool_out = BoolAction::kTrue;
+        return true;
+      }
     }
 
-    if (system_audio_muted_) {
-      os << " muted";
+    static const char* FALSE_STRINGS[] = {"no", "off", "false"};
+    for (const char* s : FALSE_STRINGS) {
+      if (!strcasecmp(string_value.c_str(), s)) {
+        *bool_out = BoolAction::kFalse;
+        return true;
+      }
     }
+
+    return false;
+  }
+
+  void FormatGainMute(std::ostream& os, const AudioGainInfo& info) {
+    int level = PerceivedLevel::GainToLevel(info.db_gain, kLevelMax);
+
+    namespace flag = ::fuchsia::media;
+    bool muted = (info.flags & flag::AudioGainInfoFlag_Mute) != 0;
+    bool can_agc = (info.flags & flag::AudioGainInfoFlag_AgcSupported) != 0;
+    bool agc = (info.flags & flag::AudioGainInfoFlag_AgcEnabled) != 0;
+
+    os << std::string(level, '=') << "|" << std::string(kLevelMax - level, '-')
+       << " :: [" << (muted ? " muted " : "unmuted") << "]"
+       << (can_agc ? (agc ? "[agc]" : "[   ]") : "") << " " << std::fixed
+       << std::setprecision(2) << info.db_gain << " dB";
   }
 
   // Calls |HandleKeystroke| on the message loop when console input is ready.
@@ -180,28 +269,29 @@ class VolApp {
   // Handles a keystroke, possibly calling |WaitForKeystroke| to wait for the
   // next one.
   void HandleKeystroke() {
-    int c = getc(stdin);
+    int c = esc_decoder_.Decode(getc(stdin));
 
     switch (c) {
       case '+':
-      case 'A':  // Because <esc>[A is the up key
-      case 'C':  // Because <esc>[C is the right key
-        audio_->SetSystemGain(PerceivedLevel::LevelToGain(
-            PerceivedLevel::GainToLevel(system_audio_gain_db_, kLevelMax) + 1,
-            kLevelMax));
+      case EscapeDecoder::kUpArrow:
+      case EscapeDecoder::kRightArrow:
+        SetDeviceGain(1.0, true);
         break;
       case '-':
-      case 'B':  // Because <esc>[B is the down key
-      case 'D':  // Because <esc>[D is the left key
-        audio_->SetSystemGain(PerceivedLevel::LevelToGain(
-            PerceivedLevel::GainToLevel(system_audio_gain_db_, kLevelMax) - 1,
-            kLevelMax));
+      case EscapeDecoder::kDownArrow:
+      case EscapeDecoder::kLeftArrow:
+        SetDeviceGain(-1.0, true);
+        break;
+      case 'a':
+      case 'A':
+        SetDeviceAgc(BoolAction::kToggle);
         break;
       case 'm':
       case 'M':
-        audio_->SetSystemMute(!system_audio_muted_);
+        SetDeviceMute(BoolAction::kToggle);
         break;
       case '\n':
+      case '\r':
       case 'q':
       case 'Q':
         quit_callback_();
@@ -214,17 +304,321 @@ class VolApp {
     WaitForKeystroke();
   }
 
+  void ShowAllDevices() {
+    for (const auto& map_entry : devices_) {
+      const auto& dev = map_entry.second;
+      namespace flag = ::fuchsia::media;
+
+      bool muted = (dev.gain_info.flags & flag::AudioGainInfoFlag_Mute) != 0;
+      bool can_agc =
+          (dev.gain_info.flags & flag::AudioGainInfoFlag_AgcSupported) != 0;
+      bool agc_enb =
+          (dev.gain_info.flags & flag::AudioGainInfoFlag_AgcEnabled) != 0;
+
+      std::cout << "Audio " << (dev.is_input ? "Input" : "Output") << " (id "
+                << dev.token_id << ")" << std::endl;
+      std::cout << "Name    : " << dev.name << std::endl;
+      std::cout << "UID     : " << dev.unique_id << std::endl;
+      std::cout << "Default : " << (dev.is_default ? "yes" : "no") << std::endl;
+      std::cout << "Gain    : " << dev.gain_info.db_gain << " dB" << std::endl;
+      std::cout << "Mute    : " << (muted ? "yes" : "no") << std::endl;
+      if (can_agc) {
+        std::cout << "AGC     : " << (agc_enb ? "yes" : "no") << std::endl;
+      }
+    }
+  }
+
+  void SetDeviceGain(float val, bool relative) {
+    auto iter = devices_.find(control_token_);
+
+    if (iter == devices_.end()) {
+      if (!interactive()) {
+        std::cout << "No appropriate device found for setting gain";
+      }
+      return;
+    }
+
+    const auto& dev_state = devices_[control_token_];
+    AudioGainInfo cmd = dev_state.gain_info;
+    cmd.db_gain = relative ? (cmd.db_gain + val) : val;
+
+    if (!interactive()) {
+      std::cout << "Setting audio " << (dev_state.is_input ? "input" : "output")
+                << " \"" << dev_state.name << "\" gain to "
+                << std::setprecision(2) << cmd.db_gain << " dB" << std::endl;
+    }
+
+    audio_->SetDeviceGain(control_token_, std::move(cmd),
+                          ::fuchsia::media::SetAudioGainFlag_GainValid);
+  }
+
+  void SetDeviceMute(BoolAction action) {
+    auto iter = devices_.find(control_token_);
+
+    if (iter == devices_.end()) {
+      if (!interactive()) {
+        std::cout << "No appropriate device found for setting mute"
+                  << std::endl;
+      }
+      return;
+    }
+
+    const auto& dev_state = devices_[control_token_];
+    AudioGainInfo cmd = dev_state.gain_info;
+
+    constexpr uint32_t flag = ::fuchsia::media::AudioGainInfoFlag_Mute;
+    // clang-format off
+    switch (action) {
+      case BoolAction::kTrue: cmd.flags |= flag; break;
+      case BoolAction::kFalse: cmd.flags &= ~flag; break;
+      case BoolAction::kToggle: cmd.flags ^= flag; break;
+    }
+    // clang-format on
+
+    if (!interactive()) {
+      std::cout << "Setting audio " << (dev_state.is_input ? "input" : "output")
+                << " \"" << dev_state.name << "\" mute to "
+                << ((cmd.flags & flag) ? "on" : "off") << "." << std::endl;
+    }
+
+    audio_->SetDeviceGain(control_token_, std::move(cmd),
+                          ::fuchsia::media::SetAudioGainFlag_MuteValid);
+  }
+
+  void SetDeviceAgc(BoolAction action) {
+    auto iter = devices_.find(control_token_);
+
+    if (iter == devices_.end()) {
+      if (!interactive()) {
+        std::cout << "No appropriate device found for setting agc" << std::endl;
+      }
+      return;
+    }
+
+    const auto& dev_state = devices_[control_token_];
+    AudioGainInfo cmd = dev_state.gain_info;
+
+    if (!(cmd.flags & ::fuchsia::media::AudioGainInfoFlag_AgcSupported)) {
+      if (!interactive()) {
+        std::cout << "Audio " << (dev_state.is_input ? "input" : "output")
+                  << " \"" << dev_state.name << "\" does not support AGC."
+                  << std::endl;
+      }
+      return;
+    }
+
+    constexpr uint32_t flag = ::fuchsia::media::AudioGainInfoFlag_AgcEnabled;
+    // clang-format off
+    switch (action) {
+      case BoolAction::kTrue: cmd.flags |= flag; break;
+      case BoolAction::kFalse: cmd.flags &= ~flag; break;
+      case BoolAction::kToggle: cmd.flags ^= flag; break;
+    }
+    // clang-format on
+
+    if (!interactive()) {
+      std::cout << "Setting audio " << (dev_state.is_input ? "input" : "output")
+                << " \"" << dev_state.name << "\" AGC to "
+                << ((cmd.flags & flag) ? "on" : "off") << "." << std::endl;
+    }
+
+    audio_->SetDeviceGain(control_token_, std::move(cmd),
+                          ::fuchsia::media::SetAudioGainFlag_AgcValid);
+  }
+
+  void ShowSelectedDevice() {
+    if (control_token_ != ZX_KOID_INVALID) {
+      const auto& dev = devices_[control_token_];
+      std::cout << "\rCurrently controlling audio "
+                << (input_ ? "input" : "output") << " (id " << dev.token_id
+                << "): " << dev.name << std::endl;
+    } else {
+      std::cout << "\rNo appropriate audio " << (input_ ? "input" : "output")
+                << " exists to control" << std::endl;
+    }
+
+    std::cout << kClearEol << std::flush;
+  }
+
+  void RedrawInteractiveState() {
+    std::cout << "\r";
+    if (control_token_ != ZX_KOID_INVALID) {
+      FormatGainMute(std::cout, devices_[control_token_].gain_info);
+    } else {
+      std::cout << "No device selected!";
+    }
+    std::cout << kClearEol << std::flush;
+  }
+
+  template <typename T>
+  bool ChooseDeviceToControl(const T& predicate) {
+    uint64_t token = ZX_KOID_INVALID;
+    uint64_t prev_token = control_token_;
+
+    for (const auto& pair : devices_) {
+      const auto& dev = pair.second;
+
+      if (predicate(dev)) {
+        token = dev.token_id;
+        break;
+      }
+    }
+
+    control_token_ = token;
+    return prev_token != control_token_;
+  }
+
+  bool ChooseDeviceToControl() {
+    if (selected_uid_.length()) {
+      return ChooseDeviceToControl([uid_ptr = selected_uid_.c_str(),
+                                    uid_len = selected_uid_.length()](
+                                       const AudioDeviceInfo& info) -> bool {
+        return (strncmp(info.unique_id.get().c_str(), uid_ptr, uid_len) == 0);
+      });
+    } else if (selected_token_ != ZX_KOID_INVALID) {
+      return ChooseDeviceToControl(
+          [token = selected_token_](const AudioDeviceInfo& info) -> bool {
+            return info.token_id == token;
+          });
+    } else {
+      return ChooseDeviceToControl(
+          [input = input_](const AudioDeviceInfo& info) -> bool {
+            return (info.is_input == input) && info.is_default;
+          });
+    }
+  }
+
+  void OnGetDevices(std::vector<AudioDeviceInfo> devices) {
+    // Build our device map.
+    for (auto& dev : devices) {
+      auto result =
+          devices_.emplace(std::make_pair(dev.token_id, std::move(dev)));
+      if (!result.second) {
+        std::cerr << "<WARNING>: Duplicate audio device token ID ("
+                  << dev.token_id << std::endl;
+        continue;
+      }
+    }
+
+    // Choose the device we want to control.
+    ChooseDeviceToControl();
+
+    if (!interactive()) {
+      // Take the actions requested by the user.
+      for (const auto& action : non_interactive_actions_) {
+        action();
+      }
+
+      // Then exit.
+      quit_callback_();
+    } else {
+      InteractiveUsage();
+      std::cout << "\n" << kHideCursor;
+
+      // Install our event hooks so we can keep up with any changes to our
+      // device state.
+      audio_.events().OnDeviceAdded = [this](AudioDeviceInfo dev) {
+        OnDeviceAdded(std::move(dev));
+      };
+      audio_.events().OnDeviceRemoved = [this](uint64_t dev_token) {
+        OnDeviceRemoved(dev_token);
+      };
+      audio_.events().OnDeviceGainChanged = [this](uint64_t dev_token,
+                                                   AudioGainInfo info) {
+        OnDeviceGainChanged(dev_token, info);
+      };
+      audio_.events().OnDefaultDeviceChanged = [this](uint64_t old_id,
+                                                      uint64_t new_id) {
+        OnDefaultDeviceChanged(old_id, new_id);
+      };
+
+      setbuf(stdin, nullptr);
+      WaitForKeystroke();
+
+      ShowSelectedDevice();
+      RedrawInteractiveState();
+    }
+  }
+
+  void OnDeviceAdded(AudioDeviceInfo device_to_add, bool skip_update = false) {
+    uint64_t token = device_to_add.token_id;
+    auto result =
+        devices_.emplace(std::make_pair(token, std::move(device_to_add)));
+
+    if (!result.second) {
+      std::cerr << "\r<WARNING>: Duplicate audio device token ID (" << token
+                << ")" << std::endl;
+      return;
+    }
+
+    if (!skip_update) {
+      if (ChooseDeviceToControl()) {
+        ShowSelectedDevice();
+        RedrawInteractiveState();
+      }
+    }
+  }
+
+  void OnDeviceRemoved(uint64_t dev_token) {
+    auto iter = devices_.find(dev_token);
+    if (iter == devices_.end()) {
+      std::cerr << "\r<WARNING>: Invalid device token (" << dev_token
+                << ") during device remove notification." << std::endl;
+      return;
+    }
+
+    devices_.erase(iter);
+
+    if (ChooseDeviceToControl()) {
+      ShowSelectedDevice();
+      RedrawInteractiveState();
+    }
+  }
+
+  void OnDeviceGainChanged(uint64_t dev_token, AudioGainInfo info) {
+    auto iter = devices_.find(dev_token);
+    if (iter == devices_.end()) {
+      std::cerr << "\r<WARNING>: Invalid device token (" << dev_token
+                << ") during gain changed notification." << std::endl;
+      return;
+    }
+
+    iter->second.gain_info = std::move(info);
+    if (control_token_ == dev_token) {
+      RedrawInteractiveState();
+    }
+  }
+
+  void OnDefaultDeviceChanged(uint64_t old_id, uint64_t new_id) {
+    auto old_iter = devices_.find(old_id);
+    if (old_iter != devices_.end()) {
+      old_iter->second.is_default = false;
+    }
+
+    auto new_iter = devices_.find(new_id);
+    if (new_iter != devices_.end()) {
+      new_iter->second.is_default = true;
+    }
+
+    if (ChooseDeviceToControl()) {
+      ShowSelectedDevice();
+      RedrawInteractiveState();
+    }
+  }
+
+  bool interactive() const { return non_interactive_actions_.empty(); }
+
   std::unique_ptr<fuchsia::sys::StartupContext> startup_context_;
   fit::closure quit_callback_;
-  fuchsia::media::AudioPtr audio_;
-  bool interactive_ = true;
-  bool mute_ = false;
-  bool unmute_ = false;
-  float gain_db_ = kGainUnchanged;
+  std::deque<fit::closure> non_interactive_actions_;
+  fuchsia::media::AudioDeviceEnumeratorPtr audio_;
+  uint64_t control_token_ = ZX_KOID_INVALID;
+  uint64_t selected_token_ = ZX_KOID_INVALID;
+  std::string selected_uid_;
+  bool input_ = false;
+  std::map<uint64_t, AudioDeviceInfo> devices_;
+  EscapeDecoder esc_decoder_;
   fsl::FDWaiter fd_waiter_;
-  float system_audio_gain_db_;
-  bool system_audio_muted_;
-  bool first_status_ = true;
 };
 
 }  // namespace media
