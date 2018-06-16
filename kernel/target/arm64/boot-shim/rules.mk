@@ -25,6 +25,10 @@ SHIM_INCLUDES := -Ikernel/include -Ikernel/arch/arm64/include -Isystem/public
 SHIM_INCLUDES += -Isystem/ulib/ddk/include  # for ddk/protocol/platform-defs.h
 SHIM_CFLAGS := $(NO_SAFESTACK) $(NO_SANITIZERS)
 
+# The shim code runs with alignment checking enabled, so make sure the
+# compiler doesn't use any unaligned memory accesses.
+SHIM_CFLAGS += -mstrict-align
+
 # for including target specific headers
 SHIM_INCLUDES += -Ikernel/target/arm64/board/$(PLATFORM_BOARD_NAME)
 
