@@ -38,7 +38,7 @@ class WeakStubController {
 
   // Break the connection between this object and the |StubController|.
   //
-  // After callign this method, |controller()| will return nullptr.
+  // After calling this method, |controller()| will return nullptr.
   void Invalidate();
 
   // The |StubController| to which this weak reference refers.
