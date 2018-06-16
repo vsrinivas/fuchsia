@@ -13,8 +13,10 @@
 #include <hw/reg.h>
 #include <hwreg/bitfields.h>
 #include <hwreg/mmio.h>
+#include <lib/zx/channel.h>
 #include <memory.h>
 #include <stdint.h>
+#include <zircon/device/media-codec.h>
 #include <zircon/errors.h>
 #include <zircon/syscalls.h>
 
@@ -22,6 +24,9 @@
 #include <memory>
 #include <thread>
 
+#include "device_ctx.h"
+#include "device_fidl.h"
+#include "local_codec_factory.h"
 #include "macros.h"
 #include "mpeg12_decoder.h"
 #include "registers.h"
@@ -33,6 +38,7 @@
 constexpr uint64_t kStreamBufferSize = PAGE_SIZE * 1024;
 
 extern "C" {
+zx_status_t amlogic_video_init(void** out_ctx);
 zx_status_t amlogic_video_bind(void* ctx, zx_device_t* parent);
 }
 
@@ -40,12 +46,30 @@ static zx_status_t amlogic_video_ioctl(void* ctx, uint32_t op,
                                        const void* in_buf, size_t in_len,
                                        void* out_buf, size_t out_len,
                                        size_t* out_actual) {
+  // The only IOCTL we support is get channel.
+  if (op != MEDIA_CODEC_IOCTL_GET_CODEC_FACTORY_CHANNEL) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
+  if ((out_buf == nullptr) || (out_actual == nullptr) ||
+      (out_len != sizeof(zx_handle_t))) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  DeviceCtx* device = reinterpret_cast<DeviceCtx*>(ctx);
+
+  zx::channel codec_factory_client_endpoint;
+  device->device_fidl()->CreateChannelBoundCodecFactory(
+      &codec_factory_client_endpoint);
+
   return ZX_OK;
 }
 
 static zx_protocol_device_t amlogic_video_device_ops = {
-    DEVICE_OPS_VERSION,
-    .ioctl = amlogic_video_ioctl,
+    DEVICE_OPS_VERSION, .ioctl = amlogic_video_ioctl,
+    // TODO(jbauman) or TODO(dustingreen): .suspend .resume, maybe .release if
+    // it would ever be run.  Currently ~AmlogicVideo code sets lower power, but
+    // ~AmlogicVideo doesn't run yet.
 };
 
 // Most buffers should be 64-kbyte aligned.
@@ -226,7 +250,7 @@ zx_status_t AmlogicVideo::LoadDecoderFirmware(uint8_t* data, uint32_t size) {
       })) {
     DECODE_ERROR("Failed to load microcode.");
     return ZX_ERR_TIMED_OUT;
-    }
+  }
 
   io_buffer_release(&firmware_buffer);
   return ZX_OK;
@@ -694,8 +718,25 @@ void AmlogicVideo::InitializeInterrupts() {
       zx_time_t time;
       zx_status_t status =
           zx_interrupt_wait(vdec1_interrupt_handle_.get(), &time);
-      if (status != ZX_OK)
+      if (status == ZX_ERR_CANCELED) {
+        // expected when zx_interrupt_destroy() is called
         return;
+      }
+      if (status != ZX_OK) {
+        // unexpected errors
+        DECODE_ERROR(
+            "AmlogicVideo::InitializeInterrupts() zx_interrupt_wait() failed "
+            "status: %d\n",
+            status);
+        if (status == ZX_ERR_BAD_STATE) {
+          // TODO(dustingreen): We should be able to remove this after fix for
+          // ZX-2268.  Currently this is potentially useful to repro for
+          // ZX-2268.
+          DECODE_ERROR("status == ZX_ERR_BAD_STATE - trying to continue\n");
+          continue;
+        }
+        return;
+      }
       video_decoder_->HandleInterrupt();
     }
   });
@@ -704,7 +745,8 @@ void AmlogicVideo::InitializeInterrupts() {
 zx_status_t AmlogicVideo::InitDecoder() {
   EnableVideoPower();
   zx_status_t status = InitializeStreamBuffer(true);
-  if (status != ZX_OK) return status;
+  if (status != ZX_OK)
+    return status;
 
   InitializeInterrupts();
 
@@ -712,17 +754,23 @@ zx_status_t AmlogicVideo::InitDecoder() {
   return video_decoder_->Initialize();
 }
 
+extern zx_status_t amlogic_video_init(void** out_ctx) {
+  DriverCtx* driver_ctx = new DriverCtx();
+  *out_ctx = reinterpret_cast<void*>(driver_ctx);
+  return ZX_OK;
+}
+
+// ctx is the driver ctx (not device ctx)
 zx_status_t amlogic_video_bind(void* ctx, zx_device_t* parent) {
 #if ENABLE_DECODER_TESTS
   TestSupport::set_parent_device(parent);
   TestSupport::RunAllTests();
 #endif
 
-  auto video = std::make_unique<AmlogicVideo>();
-  if (!video) {
-    DECODE_ERROR("Failed to create AmlogicVideo");
-    return ZX_ERR_NO_MEMORY;
-  }
+  DriverCtx* driver = reinterpret_cast<DriverCtx*>(ctx);
+  std::unique_ptr<DeviceCtx> device = std::make_unique<DeviceCtx>(driver);
+
+  AmlogicVideo* video = device->video();
 
   zx_status_t status = video->InitRegisters(parent);
   if (status != ZX_OK) {
@@ -742,7 +790,12 @@ zx_status_t amlogic_video_bind(void* ctx, zx_device_t* parent) {
     return status;
   }
 
-  video.release();
+  // The pointer to DeviceCtx is add_device() ctx now, so intentionally don't
+  // destruct the DeviceCtx instance.
+  //
+  // At least for now, the DeviceCtx stays allocated for the life of the
+  // devhost process.
+  device.release();
   zxlogf(INFO, "[amlogic_video_bind] bound\n");
   return ZX_OK;
 }

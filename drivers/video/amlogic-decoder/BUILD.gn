@@ -37,6 +37,13 @@ source_set("test_support") {
 
 source_set("sources") {
   sources = [
+    # Driver structure:
+    "device_ctx.cc",
+    "device_ctx.h",
+    "driver_ctx.cc",
+    "driver_ctx.h",
+
+    # HW driving:
     "amlogic-video.cc",
     "amlogic-video.h",
     "binding.c",
@@ -47,8 +54,17 @@ source_set("sources") {
     "mpeg12_decoder.h",
     "registers.h",
     "video_decoder.h",
+
+    # CodecFactory+Codec interface handling:
+    "codec_impl.cc",
+    "codec_impl.h",
+    "device_fidl.cc",
+    "device_fidl.h",
+    "local_codec_factory.cc",
+    "local_codec_factory.h",
   ]
   public_deps = [
+    "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/driver",
     "//zircon/public/lib/fbl",
@@ -57,6 +73,9 @@ source_set("sources") {
   ]
   deps = [
     ":test_support",
+    "//garnet/public/lib/fidl/cpp",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/media/fidl:media_codec",
   ]
   if (amlogic_decoder_tests) {
     testonly = true
@@ -68,8 +87,8 @@ source_set("sources") {
 source_set("tests") {
   testonly = true
   deps = [
-    ":test_support",
     ":sources",
+    ":test_support",
     "//third_party/googletest:gtest",
   ]
   sources = [
