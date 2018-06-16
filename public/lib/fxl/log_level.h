@@ -16,7 +16,7 @@ constexpr LogSeverity LOG_ERROR = 2;
 constexpr LogSeverity LOG_FATAL = 3;
 constexpr LogSeverity LOG_NUM_SEVERITIES = 4;
 
-// LOG_DFATAL is LOG_FATAL in debug mode, ERROR in normal mode
+// LOG_DFATAL is LOG_FATAL in debug mode, LOG_ERROR in normal mode
 #ifdef NDEBUG
 const LogSeverity LOG_DFATAL = LOG_ERROR;
 #else
