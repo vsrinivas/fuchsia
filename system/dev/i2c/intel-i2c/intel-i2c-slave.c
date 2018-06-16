@@ -48,18 +48,18 @@ const uint32_t kRxFifoDepth = 8;
 // Implement the functionality of the i2c slave devices.
 
 static int bus_is_idle(intel_serialio_i2c_device_t *controller) {
-    uint32_t i2c_sta = *REG32(&controller->regs->i2c_sta);
+    uint32_t i2c_sta = readl(&controller->regs->i2c_sta);
     return !(i2c_sta & (0x1 << I2C_STA_CA)) &&
            (i2c_sta & (0x1 << I2C_STA_TFCE));
 }
 
 static int stop_detected(intel_serialio_i2c_device_t *controller) {
-    return *REG32(&controller->regs->raw_intr_stat) &
-           (0x1 << INTR_STOP_DETECTION);
+    return (readl(&controller->regs->raw_intr_stat) &
+            (0x1 << INTR_STOP_DETECTION));
 }
 
 static int rx_fifo_empty(intel_serialio_i2c_device_t *controller) {
-    return !(*REG32(&controller->regs->i2c_sta) & (0x1 << I2C_STA_RFNE));
+    return !(readl(&controller->regs->i2c_sta) & (0x1 << I2C_STA_RFNE));
 }
 
 // Thread safety analysis cannot see the control flow through the
@@ -103,9 +103,9 @@ static zx_status_t intel_serialio_i2c_slave_transfer(
 
     // Set the target adress value and width.
     RMWREG32(&controller->regs->ctl, CTL_ADDRESSING_MODE, 1, ctl_addr_mode_bit);
-    *REG32(&controller->regs->tar_add) =
-        (tar_add_addr_mode_bit << TAR_ADD_WIDTH) |
-        (slave->chip_address << TAR_ADD_IC_TAR);
+    writel((tar_add_addr_mode_bit << TAR_ADD_WIDTH) |
+           (slave->chip_address << TAR_ADD_IC_TAR),
+           &controller->regs->tar_add);
 
     // Enable the controller.
     RMWREG32(&controller->regs->i2c_en, I2C_EN_ENABLE, 1, 1);
@@ -131,9 +131,10 @@ static zx_status_t intel_serialio_i2c_slave_transfer(
             switch (segments->type) {
             case I2C_SEGMENT_TYPE_WRITE:
                 // Wait if the TX FIFO is full
-                if (!(*REG32(&controller->regs->i2c_sta) & (0x1 << I2C_STA_TFNF))) {
-                    status = intel_serialio_i2c_wait_for_tx_empty(controller,
-                                                                  zx_deadline_after(timeout_ns));
+                if (!(readl(&controller->regs->i2c_sta) &
+                      (0x1 << I2C_STA_TFNF))) {
+                    status = intel_serialio_i2c_wait_for_tx_empty(
+                        controller, zx_deadline_after(timeout_ns));
                     if (status != ZX_OK) {
                         goto transfer_finish_1;
                     }
@@ -239,7 +240,7 @@ static zx_status_t intel_serialio_i2c_slave_transfer(
 
     // Read the data_cmd register to pull data out of the RX FIFO.
     if (!DO_UNTIL(rx_fifo_empty(controller),
-                  *REG32(&controller->regs->data_cmd), 0)) {
+                  readl(&controller->regs->data_cmd), 0)) {
         status = ZX_ERR_TIMED_OUT;
         goto transfer_finish_1;
     }

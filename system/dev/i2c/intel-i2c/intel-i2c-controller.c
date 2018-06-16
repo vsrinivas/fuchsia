@@ -336,18 +336,19 @@ static int intel_serialio_i2c_irq_thread(void* arg) {
             zxlogf(ERROR, "i2c: error waiting for interrupt: %d\n", status);
             continue;
         }
-        uint32_t intr_stat = *REG32(&dev->regs->intr_stat);
-        zxlogf(SPEW, "Received i2c interrupt: %x %x\n", intr_stat, *REG32(&dev->regs->raw_intr_stat));
+        uint32_t intr_stat = readl(&dev->regs->intr_stat);
+        zxlogf(SPEW, "Received i2c interrupt: %x %x\n",
+               intr_stat, readl(&dev->regs->raw_intr_stat));
         if (intr_stat & (1u << INTR_RX_UNDER)) {
             // If we hit an underflow, it's a bug.
             zx_object_signal(dev->event_handle, 0, ERROR_DETECTED_SIGNAL);
-            *REG32(&dev->regs->clr_rx_under);
+            readl(&dev->regs->clr_rx_under);
             zxlogf(ERROR, "i2c: rx underflow detected!\n");
         }
         if (intr_stat & (1u << INTR_RX_OVER)) {
             // If we hit an overflow, it's a bug.
             zx_object_signal(dev->event_handle, 0, ERROR_DETECTED_SIGNAL);
-            *REG32(&dev->regs->clr_rx_over);
+            readl(&dev->regs->clr_rx_over);
             zxlogf(ERROR, "i2c: rx overflow detected!\n");
         }
         if (intr_stat & (1u << INTR_RX_FULL)) {
@@ -359,7 +360,7 @@ static int intel_serialio_i2c_irq_thread(void* arg) {
         if (intr_stat & (1u << INTR_TX_OVER)) {
             // If we hit an overflow, it's a bug.
             zx_object_signal(dev->event_handle, 0, ERROR_DETECTED_SIGNAL);
-            *REG32(&dev->regs->clr_tx_over);
+            readl(&dev->regs->clr_tx_over);
             zxlogf(ERROR, "i2c: tx overflow detected!\n");
         }
         if (intr_stat & (1u << INTR_TX_EMPTY)) {
@@ -369,9 +370,10 @@ static int intel_serialio_i2c_irq_thread(void* arg) {
             mtx_unlock(&dev->irq_mask_mutex);
         }
         if (intr_stat & (1u << INTR_TX_ABORT)) {
-            zxlogf(ERROR, "i2c: tx abort detected: 0x%08x\n", *REG32(&dev->regs->tx_abrt_source));
+            zxlogf(ERROR, "i2c: tx abort detected: 0x%08x\n",
+                   readl(&dev->regs->tx_abrt_source));
             zx_object_signal(dev->event_handle, 0, ERROR_DETECTED_SIGNAL);
-            *REG32(&dev->regs->clr_tx_abort);
+            readl(&dev->regs->clr_tx_abort);
         }
         if (intr_stat & (1u << INTR_ACTIVITY)) {
             // Should always be masked...remask it.
@@ -382,10 +384,10 @@ static int intel_serialio_i2c_irq_thread(void* arg) {
         }
         if (intr_stat & (1u << INTR_STOP_DETECTION)) {
             zx_object_signal(dev->event_handle, 0, STOP_DETECTED_SIGNAL);
-            *REG32(&dev->regs->clr_stop_det);
+            readl(&dev->regs->clr_stop_det);
         }
         if (intr_stat & (1u << INTR_START_DETECTION)) {
-            *REG32(&dev->regs->clr_start_det);
+            readl(&dev->regs->clr_start_det);
         }
         if (intr_stat & (1u << INTR_GENERAL_CALL)) {
             // Should always be masked...remask it.
@@ -473,7 +475,7 @@ zx_status_t intel_serialio_i2c_issue_rx(
     intel_serialio_i2c_device_t* controller,
     uint32_t data_cmd) {
 
-    *REG32(&controller->regs->data_cmd) = data_cmd;
+    writel(data_cmd, &controller->regs->data_cmd);
     return ZX_OK;
 }
 
@@ -481,11 +483,11 @@ zx_status_t intel_serialio_i2c_read_rx(
     intel_serialio_i2c_device_t* controller,
     uint8_t* data) {
 
-    *data = *REG32(&controller->regs->data_cmd);
+    *data = readl(&controller->regs->data_cmd);
 
     uint32_t rx_tl;
     intel_serialio_i2c_get_rx_fifo_threshold(controller, &rx_tl);
-    const uint32_t rxflr = *REG32(&controller->regs->rxflr) & 0x1ff;
+    const uint32_t rxflr = readl(&controller->regs->rxflr) & 0x1ff;
     // If we've dropped the RX queue level below the threshold, clear the signal
     // and unmask the interrupt.
     if (rxflr < rx_tl) {
@@ -502,10 +504,10 @@ zx_status_t intel_serialio_i2c_issue_tx(
     intel_serialio_i2c_device_t* controller,
     uint32_t data_cmd) {
 
-    *REG32(&controller->regs->data_cmd) = data_cmd;
+    writel(data_cmd, &controller->regs->data_cmd);
     uint32_t tx_tl;
     intel_serialio_i2c_get_tx_fifo_threshold(controller, &tx_tl);
-    const uint32_t txflr = *REG32(&controller->regs->txflr) & 0x1ff;
+    const uint32_t txflr = readl(&controller->regs->txflr) & 0x1ff;
     // If we've raised the TX queue level above the threshold, clear the signal
     // and unmask the interrupt.
     if (txflr > tx_tl) {
@@ -522,7 +524,7 @@ void intel_serialio_i2c_get_rx_fifo_threshold(
     intel_serialio_i2c_device_t* controller,
     uint32_t* threshold) {
 
-    *threshold = (*REG32(&controller->regs->rx_tl) & 0xff) + 1;
+    *threshold = (readl(&controller->regs->rx_tl) & 0xff) + 1;
 }
 
 // Get an RX interrupt whenever the RX FIFO size is >= the threshold.
@@ -542,7 +544,7 @@ void intel_serialio_i2c_get_tx_fifo_threshold(
     intel_serialio_i2c_device_t* controller,
     uint32_t* threshold) {
 
-    *threshold = (*REG32(&controller->regs->tx_tl) & 0xff) + 1;
+    *threshold = (readl(&controller->regs->tx_tl) & 0xff) + 1;
 }
 
 // Get a TX interrupt whenever the TX FIFO size is <= the threshold.
@@ -597,14 +599,15 @@ zx_status_t intel_serialio_i2c_reset_controller(
 
     // The register will only return valid values if the ACPI _PS0 has been
     // evaluated.
-    if (*REG32((void*)device->regs + DEVIDLE_CONTROL) != 0xffffffff) {
+    if (readl((void*)device->regs + DEVIDLE_CONTROL) != 0xffffffff) {
         // Wake up device if it is in DevIdle state
         RMWREG32((void*)device->regs + DEVIDLE_CONTROL, DEVIDLE_CONTROL_DEVIDLE, 1, 0);
 
         // Wait for wakeup to finish processing
         int retry = 10;
         while (retry-- &&
-               (*REG32((void*)device->regs + DEVIDLE_CONTROL) & (1 << DEVIDLE_CONTROL_CMD_IN_PROGRESS))) {
+               (readl((void*)device->regs + DEVIDLE_CONTROL) &
+                (1 << DEVIDLE_CONTROL_CMD_IN_PROGRESS))) {
             usleep(10);
         }
         if (!retry) {
@@ -642,15 +645,15 @@ zx_status_t intel_serialio_i2c_reset_controller(
         speed = CTL_SPEED_FAST;
     }
 
-    *REG32(&device->regs->ctl) =
-        (0x1 << CTL_SLAVE_DISABLE) |
-        (0x1 << CTL_RESTART_ENABLE) |
-        (speed << CTL_SPEED) |
-        (CTL_MASTER_MODE_ENABLED << CTL_MASTER_MODE);
+    writel((0x1 << CTL_SLAVE_DISABLE) |
+           (0x1 << CTL_RESTART_ENABLE) |
+           (speed << CTL_SPEED) |
+           (CTL_MASTER_MODE_ENABLED << CTL_MASTER_MODE),
+           &device->regs->ctl);
 
     mtx_lock(&device->irq_mask_mutex);
     // Mask all interrupts
-    *REG32(&device->regs->intr_mask) = 0;
+    writel(0, &device->regs->intr_mask);
 
     status = intel_serialio_i2c_set_rx_fifo_threshold(device, DEFAULT_RX_FIFO_TRIGGER_LEVEL);
     if (status != ZX_OK) {
@@ -670,12 +673,13 @@ zx_status_t intel_serialio_i2c_reset_controller(
     }
 
     // Reading this register clears all interrupts.
-    *REG32(&device->regs->clr_intr);
+    readl(&device->regs->clr_intr);
 
     // Unmask the interrupts we care about
-    *REG32(&device->regs->intr_mask) = (1u<<INTR_STOP_DETECTION) | (1u<<INTR_TX_ABORT) |
-            (1u<<INTR_TX_EMPTY) | (1u<<INTR_TX_OVER) | (1u<<INTR_RX_FULL) | (1u<<INTR_RX_OVER) |
-            (1u<<INTR_RX_UNDER);
+    writel((1u<<INTR_STOP_DETECTION) | (1u<<INTR_TX_ABORT) |
+           (1u<<INTR_TX_EMPTY) | (1u<<INTR_TX_OVER) | (1u<<INTR_RX_FULL) |
+           (1u<<INTR_RX_OVER) | (1u<<INTR_RX_UNDER),
+           &device->regs->intr_mask);
 
 cleanup:
     mtx_unlock(&device->irq_mask_mutex);
