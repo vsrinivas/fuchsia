@@ -9,27 +9,10 @@
 #include <zircon/syscalls.h>
 #include <unittest/unittest.h>
 
-bool cprng_test_draw_buf_too_large(void) {
-    uint8_t buf[ZX_CPRNG_DRAW_MAX_LEN + 1];
-    BEGIN_TEST;
-    zx_status_t status = zx_cprng_draw_new(buf, sizeof(buf));
-    EXPECT_EQ(status, ZX_ERR_INVALID_ARGS, "");
-    END_TEST;
-}
-
-bool cprng_test_draw_bad_buf(void) {
-    uint8_t buf[ZX_CPRNG_DRAW_MAX_LEN];
-    BEGIN_TEST;
-    zx_status_t status = zx_cprng_draw_new((void*)4, sizeof(buf));
-    EXPECT_EQ(status, ZX_ERR_INVALID_ARGS, "");
-    END_TEST;
-}
-
 bool cprng_test_draw_success(void) {
     uint8_t buf[ZX_CPRNG_DRAW_MAX_LEN] = { 0 };
     BEGIN_TEST;
-    zx_status_t status = zx_cprng_draw_new(buf, sizeof(buf));
-    EXPECT_EQ(status, ZX_OK, "");
+    zx_cprng_draw(buf, sizeof(buf));
 
     int num_zeros = 0;
     for (unsigned int i = 0; i < sizeof(buf); ++i) {
@@ -60,8 +43,6 @@ bool cprng_test_add_entropy_buf_too_large(void) {
 }
 
 BEGIN_TEST_CASE(cprng_tests)
-RUN_TEST(cprng_test_draw_buf_too_large)
-RUN_TEST(cprng_test_draw_bad_buf)
 RUN_TEST(cprng_test_draw_success)
 RUN_TEST(cprng_test_add_entropy_buf_too_large)
 RUN_TEST(cprng_test_add_entropy_bad_buf)

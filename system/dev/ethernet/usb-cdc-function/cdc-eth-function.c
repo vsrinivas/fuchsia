@@ -153,11 +153,7 @@ typedef struct {
 };
 
 static zx_status_t cdc_generate_mac_address(usb_cdc_t* cdc) {
-    zx_status_t status = zx_cprng_draw_new(cdc->mac_addr, sizeof(cdc->mac_addr));
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "%s: cdc_generate_mac_address: zx_cprng_draw failed\n", __FUNCTION__);
-        return status;
-    }
+    zx_cprng_draw(cdc->mac_addr, sizeof(cdc->mac_addr));
 
     // set most significant byte so we are using a locally managed address
     // TODO(voydanoff) add a way to configure a real MAC address here

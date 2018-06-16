@@ -29,23 +29,11 @@ Bytes::Bytes() : buf_(nullptr), len_(0) {}
 Bytes::~Bytes() {}
 
 zx_status_t Bytes::Randomize(size_t len) {
-    zx_status_t rc;
-
-    if ((rc = Resize(len)) != ZX_OK) {
-        return rc;
+    zx_status_t status = Resize(len);
+    if (status != ZX_OK) {
+        return status;
     }
-    uint8_t* ptr = buf_.get();
-    while (len != 0) {
-        size_t n = fbl::min(len, static_cast<size_t>(ZX_CPRNG_DRAW_MAX_LEN));
-        if ((rc = zx_cprng_draw_new(ptr, n)) != ZX_OK) {
-            xprintf("zx_cprng_draw(%p, %zu) failed: %s", ptr, n,
-                    zx_status_get_string(rc));
-            return rc;
-        }
-        ptr += n;
-        len -= n;
-    }
-
+    zx_cprng_draw(buf_.get(), len);
     return ZX_OK;
 }
 

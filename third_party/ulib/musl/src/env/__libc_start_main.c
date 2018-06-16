@@ -61,9 +61,7 @@ __NO_SAFESTACK _Noreturn void __libc_start_main(
         struct setjmp_manglers setjmp_manglers;
     } randoms;
     static_assert(sizeof(randoms) <= ZX_CPRNG_DRAW_MAX_LEN, "");
-    zx_status_t status = _zx_cprng_draw_new(&randoms, sizeof(randoms));
-    if (status != ZX_OK)
-        __builtin_trap();
+    _zx_cprng_draw(&randoms, sizeof(randoms));
     __stack_chk_guard = randoms.stack_guard;
     __setjmp_manglers = randoms.setjmp_manglers;
     // Zero the stack temporaries.
@@ -77,7 +75,7 @@ __NO_SAFESTACK _Noreturn void __libc_start_main(
 
     struct start_params p = { .main = main };
     uint32_t nbytes;
-    status = zxr_message_size(bootstrap, &nbytes, &p.nhandles);
+    zx_status_t status = zxr_message_size(bootstrap, &nbytes, &p.nhandles);
     if (status != ZX_OK)
         nbytes = p.nhandles = 0;
 

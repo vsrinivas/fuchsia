@@ -536,10 +536,7 @@ zx_status_t FvmStreamPartitions(fbl::unique_fd partition_fd, fbl::unique_fd src_
         alloc.flags = fvm::kVPartFlagInactive;
         alloc.slice_count = ext->slice_count;
         memcpy(&alloc.type, parts[p].pd->type, sizeof(alloc.type));
-        if (zx_cprng_draw_new(alloc.guid, GPT_GUID_LEN) != ZX_OK) {
-            ERROR("Couldn't generate unique GUID\n");
-            return ZX_ERR_IO;
-        }
+        zx_cprng_draw(alloc.guid, GPT_GUID_LEN);
         memcpy(&alloc.name, parts[p].pd->name, sizeof(alloc.name));
         LOG("Allocating partition %s consisting of %zu slices\n", alloc.name, alloc.slice_count);
         parts[p].new_part.reset(fvm_allocate_partition(fvm_fd.get(), &alloc));

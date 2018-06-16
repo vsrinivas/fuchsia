@@ -257,11 +257,7 @@ static zx_status_t create_gpt_entry(gpt_device_t* dev, const uint64_t first,
                                     uint8_t* type, const char* name) {
     uint64_t blks = howmany(sz, blk_sz);
     uint8_t guid[GPT_GUID_LEN];
-
-    zx_status_t rc = zx_cprng_draw_new(guid, GPT_GUID_LEN);
-    if (rc != ZX_OK) {
-        return rc;
-    }
+    zx_cprng_draw(guid, GPT_GUID_LEN);
 
     // The gpt_device_t may not be valid for use with gpt_partition_add if
     // it is a newly initialized GPT which has never had gpt_device_finalize

@@ -94,9 +94,8 @@ static bool create_partition(gpt_device_t* d, const char* name, uint8_t* type,
                              partition_t* p) {
     BEGIN_HELPER;
     uint8_t guid_buf[GPT_GUID_LEN];
+    zx_cprng_draw(guid_buf, GPT_GUID_LEN);
 
-    zx_status_t rc = zx_cprng_draw_new(guid_buf, GPT_GUID_LEN);
-    ASSERT_EQ(rc, ZX_OK, "Internal error generating GUID");
     ASSERT_EQ(gpt_partition_add(d, name, type, guid_buf, p->start, p->len, 0),
               0, "Partition could not be added.");
     END_HELPER;
@@ -524,12 +523,8 @@ bool test_is_cros_device(void) {
     ASSERT_TRUE(create_test_layout(dev), "Failed to create test layout");
 
     ASSERT_TRUE(is_cros(dev), "This should be recongized as a chromeos layout");
-
-    zx_status_t rc = zx_cprng_draw_new(dev->partitions[1]->type, GPT_GUID_LEN);
-    ASSERT_EQ(rc, ZX_OK, "Error creating random GUID");
-
-    rc = zx_cprng_draw_new(dev->partitions[4]->type, GPT_GUID_LEN);
-    ASSERT_EQ(rc, ZX_OK, "Error creating random GUID");
+    zx_cprng_draw(dev->partitions[1]->type, GPT_GUID_LEN);
+    zx_cprng_draw(dev->partitions[4]->type, GPT_GUID_LEN);
     ASSERT_FALSE(is_cros(dev), "This should NOT be recognized as a chromos layout");
     gpt_device_release(dev);
     END_TEST;
@@ -549,11 +544,7 @@ END_TEST_CASE(disk_wizard_tests)
 
 int main(int argc, char** argv) {
     uint64_t seed;
-    zx_status_t rand_rc = zx_cprng_draw_new(&seed, sizeof(seed));
-    if (rand_rc != ZX_OK) {
-        fprintf(stderr, "FAILED: Couldn't re-assign GUID\n");
-        return -1;
-    }
+    zx_cprng_draw(&seed, sizeof(seed));
     srand(seed);
 
     return unittest_run_all_tests(argc, argv) ? 0 : -1;

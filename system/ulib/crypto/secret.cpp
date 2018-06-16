@@ -49,24 +49,14 @@ zx_status_t Secret::Allocate(size_t len, uint8_t** out) {
 
 zx_status_t Secret::Generate(size_t len) {
     ZX_DEBUG_ASSERT(len != 0);
-    zx_status_t rc;
 
-    uint8_t* tmp;
-    if ((rc = Allocate(len, &tmp)) != ZX_OK) {
-        return rc;
+    uint8_t* tmp = nullptr;
+    zx_status_t status = Allocate(len, &tmp);
+    if (status != ZX_OK) {
+        return status;
     }
 
-    uint8_t* ptr = buf_.get();
-    while (len != 0) {
-        size_t n = fbl::min(len, static_cast<size_t>(ZX_CPRNG_DRAW_MAX_LEN));
-        if ((rc = zx_cprng_draw_new(ptr, n)) != ZX_OK) {
-            xprintf("zx_cprng_draw of %zu bytes failed: %s", n, zx_status_get_string(rc));
-            return rc;
-        }
-        ptr += n;
-        len -= n;
-    }
-
+    zx_cprng_draw(buf_.get(), len);
     return ZX_OK;
 }
 
