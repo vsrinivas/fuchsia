@@ -88,6 +88,11 @@ class Realm : public ComponentContainer<ComponentControllerImpl> {
 
   RunnerHolder* GetOrCreateRunner(const std::string& runner);
 
+  void CreateComponentFromHTML(
+      fuchsia::sys::PackagePtr package, fuchsia::sys::LaunchInfo launch_info,
+      fidl::InterfaceRequest<fuchsia::sys::ComponentController> controller,
+      fxl::RefPtr<Namespace> ns);
+
   void CreateComponentWithProcess(
       fuchsia::sys::PackagePtr package, fuchsia::sys::LaunchInfo launch_info,
       fidl::InterfaceRequest<fuchsia::sys::ComponentController> controller,

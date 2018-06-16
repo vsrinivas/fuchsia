@@ -28,6 +28,11 @@ FXL_EXPORT bool StringFromVmo(const SizedVmo& handle, std::string* string_ptr);
 FXL_EXPORT bool StringFromVmo(const fuchsia::mem::Buffer& handle,
                               std::string* string_ptr);
 
+// Copy the contents of a shared buffer upto |num_bytes| into a string.
+// |num_bytes| should be <= |handle.size|.
+FXL_EXPORT bool StringFromVmo(const fuchsia::mem::Buffer& handle,
+                              size_t num_bytes, std::string* string_ptr);
+
 }  // namespace fsl
 
 #endif  // LIB_FSL_VMO_STRINGS_H_

@@ -48,6 +48,7 @@ source_set("lib") {
 
   public_deps = [
     "//garnet/lib/far",
+    "//garnet/lib/mime_sniffer",
     "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/app/fidl",
     "//garnet/public/lib/fsl",

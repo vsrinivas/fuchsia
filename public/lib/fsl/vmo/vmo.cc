@@ -79,6 +79,15 @@ bool StringFromVmo(const fuchsia::mem::Buffer& vmo_transport,
                                        string_ptr);
 }
 
+bool StringFromVmo(const fuchsia::mem::Buffer& vmo_transport, size_t num_bytes,
+                   std::string* string_ptr) {
+  if (!SizedVmo::IsSizeValid(vmo_transport.vmo, num_bytes)) {
+    return false;
+  }
+  return ContainerFromVmo<std::string>(vmo_transport.vmo, num_bytes,
+                                       string_ptr);
+}
+
 bool VmoFromVector(const std::vector<char>& vector, SizedVmo* sized_vmo) {
   return VmoFromContainer<std::vector<char>>(vector, sized_vmo);
 }
