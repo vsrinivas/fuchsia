@@ -527,7 +527,7 @@ zx_status_t Blobfs::VerifyBlob(size_t node_index) {
             return status;
         }
         if (target_size != inode.blob_size) {
-            fprintf(stderr, "Failed to fully decompress blob (%zu of %zu expected)\n",
+            fprintf(stderr, "Failed to fully decompress blob (%zu of %" PRIu64 " expected)\n",
                     target_size, inode.blob_size);
             return ZX_ERR_IO_DATA_INTEGRITY;
         }
