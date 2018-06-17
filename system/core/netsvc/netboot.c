@@ -17,7 +17,6 @@
 #include <inet6/inet6.h>
 #include <inet6/netifc.h>
 
-#include <launchpad/launchpad.h>
 #include <zircon/process.h>
 #include <zircon/processargs.h>
 #include <zircon/syscalls.h>
