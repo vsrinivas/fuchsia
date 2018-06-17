@@ -122,10 +122,9 @@ zx_status_t start_mini_process_etc(zx_handle_t process, zx_handle_t thread,
             goto exit;
 
         status = write_ctx_message(chn[0], vdso_base, transferred_handle);
+        transferred_handle = ZX_HANDLE_INVALID;
         if (status != ZX_OK)
             goto exit;
-        // TODO(ZX-2204): Make this write unconditional after zx_channel_write always consumes handles.
-        transferred_handle = ZX_HANDLE_INVALID;
 
         uintptr_t channel_read = (uintptr_t)get_syscall_addr(&zx_channel_read, vdso_base);
 

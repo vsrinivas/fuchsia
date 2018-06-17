@@ -232,7 +232,6 @@ zx_status_t Channel::Read(void*       buf,
 zx_status_t Channel::Write(const void*  buf,
                            uint32_t     buf_len,
                            zx::handle&& tx_handle) {
-    zx_status_t res;
     if (!buf || !buf_len)
         return ZX_ERR_INVALID_ARGS;
 
@@ -244,11 +243,7 @@ zx_status_t Channel::Write(const void*  buf,
         return zx_channel_write(handle_.get(), 0, buf, buf_len, nullptr, 0);
 
     zx_handle_t h = tx_handle.release();
-    res = zx_channel_write(handle_.get(), 0, buf, buf_len, &h, 1);
-    if (res != ZX_OK)
-        tx_handle.reset(h);
-
-    return res;
+    return zx_channel_write(handle_.get(), 0, buf, buf_len, &h, 1);
 }
 
 }  // namespace dispatcher

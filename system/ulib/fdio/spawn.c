@@ -246,10 +246,10 @@ static zx_status_t send_handles(zx_handle_t launcher, size_t handle_capacity,
     size_t msg_len = sizeof(fuchsia_process_LauncherAddHandlesRequest) + FIDL_ALIGN(h * sizeof(fuchsia_process_HandleInfo));
     status = zx_channel_write(launcher, 0, msg, msg_len, handles, h);
 
-    if (status == ZX_OK)
-        return status;
+    if (status != ZX_OK)
+        report_error(err_msg, "failed send handles: %d", status);
 
-    report_error(err_msg, "failed send handles: %d", status);
+    return status;
 
 cleanup:
     for (size_t i = 0; i < h; ++i) {
@@ -328,13 +328,8 @@ static zx_status_t send_namespace(zx_handle_t launcher, size_t name_count, size_
 
     zx_status_t status = zx_channel_write(launcher, 0, msg, msg_len, handles, h);
 
-    if (status != ZX_OK) {
+    if (status != ZX_OK)
         report_error(err_msg, "failed send namespace: %d", status);
-
-        for (size_t i = 0; i < h; ++i) {
-            zx_handle_close(handles[i]);
-        }
-    }
 
     return status;
 }

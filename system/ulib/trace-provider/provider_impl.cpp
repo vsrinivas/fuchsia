@@ -180,10 +180,8 @@ trace_provider_t* trace_provider_create(async_t* async) {
     zx_handle_t handles[] = {provider_client.release()};
     status = registry_client.write(0u, &request, sizeof(request),
                                    handles, static_cast<uint32_t>(fbl::count_of(handles)));
-    if (status != ZX_OK) {
-        provider_client.reset(handles[0]); // take back ownership after failure
+    if (status != ZX_OK)
         return nullptr;
-    }
 
     return new trace::internal::TraceProviderImpl(async, fbl::move(provider_service));
 }

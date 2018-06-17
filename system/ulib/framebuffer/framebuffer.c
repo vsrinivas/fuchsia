@@ -363,7 +363,6 @@ void fb_release_image(uint64_t image_id) {
 
 zx_status_t fb_import_event(zx_handle_t handle, uint64_t id) {
     ZX_ASSERT(inited && !in_single_buffer_mode);
-    zx_status_t status;
 
     fuchsia_display_ControllerImportEventRequest import_evt_msg;
     import_evt_msg.hdr.ordinal = fuchsia_display_ControllerImportEventOrdinal;
@@ -371,13 +370,7 @@ zx_status_t fb_import_event(zx_handle_t handle, uint64_t id) {
     import_evt_msg.id = id;
     import_evt_msg.event = FIDL_HANDLE_PRESENT;
 
-    if ((status = zx_channel_write(dc_handle, 0, &import_evt_msg,
-                                   sizeof(import_evt_msg), &handle, 1)) != ZX_OK) {
-        zx_handle_close(handle);
-        return status;
-    }
-
-    return ZX_OK;
+    return zx_channel_write(dc_handle, 0, &import_evt_msg, sizeof(import_evt_msg), &handle, 1);
 }
 
 void fb_release_event(uint64_t id) {

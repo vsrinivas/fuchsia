@@ -105,9 +105,6 @@ static zx_status_t devhost_get_handles(zx_handle_t rh, zx_device_t* dev,
         uint32_t hcount = (handle != ZX_HANDLE_INVALID) ? 1 : 0;
         r = zx_channel_write(rh, 0, &info, sizeof(info), &handle, hcount);
         if (r != ZX_OK) {
-            if (hcount) {
-                zx_handle_close(handle);
-            }
             goto fail_open;
         }
     }

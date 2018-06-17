@@ -295,7 +295,6 @@ fbl::unique_ptr<LogExporter> LaunchLogExporter(const fbl::StringPiece syslog_pat
     if (status != ZX_OK) {
         printf("LaunchLogExporter: cannot pass listener to logger service: %d (%s).\n",
                status, zx_status_get_string(status));
-        close(listener_handle);
         *error = FIDL_ERROR;
         return nullptr;
     }

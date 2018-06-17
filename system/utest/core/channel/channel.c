@@ -266,7 +266,7 @@ static bool channel_non_transferable(void) {
     EXPECT_EQ(write_result, ZX_ERR_ACCESS_DENIED, "message_write should fail with ACCESS_DENIED");
 
     zx_status_t close_result = zx_handle_close(non_transferable_event);
-    EXPECT_EQ(close_result, ZX_OK, "");
+    EXPECT_EQ(close_result, ZX_ERR_BAD_HANDLE, "");
 
     END_TEST;
 }
@@ -282,10 +282,10 @@ static bool channel_duplicate_handles(void) {
 
     zx_handle_t dup_handles[2] = { event, event };
     zx_status_t write_result = zx_channel_write(channel[0], 0u, NULL, 0, dup_handles, 2u);
-    EXPECT_EQ(write_result, ZX_ERR_INVALID_ARGS, "message_write should fail with ZX_ERR_INVALID_ARGS");
+    EXPECT_EQ(write_result, ZX_ERR_BAD_HANDLE, "message_write should fail with ZX_ERR_INVALID_ARGS");
 
     zx_status_t close_result = zx_handle_close(event);
-    EXPECT_EQ(close_result, ZX_OK, "");
+    EXPECT_EQ(close_result, ZX_ERR_BAD_HANDLE, "");
     close_result = zx_handle_close(channel[0]);
     EXPECT_EQ(close_result, ZX_OK, "");
     close_result = zx_handle_close(channel[1]);
@@ -858,7 +858,7 @@ static bool channel_disallow_write_to_self(void) {
     EXPECT_EQ(zx_channel_write(channel[0], 0, NULL, 0, &channel[0], 1),
               ZX_ERR_NOT_SUPPORTED, "");
     // Clean up.
-    EXPECT_EQ(zx_handle_close(channel[0]), ZX_OK, "");
+    EXPECT_EQ(zx_handle_close(channel[0]), ZX_ERR_BAD_HANDLE, "");
     EXPECT_EQ(zx_handle_close(channel[1]), ZX_OK, "");
 
     END_TEST;

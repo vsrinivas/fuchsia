@@ -1225,9 +1225,7 @@ static zx_status_t dc_handle_device_read(device_t* dev) {
         if (hcount != 1) {
             goto fail_wrong_hcount;
         }
-        if (zx_channel_write(virtcon_open, 0, NULL, 0, hin, 1) < 0) {
-            zx_handle_close(hin[0]);
-        }
+        zx_channel_write(virtcon_open, 0, NULL, 0, hin, 1);
         r = ZX_OK;
         break;
 
@@ -1281,7 +1279,6 @@ static zx_status_t dc_handle_device_read(device_t* dev) {
         reply.rsp.status = ZX_OK;
         reply.rsp.txid = msg.txid;
         if ((r = zx_channel_write(dev->hrpc, 0, &reply, sizeof(reply), &vmo, 1)) < 0) {
-            zx_handle_close(vmo);
             return r;
         }
         return ZX_OK;
@@ -1439,7 +1436,7 @@ static zx_status_t dh_create_device(device_t* dev, devhost_t* dh,
     msg.protocol_id = dev->protocol_id;
 
     if ((r = zx_channel_write(dh->hrpc, 0, &msg, mlen, handle, hcount)) < 0) {
-        goto fail;
+        goto fail_after_write;
     }
 
     dev->hrpc = hrpc;
@@ -1447,7 +1444,7 @@ static zx_status_t dh_create_device(device_t* dev, devhost_t* dh,
     dev->ph.waitfor = ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED;
     dev->ph.func = dc_handle_device;
     if ((r = port_wait(&dc_port, &dev->ph)) < 0) {
-        goto fail_watch;
+        goto fail_after_write;
     }
     dev->host = dh;
     dh->refcount++;
@@ -1458,7 +1455,7 @@ fail:
     while (hcount > 0) {
         zx_handle_close(handle[--hcount]);
     }
-fail_watch:
+fail_after_write:
     zx_handle_close(hrpc);
     return r;
 }
@@ -1559,10 +1556,7 @@ static zx_status_t dh_connect_proxy(device_t* dev, zx_handle_t h) {
     }
     msg.txid = 0;
     msg.op = DC_OP_CONNECT_PROXY;
-    if ((r = zx_channel_write(dev->hrpc, 0, &msg, mlen, &h, 1)) < 0) {
-        zx_handle_close(h);
-    }
-    return r;
+    return zx_channel_write(dev->hrpc, 0, &msg, mlen, &h, 1);
 }
 
 static zx_status_t dc_prepare_proxy(device_t* dev) {

@@ -570,9 +570,9 @@ fail:
     memcpy(msg.data, path, msg.datalen);
     msize = ZXRIO_HDR_SZ + msg.datalen;
 #endif
-    if ((r = zx_channel_write(dn->device->hrpc, 0, &msg, msize, &h, 1)) < 0) {
-        goto fail;
-    }
+    zx_channel_write(dn->device->hrpc, 0, &msg, msize, &h, 1);
+    // If zx_channel_write fails, the kernel will close h, which will cause the
+    // client to observe the error.
 }
 
 // Double-check that OPEN (the only message we forward)

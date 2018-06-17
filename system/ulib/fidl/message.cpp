@@ -78,8 +78,7 @@ zx_status_t Message::Write(zx_handle_t channel, uint32_t flags) {
     zx_status_t status = zx_channel_write(channel, flags, bytes_.data(),
                                           bytes_.actual(), handles_.data(),
                                           handles_.actual());
-    if (status == ZX_OK)
-        ClearHandlesUnsafe();
+    ClearHandlesUnsafe();
     return status;
 }
 

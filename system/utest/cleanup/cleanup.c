@@ -65,10 +65,9 @@ bool cleanup_test(void) {
     ASSERT_EQ(r, ZX_ERR_PEER_CLOSED, "cleanup-test: unexpected message_write return code");
 
     r = zx_object_signal(event, 0u, ZX_EVENT_SIGNALED);
-    ASSERT_GE(r, 0, "cleanup-test: unable to signal event!");
-    unittest_printf("cleanup-test: SUCCESS, event is alive\n\n");
+    ASSERT_GE(r, ZX_ERR_BAD_HANDLE, "cleanup-test: able to signal event!");
+    unittest_printf("cleanup-test: SUCCESS, event is closed\n\n");
 
-    zx_handle_close(event);
     zx_handle_close(p1[0]);
 
     // TEST3

@@ -998,18 +998,12 @@ static zx_status_t send_loader_message(launchpad_t* lp,
     }
 
     status = zx_channel_write(tochannel, 0, msg, msg_size, handles, nhandles);
-    if (status == ZX_OK) {
-        // message_write consumed all those handles.
-        for (enum special_handles i = 0; i < HND_SPECIAL_COUNT; ++i)
-            lp->special_handles[i] = ZX_HANDLE_INVALID;
+    if (status == ZX_OK)
         lp->loader_message = false;
-    } else {
-        // Close the handles we duplicated for the loader.
-        // The others remain live in the launchpad.
-        for (int i = 1; i <= HND_LOADER_COUNT; i++) {
-          zx_handle_close(handles[nhandles - i]);
-        }
-    }
+
+    // message_write consumed all those handles.
+    for (enum special_handles i = 0; i < HND_SPECIAL_COUNT; ++i)
+        lp->special_handles[i] = ZX_HANDLE_INVALID;
 
     free(msg);
     return status;
@@ -1201,15 +1195,16 @@ zx_handle_close failed on low address space reservation VMAR");
     }
 
     status = zx_channel_write(to_child, 0, msg, size, lp->handles, lp->handle_count);
-    if (status != ZX_OK) {
-        lp_error(lp, status, "failed to write procargs message");
-        goto cleanup;
-    }
 
     // message_write consumed all the handles.
     for (size_t i = 0; i < lp->handle_count; ++i)
         lp->handles[i] = ZX_HANDLE_INVALID;
     lp->handle_count = 0;
+
+    if (status != ZX_OK) {
+        lp_error(lp, status, "failed to write procargs message");
+        goto cleanup;
+    }
 
     zx_handle_close(to_child);
     free(msg);

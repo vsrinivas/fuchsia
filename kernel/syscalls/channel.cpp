@@ -252,10 +252,10 @@ static zx_status_t channel_call_epilogue(ProcessDispatcher* up,
     return ZX_OK;
 }
 
-static zx_status_t msg_put_handles(ProcessDispatcher* up, MessagePacket* msg, zx_handle_t* handles,
-                                   user_in_ptr<const zx_handle_t> user_handles, uint32_t num_user_handles,
-                                   Dispatcher* channel) {
-
+static zx_status_t msg_put_handles_deprecated(
+        ProcessDispatcher* up, MessagePacket* msg, zx_handle_t* handles,
+        user_in_ptr<const zx_handle_t> user_handles, uint32_t num_user_handles,
+        Dispatcher* channel) {
     if (user_handles.copy_array_from_user(handles, num_user_handles) != ZX_OK)
         return ZX_ERR_INVALID_ARGS;
 
@@ -301,45 +301,114 @@ static zx_status_t msg_put_handles(ProcessDispatcher* up, MessagePacket* msg, zx
     return ZX_OK;
 }
 
+static zx_status_t msg_put_handles(ProcessDispatcher* up, MessagePacket* msg,
+                                   user_in_ptr<const zx_handle_t> user_handles,
+                                   uint32_t num_handles,
+                                   Dispatcher* channel) {
+
+    zx_handle_t handles[kMaxMessageHandles];
+    if (user_handles.copy_array_from_user(handles, num_handles) != ZX_OK)
+        return ZX_ERR_INVALID_ARGS;
+
+    zx_status_t status = ZX_OK;
+
+    {
+        AutoLock lock(up->handle_table_lock());
+
+        for (size_t ix = 0; ix != num_handles; ++ix) {
+            auto handle = up->RemoveHandleLocked(handles[ix]).release();
+
+            if (status == ZX_OK) {
+                if (!handle) {
+                    status = ZX_ERR_BAD_HANDLE;
+                } else {
+                    // You may not write a channel endpoint handle into that channel
+                    // endpoint.
+                    if (handle->dispatcher().get() == channel)
+                        status = ZX_ERR_NOT_SUPPORTED;
+
+                    if (!handle->HasRights(ZX_RIGHT_TRANSFER))
+                        status = ZX_ERR_ACCESS_DENIED;
+                }
+            }
+
+            msg->mutable_handles()[ix] = handle;
+        }
+    }
+
+    msg->set_owns_handles(true);
+    return status;
+}
+
+static void consume_user_handles(ProcessDispatcher* up,
+                                 user_in_ptr<const zx_handle_t> user_handles,
+                                 uint32_t num_handles) {
+    if (num_handles == 0u)
+        return;
+
+    uint32_t offset = 0;
+    while (offset < num_handles) {
+        // We process |num_handles| in chunks of |kMaxMessageHandles| because we
+        // don't have a limit on how large |num_handles| can be yet. By the time
+        // we get around to |msg_put_handles|, we will have established that
+        // |num_handles| is at most |kMaxMessageHandles| because
+        // |MessagePacket::Create| enforces that limit.
+        uint32_t chunk_size = fbl::min(num_handles - offset, kMaxMessageHandles);
+
+        zx_handle_t handles[kMaxMessageHandles];
+
+        // If we fail |copy_array_from_user|, then we might discard some, but
+        // not all, of the handles |user_handles| specified.
+        if (user_handles.copy_array_from_user(handles, chunk_size, offset) != ZX_OK)
+            return;
+
+        {
+            AutoLock lock(up->handle_table_lock());
+            for (size_t ix = 0; ix != chunk_size; ++ix)
+                up->RemoveHandleLocked(handles[ix]);
+        }
+
+        offset += chunk_size;
+    }
+}
+
 zx_status_t sys_channel_write(zx_handle_t handle_value, uint32_t options,
                               user_in_ptr<const void> user_bytes, uint32_t num_bytes,
                               user_in_ptr<const zx_handle_t> user_handles, uint32_t num_handles) {
     LTRACEF("handle %x bytes %p num_bytes %u handles %p num_handles %u options 0x%x\n",
             handle_value, user_bytes.get(), num_bytes, user_handles.get(), num_handles, options);
 
-    if (options)
-        return ZX_ERR_INVALID_ARGS;
-
     auto up = ProcessDispatcher::GetCurrent();
 
-    fbl::RefPtr<ChannelDispatcher> channel;
-    zx_status_t result = up->GetDispatcherWithRights(handle_value, ZX_RIGHT_WRITE, &channel);
-    if (result != ZX_OK)
-        return result;
+    if (options != 0u) {
+        consume_user_handles(up, user_handles, num_handles);
+        return ZX_ERR_INVALID_ARGS;
+    }
 
+    fbl::RefPtr<ChannelDispatcher> channel;
+    zx_status_t status = up->GetDispatcherWithRights(handle_value, ZX_RIGHT_WRITE, &channel);
+    if (status != ZX_OK) {
+        consume_user_handles(up, user_handles, num_handles);
+        return status;
+    }
 
     fbl::unique_ptr<MessagePacket> msg;
-    result = MessagePacket::Create(user_bytes, num_bytes, num_handles, &msg);
-    if (result != ZX_OK)
-        return result;
+    status = MessagePacket::Create(user_bytes, num_bytes, num_handles, &msg);
+    if (status != ZX_OK) {
+        consume_user_handles(up, user_handles, num_handles);
+        return status;
+    }
 
-    zx_handle_t handles[kMaxMessageHandles];
     if (num_handles > 0u) {
-        result = msg_put_handles(up, msg.get(), handles, user_handles, num_handles,
+        status = msg_put_handles(up, msg.get(), user_handles, num_handles,
                                  static_cast<Dispatcher*>(channel.get()));
-        if (result)
-            return result;
+        if (status != ZX_OK)
+            return status;
     }
 
-    result = channel->Write(fbl::move(msg));
-    if (result != ZX_OK) {
-        // Write failed, put back the handles into this process.
-        AutoLock lock(up->handle_table_lock());
-        for (size_t ix = 0; ix != num_handles; ++ix) {
-            up->UndoRemoveHandleLocked(handles[ix]);
-        }
-        return result;
-    }
+    status = channel->Write(fbl::move(msg));
+    if (status != ZX_OK)
+        return status;
 
     ktrace(TAG_CHANNEL_WRITE, (uint32_t)channel->get_koid(), num_bytes, num_handles, 0);
     return ZX_OK;
@@ -383,9 +452,9 @@ zx_status_t sys_channel_call_noretry(zx_handle_t handle_value, uint32_t options,
 
     zx_handle_t handles[kMaxMessageHandles];
     if (num_handles > 0u) {
-        result = msg_put_handles(up, msg.get(), handles,
-                                 make_user_in_ptr(args.wr_handles), num_handles,
-                                 static_cast<Dispatcher*>(channel.get()));
+        result = msg_put_handles_deprecated(up, msg.get(), handles,
+                                            make_user_in_ptr(args.wr_handles), num_handles,
+                                            static_cast<Dispatcher*>(channel.get()));
         if (result)
             return result;
     }

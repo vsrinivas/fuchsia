@@ -148,10 +148,6 @@ zx_status_t zxrio_txn_handoff(zx_handle_t srv, zx_handle_t reply, zxrio_msg_t* m
     zx_status_t r;
     if ((r = zx_channel_write(srv, 0, msg, dsize, &reply, 1)) != ZX_OK) {
         printf("zxrio_txn_handoff: Failed to write\n");
-        // The caller may or may not be expecting a response. Either way,
-        // we need to close the channel, since it will not arrive at its
-        // intended destination.
-        zx_handle_close(reply);
     }
     return r;
 }
@@ -515,7 +511,6 @@ static zx_status_t zxrio_sync_open_connection(zx_handle_t svc, uint32_t op,
     // Write the (one-way) request message
     if ((r = zx_channel_write(svc, 0, &msg, ZXRIO_HDR_SZ + msg.datalen,
                               msg.handle, msg.hcount)) < 0) {
-        zx_handle_close(msg.handle[0]);
         zx_handle_close(h);
         return r;
     }
@@ -554,13 +549,7 @@ static zx_status_t zxrio_connect(zx_handle_t svc, zx_handle_t cnxn,
     msg.handle[0] = cnxn;
     memcpy(msg.data, name, len);
 
-    zx_status_t r;
-    if ((r = zx_channel_write(svc, 0, &msg, ZXRIO_HDR_SZ + msg.datalen, msg.handle, 1)) < 0) {
-        zx_handle_close(cnxn);
-        return r;
-    }
-
-    return ZX_OK;
+    return zx_channel_write(svc, 0, &msg, ZXRIO_HDR_SZ + msg.datalen, msg.handle, 1);
 }
 
 static ssize_t write_common(uint32_t op, fdio_t* io, const void* _data, size_t len, off_t offset) {

@@ -99,17 +99,14 @@ static void HandOffException(const zx::handle& root_job, const zx::channel& chan
     zx_status_t status =
         channel.write(0, &packet.type, sizeof(packet.type), handles, countof(handles));
     if (status != ZX_OK) {
-        // If the channel write failed, things are going badly, and this
-        // process still owns the handles. Attempt to resume the excepted
-        // thread which will typically result in the process being terminated
-        // by the kernel.
+        // If the channel write failed, things are going badly, attempt to
+        // resume the excepted  thread which will typically result in the
+        // process being terminated by the kernel.
         fprintf(stderr, "crashsvc: channel write failed: %d\n", status);
         status = zx_task_resume(handles[1], ZX_RESUME_EXCEPTION | ZX_RESUME_TRY_NEXT);
         if (status != ZX_OK) {
             fprintf(stderr, "crashsvc: zx_task_resume failed: %d\n", status);
         }
-        zx_handle_close(handles[0]);
-        zx_handle_close(handles[1]);
     }
 }
 
