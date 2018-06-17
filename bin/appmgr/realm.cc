@@ -114,7 +114,7 @@ zx::process CreateProcess(const zx::job& job, fsl::SizedVmo data,
   PushHandle(PA_JOB_DEFAULT, duplicate_job.release(), &actions);
 
   if (loader_service) {
-    PushHandle(PA_SVC_LOADER, loader_service.release(), &actions);
+    PushHandle(PA_LDSVC_LOADER, loader_service.release(), &actions);
   } else {
     // TODO(CP-62): Processes that don't have their own package use the appmgr's
     // dynamic library loader, which doesn't make much sense. We need to find an

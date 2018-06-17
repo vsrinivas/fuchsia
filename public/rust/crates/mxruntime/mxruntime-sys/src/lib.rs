@@ -62,7 +62,7 @@ pub const PA_RESOURCE: u32 = 0x3F;
 // Handle types used by the application model
 pub const PA_APP_LAUNCHER: u32 = 0x41;
 // Channel for dynamic loader service
-pub const PA_SVC_LOADER: u32 = 0x10;
+pub const PA_LDSVC_LOADER: u32 = 0x10;
 // VM object handle for the main executable file
 pub const PA_VMO_EXECUTABLE: u32 = 0x14;
 // Handle types for one-off use and prototyping

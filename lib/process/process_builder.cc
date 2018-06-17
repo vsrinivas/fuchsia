@@ -107,7 +107,7 @@ void ProcessBuilder::CloneJob() {
 
 void ProcessBuilder::CloneLdsvc() {
   fuchsia::process::HandleInfo handle_info;
-  handle_info.id = PA_SVC_LOADER;
+  handle_info.id = PA_LDSVC_LOADER;
   zx_status_t status =
       dl_clone_loader_service(handle_info.handle.reset_and_get_address());
   ZX_ASSERT(status == ZX_OK);
