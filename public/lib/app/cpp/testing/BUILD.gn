@@ -6,9 +6,6 @@ source_set("testing") {
   testonly = true
 
   sources = [
-    "fake_launcher.cc",
-    "fake_launcher.h",
-    "fake_service.h",
     "startup_context_for_test.cc",
     "startup_context_for_test.h",
     "test_with_context.cc",
@@ -20,6 +17,34 @@ source_set("testing") {
   ]
 
   public_deps = [
+    ":fake_launcher",
+    ":fake_service",
     "//garnet/public/lib/gtest",
+  ]
+}
+
+source_set("fake_launcher") {
+  testonly = true
+
+  sources = [
+    "fake_launcher.cc",
+    "fake_launcher.h",
+  ]
+
+  deps = [
+    "//garnet/public/lib/app/cpp",
+  ]
+}
+
+source_set("fake_service") {
+  testonly = true
+
+  sources = [
+    "fake_service.h",
+  ]
+
+  deps = [
+    ":fake_launcher",
+    "//garnet/public/lib/app/cpp",
   ]
 }
