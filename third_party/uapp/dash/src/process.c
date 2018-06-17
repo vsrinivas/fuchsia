@@ -3,17 +3,16 @@
 // found in the LICENSE file.
 
 #include <errno.h>
-#include <launchpad/launchpad.h>
-#include <launchpad/vmo.h>
+#include <lib/fdio/private.h>
+#include <lib/fdio/spawn.h>
+#include <poll.h>
+#include <string.h>
+#include <unistd.h>
 #include <zircon/device/pty.h>
 #include <zircon/process.h>
 #include <zircon/processargs.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/object.h>
-#include <string.h>
-#include <unistd.h>
-#include <lib/fdio/private.h>
-#include <poll.h>
 
 #include "shell.h"
 #include "memalloc.h"
@@ -23,38 +22,18 @@
 #include "options.h"
 #include "var.h"
 
-static void prepare_launch(launchpad_t* lp, const char* filename, int argc,
-                           const char* const* argv, const char* const* envp,
-                           int *fds) {
-
-    launchpad_load_from_file(lp, filename);
-    launchpad_set_args(lp, argc, argv);
-    launchpad_set_environ(lp, envp);
-    launchpad_clone(lp, LP_CLONE_FDIO_NAMESPACE);
-
-    if (fds) {
-        launchpad_clone_fd(lp, fds[0], STDIN_FILENO);
-        launchpad_clone_fd(lp, fds[1], STDOUT_FILENO);
-        launchpad_clone_fd(lp, fds[2], STDERR_FILENO);
-    } else {
-        launchpad_clone_fd(lp, STDIN_FILENO, STDIN_FILENO);
-        launchpad_clone_fd(lp, STDOUT_FILENO, STDOUT_FILENO);
-        launchpad_clone_fd(lp, STDERR_FILENO, STDERR_FILENO);
-    }
-}
-
-static zx_status_t launch(const char* filename, int argc, const char* const* argv,
+static zx_status_t launch(const char* filename, const char* const* argv,
                           const char* const* envp, zx_handle_t* process,
-                          zx_handle_t job, const char** errmsg) {
+                          zx_handle_t job, char err_msg[FDIO_SPAWN_ERR_MSG_MAX_LENGTH]) {
     // cancel any ^c generated before running the command
     uint32_t events = 0;
     ioctl_pty_read_events(STDIN_FILENO, &events); // ignore any error
 
-
-    launchpad_t* lp = NULL;
-    launchpad_create(job, filename, &lp);
-    prepare_launch(lp, filename, argc, argv, envp, NULL);
-    return launchpad_go(lp, process, errmsg);
+    // TODO(abarth): Including FDIO_SPAWN_CLONE_LDSVC doesn't fully make sense.
+    // We should find a library loader that's appropriate for this program
+    // rather than cloning the library loader used by the shell.
+    uint32_t flags = FDIO_SPAWN_CLONE_ALL & ~FDIO_SPAWN_CLONE_ENVIRON;
+    return fdio_spawn_etc(job, flags, filename, argv, envp, 0, NULL, process, err_msg);
 }
 
 // Add all function definitions to our nodelist, so we can package them up for a
@@ -73,12 +52,10 @@ addfuncdef(struct cmdentry *entry, void *token)
 
 zx_status_t process_subshell(union node* n, const char* const* envp,
                              zx_handle_t* process, zx_handle_t job,
-                             int *fds, const char** errmsg)
+                             int *fds, char err_msg[FDIO_SPAWN_ERR_MSG_MAX_LENGTH])
 {
     if (!orig_arg0)
         return ZX_ERR_NOT_FOUND;
-
-    launchpad_t* lp = NULL;
 
     // TODO(abarth): Handle the redirects properly (i.e., implement
     // redirect(n->nredir.redirect) using launchpad);
@@ -105,38 +82,47 @@ zx_status_t process_subshell(union node* n, const char* const* envp,
     if (status != ZX_OK)
         return status;
 
-    launchpad_create(job, orig_arg0, &lp);
-
     // Construct an argv array
     int argc = 1 + shellparam.nparam;
-    const char *argv[argc];
+    const char *argv[argc + 1];
     argv[0] = orig_arg0;
     size_t arg_ndx;
     for (arg_ndx = 0; arg_ndx < shellparam.nparam; arg_ndx++) {
         argv[arg_ndx + 1] = shellparam.p[arg_ndx];
     }
+    argv[argc] = NULL;
 
-    prepare_launch(lp, orig_arg0, argc, (const char* const*)argv, envp, fds);
-    launchpad_add_handle(lp, ast_vmo, PA_HND(PA_USER0, 0));
-    return launchpad_go(lp, process, errmsg);
+    fdio_spawn_action_t actions[] = {
+        {.action = FDIO_SPAWN_ACTION_CLONE_FD, .fd = {.local_fd = fds ? fds[0] : 0, .target_fd = 0}},
+        {.action = FDIO_SPAWN_ACTION_CLONE_FD, .fd = {.local_fd = fds ? fds[1] : 1, .target_fd = 1}},
+        {.action = FDIO_SPAWN_ACTION_CLONE_FD, .fd = {.local_fd = fds ? fds[2] : 2, .target_fd = 2}},
+        {.action = FDIO_SPAWN_ACTION_ADD_HANDLE, .h = {.id = PA_HND(PA_USER0, 0), .handle = ast_vmo}},
+    };
+
+    // TODO(abarth): Including FDIO_SPAWN_CLONE_LDSVC doesn't fully make sense.
+    // We should find a library loader that's appropriate for this program
+    // rather than cloning the library loader used by the shell.
+    uint32_t flags = FDIO_SPAWN_CLONE_JOB | FDIO_SPAWN_CLONE_LDSVC | FDIO_SPAWN_CLONE_NAMESPACE;
+    return fdio_spawn_etc(job, flags, orig_arg0, argv, envp,
+                          countof(actions), actions, process, err_msg);
 }
 
-int process_launch(int argc, const char* const* argv, const char* path, int index,
+int process_launch(const char* const* argv, const char* path, int index,
                    zx_handle_t* process, zx_handle_t job,
-                   zx_status_t* status_out, const char** errmsg) {
+                   zx_status_t* status_out, char err_msg[FDIO_SPAWN_ERR_MSG_MAX_LENGTH]) {
     zx_status_t status = ZX_OK;
 
     // All exported variables
     const char* const* envp = (const char* const*)environment();
 
     if (strchr(argv[0], '/') != NULL) {
-        status = launch(argv[0], argc, argv, envp, process, job, errmsg);
+        status = launch(argv[0], argv, envp, process, job, err_msg);
     } else {
         status = ZX_ERR_NOT_FOUND;
         const char* filename = NULL;
         while (status != ZX_OK && (filename = padvance(&path, argv[0])) != NULL) {
             if (--index < 0 && pathopt == NULL)
-                status = launch(filename, argc, argv, envp, process, job, errmsg);
+                status = launch(filename, argv, envp, process, job, err_msg);
             stunalloc(filename);
         }
     }
