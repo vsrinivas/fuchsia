@@ -93,7 +93,7 @@ struct BreakpointImpl::ProcessRecord {
 };
 
 BreakpointImpl::BreakpointImpl(Session* session)
-    : Breakpoint(session), weak_factory_(this) {
+    : Breakpoint(session), impl_weak_factory_(this) {
   session->system().AddObserver(this);
 }
 
@@ -287,7 +287,7 @@ void BreakpointImpl::SendBackendAddOrChange(
     FXL_DCHECK(request.breakpoint.locations.size() == 1u);
 
   session()->remote_api()->AddOrChangeBreakpoint(request, [
-    callback, breakpoint = weak_factory_.GetWeakPtr()
+    callback, breakpoint = impl_weak_factory_.GetWeakPtr()
   ](const Err& err, debug_ipc::AddOrChangeBreakpointReply reply) {
     // Be sure to issue the callback even if the breakpoint no longer
     // exists.
@@ -384,6 +384,13 @@ bool BreakpointImpl::RegisterProcess(Process* process) {
           this, process, symbols->AddressesForLine(FileLine(
                              std::move(file), settings_.location_line.line())));
     }
+  } else if (settings_.location_type ==
+             BreakpointSettings::LocationType::kAddress) {
+    changed = true;
+    record.AddLocations(this, process,
+                        std::vector<uint64_t>{settings_.location_address});
+  } else {
+    FXL_NOTREACHED();
   }
   return changed;
 }

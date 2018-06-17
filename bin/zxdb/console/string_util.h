@@ -14,6 +14,10 @@ namespace zxdb {
 // character.
 std::string GetRightArrow();
 
+// Returns a circle symbol suitable for marking breakpoints in code listings.
+std::string GetBreakpointMarker();
+std::string GetDisabledBreakpointMarker();
+
 // Returns a Unicode bullet in UTF-8.
 std::string GetBullet();
 

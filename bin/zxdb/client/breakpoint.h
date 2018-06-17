@@ -9,6 +9,7 @@
 #include "garnet/bin/zxdb/client/client_object.h"
 #include "garnet/lib/debug_ipc/records.h"
 #include "garnet/public/lib/fxl/macros.h"
+#include "garnet/public/lib/fxl/memory/weak_ptr.h"
 #include "garnet/public/lib/fxl/observer_list.h"
 
 namespace zxdb {
@@ -26,9 +27,13 @@ class Breakpoint : public ClientObject {
   void AddObserver(BreakpointObserver* observer);
   void RemoveObserver(BreakpointObserver* observer);
 
+  fxl::WeakPtr<Breakpoint> GetWeakPtr();
+
   // All of the settings, including the location, are stored in the
   // BreakpointSettings object. This API is designed so all settings changes
-  // happen atomically.
+  // happen atomically. SetSettings() will always issue the callback, even
+  // if the breakpoint has been destroyed. If you need to reference the
+  // breakpoint object in the callback, get a weak pointer.
   virtual BreakpointSettings GetSettings() const = 0;
   virtual void SetSettings(const BreakpointSettings& settings,
                            std::function<void(const Err&)> callback) = 0;
@@ -47,6 +52,7 @@ class Breakpoint : public ClientObject {
 
  private:
   fxl::ObserverList<BreakpointObserver> observers_;
+  fxl::WeakPtrFactory<Breakpoint> weak_factory_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(Breakpoint);
 };

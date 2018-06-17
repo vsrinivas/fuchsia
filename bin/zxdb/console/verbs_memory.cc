@@ -20,9 +20,11 @@
 #include "garnet/bin/zxdb/console/command.h"
 #include "garnet/bin/zxdb/console/command_utils.h"
 #include "garnet/bin/zxdb/console/console.h"
+#include "garnet/bin/zxdb/console/format_context.h"
 #include "garnet/bin/zxdb/console/format_table.h"
 #include "garnet/bin/zxdb/console/memory_format.h"
 #include "garnet/bin/zxdb/console/output_buffer.h"
+#include "lib/fxl/strings/string_printf.h"
 
 namespace zxdb {
 
@@ -107,9 +109,9 @@ Err DoMemRead(ConsoleContext* context, const Command& cmd) {
 // disassemble -----------------------------------------------------------------
 
 // Completion callback after reading process memory.
-void CompleteDisassemble(const Err& err, MemoryDump dump, uint64_t num_instr,
+void CompleteDisassemble(const Err& err, MemoryDump dump,
                          fxl::WeakPtr<Process> weak_process,
-                         Disassembler::Options options) {
+                         const FormatAsmOpts& options) {
   Console* console = Console::get();
   if (err.has_error()) {
     console->Output(err);
@@ -119,47 +121,14 @@ void CompleteDisassemble(const Err& err, MemoryDump dump, uint64_t num_instr,
   if (!weak_process)
     return;  // Give up if the process went away.
 
-  // Make the disassembler.
-  Disassembler disassembler;
-  Session* session = console->context().session();
-  Err my_err = disassembler.Init(session->arch_info());
-  if (my_err.has_error()) {
+  OutputBuffer out;
+  Err format_err = FormatAsmContext(weak_process->session()->arch_info(), dump,
+                                    options, &out);
+  if (format_err.has_error()) {
     console->Output(err);
     return;
   }
 
-  // TODO(brettw) Mark the current frame's address if it exists in the dump.
-  // The disassembly formatting code should probably be moved to the source
-  // code dumping stuff in format_file_context.cc and this function sets up
-  // the call with the appropriate parameters.
-  std::vector<std::vector<std::string>> rows;
-  disassembler.DisassembleDump(dump, options, num_instr, &rows);
-
-  std::vector<ColSpec> spec;
-  if (options.emit_addresses) {
-    spec.emplace_back(Align::kRight);
-    spec.back().syntax = Syntax::kComment;
-  }
-  if (options.emit_bytes) {
-    // Max out the bytes @ 17 cols (holds 6 bytes) to keep it from pushing
-    // things too far over in the common case.
-    spec.emplace_back(Align::kLeft, 17, std::string(), 1);
-    spec.back().syntax = Syntax::kComment;
-  }
-
-  spec.emplace_back(Align::kLeft, 0, std::string(), 1);  // Instructions.
-
-  // Params. Some can be very long so provide a max so the comments don't get
-  // pushed too far out.
-  spec.emplace_back(Align::kLeft, 10, std::string(), 1);
-  spec.emplace_back(Align::kLeft);  // Comments.
-  spec.back().syntax = Syntax::kComment;
-
-  // Left column (whatever it is) gets 2 spaces padding for indentation.
-  spec[0].pad_left = 2;
-
-  OutputBuffer out;
-  FormatTable(spec, rows, &out);
   console->Output(std::move(out));
 }
 
@@ -241,30 +210,38 @@ Err DoDisassemble(ConsoleContext* context, const Command& cmd) {
     return Err(ErrType::kInput, "\"disassemble\" takes at most one argument.");
   }
 
-  Disassembler::Options options;
+  FormatAsmOpts options;
   options.emit_addresses = true;
-  options.emit_bytes = cmd.HasSwitch(kRawSwitch);
-  options.emit_undecodable = true;
+
+  if (cmd.frame())
+    options.active_address = cmd.frame()->GetAddress();
 
   // Num argument (optional).
-  uint64_t num_instr = 16;
   if (cmd.HasSwitch(kNumSwitch)) {
+    uint64_t num_instr = 0;
     err = StringToUint64(cmd.GetSwitchValue(kNumSwitch), &num_instr);
     if (err.has_error())
       return err;
+    options.max_instructions = num_instr;
+  } else {
+    options.max_instructions = 16;
   }
+
+  // Show bytes.
+  options.emit_bytes = cmd.HasSwitch(kRawSwitch);
 
   // Compute the max bytes requires to get the requested instructions.
   // It doesn't matter if we request more memory than necessary so use a
   // high bound.
-  size_t size = num_instr * context->session()->arch_info()->max_instr_len();
+  size_t size = options.max_instructions *
+                context->session()->arch_info()->max_instr_len();
 
   // Schedule memory request.
   Process* process = cmd.target()->GetProcess();
   process->ReadMemory(
-      address, size, [ num_instr, options, process = process->GetWeakPtr() ](
+      address, size, [ options, process = process->GetWeakPtr() ](
                          const Err& err, MemoryDump dump) {
-        CompleteDisassemble(err, std::move(dump), num_instr, process, options);
+        CompleteDisassemble(err, std::move(dump), std::move(process), options);
       });
   return Err();
 }

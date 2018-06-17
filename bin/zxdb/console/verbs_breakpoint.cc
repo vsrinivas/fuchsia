@@ -5,6 +5,7 @@
 #include "garnet/bin/zxdb/console/verbs_breakpoint.h"
 
 #include "garnet/bin/zxdb/client/breakpoint.h"
+#include "garnet/bin/zxdb/client/breakpoint_location.h"
 #include "garnet/bin/zxdb/client/breakpoint_settings.h"
 #include "garnet/bin/zxdb/client/frame.h"
 #include "garnet/bin/zxdb/client/session.h"
@@ -13,6 +14,7 @@
 #include "garnet/bin/zxdb/console/command_utils.h"
 #include "garnet/bin/zxdb/console/console.h"
 #include "garnet/bin/zxdb/console/console_context.h"
+#include "garnet/bin/zxdb/console/format_context.h"
 #include "garnet/bin/zxdb/console/output_buffer.h"
 #include "garnet/bin/zxdb/console/verbs.h"
 
@@ -22,6 +24,49 @@ namespace {
 
 constexpr int kStopSwitch = 1;
 constexpr int kEnableSwitch = 2;
+
+// Callback for when updating a breakpoint is done.
+void CreateOrEditBreakpointComplete(fxl::WeakPtr<Breakpoint> breakpoint,
+                                    const Err& err) {
+  if (!breakpoint)
+    return;  // Do nothing if the breakpoint is gone.
+
+  Console* console = Console::get();
+  if (err.has_error()) {
+    OutputBuffer out;
+    out.Append("Error setting breakpoint: ");
+    out.OutputErr(err);
+    console->Output(std::move(out));
+    return;
+  }
+
+  auto locs = breakpoint->GetLocations();
+  if (locs.empty()) {
+    // When the breakpoint resolved to nothing, warn the user, they may have
+    // made a typo.
+    OutputBuffer out;
+    out.Append(DescribeBreakpoint(&console->context(), breakpoint.get()));
+    out.Append(Syntax::kWarning, "\nPending");
+    out.Append(": No matches for location, it will be pending library loads.");
+    console->Output(std::move(out));
+    return;
+  }
+
+  // Successfully wrote the breakpoint.
+  OutputBuffer out;
+  out.Append(DescribeBreakpoint(&console->context(), breakpoint.get()));
+  out.Append("\n");
+
+  // There is a question of what to show the breakpoint enabled state. When
+  // the breakpoint has a main enabled bit, and each location has its own.
+  // For simplicity, just base it on the main enabled bit (most people won't
+  // use location-specific enabling anyway).
+  //
+  // Ignore errors from printing the source, it doesn't matter that much.
+  FormatBreakpointContext(locs[0]->GetLocation(),
+                          breakpoint->GetSettings().enabled, &out);
+  console->Output(std::move(out));
+}
 
 // Backend for setting attributes on a breakpoint from both creation and
 // editing. The given breakpoint is specified if this is an edit, or is null
@@ -99,16 +144,11 @@ Err CreateOrEditBreakpoint(ConsoleContext* context, const Command& cmd,
     breakpoint = context->session()->system().CreateNewBreakpoint();
     context->SetActiveBreakpoint(breakpoint);
   }
-  breakpoint->SetSettings(settings, [](const Err& err) {
-    if (err.has_error()) {
-      OutputBuffer out;
-      out.Append("Error setting breakpoint: ");
-      out.OutputErr(err);
-      Console::get()->Output(std::move(out));
-    }
-  });
+  breakpoint->SetSettings(
+      settings, [breakpoint = breakpoint->GetWeakPtr()](const Err& err) {
+        CreateOrEditBreakpointComplete(std::move(breakpoint), err);
+      });
 
-  Console::get()->Output(DescribeBreakpoint(context, breakpoint));
   return Err();
 }
 

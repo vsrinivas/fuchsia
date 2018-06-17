@@ -12,12 +12,7 @@ namespace zxdb {
 
 class Err;
 
-enum class Syntax {
-  kNormal,
-  kComment,
-  kHeading,
-  kError,
-};
+enum class Syntax { kNormal, kComment, kHeading, kError, kWarning };
 
 // This class collects output from commands so it can be put on the screen in
 // one chunk. It's not just a string because we want to add helper functions

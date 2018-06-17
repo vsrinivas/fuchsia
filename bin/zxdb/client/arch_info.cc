@@ -32,12 +32,14 @@ ArchInfo::~ArchInfo() = default;
 Err ArchInfo::Init(debug_ipc::Arch arch) {
   switch (arch) {
     case debug_ipc::Arch::kX64:
+      is_fixed_instr_ = false;
       max_instr_len_ = 15;
       instr_align_ = 1;
       triple_name_ = "x86_64";
       processor_name_ = "x86-64";
       break;
     case debug_ipc::Arch::kArm64:
+      is_fixed_instr_ = true;
       max_instr_len_ = 4;
       instr_align_ = 4;
       triple_name_ = "aarch64";

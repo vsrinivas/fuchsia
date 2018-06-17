@@ -76,7 +76,7 @@ class BreakpointImpl : public Breakpoint,
   // breakpoint.
   uint32_t backend_id_ = 0;
 
-  fxl::WeakPtrFactory<BreakpointImpl> weak_factory_;
+  fxl::WeakPtrFactory<BreakpointImpl> impl_weak_factory_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(BreakpointImpl);
 };

@@ -7,6 +7,7 @@
 #include <inttypes.h>
 #include <memory>
 #include <string>
+#include <vector>
 
 #include "garnet/bin/zxdb/client/err.h"
 #include "garnet/public/lib/fxl/macros.h"
@@ -26,12 +27,6 @@ class MemoryDump;
 class Disassembler {
  public:
   struct Options {
-    // Writes addresses to the output stream.
-    bool emit_addresses = false;
-
-    // Writes the raw bytes to the output stream.
-    bool emit_bytes = false;
-
     // Controls the behavior for undecodable instructions. When false,
     // DisassembleOne() will report no data consumed and the empty string will
     // be returned. When true, it will emit a "data" mnemonic and advance to
@@ -40,6 +35,23 @@ class Disassembler {
     // DisassembleMany will always should undecodable instructions (otherwise
     // it won't advance).
     bool emit_undecodable = true;
+  };
+
+  // One disassembled instruction.
+  struct Row {
+    Row();
+    Row(uint64_t address, const uint8_t* bytes, size_t bytes_len,
+        std::string op, std::string params, std::string comment);
+    ~Row();
+
+    uint64_t address;
+    std::vector<uint8_t> bytes;
+    std::string op;
+    std::string params;
+    std::string comment;
+
+    // For unit testing.
+    bool operator==(const Row& other) const;
   };
 
   Disassembler();
@@ -59,8 +71,7 @@ class Disassembler {
   //
   // Be sure the input buffer always has enough data for any instruction.
   size_t DisassembleOne(const uint8_t* data, size_t data_len, uint64_t address,
-                        const Options& options,
-                        std::vector<std::string>* out) const;
+                        const Options& options, Row* out) const;
 
   // Disassembles the block, either until there is no more data, or
   // |max_instructions| have been decoded. If max_instructions is 0 it will
@@ -74,8 +85,7 @@ class Disassembler {
   // row format.
   size_t DisassembleMany(const uint8_t* data, size_t data_len,
                          uint64_t start_address, const Options& options,
-                         size_t max_instructions,
-                         std::vector<std::vector<std::string>>* out) const;
+                         size_t max_instructions, std::vector<Row>* out) const;
 
   // Like DisassembleMany() but uses a MemoryDump object. The dump will start
   // at the beginning of the memory dump. This function understands the
@@ -85,9 +95,9 @@ class Disassembler {
   // An unmapped range will be counted as one instruction. The memory
   // addresses for unmapped ranges will always be shown even if disabled in the
   // options.
-  size_t DisassembleDump(const MemoryDump& dump, const Options& options,
-                         size_t max_instructions,
-                         std::vector<std::vector<std::string>>* out) const;
+  size_t DisassembleDump(const MemoryDump& dump, uint64_t start_address,
+                         const Options& options, size_t max_instructions,
+                         std::vector<Row>* out) const;
 
  private:
   const ArchInfo* arch_ = nullptr;

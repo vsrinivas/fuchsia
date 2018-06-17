@@ -29,6 +29,9 @@ class ArchInfo {
 
   Err Init(debug_ipc::Arch arch);
 
+  // Returns true of the instruction length is fixed.
+  bool is_fixed_instr() const { return is_fixed_instr_; }
+
   // Minimum instruction alignment. Prefer instead of
   // llvm::AsmInfo::MinInstAlignment which isn't correct for ARM (reports 1).
   size_t instr_align() const { return instr_align_; }
@@ -55,6 +58,7 @@ class ArchInfo {
   const llvm::MCAsmInfo* asm_info() const { return asm_info_.get(); }
 
  private:
+  bool is_fixed_instr_ = false;
   size_t instr_align_ = 1;
   size_t max_instr_len_ = 1;
 

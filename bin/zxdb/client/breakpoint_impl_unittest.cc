@@ -34,6 +34,9 @@ class BreakpointSink : public RemoteAPI {
       std::function<void(const Err&, debug_ipc::AddOrChangeBreakpointReply)> cb)
       override {
     adds.push_back(std::make_pair(request, cb));
+
+    MessageLoop::Current()->PostTask(
+        [cb]() { cb(Err(), debug_ipc::AddOrChangeBreakpointReply()); });
   }
 
   void RemoveBreakpoint(
@@ -41,6 +44,9 @@ class BreakpointSink : public RemoteAPI {
       std::function<void(const Err&, debug_ipc::RemoveBreakpointReply)> cb)
       override {
     removes.push_back(std::make_pair(request, cb));
+
+    MessageLoop::Current()->PostTask(
+        [cb]() { cb(Err(), debug_ipc::RemoveBreakpointReply()); });
   }
 
   std::vector<AddPair> adds;
@@ -187,6 +193,38 @@ TEST_F(BreakpointImplTest, DynamicLoading) {
   ASSERT_EQ(1u, sink().removes.size());
   EXPECT_EQ(out.breakpoint.breakpoint_id,
             sink().removes[0].first.breakpoint_id);
+}
+
+// Tests that address breakpoints are enabled immediately even when no symbols
+// are available.
+TEST_F(BreakpointImplTest, Address) {
+  // TargetImpl target(&session().system_impl());
+  auto target_impls = session().system_impl().GetTargetImpls();
+  ASSERT_EQ(1u, target_impls.size());
+  TargetImpl* target = target_impls[0];
+  const uint64_t kProcessKoid = 6789;
+  target->CreateProcessForTesting(kProcessKoid, "test");
+
+  BreakpointImpl bp(&session());
+
+  const uint64_t kAddress = 0x123456780;
+  BreakpointSettings in;
+  in.enabled = true;
+  in.scope = BreakpointSettings::Scope::kTarget;
+  in.scope_target = target;
+  in.location_type = BreakpointSettings::LocationType::kAddress;
+  in.location_address = kAddress;
+
+  Err err = SyncSetSettings(bp, in);
+  EXPECT_FALSE(err.has_error());
+
+  // Check the message was sent.
+  ASSERT_EQ(1u, sink().adds.size());
+  debug_ipc::AddOrChangeBreakpointRequest out = sink().adds[0].first;
+  EXPECT_FALSE(out.breakpoint.one_shot);
+  EXPECT_EQ(debug_ipc::Stop::kAll, out.breakpoint.stop);
+  EXPECT_EQ(1u, out.breakpoint.locations.size());
+  // EXPECT_EQ(, out.breakpoint.locations[0].process_koid);
 }
 
 }  // namespace zxdb

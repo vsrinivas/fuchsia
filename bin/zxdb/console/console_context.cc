@@ -151,10 +151,10 @@ int ConsoleContext::GetActiveFrameIdForThread(const Thread* thread) {
   }
 
   // Should be a valid frame index in the thread (or no frames and == 0).
-  FXL_DCHECK((thread->GetFrames().empty() && record->active_frame_id == 0) ||
-             (record->active_frame_id >= 0 &&
-              record->active_frame_id <
-                  static_cast<int>(thread->GetFrames().size())));
+  FXL_DCHECK(
+      (thread->GetFrames().empty() && record->active_frame_id == 0) ||
+      (record->active_frame_id >= 0 &&
+       record->active_frame_id < static_cast<int>(thread->GetFrames().size())));
   return record->active_frame_id;
 }
 
@@ -436,10 +436,11 @@ void ConsoleContext::OnThreadStopped(Thread* thread,
     out.Append(" (no symbol info)\n");
   } else {
     out.Append("\n");
-    FormatFileContext(location, &out);
   }
-
   console->Output(std::move(out));
+  Err err = OutputSourceContext(thread->GetProcess(), location);
+  if (err.has_error())
+    console->Output(err);
 }
 
 void ConsoleContext::OnThreadFramesInvalidated(Thread* thread) {
