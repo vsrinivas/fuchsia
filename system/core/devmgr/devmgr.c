@@ -22,6 +22,7 @@
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/exception.h>
 #include <zircon/syscalls/object.h>
+#include <zircon/syscalls/policy.h>
 
 #include <lib/fdio/namespace.h>
 #include <lib/fdio/util.h>
@@ -544,6 +545,31 @@ static void load_cmdline_from_bootfs(void) {
     }
 }
 
+static zx_status_t fuchsia_create_job(void) {
+    zx_status_t status = zx_job_create(root_job_handle, 0u, &fuchsia_job_handle);
+    if (status != ZX_OK) {
+        printf("devmgr: unable to create fuchsia job: %d (%s)\n", status,
+               zx_status_get_string(status));
+        return status;
+    }
+
+    zx_object_set_property(fuchsia_job_handle, ZX_PROP_NAME, "fuchsia", 7);
+
+    const zx_policy_basic_t fuchsia_job_policy[] = {
+        {.condition = ZX_POL_NEW_PROCESS, .policy = ZX_POL_ACTION_DENY}
+    };
+
+    status = zx_job_set_policy(fuchsia_job_handle, ZX_JOB_POL_RELATIVE, ZX_JOB_POL_BASIC,
+                               fuchsia_job_policy, countof(fuchsia_job_policy));
+    if (status != ZX_OK) {
+        printf("devmgr: unable to set policy fuchsia job: %d (%s)\n", status,
+               zx_status_get_string(status));
+        return status;
+    }
+
+    return ZX_OK;
+}
+
 int main(int argc, char** argv) {
     // Close the loader-service channel so the service can go away.
     // We won't use it any more (no dlopen calls in this process).
@@ -566,11 +592,9 @@ int main(int argc, char** argv) {
     }
     zx_object_set_property(svcs_job_handle, ZX_PROP_NAME, "zircon-services", 16);
 
-    status = zx_job_create(root_job_handle, 0u, &fuchsia_job_handle);
-    if (status < 0) {
-        printf("unable to create service job\n");
-    }
-    zx_object_set_property(fuchsia_job_handle, ZX_PROP_NAME, "fuchsia", 7);
+    if (fuchsia_create_job() != ZX_OK)
+        return 1;
+
     zx_channel_create(0, &appmgr_req_cli, &appmgr_req_srv);
     zx_event_create(0, &fshost_event);
 
