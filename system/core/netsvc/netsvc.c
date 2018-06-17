@@ -13,14 +13,13 @@
 #include <inet6/inet6.h>
 #include <inet6/netifc.h>
 
-#include <launchpad/launchpad.h>
+#include <lib/fdio/io.h>
+#include <lib/fdio/spawn.h>
+#include <zircon/boot/netboot.h>
 #include <zircon/process.h>
 #include <zircon/processargs.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/log.h>
-#include <lib/fdio/io.h>
-
-#include <zircon/boot/netboot.h>
 
 #include "device_id.h"
 
@@ -28,36 +27,40 @@
 
 bool netbootloader = false;
 
-static void run_program(const char *progname, int argc, const char** argv, zx_handle_t h) {
+static void run_program(const char *progname, const char** argv, zx_handle_t h) {
+    zx_handle_t logger = ZX_HANDLE_INVALID;
+    zx_log_create(0, &logger);
 
-    launchpad_t* lp;
-    launchpad_create(0, progname, &lp);
-    launchpad_clone(lp, LP_CLONE_ALL & (~LP_CLONE_FDIO_STDIO));
-    launchpad_load_from_file(lp, argv[0]);
-    launchpad_set_args(lp, argc, argv);
-    zx_handle_t handle = ZX_HANDLE_INVALID;
-    zx_log_create(0, &handle);
-    launchpad_add_handle(lp, handle, PA_HND(PA_FDIO_LOGGER, 0 | FDIO_FLAG_USE_FOR_STDIO));
-    if (h != ZX_HANDLE_INVALID) {
-        launchpad_add_handle(lp, h, PA_HND(PA_USER0, 0));
-    }
-    zx_status_t status;
-    const char* errmsg;
-    if ((status = launchpad_go(lp, NULL, &errmsg)) < 0) {
-        printf("netsvc: cannot launch %s: %d: %s\n", argv[0], status, errmsg);
+    fdio_spawn_action_t actions[] = {
+        {.action = FDIO_SPAWN_ACTION_SET_NAME, .name = {.data = progname}},
+        {.action = FDIO_SPAWN_ACTION_ADD_HANDLE,
+         .h = {.id = PA_HND(PA_FDIO_LOGGER, 0 | FDIO_FLAG_USE_FOR_STDIO),
+               .handle = logger}},
+        {.action = FDIO_SPAWN_ACTION_ADD_HANDLE,
+         .h = {.id = PA_HND(PA_USER0, 0), .handle = h}},
+    };
+
+    size_t action_count = (h == ZX_HANDLE_INVALID) ? 2 : 3;
+    uint32_t flags = FDIO_SPAWN_CLONE_ALL & ~FDIO_SPAWN_CLONE_STDIO;
+    char err_msg[FDIO_SPAWN_ERR_MSG_MAX_LENGTH];
+
+    zx_status_t status = fdio_spawn_etc(ZX_HANDLE_INVALID, flags, argv[0], argv,
+                                        NULL, action_count, actions, NULL, err_msg);
+
+    if (status != ZX_OK) {
+        printf("netsvc: cannot launch %s: %d: %s\n", argv[0], status, err_msg);
     }
 }
 
 void netboot_run_cmd(const char* cmd) {
-    const char* args[] = {
-        "/boot/bin/sh", "-c", cmd
-    };
+    const char* argv[] = { "/boot/bin/sh", "-c", cmd, NULL };
     printf("net cmd: %s\n", cmd);
-    run_program("net:sh", 3, args, 0);
+    run_program("net:sh", argv, ZX_HANDLE_INVALID);
 }
 
 static void run_server(const char* progname, const char* bin, zx_handle_t h) {
-    run_program(progname, 1, &bin, h);
+    const char* argv[] = { bin, NULL };
+    run_program(progname, argv, h);
 }
 
 const char* nodename = "zircon";

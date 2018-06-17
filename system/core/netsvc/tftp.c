@@ -11,7 +11,7 @@
 #include <unistd.h>
 
 #include <inet6/inet6.h>
-#include <launchpad/launchpad.h>
+#include <lib/fdio/spawn.h>
 #include <sync/completion.h>
 #include <tftp/tftp.h>
 #include <zircon/assert.h>
@@ -206,54 +206,56 @@ done:
 
 static tftp_status paver_open_write(const char* filename, size_t size, file_info_t* file_info) {
     // paving an image to disk
-    zx_status_t status;
-    launchpad_t* lp;
-    launchpad_create(0, "paver", &lp);
-    const char* bin = "/boot/bin/install-disk-image";
-    launchpad_load_from_file(lp, bin);
+    const char* argv[] = {"/boot/bin/install-disk-image", NULL, NULL};
+
     if (!strcmp(filename + NB_IMAGE_PREFIX_LEN, NB_FVM_HOST_FILENAME)) {
         printf("netsvc: Running FVM Paver\n");
-        const char* args[] = {bin, "install-fvm"};
-        launchpad_set_args(lp, 2, args);
+        argv[1] = "install-fvm";
     } else if (!strcmp(filename + NB_IMAGE_PREFIX_LEN, NB_EFI_HOST_FILENAME)) {
         printf("netsvc: Running EFI Paver\n");
-        const char* args[] = {bin, "install-efi"};
-        launchpad_set_args(lp, 2, args);
+        argv[1] = "install-efi";
     } else if (!strcmp(filename + NB_IMAGE_PREFIX_LEN, NB_KERNC_HOST_FILENAME)) {
         printf("netsvc: Running KERN-C Paver\n");
-        const char* args[] = {bin, "install-kernc"};
-        launchpad_set_args(lp, 2, args);
+        argv[1] = "install-kernc";
     } else if (!strcmp(filename + NB_IMAGE_PREFIX_LEN, NB_ZIRCONA_HOST_FILENAME)) {
         printf("netsvc: Running ZIRCON-A Paver\n");
-        const char* args[] = {bin, "install-zircona"};
-        launchpad_set_args(lp, 2, args);
+        argv[1] = "install-zircona";
     } else if (!strcmp(filename + NB_IMAGE_PREFIX_LEN, NB_ZIRCONB_HOST_FILENAME)) {
         printf("netsvc: Running ZIRCON-B Paver\n");
-        const char* args[] = {bin, "install-zirconb"};
-        launchpad_set_args(lp, 2, args);
+        argv[1] = "install-zirconb";
     } else if (!strcmp(filename + NB_IMAGE_PREFIX_LEN, NB_ZIRCONR_HOST_FILENAME)) {
         printf("netsvc: Running ZIRCON-R Paver\n");
-        const char* args[] = {bin, "install-zirconr"};
-        launchpad_set_args(lp, 2, args);
+        argv[1] = "install-zirconr";
     } else {
         fprintf(stderr, "netsvc: Unknown Paver\n");
         return TFTP_ERR_IO;
     }
-    launchpad_clone(lp, LP_CLONE_FDIO_NAMESPACE | LP_CLONE_FDIO_STDIO | LP_CLONE_ENVIRON);
 
     int fds[2];
     if (pipe(fds)) {
         return TFTP_ERR_IO;
     }
-    launchpad_transfer_fd(lp, fds[0], STDIN_FILENO);
 
     int logfds[2];
     if (pipe(logfds)) {
+        close(fds[0]);
+        close(fds[1]);
         return TFTP_ERR_IO;
     }
-    launchpad_transfer_fd(lp, logfds[1], STDERR_FILENO);
 
-    if ((status = launchpad_go(lp, &file_info->paver.process, NULL)) != ZX_OK) {
+    fdio_spawn_action_t actions[] = {
+        {.action = FDIO_SPAWN_ACTION_SET_NAME, .name = {.data = "paver"}},
+        {.action = FDIO_SPAWN_ACTION_TRANSFER_FD,
+         .fd = {.local_fd = fds[0], .target_fd = STDIN_FILENO}},
+        {.action = FDIO_SPAWN_ACTION_TRANSFER_FD,
+         .fd = {.local_fd = logfds[1], .target_fd = STDERR_FILENO}},
+    };
+
+    zx_status_t status = fdio_spawn_etc(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL,
+                                        argv[0], argv, NULL, countof(actions), actions,
+                                        &file_info->paver.process, NULL);
+
+    if (status != ZX_OK) {
         printf("netsvc: tftp couldn't launch paver\n");
         goto err_close_fds;
     }

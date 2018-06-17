@@ -17,7 +17,6 @@
 
 #include <zircon/processargs.h>
 #include <zircon/syscalls.h>
-#include <launchpad/launchpad.h>
 
 #include <zircon/boot/netboot.h>
 
