@@ -14,7 +14,6 @@ MODULE_NAME := namespace
 MODULE_SRCS += $(LOCAL_DIR)/namespace.c
 
 MODULE_LIBS := \
-    system/ulib/launchpad \
     system/ulib/fdio \
     system/ulib/zircon \
     system/ulib/c
