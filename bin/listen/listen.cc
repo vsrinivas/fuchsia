@@ -34,7 +34,7 @@
 #include "lib/fxl/strings/string_printf.h"
 
 constexpr zx_rights_t kChildJobRights =
-    ZX_RIGHTS_BASIC | ZX_RIGHTS_IO | ZX_RIGHT_DESTROY;
+    ZX_RIGHTS_BASIC | ZX_RIGHTS_IO | ZX_RIGHT_DESTROY | ZX_RIGHT_MANAGE_JOB;
 
 class Service {
  public:
