@@ -11,20 +11,11 @@
 #include <stdlib.h>
 #include <zircon/assert.h>
 #include <zircon/device/rtc.h>
+#include <librtc.h>
 
 typedef struct {
     i2c_protocol_t i2c;
 } pcf8563_context;
-
-static uint8_t int2bcd(int x)
-{
-    return ((x / 10) << 4) | (x % 10);
-}
-
-static int bcd2int(uint8_t b)
-{
-    return (((b & 0xf0) >> 4) * 10) + (b & 0x0f);
-}
 
 static ssize_t pcf8563_rtc_get(pcf8563_context *ctx, void* buf, size_t count) {
     ZX_DEBUG_ASSERT(ctx);
@@ -43,12 +34,12 @@ static ssize_t pcf8563_rtc_get(pcf8563_context *ctx, void* buf, size_t count) {
         return err;
     }
 
-    rtc->seconds = bcd2int(read_buf[0] & 0x7f);
-    rtc->minutes = bcd2int(read_buf[1] & 0x7f);
-    rtc->hours   = bcd2int(read_buf[2] & 0x3f);
-    rtc->day     = bcd2int(read_buf[3] & 0x3f);
-    rtc->month   = bcd2int(read_buf[5] & 0x1f);
-    rtc->year    = ((read_buf[5] & 0x80) ? 2000 : 1900) + bcd2int(read_buf[6]);
+    rtc->seconds = from_bcd(read_buf[0] & 0x7f);
+    rtc->minutes = from_bcd(read_buf[1] & 0x7f);
+    rtc->hours   = from_bcd(read_buf[2] & 0x3f);
+    rtc->day     = from_bcd(read_buf[3] & 0x3f);
+    rtc->month   = from_bcd(read_buf[5] & 0x1f);
+    rtc->year    = ((read_buf[5] & 0x80) ? 2000 : 1900) + from_bcd(read_buf[6]);
 
     return sizeof *rtc;
 }
@@ -61,6 +52,11 @@ static ssize_t pcf8563_rtc_set(pcf8563_context *ctx, const void* buf, size_t cou
         return ZX_ERR_BUFFER_TOO_SMALL;
     }
 
+    // An invalid time was supplied.
+    if (rtc_is_invalid(rtc)) {
+        return ZX_ERR_OUT_OF_RANGE;
+    }
+
     int year = rtc->year;
     int century = (year < 2000) ? 0 : 1;
     if (century) {
@@ -71,18 +67,23 @@ static ssize_t pcf8563_rtc_set(pcf8563_context *ctx, const void* buf, size_t cou
 
     uint8_t write_buf[] = {
         0x02,
-        int2bcd(rtc->seconds),
-        int2bcd(rtc->minutes),
-        int2bcd(rtc->hours),
-        int2bcd(rtc->day),
+        to_bcd(rtc->seconds),
+        to_bcd(rtc->minutes),
+        to_bcd(rtc->hours),
+        to_bcd(rtc->day),
         0, // day of week
-        (century << 7) | int2bcd(rtc->month),
-        int2bcd(year)
+        (century << 7) | to_bcd(rtc->month),
+        to_bcd(year)
     };
 
     zx_status_t err = i2c_transact_sync(&ctx->i2c, 0, write_buf, sizeof write_buf, NULL, 0);
     if (err) {
         return err;
+    }
+
+    zx_status_t status = set_utc_offset(rtc);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "The RTC driver was unable to set the UTC clock!\n");
     }
 
     return sizeof *rtc;
@@ -139,6 +140,13 @@ static zx_status_t pcf8563_bind(void* ctx, zx_device_t* parent)
     if (status != ZX_OK) {
         free(context);
         return status;
+    }
+
+    rtc_t rtc;
+    sanitize_rtc(context, &pcf8563_rtc_device_proto, &rtc);
+    status = set_utc_offset(&rtc);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "The RTC driver was unable to set the UTC clock!\n");
     }
 
     return ZX_OK;

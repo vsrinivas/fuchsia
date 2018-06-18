@@ -21,6 +21,8 @@ MODULE_STATIC_LIBS := \
     system/ulib/sync \
     system/ulib/hid
 
+MODULE_STATIC_LIBS := system/ulib/ddk system/ulib/rtc system/ulib/sync
+
 MODULE_LIBS := system/ulib/driver system/ulib/zircon system/ulib/c
 
 include make/module.mk

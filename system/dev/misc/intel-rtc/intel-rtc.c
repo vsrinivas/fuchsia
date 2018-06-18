@@ -3,10 +3,12 @@
 // found in the LICENSE file.
 
 #include <ddk/binding.h>
+#include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <zircon/device/rtc.h>
 #include <hw/inout.h>
+#include <librtc.h>
 
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
@@ -23,68 +25,6 @@
 #define RTC_DATA_REG 0x71
 
 #define RTC_HOUR_PM_BIT 0x80
-
-// Leading 0 allows using the 1-indexed month values from rtc.
-static const uint64_t days_in_month[] = {
-    0,
-    31, // January
-    28, // February (not leap year)
-    31, // March
-    30, // April
-    31, // May
-    30, // June
-    31, // July
-    31, // August
-    30, // September
-    31, // October
-    30, // November
-    31, // December
-};
-
-// Start with seconds from the Unix epoch to 2016/1/1T00:00:00.
-static const uint64_t local_epoc = 1451606400;
-static const uint16_t local_epoc_year = 2016;
-
-static bool is_leap_year(uint16_t year) {
-    return ((year % 4) == 0 && (year % 100) != 0) || ((year % 400) == 0);
-}
-
-// This is run on boot (after validation of the RTC) and whenever the
-// RTC is adjusted.
-static void set_utc_offset(rtc_t* rtc) {
-    // First add all of the prior years
-    uint64_t days_since_local_epoc = 0;
-    for (uint16_t year = local_epoc_year; year < rtc->year; year++) {
-        days_since_local_epoc += is_leap_year(year) ? 366 : 365;
-    }
-
-    // Next add all the prior complete months this year.
-    for (size_t month = 1; month < rtc->month; month++) {
-        days_since_local_epoc += days_in_month[month];
-    }
-    if (rtc->month > 2 && is_leap_year(rtc->year)) {
-        days_since_local_epoc++;
-    }
-
-    // Add all the prior complete days.
-    days_since_local_epoc += rtc->day - 1;
-
-    // Hours, minutes, and seconds are 0 indexed.
-    uint64_t hours_since_local_epoc = (days_since_local_epoc * 24) + rtc->hours;
-    uint64_t minutes_since_local_epoc = (hours_since_local_epoc * 60) + rtc->minutes;
-    uint64_t seconds_since_local_epoc = (minutes_since_local_epoc * 60) + rtc->seconds;
-
-    uint64_t rtc_seconds = local_epoc + seconds_since_local_epoc;
-    uint64_t rtc_nanoseconds = rtc_seconds * 1000000000;
-
-    uint64_t monotonic_nanoseconds = zx_clock_get(ZX_CLOCK_MONOTONIC);
-    int64_t offset = rtc_nanoseconds - monotonic_nanoseconds;
-
-    zx_status_t status = zx_clock_adjust(get_root_resource(), ZX_CLOCK_UTC, offset);
-    if (status != ZX_OK) {
-        fprintf(stderr, "The RTC driver was unable to set the UTC clock!\n");
-    }
-}
 
 static mtx_t lock = MTX_INIT;
 
@@ -119,14 +59,6 @@ enum intel_rtc_register_b {
     REG_B_PERIODIC_INTERRUPT_ENABLE_BIT = 1 << 6,
     REG_B_UPDATE_CYCLE_INHIBIT_BIT = 1 << 7,
 };
-
-static uint8_t to_bcd(uint8_t binary) {
-    return ((binary / 10) << 4) | (binary % 10);
-}
-
-static uint8_t from_bcd(uint8_t bcd) {
-    return ((bcd >> 4) * 10) + (bcd & 0xf);
-}
 
 static uint8_t read_reg_raw(enum intel_rtc_registers reg) {
     outp(RTC_IDX_REG, reg);
@@ -265,16 +197,6 @@ static ssize_t intel_rtc_get(void* buf, size_t count) {
     return sizeof(rtc_t);
 }
 
-static bool rtc_is_invalid(const rtc_t* rtc) {
-    return rtc->seconds > 59 ||
-        rtc->minutes > 59 ||
-        rtc->hours > 23 ||
-        rtc->day > 31 ||
-        rtc->month > 12 ||
-        rtc->year < 2000 ||
-        rtc->year > 2099;
-}
-
 static ssize_t intel_rtc_set(const void* buf, size_t count) {
     if (count < sizeof(rtc_t)) {
         return ZX_ERR_BUFFER_TOO_SMALL;
@@ -289,25 +211,11 @@ static ssize_t intel_rtc_set(const void* buf, size_t count) {
 
     write_time(&rtc);
     // TODO(kulakowski) This isn't the place for this long term.
-    set_utc_offset(&rtc);
-    return sizeof(rtc_t);
-}
-
-// Validate that the RTC is set to a valid time, and to a relatively
-// sane one. Report the validated or reset time back via rtc.
-static void sanitize_rtc(rtc_t* rtc) {
-    // January 1, 2016 00:00:00
-    static const rtc_t default_rtc = {
-        .day = 1,
-        .month = 1,
-        .year = 2016,
-    };
-
-    intel_rtc_get(rtc, sizeof(*rtc));
-    if (rtc_is_invalid(rtc) || rtc->year < local_epoc_year) {
-        intel_rtc_set(&default_rtc, sizeof(&default_rtc));
-        *rtc = default_rtc;
+    zx_status_t status = set_utc_offset(&rtc);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "The RTC driver was unable to set the UTC clock!\n");
     }
+    return sizeof(rtc_t);
 }
 
 // Implement ioctl protocol.
@@ -359,8 +267,11 @@ static zx_status_t intel_rtc_bind(void* ctx, zx_device_t* parent) {
     }
 
     rtc_t rtc;
-    sanitize_rtc(&rtc);
-    set_utc_offset(&rtc);
+    sanitize_rtc(NULL, &intel_rtc_device_proto, &rtc);
+    status = set_utc_offset(&rtc);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "The RTC driver was unable to set the UTC clock!\n");
+    }
 
     return ZX_OK;
 #else
