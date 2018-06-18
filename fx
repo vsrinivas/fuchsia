@@ -225,7 +225,11 @@ if [ -z "${iterative}" ]; then
 elif which inotifywait >/dev/null; then
   # Watch everything except out/ and files/directories beginning with "."
   # such as lock files, swap files, .git, etc'.
-  while inotifywait -qqre modify --exclude "/\." "${fuchsia_dir}" @"${fuchsia_dir}"/out; do
+  inotifywait -qrme modify --exclude "/\." "${fuchsia_dir}" @"${fuchsia_dir}"/out | while read; do
+    # Drain all subsequent events in a batch.
+    # Otherwise when multiple files are changes at once we'd run multiple
+    # times.
+    read -d "" -t .01
     # Allow at most one fx -i invocation per Fuchsia dir at a time.
     # Otherwise multiple concurrent fx -i invocations can trigger each other
     # and cause a storm.
