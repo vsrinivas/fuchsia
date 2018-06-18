@@ -1,10 +1,9 @@
 # Process Creation
 
 The kernel provides low-level facilities for creating and setting up processes.
-However, using these facilities are difficult to use directly because they
-involve directly mapping memory for executables, shared libraries, and stacks.
-Instead, you should use one of the higher-level mechanisms for creating
-processes.
+However, these facilities are difficult to use because they involve directly
+mapping memory for executables, shared libraries, and stacks. Instead, you should
+use one of the higher-level mechanisms for creating processes.
 
 ## fuchsia.process.Launcher
 
@@ -16,7 +15,7 @@ output handles), and the service does the work of parsing the ELF executable
 format, configuring the address space for the process, and sending the process
 the startup message.
 
-Most clients do not need to use this sevice directly. Instead, most clients can
+Most clients do not need to use this service directly. Instead, most clients can
 use the simple C frontend in the FDIO library called `fdio_spawn`. This
 function, and its more advanced `fdio_spawn_etc` and `fdio_spawn_vmo`
 companions, connect to the `fuchsia.process.Launcher` service and send the
@@ -33,12 +32,12 @@ to supply all the kernel objects for the new process.
 
 To create a process in its own namespace, Fuchsia provides the
 `fuchsia.sys.Launcher` service. Rather than providing this process all the
-kernel objected needed to construct the new process, you simply provide the
-service a high-level decription of the process you wish to create and the
+kernel objects needed to construct the new process, you simply provide the
+service a high-level description of the process you wish to create and the
 `fuchsia.sys.Launcher` implementation supplies the new process with the
 appropriate kernel objects. For example, if you provide the URL of a component
 within a package, `fuchsia.sys.Launcher` will create a process for that
-component in a namespace appropriate for that compoment with access to its own
+component in a namespace appropriate for that component with access to its own
 package and whatever other resources are declared in the `sandbox` section of
 its manifest.
 
