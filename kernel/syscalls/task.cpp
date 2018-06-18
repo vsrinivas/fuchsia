@@ -191,10 +191,15 @@ zx_status_t sys_thread_start(zx_handle_t thread_handle, zx_vaddr_t entry,
     auto up = ProcessDispatcher::GetCurrent();
 
     fbl::RefPtr<ThreadDispatcher> thread;
-    zx_status_t status = up->GetDispatcherWithRights(thread_handle, ZX_RIGHT_WRITE,
+    zx_status_t status = up->GetDispatcherWithRights(thread_handle, ZX_RIGHT_MANAGE_THREAD,
                                                      &thread);
-    if (status != ZX_OK)
-        return status;
+    if (status != ZX_OK) {
+        // Try again, but with the WRITE right.
+        // TODO(kulakowski) Remove this when all callers are using MANAGE_THREAD.
+        status = up->GetDispatcherWithRights(thread_handle, ZX_RIGHT_WRITE, &thread);
+        if (status != ZX_OK)
+            return status;
+    }
 
     ktrace(TAG_THREAD_START, (uint32_t)thread->get_koid(), 0, 0, 0);
     return thread->Start(entry, stack, arg1, arg2, /* initial_thread= */ false);
