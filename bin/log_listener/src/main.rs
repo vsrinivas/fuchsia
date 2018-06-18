@@ -49,7 +49,7 @@ fn help(name: &str) -> String {
             Minimum severity to filter on.
 
         --verbosity <integer>:
-            Verbosity to filer on. It should be positive integer greater than 0.
+            Verbosity to filter on. It should be positive integer greater than 0.
 
         --help | -h:
             Prints usage.",
