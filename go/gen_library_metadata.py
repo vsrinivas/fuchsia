@@ -9,7 +9,7 @@ import os
 import sys
 
 
-class Library(object):
+class Source(object):
 
     def __init__(self, name, path, file):
         self.name = name
@@ -26,29 +26,29 @@ class Library(object):
         return self.name == other.name and self.path == other.path
 
 
-def get_libraries(dep_files, extra_library=None):
-    # Aggregate library data from dependencies.
-    libraries = set()
-    if extra_library:
-        libraries.add(extra_library)
+def get_sources(dep_files, extra_sources=None):
+    # Aggregate source data from dependencies.
+    sources = set()
+    if extra_sources:
+        sources.update(extra_sources)
     for dep in dep_files:
         with open(dep, 'r') as dep_file:
             for name, path in json.load(dep_file).iteritems():
-                libraries.add(Library(name, path, dep))
+                sources.add(Source(name, path, dep))
 
     # Verify duplicates.
-    libs_by_name = {}
-    for lib in libraries:
-        libs_by_name.setdefault(lib.name, []).append(lib)
-    for name, libs in libs_by_name.iteritems():
-        if len(libs) <= 1:
+    sources_by_name = {}
+    for src in sources:
+        sources_by_name.setdefault(src.name, []).append(src)
+    for name, srcs in sources_by_name.iteritems():
+        if len(srcs) <= 1:
             continue
-        print('Error: library "%s" has multiple paths.' % name)
-        for lib in libs:
-            print(' - %s (%s)' % (lib.path, lib.file))
-        raise Exception('Could not aggregate libraries')
+        print('Error: source "%s" has multiple paths.' % name)
+        for src in srcs:
+            print(' - %s (%s)' % (src.path, src.file))
+        raise Exception('Could not aggregate sources')
 
-    return dict([(l.name, l.path) for l in libraries])
+    return dict([(s.name, s.path) for s in sources])
 
 
 def main():
@@ -61,6 +61,9 @@ def main():
     parser.add_argument('--source-dir',
                         help='Path to the library\'s source directory',
                         required=True)
+    parser.add_argument('--sources',
+                        help='List of source files',
+                        nargs='*')
     parser.add_argument('--output',
                         help='Path to the file to generate',
                         required=True)
@@ -74,8 +77,16 @@ def main():
         with open(args.name_file, 'r') as name_file:
             name = name_file.read()
 
-    current_library = Library(name, args.source_dir, args.output)
-    result = get_libraries(args.deps, extra_library=current_library)
+    current_sources = []
+    if args.sources:
+        # TODO(BLD-62): verify that the sources are in a single folder.
+        for source in args.sources:
+            current_sources.append(Source(os.path.join(name, source),
+                                          os.path.join(args.source_dir, source),
+                                          args.output))
+    else:
+        current_sources.append(Source(name, args.source_dir, args.output))
+    result = get_sources(args.deps, extra_sources=current_sources)
     with open(args.output, 'w') as output_file:
         json.dump(result, output_file, indent=2, sort_keys=True)
 

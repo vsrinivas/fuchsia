@@ -70,6 +70,10 @@ template("fidl_go") {
 
     source_dir = file_stem
 
+    sources = [
+      "impl.go",
+    ]
+
     non_go_deps = [
       ":$generation_target_name",
     ]

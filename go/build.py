@@ -13,7 +13,7 @@ import string
 import shutil
 import errno
 
-from gen_libraries import get_libraries
+from gen_library_metadata import get_sources
 
 
 def main():
@@ -79,7 +79,7 @@ def main():
       dependencies = []
       for dep in args.go_dependency:
         dependencies.append(string.split(dep, '=', 1))
-      dependencies.extend(get_libraries(args.go_dep_files).items())
+      dependencies.extend(get_sources(args.go_dep_files).items())
 
       # Make sure the user didn't specify multiple dependencies that all share
       # the same destination.

@@ -76,7 +76,7 @@ template("go_build") {
     depfile = "${output_path}.d"
 
     sources = [
-      "//build/go/gen_libraries.py",
+      "//build/go/gen_library_metadata.py",
     ]
 
     # The same Go toolchain is used for host and target.

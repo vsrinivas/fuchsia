@@ -22,6 +22,10 @@
 #     Path to the root of the sources for the package.
 #     Defaults to the current directory.
 #
+#   sources (optional)
+#     List of source files, relative to source_dir.
+#     TODO(BLD-62): make this attribute required.
+#
 #   deps (optional)
 #     List of labels for Go libraries this target depends on.
 #
@@ -45,8 +49,13 @@ template("go_library") {
     source_dir = invoker.source_dir
   }
 
+  go_sources = []
+  if (defined(invoker.sources)) {
+    go_sources = invoker.sources
+  }
+
   action(target_name) {
-    script = "//build/go/gen_libraries.py"
+    script = "//build/go/gen_library_metadata.py"
 
     library_file = "$target_gen_dir/$target_name.go_deps"
 
@@ -75,6 +84,8 @@ template("go_library") {
     args = name_args + [
              "--source-dir",
              rebase_path(source_dir),
+             "--sources",
+           ] + go_sources + [
              "--output",
              rebase_path(library_file),
              "--deps",
