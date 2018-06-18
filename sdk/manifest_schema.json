@@ -263,10 +263,15 @@
           "enum": [
             "fidl"
           ]
+        },
+        "name": {
+          "description": "A FIDL library's name",
+          "type": "string"
         }
       },
       "required": [
-        "domain"
+        "domain",
+        "name"
       ],
       "additionalProperties": false
     },
