@@ -32,6 +32,7 @@ extern crate wlan_sme;
 
 mod device;
 mod device_watch;
+mod future_util;
 mod logger;
 mod service;
 mod station;
