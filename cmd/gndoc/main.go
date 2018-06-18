@@ -60,10 +60,10 @@ func main() {
 
 	ctx := context.Background()
 	sourceMap := gndoc.NewSourceMap(sources)
-	argMap := gndoc.NewArgMap(len(inputFiles), sourceMap)
+	argMap := gndoc.NewArgMap(sourceMap)
 
-	args, keys, errs := gndoc.ParseGNArgs(ctx, inputFiles, keyArgs)
-	argMap.AddArgs(args, keys)
+	args, errs := gndoc.ParseGNArgs(ctx, inputFiles, keyArgs)
+	argMap.AddArgs(args)
 	if err := <-errs; err != nil {
 		log.Fatalf("Error: %s\n", err)
 	}
@@ -81,5 +81,6 @@ func main() {
 	} else {
 		out = os.Stdout
 	}
+
 	argMap.EmitMarkdown(out)
 }

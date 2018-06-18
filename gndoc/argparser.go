@@ -12,25 +12,29 @@ import (
 	"strings"
 )
 
-// GNArg holds the information directly parsed from the json output of `gn args <build> --list --json`.
-type GNArg struct {
+// Arg holds the information directly parsed from the json output of `gn args <build> --list --json`.
+type Arg struct {
 	Name       string   `json:"name"`
-	CurrentVal ArgValue `json:"current"`
-	DefaultVal ArgValue `json:"default"`
+	CurrentVal argValue `json:"current"`
+	DefaultVal argValue `json:"default"`
 	Comment    string   `json:"comment"`
 	Key        string   `json: "-"`
 }
 
+// ArgValue holds a value, its filepath and line number, and the build associated with the value.
+type argValue struct {
+	Val  interface{} `json:"value"`
+	File string      `json:"file"`
+	Line int         `json:"line"`
+}
+
 // ParseGNArgs runs the necessary gn commands and decodes the json output into a channel of GNArgs.
-func ParseGNArgs(ctx context.Context, inputFiles []string, keyArgs []string) (<-chan GNArg, <-chan string, <-chan error) {
-	args := make(chan GNArg)
-	// Buffer the keys we find so that we don't block the args.
-	keys := make(chan string, len(inputFiles))
+func ParseGNArgs(ctx context.Context, inputFiles []string, keyArgs []string) (<-chan Arg, <-chan error) {
+	args := make(chan Arg)
 	errs := make(chan error, 1)
 	go func() {
 		defer func() {
 			close(args)
-			close(keys)
 			close(errs)
 		}()
 		for _, input := range inputFiles {
@@ -38,31 +42,30 @@ func ParseGNArgs(ctx context.Context, inputFiles []string, keyArgs []string) (<-
 			case <-ctx.Done():
 				return
 			default:
-				key, err := parseJson(input, keyArgs, args)
+				err := parseJson(input, keyArgs, args)
 				if err != nil {
 					errs <- err
 					return
 				}
-				keys <- key
 			}
 		}
 	}()
-	return args, keys, errs
+	return args, errs
 }
 
-func parseJson(input string, keyArgs []string, out chan<- GNArg) (string, error) {
+func parseJson(input string, keyArgs []string, out chan<- Arg) error {
 	// Open the json file.
 	file, err := os.Open(input)
 	if err != nil {
-		return "", err
+		return err
 	}
 	defer file.Close()
 
 	// Decode the json into GNArgs.
-	var gnArgs []GNArg
+	var gnArgs []Arg
 	decoder := json.NewDecoder(file)
 	if err := decoder.Decode(&gnArgs); err != nil {
-		return "", err
+		return err
 	}
 
 	// Mark the args with the relevant key and send to channel.
@@ -72,11 +75,12 @@ func parseJson(input string, keyArgs []string, out chan<- GNArg) (string, error)
 		out <- arg
 	}
 
-	return key, nil
+	return nil
 }
 
+// TODO: make sure this is sorted before stringifying
 // getKey searches the decoded json for the flagged keys and builds the marker string.
-func getKey(args []GNArg, keys []string) string {
+func getKey(args []Arg, keys []string) string {
 	keyVals := make([]string, len(keys))
 	for _, arg := range args {
 		for idx, key := range keys {
