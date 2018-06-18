@@ -296,6 +296,8 @@ int RunAllTests(const RunTestFn& RunTest, int argc, const char* const* argv,
         }
 
         // Sync output filesystem.
+        // disable on Mac until proper way to sync Mac filesystems is discovered
+#if !defined(__APPLE__)
         int fd = open(output_dir, O_RDONLY);
         if (fd < 0) {
             printf("Warning: Could not open %s for syncing", output_dir);
@@ -304,6 +306,7 @@ int RunAllTests(const RunTestFn& RunTest, int argc, const char* const* argv,
         } else {
             close(fd);
         }
+#endif
     }
 
     // Display any failed tests, and free the test results.
