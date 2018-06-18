@@ -9,7 +9,7 @@ use std::fmt::{self, Debug, Formatter};
 use std::ops::Range;
 
 use byteorder::{ByteOrder, NetworkEndian};
-use zerocopy::{AsBytes, ByteSlice, FromBytes, LayoutVerified, Unaligned};
+use zerocopy::{AsBytes, ByteSlice, ByteSliceMut, FromBytes, LayoutVerified, Unaligned};
 
 use error::ParseError;
 use ip::{IpProto, Ipv4Addr, Ipv4Option};
@@ -224,7 +224,10 @@ impl<B: ByteSlice> Ipv4Packet<B> {
     }
 }
 
-impl<'a> Ipv4Packet<&'a mut [u8]> {
+impl<B> Ipv4Packet<B>
+where
+    B: ByteSliceMut,
+{
     /// Set the Time To Live (TTL).
     ///
     /// Set the TTL and update the header checksum accordingly.

@@ -187,7 +187,10 @@ impl<B: ByteSlice> EthernetFrame<B> {
     }
 }
 
-impl<'a> EthernetFrame<&'a mut [u8]> {
+impl<B> EthernetFrame<B>
+where
+    B: AsMut<[u8]>,
+{
     /// Serialize an Ethernet frame in an existing buffer.
     ///
     /// `serialize` serializes an `EthernetFrame` which uses the provided
@@ -227,8 +230,8 @@ impl<'a> EthernetFrame<&'a mut [u8]> {
     /// header, ARP header, etc). See the `DETAILS.md` file in the repository
     /// root for more details.
     pub fn serialize(
-        mut buffer: BufferAndRange<&'a mut [u8]>, src_mac: Mac, dst_mac: Mac, ethertype: EtherType,
-    ) -> BufferAndRange<&'a mut [u8]> {
+        mut buffer: BufferAndRange<B>, src_mac: Mac, dst_mac: Mac, ethertype: EtherType,
+    ) -> BufferAndRange<B> {
         // NOTE: EtherType values of 1500 and below are used to indicate the
         // length of the body in bytes. We don't need to validate this because
         // the EtherType enum has no variants with values in that range.
@@ -415,7 +418,7 @@ mod tests {
         // create with a body which is below the minimum length
         let mut buf = [0u8; 60];
         EthernetFrame::serialize(
-            BufferAndRange::new(&mut buf, (60 - (MIN_BODY_LEN - 1))..),
+            BufferAndRange::new(&mut buf[..], (60 - (MIN_BODY_LEN - 1))..),
             Mac::new([0, 1, 2, 3, 4, 5]),
             Mac::new([6, 7, 8, 9, 10, 11]),
             EtherType::Arp,

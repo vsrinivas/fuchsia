@@ -17,7 +17,6 @@ use device::arp::{ArpHardwareType, ArpOp};
 use device::ethernet::{EtherType, Mac};
 use error::ParseError;
 use ip::Ipv4Addr;
-use wire::util::BufferAndRange;
 
 // Header has the same memory layout (thanks to repr(C, packed)) as an ARP
 // header. Thus, we can simply reinterpret the bytes of the ARP header as a
@@ -280,8 +279,9 @@ where
     }
 }
 
-impl<'a, HwAddr, ProtoAddr> ArpPacket<&'a mut [u8], HwAddr, ProtoAddr>
+impl<B, HwAddr, ProtoAddr> ArpPacket<B, HwAddr, ProtoAddr>
 where
+    B: AsMut<[u8]>,
     HwAddr: Copy + HType + FromBytes + AsBytes + Unaligned,
     ProtoAddr: Copy + PType + FromBytes + AsBytes + Unaligned,
 {
@@ -314,7 +314,7 @@ where
     /// `serialize` panics if there is insufficient room in the buffer to store
     /// the ARP packet. The caller can guarantee that there will be enough room
     /// by providing a buffer of at least `ArpPacket::MAX_LEN` bytes.
-    pub fn serialize<B: AsRef<[u8]> + AsMut<[u8]>>(
+    pub fn serialize(
         mut buffer: B, operation: ArpOp, sender_hardware_addr: HwAddr,
         sender_protocol_addr: ProtoAddr, target_hardware_addr: HwAddr,
         target_protocol_addr: ProtoAddr,
@@ -429,7 +429,7 @@ mod tests {
     fn test_serialize() {
         let mut buf = [0; 28];
         {
-            let buffer = ArpPacket::serialize(
+            ArpPacket::serialize(
                 &mut buf[..],
                 ArpOp::Request,
                 TEST_SENDER_MAC,

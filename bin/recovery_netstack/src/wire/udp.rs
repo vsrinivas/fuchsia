@@ -236,7 +236,10 @@ impl<B: ByteSlice> UdpPacket<B> {
 // in UdpPacket::parse, provides the invariant that a UdpPacket always has a
 // valid checksum.
 
-impl<'a> UdpPacket<&'a mut [u8]> {
+impl<B> UdpPacket<B>
+where
+    B: AsMut<[u8]>,
+{
     /// Serialize a UDP packet in an existing buffer.
     ///
     /// `serialize` creates a `UdpPacket` which uses the provided `buffer` for
@@ -267,7 +270,7 @@ impl<'a> UdpPacket<&'a mut [u8]> {
     /// `serialize` panics if there is insufficient room preceding the body to
     /// store the UDP header. The caller can guarantee that there will be enough
     /// room by providing at least `MAX_HEADER_LEN` pre-body bytes.
-    pub fn serialize<B: AsMut<[u8]>, A: IpAddr>(
+    pub fn serialize<A: IpAddr>(
         mut buffer: BufferAndRange<B>, src_ip: A, dst_ip: A, src_port: Option<NonZeroU16>,
         dst_port: NonZeroU16,
     ) -> BufferAndRange<B> {
