@@ -90,7 +90,6 @@ template("go_build") {
       deps += [
         "//garnet/public/sdk:zircon_sysroot_export",
         "//zircon/public/lib/fdio",
-        "//zircon/public/lib/launchpad",
       ]
     }
 
