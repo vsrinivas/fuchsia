@@ -22,7 +22,7 @@ static zx_handle_t log_handle;
 static void log_write(const void* data, size_t len) {
     while (len > 0) {
         size_t xfer = (len > LOGBUF_MAX) ? LOGBUF_MAX : len;
-        zx_log_write(log_handle, xfer, data, 0);
+        zx_debuglog_write(log_handle, 0, data, xfer);
         data += xfer;
         len -= xfer;
     }
@@ -95,7 +95,7 @@ int main(int argc, char** argv) {
     if (zx_log_create(0, &log_handle) < 0) {
         return -2;
     }
-    zx_log_write(log_handle, 4, "TEST", 0);
+    zx_debuglog_write(log_handle, 0, "TEST", 4);
 
     if (get_root_resource() == ZX_HANDLE_INVALID) {
         fprintf(stderr, "Cannot access root resource, refusing to run tests.\n");

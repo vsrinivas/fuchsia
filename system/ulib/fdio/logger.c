@@ -42,7 +42,7 @@ static ssize_t log_write(fdio_t* io, const void* _data, size_t len) {
     while (len-- > 0) {
         char c = *data++;
         if (c == '\n') {
-            zx_log_write(log_io->handle, logbuf->next, logbuf->data, 0);
+            zx_debuglog_write(log_io->handle, 0, logbuf->data, logbuf->next);
             logbuf->next = 0;
             continue;
         }
@@ -51,7 +51,7 @@ static ssize_t log_write(fdio_t* io, const void* _data, size_t len) {
         }
         logbuf->data[logbuf->next++] = c;
         if (logbuf->next == LOGBUF_MAX) {
-            zx_log_write(log_io->handle, logbuf->next, logbuf->data, 0);
+            zx_debuglog_write(log_io->handle, 0, logbuf->data, logbuf->next);
             logbuf->next = 0;
             continue;
         }

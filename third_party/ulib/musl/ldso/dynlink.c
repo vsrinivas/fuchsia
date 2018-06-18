@@ -2506,7 +2506,7 @@ __NO_SAFESTACK __attribute__((__visibility__("hidden"))) void _dl_log_write(
             if (nl != NULL) {
                 chunk = nl + 1 - buffer;
             }
-            zx_status_t status = _zx_log_write(logger, chunk, buffer, 0);
+            zx_status_t status = _zx_debuglog_write(logger, 0, buffer, chunk);
             if (status != ZX_OK) {
                 __builtin_trap();
             }

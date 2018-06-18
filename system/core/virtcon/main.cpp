@@ -42,7 +42,7 @@ static zx_status_t log_reader_cb(port_handler_t* ph, zx_signals_t signals, uint3
     zx_log_record_t* rec = (zx_log_record_t*)buf;
     zx_status_t status;
     for (;;) {
-        if ((status = zx_log_read(ph->handle, ZX_LOG_RECORD_MAX, rec, 0)) < 0) {
+        if ((status = zx_debuglog_read(ph->handle, 0, rec, ZX_LOG_RECORD_MAX)) < 0) {
             if (status == ZX_ERR_SHOULD_WAIT) {
                 // return non-OK to avoid needlessly re-arming the repeating wait
                 return ZX_ERR_NEXT;
