@@ -63,7 +63,8 @@ static bool test_results() {
     perftest::ResultsSet results;
     DummyOutputStream out;
     EXPECT_TRUE(perftest::internal::RunTests(
-                    &test_list, kRunCount, "", out.fp(), &results));
+                    "test-suite", &test_list, kRunCount, "", out.fp(),
+                    &results));
 
     auto* test_cases = results.results();
     ASSERT_EQ(test_cases->size(), 1);
@@ -89,7 +90,8 @@ static bool test_failing_test() {
     perftest::ResultsSet results;
     DummyOutputStream out;
     EXPECT_FALSE(perftest::internal::RunTests(
-                     &test_list, kRunCount, "", out.fp(), &results));
+                    "test-suite", &test_list, kRunCount, "", out.fp(),
+                    &results));
     EXPECT_EQ(results.results()->size(), 0);
 
     END_TEST;
@@ -118,7 +120,7 @@ static bool test_bad_keep_running_calls() {
         perftest::ResultsSet results;
         DummyOutputStream out;
         bool success = perftest::internal::RunTests(
-            &test_list, kRunCount, "", out.fp(), &results);
+            "test-suite", &test_list, kRunCount, "", out.fp(), &results);
         EXPECT_EQ(success, kRunCount == actual_runs);
         EXPECT_EQ(results.results()->size(),
                   (size_t)(kRunCount == actual_runs ? 1 : 0));
@@ -153,7 +155,8 @@ static bool test_multistep_test() {
     perftest::ResultsSet results;
     DummyOutputStream out;
     EXPECT_TRUE(perftest::internal::RunTests(
-                    &test_list, kRunCount, "", out.fp(), &results));
+                    "test-suite", &test_list, kRunCount, "", out.fp(),
+                    &results));
     ASSERT_EQ(results.results()->size(), 3);
     EXPECT_STR_EQ((*results.results())[0].label().c_str(), "example_test.step1");
     EXPECT_STR_EQ((*results.results())[1].label().c_str(), "example_test.step2");
@@ -187,7 +190,7 @@ static bool test_next_step_called_before_keep_running() {
     perftest::ResultsSet results;
     DummyOutputStream out;
     bool success = perftest::internal::RunTests(
-        &test_list, kRunCount, "", out.fp(), &results);
+        "test-suite", &test_list, kRunCount, "", out.fp(), &results);
     EXPECT_FALSE(success);
     EXPECT_FALSE(keeprunning_retval);
 
@@ -222,7 +225,7 @@ static bool test_bad_next_step_calls() {
         perftest::ResultsSet results;
         DummyOutputStream out;
         bool success = perftest::internal::RunTests(
-            &test_list, kRunCount, "", out.fp(), &results);
+            "test-suite", &test_list, kRunCount, "", out.fp(), &results);
         const int kCorrectNumberOfCalls = 2;
         EXPECT_EQ(success, actual_calls == kCorrectNumberOfCalls);
         EXPECT_EQ(results.results()->size(),
@@ -262,5 +265,5 @@ RUN_TEST(test_parsing_command_args)
 END_TEST_CASE(perftest_runner_test)
 
 int main(int argc, char** argv) {
-    return perftest::PerfTestMain(argc, argv);
+    return perftest::PerfTestMain(argc, argv, "zircon.perf_test");
 }

@@ -178,10 +178,11 @@ void RegisterSimpleTest(const char* test_name) {
 // Entry point for the perf test runner that a test executable should call
 // from main().  This will run the registered perf tests and/or unit tests,
 // based on the command line arguments.  (See the "--help" output for more
-// details.)
-int PerfTestMain(int argc, char** argv);
+// details.)  |test_suite| is included in the test results JSON and is used to
+// categorize test results in the performance dashboard.
+int PerfTestMain(int argc, char** argv, const char* test_suite = "");
 
-// Run a single test |run_count| times, and add the results to
+// Run a single test for |test_suite| |run_count| times, and add the results to
 // |results_set| using the given name, |test_name|.  On error, this returns
 // false and sets |*error_out| to an error string.
 //
@@ -189,7 +190,8 @@ int PerfTestMain(int argc, char** argv);
 // PerfTestMain() -- e.g. for test cases with complex parameters based on
 // command line arguments, or for test cases that reuse some shared state
 // and must be run in a particular order.
-bool RunTest(const char* test_name, const fbl::Function<TestFunc>& test_func,
+bool RunTest(const char* test_suite, const char* test_name,
+             const fbl::Function<TestFunc>& test_func,
              uint32_t run_count, ResultsSet* results_set,
              fbl::String* error_out);
 

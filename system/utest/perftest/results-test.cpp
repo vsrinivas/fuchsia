@@ -22,7 +22,7 @@ static bool test_json_output() {
 
     perftest::ResultsSet results;
     perftest::TestCaseResults* test_case =
-        results.AddTestCase("ExampleNullSyscall", "nanoseconds");
+        results.AddTestCase("results_test", "ExampleNullSyscall", "nanoseconds");
     // Fill out some example data.
     for (int val = 101; val <= 105; ++val) {
         test_case->AppendValue(val);
@@ -36,7 +36,7 @@ static bool test_json_output() {
     ASSERT_TRUE(FixUpFileBuffer(fp, buf, sizeof(buf)));
 
     // Test the JSON output.
-    const char* expected = R"JSON([{"label":"ExampleNullSyscall","unit":"nanoseconds","samples":[{"values":[101.000000,102.000000,103.000000,104.000000,105.000000]}]}])JSON";
+    const char* expected = R"JSON([{"label":"ExampleNullSyscall","test_suite":"results_test","unit":"nanoseconds","samples":[{"values":[101.000000,102.000000,103.000000,104.000000,105.000000]}]}])JSON";
     EXPECT_STR_EQ(expected, buf, "");
 
     END_TEST;
@@ -47,7 +47,7 @@ static bool test_summary_statistics() {
 
     perftest::ResultsSet results;
     perftest::TestCaseResults* test_case =
-        results.AddTestCase("ExampleNullSyscall", "nanoseconds");
+        results.AddTestCase("results_test", "ExampleNullSyscall", "nanoseconds");
     // Fill out some example data in a non-sorted order.
     test_case->AppendValue(200);
     test_case->AppendValue(6);

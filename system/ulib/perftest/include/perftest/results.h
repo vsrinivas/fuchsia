@@ -38,12 +38,15 @@ struct SummaryStatistics {
 // the test case, in order.
 class TestCaseResults {
 public:
-    TestCaseResults(const fbl::String& label, const fbl::String& unit)
-        : label_(label),
+    TestCaseResults(const fbl::String& test_suite, const fbl::String& label,
+                    const fbl::String& unit)
+        : test_suite_(test_suite),
+          label_(label),
           unit_(unit) {}
 
     fbl::String label() const { return label_; }
     fbl::String unit() const { return unit_; }
+    fbl::String test_suite() const { return test_suite_; }
     fbl::Vector<double>* values() { return &values_; }
 
     void AppendValue(double value) {
@@ -56,6 +59,7 @@ public:
     SummaryStatistics GetSummaryStatistics() const;
 
 private:
+    fbl::String test_suite_;
     fbl::String label_;
     fbl::String unit_;
     fbl::Vector<double> values_;
@@ -70,7 +74,8 @@ class ResultsSet {
 public:
     fbl::Vector<TestCaseResults>* results() { return &results_; }
 
-    TestCaseResults* AddTestCase(const fbl::String& label,
+    TestCaseResults* AddTestCase(const fbl::String& test_suite,
+                                 const fbl::String& label,
                                  const fbl::String& unit);
 
     // A caller may check for errors using ferror().

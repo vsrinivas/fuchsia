@@ -114,6 +114,8 @@ void WriteJSONString(FILE* out_file, const char* string) {
 void TestCaseResults::WriteJSON(FILE* out_file) const {
     fprintf(out_file, "{\"label\":");
     WriteJSONString(out_file, label_.c_str());
+    fprintf(out_file, ",\"test_suite\":");
+    WriteJSONString(out_file, test_suite_.c_str());
     fprintf(out_file, ",\"unit\":");
     WriteJSONString(out_file, unit_.c_str());
     fprintf(out_file, ",\"samples\":[");
@@ -132,9 +134,10 @@ void TestCaseResults::WriteJSON(FILE* out_file) const {
     fprintf(out_file, "]}");
 }
 
-TestCaseResults* ResultsSet::AddTestCase(const fbl::String& label,
+TestCaseResults* ResultsSet::AddTestCase(const fbl::String& test_suite,
+                                         const fbl::String& label,
                                          const fbl::String& unit) {
-    TestCaseResults test_case(label, unit);
+    TestCaseResults test_case(test_suite, label, unit);
     results_.push_back(fbl::move(test_case));
     return &results_[results_.size() - 1];
 }

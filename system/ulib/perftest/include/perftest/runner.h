@@ -20,7 +20,8 @@ struct NamedTest {
 
 typedef fbl::Vector<NamedTest> TestList;
 
-bool RunTests(TestList* test_list, uint32_t run_count, const char* regex_string,
+bool RunTests(const char* test_suite, TestList* test_list,
+              uint32_t run_count, const char* regex_string,
               FILE* log_stream, ResultsSet* results_set);
 
 struct CommandArgs {
