@@ -27,11 +27,11 @@ BeaconSender::~BeaconSender() {
 }
 
 void BeaconSender::Start(BssInterface* bss, const PsCfg& ps_cfg,
-                         const wlan_mlme::StartRequest& req) {
+                         const MlmeMsg<wlan_mlme::StartRequest>& req) {
     ZX_DEBUG_ASSERT(!IsStarted());
 
     bss_ = bss;
-    req.Clone(&req_);
+    req.body()->Clone(&req_);
 
     auto status = device_->EnableBeaconing(true);
     if (status != ZX_OK) {

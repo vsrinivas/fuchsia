@@ -31,12 +31,12 @@ InfraBss::~InfraBss() {
     Stop();
 }
 
-void InfraBss::Start(const wlan_mlme::StartRequest& req) {
+void InfraBss::Start(const MlmeMsg<wlan_mlme::StartRequest>& req) {
     if (IsStarted()) { return; }
 
     // Move to requested channel.
     auto chan = wlan_channel_t{
-        .primary = req.channel,
+        .primary = req.body()->channel,
         .cbw = CBW20,
     };
 
@@ -49,12 +49,12 @@ void InfraBss::Start(const wlan_mlme::StartRequest& req) {
     auto status = device_->SetChannel(chan);
     if (status != ZX_OK) {
         errorf("[infra-bss] [%s] requested start on channel %u failed: %d\n",
-               bssid_.ToString().c_str(), req.channel, status);
+               bssid_.ToString().c_str(), req.body()->channel, status);
     }
     chan_ = chan;
 
-    ZX_DEBUG_ASSERT(req.dtim_period > 0);
-    if (req.dtim_period == 0) {
+    ZX_DEBUG_ASSERT(req.body()->dtim_period > 0);
+    if (req.body()->dtim_period == 0) {
         ps_cfg_.SetDtimPeriod(1);
         warnf(
             "[infra-bss] [%s] received start request with reserved DTIM period of "
@@ -62,18 +62,18 @@ void InfraBss::Start(const wlan_mlme::StartRequest& req) {
             "to DTIM period of 1\n",
             bssid_.ToString().c_str());
     } else {
-        ps_cfg_.SetDtimPeriod(req.dtim_period);
+        ps_cfg_.SetDtimPeriod(req.body()->dtim_period);
     }
 
     debugbss("[infra-bss] [%s] starting BSS\n", bssid_.ToString().c_str());
-    debugbss("    SSID: %s\n", req.ssid->data());
-    debugbss("    Beacon Period: %u\n", req.beacon_period);
-    debugbss("    DTIM Period: %u\n", req.dtim_period);
-    debugbss("    Channel: %u\n", req.channel);
+    debugbss("    SSID: %s\n", req.body()->ssid->data());
+    debugbss("    Beacon Period: %u\n", req.body()->beacon_period);
+    debugbss("    DTIM Period: %u\n", req.body()->dtim_period);
+    debugbss("    Channel: %u\n", req.body()->channel);
 
     // Keep track of start request which holds important configuration
     // information.
-    req.Clone(&start_req_);
+    req.body()->Clone(&start_req_);
 
     // Start sending Beacon frames.
     started_at_ = zx_clock_get(ZX_CLOCK_MONOTONIC);

@@ -14,6 +14,7 @@
 
 #include <lib/fidl/cpp/decoder.h>
 #include <lib/fidl/cpp/message.h>
+#include <zircon/system/public/zircon/fidl.h>
 
 namespace wlan {
 
@@ -86,12 +87,13 @@ class BaseMlmeMsg {
     BaseMlmeMsg() = default;
     virtual ~BaseMlmeMsg() = default;
 
-    template <typename M> MlmeMsg<M>* As() {
-        return get_type_id() == MlmeMsg<M>::type_id() ? static_cast<MlmeMsg<M>*>(this) : nullptr;
+    template <typename M> const MlmeMsg<M>* As() const {
+        return get_type_id() == MlmeMsg<M>::type_id() ? static_cast<const MlmeMsg<M>*>(this)
+                                                      : nullptr;
     }
 
    protected:
-    virtual const void* get_type_id() = 0;
+    virtual const void* get_type_id() const = 0;
 
    private:
     BaseMlmeMsg(BaseMlmeMsg const&) = delete;
@@ -109,20 +111,25 @@ template <typename M> class MlmeMsg : public BaseMlmeMsg {
         auto hdr = FromBytes<fidl_message_header_t>(pkt->data(), pkt->len());
         if (hdr == nullptr) { return ZX_ERR_NOT_SUPPORTED; }
 
+        out_msg->ordinal_ = hdr->ordinal;
+
         auto status = DeserializeServiceMsg(*pkt, hdr->ordinal, &out_msg->msg_);
         if (status != ZX_OK) { return status; }
 
         return ZX_OK;
     }
 
-    const M* body() {
-        return &msg_;
-    }
+    // TODO(hahnr): ordinal() is only exposed while we transition to Frame Handling 2.0.
+    // Once transition landed, MlmeMsg has no need even own the ordinal.
+    uint32_t ordinal() const { return ordinal_; }
+
+    const M* body() const { return &msg_; }
 
     static const void* type_id() { return &MlmeMsg<M>::kTypeId; }
-    const void* get_type_id() override { return type_id(); }
+    const void* get_type_id() const override { return type_id(); }
 
    private:
+    uint32_t ordinal_;
     M msg_;
 };
 

@@ -417,7 +417,7 @@ zx_status_t Dispatcher::HandleMlmeMessage(fbl::unique_ptr<Packet> packet, uint32
         errorf("could not deserialize MLME primitive %d: \n", ordinal);
         return status;
     }
-    return mlme_->HandleFrame(ordinal, *msg.body());
+    return mlme_->HandleFrame(msg);
 }
 
 template <typename T> zx_status_t Dispatcher::SendServiceMessage(uint32_t ordinal, T* msg) const {

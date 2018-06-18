@@ -41,7 +41,7 @@ zx_status_t ApMlme::HandleTimeout(const ObjectId id) {
     return ZX_OK;
 }
 
-zx_status_t ApMlme::HandleMlmeStartReq(const wlan_mlme::StartRequest& req) {
+zx_status_t ApMlme::HandleMlmeStartReq(const MlmeMsg<wlan_mlme::StartRequest>& req) {
     debugfn();
 
     // Only one BSS can be started at a time.
@@ -69,7 +69,7 @@ zx_status_t ApMlme::HandleMlmeStartReq(const wlan_mlme::StartRequest& req) {
     return ZX_OK;
 }
 
-zx_status_t ApMlme::HandleMlmeStopReq(const wlan_mlme::StopRequest& req) {
+zx_status_t ApMlme::HandleMlmeStopReq(const MlmeMsg<wlan_mlme::StopRequest>& req) {
     debugfn();
 
     if (bss_ == nullptr) {

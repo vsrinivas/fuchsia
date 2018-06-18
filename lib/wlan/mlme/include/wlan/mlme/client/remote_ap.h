@@ -95,7 +95,7 @@ class InitState : public RemoteAp::BaseState {
    private:
     zx_status_t HandleBeacon(const MgmtFrame<Beacon>& frame) override;
     zx_status_t HandleProbeResponse(const MgmtFrame<ProbeResponse>& frame) override;
-    zx_status_t HandleMlmeJoinReq(const ::fuchsia::wlan::mlme::JoinRequest& req) override;
+    zx_status_t HandleMlmeJoinReq(const MlmeMsg<::fuchsia::wlan::mlme::JoinRequest>& req) override;
 
     void OnExit() override;
     void MoveToJoinedState();
@@ -112,7 +112,8 @@ class JoinedState : public RemoteAp::BaseState {
     const char* name() const override { return kName; }
 
    private:
-    zx_status_t HandleMlmeAuthReq(const ::fuchsia::wlan::mlme::AuthenticateRequest& req) override;
+    zx_status_t HandleMlmeAuthReq(
+        const MlmeMsg<::fuchsia::wlan::mlme::AuthenticateRequest>& req) override;
 };
 
 class AuthenticatingState : public RemoteAp::BaseState {
@@ -143,7 +144,8 @@ class AuthenticatedState : public RemoteAp::BaseState {
     const char* name() const override { return kName; }
 
    private:
-    zx_status_t HandleMlmeAssocReq(const ::fuchsia::wlan::mlme::AssociateRequest& req) override;
+    zx_status_t HandleMlmeAssocReq(
+        const MlmeMsg<::fuchsia::wlan::mlme::AssociateRequest>& req) override;
 };
 
 class AssociatingState : public RemoteAp::BaseState {

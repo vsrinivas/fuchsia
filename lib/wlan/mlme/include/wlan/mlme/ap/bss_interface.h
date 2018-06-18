@@ -18,6 +18,7 @@ namespace wlan {
 
 class Buffer;
 class StartRequest;
+template <typename T> class MlmeMsg;
 
 // Power Saving configuration managing TIM and DTIM.
 class PsCfg {
@@ -65,7 +66,7 @@ class BssInterface {
     virtual uint64_t timestamp() = 0;
 
     // Starts the BSS. Beacons will be sent and incoming frames are processed.
-    virtual void Start(const ::fuchsia::wlan::mlme::StartRequest& req) = 0;
+    virtual void Start(const MlmeMsg<::fuchsia::wlan::mlme::StartRequest>& req) = 0;
     // Stops the BSS. All incoming frames are dropped and Beacons are not sent
     // anymore.
     virtual void Stop() = 0;

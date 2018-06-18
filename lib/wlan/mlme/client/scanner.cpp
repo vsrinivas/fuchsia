@@ -34,11 +34,11 @@ Scanner::Scanner(DeviceInterface* device, fbl::unique_ptr<Timer> timer)
     ZX_DEBUG_ASSERT(timer_.get());
 }
 
-zx_status_t Scanner::HandleMlmeScanReq(const wlan_mlme::ScanRequest& req) {
+zx_status_t Scanner::HandleMlmeScanReq(const MlmeMsg<wlan_mlme::ScanRequest>& req) {
     return Start(req);
 }
 
-zx_status_t Scanner::Start(const wlan_mlme::ScanRequest& req) {
+zx_status_t Scanner::Start(const MlmeMsg<wlan_mlme::ScanRequest>& req) {
     debugfn();
 
     if (IsRunning()) { return ZX_ERR_UNAVAILABLE; }
@@ -49,10 +49,11 @@ zx_status_t Scanner::Start(const wlan_mlme::ScanRequest& req) {
     resp_->bss_description_set = fidl::VectorPtr<wlan_mlme::BSSDescription>::New(0);
     resp_->result_code = wlan_mlme::ScanResultCodes::NOT_SUPPORTED;
 
-    if (req.channel_list->size() == 0) { return SendScanConfirm(); }
-    if (req.max_channel_time < req.min_channel_time) { return SendScanConfirm(); }
+    if (req.body()->channel_list->size() == 0) { return SendScanConfirm(); }
+    if (req.body()->max_channel_time < req.body()->min_channel_time) { return SendScanConfirm(); }
     // TODO(NET-629): re-enable checking the enum value after fidl2 lands
-    //if (!BSSTypes_IsValidValue(req.bss_type) || !ScanTypes_IsValidValue(req.scan_type)) {
+    // if (!BSSTypes_IsValidValue(req.body()->bss_type) ||
+    // !ScanTypes_IsValidValue(req.body()->scan_type)) {
     //    return SendScanConfirm();
     //}
 
@@ -60,7 +61,7 @@ zx_status_t Scanner::Start(const wlan_mlme::ScanRequest& req) {
     // NOT_SUPPORTED errors. Then set SUCCESS only when we've successfully finished scanning.
     resp_->result_code = wlan_mlme::ScanResultCodes::SUCCESS;
     req_ = wlan_mlme::ScanRequest::New();
-    zx_status_t status = req.Clone(req_.get());
+    zx_status_t status = req.body()->Clone(req_.get());
     if (status != ZX_OK) {
         errorf("could not clone Scanrequest: %d\n", status);
         Reset();

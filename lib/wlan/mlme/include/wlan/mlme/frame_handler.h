@@ -5,6 +5,7 @@
 #pragma once
 
 #include <wlan/mlme/mac_frame.h>
+#include <wlan/mlme/service.h>
 
 #include <fuchsia/wlan/mlme/cpp/fidl.h>
 
@@ -17,11 +18,11 @@
     virtual zx_status_t methodName(args) { return ZX_OK; }
 
 #define WLAN_DECL_FUNC_HANDLE_MLME(methodName, mlmeMsgType) \
-    WLAN_DECL_VIRT_FUNC_HANDLE(methodName, const ::fuchsia::wlan::mlme::mlmeMsgType&)
+    WLAN_DECL_VIRT_FUNC_HANDLE(methodName, const MlmeMsg<::fuchsia::wlan::mlme::mlmeMsgType>&)
 
-#define WLAN_DECL_FUNC_INTERNAL_HANDLE_MLME(methodName, mlmeMsgType)                    \
-    zx_status_t HandleMlmeFrameInternal(uint32_t ordinal, const ::fuchsia::wlan::mlme::mlmeMsgType& msg) { \
-        return methodName(msg);                                                         \
+#define WLAN_DECL_FUNC_INTERNAL_HANDLE_MLME(methodName, mlmeMsgType)                              \
+    zx_status_t HandleMlmeFrameInternal(const MlmeMsg<::fuchsia::wlan::mlme::mlmeMsgType>& msg) { \
+        return methodName(msg);                                                                   \
     }
 
 #define WLAN_DECL_FUNC_HANDLE_MGMT(mgmtFrameType) \
@@ -173,12 +174,11 @@ class FrameHandler : public fbl::RefCounted<FrameHandler> {
 
    private:
     // Internal Service Message handlers.
-    template <typename Message>
-    zx_status_t HandleFrameInternal(uint32_t ordinal, const Message& msg) {
-        auto status = HandleMlmeMessage(ordinal);
+    template <typename Message> zx_status_t HandleFrameInternal(const MlmeMsg<Message>& msg) {
+        auto status = HandleMlmeMessage(msg.ordinal());
         if (status != ZX_OK) { return status; }
 
-        return HandleMlmeFrameInternal(ordinal, msg);
+        return HandleMlmeFrameInternal(msg);
     }
     WLAN_DECL_FUNC_INTERNAL_HANDLE_MLME(HandleMlmeResetReq, ResetRequest)
     WLAN_DECL_FUNC_INTERNAL_HANDLE_MLME(HandleMlmeScanReq, ScanRequest)

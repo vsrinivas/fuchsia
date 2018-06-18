@@ -35,6 +35,20 @@ const uint8_t kBeacon[] = {
     0x64, 0x00, 0x01, 0x00, 0x00, 0x09, 0x74, 0x65, 0x73, 0x74, 0x20, 0x73, 0x73, 0x69, 0x64,
 };
 
+template <typename T>
+static fbl::unique_ptr<Packet> IntoPacket(const T& msg, uint32_t ordinal = 42) {
+    // fidl2 doesn't have a way to get the serialized size yet. 4096 bytes should be enough for
+    // everyone.
+    constexpr size_t kBufLen = 4096;
+
+    auto buffer = GetBuffer(kBufLen);
+    memset(buffer->data(), 0, kBufLen);
+    auto pkt = fbl::make_unique<Packet>(fbl::move(buffer), kBufLen);
+    pkt->set_peer(Packet::Peer::kService);
+    SerializeServiceMsg(pkt.get(), ordinal, msg.get());
+    return fbl::move(pkt);
+}
+
 class ScannerTest : public ::testing::Test {
    public:
     ScannerTest() : scanner_(&mock_dev_, mock_dev_.CreateTimer(1u)) { SetupMessages(); }
@@ -44,13 +58,21 @@ class ScannerTest : public ::testing::Test {
         req_ = wlan_mlme::ScanRequest::New();
         req_->channel_list.resize(0);
         req_->channel_list->push_back(1);
+        req_->ssid = "";
     }
 
     void SetPassive() { req_->scan_type = wlan_mlme::ScanTypes::PASSIVE; }
 
     void SetActive() { req_->scan_type = wlan_mlme::ScanTypes::ACTIVE; }
 
-    zx_status_t Start() { return scanner_.Start(*req_); }
+    zx_status_t Start() {
+        auto pkt = IntoPacket(req_, fuchsia_wlan_mlme_MLMEScanConfOrdinal);
+        MlmeMsg<wlan_mlme::ScanRequest> start_req;
+        if (MlmeMsg<wlan_mlme::ScanRequest>::FromPacket(fbl::move(pkt), &start_req) != ZX_OK) {
+            return ZX_ERR_IO;
+        }
+        return scanner_.Start(start_req);
+    }
 
     zx_status_t DeserializeScanResponse() {
         return mock_dev_.GetQueuedServiceMsg(fuchsia_wlan_mlme_MLMEScanConfOrdinal, &resp_);

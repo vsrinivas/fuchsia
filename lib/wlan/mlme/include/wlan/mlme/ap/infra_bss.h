@@ -36,7 +36,7 @@ class InfraBss : public BssInterface, public FrameHandler, public RemoteClient::
     // BssInterface implementation
     const common::MacAddr& bssid() const override;
     uint64_t timestamp() override;
-    void Start(const ::fuchsia::wlan::mlme::StartRequest& req) override;
+    void Start(const MlmeMsg<::fuchsia::wlan::mlme::StartRequest>& req) override;
     void Stop() override;
     zx_status_t AssignAid(const common::MacAddr& client, aid_t* out_aid) override;
     zx_status_t ReleaseAid(const common::MacAddr& client) override;

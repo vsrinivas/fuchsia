@@ -33,14 +33,14 @@ class Scanner : public FrameHandler {
         kActive,
     };
 
-    zx_status_t Start(const ::fuchsia::wlan::mlme::ScanRequest& req);
+    zx_status_t Start(const MlmeMsg<::fuchsia::wlan::mlme::ScanRequest>& req);
     void Reset();
 
     bool IsRunning() const;
     Type ScanType() const;
     wlan_channel_t ScanChannel() const;
 
-    zx_status_t HandleMlmeScanReq(const ::fuchsia::wlan::mlme::ScanRequest& req) override;
+    zx_status_t HandleMlmeScanReq(const MlmeMsg<::fuchsia::wlan::mlme::ScanRequest>& req) override;
     zx_status_t HandleMgmtFrame(const MgmtFrameHeader& hdr) override;
     zx_status_t HandleBeacon(const MgmtFrame<Beacon>& frame) override;
     zx_status_t HandleProbeResponse(const MgmtFrame<ProbeResponse>& frame) override;

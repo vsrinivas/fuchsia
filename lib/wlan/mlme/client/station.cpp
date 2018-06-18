@@ -58,7 +58,7 @@ zx_status_t Station::HandleMlmeMessage(uint32_t ordinal) {
     return (bssid() == nullptr ? ZX_ERR_STOP : ZX_OK);
 }
 
-zx_status_t Station::HandleMlmeJoinReq(const wlan_mlme::JoinRequest& req) {
+zx_status_t Station::HandleMlmeJoinReq(const MlmeMsg<wlan_mlme::JoinRequest>& req) {
     debugfn();
 
     if (state_ != WlanState::kUnjoined) {
@@ -68,7 +68,7 @@ zx_status_t Station::HandleMlmeJoinReq(const wlan_mlme::JoinRequest& req) {
 
     // Clone request to take ownership of the BSS.
     bss_ = wlan_mlme::BSSDescription::New();
-    req.selected_bss.Clone(bss_.get());
+    req.body()->selected_bss.Clone(bss_.get());
     bssid_.Set(bss_->bssid.data());
 
     auto chan = GetBssChan();
@@ -105,7 +105,7 @@ zx_status_t Station::HandleMlmeJoinReq(const wlan_mlme::JoinRequest& req) {
     }
 
     join_chan_ = chan;
-    join_timeout_ = deadline_after_bcn_period(req.join_failure_timeout);
+    join_timeout_ = deadline_after_bcn_period(req.body()->join_failure_timeout);
     status = timer_->SetTimer(join_timeout_);
     if (status != ZX_OK) {
         errorf("could not set join timer: %d\n", status);
@@ -123,13 +123,13 @@ zx_status_t Station::HandleMlmeJoinReq(const wlan_mlme::JoinRequest& req) {
     return status;
 }  // namespace wlan
 
-zx_status_t Station::HandleMlmeAuthReq(const wlan_mlme::AuthenticateRequest& req) {
+zx_status_t Station::HandleMlmeAuthReq(const MlmeMsg<wlan_mlme::AuthenticateRequest>& req) {
     debugfn();
 
     if (bss_ == nullptr) { return ZX_ERR_BAD_STATE; }
 
     // TODO(tkilbourn): better result codes
-    common::MacAddr peer_sta_addr(req.peer_sta_address.data());
+    common::MacAddr peer_sta_addr(req.body()->peer_sta_address.data());
     if (bssid_ != peer_sta_addr) {
         errorf("cannot authenticate before joining\n");
         return service::SendAuthConfirm(device_, bssid_,
@@ -143,7 +143,7 @@ zx_status_t Station::HandleMlmeAuthReq(const wlan_mlme::AuthenticateRequest& req
     if (state_ != WlanState::kUnauthenticated) {
         warnf("already authenticated; sending request anyway\n");
     }
-    if (req.auth_type != wlan_mlme::AuthenticationTypes::OPEN_SYSTEM) {
+    if (req.body()->auth_type != wlan_mlme::AuthenticationTypes::OPEN_SYSTEM) {
         // TODO(tkilbourn): support other authentication types
         // TODO(tkilbourn): set the auth_alg_ when we support other authentication types
         errorf("only OpenSystem authentication is supported\n");
@@ -182,7 +182,7 @@ zx_status_t Station::HandleMlmeAuthReq(const wlan_mlme::AuthenticateRequest& req
         return status;
     }
 
-    auth_timeout_ = deadline_after_bcn_period(req.auth_failure_timeout);
+    auth_timeout_ = deadline_after_bcn_period(req.body()->auth_failure_timeout);
     status = timer_->SetTimer(auth_timeout_);
     if (status != ZX_OK) {
         errorf("could not set auth timer: %d\n", status);
@@ -194,7 +194,7 @@ zx_status_t Station::HandleMlmeAuthReq(const wlan_mlme::AuthenticateRequest& req
     return status;
 }
 
-zx_status_t Station::HandleMlmeDeauthReq(const wlan_mlme::DeauthenticateRequest& req) {
+zx_status_t Station::HandleMlmeDeauthReq(const MlmeMsg<wlan_mlme::DeauthenticateRequest>& req) {
     debugfn();
 
     if (state_ != WlanState::kAssociated && state_ != WlanState::kAuthenticated) {
@@ -205,7 +205,7 @@ zx_status_t Station::HandleMlmeDeauthReq(const wlan_mlme::DeauthenticateRequest&
     if (bss_ == nullptr) { return ZX_ERR_BAD_STATE; }
 
     // Check whether the request wants to deauthenticate from this STA's BSS.
-    common::MacAddr peer_sta_addr(req.peer_sta_address.data());
+    common::MacAddr peer_sta_addr(req.body()->peer_sta_address.data());
     if (bssid_ != peer_sta_addr) { return ZX_OK; }
 
     MgmtFrame<Deauthentication> frame;
@@ -221,7 +221,7 @@ zx_status_t Station::HandleMlmeDeauthReq(const wlan_mlme::DeauthenticateRequest&
     frame.FillTxInfo();
 
     auto deauth = frame.body();
-    deauth->reason_code = static_cast<uint16_t>(req.reason_code);
+    deauth->reason_code = static_cast<uint16_t>(req.body()->reason_code);
 
     finspect("Outbound Mgmt Frame(Deauth): %s\n", debug::Describe(*hdr).c_str());
     status = device_->SendWlan(frame.Take());
@@ -230,7 +230,7 @@ zx_status_t Station::HandleMlmeDeauthReq(const wlan_mlme::DeauthenticateRequest&
         // Deauthenticate nevertheless. IEEE isn't clear on what we are supposed to do.
     }
 
-    infof("deauthenticating from %s, reason=%hu\n", bss_->ssid->data(), req.reason_code);
+    infof("deauthenticating from %s, reason=%hu\n", bss_->ssid->data(), req.body()->reason_code);
 
     // TODO(hahnr): Refactor once we have the new state machine.
     state_ = WlanState::kUnauthenticated;
@@ -241,13 +241,13 @@ zx_status_t Station::HandleMlmeDeauthReq(const wlan_mlme::DeauthenticateRequest&
     return ZX_OK;
 }
 
-zx_status_t Station::HandleMlmeAssocReq(const wlan_mlme::AssociateRequest& req) {
+zx_status_t Station::HandleMlmeAssocReq(const MlmeMsg<wlan_mlme::AssociateRequest>& req) {
     debugfn();
 
     if (bss_ == nullptr) { return ZX_ERR_BAD_STATE; }
 
     // TODO(tkilbourn): better result codes
-    common::MacAddr peer_sta_addr(req.peer_sta_address.data());
+    common::MacAddr peer_sta_addr(req.body()->peer_sta_address.data());
     if (bssid_ != peer_sta_addr) {
         errorf("bad peer STA address for association\n");
         return service::SendAuthConfirm(device_, bssid_,
@@ -311,8 +311,10 @@ zx_status_t Station::HandleMlmeAssocReq(const wlan_mlme::AssociateRequest& req) 
     }
 
     // Write RSNE from MLME-Association.request if available.
-    if (req.rsn) {
-        if (!w.write<RsnElement>(req.rsn->data(), req.rsn->size())) { return ZX_ERR_IO; }
+    if (req.body()->rsn) {
+        if (!w.write<RsnElement>(req.body()->rsn->data(), req.body()->rsn->size())) {
+            return ZX_ERR_IO;
+        }
     }
 
     if (IsHTReady()) {
@@ -1039,7 +1041,7 @@ zx_status_t Station::SendAddBaRequestFrame() {
     return ZX_OK;
 }
 
-zx_status_t Station::HandleMlmeEapolReq(const wlan_mlme::EapolRequest& req) {
+zx_status_t Station::HandleMlmeEapolReq(const MlmeMsg<wlan_mlme::EapolRequest>& req) {
     debugfn();
 
     if (!bss_) { return ZX_ERR_BAD_STATE; }
@@ -1048,7 +1050,7 @@ zx_status_t Station::HandleMlmeEapolReq(const wlan_mlme::EapolRequest& req) {
         return ZX_OK;
     }
 
-    size_t len = sizeof(DataFrameHeader) + sizeof(LlcHeader) + req.data->size();
+    size_t len = sizeof(DataFrameHeader) + sizeof(LlcHeader) + req.body()->data->size();
     fbl::unique_ptr<Buffer> buffer = GetBuffer(len);
     if (buffer == nullptr) { return ZX_ERR_NO_RESOURCES; }
     auto packet = fbl::unique_ptr<Packet>(new Packet(std::move(buffer), len));
@@ -1058,9 +1060,9 @@ zx_status_t Station::HandleMlmeEapolReq(const wlan_mlme::EapolRequest& req) {
     hdr->fc.set_type(FrameType::kData);
     hdr->fc.set_to_ds(1);
 
-    hdr->addr1.Set(req.dst_addr.data());
-    hdr->addr2.Set(req.src_addr.data());
-    hdr->addr3.Set(req.dst_addr.data());
+    hdr->addr1.Set(req.body()->dst_addr.data());
+    hdr->addr2.Set(req.body()->src_addr.data());
+    hdr->addr3.Set(req.body()->dst_addr.data());
 
     SetSeqNo(hdr, &seq_);
 
@@ -1070,7 +1072,7 @@ zx_status_t Station::HandleMlmeEapolReq(const wlan_mlme::EapolRequest& req) {
     llc->control = kLlcUnnumberedInformation;
     std::memcpy(llc->oui, kLlcOui, sizeof(llc->oui));
     llc->protocol_id = htobe16(kEapolProtocolId);
-    std::memcpy(llc->payload, req.data->data(), req.data->size());
+    std::memcpy(llc->payload, req.body()->data->data(), req.body()->data->size());
 
     zx_status_t status = device_->SendWlan(std::move(packet));
     if (status != ZX_OK) {
@@ -1084,10 +1086,10 @@ zx_status_t Station::HandleMlmeEapolReq(const wlan_mlme::EapolRequest& req) {
     return status;
 }
 
-zx_status_t Station::HandleMlmeSetKeysReq(const wlan_mlme::SetKeysRequest& req) {
+zx_status_t Station::HandleMlmeSetKeysReq(const MlmeMsg<wlan_mlme::SetKeysRequest>& req) {
     debugfn();
 
-    for (auto& keyDesc : *req.keylist) {
+    for (auto& keyDesc : *req.body()->keylist) {
         if (keyDesc.key.is_null()) { return ZX_ERR_NOT_SUPPORTED; }
 
         uint8_t key_type;

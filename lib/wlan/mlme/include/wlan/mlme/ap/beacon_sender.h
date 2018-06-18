@@ -22,7 +22,8 @@ class BeaconSender : public FrameHandler {
     BeaconSender(DeviceInterface* device);
     ~BeaconSender();
 
-    void Start(BssInterface* bss, const PsCfg& ps_cfg, const ::fuchsia::wlan::mlme::StartRequest& req);
+    void Start(BssInterface* bss, const PsCfg& ps_cfg,
+               const MlmeMsg<::fuchsia::wlan::mlme::StartRequest>& req);
     void Stop();
     zx_status_t UpdateBeacon(const PsCfg& ps_cfg);
     zx_status_t HandleProbeRequest(const MgmtFrame<ProbeRequest>& frame) override;

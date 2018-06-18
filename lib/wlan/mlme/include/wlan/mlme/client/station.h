@@ -76,12 +76,17 @@ class Station : public FrameHandler {
     zx_status_t SendKeepAliveResponse();
 
     zx_status_t HandleMlmeMessage(uint32_t ordinal) override;
-    zx_status_t HandleMlmeJoinReq(const ::fuchsia::wlan::mlme::JoinRequest& req) override;
-    zx_status_t HandleMlmeAuthReq(const ::fuchsia::wlan::mlme::AuthenticateRequest& req) override;
-    zx_status_t HandleMlmeDeauthReq(const ::fuchsia::wlan::mlme::DeauthenticateRequest& req) override;
-    zx_status_t HandleMlmeAssocReq(const ::fuchsia::wlan::mlme::AssociateRequest& req) override;
-    zx_status_t HandleMlmeEapolReq(const ::fuchsia::wlan::mlme::EapolRequest& req) override;
-    zx_status_t HandleMlmeSetKeysReq(const ::fuchsia::wlan::mlme::SetKeysRequest& req) override;
+    zx_status_t HandleMlmeJoinReq(const MlmeMsg<::fuchsia::wlan::mlme::JoinRequest>& req) override;
+    zx_status_t HandleMlmeAuthReq(
+        const MlmeMsg<::fuchsia::wlan::mlme::AuthenticateRequest>& req) override;
+    zx_status_t HandleMlmeDeauthReq(
+        const MlmeMsg<::fuchsia::wlan::mlme::DeauthenticateRequest>& req) override;
+    zx_status_t HandleMlmeAssocReq(
+        const MlmeMsg<::fuchsia::wlan::mlme::AssociateRequest>& req) override;
+    zx_status_t HandleMlmeEapolReq(
+        const MlmeMsg<::fuchsia::wlan::mlme::EapolRequest>& req) override;
+    zx_status_t HandleMlmeSetKeysReq(
+        const MlmeMsg<::fuchsia::wlan::mlme::SetKeysRequest>& req) override;
 
     zx_status_t HandleDataFrame(const DataFrameHeader& hdr) override;
     zx_status_t HandleBeacon(const MgmtFrame<Beacon>& frame) override;

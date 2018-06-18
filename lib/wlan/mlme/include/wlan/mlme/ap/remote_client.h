@@ -204,8 +204,10 @@ class AssociatedState : public BaseState {
     zx_status_t HandleDisassociation(const MgmtFrame<Disassociation>& frame) override;
     zx_status_t HandleCtrlFrame(const FrameControl& fc) override;
     zx_status_t HandlePsPollFrame(const CtrlFrame<PsPollFrame>& frame) override;
-    zx_status_t HandleMlmeEapolReq(const ::fuchsia::wlan::mlme::EapolRequest& req) override;
-    zx_status_t HandleMlmeSetKeysReq(const ::fuchsia::wlan::mlme::SetKeysRequest& req) override;
+    zx_status_t HandleMlmeEapolReq(
+        const MlmeMsg<::fuchsia::wlan::mlme::EapolRequest>& req) override;
+    zx_status_t HandleMlmeSetKeysReq(
+        const MlmeMsg<::fuchsia::wlan::mlme::SetKeysRequest>& req) override;
     zx_status_t HandleAddBaRequestFrame(const MgmtFrame<AddBaRequestFrame>& frame) override;
     zx_status_t HandleAddBaResponseFrame(const MgmtFrame<AddBaResponseFrame>& frame) override;
 

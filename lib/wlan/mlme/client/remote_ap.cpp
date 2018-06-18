@@ -241,7 +241,7 @@ void InitState::OnExit() {
     ap_->CancelTimer();
 }
 
-zx_status_t InitState::HandleMlmeJoinReq(const wlan_mlme::JoinRequest& req) {
+zx_status_t InitState::HandleMlmeJoinReq(const MlmeMsg<wlan_mlme::JoinRequest>& req) {
     debugfn();
 
     const auto& chan = ap_->bss_chan();
@@ -254,7 +254,7 @@ zx_status_t InitState::HandleMlmeJoinReq(const wlan_mlme::JoinRequest& req) {
         return status;
     }
 
-    wlan_tu_t tu = ap_->bss().beacon_period * req.join_failure_timeout;
+    wlan_tu_t tu = ap_->bss().beacon_period * req.body()->join_failure_timeout;
     join_deadline_ = ap_->CreateTimerDeadline(tu);
     status = ap_->StartTimer(join_deadline_);
     if (status != ZX_OK) {
@@ -302,20 +302,20 @@ void InitState::HandleTimeout() {
 
 JoinedState::JoinedState(RemoteAp* ap) : RemoteAp::BaseState(ap) {}
 
-zx_status_t JoinedState::HandleMlmeAuthReq(const wlan_mlme::AuthenticateRequest& req) {
+zx_status_t JoinedState::HandleMlmeAuthReq(const MlmeMsg<wlan_mlme::AuthenticateRequest>& req) {
     debugfn();
 
     debugjoin("[ap] [%s] received MLME-AUTHENTICATION.request\n", ap_->bssid_str());
 
     // TODO(tkilbourn): better result codes
-    common::MacAddr peer_sta_addr(req.peer_sta_address.data());
+    common::MacAddr peer_sta_addr(req.body()->peer_sta_address.data());
     if (ap_->bssid() != peer_sta_addr) {
         errorf("[ap] [%s] received authentication request for other BSS\n", ap_->bssid_str());
         return service::SendAuthConfirm(ap_->device(), ap_->bssid(),
                                         wlan_mlme::AuthenticateResultCodes::REFUSED);
     }
 
-    if (req.auth_type != wlan_mlme::AuthenticationTypes::OPEN_SYSTEM) {
+    if (req.body()->auth_type != wlan_mlme::AuthenticationTypes::OPEN_SYSTEM) {
         // TODO(tkilbourn): support other authentication types
         // TODO(tkilbourn): set the auth_alg_ when we support other authentication types
         errorf("[ap] [%s] only OpenSystem authentication is supported\n", ap_->bssid_str());
@@ -354,7 +354,7 @@ zx_status_t JoinedState::HandleMlmeAuthReq(const wlan_mlme::AuthenticateRequest&
         return status;
     }
 
-    MoveToState<AuthenticatingState>(AuthAlgorithm::kOpenSystem, req.auth_failure_timeout);
+    MoveToState<AuthenticatingState>(AuthAlgorithm::kOpenSystem, req.body()->auth_failure_timeout);
     return status;
 }
 
@@ -432,11 +432,12 @@ void AuthenticatingState::MoveOn(wlan_mlme::AuthenticateResultCodes result_code)
 
 AuthenticatedState::AuthenticatedState(RemoteAp* ap) : RemoteAp::BaseState(ap) {}
 
-zx_status_t AuthenticatedState::HandleMlmeAssocReq(const wlan_mlme::AssociateRequest& req) {
+zx_status_t AuthenticatedState::HandleMlmeAssocReq(
+    const MlmeMsg<wlan_mlme::AssociateRequest>& req) {
     debugfn();
 
     // TODO(tkilbourn): better result codes
-    common::MacAddr peer_sta_addr(req.peer_sta_address.data());
+    common::MacAddr peer_sta_addr(req.body()->peer_sta_address.data());
     if (ap_->bssid() != peer_sta_addr) {
         errorf("bad peer STA address for association\n");
         service::SendAssocConfirm(ap_->device(),
@@ -496,8 +497,8 @@ zx_status_t AuthenticatedState::HandleMlmeAssocReq(const wlan_mlme::AssociateReq
     }
 
     // Write RSNE from MLME-Association.request if available.
-    if (req.rsn) {
-        if (!w.write<RsnElement>(req.rsn->data(), req.rsn->size())) {
+    if (req.body()->rsn) {
+        if (!w.write<RsnElement>(req.body()->rsn->data(), req.body()->rsn->size())) {
             errorf("could not write RSNE\n");
             service::SendAssocConfirm(ap_->device(),
                                       wlan_mlme::AssociateResultCodes::REFUSED_REASON_UNSPECIFIED);

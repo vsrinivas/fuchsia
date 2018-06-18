@@ -75,13 +75,13 @@ zx_status_t ClientMlme::HandleTimeout(const ObjectId id) {
     return ZX_OK;
 }
 
-zx_status_t ClientMlme::HandleMlmeJoinReq(const wlan_mlme::JoinRequest& req) {
+zx_status_t ClientMlme::HandleMlmeJoinReq(const MlmeMsg<wlan_mlme::JoinRequest>& req) {
     debugfn();
     fbl::unique_ptr<Timer> timer;
     ObjectId timer_id;
     timer_id.set_subtype(to_enum_type(ObjectSubtype::kTimer));
     timer_id.set_target(to_enum_type(ObjectTarget::kStation));
-    timer_id.set_mac(common::MacAddr(req.selected_bss.bssid.data()).ToU64());
+    timer_id.set_mac(common::MacAddr(req.body()->selected_bss.bssid.data()).ToU64());
     auto status = device_->GetTimer(ToPortKey(PortKeyType::kMlme, timer_id.val()), &timer);
     if (status != ZX_OK) {
         errorf("could not create station timer: %d\n", status);

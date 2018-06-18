@@ -22,8 +22,9 @@ class ApMlme : public Mlme {
     ~ApMlme();
 
     // FrameHandler methods.
-    zx_status_t HandleMlmeStartReq(const ::fuchsia::wlan::mlme::StartRequest& req) override;
-    zx_status_t HandleMlmeStopReq(const ::fuchsia::wlan::mlme::StopRequest& req) override;
+    zx_status_t HandleMlmeStartReq(
+        const MlmeMsg<::fuchsia::wlan::mlme::StartRequest>& req) override;
+    zx_status_t HandleMlmeStopReq(const MlmeMsg<::fuchsia::wlan::mlme::StopRequest>& req) override;
 
     // Mlme interface methods.
     zx_status_t Init() override;

@@ -445,8 +445,8 @@ void AssociatedState::UpdatePowerSaveMode(const FrameControl& fc) {
     }
 }
 
-zx_status_t AssociatedState::HandleMlmeEapolReq(const wlan_mlme::EapolRequest& req) {
-    size_t len = sizeof(DataFrameHeader) + sizeof(LlcHeader) + req.data->size();
+zx_status_t AssociatedState::HandleMlmeEapolReq(const MlmeMsg<wlan_mlme::EapolRequest>& req) {
+    size_t len = sizeof(DataFrameHeader) + sizeof(LlcHeader) + req.body()->data->size();
     auto buffer = GetBuffer(len);
     if (buffer == nullptr) { return ZX_ERR_NO_RESOURCES; }
 
@@ -457,9 +457,9 @@ zx_status_t AssociatedState::HandleMlmeEapolReq(const wlan_mlme::EapolRequest& r
     auto hdr = packet->mut_field<DataFrameHeader>(0);
     hdr->fc.set_type(FrameType::kData);
     hdr->fc.set_from_ds(1);
-    hdr->addr1.Set(req.dst_addr.data());
+    hdr->addr1.Set(req.body()->dst_addr.data());
     hdr->addr2 = client_->bss()->bssid();
-    hdr->addr3.Set(req.src_addr.data());
+    hdr->addr3.Set(req.body()->src_addr.data());
     hdr->sc.set_seq(client_->bss()->NextSeq(*hdr));
 
     auto llc = packet->mut_field<LlcHeader>(sizeof(DataFrameHeader));
@@ -468,7 +468,7 @@ zx_status_t AssociatedState::HandleMlmeEapolReq(const wlan_mlme::EapolRequest& r
     llc->control = kLlcUnnumberedInformation;
     std::memcpy(llc->oui, kLlcOui, sizeof(llc->oui));
     llc->protocol_id = htobe16(kEapolProtocolId);
-    std::memcpy(llc->payload, req.data->data(), req.data->size());
+    std::memcpy(llc->payload, req.body()->data->data(), req.body()->data->size());
 
     auto status = client_->bss()->SendDataFrame(fbl::move(packet));
     if (status != ZX_OK) {
@@ -483,10 +483,10 @@ zx_status_t AssociatedState::HandleMlmeEapolReq(const wlan_mlme::EapolRequest& r
     return status;
 }
 
-zx_status_t AssociatedState::HandleMlmeSetKeysReq(const wlan_mlme::SetKeysRequest& req) {
+zx_status_t AssociatedState::HandleMlmeSetKeysReq(const MlmeMsg<wlan_mlme::SetKeysRequest>& req) {
     debugfn();
 
-    for (auto& keyDesc : *req.keylist) {
+    for (auto& keyDesc : *req.body()->keylist) {
         if (keyDesc.key.is_null()) { return ZX_ERR_NOT_SUPPORTED; }
 
         switch (keyDesc.key_type) {
