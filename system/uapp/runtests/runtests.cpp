@@ -21,7 +21,11 @@ const char* kDefaultTestDirs[] = {
     "/boot/test/ddk",
     "/boot/test/sys",
     "/boot/test/fs",
-    // layers above garnet use fs images rather than ramdisks and place tests in /system
+    // /pkgfs is where test binaries should be found in garnet and above.
+    "/pkgfs/packages/*/*/test",
+    // Moreover, for the higher layers, there are still tests using the deprecated /system image.
+    // Soon they will all be moved under /pkgfs.
+    "/system/test",
     "/system/test/core",
     "/system/test/libc",
     "/system/test/ddk",
