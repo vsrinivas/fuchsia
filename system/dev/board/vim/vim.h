@@ -69,3 +69,6 @@ zx_status_t vim2_mailbox_init(vim_bus_t* bus);
 
 // vim-display.c
 zx_status_t vim_display_init(vim_bus_t* bus);
+
+// vim-video.c
+zx_status_t vim_video_init(vim_bus_t* bus);
