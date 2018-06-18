@@ -22,6 +22,7 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/vim-mailbox.c \
     $(LOCAL_DIR)/vim-display.c \
     $(LOCAL_DIR)/vim-video.c \
+    $(LOCAL_DIR)/vim-led2472g.c \
 
 MODULE_STATIC_LIBS := \
     system/ulib/ddk \

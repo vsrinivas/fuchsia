@@ -38,22 +38,6 @@ static zx_protocol_device_t vim_bus_device_protocol = {
     .release = vim_bus_release,
 };
 
-static const pbus_i2c_channel_t led2472g_channels[] = {
-  {
-    .bus_id = 0,
-    .address = 0x46,
-  },
-};
-
-static const pbus_dev_t led2472g_dev = {
-  .name = "led2472g",
-  .vid = PDEV_VID_GENERIC,
-  .pid = PDEV_PID_GENERIC,
-  .did = PDEV_DID_LED2472G,
-  .i2c_channels = led2472g_channels,
-  .i2c_channel_count = countof(led2472g_channels),
-};
-
 static int vim_start_thread(void* arg) {
     vim_bus_t* bus = arg;
     zx_status_t status;
@@ -111,9 +95,9 @@ static int vim_start_thread(void* arg) {
         goto fail;
     }
 
-    if ((status = pbus_device_add(&bus->pbus, &led2472g_dev, 0)) != ZX_OK) {
-      zxlogf(ERROR, "vim_start_thread could not add led2472g_dev: %d\n", status);
-      goto fail;
+    if ((status = vim_led2472g_init(bus)) != ZX_OK) {
+        zxlogf(ERROR, "vim_led2472g_init failed: %d\n", status);
+        goto fail;
     }
 
     if ((status = vim_eth_init(bus)) != ZX_OK) {
