@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/zxdb/console/format_file_context.h"
+#include "garnet/bin/zxdb/console/format_context.h"
 
 #include <algorithm>
 #include <vector>
