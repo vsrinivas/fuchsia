@@ -16,6 +16,7 @@
 #include "lib/fsl/vmo/sized_vmo.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/string_number_conversions.h"
+#include "third_party/icu/source/common/unicode/errorcode.h"
 #include "third_party/icu/source/common/unicode/udata.h"
 #include "third_party/icu/source/i18n/unicode/timezone.h"
 
@@ -77,6 +78,13 @@ void TimezoneImpl::GetTimezoneOffsetMinutes(
   timezone->getOffset(static_cast<UDate>(milliseconds_since_epoch), false,
                       local_offset, dst_offset, error);
   if (error != U_ZERO_ERROR) {
+    // For an as-of-yet-unknown reason, this code simply existing appears to
+    // prevent [SY-516] from happening. Without it, getting the offset fails
+    // consistently.
+    icu::ErrorCode icuError;
+    icuError.set(error);
+    FXL_LOG(ERROR) << "Unable to get correct offset: error code " << error
+                   << " " << icuError.errorName();
     callback(0, 0);
     return;
   }
@@ -159,7 +167,8 @@ void TimezoneImpl::ReleaseWatcher(fuchsia::timezone::TimezoneWatcher* watcher) {
       std::remove_if(watchers_.begin(), watchers_.end(), predicate));
 }
 
-void TimezoneImpl::Watch(fidl::InterfaceHandle<fuchsia::timezone::TimezoneWatcher> watcher) {
+void TimezoneImpl::Watch(
+    fidl::InterfaceHandle<fuchsia::timezone::TimezoneWatcher> watcher) {
   fuchsia::timezone::TimezoneWatcherPtr watcher_proxy = watcher.Bind();
   fuchsia::timezone::TimezoneWatcher* proxy_raw_ptr = watcher_proxy.get();
   watcher_proxy.set_error_handler(
