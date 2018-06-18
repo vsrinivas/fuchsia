@@ -20,6 +20,7 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/vim-eth.c \
     $(LOCAL_DIR)/vim-thermal.c \
     $(LOCAL_DIR)/vim-mailbox.c \
+    $(LOCAL_DIR)/vim-display.c \
 
 MODULE_STATIC_LIBS := \
     system/ulib/ddk \

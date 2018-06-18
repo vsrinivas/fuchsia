@@ -20,7 +20,6 @@
 #include <hw/reg.h>
 
 #include <soc/aml-s912/s912-hw.h>
-#include <soc/aml-s912/s912-gpio.h>
 
 #include <zircon/assert.h>
 #include <zircon/process.h>
@@ -28,74 +27,6 @@
 #include <zircon/threads.h>
 
 #include "vim.h"
-
-// DMC MMIO for display driver
-static pbus_mmio_t vim_display_mmios[] = {
-    {
-        .base =     S912_PRESET_BASE,
-        .length =   S912_PRESET_LENGTH,
-    },
-    {
-        .base =     S912_HDMITX_BASE,
-        .length =   S912_HDMITX_LENGTH,
-    },
-    {
-        .base =     S912_HIU_BASE,
-        .length =   S912_HIU_LENGTH,
-    },
-    {
-        .base =     S912_VPU_BASE,
-        .length =   S912_VPU_LENGTH,
-    },
-    {
-        .base =     S912_HDMITX_SEC_BASE,
-        .length =   S912_HDMITX_SEC_LENGTH,
-    },
-    {
-        .base =     S912_DMC_REG_BASE,
-        .length =   S912_DMC_REG_LENGTH,
-    },
-    {
-        .base =     S912_CBUS_REG_BASE,
-        .length =   S912_CBUS_REG_LENGTH,
-    },
-};
-
-const pbus_gpio_t vim_display_gpios[] = {
-    {
-        // HPD
-        .gpio = S912_GPIOH(0),
-    },
-};
-
-static const pbus_irq_t vim_display_irqs[] = {
-    {
-        .irq = S912_VIU1_VSYNC_IRQ,
-        .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
-    },
-};
-
-static const pbus_bti_t vim_display_btis[] = {
-    {
-        .iommu_index = 0,
-        .bti_id = BTI_DISPLAY,
-    },
-};
-
-static const pbus_dev_t display_dev = {
-    .name = "display",
-    .vid = PDEV_VID_KHADAS,
-    .pid = PDEV_PID_VIM2,
-    .did = PDEV_DID_VIM_DISPLAY,
-    .mmios = vim_display_mmios,
-    .mmio_count = countof(vim_display_mmios),
-    .gpios = vim_display_gpios,
-    .gpio_count = countof(vim_display_gpios),
-    .irqs = vim_display_irqs,
-    .irq_count = countof(vim_display_irqs),
-    .btis = vim_display_btis,
-    .bti_count = countof(vim_display_btis),
-};
 
 static void vim_bus_release(void* ctx) {
     vim_bus_t* bus = ctx;
@@ -230,13 +161,14 @@ static int vim_start_thread(void* arg) {
         zxlogf(ERROR, "vim2_mailbox_init failed: %d\n", status);
         goto fail;
     }
+
     if ((status = vim2_thermal_init(bus)) != ZX_OK) {
         zxlogf(ERROR, "vim2_thermal_init failed: %d\n", status);
         goto fail;
     }
 
-    if ((status = pbus_device_add(&bus->pbus, &display_dev, 0)) != ZX_OK) {
-        zxlogf(ERROR, "vim_start_thread could not add display_dev: %d\n", status);
+    if ((status = vim_display_init(bus)) != ZX_OK) {
+        zxlogf(ERROR, "vim_display_init failed: %d\n", status);
         goto fail;
     }
 
