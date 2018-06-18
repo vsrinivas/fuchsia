@@ -135,41 +135,6 @@ fi
 declare -r vars_sh="${fuchsia_dir}/scripts/devshell/lib/vars.sh"
 source "${vars_sh}"
 
-readonly LOCK_FILE="${fuchsia_dir}"/.fx_lock
-
-function _rmlock () {
-  [[ -n "${LOCK_FILE}" ]] && rm -f "${LOCK_FILE}"
-}
-
-# Use a lock file around a command.
-# Print a message if the lock isn't immediately entered,
-# and block until it is.
-function locked {
-  declare -r cmd="$@"
-
-  if which flock >/dev/null; then
-    (
-      flock -n 9 || echo "Locked by ${LOCK_FILE}..."
-    ) 9>"${LOCK_FILE}"
-    flock "${LOCK_FILE}" -c "${cmd}"
-  else
-    # Some platforms don't have flock, fall back to shlock.
-    # This will cause a deadlock if any subcommand calls back to fx,
-    # because shlock isn't reentrant by forked processes.
-    if shlock -f "${LOCK_FILE}" -p $$; then
-      trap _rmlock EXIT
-      ${cmd}
-      _rmlock
-    else
-      echo "Locked by ${LOCK_FILE}..."
-      while ! shlock -f "${LOCK_FILE}" -p $$; do sleep .1; done
-      trap _rmlock EXIT
-      ${cmd}
-      _rmlock
-    fi
-  fi
-}
-
 while [[ $# -ne 0 ]]; do
   case $1 in
     --config=*|--dir=*)
@@ -264,14 +229,14 @@ elif which inotifywait >/dev/null; then
     # Allow at most one fx -i invocation per Fuchsia dir at a time.
     # Otherwise multiple concurrent fx -i invocations can trigger each other
     # and cause a storm.
-    locked "${command_path}" "$@"
+    "${command_path}" "$@"
   done
 elif which apt-get >/dev/null; then
   echo "Missing inotifywait"
   echo "Try: sudo apt-get install inotify-tools"
 elif which fswatch >/dev/null; then
   fswatch --one-per-batch --event=Updated -e "${fuchsia_dir}"/out/ -e "/\." . | while read; do
-    locked "${command_path}" "$@"
+    "${command_path}" "$@"
   done
 else
   echo "Missing fswatch"

@@ -10,6 +10,41 @@
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/lib/vars.sh
 fx-config-read
 
+readonly LOCK_FILE="${FUCHSIA_DIR}"/.build_lock
+
+function _rmlock () {
+  [[ -n "${LOCK_FILE}" ]] && rm -f "${LOCK_FILE}"
+}
+
+# Use a lock file around a command.
+# Print a message if the lock isn't immediately entered,
+# and block until it is.
+function locked {
+  declare -r cmd="$@"
+
+  if which flock >/dev/null; then
+    (
+      flock -n 9 || echo "Locked by ${LOCK_FILE}..."
+    ) 9>"${LOCK_FILE}"
+    flock "${LOCK_FILE}" -c "${cmd}"
+  else
+    # Some platforms don't have flock, fall back to shlock.
+    # This will cause a deadlock if any subcommand calls back to fx,
+    # because shlock isn't reentrant by forked processes.
+    if shlock -f "${LOCK_FILE}" -p $$; then
+      trap _rmlock EXIT
+      ${cmd}
+      _rmlock
+    else
+      echo "Locked by ${LOCK_FILE}..."
+      while ! shlock -f "${LOCK_FILE}" -p $$; do sleep .1; done
+      trap _rmlock EXIT
+      ${cmd}
+      _rmlock
+    fi
+  fi
+}
+
 function main {
   local env_args=
 
@@ -28,7 +63,7 @@ function main {
     env_args="${env_args} TMPDIR=${TMPDIR}"
   fi
 
-  env -i ${env_args} \
+  locked env -i ${env_args} \
     "${FUCHSIA_DIR}/buildtools/ninja" -j "$(fx-choose-build-concurrency)" \
                                       -C "${FUCHSIA_BUILD_DIR}" "$@"
 }
