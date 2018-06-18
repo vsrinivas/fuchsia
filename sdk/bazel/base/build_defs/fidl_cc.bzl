@@ -125,8 +125,7 @@ def cc_fidl_library(name, library, visibility=None):
             gen_name + ".cc",
         ],
         deps = [
-            # TODO(pylaligand): this should be a reference to the present workspace.
-            "@fuchsia_sdk//pkg/fidl_cpp",
+            Label("//pkg/fidl_cpp"),
         ],
         visibility = visibility,
     )
