@@ -2,11 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#![feature(refcell_map_split)]
 #![cfg_attr(not(test), no_std)]
 
 #[cfg(test)]
 extern crate core;
 
+use core::cell::{Ref, RefMut};
 use core::fmt::{self, Debug, Display, Formatter};
 use core::marker::PhantomData;
 use core::mem;
@@ -94,11 +96,11 @@ impl_for_array_sizes!(Unaligned);
 /// A length- and alignment-checked reference to a byte slice which can safely
 /// be reinterpreted as another type.
 ///
-/// `LayoutVerified` is either a &[u8] or a &mut [u8] with the invaraint that
-/// the slice's length and alignment are each greater than or equal to the
-/// length and alignment of `T`. Using this invariant, it implements `Deref` for
-/// `T` so long as `T: FromBytes` and `DerefMut` so long as `T: FromBytes +
-/// AsBytes`.
+/// `LayoutVerified` is a byte slice reference (`&[u8]`, `&mut [u8]`,
+/// `Ref<[u8]>`, `RefMut<[u8]>`, etc) with the invaraint that the slice's length
+/// and alignment are each greater than or equal to the length and alignment of
+/// `T`. Using this invariant, it implements `Deref` for `T` so long as `T:
+/// FromBytes` and `DerefMut` so long as `T: FromBytes + AsBytes`.
 ///
 /// # Examples
 ///
@@ -107,7 +109,7 @@ impl_for_array_sizes!(Unaligned);
 /// reference were simply a reference to that type.
 ///
 /// ```rust
-/// use zerocopy::{AsBytes, ByteSlice, FromBytes, LayoutVerified, Unaligned};
+/// use zerocopy::{AsBytes, ByteSlice, ByteSliceMut, FromBytes, LayoutVerified, Unaligned};
 ///
 /// #[repr(C, packed)]
 /// struct UdpHeader {
@@ -137,7 +139,7 @@ impl_for_array_sizes!(Unaligned);
 ///     }
 /// }
 ///
-/// impl<'a> UdpPacket<&'a mut [u8]> {
+/// impl<B: ByteSliceMut> UdpPacket<B> {
 ///     pub fn set_src_port(&mut self, src_port: [u8; 2]) {
 ///         self.header.src_port = src_port;
 ///     }
@@ -205,11 +207,11 @@ where
     }
 }
 
-fn map_zeroed<'a, T>(
-    opt: Option<LayoutVerified<&'a mut [u8], T>>,
-) -> Option<LayoutVerified<&'a mut [u8], T>> {
+fn map_zeroed<B: ByteSliceMut, T>(
+    opt: Option<LayoutVerified<B, T>>,
+) -> Option<LayoutVerified<B, T>> {
     match opt {
-        Some(lv) => {
+        Some(mut lv) => {
             for b in lv.0.iter_mut() {
                 *b = 0;
             }
@@ -219,11 +221,11 @@ fn map_zeroed<'a, T>(
     }
 }
 
-fn map_prefix_tuple_zeroed<'a, T>(
-    opt: Option<(LayoutVerified<&'a mut [u8], T>, &'a mut [u8])>,
-) -> Option<(LayoutVerified<&'a mut [u8], T>, &'a mut [u8])> {
+fn map_prefix_tuple_zeroed<B: ByteSliceMut, T>(
+    opt: Option<(LayoutVerified<B, T>, B)>,
+) -> Option<(LayoutVerified<B, T>, B)> {
     match opt {
-        Some((lv, rest)) => {
+        Some((mut lv, rest)) => {
             for b in lv.0.iter_mut() {
                 *b = 0;
             }
@@ -233,13 +235,16 @@ fn map_prefix_tuple_zeroed<'a, T>(
     }
 }
 
-fn map_suffix_tuple_zeroed<'a, T>(
-    opt: Option<(&'a mut [u8], LayoutVerified<&'a mut [u8], T>)>,
-) -> Option<(&'a mut [u8], LayoutVerified<&'a mut [u8], T>)> {
+fn map_suffix_tuple_zeroed<B: ByteSliceMut, T>(
+    opt: Option<(B, LayoutVerified<B, T>)>,
+) -> Option<(B, LayoutVerified<B, T>)> {
     map_prefix_tuple_zeroed(opt.map(|(a, b)| (b, a))).map(|(a, b)| (b, a))
 }
 
-impl<'a, T> LayoutVerified<&'a mut [u8], T> {
+impl<B, T> LayoutVerified<B, T>
+where
+    B: ByteSliceMut,
+{
     /// Construct a new `LayoutVerified` after zeroing the bytes.
     ///
     /// `new_zeroed` verifies that `bytes.len() == size_of::<T>()` and that
@@ -250,7 +255,7 @@ impl<'a, T> LayoutVerified<&'a mut [u8], T> {
     /// can be useful when re-using buffers to ensure that sensitive data
     /// previously stored in the buffer is not leaked.
     #[inline]
-    pub fn new_zeroed(bytes: &'a mut [u8]) -> Option<LayoutVerified<&'a mut [u8], T>> {
+    pub fn new_zeroed(bytes: B) -> Option<LayoutVerified<B, T>> {
         map_zeroed(Self::new(bytes))
     }
 
@@ -267,9 +272,7 @@ impl<'a, T> LayoutVerified<&'a mut [u8], T> {
     /// initialized to zero. This can be useful when re-using buffers to ensure
     /// that sensitive data previously stored in the buffer is not leaked.
     #[inline]
-    pub fn new_from_prefix_zeroed(
-        bytes: &'a mut [u8],
-    ) -> Option<(LayoutVerified<&'a mut [u8], T>, &'a mut [u8])> {
+    pub fn new_from_prefix_zeroed(bytes: B) -> Option<(LayoutVerified<B, T>, B)> {
         map_prefix_tuple_zeroed(Self::new_from_prefix(bytes))
     }
 
@@ -287,9 +290,7 @@ impl<'a, T> LayoutVerified<&'a mut [u8], T> {
     /// initialized to zero. This can be useful when re-using buffers to ensure
     /// that sensitive data previously stored in the buffer is not leaked.
     #[inline]
-    pub fn new_from_suffix_zeroed(
-        bytes: &'a mut [u8],
-    ) -> Option<(&'a mut [u8], LayoutVerified<&'a mut [u8], T>)> {
+    pub fn new_from_suffix_zeroed(bytes: B) -> Option<(B, LayoutVerified<B, T>)> {
         map_suffix_tuple_zeroed(Self::new_from_suffix(bytes))
     }
 }
@@ -347,8 +348,9 @@ where
     }
 }
 
-impl<'a, T> LayoutVerified<&'a mut [u8], T>
+impl<B, T> LayoutVerified<B, T>
 where
+    B: ByteSliceMut,
     T: Unaligned,
 {
     /// Construct a new `LayoutVerified` for a type with no alignment
@@ -362,7 +364,7 @@ where
     /// can be useful when re-using buffers to ensure that sensitive data
     /// previously stored in the buffer is not leaked.
     #[inline]
-    pub fn new_unaligned_zeroed(bytes: &'a mut [u8]) -> Option<LayoutVerified<&'a mut [u8], T>> {
+    pub fn new_unaligned_zeroed(bytes: B) -> Option<LayoutVerified<B, T>> {
         map_zeroed(Self::new_unaligned(bytes))
     }
 
@@ -378,9 +380,7 @@ where
     /// initialized to zero. This can be useful when re-using buffers to ensure
     /// that sensitive data previously stored in the buffer is not leaked.
     #[inline]
-    pub fn new_unaligned_from_prefix_zeroed(
-        bytes: &'a mut [u8],
-    ) -> Option<(LayoutVerified<&'a mut [u8], T>, &'a mut [u8])> {
+    pub fn new_unaligned_from_prefix_zeroed(bytes: B) -> Option<(LayoutVerified<B, T>, B)> {
         map_prefix_tuple_zeroed(Self::new_unaligned_from_prefix(bytes))
     }
 
@@ -396,9 +396,7 @@ where
     /// initialized to zero. This can be useful when re-using buffers to ensure
     /// that sensitive data previously stored in the buffer is not leaked.
     #[inline]
-    pub fn new_unaligned_from_suffix_zeroed(
-        bytes: &'a mut [u8],
-    ) -> Option<(&'a mut [u8], LayoutVerified<&'a mut [u8], T>)> {
+    pub fn new_unaligned_from_suffix_zeroed(bytes: B) -> Option<(B, LayoutVerified<B, T>)> {
         map_suffix_tuple_zeroed(Self::new_unaligned_from_suffix(bytes))
     }
 }
@@ -407,10 +405,13 @@ fn aligned_to(bytes: &[u8], align: usize) -> bool {
     (bytes as *const _ as *const () as usize) % align == 0
 }
 
-impl<'a, T> LayoutVerified<&'a mut [u8], T> {
+impl<B, T> LayoutVerified<B, T>
+where
+    B: ByteSliceMut,
+{
     #[inline]
     pub fn bytes_mut(&mut self) -> &mut [u8] {
-        self.0
+        &mut self.0
     }
 }
 
@@ -426,8 +427,9 @@ where
     }
 }
 
-impl<'a, T> DerefMut for LayoutVerified<&'a mut [u8], T>
+impl<B, T> DerefMut for LayoutVerified<B, T>
 where
+    B: ByteSliceMut,
     T: FromBytes + AsBytes,
 {
     #[inline]
@@ -441,6 +443,7 @@ where
     B: ByteSlice,
     T: FromBytes + Display,
 {
+    #[inline]
     fn fmt(&self, fmt: &mut Formatter) -> fmt::Result {
         let inner: &T = self;
         inner.fmt(fmt)
@@ -452,6 +455,7 @@ where
     B: ByteSlice,
     T: FromBytes + Debug,
 {
+    #[inline]
     fn fmt(&self, fmt: &mut Formatter) -> fmt::Result {
         let inner: &T = self;
         fmt.debug_tuple("LayoutVerified").field(&inner).finish()
@@ -459,31 +463,46 @@ where
 }
 
 mod sealed {
+    use core::cell::{Ref, RefMut};
+
     pub trait Sealed {}
     impl<'a> Sealed for &'a [u8] {}
     impl<'a> Sealed for &'a mut [u8] {}
+    impl<'a> Sealed for Ref<'a, [u8]> {}
+    impl<'a> Sealed for RefMut<'a, [u8]> {}
 }
 
-// ByteSlice abstract over &[u8] and &mut [u8]. We rely on various behaviors of
-// [u8] references such as that a given reference will never changes its length
+// ByteSlice and ByteSliceMut abstract over [u8] references (&[u8], &mut [u8],
+// Ref<[u8]>, RefMut<[u8]>, etc). We rely on various behaviors of these
+// references such as that a given reference will never changes its length
 // between calls to deref() or deref_mut(), and that split_at() works as
-// expected. If ByteSlice was not sealed, consumers could implement it in a way
-// that violated these behaviors, and would break our unsafe code. Thus, we seal
-// it and implement it only for [u8] references. For the same reason, it's an
-// unsafe trait.
+// expected. If ByteSlice or ByteSliceMut were not sealed, consumers could
+// implement them in a way that violated these behaviors, and would break our
+// unsafe code. Thus, we seal them and implement it only for known-good
+// reference types. For the same reason, they're unsafe traits.
 
-/// `&[u8]` or `&mut [u8]`
+/// A mutable or immutable reference to a byte slice.
 ///
-/// `ByteSlice` abstracts over the mutability of a byte slice reference. It is
-/// guaranteed to only be implemented for `&[u8]` and `&mut [u8]`.
+/// `ByteSlice` abstracts over the mutability of a byte slice reference, and is
+/// implemented for various special reference types such as `Ref<[u8]>` and
+/// `RefMut<[u8]>`.
 pub unsafe trait ByteSlice: Deref<Target = [u8]> + Sized + self::sealed::Sealed {
     fn as_ptr(&self) -> *const u8;
     fn split_at(self, mid: usize) -> (Self, Self);
 }
 
+/// A mutable reference to a byte slice.
+///
+/// `ByteSliceMut` abstracts over various ways of storing a mutable reference to
+/// a byte slice, and is implemented for various special reference types such as
+/// `RefMut<[u8]>`.
+pub unsafe trait ByteSliceMut: ByteSlice + DerefMut {
+    fn as_mut_ptr(&mut self) -> *mut u8;
+}
+
 unsafe impl<'a> ByteSlice for &'a [u8] {
     fn as_ptr(&self) -> *const u8 {
-        <[u8]>::as_ptr(&self)
+        <[u8]>::as_ptr(self)
     }
     fn split_at(self, mid: usize) -> (Self, Self) {
         <[u8]>::split_at(self, mid)
@@ -491,10 +510,37 @@ unsafe impl<'a> ByteSlice for &'a [u8] {
 }
 unsafe impl<'a> ByteSlice for &'a mut [u8] {
     fn as_ptr(&self) -> *const u8 {
-        <[u8]>::as_ptr(&self)
+        <[u8]>::as_ptr(self)
     }
     fn split_at(self, mid: usize) -> (Self, Self) {
         <[u8]>::split_at_mut(self, mid)
+    }
+}
+unsafe impl<'a> ByteSlice for Ref<'a, [u8]> {
+    fn as_ptr(&self) -> *const u8 {
+        <[u8]>::as_ptr(self)
+    }
+    fn split_at(self, mid: usize) -> (Self, Self) {
+        Ref::map_split(self, |slice| <[u8]>::split_at(slice, mid))
+    }
+}
+unsafe impl<'a> ByteSlice for RefMut<'a, [u8]> {
+    fn as_ptr(&self) -> *const u8 {
+        <[u8]>::as_ptr(self)
+    }
+    fn split_at(self, mid: usize) -> (Self, Self) {
+        RefMut::map_split(self, |slice| <[u8]>::split_at_mut(slice, mid))
+    }
+}
+
+unsafe impl<'a> ByteSliceMut for &'a mut [u8] {
+    fn as_mut_ptr(&mut self) -> *mut u8 {
+        <[u8]>::as_mut_ptr(self)
+    }
+}
+unsafe impl<'a> ByteSliceMut for RefMut<'a, [u8]> {
+    fn as_mut_ptr(&mut self) -> *mut u8 {
+        <[u8]>::as_mut_ptr(self)
     }
 }
 
