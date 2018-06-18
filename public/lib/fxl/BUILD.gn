@@ -275,7 +275,6 @@ executable("fxl_unittests") {
 if (is_fuchsia) {
   package("unittests_package") {
     testonly = true
-    deprecated_system_image = true
 
     package_name = "fxl_unittests"
 

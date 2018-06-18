@@ -150,7 +150,6 @@ executable("fidl_cpp_unittests") {
 
 package("fidl_tests") {
   testonly = true
-  deprecated_system_image = true
 
   deps = [
     ":fidl_cpp_unittests",
