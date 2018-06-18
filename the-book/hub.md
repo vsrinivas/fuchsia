@@ -45,6 +45,10 @@ The hub is organized as follows:
 > A read-only file containing the koid of the realm’s job, in decimal ASCII
 > without padding or terminators.
 
+**\<realm id\>/svc**: realm’s services
+> Contains all the services which are available in this realm. ls command
+> will only show the services which were directly created in this realm.
+
 **\<realm id\>/r/**: child realm list
 > A read-only directory containing a list of child realms.
 
@@ -97,3 +101,7 @@ The hub is organized as follows:
 > A directory containing objects which the component has published for debugging
 > purposes, such as introspection files and services.  May contain read-write
 > objects.
+
+**\<component instance id\>/c/**: sub component instance list
+> A read-only directory containing a list of sub component instances. This is
+> only generated for runner components.
