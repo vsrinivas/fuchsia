@@ -511,8 +511,7 @@ void LinkImpl::UpdateObject(fidl::VectorPtr<fidl::StringPtr> path,
   // TODO(jimbe, mesch): This method needs a success status,
   // otherwise clients have no way to know they sent bogus data.
 
-  operation_queue_.Add(
-      new UpdateObjectCall(this, std::move(path), json, src));
+  operation_queue_.Add(new UpdateObjectCall(this, std::move(path), json, src));
 }
 
 void LinkImpl::Erase(fidl::VectorPtr<fidl::StringPtr> path,
@@ -664,7 +663,6 @@ void LinkImpl::WatchAll(
     fidl::InterfaceHandle<fuchsia::modular::LinkWatcher> watcher) {
   Watch(std::move(watcher), kWatchAllConnectionId);
 }
-
 
 void LinkImpl::OnPageChange(const std::string& key, const std::string& value) {
   operation_queue_.Add(new ChangeCall(this, value));
