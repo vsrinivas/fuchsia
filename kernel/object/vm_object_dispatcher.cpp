@@ -96,35 +96,58 @@ zx_status_t VmObjectDispatcher::GetSize(uint64_t* size) {
 }
 
 zx_status_t VmObjectDispatcher::RangeOp(uint32_t op, uint64_t offset, uint64_t size,
-                                        user_inout_ptr<void> buffer, size_t buffer_size) {
+                                        user_inout_ptr<void> buffer, size_t buffer_size,
+                                        zx_rights_t rights) {
     canary_.Assert();
 
     LTRACEF("op %u offset %#" PRIx64 " size %#" PRIx64
-            " buffer %p buffer_size %zu\n",
-            op, offset, size, buffer.get(), buffer_size);
+            " buffer %p buffer_size %zu rights %#x\n",
+            op, offset, size, buffer.get(), buffer_size, rights);
 
     switch (op) {
         case ZX_VMO_OP_COMMIT: {
+            if ((rights & ZX_RIGHT_WRITE) == 0) {
+                return ZX_ERR_ACCESS_DENIED;
+            }
             // TODO: handle partial commits
             auto status = vmo_->CommitRange(offset, size, nullptr);
             return status;
         }
         case ZX_VMO_OP_DECOMMIT: {
+            if ((rights & ZX_RIGHT_WRITE) == 0) {
+                return ZX_ERR_ACCESS_DENIED;
+            }
             // TODO: handle partial decommits
             auto status = vmo_->DecommitRange(offset, size, nullptr);
             return status;
         }
         case ZX_VMO_OP_LOCK:
         case ZX_VMO_OP_UNLOCK:
-            // TODO: handle
+            // TODO: handle or remove
             return ZX_ERR_NOT_SUPPORTED;
+
         case ZX_VMO_OP_CACHE_SYNC:
+            if ((rights & ZX_RIGHT_READ) == 0) {
+                return ZX_ERR_ACCESS_DENIED;
+            }
             return vmo_->SyncCache(offset, size);
         case ZX_VMO_OP_CACHE_INVALIDATE:
+            // A straight invalidate op requires the write right since
+            // it may drop dirty cache lines, thus modifying the contents
+            // of the VMO.
+            if ((rights & ZX_RIGHT_WRITE) == 0) {
+                return ZX_ERR_ACCESS_DENIED;
+            }
             return vmo_->InvalidateCache(offset, size);
         case ZX_VMO_OP_CACHE_CLEAN:
+            if ((rights & ZX_RIGHT_READ) == 0) {
+                return ZX_ERR_ACCESS_DENIED;
+            }
             return vmo_->CleanCache(offset, size);
         case ZX_VMO_OP_CACHE_CLEAN_INVALIDATE:
+            if ((rights & ZX_RIGHT_READ) == 0) {
+                return ZX_ERR_ACCESS_DENIED;
+            }
             return vmo_->CleanInvalidateCache(offset, size);
         default:
             return ZX_ERR_INVALID_ARGS;

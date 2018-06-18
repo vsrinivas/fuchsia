@@ -184,13 +184,15 @@ zx_status_t sys_vmo_op_range(zx_handle_t handle, uint32_t op, uint64_t offset, u
     auto up = ProcessDispatcher::GetCurrent();
 
     // lookup the dispatcher from handle
-    // TODO(ZX-967): test rights on the handle
+    // save the rights and pass down into the dispatcher for further testing
     fbl::RefPtr<VmObjectDispatcher> vmo;
-    zx_status_t status = up->GetDispatcher(handle, &vmo);
-    if (status != ZX_OK)
+    zx_rights_t rights;
+    zx_status_t status = up->GetDispatcherAndRights(handle, &vmo, &rights);
+    if (status != ZX_OK) {
         return status;
+    }
 
-    return vmo->RangeOp(op, offset, size, _buffer, buffer_size);
+    return vmo->RangeOp(op, offset, size, _buffer, buffer_size, rights);
 }
 
 zx_status_t sys_vmo_set_cache_policy(zx_handle_t handle, uint32_t cache_policy) {
