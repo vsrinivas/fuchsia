@@ -30,11 +30,35 @@ static void usage(const char* prog_name) {
     printf("%s [options]\n", prog_name);
     printf("\nOptions\n");
     printf("  -i <stream id>  : ID of stream to transfer over, must be positive. Defaults to 1.\n"
-           "  -f <filename>   : Name of file to transfer.\n");
+           "  -f <filename>   : Name of file to write to or read from.\n"
+           "  -d              : Download from xdc. This is the default if no mode is specified.\n"
+           "  -u              : Upload to xdc.\n");
+}
+
+// Reads the file header from the xdc device and stores it in out_file_header.
+static zx_status_t read_file_header(const fbl::unique_fd& xdc_fd, file_header_t* out_file_header) {
+    unsigned char* buf = reinterpret_cast<unsigned char*>(out_file_header);
+
+    ssize_t res;
+    size_t total_read = 0;
+    size_t len = sizeof(file_header_t);
+    while ((total_read < len) &&
+           ((res = read(xdc_fd.get(), buf + total_read, len - total_read)) != 0)) {
+        if (res < 0) {
+            printf("Fatal read error: %s\n", strerror(errno));
+            return ZX_ERR_IO;
+        }
+        total_read += res;
+    }
+    if (total_read != len) {
+        fprintf(stderr, "Malformed file header, only read %lu bytes, want %lu\n", total_read, len);
+        return ZX_ERR_BAD_STATE;
+    }
+    return ZX_OK;
 }
 
 // Writes the file header to the xdc device and also stores it in out_file_header.
-static zx_status_t write_file_header(fbl::unique_fd& file_fd, fbl::unique_fd& xdc_fd,
+static zx_status_t write_file_header(const fbl::unique_fd& file_fd, fbl::unique_fd& xdc_fd,
                                      file_header_t* out_file_header) {
     struct stat s;
     if (fstat(file_fd.get(), &s) < 0) {
@@ -88,9 +112,10 @@ int main(int argc, char** argv) {
 
     const char* filename = nullptr;
     uint32_t stream_id = DEFAULT_STREAM_ID;
+    bool download = true;
 
     int opt;
-    while ((opt = getopt(argc, argv, "i:f:")) != -1) {
+    while ((opt = getopt(argc, argv, "i:f:du")) != -1) {
         switch (opt) {
         case 'i':
             if (sscanf(optarg, "%u", &stream_id) != 1) {
@@ -104,6 +129,12 @@ int main(int argc, char** argv) {
             break;
         case 'f':
             filename = optarg;
+            break;
+        case 'd':
+            download = true;
+            break;
+        case 'u':
+            download = false;
             break;
         default:
             fprintf(stderr, "Invalid option\n");
@@ -123,16 +154,31 @@ int main(int argc, char** argv) {
         return -1;
     }
 
-    int file_flags = O_RDONLY;
-    fbl::unique_fd file_fd(open(filename, file_flags));
+    int file_flags = download ? (O_RDWR | O_CREAT) : O_RDONLY;
+    fbl::unique_fd file_fd(open(filename, file_flags, 0666));
     if (!file_fd) {
         fprintf(stderr, "Failed to open \"%s\", err %s\n", filename, strerror(errno));
         return -1;
     }
+
+    fbl::unique_fd src_fd;
+    fbl::unique_fd dest_fd;
+
     file_header_t file_header;
-    if (write_file_header(file_fd, xdc_fd, &file_header) != ZX_OK) {
-        return -1;
+    if (download) {
+        if (read_file_header(xdc_fd, &file_header) != ZX_OK) {
+            return -1;
+        }
+        src_fd = fbl::move(xdc_fd);
+        dest_fd = fbl::move(file_fd);
+    } else {
+        if (write_file_header(file_fd, xdc_fd, &file_header) != ZX_OK) {
+            return -1;
+        }
+        src_fd = fbl::move(file_fd);
+        dest_fd = fbl::move(xdc_fd);
     }
+
     status = transfer(file_fd, file_header.file_size, xdc_fd);
     if (status != ZX_OK) {
         return -1;
