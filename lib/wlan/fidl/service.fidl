@@ -64,6 +64,7 @@ interface DeviceService {
   // 20: reserved for StopIface
   21: DestroyIface(DestroyIfaceRequest req) -> (int32 @status);
   22: GetClientSme(uint16 iface_id, request<fuchsia.wlan.sme.ClientSme> sme) -> (int32 @status);
+  30: GetIfaceStats(uint16 iface_id) -> (int32 @status, fuchsia.wlan.stats.IfaceStats? stats);
 
   100: WatchDevices(request<DeviceWatcher> watcher);
 };

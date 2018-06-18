@@ -11,6 +11,7 @@ use futures::channel::mpsc::UnboundedReceiver;
 use futures::{future, Future, FutureExt, Never, stream};
 use futures::prelude::*;
 use station;
+use stats_scheduler::StatsRef;
 use std::sync::Arc;
 use watchable_map::MapEvent;
 use watcher_service;
@@ -19,7 +20,7 @@ use wlan;
 use zx;
 
 many_futures!(ServiceFut,
- [ListPhys, QueryPhy, CreateIface, GetClientSme, WatchDevices]);
+ [ListPhys, QueryPhy, CreateIface, GetClientSme, GetIfaceStats, WatchDevices]);
 
 pub fn device_service<S>(phys: Arc<PhyMap>, ifaces: Arc<IfaceMap>,
                          phy_events: UnboundedReceiver<MapEvent<u16, PhyDevice>>,
@@ -74,6 +75,16 @@ fn serve_channel(phys: Arc<PhyMap>, ifaces: Arc<IfaceMap>,
             DeviceServiceRequest::GetClientSme{ iface_id, sme, responder } => ServiceFut::GetClientSme({
                 let status = get_client_sme(&ifaces, iface_id, sme);
                 responder.send(status.into_raw()).into_future()
+            }),
+            DeviceServiceRequest::GetIfaceStats{ iface_id, responder } => ServiceFut::GetIfaceStats({
+                get_iface_stats(&ifaces, iface_id)
+                    .then(move |res| match res {
+                        Ok(stats_ref) => {
+                            let mut stats = stats_ref.lock();
+                            responder.send(zx::sys::ZX_OK, Some(OutOfLine(&mut stats)))
+                        }
+                        Err(status) => responder.send(status.into_raw(), None)
+                    })
             }),
             DeviceServiceRequest::WatchDevices{ watcher, control_handle: _ } => ServiceFut::WatchDevices({
                 watcher_service.add_watcher(watcher)
@@ -179,3 +190,11 @@ fn get_client_sme(ifaces: &Arc<IfaceMap>, iface_id: u16,
     }
 }
 
+fn get_iface_stats(ifaces: &Arc<IfaceMap>, iface_id: u16)
+    -> impl Future<Item = StatsRef, Error = zx::Status>
+{
+    ifaces.get(&iface_id)
+        .ok_or(zx::Status::NOT_FOUND)
+        .into_future()
+        .and_then(|iface| iface.stats_sched.get_stats())
+}

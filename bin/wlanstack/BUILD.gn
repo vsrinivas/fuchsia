@@ -20,6 +20,7 @@ rustc_binary("bin") {
     "//garnet/lib/wlan/fidl:wlantap-rustc",
     "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/lib/wlan/fidl:mlme-rustc",
+    "//garnet/public/lib/wlan/fidl:stats-rustc",
     "//garnet/public/rust/crates/fuchsia-app",
     "//garnet/public/rust/crates/fuchsia-async",
     "//garnet/public/rust/crates/fuchsia-vfs/fuchsia-vfs-watcher",

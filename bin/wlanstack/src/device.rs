@@ -8,6 +8,7 @@ use futures::prelude::*;
 use futures::stream;
 use futures::channel::mpsc;
 use station;
+use stats_scheduler::{self, StatsScheduler};
 use watchable_map::WatchableMap;
 use wlan;
 use wlan_dev;
@@ -23,6 +24,7 @@ pub type ClientSmeServer = mpsc::UnboundedSender<super::station::ClientSmeEndpoi
 
 pub struct IfaceDevice {
     pub client_sme_server: Option<ClientSmeServer>,
+    pub stats_sched: StatsScheduler,
     pub _device: wlan_dev::Device,
 }
 
@@ -77,12 +79,14 @@ fn serve_iface(ifaces: Arc<IfaceMap>,
     println!("new iface #{}: {}", new_iface.id, new_iface.device.path().to_string_lossy());
     let id = new_iface.id;
     let (sender, receiver) = mpsc::unbounded();
+    let (stats_sched, stats_requests) = stats_scheduler::create_scheduler();
     ifaces.insert(id, IfaceDevice {
         // TODO(gbonik): check the role of the interface instead of assuming it is a client
         client_sme_server: Some(sender),
+        stats_sched,
         _device: new_iface.device,
     });
-    station::serve_client_sme(new_iface.proxy, receiver)
+    station::serve_client_sme(new_iface.proxy, receiver, stats_requests)
         .recover::<Never, _>(|e| eprintln!("Error serving client station: {:?}", e))
         .then(move |_| {
             println!("iface removed: {}", id);

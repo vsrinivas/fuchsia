@@ -2,9 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// TODO(gbonik): Remove once this module is actually used
-#![allow(dead_code)]
-
 use futures::prelude::*;
 use futures::task;
 use futures::stream::Fuse;

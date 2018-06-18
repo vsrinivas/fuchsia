@@ -5,15 +5,17 @@
 #![allow(dead_code)]
 #![allow(unused_variables)]
 
-use fidl::{self, endpoints2::RequestStream, endpoints2::ServerEnd};
-use wlan_sme::{client, Station, MlmeRequest, MlmeStream};
-use wlan_sme::client::{ConnectResult, DiscoveryError, DiscoveryResult, DiscoveredEss};
-use fidl_mlme::MlmeProxy;
-use fidl_sme::{self, ClientSmeRequest};
-use std::sync::{Arc, Mutex};
 use failure;
+use fidl::{self, endpoints2::RequestStream, endpoints2::ServerEnd};
+use fidl_mlme::{self, MlmeEvent, MlmeProxy};
+use fidl_sme::{self, ClientSmeRequest};
+use fidl_stats::IfaceStats;
 use futures::{prelude::*, stream};
 use futures::channel::mpsc;
+use stats_scheduler::StatsRequest;
+use std::sync::{Arc, Mutex};
+use wlan_sme::{client, Station, MlmeRequest, MlmeStream};
+use wlan_sme::client::{ConnectResult, DiscoveryError, DiscoveryResult, DiscoveredEss};
 use zx;
 
 struct ClientTokens;
@@ -26,14 +28,15 @@ impl client::Tokens for ClientTokens {
 pub type ClientSmeEndpoint = ServerEnd<fidl_sme::ClientSmeMarker>;
 type Client = client::ClientSme<ClientTokens>;
 
-pub fn serve_client_sme(proxy: MlmeProxy,
-                        new_fidl_clients: mpsc::UnboundedReceiver<ClientSmeEndpoint>)
+pub fn serve_client_sme<S>(proxy: MlmeProxy,
+                           new_fidl_clients: mpsc::UnboundedReceiver<ClientSmeEndpoint>,
+                           stats_requests: S)
     -> impl Future<Item = (), Error = failure::Error>
+    where S: Stream<Item = StatsRequest, Error = Never>
 {
     let (client, mlme_stream, user_stream) = Client::new();
     let client_arc = Arc::new(Mutex::new(client));
-    // A future that handles MLME interactions
-    let mlme_sme_fut = serve_mlme_sme(proxy, client_arc.clone(), mlme_stream);
+    let mlme_sme_fut = serve_mlme_sme(proxy, client_arc.clone(), mlme_stream, stats_requests);
     let sme_fidl_fut = serve_client_sme_fidl(client_arc, new_fidl_clients, user_stream)
         .map(|x| x.never_into::<()>());
     mlme_sme_fut.select(sme_fidl_fut)
@@ -66,13 +69,21 @@ fn serve_client_sme_fidl(client_arc: Arc<Mutex<Client>>,
 }
 
 // The returned future successfully terminates when MLME closes the channel
-fn serve_mlme_sme<S: Station>(proxy: MlmeProxy, station: Arc<Mutex<S>>, mlme_stream: MlmeStream)
+fn serve_mlme_sme<STA, SRS>(proxy: MlmeProxy, station: Arc<Mutex<STA>>, mlme_stream: MlmeStream,
+                            stats_requests: SRS)
      -> impl Future<Item = (), Error = failure::Error>
+    where STA: Station,
+          SRS: Stream<Item = StatsRequest, Error = Never>
 {
-    let mlme_to_sme_fut = proxy.take_event_stream().for_each(move |e| {
-        station.lock().unwrap().on_mlme_event(e);
-        Ok(())
-    }).map(|_| ()).err_into::<failure::Error>();
+    let (mut stats_sender, stats_fut) = serve_stats(proxy.clone(), stats_requests);
+    let mlme_to_sme_fut = proxy.take_event_stream()
+        .err_into::<failure::Error>()
+        .for_each(move |e| match e {
+            // Handle the stats response separately since it is SME-independent
+            MlmeEvent::StatsQueryResp{ resp } => handle_stats_resp(&mut stats_sender, resp),
+            other => Ok(station.lock().unwrap().on_mlme_event(other))
+        })
+        .map(|_| ());
     let sme_to_mlme_fut = mlme_stream
         // Map 'Never' to 'fidl::Error'
         .map_err(|e| e.never_into())
@@ -98,10 +109,48 @@ fn serve_mlme_sme<S: Station>(proxy: MlmeProxy, station: Arc<Mutex<S>>, mlme_str
             Err(other) => Err(other.into()),
         });
     // Select, not join: terminate as soon as one of the futures terminates
-    mlme_to_sme_fut.select(sme_to_mlme_fut)
-        .map(|_| ())
+    let mlme_sme_fut = mlme_to_sme_fut.select(sme_to_mlme_fut)
         .map_err(|e| e.either(|(x, _)| x.context("MLME->SME").into(),
-                              |(x, _)| x.context("SME->MLME").into()))
+                              |(x, _)| x.context("SME->MLME").into()));
+    // select3() would be nice
+    mlme_sme_fut.select(stats_fut)
+        .map(|_| ())
+        .map_err(|e| e.either(|(x, _)| x,
+                              |(x, _)| x.context("Stats server").into()))
+}
+
+fn handle_stats_resp(stats_sender: &mut mpsc::Sender<IfaceStats>,
+                     resp: fidl_mlme::StatsQueryResponse) -> Result<(), failure::Error> {
+    stats_sender.try_send(resp.stats).or_else(|e| {
+        if e.is_full() {
+            // We only expect one response from MLME per each request, so the bounded
+            // queue of size 1 should always suffice.
+            eprintln!("Received an extra GetStatsResp from MLME, discarding");
+            Ok(())
+        } else {
+            Err(format_err!("Failed to send a message to stats future"))
+        }
+    })
+}
+
+fn serve_stats<S>(proxy: MlmeProxy, stats_requests: S)
+    -> (mpsc::Sender<IfaceStats>, impl Future<Item = Never, Error = failure::Error>)
+    where S: Stream<Item = StatsRequest, Error = Never>
+{
+    let (sender, receiver) = mpsc::channel(1);
+    let fut = stats_requests
+        .map_err::<failure::Error, _>(|e| e.never_into())
+        .and_then(move |req| {
+            proxy.stats_query_req()?;
+            Ok(req)
+        })
+        .zip(receiver.map_err(|e| e.never_into()))
+        .for_each(|(req, stats)| {
+            req.reply(stats);
+            Ok(())
+        })
+        .and_then(|_| Err(format_err!("Stats server future unexpectedly finished")));
+    (sender, fut)
 }
 
 fn new_client_service(client: Arc<Mutex<Client>>, endpoint: ClientSmeEndpoint)

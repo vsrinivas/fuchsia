@@ -16,6 +16,7 @@ extern crate fidl_fuchsia_wlan_mlme as fidl_mlme;
 extern crate fidl_fuchsia_wlan_device as wlan;
 extern crate fidl_fuchsia_wlan_device_service as wlan_service;
 extern crate fidl_fuchsia_wlan_sme as fidl_sme;
+extern crate fidl_fuchsia_wlan_stats as fidl_stats;
 extern crate fuchsia_app as component;
 #[macro_use] extern crate fuchsia_async as async;
 extern crate fuchsia_vfs_watcher as vfs_watcher;
@@ -36,6 +37,7 @@ mod future_util;
 mod logger;
 mod service;
 mod station;
+mod stats_scheduler;
 mod watchable_map;
 mod watcher_service;
 
