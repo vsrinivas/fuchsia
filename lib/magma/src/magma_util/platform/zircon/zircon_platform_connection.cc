@@ -599,7 +599,6 @@ public:
         ImportBufferOp op;
         magma_status_t result = channel_write(&op, sizeof(op), &duplicate_handle_zx, 1);
         if (result != MAGMA_STATUS_OK) {
-            zx_handle_close(duplicate_handle);
             return DRET_MSG(result, "failed to write to channel");
         }
 
@@ -628,7 +627,6 @@ public:
 
         magma_status_t result = channel_write(&op, sizeof(op), &duplicate_handle_zx, 1);
         if (result != MAGMA_STATUS_OK) {
-            zx_handle_close(handle);
             return DRET_MSG(result, "failed to write to channel");
         }
 
@@ -678,7 +676,6 @@ public:
         zx_handle_t duplicate_handle_zx = command_buffer_handle;
         magma_status_t result = channel_write(&op, sizeof(op), &duplicate_handle_zx, 1);
         if (result != MAGMA_STATUS_OK) {
-            zx_handle_close(command_buffer_handle);
             SetError(result);
         }
     }

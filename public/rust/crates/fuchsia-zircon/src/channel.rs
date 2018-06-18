@@ -97,9 +97,9 @@ impl Channel {
         unsafe {
             let status = sys::zx_channel_write(self.raw_handle(), opts, bytes.as_ptr(), n_bytes,
                 handles.as_ptr() as *const sys::zx_handle_t, n_handles);
-            ok(status)?;
-            // Handles were successfully transferred, forget them on sender side
+            // Handles are always consumed, forget them on sender side
             handles.set_len(0);
+            ok(status)?;
             Ok(())
         }
     }
