@@ -160,8 +160,12 @@ class AudioDeviceManager : public ::fuchsia::media::AudioDeviceEnumerator {
 
   void LinkToCapturers(const fbl::RefPtr<AudioDevice>& device);
 
-  // A pointer to the server which encapsulates us.  It is not possible for this
-  // pointer to be bad while we still exist.
+  // Re-evaluate which device should be the default device, and send
+  // notifications to users if the default device has changed.
+  void UpdateDefaultDevice(bool input);
+
+  // A pointer to the server which encapsulates us.  It is not possible for
+  // this pointer to be bad while we still exist.
   AudioServerImpl* server_;
 
   // The set of AudioDeviceEnumerator clients we are currently tending to.
@@ -189,8 +193,11 @@ class AudioDeviceManager : public ::fuchsia::media::AudioDeviceEnumerator {
   // gain on a per-output basis.
   float master_gain_ = -20.0;
 
+  // State which affects routing policy.
   fuchsia::media::AudioOutputRoutingPolicy routing_policy_ =
       fuchsia::media::AudioOutputRoutingPolicy::kLastPluggedOutput;
+  uint64_t default_output_token_ = ZX_KOID_INVALID;
+  uint64_t default_input_token_ = ZX_KOID_INVALID;
 };
 
 }  // namespace audio

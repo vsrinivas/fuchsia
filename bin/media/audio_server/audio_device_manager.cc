@@ -129,9 +129,17 @@ void AudioDeviceManager::ActivateDevice(
 
   // TODO(johngro): load and apply persisted settings now
 
-  // Notify interested users of the new device.
+  // Notify interested users of the new device.  We need to check to see if this
+  // is going to become the new default device so that we can fill out
+  // is_default field of the notification properly.  Right now, we define
+  // "default" device to mean simply last-plugged.
   ::fuchsia::media::AudioDeviceInfo info;
   device->GetDeviceInfo(&info);
+
+  auto last_plugged = FindLastPlugged(device->type());
+  info.is_default =
+      (last_plugged && (last_plugged->token() == device->token()));
+
   for (auto& client : bindings_.bindings()) {
     client->events().OnDeviceAdded(info);
   }
@@ -140,9 +148,11 @@ void AudioDeviceManager::ActivateDevice(
   // in the system.
   if (device->plugged()) {
     zx_time_t plug_time = device->plug_time();
-    device->UpdatePlugState(false, plug_time);
     OnDevicePlugged(device, plug_time);
   }
+
+  // Check to see if the default device has changed and update users if it has.
+  UpdateDefaultDevice(device->is_input());
 }
 
 void AudioDeviceManager::RemoveDevice(const fbl::RefPtr<AudioDevice>& device) {
@@ -163,9 +173,11 @@ void AudioDeviceManager::RemoveDevice(const fbl::RefPtr<AudioDevice>& device) {
     auto& device_set = device->activated() ? devices_ : devices_pending_init_;
     device_set.erase(*device);
 
-    // If the device was active, let clients know that this device has
-    // gone away.
+    // If the device was active, reconsider what the default device is now, and
+    // let clients know that this device has gone away.
     if (device->activated()) {
+      UpdateDefaultDevice(device->is_input());
+
       for (auto& client : bindings_.bindings()) {
         client->events().OnDeviceRemoved(device->token());
       }
@@ -176,11 +188,22 @@ void AudioDeviceManager::RemoveDevice(const fbl::RefPtr<AudioDevice>& device) {
 void AudioDeviceManager::HandlePlugStateChange(
     const fbl::RefPtr<AudioDevice>& device, bool plugged, zx_time_t plug_time) {
   FXL_DCHECK(device != nullptr);
+
+  // Update the device's plug state in our bookkeeping.  If there was no change,
+  // then we are done.
+  if (!device->UpdatePlugState(plugged, plug_time)) {
+    return;
+  }
+
   if (plugged) {
     OnDevicePlugged(device, plug_time);
   } else {
     OnDeviceUnplugged(device, plug_time);
   }
+
+  // Check to see if the default device has changed and update users if it
+  // has.
+  UpdateDefaultDevice(device->is_input());
 }
 
 void AudioDeviceManager::SetMasterGain(float db_gain) {
@@ -200,7 +223,9 @@ void AudioDeviceManager::GetDevices(GetDevicesCallback cbk) {
     if (dev.token() != ZX_KOID_INVALID) {
       ::fuchsia::media::AudioDeviceInfo info;
       dev.GetDeviceInfo(&info);
-      info.is_default = false;  // TODO(johngro): fill this out
+      info.is_default =
+          (dev.token() ==
+           (dev.is_input() ? default_input_token_ : default_output_token_));
       ret.push_back(std::move(info));
     }
   }
@@ -238,14 +263,12 @@ void AudioDeviceManager::SetDeviceGain(
 
 void AudioDeviceManager::GetDefaultInputDevice(
     GetDefaultInputDeviceCallback cbk) {
-  // TODO(johngro): Implement
-  cbk(ZX_KOID_INVALID);
+  cbk(default_input_token_);
 }
 
 void AudioDeviceManager::GetDefaultOutputDevice(
     GetDefaultOutputDeviceCallback cbk) {
-  // TODO(johngro): Implement
-  cbk(ZX_KOID_INVALID);
+  cbk(default_output_token_);
 }
 
 void AudioDeviceManager::SelectOutputsForRenderer(AudioRendererImpl* renderer) {
@@ -504,12 +527,6 @@ void AudioDeviceManager::OnDevicePlugged(const fbl::RefPtr<AudioDevice>& device,
                                          zx_time_t plug_time) {
   FXL_DCHECK(device);
 
-  // Update the plug state of the device.  If this was not an actual change in
-  // the plug state of the device, then we are done.
-  if (!device->UpdatePlugState(true, plug_time)) {
-    return;
-  }
-
   if (device->is_output()) {
     // This new device is an output.  Go over our list of renderers and "do
     // the right thing" based on our current routing policy.  If we are using
@@ -591,6 +608,20 @@ void AudioDeviceManager::LinkToCapturers(
       capturer.UnlinkSources();
       AudioObject::LinkObjects(device, fbl::WrapRefPtr(&capturer));
     }
+  }
+}
+
+void AudioDeviceManager::UpdateDefaultDevice(bool input) {
+  const auto new_dev = FindLastPlugged(input ? AudioObject::Type::Input
+                                             : AudioObject::Type::Output);
+  uint64_t new_id = new_dev ? new_dev->token() : ZX_KOID_INVALID;
+  uint64_t& old_id = input ? default_input_token_ : default_output_token_;
+
+  if (old_id != new_id) {
+    for (auto& client : bindings_.bindings()) {
+      client->events().OnDefaultDeviceChanged(old_id, new_id);
+    }
+    old_id = new_id;
   }
 }
 
