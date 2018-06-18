@@ -8,6 +8,7 @@ MODULE_TYPE := userapp
 MODULE_GROUP := misc
 
 MODULE_SRCS += \
+    $(LOCAL_DIR)/xdc-device.cpp \
     $(LOCAL_DIR)/xdc-test.cpp \
 
 MODULE_STATIC_LIBS := \
