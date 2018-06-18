@@ -62,8 +62,7 @@ static zx_status_t xdc_schedule_transfer_locked(xdc_t* xdc, xdc_endpoint_t* ep,
 
 // Schedules any queued requests on the endpoint's transfer ring, until we fill our
 // transfer ring or have no more requests.
-static void xdc_process_transactions_locked(xdc_t* xdc, xdc_endpoint_t* ep)
-                                            __TA_REQUIRES(xdc->lock) {
+void xdc_process_transactions_locked(xdc_t* xdc, xdc_endpoint_t* ep) __TA_REQUIRES(xdc->lock) {
     while (1) {
         if (xhci_transfer_ring_free_trbs(&ep->transfer_ring) == 0) {
             // No available TRBs - need to wait for some to complete.
@@ -94,12 +93,13 @@ static void xdc_process_transactions_locked(xdc_t* xdc, xdc_endpoint_t* ep)
     }
 }
 
-zx_status_t xdc_queue_transfer(xdc_t* xdc, usb_request_t* req, bool in) {
+zx_status_t xdc_queue_transfer(xdc_t* xdc, usb_request_t* req, bool in, bool is_ctrl_msg) {
     xdc_endpoint_t* ep = in ? &xdc->eps[IN_EP_IDX] : &xdc->eps[OUT_EP_IDX];
 
     mtx_lock(&xdc->lock);
 
-    if (!xdc->configured || ep->state == XDC_EP_STATE_DEAD) {
+    // We should always queue control messages unless there is an unrecoverable error.
+    if (!is_ctrl_msg && (!xdc->configured || ep->state == XDC_EP_STATE_DEAD)) {
         mtx_unlock(&xdc->lock);
         return ZX_ERR_IO_NOT_PRESENT;
     }
@@ -108,19 +108,18 @@ zx_status_t xdc_queue_transfer(xdc_t* xdc, usb_request_t* req, bool in) {
         zx_status_t status = usb_request_physmap(req);
         if (status != ZX_OK) {
             zxlogf(ERROR, "%s: usb_request_physmap failed: %d\n", __FUNCTION__, status);
-            // Call the complete callback outside of the lock.
             mtx_unlock(&xdc->lock);
-            usb_request_complete(req, status, 0);
-            return ZX_OK;
+            return status;
         }
     }
 
     list_add_tail(&ep->queued_reqs, &req->node);
 
-    // We can still queue requests for later while the endpoint is halted,
-    // but before scheduling the TRBs we should wait until the halt is
-    // cleared by DbC and we've cleaned up the transfer ring.
-    if (ep->state == XDC_EP_STATE_RUNNING) {
+    // We can still queue requests for later while waiting for the xdc device to be configured,
+    // or while the endpoint is halted. Before scheduling the TRBs however, we should wait
+    // for the device to be configured, and/or the halt is cleared by DbC and we've cleaned
+    // up the transfer ring.
+    if (xdc->configured && ep->state == XDC_EP_STATE_RUNNING) {
         xdc_process_transactions_locked(xdc, ep);
     }
 

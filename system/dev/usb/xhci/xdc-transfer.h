@@ -11,7 +11,10 @@
 zx_status_t xdc_restart_transfer_ring_locked(xdc_t* xdc, xdc_endpoint_t* ep)
                                              __TA_REQUIRES(xdc->lock);
 
-zx_status_t xdc_queue_transfer(xdc_t* xdc, usb_request_t* req, bool in);
+void xdc_process_transactions_locked(xdc_t* xdc, xdc_endpoint_t* ep) __TA_REQUIRES(xdc->lock);
+
+zx_status_t xdc_queue_transfer(xdc_t* xdc, usb_request_t* req, bool in, bool is_ctrl_msg);
+
 bool xdc_has_free_trbs(xdc_t* xdc, bool in);
 
 // This is called from the xdc_poll thread.

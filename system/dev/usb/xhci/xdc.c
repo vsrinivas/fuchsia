@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <ddk/debug.h>
+#include <xdc-server-utils/msg.h>
 #include <zircon/device/debug.h>
 #include <zircon/hw/usb.h>
 #include <assert.h>
@@ -61,8 +62,8 @@ typedef struct xdc_instance {
     list_node_t node;
 } xdc_instance_t;
 
-static zx_status_t xdc_write(void* ctx, uint32_t stream_id, const void* buf, size_t count,
-                             size_t* actual);
+static zx_status_t xdc_write(xdc_t* xdc, uint32_t stream_id, const void* buf, size_t count,
+                             size_t* actual, bool is_ctrl_msg);
 
 static void xdc_wait_bits(volatile uint32_t* ptr, uint32_t bits, uint32_t expected) {
     uint32_t value = XHCI_READ32(ptr);
@@ -265,7 +266,28 @@ static zx_status_t xdc_write_instance(void* ctx, const void* buf, size_t count,
 
     mtx_unlock(&inst->lock);
 
-    return xdc_write(inst->parent, stream_id, buf, count, actual);
+    return xdc_write(inst->parent, stream_id, buf, count, actual, false /* is_ctrl_msg */);
+}
+
+// Sends a message to the host to notify when a xdc device stream becomes online or offline.
+// If the message cannot be currently sent, it will be queued for later.
+static void xdc_notify_stream_state(xdc_t* xdc, uint32_t stream_id, bool online) {
+    xdc_msg_t msg = {
+        .opcode = XDC_NOTIFY_STREAM_STATE,
+        .notify_stream_state = { .stream_id = stream_id, .online = online }
+    };
+
+    size_t actual;
+    zx_status_t status = xdc_write(xdc, XDC_MSG_STREAM, &msg, sizeof(msg), &actual,
+                                   true /* is_ctrl_msg */);
+    if (status == ZX_OK) {
+        // The write size is much less than the max packet size, so it should complete entirely.
+        ZX_DEBUG_ASSERT(actual == sizeof(xdc_msg_t));
+    } else {
+        // xdc_write should always queue ctrl msgs, unless some fatal error occurs e.g. OOM.
+        zxlogf(ERROR, "xdc_write_internal returned err: %d, dropping ctrl msg for stream id %u\n",
+               status, stream_id);
+    }
 }
 
 // Sets the stream id for the device instance.
@@ -299,6 +321,9 @@ static zx_status_t xdc_register_stream(xdc_instance_t* inst, uint32_t stream_id)
 
     mtx_unlock(&xdc->instance_list_lock);
 
+    // Notify the host that this stream id is available on the debug device.
+    xdc_notify_stream_state(xdc, stream_id, true /* online */);
+
     // TODO(jocelyndang): set instance as writable if / when we are notified that the
     // stream id has been registered on the host side.
 
@@ -309,7 +334,7 @@ static zx_status_t xdc_register_stream(xdc_instance_t* inst, uint32_t stream_id)
 // Attempts to requeue the request on the IN endpoint.
 // If not successful, the request is returned to the free_read_reqs list.
 static void xdc_queue_read_locked(xdc_t* xdc, usb_request_t* req) __TA_REQUIRES(xdc->read_lock) {
-    zx_status_t status = xdc_queue_transfer(xdc, req, true /** in **/);
+    zx_status_t status = xdc_queue_transfer(xdc, req, true /** in **/, false /* is_ctrl_msg */);
     if (status != ZX_OK) {
         zxlogf(ERROR, "xdc_read failed to re-queue request %d\n", status);
         list_add_tail(&xdc->free_read_reqs, &req->node);
@@ -444,6 +469,11 @@ static zx_status_t xdc_close_instance(void* ctx, uint32_t flags) {
         xdc_queue_read_locked(xdc, req);
     }
     mtx_unlock(&xdc->read_lock);
+
+    if (inst->has_stream_id) {
+        // Notify the host that this stream id is now unavailable on the debug device.
+        xdc_notify_stream_state(xdc, inst->stream_id, false /* online */);
+    }
 
     atomic_fetch_add(&xdc->num_instances, -1);
 
@@ -644,17 +674,16 @@ static void xdc_write_complete(usb_request_t* req, void* cookie) {
     mtx_unlock(&xdc->write_lock);
 }
 
-static zx_status_t xdc_write(void* ctx, uint32_t stream_id, const void* buf, size_t count,
-                             size_t* actual) {
-    xdc_t* xdc = ctx;
-
+static zx_status_t xdc_write(xdc_t* xdc, uint32_t stream_id, const void* buf, size_t count,
+                             size_t* actual, bool is_ctrl_msg) {
     // TODO(jocelyndang): we should check for requests that are too big to fit on the transfer ring.
 
     zx_status_t status = ZX_OK;
 
     mtx_lock(&xdc->write_lock);
 
-    if (!xdc->writable) {
+    // We should always queue control messages unless there is an unrecoverable error.
+    if (!is_ctrl_msg && !xdc->writable) {
         // Need to wait for some requests to complete.
         mtx_unlock(&xdc->write_lock);
         return ZX_ERR_SHOULD_WAIT;
@@ -678,8 +707,7 @@ static zx_status_t xdc_write(void* ctx, uint32_t stream_id, const void* buf, siz
     usb_request_copyto(req, buf, count, header_len /* offset */);
     req->header.length = header.total_length;
 
-
-    status = xdc_queue_transfer(xdc, req, false /* in */);
+    status = xdc_queue_transfer(xdc, req, false /* in */, is_ctrl_msg);
     if (status != ZX_OK) {
         zxlogf(ERROR, "xdc_write failed %d\n", status);
         usb_request_pool_add(&xdc->free_write_reqs, req);
@@ -848,10 +876,16 @@ bool xdc_update_state(xdc_t* xdc, xdc_poll_state_t* poll_state) {
             poll_state->configured = true;
 
             mtx_lock(&xdc->lock);
-            xdc->configured = true;
-            mtx_unlock(&xdc->lock);
 
+            xdc->configured = true;
             zxlogf(INFO, "xdc configured on port: %u\n", port);
+
+            // We just entered configured mode, so endpoints are ready. Queue any waiting messages.
+            for (int i = 0; i < NUM_EPS; i++) {
+                xdc_process_transactions_locked(xdc, &xdc->eps[i]);
+            }
+
+            mtx_unlock(&xdc->lock);
         }
     }
 
