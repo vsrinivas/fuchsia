@@ -51,11 +51,10 @@ def remove_dashes(name):
 class BazelBuilder(Builder):
 
     def __init__(self, output, overlay):
-        super(BazelBuilder, self).__init__(domains=['cpp', 'exe', 'fidl'],
-                                           ignored_domains=['image'])
+        super(BazelBuilder, self).__init__(
+            domains=['cpp', 'dart', 'exe', 'fidl'], ignored_domains=['image'])
         self.output = output
         self.is_overlay = overlay
-        self.tools = []
 
 
     def source(self, *args):
@@ -87,9 +86,22 @@ class BazelBuilder(Builder):
     def finalize(self):
         if self.is_overlay:
             return
-        if self.tools:
-            # Write the build file for the tools directory.
-            self.write_file(self.dest('tools', 'BUILD'), 'tools', self.tools)
+        # Write BUILD files for tools directories.
+        tools_root = os.path.join(self.output, 'tools')
+        for directory, _, _ in os.walk(tools_root, topdown=True):
+            self.write_file(self.dest(directory, 'BUILD'), 'tools', {})
+
+
+    def install_dart_atom(self, atom):
+        '''Installs an atom from the "dart" domain.'''
+        type = atom.tags['type']
+        if type == 'library':
+            # TODO(alainv): Layout Dart libraries.
+            print('Atom type "%s" not handled, skipping %s.' % (type, atom.id))
+            return
+        for file in atom.files:
+            dest = self.make_dir(self.dest('tools', file.destination))
+            shutil.copy2(file.source, dest)
 
 
     def install_cpp_atom(self, atom):
@@ -202,7 +214,6 @@ class BazelBuilder(Builder):
         file = files[0]
         destination = self.make_dir(self.dest('tools', file.destination))
         shutil.copy2(file.source, destination)
-        self.tools.append(atom.id.name)
 
 
     def install_fidl_atom(self, atom):
