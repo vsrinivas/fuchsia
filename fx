@@ -256,12 +256,14 @@ fi
 shift # Removes the command name.
 
 if [ -z "${iterative}" ]; then
-  # Allow at most one fx invocation per Fuchsia dir at a time.
-  locked "${command_path}" "$@"
+  "${command_path}" "$@"
 elif which inotifywait >/dev/null; then
   # Watch everything except out/ and files/directories beginning with "."
   # such as lock files, swap files, .git, etc'.
   while inotifywait -qqre modify --exclude "/\." "${fuchsia_dir}" @"${fuchsia_dir}"/out; do
+    # Allow at most one fx -i invocation per Fuchsia dir at a time.
+    # Otherwise multiple concurrent fx -i invocations can trigger each other
+    # and cause a storm.
     locked "${command_path}" "$@"
   done
 elif which apt-get >/dev/null; then
