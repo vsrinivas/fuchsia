@@ -401,7 +401,7 @@ FIRMWARE_SRC_DIR := prebuilt/downloads/firmware
 # TODO(mcgrathr): Force an absolute path for this so that every rhs in the
 # manifest either starts with $(BUILDDIR) or is absolute.
 # //scripts/build-zircon.sh needs this.
-FIRMWARE_SRC_DIR := $(shell cd $(FIRMWARE_SRC_DIR) && pwd)
+FIRMWARE_SRC_DIR := $(abspath $(FIRMWARE_SRC_DIR))
 
 # if someone defines this, the build id will be pulled into lib/version
 BUILDID ?=
