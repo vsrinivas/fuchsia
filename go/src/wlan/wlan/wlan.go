@@ -293,7 +293,7 @@ func (c *Client) handleMLMEMsg(resp interface{}) (state, error) {
 	// Query Stats is state-independent so handle it immediately.
 	case *mlme.StatsQueryResponse:
 		if c.pendingStatsResp != nil {
-			c.pendingStatsResp <- &CommandResult{resp, nil}
+			c.pendingStatsResp <- &CommandResult{ resp.(*mlme.StatsQueryResponse).Stats, nil }
 			c.pendingStatsResp = nil
 		}
 	// Everything else is state-dependent

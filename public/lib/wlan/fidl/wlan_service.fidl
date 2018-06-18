@@ -71,7 +71,7 @@ struct BssConfig {
 
 struct WlanStats {
   Error error;
-  fuchsia.wlan.mlme.StatsQueryResponse stats;
+  fuchsia.wlan.stats.IfaceStats stats;
 };
 
 // Stub interface; eventually to be replaced by something based on the 802.11

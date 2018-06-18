@@ -31,6 +31,7 @@
 namespace wlan {
 
 namespace wlan_mlme = ::fuchsia::wlan::mlme;
+namespace wlan_stats = ::fuchsia::wlan::stats;
 
 Dispatcher::Dispatcher(DeviceInterface* device, fbl::unique_ptr<Mlme> mlme)
     : device_(device), mlme_(std::move(mlme)) {
@@ -487,10 +488,10 @@ zx_status_t Dispatcher::HandleMlmeStats(uint32_t ordinal) const {
     ZX_DEBUG_ASSERT(ordinal == fuchsia_wlan_mlme_MLMEStatsQueryReqOrdinal);
 
     wlan_mlme::StatsQueryResponse resp;
-    resp.dispatcher_stats = stats_.ToFidl();
+    resp.stats.dispatcher_stats = stats_.ToFidl();
     auto mlme_stats = mlme_->GetMlmeStats();
     if (!mlme_stats.has_invalid_tag()) {
-      resp.mlme_stats = std::make_unique<wlan_mlme::MlmeStats>(mlme_->GetMlmeStats());
+      resp.stats.mlme_stats = std::make_unique<wlan_stats::MlmeStats>(mlme_->GetMlmeStats());
     }
     return SendServiceMessage(fuchsia_wlan_mlme_MLMEStatsQueryRespOrdinal, &resp);
 }

@@ -55,7 +55,7 @@ class Mlme : public FrameHandler {
     virtual zx_status_t HandleTimeout(const ObjectId id) = 0;
     // Called when the hardware reports an indication such as Pre-TBTT.
     virtual void HwIndication(uint32_t ind) {};
-    virtual ::fuchsia::wlan::mlme::MlmeStats GetMlmeStats() const { return ::fuchsia::wlan::mlme::MlmeStats{}; };
+    virtual ::fuchsia::wlan::stats::MlmeStats GetMlmeStats() const { return {}; };
 };
 
 }  // namespace wlan

@@ -111,8 +111,8 @@ zx_status_t ClientMlme::PostChannelChange() {
     return ZX_OK;
 }
 
-wlan_mlme::MlmeStats ClientMlme::GetMlmeStats() const {
-    wlan_mlme::MlmeStats mlme_stats;
+wlan_stats::MlmeStats ClientMlme::GetMlmeStats() const {
+    wlan_stats::MlmeStats mlme_stats{};
     if (sta_) {
       mlme_stats.set_client_mlme_stats(sta_->stats());
     }

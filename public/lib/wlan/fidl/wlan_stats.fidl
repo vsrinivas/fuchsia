@@ -35,3 +35,13 @@ struct ApMlmeStats {
 };
 
 // LINT.ThenChange(//garnet/lib/wlan/common/include/wlan/common/stats.h)
+
+union MlmeStats {
+  ClientMlmeStats client_mlme_stats;
+  ApMlmeStats ap_mlme_stats;
+};
+
+struct IfaceStats {
+    DispatcherStats dispatcher_stats;
+    MlmeStats? mlme_stats;
+};
