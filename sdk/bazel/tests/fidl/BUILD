@@ -24,3 +24,14 @@ fidl_library(
         ":fidl",
     ],
 )
+
+fidl_library(
+    name = "fuchsia",
+    library = "bazel.examples.fuchsia",
+    srcs = [
+        "fuchsia.fidl",
+    ],
+    deps = [
+        "@fuchsia_sdk//fidl/fuchsia.sys",
+    ],
+)

@@ -33,6 +33,17 @@ class Library(object):
         self.includes = []
 
 
+class FidlLibrary(object):
+    '''Represents a FIDL library.
+       Convenience storage object to be consumed by Mako templates.
+       '''
+    def __init__(self, name, library):
+        self.name = name
+        self.library = library
+        self.srcs = []
+        self.deps = []
+
+
 def remove_dashes(name):
     return name.replace('-', '_')
 
@@ -40,8 +51,8 @@ def remove_dashes(name):
 class BazelBuilder(Builder):
 
     def __init__(self, output, overlay):
-        super(BazelBuilder, self).__init__(domains=['cpp', 'exe'],
-                                           ignored_domains=['fidl', 'image'])
+        super(BazelBuilder, self).__init__(domains=['cpp', 'exe', 'fidl'],
+                                           ignored_domains=['image'])
         self.output = output
         self.is_overlay = overlay
         self.tools = []
@@ -192,6 +203,22 @@ class BazelBuilder(Builder):
         destination = self.make_dir(self.dest('tools', file.destination))
         shutil.copy2(file.source, destination)
         self.tools.append(atom.id.name)
+
+
+    def install_fidl_atom(self, atom):
+        '''Installs an atom from the "fidl" domain.'''
+        if self.is_overlay:
+            return
+        name = remove_dashes(atom.id.name)
+        data = FidlLibrary(name, atom.tags['name'])
+        base = self.dest('fidl', name)
+        for file in atom.files:
+            dest = self.make_dir(os.path.join(base, file.destination))
+            shutil.copy2(file.source, dest)
+            data.srcs.append(file.destination)
+        for dep_id in atom.deps:
+            data.deps.append('//fidl/' + remove_dashes(dep_id.name))
+        self.write_file(os.path.join(base, 'BUILD'), 'fidl', data)
 
 
 def main():

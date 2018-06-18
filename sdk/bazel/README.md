@@ -49,6 +49,7 @@ $root/
 The `generate-tests.py` script creates a workspace for testing the generated
 SDK. From within that workspace, run:
 ```
+bazel build --config=fuchsia @fuchsia_sdk//...
 bazel build --config=fuchsia //...
 ```
 
@@ -80,7 +81,7 @@ build:fuchsia --cpu=x86_64
 build:fuchsia --host_crosstool_top=@bazel_tools//tools/cpp:toolchain
 ```
 
-Target can then be built for Fuschsia with:
+Targets can then be built for Fuschsia with:
 
 ```
 $ bazel build --config=fuchsia //...
