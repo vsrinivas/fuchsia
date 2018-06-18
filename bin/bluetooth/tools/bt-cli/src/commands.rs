@@ -9,6 +9,7 @@ macro_rules! gen_completer {
     }) => {
         #[derive(PartialEq)]
         pub enum $name {
+            Nothing,
             $($variant),*
         }
 
@@ -31,6 +32,7 @@ macro_rules! gen_completer {
         impl fmt::Display for $name {
             fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
                 match *self {
+                    $name::Nothing => write!(f, ""),
                     $($name::$variant => write!(f, $val)),* ,
                 }
             }
@@ -42,6 +44,7 @@ macro_rules! gen_completer {
             fn from_str(s: &str) -> Result<$name, ()> {
                 match s {
                     $($val => Ok($name::$variant)),* ,
+                    "" => Ok($name::Nothing),
                     _ => Err(()),
                 }
             }

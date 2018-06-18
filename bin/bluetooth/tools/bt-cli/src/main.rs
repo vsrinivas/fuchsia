@@ -158,10 +158,13 @@ fn main() -> Result<(), Error> {
                         Output::GetActiveAdapter(get_active_adapter(bt_svc.clone()))
                     }
                     Ok(Cmd::Help) => Output::Help(fok(Cmd::help_msg())),
+                    Ok(Cmd::Nothing) => Output::Error(fok(String::from(""))),
                     Err(e) => Output::Error(fok(format!("Error: {:?}", e))),
                 };
                 let res = exec.run_singlethreaded(fut)?;
-                println!("{}", res);
+                if res != "" {
+                    println!("{}", res);
+                }
             }
             Err(ReadlineError::Interrupted) => break,
             Err(_) => break, // empty line
