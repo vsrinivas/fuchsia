@@ -8,7 +8,9 @@ import (
 	"amber/daemon"
 	"amber/pkg"
 	"bytes"
+	"os"
 	"sync"
+	"sync/atomic"
 	"syscall/zx"
 	"syscall/zx/zxwait"
 	"testing"
@@ -37,7 +39,8 @@ func TestCompleteUpdateRequest(t *testing.T) {
 	a := make(chan string, 5)
 	c := make(chan *completeUpdateRequest, 1)
 	w := make(chan *startUpdateRequest, 1)
-	writeFunc := func(r *daemon.GetResult) (string, error) {
+
+	writeFunc := func(r *daemon.GetResult, dst *os.File) (string, error) {
 		counterMu.Lock()
 		writeReqCount++
 		counterMu.Unlock()
@@ -46,7 +49,8 @@ func TestCompleteUpdateRequest(t *testing.T) {
 		}()
 		return r.Update.Merkle, nil
 	}
-	m := NewActivationMonitor(c, w, a, writeFunc)
+
+	m := NewActivationMonitor(c, w, a, dummyCreate, writeFunc)
 
 	in, out, e := zx.NewChannel(0)
 	if e != nil {
@@ -96,7 +100,7 @@ func TestNonWaitingRequest(t *testing.T) {
 	a := make(chan string, 5)
 	c := make(chan *completeUpdateRequest, 1)
 	w := make(chan *startUpdateRequest, 1)
-	writeFunc := func(r *daemon.GetResult) (string, error) {
+	writeFunc := func(r *daemon.GetResult, dst *os.File) (string, error) {
 		counterMu.Lock()
 		writeReqCount++
 		counterMu.Unlock()
@@ -105,7 +109,7 @@ func TestNonWaitingRequest(t *testing.T) {
 		}()
 		return r.Update.Merkle, nil
 	}
-	m := NewActivationMonitor(c, w, a, writeFunc)
+	m := NewActivationMonitor(c, w, a, dummyCreate, writeFunc)
 	req := startUpdateRequest{
 		pkgData: &sampleGetResA,
 		wg:      &sync.WaitGroup{},
@@ -141,13 +145,13 @@ func TestOtherPackageActivated(t *testing.T) {
 	a := make(chan string, 5)
 	c := make(chan *completeUpdateRequest, 1)
 	w := make(chan *startUpdateRequest, 1)
-	writeFunc := func(r *daemon.GetResult) (string, error) {
+	writeFunc := func(r *daemon.GetResult, dst *os.File) (string, error) {
 		go func() {
 			a <- unrequestedMerkle
 		}()
 		return r.Update.Merkle, nil
 	}
-	m := NewActivationMonitor(c, w, a, writeFunc)
+	m := NewActivationMonitor(c, w, a, dummyCreate, writeFunc)
 
 	in, out, e := zx.NewChannel(0)
 	if e != nil {
@@ -199,13 +203,23 @@ func TestHighRequestVolume(t *testing.T) {
 	a := make(chan string, 5)
 	c := make(chan *completeUpdateRequest)
 	w := make(chan *startUpdateRequest, 1)
-	writeFunc := func(r *daemon.GetResult) (string, error) {
+	writeFunc := func(r *daemon.GetResult, dst *os.File) (string, error) {
 		counterMu.Lock()
 		writeReqCount++
 		counterMu.Unlock()
 		return r.Update.Merkle, nil
 	}
-	m := NewActivationMonitor(c, w, a, writeFunc)
+
+	// mock a create function which returns os.ErrExist when a fetch for the
+	// package is in progress
+	muActiveFiles := &sync.Mutex{}
+	activeFiles := make(map[string]struct{})
+	createCount := int32(0)
+	createFunc := func(r *daemon.GetResult) (*os.File, error) {
+		return mockCreate(r, &createCount, muActiveFiles, activeFiles)
+	}
+
+	m := NewActivationMonitor(c, w, a, createFunc, writeFunc)
 
 	reqCount := 1000
 	reqs, outChans := makeCompletionReqs(reqCount, &sampleGetResA, t)
@@ -220,8 +234,13 @@ func TestHighRequestVolume(t *testing.T) {
 			for i, r := range reqs[start : start+200] {
 				c <- r
 
-				// produce availability events at somewhat irregular intervals
+				// produce availability events at somewhat irregular intervals and
+				// also remove these from the list of active files
 				if start+i == start+start/10 {
+					// remove this update from the active files set
+					muActiveFiles.Lock()
+					delete(activeFiles, reqs[0].pkgData.Update.Merkle)
+					muActiveFiles.Unlock()
 					a <- reqs[0].pkgData.Update.Merkle
 				}
 			}
@@ -243,6 +262,9 @@ func TestHighRequestVolume(t *testing.T) {
 		t.Fatalf("Unexpected number of write requests, expected no more than %d, found %d",
 			len(ranges)+1, writeReqCount)
 	}
+	if createCount != int32(reqCount) {
+		t.Fatalf("Create count %d does not match expected fo %d", createCount, reqCount)
+	}
 	counterMu.Unlock()
 }
 
@@ -252,13 +274,23 @@ func TestMultipleTargets(t *testing.T) {
 	a := make(chan string, 5)
 	c := make(chan *completeUpdateRequest)
 	w := make(chan *startUpdateRequest, 1)
-	writeFunc := func(r *daemon.GetResult) (string, error) {
+	writeFunc := func(r *daemon.GetResult, dst *os.File) (string, error) {
 		counterMu.Lock()
 		reqCounts[r.Update.Merkle] = reqCounts[r.Update.Merkle] + 1
 		counterMu.Unlock()
 		return r.Update.Merkle, nil
 	}
-	m := NewActivationMonitor(c, w, a, writeFunc)
+
+	// mock a create function which returns os.ErrExist when a fetch for the
+	// package is in progress
+	muActiveFiles := &sync.Mutex{}
+	activeFiles := make(map[string]struct{})
+	createCount := int32(0)
+	createFunc := func(r *daemon.GetResult) (*os.File, error) {
+		return mockCreate(r, &createCount, muActiveFiles, activeFiles)
+	}
+
+	m := NewActivationMonitor(c, w, a, createFunc, writeFunc)
 
 	reqCount := 1000
 	reqsA, outChans := makeCompletionReqs(reqCount, &sampleGetResA, t)
@@ -279,6 +311,10 @@ func TestMultipleTargets(t *testing.T) {
 
 				// produce availability events at somewhat irregular intervals
 				if start+i == start+start/10 {
+					// remove this update from the active files set
+					muActiveFiles.Lock()
+					delete(activeFiles, reqsA[0].pkgData.Update.Merkle)
+					muActiveFiles.Unlock()
 					a <- reqsA[0].pkgData.Update.Merkle
 				}
 			}
@@ -291,6 +327,10 @@ func TestMultipleTargets(t *testing.T) {
 
 				// produce availability events at somewhat irregular intervals
 				if start+i == start+start/10 {
+					// remove this update from the active files set
+					muActiveFiles.Lock()
+					delete(activeFiles, reqsB[0].pkgData.Update.Merkle)
+					muActiveFiles.Unlock()
 					a <- reqsB[0].pkgData.Update.Merkle
 				}
 			}
@@ -327,13 +367,23 @@ func TestUnactivatedTarget(t *testing.T) {
 	a := make(chan string, 5)
 	c := make(chan *completeUpdateRequest)
 	w := make(chan *startUpdateRequest, 1)
-	writeFunc := func(r *daemon.GetResult) (string, error) {
+	writeFunc := func(r *daemon.GetResult, dst *os.File) (string, error) {
 		counterMu.Lock()
 		writeReqCount++
 		counterMu.Unlock()
 		return r.Update.Merkle, nil
 	}
-	m := NewActivationMonitor(c, w, a, writeFunc)
+
+	// mock a create function which returns os.ErrExist when a fetch for the
+	// package is in progress
+	muActiveFiles := &sync.Mutex{}
+	activeFiles := make(map[string]struct{})
+	createCount := int32(0)
+	createFunc := func(r *daemon.GetResult) (*os.File, error) {
+		return mockCreate(r, &createCount, muActiveFiles, activeFiles)
+	}
+
+	m := NewActivationMonitor(c, w, a, createFunc, writeFunc)
 
 	reqCount := 100
 	reqsPos, outChansPos := makeCompletionReqs(reqCount, &sampleGetResA, t)
@@ -352,6 +402,10 @@ func TestUnactivatedTarget(t *testing.T) {
 
 				// produce availability events at somewhat irregular intervals
 				if start+i == start+start/10 {
+					// remove this update from the active files set
+					muActiveFiles.Lock()
+					delete(activeFiles, reqsPos[0].pkgData.Update.Merkle)
+					muActiveFiles.Unlock()
 					a <- reqsPos[0].pkgData.Update.Merkle
 				}
 			}
@@ -431,4 +485,20 @@ func makeCompletionReqs(count int, getRes *daemon.GetResult, t *testing.T) (
 		chans = append(chans, &chanExpected{ipcChan: &out, merkle: getRes.Update.Merkle})
 	}
 	return reqs, chans
+}
+
+func mockCreate(r *daemon.GetResult, counter *int32, mu *sync.Mutex, activeFiles map[string]struct{}) (*os.File, error) {
+	atomic.AddInt32(counter, 1)
+	mu.Lock()
+	defer mu.Unlock()
+	if _, ok := activeFiles[r.Update.Merkle]; ok {
+		return nil, os.ErrExist
+	} else {
+		activeFiles[r.Update.Merkle] = struct{}{}
+		return nil, nil
+	}
+}
+
+func dummyCreate(r *daemon.GetResult) (*os.File, error) {
+	return nil, nil
 }

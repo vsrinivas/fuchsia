@@ -6,6 +6,7 @@ package ipcserver
 
 import (
 	"fmt"
+	"os"
 	"strings"
 	"sync"
 
@@ -37,7 +38,7 @@ func NewControlSrvr(d *daemon.Daemon, s *daemon.SystemUpdateMonitor) *ControlSrv
 	a := make(chan string, 5)
 	c := make(chan *completeUpdateRequest, 1)
 	w := make(chan *startUpdateRequest, 1)
-	m := NewActivationMonitor(c, w, a, daemon.WriteUpdateToPkgFS)
+	m := NewActivationMonitor(c, w, a, daemon.CreateOutputFile, daemon.WriteUpdateToPkgFS)
 	go m.Do()
 
 	return &ControlSrvr{
@@ -145,13 +146,15 @@ func (c *ControlSrvr) downloadPkgMeta(name string, version, merkle *string) (*da
 	ps := pkg.NewPackageSet()
 	pkg := pkg.Package{Name: name, Version: *version, Merkle: *merkle}
 	ps.Add(&pkg)
-
 	updates := c.daemon.GetUpdates(ps)
 	result, ok := updates[pkg]
 	if !ok {
 		return nil, fmt.Errorf("No update available for %s", name)
 	}
-	if result.Err != nil {
+
+	// it is not an error if we get an "exists" back because it is perfectly
+	// valid to re-install/activate an existing package
+	if result.Err != nil && !os.IsExist(result.Err) {
 		return nil,
 			fmt.Errorf("Error while checking for update to %s: %s", result.Orig.Name,
 				result.Err)

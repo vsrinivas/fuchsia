@@ -356,13 +356,17 @@ func (d *Daemon) GetUpdates(pkgs *pkg.PackageSet) map[pkg.Package]*GetResult {
 		}
 	}
 
-	var rec *upRec
+	// see if any requested packages are already on the system. We'll avoid
+	// fetching these, but otherwise send through the rest of the process
+	toGet = detectExisting(toGet, totalRes)
 
+	var rec *upRec
 	if len(toGet) > 0 {
 		rec = &upRec{
 			pkgs: toGet,
 			c:    make([]chan<- map[pkg.Package]*GetResult, 0, 0),
 		}
+
 		wg.Add(1)
 		go func() {
 			d.awaitResults(c, wanted, totalRes, &resLock)
@@ -399,6 +403,48 @@ func (d *Daemon) GetUpdates(pkgs *pkg.PackageSet) map[pkg.Package]*GetResult {
 	// close our reply channel
 	close(c)
 	return totalRes
+}
+
+// detectExisting checks to see if packages in the `pkgs` list already exist on
+// the device. If they do exist an entry is inserted into resultSet with the
+// Orig and Update set to the packge value in the `pkgs` list, with the Err
+// value set to one that passes os.IsExist(). The list returned is any pkgs
+// that do not exist already on the system. The expectation is that the
+// synthesized GetResults will get passed through the rest of the pipeline
+// and cause a 're-activation' of the installed package. This will cause
+// the pipeline to 'repair' or complete the package if it is missing any
+// contents.
+func detectExisting(pkgs []*pkg.Package, resultSet map[pkg.Package]*GetResult) []*pkg.Package {
+	//synthesize fetch results for existing packages
+
+	retained := []*pkg.Package{}
+	for _, pkg := range pkgs {
+		if pkg.Merkle != "" {
+			// try to create in the incoming package directory of pkgfs. If
+			// this bounces back with ErrExist, the blob is already in blobfs
+			// in some state. If we get any other error or no error at all,
+			// try to install the package from scratch.
+			f, err := os.OpenFile(filepath.Join(DstUpdate, pkg.Merkle), os.O_WRONLY|os.O_CREATE,
+				os.ModePerm)
+			if err != nil && os.IsExist(err) {
+				resultSet[*pkg] = &GetResult{
+					Orig:   *pkg,
+					Update: *pkg,
+					Err:    err,
+				}
+				continue
+			} else if err == nil {
+				// open succeeded, so clean up
+				f.Close()
+				// any error should be benign or result in an error down the line
+				if rmErr := os.Remove(f.Name()); rmErr != nil {
+					log.Printf("Unexpected error removing file: %s", rmErr)
+				}
+			}
+		}
+		retained = append(retained, pkg)
+	}
+	return retained
 }
 
 func (d *Daemon) getUpdates(rec *upRec) map[pkg.Package]*GetResult {
@@ -561,9 +607,12 @@ func ProcessPackage(data *GetResult, pkgs *pkg.PackageSet) error {
 		return NewErrProcessPackage("invalid path")
 	}
 
-	_, err := WriteUpdateToPkgFS(data)
-
+	file, err := CreateOutputFile(data)
 	if err != nil {
+		return err
+	}
+
+	if _, err = WriteUpdateToPkgFS(data, file); err != nil {
 		return err
 	}
 
@@ -571,24 +620,29 @@ func ProcessPackage(data *GetResult, pkgs *pkg.PackageSet) error {
 	return nil
 }
 
-func WriteUpdateToPkgFS(data *GetResult) (string, error) {
+// CreateOutputFile opens a path in pkgfs based on `data`'s merkle root. This
+// function will return an error if the file already exists. Files which
+// already exist will still cause pkgfs to import and/or heal the package that
+// it represents, so the caller should consider whether an os.IsExist()-matching
+// error should be treated as a failure.
+func CreateOutputFile(data *GetResult) (*os.File, error) {
+	dstPath := filepath.Join(DstUpdate, data.Update.Merkle)
+	dst, e := os.OpenFile(dstPath, os.O_WRONLY|os.O_CREATE, os.ModePerm)
+	if e != nil {
+		return nil, e
+	}
+	return dst, nil
+}
+
+// WriteUpdateToPkgFS writes the data in the GetResult to `dst`. `dst` is
+// closed before exiting.
+func WriteUpdateToPkgFS(data *GetResult, dst *os.File) (string, error) {
+	defer dst.Close()
 	e := data.Open()
 	if e != nil {
 		return "", e
 	}
 	defer data.Close()
-
-	dstPath := filepath.Join(DstUpdate, data.Update.Merkle)
-	dst, e := os.Create(dstPath)
-
-	if e != nil {
-		// if the file already exists, treat as success
-		if os.IsExist(e) {
-			return dstPath, e
-		}
-		return "", NewErrProcessPackage("couldn't open file to write update %s", e)
-	}
-	defer dst.Close()
 
 	i, err := data.Stat()
 	if err != nil {
@@ -608,5 +662,5 @@ func WriteUpdateToPkgFS(data *GetResult) (string, error) {
 		return "", NewErrProcessPackage("pkg blob incomplete, only wrote %d out of %d bytes", written, i.Size())
 	}
 
-	return dstPath, nil
+	return dst.Name(), nil
 }

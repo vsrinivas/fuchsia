@@ -7,6 +7,7 @@ package ipcserver
 import (
 	"amber/daemon"
 	"amber/lg"
+	"fmt"
 	"os"
 	"sync"
 	"syscall/zx"
@@ -14,7 +15,8 @@ import (
 
 type ActivationMonitor struct {
 	waitList     map[string][]*zx.Channel
-	write        func(*daemon.GetResult) (string, error)
+	write        func(*daemon.GetResult, *os.File) (string, error)
+	create       func(*daemon.GetResult) (*os.File, error)
 	CompleteReqs <-chan *completeUpdateRequest
 	WriteReqs    <-chan *startUpdateRequest
 	Acts         <-chan string
@@ -32,11 +34,13 @@ type completeUpdateRequest struct {
 }
 
 func NewActivationMonitor(cr <-chan *completeUpdateRequest, wr <-chan *startUpdateRequest,
-	activations <-chan string, writeFunc func(*daemon.GetResult) (string, error)) *ActivationMonitor {
+	activations <-chan string, createFunc func(*daemon.GetResult) (*os.File, error),
+	writeFunc func(*daemon.GetResult, *os.File) (string, error)) *ActivationMonitor {
 	a := ActivationMonitor{
 		CompleteReqs: cr,
 		WriteReqs:    wr,
 		Acts:         activations,
+		create:       createFunc,
 		write:        writeFunc,
 	}
 	a.waitList = make(map[string][]*zx.Channel)
@@ -52,30 +56,24 @@ func (am *ActivationMonitor) Do() {
 				break
 			}
 			lg.Log.Printf("Blocking update request received for %q\n", r.pkgData.Update.Merkle)
-			if _, ok := am.waitList[r.pkgData.Update.Merkle]; !ok {
-				if _, err := am.write(r.pkgData); err != nil {
-					if os.IsExist(err) {
-						lg.Log.Println("Package meta far already present, assuming package is available")
-						r.replyChan.Write([]byte(r.pkgData.Update.Merkle), []zx.Handle{}, 0)
-					}
-					r.replyChan.Close()
-					break
-				}
+			if err := am.writeMetaFAR(r.pkgData, r.replyChan); err != nil {
+				r.pkgData.Err = err
+				// if there was an error writing the meta FAR, don't listen for an activation
+				break
 			}
-
 			am.registerReq(r)
 		case r, ok := <-am.WriteReqs:
 			if !ok {
 				am.WriteReqs = nil
 				break
 			}
-			if _, err := am.write(r.pkgData); err != nil {
-				if !os.IsExist(err) {
-					r.err = err
-				}
+
+			if err := am.writeMetaFAR(r.pkgData, nil); err != nil {
+				r.pkgData.Err = err
 			} else {
 				am.setPkgInProgress(r)
 			}
+
 			r.wg.Done()
 		case pkg, ok := <-am.Acts:
 			if !ok {
@@ -111,4 +109,41 @@ func (am *ActivationMonitor) registerReq(req *completeUpdateRequest) {
 		chans = []*zx.Channel{}
 	}
 	am.waitList[req.pkgData.Update.Merkle] = append(chans, req.replyChan)
+}
+
+// writeMetaFAR writes out the meta FAR. It returns an error if the caller
+// should not expect the write operation to product a package activation
+// notification at a later date. If a replyChan is supplied it also sends
+// an error back through it and closes it as approriate.
+func (am *ActivationMonitor) writeMetaFAR(pkgData *daemon.GetResult, replyChan *zx.Channel) error {
+	file, err := am.create(pkgData)
+	if err == nil {
+		if _, err := am.write(pkgData, file); err != nil {
+			msg := fmt.Sprintf("could not write package meta file: %s", err)
+			if replyChan != nil {
+				sendError(replyChan, msg)
+			}
+			return err
+		}
+	} else if !os.IsExist(err) {
+		if replyChan != nil {
+			sendError(replyChan, err.Error())
+		}
+		return err
+	}
+	return nil
+}
+
+// sendError sends an error back through the client handle. This method will
+// return an error if it is unable to send an error throug the client handle.
+func sendError(replyChan *zx.Channel, msg string) error {
+	lg.Log.Println(msg)
+	signalErr := replyChan.Handle().SignalPeer(0, zx.SignalUser0)
+	if signalErr != nil {
+		lg.Log.Printf("signal failed: %s", signalErr)
+		replyChan.Close()
+	} else {
+		replyChan.Write([]byte(msg), []zx.Handle{}, 0)
+	}
+	return signalErr
 }
