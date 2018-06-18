@@ -148,7 +148,7 @@ class AudioDevice : public AudioObject {
   //
   // Hooks used by encapsulated AudioDriver instances to notify AudioDevices
   // about internal state machine changes.
-  virtual void OnDriverGetFormatsComplete()
+  virtual void OnDriverInfoFetched()
       FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token()){};
 
   virtual void OnDriverConfigComplete()

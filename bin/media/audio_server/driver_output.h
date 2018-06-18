@@ -53,7 +53,7 @@ class DriverOutput : public StandardOutputBase {
 
   // Callbacks triggered by our driver object as it completes various
   // asynchronous tasks.
-  void OnDriverGetFormatsComplete() override
+  void OnDriverInfoFetched() override
       FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token());
 
   void OnDriverConfigComplete() override

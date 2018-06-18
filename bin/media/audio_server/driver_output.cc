@@ -73,9 +73,9 @@ void DriverOutput::OnWakeup() {
     return;
   }
 
-  // Kick off the process of driver configuration by requesting the modes which
-  // the driver supports.
-  driver_->GetSupportedFormats();
+  // Kick off the process of driver configuration by requesting the basic driver
+  // info, which will include the modes which the driver supports.
+  driver_->GetDriverInfo();
   state_ = State::FetchingFormats;
 }
 
@@ -248,7 +248,7 @@ void DriverOutput::ScheduleNextLowWaterWakeup() {
       fxl::TimeDelta::FromNanoseconds(low_water_time)));
 }
 
-void DriverOutput::OnDriverGetFormatsComplete() {
+void DriverOutput::OnDriverInfoFetched() {
   auto cleanup = fbl::MakeAutoCall([this]() FXL_NO_THREAD_SAFETY_ANALYSIS {
     state_ = State::Shutdown;
     ShutdownSelf();

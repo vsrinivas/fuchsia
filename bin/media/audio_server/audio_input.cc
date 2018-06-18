@@ -39,7 +39,7 @@ zx_status_t AudioInput::Init() {
 void AudioInput::OnWakeup() {
   // We were poked.  Are we just starting up?
   if (state_ == State::Initialized) {
-    if (driver_->GetSupportedFormats() != ZX_OK) {
+    if (driver_->GetDriverInfo() != ZX_OK) {
       ShutdownSelf();
     } else {
       state_ = State::FetchingFormats;
@@ -48,7 +48,7 @@ void AudioInput::OnWakeup() {
   }
 }
 
-void AudioInput::OnDriverGetFormatsComplete() {
+void AudioInput::OnDriverInfoFetched() {
   state_ = State::Idle;
 
   uint32_t pref_fps = 48000;

@@ -25,7 +25,7 @@ class AudioInput : public AudioDevice {
 
   void OnWakeup() override FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token());
 
-  void OnDriverGetFormatsComplete() override
+  void OnDriverInfoFetched() override
       FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token());
 
   void OnDriverConfigComplete() override
