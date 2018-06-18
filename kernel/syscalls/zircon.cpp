@@ -95,6 +95,10 @@ zx_status_t sys_clock_get_new(zx_clock_t clock_id, user_out_ptr<zx_time_t> out_t
     return out_time.copy_to_user(time);
 }
 
+zx_time_t sys_clock_get_monotonic() {
+    return current_time();
+}
+
 zx_status_t sys_clock_adjust(zx_handle_t hrsrc, zx_clock_t clock_id, int64_t offset) {
     // TODO(ZX-971): finer grained validation
     zx_status_t status;

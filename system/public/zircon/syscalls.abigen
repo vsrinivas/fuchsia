@@ -57,6 +57,10 @@ syscall clock_get_new
     (clock_id: zx_clock_t)
     returns (zx_status_t, out: zx_time_t);
 
+syscall clock_get_monotonic
+    ()
+    returns (zx_time_t);
+
 syscall nanosleep blocking
     (deadline: zx_time_t)
     returns (zx_status_t);

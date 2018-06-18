@@ -98,6 +98,7 @@
 ## Time
 + [nanosleep](syscalls/nanosleep.md) - sleep for some number of nanoseconds
 + [clock_get](syscalls/clock_get.md) - read a system clock
++ [clock_get_monotonic](syscalls/clock_get_monotonic.md) - read the monotonic system clock
 + [ticks_get](syscalls/ticks_get.md) - read high-precision timer ticks
 + [ticks_per_second](syscalls/ticks_per_second.md) - read the number of high-precision timer ticks in a second
 
