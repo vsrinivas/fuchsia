@@ -19,6 +19,8 @@ import (
 	"syscall/zx"
 )
 
+const debug = false
+
 type Wlanstack struct {
 	cfg   *wlan.Config
 	apCfg *wlan.APConfig
@@ -216,15 +218,16 @@ func (ws *Wlanstack) readConfigFile() {
 	// TODO(tkilbourn): monitor this file for changes
 	// TODO(tkilbourn): replace this with a FIDL interface
 	const configFile = "/pkg/data/config.json"
-	// Once we remove the overrideFile, remove "system" access from meta/sandbox.
-	const overrideFile = "/system/data/wlanstack/override.json"
 
-	cfg, err := wlan.ReadConfigFromFile(overrideFile)
+	cfg, err := wlan.ReadConfigUser()
 	if err != nil {
 		if cfg, err = wlan.ReadConfigFromFile(configFile); err != nil {
 			log.Printf("[W] could not open config (%v)", configFile)
 			return
 		}
+	}
+	if debug {
+		log.Printf("cfg read: %+v, err: %+v", cfg, err)
 	}
 	ws.cfg = cfg
 }

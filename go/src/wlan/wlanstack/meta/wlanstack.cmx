@@ -4,6 +4,6 @@
     },
     "sandbox": {
         "dev": [ "class/wlanif" ],
-        "system": [ "data/wlanstack" ]
+        "features": [ "persistent-storage" ]
     }
 }

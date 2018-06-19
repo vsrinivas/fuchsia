@@ -10,6 +10,9 @@ import (
 	"io/ioutil"
 )
 
+// If we remove the wlanConfigUser, remove "persistent-storage" access from meta/sandbox.
+const wlanConfigUser = "/data/wlan_config_user.json"
+
 type Config struct {
 	SSID         string `json:"SSID"`
 	ScanInterval int    `json:"ScanInternal"`
@@ -19,6 +22,10 @@ type Config struct {
 
 func NewConfig() *Config {
 	return &Config{}
+}
+
+func ReadConfigUser() (*Config, error) {
+	return ReadConfigFromFile(wlanConfigUser)
 }
 
 func ReadConfigFromFile(path string) (*Config, error) {
@@ -31,4 +38,20 @@ func ReadConfigFromFile(path string) (*Config, error) {
 	err = json.Unmarshal(cfgBytes, cfg)
 	fmt.Printf("Done reading the config file: %s\n", path)
 	return cfg, err
+}
+
+func (cfg *Config) SaveConfigUser() error {
+	cfgBytes, err := json.Marshal(*cfg)
+	if err != nil {
+		fmt.Printf("Cannot marshal config data into json\n")
+		return err;
+	}
+
+	err = ioutil.WriteFile(wlanConfigUser, cfgBytes, 0)
+	if err != nil {
+		fmt.Printf("Error writing the config file: %s\nError: %+v\n", wlanConfigUser, err)
+	} else {
+		fmt.Printf("Successfully saved config to %s\n", wlanConfigUser)
+	}
+	return err
 }

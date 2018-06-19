@@ -891,6 +891,7 @@ func (s *associatedState) handleMLMEMsg(msg interface{}, c *Client) (state, erro
 		// TODO(hahnr): Evaluate response code.
 		if c.eapolC.KeyExchange().IsComplete() {
 			log.Printf("WLAN connected (EAPOL)")
+			c.cfg.SaveConfigUser()
 		}
 		return s, nil
 	default:
