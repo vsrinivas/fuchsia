@@ -30,6 +30,19 @@ struct Mode {
 // Flag for interlaced display modes.
 const int32 modeInterlaced = 0x1;
 
+// Info about valid cursor configuratoins.
+struct CursorInfo {
+  // The width and height of the cursor configuration, in pixels.
+  uint32 width;
+  uint32 height;
+
+  uint32 pixel_format;
+
+  // TODO(FIDL-204): Pad to 16 bytes - remove this when fidl alignment
+  // issues are resolved
+  uint32 unused;
+};
+
 // Info contains the information about a particular attached display.
 struct Info {
   uint64 id;
@@ -40,6 +53,14 @@ struct Info {
   // zx_pixel_format_t constants supported by the attached display. The
   // first entry is the preferred mode.
   vector<uint32> pixel_format;
+
+  // A list of cursor configurations most likely to be accepted by the
+  // driver. Maybe be empty if there is no hardware support for cursors.
+  //
+  // The driver may reject some of these configurations in some
+  // circumstances, and it may accept other configurations, but at least
+  // one of these configurations should be valid at most times.
+  vector<CursorInfo> cursor_configs;
 };
 
 // An ImageConfig accompanies image data and defines how to interpret that data.
@@ -186,7 +207,7 @@ interface Controller {
 
   // Configures the layer as a primary layer with no image and the default
   // config (no src_frame cropping, the identity transform, positioned in the
-  //top-left corner of the composed output, and no scaling).
+  // top-left corner of the composed output, and no scaling).
   //
   // If the image configuration changes due to applying this operation, the
   // image currently being displayed and any pending images will be dropped
@@ -202,6 +223,14 @@ interface Controller {
   // composed output. CheckConfig will return CONFIG_ERROR if any of these
   // conditions is violated.
   10: SetLayerPrimaryPosition(uint64 layer_id, Transform transform, Frame src_frame, Frame dest_frame);
+
+  // Configures the layer as a cursor layer with the given config. The
+  // default position is (0, 0).
+  19: SetLayerCursorConfig(uint64 layer_id, ImageConfig image_config);
+
+  // Updates the cursor position. Illegal if called on a non-cursor layer. The
+  // cursor does not have to overlap the display.
+  20: SetLayerCursorPosition(uint64 layer_id, int32 x, int32 y);
 
   // Sets the image for the layer. It is illegal to call this with an
   // image which doesn't match the layer's pending ImageConfig.
@@ -268,6 +297,8 @@ interface Controller {
 
   // TODO(stevensd): Renumber method ordinals in declaration order
   // 18: SetDisplayMode
+  // 19: SetLayerCursorConfig
+  // 20: SetLayerCursorPosition
 
   // TODO(stevensd): Delete this when nothing uses it anymore
   100: SetDisplayImage(uint64 display, uint64 image_id, uint64 wait_event_id, uint64 present_event_id, uint64 signal_event_id);

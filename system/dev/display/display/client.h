@@ -41,6 +41,7 @@ class Layer : public IdMappable<fbl::unique_ptr<Layer>> {
 public:
     fbl::RefPtr<Image> current_image() const { return displayed_image_; };
     uint32_t z_order() const { return current_layer_.z_index; }
+    bool is_skipped() const { return is_skipped_; }
 
 private:
     layer_t pending_layer_;
@@ -67,6 +68,8 @@ private:
 
     // The display this layer was most recently displayed on
     uint64_t current_display_id_;
+
+    bool is_skipped_;
 
     friend Client;
 };
@@ -97,6 +100,9 @@ private:
 
     fbl::unique_ptr<zx_pixel_format_t[]> pixel_formats_;
     uint32_t pixel_format_count_;
+
+    fbl::unique_ptr<cursor_info_t[]> cursor_infos_;
+    uint32_t cursor_info_count_;
 
     bool mode_change_ = false;
 
@@ -150,6 +156,12 @@ private:
             fidl::Builder* resp_builder, const fidl_type_t** resp_table);
     void HandleSetLayerPrimaryPosition(
             const fuchsia_display_ControllerSetLayerPrimaryPositionRequest* req,
+            fidl::Builder* resp_builder, const fidl_type_t** resp_table);
+    void HandleSetLayerCursorConfig(
+            const fuchsia_display_ControllerSetLayerCursorConfigRequest* req,
+            fidl::Builder* resp_builder, const fidl_type_t** resp_table);
+    void HandleSetLayerCursorPosition(
+            const fuchsia_display_ControllerSetLayerCursorPositionRequest* req,
             fidl::Builder* resp_builder, const fidl_type_t** resp_table);
     void HandleSetLayerImage(const fuchsia_display_ControllerSetLayerImageRequest* req,
                              fidl::Builder* resp_builder, const fidl_type_t** resp_table);

@@ -81,6 +81,10 @@ public:
     bool GetSupportedPixelFormats(uint64_t display_id, uint32_t* count_out,
                                   fbl::unique_ptr<zx_pixel_format_t[]>* fmts_out)
                                   __TA_NO_THREAD_SAFETY_ANALYSIS;
+    // Calling GetCursorInfo requires holding |mtx()|
+    bool GetCursorInfo(uint64_t display_id, uint32_t* count_out,
+                       fbl::unique_ptr<cursor_info_t[]>* cursor_info_out)
+                       __TA_NO_THREAD_SAFETY_ANALYSIS;
 
     display_controller_protocol_ops_t* ops() { return ops_.ops; }
     void* ops_ctx() { return ops_.ctx; }

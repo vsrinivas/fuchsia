@@ -254,12 +254,13 @@ void Controller::ApplyConfig(DisplayConfig* configs[], int32_t count,
 
             for (auto& layer_node : config->get_current_layers()) {
                 Layer* layer = layer_node.layer;
-                fbl::RefPtr<Image> image = layer->current_image();
-
-                // No need to update tracking if there's no image
-                if (!image) {
+                if (layer->is_skipped()) {
                     continue;
                 }
+
+
+                fbl::RefPtr<Image> image = layer->current_image();
+                ZX_ASSERT(image); // Displayed layers must always have images
 
                 // Set the image z index so vsync knows what layer the image is in
                 image->set_z_index(layer->z_order());
@@ -346,25 +347,27 @@ bool Controller::GetPanelConfig(uint64_t display_id, const edid::Edid** edid,
     return false;
 }
 
-bool Controller::GetSupportedPixelFormats(uint64_t display_id, uint32_t* count_out,
-                                          fbl::unique_ptr<zx_pixel_format_t[]>* fmts_out) {
-    ZX_DEBUG_ASSERT(mtx_trylock(&mtx_) == thrd_busy);
-    for (auto& display : displays_) {
-        if (display.id == display_id) {
-            *count_out = display.info.pixel_format_count;
-            fbl::AllocChecker ac;
-            *fmts_out =
-                    fbl::unique_ptr<zx_pixel_format_t[]>(new (&ac) zx_pixel_format_t[*count_out]);
-            if (!ac.check()) {
-                return false;
-            }
-            memcpy(fmts_out->get(), display.info.pixel_formats,
-                   sizeof(zx_pixel_format_t) * display.info.pixel_format_count);
-            return true;
-        }
-    }
-    return false;
+#define GET_DISPLAY_INFO(FN_NAME, COUNT_FIELD, TYPE_FIELD, TYPE) \
+bool Controller::FN_NAME(uint64_t display_id, uint32_t* count_out, \
+                         fbl::unique_ptr<TYPE[]>* data_out) { \
+    ZX_DEBUG_ASSERT(mtx_trylock(&mtx_) == thrd_busy); \
+    for (auto& display : displays_) { \
+        if (display.id == display_id) { \
+            *count_out = display.info.COUNT_FIELD; \
+            fbl::AllocChecker ac; \
+            *data_out = fbl::unique_ptr<TYPE[]>(new (&ac) TYPE[*count_out]); \
+            if (!ac.check()) { \
+                return false; \
+            } \
+            memcpy(data_out->get(), display.info.TYPE_FIELD, sizeof(TYPE) * *count_out); \
+            return true; \
+        } \
+    } \
+    return false; \
 }
+
+GET_DISPLAY_INFO(GetCursorInfo, cursor_info_count, cursor_infos, cursor_info_t)
+GET_DISPLAY_INFO(GetSupportedPixelFormats, pixel_format_count, pixel_formats, zx_pixel_format_t);
 
 zx_status_t Controller::DdkOpen(zx_device_t** dev_out, uint32_t flags) {
     return DdkOpenAt(dev_out, "", flags);

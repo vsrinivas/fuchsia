@@ -40,6 +40,8 @@ zx_status_t decode_message(fidl::Message* msg) {
     SELECT_TABLE_CASE(fuchsia_display_ControllerSetDisplayLayers);
     SELECT_TABLE_CASE(fuchsia_display_ControllerSetLayerPrimaryConfig);
     SELECT_TABLE_CASE(fuchsia_display_ControllerSetLayerPrimaryPosition);
+    SELECT_TABLE_CASE(fuchsia_display_ControllerSetLayerCursorConfig);
+    SELECT_TABLE_CASE(fuchsia_display_ControllerSetLayerCursorPosition);
     SELECT_TABLE_CASE(fuchsia_display_ControllerSetLayerImage);
     SELECT_TABLE_CASE(fuchsia_display_ControllerCheckConfig);
     SELECT_TABLE_CASE(fuchsia_display_ControllerApplyConfig);
@@ -105,6 +107,18 @@ static void do_early_retire(list_node_t* list, display::image_node_t* end = null
     }
 }
 
+static void populate_image(const fuchsia_display_ImageConfig& image, image_t* image_out) {
+    static_assert(offsetof(image_t, width) ==
+            offsetof(fuchsia_display_ImageConfig, width), "Struct mismatch");
+    static_assert(offsetof(image_t, height) ==
+            offsetof(fuchsia_display_ImageConfig, height), "Struct mismatch");
+    static_assert(offsetof(image_t, pixel_format) ==
+            offsetof(fuchsia_display_ImageConfig, pixel_format), "Struct mismatch");
+    static_assert(offsetof(image_t, type) ==
+            offsetof(fuchsia_display_ImageConfig, type), "Struct mismatch");
+    memcpy(image_out, &image, sizeof(fuchsia_display_ImageConfig));
+}
+
 } // namespace
 
 namespace display {
@@ -155,6 +169,8 @@ void Client::HandleControllerApi(async_t* async, async::WaitBase* self,
     HANDLE_REQUEST_CASE(SetDisplayLayers);
     HANDLE_REQUEST_CASE(SetLayerPrimaryConfig);
     HANDLE_REQUEST_CASE(SetLayerPrimaryPosition);
+    HANDLE_REQUEST_CASE(SetLayerCursorConfig);
+    HANDLE_REQUEST_CASE(SetLayerCursorPosition);
     HANDLE_REQUEST_CASE(SetLayerImage);
     HANDLE_REQUEST_CASE(CheckConfig);
     HANDLE_REQUEST_CASE(ApplyConfig);
@@ -431,15 +447,7 @@ void Client::HandleSetLayerPrimaryConfig(
     layer->pending_layer_.type = LAYER_PRIMARY;
     primary_layer_t* primary_layer = &layer->pending_layer_.cfg.primary;
 
-    static_assert(offsetof(image_t, width) ==
-            offsetof(fuchsia_display_ImageConfig, width), "Struct mismatch");
-    static_assert(offsetof(image_t, height) ==
-            offsetof(fuchsia_display_ImageConfig, height), "Struct mismatch");
-    static_assert(offsetof(image_t, pixel_format) ==
-            offsetof(fuchsia_display_ImageConfig, pixel_format), "Struct mismatch");
-    static_assert(offsetof(image_t, type) ==
-            offsetof(fuchsia_display_ImageConfig, type), "Struct mismatch");
-    memcpy(&primary_layer->image, &req->image_config, sizeof(fuchsia_display_ImageConfig));
+    populate_image(req->image_config, &primary_layer->image);
 
     // Initialize the src_frame and dest_frame with the default, full-image frame.
     frame_t new_frame = {
@@ -490,6 +498,44 @@ void Client::HandleSetLayerPrimaryPosition(
     pending_config_valid_ = false;
 }
 
+void Client::HandleSetLayerCursorConfig(
+        const fuchsia_display_ControllerSetLayerCursorConfigRequest* req,
+        fidl::Builder* resp_builder, const fidl_type_t** resp_table) {
+    auto layer = layers_.find(req->layer_id);
+    if (!layer.IsValid()) {
+        zxlogf(WARN, "SetLayerCursorConfig on invalid layer\n");
+        return;
+    }
+
+    layer->pending_layer_.type = LAYER_CURSOR;
+    cursor_layer_t* cursor_layer = &layer->pending_layer_.cfg.cursor;
+
+    cursor_layer->x_pos = 0;
+    cursor_layer->y_pos = 0;
+    populate_image(req->image_config, &cursor_layer->image);
+
+    layer->pending_image_ = nullptr;
+    layer->config_change_ = true;
+    pending_config_valid_ = false;
+}
+
+void Client::HandleSetLayerCursorPosition(
+        const fuchsia_display_ControllerSetLayerCursorPositionRequest* req,
+        fidl::Builder* resp_builder, const fidl_type_t** resp_table) {
+    auto layer = layers_.find(req->layer_id);
+    if (!layer.IsValid() || layer->pending_layer_.type != LAYER_CURSOR) {
+        zxlogf(ERROR, "SetLayerCursorPosition on invalid layer\n");
+        TearDown();
+        return;
+    }
+
+    cursor_layer_t* cursor_layer = &layer->pending_layer_.cfg.cursor;
+    cursor_layer->x_pos = req->x;
+    cursor_layer->y_pos = req->y;
+
+    layer->config_change_ = true;
+}
+
 void Client::HandleSetLayerImage(const fuchsia_display_ControllerSetLayerImageRequest* req,
                                    fidl::Builder* resp_builder, const fidl_type_t** resp_table) {
     auto layer = layers_.find(req->layer_id);
@@ -504,9 +550,16 @@ void Client::HandleSetLayerImage(const fuchsia_display_ControllerSetLayerImageRe
         TearDown();
         return;
     }
-    if (!(layer->pending_layer_.type == LAYER_PRIMARY
-            && image->HasSameConfig(layer->pending_layer_.cfg.primary.image))) {
+    // Only primary or cursor layers can have images
+    ZX_ASSERT(layer->pending_layer_.type == LAYER_PRIMARY
+            || layer->pending_layer_.type == LAYER_CURSOR);
+    image_t* cur_image = layer->pending_layer_.type == LAYER_PRIMARY ?
+            &layer->pending_layer_.cfg.primary.image : &layer->pending_layer_.cfg.cursor.image;
+    if (!image->HasSameConfig(*cur_image)) {
         zxlogf(ERROR, "SetLayerImage with mismatch layer config\n");
+        if (image.IsValid()) {
+            image->DiscardAcquire();
+        }
         TearDown();
         return;
     }
@@ -639,9 +692,15 @@ void Client::HandleApplyConfig(const fuchsia_display_ControllerApplyConfigReques
                 layer->current_layer_ = layer->pending_layer_;
                 layer->config_change_ = false;
 
-                // type is validated in ::CheckConfig, so something must be very wrong.
-                ZX_ASSERT(layer->current_layer_.type == LAYER_PRIMARY);
-                image_t* new_config = &layer->current_layer_.cfg.primary.image;
+                image_t* new_config;
+                if (layer->current_layer_.type == LAYER_PRIMARY) {
+                    new_config = &layer->current_layer_.cfg.primary.image;
+                } else if (layer->current_layer_.type == LAYER_CURSOR) {
+                    new_config = &layer->current_layer_.cfg.cursor.image;
+                } else {
+                    // type is validated in ::CheckConfig, so something must be very wrong.
+                    ZX_ASSERT(false);
+                }
 
                 // If the layer's image configuration changed, drop any waiting images
                 if (!list_is_empty(&layer->waiting_images_)
@@ -756,7 +815,7 @@ bool Client::CheckConfig(fidl::Builder* resp_builder) {
                 invalid = (!frame_contains(image_frame, layer->src_frame)
                         || !frame_contains(display_frame, layer->dest_frame));
             } else {
-                invalid = true;
+                invalid = layer_node.layer->pending_layer_.type != LAYER_CURSOR;
             }
 
             if (invalid) {
@@ -921,9 +980,11 @@ void Client::ApplyConfig() {
                 layer->displayed_image_ = fbl::move(node->self);
                 list_remove_head(&layer->waiting_images_);
 
+                void* handle = layer->displayed_image_->info().handle;
                 if (layer->current_layer_.type == LAYER_PRIMARY) {
-                    layer->current_layer_.cfg.primary.image.handle =
-                            layer->displayed_image_->info().handle;
+                    layer->current_layer_.cfg.primary.image.handle = handle;
+                } else if (layer->current_layer_.type == LAYER_CURSOR) {
+                    layer->current_layer_.cfg.cursor.image.handle = handle;
                 } else {
                     // type is validated in ::CheckConfig, so something must be very wrong.
                     ZX_ASSERT(false);
@@ -955,8 +1016,22 @@ void Client::ApplyConfig() {
                 }
             }
 
-            // If the layer has an image, insert it into the ddk layer array
-            if (layer->displayed_image_) {
+            // If the layer has no image, skip it
+            layer->is_skipped_ = layer->displayed_image_ == nullptr;
+            if (!layer->is_skipped_ && layer->current_layer_.type == LAYER_CURSOR) {
+                // If the cursor is completely off the display, skip it. It's possible that
+                // the hardware can position the cursor offscreen, but it's not clear how
+                // that would interact with our vsync tracking.
+                const cursor_layer_t* cursor = &layer->current_layer_.cfg.cursor;
+                const display_mode_t* mode = &display_config.current_.mode;
+                layer->is_skipped_ =
+                        cursor->x_pos + static_cast<int32_t>(cursor->image.width) <= 0 ||
+                        cursor->x_pos >= static_cast<int32_t>(mode->h_addressable) ||
+                        cursor->y_pos + static_cast<int32_t>(cursor->image.height) <= 0 ||
+                        cursor->y_pos >= static_cast<int32_t>(mode->v_addressable);
+            }
+
+            if (!layer->is_skipped_) {
                 display_config.current_.layer_count++;
                 layers[layer_idx++] = &layer->current_layer_;
             }
@@ -1055,6 +1130,12 @@ void Client::OnDisplaysChanged(uint64_t* displays_added,
                 zxlogf(WARN, "Failed to get pixel formats when processing hotplug\n");
                 continue;
             }
+
+            if (!controller_->GetCursorInfo(config->id,
+                                            &config->cursor_info_count_, &config->cursor_infos_)) {
+                zxlogf(WARN, "Failed to get cursor info when processing hotplug\n");
+                continue;
+            }
             configs_.insert(fbl::move(config));
         }
 
@@ -1079,6 +1160,7 @@ void Client::OnDisplaysChanged(uint64_t* displays_added,
             coded_configs[i].id = config->id;
             coded_configs[i].pixel_format.data = reinterpret_cast<void*>(FIDL_ALLOC_PRESENT);
             coded_configs[i].modes.data = reinterpret_cast<void*>(FIDL_ALLOC_PRESENT);
+            coded_configs[i].cursor_configs.data = reinterpret_cast<void*>(FIDL_ALLOC_PRESENT);
 
             if (edid) {
                 auto timings = edid->begin();
@@ -1107,6 +1189,20 @@ void Client::OnDisplaysChanged(uint64_t* displays_added,
             memcpy(builder.NewArray<zx_pixel_format_t>(config->pixel_format_count_),
                    config->pixel_formats_.get(),
                    sizeof(zx_pixel_format_t) * config->pixel_format_count_);
+
+            static_assert(offsetof(cursor_info_t, width) ==
+                    offsetof(fuchsia_display_CursorInfo, width), "Bad struct");
+            static_assert(offsetof(cursor_info_t, height) ==
+                    offsetof(fuchsia_display_CursorInfo, height), "Bad struct");
+            static_assert(offsetof(cursor_info_t, format) ==
+                    offsetof(fuchsia_display_CursorInfo, pixel_format), "Bad struct");
+            static_assert(sizeof(cursor_info_t) <= sizeof(fuchsia_display_CursorInfo), "Bad size");
+            coded_configs[i].cursor_configs.count = config->cursor_info_count_;
+            auto coded_cursor_configs =
+                    builder.NewArray<fuchsia_display_CursorInfo>(config->cursor_info_count_);
+            for (unsigned i = 0; i < config->cursor_info_count_; i++) {
+                memcpy(&coded_cursor_configs[i], &config->cursor_infos_[i], sizeof(cursor_info_t));
+            }
         }
     }
 
