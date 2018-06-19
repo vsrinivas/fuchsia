@@ -250,6 +250,7 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider,
   fidl::Binding<fuchsia::modular::FocusWatcher> focus_watcher_binding_;
 
   // Machinery to support fuchsia::modular::StoryProvider.GetLinkPeer().
+  // NOTE: This will be removed. MI4-1085
   struct LinkPeer;
   std::vector<std::unique_ptr<LinkPeer>> link_peers_;
 

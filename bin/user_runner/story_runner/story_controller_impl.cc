@@ -41,6 +41,20 @@
 #include "peridot/lib/fidl/clone.h"
 #include "peridot/lib/ledger_client/operations.h"
 
+// Used to create std::set<LinkPath>.
+namespace std {
+template <>
+struct less<fuchsia::modular::LinkPath> {
+  bool operator()(const fuchsia::modular::LinkPath& left,
+                  const fuchsia::modular::LinkPath& right) const {
+    if (left.module_path == right.module_path) {
+      return left.link_name < right.link_name;
+    }
+    return *left.module_path < *right.module_path;
+  }
+};
+}  // namespace std
+
 namespace modular {
 
 constexpr char kStoryScopeLabelPrefix[] = "story-";
@@ -283,82 +297,6 @@ class StoryControllerImpl::KillModuleCall : public Operation<> {
   FXL_DISALLOW_COPY_AND_ASSIGN(KillModuleCall);
 };
 
-class StoryControllerImpl::ConnectLinkCall : public Operation<> {
- public:
-  // TODO(mesch/thatguy): Notifying watchers on new fuchsia::modular::Link
-  // connections is overly complex. Sufficient and simpler would be to have a
-  // Story watchers notified of fuchsia::modular::Link state changes for all
-  // Links within a Story.
-  ConnectLinkCall(StoryControllerImpl* const story_controller_impl,
-                  fuchsia::modular::LinkPathPtr link_path,
-                  fuchsia::modular::CreateLinkInfoPtr create_link_info,
-                  bool notify_watchers,
-                  fidl::InterfaceRequest<fuchsia::modular::Link> request,
-                  ResultCall done)
-      : Operation("StoryControllerImpl::ConnectLinkCall", std::move(done)),
-        story_controller_impl_(story_controller_impl),
-        link_path_(std::move(link_path)),
-        create_link_info_(std::move(create_link_info)),
-        notify_watchers_(notify_watchers),
-        request_(std::move(request)) {}
-
- private:
-  void Run() override {
-    FlowToken flow{this};
-    auto i = std::find_if(story_controller_impl_->links_.begin(),
-                          story_controller_impl_->links_.end(),
-                          [this](const std::unique_ptr<LinkImpl>& l) {
-                            return l->link_path() == *link_path_;
-                          });
-    if (i != story_controller_impl_->links_.end()) {
-      (*i)->Connect(std::move(request_));
-      return;
-    }
-
-    link_impl_.reset(new LinkImpl(
-        story_controller_impl_->story_storage_->ledger_client(),
-        fidl::Clone(story_controller_impl_->story_storage_->page_id()),
-        *link_path_, std::move(create_link_info_)));
-    LinkImpl* const link_ptr = link_impl_.get();
-    if (request_) {
-      link_impl_->Connect(std::move(request_));
-      // Transfer ownership of |link_impl_| over to |story_controller_impl_|.
-      story_controller_impl_->links_.emplace_back(link_impl_.release());
-
-      // This orphaned handler will be called after this operation has been
-      // deleted. So we need to take special care when depending on members.
-      // Copies of |story_controller_impl_| and |link_ptr| are ok.
-      link_ptr->set_orphaned_handler(
-          [link_ptr, story_controller_impl = story_controller_impl_] {
-            story_controller_impl->DisposeLink(link_ptr);
-          });
-    }
-
-    link_ptr->Sync([this, flow] { Cont(flow); });
-  }
-
-  void Cont(FlowToken token) {
-    if (!notify_watchers_)
-      return;
-
-    for (auto& i : story_controller_impl_->links_watchers_.ptrs()) {
-      fuchsia::modular::LinkPath link_path;
-      link_path_->Clone(&link_path);
-      (*i)->OnNewLink(std::move(link_path));
-    }
-  }
-
-  StoryControllerImpl* const story_controller_impl_;  // not owned
-  const fuchsia::modular::LinkPathPtr link_path_;
-  fuchsia::modular::CreateLinkInfoPtr create_link_info_;
-  const bool notify_watchers_;
-  fidl::InterfaceRequest<fuchsia::modular::Link> request_;
-
-  std::unique_ptr<LinkImpl> link_impl_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(ConnectLinkCall);
-};
-
 // Populates a fuchsia::modular::ModuleParameterMap struct from a
 // fuchsia::modular::CreateModuleParameterMapInfo struct. May create new Links
 // for any fuchsia::modular::CreateModuleParameterMapInfo.property_info if
@@ -389,8 +327,8 @@ class StoryControllerImpl::InitializeChainCall
 
     // For each property in |create_parameter_map_info_|, either:
     // a) Copy the |link_path| to |result_| directly or
-    // b) Create & populate a new fuchsia::modular::Link and add the correct
-    // mapping to |result_|.
+    // b) Create & populate a new Link and add the correct mapping to
+    // |result_|.
     for (auto& entry : *create_parameter_map_info_->property_info) {
       const auto& key = entry.key;
       const auto& info = entry.value;
@@ -401,26 +339,25 @@ class StoryControllerImpl::InitializeChainCall
         info.link_path().Clone(&mapping->link_path);
       } else {  // info->is_create_link()
         mapping->link_path.module_path.resize(0);
-        // Create a new fuchsia::modular::Link. ConnectLinkCall will either
-        // create a new fuchsia::modular::Link, or connect to an existing one.
-        //
-        // TODO(thatguy): If the fuchsia::modular::Link already exists (it
-        // shouldn't), |create_link_info.initial_data| will be ignored.
         for (const auto& i : *module_path_) {
           mapping->link_path.module_path.push_back(i);
         }
         mapping->link_path.link_name = key;
 
-        // We create N ConnectLinkCall operations. We rely on the fact that
-        // once all refcounted instances of |flow| are destroyed, the
-        // InitializeChainCall will automatically finish.
-        fuchsia::modular::LinkPathPtr link_path =
-            fuchsia::modular::LinkPath::New();
-        mapping->link_path.Clone(link_path.get());
-        operation_queue_.Add(new ConnectLinkCall(
-            story_controller_impl_, std::move(link_path),
-            CloneOptional(info.create_link()), false /* notify_watchers */,
-            nullptr /* interface request */, [flow] {}));
+        // We issue N UpdateLinkValue calls and capture |flow| on each. We rely
+        // on the fact that once all refcounted instances of |flow| are
+        // destroyed, the InitializeChainCall will automatically finish.
+        auto initial_data = info.create_link().initial_data;
+        story_controller_impl_->story_storage_->UpdateLinkValue(
+            mapping->link_path,
+            [initial_data, flow](fidl::StringPtr* value) {
+              if (value->is_null()) {
+                // This is a new link. If it weren't, *value would be set to
+                // some valid JSON.
+                *value = initial_data;
+              }
+            },
+            this /* context */);
       }
 
       result_->entries.push_back(std::move(*mapping));
@@ -431,8 +368,6 @@ class StoryControllerImpl::InitializeChainCall
   const fidl::VectorPtr<fidl::StringPtr> module_path_;
   const fuchsia::modular::CreateModuleParameterMapInfoPtr
       create_parameter_map_info_;
-
-  OperationQueue operation_queue_;
 
   fuchsia::modular::ModuleParameterMapPtr result_;
 
@@ -545,12 +480,6 @@ class StoryControllerImpl::StopCall : public Operation<> {
  private:
   // StopCall may be run even on a story impl that is not running.
   void Run() override {
-    // At this point, we don't need notifications from disconnected
-    // Links anymore, as they will all be disposed soon anyway.
-    for (auto& link : story_controller_impl_->links_) {
-      link->set_orphaned_handler(nullptr);
-    }
-
     std::vector<FuturePtr<>> did_teardowns;
     did_teardowns.reserve(story_controller_impl_->connections_.size());
 
@@ -586,28 +515,13 @@ class StoryControllerImpl::StopCall : public Operation<> {
             story_controller_impl_->story_context_binding_.Unbind();
           }
 
-          std::vector<FuturePtr<>> did_sync_links;
-          did_sync_links.reserve(story_controller_impl_->links_.size());
-
-          // The links don't need to be written now, because they all were
-          // written when they were last changed, but we need to wait for the
-          // last write request to finish, which is done with the Sync() request
-          // below.
-          for (auto& link : story_controller_impl_->links_) {
-            auto did_sync_link = Future<>::Create(
-                "StoryControllerImpl.StopCall.Run.did_sync_link");
-            link->Sync(did_sync_link->Completer());
-            did_sync_links.emplace_back(did_sync_link);
-          }
-
-          return Future<>::Wait("StoryControllerImpl.StopCall.Run.Wait2",
-                                did_sync_links);
+          // Ensure every story storage operation has completed.
+          return story_controller_impl_->story_storage_->Sync();
         })
         ->Then([this] {
           // Clear the remaining links and connections in case there are some
           // left. At this point, no DisposeLink() calls can arrive anymore.
-          story_controller_impl_->links_.clear();
-          story_controller_impl_->connections_.clear();
+          story_controller_impl_->link_impls_.CloseAll();
 
           // If this StopCall is part of a DeleteCall, then we don't notify
           // story state changes; the pertinent state change will be the delete
@@ -859,21 +773,17 @@ class StoryControllerImpl::ResolveParameterCall
  private:
   void Run() {
     FlowToken flow{this, &result_};
-    operation_queue_.Add(new ConnectLinkCall(
-        story_controller_impl_, fidl::Clone(link_path_),
-        nullptr /* create_link_info */, false /* notify_watchers */,
-        link_.NewRequest(), [this, flow] { Cont(flow); }));
-  }
+    story_controller_impl_->story_storage_->GetLinkValue(*link_path_)
+        ->WeakThen(GetWeakPtr(), [this, flow](StoryStorage::Status status,
+                                              fidl::StringPtr value) {
+          // TODO: Add error handling.
+          auto link_info = fuchsia::modular::ResolverLinkInfo::New();
+          link_info->path = std::move(*link_path_);
+          link_info->content_snapshot = std::move(value);
 
-  void Cont(FlowToken flow) {
-    link_->Get(nullptr /* path */, [this, flow](fidl::StringPtr content) {
-      auto link_info = fuchsia::modular::ResolverLinkInfo::New();
-      link_info->path = std::move(*link_path_);
-      link_info->content_snapshot = std::move(content);
-
-      result_ = fuchsia::modular::ResolverParameterConstraint::New();
-      result_->set_link_info(std::move(*link_info));
-    });
+          result_ = fuchsia::modular::ResolverParameterConstraint::New();
+          result_->set_link_info(std::move(*link_info));
+        });
   }
 
   OperationQueue operation_queue_;
@@ -1405,9 +1315,25 @@ void StoryControllerImpl::RequestStoryFocus() {
 void StoryControllerImpl::ConnectLinkPath(
     fuchsia::modular::LinkPathPtr link_path,
     fidl::InterfaceRequest<fuchsia::modular::Link> request) {
-  operation_queue_.Add(new ConnectLinkCall(
-      this, std::move(link_path), nullptr /* create_link_info */,
-      true /* notify_watchers */, std::move(request), [] {}));
+  // Cache a copy of the current active links, because link_impls_.AddBinding()
+  // will change the set to include the newly created link connection.
+  auto active_links = GetActiveLinksInternal();
+
+  LinkPath link_path_clone;
+  link_path->Clone(&link_path_clone);
+  link_impls_.AddBinding(
+      std::make_unique<LinkImpl>(story_storage_, std::move(link_path_clone)),
+      std::move(request));
+
+  // TODO: remove this. MI4-1084
+  if (active_links.count(*link_path) == 0) {
+    // This is a new link: notify watchers.
+    for (auto& i : links_watchers_.ptrs()) {
+      LinkPath link_path_clone;
+      link_path->Clone(&link_path_clone);
+      (*i)->OnNewLink(std::move(link_path_clone));
+    }
+  }
 }
 
 fuchsia::modular::LinkPathPtr StoryControllerImpl::GetLinkPathForParameterName(
@@ -1528,6 +1454,17 @@ void StoryControllerImpl::ProcessPendingViews() {
   }
 }
 
+std::set<fuchsia::modular::LinkPath>
+StoryControllerImpl::GetActiveLinksInternal() {
+  std::set<fuchsia::modular::LinkPath> paths;
+  for (auto& entry : link_impls_.bindings()) {
+    LinkPath p;
+    entry->impl()->link_path().Clone(&p);
+    paths.insert(std::move(p));
+  }
+  return paths;
+}
+
 void StoryControllerImpl::OnModuleDataUpdated(
     fuchsia::modular::ModuleData module_data) {
   // Control reaching here means that this update came from a remote device.
@@ -1535,7 +1472,6 @@ void StoryControllerImpl::OnModuleDataUpdated(
       new OnModuleDataUpdatedCall(this, std::move(module_data)));
 }
 
-// |fuchsia::modular::StoryController|
 void StoryControllerImpl::GetInfo(GetInfoCallback callback) {
   // Synced such that if GetInfo() is called after Start() or Stop(), the
   // state after the previously invoked operation is returned.
@@ -1563,18 +1499,15 @@ void StoryControllerImpl::GetInfo(GetInfoCallback callback) {
   }));
 }
 
-// |fuchsia::modular::StoryController|
 void StoryControllerImpl::Start(
     fidl::InterfaceRequest<fuchsia::ui::views_v1_token::ViewOwner> request) {
   operation_queue_.Add(new StartCall(this, story_storage_, std::move(request)));
 }
 
-// |fuchsia::modular::StoryController|
 void StoryControllerImpl::Stop(StopCallback done) {
   operation_queue_.Add(new StopCall(this, true /* notify */, done));
 }
 
-// |fuchsia::modular::StoryController|
 void StoryControllerImpl::Watch(
     fidl::InterfaceHandle<fuchsia::modular::StoryWatcher> watcher) {
   auto ptr = watcher.Bind();
@@ -1582,7 +1515,6 @@ void StoryControllerImpl::Watch(
   watchers_.AddInterfacePtr(std::move(ptr));
 }
 
-// |fuchsia::modular::StoryController|
 void StoryControllerImpl::GetActiveModules(
     fidl::InterfaceHandle<fuchsia::modular::StoryModulesWatcher> watcher,
     GetActiveModulesCallback callback) {
@@ -1605,7 +1537,6 @@ void StoryControllerImpl::GetActiveModules(
       })));
 }
 
-// |fuchsia::modular::StoryController|
 void StoryControllerImpl::GetModules(GetModulesCallback callback) {
   auto on_run = Future<>::Create("StoryControllerImpl.GetModules.on_run");
   auto done =
@@ -1614,7 +1545,6 @@ void StoryControllerImpl::GetModules(GetModulesCallback callback) {
       on_run, done, callback, "StoryControllerImpl.GetModules.op"));
 }
 
-// |fuchsia::modular::StoryController|
 void StoryControllerImpl::GetModuleController(
     fidl::VectorPtr<fidl::StringPtr> module_path,
     fidl::InterfaceRequest<fuchsia::modular::ModuleController> request) {
@@ -1633,36 +1563,24 @@ void StoryControllerImpl::GetModuleController(
       })));
 }
 
-// |fuchsia::modular::StoryController|
 void StoryControllerImpl::GetActiveLinks(
     fidl::InterfaceHandle<fuchsia::modular::StoryLinksWatcher> watcher,
     GetActiveLinksCallback callback) {
-  // We execute this in a SyncCall so that we are sure we don't fall in a
-  // crack between a link being created and inserted in the links collection
-  // during some Operation. (Right now Links are not created in an Operation,
-  // but we don't want to rely on it.)
-  operation_queue_.Add(new SyncCall(fxl::MakeCopyable(
-      [this, watcher = std::move(watcher), callback]() mutable {
-        if (watcher) {
-          auto ptr = watcher.Bind();
-          links_watchers_.AddInterfacePtr(std::move(ptr));
-        }
+  auto result = fidl::VectorPtr<fuchsia::modular::LinkPath>::New(0);
 
-        // Only active links, i.e. links currently in use by a
-        // module, are returned here. Eventually we might want to
-        // list all links, but this requires some changes to how
-        // links are stored to make it nice. (Right now we need to
-        // parse keys, which we don't want to.)
-        fidl::VectorPtr<fuchsia::modular::LinkPath> result;
-        result.resize(links_.size());
-        for (size_t i = 0; i < links_.size(); i++) {
-          links_[i]->link_path().Clone(&result->at(i));
-        }
-        callback(std::move(result));
-      })));
+  std::set<fuchsia::modular::LinkPath> active_links = GetActiveLinksInternal();
+  for (auto& p : active_links) {
+    LinkPath clone;
+    p.Clone(&clone);
+    result.push_back(std::move(clone));
+  }
+
+  if (watcher) {
+    links_watchers_.AddInterfacePtr(watcher.Bind());
+  }
+  callback(std::move(result));
 }
 
-// |fuchsia::modular::StoryController|
 void StoryControllerImpl::GetLink(
     fidl::VectorPtr<fidl::StringPtr> module_path, fidl::StringPtr name,
     fidl::InterfaceRequest<fuchsia::modular::Link> request) {
@@ -1725,14 +1643,6 @@ void StoryControllerImpl::SetState(
   }
 
   story_provider_impl_->NotifyStoryStateChange(story_id_, state_);
-}
-
-void StoryControllerImpl::DisposeLink(LinkImpl* const link) {
-  auto f = std::find_if(
-      links_.begin(), links_.end(),
-      [link](const std::unique_ptr<LinkImpl>& l) { return l.get() == link; });
-  FXL_DCHECK(f != links_.end());
-  links_.erase(f);
 }
 
 bool StoryControllerImpl::IsExternalModule(

@@ -193,11 +193,11 @@ class StoryControllerImpl : fuchsia::modular::StoryController,
 
   // Misc internal helpers.
   void SetState(fuchsia::modular::StoryState new_state);
-  void DisposeLink(LinkImpl* link);
   void AddModuleWatcher(fuchsia::modular::ModuleControllerPtr module_controller,
                         const fidl::VectorPtr<fidl::StringPtr>& module_path);
   void UpdateStoryState(fuchsia::modular::ModuleState state);
   void ProcessPendingViews();
+  std::set<fuchsia::modular::LinkPath> GetActiveLinksInternal();
 
   bool IsExternalModule(const fidl::VectorPtr<fidl::StringPtr>& module_path);
 
@@ -292,7 +292,7 @@ class StoryControllerImpl : fuchsia::modular::StoryController,
   std::vector<std::unique_ptr<ChainImpl>> chains_;
 
   // The second ingredient of a story: Links. They connect Modules.
-  std::vector<std::unique_ptr<LinkImpl>> links_;
+  fidl::BindingSet<Link, std::unique_ptr<LinkImpl>> link_impls_;
 
   // A collection of services, scoped to this Story, for use by intelligent
   // Modules.

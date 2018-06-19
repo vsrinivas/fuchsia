@@ -67,6 +67,8 @@ interface StoryProvider {
   // updates to it as if the updates come from another device. This is available
   // only in developer mode and is mainly useful for testing. Note right now
   // there is only developer mode, i.e. this is always available.
+  //
+  // DEPRECATED: This is slated for removal. MI4-1085
   12: GetLinkPeer(string story_id, vector<string>? module_path, string link_name,
                   request<Link> @request);
 

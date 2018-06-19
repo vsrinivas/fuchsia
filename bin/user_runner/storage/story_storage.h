@@ -119,12 +119,21 @@ class StoryStorage : public PageClient {
   // value for the link and return. The new value will be written to storage
   // and the returned future completed with the status.
   //
+  // |mutate_fn|'s |value| points to the current value for the link and may be
+  // modified. If the link is new and has no value, value->is_null() will be
+  // true. Otherwise, *value will be valid JSON and must remain valid JSON
+  // after |mutate_fn| is done.
+  //
   // |context| is carried with the mutation operation and passed to any
   // notifications about this change on this instance of StoryStorage. A value
   // of nullptr for |context| is illegal.
   FuturePtr<Status> UpdateLinkValue(
       const LinkPath& link_path,
-      std::function<void(fidl::StringPtr*)> mutate_fn, const void* context);
+      std::function<void(fidl::StringPtr* value)> mutate_fn,
+      const void* context);
+
+  // Completes the returned future after all prior methods have completed.
+  FuturePtr<> Sync();
 
   // TODO(thatguy): Remove users of these and remove. Only used when
   // constructing a LinkImpl in StoryControllerImpl. Bring Link storage
@@ -157,6 +166,9 @@ class StoryStorage : public PageClient {
 
   LedgerClient* const ledger_client_;
   const fuchsia::ledger::PageId page_id_;
+  // NOTE: This operation queue serializes all link operations, even though
+  // operations on different links do not have an impact on each other. Consider
+  // adding an OperationQueue per link if we want to increase concurrency.
   OperationQueue operation_queue_;
 
   // Called when new ModuleData is encountered from the Ledger.

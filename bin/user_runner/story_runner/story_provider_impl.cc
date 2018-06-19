@@ -71,8 +71,8 @@ class StoryProviderImpl::CreateStoryCall : public Operation<fidl::StringPtr> {
     // 1) Create the story storage.
     // 2) Set any extra info.
     // 3) If we got an initial module, add it.
-    session_storage_->CreateStory(std::move(extra_info_),
-                                  is_kind_of_proto_story_)
+    session_storage_
+        ->CreateStory(std::move(extra_info_), is_kind_of_proto_story_)
         ->WeakThen(GetWeakPtr(), [this, flow](fidl::StringPtr story_id,
                                               fuchsia::ledger::PageId page_id) {
           story_id_ = story_id;
@@ -300,8 +300,10 @@ class StoryProviderImpl::StopStoryShellCall : public Operation<> {
 };
 
 struct StoryProviderImpl::LinkPeer {
-  std::unique_ptr<LedgerClient> ledger;
+  std::unique_ptr<LedgerClient> ledger_client;
+  std::unique_ptr<StoryStorage> storage;
   std::unique_ptr<LinkImpl> link;
+  std::unique_ptr<fidl::Binding<Link>> binding;
 };
 
 class StoryProviderImpl::GetLinkPeerCall : public Operation<> {
@@ -333,23 +335,27 @@ class StoryProviderImpl::GetLinkPeerCall : public Operation<> {
           }
           auto link_peer = std::make_unique<LinkPeer>();
 
-          link_peer->ledger =
+          link_peer->ledger_client =
               session_storage_->ledger_client()->GetLedgerClientPeer();
+          link_peer->storage = std::make_unique<StoryStorage>(
+              link_peer->ledger_client.get(),
+              CloneStruct(*story_data->story_page_id));
 
           auto link_path = fuchsia::modular::LinkPath::New();
           link_path->module_path = module_path_.Clone();
           link_path->link_name = link_name_;
 
-          link_peer->link = std::make_unique<LinkImpl>(
-              link_peer->ledger.get(), CloneStruct(*story_data->story_page_id),
-              std::move(*link_path), nullptr);
+          link_peer->link = std::make_unique<LinkImpl>(link_peer->storage.get(),
+                                                       std::move(*link_path));
 
-          link_peer->link->Connect(std::move(request_));
+          link_peer->binding = std::make_unique<fidl::Binding<Link>>(
+              link_peer->link.get(), std::move(request_));
 
           impl_->link_peers_.emplace_back(std::move(link_peer));
 
-          // TODO(mesch): Set an orphaned handler so that link peers get dropped
-          // earlier than at logout.
+          // TODO(thatguy): Eliminate the usage of LinkPeers entirely, as they
+          // are only used for tests.
+          // MI4-1085
         });
   }
 
@@ -521,11 +527,9 @@ void StoryProviderImpl::MaybeLoadStoryShell() {
 void StoryProviderImpl::CreateStory(fidl::StringPtr module_url,
                                     CreateStoryCallback callback) {
   FXL_LOG(INFO) << "fuchsia::modular::CreateStory() " << module_url;
-  operation_queue_.Add(new CreateStoryCall(session_storage_, this, module_url,
-                                           nullptr /* extra_info */,
-                                           nullptr /* root_json */,
-                                           false /* is_kind_of_proto_story */,
-                                           callback));
+  operation_queue_.Add(new CreateStoryCall(
+      session_storage_, this, module_url, nullptr /* extra_info */,
+      nullptr /* root_json */, false /* is_kind_of_proto_story */, callback));
 }
 
 // |fuchsia::modular::StoryProvider|
@@ -534,23 +538,19 @@ void StoryProviderImpl::CreateStoryWithInfo(
     fidl::VectorPtr<fuchsia::modular::StoryInfoExtraEntry> extra_info,
     fidl::StringPtr root_json, CreateStoryWithInfoCallback callback) {
   FXL_LOG(INFO) << "CreateStoryWithInfo() " << module_url << " " << root_json;
-  operation_queue_.Add(new CreateStoryCall(session_storage_, this, module_url,
-                                           std::move(extra_info),
-                                           std::move(root_json),
-                                           false /* is_kind_of_proto_story */,
-                                           callback));
+  operation_queue_.Add(new CreateStoryCall(
+      session_storage_, this, module_url, std::move(extra_info),
+      std::move(root_json), false /* is_kind_of_proto_story */, callback));
 }
 
 // |fuchsia::modular::StoryProvider|
 void StoryProviderImpl::CreateKindOfProtoStory(
     CreateKindOfProtoStoryCallback callback) {
   FXL_LOG(INFO) << "CreateKindOfProtoStory() ";
-  operation_queue_.Add(new CreateStoryCall(session_storage_, this,
-                                           nullptr /* module_url */,
-                                           nullptr /* extra_info) */,
-                                           nullptr /* root_json */,
-                                           true /* is_kind_of_proto_story */,
-                                           callback));
+  operation_queue_.Add(
+      new CreateStoryCall(session_storage_, this, nullptr /* module_url */,
+                          nullptr /* extra_info) */, nullptr /* root_json */,
+                          true /* is_kind_of_proto_story */, callback));
 }
 
 // |fuchsia::modular::StoryProvider|
@@ -645,8 +645,8 @@ void StoryProviderImpl::RunningStories(RunningStoriesCallback callback) {
 
 // |fuchsia::modular::StoryProvider|
 void StoryProviderImpl::PromoteKindOfProtoStory(fidl::StringPtr story_id) {
-  auto on_run = Future<>::Create(
-      "StoryProviderImpl.PromoteKindOfProtoStory.on_run");
+  auto on_run =
+      Future<>::Create("StoryProviderImpl.PromoteKindOfProtoStory.on_run");
   auto done = on_run->AsyncMap([this, story_id] {
     return session_storage_->PromoteKindOfProtoStory(story_id);
   });

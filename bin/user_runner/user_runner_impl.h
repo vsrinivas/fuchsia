@@ -43,9 +43,10 @@ class LedgerClient;
 class LinkImpl;
 class MessageQueueManager;
 class PuppetMasterImpl;
+class SessionStorage;
 class StoryCommandExecutor;
 class StoryProviderImpl;
-class SessionStorage;
+class StoryStorage;
 class VisibleStoriesHandler;
 
 class UserRunnerImpl : fuchsia::modular::internal::UserRunner,
@@ -61,15 +62,16 @@ class UserRunnerImpl : fuchsia::modular::internal::UserRunner,
 
  private:
   // |UserRunner|
-  void Initialize(fuchsia::modular::auth::AccountPtr account, 
-                  fuchsia::modular::AppConfig user_shell,
-                  fuchsia::modular::AppConfig story_shell,
-                  fidl::InterfaceHandle<fuchsia::modular::auth::TokenProviderFactory>
-                      token_provider_factory,
-                  fidl::InterfaceHandle<fuchsia::modular::internal::UserContext>
-                      user_context,
-                  fidl::InterfaceRequest<fuchsia::ui::views_v1_token::ViewOwner>
-                      view_owner_request) override;
+  void Initialize(
+      fuchsia::modular::auth::AccountPtr account,
+      fuchsia::modular::AppConfig user_shell,
+      fuchsia::modular::AppConfig story_shell,
+      fidl::InterfaceHandle<fuchsia::modular::auth::TokenProviderFactory>
+          token_provider_factory,
+      fidl::InterfaceHandle<fuchsia::modular::internal::UserContext>
+          user_context,
+      fidl::InterfaceRequest<fuchsia::ui::views_v1_token::ViewOwner>
+          view_owner_request) override;
 
   // |UserRunner|
   void SwapUserShell(fuchsia::modular::AppConfig user_shell,
@@ -247,7 +249,9 @@ class UserRunnerImpl : fuchsia::modular::internal::UserRunner,
   // Given to the user shell so it can store its own data. These data are
   // shared between all user shells (so it's not private to the user shell
   // *app*).
-  std::unique_ptr<LinkImpl> user_shell_link_;
+  std::unique_ptr<StoryStorage> user_shell_storage_;
+  fidl::BindingSet<fuchsia::modular::Link, std::unique_ptr<LinkImpl>>
+      user_shell_link_bindings_;
 
   // For the Ledger Debug Dashboard
   std::unique_ptr<Scope> ledger_dashboard_scope_;

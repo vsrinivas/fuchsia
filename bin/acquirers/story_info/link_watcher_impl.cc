@@ -78,11 +78,14 @@ LinkWatcherImpl::LinkWatcherImpl(
       story_id_(story_id),
       link_path_(std::move(link_path)),
       link_watcher_binding_(this) {
-  fuchsia::modular::LinkPtr link;
   fidl::VectorPtr<fidl::StringPtr> module_path;
   fidl::Clone(link_path_.module_path, &module_path);
+  // We hold onto a LinkPtr for the lifetime of this LinkWatcherImpl so that
+  // our watcher handle stays alive. Incidentally, this also means that the
+  // observed link remains "active" in the FW forever.
+  // TODO(thatguy): Use the new PuppetMaster observation API. MI4-1084
   story_controller_->GetLink(std::move(module_path), link_path_.link_name,
-                             link.NewRequest());
+                             link_ptr_.NewRequest());
 
   story_value->CreateChildValue(link_node_writer_.NewRequest(),
                                 fuchsia::modular::ContextValueType::LINK);
@@ -92,7 +95,7 @@ LinkWatcherImpl::LinkWatcherImpl(
                                                    link_path_.link_name)
                                       .Build()));
 
-  link->Watch(link_watcher_binding_.NewBinding());
+  link_ptr_->Watch(link_watcher_binding_.NewBinding());
 
   // If the link becomes inactive, we stop watching it. It might still receive
   // updates from other devices, but nothing can tell us as it isn't kept in

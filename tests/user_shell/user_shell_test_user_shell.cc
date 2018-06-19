@@ -95,7 +95,7 @@ class StoryLinksWatcherImpl : fuchsia::modular::StoryLinksWatcher {
  private:
   // |fuchsia::modular::StoryLinksWatcher|
   void OnNewLink(fuchsia::modular::LinkPath data) override {
-    FXL_LOG(INFO) << "New fuchsia::modular::Link: " << data.link_name;
+    FXL_LOG(INFO) << "New Link: " << data.link_name;
   }
 
   fidl::Binding<fuchsia::modular::StoryLinksWatcher> binding_;
@@ -243,8 +243,7 @@ class TestApp
     TestStoryProvider_GetStoryInfo_Null();
   }
 
-  TestPoint get_story_info_null_{
-      "fuchsia::modular::StoryProvider.GetStoryInfo() is null"};
+  TestPoint get_story_info_null_{"StoryProvider.GetStoryInfo() is null"};
 
   void TestStoryProvider_GetStoryInfo_Null() {
     story_provider_->GetStoryInfo(
@@ -257,7 +256,7 @@ class TestApp
         });
   }
 
-  TestPoint get_link_{"fuchsia::modular::UserShellContext.GetLink()"};
+  TestPoint get_link_{"UserShellContext.GetLink()"};
 
   void TestUserShellContext_GetLink() {
     user_shell_context_->GetLink(user_shell_link_.NewRequest());
@@ -267,8 +266,7 @@ class TestApp
     });
   }
 
-  TestPoint previous_stories_{
-      "fuchsia::modular::StoryProvider.PreviousStories()"};
+  TestPoint previous_stories_{"StoryProvider.PreviousStories()"};
 
   void TestStoryProvider_PreviousStories() {
     story_provider_->PreviousStories(
@@ -278,15 +276,14 @@ class TestApp
         });
   }
 
-  TestPoint get_story_info_{"fuchsia::modular::StoryProvider.GetStoryInfo()"};
+  TestPoint get_story_info_{"StoryProvider.GetStoryInfo()"};
 
   void TestStoryProvider_GetStoryInfo(
       fidl::VectorPtr<fuchsia::modular::StoryInfo> stories) {
     if (stories->empty()) {
       get_story_info_.Pass();
     } else {
-      FXL_LOG(ERROR) << "fuchsia::modular::StoryProvider.GetStoryInfo() "
-                     << stories->size();
+      FXL_LOG(ERROR) << "StoryProvider.GetStoryInfo() " << stories->size();
       for (const auto& item : stories.get()) {
         FXL_LOG(INFO) << item.id;
       }
@@ -431,8 +428,7 @@ class TestApp
   void TestStory2_InfoAfterDeleteIsNull(fuchsia::modular::StoryInfoPtr info) {
     story2_info_after_delete_.Pass();
     if (info) {
-      modular::testing::Fail(
-          "fuchsia::modular::StoryInfo after DeleteStory() must return null.");
+      modular::testing::Fail("StoryInfo after DeleteStory() must return null.");
     }
 
     Signal(modular::testing::kTestShutdown);

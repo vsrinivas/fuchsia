@@ -84,9 +84,10 @@ constexpr char kCharsToEscape[] = ":/";
 //    second sub separator character.
 //
 constexpr char kSubSeparator[] = ":";
+
+std::string EncodeLinkPath(const fuchsia::modular::LinkPath& link_path);
 std::string EncodeModulePath(
     const fidl::VectorPtr<fidl::StringPtr>& module_path);
-std::string EncodeLinkPath(const fuchsia::modular::LinkPath& link_path);
 std::string EncodeModuleComponentNamespace(const std::string& story_id);
 
 // More notes:

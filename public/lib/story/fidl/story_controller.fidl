@@ -68,15 +68,7 @@ interface StoryController {
   // client as to the parent module or story runner might not be right yet.
   9: GetModuleController(vector<string> module_path, request<ModuleController> @request);
 
-  // Lists the active links in the story. Active links are those in memory with
-  // connections to modules and watchers.
-  //
-  // Link values and notifications for changes of the link values can be
-  // obtained through GetLink() and by registration of a LinkWatcher on the
-  // Link.
-  //
-  // Notifications for changes to this list are supplied through
-  // StoryLinksWatcher.OnNewLink(), if a watcher is supplied in the call.
+  // Deprecated: MI4-1084
   10: GetActiveLinks(StoryLinksWatcher? watcher) -> (vector<LinkPath> link_data);
 
   // Gets a connection to the specified link in the story. Links are identified

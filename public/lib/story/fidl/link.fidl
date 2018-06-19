@@ -85,27 +85,8 @@ interface Link {
   // handle. The Notify() callback method will be immediately invoked with the
   // value in the Link, even if it's empty.
   //
-  // The LinkWatcher connection survives the Link connection it was registered
-  // on. However, once a Link instance has no connections it is deleted and its
-  // watchers disconnected. There are two modes of use of a LinkWatcher:
-  //
-  // 1. For a client to obtain updates from a Link instance that is used by a
-  //    client, the client must retain both the Link connection and the
-  //    LinkWatcher connection, and reset both once the Link is no longer used.
-  //    This mode is most appropriate for Modules.
-  //
-  // 2. For a client to obtain updates from a Link instance until it's no longer
-  //    used by any other client, and be notified of that situation (by the
-  //    LinkWatcher connection being closed), the client must not retain the
-  //    Link connection and retain only the LinkWatcher connection. This mode is
-  //    most appropriate for Agents that use the
-  //    StoryController.GetActiveLinks() inspection API to keep track of
-  //    activity in a story.
-  //
-  // With use 2, there obviously will be no updates to the Link value made
-  // through the Link connection the LinkWatcher was registered on, so Watch()
-  // and WatchAll(), below, have the same effect.
-  //
+  // The LinkWatcher connection will be closed if the owning Link handle closed.
+
   // All connections to a Link and LinkWatcher are closed once the story the
   // link belongs to is stopped.
   6: Watch(LinkWatcher watcher);

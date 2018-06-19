@@ -212,13 +212,11 @@ TEST_F(StoryStorageTest, UpdateModuleData) {
 }
 
 namespace {
-
 LinkPath MakeLinkPath(const std::string& name) {
   LinkPath path;
   path.link_name = name;
   return path;
 }
-
 }  // namespace
 
 TEST_F(StoryStorageTest, GetLink_Null) {
@@ -246,7 +244,7 @@ TEST_F(StoryStorageTest, UpdateLinkValue) {
   storage
       ->UpdateLinkValue(MakeLinkPath("link"),
                         [](fidl::StringPtr* current_value) {
-                          EXPECT_EQ("null", *current_value);
+                          EXPECT_TRUE(current_value->is_null());
                           *current_value = "10";
                         },
                         &context)

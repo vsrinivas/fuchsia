@@ -29,7 +29,7 @@ class LinkWatcherImpl : fuchsia::modular::LinkWatcher {
   ~LinkWatcherImpl() override;
 
  private:
-  // |fuchsia::modular::LinkWatcher|
+  // |LinkWatcher|
   void Notify(fidl::StringPtr json) override;
 
   void ProcessNewValue(const fidl::StringPtr& json);
@@ -62,6 +62,7 @@ class LinkWatcherImpl : fuchsia::modular::LinkWatcher {
   std::map<fidl::StringPtr, fuchsia::modular::ContextValueWriterPtr>
       topic_node_writers_;
 
+  fuchsia::modular::LinkPtr link_ptr_;
   fidl::Binding<fuchsia::modular::LinkWatcher> link_watcher_binding_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(LinkWatcherImpl);

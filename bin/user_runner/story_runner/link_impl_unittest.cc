@@ -43,26 +43,18 @@ class TestLinkWatcher : public LinkWatcher {
 
 class LinkImplTest : public testing::TestWithLedger {
  public:
-  LinkPtr MakeLink(std::string ledger_page, std::string name,
-                   std::string initial_data = "") {
+  std::unique_ptr<StoryStorage> MakeStorage(std::string ledger_page) {
     auto page_id = MakePageId(ledger_page);
+    return std::make_unique<StoryStorage>(ledger_client(), page_id);
+  }
+
+  LinkPtr MakeLink(StoryStorage* const storage, std::string name) {
     LinkPath link_path;
     link_path.link_name = name;
 
-    CreateLinkInfoPtr create_link_info;
-    if (!initial_data.empty()) {
-      create_link_info = CreateLinkInfo::New();
-      create_link_info->initial_data = initial_data;
-      // |create_link_info->allowed_types| is already null.
-    }
-
     LinkPtr ptr;
-    auto impl =
-        std::make_unique<LinkImpl>(ledger_client(), CloneStruct(page_id),
-                                   link_path, std::move(create_link_info));
-    impl->Connect(ptr.NewRequest());
-    impls_.push_back(std::move(impl));
-
+    auto impl = std::make_unique<LinkImpl>(storage, std::move(link_path));
+    links_.AddBinding(std::move(impl), ptr.NewRequest());
     return ptr;
   }
 
@@ -80,14 +72,36 @@ class LinkImplTest : public testing::TestWithLedger {
     link->WatchAll(std::move(ptr));
   }
 
-  std::vector<std::unique_ptr<LinkImpl>> impls_;
+  fidl::BindingSet<Link, std::unique_ptr<LinkImpl>> links_;
   fidl::BindingSet<LinkWatcher, std::unique_ptr<TestLinkWatcher>> watchers_;
 };
+
+TEST_F(LinkImplTest, GetNull) {
+  auto storage = MakeStorage("page");
+  auto link = MakeLink(storage.get(), "foo");
+
+  bool get_done{};
+  link->Get(nullptr /* path */, [&](fidl::StringPtr value) {
+    get_done = true;
+    EXPECT_EQ("null", value);
+  });
+  EXPECT_TRUE(RunLoopUntilWithTimeout([&] { return get_done; }));
+
+  get_done = false;
+  fidl::VectorPtr<fidl::StringPtr> path;
+  path->push_back("one");
+  link->Get(std::move(path), [&](fidl::StringPtr value) {
+    get_done = true;
+    EXPECT_EQ("null", value);
+  });
+  EXPECT_TRUE(RunLoopUntilWithTimeout([&] { return get_done; }));
+}
 
 TEST_F(LinkImplTest, WatchDefaultBehavior) {
   // When we ask to watch a link, we should be notified immediately (on the
   // next iteration of the event loop) of its current value.
-  auto link = MakeLink("page", "mylink");
+  auto storage = MakeStorage("page");
+  auto link = MakeLink(storage.get(), "mylink");
 
   int notified_count{0};
   Watch(link.get(), [&](const fidl::StringPtr& value) {
@@ -106,31 +120,9 @@ TEST_F(LinkImplTest, WatchDefaultBehavior) {
   EXPECT_TRUE(RunLoopUntilWithTimeout([&] { return notified_count == 2; }));
 }
 
-TEST_F(LinkImplTest, InitialValue) {
-  // When constructing a LinkImpl with an initial value, we should see it
-  // populated, but only the first time: if the link has a value already
-  // in the ledger, we should not change it.
-  auto link = MakeLink("page", "mylink", "1337");
-
-  int notified_count{0};
-  Watch(link.get(), [&](const fidl::StringPtr& value) {
-    ++notified_count;
-    EXPECT_EQ("1337", value);
-  });
-  EXPECT_TRUE(RunLoopUntilWithTimeout([&] { return notified_count == 1; }));
-
-  // We don't expect to see a change to "10".
-  auto same_link = MakeLink("page", "mylink", "10");
-  bool same_link_got_value{};
-  Watch(same_link.get(), [&](const fidl::StringPtr& value) {
-    same_link_got_value = true;
-    EXPECT_EQ("1337", value);
-  });
-  EXPECT_TRUE(RunLoopUntilWithTimeout([&] { return same_link_got_value; }));
-}
-
 TEST_F(LinkImplTest, SetAndWatch) {
-  auto link = MakeLink("page", "mylink");
+  auto storage = MakeStorage("page");
+  auto link = MakeLink(storage.get(), "mylink");
 
   // Watch for our own changes, which we shouldn't see. The initial value
   // ("null"), is sent immediately, though.
@@ -156,7 +148,8 @@ TEST_F(LinkImplTest, SetAndWatch) {
 }
 
 TEST_F(LinkImplTest, SetAndWatchAndGet) {
-  auto link = MakeLink("page", "mylink");
+  auto storage = MakeStorage("page");
+  auto link = MakeLink(storage.get(), "mylink");
 
   fidl::StringPtr notified_value;
   int notified_count{0};
@@ -194,7 +187,8 @@ TEST_F(LinkImplTest, SetAndWatchAndGet) {
 }
 
 TEST_F(LinkImplTest, Erase) {
-  auto link = MakeLink("page", "mylink");
+  auto storage = MakeStorage("page");
+  auto link = MakeLink(storage.get(), "mylink");
 
   link->Set(nullptr, R"({
     "one": 1,
@@ -214,7 +208,8 @@ TEST_F(LinkImplTest, Erase) {
 }
 
 TEST_F(LinkImplTest, SetAndGetEntity) {
-  auto link = MakeLink("page", "mylink");
+  auto storage = MakeStorage("page");
+  auto link = MakeLink(storage.get(), "mylink");
 
   link->SetEntity("ref");
   bool done{};

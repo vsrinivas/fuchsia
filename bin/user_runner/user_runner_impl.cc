@@ -733,18 +733,17 @@ void UserRunnerImpl::GetIntelligenceServices(
 
 void UserRunnerImpl::GetLink(
     fidl::InterfaceRequest<fuchsia::modular::Link> request) {
-  if (user_shell_link_) {
-    user_shell_link_->Connect(std::move(request));
-    return;
+  if (!user_shell_storage_) {
+    user_shell_storage_ = std::make_unique<StoryStorage>(
+        ledger_client_.get(), fuchsia::ledger::PageId());
   }
 
   fuchsia::modular::LinkPath link_path;
   link_path.module_path.resize(0);
   link_path.link_name = kUserShellLinkName;
-  user_shell_link_ = std::make_unique<LinkImpl>(ledger_client_.get(),
-                                                fuchsia::ledger::PageId(),
-                                                std::move(link_path), nullptr);
-  user_shell_link_->Connect(std::move(request));
+  auto impl = std::make_unique<LinkImpl>(user_shell_storage_.get(),
+                                         std::move(link_path));
+  user_shell_link_bindings_.AddBinding(std::move(impl), std::move(request));
 }
 
 void UserRunnerImpl::GetPresentation(

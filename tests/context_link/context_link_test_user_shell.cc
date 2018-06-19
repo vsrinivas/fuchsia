@@ -104,9 +104,8 @@ class TestApp
         intelligence_services.NewRequest());
     intelligence_services->GetContextReader(context_reader_.NewRequest());
     context_listener_.Listen(context_reader_.get());
-    context_reader_.set_error_handler([] {
-      FXL_LOG(ERROR) << "Lost fuchsia::modular::ContextReader connection.";
-    });
+    context_reader_.set_error_handler(
+        [] { FXL_LOG(ERROR) << "Lost ContextReader connection."; });
 
     CreateStory();
   }
@@ -122,7 +121,6 @@ class TestApp
   }
 
   TestPoint start_story_enter_{"StartStory() Enter"};
-  TestPoint start_story_exit_{"StartStory() Exit"};
 
   void StartStory() {
     start_story_enter_.Pass();
@@ -137,8 +135,6 @@ class TestApp
     // Start and show the new story.
     fidl::InterfaceHandle<fuchsia::ui::views_v1_token::ViewOwner> story_view;
     story_controller_->Start(story_view.NewRequest());
-
-    start_story_exit_.Pass();
   }
 
   // NOTE(mesch): We would like to test that changes of value are also picked up

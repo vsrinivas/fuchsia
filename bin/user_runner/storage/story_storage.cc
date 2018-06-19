@@ -178,7 +178,7 @@ class ReadLinkDataCall
       std::string value_as_string;
       switch (status) {
         case fuchsia::ledger::Status::KEY_NOT_FOUND:
-          value_ = kJsonNull;
+          // Leave value_ as a null-initialized StringPtr.
           return;
         case fuchsia::ledger::Status::OK:
           if (!value) {
@@ -222,7 +222,16 @@ FuturePtr<StoryStorage::Status, fidl::StringPtr> StoryStorage::GetLinkValue(
   auto ret = Future<Status, fidl::StringPtr>::Create(
       "StoryStorage::GetLinkValue " + key);
   operation_queue_.Add(new ReadLinkDataCall(this, key, ret->Completer()));
-  return ret;
+  // We use AsyncMap here, even though we could semantically use Map, because
+  // we need to return >1 value and only AsyncMap lets you do that.
+  return ret->AsyncMap([](StoryStorage::Status status, fidl::StringPtr value) {
+    if (value.is_null()) {
+      value = kJsonNull;
+    }
+    return Future<StoryStorage::Status, fidl::StringPtr>::CreateCompleted(
+        "StoryStorage.GetLinkValue.AsyncMap", std::move(status),
+        std::move(value));
+  });
 }
 
 namespace {
@@ -245,8 +254,8 @@ class WriteLinkDataCall : public Operation<StoryStorage::Status> {
                               [this, flow](fuchsia::ledger::Status status) {
                                 if (status != fuchsia::ledger::Status::OK) {
                                   FXL_LOG(ERROR)
-                                      << "StoryStorage.UpdateLinkValue " << key_
-                                      << " "
+                                      << "StoryStorage.WriteLinkDataCall "
+                                      << key_ << " "
                                       << " Page.Put() " << status;
                                   status_ = StoryStorage::Status::LEDGER_ERROR;
                                 }
@@ -298,13 +307,6 @@ class UpdateLinkCall : public Operation<StoryStorage::Status, fidl::StringPtr> {
   void Mutate(FlowToken flow, fidl::StringPtr current_value) {
     new_value_ = current_value;
     mutate_fn_(&new_value_);
-    if (new_value_ == current_value) {
-      // Set the returned new value to null so the caller knows we succeeded
-      // but didn't write anything.
-      new_value_ = nullptr;
-      return;
-    }
-
     rapidjson::Document doc;
     doc.Parse(new_value_);
     if (new_value_.is_null() || doc.HasParseError()) {
@@ -313,6 +315,13 @@ class UpdateLinkCall : public Operation<StoryStorage::Status, fidl::StringPtr> {
                        << " invalid json: " << doc.GetParseError();
       }
       status_ = StoryStorage::Status::LINK_INVALID_JSON;
+      return;
+    }
+
+    if (new_value_ == current_value) {
+      // Set the returned new value to null so the caller knows we succeeded
+      // but didn't write anything.
+      new_value_ = nullptr;
       return;
     }
 
@@ -368,7 +377,7 @@ FuturePtr<StoryStorage::Status> StoryStorage::UpdateLinkValue(
       did_update->Completer()));
 
   // We can't chain this call to the parent future chain because we do
-  // not want it to happen at all in the cases of the above errors.
+  // not want it to happen at all in the case of errors.
   return did_update->WeakMap(
       GetWeakPtr(), [this, key, context](StoryStorage::Status status,
                                          fidl::StringPtr new_value) {
@@ -380,6 +389,17 @@ FuturePtr<StoryStorage::Status> StoryStorage::UpdateLinkValue(
 
         return status;
       });
+}
+
+FuturePtr<> StoryStorage::Sync() {
+  auto ret = Future<>::Create("StoryStorage::Sync.ret");
+  operation_queue_.Add(NewCallbackOperation("StoryStorage::Sync",
+                                            [](OperationBase* op) {
+                                              return Future<>::CreateCompleted(
+                                                  "StoryStorage::Sync");
+                                            },
+                                            ret->Completer()));
+  return ret;
 }
 
 void StoryStorage::OnPageChange(const std::string& key,
@@ -410,7 +430,13 @@ void StoryStorage::OnPageChange(const std::string& key,
       on_module_data_updated_(std::move(*module_data));
     }
   } else {
-    FXL_LOG(FATAL) << "Unexpected StoryStorage Ledger key prefix: " << key;
+    // TODO(thatguy): We store some Link data on the root page (where StoryData
+    // is stored) for the user shell to make use of. This means we get notified
+    // in that instance of changes we don't care about.
+    //
+    // Consider putting all story-scoped data under a shared prefix, and use
+    // that when initializing the PageClient.
+    FXL_LOG(ERROR) << "Unexpected StoryStorage Ledger key prefix: " << key;
   }
 }
 

@@ -59,12 +59,10 @@ StoryWatcherImpl::StoryWatcherImpl(
 
 StoryWatcherImpl::~StoryWatcherImpl() = default;
 
-// |fuchsia::modular::StoryWatcher|
 void StoryWatcherImpl::OnStateChange(fuchsia::modular::StoryState new_state) {
   // TODO(thatguy): Add recording of state to fuchsia::modular::StoryMetadata.
 }
 
-// |fuchsia::modular::StoryWatcher|
 void StoryWatcherImpl::OnModuleAdded(fuchsia::modular::ModuleData module_data) {
   fuchsia::modular::ContextValueWriterPtr module_value;
   context_value_->CreateChildValue(module_value.NewRequest(),
@@ -80,7 +78,6 @@ void StoryWatcherImpl::OnModuleAdded(fuchsia::modular::ModuleData module_data) {
   module_values_.emplace(path, std::move(module_value));
 }
 
-// |fuchsia::modular::StoryLinksWatcher|
 void StoryWatcherImpl::OnNewLink(fuchsia::modular::LinkPath link_path) {
   WatchLink(std::move(link_path));
 }
