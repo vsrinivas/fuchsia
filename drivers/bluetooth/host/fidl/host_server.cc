@@ -45,10 +45,11 @@ void HostServer::GetInfo(GetInfoCallback callback) {
 
 void HostServer::SetLocalName(::fidl::StringPtr local_name,
                               SetLocalNameCallback callback) {
-  adapter()->SetLocalName(local_name, [self = weak_ptr_factory_.GetWeakPtr(),
-                                       callback = std::move(callback)](auto status) {
-    callback(fidl_helpers::StatusToFidl(status, "Can't Set Local Name"));
-  });
+  adapter()->SetLocalName(
+      local_name, [self = weak_ptr_factory_.GetWeakPtr(),
+                   callback = std::move(callback)](auto status) {
+        callback(fidl_helpers::StatusToFidl(status, "Can't Set Local Name"));
+      });
 }
 
 void HostServer::StartDiscovery(StartDiscoveryCallback callback) {
@@ -65,60 +66,62 @@ void HostServer::StartDiscovery(StartDiscoveryCallback callback) {
   requesting_discovery_ = true;
   auto bredr_manager = adapter()->bredr_discovery_manager();
   // TODO(jamuraa): start these in parallel instead of sequence
-  bredr_manager->RequestDiscovery([self = weak_ptr_factory_.GetWeakPtr(),
-                                   bredr_manager, callback = std::move(callback)](
-                                      btlib::hci::Status status, auto session) mutable {
-    if (!self) {
-      callback(
-          fidl_helpers::NewFidlError(ErrorCode::FAILED, "Adapter Shutdown"));
-      return;
-    }
+  bredr_manager->RequestDiscovery(
+      [self = weak_ptr_factory_.GetWeakPtr(), bredr_manager,
+       callback = std::move(callback)](btlib::hci::Status status,
+                                       auto session) mutable {
+        if (!self) {
+          callback(fidl_helpers::NewFidlError(ErrorCode::FAILED,
+                                              "Adapter Shutdown"));
+          return;
+        }
 
-    if (!status || !session) {
-      FXL_VLOG(1) << "Failed to start BR/EDR discovery session";
-      callback(fidl_helpers::StatusToFidl(
-          status, "Failed to start BR/EDR discovery session"));
-      self->requesting_discovery_ = false;
-      return;
-    }
+        if (!status || !session) {
+          FXL_VLOG(1) << "Failed to start BR/EDR discovery session";
+          callback(fidl_helpers::StatusToFidl(
+              status, "Failed to start BR/EDR discovery session"));
+          self->requesting_discovery_ = false;
+          return;
+        }
 
-    self->bredr_discovery_session_ = std::move(session);
+        self->bredr_discovery_session_ = std::move(session);
 
-    auto le_manager = self->adapter()->le_discovery_manager();
-    le_manager->StartDiscovery([self, callback = std::move(callback)](auto session) {
-      // End the new session if this AdapterServer got destroyed in the mean
-      // time (e.g. because the client disconnected).
-      if (!self) {
-        callback(
-            fidl_helpers::NewFidlError(ErrorCode::FAILED, "Adapter Shutdown"));
-        return;
-      }
+        auto le_manager = self->adapter()->le_discovery_manager();
+        le_manager->StartDiscovery(
+            [self, callback = std::move(callback)](auto session) {
+              // End the new session if this AdapterServer got destroyed in the
+              // mean time (e.g. because the client disconnected).
+              if (!self) {
+                callback(fidl_helpers::NewFidlError(ErrorCode::FAILED,
+                                                    "Adapter Shutdown"));
+                return;
+              }
 
-      if (!session) {
-        FXL_VLOG(1) << "Failed to start LE discovery session";
-        callback(fidl_helpers::NewFidlError(
-            ErrorCode::FAILED, "Failed to start LE discovery session"));
-        self->bredr_discovery_session_ = nullptr;
-        self->requesting_discovery_ = false;
-        return;
-      }
+              if (!session) {
+                FXL_VLOG(1) << "Failed to start LE discovery session";
+                callback(fidl_helpers::NewFidlError(
+                    ErrorCode::FAILED, "Failed to start LE discovery session"));
+                self->bredr_discovery_session_ = nullptr;
+                self->requesting_discovery_ = false;
+                return;
+              }
 
-      // Set up a general-discovery filter for connectable devices.
-      session->filter()->set_connectable(true);
-      session->filter()->SetGeneralDiscoveryFlags();
+              // Set up a general-discovery filter for connectable devices.
+              session->filter()->set_connectable(true);
+              session->filter()->SetGeneralDiscoveryFlags();
 
-      self->le_discovery_session_ = std::move(session);
-      self->requesting_discovery_ = false;
+              self->le_discovery_session_ = std::move(session);
+              self->requesting_discovery_ = false;
 
-      // Send the adapter state update.
-      AdapterState state;
-      state.discovering = Bool::New();
-      state.discovering->value = true;
-      self->binding()->events().OnHostStateChanged(std::move(state));
+              // Send the adapter state update.
+              AdapterState state;
+              state.discovering = Bool::New();
+              state.discovering->value = true;
+              self->binding()->events().OnHostStateChanged(std::move(state));
 
-      callback(Status());
-    });
-  });
+              callback(Status());
+            });
+      });
 }
 
 void HostServer::StopDiscovery(StopDiscoveryCallback callback) {

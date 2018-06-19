@@ -130,8 +130,7 @@ class LowEnergyConnection {
 }  // namespace internal
 
 LowEnergyConnectionRef::LowEnergyConnectionRef(
-    const std::string& device_id,
-    hci::ConnectionHandle handle,
+    const std::string& device_id, hci::ConnectionHandle handle,
     fxl::WeakPtr<LowEnergyConnectionManager> manager)
     : active_(true), device_id_(device_id), handle_(handle), manager_(manager) {
   FXL_DCHECK(!device_id_.empty());
@@ -173,8 +172,7 @@ LowEnergyConnectionManager::PendingRequestData::PendingRequestData(
 }
 
 void LowEnergyConnectionManager::PendingRequestData::NotifyCallbacks(
-    hci::Status status,
-    const RefFunc& func) {
+    hci::Status status, const RefFunc& func) {
   FXL_DCHECK(!callbacks_.empty());
   for (const auto& callback : callbacks_) {
     callback(status, func());
@@ -182,10 +180,8 @@ void LowEnergyConnectionManager::PendingRequestData::NotifyCallbacks(
 }
 
 LowEnergyConnectionManager::LowEnergyConnectionManager(
-    fxl::RefPtr<hci::Transport> hci,
-    hci::LowEnergyConnector* connector,
-    RemoteDeviceCache* device_cache,
-    fbl::RefPtr<l2cap::L2CAP> l2cap,
+    fxl::RefPtr<hci::Transport> hci, hci::LowEnergyConnector* connector,
+    RemoteDeviceCache* device_cache, fbl::RefPtr<l2cap::L2CAP> l2cap,
     fbl::RefPtr<gatt::GATT> gatt)
     : hci_(hci),
       request_timeout_ms_(kLECreateConnectionTimeoutMs),
@@ -299,20 +295,19 @@ bool LowEnergyConnectionManager::Connect(const std::string& device_identifier,
   // succeed.
   auto conn_ref = AddConnectionRef(device_identifier);
   if (conn_ref) {
-    async::PostTask(dispatcher_,
-        [conn_ref = std::move(conn_ref),
-                           callback = std::move(callback)]() mutable {
-          // Do not report success if the link has been disconnected (e.g. via
-          // Disconnect() or other circumstances).
-          if (!conn_ref->active()) {
-            FXL_VLOG(1) << "gap: LowEnergyConnectionManager: Link "
-                           "disconnected, ref is inactive";
+    async::PostTask(dispatcher_, [conn_ref = std::move(conn_ref),
+                                  callback = std::move(callback)]() mutable {
+      // Do not report success if the link has been disconnected (e.g. via
+      // Disconnect() or other circumstances).
+      if (!conn_ref->active()) {
+        FXL_VLOG(1) << "gap: LowEnergyConnectionManager: Link "
+                       "disconnected, ref is inactive";
 
-            callback(hci::Status(common::HostError::kFailed), nullptr);
-          } else {
-            callback(hci::Status(), std::move(conn_ref));
-          }
-        });
+        callback(hci::Status(common::HostError::kFailed), nullptr);
+      } else {
+        callback(hci::Status(), std::move(conn_ref));
+      }
+    });
 
     return true;
   }
@@ -465,8 +460,7 @@ void LowEnergyConnectionManager::RequestCreateConnection(RemoteDevice* peer) {
 }
 
 LowEnergyConnectionRefPtr LowEnergyConnectionManager::InitializeConnection(
-    const std::string& device_id,
-    std::unique_ptr<hci::Connection> link) {
+    const std::string& device_id, std::unique_ptr<hci::Connection> link) {
   FXL_DCHECK(link);
   FXL_DCHECK(link->ll_type() == hci::Connection::LinkType::kLE);
 
@@ -534,8 +528,7 @@ LowEnergyConnectionRefPtr LowEnergyConnectionManager::AddConnectionRef(
 }
 
 void LowEnergyConnectionManager::CleanUpConnection(
-    std::unique_ptr<internal::LowEnergyConnection> conn,
-    bool close_link) {
+    std::unique_ptr<internal::LowEnergyConnection> conn, bool close_link) {
   FXL_DCHECK(conn);
 
   // Mark the peer device as no longer connected.
@@ -616,8 +609,7 @@ RemoteDevice* LowEnergyConnectionManager::UpdateRemoteDeviceWithLink(
 }
 
 void LowEnergyConnectionManager::OnConnectResult(
-    const std::string& device_identifier,
-    hci::Status status,
+    const std::string& device_identifier, hci::Status status,
     hci::ConnectionPtr link) {
   FXL_DCHECK(connections_.find(device_identifier) == connections_.end());
 
@@ -749,8 +741,7 @@ void LowEnergyConnectionManager::OnLEConnectionUpdateComplete(
 }
 
 void LowEnergyConnectionManager::OnNewLEConnectionParams(
-    const std::string& device_identifier,
-    hci::ConnectionHandle handle,
+    const std::string& device_identifier, hci::ConnectionHandle handle,
     const hci::LEPreferredConnectionParameters& params) {
   FXL_VLOG(1) << fxl::StringPrintf(
       "gap: LE conn. params. received (handle: 0x%04x)", handle);

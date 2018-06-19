@@ -63,9 +63,7 @@ void LowEnergyDiscoverySession::NotifyError() {
 }
 
 LowEnergyDiscoveryManager::LowEnergyDiscoveryManager(
-    Mode mode,
-    fxl::RefPtr<hci::Transport> hci,
-    RemoteDeviceCache* device_cache)
+    Mode mode, fxl::RefPtr<hci::Transport> hci, RemoteDeviceCache* device_cache)
     : dispatcher_(async_get_default()),
       device_cache_(device_cache),
       weak_ptr_factory_(this) {
@@ -150,8 +148,7 @@ void LowEnergyDiscoveryManager::RemoveSession(
 }
 
 void LowEnergyDiscoveryManager::OnDeviceFound(
-    const hci::LowEnergyScanResult& result,
-    const common::ByteBuffer& data) {
+    const hci::LowEnergyScanResult& result, const common::ByteBuffer& data) {
   FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
 
   auto device = device_cache_->FindDeviceByAddress(result.address);
