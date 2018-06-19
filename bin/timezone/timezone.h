@@ -11,11 +11,11 @@
 #include "lib/fidl/cpp/binding_set.h"
 #include "third_party/icu/source/common/unicode/strenum.h"
 
-namespace funcshia {
+namespace fucshia {
 namespace sys {
 class StartupContext;
 }
-}
+}  // namespace fucshia
 
 namespace time_zone {
 
@@ -37,7 +37,8 @@ class TimezoneImpl : public fuchsia::timezone::Timezone {
   void SetTimezone(fidl::StringPtr timezone_id,
                    SetTimezoneCallback callback) override;
   void GetTimezoneId(GetTimezoneIdCallback callback) override;
-  void Watch(fidl::InterfaceHandle<fuchsia::timezone::TimezoneWatcher> watcher) override;
+  void Watch(fidl::InterfaceHandle<fuchsia::timezone::TimezoneWatcher> watcher)
+      override;
 
   void AddBinding(fidl::InterfaceRequest<fuchsia::timezone::Timezone> request);
 

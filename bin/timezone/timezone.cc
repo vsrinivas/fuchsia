@@ -20,10 +20,10 @@
 #include "third_party/icu/source/common/unicode/udata.h"
 #include "third_party/icu/source/i18n/unicode/timezone.h"
 
-static constexpr char kTzIdPath[] = "/data/tz_id";
-static constexpr char kIcuDataPath[] = "/pkg/data/icudtl.dat";
-static constexpr char kDefaultTimezone[] = "UTC";
-static constexpr int32_t kMillisecondsInMinute = 60000;
+constexpr char kTzIdPath[] = "/data/tz_id";
+constexpr char kIcuDataPath[] = "/pkg/data/icudtl.dat";
+constexpr char kDefaultTimezone[] = "UTC";
+constexpr int32_t kMillisecondsInMinute = 60000;
 
 namespace time_zone {
 
@@ -57,7 +57,6 @@ bool TimezoneImpl::Init() {
     return false;
   }
 
-  FXL_LOG(INFO) << "Time zone data initialized successfully.";
   return true;
 }
 
@@ -72,15 +71,12 @@ void TimezoneImpl::GetTimezoneOffsetMinutes(
   std::unique_ptr<icu::TimeZone> timezone(
       icu::TimeZone::createTimeZone(timezone_id.get().c_str()));
   int32_t local_offset = 0, dst_offset = 0;
-  UErrorCode error;
+  UErrorCode error = U_ZERO_ERROR;
   // Local time is set to false, and local_offset/dst_offset/error are mutated
   // via non-const references.
   timezone->getOffset(static_cast<UDate>(milliseconds_since_epoch), false,
                       local_offset, dst_offset, error);
   if (error != U_ZERO_ERROR) {
-    // For an as-of-yet-unknown reason, this code simply existing appears to
-    // prevent [SY-516] from happening. Without it, getting the offset fails
-    // consistently.
     icu::ErrorCode icuError;
     icuError.set(error);
     FXL_LOG(ERROR) << "Unable to get correct offset: error code " << error
