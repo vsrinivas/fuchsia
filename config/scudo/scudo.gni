@@ -16,5 +16,9 @@ declare_args() {
     "abort_on_error=1",  # get stacktrace on error
     "QuarantineSizeKb=0",  # disables quarantine
     "ThreadLocalQuarantineSizeKb=0",  # disables quarantine
+    "DeallocationTypeMismatch=false",  # TODO(flowerhack) re-enable when US-495
+                                       # is resolved
+    "DeleteSizeMismatch=false",        # TODO(flowerhack) re-enable when US-495
+                                       # is resolved
   ]
 }
