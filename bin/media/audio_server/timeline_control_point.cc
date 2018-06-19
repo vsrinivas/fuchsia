@@ -148,7 +148,8 @@ void TimelineControlPoint::SetProgramRange(uint64_t program, int64_t min_pts,
 
 void TimelineControlPoint::Prime(PrimeCallback callback) {
   if (prime_requested_callback_) {
-    prime_requested_callback_([this, callback = std::move(callback)]() { callback(); });
+    prime_requested_callback_(
+        [this, callback = std::move(callback)]() { callback(); });
   } else {
     callback();
   }
@@ -221,9 +222,10 @@ void TimelineControlPoint::ClearPendingTimelineFunction(bool completed) {
   pending_timeline_function_ = TimelineFunction(
       fuchsia::media::kUnspecifiedTime, fuchsia::media::kUnspecifiedTime, 0, 1);
   if (set_timeline_transform_callback_) {
-    SetTimelineTransformCallback callback = std::move(set_timeline_transform_callback_);
-    async::PostTask(async_,
-                    [this, callback = std::move(callback), completed]() { callback(completed); });
+    SetTimelineTransformCallback callback =
+        std::move(set_timeline_transform_callback_);
+    async::PostTask(async_, [this, callback = std::move(callback),
+                             completed]() { callback(completed); });
   }
 }
 

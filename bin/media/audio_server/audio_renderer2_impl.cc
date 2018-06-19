@@ -404,9 +404,9 @@ void AudioRenderer2Impl::SendPacket(fuchsia::media::AudioPacket packet,
   start_pts &= mask;
 
   // Create the packet.
-  auto packet_ref = fbl::AdoptRef<AudioPacketRef>(
-      new AudioPacketRefV2(payload_buffer_, std::move(callback), std::move(packet), owner_,
-                           frame_count << kPtsFractionalBits, start_pts));
+  auto packet_ref = fbl::AdoptRef<AudioPacketRef>(new AudioPacketRefV2(
+      payload_buffer_, std::move(callback), std::move(packet), owner_,
+      frame_count << kPtsFractionalBits, start_pts));
 
   // The end pts is the value we will use for the next packet's start PTS, if
   // the user does not provide an explicit PTS.
