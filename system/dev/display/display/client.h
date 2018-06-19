@@ -104,7 +104,7 @@ private:
     fbl::unique_ptr<cursor_info_t[]> cursor_infos_;
     uint32_t cursor_info_count_;
 
-    bool mode_change_ = false;
+    bool display_config_change_ = false;
 
     friend Client;
     friend ClientProxy;
@@ -149,6 +149,9 @@ private:
                             fidl::Builder* resp_builder, const fidl_type_t** resp_table);
     void HandleSetDisplayMode(const fuchsia_display_ControllerSetDisplayModeRequest* req,
                               fidl::Builder* resp_builder, const fidl_type_t** resp_table);
+    void HandleSetDisplayColorConversion(
+            const fuchsia_display_ControllerSetDisplayColorConversionRequest* req,
+            fidl::Builder* resp_builder, const fidl_type_t** resp_table);
     void HandleSetDisplayLayers(const fuchsia_display_ControllerSetDisplayLayersRequest* req,
                                 fidl::Builder* resp_builder, const fidl_type_t** resp_table);
     void HandleSetLayerPrimaryConfig(

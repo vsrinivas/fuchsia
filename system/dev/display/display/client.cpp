@@ -37,6 +37,7 @@ zx_status_t decode_message(fidl::Message* msg) {
     SELECT_TABLE_CASE(fuchsia_display_ControllerCreateLayer);
     SELECT_TABLE_CASE(fuchsia_display_ControllerDestroyLayer);
     SELECT_TABLE_CASE(fuchsia_display_ControllerSetDisplayMode);
+    SELECT_TABLE_CASE(fuchsia_display_ControllerSetDisplayColorConversion);
     SELECT_TABLE_CASE(fuchsia_display_ControllerSetDisplayLayers);
     SELECT_TABLE_CASE(fuchsia_display_ControllerSetLayerPrimaryConfig);
     SELECT_TABLE_CASE(fuchsia_display_ControllerSetLayerPrimaryPosition);
@@ -166,6 +167,7 @@ void Client::HandleControllerApi(async_t* async, async::WaitBase* self,
     HANDLE_REQUEST_CASE(CreateLayer);
     HANDLE_REQUEST_CASE(DestroyLayer);
     HANDLE_REQUEST_CASE(SetDisplayMode);
+    HANDLE_REQUEST_CASE(SetDisplayColorConversion);
     HANDLE_REQUEST_CASE(SetDisplayLayers);
     HANDLE_REQUEST_CASE(SetLayerPrimaryConfig);
     HANDLE_REQUEST_CASE(SetLayerPrimaryPosition);
@@ -399,7 +401,7 @@ void Client::HandleSetDisplayMode(const fuchsia_display_ControllerSetDisplayMode
                     && calculate_refresh_rate_e2(*timings) == req->mode.refresh_rate_e2) {
                 populate_display_mode(*timings, &config->pending_.mode);
                 pending_config_valid_ = false;
-                config->mode_change_ = true;
+                config->display_config_change_ = true;
                 return;
             }
         }
@@ -409,6 +411,37 @@ void Client::HandleSetDisplayMode(const fuchsia_display_ControllerSetDisplayMode
     }
 
     TearDown();
+}
+
+void Client::HandleSetDisplayColorConversion(
+        const fuchsia_display_ControllerSetDisplayColorConversionRequest* req,
+        fidl::Builder* resp_builder, const fidl_type_t** resp_table) {
+    auto config = configs_.find(req->display_id);
+    if (!config.IsValid()) {
+        return;
+    }
+
+    config->pending_.cc_flags = 0;
+    if (!isnan(req->preoffsets[0])) {
+        config->pending_.cc_flags |= COLOR_CONVERSION_PREOFFSET;
+        memcpy(config->pending_.cc_preoffsets, req->preoffsets, sizeof(req->preoffsets));
+        static_assert(sizeof(req->preoffsets) == sizeof(config->pending_.cc_preoffsets), "");
+    }
+
+    if (!isnan(req->coefficients[0])) {
+        config->pending_.cc_flags |= COLOR_CONVERSION_COEFFICIENTS;
+        memcpy(config->pending_.cc_coefficients, req->coefficients, sizeof(req->coefficients));
+        static_assert(sizeof(req->coefficients) == sizeof(config->pending_.cc_coefficients), "");
+    }
+
+    if (!isnan(req->postoffsets[0])) {
+        config->pending_.cc_flags |= COLOR_CONVERSION_POSTOFFSET;
+        memcpy(config->pending_.cc_postoffsets, req->postoffsets, sizeof(req->postoffsets));
+        static_assert(sizeof(req->postoffsets) == sizeof(config->pending_.cc_postoffsets), "");
+    }
+
+    config->display_config_change_ = true;
+    pending_config_valid_ = false;
 }
 
 void Client::HandleSetDisplayLayers(const fuchsia_display_ControllerSetDisplayLayersRequest* req,
@@ -604,8 +637,8 @@ void Client::HandleCheckConfig(const fuchsia_display_ControllerCheckConfigReques
             }
             config.pending_layer_change_ = false;
 
-            config.pending_.mode = config.current_.mode;
-            config.mode_change_ = false;
+            config.pending_ = config.current_;
+            config.display_config_change_ = false;
         }
         pending_config_valid_ = true;
     }
@@ -632,9 +665,9 @@ void Client::HandleApplyConfig(const fuchsia_display_ControllerApplyConfigReques
     }
 
     for (auto& display_config : configs_) {
-        if (display_config.mode_change_) {
-            display_config.current_.mode = display_config.pending_.mode;
-            display_config.mode_change_ = false;
+        if (display_config.display_config_change_) {
+            display_config.current_ = display_config.pending_;
+            display_config.display_config_change_ = false;
         }
 
         // Put the pending image in the wait queue (the case where it's already ready
@@ -880,7 +913,9 @@ bool Client::CheckConfig(fidl::Builder* resp_builder) {
             == CLIENT_SRC_FRAME, "Const mismatch");
     static_assert((1 << fuchsia_display_ClientCompositionOp_CLIENT_TRANSFORM)
             == CLIENT_TRANSFORM, "Const mismatch");
-    constexpr uint32_t kAllErrors = (CLIENT_TRANSFORM << 1) - 1;
+    static_assert((1 << fuchsia_display_ClientCompositionOp_CLIENT_COLOR_CONVERSION)
+            == CLIENT_COLOR_CONVERSION, "Const mismatch");
+    constexpr uint32_t kAllErrors = (CLIENT_COLOR_CONVERSION << 1) - 1;
 
     config_idx = 0;
     layer_idx = 0;
@@ -1121,6 +1156,8 @@ void Client::OnDisplaysChanged(uint64_t* displays_added,
                 config->current_.mode.h_addressable = params->width;
                 config->current_.mode.v_addressable = params->height;
             }
+
+            config->current_.cc_flags = 0;
 
             config->pending_ = config->current_;
 

@@ -185,7 +185,8 @@ static void astro_check_configuration(void* ctx,
                 && layer->image.width == display->width
                 && layer->image.height == display->height
                 && memcmp(&layer->dest_frame, &frame, sizeof(frame_t)) == 0
-                && memcmp(&layer->src_frame, &frame, sizeof(frame_t)) == 0;
+                && memcmp(&layer->src_frame, &frame, sizeof(frame_t)) == 0
+                && display_configs[0]->cc_flags == 0;
     }
     if (!success) {
         layer_cfg_results[0][0] = CLIENT_MERGE_BASE;

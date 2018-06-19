@@ -1113,7 +1113,24 @@ void Controller::CheckConfiguration(const display_config_t** display_config,
 
     for (unsigned i = 0; i < display_count; i++) {
         auto* config = display_config[i];
-        if (config->layer_count > 3) {
+
+        bool merge_all = config->layer_count > 3;
+        if (!merge_all && config->cc_flags) {
+            if (config->cc_flags & COLOR_CONVERSION_PREOFFSET) {
+                for (int i = 0; i < 3; i++) {
+                    merge_all |= config->cc_preoffsets[i] <= -1;
+                    merge_all |= config->cc_preoffsets[i] >= 1;
+                }
+            }
+            if (config->cc_flags & COLOR_CONVERSION_POSTOFFSET) {
+                for (int i = 0; i < 3; i++) {
+                    merge_all |= config->cc_postoffsets[i] <= -1;
+                    merge_all |= config->cc_postoffsets[i] >= 1;
+                }
+            }
+        }
+
+        if (merge_all) {
             layer_cfg_result[i][0] = CLIENT_MERGE_BASE;
             for (unsigned j = 1; j < config->layer_count; j++) {
                 layer_cfg_result[i][j] = CLIENT_MERGE_SRC;

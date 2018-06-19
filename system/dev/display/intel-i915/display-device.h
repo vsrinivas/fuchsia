@@ -76,8 +76,9 @@ private:
     bool ResetTrans();
     bool ResetDdi();
 
-    void ConfigurePrimaryPlane(uint32_t plane_num, const primary_layer_t* primary);
-    void ConfigureCursorPlane(const cursor_layer_t* cursor);
+    void ConfigurePrimaryPlane(uint32_t plane_num, const primary_layer_t* primary, bool enable_csc);
+    void ConfigureCursorPlane(const cursor_layer_t* cursor, bool enable_csc);
+    void SetColorConversionOffsets(bool preoffsets, const float vals[3]);
 
     // Borrowed reference to Controller instance
     Controller* controller_;

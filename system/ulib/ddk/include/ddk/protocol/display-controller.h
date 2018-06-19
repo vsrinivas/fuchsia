@@ -180,11 +180,29 @@ typedef struct display_mode {
     uint32_t mode_flags; // A bitmask of MODE_FLAG_* values
 } display_mode_t;
 
+// If set, use the 0 vector for the color conversion preoffset
+#define COLOR_CONVERSION_PREOFFSET (1 << 0)
+// If set, use the identity matrix for the color conversion coefficients
+#define COLOR_CONVERSION_COEFFICIENTS (1 << 1)
+// If set, use the 0 vector for the color conversion postoffset
+#define COLOR_CONVERSION_POSTOFFSET (1 << 2)
+
 typedef struct display_config {
     // the display id to which the configuration applies
     uint64_t display_id;
 
     display_mode_t mode;
+
+    // Bitmask of COLOR_CONVERSION_* flags
+    uint32_t cc_flags;
+    // Color conversion is applied to each pixel according to the formula:
+    //
+    // (cc_coefficients * (pixel + cc_preoffsets)) + cc_postoffsets
+    //
+    // where pixel is a column vector consiting of the pixel's 3 components.
+    float cc_preoffsets[3];
+    float cc_coefficients[3][3];
+    float cc_postoffsets[3];
 
     uint32_t layer_count;
     layer_t** layers;
@@ -209,6 +227,8 @@ typedef struct display_config {
 #define CLIENT_SRC_FRAME (1 << 4)
 // The client should pre-apply the transformation so TRANSFORM_IDENTITY can be used.
 #define CLIENT_TRANSFORM (1 << 5)
+// The client should apply the color conversion.
+#define CLIENT_COLOR_CONVERSION (1 << 6)
 
 // The client guarantees that check_configuration and apply_configuration are always
 // made from a single thread. The client makes no other threading guarantees.

@@ -247,6 +247,12 @@ int main(int argc, const char* argv[]) {
             }
             argv += 3;
             argc -= 3;
+        } else if (strcmp(argv[0], "--grayscale") == 0) {
+            for (auto& d : displays) {
+                d.set_grayscale(true);
+            }
+            argv++;
+            argc--;
         } else if (strcmp(argv[0], "--num-frames") == 0) {
             num_frames = atoi(argv[1]);
             argv += 2;

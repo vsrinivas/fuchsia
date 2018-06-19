@@ -30,11 +30,16 @@ public:
         return mode_idx_ < modes_.size();
     }
 
+    void set_grayscale(bool grayscale) {
+        grayscale_ = grayscale;
+    }
+
     void Dump();
 
 private:
     uint32_t format_idx_ = 0;
     uint32_t mode_idx_ = 0;
+    bool grayscale_ = false;
 
     uint64_t id_;
     fbl::Vector<zx_pixel_format_t> pixel_formats_;

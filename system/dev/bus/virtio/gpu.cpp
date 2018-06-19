@@ -144,7 +144,8 @@ void GpuDevice::virtio_gpu_check_configuration(void* ctx,
                 && layer->image.width == gd->pmode_.r.width
                 && layer->image.height == gd->pmode_.r.height
                 && memcmp(&layer->dest_frame, &frame, sizeof(frame_t)) == 0
-                && memcmp(&layer->src_frame, &frame, sizeof(frame_t)) == 0;
+                && memcmp(&layer->src_frame, &frame, sizeof(frame_t)) == 0
+                && display_configs[0]->cc_flags == 0;
     }
     if (!success) {
         layer_cfg_results[0][0] = CLIENT_MERGE_BASE;

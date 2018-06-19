@@ -196,6 +196,7 @@ class CursorCtrl : public hwreg::RegisterBase<CursorCtrl, uint32_t> {
 public:
     static constexpr uint32_t kBaseAddr = 0x70080;
 
+    DEF_BIT(24, pipe_csc_enable);
     DEF_FIELD(5, 0, mode_select);
     static constexpr uint32_t kDisabled = 0;
     static constexpr uint32_t kArgb128x128 = 34;
@@ -221,6 +222,47 @@ public:
 
     static constexpr uint32_t kPageShift = 12;
     DEF_FIELD(31, 12, surface_base_addr);
+};
+
+// CSC_COEFF
+class CscCoeff : public hwreg::RegisterBase<CscCoeff, uint32_t> {
+public:
+    static constexpr uint32_t kBaseAddr = 0x49010;
+
+    hwreg::BitfieldRef<uint32_t> coefficient(uint32_t i, uint32_t j) {
+        ZX_DEBUG_ASSERT(i < 3 && j < 3);
+        uint32_t bit = 16 - ((j % 2) * 16);
+        return hwreg::BitfieldRef<uint32_t>(reg_value_ptr(), bit + 15, bit);
+    }
+};
+
+class CscCoeffFormat : public hwreg::RegisterBase<CscCoeffFormat, uint16_t> {
+public:
+    DEF_BIT(15, sign);
+    DEF_FIELD(14, 12, exponent);
+    static constexpr uint16_t kExponent0125 = 3;
+    static constexpr uint16_t kExponent025 = 2;
+    static constexpr uint16_t kExponent05 = 1;
+    static constexpr uint16_t kExponent1 = 0;
+    static constexpr uint16_t kExponent2 = 7;
+    static constexpr uint16_t kExponent4 = 6;
+    DEF_FIELD(11, 3, mantissa);
+};
+
+// CSC_MODE
+class CscMode : public hwreg::RegisterBase<CscMode, uint32_t> {
+public:
+    static constexpr uint32_t kBaseAddr = 0x49028;
+};
+
+// CSC_POSTOFF / CSC_PREOFF
+class CscOffset : public hwreg::RegisterBase<CscOffset, uint32_t> {
+public:
+    static constexpr uint32_t kPostOffsetBaseAddr = 0x49040;
+    static constexpr uint32_t kPreOffsetBaseAddr = 0x49030;
+
+    DEF_BIT(12, sign);
+    DEF_FIELD(11, 0, magnitude);
 };
 
 // An instance of PipeRegs represents the registers for a particular pipe.
@@ -299,6 +341,22 @@ public:
         return GetReg<registers::CursorSurfaceLive>();
     }
 
+    hwreg::RegisterAddr<registers::CscCoeff> CscCoeff(uint32_t i, uint32_t j) {
+        ZX_DEBUG_ASSERT(i < 3 && j < 3);
+        uint32_t base = registers::CscCoeff::kBaseAddr + 4 * ((i * 2) + (j == 2 ? 1 : 0));
+        return GetCscReg<registers::CscCoeff>(base);
+    }
+
+    hwreg::RegisterAddr<registers::CscMode> CscMode() {
+        return GetCscReg<registers::CscMode>(registers::CscMode::kBaseAddr);
+    }
+
+    hwreg::RegisterAddr<registers::CscOffset> CscOffset(bool preoffset, uint32_t component_idx) {
+        uint32_t base = (4 * component_idx) + (preoffset ?
+            registers::CscOffset::kPreOffsetBaseAddr : registers::CscOffset::kPostOffsetBaseAddr);
+        return GetCscReg<registers::CscOffset>(base);
+    }
+
 private:
     template <class RegType> hwreg::RegisterAddr<RegType> GetReg() {
         return hwreg::RegisterAddr<RegType>(RegType::kBaseAddr + 0x1000 * pipe_);
@@ -306,6 +364,10 @@ private:
 
     template <class RegType> hwreg::RegisterAddr<RegType> GetPlaneReg(int32_t plane) {
         return hwreg::RegisterAddr<RegType>(RegType::kBaseAddr + 0x1000 * pipe_ + 0x100 * plane);
+    }
+
+    template <class RegType> hwreg::RegisterAddr<RegType> GetCscReg(uint32_t base) {
+        return hwreg::RegisterAddr<RegType>(base + 0x100 * pipe_);
     }
 
     Pipe pipe_;

@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "display.h"
+#include <math.h>
 #include <zircon/syscalls.h>
 
 Display::Display(fuchsia_display_Info* info) {
@@ -48,14 +49,27 @@ void Display::Dump() {
 }
 
 void Display::Init(zx_handle_t dc_handle) {
-    if (mode_idx_ == 0) {
-        return;
+    if (mode_idx_ != 0) {
+        fuchsia_display_ControllerSetDisplayModeRequest set_mode_msg;
+        set_mode_msg.hdr.ordinal = fuchsia_display_ControllerSetDisplayModeOrdinal;
+        set_mode_msg.display_id = id_;
+        set_mode_msg.mode = modes_[mode_idx_];
+        ZX_ASSERT(zx_channel_write(dc_handle, 0,
+                                   &set_mode_msg, sizeof(set_mode_msg), nullptr, 0) == ZX_OK);
     }
 
-    fuchsia_display_ControllerSetDisplayModeRequest set_mode_msg;
-    set_mode_msg.hdr.ordinal = fuchsia_display_ControllerSetDisplayModeOrdinal;
-    set_mode_msg.display_id = id_;
-    set_mode_msg.mode = modes_[mode_idx_];
-    ZX_ASSERT(zx_channel_write(dc_handle, 0,
-                               &set_mode_msg, sizeof(set_mode_msg), nullptr, 0) == ZX_OK);
+    if (grayscale_) {
+        fuchsia_display_ControllerSetDisplayColorConversionRequest cc_msg;
+        cc_msg.hdr.ordinal = fuchsia_display_ControllerSetDisplayColorConversionOrdinal;
+        cc_msg.display_id = id_;
+        cc_msg.postoffsets[0] = nanf("post");
+        cc_msg.preoffsets[0] = nanf("pre");
+        float grayscale[9] = {
+            .2126f, .7152f, .0722f,
+            .2126f, .7152f, .0722f,
+            .2126f, .7152f, .0722f,
+        };
+        memcpy(cc_msg.coefficients, grayscale, sizeof(grayscale));
+        ZX_ASSERT(zx_channel_write(dc_handle, 0, &cc_msg, sizeof(cc_msg), NULL, 0) == ZX_OK);
+    }
 }

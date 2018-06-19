@@ -122,6 +122,8 @@ enum ClientCompositionOp : uint8 {
   CLIENT_SRC_FRAME = 4;
   // The client should pre-apply the transformation so TRANSFORM_IDENTITY can be used.
   CLIENT_TRANSFORM = 5;
+  // The client should apply the color conversion itself.
+  CLIENT_COLOR_CONVERSION = 6;
 };
 
 enum ConfigError : uint8 {
@@ -197,6 +199,21 @@ interface Controller {
   //
   // It is illegal to pass a display mode which was not part of the display's Info.
   18: SetDisplayMode(uint64 display_id, Mode mode);
+
+  // Set the color conversion applied to the display. The conversion is applied to
+  // to each pixel according to the formula:
+  //
+  // (coefficients * (pixel + preoffsets)) + postoffsets
+  //
+  // where pixel is a column vector consiting of the pixel's 3 components.
+  //
+  // |coefficients| is passed in row-major order. If the first entry of an
+  // array is NaN, the array is treated as the identity element for the relevant
+  // operation.
+  21: SetDisplayColorConversion(uint64 display_id,
+                                array<float32>:3 preoffsets,
+                                array<float32>:9 coefficients,
+                                array<float32>:3 postoffsets);
 
   // Sets which layers are on a display. The list is in increasing z-order.
   //
@@ -299,6 +316,7 @@ interface Controller {
   // 18: SetDisplayMode
   // 19: SetLayerCursorConfig
   // 20: SetLayerCursorPosition
+  // 21: SetDisplayColorConversion
 
   // TODO(stevensd): Delete this when nothing uses it anymore
   100: SetDisplayImage(uint64 display, uint64 image_id, uint64 wait_event_id, uint64 present_event_id, uint64 signal_event_id);

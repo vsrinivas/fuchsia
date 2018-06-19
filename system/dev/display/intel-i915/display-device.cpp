@@ -3,6 +3,8 @@
 // found in the LICENSE file.
 
 #include <lib/zx/vmo.h>
+#include <float.h>
+#include <math.h>
 #include <zircon/device/backlight.h>
 
 #include "display-device.h"
@@ -55,6 +57,49 @@ void backlight_release(void* ctx) {
 }
 
 static zx_protocol_device_t backlight_ops = {};
+
+uint32_t float_to_i915_csc_offset(float f) {
+    ZX_DEBUG_ASSERT(0 <= f && f < 1.0f); // Controller::CheckConfiguration validates this
+
+    // f is in [0, 1). Multiply by 2^12 to convert to a 12-bit fixed-point fraction.
+    return static_cast<uint32_t>(f * pow(FLT_RADIX, 12));
+}
+
+uint32_t float_to_i915_csc_coefficient(float f) {
+    registers::CscCoeffFormat res;
+    if (f < 0) {
+        f *= -1;
+        res.set_sign(1);
+    }
+
+    if (f < .125) {
+        res.set_exponent(res.kExponent0125);
+        f /= .125f;
+    } else if (f < .25) {
+        res.set_exponent(res.kExponent025);
+        f /= .25f;
+    } else if (f < .5) {
+        res.set_exponent(res.kExponent05);
+        f /= .5f;
+    } else if (f < 1) {
+        res.set_exponent(res.kExponent1);
+    } else if (f < 2) {
+        res.set_exponent(res.kExponent2);
+        f /= 2.0f;
+    } else {
+        res.set_exponent(res.kExponent4);
+        f /= 4.0f;
+    }
+    f = (f * 512) + .5f;
+
+    if (f >= 512) {
+        res.set_mantissa(0x1ff);
+    } else {
+        res.set_mantissa(static_cast<uint16_t>(f));
+    }
+
+    return res.reg_value();
+}
 
 } // namespace
 
@@ -200,6 +245,33 @@ void DisplayDevice::ApplyConfiguration(const display_config_t* config) {
     pipe_size.set_vertical_source_size(info_.v_addressable - 1);
     pipe_size.WriteTo(mmio_space());
 
+    if (config->cc_flags) {
+        float zero_offset[3] = {};
+        SetColorConversionOffsets(true, config->cc_flags & COLOR_CONVERSION_PREOFFSET ?
+                config->cc_preoffsets : zero_offset);
+        SetColorConversionOffsets(false, config->cc_flags & COLOR_CONVERSION_POSTOFFSET ?
+                config->cc_postoffsets : zero_offset);
+
+        float identity[3][3] = {
+            { 1, 0, 0, },
+            { 0, 1, 0, },
+            { 0, 0, 1, },
+        };
+        for (uint32_t i = 0; i < 3; i++) {
+            for (uint32_t j = 0; j < 3; j++) {
+                float val = config->cc_flags & COLOR_CONVERSION_COEFFICIENTS ?
+                        config->cc_coefficients[i][j] : identity[i][j];
+
+                auto reg = pipe_regs.CscCoeff(i, j).ReadFrom(mmio_space());
+                reg.coefficient(i, j).set( float_to_i915_csc_coefficient(val));
+                reg.WriteTo(mmio_space());
+            }
+        }
+
+        // CSC registers are double buffered on CscMode
+        pipe_regs.CscMode().ReadFrom(mmio_space()).WriteTo(mmio_space());
+    }
+
     for (unsigned i = 0; i < 3; i++) {
         primary_layer_t* primary = nullptr;
         for (unsigned j = 0; j < config->layer_count; j++) {
@@ -209,16 +281,17 @@ void DisplayDevice::ApplyConfiguration(const display_config_t* config) {
                 break;
             }
         }
-        ConfigurePrimaryPlane(i, primary);
+        ConfigurePrimaryPlane(i, primary, !!config->cc_flags);
     }
     cursor_layer_t* cursor = nullptr;
     if (config->layer_count && config->layers[config->layer_count - 1]->type == LAYER_CURSOR) {
         cursor = &config->layers[config->layer_count - 1]->cfg.cursor;
     }
-    ConfigureCursorPlane(cursor);
+    ConfigureCursorPlane(cursor, !!config->cc_flags);
 }
 
-void DisplayDevice::ConfigurePrimaryPlane(uint32_t plane_num, const primary_layer_t* primary) {
+void DisplayDevice::ConfigurePrimaryPlane(uint32_t plane_num,
+                                          const primary_layer_t* primary, bool enable_csc) {
     registers::PipeRegs pipe_regs(pipe());
 
     auto plane_ctrl = pipe_regs.PlaneControl(plane_num).ReadFrom(controller_->mmio_space());
@@ -277,6 +350,7 @@ void DisplayDevice::ConfigurePrimaryPlane(uint32_t plane_num, const primary_laye
     stride_reg.WriteTo(controller_->mmio_space());
 
     plane_ctrl.set_plane_enable(1);
+    plane_ctrl.set_pipe_csc_enable(enable_csc);
     plane_ctrl.set_source_pixel_format(plane_ctrl.kFormatRgb8888);
     if (primary->image.type == IMAGE_TYPE_SIMPLE) {
         plane_ctrl.set_tiled_surface(plane_ctrl.kLinear);
@@ -307,7 +381,7 @@ void DisplayDevice::ConfigurePrimaryPlane(uint32_t plane_num, const primary_laye
     plane_surface.WriteTo(controller_->mmio_space());
 }
 
-void DisplayDevice::ConfigureCursorPlane(const cursor_layer_t* cursor) {
+void DisplayDevice::ConfigureCursorPlane(const cursor_layer_t* cursor, bool enable_csc) {
     registers::PipeRegs pipe_regs(pipe());
 
     auto cursor_ctrl = pipe_regs.CursorCtrl().ReadFrom(controller_->mmio_space());
@@ -329,6 +403,7 @@ void DisplayDevice::ConfigureCursorPlane(const cursor_layer_t* cursor) {
         // The configuration was not properly validated
         ZX_ASSERT(false);
     }
+    cursor_ctrl.set_pipe_csc_enable(enable_csc);
     cursor_ctrl.WriteTo(mmio_space());
 
     auto cursor_pos = pipe_regs.CursorPos().FromValue(0);
@@ -351,6 +426,21 @@ void DisplayDevice::ConfigureCursorPlane(const cursor_layer_t* cursor) {
     auto cursor_base = pipe_regs.CursorBase().ReadFrom(controller_->mmio_space());
     cursor_base.set_cursor_base(base_address >> cursor_base.kPageShift);
     cursor_base.WriteTo(controller_->mmio_space());
+}
+
+void DisplayDevice::SetColorConversionOffsets(bool preoffsets, const float vals[3]) {
+    registers::PipeRegs pipe_regs(pipe());
+
+    for (uint32_t i = 0; i < 3; i++) {
+        float offset = vals[i];
+        auto offset_reg = pipe_regs.CscOffset(preoffsets, i).FromValue(0);
+        if (offset < 0) {
+            offset_reg.set_sign(1);
+            offset *= -1;
+        }
+        offset_reg.set_magnitude(float_to_i915_csc_offset(offset));
+        offset_reg.WriteTo(mmio_space());
+    }
 }
 
 } // namespace i915
