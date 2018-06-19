@@ -74,6 +74,33 @@ TEST(Breakpoint, Registration) {
             delegate.register_calls());
   EXPECT_EQ(CallVector({CallPair{kProcess1, kAddress1}}),
             delegate.unregister_calls());
+
+  // Add a new location
+  delegate.Clear();
+
+  // Add the old breakpoint and a new one
+  debug_ipc::ProcessBreakpointSettings old_pr_settings;
+  old_pr_settings.process_koid = kProcess1;
+  old_pr_settings.thread_koid = 0;
+  old_pr_settings.address = kAddress1;
+
+  constexpr zx_koid_t kProcess3 = 3;
+  constexpr uint64_t kAddress3 = 0x9ABC;
+
+  debug_ipc::ProcessBreakpointSettings new_pr_settings;
+  new_pr_settings.process_koid = kProcess3;
+  new_pr_settings.thread_koid = 0;
+  new_pr_settings.address = kAddress3;
+
+  settings.locations.clear();
+  settings.locations.push_back(old_pr_settings);
+  settings.locations.push_back(new_pr_settings);
+
+  ASSERT_EQ(ZX_OK, bp.SetSettings(settings));
+
+  EXPECT_EQ(CallVector({{kProcess1, kAddress1}, {kProcess3, kAddress3}}),
+            delegate.register_calls());
+  EXPECT_EQ(CallVector({{kProcess2, kAddress2}}), delegate.unregister_calls());
 }
 
 // The destructor should clear breakpoint locations.
