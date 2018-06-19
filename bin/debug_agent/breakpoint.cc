@@ -11,7 +11,11 @@ namespace debug_agent {
 
 Breakpoint::Breakpoint(ProcessDelegate* process_delegate)
     : process_delegate_(process_delegate) {}
-Breakpoint::~Breakpoint() = default;
+
+Breakpoint::~Breakpoint() {
+  for (const auto& loc : locations_)
+    process_delegate_->UnregisterBreakpoint(this, loc.first, loc.second);
+}
 
 zx_status_t Breakpoint::SetSettings(
     const debug_ipc::BreakpointSettings& settings) {

@@ -76,4 +76,36 @@ TEST(Breakpoint, Registration) {
             delegate.unregister_calls());
 }
 
+// The destructor should clear breakpoint locations.
+TEST(Breakpoint, Destructor) {
+  TestProcessDelegate delegate;
+  std::unique_ptr<Breakpoint> bp = std::make_unique<Breakpoint>(&delegate);
+
+  debug_ipc::BreakpointSettings settings;
+  settings.breakpoint_id = 1;
+  settings.locations.resize(1);
+
+  constexpr zx_koid_t kProcess1 = 1;
+  constexpr uint64_t kAddress1 = 0x1234;
+
+  debug_ipc::ProcessBreakpointSettings& pr_settings = settings.locations.back();
+  pr_settings.process_koid = kProcess1;
+  pr_settings.thread_koid = 0;
+  pr_settings.address = kAddress1;
+
+  // Apply the settings.
+  ASSERT_EQ(ZX_OK, bp->SetSettings(settings));
+  EXPECT_EQ(CallVector({CallPair{kProcess1, kAddress1}}),
+            delegate.register_calls());
+  EXPECT_TRUE(delegate.unregister_calls().empty());
+
+  delegate.Clear();
+
+  // Delete the breakpoint to make sure the locations get updated.
+  delegate.Clear();
+  bp.reset();
+  EXPECT_EQ(CallVector({CallPair{kProcess1, kAddress1}}),
+            delegate.unregister_calls());
+}
+
 }  // namespace debug_agent
