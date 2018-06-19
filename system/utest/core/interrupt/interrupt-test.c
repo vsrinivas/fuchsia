@@ -4,14 +4,43 @@
 
 #include <unittest/unittest.h>
 #include <zircon/syscalls.h>
+#include <zircon/process.h>
 #include <zircon/syscalls/port.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <poll.h>
 #include <stdio.h>
 #include <unistd.h>
+#include <threads.h>
 
 extern zx_handle_t get_root_resource(void);
+
+static bool get_thread_info(zx_handle_t thread, zx_info_thread_t* info) {
+    return zx_object_get_info(thread, ZX_INFO_THREAD, info, sizeof(*info), NULL, NULL) == ZX_OK;
+}
+
+static bool wait_thread(zx_handle_t thread, uint32_t reason) {
+    while (true) {
+        zx_info_thread_t info;
+        ASSERT_TRUE(get_thread_info(thread, &info), "");
+        if (info.state == reason)
+            break;
+        zx_nanosleep(zx_deadline_after(ZX_MSEC(1)));
+    }
+    return true;
+}
+
+static int interrupt_test_thread(void *arg) {
+    zx_handle_t rsrc = get_root_resource();
+    zx_handle_t vinth;
+    ASSERT_EQ(zx_interrupt_create(rsrc, 0, ZX_INTERRUPT_VIRTUAL,
+                                  &vinth), ZX_OK, "");
+
+    while(1) {
+        ASSERT_EQ(zx_interrupt_wait(vinth, NULL), ZX_OK, "");
+    }
+    return 0;
+}
 
 // Tests to bind interrupt to a non-bindable port
 static bool interrupt_port_non_bindable_test(void) {
@@ -129,8 +158,42 @@ static bool interrupt_test(void) {
     END_TEST;
 }
 
+// Tests interrupt thread after suspend/resume
+static bool interrupt_suspend_test(void) {
+    BEGIN_TEST;
+
+    zx_handle_t thread_h;
+    const char* thread_name = "interrupt_test_thread";
+    // preallocated stack to satisfy the thread we create
+    static uint8_t stack[1024] __ALIGNED(16);
+
+
+    // Create and start a thread which waits for an IRQ
+    ASSERT_EQ(zx_thread_create(zx_process_self(), thread_name, strlen(thread_name),
+                               0, &thread_h), ZX_OK, "");
+
+    ASSERT_EQ(zx_thread_start(thread_h, (uintptr_t)interrupt_test_thread,
+                             (uintptr_t)stack + sizeof(stack),
+                             0, 0), ZX_OK, "");
+
+    // Wait till the thread is in blocked state
+    ASSERT_TRUE(wait_thread(thread_h, ZX_THREAD_STATE_BLOCKED_INTERRUPT), "");
+
+    // Suspend the thread, wait till it is suspended
+    zx_handle_t suspend_token = ZX_HANDLE_INVALID;
+    ASSERT_EQ(zx_task_suspend_token(thread_h, &suspend_token), ZX_OK, "");
+    ASSERT_TRUE(wait_thread(thread_h, ZX_THREAD_STATE_SUSPENDED), "");
+
+    // Resume the thread, wait till it is back to being in blocked state
+    ASSERT_EQ(zx_handle_close(suspend_token), ZX_OK, "");
+    ASSERT_TRUE(wait_thread(thread_h, ZX_THREAD_STATE_BLOCKED_INTERRUPT), "");
+
+    END_TEST;
+}
+
 BEGIN_TEST_CASE(interrupt_tests)
 RUN_TEST(interrupt_test)
 RUN_TEST(interrupt_port_bound_test)
 RUN_TEST(interrupt_port_non_bindable_test)
+RUN_TEST(interrupt_suspend_test)
 END_TEST_CASE(interrupt_tests)

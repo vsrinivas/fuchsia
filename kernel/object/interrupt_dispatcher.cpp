@@ -48,6 +48,13 @@ zx_status_t InterruptDispatcher::WaitForInterrupt(zx_time_t* out_timestamp) {
             ThreadDispatcher::AutoBlocked by(ThreadDispatcher::Blocked::INTERRUPT);
             zx_status_t status = event_wait_deadline(&event_, ZX_TIME_INFINITE, true);
             if (status != ZX_OK) {
+                // The system call was interrupted and we need to retry
+                // but before we retry we will set the interrupt state
+                // back to IDLE
+                if (status == ZX_ERR_INTERNAL_INTR_RETRY) {
+                    AutoSpinLock guard(&spinlock_);
+                    state_ = InterruptState::IDLE;
+                }
                 return status;
             }
         }
