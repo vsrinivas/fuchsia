@@ -1,0 +1,185 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+// TODO(tkilbourn): rename to fuchsia.net.stack once Go can handle nested libraries (BLD-175).
+library fuchsia.net_stack;
+
+using fuchsia.net;
+
+// Features that may be present on a network interface.
+// TODO(tkilbourn): consider a bitfield for this.
+enum InterfaceFeature : uint8 {
+    // The interface is a wireless network interface.
+    wlan = 1;
+
+    // The interface is synthetic, i.e., not backed by hardware.
+    synthetic = 2;
+
+    // The interface is a loopback device provided by the stack.
+    loopback = 3;
+};
+
+// Status constants
+// The interface is enabled.
+const uint32 interfaceStatusEnabled = 0x01;
+// The interface has a physical link.
+const uint32 interfaceStatusLinkUp = 0x02;
+
+struct InterfaceAddress {
+    // The IP address of the interface.
+    fuchsia.net.IpAddress ipAddress;
+
+    // The length of the network portion of the interface IP address.
+    uint8 prefixLen;
+
+    // For point-to-point interfaces, the address of the remote peer.
+    fuchsia.net.IpAddress? peerAddress;
+};
+
+struct InterfaceInfo {
+    // An opaque identifier for the interface, assigned by the stack.
+    // This identifier will never be 0, and will not be reused even if the device is removed and
+    // subsequently re-added. It is not stable across netstack instances.
+    uint64 id;
+
+    // The topological path to the device, representing a stable identifier for the interface
+    // hardware.
+    string path;
+
+    // The MAC address of the interface, if available.
+    fuchsia.net.MacAddress? mac;
+
+    // The maximum transmission unit for the interface in bytes.
+    uint32 mtu;
+
+    // The features present on the interface.
+    // TODO(tkilbourn): consider a bitfield for this.
+    vector<InterfaceFeature> features;
+
+    // The status of the interface. This is a bitfield containing the "Status constants" in this
+    // file.
+    uint32 @status;
+
+    // The list of addresses currently assigned to the interface.
+    vector<InterfaceAddress> addresses;
+};
+
+// A ForwardingDestination represents either the device that should transmit a packet or the address
+// of the next hop in the route.
+union ForwardingDestination {
+    // The opaque identifier of the device to which packets should be forwarded.
+    uint64 deviceId;
+
+    // The IP address of the next hop, used to look up the next forwarding entry.
+    fuchsia.net.IpAddress nextHop;
+};
+
+// An entry in the forwarding table for the network stack.
+struct ForwardingEntry {
+    // The subnet is the key for the entry in the table.
+    fuchsia.net.Subnet subnet;
+
+    // The destination that will receive the forwarded packet.
+    ForwardingDestination destination;
+};
+
+enum InterfaceChangeEvent {
+    // The device was added to the system.
+    added = 1;
+
+    // The device was removed from the system.
+    removed = 2;
+
+    // The device was enabled.
+    enabled = 3;
+
+    // The device was disabled.
+    disabled = 4;
+
+    // The device has a link to the medium on which it is attached.
+    linkUp = 5;
+
+    // The device does not have a link to the medium on which it is attached.
+    linkDown = 6;
+};
+
+struct InterfaceStatusChange {
+    // The opaque identifier of the device that had its status change.
+    uint64 id;
+
+    // The event representing the status change.
+    InterfaceChangeEvent event;
+};
+
+union InterfaceAddressChangeEvent {
+    InterfaceAddress added;
+    InterfaceAddress removed;
+};
+
+struct InterfaceAddressChange {
+    // The opaque identifier of the device that had its address change.
+    uint64 id;
+
+    // The event representing the address change.
+    InterfaceAddressChangeEvent event;
+};
+
+enum ErrorType {
+    internal = 1;
+    notSupported = 2;
+    invalidArgs = 10;
+    badState = 20;
+    timedOut = 21;
+    notFound = 25;
+    alreadyExists = 26;
+    io = 40;
+};
+
+struct Error {
+    ErrorType type;
+};
+
+[Discoverable]
+interface Stack {
+    // List all the interfaces available in the network stack.
+    0x100: ListInterfaces() -> (vector<InterfaceInfo> ifs);
+
+    // Retrieve info about a specific interface.
+    0x101: GetInterfaceInfo(uint64 id) -> (InterfaceInfo? info, Error? err);
+
+    // Enable the interface. Packets may be processed by the stack after this call is processed.
+    0x102: EnableInterface(uint64 id) -> (Error? err);
+
+    // Disable the interface. The stack will no longer process packets after this call.
+    0x103: DisableInterface(uint64 id) -> (Error? err);
+
+    // Add an address to the interface. If the interface already has an address of a given type that
+    // does not allow duplicates, this method will return an error.
+    0x104: AddInterfaceAddress(uint64 id, InterfaceAddress addr) -> (Error? err);
+
+    // Remove the address from the interface. If the address is not assigned to the interface, an
+    // error is returned.
+    0x105: DelInterfaceAddress(uint64 id, fuchsia.net.IpAddress addr) -> (Error? err);
+
+    // List all the entries in the forwarding table for the network stack.
+    0x200: GetForwardingTable() -> (vector<ForwardingEntry> table);
+
+    // Add a new entry to the forwarding table. If the table already contains an entry with the same
+    // subnet, an error is returned. The entry may be deleted using DelForwardingEntry first.
+    0x201: AddForwardingEntry(ForwardingEntry entry) -> (Error? err);
+
+    // Removes the forwarding entry with the given subnet. This will not affect any overlapping
+    // subnets (superset or subset) so the subnet must exactly match an entry in the forwarding
+    // table. If no entry for the subnet exists, an error is returned.
+    0x202: DelForwardingEntry(fuchsia.net.Subnet subnet) -> (Error? err);
+
+    // 0x300: reserved for packet filtering
+
+    // Events
+    // A status change event is triggered whenever an interface's status changes.
+    0x1000: -> OnInterfaceStatusChange(InterfaceStatusChange info);
+
+    // An address change event is triggered whenever an interface's addresses change.
+    0x1001: -> OnInterfaceAddressChange(InterfaceAddressChange info);
+};
