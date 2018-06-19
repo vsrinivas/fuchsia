@@ -269,8 +269,8 @@ bool Compositor::DrawFrame(const FrameTimingsPtr& frame_timings,
   if (drawable_layers.empty())
     return false;
 
-  escher::FramePtr frame = escher()->NewFrame(
-      "Scenic Compositor", frame_timings->frame_number());
+  escher::FramePtr frame =
+      escher()->NewFrame("Scenic Compositor", frame_timings->frame_number());
 
   auto overlay_model = DrawOverlaysToModel(
       drawable_layers, frame, frame_timings, escher_renderer, shadow_renderer);
@@ -307,14 +307,14 @@ void Compositor::DrawToImage(escher::PaperRenderer* escher_renderer,
                              const escher::SemaphorePtr& frame_done_semaphore) {
   TRACE_DURATION("gfx", "Compositor::DrawToImage");
 
-  FrameTimingsPtr frame_timings;
-
   const std::vector<Layer*> drawable_layers = GetDrawableLayers();
   if (drawable_layers.empty()) {
     return;
   }
-  escher::FramePtr frame = escher()->NewFrame(
-      "Scenic Compositor", frame_timings->frame_number());
+
+  auto frame_timings = fxl::MakeRefCounted<FrameTimings>();
+  escher::FramePtr frame =
+      escher()->NewFrame("Scenic Compositor", frame_timings->frame_number());
   auto overlay_model = DrawOverlaysToModel(
       drawable_layers, frame, frame_timings, escher_renderer, shadow_renderer);
   if (overlay_model == nullptr) {
