@@ -5,6 +5,7 @@
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/io-buffer.h>
+#include <ddk/metadata.h>
 #include <ddk/protocol/gpio.h>
 #include <ddk/protocol/platform-bus.h>
 #include <ddk/protocol/platform-defs.h>
@@ -39,6 +40,13 @@ static const pbus_bti_t raw_nand_btis[] = {
     },
 };
 
+static const pbus_boot_metadata_t raw_nand_metadata[] = {
+    {
+        .type = DEVICE_METADATA_PARTITION_MAP,
+        .extra = 0,
+    },
+};
+
 static const pbus_dev_t raw_nand_dev = {
     .name = "aml_raw_nand",
     .vid = PDEV_VID_AMLOGIC,
@@ -50,8 +58,9 @@ static const pbus_dev_t raw_nand_dev = {
     .irq_count = countof(raw_nand_irqs),
     .btis = raw_nand_btis,
     .bti_count = countof(raw_nand_btis),
+    .boot_metadata = raw_nand_metadata,
+    .boot_metadata_count = countof(raw_nand_metadata),
 };
-
 
 zx_status_t aml_raw_nand_init(aml_bus_t* bus) {
     zx_status_t status;
