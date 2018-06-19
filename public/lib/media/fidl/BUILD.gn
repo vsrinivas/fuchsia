@@ -52,3 +52,19 @@ fidl("media_codec") {
     "codec_factory.fidl",
   ]
 }
+
+
+fidl("simple_camera") {
+  name = "fuchsia.simplecamera"
+
+  sdk_category = "partner"
+
+  sources = [
+    "simple_camera.fidl",
+  ]
+
+  public_deps = [
+  "//garnet/public/lib/images/fidl",
+  ]
+}
+

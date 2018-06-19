@@ -1,0 +1,69 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+
+source_set("lib") {
+  sources = [
+    "simple_camera_server_app.cc",
+    "simple_camera_server_app.h",
+  ]
+
+  public_deps = [
+    "//garnet/public/lib/media/fidl:simple_camera",
+    "//garnet/public/lib/app/cpp",
+    "//garnet/public/lib/fidl/cpp",
+  ]
+}
+
+executable("bin") {
+  output_name = "simple_camera_server_cpp"
+
+  sources = [
+    "simple_camera_server.cc",
+  ]
+
+  deps = [
+    ":lib",
+    "//zircon/public/lib/async-default",
+    "//zircon/public/lib/async-loop-cpp",
+  ]
+}
+
+package("simple_camera_server_cpp") {
+  deps = [
+    ":bin",
+  ]
+
+  binary = "simple_camera_server_cpp"
+}
+
+# executable("simple_camera_server_cpp_unittests") {
+#  testonly = true
+#
+#  sources = [
+#    "simple_camera_server_app_unittest.cc",
+#  ]
+#
+#  deps = [
+#    ":lib",
+#    "//garnet/public/lib/fxl/test:gtest_main",
+#    "//garnet/public/lib/gtest",
+#  ]
+#}
+#
+#package("simple_camera_server_cpp_tests") {
+#  testonly = true
+#  deprecated_system_image = true
+#
+#  deps = [
+#    ":simple_camera_server_cpp_unittests",
+#  ]
+#
+#  tests = [
+#    {
+#      name = "simple_camera_server_cpp_unittests"
+#    },
+#  ]
+#}
