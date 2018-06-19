@@ -20,6 +20,7 @@
 #include <ddk/protocol/usb.h>
 
 #include "debug.h"
+#include "netbuf.h"
 
 // clang-format off
 /* IDs of the 6 default common rings of msgbuf protocol */
@@ -83,7 +84,7 @@ struct brcmf_bus_dcmd {
 struct brcmf_bus_ops {
     zx_status_t (*preinit)(struct brcmf_device* dev);
     void (*stop)(struct brcmf_device* dev);
-    zx_status_t (*txdata)(struct brcmf_device* dev, struct sk_buff* skb);
+    zx_status_t (*txdata)(struct brcmf_device* dev, struct brcmf_netbuf* skb);
     zx_status_t (*txctl)(struct brcmf_device* dev, unsigned char* msg, uint len);
     zx_status_t (*rxctl)(struct brcmf_device* dev, unsigned char* msg, uint len, int* rxlen_out);
     struct pktq* (*gettxq)(struct brcmf_device* dev);
@@ -176,7 +177,7 @@ static inline void brcmf_bus_stop(struct brcmf_bus* bus) {
     bus->ops->stop(bus->dev);
 }
 
-static inline int brcmf_bus_txdata(struct brcmf_bus* bus, struct sk_buff* skb) {
+static inline int brcmf_bus_txdata(struct brcmf_bus* bus, struct brcmf_netbuf* skb) {
     return bus->ops->txdata(bus->dev, skb);
 }
 
@@ -234,9 +235,9 @@ static inline zx_status_t brcmf_bus_get_fwname(struct brcmf_bus* bus, uint chip,
  */
 
 /* Receive frame for delivery to OS.  Callee disposes of rxp. */
-void brcmf_rx_frame(struct brcmf_device* dev, struct sk_buff* rxp, bool handle_event);
+void brcmf_rx_frame(struct brcmf_device* dev, struct brcmf_netbuf* rxp, bool handle_event);
 /* Receive async event packet from firmware. Callee disposes of rxp. */
-void brcmf_rx_event(struct brcmf_device* dev, struct sk_buff* rxp);
+void brcmf_rx_event(struct brcmf_device* dev, struct brcmf_netbuf* rxp);
 
 /* Indication from bus module regarding presence/insertion of dongle. */
 zx_status_t brcmf_attach(struct brcmf_device* dev, struct brcmf_mp_device* settings);

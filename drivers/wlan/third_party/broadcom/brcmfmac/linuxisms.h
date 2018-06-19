@@ -177,7 +177,6 @@ typedef uint32_t gfp_t;
 #define LINUX_FUNCUU(name) LINUX_FUNC(name, uint32_t, uint32_t)
 LINUX_FUNCVV(skb_peek_tail)
 LINUX_FUNCVV(skb_peek)
-LINUX_FUNCVI(skb_cloned)
 LINUX_FUNCVV(eth_broadcast_addr)
 LINUX_FUNCcVV(is_multicast_ether_addr)
 LINUX_FUNCVV(eth_zero_addr)
@@ -189,7 +188,6 @@ LINUX_FUNCVI(skb_queue_empty)
 LINUX_FUNCVV(skb_dequeue)
 LINUX_FUNCVV(__skb_dequeue)
 LINUX_FUNCVI(skb_queue_len)
-LINUX_FUNCVI(skb_pull)
 LINUX_FUNCVI(__skb_trim)
 LINUX_FUNCVI(brfcmf_dbg)
 LINUX_FUNCII(time_after)
@@ -204,7 +202,6 @@ LINUX_FUNCVI(no_printk)
 LINUX_FUNCVI(skb_unlink)
 LINUX_FUNCVI(skb_push)
 LINUX_FUNCVU(skb_headroom)
-LINUX_FUNCVI(skb_tailroom)
 LINUX_FUNCVI(skb_cow_head)
 LINUX_FUNCVI(skb_queue_tail)
 LINUX_FUNCVI(skb_queue_is_last)
@@ -212,12 +209,9 @@ LINUX_FUNCVI(skb_trim)
 LINUX_FUNCVI(skb_linearize)
 LINUX_FUNCVI(__skb_queue_after)
 LINUX_FUNCVI(__skb_unlink)
-LINUX_FUNCVI(skb_put)
 LINUX_FUNCVI(__skb_put)
 LINUX_FUNCVI(__skb_queue_head_init)
 LINUX_FUNCVI(__skb_queue_tail)
-LINUX_FUNCVI(kfree_skb)
-LINUX_FUNCVI(skb_queue_head_init)
 #define skb_queue_walk_safe(a, b, c) for((void)c, b=(a)->next;;)
 #define skb_queue_walk(a, b) for(b=(a)->next;;)
 LINUX_FUNCVV(netdev_priv)
@@ -368,7 +362,6 @@ LINUX_FUNCVI(register_netdev)
 LINUX_FUNCVV(wiphy_net)
 LINUX_FUNCVI(netif_carrier_ok)
 LINUX_FUNCVI(netif_carrier_on)
-LINUX_FUNCVI(dev_kfree_skb_any)
 LINUX_FUNCVI(seq_printf)
 LINUX_FUNCVS(seq_write)
 LINUX_FUNCVI(netif_queue_stopped)
@@ -415,7 +408,6 @@ LINUX_FUNCVV(skb_queue_prev)
 LINUX_FUNCII(BITS_TO_LONGS)
 LINUX_FUNCVV(cfg80211_vendor_cmd_alloc_reply_skb)
 LINUX_FUNCVI(cfg80211_vendor_cmd_reply)
-LINUX_FUNCIV(dev_alloc_skb)
 LINUX_FUNCVI(usb_fill_bulk_urb)
 LINUX_FUNCIV(usb_alloc_urb)
 LINUX_FUNCVI(usb_free_urb)
@@ -708,28 +700,6 @@ enum brcmf_bus_type { BRCMF_BUSTYPE_SDIO, BRCMF_BUSTYPE_USB, BRCMF_BUSTYPE_PCIE 
 struct sg_table {
     void* sgl;
     int orig_nents;
-};
-
-struct sk_buff;
-struct sk_buff_head {
-    uint32_t priority;
-    int qlen;
-    struct sk_buff* next;
-};
-
-struct sk_buff {
-    uint16_t protocol;
-    int priority;
-    uint16_t len;
-    uint32_t data_len;
-    uint32_t end;
-    uint32_t tail;
-    void* data;
-    void* next;
-    void* prev;
-    void* cb;
-    uint32_t pkt_type;
-    uint32_t ip_summed;
 };
 
 struct current_with_pid {

@@ -29,6 +29,7 @@
 #include "fwil.h"
 #include "fwil_types.h"
 #include "linuxisms.h"
+#include "netbuf.h"
 #include "p2p.h"
 
 static zx_status_t brcmf_cfg80211_vndr_cmds_dcmd_handler(struct wiphy* wiphy,
@@ -37,7 +38,7 @@ static zx_status_t brcmf_cfg80211_vndr_cmds_dcmd_handler(struct wiphy* wiphy,
     struct brcmf_cfg80211_vif* vif;
     struct brcmf_if* ifp;
     const struct brcmf_vndr_dcmd_hdr* cmdhdr = data;
-    struct sk_buff* reply;
+    struct brcmf_netbuf* reply;
     zx_status_t ret;
     int payload, ret_len;
     void* dcmd_buf = NULL;
@@ -103,7 +104,7 @@ static zx_status_t brcmf_cfg80211_vndr_cmds_dcmd_handler(struct wiphy* wiphy,
 
         if (nla_put(reply, BRCMF_NLATTR_DATA, msglen, wr_pointer) ||
                 nla_put_u16(reply, BRCMF_NLATTR_LEN, msglen)) {
-            kfree_skb(reply);
+            brcmf_netbuf_free(reply);
             ret = ZX_ERR_NO_RESOURCES;
             break;
         }

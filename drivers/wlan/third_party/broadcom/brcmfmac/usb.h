@@ -20,6 +20,9 @@
 #include <zircon/listnode.h>
 #include <zircon/types.h>
 
+#include "linuxisms.h"
+#include "netbuf.h"
+
 enum brcmf_usb_state {
     BRCMFMAC_USB_STATE_DOWN,
     BRCMFMAC_USB_STATE_DL_FAIL,
@@ -53,7 +56,7 @@ struct brcmf_usbreq {
     struct list_node list;
     struct brcmf_usbdev_info* devinfo;
     struct urb* urb;
-    struct sk_buff* skb;
+    struct brcmf_netbuf* skb;
 };
 
 #endif /* BRCMFMAC_USB_H */

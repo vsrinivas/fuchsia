@@ -38,6 +38,7 @@
 #include "device.h"
 #include "firmware.h"
 #include "linuxisms.h"
+#include "netbuf.h"
 
 #define IOCTL_RESP_TIMEOUT_MSEC (2000)
 
@@ -486,7 +487,7 @@ static void brcmf_usb_tx_complete(struct urb* urb) {
 static void brcmf_usb_rx_complete(struct urb* urb) {
     struct brcmf_usbreq* req = (struct brcmf_usbreq*)urb->context;
     struct brcmf_usbdev_info* devinfo = req->devinfo;
-    struct sk_buff* skb;
+    struct brcmf_netbuf* skb;
 
     pthread_mutex_lock(&irq_callback_lock);
     brcmf_dbg(USB, "Enter, urb->status=%d\n", urb->status);
@@ -503,7 +504,7 @@ static void brcmf_usb_rx_complete(struct urb* urb) {
     }
 
     if (devinfo->bus_pub.state == BRCMFMAC_USB_STATE_UP) {
-        skb_put(skb, urb->actual_length);
+        brcmf_netbuf_grow_tail(skb, urb->actual_length);
         brcmf_rx_frame(devinfo->dev, skb, true);
         brcmf_usb_rx_refill(devinfo, req);
     } else {
@@ -515,22 +516,22 @@ static void brcmf_usb_rx_complete(struct urb* urb) {
 }
 
 static void brcmf_usb_rx_refill(struct brcmf_usbdev_info* devinfo, struct brcmf_usbreq* req) {
-    struct sk_buff* skb;
+    struct brcmf_netbuf* skb;
     zx_status_t ret;
 
     if (!req || !devinfo) {
         return;
     }
 
-    skb = dev_alloc_skb(devinfo->bus_pub.bus_mtu);
+    skb = brcmf_netbuf_allocate(devinfo->bus_pub.bus_mtu);
     if (!skb) {
         brcmf_usb_enq(devinfo, &devinfo->rx_freeq, req, NULL);
         return;
     }
     req->skb = skb;
 
-    usb_fill_bulk_urb(req->urb, devinfo->usbdev, devinfo->rx_endpoint, skb->data, skb_tailroom(skb),
-                      brcmf_usb_rx_complete, req);
+    usb_fill_bulk_urb(req->urb, devinfo->usbdev, devinfo->rx_endpoint, skb->data,
+                      brcmf_netbuf_tail_space(skb), brcmf_usb_rx_complete, req);
     req->devinfo = devinfo;
     brcmf_usb_enq(devinfo, &devinfo->rx_postq, req, NULL);
 
@@ -581,7 +582,7 @@ static void brcmf_usb_state_change(struct brcmf_usbdev_info* devinfo, int state)
     }
 }
 
-static zx_status_t brcmf_usb_tx(struct brcmf_device* dev, struct sk_buff* skb) {
+static zx_status_t brcmf_usb_tx(struct brcmf_device* dev, struct brcmf_netbuf* skb) {
     struct brcmf_usbdev_info* devinfo = brcmf_usb_get_businfo(dev);
     struct brcmf_usbreq* req;
     zx_status_t ret;

@@ -39,6 +39,7 @@
 #include "fwil.h"
 #include "fwil_types.h"
 #include "linuxisms.h"
+#include "netbuf.h"
 #include "p2p.h"
 #include "pno.h"
 #include "proto.h"

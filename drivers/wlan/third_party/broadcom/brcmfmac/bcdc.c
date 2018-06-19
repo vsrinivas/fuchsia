@@ -32,6 +32,7 @@
 #include "device.h"
 #include "fwsignal.h"
 #include "linuxisms.h"
+#include "netbuf.h"
 #include "proto.h"
 #include "tracepoint.h"
 
@@ -269,7 +270,7 @@ done:
 }
 
 static void brcmf_proto_bcdc_hdrpush(struct brcmf_pub* drvr, int ifidx, uint8_t offset,
-                                     struct sk_buff* pktbuf) {
+                                     struct brcmf_netbuf* pktbuf) {
     struct brcmf_proto_bcdc_header* h;
 
     brcmf_dbg(BCDC, "Enter\n");
@@ -292,7 +293,7 @@ static void brcmf_proto_bcdc_hdrpush(struct brcmf_pub* drvr, int ifidx, uint8_t 
 }
 
 static zx_status_t brcmf_proto_bcdc_hdrpull(struct brcmf_pub* drvr, bool do_fws,
-                                            struct sk_buff* pktbuf,
+                                            struct brcmf_netbuf* pktbuf,
                                             struct brcmf_if** ifp) {
     struct brcmf_proto_bcdc_header* h;
     struct brcmf_if* tmp_if;
@@ -325,11 +326,11 @@ static zx_status_t brcmf_proto_bcdc_hdrpull(struct brcmf_pub* drvr, bool do_fws,
 
     pktbuf->priority = h->priority & BCDC_PRIORITY_MASK;
 
-    skb_pull(pktbuf, BCDC_HEADER_LEN);
+    brcmf_netbuf_shrink_head(pktbuf, BCDC_HEADER_LEN);
     if (do_fws) {
         brcmf_fws_hdrpull(tmp_if, h->data_offset << 2, pktbuf);
     } else {
-        skb_pull(pktbuf, h->data_offset << 2);
+        brcmf_netbuf_shrink_head(pktbuf, h->data_offset << 2);
     }
 
     if (pktbuf->len == 0) {
@@ -343,7 +344,7 @@ static zx_status_t brcmf_proto_bcdc_hdrpull(struct brcmf_pub* drvr, bool do_fws,
 }
 
 static zx_status_t brcmf_proto_bcdc_tx_queue_data(struct brcmf_pub* drvr, int ifidx,
-                                                  struct sk_buff* skb) {
+                                                  struct brcmf_netbuf* skb) {
     struct brcmf_if* ifp = brcmf_get_ifp(drvr, ifidx);
     struct brcmf_bcdc* bcdc = drvr->proto->pd;
 
@@ -355,7 +356,7 @@ static zx_status_t brcmf_proto_bcdc_tx_queue_data(struct brcmf_pub* drvr, int if
 }
 
 static int brcmf_proto_bcdc_txdata(struct brcmf_pub* drvr, int ifidx, uint8_t offset,
-                                   struct sk_buff* pktbuf) {
+                                   struct brcmf_netbuf* pktbuf) {
     brcmf_proto_bcdc_hdrpush(drvr, ifidx, offset, pktbuf);
     return brcmf_bus_txdata(drvr->bus_if, pktbuf);
 }
@@ -369,7 +370,7 @@ void brcmf_proto_bcdc_txflowblock(struct brcmf_device* dev, bool state) {
     brcmf_fws_bus_blocked(drvr, state);
 }
 
-void brcmf_proto_bcdc_txcomplete(struct brcmf_device* dev, struct sk_buff* txp, bool success) {
+void brcmf_proto_bcdc_txcomplete(struct brcmf_device* dev, struct brcmf_netbuf* txp, bool success) {
     struct brcmf_bus* bus_if = dev_get_drvdata(dev);
     struct brcmf_bcdc* bcdc = bus_if->drvr->proto->pd;
     struct brcmf_if* ifp;
@@ -395,7 +396,7 @@ static void brcmf_proto_bcdc_delete_peer(struct brcmf_pub* drvr, int ifidx, uint
 
 static void brcmf_proto_bcdc_add_tdls_peer(struct brcmf_pub* drvr, int ifidx, uint8_t peer[ETH_ALEN]) {}
 
-static void brcmf_proto_bcdc_rxreorder(struct brcmf_if* ifp, struct sk_buff* skb) {
+static void brcmf_proto_bcdc_rxreorder(struct brcmf_if* ifp, struct brcmf_netbuf* skb) {
     brcmf_fws_rxreorder(ifp, skb);
 }
 

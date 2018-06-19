@@ -22,6 +22,7 @@
 //#include <linux/skbuff.h>
 
 #include "linuxisms.h"
+#include "netbuf.h"
 
 /*
  * Spin at most 'us' microseconds while 'exp' is true.
@@ -70,7 +71,7 @@
 #define ETHER_ADDR_STR_LEN 18
 
 struct pktq_prec {
-    struct sk_buff_head skblist;
+    struct brcmf_netbuf_list skblist;
     uint16_t max; /* maximum number of queued packets */
 };
 
@@ -105,34 +106,34 @@ static inline bool pktq_pempty(struct pktq* pq, int prec) {
     return skb_queue_empty(&pq->q[prec].skblist);
 }
 
-static inline struct sk_buff* pktq_ppeek(struct pktq* pq, int prec) {
+static inline struct brcmf_netbuf* pktq_ppeek(struct pktq* pq, int prec) {
     return skb_peek(&pq->q[prec].skblist);
 }
 
-static inline struct sk_buff* pktq_ppeek_tail(struct pktq* pq, int prec) {
+static inline struct brcmf_netbuf* pktq_ppeek_tail(struct pktq* pq, int prec) {
     return skb_peek_tail(&pq->q[prec].skblist);
 }
 
-struct sk_buff* brcmu_pktq_penq(struct pktq* pq, int prec, struct sk_buff* p);
-struct sk_buff* brcmu_pktq_penq_head(struct pktq* pq, int prec, struct sk_buff* p);
-struct sk_buff* brcmu_pktq_pdeq(struct pktq* pq, int prec);
-struct sk_buff* brcmu_pktq_pdeq_tail(struct pktq* pq, int prec);
-struct sk_buff* brcmu_pktq_pdeq_match(struct pktq* pq, int prec,
-                                      bool (*match_fn)(struct sk_buff* p, void* arg), void* arg);
+struct brcmf_netbuf* brcmu_pktq_penq(struct pktq* pq, int prec, struct brcmf_netbuf* p);
+struct brcmf_netbuf* brcmu_pktq_penq_head(struct pktq* pq, int prec, struct brcmf_netbuf* p);
+struct brcmf_netbuf* brcmu_pktq_pdeq(struct pktq* pq, int prec);
+struct brcmf_netbuf* brcmu_pktq_pdeq_tail(struct pktq* pq, int prec);
+struct brcmf_netbuf* brcmu_pktq_pdeq_match(struct pktq* pq, int prec,
+                                      bool (*match_fn)(struct brcmf_netbuf* p, void* arg), void* arg);
 
 /* packet primitives */
-struct sk_buff* brcmu_pkt_buf_get_skb(uint len);
-void brcmu_pkt_buf_free_skb(struct sk_buff* skb);
+struct brcmf_netbuf* brcmu_pkt_buf_get_skb(uint len);
+void brcmu_pkt_buf_free_skb(struct brcmf_netbuf* skb);
 
 /* Empty the queue at particular precedence level */
 /* callback function fn(pkt, arg) returns true if pkt belongs to if */
-void brcmu_pktq_pflush(struct pktq* pq, int prec, bool dir, bool (*fn)(struct sk_buff*, void*),
+void brcmu_pktq_pflush(struct pktq* pq, int prec, bool dir, bool (*fn)(struct brcmf_netbuf*, void*),
                        void* arg);
 
 /* operations on a set of precedences in packet queue */
 
 int brcmu_pktq_mlen(struct pktq* pq, uint prec_bmp);
-struct sk_buff* brcmu_pktq_mdeq(struct pktq* pq, uint prec_bmp, int* prec_out);
+struct brcmf_netbuf* brcmu_pktq_mdeq(struct pktq* pq, uint prec_bmp, int* prec_out);
 
 /* operations on packet queue as a whole */
 
@@ -158,8 +159,8 @@ static inline bool pktq_empty(struct pktq* pq) {
 
 void brcmu_pktq_init(struct pktq* pq, int num_prec, int max_len);
 /* prec_out may be NULL if caller is not interested in return value */
-struct sk_buff* brcmu_pktq_peek_tail(struct pktq* pq, int* prec_out);
-void brcmu_pktq_flush(struct pktq* pq, bool dir, bool (*fn)(struct sk_buff*, void*), void* arg);
+struct brcmf_netbuf* brcmu_pktq_peek_tail(struct pktq* pq, int* prec_out);
+void brcmu_pktq_flush(struct pktq* pq, bool dir, bool (*fn)(struct brcmf_netbuf*, void*), void* arg);
 
 /* externs */
 /* ip address */
@@ -196,7 +197,7 @@ static inline void* brcmu_alloc_and_copy(const void* buf, size_t size) {
 /* externs */
 /* format/print */
 #ifdef DEBUG
-void brcmu_prpkt(const char* msg, struct sk_buff* p0);
+void brcmu_prpkt(const char* msg, struct brcmf_netbuf* p0);
 #else
 #define brcmu_prpkt(a, b)
 #endif /* DEBUG */

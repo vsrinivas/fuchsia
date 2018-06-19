@@ -66,6 +66,8 @@ driver_module("brcmfmac_driver") {
     "linuxisms.c",
     "msgbuf.c",
     "msgbuf.h",
+    "netbuf.c",
+    "netbuf.h",
     "of.c",
     "of.h",
     "p2p.c",

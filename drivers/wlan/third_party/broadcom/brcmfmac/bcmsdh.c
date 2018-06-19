@@ -49,6 +49,7 @@
 #include "defs.h"
 #include "device.h"
 #include "linuxisms.h"
+#include "netbuf.h"
 #include "sdio.h"
 #include "soc.h"
 
@@ -288,7 +289,7 @@ out:
 }
 
 static zx_status_t brcmf_sdiod_skbuff_read(struct brcmf_sdio_dev* sdiodev, struct sdio_func* func,
-                                           uint32_t addr, struct sk_buff* skb) {
+                                           uint32_t addr, struct brcmf_netbuf* skb) {
     unsigned int req_sz;
     zx_status_t err;
 
@@ -317,7 +318,7 @@ static zx_status_t brcmf_sdiod_skbuff_read(struct brcmf_sdio_dev* sdiodev, struc
 }
 
 static zx_status_t brcmf_sdiod_skbuff_write(struct brcmf_sdio_dev* sdiodev, struct sdio_func* func,
-                                            uint32_t addr, struct sk_buff* skb) {
+                                            uint32_t addr, struct brcmf_netbuf* skb) {
     unsigned int req_sz;
     zx_status_t err;
 
@@ -347,17 +348,17 @@ static zx_status_t brcmf_sdiod_skbuff_write(struct brcmf_sdio_dev* sdiodev, stru
  * caller has already been padded and aligned.
  */
 static zx_status_t brcmf_sdiod_sglist_rw(struct brcmf_sdio_dev* sdiodev, struct sdio_func* func,
-                                         bool write, uint32_t addr, struct sk_buff_head* pktlist) {
+                                         bool write, uint32_t addr, struct brcmf_netbuf_list* pktlist) {
     unsigned int req_sz, func_blk_sz, sg_cnt, sg_data_sz, pkt_offset;
     unsigned int max_req_sz, orig_offset, dst_offset;
     unsigned short max_seg_cnt, seg_sz;
     unsigned char* pkt_data;
     unsigned char* orig_data;
     unsigned char* dst_data;
-    struct sk_buff* pkt_next = NULL;
-    struct sk_buff* local_pkt_next;
-    struct sk_buff_head local_list;
-    struct sk_buff_head* target_list;
+    struct brcmf_netbuf* pkt_next = NULL;
+    struct brcmf_netbuf* local_pkt_next;
+    struct brcmf_netbuf_list local_list;
+    struct brcmf_netbuf_list* target_list;
     struct mmc_request mmc_req;
     struct mmc_command mmc_cmd;
     struct mmc_data mmc_dat;
@@ -422,7 +423,7 @@ static zx_status_t brcmf_sdiod_sglist_rw(struct brcmf_sdio_dev* sdiodev, struct 
         sg_cnt = 0;
         sgl = sdiodev->sgtable.sgl;
         /* prep sg table */
-        while (pkt_next != (struct sk_buff*)target_list) {
+        while (pkt_next != (struct brcmf_netbuf*)target_list) {
             pkt_data = pkt_next->data + pkt_offset;
             sg_data_sz = pkt_next->len - pkt_offset;
             if (sg_data_sz > sdiodev->max_segment_size) {
@@ -512,7 +513,7 @@ exit:
 }
 
 zx_status_t brcmf_sdiod_recv_buf(struct brcmf_sdio_dev* sdiodev, uint8_t* buf, uint nbytes) {
-    struct sk_buff* mypkt;
+    struct brcmf_netbuf* mypkt;
     zx_status_t err;
 
     mypkt = brcmu_pkt_buf_get_skb(nbytes);
@@ -530,7 +531,7 @@ zx_status_t brcmf_sdiod_recv_buf(struct brcmf_sdio_dev* sdiodev, uint8_t* buf, u
     return err;
 }
 
-zx_status_t brcmf_sdiod_recv_pkt(struct brcmf_sdio_dev* sdiodev, struct sk_buff* pkt) {
+zx_status_t brcmf_sdiod_recv_pkt(struct brcmf_sdio_dev* sdiodev, struct brcmf_netbuf* pkt) {
     uint32_t addr = sdiodev->cc_core->base;
     zx_status_t err = ZX_OK;
 
@@ -550,10 +551,10 @@ done:
     return err;
 }
 
-zx_status_t brcmf_sdiod_recv_chain(struct brcmf_sdio_dev* sdiodev, struct sk_buff_head* pktq,
+zx_status_t brcmf_sdiod_recv_chain(struct brcmf_sdio_dev* sdiodev, struct brcmf_netbuf_list* pktq,
                                    uint totlen) {
-    struct sk_buff* glom_skb = NULL;
-    struct sk_buff* skb;
+    struct brcmf_netbuf* glom_skb = NULL;
+    struct brcmf_netbuf* skb;
     uint32_t addr = sdiodev->cc_core->base;
     zx_status_t err = ZX_OK;
 
@@ -581,7 +582,7 @@ zx_status_t brcmf_sdiod_recv_chain(struct brcmf_sdio_dev* sdiodev, struct sk_buf
 
         skb_queue_walk(pktq, skb) {
             memcpy(skb->data, glom_skb->data, skb->len);
-            skb_pull(glom_skb, skb->len);
+            brcmf_netbuf_shrink_head(glom_skb, skb->len);
         }
     } else {
         err = brcmf_sdiod_sglist_rw(sdiodev, sdiodev->func2, false, addr, pktq);
@@ -593,7 +594,7 @@ done:
 }
 
 zx_status_t brcmf_sdiod_send_buf(struct brcmf_sdio_dev* sdiodev, uint8_t* buf, uint nbytes) {
-    struct sk_buff* mypkt;
+    struct brcmf_netbuf* mypkt;
     uint32_t addr = sdiodev->cc_core->base;
     zx_status_t err;
 
@@ -623,8 +624,8 @@ zx_status_t brcmf_sdiod_send_buf(struct brcmf_sdio_dev* sdiodev, uint8_t* buf, u
     return err;
 }
 
-zx_status_t brcmf_sdiod_send_pkt(struct brcmf_sdio_dev* sdiodev, struct sk_buff_head* pktq) {
-    struct sk_buff* skb;
+zx_status_t brcmf_sdiod_send_pkt(struct brcmf_sdio_dev* sdiodev, struct brcmf_netbuf_list* pktq) {
+    struct brcmf_netbuf* skb;
     uint32_t addr = sdiodev->cc_core->base;
     zx_status_t err;
 
@@ -655,14 +656,14 @@ zx_status_t brcmf_sdiod_send_pkt(struct brcmf_sdio_dev* sdiodev, struct sk_buff_
 zx_status_t brcmf_sdiod_ramrw(struct brcmf_sdio_dev* sdiodev, bool write, uint32_t address,
                               uint8_t* data, uint size) {
     zx_status_t err = ZX_OK;
-    struct sk_buff* pkt;
+    struct brcmf_netbuf* pkt;
     uint32_t sdaddr;
     uint dsize;
 
     dsize = min_t(uint, SBSDIO_SB_OFT_ADDR_LIMIT, size);
-    pkt = dev_alloc_skb(dsize);
+    pkt = brcmf_netbuf_allocate(dsize);
     if (!pkt) {
-        brcmf_err("dev_alloc_skb failed: len %d\n", dsize);
+        brcmf_err("brcmf_netbuf_allocate failed: len %d\n", dsize);
         return ZX_ERR_IO;
     }
     pkt->priority = 0;
@@ -691,7 +692,7 @@ zx_status_t brcmf_sdiod_ramrw(struct brcmf_sdio_dev* sdiodev, bool write, uint32
         sdaddr &= SBSDIO_SB_OFT_ADDR_MASK;
         sdaddr |= SBSDIO_SB_ACCESS_2_4B_FLAG;
 
-        skb_put(pkt, dsize);
+        brcmf_netbuf_grow_tail(pkt, dsize);
 
         if (write) {
             memcpy(pkt->data, data, dsize);

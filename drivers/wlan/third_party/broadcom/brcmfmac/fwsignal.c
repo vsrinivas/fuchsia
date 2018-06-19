@@ -42,6 +42,7 @@
 #include "fwil.h"
 #include "fwil_types.h"
 #include "linuxisms.h"
+#include "netbuf.h"
 #include "p2p.h"
 #include "proto.h"
 #include "workqueue.h"
@@ -179,9 +180,9 @@ enum brcmf_fws_should_schedule {BRCMF_FWS_NOSCHEDULE, BRCMF_FWS_SCHEDULE};
 /**
  * enum brcmf_fws_skb_state - indicates processing state of skb.
  *
- * @BRCMF_FWS_SKBSTATE_NEW: sk_buff is newly arrived in the driver.
- * @BRCMF_FWS_SKBSTATE_DELAYED: sk_buff had to wait on queue.
- * @BRCMF_FWS_SKBSTATE_SUPPRESSED: sk_buff has been suppressed by firmware.
+ * @BRCMF_FWS_SKBSTATE_NEW: brcmf_netbuf is newly arrived in the driver.
+ * @BRCMF_FWS_SKBSTATE_DELAYED: brcmf_netbuf had to wait on queue.
+ * @BRCMF_FWS_SKBSTATE_SUPPRESSED: brcmf_netbuf has been suppressed by firmware.
  * @BRCMF_FWS_SKBSTATE_TIM: allocated for TIM update info.
  */
 enum brcmf_fws_skb_state {
@@ -201,7 +202,7 @@ enum brcmf_fws_skb_state {
  * @state: transmit state of the packet.
  * @mac: descriptor related to destination for this packet.
  *
- * This information is stored in control buffer struct sk_buff::cb, which
+ * This information is stored in control buffer struct brcmf_netbuf::cb, which
  * provides 48 bytes of storage so this structure should not exceed that.
  */
 struct brcmf_skbuff_cb {
@@ -222,7 +223,7 @@ struct brcmf_skbuff_cb {
 // clang-format-off
 
 /*
- * sk_buff control if flags
+ * brcmf_netbuf control if flags
  *
  *  b[11]  - packet sent upon firmware request.
  *  b[10]  - packet only contains signalling data.
@@ -252,7 +253,7 @@ struct brcmf_skbuff_cb {
                     BRCMF_SKB_IF_FLAGS_##field##_SHIFT)
 
 /*
- * sk_buff control packet identifier
+ * brcmf_netbuf control packet identifier
  *
  * 32-bit packet identifier used in PKTTAG tlv from host to dongle.
  *
@@ -430,7 +431,7 @@ enum brcmf_fws_hanger_item_state {
  */
 struct brcmf_fws_hanger_item {
     enum brcmf_fws_hanger_item_state state;
-    struct sk_buff* pkt;
+    struct brcmf_netbuf* pkt;
 };
 
 /**
@@ -560,14 +561,14 @@ static void brcmf_fws_unlock(struct brcmf_fws_info* fws) { // __TA_RELEASE(&fws-
     pthread_mutex_unlock(&irq_callback_lock);
 }
 
-static bool brcmf_fws_ifidx_match(struct sk_buff* skb, void* arg) {
+static bool brcmf_fws_ifidx_match(struct brcmf_netbuf* skb, void* arg) {
     uint32_t ifidx = brcmf_skb_if_flags_get_field(skb, INDEX);
     return ifidx == *(uint32_t*)arg;
 }
 
 static void brcmf_fws_psq_flush(struct brcmf_fws_info* fws, struct pktq* q, int ifidx) {
-    bool (*matchfn)(struct sk_buff*, void*) = NULL;
-    struct sk_buff* skb;
+    bool (*matchfn)(struct brcmf_netbuf*, void*) = NULL;
+    struct brcmf_netbuf* skb;
     int prec;
 
     if (ifidx != -1) {
@@ -613,7 +614,7 @@ done:
     return i;
 }
 
-static zx_status_t brcmf_fws_hanger_pushpkt(struct brcmf_fws_hanger* h, struct sk_buff* pkt,
+static zx_status_t brcmf_fws_hanger_pushpkt(struct brcmf_fws_hanger* h, struct brcmf_netbuf* pkt,
                                             uint32_t slot_id) {
     if (slot_id >= BRCMF_FWS_HANGER_MAXITEMS) {
         return ZX_ERR_OUT_OF_RANGE;
@@ -632,7 +633,7 @@ static zx_status_t brcmf_fws_hanger_pushpkt(struct brcmf_fws_hanger* h, struct s
 }
 
 static inline zx_status_t brcmf_fws_hanger_poppkt(struct brcmf_fws_hanger* h, uint32_t slot_id,
-                                                  struct sk_buff** pktout, bool remove_item) {
+                                                  struct brcmf_netbuf** pktout, bool remove_item) {
     if (slot_id >= BRCMF_FWS_HANGER_MAXITEMS) {
         return ZX_ERR_OUT_OF_RANGE;
     }
@@ -666,10 +667,10 @@ static zx_status_t brcmf_fws_hanger_mark_suppressed(struct brcmf_fws_hanger* h, 
     return ZX_OK;
 }
 
-static void brcmf_fws_hanger_cleanup(struct brcmf_fws_info* fws, bool (*fn)(struct sk_buff*, void*),
+static void brcmf_fws_hanger_cleanup(struct brcmf_fws_info* fws, bool (*fn)(struct brcmf_netbuf*, void*),
                                      int ifidx) {
     struct brcmf_fws_hanger* h = &fws->hanger;
-    struct sk_buff* skb;
+    struct brcmf_netbuf* skb;
     int i;
     enum brcmf_fws_hanger_item_state s;
 
@@ -812,10 +813,10 @@ static void brcmf_fws_macdesc_cleanup(struct brcmf_fws_info* fws,
 }
 
 static void brcmf_fws_bus_txq_cleanup(struct brcmf_fws_info* fws,
-                                      bool (*fn)(struct sk_buff*, void*), int ifidx) {
+                                      bool (*fn)(struct brcmf_netbuf*, void*), int ifidx) {
     struct brcmf_fws_hanger_item* hi;
     struct pktq* txq;
-    struct sk_buff* skb;
+    struct brcmf_netbuf* skb;
     int prec;
     uint32_t hslot;
     zx_status_t err;
@@ -842,7 +843,7 @@ static void brcmf_fws_bus_txq_cleanup(struct brcmf_fws_info* fws,
 static void brcmf_fws_cleanup(struct brcmf_fws_info* fws, int ifidx) {
     int i;
     struct brcmf_fws_mac_descriptor* table;
-    bool (*matchfn)(struct sk_buff*, void*) = NULL;
+    bool (*matchfn)(struct brcmf_netbuf*, void*) = NULL;
 
     if (fws == NULL) {
         return;
@@ -863,7 +864,7 @@ static void brcmf_fws_cleanup(struct brcmf_fws_info* fws, int ifidx) {
     brcmf_fws_hanger_cleanup(fws, matchfn, ifidx);
 }
 
-static uint8_t brcmf_fws_hdrpush(struct brcmf_fws_info* fws, struct sk_buff* skb) {
+static uint8_t brcmf_fws_hdrpush(struct brcmf_fws_info* fws, struct brcmf_netbuf* skb) {
     struct brcmf_fws_mac_descriptor* entry = brcmf_skbcb(skb)->mac;
     uint8_t* wlh;
     uint16_t data_offset = 0;
@@ -917,7 +918,7 @@ static uint8_t brcmf_fws_hdrpush(struct brcmf_fws_info* fws, struct sk_buff* skb
 
 static bool brcmf_fws_tim_update(struct brcmf_fws_info* fws, struct brcmf_fws_mac_descriptor* entry,
                                  int fifo, bool send_immediately) {
-    struct sk_buff* skb;
+    struct brcmf_netbuf* skb;
     struct brcmf_skbuff_cb* skcb;
     zx_status_t err;
     uint32_t len;
@@ -944,7 +945,7 @@ static bool brcmf_fws_tim_update(struct brcmf_fws_info* fws, struct brcmf_fws_ma
         if (skb == NULL) {
             return false;
         }
-        skb_pull(skb, len);
+        brcmf_netbuf_shrink_head(skb, len);
         skcb = brcmf_skbcb(skb);
         skcb->mac = entry;
         skcb->mac_status = ZX_OK;
@@ -1155,7 +1156,7 @@ static enum brcmf_fws_should_schedule brcmf_fws_request_indicate(struct brcmf_fw
 }
 
 static void brcmf_fws_macdesc_use_req_credit(struct brcmf_fws_mac_descriptor* entry,
-                                             struct sk_buff* skb) {
+                                             struct brcmf_netbuf* skb) {
     if (entry->requested_credit > 0) {
         entry->requested_credit--;
         brcmf_skb_if_flags_set_field(skb, REQUESTED, 1);
@@ -1176,7 +1177,7 @@ static void brcmf_fws_macdesc_use_req_credit(struct brcmf_fws_mac_descriptor* en
     }
 }
 
-static void brcmf_fws_macdesc_return_req_credit(struct sk_buff* skb) {
+static void brcmf_fws_macdesc_return_req_credit(struct brcmf_netbuf* skb) {
     struct brcmf_fws_mac_descriptor* entry = brcmf_skbcb(skb)->mac;
 
     if ((brcmf_skb_if_flags_get_field(skb, REQ_CREDIT)) && (entry->state == BRCMF_FWS_STATE_CLOSE)) {
@@ -1226,14 +1227,14 @@ static void brcmf_fws_schedule_deq(struct brcmf_fws_info* fws) {
 }
 
 static zx_status_t brcmf_fws_enq(struct brcmf_fws_info* fws, enum brcmf_fws_skb_state state,
-                                 int fifo, struct sk_buff* p) {
+                                 int fifo, struct brcmf_netbuf* p) {
     int prec = 2 * fifo;
     uint32_t* qfull_stat = &fws->stats.delayq_full_error;
     struct brcmf_fws_mac_descriptor* entry;
     struct pktq* pq;
-    struct sk_buff_head* queue;
-    struct sk_buff* p_head;
-    struct sk_buff* p_tail;
+    struct brcmf_netbuf_list* queue;
+    struct brcmf_netbuf* p_head;
+    struct brcmf_netbuf* p_tail;
     uint32_t fr_new;
     uint32_t fr_compare;
 
@@ -1300,7 +1301,7 @@ static zx_status_t brcmf_fws_enq(struct brcmf_fws_info* fws, enum brcmf_fws_skb_
     fws->fifo_delay_map |= 1 << fifo;
     fws->fifo_enqpkt[fifo]++;
 
-    /* update the sk_buff state */
+    /* update the brcmf_netbuf state */
     brcmf_skbcb(p)->state = state;
 
     /*
@@ -1312,10 +1313,10 @@ static zx_status_t brcmf_fws_enq(struct brcmf_fws_info* fws, enum brcmf_fws_skb_
     return ZX_OK;
 }
 
-static struct sk_buff* brcmf_fws_deq(struct brcmf_fws_info* fws, int fifo) {
+static struct brcmf_netbuf* brcmf_fws_deq(struct brcmf_fws_info* fws, int fifo) {
     struct brcmf_fws_mac_descriptor* table;
     struct brcmf_fws_mac_descriptor* entry;
-    struct sk_buff* p;
+    struct brcmf_netbuf* p;
     int num_nodes;
     int node_pos;
     int prec_out;
@@ -1379,7 +1380,7 @@ done:
 }
 
 static zx_status_t brcmf_fws_txstatus_suppressed(struct brcmf_fws_info* fws, int fifo,
-                                                 struct sk_buff* skb, uint32_t genbit,
+                                                 struct brcmf_netbuf* skb, uint32_t genbit,
                                                  uint16_t seq) {
     struct brcmf_fws_mac_descriptor* entry = brcmf_skbcb(skb)->mac;
     uint32_t hslot;
@@ -1422,7 +1423,7 @@ static zx_status_t brcmf_fws_txs_process(struct brcmf_fws_info* fws, uint8_t fla
     uint32_t fifo;
     zx_status_t ret;
     bool remove_from_hanger = true;
-    struct sk_buff* skb;
+    struct brcmf_netbuf* skb;
     struct brcmf_skbuff_cb* skcb;
     struct brcmf_fws_mac_descriptor* entry = NULL;
     struct brcmf_if* ifp;
@@ -1595,7 +1596,7 @@ static zx_status_t brcmf_fws_notify_bcmc_credit_support(struct brcmf_if* ifp,
 }
 
 static void brcmf_rxreorder_get_skb_list(struct brcmf_ampdu_rx_reorder* rfi, uint8_t start, uint8_t end,
-                                         struct sk_buff_head* skb_list) {
+                                         struct brcmf_netbuf_list* skb_list) {
     /* initialize return list */
     __skb_queue_head_init(skb_list);
 
@@ -1617,12 +1618,12 @@ static void brcmf_rxreorder_get_skb_list(struct brcmf_ampdu_rx_reorder* rfi, uin
     rfi->pend_pkts -= skb_queue_len(skb_list);
 }
 
-void brcmf_fws_rxreorder(struct brcmf_if* ifp, struct sk_buff* pkt) {
+void brcmf_fws_rxreorder(struct brcmf_if* ifp, struct brcmf_netbuf* pkt) {
     uint8_t* reorder_data;
     uint8_t flow_id, max_idx, cur_idx, exp_idx, end_idx;
     struct brcmf_ampdu_rx_reorder* rfi;
-    struct sk_buff_head reorder_list;
-    struct sk_buff* pnext;
+    struct brcmf_netbuf_list reorder_list;
+    struct brcmf_netbuf* pnext;
     uint8_t flags;
     uint32_t buf_size;
 
@@ -1671,7 +1672,7 @@ void brcmf_fws_rxreorder(struct brcmf_if* ifp, struct sk_buff* pkt) {
         }
 
         ifp->drvr->reorder_flows[flow_id] = rfi;
-        rfi->pktslots = (struct sk_buff**)(rfi + 1);
+        rfi->pktslots = (struct brcmf_netbuf**)(rfi + 1);
         rfi->max_idx = max_idx;
     }
     if (flags & BRCMF_RXREORDER_NEW_HOLE) {
@@ -1779,7 +1780,7 @@ netif_rx:
     }
 }
 
-void brcmf_fws_hdrpull(struct brcmf_if* ifp, int16_t siglen, struct sk_buff* skb) {
+void brcmf_fws_hdrpull(struct brcmf_if* ifp, int16_t siglen, struct brcmf_netbuf* skb) {
     struct brcmf_skb_reorder_data* rd;
     struct brcmf_fws_info* fws = drvr_to_fws(ifp->drvr);
     uint8_t* signal_data;
@@ -1800,7 +1801,7 @@ void brcmf_fws_hdrpull(struct brcmf_if* ifp, int16_t siglen, struct sk_buff* skb
     }
     /* if flow control disabled, skip to packet data and leave */
     if ((!fws) || (!fws->fw_signals)) {
-        skb_pull(skb, siglen);
+        brcmf_netbuf_shrink_head(skb, siglen);
         return;
     }
 
@@ -1895,7 +1896,7 @@ void brcmf_fws_hdrpull(struct brcmf_if* ifp, int16_t siglen, struct sk_buff* skb
     /* signalling processing result does
      * not affect the actual ethernet packet.
      */
-    skb_pull(skb, siglen);
+    brcmf_netbuf_shrink_head(skb, siglen);
 
     /* this may be a signal-only packet
      */
@@ -1904,7 +1905,7 @@ void brcmf_fws_hdrpull(struct brcmf_if* ifp, int16_t siglen, struct sk_buff* skb
     }
 }
 
-static uint8_t brcmf_fws_precommit_skb(struct brcmf_fws_info* fws, int fifo, struct sk_buff* p) {
+static uint8_t brcmf_fws_precommit_skb(struct brcmf_fws_info* fws, int fifo, struct brcmf_netbuf* p) {
     struct brcmf_skbuff_cb* skcb = brcmf_skbcb(p);
     // TODO(cphoenix): skcb->mac and mac_status are often unchecked in this file. Be more paranoid?
     struct brcmf_fws_mac_descriptor* entry = skcb->mac;
@@ -1925,9 +1926,9 @@ static uint8_t brcmf_fws_precommit_skb(struct brcmf_fws_info* fws, int fifo, str
     return brcmf_fws_hdrpush(fws, p);
 }
 
-static void brcmf_fws_rollback_toq(struct brcmf_fws_info* fws, struct sk_buff* skb, int fifo) {
+static void brcmf_fws_rollback_toq(struct brcmf_fws_info* fws, struct brcmf_netbuf* skb, int fifo) {
     struct brcmf_fws_mac_descriptor* entry;
-    struct sk_buff* pktout;
+    struct brcmf_netbuf* pktout;
     int qidx, hslot;
     zx_status_t rc = ZX_OK;
 
@@ -1983,7 +1984,7 @@ static zx_status_t brcmf_fws_borrow_credit(struct brcmf_fws_info* fws) {
     return ZX_ERR_UNAVAILABLE;
 }
 
-static zx_status_t brcmf_fws_commit_skb(struct brcmf_fws_info* fws, int fifo, struct sk_buff* skb) {
+static zx_status_t brcmf_fws_commit_skb(struct brcmf_fws_info* fws, int fifo, struct brcmf_netbuf* skb) {
     struct brcmf_skbuff_cb* skcb = brcmf_skbcb(skb);
     struct brcmf_fws_mac_descriptor* entry;
     zx_status_t rc;
@@ -2027,7 +2028,7 @@ rollback:
     return rc;
 }
 
-static zx_status_t brcmf_fws_assign_htod(struct brcmf_fws_info* fws, struct sk_buff* p, int fifo) {
+static zx_status_t brcmf_fws_assign_htod(struct brcmf_fws_info* fws, struct brcmf_netbuf* p, int fifo) {
     struct brcmf_skbuff_cb* skcb = brcmf_skbcb(p);
     zx_status_t rc;
     int hslot;
@@ -2047,7 +2048,7 @@ static zx_status_t brcmf_fws_assign_htod(struct brcmf_fws_info* fws, struct sk_b
     return rc;
 }
 
-zx_status_t brcmf_fws_process_skb(struct brcmf_if* ifp, struct sk_buff* skb) {
+zx_status_t brcmf_fws_process_skb(struct brcmf_if* ifp, struct brcmf_netbuf* skb) {
     struct brcmf_fws_info* fws = drvr_to_fws(ifp->drvr);
     struct brcmf_skbuff_cb* skcb = brcmf_skbcb(skb);
     struct ethhdr* eh = (struct ethhdr*)(skb->data);
@@ -2132,7 +2133,7 @@ void brcmf_fws_del_interface(struct brcmf_if* ifp) {
 static void brcmf_fws_dequeue_worker(struct work_struct* worker) {
     struct brcmf_fws_info* fws;
     struct brcmf_pub* drvr;
-    struct sk_buff* skb;
+    struct brcmf_netbuf* skb;
     int fifo;
     uint32_t hslot;
     uint32_t ifidx;
@@ -2379,7 +2380,7 @@ bool brcmf_fws_fc_active(struct brcmf_fws_info* fws) {
     return fws->fcmode != BRCMF_FWS_FCMODE_NONE;
 }
 
-void brcmf_fws_bustxfail(struct brcmf_fws_info* fws, struct sk_buff* skb) {
+void brcmf_fws_bustxfail(struct brcmf_fws_info* fws, struct brcmf_netbuf* skb) {
     uint32_t hslot;
 
     if (brcmf_skbcb(skb)->state == BRCMF_FWS_SKBSTATE_TIM) {

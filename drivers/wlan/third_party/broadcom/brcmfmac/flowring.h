@@ -16,6 +16,7 @@
 #define BRCMFMAC_FLOWRING_H
 
 #include "device.h"
+#include "netbuf.h"
 #include "proto.h"
 
 #define BRCMF_FLOWRING_HASHSIZE 512 /* has to be 2^x */
@@ -34,7 +35,7 @@ struct brcmf_flowring_ring {
     uint16_t hash_id;
     bool blocked;
     enum ring_status status;
-    struct sk_buff_head skblist;
+    struct brcmf_netbuf_list skblist;
 };
 
 struct brcmf_flowring_tdls_entry {
@@ -60,9 +61,9 @@ zx_status_t brcmf_flowring_create(struct brcmf_flowring* flow, uint8_t da[ETH_AL
 void brcmf_flowring_delete(struct brcmf_flowring* flow, uint16_t flowid);
 void brcmf_flowring_open(struct brcmf_flowring* flow, uint16_t flowid);
 uint8_t brcmf_flowring_tid(struct brcmf_flowring* flow, uint16_t flowid);
-uint32_t brcmf_flowring_enqueue(struct brcmf_flowring* flow, uint16_t flowid, struct sk_buff* skb);
-struct sk_buff* brcmf_flowring_dequeue(struct brcmf_flowring* flow, uint16_t flowid);
-void brcmf_flowring_reinsert(struct brcmf_flowring* flow, uint16_t flowid, struct sk_buff* skb);
+uint32_t brcmf_flowring_enqueue(struct brcmf_flowring* flow, uint16_t flowid, struct brcmf_netbuf* skb);
+struct brcmf_netbuf* brcmf_flowring_dequeue(struct brcmf_flowring* flow, uint16_t flowid);
+void brcmf_flowring_reinsert(struct brcmf_flowring* flow, uint16_t flowid, struct brcmf_netbuf* skb);
 uint32_t brcmf_flowring_qlen(struct brcmf_flowring* flow, uint16_t flowid);
 uint8_t brcmf_flowring_ifidx_get(struct brcmf_flowring* flow, uint16_t flowid);
 struct brcmf_flowring* brcmf_flowring_attach(struct brcmf_device* dev, uint16_t nrofrings);

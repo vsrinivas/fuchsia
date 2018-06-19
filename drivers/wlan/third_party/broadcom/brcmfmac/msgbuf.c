@@ -36,6 +36,7 @@
 #include "device.h"
 #include "flowring.h"
 #include "linuxisms.h"
+#include "netbuf.h"
 #include "proto.h"
 #include "tracepoint.h"
 #include "workqueue.h"
@@ -271,7 +272,7 @@ struct brcmf_msgbuf {
 struct brcmf_msgbuf_pktid {
     atomic_int allocated;
     uint16_t data_offset;
-    struct sk_buff* skb;
+    struct brcmf_netbuf* skb;
     dma_addr_t physaddr;
 };
 
@@ -307,7 +308,7 @@ static struct brcmf_msgbuf_pktids* brcmf_msgbuf_init_pktids(uint32_t nr_array_en
 
 static zx_status_t brcmf_msgbuf_alloc_pktid(struct brcmf_device* dev,
                                             struct brcmf_msgbuf_pktids* pktids,
-                                            struct sk_buff* skb, uint16_t data_offset,
+                                            struct brcmf_netbuf* skb, uint16_t data_offset,
                                             dma_addr_t* physaddr, uint32_t* idx) {
     struct brcmf_msgbuf_pktid* array;
     uint32_t count;
@@ -353,10 +354,10 @@ static zx_status_t brcmf_msgbuf_alloc_pktid(struct brcmf_device* dev,
     return ZX_OK;
 }
 
-static struct sk_buff* brcmf_msgbuf_get_pktid(struct brcmf_device* dev,
+static struct brcmf_netbuf* brcmf_msgbuf_get_pktid(struct brcmf_device* dev,
                                               struct brcmf_msgbuf_pktids* pktids, uint32_t idx) {
     struct brcmf_msgbuf_pktid* pktid;
-    struct sk_buff* skb;
+    struct brcmf_netbuf* skb;
 
     if (idx >= pktids->array_size) {
         brcmf_err("Invalid packet id %d (max %d)\n", idx, pktids->array_size);
@@ -463,7 +464,7 @@ static void brcmf_msgbuf_ioctl_resp_wake(struct brcmf_msgbuf* msgbuf) {
 static zx_status_t brcmf_msgbuf_query_dcmd(struct brcmf_pub* drvr, int ifidx, uint cmd, void* buf,
                                            uint len, zx_status_t* fwerr) {
     struct brcmf_msgbuf* msgbuf = (struct brcmf_msgbuf*)drvr->proto->pd;
-    struct sk_buff* skb = NULL;
+    struct brcmf_netbuf* skb = NULL;
     zx_status_t err;
 
     brcmf_dbg(MSGBUF, "ifidx=%d, cmd=%d, len=%d\n", ifidx, cmd, len);
@@ -501,12 +502,12 @@ static zx_status_t brcmf_msgbuf_set_dcmd(struct brcmf_pub* drvr, int ifidx, uint
     return brcmf_msgbuf_query_dcmd(drvr, ifidx, cmd, buf, len, fwerr);
 }
 
-static zx_status_t brcmf_msgbuf_hdrpull(struct brcmf_pub* drvr, bool do_fws, struct sk_buff* skb,
+static zx_status_t brcmf_msgbuf_hdrpull(struct brcmf_pub* drvr, bool do_fws, struct brcmf_netbuf* skb,
                                         struct brcmf_if** ifp) {
     return ZX_ERR_IO_NOT_PRESENT;
 }
 
-static void brcmf_msgbuf_rxreorder(struct brcmf_if* ifp, struct sk_buff* skb) {}
+static void brcmf_msgbuf_rxreorder(struct brcmf_if* ifp, struct brcmf_netbuf* skb) {}
 
 static void brcmf_msgbuf_remove_flowring(struct brcmf_msgbuf* msgbuf, uint16_t flowid) {
     uint32_t dma_sz;
@@ -612,7 +613,7 @@ static void brcmf_msgbuf_flowring_worker(struct work_struct* work) {
 }
 
 static uint32_t brcmf_msgbuf_flowring_create(struct brcmf_msgbuf* msgbuf, int ifidx,
-                                             struct sk_buff* skb) {
+                                             struct brcmf_netbuf* skb) {
     struct brcmf_msgbuf_work_item* create;
     struct ethhdr* eh = (struct ethhdr*)(skb->data);
     uint32_t flowid;
@@ -648,7 +649,7 @@ static void brcmf_msgbuf_txflow(struct brcmf_msgbuf* msgbuf, uint16_t flowid) {
     struct brcmf_commonring* commonring;
     void* ret_ptr;
     uint32_t count;
-    struct sk_buff* skb;
+    struct brcmf_netbuf* skb;
     dma_addr_t physaddr;
     uint32_t pktid;
     struct msgbuf_tx_msghdr* tx_msghdr;
@@ -736,7 +737,7 @@ static zx_status_t brcmf_msgbuf_schedule_txdata(struct brcmf_msgbuf* msgbuf, uin
 }
 
 static zx_status_t brcmf_msgbuf_tx_queue_data(struct brcmf_pub* drvr, int ifidx,
-                                              struct sk_buff* skb) {
+                                              struct brcmf_netbuf* skb) {
     struct brcmf_msgbuf* msgbuf = (struct brcmf_msgbuf*)drvr->proto->pd;
     struct brcmf_flowring* flow = msgbuf->flow;
     struct ethhdr* eh = (struct ethhdr*)(skb->data);
@@ -798,7 +799,7 @@ static void brcmf_msgbuf_process_txstatus(struct brcmf_msgbuf* msgbuf, void* buf
     struct brcmf_commonring* commonring;
     struct msgbuf_tx_status* tx_status;
     uint32_t idx;
-    struct sk_buff* skb;
+    struct brcmf_netbuf* skb;
     uint16_t flowid;
 
     tx_status = (struct msgbuf_tx_status*)buf;
@@ -820,7 +821,7 @@ static void brcmf_msgbuf_process_txstatus(struct brcmf_msgbuf* msgbuf, void* buf
 static uint32_t brcmf_msgbuf_rxbuf_data_post(struct brcmf_msgbuf* msgbuf, uint32_t count) {
     struct brcmf_commonring* commonring;
     void* ret_ptr;
-    struct sk_buff* skb;
+    struct brcmf_netbuf* skb;
     uint16_t alloced;
     uint32_t pktlen;
     dma_addr_t physaddr;
@@ -851,7 +852,7 @@ static uint32_t brcmf_msgbuf_rxbuf_data_post(struct brcmf_msgbuf* msgbuf, uint32
         pktlen = skb->len;
         if (brcmf_msgbuf_alloc_pktid(msgbuf->drvr->bus_if->dev, msgbuf->rx_pktids, skb, 0,
                                      &physaddr, &pktid)) {
-            dev_kfree_skb_any(skb);
+            brcmf_netbuf_free(skb);
             brcmf_err("No PKTID available !!\n");
             brcmf_commonring_write_cancel(commonring, alloced - i);
             break;
@@ -863,7 +864,7 @@ static uint32_t brcmf_msgbuf_rxbuf_data_post(struct brcmf_msgbuf* msgbuf, uint32
             rx_bufpost->metadata_buf_addr.high_addr = address >> 32;
             rx_bufpost->metadata_buf_addr.low_addr = address & 0xffffffff;
 
-            skb_pull(skb, msgbuf->rx_metadata_offset);
+            brcmf_netbuf_shrink_head(skb, msgbuf->rx_metadata_offset);
             pktlen = skb->len;
             physaddr += msgbuf->rx_metadata_offset;
         }
@@ -911,7 +912,7 @@ static void brcmf_msgbuf_update_rxbufpost_count(struct brcmf_msgbuf* msgbuf, uin
 static uint32_t brcmf_msgbuf_rxbuf_ctrl_post(struct brcmf_msgbuf* msgbuf, bool event_buf, uint32_t count) {
     struct brcmf_commonring* commonring;
     void* ret_ptr;
-    struct sk_buff* skb;
+    struct brcmf_netbuf* skb;
     uint16_t alloced;
     uint32_t pktlen;
     dma_addr_t physaddr;
@@ -944,7 +945,7 @@ static uint32_t brcmf_msgbuf_rxbuf_ctrl_post(struct brcmf_msgbuf* msgbuf, bool e
         pktlen = skb->len;
         if (brcmf_msgbuf_alloc_pktid(msgbuf->drvr->bus_if->dev, msgbuf->rx_pktids, skb, 0,
                                      &physaddr, &pktid)) {
-            dev_kfree_skb_any(skb);
+            brcmf_netbuf_free(skb);
             brcmf_err("No PKTID available !!\n");
             brcmf_commonring_write_cancel(commonring, alloced - i);
             break;
@@ -993,7 +994,7 @@ static void brcmf_msgbuf_process_event(struct brcmf_msgbuf* msgbuf, void* buf) {
     struct msgbuf_rx_event* event;
     uint32_t idx;
     uint16_t buflen;
-    struct sk_buff* skb;
+    struct brcmf_netbuf* skb;
     struct brcmf_if* ifp;
 
     event = (struct msgbuf_rx_event*)buf;
@@ -1011,7 +1012,7 @@ static void brcmf_msgbuf_process_event(struct brcmf_msgbuf* msgbuf, void* buf) {
     }
 
     if (msgbuf->rx_dataoffset) {
-        skb_pull(skb, msgbuf->rx_dataoffset);
+        brcmf_netbuf_shrink_head(skb, msgbuf->rx_dataoffset);
     }
 
     skb_trim(skb, buflen);
@@ -1032,7 +1033,7 @@ exit:
 
 static void brcmf_msgbuf_process_rx_complete(struct brcmf_msgbuf* msgbuf, void* buf) {
     struct msgbuf_rx_complete* rx_complete;
-    struct sk_buff* skb;
+    struct brcmf_netbuf* skb;
     uint16_t data_offset;
     uint16_t buflen;
     uint32_t idx;
@@ -1051,9 +1052,9 @@ static void brcmf_msgbuf_process_rx_complete(struct brcmf_msgbuf* msgbuf, void* 
     }
 
     if (data_offset) {
-        skb_pull(skb, data_offset);
+        brcmf_netbuf_shrink_head(skb, data_offset);
     } else if (msgbuf->rx_dataoffset) {
-        skb_pull(skb, msgbuf->rx_dataoffset);
+        brcmf_netbuf_shrink_head(skb, msgbuf->rx_dataoffset);
     }
 
     skb_trim(skb, buflen);

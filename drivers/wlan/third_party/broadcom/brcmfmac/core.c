@@ -44,6 +44,7 @@
 #include "fwil.h"
 #include "fwil_types.h"
 #include "linuxisms.h"
+#include "netbuf.h"
 #include "p2p.h"
 #include "pcie.h"
 #include "pno.h"
@@ -236,7 +237,7 @@ static void brcmf_netdev_set_multicast_list(struct net_device* ndev) {
     workqueue_schedule_default(&ifp->multicast_work);
 }
 
-static netdev_tx_t brcmf_netdev_start_xmit(struct sk_buff* skb, struct net_device* ndev) {
+static netdev_tx_t brcmf_netdev_start_xmit(struct brcmf_netbuf* skb, struct net_device* ndev) {
     zx_status_t ret;
     struct brcmf_if* ifp = ndev_to_if(ndev);
     struct brcmf_pub* drvr = ifp->drvr;
@@ -329,7 +330,7 @@ void brcmf_txflowblock_if(struct brcmf_if* ifp, enum brcmf_netif_stop_reason rea
     pthread_mutex_unlock(&irq_callback_lock);
 }
 
-void brcmf_netif_rx(struct brcmf_if* ifp, struct sk_buff* skb) {
+void brcmf_netif_rx(struct brcmf_if* ifp, struct brcmf_netbuf* skb) {
     if (skb->pkt_type == ADDRESSED_TO_MULTICAST) {
         ifp->ndev->stats.multicast++;
     }
@@ -354,7 +355,7 @@ void brcmf_netif_rx(struct brcmf_if* ifp, struct sk_buff* skb) {
     }
 }
 
-static zx_status_t brcmf_rx_hdrpull(struct brcmf_pub* drvr, struct sk_buff* skb,
+static zx_status_t brcmf_rx_hdrpull(struct brcmf_pub* drvr, struct brcmf_netbuf* skb,
                                     struct brcmf_if** ifp) {
     zx_status_t ret;
 
@@ -373,7 +374,7 @@ static zx_status_t brcmf_rx_hdrpull(struct brcmf_pub* drvr, struct sk_buff* skb,
     return ZX_OK;
 }
 
-void brcmf_rx_frame(struct brcmf_device* dev, struct sk_buff* skb, bool handle_event) {
+void brcmf_rx_frame(struct brcmf_device* dev, struct brcmf_netbuf* skb, bool handle_event) {
     struct brcmf_if* ifp;
     struct brcmf_bus* bus_if = dev_get_drvdata(dev);
     struct brcmf_pub* drvr = bus_if->drvr;
@@ -396,7 +397,7 @@ void brcmf_rx_frame(struct brcmf_device* dev, struct sk_buff* skb, bool handle_e
     }
 }
 
-void brcmf_rx_event(struct brcmf_device* dev, struct sk_buff* skb) {
+void brcmf_rx_event(struct brcmf_device* dev, struct brcmf_netbuf* skb) {
     struct brcmf_if* ifp;
     struct brcmf_bus* bus_if = dev_get_drvdata(dev);
     struct brcmf_pub* drvr = bus_if->drvr;
@@ -411,7 +412,7 @@ void brcmf_rx_event(struct brcmf_device* dev, struct sk_buff* skb) {
     brcmu_pkt_buf_free_skb(skb);
 }
 
-void brcmf_txfinalize(struct brcmf_if* ifp, struct sk_buff* txp, bool success) {
+void brcmf_txfinalize(struct brcmf_if* ifp, struct brcmf_netbuf* txp, bool success) {
     struct ethhdr* eh;
     uint16_t type;
 
@@ -592,9 +593,9 @@ static zx_status_t brcmf_net_p2p_stop(struct net_device* ndev) {
     return brcmf_cfg80211_down(ndev);
 }
 
-static netdev_tx_t brcmf_net_p2p_start_xmit(struct sk_buff* skb, struct net_device* ndev) {
+static netdev_tx_t brcmf_net_p2p_start_xmit(struct brcmf_netbuf* skb, struct net_device* ndev) {
     if (skb) {
-        dev_kfree_skb_any(skb);
+        brcmf_netbuf_free(skb);
     }
 
     return NETDEV_TX_OK;

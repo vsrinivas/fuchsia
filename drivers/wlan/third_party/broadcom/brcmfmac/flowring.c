@@ -29,6 +29,7 @@
 #include "device.h"
 #include "linuxisms.h"
 #include "msgbuf.h"
+#include "netbuf.h"
 #include "proto.h"
 
 #define BRCMF_FLOWRING_HIGH 1024
@@ -152,7 +153,7 @@ zx_status_t brcmf_flowring_create(struct brcmf_flowring* flow, uint8_t da[ETH_AL
 
         ring->hash_id = hash_idx;
         ring->status = RING_CLOSED;
-        skb_queue_head_init(&ring->skblist);
+        brcmf_netbuf_list_init(&ring->skblist);
         flow->rings[i] = ring;
 
         return i;
@@ -222,7 +223,7 @@ void brcmf_flowring_delete(struct brcmf_flowring* flow, uint16_t flowid) {
     struct brcmf_if* ifp;
     uint16_t hash_idx;
     uint8_t ifidx;
-    struct sk_buff* skb;
+    struct brcmf_netbuf* skb;
 
     ring = flow->rings[flowid];
     if (!ring) {
@@ -247,7 +248,7 @@ void brcmf_flowring_delete(struct brcmf_flowring* flow, uint16_t flowid) {
     free(ring);
 }
 
-uint32_t brcmf_flowring_enqueue(struct brcmf_flowring* flow, uint16_t flowid, struct sk_buff* skb) {
+uint32_t brcmf_flowring_enqueue(struct brcmf_flowring* flow, uint16_t flowid, struct brcmf_netbuf* skb) {
     struct brcmf_flowring_ring* ring;
 
     ring = flow->rings[flowid];
@@ -270,9 +271,9 @@ uint32_t brcmf_flowring_enqueue(struct brcmf_flowring* flow, uint16_t flowid, st
     return skb_queue_len(&ring->skblist);
 }
 
-struct sk_buff* brcmf_flowring_dequeue(struct brcmf_flowring* flow, uint16_t flowid) {
+struct brcmf_netbuf* brcmf_flowring_dequeue(struct brcmf_flowring* flow, uint16_t flowid) {
     struct brcmf_flowring_ring* ring;
-    struct sk_buff* skb;
+    struct brcmf_netbuf* skb;
 
     ring = flow->rings[flowid];
     if (ring->status != RING_OPEN) {
@@ -289,7 +290,7 @@ struct sk_buff* brcmf_flowring_dequeue(struct brcmf_flowring* flow, uint16_t flo
     return skb;
 }
 
-void brcmf_flowring_reinsert(struct brcmf_flowring* flow, uint16_t flowid, struct sk_buff* skb) {
+void brcmf_flowring_reinsert(struct brcmf_flowring* flow, uint16_t flowid, struct brcmf_netbuf* skb) {
     struct brcmf_flowring_ring* ring;
 
     ring = flow->rings[flowid];

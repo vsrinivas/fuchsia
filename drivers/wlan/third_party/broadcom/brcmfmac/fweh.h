@@ -22,13 +22,13 @@
 //#include <linux/if_ether.h>
 //#include <linux/skbuff.h>
 
-#include "linuxisms.h"
-
 #include <zircon/listnode.h>
 
 #include <endian.h>
 #include <string.h>
 
+#include "linuxisms.h"
+#include "netbuf.h"
 #include "workqueue.h"
 
 /* formward declarations */
@@ -340,7 +340,7 @@ void brcmf_fweh_process_event(struct brcmf_pub* drvr, struct brcmf_event* event_
                               uint32_t packet_len);
 void brcmf_fweh_p2pdev_setup(struct brcmf_if* ifp, bool ongoing);
 
-static inline void brcmf_fweh_process_skb(struct brcmf_pub* drvr, struct sk_buff* skb) {
+static inline void brcmf_fweh_process_skb(struct brcmf_pub* drvr, struct brcmf_netbuf* skb) {
     struct brcmf_event* event_packet;
     uint16_t usr_stype;
 

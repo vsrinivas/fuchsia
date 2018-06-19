@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013 Broadcom Corporation
+ * Copyright (c) 2018 The Fuchsia Authors
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -13,24 +13,29 @@
  * OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN
  * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
-#ifndef BRCMFMAC_BCDC_H
-#define BRCMFMAC_BCDC_H
 
-#include "core.h"
-#include "device.h"
 #include "netbuf.h"
 
-#ifdef CONFIG_BRCMFMAC_PROTO_BCDC
-zx_status_t brcmf_proto_bcdc_attach(struct brcmf_pub* drvr);
-void brcmf_proto_bcdc_detach(struct brcmf_pub* drvr);
-void brcmf_proto_bcdc_txflowblock(struct brcmf_device* dev, bool state);
-void brcmf_proto_bcdc_txcomplete(struct brcmf_device* dev, struct brcmf_netbuf* txp, bool success);
-struct brcmf_fws_info* drvr_to_fws(struct brcmf_pub* drvr);
-#else
-static inline zx_status_t brcmf_proto_bcdc_attach(struct brcmf_pub* drvr) {
-    return ZX_OK;
-}
-static inline void brcmf_proto_bcdc_detach(struct brcmf_pub* drvr) {}
-#endif
+#include <stdlib.h>
+#include <sys/types.h>
 
-#endif /* BRCMFMAC_BCDC_H */
+#include "debug.h"
+
+struct brcmf_netbuf* brcmf_netbuf_allocate(uint32_t size) {
+    struct brcmf_netbuf* netbuf = calloc(1, sizeof(*netbuf));
+    if (netbuf == NULL) {
+        return NULL;
+    }
+    netbuf->data = netbuf->allocated_buffer = malloc(size);
+    if (netbuf->data == NULL) {
+        free(netbuf);
+        return NULL;
+    }
+    netbuf->allocated_size = size;
+    return netbuf;
+}
+
+void brcmf_netbuf_free(struct brcmf_netbuf* netbuf) {
+    free(netbuf->allocated_buffer);
+    free(netbuf);
+}

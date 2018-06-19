@@ -52,6 +52,7 @@
 #include "device.h"
 #include "firmware.h"
 #include "linuxisms.h"
+#include "netbuf.h"
 #include "soc.h"
 #include "workqueue.h"
 
@@ -473,8 +474,8 @@ struct brcmf_sdio {
     uint txbound; /* Tx frames to send before resched */
     uint txminmax;
 
-    struct sk_buff* glomd;    /* Packet containing glomming descriptor */
-    struct sk_buff_head glom; /* Packet list for glommed superframe */
+    struct brcmf_netbuf* glomd;    /* Packet containing glomming descriptor */
+    struct brcmf_netbuf_list glom; /* Packet list for glommed superframe */
 
     uint8_t* rxbuf;             /* Buffer for receiving control packets */
     uint rxblen;           /* Allocated length of rxbuf */
@@ -633,12 +634,12 @@ static struct brcmf_firmware_mapping brcmf_sdio_fwnames[] = {
     BRCMF_FW_NVRAM_ENTRY(CY_CC_4373_CHIP_ID, 0xFFFFFFFF, 4373)
 };
 
-static void pkt_align(struct sk_buff* p, int len, int align) {
+static void pkt_align(struct brcmf_netbuf* p, int len, int align) {
     uint datalign;
     datalign = (unsigned long)(p->data);
     datalign = roundup(datalign, (align)) - datalign;
     if (datalign) {
-        skb_pull(p, datalign);
+        brcmf_netbuf_shrink_head(p, datalign);
     }
     __skb_trim(p, len);
 }
@@ -1178,7 +1179,7 @@ static void brcmf_sdio_txfail(struct brcmf_sdio* bus) {
 
 /* return total length of buffer chain */
 static uint brcmf_sdio_glom_len(struct brcmf_sdio* bus) {
-    struct sk_buff* p;
+    struct brcmf_netbuf* p;
     uint total;
 
     total = 0;
@@ -1187,8 +1188,8 @@ static uint brcmf_sdio_glom_len(struct brcmf_sdio* bus) {
 }
 
 static void brcmf_sdio_free_glom(struct brcmf_sdio* bus) {
-    struct sk_buff* cur;
-    struct sk_buff* next;
+    struct brcmf_netbuf* cur;
+    struct brcmf_netbuf* next;
 
     skb_queue_walk_safe(&bus->glom, cur, next) {
         skb_unlink(cur, &bus->glom);
@@ -1408,8 +1409,8 @@ static uint8_t brcmf_sdio_rxglom(struct brcmf_sdio* bus, uint8_t rxseq) {
     uint8_t* dptr;
     uint8_t num = 0;
     uint16_t sublen;
-    struct sk_buff* pfirst;
-    struct sk_buff* pnext;
+    struct brcmf_netbuf* pfirst;
+    struct brcmf_netbuf* pnext;
 
     zx_status_t errcode;
     uint8_t doff, sfdoff;
@@ -1531,7 +1532,7 @@ static uint8_t brcmf_sdio_rxglom(struct brcmf_sdio* bus, uint8_t rxseq) {
         bus->cur_read.len = rd_new.len_nxtfrm << 4;
 
         /* Remove superframe header, remember offset */
-        skb_pull(pfirst, rd_new.dat_offset);
+        brcmf_netbuf_shrink_head(pfirst, rd_new.dat_offset);
         sfdoff = rd_new.dat_offset;
         num = 0;
 
@@ -1574,7 +1575,7 @@ static uint8_t brcmf_sdio_rxglom(struct brcmf_sdio* bus, uint8_t rxseq) {
                                "Rx Subframe Data:\n");
 
             __skb_trim(pfirst, sublen);
-            skb_pull(pfirst, doff);
+            brcmf_netbuf_shrink_head(pfirst, doff);
 
             if (pfirst->len == 0) {
                 skb_unlink(pfirst, &bus->glom);
@@ -1720,7 +1721,7 @@ static void brcmf_sdio_pad(struct brcmf_sdio* bus, uint16_t* pad, uint16_t* rdle
 }
 
 static uint brcmf_sdio_readframes(struct brcmf_sdio* bus, uint maxframes) {
-    struct sk_buff* pkt; /* Packet for event or data frames */
+    struct brcmf_netbuf* pkt; /* Packet for event or data frames */
     uint16_t pad;             /* Number of pad bytes to read */
     uint rxleft = 0;     /* Remaining number of frames allowed */
     zx_status_t ret;             /* Return code from calls */
@@ -1799,7 +1800,7 @@ static uint brcmf_sdio_readframes(struct brcmf_sdio* bus, uint maxframes) {
             sdio_release_host(bus->sdiodev->func1);
             continue;
         }
-        skb_pull(pkt, head_read);
+        brcmf_netbuf_shrink_head(pkt, head_read);
         pkt_align(pkt, rd->len_left, bus->head_align);
 
         ret = brcmf_sdiod_recv_pkt(bus->sdiodev, pkt);
@@ -1865,7 +1866,7 @@ static uint brcmf_sdio_readframes(struct brcmf_sdio* bus, uint maxframes) {
                 brcmf_dbg(GLOM, "glom descriptor, %d bytes:\n", rd->len);
                 brcmf_dbg_hex_dump(BRCMF_GLOM_ON(), pkt->data, rd->len, "Glom Data:\n");
                 __skb_trim(pkt, rd->len);
-                skb_pull(pkt, SDPCM_HDRLEN);
+                brcmf_netbuf_shrink_head(pkt, SDPCM_HDRLEN);
                 bus->glomd = pkt;
             } else {
                 brcmf_err(
@@ -1886,7 +1887,7 @@ static uint brcmf_sdio_readframes(struct brcmf_sdio* bus, uint maxframes) {
 
         /* Fill in packet len and prio, deliver upward */
         __skb_trim(pkt, rd->len);
-        skb_pull(pkt, rd->dat_offset);
+        brcmf_netbuf_shrink_head(pkt, rd->dat_offset);
 
         if (pkt->len == 0) {
             brcmu_pkt_buf_free_skb(pkt);
@@ -1924,7 +1925,7 @@ static void brcmf_sdio_wait_event_wakeup(struct brcmf_sdio* bus) {
     return;
 }
 
-static zx_status_t brcmf_sdio_txpkt_hdalign(struct brcmf_sdio* bus, struct sk_buff* pkt,
+static zx_status_t brcmf_sdio_txpkt_hdalign(struct brcmf_sdio* bus, struct brcmf_netbuf* pkt,
                                             uint16_t* head_pad_out) {
     struct brcmf_bus_stats* stats;
     uint16_t head_pad;
@@ -1955,7 +1956,7 @@ static zx_status_t brcmf_sdio_txpkt_hdalign(struct brcmf_sdio* bus, struct sk_bu
 }
 
 /*
- * struct brcmf_skbuff_cb reserves first two bytes in sk_buff::cb for
+ * struct brcmf_skbuff_cb reserves first two bytes in brcmf_netbuf::cb for
  * bus layer usage.
  */
 /* flag marking a dummy skb added for DMA alignment requirement */
@@ -1963,11 +1964,11 @@ static zx_status_t brcmf_sdio_txpkt_hdalign(struct brcmf_sdio* bus, struct sk_bu
 /* bit mask of data length chopped from the previous packet */
 #define ALIGN_SKB_CHOP_LEN_MASK 0x7fff
 
-static zx_status_t brcmf_sdio_txpkt_prep_sg(struct brcmf_sdio* bus, struct sk_buff_head* pktq,
-                                            struct sk_buff* pkt, uint16_t total_len,
+static zx_status_t brcmf_sdio_txpkt_prep_sg(struct brcmf_sdio* bus, struct brcmf_netbuf_list* pktq,
+                                            struct brcmf_netbuf* pkt, uint16_t total_len,
                                             uint16_t* tail_pad_out) {
     struct brcmf_sdio_dev* sdiodev;
-    struct sk_buff* pkt_pad;
+    struct brcmf_netbuf* pkt_pad;
     uint16_t tail_pad, tail_chop, chain_pad, head_pad;
     unsigned int blksize;
     bool lastfrm;
@@ -1990,14 +1991,14 @@ static zx_status_t brcmf_sdio_txpkt_prep_sg(struct brcmf_sdio* bus, struct sk_bu
     if (lastfrm && chain_pad) {
         tail_pad += blksize - chain_pad;
     }
-    if (skb_tailroom(pkt) < tail_pad && pkt->len > blksize) {
+    if (brcmf_netbuf_tail_space(pkt) < tail_pad && pkt->len > blksize) {
         pkt_pad = brcmu_pkt_buf_get_skb(tail_pad + tail_chop + bus->head_align);
         if (pkt_pad == NULL) {
             return ZX_ERR_NO_MEMORY;
         }
         ret = brcmf_sdio_txpkt_hdalign(bus, pkt_pad, &head_pad);
         if (unlikely(ret != ZX_OK)) {
-            kfree_skb(pkt_pad);
+            brcmf_netbuf_free(pkt_pad);
             return ret;
         }
         memcpy(pkt_pad->data, pkt->data + pkt->len - tail_chop, tail_chop);
@@ -2006,8 +2007,8 @@ static zx_status_t brcmf_sdio_txpkt_prep_sg(struct brcmf_sdio* bus, struct sk_bu
         skb_trim(pkt_pad, tail_pad + tail_chop);
         __skb_queue_after(pktq, pkt, pkt_pad);
     } else {
-        ntail = pkt->data_len + tail_pad - (pkt->end - pkt->tail);
-        if (skb_cloned(pkt) || ntail > 0)
+        ntail = pkt->allocated_size + tail_pad - (pkt->end - pkt->tail);
+        if (ntail > 0)
             if (pskb_expand_head(pkt, 0, ntail, GFP_ATOMIC)) {
                 return ZX_ERR_NO_MEMORY;
             }
@@ -2035,10 +2036,10 @@ static zx_status_t brcmf_sdio_txpkt_prep_sg(struct brcmf_sdio* bus, struct sk_bu
  *  - Prepare header
  * Return: negative value if there is error
  */
-static zx_status_t brcmf_sdio_txpkt_prep(struct brcmf_sdio* bus, struct sk_buff_head* pktq,
+static zx_status_t brcmf_sdio_txpkt_prep(struct brcmf_sdio* bus, struct brcmf_netbuf_list* pktq,
                                          uint chan) {
     uint16_t head_pad, total_len;
-    struct sk_buff* pkt_next;
+    struct brcmf_netbuf* pkt_next;
     uint8_t txseq;
     zx_status_t ret;
     struct brcmf_sdio_hdrinfo hd_info = {0};
@@ -2108,14 +2109,14 @@ static zx_status_t brcmf_sdio_txpkt_prep(struct brcmf_sdio* bus, struct sk_buff_
  *  - Remove head padding
  *  - Remove tail padding
  */
-static void brcmf_sdio_txpkt_postp(struct brcmf_sdio* bus, struct sk_buff_head* pktq) {
+static void brcmf_sdio_txpkt_postp(struct brcmf_sdio* bus, struct brcmf_netbuf_list* pktq) {
     uint8_t* hdr;
     uint32_t dat_offset;
     uint16_t tail_pad;
     uint16_t dummy_flags, chop_len;
-    struct sk_buff* pkt_next;
-    struct sk_buff* tmp;
-    struct sk_buff* pkt_prev;
+    struct brcmf_netbuf* pkt_next;
+    struct brcmf_netbuf* tmp;
+    struct brcmf_netbuf* pkt_prev;
 
     skb_queue_walk_safe(pktq, pkt_next, tmp) {
         dummy_flags = *(uint16_t*)(pkt_next->cb);
@@ -2123,7 +2124,7 @@ static void brcmf_sdio_txpkt_postp(struct brcmf_sdio* bus, struct sk_buff_head* 
             chop_len = dummy_flags & ALIGN_SKB_CHOP_LEN_MASK;
             if (chop_len) {
                 pkt_prev = pkt_next->prev;
-                skb_put(pkt_prev, chop_len);
+                brcmf_netbuf_grow_tail(pkt_prev, chop_len);
             }
             __skb_unlink(pkt_next, pktq);
             brcmu_pkt_buf_free_skb(pkt_next);
@@ -2131,7 +2132,7 @@ static void brcmf_sdio_txpkt_postp(struct brcmf_sdio* bus, struct sk_buff_head* 
             hdr = pkt_next->data + bus->tx_hdrlen - SDPCM_SWHDR_LEN;
             dat_offset = *(uint32_t*)hdr;
             dat_offset = (dat_offset & SDPCM_DOFFSET_MASK) >> SDPCM_DOFFSET_SHIFT;
-            skb_pull(pkt_next, dat_offset);
+            brcmf_netbuf_shrink_head(pkt_next, dat_offset);
             if (bus->txglom) {
                 tail_pad = *(uint16_t*)(hdr - 2);
                 skb_trim(pkt_next, pkt_next->len - tail_pad);
@@ -2142,10 +2143,10 @@ static void brcmf_sdio_txpkt_postp(struct brcmf_sdio* bus, struct sk_buff_head* 
 
 /* Writes a HW/SW header into the packet and sends it. */
 /* Assumes: (a) header space already there, (b) caller holds lock */
-static zx_status_t brcmf_sdio_txpkt(struct brcmf_sdio* bus, struct sk_buff_head* pktq, uint chan) {
+static zx_status_t brcmf_sdio_txpkt(struct brcmf_sdio* bus, struct brcmf_netbuf_list* pktq, uint chan) {
     zx_status_t ret;
-    struct sk_buff* pkt_next;
-    struct sk_buff* tmp;
+    struct brcmf_netbuf* pkt_next;
+    struct brcmf_netbuf* tmp;
 
     brcmf_dbg(TRACE, "Enter\n");
 
@@ -2177,8 +2178,8 @@ done:
 }
 
 static uint brcmf_sdio_sendfromq(struct brcmf_sdio* bus, uint maxframes) {
-    struct sk_buff* pkt;
-    struct sk_buff_head pktq;
+    struct brcmf_netbuf* pkt;
+    struct brcmf_netbuf_list pktq;
     uint32_t intstat_addr = bus->sdio_core->base + SD_REG(intstatus);
     uint32_t intstatus = 0;
     zx_status_t ret = ZX_OK;
@@ -2580,8 +2581,8 @@ static struct pktq* brcmf_sdio_bus_gettxq(struct brcmf_device* dev) {
     return &bus->txq;
 }
 
-static bool brcmf_sdio_prec_enq(struct pktq* q, struct sk_buff* pkt, int prec) {
-    struct sk_buff* p;
+static bool brcmf_sdio_prec_enq(struct pktq* q, struct brcmf_netbuf* pkt, int prec) {
+    struct brcmf_netbuf* p;
     int eprec = -1; /* precedence to evict from */
 
     /* Fast case, precedence queue is not full and we are also not
@@ -2625,7 +2626,7 @@ static bool brcmf_sdio_prec_enq(struct pktq* q, struct sk_buff* pkt, int prec) {
     return p != NULL;
 }
 
-static zx_status_t brcmf_sdio_bus_txdata(struct brcmf_device* dev, struct sk_buff* pkt) {
+static zx_status_t brcmf_sdio_bus_txdata(struct brcmf_device* dev, struct brcmf_netbuf* pkt) {
     zx_status_t ret;
     uint prec;
     struct brcmf_bus* bus_if = dev_get_drvdata(dev);
@@ -2654,7 +2655,7 @@ static zx_status_t brcmf_sdio_bus_txdata(struct brcmf_device* dev, struct sk_buf
     /* reset bus_flags in packet cb */
     *(uint16_t*)(pkt->cb) = 0;
     if (!brcmf_sdio_prec_enq(&bus->txq, pkt, prec)) {
-        skb_pull(pkt, bus->tx_hdrlen);
+        brcmf_netbuf_shrink_head(pkt, bus->tx_hdrlen);
         brcmf_err("out of bus->txq !!!\n");
         ret = ZX_ERR_NO_RESOURCES;
     } else {
@@ -4010,7 +4011,7 @@ struct brcmf_sdio* brcmf_sdio_probe(struct brcmf_sdio_dev* sdiodev) {
 
     bus->sdiodev = sdiodev;
     sdiodev->bus = bus;
-    skb_queue_head_init(&bus->glom);
+    brcmf_netbuf_list_init(&bus->glom);
     bus->txbound = BRCMF_TXBOUND;
     bus->rxbound = BRCMF_RXBOUND;
     bus->txminmax = BRCMF_TXMINMAX;
