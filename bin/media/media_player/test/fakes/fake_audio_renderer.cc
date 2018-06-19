@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/media/media_player/test/fake_audio_renderer.h"
+#include "garnet/bin/media/media_player/test/fakes/fake_audio_renderer.h"
 
 #include <iomanip>
 #include <iostream>
@@ -16,21 +16,6 @@
 
 namespace media_player {
 namespace test {
-
-namespace {
-
-static uint64_t Hash(const void* data, size_t data_size) {
-  const uint8_t* bytes = reinterpret_cast<const uint8_t*>(data);
-  uint64_t hash = 0;
-
-  for (; data_size != 0; --data_size, ++bytes) {
-    hash = *bytes + (hash << 6) + (hash << 16) - hash;
-  }
-
-  return hash;
-}
-
-}  // namespace
 
 FakeAudioRenderer::FakeAudioRenderer()
     : async_(async_get_default()), binding_(this) {}
@@ -69,8 +54,9 @@ void FakeAudioRenderer::SendPacket(fuchsia::media::AudioPacket packet,
   if (dump_packets_) {
     std::cerr << "{ " << packet.timestamp << ", " << packet.payload_size
               << ", 0x" << std::hex << std::setw(16) << std::setfill('0')
-              << Hash(mapped_buffer_.PtrFromOffset(packet.payload_offset),
-                      packet.payload_size)
+              << PacketInfo::Hash(
+                     mapped_buffer_.PtrFromOffset(packet.payload_offset),
+                     packet.payload_size)
               << std::dec << " },\n";
   }
 
@@ -83,8 +69,9 @@ void FakeAudioRenderer::SendPacket(fuchsia::media::AudioPacket packet,
     if (expected_packets_info_iter_->timestamp() != packet.timestamp ||
         expected_packets_info_iter_->size() != packet.payload_size ||
         expected_packets_info_iter_->hash() !=
-            Hash(mapped_buffer_.PtrFromOffset(packet.payload_offset),
-                 packet.payload_size)) {
+            PacketInfo::Hash(
+                mapped_buffer_.PtrFromOffset(packet.payload_offset),
+                packet.payload_size)) {
       FXL_DLOG(ERROR) << "supplied packet doesn't match expected packet info";
       expected_ = false;
     }

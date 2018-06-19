@@ -52,10 +52,12 @@ executable("tests") {
   testonly = true
 
   sources = [
-    "test/fake_audio_renderer.cc",
-    "test/fake_audio_renderer.h",
-    "test/fake_wav_reader.cc",
-    "test/fake_wav_reader.h",
+    "test/fakes/fake_audio_renderer.cc",
+    "test/fakes/fake_audio_renderer.h",
+    "test/fakes/fake_wav_reader.cc",
+    "test/fakes/fake_wav_reader.h",
+    "test/fakes/packet_info.cc",
+    "test/fakes/packet_info.h",
     "test/main.cc",
     "test/media_player_test_params.cc",
     "test/media_player_test_params.h",

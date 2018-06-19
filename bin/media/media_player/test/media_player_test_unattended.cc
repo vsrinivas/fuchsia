@@ -11,8 +11,8 @@
 #include <lib/async/cpp/task.h>
 #include <lib/fit/function.h>
 
-#include "garnet/bin/media/media_player/test/fake_audio_renderer.h"
-#include "garnet/bin/media/media_player/test/fake_wav_reader.h"
+#include "garnet/bin/media/media_player/test/fakes/fake_audio_renderer.h"
+#include "garnet/bin/media/media_player/test/fakes/fake_wav_reader.h"
 #include "lib/app/cpp/connect.h"
 #include "lib/app/cpp/startup_context.h"
 #include "lib/fidl/cpp/optional.h"
@@ -29,7 +29,6 @@ MediaPlayerTestUnattended::MediaPlayerTestUnattended(
   FXL_DCHECK(quit_callback_);
   std::cerr << "MediaPlayerTest starting\n";
 
-  std::cerr << "creating player\n";
   media_player_ =
       startup_context_
           ->ConnectToEnvironmentService<fuchsia::mediaplayer::MediaPlayer>();
@@ -73,11 +72,8 @@ MediaPlayerTestUnattended::MediaPlayerTestUnattended(
   media_player_->SetAudioRenderer(std::move(fake_audio_renderer_ptr));
 
   media_player_->SetReaderSource(std::move(fake_reader_ptr));
-  std::cerr << "player created " << (media_player_ ? "ok\n" : "NULL PTR\n");
 
-  std::cerr << "calling play\n";
   media_player_->Play();
-  std::cerr << "called play\n";
 }
 
 }  // namespace test

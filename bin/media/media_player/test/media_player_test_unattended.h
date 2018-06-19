@@ -10,8 +10,8 @@
 #include <lib/async/cpp/task.h>
 #include <lib/fit/function.h>
 
-#include "garnet/bin/media/media_player/test/fake_audio_renderer.h"
-#include "garnet/bin/media/media_player/test/fake_wav_reader.h"
+#include "garnet/bin/media/media_player/test/fakes/fake_audio_renderer.h"
+#include "garnet/bin/media/media_player/test/fakes/fake_wav_reader.h"
 #include "lib/app/cpp/connect.h"
 #include "lib/app/cpp/startup_context.h"
 #include "lib/fidl/cpp/optional.h"

@@ -12,6 +12,7 @@
 #include <fuchsia/media/cpp/fidl.h>
 #include <lib/async/dispatcher.h>
 
+#include "garnet/bin/media/media_player/test/fakes/packet_info.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/media/timeline/timeline_function.h"
 #include "lib/media/transport/mapped_shared_buffer.h"
@@ -22,21 +23,6 @@ namespace test {
 // Implements AudioRenderer2 for testing.
 class FakeAudioRenderer : public fuchsia::media::AudioRenderer2 {
  public:
-  class PacketInfo {
-   public:
-    PacketInfo(int64_t timestamp, uint64_t size, uint64_t hash)
-        : timestamp_(timestamp), size_(size), hash_(hash) {}
-
-    int64_t timestamp() const { return timestamp_; }
-    uint64_t size() const { return size_; }
-    uint64_t hash() const { return hash_; }
-
-   private:
-    int64_t timestamp_;
-    uint64_t size_;
-    uint64_t hash_;
-  };
-
   FakeAudioRenderer();
 
   ~FakeAudioRenderer() override;
