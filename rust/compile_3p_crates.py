@@ -76,6 +76,9 @@ def main():
     parser.add_argument("--shared-libs-root",
                         help="Path to the location of shared libraries",
                         required=False)
+    parser.add_argument("--cipd-version",
+                        help="CIPD version of Rust toolchain",
+                        required=False)
     parser.add_argument
     args = parser.parse_args()
 
