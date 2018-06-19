@@ -47,7 +47,7 @@ type symbolizerRepo struct {
 	builds map[string]string
 }
 
-func ExampleBasic() {
+func TestBasic(t *testing.T) {
 	// mock the input and outputs of llvm-symbolizer
 	symbo := newMockSymbolizer([]mockModule{
 		{"testdata/libc.elf", map[uint64][]SourceLocation{
@@ -61,6 +61,9 @@ func ExampleBasic() {
 			0x83000: {{NewOptStr("aes.c"), 560, NewOptStr("gf256_div")}},
 		}},
 	})
+	// Get a line parser
+	parseLine := GetLineParser()
+
 	// mock ids.txt
 	repo := NewRepo()
 	repo.AddSource(NewMockSource("mock_source.txt", testBinaries))
@@ -73,44 +76,32 @@ func ExampleBasic() {
 	filter.AddModule(Module{"libcrypto.elf", "12ef5c50b3ed3599c07c02d4509311be", 2})
 	filter.AddSegment(Segment{1, 0x12345000, 849596, "rx", 0x0})
 	filter.AddSegment(Segment{2, 0x23456000, 539776, "rx", 0x80000})
-	line := ParseLine("\033[1m Error at {{{pc:0x123879c0}}}")
+	line := parseLine("\033[1m Error at {{{pc:0x123879c0}}}")
 	// print out a more precise form
-	line.Accept(&FilterVisitor{filter, 1})
+	for _, token := range line {
+		token.Accept(&FilterVisitor{filter, 1})
+	}
 	json, err := GetLineJson(line)
 	if err != nil {
-		fmt.Printf("json did not parse correctly: %v", err)
-		return
+		t.Fatalf("json did not parse correctly: %v", err)
 	}
-	fmt.Print(string(json))
 
-	// Output:
-	//{
-	//	"type": "group",
-	//	"children": [
-	//		{
-	//			"type": "color",
-	//			"color": 1,
-	//			"children": [
-	//				{
-	//					"type": "text",
-	//					"text": " Error at "
-	//				},
-	//				{
-	//					"type": "pc",
-	//					"vaddr": 305691072,
-	//					"file": "atan2.c",
-	//					"line": 49,
-	//					"function": "atan2"
-	//				}
-	//			]
-	//		}
-	//	]
-	//}
+	expectedJson := []byte(`[
+    {"type": "color", "color": 1},
+    {"type": "text", "text": " Error at "},
+    {"type": "pc", "vaddr": 305691072, "file": "atan2.c",
+     "line": 49, "function": "atan2"}
+  ]`)
+
+	if !EqualJson(json, expectedJson) {
+		t.Error("expected", expectedJson, "got", json)
+	}
 }
 
 func TestMalformed(t *testing.T) {
+	parseLine := GetLineParser()
 	// Parse a bad line
-	line := ParseLine("\033[1m Error at {{{pc:0x123879c0")
+	line := parseLine("\033[1m Error at {{{pc:0x123879c0")
 	// Malformed lines should still parse
 	if line == nil {
 		t.Error("expected", "not nil", "got", line)
@@ -131,7 +122,8 @@ func EqualJson(a, b []byte) bool {
 }
 
 func TestBacktrace(t *testing.T) {
-	line := ParseLine("Error at {{{bt:0:0x12389987}}}")
+	parseLine := GetLineParser()
+	line := parseLine("Error at {{{bt:0:0x12389987}}}")
 
 	if line == nil {
 		t.Error("got", nil, "expected", "not nil")
@@ -157,23 +149,22 @@ func TestBacktrace(t *testing.T) {
 	// add some context
 	filter.AddModule(Module{"libc.so", "4fcb712aa6387724a9f465a32cd8c14b", 1})
 	filter.AddSegment(Segment{1, 0x12345000, 849596, "rx", 0x0})
-	line.Accept(&FilterVisitor{filter, 1})
+	for _, token := range line {
+		token.Accept(&FilterVisitor{filter, 1})
+	}
 
 	json, err := GetLineJson(line)
 	if err != nil {
 		t.Error("json did not parse correctly", err)
 	}
 
-	expectedJson := []byte(`{
-    "type": "group",
-    "children": [
-      {"type": "text", "text": "Error at "},
-      {"type": "bt", "vaddr": 305699207, "num": 0, "locs":[
-        {"line": 64, "function": "duffcopy", "file": "duff.h"},
-        {"line": 76, "function": "memcpy", "file": "memcpy.c"}
-      ]}
-    ]
-  }`)
+	expectedJson := []byte(`[
+    {"type": "text", "text": "Error at "},
+    {"type": "bt", "vaddr": 305699207, "num": 0, "locs":[
+      {"line": 64, "function": "duffcopy", "file": "duff.h"},
+      {"line": 76, "function": "memcpy", "file": "memcpy.c"}
+    ]}
+  ]`)
 
 	if !EqualJson(json, expectedJson) {
 		t.Error("unexpected json output", "got", string(json), "expected", string(expectedJson))
@@ -181,14 +172,15 @@ func TestBacktrace(t *testing.T) {
 }
 
 func TestReset(t *testing.T) {
-	line := ParseLine("{{{reset}}}")
+	parseLine := GetLineParser()
+	line := parseLine("{{{reset}}}")
 
 	json, err := GetLineJson(line)
 	if err != nil {
 		t.Error("json did not parse correctly", err)
 	}
 
-	expectedJson := []byte(`{"type":"group", "children":[{"type":"reset"}]}`)
+	expectedJson := []byte(`[{"type":"reset"}]`)
 	if !EqualJson(json, expectedJson) {
 		t.Error("unexpected json output", "got", string(json), "expected", string(expectedJson))
 	}
@@ -240,7 +232,9 @@ func TestReset(t *testing.T) {
 	}
 
 	// now forget the context
-	line.Accept(&FilterVisitor{filter, 1})
+	for _, token := range line {
+		token.Accept(&FilterVisitor{filter, 1})
+	}
 
 	if _, err := filter.FindInfoForAddress(addr); err == nil {
 		t.Error("expected non-nil error but got", err)

@@ -13,24 +13,14 @@ import (
 type NodeVisitor interface {
 	VisitBt(elem *BacktraceElement)
 	VisitPc(elem *PCElement)
-	VisitColor(node *ColorGroup)
+	VisitColor(node *ColorCode)
 	VisitText(node *Text)
 	VisitReset(elem *ResetElement)
 	VisitModule(elem *ModuleElement)
 	VisitMapping(elem *MappingElement)
-	VisitGroup(elem *PresentationGroup)
 }
 type Node interface {
 	Accept(visitor NodeVisitor)
-}
-
-// PresentationGroup represents a sequence of presentable parts of a line
-type PresentationGroup struct {
-	children []Node
-}
-
-func (p *PresentationGroup) Accept(visitor NodeVisitor) {
-	visitor.VisitGroup(p)
 }
 
 // OptionalString implements possibelly missing strings from llvm-symbolizer
@@ -97,13 +87,12 @@ func (p *PCElement) Accept(visitor NodeVisitor) {
 }
 
 // TODO(jakehehrlich): Make this semantic rather than literal (e.g. keep track of color/bold information directly)
-// ColorGroup is an AST node representing a colored part of the markup
-type ColorGroup struct {
-	color    uint64
-	children []Node
+// ColorCode is an AST node representing a colored part of the markup
+type ColorCode struct {
+	color uint64
 }
 
-func (c *ColorGroup) Accept(visitor NodeVisitor) {
+func (c *ColorCode) Accept(visitor NodeVisitor) {
 	visitor.VisitColor(c)
 }
 

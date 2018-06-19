@@ -6,24 +6,22 @@ package symbolize
 
 import (
 	"encoding/json"
-	"fmt"
 )
 
 type JsonVisitor struct {
 	stack []json.RawMessage
 }
 
-func GetLineJson(line Node) ([]byte, error) {
+func GetLineJson(line []Node) ([]byte, error) {
 	var j JsonVisitor
-	line.Accept(&j)
+	for _, token := range line {
+		token.Accept(&j)
+	}
 	return j.getJson()
 }
 
 func (j *JsonVisitor) getJson() ([]byte, error) {
-	if len(j.stack) != 1 {
-		return nil, fmt.Errorf("json did not fully parse: %d items on stack", len(j.stack))
-	}
-	return json.MarshalIndent(j.stack[0], "", "\t")
+	return json.MarshalIndent(j.stack, "", "\t")
 }
 
 func (j *JsonVisitor) VisitBt(elem *BacktraceElement) {
@@ -72,19 +70,14 @@ func (j *JsonVisitor) VisitPc(elem *PCElement) {
 	j.stack = append(j.stack, msg)
 }
 
-func (j *JsonVisitor) VisitColor(elem *ColorGroup) {
+func (j *JsonVisitor) VisitColor(elem *ColorCode) {
 	out := j.stack
-	for _, child := range elem.children {
-		child.Accept(j)
-	}
 	msg, _ := json.Marshal(struct {
-		Tipe     string            `json:"type"`
-		Color    uint64            `json:"color"`
-		Children []json.RawMessage `json:"children"`
+		Tipe  string `json:"type"`
+		Color uint64 `json:"color"`
 	}{
-		Tipe:     "color",
-		Color:    elem.color,
-		Children: append([]json.RawMessage(nil), j.stack[len(out):]...),
+		Tipe:  "color",
+		Color: elem.color,
 	})
 	j.stack = append(out, msg)
 }
@@ -98,21 +91,6 @@ func (j *JsonVisitor) VisitText(elem *Text) {
 		Text: elem.text,
 	})
 	j.stack = append(j.stack, msg)
-}
-
-func (j *JsonVisitor) VisitGroup(group *PresentationGroup) {
-	out := j.stack
-	for _, child := range group.children {
-		child.Accept(j)
-	}
-	msg, _ := json.Marshal(struct {
-		Tipe     string            `json:"type"`
-		Children []json.RawMessage `json:"children"`
-	}{
-		Tipe:     "group",
-		Children: append([]json.RawMessage(nil), j.stack[len(out):]...),
-	})
-	j.stack = append(out, msg)
 }
 
 // TODO: update this for generalized modules

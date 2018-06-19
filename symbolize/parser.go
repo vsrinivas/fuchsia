@@ -9,229 +9,135 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"regexp"
+	"strconv"
 )
+
+// TODO: Implement a reflection based means of automatically doing these conversions.
+func str2dec(what string) uint64 {
+	out, err := strconv.ParseUint(what, 10, 64)
+	if err != nil {
+		panic(err.Error())
+	}
+	return out
+}
+
+func str2int(what string) uint64 {
+	out, err := strconv.ParseUint(what, 0, 64)
+	if err != nil {
+		panic(err.Error())
+	}
+	return out
+}
+
+func str2float(what string) float64 {
+	out, err := strconv.ParseFloat(what, 64)
+	if err != nil {
+		panic(err.Error())
+	}
+	return out
+}
 
 const (
-	elemSuffix   string = "}}}"
-	colorPrefix  string = "\033["
-	modulePrefix string = "{{{module:"
-	mmapPrefix   string = "{{{mmap:"
-	pcPrefix     string = "{{{pc:"
-	btPrefix     string = "{{{bt:"
+	decRegexp   = "(?:[[:digit:]]+)"
+	ptrRegexp   = "(?:0|0x[[:xdigit:]]{1,16})"
+	strRegexp   = "(?:[^{}:]*)"
+	spaceRegexp = `(?:\s*)`
+	floatRegexp = `(?:[[:digit:]]+)\.(?:[[:digit:]]+)`
 )
 
-var (
-	endTextRegex      = regexp.MustCompile("({{{.*}}})|(\033\\[[0-9]+m)")
-	beginLogLineRegex = regexp.MustCompile(`\[[0-9]+\.[0-9]+\] [0-9]+\.[0-9]+>`)
-)
+type ParseLineFunc func(msg string) []Node
 
-func ParseText(b *ParserState) interface{} {
-	var idx int
-	if loc := endTextRegex.FindStringIndex(string(*b)); loc != nil {
-		idx = loc[0]
-	} else {
-		idx = len(*b)
-	}
-	if idx == 0 {
-		return nil
-	}
-	text := string((*b)[:idx])
-	*b = (*b)[idx:]
-	return &Text{text}
-}
-
-func ParseBt(b *ParserState) interface{} {
-	return b.prefix(btPrefix, func(b *ParserState) interface{} {
-		num, err := b.intBefore(":")
-		if err != nil {
-			return nil
-		}
-		addr, err := b.intBefore(elemSuffix)
-		if err != nil {
-			return nil
-		}
-		return &BacktraceElement{num: num, vaddr: addr}
-	})
-}
-
-func ParsePc(b *ParserState) interface{} {
-	return b.prefix(pcPrefix, func(b *ParserState) interface{} {
-		addr, err := b.intBefore(elemSuffix)
-		if err != nil {
-			return nil
-		}
-		return &PCElement{vaddr: addr}
-	})
-}
-
-func ParseColor(b *ParserState) interface{} {
-	return b.prefix(colorPrefix, func(b *ParserState) interface{} {
-		var out ColorGroup
-		var err error
-		if out.color, err = b.intBefore("m"); err != nil {
-			return nil
-		}
-		b.many(&out.children, func(b *ParserState) interface{} {
-			return b.choice(ParsePc, ParseText)
+func GetLineParser() ParseLineFunc {
+	var b RegexpTokenizerBuilder
+	out := []Node{}
+	dec := decRegexp
+	ptr := ptrRegexp
+	str := strRegexp
+	num := fmt.Sprintf("(?:%s|%s)", dec, ptr)
+	b.AddRule(fmt.Sprintf("{{{bt:(%s):(%s)}}}", dec, ptr), func(args ...string) {
+		out = append(out, &BacktraceElement{
+			num:   str2dec(args[1]),
+			vaddr: str2int(args[2]),
 		})
-		return &out
 	})
-}
-
-func ParseModule(b *ParserState) interface{} {
-	return b.prefix(modulePrefix, func(b *ParserState) interface{} {
-		var out Module
-		var err error
-		if out.id, err = b.intBefore(":"); err != nil {
-			return nil
-		}
-		if out.name, err = b.before(":"); err != nil {
-			return nil
-		}
-		if !b.expect("elf:") {
-			return nil
-		}
-		if out.build, err = b.before(elemSuffix); err != nil {
-			return nil
-		}
-		return &ModuleElement{out}
+	b.AddRule(fmt.Sprintf("{{{pc:(%s)}}}", ptr), func(args ...string) {
+		out = append(out, &PCElement{vaddr: str2int(args[1])})
 	})
-}
-
-func ParseMapping(b *ParserState) interface{} {
-	return b.prefix(mmapPrefix, func(b *ParserState) interface{} {
-		var out Segment
-		var err error
-		if out.vaddr, err = b.intBefore(":"); err != nil {
-			return nil
-		}
-		if out.size, err = b.intBefore(":"); err != nil {
-			return nil
-		}
-		if b.expect("load:") {
-			if out.mod, err = b.intBefore(":"); err != nil {
-				return nil
-			}
-			if out.flags, err = b.before(":"); err != nil {
-				return nil
-			}
-			if out.modRelAddr, err = b.intBefore(elemSuffix); err != nil {
-				return nil
-			}
-		} else {
-			if _, err = b.before("}}}"); err != nil {
-				return nil
-			}
-		}
-		return &MappingElement{out}
+	b.AddRule(fmt.Sprintf("\033\\[(%s)m", dec), func(args ...string) {
+		out = append(out, &ColorCode{color: str2dec(args[1])})
 	})
-}
-
-func ParseReset(b *ParserState) interface{} {
-	if b.expect("{{{reset}}}") {
-		return &ResetElement{}
+	b.AddRule(fmt.Sprintf(`{{{module:(%s):(%s):elf:(%s)}}}`, num, str, str), func(args ...string) {
+		out = append(out, &ModuleElement{mod: Module{
+			id:    str2int(args[1]),
+			name:  args[2],
+			build: args[3],
+		}})
+	})
+	b.AddRule(fmt.Sprintf(`{{{mmap:(%s):(%s):load:(%s):(%s):(%s)}}}`, ptr, num, num, str, ptr), func(args ...string) {
+		out = append(out, &MappingElement{seg: Segment{
+			vaddr:      str2int(args[1]),
+			size:       str2int(args[2]),
+			mod:        str2int(args[3]),
+			flags:      args[4],
+			modRelAddr: str2int(args[5]),
+		}})
+	})
+	b.AddRule(`{{{reset}}}`, func(args ...string) {
+		out = append(out, &ResetElement{})
+	})
+	tokenizer, err := b.Compile(func(text string) {
+		out = append(out, &Text{text: text})
+	})
+	if err != nil {
+		panic(err.Error())
 	}
-	return nil
-}
-
-func ParsePresentationGroup(b *ParserState) interface{} {
-	var p PresentationGroup
-	b.many(&p.children, func(b *ParserState) interface{} {
-		return b.choice(ParseColor, ParseModule, ParseMapping, ParseBt, ParseReset, ParsePc, ParseText)
-	})
-	return &p
-}
-
-func ParseLine(line string) Node {
-	buf := ParserState(line)
-	b := &buf
-	out := ParsePresentationGroup(b)
-	if len(buf) != 0 || out == nil {
-		return nil
+	return func(msg string) []Node {
+		out = nil
+		tokenizer.Run(msg)
+		return out
 	}
-	return out.(Node)
-	// TODO: add node type for malformed text and emit warning
-}
-
-func ParseLogLine(b *ParserState) (InputLine, error) {
-	var out InputLine
-	if b.expect("[") {
-		var err error
-		time, err := b.floatBefore("]")
-		if err != nil {
-			return out, err
-		}
-		b.whitespace()
-		pid, err := b.decBefore(".")
-		if err != nil {
-			return out, err
-		}
-		out.source = process(pid)
-		tid, err := b.decBefore(">")
-		if err != nil {
-			return out, err
-		}
-		out.header = logHeader{process: pid, thread: tid, time: time}
-		b.whitespace()
-		out.msg = string(*b)
-		return out, nil
-	}
-	return out, fmt.Errorf("malformed serial log line")
 }
 
 func StartParsing(ctx context.Context, reader io.Reader) <-chan InputLine {
 	out := make(chan InputLine)
 	// This is not used for demuxing. It is a human readable line number.
 	var lineno uint64 = 1
+	var b RegexpTokenizerBuilder
+	space := spaceRegexp
+	float := floatRegexp
+	dec := decRegexp
+	b.AddRule(fmt.Sprintf(`\[(%s)\]%s(%s)\.(%s)>%s(.*)$`, float, space, dec, dec, space), func(args ...string) {
+		var hdr logHeader
+		var line InputLine
+		hdr.time = str2float(args[1])
+		hdr.process = str2int(args[2])
+		hdr.thread = str2int(args[3])
+		line.header = hdr
+		line.source = process(hdr.process)
+		line.lineno = lineno
+		line.msg = args[4]
+		out <- line
+	})
+	tokenizer, err := b.Compile(func(text string) {
+		var line InputLine
+		line.source = dummySource{}
+		line.msg = text
+		line.lineno = lineno
+		out <- line
+	})
+	if err != nil {
+		panic(err.Error())
+	}
 	go func() {
 		defer close(out)
 		scanner := bufio.NewScanner(reader)
-		for scanner.Scan() {
+		for ; scanner.Scan(); lineno++ {
 			select {
 			case <-ctx.Done():
 				return
-			default: // Continue.
+			default:
+				tokenizer.Run(scanner.Text())
 			}
-			text := ParserState(scanner.Text())
-			b := &text
-			// Get the dummyText and needed text.
-			locs := beginLogLineRegex.FindStringIndex(string(text))
-			if locs == nil {
-				// This means the whole thing is dummy text.
-				var line InputLine
-				line.source = dummySource{}
-				line.msg = string(text)
-				line.lineno = lineno
-				// Make sure to increase the lineno
-				lineno++
-				out <- line
-				// Read next line
-				continue
-			}
-			// Check for dummy text
-			if locs[0] > 0 {
-				// This means we found a match but there was some junk at the start.
-				dummyText := string(text[:locs[0]])
-				var line InputLine
-				line.source = dummySource{}
-				line.msg = dummyText
-				// Use the same lineno for both lines as it is for debugging from the original.
-				line.lineno = lineno
-				out <- line
-			}
-			// Advance b to the correct start
-			*b = (*b)[locs[0]:]
-			// Now attempt to parse the log line
-			line, err := ParseLogLine(b)
-			line.lineno = lineno
-			lineno++
-			// If we error out send this line whole to the dummy process
-			if err != nil {
-				// Some partial bit of this might have parsed so just modify it.
-				line.msg = string(*b)
-			}
-			out <- line
 		}
 	}()
 	return out

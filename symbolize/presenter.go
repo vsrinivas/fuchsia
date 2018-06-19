@@ -34,7 +34,9 @@ func (b *BasicPresenter) WriteLine(res OutputLine) {
 	if hdr, ok := res.header.(logHeader); ok {
 		fmt.Fprintf(b.output, "[%.3f] %05d.%05d> ", hdr.time, hdr.process, hdr.thread)
 	}
-	res.line.Accept(b)
+	for _, token := range res.line {
+		token.Accept(b)
+	}
 	fmt.Fprint(b.output, "\n")
 }
 
@@ -77,13 +79,10 @@ func (b *BasicPresenter) VisitPc(node *PCElement) {
 	}
 }
 
-func (b *BasicPresenter) VisitColor(node *ColorGroup) {
+func (b *BasicPresenter) VisitColor(node *ColorCode) {
 	if b.enableColor {
 		b.lineUsedColor = true
 		fmt.Fprintf(b.output, "\033[%dm", node.color)
-	}
-	for _, child := range node.children {
-		child.Accept(b)
 	}
 }
 
@@ -93,12 +92,6 @@ func (b *BasicPresenter) VisitText(node *Text) {
 
 func (b *BasicPresenter) VisitReset(elem *ResetElement) {
 	fmt.Fprintf(b.output, "{{{reset}}}")
-}
-
-func (b *BasicPresenter) VisitGroup(group *PresentationGroup) {
-	for _, child := range group.children {
-		child.Accept(b)
-	}
 }
 
 func (b *BasicPresenter) VisitModule(node *ModuleElement) {

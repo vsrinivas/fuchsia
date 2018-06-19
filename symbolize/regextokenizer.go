@@ -10,7 +10,7 @@ import (
 	"strings"
 )
 
-type actionFunc func(...string) error
+type actionFunc func(...string)
 
 type regexInfo struct {
 	regex      *regexp.Regexp // the regex for this rule
@@ -24,7 +24,7 @@ type regexInfo struct {
 type RegexpTokenizer struct {
 	regexs        []regexInfo
 	master        *regexp.Regexp
-	defaultAction func(string) error
+	defaultAction func(string)
 }
 
 type rule struct {
@@ -37,13 +37,15 @@ type RegexpTokenizerBuilder struct {
 	rules []rule
 }
 
+// TODO: Add a way to infer the automatic conversions that need to happen from
+// a user supplied function's type via reflection.
 // Rule adds a new regex to the builder
 func (r *RegexpTokenizerBuilder) AddRule(regex string, action actionFunc) {
 	r.rules = append(r.rules, rule{regex, action})
 }
 
 // End compiles the list of regular expressions and actions into a RegexpTokenizer
-func (r *RegexpTokenizerBuilder) Compile(defaultAction func(string) error) (*RegexpTokenizer, error) {
+func (r *RegexpTokenizerBuilder) Compile(defaultAction func(string)) (*RegexpTokenizer, error) {
 	out := RegexpTokenizer{defaultAction: defaultAction}
 	// Start groupIndex at 1 to account for the master regexp
 	groupIndex := 1
@@ -70,12 +72,13 @@ func (r *RegexpTokenizerBuilder) Compile(defaultAction func(string) error) (*Reg
 }
 
 // Run tokenizes 'input'
-func (r *RegexpTokenizer) Run(input string) error {
+func (r *RegexpTokenizer) Run(input string) {
 	for len(input) > 0 {
 		locs := r.master.FindStringSubmatchIndex(input)
 		if locs == nil {
 			// There are no more matches so parse the rest of the input and return
-			return r.defaultAction(input)
+			r.defaultAction(input)
+			return
 		}
 		// If there is anything before the match we need to pass it to the default case.
 		if locs[0] != 0 {
@@ -91,15 +94,11 @@ func (r *RegexpTokenizer) Run(input string) error {
 					groups = append(groups, input[groupBeginIdx:groupEndIdx])
 				}
 				// Pass the regex's groups to it
-				err := regex.action(groups...)
-				if err != nil {
-					return err
-				}
+				regex.action(groups...)
 				break
 			}
 		}
 		// Now we need to advance the input to not cover anything in the match.
 		input = input[locs[1]:]
 	}
-	return nil
 }

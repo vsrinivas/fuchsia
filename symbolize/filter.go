@@ -59,7 +59,7 @@ type Module struct {
 
 type OutputLine struct {
 	LogLine
-	line Node
+	line []Node
 }
 
 type missingObjError struct {
@@ -152,6 +152,7 @@ func (s *Filter) AddSegment(seg Segment) {
 // Start tells the filter to start consuming input and produce output.
 func (f *Filter) Start(ctx context.Context, input <-chan InputLine) <-chan OutputLine {
 	out := make(chan OutputLine)
+	parseLine := GetLineParser()
 	go func() {
 		for {
 			select {
@@ -162,11 +163,13 @@ func (f *Filter) Start(ctx context.Context, input <-chan InputLine) <-chan Outpu
 					return
 				}
 				var res OutputLine
-				if res.line = ParseLine(elem.msg); res.line == nil {
-					res.line = &Text{text: elem.msg}
+				if res.line = parseLine(elem.msg); res.line == nil {
+					res.line = []Node{&Text{text: elem.msg}}
 				}
 				// Update AST with source locations.
-				res.line.Accept(&FilterVisitor{filter: f, lineno: elem.lineno})
+				for _, token := range res.line {
+					token.Accept(&FilterVisitor{filter: f, lineno: elem.lineno})
+				}
 				res.LogLine = elem.LogLine
 				out <- res
 			}
@@ -202,10 +205,8 @@ func (f *FilterVisitor) VisitPc(elem *PCElement) {
 	elem.info = info
 }
 
-func (f *FilterVisitor) VisitColor(group *ColorGroup) {
-	for _, child := range group.children {
-		child.Accept(f)
-	}
+func (f *FilterVisitor) VisitColor(group *ColorCode) {
+
 }
 
 func (f *FilterVisitor) VisitText(_ *Text) {
@@ -217,12 +218,6 @@ func (f *FilterVisitor) VisitText(_ *Text) {
 func (f *FilterVisitor) VisitReset(elem *ResetElement) {
 	// TODO: Check if Reset had an effect and output that a pid reuse occured.
 	f.filter.Reset()
-}
-
-func (f *FilterVisitor) VisitGroup(group *PresentationGroup) {
-	for _, child := range group.children {
-		child.Accept(f)
-	}
 }
 
 func (f *FilterVisitor) VisitModule(elem *ModuleElement) {
