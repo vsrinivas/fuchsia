@@ -88,8 +88,6 @@ class LinkImpl : PageClient {
   void Connect(fidl::InterfaceRequest<fuchsia::modular::Link> request);
 
   // Used by LinkConnection.
-  void UpdateObject(fidl::VectorPtr<fidl::StringPtr> path, fidl::StringPtr json,
-                    uint32_t src);
   void Set(fidl::VectorPtr<fidl::StringPtr> path, fidl::StringPtr json,
            uint32_t src);
   void Get(fidl::VectorPtr<fidl::StringPtr> path,
@@ -193,7 +191,6 @@ class LinkImpl : PageClient {
   class WriteCall;
   class GetCall;
   class SetCall;
-  class UpdateObjectCall;
   class EraseCall;
   class GetEntityCall;
   class WatchCall;
@@ -221,8 +218,6 @@ class LinkConnection : fuchsia::modular::Link {
                  fidl::InterfaceRequest<fuchsia::modular::Link> link_request);
 
   // |fuchsia::modular::Link|
-  void UpdateObject(fidl::VectorPtr<fidl::StringPtr> path,
-                    fidl::StringPtr json) override;
   void Set(fidl::VectorPtr<fidl::StringPtr> path,
            fidl::StringPtr json) override;
   void Get(fidl::VectorPtr<fidl::StringPtr> path,

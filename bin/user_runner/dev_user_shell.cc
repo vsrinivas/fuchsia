@@ -133,7 +133,7 @@ class DevUserShellApp
     if (!settings_.root_link.empty()) {
       fuchsia::modular::LinkPtr root;
       story_controller_->GetLink(nullptr, "root", root.NewRequest());
-      root->UpdateObject(nullptr, settings_.root_link);
+      root->Set(nullptr, settings_.root_link);
     }
   }
 

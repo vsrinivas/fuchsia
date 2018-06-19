@@ -153,7 +153,7 @@ TEST_F(LinkImplTest, SetAndWatch) {
   EXPECT_EQ("42", notified_value);
 }
 
-TEST_F(LinkImplTest, UpdateAndWatchAndGet) {
+TEST_F(LinkImplTest, SetAndWatchAndGet) {
   auto link = MakeLink("page", "mylink");
 
   fidl::StringPtr notified_value;
@@ -167,14 +167,20 @@ TEST_F(LinkImplTest, UpdateAndWatchAndGet) {
     "one": 1,
     "two": 2
   })");
-  link->UpdateObject(nullptr, R"({ "two": "two", "three": 3 })");
+  fidl::VectorPtr<fidl::StringPtr> path;
+  path->push_back("two");
+  link->Set(std::move(path), R"("two")");
+
+  path->clear();
+  path->push_back("three");
+  link->Set(std::move(path), R"(3)");
 
   bool synced{};
   link->Sync([&synced] { synced = true; });
   EXPECT_TRUE(RunLoopUntilWithTimeout([&] { return synced; }));
 
   const std::string expected_value = R"({"one":1,"two":"two","three":3})";
-  EXPECT_EQ(3, notified_count);  // initial, Set, UpdateObject
+  EXPECT_EQ(4, notified_count);  // initial, 3x Set
   EXPECT_EQ(expected_value, notified_value);
 
   bool get_done{};

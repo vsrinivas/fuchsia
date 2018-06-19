@@ -284,40 +284,6 @@ class LinkImpl::SetCall : public Operation<> {
   FXL_DISALLOW_COPY_AND_ASSIGN(SetCall);
 };
 
-class LinkImpl::UpdateObjectCall : public Operation<> {
- public:
-  UpdateObjectCall(LinkImpl* const impl, fidl::VectorPtr<fidl::StringPtr> path,
-                   fidl::StringPtr json, const uint32_t src)
-      : Operation("LinkImpl::UpdateObjectCall", [] {}),
-        impl_(impl),
-        path_(std::move(path)),
-        json_(json),
-        src_(src) {}
-
- private:
-  void Run() override {
-    FlowToken flow{this};
-
-    CrtJsonPointer ptr = CreatePointer(impl_->doc_, *path_);
-    const bool success = impl_->ApplyUpdateOp(ptr, json_);
-    if (success) {
-      operation_queue_.Add(new WriteCall(impl_, src_, [flow] {}));
-    } else {
-      FXL_LOG(WARNING) << "LinkImpl::UpdateObjectCall failed " << json_;
-    }
-  }
-
-  LinkImpl* const impl_;  // not owned
-  const fidl::VectorPtr<fidl::StringPtr> path_;
-  const fidl::StringPtr json_;
-  const uint32_t src_;
-
-  // WriteCall is executed here.
-  OperationQueue operation_queue_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(UpdateObjectCall);
-};
-
 class LinkImpl::EraseCall : public Operation<> {
  public:
   EraseCall(LinkImpl* const impl, fidl::VectorPtr<fidl::StringPtr> path,
@@ -504,14 +470,6 @@ void LinkImpl::Set(fidl::VectorPtr<fidl::StringPtr> path, fidl::StringPtr json,
   // TODO(jimbe, mesch): This method needs a success status, otherwise clients
   // have no way to know they sent bogus data.
   operation_queue_.Add(new SetCall(this, std::move(path), json, src));
-}
-
-void LinkImpl::UpdateObject(fidl::VectorPtr<fidl::StringPtr> path,
-                            fidl::StringPtr json, const uint32_t src) {
-  // TODO(jimbe, mesch): This method needs a success status,
-  // otherwise clients have no way to know they sent bogus data.
-
-  operation_queue_.Add(new UpdateObjectCall(this, std::move(path), json, src));
 }
 
 void LinkImpl::Erase(fidl::VectorPtr<fidl::StringPtr> path,
@@ -702,11 +660,6 @@ void LinkConnection::WatchAll(
 }
 
 void LinkConnection::Sync(SyncCallback callback) { impl_->Sync(callback); }
-
-void LinkConnection::UpdateObject(fidl::VectorPtr<fidl::StringPtr> path,
-                                  fidl::StringPtr json) {
-  impl_->UpdateObject(std::move(path), json, id_);
-}
 
 void LinkConnection::Set(fidl::VectorPtr<fidl::StringPtr> path,
                          fidl::StringPtr json) {

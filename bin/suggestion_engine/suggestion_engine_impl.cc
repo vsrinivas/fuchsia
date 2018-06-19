@@ -483,7 +483,7 @@ void SuggestionEngineImpl::PerformUpdateModuleAction(
                   break;
                 }
                 case fuchsia::modular::IntentParameterData::Tag::kJson: {
-                  link->UpdateObject(nullptr, parameter.data.json());
+                  link->Set(nullptr, parameter.data.json());
                   break;
                 }
                 case fuchsia::modular::IntentParameterData::Tag::kEntityType:

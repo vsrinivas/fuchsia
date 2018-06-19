@@ -63,34 +63,6 @@ interface Link {
   // changed.
   3: Set(vector<string>? path, string json);
 
-  // For each member of the object defined by |json|, set or overwrite the
-  // same member of the object found at |path| with that member's value.
-  //
-  // For example:
-  //
-  // Object at |path|:
-  //
-  //   {"x":3,"name":"Joe"}
-  //
-  // |json|:
-  //
-  //    {"name":"Tom","y":5.9}
-  //
-  // Resulting object at |path| after UpdateObject():
-  //
-  //   {"x":3,"name":"Tom","y":5.9}
-  //
-  // If |path| points at a null value, the null value is overwritten with the
-  // object in |json|. |path| will be created if it does not exist. Overwrites
-  // any values or arrays as necessary to ensure that |path| exists. To set a
-  // value or an array, use Set() instead. The string in |json| must represent
-  // an object. To update the root (must be an object or null), pass "" for
-  // |path|.
-  //
-  // This call notifies Watchers, although this may be skipped if nothing
-  // changed.
-  4: UpdateObject(vector<string>? path, string json);
-
   // Erases the object member at the given |path|. If the path is not found or
   // does not match the current structure of the JSON, the path will not be
   // created and the call is ignored. The |path| parameter cannot be null or
