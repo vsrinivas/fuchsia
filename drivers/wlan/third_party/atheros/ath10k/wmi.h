@@ -395,11 +395,10 @@ static inline char* wmi_service_name(int service_id) {
 #undef SVCSTR
 }
 
-#if 0 // NEEDS PORTING
 #define WMI_SERVICE_IS_ENABLED(wmi_svc_bmap, svc_id, len) \
     ((svc_id) < (len) && \
      (wmi_svc_bmap)[(svc_id) / (sizeof(uint32_t))] & \
-     BIT((svc_id) % (sizeof(uint32_t))))
+     (1 << ((svc_id) % (sizeof(uint32_t)))))
 
 #define SVCMAP(x, y, len) \
     do { \
@@ -407,6 +406,7 @@ static inline char* wmi_service_name(int service_id) {
             BITARR_SET(out, y); \
     } while (0)
 
+#if 0 // NEEDS PORTING
 static inline void wmi_10x_svc_map(const uint32_t* in, unsigned long* out,
                                    size_t len) {
     SVCMAP(WMI_10X_SERVICE_BEACON_OFFLOAD,
@@ -468,6 +468,7 @@ static inline void wmi_10x_svc_map(const uint32_t* in, unsigned long* out,
     SVCMAP(WMI_10X_SERVICE_PEER_STATS,
            WMI_SERVICE_PEER_STATS, len);
 }
+#endif // NEEDS PORTING
 
 static inline void wmi_main_svc_map(const uint32_t* in, unsigned long* out,
                                     size_t len) {
@@ -537,6 +538,7 @@ static inline void wmi_main_svc_map(const uint32_t* in, unsigned long* out,
            WMI_SERVICE_TX_ENCAP, len);
 }
 
+#if 0 // NEEDS PORTING
 static inline void wmi_10_4_svc_map(const uint32_t* in, unsigned long* out,
                                     size_t len) {
     SVCMAP(WMI_10_4_SERVICE_BEACON_OFFLOAD,
@@ -6577,8 +6579,14 @@ struct wmi_pdev_chan_info_req_cmd {
     uint32_t reserved;
 } __PACKED;
 
+#define WMI_PFX(type) ATH10K_MSG_TYPE_WMI_##type
+
+#define WMI_MSG(type, hdr) \
+    MSG(WMI_PFX(type), ATH10K_MSG_TYPE_WMI, sizeof(struct hdr))
+
 #define WMI_MSGS \
-    MSG(ATH10K_MSG_TYPE_WMI, ATH10K_MSG_TYPE_HTC, sizeof(struct wmi_cmd_hdr))
+    MSG(ATH10K_MSG_TYPE_WMI, ATH10K_MSG_TYPE_HTC, sizeof(struct wmi_cmd_hdr)), \
+    WMI_MSG(INIT_CMD_10_2, wmi_init_cmd_10_2)
 
 #define WMI_TX_CREDITS_AVAILABLE ZX_USER_SIGNAL_0
 

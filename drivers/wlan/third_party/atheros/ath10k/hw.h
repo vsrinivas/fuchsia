@@ -634,8 +634,8 @@ ath10k_rx_desc_get_l3_pad_bytes(struct ath10k_hw_params* hw,
                                                     (TARGET_10X_NUM_PEERS) * 2)
 #define TARGET_10X_TX_STATS_NUM_TIDS            MIN((TARGET_10X_NUM_TIDS_MAX), \
                                                     (TARGET_10X_TX_STATS_NUM_PEERS) * 2)
-#define TARGET_10X_TX_CHAIN_MASK                (BIT(0) | BIT(1) | BIT(2))
-#define TARGET_10X_RX_CHAIN_MASK                (BIT(0) | BIT(1) | BIT(2))
+#define TARGET_10X_TX_CHAIN_MASK                0x7
+#define TARGET_10X_RX_CHAIN_MASK                0x7
 #define TARGET_10X_RX_TIMEOUT_LO_PRI            100
 #define TARGET_10X_RX_TIMEOUT_HI_PRI            40
 #define TARGET_10X_SCAN_MAX_PENDING_REQS        4

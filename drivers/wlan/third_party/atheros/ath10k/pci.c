@@ -1182,28 +1182,22 @@ static void ath10k_pci_process_rx_cb(struct ath10k_ce_pipe* ce_state,
 
 static void ath10k_pci_process_htt_rx_cb(struct ath10k_ce_pipe* ce_state,
                                          void (*callback)(struct ath10k* ar,
-                                               struct ath10k_msg_buf* msg_buf)) {
-    ZX_DEBUG_ASSERT_MSG(0, "ath10k_pci_process_htt_rx_cb not implemented\n");
-#if 0 // NEEDS PORTING
+                                                          struct ath10k_msg_buf* msg_buf)) {
     struct ath10k* ar = ce_state->ar;
     struct ath10k_pci* ar_pci = ath10k_pci_priv(ar);
     struct ath10k_pci_pipe* pipe_info =  &ar_pci->pipe_info[ce_state->id];
     struct ath10k_ce_pipe* ce_pipe = pipe_info->ce_hdl;
-    struct sk_buff* skb;
-    struct sk_buff_head list;
+    struct ath10k_msg_buf* msg_buf;
     void* transfer_context;
-    unsigned int nbytes, max_nbytes, nentries;
-    int orig_len;
+    unsigned int nbytes, max_nbytes, nentries = 0;
 
     /* No need to aquire ce_lock for CE5, since this is the only place CE5
      * is processed other than init and deinit. Before releasing CE5
      * buffers, interrupts are disabled. Thus CE5 access is serialized.
      */
-    __skb_queue_head_init(&list);
-    while (ath10k_ce_completed_recv_next_nolock(ce_state, &transfer_context,
-            &nbytes) == 0) {
-        skb = transfer_context;
-        max_nbytes = skb->len + skb_tailroom(skb);
+    while (ath10k_ce_completed_recv_next_nolock(ce_state, &transfer_context, &nbytes) == 0) {
+        msg_buf = transfer_context;
+        max_nbytes = msg_buf->capacity;
 
         if (unlikely(max_nbytes < nbytes)) {
             ath10k_warn("rxed more than expected (nbytes %d, max %d)",
@@ -1211,32 +1205,22 @@ static void ath10k_pci_process_htt_rx_cb(struct ath10k_ce_pipe* ce_state,
             continue;
         }
 
-        dma_sync_single_for_cpu(ar->dev, ATH10K_SKB_RXCB(skb)->paddr,
-                                max_nbytes, DMA_FROM_DEVICE);
-        skb_put(skb, nbytes);
-        __skb_queue_tail(&list, skb);
-    }
+        io_buffer_cache_flush_invalidate(&msg_buf->buf, 0, max_nbytes);
 
-    nentries = skb_queue_len(&list);
-    while ((skb = __skb_dequeue(&list))) {
+        msg_buf->used = nbytes;
+        nentries++;
+
         ath10k_dbg(ar, ATH10K_DBG_PCI, "pci rx ce pipe %d len %d\n",
-                   ce_state->id, skb->len);
+                   ce_state->id, msg_buf->used);
         ath10k_dbg_dump(ar, ATH10K_DBG_PCI_DUMP, NULL, "pci rx: ",
-                        skb->data, skb->len);
+                        msg_buf->vaddr, msg_buf->used);
 
-        orig_len = skb->len;
-        callback(ar, skb);
-        skb_push(skb, orig_len - skb->len);
-        skb_reset_tail_pointer(skb);
-        skb_trim(skb, 0);
+        callback(ar, msg_buf);
 
         /*let device gain the buffer again*/
-        dma_sync_single_for_device(ar->dev, ATH10K_SKB_RXCB(skb)->paddr,
-                                   skb->len + skb_tailroom(skb),
-                                   DMA_FROM_DEVICE);
+        io_buffer_cache_flush(&msg_buf->buf, 0, max_nbytes);
     }
     ath10k_ce_rx_update_write_idx(ce_pipe, nentries);
-#endif // NEEDS PORTING
 }
 
 /* Called by lower (CE) layer when data is received from the Target. */
