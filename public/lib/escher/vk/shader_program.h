@@ -41,9 +41,18 @@ class ShaderProgram : public Resource, private ShaderModuleListener {
 
   ~ShaderProgram() override;
 
-  // Called by CommandBuffer implementation.  Not useful to Escher clients.
+  // NOTE: The following public methods are called by the CommandBuffer
+  // implementation, and are not useful to Escher clients.
+
+  // Return the pipeline layout common to all pipeline variants of this program.
   PipelineLayout* pipeline_layout();
+
+  // Return the module corresponding to the specified shader stage, or nullptr
+  // if the program has no shader for that stage (e.g. many graphics programs
+  // will not have a geometry shader).
   const ShaderModulePtr& GetModuleForStage(ShaderStage stage) const;
+
+  // Simple HashMap lookup and insertion.
   vk::Pipeline FindPipeline(Hash hash) const;
   void StashPipeline(Hash hash, vk::Pipeline pipeline);
 

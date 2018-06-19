@@ -46,8 +46,6 @@ class WaterfallDemo : public Demo {
   void InitializeEscherStage(const DemoHarness::WindowParams& window_params);
   void InitializeDemoScene();
 
-  escher::HackFilesystemPtr filesystem_;
-
   WaterfallRendererPtr renderer_;
   escher::VulkanSwapchainHelper swapchain_helper_;
 

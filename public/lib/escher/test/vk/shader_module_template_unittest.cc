@@ -6,6 +6,7 @@
 
 #include "lib/escher/fs/hack_filesystem.h"
 #include "lib/escher/vk/shader_module_template.h"
+#include "lib/escher/vk/shader_variant_args.h"
 
 #include "third_party/shaderc/libshaderc/include/shaderc/shaderc.hpp"
 
@@ -143,9 +144,9 @@ void ShaderModuleTemplateTest::TearDown() {
 }
 
 VK_TEST_F(ShaderModuleTemplateTest, SameAndDifferentVariants) {
-  ShaderModuleVariantArgs args1({{"ATTR_POSITION_OFFSET", "1"}});
-  ShaderModuleVariantArgs args2({{"ATTR_POSITION_OFFSET", "1"}});
-  ShaderModuleVariantArgs args3({{"ATTR_PERIMETER", "1"}});
+  ShaderVariantArgs args1({{"ATTR_POSITION_OFFSET", "1"}});
+  ShaderVariantArgs args2({{"ATTR_POSITION_OFFSET", "1"}});
+  ShaderVariantArgs args3({{"ATTR_PERIMETER", "1"}});
 
   auto module1 = module_template()->GetShaderModuleVariant(args1);
   auto module2 = module_template()->GetShaderModuleVariant(args2);
@@ -180,7 +181,7 @@ class TestShaderModuleListener : public ShaderModuleListener {
 };
 
 VK_TEST_F(ShaderModuleTemplateTest, Listeners) {
-  ShaderModuleVariantArgs args({{"ATTR_POSITION_OFFSET", "1"}});
+  ShaderVariantArgs args({{"ATTR_POSITION_OFFSET", "1"}});
   auto module = module_template()->GetShaderModuleVariant(args);
 
   // New listeners are immediately updated.

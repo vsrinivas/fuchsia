@@ -7,10 +7,12 @@
 #include "garnet/public/lib/escher/test/gtest_escher.h"
 #include "garnet/public/lib/escher/test/vk/vulkan_tester.h"
 
+#include "lib/escher/defaults/default_shader_program_factory.h"
 #include "lib/escher/geometry/tessellation.h"
 #include "lib/escher/shape/mesh.h"
 #include "lib/escher/vk/command_buffer.h"
 #include "lib/escher/vk/shader_module_template.h"
+#include "lib/escher/vk/shader_variant_args.h"
 #include "lib/escher/vk/texture.h"
 
 namespace {
@@ -18,7 +20,6 @@ using namespace escher;
 
 class ShaderProgramTest : public ::testing::Test, public VulkanTester {
  protected:
-  const HackFilesystemPtr& filesystem() const { return filesystem_; }
   const MeshPtr& ring_mesh1() const { return ring_mesh1_; }
   const MeshPtr& ring_mesh2() const { return ring_mesh2_; }
   const MeshPtr& sphere_mesh() const { return sphere_mesh_; }
@@ -28,8 +29,8 @@ class ShaderProgramTest : public ::testing::Test, public VulkanTester {
     auto escher = test::GetEscher();
     EXPECT_TRUE(escher->Cleanup());
 
-    filesystem_ = fxl::MakeRefCounted<HackFilesystem>();
-    bool success = filesystem_->InitializeWithRealFiles(
+    auto factory = escher->shader_program_factory();
+    bool success = factory->filesystem()->InitializeWithRealFiles(
         {"shaders/model_renderer/default_position.vert",
          "shaders/model_renderer/main.frag", "shaders/model_renderer/main.vert",
          "shaders/model_renderer/shadow_map_generation.frag",
@@ -55,38 +56,50 @@ class ShaderProgramTest : public ::testing::Test, public VulkanTester {
     escher->vk_device().waitIdle();
     EXPECT_TRUE(escher->Cleanup());
 
-    filesystem_ = nullptr;
+    escher->shader_program_factory()->Clear();
   }
 
-  HackFilesystemPtr filesystem_;
   MeshPtr ring_mesh1_;
   MeshPtr ring_mesh2_;
   MeshPtr sphere_mesh_;
 };
 
+VK_TEST_F(ShaderProgramTest, CachedVariants) {
+  auto escher = test::GetEscher();
+
+  ShaderVariantArgs variant1(
+      {{"NO_SHADOW_LIGHTING_PASS", "1"}, {"USE_UV_ATTRIBUTE", "1"}});
+  ShaderVariantArgs variant2(
+      {{"NO_SHADOW_LIGHTING_PASS", "1"}, {"USE_UV_ATTRIBUTE", "0"}});
+
+  const char* kMainVert = "shaders/model_renderer/main.vert";
+  const char* kMainFrag = "shaders/model_renderer/main.frag";
+
+  auto program1 = escher->GetGraphicsProgram(kMainVert, kMainFrag, variant1);
+  auto program2 = escher->GetGraphicsProgram(kMainVert, kMainFrag, variant1);
+  auto program3 = escher->GetGraphicsProgram(kMainVert, kMainFrag, variant2);
+  auto program4 = escher->GetGraphicsProgram(kMainVert, kMainFrag, variant2);
+
+  // The first two programs use the same variant args, so should be identical,
+  // and similarly with the last two.
+  EXPECT_EQ(program1, program2);
+  EXPECT_EQ(program3, program4);
+  EXPECT_NE(program1, program3);
+}
+
 // TODO(ES-83): we need to set up so many meshes, materials, framebuffers, etc.
 // before we can obtain pipelines, we might as well just make this an end-to-end
 // test and actually render.  Or, go the other direction and manually set up
 // state in a standalone CommandBufferPipelineState object.
-VK_TEST_F(ShaderProgramTest, BasicVariants) {
+VK_TEST_F(ShaderProgramTest, GeneratePipelines) {
   auto escher = test::GetEscher();
 
-  auto vertex_template = fxl::MakeRefCounted<ShaderModuleTemplate>(
-      escher->vk_device(), escher->shaderc_compiler(), ShaderStage::kVertex,
-      "shaders/model_renderer/main.vert", filesystem());
-
-  auto fragment_template = fxl::MakeRefCounted<ShaderModuleTemplate>(
-      escher->vk_device(), escher->shaderc_compiler(), ShaderStage::kFragment,
-      "shaders/model_renderer/main.frag", filesystem());
-
-  ShaderModuleVariantArgs variant(
+  ShaderVariantArgs variant(
       {{"NO_SHADOW_LIGHTING_PASS", "1"}, {"USE_UV_ATTRIBUTE", "1"}});
 
-  auto vertex_module = vertex_template->GetShaderModuleVariant(variant);
-  auto fragment_module = fragment_template->GetShaderModuleVariant(variant);
-
-  auto program = ShaderProgram::NewGraphics(escher->resource_recycler(),
-                                            {vertex_module, fragment_module});
+  auto program =
+      escher->GetGraphicsProgram("shaders/model_renderer/main.vert",
+                                 "shaders/model_renderer/main.frag", variant);
 
   auto cb = CommandBuffer::NewForGraphics(escher);
 

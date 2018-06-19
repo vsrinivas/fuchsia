@@ -65,6 +65,10 @@ struct PipelineLayoutSpec {
 // because there is already a PipelineLayout in impl/vk.
 }  // namespace impl
 
+// A PipelineLayout encapsulates a VkPipelineLayout object, as well as an array
+// of DescriptorSetAllocators that are configured to allocate descriptor sets
+// that match the sets required, at each index, by pipelines with this layout.
+//
 // TODO(ES-83): does this need to be a Resource?  If these are always
 // reffed by pipelines that use them, then it should suffice to keep those
 // pipelines alive, right?

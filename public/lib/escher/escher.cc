@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "lib/escher/escher.h"
+#include "lib/escher/defaults/default_shader_program_factory.h"
 #include "lib/escher/impl/command_buffer_pool.h"
 #include "lib/escher/impl/glsl_compiler.h"
 #include "lib/escher/impl/image_cache.h"
@@ -68,7 +69,8 @@ std::unique_ptr<impl::MeshManager> NewMeshManager(
 }  // anonymous namespace
 
 Escher::Escher(VulkanDeviceQueuesPtr device)
-    : device_(std::move(device)),
+    : renderer_count_(0),
+      device_(std::move(device)),
       vulkan_context_(device_->GetVulkanContext()),
       gpu_allocator_(std::make_unique<NaiveGpuAllocator>(vulkan_context_)),
       command_buffer_sequencer_(
@@ -80,7 +82,6 @@ Escher::Escher(VulkanDeviceQueuesPtr device)
       glsl_compiler_(std::make_unique<impl::GlslToSpirvCompiler>()),
       shaderc_compiler_(std::make_unique<shaderc::Compiler>()),
       pipeline_cache_(std::make_unique<impl::PipelineCache>()),
-      renderer_count_(0),
       weak_factory_(this) {
   FXL_DCHECK(vulkan_context_.instance);
   FXL_DCHECK(vulkan_context_.physical_device);
@@ -93,7 +94,6 @@ Escher::Escher(VulkanDeviceQueuesPtr device)
   // been initialized.
   image_cache_ =
       std::make_unique<impl::ImageCache>(GetWeakPtr(), gpu_allocator());
-
   gpu_uploader_ =
       NewGpuUploader(GetWeakPtr(), command_buffer_pool(),
                      transfer_command_buffer_pool(), gpu_allocator());
@@ -107,6 +107,8 @@ Escher::Escher(VulkanDeviceQueuesPtr device)
       std::make_unique<impl::RenderPassCache>(resource_recycler()),
   framebuffer_allocator_ = std::make_unique<impl::FramebufferAllocator>(
       resource_recycler(), render_pass_cache_.get());
+  shader_program_factory_ =
+      std::make_unique<DefaultShaderProgramFactory>(GetWeakPtr());
 
   // Query relevant Vulkan properties.
   auto device_properties = vk_physical_device().getProperties();
@@ -119,6 +121,7 @@ Escher::Escher(VulkanDeviceQueuesPtr device)
 
 Escher::~Escher() {
   FXL_DCHECK(renderer_count_ == 0);
+  shader_program_factory_->Clear();
   vk_device().waitIdle();
   Cleanup();
 
@@ -218,6 +221,12 @@ TexturePtr Escher::NewAttachmentTexture(vk::Format format, uint32_t width,
   return NewTexture(format, width, height, sample_count, usage_flags, filter,
                     image_utils::FormatToColorOrDepthStencilAspectFlags(format),
                     use_unnormalized_coordinates);
+}
+
+ShaderProgramPtr Escher::GetProgram(
+    const std::string shader_paths[EnumCount<ShaderStage>()],
+    ShaderVariantArgs args) {
+  return shader_program_factory_->GetProgram(shader_paths, std::move(args));
 }
 
 FramePtr Escher::NewFrame(const char* trace_literal, uint64_t frame_number,

@@ -101,6 +101,8 @@ source_set("escher") {
   }
 
   sources = [
+    "defaults/default_shader_program_factory.cc",
+    "defaults/default_shader_program_factory.h",
     "escher.cc",
     "escher.h",
     "escher_process_init.cc",
@@ -338,6 +340,10 @@ source_set("escher") {
     "vk/shader_module_template.h",
     "vk/shader_program.cc",
     "vk/shader_program.h",
+    "vk/shader_program_factory.cc",
+    "vk/shader_program_factory.h",
+    "vk/shader_variant_args.cc",
+    "vk/shader_variant_args.h",
     "vk/simple_image_factory.cc",
     "vk/simple_image_factory.h",
     "vk/texture.cc",

@@ -12,6 +12,7 @@
 #include "lib/escher/status.h"
 #include "lib/escher/util/hash.h"
 #include "lib/escher/util/hash_map.h"
+#include "lib/escher/vk/shader_program_factory.h"
 #include "lib/escher/vk/vulkan_context.h"
 #include "lib/escher/vk/vulkan_device_queues.h"
 #include "lib/fxl/macros.h"
@@ -22,7 +23,7 @@ namespace escher {
 //
 // Escher is currently not thread-safe; it (and all objects obtained from it)
 // must be used from a single thread.
-class Escher : public MeshBuilderFactory {
+class Escher : public MeshBuilderFactory, public ShaderProgramFactory {
  public:
   // Escher does not take ownership of the objects in the Vulkan context.  It is
   // up to the application to eventually destroy them, and also to ensure that
@@ -131,6 +132,10 @@ class Escher : public MeshBuilderFactory {
     return transfer_command_buffer_pool_.get();
   }
 
+  DefaultShaderProgramFactory* shader_program_factory() {
+    return shader_program_factory_.get();
+  }
+
   // Check if GPU performance profiling is supported.
   bool supports_timer_queries() const { return supports_timer_queries_; }
   float timestamp_period() const { return timestamp_period_; }
@@ -140,6 +145,12 @@ class Escher : public MeshBuilderFactory {
   friend class Renderer;
   void IncrementRendererCount() { ++renderer_count_; }
   void DecrementRendererCount() { --renderer_count_; }
+  std::atomic<uint32_t> renderer_count_;
+
+  // |ShaderProgramFactory|
+  ShaderProgramPtr GetProgram(
+      const std::string shader_paths[EnumCount<ShaderStage>()],
+      ShaderVariantArgs args) override;
 
   VulkanDeviceQueuesPtr device_;
   VulkanContext vulkan_context_;
@@ -156,10 +167,10 @@ class Escher : public MeshBuilderFactory {
   // before they can be constructed.
 
   std::unique_ptr<impl::ImageCache> image_cache_;
-
   std::unique_ptr<impl::GpuUploader> gpu_uploader_;
   std::unique_ptr<ResourceRecycler> resource_recycler_;
   std::unique_ptr<impl::MeshManager> mesh_manager_;
+  std::unique_ptr<DefaultShaderProgramFactory> shader_program_factory_;
 
   std::unique_ptr<impl::PipelineLayoutCache> pipeline_layout_cache_;
 
@@ -168,8 +179,6 @@ class Escher : public MeshBuilderFactory {
 
   HashMap<Hash, std::unique_ptr<impl::DescriptorSetAllocator>>
       descriptor_set_allocators_;
-
-  std::atomic<uint32_t> renderer_count_;
 
   bool supports_timer_queries_ = false;
   float timestamp_period_ = 0.f;

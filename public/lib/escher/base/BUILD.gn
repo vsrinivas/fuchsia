@@ -9,6 +9,7 @@ static_library("escher_base") {
     "owner.h",
     "reffable.cc",
     "reffable.h",
+    "trait.h",
     "type_info.h",
     "typed_reffable.h",
   ]

@@ -12,7 +12,9 @@
 
 namespace escher {
 
-// A simple base class for self-hashing objects.
+// A simple base class for self-hashing objects.  Copying and moving is allowed;
+// it's up to subclasses to disallow, if they want.
+//
 // Not thread-safe.
 class Hashable {
  public:

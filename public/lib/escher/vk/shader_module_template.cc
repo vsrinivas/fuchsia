@@ -93,19 +93,6 @@ class Includer : public shaderc::CompileOptions::IncluderInterface {
 
 }  // anonymous namespace
 
-ShaderModuleVariantArgs::ShaderModuleVariantArgs(
-    std::vector<std::pair<std::string, std::string>> definitions)
-    : definitions_(std::move(definitions)) {}
-
-Hash ShaderModuleVariantArgs::GenerateHash() const {
-  Hasher h;
-  for (auto& def : definitions_) {
-    h.string(def.first);
-    h.string(def.second);
-  }
-  return h.value();
-}
-
 ShaderModuleTemplate::ShaderModuleTemplate(vk::Device device,
                                            shaderc::Compiler* compiler,
                                            ShaderStage shader_stage,
@@ -120,7 +107,7 @@ ShaderModuleTemplate::ShaderModuleTemplate(vk::Device device,
 ShaderModuleTemplate::~ShaderModuleTemplate() { FXL_DCHECK(variants_.empty()); }
 
 ShaderModulePtr ShaderModuleTemplate::GetShaderModuleVariant(
-    const ShaderModuleVariantArgs& args) {
+    const ShaderVariantArgs& args) {
   if (Variant* variant = variants_[args]) {
     return ShaderModulePtr(variant);
   }
@@ -156,7 +143,7 @@ void ShaderModuleTemplate::ScheduleVariantCompilation(
 }
 
 ShaderModuleTemplate::Variant::Variant(ShaderModuleTemplate* tmplate,
-                                       ShaderModuleVariantArgs args)
+                                       ShaderVariantArgs args)
     : ShaderModule(tmplate->device_, tmplate->shader_stage_),
       template_(tmplate),
       args_(std::move(args)),
@@ -165,12 +152,12 @@ ShaderModuleTemplate::Variant::Variant(ShaderModuleTemplate* tmplate,
   // been initialized, and weak_factory_ must be initialized last (at least if
   // we don't want to invite trouble).
   auto& fs = template_->filesystem_;
-  filesystem_watcher_ = fs->RegisterWatcher(
-      [weak = weak_factory_.GetWeakPtr()](HackFilePath changed_path) {
-        if (weak) {
-          weak->template_->ScheduleVariantCompilation(weak);
-        }
-      });
+  filesystem_watcher_ = fs->RegisterWatcher([weak = weak_factory_.GetWeakPtr()](
+      HackFilePath changed_path) {
+    if (weak) {
+      weak->template_->ScheduleVariantCompilation(weak);
+    }
+  });
 }
 
 ShaderModuleTemplate::Variant::~Variant() {

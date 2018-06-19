@@ -4,6 +4,7 @@
 
 #include "garnet/examples/escher/waterfall2/waterfall_demo.h"
 
+#include "lib/escher/defaults/default_shader_program_factory.h"
 #include "lib/escher/geometry/tessellation.h"
 #include "lib/escher/scene/camera.h"
 #include "lib/escher/scene/model.h"
@@ -22,38 +23,22 @@ static constexpr float kFar = -1.f;
 static constexpr float kLightIntensity = 0.5f;
 
 // Constructor helper.
-HackFilesystemPtr CreateFilesystem() {
-  auto filesystem = fxl::MakeRefCounted<HackFilesystem>();
-  FXL_CHECK(filesystem->InitializeWithRealFiles(
+ShaderProgramPtr CreateShaderProgram(Escher* escher) {
+  escher->shader_program_factory()->filesystem()->InitializeWithRealFiles(
       {"shaders/simple.vert", "shaders/simple.frag"},
-      "garnet/examples/escher/waterfall2/"));
-  return filesystem;
-}
+      "garnet/examples/escher/waterfall2/");
 
-// Constructor helper.
-ShaderProgramPtr CreateShaderProgram(Escher* escher,
-                                     const HackFilesystemPtr& filesystem) {
-  ShaderModuleVariantArgs variant({});
-
-  auto vertex_template = fxl::MakeRefCounted<ShaderModuleTemplate>(
-      escher->vk_device(), escher->shaderc_compiler(), ShaderStage::kVertex,
-      "shaders/simple.vert", filesystem);
-  auto vertex_module = vertex_template->GetShaderModuleVariant(variant);
-
-  auto fragment_template = fxl::MakeRefCounted<ShaderModuleTemplate>(
-      escher->vk_device(), escher->shaderc_compiler(), ShaderStage::kFragment,
-      "shaders/simple.frag", filesystem);
-  auto fragment_module = fragment_template->GetShaderModuleVariant(variant);
-
-  return ShaderProgram::NewGraphics(escher->resource_recycler(),
-                                    {vertex_module, fragment_module});
+  // We only obtain the factory above in order to to initialize with files from
+  // the filesystem.  The usual, convenient way to obtain a shader program is to
+  // ask Escher (which ends up delegating to the factory above).
+  return escher->GetGraphicsProgram("shaders/simple.vert",
+                                    "shaders/simple.frag", ShaderVariantArgs());
 }
 
 WaterfallDemo::WaterfallDemo(DemoHarness* harness, int argc, char** argv)
     : Demo(harness),
-      filesystem_(CreateFilesystem()),
-      renderer_(WaterfallRenderer::New(
-          GetEscherWeakPtr(), CreateShaderProgram(escher(), filesystem_))),
+      renderer_(WaterfallRenderer::New(GetEscherWeakPtr(),
+                                       CreateShaderProgram(escher()))),
       swapchain_helper_(harness->GetVulkanSwapchain(),
                         escher()->vulkan_context().device,
                         escher()->vulkan_context().queue) {

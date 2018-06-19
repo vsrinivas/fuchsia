@@ -106,6 +106,8 @@ vk::Pipeline CommandBufferPipelineState::FlushGraphicsPipeline(
     }
   }
 
+  // Try to find a previously-stashed pipeline that matches the current command
+  // state.  If none is found, build a new pipeline and stash it.
   Hash hash = h.value();
   if (auto pipeline = program->FindPipeline(hash)) {
     return pipeline;

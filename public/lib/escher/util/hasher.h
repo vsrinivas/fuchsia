@@ -109,12 +109,22 @@ class Hasher {
   }
 
   inline void const_chars(const char* str) {
+    // Ensure that even empty strings affect the hash, otherwise {"","","foo"}
+    // would hash to the same as {"","foo",""}.
+    u32(45);
+
     char c;
     while ((c = *str++) != '\0')
       u32(uint8_t(c));
   }
 
-  inline void string(const std::string& str) { data(str.data(), str.length()); }
+  inline void string(const std::string& str) {
+    // Ensure that even empty strings affect the hash, otherwise {"","","foo"}
+    // would hash to the same as {"","foo",""}.
+    u32(45);
+
+    data(str.data(), str.length());
+  }
 
  private:
   uint64_t value_;
