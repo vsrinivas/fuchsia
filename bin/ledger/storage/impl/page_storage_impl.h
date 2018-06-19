@@ -31,6 +31,11 @@ class PageStorageImpl : public PageStorage {
                   coroutine::CoroutineService* coroutine_service,
                   encryption::EncryptionService* encryption_service,
                   ledger::DetachedPath page_dir, PageId page_id);
+  PageStorageImpl(async_t* async,
+                  coroutine::CoroutineService* coroutine_service,
+                  encryption::EncryptionService* encryption_service,
+                  std::unique_ptr<PageDb> page_db, PageId page_id);
+
   ~PageStorageImpl() override;
 
   // Initializes this PageStorageImpl. This includes initializing the underlying
@@ -135,11 +140,6 @@ class PageStorageImpl : public PageStorage {
 
  private:
   friend class PageStorageImplAccessorForTest;
-
-  PageStorageImpl(async_t* async,
-                  coroutine::CoroutineService* coroutine_service,
-                  encryption::EncryptionService* encryption_service,
-                  std::unique_ptr<PageDb> page_db, PageId page_id);
 
   // Marks all pieces needed for the given objects as local.
   FXL_WARN_UNUSED_RESULT Status

@@ -21,7 +21,14 @@ namespace storage {
 
 // A |JournalImpl| represents a commit in progress.
 class JournalImpl : public Journal {
+ private:
+  // Passkey idiom to restrict access to the constructor to static factories.
+  class Token;
+
  public:
+  JournalImpl(Token token, JournalType type,
+              coroutine::CoroutineService* coroutine_service,
+              PageStorageImpl* page_storage, JournalId id, CommitId base);
   ~JournalImpl() override;
 
   // Creates a new Journal for a simple commit.
@@ -56,8 +63,11 @@ class JournalImpl : public Journal {
   const JournalId& GetId() const override;
 
  private:
-  JournalImpl(JournalType type, coroutine::CoroutineService* coroutine_service,
-              PageStorageImpl* page_storage, JournalId id, CommitId base);
+  class Token {
+   private:
+    Token() {}
+    friend JournalImpl;
+  };
 
   void GetParents(
       std::function<void(Status,

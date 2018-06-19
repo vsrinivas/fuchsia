@@ -380,7 +380,7 @@ void CollectPieces(
                        std::function<void(Status, fxl::StringView)>)>
         data_accessor,
     std::function<bool(IterationStatus, ObjectIdentifier)> callback) {
-  auto state = fxl::AdoptRef(new CollectPiecesState());
+  auto state = fxl::MakeRefCounted<CollectPiecesState>();
   state->data_accessor = std::move(data_accessor);
   state->callback = std::move(callback);
 

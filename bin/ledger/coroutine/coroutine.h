@@ -79,7 +79,7 @@ FXL_WARN_UNUSED_RESULT ContinuationStatus SyncCall(CoroutineHandler* handler,
     bool terminated = false;
   };
 
-  auto termination_sentinel = fxl::AdoptRef(new TerminationSentinel());
+  auto termination_sentinel = fxl::MakeRefCounted<TerminationSentinel>();
   auto on_return = fxl::MakeAutoCall(
       [termination_sentinel] { termination_sentinel->terminated = true; });
 

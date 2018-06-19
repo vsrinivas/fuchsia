@@ -12,7 +12,20 @@
 namespace storage {
 
 class CommitImpl : public Commit {
+ private:
+  // Passkey idiom to restrict access to the constructor to static factories.
+  class Token;
+  class SharedStorageBytes;
+
  public:
+  // Creates a new |CommitImpl| object with the given contents. |timestamp| is
+  // the number of nanoseconds since epoch.
+  CommitImpl(Token token, PageStorage* page_storage, CommitId id,
+             int64_t timestamp, uint64_t generation,
+             ObjectIdentifier root_node_identifier,
+             std::vector<CommitIdView> parent_ids,
+             fxl::RefPtr<SharedStorageBytes> storage_bytes);
+
   ~CommitImpl() override;
 
   // Factory method for creating a |CommitImpl| object given its storage
@@ -41,14 +54,11 @@ class CommitImpl : public Commit {
   fxl::StringView GetStorageBytes() const override;
 
  private:
-  class SharedStorageBytes;
-
-  // Creates a new |CommitImpl| object with the given contents. |timestamp| is
-  // the number of nanoseconds since epoch.
-  CommitImpl(PageStorage* page_storage, CommitId id, int64_t timestamp,
-             uint64_t generation, ObjectIdentifier root_node_identifier,
-             std::vector<CommitIdView> parent_ids,
-             fxl::RefPtr<SharedStorageBytes> storage_bytes);
+  class Token {
+   private:
+    Token() {}
+    friend CommitImpl;
+  };
 
   PageStorage* page_storage_;
   const CommitId id_;

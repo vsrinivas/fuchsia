@@ -89,7 +89,7 @@ class PageWatcherImpl : public ledger::PageWatcher {
                 ledger::ResultState /*result_state*/,
                 OnChangeCallback callback) override {
     changes++;
-    current_snapshot_ = fxl::AdoptRef(new RefCountedPageSnapshot());
+    current_snapshot_ = fxl::MakeRefCounted<RefCountedPageSnapshot>();
     callback((**current_snapshot_).NewRequest());
   }
 
@@ -255,8 +255,7 @@ class ConvergenceTest
 
   std::unique_ptr<PageWatcherImpl> WatchPageContents(ledger::PagePtr* page) {
     ledger::PageWatcherPtr page_watcher;
-    fxl::RefPtr<RefCountedPageSnapshot> page_snapshot =
-        fxl::AdoptRef(new RefCountedPageSnapshot());
+    auto page_snapshot = fxl::MakeRefCounted<RefCountedPageSnapshot>();
     fidl::InterfaceRequest<ledger::PageSnapshot> page_snapshot_request =
         (**page_snapshot).NewRequest();
     std::unique_ptr<PageWatcherImpl> watcher =

@@ -42,14 +42,11 @@ CommitIdView ToCommitIdView(const IdStorage* id_storage) {
 class CommitImpl::SharedStorageBytes
     : public fxl::RefCountedThreadSafe<SharedStorageBytes> {
  public:
-  inline static fxl::RefPtr<SharedStorageBytes> Create(std::string bytes) {
-    return AdoptRef(new SharedStorageBytes(std::move(bytes)));
-  }
-
   const std::string& bytes() { return bytes_; }
 
  private:
   FRIEND_REF_COUNTED_THREAD_SAFE(SharedStorageBytes);
+  FRIEND_MAKE_REF_COUNTED(SharedStorageBytes);
   explicit SharedStorageBytes(std::string bytes) : bytes_(std::move(bytes)) {}
   ~SharedStorageBytes() {}
 
@@ -96,8 +93,8 @@ std::string SerializeCommit(
 }
 }  // namespace
 
-CommitImpl::CommitImpl(PageStorage* page_storage, CommitId id,
-                       int64_t timestamp, uint64_t generation,
+CommitImpl::CommitImpl(Token /* token */, PageStorage* page_storage,
+                       CommitId id, int64_t timestamp, uint64_t generation,
                        ObjectIdentifier root_node_identifier,
                        std::vector<CommitIdView> parent_ids,
                        fxl::RefPtr<SharedStorageBytes> storage_bytes)
@@ -124,8 +121,8 @@ Status CommitImpl::FromStorageBytes(PageStorage* page_storage, CommitId id,
     return Status::FORMAT_ERROR;
   }
 
-  fxl::RefPtr<SharedStorageBytes> storage_ptr =
-      SharedStorageBytes::Create(std::move(storage_bytes));
+  auto storage_ptr =
+      fxl::MakeRefCounted<SharedStorageBytes>(std::move(storage_bytes));
 
   const CommitStorage* commit_storage =
       GetCommitStorage(storage_ptr->bytes().data());
@@ -137,10 +134,10 @@ Status CommitImpl::FromStorageBytes(PageStorage* page_storage, CommitId id,
   for (size_t i = 0; i < commit_storage->parents()->size(); ++i) {
     parent_ids.emplace_back(ToCommitIdView(commit_storage->parents()->Get(i)));
   }
-  commit->reset(new CommitImpl(
-      page_storage, std::move(id), commit_storage->timestamp(),
+  *commit = std::make_unique<CommitImpl>(
+      Token(), page_storage, std::move(id), commit_storage->timestamp(),
       commit_storage->generation(), std::move(root_node_identifier), parent_ids,
-      std::move(storage_ptr)));
+      std::move(storage_ptr));
   return Status::OK;
 }
 
@@ -198,21 +195,20 @@ void CommitImpl::Empty(
 
         FXL_DCHECK(IsDigestValid(root_identifier.object_digest));
 
-        fxl::RefPtr<SharedStorageBytes> storage_ptr =
-            SharedStorageBytes::Create("");
+        auto storage_ptr = fxl::MakeRefCounted<SharedStorageBytes>("");
 
-        auto ptr = std::unique_ptr<Commit>(new CommitImpl(
-            page_storage, kFirstPageCommitId.ToString(), 0, 0,
+        auto ptr = std::make_unique<CommitImpl>(
+            Token(), page_storage, kFirstPageCommitId.ToString(), 0, 0,
             std::move(root_identifier), std::vector<CommitIdView>(),
-            std::move(storage_ptr)));
+            std::move(storage_ptr));
         callback(Status::OK, std::move(ptr));
       });
 }
 
 std::unique_ptr<Commit> CommitImpl::Clone() const {
-  return std::unique_ptr<CommitImpl>(
-      new CommitImpl(page_storage_, id_, timestamp_, generation_,
-                     root_node_identifier_, parent_ids_, storage_bytes_));
+  return std::make_unique<CommitImpl>(Token(), page_storage_, id_, timestamp_,
+                                      generation_, root_node_identifier_,
+                                      parent_ids_, storage_bytes_);
 }
 
 const CommitId& CommitImpl::GetId() const { return id_; }

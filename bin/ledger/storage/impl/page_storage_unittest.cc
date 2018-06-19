@@ -57,15 +57,6 @@ class PageStorageImplAccessorForTest {
   static PageDb& GetDb(const std::unique_ptr<PageStorageImpl>& storage) {
     return *(storage->db_);
   }
-
-  static std::unique_ptr<PageStorageImpl> CreateStorage(
-      async_t* async, coroutine::CoroutineService* coroutine_service,
-      encryption::EncryptionService* encryption_service,
-      std::unique_ptr<PageDb> page_db, PageId page_id) {
-    return std::unique_ptr<PageStorageImpl>(
-        new PageStorageImpl(async, coroutine_service, encryption_service,
-                            std::move(page_db), std::move(page_id)));
-  }
 };
 
 namespace {
@@ -953,10 +944,9 @@ TEST_F(PageStorageTest, CreateJournalHugeNode) {
 TEST_F(PageStorageTest, JournalCommitFailsAfterFailedOperation) {
   // Using FakePageDbImpl will cause all PageDb operations that have to do
   // with journal entry update, to fail with a NOT_IMPLEMENTED error.
-  std::unique_ptr<PageStorageImpl> test_storage =
-      PageStorageImplAccessorForTest::CreateStorage(
-          dispatcher(), &coroutine_service_, &encryption_service_,
-          std::make_unique<FakePageDbImpl>(), RandomString(10));
+  auto test_storage = std::make_unique<PageStorageImpl>(
+      dispatcher(), &coroutine_service_, &encryption_service_,
+      std::make_unique<FakePageDbImpl>(), RandomString(10));
 
   bool called;
   Status status;

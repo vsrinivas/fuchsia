@@ -17,7 +17,7 @@
 
 namespace storage {
 
-JournalImpl::JournalImpl(JournalType type,
+JournalImpl::JournalImpl(Token /* token */, JournalType type,
                          coroutine::CoroutineService* coroutine_service,
                          PageStorageImpl* page_storage, JournalId id,
                          CommitId base)
@@ -39,18 +39,18 @@ JournalImpl::~JournalImpl() {
 std::unique_ptr<Journal> JournalImpl::Simple(
     JournalType type, coroutine::CoroutineService* coroutine_service,
     PageStorageImpl* page_storage, const JournalId& id, const CommitId& base) {
-  return std::unique_ptr<Journal>(
-      new JournalImpl(type, coroutine_service, page_storage, id, base));
+  return std::make_unique<JournalImpl>(Token(), type, coroutine_service,
+                                       page_storage, id, base);
 }
 
 std::unique_ptr<Journal> JournalImpl::Merge(
     coroutine::CoroutineService* coroutine_service,
     PageStorageImpl* page_storage, const JournalId& id, const CommitId& base,
     const CommitId& other) {
-  JournalImpl* db_journal = new JournalImpl(
-      JournalType::EXPLICIT, coroutine_service, page_storage, id, base);
-  db_journal->other_ = std::make_unique<CommitId>(other);
-  std::unique_ptr<Journal> journal(db_journal);
+  auto journal =
+      std::make_unique<JournalImpl>(Token(), JournalType::EXPLICIT,
+                                    coroutine_service, page_storage, id, base);
+  journal->other_ = std::make_unique<CommitId>(other);
   return journal;
 }
 

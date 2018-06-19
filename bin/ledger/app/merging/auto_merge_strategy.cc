@@ -81,8 +81,7 @@ AutoMergeStrategy::AutoMerger::AutoMerger(
 AutoMergeStrategy::AutoMerger::~AutoMerger() {}
 
 void AutoMergeStrategy::AutoMerger::Start() {
-  std::unique_ptr<std::vector<storage::EntryChange>> changes(
-      new std::vector<storage::EntryChange>());
+  auto changes = std::make_unique<std::vector<storage::EntryChange>>();
   auto on_next = [weak_this = weak_factory_.GetWeakPtr(),
                   changes = changes.get()](storage::EntryChange change) {
     if (!weak_this) {
@@ -137,7 +136,7 @@ void AutoMergeStrategy::AutoMerger::OnRightChangeReady(
     bool distinct = true;
   };
 
-  std::unique_ptr<PageChangeIndex> index(new PageChangeIndex());
+  auto index = std::make_unique<PageChangeIndex>();
 
   auto on_next = fxl::MakeCopyable(
       [weak_this = weak_factory_.GetWeakPtr(), index = index.get(),
