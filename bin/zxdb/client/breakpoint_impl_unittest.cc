@@ -138,10 +138,10 @@ TEST_F(BreakpointImplTest, DynamicLoading) {
   const std::string kBuildID1 = "abcd";
   const std::string kBuildID2 = "zyxw";
   fxl::RefPtr<SystemSymbols::ModuleRef> module1_ref =
-      session().system_impl().symbols().InjectModuleForTesting(
+      session().system().GetSymbols()->InjectModuleForTesting(
           kBuildID1, std::move(module1));
   fxl::RefPtr<SystemSymbols::ModuleRef> module2_ref =
-      session().system_impl().symbols().InjectModuleForTesting(
+      session().system().GetSymbols()->InjectModuleForTesting(
           kBuildID2, std::move(module2));
 
   // Cause the process to load module 1.

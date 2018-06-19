@@ -53,6 +53,9 @@ class SystemSymbols {
   SystemSymbols();
   ~SystemSymbols();
 
+  // Returns the directory to which paths are relative.
+  const std::string& build_dir() const { return build_dir_; }
+
   // Loads the build ID file, clearing existing state. Returns true if the
   // load succeeded. In both success and failure case, *msg will be filled with
   // an informational message. See also AddBuildIDToFileMapping().
@@ -89,6 +92,9 @@ class SystemSymbols {
   // Notification from the ModuleRef that all references have been deleted and
   // the tracking information should be removed from the map.
   void WillDeleteModule(ModuleRef* module);
+
+  // The directory to which paths are relative.
+  std::string build_dir_;
 
   // Generated from the ids.txt file, this maps a build ID to a local file.
   std::map<std::string, std::string> build_id_to_file_;

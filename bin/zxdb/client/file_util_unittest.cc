@@ -15,4 +15,21 @@ TEST(FileUtil, ExtractLastFileComponent) {
   EXPECT_EQ("foo.cpp", ExtractLastFileComponent("baz/bar/foo.cpp"));
 }
 
+TEST(FileUtil, IsPathAbsolute) {
+  EXPECT_FALSE(IsPathAbsolute(""));
+  EXPECT_TRUE(IsPathAbsolute("/"));
+  EXPECT_TRUE(IsPathAbsolute("/foo/bar"));
+  EXPECT_FALSE(IsPathAbsolute("foo/bar"));
+  EXPECT_FALSE(IsPathAbsolute("./foo/bar"));
+}
+
+TEST(FileUtil, CatPathComponents) {
+  EXPECT_EQ("", CatPathComponents("", ""));
+  EXPECT_EQ("a", CatPathComponents("", "a"));
+  EXPECT_EQ("a", CatPathComponents("a", ""));
+  EXPECT_EQ("a/b", CatPathComponents("a", "b"));
+  EXPECT_EQ("a/b", CatPathComponents("a/", "b"));
+  EXPECT_EQ("a/b/", CatPathComponents("a/", "b/"));
+}
+
 }  // namespace zxdb

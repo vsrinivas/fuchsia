@@ -23,7 +23,7 @@ SystemImpl::SystemImpl(Session* session)
   std::string symbol_msg;
   bool ids_loaded = symbols_.LoadBuildIDFile(&symbol_msg);
   debug_ipc::MessageLoop::Current()->PostTask(
-      [weak_system = weak_factory_.GetWeakPtr(), ids_loaded, symbol_msg]() {
+      [ weak_system = weak_factory_.GetWeakPtr(), ids_loaded, symbol_msg ]() {
         if (weak_system) {
           for (auto& observer : weak_system->observers())
             observer.DidTryToLoadSymbolMapping(ids_loaded, symbol_msg);
@@ -66,6 +66,8 @@ std::vector<TargetImpl*> SystemImpl::GetTargetImpls() const {
     result.push_back(t.get());
   return result;
 }
+
+SystemSymbols* SystemImpl::GetSymbols() { return &symbols_; }
 
 std::vector<Target*> SystemImpl::GetTargets() const {
   std::vector<Target*> result;

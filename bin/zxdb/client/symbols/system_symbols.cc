@@ -4,6 +4,7 @@
 
 #include "garnet/bin/zxdb/client/symbols/system_symbols.h"
 
+#include "garnet/bin/zxdb/client/file_util.h"
 #include "garnet/bin/zxdb/client/host_util.h"
 #include "garnet/bin/zxdb/client/symbols/module_symbols_impl.h"
 #include "garnet/public/lib/fxl/strings/string_printf.h"
@@ -14,15 +15,12 @@ namespace zxdb {
 
 namespace {
 
-// Returns the file path of the "ids.txt" file that maps build IDs to file
-// paths for the current build.
-//
 // TODO(brettw) this is hardcoded and will only work in a full local build.
 // We will need a more flexible way to do handle this, and also a way to
 // explicitly specify a location for the mapping file.
-std::string GetIdFilePath() {
-  // Expect the debugger to be in "<build>/host_x64/zxdb" and the build ID
-  // mapping file to be in "<build>/ids.txt".
+std::string GetBuildDir() {
+  // Expect the debugger to be in "<build>/host_x64/zxdb" and the build dir
+  // to be one directory up.
   std::string path = GetSelfPath();
   if (path.empty())
     return path;
@@ -35,7 +33,6 @@ std::string GetIdFilePath() {
     if (last_slash != std::string::npos)
       path.resize(last_slash + 1);  // + 1 means keep the last slash.
   }
-  path.append("ids.txt");
   return path;
 }
 
@@ -60,7 +57,7 @@ void SystemSymbols::ModuleRef::SystemSymbolsDeleting() {
 
 // SystemSymbols ---------------------------------------------------------------
 
-SystemSymbols::SystemSymbols() = default;
+SystemSymbols::SystemSymbols() : build_dir_(GetBuildDir()) {}
 
 SystemSymbols::~SystemSymbols() {
   // Disown any remaining ModuleRefs so they don't call us back.
@@ -70,7 +67,7 @@ SystemSymbols::~SystemSymbols() {
 }
 
 bool SystemSymbols::LoadBuildIDFile(std::string* msg) {
-  std::string file_name = GetIdFilePath();
+  std::string file_name = CatPathComponents(build_dir_, "ids.txt");
   FILE* id_file = fopen(file_name.c_str(), "r");
   if (!id_file) {
     *msg = "Build ID file not found: " + file_name;

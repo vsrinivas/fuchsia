@@ -17,6 +17,7 @@ static_library("symbols") {
     "location.h",
     "module_symbols.h",
     "process_symbols.h",
+    "system_symbols.h",
     "target_symbols.h",
   ]
 
@@ -40,7 +41,6 @@ static_library("symbols") {
     "process_symbols_impl.cc",
     "process_symbols_impl.h",
     "system_symbols.cc",
-    "system_symbols.h",
     "target_symbols.cc",
     "target_symbols_impl.cc",
     "target_symbols_impl.h",

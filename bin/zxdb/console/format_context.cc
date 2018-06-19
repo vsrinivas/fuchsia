@@ -9,6 +9,7 @@
 
 #include "garnet/bin/zxdb/client/arch_info.h"
 #include "garnet/bin/zxdb/client/disassembler.h"
+#include "garnet/bin/zxdb/client/file_util.h"
 #include "garnet/bin/zxdb/client/memory_dump.h"
 #include "garnet/bin/zxdb/client/process.h"
 #include "garnet/bin/zxdb/client/session.h"
@@ -110,8 +111,10 @@ Err OutputSourceContext(Process* process, const Location& location) {
     source_opts.dim_nonactive = true;
 
     OutputBuffer out;
-    Err err =
-        FormatSourceFileContext(location.file_line().file(), source_opts, &out);
+    Err err = FormatSourceFileContext(
+        location.file_line().file(),
+        process->session()->system().GetSymbols()->build_dir(), source_opts,
+        &out);
     if (err.has_error())
       return err;
 
@@ -155,7 +158,8 @@ Err OutputSourceContext(Process* process, const Location& location) {
             return;
           }
           OutputBuffer out;
-          Err err = FormatAsmContext(weak_process->session()->arch_info(), dump, options, &out);
+          Err err = FormatAsmContext(weak_process->session()->arch_info(), dump,
+                                     options, &out);
           if (err.has_error())
             console->Output(err);
           else
@@ -169,10 +173,23 @@ Err OutputSourceContext(Process* process, const Location& location) {
 // performance, but we should be careful to always pick the latest version
 // since it can get updated.
 Err FormatSourceFileContext(const std::string& file_name,
+                            const std::string& build_dir,
                             const FormatSourceOpts& opts, OutputBuffer* out) {
+  // Search for the source file. If it's relative, try to find it relative to
+  // the build dir, and if that doesn't exist, try relative to the current
+  // directory).
   std::string contents;
-  if (!files::ReadFileToString(file_name, &contents))
-    return Err("Source file not found: " + file_name);
+  if (IsPathAbsolute(file_name)) {
+    // Absolute path, expect it to be readable or fail.
+    if (!files::ReadFileToString(file_name, &contents))
+      return Err("Source file not found: " + file_name);
+  } else if (!files::ReadFileToString(CatPathComponents(build_dir, file_name),
+                                      &contents)) {
+    // Doesn't exist relative to build dir, fall back to trying to read it
+    // from the current dir.
+    if (!files::ReadFileToString(file_name, &contents))
+      return Err("Source file not found: " + file_name);
+  }
 
   return FormatSourceContext(file_name, contents, opts, out);
 }
@@ -340,7 +357,8 @@ Err FormatAsmContext(const ArchInfo* arch_info, const MemoryDump& dump,
   return Err();
 }
 
-Err FormatBreakpointContext(const Location& location, bool enabled,
+Err FormatBreakpointContext(const Location& location,
+                            const std::string& build_dir, bool enabled,
                             OutputBuffer* out) {
   if (!location.has_symbols())
     return Err("No symbols for this location.");
@@ -352,7 +370,8 @@ Err FormatBreakpointContext(const Location& location, bool enabled,
   opts.first_line = line - kBreakpointContext;
   opts.last_line = line + kBreakpointContext;
   opts.bp_lines[line] = enabled;
-  return FormatSourceFileContext(location.file_line().file(), opts, out);
+  return FormatSourceFileContext(location.file_line().file(), build_dir, opts,
+                                 out);
 }
 
 }  // namespace zxdb

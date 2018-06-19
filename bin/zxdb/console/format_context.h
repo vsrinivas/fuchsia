@@ -56,7 +56,11 @@ struct FormatSourceOpts {
 
 // Formats the contents of the given local file name to the output. See
 // FormatSourceFileContext for error handling.
+//
+// The build_dir indicates the directory where relative file names will be
+// treated as relative to.
 Err FormatSourceFileContext(const std::string& file_name,
+                            const std::string& build_dir,
                             const FormatSourceOpts& opts, OutputBuffer* out);
 
 // Formats the given source to the output.
@@ -97,7 +101,10 @@ Err FormatAsmContext(const ArchInfo* arch_info, const MemoryDump& dump,
 // Generally the location passed here should be the location of a resolved
 // BreakpointLocation since the breakpoint itself won't have a fully qualified
 // file name, and the breakpoint may move slightly when it's actually applied.
-Err FormatBreakpointContext(const Location& location, bool enabled,
+//
+// Build_dir is used to find relative files by FormatSourceFileContext().
+Err FormatBreakpointContext(const Location& location,
+                            const std::string& build_dur, bool enabled,
                             OutputBuffer* out);
 
 }  // namespace zxdb

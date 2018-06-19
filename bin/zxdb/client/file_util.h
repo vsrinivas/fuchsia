@@ -14,4 +14,15 @@ namespace zxdb {
 // whole thing.
 fxl::StringView ExtractLastFileComponent(fxl::StringView path);
 
+// Returns true if the given file path is absolute (begins with a slash).
+// The contents could still have relative components ("/foo/../bar" is still
+// absolute).
+bool IsPathAbsolute(const std::string& path);
+
+// Concatenates the two path components with a slash in between them. "first"
+// can end with a slash or not. The second component shouldn't begin with a
+// slash.
+std::string CatPathComponents(const std::string& first,
+                              const std::string& second);
+
 }  // namespace zxdb

@@ -19,14 +19,12 @@ class ProcessImpl;
 class SystemSymbolsProxy;
 class TargetImpl;
 
-class SystemImpl : public System {
+class SystemImpl final : public System {
  public:
   explicit SystemImpl(Session* session);
   ~SystemImpl() override;
 
   ProcessImpl* ProcessImplFromKoid(uint64_t koid) const;
-
-  SystemSymbols& symbols() { return symbols_; }
 
   // Broadcasts the global process notifications.
   void NotifyDidCreateProcess(Process* process);
@@ -35,6 +33,7 @@ class SystemImpl : public System {
   std::vector<TargetImpl*> GetTargetImpls() const;
 
   // System implementation:
+  SystemSymbols* GetSymbols() override;
   std::vector<Target*> GetTargets() const override;
   std::vector<Breakpoint*> GetBreakpoints() const override;
   Process* ProcessFromKoid(uint64_t koid) const override;
