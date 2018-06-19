@@ -2,6 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+load("@fuchsia_sdk//build_defs:package.bzl", "fuchsia_package")
+load("@fuchsia_sdk//build_defs:packageable_cc_binary.bzl", "packageable_cc_binary")
+
 # Vanilla C++ program.
 cc_binary(
     name = "compilation",
@@ -18,5 +21,19 @@ cc_binary(
     ],
     deps = [
         "@fuchsia_sdk//pkg/fdio",
+    ],
+)
+
+# Prepare the binary for inclusion in a package.
+packageable_cc_binary(
+    name = "packageable",
+    binary = ":pkg_dep",
+)
+
+# C++ program in a Fuchsia package.
+fuchsia_package(
+    name = "package",
+    deps = [
+        ":packageable",
     ],
 )

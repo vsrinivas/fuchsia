@@ -2,83 +2,164 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+load(":package_info.bzl", "get_aggregate_info", "PackageAggregateInfo", "PackageLocalInfo")
+
 """
 Defines a Fuchsia package
 
 The package template is used to define a unit of related code and data.
-A package always has a name (defaulting to the target name)
 
 Parameters
 
-  name(string, required)
-      The name of the package
+    name(string, required)
+        The name of the package
 
-  deps(list, required)
-      The list of targets to be built into this package
+    deps(list, required)
+        The list of targets to be built into this package
 """
 
-def _fuchsia_package_impl (ctx):
-    print("building fuchsia_package %s\n" % ctx.attr.name)
-    transitive_runfile_sets = []
-    for d in ctx.attr.deps:
-        transitive_runfile_sets.append(d.default_runfiles.files)
-    transitive_runfiles = depset(transitive = transitive_runfile_sets)
+def _info_impl(target, context):
+    mappings = []
+    if PackageLocalInfo in target:
+        mappings = target[PackageLocalInfo].mappings
+    deps = context.attr.deps if hasattr(context.attr, "deps") else []
+    return [get_aggregate_info(mappings, deps)]
 
-    manifest_file_contents=""
-    for runfile in transitive_runfiles.to_list():
-        if runfile.extension == '':
-            manifest_file_contents += "bin/{}={}\n".format(runfile.basename, runfile.path)
-        elif runfile.extension == 'so':
-            manifest_file_contents += "lib/{}={}\n".format(runfile.basename, runfile.path)
+# An aspect which turns PackageLocalInfo providers into a PackageAggregateInfo
+# provider to identify all elements which need to be included in the package.
+_info_aspect = aspect(
+    implementation = _info_impl,
+    attr_aspects = [
+        "deps",
+    ],
+)
 
-    meta_package = ctx.actions.declare_file("meta/package")
-    manifest_file_contents += "meta/package={}\n".format(meta_package.path)
-    manifest_file = ctx.actions.declare_file("package_manifest")
-    ctx.actions.write(output = manifest_file, content = manifest_file_contents)
+def _fuchsia_package_impl(context):
+    # List all the files that need to be included in the package.
+    info = get_aggregate_info([], context.attr.deps)
+    manifest_file_contents = ""
+    package_contents = []
+    for mapping in info.contents.to_list():
+        manifest_file_contents += "%s=%s\n" % (mapping[0], mapping[1].path)
+        package_contents.append(mapping[1])
 
+    base = context.attr.name + "_pkg/"
+    meta_package = context.actions.declare_file(base + "meta/package")
+    manifest_file_contents += "meta/package=%s\n" % meta_package.path
+
+    manifest_file = context.actions.declare_file(base + "package_manifest")
     package_dir = manifest_file.dirname
 
-    ctx.actions.run(
-        outputs = [meta_package],
-        executable = ctx.executable.pm,
-        arguments = ["-o", package_dir, "-n", ctx.attr.name, "init"],
+    # Write the manifest file.
+    context.actions.write(
+        output = manifest_file,
+        content = manifest_file_contents,
+    )
+
+    # Initialize the package's meta directory.
+    context.actions.run(
+        executable = context.executable._pm,
+        arguments = [
+            "-o",
+            package_dir,
+            "-n",
+            context.attr.name,
+            "init",
+        ],
+        outputs = [
+            meta_package,
+        ],
         mnemonic = "PmInit",
-        progress_message = "Initializing Fuchsia PM meta directory {}".format(ctx.attr.name))
+    )
 
-    pm_signing_key = ctx.actions.declare_file("development.key")
-    ctx.actions.run(
-        outputs = [pm_signing_key],
-        inputs = [meta_package],
-        executable = ctx.executable.pm,
-        arguments = ["-o", package_dir, "-k", pm_signing_key.path, "genkey"],
+    # TODO(pylaligand): figure out how to specify this key.
+    # Generate a signing key.
+    signing_key = context.actions.declare_file(base + "development.key")
+    context.actions.run(
+        executable = context.executable._pm,
+        arguments = [
+            "-o",
+            package_dir,
+            "-k",
+            signing_key.path,
+            "genkey",
+        ],
+        inputs = [
+            meta_package,
+        ],
+        outputs = [
+            signing_key,
+        ],
         mnemonic = "PmGenkey",
-        progress_message = "Creating Fuchsia PM signing key for {}".format(ctx.attr.name))
+    )
 
-    pm_build_inputs = depset(direct = [manifest_file, pm_signing_key, meta_package], transitive = transitive_runfile_sets)
-    meta_far = ctx.actions.declare_file("meta.far")
-    ctx.actions.run(
-        outputs = [meta_far],
-        inputs = pm_build_inputs,
-        executable = ctx.executable.pm,
-        arguments = ["-o", package_dir, "-k", pm_signing_key.path, "-m", manifest_file.path, "build"],
+    # Build the package metadata.
+    meta_far = context.actions.declare_file(base + "meta.far")
+    context.actions.run(
+        executable = context.executable._pm,
+        arguments = [
+            "-o",
+            package_dir,
+            "-k",
+            signing_key.path,
+            "-m",
+            manifest_file.path,
+            "build",
+        ],
+        inputs = package_contents + [
+            manifest_file,
+            meta_package,
+            signing_key,
+        ],
+        outputs = [
+            meta_far,
+        ],
         mnemonic = "PmBuild",
-        progress_message = "building Fuchsia package metadata for {}".format(ctx.attr.name))
+    )
 
-    pm_archive_inputs = depset(direct = [manifest_file, pm_signing_key, meta_far], transitive = transitive_runfile_sets)
-    package_archive = ctx.actions.declare_file("{}-0.far".format(ctx.attr.name))
-    ctx.actions.run(
-        outputs = [package_archive],
-        inputs = pm_archive_inputs,
-        executable = ctx.executable.pm,
-        arguments = ["-o", package_dir, "-k", pm_signing_key.path, "-m", manifest_file.path, "archive"],
+    # Create the package archive.
+    package_archive = context.actions.declare_file(base + context.attr.name + "-0.far")
+    context.actions.run(
+        executable = context.executable._pm,
+        arguments = [
+            "-o",
+            package_dir,
+            "-k",
+            signing_key.path,
+            "-m",
+            manifest_file.path,
+            "archive",
+        ],
+        inputs = [
+            manifest_file,
+            signing_key,
+            meta_far,
+        ] + package_contents,
+        outputs = [
+            package_archive,
+        ],
         mnemonic = "PmArchive",
-        progress_message = "Creating Fuchsia package archive for {}".format(ctx.attr.name))
-    return [DefaultInfo(files = depset([package_archive]))]
+    )
+
+    return [
+        DefaultInfo(files = depset([package_archive])),
+    ]
 
 fuchsia_package = rule(
     implementation = _fuchsia_package_impl,
     attrs = {
-        "deps": attr.label_list(),
-        "pm": attr.label(executable=True, cfg="host", allow_files=True)
+        "deps": attr.label_list(
+            doc = "The objects to include in the package",
+            aspects = [
+                _info_aspect,
+            ],
+            mandatory = True,
+        ),
+        "_pm": attr.label(
+            default = Label("//tools:pm"),
+            allow_single_file = True,
+            executable = True,
+            cfg = "host",
+        ),
     },
 )

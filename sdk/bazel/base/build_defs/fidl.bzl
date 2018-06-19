@@ -15,7 +15,13 @@
 #   deps
 #     List of labels for FIDL libraries this library depends on.
 
-FidlLibraryInfo = provider(fields=["info", "name", "ir"])
+FidlLibraryInfo = provider(
+    fields = [
+        "info",
+        "name",
+        "ir",
+    ],
+)
 
 def _gather_dependencies(deps):
     info = []
