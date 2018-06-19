@@ -140,13 +140,12 @@ class TestApp
     story_controller_->GetModuleController(std::move(module_path),
                                            module1_controller_.NewRequest());
 
-    module1_watcher_.Watch(&module1_controller_);
-    module1_watcher_.Continue(
-        [this](fuchsia::modular::ModuleState module_state) {
-          if (module_state == fuchsia::modular::ModuleState::STOPPED) {
+    module1_controller_.events().OnStateChange =
+        [this](fuchsia::modular::ModuleState new_state) {
+          if (new_state == fuchsia::modular::ModuleState::STOPPED) {
             module1_stopped_.Pass();
           }
-        });
+        };
 
     module1_controller_->Stop([this] { GetActiveModules1(); });
   }

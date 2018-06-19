@@ -13,6 +13,7 @@ library fuchsia.modular;
 interface ModuleController {
   // Registers a watcher that is notified when the module is done or otherwise
   // stops.
+  // DEPRECATED: transitioning to use FIDL events such as OnStateChanged.
   1: Watch(ModuleWatcher watcher);
 
   // Requests that this module become the focused module in the story.
@@ -27,6 +28,9 @@ interface ModuleController {
 
   // The result callback is called once the Module's runtime has been torn down.
   4: Stop() -> ();
+
+  // Called with the current state when it changes.
+  5: -> OnStateChange(ModuleState new_state);
 };
 
 // This interface is implemented by the client calling ModuleController.Watch().
