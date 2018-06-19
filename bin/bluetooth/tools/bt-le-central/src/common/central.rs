@@ -5,13 +5,11 @@
 // TODO(armansito): Remove this once a server channel can be killed using a Controller
 #![allow(unreachable_code)]
 
-use async;
-
 use bt::error::Error as BTError;
 use common::gatt::start_gatt_loop;
 use failure::Error;
 use fidl::endpoints2;
-use fidl_ble::{CentralDelegate, CentralDelegateImpl, CentralProxy, RemoteDevice};
+use fidl_ble::{CentralEvent, CentralProxy, RemoteDevice};
 use futures::future;
 use futures::future::Either::{Left, Right};
 use futures::prelude::*;
@@ -48,62 +46,52 @@ impl CentralState {
     }
 }
 
-pub fn make_central_delegate(state: CentralStatePtr, channel: async::Channel)
-    -> impl Future<Item = (), Error = Never> + Send {
-    CentralDelegateImpl {
-        state: state,
-        on_open: |_, _| future::ok(()),
-
-        on_scan_state_changed: |_, scanning: bool, _| {
-            println!("  scan state changed: {}", scanning);
-            future::ok(())
-        },
-
-        on_device_discovered: |ref mut state, device: RemoteDevice, _| {
-            let id = device.identifier.clone();
-            let connectable = device.connectable;
-            println!(" {}", RemoteDeviceWrapper(device));
-
-            // TODO(armansito): async/await plz
-            let central = state.read();
-            if central.scan_once || central.connect {
-                // Stop scanning.
-                if let Err(e) = central.svc.stop_scan() {
-                    eprintln!("request to stop scan failed: {}", e);
-
-                    // TODO(armansito): kill the channel here instead
-                    exit(0);
-                    Left(future::ok(()))
-                } else if central.connect && connectable {
-                    Right(connect_peripheral(Arc::clone(state), id).recover(|_| {
-                        // TODO(armansito): kill the channel here instead
-                        exit(0);
-                        ()
-                    }))
-                } else {
-                    // TODO(armansito): kill the channel here instead
-                    exit(0);
-                    Left(future::ok(()))
+pub fn listen_central_events(
+    state: CentralStatePtr,
+) -> impl Future<Item = (), Error = Never> + Send {
+    let evt_stream = state.read().get_svc().take_event_stream();
+    evt_stream
+        .for_each(move |evt| {
+            match evt {
+                CentralEvent::OnScanStateChanged { scanning } => {
+                    eprintln!("  scan state changed: {}", scanning);
                 }
-            } else {
-                Left(future::ok(()))
+                CentralEvent::OnDeviceDiscovered { device } => {
+                    let id = device.identifier.clone();
+                    let connectable = device.connectable;
+                    eprintln!(" {}", RemoteDeviceWrapper(device));
+                    let central = state.read();
+                    if central.scan_once || central.connect {
+                        // Stop scanning.
+                        if let Err(e) = central.svc.stop_scan() {
+                            eprintln!("request to stop scan failed: {}", e);
+                            // TODO(armansito): kill the channel here instead
+                            exit(0);
+                        } else if central.connect && connectable {
+                            connect_peripheral(state.clone(), id);
+                        } else {
+                            // TODO(armansito): kill the channel here instead
+                            exit(0);
+                        }
+                    }
+                }
+                CentralEvent::OnPeripheralDisconnected { identifier } => {
+                    eprintln!("  peer disconnected: {}", identifier);
+                    // TODO(armansito): Close the channel here instead
+                    exit(0);
+                }
             }
-        },
-
-        on_peripheral_disconnected: |_, id: String, _| {
-            println!("  peer disconnected: {}", id);
-            // TODO(armansito): Close the channel here instead
-            exit(0);
             future::ok(())
-        },
-    }.serve(channel)
-        .recover(|e| eprintln!("error running BLE Central delegate {:?}", e))
+        })
+        .map(|_| ())
+        .recover(|e| eprintln!("failed to subscribe to BLE Central events: {:?}", e))
 }
 
 // Attempts to connect to the peripheral with the given |id| and begins the
 // GATT REPL if this succeeds.
-fn connect_peripheral(state: CentralStatePtr, mut id: String)
-    -> impl Future<Item = (), Error = Error> {
+fn connect_peripheral(
+    state: CentralStatePtr, mut id: String,
+) -> impl Future<Item = (), Error = Error> {
     let (proxy, server) = match endpoints2::create_endpoints() {
         Err(_) => {
             return Left(future::err(

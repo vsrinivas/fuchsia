@@ -2,19 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-
 use async;
 
 use bt::error::Error as BTError;
 use common::gatt_types::Service;
 use failure::Error;
 use fidl::endpoints2;
-use fidl_gatt::{Characteristic as FidlCharacteristic, ClientProxy,
-                RemoteServiceEvent, RemoteServiceProxy, ServiceInfo};
-use futures::{Future, FutureExt, Never, Stream, StreamExt, future};
+use fidl_gatt::{Characteristic as FidlCharacteristic, ClientProxy, RemoteServiceEvent,
+                RemoteServiceProxy, ServiceInfo};
 use futures::channel::mpsc::channel;
 use futures::future::Either::{Left, Right};
 use futures::future::FutureResult;
+use futures::{future, Future, FutureExt, Never, Stream, StreamExt};
 
 use parking_lot::RwLock;
 use std::io::{self, Read, Write};
@@ -23,7 +22,9 @@ use std::sync::Arc;
 use std::thread;
 
 macro_rules! left_ok {
-    () => (Left(future::ok(())))
+    () => {
+        Left(future::ok(()))
+    };
 }
 
 type GattClientPtr = Arc<RwLock<GattClient>>;
@@ -116,21 +117,23 @@ pub fn start_gatt_loop(proxy: ClientProxy) -> impl Future<Item = (), Error = Err
     get_services.and_then(|_| {
         stdin_stream()
             .map_err(|e| BTError::new(&format!("stream error: {:?}", e)).into())
-            .for_each(move |cmd| if cmd == "exit" {
-                Left(future::err(BTError::new("exited").into()))
-            } else {
-                Right(
-                    handle_cmd(cmd, client2.clone())
-                        .map_err(|e| {
-                            println!("Error: {}", e);
-                            e
-                        })
-                        .and_then(|_| {
-                            print!("> ");
-                            io::stdout().flush().unwrap();
-                            Ok(())
-                        }),
-                )
+            .for_each(move |cmd| {
+                if cmd == "exit" {
+                    Left(future::err(BTError::new("exited").into()))
+                } else {
+                    Right(
+                        handle_cmd(cmd, client2.clone())
+                            .map_err(|e| {
+                                println!("Error: {}", e);
+                                e
+                            })
+                            .and_then(|_| {
+                                print!("> ");
+                                io::stdout().flush().unwrap();
+                                Ok(())
+                            }),
+                    )
+                }
             })
             .and_then(|_| Ok(()))
     })
@@ -203,8 +206,9 @@ fn read_characteristic(client: GattClientPtr, id: u64) -> impl Future<Item = (),
 }
 
 // Write to a characteristic.
-fn write_characteristic(client: GattClientPtr, id: u64, value: Vec<u8>)
-    -> impl Future<Item = (), Error = Error> {
+fn write_characteristic(
+    client: GattClientPtr, id: u64, value: Vec<u8>,
+) -> impl Future<Item = (), Error = Error> {
     client
         .read()
         .active_proxy
@@ -289,7 +293,6 @@ fn do_connect(args: Vec<&str>, client: GattClientPtr) -> impl Future<Item = (), 
             Right(discover_characteristics(client))
         }
     }
-
 }
 
 fn do_read_chr(args: Vec<&str>, client: GattClientPtr) -> impl Future<Item = (), Error = Error> {
@@ -344,8 +347,9 @@ fn do_write_chr(args: Vec<&str>, client: GattClientPtr) -> impl Future<Item = ()
     }
 }
 
-fn do_enable_notify(args: Vec<&str>, client: GattClientPtr)
-    -> impl Future<Item = (), Error = Error> {
+fn do_enable_notify(
+    args: Vec<&str>, client: GattClientPtr,
+) -> impl Future<Item = (), Error = Error> {
     if args.len() != 1 {
         println!("usage: enable-notify <id>");
         return left_ok!();
@@ -385,8 +389,9 @@ fn do_enable_notify(args: Vec<&str>, client: GattClientPtr)
     )
 }
 
-fn do_disable_notify(args: Vec<&str>, client: GattClientPtr)
-    -> impl Future<Item = (), Error = Error> {
+fn do_disable_notify(
+    args: Vec<&str>, client: GattClientPtr,
+) -> impl Future<Item = (), Error = Error> {
     if args.len() != 1 {
         println!("usage: disable-notify <id>");
         return left_ok!();
@@ -430,9 +435,9 @@ fn do_disable_notify(args: Vec<&str>, client: GattClientPtr)
 // because the handlers potentially return different concrete types which can't be returned in the
 // same Either branch.
 macro_rules! right_cmd {
-    ($cmd: expr) => (
+    ($cmd:expr) => {
         Right(Box::new($cmd) as Box<Future<Item = (), Error = Error> + Send>)
-    )
+    };
 }
 
 // Processes |cmd| and returns its result.

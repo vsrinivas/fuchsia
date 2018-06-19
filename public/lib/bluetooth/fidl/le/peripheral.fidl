@@ -6,23 +6,6 @@ library fuchsia.bluetooth.le;
 
 using fuchsia.bluetooth;
 
-interface PeripheralDelegate {
-  // Called when a remote central device has connected to a connectable advertisement.
-  // Provides a GATT client handle which can be used to interact with GATT service
-  // on the central device.
-  //
-  // When this is called, the Advertisement will have stopped, and StartAdvertising
-  // should be called again to re-start advertising when the peripheral can accept
-  // another connection.
-  //
-  // Note: Centrals can connect to the local device and interact with the GATT server
-  // from an application without Peripheral.StartAdvertising() being called.
-  1: OnCentralConnected(string advertisement_id, RemoteDevice central);
-
-  // Called when a remote central previously connected to this application is disconnected.
-  2: OnCentralDisconnected(string device_id);
-};
-
 [Discoverable]
 interface Peripheral {
   // Starts sending advertisements based on the given parameters.
@@ -51,9 +34,23 @@ interface Peripheral {
   //     is supported on the current platform and parameters.
   //   - If |anonymous| advertising is requested but the controller cannot support it.
   1: StartAdvertising(AdvertisingData advertising_data, AdvertisingData? scan_result,
-                      PeripheralDelegate? delegate, uint32 interval_ms, bool anonymous) ->
-                      (fuchsia.bluetooth.Status @status, string? advertisement_id);
+         uint32 interval_ms, bool anonymous) -> (fuchsia.bluetooth.Status @status, string? advertisement_id);
 
   // Stop a an advertising session that was previously started by this application.
   2: StopAdvertising(string advertisement_id) -> (fuchsia.bluetooth.Status @status);
+
+  // Called when a remote central device has connected to a connectable advertisement.
+  // Provides a GATT client handle which can be used to interact with GATT service
+  // on the central device.
+  //
+  // When this is called, the Advertisement will have stopped, and StartAdvertising
+  // should be called again to re-start advertising when the peripheral can accept
+  // another connection.
+  //
+  // Note: Centrals can connect to the local device and interact with the GATT server
+  // from an application without Peripheral.StartAdvertising() being called.
+  101: -> OnCentralConnected(string advertisement_id, RemoteDevice central);
+
+  // Called when a remote central previously connected to this application is disconnected.
+  102: -> OnCentralDisconnected(string device_id);
 };

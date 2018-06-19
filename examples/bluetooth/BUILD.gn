@@ -9,19 +9,20 @@ package("garnet_bluetooth_examples") {
 
   deps = [
     # "ble_battery_service",
-    "bt-le-heart-rate-peripheral",
-    "bt_beacon_reader",
+    # "bt-le-heart-rate-peripheral",
+    # "bt_beacon_reader",
   ]
 
   binaries = [
     # {
     #   name = "ble_battery_service"
     # },
-    {
-      name = "bt-le-heart-rate-peripheral"
-    },
-    {
-      name = "bt_beacon_reader"
-    },
+    # TODO(xow): NET-1050
+    # {
+    #   name = "bt-le-heart-rate-peripheral"
+    # },
+    # {
+    #   name = "bt_beacon_reader"
+    # },
   ]
 }

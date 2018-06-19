@@ -30,9 +30,6 @@ class LowEnergyCentralServer
 
  private:
   // fuchsia::bluetooth::le::Central overrides:
-  void SetDelegate(
-      ::fidl::InterfaceHandle<fuchsia::bluetooth::le::CentralDelegate> delegate)
-      override;
   void GetPeripherals(::fidl::VectorPtr<::fidl::StringPtr> service_uuids,
                       GetPeripheralsCallback callback) override;
   void GetPeripheral(::fidl::StringPtr identifier,
@@ -73,9 +70,6 @@ class LowEnergyCentralServer
   //   this device.
   std::unordered_map<std::string, ::btlib::gap::LowEnergyConnectionRefPtr>
       connections_;
-
-  // The delegate that is set via SetDelegate()
-  fuchsia::bluetooth::le::CentralDelegatePtr delegate_;
 
   // Keep this as the last member to make sure that all weak pointers are
   // invalidated before other members get destroyed.

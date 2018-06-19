@@ -18,8 +18,6 @@ using fuchsia::bluetooth::Status;
 using fuchsia::bluetooth::le::AdvertisingData;
 using fuchsia::bluetooth::le::AdvertisingDataPtr;
 using fuchsia::bluetooth::le::Peripheral;
-using fuchsia::bluetooth::le::PeripheralDelegate;
-using fuchsia::bluetooth::le::PeripheralDelegatePtr;
 using fuchsia::bluetooth::le::RemoteDevice;
 using fuchsia::bluetooth::le::RemoteDevicePtr;
 
@@ -42,9 +40,11 @@ std::string MessageFromStatus(btlib::hci::Status status) {
 
 }  // namespace
 
-LowEnergyPeripheralServer::InstanceData::InstanceData(const std::string& id,
-                                                      DelegatePtr delegate)
-    : id_(id), delegate_(std::move(delegate)) {}
+LowEnergyPeripheralServer::InstanceData::InstanceData(
+    const std::string& id, fxl::WeakPtr<LowEnergyPeripheralServer> owner)
+    : id_(id), owner_(owner) {
+      FXL_DCHECK(owner_);
+    }
 
 void LowEnergyPeripheralServer::InstanceData::RetainConnection(
     ConnectionRefPtr conn_ref, RemoteDevice peer) {
@@ -52,14 +52,14 @@ void LowEnergyPeripheralServer::InstanceData::RetainConnection(
   FXL_DCHECK(!conn_ref_);
 
   conn_ref_ = std::move(conn_ref);
-  delegate_->OnCentralConnected(id_, std::move(peer));
+  owner_->binding()->events().OnCentralConnected(id_, std::move(peer));
 }
 
 void LowEnergyPeripheralServer::InstanceData::ReleaseConnection() {
   FXL_DCHECK(connectable());
   FXL_DCHECK(conn_ref_);
 
-  delegate_->OnCentralDisconnected(conn_ref_->device_identifier());
+  owner_->binding()->events().OnCentralDisconnected(conn_ref_->device_identifier());
   conn_ref_ = nullptr;
 }
 
@@ -81,7 +81,6 @@ LowEnergyPeripheralServer::~LowEnergyPeripheralServer() {
 void LowEnergyPeripheralServer::StartAdvertising(
     AdvertisingData advertising_data,
     AdvertisingDataPtr scan_result,
-    ::fidl::InterfaceHandle<PeripheralDelegate> delegate,
     uint32_t interval,
     bool anonymous,
     StartAdvertisingCallback callback) {
@@ -97,18 +96,13 @@ void LowEnergyPeripheralServer::StartAdvertising(
   auto self = weak_ptr_factory_.GetWeakPtr();
 
   ::btlib::gap::LowEnergyAdvertisingManager::ConnectionCallback connect_cb;
-  if (delegate) {
-    // TODO(armansito): The conversion from hci::Connection to
-    // gap::LowEnergyConnectionRef should be performed by a gap library object
-    // and not in this layer (see NET-355).
-    connect_cb = [self](auto adv_id, auto link) {
-      if (self)
-        self->OnConnected(std::move(adv_id), std::move(link));
-    };
-  }
-  // |delegate| is temporarily held by the result callback, which will close the
-  // delegate channel if the advertising fails (after returning the status)
-  auto advertising_status_cb = [self, callback = std::move(callback), delegate = std::move(delegate)](
+  // TODO(armansito): The conversion from hci::Connection to
+  // gap::LowEnergyConnectionRef should be performed by a gap library object
+  // and not in this layer (see NET-355).
+  connect_cb = [self](auto adv_id, auto link) {
+    if (self) self->OnConnected(std::move(adv_id), std::move(link));
+  };
+  auto advertising_status_cb = [self, callback = std::move(callback)](
                                    std::string ad_id,
                                    ::btlib::hci::Status status) mutable {
     if (!self)
@@ -121,19 +115,7 @@ void LowEnergyPeripheralServer::StartAdvertising(
       return;
     }
 
-    auto delegate_ptr = delegate.Bind();
-
-    // Set the error handler for connectable advertisements only (i.e. if a
-    // delegate was provided).
-    if (delegate_ptr) {
-      delegate_ptr.set_error_handler([self, ad_id] {
-        if (self) {
-          self->StopAdvertisingInternal(ad_id);
-        }
-      });
-    }
-
-    self->instances_[ad_id] = InstanceData(ad_id, std::move(delegate_ptr));
+    self->instances_[ad_id] = InstanceData(ad_id, self->weak_ptr_factory_.GetWeakPtr());
     callback(Status(), ad_id);
   };
 

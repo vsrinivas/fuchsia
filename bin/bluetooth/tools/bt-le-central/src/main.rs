@@ -20,7 +20,7 @@ extern crate parking_lot;
 use bt::error::Error as BTError;
 use failure::{Error, Fail, ResultExt};
 use fidl::encoding2::OutOfLine;
-use fidl_ble::{CentralDelegateMarker, CentralMarker, CentralProxy, ScanFilter};
+use fidl_ble::{CentralMarker, CentralProxy, ScanFilter};
 use futures::future;
 use futures::future::Either::{Left, Right};
 use futures::prelude::*;
@@ -28,10 +28,11 @@ use getopts::Options;
 
 mod common;
 
-use common::central::{CentralState, make_central_delegate};
+use common::central::{listen_central_events, CentralState};
 
-fn do_scan(args: &[String], central: &CentralProxy)
-    -> (bool, bool, impl Future<Item = (), Error = Error>) {
+fn do_scan(
+    args: &[String], central: &CentralProxy,
+) -> (bool, bool, impl Future<Item = (), Error = Error>) {
     let mut opts = Options::new();
 
     opts.optflag("h", "help", "");
@@ -70,20 +71,18 @@ fn do_scan(args: &[String], central: &CentralProxy)
 
     let uuids = match matches.opt_str("u") {
         None => None,
-        Some(val) => Some(vec![
-            match val.len() {
-                4 => format!("0000{}-0000-1000-8000-00805F9B34FB", val),
-                36 => val,
-                _ => {
-                    println!("invalid service UUID: {}", val);
-                    return (
-                        false,
-                        false,
-                        Left(future::err(BTError::new("invalid input").into())),
-                    );
-                }
-            },
-        ]),
+        Some(val) => Some(vec![match val.len() {
+            4 => format!("0000{}-0000-1000-8000-00805F9B34FB", val),
+            36 => val,
+            _ => {
+                println!("invalid service UUID: {}", val);
+                return (
+                    false,
+                    false,
+                    Left(future::err(BTError::new("invalid input").into())),
+                );
+            }
+        }]),
     };
 
     let name = matches.opt_str("n");
@@ -142,7 +141,8 @@ fn usage(appname: &str) -> () {
     eprintln!(
         "usage: {} <command>
 commands:
-  scan: Scan for nearby devices and optionally connect to them
+  scan: Scan for nearby devices and optionally connect to \
+         them
   connect: Connect to a peer using its ID",
         appname
     );
@@ -158,20 +158,8 @@ fn main() -> Result<(), Error> {
     }
 
     let mut executor = async::Executor::new().context("error creating event loop")?;
-    let central_svc = app::client::connect_to_service::<CentralMarker>().context(
-        "Failed to connect to BLE Central service",
-    )?;
-
-    // Set up the CentralDelegate.
-    let (remote, local) = zx::Channel::create().context("failed to create zx channel")?;
-    let local = async::Channel::from_channel(local).context(
-        "failed to make async channel",
-    )?;
-
-    let remote_end = fidl::endpoints2::ClientEnd::<CentralDelegateMarker>::new(remote);
-    central_svc.set_delegate(remote_end).context(
-        "failed to register delegate",
-    )?;
+    let central_svc = app::client::connect_to_service::<CentralMarker>()
+        .context("Failed to connect to BLE Central service")?;
 
     let state = CentralState::new(central_svc);
 
@@ -192,11 +180,7 @@ fn main() -> Result<(), Error> {
         }
     };
 
-    // |delegate_fut| can never fail but we map its error type to a placeholder to coerce the
-    // types.
-    let delegate_fut = make_central_delegate(state, local).map_err(|_| {
-        BTError::new("Central disconnected").into()
-    });
-    let fut = command_fut.and_then(|_| delegate_fut);
+    let event_fut = listen_central_events(state).map_err(|_| unreachable!("Listening to events should never fail"));
+    let fut = command_fut.and_then(|_| event_fut);
     executor.run_singlethreaded(fut).map_err(Into::into)
 }

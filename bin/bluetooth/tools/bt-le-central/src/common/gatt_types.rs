@@ -35,9 +35,7 @@ impl fmt::Display for Service {
         write!(
             f,
             "[service: id: {}, primary: {}, type: {}]",
-            self.info.id,
-            self.info.primary,
-            self.info.type_
+            self.info.id, self.info.primary, self.info.type_
         )?;
         if let Some(ref chrcs) = self.characteristics {
             let mut i: i32 = 0;
@@ -67,9 +65,7 @@ impl fmt::Display for Characteristic {
                 write!(
                     f,
                     "\n          {}: [descr.: id: {}, type: {}]",
-                    i,
-                    descr.id,
-                    descr.type_
+                    i, descr.id, descr.type_
                 )?;
                 i += 1;
             }

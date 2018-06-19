@@ -14,8 +14,6 @@ using fuchsia::bluetooth::Int8;
 using fuchsia::bluetooth::Status;
 
 using fuchsia::bluetooth::gatt::Client;
-using fuchsia::bluetooth::le::CentralDelegate;
-using fuchsia::bluetooth::le::CentralDelegatePtr;
 using fuchsia::bluetooth::le::ScanFilterPtr;
 
 namespace bthost {
@@ -33,20 +31,6 @@ LowEnergyCentralServer::LowEnergyCentralServer(
 
 LowEnergyCentralServer::~LowEnergyCentralServer() {
   gatt_host_->UnbindGattClient(reinterpret_cast<GattHost::Token>(this));
-}
-
-void LowEnergyCentralServer::SetDelegate(
-    ::fidl::InterfaceHandle<CentralDelegate> delegate) {
-  if (!delegate) {
-    FXL_VLOG(1) << "Cannot set a null delegate";
-    return;
-  }
-
-  delegate_ = delegate.Bind();
-  delegate_.set_error_handler([this] {
-    FXL_VLOG(1) << "LowEnergyCentral delegate disconnected";
-    delegate_ = nullptr;
-  });
 }
 
 void LowEnergyCentralServer::GetPeripherals(
@@ -251,8 +235,6 @@ void LowEnergyCentralServer::DisconnectPeripheral(
 
 void LowEnergyCentralServer::OnScanResult(
     const ::btlib::gap::RemoteDevice& remote_device) {
-  if (!delegate_)
-    return;
 
   auto fidl_device = fidl_helpers::NewLERemoteDevice(remote_device);
   if (!fidl_device) {
@@ -265,18 +247,16 @@ void LowEnergyCentralServer::OnScanResult(
     fidl_device->rssi->value = remote_device.rssi();
   }
 
-  delegate_->OnDeviceDiscovered(std::move(*fidl_device));
+  binding()->events().OnDeviceDiscovered(std::move(*fidl_device));
 }
 
 void LowEnergyCentralServer::NotifyScanStateChanged(bool scanning) {
-  if (delegate_)
-    delegate_->OnScanStateChanged(scanning);
+  binding()->events().OnScanStateChanged(scanning);
 }
 
 void LowEnergyCentralServer::NotifyPeripheralDisconnected(
     const std::string& identifier) {
-  if (delegate_)
-    delegate_->OnPeripheralDisconnected(identifier);
+  binding()->events().OnPeripheralDisconnected(identifier);
 }
 
 }  // namespace bthost

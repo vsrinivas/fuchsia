@@ -28,18 +28,17 @@ class LowEnergyPeripheralServer
   ~LowEnergyPeripheralServer() override;
 
  private:
-  using DelegatePtr = fuchsia::bluetooth::le::PeripheralDelegatePtr;
   using ConnectionRefPtr = ::btlib::gap::LowEnergyConnectionRefPtr;
 
   class InstanceData final {
    public:
     InstanceData() = default;
-    InstanceData(const std::string& id, DelegatePtr delegate);
+    InstanceData(const std::string& id, fxl::WeakPtr<LowEnergyPeripheralServer> owner);
 
     InstanceData(InstanceData&& other) = default;
     InstanceData& operator=(InstanceData&& other) = default;
 
-    bool connectable() const { return static_cast<bool>(delegate_); }
+    bool connectable() const { return static_cast<bool>(owner_->binding()); }
 
     // Takes ownership of |conn_ref| and notifies the delegate of the new
     // connection.
@@ -52,8 +51,10 @@ class LowEnergyPeripheralServer
 
    private:
     std::string id_;
-    DelegatePtr delegate_;
     ConnectionRefPtr conn_ref_;
+    // The object that created and owns this InstanceData.
+    // |owner_| must outlive the InstanceData.
+    fxl::WeakPtr<LowEnergyPeripheralServer> owner_; // weak
 
     FXL_DISALLOW_COPY_AND_ASSIGN(InstanceData);
   };
@@ -62,8 +63,6 @@ class LowEnergyPeripheralServer
   void StartAdvertising(
       fuchsia::bluetooth::le::AdvertisingData advertising_data,
       fuchsia::bluetooth::le::AdvertisingDataPtr scan_result,
-      ::fidl::InterfaceHandle<fuchsia::bluetooth::le::PeripheralDelegate>
-          delegate,
       uint32_t interval, bool anonymous,
       StartAdvertisingCallback callback) override;
 
