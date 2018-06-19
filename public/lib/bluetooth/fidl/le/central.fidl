@@ -1,0 +1,64 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.bluetooth.le;
+
+using fuchsia.bluetooth;
+using fuchsia.bluetooth.gatt;
+
+interface CentralDelegate {
+  // Called when the scan state changes, e.g. when a scan session terminates due to a call to
+  // Central.StopScan() or another unexpected condition.
+  1: OnScanStateChanged(bool scanning);
+
+  // Called for each peripheral/broadcaster that is discovered during a scan session. |rssi|
+  // contains the received signal strength of the advertising packet that generated this event, if
+  // available.
+  2: OnDeviceDiscovered(RemoteDevice device);
+
+  // Called when this Central's connection to a peripheral with the given identifier is terminated.
+  3: OnPeripheralDisconnected(string identifier);
+};
+
+[Discoverable]
+interface Central {
+  // Sets the delegate that shoud be notified for LE Scanner and Central role events.
+  1: SetDelegate(CentralDelegate delegate);
+
+  // Returns the list of peripherals that are known to the system from previous scan, connection,
+  // and/or bonding procedures. The results can be filtered based on service UUIDs that are known to
+  // be present on the peripheral.
+  //
+  // This method only returns peripherals (i.e. connectable devices).
+  2: GetPeripherals(vector<string>? service_uuids) -> (vector<RemoteDevice> peripherals);
+
+  // Returns information about a single peripheral that is known to the system from previous scan,
+  // connection, and/or bonding procedures based on its unique identifier. Returns null if
+  // |identifier| is not recognized.
+  3: GetPeripheral(string identifier) -> (RemoteDevice? peripheral);
+
+  // Initiates a scan session for nearby peripherals and broadcasters. Discovered devices will be
+  // reported via CentralDelegate.OnDeviceDiscovered(). If a scan session is already in progress,
+  // |filter| will replace the existing session's filter.
+  //
+  // If |filter| is null or empty (i.e. none of its fields has been populated) then the delegate
+  // will be notified for all discoverable devices that are found. This is not recommended; clients
+  // should generally filter results by at least one of |filter.service_uuids|,
+  // |filter.service_data|, and/or |filter.manufacturer_identifier|.
+  4: StartScan(ScanFilter? filter) -> (fuchsia.bluetooth.Status @status);
+
+  // Terminate a previously started scan session.
+  5: StopScan();
+
+  // Creates a connection to the peripheral device with the given identifier.
+  // Returns the status of the operation in |status|.
+  //
+  // On success, |gatt_client| will be bound and can be used for GATT client
+  // role procedures. On failure, |gatt_client| will be closed and |status| will
+  // indicate an error.
+  6: ConnectPeripheral(string identifier, request<fuchsia.bluetooth.gatt.Client> gatt_client) -> (fuchsia.bluetooth.Status @status);
+
+  // Disconnects this Central's connection to the peripheral with the given identifier.
+  7: DisconnectPeripheral(string identifier) -> (fuchsia.bluetooth.Status @status);
+};

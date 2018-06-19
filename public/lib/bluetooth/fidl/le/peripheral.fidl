@@ -1,0 +1,59 @@
+// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.bluetooth.le;
+
+using fuchsia.bluetooth;
+
+interface PeripheralDelegate {
+  // Called when a remote central device has connected to a connectable advertisement.
+  // Provides a GATT client handle which can be used to interact with GATT service
+  // on the central device.
+  //
+  // When this is called, the Advertisement will have stopped, and StartAdvertising
+  // should be called again to re-start advertising when the peripheral can accept
+  // another connection.
+  //
+  // Note: Centrals can connect to the local device and interact with the GATT server
+  // from an application without Peripheral.StartAdvertising() being called.
+  1: OnCentralConnected(string advertisement_id, RemoteDevice central);
+
+  // Called when a remote central previously connected to this application is disconnected.
+  2: OnCentralDisconnected(string device_id);
+};
+
+[Discoverable]
+interface Peripheral {
+  // Starts sending advertisements based on the given parameters.
+  //   - |advertising_data|: The advertising data that should be included in the payload.
+  //   - |scan_result|: The scan result that will be returned when the advertisement is
+  //                    scanned.  Setting this will mark the advertisement set as scannable.
+  //   - |delegate|: Callbacks to be called when this advertisement is connected to.
+  //                 If set, this advertisement set will be marked as connectable.
+  //                 NOTE: connections can be made to a GATT server even if this is not set.
+  //   - |interval_ms|: The requested interval to advertise this set at in milliseconds.
+  //                    minimum 20, maximum 10,000,000 (almost 3 hours). A reasonable
+  //                    default is 1 second (1000).
+  //   - |anonymous|: if true, the address of this device will not be included
+  //
+  // If the |tx_power_level| is set in either AdvertisingData, it will be replaced with
+  // the actual TX Power level reported by the adapter, or included in the extended header
+  // of the Advertising PDU to save advertising space.
+  //
+  // If |scan_result| and |advertising_data| are both set, legacy advertising will be used,
+  // which limits the size of the advertising data.
+  //
+  // This request will fail if:
+  //   - The |service_uuids| field of |advertising_data| contains a UUID that does not match
+  //     a GATT service that was previously registered by this application;
+  //   - If the provided advertising data cannot fit within the advertising payload MTU that
+  //     is supported on the current platform and parameters.
+  //   - If |anonymous| advertising is requested but the controller cannot support it.
+  1: StartAdvertising(AdvertisingData advertising_data, AdvertisingData? scan_result,
+                      PeripheralDelegate? delegate, uint32 interval_ms, bool anonymous) ->
+                      (fuchsia.bluetooth.Status @status, string? advertisement_id);
+
+  // Stop a an advertising session that was previously started by this application.
+  2: StopAdvertising(string advertisement_id) -> (fuchsia.bluetooth.Status @status);
+};

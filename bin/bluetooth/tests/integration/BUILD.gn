@@ -16,10 +16,9 @@ rustc_binary("bt_lifecycle_integration_test") {
   deps = [
     "//garnet/lib/bluetooth/fidl:bluetooth_host-rustc",
     "//garnet/lib/rust/crates/fuchsia-bluetooth",
-    "//garnet/public/lib/bluetooth/fidl:bluetooth-rustc",
-    "//garnet/public/lib/bluetooth/fidl:bluetooth_control-rustc",
-    "//garnet/public/lib/bluetooth/fidl:bluetooth_gatt-rustc",
-    "//garnet/public/lib/bluetooth/fidl:bluetooth_low_energy-rustc",
+    "//garnet/public/lib/bluetooth/fidl/control:control-rustc",
+    "//garnet/public/lib/bluetooth/fidl/gatt:gatt-rustc",
+    "//garnet/public/lib/bluetooth/fidl/le:le-rustc",
     "//garnet/public/rust/crates/fdio",
     "//garnet/public/rust/crates/fuchsia-async",
     "//third_party/rust-crates/rustc_deps:failure",

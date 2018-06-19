@@ -1,0 +1,113 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.bluetooth.control;
+
+using fuchsia.bluetooth;
+
+// Possible values for the LE Appearance property which describes the external
+// appearance of a
+// device at a high level.
+// (See the Bluetooth assigned-numbers document:
+// https://www.bluetooth.com/specifications/gatt/viewer?attributeXmlFile=org.bluetooth.characteristic.gap.appearance.xml)
+enum Appearance {
+  UNKNOWN = 0;
+  PHONE = 64;
+  COMPUTER = 128;
+  WATCH = 192;
+  WATCH_SPORTS = 193;
+  CLOCK = 256;
+  DISPLAY = 320;
+  REMOTE_CONTROL = 384;
+  EYE_GLASSES = 448;
+  TAG = 512;
+  KEYRING = 576;
+  MEDIA_PLAYER = 640;
+  BARCODE_SCANNER = 704;
+  THERMOMETER = 768;
+  THERMOMETER_EAR = 769;
+  HEART_RATE_SENSOR = 832;
+  HEART_RATE_SENSOR_BELT = 833;
+  BLOOD_PRESSURE = 896;
+  BLOOD_PRESSURE_ARM = 897;
+  BLOOD_PRESSURE_WRIST = 898;
+  HID = 960;
+  HID_KEYBOARD = 961;
+  HID_MOUSE = 962;
+  HID_JOYSTICK = 963;
+  HID_GAMEPAD = 964;
+  HID_DIGITIZER_TABLET = 965;
+  HID_CARD_READER = 966;
+  HID_DIGITAL_PEN = 967;
+  HID_BARCODE_SCANNER = 968;
+  GLUCOSE_METER = 1024;
+  RUNNING_WALKING_SENSOR = 1088;
+  RUNNING_WALKING_SENSOR_IN_SHOE = 1089;
+  RUNNING_WALKING_SENSOR_ON_SHOE = 1090;
+  RUNNING_WALKING_SENSOR_ON_HIP = 1091;
+  CYCLING = 1152;
+  CYCLING_COMPUTER = 1153;
+  CYCLING_SPEED_SENSOR = 1154;
+  CYCLING_CADENCE_SENSOR = 1155;
+  CYCLING_POWER_SENSOR = 1156;
+  CYCLING_SPEED_AND_CADENCE_SENSOR = 1157;
+  PULSE_OXIMETER = 3136;
+  PULSE_OXIMETER_FINGERTIP = 3137;
+  PULSE_OXIMETER_WRIST = 3138;
+  WEIGHT_SCALE = 3200;
+  PERSONAL_MOBILITY = 3264;
+  PERSONAL_MOBILITY_WHEELCHAIR = 3265;
+  PERSONAL_MOBILITY_SCOOTER = 3266;
+  GLUCOSE_MONITOR = 3328;
+  SPORTS_ACTIVITY = 5184;
+  SPORTS_ACTIVITY_LOCATION_DISPLAY = 5185;
+  SPORTS_ACTIVITY_LOCATION_AND_NAV_DISPLAY = 5186;
+  SPORTS_ACTIVITY_LOCATION_POD = 5187;
+  SPORTS_ACTIVITY_LOCATION_AND_NAV_POD = 5188;
+};
+
+enum TechnologyType {
+  LOW_ENERGY = 0;
+  CLASSIC = 1;
+  DUAL_MODE = 2;
+};
+
+// Represents a remote BR/EDR, LE, or dual-mode BR/EDR/LE device.
+struct RemoteDevice {
+  // Uniquely identifies this device on the current system.
+  string identifier;
+
+  // Bluetooth device address that identifies this remote device. Clients
+  // should display this field to the user when |name| is not available.
+  //
+  // NOTE: Clients should use the |identifier| field to distinguish between
+  // remote devices instead of using their address.
+  string address;
+
+  // The Bluetooth technologies that are supported by this device.
+  TechnologyType technology;
+
+  // The name of the remote device if present or known.
+  string? name;
+
+  // The LE appearance property. Present if this is a LE device and the
+  // appearance information was obtained over advertising and/or GATT.
+  Appearance appearance;
+
+  // The most recently obtained advertising signal strength for this device.
+  fuchsia.bluetooth.Int8? rssi;
+
+  // The most recently obtained transmission power for this device.
+  fuchsia.bluetooth.Int8? tx_power;
+
+  // Whether or not a BR/EDR and/or LE connection exists between the local
+  // adapter and this device.
+  bool connected;
+
+  // Whether or not a bond exists between the local adapter and this device.
+  bool bonded;
+
+  // The list of service UUIDs known to be published on this remote device.
+  vector<string> service_uuids;
+};

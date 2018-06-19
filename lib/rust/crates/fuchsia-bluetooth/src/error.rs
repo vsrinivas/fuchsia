@@ -14,7 +14,9 @@ pub struct Error {
 impl Error {
     /// Constructs an Error with a message.
     pub fn new(msg: &str) -> Error {
-        Error { message: msg.to_string() }
+        Error {
+            message: msg.to_string(),
+        }
     }
 }
 

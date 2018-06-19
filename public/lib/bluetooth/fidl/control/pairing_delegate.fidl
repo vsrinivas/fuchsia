@@ -1,0 +1,37 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.bluetooth.control;
+
+using fuchsia.bluetooth;
+
+// Input and Output Capabilities for pairing exchanges.
+// See Volume 3, Part C, Table 5.3 and 5.4
+enum InputCapabilityType {
+  NONE = 0;
+  CONFIRMATION = 1;
+  KEYBOARD = 2;
+};
+
+enum OutputCapabilityType {
+  NONE = 0;
+  NUMERIC = 1;
+};
+
+// Different types required by the Security Manager for pairing methods.
+// Bluetooth SIG has different requirements for different device capabilities.
+enum PairRequestType {
+  PIN_ENTRY = 0;
+  PIN_DISPLAY = 1;
+  PASSKEY_ENTRY = 2;
+  CONSENT = 3;
+};
+
+interface PairingDelegate {
+  // If |pin| is not null, |response| must match to accept the pairing request.
+  // Otherwise if |response| is present, pairing is accepted and the response
+  // is used as the passkey or pin if necessary.
+  1: OnPairRequest(RemoteDevice device, PairRequestType type, string? pin) ->
+                  (string? response);
+};

@@ -19,23 +19,29 @@ macro_rules! make_clones {
 /// Two Args is the error type & a description
 #[macro_export]
 macro_rules! bt_fidl_status {
-    () => (fidl_fuchsia_bluetooth::Status { error: None } );
+    () => {
+        fidl_fuchsia_bluetooth::Status { error: None }
+    };
 
-    ($error_code:ident) => (fidl_fuchsia_bluetooth::Status { error: Some(Box::new(
-                    fidl_fuchsia_bluetooth::Error {
-                        description: None,
-                        protocol_error_code: 0,
-                        error_code: fidl_fuchsia_bluetooth::ErrorCode::$error_code,
-                    }))
-    });
+    ($error_code:ident) => {
+        fidl_fuchsia_bluetooth::Status {
+            error: Some(Box::new(fidl_fuchsia_bluetooth::Error {
+                description: None,
+                protocol_error_code: 0,
+                error_code: fidl_fuchsia_bluetooth::ErrorCode::$error_code,
+            })),
+        }
+    };
 
-    ($error_code:ident, $description:expr) => (fidl_fuchsia_bluetooth::Status { error: Some(Box::new(
-                    fidl_fuchsia_bluetooth::Error {
-                        description: Some($description.to_string()),
-                        protocol_error_code: 0,
-                        error_code: fidl_fuchsia_bluetooth::ErrorCode::$error_code,
-                    }))
-    });
+    ($error_code:ident, $description:expr) => {
+        fidl_fuchsia_bluetooth::Status {
+            error: Some(Box::new(fidl_fuchsia_bluetooth::Error {
+                description: Some($description.to_string()),
+                protocol_error_code: 0,
+                error_code: fidl_fuchsia_bluetooth::ErrorCode::$error_code,
+            })),
+        }
+    };
 }
 
 /// Clone Adapter Info

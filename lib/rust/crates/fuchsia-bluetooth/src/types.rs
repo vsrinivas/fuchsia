@@ -6,20 +6,20 @@ use fidl_fuchsia_bluetooth;
 use std::fmt;
 
 macro_rules! bt_fidl_wrap {
-    ( $x:ident) => {
-            /// Wrapper for mapping fidl_fuchsia_bluetooth::$x to fuchsia_bluetooth::$x
-            pub struct $x(fidl_fuchsia_bluetooth::$x);
+    ($x:ident) => {
+        /// Wrapper for mapping fidl_fuchsia_bluetooth::$x to fuchsia_bluetooth::$x
+        pub struct $x(fidl_fuchsia_bluetooth::$x);
 
-            impl From<fidl_fuchsia_bluetooth::$x> for $x {
-                fn from(b: fidl_fuchsia_bluetooth::$x) -> $x {
-                    $x(b)
-                }
+        impl From<fidl_fuchsia_bluetooth::$x> for $x {
+            fn from(b: fidl_fuchsia_bluetooth::$x) -> $x {
+                $x(b)
             }
-            impl Into<fidl_fuchsia_bluetooth::$x> for $x {
-                fn into(self) -> fidl_fuchsia_bluetooth::$x {
-                    self.0
-                }
+        }
+        impl Into<fidl_fuchsia_bluetooth::$x> for $x {
+            fn into(self) -> fidl_fuchsia_bluetooth::$x {
+                self.0
             }
+        }
     };
 }
 
@@ -39,5 +39,3 @@ impl fmt::Display for Status {
         write!(fmt, "{:?}", self.0.error)
     }
 }
-
-

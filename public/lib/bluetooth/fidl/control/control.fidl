@@ -1,0 +1,123 @@
+// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.bluetooth.control;
+
+using fuchsia.bluetooth;
+
+// Bluetooth controller and its associated host-subsystem state that is present
+// on the current platform.
+struct AdapterInfo {
+  // UUID that uniquely identifies this adapter on the current system.
+  string identifier;
+
+  // The Bluetooth technologies that are supported by this adapter.
+  TechnologyType technology;
+
+  // Public Bluetooth device address which can be displayed to the user.
+  string address;
+
+  // The current adapter state. This field is only present when an AdapterInfo
+  // is obtained via the Control and ControlDelegate interfaces. If present,
+  // all optional members of |state| will also be present.
+  AdapterState? state;
+};
+
+// Contains static global information about a local Bluetooth adapter,
+// including its current state.  Each adapter instance represents a physical
+struct AdapterState {
+  // The local name of the local adapter, visible to other devices when
+  // discoverable.
+  string? local_name;
+
+  // Whether or not the local adapter is currently discoverable over BR/EDR and
+  // LE physical channels.
+  fuchsia.bluetooth.Bool? discoverable;
+
+  // Whether or not device discovery is currently being performed.
+  fuchsia.bluetooth.Bool? discovering;
+
+  // Service UUIDs of all local services that are published and available to
+  // other devices via this adapter. These services are usually registered
+  // using the GATT and the classic profile APIs.
+  vector<string>? local_service_uuids;
+};
+
+// Primary Bluetooth control service to access bluetooth
+[Discoverable]
+interface Control {
+  // Returns whether or not Bluetooth is currently available on the system.
+  1: IsBluetoothAvailable() -> (bool available);
+
+  // Registers a delegate to handle pairing requests.
+  // Indicate the capability type of the PairingDelegate using |in| and |out|.
+  // If your input/output capability is variable, call this function when it
+  // changes to update.
+  // Setting a pairing delegate closes the previously assigned pairing Delegate.
+  //
+  // To disable pairing, set |delegate| to null.
+  3: SetPairingDelegate(InputCapabilityType in, OutputCapabilityType out,
+                        PairingDelegate? delegate);
+
+  // Returns information about all local adapters that are known to the system.
+  4: GetAdapters() -> (vector<AdapterInfo>? adapters);
+
+  // Sets the local adapter with the given |identifier| to act as the backing
+  // adapter for all Bluetooth interfaces.
+  5: SetActiveAdapter(string identifier) -> (fuchsia.bluetooth.Status @status);
+
+  // Returns information on the current active adapter, if it exists.
+  6: GetActiveAdapterInfo() -> (AdapterInfo? @adapter);
+
+  // If |discovery| is true, active discovery is requested.
+  // When requesting discovery, general discovery for BR/EDR and LE will be
+  // active and newly discovered devices will be reported via
+  // RemoteDeviceDelegate.OnDeviceUpdate().
+  //
+  // Discovery may be active when not reqested.
+  // If an error occurs when starting discovery, it is reflected in |status|.
+  8: RequestDiscovery(bool discovery) -> (fuchsia.bluetooth.Status @status);
+
+  // Retrieve the set of known remote devices.
+  // Note: These devices are not guaranteed to still be reachable.
+  9: GetKnownRemoteDevices() -> (vector<RemoteDevice> devices);
+
+  // Sets the public Bluetooth name for this device, or resets to the default
+  // name if |name| is not present.
+  10: SetName(string? name) -> (fuchsia.bluetooth.Status @status);
+
+  // Set the discoverability of this device.
+  11: SetDiscoverable(bool discoverable) -> (fuchsia.bluetooth.Status @status);
+
+  // Attempt to connect to the remote |device_id|.
+  // If |bond| is set, try to bond to this device as well.
+  12: Connect(string device_id, bool bond) -> (fuchsia.bluetooth.Status @status);
+
+  // Disconnect a previously-connected device.
+  // Note: This does not remove a device bond, see Control::Forget.
+  13: Disconnect(string device_id) -> (fuchsia.bluetooth.Status @status);
+
+  // Forgets |device_id| completely, removing all bonding information.
+  // This will disconnect a device if it is connected.
+  14: Forget(string device_id) -> (fuchsia.bluetooth.Status @status);
+
+  // Events
+
+  // Sent when the active adapter has been updated. If |active_adapter| is
+  // null, then no adapter is currently active.
+  10100: -> OnActiveAdapterChanged(AdapterInfo? adapter);
+
+  // Sent when an adapter has been updated.
+  10101: -> OnAdapterUpdated(AdapterInfo adapter);
+
+  // Sent when an adapter with the given |identifier| has been removed from
+  // the system.
+  10102: -> OnAdapterRemoved(string identifier);
+
+  // Sent when a Host Device is Updated
+  10700: -> OnDeviceUpdated(RemoteDevice device);
+
+  // Sent when a Host Device is removed
+  10701: -> OnDeviceRemoved(string identifier);
+};

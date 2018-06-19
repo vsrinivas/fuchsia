@@ -30,7 +30,7 @@ class DiscoveryFilter;
 namespace bthost {
 namespace fidl_helpers {
 
-// Functions for generating a FIDL bluetooth::Status
+// Functions for generating a FIDL bluetooth::common::Status
 
 fuchsia::bluetooth::ErrorCode HostErrorToFidl(
     ::btlib::common::HostError host_error);

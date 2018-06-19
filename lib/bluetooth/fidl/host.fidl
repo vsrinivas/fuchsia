@@ -6,7 +6,7 @@ library fuchsia.bluetooth.host;
 
 using fuchsia.bluetooth;
 using fuchsia.bluetooth.control;
-using fuchsia.bluetoth.gatt;
+using fuchsia.bluetooth.gatt;
 using fuchsia.bluetooth.le;
 
 // Interface for interacting with a Bluetooth host device (bt-host)

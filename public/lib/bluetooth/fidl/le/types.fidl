@@ -1,0 +1,96 @@
+// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.bluetooth.le;
+
+using fuchsia.bluetooth;
+using fuchsia.bluetooth.gatt;
+
+struct ServiceDataEntry {
+  string uuid;
+  vector<uint8> data;
+};
+
+struct ManufacturerSpecificDataEntry {
+  uint16 company_id;
+  vector<uint8> data;
+};
+
+// Represents advertising and scan response data advertised by a broadcaster or peripheral.
+struct AdvertisingData {
+  // Name of the device.
+  string? name;
+
+  // The radio transmission power level reported in the advertisement.
+  fuchsia.bluetooth.Int8? tx_power_level;
+
+  // The appearance reported in the advertisemet.
+  fuchsia.bluetooth.UInt16? appearance;
+
+  // List of service UUIDs reported in the advertisement.
+  vector<string>? service_uuids;
+
+  // Service data included in the advertisement.
+  vector<ServiceDataEntry>? service_data;
+
+  // Manufacturer specific data entries.
+  vector<ManufacturerSpecificDataEntry>? manufacturer_specific_data;
+
+  // Service UUIDs that were solicited in the advertisement. Peripherals can invite centrals that
+  // expose certain services to connect to them using service solicitation.
+  vector<string>? solicited_service_uuids;
+
+  // URIs included in the advertising packet.
+  // These are full URIs (they are encoded/decoded automatically)
+  vector<string>? uris;
+};
+
+// Represents a remote Bluetooth Low Energy device. A RemoteDevice can represent a central,
+// broadcaster, or peripheral based on the API from which it was received.
+struct RemoteDevice {
+  // Identifier that uniquely identifies this device on the current system.
+  string identifier;
+
+  // Whether or not this device is connectable. Non-connectable devices are typically acting in the
+  // LE broadcaster role.
+  bool connectable;
+
+  // The last known RSSI of this device, if known.
+  fuchsia.bluetooth.Int8? rssi;
+
+  // Advertising data broadcast by this device if this device is a broadcaster or peripheral.
+  AdvertisingData? advertising_data;
+};
+
+// Filter parameters for use during a scan. A discovered peripheral or broadcaster will be reported
+// to applications only if it satisfies all of the provided filter parameters. Null fields will be
+// ignored.
+struct ScanFilter {
+  // Filter based on advertised service UUIDs. A peripheral that advertises at least one of the
+  // entries in |service_uuids| will satisfy this filter.
+  vector<string>? service_uuids;
+
+  // Filter based on service data containing one of the given UUIDs.
+  vector<string>? service_data_uuids;
+
+  // Filter based on a company identifier present in the manufacturer data. If this filter parameter
+  // is set, then the advertising payload must contain manufacturer specific data with the provided
+  // company identifier to satisfy this filter.
+  fuchsia.bluetooth.UInt16? manufacturer_identifier;
+
+  // Filter based on whether or not a device is connectable. For example, a client that is only
+  // interested in peripherals that it can connect to can set this to true. Similarly a client can
+  // scan only for braodcasters by setting this to false.
+  fuchsia.bluetooth.Bool? connectable;
+
+  // Filter results based on a portion of the advertised device name.
+  string? name_substring;
+
+  // Filter results based on the path loss of the radio wave. A device that matches this filter must
+  // satisfy the following:
+  //   1. Radio transmission power level and received signal strength must be available for the path
+  //      loss calculation;
+  //   2. The calculated path loss value must be less than, or equal to, |max_path_loss|.
+  fuchsia.bluetooth.Int8? max_path_loss;
+};
