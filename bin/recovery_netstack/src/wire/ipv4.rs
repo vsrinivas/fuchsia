@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-//! Parsing and serialization of IP packets.
+//! Parsing and serialization of IPv4 packets.
 
 #[cfg(test)]
 use std::fmt::{self, Debug, Formatter};

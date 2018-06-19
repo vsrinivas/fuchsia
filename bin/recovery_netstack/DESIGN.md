@@ -133,7 +133,9 @@ responsibility of such code to ensure that these padding bytes are zeroed before
 calling the serialization function. *For more on padding and minimum body sizes,
 see the "Prefix and Padding" section.*
 
-*See also: The `_zeroed` constructors of the `zerocopy::LayoutVerified` type*
+*See also:*
+- *The `_zeroed` constructors of the `zerocopy::LayoutVerified` type*
+- *`wire::BufferAndRange::extend_forwards_zero`*
 
 ## IP Types
 

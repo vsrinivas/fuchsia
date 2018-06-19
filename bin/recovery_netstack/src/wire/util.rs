@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+pub use self::buffer::*;
 pub use self::checksum::*;
 pub use self::options::*;
-pub use self::range::*;
 
 /// Whether `size` fits in a `u16`.
 pub fn fits_in_u16(size: usize) -> bool {
@@ -547,7 +547,7 @@ mod options {
     }
 }
 
-mod range {
+mod buffer {
     use std::cmp;
     use std::convert::TryFrom;
     use std::ops::{Bound, Range, RangeBounds};
@@ -615,6 +615,26 @@ mod range {
                 buffer,
                 range: canonicalize_range_infallible(len, &range),
             }
+        }
+
+        /// Extend the end of the range forwards towards the end of the buffer.
+        ///
+        /// `extend_forwards` adds `bytes` to the end index of the buffer's
+        /// range, resulting in the range being `bytes` bytes closer to the end
+        /// of the buffer than it was before.
+        ///
+        /// # Panics
+        ///
+        /// `extend_forwards` panics if there are fewer than `bytes` bytes
+        /// following the existing range.
+        pub fn extend_forwards(&mut self, bytes: usize) {
+            assert!(
+                bytes <= self.buffer.as_ref().len() - self.range.end,
+                "cannot extend range with {} following bytes forwards by {} bytes",
+                self.buffer.as_ref().len() - self.range.end,
+                bytes
+            );
+            self.range.end += bytes;
         }
     }
 
@@ -695,6 +715,31 @@ mod range {
             let (prefix, rest) = (&mut self.buffer.as_mut()[..]).split_at_mut(self.range.start);
             let (mid, suffix) = rest.split_at_mut(self.range.end - self.range.start);
             (prefix, mid, suffix)
+        }
+    }
+
+    impl<B> BufferAndRange<B>
+    where
+        B: AsRef<[u8]> + AsMut<[u8]>,
+    {
+        /// Extend the end of the range forwards towards the end of the buffer,
+        /// zeroing the newly-included bytes.
+        ///
+        /// `extend_forwards_zero` adds `bytes` to the end index of the buffer's
+        /// range, resulting in the range being `bytes` bytes closer to the end
+        /// of the buffer than it was before. These new bytes are set to zero,
+        /// which can be useful when extending a body to include padding which
+        /// has not yet been zeroed.
+        ///
+        /// # Panics
+        ///
+        /// `extend_forwards_zero` panics if there are fewer than `bytes` bytes
+        /// following the existing range.
+        pub fn extend_forwards_zero(&mut self, bytes: usize) {
+            self.extend_forwards(bytes);
+            let slice = self.as_mut();
+            let len = slice.len();
+            zero(&mut slice[len - bytes..]);
         }
     }
 
@@ -799,6 +844,15 @@ mod range {
                 &mut RefOrOwnedInner::Ref(ref mut r) => r.as_mut(),
                 &mut RefOrOwnedInner::Owned(ref mut v) => v.as_mut_slice(),
             }
+        }
+    }
+
+    /// Zero a slice.
+    ///
+    /// Set every element of `slice` to 0.
+    fn zero(slice: &mut [u8]) {
+        for s in slice.iter_mut() {
+            *s = 0;
         }
     }
 

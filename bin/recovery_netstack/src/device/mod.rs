@@ -66,25 +66,27 @@ pub fn send_ip_frame<A, B, F>(
     state: &mut StackState, device: DeviceId, local_addr: A, get_buffer: F,
 ) where
     A: IpAddr,
-    B: AsMut<[u8]>,
+    B: AsRef<[u8]> + AsMut<[u8]>,
     F: SerializationCallback<B>,
 {
     match device.protocol {
-        DeviceProtocol::Ethernet => unimplemented!(),
+        DeviceProtocol::Ethernet => {
+            self::ethernet::send_ip_frame(state, device.id, local_addr, get_buffer)
+        }
     }
 }
 
 /// Receive a device layer frame from the network.
 pub fn receive_frame(state: &mut StackState, device: DeviceId, bytes: &mut [u8]) {
     match device.protocol {
-        DeviceProtocol::Ethernet => unimplemented!(),
+        DeviceProtocol::Ethernet => self::ethernet::receive_frame(state, device.id, bytes),
     }
 }
 
 /// Get the IP address and subnet associated with this device.
 pub fn get_ip_addr<A: IpAddr>(state: &mut StackState, device: DeviceId) -> Option<(A, Subnet<A>)> {
     match device.protocol {
-        DeviceProtocol::Ethernet => unimplemented!(),
+        DeviceProtocol::Ethernet => self::ethernet::get_ip_addr(state, device.id),
     }
 }
 
@@ -94,6 +96,6 @@ pub fn set_ip_addr<A: IpAddr>(
 ) {
     assert!(subnet.contains(addr));
     match device.protocol {
-        DeviceProtocol::Ethernet => unimplemented!(),
+        DeviceProtocol::Ethernet => self::ethernet::set_ip_addr(state, device.id, addr, subnet),
     }
 }

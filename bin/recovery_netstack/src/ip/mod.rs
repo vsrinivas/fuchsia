@@ -166,7 +166,7 @@ fn lookup_route<A: IpAddr>(state: &IpLayerState, dst_ip: A) -> Option<Destinatio
 pub fn send_ip_packet<'a, A, B, F>(state: &mut StackState, dst_ip: A, proto: IpProto, get_buffer: F)
 where
     A: IpAddr,
-    B: AsMut<[u8]>,
+    B: AsRef<[u8]> + AsMut<[u8]>,
     F: AddrSerializationCallback<A, B>,
 {
     if A::Version::LOOPBACK_SUBNET.contains(dst_ip) {
@@ -230,7 +230,7 @@ pub fn send_ip_packet_from<A, B, F>(
     get_buffer: F,
 ) where
     A: IpAddr,
-    B: AsMut<[u8]>,
+    B: AsRef<[u8]> + AsMut<[u8]>,
     F: SerializationCallback<B>,
 {
     assert!(!A::Version::LOOPBACK_SUBNET.contains(src_ip));
