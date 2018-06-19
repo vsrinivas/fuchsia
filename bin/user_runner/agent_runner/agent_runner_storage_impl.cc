@@ -52,17 +52,17 @@ class AgentRunnerStorageImpl::InitializeCall : public Operation<> {
  public:
   InitializeCall(
       NotificationDelegate* const delegate,
-      std::shared_ptr<fuchsia::ledger::PageSnapshotPtr> const snapshot,
+      fuchsia::ledger::PageSnapshotPtr snapshot,
       std::function<void()> done)
       : Operation("AgentRunnerStorageImpl::InitializeCall", std::move(done)),
         delegate_(delegate),
-        snapshot_(snapshot) {}
+        snapshot_(std::move(snapshot)) {}
 
  private:
   void Run() override {
     FlowToken flow{this};
 
-    GetEntries((*snapshot_).get(), &entries_,
+    GetEntries(snapshot_.get(), &entries_,
                [this, flow](fuchsia::ledger::Status status) {
                  if (status != fuchsia::ledger::Status::OK) {
                    FXL_LOG(ERROR) << trace_name() << " "
@@ -99,7 +99,7 @@ class AgentRunnerStorageImpl::InitializeCall : public Operation<> {
   }
 
   NotificationDelegate* const delegate_;
-  std::shared_ptr<fuchsia::ledger::PageSnapshotPtr> snapshot_;
+  fuchsia::ledger::PageSnapshotPtr snapshot_;
   std::vector<fuchsia::ledger::Entry> entries_;
   FXL_DISALLOW_COPY_AND_ASSIGN(InitializeCall);
 };
@@ -191,7 +191,7 @@ void AgentRunnerStorageImpl::Initialize(NotificationDelegate* const delegate,
   FXL_DCHECK(!delegate_);
   delegate_ = delegate;
   operation_queue_.Add(
-      new InitializeCall(delegate_, page_snapshot(), std::move(done)));
+      new InitializeCall(delegate_, NewSnapshot(), std::move(done)));
 }
 
 void AgentRunnerStorageImpl::WriteTask(const std::string& agent_url,
