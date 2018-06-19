@@ -53,7 +53,7 @@ between a number of components with compatible security constraints.
 Early on in the boot process, the system does create a number of processes
 manually. For example, the kernel manually creates the first userspace process,
 `userboot`, which creates `devmgr` in turn. These low-level mechanisms use the
-`liblaunchpad.so` shared library, which contains the logic for parsing EFL
+`liblaunchpad.so` shared library, which contains the logic for parsing ELF
 files. Direct construction of processes is prohibited in the `fuchsia` job tree
 using a job policy.
 
