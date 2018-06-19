@@ -41,7 +41,7 @@ TEST(Coroutine, SingleRoutine) {
   EXPECT_EQ(kLoopCount, result);
 
   for (int i = kLoopCount - 1; i >= 0; --i) {
-    handler->Continue(ContinuationStatus::OK);
+    handler->Resume(ContinuationStatus::OK);
     EXPECT_EQ(i, result);
   }
 }
@@ -71,14 +71,14 @@ TEST(Coroutine, ManyRoutines) {
 
   for (size_t i = 0; i < 2; ++i) {
     for (CoroutineHandler* handler : handlers) {
-      handler->Continue(ContinuationStatus::OK);
+      handler->Resume(ContinuationStatus::OK);
     }
   }
 
   EXPECT_EQ(nb_routines, handlers.size());
 
   for (size_t i = 0; i < nb_routines; ++i) {
-    (*handlers.begin())->Continue(ContinuationStatus::OK);
+    (*handlers.begin())->Resume(ContinuationStatus::OK);
   }
 
   EXPECT_TRUE(handlers.empty());
@@ -229,13 +229,13 @@ TEST(Coroutine, ReuseStack) {
 
           ++nb_coroutines_calls;
         });
-    handler->Continue(ContinuationStatus::OK);
+    handler->Resume(ContinuationStatus::OK);
   }
 
   EXPECT_EQ(2u, nb_coroutines_calls);
 }
 
-TEST(Coroutine, ContinueCoroutineInOtherCoroutineDestructor) {
+TEST(Coroutine, ResumeCoroutineInOtherCoroutineDestructor) {
   CoroutineServiceImpl coroutine_service;
   CoroutineHandler* handler1 = nullptr;
   CoroutineHandler* handler2 = nullptr;
@@ -245,7 +245,7 @@ TEST(Coroutine, ContinueCoroutineInOtherCoroutineDestructor) {
   coroutine_service.StartCoroutine([&](CoroutineHandler* local_handler1) {
     handler1 = local_handler1;
     auto autocall =
-        fxl::MakeAutoCall([&] { handler1->Continue(ContinuationStatus::OK); });
+        fxl::MakeAutoCall([&] { handler1->Resume(ContinuationStatus::OK); });
     coroutine_service.StartCoroutine(fxl::MakeCopyable(
         [&handler2, &routine2_done,
          autocall = std::move(autocall)](CoroutineHandler* local_handler2) {
@@ -257,7 +257,7 @@ TEST(Coroutine, ContinueCoroutineInOtherCoroutineDestructor) {
     routine1_done = true;
   });
 
-  handler2->Continue(ContinuationStatus::OK);
+  handler2->Resume(ContinuationStatus::OK);
 
   EXPECT_TRUE(routine1_done);
   EXPECT_TRUE(routine2_done);

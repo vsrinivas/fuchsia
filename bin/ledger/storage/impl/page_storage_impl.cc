@@ -95,7 +95,7 @@ PageStorageImpl::PageStorageImpl(
 PageStorageImpl::~PageStorageImpl() {
   // Interrupt any active handlers.
   while (!handlers_.empty()) {
-    (*handlers_.begin())->Continue(coroutine::ContinuationStatus::INTERRUPTED);
+    (*handlers_.begin())->Resume(coroutine::ContinuationStatus::INTERRUPTED);
   }
 }
 

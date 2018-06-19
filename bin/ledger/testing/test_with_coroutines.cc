@@ -11,8 +11,8 @@ namespace {
 // Wrapper around a real CoroutineHandler for test.
 //
 // The wrapper allows to delay re-entering the coroutine body when the run loop
-// is running. When |Continue| is called, it quits the loop, and the main method
-// calls |ContinueIfNeeded| when the loop exits.
+// is running. When |Resume| is called, it quits the loop, and the main method
+// calls |ResumeIfNeeded| when the loop exits.
 class TestCoroutineHandler : public coroutine::CoroutineHandler {
  public:
   explicit TestCoroutineHandler(coroutine::CoroutineHandler* delegate,
@@ -21,11 +21,11 @@ class TestCoroutineHandler : public coroutine::CoroutineHandler {
 
   coroutine::ContinuationStatus Yield() override { return delegate_->Yield(); }
 
-  void Continue(coroutine::ContinuationStatus status) override {
+  void Resume(coroutine::ContinuationStatus status) override {
     // If interrupting, no need to delay the call as the test will not run the
     // loop itself.
     if (status == coroutine::ContinuationStatus::INTERRUPTED) {
-      delegate_->Continue(status);
+      delegate_->Resume(status);
       return;
     }
     quit_callback_();
@@ -33,10 +33,10 @@ class TestCoroutineHandler : public coroutine::CoroutineHandler {
   }
 
   // Re-enters the coroutine body if the handler delayed the call.
-  void ContinueIfNeeded() {
+  void ResumeIfNeeded() {
     if (need_to_continue_) {
       need_to_continue_ = false;
-      delegate_->Continue(coroutine::ContinuationStatus::OK);
+      delegate_->Resume(coroutine::ContinuationStatus::OK);
     }
   }
 
@@ -62,7 +62,7 @@ void TestWithCoroutines::RunInCoroutine(
         ended = true;
       });
   while (!ended) {
-    test_handler->ContinueIfNeeded();
+    test_handler->ResumeIfNeeded();
     RunLoopUntilIdle();
   }
 }

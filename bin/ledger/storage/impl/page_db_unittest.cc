@@ -463,10 +463,9 @@ TEST_F(PageDbTest, LE_451_ReproductionTest) {
 
   // Posting a task at this level ensures that the right interleaving between
   // reading and writing object status happens.
-  async::PostTask(dispatcher(), [&] {
-      handler1->Continue(coroutine::ContinuationStatus::OK);
-  });
-  handler2->Continue(coroutine::ContinuationStatus::OK);
+  async::PostTask(dispatcher(),
+                  [&] { handler1->Resume(coroutine::ContinuationStatus::OK); });
+  handler2->Resume(coroutine::ContinuationStatus::OK);
 
   // Finish the test.
   RunLoopUntilIdle();

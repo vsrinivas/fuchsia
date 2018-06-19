@@ -24,7 +24,7 @@ class CoroutineServiceImpl::CoroutineHandlerImpl : public CoroutineHandler {
 
   // CoroutineHandler.
   ContinuationStatus Yield() override;
-  void Continue(ContinuationStatus status) override;
+  void Resume(ContinuationStatus status) override;
 
   void Start();
   void set_cleanup(
@@ -74,7 +74,7 @@ ContinuationStatus CoroutineServiceImpl::CoroutineHandlerImpl::Yield() {
   return DoYield();
 }
 
-void CoroutineServiceImpl::CoroutineHandlerImpl::Continue(
+void CoroutineServiceImpl::CoroutineHandlerImpl::Resume(
     ContinuationStatus status) {
   FXL_DCHECK(!finished_);
 
@@ -101,7 +101,7 @@ void CoroutineServiceImpl::CoroutineHandlerImpl::Start() {
   context::MakeContext(&routine_context_, stack_.get(),
                        &CoroutineServiceImpl::CoroutineHandlerImpl::StaticRun,
                        this);
-  Continue(ContinuationStatus::OK);
+  Resume(ContinuationStatus::OK);
 }
 
 void CoroutineServiceImpl::CoroutineHandlerImpl::StaticRun(void* data) {
@@ -143,7 +143,7 @@ CoroutineServiceImpl::CoroutineServiceImpl() {}
 
 CoroutineServiceImpl::~CoroutineServiceImpl() {
   while (!handlers_.empty()) {
-    handlers_.back()->Continue(ContinuationStatus::INTERRUPTED);
+    handlers_.back()->Resume(ContinuationStatus::INTERRUPTED);
   }
 }
 

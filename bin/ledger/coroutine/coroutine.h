@@ -13,7 +13,7 @@
 
 // This Coroutine library allows to use coroutines. A coroutine is a function
 // that can interrupt itself by yielding, and the computation will resume at the
-// same point when another context of execution continues the coroutine using
+// same point when another context of execution resumes the coroutine using
 // its handler.
 namespace coroutine {
 
@@ -29,9 +29,9 @@ enum class ContinuationStatus : bool {
 // context of execution to resume the computation.
 //
 // Threading: until the first Yield(), the coroutine executes on the thread that
-// called CoroutineService::StartCoroutine(). Between Yield() and Continue(),
+// called CoroutineService::StartCoroutine(). Between Yield() and Resume(),
 // the handler can be passed to another thread - the computation resumes on the
-// thread that called Continue().
+// thread that called Resume().
 class CoroutineHandler {
  public:
   virtual ~CoroutineHandler() {}
@@ -45,7 +45,7 @@ class CoroutineHandler {
   // This must only be called outside of the coroutine when it is yielded. If
   // |status| is |INTERRUPTED|, |Yield| will return |INTERRUPTED| when the
   // coroutine is resumed, asking it to terminate.
-  virtual void Continue(ContinuationStatus status) = 0;
+  virtual void Resume(ContinuationStatus status) = 0;
 };
 
 // The service handling coroutines. It allows to create new coroutines.
@@ -62,7 +62,7 @@ class CoroutineService {
 };
 
 // Allows to execute an asynchronous call in a coroutine. The coroutine will
-// yield until the asynchronous call terminates, it will then be continued and
+// yield until the asynchronous call terminates, it will then be resumed and
 // will store the results of the asynchronous calls in |parameters|. If
 // |SyncCall| returns |INTERRUPTED|, the coroutine must unwind its stack and
 // terminate.
@@ -97,7 +97,7 @@ FXL_WARN_UNUSED_RESULT ContinuationStatus SyncCall(CoroutineHandler* handler,
           sync_state = false;
           return;
         }
-        handler->Continue(ContinuationStatus::INTERRUPTED);
+        handler->Resume(ContinuationStatus::INTERRUPTED);
       });
   async_call(callback::Capture(
       fxl::MakeCopyable([termination_sentinel, &sync_state, &callback_called,
@@ -112,7 +112,7 @@ FXL_WARN_UNUSED_RESULT ContinuationStatus SyncCall(CoroutineHandler* handler,
           sync_state = false;
           return;
         }
-        handler->Continue(ContinuationStatus::OK);
+        handler->Resume(ContinuationStatus::OK);
       }),
       parameters...));
   // If sync_state is still true, the callback was not called. Yield until it
