@@ -123,7 +123,9 @@ typedef struct {
     xdc_packet_state_t cur_read_packet;
     mtx_t read_lock;
 
-    struct list_node instance_list;
+    list_node_t instance_list;
+    // Streams registered by the host.
+    list_node_t host_streams;
     mtx_t instance_list_lock;
 
     // At least one xdc instance has been opened.

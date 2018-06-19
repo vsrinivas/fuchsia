@@ -50,6 +50,8 @@ typedef struct xdc_instance {
     // ID of stream that this instance is reading and writing from.
     // Only valid if has_stream_id is true.
     uint32_t stream_id;
+    // Whether the host has registered a stream of the same id.
+    bool connected;
     bool dead;
     xdc_packet_state_t cur_read_packet;
     // Where we've read up to, in the first request of the completed reads list.
@@ -61,6 +63,13 @@ typedef struct xdc_instance {
     // For storing this instance in the parent's instance_list.
     list_node_t node;
 } xdc_instance_t;
+
+// For tracking streams registered on the host side.
+typedef struct {
+    uint32_t stream_id;
+    // For storing this in xdc's host_streams list.
+    list_node_t node;
+} xdc_host_stream_t;
 
 static zx_status_t xdc_write(xdc_t* xdc, uint32_t stream_id, const void* buf, size_t count,
                              size_t* actual, bool is_ctrl_msg);
@@ -262,11 +271,45 @@ static zx_status_t xdc_write_instance(void* ctx, const void* buf, size_t count,
         mtx_unlock(&inst->lock);
         return ZX_ERR_BAD_STATE;
     }
+    if (!inst->connected) {
+        mtx_unlock(&inst->lock);
+        return ZX_ERR_SHOULD_WAIT;
+    }
     uint32_t stream_id = inst->stream_id;
 
     mtx_unlock(&inst->lock);
 
     return xdc_write(inst->parent, stream_id, buf, count, actual, false /* is_ctrl_msg */);
+}
+
+static void xdc_update_instance_write_signal(xdc_instance_t* inst, bool writable) {
+    mtx_lock(&inst->lock);
+
+    if (inst->dead || !inst->has_stream_id) {
+        mtx_unlock(&inst->lock);
+        return;
+    }
+
+    // For an instance to be writable, we need the xdc device to be ready for writing,
+    // and the corresponding stream to be registered on the host.
+    if (writable && inst->connected) {
+        device_state_set(inst->zxdev, DEV_STATE_WRITABLE);
+    } else {
+        device_state_clr(inst->zxdev, DEV_STATE_WRITABLE);
+    }
+
+    mtx_unlock(&inst->lock);
+}
+
+static xdc_host_stream_t* xdc_get_host_stream(xdc_t* xdc, uint32_t stream_id)
+                                              __TA_REQUIRES(xdc->instance_list_lock) {
+    xdc_host_stream_t* host_stream;
+    list_for_every_entry(&xdc->host_streams, host_stream, xdc_host_stream_t, node) {
+        if (host_stream->stream_id == stream_id) {
+            return host_stream;
+        }
+    }
+    return NULL;
 }
 
 // Sends a message to the host to notify when a xdc device stream becomes online or offline.
@@ -317,6 +360,7 @@ static zx_status_t xdc_register_stream(xdc_instance_t* inst, uint32_t stream_id)
     mtx_lock(&inst->lock);
     inst->stream_id = stream_id;
     inst->has_stream_id = true;
+    inst->connected = xdc_get_host_stream(xdc, stream_id) != NULL;
     mtx_unlock(&inst->lock);
 
     mtx_unlock(&xdc->instance_list_lock);
@@ -324,8 +368,9 @@ static zx_status_t xdc_register_stream(xdc_instance_t* inst, uint32_t stream_id)
     // Notify the host that this stream id is available on the debug device.
     xdc_notify_stream_state(xdc, stream_id, true /* online */);
 
-    // TODO(jocelyndang): set instance as writable if / when we are notified that the
-    // stream id has been registered on the host side.
+    mtx_lock(&xdc->write_lock);
+    xdc_update_instance_write_signal(inst, xdc->writable);
+    mtx_unlock(&xdc->write_lock);
 
     zxlogf(TRACE, "registered stream id %u\n", stream_id);
     return ZX_OK;
@@ -641,21 +686,7 @@ static void xdc_update_write_signal_locked(xdc_t* xdc, bool online)
     mtx_lock(&xdc->instance_list_lock);
     xdc_instance_t* inst;
     list_for_every_entry(&xdc->instance_list, inst, xdc_instance_t, node) {
-        mtx_lock(&inst->lock);
-
-        // TODO(jocelyndang): we should also check that the stream id
-        // has been registered on the host side.
-        if (inst->dead || !inst->has_stream_id) {
-            mtx_unlock(&inst->lock);
-            continue;
-        }
-        if (xdc->writable) {
-            device_state_set(inst->zxdev, DEV_STATE_WRITABLE);
-        } else {
-            device_state_clr(inst->zxdev, DEV_STATE_WRITABLE);
-        }
-
-        mtx_unlock(&inst->lock);
+        xdc_update_instance_write_signal(inst, xdc->writable);
     }
     mtx_unlock(&xdc->instance_list_lock);
 }
@@ -722,6 +753,66 @@ out:
     return status;
 }
 
+static void xdc_handle_msg(xdc_t* xdc, xdc_msg_t* msg) {
+    switch (msg->opcode) {
+    case XDC_NOTIFY_STREAM_STATE: {
+        xdc_notify_stream_state_t* state = &msg->notify_stream_state;
+
+        mtx_lock(&xdc->instance_list_lock);
+
+        // Find the saved host stream if it exists.
+        xdc_host_stream_t* host_stream = xdc_get_host_stream(xdc, state->stream_id);
+        if (state->online == (host_stream != NULL)) {
+            zxlogf(ERROR, "cannot set host stream state for id %u as it was already %s\n",
+                   state->stream_id, state->online ? "online" : "offline");
+            mtx_unlock(&xdc->instance_list_lock);
+            return;
+        }
+        if (state->online) {
+            xdc_host_stream_t* host_stream = malloc(sizeof(xdc_host_stream_t));
+            if (!host_stream) {
+                zxlogf(ERROR, "can't create host stream, out of memory!\n");
+                mtx_unlock(&xdc->instance_list_lock);
+                return;
+            }
+            zxlogf(TRACE, "setting host stream id %u as online\n", state->stream_id);
+            host_stream->stream_id = state->stream_id;
+            list_add_tail(&xdc->host_streams, &host_stream->node);
+        } else {
+            zxlogf(TRACE, "setting host stream id %u as offline\n", state->stream_id);
+            list_delete(&host_stream->node);
+        }
+
+        // Check if any instance is registered to this stream id and update its connected status.
+        xdc_instance_t* test;
+        xdc_instance_t* match = NULL;
+        list_for_every_entry(&xdc->instance_list, test, xdc_instance_t, node) {
+            mtx_lock(&test->lock);
+            if (test->has_stream_id && test->stream_id == state->stream_id) {
+                zxlogf(TRACE, "stream id %u is now %s to the host\n",
+                       state->stream_id, state->online ? "connected" : "disconnected");
+                test->connected = state->online;
+                match = test;
+                mtx_unlock(&test->lock);
+                break;
+            }
+            mtx_unlock(&test->lock);
+        }
+        mtx_unlock(&xdc->instance_list_lock);
+
+        if (match) {
+            // Notify the instance whether they can now write.
+            mtx_lock(&xdc->write_lock);
+            xdc_update_instance_write_signal(match, xdc->writable);
+            mtx_unlock(&xdc->write_lock);
+        }
+        return;
+    }
+    default:
+        zxlogf(ERROR, "unrecognized command: %d\n", msg->opcode);
+    }
+}
+
 static void xdc_read_complete(usb_request_t* req, void* cookie) {
     xdc_t* xdc = cookie;
 
@@ -745,10 +836,31 @@ static void xdc_read_complete(usb_request_t* req, void* cookie) {
         xdc_queue_read_locked(xdc, req);
         goto out;
     }
-    status = xdc_update_packet_state(&xdc->cur_read_packet, data, req->response.actual, NULL);
+    bool new_header;
+    status = xdc_update_packet_state(&xdc->cur_read_packet, data, req->response.actual,
+                                     &new_header);
     if (status != ZX_OK) {
         xdc_queue_read_locked(xdc, req);
         goto out;
+    }
+
+    if (new_header && xdc->cur_read_packet.header.stream_id == XDC_MSG_STREAM) {
+        size_t offset = sizeof(xdc_packet_header_t);
+        if (req->response.actual - offset < sizeof(xdc_msg_t)) {
+            zxlogf(ERROR, "malformed xdc ctrl msg, len was %lu want %lu\n",
+                   req->response.actual - offset, sizeof(xdc_msg_t));
+            xdc_queue_read_locked(xdc, req);
+            goto out;
+        }
+        xdc_msg_t msg;
+        usb_request_copyfrom(req, &msg, sizeof(xdc_msg_t), offset);
+
+        // We should process the control message outside of the lock, so requeue the request now.
+        xdc_queue_read_locked(xdc, req);
+        mtx_unlock(&xdc->read_lock);
+
+        xdc_handle_msg(xdc, &msg);
+        return;
     }
 
     // Find the instance that is registered for the stream id of the message.
