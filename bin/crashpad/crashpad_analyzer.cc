@@ -4,6 +4,8 @@
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fdio/io.h>
+#include "lib/fxl/files/file.h"
+#include "lib/fxl/strings/trim.h"
 #include <lib/zx/handle.h>
 #include <lib/zx/log.h>
 #include <lib/zx/time.h>
@@ -91,6 +93,16 @@ std::string GetSystemLogToFile() {
   }
 }
 
+std::string GetVersion() {
+  const char kFilepath[] = "/system/data/build/last-update";
+  std::string build_timestamp;
+  if (!files::ReadFileToString(kFilepath, &build_timestamp)) {
+    FXL_LOG(ERROR) << "Failed to read build timestamp from '" << kFilepath << "'.";
+    return "unknown";
+  }
+  return fxl::TrimString(build_timestamp, "\r\n").ToString();
+}
+
 }  // namespace
 
 int HandleException(zx::process process, zx::thread thread) {
@@ -122,11 +134,7 @@ int HandleException(zx::process process, zx::thread thread) {
 
   std::map<std::string, std::string> annotations;
   annotations["product"] = "Fuchsia";
-  annotations["version"] = "unknown";
-  char version[64] = {};
-  if (zx_system_get_version(version, sizeof(version)) == ZX_OK) {
-    annotations["version"] = version;
-  }
+  annotations["version"] = GetVersion();
 
   std::map<std::string, base::FilePath> attachments;
   ScopedUnlink temp_log_file(GetSystemLogToFile());

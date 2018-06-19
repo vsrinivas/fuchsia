@@ -3,7 +3,8 @@
         "binary": "bin/crashpad_analyzer"
     },
     "sandbox": {
-        "features": [ "persistent-storage", "root-ssl-certificates" ]
+        "features": [ "persistent-storage", "root-ssl-certificates" ],
+        "system": [ "data/build" ]
     }
 }
 
