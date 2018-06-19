@@ -13,6 +13,21 @@
 namespace media {
 namespace audio {
 
+namespace {
+std::string AudioDeviceUniqueIdToString(const audio_stream_unique_id_t& id) {
+  static_assert(sizeof(id.data) == 16, "Unexpected unique ID size");
+  char buf[(sizeof(id.data) * 2) + 1];
+
+  const auto& d = id.data;
+  snprintf(buf, sizeof(buf),
+           "%02x%02x%02x%02x%02x%02x%02x%02x"
+           "%02x%02x%02x%02x%02x%02x%02x%02x",
+           d[0], d[1], d[2], d[3], d[4], d[5], d[6], d[7], d[8], d[9], d[10],
+           d[11], d[12], d[13], d[14], d[15]);
+  return std::string(buf, sizeof(buf) - 1);
+}
+}  // namespace
+
 AudioDevice::AudioDevice(AudioObject::Type type, AudioDeviceManager* manager)
     : AudioObject(type), manager_(manager), driver_(new AudioDriver(this)) {
   FXL_DCHECK(manager_);
@@ -152,6 +167,19 @@ const TimelineFunction& AudioDevice::driver_clock_mono_to_ring_pos_bytes()
     const {
   return driver_->clock_mono_to_ring_pos_bytes();
 };
+
+void AudioDevice::GetDeviceInfo(
+    ::fuchsia::media::AudioDeviceInfo* out_info) const {
+  const auto& drv = *driver();
+  out_info->name = drv.manufacturer_name() + ' ' + drv.product_name();
+  out_info->unique_id = AudioDeviceUniqueIdToString(drv.persistent_unique_id());
+  out_info->token_id = token();
+  out_info->is_input = is_input();
+  out_info->is_default = false;
+
+  // TODO(johngro): fill this out
+  ::memset(&out_info->gain_info, 0, sizeof(out_info->gain_info));
+}
 
 }  // namespace audio
 }  // namespace media

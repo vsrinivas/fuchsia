@@ -87,6 +87,10 @@ class AudioDevice : public AudioObject,
     return nullptr;
   }
 
+  // Device info which can be used during device enumeration and
+  // add-notifications.
+  void GetDeviceInfo(::fuchsia::media::AudioDeviceInfo* out_info) const;
+
  protected:
   friend class fbl::RefPtr<AudioDevice>;
   ~AudioDevice() override;

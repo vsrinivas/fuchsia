@@ -129,7 +129,12 @@ void AudioDeviceManager::ActivateDevice(
 
   // TODO(johngro): load and apply persisted settings now
 
-  // TODO(johngro): notify interested users of the new device.
+  // Notify interested users of the new device.
+  ::fuchsia::media::AudioDeviceInfo info;
+  device->GetDeviceInfo(&info);
+  for (auto& client : bindings_.bindings()) {
+    client->events().OnDeviceAdded(info);
+  }
 
   // Reconsider our current routing policy now that we have a new device present
   // in the system.
@@ -157,6 +162,14 @@ void AudioDeviceManager::RemoveDevice(const fbl::RefPtr<AudioDevice>& device) {
   if (device->InContainer()) {
     auto& device_set = device->activated() ? devices_ : devices_pending_init_;
     device_set.erase(*device);
+
+    // If the device was active, let clients know that this device has
+    // gone away.
+    if (device->activated()) {
+      for (auto& client : bindings_.bindings()) {
+        client->events().OnDeviceRemoved(device->token());
+      }
+    }
   }
 }
 
@@ -183,23 +196,43 @@ void AudioDeviceManager::SetMasterGain(float db_gain) {
 void AudioDeviceManager::GetDevices(GetDevicesCallback cbk) {
   std::vector<::fuchsia::media::AudioDeviceInfo> ret;
 
-  // TODO(johngro): Implement
+  for (const auto& dev : devices_) {
+    if (dev.token() != ZX_KOID_INVALID) {
+      ::fuchsia::media::AudioDeviceInfo info;
+      dev.GetDeviceInfo(&info);
+      info.is_default = false;  // TODO(johngro): fill this out
+      ret.push_back(std::move(info));
+    }
+  }
 
   cbk(fidl::VectorPtr<::fuchsia::media::AudioDeviceInfo>(std::move(ret)));
 }
 
 void AudioDeviceManager::GetDeviceGain(uint64_t device_token,
                                        GetDeviceGainCallback cbk) {
-  // TODO(johngro): Implement
+  auto dev = devices_.find(device_token);
+
   ::fuchsia::media::AudioGainInfo info;
-  info.db_gain = 0.0;
-  info.flags = 0;
-  cbk(ZX_KOID_INVALID, std::move(info));
+  if (dev.IsValid()) {
+    // TODO(johngro): get this from the actual device.
+    info.db_gain = 0.0;
+    info.flags = 0;
+    cbk(device_token, std::move(info));
+  } else {
+    info.db_gain = 0.0;
+    info.flags = 0;
+    cbk(ZX_KOID_INVALID, std::move(info));
+  }
 }
 
 void AudioDeviceManager::SetDeviceGain(
     uint64_t device_token, ::fuchsia::media::AudioGainInfo gain_info,
     uint32_t set_flags) {
+  auto dev = devices_.find(device_token);
+  if (!dev.IsValid()) {
+    return;
+  }
+
   // TODO(johngro): Implement
 }
 
