@@ -704,6 +704,13 @@ zx_status_t AmlogicVideo::Bind() {
   vc_video_args.ctx = this;
   vc_video_args.ops = &amlogic_video_device_ops;
 
+  // ZX_PROTOCOL_MEDIA_CODEC causes /dev/class/media-codec to get created, and
+  // flags support for MEDIA_CODEC_IOCTL_GET_CODEC_FACTORY_CHANNEL.  The
+  // proto_ops_ is empty but has a non-null address, so we don't break the
+  // invariant that devices with a protocol have non-null proto_ops.
+  vc_video_args.proto_id = ZX_PROTOCOL_MEDIA_CODEC;
+  vc_video_args.proto_ops = &proto_ops_;
+
   zx_status_t status = device_add(parent_, &vc_video_args, &device_);
   if (status != ZX_OK) {
     DECODE_ERROR("Failed to bind device");
