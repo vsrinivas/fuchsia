@@ -11,7 +11,7 @@ use std::collections::HashMap;
 
 use device::ethernet::EthernetDeviceState;
 use ip::{IpAddr, Subnet};
-use wire::BufferAndRange;
+use wire::SerializationCallback;
 use StackState;
 
 /// An ID identifying a device.
@@ -53,6 +53,9 @@ pub struct DeviceLayerState {
 /// number of bytes in the body and the post-body padding must not be smaller
 /// than the minimum size passed to the callback.
 ///
+/// For more details on the callback, see the [`::wire::SerializationCallback`]
+/// documentation.
+///
 /// # Panics
 ///
 /// `send_ip_frame` panics if the buffer returned from `get_buffer` does not
@@ -64,7 +67,7 @@ pub fn send_ip_frame<A, B, F>(
 ) where
     A: IpAddr,
     B: AsMut<[u8]>,
-    F: FnOnce(usize, usize) -> BufferAndRange<B>,
+    F: SerializationCallback<B>,
 {
     match device.protocol {
         DeviceProtocol::Ethernet => unimplemented!(),

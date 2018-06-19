@@ -94,6 +94,8 @@ If an existing buffer is to be re-used, the `ensure_prefix_padding` function can
 be used to ensure that the buffer has enough prefix and suffix bytes to satisfy
 the requirements discussed here, reallocating a larger buffer if necessary.
 
+*See also: `wire::SerializationCallback`*
+
 ### In-Place Packet Modification
 
 In certain scenarios, it is necessary to modify an existing packet before
@@ -130,6 +132,8 @@ the seriliazation function for the packet format in question. It is the
 responsibility of such code to ensure that these padding bytes are zeroed before
 calling the serialization function. *For more on padding and minimum body sizes,
 see the "Prefix and Padding" section.*
+
+*See also: The `_zeroed` constructors of the `zerocopy::LayoutVerified` type*
 
 ## IP Types
 

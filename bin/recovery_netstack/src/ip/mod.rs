@@ -16,7 +16,7 @@ use device::DeviceId;
 use error::ParseError;
 use ip::forwarding::{Destination, ForwardingTable};
 use wire::ipv4::{Ipv4Packet, Ipv4PacketBuilder};
-use wire::{ensure_prefix_padding, BufferAndRange};
+use wire::{ensure_prefix_padding, AddrSerializationCallback, BufferAndRange, SerializationCallback};
 use StackState;
 
 // default IPv4 TTL or IPv6 hops
@@ -154,6 +154,9 @@ fn lookup_route<A: IpAddr>(state: &IpLayerState, dst_ip: A) -> Option<Destinatio
 /// in the body and the post-body padding must not be smaller than the minimum
 /// size passed to the callback.
 ///
+/// For more details on the callback, see the
+/// [`::wire::AddrSerializationCallback`] documentation.
+///
 /// # Panics
 ///
 /// `send_ip_packet` panics if the buffer returned from `get_buffer` does not
@@ -164,7 +167,7 @@ pub fn send_ip_packet<'a, A, B, F>(state: &mut StackState, dst_ip: A, proto: IpP
 where
     A: IpAddr,
     B: AsMut<[u8]>,
-    F: FnOnce(A, usize, usize) -> BufferAndRange<B>,
+    F: AddrSerializationCallback<A, B>,
 {
     if A::Version::LOOPBACK_SUBNET.contains(dst_ip) {
         let buffer = get_buffer(A::Version::LOOPBACK_ADDRESS, 0, 0);
@@ -209,6 +212,9 @@ where
 /// post-body padding must not be smaller than the minimum size passed to the
 /// callback.
 ///
+/// For more details on the callback, see the [`::wire::SerializationCallback`]
+/// documentation.
+///
 /// # Panics
 ///
 /// `send_ip_packet_from` panics if the buffer returned from `get_buffer` does
@@ -225,7 +231,7 @@ pub fn send_ip_packet_from<A, B, F>(
 ) where
     A: IpAddr,
     B: AsMut<[u8]>,
-    F: FnOnce(usize, usize) -> BufferAndRange<B>,
+    F: SerializationCallback<B>,
 {
     assert!(!A::Version::LOOPBACK_SUBNET.contains(src_ip));
     assert!(!A::Version::LOOPBACK_SUBNET.contains(dst_ip));
