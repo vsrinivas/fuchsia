@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use async;
-use device::{PhyDevice, PhyMap, IfaceDevice, IfaceMap};
+use device::{self, PhyDevice, PhyMap, IfaceDevice, IfaceMap};
 use failure;
 use fidl::encoding2::OutOfLine;
 use fidl::endpoints2::RequestStream;
@@ -176,9 +176,9 @@ fn get_client_sme(ifaces: &Arc<IfaceMap>, iface_id: u16,
     let iface = ifaces.get(&iface_id);
     let server = match iface {
         None => return zx::Status::NOT_FOUND,
-        Some(ref iface) => match iface.client_sme_server {
-            None => return zx::Status::NOT_SUPPORTED,
-            Some(ref server) => server
+        Some(ref iface) => match iface.sme_server {
+            device::SmeServer::Client(ref server) => server,
+            _ => return zx::Status::NOT_SUPPORTED
         }
     };
     match server.unbounded_send(endpoint) {

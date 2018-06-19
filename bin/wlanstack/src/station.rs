@@ -7,7 +7,7 @@
 
 use failure;
 use fidl::{self, endpoints2::RequestStream, endpoints2::ServerEnd};
-use fidl_mlme::{self, MlmeEvent, MlmeProxy};
+use fidl_mlme::{self, MlmeEvent, MlmeEventStream, MlmeProxy};
 use fidl_sme::{self, ClientSmeRequest};
 use fidl_stats::IfaceStats;
 use futures::{prelude::*, stream};
@@ -29,6 +29,7 @@ pub type ClientSmeEndpoint = ServerEnd<fidl_sme::ClientSmeMarker>;
 type Client = client::ClientSme<ClientTokens>;
 
 pub fn serve_client_sme<S>(proxy: MlmeProxy,
+                           event_stream: MlmeEventStream,
                            new_fidl_clients: mpsc::UnboundedReceiver<ClientSmeEndpoint>,
                            stats_requests: S)
     -> impl Future<Item = (), Error = failure::Error>
@@ -36,7 +37,8 @@ pub fn serve_client_sme<S>(proxy: MlmeProxy,
 {
     let (client, mlme_stream, user_stream) = Client::new();
     let client_arc = Arc::new(Mutex::new(client));
-    let mlme_sme_fut = serve_mlme_sme(proxy, client_arc.clone(), mlme_stream, stats_requests);
+    let mlme_sme_fut = serve_mlme_sme(
+        proxy, event_stream, client_arc.clone(), mlme_stream, stats_requests);
     let sme_fidl_fut = serve_client_sme_fidl(client_arc, new_fidl_clients, user_stream)
         .map(|x| x.never_into::<()>());
     mlme_sme_fut.select(sme_fidl_fut)
@@ -69,14 +71,15 @@ fn serve_client_sme_fidl(client_arc: Arc<Mutex<Client>>,
 }
 
 // The returned future successfully terminates when MLME closes the channel
-fn serve_mlme_sme<STA, SRS>(proxy: MlmeProxy, station: Arc<Mutex<STA>>, mlme_stream: MlmeStream,
+fn serve_mlme_sme<STA, SRS>(proxy: MlmeProxy, event_stream: MlmeEventStream,
+                            station: Arc<Mutex<STA>>, mlme_stream: MlmeStream,
                             stats_requests: SRS)
      -> impl Future<Item = (), Error = failure::Error>
     where STA: Station,
           SRS: Stream<Item = StatsRequest, Error = Never>
 {
     let (mut stats_sender, stats_fut) = serve_stats(proxy.clone(), stats_requests);
-    let mlme_to_sme_fut = proxy.take_event_stream()
+    let mlme_to_sme_fut = event_stream
         .err_into::<failure::Error>()
         .for_each(move |e| match e {
             // Handle the stats response separately since it is SME-independent
