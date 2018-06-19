@@ -373,7 +373,9 @@ void Client::HandleSetDisplayMode(const fuchsia_display_ControllerSetDisplayMode
             if ((*timings).horizontal_addressable == req->mode.horizontal_resolution
                     && (*timings).vertical_addressable == req->mode.vertical_resolution
                     && calculate_refresh_rate_e2(*timings) == req->mode.refresh_rate_e2) {
-                populate_display_mode(*timings, &config->current_.mode);
+                populate_display_mode(*timings, &config->pending_.mode);
+                pending_config_valid_ = false;
+                config->mode_change_ = true;
                 return;
             }
         }
@@ -540,6 +542,9 @@ void Client::HandleCheckConfig(const fuchsia_display_ControllerCheckConfigReques
                 config.pending_layers_.push_front(layer);
             }
             config.pending_layer_change_ = false;
+
+            config.pending_.mode = config.current_.mode;
+            config.mode_change_ = false;
         }
         pending_config_valid_ = true;
     }
@@ -566,6 +571,11 @@ void Client::HandleApplyConfig(const fuchsia_display_ControllerApplyConfigReques
     }
 
     for (auto& display_config : configs_) {
+        if (display_config.mode_change_) {
+            display_config.current_.mode = display_config.pending_.mode;
+            display_config.mode_change_ = false;
+        }
+
         // Put the pending image in the wait queue (the case where it's already ready
         // will be handled later). This needs to be done before migrating layers, as
         // that needs to know if there are any waiting images.

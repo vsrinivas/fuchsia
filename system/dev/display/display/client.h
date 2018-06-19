@@ -98,6 +98,8 @@ private:
     fbl::unique_ptr<zx_pixel_format_t[]> pixel_formats_;
     uint32_t pixel_format_count_;
 
+    bool mode_change_ = false;
+
     friend Client;
     friend ClientProxy;
 };
