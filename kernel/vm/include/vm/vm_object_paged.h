@@ -28,7 +28,13 @@
 // the main VM object type, holding a list of pages
 class VmObjectPaged final : public VmObject {
 public:
-    static zx_status_t Create(uint32_t pmm_alloc_flags, uint64_t size, fbl::RefPtr<VmObject>* vmo);
+    // |options_| is a bitmask of:
+    static constexpr uint32_t kResizable    = (1u << 0);
+    static constexpr uint32_t kContiguous   = (1u << 1);
+
+    static zx_status_t Create(uint32_t pmm_alloc_flags,
+                              uint32_t options,
+                              uint64_t size, fbl::RefPtr<VmObject>* vmo);
 
     // Create a VMO backed by a contiguous range of physical memory.  The
     // returned vmo has all of its pages committed, and does not allow
@@ -45,7 +51,8 @@ public:
         // any deadlocks.
         TA_NO_THREAD_SAFETY_ANALYSIS { return size_; }
     bool is_paged() const override { return true; }
-    bool is_contiguous() const override { return is_contiguous_; }
+    bool is_contiguous() const override {return (options_ & kContiguous); }
+    bool is_resizable() const override { return (options_ & kResizable); }
 
     size_t AllocatedPagesInRange(uint64_t offset, uint64_t len) const override;
 
@@ -78,7 +85,7 @@ public:
         // Calls a Locked method of the parent, which confuses analysis.
         TA_NO_THREAD_SAFETY_ANALYSIS;
 
-    zx_status_t CloneCOW(uint64_t offset, uint64_t size, bool copy_name,
+    zx_status_t CloneCOW(bool resizable, uint64_t offset, uint64_t size, bool copy_name,
                          fbl::RefPtr<VmObject>* clone_vmo) override
         // Calls a Locked method of the child, which confuses analysis.
         TA_NO_THREAD_SAFETY_ANALYSIS;
@@ -95,8 +102,8 @@ public:
 
 private:
     // private constructor (use Create())
-    VmObjectPaged(uint32_t pmm_alloc_flags, uint64_t size, fbl::RefPtr<VmObject> parent,
-                  bool is_contiguous);
+    VmObjectPaged(
+        uint32_t options, uint32_t pmm_alloc_flags, uint64_t size, fbl::RefPtr<VmObject> parent);
 
     // private destructor, only called from refptr
     ~VmObjectPaged() override;
@@ -132,11 +139,11 @@ private:
     zx_status_t SetParentOffsetLocked(uint64_t o) TA_REQ(lock_);
 
     // members
+    const uint32_t options_;
     uint64_t size_ TA_GUARDED(lock_) = 0;
     uint64_t parent_offset_ TA_GUARDED(lock_) = 0;
     uint32_t pmm_alloc_flags_ TA_GUARDED(lock_) = PMM_ALLOC_FLAG_ANY;
     uint32_t cache_policy_ TA_GUARDED(lock_) = ARCH_MMU_FLAG_CACHED;
-    const bool is_contiguous_;
 
     // a tree of pages
     VmPageList page_list_ TA_GUARDED(lock_);

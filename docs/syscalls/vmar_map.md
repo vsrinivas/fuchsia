@@ -44,6 +44,8 @@ closing the VMO handle does not remove the mapping added by this function.
 - **ZX_VM_FLAG_MAP_RANGE**  Immediately page into the new mapping all backed
   regions of the VMO.  This cannot be specified if
   *ZX_VM_FLAG_SPECIFIC_OVERWRITE* is used.
+- **ZX_VM_FLAG_REQUIRE_NON_RESIZABLE** Maps the VMO only if the VMO is non-resizable,
+  that is, it was created with the **ZX_VMO_NON_RESIZABLE** option.
 
 *vmar_offset* must be 0 if *map_flags* does not have **ZX_VM_FLAG_SPECIFIC** or
 **ZX_VM_FLAG_SPECIFIC_OVERWRITE** set.  If neither of those flags are set, then
@@ -74,9 +76,19 @@ non-zero when neither **ZX_VM_FLAG_SPECIFIC** nor
 
 **ZX_ERR_ACCESS_DENIED**  Insufficient privileges to make the requested mapping.
 
+**ZX_ERR_NOT_SUPPORTED** The VMO is resizable and **ZX_VM_FLAG_REQUIRE_NON_RESIZABLE** was
+requested.
+
 **ZX_ERR_NO_MEMORY**  Failure due to lack of memory.
 There is no good way for userspace to handle this (unlikely) error.
 In a future build this error will no longer occur.
+
+## NOTES
+
+The VMO that backs a memory mapping can be resized to a smaller size. This can cause the
+thread is reading or writting to the VMAR region to fault. To avoid this hazard, services
+that receive VMOs from clients should use **ZX_VM_FLAG_REQUIRE_NON_RESIZABLE** when mapping
+the VMO.
 
 ## SEE ALSO
 

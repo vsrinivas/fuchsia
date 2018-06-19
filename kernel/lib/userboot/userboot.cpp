@@ -272,7 +272,7 @@ static void clog_to_vmo(const void* data, size_t off, size_t len, void* cookie) 
 static zx_status_t crashlog_to_vmo(fbl::RefPtr<VmObject>* out) {
     size_t size = platform_recover_crashlog(0, NULL, NULL);
     fbl::RefPtr<VmObject> crashlog_vmo;
-    zx_status_t status = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, size, &crashlog_vmo);
+    zx_status_t status = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, 0u, size, &crashlog_vmo);
     if (status != ZX_OK) {
         return status;
     }
@@ -290,7 +290,7 @@ static zx_status_t attempt_userboot() {
         dprintf(INFO, "userboot: ramdisk %#15zx @ %p\n", rsize, rbase);
 
     fbl::RefPtr<VmObject> stack_vmo;
-    zx_status_t status = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, stack_size, &stack_vmo);
+    zx_status_t status = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, 0u, stack_size, &stack_vmo);
     if (status != ZX_OK)
         return status;
     stack_vmo->set_name(STACK_VMO_NAME, sizeof(STACK_VMO_NAME) - 1);

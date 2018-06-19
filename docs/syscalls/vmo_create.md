@@ -45,7 +45,8 @@ The following rights will be set on the handle by default:
 **ZX_RIGHT_SET_PROPERTY** - May set its properties using
 [object_set_property](object_set_property).
 
-The *options* field is currently unused and must be set to 0.
+The *options* field can be 0 or **ZX_VMO_NON_RESIZABLE** to create a VMO
+that cannot change size. Clones of a non-resizable VMO can be resized.
 
 The **ZX_VMO_ZERO_CHILDREN** signal is active on a newly created VMO. It becomes
 inactive whenever a clone of the VMO is created and becomes active again when

@@ -55,7 +55,7 @@ zx_status_t Arena::Init(const char* name, size_t ob_size, size_t count) {
 
     // Create the VMO.
     fbl::RefPtr<VmObject> vmo;
-    zx_status_t status = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, vmo_sz, &vmo);
+    zx_status_t status = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, 0u, vmo_sz, &vmo);
     if (status != ZX_OK) {
         LTRACEF("Arena '%s': can't create %zu-byte VMO\n", name, vmo_sz);
         return status;

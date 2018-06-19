@@ -230,6 +230,8 @@ typedef uint32_t zx_rights_t;
 #define ZX_RIGHTS_POLICY \
     (ZX_RIGHT_GET_POLICY | ZX_RIGHT_SET_POLICY)
 
+// VM Object creation options
+#define ZX_VMO_NON_RESIZABLE             1u
 
 // VM Object opcodes
 #define ZX_VMO_OP_COMMIT                 1u
@@ -243,20 +245,22 @@ typedef uint32_t zx_rights_t;
 #define ZX_VMO_OP_CACHE_CLEAN_INVALIDATE 9u
 
 // VM Object clone flags
-#define ZX_VMO_CLONE_COPY_ON_WRITE       1u
+#define ZX_VMO_CLONE_COPY_ON_WRITE        (1u << 0)
+#define ZX_VMO_CLONE_NON_RESIZEABLE       (1u << 1)
 
 // Mapping flags to vmar routines
-#define ZX_VM_FLAG_PERM_READ          (1u << 0)
-#define ZX_VM_FLAG_PERM_WRITE         (1u << 1)
-#define ZX_VM_FLAG_PERM_EXECUTE       (1u << 2)
-#define ZX_VM_FLAG_COMPACT            (1u << 3)
-#define ZX_VM_FLAG_SPECIFIC           (1u << 4)
-#define ZX_VM_FLAG_SPECIFIC_OVERWRITE (1u << 5)
-#define ZX_VM_FLAG_CAN_MAP_SPECIFIC   (1u << 6)
-#define ZX_VM_FLAG_CAN_MAP_READ       (1u << 7)
-#define ZX_VM_FLAG_CAN_MAP_WRITE      (1u << 8)
-#define ZX_VM_FLAG_CAN_MAP_EXECUTE    (1u << 9)
-#define ZX_VM_FLAG_MAP_RANGE          (1u << 10)
+#define ZX_VM_FLAG_PERM_READ              (1u << 0)
+#define ZX_VM_FLAG_PERM_WRITE             (1u << 1)
+#define ZX_VM_FLAG_PERM_EXECUTE           (1u << 2)
+#define ZX_VM_FLAG_COMPACT                (1u << 3)
+#define ZX_VM_FLAG_SPECIFIC               (1u << 4)
+#define ZX_VM_FLAG_SPECIFIC_OVERWRITE     (1u << 5)
+#define ZX_VM_FLAG_CAN_MAP_SPECIFIC       (1u << 6)
+#define ZX_VM_FLAG_CAN_MAP_READ           (1u << 7)
+#define ZX_VM_FLAG_CAN_MAP_WRITE          (1u << 8)
+#define ZX_VM_FLAG_CAN_MAP_EXECUTE        (1u << 9)
+#define ZX_VM_FLAG_MAP_RANGE              (1u << 10)
+#define ZX_VM_FLAG_REQUIRE_NON_RESIZABLE  (1u << 11)
 
 // virtual address
 typedef uintptr_t zx_vaddr_t;

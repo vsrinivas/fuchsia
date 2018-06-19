@@ -38,7 +38,8 @@ zx_status_t vm_allocate_kstack(bool unsafe, void** kstack_top_out,
 
     // Create a VMO for our stack
     fbl::RefPtr<VmObject> stack_vmo;
-    zx_status_t status = VmObjectPaged::Create(0, DEFAULT_STACK_SIZE, &stack_vmo);
+    zx_status_t status = VmObjectPaged::Create(
+        PMM_ALLOC_FLAG_ANY, 0u, DEFAULT_STACK_SIZE, &stack_vmo);
     if (status != ZX_OK) {
         TRACEF("error allocating %s stack for thread\n",
                unsafe ? "unsafe" : "safe");

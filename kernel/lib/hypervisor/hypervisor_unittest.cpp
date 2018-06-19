@@ -32,7 +32,7 @@ static zx_status_t get_paddr(void* context, size_t offset, size_t index, paddr_t
 
 static zx_status_t create_vmo(size_t vmo_size, fbl::RefPtr<VmObject>* vmo_out) {
     fbl::RefPtr<VmObject> vmo;
-    zx_status_t status = VmObjectPaged::Create(0, vmo_size, &vmo);
+    zx_status_t status = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, 0u, vmo_size, &vmo);
     if (status != ZX_OK)
         return status;
 
@@ -219,7 +219,7 @@ static bool guest_physical_address_space_map_interrupt_controller() {
 
     // Allocate VMO.
     fbl::RefPtr<VmObject> vmo;
-    zx_status_t status = VmObjectPaged::Create(0, PAGE_SIZE, &vmo);
+    zx_status_t status = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, 0u, PAGE_SIZE, &vmo);
     EXPECT_EQ(status, ZX_OK, "vmobject creation\n");
     EXPECT_NONNULL(vmo, "Failed to allocate VMO\n");
 

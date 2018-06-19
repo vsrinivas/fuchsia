@@ -21,7 +21,7 @@ fbl::unique_ptr<UserMemory> UserMemory::Create(size_t size) {
     size = ROUNDUP_PAGE_SIZE(size);
 
     fbl::RefPtr<VmObject> vmo;
-    zx_status_t status = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, size, &vmo);
+    zx_status_t status = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, 0u, size, &vmo);
     if (status != ZX_OK) {
         unittest_printf("VmObjectPaged::Create failed: %d\n", status);
         return nullptr;

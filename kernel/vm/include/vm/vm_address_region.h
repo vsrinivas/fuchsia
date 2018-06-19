@@ -42,6 +42,8 @@
 // with execute permissions.  When on a VmMapping, controls whether or not the
 // mapping can gain this permission.
 #define VMAR_FLAG_CAN_MAP_EXECUTE (1 << 6)
+// Require that VMO backing the mapping is non-resizable.
+#define VMAR_FLAG_REQUIRE_NON_RESIZABLE (1 << 7)
 
 #define VMAR_CAN_RWX_FLAGS (VMAR_FLAG_CAN_MAP_READ |  \
                             VMAR_FLAG_CAN_MAP_WRITE | \

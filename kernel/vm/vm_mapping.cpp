@@ -648,8 +648,10 @@ zx_status_t VmMapping::PageFault(vaddr_t va, const uint pf_flags) {
     vm_page_t* page;
     zx_status_t status = object_->GetPageLocked(vmo_offset, pf_flags, nullptr, &page, &new_pa);
     if (status < 0) {
-        TRACEF("ERROR: failed to fault in or grab existing page\n");
-        TRACEF("%p vmo_offset %#" PRIx64 ", pf_flags %#x\n", this, vmo_offset, pf_flags);
+        // TODO(cpu): This trace was originally TRACEF() always on, but it fires if the
+        // VMO was resized, rather than just when the system is running out of memory.
+        LTRACEF("ERROR: failed to fault in or grab existing page\n");
+        LTRACEF("%p vmo_offset %#" PRIx64 ", pf_flags %#x\n", this, vmo_offset, pf_flags);
         return status;
     }
 

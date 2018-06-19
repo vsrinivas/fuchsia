@@ -52,6 +52,8 @@ public:
     // Returns true if the object is backed by a contiguous range of physical
     // memory.
     virtual bool is_contiguous() const { return false; }
+    // Returns true if the object size can be changed.
+    virtual bool is_resizable() const { return false; }
 
     // Returns the number of physical pages currently allocated to the
     // object where (offset <= page_offset < offset+len).
@@ -163,7 +165,8 @@ public:
 
     // create a copy-on-write clone vmo at the page-aligned offset and length
     // note: it's okay to start or extend past the size of the parent
-    virtual zx_status_t CloneCOW(uint64_t offset, uint64_t size, bool copy_name,
+    virtual zx_status_t CloneCOW(bool resizable,
+                                 uint64_t offset, uint64_t size, bool copy_name,
                                  fbl::RefPtr<VmObject>* clone_vmo) {
         return ZX_ERR_NOT_SUPPORTED;
     }

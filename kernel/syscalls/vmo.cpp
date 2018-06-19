@@ -38,8 +38,11 @@ zx_status_t sys_vmo_create(uint64_t size, uint32_t options,
                            user_out_handle* out) {
     LTRACEF("size %#" PRIx64 "\n", size);
 
-    if (options != 0u)
-        return ZX_ERR_INVALID_ARGS;
+    switch (options) {
+    case 0: options = VmObjectPaged::kResizable; break;
+    case ZX_VMO_NON_RESIZABLE: options = 0u; break;
+    default: return ZX_ERR_INVALID_ARGS;
+    }
 
     auto up = ProcessDispatcher::GetCurrent();
     zx_status_t res = up->QueryPolicy(ZX_POL_NEW_VMO);
@@ -48,7 +51,7 @@ zx_status_t sys_vmo_create(uint64_t size, uint32_t options,
 
     // create a vm object
     fbl::RefPtr<VmObject> vmo;
-    res = VmObjectPaged::Create(0, size, &vmo);
+    res = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, options, size, &vmo);
     if (res != ZX_OK)
         return res;
 

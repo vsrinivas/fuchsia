@@ -64,10 +64,12 @@ zx_status_t RoundSize(uint64_t size, uint64_t* out_size) {
 
 } // namespace
 
-VmObjectPaged::VmObjectPaged(uint32_t pmm_alloc_flags, uint64_t size, fbl::RefPtr<VmObject> parent,
-                             bool is_contiguous)
-    : VmObject(fbl::move(parent)), size_(size), pmm_alloc_flags_(pmm_alloc_flags),
-      is_contiguous_(is_contiguous) {
+VmObjectPaged::VmObjectPaged(
+    uint32_t options, uint32_t pmm_alloc_flags, uint64_t size, fbl::RefPtr<VmObject> parent)
+        : VmObject(fbl::move(parent)),
+          options_(options),
+          size_(size),
+          pmm_alloc_flags_(pmm_alloc_flags) {
     LTRACEF("%p\n", this);
 
     DEBUG_ASSERT(IS_PAGE_ALIGNED(size_));
@@ -91,15 +93,23 @@ VmObjectPaged::~VmObjectPaged() {
     page_list_.FreeAllPages();
 }
 
-zx_status_t VmObjectPaged::Create(uint32_t pmm_alloc_flags, uint64_t size, fbl::RefPtr<VmObject>* obj) {
+zx_status_t VmObjectPaged::Create(uint32_t pmm_alloc_flags,
+                                  uint32_t options,
+                                  uint64_t size, fbl::RefPtr<VmObject>* obj) {
     // make sure size is page aligned
     zx_status_t status = RoundSize(size, &size);
-    if (status != ZX_OK)
+    if (status != ZX_OK) {
         return status;
+    }
+
+    if (options & kContiguous) {
+        // Force callers to use CreateContiguous() instead.
+        return ZX_ERR_INVALID_ARGS;
+    }
 
     fbl::AllocChecker ac;
-    auto vmo = fbl::AdoptRef<VmObject>(new (&ac) VmObjectPaged(pmm_alloc_flags, size, nullptr,
-                                                               false /* is_contiguous */));
+    auto vmo = fbl::AdoptRef<VmObject>(
+        new (&ac) VmObjectPaged(options, pmm_alloc_flags, size, nullptr));
     if (!ac.check())
         return ZX_ERR_NO_MEMORY;
 
@@ -118,8 +128,8 @@ zx_status_t VmObjectPaged::CreateContiguous(uint32_t pmm_alloc_flags, uint64_t s
     }
 
     fbl::AllocChecker ac;
-    auto vmo = fbl::AdoptRef<VmObject>(new (&ac) VmObjectPaged(pmm_alloc_flags, size, nullptr,
-                                                               true /* is_contiguous */));
+    auto vmo = fbl::AdoptRef<VmObject>(
+        new (&ac) VmObjectPaged(kContiguous, pmm_alloc_flags, size, nullptr));
     if (!ac.check()) {
         return ZX_ERR_NO_MEMORY;
     }
@@ -176,7 +186,57 @@ zx_status_t VmObjectPaged::CreateContiguous(uint32_t pmm_alloc_flags, uint64_t s
     return ZX_OK;
 }
 
-zx_status_t VmObjectPaged::CloneCOW(uint64_t offset, uint64_t size, bool copy_name, fbl::RefPtr<VmObject>* clone_vmo) {
+zx_status_t VmObjectPaged::CreateFromROData(const void* data, size_t size, fbl::RefPtr<VmObject>* obj) {
+    LTRACEF("data %p, size %zu\n", data, size);
+
+    fbl::RefPtr<VmObject> vmo;
+    zx_status_t status = Create(PMM_ALLOC_FLAG_ANY, 0, size, &vmo);
+    if (status != ZX_OK)
+        return status;
+
+    if (size > 0) {
+        ASSERT(IS_PAGE_ALIGNED(size));
+        ASSERT(IS_PAGE_ALIGNED(reinterpret_cast<uintptr_t>(data)));
+
+        // Do a direct lookup of the physical pages backing the range of
+        // the kernel that these addresses belong to and jam them directly
+        // into the VMO.
+        //
+        // NOTE: This relies on the kernel not otherwise owning the pages.
+        // If the setup of the kernel's address space changes so that the
+        // pages are attached to a kernel VMO, this will need to change.
+
+        paddr_t start_paddr = vaddr_to_paddr(data);
+        ASSERT(start_paddr != 0);
+
+        for (size_t count = 0; count < size / PAGE_SIZE; count++) {
+            paddr_t pa = start_paddr + count * PAGE_SIZE;
+            vm_page_t* page = paddr_to_vm_page(pa);
+            ASSERT(page);
+
+            if (page->state == VM_PAGE_STATE_WIRED) {
+                // it's wired to the kernel, so we can just use it directly
+            } else if (page->state == VM_PAGE_STATE_FREE) {
+                ASSERT(pmm_alloc_range(pa, 1, nullptr) == 1);
+                page->state = VM_PAGE_STATE_WIRED;
+            } else {
+                panic("page used to back static vmo in unusable state: paddr %#" PRIxPTR " state %u\n", pa,
+                      page->state);
+            }
+
+            // XXX hack to work around the ref pointer to the base class
+            auto vmo2 = static_cast<VmObjectPaged*>(vmo.get());
+            vmo2->AddPage(page, count * PAGE_SIZE);
+        }
+    }
+
+    *obj = fbl::move(vmo);
+
+    return ZX_OK;
+}
+
+zx_status_t VmObjectPaged::CloneCOW(bool resizable, uint64_t offset, uint64_t size,
+    bool copy_name, fbl::RefPtr<VmObject>* clone_vmo) {
     LTRACEF("vmo %p offset %#" PRIx64 " size %#" PRIx64 "\n", this, offset, size);
 
     canary_.Assert();
@@ -186,10 +246,12 @@ zx_status_t VmObjectPaged::CloneCOW(uint64_t offset, uint64_t size, bool copy_na
     if (status != ZX_OK)
         return status;
 
+    auto options = resizable ? kResizable : 0u;
+
     // allocate the clone up front outside of our lock
     fbl::AllocChecker ac;
-    auto vmo = fbl::AdoptRef<VmObjectPaged>(new (&ac) VmObjectPaged(pmm_alloc_flags_, size, fbl::WrapRefPtr(this),
-                                                                    false /* is_contiguous */));
+    auto vmo = fbl::AdoptRef<VmObjectPaged>(
+        new (&ac) VmObjectPaged(options, pmm_alloc_flags_, size, fbl::WrapRefPtr(this)));
     if (!ac.check())
         return ZX_ERR_NO_MEMORY;
 
@@ -293,55 +355,6 @@ zx_status_t VmObjectPaged::AddPageLocked(vm_page_t* p, uint64_t offset) {
 
     // other mappings may have covered this offset into the vmo, so unmap those ranges
     RangeChangeUpdateLocked(offset, PAGE_SIZE);
-
-    return ZX_OK;
-}
-
-zx_status_t VmObjectPaged::CreateFromROData(const void* data, size_t size, fbl::RefPtr<VmObject>* obj) {
-    LTRACEF("data %p, size %zu\n", data, size);
-
-    fbl::RefPtr<VmObject> vmo;
-    zx_status_t status = Create(PMM_ALLOC_FLAG_ANY, size, &vmo);
-    if (status != ZX_OK)
-        return status;
-
-    if (size > 0) {
-        ASSERT(IS_PAGE_ALIGNED(size));
-        ASSERT(IS_PAGE_ALIGNED(reinterpret_cast<uintptr_t>(data)));
-
-        // Do a direct lookup of the physical pages backing the range of
-        // the kernel that these addresses belong to and jam them directly
-        // into the VMO.
-        //
-        // NOTE: This relies on the kernel not otherwise owning the pages.
-        // If the setup of the kernel's address space changes so that the
-        // pages are attached to a kernel VMO, this will need to change.
-
-        paddr_t start_paddr = vaddr_to_paddr(data);
-        ASSERT(start_paddr != 0);
-
-        for (size_t count = 0; count < size / PAGE_SIZE; count++) {
-            paddr_t pa = start_paddr + count * PAGE_SIZE;
-            vm_page_t* page = paddr_to_vm_page(pa);
-            ASSERT(page);
-
-            if (page->state == VM_PAGE_STATE_WIRED) {
-                // it's wired to the kernel, so we can just use it directly
-            } else if (page->state == VM_PAGE_STATE_FREE) {
-                ASSERT(pmm_alloc_range(pa, 1, nullptr) == 1);
-                page->state = VM_PAGE_STATE_WIRED;
-            } else {
-                panic("page used to back static vmo in unusable state: paddr %#" PRIxPTR " state %u\n", pa,
-                      page->state);
-            }
-
-            // XXX hack to work around the ref pointer to the base class
-            auto vmo2 = static_cast<VmObjectPaged*>(vmo.get());
-            vmo2->AddPage(page, count * PAGE_SIZE);
-        }
-    }
-
-    *obj = fbl::move(vmo);
 
     return ZX_OK;
 }
@@ -593,7 +606,7 @@ zx_status_t VmObjectPaged::DecommitRange(uint64_t offset, uint64_t len, uint64_t
     if (decommitted)
         *decommitted = 0;
 
-    if (is_contiguous_) {
+    if (options_ & kContiguous) {
         return ZX_ERR_NOT_SUPPORTED;
     }
 
@@ -756,6 +769,10 @@ zx_status_t VmObjectPaged::ResizeLocked(uint64_t s) {
     DEBUG_ASSERT(lock_.IsHeld());
 
     LTRACEF("vmo %p, size %" PRIu64 "\n", this, s);
+
+    if (!(options_ & kResizable)) {
+        return ZX_ERR_UNAVAILABLE;
+    }
 
     // round up the size to the next page size boundary and make sure we dont wrap
     zx_status_t status = RoundSize(s, &s);

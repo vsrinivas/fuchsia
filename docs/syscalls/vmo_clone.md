@@ -21,7 +21,8 @@ of an existing vmo.
 One handle is returned on success, representing an object with the requested
 size.
 
-*options* must contain one or more flags to control clone creation.
+*options* must contain *ZX_VMO_CLONE_COPY_ON_WRITE* and zero or more flags to control
+clone creation.
 
 Valid flags:
 
@@ -32,6 +33,8 @@ the cloned vmo is now a copy and may diverge from the parent. Any reads from
 ranges outside of the parent vmo's size will contain zeros, and writes will
 allocate new zero filled pages.  See the NOTES section below for details on
 VMO syscall interactions with clones.
+
+- *ZX_VMO_CLONE_NON_RESIZEABLE* - Create a non-resizeable clone VMO.
 
 *offset* must be page aligned.
 

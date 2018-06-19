@@ -165,9 +165,20 @@ zx_status_t VmObjectDispatcher::Clone(uint32_t options, uint64_t offset, uint64_
     LTRACEF("options 0x%x offset %#" PRIx64 " size %#" PRIx64 "\n",
             options, offset, size);
 
+    bool resizable = true;
     if (options & ZX_VMO_CLONE_COPY_ON_WRITE) {
-        return vmo_->CloneCOW(offset, size, copy_name, clone_vmo);
+        options &= ~ZX_VMO_CLONE_COPY_ON_WRITE;
     } else {
         return ZX_ERR_INVALID_ARGS;
     }
+
+    if (options & ZX_VMO_CLONE_NON_RESIZEABLE) {
+        resizable = false;
+        options &= ~ZX_VMO_CLONE_NON_RESIZEABLE;
+    }
+
+    if (options)
+        return ZX_ERR_INVALID_ARGS;
+
+    return vmo_->CloneCOW(resizable, offset, size, copy_name, clone_vmo);
 }

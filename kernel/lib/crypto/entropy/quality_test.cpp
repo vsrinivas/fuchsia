@@ -39,7 +39,7 @@ fbl::RefPtr<VmObject> entropy_vmo;
 bool entropy_was_lost = false;
 
 static void SetupEntropyVmo(uint level) {
-    if (VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, entropy_len, &entropy_vmo) != ZX_OK) {
+    if (VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, 0u, entropy_len, &entropy_vmo) != ZX_OK) {
         printf("entropy-boot-test: Failed to create entropy_vmo (data lost)\n");
         entropy_was_lost = true;
         return;

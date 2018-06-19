@@ -75,6 +75,10 @@ zx_status_t split_syscall_flags(uint32_t flags, uint32_t* vmar_flags, uint* arch
         vmar |= VMAR_FLAG_CAN_MAP_EXECUTE;
         flags &= ~ZX_VM_FLAG_CAN_MAP_EXECUTE;
     }
+    if (flags & ZX_VM_FLAG_REQUIRE_NON_RESIZABLE) {
+        vmar |= VMAR_FLAG_REQUIRE_NON_RESIZABLE;
+        flags &= ~ZX_VM_FLAG_REQUIRE_NON_RESIZABLE;
+    }
 
     if (flags != 0)
         return ZX_ERR_INVALID_ARGS;
@@ -174,6 +178,12 @@ zx_status_t VmAddressRegionDispatcher::Map(size_t vmar_offset, fbl::RefPtr<VmObj
     zx_status_t status = split_syscall_flags(flags, &vmar_flags, &arch_mmu_flags);
     if (status != ZX_OK)
         return status;
+
+    if (vmar_flags & VMAR_FLAG_REQUIRE_NON_RESIZABLE) {
+        vmar_flags &= ~VMAR_FLAG_REQUIRE_NON_RESIZABLE;
+        if (vmo->is_resizable())
+            return ZX_ERR_NOT_SUPPORTED;
+    }
 
     fbl::RefPtr<VmMapping> result(nullptr);
     status = vmar_->CreateVmMapping(vmar_offset, len, /* align_pow2 */ 0,
