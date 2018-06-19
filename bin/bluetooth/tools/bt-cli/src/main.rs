@@ -91,6 +91,16 @@ fn stop_discovery(
         .and_then(|response| Ok(Status::from(response).to_string()))
 }
 
+fn set_discoverable(discoverable: bool,
+    control_svc: Arc<RwLock<ControlProxy>>
+) -> impl Future<Item = String, Error = Error> {
+    control_svc
+        .read()
+        .set_discoverable(discoverable)
+        .map_err(|e| e.context("error getting response").into())
+        .and_then(|response| Ok(Status::from(response).to_string()))
+}
+
 fn main() -> Result<(), Error> {
     let config = Config::builder()
         .history_ignore_space(true)
@@ -138,6 +148,7 @@ fn main() -> Result<(), Error> {
                     [
                         StartDiscovery,
                         StopDiscovery,
+                        Discoverable,
                         GetAdapters,
                         GetActiveAdapter,
                         Help,
@@ -152,6 +163,14 @@ fn main() -> Result<(), Error> {
                     Ok(Cmd::StopDiscovery) => {
                         println!("Stopping Discovery!");
                         Output::StopDiscovery(stop_discovery(bt_svc.clone()))
+                    }
+                    Ok(Cmd::Discoverable) => {
+                        println!("Becoming discoverable..");
+                        Output::Discoverable(set_discoverable(true, bt_svc.clone()))
+                    }
+                    Ok(Cmd::NotDiscoverable) => {
+                        println!("Revoking discoverability..");
+                        Output::Discoverable(set_discoverable(false, bt_svc.clone()))
                     }
                     Ok(Cmd::GetAdapters) => Output::GetAdapters(get_adapters(bt_svc.clone())),
                     Ok(Cmd::ActiveAdapter) => {

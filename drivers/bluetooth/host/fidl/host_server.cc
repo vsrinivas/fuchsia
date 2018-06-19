@@ -164,11 +164,12 @@ void HostServer::SetDiscoverable(bool discoverable,
     this->binding()->events().OnHostStateChanged(std::move(state));
 
     callback(Status());
+    return;
   }
   if (discoverable && requesting_discoverable_) {
     FXL_VLOG(1) << "Discoverable already being set";
     callback(fidl_helpers::NewFidlError(ErrorCode::IN_PROGRESS,
-                                        "Discovery already in progress"));
+                                        "SetDiscoverable already in progress"));
     return;
   }
   requesting_discoverable_ = true;

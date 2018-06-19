@@ -60,6 +60,8 @@ gen_completer! {
         GetAdapters = ("list-adapters", "Show all known bluetooth adapters"),
         StartDiscovery = ("start-discovery", "Start Discovery"),
         StopDiscovery = ("stop-discovery", "Stop Discovery"),
+        Discoverable = ("discoverable", "Set this device to be discoverable"),
+        NotDiscoverable = ("not-discoverable", "Revoke device discoverability"),
     }
 }
 
