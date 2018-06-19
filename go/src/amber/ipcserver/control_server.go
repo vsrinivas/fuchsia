@@ -6,9 +6,9 @@ package ipcserver
 
 import (
 	"fmt"
-	"log"
 	"os"
-	"strings"
+	"regexp"
+	"runtime"
 	"sync"
 
 	"fidl/bindings"
@@ -30,9 +30,12 @@ type ControlSrvr struct {
 	compReqs    chan<- *completeUpdateRequest
 	writeReqs   chan<- *startUpdateRequest
 	sysUpdate   *daemon.SystemUpdateMonitor
+	blobChan    chan string
 }
 
 const ZXSIO_DAEMON_ERROR = zx.SignalUser0
+
+var merklePat = regexp.MustCompile("^[0-9a-f]{64}$")
 
 func NewControlSrvr(d *daemon.Daemon, s *daemon.SystemUpdateMonitor) *ControlSrvr {
 	go bindings.Serve()
@@ -42,14 +45,24 @@ func NewControlSrvr(d *daemon.Daemon, s *daemon.SystemUpdateMonitor) *ControlSrv
 	m := NewActivationMonitor(c, w, a, daemon.CreateOutputFile, daemon.WriteUpdateToPkgFS)
 	go m.Do()
 
-	return &ControlSrvr{
+	cs := &ControlSrvr{
 		daemon:      d,
 		actMon:      m,
 		activations: a,
 		compReqs:    c,
 		writeReqs:   w,
 		sysUpdate:   s,
+		blobChan:    make(chan string, 30*runtime.NumCPU()),
 	}
+
+	for i := 0; i < runtime.NumCPU(); i++ {
+		go func() {
+			for s := range cs.blobChan {
+				cs.daemon.GetBlob(s)
+			}
+		}()
+	}
+	return cs
 }
 
 func (c *ControlSrvr) DoTest(in int32) (out string, err error) {
@@ -179,14 +192,11 @@ func (c *ControlSrvr) GetUpdate(name string, version, merkle *string) (*string, 
 }
 
 func (c *ControlSrvr) GetBlob(merkle string) error {
-	if len(strings.TrimSpace(merkle)) == 0 {
-		return fmt.Errorf("supplied merkle root is empty")
+	if !merklePat.Match([]byte(merkle)) {
+		return fmt.Errorf("%q is not a valid merkle root", merkle)
 	}
 
-	err := c.daemon.GetBlob(merkle)
-	if err != nil {
-		log.Printf("blob retrieval error %s", err)
-	}
+	c.blobChan <- merkle
 	return nil
 }
 

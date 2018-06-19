@@ -24,10 +24,41 @@ type BlobRepo struct {
 	Interval time.Duration
 }
 
-func FetchBlob(repos []BlobRepo, blob string, muRun *sync.Mutex, outputDir string) error {
-	muRun.Lock()
-	defer muRun.Unlock()
+var muMap = &sync.Mutex{}
+var requestMap = map[string]*fetchJob{}
 
+type fetchJob struct {
+	cond *sync.Cond
+	err  error
+}
+
+func FetchBlob(repos []BlobRepo, blob string, outputDir string) error {
+	// if a fetch is already happening, just wait for the result
+	// from that
+	muMap.Lock()
+	job, ok := requestMap[blob]
+	// fetch not already in progress, create a job record
+	if !ok {
+		job = &fetchJob{cond: sync.NewCond(&sync.Mutex{}), err: nil}
+		requestMap[blob] = job
+		defer func() {
+			muMap.Lock()
+			delete(requestMap, blob)
+			job.cond.Broadcast()
+			muMap.Unlock()
+		}()
+	}
+	muMap.Unlock()
+
+	// someone else is already doing a fetch, wait for their result
+	if ok {
+		job.cond.L.Lock()
+		job.cond.Wait()
+		job.cond.L.Unlock()
+		return job.err
+	}
+
+	// if we go this far, the fetch is our job
 	var err error
 	for i := range repos {
 		reader, sz, err2 := FetchBlobFromRepo(repos[i], blob)
@@ -44,13 +75,15 @@ func FetchBlob(repos []BlobRepo, blob string, muRun *sync.Mutex, outputDir strin
 	}
 
 	if err != nil {
-		return fmt.Errorf("attempted write of %q failed: %s", blob, err)
+		job.err = fmt.Errorf("attempted write of %q failed: %s", blob, err)
+	} else {
+		job.err = fmt.Errorf("couldn't fetch blob %q from any repo", blob)
 	}
-	return fmt.Errorf("couldn't fetch blob %q from any repo", blob)
+	return job.err
 }
 
-// FetchBlobFromRepo attempts to pull the set of blobs requested from the supplied
-// BlobRepo. FetchBlob returns the list of blobs successfully stored.
+// FetchBlobFromRepo starts an IO request to the given repository and returns
+// the io.ReadCloser, size and any error enountered.
 func FetchBlobFromRepo(r BlobRepo, blob string) (io.ReadCloser, int64, error) {
 	var client *http.Client
 	if r.Source != nil {
@@ -87,7 +120,7 @@ func FetchBlobFromRepo(r BlobRepo, blob string) (io.ReadCloser, int64, error) {
 }
 
 func WriteBlob(name string, sz int64, con io.ReadCloser) error {
-	f, err := os.Create(name)
+	f, err := os.OpenFile(name, os.O_CREATE|os.O_WRONLY, os.ModePerm)
 	if err != nil {
 		return err
 	}

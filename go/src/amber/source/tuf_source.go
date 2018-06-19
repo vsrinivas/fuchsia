@@ -68,6 +68,9 @@ func newTUFSourceConfig(cfg *amber.SourceConfig) (tufSourceConfig, error) {
 
 // TUFSource wraps a TUF Client into the Source interface
 type TUFSource struct {
+	// mu guards all following fields
+	mu sync.Mutex
+
 	cfg tufSourceConfig
 
 	dir string
@@ -86,7 +89,6 @@ type TUFSource struct {
 
 	keys      []*tuf_data.Key
 	tufClient *tuf.Client
-	mu        sync.Mutex
 }
 
 type merkle struct {
@@ -345,6 +347,10 @@ func (f *TUFSource) GetConfig() *amber.SourceConfig {
 }
 
 func (f *TUFSource) GetHttpClient() *http.Client {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	// http.Client itself is thread safe, but the member alias is not, so is
+	// guarded here.
 	return f.httpClient
 }
 

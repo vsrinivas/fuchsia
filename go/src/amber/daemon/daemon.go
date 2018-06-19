@@ -51,9 +51,6 @@ type Daemon struct {
 	// update Package content from.
 	processor func(*GetResult, *pkg.PackageSet) error
 
-	//blobSrc       *BlobFetcher
-	muBlobUpdates sync.Mutex
-
 	muRepos sync.Mutex
 	repos   []BlobRepo
 
@@ -226,10 +223,10 @@ func (d *Daemon) AddBlobRepo(br BlobRepo) error {
 	return nil
 }
 
-// GetBlob is a blocking call which tries to get all requested blobs
+// GetBlob is a blocking call which downloads the requested blob
 func (d *Daemon) GetBlob(blob string) error {
 	repos := d.blobRepos()
-	return FetchBlob(repos, blob, &d.muBlobUpdates, DstBlob)
+	return FetchBlob(repos, blob, DstBlob)
 }
 
 func (d *Daemon) RemoveBlobRepo(r BlobRepo) {
