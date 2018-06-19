@@ -145,6 +145,8 @@ pub enum Error {
     InvalidNonceSize(usize),
     #[fail(display = "invalid key data; expected negotiated RSNE")]
     InvalidKeyDataRsne,
+    #[fail(display = "buffer too small; required: {}, available: {}", _0, _1)]
+    BufferTooSmall(usize, usize),
 }
 
 impl From<std::io::Error> for Error {

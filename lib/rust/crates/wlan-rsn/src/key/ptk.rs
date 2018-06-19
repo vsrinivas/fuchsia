@@ -25,7 +25,12 @@ pub struct Ptk {
 impl Ptk {
     // IEEE 802.11-2016, 12.7.1.3
     pub fn new(
-        pmk: &[u8], aa: &[u8; 6], spa: &[u8; 6], anonce: &[u8], snonce: &[u8], akm: &Akm,
+        pmk: &[u8],
+        aa: &[u8; 6],
+        spa: &[u8; 6],
+        anonce: &[u8],
+        snonce: &[u8],
+        akm: &Akm,
         cipher: &Cipher,
     ) -> Result<Ptk, failure::Error> {
         if anonce.len() != 32 {
@@ -80,6 +85,10 @@ impl Ptk {
     pub fn tk(&self) -> &[u8] {
         let start = self.kck_len + self.kek_len;
         &self.ptk[start..start + self.tk_len]
+    }
+
+    pub fn ptk(&self) -> &[u8] {
+        &self.ptk[..]
     }
 }
 

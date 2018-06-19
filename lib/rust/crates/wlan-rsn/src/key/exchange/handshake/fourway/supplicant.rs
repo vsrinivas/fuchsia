@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use Error;
 use akm::Akm;
 use bytes::Bytes;
 use bytes::BytesMut;
@@ -9,22 +10,20 @@ use crypto_utils::nonce::NonceReader;
 use eapol;
 use failure;
 use integrity;
-use key::exchange::handshake::fourway;
 use key::exchange::Key;
+use key::exchange::handshake::fourway;
 use key::gtk::Gtk;
 use key::ptk::Ptk;
 use key_data;
 use rsna::{SecAssocResult, SecAssocUpdate};
 use rsne::Rsne;
 use std::rc::Rc;
-use Error;
 
 #[derive(Default)]
 struct PtkInitState {}
 struct GtkInitState {}
 
 impl PtkInitState {
-
     // IEEE Std 802.1X-2010, 12.7.6.2
     fn on_message_1(
         &self,
@@ -56,7 +55,6 @@ impl PtkInitState {
         Ok((msg2, ptk))
     }
 
-
     // IEEE Std 802.1X-2010, 12.7.6.3
     fn create_message_2(
         &self,
@@ -73,7 +71,7 @@ impl PtkInitState {
         shared.cfg.a_rsne.as_bytes(&mut key_data)?;
 
         let mut msg2 = eapol::KeyFrame {
-            version: eapol::ProtocolVersion::Ieee802dot1x2010 as u8,
+            version: msg1.version,
             packet_type: eapol::PacketType::Key as u8,
             packet_body_len: 0, // Updated afterwards
             descriptor_type: eapol::KeyDescriptor::Ieee802dot11 as u8,
@@ -92,14 +90,14 @@ impl PtkInitState {
         // Verified before that Supplicant's RSNE holds one AKM Suite.
         let akm = &shared.cfg.s_rsne.akm_suites[0];
         let integrity_alg = akm.integrity_algorithm().ok_or(Error::UnsupportedAkmSuite)?;
-        update_mic(&shared.kck[..], integrity_alg, &mut msg2)?;
+        let mic_len = akm.mic_bytes().ok_or(Error::UnsupportedAkmSuite)?;
+        update_mic(&shared.kck[..], mic_len, integrity_alg, &mut msg2)?;
 
         Ok(msg2)
     }
 }
 
 impl GtkInitState {
-
     // IEEE Std 802.1X-2010, 12.7.6.4
     fn on_message_3(
         &self,
@@ -136,7 +134,6 @@ impl GtkInitState {
         }
     }
 
-
     // IEEE Std 802.1X-2010, 12.7.6.5
     fn create_message_4(
         &self,
@@ -150,7 +147,7 @@ impl GtkInitState {
         key_info.set_secure(true);
 
         let mut msg4 = eapol::KeyFrame {
-            version: eapol::ProtocolVersion::Ieee802dot1x2010 as u8,
+            version: msg3.version,
             packet_type: eapol::PacketType::Key as u8,
             packet_body_len: 0, // Updated afterwards
             descriptor_type: eapol::KeyDescriptor::Ieee802dot11 as u8,
@@ -169,7 +166,8 @@ impl GtkInitState {
         // Verified before that Supplicant's RSNE holds one AKM Suite.
         let akm = &shared.cfg.s_rsne.akm_suites[0];
         let integrity_alg = akm.integrity_algorithm().ok_or(Error::UnsupportedAkmSuite)?;
-        update_mic(&shared.kck[..], integrity_alg, &mut msg4)?;
+        let mic_len = akm.mic_bytes().ok_or(Error::UnsupportedAkmSuite)?;
+        update_mic(&shared.kck[..], mic_len, integrity_alg, &mut msg4)?;
 
         Ok(msg4)
     }
@@ -310,6 +308,7 @@ impl Supplicant {
 
 fn update_mic(
     kck: &[u8],
+    mic_len: u16,
     alg: Box<integrity::Algorithm>,
     frame: &mut eapol::KeyFrame,
 ) -> Result<(), failure::Error> {
@@ -318,6 +317,6 @@ fn update_mic(
     let written = buf.len();
     buf.truncate(written);
     let mic = alg.compute(kck, &buf[..])?;
-    frame.key_mic = Bytes::from(mic);
+    frame.key_mic = Bytes::from(&mic[..mic_len as usize]);
     Ok(())
 }

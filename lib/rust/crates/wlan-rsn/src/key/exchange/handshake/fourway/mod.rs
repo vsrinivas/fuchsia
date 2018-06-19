@@ -7,6 +7,7 @@ mod supplicant;
 
 use self::authenticator::Authenticator;
 use self::supplicant::Supplicant;
+use Error;
 use akm::Akm;
 use bytes::BytesMut;
 use cipher::{Cipher, GROUP_CIPHER_SUITE, TKIP};
@@ -18,7 +19,6 @@ use key::ptk::Ptk;
 use rsna::{Role, SecAssocResult, SecAssocUpdate};
 use rsne::Rsne;
 use std::rc::Rc;
-use Error;
 
 enum RoleHandler {
     Authenticator(Authenticator),
@@ -222,7 +222,7 @@ impl Fourway {
 
         // IEEE Std 802.11-2016, 12.7.2, f)
         // IV is not used.
-        if is_zero(&frame.key_iv[..]) {
+        if !is_zero(&frame.key_iv[..]) {
             return Err(Error::InvalidIv.into());
         }
 
@@ -273,7 +273,7 @@ impl Fourway {
         // completed successfully. Report all other updates.
         updates
             .drain_filter(|update| match update {
-                SecAssocUpdate::Key(key) => true,
+                SecAssocUpdate::Key(_) => true,
                 _ => false,
             })
             .for_each(|update| {

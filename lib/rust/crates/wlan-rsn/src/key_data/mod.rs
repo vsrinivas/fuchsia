@@ -4,6 +4,7 @@
 
 pub mod kde;
 
+use bytes::{BufMut, BytesMut};
 use nom::IResult::{Done, Incomplete};
 use nom::{IResult, Needed};
 use rsne;
@@ -60,9 +61,96 @@ pub fn extract_elements(key_data: &[u8]) -> Result<Vec<Element>> {
     }
 }
 
+// IEEE Std 802.11-2016, 12.7.2 j)
+// Adds padding to a given key data if necessary and truncates all remaining bytes of the buffer.
+pub fn add_padding(buf: &mut BytesMut) {
+    let padding_len = if buf.len() < 16 {
+        16 - buf.len()
+    } else {
+        ((buf.len() + 7) / 8) * 8 - buf.len()
+    };
+
+    if padding_len != 0 {
+        // Buffer too small to hold padding; grow buffer.
+        if buf.remaining_mut() < padding_len {
+            let remaining = buf.remaining_mut();
+            buf.reserve(padding_len - remaining);
+        }
+
+        buf.put_u8(kde::TYPE);
+        buf.put(&vec![0u8; padding_len - 1][..]);
+    }
+
+    let written_bytes = buf.len();
+    buf.truncate(written_bytes);
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    pub fn is_zero(slice: &[u8]) -> bool {
+        slice.iter().all(|&x| x == 0)
+    }
+
+    #[test]
+    fn test_add_padding_min_length() {
+        let mut buf = BytesMut::from(vec![]);
+        add_padding(&mut buf);
+        assert_eq!(buf.len(), 16);
+        assert_eq!(buf[0], 0xDD);
+        assert!(is_zero(&buf[1..]));
+
+        let mut buf = BytesMut::from(vec![0xFF]);
+        add_padding(&mut buf);
+        assert_eq!(buf.len(), 16);
+        assert_eq!(buf[1], 0xDD);
+        assert!(is_zero(&buf[2..]));
+
+        // Although length is a multiple of 8, the minimum length should be 16.
+        let mut buf = BytesMut::from(vec![0xFF; 8]);
+        add_padding(&mut buf);
+        assert_eq!(buf.len(), 16);
+        assert_eq!(buf[8], 0xDD);
+        assert!(is_zero(&buf[9..]));
+
+        let mut buf = BytesMut::from(vec![0xFF; 14]);
+        add_padding(&mut buf);
+        assert_eq!(buf.len(), 16);
+        assert_eq!(buf[14], 0xDD);
+        assert!(is_zero(&buf[15..]));
+
+        let mut buf = BytesMut::from(vec![0xFF; 16]);
+        add_padding(&mut buf);
+        assert_eq!(buf.len(), 16);
+        assert_eq!(buf[15], 0xFF);
+    }
+
+    #[test]
+    fn test_add_padding_8_multiple_length() {
+        let mut buf = BytesMut::from(vec![0xFF; 17]);
+        add_padding(&mut buf);
+        assert_eq!(buf.len(), 24);
+        assert_eq!(buf[17], 0xDD);
+        assert!(is_zero(&buf[18..]));
+
+        let mut buf = BytesMut::from(vec![0xFF; 22]);
+        add_padding(&mut buf);
+        assert_eq!(buf.len(), 24);
+        assert_eq!(buf[22], 0xDD);
+        assert!(is_zero(&buf[23..]));
+
+        let mut buf = BytesMut::from(vec![0xFF; 24]);
+        add_padding(&mut buf);
+        assert_eq!(buf.len(), 24);
+        assert_eq!(buf[23], 0xFF);
+
+        let mut buf = BytesMut::from(vec![0xFF; 25]);
+        add_padding(&mut buf);
+        assert_eq!(buf.len(), 32);
+        assert_eq!(buf[25], 0xDD);
+        assert!(is_zero(&buf[26..]));
+    }
 
     #[test]
     fn test_complex_key_data() {
@@ -92,7 +180,7 @@ mod tests {
             0x00, 0x0F, 0xAC, 1, // Group Data Cipher
             // Unsupported IE
             200, 2, 1, 3,
-            // 8 bytes padding
+            // 4 bytes padding
             0xDD, 0, 0, 0,
         ];
         let result = extract_elements(&buf[..]);
@@ -126,8 +214,7 @@ mod tests {
                 },
                 Element::Rsne(rsne) => match pos {
                     2 => {
-                        assert_eq!(rsne.element_id, 48);
-                        assert_eq!(rsne.length, 6);
+                        assert_eq!(rsne.len(), 8);
                         assert_eq!(rsne.version, 257);
                         assert!(rsne.group_data_cipher_suite.is_some());
                         let cipher = rsne.group_data_cipher_suite.unwrap();
@@ -136,8 +223,7 @@ mod tests {
                         assert_eq!(cipher.oui, &oui[..]);
                     }
                     4 => {
-                        assert_eq!(rsne.element_id, 48);
-                        assert_eq!(rsne.length, 6);
+                        assert_eq!(rsne.len(), 8);
                         assert_eq!(rsne.version, 9);
                         assert!(rsne.group_data_cipher_suite.is_some());
                         let cipher = rsne.group_data_cipher_suite.unwrap();

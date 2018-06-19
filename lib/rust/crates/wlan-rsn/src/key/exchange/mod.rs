@@ -63,7 +63,11 @@ pub enum Config {
 
 impl Config {
     pub fn for_4way_handshake(
-        role: Role, sta_addr: [u8; 6], sta_rsne: Rsne, peer_addr: [u8; 6], peer_rsne: Rsne
+        role: Role,
+        sta_addr: [u8; 6],
+        sta_rsne: Rsne,
+        peer_addr: [u8; 6],
+        peer_rsne: Rsne,
     ) -> Result<Config, failure::Error> {
         fourway::Config::new(role, sta_addr, sta_rsne, peer_addr, peer_rsne)
             .map_err(|e| e.into())

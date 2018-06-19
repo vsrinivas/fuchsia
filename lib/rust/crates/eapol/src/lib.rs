@@ -86,7 +86,7 @@ bitfield! {
     pub request, set_request: 11;
     pub encrypted_key_data, set_encrypted_key_data: 12;
     pub smk_message, set_smk_message: 13;
-    value, _: 15,0;
+    pub value, _: 15,0;
     // Bit 14-15 reserved.
 }
 
@@ -118,9 +118,8 @@ pub struct KeyFrame {
 
 impl KeyFrame {
     pub fn len(&self) -> usize {
-        let static_part_len: usize = 35;
-        let dynamic_part_len: usize =
-            self.key_nonce.len() + self.key_iv.len() + self.key_mic.len() + self.key_data.len();
+        let static_part_len: usize = 83;
+        let dynamic_part_len: usize = self.key_mic.len() + self.key_data.len();
         static_part_len + dynamic_part_len
     }
 

@@ -19,7 +19,10 @@ impl HmacSha1 {
 impl Algorithm for HmacSha1 {
     fn verify(&self, key: &[u8], data: &[u8], expected: &[u8]) -> bool {
         match self.compute(key, data) {
-            Ok(code) => MacResult::new_from_owned(code) == MacResult::new(expected),
+            Ok(mut code) => {
+                code.resize(expected.len(), 0);
+                MacResult::new_from_owned(code) == MacResult::new(expected)
+            }
             _ => false,
         }
     }

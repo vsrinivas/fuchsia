@@ -15,7 +15,10 @@ pub struct Gtk {
 
 impl Gtk {
     pub fn from_gtk(gtk: Vec<u8>) -> Gtk {
-        Gtk { tk_len: gtk.len(), gtk: gtk, }
+        Gtk {
+            tk_len: gtk.len(),
+            gtk: gtk,
+        }
     }
 
     // IEEE 802.11-2016, 12.7.1.4
@@ -39,6 +42,10 @@ impl Gtk {
 
     pub fn tk(&self) -> &[u8] {
         &self.gtk[0..self.tk_len]
+    }
+
+    pub fn gtk(&self) -> &[u8] {
+        &self.gtk[..]
     }
 }
 
