@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use bytes::BufMut;
+use bytes::{Buf, BufMut};
 use futures::task;
 use futures::{Async, Future, Poll};
 use std::io;
@@ -47,11 +47,33 @@ impl UdpSocket {
             Err(e) => {
                 if e.kind() == io::ErrorKind::WouldBlock {
                     self.0.need_read(cx);
-                    return Ok(Async::Pending);
+                    Ok(Async::Pending)
+                } else {
+                    Err(e)
                 }
-                return Err(e);
             }
             Ok((size, addr)) => Ok(Async::Ready((size, addr))),
+        }
+    }
+
+    pub fn send_to<B: Buf>(self, buf: B, addr: SocketAddr) -> SendTo<B> {
+        SendTo(Some((buf, addr, self)))
+    }
+
+    pub fn async_send_to(
+        &self, buf: &[u8], addr: SocketAddr, cx: &mut task::Context,
+    ) -> Poll<(), io::Error> {
+        try_ready!(EventedFd::poll_writable(&self.0, cx));
+        match self.0.as_ref().send_to(buf, addr) {
+            Err(e) => {
+                if e.kind() == io::ErrorKind::WouldBlock {
+                    self.0.need_write(cx);
+                    Ok(Async::Pending)
+                } else {
+                    Err(e)
+                }
+            }
+            Ok(_) => Ok(Async::Ready(())),
         }
     }
 }
@@ -80,5 +102,52 @@ where
         let socket = self.1.take().unwrap();
         let buffer = self.0.take().unwrap();
         Ok(Async::Ready((socket, buffer, addr)))
+    }
+}
+
+pub struct SendTo<B: Buf>(Option<(B, SocketAddr, UdpSocket)>);
+
+impl<B> Future for SendTo<B>
+where
+    B: Buf,
+{
+    type Item = UdpSocket;
+    type Error = io::Error;
+
+    fn poll(&mut self, cx: &mut task::Context) -> Poll<Self::Item, Self::Error> {
+        {
+            let (buf, addr, socket) = self.0.as_mut().expect("polled a SendTo after completion");
+            try_ready!(socket.async_send_to(buf.bytes(), *addr, cx));
+        }
+        let (_, _, socket) = self.0.take().unwrap();
+        Ok(Async::Ready(socket))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use Executor;
+    use futures::{FutureExt, future};
+    use super::UdpSocket;
+
+    #[test]
+    fn send_recv() {
+        let mut exec = Executor::new().expect("could not create executor");
+
+        let addr = "127.0.0.1:29995".parse().unwrap();
+        let buf = ::std::io::Cursor::new(b"hello world");
+        let socket = UdpSocket::bind(&addr).expect("could not create socket");
+        let fut = socket.send_to(buf.clone(), addr)
+            .and_then(|socket| {
+                let recvbuf = Vec::with_capacity(11);
+                socket.recv_from(recvbuf)
+            })
+            .and_then(|(_sock, recvbuf, sender)| {
+                assert_eq!(addr, sender);
+                assert_eq!(buf.get_ref(), &recvbuf.as_slice());
+                future::ok(())
+            });
+
+        exec.run_singlethreaded(fut).expect("failed to run udp socket test");
     }
 }
