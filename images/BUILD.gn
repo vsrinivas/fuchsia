@@ -605,32 +605,6 @@ vboot("zircon") {
 zircon_vboot_image_path = get_target_outputs(":zircon.vboot")
 image_paths += [ "IMAGE_ZIRCON_VBOOT=" + rebase_path(zircon_vboot_image_path[0], root_build_dir) ]
 
-if (target_cpu != "arm64") {
-  # EFI ESP images.
-  esp("local") {
-    testonly = true
-    if (always_zedboot) {
-      cmdline = "zedboot/efi_cmdline.txt"
-    } else {
-      cmdline = "efi_local_cmdline.txt"
-    }
-    zircon_bin = "${zircon_build_dir}/zircon.bin"
-
-    # XXX(raggi): this path is shared with //build/images/BUILD.gn.
-    zedboot_bin = "$root_out_dir/zedboot.bin"
-
-    bootdatas = get_target_outputs(":bootdata-blob")
-    bootdata_bin = bootdatas[0]
-
-    deps = [
-      ":bootdata-blob",
-      "zedboot:zedboot.bin",
-    ]
-  }
-  esp_image_path = get_target_outputs(":local.esp.blk")
-  image_paths += [ "IMAGE_ESP_RAW=" + rebase_path(esp_image_path[0], root_build_dir) ]
-}
-
 zbi("bootfs") {
   manifest = boot_manifest
   deps = [
@@ -659,6 +633,35 @@ zbi("zircon") {
 }
 zircon_image_path = get_target_outputs(":zircon.zbi")
 image_paths += [ "IMAGE_ZIRCONA_ZBI=" + rebase_path(zircon_image_path[0], root_build_dir) ]
+
+
+if (target_cpu != "arm64") {
+  # EFI ESP images.
+  esp("local") {
+    testonly = true
+    if (always_zedboot) {
+      cmdline = "zedboot/efi_cmdline.txt"
+    } else {
+      cmdline = "efi_local_cmdline.txt"
+    }
+
+    # XXX(raggi): this path is shared with //build/images/BUILD.gn.
+    zedboot_bin = "$root_out_dir/zedboot.bin"
+
+    zbi_label = ":zircon.zbi"
+    zbis = get_target_outputs(zbi_label)
+    zbi = zbis[0]
+
+    zircon_bin = zbi
+
+    deps = [
+      zbi_label,
+      "zedboot:zedboot.bin",
+    ]
+  }
+  esp_image_path = get_target_outputs(":local.esp.blk")
+  image_paths += [ "IMAGE_ESP_RAW=" + rebase_path(esp_image_path[0], root_build_dir) ]
+}
 
 # The installer needs all images except for fvm.blk (it has fvm.sparse.blk):
 installer_images = [
