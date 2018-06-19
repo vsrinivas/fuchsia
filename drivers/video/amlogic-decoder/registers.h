@@ -312,10 +312,17 @@ DEFINE_REGISTER(HevcParserCmdSkip0, DosRegisterIo, 0x3128);
 DEFINE_REGISTER(HevcParserCmdSkip1, DosRegisterIo, 0x3129);
 DEFINE_REGISTER(HevcParserCmdSkip2, DosRegisterIo, 0x312a);
 
+DEFINE_REGISTER(HevcMpredAbvStartAddr, DosRegisterIo, 0x3212);
+DEFINE_REGISTER(HevcMpredMvWrStartAddr, DosRegisterIo, 0x3213);
+DEFINE_REGISTER(HevcMpredMvRdStartAddr, DosRegisterIo, 0x3214);
+DEFINE_REGISTER(HevcMpredMvWptr, DosRegisterIo, 0x3215);
+DEFINE_REGISTER(HevcMpredMvRptr, DosRegisterIo, 0x3216);
+DEFINE_REGISTER(HevcMpredCurrLcu, DosRegisterIo, 0x3219);
 DEFINE_REGISTER(HevcMpredCtrl3, DosRegisterIo, 0x321d);
 REGISTER_NAME(HevcMpredCtrl4, DosRegisterIo, 0x324c)
   DEF_BIT(6, use_prev_frame_mvs);
 };
+DEFINE_REGISTER(HevcMpredMvRdEndAddr, DosRegisterIo, 0x3262);
 
 DEFINE_REGISTER(HevcMpsr, DosRegisterIo, 0x3301);
 DEFINE_REGISTER(HevcCpsr, DosRegisterIo, 0x3321);
@@ -339,9 +346,21 @@ REGISTER_NAME(HevcdIppAxiifConfig, DosRegisterIo, 0x340b)
   DEF_FIELD(3, 0, double_write_endian);
 };
 
-DEFINE_REGISTER(HevcdMppAnc2AxiTblConfAddr, DosRegisterIo, 0x3460);
+DEFINE_REGISTER(Vp9dMppRefScaleEnable, DosRegisterIo, 0x3441);
+REGISTER_NAME(Vp9dMppRefinfoTblAccconfig, DosRegisterIo, 0x3442)
+  DEF_BIT(2, bit2);
+};
+DEFINE_REGISTER(Vp9dMppRefinfoData, DosRegisterIo, 0x3443);
+REGISTER_NAME(HevcdMppAnc2AxiTblConfAddr, DosRegisterIo, 0x3460)
+  DEF_BIT(1, bit1);
+  DEF_BIT(2, bit2);
+};
 DEFINE_REGISTER(HevcdMppAnc2AxiTblData, DosRegisterIo, 0x3464);
-DEFINE_REGISTER(HevcdMppAncCanvasAccconfigAddr, DosRegisterIo, 0x34c0);
+REGISTER_NAME(HevcdMppAncCanvasAccconfigAddr, DosRegisterIo, 0x34c0);
+  DEF_BIT(0, bit0); // Probably signals a write.
+  DEF_BIT(1, bit1);
+  DEF_FIELD(15, 8, field15_8);
+};
 DEFINE_REGISTER(HevcdMppAncCanvasDataAddr, DosRegisterIo, 0x34c1);
 
 REGISTER_NAME(HevcdMppDecompCtl1, DosRegisterIo, 0x34c2)

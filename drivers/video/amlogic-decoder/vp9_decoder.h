@@ -82,6 +82,12 @@ class Vp9Decoder : public VideoDecoder {
   struct Frame {
     ~Frame();
 
+    // Index into frames_.
+    uint32_t index;
+
+    // This is the count of references from reference_frame_map_, last_frame_,
+    // current_frame_, and any buffers the ultimate consumers have outstanding.
+    int32_t refcount = 0;
     // Allocated on demand.
     std::unique_ptr<VideoFrame> frame;
     // With the MMU enabled the compressed frame header is stored separately
@@ -91,12 +97,18 @@ class Vp9Decoder : public VideoDecoder {
 
     io_buffer_t compressed_data = {};
 
+    // This stores the motion vectors used to decode this frame for use in
+    // calculating motion vectors for the next frame.
+    io_buffer_t mv_mpred_buffer = {};
+
     // This is decoded_frame_count_ when this frame was decoded into.
     uint32_t decoded_index = 0xffffffff;
   };
 
   struct PictureData {
-    bool keyframe;
+    bool keyframe = false;
+    bool intra_only = false;
+    uint32_t refresh_frame_flags = 0;
   };
 
   union HardwareRenderParams;
@@ -104,7 +116,7 @@ class Vp9Decoder : public VideoDecoder {
   zx_status_t AllocateFrames();
   void InitializeHardwarePictureList();
   void InitializeParser();
-  void FindNewFrameBuffer(HardwareRenderParams* params);
+  bool FindNewFrameBuffer(HardwareRenderParams* params);
   void InitLoopFilter();
   void UpdateLoopFilter(HardwareRenderParams* params);
   void ProcessCompletedFrames();
@@ -113,6 +125,8 @@ class Vp9Decoder : public VideoDecoder {
   void ConfigureMcrcc();
   void UpdateLoopFilterThresholds();
   void ConfigureMotionPrediction();
+  void ConfigureReferenceFrameHardware();
+  void SetRefFrames(HardwareRenderParams* params);
 
   Owner* owner_;
 
@@ -120,7 +134,7 @@ class Vp9Decoder : public VideoDecoder {
   FrameReadyNotifier notifier_;
 
   std::vector<std::unique_ptr<Frame>> frames_;
-  int current_frame_idx_ = -1;
+  Frame* last_frame_ = nullptr;
   Frame* current_frame_ = nullptr;
   std::unique_ptr<loop_filter_info_n> loop_filter_info_;
   std::unique_ptr<loopfilter> loop_filter_;
@@ -131,6 +145,13 @@ class Vp9Decoder : public VideoDecoder {
 
   PictureData last_frame_data_;
   PictureData current_frame_data_;
+  // The VP9 specification requires that 8 reference frames can be stored -
+  // they're saved in this structure.
+  Frame* reference_frame_map_[8] = {};
+
+  // Each frame that's being decoded can reference 3 of the frames that are in
+  // reference_frame_map_.
+  Frame* current_reference_frames_[3] = {};
 };
 
 #endif  // VP9_DECODER_H_

@@ -180,7 +180,7 @@ class TestVP9 {
 #if DUMP_VIDEO_TO_FILE
           DumpVideoFrameToFile(frame, "/tmp/bearvp9.yuv");
 #endif
-          if (frame_count == 1)
+          if (frame_count == 26)
             wait_valid.set_value();
         });
 
