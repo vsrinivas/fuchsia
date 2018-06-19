@@ -1,5 +1,5 @@
 {
-    "packages": {
-        "mime_sniffer_unittests": "//garnet/lib/mime_sniffer:mime_sniffer_unittests"
-    }
+    "packages": [
+        "//garnet/lib/mime_sniffer:mime_sniffer_unittests"
+    ]
 }

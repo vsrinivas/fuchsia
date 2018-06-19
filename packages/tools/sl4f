@@ -1,5 +1,5 @@
 {
-    "packages": {
-        "sl4f": "//garnet/bin/sl4f"
-    }
+    "packages": [
+        "//garnet/bin/sl4f"
+    ]
 }
