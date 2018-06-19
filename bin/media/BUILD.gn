@@ -14,6 +14,7 @@ group("services") {
 
 group("tools") {
   public_deps = [
+    "//garnet/bin/media/signal_generator",
     "//garnet/bin/media/vol",
   ]
 }

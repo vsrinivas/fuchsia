@@ -1,4 +1,4 @@
-{
+ {
     "imports": [
         "garnet/packages/prod/media_audio",
         "garnet/packages/prod/media_codec",
@@ -6,8 +6,9 @@
     ],
     "packages": [
         "//garnet/bin/media/net_media_service",
-        "//garnet/bin/tts:tts_service",
+        "//garnet/bin/media/signal_generator",
         "//garnet/bin/media/vol",
+        "//garnet/bin/tts:tts_service",
         "//garnet/lib/media/camera/simple_camera_server:simple_camera_server_cpp"
     ]
 }
