@@ -8,7 +8,6 @@ extern crate fuchsia_zircon as zx;
 extern crate futures;
 
 pub mod client;
-pub mod mlme;
 
 use futures::channel::mpsc;
 
