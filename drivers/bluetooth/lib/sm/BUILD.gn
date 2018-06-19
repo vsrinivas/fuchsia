@@ -20,6 +20,8 @@ static_library("sm") {
     "bearer.h",
     "status.cc",
     "status.h",
+    "types.cc",
+    "types.h",
     "util.cc",
     "util.h",
   ]

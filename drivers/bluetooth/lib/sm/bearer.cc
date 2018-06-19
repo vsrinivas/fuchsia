@@ -32,22 +32,6 @@ common::MutableByteBufferPtr NewPDU(size_t param_size) {
 
 }  // namespace
 
-Bearer::PairingFeatures::PairingFeatures() {
-  std::memset(this, 0, sizeof(*this));
-}
-
-Bearer::PairingFeatures::PairingFeatures(bool initiator, bool sc,
-                                         PairingMethod method,
-                                         uint8_t enc_key_size,
-                                         KeyDistGenField local_kd,
-                                         KeyDistGenField remote_kd)
-    : initiator(initiator),
-      secure_connections(sc),
-      method(method),
-      encryption_key_size(enc_key_size),
-      local_key_distribution(local_kd),
-      remote_key_distribution(remote_kd) {}
-
 Bearer::Bearer(fbl::RefPtr<l2cap::Channel> chan, hci::Connection::Role role,
                bool sc_supported, IOCapability io_capability,
                StatusCallback error_callback,

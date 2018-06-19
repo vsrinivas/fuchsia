@@ -5,6 +5,7 @@
 #pragma once
 
 #include <lib/async/cpp/task.h>
+#include <lib/fit/function.h>
 
 #include "garnet/drivers/bluetooth/lib/hci/connection.h"
 #include "garnet/drivers/bluetooth/lib/l2cap/channel.h"
@@ -13,6 +14,7 @@
 #include "garnet/drivers/bluetooth/lib/sm/packet.h"
 #include "garnet/drivers/bluetooth/lib/sm/smp.h"
 #include "garnet/drivers/bluetooth/lib/sm/status.h"
+#include "garnet/drivers/bluetooth/lib/sm/types.h"
 
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/weak_ptr.h"
@@ -38,15 +40,7 @@ class Bearer final {
   // Callback used to communicate the result of the "Pairing Feature Exchange"
   // sub-procedure (i.e. Phase 1). This can be called when pairing is either
   // remote or locally initated, with the following parameters:
-  //
-  //   - |initiator|: True if the local device is in the "initiator" role.
-  //   - |secure_connections|: True if LE Secure Connections pairing should be
-  //     used. Otherwise, LE Legacy pairing should be used.
-  //   - |method|: Indicates the key generation model used for Phase 2.
-  //   - |encryption_key_size|: The negotiated encryption key size.
-  //   - |local_key_distribution|: The keys that we must distribute to the peer.
-  //   - |remote_key_distribution|: The keys that will be distributed to us by
-  //     the peer.
+  //   - |features|: The negotiated features.
   //   - |preq| and |pres|: The SMP "Pairing Request" and "Pairing Response"
   //     command payloads that have been exchanged between the devices. These
   //     values are used to generate "Mconfirm" and "Sconfirm" values used in LE
@@ -64,20 +58,7 @@ class Bearer final {
   //
   // The Pairing Feature Exchange procedures will fail if no feature exchange
   // callback is assigned.
-  struct PairingFeatures {
-    PairingFeatures();
-    PairingFeatures(bool initiator, bool sc, PairingMethod method,
-                    uint8_t enc_key_size, KeyDistGenField local_kd,
-                    KeyDistGenField remote_kd);
-
-    bool initiator;
-    bool secure_connections;
-    PairingMethod method;
-    uint8_t encryption_key_size;
-    KeyDistGenField local_key_distribution;
-    KeyDistGenField remote_key_distribution;
-  };
-  using FeatureExchangeCallback = fbl::Function<void(
+  using FeatureExchangeCallback = fit::function<void(
       const PairingFeatures& features, const common::ByteBuffer& preq,
       const common::ByteBuffer& pres)>;
 

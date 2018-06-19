@@ -47,7 +47,7 @@ class SMP_BearerTest : public l2cap::testing::FakeChannelTest {
     last_error_ = error;
   }
 
-  void OnFeatureExchangeComplete(const Bearer::PairingFeatures& features,
+  void OnFeatureExchangeComplete(const PairingFeatures& features,
                                  const ByteBuffer& preq,
                                  const ByteBuffer& pres) {
     feature_exchange_count_++;
@@ -63,7 +63,7 @@ class SMP_BearerTest : public l2cap::testing::FakeChannelTest {
   Status last_error() const { return last_error_; }
 
   int feature_exchange_count() const { return feature_exchange_count_; }
-  const Bearer::PairingFeatures& features() const { return features_; }
+  const PairingFeatures& features() const { return features_; }
   const ByteBuffer& preq() const { return preq_; }
   const ByteBuffer& pres() const { return pres_; }
 
@@ -75,7 +75,7 @@ class SMP_BearerTest : public l2cap::testing::FakeChannelTest {
   Status last_error_;
 
   int feature_exchange_count_ = 0;
-  Bearer::PairingFeatures features_;
+  PairingFeatures features_;
   DynamicByteBuffer pres_, preq_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(SMP_BearerTest);
