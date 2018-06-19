@@ -51,9 +51,8 @@ fuchsia::ledger::PageSnapshotPtr PageClient::NewSnapshot(
 }
 
 fidl::InterfaceRequest<fuchsia::ledger::PageSnapshot> PageClient::NewRequest() {
-  page_snapshot_ = std::make_shared<fuchsia::ledger::PageSnapshotPtr>();
-  auto ret = (*page_snapshot_).NewRequest();
-  (*page_snapshot_).set_error_handler([this] {
+  auto ret = page_snapshot_.NewRequest();
+  page_snapshot_.set_error_handler([this] {
     FXL_LOG(ERROR) << context_ << ": "
                    << "PageSnapshot connection unexpectedly closed.";
   });
