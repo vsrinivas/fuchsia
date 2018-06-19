@@ -17,6 +17,11 @@ Display::Display(fuchsia_display_Info* info) {
     for (unsigned i = 0; i < info->modes.count; i++) {
         modes_.push_back(mode[i]);
     }
+
+    auto cursors = reinterpret_cast<fuchsia_display_CursorInfo*>(info->cursor_configs.data);
+    for (unsigned i = 0; i < info->cursor_configs.count; i++) {
+        cursors_.push_back(cursors[i]);
+    }
 }
 
 void Display::Dump() {
@@ -32,6 +37,12 @@ void Display::Dump() {
         printf("\t\t%d\t: %dx%d\t%d.%02d\n", i,
                modes_[i].horizontal_resolution, modes_[i].vertical_resolution,
                modes_[i].refresh_rate_e2 / 100, modes_[i].refresh_rate_e2 % 100);
+    }
+
+    printf("\n\tSupported cursor modes:\n");
+    for (unsigned i = 0; i < cursors_.size(); i++) {
+        printf("\t\t%d\t: %dx%d\t%08x\n",
+               i, cursors_[i].width, cursors_[i].height, cursors_[i].pixel_format);
     }
     printf("\n");
 }

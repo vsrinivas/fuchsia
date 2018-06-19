@@ -14,6 +14,9 @@
 // a define to enable using it for testing.
 #if defined(__x86_64__)
 #define USE_INTEL_Y_TILING 1
+#else
+#define USE_INTEL_Y_TILING 0
+#endif
 
 #define TILE_PIXEL_WIDTH 32u
 #define TILE_PIXEL_HEIGHT 32u
@@ -22,9 +25,6 @@
 #define TILE_NUM_PIXELS (TILE_NUM_BYTES / TILE_BYTES_PER_PIXEL)
 #define SUBTILE_COLUMN_WIDTH 4u
 
-#else
-#define USE_INTEL_Y_TILING 0
-#endif
 
 // Indicies into event and event_ids
 #define WAIT_EVENT 0
@@ -41,7 +41,7 @@ class Image {
 public:
     static Image* Create(zx_handle_t dc_handle,
                          uint32_t width, uint32_t height, zx_pixel_format_t format,
-                         uint32_t fg_color);
+                         uint32_t fg_color, bool cursor);
 
     void Render(int32_t prev_step, int32_t step_num);
 
@@ -56,7 +56,7 @@ public:
 private:
     Image(uint32_t width, uint32_t height, int32_t stride,
           zx_pixel_format_t format, zx_handle_t handle, void* buf,
-          uint32_t fg_color_);
+          uint32_t fg_color, bool cursor);
 
     uint32_t width_;
     uint32_t height_;
@@ -67,4 +67,5 @@ private:
     void* buf_;
 
     uint32_t fg_color_;
+    bool cursor_;
 };

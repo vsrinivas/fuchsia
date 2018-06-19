@@ -35,6 +35,52 @@ public:
     VirtualLayer(Display* display);
     VirtualLayer(const fbl::Vector<Display>& displays);
 
+    // Finish initializing the layer. All Set* methods should be called before this.
+    virtual bool Init(zx_handle_t channel) = 0;
+
+    // Steps the local layout state to frame_num.
+    virtual void StepLayout(int32_t frame_num) = 0;
+
+    // Waits for the display controller to be done with the previous version of this frame.
+    virtual bool WaitForReady() = 0;
+
+    // Sets the current layout to the display contorller.
+    virtual void SendLayout(zx_handle_t channel) = 0;
+
+    // Renders the current frame (and signals the fence if necessary).
+    virtual void Render(int32_t frame_num) = 0;
+
+    // Waits for the current layer configuration to be presented.
+    virtual bool WaitForPresent() = 0;
+
+    // Gets the display controller layer ID for usage on the given display.
+    uint64_t id(uint64_t display_id) const {
+        for (unsigned i = 0; i < displays_.size(); i++) {
+            if (displays_[i]->id() == display_id) {
+                if (layers_[i].active) {
+                    return layers_[i].id;
+                }
+            }
+        }
+        return INVALID_ID;
+    }
+
+protected:
+    layer_t* CreateLayer(zx_handle_t dc_handle);
+    void SetLayerImages(zx_handle_t handle, bool alt_image);
+
+    fbl::Vector<Display*> displays_;
+    fbl::Vector<layer_t> layers_;
+
+    uint32_t width_;
+    uint32_t height_;
+};
+
+class PrimaryLayer : public VirtualLayer {
+public:
+    PrimaryLayer(Display* display);
+    PrimaryLayer(const fbl::Vector<Display>& displays);
+
     // Set* methods to configure the layer.
     void SetImageDimens(uint32_t width, uint32_t height) {
         image_width_ = width;
@@ -59,47 +105,17 @@ public:
     void SetLayerToggle(bool toggle) { layer_toggle_ = toggle; }
     void SetRotates(bool rotates) { rotates_ = rotates; }
 
-    // Finish initializing the layer. All Set* methods should be called before this.
-    bool Init(zx_handle_t channel);
-
-    // Steps the local layout state to frame_num.
-    void StepLayout(int32_t frame_num);
-
-    // Waits for the display controller to be done with the previous version of this frame.
-    bool WaitForReady();
-
-    // Sets the current layout to the display contorller.
-    void SendLayout(zx_handle_t channel);
-
-    // Renders the current frame (and signals the fence if necessary).
-    void Render(int32_t frame_num);
-
-    // Waits for the current layer configuration to be presented.
-    bool WaitForPresent();
-
-    // Gets the display controller layer ID for usage on the given display.
-    uint64_t id(uint64_t display_id) const {
-        for (unsigned i = 0; i < displays_.size(); i++) {
-            if (displays_[i]->id() == display_id) {
-                if (layers_[i].active) {
-                    return layers_[i].id;
-                }
-            }
-        }
-        return INVALID_ID;
-    }
+    bool Init(zx_handle_t channel) override;
+    void StepLayout(int32_t frame_num) override;
+    bool WaitForReady() override;
+    void SendLayout(zx_handle_t channel) override;
+    void Render(int32_t frame_num) override;
+    bool WaitForPresent() override;
 
 private:
-    void SetLayerImages(zx_handle_t handle);
     void SetLayerPositions(zx_handle_t handle);
     bool Wait(uint32_t idx);
     void InitImageDimens();
-
-    fbl::Vector<Display*> displays_;
-    fbl::Vector<layer_t> layers_;
-
-    uint32_t width_;
-    uint32_t height_;
 
     uint32_t image_width_ = 0;
     uint32_t image_height_ = 0;
@@ -115,4 +131,24 @@ private:
 
     bool alt_image_ = false;
     Image* images_[2];
+};
+
+class CursorLayer : public VirtualLayer {
+public:
+    CursorLayer(Display* display);
+    CursorLayer(const fbl::Vector<Display>& displays);
+
+    bool Init(zx_handle_t channel) override;
+    void StepLayout(int32_t frame_num) override;
+    void SendLayout(zx_handle_t channel) override;
+
+    bool WaitForReady() override { return true; }
+    void Render(int32_t frame_num) override {}
+    bool WaitForPresent() override { return true; }
+
+private:
+    uint32_t x_pos_ = 0;
+    uint32_t y_pos_ = 0;
+
+    Image* image_;
 };

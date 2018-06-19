@@ -17,6 +17,7 @@ public:
 
     zx_pixel_format_t format() const { return pixel_formats_[format_idx_]; }
     fuchsia_display_Mode mode() const { return modes_[mode_idx_]; }
+    fuchsia_display_CursorInfo cursor() const { return cursors_[0]; }
     uint64_t id() const { return id_; }
 
     bool set_format_idx(uint32_t idx) {
@@ -38,4 +39,5 @@ private:
     uint64_t id_;
     fbl::Vector<zx_pixel_format_t> pixel_formats_;
     fbl::Vector<fuchsia_display_Mode> modes_;
+    fbl::Vector<fuchsia_display_CursorInfo> cursors_;
 };

@@ -19,12 +19,13 @@
 static constexpr uint32_t kRenderPeriod = 120;
 
 Image::Image(uint32_t width, uint32_t height, int32_t stride,
-             zx_pixel_format_t format, zx_handle_t vmo, void* buf, uint32_t fg_color)
+             zx_pixel_format_t format, zx_handle_t vmo, void* buf, uint32_t fg_color, bool cursor)
         : width_(width), height_(height), stride_(stride), format_(format),
-          vmo_(vmo), buf_(buf), fg_color_(fg_color) {}
+          vmo_(vmo), buf_(buf), fg_color_(fg_color), cursor_(cursor) {}
 
 Image* Image::Create(zx_handle_t dc_handle,
-                     uint32_t width, uint32_t height, zx_pixel_format_t format, uint32_t fg_color) {
+                     uint32_t width, uint32_t height, zx_pixel_format_t format,
+                     uint32_t fg_color, bool cursor) {
     fuchsia_display_ControllerComputeLinearImageStrideRequest stride_msg;
     stride_msg.hdr.ordinal = fuchsia_display_ControllerComputeLinearImageStrideOrdinal;
     stride_msg.width = width;
@@ -51,13 +52,13 @@ Image* Image::Create(zx_handle_t dc_handle,
     zx::vmo vmo;
     fuchsia_display_ControllerAllocateVmoRequest alloc_msg;
     alloc_msg.hdr.ordinal = fuchsia_display_ControllerAllocateVmoOrdinal;
-#if !USE_INTEL_Y_TILING
-    alloc_msg.size = stride_rsp.stride * height * ZX_PIXEL_FORMAT_BYTES(format);
-#else
-    ZX_ASSERT(ZX_PIXEL_FORMAT_BYTES(format) == TILE_BYTES_PER_PIXEL);
-    alloc_msg.size = fbl::round_up(width, TILE_PIXEL_WIDTH) *
-            fbl::round_up(height, TILE_PIXEL_HEIGHT) * TILE_BYTES_PER_PIXEL;
-#endif
+    if (!USE_INTEL_Y_TILING || cursor) {
+        alloc_msg.size = stride_rsp.stride * height * ZX_PIXEL_FORMAT_BYTES(format);
+    } else {
+        ZX_ASSERT(ZX_PIXEL_FORMAT_BYTES(format) == TILE_BYTES_PER_PIXEL);
+        alloc_msg.size = fbl::round_up(width, TILE_PIXEL_WIDTH) *
+                fbl::round_up(height, TILE_PIXEL_HEIGHT) * TILE_BYTES_PER_PIXEL;
+    }
 
     fuchsia_display_ControllerAllocateVmoResponse alloc_rsp;
     zx_channel_call_args_t call_args = {};
@@ -88,7 +89,8 @@ Image* Image::Create(zx_handle_t dc_handle,
     memset(ptr, 0xff, alloc_msg.size);
     zx_cache_flush(ptr, alloc_msg.size, ZX_CACHE_FLUSH_DATA);
 
-    return new Image(width, height, stride_rsp.stride, format, vmo.release(), ptr, fg_color);
+    return new Image(width, height, stride_rsp.stride, format,
+                     vmo.release(), ptr, fg_color, cursor);
 }
 
 #define STRIPE_SIZE 37 // prime to make movement more interesting
@@ -114,40 +116,41 @@ void Image::Render(int32_t prev_step, int32_t step_num) {
             int32_t color = in_stripe ? fg_color_: 0xffffffff;
 
             uint32_t* ptr = static_cast<uint32_t*>(buf_);
-#if !USE_INTEL_Y_TILING
-            ptr += (y * stride_) + x;
-#else
-            // Add the offset to the pixel's tile
-            uint32_t width_in_tiles = (width_ + TILE_PIXEL_WIDTH - 1) / TILE_PIXEL_WIDTH;
-            uint32_t tile_idx = (y / TILE_PIXEL_HEIGHT) * width_in_tiles  + (x / TILE_PIXEL_WIDTH);
-            ptr += (TILE_NUM_PIXELS * tile_idx);
-            // Add the offset within the pixel's tile
-            uint32_t subtile_column_offset =
-                    ((x % TILE_PIXEL_WIDTH) / SUBTILE_COLUMN_WIDTH) * TILE_PIXEL_HEIGHT;
-            uint32_t subtile_line_offset =
-                    (subtile_column_offset + (y % TILE_PIXEL_HEIGHT)) * SUBTILE_COLUMN_WIDTH;
-            ptr += subtile_line_offset + (x % SUBTILE_COLUMN_WIDTH);
-#endif
+            if (!USE_INTEL_Y_TILING || cursor_) {
+                ptr += (y * stride_) + x;
+            } else {
+                // Add the offset to the pixel's tile
+                uint32_t width_in_tiles = (width_ + TILE_PIXEL_WIDTH - 1) / TILE_PIXEL_WIDTH;
+                uint32_t tile_idx =
+                        (y / TILE_PIXEL_HEIGHT) * width_in_tiles + (x / TILE_PIXEL_WIDTH);
+                ptr += (TILE_NUM_PIXELS * tile_idx);
+                // Add the offset within the pixel's tile
+                uint32_t subtile_column_offset =
+                        ((x % TILE_PIXEL_WIDTH) / SUBTILE_COLUMN_WIDTH) * TILE_PIXEL_HEIGHT;
+                uint32_t subtile_line_offset =
+                        (subtile_column_offset + (y % TILE_PIXEL_HEIGHT)) * SUBTILE_COLUMN_WIDTH;
+                ptr += subtile_line_offset + (x % SUBTILE_COLUMN_WIDTH);
+            }
             *ptr = color;
         }
     }
 
-#if !USE_INTEL_Y_TILING
-    uint32_t byte_stride = stride_ * ZX_PIXEL_FORMAT_BYTES(format_);
-    zx_cache_flush(reinterpret_cast<uint8_t*>(buf_) + (byte_stride * start),
-                   byte_stride * (end - start), ZX_CACHE_FLUSH_DATA);
-#else
-    uint8_t* buf = static_cast<uint8_t*>(buf_);
-    uint32_t width_in_tiles = (width_ + TILE_PIXEL_WIDTH - 1) / TILE_PIXEL_WIDTH;
-    uint32_t y_start_tile = start / TILE_PIXEL_HEIGHT;
-    uint32_t y_end_tile = (end + TILE_PIXEL_HEIGHT - 1) / TILE_PIXEL_HEIGHT;
-    for (unsigned i = 0; i < width_in_tiles; i++) {
-        for (unsigned j = y_start_tile; j < y_end_tile; j++) {
-            unsigned offset = (TILE_NUM_BYTES * (j * width_in_tiles + i));
-            zx_cache_flush(buf + offset, TILE_NUM_BYTES, ZX_CACHE_FLUSH_DATA);
+    if (!USE_INTEL_Y_TILING || cursor_) {
+        uint32_t byte_stride = stride_ * ZX_PIXEL_FORMAT_BYTES(format_);
+        zx_cache_flush(reinterpret_cast<uint8_t*>(buf_) + (byte_stride * start),
+                       byte_stride * (end - start), ZX_CACHE_FLUSH_DATA);
+    } else {
+        uint8_t* buf = static_cast<uint8_t*>(buf_);
+        uint32_t width_in_tiles = (width_ + TILE_PIXEL_WIDTH - 1) / TILE_PIXEL_WIDTH;
+        uint32_t y_start_tile = start / TILE_PIXEL_HEIGHT;
+        uint32_t y_end_tile = (end + TILE_PIXEL_HEIGHT - 1) / TILE_PIXEL_HEIGHT;
+        for (unsigned i = 0; i < width_in_tiles; i++) {
+            for (unsigned j = y_start_tile; j < y_end_tile; j++) {
+                unsigned offset = (TILE_NUM_BYTES * (j * width_in_tiles + i));
+                zx_cache_flush(buf + offset, TILE_NUM_BYTES, ZX_CACHE_FLUSH_DATA);
+            }
         }
     }
-#endif
 }
 
 bool Image::Import(zx_handle_t dc_handle, image_import_t* info_out) {
@@ -184,11 +187,11 @@ bool Image::Import(zx_handle_t dc_handle, image_import_t* info_out) {
     import_msg.image_config.height = height_;
     import_msg.image_config.width = width_;
     import_msg.image_config.pixel_format = format_;
-#if !USE_INTEL_Y_TILING
-    import_msg.image_config.type = IMAGE_TYPE_SIMPLE;
-#else
-    import_msg.image_config.type = 2; // IMAGE_TYPE_Y_LEGACY
-#endif
+    if (!USE_INTEL_Y_TILING || cursor_) {
+        import_msg.image_config.type = IMAGE_TYPE_SIMPLE;
+    } else {
+        import_msg.image_config.type = 2; // IMAGE_TYPE_Y_LEGACY
+    }
     import_msg.vmo = FIDL_HANDLE_PRESENT;
     import_msg.offset = 0;
     zx_handle_t vmo_dup;

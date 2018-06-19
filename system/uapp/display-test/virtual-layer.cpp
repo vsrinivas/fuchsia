@@ -12,9 +12,14 @@ static constexpr uint32_t kSrcFrameBouncePeriod = 90;
 static constexpr uint32_t kDestFrameBouncePeriod = 60;
 static constexpr uint32_t kRotationPeriod = 24;
 
-static uint32_t colors[] = {
-    0xffff0000, 0xff00ff00, 0xff0000ff,
-};
+
+static uint32_t get_fg_color() {
+    static uint32_t layer_count = 0;
+    static uint32_t colors[] = {
+        0xffff0000, 0xff00ff00, 0xff0000ff,
+    };
+    return colors[layer_count++ % fbl::count_of(colors)];
+}
 
 // Checks if two rectangles intersect, and if so, returns their intersection.
 static bool compute_intersection(const frame_t& a, const frame_t& b, frame_t* intersection) {
@@ -39,8 +44,6 @@ VirtualLayer::VirtualLayer(Display* display) {
     displays_.push_back(display);
     width_ = display->mode().horizontal_resolution;
     height_ = display->mode().vertical_resolution;
-    image_format_ = display->format();
-    SetImageDimens(width_, height_);
 }
 
 VirtualLayer::VirtualLayer(const fbl::Vector<Display>& displays) {
@@ -54,20 +57,53 @@ VirtualLayer::VirtualLayer(const fbl::Vector<Display>& displays) {
         width_ += d->mode().horizontal_resolution;
         height_ = fbl::max(height_, d->mode().vertical_resolution);
     }
+}
+
+layer_t* VirtualLayer::CreateLayer(zx_handle_t dc_handle) {
+    layers_.push_back(layer_t());
+    layers_[layers_.size() - 1].active = false;
+
+    fuchsia_display_ControllerCreateLayerRequest create_layer_msg;
+    create_layer_msg.hdr.ordinal = fuchsia_display_ControllerCreateLayerOrdinal;
+
+    fuchsia_display_ControllerCreateLayerResponse create_layer_rsp;
+    zx_channel_call_args_t call_args = {};
+    call_args.wr_bytes = &create_layer_msg;
+    call_args.rd_bytes = &create_layer_rsp;
+    call_args.wr_num_bytes = sizeof(create_layer_msg);
+    call_args.rd_num_bytes = sizeof(create_layer_rsp);
+    uint32_t actual_bytes, actual_handles;
+    if (zx_channel_call(dc_handle, 0, ZX_TIME_INFINITE, &call_args,
+                        &actual_bytes, &actual_handles) != ZX_OK) {
+        printf("Creating layer failed\n");
+        return nullptr;
+    }
+    if (create_layer_rsp.res != ZX_OK) {
+        printf("Creating layer failed\n");
+        return nullptr;
+    }
+    layers_[layers_.size() - 1].id = create_layer_rsp.layer_id;
+
+    return &layers_[layers_.size() - 1];
+}
+
+PrimaryLayer::PrimaryLayer(Display* display) : VirtualLayer(display) {
+    image_format_ = display->format();
+}
+
+PrimaryLayer::PrimaryLayer(const fbl::Vector<Display>& displays) : VirtualLayer(displays) {
     image_format_ = displays_[0]->format();
     SetImageDimens(width_, height_);
 }
 
-bool VirtualLayer::Init(zx_handle_t dc_handle) {
-    fuchsia_display_ControllerCreateLayerRequest create_layer_msg;
-    create_layer_msg.hdr.ordinal = fuchsia_display_ControllerCreateLayerOrdinal;
+bool PrimaryLayer::Init(zx_handle_t dc_handle) {
+    uint32_t fg_color = get_fg_color();
 
-    static uint32_t layer_count = 0;
-    uint32_t fg_color = colors[layer_count++ % fbl::count_of(colors)];
-
-    images_[0] = Image::Create(dc_handle, image_width_, image_height_, image_format_, fg_color);
+    images_[0] = Image::Create(
+            dc_handle, image_width_, image_height_, image_format_, fg_color, false);
     if (layer_flipping_) {
-        images_[1] = Image::Create(dc_handle, image_width_, image_height_, image_format_, fg_color);
+        images_[1] = Image::Create(
+                dc_handle, image_width_, image_height_, image_format_, fg_color, false);
     } else {
         images_[0]->Render(-1, -1);
     }
@@ -77,38 +113,22 @@ bool VirtualLayer::Init(zx_handle_t dc_handle) {
     }
 
     for (unsigned i = 0; i < displays_.size(); i++) {
-        layers_.push_back(layer_t());
-        layers_[i].active = false;
+        layer_t* layer = CreateLayer(dc_handle);
+        if (layer == nullptr) {
+            return false;
+        }
 
-        images_[0]->Import(dc_handle, &layers_[i].import_info[0]);
+        images_[0]->Import(dc_handle, &layer->import_info[0]);
         if (layer_flipping_) {
-            images_[1]->Import(dc_handle, &layers_[i].import_info[1]);
+            images_[1]->Import(dc_handle, &layer->import_info[1]);
         } else {
-            zx_object_signal(layers_[i].import_info[alt_image_].events[WAIT_EVENT],
+            zx_object_signal(layer->import_info[alt_image_].events[WAIT_EVENT],
                              0, ZX_EVENT_SIGNALED);
         }
 
-        fuchsia_display_ControllerCreateLayerResponse create_layer_rsp;
-        zx_channel_call_args_t call_args = {};
-        call_args.wr_bytes = &create_layer_msg;
-        call_args.rd_bytes = &create_layer_rsp;
-        call_args.wr_num_bytes = sizeof(create_layer_msg);
-        call_args.rd_num_bytes = sizeof(create_layer_rsp);
-        uint32_t actual_bytes, actual_handles;
-        if (zx_channel_call(dc_handle, 0, ZX_TIME_INFINITE, &call_args,
-                            &actual_bytes, &actual_handles) != ZX_OK) {
-            printf("Creating layer failed\n");
-            return false;
-        }
-        if (create_layer_rsp.res != ZX_OK) {
-            printf("Creating layer failed\n");
-            return false;
-        }
-        layers_[i].id = create_layer_rsp.layer_id;
-
         fuchsia_display_ControllerSetLayerPrimaryConfigRequest config;
         config.hdr.ordinal = fuchsia_display_ControllerSetLayerPrimaryConfigOrdinal;
-        config.layer_id = layers_[i].id;
+        config.layer_id = layer->id;
         config.image_config.height = image_height_;
         config.image_config.width = image_width_;
         config.image_config.pixel_format = image_format_;
@@ -126,7 +146,7 @@ bool VirtualLayer::Init(zx_handle_t dc_handle) {
 
     StepLayout(0);
     if (!layer_flipping_) {
-        SetLayerImages(dc_handle);
+        SetLayerImages(dc_handle, false);
     }
     if (!(pan_src_ || pan_dest_)) {
         SetLayerPositions(dc_handle);
@@ -135,7 +155,7 @@ bool VirtualLayer::Init(zx_handle_t dc_handle) {
     return true;
 }
 
-void VirtualLayer::StepLayout(int32_t frame_num) {
+void PrimaryLayer::StepLayout(int32_t frame_num) {
     if (layer_flipping_) {
         alt_image_ = frame_num % 2;
     }
@@ -203,24 +223,24 @@ void VirtualLayer::StepLayout(int32_t frame_num) {
     }
 }
 
-void VirtualLayer::SendLayout(zx_handle_t channel) {
+void PrimaryLayer::SendLayout(zx_handle_t channel) {
     if (layer_flipping_) {
-        SetLayerImages(channel);
+        SetLayerImages(channel, alt_image_);
     }
     if (pan_src_ || pan_dest_) {
         SetLayerPositions(channel);
     }
 }
 
-bool VirtualLayer::WaitForReady() {
+bool PrimaryLayer::WaitForReady() {
     return Wait(SIGNAL_EVENT);
 }
 
-bool VirtualLayer::WaitForPresent() {
+bool PrimaryLayer::WaitForPresent() {
     return Wait(PRESENT_EVENT);
 }
 
-void VirtualLayer::Render(int32_t frame_num) {
+void PrimaryLayer::Render(int32_t frame_num) {
     if (!layer_flipping_) {
         return;
     }
@@ -230,7 +250,7 @@ void VirtualLayer::Render(int32_t frame_num) {
     }
 }
 
-void VirtualLayer::SetLayerPositions(zx_handle_t dc_handle) {
+void PrimaryLayer::SetLayerPositions(zx_handle_t dc_handle) {
     fuchsia_display_ControllerSetLayerPrimaryPositionRequest msg;
     msg.hdr.ordinal = fuchsia_display_ControllerSetLayerPrimaryPositionOrdinal;
 
@@ -254,16 +274,16 @@ void VirtualLayer::SetLayerPositions(zx_handle_t dc_handle) {
     }
 }
 
-void VirtualLayer::SetLayerImages(zx_handle_t dc_handle) {
+void VirtualLayer::SetLayerImages(zx_handle_t dc_handle, bool alt_image) {
     fuchsia_display_ControllerSetLayerImageRequest msg;
     msg.hdr.ordinal = fuchsia_display_ControllerSetLayerImageOrdinal;
 
     for (auto& layer : layers_) {
         msg.layer_id = layer.id;
-        msg.image_id = layer.import_info[alt_image_].id;
-        msg.wait_event_id = layer.import_info[alt_image_].event_ids[WAIT_EVENT];
-        msg.present_event_id = layer.import_info[alt_image_].event_ids[PRESENT_EVENT];
-        msg.signal_event_id = layer.import_info[alt_image_].event_ids[SIGNAL_EVENT];
+        msg.image_id = layer.import_info[alt_image].id;
+        msg.wait_event_id = layer.import_info[alt_image].event_ids[WAIT_EVENT];
+        msg.present_event_id = layer.import_info[alt_image].event_ids[PRESENT_EVENT];
+        msg.signal_event_id = layer.import_info[alt_image].event_ids[SIGNAL_EVENT];
 
         if (zx_channel_write(dc_handle, 0, &msg, sizeof(msg), nullptr, 0) != ZX_OK) {
             ZX_ASSERT(false);
@@ -271,7 +291,7 @@ void VirtualLayer::SetLayerImages(zx_handle_t dc_handle) {
     }
 }
 
-bool VirtualLayer::Wait(uint32_t idx) {
+bool PrimaryLayer::Wait(uint32_t idx) {
     zx_time_t deadline = zx_deadline_after(ZX_MSEC(100));
     for (auto& layer : layers_) {
         uint32_t observed;
@@ -289,4 +309,73 @@ bool VirtualLayer::Wait(uint32_t idx) {
         }
     }
     return true;
+}
+
+CursorLayer::CursorLayer(Display* display) : VirtualLayer(display) { }
+
+CursorLayer::CursorLayer(const fbl::Vector<Display>& displays) : VirtualLayer(displays) { }
+
+bool CursorLayer::Init(zx_handle_t dc_handle) {
+    fuchsia_display_CursorInfo info = displays_[0]->cursor();
+    image_ = Image::Create(
+            dc_handle, info.width, info.height, info.pixel_format, get_fg_color(), true);
+    if (!image_) {
+        return false;
+    }
+    image_->Render(-1, -1);
+
+    for (unsigned i = 0; i < displays_.size(); i++) {
+        layer_t* layer = CreateLayer(dc_handle);
+        if (layer == nullptr) {
+            return false;
+        }
+
+        layer->active = true;
+        if (!image_->Import(dc_handle, &layer->import_info[0])) {
+            return false;
+        }
+        zx_object_signal(layer->import_info[0].events[WAIT_EVENT], 0, ZX_EVENT_SIGNALED);
+
+        fuchsia_display_ControllerSetLayerCursorConfigRequest config;
+        config.hdr.ordinal = fuchsia_display_ControllerSetLayerCursorConfigOrdinal;
+        config.layer_id = layer->id;
+        config.image_config.height = info.height;
+        config.image_config.width = info.width;
+        config.image_config.pixel_format = info.pixel_format;
+        config.image_config.type = IMAGE_TYPE_SIMPLE;
+
+        if (zx_channel_write(dc_handle, 0, &config, sizeof(config), nullptr, 0) != ZX_OK) {
+            printf("Setting layer config failed\n");
+            return false;
+        }
+    }
+
+    SetLayerImages(dc_handle, false);
+
+    return true;
+}
+
+void CursorLayer::StepLayout(int32_t frame_num) {
+    fuchsia_display_CursorInfo info = displays_[0]->cursor();
+
+    x_pos_ = interpolate(width_ + info.width, frame_num, kDestFrameBouncePeriod) - info.width;
+    y_pos_ = interpolate(height_ + info.height, frame_num, kDestFrameBouncePeriod) - info.height;
+}
+
+void CursorLayer::SendLayout(zx_handle_t dc_handle) {
+    fuchsia_display_ControllerSetLayerCursorPositionRequest msg;
+    msg.hdr.ordinal = fuchsia_display_ControllerSetLayerCursorPositionOrdinal;
+
+    uint32_t display_start = 0;
+    for (unsigned i = 0; i < displays_.size(); i++) {
+        msg.layer_id = layers_[i].id;
+        msg.x = x_pos_ - display_start;
+        msg.y = y_pos_;
+
+        if (zx_channel_write(dc_handle, 0, &msg, sizeof(msg), nullptr, 0) != ZX_OK) {
+            ZX_ASSERT(false);
+        }
+
+        display_start += displays_[i]->mode().horizontal_resolution;
+    }
 }

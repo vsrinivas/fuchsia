@@ -92,12 +92,12 @@ Display* find_display(fbl::Vector<Display>& displays, const char* id_str) {
     return nullptr;
 }
 
-bool update_display_layers(const fbl::Vector<VirtualLayer>& layers,
+bool update_display_layers(const fbl::Vector<VirtualLayer*>& layers,
                            const Display& display, fbl::Vector<uint64_t>* current_layers) {
     fbl::Vector<uint64_t> new_layers;
 
     for (auto& layer : layers) {
-        uint64_t id = layer.id(display.id());
+        uint64_t id = layer->id(display.id());
         if (id != INVALID_ID) {
             new_layers.push_back(id);
         }
@@ -202,7 +202,7 @@ int main(int argc, const char* argv[]) {
 
     fbl::Vector<Display> displays;
     fbl::Vector<fbl::Vector<uint64_t>> display_layers;
-    fbl::Vector<VirtualLayer> layers;
+    fbl::Vector<VirtualLayer*> layers;
     int32_t num_frames = 120; // default to 120 frames
 
     if (!bind_display(&displays)) {
@@ -258,22 +258,24 @@ int main(int argc, const char* argv[]) {
     }
 
     // Layer which covers all displays and uses page flipping.
-    VirtualLayer layer1(displays);
+    PrimaryLayer layer1(displays);
     layer1.SetLayerFlipping(true);
-    layers.push_back(fbl::move(layer1));
+    layers.push_back(&layer1);
 
     // Layer which covers the left half of the of the first display
     // and toggles on and off every frame.
-    VirtualLayer layer2(&displays[0]);
+    PrimaryLayer layer2(&displays[0]);
     layer2.SetImageDimens(displays[0].mode().horizontal_resolution / 2,
                           displays[0].mode().vertical_resolution);
     layer2.SetLayerToggle(true);
-    layers.push_back(fbl::move(layer2));
+    layers.push_back(&layer2);
 
+// Intel only supports 3 layers, so add ifdef for quick toggling of the 3rd layer
+#if 0
     // Layer which is smaller than the display and bigger than its image
     // and which animates back and forth across all displays and also
     // its src image and also rotates.
-    VirtualLayer layer3(displays);
+    PrimaryLayer layer3(displays);
     // Width is the larger of disp_width/2, display_height/2, but we also need
     // to make sure that it's less than the smaller display dimension.
     uint32_t width = fbl::min(fbl::max(displays[0].mode().vertical_resolution / 2,
@@ -288,11 +290,15 @@ int main(int argc, const char* argv[]) {
     layer3.SetPanDest(true);
     layer3.SetPanSrc(true);
     layer3.SetRotates(true);
-    layers.push_back(fbl::move(layer3));
+    layers.push_back(&layer3);
+#else
+    CursorLayer layer4(displays);
+    layers.push_back(&layer4);
+#endif
 
     printf("Initializing layers\n");
     for (auto& layer : layers) {
-        if (!layer.Init(dc_handle)) {
+        if (!layer->Init(dc_handle)) {
             printf("Layer init failed\n");
             return -1;
         }
@@ -307,14 +313,14 @@ int main(int argc, const char* argv[]) {
         for (auto& layer : layers) {
             // Step before waiting, since not every layer is used every frame
             // so we won't necessarily need to wait.
-            layer.StepLayout(i);
+            layer->StepLayout(i);
 
-            if (!layer.WaitForReady()) {
+            if (!layer->WaitForReady()) {
                 printf("Buffer failed to become free\n");
                 return -1;
             }
 
-            layer.SendLayout(dc_handle);
+            layer->SendLayout(dc_handle);
         }
 
         for (unsigned i = 0; i < displays.size(); i++) {
@@ -328,17 +334,16 @@ int main(int argc, const char* argv[]) {
         }
 
         for (auto& layer : layers) {
-            layer.Render(i);
+            layer->Render(i);
         }
 
         for (auto& layer : layers) {
-            ZX_ASSERT(layer.WaitForPresent());
+            ZX_ASSERT(layer->WaitForPresent());
         }
     }
 
     printf("Done rendering\n");
     zx_nanosleep(zx_deadline_after(ZX_MSEC(500)));
-    printf("Return!\n");
 
     return 0;
 }
