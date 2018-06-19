@@ -149,38 +149,36 @@ Err ParseHostPort(const std::string& input, std::string* out_host,
 }
 
 std::string TargetStateToString(Target::State state) {
-  struct Mapping {
-    Target::State state;
-    const char* string;
-  };
-  static const Mapping mappings[] = {{Target::State::kNone, "Not running"},
-                                     {Target::State::kStarting, "Starting"},
-                                     {Target::State::kRunning, "Running"}};
-
-  for (const Mapping& mapping : mappings) {
-    if (mapping.state == state)
-      return mapping.string;
+  switch (state) {
+    case Target::State::kNone:
+      return "Not running";
+    case Target::State::kStarting:
+      return "Starting";
+    case Target::State::kAttaching:
+      return "Attaching";
+    case Target::State::kRunning:
+      return "Running";
   }
   FXL_NOTREACHED();
   return std::string();
 }
 
 std::string ThreadStateToString(debug_ipc::ThreadRecord::State state) {
-  struct Mapping {
-    debug_ipc::ThreadRecord::State state;
-    const char* string;
-  };
-  static const Mapping mappings[] = {
-      {debug_ipc::ThreadRecord::State::kNew, "New"},
-      {debug_ipc::ThreadRecord::State::kRunning, "Running"},
-      {debug_ipc::ThreadRecord::State::kSuspended, "Suspended"},
-      {debug_ipc::ThreadRecord::State::kBlocked, "Blocked"},
-      {debug_ipc::ThreadRecord::State::kDying, "Dying"},
-      {debug_ipc::ThreadRecord::State::kDead, "Dead"}};
-
-  for (const Mapping& mapping : mappings) {
-    if (mapping.state == state)
-      return mapping.string;
+  switch (state) {
+    case debug_ipc::ThreadRecord::State::kNew:
+      return "New";
+    case debug_ipc::ThreadRecord::State::kRunning:
+      return "Running";
+    case debug_ipc::ThreadRecord::State::kSuspended:
+      return "Suspended";
+    case debug_ipc::ThreadRecord::State::kBlocked:
+      return "Blocked";
+    case debug_ipc::ThreadRecord::State::kDying:
+      return "Dying";
+    case debug_ipc::ThreadRecord::State::kDead:
+      return "Dead";
+    case debug_ipc::ThreadRecord::State::kLast:
+      break;  // Fall through to assertion, this value shouldn't be used.
   }
   FXL_NOTREACHED();
   return std::string();
@@ -196,9 +194,8 @@ std::string BreakpointScopeToString(const ConsoleContext* context,
                                context->IdForTarget(settings.scope_target));
     case BreakpointSettings::Scope::kThread:
       return fxl::StringPrintf(
-          "pr %d t %d",
-          context->IdForTarget(
-              settings.scope_thread->GetProcess()->GetTarget()),
+          "pr %d t %d", context->IdForTarget(
+                            settings.scope_thread->GetProcess()->GetTarget()),
           context->IdForThread(settings.scope_thread));
   }
   FXL_NOTREACHED();
@@ -225,17 +222,15 @@ const char* BreakpointEnabledToString(bool enabled) {
 }
 
 std::string ExceptionTypeToString(debug_ipc::NotifyException::Type type) {
-  struct Mapping {
-    debug_ipc::NotifyException::Type type;
-    const char* string;
-  };
-  static const Mapping mappings[] = {
-      {debug_ipc::NotifyException::Type::kGeneral, "General"},
-      {debug_ipc::NotifyException::Type::kHardware, "Hardware"},
-      {debug_ipc::NotifyException::Type::kSoftware, "Software"}};
-  for (const Mapping& mapping : mappings) {
-    if (mapping.type == type)
-      return mapping.string;
+  switch (type) {
+    case debug_ipc::NotifyException::Type::kGeneral:
+      return "General";
+    case debug_ipc::NotifyException::Type::kHardware:
+      return "Hardware";
+    case debug_ipc::NotifyException::Type::kSoftware:
+      return "Software";
+    case debug_ipc::NotifyException::Type::kLast:
+      break;  // Fall through to assertion, this value shouldn't be used.
   }
   FXL_NOTREACHED();
   return std::string();

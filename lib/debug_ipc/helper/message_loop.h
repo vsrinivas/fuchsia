@@ -49,7 +49,7 @@ class MessageLoop {
   static MessageLoop* Current();
 
   // Runs the message loop.
-  virtual void Run() = 0;
+  void Run();
 
   void PostTask(std::function<void()> fn);
 
@@ -72,6 +72,8 @@ class MessageLoop {
   virtual WatchHandle WatchFD(WatchMode mode, int fd, FDWatcher* watcher) = 0;
 
  protected:
+  virtual void RunImpl() = 0;
+
   // Used by WatchHandle to unregister a watch. Can be called from any thread
   // without the lock held.
   virtual void StopWatching(int id) = 0;

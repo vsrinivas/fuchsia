@@ -24,13 +24,13 @@ class MessageLoopPoll : public MessageLoop, public FDWatcher {
   // MessageLoop implementation.
   void Init() override;
   void Cleanup() override;
-  void Run() override;
   WatchHandle WatchFD(WatchMode mode, int fd, FDWatcher* watcher) override;
 
  private:
   struct WatchInfo;
 
   // MessageLoop protected implementation.
+  void RunImpl() override;
   void StopWatching(int id) override;
   void SetHasTasks() override;
 

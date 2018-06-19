@@ -50,6 +50,9 @@ class Err {
   ErrType type() const { return type_; }
   const std::string& msg() const { return msg_; }
 
+  // Equality operator is provided for tests.
+  bool operator==(const Err& other) const;
+
  private:
   ErrType type_ = ErrType::kNone;
   std::string msg_;

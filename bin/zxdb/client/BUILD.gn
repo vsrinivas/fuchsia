@@ -106,6 +106,7 @@ source_set("tests") {
     "file_util_unittest.cc",
     "memory_dump_unittest.cc",
     "string_util_unittest.cc",
+    "target_impl_unittest.cc",
   ]
 
   deps = [

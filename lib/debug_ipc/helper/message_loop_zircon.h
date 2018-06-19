@@ -24,7 +24,6 @@ class MessageLoopZircon : public MessageLoop {
   static MessageLoopZircon* Current();
 
   // MessageLoop implementation.
-  void Run() override;
   WatchHandle WatchFD(WatchMode mode, int fd, FDWatcher* watcher) override;
 
   // Watches the given socket for read/write status. The watcher must outlive
@@ -49,6 +48,7 @@ class MessageLoopZircon : public MessageLoop {
   struct WatchInfo;
 
   // MessageLoop protected implementation.
+  void RunImpl() override;
   void StopWatching(int id) override;
   void SetHasTasks() override;
 

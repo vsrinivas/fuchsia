@@ -33,6 +33,11 @@ void MessageLoop::Cleanup() {
 // static
 MessageLoop* MessageLoop::Current() { return current_message_loop; }
 
+void MessageLoop::Run() {
+  should_quit_ = false;
+  RunImpl();
+}
+
 void MessageLoop::PostTask(std::function<void()> fn) {
   bool needs_awaken;
   {

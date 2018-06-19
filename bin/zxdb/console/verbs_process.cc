@@ -23,13 +23,12 @@ namespace zxdb {
 
 namespace {
 
-// Checks that the given target can be run or attached and returns Er().
-// Otherwise returns an error describing the problem.
+// Verifies that the given target can be run or attached.
 Err AssertRunnableTarget(Target* target) {
   Target::State state = target->GetState();
-  if (state == Target::State::kStarting) {
+  if (state == Target::State::kStarting || state == Target::State::kAttaching) {
     return Err(
-        "The current process is in the process of starting.\n"
+        "The current process is in the process of starting or attaching.\n"
         "Either \"kill\" it or create a \"new\" process context.");
   }
   if (state == Target::State::kRunning) {

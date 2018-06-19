@@ -57,7 +57,7 @@ void TargetImpl::SetArgs(std::vector<std::string> args) {
 void TargetImpl::Launch(Callback callback) {
   Err err;
   if (state_ != State::kNone)
-    err = Err("Can't launch, program is already running.");
+    err = Err("Can't launch, program is already running or starting.");
   else if (args_.empty())
     err = Err("No program specified to launch.");
 
@@ -69,6 +69,8 @@ void TargetImpl::Launch(Callback callback) {
         });
     return;
   }
+
+  state_ = State::kStarting;
 
   debug_ipc::LaunchRequest request;
   request.argv = args_;
@@ -107,6 +109,18 @@ void TargetImpl::Kill(Callback callback) {
 }
 
 void TargetImpl::Attach(uint64_t koid, Callback callback) {
+  if (state_ != State::kNone) {
+    // Avoid reentering caller to dispatch the error.
+    debug_ipc::MessageLoop::Current()->PostTask(
+        [callback, weak_ptr = GetWeakPtr()]() {
+          callback(std::move(weak_ptr), Err(
+              "Can't attach, program is already running or starting."));
+        });
+    return;
+  }
+
+  state_ = State::kAttaching;
+
   debug_ipc::AttachRequest request;
   request.koid = koid;
   session()->remote_api()->Attach(
@@ -182,12 +196,13 @@ void TargetImpl::OnLaunchOrAttachReplyThunk(fxl::WeakPtr<TargetImpl> target,
 void TargetImpl::OnLaunchOrAttachReply(Callback callback, const Err& err,
                                        uint64_t koid, uint32_t status,
                                        const std::string& process_name) {
-  FXL_DCHECK(state_ = State::kStarting);
+  FXL_DCHECK(state_ == State::kAttaching || state_ == State::kStarting);
   FXL_DCHECK(!process_.get());  // Shouldn't have a process.
 
   Err issue_err;  // Error to send in callback.
   if (err.has_error()) {
     // Error from transport.
+    state_ = State::kNone;
     issue_err = err;
   } else if (status != 0) {
     // Error from launching.
@@ -215,6 +230,7 @@ void TargetImpl::OnKillOrDetachReply(const Err& err, uint32_t status,
   Err issue_err;  // Error to send in callback.
   if (err.has_error()) {
     // Error from transport.
+    state_ = State::kNone;
     issue_err = err;
   } else if (status != 0) {
     // Error from detaching.

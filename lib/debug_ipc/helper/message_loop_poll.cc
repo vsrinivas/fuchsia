@@ -85,24 +85,6 @@ void MessageLoopPoll::Cleanup() {
   MessageLoop::Cleanup();
 }
 
-void MessageLoopPoll::Run() {
-  std::vector<pollfd> poll_vect;
-  std::vector<size_t> map_indices;
-
-  while (!should_quit()) {
-    // This could be optimized to avoid recomputing every time.
-    ConstructFDMapping(&poll_vect, &map_indices);
-    FXL_DCHECK(!poll_vect.empty());
-    FXL_DCHECK(poll_vect.size() == map_indices.size());
-
-    poll(&poll_vect[0], static_cast<nfds_t>(poll_vect.size()), -1);
-    for (size_t i = 0; i < poll_vect.size(); i++) {
-      if (poll_vect[i].revents)
-        OnHandleSignaled(poll_vect[i].fd, poll_vect[i].revents, map_indices[i]);
-    }
-  }
-}
-
 MessageLoop::WatchHandle MessageLoopPoll::WatchFD(WatchMode mode, int fd,
                                                   FDWatcher* watcher) {
   // The dispatch code for watch callbacks requires this be called on the
@@ -122,6 +104,24 @@ MessageLoop::WatchHandle MessageLoopPoll::WatchFD(WatchMode mode, int fd,
   watches_[watch_id] = info;
 
   return WatchHandle(this, watch_id);
+}
+
+void MessageLoopPoll::RunImpl() {
+  std::vector<pollfd> poll_vect;
+  std::vector<size_t> map_indices;
+
+  while (!should_quit()) {
+    // This could be optimized to avoid recomputing every time.
+    ConstructFDMapping(&poll_vect, &map_indices);
+    FXL_DCHECK(!poll_vect.empty());
+    FXL_DCHECK(poll_vect.size() == map_indices.size());
+
+    poll(&poll_vect[0], static_cast<nfds_t>(poll_vect.size()), -1);
+    for (size_t i = 0; i < poll_vect.size(); i++) {
+      if (poll_vect[i].revents)
+        OnHandleSignaled(poll_vect[i].fd, poll_vect[i].revents, map_indices[i]);
+    }
+  }
 }
 
 void MessageLoopPoll::StopWatching(int id) {

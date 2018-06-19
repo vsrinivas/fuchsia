@@ -80,53 +80,6 @@ MessageLoopZircon* MessageLoopZircon::Current() {
   return current_message_loop_zircon;
 }
 
-void MessageLoopZircon::Run() {
-  // Init should have been called.
-  FXL_DCHECK(Current() == this);
-
-  zx_port_packet_t packet;
-  while (!should_quit() &&
-         port_.wait(zx::time::infinite(), &packet) == ZX_OK) {
-    WatchInfo* watch_info = nullptr;
-    {
-      std::lock_guard<std::mutex> guard(mutex_);
-      if (packet.key == kTaskSignalKey) {
-        // Do a C++ task.
-        if (ProcessPendingTask())
-          SetHasTasks();  // Enqueue another task signal.
-        continue;
-      }
-
-      // Some event being watched.
-      auto found = watches_.find(packet.key);
-      if (found == watches_.end()) {
-        FXL_NOTREACHED();
-        continue;
-      }
-      watch_info = &found->second;
-    }
-
-    // Dispatch the watch callback outside of the lock. This depends on the
-    // stability of the WatchInfo pointer in the map (std::map is stable across
-    // updates) and the watch not getting unregistered from another thread
-    // asynchronously (which the API requires and is enforced by a DCHECK in
-    // the StopWatching impl).
-    switch (watch_info->type) {
-      case WatchType::kFdio:
-        OnFdioSignal(packet.key, *watch_info, packet);
-        break;
-      case WatchType::kProcessExceptions:
-        OnProcessException(*watch_info, packet);
-        break;
-      case WatchType::kSocket:
-        OnSocketSignal(packet.key, *watch_info, packet);
-        break;
-      default:
-        FXL_NOTREACHED();
-    }
-  }
-}
-
 MessageLoop::WatchHandle MessageLoopZircon::WatchFD(WatchMode mode, int fd,
                                                     FDWatcher* watcher) {
   WatchInfo info;
@@ -232,6 +185,53 @@ MessageLoop::WatchHandle MessageLoopZircon::WatchProcessExceptions(
     watches_[watch_id] = info;
   }
   return WatchHandle(this, watch_id);
+}
+
+void MessageLoopZircon::RunImpl() {
+  // Init should have been called.
+  FXL_DCHECK(Current() == this);
+
+  zx_port_packet_t packet;
+  while (!should_quit() &&
+         port_.wait(zx::time::infinite(), &packet) == ZX_OK) {
+    WatchInfo* watch_info = nullptr;
+    {
+      std::lock_guard<std::mutex> guard(mutex_);
+      if (packet.key == kTaskSignalKey) {
+        // Do a C++ task.
+        if (ProcessPendingTask())
+          SetHasTasks();  // Enqueue another task signal.
+        continue;
+      }
+
+      // Some event being watched.
+      auto found = watches_.find(packet.key);
+      if (found == watches_.end()) {
+        FXL_NOTREACHED();
+        continue;
+      }
+      watch_info = &found->second;
+    }
+
+    // Dispatch the watch callback outside of the lock. This depends on the
+    // stability of the WatchInfo pointer in the map (std::map is stable across
+    // updates) and the watch not getting unregistered from another thread
+    // asynchronously (which the API requires and is enforced by a DCHECK in
+    // the StopWatching impl).
+    switch (watch_info->type) {
+      case WatchType::kFdio:
+        OnFdioSignal(packet.key, *watch_info, packet);
+        break;
+      case WatchType::kProcessExceptions:
+        OnProcessException(*watch_info, packet);
+        break;
+      case WatchType::kSocket:
+        OnSocketSignal(packet.key, *watch_info, packet);
+        break;
+      default:
+        FXL_NOTREACHED();
+    }
+  }
 }
 
 void MessageLoopZircon::StopWatching(int id) {

@@ -30,8 +30,8 @@ Err ParseInputLocation(const Frame* frame, const std::string& input,
     "  <file>:<line>\n" \
     "    " cmd " foo.cc:123\n" \
     "\n" \
-    "    🛈  To disambiguate different files with the same name, include\n" \
-    "       directory names preceeding the name (from the right).\n" \
+    "    ▷ To disambiguate different files with the same name, include\n" \
+    "      directory names preceeding the name (from the right).\n" \
     "\n" \
     "  <line number> (within the frame's file)\n" \
     "    " cmd " 123\n" \

@@ -181,7 +181,7 @@ Err CreateOrEditBreakpoint(ConsoleContext* context, const Command& cmd,
 
 const char kBreakShortHelp[] = "break / br: Create a breakpoint.";
 const char kBreakHelp[] =
-    R"("break <location>
+    R"(break <location>
 
   Alias: "b"
 

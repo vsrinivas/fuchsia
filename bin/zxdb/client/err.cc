@@ -14,4 +14,8 @@ Err::Err(const std::string& msg) : type_(ErrType::kGeneral), msg_(msg) {}
 
 Err::~Err() = default;
 
+bool Err::operator==(const Err& other) const {
+  return type_ == other.type_ && msg_ == other.msg_;
+}
+
 }  // namespace zxdb

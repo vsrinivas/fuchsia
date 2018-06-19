@@ -47,6 +47,9 @@ class Target : public ClientObject {
     // to running (success) or stopped (if launching or attaching failed).
     kStarting,
 
+    // A pending state like starting but when we're waiting to attach.
+    kAttaching,
+
     // The process is running. From here, it can only transition to stopped.
     kRunning
   };
