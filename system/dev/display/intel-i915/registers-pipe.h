@@ -21,7 +21,8 @@ static const Pipe kPipes[kPipeCount] = {
     PIPE_A, PIPE_B, PIPE_C,
 };
 
-static constexpr uint32_t kPrimaryPlaneCount = 3;
+static constexpr uint32_t kImagePlaneCount = 3;
+static constexpr uint32_t kCursorPlane = 2;
 
 // PIPE_SRCSZ
 class PipeSourceSize : public hwreg::RegisterBase<PipeSourceSize, uint32_t> {
@@ -179,6 +180,49 @@ public:
     DEF_FIELD(12, 0, x_pos);
 };
 
+// CUR_BASE
+class CursorBase : public hwreg::RegisterBase<CursorBase, uint32_t> {
+public:
+    static constexpr uint32_t kBaseAddr = 0x70084;
+
+    DEF_FIELD(31, 12, cursor_base);
+    // This field omits the lower 12 bits of the address, so the address
+    // must be 4k-aligned.
+    static constexpr uint32_t kPageShift = 12;
+};
+
+// CUR_CTL
+class CursorCtrl : public hwreg::RegisterBase<CursorCtrl, uint32_t> {
+public:
+    static constexpr uint32_t kBaseAddr = 0x70080;
+
+    DEF_FIELD(5, 0, mode_select);
+    static constexpr uint32_t kDisabled = 0;
+    static constexpr uint32_t kArgb128x128 = 34;
+    static constexpr uint32_t kArgb256x256 = 35;
+    static constexpr uint32_t kArgb64x64 = 39;
+};
+
+// CUR_POS
+class CursorPos : public hwreg::RegisterBase<CursorPos, uint32_t> {
+public:
+    static constexpr uint32_t kBaseAddr = 0x70088;
+
+    DEF_BIT(31, y_sign);
+    DEF_FIELD(27, 16, y_pos);
+    DEF_BIT(15, x_sign);
+    DEF_FIELD(12, 0, x_pos);
+};
+
+// CUR_SURFLIVE
+class CursorSurfaceLive : public hwreg::RegisterBase<CursorSurfaceLive, uint32_t> {
+public:
+    static constexpr uint32_t kBaseAddr = 0x700ac;
+
+    static constexpr uint32_t kPageShift = 12;
+    DEF_FIELD(31, 12, surface_base_addr);
+};
+
 // An instance of PipeRegs represents the registers for a particular pipe.
 class PipeRegs {
 public:
@@ -237,6 +281,22 @@ public:
 
     hwreg::RegisterAddr<registers::PipeDeInterrupt> PipeDeInterrupt(uint32_t type) {
         return hwreg::RegisterAddr<registers::PipeDeInterrupt>(type + 0x10 * pipe_);
+    }
+
+    hwreg::RegisterAddr<registers::CursorBase> CursorBase() {
+        return GetReg<registers::CursorBase>();
+    }
+
+    hwreg::RegisterAddr<registers::CursorCtrl> CursorCtrl() {
+        return GetReg<registers::CursorCtrl>();
+    }
+
+    hwreg::RegisterAddr<registers::CursorPos> CursorPos() {
+        return GetReg<registers::CursorPos>();
+    }
+
+    hwreg::RegisterAddr<registers::CursorSurfaceLive> CursorSurfaceLive() {
+        return GetReg<registers::CursorSurfaceLive>();
     }
 
 private:

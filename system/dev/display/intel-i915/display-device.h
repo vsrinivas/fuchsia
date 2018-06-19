@@ -76,6 +76,9 @@ private:
     bool ResetTrans();
     bool ResetDdi();
 
+    void ConfigurePrimaryPlane(uint32_t plane_num, const primary_layer_t* primary);
+    void ConfigureCursorPlane(const cursor_layer_t* cursor);
+
     // Borrowed reference to Controller instance
     Controller* controller_;
 

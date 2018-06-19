@@ -110,13 +110,13 @@ private:
     bool CalculateMinimumAllocations(const display_config_t** display_configs,
                                      uint32_t display_count,
                                      uint16_t min_allocs[registers::kPipeCount]
-                                                        [registers::kPrimaryPlaneCount])
+                                                        [registers::kImagePlaneCount])
                                      __TA_REQUIRES(display_lock_);
     // Updates plane_buffers_ based pipe_buffers_ and the given parameters
     void UpdateAllocations(const uint16_t min_allocs[registers::kPipeCount]
-                                                    [registers::kPrimaryPlaneCount],
+                                                    [registers::kImagePlaneCount],
                            const uint64_t display_rate[registers::kPipeCount]
-                                                      [registers::kPrimaryPlaneCount])
+                                                      [registers::kImagePlaneCount])
                            __TA_REQUIRES(display_lock_);
     // Reallocates the pipe buffers when a pipe comes online/goes offline. This is a
     // long-running operation, as shifting allocations between pipes requires waiting
@@ -193,7 +193,7 @@ private:
         // The length of the minimum allocation required by the plane. 0 if no
         // allocation is required.
         uint16_t minimum;
-    } plane_buffers_[registers::kPipeCount][registers::kPrimaryPlaneCount]
+    } plane_buffers_[registers::kPipeCount][registers::kImagePlaneCount]
             __TA_GUARDED(display_lock_) = {};
     // Buffer allocations for pipes
     pipe_buffer_allocation_t pipe_buffers_[registers::kPipeCount] __TA_GUARDED(display_lock_) = {};

@@ -50,6 +50,12 @@
 namespace {
 static const zx_pixel_format_t supported_formats[1] = { ZX_PIXEL_FORMAT_ARGB_8888 };
 
+static const cursor_info_t cursor_infos[3] = {
+    { .width = 64, .height = 64, .format = ZX_PIXEL_FORMAT_ARGB_8888 },
+    { .width = 128, .height = 128, .format = ZX_PIXEL_FORMAT_ARGB_8888 },
+    { .width = 256, .height = 256, .format = ZX_PIXEL_FORMAT_ARGB_8888 },
+};
+
 bool pipe_in_use(const fbl::Vector<fbl::unique_ptr<i915::DisplayDevice>>& displays,
                  registers::Pipe pipe) {
     for (size_t i = 0; i < displays.size(); i++) {
@@ -225,6 +231,14 @@ void Controller::HandlePipeVsync(registers::Pipe pipe) {
                         handles[handle_count++] = handle;
                     }
                 }
+
+                auto live_surface = regs.CursorSurfaceLive().ReadFrom(mmio_space());
+                void* handle = reinterpret_cast<void*>(
+                        live_surface.surface_base_addr() << live_surface.kPageShift);
+                if (handle) {
+                    handles[handle_count++] = handle;
+                }
+
                 break;
             }
         }
@@ -367,7 +381,7 @@ bool Controller::BringUpDisplayEngine(bool resume) {
         }
 
         // Disable the primary plane watermarks and reset their buffer allocation
-        for (unsigned plane_num = 0; plane_num < registers::kPrimaryPlaneCount; plane_num++) {
+        for (unsigned plane_num = 0; plane_num < registers::kImagePlaneCount; plane_num++) {
             for (int wm_num = 0; wm_num < 8; wm_num++) {
                 auto wm = pipe_regs.PlaneWatermark(plane_num + 1, wm_num).FromValue(0);
                 wm.WriteTo(mmio_space());
@@ -408,7 +422,7 @@ void Controller::ResetPipe(registers::Pipe pipe) {
     }
 
     ZX_DEBUG_ASSERT(mtx_trylock(&display_lock_) == thrd_busy);
-    for (unsigned plane_num = 0; plane_num < registers::kPrimaryPlaneCount; plane_num++) {
+    for (unsigned plane_num = 0; plane_num < registers::kImagePlaneCount; plane_num++) {
         plane_buffers_[pipe][plane_num].start = registers::PlaneBufCfg::kBufferCount;
         plane_buffers_[pipe][plane_num].minimum = 0;
     }
@@ -620,6 +634,9 @@ zx_status_t Controller::GetDisplayInfo(uint64_t display_id, display_info_t* info
     info->panel.edid.length = device->edid().edid_length();
     info->pixel_formats = supported_formats;
     info->pixel_format_count = static_cast<uint32_t>(fbl::count_of(supported_formats));
+    info->cursor_infos = cursor_infos;
+    info->cursor_info_count = static_cast<uint32_t>(fbl::count_of(cursor_infos));
+
     return ZX_OK;
 }
 
@@ -718,10 +735,21 @@ bool Controller::GetLayer(registers::Pipe pipe, uint32_t plane,
             continue;
         }
         for (unsigned j = 0; j < config->layer_count; j++) {
-            if (config->layers[j]->z_index == plane) {
-                *layer_out = config->layers[j];
-                return true;
+            if (config->layers[j]->type == LAYER_PRIMARY) {
+                if (plane != config->layers[j]->z_index) {
+                    continue;
+                }
+            } else if (config->layers[j]->type == LAYER_CURSOR) {
+                // Since the config is validated, we know the cursor is the
+                // highest plane, so we don't care about the layer's z_index.
+                if (plane != registers::kCursorPlane) {
+                    continue;
+                }
+            } else {
+                ZX_ASSERT(false);
             }
+            *layer_out = config->layers[j];
+            return true;
         }
     }
     return false;
@@ -730,9 +758,9 @@ bool Controller::GetLayer(registers::Pipe pipe, uint32_t plane,
 bool Controller::CalculateMinimumAllocations(const display_config_t** display_configs,
                                              uint32_t display_count,
                                              uint16_t min_allocs[registers::kPipeCount]
-                                                                [registers::kPrimaryPlaneCount]) {
+                                                                [registers::kImagePlaneCount]) {
     ZX_ASSERT(display_count < registers::kPipeCount);
-    // This fn ignores layers after kPrimaryPlaneCount. Displays with too many layers already
+    // This fn ignores layers after kImagePlaneCount. Displays with too many layers already
     // failed in ::CheckConfiguration, so it doesn't matter if we incorrectly say they pass here.
 
     bool success = true;
@@ -740,12 +768,18 @@ bool Controller::CalculateMinimumAllocations(const display_config_t** display_co
         registers::Pipe pipe = registers::kPipes[pipe_num];
         uint32_t total = 0;
 
-        for (unsigned plane_num = 0; plane_num < registers::kPrimaryPlaneCount; plane_num++) {
+        for (unsigned plane_num = 0; plane_num < registers::kImagePlaneCount; plane_num++) {
             const layer_t* layer;
             if (!GetLayer(pipe, plane_num, display_configs, display_count, &layer)) {
                 min_allocs[pipe_num][plane_num] = 0;
                 continue;
             }
+
+            if (layer->type == LAYER_CURSOR) {
+                min_allocs[pipe_num][plane_num] = 8;
+                continue;
+            }
+
             ZX_ASSERT(layer->type == LAYER_PRIMARY);
             const primary_layer_t* primary = &layer->cfg.primary;
 
@@ -787,18 +821,18 @@ bool Controller::CalculateMinimumAllocations(const display_config_t** display_co
 }
 
 void Controller::UpdateAllocations(const uint16_t min_allocs[registers::kPipeCount]
-                                                            [registers::kPrimaryPlaneCount],
+                                                            [registers::kImagePlaneCount],
                                    const uint64_t data_rate[registers::kPipeCount]
-                                                           [registers::kPrimaryPlaneCount]) {
-    uint16_t allocs[registers::kPipeCount][registers::kPrimaryPlaneCount];
+                                                           [registers::kImagePlaneCount]) {
+    uint16_t allocs[registers::kPipeCount][registers::kImagePlaneCount];
 
     for (unsigned pipe_num = 0; pipe_num < registers::kPipeCount; pipe_num++) {
         uint64_t total_data_rate = 0;
-        for (unsigned plane_num = 0; plane_num < registers::kPrimaryPlaneCount; plane_num++) {
+        for (unsigned plane_num = 0; plane_num < registers::kImagePlaneCount; plane_num++) {
             total_data_rate += data_rate[pipe_num][plane_num];
         }
         if (total_data_rate == 0) {
-            for (unsigned plane_num = 0; plane_num < registers::kPrimaryPlaneCount; plane_num++) {
+            for (unsigned plane_num = 0; plane_num < registers::kImagePlaneCount; plane_num++) {
                 allocs[pipe_num][plane_num] = 0;
             }
             continue;
@@ -808,10 +842,10 @@ void Controller::UpdateAllocations(const uint16_t min_allocs[registers::kPipeCou
         // that percentage isn't enough for a plane, give that plane its minimum allocation and
         // then try again.
         double buffers_per_pipe = pipe_buffers_[pipe_num].end - pipe_buffers_[pipe_num].start;
-        bool forced_alloc[registers::kPrimaryPlaneCount] = {};
+        bool forced_alloc[registers::kImagePlaneCount] = {};
         bool done = false;
         while (!done) {
-            for (unsigned plane_num = 0; plane_num < registers::kPrimaryPlaneCount; plane_num++) {
+            for (unsigned plane_num = 0; plane_num < registers::kImagePlaneCount; plane_num++) {
                 if (forced_alloc[plane_num]) {
                     continue;
                 }
@@ -824,7 +858,7 @@ void Controller::UpdateAllocations(const uint16_t min_allocs[registers::kPipeCou
 
             done = true;
 
-            for (unsigned plane_num = 0; plane_num < registers::kPrimaryPlaneCount; plane_num++) {
+            for (unsigned plane_num = 0; plane_num < registers::kImagePlaneCount; plane_num++) {
                 if (allocs[pipe_num][plane_num] < min_allocs[pipe_num][plane_num]) {
                     done = false;
                     allocs[pipe_num][plane_num] = min_allocs[pipe_num][plane_num];
@@ -839,7 +873,7 @@ void Controller::UpdateAllocations(const uint16_t min_allocs[registers::kPipeCou
     // Do the actual allocation, using the buffers that are asigned to each pipe.
     for (unsigned pipe_num = 0; pipe_num < registers::kPipeCount; pipe_num++) {
         uint16_t start = pipe_buffers_[pipe_num].start;
-        for (unsigned plane_num = 0; plane_num < registers::kPrimaryPlaneCount; plane_num++) {
+        for (unsigned plane_num = 0; plane_num < registers::kImagePlaneCount; plane_num++) {
             auto cur = &plane_buffers_[pipe_num][plane_num];
             cur->minimum = min_allocs[pipe_num][plane_num];
 
@@ -867,32 +901,51 @@ void Controller::UpdateAllocations(const uint16_t min_allocs[registers::kPipeCou
             wm0.set_enable(cur->start != registers::PlaneBufCfg::kBufferCount);
             wm0.set_blocks(cur->end - cur->start);
             wm0.WriteTo(mmio_space());
+
+            // Give the buffers to both the cursor plane and plane 2, since
+            // only one will actually be active.
+            if (plane_num == registers::kCursorPlane) {
+                auto buf_cfg = pipe_regs.PlaneBufCfg(0).FromValue(0);
+                buf_cfg.set_buffer_start(cur->start);
+                buf_cfg.set_buffer_end(cur->end - 1);
+                buf_cfg.WriteTo(mmio_space());
+
+                auto wm0 = pipe_regs.PlaneWatermark(0, 0).FromValue(0);
+                wm0.set_enable(cur->start != registers::PlaneBufCfg::kBufferCount);
+                wm0.set_blocks(cur->end - cur->start);
+                wm0.WriteTo(mmio_space());
+            }
         }
     }
 }
 
 bool Controller::ReallocatePlaneBuffers(const display_config_t** display_configs,
                                         uint32_t display_count) {
-    uint16_t min_allocs[registers::kPipeCount][registers::kPrimaryPlaneCount];
+    uint16_t min_allocs[registers::kPipeCount][registers::kImagePlaneCount];
     if (!CalculateMinimumAllocations(display_configs, display_count, min_allocs)) {
         return false;
     }
 
     // Calculate the data rates and store the minimum allocations
-    uint64_t data_rate[registers::kPipeCount][registers::kPrimaryPlaneCount];
+    uint64_t data_rate[registers::kPipeCount][registers::kImagePlaneCount];
     for (unsigned pipe_num = 0; pipe_num < registers::kPipeCount; pipe_num++) {
         registers::Pipe pipe = registers::kPipes[pipe_num];
-        for (unsigned plane_num = 0; plane_num < registers::kPrimaryPlaneCount; plane_num++) {
+        for (unsigned plane_num = 0; plane_num < registers::kImagePlaneCount; plane_num++) {
             const layer_t* layer;
             if (!GetLayer(pipe, plane_num, display_configs, display_count, &layer)) {
                 data_rate[pipe_num][plane_num] = 0;
-            } else {
-                ZX_ASSERT(layer->type == LAYER_PRIMARY);
+            } else if (layer->type == LAYER_PRIMARY) {
                 const primary_layer_t* primary = &layer->cfg.primary;
 
                 data_rate[pipe_num][plane_num] = primary->src_frame.width *
                         primary->src_frame.height *
                         ZX_PIXEL_FORMAT_BYTES(primary->image.pixel_format);
+            } else if (layer->type == LAYER_CURSOR) {
+                // Use a tiny data rate so the cursor gets the minimum number of buffers
+                data_rate[pipe_num][plane_num] = 1;
+            } else {
+                // Other layers don't use pipe/planes, so GetLayer should have returned false
+                ZX_ASSERT(false);
             }
         }
     }
@@ -915,11 +968,11 @@ void Controller::ReallocatePipeBuffers(bool is_hotplug) {
 
     // Approximate the data rate based on how many buffers are allocated to each plane. This
     // can be slightly off, but that'll be fixed on the next page flip.
-    uint16_t min_allocs[registers::kPipeCount][registers::kPrimaryPlaneCount];
-    uint64_t data_rate[registers::kPipeCount][registers::kPrimaryPlaneCount];
+    uint16_t min_allocs[registers::kPipeCount][registers::kImagePlaneCount];
+    uint64_t data_rate[registers::kPipeCount][registers::kImagePlaneCount];
     for (unsigned pipe_num = 0; pipe_num < registers::kPipeCount; pipe_num++) {
         uint16_t pipe_total = 0;
-        for (unsigned plane_num = 0; plane_num < registers::kPrimaryPlaneCount; plane_num++) {
+        for (unsigned plane_num = 0; plane_num < registers::kImagePlaneCount; plane_num++) {
             auto alloc = &plane_buffers_[pipe_num][plane_num];
             data_rate[pipe_num][plane_num] = alloc->start == registers::PlaneBufCfg::kBufferCount ?
                     0 : alloc->end - alloc->start;
@@ -942,11 +995,12 @@ void Controller::ReallocatePipeBuffers(bool is_hotplug) {
         for (unsigned pipe_num = 0; pipe_num < registers::kPipeCount; pipe_num++) {
             registers::Pipe pipe = registers::kPipes[pipe_num];
             registers::PipeRegs pipe_regs(pipe);
-            for (unsigned plane_num = 0; plane_num < registers::kPrimaryPlaneCount; plane_num++) {
+            for (unsigned plane_num = 0; plane_num < registers::kImagePlaneCount; plane_num++) {
                  pipe_regs.PlaneControl(plane_num).ReadFrom(mmio_space())
                         .set_plane_enable(0).WriteTo(mmio_space());
                  pipe_regs.PlaneSurface(plane_num).ReadFrom(mmio_space()).WriteTo(mmio_space());
             }
+            pipe_regs.CursorBase().ReadFrom(mmio_space()).WriteTo(mmio_space());
         }
         return;
     }
@@ -1031,9 +1085,10 @@ void Controller::ReallocatePipeBuffers(bool is_hotplug) {
                 // Flush the pipe allocation, wait for it to be active, and update
                 // what is current active.
                 registers::PipeRegs pipe_regs(registers::kPipes[pipe_num]);
-                for (unsigned j = 0; j < registers::kPrimaryPlaneCount; j++) {
+                for (unsigned j = 0; j < registers::kImagePlaneCount; j++) {
                     pipe_regs.PlaneSurface(j).ReadFrom(mmio_space()).WriteTo(mmio_space());
                 }
+                pipe_regs.CursorBase().ReadFrom(mmio_space()).WriteTo(mmio_space());
 
                 // TODO(stevensd): Wait for vsync instead of sleeping
                 // TODO(stevesnd): Parallelize/reduce the number of vsyncs we wait for
@@ -1067,47 +1122,69 @@ void Controller::CheckConfiguration(const display_config_t** display_config,
         }
 
         for (unsigned j = 0; j < config->layer_count; j++) {
-            if (config->layers[j]->type != LAYER_PRIMARY) {
-                layer_cfg_result[i][j] = CLIENT_USE_PRIMARY;
-                continue;
-            }
-            primary_layer_t* primary = &config->layers[j]->cfg.primary;
-            if (primary->transform_mode == FRAME_TRANSFORM_ROT_90
-                    || primary->transform_mode == FRAME_TRANSFORM_ROT_270) {
-                // Linear and x tiled images don't support 90/270 rotation
-                if (primary->image.type == IMAGE_TYPE_SIMPLE
-                        || primary->image.type == IMAGE_TYPE_X_TILED) {
+            switch (config->layers[j]->type) {
+            case LAYER_PRIMARY: {
+                primary_layer_t* primary = &config->layers[j]->cfg.primary;
+                if (primary->transform_mode == FRAME_TRANSFORM_ROT_90
+                        || primary->transform_mode == FRAME_TRANSFORM_ROT_270) {
+                    // Linear and x tiled images don't support 90/270 rotation
+                    if (primary->image.type == IMAGE_TYPE_SIMPLE
+                            || primary->image.type == IMAGE_TYPE_X_TILED) {
+                        layer_cfg_result[i][j] |= CLIENT_TRANSFORM;
+                    }
+                } else if (primary->transform_mode != FRAME_TRANSFORM_IDENTITY
+                        && primary->transform_mode != FRAME_TRANSFORM_ROT_180) {
+                    // Cover unsupported rotations
                     layer_cfg_result[i][j] |= CLIENT_TRANSFORM;
                 }
-            } else if (primary->transform_mode != FRAME_TRANSFORM_IDENTITY
-                    && primary->transform_mode != FRAME_TRANSFORM_ROT_180) {
-                // Cover unsupported rotations
-                layer_cfg_result[i][j] |= CLIENT_TRANSFORM;
-            }
 
-            uint32_t src_width;
-            uint32_t src_height;
-            if (primary->transform_mode == FRAME_TRANSFORM_IDENTITY
-                    || primary->transform_mode == FRAME_TRANSFORM_ROT_180
-                    || primary->transform_mode == FRAME_TRANSFORM_REFLECT_X
-                    || primary->transform_mode == FRAME_TRANSFORM_REFLECT_Y) {
-                src_width = primary->src_frame.width;
-                src_height = primary->src_frame.height;
-            } else {
-                src_width = primary->src_frame.height;
-                src_height = primary->src_frame.width;
-            }
+                uint32_t src_width;
+                uint32_t src_height;
+                if (primary->transform_mode == FRAME_TRANSFORM_IDENTITY
+                        || primary->transform_mode == FRAME_TRANSFORM_ROT_180
+                        || primary->transform_mode == FRAME_TRANSFORM_REFLECT_X
+                        || primary->transform_mode == FRAME_TRANSFORM_REFLECT_Y) {
+                    src_width = primary->src_frame.width;
+                    src_height = primary->src_frame.height;
+                } else {
+                    src_width = primary->src_frame.height;
+                    src_height = primary->src_frame.width;
+                }
 
-            if (primary->dest_frame.width != src_width
-                    || primary->dest_frame.height != src_height) {
-                layer_cfg_result[i][j] |= CLIENT_FRAME_SCALE;
+                if (primary->dest_frame.width != src_width
+                        || primary->dest_frame.height != src_height) {
+                    layer_cfg_result[i][j] |= CLIENT_FRAME_SCALE;
+                }
+                break;
+            }
+            case LAYER_CURSOR: {
+                if (j != config->layer_count - 1) {
+                    layer_cfg_result[i][j] |= CLIENT_USE_PRIMARY;
+                }
+                const image_t* image = &config->layers[j]->cfg.cursor.image;
+                if (image->type != IMAGE_TYPE_SIMPLE) {
+                    layer_cfg_result[i][j] |= CLIENT_USE_PRIMARY;
+                }
+                bool found = false;
+                for (unsigned x = 0; x < fbl::count_of(cursor_infos) && !found; x++) {
+                    found = image->width == cursor_infos[x].width
+                            && image->height == cursor_infos[x].height
+                            && image->pixel_format == cursor_infos[x].format;
+                }
+                if (!found) {
+                    layer_cfg_result[i][j] |= CLIENT_USE_PRIMARY;
+                }
+                break;
+            }
+            default:
+                layer_cfg_result[i][j] |= CLIENT_USE_PRIMARY;
             }
         }
     }
 
-    // CalculateMinimumAllocations ignores layers after kPrimaryPlaneCount. That's fine, since
+    // CalculateMinimumAllocations ignores layers after kImagePlaneCount. That's fine, since
     // that case already fails from an earlier check.
-    uint16_t arr[registers::kPipeCount][registers::kPrimaryPlaneCount];
+    uint16_t arr[registers::kPipeCount][registers::kImagePlaneCount];
     if (!CalculateMinimumAllocations(display_config, display_count, arr)) {
         // Find any displays whose allocation fails and set the return code. Overwrite
         // any previous errors, since they get solved by the merge.

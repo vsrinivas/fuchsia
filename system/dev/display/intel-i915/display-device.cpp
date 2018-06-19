@@ -204,100 +204,153 @@ void DisplayDevice::ApplyConfiguration(const display_config_t* config) {
         primary_layer_t* primary = nullptr;
         for (unsigned j = 0; j < config->layer_count; j++) {
             layer_t* layer = config->layers[j];
-            if (layer->z_index == i) {
+            if (layer->type == LAYER_PRIMARY && layer->z_index == i) {
                 primary = &layer->cfg.primary;
                 break;
             }
         }
-        if (!primary) {
-            auto plane_ctrl = pipe_regs.PlaneControl(i).ReadFrom(controller_->mmio_space());
-            plane_ctrl.set_plane_enable(0);
-            plane_ctrl.WriteTo(controller_->mmio_space());
-
-            auto plane_surface = pipe_regs.PlaneSurface(i).ReadFrom(controller_->mmio_space());
-            plane_surface.set_surface_base_addr(0);
-            plane_surface.WriteTo(controller_->mmio_space());
-            continue;
-        }
-        image_t* image = &primary->image;
-
-        const fbl::unique_ptr<GttRegion>& region = controller_->GetGttRegion(image->handle);
-        region->SetRotation(primary->transform_mode, *image);
-
-        uint32_t plane_width;
-        uint32_t plane_height;
-        uint32_t stride;
-        uint32_t x_offset;
-        uint32_t y_offset;
-        if (primary->transform_mode == FRAME_TRANSFORM_IDENTITY
-                || primary->transform_mode == FRAME_TRANSFORM_ROT_180) {
-            plane_width = primary->src_frame.width;
-            plane_height = primary->src_frame.height;
-            stride = width_in_tiles(image->type, image->width, image->pixel_format);
-            x_offset = primary->src_frame.x_pos;
-            y_offset = primary->src_frame.y_pos;
-        } else {
-            uint32_t tile_height = height_in_tiles(image->type, image->height, image->pixel_format);
-            uint32_t tile_px_height = get_tile_px_height(image->type, image->pixel_format);
-            uint32_t total_height = tile_height * tile_px_height;
-
-            plane_width = primary->src_frame.height;
-            plane_height = primary->src_frame.width;
-            stride = tile_height;
-            x_offset = total_height - primary->src_frame.y_pos - primary->src_frame.height;
-            y_offset = primary->src_frame.x_pos;
-        }
-
-        auto plane_size = pipe_regs.PlaneSurfaceSize(i).FromValue(0);
-        plane_size.set_width_minus_1(plane_width - 1);
-        plane_size.set_height_minus_1(plane_height - 1);
-        plane_size.WriteTo(mmio_space());
-
-        auto plane_pos = pipe_regs.PlanePosition(i).FromValue(0);
-        plane_pos.set_x_pos(primary->dest_frame.x_pos);
-        plane_pos.set_y_pos(primary->dest_frame.y_pos);
-        plane_pos.WriteTo(mmio_space());
-
-        auto plane_offset = pipe_regs.PlaneOffset(i).FromValue(0);
-        plane_offset.set_start_x(x_offset);
-        plane_offset.set_start_y(y_offset);
-        plane_offset.WriteTo(mmio_space());
-
-        auto stride_reg = pipe_regs.PlaneSurfaceStride(i).FromValue(0);
-        stride_reg.set_stride(stride);
-        stride_reg.WriteTo(controller_->mmio_space());
-
-        auto plane_ctrl = pipe_regs.PlaneControl(i).ReadFrom(controller_->mmio_space());
-        plane_ctrl.set_plane_enable(1);
-        plane_ctrl.set_source_pixel_format(plane_ctrl.kFormatRgb8888);
-        if (primary->image.type == IMAGE_TYPE_SIMPLE) {
-            plane_ctrl.set_tiled_surface(plane_ctrl.kLinear);
-        } else if (primary->image.type == IMAGE_TYPE_X_TILED) {
-            plane_ctrl.set_tiled_surface(plane_ctrl.kTilingX);
-        } else if (primary->image.type == IMAGE_TYPE_Y_LEGACY_TILED) {
-            plane_ctrl.set_tiled_surface(plane_ctrl.kTilingYLegacy);
-        } else {
-            ZX_ASSERT(primary->image.type == IMAGE_TYPE_YF_TILED);
-            plane_ctrl.set_tiled_surface(plane_ctrl.kTilingYF);
-        }
-        if (primary->transform_mode == FRAME_TRANSFORM_IDENTITY) {
-            plane_ctrl.set_plane_rotation(plane_ctrl.kIdentity);
-        } else if (primary->transform_mode == FRAME_TRANSFORM_ROT_90) {
-            plane_ctrl.set_plane_rotation(plane_ctrl.k90deg);
-        } else if (primary->transform_mode == FRAME_TRANSFORM_ROT_180) {
-            plane_ctrl.set_plane_rotation(plane_ctrl.k180deg);
-        } else {
-            ZX_ASSERT(primary->transform_mode == FRAME_TRANSFORM_ROT_270);
-            plane_ctrl.set_plane_rotation(plane_ctrl.k270deg);
-        }
-        plane_ctrl.WriteTo(controller_->mmio_space());
-
-        uint32_t base_address = static_cast<uint32_t>(region->base());
-
-        auto plane_surface = pipe_regs.PlaneSurface(i).ReadFrom(controller_->mmio_space());
-        plane_surface.set_surface_base_addr(base_address >> plane_surface.kRShiftCount);
-        plane_surface.WriteTo(controller_->mmio_space());
+        ConfigurePrimaryPlane(i, primary);
     }
+    cursor_layer_t* cursor = nullptr;
+    if (config->layer_count && config->layers[config->layer_count - 1]->type == LAYER_CURSOR) {
+        cursor = &config->layers[config->layer_count - 1]->cfg.cursor;
+    }
+    ConfigureCursorPlane(cursor);
+}
+
+void DisplayDevice::ConfigurePrimaryPlane(uint32_t plane_num, const primary_layer_t* primary) {
+    registers::PipeRegs pipe_regs(pipe());
+
+    auto plane_ctrl = pipe_regs.PlaneControl(plane_num).ReadFrom(controller_->mmio_space());
+    if (primary == nullptr) {
+        plane_ctrl.set_plane_enable(0).WriteTo(mmio_space());
+        pipe_regs.PlaneSurface(plane_num).FromValue(0).WriteTo(mmio_space());
+        return;
+    }
+
+    const image_t* image = &primary->image;
+
+    const fbl::unique_ptr<GttRegion>& region = controller_->GetGttRegion(image->handle);
+    region->SetRotation(primary->transform_mode, *image);
+
+    uint32_t plane_width;
+    uint32_t plane_height;
+    uint32_t stride;
+    uint32_t x_offset;
+    uint32_t y_offset;
+    if (primary->transform_mode == FRAME_TRANSFORM_IDENTITY
+            || primary->transform_mode == FRAME_TRANSFORM_ROT_180) {
+        plane_width = primary->src_frame.width;
+        plane_height = primary->src_frame.height;
+        stride = width_in_tiles(image->type, image->width, image->pixel_format);
+        x_offset = primary->src_frame.x_pos;
+        y_offset = primary->src_frame.y_pos;
+    } else {
+        uint32_t tile_height = height_in_tiles(image->type, image->height, image->pixel_format);
+        uint32_t tile_px_height = get_tile_px_height(image->type, image->pixel_format);
+        uint32_t total_height = tile_height * tile_px_height;
+
+        plane_width = primary->src_frame.height;
+        plane_height = primary->src_frame.width;
+        stride = tile_height;
+        x_offset = total_height - primary->src_frame.y_pos - primary->src_frame.height;
+        y_offset = primary->src_frame.x_pos;
+    }
+
+    auto plane_size = pipe_regs.PlaneSurfaceSize(plane_num).FromValue(0);
+    plane_size.set_width_minus_1(plane_width - 1);
+    plane_size.set_height_minus_1(plane_height - 1);
+    plane_size.WriteTo(mmio_space());
+
+    auto plane_pos = pipe_regs.PlanePosition(plane_num).FromValue(0);
+    plane_pos.set_x_pos(primary->dest_frame.x_pos);
+    plane_pos.set_y_pos(primary->dest_frame.y_pos);
+    plane_pos.WriteTo(mmio_space());
+
+    auto plane_offset = pipe_regs.PlaneOffset(plane_num).FromValue(0);
+    plane_offset.set_start_x(x_offset);
+    plane_offset.set_start_y(y_offset);
+    plane_offset.WriteTo(mmio_space());
+
+    auto stride_reg = pipe_regs.PlaneSurfaceStride(plane_num).FromValue(0);
+    stride_reg.set_stride(stride);
+    stride_reg.WriteTo(controller_->mmio_space());
+
+    plane_ctrl.set_plane_enable(1);
+    plane_ctrl.set_source_pixel_format(plane_ctrl.kFormatRgb8888);
+    if (primary->image.type == IMAGE_TYPE_SIMPLE) {
+        plane_ctrl.set_tiled_surface(plane_ctrl.kLinear);
+    } else if (primary->image.type == IMAGE_TYPE_X_TILED) {
+        plane_ctrl.set_tiled_surface(plane_ctrl.kTilingX);
+    } else if (primary->image.type == IMAGE_TYPE_Y_LEGACY_TILED) {
+        plane_ctrl.set_tiled_surface(plane_ctrl.kTilingYLegacy);
+    } else {
+        ZX_ASSERT(primary->image.type == IMAGE_TYPE_YF_TILED);
+        plane_ctrl.set_tiled_surface(plane_ctrl.kTilingYF);
+    }
+    if (primary->transform_mode == FRAME_TRANSFORM_IDENTITY) {
+        plane_ctrl.set_plane_rotation(plane_ctrl.kIdentity);
+    } else if (primary->transform_mode == FRAME_TRANSFORM_ROT_90) {
+        plane_ctrl.set_plane_rotation(plane_ctrl.k90deg);
+    } else if (primary->transform_mode == FRAME_TRANSFORM_ROT_180) {
+        plane_ctrl.set_plane_rotation(plane_ctrl.k180deg);
+    } else {
+        ZX_ASSERT(primary->transform_mode == FRAME_TRANSFORM_ROT_270);
+        plane_ctrl.set_plane_rotation(plane_ctrl.k270deg);
+    }
+    plane_ctrl.WriteTo(controller_->mmio_space());
+
+    uint32_t base_address = static_cast<uint32_t>(region->base());
+
+    auto plane_surface = pipe_regs.PlaneSurface(plane_num).ReadFrom(controller_->mmio_space());
+    plane_surface.set_surface_base_addr(base_address >> plane_surface.kRShiftCount);
+    plane_surface.WriteTo(controller_->mmio_space());
+}
+
+void DisplayDevice::ConfigureCursorPlane(const cursor_layer_t* cursor) {
+    registers::PipeRegs pipe_regs(pipe());
+
+    auto cursor_ctrl = pipe_regs.CursorCtrl().ReadFrom(controller_->mmio_space());
+    // The hardware requires that the cursor has at least one pixel on the display,
+    // so disable the plane if there is no overlap.
+    if (cursor == nullptr) {
+        cursor_ctrl.set_mode_select(cursor_ctrl.kDisabled).WriteTo(mmio_space());
+        pipe_regs.CursorBase().FromValue(0).WriteTo(mmio_space());
+        return;
+    }
+
+    if (cursor->image.width == 64) {
+        cursor_ctrl.set_mode_select(cursor_ctrl.kArgb64x64);
+    } else if (cursor->image.width == 128) {
+        cursor_ctrl.set_mode_select(cursor_ctrl.kArgb128x128);
+    } else if (cursor->image.width == 256) {
+        cursor_ctrl.set_mode_select(cursor_ctrl.kArgb256x256);
+    } else {
+        // The configuration was not properly validated
+        ZX_ASSERT(false);
+    }
+    cursor_ctrl.WriteTo(mmio_space());
+
+    auto cursor_pos = pipe_regs.CursorPos().FromValue(0);
+    if (cursor->x_pos < 0) {
+        cursor_pos.set_x_sign(1);
+        cursor_pos.set_x_pos(-cursor->x_pos);
+    } else {
+        cursor_pos.set_x_pos(cursor->x_pos);
+    }
+    if (cursor->y_pos < 0) {
+        cursor_pos.set_y_sign(1);
+        cursor_pos.set_y_pos(-cursor->y_pos);
+    } else {
+        cursor_pos.set_y_pos(cursor->y_pos);
+    }
+    cursor_pos.WriteTo(mmio_space());
+
+    uint32_t base_address =
+            static_cast<uint32_t>(reinterpret_cast<uint64_t>(cursor->image.handle));
+    auto cursor_base = pipe_regs.CursorBase().ReadFrom(controller_->mmio_space());
+    cursor_base.set_cursor_base(base_address >> cursor_base.kPageShift);
+    cursor_base.WriteTo(controller_->mmio_space());
 }
 
 } // namespace i915

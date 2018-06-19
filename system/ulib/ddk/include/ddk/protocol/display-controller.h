@@ -23,6 +23,14 @@ typedef struct display_params {
     uint32_t refresh_rate_e2;
 } display_params_t;
 
+// Info about valid cursor configuratoins.
+typedef struct cursor_info {
+    // The width and height of the cursor configuration, in pixels.
+    uint32_t width;
+    uint32_t height;
+    zx_pixel_format_t format;
+} cursor_info_t;
+
 // a structure containing information a connected display
 typedef struct display_info {
     // A flag indicating whether or not the display has a valid edid. If no edid is
@@ -43,6 +51,15 @@ typedef struct display_info {
     // preferred pixel format.
     const zx_pixel_format_t* pixel_formats;
     uint32_t pixel_format_count;
+
+    // A list of cursor configurations most likely to be accepted by the driver. Can
+    // be null if cursor_count is 0.
+    //
+    // The driver may reject some of these configurations in some circumstances, and
+    // it may accept other configurations, but at least one of these configurations
+    // should be valid at most times.
+    const cursor_info_t* cursor_infos;
+    uint32_t cursor_info_count;
 } display_info_t;
 
 // The image is linear and VMO backed.
@@ -118,9 +135,20 @@ typedef struct primary_layer {
     frame_t dest_frame;
 } primary_layer_t;
 
+typedef struct cursor_layer {
+    image_t image;
+
+    // The position of the top-left corner of the cursor's image. When being
+    // applied to a display, the cursor is guaranteed to have at least one
+    // pixel of overlap with the display.
+    int32_t x_pos;
+    int32_t y_pos;
+} cursor_layer_t;
+
 // Types of layers.
 
 #define LAYER_PRIMARY 0
+#define LAYER_CURSOR 1
 
 typedef struct layer {
     // One of the LAYER_* flags.
@@ -129,6 +157,7 @@ typedef struct layer {
     uint32_t z_index;
     union {
         primary_layer_t primary;
+        cursor_layer_t cursor;
     } cfg;
 } layer_t;
 
@@ -211,7 +240,8 @@ typedef struct display_controller_protocol_ops {
     //
     // Whether or not the driver can accept the configuration cannot depend on the
     // particular image handles, as it must always be possible to present a new image in
-    // place of another image with a matching configuration.
+    // place of another image with a matching configuration. It also cannot depend on the
+    // cursor position, as that can be updated without another call to check_configuration.
     //
     // layer_cfg_result points to an array of arrays. The primary length is display_count, the
     // secondary lengths are the corresponding display_cfg's layer_count. Any errors in layer
