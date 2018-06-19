@@ -8,7 +8,6 @@ import("//peridot/build/tests_package.gni")
 tests_package("story_runner_unittests") {
   deps = [
     ":chain_impl_unittest",
-    ":key_generator_unittest",
     ":link_impl_unittest",
   ]
 }
@@ -17,8 +16,6 @@ source_set("story_runner") {
   sources = [
     "chain_impl.cc",
     "chain_impl.h",
-    "key_generator.cc",
-    "key_generator.h",
     "link_impl.cc",
     "link_impl.h",
     "module_context_impl.cc",
@@ -104,20 +101,6 @@ executable("chain_impl_unittest") {
     "//garnet/public/lib/gtest",
     "//peridot/bin/user_runner/agent_runner",
     "//peridot/lib/testing:story_controller_mock",
-    "//third_party/googletest:gtest_main",
-  ]
-}
-
-executable("key_generator_unittest") {
-  testonly = true
-
-  sources = [
-    "key_generator_unittest.cc",
-  ]
-
-  deps = [
-    ":story_runner",
-    "//peridot/bin/user_runner/agent_runner",
     "//third_party/googletest:gtest_main",
   ]
 }
