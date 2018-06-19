@@ -214,6 +214,17 @@ typedef struct acpi_table_xsdt
  *
  ******************************************************************************/
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic error "-Wpadded"
+
+/*
+ * According to the the ACPI specification, section 5.2.10, the platform boot
+ * firmware aligns the FACS on a 64-byte boundary anywhere within the system’s
+ * memory address space. This means we can use 8-byte alignment on the FACS
+ * struct even though all other structs use byte-packing, which is necessary
+ * for lock-free access to ACPI Global Lock.
+ */
+
 typedef struct acpi_table_facs
 {
     char                    Signature[4];           /* ASCII table signature */
@@ -228,7 +239,9 @@ typedef struct acpi_table_facs
     UINT32                  OspmFlags;              /* Flags to be set by OSPM (ACPI 4.0) */
     UINT8                   Reserved1[24];          /* Reserved, must be zero */
 
-} ACPI_TABLE_FACS;
+} __attribute__((aligned(8))) ACPI_TABLE_FACS;
+
+#pragma GCC diagnostic pop
 
 /* Masks for GlobalLock flag field above */
 

@@ -14,7 +14,6 @@ else
 MODULE_CFLAGS += \
     -Wno-incompatible-pointer-types-discards-qualifiers \
     -Wno-null-pointer-arithmetic
-MODULE_CPPFLAGS += -Wno-atomic-alignment
 endif
 # We need to specify -fno-strict-aliasing, since ACPICA has a habit of
 # violating strict aliasing rules in some of its macros.  Rewriting this
