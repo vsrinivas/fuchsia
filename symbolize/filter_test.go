@@ -5,6 +5,7 @@
 package symbolize
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"reflect"
@@ -72,14 +73,20 @@ func TestBasic(t *testing.T) {
 	filter := NewFilter(repo, symbo)
 
 	// parse some example lines
-	filter.AddModule(Module{"libc.elf", "4fcb712aa6387724a9f465a32cd8c14b", 1})
-	filter.AddModule(Module{"libcrypto.elf", "12ef5c50b3ed3599c07c02d4509311be", 2})
+	err := filter.AddModule(Module{"libc.elf", "4fcb712aa6387724a9f465a32cd8c14b", 1})
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = filter.AddModule(Module{"libcrypto.elf", "12ef5c50b3ed3599c07c02d4509311be", 2})
+	if err != nil {
+		t.Fatal(err)
+	}
 	filter.AddSegment(Segment{1, 0x12345000, 849596, "rx", 0x0})
 	filter.AddSegment(Segment{2, 0x23456000, 539776, "rx", 0x80000})
 	line := parseLine("\033[1m Error at {{{pc:0x123879c0}}}")
 	// print out a more precise form
 	for _, token := range line {
-		token.Accept(&FilterVisitor{filter, 1})
+		token.Accept(&FilterVisitor{filter, 1, context.Background()})
 	}
 	json, err := GetLineJson(line)
 	if err != nil {
@@ -147,10 +154,13 @@ func TestBacktrace(t *testing.T) {
 	filter := NewFilter(repo, symbo)
 
 	// add some context
-	filter.AddModule(Module{"libc.so", "4fcb712aa6387724a9f465a32cd8c14b", 1})
+	err = filter.AddModule(Module{"libc.so", "4fcb712aa6387724a9f465a32cd8c14b", 1})
+	if err != nil {
+		t.Fatal(err)
+	}
 	filter.AddSegment(Segment{1, 0x12345000, 849596, "rx", 0x0})
 	for _, token := range line {
-		token.Accept(&FilterVisitor{filter, 1})
+		token.Accept(&FilterVisitor{filter, 1, context.Background()})
 	}
 
 	json, err := GetLineJson(line)
@@ -204,7 +214,10 @@ func TestReset(t *testing.T) {
 
 	// add some context
 	mod := Module{"libc.so", "4fcb712aa6387724a9f465a32cd8c14b", 1}
-	filter.AddModule(mod)
+	err = filter.AddModule(mod)
+	if err != nil {
+		t.Fatal(err)
+	}
 	seg := Segment{1, 0x12345000, 849596, "rx", 0x0}
 	filter.AddSegment(seg)
 
@@ -233,7 +246,7 @@ func TestReset(t *testing.T) {
 
 	// now forget the context
 	for _, token := range line {
-		token.Accept(&FilterVisitor{filter, 1})
+		token.Accept(&FilterVisitor{filter, 1, context.Background()})
 	}
 
 	if _, err := filter.FindInfoForAddress(addr); err == nil {

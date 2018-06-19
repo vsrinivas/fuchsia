@@ -7,7 +7,8 @@ package symbolize
 import (
 	"context"
 	"fmt"
-	"log"
+
+	"fuchsia.googlesource.com/tools/logger"
 )
 
 type remuxer struct {
@@ -84,7 +85,7 @@ func (d *Demuxer) Start(ctx context.Context, input <-chan InputLine) <-chan Outp
 	remux := newRemuxer()
 	out, err := remux.start(ctx)
 	if err != nil {
-		log.Fatal("Failed to start remuxer in case where that should never happen.")
+		logger.Fatalf(ctx, "Failed to start remuxer in case where that should never happen.")
 	}
 	go func() {
 		// Clean up the channels/goroutines when we're done
@@ -94,7 +95,7 @@ func (d *Demuxer) Start(ctx context.Context, input <-chan InputLine) <-chan Outp
 			}
 			err := remux.stop()
 			if err != nil {
-				log.Printf("warning: %v", err)
+				logger.Warningf(ctx, "%v", err)
 			}
 		}()
 		// Start multiplexing things out

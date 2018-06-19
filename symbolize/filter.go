@@ -7,7 +7,8 @@ package symbolize
 import (
 	"context"
 	"fmt"
-	"log"
+
+	"fuchsia.googlesource.com/tools/logger"
 )
 
 type lineSource interface{}
@@ -139,16 +140,19 @@ func (s *Filter) Reset() {
 }
 
 // AddModule updates the filter state to inform it of a new module
-func (s *Filter) AddModule(m Module) {
+func (s *Filter) AddModule(m Module) error {
+	var err error
 	// Flag odd build IDs.
 	if modName, ok := s.modNamesByBuildID[m.build]; ok {
 		if modName != m.name {
-			log.Printf("found two modules named %s and %s with the same build ID of %s", modName, m.name, m.build)
+			err = fmt.Errorf("found two modules named %s and %s with the same build ID of %s", modName, m.name, m.build)
 		}
 	}
 	// Keep track of modules by build ID.
 	s.modNamesByBuildID[m.build] = m.name
 	s.modules[m.id] = m
+
+	return err
 }
 
 // AddSegment updates the filter state to inform it of a new memory mapped location.
@@ -175,7 +179,7 @@ func (f *Filter) Start(ctx context.Context, input <-chan InputLine) <-chan Outpu
 				}
 				// Update AST with source locations.
 				for _, token := range res.line {
-					token.Accept(&FilterVisitor{filter: f, lineno: elem.lineno})
+					token.Accept(&FilterVisitor{filter: f, lineno: elem.lineno, ctx: ctx})
 				}
 				res.LogLine = elem.LogLine
 				out <- res
@@ -188,6 +192,11 @@ func (f *Filter) Start(ctx context.Context, input <-chan InputLine) <-chan Outpu
 type FilterVisitor struct {
 	filter *Filter
 	lineno uint64
+	ctx    context.Context
+}
+
+func (f *FilterVisitor) warn(err error) {
+	logger.Warningf(f.ctx, "on line %d: %v", f.lineno, err)
 }
 
 func (f *FilterVisitor) VisitBt(elem *BacktraceElement) {
@@ -195,7 +204,7 @@ func (f *FilterVisitor) VisitBt(elem *BacktraceElement) {
 	if err != nil {
 		// Don't be noisy about missing objects.
 		if _, ok := err.(*missingObjError); !ok {
-			log.Printf("warning on line %d: %v", f.lineno, err)
+			f.warn(err)
 		}
 	}
 	elem.info = info
@@ -206,7 +215,7 @@ func (f *FilterVisitor) VisitPc(elem *PCElement) {
 	if err != nil {
 		// Don't be noisy about missing objects.
 		if _, ok := err.(*missingObjError); !ok {
-			log.Printf("warning on line %d: %v", f.lineno, err)
+			f.warn(err)
 		}
 	}
 	elem.info = info
@@ -228,7 +237,10 @@ func (f *FilterVisitor) VisitReset(elem *ResetElement) {
 }
 
 func (f *FilterVisitor) VisitModule(elem *ModuleElement) {
-	f.filter.AddModule(elem.mod)
+	err := f.filter.AddModule(elem.mod)
+	if err != nil {
+		f.warn(err)
+	}
 }
 
 func (f *FilterVisitor) VisitMapping(elem *MappingElement) {
