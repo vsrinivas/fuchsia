@@ -69,8 +69,7 @@ std::unique_ptr<StartupContext> StartupContext::CreateFrom(
 
 void StartupContext::ConnectToEnvironmentService(
     const std::string& interface_name, zx::channel channel) {
-  return incoming_services().ConnectToService(std::move(channel),
-                                              interface_name);
+  incoming_services().ConnectToService(std::move(channel), interface_name);
 }
 
 }  // namespace sys
