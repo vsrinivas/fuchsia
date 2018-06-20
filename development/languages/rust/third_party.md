@@ -13,6 +13,11 @@ any necessary crates into the `vendor` dir.
 If a crate is not available in the vendor directory, it can to be added with
 the following steps:
 
+1. If you have not yet received OSRB approval for the library, you will need
+   to do so by following the instructions under the "Process for 3rd Party
+   Hosted Code" section in [this document][osrb-process]. If you are not a
+   Google employee, you will need to ask a Google employee to do this part
+   for you.
 1. Reference the crates you need in [`rustc_deps/Cargo.toml`][3p-cargo-toml].
 1. Run `fn update-rustc-third-party`. This will download all crates listed in
    [`rustc_deps/Cargo.toml`][3p-cargo-toml] as well as their dependencies and
@@ -47,4 +52,5 @@ Linking to a native library is not currently supported.
 [3p-cargo-toml]: https://fuchsia.googlesource.com/third_party/rust-crates/+/master/rustc_deps/Cargo.toml
 [3p-manifest]: https://fuchsia.googlesource.com/garnet/+/master/manifest/third_party#190
 [3p-vendor]: https://fuchsia.googlesource.com/third_party/rust-crates/+/master/rustc_deps/vendor/
+[osrb-process]: https://docs.google.com/document/d/1X3eNvc4keQxOpbkGUiyYBMtr3ueEnVQCPW61FT96o_E/edit#heading=h.7mb7m2qs89th
 [jiri-manifest]: https://fuchsia.googlesource.com/manifest/+/master/runtimes/rust "Jiri manifest"
