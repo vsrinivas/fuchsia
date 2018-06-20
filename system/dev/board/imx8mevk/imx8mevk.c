@@ -188,9 +188,7 @@ fail:
     return status;
 }
 
-static zx_status_t imx8mevk_bus_bind(void* ctx, zx_device_t* parent)
-{
-
+static zx_status_t imx8mevk_bus_bind(void* ctx, zx_device_t* parent) {
     imx8mevk_bus_t* bus = calloc(1, sizeof(imx8mevk_bus_t));
     if (!bus) {
         return ZX_ERR_NO_MEMORY;
@@ -212,14 +210,6 @@ static zx_status_t imx8mevk_bus_bind(void* ctx, zx_device_t* parent)
     status = iommu_get_bti(&bus->iommu, 0, BTI_BOARD, &bus->bti_handle);
     if (status != ZX_OK) {
         zxlogf(ERROR, "%s: iommu_get_bti failed %d\n", __FUNCTION__, status);
-        goto fail;
-    }
-
-    const char* board_name = pbus_get_board_name(&bus->pbus);
-    if (!strcmp(board_name, "imx8mevk")) {
-        bus->soc_pid = PDEV_VID_NXP;
-    } else {
-        zxlogf(ERROR, "%s: Invalid/Unsupported board (%s)\n", __FUNCTION__, board_name);
         goto fail;
     }
 
@@ -256,11 +246,11 @@ static zx_driver_ops_t imx8mevk_bus_driver_ops = {
     .bind = imx8mevk_bus_bind,
 };
 
-ZIRCON_DRIVER_BEGIN(vim_bus, imx8mevk_bus_driver_ops, "zircon", "0.1", 6)
+ZIRCON_DRIVER_BEGIN(imx8mevk_bus, imx8mevk_bus_driver_ops, "zircon", "0.1", 6)
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PLATFORM_BUS),
     BI_GOTO_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_NXP, 0),
     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_PID, PDEV_PID_IMX8MEVK),
     BI_LABEL(0),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_GOOGLE),
     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_PID, PDEV_PID_MADRONE),
-ZIRCON_DRIVER_END(vim_bus)
+ZIRCON_DRIVER_END(imx8mevk_bus)

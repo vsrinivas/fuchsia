@@ -4,6 +4,7 @@
 
 #include <ddk/debug.h>
 #include <ddk/device.h>
+#include <ddk/metadata.h>
 #include <ddk/protocol/platform-bus.h>
 #include <ddk/protocol/platform-defs.h>
 
@@ -46,13 +47,19 @@ static const pbus_bti_t sdhci_btis[] = {
     },
 };
 
+static const pbus_boot_metadata_t sdhci_metadata[] = {
+    {
+        .type = DEVICE_METADATA_PARTITION_MAP,
+        .extra = 0,
+    },
+};
+
 static const pbus_gpio_t sdhci_gpios[] = {
     {
         // eMMC Reset
         .gpio = IMX_GPIO_PIN(2, 10), //1-based
     },
 };
-
 
 static pbus_dev_t sdhci_dev = {
     .name = "sdhci",
@@ -67,11 +74,11 @@ static pbus_dev_t sdhci_dev = {
     .bti_count = countof(sdhci_btis),
     .gpios = sdhci_gpios,
     .gpio_count = countof(sdhci_gpios),
+    .boot_metadata = sdhci_metadata,
+    .boot_metadata_count = countof(sdhci_metadata),
 };
 
-
 zx_status_t imx8m_sdhci_init(imx8mevk_bus_t* bus) {
-
     zx_status_t status = pbus_device_add(&bus->pbus, &sdhci_dev, 0);
     if (status != ZX_OK) {
         zxlogf(ERROR, "%s: pbus_device_add failed %d\n", __FUNCTION__, status);
