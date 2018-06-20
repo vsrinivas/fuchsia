@@ -30,7 +30,6 @@ MODULE_STATIC_LIBS := \
     third_party/ulib/uboringssl \
 
 MODULE_LIBS := \
-    system/ulib/launchpad \
     system/ulib/zircon \
     system/ulib/c \
     system/ulib/fdio \

@@ -12,65 +12,81 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-#include <lib/fdio/io.h>
-#include <lib/fdio/util.h>
 #include <fs-management/mount.h>
-#include <launchpad/launchpad.h>
-#include <launchpad/vmo.h>
+#include <lib/fdio/io.h>
+#include <lib/fdio/spawn.h>
+#include <lib/fdio/util.h>
+#include <lib/zx/process.h>
 #include <zircon/compiler.h>
 #include <zircon/processargs.h>
+#include <zircon/status.h>
 #include <zircon/syscalls.h>
-#include <lib/zx/process.h>
 
 namespace {
 
-launchpad_t* InitStdio(int argc, const char** argv, zx_handle_t* handles, uint32_t* types,
-                       size_t len, uint32_t clone_what) {
-    launchpad_t* lp;
-    launchpad_create(ZX_HANDLE_INVALID, argv[0], &lp);
-    launchpad_clone(lp, clone_what);
-    launchpad_load_from_file(lp, argv[0]);
-    launchpad_set_args(lp, argc, argv);
-
-    for (size_t i = 0; i < len; i++) {
-        launchpad_add_handle(lp, handles[i], types[i]);
+void InitArgvAndActions(int argc, const char** argv, zx_handle_t* handles,
+                        uint32_t* types, size_t len,
+                        const char** null_terminated_argv_out,
+                        fdio_spawn_action_t* actions_out) {
+    for (int i = 0; i < argc; ++i) {
+        null_terminated_argv_out[i] = argv[i];
     }
-    return lp;
+    null_terminated_argv_out[argc] = nullptr;
+
+    for (size_t i = 0; i < len; ++i) {
+        actions_out[i].action = FDIO_SPAWN_ACTION_ADD_HANDLE;
+        actions_out[i].h.id = types[i];
+        actions_out[i].h.handle = handles[i];
+    }
 }
 
 }  // namespace
 
 zx_status_t launch_logs_async(int argc, const char** argv, zx_handle_t* handles,
                               uint32_t* types, size_t len) {
-    launchpad_t* lp =
-            InitStdio(argc, argv, handles, types, len, LP_CLONE_ALL& (~LP_CLONE_FDIO_STDIO));
+    const char* null_terminated_argv[argc + 1];
+    fdio_spawn_action_t actions[len + 1];
+    InitArgvAndActions(argc, argv, handles, types, len, null_terminated_argv, actions);
+
+    size_t action_count = len;
+
     zx_handle_t h;
     zx_log_create(0, &h);
     if (h != ZX_HANDLE_INVALID) {
-        launchpad_add_handle(lp, h, PA_HND(PA_FDIO_LOGGER,
-                                           0 | FDIO_FLAG_USE_FOR_STDIO));
+        actions[action_count].action = FDIO_SPAWN_ACTION_ADD_HANDLE;
+        actions[action_count].h.id = PA_HND(PA_FDIO_LOGGER, FDIO_FLAG_USE_FOR_STDIO);
+        actions[action_count].h.handle = h;
+        ++action_count;
     }
 
-    zx_status_t status;
-    const char* errmsg;
-    if ((status = launchpad_go(lp, nullptr, &errmsg)) != ZX_OK) {
-        fprintf(stderr, "fs-management: Cannot launch %s: %d: %s\n", argv[0], status, errmsg);
+    uint32_t flags = FDIO_SPAWN_CLONE_ALL & ~FDIO_SPAWN_CLONE_STDIO;
+    char err_msg[FDIO_SPAWN_ERR_MSG_MAX_LENGTH];
+    zx_status_t status = fdio_spawn_etc(ZX_HANDLE_INVALID, flags, argv[0], null_terminated_argv,
+                                        nullptr, action_count, actions, nullptr, err_msg);
+    if (status != ZX_OK) {
+        fprintf(stderr, "fs-management: Cannot launch %s: %d (%s): %s\n",
+                argv[0], status, zx_status_get_string(status), err_msg);
     }
     return status;
 }
 
 zx_status_t launch_stdio_sync(int argc, const char** argv, zx_handle_t* handles,
                               uint32_t* types, size_t len) {
-    launchpad_t* lp = InitStdio(argc, argv, handles, types, len, LP_CLONE_ALL);
+    const char* null_terminated_argv[argc + 1];
+    fdio_spawn_action_t actions[len];
+    InitArgvAndActions(argc, argv, handles, types, len, null_terminated_argv, actions);
 
-    zx_handle_t proc_handle;
-    const char* errmsg;
-    zx_status_t status = launchpad_go(lp, &proc_handle, &errmsg);
+    zx::process proc;
+    char err_msg[FDIO_SPAWN_ERR_MSG_MAX_LENGTH];
+    zx_status_t status = fdio_spawn_etc(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL,
+                                        argv[0], null_terminated_argv, nullptr,
+                                        len, actions, proc.reset_and_get_address(),
+                                        err_msg);
     if (status != ZX_OK) {
-        fprintf(stderr, "fs-management: Cannot launch %s: %d: %s\n", argv[0], status, errmsg);
+        fprintf(stderr, "fs-management: Cannot launch %s: %d (%s): %s\n",
+                argv[0], status, zx_status_get_string(status), err_msg);
         return status;
     }
-    zx::process proc(proc_handle);
 
     status = proc.wait_one(ZX_PROCESS_TERMINATED, zx::time::infinite(), nullptr);
     if (status != ZX_OK) {
@@ -93,13 +109,21 @@ zx_status_t launch_stdio_sync(int argc, const char** argv, zx_handle_t* handles,
 
 zx_status_t launch_stdio_async(int argc, const char** argv, zx_handle_t* handles,
                                uint32_t* types, size_t len) {
-    launchpad_t* lp = InitStdio(argc, argv, handles, types, len, LP_CLONE_ALL);
+    const char* null_terminated_argv[argc + 1];
+    fdio_spawn_action_t actions[len];
+    InitArgvAndActions(argc, argv, handles, types, len, null_terminated_argv, actions);
 
-    zx_status_t status;
-    const char* errmsg;
-    if ((status = launchpad_go(lp, nullptr, &errmsg)) != ZX_OK) {
-        fprintf(stderr, "fs-management: Cannot launch %s: %d: %s\n", argv[0], status, errmsg);
+    zx::process proc;
+    char err_msg[FDIO_SPAWN_ERR_MSG_MAX_LENGTH];
+    zx_status_t status = fdio_spawn_etc(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL,
+                                        argv[0], null_terminated_argv, nullptr,
+                                        len, actions, proc.reset_and_get_address(),
+                                        err_msg);
+    if (status != ZX_OK) {
+        fprintf(stderr, "fs-management: Cannot launch %s: %d (%s): %s\n",
+                argv[0], status, zx_status_get_string(status), err_msg);
         return status;
     }
+
     return status;
 }
