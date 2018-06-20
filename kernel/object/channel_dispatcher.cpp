@@ -125,13 +125,8 @@ void ChannelDispatcher::RemoveWaiter(MessageWaiter* waiter) {
     waiters_.erase(*waiter);
 }
 
-void ChannelDispatcher::on_zero_handles() {
+void ChannelDispatcher::on_zero_handles_locked() {
     canary_.Assert();
-
-    AutoLock lock(get_lock());
-    // Detach other endpoint
-
-    fbl::RefPtr<ChannelDispatcher> other = fbl::move(peer_);
 
     // (3A) Abort any waiting Call operations
     // because we've been canceled by reason
@@ -141,20 +136,15 @@ void ChannelDispatcher::on_zero_handles() {
         auto waiter = waiters_.pop_front();
         waiter->Cancel(ZX_ERR_CANCELED);
     }
-
-    // Ensure other endpoint detaches us
-    if (other)
-        other->OnPeerZeroHandlesLocked();
 }
 
 // This requires holding the shared channel lock. The thread analysis
 // can reason about repeated calls to get_lock() on the shared object,
 // but cannot reason about the aliasing between left->get_lock() and
 // right->get_lock(), which occurs above in on_zero_handles.
-void ChannelDispatcher::OnPeerZeroHandlesLocked() TA_NO_THREAD_SAFETY_ANALYSIS {
+void ChannelDispatcher::OnPeerZeroHandlesLocked() {
     canary_.Assert();
 
-    peer_.reset();
     UpdateStateLocked(ZX_CHANNEL_WRITABLE, ZX_CHANNEL_PEER_CLOSED);
     // (3B) Abort any waiting Call operations
     // because we've been canceled by reason

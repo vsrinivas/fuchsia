@@ -105,20 +105,13 @@ void SocketDispatcher::Init(fbl::RefPtr<SocketDispatcher> other) TA_NO_THREAD_SA
     peer_koid_ = peer_->get_koid();
 }
 
-void SocketDispatcher::on_zero_handles() TA_NO_THREAD_SAFETY_ANALYSIS {
+void SocketDispatcher::on_zero_handles_locked() {
     canary_.Assert();
-
-    AutoLock lock(get_lock());
-    // Drop our reference to our peer.
-    auto other = fbl::move(peer_);
-    if (other != nullptr)
-        other->OnPeerZeroHandlesLocked();
 }
 
 void SocketDispatcher::OnPeerZeroHandlesLocked() {
     canary_.Assert();
 
-    peer_.reset();
     UpdateStateLocked(ZX_SOCKET_WRITABLE, ZX_SOCKET_PEER_CLOSED);
 }
 

@@ -27,12 +27,15 @@ public:
 
     zx_obj_type_t get_type() const final { return ZX_OBJ_TYPE_FIFO; }
     bool has_state_tracker() const final { return true; }
-    void on_zero_handles() final;
 
     zx_status_t WriteFromUser(size_t elem_size, user_in_ptr<const uint8_t> src, size_t count,
                               size_t* actual);
     zx_status_t ReadToUser(size_t elem_size, user_out_ptr<uint8_t> dst, size_t count,
                            size_t* actual);
+
+    // PeeredDispatcher implementation.
+    void on_zero_handles_locked() TA_REQ(get_lock());
+    void OnPeerZeroHandlesLocked() TA_REQ(get_lock());
 
 private:
     FifoDispatcher(fbl::RefPtr<PeerHolder<FifoDispatcher>> holder,
@@ -40,10 +43,8 @@ private:
                    fbl::unique_ptr<uint8_t[]> data);
     void Init(fbl::RefPtr<FifoDispatcher> other);
     zx_status_t WriteSelfLocked(size_t elem_size, user_in_ptr<const uint8_t> ptr, size_t count,
-                                size_t* actual);
-    zx_status_t UserSignalSelfLocked(uint32_t clear_mask, uint32_t set_mask);
-
-    void OnPeerZeroHandlesLocked();
+                                size_t* actual) TA_REQ(get_lock());
+    zx_status_t UserSignalSelfLocked(uint32_t clear_mask, uint32_t set_mask) TA_REQ(get_lock());
 
     fbl::Canary<fbl::magic("FIFO")> canary_;
     const uint32_t elem_count_;

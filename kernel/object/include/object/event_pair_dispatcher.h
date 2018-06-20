@@ -23,8 +23,11 @@ public:
     zx_obj_type_t get_type() const final { return ZX_OBJ_TYPE_EVENTPAIR; }
     bool has_state_tracker() const final { return true; }
     CookieJar* get_cookie_jar() final { return &cookie_jar_; }
-    void on_zero_handles() final;
     zx_signals_t allowed_user_signals() const final { return ZX_USER_SIGNAL_ALL | ZX_EVENT_SIGNALED; }
+
+    // PeeredDispatcher implementation.
+    void on_zero_handles_locked() TA_REQ(get_lock());
+    void OnPeerZeroHandlesLocked() TA_REQ(get_lock());
 
 private:
     explicit EventPairDispatcher(fbl::RefPtr<PeerHolder<EventPairDispatcher>> holder);

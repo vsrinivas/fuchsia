@@ -42,18 +42,13 @@ zx_status_t EventPairDispatcher::Create(fbl::RefPtr<Dispatcher>* dispatcher0,
 
 EventPairDispatcher::~EventPairDispatcher() {}
 
-void EventPairDispatcher::on_zero_handles()
-    TA_NO_THREAD_SAFETY_ANALYSIS {
+void EventPairDispatcher::on_zero_handles_locked() {
     canary_.Assert();
+}
 
-    fbl::AutoLock locker(get_lock());
-
-    auto peer = fbl::move(peer_);
-    if (peer != nullptr) {
-        peer->InvalidateCookieLocked(peer->get_cookie_jar());
-        peer->UpdateStateLocked(0u, ZX_EVENTPAIR_PEER_CLOSED);
-        peer->peer_.reset();
-    }
+void EventPairDispatcher::OnPeerZeroHandlesLocked() {
+    InvalidateCookieLocked(get_cookie_jar());
+    UpdateStateLocked(0u, ZX_EVENTPAIR_PEER_CLOSED);
 }
 
 EventPairDispatcher::EventPairDispatcher(fbl::RefPtr<PeerHolder<EventPairDispatcher>> holder)

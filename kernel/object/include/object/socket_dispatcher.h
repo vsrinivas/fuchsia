@@ -29,7 +29,6 @@ public:
     // Dispatcher implementation.
     zx_obj_type_t get_type() const final { return ZX_OBJ_TYPE_SOCKET; }
     bool has_state_tracker() const final { return true; }
-    void on_zero_handles() final;
 
     // Socket methods.
     zx_status_t Write(user_in_ptr<const void> src, size_t len, size_t* written);
@@ -57,14 +56,16 @@ public:
     size_t TransmitBufferMax() const;
     size_t TransmitBufferSize() const;
 
-    void OnPeerZeroHandlesLocked() TA_REQ(get_lock());
-
     zx_status_t CheckShareable(SocketDispatcher* to_send);
 
     struct ControlMsg {
         static constexpr size_t kSize = 1024;
         char msg[kSize];
     };
+
+    // PeeredDispatcher implementation.
+    void on_zero_handles_locked() TA_REQ(get_lock());
+    void OnPeerZeroHandlesLocked() TA_REQ(get_lock());
 
 private:
     // |control_msg| may be null.

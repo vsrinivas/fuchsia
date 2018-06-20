@@ -80,31 +80,25 @@ void FifoDispatcher::Init(fbl::RefPtr<FifoDispatcher> other) TA_NO_THREAD_SAFETY
     peer_koid_ = peer_->get_koid();
 }
 
-zx_status_t FifoDispatcher::UserSignalSelfLocked(uint32_t clear_mask, uint32_t set_mask)
-    TA_NO_THREAD_SAFETY_ANALYSIS {
+zx_status_t FifoDispatcher::UserSignalSelfLocked(uint32_t clear_mask, uint32_t set_mask) {
     canary_.Assert();
     UpdateStateLocked(clear_mask, set_mask);
     return ZX_OK;
 }
 
-void FifoDispatcher::on_zero_handles() {
+void FifoDispatcher::on_zero_handles_locked() {
     canary_.Assert();
-
-    AutoLock lock(get_lock());
-    fbl::RefPtr<FifoDispatcher> other = fbl::move(peer_);
-    if (other != nullptr)
-        other->OnPeerZeroHandlesLocked();
 }
 
-void FifoDispatcher::OnPeerZeroHandlesLocked() TA_NO_THREAD_SAFETY_ANALYSIS {
+void FifoDispatcher::OnPeerZeroHandlesLocked() {
     canary_.Assert();
 
-    peer_.reset();
     UpdateStateLocked(ZX_FIFO_WRITABLE, ZX_FIFO_PEER_CLOSED);
 }
 
 zx_status_t FifoDispatcher::WriteFromUser(size_t elem_size, user_in_ptr<const uint8_t> ptr,
-                                          size_t count, size_t* actual) {
+                                          size_t count, size_t* actual)
+    TA_NO_THREAD_SAFETY_ANALYSIS {
     canary_.Assert();
 
     AutoLock lock(get_lock());

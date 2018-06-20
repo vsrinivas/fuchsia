@@ -298,10 +298,23 @@ public:
         return ZX_OK;
     }
 
-    // Subclasses of PeeredDispatcher must implement
-    // |on_zero_handles|. In particular, they are required to reset
-    // their peer's |peer_| field.
-    virtual void on_zero_handles() override = 0;
+    // All subclasses of PeeredDispatcher must implement a public
+    // |void on_zero_handles_locked()|. The peer lifetime management
+    // (i.e. the peer zeroing) is centralized here.
+    void on_zero_handles() override final TA_NO_THREAD_SAFETY_ANALYSIS {
+        fbl::AutoLock lock(get_lock());
+        auto peer = fbl::move(peer_);
+        static_cast<Self*>(this)->on_zero_handles_locked();
+
+        // This is needed to avoid leaks, and to ensure that
+        // |user_signal| can correctly report ZX_ERR_PEER_CLOSED.
+        if (peer != nullptr) {
+            // This defeats the lock analysis in the usual way: it
+            // can't reason that the peers' get_lock() calls alias.
+            peer->peer_.reset();
+            static_cast<Self*>(peer.get())->OnPeerZeroHandlesLocked();
+        }
+    }
 
     fbl::Mutex* get_lock() const override { return holder_->get_lock(); }
 
