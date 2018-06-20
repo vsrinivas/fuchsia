@@ -274,6 +274,11 @@ pub mod server {
             // TODO(raggi): re-arrange things to avoid the copy here
             let path = std::str::from_utf8(msg.data()).unwrap().to_owned();
 
+            if path == "public" {
+                self.serve_channel(service_channel);
+                return msg.into();
+            }
+
             match self.factories.iter_mut().find(|factory| factory.service_name() == path) {
                 Some(factory) => factory.spawn_service(service_channel),
                 None => eprintln!("No service found for path {}", path),
