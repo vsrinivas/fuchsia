@@ -5,7 +5,6 @@
 LOCAL_DIR := $(GET_LOCAL_DIR)
 
 MODULE := $(LOCAL_DIR)
-MODULE_NAME := framebuffer
 
 MODULE_TYPE := userlib
 
@@ -18,8 +17,6 @@ MODULE_LIBS := system/ulib/zircon system/ulib/fdio system/ulib/c
 
 MODULE_FIDL_LIBS := system/fidl/display
 
-MODULE_SO_NAME := $(MODULE_NAME)
-MODULE_EXPORT := so
-MODULE_PACKAGE := shared
+MODULE_PACKAGE := static
 
 include make/module.mk
