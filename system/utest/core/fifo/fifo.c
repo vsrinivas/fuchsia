@@ -144,13 +144,14 @@ static bool options_test(void) {
 
     zx_handle_t fifos[2];
     ASSERT_EQ(zx_fifo_create(23, 8, 8, &fifos[0], &fifos[1]),
-              ZX_ERR_INVALID_ARGS, "");
+              ZX_ERR_OUT_OF_RANGE, "");
 
     END_TEST;
 }
 
 BEGIN_TEST_CASE(fifo_tests)
 RUN_TEST(basic_test)
+RUN_TEST(options_test)
 END_TEST_CASE(fifo_tests)
 
 #ifndef BUILD_COMBINED_TESTS
