@@ -26,13 +26,14 @@ executable_package("device_runner") {
 
   deps = [
     ":lib",
-    "//garnet/public/lib/app/cpp",
     "//garnet/public/fidl/fuchsia.sys",
-    "//garnet/public/lib/fxl",
     "//garnet/public/fidl/fuchsia.ui.policy",
     "//garnet/public/fidl/fuchsia.ui.views_v1",
+    "//garnet/public/lib/app/cpp",
+    "//garnet/public/lib/fxl",
     "//peridot/bin/device_runner/cobalt",
     "//peridot/lib/common:async_holder",
+    "//peridot/lib/common:names",
     "//peridot/lib/common:teardown",
     "//peridot/lib/fidl:app_client",
     "//peridot/lib/fidl:array_to_string",
@@ -64,12 +65,12 @@ source_set("lib") {
 
   deps = [
     ":users",
-    "//garnet/public/lib/app/cpp",
     "//garnet/public/fidl/fuchsia.sys",
-    "//garnet/public/lib/fsl",
-    "//garnet/public/lib/fxl",
     "//garnet/public/fidl/fuchsia.ui.policy",
     "//garnet/public/fidl/fuchsia.ui.views_v1",
+    "//garnet/public/lib/app/cpp",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
     "//peridot/lib/common:async_holder",
     "//peridot/lib/common:names",
     "//peridot/lib/common:teardown",
@@ -93,9 +94,9 @@ executable_package("dev_device_shell") {
   ]
 
   deps = [
+    "//garnet/public/fidl/fuchsia.ui.views_v1",
     "//garnet/public/lib/callback",
     "//garnet/public/lib/fxl",
-    "//garnet/public/fidl/fuchsia.ui.views_v1",
     "//peridot/lib/fidl:single_service_app",
     "//peridot/lib/testing",
     "//peridot/public/fidl/fuchsia.modular",
