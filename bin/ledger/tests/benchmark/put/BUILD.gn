@@ -33,6 +33,8 @@ source_set("lib") {
     "//peridot/bin/ledger/testing:lib",
     "//peridot/lib/convert",
     "//peridot/public/lib/ledger/fidl",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/fit",
   ]
 
   configs += [ "//peridot/bin/ledger:ledger_config" ]

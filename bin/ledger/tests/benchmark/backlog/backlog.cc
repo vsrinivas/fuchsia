@@ -92,19 +92,34 @@ void BacklogBenchmark::Run() {
   cloud_provider::CloudProviderPtr cloud_provider_writer;
   cloud_provider_firebase_factory_.MakeCloudProvider(
       server_id_, "backlog", cloud_provider_writer.NewRequest());
-  ledger::Status status = test::GetLedger(
-      loop_, startup_context_.get(), writer_controller_.NewRequest(),
-      std::move(cloud_provider_writer), "backlog", writer_path, &writer_);
-  QuitOnError([this] { loop_->Quit(); }, status, "Get writer ledger");
+  test::GetLedger(
+      startup_context_.get(), writer_controller_.NewRequest(),
+      std::move(cloud_provider_writer), "backlog", writer_path,
+      QuitLoopClosure(),
+      [this](ledger::Status status, ledger::LedgerPtr writer) {
+        if (QuitOnError(QuitLoopClosure(), status, "Get writer ledger")) {
+          return;
+        }
+        writer_ = std::move(writer);
 
-  status = test::GetPageEnsureInitialized(loop_, &writer_, nullptr,
-                                          &writer_page_, &page_id_);
-  QuitOnError([this] { loop_->Quit(); }, status, "Writer page initialization");
+        test::GetPageEnsureInitialized(
+            &writer_, nullptr, QuitLoopClosure(),
+            [this](ledger::Status status, ledger::PagePtr writer_page,
+                   ledger::PageId page_id) {
+              if (QuitOnError(QuitLoopClosure(), status,
+                              "Writer page initialization")) {
+                return;
+              }
 
-  WaitForWriterUpload();
-  TRACE_ASYNC_BEGIN("benchmark", "populate and upload", 0);
-  TRACE_ASYNC_BEGIN("benchmark", "populate", 0);
-  Populate();
+              writer_page_ = std::move(writer_page);
+              page_id_ = std::move(page_id);
+
+              WaitForWriterUpload();
+              TRACE_ASYNC_BEGIN("benchmark", "populate and upload", 0);
+              TRACE_ASYNC_BEGIN("benchmark", "populate", 0);
+              Populate();
+            });
+      });
 }
 
 void BacklogBenchmark::Populate() {
@@ -119,8 +134,10 @@ void BacklogBenchmark::Populate() {
       reference_strategy_, ledger::Priority::EAGER,
       [this](ledger::Status status) {
         if (status != ledger::Status::OK) {
-          benchmark::QuitOnError([this] { loop_->Quit(); }, status,
-                                 "PageGenerator::Populate");
+          if (QuitOnError(QuitLoopClosure(), status,
+                          "PageGenerator::Populate")) {
+            return;
+          }
           return;
         }
         done_writing_ = true;
@@ -142,8 +159,7 @@ void BacklogBenchmark::WaitForWriterUpload() {
   };
   writer_page_->SetSyncStateWatcher(
       sync_watcher_binding_.NewBinding(),
-      benchmark::QuitOnErrorCallback([this] { loop_->Quit(); },
-                                     "Page::SetSyncStateWatcher"));
+      QuitOnErrorCallback(QuitLoopClosure(), "Page::SetSyncStateWatcher"));
 }
 
 void BacklogBenchmark::ConnectReader() {
@@ -153,22 +169,28 @@ void BacklogBenchmark::ConnectReader() {
   cloud_provider::CloudProviderPtr cloud_provider_reader;
   cloud_provider_firebase_factory_.MakeCloudProvider(
       server_id_, "backlog", cloud_provider_reader.NewRequest());
-  ledger::Status status = test::GetLedger(
-      loop_, startup_context_.get(), reader_controller_.NewRequest(),
-      std::move(cloud_provider_reader), "backlog", reader_path, &reader_);
-  QuitOnError([this] { loop_->Quit(); }, status, "ConnectReader");
+  test::GetLedger(
+      startup_context_.get(), reader_controller_.NewRequest(),
+      std::move(cloud_provider_reader), "backlog", reader_path,
+      QuitLoopClosure(),
+      [this](ledger::Status status, ledger::LedgerPtr reader) {
+        if (QuitOnError(QuitLoopClosure(), status, "ConnectReader")) {
+          return;
+        }
+        reader_ = std::move(reader);
 
-  TRACE_ASYNC_BEGIN("benchmark", "download", 0);
-  TRACE_ASYNC_BEGIN("benchmark", "get page", 0);
-  reader_->GetPage(fidl::MakeOptional(page_id_), reader_page_.NewRequest(),
-                   [this](ledger::Status status) {
-                     if (benchmark::QuitOnError([this] { loop_->Quit(); },
-                                                status, "GetPage")) {
-                       return;
-                     }
-                     TRACE_ASYNC_END("benchmark", "get page", 0);
-                     WaitForReaderDownload();
-                   });
+        TRACE_ASYNC_BEGIN("benchmark", "download", 0);
+        TRACE_ASYNC_BEGIN("benchmark", "get page", 0);
+        reader_->GetPage(
+            fidl::MakeOptional(page_id_), reader_page_.NewRequest(),
+            [this](ledger::Status status) {
+              if (QuitOnError(QuitLoopClosure(), status, "GetPage")) {
+                return;
+              }
+              TRACE_ASYNC_END("benchmark", "get page", 0);
+              WaitForReaderDownload();
+            });
+      });
 }
 
 void BacklogBenchmark::WaitForReaderDownload() {
@@ -188,14 +210,13 @@ void BacklogBenchmark::WaitForReaderDownload() {
   };
   reader_page_->SetSyncStateWatcher(
       sync_watcher_binding_.NewBinding(),
-      benchmark::QuitOnErrorCallback([this] { loop_->Quit(); },
-                                     "Page::SetSyncStateWatcher"));
+      QuitOnErrorCallback(QuitLoopClosure(), "Page::SetSyncStateWatcher"));
 }
 
 void BacklogBenchmark::GetReaderSnapshot() {
   reader_page_->GetSnapshot(
       reader_snapshot_.NewRequest(), fidl::VectorPtr<uint8_t>::New(0), nullptr,
-      benchmark::QuitOnErrorCallback([this] { loop_->Quit(); }, "GetSnapshot"));
+      QuitOnErrorCallback(QuitLoopClosure(), "GetSnapshot"));
   TRACE_ASYNC_BEGIN("benchmark", "get all entries", 0);
   GetEntriesStep(nullptr, unique_key_count_);
 }
@@ -205,7 +226,9 @@ void BacklogBenchmark::CheckStatusAndGetMore(
     std::unique_ptr<ledger::Token> next_token) {
   if ((status != ledger::Status::OK) &&
       (status != ledger::Status::PARTIAL_RESULT)) {
-    QuitOnError([this] { loop_->Quit(); }, status, "PageSnapshot::GetEntries");
+    if (QuitOnError(QuitLoopClosure(), status, "PageSnapshot::GetEntries")) {
+      return;
+    }
   }
 
   if (status == ledger::Status::OK) {
@@ -260,6 +283,10 @@ void BacklogBenchmark::ShutDown() {
   test::KillLedgerProcess(&writer_controller_);
   test::KillLedgerProcess(&reader_controller_);
   loop_->Quit();
+}
+
+fit::closure BacklogBenchmark::QuitLoopClosure() {
+  return [this] { loop_->Quit(); };
 }
 
 }  // namespace benchmark

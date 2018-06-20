@@ -8,6 +8,8 @@
 #include <functional>
 #include <string>
 
+#include <lib/fit/function.h>
+
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/strings/string_view.h"
 #include "peridot/bin/ledger/fidl/include/types.h"
@@ -18,11 +20,11 @@ namespace benchmark {
 // Logs an error and calls |quit_callback| which quits a related message loop if
 // the given ledger status is not ledger::Status::OK. Returns true if the loop
 // was quit .
-bool QuitOnError(fxl::Closure quit_callback, ledger::Status status,
+bool QuitOnError(fit::closure quit_callback, ledger::Status status,
                  fxl::StringView description);
 
 std::function<void(ledger::Status)> QuitOnErrorCallback(
-    fxl::Closure quit_callback, std::string description);
+    fit::closure quit_callback, std::string description);
 
 }  // namespace benchmark
 }  // namespace test

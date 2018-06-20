@@ -4,10 +4,12 @@
 
 #include "peridot/bin/ledger/testing/quit_on_error.h"
 
+#include "lib/fxl/functional/make_copyable.h"
+
 namespace test {
 namespace benchmark {
 
-bool QuitOnError(fxl::Closure quit_callback, ledger::Status status,
+bool QuitOnError(fit::closure quit_callback, ledger::Status status,
                  fxl::StringView description) {
   if (status != ledger::Status::OK) {
     FXL_LOG(ERROR) << description << " failed with status " << status << ".";
@@ -18,11 +20,12 @@ bool QuitOnError(fxl::Closure quit_callback, ledger::Status status,
 }
 
 std::function<void(ledger::Status)> QuitOnErrorCallback(
-    fxl::Closure quit_callback, std::string description) {
-  return [quit_callback = std::move(quit_callback),
-          description](ledger::Status status) {
-    QuitOnError(quit_callback, status, description);
-  };
+    fit::closure quit_callback, std::string description) {
+  return fxl::MakeCopyable(
+      [quit_callback = std::move(quit_callback),
+       description = std::move(description)](ledger::Status status) mutable {
+        QuitOnError(quit_callback.share(), status, description);
+      });
 }
 
 }  // namespace benchmark
