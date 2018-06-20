@@ -4,19 +4,22 @@
 
 major_version: "1.x.x"
 minor_version: "llvm:7.x.x"
-default_target_cpu: "x86_64"
+default_target_cpu: "${data.arches[0].short_name}"
 
-# TODO(alainv): Add support for arm64.
+% for arch in data.arches:
 default_toolchain {
-  cpu: "x86_64"
-  toolchain_identifier: "crosstool-1.x.x-llvm-fuchsia-x86_64"
+  cpu: "${arch.short_name}"
+  toolchain_identifier: "crosstool-1.x.x-llvm-fuchsia-${arch.short_name}"
 }
 
+% endfor
+
+% for arch in data.arches:
 toolchain {
   abi_version: "local"
   abi_libc_version: "local"
 
-  builtin_sysroot: "%{SYSROOT}"
+  builtin_sysroot: "%{SYSROOT_${arch.short_name.upper()}}"
   compiler: "llvm"
   default_python_top: "/dev/null"
   default_python_version: "python2.7"
@@ -29,9 +32,9 @@ toolchain {
   supports_normalizing_ar: true
   supports_start_end_lib: false
   target_libc: "fuchsia"
-  target_cpu: "x86_64"
-  target_system_name: "x86_64-fuchsia"
-  toolchain_identifier: "crosstool-1.x.x-llvm-fuchsia-x86_64"
+  target_cpu: "${arch.long_name}"
+  target_system_name: "${arch.long_name}-fuchsia"
+  toolchain_identifier: "crosstool-1.x.x-llvm-fuchsia-${arch.short_name}"
   cc_target_os: "fuchsia"
 
   tool_path { name: "ar" path: "clang/bin/llvm-ar" }
@@ -48,8 +51,8 @@ toolchain {
   tool_path { name: "gcov-tool" path: "/not_available/gcov-tool" }  # Not used but required
   tool_path { name: "ld" path: "clang/bin/ld.lld" }
 
-  compiler_flag: "--target=x86_64-fuchsia"
-  linker_flag: "--target=x86_64-fuchsia"
+  compiler_flag: "--target=${arch.long_name}-fuchsia"
+  linker_flag: "--target=${arch.long_name}-fuchsia"
 
   cxx_flag: "-std=c++14"
   cxx_flag: "-xc++"
@@ -61,8 +64,8 @@ toolchain {
   # The following are to make the various files in runtimes/sdk available
 
   # Implicit dependencies for Fuchsia system functionality
-  cxx_builtin_include_directory: "%{SYSROOT}/include" # Platform parts of libc.
-  cxx_builtin_include_directory: "%{CROSSTOOL_ROOT}/clang/lib/x86_64-fuchsia/include/c++/v1" # Platform libc++.
+  cxx_builtin_include_directory: "%{SYSROOT_${arch.short_name.upper()}}/include" # Platform parts of libc.
+  cxx_builtin_include_directory: "%{CROSSTOOL_ROOT}/clang/lib/${arch.long_name}-fuchsia/include/c++/v1" # Platform libc++.
   cxx_builtin_include_directory: "%{CROSSTOOL_ROOT}/clang/lib/clang/7.0.0/include" # Platform libc++.
   ### end
 
@@ -71,3 +74,5 @@ toolchain {
   compiler_flag: "-Wall"
   compiler_flag: "-Werror"
 }
+
+% endfor

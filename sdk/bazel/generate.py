@@ -21,16 +21,23 @@ sys.path += [os.path.join(FUCHSIA_ROOT, 'scripts', 'sdk', 'common')]
 from layout_builder import Builder, process_manifest
 
 
+ARCH_MAP = {
+    'arm64': 'aarch64',
+    'x64': 'x86_64',
+}
+
+
 class Library(object):
     '''Represents a C/C++ library.
        Convenience storage object to be consumed by Mako templates.
        '''
-    def __init__(self, name):
+    def __init__(self, name, target_arch):
         self.name = name
         self.srcs = []
         self.hdrs = []
         self.deps = []
         self.includes = []
+        self.target_arch = target_arch
 
 
 class FidlLibrary(object):
@@ -42,6 +49,23 @@ class FidlLibrary(object):
         self.library = library
         self.srcs = []
         self.deps = []
+
+
+class Arch(object):
+    '''Represents an arch.
+       Convenience storage object to be consumed by Mako templates.
+       '''
+    def __init__(self, arch):
+        self.short_name = arch
+        self.long_name = ARCH_MAP[arch]
+
+
+class Crosstool(object):
+    '''Represents available crosstools.
+       Convenience storage object to be consumed by Mako templates.
+       '''
+    def __init__(self):
+        self.arches = []
 
 
 def remove_dashes(name):
@@ -67,12 +91,12 @@ class BazelBuilder(Builder):
         return os.path.join(self.output, *args)
 
 
-    def write_file(self, path, template_name, data):
+    def write_file(self, path, template_name, data, append=False):
         '''Writes a file based on a Mako template.'''
         self.make_dir(path)
         template = Template(filename=self.source('templates',
                                                  template_name + '.mako'))
-        with open(path, 'w') as file:
+        with open(path, 'a' if append else 'w') as file:
             file.write(template.render(data=data))
 
 
@@ -84,12 +108,31 @@ class BazelBuilder(Builder):
 
 
     def finalize(self):
+        # Generate the crosstool.bzl based on the available sysroots.
+        self.install_crosstool()
         if self.is_overlay:
             return
         # Write BUILD files for tools directories.
         tools_root = os.path.join(self.output, 'tools')
         for directory, _, _ in os.walk(tools_root, topdown=True):
             self.write_file(os.path.join(directory, 'BUILD'), 'tools', {})
+
+
+    def install_crosstool(self):
+        sysroot_dir = self.dest('arch')
+        if os.path.isdir(sysroot_dir):
+            crosstool = Crosstool()
+            for arch in os.listdir(sysroot_dir):
+                if arch in ARCH_MAP:
+                    crosstool.arches.append(Arch(arch))
+                else:
+                    print('Unknown target arch: %s' % arch)
+            self.write_file(self.dest('build_defs', 'crosstool.bzl'),
+                            'crosstool_bzl', crosstool)
+            self.write_file(self.dest('build_defs', 'BUILD.crosstool'),
+                            'crosstool', crosstool)
+            self.write_file(self.dest('build_defs', 'CROSSTOOL.in'),
+                            'crosstool_in', crosstool)
 
 
     def install_dart_atom(self, atom):
@@ -142,7 +185,7 @@ class BazelBuilder(Builder):
             return
 
         name = remove_dashes(atom.id.name)
-        library = Library(name)
+        library = Library(name, self.metadata.target_arch)
         base = self.dest('pkg', name)
 
         for file in atom.files:
@@ -171,12 +214,18 @@ class BazelBuilder(Builder):
             else:
                 raise Exception('Error: unknow file extension "%s" for %s.' %
                                 (extension, atom.id))
-        for dep_id in atom.deps:
-            library.deps.append('//pkg/' + remove_dashes(dep_id.name))
 
-        library.includes.append('include')
+        # Only write the prebuilt library BUILD top when not in overlay.
+        if not self.is_overlay:
+            for dep_id in atom.deps:
+                library.deps.append('//pkg/' + remove_dashes(dep_id.name))
+            library.includes.append('include')
+            self.write_file(os.path.join(base, 'BUILD'),
+                            'cc_prebuilt_library_top', library)
 
-        self.write_file(os.path.join(base, 'BUILD'), 'cc_library', library)
+        # Write the arch specific dependencies.
+        self.write_file(os.path.join(base, 'BUILD'),
+                        'cc_prebuilt_library_srcs', library, append=True)
 
 
     def install_cpp_source_atom(self, atom):
@@ -185,7 +234,7 @@ class BazelBuilder(Builder):
             return
 
         name = remove_dashes(atom.id.name)
-        library = Library(name)
+        library = Library(name, self.metadata.target_arch)
         base = self.dest('pkg', name)
 
         for file in atom.files:
