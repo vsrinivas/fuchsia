@@ -89,7 +89,7 @@ class BazelBuilder(Builder):
         # Write BUILD files for tools directories.
         tools_root = os.path.join(self.output, 'tools')
         for directory, _, _ in os.walk(tools_root, topdown=True):
-            self.write_file(self.dest(directory, 'BUILD'), 'tools', {})
+            self.write_file(os.path.join(directory, 'BUILD'), 'tools', {})
 
 
     def install_dart_atom(self, atom):
@@ -98,6 +98,8 @@ class BazelBuilder(Builder):
         if type == 'library':
             # TODO(alainv): Layout Dart libraries.
             print('Atom type "%s" not handled, skipping %s.' % (type, atom.id))
+            return
+        if self.is_overlay:
             return
         for file in atom.files:
             dest = self.make_dir(self.dest('tools', file.destination))
