@@ -357,10 +357,7 @@ static void process_zbi(zbi_header_t* root) {
 
     // Make sure the image looks valid.
     result = image.Check(nullptr);
-    if (result == ZBI_RESULT_BAD_VERSION) {
-        // TODO(gkalsi): Remove this by 2018-06-18 and fail with an error.
-        printf("WARNING: ZBI Version field unset, please update your bootloader!\n");
-    } else if (result != ZBI_RESULT_OK) {
+    if (result != ZBI_RESULT_OK) {
         // TODO(gkalsi): Print something informative here?
         return;
     }
