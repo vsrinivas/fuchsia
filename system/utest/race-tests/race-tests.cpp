@@ -5,10 +5,10 @@
 #include <pthread.h>
 #include <stdlib.h>
 
-#include <launchpad/launchpad.h>
-#include <zircon/syscalls.h>
 #include <fbl/algorithm.h>
+#include <lib/fdio/spawn.h>
 #include <unittest/unittest.h>
+#include <zircon/syscalls.h>
 
 // This file is for regression tests for race conditions where the test was
 // only observed to reproduce the race condition when some scheduling
@@ -36,16 +36,9 @@ static bool test_process_exit_status_race() {
     BEGIN_TEST;
 
     // Launch a subprocess.
-    launchpad_t* lp;
-    ASSERT_EQ(launchpad_create(ZX_HANDLE_INVALID, "test_process", &lp),
-              ZX_OK);
-    ASSERT_EQ(launchpad_load_from_file(lp, g_executable_filename), ZX_OK);
-    const char* args[] = { g_executable_filename, "--subprocess" };
-    ASSERT_EQ(launchpad_set_args(lp, static_cast<int>(fbl::count_of(args)), args), ZX_OK);
-    ASSERT_EQ(launchpad_clone(lp, LP_CLONE_ALL), ZX_OK);
+    const char* argv[] = { g_executable_filename, "--subprocess", nullptr };
     zx_handle_t proc;
-    const char* errmsg;
-    ASSERT_EQ(launchpad_go(lp, &proc, &errmsg), ZX_OK);
+    ASSERT_EQ(fdio_spawn(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL, g_executable_filename, argv, &proc), ZX_OK);
 
     for (;;) {
         // Query the process state.

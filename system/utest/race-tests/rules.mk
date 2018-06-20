@@ -17,7 +17,6 @@ MODULE_NAME := race-test
 
 MODULE_LIBS := \
     system/ulib/c \
-    system/ulib/launchpad \
     system/ulib/zircon \
     system/ulib/fdio \
     system/ulib/unittest \
