@@ -62,6 +62,9 @@ class Bearer final {
       const PairingFeatures& features, const common::ByteBuffer& preq,
       const common::ByteBuffer& pres)>;
 
+  // Callback used to notify when a 128-bit value is received from the peer.
+  using ValueCallback = fit::function<void(const common::UInt128&)>;
+
   // Initializes this Bearer with the following parameters:
   //   - |chan|: The L2CAP SMP fixed channel.
   //   - |role|: The local connection role.
@@ -83,16 +86,39 @@ class Bearer final {
   // Returns true if pairing has been initiated.
   bool pairing_started() const { return timeout_task_.is_pending(); }
 
+  // Returns the connection role.
+  hci::Connection::Role role() const { return role_; }
+
   // Initiates "Pairing Feature Exchange" with the local device as the
   // initiator (Vol 3, Part H, 2.3). A successful exchange will be indicated by
   // calling via feature exchange callback and failure via the error callback.
   //
   // Returns false if the procedure cannot be initiated because:
-  //   - This or another sub-procedure is in progress.
+  //   - This procedure is already in progress.
   //   - The local device is the slave in the connection.
   //
   // This method can be called on both LE and BR/EDR.
   bool InitiateFeatureExchange();
+
+  // Sends a "confirm value" for Phase 2 of legacy pairing. Returns false if
+  // feature exchange is in progress or pairing hasn't been started.
+  bool SendConfirmValue(const common::UInt128& confirm);
+
+  // Set a callback to be called when the peer sends us a "confirm value" for
+  // Phase 2 of legacy pairing.
+  void set_confirm_value_callback(ValueCallback callback) {
+    confirm_value_callback_ = std::move(callback);
+  }
+
+  // Sends a "random value" for Phase 2 of legacy pairing. Returns false if
+  // feature exchange is in progress or pairing hasn't been started.
+  bool SendRandomValue(const common::UInt128& random);
+
+  // Set a callback to be called when the peer sends us a "random value" for
+  // Phase 2 of legacy pairing.
+  void set_random_value_callback(ValueCallback callback) {
+    random_value_callback_ = std::move(callback);
+  }
 
   // Stops the pairing timer. The pairing timer is started when a Pairing
   // Request or Security Request is sent or received and must be explicitly
@@ -125,6 +151,8 @@ class Bearer final {
   void OnPairingFailed(const PacketReader& reader);
   void OnPairingRequest(const PacketReader& reader);
   void OnPairingResponse(const PacketReader& reader);
+  void OnPairingConfirm(const PacketReader& reader);
+  void OnPairingRandom(const PacketReader& reader);
 
   // Sends a Pairing Failed command to the peer.
   void SendPairingFailed(ErrorCode ecode);
@@ -143,6 +171,8 @@ class Bearer final {
   uint8_t mtu_;
   StatusCallback error_callback_;
   FeatureExchangeCallback feature_exchange_callback_;
+  ValueCallback confirm_value_callback_;
+  ValueCallback random_value_callback_;
 
   // We use this buffer to store pairing request and response PDUs as they are
   // needed to complete the feature exchange (i.e. the "preq" and "pres"

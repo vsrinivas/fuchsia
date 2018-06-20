@@ -125,6 +125,56 @@ bool Bearer::InitiateFeatureExchange() {
   return true;
 }
 
+bool Bearer::SendConfirmValue(const common::UInt128& confirm) {
+  if (!pairing_started()) {
+    FXL_VLOG(1) << "sm: Not pairing!";
+    return false;
+  }
+
+  // Only allowed on the LE transport.
+  if (chan_->link_type() != hci::Connection::LinkType::kLE) {
+    return false;
+  }
+
+  auto pdu = NewPDU(sizeof(PairingConfirmValue));
+  if (!pdu) {
+    FXL_LOG(ERROR) << "sm: Out of memory!";
+    Abort(ErrorCode::kUnspecifiedReason);
+    return false;
+  }
+
+  PacketWriter writer(kPairingConfirm, pdu.get());
+  *writer.mutable_payload<PairingConfirmValue>() = confirm;
+  chan_->Send(std::move(pdu));
+
+  return true;
+}
+
+bool Bearer::SendRandomValue(const common::UInt128& random) {
+  if (!pairing_started()) {
+    FXL_VLOG(1) << "sm: Not pairing!";
+    return false;
+  }
+
+  // Only allowed on the LE transport.
+  if (chan_->link_type() != hci::Connection::LinkType::kLE) {
+    return false;
+  }
+
+  auto pdu = NewPDU(sizeof(PairingRandomValue));
+  if (!pdu) {
+    FXL_LOG(ERROR) << "sm: Out of memory!";
+    Abort(ErrorCode::kUnspecifiedReason);
+    return false;
+  }
+
+  PacketWriter writer(kPairingRandom, pdu.get());
+  *writer.mutable_payload<PairingRandomValue>() = random;
+  chan_->Send(std::move(pdu));
+
+  return true;
+}
+
 void Bearer::StopTimer() {
   if (timeout_task_.is_pending()) {
     zx_status_t status = timeout_task_.Cancel();
@@ -354,6 +404,54 @@ void Bearer::OnPairingResponse(const PacketReader& reader) {
   feature_exchange_callback_(features, pairing_payload_buffer_, reader.data());
 }
 
+void Bearer::OnPairingConfirm(const PacketReader& reader) {
+  // Ignore the command if not pairing.
+  if (!pairing_started()) {
+    FXL_VLOG(1) << "sm: Dropped unexpected \"confirm value\"";
+    return;
+  }
+
+  // Only allowed on the LE transport.
+  if (chan_->link_type() != hci::Connection::LinkType::kLE) {
+    FXL_VLOG(1) << "sm: \"Confirm value\" over BR/EDR not supported!";
+    Abort(ErrorCode::kCommandNotSupported);
+    return;
+  }
+
+  if (reader.payload_size() != sizeof(PairingConfirmValue)) {
+    FXL_VLOG(1) << "sm: Malformed \"Pairing Confirm\" payload";
+    Abort(ErrorCode::kInvalidParameters);
+    return;
+  }
+
+  FXL_DCHECK(confirm_value_callback_);
+  confirm_value_callback_(reader.payload<PairingConfirmValue>());
+}
+
+void Bearer::OnPairingRandom(const PacketReader& reader) {
+  // Ignore the command if not pairing.
+  if (!pairing_started()) {
+    FXL_VLOG(1) << "sm: Dropped unexpected \"random value\"";
+    return;
+  }
+
+  // Only allowed on the LE transport.
+  if (chan_->link_type() != hci::Connection::LinkType::kLE) {
+    FXL_VLOG(1) << "sm: \"Random value\" over BR/EDR not supported!";
+    Abort(ErrorCode::kCommandNotSupported);
+    return;
+  }
+
+  if (reader.payload_size() != sizeof(PairingRandomValue)) {
+    FXL_VLOG(1) << "sm: Malformed \"Pairing Randomm\" payload";
+    Abort(ErrorCode::kInvalidParameters);
+    return;
+  }
+
+  FXL_DCHECK(random_value_callback_);
+  random_value_callback_(reader.payload<PairingRandomValue>());
+}
+
 void Bearer::SendPairingFailed(ErrorCode ecode) {
   auto pdu = NewPDU(sizeof(ErrorCode));
   PacketWriter writer(kPairingFailed, pdu.get());
@@ -398,6 +496,12 @@ void Bearer::OnRxBFrame(const l2cap::SDU& sdu) {
         break;
       case kPairingResponse:
         OnPairingResponse(reader);
+        break;
+      case kPairingConfirm:
+        OnPairingConfirm(reader);
+        break;
+      case kPairingRandom:
+        OnPairingRandom(reader);
         break;
       default:
         FXL_VLOG(2) << fxl::StringPrintf("sm: Unsupported command: 0x%02x",

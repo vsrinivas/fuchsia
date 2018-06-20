@@ -20,6 +20,7 @@ using common::CreateStaticByteBuffer;
 using common::DynamicByteBuffer;
 using common::HostError;
 using common::StaticByteBuffer;
+using common::UInt128;
 
 class SMP_BearerTest : public l2cap::testing::FakeChannelTest {
  public:
@@ -31,10 +32,17 @@ class SMP_BearerTest : public l2cap::testing::FakeChannelTest {
 
   void TearDown() override { bearer_ = nullptr; }
 
-  void NewBearer(hci::Connection::Role role = hci::Connection::Role::kMaster,
-                 bool sc_supported = false,
-                 IOCapability io_capability = IOCapability::kNoInputNoOutput) {
-    ChannelOptions options(l2cap::kLESMPChannelId);
+  void NewBearer(
+      hci::Connection::Role role = hci::Connection::Role::kMaster,
+      hci::Connection::LinkType ll_type = hci::Connection::LinkType::kLE,
+      bool sc_supported = false,
+      IOCapability io_capability = IOCapability::kNoInputNoOutput) {
+    l2cap::ChannelId cid = ll_type == hci::Connection::LinkType::kLE
+                               ? l2cap::kLESMPChannelId
+                               : l2cap::kSMPChannelId;
+    ChannelOptions options(cid);
+    options.link_type = ll_type;
+
     fake_chan_ = CreateFakeChannel(options);
     bearer_ = std::make_unique<Bearer>(
         fake_chan_, role, sc_supported, io_capability,
@@ -143,8 +151,8 @@ TEST_F(SMP_BearerTest, FeatureExchangeStartDefaultParams) {
 }
 
 TEST_F(SMP_BearerTest, FeatureExchangeStartCustomParams) {
-  NewBearer(hci::Connection::Role::kMaster, true /* sc_supported */,
-            IOCapability::kDisplayYesNo);
+  NewBearer(hci::Connection::Role::kMaster, hci::Connection::LinkType::kLE,
+            true /* sc_supported */, IOCapability::kDisplayYesNo);
   bearer()->set_oob_available(true);
   bearer()->set_mitm_required(true);
 
@@ -312,8 +320,8 @@ TEST_F(SMP_BearerTest, FeatureExchangePairingResponseJustWorks) {
 // One of the devices requires MITM protection and the I/O capabilities can
 // provide it.
 TEST_F(SMP_BearerTest, FeatureExchangePairingResponseMITM) {
-  NewBearer(hci::Connection::Role::kMaster, false /* sc_supported */,
-            IOCapability::kDisplayYesNo);
+  NewBearer(hci::Connection::Role::kMaster, hci::Connection::LinkType::kLE,
+            false /* sc_supported */, IOCapability::kDisplayYesNo);
 
   const auto kRequest =
       CreateStaticByteBuffer(0x01,  // code: Pairing Request
@@ -552,8 +560,8 @@ TEST_F(SMP_BearerTest, FeatureExchangeResponderJustWorks) {
 }
 
 TEST_F(SMP_BearerTest, FeatureExchangeResponderMITM) {
-  NewBearer(hci::Connection::Role::kSlave, false /* sc_supported */,
-            IOCapability::kDisplayYesNo);
+  NewBearer(hci::Connection::Role::kSlave, hci::Connection::LinkType::kLE,
+            false /* sc_supported */, IOCapability::kDisplayYesNo);
 
   const auto kRequest =
       CreateStaticByteBuffer(0x01,  // code: Pairing Request
@@ -627,6 +635,278 @@ TEST_F(SMP_BearerTest, StopTimer) {
   AdvanceTimeBy(zx::sec(kPairingTimeout));
   RunLoopUntilIdle();
   EXPECT_EQ(0, pairing_error_count());
+}
+
+TEST_F(SMP_BearerTest, SendConfirmValueNotPairing) {
+  ASSERT_FALSE(bearer()->pairing_started());
+
+  UInt128 confirm;
+  EXPECT_FALSE(bearer()->SendConfirmValue(confirm));
+}
+
+TEST_F(SMP_BearerTest, SendConfirmValueNotLE) {
+  NewBearer(hci::Connection::Role::kMaster, hci::Connection::LinkType::kACL,
+            false /* sc_supported */, IOCapability::kDisplayYesNo);
+  bearer()->InitiateFeatureExchange();
+  ASSERT_TRUE(bearer()->pairing_started());
+
+  UInt128 confirm;
+  EXPECT_FALSE(bearer()->SendConfirmValue(confirm));
+}
+
+TEST_F(SMP_BearerTest, SendConfirmValue) {
+  bearer()->InitiateFeatureExchange();
+  ASSERT_TRUE(bearer()->pairing_started());
+
+  UInt128 confirm{{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}};
+
+  // Initiate the request in a loop task so it runs after the call to Expect
+  // below.
+  async::PostTask(dispatcher(),
+                  [&] { EXPECT_TRUE(bearer()->SendConfirmValue(confirm)); });
+
+  // clang-format off
+  EXPECT_TRUE(Expect(CreateStaticByteBuffer(
+      // code: Pairing Confirm
+      0x03,
+
+      // Confirm value
+      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16
+  )));
+  // clang-format on
+}
+
+TEST_F(SMP_BearerTest, OnPairingConfirmNotPairing) {
+  bool called = false;
+  bearer()->set_confirm_value_callback([&](const auto&) { called = true; });
+
+  // clang-format off
+  const auto kPairingConfirm = CreateStaticByteBuffer(
+      // code: Pairing Confirm
+      0x03,
+
+      // Confirm value
+      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16
+  );
+  // clang-format on
+
+  fake_chan()->Receive(kPairingConfirm);
+  RunLoopUntilIdle();
+  EXPECT_FALSE(called);
+}
+
+TEST_F(SMP_BearerTest, OnPairingConfirmNotLE) {
+  NewBearer(hci::Connection::Role::kMaster, hci::Connection::LinkType::kACL,
+            false /* sc_supported */, IOCapability::kDisplayYesNo);
+  bearer()->InitiateFeatureExchange();
+  ASSERT_TRUE(bearer()->pairing_started());
+
+  bool called = false;
+  bearer()->set_confirm_value_callback([&](const auto&) { called = true; });
+
+  // clang-format off
+  const auto kPairingConfirm = CreateStaticByteBuffer(
+      // code: Pairing Confirm
+      0x03,
+
+      // Confirm value
+      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16
+  );
+  const auto kPairingFailed = CreateStaticByteBuffer(
+      0x05,  // code: Pairing Failed
+      0x07   // reason: Command Not Supported
+  );
+  // clang-format on
+
+  EXPECT_TRUE(ReceiveAndExpect(kPairingConfirm, kPairingFailed));
+  EXPECT_FALSE(called);
+}
+
+TEST_F(SMP_BearerTest, OnPairingConfirmMalformed) {
+  bearer()->InitiateFeatureExchange();
+  ASSERT_TRUE(bearer()->pairing_started());
+
+  bool called = false;
+  bearer()->set_confirm_value_callback([&](const auto&) { called = true; });
+
+  // clang-format off
+  const auto kMalformedPairingConfirm = CreateStaticByteBuffer(
+      // code: Pairing Confirm
+      0x03,
+
+      // Confirm value (1 octet too short)
+      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15
+  );
+  const auto kPairingFailed = CreateStaticByteBuffer(
+      0x05,  // code: Pairing Failed
+      0x0A   // reason: Invalid Parameters
+  );
+  // clang-format on
+
+  EXPECT_TRUE(ReceiveAndExpect(kMalformedPairingConfirm, kPairingFailed));
+  EXPECT_FALSE(called);
+}
+
+TEST_F(SMP_BearerTest, OnPairingConfirmCallback) {
+  bearer()->InitiateFeatureExchange();
+  ASSERT_TRUE(bearer()->pairing_started());
+
+  UInt128 kExpected{{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}};
+  bool called = false;
+  bearer()->set_confirm_value_callback([&](const auto& confirm) {
+    EXPECT_EQ(kExpected, confirm);
+    called = true;
+  });
+
+  // clang-format off
+  const auto kPairingConfirm = CreateStaticByteBuffer(
+      // code: Pairing Confirm
+      0x03,
+
+      // Confirm value
+      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16
+  );
+  // clang-format on
+
+  fake_chan()->Receive(kPairingConfirm);
+  RunLoopUntilIdle();
+  EXPECT_TRUE(called);
+}
+
+TEST_F(SMP_BearerTest, SendRandomValueNotPairing) {
+  ASSERT_FALSE(bearer()->pairing_started());
+
+  UInt128 rand;
+  EXPECT_FALSE(bearer()->SendRandomValue(rand));
+}
+
+TEST_F(SMP_BearerTest, SendRandomValueNotLE) {
+  NewBearer(hci::Connection::Role::kMaster, hci::Connection::LinkType::kACL,
+            false /* sc_supported */, IOCapability::kDisplayYesNo);
+  bearer()->InitiateFeatureExchange();
+  ASSERT_TRUE(bearer()->pairing_started());
+
+  UInt128 rand;
+  EXPECT_FALSE(bearer()->SendRandomValue(rand));
+}
+
+TEST_F(SMP_BearerTest, SendRandomValue) {
+  bearer()->InitiateFeatureExchange();
+  ASSERT_TRUE(bearer()->pairing_started());
+
+  UInt128 rand{{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}};
+
+  // Initiate the request in a loop task so it runs after the call to Expect
+  // below.
+  async::PostTask(dispatcher(),
+                  [&] { EXPECT_TRUE(bearer()->SendRandomValue(rand)); });
+
+  // clang-format off
+  EXPECT_TRUE(Expect(CreateStaticByteBuffer(
+      // code: Pairing Random
+      0x04,
+
+      // Confirm value
+      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16
+  )));
+  // clang-format on
+}
+
+TEST_F(SMP_BearerTest, OnPairingRandomNotPairing) {
+  bool called = false;
+  bearer()->set_random_value_callback([&](const auto&) { called = true; });
+
+  // clang-format off
+  const auto kPairingRandom = CreateStaticByteBuffer(
+      // code: Pairing Random
+      0x04,
+
+      // Random value
+      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16
+  );
+  // clang-format on
+
+  fake_chan()->Receive(kPairingRandom);
+  RunLoopUntilIdle();
+  EXPECT_FALSE(called);
+}
+
+TEST_F(SMP_BearerTest, OnPairingRandomNotLE) {
+  NewBearer(hci::Connection::Role::kMaster, hci::Connection::LinkType::kACL,
+            false /* sc_supported */, IOCapability::kDisplayYesNo);
+  bearer()->InitiateFeatureExchange();
+  ASSERT_TRUE(bearer()->pairing_started());
+
+  bool called = false;
+  bearer()->set_random_value_callback([&](const auto&) { called = true; });
+
+  // clang-format off
+  const auto kPairingRandom = CreateStaticByteBuffer(
+      // code: Pairing Random
+      0x04,
+
+      // Random value
+      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16
+  );
+  const auto kPairingFailed = CreateStaticByteBuffer(
+      0x05,  // code: Pairing Failed
+      0x07   // reason: Command Not Supported
+  );
+  // clang-format on
+
+  EXPECT_TRUE(ReceiveAndExpect(kPairingRandom, kPairingFailed));
+  EXPECT_FALSE(called);
+}
+
+TEST_F(SMP_BearerTest, OnPairingRandomMalformed) {
+  bearer()->InitiateFeatureExchange();
+  ASSERT_TRUE(bearer()->pairing_started());
+
+  bool called = false;
+  bearer()->set_random_value_callback([&](const auto&) { called = true; });
+
+  // clang-format off
+  const auto kMalformedPairingRandom = CreateStaticByteBuffer(
+      // code: Pairing Random
+      0x04,
+
+      // Random value (1 octet too short)
+      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15
+  );
+  const auto kPairingFailed = CreateStaticByteBuffer(
+      0x05,  // code: Pairing Failed
+      0x0A   // reason: Invalid Parameters
+  );
+  // clang-format on
+
+  EXPECT_TRUE(ReceiveAndExpect(kMalformedPairingRandom, kPairingFailed));
+  EXPECT_FALSE(called);
+}
+
+TEST_F(SMP_BearerTest, OnPairingRandomCallback) {
+  bearer()->InitiateFeatureExchange();
+  ASSERT_TRUE(bearer()->pairing_started());
+
+  UInt128 kExpected{{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}};
+  bool called = false;
+  bearer()->set_random_value_callback([&](const auto& rand) {
+    EXPECT_EQ(kExpected, rand);
+    called = true;
+  });
+
+  // clang-format off
+  const auto kPairingRandom = CreateStaticByteBuffer(
+      // code: Pairing Random
+      0x04,
+
+      // Random value
+      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16
+  );
+  // clang-format on
+
+  fake_chan()->Receive(kPairingRandom);
+  RunLoopUntilIdle();
+  EXPECT_TRUE(called);
 }
 
 }  // namespace
