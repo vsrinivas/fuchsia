@@ -14,8 +14,6 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/fdio.c \
     $(LOCAL_DIR)/vmo.c
 
-MODULE_EXPORT := so
-
 MODULE_SO_NAME := launchpad
 
 MODULE_STATIC_LIBS := \
