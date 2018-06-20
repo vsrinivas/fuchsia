@@ -133,9 +133,13 @@ class ComponentBridgeTest : public gtest::TestWithMessageLoop,
     return component;
   }
 
+  void SetReturnCode(int64_t errcode) {
+    errcode_ = errcode;
+  }
+
   void SendReturnCode() {
     for (const auto& iter : wait_callbacks_) {
-      iter(1);
+      iter(errcode_);
     }
     wait_callbacks_.clear();
   }
@@ -144,6 +148,7 @@ class ComponentBridgeTest : public gtest::TestWithMessageLoop,
   FakeRunner runner_;
   ::fidl::Binding<fuchsia::sys::ComponentController> binding_;
   fuchsia::sys::ComponentControllerPtr remote_controller_;
+  int64_t errcode_ = 1;
 
   bool binding_error_handler_called_;
 };
@@ -220,7 +225,7 @@ TEST_F(ComponentControllerTest, CreateAndKill) {
   ASSERT_EQ(realm_.ComponentCount(), 1u);
 
   bool wait = false;
-  component_ptr->Wait([&wait](int errcode) { wait = true; });
+  component_ptr->Wait([&wait](int64_t errcode) { wait = true; });
   component_ptr->Kill();
   EXPECT_TRUE(RunLoopUntilWithTimeout([&wait] { return wait; },
                                       fxl::TimeDelta::FromSeconds(5)));
@@ -235,7 +240,7 @@ TEST_F(ComponentControllerTest, ControllerScope) {
   {
     fuchsia::sys::ComponentControllerPtr component_ptr;
     auto component = create_component(component_ptr);
-    component->Wait([&wait](int errcode) { wait = true; });
+    component->Wait([&wait](int64_t errcode) { wait = true; });
     realm_.AddComponent(std::move(component));
 
     ASSERT_EQ(realm_.ComponentCount(), 1u);
@@ -253,7 +258,7 @@ TEST_F(ComponentControllerTest, DetachController) {
   {
     fuchsia::sys::ComponentControllerPtr component_ptr;
     auto component = create_component(component_ptr);
-    component->Wait([&wait](int errcode) { wait = true; });
+    component->Wait([&wait](int64_t errcode) { wait = true; });
     realm_.AddComponent(std::move(component));
 
     ASSERT_EQ(realm_.ComponentCount(), 1u);
@@ -305,10 +310,17 @@ TEST_F(ComponentBridgeTest, CreateAndKill) {
   ASSERT_EQ(runner_.ComponentCount(), 1u);
 
   bool wait = false;
-  component_ptr->Wait([&wait](int errcode) { wait = true; });
+  int64_t retval;
+  component_ptr->Wait([&wait, &retval](int64_t errcode) {
+    wait = true;
+    retval = errcode;
+  });
+  int64_t expected_retval = (1L << 60);
+  SetReturnCode(expected_retval);
   component_ptr->Kill();
   EXPECT_TRUE(RunLoopUntilWithTimeout([&wait] { return wait; },
                                       fxl::TimeDelta::FromSeconds(5)));
+  EXPECT_EQ(expected_retval, retval);
 
   // make sure all messages are processed after wait was called
   RunLoopUntilIdle();
@@ -320,7 +332,7 @@ TEST_F(ComponentBridgeTest, ControllerScope) {
   {
     fuchsia::sys::ComponentControllerPtr component_ptr;
     auto component = create_component_bridge(component_ptr);
-    component->Wait([&wait](int errcode) { wait = true; });
+    component->Wait([&wait](int64_t errcode) { wait = true; });
     runner_.AddComponent(std::move(component));
 
     ASSERT_EQ(runner_.ComponentCount(), 1u);
@@ -339,7 +351,7 @@ TEST_F(ComponentBridgeTest, DetachController) {
   {
     fuchsia::sys::ComponentControllerPtr component_ptr;
     auto component = create_component_bridge(component_ptr);
-    component->Wait([&wait](int errcode) { wait = true; });
+    component->Wait([&wait](int64_t errcode) { wait = true; });
     component_bridge_ptr = component.get();
     runner_.AddComponent(std::move(component));
 

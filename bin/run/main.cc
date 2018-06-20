@@ -50,10 +50,10 @@ int main(int argc, const char** argv) {
   fuchsia::sys::ComponentControllerSyncPtr controller;
   launcher->CreateComponent(std::move(launch_info), controller.NewRequest());
 
-  int32_t return_code;
+  int64_t return_code;
   if (!controller->Wait(&return_code)) {
     fprintf(stderr, "%s exited without a return code\n", argv[1]);
     return 1;
   }
-  return return_code;
+  return static_cast<int>(return_code);
 }

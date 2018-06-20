@@ -30,5 +30,5 @@ interface ComponentController {
   // This call will return just before the component terminates and the
   // interface is closed. If the interface closes without this call returning
   // the caller may assume that the component terminated unexpectedly.
-  3: Wait() -> (int32 return_code);
+  3: Wait() -> (int64 return_code);
 };
