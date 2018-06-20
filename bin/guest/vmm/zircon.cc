@@ -164,8 +164,7 @@ static zx_status_t load_bootfs(const int fd, const machina::PhysMem& phys_mem,
     return ZX_ERR_IO;
   }
 
-  container_hdr->length += ZBI_ALIGN(ramdisk_hdr.length) +
-                           static_cast<uint32_t>(sizeof(zbi_header_t));
+  container_hdr->length += ZBI_ALIGN(ramdisk_hdr.length);
 
   return ZX_OK;
 }
