@@ -17,6 +17,7 @@ import (
 	initcmd "fuchsia.googlesource.com/pm/cmd/pm/init"
 	"fuchsia.googlesource.com/pm/cmd/pm/install"
 	"fuchsia.googlesource.com/pm/cmd/pm/seal"
+	"fuchsia.googlesource.com/pm/cmd/pm/serve"
 	"fuchsia.googlesource.com/pm/cmd/pm/sign"
 	"fuchsia.googlesource.com/pm/cmd/pm/update"
 	"fuchsia.googlesource.com/pm/cmd/pm/verify"
@@ -34,6 +35,7 @@ Commands
     verify  - verify metadata signature against the embedded public key
     archive - construct a single .far representation of the package
     expand  - expand a single .far representation of a package into a repository
+    serve   - serve a TUF directory of packages
 
 Dev Only:
     install - install a single .far representation of the package
@@ -53,6 +55,8 @@ func main() {
 	}
 
 	flag.Parse()
+
+	var args = flag.Args()[1:]
 
 	var err error
 	switch flag.Arg(0) {
@@ -90,6 +94,9 @@ func main() {
 
 	case "sign":
 		err = sign.Run(cfg)
+
+	case "serve":
+		err = serve.Run(cfg, args)
 
 	case "update":
 		err = update.Run(cfg)
