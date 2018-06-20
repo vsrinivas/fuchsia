@@ -336,7 +336,6 @@ zx_status_t fb_import_image(zx_handle_t handle, uint32_t type, uint64_t *id_out)
         if (status == ZX_ERR_CALL_FAILED) {
             return read_status;
         } else {
-            zx_handle_close(handle);
             return status;
         }
     }

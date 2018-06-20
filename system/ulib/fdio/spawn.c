@@ -583,8 +583,8 @@ zx_status_t fdio_spawn_vmo(zx_handle_t job,
         status = zx_channel_call(launcher, 0, ZX_TIME_INFINITE, &args,
                                  &actual_bytes, &actual_handles, &read_status);
 
-        if (status == ZX_OK || status == ZX_ERR_CALL_FAILED)
-            memset(msg_handles, 0, sizeof(msg_handles));
+        // zx_channel_call always consumes handles.
+        memset(msg_handles, 0, sizeof(msg_handles));
 
         if (status != ZX_OK) {
             report_error(err_msg, "failed to send launch message: %d", status);

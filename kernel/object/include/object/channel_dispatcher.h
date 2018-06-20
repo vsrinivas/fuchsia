@@ -45,8 +45,7 @@ public:
 
     // Write to the opposing endpoint's message queue.
     zx_status_t Write(fbl::unique_ptr<MessagePacket> msg) TA_NO_THREAD_SAFETY_ANALYSIS;
-    zx_status_t Call(fbl::unique_ptr<MessagePacket> msg,
-                     zx_time_t deadline, bool* return_handles,
+    zx_status_t Call(fbl::unique_ptr<MessagePacket> msg, zx_time_t deadline,
                      fbl::unique_ptr<MessagePacket>* reply) TA_NO_THREAD_SAFETY_ANALYSIS;
 
     // Performs the wait-then-read half of Call.  This is meant for retrying

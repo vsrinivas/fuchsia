@@ -2375,9 +2375,7 @@ __NO_SAFESTACK static zx_status_t loader_svc_rpc(uint32_t ordinal,
               "%d (%s), read %d (%s)",
               call.wr_num_bytes, status, _zx_status_get_string(status),
               read_status, _zx_status_get_string(read_status));
-        if (status != ZX_ERR_CALL_FAILED)
-            _zx_handle_close(request_handle);
-        else if (read_status != ZX_OK)
+        if (status == ZX_ERR_CALL_FAILED && read_status != ZX_OK)
             status = read_status;
         return status;
     }
@@ -2475,9 +2473,7 @@ __NO_SAFESTACK zx_status_t dl_clone_loader_service(zx_handle_t* out) {
     if ((status = _zx_channel_call(loader_svc, 0, ZX_TIME_INFINITE,
                                    &call, &reply_size, &handle_count,
                                    &read_status)) != ZX_OK) {
-        if (status != ZX_ERR_CALL_FAILED)
-            _zx_handle_close(h1);
-        else if (read_status != ZX_OK)
+        if (status == ZX_ERR_CALL_FAILED && read_status != ZX_OK)
             status = read_status;
     } else if ((reply_size != ldmsg_rsp_get_size(&rsp)) ||
                (rsp.header.ordinal != LDMSG_OP_CLONE)) {

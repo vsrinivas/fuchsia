@@ -178,14 +178,11 @@ static zx_status_t zxrio_txn(zxrio_t* rio, zxrio_msg_t* msg) {
 
     r = zx_channel_call(rio->h, 0, ZX_TIME_INFINITE, &args, &dsize, &msg->hcount, &rs);
     if (r < 0) {
-        if (r == ZX_ERR_CALL_FAILED) {
-            // read phase failed, true status is in rs
-            msg->hcount = 0;
+        msg->hcount = 0;
+        // read phase failed, true status is in rs
+        if (r == ZX_ERR_CALL_FAILED)
             return rs;
-        } else {
-            // write phase failed, we must discard the handles
-            goto fail_discard_handles;
-        }
+        return r;
     }
 
     // check for protocol errors
@@ -201,8 +198,7 @@ static zx_status_t zxrio_txn(zxrio_t* rio, zxrio_msg_t* msg) {
     return r;
 
 fail_discard_handles:
-    // We failed either writing at all (still have the handles)
-    // or after reading (need to abandon any handles we received)
+    // If we failed after reading, we need to abandon any handles we received.
     discard_handles(msg->handle, msg->hcount);
     msg->hcount = 0;
     return r;

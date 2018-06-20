@@ -480,6 +480,7 @@ enum {
     OP_IGNORE,
     OP_HANDLE,
     OP_SHUTDOWN,
+    OP_POSTSHUTDOWN
 };
 
 typedef struct {
@@ -624,6 +625,9 @@ static zx_status_t do_cc(zx_handle_t cli, uint32_t op) {
             if ((op == OP_SHUTDOWN) && (rd_status == ZX_ERR_PEER_CLOSED)) {
                 return ZX_OK;
             }
+            if ((op == OP_POSTSHUTDOWN) && (rd_status == ZX_ERR_PEER_CLOSED)) {
+                return ZX_OK;
+            }
             if ((op == OP_TOOBIG) && (rd_status == ZX_ERR_BUFFER_TOO_SMALL)) {
                 return ZX_OK;
             }
@@ -704,6 +708,46 @@ static bool channel_call(void) {
     ASSERT_EQ(r, 0, "");
 
     ASSERT_EQ(do_cc(cli, OP_SHUTDOWN), ZX_OK, "");
+
+    ASSERT_EQ(do_cc(cli, OP_POSTSHUTDOWN), ZX_OK, "");
+    ASSERT_EQ(zx_handle_close(cli), ZX_OK, "");
+
+    END_TEST;
+}
+
+static bool channel_call_consumes_handles(void) {
+    BEGIN_TEST;
+
+    zx_handle_t cli, srv;
+    ASSERT_EQ(zx_channel_create(0, &cli, &srv), ZX_OK, "");
+    ASSERT_EQ(zx_handle_close(srv), ZX_OK, "");
+
+    zx_handle_t h;
+    ASSERT_EQ(zx_event_create(0, &h), ZX_OK, "");
+
+    uint8_t msg[64];
+    memset(msg, 0, sizeof(msg));
+
+    zx_channel_call_args_t args = {
+        .wr_bytes = &msg,
+        .wr_handles = &h,
+        .rd_bytes = &msg,
+        .rd_handles = NULL,
+        .wr_num_bytes = sizeof(msg),
+        .wr_num_handles = 1,
+        .rd_num_bytes = sizeof(msg),
+        .rd_num_handles = 0,
+    };
+
+    uint32_t act_bytes = 0xffffffff;
+    uint32_t act_handles = 0xffffffff;
+
+    zx_status_t rs = ZX_OK;
+    zx_status_t r = zx_channel_call(cli, 42, ZX_TIME_INFINITE, &args, &act_bytes,
+                                    &act_handles, &rs);
+
+    ASSERT_EQ(r, ZX_ERR_INVALID_ARGS, "");
+    ASSERT_EQ(zx_handle_close(h), ZX_ERR_BAD_HANDLE, "");
 
     END_TEST;
 }
@@ -987,6 +1031,7 @@ RUN_TEST(channel_duplicate_handles)
 RUN_TEST(channel_multithread_read)
 RUN_TEST(channel_may_discard)
 RUN_TEST(channel_call)
+RUN_TEST(channel_call_consumes_handles)
 RUN_TEST(channel_call2)
 RUN_TEST(bad_channel_call_finish)
 RUN_TEST(channel_nest)

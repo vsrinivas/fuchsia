@@ -59,6 +59,8 @@ inbound message queue, cause **ZX_CHANNEL_READABLE** to be signaled, etc.
 Inbound messages that are too large to fit in *rd_num_bytes* and *rd_num_handles*
 are discarded and **ZX_ERR_BUFFER_TOO_SMALL** is returned in that case.
 
+As with **zx_channel_write**(), the handles in *handles* are always consumed by
+**zx_channel_call**() and no longer exist in the calling process.
 
 ## RETURN VALUE
 
@@ -67,29 +69,20 @@ count of handles in the reply message are returned via *actual_bytes* and
 *actual_handles*, respectively.
 
 The special return value **ZX_ERR_CALL_FAILED** indicates that the message was
-sent, but an error occurred while waiting for a response.  This is necessary
-to disambiguate errors like **ZX_ERR_PEER_CLOSED** which could have occurred
-while attempting the write (in which case the caller would still own any handles
-passed via *handles*) or while waiting (in which case the caller would no longer
-own any of the handles).  The return parameter *read_status* is used to indicate
-the specific error that occurred during the wait or read phase when **ZX_ERR_CALL_FAILED**
-is returned.
-
-In the event of **ZX_OK**, **ZX_ERR_TIMED_OUT**, or **ZX_ERR_CALL_FAILED**, the
-handles in *handles* have been sent in a message to the other endpoint of the
-Channel and no longer exist in the calling process.  In the event of any other
-return values, the handles in *handles* remain in the calling process, unchanged.
+sent, but an error occurred while waiting for a response. The return parameter
+*read_status* is used to indicate the specific error that occurred during the
+wait or read phase when **ZX_ERR_CALL_FAILED** is returned.
 
 ## ERRORS
 
-**ZX_ERR_BAD_HANDLE**  *handle* is not a valid handle or any element in
-*handles* is not a valid handle.
+**ZX_ERR_BAD_HANDLE**  *handle* is not a valid handle, any element in
+*handles* is not a valid handle, or there are duplicates among the handles
+in the *handles* array.
 
 **ZX_ERR_WRONG_TYPE**  *handle* is not a channel handle.
 
 **ZX_ERR_INVALID_ARGS**  any of the provided pointers are invalid or null,
-or there are duplicates among the handles in the *handles* array, or *wr_num_bytes*
-is less than four, or *options* is nonzero.
+or *wr_num_bytes* is less than four, or *options* is nonzero.
 
 **ZX_ERR_ACCESS_DENIED**  *handle* does not have **ZX_RIGHT_WRITE** or
 any element in *handles* does not have **ZX_RIGHT_TRANSFER**.

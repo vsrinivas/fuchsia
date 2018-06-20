@@ -275,9 +275,9 @@ int analyzer_starter(void* arg) {
             status = zx_channel_call(analyzer, 0, ZX_TIME_INFINITE, &args,
                                     &actual_bytes, &actual_handles, NULL);
         }
-        // zx_channel_call consumes the handles with these two result codes.
-        if (status == ZX_OK || status == ZX_ERR_CALL_FAILED)
-            memset(handles, 0, sizeof(handles));
+        // zx_channel_call always consumes the handles.
+        memset(handles, 0, sizeof(handles));
+
 cleanup:
         if (analyzer)
             zx_handle_close(analyzer);

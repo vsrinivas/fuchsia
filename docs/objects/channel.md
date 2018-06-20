@@ -22,8 +22,8 @@ Alternatively, a call to *zx_channel_call()* enqueues a message in one
 direction of the channel, waits for a corresponding response, and
 dequeues the response message. In call mode, corresponding responses
 are identified via the first 4 bytes of the message, called the
-transaction ID. Coming up with distinct transaction IDs is up to the
-users of *zx_channel_call()*.
+transaction ID. The kernel supplies distinct transaction IDs (always with the
+high bit set) for messages written with *zx_channel_call()*.
 
 The process of sending a message via a channel has two steps. The
 first is to atomically write the data into the channel and move

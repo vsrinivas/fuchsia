@@ -241,9 +241,6 @@ static zx_status_t import_vmo(display_info* display, zx_handle_t vmo, uint64_t* 
     zx_status_t read_status;
     if ((status = zx_channel_call(dc_ph.handle, 0, ZX_TIME_INFINITE, &call_args,
                                   &actual_bytes, &actual_handles, &read_status)) != ZX_OK) {
-        if (status != ZX_ERR_CALL_FAILED) {
-            zx_handle_close(vmo_dup);
-        }
         printf("vc: Failed to import vmo call %d\n", status);
         return status == ZX_ERR_CALL_FAILED ? read_status : status;
     }
