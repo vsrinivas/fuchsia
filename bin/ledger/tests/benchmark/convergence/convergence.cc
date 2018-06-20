@@ -90,10 +90,10 @@ void ConvergenceBenchmark::Run() {
     cloud_provider::CloudProviderPtr cloud_provider;
     cloud_provider_firebase_factory_.MakeCloudProvider(
         server_id_, "", cloud_provider.NewRequest());
-    ledger::Status status =
-        test::GetLedger(loop_, startup_context_.get(),
-                        &device_context.controller, std::move(cloud_provider),
-                        "convergence", synced_dir_path, &device_context.ledger);
+    ledger::Status status = test::GetLedger(
+        loop_, startup_context_.get(), device_context.controller.NewRequest(),
+        std::move(cloud_provider), "convergence", synced_dir_path,
+        &device_context.ledger);
     QuitOnError([this] { loop_->Quit(); }, status, "GetLedger");
     device_context.ledger->GetPage(
         fidl::MakeOptional(page_id_),

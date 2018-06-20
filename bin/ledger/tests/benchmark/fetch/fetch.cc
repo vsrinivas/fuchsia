@@ -83,7 +83,7 @@ void FetchBenchmark::Run() {
   cloud_provider_firebase_factory_.MakeCloudProvider(
       server_id_, "", cloud_provider_writer.NewRequest());
   ledger::Status status = test::GetLedger(
-      loop_, startup_context_.get(), &writer_controller_,
+      loop_, startup_context_.get(), writer_controller_.NewRequest(),
       std::move(cloud_provider_writer), "fetch", writer_path, &writer_);
   QuitOnError([this] { loop_->Quit(); }, status, "Get writer ledger");
 
@@ -141,7 +141,7 @@ void FetchBenchmark::ConnectReader() {
   cloud_provider_firebase_factory_.MakeCloudProvider(
       server_id_, "", cloud_provider_reader.NewRequest());
   ledger::Status status = test::GetLedger(
-      loop_, startup_context_.get(), &reader_controller_,
+      loop_, startup_context_.get(), reader_controller_.NewRequest(),
       std::move(cloud_provider_reader), "fetch", reader_path, &reader_);
   QuitOnError([this] { loop_->Quit(); }, status, "ConnectReader");
 

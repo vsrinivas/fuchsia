@@ -64,9 +64,9 @@ DiskSpaceBenchmark::DiskSpaceBenchmark(async::Loop* loop, size_t page_count,
 
 void DiskSpaceBenchmark::Run() {
   ledger::LedgerPtr ledger;
-  ledger::Status status =
-      test::GetLedger(loop_, startup_context_.get(), &component_controller_,
-                      nullptr, "disk_space", tmp_dir_.path(), &ledger);
+  ledger::Status status = test::GetLedger(
+      loop_, startup_context_.get(), component_controller_.NewRequest(),
+      nullptr, "disk_space", tmp_dir_.path(), &ledger);
   QuitOnError([this] { loop_->Quit(); }, status, "GetLedger");
 
   for (size_t page_number = 0; page_number < page_count_; page_number++) {

@@ -56,9 +56,9 @@ void PutBenchmark::Run() {
                         : "on")
                 << (update_ ? " --update" : "");
   ledger::LedgerPtr ledger;
-  ledger::Status status =
-      test::GetLedger(loop_, startup_context_.get(), &component_controller_,
-                      nullptr, "put", tmp_dir_.path(), &ledger);
+  ledger::Status status = test::GetLedger(
+      loop_, startup_context_.get(), component_controller_.NewRequest(),
+      nullptr, "put", tmp_dir_.path(), &ledger);
   QuitOnError([this] { loop_->Quit(); }, status, "GetLedger");
 
   ledger::PageId id;

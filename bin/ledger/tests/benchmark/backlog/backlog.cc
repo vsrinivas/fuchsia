@@ -93,7 +93,7 @@ void BacklogBenchmark::Run() {
   cloud_provider_firebase_factory_.MakeCloudProvider(
       server_id_, "backlog", cloud_provider_writer.NewRequest());
   ledger::Status status = test::GetLedger(
-      loop_, startup_context_.get(), &writer_controller_,
+      loop_, startup_context_.get(), writer_controller_.NewRequest(),
       std::move(cloud_provider_writer), "backlog", writer_path, &writer_);
   QuitOnError([this] { loop_->Quit(); }, status, "Get writer ledger");
 
@@ -154,7 +154,7 @@ void BacklogBenchmark::ConnectReader() {
   cloud_provider_firebase_factory_.MakeCloudProvider(
       server_id_, "backlog", cloud_provider_reader.NewRequest());
   ledger::Status status = test::GetLedger(
-      loop_, startup_context_.get(), &reader_controller_,
+      loop_, startup_context_.get(), reader_controller_.NewRequest(),
       std::move(cloud_provider_reader), "backlog", reader_path, &reader_);
   QuitOnError([this] { loop_->Quit(); }, status, "ConnectReader");
 

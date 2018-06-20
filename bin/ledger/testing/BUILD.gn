@@ -41,6 +41,7 @@ source_set("lib") {
     "//peridot/public/lib/cloud_provider/fidl",
     "//peridot/public/lib/ledger/fidl",
     "//third_party/googletest:gtest",
+    "//zircon/public/lib/fit",
     "//zircon/public/lib/trace-provider",
   ]
 
@@ -88,11 +89,16 @@ source_set("unittests") {
   testonly = true
 
   sources = [
+    "get_ledger_unittest.cc",
     "ledger_app_instance_factory_unittest.cc",
   ]
 
   deps = [
     ":ledger_instance_factory",
+    ":lib",
+    "//garnet/public/lib/callback",
+    "//garnet/public/lib/fxl",
+    "//zircon/public/lib/async-loop-cpp",
   ]
 
   configs += [ "//peridot/bin/ledger:ledger_config" ]

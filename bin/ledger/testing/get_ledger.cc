@@ -19,14 +19,61 @@
 
 namespace test {
 namespace {
-ledger::Status GetLedger(fxl::Closure run_loop, fxl::Closure stop_loop,
-                         fuchsia::sys::StartupContext* context,
-                         fuchsia::sys::ComponentControllerPtr* controller,
-                         cloud_provider::CloudProviderPtr cloud_provider,
-                         std::string ledger_name,
-                         std::string ledger_repository_path,
-                         ledger::LedgerPtr* ledger_ptr) {
-  ledger_internal::LedgerRepositoryFactoryPtr repository_factory;
+
+void RunLoop(async::Loop* loop) {
+  loop->Run();
+  loop->ResetQuit();
+}
+
+void RunLoop(fsl::MessageLoop* loop) { loop->Run(); }
+
+fit::function<void()> QuitLoopClosure(async::Loop* loop) {
+  return [loop] { loop->Quit(); };
+}
+fit::function<void()> QuitLoopClosure(fsl::MessageLoop* loop) {
+  return [loop] { loop->QuitNow(); };
+}
+
+template <typename LOOP>
+ledger::Status GetLedgerInternal(
+    LOOP* loop, fuchsia::sys::StartupContext* context,
+    fidl::InterfaceRequest<fuchsia::sys::ComponentController>
+        controller_request,
+    cloud_provider::CloudProviderPtr cloud_provider, std::string ledger_name,
+    std::string ledger_repository_path, ledger::LedgerPtr* ledger_ptr) {
+  ledger::Status status = ledger::Status::INTERNAL_ERROR;
+  GetLedger(context, std::move(controller_request), std::move(cloud_provider),
+            std::move(ledger_name), std::move(ledger_repository_path),
+            QuitLoopClosure(loop),
+            callback::Capture(QuitLoopClosure(loop), &status, ledger_ptr));
+  RunLoop(loop);
+  return status;
+}
+
+template <typename LOOP>
+ledger::Status GetPageEnsureInitializedInternal(LOOP* loop,
+                                                ledger::LedgerPtr* ledger,
+                                                ledger::PageIdPtr requested_id,
+                                                ledger::PagePtr* page,
+                                                ledger::PageId* page_id) {
+  ledger::Status status = ledger::Status::INTERNAL_ERROR;
+  GetPageEnsureInitialized(
+      ledger, std::move(requested_id), QuitLoopClosure(loop),
+      callback::Capture(QuitLoopClosure(loop), &status, page, page_id));
+  RunLoop(loop);
+  return status;
+}
+}  // namespace
+
+void GetLedger(
+    fuchsia::sys::StartupContext* context,
+    fidl::InterfaceRequest<fuchsia::sys::ComponentController>
+        controller_request,
+    cloud_provider::CloudProviderPtr cloud_provider, std::string ledger_name,
+    std::string ledger_repository_path, fit::function<void()> error_handler,
+    fit::function<void(ledger::Status, ledger::LedgerPtr)> callback) {
+  auto repository_factory =
+      std::make_unique<ledger_internal::LedgerRepositoryFactoryPtr>();
   fuchsia::sys::Services child_services;
   fuchsia::sys::LaunchInfo launch_info;
   launch_info.url = "ledger";
@@ -35,84 +82,107 @@ ledger::Status GetLedger(fxl::Closure run_loop, fxl::Closure stop_loop,
   launch_info.arguments.push_back("--disable_reporting");
 
   context->launcher()->CreateComponent(std::move(launch_info),
-                                       controller->NewRequest());
-  child_services.ConnectToService(repository_factory.NewRequest());
-  ledger_internal::LedgerRepositoryPtr repository;
+                                       std::move(controller_request));
+  child_services.ConnectToService(repository_factory->NewRequest());
 
-  ledger::Status status = ledger::Status::UNKNOWN_ERROR;
+  auto repository_factory_ptr = repository_factory->get();
+  auto repository = std::make_unique<ledger_internal::LedgerRepositoryPtr>();
+  auto request = repository->NewRequest();
 
-  repository_factory->GetRepository(
-      ledger_repository_path, std::move(cloud_provider),
-      repository.NewRequest(), callback::Capture(stop_loop, &status));
-  run_loop();
-  if (status != ledger::Status::OK) {
-    FXL_LOG(ERROR) << "Failure while getting repository.";
-    return status;
-  }
+  repository_factory_ptr->GetRepository(
+      ledger_repository_path, std::move(cloud_provider), std::move(request),
+      fxl::MakeCopyable(
+          [repository_factory = std::move(repository_factory),
+           repository = std::move(repository),
+           ledger_name = std::move(ledger_name),
+           ledger_repository_path = std::move(ledger_repository_path),
+           error_handler = std::move(error_handler),
+           callback = std::move(callback)](ledger::Status status) mutable {
+            if (status != ledger::Status::OK) {
+              FXL_LOG(ERROR) << "Failure while getting repository.";
+              callback(status, nullptr);
+              return;
+            }
 
-  repository->GetLedger(convert::ToArray(ledger_name), ledger_ptr->NewRequest(),
-                        callback::Capture(stop_loop, &status));
-  run_loop();
-  if (status != ledger::Status::OK) {
-    FXL_LOG(ERROR) << "Failure while getting ledger.";
-    return status;
-  }
-  ledger_ptr->set_error_handler([stop_loop = std::move(stop_loop)] {
-    FXL_LOG(ERROR) << "The ledger connection was closed, quitting.";
-    stop_loop();
-  });
-
-  return status;
+            auto repository_ptr = repository->get();
+            auto ledger = std::make_unique<ledger::LedgerPtr>();
+            auto request = ledger->NewRequest();
+            repository_ptr->GetLedger(
+                convert::ToArray(ledger_name), std::move(request),
+                fxl::MakeCopyable([repository = std::move(repository),
+                                   ledger = std::move(ledger),
+                                   error_handler = std::move(error_handler),
+                                   callback = std::move(callback)](
+                                      ledger::Status status) mutable {
+                  if (status != ledger::Status::OK) {
+                    FXL_LOG(ERROR) << "Failure while getting ledger.";
+                    callback(status, nullptr);
+                    return;
+                  }
+                  ledger->set_error_handler(
+                      [error_handler = std::move(error_handler)] {
+                        FXL_LOG(ERROR)
+                            << "The ledger connection was closed, quitting.";
+                        error_handler();
+                      });
+                  callback(ledger::Status::OK, std::move(*ledger));
+                }));
+          }));
 }
 
-ledger::Status GetPageEnsureInitialized(fxl::Closure run_loop,
-                                        fxl::Closure stop_loop,
-                                        ledger::LedgerPtr* ledger,
-                                        ledger::PageIdPtr requested_id,
-                                        ledger::PagePtr* page,
-                                        ledger::PageId* page_id) {
-  ledger::Status status;
-  (*ledger)->GetPage(std::move(requested_id), page->NewRequest(),
-                     callback::Capture(stop_loop, &status));
-  run_loop();
-  if (status != ledger::Status::OK) {
-    return status;
-  }
-
-  page->set_error_handler([stop_loop] {
-    FXL_LOG(ERROR) << "The page connection was closed, quitting.";
-    stop_loop();
-  });
-
-  (*page)->GetId(callback::Capture(std::move(stop_loop), page_id));
-  return status;
-}
-}  // namespace
-
-ledger::Status GetLedger(async::Loop* loop,
-                         fuchsia::sys::StartupContext* context,
-                         fuchsia::sys::ComponentControllerPtr* controller,
-                         cloud_provider::CloudProviderPtr cloud_provider,
-                         std::string ledger_name,
-                         std::string ledger_repository_path,
-                         ledger::LedgerPtr* ledger_ptr) {
-  return GetLedger([loop] { loop->Run(); }, [loop] { loop->Quit(); }, context,
-                   controller, std::move(cloud_provider),
-                   std::move(ledger_name), std::move(ledger_repository_path),
-                   ledger_ptr);
+ledger::Status GetLedger(
+    async::Loop* loop, fuchsia::sys::StartupContext* context,
+    fidl::InterfaceRequest<fuchsia::sys::ComponentController>
+        controller_request,
+    cloud_provider::CloudProviderPtr cloud_provider, std::string ledger_name,
+    std::string ledger_repository_path, ledger::LedgerPtr* ledger_ptr) {
+  return GetLedgerInternal(loop, context, std::move(controller_request),
+                           std::move(cloud_provider), std::move(ledger_name),
+                           std::move(ledger_repository_path), ledger_ptr);
 }
 
-ledger::Status GetLedger(fsl::MessageLoop* loop,
-                         fuchsia::sys::StartupContext* context,
-                         fuchsia::sys::ComponentControllerPtr* controller,
-                         cloud_provider::CloudProviderPtr cloud_provider,
-                         std::string ledger_name,
-                         std::string ledger_repository_path,
-                         ledger::LedgerPtr* ledger_ptr) {
-  return GetLedger([loop] { loop->Run(); }, [loop] { loop->QuitNow(); },
-                   context, controller, std::move(cloud_provider),
-                   std::move(ledger_name), std::move(ledger_repository_path),
-                   ledger_ptr);
+ledger::Status GetLedger(
+    fsl::MessageLoop* loop, fuchsia::sys::StartupContext* context,
+    fidl::InterfaceRequest<fuchsia::sys::ComponentController>
+        controller_request,
+    cloud_provider::CloudProviderPtr cloud_provider, std::string ledger_name,
+    std::string ledger_repository_path, ledger::LedgerPtr* ledger_ptr) {
+  return GetLedgerInternal(loop, context, std::move(controller_request),
+                           std::move(cloud_provider), std::move(ledger_name),
+                           std::move(ledger_repository_path), ledger_ptr);
+}
+
+void GetPageEnsureInitialized(
+    ledger::LedgerPtr* ledger, ledger::PageIdPtr requested_id,
+    fit::function<void()> error_handler,
+    fit::function<void(ledger::Status, ledger::PagePtr, ledger::PageId)>
+        callback) {
+  auto page = std::make_unique<ledger::PagePtr>();
+  auto request = page->NewRequest();
+  (*ledger)->GetPage(
+      std::move(requested_id), std::move(request),
+      fxl::MakeCopyable(
+          [page = std::move(page), error_handler = std::move(error_handler),
+           callback = std::move(callback)](ledger::Status status) mutable {
+            if (status != ledger::Status::OK) {
+              FXL_LOG(ERROR) << "Failure while getting a page.";
+              callback(status, nullptr, {});
+              return;
+            }
+
+            page->set_error_handler([error_handler = std::move(error_handler)] {
+              FXL_LOG(ERROR) << "The page connection was closed, quitting.";
+              error_handler();
+            });
+
+            auto page_ptr = (*page).get();
+            page_ptr->GetId(fxl::MakeCopyable(
+                [page = std::move(page),
+                 callback = std::move(callback)](ledger::PageId page_id) {
+                  callback(ledger::Status::OK, std::move(*page),
+                           std::move(page_id));
+                }));
+          }));
 }
 
 ledger::Status GetPageEnsureInitialized(async::Loop* loop,
@@ -120,9 +190,8 @@ ledger::Status GetPageEnsureInitialized(async::Loop* loop,
                                         ledger::PageIdPtr requested_id,
                                         ledger::PagePtr* page,
                                         ledger::PageId* page_id) {
-  return GetPageEnsureInitialized([loop] { loop->Run(); },
-                                  [loop] { loop->Quit(); }, ledger,
-                                  std::move(requested_id), page, page_id);
+  return GetPageEnsureInitializedInternal(loop, ledger, std::move(requested_id),
+                                          page, page_id);
 }
 
 ledger::Status GetPageEnsureInitialized(fsl::MessageLoop* loop,
@@ -130,9 +199,8 @@ ledger::Status GetPageEnsureInitialized(fsl::MessageLoop* loop,
                                         ledger::PageIdPtr requested_id,
                                         ledger::PagePtr* page,
                                         ledger::PageId* page_id) {
-  return GetPageEnsureInitialized([loop] { loop->Run(); },
-                                  [loop] { loop->QuitNow(); }, ledger,
-                                  std::move(requested_id), page, page_id);
+  return GetPageEnsureInitializedInternal(loop, ledger, std::move(requested_id),
+                                          page, page_id);
 }
 
 void KillLedgerProcess(fuchsia::sys::ComponentControllerPtr* controller) {

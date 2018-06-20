@@ -61,9 +61,9 @@ void UpdateEntryBenchmark::Run() {
   FXL_LOG(INFO) << "--entry-count=" << entry_count_
                 << " --transaction-size=" << transaction_size_;
   ledger::LedgerPtr ledger;
-  ledger::Status status =
-      test::GetLedger(loop_, startup_context_.get(), &component_controller_,
-                      nullptr, "update_entry", tmp_dir_.path(), &ledger);
+  ledger::Status status = test::GetLedger(
+      loop_, startup_context_.get(), component_controller_.NewRequest(),
+      nullptr, "update_entry", tmp_dir_.path(), &ledger);
   QuitOnError([this] { loop_->Quit(); }, status, "GetLedger");
 
   fidl::VectorPtr<uint8_t> key = generator_.MakeKey(0, key_size_);

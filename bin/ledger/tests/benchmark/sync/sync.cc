@@ -87,7 +87,7 @@ void SyncBenchmark::Run() {
       server_id_, "", cloud_provider_alpha.NewRequest());
   ledger::LedgerPtr alpha;
   ledger::Status status = test::GetLedger(
-      loop_, startup_context_.get(), &alpha_controller_,
+      loop_, startup_context_.get(), alpha_controller_.NewRequest(),
       std::move(cloud_provider_alpha), "sync", alpha_path, &alpha);
   QuitOnError([this] { loop_->Quit(); }, status, "alpha ledger");
 
@@ -95,9 +95,9 @@ void SyncBenchmark::Run() {
   cloud_provider_firebase_factory_.MakeCloudProvider(
       server_id_, "", cloud_provider_beta.NewRequest());
   ledger::LedgerPtr beta;
-  status =
-      test::GetLedger(loop_, startup_context_.get(), &beta_controller_,
-                      std::move(cloud_provider_beta), "sync", beta_path, &beta);
+  status = test::GetLedger(
+      loop_, startup_context_.get(), beta_controller_.NewRequest(),
+      std::move(cloud_provider_beta), "sync", beta_path, &beta);
   QuitOnError([this] { loop_->Quit(); }, status, "beta ledger");
 
   ledger::PageId id;
