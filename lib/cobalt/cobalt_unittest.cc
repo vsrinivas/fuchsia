@@ -10,7 +10,7 @@
 #include "lib/fidl/cpp/clone.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
-#include "lib/gtest/test_with_message_loop.h"
+#include "lib/gtest/test_with_loop.h"
 #include "lib/svc/cpp/service_provider_bridge.h"
 
 namespace cobalt {
@@ -195,7 +195,7 @@ class FakeCobaltEncoderFactoryImpl
   fidl::BindingSet<fuchsia::cobalt::CobaltEncoder> cobalt_encoder_bindings_;
 };
 
-class CobaltTest : public gtest::TestWithMessageLoop {
+class CobaltTest : public gtest::TestWithLoop {
  public:
   CobaltTest() : context_(InitStartupContext()) {}
   ~CobaltTest() override {}

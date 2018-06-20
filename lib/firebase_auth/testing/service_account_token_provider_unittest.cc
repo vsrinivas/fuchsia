@@ -7,15 +7,14 @@
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>
 
-#include "gtest/gtest.h"
 #include "lib/callback/capture.h"
-#include "lib/fsl/tasks/message_loop.h"
+#include "lib/callback/set_when_called.h"
 #include "lib/fsl/vmo/strings.h"
 #include "lib/fxl/files/file.h"
 #include "lib/fxl/files/scoped_temp_dir.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/string_number_conversions.h"
-#include "lib/gtest/test_with_message_loop.h"
+#include "lib/gtest/test_with_loop.h"
 #include "lib/network_wrapper/fake_network_wrapper.h"
 
 namespace service_account {
@@ -57,10 +56,10 @@ constexpr fxl::StringView kWrongKeyTestConfig =
     "\"client_id\": \"fake_id\""
     "}";
 
-class ServiceAccountTokenProviderTest : public gtest::TestWithMessageLoop {
+class ServiceAccountTokenProviderTest : public gtest::TestWithLoop {
  public:
   ServiceAccountTokenProviderTest()
-      : network_wrapper_(message_loop_.async()),
+      : network_wrapper_(dispatcher()),
         token_provider_(&network_wrapper_, "user_id") {}
 
  protected:
@@ -109,12 +108,15 @@ class ServiceAccountTokenProviderTest : public gtest::TestWithMessageLoop {
     return response;
   }
 
-  bool GetToken(std::string api_key, fuchsia::modular::auth::FirebaseTokenPtr* token,
+  bool GetToken(std::string api_key,
+                fuchsia::modular::auth::FirebaseTokenPtr* token,
                 fuchsia::modular::auth::AuthErr* error) {
+    bool called;
     token_provider_.GetFirebaseAuthToken(
-        api_key, callback::Capture([this] { message_loop_.PostQuitTask(); },
-                                   token, error));
-    return !RunLoopWithTimeout();
+        api_key,
+        callback::Capture(callback::SetWhenCalled(&called), token, error));
+    RunLoopUntilIdle();
+    return called;
   }
 
   files::ScopedTempDir dir_;

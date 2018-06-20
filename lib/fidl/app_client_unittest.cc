@@ -7,7 +7,7 @@
 #include <fuchsia/sys/cpp/fidl.h>
 #include <test/peridot/lib/fidl/appclient/cpp/fidl.h>
 #include "gtest/gtest.h"
-#include "lib/gtest/test_with_message_loop.h"
+#include "lib/gtest/test_with_loop.h"
 #include "peridot/lib/testing/fake_launcher.h"
 
 namespace modular {
@@ -51,7 +51,7 @@ class TestComponentController : fuchsia::sys::ComponentController {
   FXL_DISALLOW_COPY_AND_ASSIGN(TestComponentController);
 };
 
-class AppClientTest : public gtest::TestWithMessageLoop {};
+class AppClientTest : public gtest::TestWithLoop {};
 
 TEST_F(AppClientTest, BaseRun_Success) {
   bool callback_called = false;
@@ -92,11 +92,8 @@ TEST_F(AppClientTest, BaseTerminate_Success) {
                            });
 
   EXPECT_TRUE(callback_called);
-  EXPECT_TRUE(
-      RunLoopUntilWithTimeout([&app_terminated_callback_called, &controller] {
-        return app_terminated_callback_called && controller.killed();
-      }));
-
+  RunLoopUntilIdle();
+  EXPECT_TRUE(app_terminated_callback_called);
   EXPECT_TRUE(controller.killed());
 }
 
@@ -137,8 +134,8 @@ TEST_F(AppClientTest, RunWithParams_Success) {
         callback_called = true;
       });
 
-  AppClient<TerminateService> app_client(
-      &launcher, GetTestAppConfig(), "", std::move(additional_services));
+  AppClient<TerminateService> app_client(&launcher, GetTestAppConfig(), "",
+                                         std::move(additional_services));
 
   EXPECT_TRUE(callback_called);
 }
