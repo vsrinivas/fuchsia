@@ -1,0 +1,31 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.net;
+
+// Legacy interface to create a socket
+enum SocketDomain {
+    inet = 2;
+    inet6 = 10;
+};
+
+enum SocketType {
+    stream = 1;
+    dgram = 2;
+};
+
+enum SocketProtocol {
+    ip = 0;
+    icmp = 1;
+    tcp = 6;
+    udp = 17;
+    ipv6 = 41;
+    icmpv6 = 58;
+};
+
+[Discoverable]
+interface LegacySocketProvider {
+    1: OpenSocket(SocketDomain domain, SocketType type, SocketProtocol protocol)
+        -> (handle<socket> s, int32 @status);
+};
