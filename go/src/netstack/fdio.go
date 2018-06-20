@@ -94,6 +94,8 @@ type iostate struct {
 	netProto   tcpip.NetworkProtocolNumber   // IPv4 or IPv6
 	transProto tcpip.TransportProtocolNumber // TCP or UDP
 
+	openProto int // protocol for opOpen
+
 	dataHandle zx.Handle // a zx.Socket, used to communicate with libc
 
 	mu        sync.Mutex
@@ -496,13 +498,14 @@ func (ios *iostate) loopControl(s *socketServer, cookie int64) {
 	}
 }
 
-func (s *socketServer) newIostate(h zx.Handle, netProto tcpip.NetworkProtocolNumber, transProto tcpip.TransportProtocolNumber, wq *waiter.Queue, ep tcpip.Endpoint, isAccept bool) (reterr error) {
+func (s *socketServer) newIostate(h zx.Handle, netProto tcpip.NetworkProtocolNumber, transProto tcpip.TransportProtocolNumber, wq *waiter.Queue, ep tcpip.Endpoint, isAccept bool, openProto int) (reterr error) {
 	var peerS zx.Handle
 	ios := &iostate{
 		netProto:   netProto,
 		transProto: transProto,
 		wq:         wq,
 		ep:         ep,
+		openProto:  openProto,
 		refs:       1,
 	}
 	switch transProto {
@@ -570,15 +573,22 @@ func (s *socketServer) newIostate(h zx.Handle, netProto tcpip.NetworkProtocolNum
 			return err
 		}
 	} else {
-		// Before we add a dispatcher for this iostate, respond to the client describing what
-		// kind of object this is.
-		ro := fdio.RioDescription{
-			Status: errStatus(nil),
+		switch openProto {
+		case 2:
+			ro := fdio.RioDescription{
+				Status: errStatus(nil),
+			}
+			ro.Info.Tag = fdio.ProtocolSocket
+			ro.SetOp(fdio.OpOnOpen)
+			ro.Info.Socket().Handle = peerS
+			ro.Write(h, 0)
+		case 3:
+			r := openReply{
+				Status: errStatus(nil),
+				Handle: peerS,
+			}
+			r.Write(h)
 		}
-		ro.Info.Tag = fdio.ProtocolSocket
-		ro.SetOp(fdio.OpOnOpen)
-		ro.Info.Socket().Handle = peerS
-		ro.Write(h, 0)
 		h.Close()
 	}
 
@@ -615,9 +625,9 @@ type socketServer struct {
 	io   map[cookie]*iostate
 }
 
-func (s *socketServer) opSocket(h zx.Handle, path string) (err error) {
-	var domain, typ, protocol int
-	if n, _ := fmt.Sscanf(path, "socket-v2/%d/%d/%d\x00", &domain, &typ, &protocol); n != 3 {
+func (s *socketServer) opSocket(h zx.Handle, path string, openProto int) (err error) {
+	var version, domain, typ, protocol int
+	if n, _ := fmt.Sscanf(path, "socket-v%d/%d/%d/%d\x00", &version, &domain, &typ, &protocol); n != 4 {
 		return mxerror.Errorf(zx.ErrInvalidArgs, "socket: bad path %q (n=%d)", path, n)
 	}
 
@@ -649,7 +659,7 @@ func (s *socketServer) opSocket(h zx.Handle, path string) (err error) {
 			log.Printf("socket: setsockopt v6only option failed: %v", err)
 		}
 	}
-	err = s.newIostate(h, n, transProto, wq, ep, false)
+	err = s.newIostate(h, n, transProto, wq, ep, false, openProto)
 	if err != nil {
 		if debug {
 			log.Printf("socket: new iostate: %v", err)
@@ -1075,7 +1085,7 @@ func (s *socketServer) loopListen(ios *iostate, inCh chan struct{}) {
 			}
 		}
 
-		err = s.newIostate(ios.dataHandle, ios.netProto, ios.transProto, newwq, newep, true)
+		err = s.newIostate(ios.dataHandle, ios.netProto, ios.transProto, newwq, newep, true, ios.openProto)
 		if err != nil {
 			if debug {
 				log.Printf("listen: newIostate failed: %v", err)
@@ -1452,26 +1462,41 @@ func (s *socketServer) fdioHandler(msg *fdio.Msg, rh zx.Handle, cookieVal int64)
 	switch op {
 	case fdio.OpOpen:
 		path := string(msg.Data[:msg.Datalen])
+		openProto := 3
 		var err error
 		switch {
-		case strings.HasPrefix(path, "none-v2"): // ZXRIO_SOCKET_DIR_NONE
-			err = s.newIostate(msg.Handle[0], ipv4.ProtocolNumber, tcp.ProtocolNumber, nil, nil, false)
-		case strings.HasPrefix(path, "socket-v2/"): // ZXRIO_SOCKET_DIR_SOCKET
-			err = s.opSocket(msg.Handle[0], path)
+		case strings.HasPrefix(path, "none-v2"):
+			openProto := 2
+			err = s.newIostate(msg.Handle[0], ipv4.ProtocolNumber, tcp.ProtocolNumber, nil, nil, false, openProto)
+		case strings.HasPrefix(path, "none-v3"): // ZXRIO_SOCKET_DIR_NONE
+
+			err = s.newIostate(msg.Handle[0], ipv4.ProtocolNumber, tcp.ProtocolNumber, nil, nil, false, openProto)
+		case strings.HasPrefix(path, "socket-v2/"):
+			openProto := 2
+			err = s.opSocket(msg.Handle[0], path, openProto)
+		case strings.HasPrefix(path, "socket-v3/"): // ZXRIO_SOCKET_DIR_SOCKET
+			err = s.opSocket(msg.Handle[0], path, openProto)
 		default:
 			if debug2 {
 				log.Printf("open: unknown path=%q", path)
 			}
-			log.Printf("open: unknown path=%q", path)
 			err = mxerror.Errorf(zx.ErrNotSupported, "open: unknown path=%q", path)
 		}
 
 		if err != nil {
-			ro := fdio.RioDescription{
-				Status: errStatus(err),
+			switch openProto {
+			case 2:
+				ro := fdio.RioDescription{
+					Status: errStatus(err),
+				}
+				ro.SetOp(fdio.OpOnOpen)
+				ro.Write(msg.Handle[0], 0)
+			case 3:
+				r := openReply{
+					Status: errStatus(err),
+				}
+				r.Write(msg.Handle[0])
 			}
-			ro.SetOp(fdio.OpOnOpen)
-			ro.Write(msg.Handle[0], 0)
 			msg.Handle[0].Close()
 		}
 		return fdio.ErrIndirect.Status
@@ -1548,4 +1573,25 @@ func (s *socketServer) zxsocketHandler(msg *zxsocket.Msg, rh zx.Socket, cookieVa
 	}
 	return zx.ErrBadState
 	// TODO do_halfclose
+}
+
+type openReply struct {
+	Status zx.Status
+	Handle zx.Handle
+}
+
+func (r *openReply) Write(h zx.Handle) {
+	data := make([]byte, 4)
+	binary.LittleEndian.PutUint32(data, uint32(r.Status))
+	handles := []zx.Handle{r.Handle}
+	c := zx.Channel(h)
+	c.Write(data, handles, 0)
+}
+
+func init() {
+	// The marshalling in openReply.Write assumes that
+	// zx.Status is a 32bit integer.
+	if binary.Size(zx.Status(0)) != 4 {
+		panic("zx.Status is not 4 bytes")
+	}
 }
