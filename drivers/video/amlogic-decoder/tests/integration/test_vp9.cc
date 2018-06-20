@@ -153,7 +153,7 @@ std::vector<uint8_t> ConvertIvfToAmlV(const uint8_t* data, uint32_t length) {
 
 class TestVP9 {
  public:
-  static void Decode() {
+  static void Decode(bool use_parser, const char* filename) {
     auto video = std::make_unique<AmlogicVideo>();
     ASSERT_TRUE(video);
 
@@ -162,11 +162,15 @@ class TestVP9 {
     video->core_ = std::make_unique<HevcDec>(video.get());
     video->core_->PowerOn();
 
-    EXPECT_EQ(ZX_OK, video->InitializeStreamBuffer(true, PAGE_SIZE));
+    EXPECT_EQ(ZX_OK,
+              video->InitializeStreamBuffer(
+                  use_parser, use_parser ? PAGE_SIZE : 1024 * PAGE_SIZE));
 
     video->InitializeInterrupts();
 
-    EXPECT_EQ(ZX_OK, video->InitializeEsParser());
+    if (use_parser) {
+      EXPECT_EQ(ZX_OK, video->InitializeEsParser());
+    }
 
     {
       std::lock_guard<std::mutex> lock(video->video_decoder_lock_);
@@ -199,9 +203,14 @@ class TestVP9 {
 
     // Put on a separate thread because it needs video decoding to progress in
     // order to finish.
-    auto parser = std::async([&video]() {
+    auto parser = std::async([&video, use_parser]() {
       auto aml_data = ConvertIvfToAmlV(bear_vp9_ivf, bear_vp9_ivf_len);
-      video->ParseVideo(aml_data.data(), aml_data.size());
+      if (use_parser) {
+        video->ParseVideo(aml_data.data(), aml_data.size());
+      } else {
+        video->core_->InitializeDirectInput();
+        video->ProcessVideoNoParser(aml_data.data(), aml_data.size());
+      }
     });
 
     zx_nanosleep(zx_deadline_after(ZX_SEC(1)));
@@ -229,4 +238,9 @@ class TestVP9 {
     video->video_decoder_->ReturnFrame(frame);
   }
 };
-TEST(VP9, Decode) { TestVP9::Decode(); }
+
+TEST(VP9, Decode) { TestVP9::Decode(true, "/tmp/bearvp9.yuv"); }
+
+TEST(VP9, DecodeNoParser) {
+  TestVP9::Decode(false, "/tmp/bearvp9noparser.yuv");
+}

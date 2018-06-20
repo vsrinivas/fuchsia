@@ -218,4 +218,34 @@ void HevcDec::InitializeParserInput() {
       .WriteTo(mmio()->dosbus);
 }
 
-void HevcDec::InitializeDirectInput() { FXL_NOTIMPLEMENTED(); }
+void HevcDec::InitializeDirectInput() {
+  HevcStreamControl::Get()
+      .ReadFrom(mmio()->dosbus)
+      .set_endianness(7)
+      .set_use_parser_vbuf_wp(false)
+      .set_stream_fetch_enable(false)
+      .WriteTo(mmio()->dosbus);
+  HevcStreamFifoCtl::Get()
+      .ReadFrom(mmio()->dosbus)
+      .set_stream_fifo_hole(1)
+      .WriteTo(mmio()->dosbus);
+}
+
+void HevcDec::UpdateWritePointer(uint32_t write_pointer) {
+  HevcStreamWrPtr::Get().FromValue(write_pointer).WriteTo(mmio()->dosbus);
+  HevcStreamControl::Get()
+      .ReadFrom(mmio()->dosbus)
+      .set_endianness(7)
+      .set_use_parser_vbuf_wp(false)
+      .set_stream_fetch_enable(true)
+      .WriteTo(mmio()->dosbus);
+}
+
+uint32_t HevcDec::GetStreamInputOffset() {
+  uint32_t write_ptr =
+      HevcStreamWrPtr::Get().ReadFrom(mmio()->dosbus).reg_value();
+  uint32_t buffer_start =
+      HevcStreamStartAddr::Get().ReadFrom(mmio()->dosbus).reg_value();
+  assert(write_ptr >= buffer_start);
+  return write_ptr - buffer_start;
+}

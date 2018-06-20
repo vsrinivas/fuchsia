@@ -255,3 +255,21 @@ void Vdec1::InitializeDirectInput() {
   VldMemVififoBufCntl::Get().FromValue(0).set_manual(true).WriteTo(
       mmio()->dosbus);
 }
+
+void Vdec1::UpdateWritePointer(uint32_t write_pointer) {
+  VldMemVififoWP::Get().FromValue(write_pointer).WriteTo(mmio()->dosbus);
+  VldMemVififoControl::Get()
+      .ReadFrom(mmio()->dosbus)
+      .set_fill_en(true)
+      .set_empty_en(true)
+      .WriteTo(mmio()->dosbus);
+}
+
+uint32_t Vdec1::GetStreamInputOffset() {
+  uint32_t write_ptr =
+      VldMemVififoWP::Get().ReadFrom(mmio()->dosbus).reg_value();
+  uint32_t buffer_start =
+      VldMemVififoStartPtr::Get().ReadFrom(mmio()->dosbus).reg_value();
+  assert(write_ptr >= buffer_start);
+  return write_ptr - buffer_start;
+}

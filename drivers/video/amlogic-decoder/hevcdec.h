@@ -30,6 +30,8 @@ class HevcDec : public DecoderCore {
                              uint32_t buffer_size) override;
   void InitializeParserInput() override;
   void InitializeDirectInput() override;
+  void UpdateWritePointer(uint32_t write_pointer) override;
+  uint32_t GetStreamInputOffset() override;
 
  private:
   MmioRegisters* mmio() const { return owner_->mmio(); }
