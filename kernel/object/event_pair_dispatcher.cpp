@@ -47,11 +47,13 @@ void EventPairDispatcher::on_zero_handles()
     canary_.Assert();
 
     fbl::AutoLock locker(get_lock());
-    DEBUG_ASSERT(peer_);
 
-    peer_->InvalidateCookieLocked(peer_->get_cookie_jar());
-    peer_->UpdateStateLocked(0u, ZX_EVENTPAIR_PEER_CLOSED);
-    peer_.reset();
+    auto peer = fbl::move(peer_);
+    if (peer != nullptr) {
+        peer->InvalidateCookieLocked(peer->get_cookie_jar());
+        peer->UpdateStateLocked(0u, ZX_EVENTPAIR_PEER_CLOSED);
+        peer->peer_.reset();
+    }
 }
 
 EventPairDispatcher::EventPairDispatcher(fbl::RefPtr<PeerHolder<EventPairDispatcher>> holder)

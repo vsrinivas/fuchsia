@@ -244,6 +244,18 @@ static bool channel_close_test(void) {
     END_TEST;
 }
 
+static bool channel_peer_closed_test(void) {
+    BEGIN_TEST;
+
+    zx_handle_t channel[2];
+    ASSERT_EQ(zx_channel_create(0, &channel[0], &channel[1]), ZX_OK, "");
+    ASSERT_EQ(zx_handle_close(channel[1]), ZX_OK, "");
+    ASSERT_EQ(zx_object_signal_peer(channel[0], 0u, ZX_USER_SIGNAL_0), ZX_ERR_PEER_CLOSED, "");
+    ASSERT_EQ(zx_handle_close(channel[0]), ZX_OK, "");
+
+    END_TEST;
+}
+
 static bool channel_non_transferable(void) {
     BEGIN_TEST;
 
@@ -1026,6 +1038,7 @@ BEGIN_TEST_CASE(channel_tests)
 RUN_TEST(channel_test)
 RUN_TEST(channel_read_error_test)
 RUN_TEST(channel_close_test)
+RUN_TEST(channel_peer_closed_test)
 RUN_TEST(channel_non_transferable)
 RUN_TEST(channel_duplicate_handles)
 RUN_TEST(channel_multithread_read)

@@ -121,10 +121,23 @@ static bool signal_peer_test(void) {
     END_TEST;
 }
 
+static bool signal_peer_closed_test(void) {
+    BEGIN_TEST;
+
+    zx_handle_t eventpair[2];
+    ASSERT_EQ(zx_eventpair_create(0, &eventpair[0], &eventpair[1]), ZX_OK, "");
+    ASSERT_EQ(zx_handle_close(eventpair[1]), ZX_OK, "");
+    ASSERT_EQ(zx_object_signal_peer(eventpair[0], 0u, ZX_USER_SIGNAL_0), ZX_ERR_PEER_CLOSED, "");
+    ASSERT_EQ(zx_handle_close(eventpair[0]), ZX_OK, "");
+
+    END_TEST;
+}
+
 BEGIN_TEST_CASE(eventpair_tests)
 RUN_TEST(create_test)
 RUN_TEST(signal_test)
 RUN_TEST(signal_peer_test)
+RUN_TEST(signal_peer_closed_test)
 END_TEST_CASE(eventpair_tests)
 
 #ifndef BUILD_COMBINED_TESTS

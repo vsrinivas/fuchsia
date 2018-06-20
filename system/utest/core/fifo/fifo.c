@@ -139,6 +139,18 @@ static bool basic_test(void) {
     END_TEST;
 }
 
+static bool peer_closed_test(void) {
+    BEGIN_TEST;
+
+    zx_handle_t fifo[2];
+    ASSERT_EQ(zx_fifo_create(16, 16, 0, &fifo[0], &fifo[1]), ZX_OK, "");
+    ASSERT_EQ(zx_handle_close(fifo[1]), ZX_OK, "");
+    ASSERT_EQ(zx_object_signal_peer(fifo[0], 0u, ZX_USER_SIGNAL_0), ZX_ERR_PEER_CLOSED, "");
+    ASSERT_EQ(zx_handle_close(fifo[0]), ZX_OK, "");
+
+    END_TEST;
+}
+
 static bool options_test(void) {
     BEGIN_TEST;
 
@@ -151,6 +163,7 @@ static bool options_test(void) {
 
 BEGIN_TEST_CASE(fifo_tests)
 RUN_TEST(basic_test)
+RUN_TEST(peer_closed_test)
 RUN_TEST(options_test)
 END_TEST_CASE(fifo_tests)
 

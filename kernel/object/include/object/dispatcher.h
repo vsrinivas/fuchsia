@@ -247,6 +247,10 @@ private:
 //     foo0->Init(&foo1);
 //     foo1->Init(&foo0);
 
+// A PeeredDispatcher object, in its |on_zero_handles| call must clear
+// out its peer's |peer_| field. This is needed to avoid leaks, and to
+// ensure that |user_signal| can correctly report ZX_ERR_PEER_CLOSED.
+
 // TODO(kulakowski) We should investigate turning this into one
 // allocation. This would mean PeerHolder would have two EndPoint
 // members, and that PeeredDispatcher would have custom refcounting.
@@ -293,6 +297,11 @@ public:
         peer_->UpdateStateLocked(clear_mask, set_mask);
         return ZX_OK;
     }
+
+    // Subclasses of PeeredDispatcher must implement
+    // |on_zero_handles|. In particular, they are required to reset
+    // their peer's |peer_| field.
+    virtual void on_zero_handles() override = 0;
 
     fbl::Mutex* get_lock() const override { return holder_->get_lock(); }
 

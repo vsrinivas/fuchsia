@@ -140,6 +140,18 @@ static bool socket_signals(void) {
     END_TEST;
 }
 
+static bool socket_peer_closed(void) {
+    BEGIN_TEST;
+
+    zx_handle_t socket[2];
+    ASSERT_EQ(zx_socket_create(0, &socket[0], &socket[1]), ZX_OK, "");
+    ASSERT_EQ(zx_handle_close(socket[1]), ZX_OK, "");
+    ASSERT_EQ(zx_object_signal_peer(socket[0], 0u, ZX_USER_SIGNAL_0), ZX_ERR_PEER_CLOSED, "");
+    ASSERT_EQ(zx_handle_close(socket[0]), ZX_OK, "");
+
+    END_TEST;
+}
+
 static bool socket_shutdown_write(void) {
     BEGIN_TEST;
 
@@ -815,6 +827,7 @@ static bool socket_accept(void) {
 BEGIN_TEST_CASE(socket_tests)
 RUN_TEST(socket_basic)
 RUN_TEST(socket_signals)
+RUN_TEST(socket_peer_closed)
 RUN_TEST(socket_shutdown_write)
 RUN_TEST(socket_shutdown_read)
 RUN_TEST(socket_bytes_outstanding)
