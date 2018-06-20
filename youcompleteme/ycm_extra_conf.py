@@ -48,17 +48,14 @@ common_flags = [
     fuchsia_clang + '/include',
     '-isystem',
     fuchsia_clang + '/include/c++/v1',
+    '-I' + fuchsia_root,
+    '-I' + fuchsia_build + '/gen'
 ]
 
 # Add the sysroot include if we found the zircon project
 if target_cpu:
-    common_flags += ['-I' + os.path.join(
+    arch_flags = ['-I' + os.path.join(
         fuchsia_root, 'out/build-zircon', 'build-' + target_cpu, 'sysroot/include')]
-
-default_flags = [
-    '-I' + fuchsia_root,
-    '-I' + fuchsia_build + '/gen'
-]
 
 
 def GetClangCommandFromNinjaForFilename(filename):
@@ -74,7 +71,8 @@ def GetClangCommandFromNinjaForFilename(filename):
     (List of Strings) Command line arguments for clang.
   """
 
-  fuchsia_flags = []
+  # By default we start with the common to every file flags
+  fuchsia_flags = common_flags
 
   # Header files can't be built. Instead, try to match a header file to its
   # corresponding source file.
@@ -115,7 +113,7 @@ def GetClangCommandFromNinjaForFilename(filename):
       clang_line = line
       break
   else:
-    return default_flags + fuchsia_flags
+    return fuchsia_flags
 
   # Parse out the -I and -D flags. These seem to be the only ones that are
   # important for YCM's purposes.
@@ -159,7 +157,8 @@ def FlagsForFile(filename):
             zircon_compilation_info.compiler_working_dir_,
         'do_cache': True
       }
-  fuchsia_flags = GetClangCommandFromNinjaForFilename(filename)
-  final_flags = common_flags + fuchsia_flags
+  file_flags = GetClangCommandFromNinjaForFilename(filename)
+  # We add the arch specific flags
+  final_flags = file_flags + arch_flags
 
   return {'flags': final_flags, 'do_cache': True}
