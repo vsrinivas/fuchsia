@@ -35,6 +35,9 @@
 #include "peridot/lib/ledger_client/page_id.h"
 #include "peridot/lib/rapidjson/rapidjson.h"
 
+// In tests prefetching mondrian saved ~30ms in story start up time.
+#define PREFETCH_MONDRIAN 0
+
 namespace modular {
 
 // 1. Ask SessionStorage to create an ID and storage for the new story.
@@ -486,6 +489,7 @@ StoryProviderImpl::StartStoryShell(
 }
 
 void StoryProviderImpl::MaybeLoadStoryShellDelayed() {
+#if PREFETCH_MONDRIAN
   async::PostDelayedTask(
       async_get_default(),
       [weak_this = weak_factory_.GetWeakPtr()] {
@@ -498,6 +502,7 @@ void StoryProviderImpl::MaybeLoadStoryShellDelayed() {
         }
       },
       zx::sec(5));
+#endif
 }
 
 void StoryProviderImpl::MaybeLoadStoryShell() {
