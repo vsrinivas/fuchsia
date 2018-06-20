@@ -10,7 +10,6 @@
 #![feature(nonzero)]
 #![feature(specialization)]
 #![feature(try_from)]
-#![feature(repr_transparent)]
 // In case we roll the toolchain and something we're using as a feature has been
 // stabilized.
 #![allow(stable_features)]

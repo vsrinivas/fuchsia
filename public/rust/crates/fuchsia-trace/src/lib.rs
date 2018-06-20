@@ -1,5 +1,3 @@
-#![feature(repr_transparent)]
-
 extern crate fuchsia_zircon as zx;
 
 // Re-export libc to be used from the c_char macro
