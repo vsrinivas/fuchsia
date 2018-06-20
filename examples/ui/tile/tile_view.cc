@@ -79,7 +79,8 @@ void TileView::CreateNestedEnvironment() {
 
   zx::channel h1, h2;
   if (zx::channel::create(0, &h1, &h2) < 0)
-    return startup_context_->environment()->GetDirectory(std::move(h1));
+    return;
+  startup_context_->environment()->GetDirectory(std::move(h1));
   service_provider_bridge_.set_backing_dir(std::move(h2));
 }
 
