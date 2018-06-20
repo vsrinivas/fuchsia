@@ -1,0 +1,95 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/rust/rustc_artifact.gni")
+
+# Defines a Rust static library
+#
+# Parameters
+#
+#   name
+#     Name of the crate as defined in its manifest file. If not specified, it is
+#     assumed to be the same as the target name.
+#
+#   version
+#     Semver version of the crate as seen on crates.io.
+#
+#   deps (optional)
+#     List of rust_library GN targets on which this crate depends.
+#     Third party crates can be included through paths like
+#     "//third_party/rust-crates/rustc_deps:<cratename>",
+#
+#   non_rust_deps (optional)
+#     List of non-rust_library GN targets on which this crate depends.
+#
+#   with_unit_tests (optional)
+#     Builds unit tests associated with the binary. This will create a
+#     `<name>-bin-unit-test` test file in the output directory.
+#
+#   source_root (optional)
+#     Location of the crate root (e.g. `src/main.rs` or `src/lib.rs`).
+#     This defaults to `./src/main.rs` for binaries and `./src/lib.rs` for libraries,
+#     and should only be changed when absolutely necessary
+#     (such as in the case of generated code).
+#
+#   output_name (optional)
+#     Name of the output file.
+#
+# Example of usage:
+#
+#   rustc_staticlib("foo") {
+#     deps = [
+#       "//garnet/public/rust/crates/bar",
+#       "//third_party/rust-crates/rustc_deps:clap",
+#       "//third_party/rust-crates/rustc_deps:serde",
+#       "//third_party/rust-crates/rustc_deps:slab",
+#     ]
+#     with_unit_tests = true
+#   }
+template("rustc_staticlib") {
+  rustc_target = "_${target_name}_rustc_artifact"
+  group_target = "${target_name}"
+
+  rustc_artifact(rustc_target) {
+    forward_variables_from(invoker,
+                           [
+                             "name",
+                             "version",
+                             "deps",
+                             "non_rust_deps",
+                             "with_unit_tests",
+                             "output_name",
+                             "source_root",
+                             "testonly",
+                           ])
+    type = "staticlib"
+  }
+
+  public_hdrs = []
+  if (defined(invoker.public)) {
+    public_hdrs += invoker.public
+  }
+
+  
+  header_target = "_${target_name}_staticlib_headers"
+  config_target = "_${target_name}_staticlib_config"
+
+  source_set(header_target) {
+    public = public_hdrs
+    visibility = [ ":$group_target" ]
+  }
+
+  config(config_target) {
+    libs = get_target_outputs(":${rustc_target}_build")
+    visibility = [ ":$group_target" ]
+  }
+
+  group(target_name) {
+    public_configs = [ ":$config_target" ]
+    public_deps = [
+      ":$rustc_target",
+      ":$header_target",
+    ]
+  }
+}
