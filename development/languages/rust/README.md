@@ -29,6 +29,7 @@ fx set x64 --release --args "rustc_prefix=\"/path/to/bin/dir\""
 
 - [Managing third-party dependencies](third_party.md)
 - [Unsafe code](unsafe.md)
+- [Unstable features](unstable.md)
 
 
 [target-library-rustc]: https://fuchsia.googlesource.com/build/+/master/rust/rustc_library.gni "Rust library"
