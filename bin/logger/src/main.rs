@@ -405,6 +405,7 @@ mod tests {
         expected: Vec<LogMessage>,
         done: Arc<AtomicBool>,
         closed: Arc<AtomicBool>,
+        test_name: String,
     }
     impl LogListenerState {
         fn log(&mut self, msg: LogMessage) {
@@ -421,6 +422,7 @@ mod tests {
             );
             if self.expected.len() == 0 {
                 self.done.store(true, Ordering::Relaxed);
+                println!("DEBUG: {}: setting done=true", self.test_name);
             }
         }
     }
@@ -463,21 +465,28 @@ mod tests {
                 state: ll,
                 on_open: |_, _| fok(()),
                 done: |ll, _| {
+                    println!("DEBUG: {}: done called", ll.test_name);
                     ll.closed.store(true, Ordering::Relaxed);
                     fok(())
                 },
                 log: |ll, msg, _controller| {
+                    println!("DEBUG: {}: log called", ll.test_name);
                     ll.log(msg);
                     fok(())
                 },
                 log_many: |ll, msgs, _controller| {
+                    println!(
+                        "DEBUG: {}: logMany called, msgs.len(): {}",
+                        ll.test_name,
+                        msgs.len()
+                    );
                     for msg in msgs {
                         ll.log(msg);
                     }
                     fok(())
                 },
             }.serve(chan)
-                .recover(|e| panic!("ankur test fail {:?}", e)),
+                .recover(|e| panic!("test fail {:?}", e)),
         )
     }
 
@@ -573,6 +582,7 @@ mod tests {
             expected: vec![lm1, lm2, lm3],
             done: done.clone(),
             closed: closed.clone(),
+            test_name: "log_manager_test".to_string(),
         };
 
         setup_listener(ls, log_proxy, None, test_dump_logs);
@@ -625,6 +635,7 @@ mod tests {
             expected: expected,
             done: done.clone(),
             closed: Arc::new(AtomicBool::new(false)),
+            test_name: test_name.clone().to_string(),
         };
         println!("DEBUG: {}: call setup_listener", test_name);
         setup_listener(ls, log_proxy, filter_options, false);
