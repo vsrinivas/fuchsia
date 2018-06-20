@@ -447,14 +447,11 @@ static void aml_sd_emmc_init_regs(aml_sd_emmc_t* dev) {
 static void aml_sd_emmc_hw_reset(void* ctx) {
     aml_sd_emmc_t *dev = (aml_sd_emmc_t *)ctx;
     mtx_lock(&dev->mtx);
-    if (dev->gpio_count == 1) {
-        //Currently we only have 1 gpio
-        gpio_config(&dev->gpio, 0, GPIO_DIR_OUT);
-        gpio_write(&dev->gpio, 0, 0);
-        usleep(10 * 1000);
-        gpio_write(&dev->gpio, 0, 1);
-        usleep(10 * 1000);
-    }
+    gpio_config(&dev->gpio, 0, GPIO_DIR_OUT);
+    gpio_write(&dev->gpio, 0, 0);
+    usleep(10 * 1000);
+    gpio_write(&dev->gpio, 0, 1);
+    usleep(10 * 1000);
     aml_sd_emmc_init_regs(dev);
     mtx_unlock(&dev->mtx);
 }
@@ -525,6 +522,7 @@ static int aml_sd_emmc_irq_thread(void *ctx) {
         status_irq = regs->sd_emmc_status;
         if (!(status_irq & AML_SD_EMMC_STATUS_END_OF_CHAIN)) {
             status = ZX_ERR_IO_INVALID;
+            zxlogf(ERROR, "aml_sd_emmc_irq_thread: END OF CHAIN bit is not set\n");
             goto complete;
         }
 
@@ -871,6 +869,27 @@ static zx_protocol_device_t aml_sd_emmc_device_proto = {
     .release = aml_sd_emmc_release,
 };
 
+static zx_status_t aml_sd_emmc_get_sdio_oob_irq(void* ctx, zx_handle_t *oob_irq_handle) {
+    aml_sd_emmc_t* dev = ctx;
+
+    if (dev->gpio_count <= 1) {
+        return ZX_OK;
+    }
+
+    zx_status_t st = gpio_config(&dev->gpio, 1, GPIO_DIR_IN);
+    if (st != ZX_OK) {
+        zxlogf(ERROR, "aml_sd_emmc_get_oob_irq: gpio_config failed: %d\n", st);
+        return st;
+    }
+
+    st = gpio_get_interrupt(&dev->gpio, 1, ZX_INTERRUPT_MODE_LEVEL_LOW, oob_irq_handle);
+    if (st != ZX_OK) {
+        zxlogf(ERROR, "aml_sd_emmc_get_oob_irq: gpio_get_interrupt failed: %d\n", st);
+        return st;
+    }
+    return ZX_OK;
+}
+
 static sdmmc_protocol_ops_t aml_sdmmc_proto = {
     .host_info = aml_sd_emmc_host_info,
     .set_signal_voltage = aml_sd_emmc_set_signal_voltage,
@@ -880,6 +899,7 @@ static sdmmc_protocol_ops_t aml_sdmmc_proto = {
     .hw_reset = aml_sd_emmc_hw_reset,
     .perform_tuning = aml_sd_emmc_perform_tuning,
     .request = aml_sd_emmc_request,
+    .get_sdio_oob_irq = aml_sd_emmc_get_sdio_oob_irq,
 };
 
 static zx_status_t aml_sd_emmc_bind(void* ctx, zx_device_t* parent) {

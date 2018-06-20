@@ -37,6 +37,9 @@ static const pbus_gpio_t sdio_gpios[] = {
     {
         .gpio = S912_GPIOX(6),
     },
+    {
+        .gpio = S912_WIFI_SDIO_WAKE_HOST,
+    },
 };
 
 static aml_sd_emmc_config_t config = {
@@ -78,6 +81,7 @@ zx_status_t vim_sdio_init(vim_bus_t* bus) {
     gpio_set_alt_function(&bus->gpio, S912_WIFI_SDIO_D3, S912_WIFI_SDIO_D3_FN);
     gpio_set_alt_function(&bus->gpio, S912_WIFI_SDIO_CLK, S912_WIFI_SDIO_CLK_FN);
     gpio_set_alt_function(&bus->gpio, S912_WIFI_SDIO_CMD, S912_WIFI_SDIO_CMD_FN);
+    gpio_set_alt_function(&bus->gpio, S912_WIFI_SDIO_WAKE_HOST, S912_WIFI_SDIO_WAKE_HOST_FN);
 
     if ((status = pbus_device_add(&bus->pbus, &sdio_dev, 0)) != ZX_OK) {
         zxlogf(ERROR, "vim_sdio_init could not add sdio_dev: %d\n", status);

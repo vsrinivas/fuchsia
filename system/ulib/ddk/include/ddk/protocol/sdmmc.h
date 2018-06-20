@@ -105,6 +105,8 @@ typedef struct sdmmc_protocol_ops {
     zx_status_t (*perform_tuning)(void* ctx);
     // issue a request
     zx_status_t (*request)(void* ctx, sdmmc_req_t* req);
+    // get out-of-bandwidth irq handle for SDIO
+    zx_status_t (*get_sdio_oob_irq)(void* ctx, zx_handle_t *oob_irq);
 } sdmmc_protocol_ops_t;
 
 typedef struct sdmmc_protocol {
@@ -114,6 +116,11 @@ typedef struct sdmmc_protocol {
 
 static inline zx_status_t sdmmc_host_info(sdmmc_protocol_t* sdmmc, sdmmc_host_info_t* info) {
     return sdmmc->ops->host_info(sdmmc->ctx, info);
+}
+
+static inline zx_status_t sdmmc_get_sdio_oob_irq(sdmmc_protocol_t* sdmmc,
+                                                 zx_handle_t *oob_irq_handle) {
+    return sdmmc->ops->get_sdio_oob_irq(sdmmc->ctx, oob_irq_handle);
 }
 
 static inline zx_status_t sdmmc_set_signal_voltage(sdmmc_protocol_t* sdmmc,

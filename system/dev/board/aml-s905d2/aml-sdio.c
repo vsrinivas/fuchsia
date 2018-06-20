@@ -37,6 +37,9 @@ static const pbus_gpio_t sdio_gpios[] = {
     {
         .gpio = S905D2_GPIOX(6),
     },
+    {
+        .gpio = S905D2_WIFI_SDIO_WAKE_HOST,
+    },
 };
 
 static aml_sd_emmc_config_t config = {

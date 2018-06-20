@@ -1052,6 +1052,11 @@ static zx_status_t imx_sdhci_perform_tuning(void* ctx) {
    return ZX_OK;
 }
 
+static zx_status_t imx_sdhci_get_oob_irq(void* ctx, zx_handle_t *oob_irq_handle) {
+    // Currently we do not support SDIO
+    return ZX_ERR_NOT_SUPPORTED;
+}
+
 static sdmmc_protocol_ops_t sdmmc_proto = {
     .host_info = imx_sdhci_host_info,
     .set_signal_voltage = imx_sdhci_set_signal_voltage,
@@ -1061,6 +1066,7 @@ static sdmmc_protocol_ops_t sdmmc_proto = {
     .hw_reset = imx_sdhci_hw_reset,
     .perform_tuning = imx_sdhci_perform_tuning,
     .request = imx_sdhci_request,
+    .get_sdio_oob_irq = imx_sdhci_get_oob_irq,
 };
 
 static void imx_sdhci_unbind(void* ctx) {
