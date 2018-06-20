@@ -23,12 +23,16 @@ CmxMetadata::CmxMetadata() = default;
 
 CmxMetadata::~CmxMetadata() = default;
 
-rapidjson::Value& CmxMetadata::ParseSandboxMetadata(const std::string& data) {
+bool CmxMetadata::ParseSandboxMetadata(const std::string& data,
+                                       rapidjson::Value* parsed_value) {
   rapidjson::Document document;
   document.Parse(data);
+  if (!document.IsObject())
+    return false;
   auto sandbox = document.FindMember(kSandbox);
 
-  return sandbox->value;
+  *parsed_value = sandbox->value;
+  return true;
 }
 
 std::string CmxMetadata::GetCmxPath(std::string package_resolved_url) {

@@ -13,12 +13,23 @@ namespace {
 
 TEST(CmxMetadata, ParseSandboxMetadata) {
   CmxMetadata cmx;
-  rapidjson::Value& sandbox = cmx.ParseSandboxMetadata(
-      R"JSON({ "sandbox": { "dev": [ "class/input" ]}, "other": "stuff" })JSON");
+  rapidjson::Value sandbox;
+  EXPECT_TRUE(cmx.ParseSandboxMetadata(
+      R"JSON({ "sandbox": { "dev": [ "class/input" ]}, "other": "stuff" })JSON",
+      &sandbox));
 
   EXPECT_TRUE(sandbox.IsObject());
   EXPECT_TRUE(sandbox.HasMember("dev"));
   EXPECT_FALSE(sandbox.HasMember("other"));
+}
+
+// Test that we return an error when parsing invalid sandbox metadata instead.
+TEST(CmxMetadata, ParseInvalidSandboxMetadata) {
+  CmxMetadata cmx;
+  rapidjson::Value sandbox;
+  EXPECT_FALSE(cmx.ParseSandboxMetadata(R"JSON({ ,,, })JSON", &sandbox));
+
+  EXPECT_FALSE(sandbox.IsObject());
 }
 
 TEST(CmxMetadata, GetCmxPath) {

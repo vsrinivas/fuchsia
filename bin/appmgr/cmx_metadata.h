@@ -19,7 +19,8 @@ class CmxMetadata {
 
   // Takes a raw JSON string and returns the value object corresponding to
   // "sandbox".
-  rapidjson::Value& ParseSandboxMetadata(const std::string& data);
+  bool ParseSandboxMetadata(const std::string& data,
+                            rapidjson::Value* parsed_value);
 
   // Takes a package's resolved_url, e.g. file:///pkgfs/packages/<FOO>/0, and
   // returns the default component's .cmx path, e.g. meta/<FOO>.cmx
