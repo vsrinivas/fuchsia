@@ -256,8 +256,11 @@ static zx_driver_ops_t imx8mevk_bus_driver_ops = {
     .bind = imx8mevk_bus_bind,
 };
 
-ZIRCON_DRIVER_BEGIN(vim_bus, imx8mevk_bus_driver_ops, "zircon", "0.1", 4)
+ZIRCON_DRIVER_BEGIN(vim_bus, imx8mevk_bus_driver_ops, "zircon", "0.1", 6)
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PLATFORM_BUS),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_NXP),
+    BI_GOTO_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_NXP, 0),
     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_PID, PDEV_PID_IMX8MEVK),
+    BI_LABEL(0),
+    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_GOOGLE),
+    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_PID, PDEV_PID_MADRONE),
 ZIRCON_DRIVER_END(vim_bus)
