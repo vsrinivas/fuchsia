@@ -26,37 +26,62 @@
 #include "private.h"
 #include "unistd.h"
 
+zx_status_t zxsio_open(fdio_t** io, zx_handle_t svc, const char* name);
 zx_status_t zxsio_accept(fdio_t* io, zx_handle_t* s2);
 
 static zx_status_t fdio_getsockopt(fdio_t* io, int level, int optname,
                                    void* restrict optval,
                                    socklen_t* restrict optlen);
 
-static mtx_t netstack_lock = MTX_INIT;
-static mtx_t dns_lock = MTX_INIT;
-// Use -2 as sentinal to mean "uninitialized" so it's distinct from errors
-// returned from open, which return -1. In get_netstack and get_dns, we
-// explicitly check for -2 (not just any negative number) so that, if open fails
-// the first time we try (setting the value to -1), we won't ever retry.
-static int netstack = -2;
-static int dns = -2;
-
-int get_netstack(void) {
-    mtx_lock(&netstack_lock);
-    if (netstack == -2)
-        netstack = open("/svc/net.Netstack", O_PIPELINE | O_RDWR);
-    int result = netstack;
-    mtx_unlock(&netstack_lock);
-    return result;
+static zx_status_t get_service_handle(const char* path, zx_handle_t* saved,
+                                      mtx_t* lock, zx_handle_t* out) {
+    zx_status_t r;
+    zx_handle_t h0, h1;
+    mtx_lock(lock);
+    if (*saved == ZX_HANDLE_INVALID) {
+        if ((r = zx_channel_create(0, &h0, &h1)) != ZX_OK) {
+            mtx_unlock(lock);
+            return r;
+        }
+        if ((r = fdio_service_connect(path, h1)) != ZX_OK) {
+            mtx_unlock(lock);
+            zx_handle_close(h0);
+            return r;
+        }
+        *saved = h0;
+    }
+    *out = *saved;
+    mtx_unlock(lock);
+    return ZX_OK;
 }
 
-int get_dns(void) {
-    mtx_lock(&dns_lock);
-    if (dns == -2)
-        dns = open("/svc/dns.DNS", O_PIPELINE | O_RDWR);
-    int result = dns;
-    mtx_unlock(&dns_lock);
-    return result;
+// This wrapper waits for the service to publish the service handle.
+// TODO(ZX-1890): move to a better mechanism when available.
+static zx_status_t get_service_with_retries(const char* path, zx_handle_t* saved,
+                                            mtx_t* lock, zx_handle_t* out) {
+    zx_status_t r;
+    unsigned retry = 0;
+    while ((r = get_service_handle(path, saved, lock, out)) == ZX_ERR_NOT_FOUND) {
+        if (retry >= 24) {
+            // 10-second timeout
+            return ZX_ERR_NOT_FOUND;
+        }
+        retry++;
+        zx_nanosleep(zx_deadline_after((retry < 8) ? ZX_MSEC(250) : ZX_MSEC(500)));
+    }
+    return r;
+}
+
+static zx_status_t get_netstack(zx_handle_t* out) {
+    static zx_handle_t saved = ZX_HANDLE_INVALID;
+    static mtx_t lock = MTX_INIT;
+    return get_service_with_retries("/svc/net.Netstack", &saved, &lock, out);
+}
+
+static zx_status_t get_dns(zx_handle_t* out) {
+    static zx_handle_t saved = ZX_HANDLE_INVALID;
+    static mtx_t lock = MTX_INIT;
+    return get_service_with_retries("/svc/dns.DNS", &saved, &lock, out);
 }
 
 int socket(int domain, int type, int protocol) {
@@ -72,19 +97,11 @@ int socket(int domain, int type, int protocol) {
         return ERRNO(EINVAL);
     }
 
-    // Wait for the the network stack to publish the socket device
-    // if necessary.
-    // TODO: move to a better mechanism when available.
-    unsigned retry = 0;
-    while ((r = __fdio_open_at(&io, get_netstack(), path, 0, 0)) == ZX_ERR_NOT_FOUND) {
-        if (retry >= 24) {
-            // 10-second timeout
-            return ERRNO(EIO);
-        }
-        retry++;
-        zx_nanosleep(zx_deadline_after((retry < 8) ? ZX_MSEC(250) : ZX_MSEC(500)));
+    zx_handle_t svc;
+    if ((r = get_netstack(&svc)) != ZX_OK) {
+        return ERRNO(EIO);
     }
-    if (r < 0) {
+    if ((r = zxsio_open(&io, svc, path)) != ZX_OK) {
         return ERROR(r);
     }
     if (type & SOCK_STREAM) {
@@ -257,20 +274,13 @@ int getaddrinfo(const char* __restrict node,
         errno = EINVAL;
         return EAI_SYSTEM;
     }
-    // Wait for Netstack to publish the socket device if necessary.
     // TODO(joshlf): Use DNS (get_dns()) instead of Netstack
-    // TODO: move to a better mechanism when available.
-    unsigned retry = 0;
-    while ((r = __fdio_open_at(&io, get_netstack(), ZXRIO_SOCKET_DIR_NONE,
-                               0, 0)) == ZX_ERR_NOT_FOUND) {
-        if (retry >= 24) {
-            // 10-second timeout
-            return EAI_AGAIN;
-        }
-        retry++;
-        zx_nanosleep(zx_deadline_after((retry < 8) ? ZX_MSEC(250) : ZX_MSEC(500)));
+    zx_handle_t svc;
+    if ((r = get_netstack(&svc)) != ZX_OK) {
+        errno = fdio_status_to_errno(r);
+        return EAI_SYSTEM;
     }
-    if (r < 0) {
+    if ((r = zxsio_open(&io, svc, ZXRIO_SOCKET_DIR_NONE)) != ZX_OK) {
         errno = fdio_status_to_errno(r);
         return EAI_SYSTEM;
     }

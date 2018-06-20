@@ -17,8 +17,8 @@
 
 __BEGIN_CDECLS
 
-#define ZXRIO_SOCKET_DIR_NONE   "none-v2"
-#define ZXRIO_SOCKET_DIR_SOCKET "socket-v2"
+#define ZXRIO_SOCKET_DIR_NONE   "none-v3"
+#define ZXRIO_SOCKET_DIR_SOCKET "socket-v3"
 
 // fdio signals
 #define ZXSIO_SIGNAL_INCOMING ZX_USER_SIGNAL_0
