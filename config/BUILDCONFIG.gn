@@ -47,7 +47,7 @@ declare_args() {
   # It exists only to be set in `toolchain_args`.
   # See //build/toolchain/clang_toolchain.gni for details.
   # This variable is a scope giving details about the current toolchain:
-  #     toolchain_variant.base
+  #     `toolchain_variant.base`
   #         [label] The "base" toolchain for this variant, *often the
   #         right thing to use in comparisons, not `current_toolchain`.*
   #         This is the toolchain actually referenced directly in GN
@@ -58,15 +58,16 @@ declare_args() {
   #         thought it was in.  This is the right thing to use in a test
   #         like `toolchain_variant.base == target_toolchain`, rather
   #         rather than comparing against `current_toolchain`.
-  #     toolchain_variant.name
-  #         [string] The name of this variant, as used in `variant` fields in
-  #         `select_variant` clauses.  In the base toolchain and its
-  #         `shlib_toolchain`, this is "".
-  #     toolchain_variant.suffix
+  #     `toolchain_variant.name`
+  #         [string] The name of this variant, as used in `variant` fields
+  #         in [`select_variant`](#select_variant) clauses.  In the base
+  #         toolchain and its `shlib_toolchain`, this is `""`.
+  #     `toolchain_variant.suffix`
   #         [string] This is "-${toolchain_variant.name}", "" if name is empty.
-  #     toolchain_variant.is_pic_default
+  #     `toolchain_variant.is_pic_default`
   #         [bool] This is true in `shlib_toolchain`.
-  # The other fields are the variant's effects as defined in `known_variants`.
+  # The other fields are the variant's effects as defined in
+  # [`known_variants`](#known_variants).
   toolchain_variant = {
     base = target_toolchain  # default toolchain
   }
@@ -276,54 +277,55 @@ _asan_variant = {
 
 declare_args() {
   # List of variants that will form the basis for variant toolchains.
-  # To make use of a variant, set `select_variant` (which see).
+  # To make use of a variant, set [`select_variant`](#select_variant).
   #
   # Normally this is not set as a build argument, but it serves to
-  # document the available set of variants.  See also `universal_variants`.
+  # document the available set of variants.
+  # See also [`universal_variants`](#universal_variants).
   # Only set this to remove all the default variants here.
-  # To add more, set `extra_variants` instead.
+  # To add more, set [`extra_variants`](#extra_variants) instead.
   #
   # Each element of the list is one variant, which is a scope defining:
   #
-  #   configs (optional)
+  #   `configs` (optional)
   #       [list of labels] Each label names a config that will be
   #       automatically used by every target built in this variant.
-  #       For each config ${label}, there must also be a target
-  #       ${label}_deps, which each target built in this variant will
+  #       For each config `${label}`, there must also be a target
+  #       `${label}_deps`, which each target built in this variant will
   #       automatically depend on.  The `variant()` template is the
   #       recommended way to define a config and its `_deps` target at
   #       the same time.
   #
-  #   remove_common_configs (optional)
-  #   remove_shared_configs (optional)
+  #   `remove_common_configs` (optional)
+  #   `remove_shared_configs` (optional)
   #       [list of labels] This list will be removed (with `-=`) from
   #       the `default_common_binary_configs` list (or the
   #       `default_shared_library_configs` list, respectively) after
   #       all other defaults (and this variant's configs) have been
   #       added.
   #
-  #   deps (optional)
+  #   `deps` (optional)
   #       [list of labels] Added to the deps of every target linked in
-  #       this variant (as well as the automatic "${label}_deps" for
+  #       this variant (as well as the automatic `${label}_deps` for
   #       each label in configs).
   #
-  #   name (required if configs is omitted)
-  #       [string] Name of the variant as used in `select_variant`
-  #       elements' `variant` fields.  It's a good idea to make it
-  #       something concise and meaningful when seen as e.g. part of a
-  #       directory name under `$root_build_dir`.  If name is omitted,
-  #       configs must be nonempty and the simple names (not the full
-  #       label, just the part after all /s and :s) of these configs
-  #       will be used in toolchain names (each prefixed by a "-"), so
-  #       the list of config names forming each variant must be unique
+  #   `name` (required if configs is omitted)
+  #       [string] Name of the variant as used in
+  #       [`select_variant`](#select_variant) elements' `variant` fields.
+  #       It's a good idea to make it something concise and meaningful when
+  #       seen as e.g. part of a directory name under `$root_build_dir`.
+  #       If name is omitted, configs must be nonempty and the simple names
+  #       (not the full label, just the part after all `/`s and `:`s) of these
+  #       configs will be used in toolchain names (each prefixed by a "-"),
+  #       so the list of config names forming each variant must be unique
   #       among the lists in `known_variants + extra_variants`.
   #
-  #   toolchain_args (optional)
+  #   `toolchain_args` (optional)
   #       [scope] Each variable defined in this scope overrides a
   #       build argument in the toolchain context of this variant.
   #
-  #   host_only (optional)
-  #   target_only (optional)
+  #   `host_only` (optional)
+  #   `target_only` (optional)
   #       [scope] This scope can contain any of the fields above.
   #       These values are used only for host or target, respectively.
   #       Any fields included here should not also be in the outer scope.
@@ -365,24 +367,26 @@ declare_args() {
   ]
 
   # Additional variant toolchain configs to support.
-  # This is just added to `known_variants`, which see.
+  # This is just added to [`known_variants`](#known_variants).
   extra_variants = []
 
-  # List of "universal" variants, in addition to `known_variants` (which
-  # see).  Normally this is not set as a build argument, but it serves to
-  # document the available set of variants.  These are treated just like
-  # `known_variants`, but as well as being variants by themselves, these
-  # are also combined with each of `known_variants` to form additional
-  # variants, e.g. "asan-debug" or "ubsan-sancov-release".
+  # List of "universal" variants, in addition to
+  # [`known_variants`](#known_variants).  Normally this is not set as a
+  # build argument, but it serves to document the available set of
+  # variants.  These are treated just like
+  # [`known_variants`](#known_variants), but as well as being variants by
+  # themselves, these are also combined with each of
+  # [`known_variants`](#known_variants) to form additional variants,
+  # e.g. "asan-debug" or "ubsan-sancov-release".
   universal_variants = []
 
   # Only one of "debug" and "release" is really available as a universal
   # variant in any given build (depending on the global setting of
-  # `is_debug`).  But this gets evaluated separately in every toolchain,
-  # so e.g. in the "release" toolchain the sense of `if (is_debug)` tests
-  # is inverted and this would list only "debug" as an available variant.
-  # The selection logic in `variant_target` (below) can only work if the
-  # value of `universal_variants` it sees includes the current variant.
+  # `is_debug`).  But this gets evaluated separately in every toolchain, so
+  # e.g. in the "release" toolchain the sense of `if (is_debug)` tests is
+  # inverted and this would list only "debug" as an available variant.  The
+  # selection logic in `variant_target()` can only work if the value of
+  # `universal_variants` it sees includes the current variant.
   if (is_debug) {
     universal_variants += [
       {
@@ -409,7 +413,7 @@ declare_args() {
   # is not set as a build argument, but it serves to document the available
   # set of short-cut names for variant selectors.  Each element of this list
   # is a scope where `.name` is the short name and `.select_variant` is a
-  # a list that can be spliced into `select_variant`, which see.
+  # a list that can be spliced into [`select_variant`](#select_variant).
   select_variant_shortcuts = [
     {
       name = "host_asan"
@@ -510,12 +514,13 @@ declare_args() {
   # a string; it gets expanded to a full selector.  A full selector is a
   # scope, described below.
   #
-  # A string selector can match a name in `select_variant_shortcuts`,
-  # which see.  If it's not a specific shortcut listed there, then it
-  # can be the name of any variant described in `known_variants` and
-  # `universal_variants` (and combinations thereof).  A `selector`
-  # that's a simple variant name selects for every binary built in the
-  # target toolchain: `{ host=false variant=selector }`.
+  # A string selector can match a name in
+  # [`select_variant_shortcuts`](#select_variant_shortcuts).  If it's not a
+  # specific shortcut listed there, then it can be the name of any variant
+  # described in [`known_variants`](#known_variants) and
+  # [`universal_variants`](#universal_variants) (and combinations thereof).
+  # A `selector` that's a simple variant name selects for every binary
+  # built in the target toolchain: `{ host=false variant=selector }`.
   #
   # If a string selector contains a slash, then it's `"shortcut/filename"`
   # and selects only the binary in the target toolchain whose `output_name`
@@ -525,17 +530,18 @@ declare_args() {
   # The scope that forms a full selector defines some of these:
   #
   #     variant (required)
-  #         [string or false] The variant that applies if this selector
-  #         matches.  This can be false to choose no variant, or a
-  #         string that names the variant.  See `known_variants` and
-  #         `universal_variants`.
+  #         [string or `false`] The variant that applies if this selector
+  #         matches.  This can be `false` to choose no variant, or a string
+  #         that names the variant.  See
+  #         [`known_variants`](#known_variants) and
+  #         [`universal_variants`](#universal_variants).
   #
   # The rest below are matching criteria.  All are optional.
   # The selector matches if and only if all of its criteria match.
   # If none of these is defined, then the selector always matches.
   #
   # The first selector in the list to match wins and then the rest of
-  # the list is ignored. So construct more complex rules by using a
+  # the list is ignored.  So construct more complex rules by using a
   # "blacklist" selector with `variant=false` before a catch-all or
   # "whitelist" selector that names a variant.
   #
@@ -551,7 +557,7 @@ declare_args() {
   #         If false, the selector matches in targets without testonly=true.
   #
   #     target_type
-  #         [strings]: "executable", "loadable_module", or "driver_module"
+  #         [strings]: `"executable"`, `"loadable_module"`, or `"driver_module"`
   #
   #     output_name
   #         [strings]: target's `output_name` (default: its `target name`)
