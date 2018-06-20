@@ -12,6 +12,9 @@ namespace component {
 // Canonicalizes a URL, if possible.  Otherwise, returns an empty string/
 std::string CanonicalizeURL(const std::string& url);
 
+// Returns the scheme portion of the URL, if any.
+std::string GetSchemeFromURL(const std::string& url);
+
 // Resolves a URL into a path, if possible. Otherwise, returns an empty string.
 std::string GetPathFromURL(const std::string& url);
 

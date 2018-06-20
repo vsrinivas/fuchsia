@@ -26,12 +26,12 @@
 #include "garnet/bin/appmgr/url_resolver.h"
 #include "garnet/bin/appmgr/util.h"
 #include "garnet/lib/far/format.h"
-#include "garnet/lib/mime_sniffer/mime_sniffer.h"
 #include "lib/app/cpp/connect.h"
 #include "lib/fsl/handles/object_info.h"
 #include "lib/fsl/io/fd.h"
 #include "lib/fsl/vmo/file.h"
 #include "lib/fsl/vmo/strings.h"
+#include "lib/fxl/files/directory.h"
 #include "lib/fxl/files/file.h"
 #include "lib/fxl/functional/auto_call.h"
 #include "lib/fxl/functional/make_copyable.h"
@@ -48,7 +48,6 @@ constexpr char kAppPath[] = "bin/app";
 constexpr char kAppArv0[] = "/pkg/bin/app";
 constexpr char kLegacyFlatExportedDirPath[] = "meta/legacy_flat_exported_dir";
 constexpr char kRuntimePath[] = "meta/runtime";
-constexpr char kWebRunnerUrl[] = "web_runner_prototype";
 
 std::vector<const char*> GetArgv(const std::string& argv0,
                                  const fuchsia::sys::LaunchInfo& launch_info) {
@@ -155,25 +154,6 @@ zx::process CreateProcess(const zx::job& job, fsl::SizedVmo data,
   }
 
   return process;
-}
-
-bool IsHtml(const fuchsia::mem::Buffer* vmo) {
-  size_t len = mime_sniffer::kMaxBytesToSniff;
-  if (vmo->size < len) {
-    len = vmo->size;
-  }
-  std::string vmo_str;
-  if (!fsl::StringFromVmo(*(vmo), len, &vmo_str)) {
-    return false;
-  }
-  bool have_enough_data;
-  std::string mime_type;
-  bool result = mime_sniffer::SniffForHTML(vmo_str.data(), vmo_str.size(),
-                                           &have_enough_data, &mime_type);
-  if (result) {
-    FXL_DCHECK(mime_type == "text/html");
-  }
-  return result;
 }
 
 }  // namespace
@@ -283,31 +263,33 @@ void Realm::CreateComponent(
   }
   launch_info.url = canon_url;
 
+  std::string scheme = GetSchemeFromURL(canon_url);
+
+  fxl::RefPtr<Namespace> ns = default_namespace_;
+  if (launch_info.additional_services) {
+    ns = fxl::MakeRefCounted<Namespace>(
+        default_namespace_, this, std::move(launch_info.additional_services));
+  }
+
+  // TODO(CP-69): Provision this map as a config file rather than hard-coding.
+  if (scheme == "http" || scheme == "https") {
+    CreateComponentFromNetwork(std::move(launch_info), std::move(controller),
+                               std::move(ns), std::move(callback));
+    return;
+  }
+
   // launch_info is moved before LoadComponent() gets at its first argument.
   fidl::StringPtr url = launch_info.url;
   loader_->LoadComponent(
       url, fxl::MakeCopyable([this, launch_info = std::move(launch_info),
-                              controller = std::move(controller),
+                              controller = std::move(controller), ns,
                               callback = fbl::move(callback)](
                                  fuchsia::sys::PackagePtr package) mutable {
-        fxl::RefPtr<Namespace> ns = default_namespace_;
-        if (launch_info.additional_services) {
-          ns = fxl::MakeRefCounted<Namespace>(
-              default_namespace_, this,
-              std::move(launch_info.additional_services));
-        }
-
         if (package) {
           if (package->data) {
-            if (IsHtml(package->data.get())) {
-              CreateComponentFromHTML(std::move(package),
-                                      std::move(launch_info),
-                                      std::move(controller), std::move(ns));
-            } else {
-              CreateComponentWithProcess(
-                  std::move(package), std::move(launch_info),
-                  std::move(controller), std::move(ns), fbl::move(callback));
-            }
+            CreateComponentWithProcess(
+                std::move(package), std::move(launch_info),
+                std::move(controller), std::move(ns), fbl::move(callback));
           } else if (package->directory) {
             CreateComponentFromPackage(
                 std::move(package), std::move(launch_info),
@@ -422,30 +404,38 @@ void Realm::CreateComponentWithProcess(
   }
 }
 
-void Realm::CreateComponentFromHTML(
-    fuchsia::sys::PackagePtr package, fuchsia::sys::LaunchInfo launch_info,
+void Realm::CreateComponentFromNetwork(
+    fuchsia::sys::LaunchInfo launch_info,
     fidl::InterfaceRequest<fuchsia::sys::ComponentController> controller,
-    fxl::RefPtr<Namespace> ns) {
+    fxl::RefPtr<Namespace> ns, ComponentObjectCreatedCallback callback) {
   zx::channel svc = ns->OpenServicesAsDirectory();
   if (!svc)
     return;
 
   NamespaceBuilder builder;
   builder.AddServices(std::move(svc));
-  fuchsia::sys::Package inner_package;
-  inner_package.resolved_url = package->resolved_url;
+
+  fuchsia::sys::Package package;
+  package.resolved_url = launch_info.url;
 
   fuchsia::sys::StartupInfo startup_info;
   startup_info.launch_info = std::move(launch_info);
   startup_info.flat_namespace = builder.BuildForRunner();
 
-  auto* runner = GetOrCreateRunner(kWebRunnerUrl);
+  // TODO(CP-71): Remove web_runner_prototype scaffolding once there is a real
+  // web_runner.
+  const char* runner_url = "web_runner_prototype";
+  if (!files::IsDirectory("/pkgfs/packages/web_runner_prototype"))
+    runner_url = "web_runner";
+
+  auto* runner = GetOrCreateRunner(runner_url);
   if (runner == nullptr) {
-    FXL_LOG(ERROR) << "Cannot create " << runner << " to run "
+    FXL_LOG(ERROR) << "Cannot create " << runner_url << " to run "
                    << launch_info.url;
     return;
   }
-  runner->StartComponent(std::move(inner_package), std::move(startup_info),
+
+  runner->StartComponent(std::move(package), std::move(startup_info),
                          std::move(ns), std::move(controller));
 }
 

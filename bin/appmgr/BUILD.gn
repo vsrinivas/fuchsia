@@ -48,7 +48,6 @@ source_set("lib") {
 
   public_deps = [
     "//garnet/lib/far",
-    "//garnet/lib/mime_sniffer",
     "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/app/fidl",
     "//garnet/public/lib/fsl",
@@ -111,6 +110,7 @@ executable("tests") {
     "runtime_metadata_unittest.cc",
     "sandbox_metadata_unittest.cc",
     "service_provider_dir_unittest.cc",
+    "url_resolver_unittest.cc",
     "util_unittest.cc",
   ]
 
