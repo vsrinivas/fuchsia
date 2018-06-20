@@ -42,9 +42,4 @@ package("echo2_client_go") {
   ]
 
   binary = "echo2_client_go"
-
-  meta = [ {
-        path = rebase_path("//garnet/bin/appmgr/legacy_flat_exported_dir")
-        dest = "legacy_flat_exported_dir"
-      } ]
 }
