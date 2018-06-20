@@ -4,30 +4,19 @@
 
 #include "garnet/examples/media/simple_sine/simple_sine.h"
 
+#include "lib/async-loop/cpp/loop.h"
 #include "lib/fxl/logging.h"
 
 namespace {
-// TODO(mpuryear): Make frame rate, num_chans, payload size & num, frequency,
-// amplitude and duration into command line inputs; the below become defaults.
-
-// Set the renderer format to: 48 kHz, mono, 16-bit LPCM (signed integer).
-constexpr float kRendererFrameRate = 48000.0f;
-constexpr size_t kNumChannels = 1;
-
-// For this example, feed audio to the system in payloads of 10 milliseconds.
-constexpr size_t kMSecsPerPayload = 10;
-constexpr size_t kFramesPerPayload =
-    kMSecsPerPayload * kRendererFrameRate / 1000;
-// Contiguous payload buffers mapped into a single 1-sec memory section (id 0)
+// This example feeds the system 1 second of audio, in 10-millisecond payloads.
 constexpr size_t kNumPayloads = 100;
-// Play a sine wave that is 439 Hz, at 1/8 of full-scale volume.
-constexpr float kFrequency = 439.0f;
-constexpr float kFrequencyScalar = kFrequency * 2 * M_PI / kRendererFrameRate;
-constexpr float kAmplitudeScalar = 0.125f;
-// Loop for 2 seconds.
-constexpr size_t kTotalDurationSecs = 2;
-constexpr size_t kNumPacketsToSend =
-    kTotalDurationSecs * kRendererFrameRate / kFramesPerPayload;
+// Set the renderer format to: 48 kHz, mono, 32-bit float.
+constexpr float kRendererFrameRate = 48000.0f;
+constexpr size_t kFramesPerPayload = kRendererFrameRate / kNumPayloads;
+
+// Play a 439 Hz sine wave at 1/8 of full-scale volume.
+constexpr double kFrequency = 439.0;
+constexpr double kAmplitude = 0.125;
 }  // namespace
 
 namespace examples {
@@ -39,10 +28,6 @@ MediaApp::MediaApp(fit::closure quit_callback)
 
 // Prepare for playback, submit initial data and start the presentation timeline
 void MediaApp::Run(fuchsia::sys::StartupContext* app_context) {
-  sample_size_ = (use_float_ ? sizeof(float) : sizeof(int16_t));
-  payload_size_ = kFramesPerPayload * kNumChannels * sample_size_;
-  total_mapping_size_ = payload_size_ * kNumPayloads;
-
   AcquireRenderer(app_context);
   SetMediaType();
 
@@ -60,14 +45,12 @@ void MediaApp::Run(fuchsia::sys::StartupContext* app_context) {
                                fuchsia::media::kNoTimestamp);
 }
 
-// Use StartupContext to acquire AudioPtr and AudioRenderer2Ptr in turn. Set
-// error handler, in case of channel closure.
+// Use StartupContext to acquire AudioPtr, which we only need in order to get
+// an AudioRenderer2Ptr. Set an error handler, in case of channel closure.
 void MediaApp::AcquireRenderer(fuchsia::sys::StartupContext* app_context) {
-  // The Audio interface is needed only long enough to create the renderer(s).
   fuchsia::media::AudioPtr audio =
       app_context->ConnectToEnvironmentService<fuchsia::media::Audio>();
 
-  // Only one of [AudioRenderer or MediaRenderer] must be kept open for playback
   audio->CreateRendererV2(audio_renderer_.NewRequest());
 
   audio_renderer_.set_error_handler([this]() {
@@ -77,26 +60,27 @@ void MediaApp::AcquireRenderer(fuchsia::sys::StartupContext* app_context) {
   });
 }
 
-// Set the Mediarenderer's audio format to stereo 48kHz 16-bit (LPCM).
+// Set the renderer's audio format: mono 48kHz 32-bit float.
 void MediaApp::SetMediaType() {
   FXL_DCHECK(audio_renderer_);
 
   fuchsia::media::AudioPcmFormat format;
 
-  format.sample_format =
-      (use_float_ ? fuchsia::media::AudioSampleFormat::FLOAT
-                  : fuchsia::media::AudioSampleFormat::SIGNED_16);
-  format.channels = kNumChannels;
+  format.sample_format = fuchsia::media::AudioSampleFormat::FLOAT;
+  format.channels = 1;
   format.frames_per_second = kRendererFrameRate;
 
   audio_renderer_->SetPcmFormat(std::move(format));
 }
 
-// Create a single Virtual Memory Object, and map enough memory for our audio
-// buffers. Reduce the rights and send the handle over to the AudioRenderer to
-// act as our shared buffer.
+// Create a Virtual Memory Object, and map enough memory for audio buffers.
+// Send a reduced-rights handle to AudioRenderer2 to act as a shared buffer.
 zx_status_t MediaApp::CreateMemoryMapping() {
   zx::vmo payload_vmo;
+
+  payload_size_ = kFramesPerPayload * sizeof(float);
+  total_mapping_size_ = payload_size_ * kNumPayloads;
+
   zx_status_t status = payload_buffer_.CreateAndMap(
       total_mapping_size_, ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE,
       nullptr, &payload_vmo, ZX_RIGHT_READ | ZX_RIGHT_MAP | ZX_RIGHT_TRANSFER);
@@ -111,29 +95,18 @@ zx_status_t MediaApp::CreateMemoryMapping() {
   return ZX_OK;
 }
 
-// Write a sine wave into our buffer. We'll continuously loop/resubmit it.
+// Write a sine wave into our buffer; we'll submit packets that point to it.
 void MediaApp::WriteAudioIntoBuffer() {
   float* float_buffer = reinterpret_cast<float*>(payload_buffer_.start());
 
   for (size_t frame = 0; frame < kFramesPerPayload * kNumPayloads; ++frame) {
-    float float_val = kAmplitudeScalar * sin(frame * kFrequencyScalar);
-
-    for (size_t chan_num = 0; chan_num < kNumChannels; ++chan_num) {
-      if (use_float_) {
-        float_buffer[frame * kNumChannels + chan_num] = float_val;
-      } else {
-        int16_t int_val = static_cast<int16_t>(
-            round(float_val * std::numeric_limits<int16_t>::max()));
-        int16_t* int_buffer = reinterpret_cast<int16_t*>(float_buffer);
-
-        int_buffer[frame * kNumChannels + chan_num] = int_val;
-      }
-    }
+    float_buffer[frame] =
+        kAmplitude * sin(frame * kFrequency * 2 * M_PI / kRendererFrameRate);
   }
 }
 
-// We divided our cross-proc buffer into different zones, called payloads.
-// Create a packet corresponding to this particular payload.
+// We divide our cross-proc buffer into different zones, called payloads.
+// Create a packet that corresponds to this particular payload.
 fuchsia::media::AudioPacket MediaApp::CreateAudioPacket(size_t payload_num) {
   fuchsia::media::AudioPacket packet;
   packet.payload_offset = (payload_num * payload_size_) % total_mapping_size_;
@@ -152,11 +125,11 @@ void MediaApp::SendPacket(fuchsia::media::AudioPacket packet) {
 
 void MediaApp::OnSendPacketComplete() {
   ++num_packets_completed_;
-  FXL_DCHECK(num_packets_completed_ <= kNumPacketsToSend);
+  FXL_DCHECK(num_packets_completed_ <= kNumPayloads);
 
-  if (num_packets_sent_ < kNumPacketsToSend) {
+  if (num_packets_sent_ < kNumPayloads) {
     SendPacket(CreateAudioPacket(num_packets_sent_));
-  } else if (num_packets_completed_ >= kNumPacketsToSend) {
+  } else if (num_packets_completed_ >= kNumPayloads) {
     Shutdown();
   }
 }
@@ -168,3 +141,17 @@ void MediaApp::Shutdown() {
 }
 
 }  // namespace examples
+
+int main(int argc, const char** argv) {
+  async::Loop loop(&kAsyncLoopConfigMakeDefault);
+  auto startup_context = fuchsia::sys::StartupContext::CreateFromStartupInfo();
+
+  examples::MediaApp media_app(
+      [&loop]() { async::PostTask(loop.async(), [&loop]() { loop.Quit(); }); });
+
+  media_app.Run(startup_context.get());
+
+  loop.Run();  // Now wait for the message loop to return...
+
+  return 0;
+}

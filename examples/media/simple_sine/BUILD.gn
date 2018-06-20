@@ -4,7 +4,6 @@
 
 executable("simple_sine") {
   sources = [
-    "main.cc",
     "simple_sine.cc",
     "simple_sine.h",
   ]

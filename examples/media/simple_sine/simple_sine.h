@@ -17,8 +17,6 @@ class MediaApp {
  public:
   MediaApp(fit::closure quit_callback);
 
-  void set_float(bool enable_float) { use_float_ = enable_float; }
-
   void Run(fuchsia::sys::StartupContext* app_context);
 
  private:
@@ -39,13 +37,10 @@ class MediaApp {
   fuchsia::media::AudioRenderer2Ptr audio_renderer_;
 
   vmo_utils::VmoMapper payload_buffer_;
-  size_t sample_size_;
   size_t payload_size_;
   size_t total_mapping_size_;
   size_t num_packets_sent_ = 0u;
   size_t num_packets_completed_ = 0u;
-
-  bool use_float_ = false;
 };
 
 }  // namespace examples

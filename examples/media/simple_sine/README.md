@@ -5,19 +5,18 @@ implementation, how to play audio via the lowest-layer FIDL interfaces.
 
 ### USAGE
 
-  simple_sine [--float]
+  simple_sine
 
 ### Asynchronous applications and Fuchsia
 
-Because this example uses asynchronous interface calls, it establishes an
-asynchronous message loop before calling into it's MediaApp object. Once the
-MediaApp does all of its initial setup -- including establishing callbacks that
-will be triggered later -- we run the loop. The loop accepts and dispatches any
-incoming messages, until instructed to quit (at which point the loop.Run
-function returns, and this example app exits). The MediaApp object knows when
-the last piece of audio has been played, so it must post the 'quit' message to
-our loop. It does so using the closure that we provided it in the MediaApp
-constructor.
+This example uses asynchronous interface calls, establishing an asynchronous
+message loop before calling into its MediaApp object. Once the MediaApp performs
+initial setup -- including establishing a callback that will be triggered later
+-- we run the loop. The loop accepts and dispatches incoming messages until
+instructed to quit (at which point loop.Run() returns, and this example app
+exits). The MediaApp knows when the last piece of audio has played, so it posts
+a 'quit' message to our loop. It does so using the closure that we provided it,
+in the MediaApp constructor.
 
 ### Internals
 
@@ -49,28 +48,25 @@ Below is a more detailed account of the steps taken, and why each is necessary.
 ##### Open FIDL interfaces
 
 With the provided StartupContext, we obtain an Audio interface pointer to, and
-use that to obtain interface pointers to AudioRenderer2. At
-that point we no longer need our Audio interface and can allow it to go
-out of scope (and hence be automatically closed).
+use that to obtain interface pointers to AudioRenderer2. At that point we no
+longer need our Audio interface and can allow it to go out of scope (and hence
+be automatically closed).
 
 We use the AudioRenderer2 interface to _set playback format_ and start
 playback. If we so desired, we could also use AudioRenderer2 to set output
 gain for our audio stream (not shown in this example).
 
-We must **set_error_handler** on every interface before using it. These
-interfaces represent FIDL channels, which can close asynchronously. The system
-notifies us of these closures via this error handler callback. In this example,
+We must **set_error_handler** on each asynchronous interface before using it.
+These interfaces represent FIDL channels, which can close asynchronously. The
+system notifies us of closures via an error handler callback. In this example,
 if an unexpected channel closure occurs we log the problem and begin the
 shutdown process.
 
 ##### Set Playback Format
 
 We populate an `AudioPcmFormat` struct with the appropriate number of channels,
-sample rate, and sample format. If the float flag has been specified via the
-command-line, then 32-bit floating-point format is used; otherwise this example
-uses 16-bit signed integers. In this example, the number of channels and sample
-rate are set by constants, but the app could be easily modified to set these
-based on command-line parameters as well.
+sample rate, and sample format. This example uses 32-bit floating-point format,
+playing a 1-channel signal at 48 kHz.
 
 ##### Map a Shared Memory Section to the Renderer
 
@@ -91,15 +87,14 @@ section, before instructing the audio renderer to use this section via the
 
 Having mapped our shared memory section into our process (at
 `payload_buffer_.start()`), we can now write audio data into it. In this
-simple example, we write our audio data only once, during setup, but clients
+simple example, we write our audio data only once during setup, but clients
 can write into mapped memory at any time **before it is submitted** to the
 system, or **after the system returns it**. This is described in more detail
 in the following section.
 
 This example plays a sine wave signal, sending identical data to both left and
 right channels (as shown in the inner loop of `WriteAudioIntoBuffer`). For each
-frame in our audio buffer we compute the appropriate sine value using 32-bit
-float precision, then convert it into signed 16-bit integer if needed.
+frame in our audio buffer we compute the appropriate sine value.
 
 In order for the audio subsystem to use our buffer as a wraparound ring-buffer,
 we must subdivide it and continuously submit these pieces in sequence. This
@@ -136,18 +131,18 @@ within the `SendPacket` callback itself, immediately before submitting it. In
 this example, data has been pre-written and payloads can simply be resubmitted
 without being rewritten.
 
-This example plays a sine wave for two seconds. It knows the exact number of
+This example plays a sine wave for one second. It knows the exact number of
 media packets needed, and submits exactly that number. Once the callback is
 received for that last packet, it begins an orderly shutdown (as there are no
 additional packets outstanding). An interactive application might do this same
-thing upon receiving a signal to stop from its UI.
+thing upon receiving a signal to stop, from its UI.
 
 ##### Begin Playback
 
 Once we tell the audio renderer to begin playback, we will almost immediately
 begin to receive `SendPacket` callbacks. For this reason, we do not need to
 receive a separate callback when playback completes; this is why we call
-`PlayNoReply`. The parameters to `PlayNoreply` indicate that playback should
+`PlayNoReply`. The parameters to `PlayNoReply` indicate that playback should
 begin as soon as the system can responsibly do so, using a media timestamp of
 the first packet that we provided (thus, 0 here). The callbacks (and subsequent
 sending of the next packets) will continue until we stop submitting them, or
