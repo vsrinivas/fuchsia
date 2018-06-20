@@ -14,7 +14,7 @@
 
 #include <lib/fidl/cpp/decoder.h>
 #include <lib/fidl/cpp/message.h>
-#include <zircon/system/public/zircon/fidl.h>
+#include <zircon/fidl.h>
 
 namespace wlan {
 
