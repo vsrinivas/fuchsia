@@ -100,7 +100,7 @@ scripts/netboot-zircon ./build-arm64
 To netboot garnet, run the following under the fuchsia directory:
 
 ```
-fx set arm64 --netboot && fx full-build && fx boot --neboot -1
+fx set arm64 --netboot && fx full-build && fx boot --netboot -1
 ```
 
 You should be able to see "Issued boot command to ..." message printed out if this step is successful.
