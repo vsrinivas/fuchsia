@@ -153,20 +153,9 @@ impl Channel {
                     self.raw_handle(), options, timeout.nanos(), &args, &mut actual_read_bytes,
                     &mut actual_read_handles, &mut read_status))
         };
-
-        match status {
-            Status::OK |
-            Status::TIMED_OUT |
-            Status::CALL_FAILED => {
-                // Handles were successfully transferred,
-                // even if we didn't get a response, so forget
-                // them on the sender side.
-                unsafe { handles.set_len(0); }
-            }
-            _ => {}
-        }
-
         unsafe {
+            // Handles are always consumed.
+            handles.set_len(0);
             buf.bytes.set_len(actual_read_bytes as usize);
             buf.handles.set_len(actual_read_handles as usize);
         }
