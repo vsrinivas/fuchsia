@@ -4,6 +4,7 @@
 
 #include <ddk/debug.h>
 #include <fbl/auto_lock.h>
+#include <hw/reg.h>
 #include <inttypes.h>
 
 #include "pci.h"
@@ -27,47 +28,43 @@ static void ReadVirtioCap(pci_protocol_t* pci, uint8_t offset, virtio_pci_cap& c
 // ensure fields are only accessed with the right size.
 template <typename T>
 void MmioWrite(volatile T* addr, T value) {
-    *addr = value;
+    T::bad_instantiation();
 }
 
 template <typename T>
 void MmioRead(const volatile T* addr, T* value) {
-    *value = *addr;
+    T::bad_instantiation();
 }
 
-#ifdef __aarch64__
-// TODO(ZX-2238): Work around Linux KVM not supporting load/store instructions
-// with writeback, which the compiler might decide to generate.
 template <>
 void MmioWrite<uint32_t>(volatile uint32_t* addr, uint32_t value) {
-    __asm__("str %w1, %0" : "=m" (*addr) : "r" (value));
+    writel(value, addr);
 }
 
 template <>
 void MmioRead<uint32_t>(const volatile uint32_t* addr, uint32_t* value) {
-    __asm__("ldr %w0, %1" : "=r" (*value) : "m" (*addr));
+    *value = readl(addr);
 }
 
 template <>
 void MmioWrite<uint16_t>(volatile uint16_t* addr, uint16_t value) {
-    __asm__("strh %w1, %0" : "=m" (*addr) : "r" (value));
+    writew(value, addr);
 }
 
 template <>
 void MmioRead<uint16_t>(const volatile uint16_t* addr, uint16_t* value) {
-    __asm__("ldrh %w0, %1" : "=r" (*value) : "m" (*addr));
+    *value = readw(addr);
 }
 
 template <>
 void MmioWrite<uint8_t>(volatile uint8_t* addr, uint8_t value) {
-    __asm__("strb %w1, %0" : "=m" (*addr) : "r" (value));
+    writeb(value, addr);
 }
 
 template <>
 void MmioRead<uint8_t>(const volatile uint8_t* addr, uint8_t* value) {
-    __asm__("ldrb %w0, %1" : "=r" (*value) : "m" (*addr));
+    *value = readb(addr);
 }
-#endif
 
 // Virtio 1.0 Section 4.1.3:
 // 64-bit fields are to be treated as two 32-bit fields, with low 32 bit
