@@ -943,11 +943,9 @@ static zx_status_t aml_sd_emmc_bind(void* ctx, zx_device_t* parent) {
         goto fail;
     }
 
-    dev->info.caps = SDMMC_HOST_CAP_BUS_WIDTH_8 | SDMMC_HOST_CAP_VOLTAGE_330 | SDMMC_HOST_CAP_ADMA2;
+    dev->info.caps = SDMMC_HOST_CAP_BUS_WIDTH_8 | SDMMC_HOST_CAP_VOLTAGE_330;
     // Populate board specific information
-    //TODO(ravoorir) : Uncomment after all the board drivers publish the
-    //metadata
-    /*aml_sd_emmc_config_t dev_config;
+    aml_sd_emmc_config_t dev_config;
     size_t actual;
     status = device_get_metadata(parent, DEVICE_METADATA_DRIVER_DATA,
                                  &dev_config, sizeof(aml_sd_emmc_config_t), &actual);
@@ -957,7 +955,7 @@ static zx_status_t aml_sd_emmc_bind(void* ctx, zx_device_t* parent) {
     }
     if (dev_config.supports_dma) {
         dev->info.caps |= SDMMC_HOST_CAP_ADMA2;
-    }*/
+    }
 
     dev->regs = (aml_sd_emmc_regs_t*)io_buffer_virt(&dev->mmio);
 
