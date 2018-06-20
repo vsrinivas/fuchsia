@@ -23,17 +23,16 @@ RemoteDevice* RemoteDeviceCache::NewDevice(const common::DeviceAddress& address,
       fxl::GenerateUUID(), address, connectable);
   devices_[device->identifier()] = std::unique_ptr<RemoteDevice>(device);
   address_map_[device->address()] = device->identifier();
-  NotifyDeviceUpdated(device);
+  NotifyDeviceUpdated(*device);
 
   return device;
 }
 
-void RemoteDeviceCache::NotifyDeviceUpdated(const RemoteDevice* device) {
-  FXL_DCHECK(device);
-  FXL_DCHECK(devices_.find(device->identifier()) != devices_.end());
-  FXL_DCHECK(devices_[device->identifier()].get() == device);
+void RemoteDeviceCache::NotifyDeviceUpdated(const RemoteDevice& device) {
+  FXL_DCHECK(devices_.find(device.identifier()) != devices_.end());
+  FXL_DCHECK(devices_[device.identifier()].get() == &device);
   if (device_updated_callback_)
-    device_updated_callback_(*device);
+    device_updated_callback_(device);
 }
 
 RemoteDevice* RemoteDeviceCache::FindDeviceById(

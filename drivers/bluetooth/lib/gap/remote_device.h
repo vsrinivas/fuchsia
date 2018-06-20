@@ -28,8 +28,6 @@ namespace gap {
 // RemoteDeviceCache.
 class RemoteDevice final {
  public:
-  using UpdatedCallback = fit::function<void(RemoteDevice*)>;
-
   // TODO(armansito): Probably keep separate states for LE and BR/EDR.
   enum class ConnectionState {
     // No link exists between the local adapter and this device.
@@ -192,10 +190,14 @@ class RemoteDevice final {
 
  private:
   friend class RemoteDeviceCache;
+  using UpdatedCallback = fit::function<void(const RemoteDevice&)>;
 
   // TODO(armansito): Add constructor from persistent storage format.
 
-  // Caller must ensure that |callback| is non-emtpy, and outlives |this|.
+  // Constructor: only intended for use by RemoteDeviceCache.
+  // Expanding access would a) violate the constraint that all RemoteDevices
+  // are created through a RemoteDeviceCache, and b) introduce lifetime issues
+  // (does |callback| outlive |this|?).
   RemoteDevice(UpdatedCallback callback, const std::string& identifier,
                const common::DeviceAddress& address, bool connectable);
 

@@ -65,7 +65,7 @@ class RemoteDeviceCache final {
 
   // Notifies interested parties that |device| has seen a significant change.
   // |device| must already exist in the cache.
-  void NotifyDeviceUpdated(const RemoteDevice* device);
+  void NotifyDeviceUpdated(const RemoteDevice& device);
 
   // Stores all known remote devices.
   RemoteDeviceMap devices_;

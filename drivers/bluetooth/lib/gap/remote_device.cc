@@ -65,7 +65,7 @@ void RemoteDevice::set_le_connection_state(ConnectionState state) {
               << ConnectionStateToString(state) << "\"";
 
   le_connection_state_ = state;
-  updated_callback_(this);
+  updated_callback_(*this);
 }
 
 void RemoteDevice::set_bredr_connection_state(ConnectionState state) {
@@ -75,7 +75,7 @@ void RemoteDevice::set_bredr_connection_state(ConnectionState state) {
               << ConnectionStateToString(state) << "\"";
 
   bredr_connection_state_ = state;
-  updated_callback_(this);
+  updated_callback_(*this);
 }
 
 void RemoteDevice::SetLEAdvertisingData(
@@ -105,7 +105,7 @@ void RemoteDevice::SetLEAdvertisingData(
   advertising_data.Copy(&advertising_data_buffer_);
 
   if (old_parsed_ad.local_name() != new_parsed_ad.local_name()) {
-    updated_callback_(this);
+    updated_callback_(*this);
   }
 }
 
@@ -138,7 +138,7 @@ void RemoteDevice::SetInquiryData(const hci::InquiryResult& result) {
   page_scan_repetition_mode_ = result.page_scan_repetition_mode;
   device_class_ = result.class_of_device;
   if (significant_change) {
-    updated_callback_(this);
+    updated_callback_(*this);
   }
 }
 
@@ -166,7 +166,7 @@ void RemoteDevice::SetInquiryData(
 
 void RemoteDevice::SetName(const std::string& name) {
   name_ = name;
-  updated_callback_(this);
+  updated_callback_(*this);
 }
 
 bool RemoteDevice::TryMakeNonTemporary() {
@@ -181,7 +181,7 @@ bool RemoteDevice::TryMakeNonTemporary() {
 
   if (temporary_) {
     temporary_ = false;
-    updated_callback_(this);
+    updated_callback_(*this);
   }
 
   return true;
