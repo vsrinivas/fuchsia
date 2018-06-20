@@ -5,10 +5,11 @@
 #ifndef PERIDOT_BIN_LEDGER_TESTS_BENCHMARK_PUT_PUT_H_
 #define PERIDOT_BIN_LEDGER_TESTS_BENCHMARK_PUT_PUT_H_
 
-#include <lib/async-loop/cpp/loop.h>
-
 #include <memory>
 #include <set>
+
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/fit/function.h>
 
 #include "lib/app/cpp/startup_context.h"
 #include "lib/fxl/files/scoped_temp_dir.h"
@@ -62,6 +63,7 @@ class PutBenchmark : public ledger::PageWatcher {
                 std::function<void()> on_done);
 
   void ShutDown();
+  fit::closure QuitLoopClosure();
 
   async::Loop* const loop_;
   test::DataGenerator generator_;
@@ -79,6 +81,7 @@ class PutBenchmark : public ledger::PageWatcher {
   const PageDataGenerator::ReferenceStrategy reference_strategy_;
 
   fuchsia::sys::ComponentControllerPtr component_controller_;
+  ledger::LedgerPtr ledger_;
   ledger::PagePtr page_;
   // Keys that we use to identify a change event. For transaction_size = 1 it
   // contains all the keys, otherwise only the last changed key for each
