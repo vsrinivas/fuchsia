@@ -364,7 +364,7 @@ zx_status_t SocketDispatcher::CheckShareable(SocketDispatcher* to_send) {
     return ZX_OK;
 }
 
-zx_status_t SocketDispatcher::Share(Handle* h) TA_NO_THREAD_SAFETY_ANALYSIS {
+zx_status_t SocketDispatcher::Share(HandleOwner h) TA_NO_THREAD_SAFETY_ANALYSIS {
     canary_.Assert();
 
     LTRACE_ENTRY;
@@ -376,16 +376,16 @@ zx_status_t SocketDispatcher::Share(Handle* h) TA_NO_THREAD_SAFETY_ANALYSIS {
     if (!peer_)
         return ZX_ERR_PEER_CLOSED;
 
-    return peer_->ShareSelfLocked(h);
+    return peer_->ShareSelfLocked(fbl::move(h));
 }
 
-zx_status_t SocketDispatcher::ShareSelfLocked(Handle* h) TA_NO_THREAD_SAFETY_ANALYSIS {
+zx_status_t SocketDispatcher::ShareSelfLocked(HandleOwner h) TA_NO_THREAD_SAFETY_ANALYSIS {
     canary_.Assert();
 
     if (accept_queue_)
         return ZX_ERR_SHOULD_WAIT;
 
-    accept_queue_.reset(h);
+    accept_queue_ = fbl::move(h);
 
     UpdateStateLocked(0, ZX_SOCKET_ACCEPT);
     if (peer_)

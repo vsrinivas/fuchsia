@@ -129,29 +129,31 @@ zx_status_t sys_socket_share(zx_handle_t handle, zx_handle_t other) {
 
     fbl::RefPtr<SocketDispatcher> socket;
     zx_status_t status = up->GetDispatcherWithRights(handle, ZX_RIGHT_WRITE, &socket);
-    if (status != ZX_OK)
-        return status;
-
-    fbl::RefPtr<SocketDispatcher> other_socket;
-    status = up->GetDispatcherWithRights(other, ZX_RIGHT_TRANSFER, &other_socket);
-    if (status != ZX_OK)
-        return status;
-
-    status = socket->CheckShareable(other_socket.get());
-    if (status != ZX_OK)
-        return status;
-
-    Handle* h = up->RemoveHandle(other).release();
-
-    status = socket->Share(h);
-
     if (status != ZX_OK) {
-        AutoLock lock(up->handle_table_lock());
-        up->UndoRemoveHandleLocked(other);
+        up->RemoveHandle(other);
         return status;
     }
 
-    return ZX_OK;
+    HandleOwner other_handle = up->RemoveHandle(other);
+    if (!other_handle) {
+        return ZX_ERR_BAD_HANDLE;
+    }
+    if (!other_handle->HasRights(ZX_RIGHT_TRANSFER)) {
+        return ZX_ERR_ACCESS_DENIED;
+    }
+
+    fbl::RefPtr<Dispatcher> other_dispatcher = other_handle->dispatcher();
+    auto other_socket = DownCastDispatcher<SocketDispatcher>(&other_dispatcher);
+    if (other_socket == nullptr) {
+        return ZX_ERR_WRONG_TYPE;
+    }
+
+    status = socket->CheckShareable(other_socket.get());
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    return socket->Share(fbl::move(other_handle));
 }
 
 zx_status_t sys_socket_accept(zx_handle_t handle, user_out_handle* out) {

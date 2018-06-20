@@ -44,8 +44,9 @@ public:
 
     zx_status_t ReadControl(user_out_ptr<void> dst, size_t len, size_t* nread);
 
-    // On success, share takes ownership of h
-    zx_status_t Share(Handle* h);
+    // On success, the share queue takes ownership of |h|. On failure,
+    // |h| is closed.
+    zx_status_t Share(HandleOwner h);
 
     // On success, a HandleOwner is returned via h
     zx_status_t Accept(HandleOwner* h);
@@ -77,7 +78,7 @@ private:
     zx_status_t WriteControlSelfLocked(user_in_ptr<const void> src, size_t len) TA_REQ(get_lock());
     zx_status_t UserSignalSelfLocked(uint32_t clear_mask, uint32_t set_mask) TA_REQ(get_lock());
     zx_status_t ShutdownOtherLocked(uint32_t how) TA_REQ(get_lock());
-    zx_status_t ShareSelfLocked(Handle* h) TA_REQ(get_lock());
+    zx_status_t ShareSelfLocked(HandleOwner h) TA_REQ(get_lock());
 
     bool is_full() const TA_REQ(get_lock()) { return data_.is_full(); }
     bool is_empty() const TA_REQ(get_lock()) { return data_.is_empty(); }

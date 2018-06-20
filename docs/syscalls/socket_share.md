@@ -16,6 +16,10 @@ zx_status_t zx_socket_share(zx_handle_t socket, zx_handle_t socket_to_send);
 connection.  The signal **ZX_SOCKET_SHARE** is asserted when it is possible
 to send a socket.
 
+On success, the *socket_to_send* is placed into the *socket*'s share
+queue, and is no longer accessible to the caller's process. On any
+failure, *socket_to_send* is discarded rather than transferred.
+
 ## RETURN VALUE
 
 **socket_share**() returns **ZX_OK** on success.  In the event of failure,
@@ -34,7 +38,7 @@ the handle *socket_to_send* lacks **ZX_RIGHT_TRANSFER**.
 as *socket* or to the other endpoint of *socket* or the *socket_to_send* itself
 is capable of sharing.
 
-**ZX_ERR_SHOULD_WAIT**  There is no new socket ready to be accepted.
+**ZX_ERR_SHOULD_WAIT**  There is already a socket in the share queue.
 
 **ZX_ERR_NOT_SUPPORTED**  This socket does not support the transfer of sockets.
 It was not created with the ZX_SOCKET_HAS_ACCEPT option.
