@@ -96,9 +96,23 @@ class BazelBuilder(Builder):
         '''Installs an atom from the "dart" domain.'''
         type = atom.tags['type']
         if type == 'library':
-            # TODO(alainv): Layout Dart libraries.
-            print('Atom type "%s" not handled, skipping %s.' % (type, atom.id))
-            return
+            self.install_dart_library_atom(atom)
+        elif type == 'tool':
+            self.install_dart_tool_atom(atom)
+        else:
+            print('Dart atom type "%s" not handled, skipping %s.'
+                  % (type, atom.id))
+
+
+    def install_dart_library_atom(self, atom):
+        base = self.dest('dart', remove_dashes(atom.id.name))
+        for file in atom.files:
+            dest = self.make_dir(os.path.join(base, file.destination))
+            shutil.copy2(file.source, dest)
+            # TODO(pylaligand): add a build file.
+
+
+    def install_dart_tool_atom(self, atom):
         if self.is_overlay:
             return
         for file in atom.files:
@@ -116,7 +130,8 @@ class BazelBuilder(Builder):
         elif type == 'sysroot':
             self.install_cpp_sysroot_atom(atom)
         else:
-            print('Atom type "%s" not handled, skipping %s.' % (type, atom.id))
+            print('C++ atom type "%s" not handled, skipping %s.'
+                  % (type, atom.id))
 
 
     def install_cpp_prebuilt_atom(self, atom, check_arch=True):
