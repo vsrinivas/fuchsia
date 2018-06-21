@@ -27,10 +27,8 @@ class Scope {
   Scope(const Scope* parent_scope, const std::string& label);
 
   template <typename Interface>
-  void AddService(
-      fuchsia::sys::ServiceProviderImpl::InterfaceRequestHandler<Interface>
-          handler,
-      const std::string& service_name = Interface::Name_) {
+  void AddService(fidl::InterfaceRequestHandler<Interface> handler,
+                  const std::string& service_name = Interface::Name_) {
     service_provider_bridge_.AddService(std::move(handler), service_name);
   }
 
