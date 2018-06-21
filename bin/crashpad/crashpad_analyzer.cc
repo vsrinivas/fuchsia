@@ -12,6 +12,7 @@
 #include <zircon/processargs.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/log.h>
+#include <zircon/syscalls/object.h>
 #include "lib/fxl/files/file.h"
 #include "lib/fxl/strings/trim.h"
 
@@ -100,6 +101,14 @@ std::string GetVersion() {
   return fxl::TrimString(build_timestamp, "\r\n").ToString();
 }
 
+std::string GetPackageName(const zx::process& process) {
+  char name[ZX_MAX_NAME_LEN];
+  if (process.get_property(ZX_PROP_NAME, name, sizeof(name)) == ZX_OK) {
+    return std::string(name);
+  }
+  return std::string("unknown-package");
+}
+
 }  // namespace
 
 int HandleException(zx::process process, zx::thread thread) {
@@ -132,6 +141,8 @@ int HandleException(zx::process process, zx::thread thread) {
   std::map<std::string, std::string> annotations;
   annotations["product"] = "Fuchsia";
   annotations["version"] = GetVersion();
+  // We use ptype to benefit from Chrome's "Process type" handling in the UI.
+  annotations["ptype"] = GetPackageName(process);
 
   std::map<std::string, base::FilePath> attachments;
   ScopedUnlink temp_log_file(GetSystemLogToFile());
