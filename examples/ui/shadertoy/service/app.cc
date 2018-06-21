@@ -16,14 +16,7 @@ App::App(async::Loop* loop, fuchsia::sys::StartupContext* app_context,
       renderer_(escher, kDefaultImageFormat),
       compiler_(loop, escher, renderer_.render_pass(),
                 renderer_.descriptor_set_layout()) {
-  app_context->outgoing()
-      .AddPublicService<fuchsia::examples::shadertoy::ShadertoyFactory>(
-          [this](fidl::InterfaceRequest<
-                 fuchsia::examples::shadertoy::ShadertoyFactory>
-                     request) {
-            FXL_LOG(INFO) << "Accepting connection to ShadertoyFactory";
-            factory_bindings_.AddBinding(this, std::move(request));
-          });
+  app_context->outgoing().AddPublicService(factory_bindings_.GetHandler(this));
 }
 
 App::~App() = default;

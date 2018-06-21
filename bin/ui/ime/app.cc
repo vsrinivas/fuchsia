@@ -17,10 +17,7 @@ namespace ime {
 App::App(const fxl::CommandLine& command_line)
     : startup_context_(fuchsia::sys::StartupContext::CreateFromStartupInfo()) {
   FXL_DCHECK(startup_context_);
-  startup_context_->outgoing().AddPublicService<fuchsia::ui::input::ImeService>(
-      [this](fidl::InterfaceRequest<fuchsia::ui::input::ImeService> request) {
-        ime_bindings_.AddBinding(this, std::move(request));
-      });
+  startup_context_->outgoing().AddPublicService(ime_bindings_.GetHandler(this));
 }
 
 App::~App() {}

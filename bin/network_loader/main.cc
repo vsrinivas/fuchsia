@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/net/oldhttp/cpp/fidl.h>
+#include <fuchsia/sys/cpp/fidl.h>
 
 #include <unordered_map>
 
@@ -127,11 +127,7 @@ class NetworkLoader : public fuchsia::sys::Loader {
  public:
   NetworkLoader()
       : context_(fuchsia::sys::StartupContext::CreateFromStartupInfo()) {
-    context_->outgoing().AddPublicService<fuchsia::sys::Loader>(
-        [this](fidl::InterfaceRequest<fuchsia::sys::Loader> request) {
-          bindings_.AddBinding(this, std::move(request));
-        });
-
+    context_->outgoing().AddPublicService(bindings_.GetHandler(this));
     context_->ConnectToEnvironmentService(http_.NewRequest());
   }
 
@@ -140,8 +136,8 @@ class NetworkLoader : public fuchsia::sys::Loader {
     http::URLLoaderPtr loader;
     http_->CreateURLLoader(loader.NewRequest());
 
-    auto retrying_loader =
-        std::make_unique<RetryingLoader>(std::move(loader), url, std::move(callback));
+    auto retrying_loader = std::make_unique<RetryingLoader>(
+        std::move(loader), url, std::move(callback));
     RetryingLoader* ref = retrying_loader.get();
     loaders_.emplace(ref, std::move(retrying_loader));
     ref->SetDeleter([this, ref] { loaders_.erase(ref); });

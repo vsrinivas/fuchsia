@@ -5,8 +5,8 @@
 #ifndef LIB_APP_CPP_TESTING_TEST_WITH_CONTEXT_H_
 #define LIB_APP_CPP_TESTING_TEST_WITH_CONTEXT_H_
 
+#include "lib/app/cpp/testing/startup_context_for_test.h"
 #include "lib/gtest/test_with_loop.h"
-#include "startup_context_for_test.h"
 
 namespace fuchsia {
 namespace sys {

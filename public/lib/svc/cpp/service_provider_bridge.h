@@ -35,15 +35,11 @@ class ServiceProviderBridge : public ServiceProvider {
 
   using ServiceConnector = fit::function<void(zx::channel)>;
 
-  template <typename Interface>
-  using InterfaceRequestHandler =
-      fit::function<void(fidl::InterfaceRequest<Interface> interface_request)>;
-
   void AddServiceForName(ServiceConnector connector,
                          const std::string& service_name);
 
   template <typename Interface>
-  void AddService(InterfaceRequestHandler<Interface> handler,
+  void AddService(fidl::InterfaceRequestHandler<Interface> handler,
                   const std::string& service_name = Interface::Name_) {
     AddServiceForName(
         [handler = std::move(handler)](zx::channel channel) {

@@ -6,8 +6,8 @@
 #define LIB_SVC_CPP_SERVICE_NAMESPACE_H_
 
 #include <fbl/ref_ptr.h>
-#include <fs/synchronous-vfs.h>
 #include <fs/pseudo-dir.h>
+#include <fs/synchronous-vfs.h>
 #include <lib/fit/function.h>
 #include <lib/zx/channel.h>
 
@@ -34,23 +34,13 @@ class ServiceNamespace : public ServiceProvider {
   // just channels) specified by service name to service implementations.
   using ServiceConnector = fit::function<void(zx::channel)>;
 
-  // A |InterfaceRequestHandler<Interface>| is simply a function that
-  // handles an interface request for |Interface|. If it determines that the
-  // request should be "accepted", then it should "connect" ("take ownership
-  // of") request. Otherwise, it can simply drop |interface_request| (as implied
-  // by the interface).
-  template <typename Interface>
-  using InterfaceRequestHandler =
-      fit::function<void(fidl::InterfaceRequest<Interface> interface_request)>;
-
   // Constructs this service namespace implementation in an unbound state.
   ServiceNamespace();
 
   // Constructs this service provider implementation, binding it to the given
   // interface request. Note: If |request| is not valid ("pending"), then the
   // object will be put into an unbound state.
-  explicit ServiceNamespace(
-      fidl::InterfaceRequest<ServiceProvider> request);
+  explicit ServiceNamespace(fidl::InterfaceRequest<ServiceProvider> request);
 
   explicit ServiceNamespace(fbl::RefPtr<fs::PseudoDir> directory);
 
@@ -75,18 +65,14 @@ class ServiceNamespace : public ServiceProvider {
                          const std::string& service_name);
 
   // Adds a supported service with the given |service_name|, using the given
-  // |interface_request_handler| (see above for information about
-  // |InterfaceRequestHandler<Interface>|). |interface_request_handler| should
-  // remain valid for the lifetime of this object.
+  // |InterfaceRequestHandler|, which should remain valid for the lifetime of
+  // this object.
   //
   // A typical usage may be:
   //
-  //   service_namespace_->AddService<Foobar>(
-  //       [](InterfaceRequest<FooBar> foobar_request) {
-  //         foobar_binding_.AddBinding(this, std::move(foobar_request));
-  //       });
+  //   service_namespace_->AddService(foobar_bindings_.GetHandler(this));
   template <typename Interface>
-  void AddService(InterfaceRequestHandler<Interface> handler,
+  void AddService(fidl::InterfaceRequestHandler<Interface> handler,
                   const std::string& service_name = Interface::Name_) {
     AddServiceForName(
         [handler = std::move(handler)](zx::channel channel) {

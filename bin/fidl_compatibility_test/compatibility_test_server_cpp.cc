@@ -22,11 +22,7 @@ class EchoServerApp : public Echo {
   explicit EchoServerApp(async::Loop* loop)
       : loop_(loop),
         context_(fuchsia::sys::StartupContext::CreateFromStartupInfo()) {
-    context_->outgoing().AddPublicService<Echo>(
-        [this](fidl::InterfaceRequest<Echo> request) {
-          bindings_.AddBinding(
-              this, fidl::InterfaceRequest<Echo>(std::move(request)));
-        });
+    context_->outgoing().AddPublicService(bindings_.GetHandler(this));
   }
 
   ~EchoServerApp() {}

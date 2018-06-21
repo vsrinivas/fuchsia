@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "test_with_context.h"
+#include "lib/app/cpp/testing/test_with_context.h"
 
 namespace fuchsia {
 namespace sys {

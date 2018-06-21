@@ -4,8 +4,6 @@
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fdio/io.h>
-#include "lib/fxl/files/file.h"
-#include "lib/fxl/strings/trim.h"
 #include <lib/zx/handle.h>
 #include <lib/zx/log.h>
 #include <lib/zx/time.h>
@@ -14,6 +12,8 @@
 #include <zircon/processargs.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/log.h>
+#include "lib/fxl/files/file.h"
+#include "lib/fxl/strings/trim.h"
 
 #include <utility>
 
@@ -97,7 +97,8 @@ std::string GetVersion() {
   const char kFilepath[] = "/system/data/build/last-update";
   std::string build_timestamp;
   if (!files::ReadFileToString(kFilepath, &build_timestamp)) {
-    FXL_LOG(ERROR) << "Failed to read build timestamp from '" << kFilepath << "'.";
+    FXL_LOG(ERROR) << "Failed to read build timestamp from '" << kFilepath
+                   << "'.";
     return "unknown";
   }
   return fxl::TrimString(build_timestamp, "\r\n").ToString();
@@ -171,11 +172,7 @@ int main(int argc, const char** argv) {
 
   fidl::BindingSet<fuchsia::crash::Analyzer> bindings;
 
-  app_context->outgoing().AddPublicService<fuchsia::crash::Analyzer>(
-      [&analyzer,
-       &bindings](fidl::InterfaceRequest<fuchsia::crash::Analyzer> request) {
-        bindings.AddBinding(&analyzer, std::move(request));
-      });
+  app_context->outgoing().AddPublicService(bindings.GetHandler(&analyzer));
 
   loop.Run();
 

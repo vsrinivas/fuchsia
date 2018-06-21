@@ -15,10 +15,7 @@ namespace {
 class Service : public ::test::sysmgr::Interface {
  public:
   Service() : context_(fuchsia::sys::StartupContext::CreateFromStartupInfo()) {
-    context_->outgoing().AddPublicService<Interface>(
-        [this](fidl::InterfaceRequest<Interface> request) {
-          bindings_.AddBinding(this, std::move(request));
-        });
+    context_->outgoing().AddPublicService(bindings_.GetHandler(this));
   }
 
   ~Service() = default;

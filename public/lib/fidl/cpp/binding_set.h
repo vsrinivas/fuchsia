@@ -86,6 +86,14 @@ class BindingSet {
     return handle;
   }
 
+  // Returns an InterfaceRequestHandler that binds the incoming
+  // InterfaceRequests this object.
+  InterfaceRequestHandler<Interface> GetHandler(ImplPtr impl) {
+    return [this, impl](InterfaceRequest<Interface> request) {
+      AddBinding(impl, std::move(request));
+    };
+  }
+
   // Removes all the bindings from the set.
   //
   // Closes all the channels associated with this |BindingSet|.

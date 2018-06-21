@@ -19,9 +19,13 @@ namespace testing {
 // environment.
 class FakeLauncher : public fuchsia::sys::Launcher {
  public:
-  FakeLauncher() : binding_(this) {}
+  FakeLauncher();
+  ~FakeLauncher() override;
 
-  using ComponentConnectorFn = std::function<void(
+  FakeLauncher(const FakeLauncher&) = delete;
+  FakeLauncher& operator=(const FakeLauncher&) = delete;
+
+  using ComponentConnector = std::function<void(
       fuchsia::sys::LaunchInfo,
       fidl::InterfaceRequest<fuchsia::sys::ComponentController>)>;
 
@@ -31,7 +35,7 @@ class FakeLauncher : public fuchsia::sys::Launcher {
   // The connector may implement the |LaunchInfo.services| and
   // |ComponentController| interfaces to communicate with its connector and
   // listen for component signals.
-  void RegisterComponent(std::string url, ComponentConnectorFn connector);
+  void RegisterComponent(std::string url, ComponentConnector connector);
 
   // Forwards this |CreateComponent| request to a registered connector, if an
   // associated one exists. If one is not registered for |launch_info.url|, then
@@ -42,7 +46,7 @@ class FakeLauncher : public fuchsia::sys::Launcher {
                            controller) override;
 
  private:
-  std::map<std::string, ComponentConnectorFn> connectors_;
+  std::map<std::string, ComponentConnector> connectors_;
   fidl::Binding<Launcher> binding_;
   friend class StartupContextForTest;
 

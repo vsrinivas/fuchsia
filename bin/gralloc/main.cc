@@ -34,11 +34,7 @@ int main(int argc, const char** argv) {
 
   fidl::BindingSet<fuchsia::gralloc::Gralloc> bindings;
 
-  app_context->outgoing().AddPublicService<fuchsia::gralloc::Gralloc>(
-      [&grallocator,
-       &bindings](fidl::InterfaceRequest<fuchsia::gralloc::Gralloc> request) {
-        bindings.AddBinding(&grallocator, std::move(request));
-      });
+  app_context->outgoing().AddPublicService(bindings.GetHandler(&grallocator));
 
   loop.Run();
 

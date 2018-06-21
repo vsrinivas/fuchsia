@@ -11,17 +11,11 @@ namespace tracing {
 TraceManagerApp::TraceManagerApp(const Config& config)
     : context_(fuchsia::sys::StartupContext::CreateFromStartupInfo()),
       trace_manager_(context_.get(), config) {
-  context_->outgoing().AddPublicService<fuchsia::tracelink::Registry>(
-      [this](fidl::InterfaceRequest<fuchsia::tracelink::Registry> request) {
-        trace_registry_bindings_.AddBinding(&trace_manager_,
-                                            std::move(request));
-      });
+  context_->outgoing().AddPublicService(
+      trace_registry_bindings_.GetHandler(&trace_manager_));
 
-  context_->outgoing().AddPublicService<fuchsia::tracing::TraceController>(
-      [this](fidl::InterfaceRequest<fuchsia::tracing::TraceController> request) {
-        trace_controller_bindings_.AddBinding(&trace_manager_,
-                                              std::move(request));
-      });
+  context_->outgoing().AddPublicService(
+      trace_controller_bindings_.GetHandler(&trace_manager_));
 }
 
 TraceManagerApp::~TraceManagerApp() = default;

@@ -26,12 +26,7 @@ ScenicScanout::ScenicScanout(fuchsia::sys::StartupContext* startup_context,
   // mozart service.
   SetReady(false);
 
-  startup_context_->outgoing()
-      .AddPublicService<::fuchsia::ui::views_v1::ViewProvider>(
-          [this](fidl::InterfaceRequest<::fuchsia::ui::views_v1::ViewProvider>
-                     request) {
-            bindings_.AddBinding(this, std::move(request));
-          });
+  startup_context_->outgoing().AddPublicService(bindings_.GetHandler(this));
 }
 
 void ScenicScanout::CreateView(

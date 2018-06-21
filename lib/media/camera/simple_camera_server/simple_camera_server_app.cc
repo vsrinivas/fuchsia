@@ -10,10 +10,7 @@ namespace simple_camera {
 
 SimpleCameraApp::SimpleCameraApp()
     : context_(fuchsia::sys::StartupContext::CreateFromStartupInfo()) {
-  context_->outgoing().AddPublicService<SimpleCamera>(
-      [this](fidl::InterfaceRequest<SimpleCamera> request) {
-        bindings_.AddBinding(this, std::move(request));
-      });
+  context_->outgoing().AddPublicService(bindings_.GetHandler(this));
 }
 
 void SimpleCameraApp::ConnectToCamera(

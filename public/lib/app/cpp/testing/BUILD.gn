@@ -18,7 +18,7 @@ source_set("testing") {
 
   public_deps = [
     ":fake_launcher",
-    ":fake_service",
+    ":fake_component",
     "//garnet/public/lib/gtest",
   ]
 }
@@ -36,11 +36,12 @@ source_set("fake_launcher") {
   ]
 }
 
-source_set("fake_service") {
+source_set("fake_component") {
   testonly = true
 
   sources = [
-    "fake_service.h",
+    "fake_component.cc",
+    "fake_component.h",
   ]
 
   deps = [

@@ -102,18 +102,11 @@ CobaltApp::CobaltApp(async_t* async, std::chrono::seconds schedule_interval,
       client_config_, getClientSecret(), &shipping_dispatcher_, &system_data_,
       &timer_manager_));
 
-  context_->outgoing().AddPublicService<fuchsia::cobalt::CobaltEncoderFactory>(
-      [this](fidl::InterfaceRequest<fuchsia::cobalt::CobaltEncoderFactory>
-                 request) {
-        factory_bindings_.AddBinding(factory_impl_.get(), std::move(request));
-      });
+  context_->outgoing().AddPublicService(
+      factory_bindings_.GetHandler(factory_impl_.get()));
 
-  context_->outgoing().AddPublicService<fuchsia::cobalt::CobaltController>(
-      [this](
-          fidl::InterfaceRequest<fuchsia::cobalt::CobaltController> request) {
-        controller_bindings_.AddBinding(controller_impl_.get(),
-                                        std::move(request));
-      });
+  context_->outgoing().AddPublicService(
+      controller_bindings_.GetHandler(controller_impl_.get()));
 }
 
 ClientSecret CobaltApp::getClientSecret() {

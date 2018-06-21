@@ -25,10 +25,7 @@ GuestControllerImpl::GuestControllerImpl(
   zx_status_t status = zx::socket::create(0, &server_socket_, &client_socket_);
   FXL_CHECK(status == ZX_OK) << "Failed to create socket";
 
-  startup_context->outgoing().AddPublicService<fuchsia::guest::GuestController>(
-      [this](fidl::InterfaceRequest<fuchsia::guest::GuestController> request) {
-        bindings_.AddBinding(this, std::move(request));
-      });
+  startup_context->outgoing().AddPublicService(bindings_.GetHandler(this));
 }
 
 void GuestControllerImpl::GetPhysicalMemory(

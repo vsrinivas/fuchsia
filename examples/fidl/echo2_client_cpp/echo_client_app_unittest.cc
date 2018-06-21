@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include "echo_client_app.h"
-#include "lib/app/cpp/testing/fake_service.h"
+#include "lib/app/cpp/testing/fake_component.h"
 #include "lib/app/cpp/testing/test_with_context.h"
 
 namespace echo2 {
@@ -12,11 +12,11 @@ namespace testing {
 using namespace fidl::examples::echo;
 
 // Fake server, which the client under test will be used against
-class FakeEcho : public Echo, public fuchsia::sys::testing::FakeService<Echo> {
+class FakeEcho : public Echo {
  public:
-  static const std::string URL_;
+  static const std::string kURL_;
 
-  FakeEcho() : FakeService(this){};
+  FakeEcho() { component_.AddPublicService(bindings_.GetHandler(this)); }
 
   // Fake implementation of server-side logic
   void EchoString(fidl::StringPtr value, EchoStringCallback callback) {
@@ -27,14 +27,16 @@ class FakeEcho : public Echo, public fuchsia::sys::testing::FakeService<Echo> {
 
   // Register to be launched with a fake URL
   void Register(fuchsia::sys::testing::FakeLauncher& fake_launcher) {
-    FakeService<Echo>::Register(URL_, fake_launcher);
+    component_.Register(kURL_, fake_launcher);
   }
 
  private:
+  fuchsia::sys::testing::FakeComponent component_;
+  fidl::BindingSet<Echo> bindings_;
   fidl::StringPtr answer_;
 };
 
-const std::string FakeEcho::URL_ = "fake-echo";
+const std::string FakeEcho::kURL_ = "fake-echo";
 
 class EchoClientAppForTest : public EchoClientApp {
  public:
@@ -70,7 +72,7 @@ class EchoClientAppTest : public fuchsia::sys::testing::TestWithContext {
 // Answer "Hello World" with "Goodbye World"
 TEST_F(EchoClientAppTest, EchoString_HelloWorld_GoodbyeWorld) {
   fidl::StringPtr message = "bogus";
-  Start(FakeEcho::URL_);
+  Start(FakeEcho::kURL_);
   SetAnswer("Goodbye World!");
   echo()->EchoString("Hello World!",
                      [&](::fidl::StringPtr retval) { message = retval; });

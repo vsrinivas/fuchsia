@@ -5,6 +5,7 @@
 #ifndef LIB_FIDL_CPP_INTERFACE_REQUEST_H_
 #define LIB_FIDL_CPP_INTERFACE_REQUEST_H_
 
+#include <lib/fit/function.h>
 #include <lib/zx/channel.h>
 
 #include <cstddef>
@@ -108,6 +109,15 @@ class InterfaceRequest {
  private:
   zx::channel channel_;
 };
+
+// A |InterfaceRequestHandler<Interface>| is simply a function that
+// handles an interface request for |Interface|. If it determines that the
+// request should be "accepted", then it should "connect" ("take ownership
+// of") request. Otherwise, it can simply drop |request| (as implied by the
+// interface).
+template <typename Interface>
+using InterfaceRequestHandler =
+    fit::function<void(fidl::InterfaceRequest<Interface> request)>;
 
 // Equality.
 template <typename T>

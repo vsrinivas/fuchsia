@@ -26,11 +26,8 @@ class TokenManagerApp {
  public:
   TokenManagerApp(std::unique_ptr<fuchsia::sys::StartupContext> context)
       : app_context_(std::move(context)), factory_impl_(app_context_.get()) {
-    app_context_->outgoing()
-        .AddPublicService<fuchsia::auth::TokenManagerFactory>(
-            [this](fidl::InterfaceRequest<auth::TokenManagerFactory> request) {
-              factory_bindings_.AddBinding(&factory_impl_, std::move(request));
-            });
+    app_context_->outgoing().AddPublicService(
+        factory_bindings_.GetHandler(&factory_impl_));
   }
 
  private:

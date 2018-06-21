@@ -97,10 +97,7 @@ VirtioVsock::VirtioVsock(fuchsia::sys::StartupContext* context,
       tx_stream_(async, tx_queue(), this) {
   config_.guest_cid = 0;
   if (context) {
-    context->outgoing().AddPublicService<fuchsia::guest::SocketEndpoint>(
-        [this](fidl::InterfaceRequest<fuchsia::guest::SocketEndpoint> request) {
-          endpoint_bindings_.AddBinding(this, std::move(request));
-        });
+    context->outgoing().AddPublicService(endpoint_bindings_.GetHandler(this));
   }
 }
 

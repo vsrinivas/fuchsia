@@ -2,11 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "fake_launcher.h"
+#include "lib/app/cpp/testing/fake_launcher.h"
 
 namespace fuchsia {
 namespace sys {
 namespace testing {
+
+FakeLauncher::FakeLauncher() : binding_(this) {}
+
+FakeLauncher::~FakeLauncher() = default;
 
 void FakeLauncher::CreateComponent(
     fuchsia::sys::LaunchInfo launch_info,
@@ -18,8 +22,8 @@ void FakeLauncher::CreateComponent(
 }
 
 void FakeLauncher::RegisterComponent(std::string url,
-                                     ComponentConnectorFn connector) {
-  connectors_[url] = connector;
+                                     ComponentConnector connector) {
+  connectors_[url] = std::move(connector);
 }
 
 void FakeLauncher::Bind(fidl::InterfaceRequest<Launcher> request) {

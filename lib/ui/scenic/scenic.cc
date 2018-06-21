@@ -13,11 +13,7 @@ Scenic::Scenic(fuchsia::sys::StartupContext* app_context,
     : app_context_(app_context), quit_callback_(std::move(quit_callback)) {
   FXL_DCHECK(app_context_);
 
-  app_context->outgoing().AddPublicService<fuchsia::ui::scenic::Scenic>(
-      [this](fidl::InterfaceRequest<fuchsia::ui::scenic::Scenic> request) {
-        FXL_VLOG(1) << "Accepting connection to Scenic";
-        scenic_bindings_.AddBinding(this, std::move(request));
-      });
+  app_context->outgoing().AddPublicService(scenic_bindings_.GetHandler(this));
 }
 
 Scenic::~Scenic() = default;
@@ -53,7 +49,7 @@ void Scenic::CreateSession(
   } else {
     run_after_all_systems_initialized_.push_back(
         [this, session_request = std::move(session_request),
-                           listener = std::move(listener)]() mutable {
+         listener = std::move(listener)]() mutable {
           CreateSessionImmediately(std::move(session_request),
                                    std::move(listener));
         });

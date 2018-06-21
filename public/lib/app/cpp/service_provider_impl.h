@@ -34,15 +34,6 @@ class ServiceProviderImpl : public ServiceProvider {
   // or more complex name-based service resolution strategies.
   using DefaultServiceConnector = fit::function<void(std::string, zx::channel)>;
 
-  // A |InterfaceRequestHandler<Interface>| is simply a function that
-  // handles an interface request for |Interface|. If it determines that the
-  // request should be "accepted", then it should "connect" ("take ownership
-  // of") request. Otherwise, it can simply drop |interface_request| (as implied
-  // by the interface).
-  template <typename Interface>
-  using InterfaceRequestHandler =
-      fit::function<void(fidl::InterfaceRequest<Interface> interface_request)>;
-
   // Constructs this service provider implementation in an unbound state.
   ServiceProviderImpl();
 
@@ -69,18 +60,14 @@ class ServiceProviderImpl : public ServiceProvider {
                          const std::string& service_name);
 
   // Adds a supported service with the given |service_name|, using the given
-  // |interface_request_handler| (see above for information about
-  // |InterfaceRequestHandler<Interface>|). |interface_request_handler| should
-  // remain valid for the lifetime of this object.
+  // |interface_request_handler|, which should remain valid for the lifetime of
+  // this object.
   //
   // A typical usage may be:
   //
-  //   service_provider_impl_->AddService<Foobar>(
-  //       [](InterfaceRequest<FooBar> foobar_request) {
-  //         foobar_binding_.AddBinding(this, std::move(foobar_request));
-  //       });
+  //   AddService(foobar_bindings_.GetHandler(this));
   template <typename Interface>
-  void AddService(InterfaceRequestHandler<Interface> handler,
+  void AddService(fidl::InterfaceRequestHandler<Interface> handler,
                   const std::string& service_name = Interface::Name_) {
     AddServiceForName(
         [handler = std::move(handler)](zx::channel channel) {

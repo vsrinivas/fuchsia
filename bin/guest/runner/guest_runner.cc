@@ -14,10 +14,7 @@ namespace guest_runner {
 GuestRunner::GuestRunner()
     : context_(fuchsia::sys::StartupContext::CreateFromStartupInfo()) {
   context_->environment()->GetLauncher(launcher_.NewRequest());
-  context_->outgoing().AddPublicService<fuchsia::sys::Runner>(
-      [this](fidl::InterfaceRequest<fuchsia::sys::Runner> request) {
-        bindings_.AddBinding(this, std::move(request));
-      });
+  context_->outgoing().AddPublicService(bindings_.GetHandler(this));
 }
 
 GuestRunner::~GuestRunner() = default;

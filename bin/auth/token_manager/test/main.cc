@@ -34,10 +34,8 @@ class DevAuthProviderApp {
   }
 
   void Run() {
-    app_context_->outgoing().AddPublicService<AuthProviderFactory>(
-        [this](fidl::InterfaceRequest<AuthProviderFactory> request) {
-          factory_bindings_.AddBinding(&factory_impl_, std::move(request));
-        });
+    app_context_->outgoing().AddPublicService(
+        factory_bindings_.GetHandler(&factory_impl_));
     loop_.Run();
   }
 

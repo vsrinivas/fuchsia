@@ -72,12 +72,7 @@ NetConnectorImpl::NetConnectorImpl(NetConnectorParams* params,
   }
 
   // Running as listener.
-  startup_context_->outgoing()
-      .AddPublicService<fuchsia::netconnector::NetConnector>(
-          [this](fidl::InterfaceRequest<fuchsia::netconnector::NetConnector>
-                     request) {
-            bindings_.AddBinding(this, std::move(request));
-          });
+  startup_context_->outgoing().AddPublicService(bindings_.GetHandler(this));
 
   device_names_publisher_.SetCallbackRunner(
       [this](const GetKnownDeviceNamesCallback& callback, uint64_t version) {

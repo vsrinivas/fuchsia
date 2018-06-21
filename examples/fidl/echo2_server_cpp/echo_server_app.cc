@@ -14,10 +14,7 @@ EchoServerApp::EchoServerApp()
 EchoServerApp::EchoServerApp(
     std::unique_ptr<fuchsia::sys::StartupContext> context)
     : context_(std::move(context)) {
-  context_->outgoing().AddPublicService<Echo>(
-      [this](fidl::InterfaceRequest<Echo> request) {
-        bindings_.AddBinding(this, std::move(request));
-      });
+  context_->outgoing().AddPublicService(bindings_.GetHandler(this));
 }
 
 void EchoServerApp::EchoString(fidl::StringPtr value,

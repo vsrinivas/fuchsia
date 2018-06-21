@@ -21,11 +21,7 @@ namespace mdns {
 
 MdnsServiceImpl::MdnsServiceImpl(fuchsia::sys::StartupContext* startup_context)
     : startup_context_(startup_context) {
-  startup_context_->outgoing().AddPublicService<fuchsia::mdns::MdnsService>(
-      [this](fidl::InterfaceRequest<fuchsia::mdns::MdnsService> request) {
-        bindings_.AddBinding(this, std::move(request));
-      });
-
+  startup_context_->outgoing().AddPublicService(bindings_.GetHandler(this));
   Start();
 }
 
@@ -54,8 +50,8 @@ void MdnsServiceImpl::ResolveHostName(fidl::StringPtr host_name,
       host_name,
       fxl::TimePoint::Now() + fxl::TimeDelta::FromMilliseconds(timeout_ms),
       [this, callback = std::move(callback)](const std::string& host_name,
-                       const IpAddress& v4_address,
-                       const IpAddress& v6_address) {
+                                             const IpAddress& v4_address,
+                                             const IpAddress& v6_address) {
         callback(MdnsFidlUtil::CreateSocketAddressIPv4(v4_address),
                  MdnsFidlUtil::CreateSocketAddressIPv6(v6_address));
       });

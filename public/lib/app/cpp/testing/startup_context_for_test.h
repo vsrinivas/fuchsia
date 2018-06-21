@@ -8,8 +8,8 @@
 #include <fs/pseudo-dir.h>
 #include <fuchsia/sys/cpp/fidl.h>
 
-#include "fake_launcher.h"
 #include "lib/app/cpp/startup_context.h"
+#include "lib/app/cpp/testing/fake_launcher.h"
 #include "lib/svc/cpp/services.h"
 
 namespace fuchsia {

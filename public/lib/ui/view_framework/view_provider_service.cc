@@ -16,10 +16,7 @@ ViewProviderService::ViewProviderService(
     : startup_context_(startup_context), view_factory_(view_factory) {
   FXL_DCHECK(startup_context_);
 
-  startup_context_->outgoing().AddPublicService<ViewProvider>(
-      [this](fidl::InterfaceRequest<ViewProvider> request) {
-        bindings_.AddBinding(this, std::move(request));
-      });
+  startup_context_->outgoing().AddPublicService(bindings_.GetHandler(this));
 }
 
 ViewProviderService::~ViewProviderService() {
