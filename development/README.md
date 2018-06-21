@@ -28,8 +28,8 @@ and debugging Fuchsia and programs running on Fuchsia.
  - [FIDL](languages/fidl/README.md)
  - [Go](languages/go/README.md)
  - [Rust](languages/rust/README.md)
- - [Flutter modules][flutter_module] - how to write a graphical module using
- Flutter
+ - [Flutter modules](languages/dart/mods.md) - how to write a graphical module
+   using Flutter
 
 ## API
 
@@ -67,6 +67,5 @@ This section covers Fuchsia-wide conventions and best practices.
 [acer_12]: https://fuchsia.googlesource.com/zircon/+/master/docs/targets/acer12.md "Acer 12"
 [intel_nuc]: https://fuchsia.googlesource.com/zircon/+/master/docs/targets/nuc.md "Intel NUC"
 [pixelbook]: hardware/pixelbook.md "Pixelbook"
-[flutter_module]: https://fuchsia.googlesource.com/peridot/+/master/examples/HOWTO_FLUTTER.md "Flutter modules"
 [tracing]: https://fuchsia.googlesource.com/garnet/+/master/docs/tracing_usage_guide.md
 [trace_based_benchmarking]: https://fuchsia.googlesource.com/garnet/+/master/docs/benchmarking.md

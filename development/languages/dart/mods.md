@@ -6,109 +6,79 @@ fuchsia build and included in the bootfs.
 
 # Example Modules
 
-## Hello World
+## Hello
 
-(located in `hello_world_flutter/`)
+(located in `//topaz/examples/ui/hello_mod/`)
 
 This example demonstrates how to create a minimal flutter module and implement
-the `Module` interface. It shows a simple flutter text widget displaying
-"Hello, world!" on the screen.
-
-## Counter
-
-(located in `counter_flutter/`)
-
-This example consists of two modules: parent and child. The parent module runs
-as the top-level module and spawns a child module. Each module displays the
-shared counter value, and the value can be increased or decreased from both
-modules. The main purpose of this example is to demonstrate the following
-aspects:
-
-* Starting a new module as a child, using the `Story` service.
-* Composing the child's UI into the parent's widget tree using `ChildView`.
-* Exchanging data between modules using a shared `fuchsia::modular::Link` service.
+the `Module` interface. It shows a simple flutter text widget displaying "hello"
+on the screen.
 
 ## Running the Examples on Fuchsia
 
 You can run an example module without going through the full-blown user shell.
 The available URLs for for flutter module examples are:
 
-* `example_flutter_hello_world`
-* `example_flutter_counter_parent`
+*   `hello_mod`
 
 After a successful build of fuchsia, type the following command from the zx
 console to run the device runner with the dev user shell:
 
 ```
-device_runner --user_shell=dev_user_shell --user_shell_args=--root_module=example_flutter_hello_world
+killall scenic  # Kills all other mods.
+device_runner --user_shell=dev_user_shell --user_shell_args=--root_module=hello_mod
 ```
 
 # Basics
 
-A flutter module is a flutter app which provides a `Module` service
-implementation. Roughly, the main function of a flutter module should look like
-the following.
+A flutter module is a flutter app which use [ModuleDriver](
+https://fuchsia.googlesource.com/topaz/+/master/public/lib/app_driver/dart/lib/src/module_driver.dart)
+. An example of a minimal
+flutter module is available in [//topaz/examples/ui/hello_mod/](
+https://fuchsia.googlesource.com/topaz/+/master/examples/ui/hello_mod/).
+
+Below we reproduce the contents of `main()` from that example:
 
 ```dart
-final StartupContext _context = new StartupContext.fromStartupInfo();
-
-// Keep this module reference as a global variable to keep it for the lifetime
-// of this module.
-ModuleImpl _module;
-
-class ModuleImpl extends Module {
-  final ModuleBinding _binding = new ModuleBinding();
-
-  void bind(InterfaceRequest<Module> request) {
-    _binding.bind(this, request);
-  }
-
-  // Implement all the methods defined in the Module interface below...
-
-  @override
-  void initialize(...) { ... }
-
-  @override
-  void stop(void callback()) { ... }
-}
+final ModuleDriver _driver = ModuleDriver();
 
 void main() {
-  _context.outgoingServices.addServiceForName(
-    (InterfaceRequest<Module> request) {
-      _module = new ModuleImpl()..bind(request);
-    },
-    Module.serviceName,
-  );
+  setupLogger(name: 'Hello mod');
 
-  runApp(/* A top level flutter widget goes here, which will be the root Mozart
-            view for this module. */);
+  _driver.start().then((ModuleDriver driver) {
+      log.info('Hello mod started');
+    });
+
+  runApp(
+    MaterialApp(
+      title: 'Hello mod',
+      home: ScopedModel<_MyModel>(
+        model: _MyModel(),
+        child: _MyScaffold(),
+      ),
+    ),
+  );
 }
 ```
-
-When the `Module` implementation wants to update some values in `State` of a
-`StatefulWidget`, it can obtain the `State` object via `GlobalKey`s or other
-means. (See the "counter" example code.)
 
 # Importing Packages
 
 ## Adding Dependency to BUILD.gn
 
 To import a dart package written within the fuchsia tree, the dependency should
-be added to the project's `BUILD.gn`. The `BUILD.gn` file for the hello_world
-example this:
+be added to the project's `BUILD.gn`. The `BUILD.gn` file for the hello_mod
+example looks like this:
 
-```
-import("//third_party/flutter/build/flutter_app.gni")
+```gn
+import("//topaz/runtime/flutter_runner/flutter_app.gni")
 
-flutter_app("example_flutter_hello_world") {
-  main_dart = "lib/main.dart"
+flutter_app("hello_mod") {
+  main_dart = "main.dart"
+  package_name = "hello_mod"
+  fuchsia_package_name = "hello_mod"
   deps = [
-    "//garnet/public/lib/ui/views/fidl:fidl_dart",         # view fidl dart bindings
-    "//peridot/public/lib/module/fidl:fidl_dart",          # module fidl dart bindings
-    "//peridot/public/lib/story/fidl:fidl_dart",           # story fidl dart bindings
-    "//third_party/dart-pkg/git/flutter/packages/flutter", # flutter package
-    "//topaz/public/lib/app/dart",                         # needed for StartupContext
-    "//topaz/public/lib/fidl/dart",                        # fidl dart libraries
+    "//topaz/public/dart/widgets:lib.widgets",
+    "//topaz/public/lib/app_driver/dart",
   ]
 }
 ```
@@ -127,32 +97,25 @@ at `//third_party/dart-pkg/pub/<package_name>`.
 To use any FIDL generated dart bindings, you need to first look at the
 `BUILD.gn` defining the `fidl` target that contains the desired `.fidl` file.
 For example, let's say we want to import and use the `module.fidl` file (located
-in `<fuchsia_root>/peridot/services/module`) in our dart code. We should
-first look at the `BUILD.gn` file in the same directory. In this file we can see
-that the `module.fidl` file is included in the `fidl("module")` target.
+in `//peridot/public/lib/module/fidl/`) in our dart code. We should first
+look at the `BUILD.gn` file, in this case `//peridot/public/lib/BUILD.gn`. In
+this file we can see that the `module.fidl` file is included in the
+`fidl("fidl")` target.
 
 ```
-# For consumption outside modular.
-fidl("module") {
+fidl("fidl") {
   sources = [
-    "link.fidl",
-    "module.fidl",   # This is the fidl we want to use for now.
-    "module_controller.fidl",
-    "module_context.fidl",
+    ...
+    "module/fidl/module.fidl",   # This is the fidl we want to use for now.
+    ...
   ]
 }
 ```
 
-This means that we need to depend on this group of fidl files named 'story'. In
-our module's `BUILD.gn`, we can add the dependency with the following syntax:
+This means that we need to depend on this group of fidl files. In our module's
+`BUILD.gn`, we can add the dependency with the following syntax:
 
-```
-"//<dir>:<fidl_target_name>_dart"
-```
-
-Let's look at the `BUILD.gn` in our hello_world example module directory again.
-It has `"//peridot/public/lib/story/fidl:fidl_dart",` as a dependency. (Note the
-`_dart` added at the end.)
+`"//<dir>:<fidl_target_name>_dart"`
 
 Once this is done, we can use all the interfaces defined in `.fidl` files
 contained in this `story` fidl target from our code.
@@ -179,15 +142,9 @@ To import things in the fuchsia tree, we use dots (`.`) instead of slashes (`/`)
 as path delimiter. For FIDL-generated dart files, we add `.dart` at the end of
 the corresponding fidl file path. (e.g. `module.fidl.dart`)
 
-
 # Using FIDL Dart Bindings
 
-The best place to start is the dartdoc comments in this file:
-https://fuchsia.googlesource.com/topaz/public/+/master/lib/fidl/dart/lib/src/bindings/interface.dart
-
-Also, refer to the example flutter module code to see how the
-`InterfaceHandle<Foo>`, `InterfaceRequest<Foo>`, `InterfacePair<Foo>`,
-`FooProxy` classes are used.
+See the [FIDL tutorial](../fidl/tutorial.md).
 
 ## Things to Watch Out For
 
@@ -195,8 +152,9 @@ Also, refer to the example flutter module code to see how the
 
 Once an `InterfaceHandle<Foo>` is bound to a proxy, the handle cannot be used in
 other places. Often, in case you have to share the same service with multiple
-parties (e.g. sharing the same `fuchsia::modular::Link` service across multiple modules), the
-service will provide a way to obtain a duplicate handle (e.g. `fuchsia::modular::Link::Dup()`).
+parties (e.g. sharing the same `fuchsia::modular::Link` service across multiple
+modules), the service will provide a way to obtain a duplicate handle (e.g.
+`fuchsia::modular::Link::Dup()`).
 
 You can also call `unbind()` method on `ProxyController` to get the usable
 `InterfaceHandle<Foo>` back, which then can be used by someone else.
