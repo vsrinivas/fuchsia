@@ -146,7 +146,7 @@ zx_status_t brcmf_debug_attach(struct brcmf_pub* drvr) {
         return ZX_ERR_NOT_FILE;
     }
 
-    ret = debugfs_create_dir(dev_name(dev), root_folder, &drvr->dbgfs_dir);
+    ret = debugfs_create_dir(device_get_name(dev->zxdev), root_folder, &drvr->dbgfs_dir);
     return ret;
 }
 

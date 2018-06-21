@@ -454,7 +454,7 @@ static zx_status_t brcmf_fw_request_nvram_done(const struct brcmf_firmware* fw, 
     size_t data_len;
     bool raw_nvram;
 
-    brcmf_dbg(TRACE, "enter: dev=%s\n", dev_name(fwctx->dev));
+    brcmf_dbg(TRACE, "enter: dev=%s\n", device_get_name(fwctx->dev->zxdev));
     if (fw && fw->data) {
         data = (uint8_t*)fw->data;
         data_len = fw->size;
@@ -483,7 +483,7 @@ static zx_status_t brcmf_fw_request_nvram_done(const struct brcmf_firmware* fw, 
     return ZX_OK;
 
 fail:
-    brcmf_dbg(TRACE, "failed: dev=%s\n", dev_name(fwctx->dev));
+    brcmf_dbg(TRACE, "failed: dev=%s\n", device_get_name(fwctx->dev->zxdev));
     fwctx->done(fwctx->dev, ZX_ERR_NOT_FOUND, NULL, NULL, 0);
     free(fwctx);
     return ZX_ERR_NO_RESOURCES;
@@ -526,7 +526,7 @@ static zx_status_t brcmf_fw_request_code_done(const struct brcmf_firmware* fw, v
     struct brcmf_fw* fwctx = ctx;
     zx_status_t result = ZX_OK;
 
-    brcmf_dbg(TRACE, "enter: dev=%s\n", dev_name(fwctx->dev));
+    brcmf_dbg(TRACE, "enter: dev=%s\n", device_get_name(fwctx->dev->zxdev));
     if (!fw) {
         result = ZX_ERR_INVALID_ARGS;
         goto fail;
@@ -547,7 +547,7 @@ static zx_status_t brcmf_fw_request_code_done(const struct brcmf_firmware* fw, v
     return result;
 
 fail:
-    brcmf_dbg(TRACE, "failed: dev=%s\n", dev_name(fwctx->dev));
+    brcmf_dbg(TRACE, "failed: dev=%s\n", device_get_name(fwctx->dev->zxdev));
 done:
     fwctx->done(fwctx->dev, result, fw, NULL, 0);
     free(fwctx);
@@ -562,7 +562,7 @@ zx_status_t brcmf_fw_get_firmwares_pcie(struct brcmf_device* dev, uint16_t flags
                                         uint16_t domain_nr, uint16_t bus_nr) {
     struct brcmf_fw* fwctx;
 
-    brcmf_dbg(TRACE, "enter: dev=%s\n", dev_name(dev));
+    brcmf_dbg(TRACE, "enter: dev=%s\n", device_get_name(dev->zxdev));
     if (!fw_cb || !code) {
         return ZX_ERR_INVALID_ARGS;
     }

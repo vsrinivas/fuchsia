@@ -237,7 +237,7 @@ void brcmf_flowring_delete(struct brcmf_flowring* flow, uint16_t flowid) {
     brcmf_flowring_block(flow, flowid, false);
     hash_idx = ring->hash_id;
     flow->hash[hash_idx].ifidx = BRCMF_FLOWRING_INVALID_IFIDX;
-    eth_zero_addr(flow->hash[hash_idx].mac);
+    fill_with_zero_addr(flow->hash[hash_idx].mac);
     flow->rings[flowid] = NULL;
 
     skb = skb_dequeue(&ring->skblist);

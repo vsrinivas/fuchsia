@@ -54,9 +54,10 @@ __PRINTFLIKE(2, 3) void __brcmf_err(const char* func, const char* fmt, ...);
 /* Macro for error messages. When debugging / tracing the driver all error
  * messages are important to us.
  */
+// TODO(cphoenix): Add rate limiting
 #define brcmf_err(fmt, ...)                                                                   \
     do {                                                                                      \
-        if (IS_ENABLED(CONFIG_BRCMDBG) || IS_ENABLED(CONFIG_BRCM_TRACING) || net_ratelimit()) \
+        if (IS_ENABLED(CONFIG_BRCMDBG) || IS_ENABLED(CONFIG_BRCM_TRACING)) \
             __brcmf_err(__func__, fmt, ##__VA_ARGS__);                                        \
     } while (0)
 

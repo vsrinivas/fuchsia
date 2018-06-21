@@ -250,14 +250,14 @@ static netdev_tx_t brcmf_netdev_start_xmit(struct brcmf_netbuf* skb, struct net_
     if (drvr->bus_if->state != BRCMF_BUS_UP) {
         brcmf_err("xmit rejected state=%d\n", drvr->bus_if->state);
         netif_stop_queue(ndev);
-        dev_kfree_skb(skb);
+        brcmf_netbuf_free(skb);
         ret = ZX_ERR_UNAVAILABLE;
         goto done;
     }
 
     /* Make sure there's enough writeable headroom */
     if (skb_headroom(skb) < drvr->hdrlen || skb_header_cloned(skb)) {
-        head_delta = max_t(int, drvr->hdrlen - skb_headroom(skb), 0);
+        head_delta = max((int)(drvr->hdrlen - skb_headroom(skb)), 0);
 
         brcmf_dbg(INFO, "%s: insufficient headroom (%d)\n", brcmf_ifname(ifp), head_delta);
         atomic_fetch_add(&drvr->bus_if->stats.pktcowed, 1);
@@ -272,7 +272,7 @@ static netdev_tx_t brcmf_netdev_start_xmit(struct brcmf_netbuf* skb, struct net_
     /* validate length for ether packet */
     if (skb->len < sizeof(*eh)) {
         ret = ZX_ERR_INVALID_ARGS;
-        dev_kfree_skb(skb);
+        brcmf_netbuf_free(skb);
         goto done;
     }
 
@@ -379,7 +379,7 @@ void brcmf_rx_frame(struct brcmf_device* dev, struct brcmf_netbuf* skb, bool han
     struct brcmf_bus* bus_if = dev_get_drvdata(dev);
     struct brcmf_pub* drvr = bus_if->drvr;
 
-    brcmf_dbg(DATA, "Enter: %s: rxp=%p\n", dev_name(dev), skb);
+    brcmf_dbg(DATA, "Enter: %s: rxp=%p\n", device_get_name(dev->zxdev), skb);
 
     if (brcmf_rx_hdrpull(drvr, skb, &ifp)) {
         brcmf_dbg(TEMP, "hdrpull returned nonzero");
@@ -403,7 +403,7 @@ void brcmf_rx_event(struct brcmf_device* dev, struct brcmf_netbuf* skb) {
     struct brcmf_bus* bus_if = dev_get_drvdata(dev);
     struct brcmf_pub* drvr = bus_if->drvr;
 
-    brcmf_dbg(EVENT, "Enter: %s: rxp=%p\n", dev_name(dev), skb);
+    brcmf_dbg(EVENT, "Enter: %s: rxp=%p\n", device_get_name(dev->zxdev), skb);
 
     if (brcmf_rx_hdrpull(drvr, skb, &ifp)) {
         return;
@@ -444,7 +444,7 @@ static void brcmf_ethtool_get_drvinfo(struct net_device* ndev, struct ethtool_dr
     strlcpy(info->driver, KBUILD_MODNAME, sizeof(info->driver));
     strlcpy(info->version, drev, sizeof(info->version));
     strlcpy(info->fw_version, drvr->fwver, sizeof(info->fw_version));
-    strlcpy(info->bus_info, dev_name(drvr->bus_if->dev), sizeof(info->bus_info));
+    strlcpy(info->bus_info, device_get_name(drvr->bus_if->dev->zxdev), sizeof(info->bus_info));
 }
 
 static const struct ethtool_ops brcmf_ethtool_ops = {

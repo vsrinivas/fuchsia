@@ -2050,7 +2050,7 @@ fail:
 zx_status_t brcmf_p2p_add_vif(struct wiphy* wiphy, const char* name, enum nl80211_iftype type,
                               struct vif_params* params, struct wireless_dev** vif_out) {
     struct brcmf_cfg80211_info* cfg = wiphy_to_cfg(wiphy);
-    struct brcmf_if* ifp = ndev_to_if(cfg_to_ndev(cfg));
+    struct brcmf_if* ifp = cfg_to_if(cfg);
     struct brcmf_cfg80211_vif* vif;
     enum brcmf_fil_p2p_if_types iftype;
     zx_status_t err;

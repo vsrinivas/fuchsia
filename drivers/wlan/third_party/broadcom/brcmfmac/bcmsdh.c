@@ -721,7 +721,7 @@ zx_status_t brcmf_sdiod_ramrw(struct brcmf_sdio_dev* sdiodev, bool write, uint32
         }
     }
 
-    dev_kfree_skb(pkt);
+    brcmf_netbuf_free(pkt);
 
     sdio_release_host(sdiodev->func1);
 
@@ -757,7 +757,7 @@ void brcmf_sdiod_sgtable_alloc(struct brcmf_sdio_dev* sdiodev) {
         return;
     }
 
-    nents = max_t(uint, BRCMF_DEFAULT_RXGLOM_SIZE, sdiodev->settings->bus.sdio.txglomsz);
+    nents = max(BRCMF_DEFAULT_RXGLOM_SIZE, (uint)sdiodev->settings->bus.sdio.txglomsz);
     nents += (nents >> 4) + 1;
 
     WARN_ON(nents > sdiodev->max_segment_count);

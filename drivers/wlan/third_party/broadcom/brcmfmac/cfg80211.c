@@ -553,7 +553,7 @@ static zx_status_t brcmf_cfg80211_request_ap_if(struct brcmf_if* ifp) {
 static zx_status_t brcmf_ap_add_vif(struct wiphy* wiphy, const char* name,
                                     struct vif_params* params, struct wireless_dev** dev_out) {
     struct brcmf_cfg80211_info* cfg = wiphy_to_cfg(wiphy);
-    struct brcmf_if* ifp = ndev_to_if(cfg_to_ndev(cfg));
+    struct brcmf_if* ifp = cfg_to_if(cfg);
     struct brcmf_cfg80211_vif* vif;
     zx_status_t err;
 
@@ -815,7 +815,7 @@ static int brcmf_cfg80211_del_iface(struct wiphy* wiphy, struct wireless_dev* wd
 
     if (ndev) {
         if (brcmf_test_bit_in_array(BRCMF_SCAN_STATUS_BUSY, &cfg->scan_status) &&
-                cfg->escan_info.ifp == netdev_priv(ndev)) {
+                cfg->escan_info.ifp == ndev_to_if(ndev)) {
             brcmf_notify_escan_complete(cfg, ndev_to_if(ndev), true, true);
         }
 
@@ -1394,7 +1394,7 @@ static zx_status_t brcmf_cfg80211_join_ibss(struct wiphy* wiphy, struct net_devi
         memcpy(profile->bssid, params->bssid, ETH_ALEN);
     } else {
         fill_with_broadcast_addr(join_params.params_le.bssid);
-        eth_zero_addr(profile->bssid);
+        fill_with_zero_addr(profile->bssid);
     }
 
     /* Channel */
@@ -5695,7 +5695,7 @@ static void brcmf_update_bw40_channel_flag(struct ieee80211_channel* channel,
 }
 
 static zx_status_t brcmf_construct_chaninfo(struct brcmf_cfg80211_info* cfg, uint32_t bw_cap[]) {
-    struct brcmf_if* ifp = ndev_to_if(cfg_to_ndev(cfg));
+    struct brcmf_if* ifp = cfg_to_if(cfg);
     struct ieee80211_supported_band* band;
     struct ieee80211_channel* channel;
     struct wiphy* wiphy;
@@ -5809,7 +5809,7 @@ fail_pbuf:
 }
 
 static zx_status_t brcmf_enable_bw40_2g(struct brcmf_cfg80211_info* cfg) {
-    struct brcmf_if* ifp = ndev_to_if(cfg_to_ndev(cfg));
+    struct brcmf_if* ifp = cfg_to_if(cfg);
     struct ieee80211_supported_band* band;
     struct brcmf_fil_bwcap_le band_bwcap;
     struct brcmf_chanspec_list* list;
@@ -5998,7 +5998,7 @@ static void brcmf_update_vht_cap(struct ieee80211_supported_band* band, uint32_t
 
 static zx_status_t brcmf_setup_wiphybands(struct wiphy* wiphy) {
     struct brcmf_cfg80211_info* cfg = wiphy_to_cfg(wiphy);
-    struct brcmf_if* ifp = ndev_to_if(cfg_to_ndev(cfg));
+    struct brcmf_if* ifp = cfg_to_if(cfg);
     uint32_t nmode = 0;
     uint32_t vhtmode = 0;
     uint32_t bw_cap[2] = {WLC_BW_20MHZ_BIT, WLC_BW_20MHZ_BIT};
@@ -6573,7 +6573,7 @@ static zx_status_t brcmf_translate_country_code(struct brcmf_pub* drvr, char alp
 
 static void brcmf_cfg80211_reg_notifier(struct wiphy* wiphy, struct regulatory_request* req) {
     struct brcmf_cfg80211_info* cfg = wiphy_to_cfg(wiphy);
-    struct brcmf_if* ifp = ndev_to_if(cfg_to_ndev(cfg));
+    struct brcmf_if* ifp = cfg_to_if(cfg);
     struct brcmf_fil_country_le ccreq;
     zx_status_t err;
     int i;
@@ -6679,7 +6679,7 @@ struct brcmf_cfg80211_info* brcmf_cfg80211_attach(struct brcmf_pub* drvr,
     }
     wiphy->ops = ops;
     wiphy->priv_info = malloc(sizeof(struct brcmf_cfg80211_info));
-    if (wiphy_to_cfg(wiphy) == NULL) { // Returns wiphy->priv_info
+    if (wiphy->priv_info == NULL) {
         free(wiphy);
         goto ops_out;
     }

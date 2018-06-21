@@ -3315,7 +3315,7 @@ static zx_status_t brcmf_sdio_bus_preinit(struct brcmf_device* dev) {
         /* otherwise, set txglomalign */
         value = sdiodev->settings->bus.sdio.sd_sgentry_align;
         /* SDIO ADMA requires at least 32 bit alignment */
-        value = max_t(uint32_t, value, ALIGNMENT);
+        value = max(value, ALIGNMENT);
         err = brcmf_iovar_data_set(dev, "bus:txglomalign", &value, sizeof(uint32_t));
     }
 
@@ -3897,7 +3897,7 @@ static void brcmf_sdio_firmware_callback(struct brcmf_device* dev, zx_status_t e
     struct brcmf_core* core = bus->sdio_core;
     uint8_t saveclk;
 
-    brcmf_dbg(TRACE, "Enter: dev=%s, err=%d\n", dev_name(dev), err);
+    brcmf_dbg(TRACE, "Enter: dev=%s, err=%d\n", device_get_name(dev->zxdev), err);
 
     if (err != ZX_OK) {
         goto fail;
@@ -4053,7 +4053,7 @@ struct brcmf_sdio* brcmf_sdio_probe(struct brcmf_sdio_dev* sdiodev) {
     brcmf_err("* * Need to do ret = kthread_run(brcmf_sdio_watchdog_thread, ...");
     (void)brcmf_sdio_watchdog_thread;
 //    ret = kthread_run(brcmf_sdio_watchdog_thread, bus, "brcmf_wdog/%s",
-//                      dev_name(&sdiodev->func1->dev), &bus->watchdog_tsk);
+//                      device_get_name(sdiodev->func1->dev.zxdev), &bus->watchdog_tsk);
 //    if (ret != ZX_OK) {
 //        pr_warn("brcmf_watchdog thread failed to start\n");
 //        bus->watchdog_tsk = NULL;

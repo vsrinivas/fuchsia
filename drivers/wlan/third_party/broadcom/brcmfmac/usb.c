@@ -1190,7 +1190,7 @@ static void brcmf_usb_probe_phase2(struct brcmf_device* dev, zx_status_t ret,
     mtx_unlock(&devinfo->dev_init_lock);
     return;
 error:
-    brcmf_dbg(TRACE, "failed: dev=%s, err=%d\n", dev_name(dev), ret);
+    brcmf_dbg(TRACE, "failed: dev=%s, err=%d\n", device_get_name(dev->zxdev), ret);
     mtx_unlock(&devinfo->dev_init_lock);
     brcmf_err("TODO(cphoenix): Used to call device_release_driver(dev);");
 }
@@ -1278,7 +1278,7 @@ static void brcmf_usb_disconnect_cb(struct brcmf_usbdev_info* devinfo) {
 
 static zx_status_t brcmf_usb_probe(struct brcmf_usb_interface* intf,
                                    const struct brcmf_usb_device_id* id) {
-    struct brcmf_usb_device* usb = interface_to_usbdev(intf);
+    struct brcmf_usb_device* usb = intf_to_usbdev(intf);
     struct brcmf_usbdev_info* devinfo;
     struct brcmf_usb_interface_descriptor* desc;
     usb_endpoint_descriptor_t* endpoint;
@@ -1411,7 +1411,7 @@ done:
  * only need to signal the bus being down and update the state.
  */
 static zx_status_t brcmf_usb_suspend(struct brcmf_usb_interface* intf, pm_message_t state) {
-    struct brcmf_usb_device* usb = interface_to_usbdev(intf);
+    struct brcmf_usb_device* usb = intf_to_usbdev(intf);
     struct brcmf_usbdev_info* devinfo = brcmf_usb_get_businfo(&usb->dev);
 
     brcmf_dbg(USB, "Enter\n");
@@ -1428,7 +1428,7 @@ static zx_status_t brcmf_usb_suspend(struct brcmf_usb_interface* intf, pm_messag
  * (re-) start the bus.
  */
 static zx_status_t brcmf_usb_resume(struct brcmf_usb_interface* intf) {
-    struct brcmf_usb_device* usb = interface_to_usbdev(intf);
+    struct brcmf_usb_device* usb = intf_to_usbdev(intf);
     struct brcmf_usbdev_info* devinfo = brcmf_usb_get_businfo(&usb->dev);
 
     brcmf_dbg(USB, "Enter\n");
@@ -1442,7 +1442,7 @@ static zx_status_t brcmf_usb_resume(struct brcmf_usb_interface* intf) {
 }
 
 static zx_status_t brcmf_usb_reset_resume(struct brcmf_usb_interface* intf) {
-    struct brcmf_usb_device* usb = interface_to_usbdev(intf);
+    struct brcmf_usb_device* usb = intf_to_usbdev(intf);
     struct brcmf_usbdev_info* devinfo = brcmf_usb_get_businfo(&usb->dev);
 
     brcmf_dbg(USB, "Enter\n");

@@ -104,6 +104,10 @@ static inline void fill_with_broadcast_addr(uint8_t* address) {
     memset(address, 0xff, ETH_ALEN);
 }
 
+static inline void fill_with_zero_addr(uint8_t* address) {
+    memset(address, 0, ETH_ALEN);
+}
+
 enum {ADDRESSED_TO_MULTICAST = 1, ADDRESSED_TO_BROADCAST, ADDRESSED_TO_OTHER_HOST};
 
 struct brcmf_device {
@@ -173,7 +177,9 @@ void brcmf_free_net_device(struct net_device* dev);
 
 void brcmf_enable_tx(struct net_device* dev);
 
-extern bool verbose; // TODO(cphoenix): Temporary, for debugging.
+static inline struct brcmf_usb_device* intf_to_usbdev(const struct brcmf_usb_interface* intf) {
+    return intf->usb_device;
+}
 
 // TODO(cphoenix): Fix this hack
 #define ieee80211_frequency_to_channel(freq) (freq)
