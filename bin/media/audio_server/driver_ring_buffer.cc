@@ -66,8 +66,8 @@ zx_status_t DriverRingBuffer::Init(zx::vmo vmo, uint32_t frame_size,
   // Map the VMO into our address space.
   // TODO(johngro) : How do I specify the cache policy for this mapping?
   uint32_t flags = ZX_VM_FLAG_PERM_READ | (input ? 0 : ZX_VM_FLAG_PERM_WRITE);
-  res = zx_vmar_map(zx_vmar_root_self(), 0u, vmo_.get(), 0u, size_, flags,
-                    reinterpret_cast<uintptr_t*>(&virt_));
+  res = zx_vmar_map_old(zx_vmar_root_self(), 0u, vmo_.get(), 0u, size_, flags,
+                        reinterpret_cast<uintptr_t*>(&virt_));
   if (res != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to map ring buffer VMO (res " << res << ")";
     return res;
