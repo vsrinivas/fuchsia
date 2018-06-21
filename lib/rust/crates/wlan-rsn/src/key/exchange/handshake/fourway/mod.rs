@@ -325,6 +325,14 @@ fn validate_message_1(frame: &eapol::KeyFrame) -> Result<(), failure::Error> {
     } else {
         Ok(())
     }
+
+    // The first message of the Handshake is also required to carry a zeroed MIC.
+    // Some routers however send messages without zeroing out the MIC beforehand.
+    // To ensure compatibility with such routers, the MIC of the first message is
+    // allowed to be set.
+    // This assumption faces no security risk because the message's MIC is only
+    // validated in the Handshake and not in the Supplicant or Authenticator
+    // implementation.
 }
 
 fn validate_message_2(frame: &eapol::KeyFrame) -> Result<(), failure::Error> {
@@ -498,4 +506,40 @@ fn is_zero(slice: &[u8]) -> bool {
     slice.iter().all(|&x| x == 0)
 }
 
-// TODO(hahnr): Add tests.
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use rsna::test_util;
+    use bytes::Bytes;
+
+    #[test]
+    fn test_nonzero_mic_in_first_msg() {
+        // Create a new instance of the 4-Way Handshake in Supplicant role.
+        msg1.key_mic = Bytes::from(vec![0xAA; 16]);
+        let pmk = test_util::get_pmk();
+        let cfg = Config{
+            s_rsne: test_util::get_s_rsne(),
+            a_rsne: test_util::get_a_rsne(),
+            s_addr: test_util::S_ADDR,
+            a_addr: test_util::A_ADDR,
+            role: Role::Supplicant
+        };
+        let mut handshake = Fourway::new(cfg, pmk)
+            .expect("error while creating 4-Way Handshake");
+
+        // Send first message of Handshake to Supplicant and verify result.
+        let a_nonce = test_util::get_nonce();
+        let mut msg1 = test_util::get_4whs_msg1(&a_nonce[..], 1);
+        let updates = handshake.on_eapol_key_frame(&msg1)
+            .expect("error processing first message");
+        assert_eq!(updates.len(), 1);
+        let update = updates.get(0).expect("expected at least one update");
+        match update {
+            SecAssocUpdate::TxEapolKeyFrame(_) => {},
+            _ => assert!(false),
+        }
+    }
+
+    // TODO(hahnr): Add additional tests.
+}

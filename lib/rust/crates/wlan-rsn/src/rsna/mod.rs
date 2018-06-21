@@ -8,7 +8,7 @@ use key::exchange::Key;
 
 mod esssa;
 #[cfg(test)]
-mod test_util;
+pub mod test_util;
 
 #[derive(Debug)]
 pub enum Role {

@@ -18,8 +18,8 @@ use rsna::esssa::EssSa;
 use rsne::Rsne;
 use suite_selector::OUI;
 
-const S_ADDR: [u8; 6] = [0x81, 0x76, 0x61, 0x14, 0xDF, 0xC9];
-const A_ADDR: [u8; 6] = [0x1D, 0xE3, 0xFD, 0xDF, 0xCB, 0xD3];
+pub const S_ADDR: [u8; 6] = [0x81, 0x76, 0x61, 0x14, 0xDF, 0xC9];
+pub const A_ADDR: [u8; 6] = [0x1D, 0xE3, 0xFD, 0xDF, 0xCB, 0xD3];
 
 pub fn get_a_rsne() -> Rsne {
     let mut rsne = Rsne::new();
@@ -90,9 +90,13 @@ pub fn get_ptk(anonce: &[u8], snonce: &[u8]) -> Ptk {
         oui: Bytes::from(&OUI[..]),
         suite_type: cipher::CCMP_128,
     };
-    let pmk = Vec::from_hex("0dc0d6eb90555ed6419756b9a15ec3e3209b63df707dd508d14581f8982721af")
-        .expect("error reading PMK from hex");
+    let pmk = get_pmk();
     Ptk::new(&pmk[..], &A_ADDR, &S_ADDR, anonce, snonce, &akm, &cipher).expect("error deriving PTK")
+}
+
+pub fn get_pmk() -> Vec<u8> {
+    Vec::from_hex("0dc0d6eb90555ed6419756b9a15ec3e3209b63df707dd508d14581f8982721af")
+        .expect("error reading PMK from hex")
 }
 
 pub fn compute_mic(kck: &[u8], frame: &eapol::KeyFrame) -> Vec<u8> {
@@ -139,7 +143,7 @@ pub fn get_pairwise_cipher() -> cipher::Cipher {
     get_s_rsne().pairwise_cipher_suites.remove(0)
 }
 
-pub fn get_4whs_msg1(anonce: &[u8], replay_counter: u64) -> eapol::Frame {
+pub fn get_4whs_msg1(anonce: &[u8], replay_counter: u64) -> eapol::KeyFrame {
     let mut msg = eapol::KeyFrame {
         version: 1,
         packet_type: 3,
@@ -156,10 +160,10 @@ pub fn get_4whs_msg1(anonce: &[u8], replay_counter: u64) -> eapol::Frame {
         key_data: Bytes::from(vec![]),
     };
     msg.update_packet_body_len();
-    eapol::Frame::Key(msg)
+    msg
 }
 
-pub fn get_4whs_msg3(ptk: &Ptk, anonce: &[u8], replay_counter: u64, gtk: &[u8]) -> eapol::Frame {
+pub fn get_4whs_msg3(ptk: &Ptk, anonce: &[u8], replay_counter: u64, gtk: &[u8]) -> eapol::KeyFrame {
     let mut buf = BytesMut::from(vec![]);
     buf.reserve(256);
 
@@ -205,7 +209,7 @@ pub fn get_4whs_msg3(ptk: &Ptk, anonce: &[u8], replay_counter: u64, gtk: &[u8]) 
     let mic = compute_mic(ptk.kck(), &msg);
     msg.key_mic = Bytes::from(mic);
 
-    eapol::Frame::Key(msg)
+    msg
 }
 
 pub fn is_zero(slice: &[u8]) -> bool {
