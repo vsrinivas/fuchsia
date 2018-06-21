@@ -5,9 +5,10 @@
 #ifndef PERIDOT_BIN_LEDGER_TESTS_BENCHMARK_DISK_SPACE_DISK_SPACE_H_
 #define PERIDOT_BIN_LEDGER_TESTS_BENCHMARK_DISK_SPACE_DISK_SPACE_H_
 
-#include <lib/async-loop/cpp/loop.h>
-
 #include <memory>
+
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/fit/function.h>
 
 #include "lib/app/cpp/startup_context.h"
 #include "lib/fxl/files/scoped_temp_dir.h"
@@ -54,6 +55,7 @@ class DiskSpaceBenchmark {
  private:
   void Populate();
   void ShutDownAndRecord();
+  fit::closure QuitLoopClosure();
 
   async::Loop* const loop_;
   files::ScopedTempDir tmp_dir_;
@@ -66,6 +68,7 @@ class DiskSpaceBenchmark {
   const size_t key_size_;
   const size_t value_size_;
   fuchsia::sys::ComponentControllerPtr component_controller_;
+  ledger::LedgerPtr ledger_;
   std::vector<ledger::PagePtr> pages_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(DiskSpaceBenchmark);

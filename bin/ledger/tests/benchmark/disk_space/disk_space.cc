@@ -10,6 +10,7 @@
 
 #include <iostream>
 
+#include "garnet/public/lib/callback/waiter.h"
 #include "lib/callback/waiter.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/files/directory.h"
@@ -63,27 +64,41 @@ DiskSpaceBenchmark::DiskSpaceBenchmark(async::Loop* loop, size_t page_count,
 }
 
 void DiskSpaceBenchmark::Run() {
-  ledger::LedgerPtr ledger;
-  ledger::Status status = test::GetLedger(
-      loop_, startup_context_.get(), component_controller_.NewRequest(),
-      nullptr, "disk_space", tmp_dir_.path(), &ledger);
-  QuitOnError([this] { loop_->Quit(); }, status, "GetLedger");
+  test::GetLedger(
+      startup_context_.get(), component_controller_.NewRequest(), nullptr,
+      "disk_space", tmp_dir_.path(), QuitLoopClosure(),
+      [this](ledger::Status status, ledger::LedgerPtr ledger) {
+        if (QuitOnError(QuitLoopClosure(), status, "GetLedger")) {
+          return;
+        }
+        ledger_ = std::move(ledger);
 
-  for (size_t page_number = 0; page_number < page_count_; page_number++) {
-    ledger::PagePtr page;
-    status =
-        test::GetPageEnsureInitialized(loop_, &ledger, nullptr, &page, nullptr);
-    pages_.push_back(std::move(page));
-  }
-  if (benchmark::QuitOnError([this] { loop_->Quit(); }, status,
-                             "GetPageEnsureInitialized")) {
-    return;
-  }
-  if (commit_count_ == 0) {
-    ShutDownAndRecord();
-    return;
-  }
-  Populate();
+        auto waiter = fxl::MakeRefCounted<
+            callback::Waiter<ledger::Status, ledger::PagePtr>>(
+            ledger::Status::OK);
+
+        for (size_t page_number = 0; page_number < page_count_; page_number++) {
+          test::GetPageEnsureInitialized(
+              &ledger_, nullptr, QuitLoopClosure(),
+              [callback = waiter->NewCallback()](
+                  ledger::Status status, ledger::PagePtr page,
+                  ledger::PageId id) { callback(status, std::move(page)); });
+        }
+
+        waiter->Finalize(
+            [this](ledger::Status status, std::vector<ledger::PagePtr> pages) {
+              if (QuitOnError(QuitLoopClosure(), status,
+                              "GetPageEnsureInitialized")) {
+                return;
+              }
+              pages_ = std::move(pages);
+              if (commit_count_ == 0) {
+                ShutDownAndRecord();
+                return;
+              }
+              Populate();
+            });
+      });
 }
 
 void DiskSpaceBenchmark::Populate() {
@@ -98,13 +113,11 @@ void DiskSpaceBenchmark::Populate() {
     auto keys = generator_.MakeKeys(insertions, key_size_, unique_key_count_);
     page_data_generator_.Populate(
         &page, std::move(keys), value_size_, transaction_size,
-        test::benchmark::PageDataGenerator::ReferenceStrategy::REFERENCE,
+        PageDataGenerator::ReferenceStrategy::REFERENCE,
         ledger::Priority::EAGER, waiter->NewCallback());
   }
   waiter->Finalize([this](ledger::Status status) {
-    if (status != ledger::Status::OK) {
-      benchmark::QuitOnError([this] { loop_->Quit(); }, status,
-                             "PageGenerator::Populate");
+    if (QuitOnError(QuitLoopClosure(), status, "PageGenerator::Populate")) {
       return;
     }
     ShutDownAndRecord();
@@ -119,6 +132,10 @@ void DiskSpaceBenchmark::ShutDownAndRecord() {
   FXL_CHECK(ledger::GetDirectoryContentSize(tmp_dir_.path(), &tmp_dir_size));
   TRACE_COUNTER("benchmark", "ledger_directory_size", 0, "directory_size",
                 TA_UINT64(tmp_dir_size));
+}
+
+fit::closure DiskSpaceBenchmark::QuitLoopClosure() {
+  return [this] { loop_->Quit(); };
 }
 
 }  // namespace benchmark
