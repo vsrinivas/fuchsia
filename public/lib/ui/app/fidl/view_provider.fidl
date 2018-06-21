@@ -1,0 +1,45 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.ui.app;
+
+// NOTE: This is likely not the ViewProvider you are looking for!  This is
+// the new ViewProvider interface that will be deprectaing the old one soon.
+// The old ViewProvider is in fuchsia.ui.views_v1.ViewProvider.
+// TODO(SCN-589): Remove this when old ViewProvider is deleted.
+//
+// ViewProvider is the standard mechanism for two modules to each obtain half
+// of a shared eventpair token.  The shared token is a capability allowing the
+// modules to ask Scenic to create a ViewHolder/View pair.  The resulting
+// View and ViewHolder are linked together until either one is destroyed.
+//
+// Modules are free to use any other mechanism to agree upon the shared
+// eventpair token, and use this to create the linked ViewHolder/View.
+// ViewProvider is given for the convienience of clients that don't require
+// a more complex implementation.
+[Discoverable]
+interface ViewProvider {
+  // Creates a new View under the control of the ViewProvider.
+  //
+  // |token| is one half of the shared eventpair which will bind the new View
+  // to its associated ViewHolder.  The ViewProvider will use |token| to
+  // create its internal View representation.  The caller is expected to use
+  // its half to create corresponding ViewHolder object.
+  //
+  // |incoming_services| allows clients to request services from the
+  // ViewProvider implementation.  |outgoing_services| allows clients to
+  // provide services of their own to the ViewProvider implementaion.
+  //
+  // Clients can embed a ViewHolder (and by proxy the paired View) into their
+  // scene graph by using |Node.AddChild()|.  The ViewHolder cannot itself
+  // have any children. A ViewProvider implementation can nest scene objects
+  // within its View by using |View.AddChild()|.  The View itself
+  // cannot be a child of anything.
+  //
+  // Modules can use these mechanisms to establish a distributed,
+  // inter-process scene graph.
+  1: CreateView(handle<eventpair> token,
+                 request<fuchsia.sys.ServiceProvider>? incoming_services,
+                 fuchsia.sys.ServiceProvider outgoing_services);
+};

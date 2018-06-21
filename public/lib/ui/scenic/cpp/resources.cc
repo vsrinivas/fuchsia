@@ -295,30 +295,30 @@ void ImportNode::BindAsRequest(zx::eventpair* out_export_token) {
   is_bound_ = true;
 }
 
-SpaceHolder::SpaceHolder(Session* session, zx::eventpair token,
+ViewHolder::ViewHolder(Session* session, zx::eventpair token,
                          const std::string& debug_name)
     : Resource(session) {
-  session->Enqueue(NewCreateSpaceHolderCmd(id(), std::move(token), debug_name));
+  session->Enqueue(NewCreateViewHolderCmd(id(), std::move(token), debug_name));
 }
 
-SpaceHolder::~SpaceHolder() = default;
+ViewHolder::~ViewHolder() = default;
 
-void SpaceHolder::SetSpaceProperties(const float bounding_box_min[3],
-                                     const float bounding_box_max[3],
-                                     const float inset_from_min[3],
-                                     const float inset_from_max[3]) {
-  session()->Enqueue(NewSetSpacePropertiesCmd(id(), bounding_box_min,
-                                              bounding_box_max, inset_from_min,
-                                              inset_from_max));
+void ViewHolder::SetViewProperties(const float bounding_box_min[3],
+                                   const float bounding_box_max[3],
+                                   const float inset_from_min[3],
+                                   const float inset_from_max[3]) {
+  session()->Enqueue(NewSetViewPropertiesCmd(id(), bounding_box_min,
+                                             bounding_box_max, inset_from_min,
+                                             inset_from_max));
 }
 
-Space::Space(Session* session, zx::eventpair token,
+View::View(Session* session, zx::eventpair token,
              const std::string& debug_name)
     : Resource(session) {
-  session->Enqueue(NewCreateSpaceCmd(id(), std::move(token), debug_name));
+  session->Enqueue(NewCreateViewCmd(id(), std::move(token), debug_name));
 }
 
-Space::~Space() = default;
+View::~View() = default;
 
 ClipNode::ClipNode(Session* session) : ContainerNode(session) {
   session->Enqueue(NewCreateClipNodeCmd(id()));

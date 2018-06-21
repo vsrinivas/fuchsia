@@ -63,37 +63,3 @@ struct EntityNodeArgs {
   // TODO(SCN-694): Clean up dummy args.
   uint32 unused = 0;
 };
-
-// TODO(SCN-695): Move these into resources.fidl along with the other Node
-// types when they are no longer Nodes.
-// Represents a transform space which serves as a container for Nodes.  The
-// Nodes will have the Spaces' coordinate transform applied to their own, in
-// addition to being clipped to the Spaces' bounding box.
-// See |SpaceProperties|.
-//
-// Each Space is linked to a paired SpaceHolder via a shared token.
-//
-// Usually the Space and its associated SpaceHolder exist in separate processes,
-// allowing a distributed scene graph to be constructed.
-//
-// Characteristics
-// - has_children
-struct SpaceArgs {
-  handle<eventpair> token;
-  string? debug_name;
-};
-
-// Represents a proxy for a Space which can be added to a scene graph in order
-// to embed the Space within it.
-//
-// Each SpaceHolder is linked to a paired Space via a shared token.
-//
-// Usually the SpaceHolder and its associated Space exist in separate processes,
-// allowing a distributed scene graph to be constructed.
-//
-// Characteristics
-// - has_parent
-struct SpaceHolderArgs {
-  handle<eventpair> token;
-  string? debug_name;
-};

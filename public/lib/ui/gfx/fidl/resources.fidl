@@ -15,22 +15,24 @@ union ResourceArgs {
   ImagePipeArgs image_pipe;
   BufferArgs buffer;
 
+  // Views.
+  ViewArgs view;
+  ViewHolderArgs view_holder;
+
   // Shapes (see shapes.fidl).
   RectangleArgs rectangle;
   RoundedRectangleArgs rounded_rectangle;
   CircleArgs circle;
   MeshArgs mesh;
 
-  // Materials.
-  MaterialArgs material;
-
-  // Nodes.
+  // Nodes (see nodes.fidl).
   ShapeNodeArgs shape_node;
   ClipNodeArgs clip_node;
   EntityNodeArgs entity_node;
   OpacityNodeArgs opacity_node;
-  SpaceArgs space_node;
-  SpaceHolderArgs space_holder_node;
+
+  // Materials.
+  MaterialArgs material;
 
   // Layers.
   DisplayCompositorArgs display_compositor;
@@ -82,6 +84,32 @@ struct BufferArgs {
   uint32 memory_id;      // id of a |Memory| resource
   uint32 memory_offset;  // byte offset of buffer within |Memory| resource
   uint32 num_bytes;
+};
+
+// Represents a transform space which serves as a container for Nodes.  The
+// Nodes will have the Views' coordinate transform applied to their own, in
+// addition to being clipped to the Views' bounding box.
+// See |ViewProperties|.
+//
+// Each View is linked to a paired ViewHolder via a shared token.
+//
+// Usually the View and its associated ViewHolder exist in separate processes,
+// allowing a distributed scene graph to be constructed.
+struct ViewArgs {
+  handle<eventpair> token;
+  string? debug_name;
+};
+
+// Represents a proxy for a View which can be added to a scene graph in order
+// to embed the View within it.
+//
+// Each ViewHolder is linked to a paired View via a shared token.
+//
+// Usually the ViewHolder and its associated View exist in separate processes,
+// allowing a distributed scene graph to be constructed.
+struct ViewHolderArgs {
+  handle<eventpair> token;
+  string? debug_name;
 };
 
 // A DisplayCompositor draws its attached |LayerStack| into an image that is

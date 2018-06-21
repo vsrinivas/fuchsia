@@ -28,6 +28,8 @@
 #include "garnet/lib/ui/gfx/resources/shapes/mesh_shape.h"
 #include "garnet/lib/ui/gfx/resources/shapes/rectangle_shape.h"
 #include "garnet/lib/ui/gfx/resources/shapes/rounded_rectangle_shape.h"
+#include "garnet/lib/ui/gfx/resources/view.h"
+#include "garnet/lib/ui/gfx/resources/view_holder.h"
 #include "lib/fxl/logging.h"
 
 namespace scenic {
@@ -87,6 +89,20 @@ void DumpVisitor::Visit(ImagePipe* r) {
     EndSection();
   }
   VisitResource(r);
+  EndItem();
+}
+
+void DumpVisitor::Visit(View* r) {
+  // TODO(SCN-793): improve DumpVisitor to display View/ViewHolder during
+  // traversal.
+  BeginItem("View", r);
+  EndItem();
+}
+
+void DumpVisitor::Visit(ViewHolder* r) {
+  // TODO(SCN-793): improve DumpVisitor to display View/ViewHolder during
+  // traversal.
+  BeginItem("ViewHolder", r);
   EndItem();
 }
 

@@ -12,6 +12,7 @@
 #include <trace/event.h>
 
 #include <fuchsia/ui/gfx/cpp/fidl.h>
+
 #include "garnet/lib/ui/gfx/engine/hit_tester.h"
 #include "garnet/lib/ui/gfx/engine/session_handler.h"
 #include "garnet/lib/ui/gfx/resources/buffer.h"
@@ -38,6 +39,8 @@
 #include "garnet/lib/ui/gfx/resources/shapes/rounded_rectangle_shape.h"
 #include "garnet/lib/ui/gfx/resources/stereo_camera.h"
 #include "garnet/lib/ui/gfx/resources/variable.h"
+#include "garnet/lib/ui/gfx/resources/view.h"
+#include "garnet/lib/ui/gfx/resources/view_holder.h"
 #include "garnet/lib/ui/gfx/util/unwrap.h"
 #include "garnet/lib/ui/gfx/util/wrap.h"
 
@@ -134,9 +137,9 @@ bool Session::ApplyCommand(::fuchsia::ui::gfx::Command command) {
     case ::fuchsia::ui::gfx::Command::Tag::kSetHitTestBehavior:
       return ApplySetHitTestBehaviorCmd(
           std::move(command.set_hit_test_behavior()));
-    case ::fuchsia::ui::gfx::Command::Tag::kSetSpaceProperties:
-      return ApplySetSpacePropertiesCmd(
-          std::move(command.set_space_properties()));
+    case ::fuchsia::ui::gfx::Command::Tag::kSetViewProperties:
+      return ApplySetViewPropertiesCmd(
+          std::move(command.set_view_properties()));
     case ::fuchsia::ui::gfx::Command::Tag::kSetCamera:
       return ApplySetCameraCmd(std::move(command.set_camera()));
     case ::fuchsia::ui::gfx::Command::Tag::kSetCameraTransform:
@@ -239,6 +242,11 @@ bool Session::ApplyCreateResourceCmd(
       return ApplyCreateMesh(id, std::move(command.resource.mesh()));
     case ::fuchsia::ui::gfx::ResourceArgs::Tag::kMaterial:
       return ApplyCreateMaterial(id, std::move(command.resource.material()));
+    case ::fuchsia::ui::gfx::ResourceArgs::Tag::kView:
+      return ApplyCreateView(id, std::move(command.resource.view()));
+    case ::fuchsia::ui::gfx::ResourceArgs::Tag::kViewHolder:
+      return ApplyCreateViewHolder(id,
+                                   std::move(command.resource.view_holder()));
     case ::fuchsia::ui::gfx::ResourceArgs::Tag::kClipNode:
       return ApplyCreateClipNode(id, std::move(command.resource.clip_node()));
     case ::fuchsia::ui::gfx::ResourceArgs::Tag::kOpacityNode:
@@ -248,11 +256,6 @@ bool Session::ApplyCreateResourceCmd(
                                    std::move(command.resource.entity_node()));
     case ::fuchsia::ui::gfx::ResourceArgs::Tag::kShapeNode:
       return ApplyCreateShapeNode(id, std::move(command.resource.shape_node()));
-    case ::fuchsia::ui::gfx::ResourceArgs::Tag::kSpaceNode:
-      return ApplyCreateSpace(id, std::move(command.resource.space_node()));
-    case ::fuchsia::ui::gfx::ResourceArgs::Tag::kSpaceHolderNode:
-      return ApplyCreateSpaceHolder(
-          id, std::move(command.resource.space_holder_node()));
     case ::fuchsia::ui::gfx::ResourceArgs::Tag::kDisplayCompositor:
       return ApplyCreateDisplayCompositor(
           id, std::move(command.resource.display_compositor()));
@@ -309,10 +312,26 @@ bool Session::ApplyImportResourceCmd(
 }
 
 bool Session::ApplyAddChildCmd(::fuchsia::ui::gfx::AddChildCmd command) {
-  // Find the parent and child nodes.
-  if (auto parent_node = resources_.FindResource<Node>(command.node_id)) {
-    if (auto child_node = resources_.FindResource<Node>(command.child_id)) {
+  // Find the parent and child nodes. We can add:
+  // - Nodes to Nodes
+  // - ViewHolders to Nodes
+  // - Nodes to Views
+  // TODO(SCN-795): Split these out into separate commands.
+  if (auto parent_node = resources_.FindResource<Node>(
+          command.node_id, ResourceMap::ErrorBehavior::kDontReportErrors)) {
+    if (auto child_node = resources_.FindResource<Node>(
+            command.child_id, ResourceMap::ErrorBehavior::kDontReportErrors)) {
       return parent_node->AddChild(std::move(child_node));
+    } else if (auto child_node =
+                   resources_.FindResource<ViewHolder>(command.child_id)) {
+      child_node->SetParent(std::move(parent_node));
+      return true;
+    }
+  } else if (auto parent_node =
+                 resources_.FindResource<View>(command.node_id)) {
+    if (auto child_node = resources_.FindResource<Node>(command.child_id)) {
+      parent_node->AddChild(std::move(child_node));
+      return true;
     }
   }
   return false;
@@ -449,7 +468,7 @@ bool Session::ApplySetMaterialCmd(::fuchsia::ui::gfx::SetMaterialCmd command) {
 
 bool Session::ApplySetClipCmd(::fuchsia::ui::gfx::SetClipCmd command) {
   if (command.clip_id != 0) {
-    // TODO(MZ-167): Support non-zero clip_id.
+    // TODO(SCN-167): Support non-zero clip_id.
     error_reporter_->ERROR() << "scenic::gfx::Session::ApplySetClipCmd(): only "
                                 "clip_to_self is implemented.";
     return false;
@@ -471,9 +490,9 @@ bool Session::ApplySetHitTestBehaviorCmd(
   return false;
 }
 
-bool Session::ApplySetSpacePropertiesCmd(
-    ::fuchsia::ui::gfx::SetSpacePropertiesCmd command) {
-  error_reporter()->ERROR() << "SetSpacePropertiesCmd not implemented.";
+bool Session::ApplySetViewPropertiesCmd(
+    ::fuchsia::ui::gfx::SetViewPropertiesCmd command) {
+  error_reporter()->ERROR() << "SetViewPropertiesCmd not implemented.";
   return false;
 }
 
@@ -622,7 +641,7 @@ bool Session::ApplySetEventMaskCmd(
 
 bool Session::ApplySetCameraTransformCmd(
     ::fuchsia::ui::gfx::SetCameraTransformCmd command) {
-  // TODO(MZ-123): support variables.
+  // TODO(SCN-123): support variables.
   if (IsVariable(command.eye_position) || IsVariable(command.eye_look_at) ||
       IsVariable(command.eye_up)) {
     error_reporter_->ERROR()
@@ -640,7 +659,7 @@ bool Session::ApplySetCameraTransformCmd(
 
 bool Session::ApplySetCameraProjectionCmd(
     ::fuchsia::ui::gfx::SetCameraProjectionCmd command) {
-  // TODO(MZ-123): support variables.
+  // TODO(SCN-123): support variables.
   if (IsVariable(command.fovy)) {
     error_reporter_->ERROR()
         << "scenic::gfx::Session::ApplySetCameraProjectionCmd(): "
@@ -717,7 +736,7 @@ bool Session::ApplySetCameraPoseBufferCmd(
 
 bool Session::ApplySetLightColorCmd(
     ::fuchsia::ui::gfx::SetLightColorCmd command) {
-  // TODO(MZ-123): support variables.
+  // TODO(SCN-123): support variables.
   if (command.color.variable_id) {
     error_reporter_->ERROR()
         << "scenic::gfx::Session::ApplySetLightColorCmd(): "
@@ -731,7 +750,7 @@ bool Session::ApplySetLightColorCmd(
 
 bool Session::ApplySetLightDirectionCmd(
     ::fuchsia::ui::gfx::SetLightDirectionCmd command) {
-  // TODO(MZ-123): support variables.
+  // TODO(SCN-123): support variables.
   if (command.direction.variable_id) {
     error_reporter_->ERROR()
         << "scenic::gfx::Session::ApplySetLightDirectionCmd(): "
@@ -863,7 +882,7 @@ bool Session::ApplyCreateRectangle(scenic::ResourceId id,
     return false;
   }
 
-  // TODO(MZ-123): support variables.
+  // TODO(SCN-123): support variables.
   if (IsVariable(args.width) || IsVariable(args.height)) {
     error_reporter_->ERROR() << "scenic::gfx::Session::ApplyCreateRectangle(): "
                                 "unimplemented: variable width/height.";
@@ -886,7 +905,7 @@ bool Session::ApplyCreateRoundedRectangle(
     return false;
   }
 
-  // TODO(MZ-123): support variables.
+  // TODO(SCN-123): support variables.
   if (IsVariable(args.width) || IsVariable(args.height) ||
       IsVariable(args.top_left_radius) || IsVariable(args.top_right_radius) ||
       IsVariable(args.bottom_left_radius) ||
@@ -916,7 +935,7 @@ bool Session::ApplyCreateCircle(scenic::ResourceId id,
     return false;
   }
 
-  // TODO(MZ-123): support variables.
+  // TODO(SCN-123): support variables.
   if (IsVariable(args.radius)) {
     error_reporter_->ERROR() << "scenic::gfx::Session::ApplyCreateCircle(): "
                                 "unimplemented: variable radius.";
@@ -937,6 +956,32 @@ bool Session::ApplyCreateMaterial(scenic::ResourceId id,
                                   ::fuchsia::ui::gfx::MaterialArgs args) {
   auto material = CreateMaterial(id);
   return material ? resources_.AddResource(id, std::move(material)) : false;
+}
+
+bool Session::ApplyCreateView(scenic::ResourceId id,
+                              ::fuchsia::ui::gfx::ViewArgs args) {
+  if (!args.token) {
+    error_reporter_->ERROR() << "scenic::gfx::Session::ApplyCreateView(): "
+                                "no token provided.";
+    return false;
+  }
+
+  auto view = CreateView(id, std::move(args));
+  return view ? resources_.AddResource(id, std::move(view)) : false;
+}
+
+bool Session::ApplyCreateViewHolder(scenic::ResourceId id,
+                                    ::fuchsia::ui::gfx::ViewHolderArgs args) {
+  if (!args.token) {
+    error_reporter_->ERROR()
+        << "scenic::gfx::Session::ApplyCreateViewHolder(): "
+           "no token provided.";
+    return false;
+  }
+
+  auto view_holder = CreateViewHolder(id, std::move(args));
+  return view_holder ? resources_.AddResource(id, std::move(view_holder))
+                     : false;
 }
 
 bool Session::ApplyCreateClipNode(scenic::ResourceId id,
@@ -961,20 +1006,6 @@ bool Session::ApplyCreateShapeNode(scenic::ResourceId id,
                                    ::fuchsia::ui::gfx::ShapeNodeArgs args) {
   auto node = CreateShapeNode(id, std::move(args));
   return node ? resources_.AddResource(id, std::move(node)) : false;
-}
-
-bool Session::ApplyCreateSpace(scenic::ResourceId id,
-                               ::fuchsia::ui::gfx::SpaceArgs args) {
-  error_reporter()->ERROR()
-      << "scenic::gfx::Session::ApplyCreateSpace(): unimplemented";
-  return false;
-}
-
-bool Session::ApplyCreateSpaceHolder(scenic::ResourceId id,
-                                     ::fuchsia::ui::gfx::SpaceHolderArgs args) {
-  error_reporter()->ERROR()
-      << "scenic::gfx::Session::ApplyCreateSpaceHolder(): unimplemented";
-  return false;
 }
 
 bool Session::ApplyCreateDisplayCompositor(
@@ -1029,7 +1060,7 @@ ResourcePtr Session::CreateImage(scenic::ResourceId id, MemoryPtr memory,
 ResourcePtr Session::CreateBuffer(scenic::ResourceId id, MemoryPtr memory,
                                   uint32_t memory_offset, uint32_t num_bytes) {
   if (!memory->IsKindOf<GpuMemory>()) {
-    // TODO(MZ-273): host memory should also be supported.
+    // TODO(SCN-273): host memory should also be supported.
     error_reporter_->ERROR() << "scenic::gfx::Session::CreateBuffer(): "
                                 "memory must be of type "
                                 "ui.gfx.MemoryType.VK_DEVICE_MEMORY";
@@ -1084,6 +1115,16 @@ ResourcePtr Session::CreateDirectionalLight(scenic::ResourceId id) {
   return fxl::MakeRefCounted<DirectionalLight>(this, id);
 }
 
+ResourcePtr Session::CreateView(scenic::ResourceId id,
+                                ::fuchsia::ui::gfx::ViewArgs args) {
+  return fxl::MakeRefCounted<View>(this, id, std::move(args));
+}
+
+ResourcePtr Session::CreateViewHolder(scenic::ResourceId id,
+                                      ::fuchsia::ui::gfx::ViewHolderArgs args) {
+  return fxl::MakeRefCounted<ViewHolder>(this, id, std::move(args));
+}
+
 ResourcePtr Session::CreateClipNode(scenic::ResourceId id,
                                     ::fuchsia::ui::gfx::ClipNodeArgs args) {
   error_reporter_->ERROR() << "scenic::gfx::Session::CreateClipNode(): "
@@ -1125,10 +1166,10 @@ ResourcePtr Session::CreateDisplayCompositor(
 
 ResourcePtr Session::CreateImagePipeCompositor(
     scenic::ResourceId id, ::fuchsia::ui::gfx::ImagePipeCompositorArgs args) {
-  // TODO(MZ-179)
+  // TODO(SCN-179)
   error_reporter_->ERROR()
       << "scenic::gfx::Session::ApplyCreateImagePipeCompositor() "
-         "is unimplemented (MZ-179)";
+         "is unimplemented (SCN-179)";
   return ResourcePtr();
 }
 
@@ -1432,7 +1473,7 @@ bool Session::ApplyScheduledUpdates(uint64_t presentation_time,
       // presentation_time was to the requested time.
     } else {
       // An error was encountered while applying the update.
-      FXL_LOG(WARNING) << "mozart::Session::ApplyScheduledUpdates(): "
+      FXL_LOG(WARNING) << "scenic::gfx::Session::ApplyScheduledUpdates(): "
                           "An error was encountered while applying the update. "
                           "Initiating teardown.";
 
@@ -1493,7 +1534,7 @@ void Session::HitTest(uint32_t node_id, ::fuchsia::ui::gfx::vec3 ray_origin,
                                  escher::vec4(Unwrap(ray_direction), 0.f)});
     callback(WrapHits(hits));
   } else {
-    // TODO(MZ-162): Currently the test fails if the node isn't presented yet.
+    // TODO(SCN-162): Currently the test fails if the node isn't presented yet.
     // Perhaps we should given clients more control over which state of
     // the scene graph will be consulted for hit testing purposes.
     error_reporter_->WARN()

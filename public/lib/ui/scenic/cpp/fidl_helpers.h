@@ -83,9 +83,9 @@ fuchsia::ui::gfx::Command NewCreateClipNodeCmd(uint32_t id);
 fuchsia::ui::gfx::Command NewCreateEntityNodeCmd(uint32_t id);
 fuchsia::ui::gfx::Command NewCreateOpacityNodeCmd(uint32_t id);
 fuchsia::ui::gfx::Command NewCreateShapeNodeCmd(uint32_t id);
-fuchsia::ui::gfx::Command NewCreateSpaceCmd(uint32_t id, zx::eventpair token,
+fuchsia::ui::gfx::Command NewCreateViewCmd(uint32_t id, zx::eventpair token,
                                             const std::string& debug_name);
-fuchsia::ui::gfx::Command NewCreateSpaceHolderCmd(
+fuchsia::ui::gfx::Command NewCreateViewHolderCmd(
     uint32_t id, zx::eventpair token, const std::string& debug_name);
 fuchsia::ui::gfx::Command NewCreateVariableCmd(uint32_t id,
                                                fuchsia::ui::gfx::Value value);
@@ -110,8 +110,8 @@ fuchsia::ui::gfx::Command NewImportResourceCmdAsRequest(
     uint32_t resource_id, fuchsia::ui::gfx::ImportSpec import_spec,
     zx::eventpair* out_export_token);
 
-// Space/SpaceHolder commands.
-fuchsia::ui::gfx::Command NewSetSpacePropertiesCmd(
+// View/ViewHolder commands.
+fuchsia::ui::gfx::Command NewSetViewPropertiesCmd(
     uint32_t space_holder_id, const float bounding_box_min[3],
     const float bounding_box_max[3], const float inset_from_min[3],
     const float inset_from_max[3]);

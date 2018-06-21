@@ -202,17 +202,17 @@ struct BoundingBox {
   vec3 max;
 };
 
-// Represents the properties for a finite transform (sub)space.
+// Represents the properties for a View.
 //
-// |extents| specifies the bounding box for the Space itself.  Content
-// contained within the Space is clipped to this bounding box.
+// |extents| specifies the bounding box for the View itself.  Content
+// contained within the View is clipped to this bounding box.
 //
 // |insets_from_min| and |insets_from_max| specify the distances between the
-// space's bounding box and that of its parent Space.
+// view's bounding box and that of its parent.
 //
-// The parent Space's bounding box extents can be defined as:
+// The View's bounding box extents can be defined as:
 //    { extents.min - inset_from_min, extents.max + inset_from_max }
-struct SpaceProperties {
+struct ViewProperties {
   BoundingBox extents;
   vec3 inset_from_min;
   vec3 inset_from_max;

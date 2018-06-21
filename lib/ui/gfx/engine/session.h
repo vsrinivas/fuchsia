@@ -10,6 +10,7 @@
 #include "garnet/lib/ui/gfx/engine/engine.h"
 #include "garnet/lib/ui/gfx/engine/resource_map.h"
 #include "garnet/lib/ui/gfx/resources/memory.h"
+//#include "garnet/lib/ui/gfx/resources/resource.h"
 #include "garnet/lib/ui/scenic/util/error_reporter.h"
 #include "garnet/lib/ui/scenic/util/print_command.h"
 #include "lib/escher/flib/fence_set_listener.h"
@@ -34,6 +35,7 @@ class Session;
 using SessionPtr = ::fxl::RefPtr<Session>;
 
 class Engine;
+class Resource;
 class SessionHandler;
 
 // TODO: use unsafe ref-counting for better performance (our architecture
@@ -140,8 +142,8 @@ class Session : public fxl::RefCountedThreadSafe<Session> {
   bool ApplySetShapeCmd(::fuchsia::ui::gfx::SetShapeCmd command);
   bool ApplySetMaterialCmd(::fuchsia::ui::gfx::SetMaterialCmd command);
   bool ApplySetClipCmd(::fuchsia::ui::gfx::SetClipCmd command);
-  bool ApplySetSpacePropertiesCmd(
-      ::fuchsia::ui::gfx::SetSpacePropertiesCmd command);
+  bool ApplySetViewPropertiesCmd(
+      ::fuchsia::ui::gfx::SetViewPropertiesCmd command);
   bool ApplySetHitTestBehaviorCmd(
       ::fuchsia::ui::gfx::SetHitTestBehaviorCmd command);
   bool ApplySetCameraCmd(::fuchsia::ui::gfx::SetCameraCmd command);
@@ -205,6 +207,10 @@ class Session : public fxl::RefCountedThreadSafe<Session> {
                        ::fuchsia::ui::gfx::MeshArgs args);
   bool ApplyCreateMaterial(scenic::ResourceId id,
                            ::fuchsia::ui::gfx::MaterialArgs args);
+  bool ApplyCreateView(scenic::ResourceId id,
+                       ::fuchsia::ui::gfx::ViewArgs args);
+  bool ApplyCreateViewHolder(scenic::ResourceId id,
+                             ::fuchsia::ui::gfx::ViewHolderArgs args);
   bool ApplyCreateClipNode(scenic::ResourceId id,
                            ::fuchsia::ui::gfx::ClipNodeArgs args);
   bool ApplyCreateEntityNode(scenic::ResourceId id,
@@ -213,10 +219,6 @@ class Session : public fxl::RefCountedThreadSafe<Session> {
                               ::fuchsia::ui::gfx::OpacityNodeArgs args);
   bool ApplyCreateShapeNode(scenic::ResourceId id,
                             ::fuchsia::ui::gfx::ShapeNodeArgs args);
-  bool ApplyCreateSpace(scenic::ResourceId id,
-                        ::fuchsia::ui::gfx::SpaceArgs args);
-  bool ApplyCreateSpaceHolder(scenic::ResourceId id,
-                              ::fuchsia::ui::gfx::SpaceHolderArgs args);
   bool ApplyCreateDisplayCompositor(
       scenic::ResourceId id, ::fuchsia::ui::gfx::DisplayCompositorArgs args);
   bool ApplyCreateImagePipeCompositor(
@@ -247,6 +249,11 @@ class Session : public fxl::RefCountedThreadSafe<Session> {
 
   ResourcePtr CreateAmbientLight(scenic::ResourceId id);
   ResourcePtr CreateDirectionalLight(scenic::ResourceId id);
+
+  ResourcePtr CreateView(scenic::ResourceId id,
+                         ::fuchsia::ui::gfx::ViewArgs args);
+  ResourcePtr CreateViewHolder(scenic::ResourceId id,
+                               ::fuchsia::ui::gfx::ViewHolderArgs args);
   ResourcePtr CreateClipNode(scenic::ResourceId id,
                              ::fuchsia::ui::gfx::ClipNodeArgs args);
   ResourcePtr CreateEntityNode(scenic::ResourceId id,
@@ -255,6 +262,7 @@ class Session : public fxl::RefCountedThreadSafe<Session> {
                                 ::fuchsia::ui::gfx::OpacityNodeArgs args);
   ResourcePtr CreateShapeNode(scenic::ResourceId id,
                               ::fuchsia::ui::gfx::ShapeNodeArgs args);
+
   ResourcePtr CreateDisplayCompositor(
       scenic::ResourceId id, ::fuchsia::ui::gfx::DisplayCompositorArgs args);
   ResourcePtr CreateImagePipeCompositor(

@@ -32,28 +32,35 @@ class ResourceMap {
 
   size_t size() const { return resources_.size(); }
 
+  enum class ErrorBehavior { kDontReportErrors, kReportErrors };
+
   // Attempt to find the resource within the map.  If it is found, verify that
-  // it has the correct type, and return it.  Return nullptr if it is not found,
-  // or if type validation fails.
+  // it has the correct type, and return it.  Return nullptr and report an
+  // error if it is not found, or if type validation fails.
   //
   // example:
   // ResourceType someResource = map.FindResource<ResourceType>();
   template <class ResourceT>
-  fxl::RefPtr<ResourceT> FindResource(scenic::ResourceId id) {
+  fxl::RefPtr<ResourceT> FindResource(
+      scenic::ResourceId id,
+      ErrorBehavior report_errors = ErrorBehavior::kReportErrors) {
     auto it = resources_.find(id);
 
     if (it == resources_.end()) {
-      error_reporter_->ERROR() << "No resource exists with ID " << id;
+      if (report_errors == ErrorBehavior::kReportErrors) {
+        error_reporter_->ERROR() << "No resource exists with ID " << id;
+      }
       return fxl::RefPtr<ResourceT>();
     };
 
     auto resource_ptr = it->second->GetDelegate(ResourceT::kTypeInfo);
-
     if (resource_ptr == nullptr) {
-      error_reporter_->ERROR()
-          << "Type mismatch for resource ID " << id << ": actual type is "
-          << it->second->type_info().name << ", expected a sub-type of "
-          << ResourceT::kTypeInfo.name;
+      if (report_errors == ErrorBehavior::kReportErrors) {
+        error_reporter_->ERROR()
+            << "Type mismatch for resource ID " << id << ": actual type is "
+            << it->second->type_info().name << ", expected a sub-type of "
+            << ResourceT::kTypeInfo.name;
+      }
       return fxl::RefPtr<ResourceT>();
     }
 

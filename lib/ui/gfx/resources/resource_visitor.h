@@ -14,6 +14,8 @@ class HostMemory;
 class Image;
 class ImagePipe;
 class Buffer;
+class View;
+class ViewHolder;
 class EntityNode;
 class OpacityNode;
 class ShapeNode;
@@ -41,6 +43,10 @@ class ResourceVisitor {
   virtual void Visit(Image* r) = 0;
   virtual void Visit(ImagePipe* r) = 0;
   virtual void Visit(Buffer* r) = 0;
+
+  // Views.
+  virtual void Visit(View* r) = 0;
+  virtual void Visit(ViewHolder* r) = 0;
 
   // Nodes.
   virtual void Visit(EntityNode* r) = 0;

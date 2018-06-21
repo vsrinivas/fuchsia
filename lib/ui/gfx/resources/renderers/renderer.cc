@@ -24,6 +24,8 @@
 #include "garnet/lib/ui/gfx/resources/nodes/traversal.h"
 #include "garnet/lib/ui/gfx/resources/shapes/circle_shape.h"
 #include "garnet/lib/ui/gfx/resources/shapes/shape.h"
+#include "garnet/lib/ui/gfx/resources/view.h"
+#include "garnet/lib/ui/gfx/resources/view_holder.h"
 
 namespace scenic {
 namespace gfx {
@@ -89,6 +91,10 @@ void Renderer::Visitor::Visit(Image* r) { FXL_CHECK(false); }
 void Renderer::Visitor::Visit(ImagePipe* r) { FXL_CHECK(false); }
 
 void Renderer::Visitor::Visit(Buffer* r) { FXL_CHECK(false); }
+
+void Renderer::Visitor::Visit(View* r) { FXL_CHECK(false); }
+
+void Renderer::Visitor::Visit(ViewHolder* r) { FXL_CHECK(false); }
 
 void Renderer::Visitor::Visit(EntityNode* r) { VisitNode(r); }
 

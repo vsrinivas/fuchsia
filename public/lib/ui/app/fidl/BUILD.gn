@@ -12,7 +12,7 @@ fidl("fidl") {
   sdk_category = "partner"
 
   sources = [
-    "space_provider.fidl",
+    "view_provider.fidl",
   ]
 
   public_deps = [

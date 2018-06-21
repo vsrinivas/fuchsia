@@ -54,8 +54,8 @@ std::ostream& operator<<(std::ostream& stream,
       return stream << "SetClip";
     case Command::Tag::kSetHitTestBehavior:
       return stream << "SetHitTestBehavior";
-    case Command::Tag::kSetSpaceProperties:
-      return stream << "SetSpaceProperties";
+    case Command::Tag::kSetViewProperties:
+      return stream << "SetViewProperties";
     case Command::Tag::kSetCamera:
       return stream << "SetCamera";
     case Command::Tag::kSetCameraTransform:
@@ -154,6 +154,12 @@ std::ostream& operator<<(std::ostream& stream,
     case ResourceArgs::Tag::kMaterial:
       stream << "Material";
       break;
+    case ResourceArgs::Tag::kView:
+      stream << "View";
+      break;
+    case ResourceArgs::Tag::kViewHolder:
+      stream << "ViewHolder";
+      break;
     case ResourceArgs::Tag::kClipNode:
       stream << "ClipNode";
       break;
@@ -165,12 +171,6 @@ std::ostream& operator<<(std::ostream& stream,
       break;
     case ResourceArgs::Tag::kShapeNode:
       stream << "ShapeNode";
-      break;
-    case ResourceArgs::Tag::kSpaceNode:
-      stream << "SpaceNode";
-      break;
-    case ResourceArgs::Tag::kSpaceHolderNode:
-      stream << "SpaceHolderNode";
       break;
     case ResourceArgs::Tag::kDisplayCompositor:
       stream << "DisplayCompositor";

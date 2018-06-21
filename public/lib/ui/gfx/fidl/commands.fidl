@@ -35,7 +35,7 @@ union Command {
   SetMaterialCmd set_material;
   SetClipCmd set_clip;
   SetHitTestBehaviorCmd set_hit_test_behavior;
-  SetSpacePropertiesCmd set_space_properties;
+  SetViewPropertiesCmd set_view_properties;
 
   // Camera and lighting commands.
   SetCameraCmd set_camera;
@@ -355,13 +355,13 @@ struct SetHitTestBehaviorCmd {
   HitTestBehavior hit_test_behavior;
 };
 
-// Sets the properties for a SpaceHolder's attached Space.
+// Sets the properties for a ViewHolder's attached View.
 //
 // Constraints:
-// - |space_holder_id| refs a |SpaceHolder|.
-struct SetSpacePropertiesCmd {
-  uint32 space_holder_id;
-  SpaceProperties properties;
+// - |view_holder_id| refs a |ViewHolder|.
+struct SetViewPropertiesCmd {
+  uint32 view_holder_id;
+  ViewProperties properties;
 };
 
 // Sets a renderer's camera.

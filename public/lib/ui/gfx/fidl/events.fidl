@@ -16,10 +16,10 @@ union Event {
 
   // Events which are always delivered, regardless of mask.
   ImportUnboundEvent import_unbound;
-  SpaceDisconnectedEvent space_disconnected;
-  SpaceAddedToSceneEvent space_added_to_scene;
-  SpaceRemovedFromSceneEvent space_removed_from_scene;
-  SpacePropertiesChangedEvent space_properties_changed;
+  ViewDisconnectedEvent view_disconnected;
+  ViewAddedToSceneEvent view_added_to_scene;
+  ViewRemovedFromSceneEvent view_removed_from_scene;
+  ViewPropertiesChangedEvent view_properties_changed;
 };
 
 // Provides rendering target metrics information about the specified node.
@@ -44,40 +44,40 @@ struct ImportUnboundEvent {
   uint32 resource_id;
 };
 
-// Delivered when the Space corresponding to the given SpaceHolder is
+// Delivered when the View corresponding to the given ViewHolder is
 // disconnected/destroyed, or the other side of the connection is destroyed
 // before it was fully established.
-struct SpaceDisconnectedEvent {
-  uint32 space_holder_id;
+struct ViewDisconnectedEvent {
+  uint32 view_holder_id;
 };
 
-// Delivered when the parent SpaceHolder for the given Space becomes a part of
+// Delivered when the parent ViewHolder for the given View becomes a part of
 // a Scene.
 //
-// A SpaceHolder is considered to be part of a Scene if there is an unbroken
+// A ViewHolder is considered to be part of a Scene if there is an unbroken
 // chain of parent-child relationships between the Scene node and the
-// SpaceHolder node.
-struct SpaceAddedToSceneEvent {
-  uint32 space_id;
-  SpaceProperties properties;
+// ViewHolder node.
+struct ViewAddedToSceneEvent {
+  uint32 view_id;
+  ViewProperties properties;
 };
 
-// Delivered when the parent SpaceHolder for the given Space is no longer part
+// Delivered when the parent ViewHolder for the given View is no longer part
 // of a scene.
 //
-// This can happen if the SpaceHolder is detached directly from the scene, or
+// This can happen if the ViewHolder is detached directly from the scene, or
 // if one of its parent nodes is.
 //
-// A SpaceHolder is considered to be part of a Scene if there is an unbroken
+// A ViewHolder is considered to be part of a Scene if there is an unbroken
 // chain of parent-child relationships between the Scene node and the
-// SpaceHolder node.
-struct SpaceRemovedFromSceneEvent {
-  uint32 space_id;
+// ViewHolder node.
+struct ViewRemovedFromSceneEvent {
+  uint32 view_id;
 };
 
-// Delivered when the parent SpaceHolder for the given Space makes a change to
-// the Space's properties.
-struct SpacePropertiesChangedEvent {
-  uint32 space_id;
-  SpaceProperties properties;
+// Delivered when the parent ViewHolder for the given View makes a change to
+// the View's properties.
+struct ViewPropertiesChangedEvent {
+  uint32 view_id;
+  ViewProperties properties;
 };

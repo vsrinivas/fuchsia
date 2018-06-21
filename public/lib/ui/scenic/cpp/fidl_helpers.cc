@@ -26,7 +26,7 @@ fuchsia::ui::scenic::Command NewCommand(fuchsia::ui::gfx::Command command) {
 }
 
 // Helper function for all resource creation functions.
-static fuchsia::ui::gfx::Command NewCreateResourceCmd(
+fuchsia::ui::gfx::Command NewCreateResourceCmd(
     uint32_t id, fuchsia::ui::gfx::ResourceArgs resource) {
   fuchsia::ui::gfx::CreateResourceCmd create_resource;
   create_resource.id = id;
@@ -377,27 +377,27 @@ fuchsia::ui::gfx::Command NewCreateShapeNodeCmd(uint32_t id) {
   return NewCreateResourceCmd(id, std::move(resource));
 }
 
-fuchsia::ui::gfx::Command NewCreateSpaceCmd(uint32_t id, zx::eventpair token,
+fuchsia::ui::gfx::Command NewCreateViewCmd(uint32_t id, zx::eventpair token,
                                             const std::string& debug_name) {
   FXL_DCHECK(token);
-  fuchsia::ui::gfx::SpaceArgs space;
-  space.token = std::move(token);
-  space.debug_name = debug_name;
+  fuchsia::ui::gfx::ViewArgs view;
+  view.token = std::move(token);
+  view.debug_name = debug_name;
 
   fuchsia::ui::gfx::ResourceArgs resource;
-  resource.set_space_node(std::move(space));
+  resource.set_view(std::move(view));
   return NewCreateResourceCmd(id, std::move(resource));
 }
 
-fuchsia::ui::gfx::Command NewCreateSpaceHolderCmd(
+fuchsia::ui::gfx::Command NewCreateViewHolderCmd(
     uint32_t id, zx::eventpair token, const std::string& debug_name) {
   FXL_DCHECK(token);
-  fuchsia::ui::gfx::SpaceHolderArgs space_holder;
-  space_holder.token = std::move(token);
-  space_holder.debug_name = debug_name;
+  fuchsia::ui::gfx::ViewHolderArgs view_holder;
+  view_holder.token = std::move(token);
+  view_holder.debug_name = debug_name;
 
   fuchsia::ui::gfx::ResourceArgs resource;
-  resource.set_space_holder_node(std::move(space_holder));
+  resource.set_view_holder(std::move(view_holder));
   return NewCreateResourceCmd(id, std::move(resource));
 }
 
@@ -515,20 +515,20 @@ fuchsia::ui::gfx::Command NewImportResourceCmdAsRequest(
                               std::move(import_token));
 }
 
-fuchsia::ui::gfx::Command NewSetSpacePropertiesCmd(
-    uint32_t space_holder_id, const float bounding_box_min[3],
+fuchsia::ui::gfx::Command NewSetViewPropertiesCmd(
+    uint32_t view_holder_id, const float bounding_box_min[3],
     const float bounding_box_max[3], const float inset_from_min[3],
     const float inset_from_max[3]) {
-  fuchsia::ui::gfx::SetSpacePropertiesCmd set_space_properties;
-  set_space_properties.space_holder_id = space_holder_id;
-  auto& props = set_space_properties.properties;
+  fuchsia::ui::gfx::SetViewPropertiesCmd set_view_properties;
+  set_view_properties.view_holder_id = view_holder_id;
+  auto& props = set_view_properties.properties;
   props.extents.min = NewVector3(bounding_box_min);
   props.extents.max = NewVector3(bounding_box_max);
   props.inset_from_min = NewVector3(inset_from_min);
   props.inset_from_max = NewVector3(inset_from_max);
 
   fuchsia::ui::gfx::Command command;
-  command.set_set_space_properties(std::move(set_space_properties));
+  command.set_set_view_properties(std::move(set_view_properties));
 
   return command;
 }

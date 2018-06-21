@@ -9,6 +9,7 @@
 #include <fuchsia/ui/gfx/cpp/fidl.h>
 #include "garnet/lib/ui/gfx/resources/import.h"
 #include "garnet/lib/ui/gfx/resources/nodes/traversal.h"
+#include "garnet/lib/ui/gfx/resources/view.h"
 
 #include "lib/escher/geometry/types.h"
 
@@ -119,6 +120,12 @@ bool Node::Detach() {
       case ParentRelation::kNone:
         FXL_NOTREACHED();
         break;
+    }
+
+    // If our parent is a View, ensure it's aware that we've been re-parented.
+    if (view_) {
+      view_->DetachChild(this);
+      view_ = nullptr;
     }
 
     parent_relation_ = ParentRelation::kNone;

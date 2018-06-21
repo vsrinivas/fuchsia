@@ -17,6 +17,7 @@
 
 #include "garnet/lib/ui/gfx/displays/display_manager.h"
 #include "garnet/lib/ui/gfx/engine/frame_scheduler.h"
+#include "garnet/lib/ui/gfx/engine/object_linker.h"
 #include "garnet/lib/ui/gfx/engine/resource_linker.h"
 #include "garnet/lib/ui/gfx/engine/session_manager.h"
 #include "garnet/lib/ui/gfx/engine/update_scheduler.h"
@@ -31,7 +32,11 @@ namespace gfx {
 class Compositor;
 class Session;
 class SessionHandler;
+class View;
+class ViewHolder;
 class Swapchain;
+
+using ViewLinker = ObjectLinker<View, ViewHolder>;
 
 // Owns a group of sessions which can share resources with one another
 // using the same resource linker and which coexist within the same timing
@@ -74,6 +79,7 @@ class Engine : public UpdateScheduler, private FrameSchedulerDelegate {
   }
 
   ResourceLinker* resource_linker() { return &resource_linker_; }
+  ViewLinker* view_linker() { return &view_linker_; }
 
   EventTimestamper* event_timestamper() { return &event_timestamper_; }
 
@@ -144,6 +150,8 @@ class Engine : public UpdateScheduler, private FrameSchedulerDelegate {
   escher::ShadowMapRendererPtr shadow_renderer_;
 
   ResourceLinker resource_linker_;
+  ViewLinker view_linker_;
+
   EventTimestamper event_timestamper_;
   std::unique_ptr<escher::SimpleImageFactory> image_factory_;
   std::unique_ptr<escher::RoundedRectFactory> rounded_rect_factory_;

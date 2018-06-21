@@ -346,33 +346,33 @@ class ImportNode final : public ContainerNode {
   bool is_bound_ = false;
 };
 
-// Represents a proxy for a Space which can be added to a scene graph in order
-// to embed the Space within it.
+// Represents a proxy for a View which can be added to a scene graph in order
+// to embed the View within it.
 //
-// Each SpaceHolder is linked to a paired Space via a shared token.
+// Each ViewHolder is linked to a paired View via a shared token.
 //
-// Usually the SpaceHolder and its associated Space exist in separate processes,
+// Usually the ViewHolder and its associated View exist in separate processes,
 // allowing a distributed scene graph to be constructed.
-class SpaceHolder final : public Resource {
+class ViewHolder final : public Resource {
  public:
-  SpaceHolder(Session* session, zx::eventpair token,
-              const std::string& debug_name);
-  ~SpaceHolder();
+  ViewHolder(Session* session, zx::eventpair token,
+             const std::string& debug_name);
+  ~ViewHolder();
 
   // Set properties of the attached space.
-  void SetSpaceProperties(const float bounding_box_min[3],
-                          const float bounding_box_max[3],
-                          const float inset_from_min[3],
-                          const float inset_from_max[3]);
+  void SetViewProperties(const float bounding_box_min[3],
+                         const float bounding_box_max[3],
+                         const float inset_from_min[3],
+                         const float inset_from_max[3]);
 };
 
 // Represents a transform space which serves as a container for Nodes.  The
-// Nodes will have the Spaces' coordinate transform applied to their own, in
-// addition to being clipped to the Spaces' bounding box.
-class Space final : public Resource {
+// Nodes will have the Views' coordinate transform applied to their own, in
+// addition to being clipped to the Views' bounding box.
+class View final : public Resource {
  public:
-  Space(Session* session, zx::eventpair token, const std::string& debug_name);
-  ~Space();
+  View(Session* session, zx::eventpair token, const std::string& debug_name);
+  ~View();
 };
 
 // Creates a node that clips the contents of its hierarchy to the specified clip

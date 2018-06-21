@@ -27,8 +27,8 @@ constexpr uint32_t kRootNodeId = 1;
 
 FakeSession::FakeSession() : async_(async_get_default()), binding_(this) {
   fuchsia::ui::gfx::ResourceArgs root_resource;
-  fuchsia::ui::gfx::SpaceArgs space_args;
-  root_resource.set_space_node(std::move(space_args));
+  fuchsia::ui::gfx::ViewArgs view_args;
+  root_resource.set_view(std::move(view_args));
   resources_by_id_.emplace(kRootNodeId, std::move(root_resource));
 }
 

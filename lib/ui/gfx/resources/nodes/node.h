@@ -17,6 +17,7 @@ namespace scenic {
 namespace gfx {
 
 class Node;
+class View;
 using NodePtr = fxl::RefPtr<Node>;
 
 // Node is an abstract base class for all the concrete node types listed in
@@ -71,6 +72,10 @@ class Node : public Resource {
 
   Node* parent() const { return parent_; }
 
+  View* view() const { return view_; }
+
+  void set_view(View* view) { view_ = view; }
+
   const std::vector<NodePtr>& children() const { return children_; }
 
   const std::vector<NodePtr>& parts() const { return parts_; }
@@ -111,6 +116,7 @@ class Node : public Resource {
 
   uint32_t tag_value_ = 0u;
   Node* parent_ = nullptr;
+  View* view_ = nullptr;
   ParentRelation parent_relation_ = ParentRelation::kNone;
   std::vector<NodePtr> children_;
   std::vector<NodePtr> parts_;
