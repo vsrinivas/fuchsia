@@ -4,6 +4,7 @@
 # found in the LICENSE file.
 
 import argparse
+import json
 import os
 import sys
 
@@ -44,20 +45,16 @@ def main():
         with open(spec, 'r') as spec_file:
             manifest = yaml.safe_load(spec_file)
             name = manifest['name']
+            tag = '3p:%s' % name
             if name in FLUTTER_PACKAGES:
-                deps[name] = {
-                    'sdk': 'flutter',
-                }
+                deps[tag] = 'flutter_sdk'
             else:
-                version = manifest['version']
-                deps[name] = '^%s' % version
+                if 'version' not in manifest:
+                    raise Exception('%s does not specify a version.' % spec)
+                deps[tag] = manifest['version']
 
-    manifest = {
-        'name': '%s_third_party' % args.name,
-        'dependencies': deps,
-    }
     with open(args.out, 'w') as out_file:
-        yaml.dump(manifest, out_file, default_flow_style=False)
+        json.dump(deps, out_file)
 
     return 0
 

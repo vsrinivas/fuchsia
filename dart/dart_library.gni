@@ -414,7 +414,7 @@ if (current_toolchain == dart_toolchain) {
       # Build a manifest file listing third-party dependencies of this package.
       # This will make it easier to build the final published package.
       third_party_spec_target_name = "${target_name}_third_party_spec"
-      third_party_spec_file = "$target_gen_dir/${target_name}_3p.yaml"
+      third_party_spec_file = "$target_gen_dir/${target_name}_3p_tags"
 
       action(third_party_spec_target_name) {
         script = "//build/dart/sdk/gen_3p_manifest.py"
@@ -466,6 +466,7 @@ if (current_toolchain == dart_toolchain) {
         tags = [
           "type:library",
         ]
+        tags_file = third_party_spec_file
         name = atom_name
 
         category = invoker.sdk_category
@@ -478,13 +479,6 @@ if (current_toolchain == dart_toolchain) {
         ]
 
         file_manifest = sdk_sources_file
-
-        files = [
-          {
-            source = third_party_spec_file
-            dest = "third_party/pubspec.yaml"
-          },
-        ]
       }
     }
   }

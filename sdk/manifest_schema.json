@@ -225,6 +225,11 @@
           ]
         }
       },
+      "patternProperties": {
+        "^3p:.+": {
+          "type": "string"
+        }
+      },
       "required": [
         "domain",
         "type"

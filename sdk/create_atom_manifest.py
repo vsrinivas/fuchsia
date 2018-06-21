@@ -42,6 +42,9 @@ def main():
     parser.add_argument('--tags',
                         help='List of tags for the included elements',
                         nargs='*')
+    parser.add_argument('--tags-file',
+                        help='A file containing tags',
+                        required=False)
     parser.add_argument('--gn-label',
                         help='GN label of the atom',
                         required=True)
@@ -108,7 +111,13 @@ def main():
         all_package_deps.update(atom.package_deps)
 
     tags = dict(map(lambda t: t.split(':', 1), args.tags))
+    if args.tags_file:
+        with open(args.tags_file, 'r') as tags_file:
+            data = json.load(tags_file)
+            assert isinstance(data, dict)
+            tags.update(data)
     tags['domain'] = args.domain
+
     all_atoms.update([Atom({
         'id': id,
         'gn-label': args.gn_label,

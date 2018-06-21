@@ -69,6 +69,11 @@
 #     List of strings characterizing this element.
 #     Examples: "service:networking", "language:rust", "layer:garnet"
 #
+#   tags_file (optional)
+#     File containing a set of tags.
+#     This file must be using the JSON format; the top-level object must be a
+#     map whose values are strings.
+#
 #   manifest_file (optional)
 #     Path to the manifest to generate.
 #
@@ -207,6 +212,12 @@ template("sdk_atom") {
              "--deps",
            ] + dep_manifests + [ "--package-deps" ] + package_dep_manifests +
            [ "--files" ] + file_mappings + [ "--tags" ] + tags
+    if (defined(invoker.tags_file)) {
+      args += [
+        "--tags-file",
+        rebase_path(invoker.tags_file),
+      ]
+    }
 
     if (defined(invoker.file_manifest)) {
       inputs += [ invoker.file_manifest ]
