@@ -19,6 +19,7 @@ rustc_binary("bt-le-central") {
     "//garnet/public/rust/crates/fuchsia-async",
     "//garnet/public/rust/crates/fuchsia-vfs/fuchsia-vfs-watcher",
     "//garnet/public/rust/crates/fuchsia-zircon",
+    "//third_party/rust-crates/rustc_deps:getopts",
     "//third_party/rust-crates/rustc_deps:failure",
     "//third_party/rust-crates/rustc_deps:futures",
     "//third_party/rust-crates/rustc_deps:getopts",
