@@ -66,9 +66,10 @@ ConvergenceBenchmark::ConvergenceBenchmark(async::Loop* loop, int entry_count,
   FXL_DCHECK(value_size_ > 0);
   FXL_DCHECK(device_count_ > 1);
   for (auto& device_context : devices_) {
-    device_context.storage_directory =
+    device_context = std::make_unique<DeviceContext>();
+    device_context->storage_directory =
         std::make_unique<files::ScopedTempDir>(kStoragePath);
-    device_context.page_watcher =
+    device_context->page_watcher =
         std::make_unique<fidl::Binding<ledger::PageWatcher>>(this);
   }
   page_id_ = generator_.MakePageId();
@@ -83,31 +84,38 @@ void ConvergenceBenchmark::Run() {
     // but with the same lowest-level directory name, so they correspond to the
     // same "user".
     std::string synced_dir_path =
-        device_context.storage_directory->path() + "/convergence_user";
+        device_context->storage_directory->path() + "/convergence_user";
     bool ret = files::CreateDirectory(synced_dir_path);
     FXL_DCHECK(ret);
 
     cloud_provider::CloudProviderPtr cloud_provider;
     cloud_provider_firebase_factory_.MakeCloudProvider(
         server_id_, "", cloud_provider.NewRequest());
-    ledger::Status status = test::GetLedger(
-        loop_, startup_context_.get(), device_context.controller.NewRequest(),
+
+    test::GetLedger(
+        startup_context_.get(), device_context->controller.NewRequest(),
         std::move(cloud_provider), "convergence", synced_dir_path,
-        &device_context.ledger);
-    QuitOnError([this] { loop_->Quit(); }, status, "GetLedger");
-    device_context.ledger->GetPage(
-        fidl::MakeOptional(page_id_),
-        device_context.page_connection.NewRequest(),
-        benchmark::QuitOnErrorCallback([this] { loop_->Quit(); }, "GetPage"));
-    ledger::PageSnapshotPtr snapshot;
-    // Register a watcher; we don't really need the snapshot.
-    device_context.page_connection->GetSnapshot(
-        snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
-        device_context.page_watcher->NewBinding(), waiter->NewCallback());
+        QuitLoopClosure(),
+        [this, device_context = device_context.get(),
+         callback = waiter->NewCallback()](ledger::Status status,
+                                           ledger::LedgerPtr ledger) {
+          if (QuitOnError(QuitLoopClosure(), status, "GetLedger")) {
+            return;
+          }
+          device_context->ledger = std::move(ledger);
+          device_context->ledger->GetPage(
+              fidl::MakeOptional(page_id_),
+              device_context->page_connection.NewRequest(),
+              benchmark::QuitOnErrorCallback(QuitLoopClosure(), "GetPage"));
+          ledger::PageSnapshotPtr snapshot;
+          // Register a watcher; we don't really need the snapshot.
+          device_context->page_connection->GetSnapshot(
+              snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
+              device_context->page_watcher->NewBinding(), std::move(callback));
+        });
   }
   waiter->Finalize([this](ledger::Status status) {
-    if (benchmark::QuitOnError([this] { loop_->Quit(); }, status,
-                               "GetSnapshot")) {
+    if (benchmark::QuitOnError(QuitLoopClosure(), status, "GetSnapshot")) {
       return;
     }
     Start(0);
@@ -130,9 +138,9 @@ void ConvergenceBenchmark::Start(int step) {
       remaining_keys_.insert(convert::ToString(key));
     }
     fidl::VectorPtr<uint8_t> value = generator_.MakeValue(value_size_);
-    devices_[device_id].page_connection->Put(
+    devices_[device_id]->page_connection->Put(
         std::move(key), std::move(value),
-        benchmark::QuitOnErrorCallback([this] { loop_->Quit(); }, "Put"));
+        benchmark::QuitOnErrorCallback(QuitLoopClosure(), "Put"));
   }
 
   TRACE_ASYNC_BEGIN("benchmark", "convergence", step);
@@ -158,10 +166,15 @@ void ConvergenceBenchmark::OnChange(ledger::PageChange page_change,
 
 void ConvergenceBenchmark::ShutDown() {
   for (auto& device_context : devices_) {
-    test::KillLedgerProcess(&device_context.controller);
+    test::KillLedgerProcess(&device_context->controller);
   }
   loop_->Quit();
 }
+
+fit::closure ConvergenceBenchmark::QuitLoopClosure() {
+  return [this] { loop_->Quit(); };
+}
+
 }  // namespace benchmark
 }  // namespace test
 
