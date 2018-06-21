@@ -279,6 +279,14 @@ cleanup_mutex:
 
 // Unplug a single CPU.  Must be called while hodling the hotplug lock
 static zx_status_t mp_unplug_cpu_mask_single_locked(cpu_num_t cpu_id) {
+    // Wait for |cpu_id| to complete any in-progress DPCs and terminate its DPC thread.  Later, once
+    // nothing is running on it, we'll migrate its queued DPCs to another CPU.
+    dpc_shutdown(cpu_id);
+
+    // TODO(maniscalco): |cpu_id| is about to shutdown.  We should ensure it has no pinned threads
+    // (except maybe the idle thread).  Once we're confident we've terminated/migrated them all,
+    // this would be a good place to DEBUG_ASSERT.
+
     // Create a thread for the unplug.  We will cause the target CPU to
     // context switch to this thread.  After this happens, it should no
     // longer be accessing system state and can be safely shut down.
@@ -323,8 +331,8 @@ static zx_status_t mp_unplug_cpu_mask_single_locked(cpu_num_t cpu_id) {
 
     // Now that the CPU is no longer processing tasks, move all of its timers
     timer_transition_off_cpu(cpu_id);
-    // Move the CPU's DPCs to the current CPU.
-    dpc_transition_off_cpu(cpu_id);
+    // Move the CPU's queued DPCs to the current CPU.
+    dpc_shutdown_transition_off_cpu(cpu_id);
 
     status = platform_mp_cpu_unplug(cpu_id);
     if (status != ZX_OK) {

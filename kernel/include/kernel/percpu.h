@@ -43,6 +43,10 @@ struct percpu {
     // dpc context
     list_node_t dpc_list;
     event_t dpc_event;
+    // request the dpc thread to stop by setting to true; guarded by dpc_lock
+    bool dpc_stop;
+    // each cpu has a dedicated thread for processing dpcs
+    thread_t* dpc_thread;
 } __CPU_ALIGN;
 
 // the kernel per-cpu structure

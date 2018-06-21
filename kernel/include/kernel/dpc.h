@@ -42,7 +42,28 @@ zx_status_t dpc_queue(dpc_t* dpc, bool reschedule);
 // does not force a reschedule
 zx_status_t dpc_queue_thread_locked(dpc_t* dpc);
 
-// Moves pending dpcs for the given CPU to the caller's CPU
-void dpc_transition_off_cpu(uint cpu);
+// Begins the DPC shutdown process for |cpu|.
+//
+// Shutting down a DPC queue is a two-phase process.  This is the first phase.  See
+// |dpc_shutdown_transition_off_cpu| for the second phase.
+//
+// This function:
+// - stops servicing the queue
+// - waits for any in-progress DPC to complete
+// - ensures no queued DPCs will begin executing
+// - joins the DPC thread
+//
+// Upon completion, |cpu| may have unexecuted DPCs and |dpc_queue| will continue to queue new DPCs.
+//
+// Once |cpu| is no longer executing tasks, finish the shutdown process by calling
+// |dpc_shutdown_transition_off_cpu|.
+void dpc_shutdown(uint cpu);
+
+// Moves queued DPCs from |cpu| to the caller's CPU.
+//
+// This is the second phase of DPC shutdown.  See |dpc_shutdown|.
+//
+// Should only be called after |cpu| has stopped executing tasks.
+void dpc_shutdown_transition_off_cpu(uint cpu);
 
 __END_CDECLS

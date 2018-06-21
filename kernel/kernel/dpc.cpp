@@ -65,7 +65,34 @@ zx_status_t dpc_queue_thread_locked(dpc_t* dpc) {
     return ZX_OK;
 }
 
-void dpc_transition_off_cpu(uint cpu_id) {
+void dpc_shutdown(uint cpu_id) {
+    DEBUG_ASSERT(cpu_id < SMP_MAX_CPUS);
+
+    spin_lock_saved_state_t state;
+    spin_lock_irqsave(&dpc_lock, state);
+
+    DEBUG_ASSERT(!percpu[cpu_id].dpc_stop);
+
+    // Ask the DPC thread to terminate.
+    percpu[cpu_id].dpc_stop = true;
+
+    // Take the thread pointer so we can join outside the spinlock.
+    thread_t* t = percpu[cpu_id].dpc_thread;
+    percpu[cpu_id].dpc_thread = nullptr;
+
+    spin_unlock_irqrestore(&dpc_lock, state);
+
+    // Wake it.
+    event_signal(&percpu[cpu_id].dpc_event, false);
+
+    // Wait for it to terminate.
+    int ret = 0;
+    zx_status_t status = thread_join(t, &ret, ZX_TIME_INFINITE);
+    DEBUG_ASSERT(status == ZX_OK);
+    DEBUG_ASSERT(ret == 0);
+}
+
+void dpc_shutdown_transition_off_cpu(uint cpu_id) {
     DEBUG_ASSERT(cpu_id < SMP_MAX_CPUS);
 
     spin_lock_saved_state_t state;
@@ -74,6 +101,10 @@ void dpc_transition_off_cpu(uint cpu_id) {
     uint cur_cpu = arch_curr_cpu_num();
     DEBUG_ASSERT(cpu_id != cur_cpu);
 
+    // The DPC thread should already be stopped.
+    DEBUG_ASSERT(percpu[cpu_id].dpc_stop);
+    DEBUG_ASSERT(percpu[cpu_id].dpc_thread == nullptr);
+
     list_node_t* src_list = &percpu[cpu_id].dpc_list;
     list_node_t* dst_list = &percpu[cur_cpu].dpc_list;
 
@@ -81,9 +112,13 @@ void dpc_transition_off_cpu(uint cpu_id) {
     while ((dpc = list_remove_head_type(src_list, dpc_t, node))) {
         list_add_tail(dst_list, &dpc->node);
     }
-    spin_unlock_irqrestore(&dpc_lock, state);
 
-    event_signal(&percpu[cur_cpu].dpc_event, false);
+    // Reset the state so we can restart DPC processing if the CPU comes back online.
+    DEBUG_ASSERT(list_is_empty(&percpu[cpu_id].dpc_list));
+    percpu[cpu_id].dpc_stop = false;
+    event_destroy(&percpu[cpu_id].dpc_event);
+
+    spin_unlock_irqrestore(&dpc_lock, state);
 }
 
 static int dpc_thread(void* arg) {
@@ -104,6 +139,11 @@ static int dpc_thread(void* arg) {
         DEBUG_ASSERT(err == ZX_OK);
 
         spin_lock_irqsave(&dpc_lock, state);
+
+        if (cpu->dpc_stop) {
+            spin_unlock_irqrestore(&dpc_lock, state);
+            return 0;
+        }
 
         // pop a dpc off the list, make a local copy.
         dpc_t* dpc = list_remove_head_type(list, dpc_t, node);
@@ -137,12 +177,13 @@ void dpc_init_for_cpu(void) {
 
     list_initialize(&cpu->dpc_list);
     event_init(&cpu->dpc_event, false, 0);
+    cpu->dpc_stop = false;
 
     char name[10];
     snprintf(name, sizeof(name), "dpc-%u", cpu_num);
-    thread_t* t = thread_create(name, &dpc_thread, NULL, DPC_THREAD_PRIORITY, DEFAULT_STACK_SIZE);
-    thread_set_cpu_affinity(t, cpu_num_to_mask(cpu_num));
-    thread_detach_and_resume(t);
+    cpu->dpc_thread = thread_create(name, &dpc_thread, NULL, DPC_THREAD_PRIORITY, DEFAULT_STACK_SIZE);
+    thread_set_cpu_affinity(cpu->dpc_thread, cpu_num_to_mask(cpu_num));
+    thread_resume(cpu->dpc_thread);
 }
 
 static void dpc_init(unsigned int level) {

@@ -483,8 +483,11 @@ static void migrate_current_thread(thread_t* current_thread) TA_REQ(thread_lock)
 }
 
 // migrate all non-pinned threads assigned to |old_cpu| to other queues
+//
+// must be called on |old_cpu|
 void sched_transition_off_cpu(cpu_num_t old_cpu) {
     DEBUG_ASSERT(spin_lock_held(&thread_lock));
+    DEBUG_ASSERT(old_cpu == arch_curr_cpu_num());
 
     // Ensure we do not get scheduled on anymore.
     mp_set_curr_cpu_active(false);
