@@ -98,7 +98,6 @@ multiconst!(zx_status_t, [
     ZX_ERR_NOT_SUPPORTED     = -2;
     ZX_ERR_NO_RESOURCES      = -3;
     ZX_ERR_NO_MEMORY         = -4;
-    ZX_ERR_CALL_FAILED       = -5;
     ZX_ERR_INTERRUPTED_RETRY = -6;
     ZX_ERR_INVALID_ARGS      = -10;
     ZX_ERR_BAD_HANDLE        = -11;

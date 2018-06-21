@@ -168,7 +168,6 @@ extern {
         args: *const zx_channel_call_args_t,
         actual_bytes: *mut u32,
         actual_handles: *mut u32,
-        read_status: *mut zx_status_t
         ) -> zx_status_t;
 
     pub fn zx_channel_call_finish(
@@ -176,7 +175,6 @@ extern {
         args: *const zx_channel_call_args_t,
         actual_bytes: *mut u32,
         actual_handles: *mut u32,
-        read_status: *mut zx_status_t
         ) -> zx_status_t;
 
     pub fn zx_channel_call(
@@ -186,7 +184,6 @@ extern {
         args: *const zx_channel_call_args_t,
         actual_bytes: *mut u32,
         actual_handles: *mut u32,
-        read_status: *mut zx_status_t
         ) -> zx_status_t;
 
     pub fn zx_socket_create(

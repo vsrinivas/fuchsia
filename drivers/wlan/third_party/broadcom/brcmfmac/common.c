@@ -181,7 +181,7 @@ static zx_status_t brcmf_c_process_clm_blob(struct brcmf_if* ifp) {
     }
 
     brcmf_dbg(TEMP, "* * Would have requested firmware name %s", clm_name);
-    err = ZX_ERR_CALL_FAILED;
+    err = ZX_ERR_INTERNAL;
 //    err = request_firmware(&clm, clm_name, dev);
     if (err != ZX_OK) {
         brcmf_info("no clm_blob available(err=%d), device may have limited channels available\n",

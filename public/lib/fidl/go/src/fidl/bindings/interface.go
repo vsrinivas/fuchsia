@@ -130,7 +130,7 @@ func (p *Proxy) Call(ordinal uint32, req Payload, resp Payload) error {
 	}
 
 	// Make the IPC call.
-	cnb, cnh, _, err := p.Channel.Call(0, zx.TimensecInfinite, respb[:nb], resph[:nh], respb[:], resph[:])
+	cnb, cnh, err := p.Channel.Call(0, zx.TimensecInfinite, respb[:nb], resph[:nh], respb[:], resph[:])
 	if err != nil {
 		return err
 	}

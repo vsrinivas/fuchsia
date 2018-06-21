@@ -179,7 +179,7 @@ zx_status_t ProcessBuilder::Prepare(std::string* error_message) {
   }
   fuchsia::process::CreateWithoutStartingResult result;
   if (!launcher_->CreateWithoutStarting(std::move(launch_info_), &result))
-    return ZX_ERR_CALL_FAILED;
+    return ZX_ERR_PEER_CLOSED;
   if (result.status != ZX_OK) {
     if (error_message)
       *error_message = result.error_message;

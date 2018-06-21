@@ -50,7 +50,6 @@ assoc_values!(Status, [
     NOT_SUPPORTED      = sys::ZX_ERR_NOT_SUPPORTED;
     NO_RESOURCES       = sys::ZX_ERR_NO_RESOURCES;
     NO_MEMORY          = sys::ZX_ERR_NO_MEMORY;
-    CALL_FAILED        = sys::ZX_ERR_CALL_FAILED;
     INTERRUPTED_RETRY  = sys::ZX_ERR_INTERRUPTED_RETRY;
     INVALID_ARGS       = sys::ZX_ERR_INVALID_ARGS;
     BAD_HANDLE         = sys::ZX_ERR_BAD_HANDLE;
@@ -151,7 +150,6 @@ impl From<Status> for io::ErrorKind {
             Status::NOT_SUPPORTED |
             Status::NO_RESOURCES |
             Status::NO_MEMORY |
-            Status::CALL_FAILED |
             _ => Other,
         }
     }

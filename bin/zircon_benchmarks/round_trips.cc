@@ -310,10 +310,9 @@ class ChannelCallTest {
   void Run() {
     uint32_t bytes_read;
     uint32_t handles_read;
-    zx_status_t read_status;
     zx_status_t status =
         zx_channel_call(client_, 0, ZX_TIME_INFINITE, &args_, &bytes_read,
-                        &handles_read, &read_status);
+                        &handles_read);
     FXL_CHECK(status == ZX_OK);
   }
 
