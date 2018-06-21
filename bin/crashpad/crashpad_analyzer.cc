@@ -73,24 +73,20 @@ std::string GetSystemLogToFile() {
     return std::string();
   }
 
-  std::vector<std::string> result;
   char buf[ZX_LOG_RECORD_MAX + 1];
   zx_log_record_t* rec = (zx_log_record_t*)buf;
-  for (;;) {
-    if (log.read(ZX_LOG_RECORD_MAX, rec, 0) > 0) {
-      if (rec->datalen && (rec->data[rec->datalen - 1] == '\n')) {
-        rec->datalen--;
-      }
-      rec->data[rec->datalen] = 0;
-
-      dprintf(fd.get(), "[%05d.%03d] %05" PRIu64 ".%05" PRIu64 "> %s\n",
-              (int)(rec->timestamp / 1000000000ULL),
-              (int)((rec->timestamp / 1000000ULL) % 1000ULL), rec->pid,
-              rec->tid, rec->data);
-    } else {
-      return std::string(filename);
+  while (log.read(ZX_LOG_RECORD_MAX, rec, 0) > 0) {
+    if (rec->datalen && (rec->data[rec->datalen - 1] == '\n')) {
+      rec->datalen--;
     }
+    rec->data[rec->datalen] = 0;
+
+    dprintf(fd.get(), "[%05d.%03d] %05" PRIu64 ".%05" PRIu64 "> %s\n",
+            (int)(rec->timestamp / 1000000000ULL),
+            (int)((rec->timestamp / 1000000ULL) % 1000ULL), rec->pid,
+            rec->tid, rec->data);
   }
+  return std::string(filename);
 }
 
 std::string GetVersion() {
