@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #![deny(warnings)]
-#![feature(rustc_private)]
 
 extern crate failure;
 extern crate fidl;

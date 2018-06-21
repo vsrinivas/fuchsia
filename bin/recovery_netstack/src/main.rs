@@ -7,7 +7,6 @@
 #![feature(const_fn)]
 #![feature(never_type)]
 #![feature(nll)]
-#![feature(nonzero)]
 #![feature(specialization)]
 #![feature(try_from)]
 // In case we roll the toolchain and something we're using as a feature has been
