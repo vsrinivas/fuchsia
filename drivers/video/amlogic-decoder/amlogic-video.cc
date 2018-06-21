@@ -132,10 +132,7 @@ void AmlogicVideo::EnableClockGate() {
 }
 
 void AmlogicVideo::DisableClockGate() {
-  HhiGclkMpeg2::Get()
-      .ReadFrom(hiubus_.get())
-      .set_vpu_interrupt(false)
-      .WriteTo(hiubus_.get());
+  // Keep VPU interrupt enabled, as it's used for vsync by the display.
   HhiGclkMpeg1::Get()
       .ReadFrom(hiubus_.get())
       .set_u_parser_top(false)
