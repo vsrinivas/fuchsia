@@ -37,8 +37,10 @@ GfxSystem::~GfxSystem() {
     // escher::GlslangInitializeProcess() was never called).
     escher::GlslangFinalizeProcess();
   }
-  vulkan_instance_->proc_addrs().DestroyDebugReportCallbackEXT(
-      vulkan_instance_->vk_instance(), debug_report_callback_, nullptr);
+  if (vulkan_instance_) {
+    vulkan_instance_->proc_addrs().DestroyDebugReportCallbackEXT(
+        vulkan_instance_->vk_instance(), debug_report_callback_, nullptr);
+  }
 }
 
 std::unique_ptr<CommandDispatcher> GfxSystem::CreateCommandDispatcher(
