@@ -39,10 +39,6 @@
              path="third_party/android/platform/system/core"
              remote="https://fuchsia.googlesource.com/third_party/android/platform/system/core"
              revision="5e041a4f45c72e1f2c283af21a40880fbb938d26"/>
-    <project name="third_party/angle"
-             path="third_party/angle"
-             remote="https://chromium.googlesource.com/angle/angle"
-             revision="1a3bbaa88194d701e2d70b665f8abec3e6c8d5e9"/>
     <project name="third_party/asio"
              path="third_party/asio"
              remote="https://fuchsia.googlesource.com/third_party/asio"
