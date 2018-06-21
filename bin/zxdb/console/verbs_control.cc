@@ -46,7 +46,7 @@ Command syntax
       "thread 1"
           Select thread with ID 1 to be the default.
 
-  Verb-noun combinations
+  Noun-Verb combinations
       "thread 4 step"
           Steps thread 4 of the current process regardless of the currently
           selected thread.

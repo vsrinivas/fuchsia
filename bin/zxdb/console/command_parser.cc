@@ -146,67 +146,32 @@ Err ConsumeNoun(const std::vector<std::string>& tokens, size_t* token_index,
   return Err();
 }
 
-}  // namespace
+// Continue to consume nouns from the token stream until either no more tokens
+// have been found or we reached the end of tokens.
+//
+// If successful, it will add the nouns to the command and will update the
+// token_index to the next token to be evaluated.
+Err ConsumeNouns(const std::vector<std::string>& tokens, size_t* token_index,
+                 Command *output) {
+  bool found_noun = false;      // Whether the next token(s) were nouns
+  do {
+    Err err = ConsumeNoun(tokens, token_index, output, &found_noun);
+    if (err.has_error())
+      return err;
+  } while (found_noun && (*token_index < tokens.size()));
 
-Err TokenizeCommand(const std::string& input,
-                    std::vector<std::string>* result) {
-  result->clear();
-
-  // TODO(brettw) this will probably need some kind of quoting and escaping
-  // logic.
-  size_t cur = 0;
-  while (true) {
-    // Skip separators
-    while (cur < input.size() && IsTokenSeparator(input[cur])) {
-      ++cur;
-    }
-    if (cur == input.size())
-      break;
-    size_t token_begin = cur;
-
-    // Skip to end of token.
-    while (cur < input.size() && !IsTokenSeparator(input[cur])) {
-      ++cur;
-    }
-    if (cur == token_begin)
-      break;  // Got to end of input.
-
-    // Emit token.
-    result->push_back(input.substr(token_begin, cur - token_begin));
-  }
-
-  // This returns an Err() to allow for adding escaping errors in the future.
   return Err();
 }
 
-Err ParseCommand(const std::string& input, Command* output) {
-  *output = Command();
-
-  std::vector<std::string> tokens;
-  Err err = TokenizeCommand(input, &tokens);
-  if (err.has_error() || tokens.empty())
-    return err;
-
-  return ParseCommand(tokens, output);
-}
-
-Err ParseCommand(const std::vector<std::string>& tokens, Command* output) {
-  *output = Command();
-  if (tokens.empty())
-    return Err();
-
-  size_t token_index = 0;
-  while (token_index < tokens.size()) {
-    bool had_noun = false;
-    Err err = ConsumeNoun(tokens, &token_index, output, &had_noun);
-    if (err.has_error())
-      return err;
-    if (!had_noun)
-      break;
-  }
-
-  if (token_index == tokens.size())
-    return Err();  // No verb specified (for example "process 2").
+// Consumes the next token expecting to find a verb. If valid it will register
+// the noun into the command and will advance the token_index variable.
+//
+// Will update a given pointer to the respective VerbRecord. We return by
+// pointer because VerbRecords are unique and non-copyable/movable.
+Err ConsumeVerb(const std::vector<std::string>& tokens, size_t* token_index_ptr,
+                Command* output, const VerbRecord **verb_record) {
+  // Reference makes the code easier to understand
+  size_t& token_index = *token_index_ptr;
 
   // Consume the verb.
   const auto& verb_strings = GetStringVerbMap();
@@ -222,26 +187,45 @@ Err ParseCommand(const std::vector<std::string>& tokens, Command* output) {
   const auto& verbs = GetVerbs();
   auto found_verb = verbs.find(output->verb());
   FXL_DCHECK(found_verb != verbs.end());  // Valid verb should always be found.
-  const VerbRecord& verb_record = found_verb->second;
+  *verb_record = &found_verb->second;
+
+  return Err();
+}
+
+// Consumes tokens and interprets them as switches. Each verb has a particular
+// set of switches associated to it. The appeareance of another switch means
+// the command is erroneous.
+//
+// If successful, it will set the switches to the command and will update the
+// token_index to the next token to be evaluated.
+Err ConsumeSwitches(const std::vector<std::string>& tokens, size_t* token_index_ptr,
+                    Command* output, const VerbRecord& verb_record) {
+  // Reference makes the code easier to understand
+  size_t& token_index = *token_index_ptr;
 
   // Look for switches.
   while (token_index < tokens.size()) {
     const std::string& token = tokens[token_index];
+
+    // "--" marks the end of switches.
     if (token == "--") {
-      // "--" marks the end of switches.
       token_index++;
       break;
     }
+
+    // Not a switch, everything else is an arg.
     if (token[0] != '-')
-      break;  // Not a switch, everything else is an arg.
+      break;
+
     if (token.size() == 1)
       return Err("Invalid switch \"-\".");
 
     const SwitchRecord* sw_record = nullptr;
     std::string value;
     bool next_token_is_value = false;
+
     if (token[1] == '-') {
-      // Two-hyphen switch.
+      // Two-hyphen (--) switch.
       size_t equals_index = std::string::npos;
       sw_record = FindLongSwitch(token, verb_record, &equals_index);
       if (!sw_record)
@@ -294,6 +278,82 @@ Err ParseCommand(const std::vector<std::string>& tokens, Command* output) {
     token_index++;
   }
 
+  return Err();
+}
+
+}  // namespace
+
+Err TokenizeCommand(const std::string& input,
+                    std::vector<std::string>* result) {
+  result->clear();
+
+  // TODO(brettw) this will probably need some kind of quoting and escaping
+  // logic.
+  size_t cur = 0;
+  while (true) {
+    // Skip separators
+    while (cur < input.size() && IsTokenSeparator(input[cur])) {
+      ++cur;
+    }
+    if (cur == input.size())
+      break;
+    size_t token_begin = cur;
+
+    // Skip to end of token.
+    while (cur < input.size() && !IsTokenSeparator(input[cur])) {
+      ++cur;
+    }
+    if (cur == token_begin)
+      break;  // Got to end of input.
+
+    // Emit token.
+    result->push_back(input.substr(token_begin, cur - token_begin));
+  }
+
+  // This returns an Err() to allow for adding escaping errors in the future.
+  return Err();
+}
+
+Err ParseCommand(const std::string& input, Command* output) {
+  *output = Command();
+
+  std::vector<std::string> tokens;
+  Err err = TokenizeCommand(input, &tokens);
+  if (err.has_error() || tokens.empty())
+    return err;
+
+  return ParseCommand(tokens, output);
+}
+
+Err ParseCommand(const std::vector<std::string>& tokens, Command* output) {
+  *output = Command();
+  if (tokens.empty())
+    return Err();
+
+  // Keep track of the next token to evaluate
+  size_t token_index = 0;
+
+  // We look for all the possible nouns within the tokens
+  Err noun_err = ConsumeNouns(tokens, &token_index, output);
+  if (noun_err.has_error())
+    return noun_err;
+
+  // If no more tokens, then no verb was specified (for example "process 2").
+  if (token_index == tokens.size())
+    return Err();
+
+  // We look for a verb after the nouns and get a reference to the global
+  // associated VerbRecord associated with it.
+  const VerbRecord *verb_record;
+  Err verb_err = ConsumeVerb(tokens, &token_index, output, &verb_record);
+  if (verb_err.has_error())
+    return verb_err;
+
+  Err switch_err = ConsumeSwitches(tokens, &token_index, output, *verb_record);
+  if (switch_err.has_error())
+    return switch_err;
+
+  // Every token left is an argument to the command
   std::vector<std::string> args(tokens.begin() + token_index, tokens.end());
   output->set_args(std::move(args));
   return Err();
