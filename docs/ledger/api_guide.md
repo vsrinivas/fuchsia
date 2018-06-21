@@ -225,7 +225,7 @@ commits, based on best-effort, not-guaranteed-to-be-right, timestamps of each
 commit.
 
 The client might opt for a different merge policy by implementing the
-`MergeResolverFactory` interface and setting it through a Ledger connection.
+`ConflictResolverFactory` interface and setting it through a Ledger connection.
 
 Available conflict resolution policies:
 
