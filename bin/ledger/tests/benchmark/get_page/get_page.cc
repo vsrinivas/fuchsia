@@ -45,12 +45,17 @@ GetPageBenchmark::GetPageBenchmark(async::Loop* loop, size_t requests_count,
 }
 
 void GetPageBenchmark::Run() {
-  ledger::Status status = test::GetLedger(
-      loop_, startup_context_.get(), component_controller_.NewRequest(),
-      nullptr, "get_page", tmp_dir_.path(), &ledger_);
-  QuitOnError([this] { loop_->Quit(); }, status, "GetLedger");
-  page_id_ = fidl::MakeOptional(generator_.MakePageId());
-  RunSingle(requests_count_);
+  test::GetLedger(startup_context_.get(), component_controller_.NewRequest(),
+                  nullptr, "get_page", tmp_dir_.path(), QuitLoopClosure(),
+                  [this](ledger::Status status, ledger::LedgerPtr ledger) {
+                    if (QuitOnError(QuitLoopClosure(), status, "GetLedger")) {
+                      return;
+                    }
+                    ledger_ = std::move(ledger);
+
+                    page_id_ = fidl::MakeOptional(generator_.MakePageId());
+                    RunSingle(requests_count_);
+                  });
 }
 
 void GetPageBenchmark::RunSingle(size_t request_number) {
@@ -63,8 +68,8 @@ void GetPageBenchmark::RunSingle(size_t request_number) {
   ledger::PagePtr page;
   ledger_->GetPage(reuse_ ? fidl::Clone(page_id_) : nullptr, page.NewRequest(),
                    [this, request_number](ledger::Status status) {
-                     if (benchmark::QuitOnError([this] { loop_->Quit(); },
-                                                status, "Ledger::GetPage")) {
+                     if (QuitOnError(QuitLoopClosure(), status,
+                                     "Ledger::GetPage")) {
                        return;
                      }
                      TRACE_ASYNC_END("benchmark", "get page",
@@ -77,6 +82,10 @@ void GetPageBenchmark::RunSingle(size_t request_number) {
 void GetPageBenchmark::ShutDown() {
   test::KillLedgerProcess(&component_controller_);
   loop_->Quit();
+}
+
+fit::closure GetPageBenchmark::QuitLoopClosure() {
+  return [this] { loop_->Quit(); };
 }
 
 }  // namespace benchmark

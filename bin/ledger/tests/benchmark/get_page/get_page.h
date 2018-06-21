@@ -5,9 +5,10 @@
 #ifndef PERIDOT_BIN_LEDGER_TESTS_BENCHMARK_GET_PAGE_GET_PAGE_H_
 #define PERIDOT_BIN_LEDGER_TESTS_BENCHMARK_GET_PAGE_GET_PAGE_H_
 
-#include <lib/async-loop/cpp/loop.h>
-
 #include <vector>
+
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/fit/function.h>
 
 #include "lib/app/cpp/startup_context.h"
 #include "lib/fxl/files/scoped_temp_dir.h"
@@ -32,6 +33,7 @@ class GetPageBenchmark {
  private:
   void RunSingle(size_t request_number);
   void ShutDown();
+  fit::closure QuitLoopClosure();
 
   async::Loop* const loop_;
   files::ScopedTempDir tmp_dir_;
