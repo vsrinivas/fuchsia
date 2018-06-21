@@ -529,12 +529,10 @@ zx_status_t IntelAudioDsp::LoadFirmware() {
     }
 
     // Wait for firwmare boot
-    st = ipc_.WaitForFirmwareReady(INTEL_ADSP_BASE_FW_INIT_TIMEOUT_NSEC);
-    if (st != ZX_OK) {
-        LOG(ERROR, "Error waiting for DSP base firmware entry (err %d, fw_status = 0x%08x)\n",
-                   st, REG_RD(&fw_regs()->fw_status));
-        return st;
-    }
+    // Read FW_STATUS first... Polling this field seems to affect something in the DSP.
+    // If we wait for the FW Ready IPC first, sometimes FW_STATUS will not equal
+    // ADSP_FW_STATUS_STATE_ENTER_BASE_FW when this times out, but if we then poll
+    // FW_STATUS the value will transition to the expected value.
     st = WaitCondition(INTEL_ADSP_BASE_FW_INIT_TIMEOUT_NSEC,
                        INTEL_ADSP_POLL_FW_NSEC,
                        [this]() -> bool {
@@ -543,7 +541,21 @@ zx_status_t IntelAudioDsp::LoadFirmware() {
                                   ADSP_FW_STATUS_STATE_ENTER_BASE_FW);
                        });
     if (st != ZX_OK) {
-        LOG(ERROR, "Got FW Ready IPC but fw_status = 0x%08x\n", REG_RD(&fw_regs()->fw_status));
+        LOG(ERROR, "Error waiting for DSP base firmware entry (err %d, fw_status = 0x%08x)\n",
+                   st, REG_RD(&fw_regs()->fw_status));
+        return st;
+    }
+
+    // Stop the DMA
+    loader.StopTransfer();
+
+    // Now check whether we received the FW Ready IPC. Receiving this IPC indicates the
+    // IPC system is ready. Both FW_STATUS = ADSP_FW_STATUS_STATE_ENTER_BASE_FW and
+    // receiving the IPC are required for the DSP to be operational.
+    st = ipc_.WaitForFirmwareReady(INTEL_ADSP_BASE_FW_INIT_TIMEOUT_NSEC);
+    if (st != ZX_OK) {
+        LOG(ERROR, "Error waiting for FW Ready IPC (err %d, fw_status = 0x%08x)\n",
+                   st, REG_RD(&fw_regs()->fw_status));
         return st;
     }
 

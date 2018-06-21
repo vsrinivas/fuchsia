@@ -146,5 +146,9 @@ zx_status_t IntelDspCodeLoader::TransferFirmware(const PinnedVmo& pinned_fw, siz
     return ZX_OK;
 }
 
+void IntelDspCodeLoader::StopTransfer() {
+    REG_CLR_BITS(&regs_->stream.ctl_sts.w, HDA_SD_REG_CTRL_RUN);
+}
+
 }  // namespace intel_hda
 }  // namespace audio

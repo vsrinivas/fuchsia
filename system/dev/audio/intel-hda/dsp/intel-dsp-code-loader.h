@@ -32,6 +32,7 @@ public:
 
     zx_status_t Initialize() __WARN_UNUSED_RESULT;
     zx_status_t TransferFirmware(const PinnedVmo& pinned_fw, size_t fw_size);
+    void StopTransfer();
 
 private:
     // Log prefix storage
