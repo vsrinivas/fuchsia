@@ -102,6 +102,8 @@ zx_status_t sdio_io_rw_direct(sdmmc_device_t* dev, bool write, uint32_t fn_idx,
 zx_status_t sdio_io_rw_extended(sdmmc_device_t *dev, bool write, uint32_t fn_idx,
                                 uint32_t reg_addr, bool incr, uint8_t *buf,
                                 uint32_t blk_count, uint32_t blk_size);
+zx_status_t sdio_enable_interrupt(void *ctx, uint8_t fn_idx);
+
 // MMC ops
 
 zx_status_t mmc_send_op_cond(sdmmc_device_t* dev, uint32_t ocr, uint32_t* rocr);

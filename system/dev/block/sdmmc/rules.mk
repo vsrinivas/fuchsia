@@ -14,6 +14,7 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/sd.c \
     $(LOCAL_DIR)/sdmmc.c \
     $(LOCAL_DIR)/sdio.c \
+    $(LOCAL_DIR)/sdio-interrupts.c \
 
 MODULE_STATIC_LIBS := system/ulib/ddk system/ulib/sync system/ulib/pretty
 

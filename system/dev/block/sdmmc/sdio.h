@@ -28,8 +28,11 @@ typedef struct sdio_func_info {
     uint32_t manufacturer_id;
     uint32_t product_id;
     uint32_t max_blk_size;
+    uint16_t cur_blk_size;
     uint32_t max_tran_speed;
     uint8_t  fn_intf_code;
+    bool enabled;
+    bool intr_enabled;
 } sdio_func_info_t;
 
 typedef struct sdio_device_info {

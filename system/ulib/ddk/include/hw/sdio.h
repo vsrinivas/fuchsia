@@ -47,6 +47,7 @@
 // IO_RW_EXTENDED Fields
 #define SDIO_IO_RW_EXTD_BYTE_BLK_COUNT_LOC      0
 #define SDIO_IO_RW_EXTD_BYTE_BLK_COUNT_MASK     0x000001ff
+#define SDIO_IO_RW_EXTD_MAX_BLKS_PER_CMD        511 // 9 bits
 #define SDIO_IO_RW_EXTD_REG_ADDR_LOC            9
 #define SDIO_IO_RW_EXTD_REG_ADDR_MASK           0x03fffe00
 #define SDIO_IO_RW_EXTD_OP_CODE_INCR            0x04000000
@@ -76,7 +77,10 @@
 #define SDIO_CIA_CCCR_SD_FORMAT_VER_ADDR        0x01
 #define SDIO_CIA_CCCR_IOEx_EN_FUNC_ADDR         0x02
 #define SDIO_CIA_CCCR_IORx_FUNC_RDY_ADDR        0x03
+
 #define SDIO_CIA_CCCR_IEN_INTR_EN_ADDR          0x04
+#define SDIO_ALL_INTR_ENABLED_MASK              0xFE
+
 #define SDIO_CIA_CCCR_INTx_INTR_PEN_ADDR        0x05
 #define SDIO_CIA_CCCR_ASx_ABORT_SEL_CR_ADDR     0x06
 
@@ -181,3 +185,7 @@ static const uint32_t sdio_cis_tpl_funce_tran_speed_val[16] =
     {0, 100, 120, 130, 150, 200, 250, 300, 350, 400, 450, 500, 550, 600, 700, 800};
 static const uint32_t sdio_cis_tpl_funce_tran_speed_unit[8] =
     {1, 10, 100, 1000, 0, 0, 0, 0 }; //Kbit/sec
+
+static inline bool sdio_fn_idx_valid(uint8_t fn_idx) {
+    return (fn_idx < SDIO_MAX_FUNCS);
+}
