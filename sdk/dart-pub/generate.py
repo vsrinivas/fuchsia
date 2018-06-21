@@ -27,6 +27,9 @@ class DartBuilder(Builder):
         self.output = output
 
     def install_dart_atom(self, atom):
+        if atom.tags['type'] != 'library':
+            print('Skipping non-library atom %s.' % atom.id)
+            return
         base = os.path.join(self.output, 'packages', atom.id.name)
         # Copy all the source files.
         for file in atom.files:
@@ -42,11 +45,17 @@ class DartBuilder(Builder):
             deps[name] = {
                 'path': '../%s' % name,
             }
-        # Add third-party dependencies which are already available in a separate
-        # manifest file.
-        deps['%s_third_party' % atom.id.name] = {
-            'path': 'third_party',
-        }
+        # Add third-party dependencies.
+        for tag, value in atom.tags.iteritems():
+            if not tag.startswith('3p:'):
+                continue
+            name = tag.split(':', 1)[1]
+            if value == 'flutter_sdk':
+                deps[name] = {
+                    'sdk': 'flutter',
+                }
+            else:
+                deps[name] = '^%s' % value
         pubspec = {
             'name': atom.id.name,
             'dependencies': deps,
