@@ -136,7 +136,7 @@ public:
 
             TestCaseResults* results = dest->AddTestCase(
                 test_suite, name, "nanoseconds");
-            results->values()->reserve(run_count_);
+            results->values.reserve(run_count_);
             for (uint32_t run = 0; run < run_count_; ++run) {
                 uint64_t time_taken = (GetTimestamp(run, step + 1) -
                                        GetTimestamp(run, step));

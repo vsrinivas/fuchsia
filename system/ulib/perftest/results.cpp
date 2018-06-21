@@ -67,14 +67,14 @@ double Median(const fbl::Vector<double>& values) {
 } // namespace
 
 SummaryStatistics TestCaseResults::GetSummaryStatistics() const {
-    ZX_ASSERT(values_.size() > 0);
-    double mean = Mean(values_);
+    ZX_ASSERT(values.size() > 0);
+    double mean = Mean(values);
     return SummaryStatistics{
-        .min = Min(values_),
-        .max = Max(values_),
+        .min = Min(values),
+        .max = Max(values),
         .mean = mean,
-        .std_dev = StdDev(values_, mean),
-        .median = Median(values_),
+        .std_dev = StdDev(values, mean),
+        .median = Median(values),
     };
 }
 
@@ -113,16 +113,16 @@ void WriteJSONString(FILE* out_file, const char* string) {
 
 void TestCaseResults::WriteJSON(FILE* out_file) const {
     fprintf(out_file, "{\"label\":");
-    WriteJSONString(out_file, label_.c_str());
+    WriteJSONString(out_file, label.c_str());
     fprintf(out_file, ",\"test_suite\":");
-    WriteJSONString(out_file, test_suite_.c_str());
+    WriteJSONString(out_file, test_suite.c_str());
     fprintf(out_file, ",\"unit\":");
-    WriteJSONString(out_file, unit_.c_str());
+    WriteJSONString(out_file, unit.c_str());
     fprintf(out_file, ",\"samples\":[");
 
     fprintf(out_file, "{\"values\":[");
     bool first = true;
-    for (const auto value : values_) {
+    for (const auto value : values) {
         if (!first) {
             fprintf(out_file, ",");
         }
@@ -166,7 +166,7 @@ void ResultsSet::PrintSummaryStatistics(FILE* out_file) const {
         SummaryStatistics stats = test.GetSummaryStatistics();
         fprintf(out_file, "%10.0f %10.0f %10.0f %10.0f %10.0f %-12s %s\n",
                 stats.mean, stats.std_dev, stats.min, stats.max, stats.median,
-                test.unit().c_str(), test.label().c_str());
+                test.unit.c_str(), test.label.c_str());
     }
 }
 

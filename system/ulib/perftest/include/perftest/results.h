@@ -36,21 +36,15 @@ struct SummaryStatistics {
 // This represents the results for a particular test case.  It contains a
 // sequence of values, which are typically the times taken by each run of
 // the test case, in order.
-class TestCaseResults {
-public:
+struct TestCaseResults {
     TestCaseResults(const fbl::String& test_suite, const fbl::String& label,
                     const fbl::String& unit)
-        : test_suite_(test_suite),
-          label_(label),
-          unit_(unit) {}
-
-    fbl::String label() const { return label_; }
-    fbl::String unit() const { return unit_; }
-    fbl::String test_suite() const { return test_suite_; }
-    fbl::Vector<double>* values() { return &values_; }
+        : test_suite(test_suite),
+          label(label),
+          unit(unit) {}
 
     void AppendValue(double value) {
-        values_.push_back(value);
+        values.push_back(value);
     }
 
     // A caller may check for errors using ferror().
@@ -58,11 +52,10 @@ public:
 
     SummaryStatistics GetSummaryStatistics() const;
 
-private:
-    fbl::String test_suite_;
-    fbl::String label_;
-    fbl::String unit_;
-    fbl::Vector<double> values_;
+    fbl::String test_suite;
+    fbl::String label;
+    fbl::String unit;
+    fbl::Vector<double> values;
 };
 
 // This represents the results for a set of test cases.

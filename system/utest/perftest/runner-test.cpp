@@ -42,7 +42,7 @@ static bool FailingTest(perftest::RepeatState* state) {
 
 // Sanity-check time values.
 static bool check_times(perftest::TestCaseResults* test_case) {
-    for (auto time_taken : *test_case->values()) {
+    for (auto time_taken : test_case->values) {
         EXPECT_GE(time_taken, 0);
         // Check for unreasonably large values, which suggest that we
         // subtracted timestamps incorrectly.
@@ -70,8 +70,8 @@ static bool test_results() {
     ASSERT_EQ(test_cases->size(), 1);
     // The output should have time values for the number of runs we requested.
     auto* test_case = &(*test_cases)[0];
-    EXPECT_EQ(test_case->values()->size(), kRunCount);
-    EXPECT_STR_EQ(test_case->label().c_str(), "no_op_example_test");
+    EXPECT_EQ(test_case->values.size(), kRunCount);
+    EXPECT_STR_EQ(test_case->label.c_str(), "no_op_example_test");
     EXPECT_TRUE(check_times(test_case));
 
     END_TEST;
@@ -158,11 +158,11 @@ static bool test_multistep_test() {
                     "test-suite", &test_list, kRunCount, "", out.fp(),
                     &results));
     ASSERT_EQ(results.results()->size(), 3);
-    EXPECT_STR_EQ((*results.results())[0].label().c_str(), "example_test.step1");
-    EXPECT_STR_EQ((*results.results())[1].label().c_str(), "example_test.step2");
-    EXPECT_STR_EQ((*results.results())[2].label().c_str(), "example_test.step3");
+    EXPECT_STR_EQ((*results.results())[0].label.c_str(), "example_test.step1");
+    EXPECT_STR_EQ((*results.results())[1].label.c_str(), "example_test.step2");
+    EXPECT_STR_EQ((*results.results())[2].label.c_str(), "example_test.step3");
     for (auto& test_case : *results.results()) {
-        EXPECT_EQ(test_case.values()->size(), kRunCount);
+        EXPECT_EQ(test_case.values.size(), kRunCount);
         EXPECT_TRUE(check_times(&test_case));
     }
 
