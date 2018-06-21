@@ -16,8 +16,7 @@ template <typename ResponseType>
 struct ResponseVariant {
   using CallbackType = std::function<void(grpc::Status, ResponseType)>;
 
-  static void Call(const CallbackType& callback,
-                   grpc::Status status,
+  static void Call(const CallbackType& callback, grpc::Status status,
                    ResponseType response) {
     callback(std::move(status), std::move(response));
   }
@@ -29,8 +28,7 @@ template <>
 struct ResponseVariant<google::protobuf::Empty> {
   using CallbackType = std::function<void(grpc::Status)>;
 
-  static void Call(const CallbackType& callback,
-                   grpc::Status status,
+  static void Call(const CallbackType& callback, grpc::Status status,
                    google::protobuf::Empty /*response*/) {
     callback(std::move(status));
   }
@@ -57,8 +55,7 @@ void MakeCall(
 }  // namespace
 
 FirestoreServiceImpl::FirestoreServiceImpl(
-    std::string server_id,
-    async_t* async,
+    std::string server_id, async_t* async,
     std::shared_ptr<grpc::Channel> channel)
     : server_id_(std::move(server_id)),
       database_path_("projects/" + server_id_ + "/databases/(default)"),
@@ -132,7 +129,8 @@ void FirestoreServiceImpl::Commit(
     google::firestore::v1beta1::CommitRequest request,
     std::shared_ptr<grpc::CallCredentials> call_credentials,
     std::function<void(grpc::Status,
-                       google::firestore::v1beta1::CommitResponse)> callback) {
+                       google::firestore::v1beta1::CommitResponse)>
+        callback) {
   FXL_DCHECK(async_ == async_get_default());
   CommitResponseCall& call = commit_response_calls_.emplace();
   call.context.set_credentials(call_credentials);
@@ -145,9 +143,10 @@ void FirestoreServiceImpl::Commit(
 void FirestoreServiceImpl::RunQuery(
     google::firestore::v1beta1::RunQueryRequest request,
     std::shared_ptr<grpc::CallCredentials> call_credentials,
-    std::function<void(
-        grpc::Status,
-        std::vector<google::firestore::v1beta1::RunQueryResponse>)> callback) {
+    std::function<
+        void(grpc::Status,
+             std::vector<google::firestore::v1beta1::RunQueryResponse>)>
+        callback) {
   FXL_DCHECK(async_ == async_get_default());
   auto context = std::make_unique<grpc::ClientContext>();
   context->set_credentials(call_credentials);

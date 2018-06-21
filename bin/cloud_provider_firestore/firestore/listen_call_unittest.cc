@@ -27,8 +27,7 @@ class TestListenStream : public ListenStream {
     write_tag = static_cast<std::function<void(bool)>*>(tag);
   }
   void Write(const google::firestore::v1beta1::ListenRequest& /*request*/,
-             grpc::WriteOptions /*options*/,
-             void* /*tag*/) override {}
+             grpc::WriteOptions /*options*/, void* /*tag*/) override {}
   void WritesDone(void* /*tag*/) override {}
   void Finish(grpc::Status* /*status*/, void* tag) override {
     finish_tag = static_cast<std::function<void(bool)>*>(tag);
@@ -43,8 +42,7 @@ class TestListenStream : public ListenStream {
   FXL_DISALLOW_COPY_AND_ASSIGN(TestListenStream);
 };
 
-class ListenCallTest : public ::testing::Test,
-                       public ListenCallClient {
+class ListenCallTest : public ::testing::Test, public ListenCallClient {
  public:
   ListenCallTest() {
     auto stream = std::make_unique<TestListenStream>();

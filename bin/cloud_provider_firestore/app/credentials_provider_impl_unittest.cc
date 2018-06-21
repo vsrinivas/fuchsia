@@ -18,8 +18,8 @@ namespace {
 class CredentialsProviderImplTest : public gtest::TestWithLoop {
  public:
   CredentialsProviderImplTest() {
-    auto firebase_auth = std::make_unique<firebase_auth::TestFirebaseAuth>(
-        dispatcher());
+    auto firebase_auth =
+        std::make_unique<firebase_auth::TestFirebaseAuth>(dispatcher());
     firebase_auth_ = firebase_auth.get();
     credentials_provider_ =
         std::make_unique<CredentialsProviderImpl>(std::move(firebase_auth));

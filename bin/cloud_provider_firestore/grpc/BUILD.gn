@@ -28,7 +28,7 @@ source_set("unittests") {
   deps = [
     ":grpc",
     "//garnet/public/lib/callback",
-    "//third_party/grpc:grpc++",
     "//third_party/googletest:gtest",
+    "//third_party/grpc:grpc++",
   ]
 }

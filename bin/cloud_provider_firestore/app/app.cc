@@ -15,8 +15,7 @@
 namespace cloud_provider_firestore {
 namespace {
 
-constexpr fxl::StringView kNoStatisticsReporting =
-    "disable_reporting";
+constexpr fxl::StringView kNoStatisticsReporting = "disable_reporting";
 
 struct AppParams {
   bool disable_statistics = false;

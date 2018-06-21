@@ -26,13 +26,9 @@ class TestListenCallHandler : public ListenCallHandler {
 TestFirestoreService::TestFirestoreService() : db_path_(), root_path_() {}
 TestFirestoreService::~TestFirestoreService() {}
 
-const std::string& TestFirestoreService::GetDatabasePath() {
-  return db_path_;
-}
+const std::string& TestFirestoreService::GetDatabasePath() { return db_path_; }
 
-const std::string& TestFirestoreService::GetRootPath() {
-  return root_path_;
-}
+const std::string& TestFirestoreService::GetRootPath() { return root_path_; }
 
 void TestFirestoreService::GetDocument(
     google::firestore::v1beta1::GetDocumentRequest request,
@@ -69,9 +65,10 @@ void TestFirestoreService::DeleteDocument(
 void TestFirestoreService::RunQuery(
     google::firestore::v1beta1::RunQueryRequest request,
     std::shared_ptr<grpc::CallCredentials> call_credentials,
-    std::function<void(
-        grpc::Status,
-        std::vector<google::firestore::v1beta1::RunQueryResponse>)> callback) {
+    std::function<
+        void(grpc::Status,
+             std::vector<google::firestore::v1beta1::RunQueryResponse>)>
+        callback) {
   run_query_records.push_back({std::move(request), std::move(callback)});
 }
 
@@ -79,7 +76,8 @@ void TestFirestoreService::Commit(
     google::firestore::v1beta1::CommitRequest request,
     std::shared_ptr<grpc::CallCredentials> /*call_credentials*/,
     std::function<void(grpc::Status,
-                       google::firestore::v1beta1::CommitResponse)> callback) {
+                       google::firestore::v1beta1::CommitResponse)>
+        callback) {
   commit_records.push_back({std::move(request), std::move(callback)});
 }
 

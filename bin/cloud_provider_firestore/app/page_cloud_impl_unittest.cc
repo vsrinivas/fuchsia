@@ -23,8 +23,7 @@ namespace cloud_provider_firestore {
 namespace {
 
 void SetTimestamp(google::firestore::v1beta1::Document* document,
-                  int64_t seconds,
-                  int32_t nanos) {
+                  int64_t seconds, int32_t nanos) {
   google::protobuf::Timestamp& timestamp =
       *((*document->mutable_fields())["timestamp"].mutable_timestamp_value());
   timestamp.set_seconds(seconds);
@@ -35,10 +34,8 @@ class PageCloudImplTest : public gtest::TestWithLoop {
  public:
   PageCloudImplTest()
       : test_credentials_provider_(dispatcher()),
-        page_cloud_impl_("page_path",
-                         &test_credentials_provider_,
-                         &firestore_service_,
-                         page_cloud_.NewRequest()) {}
+        page_cloud_impl_("page_path", &test_credentials_provider_,
+                         &firestore_service_, page_cloud_.NewRequest()) {}
   ~PageCloudImplTest() override {}
 
  protected:

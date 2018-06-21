@@ -17,8 +17,8 @@ namespace cloud_provider_firestore {
 class CloudProviderImplTest : public gtest::TestWithLoop {
  public:
   CloudProviderImplTest() {
-    auto firebase_auth = std::make_unique<firebase_auth::TestFirebaseAuth>(
-        dispatcher());
+    auto firebase_auth =
+        std::make_unique<firebase_auth::TestFirebaseAuth>(dispatcher());
     firebase_auth_ = firebase_auth.get();
     auto firestore_service = std::make_unique<TestFirestoreService>();
     firestore_service_ = firestore_service.get();

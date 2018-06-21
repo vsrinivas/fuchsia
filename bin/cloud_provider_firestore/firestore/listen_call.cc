@@ -54,9 +54,7 @@ ListenCall::ListenCall(ListenCallClient* client,
   });
 }
 
-ListenCall::~ListenCall() {
-  FXL_DCHECK(IsEmpty());
-}
+ListenCall::~ListenCall() { FXL_DCHECK(IsEmpty()); }
 
 void ListenCall::Write(google::firestore::v1beta1::ListenRequest request) {
   // It's only valid to perform a write after the connection was established,

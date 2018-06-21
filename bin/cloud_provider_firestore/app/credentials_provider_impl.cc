@@ -14,8 +14,7 @@ class FirebaseAuthPlugin : public grpc::MetadataCredentialsPlugin {
       : header_value_("Bearer " + token) {}
 
   grpc::Status GetMetadata(
-      grpc::string_ref /*service_url*/,
-      grpc::string_ref /*method_name*/,
+      grpc::string_ref /*service_url*/, grpc::string_ref /*method_name*/,
       const grpc::AuthContext& /*channel_auth_context*/,
       std::multimap<grpc::string, grpc::string>* metadata) override {
     // note: grpc seems to insist on lowercase "authorization", otherwise we get

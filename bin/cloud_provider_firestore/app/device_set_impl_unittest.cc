@@ -23,20 +23,14 @@ class DeviceSetImplTest : public gtest::TestWithLoop,
  public:
   DeviceSetImplTest()
       : test_credentials_provider_(dispatcher()),
-        device_set_impl_("user_path",
-                         &test_credentials_provider_,
-                         &firestore_service_,
-                         device_set_.NewRequest()),
+        device_set_impl_("user_path", &test_credentials_provider_,
+                         &firestore_service_, device_set_.NewRequest()),
         watcher_binding_(this) {}
 
   // cloud_provider::DeviceSetWatcher:
-  void OnCloudErased() override {
-    on_cloud_erased_calls_++;
-  }
+  void OnCloudErased() override { on_cloud_erased_calls_++; }
 
-  void OnNetworkError() override {
-    on_network_error_calls_++;
-  }
+  void OnNetworkError() override { on_network_error_calls_++; }
 
  protected:
   cloud_provider::DeviceSetPtr device_set_;

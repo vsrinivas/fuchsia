@@ -24,8 +24,7 @@ namespace cloud_provider_firestore {
 class PageCloudImpl : public cloud_provider::PageCloud {
  public:
   explicit PageCloudImpl(
-      std::string page_path,
-      CredentialsProvider* credentials_provider,
+      std::string page_path, CredentialsProvider* credentials_provider,
       FirestoreService* firestore_service,
       fidl::InterfaceRequest<cloud_provider::PageCloud> request);
   ~PageCloudImpl() override;
@@ -41,8 +40,7 @@ class PageCloudImpl : public cloud_provider::PageCloud {
                   AddCommitsCallback callback) override;
   void GetCommits(std::unique_ptr<cloud_provider::Token> min_position_token,
                   GetCommitsCallback callback) override;
-  void AddObject(fidl::VectorPtr<uint8_t> id,
-                 fuchsia::mem::Buffer data,
+  void AddObject(fidl::VectorPtr<uint8_t> id, fuchsia::mem::Buffer data,
                  AddObjectCallback callback) override;
   void GetObject(fidl::VectorPtr<uint8_t> id,
                  GetObjectCallback callback) override;

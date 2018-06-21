@@ -33,13 +33,9 @@ TEST_P(StringEncodingTest, BackAndForth) {
   EXPECT_EQ(data, decoded);
 }
 
-INSTANTIATE_TEST_CASE_P(ExampleData,
-                        StringEncodingTest,
-                        ::testing::Values(""_s,
-                                          "abcdef"_s,
-                                          "\x02\x7F"_s,
-                                          "~!@#$%^&*()_+-="_s,
-                                          "\0"_s,
+INSTANTIATE_TEST_CASE_P(ExampleData, StringEncodingTest,
+                        ::testing::Values(""_s, "abcdef"_s, "\x02\x7F"_s,
+                                          "~!@#$%^&*()_+-="_s, "\0"_s,
                                           "bazinga\0\0\0"_s));
 
 TEST(BatchEncodingTest, Empty) {

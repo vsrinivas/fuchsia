@@ -16,12 +16,12 @@ source_set("testing") {
   ]
 
   public_deps = [
-    "//zircon/public/lib/async-loop-cpp",
     "//garnet/public/lib/app/cpp",
     "//peridot/bin/cloud_provider_firestore/fidl",
     "//peridot/bin/cloud_provider_firestore/include",
     "//peridot/lib/firebase_auth/testing:service_account",
     "//peridot/public/lib/cloud_provider/fidl",
+    "//zircon/public/lib/async-loop-cpp",
   ]
 
   deps = [

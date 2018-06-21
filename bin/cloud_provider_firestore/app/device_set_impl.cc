@@ -44,9 +44,9 @@ class GrpcStatusAccumulator {
   grpc::Status result_status_ = grpc::Status::OK;
 };
 
-class GrpcStatusWaiter : public callback::BaseWaiter<GrpcStatusAccumulator,
-                                                     grpc::Status,
-                                                     grpc::Status> {
+class GrpcStatusWaiter
+    : public callback::BaseWaiter<GrpcStatusAccumulator, grpc::Status,
+                                  grpc::Status> {
  private:
   GrpcStatusWaiter()
       : callback::BaseWaiter<GrpcStatusAccumulator, grpc::Status, grpc::Status>(
@@ -57,8 +57,7 @@ class GrpcStatusWaiter : public callback::BaseWaiter<GrpcStatusAccumulator,
 }  // namespace
 
 DeviceSetImpl::DeviceSetImpl(
-    std::string user_path,
-    CredentialsProvider* credentials_provider,
+    std::string user_path, CredentialsProvider* credentials_provider,
     FirestoreService* firestore_service,
     fidl::InterfaceRequest<cloud_provider::DeviceSet> request)
     : user_path_(std::move(user_path)),

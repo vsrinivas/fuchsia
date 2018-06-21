@@ -44,8 +44,7 @@ class CloudProviderImpl : public cloud_provider::CloudProvider {
       GetDeviceSetCallback callback) override;
 
   void GetPageCloud(
-      fidl::VectorPtr<uint8_t> app_id,
-      fidl::VectorPtr<uint8_t> page_id,
+      fidl::VectorPtr<uint8_t> app_id, fidl::VectorPtr<uint8_t> page_id,
       fidl::InterfaceRequest<cloud_provider::PageCloud> page_cloud,
       GetPageCloudCallback callback) override;
 

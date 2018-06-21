@@ -77,8 +77,7 @@ google::firestore::v1beta1::StructuredQuery MakeCommitQuery(
 }  // namespace
 
 PageCloudImpl::PageCloudImpl(
-    std::string page_path,
-    CredentialsProvider* credentials_provider,
+    std::string page_path, CredentialsProvider* credentials_provider,
     FirestoreService* firestore_service,
     fidl::InterfaceRequest<cloud_provider::PageCloud> request)
     : page_path_(std::move(page_path)),

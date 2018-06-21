@@ -67,8 +67,7 @@ using RunQueryCall =
 // expose a callback-based API to the client.
 class FirestoreServiceImpl : public FirestoreService {
  public:
-  FirestoreServiceImpl(std::string server_id,
-                       async_t* async,
+  FirestoreServiceImpl(std::string server_id, async_t* async,
                        std::shared_ptr<grpc::Channel> channel);
 
   ~FirestoreServiceImpl() override;
