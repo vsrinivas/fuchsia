@@ -1,4 +1,7 @@
 {
+    "imports": [
+        "garnet/packages/tools/tiles"
+    ],
     "labels": [
         "//garnet/public/sdk:garnet"
     ]

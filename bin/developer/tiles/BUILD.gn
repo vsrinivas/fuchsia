@@ -1,0 +1,78 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+
+source_set("tiles_lib") {
+  sources = [
+    "tiles.cc",
+    "tiles.h",
+  ]
+
+  deps = [
+    "//garnet/public/lib/app/cpp",
+    "//garnet/public/lib/developer/tiles/fidl",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/ui/policy/fidl",
+    "//garnet/public/lib/ui/view_framework:view_provider",
+    "//garnet/public/lib/ui/views/cpp",
+    "//garnet/public/lib/ui/views/fidl:v1",
+  ]
+}
+
+executable("bin") {
+  output_name = "tiles"
+
+  sources = [
+    "main.cc",
+  ]
+
+  deps = [
+    ":tiles_lib",
+    "//garnet/public/lib/app/cpp",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/ui/policy/fidl",
+    "//garnet/public/lib/ui/view_framework:view_provider",
+    "//garnet/public/lib/ui/views/cpp",
+    "//garnet/public/lib/ui/views/fidl:v1",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/trace-provider",
+  ]
+}
+
+package("tiles") {
+  binary = "tiles"
+
+  deps = [
+    ":bin",
+  ]
+}
+
+executable("tiles_unittests") {
+  testonly = true
+
+  sources = [
+    "tiles_unittest.cc",
+  ]
+
+  deps = [
+    ":tiles_lib",
+    "//garnet/public/lib/app/cpp/testing",
+    "//third_party/googletest:gtest_main",
+  ]
+}
+
+package("tiles_tests") {
+  testonly = true
+
+  deps = [
+    ":tiles_unittests",
+  ]
+
+  tests = [
+    {
+      name = "tiles_unittests"
+    },
+  ]
+}

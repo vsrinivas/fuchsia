@@ -6,7 +6,8 @@
         "garnet/packages/tools/make-efi",
         "garnet/packages/tools/make-fuchsia-vol",
         "garnet/packages/tools/runmany",
-	"garnet/packages/tools/sl4f",
+        "garnet/packages/tools/sl4f",
+        "garnet/packages/tools/tiles",
         "garnet/packages/tools/vulkan_validation_layers",
         "garnet/packages/tools/zxdb"
     ]

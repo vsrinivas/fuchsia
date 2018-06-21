@@ -32,6 +32,7 @@ sdk("garnet") {
     "//garnet/go/src/fidl:fidlgen_sdk($host_toolchain)",
     "//garnet/go/src/pm:pm_bin_sdk($host_toolchain)",
     "//garnet/public/lib/app/fidl:fidl_sdk($fidl_toolchain)",
+    "//garnet/public/lib/developer/tiles/fidl:fidl_sdk($fidl_toolchain)",
     "//garnet/public/lib/fidl/cpp:cpp_sdk",
     "//garnet/public/lib/fidl/cpp:cpp_sdk",
     "//garnet/public/lib/fonts/fidl:fidl_sdk($fidl_toolchain)",

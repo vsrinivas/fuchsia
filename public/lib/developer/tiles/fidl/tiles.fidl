@@ -1,0 +1,25 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.developer.tiles;
+
+using fuchsia.math;
+using fuchsia.ui.views_v1;
+
+[Discoverable]
+interface Tiles {
+  // Instantiates a component by its URL and adds a tile backed by that component's ViewProvider.
+  // Returns a key for the tile that can be used for resizing or removing the tile, or 0 on failure.
+  1: AddTileFromURL(string url, vector<string>? args) -> (uint32 key);
+
+  // Adds a tile backed by a view from the view provider.
+  // Returns a key for the tile that can be used for resizing or removing the tile, or 0 on failure.
+  2: AddTileFromViewProvider(string url, fuchsia.ui.views_v1.ViewProvider provider) -> (uint32 key);
+
+  // Removes the tile with the given key.
+  3: RemoveTile(uint32 key);
+
+  // Returns a list of tiles.
+  5: ListTiles() -> (vector<uint32> keys, vector<string> urls, vector<fuchsia.math.SizeF> sizes);
+};
