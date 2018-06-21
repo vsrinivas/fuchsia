@@ -92,9 +92,6 @@ struct zx_proc_args {
 // See |fuchsia.ldsvc.Loader| for the interface definition.
 #define PA_LDSVC_LOADER          0x10
 
-// DEPRECATED: Use PA_LDSVC instead.
-#define PA_SVC_LOADER PA_LDSVC_LOADER
-
 // Handle to the VMO containing the ELF image of the system vDSO.  This
 // handle is duplicable, transferable, readable, and executable, but not
 // writable.  The contents of the VM object should be treated like any
