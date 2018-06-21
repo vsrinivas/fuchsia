@@ -250,7 +250,7 @@ extern {
         ) -> zx_status_t;
 
     pub fn zx_process_exit(
-        retcode: isize
+        retcode: i64
         );
 
     pub fn zx_process_create(
