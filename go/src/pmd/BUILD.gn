@@ -65,6 +65,9 @@ foreach(testpkg, test_packages) {
       "//garnet/public/lib/app/go/src/app",
       "//garnet/public/lib/fidl/go/src/fidl/bindings",
     ]
+    deps = [
+      "//zircon/public/lib/fs-management",
+    ]
     go_dependencies = common_dependencies
   }
 }
@@ -101,10 +104,7 @@ package("pmd_tests") {
   deprecated_system_image = true
   testonly = true
 
-  deps = [
-    "//zircon/public/lib/fs-management",
-  ]
-
+  deps = []
   tests = []
 
   foreach(testpkg, test_packages) {
