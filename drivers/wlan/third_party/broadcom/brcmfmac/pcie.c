@@ -515,21 +515,21 @@ static void brcmf_pcie_reset_device(struct brcmf_pciedev_info* devinfo) {
     }
 
     /* Disable ASPM */
-    brcmf_pcie_select_core(devinfo, BCMA_CORE_PCIE2);
+    brcmf_pcie_select_core(devinfo, CHIPSET_PCIE2_CORE);
     pci_read_config_dword(devinfo->pdev, BRCMF_PCIE_REG_LINK_STATUS_CTRL, &lsc);
     val = lsc & (~BRCMF_PCIE_LINK_STATUS_CTRL_ASPM_ENAB);
     pci_write_config_dword(devinfo->pdev, BRCMF_PCIE_REG_LINK_STATUS_CTRL, val);
 
     /* Watchdog reset */
-    brcmf_pcie_select_core(devinfo, BCMA_CORE_CHIPCOMMON);
+    brcmf_pcie_select_core(devinfo, CHIPSET_CHIPCOMMON_CORE);
     WRITECC32(devinfo, watchdog, 4);
     msleep(100);
 
     /* Restore ASPM */
-    brcmf_pcie_select_core(devinfo, BCMA_CORE_PCIE2);
+    brcmf_pcie_select_core(devinfo, CHIPSET_PCIE2_CORE);
     pci_write_config_dword(devinfo->pdev, BRCMF_PCIE_REG_LINK_STATUS_CTRL, lsc);
 
-    core = brcmf_chip_get_core(devinfo->ci, BCMA_CORE_PCIE2);
+    core = brcmf_chip_get_core(devinfo->ci, CHIPSET_PCIE2_CORE);
     if (core->rev <= 13) {
         for (i = 0; i < ARRAY_SIZE(cfg_offset); i++) {
             brcmf_pcie_write_reg32(devinfo, BRCMF_PCIE_PCIE2REG_CONFIGADDR, cfg_offset[i]);
@@ -544,7 +544,7 @@ static void brcmf_pcie_attach(struct brcmf_pciedev_info* devinfo) {
     uint32_t config;
 
     /* BAR1 window may not be sized properly */
-    brcmf_pcie_select_core(devinfo, BCMA_CORE_PCIE2);
+    brcmf_pcie_select_core(devinfo, CHIPSET_PCIE2_CORE);
     brcmf_pcie_write_reg32(devinfo, BRCMF_PCIE_PCIE2REG_CONFIGADDR, 0x4e0);
     config = brcmf_pcie_read_reg32(devinfo, BRCMF_PCIE_PCIE2REG_CONFIGDATA);
     brcmf_pcie_write_reg32(devinfo, BRCMF_PCIE_PCIE2REG_CONFIGDATA, config);
@@ -554,7 +554,7 @@ static void brcmf_pcie_attach(struct brcmf_pciedev_info* devinfo) {
 
 static zx_status_t brcmf_pcie_enter_download_state(struct brcmf_pciedev_info* devinfo) {
     if (devinfo->ci->chip == BRCM_CC_43602_CHIP_ID) {
-        brcmf_pcie_select_core(devinfo, BCMA_CORE_ARM_CR4);
+        brcmf_pcie_select_core(devinfo, CHIPSET_ARM_CR4_CORE);
         brcmf_pcie_write_reg32(devinfo, BRCMF_PCIE_ARMCR4REG_BANKIDX, 5);
         brcmf_pcie_write_reg32(devinfo, BRCMF_PCIE_ARMCR4REG_BANKPDA, 0);
         brcmf_pcie_write_reg32(devinfo, BRCMF_PCIE_ARMCR4REG_BANKIDX, 7);
@@ -568,7 +568,7 @@ static zx_status_t brcmf_pcie_exit_download_state(struct brcmf_pciedev_info* dev
     struct brcmf_core* core;
 
     if (devinfo->ci->chip == BRCM_CC_43602_CHIP_ID) {
-        core = brcmf_chip_get_core(devinfo->ci, BCMA_CORE_INTERNAL_MEM);
+        core = brcmf_chip_get_core(devinfo->ci, CHIPSET_INTERNAL_MEM_CORE);
         brcmf_chip_resetcore(core, 0, 0, 0);
     }
 
@@ -1548,7 +1548,7 @@ static void brcmf_pcie_setup(struct brcmf_device* dev, zx_status_t ret,
         goto fail;
     }
 
-    brcmf_pcie_select_core(devinfo, BCMA_CORE_PCIE2);
+    brcmf_pcie_select_core(devinfo, CHIPSET_PCIE2_CORE);
     ret = brcmf_pcie_request_irq(devinfo);
     if (ret != ZX_OK) {
         goto fail;
@@ -1776,7 +1776,7 @@ static zx_status_t brcmf_pcie_pm_leave_D3(struct brcmf_device* dev) {
         }
         brcmf_dbg(PCIE, "Hot resume, continue....\n");
         devinfo->state = BRCMFMAC_PCIE_STATE_UP;
-        brcmf_pcie_select_core(devinfo, BCMA_CORE_PCIE2);
+        brcmf_pcie_select_core(devinfo, CHIPSET_PCIE2_CORE);
         brcmf_bus_change_state(bus, BRCMF_BUS_UP);
         brcmf_pcie_intr_enable(devinfo);
         return ZX_OK;

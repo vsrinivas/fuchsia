@@ -1439,25 +1439,28 @@ static zx_status_t brcmf_usb_reset_resume(struct brcmf_usb_interface* intf) {
     return brcmf_fw_get_firmwares(&usb->dev, 0, devinfo->fw_name, NULL, brcmf_usb_probe_phase2);
 }
 
-#define BRCMF_USB_DEVICE(dev_id) \
-    { USB_DEVICE(BRCM_USB_VENDOR_ID_BROADCOM, dev_id) }
+#define BROADCOM_USB_DEVICE(dev_id) \
+    { .idVendor=BRCM_USB_VENDOR_ID_BROADCOM, .idProduct=dev_id }
 
 #define LINKSYS_USB_DEVICE(dev_id) \
-    { USB_DEVICE(BRCM_USB_VENDOR_ID_LINKSYS, dev_id) }
+    { .idVendor=BRCM_USB_VENDOR_ID_LINKSYS, .idProduct=dev_id }
 
 #define CYPRESS_USB_DEVICE(dev_id) \
-    { USB_DEVICE(CY_USB_VENDOR_ID_CYPRESS, dev_id) }
+    { .idVendor=CY_USB_VENDOR_ID_CYPRESS, .idProduct=dev_id }
+
+#define LG_USB_DEVICE(dev_id) \
+    { .idVendor=BRCM_USB_VENDOR_ID_LG, .idProduct=dev_id }
 
 static const struct brcmf_usb_device_id brcmf_usb_devid_table[] = {
-    BRCMF_USB_DEVICE(BRCM_USB_43143_DEVICE_ID),
-    BRCMF_USB_DEVICE(BRCM_USB_43236_DEVICE_ID),
-    BRCMF_USB_DEVICE(BRCM_USB_43242_DEVICE_ID),
-    BRCMF_USB_DEVICE(BRCM_USB_43569_DEVICE_ID),
+    BROADCOM_USB_DEVICE(BRCM_USB_43143_DEVICE_ID),
+    BROADCOM_USB_DEVICE(BRCM_USB_43236_DEVICE_ID),
+    BROADCOM_USB_DEVICE(BRCM_USB_43242_DEVICE_ID),
+    BROADCOM_USB_DEVICE(BRCM_USB_43569_DEVICE_ID),
     LINKSYS_USB_DEVICE(BRCM_USB_43235_LINKSYS_DEVICE_ID),
     CYPRESS_USB_DEVICE(CY_USB_4373_DEVICE_ID),
-    {USB_DEVICE(BRCM_USB_VENDOR_ID_LG, BRCM_USB_43242_LG_DEVICE_ID)},
+    LG_USB_DEVICE(BRCM_USB_43242_LG_DEVICE_ID),
     /* special entry for device with firmware loaded and running */
-    BRCMF_USB_DEVICE(BRCM_USB_BCMFW_DEVICE_ID),
+    BROADCOM_USB_DEVICE(BRCM_USB_BCMFW_DEVICE_ID),
     CYPRESS_USB_DEVICE(BRCM_USB_BCMFW_DEVICE_ID),
     {/* end: all zeroes */}
 };

@@ -3708,13 +3708,13 @@ static bool brcmf_sdio_probe_attach(struct brcmf_sdio* bus) {
     }
 
     /* Pick up the SDIO core info struct from chip.c */
-    bus->sdio_core = brcmf_chip_get_core(bus->ci, BCMA_CORE_SDIO_DEV);
+    bus->sdio_core = brcmf_chip_get_core(bus->ci, CHIPSET_SDIO_DEV_CORE);
     if (!bus->sdio_core) {
         goto fail;
     }
 
     /* Pick up the CHIPCOMMON core info struct, for bulk IO in bcmsdh.c */
-    sdiodev->cc_core = brcmf_chip_get_core(bus->ci, BCMA_CORE_CHIPCOMMON);
+    sdiodev->cc_core = brcmf_chip_get_core(bus->ci, CHIPSET_CHIPCOMMON_CORE);
     if (!sdiodev->cc_core) {
         goto fail;
     }

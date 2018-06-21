@@ -153,16 +153,16 @@ typedef uint32_t gfp_t;
         return 0;                                                                              \
     }
 
-#define BCMA_CORE_ARM_CM3      0x82a
-#define BCMA_CORE_INTERNAL_MEM 0x80e
-#define BCMA_CORE_ARM_CR4      0x83e
-#define BCMA_CORE_ARM_CA7      0x847
-#define BCMA_CORE_80211        0x812
-#define BCMA_CORE_PCIE2        0x83c
-#define BCMA_CORE_SDIO_DEV     0x829
-#define BCMA_CORE_CHIPCOMMON   0x800
-#define BCMA_CORE_SYS_MEM      0x849
-#define BCMA_CORE_PMU          0x827
+#define CHIPSET_ARM_CM3_CORE      0x82a
+#define CHIPSET_INTERNAL_MEM_CORE 0x80e
+#define CHIPSET_ARM_CR4_CORE      0x83e
+#define CHIPSET_ARM_CA7_CORE      0x847
+#define CHIPSET_80211_CORE        0x812
+#define CHIPSET_PCIE2_CORE        0x83c
+#define CHIPSET_SDIO_DEV_CORE     0x829
+#define CHIPSET_CHIPCOMMON_CORE   0x800
+#define CHIPSET_SYS_MEM_CORE      0x849
+#define CHIPSET_PMU_CORE          0x827
 
 // clang-format off
 #define LINUX_FUNCII(name) LINUX_FUNC(name, int, int)
