@@ -16,6 +16,7 @@ FUCHSIA_ROOT = os.path.dirname(  # $root
     SCRIPT_DIR)))                # bazel
 
 sys.path += [os.path.join(FUCHSIA_ROOT, 'third_party', 'mako')]
+from mako.lookup import TemplateLookup
 from mako.template import Template
 sys.path += [os.path.join(FUCHSIA_ROOT, 'scripts', 'sdk', 'common')]
 from layout_builder import Builder, process_manifest
@@ -94,8 +95,8 @@ class BazelBuilder(Builder):
     def write_file(self, path, template_name, data, append=False):
         '''Writes a file based on a Mako template.'''
         self.make_dir(path)
-        template = Template(filename=self.source('templates',
-                                                 template_name + '.mako'))
+        lookup = TemplateLookup(directories=[self.source('templates')])
+        template = lookup.get_template(template_name + '.mako')
         with open(path, 'a' if append else 'w') as file:
             file.write(template.render(data=data))
 
