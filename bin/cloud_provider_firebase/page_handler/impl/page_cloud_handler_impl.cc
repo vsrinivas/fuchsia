@@ -65,23 +65,23 @@ void PageCloudHandlerImpl::GetCommits(
 
   firebase_->Get(
       kCommitRoot.ToString(), GetQueryParams(auth_token, min_timestamp),
-      [callback = std::move(traced_callback)](firebase::Status status,
-                                              const rapidjson::Value& value) {
+      [callback = std::move(traced_callback)](
+          firebase::Status status, std::unique_ptr<rapidjson::Value> value) {
         if (status != firebase::Status::OK) {
           callback(ConvertFirebaseStatus(status), std::vector<Record>());
           return;
         }
-        if (value.IsNull()) {
+        if (value->IsNull()) {
           // No commits synced for this page yet.
           callback(Status::OK, std::vector<Record>());
           return;
         }
-        if (!value.IsObject()) {
+        if (!value->IsObject()) {
           callback(Status::PARSE_ERROR, std::vector<Record>());
           return;
         }
         std::vector<Record> records;
-        if (!DecodeMultipleCommitsFromValue(value, &records)) {
+        if (!DecodeMultipleCommitsFromValue(*value, &records)) {
           callback(Status::PARSE_ERROR, std::vector<Record>());
           return;
         }

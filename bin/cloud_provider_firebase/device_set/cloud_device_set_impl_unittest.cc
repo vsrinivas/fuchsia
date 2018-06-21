@@ -21,12 +21,12 @@ class FakeFirebase : public firebase::Firebase {
   void Get(const std::string& /*key*/,
            const std::vector<std::string>& query_params,
            std::function<void(firebase::Status status,
-                              const rapidjson::Value& value)>
+                              std::unique_ptr<rapidjson::Value> value)>
                callback) override {
     get_query_params.push_back(query_params);
-    rapidjson::Document document;
-    document.Parse(returned_value);
-    callback(returned_status, document);
+    auto document = std::make_unique<rapidjson::Document>();
+    document->Parse(returned_value);
+    callback(returned_status, std::move(document));
   }
 
   void Put(const std::string& /*key*/,

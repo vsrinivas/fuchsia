@@ -84,23 +84,23 @@ FirebaseImpl::~FirebaseImpl() {}
 
 void FirebaseImpl::Get(
     const std::string& key, const std::vector<std::string>& query_params,
-    std::function<void(Status status, const rapidjson::Value& value)>
+    std::function<void(Status status, std::unique_ptr<rapidjson::Value> value)>
         callback) {
   auto request_callback = [callback = std::move(callback)](
                               Status status, const std::string& response) {
     if (status != Status::OK) {
-      callback(status, rapidjson::Value());
+      callback(status, std::make_unique<rapidjson::Value>());
       return;
     }
 
-    rapidjson::Document document;
-    document.Parse(response.c_str(), response.size());
-    if (document.HasParseError()) {
-      callback(Status::PARSE_ERROR, rapidjson::Value());
+    auto document = std::make_unique<rapidjson::Document>();
+    document->Parse(response.c_str(), response.size());
+    if (document->HasParseError()) {
+      callback(Status::PARSE_ERROR, std::make_unique<rapidjson::Value>());
       return;
     }
 
-    callback(Status::OK, document);
+    callback(Status::OK, std::move(document));
   };
 
   Request(BuildRequestUrl(key, query_params), "GET", "", request_callback);

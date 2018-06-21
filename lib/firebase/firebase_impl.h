@@ -38,7 +38,8 @@ class FirebaseImpl : public Firebase {
 
   // Firebase:
   void Get(const std::string& key, const std::vector<std::string>& query_params,
-           std::function<void(Status status, const rapidjson::Value& value)>
+           std::function<void(Status status,
+                              std::unique_ptr<rapidjson::Value> value)>
                callback) override;
   void Put(const std::string& key, const std::vector<std::string>& query_params,
            const std::string& data,

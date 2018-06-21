@@ -30,11 +30,11 @@ class Firebase {
   // https://firebase.google.com/docs/database/rest/retrieve-data.
   //
   // TODO(ppi): support response Content-Length header, see LE-210.
-  virtual void Get(
-      const std::string& key,
-      const std::vector<std::string>& query_params,
-      std::function<void(Status status, const rapidjson::Value& value)>
-          callback) = 0;
+  virtual void Get(const std::string& key,
+                   const std::vector<std::string>& query_params,
+                   std::function<void(Status status,
+                                      std::unique_ptr<rapidjson::Value> value)>
+                       callback) = 0;
 
   // Overwrites the data under the given path. Data needs to be a valid JSON
   // object or JSON primitive value.

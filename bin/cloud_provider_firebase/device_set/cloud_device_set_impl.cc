@@ -46,15 +46,15 @@ void CloudDeviceSetImpl::CheckFingerprint(
 
   user_firebase_->Get(
       GetDeviceMapKey(fingerprint), query_params,
-      [callback = std::move(callback)](firebase::Status status,
-                                       const rapidjson::Value& value) {
+      [callback = std::move(callback)](
+          firebase::Status status, std::unique_ptr<rapidjson::Value> value) {
         if (status != firebase::Status::OK) {
           FXL_LOG(WARNING) << "Unable to read version from the cloud.";
           callback(Status::NETWORK_ERROR);
           return;
         }
 
-        if (value.IsNull()) {
+        if (value->IsNull()) {
           callback(Status::ERASED);
           return;
         }

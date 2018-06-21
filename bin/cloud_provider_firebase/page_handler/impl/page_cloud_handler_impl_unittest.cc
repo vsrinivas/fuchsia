@@ -66,15 +66,17 @@ class PageCloudHandlerImplTest : public gtest::TestWithLoop,
   }
 
   // firebase::Firebase:
-  void Get(const std::string& key, const std::vector<std::string>& query_params,
-           std::function<void(firebase::Status status,
-                              const rapidjson::Value& value)>
-               callback) override {
+  void Get(
+      const std::string& key,
+      const std::vector<std::string>& query_params,
+      std::function<void(firebase::Status status,
+                         std::unique_ptr<rapidjson::Value> value)> callback) override {
     get_keys_.push_back(key);
     get_queries_.push_back(query_params);
-    async::PostTask(dispatcher(), [this, callback = std::move(callback)] {
-      callback(firebase::Status::OK, *get_response_);
-    });
+    async::PostTask(dispatcher(),
+                    [this, callback = std::move(callback)] {
+                      callback(firebase::Status::OK, std::move(get_response_));
+                    });
   }
 
   void Put(const std::string& key,

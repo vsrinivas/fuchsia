@@ -10,12 +10,12 @@
 #include <lib/async/cpp/task.h>
 #include <rapidjson/document.h>
 
-#include "gtest/gtest.h"
+#include "lib/callback/capture.h"
+#include "lib/callback/set_when_called.h"
 #include "lib/fsl/socket/strings.h"
-#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/ref_ptr.h"
-#include "lib/gtest/test_with_message_loop.h"
+#include "lib/gtest/test_with_loop.h"
 #include "lib/network_wrapper/fake_network_wrapper.h"
 #include "lib/network_wrapper/network_wrapper_impl.h"
 #include "peridot/lib/socket/socket_pair.h"
@@ -23,10 +23,10 @@
 namespace firebase {
 namespace {
 
-class FirebaseImplTest : public gtest::TestWithMessageLoop, public WatchClient {
+class FirebaseImplTest : public gtest::TestWithLoop, public WatchClient {
  public:
   FirebaseImplTest()
-      : fake_network_wrapper_(message_loop_.async()),
+      : fake_network_wrapper_(dispatcher()),
         firebase_(&fake_network_wrapper_, "example", "pre/fix") {}
   ~FirebaseImplTest() override {}
 
@@ -54,10 +54,7 @@ class FirebaseImplTest : public gtest::TestWithMessageLoop, public WatchClient {
 
   void OnMalformedEvent() override { malformed_event_count_++; }
 
-  void OnConnectionError() override {
-    connection_error_count_++;
-    message_loop_.PostQuitTask();
-  }
+  void OnConnectionError() override { connection_error_count_++; }
 
   std::vector<std::string> put_paths_;
   std::vector<rapidjson::Value> put_data_;
@@ -88,16 +85,20 @@ class FirebaseImplTest : public gtest::TestWithMessageLoop, public WatchClient {
 // Verifies that GET requests are handled correctly.
 TEST_F(FirebaseImplTest, Get) {
   fake_network_wrapper_.SetStringResponse("\"content\"", 200);
-  firebase_.Get("bazinga", {},
-                [this](Status status, const rapidjson::Value& value) {
-                  std::string response_string;
-                  EXPECT_EQ(Status::OK, status);
-                  EXPECT_TRUE(value.IsString());
-                  EXPECT_EQ("content", value);
-                  message_loop_.PostQuitTask();
-                });
 
-  EXPECT_FALSE(RunLoopWithTimeout());
+  bool called;
+  Status status;
+  std::unique_ptr<rapidjson::Value> value;
+  firebase_.Get(
+      "bazinga", {},
+      callback::Capture(callback::SetWhenCalled(&called), &status, &value));
+
+  RunLoopUntilIdle();
+  EXPECT_TRUE(called);
+  EXPECT_EQ(Status::OK, status);
+  ASSERT_TRUE(value);
+  EXPECT_TRUE(value->IsString());
+  EXPECT_EQ("content", *value);
   EXPECT_EQ("https://example.firebaseio.com/pre/fix/bazinga.json",
             fake_network_wrapper_.GetRequest()->url);
   EXPECT_EQ("GET", fake_network_wrapper_.GetRequest()->method);
@@ -105,25 +106,33 @@ TEST_F(FirebaseImplTest, Get) {
 
 TEST_F(FirebaseImplTest, GetError) {
   fake_network_wrapper_.SetStringResponse("\"content\"", 404);
-  firebase_.Get("bazinga", {},
-                [this](Status status, const rapidjson::Value& value) {
-                  std::string response_string;
-                  EXPECT_NE(Status::OK, status);
-                  EXPECT_TRUE(value.IsNull());
-                  message_loop_.PostQuitTask();
-                });
+  bool called;
+  Status status;
+  std::unique_ptr<rapidjson::Value> value;
+  firebase_.Get(
+      "bazinga", {},
+      callback::Capture(callback::SetWhenCalled(&called), &status, &value));
 
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoopUntilIdle();
+  EXPECT_TRUE(called);
+  EXPECT_NE(Status::OK, status);
+  ASSERT_TRUE(value);
+  EXPECT_TRUE(value->IsNull());
 }
 
 TEST_F(FirebaseImplTest, GetWithSingleQueryParam) {
   fake_network_wrapper_.SetStringResponse("content", 200);
+  bool called;
+  Status status;
+  std::unique_ptr<rapidjson::Value> value;
   firebase_.Get("bazinga", {"orderBy=\"timestamp\""},
-                [this](Status status, const rapidjson::Value& value) {
-                  message_loop_.PostQuitTask();
-                });
+                callback::Capture(
+                    callback::SetWhenCalled(&called), &status,
+                    static_cast<std::unique_ptr<rapidjson::Value>*>(nullptr)));
 
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoopUntilIdle();
+  EXPECT_TRUE(called);
+  EXPECT_EQ(Status::PARSE_ERROR, status);
   EXPECT_EQ(
       "https://example.firebaseio.com/pre/fix/"
       "bazinga.json?orderBy=\"timestamp\"",
@@ -133,12 +142,15 @@ TEST_F(FirebaseImplTest, GetWithSingleQueryParam) {
 
 TEST_F(FirebaseImplTest, GetWithTwoQueryParams) {
   fake_network_wrapper_.SetStringResponse("content", 200);
+  bool called;
+  Status status;
   firebase_.Get("bazinga", {"one_param", "other_param=bla"},
-                [this](Status status, const rapidjson::Value& value) {
-                  message_loop_.PostQuitTask();
-                });
-
-  EXPECT_FALSE(RunLoopWithTimeout());
+                callback::Capture(
+                    callback::SetWhenCalled(&called), &status,
+                    static_cast<std::unique_ptr<rapidjson::Value>*>(nullptr)));
+  RunLoopUntilIdle();
+  EXPECT_TRUE(called);
+  EXPECT_EQ(Status::PARSE_ERROR, status);
   EXPECT_EQ(
       "https://example.firebaseio.com/pre/fix/"
       "bazinga.json?one_param&other_param=bla",
@@ -149,11 +161,16 @@ TEST_F(FirebaseImplTest, GetWithTwoQueryParams) {
 // Verifies that request urls for root of the db are correctly formed.
 TEST_F(FirebaseImplTest, Root) {
   fake_network_wrapper_.SetStringResponse("42", 200);
-  firebase_.Get("", {}, [this](Status status, const rapidjson::Value& value) {
-    message_loop_.PostQuitTask();
-  });
+  bool called;
+  Status status;
+  firebase_.Get("", {},
+                callback::Capture(
+                    callback::SetWhenCalled(&called), &status,
+                    static_cast<std::unique_ptr<rapidjson::Value>*>(nullptr)));
 
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoopUntilIdle();
+  EXPECT_TRUE(called);
+  EXPECT_EQ(Status::OK, status);
   EXPECT_EQ("https://example.firebaseio.com/pre/fix/.json",
             fake_network_wrapper_.GetRequest()->url);
 }
@@ -163,12 +180,14 @@ TEST_F(FirebaseImplTest, Put) {
   // Firebase server seems to respond with the data we sent to it. This is not
   // useful for the client so our API doesn't expose it to the client.
   fake_network_wrapper_.SetStringResponse("\"Alice\"", 200);
-  firebase_.Put("name", {}, "\"Alice\"", [this](Status status) {
-    EXPECT_EQ(Status::OK, status);
-    message_loop_.PostQuitTask();
-  });
+  bool called;
+  Status status;
+  firebase_.Put("name", {}, "\"Alice\"",
+                callback::Capture(callback::SetWhenCalled(&called), &status));
 
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoopUntilIdle();
+  EXPECT_TRUE(called);
+  EXPECT_EQ(Status::OK, status);
   EXPECT_EQ("https://example.firebaseio.com/pre/fix/name.json",
             fake_network_wrapper_.GetRequest()->url);
   EXPECT_EQ("PUT", fake_network_wrapper_.GetRequest()->method);
@@ -177,13 +196,15 @@ TEST_F(FirebaseImplTest, Put) {
 // Verifies that PATCH requests are handled correctly.
 TEST_F(FirebaseImplTest, Patch) {
   fake_network_wrapper_.SetStringResponse("\"ok\"", 200);
+  bool called;
+  Status status;
   std::string data = R"({"name":"Alice"})";
-  firebase_.Patch("person", {}, data, [this](Status status) {
-    EXPECT_EQ(Status::OK, status);
-    message_loop_.PostQuitTask();
-  });
+  firebase_.Patch("person", {}, data,
+                  callback::Capture(callback::SetWhenCalled(&called), &status));
 
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoopUntilIdle();
+  EXPECT_TRUE(called);
+  EXPECT_EQ(Status::OK, status);
   EXPECT_EQ("https://example.firebaseio.com/pre/fix/person.json",
             fake_network_wrapper_.GetRequest()->url);
   EXPECT_EQ("PATCH", fake_network_wrapper_.GetRequest()->method);
@@ -192,12 +213,14 @@ TEST_F(FirebaseImplTest, Patch) {
 // Verifies that DELETE requests are made correctly.
 TEST_F(FirebaseImplTest, Delete) {
   fake_network_wrapper_.SetStringResponse("", 200);
-  firebase_.Delete("name", {}, [this](Status status) {
-    EXPECT_EQ(Status::OK, status);
-    message_loop_.PostQuitTask();
-  });
+  bool called;
+  Status status;
+  firebase_.Delete(
+      "name", {}, callback::Capture(callback::SetWhenCalled(&called), &status));
 
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoopUntilIdle();
+  EXPECT_TRUE(called);
+  EXPECT_EQ(Status::OK, status);
   EXPECT_EQ("https://example.firebaseio.com/pre/fix/name.json",
             fake_network_wrapper_.GetRequest()->url);
   EXPECT_EQ("DELETE", fake_network_wrapper_.GetRequest()->method);
@@ -208,7 +231,7 @@ TEST_F(FirebaseImplTest, WatchRequest) {
   fake_network_wrapper_.SetStringResponse("", 200);
 
   firebase_.Watch("some/path", {}, this);
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoopUntilIdle();
 
   EXPECT_EQ("https://example.firebaseio.com/pre/fix/some/path.json",
             fake_network_wrapper_.GetRequest()->url);
@@ -223,7 +246,7 @@ TEST_F(FirebaseImplTest, WatchRequestWithQuery) {
   fake_network_wrapper_.SetStringResponse("", 200);
 
   firebase_.Watch("some/path", {"orderBy=\"timestamp\""}, this);
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoopUntilIdle();
 
   EXPECT_EQ(
       "https://example.firebaseio.com/pre/fix/some/path.json"
@@ -250,7 +273,7 @@ TEST_F(FirebaseImplTest, WatchPut) {
   fake_network_wrapper_.SetStringResponse(stream_body, 200);
 
   firebase_.Watch("/", {}, this);
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoopUntilIdle();
 
   EXPECT_EQ(3u, put_count_);
   EXPECT_EQ(0u, patch_count_);
@@ -277,7 +300,7 @@ TEST_F(FirebaseImplTest, WatchPatch) {
   fake_network_wrapper_.SetStringResponse(stream_body, 200);
 
   firebase_.Watch("/", {}, this);
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoopUntilIdle();
 
   EXPECT_EQ(0u, put_count_);
   EXPECT_EQ(1u, patch_count_);
@@ -298,7 +321,7 @@ TEST_F(FirebaseImplTest, WatchKeepAlive) {
   fake_network_wrapper_.SetStringResponse(stream_body, 200);
 
   firebase_.Watch("name", {}, this);
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoopUntilIdle();
 
   EXPECT_EQ(0u, put_count_);
   EXPECT_EQ(0u, patch_count_);
@@ -315,7 +338,7 @@ TEST_F(FirebaseImplTest, WatchCancel) {
   fake_network_wrapper_.SetStringResponse(stream_body, 200);
 
   firebase_.Watch("/", {}, this);
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoopUntilIdle();
 
   EXPECT_EQ(0u, put_count_);
   EXPECT_EQ(0u, patch_count_);
@@ -332,7 +355,7 @@ TEST_F(FirebaseImplTest, WatchAuthRevoked) {
   fake_network_wrapper_.SetStringResponse(stream_body, 200);
 
   firebase_.Watch("/", {}, this);
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoopUntilIdle();
 
   EXPECT_EQ(0u, put_count_);
   EXPECT_EQ(0u, patch_count_);
@@ -351,7 +374,7 @@ TEST_F(FirebaseImplTest, WatchErrorUnknownEvent) {
   fake_network_wrapper_.SetStringResponse(stream_body, 200);
 
   firebase_.Watch("/", {}, this);
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoopUntilIdle();
 
   EXPECT_EQ(0u, put_count_);
   EXPECT_EQ(0u, patch_count_);
@@ -364,7 +387,7 @@ TEST_F(FirebaseImplTest, WatchHttpError) {
   fake_network_wrapper_.SetStringResponse("", 404);
 
   firebase_.Watch("/", {}, this);
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoopUntilIdle();
 
   EXPECT_EQ(0u, put_count_);
   EXPECT_EQ(0u, patch_count_);
@@ -384,12 +407,7 @@ TEST_F(FirebaseImplTest, UnWatch) {
   firebase_.Watch("/", {}, this);
 
   EXPECT_TRUE(fsl::BlockingCopyFromString(event, socket.socket2));
-  message_loop_.SetAfterTaskCallback([this] {
-    if (put_count_ == 1u) {
-      message_loop_.QuitNow();
-    }
-  });
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoopUntilIdle();
 
   EXPECT_EQ(1u, put_count_);
   EXPECT_EQ(0u, patch_count_);
@@ -399,12 +417,7 @@ TEST_F(FirebaseImplTest, UnWatch) {
   EXPECT_EQ(0u, connection_error_count_);
 
   EXPECT_TRUE(fsl::BlockingCopyFromString(event, socket.socket2));
-  message_loop_.SetAfterTaskCallback([this] {
-    if (put_count_ == 2u) {
-      message_loop_.QuitNow();
-    }
-  });
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoopUntilIdle();
 
   EXPECT_EQ(2u, put_count_);
   EXPECT_EQ(0u, patch_count_);
@@ -417,10 +430,7 @@ TEST_F(FirebaseImplTest, UnWatch) {
   // the next event.
   firebase_.UnWatch(this);
   EXPECT_TRUE(fsl::BlockingCopyFromString(event, socket.socket2));
-
-  // TODO(ppi): how to avoid the wait?
-  async::PostDelayedTask(message_loop_.async(), MakeQuitTask(), zx::msec(100));
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoopUntilIdle();
 
   EXPECT_EQ(2u, put_count_);
   EXPECT_EQ(0u, patch_count_);
