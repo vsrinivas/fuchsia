@@ -18,9 +18,11 @@ executable("video_display") {
     "frame_scheduler.h",
     "frame_scheduler.cc",
     "main.cc",
-    "view.cc",
-    "view.h",
+    "simple_camera_view.cc",
+    "simple_camera_view.h",
     "camera_interface_base.h",
+    "video_display.cc",
+    "video_display.h",
   ]
 
   deps = [

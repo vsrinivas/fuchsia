@@ -2,19 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_EXAMPLES_UI_VIDEO_DISPLAY_VIEW_H_
-#define GARNET_EXAMPLES_UI_VIDEO_DISPLAY_VIEW_H_
+#pragma once
 
 #include <deque>
 #include <list>
 
 #include <fbl/vector.h>
-#include <lib/app/cpp/startup_context.h>
-#include <lib/async-loop/cpp/loop.h>
-#include <lib/fxl/macros.h>
-#include <lib/ui/scenic/client/resources.h>
-#include <lib/ui/view_framework/base_view.h>
-
+#include <fuchsia/images/cpp/fidl.h>
 #include <garnet/examples/ui/video_display/camera_client.h>
 #include <garnet/examples/ui/video_display/fake_camera_source.h>
 #include <garnet/examples/ui/video_display/fenced_buffer.h>
@@ -22,15 +16,21 @@
 
 namespace video_display {
 
-class View : public mozart::BaseView {
+class VideoDisplay {
  public:
-  View(async::Loop* loop, fuchsia::sys::StartupContext* startup_context,
-       ::fuchsia::ui::views_v1::ViewManagerPtr view_manager,
-       fidl::InterfaceRequest<::fuchsia::ui::views_v1_token::ViewOwner>
-           view_owner_request,
-       bool use_fake_camera);
+  // Connect to a camera with |camera_id|. If the camera exists, and can be
+  // connected to, configures the camera to the first available format, and
+  // starts streaming data over the image pipe.
+  // Returns an error if the initial part of setup fails.  If ZX_OK is
+  // returned, termination of communication is signalled by calling |callback|,
+  // which may be done on an arbitrary thread.
+  zx_status_t ConnectToCamera(
+      uint32_t camera_id,
+      ::fidl::InterfaceHandle<::fuchsia::images::ImagePipe> image_pipe,
+      OnShutdownCallback callback);
 
-  ~View() override;
+  ~VideoDisplay() = default;
+  VideoDisplay() = default;
 
  private:
   // Called when the driver tells us a new frame is available:
@@ -52,15 +52,6 @@ class View : public mozart::BaseView {
       const std::vector<camera_video_format_t>& out_formats);
   zx_status_t OnSetFormat(uint64_t max_frame_size);
 
-  // From mozart::BaseView. Called on a mouse or keyboard event.
-  virtual bool OnInputEvent(fuchsia::ui::input::InputEvent event) override;
-
-  // From mozart::BaseView. Called when the scene is "invalidated".
-  // Invalidation should happen when the surfaces change, but not
-  // necessarily when a texture changes.
-  void OnSceneInvalidated(
-      fuchsia::images::PresentationInfo presentation_info) override;
-
   // Creates a new buffer and registers an image with scenic.  If the buffer
   // already exists, returns a pointer to that buffer.  Buffer is not required
   // to be valid. If it is nullptr, the returned status can be used to check if
@@ -74,15 +65,16 @@ class View : public mozart::BaseView {
   // The currently selected format.
   camera_video_format_t format_;
 
-  async::Loop* const loop_;
   // The number of buffers to allocate while setting up the camera stream.
   // This number has to be at least 2, since scenic will hold onto one buffer
   // at all times.
   static constexpr uint16_t kNumberOfBuffers = 8;
-  scenic_lib::ShapeNode node_;
 
   // Image pipe to send to display
   fuchsia::images::ImagePipePtr image_pipe_;
+
+  // Callback to that we're closing communication:
+  OnShutdownCallback on_shut_down_callback_ = nullptr;
 
   std::vector<std::unique_ptr<FencedBuffer>> frame_buffers_;
   uint32_t last_buffer_index_ = 0;
@@ -92,9 +84,7 @@ class View : public mozart::BaseView {
   SimpleFrameScheduler frame_scheduler_;
   std::unique_ptr<CameraInterfaceBase> video_source_;
 
-  FXL_DISALLOW_COPY_AND_ASSIGN(View);
+  FXL_DISALLOW_COPY_AND_ASSIGN(VideoDisplay);
 };
 
 }  // namespace video_display
-
-#endif  // GARNET_EXAMPLES_UI_VIDEO_DISPLAY_VIEW_H_

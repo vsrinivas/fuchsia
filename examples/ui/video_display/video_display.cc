@@ -2,38 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <garnet/examples/ui/video_display/view.h>
+#include <garnet/examples/ui/video_display/video_display.h>
 
-#if defined(countof)
-// TODO(ZX-377): Workaround for compiler error due to Zircon defining countof()
-// as a macro.  Redefines countof() using GLM_COUNTOF(), which currently
-// provides a more sophisticated implementation anyway.
-#undef countof
-#include <glm/glm.hpp>
-#define countof(X) GLM_COUNTOF(X)
-#else
-// No workaround required.
-#include <glm/glm.hpp>
-#endif
 #include <lib/fxl/log_level.h>
 #include <lib/fxl/logging.h>
-#include <glm/gtc/type_ptr.hpp>
-
-#include <lib/ui/scenic/fidl_helpers.h>
 
 namespace video_display {
 
-namespace {
-constexpr uint32_t kShapeWidth = 640;
-constexpr uint32_t kShapeHeight = 480;
-constexpr float kDisplayHeight = 50;
-constexpr float kInitialWindowXPos = 320;
-constexpr float kInitialWindowYPos = 240;
-}  // namespace
-
 // When a buffer is released, signal that it is available to the writer
 // In this case, that means directly write to the buffer then re-present it
-void View::BufferReleased(FencedBuffer* buffer) {
+void VideoDisplay::BufferReleased(FencedBuffer* buffer) {
   FXL_VLOG(4) << "BufferReleased " << buffer->index();
   video_source_->ReleaseFrame(buffer->vmo_offset());
 }
@@ -44,8 +22,8 @@ void View::BufferReleased(FencedBuffer* buffer) {
 // will be displayed before this buffer.
 // If the incoming buffer already filled, the driver could just call
 // IncomingBufferFilled(), which will make sure the buffer is reserved first.
-zx_status_t View::ReserveIncomingBuffer(FencedBuffer* buffer,
-                                        uint64_t capture_time_ns) {
+zx_status_t VideoDisplay::ReserveIncomingBuffer(FencedBuffer* buffer,
+                                                uint64_t capture_time_ns) {
   if (nullptr == buffer) {
     FXL_LOG(ERROR) << "Invalid input buffer";
     return ZX_ERR_INVALID_ARGS;
@@ -83,8 +61,9 @@ zx_status_t View::ReserveIncomingBuffer(FencedBuffer* buffer,
   return ZX_OK;
 }
 
-// When an incoming buffer is filled, View releases the aquire fence
-zx_status_t View::IncomingBufferFilled(const camera_vb_frame_notify_t& frame) {
+// When an incoming buffer is filled, VideoDisplay releases the acquire fence
+zx_status_t VideoDisplay::IncomingBufferFilled(
+    const camera_vb_frame_notify_t& frame) {
   FencedBuffer* buffer;
   if (frame.error != 0) {
     FXL_LOG(ERROR) << "Error set on incoming frame. Error: " << frame.error;
@@ -145,9 +124,9 @@ fuchsia::images::PixelFormat ConvertFormat(
   return fuchsia::images::PixelFormat::BGRA_8;
 }
 
-zx_status_t View::FindOrCreateBuffer(uint32_t frame_size, uint64_t vmo_offset,
-                                     FencedBuffer** buffer,
-                                     const camera_video_format_t& format) {
+zx_status_t VideoDisplay::FindOrCreateBuffer(
+    uint32_t frame_size, uint64_t vmo_offset, FencedBuffer** buffer,
+    const camera_video_format_t& format) {
   if (buffer != nullptr) {
     *buffer = nullptr;
   }
@@ -207,59 +186,30 @@ zx_status_t View::FindOrCreateBuffer(uint32_t frame_size, uint64_t vmo_offset,
   return ZX_OK;
 }
 
-View::View(async::Loop* loop, fuchsia::sys::StartupContext* startup_context,
-           ::fuchsia::ui::views_v1::ViewManagerPtr view_manager,
-           fidl::InterfaceRequest<::fuchsia::ui::views_v1_token::ViewOwner>
-               view_owner_request,
-           bool use_fake_camera)
-    : BaseView(std::move(view_manager), std::move(view_owner_request),
-               "Video Display Example"),
-      loop_(loop),
-      node_(session()) {
-  FXL_VLOG(4) << "Creating View";
-  // Create an ImagePipe and pass one end to the Session:
-  uint32_t image_pipe_id = session()->AllocResourceId();
-  session()->Enqueue(scenic_lib::NewCreateImagePipeCmd(
-      image_pipe_id, image_pipe_.NewRequest()));
-
-  // Create a material that has our image pipe mapped onto it:
-  scenic_lib::Material material(session());
-  material.SetTexture(image_pipe_id);
-  session()->ReleaseResource(image_pipe_id);
-
-  // Create a rounded-rect shape to display the camera image on.
-  scenic_lib::RoundedRectangle shape(session(), kShapeWidth, kShapeHeight, 80,
-                                     80, 80, 80);
-
-  node_.SetShape(shape);
-  node_.SetMaterial(material);
-  parent_node().AddChild(node_);
-  // Translation of 0, 0 is the middle of the screen
-  node_.SetTranslation(kInitialWindowXPos, kInitialWindowYPos, kDisplayHeight);
-  InvalidateScene();
-
-  FXL_VLOG(4) << "Creating View - set up image pipe";
-  if (use_fake_camera) {
-    video_source_ = std::make_unique<FakeCameraSource>();
-  } else {
-    video_source_ = std::make_unique<CameraClient>();
+zx_status_t VideoDisplay::ConnectToCamera(
+    uint32_t camera_id,
+    ::fidl::InterfaceHandle<::fuchsia::images::ImagePipe> image_pipe,
+    OnShutdownCallback callback) {
+  if (!callback) {
+    return ZX_ERR_INVALID_ARGS;
   }
-
-  zx_status_t open_status =
-      video_source_->Open(0, [this] { this->image_pipe_.Unbind(); });
+  on_shut_down_callback_ = std::move(callback);
+  image_pipe_ = image_pipe.Bind();
+  video_source_ = std::make_unique<CameraClient>();
+  zx_status_t open_status = video_source_->Open(
+      camera_id, [this]() { this->on_shut_down_callback_(); });
   if (open_status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to open the camera. Quitting!";
-    // TODO(garratt): This does not actually quit.
-    loop_->Quit();
-    return;
+    FXL_LOG(ERROR) << "Failed to open the camera.";
+    // just return the error, the caller must respond the same as a call to
+    // on_close_callback:
+    return open_status;
   }
   zx_status_t status = video_source_->GetSupportedFormats(
-      fit::bind_member(this, &View::OnGetFormats));
+      fit::bind_member(this, &VideoDisplay::OnGetFormats));
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to get Supported Formats. Quitting!";
-    loop_->Quit();
-    return;
+    FXL_LOG(ERROR) << "Failed to get Supported Formats!";
   }
+  return status;
 }
 
 // Asyncronous setup of camera:
@@ -268,7 +218,11 @@ View::View(async::Loop* loop, fuchsia::sys::StartupContext* startup_context,
 // 3) Set buffer
 // 4) Start
 
-zx_status_t View::OnGetFormats(
+// Returning an error here will invoke the video source's error recovery,
+// which will end up calling the OnShutDownCallback.  Therefore, we don't need
+// to worry about shutting things down if OnGetFormats or OnSetFormat fails;
+// We'll get the notification to close soon enough.
+zx_status_t VideoDisplay::OnGetFormats(
     const std::vector<camera_video_format_t>& out_formats) {
   // For now, just configure to the first format available:
   if (out_formats.size() < 1) {
@@ -281,11 +235,12 @@ zx_status_t View::OnGetFormats(
               << " W:H:S = " << format_.width << ":" << format_.height << ":"
               << format_.stride << " bbp: " << format_.bits_per_pixel
               << " format: " << format_.pixel_format;
-  return video_source_->SetFormat(format_,
-                                  fit::bind_member(this, &View::OnSetFormat));
+  zx_status_t status = video_source_->SetFormat(
+      format_, fit::bind_member(this, &VideoDisplay::OnSetFormat));
+  return status;
 }
 
-zx_status_t View::OnSetFormat(uint64_t max_frame_size) {
+zx_status_t VideoDisplay::OnSetFormat(uint64_t max_frame_size) {
   FXL_VLOG(4) << "OnSetFormat: max_frame_size: " << max_frame_size
               << "  making buffer size: " << max_frame_size * kNumberOfBuffers;
   // Allocate the memory:
@@ -308,47 +263,7 @@ zx_status_t View::OnSetFormat(uint64_t max_frame_size) {
     return status;
   }
   return video_source_->Start(
-      fit::bind_member(this, &View::IncomingBufferFilled));
-}
-
-View::~View() = default;
-
-void View::OnSceneInvalidated(
-    fuchsia::images::PresentationInfo presentation_info) {
-  if (!has_logical_size()) {
-    return;
-  }
-
-  // Compute the amount of time that has elapsed since the view was created.
-  double seconds =
-      static_cast<double>(presentation_info.presentation_time) / 1'000'000'000;
-
-  const float kHalfWidth = logical_size().width * 0.5f;
-  const float kHalfHeight = logical_size().height * 0.5f;
-
-  // Compute the translation for the window to swirl around the screen.
-  // Why do this?  Well, this is an example of what a View can do, and it helps
-  // debug the camera to know if scenic is still running.
-  node_.SetTranslation(kHalfWidth * (1. + .1 * sin(seconds * 0.8)),
-                       kHalfHeight * (1. + .1 * sin(seconds * 0.6)),
-                       kDisplayHeight);
-
-  // The rounded-rectangles are constantly animating; invoke InvalidateScene()
-  // to guarantee that OnSceneInvalidated() will be called again.
-  InvalidateScene();
-}
-
-// This function is also for debugging.
-// TODO(garratt): This never gets called.
-bool View::OnInputEvent(fuchsia::ui::input::InputEvent event) {
-  if (event.is_keyboard()) {
-    const auto& keyboard = event.keyboard();
-    if (keyboard.phase == fuchsia::ui::input::KeyboardEventPhase::PRESSED) {
-      FXL_LOG(INFO) << "Key Pressed = " << keyboard.hid_usage;
-    }
-    return true;
-  }
-  return false;
+      fit::bind_member(this, &VideoDisplay::IncomingBufferFilled));
 }
 
 }  // namespace video_display
