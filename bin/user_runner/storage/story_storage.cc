@@ -154,7 +154,10 @@ class ReadLinkDataCall
     FlowToken flow{this, &status_, &value_};
     status_ = StoryStorage::Status::OK;
 
-    page_snapshot_ = page_client_->NewSnapshot([this] {
+    page_snapshot_ = page_client_->NewSnapshot([this, weak_ptr = GetWeakPtr()] {
+      if (!weak_ptr) {
+        return;
+      }
       // An error occurred getting the snapshot. Resetting page_snapshot_
       // will ensure that the FlowToken it has captured below while waiting for
       // a connected channel will be destroyed, and the operation will be
@@ -163,18 +166,9 @@ class ReadLinkDataCall
       page_snapshot_ = fuchsia::ledger::PageSnapshotPtr();
     });
 
-    // NOTE: We capture |snapshot_ptr| is the result callback for Get() because
-    // |snapshot_ptr| is a shared_ptr<> to a FIDL proxy object. If we don't
-    // hang onto a copy we risk it going out of scope before we're done using
-    // it. The failure mode here is that our result callback would never be
-    // called.
-    page_snapshot_->Get(to_array(key_), [this, flow, weak_ptr = GetWeakPtr()](
+    page_snapshot_->Get(to_array(key_), [this, flow](
                                             fuchsia::ledger::Status status,
                                             fuchsia::mem::BufferPtr value) {
-      if (!weak_ptr) {
-        return;
-      }
-
       std::string value_as_string;
       switch (status) {
         case fuchsia::ledger::Status::KEY_NOT_FOUND:
@@ -250,16 +244,18 @@ class WriteLinkDataCall : public Operation<StoryStorage::Status> {
     FlowToken flow{this, &status_};
     status_ = StoryStorage::Status::OK;
 
-    page_client_->page()->Put(to_array(key_), to_array(value_),
-                              [this, flow](fuchsia::ledger::Status status) {
-                                if (status != fuchsia::ledger::Status::OK) {
-                                  FXL_LOG(ERROR)
-                                      << "StoryStorage.WriteLinkDataCall "
-                                      << key_ << " "
-                                      << " Page.Put() " << status;
-                                  status_ = StoryStorage::Status::LEDGER_ERROR;
-                                }
-                              });
+    page_client_->page()->Put(
+        to_array(key_), to_array(value_),
+        [this, flow, weak_ptr = GetWeakPtr()](fuchsia::ledger::Status status) {
+          if (!weak_ptr) {
+            return;
+          }
+          if (status != fuchsia::ledger::Status::OK) {
+            FXL_LOG(ERROR) << "StoryStorage.WriteLinkDataCall " << key_ << " "
+                           << " Page.Put() " << status;
+            status_ = StoryStorage::Status::LEDGER_ERROR;
+          }
+        });
   }
 
   PageClient* const page_client_;

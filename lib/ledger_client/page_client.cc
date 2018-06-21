@@ -22,13 +22,14 @@ PageClient::PageClient(std::string context, LedgerClient* ledger_client,
       page_id_(std::move(page_id)),
       page_(ledger_client_->GetPage(this, context_, page_id_)),
       prefix_(std::move(prefix)) {
-  page_->GetSnapshot(NewRequest(), to_array(prefix_), binding_.NewBinding(),
-                     [this](fuchsia::ledger::Status status) {
-                       if (status != fuchsia::ledger::Status::OK) {
-                         FXL_LOG(ERROR)
-                             << context_ << " Page.GetSnapshot() " << status;
-                       }
-                     });
+  fuchsia::ledger::PageSnapshotPtr snapshot;
+  page_->GetSnapshot(
+      snapshot.NewRequest(), to_array(prefix_), binding_.NewBinding(),
+      [this](fuchsia::ledger::Status status) {
+        if (status != fuchsia::ledger::Status::OK) {
+          FXL_LOG(ERROR) << context_ << " Page.GetSnapshot() " << status;
+        }
+      });
 }
 
 PageClient::~PageClient() {
@@ -37,7 +38,7 @@ PageClient::~PageClient() {
 }
 
 fuchsia::ledger::PageSnapshotPtr PageClient::NewSnapshot(
-      std::function<void()> on_error) {
+    std::function<void()> on_error) {
   fuchsia::ledger::PageSnapshotPtr ptr;
   page_->GetSnapshot(
       ptr.NewRequest(), to_array(prefix_), nullptr /* page_watcher */,
@@ -48,29 +49,6 @@ fuchsia::ledger::PageSnapshotPtr PageClient::NewSnapshot(
         }
       });
   return ptr;
-}
-
-fidl::InterfaceRequest<fuchsia::ledger::PageSnapshot> PageClient::NewRequest() {
-  auto ret = page_snapshot_.NewRequest();
-  page_snapshot_.set_error_handler([this] {
-    FXL_LOG(ERROR) << context_ << ": "
-                   << "PageSnapshot connection unexpectedly closed.";
-  });
-  return ret;
-}
-
-fidl::InterfaceRequest<fuchsia::ledger::PageSnapshot>
-PageClient::MaybeUpdateSnapshot(
-    const fuchsia::ledger::ResultState result_state) {
-  switch (result_state) {
-    case fuchsia::ledger::ResultState::PARTIAL_CONTINUED:
-    case fuchsia::ledger::ResultState::PARTIAL_STARTED:
-      return nullptr;
-
-    case fuchsia::ledger::ResultState::COMPLETED:
-    case fuchsia::ledger::ResultState::PARTIAL_COMPLETED:
-      return NewRequest();
-  }
 }
 
 // |PageWatcher|
@@ -97,14 +75,7 @@ void PageClient::OnChange(fuchsia::ledger::PageChange page,
     OnPageDelete(to_string(key));
   }
 
-  // Every time we receive a group of OnChange notifications, we update the root
-  // page snapshot so we see the current state. Note that pending Operation
-  // instances may hold on to the previous value until they finish. New
-  // Operation instances created after the update receive the new snapshot.
-  //
-  // For continued updates, we only request the snapshot once, in the last
-  // OnChange() notification.
-  callback(MaybeUpdateSnapshot(result_state));
+  callback(nullptr);
 }
 
 void PageClient::OnPageChange(const std::string& /*key*/,

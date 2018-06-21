@@ -119,15 +119,6 @@ class PageClient : fuchsia::ledger::PageWatcher {
   friend class LedgerClient;
   virtual void OnPageConflict(Conflict* conflict);
 
-  // Replaces the previous page snapshot with a newly requested one.
-  fidl::InterfaceRequest<fuchsia::ledger::PageSnapshot> NewRequest();
-
-  // Possibly replaces the previous page snapshot with a new one
-  // requested through the result callback of a PageWatcher, depending
-  // on the continuation code of the watcher notification.
-  fidl::InterfaceRequest<fuchsia::ledger::PageSnapshot> MaybeUpdateSnapshot(
-      fuchsia::ledger::ResultState result_state);
-
   // |PageWatcher|
   void OnChange(fuchsia::ledger::PageChange page,
                 fuchsia::ledger::ResultState result_state,
@@ -140,8 +131,6 @@ class PageClient : fuchsia::ledger::PageWatcher {
   const fuchsia::ledger::PageId page_id_;
   fuchsia::ledger::Page* const page_;
   const std::string prefix_;
-
-  fuchsia::ledger::PageSnapshotPtr page_snapshot_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(PageClient);
 };
