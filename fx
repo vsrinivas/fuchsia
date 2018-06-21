@@ -218,6 +218,7 @@ if [[ $? -ne 0 ]]; then
   exit 1
 fi
 
+declare -r cmd_and_args="$@"
 shift # Removes the command name.
 
 if [ -z "${iterative}" ]; then
@@ -233,6 +234,7 @@ elif which inotifywait >/dev/null; then
     # Allow at most one fx -i invocation per Fuchsia dir at a time.
     # Otherwise multiple concurrent fx -i invocations can trigger each other
     # and cause a storm.
+    echo "---------------------------------- fx -i ${cmd_and_args} ---------------------------------------"
     "${command_path}" "$@"
   done
 elif which apt-get >/dev/null; then
@@ -240,6 +242,7 @@ elif which apt-get >/dev/null; then
   echo "Try: sudo apt-get install inotify-tools"
 elif which fswatch >/dev/null; then
   fswatch --one-per-batch --event=Updated -e "${fuchsia_dir}"/out/ -e "/\." . | while read; do
+    echo "---------------------------------- fx -i ${cmd_and_args} ---------------------------------------"
     "${command_path}" "$@"
   done
 else
