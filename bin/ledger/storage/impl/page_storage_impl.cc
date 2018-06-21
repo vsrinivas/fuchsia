@@ -370,6 +370,23 @@ void PageStorageImpl::MarkPieceSynced(ObjectIdentifier object_identifier,
       });
 }
 
+void PageStorageImpl::IsPieceSynced(
+    ObjectIdentifier object_identifier,
+    std::function<void(Status, bool)> callback) {
+  coroutine_service_->StartCoroutine(
+      [this, object_identifier = std::move(object_identifier),
+       final_callback =
+           std::move(callback)](CoroutineHandler* handler) mutable {
+        auto callback =
+            UpdateActiveHandlersCallback(handler, std::move(final_callback));
+
+        PageDbObjectStatus object_status;
+        Status status =
+            db_->GetObjectStatus(handler, object_identifier, &object_status);
+        callback(status, object_status == PageDbObjectStatus::SYNCED);
+      });
+}
+
 void PageStorageImpl::AddObjectFromLocal(
     std::unique_ptr<DataSource> data_source,
     std::function<void(Status, ObjectIdentifier)> callback) {

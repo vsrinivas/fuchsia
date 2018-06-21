@@ -462,6 +462,36 @@ class PageStorageTest : public ::test::TestWithCoroutines {
     return ::testing::AssertionSuccess();
   }
 
+  ::testing::AssertionResult IsPieceSynced(ObjectIdentifier object_identifier,
+                                           bool expected_synced) {
+    bool called;
+    Status status;
+    bool is_synced;
+    storage_->IsPieceSynced(object_identifier,
+                            callback::Capture(callback::SetWhenCalled(&called),
+                                              &status, &is_synced));
+    RunLoopUntilIdle();
+
+    if (!called) {
+      return ::testing::AssertionFailure()
+             << "IsPieceSynced for id " << object_identifier
+             << " didn't return.";
+    }
+    if (status != Status::OK) {
+      return ::testing::AssertionFailure()
+             << "IsPieceSynced for id " << object_identifier
+             << " returned status " << status;
+    }
+    if (is_synced != expected_synced) {
+      return ::testing::AssertionFailure()
+             << "For id " << object_identifier
+             << " expected to find the object " << (is_synced ? "un" : "")
+             << "synced, but was " << (expected_synced ? "un" : "")
+             << "synced, instead.";
+    }
+    return ::testing::AssertionSuccess();
+  }
+
   ::testing::AssertionResult CreateNodeFromIdentifier(
       ObjectIdentifier identifier,
       std::unique_ptr<const btree::TreeNode>* node) {
@@ -1058,6 +1088,7 @@ TEST_F(PageStorageTest, AddObjectFromLocal) {
     ASSERT_EQ(Status::OK, object->GetData(&content));
     EXPECT_EQ(data.value, content);
     EXPECT_TRUE(ObjectIsUntracked(object_identifier, true));
+    EXPECT_TRUE(IsPieceSynced(object_identifier, false));
   });
 }
 
@@ -1131,6 +1162,7 @@ TEST_F(PageStorageTest, AddLocalPiece) {
     ASSERT_EQ(Status::OK, object->GetData(&content));
     EXPECT_EQ(data.value, content);
     EXPECT_TRUE(ObjectIsUntracked(data.object_identifier, true));
+    EXPECT_TRUE(IsPieceSynced(data.object_identifier, false));
   });
 }
 
@@ -1153,6 +1185,7 @@ TEST_F(PageStorageTest, AddSyncPiece) {
     ASSERT_EQ(Status::OK, object->GetData(&content));
     EXPECT_EQ(data.value, content);
     EXPECT_TRUE(ObjectIsUntracked(data.object_identifier, false));
+    EXPECT_TRUE(IsPieceSynced(data.object_identifier, true));
   });
 }
 
@@ -1228,6 +1261,7 @@ TEST_F(PageStorageTest, AddAndGetHugeObjectFromLocal) {
   ASSERT_EQ(Status::OK, object->GetData(&content));
   EXPECT_EQ(data.value, content);
   EXPECT_TRUE(ObjectIsUntracked(object_identifier, true));
+  EXPECT_TRUE(IsPieceSynced(object_identifier, false));
 
   // Check that the object is encoded with an index, and is different than the
   // piece obtained at |object_identifier|.
@@ -1247,6 +1281,7 @@ TEST_F(PageStorageTest, UnsyncedPieces) {
   for (auto& data : data_array) {
     TryAddFromLocal(data.value, data.object_identifier);
     EXPECT_TRUE(ObjectIsUntracked(data.object_identifier, true));
+    EXPECT_TRUE(IsPieceSynced(data.object_identifier, false));
   }
 
   std::vector<CommitId> commits;
@@ -1328,6 +1363,7 @@ TEST_F(PageStorageTest, PageIsSynced) {
   for (auto& data : data_array) {
     TryAddFromLocal(data.value, data.object_identifier);
     EXPECT_TRUE(ObjectIsUntracked(data.object_identifier, true));
+    EXPECT_TRUE(IsPieceSynced(data.object_identifier, false));
   }
 
   // The objects have not been added in a commit: there is nothing to sync and
@@ -1409,6 +1445,11 @@ TEST_F(PageStorageTest, PageIsSynced) {
   ASSERT_TRUE(called);
   EXPECT_EQ(Status::OK, status);
   EXPECT_TRUE(is_synced);
+
+  // All objects should be synced now.
+  for (auto& data : data_array) {
+    EXPECT_TRUE(IsPieceSynced(data.object_identifier, true));
+  }
 }
 
 TEST_F(PageStorageTest, UntrackedObjectsSimple) {

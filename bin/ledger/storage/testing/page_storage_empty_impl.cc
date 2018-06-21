@@ -108,6 +108,13 @@ void PageStorageEmptyImpl::MarkPieceSynced(
   callback(Status::NOT_IMPLEMENTED);
 }
 
+void PageStorageEmptyImpl::IsPieceSynced(
+    ObjectIdentifier object_identifier,
+    std::function<void(Status, bool)> callback) {
+  FXL_NOTIMPLEMENTED();
+  callback(Status::NOT_IMPLEMENTED, false);
+}
+
 void PageStorageEmptyImpl::AddObjectFromLocal(
     std::unique_ptr<DataSource> /*data_source*/,
     std::function<void(Status, ObjectIdentifier)> callback) {

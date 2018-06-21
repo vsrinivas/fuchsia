@@ -118,6 +118,11 @@ class PageStorage : public PageSyncClient {
   // Marks the object with the given |object_identifier| as synced.
   virtual void MarkPieceSynced(ObjectIdentifier object_identifier,
                                std::function<void(Status)> callback) = 0;
+  // Returns true if the object is known to be synced to the cloud, false
+  // otherwise.
+  virtual void IsPieceSynced(ObjectIdentifier object_identifier,
+                             std::function<void(Status, bool)> callback) = 0;
+
   // Adds the given local object and passes the new object's id to the callback.
   virtual void AddObjectFromLocal(
       std::unique_ptr<DataSource> data_source,
