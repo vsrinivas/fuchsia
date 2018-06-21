@@ -30,8 +30,8 @@ ARCH_MAP = {
 }
 
 
-def remove_dashes(name):
-    return name.replace('-', '_')
+def sanitize(name):
+    return name.replace('-', '_').replace('.', '_')
 
 
 class BazelBuilder(Builder):
@@ -157,7 +157,7 @@ class BazelBuilder(Builder):
                   'skipping %s.' % atom.id)
             return
 
-        name = remove_dashes(atom.id.name)
+        name = sanitize(atom.id.name)
         library = model.CppLibrary(name, self.metadata.target_arch)
         base = self.dest('pkg', name)
 
@@ -191,7 +191,7 @@ class BazelBuilder(Builder):
         # Only write the prebuilt library BUILD top when not in overlay.
         if not self.is_overlay:
             for dep_id in atom.deps:
-                library.deps.append('//pkg/' + remove_dashes(dep_id.name))
+                library.deps.append('//pkg/' + sanitize(dep_id.name))
             library.includes.append('include')
             self.write_file(os.path.join(base, 'BUILD'),
                             'cc_prebuilt_library_top', library)
@@ -206,7 +206,7 @@ class BazelBuilder(Builder):
         if self.is_overlay:
             return
 
-        name = remove_dashes(atom.id.name)
+        name = sanitize(atom.id.name)
         library = model.CppLibrary(name, self.metadata.target_arch)
         base = self.dest('pkg', name)
 
@@ -223,7 +223,7 @@ class BazelBuilder(Builder):
                                 (extension, atom.id))
 
         for dep_id in atom.deps:
-            library.deps.append('//pkg/' + remove_dashes(dep_id.name))
+            library.deps.append('//pkg/' + sanitize(dep_id.name))
 
         library.includes.append('include')
 
@@ -259,7 +259,7 @@ class BazelBuilder(Builder):
         '''Installs an atom from the "fidl" domain.'''
         if self.is_overlay:
             return
-        name = remove_dashes(atom.id.name)
+        name = sanitize(atom.id.name)
         data = model.FidlLibrary(name, atom.tags['name'])
         base = self.dest('fidl', name)
         for file in atom.files:
@@ -267,7 +267,7 @@ class BazelBuilder(Builder):
             shutil.copy2(file.source, dest)
             data.srcs.append(file.destination)
         for dep_id in atom.deps:
-            data.deps.append('//fidl/' + remove_dashes(dep_id.name))
+            data.deps.append('//fidl/' + sanitize(dep_id.name))
         self.write_file(os.path.join(base, 'BUILD'), 'fidl', data)
 
 
