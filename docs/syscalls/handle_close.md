@@ -33,5 +33,6 @@ similar to free(NULL) being a valid call.
 
 ## SEE ALSO
 
+[handle_close_many](handle_close_many.md),
 [handle_duplicate](handle_duplicate.md),
 [handle_replace](handle_replace.md).

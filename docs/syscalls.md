@@ -2,6 +2,7 @@
 
 ## Handles
 + [handle_close](syscalls/handle_close.md) - close a handle
++ [handle_close_many](syscalls/handle_close_many.md) - close several handles
 + [handle_duplicate](syscalls/handle_duplicate.md) - create a duplicate handle (optionally with reduced rights)
 + [handle_replace](syscalls/handle_replace.md) - create a new handle (optionally with reduced rights) and destroy the old one
 

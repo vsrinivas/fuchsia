@@ -97,9 +97,16 @@ public:
     HandleOwner RemoveHandle(zx_handle_t handle_value);
     HandleOwner RemoveHandleLocked(zx_handle_t handle_value) TA_REQ(handle_table_lock_);
 
+    // Remove all of an array of |user_handles| from the
+    // process. Returns ZX_OK if all of the handles were removed, and
+    // returns ZX_ERR_BAD_HANDLE if any were not.
+    zx_status_t RemoveHandles(user_in_ptr<const zx_handle_t> user_handles,
+                              size_t num_handles);
+
     // Puts back the |handle_value| which has not yet been given to another process
     // back into this process.
     void UndoRemoveHandleLocked(zx_handle_t handle_value) TA_REQ(handle_table_lock_);
+
 
     // Get the dispatcher corresponding to this handle value.
     template <typename T>

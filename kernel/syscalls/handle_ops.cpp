@@ -30,6 +30,13 @@ zx_status_t sys_handle_close(zx_handle_t handle_value) {
     return ZX_OK;
 }
 
+zx_status_t sys_handle_close_many(user_in_ptr<const zx_handle_t> handles, size_t num_handles) {
+    LTRACEF("handles %p, num_handles %zu\n", handles.get(), num_handles);
+
+    auto up = ProcessDispatcher::GetCurrent();
+    return up->RemoveHandles(handles, num_handles);
+}
+
 static zx_status_t handle_dup_replace(
     bool is_replace, zx_handle_t handle_value, zx_rights_t rights,
     user_out_handle* out) {

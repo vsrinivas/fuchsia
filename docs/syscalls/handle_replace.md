@@ -40,4 +40,5 @@ on success.
 ## SEE ALSO
 
 [handle_close](handle_close.md),
+[handle_close_many](handle_close_many.md),
 [handle_duplicate](handle_duplicate.md).

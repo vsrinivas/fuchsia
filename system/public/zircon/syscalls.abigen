@@ -111,6 +111,10 @@ syscall handle_close
     (handle: zx_handle_t handle_release_always)
     returns (zx_status_t);
 
+syscall handle_close_many
+    (handles: zx_handle_t[num_handles] IN, num_handles: size_t)
+    returns (zx_status_t);
+
 syscall handle_duplicate
     (handle: zx_handle_t, rights: zx_rights_t)
     returns (zx_status_t, out: zx_handle_t handle_acquire);

@@ -274,38 +274,6 @@ static zx_status_t msg_put_handles(ProcessDispatcher* up, MessagePacket* msg,
     return status;
 }
 
-static void consume_user_handles(ProcessDispatcher* up,
-                                 user_in_ptr<const zx_handle_t> user_handles,
-                                 uint32_t num_handles) {
-    if (num_handles == 0u)
-        return;
-
-    uint32_t offset = 0;
-    while (offset < num_handles) {
-        // We process |num_handles| in chunks of |kMaxMessageHandles| because we
-        // don't have a limit on how large |num_handles| can be yet. By the time
-        // we get around to |msg_put_handles|, we will have established that
-        // |num_handles| is at most |kMaxMessageHandles| because
-        // |MessagePacket::Create| enforces that limit.
-        uint32_t chunk_size = fbl::min(num_handles - offset, kMaxMessageHandles);
-
-        zx_handle_t handles[kMaxMessageHandles];
-
-        // If we fail |copy_array_from_user|, then we might discard some, but
-        // not all, of the handles |user_handles| specified.
-        if (user_handles.copy_array_from_user(handles, chunk_size, offset) != ZX_OK)
-            return;
-
-        {
-            AutoLock lock(up->handle_table_lock());
-            for (size_t ix = 0; ix != chunk_size; ++ix)
-                up->RemoveHandleLocked(handles[ix]);
-        }
-
-        offset += chunk_size;
-    }
-}
-
 zx_status_t sys_channel_write(zx_handle_t handle_value, uint32_t options,
                               user_in_ptr<const void> user_bytes, uint32_t num_bytes,
                               user_in_ptr<const zx_handle_t> user_handles, uint32_t num_handles) {
@@ -315,21 +283,21 @@ zx_status_t sys_channel_write(zx_handle_t handle_value, uint32_t options,
     auto up = ProcessDispatcher::GetCurrent();
 
     if (options != 0u) {
-        consume_user_handles(up, user_handles, num_handles);
+        up->RemoveHandles(user_handles, num_handles);
         return ZX_ERR_INVALID_ARGS;
     }
 
     fbl::RefPtr<ChannelDispatcher> channel;
     zx_status_t status = up->GetDispatcherWithRights(handle_value, ZX_RIGHT_WRITE, &channel);
     if (status != ZX_OK) {
-        consume_user_handles(up, user_handles, num_handles);
+        up->RemoveHandles(user_handles, num_handles);
         return status;
     }
 
     fbl::unique_ptr<MessagePacket> msg;
     status = MessagePacket::Create(user_bytes, num_bytes, num_handles, &msg);
     if (status != ZX_OK) {
-        consume_user_handles(up, user_handles, num_handles);
+        up->RemoveHandles(user_handles, num_handles);
         return status;
     }
 
@@ -368,14 +336,14 @@ zx_status_t sys_channel_call_noretry(zx_handle_t handle_value, uint32_t options,
     auto up = ProcessDispatcher::GetCurrent();
 
     if (options || num_bytes < sizeof(zx_txid_t)) {
-        consume_user_handles(up, user_handles, num_handles);
+        up->RemoveHandles(user_handles, num_handles);
         return ZX_ERR_INVALID_ARGS;
     }
 
     fbl::RefPtr<ChannelDispatcher> channel;
     status = up->GetDispatcherWithRights(handle_value, ZX_RIGHT_WRITE | ZX_RIGHT_READ, &channel);
     if (status != ZX_OK) {
-        consume_user_handles(up, user_handles, num_handles);
+        up->RemoveHandles(user_handles, num_handles);
         return status;
     }
 
@@ -383,7 +351,7 @@ zx_status_t sys_channel_call_noretry(zx_handle_t handle_value, uint32_t options,
     fbl::unique_ptr<MessagePacket> msg;
     status = MessagePacket::Create(user_bytes, num_bytes, num_handles, &msg);
     if (status != ZX_OK) {
-        consume_user_handles(up, user_handles, num_handles);
+        up->RemoveHandles(user_handles, num_handles);
         return status;
     }
 

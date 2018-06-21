@@ -63,7 +63,8 @@ The [*zx_handle_duplicate()*](syscalls/handle_duplicate.md) and
 obtain additional Handles referring to the same Object as the Handle passed in,
 optionally with reduced Rights.  The [*zx_handle_close()*](syscalls/handle_close.md)
 system call closes a Handle, releasing the Object it refers to, if that Handle is
-the last one for that Object.
+the last one for that Object. The [*zx_handle_close_many()*](syscalls/handle_close_many.md)
+system call similarly closes an array of handles.
 
 
 ## Kernel Object IDs
