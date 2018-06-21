@@ -122,8 +122,7 @@ zx_status_t dc_msg_rpc(zx_handle_t h, dc_msg_t* msg, size_t msglen,
     msg->txid = 1;
     zx_status_t r;
     if ((r = zx_channel_call(h, 0, ZX_TIME_INFINITE,
-                             &args, &args.rd_num_bytes, &args.rd_num_handles,
-                             NULL)) < 0) {
+                             &args, &args.rd_num_bytes, &args.rd_num_handles)) < 0) {
         return r;
     }
     if (args.rd_num_bytes < sizeof(dc_status_t)) {

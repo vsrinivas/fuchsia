@@ -79,14 +79,7 @@ void* next_secondary(void* secondary, size_t size) {
 // Since outgoing / incoming handles are contained in fidl::Message,
 // they will be automatically closed whenever it goes out of scope.
 zx_status_t fidl_call(zx_handle_t h, fidl::Message* message) {
-    zx_status_t rs = 0;
-    zx_status_t r = message->Call(h, 0, ZX_TIME_INFINITE, &rs, message);
-    if (r == ZX_ERR_CALL_FAILED) {
-        return rs == ZX_OK ? ZX_ERR_IO : rs;
-    } else if (r != ZX_OK) {
-        return r;
-    }
-    return ZX_OK;
+    return message->Call(h, 0, ZX_TIME_INFINITE, message);
 }
 
 // zxrio_decode_request always takes ownership of the incoming handles.

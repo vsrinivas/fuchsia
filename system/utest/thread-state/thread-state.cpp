@@ -223,18 +223,14 @@ static void do_msg_channel_test(zx_handle_t channel, const Message* msg) {
 
     uint32_t actual_num_bytes = 0;
     uint32_t actual_num_handles = 0;
-    zx_status_t rd_status = ZX_OK;
     auto status = zx_channel_call(test_channel, 0, ZX_TIME_INFINITE, &args,
-                                  &actual_num_bytes, &actual_num_handles,
-                                  &rd_status);
+                                  &actual_num_bytes, &actual_num_handles);
     tu_handle_close(test_channel);
-    if (status == ZX_ERR_PEER_CLOSED ||
-        (status == ZX_ERR_CALL_FAILED && rd_status == ZX_ERR_PEER_CLOSED)) {
+    if (status == ZX_ERR_PEER_CLOSED) {
         // ok
     } else {
-        unittest_printf_critical("ERROR: channel_call didn't get PEER_CLOSED: %d/%s, read status %d/%s\n",
-                        status, zx_status_get_string(status),
-                        rd_status, zx_status_get_string(rd_status));
+        unittest_printf_critical("ERROR: channel_call didn't get PEER_CLOSED: %d/%s\n",
+                        status, zx_status_get_string(status));
         send_msg(channel, MSG_FAIL);
         return;
     }

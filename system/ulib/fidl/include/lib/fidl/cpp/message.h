@@ -150,7 +150,7 @@ public:
     // If this method returns ZX_OK, handles() will be empty because they were
     // consumed by this operation.
     zx_status_t Call(zx_handle_t channel, uint32_t flags, zx_time_t deadline,
-                     zx_status_t* read_status, Message* response);
+                     Message* response);
 
     // Stop tracking the handles in stored in handles(), without closing them.
     //

@@ -95,11 +95,9 @@ void threads_test_channel_call_fn(void* arg_) {
         .rd_num_handles = 0,
     };
 
-    arg->read_status = ZX_OK;
     arg->call_status = zx_channel_call(arg->channel, 0, ZX_TIME_INFINITE, &call_args,
-                                       &actual_bytes, &actual_handles, &arg->read_status);
+                                       &actual_bytes, &actual_handles);
     if (arg->call_status == ZX_OK) {
-        arg->read_status = ZX_OK;
         if (actual_bytes != sizeof(recv_buf) ||
             memcmp(recv_buf + sizeof(zx_txid_t), "abcdefghj" + sizeof(zx_txid_t), sizeof(recv_buf) - sizeof(zx_txid_t))) {
             arg->call_status = ZX_ERR_BAD_STATE;

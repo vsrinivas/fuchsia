@@ -36,13 +36,12 @@ static zx_status_t zx_channel_call_noretry(zx_handle_t handle,
                                            zx_time_t deadline,
                                            const zx_channel_call_args_t* args,
                                            uint32_t* actual_bytes,
-                                           uint32_t* actual_handles,
-                                           zx_status_t* read_status) {
+                                           uint32_t* actual_handles) {
     uintptr_t vdso_base =
         (uintptr_t)&zx_handle_close - VDSO_SYSCALL_zx_handle_close;
     uintptr_t fnptr = vdso_base + VDSO_SYSCALL_zx_channel_call_noretry;
     return (*(__typeof(zx_channel_call_noretry)*)fnptr)(
-        handle, options, deadline, args, actual_bytes, actual_handles, read_status);
+        handle, options, deadline, args, actual_bytes, actual_handles);
 }
 
 // This runs in a separate process, since the expected outcome of running this
@@ -82,10 +81,9 @@ static void bad_channel_call(void) {
         __builtin_trap();
     }
 
-    zx_status_t rs = ZX_OK;
     status = zx_channel_call_noretry(chan, 0, ZX_TIME_INFINITE, &args,
-                                     &act_bytes, &act_handles, &rs);
-    if (status != ZX_ERR_CALL_FAILED || rs != ZX_ERR_INTERNAL_INTR_RETRY) {
+                                     &act_bytes, &act_handles);
+    if (status != ZX_ERR_INTERNAL_INTR_RETRY) {
         zx_object_signal(event, 0, ZX_USER_SIGNAL_0);
         __builtin_trap();
     }
@@ -95,7 +93,7 @@ static void bad_channel_call(void) {
     // Doing another channel call at this point violates the VDSO contract,
     // since we haven't called SYSCALL_zx_channel_call_finish().
     zx_channel_call_noretry(chan, 0, ZX_TIME_INFINITE, &args,
-                            &act_bytes, &act_handles, &rs);
+                            &act_bytes, &act_handles);
     zx_object_signal(event, 0, ZX_USER_SIGNAL_0);
     __builtin_trap();
 }

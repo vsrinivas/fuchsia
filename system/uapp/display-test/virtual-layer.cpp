@@ -95,9 +95,8 @@ bool VirtualLayer::Init(zx_handle_t dc_handle) {
         call_args.wr_num_bytes = sizeof(create_layer_msg);
         call_args.rd_num_bytes = sizeof(create_layer_rsp);
         uint32_t actual_bytes, actual_handles;
-        zx_status_t read_status;
         if (zx_channel_call(dc_handle, 0, ZX_TIME_INFINITE, &call_args,
-                            &actual_bytes, &actual_handles, &read_status) != ZX_OK) {
+                            &actual_bytes, &actual_handles) != ZX_OK) {
             printf("Creating layer failed\n");
             return false;
         }

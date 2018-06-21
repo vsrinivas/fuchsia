@@ -2366,17 +2366,11 @@ __NO_SAFESTACK static zx_status_t loader_svc_rpc(uint32_t ordinal,
 
     uint32_t reply_size;
     uint32_t handle_count;
-    zx_status_t read_status = ZX_OK;
     status = _zx_channel_call(loader_svc, 0, ZX_TIME_INFINITE,
-                              &call, &reply_size, &handle_count,
-                              &read_status);
+                              &call, &reply_size, &handle_count);
     if (status != ZX_OK) {
-        error("_zx_channel_call of %u bytes to loader service: "
-              "%d (%s), read %d (%s)",
-              call.wr_num_bytes, status, _zx_status_get_string(status),
-              read_status, _zx_status_get_string(read_status));
-        if (status == ZX_ERR_CALL_FAILED && read_status != ZX_OK)
-            status = read_status;
+        error("_zx_channel_call of %u bytes to loader service: %d (%s)",
+              call.wr_num_bytes, status, _zx_status_get_string(status));
         return status;
     }
 
@@ -2469,12 +2463,9 @@ __NO_SAFESTACK zx_status_t dl_clone_loader_service(zx_handle_t* out) {
     };
     uint32_t reply_size;
     uint32_t handle_count;
-    zx_status_t read_status = ZX_OK;
     if ((status = _zx_channel_call(loader_svc, 0, ZX_TIME_INFINITE,
-                                   &call, &reply_size, &handle_count,
-                                   &read_status)) != ZX_OK) {
-        if (status == ZX_ERR_CALL_FAILED && read_status != ZX_OK)
-            status = read_status;
+                                   &call, &reply_size, &handle_count)) != ZX_OK) {
+        // Do nothing.
     } else if ((reply_size != ldmsg_rsp_get_size(&rsp)) ||
                (rsp.header.ordinal != LDMSG_OP_CLONE)) {
         status = ZX_ERR_INVALID_ARGS;

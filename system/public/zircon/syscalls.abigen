@@ -202,19 +202,16 @@ syscall channel_write
 syscall channel_call_noretry internal
     (handle: zx_handle_t, options: uint32_t, deadline: zx_time_t,
         args: zx_channel_call_args_t[1] IN)
-    returns (zx_status_t, actual_bytes: uint32_t,
-                actual_handles: uint32_t, read_status: zx_status_t optional);
+    returns (zx_status_t, actual_bytes: uint32_t, actual_handles: uint32_t);
 
 syscall channel_call_finish internal
     (deadline: zx_time_t, args: zx_channel_call_args_t[1] IN)
-    returns (zx_status_t, actual_bytes: uint32_t,
-                actual_handles: uint32_t, read_status: zx_status_t optional);
+    returns (zx_status_t, actual_bytes: uint32_t, actual_handles: uint32_t);
 
 syscall channel_call blocking vdsocall
     (handle: zx_handle_t, options: uint32_t, deadline: zx_time_t,
         args: zx_channel_call_args_t[1] IN)
-    returns (zx_status_t, actual_bytes: uint32_t,
-                actual_handles: uint32_t, read_status: zx_status_t optional);
+    returns (zx_status_t, actual_bytes: uint32_t, actual_handles: uint32_t);
 
 # IPC: Sockets
 

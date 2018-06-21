@@ -578,10 +578,9 @@ zx_status_t fdio_spawn_vmo(zx_handle_t job,
 
         uint32_t actual_bytes = 0;
         uint32_t actual_handles = 0;
-        zx_status_t read_status = ZX_OK;
 
         status = zx_channel_call(launcher, 0, ZX_TIME_INFINITE, &args,
-                                 &actual_bytes, &actual_handles, &read_status);
+                                 &actual_bytes, &actual_handles);
 
         // zx_channel_call always consumes handles.
         memset(msg_handles, 0, sizeof(msg_handles));

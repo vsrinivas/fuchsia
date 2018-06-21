@@ -42,7 +42,7 @@ static zx_status_t platform_dev_rpc(platform_proxy_t* proxy, pdev_req_t* req, ui
         .rd_num_handles = out_handle_count,
     };
     zx_status_t status = zx_channel_call(proxy->rpc_channel, 0, ZX_TIME_INFINITE, &args, &resp_size,
-                                         &handle_count, NULL);
+                                         &handle_count);
     if (status != ZX_OK) {
         return status;
     } else if (resp_size < sizeof(*resp)) {

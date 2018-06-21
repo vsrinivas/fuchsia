@@ -49,8 +49,6 @@ void ZirconDevice::Disconnect() {
 }
 
 zx_status_t ZirconDevice::CallDevice(const zx_channel_call_args_t& args, uint64_t timeout_msec) {
-    zx_status_t res;
-    zx_status_t read_status;
     uint32_t resp_size;
     uint32_t resp_handles;
     zx_time_t deadline;
@@ -63,10 +61,7 @@ zx_status_t ZirconDevice::CallDevice(const zx_channel_call_args_t& args, uint64_
         deadline = zx_deadline_after(ZX_MSEC(timeout_msec));
     }
 
-    res = zx_channel_call(dev_channel_, 0, deadline,
-                          &args, &resp_size, &resp_handles, &read_status);
-
-    return (res == ZX_ERR_CALL_FAILED) ? read_status : res;
+    return zx_channel_call(dev_channel_, 0, deadline, &args, &resp_size, &resp_handles);
 }
 
 zx_status_t ZirconDevice::Enumerate(

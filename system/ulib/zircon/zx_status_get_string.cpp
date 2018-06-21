@@ -13,7 +13,6 @@ const char* _zx_status_get_string(zx_status_t status) {
     case ZX_ERR_NOT_SUPPORTED: return "ZX_ERR_NOT_SUPPORTED";
     case ZX_ERR_NO_RESOURCES: return "ZX_ERR_NO_RESOURCES";
     case ZX_ERR_NO_MEMORY: return "ZX_ERR_NO_MEMORY";
-    case ZX_ERR_CALL_FAILED: return "ZX_ERR_CALL_FAILED";
     case ZX_ERR_INTERNAL_INTR_RETRY: return "ZX_ERR_INTERNAL_INTR_KILLED_RETRY";
     case ZX_ERR_INVALID_ARGS: return "ZX_ERR_INVALID_ARGS";
     case ZX_ERR_BAD_HANDLE: return "ZX_ERR_BAD_HANDLE";

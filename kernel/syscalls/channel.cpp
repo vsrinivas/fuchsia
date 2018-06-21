@@ -222,32 +222,15 @@ static zx_status_t channel_read_out(ProcessDispatcher* up,
     return ZX_OK;
 }
 
-// Handles generating the final results for call successes and read-half failures.
 static zx_status_t channel_call_epilogue(ProcessDispatcher* up,
                                          fbl::unique_ptr<MessagePacket> reply,
                                          zx_channel_call_args_t* args,
-                                         zx_status_t call_status,
                                          user_out_ptr<uint32_t> actual_bytes,
-                                         user_out_ptr<uint32_t> actual_handles,
-                                         user_out_ptr<zx_status_t> read_status) {
-    // Timeout is always returned directly.
-    if (call_status == ZX_ERR_TIMED_OUT) {
-        return call_status;
-    }
-
+                                         user_out_ptr<uint32_t> actual_handles) {
     auto bytes = reply? reply->data_size() : 0u;
-
-    if (call_status == ZX_OK) {
-        call_status = channel_read_out(up, fbl::move(reply), args, actual_bytes, actual_handles);
-    }
-
-    if (call_status != ZX_OK) {
-        if (read_status) {
-            read_status.copy_to_user(call_status);
-        }
-        return ZX_ERR_CALL_FAILED;
-    }
-
+    zx_status_t status = channel_read_out(up, fbl::move(reply), args, actual_bytes, actual_handles);
+    if (status != ZX_OK)
+        return status;
     record_recv_msg_sz(bytes);
     return ZX_OK;
 }
@@ -369,8 +352,7 @@ zx_status_t sys_channel_call_noretry(zx_handle_t handle_value, uint32_t options,
                                      zx_time_t deadline,
                                      user_in_ptr<const zx_channel_call_args_t> user_args,
                                      user_out_ptr<uint32_t> actual_bytes,
-                                     user_out_ptr<uint32_t> actual_handles,
-                                     user_out_ptr<zx_status_t> read_status) {
+                                     user_out_ptr<uint32_t> actual_handles) {
     zx_channel_call_args_t args;
 
     zx_status_t status = user_args.copy_from_user(&args);
@@ -417,15 +399,15 @@ zx_status_t sys_channel_call_noretry(zx_handle_t handle_value, uint32_t options,
     // Write message and wait for reply, deadline, or cancelation
     fbl::unique_ptr<MessagePacket> reply;
     status = channel->Call(fbl::move(msg), deadline, &reply);
-    return channel_call_epilogue(up, fbl::move(reply), &args, status,
-                                 actual_bytes, actual_handles, read_status);
+    if (status != ZX_OK)
+        return status;
+    return channel_call_epilogue(up, fbl::move(reply), &args, actual_bytes, actual_handles);
 }
 
 zx_status_t sys_channel_call_finish(zx_time_t deadline,
                                     user_in_ptr<const zx_channel_call_args_t> user_args,
                                     user_out_ptr<uint32_t> actual_bytes,
-                                    user_out_ptr<uint32_t> actual_handles,
-                                    user_out_ptr<zx_status_t> read_status) {
+                                    user_out_ptr<uint32_t> actual_handles) {
 
     zx_channel_call_args_t args;
     zx_status_t status = user_args.copy_from_user(&args);
@@ -441,7 +423,8 @@ zx_status_t sys_channel_call_finish(zx_time_t deadline,
 
     fbl::unique_ptr<MessagePacket> reply;
     status = channel->ResumeInterruptedCall(waiter, deadline, &reply);
-    return channel_call_epilogue(up, fbl::move(reply), &args, status,
-                                 actual_bytes, actual_handles, read_status);
+    if (status != ZX_OK)
+        return status;
+    return channel_call_epilogue(up, fbl::move(reply), &args, actual_bytes, actual_handles);
 
 }

@@ -162,7 +162,6 @@ static zx_status_t zxrio_txn(zxrio_t* rio, zxrio_msg_t* msg) {
     xprintf("txn h=%x op=%d len=%u\n", rio->h, msg->op, msg->datalen);
 
     zx_status_t r;
-    zx_status_t rs = ZX_ERR_INTERNAL;
     uint32_t dsize;
 
     zx_channel_call_args_t args;
@@ -176,12 +175,9 @@ static zx_status_t zxrio_txn(zxrio_t* rio, zxrio_msg_t* msg) {
     args.rd_num_handles = FDIO_MAX_HANDLES;
     const uint32_t request_op = ZXRIO_OP(msg->op);
 
-    r = zx_channel_call(rio->h, 0, ZX_TIME_INFINITE, &args, &dsize, &msg->hcount, &rs);
+    r = zx_channel_call(rio->h, 0, ZX_TIME_INFINITE, &args, &dsize, &msg->hcount);
     if (r < 0) {
         msg->hcount = 0;
-        // read phase failed, true status is in rs
-        if (r == ZX_ERR_CALL_FAILED)
-            return rs;
         return r;
     }
 

@@ -125,9 +125,7 @@ void minipr_thread_loop(zx_handle_t channel, uintptr_t fnptr) {
                 }
 
                 // Neither MINIP_CMD_BUILTIN_TRAP nor MINIP_CMD_EXIT_NORMAL send a
-                // message so the client will get either ZX_CHANNEL_PEER_CLOSED if
-                // it's doing a wait or will get ZX_ERR_CALL_FAILED of it's doing a
-                // channel_call().
+                // message so the client will get ZX_CHANNEL_PEER_CLOSED.
 
                 if (what & MINIP_CMD_BUILTIN_TRAP)
                     __builtin_trap();

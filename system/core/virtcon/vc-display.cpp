@@ -10,6 +10,7 @@
 #include <zircon/device/display-controller.h>
 #include <zircon/process.h>
 #include <zircon/processargs.h>
+#include <zircon/status.h>
 #include <zircon/syscalls.h>
 
 #include "fuchsia/display/c/fidl.h"
@@ -118,11 +119,12 @@ static zx_status_t handle_display_added(fuchsia_display_Info* info, fuchsia_disp
     stride_call.wr_num_bytes = sizeof(stride_msg);
     stride_call.rd_num_bytes = sizeof(stride_rsp);
     uint32_t actual_bytes, actual_handles;
-    zx_status_t status, read_status;
+    zx_status_t status;
     if ((status = zx_channel_call(dc_ph.handle, 0, ZX_TIME_INFINITE, &stride_call,
-                                  &actual_bytes, &actual_handles, &read_status)) != ZX_OK) {
-        printf("vc: Failed to compute fb stride %d %d\n", status, read_status);
-        return status == ZX_ERR_CALL_FAILED ? read_status : status;
+                                  &actual_bytes, &actual_handles)) != ZX_OK) {
+        printf("vc: Failed to compute fb stride: %d (%s)\n", status,
+               zx_status_get_string(status));
+        return status;
     }
 
     if (stride_rsp.stride < mode->horizontal_resolution) {
@@ -199,11 +201,11 @@ static zx_status_t allocate_vmo(uint32_t size, zx_handle_t* vmo_out) {
     call_args.rd_num_bytes = sizeof(alloc_rsp);
     call_args.rd_num_handles = 1;
     uint32_t actual_bytes, actual_handles;
-    zx_status_t status, read_status;
+    zx_status_t status;
     if ((status = zx_channel_call(dc_ph.handle, 0, ZX_TIME_INFINITE, &call_args,
-                                  &actual_bytes, &actual_handles, &read_status)) != ZX_OK) {
-        printf("vc: Failed to alloc vmo %d %d\n", status, read_status);
-        return status == ZX_ERR_CALL_FAILED ? read_status : status;
+                                  &actual_bytes, &actual_handles)) != ZX_OK) {
+        printf("vc: Failed to alloc vmo: %d (%s)\n", status, zx_status_get_string(status));
+        return status;
     }
     if (alloc_rsp.res != ZX_OK) {
         printf("vc: Failed to alloc vmo %d\n", alloc_rsp.res);
@@ -238,11 +240,10 @@ static zx_status_t import_vmo(display_info* display, zx_handle_t vmo, uint64_t* 
     call_args.wr_num_handles = 1;
     call_args.rd_num_bytes = sizeof(import_rsp);
     uint32_t actual_bytes, actual_handles;
-    zx_status_t read_status;
     if ((status = zx_channel_call(dc_ph.handle, 0, ZX_TIME_INFINITE, &call_args,
-                                  &actual_bytes, &actual_handles, &read_status)) != ZX_OK) {
-        printf("vc: Failed to import vmo call %d\n", status);
-        return status == ZX_ERR_CALL_FAILED ? read_status : status;
+                                  &actual_bytes, &actual_handles)) != ZX_OK) {
+        printf("vc: Failed to import vmo call %d (%s)\n", status, zx_status_get_string(status));
+        return status;
     }
 
     if (import_rsp.res != ZX_OK) {
@@ -265,10 +266,10 @@ static zx_status_t create_layer(uint64_t* layer_id) {
     call_args.wr_num_bytes = sizeof(create_layer_msg);
     call_args.rd_num_bytes = sizeof(create_layer_rsp);
     uint32_t actual_bytes, actual_handles;
-    zx_status_t status, read_status;
+    zx_status_t status;
     if ((status = zx_channel_call(dc_ph.handle, 0, ZX_TIME_INFINITE, &call_args,
-                                  &actual_bytes, &actual_handles, &read_status)) != ZX_OK) {
-        printf("vc: Create layer call failed %d %d\n", status, read_status);
+                                  &actual_bytes, &actual_handles)) != ZX_OK) {
+        printf("vc: Create layer call failed: %d (%s)\n", status, zx_status_get_string(status));
         return status;
     }
     if (create_layer_rsp.res != ZX_OK) {
@@ -340,11 +341,11 @@ static zx_status_t set_active_image(uint64_t layer_id, uint64_t image_id) {
     call_args.wr_num_bytes = sizeof(check_msg);
     call_args.rd_num_bytes = sizeof(check_rsp);
     uint32_t actual_bytes, actual_handles;
-    zx_status_t read_status;
     if ((status = zx_channel_call(dc_ph.handle, 0, ZX_TIME_INFINITE, &call_args,
-                                  &actual_bytes, &actual_handles, &read_status)) != ZX_OK) {
-        printf("vc: Failed to make validate display config %d\n", status);
-        return status == ZX_ERR_CALL_FAILED ? read_status : status;
+                                  &actual_bytes, &actual_handles)) != ZX_OK) {
+        printf("vc: Failed to make validate display config: %d (%s)\n", status,
+               zx_status_get_string(status));
+        return status;
     }
 
     if (check_rsp.res.count != 0) {

@@ -444,12 +444,9 @@ static zx_status_t loader_svc_rpc(zx_handle_t loader_svc, uint32_t ordinal,
     };
     uint32_t reply_size;
     uint32_t handle_count;
-    zx_status_t read_status = ZX_OK;
-    status = zx_channel_call(loader_svc, 0, ZX_TIME_INFINITE, &call, &reply_size,
-                             &handle_count, &read_status);
-    if (status != ZX_OK) {
-        return status == ZX_ERR_CALL_FAILED ? read_status : status;
-    }
+    status = zx_channel_call(loader_svc, 0, ZX_TIME_INFINITE, &call, &reply_size, &handle_count);
+    if (status != ZX_OK)
+        return status;
 
     // Check for protocol violations.
     if (reply_size != ldmsg_rsp_get_size(&rsp)) {

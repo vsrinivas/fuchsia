@@ -125,9 +125,8 @@ zx_status_t fb_bind(bool single_buffer, const char** err_msg_out) {
     stride_call.rd_bytes = &stride_rsp;
     stride_call.wr_num_bytes = sizeof(stride_msg);
     stride_call.rd_num_bytes = sizeof(stride_rsp);
-    zx_status_t read_status;
     if ((status = zx_channel_call(dc_handle, 0, ZX_TIME_INFINITE, &stride_call,
-                                  &actual_bytes, &actual_handles, &read_status)) != ZX_OK) {
+                                  &actual_bytes, &actual_handles)) != ZX_OK) {
         *err_msg_out = "Failed to get linear stride";
         goto err;
     }
@@ -142,9 +141,8 @@ zx_status_t fb_bind(bool single_buffer, const char** err_msg_out) {
     call_args.wr_num_bytes = sizeof(create_layer_msg);
     call_args.rd_num_bytes = sizeof(create_layer_rsp);
     if ((status = zx_channel_call(dc_handle, 0, ZX_TIME_INFINITE, &call_args,
-                                  &actual_bytes, &actual_handles, &read_status)) != ZX_OK) {
+                                  &actual_bytes, &actual_handles)) != ZX_OK) {
         *err_msg_out = "Create layer call failed";
-        status = (status == ZX_ERR_CALL_FAILED ? read_status : status);
         goto err;
     }
     if (create_layer_rsp.res != ZX_OK) {
@@ -206,9 +204,8 @@ zx_status_t fb_bind(bool single_buffer, const char** err_msg_out) {
         call_args.rd_num_bytes = sizeof(alloc_rsp);
         call_args.rd_num_handles = 1;
         uint32_t actual_bytes, actual_handles;
-        zx_status_t read_status;
         if ((status = zx_channel_call(dc_handle, 0, ZX_TIME_INFINITE, &call_args,
-                                      &actual_bytes, &actual_handles, &read_status)) != ZX_OK) {
+                                      &actual_bytes, &actual_handles)) != ZX_OK) {
             *err_msg_out = "Failed vmo alloc call";
             goto err;
         }
@@ -330,14 +327,9 @@ zx_status_t fb_import_image(zx_handle_t handle, uint32_t type, uint64_t *id_out)
     import_call.wr_num_handles = 1;
     import_call.rd_num_bytes = sizeof(import_rsp);
     uint32_t actual_bytes, actual_handles;
-    zx_status_t read_status;
     if ((status = zx_channel_call(dc_handle, 0, ZX_TIME_INFINITE, &import_call,
-                                  &actual_bytes, &actual_handles, &read_status)) != ZX_OK) {
-        if (status == ZX_ERR_CALL_FAILED) {
-            return read_status;
-        } else {
-            return status;
-        }
+                                  &actual_bytes, &actual_handles)) != ZX_OK) {
+        return status;
     }
 
     if (import_rsp.res != ZX_OK) {
@@ -425,9 +417,9 @@ zx_status_t fb_alloc_image_buffer(zx_handle_t* vmo_out) {
     call_args.rd_num_bytes = sizeof(alloc_rsp);
     call_args.rd_num_handles = 1;
     uint32_t actual_bytes, actual_handles;
-    zx_status_t read_status, status;
+    zx_status_t status;
     if ((status = zx_channel_call(dc_handle, 0, ZX_TIME_INFINITE, &call_args,
-                                  &actual_bytes, &actual_handles, &read_status)) != ZX_OK) {
+                                  &actual_bytes, &actual_handles)) != ZX_OK) {
         if (alloc_rsp.res != ZX_OK) {
             status = alloc_rsp.res;
         }

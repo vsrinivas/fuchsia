@@ -21,6 +21,7 @@
 #include <lib/fidl/cpp/vector_view.h>
 
 #include <zircon/pixelformat.h>
+#include <zircon/status.h>
 #include <zircon/syscalls.h>
 
 #include "display.h"
@@ -151,10 +152,10 @@ bool apply_config() {
     check_call.wr_num_bytes = sizeof(check_msg);
     check_call.rd_num_bytes = sizeof(check_resp_bytes);
     uint32_t actual_bytes, actual_handles;
-    zx_status_t read_status, status;
+    zx_status_t status;
     if ((status = zx_channel_call(dc_handle, 0, ZX_TIME_INFINITE, &check_call,
-                        &actual_bytes, &actual_handles, &read_status)) != ZX_OK) {
-        printf("Failed to make check call %d %d\n", status, read_status);
+                        &actual_bytes, &actual_handles)) != ZX_OK) {
+        printf("Failed to make check call: %d (%s)\n", status, zx_status_get_string(status));
         return false;
     }
 

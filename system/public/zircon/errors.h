@@ -23,9 +23,7 @@
 // for the operation.
 #define ZX_ERR_NO_MEMORY (-4)
 
-// ZX_ERR_CALL_FAILED: The second phase of zx_channel_call() did not complete
-// successfully.
-#define ZX_ERR_CALL_FAILED (-5)
+// -5 used to be ZX_ERR_CALL_FAILED.
 
 // ZX_ERR_INTERNAL_INTR_RETRY: The system call was interrupted, but should be
 // retried.  This should not be seen outside of the VDSO.

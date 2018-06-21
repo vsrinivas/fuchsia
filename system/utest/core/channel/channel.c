@@ -621,11 +621,10 @@ static zx_status_t do_cc(zx_handle_t cli, uint32_t op) {
     zx_status_t status;
     uint32_t bytes = 0;
     uint32_t handles = 0;
-    zx_status_t rd_status = ZX_OK;
 
     zx_time_t timeout = (op == OP_IGNORE) ? 0 : ZX_TIME_INFINITE;
 
-    status = zx_channel_call(cli, 0, timeout, &args, &bytes, &handles, &rd_status);
+    status = zx_channel_call(cli, 0, timeout, &args, &bytes, &handles);
     if (status != ZX_OK) {
         if ((op == OP_IGNORE) && (status == ZX_ERR_TIMED_OUT)) {
             return ZX_OK;
@@ -633,18 +632,16 @@ static zx_status_t do_cc(zx_handle_t cli, uint32_t op) {
         if ((op == OP_NOTXID) && (status == ZX_ERR_INVALID_ARGS)) {
             return ZX_OK;
         }
-        if (status == ZX_ERR_CALL_FAILED) {
-            if ((op == OP_SHUTDOWN) && (rd_status == ZX_ERR_PEER_CLOSED)) {
-                return ZX_OK;
-            }
-            if ((op == OP_POSTSHUTDOWN) && (rd_status == ZX_ERR_PEER_CLOSED)) {
-                return ZX_OK;
-            }
-            if ((op == OP_TOOBIG) && (rd_status == ZX_ERR_BUFFER_TOO_SMALL)) {
-                return ZX_OK;
-            }
+        if ((op == OP_SHUTDOWN) && (status == ZX_ERR_PEER_CLOSED)) {
+            return ZX_OK;
         }
-        fprintf(stderr, "do_cc: channel_call() status=%d rd_status=%d\n", status, rd_status);
+        if ((op == OP_POSTSHUTDOWN) && (status == ZX_ERR_PEER_CLOSED)) {
+            return ZX_OK;
+        }
+        if ((op == OP_TOOBIG) && (status == ZX_ERR_BUFFER_TOO_SMALL)) {
+            return ZX_OK;
+        }
+        fprintf(stderr, "do_cc: channel_call() status=%d\n", status);
         return -1000;
     }
 
@@ -754,9 +751,8 @@ static bool channel_call_consumes_handles(void) {
     uint32_t act_bytes = 0xffffffff;
     uint32_t act_handles = 0xffffffff;
 
-    zx_status_t rs = ZX_OK;
     zx_status_t r = zx_channel_call(cli, 42, ZX_TIME_INFINITE, &args, &act_bytes,
-                                    &act_handles, &rs);
+                                    &act_handles);
 
     ASSERT_EQ(r, ZX_ERR_INVALID_ARGS, "");
     ASSERT_EQ(zx_handle_close(h), ZX_ERR_BAD_HANDLE, "");
@@ -812,14 +808,12 @@ static bool channel_call2(void) {
     uint32_t act_bytes = 0xffffffff;
     uint32_t act_handles = 0xffffffff;
 
-    zx_status_t rs = ZX_OK;
     zx_status_t r = zx_channel_call(cli, 0, zx_deadline_after(ZX_MSEC(1000)), &args, &act_bytes,
-                                    &act_handles, &rs);
+                                    &act_handles);
 
     zx_handle_close(cli);
 
-    EXPECT_EQ(r, ZX_ERR_CALL_FAILED, "");
-    EXPECT_EQ(rs, ZX_ERR_PEER_CLOSED, "");
+    EXPECT_EQ(r, ZX_ERR_PEER_CLOSED, "");
 
     int retv = 0;
     EXPECT_EQ(thrd_join(t, &retv), thrd_success, "");
@@ -843,13 +837,12 @@ static bool channel_call2(void) {
 static zx_status_t zx_channel_call_finish(zx_time_t deadline,
                                           const zx_channel_call_args_t* args,
                                           uint32_t* actual_bytes,
-                                          uint32_t* actual_handles,
-                                          zx_status_t* read_status) {
+                                          uint32_t* actual_handles) {
     uintptr_t vdso_base =
         (uintptr_t)&zx_handle_close - VDSO_SYSCALL_zx_handle_close;
     uintptr_t fnptr = vdso_base + VDSO_SYSCALL_zx_channel_call_finish;
     return (*(__typeof(zx_channel_call_finish)*)fnptr)(
-        deadline, args, actual_bytes, actual_handles, read_status);
+        deadline, args, actual_bytes, actual_handles);
 }
 
 static bool bad_channel_call_finish(void) {
@@ -871,12 +864,10 @@ static bool bad_channel_call_finish(void) {
     uint32_t act_handles = 0xffffffff;
 
     // Call channel_call_finish without having had a channel call interrupted
-    zx_status_t rs = ZX_OK;
     zx_status_t r = zx_channel_call_finish(zx_deadline_after(ZX_MSEC(1000)), &args, &act_bytes,
-                                           &act_handles, &rs);
+                                           &act_handles);
 
     EXPECT_EQ(r, ZX_ERR_BAD_STATE, "");
-    EXPECT_EQ(rs, ZX_OK, ""); // The syscall leaves this unchanged.
 
     END_TEST;
 }

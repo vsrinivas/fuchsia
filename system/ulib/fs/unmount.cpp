@@ -44,17 +44,13 @@ zx_status_t vfs_unmount_handle(zx_handle_t srv, zx_time_t deadline) {
 
     uint32_t dsize;
     uint32_t hcount;
-    zx_status_t rs;
 
     // At the moment, we don't actually care what the response is from the
     // filesystem server (or even if it supports the unmount operation). As
     // soon as ANY response comes back, either in the form of a closed handle
     // or a visible response, shut down.
-    zx_status_t status = zx_channel_call(srv, 0, deadline, &args, &dsize, &hcount, &rs);
-    if (status == ZX_ERR_CALL_FAILED) {
-        // Write phase succeeded. The target filesystem had a chance to unmount properly.
-        status = ZX_OK;
-    } else if (status == ZX_OK) {
+    zx_status_t status = zx_channel_call(srv, 0, deadline, &args, &dsize, &hcount);
+    if (status == ZX_OK) {
         // Read phase succeeded. If the target filesystem returned an error, we
         // should parse it.
         if (dsize < FIDL_ALIGN(sizeof(fuchsia_io_NodeIoctlResponse))) {
@@ -85,17 +81,13 @@ zx_status_t vfs_unmount_handle(zx_handle_t srv, zx_time_t deadline) {
 
     uint32_t dsize;
     uint32_t hcount;
-    zx_status_t rs;
 
     // At the moment, we don't actually care what the response is from the
     // filesystem server (or even if it supports the unmount operation). As
     // soon as ANY response comes back, either in the form of a closed handle
     // or a visible response, shut down.
-    zx_status_t status = zx_channel_call(srv, 0, deadline, &args, &dsize, &hcount, &rs);
-    if (status == ZX_ERR_CALL_FAILED) {
-        // Write phase succeeded. The target filesystem had a chance to unmount properly.
-        status = ZX_OK;
-    } else if (status == ZX_OK) {
+    zx_status_t status = zx_channel_call(srv, 0, deadline, &args, &dsize, &hcount);
+    if (status == ZX_OK) {
         // Read phase succeeded. If the target filesystem returned an error, we
         // should parse it.
         if (dsize < ZXRIO_HDR_SZ) {

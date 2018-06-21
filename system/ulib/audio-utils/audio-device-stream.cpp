@@ -46,19 +46,11 @@ zx_status_t DoCallImpl(const zx::channel& channel,
     args.rd_num_handles = resp_handle_out ? 1 : 0;
 
     uint32_t bytes, handles;
-    zx_status_t read_status, write_status;
 
-    write_status = channel.call(0, zx::deadline_after(CALL_TIMEOUT), &args, &bytes, &handles,
-                                &read_status);
-
-    if (write_status != ZX_OK) {
-        if (write_status == ZX_ERR_CALL_FAILED) {
-            printf("Cmd read failure (cmd %04x, res %d)\n", req.hdr.cmd, read_status);
-            return read_status;
-        } else {
-            printf("Cmd write failure (cmd %04x, res %d)\n", req.hdr.cmd, write_status);
-            return write_status;
-        }
+    zx_status_t status = channel.call(0, zx::deadline_after(CALL_TIMEOUT), &args, &bytes, &handles);
+    if (status != ZX_OK) {
+        printf("Cmd failure (cmd %04x, res %d)\n", req.hdr.cmd, status);
+        return status;
     }
 
     // If the caller wants to know the size of the response length, let them

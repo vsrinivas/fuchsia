@@ -83,8 +83,7 @@ zx_status_t Message::Write(zx_handle_t channel, uint32_t flags) {
 }
 
 zx_status_t Message::Call(zx_handle_t channel, uint32_t flags,
-                          zx_time_t deadline, zx_status_t* read_status,
-                          Message* response) {
+                          zx_time_t deadline, Message* response) {
     zx_channel_call_args_t args;
     args.wr_bytes = bytes_.data();
     args.wr_handles = handles_.data();
@@ -97,8 +96,7 @@ zx_status_t Message::Call(zx_handle_t channel, uint32_t flags,
     uint32_t actual_bytes = 0u;
     uint32_t actual_handles = 0u;
     zx_status_t status = zx_channel_call(channel, flags, deadline, &args,
-                                         &actual_bytes, &actual_handles,
-                                         read_status);
+                                         &actual_bytes, &actual_handles);
     ClearHandlesUnsafe();
     if (status == ZX_OK) {
         response->bytes_.set_actual(actual_bytes);

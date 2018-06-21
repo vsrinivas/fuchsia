@@ -273,7 +273,7 @@ int analyzer_starter(void* arg) {
             uint32_t actual_bytes = 0u;
             uint32_t actual_handles = 0u;
             status = zx_channel_call(analyzer, 0, ZX_TIME_INFINITE, &args,
-                                    &actual_bytes, &actual_handles, NULL);
+                                    &actual_bytes, &actual_handles);
         }
         // zx_channel_call always consumes the handles.
         memset(handles, 0, sizeof(handles));

@@ -563,7 +563,6 @@ static bool test_suspend_channel_call() {
     ASSERT_EQ(zx_object_wait_one(thread_h, ZX_THREAD_TERMINATED, ZX_TIME_INFINITE, NULL),
               ZX_OK, "");
     EXPECT_EQ(thread_arg.call_status, ZX_OK, "");
-    EXPECT_EQ(thread_arg.read_status, ZX_OK, "");
 
     ASSERT_EQ(zx_handle_close(channel), ZX_OK, "");
     ASSERT_EQ(zx_handle_close(thread_h), ZX_OK, "");

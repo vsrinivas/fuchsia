@@ -22,8 +22,7 @@ typedef struct {
 
 zx_status_t zx_channel_call(zx_handle_t handle, uint32_t options,
                             zx_time_t deadline, zx_channel_call_args_t* args,
-                            uint32_t* actual_bytes, uint32_t* actual_handles,
-                            zx_status_t* read_status);
+                            uint32_t* actual_bytes, uint32_t* actual_handles);
 ```
 
 ## DESCRIPTION
@@ -68,11 +67,6 @@ As with **zx_channel_write**(), the handles in *handles* are always consumed by
 count of handles in the reply message are returned via *actual_bytes* and
 *actual_handles*, respectively.
 
-The special return value **ZX_ERR_CALL_FAILED** indicates that the message was
-sent, but an error occurred while waiting for a response. The return parameter
-*read_status* is used to indicate the specific error that occurred during the
-wait or read phase when **ZX_ERR_CALL_FAILED** is returned.
-
 ## ERRORS
 
 **ZX_ERR_BAD_HANDLE**  *handle* is not a valid handle, any element in
@@ -91,10 +85,6 @@ any element in *handles* does not have **ZX_RIGHT_TRANSFER**.
 closed while waiting for the reply.
 
 **ZX_ERR_CANCELED**  *handle* was closed while waiting for a reply.
-
-**ZX_ERR_CALL_FAILED**  The write phase of the call succeeded, but an error occurred
-while or after waiting for the response.  The specific error is returned via
-*read_status* if it is non-null.
 
 **ZX_ERR_NO_MEMORY**  (Temporary) Failure due to lack of memory.
 

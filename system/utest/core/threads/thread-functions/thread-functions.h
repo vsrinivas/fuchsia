@@ -44,5 +44,4 @@ void threads_test_channel_call_fn(void* arg);
 struct channel_call_suspend_test_arg {
     zx_handle_t channel;
     zx_status_t call_status;
-    zx_status_t read_status;
 };

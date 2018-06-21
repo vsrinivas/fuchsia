@@ -37,9 +37,8 @@ Image* Image::Create(zx_handle_t dc_handle,
     stride_call.wr_num_bytes = sizeof(stride_msg);
     stride_call.rd_num_bytes = sizeof(stride_rsp);
     uint32_t actual_bytes, actual_handles;
-    zx_status_t read_status;
     if (zx_channel_call(dc_handle, 0, ZX_TIME_INFINITE,
-                        &stride_call, &actual_bytes, &actual_handles, &read_status) != ZX_OK) {
+                        &stride_call, &actual_bytes, &actual_handles) != ZX_OK) {
         printf("Failed to make stride call\n");
         return nullptr;
     }
@@ -69,7 +68,7 @@ Image* Image::Create(zx_handle_t dc_handle,
     call_args.rd_num_bytes = sizeof(alloc_rsp);
     call_args.rd_num_handles = 1;
     if (zx_channel_call(dc_handle, 0, ZX_TIME_INFINITE, &call_args,
-                        &actual_bytes, &actual_handles, &read_status) != ZX_OK) {
+                        &actual_bytes, &actual_handles) != ZX_OK) {
         printf("Vmo alloc call failed\n");
         return nullptr;
     }
@@ -207,9 +206,8 @@ bool Image::Import(zx_handle_t dc_handle, image_import_t* info_out) {
     import_call.wr_num_handles = 1;
     import_call.rd_num_bytes = sizeof(import_rsp);
     uint32_t actual_bytes, actual_handles;
-    zx_status_t read_status;
     if (zx_channel_call(dc_handle, 0, ZX_TIME_INFINITE, &import_call,
-                        &actual_bytes, &actual_handles, &read_status) != ZX_OK) {
+                        &actual_bytes, &actual_handles) != ZX_OK) {
         printf("Failed to make import call\n");
         return false;
     }

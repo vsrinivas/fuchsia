@@ -43,7 +43,7 @@ zx_status_t pci_rpc_request(kpci_device_t* dev, uint32_t op, zx_handle_t* handle
     uint32_t actual_bytes;
     uint32_t actual_handles;
     zx_status_t st = zx_channel_call(dev->pciroot_rpcch, 0, ZX_TIME_INFINITE,
-                                     &cc_args, &actual_bytes, &actual_handles, NULL);
+                                     &cc_args, &actual_bytes, &actual_handles);
     if (st != ZX_OK) {
         return st;
     }

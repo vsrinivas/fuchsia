@@ -729,7 +729,7 @@ int suspended_in_syscall_reg_access_thread_func(void* arg_) {
             .rd_num_handles = 0,
         };
         zx_status_t call_status = zx_channel_call(arg->syscall_handle, 0, ZX_TIME_INFINITE,
-                                                  &call_args, &actual_bytes, &actual_handles, NULL);
+                                                  &call_args, &actual_bytes, &actual_handles);
         ASSERT_EQ(call_status, ZX_OK);
         EXPECT_EQ(actual_bytes, sizeof(recv_buf));
         EXPECT_EQ(memcmp(recv_buf + sizeof(zx_txid_t), "y", sizeof(recv_buf) - sizeof(zx_txid_t)), 0);
