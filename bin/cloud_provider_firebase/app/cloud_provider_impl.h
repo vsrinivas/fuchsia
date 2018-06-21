@@ -29,10 +29,8 @@ namespace cloud_provider_firebase {
 class CloudProviderImpl : public cloud_provider::CloudProvider {
  public:
   CloudProviderImpl(
-      network_wrapper::NetworkWrapper* network_wrapper,
-      std::string user_id,
-      Config config,
-      std::unique_ptr<firebase_auth::FirebaseAuth> firebase_auth,
+      network_wrapper::NetworkWrapper* network_wrapper, std::string user_id,
+      Config config, std::unique_ptr<firebase_auth::FirebaseAuth> firebase_auth,
       fidl::InterfaceRequest<cloud_provider::CloudProvider> request);
   ~CloudProviderImpl() override;
 
@@ -44,8 +42,7 @@ class CloudProviderImpl : public cloud_provider::CloudProvider {
       GetDeviceSetCallback callback) override;
 
   void GetPageCloud(
-      fidl::VectorPtr<uint8_t> app_id,
-      fidl::VectorPtr<uint8_t> page_id,
+      fidl::VectorPtr<uint8_t> app_id, fidl::VectorPtr<uint8_t> page_id,
       fidl::InterfaceRequest<cloud_provider::PageCloud> page_cloud,
       GetPageCloudCallback callback) override;
 

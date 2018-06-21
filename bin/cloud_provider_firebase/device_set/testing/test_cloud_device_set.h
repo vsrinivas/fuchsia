@@ -20,24 +20,20 @@ class TestCloudDeviceSet : public cloud_provider_firebase::CloudDeviceSet {
 
   ~TestCloudDeviceSet() override;
 
-  void CheckFingerprint(std::string auth_token,
-                        std::string fingerprint,
+  void CheckFingerprint(std::string auth_token, std::string fingerprint,
                         std::function<void(Status)> callback) override;
 
-  void SetFingerprint(std::string auth_token,
-                      std::string fingerprint,
+  void SetFingerprint(std::string auth_token, std::string fingerprint,
                       std::function<void(Status)> callback) override;
 
-  void WatchFingerprint(std::string auth_token,
-                        std::string fingerprint,
+  void WatchFingerprint(std::string auth_token, std::string fingerprint,
                         std::function<void(Status)> callback) override;
 
   void EraseAllFingerprints(std::string auth_token,
                             std::function<void(Status)> callback) override;
 
   void UpdateTimestampAssociatedWithFingerprint(
-      std::string auth_token,
-      std::string fingerprint) override;
+      std::string auth_token, std::string fingerprint) override;
 
   CloudDeviceSet::Status status_to_return = CloudDeviceSet::Status::OK;
 

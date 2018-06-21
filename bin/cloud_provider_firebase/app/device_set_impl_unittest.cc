@@ -29,22 +29,17 @@ class DeviceSetImplTest : public gtest::TestWithLoop,
  public:
   DeviceSetImplTest()
       : firebase_auth_(dispatcher()),
-        device_set_impl_(
-            &firebase_auth_,
-            InitCloudDeviceSet(&cloud_device_set_, dispatcher()),
-            device_set_.NewRequest()),
+        device_set_impl_(&firebase_auth_,
+                         InitCloudDeviceSet(&cloud_device_set_, dispatcher()),
+                         device_set_.NewRequest()),
         watcher_binding_(this) {}
 
   ~DeviceSetImplTest() override {}
 
   // cloud_provider::DeviceSetWatcher:
-  void OnCloudErased() override {
-    on_cloud_erased_calls_++;
-  }
+  void OnCloudErased() override { on_cloud_erased_calls_++; }
 
-  void OnNetworkError() override {
-    on_network_error_calls_++;
-  }
+  void OnNetworkError() override { on_network_error_calls_++; }
 
  protected:
   firebase_auth::TestFirebaseAuth firebase_auth_;

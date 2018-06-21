@@ -20,8 +20,7 @@ namespace cloud_provider_firebase {
 // WatchCommits() request.
 class WatchClientImpl : public firebase::WatchClient {
  public:
-  WatchClientImpl(firebase::Firebase* firebase,
-                  const std::string& firebase_key,
+  WatchClientImpl(firebase::Firebase* firebase, const std::string& firebase_key,
                   const std::vector<std::string>& query_params,
                   CommitWatcher* commit_watcher);
   ~WatchClientImpl() override;

@@ -29,8 +29,7 @@ PageCloudHandlerImpl::PageCloudHandlerImpl(firebase::Firebase* firebase,
 PageCloudHandlerImpl::~PageCloudHandlerImpl() {}
 
 void PageCloudHandlerImpl::AddCommits(
-    const std::string& auth_token,
-    std::vector<Commit> commits,
+    const std::string& auth_token, std::vector<Commit> commits,
     const std::function<void(Status)>& callback) {
   auto traced_callback =
       TRACE_CALLBACK(callback, "cloud_provider_firebase", "add_commits");
@@ -59,8 +58,7 @@ void PageCloudHandlerImpl::UnwatchCommits(CommitWatcher* watcher) {
 }
 
 void PageCloudHandlerImpl::GetCommits(
-    const std::string& auth_token,
-    const std::string& min_timestamp,
+    const std::string& auth_token, const std::string& min_timestamp,
     std::function<void(Status, std::vector<Record>)> callback) {
   auto traced_callback =
       TRACE_CALLBACK(callback, "cloud_provider_firebase", "get_commits");
@@ -109,8 +107,7 @@ void PageCloudHandlerImpl::AddObject(const std::string& auth_token,
 }
 
 void PageCloudHandlerImpl::GetObject(
-    const std::string& auth_token,
-    ObjectDigestView object_digest,
+    const std::string& auth_token, ObjectDigestView object_digest,
     std::function<void(Status status, uint64_t size, zx::socket data)>
         callback) {
   auto traced_callback =
@@ -125,8 +122,7 @@ void PageCloudHandlerImpl::GetObject(
 }
 
 std::vector<std::string> PageCloudHandlerImpl::GetQueryParams(
-    const std::string& auth_token,
-    const std::string& min_timestamp) {
+    const std::string& auth_token, const std::string& min_timestamp) {
   std::vector<std::string> result;
 
   if (!auth_token.empty()) {

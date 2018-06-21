@@ -20,24 +20,24 @@ void TestPageCloudHandler::DeliverRemoteCommits() {
     return;
   }
 
-  async::PostTask(async_, fxl::MakeCopyable(
-      [this, records = std::move(notifications_to_deliver)]() mutable {
-        watcher->OnRemoteCommits(std::move(records));
-      }));
+  async::PostTask(
+      async_,
+      fxl::MakeCopyable(
+          [this, records = std::move(notifications_to_deliver)]() mutable {
+            watcher->OnRemoteCommits(std::move(records));
+          }));
 }
 
 void TestPageCloudHandler::AddCommits(
-    const std::string& /*auth_token*/,
-    std::vector<Commit> commits,
+    const std::string& /*auth_token*/, std::vector<Commit> commits,
     const std::function<void(Status)>& callback) {
   ++add_commits_calls;
   if (status_to_return == Status::OK) {
     std::move(commits.begin(), commits.end(),
               std::back_inserter(received_commits));
   }
-  async::PostTask(
-      async_,
-      [status = status_to_return, callback] { callback(status); });
+  async::PostTask(async_,
+                  [status = status_to_return, callback] { callback(status); });
 }
 
 void TestPageCloudHandler::WatchCommits(const std::string& auth_token,
@@ -55,8 +55,7 @@ void TestPageCloudHandler::UnwatchCommits(CommitWatcher* /*watcher*/) {
 }
 
 void TestPageCloudHandler::GetCommits(
-    const std::string& auth_token,
-    const std::string& /*min_timestamp*/,
+    const std::string& auth_token, const std::string& /*min_timestamp*/,
     std::function<void(Status, std::vector<Record>)> callback) {
   get_commits_calls++;
   get_commits_auth_tokens.push_back(auth_token);
@@ -74,22 +73,20 @@ void TestPageCloudHandler::AddObject(const std::string& auth_token,
                                      std::function<void(Status)> callback) {
   std::string data_str;
   if (!fsl::StringFromVmo(data, &data_str)) {
-    async::PostTask(
-        async_,
-        [callback = std::move(callback)] { callback(Status::INTERNAL_ERROR); });
+    async::PostTask(async_, [callback = std::move(callback)] {
+      callback(Status::INTERNAL_ERROR);
+    });
     return;
   }
   added_objects[object_digest.ToString()] = data_str;
-  async::PostTask(
-      async_,
-      [status = status_to_return, callback = std::move(callback)] {
-        callback(status);
-      });
+  async::PostTask(async_,
+                  [status = status_to_return, callback = std::move(callback)] {
+                    callback(status);
+                  });
 }
 
 void TestPageCloudHandler::GetObject(
-    const std::string& auth_token,
-    ObjectDigestView object_digest,
+    const std::string& auth_token, ObjectDigestView object_digest,
     std::function<void(Status status, uint64_t size, zx::socket data)>
         callback) {
   get_object_calls++;
@@ -102,8 +99,7 @@ void TestPageCloudHandler::GetObject(
   }
 
   async::PostTask(
-      async_,
-      [this, object_digest = object_digest.ToString(), callback]() {
+      async_, [this, object_digest = object_digest.ToString(), callback]() {
         callback(Status::OK, objects_to_return[object_digest].size(),
                  fsl::WriteStringToSocket(objects_to_return[object_digest]));
       });

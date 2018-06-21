@@ -28,8 +28,7 @@ class PageCloudHandlerImpl : public PageCloudHandler {
   ~PageCloudHandlerImpl() override;
 
   // PageCloudHandler:
-  void AddCommits(const std::string& auth_token,
-                  std::vector<Commit> commits,
+  void AddCommits(const std::string& auth_token, std::vector<Commit> commits,
                   const std::function<void(Status)>& callback) override;
 
   void WatchCommits(const std::string& auth_token,
@@ -39,18 +38,15 @@ class PageCloudHandlerImpl : public PageCloudHandler {
   void UnwatchCommits(CommitWatcher* watcher) override;
 
   void GetCommits(
-      const std::string& auth_token,
-      const std::string& min_timestamp,
+      const std::string& auth_token, const std::string& min_timestamp,
       std::function<void(Status, std::vector<Record>)> callback) override;
 
-  void AddObject(const std::string& auth_token,
-                 ObjectDigestView object_digest,
+  void AddObject(const std::string& auth_token, ObjectDigestView object_digest,
                  fsl::SizedVmo data,
                  std::function<void(Status)> callback) override;
 
   void GetObject(
-      const std::string& auth_token,
-      ObjectDigestView object_digest,
+      const std::string& auth_token, ObjectDigestView object_digest,
       std::function<void(Status status, uint64_t size, zx::socket data)>
           callback) override;
 

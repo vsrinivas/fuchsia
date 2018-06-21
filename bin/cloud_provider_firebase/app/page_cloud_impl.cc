@@ -112,25 +112,26 @@ void PageCloudImpl::SendRemoteCommits() {
 
 void PageCloudImpl::AddCommits(fidl::VectorPtr<cloud_provider::Commit> commits,
                                AddCommitsCallback callback) {
-  auto request = firebase_auth_->GetFirebaseToken(fxl::MakeCopyable([
-    this, commits = std::move(commits), callback
-  ](firebase_auth::AuthStatus auth_status, std::string auth_token) mutable {
-    if (auth_status != firebase_auth::AuthStatus::OK) {
-      callback(cloud_provider::Status::AUTH_ERROR);
-      return;
-    }
+  auto request = firebase_auth_->GetFirebaseToken(
+      fxl::MakeCopyable([this, commits = std::move(commits), callback](
+                            firebase_auth::AuthStatus auth_status,
+                            std::string auth_token) mutable {
+        if (auth_status != firebase_auth::AuthStatus::OK) {
+          callback(cloud_provider::Status::AUTH_ERROR);
+          return;
+        }
 
-    std::vector<Commit> handler_commits;
-    for (auto& commit : *commits) {
-      handler_commits.emplace_back(convert::ToString(commit.id),
-                                   convert::ToString(commit.data));
-    }
+        std::vector<Commit> handler_commits;
+        for (auto& commit : *commits) {
+          handler_commits.emplace_back(convert::ToString(commit.id),
+                                       convert::ToString(commit.data));
+        }
 
-    handler_->AddCommits(std::move(auth_token), std::move(handler_commits),
-                         [callback = std::move(callback)](Status status) {
-                           callback(ConvertInternalStatus(status));
-                         });
-  }));
+        handler_->AddCommits(std::move(auth_token), std::move(handler_commits),
+                             [callback = std::move(callback)](Status status) {
+                               callback(ConvertInternalStatus(status));
+                             });
+      }));
   auth_token_requests_.emplace(request);
 }
 
@@ -183,40 +184,42 @@ void PageCloudImpl::AddObject(fidl::VectorPtr<uint8_t> id,
     callback(cloud_provider::Status::ARGUMENT_ERROR);
     return;
   }
-  auto request = firebase_auth_->GetFirebaseToken(fxl::MakeCopyable([
-    this, id = convert::ToString(id), vmo = std::move(vmo), callback
-  ](firebase_auth::AuthStatus auth_status, std::string auth_token) mutable {
-    if (auth_status != firebase_auth::AuthStatus::OK) {
-      callback(cloud_provider::Status::AUTH_ERROR);
-      return;
-    }
+  auto request = firebase_auth_->GetFirebaseToken(
+      fxl::MakeCopyable([this, id = convert::ToString(id), vmo = std::move(vmo),
+                         callback](firebase_auth::AuthStatus auth_status,
+                                   std::string auth_token) mutable {
+        if (auth_status != firebase_auth::AuthStatus::OK) {
+          callback(cloud_provider::Status::AUTH_ERROR);
+          return;
+        }
 
-    handler_->AddObject(
-        std::move(auth_token), std::move(id),
-        std::move(vmo), [callback = std::move(callback)](Status status) {
-          callback(ConvertInternalStatus(status));
-        });
-  }));
+        handler_->AddObject(std::move(auth_token), std::move(id),
+                            std::move(vmo),
+                            [callback = std::move(callback)](Status status) {
+                              callback(ConvertInternalStatus(status));
+                            });
+      }));
   auth_token_requests_.emplace(request);
 }
 
 void PageCloudImpl::GetObject(fidl::VectorPtr<uint8_t> id,
                               GetObjectCallback callback) {
-  auto request = firebase_auth_->GetFirebaseToken([
-    this, id = convert::ToString(id), callback
-  ](firebase_auth::AuthStatus auth_status, std::string auth_token) mutable {
-    if (auth_status != firebase_auth::AuthStatus::OK) {
-      callback(cloud_provider::Status::AUTH_ERROR, 0u, zx::socket());
-      return;
-    }
+  auto request = firebase_auth_->GetFirebaseToken(
+      [this, id = convert::ToString(id), callback](
+          firebase_auth::AuthStatus auth_status,
+          std::string auth_token) mutable {
+        if (auth_status != firebase_auth::AuthStatus::OK) {
+          callback(cloud_provider::Status::AUTH_ERROR, 0u, zx::socket());
+          return;
+        }
 
-    handler_->GetObject(std::move(auth_token), std::move(id),
-                        [callback = std::move(callback)](
-                            Status status, uint64_t size, zx::socket data) {
-                          callback(ConvertInternalStatus(status), size,
-                                   std::move(data));
-                        });
-  });
+        handler_->GetObject(std::move(auth_token), std::move(id),
+                            [callback = std::move(callback)](
+                                Status status, uint64_t size, zx::socket data) {
+                              callback(ConvertInternalStatus(status), size,
+                                       std::move(data));
+                            });
+      });
   auth_token_requests_.emplace(request);
 }
 

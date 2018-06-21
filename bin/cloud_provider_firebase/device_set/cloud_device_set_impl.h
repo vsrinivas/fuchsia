@@ -27,24 +27,20 @@ class CloudDeviceSetImpl : public CloudDeviceSet, public firebase::WatchClient {
       std::unique_ptr<firebase::Firebase> user_firebase);
   ~CloudDeviceSetImpl() override;
 
-  void CheckFingerprint(std::string auth_token,
-                        std::string fingerprint,
+  void CheckFingerprint(std::string auth_token, std::string fingerprint,
                         std::function<void(Status)> callback) override;
 
-  void SetFingerprint(std::string auth_token,
-                      std::string fingerprint,
+  void SetFingerprint(std::string auth_token, std::string fingerprint,
                       std::function<void(Status)> callback) override;
 
-  void WatchFingerprint(std::string auth_token,
-                        std::string fingerprint,
+  void WatchFingerprint(std::string auth_token, std::string fingerprint,
                         std::function<void(Status)> callback) override;
 
   void EraseAllFingerprints(std::string auth_token,
                             std::function<void(Status)> callback) override;
 
   void UpdateTimestampAssociatedWithFingerprint(
-      std::string auth_token,
-      std::string fingerprint) override;
+      std::string auth_token, std::string fingerprint) override;
 
   // firebase::WatchClient:
   void OnPut(const std::string& path, const rapidjson::Value& value) override;

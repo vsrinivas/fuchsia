@@ -13,49 +13,42 @@ TestCloudDeviceSet::TestCloudDeviceSet(async_t* async) : async_(async) {}
 TestCloudDeviceSet::~TestCloudDeviceSet() {}
 
 void TestCloudDeviceSet::CheckFingerprint(
-    std::string /*auth_token*/,
-    std::string fingerprint,
+    std::string /*auth_token*/, std::string fingerprint,
     std::function<void(Status)> callback) {
   checked_fingerprint = fingerprint;
-  async::PostTask(
-      async_,
-      [status = status_to_return, callback = std::move(callback)] {
-        callback(status);
-      });
+  async::PostTask(async_,
+                  [status = status_to_return, callback = std::move(callback)] {
+                    callback(status);
+                  });
 }
 
 void TestCloudDeviceSet::SetFingerprint(std::string /*auth_token*/,
                                         std::string fingerprint,
                                         std::function<void(Status)> callback) {
   set_fingerprint = fingerprint;
-  async::PostTask(
-      async_,
-      [status = status_to_return, callback = std::move(callback)] {
-        callback(status);
-      });
+  async::PostTask(async_,
+                  [status = status_to_return, callback = std::move(callback)] {
+                    callback(status);
+                  });
 }
 
 void TestCloudDeviceSet::WatchFingerprint(
-    std::string /*auth_token*/,
-    std::string fingerprint,
+    std::string /*auth_token*/, std::string fingerprint,
     std::function<void(Status)> callback) {
   watched_fingerprint = fingerprint;
   watch_callback = callback;
 }
 
 void TestCloudDeviceSet::EraseAllFingerprints(
-    std::string auth_token,
-    std::function<void(Status)> callback) {
-  async::PostTask(
-      async_,
-      [status = status_to_return, callback = std::move(callback)] {
-        callback(status);
-      });
+    std::string auth_token, std::function<void(Status)> callback) {
+  async::PostTask(async_,
+                  [status = status_to_return, callback = std::move(callback)] {
+                    callback(status);
+                  });
 }
 
 void TestCloudDeviceSet::UpdateTimestampAssociatedWithFingerprint(
-    std::string auth_token,
-    std::string fingerprint) {
+    std::string auth_token, std::string fingerprint) {
   timestamp_update_requests_++;
 }
 

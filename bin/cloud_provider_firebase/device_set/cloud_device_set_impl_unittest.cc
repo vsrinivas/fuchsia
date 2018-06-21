@@ -18,11 +18,11 @@ class FakeFirebase : public firebase::Firebase {
   FakeFirebase() {}
   ~FakeFirebase() override {}
 
-  void Get(
-      const std::string& /*key*/,
-      const std::vector<std::string>& query_params,
-      std::function<void(firebase::Status status,
-                         const rapidjson::Value& value)> callback) override {
+  void Get(const std::string& /*key*/,
+           const std::vector<std::string>& query_params,
+           std::function<void(firebase::Status status,
+                              const rapidjson::Value& value)>
+               callback) override {
     get_query_params.push_back(query_params);
     rapidjson::Document document;
     document.Parse(returned_value);

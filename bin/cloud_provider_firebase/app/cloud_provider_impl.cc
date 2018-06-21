@@ -17,10 +17,8 @@
 namespace cloud_provider_firebase {
 
 CloudProviderImpl::CloudProviderImpl(
-    network_wrapper::NetworkWrapper* network_wrapper,
-    std::string user_id,
-    Config config,
-    std::unique_ptr<firebase_auth::FirebaseAuth> firebase_auth,
+    network_wrapper::NetworkWrapper* network_wrapper, std::string user_id,
+    Config config, std::unique_ptr<firebase_auth::FirebaseAuth> firebase_auth,
     fidl::InterfaceRequest<cloud_provider::CloudProvider> request)
     : network_wrapper_(network_wrapper),
       user_id_(std::move(user_id)),
@@ -58,8 +56,7 @@ void CloudProviderImpl::GetDeviceSet(
 }
 
 void CloudProviderImpl::GetPageCloud(
-    fidl::VectorPtr<uint8_t> app_id,
-    fidl::VectorPtr<uint8_t> page_id,
+    fidl::VectorPtr<uint8_t> app_id, fidl::VectorPtr<uint8_t> page_id,
     fidl::InterfaceRequest<cloud_provider::PageCloud> page_cloud,
     GetPageCloudCallback callback) {
   std::string app_id_str = convert::ToString(app_id);

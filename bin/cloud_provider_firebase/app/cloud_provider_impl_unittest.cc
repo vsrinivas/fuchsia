@@ -26,8 +26,7 @@ Config GetFirebaseConfig() {
 }
 
 std::unique_ptr<firebase_auth::FirebaseAuth> InitFirebaseAuth(
-    async_t* async,
-    firebase_auth::TestFirebaseAuth** ptr) {
+    async_t* async, firebase_auth::TestFirebaseAuth** ptr) {
   auto firebase_auth = std::make_unique<firebase_auth::TestFirebaseAuth>(async);
   *ptr = firebase_auth.get();
   return firebase_auth;
@@ -39,12 +38,9 @@ class CloudProviderImplTest : public gtest::TestWithLoop {
  public:
   CloudProviderImplTest()
       : network_wrapper_(dispatcher()),
-        cloud_provider_impl_(
-            &network_wrapper_,
-            "user_id",
-            GetFirebaseConfig(),
-            InitFirebaseAuth(dispatcher(), &firebase_auth_),
-            cloud_provider_.NewRequest()) {}
+        cloud_provider_impl_(&network_wrapper_, "user_id", GetFirebaseConfig(),
+                             InitFirebaseAuth(dispatcher(), &firebase_auth_),
+                             cloud_provider_.NewRequest()) {}
   ~CloudProviderImplTest() override {}
 
  protected:

@@ -86,9 +86,9 @@ TEST_F(CloudStorageImplTest, TestUpload) {
   SetResponse("", 0, 200);
   bool called;
   Status status;
-  gcs_.UploadObject("", "hello-world", std::move(data),
-                    callback::Capture(callback::SetWhenCalled(&called),
-                                      &status));
+  gcs_.UploadObject(
+      "", "hello-world", std::move(data),
+      callback::Capture(callback::SetWhenCalled(&called), &status));
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
   EXPECT_EQ(Status::OK, status);
@@ -120,9 +120,9 @@ TEST_F(CloudStorageImplTest, TestUploadAuth) {
   SetResponse("", 0, 200);
   bool called;
   Status status;
-  gcs_.UploadObject("this-is-a-token", "hello-world", std::move(data),
-                    callback::Capture(callback::SetWhenCalled(&called),
-                                      &status));
+  gcs_.UploadObject(
+      "this-is-a-token", "hello-world", std::move(data),
+      callback::Capture(callback::SetWhenCalled(&called), &status));
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
   http::HttpHeaderPtr authorization_header =
@@ -139,9 +139,9 @@ TEST_F(CloudStorageImplTest, TestUploadWhenObjectAlreadyExists) {
 
   bool called;
   Status status;
-  gcs_.UploadObject("", "hello-world", std::move(data),
-                    callback::Capture(callback::SetWhenCalled(&called),
-                                      &status));
+  gcs_.UploadObject(
+      "", "hello-world", std::move(data),
+      callback::Capture(callback::SetWhenCalled(&called), &status));
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
   EXPECT_EQ(Status::OBJECT_ALREADY_EXISTS, status);

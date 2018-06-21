@@ -74,22 +74,19 @@ class PageCloudHandler {
   // The result is a vector of pairs of the retrieved commits and their
   // corresponding server timestamps.
   virtual void GetCommits(
-      const std::string& auth_token,
-      const std::string& min_timestamp,
+      const std::string& auth_token, const std::string& min_timestamp,
       std::function<void(Status, std::vector<Record>)> callback) = 0;
 
   // Uploads the given object to the cloud under the given id.
   virtual void AddObject(const std::string& auth_token,
-                         ObjectDigestView object_digest,
-                         fsl::SizedVmo data,
+                         ObjectDigestView object_digest, fsl::SizedVmo data,
                          std::function<void(Status)> callback) = 0;
 
   // Retrieves the object of the given id from the cloud. The size of the object
   // is passed to the callback along with the socket handle, so that the client
   // can verify that all data was streamed when draining the socket.
   virtual void GetObject(
-      const std::string& auth_token,
-      ObjectDigestView object_digest,
+      const std::string& auth_token, ObjectDigestView object_digest,
       std::function<void(Status status, uint64_t size, zx::socket data)>
           callback) = 0;
 

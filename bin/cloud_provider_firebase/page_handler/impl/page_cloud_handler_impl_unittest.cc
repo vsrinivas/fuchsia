@@ -42,8 +42,7 @@ class PageCloudHandlerImplTest : public gtest::TestWithLoop,
   ~PageCloudHandlerImplTest() override {}
 
   // gcs::CloudStorage:
-  void UploadObject(std::string auth_token,
-                    const std::string& key,
+  void UploadObject(std::string auth_token, const std::string& key,
                     fsl::SizedVmo data,
                     std::function<void(gcs::Status)> callback) override {
     upload_auth_tokens_.push_back(std::move(auth_token));
@@ -55,31 +54,27 @@ class PageCloudHandlerImplTest : public gtest::TestWithLoop,
   }
 
   void DownloadObject(
-      std::string auth_token,
-      const std::string& key,
+      std::string auth_token, const std::string& key,
       std::function<void(gcs::Status status, uint64_t size, zx::socket data)>
           callback) override {
     download_auth_tokens_.push_back(std::move(auth_token));
     download_keys_.push_back(key);
-    async::PostTask(dispatcher(),
-                    [this, callback = std::move(callback)] {
-                      callback(download_status_, download_response_size_,
-                               std::move(download_response_));
-                    });
+    async::PostTask(dispatcher(), [this, callback = std::move(callback)] {
+      callback(download_status_, download_response_size_,
+               std::move(download_response_));
+    });
   }
 
   // firebase::Firebase:
-  void Get(
-      const std::string& key,
-      const std::vector<std::string>& query_params,
-      std::function<void(firebase::Status status,
-                         const rapidjson::Value& value)> callback) override {
+  void Get(const std::string& key, const std::vector<std::string>& query_params,
+           std::function<void(firebase::Status status,
+                              const rapidjson::Value& value)>
+               callback) override {
     get_keys_.push_back(key);
     get_queries_.push_back(query_params);
-    async::PostTask(dispatcher(),
-                    [this, callback = std::move(callback)] {
-                      callback(firebase::Status::OK, *get_response_);
-                    });
+    async::PostTask(dispatcher(), [this, callback = std::move(callback)] {
+      callback(firebase::Status::OK, *get_response_);
+    });
   }
 
   void Put(const std::string& key,
@@ -88,10 +83,9 @@ class PageCloudHandlerImplTest : public gtest::TestWithLoop,
            std::function<void(firebase::Status status)> callback) override {
     put_keys_.push_back(key);
     put_data_.push_back(data);
-    async::PostTask(dispatcher(),
-                    [callback = std::move(callback)] {
-                      callback(firebase::Status::OK);
-                    });
+    async::PostTask(dispatcher(), [callback = std::move(callback)] {
+      callback(firebase::Status::OK);
+    });
   }
 
   void Patch(const std::string& key,
@@ -101,10 +95,9 @@ class PageCloudHandlerImplTest : public gtest::TestWithLoop,
     patch_keys_.push_back(key);
     patch_queries_.push_back(query_params);
     patch_data_.push_back(data);
-    async::PostTask(dispatcher(),
-                    [callback = std::move(callback)] {
-                      callback(firebase::Status::OK);
-                    });
+    async::PostTask(dispatcher(), [callback = std::move(callback)] {
+      callback(firebase::Status::OK);
+    });
   }
 
   void Delete(
@@ -677,10 +670,9 @@ TEST_F(PageCloudHandlerImplTest, GetObject) {
   Status status;
   uint64_t size;
   zx::socket data;
-  cloud_provider_->GetObject(
-      "this-is-a-token", "object_digest",
-      callback::Capture(callback::SetWhenCalled(&called),
-                        &status, &size, &data));
+  cloud_provider_->GetObject("this-is-a-token", "object_digest",
+                             callback::Capture(callback::SetWhenCalled(&called),
+                                               &status, &size, &data));
   RunLoopUntilIdle();
 
   EXPECT_TRUE(called);
@@ -703,10 +695,9 @@ TEST_F(PageCloudHandlerImplTest, GetObjectNotFound) {
   Status status;
   uint64_t size;
   zx::socket data;
-  cloud_provider_->GetObject(
-      "", "object_digest",
-      callback::Capture(callback::SetWhenCalled(&called), &status, &size,
-                        &data));
+  cloud_provider_->GetObject("", "object_digest",
+                             callback::Capture(callback::SetWhenCalled(&called),
+                                               &status, &size, &data));
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
   EXPECT_EQ(Status::NOT_FOUND, status);

@@ -39,14 +39,12 @@ class CloudDeviceSet {
   // Verifies that the device fingerprint in the cloud is still in the list of
   // devices, ensuring that the cloud was not erased since the last sync.
   // This makes at most one network request using the given |auth_token|.
-  virtual void CheckFingerprint(std::string auth_token,
-                                std::string fingerprint,
+  virtual void CheckFingerprint(std::string auth_token, std::string fingerprint,
                                 std::function<void(Status)> callback) = 0;
 
   // Adds the device fingerprint to the list of devices in the cloud.
   // This makes at most one network request using the given |auth_token|.
-  virtual void SetFingerprint(std::string auth_token,
-                              std::string fingerprint,
+  virtual void SetFingerprint(std::string auth_token, std::string fingerprint,
                               std::function<void(Status)> callback) = 0;
 
   // Watches the fingerprint in the cloud. The given |callback| is called with
@@ -55,8 +53,7 @@ class CloudDeviceSet {
   // status, it is never called again.
   //
   // This makes at most one network request using the given |auth_token|.
-  virtual void WatchFingerprint(std::string auth_token,
-                                std::string fingerprint,
+  virtual void WatchFingerprint(std::string auth_token, std::string fingerprint,
                                 std::function<void(Status)> callback) = 0;
 
   // Erases the entire device set. The resulting status is OK if the erase
@@ -67,8 +64,7 @@ class CloudDeviceSet {
   // Sends a request to update the server-side timestamp associated with the
   // |fingerprint|.
   virtual void UpdateTimestampAssociatedWithFingerprint(
-      std::string auth_token,
-      std::string fingerprint) = 0;
+      std::string auth_token, std::string fingerprint) = 0;
 
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(CloudDeviceSet);

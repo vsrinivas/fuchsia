@@ -25,10 +25,8 @@ const char kBatchPositionKey[] = "batch_position";
 const char kBatchSizeKey[] = "batch_size";
 
 void WriteCommit(rapidjson::Writer<rapidjson::StringBuffer>* writer,
-                 const Commit& commit,
-                 std::string encoded_id,
-                 int batch_position,
-                 int batch_size) {
+                 const Commit& commit, std::string encoded_id,
+                 int batch_position, int batch_size) {
   writer->StartObject();
   {
     writer->Key(kIdKey);

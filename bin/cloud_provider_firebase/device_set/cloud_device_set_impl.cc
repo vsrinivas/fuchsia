@@ -40,8 +40,7 @@ CloudDeviceSetImpl::~CloudDeviceSetImpl() {
 }
 
 void CloudDeviceSetImpl::CheckFingerprint(
-    std::string auth_token,
-    std::string fingerprint,
+    std::string auth_token, std::string fingerprint,
     std::function<void(Status)> callback) {
   auto query_params = QueryParamsFromAuthToken(auth_token);
 
@@ -84,8 +83,7 @@ void CloudDeviceSetImpl::SetFingerprint(std::string auth_token,
 }
 
 void CloudDeviceSetImpl::WatchFingerprint(
-    std::string auth_token,
-    std::string fingerprint,
+    std::string auth_token, std::string fingerprint,
     std::function<void(Status)> callback) {
   if (firebase_watcher_set_) {
     ResetWatcher();
@@ -99,8 +97,7 @@ void CloudDeviceSetImpl::WatchFingerprint(
 }
 
 void CloudDeviceSetImpl::EraseAllFingerprints(
-    std::string auth_token,
-    std::function<void(Status)> callback) {
+    std::string auth_token, std::function<void(Status)> callback) {
   auto query_params = QueryParamsFromAuthToken(auth_token);
 
   user_firebase_->Delete(
@@ -116,8 +113,7 @@ void CloudDeviceSetImpl::EraseAllFingerprints(
 }
 
 void CloudDeviceSetImpl::UpdateTimestampAssociatedWithFingerprint(
-    std::string auth_token,
-    std::string fingerprint) {
+    std::string auth_token, std::string fingerprint) {
   auto query_params = QueryParamsFromAuthToken(auth_token);
 
   user_firebase_->Put(GetDeviceMapKey(fingerprint), query_params,

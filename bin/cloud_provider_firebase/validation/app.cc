@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/async/cpp/task.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async/cpp/task.h>
 
 #include <iostream>
 
@@ -45,14 +45,13 @@ int main(int argc, char** argv) {
       });
 
   int32_t return_code = -1;
-  async::PostTask(
-      loop.async(), [&factory, &launcher, &return_code, &loop] {
-        factory.Init();
-        launcher.Run({}, [&return_code, &loop](int32_t result) {
-          return_code = result;
-          loop.Quit();
-        });
-      });
+  async::PostTask(loop.async(), [&factory, &launcher, &return_code, &loop] {
+    factory.Init();
+    launcher.Run({}, [&return_code, &loop](int32_t result) {
+      return_code = result;
+      loop.Quit();
+    });
+  });
   loop.Run();
   return return_code;
 }

@@ -33,10 +33,8 @@ std::unique_ptr<cloud_provider::Token> MakeToken(
 class PageCloudImplTest : public gtest::TestWithLoop,
                           cloud_provider::PageCloudWatcher {
  public:
-  PageCloudImplTest()
-      : firebase_auth_(dispatcher()), watcher_binding_(this) {
-    auto handler =
-        std::make_unique<TestPageCloudHandler>(dispatcher());
+  PageCloudImplTest() : firebase_auth_(dispatcher()), watcher_binding_(this) {
+    auto handler = std::make_unique<TestPageCloudHandler>(dispatcher());
     handler_ = handler.get();
     page_cloud_impl_ = std::make_unique<PageCloudImpl>(
         &firebase_auth_, nullptr, nullptr, std::move(handler),
@@ -53,8 +51,7 @@ class PageCloudImplTest : public gtest::TestWithLoop,
     on_new_commits_commits_callback_ = callback;
   }
 
-  void OnNewObject(fidl::VectorPtr<uint8_t> id,
-                   fuchsia::mem::Buffer data,
+  void OnNewObject(fidl::VectorPtr<uint8_t> id, fuchsia::mem::Buffer data,
                    OnNewObjectCallback callback) override {
     FXL_NOTIMPLEMENTED();
   }
@@ -148,10 +145,9 @@ TEST_F(PageCloudImplTest, GetCommits) {
   cloud_provider::Status status;
   fidl::VectorPtr<cloud_provider::Commit> commits;
   std::unique_ptr<cloud_provider::Token> token;
-  page_cloud_->GetCommits(
-      MakeToken("5"),
-      callback::Capture(callback::SetWhenCalled(&called), &status, &commits,
-                        &token));
+  page_cloud_->GetCommits(MakeToken("5"),
+                          callback::Capture(callback::SetWhenCalled(&called),
+                                            &status, &commits, &token));
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
   EXPECT_EQ(cloud_provider::Status::OK, status);
@@ -168,9 +164,9 @@ TEST_F(PageCloudImplTest, GetCommitsEmpty) {
   cloud_provider::Status status;
   fidl::VectorPtr<cloud_provider::Commit> commits;
   std::unique_ptr<cloud_provider::Token> token;
-  page_cloud_->GetCommits(
-      MakeToken("5"),
-      callback::Capture(callback::SetWhenCalled(&called), &status, &commits, &token));
+  page_cloud_->GetCommits(MakeToken("5"),
+                          callback::Capture(callback::SetWhenCalled(&called),
+                                            &status, &commits, &token));
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
   EXPECT_EQ(cloud_provider::Status::OK, status);
@@ -187,9 +183,8 @@ TEST_F(PageCloudImplTest, GetCommitsNullToken) {
   fidl::VectorPtr<cloud_provider::Commit> commits;
   std::unique_ptr<cloud_provider::Token> token;
   page_cloud_->GetCommits(
-      nullptr,
-      callback::Capture(callback::SetWhenCalled(&called), &status, &commits,
-                        &token));
+      nullptr, callback::Capture(callback::SetWhenCalled(&called), &status,
+                                 &commits, &token));
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
   EXPECT_EQ(cloud_provider::Status::OK, status);
@@ -205,10 +200,9 @@ TEST_F(PageCloudImplTest, GetCommitsNetworkError) {
   cloud_provider::Status status;
   fidl::VectorPtr<cloud_provider::Commit> commits;
   std::unique_ptr<cloud_provider::Token> token;
-  page_cloud_->GetCommits(
-      MakeToken("5"),
-      callback::Capture(callback::SetWhenCalled(&called), &status, &commits,
-                        &token));
+  page_cloud_->GetCommits(MakeToken("5"),
+                          callback::Capture(callback::SetWhenCalled(&called),
+                                            &status, &commits, &token));
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
   EXPECT_EQ(cloud_provider::Status::NETWORK_ERROR, status);
@@ -252,10 +246,9 @@ TEST_F(PageCloudImplTest, GetObject) {
   cloud_provider::Status status;
   uint64_t size;
   zx::socket data;
-  page_cloud_->GetObject(
-      convert::ToArray("abc"),
-      callback::Capture(callback::SetWhenCalled(&called), &status, &size,
-                        &data));
+  page_cloud_->GetObject(convert::ToArray("abc"),
+                         callback::Capture(callback::SetWhenCalled(&called),
+                                           &status, &size, &data));
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
   EXPECT_EQ(cloud_provider::Status::OK, status);
@@ -273,10 +266,9 @@ TEST_F(PageCloudImplTest, GetObjectNetworkError) {
   cloud_provider::Status status;
   uint64_t size;
   zx::socket data;
-  page_cloud_->GetObject(
-      convert::ToArray("abc"),
-      callback::Capture(callback::SetWhenCalled(&called), &status, &size,
-                        &data));
+  page_cloud_->GetObject(convert::ToArray("abc"),
+                         callback::Capture(callback::SetWhenCalled(&called),
+                                           &status, &size, &data));
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
   EXPECT_EQ(cloud_provider::Status::NETWORK_ERROR, status);

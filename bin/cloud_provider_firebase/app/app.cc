@@ -19,8 +19,7 @@ namespace {
 
 namespace http = ::fuchsia::net::oldhttp;
 
-constexpr fxl::StringView kNoStatisticsReporting =
-    "disable_reporting";
+constexpr fxl::StringView kNoStatisticsReporting = "disable_reporting";
 
 struct AppParams {
   bool disable_statistics = false;
