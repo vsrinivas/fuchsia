@@ -62,8 +62,18 @@ Bearer::Bearer(fbl::RefPtr<l2cap::Channel> chan, hci::Connection::Role role,
   }
 
   auto self = weak_ptr_factory_.GetWeakPtr();
-  chan_->Activate([self](const auto& sdu) { self->OnRxBFrame(sdu); },
-                  [self] { self->OnChannelClosed(); }, async_get_default());
+  chan_->Activate(
+      [self](const auto& sdu) {
+        if (self) {
+          self->OnRxBFrame(sdu);
+        }
+      },
+      [self] {
+        if (self) {
+          self->OnChannelClosed();
+        }
+      },
+      async_get_default());
 }
 
 bool Bearer::InitiateFeatureExchange() {
@@ -293,6 +303,7 @@ void Bearer::OnPairingRequest(const PacketReader& reader) {
 
   // Reject the command if we are the master.
   if (role_ == hci::Connection::Role::kMaster) {
+    FXL_VLOG(1) << "sm: Rejecting \"Pairing Request\" from slave";
     SendPairingFailed(ErrorCode::kCommandNotSupported);
     return;
   }
@@ -355,6 +366,7 @@ void Bearer::OnPairingRequest(const PacketReader& reader) {
       ResolveFeatures(false /* local_initiator */, params, *payload, &features);
   feature_exchange_pending_ = false;
   if (ecode != ErrorCode::kNoError) {
+    FXL_VLOG(1) << "sm: Rejecting pairing features";
     Abort(ecode);
     return;
   }

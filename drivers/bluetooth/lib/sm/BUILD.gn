@@ -18,6 +18,8 @@ static_library("sm") {
   sources = [
     "bearer.cc",
     "bearer.h",
+    "pairing_state.cc",
+    "pairing_state.h",
     "status.cc",
     "status.h",
     "types.cc",
@@ -38,6 +40,7 @@ source_set("tests") {
 
   sources = [
     "bearer_unittest.cc",
+    "pairing_state_unittest.cc",
     "util_unittest.cc",
   ]
 
