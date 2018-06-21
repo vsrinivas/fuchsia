@@ -8,6 +8,7 @@
 #include <fuchsia/mediacodec/cpp/fidl.h>
 
 #include <lib/fidl/cpp/binding.h>
+#include <lib/fxl/macros.h>
 
 class DeviceCtx;
 
@@ -84,6 +85,8 @@ class LocalCodecFactory : public fuchsia::mediacodec::CodecFactory {
       factory_binding_;
 
   bool is_error_handler_set_ = false;
+
+  FXL_DISALLOW_COPY_AND_ASSIGN(LocalCodecFactory);
 };
 
 #endif  // GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_LOCAL_CODEC_FACTORY_H_

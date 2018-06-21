@@ -21,7 +21,7 @@ int main(int argc, char* argv[]) {
   }
 
   async::Loop main_loop(&kAsyncLoopConfigMakeDefault);
-  main_loop.StartThread("main_loop");
+  main_loop.StartThread("FIDL_thread");
 
   std::unique_ptr<fuchsia::sys::StartupContext> startup_context =
       fuchsia::sys::StartupContext::CreateFromStartupInfo();

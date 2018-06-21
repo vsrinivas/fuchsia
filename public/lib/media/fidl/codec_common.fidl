@@ -393,16 +393,26 @@ struct CodecFormatDetails {
   // vs. the last CodecFormatDetails received for the same context.
   uint64 format_details_version_ordinal;
 
-  // Mime types used by particular decoders / encoders so far:
+  // "mime_type" strings used by particular decoders / encoders so far:
   //
-  // AAC decoder:
+  // SW AAC decoder:
   //   * input:
-  //     * audio/aac-adts - ATDS AAC; self-contained
-  //     * audio/aac - AAC ES with AudioSpecificConfig() in codec_oob_bytes.
+  //     * "audio/aac-adts" - ATDS AAC; self-contained format, but
+  //       implementation for now requires codec_oob_bytes to contain
+  //       AudioSpecificConfig() reconstructed from ADTS header data - see also
+  //       make_AudioSpecificConfig_from_ADTS_header() for now.
   //   * output:
-  //     * audio/raw - stereo linear 16 bit integer PCM
+  //     * "audio/raw" - stereo linear 16 bit integer PCM
   //
-  // TODO(dustingreen): avoid requiring codec_oob_bytes when using SoftAAC2.cpp.
+  // TODO(dustingreen): avoid requiring codec_oob_bytes when using SoftAAC2.cpp
+  // for AAC ADTS.
+  //
+  // TODO(dustingreen): Add non-ADTS AAC support (which naturally needs
+  // codec_oob_bytes).
+  //
+  // TODO(dustingreen): Consider "pseudo_mime_type", or an enum, + "domain"
+  // details as needed instead, since calling this "mime_type" could lead to
+  // confusion.
   string mime_type;
 
   // Some codecs have their own binary codec configuration structure.  For those

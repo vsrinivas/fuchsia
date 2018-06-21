@@ -4,8 +4,6 @@
 
 #include "driver_ctx.h"
 
-#include <lib/async/cpp/task.h>
-#include <lib/fit/function.h>
 #include <lib/fxl/logging.h>
 #include <stdarg.h>
 #include <stdio.h>
@@ -58,32 +56,15 @@ void DriverCtx::FatalError(const char* format, ...) {
   FXL_CHECK(false) << "DriverCtx::FatalError() is fatal.";
 }
 
-// Post to async in a way that's guaranteed to run the posted work in the same
-// order as the posting order (is the intent; if async::PostTask ever changes to
-// not guarantee order, we'll need to work around that here).
-//
-// TODO(dustingreen): Determine if async::PostTask() will strictly guarantee
-// ordering of posted items at least in the case of async::Loop.
+// Run to_run on given async, in order.
 void DriverCtx::PostSerial(async_t* async, fit::closure to_run) {
-  // TODO(dustingreen): This should just forward to async::PostTask(async,
-  // to_run) without any wrapping needed, once I figure out why attempts to use
-  // async::PostTask() directly didn't work before.  Hopefully async::PostTask()
-  // can just switch to fit::function soon.
-  std::shared_ptr<fit::closure> shared =
-      std::make_shared<fit::closure>(std::move(to_run));
-  std::function<void(void)> copyable = [shared]() {
-    fit::closure foo = std::move(*shared.get());
-    foo();
-  };
-  // The std::function copyable can be passed to a fbl::Closure parameter.  We'd
-  // prefer to use a move-only function all the way down when things are ready
-  // for that.
-  zx_status_t post_result = async::PostTask(async, copyable);
+  zx_status_t post_result = async::PostTask(async, std::move(to_run));
   if (post_result != ZX_OK) {
     FatalError("async::PostTask() failed - result: %d", post_result);
   }
 }
 
+// Run to_run_on_shared_fidl_thread on shared_fidl_thread().
 void DriverCtx::PostToSharedFidl(fit::closure to_run_on_shared_fidl_thread) {
   // Switch the implementation here to fit::function when possible.
   PostSerial(shared_fidl_loop()->async(),

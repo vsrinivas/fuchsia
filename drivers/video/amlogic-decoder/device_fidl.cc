@@ -26,6 +26,10 @@ DeviceFidl::~DeviceFidl() {
 
   // The DeviceCtx should have already moved over to the shared_fidl_thread()
   // for this (if ~DeviceCtx implemented), else it's not safe to ~fidl::Binding.
+  //
+  // Also, DeviceFidl::CreateChannelBoundCodecFactory() relies on ability to
+  // post work which will run on shared_fidl_thread() before ~DeviceFidl()
+  // runs on shared_fidl_thread().
   FXL_DCHECK(thrd_current() == device_->driver()->shared_fidl_thread());
 }
 
@@ -39,18 +43,27 @@ void DeviceFidl::CreateChannelBoundCodecFactory(zx::channel* client_endpoint) {
   }
   std::unique_ptr<LocalCodecFactory> factory =
       std::make_unique<LocalCodecFactory>(device_);
-  factory->SetErrorHandler([this, factory = factory.get()] {
-    std::lock_guard<std::mutex> lock(factories_lock_);
-    factories_.erase(factories_.find(factory));
+  factory->SetErrorHandler([this, factory_ptr = factory.get()] {
+    FXL_DCHECK(thrd_current() == device_->driver()->shared_fidl_thread());
+    factories_.erase(factories_.find(factory_ptr));
   });
-  factory->Bind(std::move(local_server_endpoint));
-  {  // scope lock
-    std::lock_guard<std::mutex> lock(factories_lock_);
-    auto insert_result =
-        factories_.insert(std::make_pair(factory.get(), std::move(factory)));
-    // insert success
-    FXL_DCHECK(insert_result.second);
-  }  // ~lock
+  // Any destruction of "this" is also posted over to shared_fidl_thread(), and
+  // will run after the work posted here runs.
+  //
+  // This posting over to shared_fidl_thread() is mainly for the benefit of
+  // factories_ only being touched from that thread, and secondarily to avoid
+  // taking a dependency on Bind() working from a different thread (both in
+  // Bind() and in DeviceFidl code).
+  device_->driver()->PostToSharedFidl(
+      [this, factory = std::move(factory),
+       server_endpoint = std::move(local_server_endpoint)]() mutable {
+        FXL_DCHECK(thrd_current() == device_->driver()->shared_fidl_thread());
+        auto insert_result = factories_.insert(
+            std::make_pair(factory.get(), std::move(factory)));
+        // insert success
+        FXL_DCHECK(insert_result.second);
+        insert_result.first->second->Bind(std::move(server_endpoint));
+      });
   *client_endpoint = std::move(local_client_endpoint);
 }
 

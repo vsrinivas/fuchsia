@@ -124,6 +124,9 @@ struct CreateDecoder_Params {
   // are guaranteed to show up on ouput.
   bool require_report_all_detected_errors = false;
 
+  // If true, require that the returned codec is HW-accelerated.
+  bool require_hw = false;
+
   // permit_lack_of_split_header_handling
   //
   // This field is a temporary field that will be going away.
@@ -161,16 +164,56 @@ struct CreateDecoder_Params {
   bool permit_lack_of_split_header_handling = false;
 };
 
+enum CodecType {
+  DECODER = 0;
+  ENCODER = 1;
+};
+
+struct CodecDescription {
+  // Decoder or encoder.
+  CodecType codec_type;
+  // The mime type of the compressed format.  For decoders this is the mime
+  // type of the input.  For encoders, this is the mime type of the output.
+  string mime_type;
+
+  // TODO(dustingreen): All these fields should be optional.
+  //
+  // TODO(dustingreen): Re-evaluate this for encoders.
+  //
+  // For each of these fields, the default is the most-capable setting, but if a
+  // codec doesn't support the most-capable behavior, then the codec must
+  // override the default.
+  bool can_stream_bytes_input = true;
+  bool can_find_start = true;
+  bool can_re_sync = true;
+  bool will_report_all_detected_errors = true;
+  bool is_hw = true;
+  bool split_header_handling = true;
+};
+
 // CodecFactory
 //
 // The purpose of the media::CodecFactory interface is to create media::Codec
 // instances.
 //
 // The interface methods don't attempt to homogenize all codec types, preferring
-// to have separate dedicated calls for decoders.  TBD whether calls for
+// to have a separate dedicated message for decoders.  TBD whether calls for
 // creating encoders will split up audio vs. video encoders, or be combined.
+//
+// Each create request is self-contained, in the sense that the interface is not
+// stateful between create requests.
 [Discoverable]
 interface CodecFactory {
+  // Driver-based local CodecFactory(s) will send this once shortly after the
+  // main CodecFactory connects to the driver-local CodecFactory.
+  //
+  // For now, the main CodecFactory will not send this.
+  //
+  // A SW-based local CodecFactory(s) will not send this event.
+  //
+  // Each codec in the list must be separately-described, for clean aggregation.
+  1: -> OnCodecList(vector<CodecDescription> codecs);
+
   // Rough sequence to create a decoder:
   //
   // factory = ConnectToEnvironmentService(CodecFactory);
@@ -195,7 +238,7 @@ interface CodecFactory {
   // because finding the Codec is allowed to be fully async, so we don't
   // necessarily yet know on return from this method which Codec will be
   // selected, if any.
-  1: CreateDecoder(
+  2: CreateDecoder(
     CreateDecoder_Params decoder_params,
     request<Codec> decoder);
 

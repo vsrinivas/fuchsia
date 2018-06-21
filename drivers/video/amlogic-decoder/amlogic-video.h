@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef AMLOGIC_VIDEO_H_
-#define AMLOGIC_VIDEO_H_
+#ifndef GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_AMLOGIC_VIDEO_H_
+#define GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_AMLOGIC_VIDEO_H_
 
 #include <ddk/binding.h>
 #include <ddk/debug.h>
@@ -20,6 +20,7 @@
 #include <thread>
 
 #include "decoder_core.h"
+#include "device_ctx.h"
 #include "firmware_blob.h"
 #include "registers.h"
 #include "video_decoder.h"
@@ -37,7 +38,7 @@ class AmlogicVideo final : public VideoDecoder::Owner,
 
   zx_status_t InitRegisters(zx_device_t* parent);
   zx_status_t InitDecoder();
-  zx_status_t Bind();
+  zx_status_t Bind(DeviceCtx* device);
 
   // VideoDecoder::Owner implementation.
   DosRegisterIo* dosbus() override { return dosbus_.get(); }
@@ -109,4 +110,4 @@ class AmlogicVideo final : public VideoDecoder::Owner,
   std::unique_ptr<VideoDecoder> video_decoder_;
 };
 
-#endif  // AMLOGIC_VIDEO_H_
+#endif  // GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_AMLOGIC_VIDEO_H_

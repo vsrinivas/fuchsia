@@ -10,6 +10,8 @@
 
 #include "amlogic-video.h"
 
+class AmlogicVideo;
+
 // A pointer to an instance of this class is the per-device "ctx".  The purpose
 // of this class is to provide a place for device-lifetime stuff to be rooted,
 // without itself being any particular aspect of the driver.
@@ -29,7 +31,7 @@ class DeviceCtx {
   DeviceFidl* device_fidl() { return device_fidl_.get(); }
 
  private:
-  DriverCtx* driver_;
+  DriverCtx* driver_ = nullptr;
 
   //
   // Device driving:

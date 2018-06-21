@@ -20,17 +20,18 @@ char kLibDecoderAac[] = "libcodec_sw_omx_dec_aac.so";
 
 namespace codec_factory {
 
+// TODO(dustingreen): Include fuchsia::mediacodec::CodecDescription info in
+// here, so we can select based on bool requirement fields in requests for a
+// codec.
 LocalCodecFactory::CodecStrategy LocalCodecFactory::codec_strategies[] = {
-    CodecStrategy{kCodecTypeAudioDecoder, "audio/aac", kLibDecoderAac,
-                  CreateRawOmxRunner},
     // TODO(dustingreen): Instead of CreateRawOmxRunner, create a wrapper that
     // deals with the lack of kLibDecoderAac support for split ADTS headers,
     // which so far is unique to this mime type.  Until we get the rest working
     // we'll just use the CreateRawOmxRunner without any wrapper and avoid
     // annoying the broken Codec in the client code, but the Codec for this mime
     // type should be made to work correctly one way or another before too long.
-    CodecStrategy{kCodecTypeAudioDecoder, "audio/aac-adts", kLibDecoderAac,
-                  CreateRawOmxRunner},
+    CodecStrategy{fuchsia::mediacodec::CodecType::DECODER, "audio/aac-adts",
+                  kLibDecoderAac, CreateRawOmxRunner},
 };
 
 void LocalCodecFactory::CreateSelfOwned(
@@ -52,13 +53,13 @@ LocalCodecFactory::LocalCodecFactory(async_t* fidl_async, thrd_t fidl_thread)
   // nothing else to do here
 }
 
-// AudioDecoder:
+// Decoder:
 
 void LocalCodecFactory::CreateDecoder(
     fuchsia::mediacodec::CreateDecoder_Params decoder_params,
-    ::fidl::InterfaceRequest<fuchsia::mediacodec::Codec>
-        audio_decoder_request) {
-  CreateCommon(kCodecTypeAudioDecoder, std::move(audio_decoder_request),
+    ::fidl::InterfaceRequest<fuchsia::mediacodec::Codec> decoder_request) {
+  CreateCommon(std::move(decoder_request),
+               fuchsia::mediacodec::CodecType::DECODER,
                decoder_params.input_details.mime_type,
                [this, decoder_params = std::move(decoder_params)](
                    codec_runner::CodecRunner* codec_runner) mutable {
@@ -72,9 +73,8 @@ void LocalCodecFactory::CreateDecoder(
 // (or combined)
 
 void LocalCodecFactory::CreateCommon(
-    CodecType codec_type,
     ::fidl::InterfaceRequest<fuchsia::mediacodec::Codec> codec_request,
-    std::string mime_type,
+    fuchsia::mediacodec::CodecType codec_type, std::string mime_type,
     fit::function<void(codec_runner::CodecRunner* codec_runner)>
         set_type_specific_params) {
   std::unique_ptr<codec_runner::CodecRunner> codec_runner =
@@ -115,8 +115,8 @@ LocalCodecFactory::CreateRawOmxRunner(async_t* fidl_async, thrd_t fidl_thread,
 }
 
 std::unique_ptr<codec_runner::CodecRunner> LocalCodecFactory::CreateCodec(
-    async_t* fidl_async, thrd_t fidl_thread, CodecType codec_type,
-    std::string mime_type) {
+    async_t* fidl_async, thrd_t fidl_thread,
+    fuchsia::mediacodec::CodecType codec_type, std::string mime_type) {
   const CodecStrategy* strategy = nullptr;
   for (size_t i = 0; i < arraysize(codec_strategies); i++) {
     if (codec_strategies[i].codec_type == codec_type &&

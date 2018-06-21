@@ -40,6 +40,13 @@ package("codec_factory") {
   ]
 
   binary = "codec_factory"
+
+  meta = [
+    {
+      path = rebase_path("codec_factory/meta/codec_factory.cmx")
+      dest = "codec_factory.cmx"
+    },
+  ]
 }
 
 # This package is only really expected to be used by the codec_factory package.

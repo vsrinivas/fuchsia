@@ -44,12 +44,7 @@ class DeviceFidl {
   void BindCodecImpl(std::unique_ptr<CodecImpl> codec);
 
  private:
-  DeviceCtx* device_;
-
-  // We only need a lock for factories_, not for codecs_, because factories_ is
-  // changed on IOCTL thread and on shared_fidl_thread(), while codecs_ is only
-  // ever changed on shared_fidl_thread().
-  std::mutex factories_lock_;
+  DeviceCtx* device_ = nullptr;
 
   // We want channel closure to imply LocalCodecFactory instance destruction,
   // and we want DeviceCtx destruction to imply all LocalCodecFactory instances
@@ -67,8 +62,9 @@ class DeviceFidl {
   // CodecFactory restarts.  It's also fine if the main CodecFactory wants to
   // use more than one for convenience and/or to get more coverage on the
   // >1 case here.
-  std::map<LocalCodecFactory*, std::unique_ptr<LocalCodecFactory>> factories_
-      FXL_GUARDED_BY(factories_lock_);
+  //
+  // Only touched from shared_fidl_thread().
+  std::map<LocalCodecFactory*, std::unique_ptr<LocalCodecFactory>> factories_;
 
   // We want channel closure to imply CodecImpl instance destruction, and we
   // want DeviceCtx destruction to imply all CodecImpl instances get destructed.
@@ -79,6 +75,8 @@ class DeviceFidl {
   // CodecImpl FIDL handling.
   //
   // We don't use a BindingSet here because we need events().
+  //
+  // Only touched from shared_fidl_thread().
   std::map<CodecImpl*, std::unique_ptr<CodecImpl>> codecs_;
 };
 

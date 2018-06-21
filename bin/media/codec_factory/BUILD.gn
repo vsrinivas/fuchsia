@@ -4,6 +4,8 @@
 
 executable("codec_factory") {
   sources = [
+    "codec_factory_app.cc",
+    "codec_factory_app.h",
     "codec_factory_impl.cc",
     "codec_factory_impl.h",
     "main.cc",

@@ -6,6 +6,7 @@
 #define GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_DRIVER_CTX_H_
 
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async/cpp/task.h>
 #include <lib/fit/function.h>
 
 #include <memory>

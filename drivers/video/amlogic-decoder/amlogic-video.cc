@@ -62,6 +62,10 @@ static zx_status_t amlogic_video_ioctl(void* ctx, uint32_t op,
   device->device_fidl()->CreateChannelBoundCodecFactory(
       &codec_factory_client_endpoint);
 
+  *(reinterpret_cast<zx_handle_t*>(out_buf)) =
+      codec_factory_client_endpoint.release();
+  *out_actual = sizeof(zx_handle_t);
+
   return ZX_OK;
 }
 
@@ -466,11 +470,11 @@ zx_status_t AmlogicVideo::InitRegisters(zx_device_t* parent) {
   return ZX_OK;
 }
 
-zx_status_t AmlogicVideo::Bind() {
+zx_status_t AmlogicVideo::Bind(DeviceCtx* device) {
   device_add_args_t vc_video_args = {};
   vc_video_args.version = DEVICE_ADD_ARGS_VERSION;
   vc_video_args.name = "amlogic_video";
-  vc_video_args.ctx = this;
+  vc_video_args.ctx = device;
   vc_video_args.ops = &amlogic_video_device_ops;
 
   // ZX_PROTOCOL_MEDIA_CODEC causes /dev/class/media-codec to get created, and
@@ -565,7 +569,7 @@ zx_status_t amlogic_video_bind(void* ctx, zx_device_t* parent) {
     return status;
   }
 
-  status = video->Bind();
+  status = video->Bind(device.get());
   if (status != ZX_OK) {
     DECODE_ERROR("Failed to bind device");
     return status;

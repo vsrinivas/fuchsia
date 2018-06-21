@@ -91,6 +91,7 @@ source_set("sources") {
     defines = [ "ENABLE_DECODER_TESTS" ]
   }
   public_configs = [ ":sources_include_config" ]
+  cflags = []
 }
 
 source_set("tests") {
@@ -138,6 +139,37 @@ package("amlogic_video_decoder") {
   libraries = [
     {
       name = "firmware/amlogic_video_ucode.bin"
+    },
+  ]
+}
+
+#
+# Manual tests
+#
+
+executable("test_amlogic_codec_factory") {
+  testonly = true
+  sources = [
+    "tests/manual/test_amlogic_codec_factory.cc",
+  ]
+  deps = [
+    "//garnet/public/lib/app/cpp",
+    "//garnet/public/lib/media/fidl:media_codec",
+    "//zircon/public/lib/async-loop-cpp",
+  ]
+}
+
+package("test_amlogic_codec_factory_package") {
+  # TODO(dustingreen): Do we need deprecated_system_image to be able to run a
+  # test manually from fx shell?
+  deprecated_system_image = true
+  testonly = true
+  deps = [
+    ":test_amlogic_codec_factory",
+  ]
+  tests = [
+    {
+      name = "test_amlogic_codec_factory"
     },
   ]
 }

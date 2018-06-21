@@ -5,11 +5,13 @@
 #ifndef GARNET_BIN_MEDIA_CODEC_FACTORY_CODEC_FACTORY_IMPL_H_
 #define GARNET_BIN_MEDIA_CODEC_FACTORY_CODEC_FACTORY_IMPL_H_
 
+#include "codec_factory_app.h"
+
 #include <fuchsia/mediacodec/cpp/fidl.h>
 
-#include "lib/app/cpp/startup_context.h"
-#include "lib/fidl/cpp/binding.h"
-#include "lib/fsl/tasks/message_loop.h"
+#include <lib/app/cpp/startup_context.h>
+#include <lib/fidl/cpp/binding.h>
+#include <lib/fsl/tasks/message_loop.h>
 
 namespace codec_factory {
 
@@ -17,7 +19,8 @@ namespace codec_factory {
 // implementation of this class to be stateful.
 class CodecFactoryImpl : public fuchsia::mediacodec::CodecFactory {
  public:
-  static void CreateSelfOwned(fuchsia::sys::StartupContext* startup_context,
+  static void CreateSelfOwned(CodecFactoryApp* app,
+                              fuchsia::sys::StartupContext* startup_context,
                               zx::channel request);
 
   // See .fidl file comments.
@@ -26,7 +29,8 @@ class CodecFactoryImpl : public fuchsia::mediacodec::CodecFactory {
       ::fidl::InterfaceRequest<fuchsia::mediacodec::Codec> decoder) override;
 
  private:
-  CodecFactoryImpl(fuchsia::sys::StartupContext* startup_context,
+  CodecFactoryImpl(CodecFactoryApp* app,
+                   fuchsia::sys::StartupContext* startup_context,
                    zx::channel channel);
   void OwnSelf(std::unique_ptr<CodecFactoryImpl> self);
 
@@ -35,7 +39,8 @@ class CodecFactoryImpl : public fuchsia::mediacodec::CodecFactory {
 
   // This class doesn't own these pointers - the creator of CodecFactoryImpl
   // must ensure these outlast this instance of CodecFactoryImpl.
-  fuchsia::sys::StartupContext* startup_context_;
+  CodecFactoryApp* app_ = nullptr;
+  fuchsia::sys::StartupContext* startup_context_ = nullptr;
   // This is only holding the underlying channel between construction and
   // OwnSelf(), at which point the channel moves into the binding.
   zx::channel channel_temp_;

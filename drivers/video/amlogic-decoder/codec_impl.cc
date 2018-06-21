@@ -58,56 +58,72 @@ void CodecImpl::Bind() {
 
 void CodecImpl::EnableOnStreamFailed() {
   FXL_CHECK(false) << "not yet implemented";
+  FXL_DCHECK(thrd_current() == device_->driver()->shared_fidl_thread());
 }
 
 void CodecImpl::SetInputBufferSettings(
     fuchsia::mediacodec::CodecPortBufferSettings input_settings) {
   FXL_CHECK(false) << "not yet implemented";
+  FXL_DCHECK(thrd_current() == device_->driver()->shared_fidl_thread());
 }
 
 void CodecImpl::AddInputBuffer(fuchsia::mediacodec::CodecBuffer buffer) {
   FXL_CHECK(false) << "not yet implemented";
+  FXL_DCHECK(thrd_current() == device_->driver()->shared_fidl_thread());
 }
 
 void CodecImpl::SetOutputBufferSettings(
     fuchsia::mediacodec::CodecPortBufferSettings output_settings) {
   FXL_CHECK(false) << "not yet implemented";
+  FXL_DCHECK(thrd_current() == device_->driver()->shared_fidl_thread());
 }
 
 void CodecImpl::AddOutputBuffer(fuchsia::mediacodec::CodecBuffer buffer) {
   FXL_CHECK(false) << "not yet implemented";
+  FXL_DCHECK(thrd_current() == device_->driver()->shared_fidl_thread());
 }
 
 void CodecImpl::FlushEndOfStreamAndCloseStream(
     uint64_t stream_lifetime_ordinal) {
   FXL_CHECK(false) << "not yet implemented";
+  FXL_DCHECK(thrd_current() == device_->driver()->shared_fidl_thread());
 }
 
 void CodecImpl::CloseCurrentStream(uint64_t stream_lifetime_ordinal,
                                    bool release_input_buffers,
                                    bool release_output_buffers) {
   FXL_CHECK(false) << "not yet implemented";
+  FXL_DCHECK(thrd_current() == device_->driver()->shared_fidl_thread());
 }
 
 void CodecImpl::Sync(SyncCallback callback) {
-  FXL_CHECK(false) << "not yet implemented";
+  FXL_DCHECK(thrd_current() == device_->driver()->shared_fidl_thread());
+  // TODO(dustingreen): Ensure the real implementation satisfies the
+  // StreamControl ordering domain semantics.  The current implementation is
+  // just to verify that a CodecImpl can be bound to a channel and communicate
+  // on that channel in both directions.
+  callback();
 }
 
 void CodecImpl::RecycleOutputPacket(
     fuchsia::mediacodec::CodecPacketHeader available_output_packet) {
   FXL_CHECK(false) << "not yet implemented";
+  FXL_DCHECK(thrd_current() == device_->driver()->shared_fidl_thread());
 }
 
 void CodecImpl::QueueInputFormatDetails(
     uint64_t stream_lifetime_ordinal,
     fuchsia::mediacodec::CodecFormatDetails format_details) {
   FXL_CHECK(false) << "not yet implemented";
+  FXL_DCHECK(thrd_current() == device_->driver()->shared_fidl_thread());
 }
 
 void CodecImpl::QueueInputPacket(fuchsia::mediacodec::CodecPacket packet) {
   FXL_CHECK(false) << "not yet implemented";
+  FXL_DCHECK(thrd_current() == device_->driver()->shared_fidl_thread());
 }
 
 void CodecImpl::QueueInputEndOfStream(uint64_t stream_lifetime_ordinal) {
   FXL_CHECK(false) << "not yet implemented";
+  FXL_DCHECK(thrd_current() == device_->driver()->shared_fidl_thread());
 }

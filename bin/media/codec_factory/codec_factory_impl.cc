@@ -24,7 +24,8 @@ namespace codec_factory {
 // to mitigate that problem locally in this class, it seems better to intergrate
 // with a more general-purpose request spam mitigation mechanism.
 void CodecFactoryImpl::CreateSelfOwned(
-    fuchsia::sys::StartupContext* startup_context, zx::channel request) {
+    CodecFactoryApp* app, fuchsia::sys::StartupContext* startup_context,
+    zx::channel request) {
   // I considered just doing "new CodecFactoryImpl(...)" here and declaring that
   // it always inherently owns itself (and implementing it that way), but that
   // seems less flexible for testing purposes and also not necessarily as safe
@@ -34,14 +35,17 @@ void CodecFactoryImpl::CreateSelfOwned(
   // As usual, can't use std::make_unique<> here since making it a friend would
   // break the point of making the constructor private.
   std::unique_ptr<CodecFactoryImpl> self(
-      new CodecFactoryImpl(startup_context, std::move(request)));
+      new CodecFactoryImpl(app, startup_context, std::move(request)));
   self->OwnSelf(std::move(self));
   assert(!self);
 }
 
 CodecFactoryImpl::CodecFactoryImpl(
-    fuchsia::sys::StartupContext* startup_context, zx::channel channel)
-    : startup_context_(startup_context), channel_temp_(std::move(channel)) {}
+    CodecFactoryApp* app, fuchsia::sys::StartupContext* startup_context,
+    zx::channel channel)
+    : app_(app),
+      startup_context_(startup_context),
+      channel_temp_(std::move(channel)) {}
 
 // TODO(dustingreen): Seems simpler to avoid channel_temp_ and OwnSelf() and
 // just have CreateSelfOwned() directly create the binding.
@@ -55,6 +59,25 @@ void CodecFactoryImpl::CreateDecoder(
     ::fidl::InterfaceRequest<fuchsia::mediacodec::Codec> decoder) {
   // We don't have any need to bind the codec_request locally to this process.
   // Instead, we find where to delegate the request to.
+
+  // First, try to find a hw-accelerated codec to satisfy the request.
+  const fuchsia::mediacodec::CodecFactoryPtr* factory =
+      app_->FindHwDecoder([&params](const fuchsia::mediacodec::CodecDescription&
+                                        hw_codec_description) -> bool {
+        // TODO(dustingreen): pay attention to the bool constraints of the
+        // params vs. the hw_codec_description bools.  For the moment we just
+        // match the codec_type, mime_type.
+        constexpr fuchsia::mediacodec::CodecType codec_type =
+            fuchsia::mediacodec::CodecType::DECODER;
+        return (codec_type == hw_codec_description.codec_type) &&
+               (params.input_details.mime_type ==
+                hw_codec_description.mime_type);
+      });
+  if (factory) {
+    // prefer HW-accelerated
+    (*factory)->CreateDecoder(std::move(params), std::move(decoder));
+    return;
+  }
 
   // For now, we always forward to a kIsolateUrlOmx app instance that we create
   // here.

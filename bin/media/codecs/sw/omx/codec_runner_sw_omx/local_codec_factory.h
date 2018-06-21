@@ -66,23 +66,14 @@ class LocalCodecFactory : public fuchsia::mediacodec::CodecFactory {
   // (or combined)
 
  private:
-  enum CodecType {
-    kCodecTypeUnknown,
-    kCodecTypeAudioDecoder,
-    kCodecTypeVideoDecoder,
-    kCodecTypeAudioEncoder,
-    kCodecTypeVideoEncoder,
-  };
-
   // We let CreateSelfOwned() deal with setting up the binding_ directly, which
   // means the constructor doesn't need to stash the
   // InterfaceRequest<CodecFactory>
   LocalCodecFactory(async_t* fidl_async, thrd_t fidl_thread);
 
   void CreateCommon(
-      CodecType codec_type,
       ::fidl::InterfaceRequest<fuchsia::mediacodec::Codec> codec_request,
-      std::string mime_type,
+      fuchsia::mediacodec::CodecType codec_type, std::string mime_type,
       fit::function<void(codec_runner::CodecRunner* codec_runner)>
           set_type_specific_params);
 
@@ -92,7 +83,7 @@ class LocalCodecFactory : public fuchsia::mediacodec::CodecFactory {
   // primarily about the OMX AAC decoder lib not dealing with split ADTS
   // headers, which the Codec interface requires.
   struct CodecStrategy {
-    CodecType codec_type;
+    fuchsia::mediacodec::CodecType codec_type;
     std::string_view mime_type;
     std::string_view lib_filename;
     std::function<std::unique_ptr<codec_runner::CodecRunner>(
@@ -108,8 +99,8 @@ class LocalCodecFactory : public fuchsia::mediacodec::CodecFactory {
       const CodecStrategy& codec_strategy);
 
   static std::unique_ptr<codec_runner::CodecRunner> CreateCodec(
-      async_t* fidl_async, thrd_t fidl_thread, CodecType codec_type,
-      std::string mime_type);
+      async_t* fidl_async, thrd_t fidl_thread,
+      fuchsia::mediacodec::CodecType codec_type, std::string mime_type);
 
   async_t* fidl_async_;
   thrd_t fidl_thread_ = 0;
