@@ -119,7 +119,8 @@ struct brcmf_netbuf* brcmu_pktq_penq_head(struct pktq* pq, int prec, struct brcm
 struct brcmf_netbuf* brcmu_pktq_pdeq(struct pktq* pq, int prec);
 struct brcmf_netbuf* brcmu_pktq_pdeq_tail(struct pktq* pq, int prec);
 struct brcmf_netbuf* brcmu_pktq_pdeq_match(struct pktq* pq, int prec,
-                                      bool (*match_fn)(struct brcmf_netbuf* p, void* arg), void* arg);
+                                           bool (*match_fn)(struct brcmf_netbuf* p, void* arg),
+                                           void* arg);
 
 /* packet primitives */
 struct brcmf_netbuf* brcmu_pkt_buf_get_skb(uint len);
@@ -160,7 +161,8 @@ static inline bool pktq_empty(struct pktq* pq) {
 void brcmu_pktq_init(struct pktq* pq, int num_prec, int max_len);
 /* prec_out may be NULL if caller is not interested in return value */
 struct brcmf_netbuf* brcmu_pktq_peek_tail(struct pktq* pq, int* prec_out);
-void brcmu_pktq_flush(struct pktq* pq, bool dir, bool (*fn)(struct brcmf_netbuf*, void*), void* arg);
+void brcmu_pktq_flush(struct pktq* pq, bool dir, bool (*fn)(struct brcmf_netbuf*, void*),
+                      void* arg);
 
 /* externs */
 /* ip address */

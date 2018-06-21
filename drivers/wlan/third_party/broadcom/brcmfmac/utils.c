@@ -119,7 +119,8 @@ EXPORT_SYMBOL(brcmu_pktq_pdeq);
  * from brcmu_pktq_pdeq() above.
  */
 struct brcmf_netbuf* brcmu_pktq_pdeq_match(struct pktq* pq, int prec,
-                                      bool (*match_fn)(struct brcmf_netbuf* skb, void* arg), void* arg) {
+                                           bool (*match_fn)(struct brcmf_netbuf* skb, void* arg),
+                                           void* arg) {
     struct brcmf_netbuf_list* q;
     struct brcmf_netbuf* p;
     struct brcmf_netbuf* next;
@@ -168,7 +169,8 @@ void brcmu_pktq_pflush(struct pktq* pq, int prec, bool dir, bool (*fn)(struct br
 }
 EXPORT_SYMBOL(brcmu_pktq_pflush);
 
-void brcmu_pktq_flush(struct pktq* pq, bool dir, bool (*fn)(struct brcmf_netbuf*, void*), void* arg) {
+void brcmu_pktq_flush(struct pktq* pq, bool dir, bool (*fn)(struct brcmf_netbuf*, void*),
+                      void* arg) {
     int prec;
     for (prec = 0; prec < pq->num_prec; prec++) {
         brcmu_pktq_pflush(pq, prec, dir, fn, arg);

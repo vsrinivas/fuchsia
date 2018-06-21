@@ -638,7 +638,6 @@ static zx_status_t brcmf_usb_up(struct brcmf_device* dev) {
 
     /* Success, indicate devinfo is fully up */
     brcmf_usb_state_change(devinfo, BRCMFMAC_USB_STATE_UP);
-
     if (devinfo->ctl_urb) {
         devinfo->ctl_in_pipe = usb_rcvctrlpipe(devinfo->usbdev, 0);
         devinfo->ctl_out_pipe = usb_sndctrlpipe(devinfo->usbdev, 0);
@@ -888,7 +887,6 @@ static zx_status_t brcmf_usb_dl_writeimage(struct brcmf_usbdev_info* devinfo, ui
                 err = ZX_ERR_INTERNAL;
                 goto fail;
             }
-
             dlpos += sendlen;
             sent += sendlen;
         }
@@ -1267,7 +1265,8 @@ static void brcmf_usb_disconnect_cb(struct brcmf_usbdev_info* devinfo) {
     brcmf_usb_detach(devinfo);
 }
 
-static zx_status_t brcmf_usb_probe(struct brcmf_usb_interface* intf, const struct brcmf_usb_device_id* id) {
+static zx_status_t brcmf_usb_probe(struct brcmf_usb_interface* intf,
+                                   const struct brcmf_usb_device_id* id) {
     struct brcmf_usb_device* usb = interface_to_usbdev(intf);
     struct brcmf_usbdev_info* devinfo;
     struct brcmf_usb_interface_descriptor* desc;

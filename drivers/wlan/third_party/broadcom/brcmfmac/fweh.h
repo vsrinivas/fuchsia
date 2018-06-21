@@ -345,9 +345,13 @@ static inline void brcmf_fweh_process_skb(struct brcmf_pub* drvr, struct brcmf_n
     uint16_t usr_stype;
 
     /* only process events when protocol matches */
-    if (skb->protocol != htobe16(ETH_P_LINK_CTL)) { return; }
+    if (skb->protocol != htobe16(ETH_P_LINK_CTL)) {
+        return;
+    }
 
-    if ((skb->len + ETH_HLEN) < sizeof(*event_packet)) { return; }
+    if ((skb->len + ETH_HLEN) < sizeof(*event_packet)) {
+       return;
+    }
 
     /* check for BRCM oui match */
     event_packet = (struct brcmf_event*)skb_mac_header(skb);

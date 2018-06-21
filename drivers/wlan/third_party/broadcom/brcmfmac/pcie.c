@@ -331,7 +331,8 @@ static uint32_t brcmf_pcie_read_reg32(struct brcmf_pciedev_info* devinfo, uint32
     return (ioread32(address));
 }
 
-static void brcmf_pcie_write_reg32(struct brcmf_pciedev_info* devinfo, uint32_t reg_offset, uint32_t value) {
+static void brcmf_pcie_write_reg32(struct brcmf_pciedev_info* devinfo, uint32_t reg_offset,
+                                   uint32_t value) {
     void __iomem* address = devinfo->regs + reg_offset;
 
     iowrite32(value, address);
@@ -349,7 +350,8 @@ static uint16_t brcmf_pcie_read_tcm16(struct brcmf_pciedev_info* devinfo, uint32
     return (ioread16(address));
 }
 
-static void brcmf_pcie_write_tcm16(struct brcmf_pciedev_info* devinfo, uint32_t mem_offset, uint16_t value) {
+static void brcmf_pcie_write_tcm16(struct brcmf_pciedev_info* devinfo, uint32_t mem_offset,
+                                   uint16_t value) {
     void __iomem* address = devinfo->tcm + mem_offset;
 
     iowrite16(value, address);
@@ -361,7 +363,8 @@ static uint16_t brcmf_pcie_read_idx(struct brcmf_pciedev_info* devinfo, uint32_t
     return (*(address));
 }
 
-static void brcmf_pcie_write_idx(struct brcmf_pciedev_info* devinfo, uint32_t mem_offset, uint16_t value) {
+static void brcmf_pcie_write_idx(struct brcmf_pciedev_info* devinfo, uint32_t mem_offset,
+                                 uint16_t value) {
     uint16_t* address = devinfo->idxbuf + mem_offset;
 
     *(address) = value;
@@ -373,7 +376,8 @@ static uint32_t brcmf_pcie_read_tcm32(struct brcmf_pciedev_info* devinfo, uint32
     return (ioread32(address));
 }
 
-static void brcmf_pcie_write_tcm32(struct brcmf_pciedev_info* devinfo, uint32_t mem_offset, uint32_t value) {
+static void brcmf_pcie_write_tcm32(struct brcmf_pciedev_info* devinfo, uint32_t mem_offset,
+                                   uint32_t value) {
     void __iomem* address = devinfo->tcm + mem_offset;
 
     iowrite32(value, address);
@@ -385,7 +389,8 @@ static uint32_t brcmf_pcie_read_ram32(struct brcmf_pciedev_info* devinfo, uint32
     return (ioread32(addr));
 }
 
-static void brcmf_pcie_write_ram32(struct brcmf_pciedev_info* devinfo, uint32_t mem_offset, uint32_t value) {
+static void brcmf_pcie_write_ram32(struct brcmf_pciedev_info* devinfo, uint32_t mem_offset,
+                                   uint32_t value) {
     void __iomem* addr = devinfo->tcm + devinfo->ci->rambase + mem_offset;
 
     iowrite32(value, addr);
@@ -870,7 +875,8 @@ static zx_status_t brcmf_pcie_ring_mb_update_wptr(void* ctx) {
 }
 
 static void* brcmf_pcie_init_dmabuffer_for_device(struct brcmf_pciedev_info* devinfo, uint32_t size,
-                                                  uint32_t tcm_dma_phys_addr, dma_addr_t* dma_handle) {
+                                                  uint32_t tcm_dma_phys_addr,
+                                                  dma_addr_t* dma_handle) {
     void* ring;
     uint64_t address;
 
@@ -1221,7 +1227,8 @@ static const struct brcmf_bus_ops brcmf_pcie_bus_ops = {
     .get_fwname = brcmf_pcie_get_fwname,
 };
 
-static void brcmf_pcie_adjust_ramsize(struct brcmf_pciedev_info* devinfo, uint8_t* data, uint32_t data_len) {
+static void brcmf_pcie_adjust_ramsize(struct brcmf_pciedev_info* devinfo, uint8_t* data,
+                                      uint32_t data_len) {
     uint32_t* field;
     uint32_t newsize;
 

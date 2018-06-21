@@ -376,8 +376,8 @@ static const struct brcmf_tlv* brcmf_parse_tlvs(const void* buf, int buflen, uin
 /* Is any of the tlvs the expected entry? If
  * not update the tlvs buffer pointer/length.
  */
-static bool brcmf_tlv_has_ie(const uint8_t* ie, const uint8_t** tlvs, uint32_t* tlvs_len, const uint8_t* oui,
-                             uint32_t oui_len, uint8_t type) {
+static bool brcmf_tlv_has_ie(const uint8_t* ie, const uint8_t** tlvs, uint32_t* tlvs_len,
+                             const uint8_t* oui, uint32_t oui_len, uint8_t type) {
     /* If the contents match the OUI and the type */
     if (ie[TLV_LEN_OFF] >= oui_len + 1 && !memcmp(&ie[TLV_BODY_OFF], oui, oui_len) &&
             type == ie[TLV_BODY_OFF + oui_len]) {
@@ -413,7 +413,8 @@ static struct brcmf_vs_tlv* brcmf_find_wpsie(const uint8_t* parse, uint32_t len)
     const struct brcmf_tlv* ie;
 
     while ((ie = brcmf_parse_tlvs(parse, len, WLAN_EID_VENDOR_SPECIFIC))) {
-        if (brcmf_tlv_has_ie((uint8_t*)ie, &parse, &len, (const uint8_t*)WPA_OUI, TLV_OUI_LEN, WPS_OUI_TYPE)) {
+        if (brcmf_tlv_has_ie((uint8_t*)ie, &parse, &len, (const uint8_t*)WPA_OUI, TLV_OUI_LEN,
+                             WPS_OUI_TYPE)) {
             return (struct brcmf_vs_tlv*)ie;
         }
     }
@@ -628,8 +629,8 @@ static bool brcmf_is_ibssmode(struct brcmf_cfg80211_vif* vif) {
 }
 
 zx_status_t brcmf_cfg80211_add_iface(struct wiphy* wiphy, const char* name,
-                                     enum nl80211_iftype type, struct vif_params* params,
-                                     struct wireless_dev** wdev_out) {
+                                     unsigned char name_assign_type, enum nl80211_iftype type,
+                                     struct vif_params* params, struct wireless_dev** wdev_out) {
     zx_status_t err;
 
     brcmf_dbg(TRACE, "enter: %s type %d\n", name, type);
@@ -975,7 +976,8 @@ static void brcmf_escan_prep(struct brcmf_cfg80211_info* cfg,
     /* Copy ssid array if applicable */
     brcmf_dbg(SCAN, "### List of SSIDs to scan ### %d\n", n_ssids);
     if (n_ssids > 0) {
-        offset = offsetof(struct brcmf_scan_params_le, channel_list) + n_channels * sizeof(uint16_t);
+        offset = offsetof(struct brcmf_scan_params_le, channel_list) +
+                 n_channels * sizeof(uint16_t);
         offset = roundup(offset, sizeof(uint32_t));
         ptr = (char*)params_le + offset;
         for (i = 0; i < (int32_t)n_ssids; i++) {
@@ -3539,7 +3541,8 @@ static void brcmf_configure_wowl(struct brcmf_cfg80211_info* cfg, struct brcmf_i
         wowl_config |= BRCMF_WOWL_NET;
         for (i = 0; i < wowl->n_patterns; i++) {
             brcmf_config_wowl_pattern(ifp, (uint8_t*)"add", (uint8_t*)wowl->patterns[i].pattern,
-                                      wowl->patterns[i].pattern_len, (uint8_t*)wowl->patterns[i].mask,
+                                      wowl->patterns[i].pattern_len,
+                                      (uint8_t*)wowl->patterns[i].mask,
                                       wowl->patterns[i].pkt_offset);
         }
     }
@@ -4070,7 +4073,8 @@ next:
     return ZX_OK;
 }
 
-static uint32_t brcmf_vndr_ie(uint8_t* iebuf, int32_t pktflag, uint8_t* ie_ptr, uint32_t ie_len, int8_t* add_del_cmd) {
+static uint32_t brcmf_vndr_ie(uint8_t* iebuf, int32_t pktflag, uint8_t* ie_ptr, uint32_t ie_len,
+                              int8_t* add_del_cmd) {
     strncpy((char*)iebuf, (char*)add_del_cmd, VNDR_IE_CMD_LEN - 1);
     iebuf[VNDR_IE_CMD_LEN - 1] = '\0';
 
@@ -4329,7 +4333,8 @@ static zx_status_t brcmf_cfg80211_start_ap(struct wiphy* wiphy, struct net_devic
     }
 
     /* find the RSN_IE */
-    rsn_ie = brcmf_parse_tlvs((uint8_t*)settings->beacon.tail, settings->beacon.tail_len, WLAN_EID_RSN);
+    rsn_ie = brcmf_parse_tlvs((uint8_t*)settings->beacon.tail, settings->beacon.tail_len,
+                              WLAN_EID_RSN);
 
     /* find the WPA_IE */
     wpa_ie = brcmf_find_wpaie((uint8_t*)settings->beacon.tail, settings->beacon.tail_len);
@@ -4643,7 +4648,8 @@ static void brcmf_cfg80211_mgmt_frame_register(struct wiphy* wiphy, struct wirel
 }
 
 static zx_status_t brcmf_cfg80211_mgmt_tx(struct wiphy* wiphy, struct wireless_dev* wdev,
-                                          struct cfg80211_mgmt_tx_params* params, uint64_t* cookie) {
+                                          struct cfg80211_mgmt_tx_params* params,
+                                          uint64_t* cookie) {
     struct brcmf_cfg80211_info* cfg = wiphy_to_cfg(wiphy);
     struct ieee80211_channel* chan = params->chan;
     const uint8_t* buf = params->buf;
@@ -5343,8 +5349,8 @@ static zx_status_t brcmf_notify_connect_status_ap(struct brcmf_cfg80211_info* cf
     return ZX_OK;
 }
 
-static zx_status_t brcmf_notify_connect_status(struct brcmf_if* ifp, const struct brcmf_event_msg* e,
-                                               void* data) {
+static zx_status_t brcmf_notify_connect_status(struct brcmf_if* ifp,
+                                               const struct brcmf_event_msg* e, void* data) {
     struct brcmf_cfg80211_info* cfg = ifp->drvr->config;
     struct net_device* ndev = ifp->ndev;
     struct brcmf_cfg80211_profile* profile = &ifp->vif->profile;
@@ -5394,8 +5400,8 @@ static zx_status_t brcmf_notify_connect_status(struct brcmf_if* ifp, const struc
     return err;
 }
 
-static zx_status_t brcmf_notify_roaming_status(struct brcmf_if* ifp, const struct brcmf_event_msg* e,
-                                               void* data) {
+static zx_status_t brcmf_notify_roaming_status(struct brcmf_if* ifp,
+                                               const struct brcmf_event_msg* e, void* data) {
     struct brcmf_cfg80211_info* cfg = ifp->drvr->config;
     uint32_t event = e->event_code;
     uint32_t status = e->status;
@@ -5942,8 +5948,9 @@ static uint16_t brcmf_get_mcs_map(uint32_t nchain, enum ieee80211_vht_mcs_suppor
     return mcs_map;
 }
 
-static void brcmf_update_vht_cap(struct ieee80211_supported_band* band, uint32_t bw_cap[2], uint32_t nchain,
-                                 uint32_t txstreams, uint32_t txbf_bfe_cap, uint32_t txbf_bfr_cap) {
+static void brcmf_update_vht_cap(struct ieee80211_supported_band* band, uint32_t bw_cap[2],
+                                 uint32_t nchain, uint32_t txstreams, uint32_t txbf_bfe_cap,
+                                 uint32_t txbf_bfr_cap) {
     uint16_t mcs_map;
 
     /* not allowed in 2.4G band */

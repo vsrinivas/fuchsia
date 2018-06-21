@@ -35,7 +35,8 @@ void brcmf_of_probe(struct brcmf_device* dev, enum brcmf_bus_type bus_type,
     uint32_t irqf;
     uint32_t val;
 
-    if (!np || bus_type != BRCMF_BUSTYPE_SDIO || !of_device_is_compatible(np, "brcm,bcm4329-fmac")) {
+    if (!np || bus_type != BRCMF_BUSTYPE_SDIO ||
+            !of_device_is_compatible(np, "brcm,bcm4329-fmac")) {
         return;
     }
 

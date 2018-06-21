@@ -122,7 +122,6 @@ bool brcmf_test_bit_in_array(size_t bit_number, atomic_ulong* addr) {
     return !!(atomic_load(&addr[index]) & bit);
 }
 
-
 void brcmf_clear_bit_in_array(size_t bit_number, atomic_ulong* addr) {
     (void)brcmf_test_and_clear_bit_in_array(bit_number, addr);
 }

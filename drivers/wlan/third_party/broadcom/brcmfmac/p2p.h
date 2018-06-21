@@ -159,7 +159,8 @@ void brcmf_p2p_detach(struct brcmf_p2p_info* p2p);
 zx_status_t brcmf_p2p_add_vif(struct wiphy* wiphy, const char* name, enum nl80211_iftype type,
                               struct vif_params* params, struct wireless_dev** vif_out);
 zx_status_t brcmf_p2p_del_vif(struct wiphy* wiphy, struct wireless_dev* wdev);
-zx_status_t brcmf_p2p_ifchange(struct brcmf_cfg80211_info* cfg, enum brcmf_fil_p2p_if_types if_type);
+zx_status_t brcmf_p2p_ifchange(struct brcmf_cfg80211_info* cfg,
+                               enum brcmf_fil_p2p_if_types if_type);
 void brcmf_p2p_ifp_removed(struct brcmf_if* ifp, bool rtnl_locked);
 zx_status_t brcmf_p2p_start_device(struct wiphy* wiphy, struct wireless_dev* wdev);
 void brcmf_p2p_stop_device(struct wiphy* wiphy, struct wireless_dev* wdev);

@@ -392,9 +392,11 @@ void brcmf_proto_bcdc_txcomplete(struct brcmf_device* dev, struct brcmf_netbuf* 
 static void brcmf_proto_bcdc_configure_addr_mode(struct brcmf_pub* drvr, int ifidx,
                                                  enum proto_addr_mode addr_mode) {}
 
-static void brcmf_proto_bcdc_delete_peer(struct brcmf_pub* drvr, int ifidx, uint8_t peer[ETH_ALEN]) {}
+static void brcmf_proto_bcdc_delete_peer(struct brcmf_pub* drvr, int ifidx,
+                                         uint8_t peer[ETH_ALEN]) {}
 
-static void brcmf_proto_bcdc_add_tdls_peer(struct brcmf_pub* drvr, int ifidx, uint8_t peer[ETH_ALEN]) {}
+static void brcmf_proto_bcdc_add_tdls_peer(struct brcmf_pub* drvr, int ifidx,
+                                           uint8_t peer[ETH_ALEN]) {}
 
 static void brcmf_proto_bcdc_rxreorder(struct brcmf_if* ifp, struct brcmf_netbuf* skb) {
     brcmf_fws_rxreorder(ifp, skb);

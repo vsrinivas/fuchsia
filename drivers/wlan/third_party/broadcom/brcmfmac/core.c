@@ -481,7 +481,8 @@ zx_status_t brcmf_netdev_open(struct net_device* ndev) {
     atomic_store(&ifp->pend_8021x_cnt, 0);
 
     /* Get current TOE mode from dongle */
-    if (brcmf_fil_iovar_int_get(ifp, "toe_ol", &toe_ol) == ZX_OK && (toe_ol & TOE_TX_CSUM_OL) != 0) {
+    if (brcmf_fil_iovar_int_get(ifp, "toe_ol", &toe_ol) == ZX_OK &&
+            (toe_ol & TOE_TX_CSUM_OL) != 0) {
         ndev->features |= NETIF_F_IP_CSUM;
     } else {
         ndev->features &= ~NETIF_F_IP_CSUM;
@@ -1009,12 +1010,10 @@ zx_status_t brcmf_bus_started(struct brcmf_device* dev) {
     if (err != ZX_OK) {
         return err;
     }
-
     p2p_ifp = NULL;
 
     /* signal bus ready */
     brcmf_bus_change_state(bus_if, BRCMF_BUS_UP);
-
     /* Bus is ready, do any initialization */
     ret = brcmf_c_preinit_dcmds(ifp);
     if (ret != ZX_OK) {

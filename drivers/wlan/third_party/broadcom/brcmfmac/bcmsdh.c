@@ -348,7 +348,8 @@ static zx_status_t brcmf_sdiod_skbuff_write(struct brcmf_sdio_dev* sdiodev, stru
  * caller has already been padded and aligned.
  */
 static zx_status_t brcmf_sdiod_sglist_rw(struct brcmf_sdio_dev* sdiodev, struct sdio_func* func,
-                                         bool write, uint32_t addr, struct brcmf_netbuf_list* pktlist) {
+                                         bool write, uint32_t addr,
+                                         struct brcmf_netbuf_list* pktlist) {
     unsigned int req_sz, func_blk_sz, sg_cnt, sg_data_sz, pkt_offset;
     unsigned int max_req_sz, orig_offset, dst_offset;
     unsigned short max_seg_cnt, seg_sz;

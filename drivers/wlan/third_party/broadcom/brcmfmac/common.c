@@ -110,8 +110,8 @@ void brcmf_c_set_joinpref_default(struct brcmf_if* ifp) {
     }
 }
 
-static zx_status_t brcmf_c_download(struct brcmf_if* ifp, uint16_t flag, struct brcmf_dload_data_le* dload_buf,
-                            uint32_t len) {
+static zx_status_t brcmf_c_download(struct brcmf_if* ifp, uint16_t flag,
+                                    struct brcmf_dload_data_le* dload_buf, uint32_t len) {
     zx_status_t err;
 
     flag |= (DLOAD_HANDLER_VER << DLOAD_FLAG_VER_SHIFT);

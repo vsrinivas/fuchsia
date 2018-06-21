@@ -56,7 +56,8 @@ static bool brcmf_flowring_is_tdls_mac(struct brcmf_flowring* flow, uint8_t mac[
     return false;
 }
 
-uint32_t brcmf_flowring_lookup(struct brcmf_flowring* flow, uint8_t da[ETH_ALEN], uint8_t prio, uint8_t ifidx) {
+uint32_t brcmf_flowring_lookup(struct brcmf_flowring* flow, uint8_t da[ETH_ALEN], uint8_t prio,
+                               uint8_t ifidx) {
     struct brcmf_flowring_hash* hash;
     uint16_t hash_idx;
     uint32_t i;
@@ -248,7 +249,8 @@ void brcmf_flowring_delete(struct brcmf_flowring* flow, uint16_t flowid) {
     free(ring);
 }
 
-uint32_t brcmf_flowring_enqueue(struct brcmf_flowring* flow, uint16_t flowid, struct brcmf_netbuf* skb) {
+uint32_t brcmf_flowring_enqueue(struct brcmf_flowring* flow, uint16_t flowid,
+                                struct brcmf_netbuf* skb) {
     struct brcmf_flowring_ring* ring;
 
     ring = flow->rings[flowid];
@@ -290,7 +292,8 @@ struct brcmf_netbuf* brcmf_flowring_dequeue(struct brcmf_flowring* flow, uint16_
     return skb;
 }
 
-void brcmf_flowring_reinsert(struct brcmf_flowring* flow, uint16_t flowid, struct brcmf_netbuf* skb) {
+void brcmf_flowring_reinsert(struct brcmf_flowring* flow, uint16_t flowid,
+                             struct brcmf_netbuf* skb) {
     struct brcmf_flowring_ring* ring;
 
     ring = flow->rings[flowid];

@@ -667,8 +667,8 @@ static zx_status_t brcmf_fws_hanger_mark_suppressed(struct brcmf_fws_hanger* h, 
     return ZX_OK;
 }
 
-static void brcmf_fws_hanger_cleanup(struct brcmf_fws_info* fws, bool (*fn)(struct brcmf_netbuf*, void*),
-                                     int ifidx) {
+static void brcmf_fws_hanger_cleanup(struct brcmf_fws_info* fws,
+                                     bool (*fn)(struct brcmf_netbuf*, void*), int ifidx) {
     struct brcmf_fws_hanger* h = &fws->hanger;
     struct brcmf_netbuf* skb;
     int i;
@@ -702,7 +702,8 @@ static void brcmf_fws_macdesc_set_name(struct brcmf_fws_info* fws,
     }
 }
 
-static void brcmf_fws_macdesc_init(struct brcmf_fws_mac_descriptor* desc, uint8_t* addr, uint8_t ifidx) {
+static void brcmf_fws_macdesc_init(struct brcmf_fws_mac_descriptor* desc, uint8_t* addr,
+                                   uint8_t ifidx) {
     brcmf_dbg(TRACE, "enter: desc %p ea=%pM, ifidx=%u\n", desc, addr, ifidx);
     desc->occupied = 1;
     desc->state = BRCMF_FWS_STATE_OPEN;
@@ -773,7 +774,8 @@ static zx_status_t brcmf_fws_macdesc_find(struct brcmf_fws_info* fws,
     ret = brcmf_fws_macdesc_lookup(fws, da, macdesc_out);
     if (ret != ZX_OK) {
         *macdesc_out = ifp->fws_desc;
-        ret = ZX_OK; // TODO(cphoenix): Check logic and expectations here, e.g. is fws_desc non-NULL?
+        // TODO(cphoenix): Check logic and expectations here, e.g. is fws_desc non-NULL?
+        ret = ZX_OK;
     }
 
 done:
@@ -965,7 +967,8 @@ static bool brcmf_fws_tim_update(struct brcmf_fws_info* fws, struct brcmf_fws_ma
     return false;
 }
 
-static void brcmf_fws_flow_control_check(struct brcmf_fws_info* fws, struct pktq* pq, uint8_t if_id) {
+static void brcmf_fws_flow_control_check(struct brcmf_fws_info* fws, struct pktq* pq,
+                                         uint8_t if_id) {
     struct brcmf_if* ifp = brcmf_get_ifp(fws->drvr, if_id);
 
     if (WARN_ON(!ifp)) {
@@ -1048,7 +1051,8 @@ static int brcmf_fws_macdesc_indicate(struct brcmf_fws_info* fws, uint8_t type, 
 }
 
 static enum brcmf_fws_should_schedule brcmf_fws_macdesc_state_indicate(struct brcmf_fws_info* fws,
-                                                                       uint8_t type, uint8_t* data) {
+                                                                       uint8_t type,
+                                                                       uint8_t* data) {
     struct brcmf_fws_mac_descriptor* entry;
     uint8_t mac_handle;
     int ret;
@@ -1180,7 +1184,8 @@ static void brcmf_fws_macdesc_use_req_credit(struct brcmf_fws_mac_descriptor* en
 static void brcmf_fws_macdesc_return_req_credit(struct brcmf_netbuf* skb) {
     struct brcmf_fws_mac_descriptor* entry = brcmf_skbcb(skb)->mac;
 
-    if ((brcmf_skb_if_flags_get_field(skb, REQ_CREDIT)) && (entry->state == BRCMF_FWS_STATE_CLOSE)) {
+    if ((brcmf_skb_if_flags_get_field(skb, REQ_CREDIT)) &&
+            (entry->state == BRCMF_FWS_STATE_CLOSE)) {
         entry->requested_credit++;
     }
 }
@@ -1551,8 +1556,8 @@ static zx_status_t brcmf_fws_dbg_seqnum_check(struct brcmf_fws_info* fws, uint8_
     return ZX_OK;
 }
 
-static zx_status_t brcmf_fws_notify_credit_map(struct brcmf_if* ifp, const struct brcmf_event_msg* e,
-                                               void* data) {
+static zx_status_t brcmf_fws_notify_credit_map(struct brcmf_if* ifp,
+                                               const struct brcmf_event_msg* e, void* data) {
     struct brcmf_fws_info* fws = drvr_to_fws(ifp->drvr);
     int i;
     uint8_t* credits = data;
@@ -1595,8 +1600,8 @@ static zx_status_t brcmf_fws_notify_bcmc_credit_support(struct brcmf_if* ifp,
     return ZX_OK;
 }
 
-static void brcmf_rxreorder_get_skb_list(struct brcmf_ampdu_rx_reorder* rfi, uint8_t start, uint8_t end,
-                                         struct brcmf_netbuf_list* skb_list) {
+static void brcmf_rxreorder_get_skb_list(struct brcmf_ampdu_rx_reorder* rfi, uint8_t start,
+                                         uint8_t end, struct brcmf_netbuf_list* skb_list) {
     /* initialize return list */
     __skb_queue_head_init(skb_list);
 
@@ -1905,7 +1910,8 @@ void brcmf_fws_hdrpull(struct brcmf_if* ifp, int16_t siglen, struct brcmf_netbuf
     }
 }
 
-static uint8_t brcmf_fws_precommit_skb(struct brcmf_fws_info* fws, int fifo, struct brcmf_netbuf* p) {
+static uint8_t brcmf_fws_precommit_skb(struct brcmf_fws_info* fws, int fifo,
+                                       struct brcmf_netbuf* p) {
     struct brcmf_skbuff_cb* skcb = brcmf_skbcb(p);
     // TODO(cphoenix): skcb->mac and mac_status are often unchecked in this file. Be more paranoid?
     struct brcmf_fws_mac_descriptor* entry = skcb->mac;
@@ -1984,7 +1990,8 @@ static zx_status_t brcmf_fws_borrow_credit(struct brcmf_fws_info* fws) {
     return ZX_ERR_UNAVAILABLE;
 }
 
-static zx_status_t brcmf_fws_commit_skb(struct brcmf_fws_info* fws, int fifo, struct brcmf_netbuf* skb) {
+static zx_status_t brcmf_fws_commit_skb(struct brcmf_fws_info* fws, int fifo,
+                                        struct brcmf_netbuf* skb) {
     struct brcmf_skbuff_cb* skcb = brcmf_skbcb(skb);
     struct brcmf_fws_mac_descriptor* entry;
     zx_status_t rc;
@@ -2028,7 +2035,8 @@ rollback:
     return rc;
 }
 
-static zx_status_t brcmf_fws_assign_htod(struct brcmf_fws_info* fws, struct brcmf_netbuf* p, int fifo) {
+static zx_status_t brcmf_fws_assign_htod(struct brcmf_fws_info* fws, struct brcmf_netbuf* p,
+                                         int fifo) {
     struct brcmf_skbuff_cb* skcb = brcmf_skbcb(p);
     zx_status_t rc;
     int hslot;

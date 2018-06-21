@@ -785,7 +785,8 @@ static zx_status_t brcmf_sdio_htclk(struct brcmf_sdio* bus, bool on, bool pendok
             return ZX_ERR_IO_REFUSED;
         }
         if (!SBSDIO_CLKAV(clkctl, bus->alp_only)) {
-            brcmf_err("HT Avail timeout (%d): clkctl 0x%02x\n", PMU_MAX_TRANSITION_DLY_USEC, clkctl);
+            brcmf_err("HT Avail timeout (%d): clkctl 0x%02x\n", PMU_MAX_TRANSITION_DLY_USEC,
+                      clkctl);
             return ZX_ERR_SHOULD_WAIT;
         }
 
@@ -2143,7 +2144,8 @@ static void brcmf_sdio_txpkt_postp(struct brcmf_sdio* bus, struct brcmf_netbuf_l
 
 /* Writes a HW/SW header into the packet and sends it. */
 /* Assumes: (a) header space already there, (b) caller holds lock */
-static zx_status_t brcmf_sdio_txpkt(struct brcmf_sdio* bus, struct brcmf_netbuf_list* pktq, uint chan) {
+static zx_status_t brcmf_sdio_txpkt(struct brcmf_sdio* bus, struct brcmf_netbuf_list* pktq,
+                                    uint chan) {
     zx_status_t ret;
     struct brcmf_netbuf* pkt_next;
     struct brcmf_netbuf* tmp;
@@ -3102,8 +3104,8 @@ static zx_status_t brcmf_sdio_bus_rxctl(struct brcmf_device* dev, unsigned char*
 }
 
 #ifdef DEBUG
-static bool brcmf_sdio_verifymemory(struct brcmf_sdio_dev* sdiodev, uint32_t ram_addr, uint8_t* ram_data,
-                                    uint ram_sz) {
+static bool brcmf_sdio_verifymemory(struct brcmf_sdio_dev* sdiodev, uint32_t ram_addr,
+                                    uint8_t* ram_data, uint ram_sz) {
     char* ram_cmp;
     zx_status_t err;
     bool ret = true;

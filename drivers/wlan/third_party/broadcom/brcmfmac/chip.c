@@ -248,7 +248,8 @@ struct brcmf_chip_priv {
 
     bool (*iscoreup)(struct brcmf_core_priv* core);
     void (*coredisable)(struct brcmf_core_priv* core, uint32_t prereset, uint32_t reset);
-    void (*resetcore)(struct brcmf_core_priv* core, uint32_t prereset, uint32_t reset, uint32_t postreset);
+    void (*resetcore)(struct brcmf_core_priv* core, uint32_t prereset, uint32_t reset,
+                      uint32_t postreset);
 };
 
 static void brcmf_chip_sb_corerev(struct brcmf_chip_priv* ci, struct brcmf_core* core) {
@@ -353,7 +354,8 @@ static void brcmf_chip_sb_coredisable(struct brcmf_core_priv* core, uint32_t pre
     usleep(1);
 }
 
-static void brcmf_chip_ai_coredisable(struct brcmf_core_priv* core, uint32_t prereset, uint32_t reset) {
+static void brcmf_chip_ai_coredisable(struct brcmf_core_priv* core, uint32_t prereset,
+                                      uint32_t reset) {
     struct brcmf_chip_priv* ci;
     uint32_t regdata;
 
@@ -446,7 +448,8 @@ static void brcmf_chip_ai_resetcore(struct brcmf_core_priv* core, uint32_t prere
     brcmf_chip_ai_coredisable(core, prereset, reset);
 
     count = 0;
-    while (ci->ops->read32(ci->ctx, core->wrapbase + BC_CORE_RESET_CONTROL) & BC_CORE_RESET_CONTROL_RESET) {
+    while (ci->ops->read32(ci->ctx, core->wrapbase + BC_CORE_RESET_CONTROL) &
+           BC_CORE_RESET_CONTROL_RESET) {
         ci->ops->write32(ci->ctx, core->wrapbase + BC_CORE_RESET_CONTROL, 0);
         count++;
         if (count > 50) {
@@ -542,7 +545,8 @@ static void brcmf_chip_core_write32(struct brcmf_core_priv* core, uint16_t reg, 
     core->chip->ops->write32(core->chip->ctx, core->pub.base + reg, val);
 }
 
-static bool brcmf_chip_socram_banksize(struct brcmf_core_priv* core, uint8_t idx, uint32_t* banksize) {
+static bool brcmf_chip_socram_banksize(struct brcmf_core_priv* core, uint8_t idx,
+                                       uint32_t* banksize) {
     uint32_t bankinfo;
     uint32_t bankidx = (SOCRAM_MEMTYPE_RAM << SOCRAM_BANKIDX_MEMTYPE_SHIFT);
 
@@ -554,7 +558,8 @@ static bool brcmf_chip_socram_banksize(struct brcmf_core_priv* core, uint8_t idx
     return !!(bankinfo & SOCRAM_BANKINFO_RETNTRAM_MASK);
 }
 
-static void brcmf_chip_socram_ramsize(struct brcmf_core_priv* sr, uint32_t* ramsize, uint32_t* srsize) {
+static void brcmf_chip_socram_ramsize(struct brcmf_core_priv* sr, uint32_t* ramsize,
+                                      uint32_t* srsize) {
     uint32_t coreinfo;
     uint nb, banksize, lss;
     bool retent;
@@ -742,7 +747,8 @@ static zx_status_t brcmf_chip_get_raminfo(struct brcmf_chip_priv* ci) {
     return ZX_OK;
 }
 
-static uint32_t brcmf_chip_dmp_get_desc(struct brcmf_chip_priv* ci, uint32_t* eromaddr, uint8_t* type) {
+static uint32_t brcmf_chip_dmp_get_desc(struct brcmf_chip_priv* ci, uint32_t* eromaddr,
+                                        uint8_t* type) {
     uint32_t val;
 
     /* read next descriptor */
@@ -1184,7 +1190,8 @@ void brcmf_chip_coredisable(struct brcmf_core* pub, uint32_t prereset, uint32_t 
     core->chip->coredisable(core, prereset, reset);
 }
 
-void brcmf_chip_resetcore(struct brcmf_core* pub, uint32_t prereset, uint32_t reset, uint32_t postreset) {
+void brcmf_chip_resetcore(struct brcmf_core* pub, uint32_t prereset, uint32_t reset,
+                          uint32_t postreset) {
     struct brcmf_core_priv* core;
 
     core = container_of(pub, struct brcmf_core_priv, pub);

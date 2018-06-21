@@ -145,8 +145,8 @@ again:
     return NULL;
 }
 
-void* brcmf_commonring_reserve_for_write_multiple(struct brcmf_commonring* commonring, uint16_t n_items,
-                                                  uint16_t* alloced) {
+void* brcmf_commonring_reserve_for_write_multiple(struct brcmf_commonring* commonring,
+                                                  uint16_t n_items, uint16_t* alloced) {
     void* ret_ptr;
     uint16_t available;
     bool retry = true;

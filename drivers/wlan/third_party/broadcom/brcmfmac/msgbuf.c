@@ -502,8 +502,8 @@ static zx_status_t brcmf_msgbuf_set_dcmd(struct brcmf_pub* drvr, int ifidx, uint
     return brcmf_msgbuf_query_dcmd(drvr, ifidx, cmd, buf, len, fwerr);
 }
 
-static zx_status_t brcmf_msgbuf_hdrpull(struct brcmf_pub* drvr, bool do_fws, struct brcmf_netbuf* skb,
-                                        struct brcmf_if** ifp) {
+static zx_status_t brcmf_msgbuf_hdrpull(struct brcmf_pub* drvr, bool do_fws,
+                                        struct brcmf_netbuf* skb, struct brcmf_if** ifp) {
     return ZX_ERR_IO_NOT_PRESENT;
 }
 
@@ -909,7 +909,8 @@ static void brcmf_msgbuf_update_rxbufpost_count(struct brcmf_msgbuf* msgbuf, uin
     }
 }
 
-static uint32_t brcmf_msgbuf_rxbuf_ctrl_post(struct brcmf_msgbuf* msgbuf, bool event_buf, uint32_t count) {
+static uint32_t brcmf_msgbuf_rxbuf_ctrl_post(struct brcmf_msgbuf* msgbuf, bool event_buf,
+                                             uint32_t count) {
     struct brcmf_commonring* commonring;
     void* ret_ptr;
     struct brcmf_netbuf* skb;
