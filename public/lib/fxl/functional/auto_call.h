@@ -30,6 +30,7 @@ namespace fxl {
 template <typename T>
 class AutoCall {
  public:
+  constexpr explicit AutoCall(std::nullptr_t) : active_(false) {}
   constexpr explicit AutoCall(T c) : call_(std::move(c)) {}
   ~AutoCall() { call(); }
 

@@ -15,6 +15,13 @@ namespace {
 
 void incr_arg(int* p) { *p += 1; }
 
+TEST(AutoCallTest, NullConstructor) {
+  {
+    fxl::AutoCall<fxl::Closure> c(nullptr);
+    // No crash is a successful test.
+  }
+}
+
 TEST(AutoCallTest, Basic) {
   int var = 0;
   {
