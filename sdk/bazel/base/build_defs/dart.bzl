@@ -9,14 +9,11 @@ DartLibraryInfo = provider(
     }
 )
 
-def aggregate_packages(package_name, source_root, deps):
-    """Aggregates the package mappings provided by the given dependencies, and
-       adds an extra mapping from the given name to the given root.
-       """
+
+def _create_info(packages, deps):
     transitive_info = [dep[DartLibraryInfo].package_map for dep in deps]
-    this_package = struct(name = package_name, root = source_root)
     result = DartLibraryInfo(
-        package_map = depset([this_package], transitive = transitive_info),
+        package_map = depset(packages, transitive = transitive_info),
     )
 
     # Verify duplicates.
@@ -34,14 +31,43 @@ def aggregate_packages(package_name, source_root, deps):
     return result
 
 
+def aggregate_packages(deps):
+    '''Aggregates the package mapping provided by the given dependencies.'''
+    return _create_info([], deps)
+
+
+def produce_package_info(package_name, source_root, deps):
+    """Aggregates the package mappings provided by the given dependencies, and
+       adds an extra mapping from the given name to the given root.
+       """
+    this_package = struct(name = package_name, root = source_root)
+    return _create_info([this_package], deps)
+
+
+def relative_path(to_path, from_dir=None):
+    """Returns the relative path from a directory to a path via the repo root.
+       """
+    if to_path.startswith("/") or from_dir.startswith("/"):
+        fail("Absolute paths are not supported.")
+    if not from_dir:
+        return to_path
+    return "../" * len(from_dir.split("/")) + to_path
+
+
 def generate_dot_packages_action(context, packages_file, package_info):
     """Creates an action that generates a .packages file based on the packages
        listed in the given info object.
        """
+    # Paths need to be relative to the current directory which is under the
+    # output directory.
+    current_directory = context.bin_dir.path + "/" + context.label.package
+    packages = {p.name: relative_path(p.root.path, from_dir=current_directory)
+                for p in package_info.package_map.to_list()}
+
     contents = ""
-    packages = {p.name: p.root.path for p in package_info.package_map.to_list()}
     for name, path in sorted(packages.items()):
         contents += name + ":" + path + "\n"
+
     context.actions.write(
         output = packages_file,
         content = contents,

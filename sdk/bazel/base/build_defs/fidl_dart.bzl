@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-load(":dart.bzl", "aggregate_packages", "generate_dot_packages_action", "DartLibraryInfo")
+load(":dart.bzl", "produce_package_info", "generate_dot_packages_action", "DartLibraryInfo")
 load(":fidl.bzl", "FidlLibraryInfo")
 
 # A Dart library backed by a FIDL library.
@@ -39,7 +39,8 @@ def _dart_codegen_impl(target, context):
 
     package_name = "fidl_" + library_name.replace(".", "_")
     deps = context.rule.attr.deps if hasattr(context.rule.attr, "deps") else []
-    library_info = aggregate_packages(package_name, package_root, deps)
+    deps = deps + context.attr._deps
+    library_info = produce_package_info(package_name, package_root, deps)
 
     return [
         library_info,
@@ -59,7 +60,11 @@ _dart_codegen = aspect(
             executable = True,
             cfg = "host",
         ),
-        # TODO(pylaligand): need at least a dep on the FIDL support package.
+        "_deps": attr.label_list(
+            default = [
+                Label("//dart/fidl"),
+            ],
+        ),
     },
     provides = [
         DartLibraryInfo,

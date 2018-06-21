@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+load(":dart.bzl", "aggregate_packages", "generate_dot_packages_action", "DartLibraryInfo")
 load(":package_info.bzl", "PackageLocalInfo")
 
 # A Fuchsia Dart application
@@ -22,17 +23,16 @@ _DART_JIT_RUNNER_CONTENT = """{
 
 def _dart_app_impl(context):
     # 1. Create the .packages file.
-    # TODO(alainv): Let a dart_library rule take care of producing that file.
     packages = context.outputs.packages
-    main = context.files.main[0]
-    context.actions.write(
-        output = packages,
-        content = "%s:%s" % (context.label.name, main.dirname))
-    # TODO(alainv): Process dependencies.
+    deps = context.attr.deps if hasattr(context.attr, "deps") else []
+    info = aggregate_packages(deps)
+    generate_dot_packages_action(context, packages, info)
+    all_sources = [package.root for package in info.package_map.to_list()]
 
     # 2. Compile the kernel.
     kernel_snapshot = context.outputs.kernel_snapshot
     manifest = context.outputs.manifest
+    main = context.files.main[0]
     context.actions.run(
         executable = context.executable._dart,
         arguments = [
@@ -49,7 +49,7 @@ def _dart_app_impl(context):
             kernel_snapshot.path,
             main.path,
         ],
-        inputs = [
+        inputs = all_sources + [
             context.files._kernel_compiler[0],
             context.files._platform_lib[0],
             packages,
@@ -87,7 +87,11 @@ dart_app = rule(
             allow_files = True,
             single_file = True,
         ),
-        # TODO(alainv): Add `deps` attrs once dart_library rules get properly integrated.
+        "deps": attr.label_list(
+            doc = "The list of libraries this app depends on",
+            mandatory = False,
+            providers = [DartLibraryInfo],
+        ),
         "_dart": attr.label(
             default = Label("//tools:dart"),
             allow_single_file = True,

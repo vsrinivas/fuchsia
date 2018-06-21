@@ -21,52 +21,13 @@ from mako.template import Template
 sys.path += [os.path.join(FUCHSIA_ROOT, 'scripts', 'sdk', 'common')]
 from layout_builder import Builder, process_manifest
 
+import template_model as model
+
 
 ARCH_MAP = {
     'arm64': 'aarch64',
     'x64': 'x86_64',
 }
-
-
-class Library(object):
-    '''Represents a C/C++ library.
-       Convenience storage object to be consumed by Mako templates.
-       '''
-    def __init__(self, name, target_arch):
-        self.name = name
-        self.srcs = []
-        self.hdrs = []
-        self.deps = []
-        self.includes = []
-        self.target_arch = target_arch
-
-
-class FidlLibrary(object):
-    '''Represents a FIDL library.
-       Convenience storage object to be consumed by Mako templates.
-       '''
-    def __init__(self, name, library):
-        self.name = name
-        self.library = library
-        self.srcs = []
-        self.deps = []
-
-
-class Arch(object):
-    '''Represents an arch.
-       Convenience storage object to be consumed by Mako templates.
-       '''
-    def __init__(self, arch):
-        self.short_name = arch
-        self.long_name = ARCH_MAP[arch]
-
-
-class Crosstool(object):
-    '''Represents available crosstools.
-       Convenience storage object to be consumed by Mako templates.
-       '''
-    def __init__(self):
-        self.arches = []
 
 
 def remove_dashes(name):
@@ -122,10 +83,10 @@ class BazelBuilder(Builder):
     def install_crosstool(self):
         sysroot_dir = self.dest('arch')
         if os.path.isdir(sysroot_dir):
-            crosstool = Crosstool()
+            crosstool = model.Crosstool()
             for arch in os.listdir(sysroot_dir):
                 if arch in ARCH_MAP:
-                    crosstool.arches.append(Arch(arch))
+                    crosstool.arches.append(model.Arch(arch, ARCH_MAP[arch]))
                 else:
                     print('Unknown target arch: %s' % arch)
             self.write_file(self.dest('build_defs', 'crosstool.bzl'),
@@ -149,11 +110,22 @@ class BazelBuilder(Builder):
 
 
     def install_dart_library_atom(self, atom):
-        base = self.dest('dart', remove_dashes(atom.id.name))
+        if self.is_overlay:
+            return
+
+        name = remove_dashes(atom.id.name)
+        package_name = atom.tags['package_name']
+        library = model.DartLibrary(name, package_name)
+        base = self.dest('dart', name)
+
         for file in atom.files:
             dest = self.make_dir(os.path.join(base, file.destination))
             shutil.copy2(file.source, dest)
-            # TODO(pylaligand): add a build file.
+
+        for dep in atom.deps:
+            library.deps.append('//dart/' + remove_dashes(dep.name))
+
+        self.write_file(os.path.join(base, 'BUILD'), 'dart_library', library)
 
 
     def install_dart_tool_atom(self, atom):
@@ -186,7 +158,7 @@ class BazelBuilder(Builder):
             return
 
         name = remove_dashes(atom.id.name)
-        library = Library(name, self.metadata.target_arch)
+        library = model.CppLibrary(name, self.metadata.target_arch)
         base = self.dest('pkg', name)
 
         for file in atom.files:
@@ -235,7 +207,7 @@ class BazelBuilder(Builder):
             return
 
         name = remove_dashes(atom.id.name)
-        library = Library(name, self.metadata.target_arch)
+        library = model.CppLibrary(name, self.metadata.target_arch)
         base = self.dest('pkg', name)
 
         for file in atom.files:
@@ -288,7 +260,7 @@ class BazelBuilder(Builder):
         if self.is_overlay:
             return
         name = remove_dashes(atom.id.name)
-        data = FidlLibrary(name, atom.tags['name'])
+        data = model.FidlLibrary(name, atom.tags['name'])
         base = self.dest('fidl', name)
         for file in atom.files:
             dest = self.make_dir(os.path.join(base, file.destination))
