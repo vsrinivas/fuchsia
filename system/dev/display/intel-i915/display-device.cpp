@@ -18,22 +18,35 @@ namespace {
 zx_status_t backlight_ioctl(void* ctx, uint32_t op,
                             const void* in_buf, size_t in_len,
                             void* out_buf, size_t out_len, size_t* out_actual) {
-    if (op == IOCTL_BACKLIGHT_SET_BRIGHTNESS) {
-        if (in_len != sizeof(backlight_state_t) || out_len != 0) {
-            return ZX_ERR_INVALID_ARGS;
-        }
-        const auto args = static_cast<const backlight_state_t*>(in_buf);
-
+    if (op == IOCTL_BACKLIGHT_SET_BRIGHTNESS
+            || op == IOCTL_BACKLIGHT_GET_BRIGHTNESS) {
         auto ref = static_cast<i915::display_ref_t*>(ctx);
         fbl::AutoLock lock(&ref->mtx);
 
-        if (ref->display_device) {
-            ref->display_device->SetBacklightState(args->on, args->brightness);
-            return ZX_OK;
-        } else {
+        if (ref->display_device == NULL) {
             return ZX_ERR_PEER_CLOSED;
         }
+
+        if (op == IOCTL_BACKLIGHT_SET_BRIGHTNESS) {
+            if (in_len != sizeof(backlight_state_t) || out_len != 0) {
+                return ZX_ERR_INVALID_ARGS;
+            }
+
+            const auto args = static_cast<const backlight_state_t*>(in_buf);
+            ref->display_device->SetBacklightState(args->on, args->brightness);
+            return ZX_OK;
+        } else if (op == IOCTL_BACKLIGHT_GET_BRIGHTNESS) {
+            if (out_len != sizeof(backlight_state_t) || in_len != 0) {
+                return ZX_ERR_INVALID_ARGS;
+            }
+            
+            auto args = static_cast<backlight_state_t*>(out_buf);
+            ref->display_device->GetBacklightState(&args->on, &args->brightness);
+            *out_actual = sizeof(backlight_state_t);
+            return ZX_OK;
+        }
     }
+
     return ZX_ERR_NOT_SUPPORTED;
 }
 

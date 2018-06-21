@@ -9,7 +9,7 @@
 #include <zircon/device/backlight.h>
 
 static void usage(char* argv[]) {
-    printf("Usage: %s [--off|<brightness-val>]\n", argv[0]);
+    printf("Usage: %s [--read|--off|<brightness-val>]\n", argv[0]);
     printf("options:\n    <brightness-val>: 0-255\n");
 }
 
@@ -17,6 +17,24 @@ int main(int argc, char* argv[]) {
     if (argc != 2) {
         usage(argv);
         return -1;
+    }
+
+    if (strcmp(argv[1], "--read") == 0) {
+        int fd = open("/dev/class/backlight/000", O_RDONLY);
+        if (fd < 0) {
+            printf("Failed to open backlight\n");
+            return -1;
+        }
+
+        backlight_state_t state;
+        ssize_t ret = ioctl_backlight_get_state(fd, &state);
+        if (ret < 0) {
+            printf("Get backlight state ioctl failed\n");
+            return -1;
+        }
+        printf("Backlight:%s Brightness:%d\n", state.on ? "on" : "off",
+                state.brightness);
+        return 0;
     }
 
     bool on;

@@ -59,6 +59,7 @@ public:
 
     virtual bool HasBacklight() { return false; }
     virtual void SetBacklightState(bool power, uint8_t brightness) {}
+    virtual void GetBacklightState(bool* power, uint8_t* brightness) {}
 
 protected:
     // Queries the DisplayDevice to see if there is a supported display attached. If
