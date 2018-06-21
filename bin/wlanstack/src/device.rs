@@ -10,9 +10,11 @@ use futures::prelude::*;
 use futures::{stream, channel::mpsc};
 use station;
 use stats_scheduler::{self, StatsScheduler};
+use std::collections::HashSet;
 use watchable_map::WatchableMap;
 use wlan;
 use wlan_dev;
+use wlan_sme;
 use zx::prelude::*;
 
 use std::sync::Arc;
@@ -133,7 +135,7 @@ fn serve_iface(ifaces: Arc<IfaceMap>,
     let NewIfaceDevice{ id, proxy, device } = new_iface;
     let (stats_sched, stats_requests) = stats_scheduler::create_scheduler();
     let ifaces_two = ifaces.clone();
-    serve_sme(proxy, event_stream, query_resp.role, stats_requests)
+    serve_sme(proxy, event_stream, query_resp, stats_requests)
         .into_future()
         .and_then(move |(sme_server, fut)| {
             println!("new iface #{}: {}", id, device.path().to_string_lossy());
@@ -154,19 +156,31 @@ fn serve_iface(ifaces: Arc<IfaceMap>,
 
 fn serve_sme<S>(proxy: fidl_mlme::MlmeProxy,
                 event_stream: fidl_mlme::MlmeEventStream,
-                role: fidl_mlme::MacRole,
+                query_resp: DeviceQueryConfirm,
                 stats_requests: S)
     -> Result<(SmeServer, impl Future<Item = (), Error = Error>), Error>
     where S: Stream<Item = stats_scheduler::StatsRequest, Error = Never>
 {
-    match role {
+    let device_caps = convert_device_caps(&query_resp);
+    match query_resp.role {
         fidl_mlme::MacRole::Client => {
             let (sender, receiver) = mpsc::unbounded();
-            let fut = station::serve_client_sme(proxy, event_stream, receiver, stats_requests);
+            let fut = station::serve_client_sme(
+                proxy, device_caps, event_stream, receiver, stats_requests);
             Ok((SmeServer::Client(sender), fut))
         },
         fidl_mlme::MacRole::Ap => {
             Err(format_err!("Access point SME is not implemented"))
         }
+    }
+}
+
+fn convert_device_caps(query_resp: &DeviceQueryConfirm) -> wlan_sme::DeviceCapabilities {
+    let mut supported_channels = HashSet::new();
+    for band in &query_resp.bands {
+        supported_channels.extend(&band.channels);
+    }
+    wlan_sme::DeviceCapabilities {
+        supported_channels
     }
 }

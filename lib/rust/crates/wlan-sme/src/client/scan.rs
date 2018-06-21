@@ -7,7 +7,8 @@ use std::collections::{HashMap, VecDeque};
 use std::collections::hash_map::Entry;
 use std::cmp::Ordering;
 use std::mem;
-use super::super::MlmeRequest;
+use std::sync::Arc;
+use super::super::{DeviceCapabilities, MlmeRequest};
 
 // Scans can be performed for two different purposes:
 //      1) Discover available wireless networks. These scans are initiated by the "user",
@@ -39,6 +40,7 @@ pub struct ScanScheduler<D, J> {
     pending_join: Option<JoinScan<J>>,
     // A queue of pending discovery requests from the user
     pending_discovery: VecDeque<DiscoveryScan<D>>,
+    device_caps: Arc<DeviceCapabilities>
 }
 
 enum ScanState<D, J> {
@@ -96,11 +98,12 @@ pub enum DiscoveryError {
 }
 
 impl<D, J> ScanScheduler<D, J> {
-    pub fn new() -> Self {
+    pub fn new(device_caps: Arc<DeviceCapabilities>) -> Self {
         ScanScheduler {
             current: ScanState::NotScanning,
             pending_join: None,
             pending_discovery: VecDeque::new(),
+            device_caps,
         }
     }
 
@@ -183,11 +186,11 @@ impl<D, J> ScanScheduler<D, J> {
         match &self.current {
             &ScanState::NotScanning => {
                 if let Some(join_scan) = self.pending_join.take() {
-                    let request = new_join_scan_request(&join_scan);
+                    let request = new_join_scan_request(&join_scan, &self.device_caps);
                     self.current = ScanState::ScanningToJoin(join_scan);
                     Some(request)
                 } else if let Some(discovery_scan) = self.pending_discovery.pop_front() {
-                    let request = new_discovery_scan_request(&discovery_scan);
+                    let request = new_discovery_scan_request(&discovery_scan, &self.device_caps);
                     self.current = ScanState::ScanningToDiscover(discovery_scan);
                     Some(request)
                 } else {
@@ -202,7 +205,8 @@ impl<D, J> ScanScheduler<D, J> {
 
 const WILDCARD_BSS_ID: [u8; 6] = [ 0xff, 0xff, 0xff, 0xff, 0xff, 0xff ];
 
-fn new_join_scan_request<T>(join_scan: &JoinScan<T>) -> ScanRequest {
+fn new_join_scan_request<T>(join_scan: &JoinScan<T>,
+                            device_caps: &DeviceCapabilities) -> ScanRequest {
     ScanRequest {
         bss_type: fidl_mlme::BssTypes::Infrastructure,
         bssid: WILDCARD_BSS_ID.clone(),
@@ -210,23 +214,22 @@ fn new_join_scan_request<T>(join_scan: &JoinScan<T>) -> ScanRequest {
         ssid: String::from_utf8_lossy(&join_scan.ssid).to_string(),
         scan_type: fidl_mlme::ScanTypes::Passive,
         probe_delay: 0,
-        // TODO(gbonik): get channel list from device caps
-        channel_list: Some(vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 36]),
+        channel_list: Some(get_channels_to_scan(&device_caps)),
         min_channel_time: 100,
         max_channel_time: 300,
         ssid_list: None
     }
 }
 
-fn new_discovery_scan_request<T>(discovery_scan: &DiscoveryScan<T>) -> ScanRequest {
+fn new_discovery_scan_request<T>(discovery_scan: &DiscoveryScan<T>,
+                                 device_caps: &DeviceCapabilities) -> ScanRequest {
     ScanRequest {
         bss_type: fidl_mlme::BssTypes::Infrastructure,
         bssid: WILDCARD_BSS_ID.clone(),
         ssid: String::new(),
         scan_type: fidl_mlme::ScanTypes::Passive,
         probe_delay: 0,
-        // TODO(gbonik): get channel list from device caps
-        channel_list: Some(vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 36]),
+        channel_list: Some(get_channels_to_scan(&device_caps)),
         min_channel_time: 100,
         max_channel_time: 300,
         ssid_list: None
@@ -278,3 +281,23 @@ fn get_dbmh(bss: &BssDescription) -> i16 {
         ::std::i16::MIN
     }
 }
+
+fn get_channels_to_scan(device_caps: &DeviceCapabilities) -> Vec<u8> {
+    SUPPORTED_CHANNELS.iter()
+        .filter(|chan| device_caps.supported_channels.contains(chan))
+        .map(|chan| *chan)
+        .collect()
+}
+
+const SUPPORTED_CHANNELS: &[u8] = &[
+    // 5GHz UNII-1
+    36, 40, 44, 48,
+    // 5GHz UNII-2 Middle
+    52, 56, 60, 64,
+    // 5GHz UNII-2 Extended
+    100, 104, 108, 112, 116, 120, 124, 128, 132, 136, 140, 144,
+    // 5GHz UNII-3
+    149, 153, 157, 161, 165,
+    // 2GHz
+    1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11,
+];

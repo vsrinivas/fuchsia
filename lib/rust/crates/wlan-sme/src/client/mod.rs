@@ -9,7 +9,8 @@ use fidl_mlme::{self, MlmeEvent, ScanRequest};
 use self::scan::{DiscoveryScan, JoinScan, JoinScanFailure, ScanResult, ScanScheduler};
 use self::state::{ConnectCommand, State};
 use std::collections::VecDeque;
-use super::MlmeRequest;
+use std::sync::Arc;
+use super::{DeviceCapabilities, MlmeRequest};
 use futures::channel::mpsc;
 
 pub use self::scan::{DiscoveryError, DiscoveryResult, DiscoveredEss};
@@ -72,13 +73,14 @@ pub enum UserEvent<T: Tokens> {
 }
 
 impl<T: Tokens> ClientSme<T> {
-    pub fn new() -> (Self, super::MlmeStream, UserStream<T>) {
+    pub fn new(caps: DeviceCapabilities) -> (Self, super::MlmeStream, UserStream<T>) {
+        let caps = Arc::new(caps);
         let (mlme_sink, mlme_stream) = mpsc::unbounded();
         let (user_sink, user_stream) = mpsc::unbounded();
         (
             ClientSme {
                 state: Some(State::Idle),
-                scan_sched: ScanScheduler::new(),
+                scan_sched: ScanScheduler::new(caps),
                 mlme_sink: UnboundedSink{ sink: mlme_sink },
                 user_sink: UnboundedSink{ sink: user_sink },
             },

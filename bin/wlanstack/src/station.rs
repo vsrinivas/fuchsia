@@ -14,7 +14,7 @@ use futures::{prelude::*, stream};
 use futures::channel::mpsc;
 use stats_scheduler::StatsRequest;
 use std::sync::{Arc, Mutex};
-use wlan_sme::{client, Station, MlmeRequest, MlmeStream};
+use wlan_sme::{client, DeviceCapabilities, Station, MlmeRequest, MlmeStream};
 use wlan_sme::client::{ConnectResult, DiscoveryError, DiscoveryResult, DiscoveredEss};
 use zx;
 
@@ -29,13 +29,14 @@ pub type ClientSmeEndpoint = ServerEnd<fidl_sme::ClientSmeMarker>;
 type Client = client::ClientSme<ClientTokens>;
 
 pub fn serve_client_sme<S>(proxy: MlmeProxy,
+                           device_caps: DeviceCapabilities,
                            event_stream: MlmeEventStream,
                            new_fidl_clients: mpsc::UnboundedReceiver<ClientSmeEndpoint>,
                            stats_requests: S)
     -> impl Future<Item = (), Error = failure::Error>
     where S: Stream<Item = StatsRequest, Error = Never>
 {
-    let (client, mlme_stream, user_stream) = Client::new();
+    let (client, mlme_stream, user_stream) = Client::new(device_caps);
     let client_arc = Arc::new(Mutex::new(client));
     let mlme_sme_fut = serve_mlme_sme(
         proxy, event_stream, client_arc.clone(), mlme_stream, stats_requests);

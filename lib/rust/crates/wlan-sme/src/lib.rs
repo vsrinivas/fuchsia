@@ -10,6 +10,11 @@ extern crate futures;
 pub mod client;
 
 use futures::channel::mpsc;
+use std::collections::HashSet;
+
+pub struct DeviceCapabilities {
+    pub supported_channels: HashSet<u8>
+}
 
 pub enum MlmeRequest {
     Scan(fidl_mlme::ScanRequest),
