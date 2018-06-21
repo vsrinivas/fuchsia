@@ -24,8 +24,13 @@ struct QueryPhyResponse {
     fuchsia.wlan.device.PhyInfo info;
 };
 
+struct IfaceListItem {
+    uint16 iface_id;
+    string path;
+};
+
 struct ListIfacesResponse {
-    vector<fuchsia.wlan.device.IfaceInfo> ifaces;
+    vector<IfaceListItem> ifaces;
 };
 
 struct CreateIfaceRequest {

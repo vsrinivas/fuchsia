@@ -13,6 +13,7 @@ extern crate fidl_fuchsia_wlan_device as wlan;
 extern crate fidl_fuchsia_wlan_device_service as wlan_service;
 extern crate fidl_fuchsia_wlan_sme as fidl_sme;
 extern crate fuchsia_app as component;
+#[macro_use]
 extern crate fuchsia_async as async;
 extern crate fuchsia_zircon as zx;
 extern crate futures;
@@ -73,8 +74,9 @@ fn do_phy(cmd: opts::PhyCmd, wlan_svc: WlanSvc) -> impl Future<Item = (), Error 
 }
 
 fn do_iface(cmd: opts::IfaceCmd, wlan_svc: WlanSvc) -> impl Future<Item = (), Error = Error> {
+    many_futures!(IfaceFut, [ New, Delete, List ]);
     match cmd {
-        opts::IfaceCmd::New { phy_id, role } => {
+        opts::IfaceCmd::New { phy_id, role } => IfaceFut::New({
             let mut req = wlan_service::CreateIfaceRequest {
                 phy_id: phy_id,
                 role: role.into(),
@@ -87,9 +89,8 @@ fn do_iface(cmd: opts::IfaceCmd, wlan_svc: WlanSvc) -> impl Future<Item = (), Er
                     println!("response: {:?}", response);
                     Ok(())
                 })
-                .left_future()
-        }
-        opts::IfaceCmd::Delete { phy_id, iface_id } => {
+        }),
+        opts::IfaceCmd::Delete { phy_id, iface_id } => IfaceFut::Delete({
             let mut req = wlan_service::DestroyIfaceRequest {
                 phy_id: phy_id,
                 iface_id: iface_id,
@@ -103,8 +104,15 @@ fn do_iface(cmd: opts::IfaceCmd, wlan_svc: WlanSvc) -> impl Future<Item = (), Er
                 })
                 .map_err(|e| e.context("error destroying iface").into())
                 .into_future()
-                .right_future()
-        }
+        }),
+        opts::IfaceCmd::List => IfaceFut::List({
+            wlan_svc.list_ifaces()
+                .map_err(|e| e.context("error getting response").into())
+                .and_then(|response| {
+                    println!("response: {:?}", response);
+                    Ok(())
+                })
+        }),
     }
 }
 

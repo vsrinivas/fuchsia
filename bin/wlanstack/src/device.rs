@@ -32,7 +32,7 @@ pub enum SmeServer {
 pub struct IfaceDevice {
     pub sme_server: SmeServer,
     pub stats_sched: StatsScheduler,
-    pub _device: wlan_dev::Device,
+    pub device: wlan_dev::Device,
 }
 
 pub type PhyMap = WatchableMap<u16, PhyDevice>;
@@ -140,7 +140,7 @@ fn serve_iface(ifaces: Arc<IfaceMap>,
             ifaces.insert(id, IfaceDevice {
                 sme_server,
                 stats_sched,
-                _device: device,
+                device,
             });
             fut
         })

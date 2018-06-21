@@ -20,7 +20,7 @@ use wlan;
 use zx;
 
 many_futures!(ServiceFut,
- [ListPhys, QueryPhy, CreateIface, GetClientSme, GetIfaceStats, WatchDevices]);
+ [ListPhys, QueryPhy, ListIfaces, CreateIface, GetClientSme, GetIfaceStats, WatchDevices]);
 
 pub fn device_service<S>(phys: Arc<PhyMap>, ifaces: Arc<IfaceMap>,
                          phy_events: UnboundedReceiver<MapEvent<u16, PhyDevice>>,
@@ -63,7 +63,9 @@ fn serve_channel(phys: Arc<PhyMap>, ifaces: Arc<IfaceMap>,
                         responder.send(status.into_raw(), r.as_mut().map(OutOfLine))
                     })
             }),
-            DeviceServiceRequest::ListIfaces { responder: _ } => unimplemented!(),
+            DeviceServiceRequest::ListIfaces { responder } => ServiceFut::ListIfaces({
+                responder.send(&mut list_ifaces(&ifaces)).into_future()
+            }),
             DeviceServiceRequest::CreateIface { req, responder } => ServiceFut::CreateIface({
                 create_iface(&phys, req)
                     .map_err(|e| e.never_into())
@@ -142,6 +144,20 @@ fn query_phy(phys: &Arc<PhyMap>, id: u16)
         })
 }
 
+fn list_ifaces(ifaces: &Arc<IfaceMap>) -> wlan_service::ListIfacesResponse {
+    let list = ifaces
+        .get_snapshot()
+        .iter()
+        .map(|(iface_id, iface)| {
+            wlan_service::IfaceListItem {
+                iface_id: *iface_id,
+                path: iface.device.path().to_string_lossy().into_owned(),
+            }
+        })
+        .collect();
+    wlan_service::ListIfacesResponse{ ifaces: list }
+}
+
 fn create_iface(phys: &Arc<PhyMap>, req: wlan_service::CreateIfaceRequest)
     -> impl Future<Item = (zx::Status, Option<wlan_service::CreateIfaceResponse>),
                    Error = Never>
@@ -211,7 +227,7 @@ mod tests {
     use stats_scheduler::{self, StatsRequest};
     use std::sync::Arc;
     use wlan::{self, PhyRequest, PhyRequestStream};
-    use wlan_service::{self, PhyListItem};
+    use wlan_service::{self, IfaceListItem, PhyListItem};
     use wlan_dev;
     use zx;
 
@@ -275,6 +291,23 @@ mod tests {
         let mut query_fut = super::query_phy(&phy_map, 10u16);
         assert_eq!(Ok(Async::Ready((zx::Status::NOT_FOUND, None))),
                    exec.run_until_stalled(&mut query_fut));
+    }
+
+    #[test]
+    fn list_two_ifaces() {
+        let _exec = async::Executor::new().expect("Failed to create an executor");
+        let (iface_map, _iface_map_events) = IfaceMap::new();
+        let iface_map = Arc::new(iface_map);
+        let iface_null = fake_client_iface("/dev/null");
+        let iface_zero = fake_client_iface("/dev/zero");
+        iface_map.insert(10u16, iface_null.iface);
+        iface_map.insert(20u16, iface_zero.iface);
+        let mut list = super::list_ifaces(&iface_map).ifaces;
+        list.sort_by_key(|p| p.iface_id);
+        assert_eq!(vec![
+            IfaceListItem{ iface_id: 10u16, path: "/dev/null".to_string() },
+            IfaceListItem{ iface_id: 20u16, path: "/dev/zero".to_string() },
+        ], list)
     }
 
     #[test]
@@ -411,7 +444,7 @@ mod tests {
         let iface = IfaceDevice {
             sme_server: device::SmeServer::Client(sme_sender),
             stats_sched,
-            _device: device
+            device
         };
         FakeClientIface {
             iface,
@@ -432,7 +465,7 @@ mod tests {
         let iface = IfaceDevice {
             sme_server: device::SmeServer::_Ap,
             stats_sched,
-            _device: device
+            device
         };
         FakeApIface {
             iface,

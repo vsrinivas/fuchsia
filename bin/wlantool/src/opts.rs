@@ -78,6 +78,9 @@ pub enum IfaceCmd {
         /// iface id to destroy
         iface_id: u16,
     },
+
+    #[structopt(name = "list")]
+    List,
 }
 
 #[derive(StructOpt, Clone, Debug)]
