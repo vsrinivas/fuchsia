@@ -1,0 +1,32 @@
+#!/boot/bin/sh
+
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# This script uses `run` to run a helper program that exits with a status given
+# as a command line parameter, and verifies that the return code is plumbed
+# back from `run`.
+
+run_test () {
+    local expected
+    expected=$1
+    local actual
+    run run_test_exiter $expected
+    actual=$?
+    if [ $actual -ne $expected ]; then
+        echo "FAIL"
+        echo "Expected return value of $expected, got $actual"
+        exit 1
+    fi
+}
+
+run_test 0
+run_test 123
+run_test -99999
+# `run` supports return values in int64 range,
+# but the shell doesn't, so the case below will fail.
+#run_test $((1 << 60))
+
+echo "PASS"
+exit 0

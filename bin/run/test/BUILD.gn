@@ -1,0 +1,72 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+
+# Test `run` from the platform's perspective
+executable("run_return_value_test") {
+  testonly = true
+
+  output_name = "run_return_value_test"
+
+  sources = [
+    "run_return_value_test.cc",
+  ]
+
+  deps = [
+    "//garnet/public/lib/fxl/test:gtest_main",
+    "//zircon/public/lib/fdio",
+  ]
+}
+
+# Test `run` from the shell's perspective
+copy("run_return_value_shell_test") {
+  sources = [
+    "run_return_value_shell_test",
+  ]
+
+  outputs = [
+    "$root_out_dir/run_return_value_shell_test",
+  ]
+}
+
+# Helper program for tests
+executable("exiter_bin") {
+  output_name = "run_test_exiter"
+
+  sources = [
+    "exiter.cc",
+  ]
+
+  deps = [
+    "//zircon/public/lib/zx",
+  ]
+}
+
+# Helper program for tests
+package("run_test_exiter") {
+  deps = [
+    ":exiter_bin",
+  ]
+
+  binary = "run_test_exiter"
+}
+
+package("run_tests") {
+  testonly = true
+
+  deps = [
+    ":run_return_value_shell_test",
+    ":run_return_value_test",
+  ]
+
+  tests = [
+    {
+      name = "run_return_value_test"
+    },
+    {
+      name = "run_return_value_shell_test"
+    },
+  ]
+}

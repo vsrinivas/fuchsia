@@ -7,6 +7,8 @@
 #include <stdio.h>
 
 #include <fuchsia/sys/cpp/fidl.h>
+#include <zircon/syscalls.h>
+
 #include "lib/app/cpp/environment_services.h"
 
 static fuchsia::sys::FileDescriptorPtr CloneFileDescriptor(int fd) {
@@ -55,5 +57,6 @@ int main(int argc, const char** argv) {
     fprintf(stderr, "%s exited without a return code\n", argv[1]);
     return 1;
   }
-  return static_cast<int>(return_code);
+  zx_process_exit(return_code);
+  return 0;
 }

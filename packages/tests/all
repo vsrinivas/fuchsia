@@ -40,6 +40,7 @@
         "garnet/packages/tests/power_manager",
         "garnet/packages/tests/process",
         "garnet/packages/tests/runtime",
+        "garnet/packages/tests/run_tests",
         "garnet/packages/tests/rust_crates",
         "garnet/packages/tests/overnet",
         "garnet/packages/tests/scenic",

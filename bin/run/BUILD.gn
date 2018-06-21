@@ -14,6 +14,7 @@ executable("bin") {
   deps = [
     "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/app/fidl",
+    "//zircon/public/lib/zx",
   ]
 }
 
@@ -24,7 +25,9 @@ package("run") {
     ":bin",
   ]
 
-  binaries = [ {
-        name = "run"
-      } ]
+  binaries = [
+    {
+      name = "run"
+    },
+  ]
 }
