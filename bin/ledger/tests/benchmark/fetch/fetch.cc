@@ -82,16 +82,29 @@ void FetchBenchmark::Run() {
   cloud_provider::CloudProviderPtr cloud_provider_writer;
   cloud_provider_firebase_factory_.MakeCloudProvider(
       server_id_, "", cloud_provider_writer.NewRequest());
-  ledger::Status status = test::GetLedger(
-      loop_, startup_context_.get(), writer_controller_.NewRequest(),
-      std::move(cloud_provider_writer), "fetch", writer_path, &writer_);
-  QuitOnError([this] { loop_->Quit(); }, status, "Get writer ledger");
+  test::GetLedger(
+      startup_context_.get(), writer_controller_.NewRequest(),
+      std::move(cloud_provider_writer), "fetch", writer_path, QuitLoopClosure(),
+      [this](ledger::Status status, ledger::LedgerPtr ledger) {
+        if (QuitOnError(QuitLoopClosure(), status, "Get writer ledger")) {
+          return;
+        }
+        writer_ = std::move(ledger);
 
-  status = test::GetPageEnsureInitialized(loop_, &writer_, nullptr,
-                                          &writer_page_, &page_id_);
-  QuitOnError([this] { loop_->Quit(); }, status, "Writer page initialization");
+        test::GetPageEnsureInitialized(
+            &writer_, nullptr, QuitLoopClosure(),
+            [this](ledger::Status status, ledger::PagePtr page,
+                   ledger::PageId id) {
+              if (QuitOnError(QuitLoopClosure(), status,
+                              "Writer page initialization")) {
+                return;
+              }
+              writer_page_ = std::move(page);
+              page_id_ = std::move(id);
 
-  Populate();
+              Populate();
+            });
+      });
 }
 
 void FetchBenchmark::Populate() {
@@ -104,9 +117,7 @@ void FetchBenchmark::Populate() {
       &writer_page_, std::move(keys), value_size_, entry_count_,
       test::benchmark::PageDataGenerator::ReferenceStrategy::REFERENCE,
       ledger::Priority::LAZY, [this](ledger::Status status) {
-        if (status != ledger::Status::OK) {
-          benchmark::QuitOnError([this] { loop_->Quit(); }, status,
-                                 "PageGenerator::Populate");
+        if (QuitOnError(QuitLoopClosure(), status, "PageGenerator::Populate")) {
           return;
         }
         WaitForWriterUpload();
@@ -129,7 +140,7 @@ void FetchBenchmark::WaitForWriterUpload() {
   };
   writer_page_->SetSyncStateWatcher(
       sync_watcher_binding_.NewBinding(),
-      benchmark::QuitOnErrorCallback([this] { loop_->Quit(); },
+      benchmark::QuitOnErrorCallback(QuitLoopClosure(),
                                      "Page::SetSyncStateWatcher"));
 }
 
@@ -140,19 +151,25 @@ void FetchBenchmark::ConnectReader() {
   cloud_provider::CloudProviderPtr cloud_provider_reader;
   cloud_provider_firebase_factory_.MakeCloudProvider(
       server_id_, "", cloud_provider_reader.NewRequest());
-  ledger::Status status = test::GetLedger(
-      loop_, startup_context_.get(), reader_controller_.NewRequest(),
-      std::move(cloud_provider_reader), "fetch", reader_path, &reader_);
-  QuitOnError([this] { loop_->Quit(); }, status, "ConnectReader");
+  test::GetLedger(
+      startup_context_.get(), reader_controller_.NewRequest(),
+      std::move(cloud_provider_reader), "fetch", reader_path, QuitLoopClosure(),
+      [this](ledger::Status status, ledger::LedgerPtr ledger) {
+        if (QuitOnError(QuitLoopClosure(), status, "ConnectReader")) {
+          return;
+        }
 
-  reader_->GetPage(fidl::MakeOptional(std::move(page_id_)),
-                   reader_page_.NewRequest(), [this](ledger::Status status) {
-                     if (benchmark::QuitOnError([this] { loop_->Quit(); },
-                                                status, "GetPage")) {
-                       return;
-                     }
-                     WaitForReaderDownload();
-                   });
+        reader_ = std::move(ledger);
+
+        reader_->GetPage(
+            fidl::MakeOptional(std::move(page_id_)), reader_page_.NewRequest(),
+            [this](ledger::Status status) {
+              if (QuitOnError(QuitLoopClosure(), status, "GetPage")) {
+                return;
+              }
+              WaitForReaderDownload();
+            });
+      });
 }
 
 void FetchBenchmark::WaitForReaderDownload() {
@@ -163,10 +180,9 @@ void FetchBenchmark::WaitForReaderDownload() {
         previous_state_ != ledger::SyncState::IDLE) {
       on_sync_state_changed_ = nullptr;
       ledger::PageSnapshotPtr snapshot;
-      reader_page_->GetSnapshot(snapshot.NewRequest(),
-                                fidl::VectorPtr<uint8_t>::New(0), nullptr,
-                                benchmark::QuitOnErrorCallback(
-                                    [this] { loop_->Quit(); }, "GetSnapshot"));
+      reader_page_->GetSnapshot(
+          snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0), nullptr,
+          benchmark::QuitOnErrorCallback(QuitLoopClosure(), "GetSnapshot"));
       FetchValues(std::move(snapshot), 0);
       return;
     }
@@ -176,7 +192,7 @@ void FetchBenchmark::WaitForReaderDownload() {
   };
   reader_page_->SetSyncStateWatcher(
       sync_watcher_binding_.NewBinding(),
-      benchmark::QuitOnErrorCallback([this] { loop_->Quit(); },
+      benchmark::QuitOnErrorCallback(QuitLoopClosure(),
                                      "Page::SetSyncStateWatcher"));
 }
 
@@ -199,7 +215,7 @@ void FetchBenchmark::FetchValues(ledger::PageSnapshotPtr snapshot, size_t i) {
       fxl::MakeCopyable(
           [this, snapshot = std::move(snapshot), i](
               ledger::Status status, fuchsia::mem::BufferPtr value) mutable {
-            if (benchmark::QuitOnError([this] { loop_->Quit(); }, status,
+            if (benchmark::QuitOnError(QuitLoopClosure(), status,
                                        "PageSnapshot::Fetch")) {
               return;
             }
@@ -223,7 +239,7 @@ void FetchBenchmark::FetchPart(ledger::PageSnapshotPtr snapshot, size_t i,
       fxl::MakeCopyable(
           [this, snapshot = std::move(snapshot), i, part, trace_event_id](
               ledger::Status status, fuchsia::mem::BufferPtr value) mutable {
-            if (benchmark::QuitOnError([this] { loop_->Quit(); }, status,
+            if (benchmark::QuitOnError(QuitLoopClosure(), status,
                                        "PageSnapshot::FetchPartial")) {
               return;
             }
@@ -236,6 +252,10 @@ void FetchBenchmark::ShutDown() {
   test::KillLedgerProcess(&writer_controller_);
   test::KillLedgerProcess(&reader_controller_);
   loop_->Quit();
+}
+
+fit::closure FetchBenchmark::QuitLoopClosure() {
+  return [this] { loop_->Quit(); };
 }
 
 }  // namespace benchmark
