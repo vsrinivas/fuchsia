@@ -324,7 +324,7 @@ void Vp9Decoder::ProcessCompletedFrames() {
   if (!current_frame_)
     return;
 
-  if (notifier_)
+  if (current_frame_data_.show_frame && notifier_)
     notifier_(current_frame_->frame.get());
 
   for (uint32_t i = 0; i < fbl::count_of(reference_frame_map_); i++) {
@@ -422,7 +422,11 @@ void Vp9Decoder::ConfigureMotionPrediction() {
       .WriteTo(owner_->dosbus());
 
   bool last_frame_has_mv =
-      !last_frame_data_.keyframe && !last_frame_data_.intra_only && last_frame_;
+      last_frame_ && !last_frame_data_.keyframe &&
+      !last_frame_data_.intra_only &&
+      current_frame_->frame->width == last_frame_->frame->width &&
+      current_frame_->frame->height == last_frame_->frame->height &&
+      !current_frame_data_.error_resilient_mode && last_frame_data_.show_frame;
   HevcMpredCtrl4::Get()
       .ReadFrom(owner_->dosbus())
       .set_use_prev_frame_mvs(last_frame_has_mv)
@@ -490,13 +494,16 @@ void Vp9Decoder::ConfigureFrameOutput(uint32_t width, uint32_t height) {
   assert(compressed_header_size <=
          io_buffer_size(&current_frame_->compressed_header, 0));
 
-  uint32_t frame_count =
-      fbl::round_up(compressed_body_size, static_cast<uint32_t>(PAGE_SIZE)) /
-      PAGE_SIZE;
-  if (!io_buffer_is_valid(&current_frame_->compressed_data)) {
+  uint32_t frame_buffer_size =
+      fbl::round_up(compressed_body_size, static_cast<uint32_t>(PAGE_SIZE));
+  if (!io_buffer_is_valid(&current_frame_->compressed_data) ||
+      (io_buffer_size(&current_frame_->compressed_data, 0) !=
+       frame_buffer_size)) {
+    if (io_buffer_is_valid(&current_frame_->compressed_data))
+      io_buffer_release(&current_frame_->compressed_data);
     zx_status_t status =
         io_buffer_init(&current_frame_->compressed_data, owner_->bti(),
-                       PAGE_SIZE * frame_count, IO_BUFFER_RW);
+                       frame_buffer_size, IO_BUFFER_RW);
     if (status != ZX_OK) {
       DECODE_ERROR("Couldn't allocate compressed frame data: %d\n", status);
       return;
@@ -508,7 +515,7 @@ void Vp9Decoder::ConfigureFrameOutput(uint32_t width, uint32_t height) {
       return;
     }
     io_buffer_cache_flush(&current_frame_->compressed_data, 0,
-                          PAGE_SIZE * frame_count);
+                          frame_buffer_size);
   }
 
   // Enough frames for the maximum possible size of compressed video have to be
@@ -518,6 +525,7 @@ void Vp9Decoder::ConfigureFrameOutput(uint32_t width, uint32_t height) {
   // TODO(MTWN-148): Return unused frames could be returned to a pool and use
   // them for decoding a different frame.
   {
+    uint32_t frame_count = frame_buffer_size / PAGE_SIZE;
     uint32_t* mmu_data = static_cast<uint32_t*>(
         io_buffer_virt(&working_buffers_.frame_map_mmu.buffer()));
     for (uint32_t i = 0; i < frame_count; i++) {
@@ -539,9 +547,13 @@ void Vp9Decoder::ConfigureFrameOutput(uint32_t width, uint32_t height) {
       .FromValue(buffer_address + current_frame_->frame->uv_plane_offset)
       .WriteTo(owner_->dosbus());
 
-  // There's no way to specify a non-tightly-packed stride.
-  HevcSaoYLength::Get().FromValue(width * height).WriteTo(owner_->dosbus());
-  HevcSaoCLength::Get().FromValue(width * height / 2).WriteTo(owner_->dosbus());
+  // There's no way to specify a different stride than the default.
+  HevcSaoYLength::Get()
+      .FromValue(current_frame_->frame->stride * height)
+      .WriteTo(owner_->dosbus());
+  HevcSaoCLength::Get()
+      .FromValue(current_frame_->frame->stride * height / 2)
+      .WriteTo(owner_->dosbus());
   // Compressed data is used as a reference for future frames, and uncompressed
   // data is output to consumers. Uncompressed data writes could be disabled in
   // the future if the consumer (e.g. the display) supported reading the
@@ -575,6 +587,23 @@ void Vp9Decoder::ConfigureFrameOutput(uint32_t width, uint32_t height) {
       .WriteTo(owner_->dosbus());
 }
 
+enum Vp9Command {
+  kVp9CommandDecodeSlice = 5,
+};
+
+void Vp9Decoder::ShowExistingFrame(HardwareRenderParams* params) {
+  Frame* frame = reference_frame_map_[params->frame_to_show];
+  if (!frame) {
+    DECODE_ERROR("Showing existing frame that doesn't exist");
+    return;
+  }
+  if (notifier_)
+    notifier_(frame->frame.get());
+  HevcDecStatusReg::Get()
+      .FromValue(kVp9CommandDecodeSlice)
+      .WriteTo(owner_->dosbus());
+}
+
 void Vp9Decoder::PrepareNewFrame() {
   HardwareRenderParams params;
   io_buffer_cache_flush_invalidate(&working_buffers_.rpm.buffer(), 0,
@@ -589,6 +618,10 @@ void Vp9Decoder::PrepareNewFrame() {
     }
   }
 
+  if (params.show_existing_frame) {
+    ShowExistingFrame(&params);
+    return;
+  }
   last_frame_data_ = current_frame_data_;
   current_frame_data_.keyframe = params.frame_type == 0;
   current_frame_data_.intra_only = params.intra_only;
@@ -597,6 +630,8 @@ void Vp9Decoder::PrepareNewFrame() {
     current_frame_data_.refresh_frame_flags =
         (1 << fbl::count_of(reference_frame_map_)) - 1;
   }
+  current_frame_data_.error_resilient_mode = params.error_resilient_mode;
+  current_frame_data_.show_frame = params.show_frame;
 
   // TODO(MTWN-149): Wait for old frames to be returned before continuing to
   // decode.
@@ -619,11 +654,9 @@ void Vp9Decoder::PrepareNewFrame() {
 
   UpdateLoopFilter(&params);
 
-  enum {
-    kDecodeSlice = 5,
-  };
-
-  HevcDecStatusReg::Get().FromValue(kDecodeSlice).WriteTo(owner_->dosbus());
+  HevcDecStatusReg::Get()
+      .FromValue(kVp9CommandDecodeSlice)
+      .WriteTo(owner_->dosbus());
 }
 
 void Vp9Decoder::SetFrameReadyNotifier(FrameReadyNotifier notifier) {
@@ -653,20 +686,22 @@ bool Vp9Decoder::FindNewFrameBuffer(HardwareRenderParams* params) {
   if (!new_frame->frame || (new_frame->frame->width != params->width) ||
       (new_frame->frame->height != params->height)) {
     auto video_frame = std::make_unique<VideoFrame>();
-    uint32_t width = params->width;
-    uint32_t height = params->height;
-    zx_status_t status =
-        io_buffer_init(&video_frame->buffer, owner_->bti(),
-                       width * height * 3 / 2, IO_BUFFER_RW | IO_BUFFER_CONTIG);
+    video_frame->width = params->width;
+    video_frame->height = params->height;
+    video_frame->stride = fbl::round_up(video_frame->width, 32u);
+    video_frame->uv_plane_offset =
+        fbl::round_up(video_frame->stride * video_frame->height, 1u << 16);
+    assert(video_frame->height % 2 == 0);
+    zx_status_t status = io_buffer_init_aligned(
+        &video_frame->buffer, owner_->bti(),
+        video_frame->uv_plane_offset +
+            video_frame->stride * video_frame->height / 2,
+        16, IO_BUFFER_RW | IO_BUFFER_CONTIG);
     if (status != ZX_OK) {
       DECODE_ERROR("Failed to make video_frame: %d\n", status);
       return false;
     }
 
-    video_frame->uv_plane_offset = width * height;
-    video_frame->stride = width;
-    video_frame->width = width;
-    video_frame->height = height;
     new_frame->frame = std::move(video_frame);
 
     // The largest coding unit is assumed to be 64x32.

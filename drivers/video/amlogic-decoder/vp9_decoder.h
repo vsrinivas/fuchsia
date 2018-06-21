@@ -109,6 +109,8 @@ class Vp9Decoder : public VideoDecoder {
     bool keyframe = false;
     bool intra_only = false;
     uint32_t refresh_frame_flags = 0;
+    bool show_frame;
+    bool error_resilient_mode;
   };
 
   union HardwareRenderParams;
@@ -120,6 +122,7 @@ class Vp9Decoder : public VideoDecoder {
   void InitLoopFilter();
   void UpdateLoopFilter(HardwareRenderParams* params);
   void ProcessCompletedFrames();
+  void ShowExistingFrame(HardwareRenderParams* params);
   void PrepareNewFrame();
   void ConfigureFrameOutput(uint32_t width, uint32_t height);
   void ConfigureMcrcc();
