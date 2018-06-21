@@ -10,6 +10,7 @@ group("lib") {
     "//garnet/drivers/bluetooth/lib/gatt",
     "//garnet/drivers/bluetooth/lib/hci",
     "//garnet/drivers/bluetooth/lib/l2cap",
+    "//garnet/drivers/bluetooth/lib/rfcomm",
   ]
 }
 
@@ -23,5 +24,6 @@ group("tests") {
     "//garnet/drivers/bluetooth/lib/hci:tests",
     "//garnet/drivers/bluetooth/lib/l2cap:tests",
     "//garnet/drivers/bluetooth/lib/sm:tests",
+    "//garnet/drivers/bluetooth/lib/rfcomm:tests",
   ]
 }

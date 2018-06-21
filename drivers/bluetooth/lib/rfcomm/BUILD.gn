@@ -1,0 +1,30 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+static_library("rfcomm") {
+  sources = [
+    "frame.cc",
+    "frame.h",
+    "rfcomm.h",
+  ]
+
+  public_deps = [
+    "//garnet/drivers/bluetooth/lib/common",
+  ]
+}
+
+source_set("tests") {
+  testonly = true
+
+  sources = [
+    "frame_unittest.cc",
+  ]
+
+  deps = [
+    ":rfcomm",
+    "//garnet/drivers/bluetooth/lib/testing",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/gtest",
+  ]
+}
