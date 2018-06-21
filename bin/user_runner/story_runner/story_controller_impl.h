@@ -171,8 +171,7 @@ class StoryControllerImpl : fuchsia::modular::StoryController,
   void GetActiveLinks(
       fidl::InterfaceHandle<fuchsia::modular::StoryLinksWatcher> watcher,
       GetActiveLinksCallback callback) override;
-  void GetLink(fidl::VectorPtr<fidl::StringPtr> module_path,
-               fidl::StringPtr name,
+  void GetLink(fuchsia::modular::LinkPath link_path,
                fidl::InterfaceRequest<fuchsia::modular::Link> request) override;
 
   // |fuchsia::modular::StoryContext|

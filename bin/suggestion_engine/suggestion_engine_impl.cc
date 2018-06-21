@@ -8,6 +8,7 @@
 
 #include <fuchsia/modular/cpp/fidl.h>
 #include <lib/context/cpp/context_helper.h>
+#include "lib/fidl/cpp/clone.h"
 #include <lib/fidl/cpp/optional.h>
 #include <lib/fxl/functional/make_copyable.h>
 #include <lib/fxl/time/time_delta.h>
@@ -523,8 +524,7 @@ void SuggestionEngineImpl::PerformUpdateModuleAction(
                 continue;
               }
               fuchsia::modular::LinkPtr link;
-              story_controller->GetLink(entry.link_path.module_path.Clone(),
-                                        std::move(entry.link_path.link_name),
+              story_controller->GetLink(fidl::Clone(entry.link_path),
                                         link.NewRequest());
               switch (parameter.data.Which()) {
                 case fuchsia::modular::IntentParameterData::Tag::
@@ -569,9 +569,9 @@ void SuggestionEngineImpl::PerformSetLinkValueAction(
   story_provider_->GetController(story_id, story_controller.NewRequest());
 
   const auto& set_link_value = action.set_link_value_action();
-  const auto& link_path = set_link_value.link_path;
   fuchsia::modular::LinkPtr link;
-  story_controller->GetLink(link_path.module_path.Clone(), link_path.link_name,
+
+  story_controller->GetLink(fidl::Clone(set_link_value.link_path),
                             link.NewRequest());
   link->Set(nullptr, set_link_value.value);
 }

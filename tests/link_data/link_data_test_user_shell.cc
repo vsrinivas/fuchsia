@@ -82,8 +82,11 @@ class TestApp
   void TestStory1_GetModule0Link() {
     fidl::VectorPtr<fidl::StringPtr> module_path;
     module_path.push_back(modular::kRootModuleName);
-    story_controller_->GetLink(std::move(module_path), nullptr,
-                               root_link_.NewRequest());
+    fuchsia::modular::LinkPath link_path = fuchsia::modular::LinkPath();
+    link_path.module_path = std::move(module_path);
+    link_path.link_name = nullptr;
+    story_controller_->GetLink(std::move(link_path), root_link_.NewRequest());
+
     root_link_->Get(nullptr, [this](fidl::StringPtr value) {
       if (value == kRootJson0) {
         story1_get_module0_link_.Pass();

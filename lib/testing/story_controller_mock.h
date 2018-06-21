@@ -20,8 +20,7 @@ class StoryControllerMock : public fuchsia::modular::StoryController {
   std::string last_added_module() const { return last_added_module_; }
 
   struct GetLinkCall {
-    fidl::VectorPtr<fidl::StringPtr> module_path;
-    fidl::StringPtr name;
+    fuchsia::modular::LinkPath link_path;
   };
   std::vector<GetLinkCall> get_link_calls;
 
@@ -78,9 +77,9 @@ class StoryControllerMock : public fuchsia::modular::StoryController {
 
   // |fuchsia::modular::StoryController|
   void GetLink(
-      fidl::VectorPtr<fidl::StringPtr> module_path, fidl::StringPtr name,
+      fuchsia::modular::LinkPath link_path,
       fidl::InterfaceRequest<fuchsia::modular::Link> request) override {
-    GetLinkCall call{std::move(module_path), name};
+    GetLinkCall call{std::move(link_path)};
     get_link_calls.push_back(std::move(call));
   }
 

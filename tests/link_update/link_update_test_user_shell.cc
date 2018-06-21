@@ -87,7 +87,11 @@ class TestApp
   void GetController(const fidl::StringPtr& story_id) {
     story_provider_->GetController(story_id, story_controller_.NewRequest());
 
-    story_controller_->GetLink(nullptr, "root", root_link_.NewRequest());
+    fuchsia::modular::LinkPath link_path = fuchsia::modular::LinkPath();
+    link_path.module_path = ::fidl::VectorPtr<::fidl::StringPtr>::New(0);
+    link_path.link_name = "root";
+    story_controller_->GetLink(std::move(link_path), root_link_.NewRequest());
+
     story_provider_->GetLinkPeer(story_id, nullptr, "root",
                                  root_peer_.NewRequest());
 

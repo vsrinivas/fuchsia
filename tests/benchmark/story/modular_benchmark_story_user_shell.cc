@@ -189,10 +189,14 @@ class TestApp : public modular::SingleServiceApp<fuchsia::modular::UserShell> {
 
   void Link() {
     FXL_LOG(INFO) << "Link()";
+
+    fuchsia::modular::LinkPath link_path = fuchsia::modular::LinkPath();
     fidl::VectorPtr<fidl::StringPtr> root_module_path;
     root_module_path.push_back(modular::kRootModuleName);
-    story_controller_->GetLink(std::move(root_module_path), nullptr,
-                               link_.NewRequest());
+    link_path.module_path = std::move(root_module_path);
+    link_path.link_name = nullptr;
+    story_controller_->GetLink(std::move(link_path), link_.NewRequest());
+
     link_watcher_.Watch(&link_);
     link_watcher_.Continue([this](fidl::StringPtr json) {
       FXL_LOG(INFO) << "Link() Watch: " << json;

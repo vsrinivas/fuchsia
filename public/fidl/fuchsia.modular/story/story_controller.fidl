@@ -71,16 +71,11 @@ interface StoryController {
   // Deprecated: MI4-1084
   10: GetActiveLinks(StoryLinksWatcher? watcher) -> (vector<LinkPath> link_data);
 
-  // Gets a connection to the specified link in the story. Links are identified
-  // by a combination of |module_path| and a |link_name|.
-  //
-  // Any link, if it doesn't exist yet, is implicitly created when it's first
+  // Gets a connection to a link in the story with the specified |link_path|. If
+  // link does not exist yet, it is implicitly created when it is first
   // accessed.
-  //
-  // TODO(thatguy): |module_path| should not be allowed to be null any more,
-  // since there are no links outside of modules (with an empty module path)
-  // anymore.
-  11: GetLink(vector<string>? module_path, string? link_name, request<Link> link); };
+  11: GetLink(LinkPath link_path, request<Link> link);
+};
 
 // Implemented by the client calling StoryController.Watch().
 interface StoryWatcher {

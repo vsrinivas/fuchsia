@@ -1415,6 +1415,7 @@ void StoryControllerImpl::RequestStoryFocus() {
   story_provider_impl_->RequestStoryFocus(story_id_);
 }
 
+// TODO(drees) Collapse functionality into GetLink.
 void StoryControllerImpl::ConnectLinkPath(
     fuchsia::modular::LinkPathPtr link_path,
     fidl::InterfaceRequest<fuchsia::modular::Link> request) {
@@ -1689,18 +1690,9 @@ void StoryControllerImpl::GetActiveLinks(
 }
 
 void StoryControllerImpl::GetLink(
-    fidl::VectorPtr<fidl::StringPtr> module_path, fidl::StringPtr name,
+    fuchsia::modular::LinkPath link_path,
     fidl::InterfaceRequest<fuchsia::modular::Link> request) {
-  // In the API, a null module path is allowed to represent the empty module
-  // path.
-  if (module_path.is_null()) {
-    module_path.resize(0);
-  }
-
-  fuchsia::modular::LinkPathPtr link_path = fuchsia::modular::LinkPath::New();
-  link_path->module_path = std::move(module_path);
-  link_path->link_name = name;
-  ConnectLinkPath(std::move(link_path), std::move(request));
+  ConnectLinkPath(fidl::MakeOptional(std::move(link_path)), std::move(request));
 }
 
 void StoryControllerImpl::AddModule(
