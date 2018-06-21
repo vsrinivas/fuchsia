@@ -39,19 +39,7 @@ std::unique_ptr<uint8_t[]> read_whole_file(const char* filename, size_t* size);
 //
 // TODO(dustingreen): Determine if async::PostTask() intends to strictly
 // guarantee order.
-template <typename L>
-void PostSerial(async_t* async, L&& to_run) {
-  // TODO(dustingreen): This should just forward to async::PostTask(async,
-  // to_run) without any wrapping needed, once I figure out why attempts to use
-  // async::PostTask() directly didn't work before.  Hopefully this can just
-  // switch to fit::function soon.
-  std::shared_ptr<L> shared = std::make_shared<L>(std::move(to_run));
-  std::function<void(void)> copyable = [shared]() {
-    L foo = std::move(*shared.get());
-    foo();
-  };
-  async::PostTask(async, copyable);
-}
+void PostSerial(async_t* async, fit::closure to_run);
 
 void SHA256_Update_AudioParameters(SHA256_CTX* sha256_ctx,
                                    const fuchsia::mediacodec::PcmFormat& pcm);

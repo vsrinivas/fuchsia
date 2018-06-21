@@ -933,6 +933,14 @@ class OmxCodecRunner : public CodecRunner {
   // involved.
   OMX_PARAM_PORTDEFINITIONTYPE omx_port_def_[kPortCount] = {};
 
+  //
+  // Overall behavior.
+  //
+
+  // Post to async in a way that's guaranteed to run the posted work in the same
+  // order as the posting order.
+  void PostSerial(async_t* async, fit::closure to_run);
+
   FXL_DISALLOW_IMPLICIT_CONSTRUCTORS(OmxCodecRunner);
 };
 

@@ -18,12 +18,7 @@ void FailFatal() {
 }
 
 void PostSerial(async_t* async, fit::closure to_run) {
-  // TODO(dustingreen): Switch to using fit::closure more directly when
-  // possible.
-  std::shared_ptr<fit::closure> shared_to_run =
-      std::make_shared<fit::closure>(std::move(to_run));
-  zx_status_t result =
-      async::PostTask(async, [shared_to_run] { (*shared_to_run)(); });
+  zx_status_t result = async::PostTask(async, std::move(to_run));
   if (result != ZX_OK) {
     printf("async::PostTask() failed\n");
     FailFatal();

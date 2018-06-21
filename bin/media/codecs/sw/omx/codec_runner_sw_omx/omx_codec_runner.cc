@@ -140,22 +140,6 @@ uint32_t BufferCountFromPortSettings(
   return PacketCountFromPortSettings(settings);
 }
 
-// Post to async in a way that's guaranteed to run the posted work in the same
-// order as the posting order.
-template <typename L>
-void PostSerial(async_t* async, L&& to_run) {
-  // TODO(dustingreen): This should just forward to
-  // async::PostTask(async, to_run) without any wrapping
-  // needed, once I figure out why attempts to use async::PostTask() directly
-  // didn't work before.
-  std::shared_ptr<L> shared = std::make_shared<L>(std::move(to_run));
-  std::function<void(void)> copyable = [shared]() {
-    L foo = std::move(*shared.get());
-    foo();
-  };
-  async::PostTask(async, copyable);
-}
-
 template <typename OMX_STRUCT>
 void InitOmxStruct(OMX_STRUCT* omx_struct) {
   memset(omx_struct, 0, sizeof(*omx_struct));
@@ -3328,6 +3312,13 @@ void OmxCodecRunner::ValidateBufferSettingsVsConstraints(
     Exit(
         "settings.single_buffer_mode && "
         "!constraints.single_buffer_mode_allowed - exiting\n");
+  }
+}
+
+void OmxCodecRunner::PostSerial(async_t* async, fit::closure to_run) {
+  zx_status_t post_result = async::PostTask(async, std::move(to_run));
+  if (post_result != ZX_OK) {
+    Exit("async::PostTask() failed - post_result %d", post_result);
   }
 }
 

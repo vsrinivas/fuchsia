@@ -70,6 +70,13 @@ std::unique_ptr<uint8_t[]> read_whole_file(const char* filename, size_t* size) {
   return raw_adts;
 }
 
+void PostSerial(async_t* async, fit::closure to_run) {
+  zx_status_t post_result = async::PostTask(async, std::move(to_run));
+  if (post_result != ZX_OK) {
+    Exit("async::PostTask() failed - post_result: %d", post_result);
+  }
+}
+
 void SHA256_Update_AudioParameters(SHA256_CTX* sha256_ctx,
                                    const fuchsia::mediacodec::PcmFormat& pcm) {
   uint32_t pcm_mode_le = htole32(pcm.pcm_mode);
