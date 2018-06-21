@@ -34,8 +34,7 @@ constexpr fxl::StringView kPersistentFileSystem = "/data";
 constexpr fxl::StringView kMinFsName = "minfs";
 constexpr zx::duration kMaxPollingDelay = zx::sec(10);
 constexpr fxl::StringView kNoMinFsFlag = "no_minfs_wait";
-constexpr fxl::StringView kNoStatisticsReporting =
-    "disable_reporting";
+constexpr fxl::StringView kNoStatisticsReporting = "disable_reporting";
 
 struct AppParams {
   bool disable_statistics = false;

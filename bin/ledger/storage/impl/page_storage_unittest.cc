@@ -1098,8 +1098,7 @@ TEST_F(PageStorageTest, InterruptAddObjectFromLocal) {
 }
 
 TEST_F(PageStorageTest, AddObjectFromLocalError) {
-  auto data_source =
-      std::make_unique<FakeErrorDataSource>(dispatcher());
+  auto data_source = std::make_unique<FakeErrorDataSource>(dispatcher());
   bool called;
   Status status;
   ObjectIdentifier object_identifier;

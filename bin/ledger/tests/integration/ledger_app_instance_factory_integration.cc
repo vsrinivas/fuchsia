@@ -139,7 +139,8 @@ LedgerAppInstanceImpl::LedgerAppInstanceImpl(
 cloud_provider::CloudProviderPtr LedgerAppInstanceImpl::MakeCloudProvider() {
   cloud_provider::CloudProviderPtr cloud_provider;
   async::PostTask(services_dispatcher_,
-                  fxl::MakeCopyable(callback::MakeScoped(weak_ptr_factory_.GetWeakPtr(),
+                  fxl::MakeCopyable(callback::MakeScoped(
+                      weak_ptr_factory_.GetWeakPtr(),
                       [this, request = cloud_provider.NewRequest()]() mutable {
                         cloud_provider_->AddBinding(std::move(request));
                       })));

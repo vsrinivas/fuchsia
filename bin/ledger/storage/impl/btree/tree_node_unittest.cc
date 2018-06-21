@@ -66,19 +66,17 @@ TEST_F(TreeNodeTest, CreateGetTreeNode) {
   bool called;
   Status status;
   std::unique_ptr<const TreeNode> found_node;
-  TreeNode::FromIdentifier(
-      &fake_storage_, node->GetIdentifier(),
-      callback::Capture(callback::SetWhenCalled(&called), &status,
-                        &found_node));
+  TreeNode::FromIdentifier(&fake_storage_, node->GetIdentifier(),
+                           callback::Capture(callback::SetWhenCalled(&called),
+                                             &status, &found_node));
   RunLoopFor(kSufficientDelay);
   EXPECT_TRUE(called);
   EXPECT_EQ(Status::OK, status);
   EXPECT_NE(nullptr, found_node);
 
-  TreeNode::FromIdentifier(
-      &fake_storage_, RandomObjectIdentifier(),
-      callback::Capture(callback::SetWhenCalled(&called), &status,
-                        &found_node));
+  TreeNode::FromIdentifier(&fake_storage_, RandomObjectIdentifier(),
+                           callback::Capture(callback::SetWhenCalled(&called),
+                                             &status, &found_node));
   RunLoopFor(kSufficientDelay);
   EXPECT_TRUE(called);
   EXPECT_EQ(Status::NOT_FOUND, status);
@@ -150,9 +148,9 @@ TEST_F(TreeNodeTest, Serialization) {
   bool called;
   Status status;
   std::unique_ptr<const Object> object;
-  fake_storage_.GetObject(node->GetIdentifier(), PageStorage::Location::LOCAL,
-                          callback::Capture(callback::SetWhenCalled(&called),
-                                            &status, &object));
+  fake_storage_.GetObject(
+      node->GetIdentifier(), PageStorage::Location::LOCAL,
+      callback::Capture(callback::SetWhenCalled(&called), &status, &object));
   RunLoopFor(kSufficientDelay);
   EXPECT_TRUE(called);
   EXPECT_EQ(Status::OK, status);

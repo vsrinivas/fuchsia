@@ -904,90 +904,86 @@ void PageStorageImpl::ObjectIsUntracked(
 void PageStorageImpl::FillBufferWithObjectContent(
     ObjectIdentifier object_identifier, fsl::SizedVmo vmo, size_t offset,
     size_t size, std::function<void(Status)> callback) {
-  GetPiece(object_identifier,
-           fxl::MakeCopyable([this, vmo = std::move(vmo), offset, size,
-                              callback = std::move(callback)](
-                                 Status status,
-                                 std::unique_ptr<const Object> object) mutable {
-             if (status != Status::OK) {
-               callback(status);
-               return;
-             }
+  GetPiece(
+      object_identifier,
+      fxl::MakeCopyable([this, vmo = std::move(vmo), offset, size,
+                         callback = std::move(callback)](
+                            Status status,
+                            std::unique_ptr<const Object> object) mutable {
+        if (status != Status::OK) {
+          callback(status);
+          return;
+        }
 
-             FXL_DCHECK(object);
-             fxl::StringView content;
-             status = object->GetData(&content);
-             if (status != Status::OK) {
-               callback(status);
-               return;
-             }
+        FXL_DCHECK(object);
+        fxl::StringView content;
+        status = object->GetData(&content);
+        if (status != Status::OK) {
+          callback(status);
+          return;
+        }
 
-             ObjectDigestType digest_type =
-                 GetObjectDigestType(object->GetIdentifier().object_digest);
-             if (digest_type == ObjectDigestType::INLINE ||
-                 digest_type == ObjectDigestType::VALUE_HASH) {
-               if (size != content.size()) {
-                 FXL_LOG(ERROR)
-                     << "Error in serialization format. Expecting object: "
-                     << object->GetIdentifier() << " to have size: " << size
-                     << ", but found an object of size: " << content.size();
-                 callback(Status::FORMAT_ERROR);
-                 return;
-               }
-               zx_status_t zx_status =
-                   vmo.vmo().write(content.data(), offset, size);
-               if (zx_status != ZX_OK) {
-                 FXL_LOG(ERROR)
-                     << "Unable to write to vmo. Status: " << zx_status;
-                 callback(Status::INTERNAL_IO_ERROR);
-                 return;
-               }
-               callback(Status::OK);
-               return;
-             }
+        ObjectDigestType digest_type =
+            GetObjectDigestType(object->GetIdentifier().object_digest);
+        if (digest_type == ObjectDigestType::INLINE ||
+            digest_type == ObjectDigestType::VALUE_HASH) {
+          if (size != content.size()) {
+            FXL_LOG(ERROR)
+                << "Error in serialization format. Expecting object: "
+                << object->GetIdentifier() << " to have size: " << size
+                << ", but found an object of size: " << content.size();
+            callback(Status::FORMAT_ERROR);
+            return;
+          }
+          zx_status_t zx_status = vmo.vmo().write(content.data(), offset, size);
+          if (zx_status != ZX_OK) {
+            FXL_LOG(ERROR) << "Unable to write to vmo. Status: " << zx_status;
+            callback(Status::INTERNAL_IO_ERROR);
+            return;
+          }
+          callback(Status::OK);
+          return;
+        }
 
-             const FileIndex* file_index;
-             status =
-                 FileIndexSerialization::ParseFileIndex(content, &file_index);
-             if (status != Status::OK) {
-               callback(Status::FORMAT_ERROR);
-               return;
-             }
-             if (file_index->size() != size) {
-               FXL_LOG(ERROR)
-                   << "Error in serialization format. Expecting object: "
-                   << object->GetIdentifier() << " to have size: " << size
-                   << ", but found an index object of size: "
-                   << file_index->size();
-               callback(Status::FORMAT_ERROR);
-               return;
-             }
+        const FileIndex* file_index;
+        status = FileIndexSerialization::ParseFileIndex(content, &file_index);
+        if (status != Status::OK) {
+          callback(Status::FORMAT_ERROR);
+          return;
+        }
+        if (file_index->size() != size) {
+          FXL_LOG(ERROR) << "Error in serialization format. Expecting object: "
+                         << object->GetIdentifier() << " to have size: " << size
+                         << ", but found an index object of size: "
+                         << file_index->size();
+          callback(Status::FORMAT_ERROR);
+          return;
+        }
 
-             size_t sub_offset = 0;
-             auto waiter = fxl::MakeRefCounted<callback::StatusWaiter<Status>>(
-                 Status::OK);
-             for (const auto* child : *file_index->children()) {
-               if (sub_offset + child->size() > file_index->size()) {
-                 callback(Status::FORMAT_ERROR);
-                 return;
-               }
-               fsl::SizedVmo vmo_copy;
-               zx_status_t zx_status =
-                   vmo.Duplicate(ZX_RIGHTS_BASIC | ZX_RIGHT_WRITE, &vmo_copy);
-               if (zx_status != ZX_OK) {
-                 FXL_LOG(ERROR)
-                     << "Unable to duplicate vmo. Status: " << zx_status;
-                 callback(Status::INTERNAL_IO_ERROR);
-                 return;
-               }
-               FillBufferWithObjectContent(
-                   ToObjectIdentifier(child->object_identifier()),
-                   std::move(vmo_copy), offset + sub_offset, child->size(),
-                   waiter->NewCallback());
-               sub_offset += child->size();
-             }
-             waiter->Finalize(std::move(callback));
-           }));
+        size_t sub_offset = 0;
+        auto waiter =
+            fxl::MakeRefCounted<callback::StatusWaiter<Status>>(Status::OK);
+        for (const auto* child : *file_index->children()) {
+          if (sub_offset + child->size() > file_index->size()) {
+            callback(Status::FORMAT_ERROR);
+            return;
+          }
+          fsl::SizedVmo vmo_copy;
+          zx_status_t zx_status =
+              vmo.Duplicate(ZX_RIGHTS_BASIC | ZX_RIGHT_WRITE, &vmo_copy);
+          if (zx_status != ZX_OK) {
+            FXL_LOG(ERROR) << "Unable to duplicate vmo. Status: " << zx_status;
+            callback(Status::INTERNAL_IO_ERROR);
+            return;
+          }
+          FillBufferWithObjectContent(
+              ToObjectIdentifier(child->object_identifier()),
+              std::move(vmo_copy), offset + sub_offset, child->size(),
+              waiter->NewCallback());
+          sub_offset += child->size();
+        }
+        waiter->Finalize(std::move(callback));
+      }));
 }
 
 Status PageStorageImpl::SynchronousInit(CoroutineHandler* handler) {

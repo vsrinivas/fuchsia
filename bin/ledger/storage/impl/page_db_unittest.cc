@@ -46,11 +46,9 @@ class PageDbTest : public ::test::TestWithCoroutines {
  public:
   PageDbTest()
       : encryption_service_(dispatcher()),
-        page_storage_(dispatcher(), &coroutine_service_,
-                      &encryption_service_,
+        page_storage_(dispatcher(), &coroutine_service_, &encryption_service_,
                       ledger::DetachedPath(tmpfs_.root_fd()), "page_id"),
-        page_db_(dispatcher(),
-                 ledger::DetachedPath(tmpfs_.root_fd())) {}
+        page_db_(dispatcher(), ledger::DetachedPath(tmpfs_.root_fd())) {}
 
   ~PageDbTest() override {}
 

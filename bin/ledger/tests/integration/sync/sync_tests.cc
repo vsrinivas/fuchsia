@@ -109,8 +109,8 @@ TEST_P(SyncIntegrationTest, ConcurrentConnection) {
   }));
 
   ledger::PageSnapshotPtr snapshot;
-  page2->GetSnapshot(snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0), nullptr,
-                     callback::Capture(MakeQuitTask(), &status));
+  page2->GetSnapshot(snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
+                     nullptr, callback::Capture(MakeQuitTask(), &status));
   RunLoop();
   ASSERT_EQ(ledger::Status::OK, status);
   std::unique_ptr<ledger::InlinedValue> inlined_value;

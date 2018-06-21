@@ -693,10 +693,9 @@ TEST_F(BTreeUtilsTest, GetObjectIdentifiersFromEmpty) {
   bool called;
   Status status;
   std::set<ObjectIdentifier> object_identifiers;
-  GetObjectIdentifiers(
-      &coroutine_service_, &fake_storage_, root_identifier,
-      callback::Capture(callback::SetWhenCalled(&called), &status,
-                        &object_identifiers));
+  GetObjectIdentifiers(&coroutine_service_, &fake_storage_, root_identifier,
+                       callback::Capture(callback::SetWhenCalled(&called),
+                                         &status, &object_identifiers));
   RunLoopFor(kSufficientDelay);
   EXPECT_TRUE(called);
   ASSERT_EQ(Status::OK, status);
@@ -713,10 +712,9 @@ TEST_F(BTreeUtilsTest, GetObjectOneNodeTree) {
   bool called;
   Status status;
   std::set<ObjectIdentifier> object_identifiers;
-  GetObjectIdentifiers(
-      &coroutine_service_, &fake_storage_, root_identifier,
-      callback::Capture(callback::SetWhenCalled(&called), &status,
-                        &object_identifiers));
+  GetObjectIdentifiers(&coroutine_service_, &fake_storage_, root_identifier,
+                       callback::Capture(callback::SetWhenCalled(&called),
+                                         &status, &object_identifiers));
   RunLoopFor(kSufficientDelay);
   EXPECT_TRUE(called);
   ASSERT_EQ(Status::OK, status);
@@ -737,10 +735,9 @@ TEST_F(BTreeUtilsTest, GetObjectIdentifiersBigTree) {
   bool called;
   Status status;
   std::set<ObjectIdentifier> object_identifiers;
-  GetObjectIdentifiers(
-      &coroutine_service_, &fake_storage_, root_identifier,
-      callback::Capture(callback::SetWhenCalled(&called), &status,
-                        &object_identifiers));
+  GetObjectIdentifiers(&coroutine_service_, &fake_storage_, root_identifier,
+                       callback::Capture(callback::SetWhenCalled(&called),
+                                         &status, &object_identifiers));
   RunLoopFor(kSufficientDelay);
   EXPECT_TRUE(called);
   ASSERT_EQ(Status::OK, status);
@@ -766,9 +763,9 @@ TEST_F(BTreeUtilsTest, GetObjectsFromSync) {
   //          [03]
   //       /        \
   // [00, 01, 02]  [04]
-  GetObjectsFromSync(&coroutine_service_, &fake_storage_, root_identifier,
-                     callback::Capture(callback::SetWhenCalled(&called),
-                                       &status));
+  GetObjectsFromSync(
+      &coroutine_service_, &fake_storage_, root_identifier,
+      callback::Capture(callback::SetWhenCalled(&called), &status));
   RunLoopFor(kSufficientDelay);
   EXPECT_TRUE(called);
   ASSERT_EQ(Status::OK, status);
@@ -782,10 +779,9 @@ TEST_F(BTreeUtilsTest, GetObjectsFromSync) {
   EXPECT_EQ(3 + 4u, object_requests.size());
 
   std::set<ObjectIdentifier> object_identifiers;
-  GetObjectIdentifiers(
-      &coroutine_service_, &fake_storage_, root_identifier,
-      callback::Capture(callback::SetWhenCalled(&called), &status,
-                        &object_identifiers));
+  GetObjectIdentifiers(&coroutine_service_, &fake_storage_, root_identifier,
+                       callback::Capture(callback::SetWhenCalled(&called),
+                                         &status, &object_identifiers));
   RunLoopFor(kSufficientDelay);
   EXPECT_TRUE(called);
   ASSERT_EQ(Status::OK, status);

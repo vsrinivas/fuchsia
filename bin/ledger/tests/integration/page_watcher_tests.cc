@@ -510,7 +510,6 @@ TEST_P(PageWatcherIntegrationTest, PageWatcherParallel) {
   EXPECT_EQ(ledger::ResultState::COMPLETED, watcher2.last_result_state_);
   EXPECT_EQ(1u, watcher2.changes_seen);
 
-
   change = std::move(watcher1.last_page_change_);
   ASSERT_EQ(1u, change.changed_entries->size());
   EXPECT_EQ("name", convert::ToString(change.changed_entries->at(0).key));

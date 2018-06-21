@@ -35,8 +35,7 @@ std::unique_ptr<cloud_provider::Token> MakeToken(
   return token;
 }
 
-class PageUploadTest : public gtest::TestWithLoop,
-                       public PageUpload::Delegate {
+class PageUploadTest : public gtest::TestWithLoop, public PageUpload::Delegate {
  public:
   PageUploadTest()
       : storage_(dispatcher()),
@@ -445,10 +444,10 @@ TEST_F(PageUploadTest, DoNotUploadSyncedCommits) {
 TEST_F(PageUploadTest, DoNotUploadSyncedCommitsOnRetry) {
   bool upload_is_idle = false;
   SetOnNewStateCallback([this, &upload_is_idle] {
-        upload_is_idle = page_upload_->IsIdle();
-        if (states_.back() == UploadSyncState::UPLOAD_TEMPORARY_ERROR) {
-          QuitLoop();
-        }
+    upload_is_idle = page_upload_->IsIdle();
+    if (states_.back() == UploadSyncState::UPLOAD_TEMPORARY_ERROR) {
+      QuitLoop();
+    }
   });
   page_upload_->StartUpload();
   RunLoopUntilIdle();

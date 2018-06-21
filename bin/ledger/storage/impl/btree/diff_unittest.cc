@@ -469,13 +469,14 @@ TEST_F(DiffTest, ForEachThreeWayDiffNoDiff) {
   bool called;
   Status status;
   // No change is expected.
-  ForEachThreeWayDiff(&coroutine_service_, &fake_storage_, base_root_identifier,
-                      left_root_identifier, right_root_identifier, "key5",
-                      [](ThreeWayChange e) {
-                        ADD_FAILURE();
-                        return true;
-                      },
-                      callback::Capture(callback::SetWhenCalled(&called), &status));
+  ForEachThreeWayDiff(
+      &coroutine_service_, &fake_storage_, base_root_identifier,
+      left_root_identifier, right_root_identifier, "key5",
+      [](ThreeWayChange e) {
+        ADD_FAILURE();
+        return true;
+      },
+      callback::Capture(callback::SetWhenCalled(&called), &status));
   RunLoopFor(kSufficientDelay);
   EXPECT_TRUE(called);
   ASSERT_EQ(Status::OK, status);

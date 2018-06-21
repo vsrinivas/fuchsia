@@ -60,7 +60,7 @@ class LedgerRepositoryImpl : public ledger_internal::LedgerRepository,
       GetLedgerRepositoryDebugCallback callback) override;
   void DiskCleanUp(DiskCleanUpCallback callback) override;
 
-private:
+ private:
   void CheckEmpty();
 
   // LedgerRepositoryDebug:

@@ -17,7 +17,8 @@ void FakeNetConnector::ConnectToServiceProvider(
 void FakeNetConnector::RegisterServiceProvider(
     fidl::StringPtr name,
     fidl::InterfaceHandle<fuchsia::sys::ServiceProvider> service_provider) {
-  fuchsia::sys::ServiceProviderPtr service_provider_ptr = service_provider.Bind();
+  fuchsia::sys::ServiceProviderPtr service_provider_ptr =
+      service_provider.Bind();
   service_provider_impl_.AddServiceForName(
       fxl::MakeCopyable([name, service_provider_ptr = std::move(
                                    service_provider_ptr)](zx::channel channel) {

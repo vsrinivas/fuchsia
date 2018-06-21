@@ -21,9 +21,8 @@ class LedgerStorageTest : public gtest::TestWithLoop {
  public:
   LedgerStorageTest()
       : encryption_service_(dispatcher()),
-        storage_(dispatcher(), &coroutine_service_,
-                 &encryption_service_, ledger::DetachedPath(tmpfs_.root_fd()),
-                 "test_app") {}
+        storage_(dispatcher(), &coroutine_service_, &encryption_service_,
+                 ledger::DetachedPath(tmpfs_.root_fd()), "test_app") {}
 
   ~LedgerStorageTest() override {}
 

@@ -155,9 +155,9 @@ StorageTest::~StorageTest(){};
   }
 
   std::unique_ptr<const Object> result;
-  GetStorage()->GetObject(object_identifier, PageStorage::Location::LOCAL,
-                          callback::Capture(callback::SetWhenCalled(&called),
-                                            &status, &result));
+  GetStorage()->GetObject(
+      object_identifier, PageStorage::Location::LOCAL,
+      callback::Capture(callback::SetWhenCalled(&called), &status, &result));
   RunLoopFor(kSufficientDelay);
   EXPECT_TRUE(called);
   if (status != Status::OK) {
@@ -221,9 +221,8 @@ StorageTest::~StorageTest(){};
   bool called;
   Status status;
   btree::TreeNode::Empty(
-      GetStorage(),
-      callback::Capture(callback::SetWhenCalled(&called), &status,
-                        empty_node_identifier));
+      GetStorage(), callback::Capture(callback::SetWhenCalled(&called), &status,
+                                      empty_node_identifier));
   RunLoopFor(kSufficientDelay);
   EXPECT_TRUE(called);
   if (status != Status::OK) {
@@ -279,13 +278,13 @@ StorageTest::~StorageTest(){};
   bool called;
   Status status;
   std::set<ObjectIdentifier> new_nodes;
-  btree::ApplyChanges(&coroutine_service_, GetStorage(), base_node_identifier,
-                      std::make_unique<btree::EntryChangeIterator>(
-                          entries.begin(), entries.end()),
-                      callback::Capture(callback::SetWhenCalled(&called),
-                                        &status, new_root_identifier,
-                                        &new_nodes),
-                      &kTestNodeLevelCalculator);
+  btree::ApplyChanges(
+      &coroutine_service_, GetStorage(), base_node_identifier,
+      std::make_unique<btree::EntryChangeIterator>(entries.begin(),
+                                                   entries.end()),
+      callback::Capture(callback::SetWhenCalled(&called), &status,
+                        new_root_identifier, &new_nodes),
+      &kTestNodeLevelCalculator);
   RunLoopFor(kSufficientDelay);
   EXPECT_TRUE(called);
   if (status != Status::OK) {

@@ -217,7 +217,7 @@ TEST_F(SerializationSizeTest, GetEntriesInline) {
   entry.key = GetKey(0, key_size);
   entry.inlined_value = std::make_unique<InlinedValue>();
   entry.inlined_value->value = convert::ToArray(GetValue(0, value_size));
-  size_t kExpectedEntrySize =  GetInlinedEntrySize(entry);
+  size_t kExpectedEntrySize = GetInlinedEntrySize(entry);
   for (size_t i = 0; i < n_entries; i++) {
     entries_to_send->push_back(fidl::Clone(entry));
   }
@@ -226,20 +226,20 @@ TEST_F(SerializationSizeTest, GetEntriesInline) {
   for (size_t i = 0; i < n_empty_entries; i++) {
     entries_to_send->push_back(fidl::Clone(empty_entry));
   }
-  size_t kExpectedEmptyEntrySize =  GetInlinedEntrySize(empty_entry);
+  size_t kExpectedEmptyEntrySize = GetInlinedEntrySize(empty_entry);
 
   // Run the callback directly.
   snapshot_impl.get_entries_inline_callback(
       Status::OK, std::move(entries_to_send), std::move(token));
 
   const size_t expected_bytes =
-      Align(kMessageHeaderSize +                        // Header.
-            kVectorHeaderSize +                         // VectorPtr.
-            n_entries * kExpectedEntrySize +            // Vector of entries.
-            n_empty_entries * kExpectedEmptyEntrySize + // Vector of entries.
-            kPointerSize +                              // Pointer to next_token.
-            GetByteVectorSize(key_size) +               // next_token.
-            kStatusEnumSize                             // Status.
+      Align(kMessageHeaderSize +                         // Header.
+            kVectorHeaderSize +                          // VectorPtr.
+            n_entries * kExpectedEntrySize +             // Vector of entries.
+            n_empty_entries * kExpectedEmptyEntrySize +  // Vector of entries.
+            kPointerSize +                 // Pointer to next_token.
+            GetByteVectorSize(key_size) +  // next_token.
+            kStatusEnumSize                // Status.
       );
   const size_t expected_handles = 0;
   EXPECT_TRUE(

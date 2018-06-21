@@ -84,10 +84,7 @@ class PageSyncImplTest : public gtest::TestWithLoop {
         std::move(page_cloud_ptr_),
         std::make_unique<TestBackoff>(&download_backoff_get_next_calls_),
         std::make_unique<TestBackoff>(&upload_backoff_get_next_calls_),
-        [this] {
-          error_callback_calls_++;
-        },
-        std::move(watcher));
+        [this] { error_callback_calls_++; }, std::move(watcher));
   }
   ~PageSyncImplTest() override {}
 
