@@ -62,16 +62,26 @@ DeleteEntryBenchmark::DeleteEntryBenchmark(async::Loop* loop,
 
 void DeleteEntryBenchmark::Run() {
   ledger::LedgerPtr ledger;
-  ledger::Status status = test::GetLedger(
-      loop_, startup_context_.get(), component_controller_.NewRequest(),
-      nullptr, "delete_entry", tmp_dir_.path(), &ledger);
-  QuitOnError([this] { loop_->Quit(); }, status, "GetLedger");
+  test::GetLedger(startup_context_.get(), component_controller_.NewRequest(),
+                  nullptr, "delete_entry", tmp_dir_.path(), QuitLoopClosure(),
+                  [this](ledger::Status status, ledger::LedgerPtr ledger) {
+                    if (QuitOnError(QuitLoopClosure(), status, "GetLedger")) {
+                      return;
+                    }
+                    ledger_ = std::move(ledger);
 
-  ledger::PageId id;
-  status = test::GetPageEnsureInitialized(loop_, &ledger, nullptr, &page_, &id);
-  QuitOnError([this] { loop_->Quit(); }, status, "Page initialization");
-
-  Populate();
+                    test::GetPageEnsureInitialized(
+                        &ledger_, nullptr, QuitLoopClosure(),
+                        [this](ledger::Status status, ledger::PagePtr page,
+                               ledger::PageId id) {
+                          if (QuitOnError(QuitLoopClosure(), status,
+                                          "Page initialization")) {
+                            return;
+                          }
+                          page_ = std::move(page);
+                          Populate();
+                        });
+                  });
 }
 
 void DeleteEntryBenchmark::Populate() {
@@ -85,13 +95,13 @@ void DeleteEntryBenchmark::Populate() {
       test::benchmark::PageDataGenerator::ReferenceStrategy::REFERENCE,
       ledger::Priority::EAGER, [this](ledger::Status status) {
         if (status != ledger::Status::OK) {
-          benchmark::QuitOnError([this] { loop_->Quit(); }, status,
+          benchmark::QuitOnError(QuitLoopClosure(), status,
                                  "PageGenerator::Populate");
           return;
         }
         if (transaction_size_ > 0) {
           page_->StartTransaction([this](ledger::Status status) {
-            if (benchmark::QuitOnError([this] { loop_->Quit(); }, status,
+            if (benchmark::QuitOnError(QuitLoopClosure(), status,
                                        "Page::StartTransaction")) {
               return;
             }
@@ -117,8 +127,7 @@ void DeleteEntryBenchmark::RunSingle(size_t i) {
 
   TRACE_ASYNC_BEGIN("benchmark", "delete_entry", i);
   page_->Delete(std::move(keys_[i]), [this, i](ledger::Status status) {
-    if (benchmark::QuitOnError([this] { loop_->Quit(); }, status,
-                               "Page::Delete")) {
+    if (benchmark::QuitOnError(QuitLoopClosure(), status, "Page::Delete")) {
       return;
     }
     TRACE_ASYNC_END("benchmark", "delete_entry", i);
@@ -135,8 +144,7 @@ void DeleteEntryBenchmark::RunSingle(size_t i) {
 void DeleteEntryBenchmark::CommitAndRunNext(size_t i) {
   TRACE_ASYNC_BEGIN("benchmark", "commit", i / transaction_size_);
   page_->Commit([this, i](ledger::Status status) {
-    if (benchmark::QuitOnError([this] { loop_->Quit(); }, status,
-                               "Page::Commit")) {
+    if (benchmark::QuitOnError(QuitLoopClosure(), status, "Page::Commit")) {
       return;
     }
     TRACE_ASYNC_END("benchmark", "commit", i / transaction_size_);
@@ -147,7 +155,7 @@ void DeleteEntryBenchmark::CommitAndRunNext(size_t i) {
       return;
     }
     page_->StartTransaction([this, i = i + 1](ledger::Status status) {
-      if (benchmark::QuitOnError([this] { loop_->Quit(); }, status,
+      if (benchmark::QuitOnError(QuitLoopClosure(), status,
                                  "Page::StartTransaction")) {
         return;
       }
@@ -160,6 +168,10 @@ void DeleteEntryBenchmark::CommitAndRunNext(size_t i) {
 void DeleteEntryBenchmark::ShutDown() {
   test::KillLedgerProcess(&component_controller_);
   loop_->Quit();
+}
+
+fit::closure DeleteEntryBenchmark::QuitLoopClosure() {
+  return [this] { loop_->Quit(); };
 }
 
 }  // namespace benchmark
