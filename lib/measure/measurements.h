@@ -24,6 +24,9 @@ struct Measurements {
   // Maps measurement ids to numbers indicating the samples at which the
   // recorded results must be split into consecutive sample groups.
   std::unordered_map<uint64_t, std::vector<size_t>> split_samples_at;
+
+  // Maps measurement ids to number of expected samples for these measurements.
+  std::unordered_map<uint64_t, size_t> expected_sample_count;
 };
 
 }  // namespace measure

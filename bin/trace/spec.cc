@@ -55,6 +55,10 @@ const char kRootSchema[] = R"({
               "minimum": 0
             }
           },
+          "expected_sample_count": {
+            "type": "integer",
+            "minimum": 1
+          },
           "required": ["type"]
         }
       }
@@ -71,6 +75,7 @@ const char kCategoriesKey[] = "categories";
 const char kMeasurementsKey[] = "measure";
 const char kTypeKey[] = "type";
 const char kSplitSamplesAtKey[] = "split_samples_at";
+const char kExpectedSampleCountKey[] = "expected_sample_count";
 const char kTestSuiteNameKey[] = "test_suite_name";
 const char kMeasureDurationType[] = "duration";
 const char kMeasureArgumentValueType[] = "argument_value";
@@ -328,6 +333,11 @@ bool DecodeSpec(const std::string& json, Spec* spec) {
         result.measurements.split_samples_at[counter].push_back(
             value.GetUint());
       }
+    }
+
+    if (measurement.HasMember(kExpectedSampleCountKey)) {
+      result.measurements.expected_sample_count[counter] =
+          measurement[kExpectedSampleCountKey].GetUint();
     }
 
     counter++;

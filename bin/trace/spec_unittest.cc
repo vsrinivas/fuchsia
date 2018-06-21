@@ -235,6 +235,31 @@ TEST(Spec, DecodeMeasurementSplitSamplesAt) {
   EXPECT_EQ(expected, measurements.split_samples_at);
 }
 
+TEST(Spec, DecodeMeasurementExpectedSampleCount) {
+  std::string json = R"({
+    "measure": [
+      {
+        "type": "duration",
+        "expected_sample_count": 10,
+        "event_name": "foo",
+        "event_category": "bar"
+      },
+      {
+        "type": "duration",
+        "event_name": "foz",
+        "event_category": "baz"
+      }
+    ]
+  })";
+
+  Spec spec;
+  ASSERT_TRUE(DecodeSpec(json, &spec));
+  auto measurements = std::move(spec.measurements);
+  EXPECT_EQ(2u, measurements.duration.size());
+  auto expected = std::unordered_map<uint64_t, size_t>{{0u, {10u}}};
+  EXPECT_EQ(expected, measurements.expected_sample_count);
+}
+
 }  // namespace
 
 }  // namespace tracing

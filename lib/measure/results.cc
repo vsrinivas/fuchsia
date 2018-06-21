@@ -4,6 +4,8 @@
 
 #include "garnet/lib/measure/results.h"
 
+#include "garnet/public/lib/fxl/logging.h"
+
 #include <sstream>
 
 namespace tracing {
@@ -49,13 +51,20 @@ std::string GetSampleGroupLabel(size_t begin, size_t end) {
 
 template <typename Spec, typename T>
 Result ComputeSingle(Spec spec, const std::vector<T>& recorded_values,
-                     std::vector<size_t> split_samples_at) {
+                     std::vector<size_t> split_samples_at,
+                     size_t expected_sample_count) {
   Result result;
   result.label = GetLabel(spec);
   result.unit = GetUnit(spec);
 
-  // Currently we output all results in milliseconds. Later we can allow
-  // measurements to specify the desired unit.
+  if ((expected_sample_count > 0) &&
+      (expected_sample_count != recorded_values.size())) {
+    FXL_LOG(ERROR) << "Number of recorded samples for an event " << result.label
+                   << " does not match the expected number (expected "
+                   << expected_sample_count << ", got "
+                   << recorded_values.size() << ").";
+    return result;
+  }
 
   if (recorded_values.empty()) {
     return result;
@@ -118,7 +127,9 @@ std::vector<Result> ComputeResults(
     results.push_back(
         ComputeSingle(measure_spec, duration_values,
                       get_or_default(measurements.split_samples_at,
-                                     measure_spec.id, no_split)));
+                                     measure_spec.id, no_split),
+                      get_or_default(measurements.expected_sample_count,
+                                     measure_spec.id, 0uL)));
   }
   for (auto& measure_spec : measurements.argument_value) {
     auto argument_values =
@@ -126,7 +137,9 @@ std::vector<Result> ComputeResults(
     results.push_back(
         ComputeSingle(measure_spec, argument_values,
                       get_or_default(measurements.split_samples_at,
-                                     measure_spec.id, no_split)));
+                                     measure_spec.id, no_split),
+                      get_or_default(measurements.expected_sample_count,
+                                     measure_spec.id, 0uL)));
   }
   for (auto& measure_spec : measurements.time_between) {
     auto time_between_values = ticks_to_ms(
@@ -135,7 +148,9 @@ std::vector<Result> ComputeResults(
     results.push_back(
         ComputeSingle(measure_spec, time_between_values,
                       get_or_default(measurements.split_samples_at,
-                                     measure_spec.id, no_split)));
+                                     measure_spec.id, no_split),
+                      get_or_default(measurements.expected_sample_count,
+                                     measure_spec.id, 0uL)));
   }
 
   return results;

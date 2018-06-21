@@ -146,6 +146,12 @@ For example, if a measurement specifies `"split_samples_at": [1, 50],`, the
 results will be reported in three groups: sample 0, samples 1 - 49, and samples
 50 to N, where N is the last samples.
 
+It is possible to specify an exact number of expected samples. In order to do
+so, an optional parameter `"expected_sample_count"` with a positive value must be
+specified for a given measurement. In that case, if the number of recorded
+samples does not match the one provided, an error will be logged and the
+measurement will produce no results (failing the benchmark).
+
 ### Full example
 
 See [examples/benchmark](../examples/benchmark/) for a full example of a

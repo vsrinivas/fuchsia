@@ -6,6 +6,7 @@
     {
       "type": "duration",
       "split_samples_at": [1, 50],
+      "expected_sample_count": 999,
       "event_name": "example",
       "event_category": "benchmark"
     },

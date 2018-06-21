@@ -94,6 +94,34 @@ TEST(Results, SplitSamples) {
   EXPECT_EQ(expected, results[0]);
 }
 
+TEST(Results, ExpectedSampleCount) {
+  Measurements measurements;
+  measurements.duration = {{42u, {"foo", "bar"}}};
+  measurements.expected_sample_count[42u] = 3;
+
+  std::unordered_map<uint64_t, std::vector<trace_ticks_t>> ticks;
+  ticks[42u] = {1u, 2u, 3u};
+
+  auto results = ComputeResults(measurements, ticks, 1000.0);
+  Result expected = {{{{1.0, 2.0, 3.0}, "samples 0 to 2"}}, "ms", "foo (bar)"};
+  EXPECT_EQ(1u, results.size());
+  EXPECT_EQ(expected, results[0]);
+}
+
+TEST(Results, ExpectedSampleCountMismatch) {
+  Measurements measurements;
+  measurements.duration = {{42u, {"foo", "bar"}}};
+  measurements.expected_sample_count[42u] = 5;
+
+  std::unordered_map<uint64_t, std::vector<trace_ticks_t>> ticks;
+  ticks[42u] = {1u, 2u, 3u};
+
+  auto results = ComputeResults(measurements, ticks, 1000.0);
+  Result expected = {{}, "ms", "foo (bar)"};
+  EXPECT_EQ(1u, results.size());
+  EXPECT_EQ(expected, results[0]);
+}
+
 }  // namespace
 
 }  // namespace measure
