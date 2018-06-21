@@ -102,6 +102,7 @@ source_set("tests") {
   deps = [
     ":sources",
     ":test_support",
+    "//garnet/public/lib/fxl",
     "//garnet/public/lib/media/fidl:media_codec",
     "//third_party/googletest:gtest",
   ]
