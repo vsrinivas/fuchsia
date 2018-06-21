@@ -175,161 +175,176 @@ typedef uint32_t gfp_t;
 #define LINUX_FUNCcVV(name) LINUX_FUNC(name, const void*, void*)
 #define LINUX_FUNCVU(name) LINUX_FUNC(name, void*, uint16_t)
 #define LINUX_FUNCUU(name) LINUX_FUNC(name, uint32_t, uint32_t)
-LINUX_FUNCVV(skb_peek_tail)
-LINUX_FUNCVV(skb_peek)
-LINUX_FUNCVV(eth_broadcast_addr)
-LINUX_FUNCcVV(is_multicast_ether_addr)
-LINUX_FUNCVV(eth_zero_addr)
-LINUX_FUNCIV(kcalloc)
-LINUX_FUNCVV(skb_mac_header)
-LINUX_FUNCVI(pskb_expand_head)
-LINUX_FUNCVV(skb_queue_head)
-LINUX_FUNCVI(skb_queue_empty)
-LINUX_FUNCVV(skb_dequeue)
-LINUX_FUNCVV(__skb_dequeue)
-LINUX_FUNCVI(skb_queue_len)
-LINUX_FUNCVI(__skb_trim)
-LINUX_FUNCVI(brfcmf_dbg)
-LINUX_FUNCII(time_after)
+
+ // These are mostly wrong or unnecessary, but going away very soon
 #define net_ratelimit() (true)
-// Last parameter of this returns an error code. Must be a zx_status_t (0 or negative).
-LINUX_FUNCVI(sdio_readb)
-// Last parameter of this returns an error code. Must be a zx_status_t (0 or negative).
-LINUX_FUNCVI(sdio_writeb)
-LINUX_FUNCVI(sdio_claim_host)
-LINUX_FUNCVI(sdio_release_host)
-LINUX_FUNCVI(no_printk)
-LINUX_FUNCVI(skb_unlink)
-LINUX_FUNCVI(skb_push)
-LINUX_FUNCVU(skb_headroom)
-LINUX_FUNCVI(skb_cow_head)
-LINUX_FUNCVI(skb_queue_tail)
-LINUX_FUNCVI(skb_queue_is_last)
-LINUX_FUNCVI(skb_trim)
-LINUX_FUNCVI(skb_linearize)
-LINUX_FUNCVI(__skb_queue_after)
-LINUX_FUNCVI(__skb_unlink)
-LINUX_FUNCVI(__skb_put)
-LINUX_FUNCVI(__skb_queue_head_init)
-LINUX_FUNCVI(__skb_queue_tail)
-#define skb_queue_walk_safe(a, b, c) for((void)c, b=(a)->next;;)
-#define skb_queue_walk(a, b) for(b=(a)->next;;)
-LINUX_FUNCVV(netdev_priv)
-LINUX_FUNCcVI(is_zero_ether_addr)
+#define max_t(a, b, c) (b)
+static inline const char* dev_name(void* dev) {
+    return device_get_name(dev);
+}
+LINUX_FUNCVV(interface_to_usbdev)
+LINUX_FUNCVV(eth_zero_addr)
 LINUX_FUNCII(trace_brcmf_sdpcm_hdr)
-LINUX_FUNCUU(cpu_to_be16)
-LINUX_FUNCUU(cpu_to_be32)
-LINUX_FUNCUU(be16_to_cpu)
-LINUX_FUNCUU(be32_to_cpu)
-LINUX_FUNCVU(__get_unaligned_be16)
-LINUX_FUNCVU(get_unaligned_be16)
-LINUX_FUNCVU(get_unaligned_be32)
+LINUX_FUNCVV(netdev_priv)
+LINUX_FUNCVI(trace_brcmf_bcdchdr)
+LINUX_FUNCVI(dev_kfree_skb)
+LINUX_FUNCVV(wiphy_priv)
+#define USB_DEVICE(a,b) .idVendor=a, .idProduct=b
+
+LINUX_FUNCVI(ether_addr_equal) // Trivial
+LINUX_FUNCVI(is_valid_ether_addr)
+LINUX_FUNCVI(eth_type_trans)
+LINUX_FUNCII(BITS_TO_LONGS)
+LINUX_FUNCII(gcd)
+LINUX_FUNCX(get_random_int)
+LINUX_FUNCII(round_up)
+LINUX_FUNCVI(nla_put) // Add netlink attribute to skb
+LINUX_FUNCVI(nla_put_u16) // Add u16 attribute to skb
+LINUX_FUNCII(MBM_TO_DBM)
+LINUX_FUNCX(prandom_u32)
 LINUX_FUNCVU(get_unaligned_le16)
+LINUX_FUNCUU(put_unaligned_le32)
 static inline uint32_t get_unaligned_le32(void* addr) {
     uint32_t value;
     memcpy(&value, addr, sizeof(uint32_t));
     return value;
 }
-LINUX_FUNCUU(put_unaligned_le32)
-LINUX_FUNCVI(brcmf_dbg_hex_dump)
-LINUX_FUNCVI(trace_brcmf_hexdump)
-LINUX_FUNCVI(trace_brcmf_debug)
-LINUX_FUNCVI(add_wait_queue)
-LINUX_FUNCII(set_current_state)
-LINUX_FUNCII(send_sig)
-LINUX_FUNCVI(kthread_stop)
-LINUX_FUNCVI(signal_pending)
-LINUX_FUNCII(schedule_timeout)
-LINUX_FUNCVV(remove_wait_queue)
-LINUX_FUNCVI(wake_up_interruptible)
-LINUX_FUNCIV(kmalloc)
-LINUX_FUNCcVV(kmemdup)
-LINUX_FUNCIV(vzalloc)
-LINUX_FUNCIV(kzalloc)
-//LINUX_FUNCIV(valloc)
-LINUX_FUNCVV(vfree)
-LINUX_FUNCVI(pr_warn)
+LINUX_FUNCVV(skb_mac_header)
+LINUX_FUNCVI(usb_kill_urb)
+LINUX_FUNCVI(usb_free_urb)
+LINUX_FUNCIV(usb_alloc_urb)
+LINUX_FUNCVI(usb_fill_bulk_urb)
+LINUX_FUNCVI(usb_fill_control_urb)
+LINUX_FUNCVS(usb_submit_urb)
+LINUX_FUNCVI(usb_rcvctrlpipe)
+LINUX_FUNCVI(usb_sndctrlpipe)
+LINUX_FUNCVI(usb_rcvbulkpipe)
+LINUX_FUNCVI(usb_sndbulkpipe)
+LINUX_FUNCVI(usb_endpoint_xfer_bulk)
+LINUX_FUNCVI(usb_endpoint_dir_in)
+LINUX_FUNCVI(usb_endpoint_num)
+LINUX_FUNCVV(usb_get_intfdata)
+LINUX_FUNCVI(usb_register)
+
+
+LINUX_FUNCVI(pskb_expand_head) // Realloc if necessary
+LINUX_FUNCVV(skb_peek_tail) // skb list
+LINUX_FUNCVV(skb_peek) // skb list
+LINUX_FUNCVV(skb_queue_head) // skb list
+LINUX_FUNCVI(skb_queue_empty) // skb list
+LINUX_FUNCVV(skb_dequeue) // skb list
+LINUX_FUNCVV(__skb_dequeue) // skb list
+LINUX_FUNCVI(skb_queue_len) // skb list
+LINUX_FUNCVI(__skb_trim) // onion
+LINUX_FUNCVI(skb_cloned) // SDIO only; probably "return false"
+LINUX_FUNCVI(skb_unlink) // skb list
+LINUX_FUNCVI(skb_push) // onion
+LINUX_FUNCVU(skb_headroom) // onion
+LINUX_FUNCVI(skb_cow_head) // realloc
+LINUX_FUNCVI(skb_queue_tail) // skb list
+LINUX_FUNCVI(skb_queue_is_last) // skb list
+LINUX_FUNCVI(skb_trim) // onion
+LINUX_FUNCVI(skb_linearize) // NOP?
+LINUX_FUNCVI(__skb_queue_after) // skb list
+LINUX_FUNCVI(__skb_unlink) // skb list
+LINUX_FUNCVI(__skb_put) // onion
+LINUX_FUNCVI(__skb_queue_head_init) // skb list
+LINUX_FUNCVI(__skb_queue_tail) // skb list
+LINUX_FUNCVV(skb_dequeue_tail) // skb list
+LINUX_FUNCVV(skb_queue_prev) // skb list
+LINUX_FUNCVV(skb_header_cloned)
+LINUX_FUNCVI(__skb_insert)
+LINUX_FUNCVI(skb_orphan)
+#define skb_queue_walk_safe(a, b, c) for(({brcmf_err("Calling skb_queue_walk_safe"); \
+                                        (void)c;}), b=(a)->next;true;)
+#define skb_queue_walk(a, b) for(({brcmf_err("Calling skb_queue_walk"); \
+                                    b=(a)->next;});true;)
+
+LINUX_FUNCVI(netdev_mc_count) // In core.c
+LINUX_FUNCVI(waitqueue_active) // In core.c
+LINUX_FUNCX(rtnl_lock) // In core.c and p2p.c
+LINUX_FUNCX(rtnl_unlock) // In core.c and p2p.c
+LINUX_FUNCVV(bcm47xx_nvram_get_contents) // In firmware.c
+LINUX_FUNCVI(bcm47xx_nvram_release_contents) // In firmware.c
+LINUX_FUNCX(in_interrupt) // In core.c and sdio.c
+
+LINUX_FUNCVI(device_set_wakeup_enable) // USB only
+LINUX_FUNCVI(usb_deregister) // USB only
+LINUX_FUNCVI(driver_for_each_device) // In usb.c only
+
+LINUX_FUNCII(send_sig) // SDIO only
+LINUX_FUNCVI(kthread_stop) // SDIO only
+LINUX_FUNCVI(wake_up_interruptible) // SDIO only
+LINUX_FUNCVI(pr_warn) // SDIO only
+LINUX_FUNCII(enable_irq) // SDIO only
+// Last parameter of this returns an error code. Must be a zx_status_t (0 or negative).
+LINUX_FUNCVI(sdio_readb) // SDIO only
+// Last parameter of this returns an error code. Must be a zx_status_t (0 or negative).
+LINUX_FUNCVI(sdio_writeb) // SDIO only
+LINUX_FUNCVI(sdio_claim_host) // SDIO only
+LINUX_FUNCVI(sdio_release_host) // SDIO only
 LINUX_FUNCVS(sdio_enable_func)
 LINUX_FUNCVI(sdio_disable_func)
-LINUX_FUNCX(wmb)
-LINUX_FUNCX(rmb)
-
-LINUX_FUNCII(enable_irq)
-LINUX_FUNCVV(wiphy_priv)
-LINUX_FUNCVS(wiphy_register)
-LINUX_FUNCVI(wiphy_unregister)
-LINUX_FUNCVV(wiphy_new)
-LINUX_FUNCVI(wiphy_free)
-LINUX_FUNCVI(wiphy_ext_feature_set)
-LINUX_FUNCVI(wiphy_read_of_freq_limits)
-LINUX_FUNCVI(wiphy_apply_custom_regulatory)
-LINUX_FUNCVV(wdev_priv)
-LINUX_FUNCVI(set_wiphy_dev)
-LINUX_FUNCVI(cfg80211_unregister_wdev)
-LINUX_FUNCVI(cfg80211_sched_scan_stopped)
-typedef struct wait_queue_head {
-  int foo;
-} wait_queue_head_t;
-LINUX_FUNC(wait_event_interruptible_timeout, struct wait_queue_head, int)
-LINUX_FUNC(wait_event_timeout, struct wait_queue_head, uint32_t)
+LINUX_FUNCVI(sdio_claim_irq)
+LINUX_FUNCVI(sdio_release_irq)
+LINUX_FUNCVI(sdio_readl)  // Last param is zx_status_t
+LINUX_FUNCVI(sdio_writel) // Last param is zx_status_t
+LINUX_FUNCVS(sdio_memcpy_fromio)
+LINUX_FUNCVS(sdio_readsb)
+LINUX_FUNCVS(sdio_set_block_size)
+#define SDIO_DEVICE(a,b) (a)
+LINUX_FUNCVS(sdio_register_driver)
+LINUX_FUNCVV(sdio_unregister_driver)
 LINUX_FUNCVI(sdio_f0_writeb)
-#define max_t(a, b, c) (b)
-LINUX_FUNCX(in_interrupt)
+LINUX_FUNCVI(sdio_memcpy_toio)
 LINUX_FUNCVI(sdio_f0_readb)
-LINUX_FUNCII(allow_signal)
-LINUX_FUNCX(kthread_should_stop)
-LINUX_FUNCII(__ffs)
-LINUX_FUNCVS(kthread_run)
-static inline const char* dev_name(void* dev) {
-    return device_get_name(dev);
-}
-LINUX_FUNCVI(init_waitqueue_head)
-LINUX_FUNCVV(strnchr)
-LINUX_FUNCVI(request_firmware)
+LINUX_FUNCVI(pm_runtime_allow) // SDIO only
+LINUX_FUNCVI(pm_runtime_forbid) // SDIO only
+LINUX_FUNCII(disable_irq_nosync) // SDIO only
+LINUX_FUNCII(request_irq) // SDIO only
+LINUX_FUNCII(enable_irq_wake) // SDIO only
+LINUX_FUNCII(disable_irq_wake) // SDIO only
+LINUX_FUNCVI(mmc_set_data_timeout) // SDIO only
+// NOTE: mmc_wait_for_req sets .error fields of mmc_command and mmc_data structs
+// to ENOMEDIUM sometimes.
+LINUX_FUNCVI(mmc_wait_for_req) // SDIO only
+LINUX_FUNCVI(of_device_is_compatible)
+LINUX_FUNCVI(of_property_read_u32)
+LINUX_FUNCVI(of_find_property)
+LINUX_FUNCVI(irq_of_parse_and_map) // OF only
+LINUX_FUNCII(irqd_get_trigger_type) // OF only
+LINUX_FUNCII(irq_get_irq_data) // OF only
+LINUX_FUNCII(free_irq) // PCI & SDIO only
+LINUX_FUNCVI(sg_set_buf)
+LINUX_FUNCVV(sg_next)
+LINUX_FUNCVI(sg_init_table)
+LINUX_FUNCVI(sg_free_table)
+LINUX_FUNCVI(sg_alloc_table)
+LINUX_FUNCII(allow_signal) // SDIO only
+LINUX_FUNCX(kthread_should_stop) // SDIO only
+LINUX_FUNCVS(kthread_run) // SDIO only
+LINUX_FUNCX(wmb) // SDIO only
+LINUX_FUNCX(rmb) // SDIO only
+
+LINUX_FUNCVI(device_release_driver)
 #define module_param_string(a, b, c, d)
 #define module_exit(a) \
     void* __modexit() { return a; }
 #define module_init(a) \
     void* __modinit() { return a; }
-// platform_driver_probe() is checked for return ENODEV / ZX_ERR_IO_NOT_PRESENT (just for logging)
-LINUX_FUNCVI(platform_driver_probe)
-LINUX_FUNCVI(platform_driver_unregister)
+
+LINUX_FUNCVI(netif_stop_queue)
+LINUX_FUNCVI(cfg80211_classify8021d)
+LINUX_FUNCVI(cfg80211_crit_proto_stopped)
+LINUX_FUNCVV(cfg80211_vendor_cmd_alloc_reply_skb)
+LINUX_FUNCVI(cfg80211_vendor_cmd_reply)
 LINUX_FUNCVI(cfg80211_ready_on_channel)
-LINUX_FUNCVI(cfg80211_sched_scan_results)
 LINUX_FUNCcVS(cfg80211_get_p2p_attr) // TODO(cphoenix): Can this return >0? If so, adjust usage.
-LINUX_FUNCII(ieee80211_frequency_to_channel)
 LINUX_FUNCVI(cfg80211_remain_on_channel_expired)
-LINUX_FUNCII(ieee80211_channel_to_frequency)
-LINUX_FUNCVV(ieee80211_get_channel)
-LINUX_FUNCII(ieee80211_is_mgmt)
-LINUX_FUNCII(ieee80211_is_action)
-LINUX_FUNCII(ieee80211_is_probe_resp)
+LINUX_FUNCVI(cfg80211_unregister_wdev)
+LINUX_FUNCVI(cfg80211_sched_scan_stopped)
 LINUX_FUNCVI(cfg80211_rx_mgmt)
 LINUX_FUNCVI(cfg80211_mgmt_tx_status)
-LINUX_FUNCX(prandom_u32)
-LINUX_FUNCVI(ether_addr_equal)
-LINUX_FUNCX(rtnl_lock)
-LINUX_FUNCX(rtnl_unlock)
-#define pci_write_config_dword(pdev, offset, value) \
-    pci_config_write32(&pdev->pci_proto, offset, value)
-#define pci_read_config_dword(pdev, offset, value) \
-    pci_config_read32(&pdev->pci_proto, offset, value)
-LINUX_FUNCcVI(pci_enable_msi)
-LINUX_FUNCcVI(pci_disable_msi)
-LINUX_FUNCcVI(pci_resource_start)
-LINUX_FUNCcVI(pci_resource_len)
-LINUX_FUNCcVS(pci_register_driver)
-LINUX_FUNCcVI(pci_unregister_driver)
-
-LINUX_FUNCVI(wake_up)
-LINUX_FUNCII(request_threaded_irq)
-LINUX_FUNCII(free_irq)
-LINUX_FUNCVV(dma_alloc_coherent)
-LINUX_FUNCVV(dma_free_coherent)
-LINUX_FUNCVI(memcpy_fromio)
-LINUX_FUNCVS(memcpy_toio)
-LINUX_FUNCVI(sdio_memcpy_toio)
-LINUX_FUNCVV(dma_zalloc_coherent)
 LINUX_FUNCVI(cfg80211_check_combinations)
 LINUX_FUNCVI(cfg80211_scan_done)
 LINUX_FUNCVI(cfg80211_disconnected)
@@ -341,20 +356,17 @@ LINUX_FUNCVV(cfg80211_new_sta)
 LINUX_FUNCVV(cfg80211_del_sta)
 LINUX_FUNCVV(cfg80211_ibss_joined)
 LINUX_FUNCVV(cfg80211_michael_mic_failure)
-LINUX_FUNCII(MBM_TO_DBM)
-LINUX_FUNCX(cond_resched)
-LINUX_FUNCII(max)
-LINUX_FUNCVI(netdev_mc_count)
-LINUX_FUNCVI(netif_stop_queue)
-LINUX_FUNCVI(dev_kfree_skb)
-LINUX_FUNCVV(skb_header_cloned)
-LINUX_FUNCUU(htons)
-LINUX_FUNCUU(ntohs)
-LINUX_FUNCVI(cfg80211_classify8021d)
+LINUX_FUNCII(ieee80211_channel_to_frequency)
+LINUX_FUNCVV(ieee80211_get_channel)
+LINUX_FUNCII(ieee80211_is_mgmt)
+LINUX_FUNCII(ieee80211_is_action)
+LINUX_FUNCII(ieee80211_is_probe_resp)
+LINUX_FUNCVS(wiphy_register)
+LINUX_FUNCVI(wiphy_free)
+LINUX_FUNCVV(wdev_priv)
+LINUX_FUNCVI(set_wiphy_dev)
 LINUX_FUNCVI(netif_rx)
 LINUX_FUNCVI(netif_rx_ni)
-LINUX_FUNCVI(eth_type_trans)
-LINUX_FUNCVI(waitqueue_active)
 LINUX_FUNCVI(netif_carrier_off)
 LINUX_FUNCVI(dev_net_set)
 LINUX_FUNCVI(register_netdevice)
@@ -364,81 +376,35 @@ LINUX_FUNCVI(netif_carrier_ok)
 LINUX_FUNCVI(netif_carrier_on)
 LINUX_FUNCVI(seq_printf)
 LINUX_FUNCVS(seq_write)
-LINUX_FUNCVI(netif_queue_stopped)
-LINUX_FUNCVI(trace_brcmf_bcdchdr)
-LINUX_FUNCVI(of_device_is_compatible)
-LINUX_FUNCVI(of_property_read_u32)
-LINUX_FUNCVI(of_find_property)
-LINUX_FUNCVI(irq_of_parse_and_map)
-LINUX_FUNCII(irqd_get_trigger_type)
-LINUX_FUNCII(irq_get_irq_data)
-LINUX_FUNCVV(bcm47xx_nvram_get_contents)
-LINUX_FUNCVI(bcm47xx_nvram_release_contents)
-LINUX_FUNCVI(dma_map_single)
-LINUX_FUNCVI(dma_mapping_error)
-LINUX_FUNCVI(dma_unmap_single)
-LINUX_FUNCVI(skb_orphan)
-LINUX_FUNCVI(__skb_insert)
-LINUX_FUNCVI(strnstr)
-LINUX_FUNCX(get_random_int)
-LINUX_FUNCII(gcd)
-LINUX_FUNCVI(usb_fill_control_urb)
-LINUX_FUNCVS(usb_submit_urb)
-LINUX_FUNCVI(usb_sndctrlpipe)
-LINUX_FUNCVI(usb_rcvctrlpipe)
-LINUX_FUNCVI(sdio_claim_irq)
-LINUX_FUNCVI(is_valid_ether_addr)
-LINUX_FUNCII(disable_irq_nosync)
-LINUX_FUNCII(request_irq)
-LINUX_FUNCII(enable_irq_wake)
-LINUX_FUNCII(disable_irq_wake)
-LINUX_FUNCVI(sdio_release_irq)
-LINUX_FUNCVI(sdio_readl)  // Last param is zx_status_t
-LINUX_FUNCVI(sdio_writel) // Last param is zx_status_t
-LINUX_FUNCVS(sdio_memcpy_fromio)
-LINUX_FUNCVS(sdio_readsb)
-LINUX_FUNCVI(dev_coredumpv)
-LINUX_FUNCVI(sg_set_buf)
-LINUX_FUNCVV(sg_next)
-LINUX_FUNCVI(cfg80211_crit_proto_stopped)
-LINUX_FUNCVI(scnprintf)
 LINUX_FUNCVI(seq_puts)
-LINUX_FUNCII(round_up)
-LINUX_FUNCVV(skb_queue_prev)
-LINUX_FUNCII(BITS_TO_LONGS)
-LINUX_FUNCVV(cfg80211_vendor_cmd_alloc_reply_skb)
-LINUX_FUNCVI(cfg80211_vendor_cmd_reply)
-LINUX_FUNCVI(usb_fill_bulk_urb)
-LINUX_FUNCIV(usb_alloc_urb)
-LINUX_FUNCVI(usb_free_urb)
-LINUX_FUNCVI(nla_put)
-LINUX_FUNCVI(nla_put_u16)
-LINUX_FUNCVI(mmc_set_data_timeout)
-// NOTE: mmc_wait_for_req sets .error fields of mmc_command and mmc_data structs to ENOMEDIUM sometimes.
-LINUX_FUNCVI(mmc_wait_for_req)
-LINUX_FUNCVI(sg_init_table)
-LINUX_FUNCVI(device_set_wakeup_enable)
-LINUX_FUNCVI(usb_kill_urb)
-LINUX_FUNCVI(sg_free_table)
-LINUX_FUNCVV(interface_to_usbdev)
-LINUX_FUNCVI(sg_alloc_table)
-LINUX_FUNCVI(pm_runtime_allow)
-LINUX_FUNCVI(pm_runtime_forbid)
-LINUX_FUNCVS(sdio_set_block_size)
-#define SDIO_DEVICE(a,b) (a)
-#define USB_DEVICE(a,b) .idVendor=a, .idProduct=b
-LINUX_FUNCVS(sdio_register_driver)
-LINUX_FUNCVV(sdio_unregister_driver)
-LINUX_FUNCVI(usb_rcvbulkpipe)
-LINUX_FUNCVI(usb_sndbulkpipe)
-LINUX_FUNCVI(driver_for_each_device)
-LINUX_FUNCVI(usb_deregister)
-LINUX_FUNCVI(usb_register)
-LINUX_FUNCVV(skb_dequeue_tail)
-LINUX_FUNCVI(print_hex_dump_bytes)
+LINUX_FUNCVI(dev_coredumpv)
+// I can't find this defined (or even declared) anywhere in the Linux codebase.
+//LINUX_FUNCVI(trace_brcmf_bcdchdr)
 
-#define netdev_for_each_mc_addr(a, b) for (a = (void*)0;;)
-#define for_each_set_bit(a, b, c) for (a = 0;;)
+#define pci_write_config_dword(pdev, offset, value) \
+    pci_config_write32(&pdev->pci_proto, offset, value)
+#define pci_read_config_dword(pdev, offset, value) \
+    pci_config_read32(&pdev->pci_proto, offset, value)
+LINUX_FUNCcVI(pci_enable_msi)
+LINUX_FUNCcVI(pci_disable_msi)
+LINUX_FUNCcVI(pci_resource_start)
+LINUX_FUNCcVI(pci_resource_len)
+LINUX_FUNCcVS(pci_register_driver)
+LINUX_FUNCcVI(pci_unregister_driver)
+//LINUX_FUNCII(free_irq) // PCI & SDIO only
+LINUX_FUNCII(request_threaded_irq) // PCI only
+LINUX_FUNCVV(dma_alloc_coherent) // PCI only
+LINUX_FUNCVV(dma_free_coherent) // PCI only
+LINUX_FUNCVI(memcpy_fromio) // PCI only
+LINUX_FUNCVS(memcpy_toio) // PCI only
+LINUX_FUNCVV(dma_zalloc_coherent) // PCI only
+LINUX_FUNCVI(dma_map_single) // PCI only
+LINUX_FUNCVI(dma_mapping_error) // PCI only
+LINUX_FUNCVI(dma_unmap_single) // PCI only
+
+#define netdev_for_each_mc_addr(a, b) for (({brcmf_err("Calling netdev_for_each_mc_addr"); \
+                                             a = (void*)0;});1;)
+#define for_each_set_bit(a, b, c) for (({brcmf_err("Calling for_each_set_bit"); a = 0;});1;)
 
 typedef uint64_t phys_addr_t;
 typedef uint64_t pm_message_t;
@@ -447,7 +413,6 @@ typedef void* usb_complete_t;
 #define CONFIG_OF                     // Turns on functions that of.c needs
 #define CONFIG_BRCMFMAC_PROTO_MSGBUF  // turns on msgbuf.h
 #define CONFIG_BRCMFMAC_PROTO_BCDC    // Needed to see func defs in bcdc.h
-#define DECLARE_WAITQUEUE(name, b) struct linuxwait name
 #define READ_ONCE(a) (a)
 #define BUG_ON(a)
 
