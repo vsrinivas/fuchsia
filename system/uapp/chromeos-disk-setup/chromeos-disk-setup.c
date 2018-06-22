@@ -53,8 +53,7 @@ int main(int argc, char** argv) {
         return -1;
     }
 
-    zx_status_t zc = config_cros_for_fuchsia(dev, &blk_info, SZ_ZX_PART,
-                                             SZ_ROOT_PART, true);
+    zx_status_t zc = config_cros_for_fuchsia(dev, &blk_info, SZ_ZX_PART);
     print_table(dev);
 
     if (zc == ZX_OK) {

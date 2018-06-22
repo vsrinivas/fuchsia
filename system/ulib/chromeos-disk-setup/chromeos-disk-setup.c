@@ -16,258 +16,211 @@
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
 
-bool is_cros(const gpt_device_t* gpt) {
-    uint8_t kern_guid[GPT_GUID_LEN] = GUID_CROS_KERNEL_VALUE;
-    uint8_t root_guid[GPT_GUID_LEN] = GUID_CROS_ROOT_VALUE;
-    uint8_t state_guid[GPT_GUID_LEN] = GUID_CROS_STATE_VALUE;
-    gpt_partition_t* const* parts = gpt->partitions;
+static const uint8_t fvm_guid[GPT_GUID_LEN] = GUID_FVM_VALUE;
+static const uint8_t kern_guid[GPT_GUID_LEN] = GUID_CROS_KERNEL_VALUE;
+static const uint8_t root_guid[GPT_GUID_LEN] = GUID_CROS_ROOT_VALUE;
+static const uint8_t state_guid[GPT_GUID_LEN] = GUID_CROS_STATE_VALUE;
+static const uint8_t syscfg_guid[GPT_GUID_LEN] = GUID_SYS_CONFIG_VALUE;
 
+// this value is shared with device-partitioner.cpp
+static const uint64_t MIN_FVM_SIZE = 8LU * (1 << 30);
+
+static const uint64_t SYSCFG_SIZE = 1 << 20;
+
+// part_name_eql compares the name field in the given partition to the cstring
+// name, returning true if the partition name is equal to name and zero-padded.
+static bool part_name_eql(const gpt_partition_t *part, const char *name) {
+    if (part == NULL) {
+        return false;
+    }
+    char buf[GPT_NAME_LEN] = {0};
+    utf16_to_cstring(&buf[0], (const uint16_t*)part->name, GPT_NAME_LEN/2);
+    return !strncmp(buf, name, GPT_NAME_LEN);
+}
+
+// part_name_guid_eql returns true if the given partition has the given name and
+// the given type GUID, false otherwise.
+static bool part_name_guid_eql(const gpt_partition_t *part, const char *name, const uint8_t guid[GPT_GUID_LEN] ) {
+    if (part == NULL) {
+        return false;
+    }
+    if (!memcmp(part->type, &guid[0], GPT_GUID_LEN) && part_name_eql(part, name)) {
+        return true;
+    }
+    return false;
+}
+
+// part_size_gte returns true if the partition size is greater than or equal to
+// the size given, false otherwise.
+static bool part_size_gte(gpt_partition_t *part, uint64_t size, uint64_t block_size) {
+    if (part == NULL) {
+        return false;
+    }
+    uint64_t size_in_blocks = part->last - part->first + 1;
+    return size_in_blocks * block_size >= size;
+}
+
+// find_by_type finds the first partition matching the given type guid.
+static gpt_partition_t* find_by_type_and_name(const gpt_device_t* gpt, const uint8_t type_guid[GPT_GUID_LEN], const char *name) {
+    for(size_t i = 0; i < PARTITIONS_COUNT; ++i) {
+        gpt_partition_t* p = gpt->partitions[i];
+        if (p == NULL) {
+            continue;
+        }
+        if (part_name_guid_eql(p, name, type_guid)) {
+            return p;
+        }
+    }
+    return NULL;
+}
+
+bool is_cros(const gpt_device_t* gpt) {
     uint8_t roots = 0;
     uint8_t kerns = 0;
     bool state = false;
-    char buf[GPT_NAME_LEN / 2 + 1];
 
-    for (int i = 0; parts[i] != NULL; ++i) {
-        const gpt_partition_t* p = parts[i];
+    for (int i = 0; i < PARTITIONS_COUNT; ++i) {
+        gpt_partition_t* p = gpt->partitions[i];
+        if (p == NULL) {
+            continue;
+        }
 
-        memset(buf, 0, GPT_NAME_LEN / 2 + 1);
-        utf16_to_cstring(buf, (uint16_t*)p->name, GPT_NAME_LEN / 2);
         if (!memcmp(p->type, root_guid, GPT_GUID_LEN) &&
-            (!memcmp("ROOT-A", buf, 7) || !memcmp("ROOT-B", buf, 7))) {
+            (part_name_eql(p, "ROOT-A") || part_name_eql(p, "ROOT-B"))) {
             roots++;
         } else if (!memcmp(p->type, kern_guid, GPT_GUID_LEN) &&
-                   (!memcmp("KERN-A", buf, 7) || !memcmp("KERN-B", buf, 7))) {
+                   (part_name_eql(p, "KERN-A") || part_name_eql(p, "KERN-B"))) {
             kerns++;
         } else if (!memcmp(p->type, state_guid, GPT_GUID_LEN) &&
-                   !memcmp("STATE", buf, 6)) {
+                   part_name_eql(p, "STATE")) {
             state = true;
         }
     }
 
-    return state && roots == 2 && kerns == 2;
+    return state && roots >= 2 && kerns >= 2;
 }
 
-// Attempt to expand the target partition without moving it.
-//  parts     - the table of all disk partitions, sorted by start block index
-//  part_idx  - partition that we want to expand
-//  sz        - the size in bytes the partition wants to be
-//  num_parts - total number of partitions of the disk
-//  disk_info - information about the disk hosting the partitions
-//
-// Returns a boolean indicating whether the resize was successful or not. If it
-// was successful, the partition record is updated, otherwise it is untouched.
-static bool expand_in_place(gpt_partition_t** parts, const int16_t part_idx,
-                            const uint64_t sz, const uint16_t num_parts,
-                            const block_info_t* disk_info) {
-    if (part_idx < 0) {
-        return false;
-    }
+// Find a contiguous run of free space on the disk at least blocks_req in length.
+// If space is found, true is returned and out_hole_start and out_hole_end
+// contain the first free and last free blocks in a contiguous run.
+static bool find_space(gpt_device_t* gpt,
+                           const uint64_t blocks_req,
+                           uint64_t *out_hole_start,
+                           uint64_t *out_hole_end) {
 
-    gpt_partition_t* targ = parts[part_idx];
-    uint64_t new_first = targ->first;
-    uint64_t new_last = targ->last;
-    uint64_t blocks_needed = howmany(sz, disk_info->block_size);
-    blocks_needed -= (targ->last - targ->first + 1);
-    uint64_t prev_part_end;
-    if (part_idx > 0) {
-        prev_part_end = parts[part_idx - 1]->last;
-    } else {
-        prev_part_end = gpt_device_get_size_blocks(disk_info->block_size) - 1;
-    }
+    gpt_partition_t* parts[PARTITIONS_COUNT] = {0};
+    memcpy(&parts, &gpt->partitions, sizeof(gpt_partition_t*) * PARTITIONS_COUNT);
 
-    uint64_t gap = targ->first - prev_part_end - 1;
-    if (gap >= blocks_needed) {
-        new_first -= blocks_needed;
-        blocks_needed = 0;
-    } else {
-        new_first -= gap;
-        blocks_needed -= gap;
-    }
+    // XXX(raggi): once the lib supports more and less than PARTITIONS_COUNT,
+    // this will need to be fixed (as will many loops).
+    gpt_sort_partitions(parts, PARTITIONS_COUNT);
 
-    uint64_t next_part_start;
-    // see if we can grow the partition at the end
-    if (num_parts > part_idx + 1) {
-        next_part_start = parts[part_idx + 1]->first;
-    } else {
-        next_part_start = disk_info->block_count -
-                          gpt_device_get_size_blocks(disk_info->block_size);
-    }
+    uint64_t first_usable, last_usable;
+    gpt_device_range(gpt, &first_usable, &last_usable);
 
-    gap = next_part_start - parts[part_idx]->last - 1;
-    if (gap >= blocks_needed) {
-        new_last = targ->last + blocks_needed;
-        blocks_needed = 0;
-    } else {
-        new_last = targ->last + gap;
-        blocks_needed -= gap;
-    }
-
-    // see if the new location of beginning and end of partition
-    // are enough, if so, modify our in-memory GPT, otherwise we
-    // can't expand in-place
-    if ((new_last - new_first + 1) * disk_info->block_size >= sz) {
-        targ->first = new_first;
-        targ->last = new_last;
-        return true;
-    } else {
-        return false;
-    }
-}
-
-// Find parition indexes based on GUID. If the partition is not found, the
-// corresponding out-variable will be set to -1.
-static void find_partitions(gpt_partition_t* const* parts, int16_t* kern_out,
-                            int16_t* root_out, int16_t* fvm_out,
-                            int16_t* state_out, const uint16_t part_count) {
-    uint8_t fvm_guid[GPT_GUID_LEN] = GUID_FVM_VALUE;
-    uint8_t kern_guid[GPT_GUID_LEN] = GUID_CROS_KERNEL_VALUE;
-    uint8_t root_guid[GPT_GUID_LEN] = GUID_CROS_ROOT_VALUE;
-    uint8_t state_guid[GPT_GUID_LEN] = GUID_CROS_STATE_VALUE;
-
-    *root_out = -1;
-    *kern_out = -1;
-    *fvm_out = -1;
-    *state_out = -1;
-    char buf[GPT_NAME_LEN / 2 + 1];
-
-    for (int i = 0; i < part_count && parts[i] != NULL &&
-                    (*root_out < 0 || *kern_out < 0 || *fvm_out < 0 || *state_out < 0);
-         ++i) {
-        const gpt_partition_t* part = parts[i];
-
-        memset(buf, 0, GPT_NAME_LEN / 2 + 1);
-        utf16_to_cstring(buf, (uint16_t*)part->name, GPT_NAME_LEN / 2);
-        if (!memcmp(part->type, root_guid, GPT_GUID_LEN) &&
-            !memcmp("ROOT-C", buf, 7)) {
-            *root_out = i;
-        } else if (!memcmp(part->type, kern_guid, GPT_GUID_LEN) &&
-                   !memcmp("KERN-C", buf, 7)) {
-            *kern_out = i;
-        } else if (!memcmp(part->type, fvm_guid, GPT_GUID_LEN)) {
-            *fvm_out = i;
-        } else if (!memcmp(part->type, state_guid, GPT_GUID_LEN) &&
-                   !memcmp("STATE", buf, 6)) {
-            *state_out = i;
+    uint64_t prev_end = first_usable - 1;
+    for (size_t i = 0; i < PARTITIONS_COUNT; i++) {
+        if (parts[i] == NULL) {
+            continue;
         }
-    }
-}
 
-// Find requested amount of space. Find the lowest block offset that
-// has that amount of available space. If space is not found, 0 is returned.
-// 0 is not a valid value since the GPT itself lives in the early part of
-static uint64_t find_space(gpt_partition_t* const* parts,
-                           const uint16_t part_count, const uint64_t blocks_req,
-                           const block_info_t* d_info) {
-    uint64_t prev_end = gpt_device_get_size_blocks(d_info->block_size) - 1;
-    for (uint16_t i = 0; i < part_count; i++) {
-        uint64_t gap = parts[i]->first - prev_end - 1;
+        // TODO(raggi): find out how the tests end up making this state
+        if (parts[i]->first >= last_usable || parts[i]->last >= last_usable) {
+            break;
+        }
+
+        uint64_t gap = parts[i]->first - (prev_end + 1);
         if (gap >= blocks_req) {
-            return prev_end + 1;
+            *out_hole_start = prev_end + 1;
+            *out_hole_end = parts[i]->first - 1;
+
+            return true;
         }
         prev_end = parts[i]->last;
     }
 
-    uint64_t last_usable =
-        d_info->block_count - gpt_device_get_size_blocks(d_info->block_size) - 1;
-    if (prev_end <= last_usable && last_usable - prev_end >= blocks_req) {
-        return prev_end + 1;
-    }
+    if (prev_end < last_usable && last_usable - (prev_end + 1) >= blocks_req) {
+        *out_hole_start = prev_end + 1;
+        *out_hole_end = last_usable;
 
-    return 0;
-}
-
-bool is_ready_to_pave(const gpt_device_t* gptd, const block_info_t* blk_info,
-                      const uint64_t sz_kern, const uint64_t sz_root,
-                      const bool fvm_req) {
-
-    bool root = false;
-    bool kern = false;
-    bool fvm = !fvm_req;
-    uint64_t max_blks_state = howmany(MIN_SZ_STATE, blk_info->block_size);
-
-    int16_t k_idx = -1;
-    int16_t r_idx = -1;
-    int16_t f_idx = -1;
-    int16_t s_idx = -1;
-    uint16_t count = 0;
-    for (; gptd->partitions[count] != NULL; count++)
-        ;
-
-    find_partitions(gptd->partitions, &k_idx, &r_idx, &f_idx, &s_idx, count);
-
-    gpt_partition_t* kern_part = NULL;
-    if (k_idx > -1) {
-        kern_part = gptd->partitions[k_idx];
-    }
-    gpt_partition_t* root_part = NULL;
-    if (r_idx > -1) {
-        root_part = gptd->partitions[r_idx];
-    }
-    gpt_partition_t* fvm_part = NULL;
-    if (f_idx > -1) {
-        fvm_part = gptd->partitions[f_idx];
-    }
-
-    if (kern_part != NULL &&
-        (kern_part->last - kern_part->first + 1) * blk_info->block_size >= sz_kern) {
-        kern = true;
-    }
-
-    if (root_part != NULL &&
-        (root_part->last - root_part->first + 1) * blk_info->block_size >= sz_root) {
-        root = true;
-    }
-
-    if (fvm_part != NULL) {
-        fvm = true;
-    }
-
-    if (fvm && root && kern) {
         return true;
     }
 
-    if (!root || !kern) {
-        return false;
-    }
+    return false;
+}
 
-    char buf[GPT_NAME_LEN / 2 + 1];
-    uint8_t state_guid[GPT_GUID_LEN] = GUID_CROS_STATE_VALUE;
-    // the fvm partition does not exist, make sure the state partition is
-    // as no larger than the allowed size to allow as much space as possible
-    // for fvm.
-    for (uint16_t i = 0; !fvm && gptd->partitions[i] != NULL; i++) {
-        gpt_partition_t* part = gptd->partitions[i];
-        memset(buf, 0, GPT_NAME_LEN / 2 + 1);
-        utf16_to_cstring(buf, (uint16_t*)part->name, GPT_NAME_LEN / 2);
-        if (!memcmp(part->type, state_guid, GPT_GUID_LEN) &&
-            !memcmp("STATE", buf, 6) &&
-            part->last - part->first + 1 <= max_blks_state) {
-            fvm = true;
+// is_ready_to_pave returns true if there exist partitions for:
+// * ZIRCON-A is a GUID_CROS_KERNEL_VALUE at least sz_kern in size.
+// * ZIRCON-B is a GUID_CROS_KERNEL_VALUE at least sz_kern in size.
+// * ZIRCON-R is a GUID_CROS_KERNEL_VALUE at least sz_kern in size.
+// * FVM      is a GUID_FVM_VALUE         at least sz_kern * 8 in size
+bool is_ready_to_pave(const gpt_device_t* gpt, const block_info_t* blk_info,
+                      const uint64_t sz_kern) {
+
+    bool found_zircon_a = false, found_zircon_b = false, found_zircon_r = false;
+    bool found_fvm = false, found_syscfg = false;
+
+    for (size_t i = 0; i < PARTITIONS_COUNT; i++) {
+        gpt_partition_t *part = gpt->partitions[i];
+        if (part == NULL) {
+            continue;
+        }
+        if (!memcmp(part->type, fvm_guid, GPT_GUID_LEN)) {
+            if (!part_name_eql(part, "FVM")) {
+                continue;
+            }
+            if (!part_size_gte(part, MIN_FVM_SIZE, blk_info->block_size)) {
+                continue;
+            }
+            found_fvm = true;
+            continue;
+        }
+        if (!memcmp(part->type, kern_guid, GPT_GUID_LEN)) {
+            if (!part_size_gte(part, sz_kern, blk_info->block_size)) {
+                continue;
+            }
+            if (part_name_eql(part, "ZIRCON-A")) {
+                found_zircon_a = true;
+            }
+            if (part_name_eql(part, "ZIRCON-B")) {
+                found_zircon_b = true;
+            }
+            if (part_name_eql(part, "ZIRCON-R")) {
+                found_zircon_r = true;
+            }
+        }
+        if (!memcmp(part->type, syscfg_guid, GPT_GUID_LEN)) {
+            if (!part_size_gte(part, SYSCFG_SIZE, blk_info->block_size)) {
+                continue;
+            }
+            found_syscfg = true;
         }
     }
+    if (!found_syscfg) {
+        printf("cros-disk-setup: missing syscfg (or insufficient size)\n");
+    }
+    if (!found_fvm) {
+        printf("cros-disk-setup: missing FVM (or insufficient size)\n");
+    }
+    if (!found_zircon_a || !found_zircon_b || !found_zircon_r) {
+        printf("cros-disk-setup: missing one or more kernel partitions\n");
+    }
 
-    return root && kern && fvm;
+    return found_zircon_a && found_zircon_b && found_zircon_r && found_fvm && found_syscfg;
 }
 
 // create a GPT entry with the supplied attributes and assign it a random
 // GUID. May return an error if the GUID can not be generated for the partition
 // or operations on the gpt_device_t fail.
-static zx_status_t create_gpt_entry(gpt_device_t* dev, const uint64_t first,
-                                    const uint64_t sz, const uint32_t blk_sz,
-                                    uint8_t* type, const char* name) {
-    uint64_t blks = howmany(sz, blk_sz);
+static zx_status_t create_gpt_entry(gpt_device_t* gpt, const uint64_t first,
+                                    const uint64_t blks,
+                                    const uint8_t type[GPT_GUID_LEN], const char* name) {
     uint8_t guid[GPT_GUID_LEN];
     zx_cprng_draw(guid, GPT_GUID_LEN);
 
-    // The gpt_device_t may not be valid for use with gpt_partition_add if
-    // it is a newly initialized GPT which has never had gpt_device_finalize
-    // or gpt_device_sync on, call gpt_device_finalize to be safe.
-    // Remove when ZX-1396 is fixed.
-    if (gpt_device_finalize(dev)) {
-      return ZX_ERR_INTERNAL;
-    }
-
-    if (gpt_partition_add(dev, name, type, guid, first, blks, 0)) {
+    uint8_t tguid[GPT_GUID_LEN];
+    memcpy(&tguid, type, GPT_GUID_LEN);
+    if (gpt_partition_add(gpt, name, tguid, guid, first, blks, 0)) {
         return ZX_ERR_INTERNAL;
     }
 
@@ -276,174 +229,146 @@ static zx_status_t create_gpt_entry(gpt_device_t* dev, const uint64_t first,
 
 zx_status_t config_cros_for_fuchsia(gpt_device_t* gpt,
                                     const block_info_t* blk_info,
-                                    const uint64_t sz_kern,
-                                    const uint64_t sz_root,
-                                    const bool fvm_req) {
-    uint8_t kern_guid[GPT_GUID_LEN] = GUID_CROS_KERNEL_VALUE;
-    uint8_t root_guid[GPT_GUID_LEN] = GUID_CROS_ROOT_VALUE;
+                                    const uint64_t sz_kern) {
 
-    if (is_ready_to_pave(gpt, blk_info, sz_kern, sz_root, fvm_req)) {
+    // TODO(raggi): this ends up getting called twice, as the canonical user,
+    // the paver, calls is_ready_to_pave itself in order to determine first
+    // whether it will need to sync the gpt.
+    if (is_ready_to_pave(gpt, blk_info, sz_kern)) {
         return ZX_OK;
     }
 
-    uint64_t sz_state = MIN_SZ_STATE;
-
-    // mark everything as unknown
-    bool root = false;
-    bool kern = false;
-    bool fvm = !fvm_req;
-
-    uint16_t num_parts = 0;
-    for (; gpt->partitions[num_parts] != NULL; ++num_parts)
-        ;
-    gpt_partition_t** parts = malloc(num_parts * sizeof(gpt_partition_t*));
-    if (parts == NULL) {
-        return ZX_ERR_NO_MEMORY;
+    // TODO(ZX-1396): The gpt_device_t may not be valid for modification if it
+    // is a newly initialized GPT which has never had gpt_device_finalize or
+    // gpt_device_sync called.
+    if (gpt_device_finalize(gpt) != 0) {
+      return ZX_ERR_INTERNAL;
     }
 
-    gpt_sort_partitions(gpt->partitions, parts, num_parts);
+    // Remove the pre-existing Fuchsia partitions as when we were not already
+    // pave-able and we're paving, assume that we want to tend toward a golden
+    // layout. This also avoids any additional complexity that could arise from
+    // intermediate gaps between these partitions.
 
-    int16_t kern_idx = -1;
-    int16_t root_idx = -1;
-    int16_t fvm_idx = -1;
-    int16_t state_idx = -1;
-    find_partitions(parts, &kern_idx, &root_idx, &fvm_idx, &state_idx, num_parts);
-
-    // see which partitions already have an entry
-    gpt_partition_t* kern_part = NULL;
-    if (kern_idx > -1) {
-        kern_part = parts[kern_idx];
+    gpt_partition_t *p;
+    if ((p = find_by_type_and_name(gpt, kern_guid, "ZIRCON-A")) != NULL) {
+        gpt_partition_remove(gpt, p->guid);
     }
-    gpt_partition_t* root_part = NULL;
-    if (root_idx > -1) {
-        root_part = parts[root_idx];
+    if ((p = find_by_type_and_name(gpt, kern_guid, "ZIRCON-B")) != NULL) {
+        gpt_partition_remove(gpt, p->guid);
     }
-    gpt_partition_t* fvm_part = NULL;
-    if (fvm_idx > -1) {
-        fvm_part = parts[fvm_idx];
+    if ((p = find_by_type_and_name(gpt, kern_guid, "ZIRCON-R")) != NULL) {
+        gpt_partition_remove(gpt, p->guid);
     }
-
-    // check which existing partitions are large enough as they are
-    if (kern_part != NULL &&
-        (kern_part->last - kern_part->first + 1) * blk_info->block_size >= sz_kern) {
-        kern = true;
+    if ((p = find_by_type_and_name(gpt, fvm_guid, "FVM")) != NULL) {
+        gpt_partition_remove(gpt, p->guid);
+    }
+    if ((p = find_by_type_and_name(gpt, syscfg_guid, "SYSCFG")) != NULL) {
+        gpt_partition_remove(gpt, p->guid);
     }
 
-    if (root_part != NULL &&
-        (root_part->last - root_part->first + 1) * blk_info->block_size >= sz_root) {
-        root = true;
+    // Space is required for 3 kernel partitions and one FVM partition that is
+    // at least 8 kernels in size.
+    uint64_t needed_space = sz_kern * 3 + MIN_FVM_SIZE + SYSCFG_SIZE;
+
+    // see if a contiguous block of space is available for space needed
+    uint64_t blocks_needed = howmany(needed_space, blk_info->block_size);
+
+    uint64_t hole_start, hole_end;
+    bool found_hole = find_space(gpt, blocks_needed, &hole_start, &hole_end);
+
+    // TODO(raggi): find a good heuristic to detect "old-paver" behavior, and if
+    // we can detect that, remove the -C's, otherwise leave them alone.
+
+    // First try removing the kernc and rootc partitions, as they're often a good fit for us:
+    if (!found_hole) {
+        // Some partitions were not large enough. If we found a KERN-C or a ROOT-C, delete them:
+        if ((p = find_by_type_and_name(gpt, kern_guid, "KERN-C")) != NULL) {
+            gpt_partition_remove(gpt, p->guid);
+        }
+        if ((p = find_by_type_and_name(gpt, root_guid, "ROOT-C")) != NULL) {
+            gpt_partition_remove(gpt, p->guid);
+        }
+
+        found_hole = find_space(gpt, blocks_needed, &hole_start, &hole_end);
     }
 
-    if (fvm_part != NULL) {
-        fvm = true;
-    }
+    // Still not enough contiguous space is available on disk, try shrinking STATE
+    if (!found_hole && (p = find_by_type_and_name(gpt, state_guid, "STATE")) != NULL)  {
+        uint64_t min_state_sz_blks = howmany(MIN_SZ_STATE, blk_info->block_size);
 
-    if (fvm && root && kern) {
-        free(parts);
-        return ZX_OK;
-    }
+        // TODO (TO-607) consider if there is free space on either side of STATE
 
-    // some partitions we're unavailable or not large enough
-    uint64_t needed_space = 0;
+        // The STATE partition is expected to be at the end of the GPT in cros,
+        // and can be shrunk in order to make space for use cases such as this.
+        // Here we first try to make the partition half of it's current size
+        // (pinned to a minimum of min_sz_blks). This gives us a roughly equal
+        // share of the free space on the disk.
 
-    // see which partitions can be expanded in place and which need to be moved
-    if (!kern) {
-        if (kern_part != NULL && expand_in_place(parts, kern_idx, sz_kern,
-                                                 num_parts, blk_info)) {
-            kern = true;
-        } else {
-            needed_space += sz_kern;
+        uint64_t state_part_blks = (p->last - p->first) + 1;
+        uint64_t new_state_part_blks = state_part_blks / 2;
+        if (new_state_part_blks < min_state_sz_blks) {
+            new_state_part_blks = min_state_sz_blks;
+        }
+        uint64_t new_free_blks = state_part_blks - new_state_part_blks;
+
+        if (new_free_blks >= blocks_needed) {
+            p->first = p->first + new_free_blks;
+
+            // find_space is re-run here as there is often a chunk of free space
+            // left before the STATE partition that is not big enough for us to
+            // fit, but is sensible to use which would not be used simply by
+            // using the state->first offset.
+            found_hole = find_space(gpt, blocks_needed, &hole_start, &hole_end);
         }
     }
 
-    if (!root) {
-        if (root_part != NULL && expand_in_place(parts, root_idx, sz_root,
-                                                 num_parts, blk_info)) {
-            root = true;
-        } else {
-            needed_space += sz_root;
-        }
+    if (!found_hole) {
+        return ZX_ERR_NO_SPACE;
     }
 
-    // some partitions don't exist or couldn't be expanded in place
-    if (needed_space > 0) {
-        // see if a contiguous block of space is available for space needed
-        uint64_t blocks_needed = howmany(needed_space, blk_info->block_size);
-        uint64_t hole = find_space(parts, num_parts, blocks_needed, blk_info);
+    printf("cros-disk-setup: Creating SYSCFG\n");
+    zx_status_t status;
+    uint64_t sz_syscfg_blks = howmany(SYSCFG_SIZE, blk_info->block_size);
+    if ((status = create_gpt_entry(gpt, hole_start, sz_syscfg_blks, syscfg_guid, "SYSCFG")) != ZX_OK) {
+        printf("cros-disk-setup: Error creating SYSCFG: %d\n", status);
+        return ZX_ERR_INTERNAL;
+    }
+    hole_start += sz_syscfg_blks;
 
-        // not enough contiguous space is available on disk, try shrinking STATE
-        if (hole == 0 && state_idx > -1) {
-            gpt_partition_t* state_part = parts[state_idx];
-            uint64_t min_sz_blks = howmany(sz_state, blk_info->block_size);
-            // TODO (TO-607) consider if there is free space on either side of STATE
-            if (state_part->last - state_part->first + 1 >=
-                min_sz_blks + blocks_needed) {
-                hole = state_part->first;
-                state_part->first += blocks_needed;
-            }
+    uint64_t sz_kern_blks = howmany(sz_kern, blk_info->block_size);
+
+    // Create GPT entries for ZIRCON-A, ZIRCON-B, ZIRCON-R and FVM if needed.
+    const char *kernel_names[3] = { "ZIRCON-A", "ZIRCON-B", "ZIRCON-R" };
+    for(size_t i = 0; i < 3; ++i) {
+        printf("cros-disk-setup: Creating %s\n", kernel_names[i]);
+        if ((status = create_gpt_entry(gpt, hole_start, sz_kern_blks, kern_guid, kernel_names[i])) != ZX_OK) {
+            printf("cros-disk-setup: Error creating %s: %d\n", kernel_names[i], status);
+            return ZX_ERR_INTERNAL;
         }
-
-        // we found or made enough available space
-        if (hole > 0) {
-            // see if we need to create GPT entries for either root-c or kern-c
-            if (kern_part == NULL) {
-                const char* k_name = "KERN-C";
-                if (create_gpt_entry(gpt, hole, sz_kern, blk_info->block_size,
-                                    kern_guid, k_name) != ZX_OK) {
-                    free(parts);
-                    return ZX_ERR_INTERNAL;
-                }
-                kern = true;
-                needed_space -= sz_kern;
-                hole += howmany(sz_kern, blk_info->block_size);
-            }
-
-            if (root_part == NULL) {
-                const char* r_name = "ROOT-C";
-                if (create_gpt_entry(gpt, hole, sz_root, blk_info->block_size,
-                                     root_guid, r_name) != ZX_OK) {
-                    free(parts);
-                    return ZX_ERR_INTERNAL;
-                }
-                root = true;
-                needed_space -= sz_root;
-                hole += howmany(sz_root, blk_info->block_size);
-            }
-
-            if (!kern) {
-                kern_part->first = hole;
-                kern_part->last = hole + howmany(sz_kern, blk_info->block_size)
-                    - 1;
-                hole = kern_part->last + 1;
-                needed_space -= sz_kern;
-                kern = true;
-            }
-
-            if (!root) {
-                root_part->first = hole;
-                root_part->last = hole + howmany(sz_root, blk_info->block_size)
-                    - 1;
-                hole = root_part->last + 1;
-                needed_space -= sz_root;
-                root = true;
-            }
-        }
+        hole_start += sz_kern_blks;
     }
 
-    if (!fvm && state_idx > -1) {
-        gpt_partition_t* part = parts[state_idx];
-        uint64_t state_blks = howmany(sz_state, blk_info->block_size);
-        if (part->last - part->first + 1 > state_blks) {
-            part->first = part->last - state_blks + 1;
-        }
-        fvm = true;
+    printf("cros-disk-setup: Creating FVM\n");
+
+    // TODO(raggi): add this after the test setup supports it.
+    // // clear the FVM superblock to ensure that a new FVM will be created there.
+    // if (gpt_partition_clear(gpt, hole_start, 1) != 0) {
+    //     printf("Error clearing FVM superblock.\n");
+    //     return ZX_ERR_INTERNAL;
+    // }
+
+    // The created FVM partition will fill the available free space.
+    if ((status = create_gpt_entry(gpt, hole_start, (hole_end - hole_start),
+                        fvm_guid, "FVM")) != ZX_OK) {
+        printf("cros-disk-setup: Error creating FVM\n");
+        return status;
     }
 
-    free(parts);
-
-    if (fvm && root && kern) {
-        return ZX_OK;
-    } else {
-        return ZX_ERR_BAD_STATE;
-    }
+    // TODO(raggi): add this once the test setup supports it.
+    // if (!gpt_device_finalize(gpt)) {
+    //     printf("Error finalizing GPT\n");
+    //     return ZX_ERR_INTERNAL;
+    // }
+    return ZX_OK;
 }

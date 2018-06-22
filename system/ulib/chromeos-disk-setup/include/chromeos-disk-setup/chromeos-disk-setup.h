@@ -23,31 +23,18 @@ __BEGIN_CDECLS
 // determine if this looks like a ChromeOS partition layout
 bool is_cros(const gpt_device_t* gpt);
 
-// We define that we're ready to pave if we have
-//  - a partition with a ChromeOS kernel GUID which is at least sz_kern bytes
-//  - a partition with the ChromeOS root GUID which is at least sz_root bytes
-//  - IF fvm_req is true then
-//    * EITHER
-//      # - a partition with the Fuchsia FVM GUID
-//                      OR
-//      # - the size of the STATE partition is already minimized, meaning we've
-//          the disk has as much free space as possible already for the FVM
+// We define that we're ready to pave if
+//  - ZIRCON-A, ZIRCON-B, and ZIRCON-R are present and at least sz_kern bytes
+//  - An FVM a partition is present
 bool is_ready_to_pave(const gpt_device_t* gpt, const block_info_t* block_info,
-                      const uint64_t sz_kern, const uint64_t sz_root,
-                      const bool fvm_req);
+                      const uint64_t sz_kern);
 
-// Configure the GPT for a dual-boot of Fuchsia and ChromeOS. The kern-c and
-// root-c partitions of the device will be configured such that they match the
-// requested sizes.
+// Configure the GPT for a dual-boot of Fuchsia and ChromeOS.
 //
-// If fvm_req is true this attempts to configure the disk is a compatible way.
-// If the disk already has an FVM, no alterations are made to it and no further
-// reconfiguration of the disk is considered necessary. If an FVM is not present
-// the STATE partition of the disk will be minimized to make as much room as
-// possible for the FVM.
+// Partitions ZIRCON-A, ZIRCON-B, ZIRCON-R, and FVM will be created.
 //
-// If fvm_req is false the function will neither consider if an FVM partition
-// exists nor whether there is available space for one to be added.
+// If space is required to create the above partitions, KERN-C and ROOT-C may be
+// deleted, and STATE may be resized.
 //
 // Returns ZX_OK if reconfiguration succeeds and then the GPT should be
 // persisted. Returns ZX_ERR_BAD_STATE if the partition table can't be
@@ -55,8 +42,6 @@ bool is_ready_to_pave(const gpt_device_t* gpt, const block_info_t* block_info,
 // disk and should be discarded.
 zx_status_t config_cros_for_fuchsia(gpt_device_t* gpt,
                                     const block_info_t* blk_info,
-                                    const uint64_t sz_kern,
-                                    const uint64_t sz_root,
-                                    const bool fvm_req);
+                                    const uint64_t sz_kern);
 
 __END_CDECLS

@@ -554,9 +554,8 @@ zx_status_t CrosDevicePartitioner::Initialize(fbl::unique_ptr<DevicePartitioner>
     block_info_t info;
     gpt_partitioner->GetBlockInfo(&info);
 
-    if (!is_ready_to_pave(gpt, &info, SZ_ZX_PART, SZ_ROOT_PART, true)) {
-        if ((status = config_cros_for_fuchsia(gpt, &info, SZ_ZX_PART, SZ_ROOT_PART,
-                                              true)) != ZX_OK) {
+    if (!is_ready_to_pave(gpt, &info, SZ_ZX_PART)) {
+        if ((status = config_cros_for_fuchsia(gpt, &info, SZ_ZX_PART)) != ZX_OK) {
             ERROR("Failed to configure CrOS for Fuchsia.\n");
             return status;
         }
@@ -569,9 +568,9 @@ zx_status_t CrosDevicePartitioner::Initialize(fbl::unique_ptr<DevicePartitioner>
     return ZX_OK;
 }
 
-constexpr char kKernaName[] = "KERN-A";
-constexpr char kKernbName[] = "KERN-B";
-constexpr char kKerncName[] = "KERN-C";
+constexpr char kZirconAName[] = "ZIRCON-A";
+// TODO(raggi): near future - constexpr char kZirconBName[] = "ZIRCON-B";
+// TODO(raggi): near future - constexpr char kZirconRName[] = "ZIRCON-R";
 
 zx_status_t CrosDevicePartitioner::AddPartition(Partition partition_type,
                                                 fbl::unique_fd* out_fd) {
@@ -585,7 +584,7 @@ zx_status_t CrosDevicePartitioner::AddPartition(Partition partition_type,
         const uint8_t kernc_type[GPT_GUID_LEN] = GUID_CROS_KERNEL_VALUE;
         memcpy(type, kernc_type, GPT_GUID_LEN);
         minimum_size_bytes = 64LU * (1 << 20);
-        name = kKerncName;
+        name = kZirconAName;
         break;
     }
     case Partition::kFuchsiaVolumeManager: {
@@ -608,7 +607,7 @@ zx_status_t CrosDevicePartitioner::FindPartition(Partition partition_type,
     switch (partition_type) {
     case Partition::kKernelC: {
         const auto filter = [](const gpt_partition_t& part) {
-            return KernelFilterCallback(part, kKerncName);
+            return KernelFilterCallback(part, kZirconAName);
         };
         return gpt_->FindPartition(filter, out_fd);
     }
@@ -622,54 +621,55 @@ zx_status_t CrosDevicePartitioner::FindPartition(Partition partition_type,
 }
 
 zx_status_t CrosDevicePartitioner::FinalizePartition(Partition partition_type) {
-    // Special partition finalization is only necessary for Zircon partition.
+    // Special partition finalization is only necessary for Zircon partitions.
     if (partition_type != Partition::kKernelC) {
         return ZX_OK;
     }
 
-    // First, find the priority of the KERN-A and KERN-B partitions.
-    gpt_partition_t* partition;
+    uint8_t top_priority = 0;
+
+    const uint8_t kern_type[GPT_GUID_LEN] = GUID_CROS_KERNEL_VALUE;
+    constexpr char kPrefix[] = "ZIRCON-";
+    uint16_t zircon_prefix[strlen(kPrefix)*2];
+    cstring_to_utf16(&zircon_prefix[0], kPrefix, strlen(kPrefix));
+
+    for(size_t i = 0; i < PARTITIONS_COUNT; ++i) {
+        const gpt_partition_t* part = gpt_->GetGpt()->partitions[i];
+        if (part == NULL) {
+            continue;
+        }
+        if (memcmp(part->type, kern_type, GPT_GUID_LEN)) {
+            continue;
+        }
+        if (memcmp(part->name, zircon_prefix, strlen(kPrefix)*2)) {
+            const uint8_t priority = gpt_cros_attr_get_priority(part->flags);
+            if (priority > top_priority) {
+                top_priority = priority;
+            }
+        }
+    }
+
+    const auto filter_zircona = [](const gpt_partition_t& part) {
+        return KernelFilterCallback(part, kZirconAName);
+    };
     zx_status_t status;
-    const auto filter_kerna = [](const gpt_partition_t& part) {
-        return KernelFilterCallback(part, kKernaName);
-    };
-    if ((status = gpt_->FindPartition(filter_kerna, &partition, nullptr)) != ZX_OK) {
-        ERROR("Cannot find %s partition\n", kKernaName);
-        return status;
-    }
-    const uint8_t priority_a = gpt_cros_attr_get_priority(partition->flags);
-
-    const auto filter_kernb = [](const gpt_partition_t& part) {
-        return KernelFilterCallback(part, kKernbName);
-    };
-    if ((status = gpt_->FindPartition(filter_kernb, &partition, nullptr)) != ZX_OK) {
-        ERROR("Cannot find %s partition\n", kKernbName);
-        return status;
-    }
-    const uint8_t priority_b = gpt_cros_attr_get_priority(partition->flags);
-
-    const auto filter_kernc = [](const gpt_partition_t& part) {
-        return KernelFilterCallback(part, kKerncName);
-    };
-    if ((status = gpt_->FindPartition(filter_kernc, &partition, nullptr)) != ZX_OK) {
-        ERROR("Cannot find %s partition\n", kKerncName);
+    gpt_partition_t* partition;
+    if ((status = gpt_->FindPartition(filter_zircona, &partition, nullptr)) != ZX_OK) {
+        ERROR("Cannot find %s partition\n", kZirconAName);
         return status;
     }
 
-    // Priority for Kern C set to higher priority than Kern A and Kern B.
-    uint8_t priority_c = fbl::max(priority_a, priority_b);
-    if (priority_c + 1 <= priority_c) {
-        ERROR("Cannot set CrOS partition priority higher than A and B\n");
+    // Priority for Zircon A set to higher priority than all other kernels.
+    if (top_priority == UINT8_MAX) {
+        ERROR("Cannot set CrOS partition priority higher than other kernels\n");
         return ZX_ERR_OUT_OF_RANGE;
     }
-    priority_c++;
-    if (priority_c <= gpt_cros_attr_get_priority(partition->flags)) {
-        // No modification required; the priority is already high enough.
-        return ZX_OK;
-    }
 
-    if (gpt_cros_attr_set_priority(&partition->flags, priority_c) != 0) {
-        ERROR("Cannot set CrOS partition priority for KERN-C\n");
+    // TODO(raggi): when other (B/R) partitions are paved, set their priority
+    // appropriately as well.
+
+    if (gpt_cros_attr_set_priority(&partition->flags, ++top_priority) != 0) {
+        ERROR("Cannot set CrOS partition priority for ZIRCON-A\n");
         return ZX_ERR_OUT_OF_RANGE;
     }
     // Successful set to 'true' to encourage the bootloader to
@@ -691,6 +691,8 @@ zx_status_t CrosDevicePartitioner::WipePartitions(const fbl::Vector<Partition>& 
     const uint8_t system_type[GPT_GUID_LEN] = GUID_SYSTEM_VALUE;
     const uint8_t blob_type[GPT_GUID_LEN] = GUID_BLOB_VALUE;
     const uint8_t data_type[GPT_GUID_LEN] = GUID_DATA_VALUE;
+
+    // TODO(raggi): add logic here to cleanup the kernc, rootc, and a/b/r partitions.
 
     fbl::Vector<const uint8_t*> partition_list;
     for (const auto& partition_type : partitions) {

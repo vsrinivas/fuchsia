@@ -3,12 +3,14 @@
 // in the LICENSE file.
 
 #include <fcntl.h>
+#include <lib/cksum.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
 #include <sys/param.h>
+#include <unistd.h>
 
+#include <lib/fdio/io.h>
 #include <zircon/device/block.h>
 #include <zircon/syscalls.h>
 
@@ -24,6 +26,7 @@
 #define SZ_EFI_PART (32 * ((uint64_t)1) << 20)
 #define SZ_KERN_PART (16 * ((uint64_t)1) << 20)
 #define SZ_FVM_PART (8 * ((uint64_t)1) << 30)
+#define SZ_SYSCFG_PART (1<<20)
 
 uint8_t guid_state[GPT_GUID_LEN] = GUID_CROS_STATE_VALUE;
 uint8_t cros_kern[GPT_GUID_LEN] = GUID_CROS_KERNEL_VALUE;
@@ -32,6 +35,7 @@ uint8_t guid_gen_data[GPT_GUID_LEN] = GUID_GEN_DATA_VALUE;
 uint8_t guid_fw[GPT_GUID_LEN] = GUID_CROS_FIRMWARE_VALUE;
 uint8_t guid_efi[GPT_GUID_LEN] = GUID_EFI_VALUE;
 uint8_t guid_fvm[GPT_GUID_LEN] = GUID_FVM_VALUE;
+uint8_t guid_syscfg[GPT_GUID_LEN] = GUID_SYS_CONFIG_VALUE;
 uint64_t c_parts_init_sz = 1;
 uint64_t blk_sz_root;
 uint64_t blk_sz_kern;
@@ -61,32 +65,51 @@ static int make_tmp_file(char* name_buf, int sz) {
     return open(name_buf, O_RDWR | O_TRUNC | O_CREAT);
 }
 
-static int prep_gpt(gpt_device_t** device_out, block_info_t* b_info) {
-    char path[4096];
-    memset(path, 0, 4096);
+static bool part_size_gte(gpt_partition_t *part, uint64_t size, uint64_t block_size) {
+    if (part == NULL) {
+        return false;
+    }
+    uint64_t size_in_blocks = part->last - part->first + 1;
+    return size_in_blocks * block_size >= size;
+}
 
-    int fd = make_tmp_file(path, 4096);
-    if (fd < 0) {
-        fprintf(stderr, "Failed to make temporary file\n");
+static gpt_partition_t* find_by_type_and_name(const gpt_device_t* gpt, const uint8_t type_guid[GPT_GUID_LEN], const char *name) {
+    for(size_t i = 0; i < PARTITIONS_COUNT; ++i) {
+        gpt_partition_t* p = gpt->partitions[i];
+        if (p == NULL) {
+            continue;
+        }
+        char buf[GPT_NAME_LEN] = {0};
+        utf16_to_cstring(&buf[0], (const uint16_t*)p->name, GPT_NAME_LEN/2);
+        if(!strncmp(buf, name, GPT_NAME_LEN)) {
+            return p;
+        }
+    }
+    return NULL;
+}
+
+static int prep_gpt(gpt_device_t** device_out, block_info_t* b_info) {
+    uint64_t sz = b_info->block_count * b_info->block_size;
+    zx_handle_t vmo;
+    if (zx_vmo_create(sz, 0, &vmo) != ZX_OK) {
         return -1;
     }
-    if (ftruncate(fd, 1024 * 1024 * 65)) {
-        fprintf(stderr, "File truncation failed\n");
-        close(fd);
-        remove(path);
+
+    int fd = fdio_vmo_fd(vmo, 0, sz);
+    if (fd <= 0) {
+        fprintf(stderr, "Failed to make vmofile\n");
         return -1;
     }
+
     zx_status_t rc = gpt_device_init(fd, b_info->block_size, b_info->block_count,
                                      device_out);
     if (rc < 0) {
         close(fd);
-        remove(path);
         fprintf(stderr, "Init failed!!\n");
         return -1;
     }
     gpt_device_finalize(*device_out);
-    close(fd);
-    remove(path);
+    // TODO(raggi): propagate and close(fd);
     return 0;
 }
 
@@ -151,8 +174,12 @@ static bool create_kern_roots_state(gpt_device_t* device) {
 
 static bool create_default_c_parts(gpt_device_t* device) {
     BEGIN_HELPER;
+
+    uint64_t begin, end;
+    gpt_device_range(device, &begin, &end);
+
     partition_t part_defs[2];
-    part_defs[0].start = gpt_device_get_size_blocks(BLOCK_SIZE);
+    part_defs[0].start = begin;
     part_defs[0].len = c_parts_init_sz;
 
     part_defs[1].start = part_defs[0].start + part_defs[0].len;
@@ -163,6 +190,7 @@ static bool create_default_c_parts(gpt_device_t* device) {
 
     ASSERT_TRUE(create_partition(device, "ROOT-C", cros_root, &part_defs[1]),
                 "");
+
     END_HELPER;
 }
 
@@ -215,6 +243,32 @@ static bool create_test_layout(gpt_device_t* device) {
     END_HELPER;
 }
 
+static bool add_zircon_parts(gpt_device_t* device, gpt_partition_t* state) {
+    BEGIN_HELPER;
+    partition_t part_defs[3];
+    part_defs[0].start = state->first;
+    part_defs[0].len = blk_sz_kernc;
+
+    part_defs[1].start = part_defs[0].start + part_defs[0].len;
+    part_defs[1].len = blk_sz_kernc;
+
+    part_defs[2].start = part_defs[1].start + part_defs[1].len;
+    part_defs[2].len = blk_sz_kernc;
+
+    state->first += 3 * blk_sz_kernc;
+
+    ASSERT_TRUE(create_partition(device, "ZIRCON-A", cros_kern, &part_defs[0]),
+                "");
+
+    ASSERT_TRUE(create_partition(device, "ZIRCON-B", cros_kern, &part_defs[1]),
+                "");
+
+    ASSERT_TRUE(create_partition(device, "ZIRCON-R", cros_kern, &part_defs[2]),
+                "");
+    END_HELPER;
+}
+
+
 static bool add_fvm_part(gpt_device_t* device, gpt_partition_t* state) {
     BEGIN_HELPER;
     partition_t fvm_part;
@@ -263,6 +317,31 @@ static bool init_test_env(gpt_device_t** d_out, block_info_t* b_out) {
     END_HELPER;
 }
 
+static bool assert_required_partitions(gpt_device_t* gpt) {
+    BEGIN_HELPER;
+    gpt_partition_t* part;
+    part = find_by_type_and_name(gpt, guid_fvm, "FVM");
+    ASSERT_NOT_NULL(part);
+    ASSERT_TRUE(part_size_gte(part, SZ_FVM_PART, BLOCK_SIZE), "FVM size");
+
+    part = find_by_type_and_name(gpt, cros_kern, "ZIRCON-A");
+    ASSERT_NOT_NULL(part);
+    ASSERT_TRUE(part_size_gte(part, SZ_KERN_PART, BLOCK_SIZE), "ZIRCON-A size");
+
+    part = find_by_type_and_name(gpt, cros_kern, "ZIRCON-B");
+    ASSERT_NOT_NULL(part);
+    ASSERT_TRUE(part_size_gte(part, SZ_KERN_PART, BLOCK_SIZE), "ZIRCON-B size");
+
+    part = find_by_type_and_name(gpt, cros_kern, "ZIRCON-R");
+    ASSERT_NOT_NULL(part);
+    ASSERT_TRUE(part_size_gte(part, SZ_KERN_PART, BLOCK_SIZE), "ZIRCON-R size");
+
+    part = find_by_type_and_name(gpt, cros_kern, "SYSCFG");
+    ASSERT_NOT_NULL(part);
+    ASSERT_TRUE(part_size_gte(part, SZ_SYSCFG_PART, BLOCK_SIZE), "SYSCFG size");
+    END_HELPER;
+}
+
 bool test_default_config(void) {
     BEGIN_TEST;
     block_info_t b_info;
@@ -271,13 +350,14 @@ bool test_default_config(void) {
 
     ASSERT_TRUE(create_test_layout(dev), "Test layout creation failed.");
 
-    ASSERT_FALSE(is_ready_to_pave(dev, &b_info, SZ_ZX_PART, SZ_ROOT_PART, true),
+    ASSERT_FALSE(is_ready_to_pave(dev, &b_info, SZ_ZX_PART),
                  "Device SHOULD NOT be ready to pave.");
-    ASSERT_EQ(config_cros_for_fuchsia(dev, &b_info, SZ_ZX_PART, SZ_ROOT_PART,
-                                      true),
+    ASSERT_EQ(config_cros_for_fuchsia(dev, &b_info, SZ_ZX_PART),
               ZX_OK, "Configuration failed.");
-    ASSERT_TRUE(is_ready_to_pave(dev, &b_info, SZ_ZX_PART, SZ_ROOT_PART, true),
+    ASSERT_TRUE(is_ready_to_pave(dev, &b_info, SZ_ZX_PART),
                 "Device SHOULD be ready to pave.");
+    
+    assert_required_partitions(dev);
 
     gpt_device_release(dev);
     END_TEST;
@@ -295,16 +375,18 @@ bool test_already_configured(void) {
     resize_kernc_from_state(dev->partitions[5], dev->partitions[0]);
     resize_rootc_from_state(dev->partitions[6], dev->partitions[0]);
 
-    ASSERT_TRUE(is_ready_to_pave(dev, &b_info, SZ_ZX_PART, SZ_ROOT_PART, true),
+    ASSERT_FALSE(is_ready_to_pave(dev, &b_info, SZ_ZX_PART),
                 "Device SHOULD NOT be ready to pave.");
 
     // TODO verify that nothing changed
-    ASSERT_EQ(config_cros_for_fuchsia(dev, &b_info, SZ_ZX_PART, SZ_ROOT_PART,
-                                      true),
+    ASSERT_EQ(config_cros_for_fuchsia(dev, &b_info, SZ_ZX_PART),
               ZX_OK, "Config failed.");
 
-    ASSERT_TRUE(is_ready_to_pave(dev, &b_info, SZ_ZX_PART, SZ_ROOT_PART, true),
+    ASSERT_TRUE(is_ready_to_pave(dev, &b_info, SZ_ZX_PART),
                 "Device SHOULD be ready to pave.");
+
+    assert_required_partitions(dev);
+
     gpt_device_release(dev);
     END_TEST;
 }
@@ -320,15 +402,17 @@ bool test_no_c_parts(void) {
 
     ASSERT_TRUE(create_misc_parts(dev), "Couldn't create misc parts");
 
-    ASSERT_FALSE(is_ready_to_pave(dev, &b_info, SZ_ZX_PART, SZ_ROOT_PART, true),
+    ASSERT_FALSE(is_ready_to_pave(dev, &b_info, SZ_ZX_PART),
                  "Should not initially be ready to pave");
 
-    ASSERT_EQ(config_cros_for_fuchsia(dev, &b_info, SZ_ZX_PART, SZ_ROOT_PART,
-                                      SZ_FVM_PART),
+    ASSERT_EQ(config_cros_for_fuchsia(dev, &b_info, SZ_ZX_PART),
               ZX_OK, "Configure failed");
 
-    ASSERT_TRUE(is_ready_to_pave(dev, &b_info, SZ_ZX_PART, SZ_ROOT_PART, true),
+    ASSERT_TRUE(is_ready_to_pave(dev, &b_info, SZ_ZX_PART),
                 "Device should now be ready to pave, but isn't");
+
+    assert_required_partitions(dev);
+
     gpt_device_release(dev);
     END_TEST;
 }
@@ -349,15 +433,17 @@ bool test_no_rootc(void) {
     ASSERT_EQ(gpt_partition_remove(dev, dev->partitions[11]->guid), 0,
               "Failed to remove ROOT-C partition");
 
-    ASSERT_FALSE(is_ready_to_pave(dev, &b_info, SZ_ZX_PART, SZ_ROOT_PART, true),
+    ASSERT_FALSE(is_ready_to_pave(dev, &b_info, SZ_ZX_PART),
                  "Should not initially be ready to pave");
 
-    ASSERT_EQ(config_cros_for_fuchsia(dev, &b_info, SZ_ZX_PART, SZ_ROOT_PART,
-                                      true),
+    ASSERT_EQ(config_cros_for_fuchsia(dev, &b_info, SZ_ZX_PART),
               ZX_OK, "Configure failed");
 
-    ASSERT_TRUE(is_ready_to_pave(dev, &b_info, SZ_ZX_PART, SZ_ROOT_PART, true),
+    ASSERT_TRUE(is_ready_to_pave(dev, &b_info, SZ_ZX_PART),
                 "Device should now be ready to pave, but isn't");
+
+    assert_required_partitions(dev);
+
     gpt_device_release(dev);
     END_TEST;
 }
@@ -378,93 +464,17 @@ bool test_no_kernc(void) {
     ASSERT_EQ(gpt_partition_remove(dev, dev->partitions[10]->guid), 0,
               "Failed to remove ROOT-C partition");
 
-    ASSERT_FALSE(is_ready_to_pave(dev, &b_info, SZ_ZX_PART, SZ_ROOT_PART, true),
+    ASSERT_FALSE(is_ready_to_pave(dev, &b_info, SZ_ZX_PART),
                  "Should not initially be ready to pave");
 
-    ASSERT_EQ(config_cros_for_fuchsia(dev, &b_info, SZ_ZX_PART, SZ_ROOT_PART,
-                                      true),
+    ASSERT_EQ(config_cros_for_fuchsia(dev, &b_info, SZ_ZX_PART),
               ZX_OK, "Configure failed");
 
-    ASSERT_TRUE(is_ready_to_pave(dev, &b_info, SZ_ZX_PART, SZ_ROOT_PART, true),
+    ASSERT_TRUE(is_ready_to_pave(dev, &b_info, SZ_ZX_PART),
                 "Device should now be ready to pave, but isn't");
-    gpt_device_release(dev);
-    END_TEST;
-}
 
-bool test_ready_with_extra_space(void) {
-    BEGIN_TEST;
-    block_info_t b_info;
-    gpt_device_t* dev;
-    ASSERT_TRUE(init_test_env(&dev, &b_info), "");
+    assert_required_partitions(dev);
 
-    ASSERT_TRUE(create_test_layout(dev), "Couldn't make test layout.");
-    resize_kernc_from_state(dev->partitions[5], dev->partitions[0]);
-    resize_rootc_from_state(dev->partitions[6], dev->partitions[0]);
-    ASSERT_TRUE(add_fvm_part(dev, dev->partitions[0]),
-                "Couldn't add FVM partition.");
-
-    const uint64_t block_gap = 1000000;
-    // make some free space
-    dev->partitions[0]->first += block_gap;
-
-    ASSERT_TRUE(is_ready_to_pave(dev, &b_info, SZ_ZX_PART, SZ_ROOT_PART, true),
-                "Should initially be ready to pave");
-
-    ASSERT_EQ(config_cros_for_fuchsia(dev, &b_info, SZ_ZX_PART, SZ_ROOT_PART, true),
-              ZX_OK, "Configure failed");
-
-    ASSERT_TRUE(is_ready_to_pave(dev, &b_info, SZ_ZX_PART, SZ_ROOT_PART, true),
-                "Device should still be ready to pave, but isn't");
-
-    char msg_buf[4096];
-    uint64_t new_gap = dev->partitions[0]->first - dev->partitions[12]->last - 1;
-    sprintf(msg_buf, "Gap size unexpected: %lu", new_gap);
-    // verify that the gap is unchanged
-    ASSERT_EQ(new_gap, block_gap, msg_buf);
-    gpt_device_release(dev);
-    END_TEST;
-}
-
-bool test_expand_in_place(void) {
-    BEGIN_TEST;
-    block_info_t b_info;
-    gpt_device_t* dev;
-    ASSERT_TRUE(init_test_env(&dev, &b_info), "");
-
-    ASSERT_TRUE(create_test_layout(dev), "Couldn't make test layout.");
-    ASSERT_TRUE(add_fvm_part(dev, dev->partitions[0]),
-              "Couldn't add FVM partition.");
-
-    // create free space enough free space for kern-c and root-c to go before the
-    // state partition along with some additional space.
-    // Then position root-c and kern-c such that they can expand in place
-    const uint64_t free_blks = 1000000;
-    uint64_t gap = blk_sz_rootc + blk_sz_kernc + free_blks;
-
-    // place the kern-c partition with a big gap after it
-    dev->partitions[5]->first = dev->partitions[0]->first;
-    dev->partitions[5]->last = dev->partitions[5]->first;
-
-    dev->partitions[0]->first += gap;
-
-    // place the root-c partition at the end of the big gap
-    dev->partitions[6]->first = dev->partitions[0]->first - 1;
-    dev->partitions[6]->last = dev->partitions[6]->first;
-
-    ASSERT_FALSE(is_ready_to_pave(dev, &b_info, SZ_ZX_PART, SZ_ROOT_PART, true),
-                 "Should not initially be ready to pave");
-
-    ASSERT_EQ(config_cros_for_fuchsia(dev, &b_info, SZ_ZX_PART, SZ_ROOT_PART, true),
-              ZX_OK, "Configure failed");
-
-    ASSERT_TRUE(is_ready_to_pave(dev, &b_info, SZ_ZX_PART, SZ_ROOT_PART, true),
-                "Device should be ready to pave, but isn't");
-
-    char msg_buf[4096];
-    uint64_t new_gap = dev->partitions[6]->first - dev->partitions[5]->last - 1;
-    sprintf(msg_buf, "Gap size unexpected: %lu", new_gap);
-    // verify that the gap is unchanged
-    ASSERT_EQ(new_gap, free_blks, msg_buf);
     gpt_device_release(dev);
     END_TEST;
 }
@@ -484,10 +494,12 @@ bool test_disk_too_small(void) {
 
     ASSERT_TRUE(create_test_layout(dev), "Failed creating initial test layout");
 
-    uint32_t reserved = gpt_device_get_size_blocks(b_info.block_size);
+    uint64_t reserved, unused;
+    gpt_device_range(dev, &reserved, &unused);
+
     // this is the size we need the STATE parition to be if we are to resize
     // it to make room for the partitions we want to add and expand
-    uint64_t needed_blks = howmany(SZ_ZX_PART + SZ_ROOT_PART + MIN_SZ_STATE,
+    uint64_t needed_blks = howmany(SZ_ZX_PART + MIN_SZ_STATE,
                                    b_info.block_size) + reserved;
     // now remove a few blocks so we can't satisfy all constraints
     needed_blks--;
@@ -502,13 +514,12 @@ bool test_disk_too_small(void) {
 
     ASSERT_TRUE(create_test_layout(dev), "Failed creating real test layout");
 
-    ASSERT_FALSE(is_ready_to_pave(dev, &b_info, SZ_ZX_PART, SZ_ROOT_PART, true),
+    ASSERT_FALSE(is_ready_to_pave(dev, &b_info, SZ_ZX_PART),
                  "Should not initially be ready to pave");
 
-    ASSERT_NE(config_cros_for_fuchsia(dev, &b_info, SZ_ZX_PART, SZ_ROOT_PART,
-                                      true),
+    ASSERT_NE(config_cros_for_fuchsia(dev, &b_info, SZ_ZX_PART),
               ZX_OK, "Configure reported success, but should have failed.");
-    ASSERT_FALSE(is_ready_to_pave(dev, &b_info, SZ_ZX_PART, SZ_ROOT_PART, true),
+    ASSERT_FALSE(is_ready_to_pave(dev, &b_info, SZ_ZX_PART),
                  "Device should still not be paveable");
     gpt_device_release(dev);
     END_TEST;
@@ -536,8 +547,6 @@ RUN_TEST(test_already_configured)
 RUN_TEST(test_no_c_parts)
 RUN_TEST(test_no_rootc)
 RUN_TEST(test_no_kernc)
-RUN_TEST(test_ready_with_extra_space)
-RUN_TEST(test_expand_in_place)
 RUN_TEST(test_disk_too_small)
 RUN_TEST(test_is_cros_device)
 END_TEST_CASE(disk_wizard_tests)
