@@ -33,7 +33,6 @@ var kernelDebugObjs = flag.Bool("kernel-dbg", true, "Include kernel objects with
 var bootdata = flag.Bool("bootdata", true, "Include bootdata")
 var qemu = flag.Bool("qemu", true, "Include QEMU binary")
 var tools = flag.Bool("tools", true, "Include additional tools")
-var media = flag.Bool("media", true, "Include C media library")
 var verbose = flag.Bool("v", false, "Verbose output")
 var dryRun = flag.Bool("n", false, "Dry run - print what would happen but don't actually do it")
 
@@ -134,23 +133,13 @@ func init() {
 
 	clientHeaders := []clientHeader{
 		{
-			media,
-			"garnet/public/lib/media/c/audio.h",
-			"media/audio.h",
-		},
-		{
 			sysroot,
 			"garnet/public/lib/netstack/c/netconfig.h",
 			"netstack/netconfig.h",
 		},
 	}
 
-	clientLibs := []clientLib{
-		{
-			media,
-			"libmedia_client.so",
-		},
-	}
+	clientLibs := []clientLib{}
 
 	files := []file{
 		{
