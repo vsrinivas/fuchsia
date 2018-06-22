@@ -27,6 +27,18 @@ go_binary("pm_bin") {
       package = "golang.org/x/crypto"
       source = "//third_party/golang/crypto"
     },
+    {
+      package = "github.com/flynn/go-tuf"
+      source = "//third_party/golibs/github.com/flynn/go-tuf"
+    },
+    {
+      package = "github.com/syndtr/goleveldb/leveldb"
+      source = "//third_party/golibs/github.com/syndtr/goleveldb/leveldb"
+    },
+    {
+      package = "github.com/tent/canonical-json-go"
+      source = "//third_party/golibs/github.com/tent/canonical-json-go"
+    },
   ]
 }
 

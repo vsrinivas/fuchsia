@@ -17,6 +17,7 @@ import (
 	"fuchsia.googlesource.com/pm/cmd/pm/genkey"
 	initcmd "fuchsia.googlesource.com/pm/cmd/pm/init"
 	"fuchsia.googlesource.com/pm/cmd/pm/install"
+	"fuchsia.googlesource.com/pm/cmd/pm/publish"
 	"fuchsia.googlesource.com/pm/cmd/pm/seal"
 	"fuchsia.googlesource.com/pm/cmd/pm/serve"
 	"fuchsia.googlesource.com/pm/cmd/pm/sign"
@@ -36,13 +37,11 @@ Commands
     verify  - verify metadata signature against the embedded public key
     archive - construct a single .far representation of the package
     expand  - expand a single .far representation of a package into a repository
+    publish - publish the package to a local TUF directory
     serve   - serve a TUF directory of packages
 
 Dev Only:
     install - install a single .far representation of the package
-
-TODO:
-    publish - upload the package to a distribution service
 `
 
 func main() {
@@ -76,6 +75,9 @@ func main() {
 
 	case "install":
 		err = install.Run(cfg, flag.Args()[1:])
+
+	case "publish":
+		err = publish.Run(cfg, flag.Args()[1:])
 
 	case "seal":
 		err = seal.Run(cfg, flag.Args()[1:])
