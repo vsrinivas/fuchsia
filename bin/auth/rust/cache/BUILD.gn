@@ -6,6 +6,10 @@ import("//build/rust/rustc_library.gni")
 
 rustc_library("cache") {
   name = "auth_cache"
-  version = "0.1.1"
+  version = "0.1.2"
   with_unit_tests = true
+
+  deps = [
+      "//third_party/rust-crates/rustc_deps:failure",
+  ]
 }

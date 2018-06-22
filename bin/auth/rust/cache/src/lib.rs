@@ -2,6 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#[macro_use]
+extern crate failure;
+
+use failure::Error;
 use std::collections::HashMap;
 use std::time::{Duration, Instant};
 
@@ -9,10 +13,13 @@ use std::time::{Duration, Instant};
 /// the cache if they have at least this much life remaining.
 const PADDING_FOR_TOKEN_EXPIRY: Duration = Duration::from_secs(600);
 
-#[derive(Debug, PartialEq, Eq)]
-pub enum Error {
+#[derive(Debug, PartialEq, Eq, Fail)]
+pub enum CacheError {
+    #[fail(display = "invalid argument")]
     InvalidArguments,
+    #[fail(display = "supplied key not found in cache")]
     KeyNotFound,
+    #[fail(display = "supplied key was found in cache but expired")]
     CacheExpired,
 }
 
@@ -77,16 +84,17 @@ pub struct CacheKey {
 }
 
 impl CacheKey {
-    /// Create a new cache key from the supplied non-empty slices.
-    pub fn new(idp_provider: &str, idp_credential_id: &str) -> CacheKey {
-        assert!(!idp_provider.is_empty(), "idp_provider must not be empty");
-        assert!(
-            !idp_credential_id.is_empty(),
-            "idp_credential_id must not be empty"
-        );
-        CacheKey {
-            idp_provider: idp_provider.to_string(),
-            idp_credential_id: idp_credential_id.to_string(),
+    /// Create a new CacheKey, or returns an Error if any input is empty.
+    pub fn new(idp_provider: String, idp_credential_id: String) -> Result<CacheKey, Error> {
+        if idp_provider.is_empty() {
+            Err(format_err!("idp_provider cannot be empty"))
+        } else if idp_credential_id.is_empty() {
+            Err(format_err!("idp_credential_id cannot be empty"))
+        } else {
+            Ok(CacheKey {
+                idp_provider,
+                idp_credential_id,
+            })
         }
     }
 }
@@ -110,7 +118,7 @@ impl TokenCache {
     /// Returns all unexpired tokens stored in the cache for the given key.
     /// Any expired tokens are also purged from the underlying cache.
     /// Returns an error if the key was not found or has expired.
-    pub fn get(&mut self, cache_key: &CacheKey) -> Result<&TokenSet, Error> {
+    pub fn get(&mut self, cache_key: &CacheKey) -> Result<&TokenSet, CacheError> {
         // First remove any expired tokens from the value if it exists then
         // delete the entire entry if this now means it is invalid.
         let mut expired_cache = false;
@@ -119,20 +127,20 @@ impl TokenCache {
         }
         if expired_cache {
             self.map.remove(cache_key);
-            return Err(Error::CacheExpired);
+            return Err(CacheError::CacheExpired);
         }
 
         // Any remaining key is now valid
         match self.map.get(cache_key) {
             Some(token_set) => Ok(token_set),
-            None => Err(Error::KeyNotFound),
+            None => Err(CacheError::KeyNotFound),
         }
     }
 
     /// Adds a new cache entry, replacing any existing entry with the same key.
-    pub fn put(&mut self, cache_key: CacheKey, token_set: TokenSet) -> Result<(), Error> {
+    pub fn put(&mut self, cache_key: CacheKey, token_set: TokenSet) -> Result<(), CacheError> {
         if !token_set.is_valid() {
-            Err(Error::InvalidArguments)
+            Err(CacheError::InvalidArguments)
         } else {
             self.map.insert(cache_key, token_set);
             Ok(())
@@ -141,9 +149,9 @@ impl TokenCache {
 
     /// Removes all tokens associated with the supplied key, returning an error
     /// if none exist.
-    pub fn delete(&mut self, cache_key: &CacheKey) -> Result<(), Error> {
+    pub fn delete(&mut self, cache_key: &CacheKey) -> Result<(), CacheError> {
         if !self.map.contains_key(cache_key) {
-            Err(Error::KeyNotFound)
+            Err(CacheError::KeyNotFound)
         } else {
             self.map.remove(cache_key);
             Ok(())
@@ -157,7 +165,7 @@ impl TokenCache {
         cache_key: &CacheKey,
         firebase_api_key: &str,
         firebase_token: FirebaseAuthToken,
-    ) -> Result<(), Error> {
+    ) -> Result<(), CacheError> {
         match self.map.get_mut(cache_key) {
             Some(token_set) => {
                 token_set
@@ -165,7 +173,7 @@ impl TokenCache {
                     .insert(firebase_api_key.to_owned(), firebase_token);
                 Ok(())
             }
-            None => Err(Error::KeyNotFound),
+            None => Err(CacheError::KeyNotFound),
         }
     }
 
@@ -228,8 +236,8 @@ mod tests {
         let mut token_cache = TokenCache::new(CACHE_SIZE);
 
         // Verify requesting an entry from an cache that does not contain it fails.
-        let key = CacheKey::new(TEST_IDP, TEST_CREDENTIAL_ID);
-        assert_eq!(token_cache.get(&key), Err(Error::KeyNotFound));
+        let key = build_test_cache_key("");
+        assert_eq!(token_cache.get(&key), Err(CacheError::KeyNotFound));
 
         // Verify inserting then retrieving a token succeeds.
         let token_set = build_test_token_set(LONG_EXPIRY, "");
@@ -240,7 +248,7 @@ mod tests {
     #[test]
     fn test_has_key() {
         let mut token_cache = TokenCache::new(CACHE_SIZE);
-        let key = CacheKey::new(TEST_IDP, TEST_CREDENTIAL_ID);
+        let key = build_test_cache_key("");
         assert_eq!(token_cache.has_key(&key), false);
         assert_eq!(
             token_cache.put(key.clone(), build_test_token_set(LONG_EXPIRY, "")),
@@ -252,8 +260,8 @@ mod tests {
     #[test]
     fn test_delete() {
         let mut token_cache = TokenCache::new(CACHE_SIZE);
-        let key = CacheKey::new(TEST_IDP, TEST_CREDENTIAL_ID);
-        assert_eq!(token_cache.delete(&key), Err(Error::KeyNotFound));
+        let key = build_test_cache_key("");
+        assert_eq!(token_cache.delete(&key), Err(CacheError::KeyNotFound));
         assert_eq!(
             token_cache.put(key.clone(), build_test_token_set(LONG_EXPIRY, "")),
             Ok(())
@@ -281,7 +289,7 @@ mod tests {
 
         // Getting the expired key should fail and remove it from the cache.
         assert_eq!(token_cache.get(&key_1), Ok(&token_set_1));
-        assert_eq!(token_cache.get(&key_2), Err(Error::CacheExpired));
+        assert_eq!(token_cache.get(&key_2), Err(CacheError::CacheExpired));
         assert_eq!(token_cache.has_key(&key_1), true);
         assert_eq!(token_cache.has_key(&key_2), false);
     }
@@ -310,7 +318,7 @@ mod tests {
         let key_2 = build_test_cache_key("2");
         assert_eq!(
             token_cache.add_firebase_token(&key_2, TEST_API_KEY, firebase_token.clone()),
-            Err(Error::KeyNotFound)
+            Err(CacheError::KeyNotFound)
         );
     }
 
@@ -319,7 +327,7 @@ mod tests {
         let mut token_cache = TokenCache::new(CACHE_SIZE);
 
         // Create a new entry in the cache without any firebase tokens.
-        let key = CacheKey::new(TEST_IDP, TEST_CREDENTIAL_ID);
+        let key = build_test_cache_key("");
         let mut token_set = build_test_token_set(LONG_EXPIRY, "");
         assert_eq!(token_cache.put(key.clone(), token_set.clone()), Ok(()));
 
