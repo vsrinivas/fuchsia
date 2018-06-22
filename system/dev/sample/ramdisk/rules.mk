@@ -6,17 +6,21 @@ LOCAL_DIR := $(GET_LOCAL_DIR)
 
 MODULE := $(LOCAL_DIR)
 
-MODULE_NAME := demo-fifo
+MODULE_NAME := demo-ramdisk
 
 MODULE_GROUP := ddk-sample
 
 MODULE_TYPE := driver
 
-MODULE_SRCS := $(LOCAL_DIR)/demo-fifo.c
+MODULE_SRCS := $(LOCAL_DIR)/demo-ramdisk.c
 
-MODULE_STATIC_LIBS := system/ulib/ddk
+MODULE_STATIC_LIBS := \
+    system/ulib/ddk \
+    system/ulib/sync
+
+MODULE_BANJO_LIBS := \
+    system/banjo/ddk-protocol-block \
 
 MODULE_LIBS := system/ulib/driver system/ulib/zircon system/ulib/c
 
 include make/module.mk
-
