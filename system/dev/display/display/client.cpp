@@ -346,7 +346,7 @@ void Client::HandleDestroyLayer(const fuchsia_display_ControllerDestroyLayerRequ
 
     auto destroyed = layers_.erase(req->layer_id);
     if (destroyed->pending_image_) {
-        destroyed->pending_image_->EarlyRetire();
+        destroyed->pending_image_->DiscardAcquire();
     }
     while (!destroyed->waiting_images_.is_empty()) {
         destroyed->waiting_images_.pop_front()->EarlyRetire();
