@@ -223,6 +223,10 @@
             "library",
             "tool"
           ]
+        },
+        "package_name": {
+          "description": "For libraries, the Dart package name",
+          "type": "string"
         }
       },
       "patternProperties": {

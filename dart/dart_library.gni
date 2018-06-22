@@ -465,6 +465,7 @@ if (current_toolchain == dart_toolchain) {
         domain = "dart"
         tags = [
           "type:library",
+          "package_name:${invoker.package_name}",
         ]
         tags_file = third_party_spec_file
         name = atom_name
