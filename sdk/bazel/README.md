@@ -1,9 +1,8 @@
-Bazel SDK
-=========
+# Bazel SDK
 
 The Bazel SDK frontend produces a [Bazel](https://bazel.build/) workspace.
 
-# Directory structure
+## Directory structure
 
 - `generate.py`: the script that generates the SDK;
 - `templates`: Mako templates used to produce various SDK files;
@@ -11,7 +10,7 @@ The Bazel SDK frontend produces a [Bazel](https://bazel.build/) workspace.
 - `generate-tests.py`: a script that creates a test workspace;
 - `tests`: various SDK tests, copied over to the test workspace.
 
-# Output layout
+## Output layout
 
 ```
 $root/
@@ -44,16 +43,30 @@ $root/
             sysroot/                       # arm64 sysroot
 ```
 
-# Testing
+## Testing
 
 The `generate-tests.py` script creates a workspace for testing the generated
 SDK. From within that workspace, run:
 ```
-bazel build --config=fuchsia @fuchsia_sdk//...
-bazel build --config=fuchsia //...
+./run.py
 ```
 
-# Consuming
+To exclude a target from the suite, mark it as ignored with:
+```
+my_rule(
+    name = "foobar",
+    ...
+    tags = [
+        "ignored",
+    ],
+)
+```
+To force-build ignored targets, use the `--ignored` flag.
+
+The test runner also builds targets in the SDK itself. To bypass this step, use
+the `--no-sdk` flag.
+
+## Consuming
 
 The produced Bazel SDK can be consumed by adding those lines to a Bazel
 `WORKSPACE`:
