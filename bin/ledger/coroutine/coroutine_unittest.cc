@@ -263,5 +263,32 @@ TEST(Coroutine, ResumeCoroutineInOtherCoroutineDestructor) {
   EXPECT_TRUE(routine2_done);
 }
 
+TEST(Coroutine, AsyncCallCapture) {
+  CoroutineServiceImpl coroutine_service;
+
+  std::function<void(size_t)> callback;
+  auto callable = [&callback](std::function<void(size_t)> called_callback) {
+    callback = std::move(called_callback);
+  };
+
+  size_t value = 0;
+  CoroutineHandler* coroutine_handler;
+  coroutine_service.StartCoroutine(
+      [callable, &coroutine_handler, &value](CoroutineHandler* handler) {
+        coroutine_handler = handler;
+        EXPECT_EQ(ContinuationStatus::INTERRUPTED,
+                  SyncCall(handler, callable, &value));
+        return;
+      });
+
+  EXPECT_TRUE(callback);
+
+  coroutine_handler->Resume(ContinuationStatus::INTERRUPTED);
+
+  callback(10);
+
+  EXPECT_EQ(0u, value);
+}
+
 }  // namespace
 }  // namespace coroutine
