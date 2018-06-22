@@ -115,11 +115,11 @@ PairingMethod SelectPairingMethod(bool sec_conn, bool local_oob, bool peer_oob,
 
 void Encrypt(const common::UInt128& key, const common::UInt128& plaintext_data,
              common::UInt128* out_encrypted_data) {
-  // Swap the bytes since, for the security function "e", "the most significant
-  // octet of key corresponds to key[0], the most significant octet of
-  // plaintextData corresponds to in[0] and the most significant octet of
-  // encryptedData corresponds to out[0] using the notation specified in
-  // FIPS-197" for the security function "e" (Vol 3, Part H, 2.2.1).
+  // Swap the bytes since "the most significant octet of key corresponds to
+  // key[0], the most significant octet of plaintextData corresponds to in[0]
+  // and the most significant octet of encryptedData corresponds to out[0] using
+  // the notation specified in FIPS-197" for the security function "e" (Vol 3,
+  // Part H, 2.2.1).
   UInt128 be_k, be_pt, be_enc;
   Swap128(key, &be_k);
   Swap128(plaintext_data, &be_pt);
@@ -162,6 +162,22 @@ void C1(const UInt128& tk, const UInt128& rand, const ByteBuffer& preq,
   Encrypt(tk, p1, &tmp);
   Xor128(tmp, p2, &tmp);
   Encrypt(tk, tmp, out_confirm_value);
+}
+
+void S1(const UInt128& tk, const UInt128& r1, const UInt128& r2,
+        UInt128* out_stk) {
+  FXL_DCHECK(out_stk);
+
+  UInt128 r_prime;
+
+  // Take the lower 64-bits of r1 and r2 and concatanate them to produce
+  // r’ = r1’ || r2’, where r2' contains the LSB and r1' the MSB.
+  constexpr size_t kHalfSize = sizeof(UInt128) / 2;
+  std::memcpy(r_prime.data(), r2.data(), kHalfSize);
+  std::memcpy(r_prime.data() + kHalfSize, r1.data(), kHalfSize);
+
+  // Calculate the STK: e(tk, r’)
+  Encrypt(tk, r_prime, out_stk);
 }
 
 }  // namespace util
