@@ -152,7 +152,7 @@ void Scanner::RemoveStaleBss() {
     // Prune stale entries.
     ts_last_prune = now;
     nbrs_bss_.RemoveIf(
-        [now](fbl::RefPtr<Bss> bss) -> bool { return (bss->ts_refreshed() + kBssExpiry >= now); });
+        [now](fbl::RefPtr<Bss> bss) -> bool { return (bss->ts_refreshed() + kBssExpiry <= now); });
 }
 
 zx_status_t Scanner::HandleBeacon(const MgmtFrame<Beacon>& frame) {
