@@ -47,7 +47,7 @@ function get_eth_iface_list {
 }
 
 function run {
-  fx-command-run cp "${FUCHSIA_DIR}/${SOURCE}" "${LOG_DIR}/${SCRIPT}" >& /dev/null
+  fx-command-run cp "${FUCHSIA_DIR}/${SOURCE}" "${LOG_DIR}/${SCRIPT}" > /dev/null 2>&1
   local suppres_output=$(${SHELL_CMD} "${LOG_DIR}/${SCRIPT}" "${LOG_DIR}/${LOG_FILE}" &)
 }
 
@@ -61,7 +61,8 @@ function wait_for_result {
     if [ "$i" -lt 3 ]; then
       sleep 1
     else
-      if ${SHELL_CMD} -o ConnectTimeout=1 ifconfig en2 |& grep -q UP ; then
+      local ssh_output=$(${SHELL_CMD} -o ConnectTimeout=1 ifconfig en2 2>&1)
+      if echo "${ssh_output}" | grep -q UP ; then
         printf "\nDone in %d seconds" "$i"
         break
       fi
