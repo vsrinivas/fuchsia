@@ -94,26 +94,26 @@ fbl::String JoinPath(const fbl::StringPiece parent, const fbl::StringPiece child
     return fbl::String::Concat({parent, child});
 }
 
-int WriteSummaryJSON(const fbl::Vector<Result>& results,
+int WriteSummaryJSON(const fbl::Vector<fbl::unique_ptr<Result>>& results,
                      const fbl::StringPiece output_file_basename,
                      const fbl::StringPiece syslog_path,
                      FILE* summary_json) {
     int test_count = 0;
     fprintf(summary_json, "{\"tests\":[\n");
-    for (const Result& result : results) {
+    for (const fbl::unique_ptr<Result>& result : results) {
         if (test_count != 0) {
             fprintf(summary_json, ",\n");
         }
         fprintf(summary_json, "{");
 
         // Write the name of the test.
-        fprintf(summary_json, "\"name\":\"%s\"", result.name.c_str());
+        fprintf(summary_json, "\"name\":\"%s\"", result->name.c_str());
 
         // Write the path to the output file, relative to the test output root
         // (i.e. what's passed in via -o). The test name is already a path to
         // the test binary on the target, so to make this a relative path, we
         // only have to skip leading '/' characters in the test name.
-        fbl::String output_file = runtests::JoinPath(result.name, output_file_basename);
+        fbl::String output_file = runtests::JoinPath(result->name, output_file_basename);
         size_t i;
         for (i = 0; i < output_file.size() && output_file[i] == '/'; i++) {
         }
@@ -126,7 +126,7 @@ int WriteSummaryJSON(const fbl::Vector<Result>& results,
         // Write the result of the test, which is either PASS or FAIL. We only
         // have one PASS condition in TestResult, which is SUCCESS.
         fprintf(summary_json, ",\"result\":\"%s\"",
-                result.launch_status == runtests::SUCCESS ? "PASS" : "FAIL");
+                result->launch_status == runtests::SUCCESS ? "PASS" : "FAIL");
 
         fprintf(summary_json, "}");
         test_count++;
@@ -168,7 +168,7 @@ bool RunTestsInDir(const RunTestFn& RunTest, const fbl::StringPiece dir_path,
                    const fbl::Vector<fbl::String>& filter_names,
                    const char* output_dir, const char* output_file_basename,
                    const signed char verbosity, int* num_failed,
-                   fbl::Vector<Result>* results) {
+                   fbl::Vector<fbl::unique_ptr<Result>>* results) {
     if ((output_dir != nullptr) && (output_file_basename == nullptr)) {
         printf("Error: output_file_basename is not null, but output_dir is.\n");
         return false;
@@ -234,10 +234,11 @@ bool RunTestsInDir(const RunTestFn& RunTest, const fbl::StringPiece dir_path,
         const char* argv[] = {test_path.c_str(), argv1, nullptr};
         const char* output_filename =
             output_filename_str.empty() ? nullptr : output_filename_str.c_str();
-        results->push_back(RunTest(argv, output_filename));
-        if ((*results)[results->size() - 1].launch_status != runtests::SUCCESS) {
+        fbl::unique_ptr<Result> result = RunTest(argv, output_filename);
+        if (result->launch_status != runtests::SUCCESS) {
             failed_count++;
         }
+        results->push_back(fbl::move(result));
     }
     closedir(dir);
     *num_failed = failed_count;

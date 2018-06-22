@@ -392,8 +392,9 @@ bool WriteSummaryJSONSucceeds() {
     // A reasonable guess that the function won't output more than this.
     fbl::unique_ptr<char[]> buf(new char[kOneMegabyte]);
     FILE* buf_file = fmemopen(buf.get(), kOneMegabyte, "w");
-    const fbl::Vector<Result> results = {Result("/a", SUCCESS, 0),
-                                         Result("b", FAILED_TO_LAUNCH, 0)};
+    fbl::Vector<fbl::unique_ptr<Result>> results;
+    results.push_back(fbl::make_unique<Result>("/a", SUCCESS, 0));
+    results.push_back(fbl::make_unique<Result>("b", FAILED_TO_LAUNCH, 0));
     ASSERT_EQ(0, WriteSummaryJSON(results, "output.txt", "/tmp/file_path", buf_file));
     fclose(buf_file);
     // We don't have a JSON parser in zircon right now, so just hard-code the expected output.
@@ -416,8 +417,9 @@ bool WriteSummaryJSONSucceedsWithoutSyslogPath() {
     // A reasonable guess that the function won't output more than this.
     fbl::unique_ptr<char[]> buf(new char[kOneMegabyte]);
     FILE* buf_file = fmemopen(buf.get(), kOneMegabyte, "w");
-    const fbl::Vector<Result> results = {Result("/a", SUCCESS, 0),
-                                         Result("b", FAILED_TO_LAUNCH, 0)};
+    fbl::Vector<fbl::unique_ptr<Result>> results;
+    results.push_back(fbl::make_unique<Result>("/a", SUCCESS, 0));
+    results.push_back(fbl::make_unique<Result>("b", FAILED_TO_LAUNCH, 0));
     ASSERT_EQ(0, WriteSummaryJSON(results, "output.txt", /*syslog_path=*/"", buf_file));
     fclose(buf_file);
     // With an empty syslog_path, we expect no values under "outputs" and "syslog_file" to
@@ -439,8 +441,9 @@ bool WriteSummaryJSONBadTestName() {
     fbl::unique_ptr<char[]> buf(new char[kOneMegabyte]);
     FILE* buf_file = fmemopen(buf.get(), kOneMegabyte, "w");
     // A test name and output file consisting entirely of slashes should trigger an error.
-    const fbl::Vector<Result> results = {Result("///", SUCCESS, 0),
-                                         Result("b", FAILED_TO_LAUNCH, 0)};
+    fbl::Vector<fbl::unique_ptr<Result>> results;
+    results.push_back(fbl::make_unique<Result>("///", SUCCESS, 0));
+    results.push_back(fbl::make_unique<Result>("b", FAILED_TO_LAUNCH, 0));
     ASSERT_NE(0, WriteSummaryJSON(results, /*output_file_basename=*/"///", /*syslog_path=*/"/", buf_file));
     fclose(buf_file);
 
@@ -493,10 +496,10 @@ bool RunTestSuccess() {
     fbl::String test_name = JoinPath(test_dir.path(), "succeed.sh");
     const char* argv[] = {test_name.c_str(), nullptr};
     ScopedScriptFile script(argv[0], "exit 0");
-    const Result result = PlatformRunTest(argv, nullptr);
-    EXPECT_STR_EQ(argv[0], result.name.c_str());
-    EXPECT_EQ(SUCCESS, result.launch_status);
-    EXPECT_EQ(0, result.return_code);
+    fbl::unique_ptr<Result> result = PlatformRunTest(argv, nullptr);
+    EXPECT_STR_EQ(argv[0], result->name.c_str());
+    EXPECT_EQ(SUCCESS, result->launch_status);
+    EXPECT_EQ(0, result->return_code);
 
     END_TEST;
 }
@@ -513,7 +516,7 @@ bool RunTestSuccessWithStdout() {
     ScopedScriptFile script(argv[0], script_contents);
 
     fbl::String output_filename = JoinPath(test_dir.path(), "test.out");
-    const Result result = PlatformRunTest(argv, output_filename.c_str());
+    fbl::unique_ptr<Result> result = PlatformRunTest(argv, output_filename.c_str());
 
     FILE* output_file = fopen(output_filename.c_str(), "r");
     ASSERT_TRUE(output_file);
@@ -522,9 +525,9 @@ bool RunTestSuccessWithStdout() {
     EXPECT_LT(0, fread(buf, sizeof(buf[0]), sizeof(buf), output_file));
     fclose(output_file);
     EXPECT_STR_EQ(expected_output, buf);
-    EXPECT_STR_EQ(argv[0], result.name.c_str());
-    EXPECT_EQ(SUCCESS, result.launch_status);
-    EXPECT_EQ(0, result.return_code);
+    EXPECT_STR_EQ(argv[0], result->name.c_str());
+    EXPECT_EQ(SUCCESS, result->launch_status);
+    EXPECT_EQ(0, result->return_code);
 
     END_TEST;
 }
@@ -541,7 +544,7 @@ bool RunTestFailureWithStderr() {
     ScopedScriptFile script(argv[0], script_contents);
 
     fbl::String output_filename = JoinPath(test_dir.path(), "test.out");
-    const Result result = PlatformRunTest(argv, output_filename.c_str());
+    fbl::unique_ptr<Result> result = PlatformRunTest(argv, output_filename.c_str());
 
     FILE* output_file = fopen(output_filename.c_str(), "r");
     ASSERT_TRUE(output_file);
@@ -550,9 +553,9 @@ bool RunTestFailureWithStderr() {
     EXPECT_LT(0, fread(buf, sizeof(buf[0]), sizeof(buf), output_file));
     fclose(output_file);
     EXPECT_STR_EQ(expected_output, buf);
-    EXPECT_STR_EQ(argv[0], result.name.c_str());
-    EXPECT_EQ(FAILED_NONZERO_RETURN_CODE, result.launch_status);
-    EXPECT_EQ(77, result.return_code);
+    EXPECT_STR_EQ(argv[0], result->name.c_str());
+    EXPECT_EQ(FAILED_NONZERO_RETURN_CODE, result->launch_status);
+    EXPECT_EQ(77, result->return_code);
 
     END_TEST;
 }
@@ -562,9 +565,9 @@ bool RunTestFailureToLoadFile() {
 
     const char* argv[] = {"i/do/not/exist/", nullptr};
 
-    const Result result = PlatformRunTest(argv, nullptr);
-    EXPECT_STR_EQ(argv[0], result.name.c_str());
-    EXPECT_EQ(FAILED_TO_LAUNCH, result.launch_status);
+    fbl::unique_ptr<Result> result = PlatformRunTest(argv, nullptr);
+    EXPECT_STR_EQ(argv[0], result->name.c_str());
+    EXPECT_EQ(FAILED_TO_LAUNCH, result->launch_status);
 
     END_TEST;
 }
@@ -578,7 +581,7 @@ bool RunTestsInDirBasic() {
     const fbl::String fail_file_name = JoinPath(test_dir.path(), "fail.sh");
     ScopedScriptFile fail_file(fail_file_name, kEchoFailureAndArgs);
     int num_failed;
-    fbl::Vector<Result> results;
+    fbl::Vector<fbl::unique_ptr<Result>> results;
     const signed char verbosity = -1;
     EXPECT_FALSE(RunTestsInDir(PlatformRunTest, test_dir.path(), {}, nullptr,
                                nullptr, verbosity, &num_failed, &results));
@@ -587,13 +590,13 @@ bool RunTestsInDirBasic() {
     bool found_succeed_result = false;
     bool found_fail_result = false;
     // The order of the results is not defined, so just check that each is present.
-    for (const Result& result : results) {
-        if (fbl::StringPiece(result.name) == succeed_file.path()) {
+    for (const fbl::unique_ptr<Result>& result : results) {
+        if (fbl::StringPiece(result->name) == succeed_file.path()) {
             found_succeed_result = true;
-            EXPECT_EQ(SUCCESS, result.launch_status);
-        } else if (fbl::StringPiece(result.name) == fail_file.path()) {
+            EXPECT_EQ(SUCCESS, result->launch_status);
+        } else if (fbl::StringPiece(result->name) == fail_file.path()) {
             found_fail_result = true;
-            EXPECT_EQ(FAILED_NONZERO_RETURN_CODE, result.launch_status);
+            EXPECT_EQ(FAILED_NONZERO_RETURN_CODE, result->launch_status);
         }
     }
     EXPECT_TRUE(found_succeed_result);
@@ -611,7 +614,7 @@ bool RunTestsInDirFilter() {
     const fbl::String fail_file_name = JoinPath(test_dir.path(), "fail.sh");
     ScopedScriptFile fail_file(fail_file_name, kEchoFailureAndArgs);
     int num_failed;
-    fbl::Vector<Result> results;
+    fbl::Vector<fbl::unique_ptr<Result>> results;
     fbl::Vector<fbl::String> filter_names({"succeed.sh"});
     const signed char verbosity = -1;
     EXPECT_TRUE(RunTestsInDir(PlatformRunTest, test_dir.path(), filter_names,
@@ -619,7 +622,7 @@ bool RunTestsInDirFilter() {
                               &results));
     EXPECT_EQ(0, num_failed);
     EXPECT_EQ(1, results.size());
-    EXPECT_STR_EQ(results[0].name.c_str(), succeed_file.path().data());
+    EXPECT_STR_EQ(results[0]->name.c_str(), succeed_file.path().data());
 
     END_TEST;
 }
@@ -631,7 +634,7 @@ bool RunTestsInDirWithVerbosity() {
     const fbl::String succeed_file_name = JoinPath(test_dir.path(), "succeed.sh");
     ScopedScriptFile succeed_file(succeed_file_name, kEchoSuccessAndArgs);
     int num_failed;
-    fbl::Vector<Result> results;
+    fbl::Vector<fbl::unique_ptr<Result>> results;
     const signed char verbosity = 77;
     const fbl::String output_dir = JoinPath(test_dir.path(), "output");
     const char output_file_base_name[] = "output.txt";

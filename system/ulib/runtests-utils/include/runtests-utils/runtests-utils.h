@@ -11,6 +11,7 @@
 
 #include <fbl/string.h>
 #include <fbl/string_piece.h>
+#include <fbl/unique_ptr.h>
 #include <fbl/vector.h>
 
 namespace runtests {
@@ -46,7 +47,8 @@ struct Result {
 // |output_filename| is the name of the file to which the test binary's output
 //   will be written. May be nullptr, in which case the output will not be
 //   redirected.
-typedef Result (*RunTestFn)(const char* argv[], const char* output_filename);
+typedef fbl::unique_ptr<Result> (*RunTestFn)(const char* argv[],
+                                             const char* output_filename);
 
 // A means of measuring how long it takes to run tests.
 class Stopwatch {
@@ -86,7 +88,7 @@ fbl::String JoinPath(fbl::StringPiece parent, fbl::StringPiece child);
 // |summary_json| is the file stream to write the JSON summary to.
 //
 // Returns 0 on success, else an error code compatible with errno.
-int WriteSummaryJSON(const fbl::Vector<Result>& results,
+int WriteSummaryJSON(const fbl::Vector<fbl::unique_ptr<Result>>& results,
                      const fbl::StringPiece output_file_basename,
                      const fbl::StringPiece syslog_path,
                      FILE* summary_json);
@@ -123,7 +125,7 @@ int ResolveGlobs(const fbl::Vector<fbl::String>& globs,
 bool RunTestsInDir(const RunTestFn& run_test, const fbl::StringPiece dir_path,
                    const fbl::Vector<fbl::String>& filter_names, const char* output_dir,
                    const char* output_file_basename, signed char verbosity,
-                   int* num_failed, fbl::Vector<Result>* results);
+                   int* num_failed, fbl::Vector<fbl::unique_ptr<Result>>* results);
 
 // Conditionally runs all tests within given directories, with the option
 // of writing an aggregated summary file.

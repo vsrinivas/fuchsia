@@ -221,7 +221,7 @@ int RunAllTests(const RunTestFn& RunTest, int argc, const char* const* argv,
 
     stopwatch->Start();
     int failed_count = 0;
-    fbl::Vector<Result> results;
+    fbl::Vector<fbl::unique_ptr<Result>> results;
     for (const fbl::String& test_dir : test_dirs) {
         // In the event of failures around a directory not existing or being an empty node
         // we will continue to the next entries rather than aborting. This allows us to handle
@@ -313,25 +313,25 @@ int RunAllTests(const RunTestFn& RunTest, int argc, const char* const* argv,
     if (failed_count) {
         printf("\nThe following tests failed:\n");
     }
-    for (const Result& result : results) {
-        switch (result.launch_status) {
+    for (const fbl::unique_ptr<Result>& result : results) {
+        switch (result->launch_status) {
         case SUCCESS:
             break;
         case FAILED_TO_LAUNCH:
-            printf("%s: failed to launch\n", result.name.c_str());
+            printf("%s: failed to launch\n", result->name.c_str());
             break;
         case FAILED_TO_WAIT:
-            printf("%s: failed to wait\n", result.name.c_str());
+            printf("%s: failed to wait\n", result->name.c_str());
             break;
         case FAILED_TO_RETURN_CODE:
-            printf("%s: failed to return exit code\n", result.name.c_str());
+            printf("%s: failed to return exit code\n", result->name.c_str());
             break;
         case FAILED_NONZERO_RETURN_CODE:
             printf("%s: returned nonzero: %" PRId64 "\n",
-                   result.name.c_str(), result.return_code);
+                   result->name.c_str(), result->return_code);
             break;
         default:
-            printf("%s: unknown result\n", result.name.c_str());
+            printf("%s: unknown result\n", result->name.c_str());
             break;
         }
     }

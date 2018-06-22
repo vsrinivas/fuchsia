@@ -6,6 +6,7 @@
 
 #include <stdio.h>
 
+#include <fbl/unique_ptr.h>
 #include <runtests-utils/runtests-utils.h>
 
 namespace runtests {
@@ -17,6 +18,7 @@ namespace runtests {
 // |output_filename| is the name of the file to which the test binary's output
 //   will be written. May be nullptr, in which case the output will not be
 //   redirected.
-Result FuchsiaRunTest(const char* argv[], const char* output_filename);
+fbl::unique_ptr<Result> FuchsiaRunTest(const char* argv[],
+                                       const char* output_filename);
 
 } // namespace runtests
