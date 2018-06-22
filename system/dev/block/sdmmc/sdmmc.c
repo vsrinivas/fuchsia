@@ -391,6 +391,7 @@ static int sdmmc_worker_thread(void* arg) {
         return st;
     }
 
+    dev->worker_thread_running = true;
     device_make_visible(dev->zxdev);
 
     for (;;) {
@@ -473,7 +474,6 @@ static zx_status_t sdmmc_bind(void* ctx, zx_device_t* parent) {
         st = thrd_status_to_zx_status(rc);
         goto fail_remove;
     }
-    dev->worker_thread_running = true;
 
     return ZX_OK;
 
