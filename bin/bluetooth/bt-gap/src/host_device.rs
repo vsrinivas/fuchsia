@@ -75,8 +75,8 @@ pub fn run(
                 }
                 // TODO(NET-968): Add integration test for this.
                 HostEvent::OnDeviceUpdated { mut device } => {
-                    if let Some(ref events) = hd.write().events {
-                        let _res = events
+                    for listener in hd.read().event_listeners.iter() {
+                        let _res = listener
                             .send_on_device_updated(&mut device)
                             .map_err(|e| error!("Failed to send device updated event: {:?}", e));
                     }

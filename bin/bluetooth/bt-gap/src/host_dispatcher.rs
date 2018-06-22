@@ -71,7 +71,7 @@ pub struct HostDispatcher {
     discoverable: Option<Weak<DiscoverableRequestToken>>,
 
     pub pairing_delegate: Option<PairingDelegateProxy>,
-    pub events: Option<ControlControlHandle>,
+    pub event_listeners: Vec<ControlControlHandle>,
 
     // Pending requests to obtain a Host.
     host_requests: Slab<task::Waker>,
@@ -86,7 +86,7 @@ impl HostDispatcher {
             discovery: None,
             discoverable: None,
             pairing_delegate: None,
-            events: None,
+            event_listeners: vec![],
             host_requests: Slab::new(),
         }
     }
@@ -266,10 +266,10 @@ impl HostDispatcher {
     fn set_active_id(&mut self, id: Option<String>) {
         info!("New active adapter: {:?}", id);
         self.active_id = id;
-        if let Some(ref events) = self.events.clone() {
-            let _res = events.send_on_active_adapter_changed(
-                self.get_active_adapter_info().as_mut().map(OutOfLine),
-            );
+        if let Some(ref mut adapter_info) = self.get_active_adapter_info() {
+            for events in self.event_listeners.iter() {
+                let _res = events.send_on_active_adapter_changed(Some(OutOfLine(adapter_info)));
+            }
         }
     }
 }
@@ -369,8 +369,8 @@ fn add_adapter(hd: Arc<RwLock<HostDispatcher>>, host_path: PathBuf)
             fok((hd.clone(), host_device))
         })
         .and_then(|(hd, host_device)| {
-            if let Some(ref events) = hd.read().events {
-                let _res = events.send_on_adapter_updated(
+            for listener in hd.read().event_listeners.iter() {
+                let _res = listener.send_on_adapter_updated(
                     &mut clone_host_info(host_device.read().get_info()),
                 );
             }

@@ -33,7 +33,7 @@ pub fn make_control_service(
         on_open: |state, handle| {
             let wstate = state.write();
             let mut hd = wstate.host.write();
-            hd.events = Some(handle.clone());
+            hd.event_listeners.push(handle.clone());
             future::ok(())
         },
         connect: |_, _, _, res| {
