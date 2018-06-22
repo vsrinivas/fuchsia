@@ -5,10 +5,9 @@
 mod scan;
 mod state;
 
-use fidl_mlme::{self, MlmeEvent, ScanRequest};
+use fidl_mlme::{MlmeEvent, ScanRequest};
 use self::scan::{DiscoveryScan, JoinScan, JoinScanFailure, ScanResult, ScanScheduler};
 use self::state::{ConnectCommand, State};
-use std::collections::VecDeque;
 use std::sync::Arc;
 use super::{DeviceCapabilities, MlmeRequest};
 use futures::channel::mpsc;
@@ -23,29 +22,40 @@ pub trait Tokens {
     type ConnectToken;
 }
 
-struct UnboundedSink<T> {
-    sink: mpsc::UnboundedSender<T>,
-}
+// This is necessary to trick the private-in-public checker.
+// A private module is not allowed to include private types in its interface,
+// even though the module itself is private and will never be exported.
+// As a workaround, we add another private module with public types.
+mod internal {
+    use futures::channel::mpsc;
+    use super::UserEvent;
 
-impl<T> UnboundedSink<T> {
-    fn send(&self, msg: T) {
-        match self.sink.unbounded_send(msg) {
-            Ok(()) => {},
-            Err(e) => {
-                if e.is_full() {
-                    panic!("Did not expect an unbounded channel to be full: {:?}", e);
+    pub struct UnboundedSink<T> {
+        pub sink: mpsc::UnboundedSender<T>,
+    }
+
+    impl<T> UnboundedSink<T> {
+        pub fn send(&self, msg: T) {
+            match self.sink.unbounded_send(msg) {
+                Ok(()) => {},
+                Err(e) => {
+                    if e.is_full() {
+                        panic!("Did not expect an unbounded channel to be full: {:?}", e);
+                    }
+                    // If the other side has disconnected, we can still technically function,
+                    // so ignore the error.
                 }
-                // If the other side has disconnected, we can still technically function,
-                // so ignore the error.
             }
         }
     }
+
+    pub type MlmeSink = UnboundedSink<super::super::MlmeRequest>;
+    pub type UserSink<T> = UnboundedSink<UserEvent<T>>;
 }
 
-type MlmeSink = UnboundedSink<MlmeRequest>;
-type UserSink<T> = UnboundedSink<UserEvent<T>>;
-pub type UserStream<T> = mpsc::UnboundedReceiver<UserEvent<T>>;
+use self::internal::*;
 
+pub type UserStream<T> = mpsc::UnboundedReceiver<UserEvent<T>>;
 
 pub struct ClientSme<T: Tokens> {
     state: Option<State<T>>,

@@ -3,15 +3,15 @@
 // found in the LICENSE file.
 
 use fidl_mlme::{self, BssDescription, MlmeEvent};
-use std::collections::VecDeque;
 use super::{ConnectResult, Tokens};
+use super::internal::{MlmeSink, UserSink};
 use super::super::MlmeRequest;
 
 const DEFAULT_JOIN_FAILURE_TIMEOUT: u32 = 20; // beacon intervals
 const DEFAULT_AUTH_FAILURE_TIMEOUT: u32 = 20; // beacon intervals
 
 pub enum LinkState {
-    ShakingHands,
+    _ShakingHands,
     LinkUp
 }
 
@@ -43,8 +43,8 @@ pub enum State<T: Tokens> {
 }
 
 impl<T: Tokens> State<T> {
-    pub fn on_mlme_event(self, event: MlmeEvent, mlme_sink: &super::MlmeSink,
-                         user_sink: &super::UserSink<T>) -> Self {
+    pub fn on_mlme_event(self, event: MlmeEvent, mlme_sink: &MlmeSink,
+                         user_sink: &UserSink<T>) -> Self {
         match self {
             State::Idle => {
                 eprintln!("Unexpected MLME message while Idle: {:?}", event);
@@ -67,7 +67,7 @@ impl<T: Tokens> State<T> {
                         State::Idle
                     }
                 },
-                other => {
+                _ => {
                     State::Joining{ cmd }
                 }
             },
@@ -103,11 +103,11 @@ impl<T: Tokens> State<T> {
                 _ => State::Associating{ cmd }
             },
             State::Associated { bss, last_rssi, link_state } => match event {
-                MlmeEvent::DisassociateInd{ ind } => {
+                MlmeEvent::DisassociateInd{ .. } => {
                     let cmd = ConnectCommand{ bss, token: None };
                     to_associating_state(cmd, mlme_sink)
                 },
-                MlmeEvent::DeauthenticateInd{ ind } => {
+                MlmeEvent::DeauthenticateInd{ .. } => {
                     State::Idle
                 },
                 MlmeEvent::SignalReport{ ind } => {
@@ -121,7 +121,7 @@ impl<T: Tokens> State<T> {
                 _ => State::Associated{ bss, last_rssi, link_state }
             },
             State::Deauthenticating{ next_cmd } => match event {
-                MlmeEvent::DeauthenticateConf{ resp } => {
+                MlmeEvent::DeauthenticateConf{ .. } => {
                     disconnect_or_join(next_cmd, mlme_sink)
                 },
                 _ => State::Deauthenticating { next_cmd }
@@ -130,7 +130,7 @@ impl<T: Tokens> State<T> {
     }
 
     pub fn disconnect(self, next_bss_to_join: Option<ConnectCommand<T::ConnectToken>>,
-                      mlme_sink: &super::MlmeSink, user_sink: &super::UserSink<T>) -> Self {
+                      mlme_sink: &MlmeSink, user_sink: &UserSink<T>) -> Self {
         match self {
             State::Idle => {
                 disconnect_or_join(next_bss_to_join, mlme_sink)
@@ -160,7 +160,7 @@ impl<T: Tokens> State<T> {
 
 fn to_deauthenticating_state<T>(current_bss: Box<BssDescription>,
                                 next_bss_to_join: Option<ConnectCommand<T::ConnectToken>>,
-                                mlme_sink: &super::MlmeSink) -> State<T>
+                                mlme_sink: &MlmeSink) -> State<T>
     where T: Tokens
 {
     mlme_sink.send(MlmeRequest::Deauthenticate(
@@ -175,7 +175,7 @@ fn to_deauthenticating_state<T>(current_bss: Box<BssDescription>,
 }
 
 fn disconnect_or_join<T>(next_bss_to_join: Option<ConnectCommand<T::ConnectToken>>,
-                         mlme_sink: &super::MlmeSink)
+                         mlme_sink: &MlmeSink)
     -> State<T>
     where T: Tokens
 {
@@ -195,7 +195,7 @@ fn disconnect_or_join<T>(next_bss_to_join: Option<ConnectCommand<T::ConnectToken
     }
 }
 
-fn to_associating_state<T>(cmd: ConnectCommand<T::ConnectToken>, mlme_sink: &super::MlmeSink)
+fn to_associating_state<T>(cmd: ConnectCommand<T::ConnectToken>, mlme_sink: &MlmeSink)
     -> State<T>
     where T: Tokens
 {
@@ -209,7 +209,7 @@ fn to_associating_state<T>(cmd: ConnectCommand<T::ConnectToken>, mlme_sink: &sup
 }
 
 fn report_connect_finished<T>(token: Option<T::ConnectToken>,
-                              user_sink: &super::UserSink<T>, result: ConnectResult)
+                              user_sink: &UserSink<T>, result: ConnectResult)
     where T: Tokens
 {
     if let Some(token) = token {
@@ -241,7 +241,7 @@ fn clone_bss_desc(d: &fidl_mlme::BssDescription) -> fidl_mlme::BssDescription {
     }
 }
 
-fn get_rsn(bss_desc: &fidl_mlme::BssDescription) -> Option<Vec<u8>> {
+fn get_rsn(_bss_desc: &fidl_mlme::BssDescription) -> Option<Vec<u8>> {
     // TODO(gbonik): Use wlan-rsn/eapol
     None
 }

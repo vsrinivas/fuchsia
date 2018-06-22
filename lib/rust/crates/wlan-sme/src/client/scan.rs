@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use fidl_mlme::{self, MlmeEvent, BssDescription, ScanResultCodes, ScanRequest};
+use fidl_mlme::{self, BssDescription, ScanResultCodes, ScanRequest};
 use std::collections::{HashMap, VecDeque};
 use std::collections::hash_map::Entry;
 use std::cmp::Ordering;
 use std::mem;
 use std::sync::Arc;
-use super::super::{DeviceCapabilities, MlmeRequest};
+use super::super::{DeviceCapabilities};
 
 // Scans can be performed for two different purposes:
 //      1) Discover available wireless networks. These scans are initiated by the "user",
@@ -27,8 +27,6 @@ pub struct JoinScan<T> {
 pub struct DiscoveryScan<T> {
     pub token: T,
 }
-
-type UserTxnId = u64;
 
 pub struct ScanScheduler<D, J> {
     // The currently running scan. We assume that MLME can handle a single concurrent scan
@@ -221,7 +219,7 @@ fn new_join_scan_request<T>(join_scan: &JoinScan<T>,
     }
 }
 
-fn new_discovery_scan_request<T>(discovery_scan: &DiscoveryScan<T>,
+fn new_discovery_scan_request<T>(_discovery_scan: &DiscoveryScan<T>,
                                  device_caps: &DeviceCapabilities) -> ScanRequest {
     ScanRequest {
         bss_type: fidl_mlme::BssTypes::Infrastructure,

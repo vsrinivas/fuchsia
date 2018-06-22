@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#![deny(warnings)]
+
 extern crate fidl_fuchsia_wlan_mlme as fidl_mlme;
 extern crate fuchsia_zircon as zx;
 #[macro_use] extern crate failure;
