@@ -180,8 +180,13 @@ void Vp9Decoder::UpdateLoopFilter(HardwareRenderParams* param) {
 zx_status_t Vp9Decoder::Initialize() {
   uint8_t* firmware;
   uint32_t firmware_size;
+  FirmwareBlob::FirmwareType firmware_type =
+      (owner_->device_type() == DeviceType::kG12A)
+          ? FirmwareBlob::FirmwareType::kVp9MmuG12a
+          : FirmwareBlob::FirmwareType::kVp9Mmu;
+
   zx_status_t status = owner_->firmware_blob()->GetFirmwareData(
-      FirmwareBlob::FirmwareType::kVp9Mmu, &firmware, &firmware_size);
+      firmware_type, &firmware, &firmware_size);
   if (status != ZX_OK)
     return status;
 

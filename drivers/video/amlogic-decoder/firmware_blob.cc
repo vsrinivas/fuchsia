@@ -113,6 +113,9 @@ zx_status_t FirmwareBlob::GetFirmwareData(FirmwareType firmware_type,
     case FirmwareType::kVp9Mmu:
       format_name = "vp9_mmu";
       break;
+    case FirmwareType::kVp9MmuG12a:
+      format_name = "vp9_g12a";
+      break;
     default:
       DECODE_ERROR("Invalid firmware type: %d\n", firmware_type);
       return ZX_ERR_INVALID_ARGS;

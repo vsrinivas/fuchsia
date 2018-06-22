@@ -18,6 +18,7 @@ class FirmwareBlob {
     kMPEG12,
     kH264,
     kVp9Mmu,
+    kVp9MmuG12a,
   };
 
   ~FirmwareBlob();
