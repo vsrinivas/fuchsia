@@ -22,10 +22,11 @@ union IpAddress {
 };
 
 struct Subnet {
-    // The IPv4 or IPv6 address.
+    // The IPv4 or IPv6 address. Only the |prefix_len| most significant bits may be set in |addr|;
+    // all bits in the host portion of the address must be zero.
     IpAddress addr;
 
-    // The prefix length of the netmask. E.g. for 192.168.1.1/24, the prefix
+    // The prefix length of the netmask. E.g. for 192.168.1.0/24, the prefix
     // length is 24, corresponding to a netmask of 255.255.255.0.
     // For IPv4, prefix_len must be in the range [0, 32].
     // For IPv6, prefix_len must be in the range [0, 128].
