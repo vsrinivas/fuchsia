@@ -201,15 +201,8 @@ void LedgerManager::GetPage(convert::ExtendedStringView page_id,
 }
 
 Status LedgerManager::DeletePage(convert::ExtendedStringView page_id) {
-  auto it = page_managers_.find(page_id);
-  if (it != page_managers_.end()) {
-    page_managers_.erase(it);
-  }
-
-  if (storage_->DeletePageStorage(page_id)) {
-    return Status::OK;
-  }
-  return Status::PAGE_NOT_FOUND;
+  FXL_NOTIMPLEMENTED();
+  return Status::INTERNAL_ERROR;
 }
 
 void LedgerManager::CreatePageStorage(storage::PageId page_id,

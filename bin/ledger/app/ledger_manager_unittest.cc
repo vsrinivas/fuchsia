@@ -68,20 +68,17 @@ class FakeLedgerStorage : public storage::LedgerStorage {
   }
 
   bool DeletePageStorage(storage::PageIdView page_id) override {
-    delete_page_calls.push_back(page_id.ToString());
     return false;
   }
 
   void ClearCalls() {
     create_page_calls.clear();
     get_page_calls.clear();
-    delete_page_calls.clear();
   }
 
   bool should_get_page_fail = false;
   std::vector<storage::PageId> create_page_calls;
   std::vector<storage::PageId> get_page_calls;
-  std::vector<storage::PageId> delete_page_calls;
 
  private:
   async_t* const async_;
@@ -146,7 +143,6 @@ class LedgerManagerTest : public gtest::TestLoopFixture {
 TEST_F(LedgerManagerTest, LedgerImpl) {
   EXPECT_EQ(0u, storage_ptr->create_page_calls.size());
   EXPECT_EQ(0u, storage_ptr->get_page_calls.size());
-  EXPECT_EQ(0u, storage_ptr->delete_page_calls.size());
 
   PagePtr page;
   storage_ptr->should_get_page_fail = true;
@@ -154,7 +150,6 @@ TEST_F(LedgerManagerTest, LedgerImpl) {
   RunLoopUntilIdle();
   EXPECT_EQ(1u, storage_ptr->create_page_calls.size());
   EXPECT_EQ(1u, storage_ptr->get_page_calls.size());
-  EXPECT_EQ(0u, storage_ptr->delete_page_calls.size());
   page.Unbind();
   storage_ptr->ClearCalls();
 
@@ -163,7 +158,6 @@ TEST_F(LedgerManagerTest, LedgerImpl) {
   RunLoopUntilIdle();
   EXPECT_EQ(1u, storage_ptr->create_page_calls.size());
   EXPECT_EQ(1u, storage_ptr->get_page_calls.size());
-  EXPECT_EQ(0u, storage_ptr->delete_page_calls.size());
   page.Unbind();
   storage_ptr->ClearCalls();
 
@@ -174,16 +168,7 @@ TEST_F(LedgerManagerTest, LedgerImpl) {
   EXPECT_EQ(1u, storage_ptr->create_page_calls.size());
   ASSERT_EQ(1u, storage_ptr->get_page_calls.size());
   EXPECT_EQ(convert::ToString(id.id), storage_ptr->get_page_calls[0]);
-  EXPECT_EQ(0u, storage_ptr->delete_page_calls.size());
   page.Unbind();
-  storage_ptr->ClearCalls();
-
-  ledger_->DeletePage(id, [this](Status) { QuitLoop(); });
-  RunLoopUntilIdle();
-  EXPECT_EQ(0u, storage_ptr->create_page_calls.size());
-  EXPECT_EQ(0u, storage_ptr->get_page_calls.size());
-  ASSERT_EQ(1u, storage_ptr->delete_page_calls.size());
-  EXPECT_EQ(convert::ToString(id.id), storage_ptr->delete_page_calls[0]);
   storage_ptr->ClearCalls();
 }
 
@@ -228,7 +213,6 @@ TEST_F(LedgerManagerTest, CallGetPageTwice) {
   EXPECT_EQ(0u, storage_ptr->create_page_calls.size());
   ASSERT_EQ(1u, storage_ptr->get_page_calls.size());
   EXPECT_EQ(convert::ToString(id.id), storage_ptr->get_page_calls[0]);
-  EXPECT_EQ(0u, storage_ptr->delete_page_calls.size());
 }
 
 // Cloud should never be queried.

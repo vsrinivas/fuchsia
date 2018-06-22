@@ -104,51 +104,6 @@ TEST_P(PageIntegrationTest, MultiplePageConnections) {
   EXPECT_EQ(page_id_1.id, page_id_2.id);
 }
 
-TEST_P(PageIntegrationTest, DeletePage) {
-  auto instance = NewLedgerAppInstance();
-  // Create a new page and find its id.
-  ledger::PagePtr page = instance->GetTestPage();
-  ledger::PageId id = PageGetId(&page);
-
-  // Delete the page.
-  bool page_closed = false;
-  page.set_error_handler([&page_closed] { page_closed = true; });
-  instance->DeletePage(id, ledger::Status::OK);
-
-  // Verify that deletion of the page closed the page connection.
-  EXPECT_FALSE(page);
-  EXPECT_TRUE(page_closed);
-
-  // Delete the same page again and expect a PAGE_NOT_FOUND result.
-  instance->DeletePage(id, ledger::Status::PAGE_NOT_FOUND);
-}
-
-TEST_P(PageIntegrationTest, MultipleLedgerConnections) {
-  auto instance = NewLedgerAppInstance();
-  // Connect to the same ledger instance twice.
-  ledger::LedgerPtr ledger_connection_1 = instance->GetTestLedger();
-  ledger::LedgerPtr ledger_connection_2 = instance->GetTestLedger();
-
-  // Create a page on the first connection.
-  ledger::PagePtr page;
-  auto waiter = NewWaiter();
-  ledger::Status status;
-  ledger_connection_1->GetPage(
-      nullptr, page.NewRequest(),
-      callback::Capture(waiter->GetCallback(), &status));
-  waiter->RunUntilCalled();
-  EXPECT_EQ(ledger::Status::OK, status);
-
-  // Delete this page on the second connection and verify that the operation
-  // succeeds.
-  ledger::PageId id = PageGetId(&page);
-  waiter = NewWaiter();
-  ledger_connection_2->DeletePage(
-      std::move(id), callback::Capture(waiter->GetCallback(), &status));
-  waiter->RunUntilCalled();
-  EXPECT_EQ(ledger::Status::OK, status);
-}
-
 INSTANTIATE_TEST_CASE_P(PageIntegrationTest, PageIntegrationTest,
                         ::testing::ValuesIn(GetLedgerAppInstanceFactories()));
 

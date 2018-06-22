@@ -105,7 +105,6 @@ void LedgerStorageImpl::GetPageStorage(
 }
 
 bool LedgerStorageImpl::DeletePageStorage(PageIdView page_id) {
-  // TODO(nellyv): We need to synchronize the page deletion with the cloud.
   ledger::DetachedPath path = GetPathFor(page_id);
   if (!files::IsDirectoryAt(path.root_fd(), path.path())) {
     return false;
