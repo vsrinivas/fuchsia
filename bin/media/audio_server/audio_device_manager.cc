@@ -244,7 +244,8 @@ void AudioDeviceManager::GetDeviceGain(uint64_t device_token,
 
   ::fuchsia::media::AudioGainInfo info = {0};
   if (dev.IsValid()) {
-    dev->GetGainInfo(&info);
+    FXL_DCHECK(dev->device_settings() != nullptr);
+    dev->device_settings()->GetGainInfo(&info);
     cbk(device_token, std::move(info));
   } else {
     cbk(ZX_KOID_INVALID, std::move(info));
@@ -616,7 +617,8 @@ void AudioDeviceManager::LinkToCapturers(
 
 void AudioDeviceManager::NotifyDeviceGainChanged(const AudioDevice& device) {
   ::fuchsia::media::AudioGainInfo info;
-  device.GetGainInfo(&info);
+  FXL_DCHECK(device.device_settings() != nullptr);
+  device.device_settings()->GetGainInfo(&info);
 
   for (auto& client : bindings_.bindings()) {
     client->events().OnDeviceGainChanged(device.token(), info);

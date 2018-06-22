@@ -1032,8 +1032,9 @@ zx_status_t AudioDriver::OnDriverInfoFetched(uint32_t info) {
   return ZX_OK;
 }
 
-zx_status_t AudioDriver::SendSetGain(const AudioDevice::GainState& gain_state,
-                                     audio_set_gain_flags_t set_flags) {
+zx_status_t AudioDriver::SendSetGain(
+    const AudioDeviceSettings::GainState& gain_state,
+    audio_set_gain_flags_t set_flags) {
   audio_stream_cmd_set_gain_req_t req;
   req.hdr.cmd =
       static_cast<audio_cmd_t>(AUDIO_STREAM_CMD_SET_GAIN | AUDIO_FLAG_NO_ACK);

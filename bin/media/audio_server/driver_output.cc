@@ -109,10 +109,15 @@ bool DriverOutput::StartMixJob(MixJob* job, fxl::TimePoint process_start) {
   //    the SW component), and then in the other (as the HW gain command takes
   //    affect).
   //
-  GainState cur_gain_state;
-  SnapshotGainState(&cur_gain_state);
-  job->sw_output_db_gain = cur_gain_state.db_gain;
-  job->sw_output_muted = cur_gain_state.muted;
+  if (device_settings_ != nullptr) {
+    AudioDeviceSettings::GainState cur_gain_state;
+    device_settings_->SnapshotGainState(&cur_gain_state);
+    job->sw_output_db_gain = cur_gain_state.db_gain;
+    job->sw_output_muted = cur_gain_state.muted;
+  } else {
+    job->sw_output_db_gain = 0.0f;
+    job->sw_output_muted = true;
+  }
 
   FXL_DCHECK(driver_ring_buffer() != nullptr);
   int64_t now = process_start.ToEpochDelta().ToNanoseconds();

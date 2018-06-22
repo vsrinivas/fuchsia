@@ -15,8 +15,10 @@
 #include <fbl/intrusive_wavl_tree.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
+#include <fuchsia/media/cpp/fidl.h>
 #include <zircon/device/audio.h>
 
+#include "garnet/bin/media/audio_server/audio_device_settings.h"
 #include "garnet/bin/media/audio_server/audio_object.h"
 #include "garnet/bin/media/audio_server/audio_pipe.h"
 #include "garnet/bin/media/audio_server/audio_renderer_impl.h"
@@ -34,12 +36,6 @@ class DriverRingBuffer;
 class AudioDevice : public AudioObject,
                     public fbl::WAVLTreeContainable<fbl::RefPtr<AudioDevice>> {
  public:
-  struct GainState {
-    float db_gain = 0.0f;
-    bool muted = false;
-    bool agc_enabled = false;
-  };
-
   // Wakeup
   //
   // Called from outside the mixing ExecutionDomain to cause an
@@ -94,11 +90,14 @@ class AudioDevice : public AudioObject,
     return nullptr;
   }
 
-  // Gain settings
+  // Accessor set gain.  Handles limiting the gain command to what the hardware
+  // allows, and waking up the device in the event of a meaningful change in
+  // gain settings.
+  //
+  // Only to be called by the AudioDeviceManager, and only after the device has
+  // declared itself to have been activated.
   void SetGainInfo(const ::fuchsia::media::AudioGainInfo& info,
-                   uint32_t set_flags) FXL_LOCKS_EXCLUDED(gain_state_lock_);
-  void GetGainInfo(::fuchsia::media::AudioGainInfo* out_info) const
-      FXL_LOCKS_EXCLUDED(gain_state_lock_);
+                   uint32_t set_flags);
 
   // Device info which can be used during device enumeration and
   // add-notifications.
@@ -109,11 +108,6 @@ class AudioDevice : public AudioObject,
 
   ~AudioDevice() override;
   AudioDevice(Type type, AudioDeviceManager* manager);
-
-  // Snapshot the current gain state and clear the dirty flag.  Returns the
-  // state of the dirty flags at snapshot time.
-  audio_set_gain_flags_t SnapshotGainState(GainState* out_state)
-      FXL_LOCKS_EXCLUDED(gain_state_lock_);
 
   //////////////////////////////////////////////////////////////////////////////
   //
@@ -238,18 +232,12 @@ class AudioDevice : public AudioObject,
   // for us.
   std::unique_ptr<AudioDriver> driver_;
 
-  // Gain state
-  // TODO(johngro): It would be great if we didn't need to use a lock to
-  // synchronize gain state.  A lock-less triple buffer structure suitable for a
-  // single writer (the device manager) single reader (the device) would be
-  // perfect.  I have such a templated class left over from a previous project,
-  // but no time to integrate at the moment to integrate it with fuchsia.  Some
-  // day, I should make the time to move it and its tests over, and then switch
-  // this code over to using it.
-  mutable fbl::Mutex gain_state_lock_;
-  GainState gain_state_ FXL_GUARDED_BY(gain_state_lock_);
-  audio_set_gain_flags_t gain_state_dirty_flags_
-      FXL_GUARDED_BY(gain_state_lock_) = static_cast<audio_set_gain_flags_t>(0);
+  // Persistable settings.  Note, this is instantiated by the audio device
+  // itself during activate self so that it may be pre-populated with the
+  // current hardware state, and so the presence/absence of this pointer is
+  // always coherent from the view of the mix_domain.  Once instantiated, this
+  // class lives for as long as the AudioDevice does.
+  fbl::RefPtr<AudioDeviceSettings> device_settings_;
 
  private:
   // It's always nice when you manager is also your friend.  Seriously though,
@@ -283,6 +271,17 @@ class AudioDevice : public AudioObject,
   void SetActivated() {
     FXL_DCHECK(!activated());
     activated_ = true;
+  }
+
+  // Accessor used by the AudioDeviceManager for accessing the device_settings
+  // object.
+  //
+  // Note: it is certainly possible for the AudioDeviceManager to simply access
+  // the device_settings_ pointer directly.  Code should use this accessor
+  // instead, however, to avoid accidentally releasing the device_settings
+  // object.
+  const fbl::RefPtr<AudioDeviceSettings>& device_settings() const {
+    return device_settings_;
   }
 
   // Plug state is protected by the fact that it is only ever accessed on the

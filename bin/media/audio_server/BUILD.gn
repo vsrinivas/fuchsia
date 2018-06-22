@@ -41,6 +41,8 @@ executable("audio_server") {
     "audio_device.h",
     "audio_device_manager.cc",
     "audio_device_manager.h",
+    "audio_device_settings.cc",
+    "audio_device_settings.h",
     "audio_driver.cc",
     "audio_driver.h",
     "audio_input.cc",

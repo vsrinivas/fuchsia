@@ -77,15 +77,6 @@ void AudioInput::OnDriverInfoFetched() {
     return;
   }
 
-  // Synchronize our current gain state as reported by hardware with our current
-  // internal state.
-  {
-    fbl::AutoLock lock(&gain_state_lock_);
-    gain_state_.db_gain = hw_gain.cur_gain;
-    gain_state_.muted = hw_gain.can_mute && hw_gain.cur_mute;
-    gain_state_.agc_enabled = hw_gain.can_agc && hw_gain.cur_agc;
-  }
-
   FXL_LOG(INFO) << "AudioInput Configuring for " << pref_fps << " Hz "
                 << pref_chan << " channel(s) sample format(0x" << std::hex
                 << static_cast<uint32_t>(pref_fmt) << ")";
@@ -183,12 +174,13 @@ void AudioInput::ApplyGainLimits(::fuchsia::media::AudioGainInfo* in_out_info,
 }
 
 void AudioInput::UpdateDriverGainState() {
-  if (state_ != State::Idle) {
+  if ((state_ != State::Idle) || (device_settings_ == nullptr)) {
     return;
   }
 
-  GainState state;
-  audio_set_gain_flags_t dirty_flags = SnapshotGainState(&state);
+  AudioDeviceSettings::GainState state;
+  audio_set_gain_flags_t dirty_flags =
+      device_settings_->SnapshotGainState(&state);
   if (!dirty_flags) {
     return;
   }

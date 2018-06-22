@@ -18,6 +18,7 @@
 #include <zircon/device/audio.h>
 
 #include "garnet/bin/media/audio_server/audio_device.h"
+#include "garnet/bin/media/audio_server/audio_device_settings.h"
 #include "garnet/bin/media/audio_server/driver_ring_buffer.h"
 #include "garnet/bin/media/audio_server/utils.h"
 
@@ -123,7 +124,7 @@ class AudioDriver {
   zx_status_t Start();
   zx_status_t Stop();
   zx_status_t SetPlugDetectEnabled(bool enabled);
-  zx_status_t SendSetGain(const AudioDevice::GainState& gain_state,
+  zx_status_t SendSetGain(const AudioDeviceSettings::GainState& gain_state,
                           audio_set_gain_flags_t set_flags);
 
  private:
