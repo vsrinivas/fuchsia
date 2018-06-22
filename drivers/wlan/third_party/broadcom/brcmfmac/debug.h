@@ -17,8 +17,6 @@
 #ifndef BRCMFMAC_DEBUG_H
 #define BRCMFMAC_DEBUG_H
 
-//#include <linux/net.h> /* net_ratelimit() */
-
 #include "linuxisms.h"
 
 // clang-format off

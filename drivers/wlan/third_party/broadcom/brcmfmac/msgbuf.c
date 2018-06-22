@@ -1316,6 +1316,7 @@ zx_status_t brcmf_proto_msgbuf_attach(struct brcmf_pub* drvr) {
 
     if_msgbuf = drvr->bus_if->msgbuf;
 
+    brcmf_dbg(TEMP, "ENTER");
     if (if_msgbuf->max_flowrings >= BRCMF_FLOWRING_HASHSIZE) {
         brcmf_err("driver not configured for this many flowrings %d\n", if_msgbuf->max_flowrings);
         if_msgbuf->max_flowrings = BRCMF_FLOWRING_HASHSIZE - 1;

@@ -382,6 +382,7 @@ void brcmf_rx_frame(struct brcmf_device* dev, struct brcmf_netbuf* skb, bool han
     brcmf_dbg(DATA, "Enter: %s: rxp=%p\n", dev_name(dev), skb);
 
     if (brcmf_rx_hdrpull(drvr, skb, &ifp)) {
+        brcmf_dbg(TEMP, "hdrpull returned nonzero");
         return;
     }
 
@@ -524,7 +525,7 @@ zx_status_t brcmf_net_attach(struct brcmf_if* ifp, bool rtnl_locked) {
     memcpy(ndev->dev_addr, ifp->mac_addr, ETH_ALEN);
     brcmf_dbg(TEMP, " * * Tried to call dev_net_set(ndev, wiphy_net(cfg_to_wiphy(drvr->config)));");
     brcmf_dbg(TEMP, "  to 'set the nd_net of net_device to the specified net namespace'");
-    brcmf_dbg(TEMP, "  file:///usr/local/google/home/cphoenix/Downloads/linuxkernnet.pdf");
+    brcmf_dbg(TEMP, "  (Note to self: see Downloads/linuxkernnet.pdf)");
 
     workqueue_init_work(&ifp->multicast_work, _brcmf_set_multicast_list);
     workqueue_init_work(&ifp->ndoffload_work, _brcmf_update_ndtable);
@@ -551,7 +552,8 @@ fail:
 
 static void brcmf_net_detach(struct net_device* ndev, bool rtnl_locked) {
     if (ndev->reg_state == NETREG_REGISTERED) {
-        brcmf_dbg(TEMP, "* * TODO(cphoenix): Tell devhost we're not valid anymore");
+        // TODO(cphoenix): Tell devhost we're not valid
+        brcmf_dbg(TEMP, "* * Need to tell devhost we're not valid anymore");
         /*if (rtnl_locked) {
             unregister_netdevice(ndev);
         } else {
@@ -620,6 +622,7 @@ static zx_status_t brcmf_net_p2p_attach(struct brcmf_if* ifp) {
     memcpy(ndev->dev_addr, ifp->mac_addr, ETH_ALEN);
 
     brcmf_err("* * Tried to register_netdev(ndev); do the ZX thing instead.");
+    // TODO(cphoenix): Add back the appropriate "fail:" code
     // If register_netdev failed, goto fail;
 
     brcmf_dbg(INFO, "%s: Broadcom Dongle Host Driver\n", ndev->name);
@@ -700,6 +703,7 @@ zx_status_t brcmf_add_if(struct brcmf_pub* drvr, int32_t bsscfgidx, int32_t ifid
     if (if_out) {
         *if_out = ifp;
     }
+    brcmf_dbg(TRACE, "Exit");
     return ZX_OK;
 }
 
@@ -1003,9 +1007,10 @@ zx_status_t brcmf_bus_started(struct brcmf_device* dev) {
     struct brcmf_if* p2p_ifp;
     zx_status_t err;
 
-    brcmf_dbg(TRACE, "\n");
+    brcmf_dbg(TRACE, "Enter");
 
     /* add primary networking interface */
+    // TODO(NET-974): Name uniqueness
     err = brcmf_add_if(drvr, 0, 0, false, "wlan", NULL, &ifp);
     if (err != ZX_OK) {
         return err;
@@ -1197,8 +1202,9 @@ void brcmf_bus_change_state(struct brcmf_bus* bus, enum brcmf_bus_state state) {
         for (ifidx = 0; ifidx < BRCMF_MAX_IFS; ifidx++) {
             if ((drvr->iflist[ifidx]) && (drvr->iflist[ifidx]->ndev)) {
                 ndev = drvr->iflist[ifidx]->ndev;
-                brcmf_dbg(INFO, "TODO(cphoenix): This code called netif_wake_queue(ndev)");
-                brcmf_dbg(INFO, "  if netif_queue_stopped(ndev). Do the Fuchsia equivalent.");
+                // TODO(cphoenix): Implement Fuchsia equivalent of...
+                // brcmf_dbg(INFO, "This code called netif_wake_queue(ndev)");
+                // brcmf_dbg(INFO, "  if netif_queue_stopped(ndev). Do the Fuchsia equivalent.");
             }
         }
     }

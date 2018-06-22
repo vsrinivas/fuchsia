@@ -326,11 +326,11 @@ void brcmf_fweh_detach(struct brcmf_pub* drvr) {
 zx_status_t brcmf_fweh_register(struct brcmf_pub* drvr, enum brcmf_fweh_event_code code,
                                 brcmf_fweh_handler_t handler) {
     if (drvr->fweh.evt_handler[code]) {
-        brcmf_err("event code %d already registered\n", code);
+        brcmf_err("Exit: event code %d already registered\n", code);
         return ZX_ERR_ALREADY_EXISTS;
     }
     drvr->fweh.evt_handler[code] = handler;
-    brcmf_dbg(TRACE, "event handler registered for %s\n", brcmf_fweh_event_name(code));
+    brcmf_dbg(TRACE, "Exit: event handler registered for %s\n", brcmf_fweh_event_name(code));
     return ZX_OK;
 }
 
@@ -392,6 +392,7 @@ void brcmf_fweh_process_event(struct brcmf_pub* drvr, struct brcmf_event* event_
     void* data;
     uint32_t datalen;
 
+    brcmf_dbg(TEMP, "Enter");
     /* get event info */
     code = be32toh(event_packet->msg.event_type);
     datalen = be32toh(event_packet->msg.datalen);
@@ -402,10 +403,13 @@ void brcmf_fweh_process_event(struct brcmf_pub* drvr, struct brcmf_event* event_
     }
 
     if (code != BRCMF_E_IF && !fweh->evt_handler[code]) {
+        brcmf_dbg(TEMP, "Event not found");
         return;
     }
 
     if (datalen > BRCMF_DCMD_MAXLEN || datalen + sizeof(*event_packet) > packet_len) {
+        brcmf_dbg(TEMP, "Len, datalen %d, event_packet size %ld, packet_len %d", datalen,
+                  sizeof(*event_packet), packet_len);
         return;
     }
 
@@ -423,5 +427,6 @@ void brcmf_fweh_process_event(struct brcmf_pub* drvr, struct brcmf_event* event_
     event->datalen = datalen;
     memcpy(event->ifaddr, event_packet->eth.h_dest, ETH_ALEN);
 
+    brcmf_dbg(TEMP, "Queueing event!");
     brcmf_fweh_queue_event(fweh, event);
 }

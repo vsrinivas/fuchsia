@@ -1075,6 +1075,7 @@ zx_status_t brcmf_cfg80211_scan(struct wiphy* wiphy, struct cfg80211_scan_reques
     brcmf_dbg(TRACE, "Enter\n");
     vif = container_of(request->wdev, struct brcmf_cfg80211_vif, wdev);
     if (!check_vif_up(vif)) {
+        brcmf_dbg(TEMP, "Vif not up");
         return ZX_ERR_IO;
     }
 
@@ -2004,6 +2005,7 @@ zx_status_t brcmf_cfg80211_connect(struct wiphy* wiphy, struct net_device* ndev,
     err = brcmf_fil_bsscfg_data_set(ifp, "join", ext_join_params, join_params_size);
     free(ext_join_params);
     if (err == ZX_OK) { /* This is it. join command worked, we are done */
+        brcmf_dbg(TEMP, "Join succeeded early!");
         goto done;
     }
 
@@ -2034,7 +2036,7 @@ done:
     if (err != ZX_OK) {
         brcmf_clear_bit_in_array(BRCMF_VIF_STATUS_CONNECTING, &ifp->vif->sme_state);
     }
-    brcmf_dbg(TRACE, "Exit\n");
+    brcmf_dbg(TRACE, "Exit, err %d\n", err);
     return err;
 }
 
@@ -5100,6 +5102,7 @@ static bool brcmf_is_linkup(struct brcmf_cfg80211_vif* vif, const struct brcmf_e
     uint32_t event = e->event_code;
     uint32_t status = e->status;
 
+    brcmf_dbg(TEMP, "Enter");
     if (vif->profile.use_fwsup == BRCMF_PROFILE_FWSUP_PSK && event == BRCMF_E_PSK_SUP &&
             status == BRCMF_E_STATUS_FWSUP_COMPLETED) {
         brcmf_set_bit_in_array(BRCMF_VIF_STATUS_EAP_SUCCESS, &vif->sme_state);
@@ -5108,6 +5111,7 @@ static bool brcmf_is_linkup(struct brcmf_cfg80211_vif* vif, const struct brcmf_e
         brcmf_dbg(CONN, "Processing set ssid\n");
         memcpy(vif->profile.bssid, e->addr, ETH_ALEN);
         if (vif->profile.use_fwsup != BRCMF_PROFILE_FWSUP_PSK) {
+            brcmf_dbg(TEMP, "Ret true");
             return true;
         }
 
@@ -5120,6 +5124,7 @@ static bool brcmf_is_linkup(struct brcmf_cfg80211_vif* vif, const struct brcmf_e
         brcmf_clear_bit_in_array(BRCMF_VIF_STATUS_ASSOC_SUCCESS, &vif->sme_state);
         return true;
     }
+    brcmf_dbg(TEMP, "Ret false");
     return false;
 }
 
@@ -6006,6 +6011,8 @@ static zx_status_t brcmf_setup_wiphybands(struct wiphy* wiphy) {
     uint32_t txbf_bfe_cap = 0;
     uint32_t txbf_bfr_cap = 0;
 
+    brcmf_dbg(TEMP, "Enter");
+
     (void)brcmf_fil_iovar_int_get(ifp, "vhtmode", &vhtmode);
     err = brcmf_fil_iovar_int_get(ifp, "nmode", &nmode);
     if (err != ZX_OK) {
@@ -6359,6 +6366,7 @@ static zx_status_t brcmf_setup_wiphy(struct wiphy* wiphy, struct brcmf_if* ifp) 
         }
     }
 
+    // TODO(cphoenix): Apply channel limits from device tree equivalent
     brcmf_dbg(TEMP, "* * Tried to wiphy_read_of_freq_limits(wiphy)");
     brcmf_dbg(TEMP, "* * This reads and applies channel limits from device tree");
 
@@ -6372,7 +6380,9 @@ static zx_status_t brcmf_config_dongle(struct brcmf_cfg80211_info* cfg) {
     int32_t power_mode;
     zx_status_t err = ZX_OK;
 
+    brcmf_dbg(TEMP, "Enter");
     if (cfg->dongle_up) {
+        brcmf_dbg(TEMP, "Early done");
         return err;
     }
 
@@ -6405,6 +6415,7 @@ static zx_status_t brcmf_config_dongle(struct brcmf_cfg80211_info* cfg) {
 
     cfg->dongle_up = true;
 default_conf_out:
+    brcmf_dbg(TEMP, "Returning %d", err);
 
     return err;
 }
@@ -6644,6 +6655,7 @@ struct brcmf_cfg80211_info* brcmf_cfg80211_attach(struct brcmf_pub* drvr,
     int32_t io_type;
     uint16_t* cap = NULL;
 
+    brcmf_dbg(TEMP, "Enter");
     if (!ndev) {
         brcmf_err("ndev is invalid\n");
         return NULL;
@@ -6804,6 +6816,7 @@ struct brcmf_cfg80211_info* brcmf_cfg80211_attach(struct brcmf_pub* drvr,
 #endif
     }
 
+    brcmf_dbg(TEMP, "Exit");
     return cfg;
 
 detach:

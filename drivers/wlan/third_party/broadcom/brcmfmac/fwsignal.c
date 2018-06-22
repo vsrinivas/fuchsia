@@ -1797,7 +1797,7 @@ void brcmf_fws_hdrpull(struct brcmf_if* ifp, int16_t siglen, struct brcmf_netbuf
     zx_status_t err;
     enum brcmf_fws_should_schedule schedule_status;
 
-    brcmf_dbg(HDRS, "enter: ifidx %d, skblen %u, sig %d\n", ifp->ifidx, skb->len, siglen);
+    brcmf_dbg(HDRS, "enter: ifidx %d, skblen %u, siglen %d\n", ifp->ifidx, skb->len, siglen);
 
     WARN_ON(siglen > skb->len);
 

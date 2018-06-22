@@ -343,7 +343,7 @@ static zx_status_t brcmf_sdiod_skbuff_write(struct brcmf_sdio_dev* sdiodev, stru
  * @addr: dongle memory address as source/destination
  * @pkt: skb pointer
  *
- * This function takes the respbonsibility as the interface function to MMC
+ * This function takes the responsibility as the interface function to MMC
  * stack for block data access. It assumes that the skb passed down by the
  * caller has already been padded and aligned.
  */

@@ -204,7 +204,7 @@ static void brcmf_usb_ioctl_resp_wake(struct brcmf_usbdev_info* devinfo) {
 }
 
 static void brcmf_usb_ctl_complete(struct brcmf_usbdev_info* devinfo, int type, int status) {
-    brcmf_dbg(USB, "Enter, status=%d\n", status);
+    //brcmf_dbg(USB, "Enter, status=%d\n", status);
 
     if (unlikely(devinfo == NULL)) {
         return;
@@ -241,7 +241,7 @@ static void brcmf_usb_ctlread_complete(struct urb* urb) {
 static void brcmf_usb_ctlwrite_complete(struct urb* urb) {
     struct brcmf_usbdev_info* devinfo = (struct brcmf_usbdev_info*)urb->context;
 
-    brcmf_dbg(USB, "Enter\n");
+    //brcmf_dbg(USB, "Enter\n");
     pthread_mutex_lock(&irq_callback_lock);
     brcmf_usb_ctl_complete(devinfo, BRCMF_USB_CBCTL_WRITE, urb->status);
     pthread_mutex_unlock(&irq_callback_lock);
@@ -251,7 +251,7 @@ static zx_status_t brcmf_usb_send_ctl(struct brcmf_usbdev_info* devinfo, uint8_t
     zx_status_t ret;
     uint16_t size;
 
-    brcmf_dbg(USB, "Enter\n");
+    //brcmf_dbg(USB, "Enter\n");
     if (devinfo == NULL || buf == NULL || len == 0 || devinfo->ctl_urb == NULL) {
         return ZX_ERR_INVALID_ARGS;
     }
@@ -278,7 +278,7 @@ static zx_status_t brcmf_usb_recv_ctl(struct brcmf_usbdev_info* devinfo, uint8_t
     zx_status_t ret;
     uint16_t size;
 
-    brcmf_dbg(USB, "Enter\n");
+    //brcmf_dbg(USB, "Enter\n");
     if ((devinfo == NULL) || (buf == NULL) || (len == 0) || (devinfo->ctl_urb == NULL)) {
         return ZX_ERR_INVALID_ARGS;
     }
@@ -306,7 +306,7 @@ static zx_status_t brcmf_usb_tx_ctlpkt(struct brcmf_device* dev, uint8_t* buf, u
     zx_status_t err = ZX_OK;
     struct brcmf_usbdev_info* devinfo = brcmf_usb_get_businfo(dev);
 
-    brcmf_dbg(USB, "Enter\n");
+    //brcmf_dbg(USB, "Enter");
     if (devinfo->bus_pub.state != BRCMFMAC_USB_STATE_UP) {
         return ZX_ERR_IO;
     }
@@ -580,6 +580,7 @@ static void brcmf_usb_state_change(struct brcmf_usbdev_info* devinfo, int state)
     } else {
         brcmf_dbg(USB, "DBUS current state=%d\n", state);
     }
+    brcmf_dbg(TEMP, "Exit");
 }
 
 static zx_status_t brcmf_usb_tx(struct brcmf_device* dev, struct brcmf_netbuf* skb) {
@@ -659,6 +660,7 @@ static zx_status_t brcmf_usb_up(struct brcmf_device* dev) {
 }
 
 static void brcmf_cancel_all_urbs(struct brcmf_usbdev_info* devinfo) {
+    brcmf_dbg(TEMP, "* * Entered cancel_all_urbs");
     if (devinfo->ctl_urb) {
         usb_kill_urb(devinfo->ctl_urb);
     }
@@ -728,6 +730,7 @@ static zx_status_t brcmf_usb_dl_cmd(struct brcmf_usbdev_info* devinfo, uint8_t c
     }
 
     if (brcmf_usb_ioctl_resp_wait(devinfo) != ZX_OK) {
+        brcmf_dbg(TEMP, "Timed out. Canceling endpoint 0.");
         usb_kill_urb(devinfo->ctl_urb);
         ret = ZX_ERR_SHOULD_WAIT;
     } else {
@@ -751,13 +754,14 @@ static bool brcmf_usb_dlneeded(struct brcmf_usbdev_info* devinfo) {
 
     /* Check if firmware downloaded already by querying runtime ID */
     id.chip = 0xDEAD;
-    brcmf_usb_dl_cmd(devinfo, DL_GETVER, &id, sizeof(id));
+    zx_status_t result = brcmf_usb_dl_cmd(devinfo, DL_GETVER, &id, sizeof(id));
+    brcmf_dbg(TEMP, "result from dl_cmd %d", result);
 
     chipid = id.chip;
     chiprev = id.chiprev;
 
     if ((chipid & 0x4300) == 0x4300) {
-        brcmf_dbg(USB, "chip %x rev 0x%x\n", chipid, chiprev);
+        brcmf_dbg(USB, "chip 0x%x rev 0x%x\n", chipid, chiprev);
     } else {
         brcmf_dbg(USB, "chip %d rev 0x%x\n", chipid, chiprev);
     }
@@ -786,6 +790,7 @@ static zx_status_t brcmf_usb_resetcfg(struct brcmf_usbdev_info* devinfo) {
         id.chip = 0xDEAD; /* Get the ID */
         err = brcmf_usb_dl_cmd(devinfo, DL_GETVER, &id, sizeof(id));
         if ((err != ZX_OK) && (err != ZX_ERR_SHOULD_WAIT)) {
+            brcmf_dbg(USB, "Returning err %d from DL_GETVER", err);
             return err;
         }
         if (id.chip == BRCMF_POSTBOOT_ID) {
@@ -956,11 +961,14 @@ static zx_status_t brcmf_usb_dlrun(struct brcmf_usbdev_info* devinfo) {
     /* Start the image */
     if (state.state == DL_RUNNABLE) {
         if (brcmf_usb_dl_cmd(devinfo, DL_GO, &state, sizeof(state)) != ZX_OK) {
+            brcmf_err("Dongle not runnable (DL_GO failed)\n");
             return ZX_ERR_IO_NOT_PRESENT;
         }
         if (brcmf_usb_resetcfg(devinfo) != ZX_OK) {
+            brcmf_err("Dongle not runnable (resetcfg failed)\n");
             return ZX_ERR_IO_NOT_PRESENT;
         }
+        brcmf_dbg(TEMP, "Survived resetcfg");
         /* The Dongle may go for re-enumeration. */
     } else {
         brcmf_err("Dongle not runnable\n");
@@ -987,6 +995,7 @@ static zx_status_t brcmf_usb_fw_download(struct brcmf_usbdev_info* devinfo) {
     if (err == ZX_OK) {
         err = brcmf_usb_dlrun(devinfo);
     }
+    brcmf_dbg(TEMP, "Exit\n");
     return err;
 }
 
@@ -1039,6 +1048,8 @@ static struct brcmf_usbdev* brcmf_usb_attach(struct brcmf_usbdev_info* devinfo, 
     /* flow control when too many tx urbs posted */
     devinfo->tx_low_watermark = ntxq / 4;
     devinfo->tx_high_watermark = devinfo->tx_low_watermark * 3;
+
+    /* Size of buffer for rx */
     devinfo->bus_pub.bus_mtu = BRCMF_USB_MAX_PKT_SIZE;
 
     /* Initialize other structure content */

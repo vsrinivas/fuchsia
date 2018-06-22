@@ -102,7 +102,8 @@ static void brcmf_feat_iovar_int_get(struct brcmf_if* ifp, enum brcmf_feat_id id
         brcmf_dbg(INFO, "enabling feature: %s\n", brcmf_feat_names[id]);
         ifp->drvr->feat_flags |= BIT(id);
     } else {
-        brcmf_dbg(TRACE, "%s feature check failed: %d\n", brcmf_feat_names[id], err);
+        brcmf_dbg(TRACE, "%s feature check failed: %d%s\n", brcmf_feat_names[id], err,
+            (err == ZX_ERR_NOT_SUPPORTED) ? " (FW: not supported)" : "");
     }
 }
 
@@ -120,7 +121,7 @@ static void brcmf_feat_iovar_data_set(struct brcmf_if* ifp, enum brcmf_feat_id i
         // original error check was "(err != -BRCMF_FW_UNSUPPORTED)" which meant that if the
         // firmware reported BRCMF_FW_UNSUPPORTED, this logic would see -EBADE and think all
         // was well.
-        brcmf_dbg(INFO, " * * NOT enabling feature %s, though the buggy Linux driver would have",
+        brcmf_dbg(INFO, " * * NOT enabling feature %s, though the Linux driver would have",
             brcmf_feat_names[id]);
     } else {
         brcmf_dbg(TRACE, "%s feature check failed: %d\n", brcmf_feat_names[id], err);

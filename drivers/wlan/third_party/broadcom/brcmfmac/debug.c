@@ -55,6 +55,44 @@ void brcmf_hexdump(const void* buf, size_t len) {
     }
 }
 
+void brcmf_alphadump(const void* buf, size_t len) {
+    if (len == 0) {
+        brcmf_dbg(INFO, "Empty alphadump %p", buf);
+        return;
+    }
+    char output[140];
+    uint8_t* bytes = (uint8_t*)buf;
+    size_t i;
+    int nonprinting = 0;
+    char* next = output;
+    bool overflow = false;
+    next += sprintf(next, "Alpha: \"");
+    for (i = 0; i < len; i++) {
+        if (bytes[i] >= 32 && bytes[i] < 128) {
+            if (nonprinting) {
+                next += sprintf(next, ",%d.", nonprinting);
+                nonprinting = 0;
+            }
+            next += sprintf(next, "%c", bytes[i]);
+        } else {
+            nonprinting++;
+        }
+        if (next > output + 125) {
+            overflow = true;
+            break;
+        }
+    }
+    if (nonprinting) {
+        next += sprintf(next, ",%d.", nonprinting);
+        nonprinting = 0;
+    }
+    if (overflow) {
+        next += sprintf(next, ">etc<");
+    }
+    sprintf(next, "\"\n");
+    brcmf_dbg(INFO, "%s", output);
+}
+
 zx_status_t brcmf_debug_create_memdump(struct brcmf_bus* bus, const void* data, size_t len) {
     void* dump;
     size_t ramsize;

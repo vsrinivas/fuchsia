@@ -1270,7 +1270,7 @@ static zx_status_t brcmf_sdio_hdparse(struct brcmf_sdio* bus, uint8_t* header,
     uint8_t rx_seq, fc, tx_seq_max;
     uint32_t swheader;
 
-    trace_brcmf_sdpcm_hdr(SDPCM_RX, header);
+    //trace_brcmf_sdpcm_hdr(SDPCM_RX, header);
 
     /* hw header */
     len = get_unaligned_le16(header);
@@ -1402,7 +1402,7 @@ static void brcmf_sdio_hdpack(struct brcmf_sdio* bus, uint8_t* header,
     hdrval |= (hd_info->dat_offset << SDPCM_DOFFSET_SHIFT) & SDPCM_DOFFSET_MASK;
     *((uint32_t*)(header + hdr_offset)) = hdrval;
     *(((uint32_t*)(header + hdr_offset)) + 1) = 0;
-    trace_brcmf_sdpcm_hdr(SDPCM_TX + !!(bus->txglom), header);
+    //trace_brcmf_sdpcm_hdr(SDPCM_TX + !!(bus->txglom), header);
 }
 
 static uint8_t brcmf_sdio_rxglom(struct brcmf_sdio* bus, uint8_t rxseq) {
@@ -3992,9 +3992,10 @@ static void brcmf_sdio_firmware_callback(struct brcmf_device* dev, zx_status_t e
 release:
     sdio_release_host(sdiodev->func1);
 fail:
-    brcmf_dbg(TRACE, "failed: dev=%s, err=%d\n", dev_name(dev), err);
-    brcmf_err("TODO(cphoenix): Used to call device_release_driver(&sdiodev->func2->dev);");
-    brcmf_err("TODO(cphoenix): Used to call device_release_driver(dev);");
+    brcmf_dbg(TRACE, "failed: dev=%s, err=%d\n", device_get_name(dev->zxdev), err);
+    // TODO(cphoenix): Do the right calls here to release the driver
+    brcmf_err("* * Used to call device_release_driver(&sdiodev->func2->dev);");
+    brcmf_err("* * Used to call device_release_driver(dev);");
 
 }
 
@@ -4022,7 +4023,8 @@ struct brcmf_sdio* brcmf_sdio_probe(struct brcmf_sdio_dev* sdiodev) {
     /* single-threaded workqueue */
     char name[WORKQUEUE_NAME_MAXLEN];
     static int queue_uniquify = 0;
-    snprintf(name, WORKQUEUE_NAME_MAXLEN, "brcmf_wq/%d", queue_uniquify++);
+    snprintf(name, WORKQUEUE_NAME_MAXLEN, "brcmf_wq/%s%d",
+             device_get_name(sdiodev->func1->dev.zxdev), queue_uniquify++);
     wq = workqueue_create(name);
     if (!wq) {
         brcmf_err("insufficient memory to create txworkqueue\n");
@@ -4047,8 +4049,8 @@ struct brcmf_sdio* brcmf_sdio_probe(struct brcmf_sdio_dev* sdiodev) {
     brcmf_timer_init(&bus->timer, brcmf_sdio_watchdog);
     /* Initialize watchdog thread */
     bus->watchdog_wait = COMPLETION_INIT;
-    // Hack to make it compile - will be fixed when we support SDIO.
-    brcmf_err("TODO(cphoenix): ret = kthread_run(brcmf_sdio_watchdog_thread, ...");
+    // TODO(cphoenix): Hack to make it compile - will be fixed when we support SDIO.
+    brcmf_err("* * Need to do ret = kthread_run(brcmf_sdio_watchdog_thread, ...");
     (void)brcmf_sdio_watchdog_thread;
 //    ret = kthread_run(brcmf_sdio_watchdog_thread, bus, "brcmf_wdog/%s",
 //                      dev_name(&sdiodev->func1->dev), &bus->watchdog_tsk);
