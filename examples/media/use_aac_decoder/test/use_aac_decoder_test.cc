@@ -120,7 +120,7 @@ int main(int argc, char* argv[]) {
   printf("Decoding test file and computing sha256...\n");
 
   uint8_t md[SHA256_DIGEST_LENGTH];
-  use_aac_decoder(std::move(codec_factory), kInputFilePath, nullptr, md);
+  use_aac_decoder(std::move(codec_factory), kInputFilePath, "", md);
 
   char actual_sha256[SHA256_DIGEST_LENGTH * 2 + 1];
   char* actual_sha256_ptr = actual_sha256;

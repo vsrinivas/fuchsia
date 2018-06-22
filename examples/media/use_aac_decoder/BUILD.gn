@@ -14,11 +14,14 @@ source_set("use_aac_decoder_source_set") {
     "codec_output.h",
     "use_aac_decoder.cc",
     "use_aac_decoder.h",
+    "use_h264_decoder.cc",
+    "use_h264_decoder.h",
     "util.cc",
     "util.h",
   ]
 
   deps = [
+    "//garnet/lib/media/raw_video_writer:raw_video_writer",
     "//garnet/lib/media/wav_writer:wav_writer",
 
     #"//garnet/public/lib/app/cpp",

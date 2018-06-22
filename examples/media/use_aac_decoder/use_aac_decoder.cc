@@ -133,8 +133,8 @@ std::unique_ptr<uint8_t[]> make_AudioSpecificConfig_from_ADTS_header(
 //     be set.
 // out_md - SHA256_DIGEST_LENGTH bytes long
 void use_aac_decoder(fuchsia::mediacodec::CodecFactoryPtr codec_factory,
-                     const char* input_adts_file, const char* output_wav_file,
-                     uint8_t* out_md) {
+                     const std::string& input_adts_file,
+                     const std::string& output_wav_file, uint8_t* out_md) {
   memset(out_md, 0, SHA256_DIGEST_LENGTH);
 
   // In this example code, we're using this async::Loop for everything
@@ -193,7 +193,7 @@ void use_aac_decoder(fuchsia::mediacodec::CodecFactoryPtr codec_factory,
   VLOGF("reading adts file...\n");
   size_t input_size;
   std::unique_ptr<uint8_t[]> input_bytes =
-      read_whole_file(input_adts_file, &input_size);
+      read_whole_file(input_adts_file.c_str(), &input_size);
   VLOGF("done reading adts file.\n");
 
   codec_factory.set_error_handler([] {
@@ -286,7 +286,6 @@ void use_aac_decoder(fuchsia::mediacodec::CodecFactoryPtr codec_factory,
             bytes_so_far += bytes_to_copy;
           }
         };
-        // int previous_offset = -1;
         int input_byte_count = input_size;
         for (int i = 0; i < input_byte_count - 1;) {
           if (!(input_bytes[i] == 0xFF &&
@@ -449,9 +448,10 @@ void use_aac_decoder(fuchsia::mediacodec::CodecFactoryPtr codec_factory,
           Exit("pcm.frames_per_second != 44100 - unexpected - actual: %d",
                pcm.frames_per_second);
         }
-        if (output_wav_file) {
+        if (!output_wav_file.empty()) {
           if (!wav_writer.Initialize(
-                  output_wav_file, fuchsia::media::AudioSampleFormat::SIGNED_16,
+                  output_wav_file.c_str(),
+                  fuchsia::media::AudioSampleFormat::SIGNED_16,
                   pcm.channel_map->size(), pcm.frames_per_second,
                   pcm.bits_per_sample)) {
             Exit("wav_writer.Initialize() failed");

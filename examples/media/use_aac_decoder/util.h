@@ -44,4 +44,8 @@ void PostSerial(async_t* async, fit::closure to_run);
 void SHA256_Update_AudioParameters(SHA256_CTX* sha256_ctx,
                                    const fuchsia::mediacodec::PcmFormat& pcm);
 
+void SHA256_Update_VideoParameters(
+    SHA256_CTX* sha256_ctx,
+    const fuchsia::mediacodec::VideoUncompressedFormat& video);
+
 #endif  // GARNET_EXAMPLES_MEDIA_USE_AAC_DECODER_UTIL_H_

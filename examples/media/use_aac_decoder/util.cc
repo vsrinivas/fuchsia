@@ -11,6 +11,31 @@
 #include <iostream>
 #include <memory>
 
+namespace {
+
+template <typename T>
+void UpdateSha256(SHA256_CTX* ctx, T field) {
+  T field_le;
+  switch (sizeof(field)) {
+    case 4:
+      field_le = htole32(field);
+      break;
+    case 2:
+      field_le = htole16(field);
+      break;
+    case 1:
+      field_le = field;
+      break;
+    default:
+      Exit("UpdateSha256 unexpected field size");
+  }
+  if (!SHA256_Update(ctx, &field_le, sizeof(field_le))) {
+    assert(false);
+  }
+}
+
+}  // namespace
+
 void Exit(const char* format, ...) {
   // Let's not have a buffer on the stack, not because it couldn't be done
   // safely, but because we'd potentially run into stack size vs. message length
@@ -46,7 +71,7 @@ std::unique_ptr<uint8_t[]> read_whole_file(const char* filename, size_t* size) {
   // std::ios::ate means start at the end to tellg() will get the size
   file.open(filename, std::ios::in | std::ios::binary | std::ios::ate);
   if (!file.is_open()) {
-    Exit("failed to open file");
+    Exit("failed to open file %s", filename);
   }
   std::streampos input_size = file.tellg();
   *size = input_size;
@@ -99,4 +124,25 @@ void SHA256_Update_AudioParameters(SHA256_CTX* sha256_ctx,
       assert(false);
     }
   }
+}
+
+void SHA256_Update_VideoParameters(
+    SHA256_CTX* sha256_ctx,
+    const fuchsia::mediacodec::VideoUncompressedFormat& video) {
+  UpdateSha256(sha256_ctx, video.fourcc);
+  UpdateSha256(sha256_ctx, video.primary_width_pixels);
+  UpdateSha256(sha256_ctx, video.primary_height_pixels);
+  UpdateSha256(sha256_ctx, video.secondary_width_pixels);
+  UpdateSha256(sha256_ctx, video.secondary_height_pixels);
+  UpdateSha256(sha256_ctx, video.planar);
+  UpdateSha256(sha256_ctx, video.swizzled);
+  UpdateSha256(sha256_ctx, video.primary_line_stride_bytes);
+  UpdateSha256(sha256_ctx, video.secondary_line_stride_bytes);
+  UpdateSha256(sha256_ctx, video.primary_start_offset);
+  UpdateSha256(sha256_ctx, video.secondary_start_offset);
+  UpdateSha256(sha256_ctx, video.tertiary_start_offset);
+  UpdateSha256(sha256_ctx, video.primary_pixel_stride);
+  UpdateSha256(sha256_ctx, video.secondary_pixel_stride);
+  UpdateSha256(sha256_ctx, video.special_formats.is_temp_field_todo_remove());
+  UpdateSha256(sha256_ctx, video.special_formats.temp_field_todo_remove());
 }

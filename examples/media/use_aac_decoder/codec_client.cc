@@ -82,6 +82,7 @@ void CodecClient::Start() {
   CallSyncAndWaitForResponse();
   VLOGF("Sync() completed, which means the Codec server exists.\n");
 
+  VLOGF("Waiting for OnInputConstraints() from the Codec server...\n");
   // The Codec client can rely on an OnInputConstraints() arriving shortly,
   // without any message required from the client first.  The
   // OnInputConstraints() may in future actually be sent by the CodecFactory,
@@ -95,6 +96,8 @@ void CodecClient::Start() {
     }
   }  // ~lock
   assert(input_constraints_);
+  VLOGF("Got OnInputConstraints() from the Codec server.\n");
+
   // We know input_constraints_ won't change outside the lock because we prevent
   // that in OnInputConstraints() by only accepting input constraints if there
   // aren't already input constraints.

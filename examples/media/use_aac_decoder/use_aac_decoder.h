@@ -23,14 +23,15 @@
 //
 // codec_factory - codec_factory to take ownership of, use, and close by the
 //     time the function returns.
-// input_adts_file - This must be set and must be the filename of an input .adts
-//     file (input file extension not checked / doesn't matter).
-// output_wav_file - If nullptr, don't write the audio data to a wav file.  If
-//     non-nullptr, output audio data to the specified wav file.  When used as
+// input_file - This is the filename of an input .adts file (input file
+//     extension not checked / doesn't matter).
+// output_file - If empty, don't write the audio data to a wav file.  If
+//     non-empty, output audio data to the specified wav file.  When used as
 //     an example, this will tend to be set.  When used as a test, this will not
 //     be set.
 void use_aac_decoder(fuchsia::mediacodec::CodecFactoryPtr codec_factory,
-                     const char* input_adts_file, const char* output_wav_file,
+                     const std::string& input_adts_file,
+                     const std::string& output_wav_file,
                      uint8_t out_md[SHA256_DIGEST_LENGTH]);
 
 #endif  // GARNET_EXAMPLES_MEDIA_USE_AAC_DECODER_USE_AAC_DECODER_H_
