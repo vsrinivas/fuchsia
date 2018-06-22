@@ -37,45 +37,6 @@
 
 constexpr uint64_t kStreamBufferSize = PAGE_SIZE * 1024;
 
-extern "C" {
-zx_status_t amlogic_video_init(void** out_ctx);
-zx_status_t amlogic_video_bind(void* ctx, zx_device_t* parent);
-}
-
-static zx_status_t amlogic_video_ioctl(void* ctx, uint32_t op,
-                                       const void* in_buf, size_t in_len,
-                                       void* out_buf, size_t out_len,
-                                       size_t* out_actual) {
-  // The only IOCTL we support is get channel.
-  if (op != MEDIA_CODEC_IOCTL_GET_CODEC_FACTORY_CHANNEL) {
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-
-  if ((out_buf == nullptr) || (out_actual == nullptr) ||
-      (out_len != sizeof(zx_handle_t))) {
-    return ZX_ERR_INVALID_ARGS;
-  }
-
-  DeviceCtx* device = reinterpret_cast<DeviceCtx*>(ctx);
-
-  zx::channel codec_factory_client_endpoint;
-  device->device_fidl()->CreateChannelBoundCodecFactory(
-      &codec_factory_client_endpoint);
-
-  *(reinterpret_cast<zx_handle_t*>(out_buf)) =
-      codec_factory_client_endpoint.release();
-  *out_actual = sizeof(zx_handle_t);
-
-  return ZX_OK;
-}
-
-static zx_protocol_device_t amlogic_video_device_ops = {
-    DEVICE_OPS_VERSION, .ioctl = amlogic_video_ioctl,
-    // TODO(jbauman) or TODO(dustingreen): .suspend .resume, maybe .release if
-    // it would ever be run.  Currently ~AmlogicVideo code sets lower power, but
-    // ~AmlogicVideo doesn't run yet.
-};
-
 // Most buffers should be 64-kbyte aligned.
 const uint32_t kBufferAlignShift = 4 + 12;
 
@@ -470,28 +431,6 @@ zx_status_t AmlogicVideo::InitRegisters(zx_device_t* parent) {
   return ZX_OK;
 }
 
-zx_status_t AmlogicVideo::Bind(DeviceCtx* device) {
-  device_add_args_t vc_video_args = {};
-  vc_video_args.version = DEVICE_ADD_ARGS_VERSION;
-  vc_video_args.name = "amlogic_video";
-  vc_video_args.ctx = device;
-  vc_video_args.ops = &amlogic_video_device_ops;
-
-  // ZX_PROTOCOL_MEDIA_CODEC causes /dev/class/media-codec to get created, and
-  // flags support for MEDIA_CODEC_IOCTL_GET_CODEC_FACTORY_CHANNEL.  The
-  // proto_ops_ is empty but has a non-null address, so we don't break the
-  // invariant that devices with a protocol have non-null proto_ops.
-  vc_video_args.proto_id = ZX_PROTOCOL_MEDIA_CODEC;
-  vc_video_args.proto_ops = &proto_ops_;
-
-  zx_status_t status = device_add(parent_, &vc_video_args, &device_);
-  if (status != ZX_OK) {
-    DECODE_ERROR("Failed to bind device");
-    return ZX_ERR_NO_MEMORY;
-  }
-  return ZX_OK;
-}
-
 void AmlogicVideo::InitializeInterrupts() {
   vdec0_interrupt_thread_ = std::thread([this]() {
     while (true) {
@@ -536,51 +475,5 @@ void AmlogicVideo::InitializeInterrupts() {
 zx_status_t AmlogicVideo::InitDecoder() {
   InitializeInterrupts();
 
-  return ZX_OK;
-}
-
-extern zx_status_t amlogic_video_init(void** out_ctx) {
-  DriverCtx* driver_ctx = new DriverCtx();
-  *out_ctx = reinterpret_cast<void*>(driver_ctx);
-  return ZX_OK;
-}
-
-// ctx is the driver ctx (not device ctx)
-zx_status_t amlogic_video_bind(void* ctx, zx_device_t* parent) {
-#if ENABLE_DECODER_TESTS
-  TestSupport::set_parent_device(parent);
-  TestSupport::RunAllTests();
-#endif
-
-  DriverCtx* driver = reinterpret_cast<DriverCtx*>(ctx);
-  std::unique_ptr<DeviceCtx> device = std::make_unique<DeviceCtx>(driver);
-
-  AmlogicVideo* video = device->video();
-
-  zx_status_t status = video->InitRegisters(parent);
-  if (status != ZX_OK) {
-    DECODE_ERROR("Failed to initialize registers");
-    return status;
-  }
-
-  status = video->InitDecoder();
-  if (status != ZX_OK) {
-    DECODE_ERROR("Failed to initialize decoder");
-    return status;
-  }
-
-  status = video->Bind(device.get());
-  if (status != ZX_OK) {
-    DECODE_ERROR("Failed to bind device");
-    return status;
-  }
-
-  // The pointer to DeviceCtx is add_device() ctx now, so intentionally don't
-  // destruct the DeviceCtx instance.
-  //
-  // At least for now, the DeviceCtx stays allocated for the life of the
-  // devhost process.
-  device.release();
-  zxlogf(INFO, "[amlogic_video_bind] bound\n");
   return ZX_OK;
 }

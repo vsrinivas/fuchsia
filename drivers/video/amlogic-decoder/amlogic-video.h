@@ -38,7 +38,6 @@ class AmlogicVideo final : public VideoDecoder::Owner,
 
   zx_status_t InitRegisters(zx_device_t* parent);
   zx_status_t InitDecoder();
-  zx_status_t Bind(DeviceCtx* device);
 
   // VideoDecoder::Owner implementation.
   DosRegisterIo* dosbus() override { return dosbus_.get(); }
@@ -66,12 +65,7 @@ class AmlogicVideo final : public VideoDecoder::Owner,
   void InitializeInterrupts();
 
   zx_device_t* parent_ = nullptr;
-  zx_device_t* device_ = nullptr;
   platform_device_protocol_t pdev_;
-  // Empty struct to use for proto_ops.
-  struct {
-    // intentionally empty
-  } proto_ops_;
   DeviceType device_type_ = DeviceType::kUnknown;
   io_buffer_t mmio_cbus_ = {};
   io_buffer_t mmio_dosbus_ = {};

@@ -24,6 +24,8 @@ class DeviceCtx {
   explicit DeviceCtx(DriverCtx* driver);
   ~DeviceCtx();
 
+  zx_status_t Bind(zx_device_t* parent);
+
   DriverCtx* driver() { return driver_; }
 
   AmlogicVideo* video() { return video_.get(); }
@@ -34,13 +36,23 @@ class DeviceCtx {
   DriverCtx* driver_ = nullptr;
 
   //
-  // Device driving:
+  // Generic driver/device interfacing:
+  //
+
+  // Empty struct to use for proto_ops.
+  struct {
+    // intentionally empty
+  } proto_ops_;
+  zx_device_t* device_ = nullptr;
+
+  //
+  // Specific device driving:
   //
 
   std::unique_ptr<AmlogicVideo> video_;
 
   //
-  // Interface handling:
+  // FIDL interface handling:
   //
 
   std::unique_ptr<DeviceFidl> device_fidl_;

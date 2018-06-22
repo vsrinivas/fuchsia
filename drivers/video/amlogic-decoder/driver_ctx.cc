@@ -4,9 +4,73 @@
 
 #include "driver_ctx.h"
 
+#include "amlogic-video.h"
+#include "macros.h"
+
+#include <ddk/driver.h>
 #include <lib/fxl/logging.h>
+
 #include <stdarg.h>
 #include <stdio.h>
+
+#if ENABLE_DECODER_TESTS
+#include "tests/test_support.h"
+#endif
+
+namespace {
+
+extern "C" {
+zx_status_t amlogic_video_init(void** out_ctx);
+zx_status_t amlogic_video_bind(void* ctx, zx_device_t* parent);
+}
+
+extern zx_status_t amlogic_video_init(void** out_ctx) {
+  DriverCtx* driver_ctx = new DriverCtx();
+  *out_ctx = reinterpret_cast<void*>(driver_ctx);
+  return ZX_OK;
+}
+
+// ctx is the driver ctx (not device ctx)
+zx_status_t amlogic_video_bind(void* ctx, zx_device_t* parent) {
+#if ENABLE_DECODER_TESTS
+  TestSupport::set_parent_device(parent);
+  TestSupport::RunAllTests();
+#endif
+
+  DriverCtx* driver = reinterpret_cast<DriverCtx*>(ctx);
+  std::unique_ptr<DeviceCtx> device = std::make_unique<DeviceCtx>(driver);
+
+  AmlogicVideo* video = device->video();
+
+  zx_status_t status = video->InitRegisters(parent);
+  if (status != ZX_OK) {
+    DECODE_ERROR("Failed to initialize registers");
+    return status;
+  }
+
+  status = video->InitDecoder();
+  if (status != ZX_OK) {
+    DECODE_ERROR("Failed to initialize decoder");
+    return status;
+  }
+
+  status = device->Bind(parent);
+  if (status != ZX_OK) {
+    DECODE_ERROR("Failed to bind device");
+    return status;
+  }
+
+  // The pointer to DeviceCtx is add_device() ctx now, so intentionally don't
+  // destruct the DeviceCtx instance.
+  //
+  // At least for now, the DeviceCtx stays allocated for the life of the
+  // devhost process.
+  device.release();
+  zxlogf(INFO, "[amlogic_video_bind] bound\n");
+  return ZX_OK;
+}
+
+}  // namespace
 
 DriverCtx::DriverCtx() {
   // We don't use kAsyncLoopConfigMakeDefault here, because we don't really want
