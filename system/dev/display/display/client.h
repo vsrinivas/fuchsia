@@ -58,7 +58,7 @@ private:
     fbl::RefPtr<Image> pending_image_;
 
     // Image which are waiting to be displayed
-    fbl::DoublyLinkedList<fbl::RefPtr<Image>> waiting_images_;
+    list_node_t waiting_images_ = LIST_INITIAL_VALUE(waiting_images_);
     // The image which has most recently been sent to the display controller impl
     fbl::RefPtr<Image> displayed_image_;
 

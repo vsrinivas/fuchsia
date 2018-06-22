@@ -14,6 +14,7 @@ Image::Image(Controller* controller, const image_t& image_config, zx::vmo handle
 
 Image::~Image() {
     ZX_DEBUG_ASSERT(!fbl::atomic_load(&in_use_));
+    ZX_DEBUG_ASSERT(!list_in_list(&node.link));
 
     controller_->ReleaseImage(this);
 }

@@ -45,10 +45,11 @@ void Controller::OnDisplaysChanged(uint64_t* displays_added, uint32_t added_coun
         if (target) {
             removed_success[removed_success_count++] = displays_removed[i];
 
-            while (!target->images.is_empty()) {
-                auto image = target->images.pop_front();
-                image->StartRetire();
-                image->OnRetire();
+            image_node_t* node;
+            while ((node = list_remove_head_type(&target->images, image_node_t, link)) != nullptr) {
+                node->self->StartRetire();
+                node->self->OnRetire();
+                node->self.reset();
             }
         } else {
             zxlogf(TRACE, "Unknown display %ld removed\n", displays_removed[i]);
@@ -130,7 +131,7 @@ void Controller::OnDisplayVsync(uint64_t display_id, void** handles, uint32_t ha
         if (handle_count != info->layer_count) {
             // There's an unexpected number of layers, so wait until the next vsync.
             return;
-        } else if (info->images.is_empty()) {
+        } else if (list_is_empty(&info->images)) {
             // If the images list is empty, then we can't have any pending layers and
             // the change is done when there are no handles being displayed.
             ZX_ASSERT(info->layer_count == 0);
@@ -140,13 +141,13 @@ void Controller::OnDisplayVsync(uint64_t display_id, void** handles, uint32_t ha
         } else {
             // Otherwise the change is done when the last handle_count==info->layer_count
             // images match the handles in the correct order.
-            auto iter = --info->images.end();
+            auto node = list_peek_tail_type(&info->images, image_node_t, link);
             int32_t handle_idx = handle_count - 1;
-            while (handle_idx >= 0 && iter.IsValid()) {
-                if (handles[handle_idx] != iter->info().handle) {
+            while (handle_idx >= 0 && node != nullptr) {
+                if (handles[handle_idx] != node->self->info().handle) {
                     break;
                 }
-                iter--;
+                node = list_prev_type(&info->images, &node->link, image_node_t, link);
                 handle_idx--;
             }
             if (handle_idx != -1) {
@@ -169,28 +170,28 @@ void Controller::OnDisplayVsync(uint64_t display_id, void** handles, uint32_t ha
     for (unsigned i = 0; i < handle_count; i++) {
         z_indices[i] = UINT32_MAX;
     }
-    auto iter = info->images.begin();
-    while (iter.IsValid()) {
-        auto cur = iter;
-        iter++;
-
+    image_node_t* cur;
+    image_node_t* tmp;
+    list_for_every_entry_safe(&info->images, cur, tmp, image_node_t, link) {
         bool handle_match = false;
         bool z_already_matched = false;
         for (unsigned i = 0; i < handle_count; i++) {
-            if (handles[i] == cur->info().handle) {
+            if (handles[i] == cur->self->info().handle) {
                 handle_match = true;
-                z_indices[i] = cur->z_index();
+                z_indices[i] = cur->self->z_index();
                 break;
-            } else if (z_indices[i] == cur->z_index()) {
+            } else if (z_indices[i] == cur->self->z_index()) {
                 z_already_matched = true;
                 break;
             }
         }
 
         if (!z_already_matched) {
-            cur->OnPresent();
+            cur->self->OnPresent();
             if (!handle_match) {
-                info->images.erase(cur)->OnRetire();
+                list_delete(&cur->link);
+                cur->self->OnRetire();
+                cur->self.reset();
             }
         }
     }
@@ -264,22 +265,19 @@ void Controller::ApplyConfig(DisplayConfig* configs[], int32_t count,
                 image->set_z_index(layer->z_order());
                 image->StartPresent();
 
-                // If the image's layer was moved between displays, we need to delete it from the
-                // old display's tracking list. The pending_layer_change logic guarantees that the
-                // the old display will be done with the image before the new one, so deleting the
-                // image won't cause problems.
-                // This is also necessary to maintain the guarantee that the last config->current.
-                // layer_count elements in the queue are the current images.
-                // TODO(stevensd): Convert to list_node_t and use delete
-                for (auto& d : displays_) {
-                    for (auto& i : d.images) {
-                        if (i.info().handle == image->info().handle) {
-                            d.images.erase(i);
-                            break;
-                        }
-                    }
+                // It's possible that the image's layer was moved between displays. The logic around
+                // pending_layer_change guarantees that the old display will be done with the image
+                // before the new display is, so deleting it from the old list is fine.
+                //
+                // Even if we're on the same display, the entry needs to be moved to the end of the
+                // list to ensure that the last config->current.layer_count elements in the queue
+                // are the current images.
+                if (list_in_list(&image->node.link)) {
+                    list_delete(&image->node.link);
+                } else {
+                    image->node.self = image;
                 }
-                display->images.push_back(fbl::move(image));
+                list_add_tail(&display->images, &image->node.link);
             }
         }
     }

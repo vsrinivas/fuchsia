@@ -95,6 +95,16 @@ void populate_display_mode(const edid::timing_params_t params, display_mode_t* m
             | (params.horizontal_sync_polarity ? MODE_FLAG_HSYNC_POSITIVE : 0);
 }
 
+// Removes and invokes EarlyRetire on all entries before end.
+static void do_early_retire(list_node_t* list, display::image_node_t* end = nullptr) {
+    display::image_node_t* node;
+    while ((node = list_peek_head_type(list, display::image_node_t, link)) != end) {
+        node->self->EarlyRetire();
+        node->self.reset();
+        list_remove_head(list);
+    }
+}
+
 } // namespace
 
 namespace display {
@@ -348,9 +358,7 @@ void Client::HandleDestroyLayer(const fuchsia_display_ControllerDestroyLayerRequ
     if (destroyed->pending_image_) {
         destroyed->pending_image_->DiscardAcquire();
     }
-    while (!destroyed->waiting_images_.is_empty()) {
-        destroyed->waiting_images_.pop_front()->EarlyRetire();
-    }
+    do_early_retire(&destroyed->waiting_images_);
     if (destroyed->displayed_image_) {
         destroyed->displayed_image_->StartRetire();
     }
@@ -586,7 +594,8 @@ void Client::HandleApplyConfig(const fuchsia_display_ControllerApplyConfigReques
                         GetFence(layer->pending_wait_event_id_),
                         GetFence(layer->pending_present_event_id_),
                         GetFence(layer->pending_signal_event_id_));
-                layer->waiting_images_.push_back(fbl::move(layer->pending_image_));
+                list_add_tail(&layer->waiting_images_, &layer->pending_image_->node.link);
+                layer->pending_image_->node.self = fbl::move(layer->pending_image_);
             }
         }
 
@@ -603,7 +612,7 @@ void Client::HandleApplyConfig(const fuchsia_display_ControllerApplyConfigReques
                 auto* layer = new_current.pop_front();
                 if (layer->layer->current_display_id_ != display_config.id
                         && layer->layer->displayed_image_
-                        && !layer->layer->waiting_images_.is_empty()) {
+                        && !list_is_empty(&layer->layer->waiting_images_)) {
                     {
                         fbl::AutoLock lock(controller_->mtx());
                         layer->layer->displayed_image_->StartRetire();
@@ -635,12 +644,10 @@ void Client::HandleApplyConfig(const fuchsia_display_ControllerApplyConfigReques
                 image_t* new_config = &layer->current_layer_.cfg.primary.image;
 
                 // If the layer's image configuration changed, drop any waiting images
-                if (!layer->waiting_images_.is_empty()
-                        && !layer->waiting_images_.front().HasSameConfig(*new_config)) {
-                    while (!layer->waiting_images_.is_empty()) {
-                        auto dropped_image = layer->waiting_images_.pop_front();
-                        dropped_image->EarlyRetire();
-                    }
+                if (!list_is_empty(&layer->waiting_images_)
+                        && !list_peek_head_type(&layer->waiting_images_, image_node_t, link)
+                                ->self->HasSameConfig(*new_config)) {
+                    do_early_retire(&layer->waiting_images_);
                 }
 
                 // Either retire the displayed image if the configuration changed or
@@ -894,16 +901,11 @@ void Client::ApplyConfig() {
         for (auto layer_node : display_config.current_layers_) {
             // Find the newest image which has become ready
             Layer* layer = layer_node.layer;
-            uint64_t new_image = INVALID_ID;
-            if (!layer->waiting_images_.is_empty()) {
-                for (auto iter = --layer->waiting_images_.cend(); iter.IsValid(); --iter) {
-                    if (iter->IsReady()) {
-                        new_image = iter->id;
-                        break;
-                    }
-                }
+            image_node_t* node = list_peek_tail_type(&layer->waiting_images_, image_node_t, link);
+            while (node != nullptr && !node->self->IsReady()) {
+                node = list_prev_type(&layer->waiting_images_, &node->link, image_node_t, link);
             }
-            if (new_image != INVALID_ID) {
+            if (node != nullptr) {
                 if (layer->displayed_image_ != nullptr) {
                     // Start retiring the image which had been displayed
                     fbl::AutoLock lock(controller_->mtx());
@@ -913,13 +915,11 @@ void Client::ApplyConfig() {
                     display_config.pending_apply_layer_change_ = true;
                 }
 
-                // Drop any images which weren't ready in order
-                while (layer->waiting_images_.front().id != new_image) {
-                    auto early_retire = layer->waiting_images_.pop_front();
-                    early_retire->EarlyRetire();
-                }
+                // Drop any images older than node.
+                do_early_retire(&layer->waiting_images_, node);
 
-                layer->displayed_image_ = layer->waiting_images_.pop_front();
+                layer->displayed_image_ = fbl::move(node->self);
+                list_remove_head(&layer->waiting_images_);
 
                 if (layer->current_layer_.type == LAYER_PRIMARY) {
                     layer->current_layer_.cfg.primary.image.handle =
@@ -1137,8 +1137,9 @@ fbl::RefPtr<FenceReference> Client::GetFence(uint64_t id) {
 
 void Client::OnFenceFired(FenceReference* fence) {
     for (auto& layer: layers_) {
-        for (auto& waiting : layer.waiting_images_) {
-            waiting.OnFenceReady(fence);
+        image_node_t* waiting;
+        list_for_every_entry(&layer.waiting_images_, waiting, image_node_t, link) {
+            waiting->self->OnFenceReady(fence);
         }
     }
     ApplyConfig();
@@ -1199,13 +1200,14 @@ bool Client::CleanUpImageLayerState(uint64_t id) {
             layer.pending_image_ = nullptr;
         }
         if (id == INVALID_ID) {
-            while (!layer.waiting_images_.is_empty()) {
-                layer.waiting_images_.pop_front()->EarlyRetire();
-            }
+            do_early_retire(&layer.waiting_images_, nullptr);
         } else {
-            for (auto& waiting : layer.waiting_images_) {
-                if (waiting.id == id) {
-                    layer.waiting_images_.erase(waiting)->EarlyRetire();
+            image_node_t* waiting;
+            list_for_every_entry(&layer.waiting_images_, waiting, image_node_t, link) {
+                if (waiting->self->id == id) {
+                    list_delete(&waiting->link);
+                    waiting->self->EarlyRetire();
+                    waiting->self.reset();
                     break;
                 }
             }

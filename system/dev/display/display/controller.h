@@ -37,7 +37,7 @@ public:
     // A list of all images which have been sent to display driver. For multiple
     // images which are displayed at the same time, images with a lower z-order
     // occur first.
-    fbl::DoublyLinkedList<fbl::RefPtr<Image>> images;
+    list_node_t images = LIST_INITIAL_VALUE(images);
     // The number of layers in the applied configuration.
     uint32_t layer_count;
 
