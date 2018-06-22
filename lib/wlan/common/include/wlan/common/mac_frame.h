@@ -634,6 +634,7 @@ struct PsPollFrame : CtrlFrameIdentifier {
 } __PACKED;
 
 // IEEE Std 802.2, 1998 Edition, 3.2
+// IETF RFC 1042
 struct LlcHeader {
     uint8_t dsap;
     uint8_t ssap;
