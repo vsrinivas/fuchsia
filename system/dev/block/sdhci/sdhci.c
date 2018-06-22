@@ -74,6 +74,8 @@ typedef struct sdhci_device {
     zx_device_t* zxdev;
 
     zx_handle_t irq_handle;
+    thrd_t irq_thread;
+
     volatile sdhci_regs_t* regs;
 
     sdhci_protocol_t sdhci;
@@ -360,7 +362,9 @@ static int sdhci_irq_thread(void *arg) {
     while (true) {
         wait_res = zx_interrupt_wait(irq_handle, NULL);
         if (wait_res != ZX_OK) {
-            printf("sdhci: interrupt wait failed with retcode = %d\n", wait_res);
+            if (wait_res != ZX_ERR_CANCELED) {
+                zxlogf(ERROR, "sdhci: interrupt wait failed with retcode = %d\n", wait_res);
+            }
             break;
         }
 
@@ -909,6 +913,11 @@ static sdmmc_protocol_ops_t sdmmc_proto = {
 
 static void sdhci_unbind(void* ctx) {
     sdhci_device_t* dev = ctx;
+
+    // stop irq thread
+    zx_interrupt_destroy(dev->irq_handle);
+    thrd_join(dev->irq_thread, NULL);
+
     device_remove(dev->zxdev);
 }
 
@@ -916,6 +925,7 @@ static void sdhci_release(void* ctx) {
     sdhci_device_t* dev = ctx;
     zx_handle_close(dev->irq_handle);
     zx_handle_close(dev->bti_handle);
+    zx_handle_close(dev->iobuf.vmo_handle);
     free(dev);
 }
 
@@ -1064,13 +1074,11 @@ static zx_status_t sdhci_bind(void* ctx, zx_device_t* parent) {
         goto fail;
     }
 
-    thrd_t irq_thread;
-    if (thrd_create_with_name(&irq_thread, sdhci_irq_thread, dev, "sdhci_irq_thread") != thrd_success) {
+    if (thrd_create_with_name(&dev->irq_thread, sdhci_irq_thread, dev, "sdhci_irq_thread") !=
+        thrd_success) {
         zxlogf(ERROR, "sdhci: failed to create irq thread\n");
         goto fail;
     }
-    thrd_detach(irq_thread);
-
 
     // Ensure that we're SDv3.
     const uint16_t vrsn = (dev->regs->slotirqversion >> 16) & 0xff;
@@ -1133,16 +1141,7 @@ static zx_status_t sdhci_bind(void* ctx, zx_device_t* parent) {
     return ZX_OK;
 fail:
     if (dev) {
-        if (dev->irq_handle != ZX_HANDLE_INVALID) {
-            zx_handle_close(dev->irq_handle);
-        }
-        if (dev->bti_handle != ZX_HANDLE_INVALID) {
-            zx_handle_close(dev->bti_handle);
-        }
-        if (dev->iobuf.vmo_handle != ZX_HANDLE_INVALID) {
-            zx_handle_close(dev->iobuf.vmo_handle);
-        }
-        free(dev);
+        sdhci_release(dev);
     }
     return status;
 }
