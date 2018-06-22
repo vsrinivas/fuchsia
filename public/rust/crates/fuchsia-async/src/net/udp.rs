@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use bytes::{Buf, BufMut};
 use futures::task;
 use futures::{Async, Future, Poll};
 use std::io;
@@ -35,7 +34,7 @@ impl UdpSocket {
         unsafe { Ok(UdpSocket(EventedFd::new(socket)?)) }
     }
 
-    pub fn recv_from<B: BufMut>(self, buf: B) -> RecvFrom<B> {
+    pub fn recv_from<B: AsMut<[u8]>>(self, buf: B) -> RecvFrom<B> {
         RecvFrom(Some(buf), Some(self))
     }
 
@@ -56,7 +55,7 @@ impl UdpSocket {
         }
     }
 
-    pub fn send_to<B: Buf>(self, buf: B, addr: SocketAddr) -> SendTo<B> {
+    pub fn send_to<B: AsRef<[u8]>>(self, buf: B, addr: SocketAddr) -> SendTo<B> {
         SendTo(Some((buf, addr, self)))
     }
 
@@ -78,38 +77,36 @@ impl UdpSocket {
     }
 }
 
-pub struct RecvFrom<B: BufMut>(Option<B>, Option<UdpSocket>);
+pub struct RecvFrom<B: AsMut<[u8]>>(Option<B>, Option<UdpSocket>);
 
 impl<B> Future for RecvFrom<B>
 where
-    B: BufMut,
+    B: AsMut<[u8]>,
 {
-    type Item = (UdpSocket, B, SocketAddr);
+    type Item = (UdpSocket, B, usize, SocketAddr);
     type Error = io::Error;
 
     fn poll(&mut self, cx: &mut task::Context) -> Poll<Self::Item, Self::Error> {
         let addr;
+        let received;
         {
             let socket = self.1.as_mut().expect("polled a RecvFrom after completion");
             let buf = self.0.as_mut().expect("polled a RecvFrom after completion");
-            let (s, a) = try_ready!(socket.async_recv_from(unsafe { buf.bytes_mut() }, cx));
-            println!("RecvFrom: advancing {} bytes", s);
-            unsafe {
-                buf.advance_mut(s);
-            }
+            let (r, a) = try_ready!(socket.async_recv_from(buf.as_mut(), cx));
             addr = a;
+            received = r;
         }
         let socket = self.1.take().unwrap();
         let buffer = self.0.take().unwrap();
-        Ok(Async::Ready((socket, buffer, addr)))
+        Ok(Async::Ready((socket, buffer, received, addr)))
     }
 }
 
-pub struct SendTo<B: Buf>(Option<(B, SocketAddr, UdpSocket)>);
+pub struct SendTo<B: AsRef<[u8]>>(Option<(B, SocketAddr, UdpSocket)>);
 
 impl<B> Future for SendTo<B>
 where
-    B: Buf,
+    B: AsRef<[u8]>,
 {
     type Item = UdpSocket;
     type Error = io::Error;
@@ -117,7 +114,7 @@ where
     fn poll(&mut self, cx: &mut task::Context) -> Poll<Self::Item, Self::Error> {
         {
             let (buf, addr, socket) = self.0.as_mut().expect("polled a SendTo after completion");
-            try_ready!(socket.async_send_to(buf.bytes(), *addr, cx));
+            try_ready!(socket.async_send_to(buf.as_ref(), *addr, cx));
         }
         let (_, _, socket) = self.0.take().unwrap();
         Ok(Async::Ready(socket))
@@ -135,16 +132,17 @@ mod tests {
         let mut exec = Executor::new().expect("could not create executor");
 
         let addr = "127.0.0.1:29995".parse().unwrap();
-        let buf = ::std::io::Cursor::new(b"hello world");
+        let buf = b"hello world";
         let socket = UdpSocket::bind(&addr).expect("could not create socket");
-        let fut = socket.send_to(buf.clone(), addr)
+        let fut = socket.send_to(&buf, addr)
             .and_then(|socket| {
-                let recvbuf = Vec::with_capacity(11);
+                let recvbuf = vec![0; 11];
                 socket.recv_from(recvbuf)
             })
-            .and_then(|(_sock, recvbuf, sender)| {
+            .and_then(|(_sock, recvbuf, received, sender)| {
                 assert_eq!(addr, sender);
-                assert_eq!(buf.get_ref(), &recvbuf.as_slice());
+                assert_eq!(received, buf.len());
+                assert_eq!(&buf, &recvbuf.as_slice());
                 future::ok(())
             });
 
