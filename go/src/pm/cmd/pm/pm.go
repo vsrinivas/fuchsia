@@ -56,11 +56,8 @@ func main() {
 
 	var err error
 	switch flag.Arg(0) {
-	case "init":
-		err = initcmd.Run(cfg)
-
-	case "genkey":
-		err = genkey.Run(cfg)
+	case "archive":
+		err = archive.Run(cfg)
 
 	case "build":
 		err = update.Run(cfg)
@@ -76,26 +73,29 @@ func main() {
 			die(err)
 		}
 
-	case "update":
-		err = update.Run(cfg)
+	case "expand":
+		err = expand.Run(cfg)
 
-	case "sign":
-		err = sign.Run(cfg)
+	case "genkey":
+		err = genkey.Run(cfg)
+
+	case "init":
+		err = initcmd.Run(cfg)
+
+	case "install":
+		err = install.Run(cfg)
 
 	case "seal":
 		err = seal.Run(cfg)
 
+	case "sign":
+		err = sign.Run(cfg)
+
+	case "update":
+		err = update.Run(cfg)
+
 	case "verify":
 		err = verify.Run(cfg)
-
-	case "archive":
-		err = archive.Run(cfg)
-
-	case "expand":
-		err = expand.Run(cfg)
-
-	case "install":
-		err = install.Run(cfg)
 
 	default:
 		flag.Usage()
