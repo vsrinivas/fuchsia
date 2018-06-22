@@ -32,10 +32,10 @@ Commands
     sign    - sign a package with the given key
     seal    - seal package metadata into a signed meta.far
     verify  - verify metadata signature against the embedded public key
-
-Dev Only:
     archive - construct a single .far representation of the package
     expand  - expand a single .far representation of a package into a repository
+
+Dev Only:
     install - install a single .far representation of the package
 
 TODO:
