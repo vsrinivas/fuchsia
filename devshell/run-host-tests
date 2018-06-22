@@ -1,0 +1,32 @@
+#!/bin/bash
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+### run host tests
+
+##
+## Runs host tests with the runtests binary.
+## If no args are passed, all host tests will be run.
+## For additional documentation, run
+## $ fx run-host-tests -h
+##
+
+set -o errexit
+set -o pipefail
+
+DEVSHELL_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${DEVSHELL_DIR}/lib/vars.sh"
+fx-config-read
+
+
+runtests="${ZIRCON_TOOLS_DIR}/runtests"
+zircon_host_tests="${ZIRCON_BUILD_DIR}/host_tests"
+fuchsia_host_tests="${FUCHSIA_BUILD_DIR}/host_tests"
+
+# If no arguments are provided, run all host tests by default.
+if [[ $# -eq 0 ]]; then
+  "${runtests}" "${zircon_host_tests}" "${fuchsia_host_tests}"
+else
+  "${runtests}" "$@"
+fi
