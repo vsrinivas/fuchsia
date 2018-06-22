@@ -11,12 +11,6 @@
 #include "lib/fidl/cpp/binding_set.h"
 #include "third_party/icu/source/common/unicode/strenum.h"
 
-namespace fucshia {
-namespace sys {
-class StartupContext;
-}
-}  // namespace fucshia
-
 namespace time_zone {
 
 // Implementation of the FIDL time service. Handles setting/getting the timezone
