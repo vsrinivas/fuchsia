@@ -342,7 +342,7 @@ static zx_status_t aml_thermal_bind(void* ctx, zx_device_t* parent) {
     return ZX_OK;
 fail:
     aml_thermal_release(thermal);
-    return ZX_OK;
+    return status;
 }
 
 static zx_driver_ops_t aml_thermal_driver_ops = {
