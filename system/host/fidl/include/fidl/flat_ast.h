@@ -21,7 +21,8 @@
 namespace fidl {
 namespace flat {
 
-template <typename T> struct PtrCompare {
+template <typename T>
+struct PtrCompare {
     bool operator()(const T* left, const T* right) const { return *left < *right; }
 };
 
@@ -32,7 +33,8 @@ class Library;
 std::string LibraryName(const Library* library, StringView separator);
 
 struct Name {
-    Name() : name_(SourceLocation()) {}
+    Name()
+        : name_(SourceLocation()) {}
 
     Name(const Library* library, SourceLocation name)
         : library_(library), name_(name) {}
@@ -71,13 +73,15 @@ struct Constant {
         kLiteral,
     };
 
-    explicit Constant(Kind kind) : kind(kind) {}
+    explicit Constant(Kind kind)
+        : kind(kind) {}
 
     const Kind kind;
 };
 
 struct IdentifierConstant : Constant {
-    explicit IdentifierConstant(Name name) : Constant(Kind::kIdentifier), name(std::move(name)) {}
+    explicit IdentifierConstant(Name name)
+        : Constant(Kind::kIdentifier), name(std::move(name)) {}
 
     Name name;
 };
@@ -100,13 +104,16 @@ private:
     uint32_t value_;
 };
 
-template <typename IntType> struct IntConstant {
+template <typename IntType>
+struct IntConstant {
     IntConstant(std::unique_ptr<Constant> constant, IntType value)
         : constant_(std::move(constant)), value_(value) {}
 
-    explicit IntConstant(IntType value) : value_(value) {}
+    explicit IntConstant(IntType value)
+        : value_(value) {}
 
-    IntConstant() : value_(0) {}
+    IntConstant()
+        : value_(0) {}
 
     IntType Value() const { return value_; }
 
@@ -140,6 +147,9 @@ struct Decl {
 
     std::unique_ptr<raw::AttributeList> attributes;
     const Name name;
+
+    bool HasAttribute(fidl::StringView name) const;
+    fidl::StringView GetAttribute(fidl::StringView name) const;
 };
 
 struct Type {
@@ -155,7 +165,8 @@ struct Type {
         kIdentifier,
     };
 
-    explicit Type(Kind kind, uint32_t size) : kind(kind), size(size) {}
+    explicit Type(Kind kind, uint32_t size)
+        : kind(kind), size(size) {}
 
     const Kind kind;
     // Set at construction time for most Types. Identifier types get
@@ -365,6 +376,11 @@ struct Interface : public Decl {
             std::unique_ptr<Type> type;
             SourceLocation name;
             FieldShape fieldshape;
+
+            // A simple parameter is one that is easily represented in C.
+            // Specifically, the parameter is either a string with a max length
+            // or does not reference any secondary objects,
+            bool IsSimple() const;
         };
 
         struct Message {

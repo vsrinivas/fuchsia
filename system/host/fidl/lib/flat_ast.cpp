@@ -45,7 +45,6 @@ constexpr TypeShape kBoolTypeShape = TypeShape(1u, 1u);
 constexpr TypeShape kStatusTypeShape = TypeShape(4u, 4u);
 constexpr TypeShape kFloat32TypeShape = TypeShape(4u, 4u);
 constexpr TypeShape kFloat64TypeShape = TypeShape(8u, 8u);
-constexpr TypeShape kPointerTypeShape = TypeShape(8u, 8u);
 
 uint32_t AlignTo(uint32_t size, uint32_t alignment) {
     auto mask = alignment - 1;
@@ -57,6 +56,7 @@ uint32_t AlignTo(uint32_t size, uint32_t alignment) {
 TypeShape CStructTypeShape(std::vector<FieldShape*>* fields) {
     uint32_t size = 0u;
     uint32_t alignment = 1u;
+    uint32_t depth = 0u;
 
     for (FieldShape* field : *fields) {
         TypeShape typeshape = field->Typeshape();
@@ -64,42 +64,63 @@ TypeShape CStructTypeShape(std::vector<FieldShape*>* fields) {
         size = AlignTo(size, typeshape.Alignment());
         field->SetOffset(size);
         size += typeshape.Size();
+        depth = std::max(depth, typeshape.Depth());
     }
-    size = AlignTo(size, alignment);
 
-    return TypeShape(size, alignment);
+    size = AlignTo(size, alignment);
+    return TypeShape(size, alignment, depth);
 }
 
 TypeShape CUnionTypeShape(const std::vector<flat::Union::Member>& members) {
     uint32_t size = 0u;
     uint32_t alignment = 1u;
+    uint32_t depth = 0u;
+
     for (const auto& member : members) {
         const auto& fieldshape = member.fieldshape;
         size = std::max(size, fieldshape.Size());
         alignment = std::max(alignment, fieldshape.Alignment());
+        depth = std::max(depth, fieldshape.Depth());
     }
+
     size = AlignTo(size, alignment);
-    return TypeShape(size, alignment);
+    return TypeShape(size, alignment, depth);
 }
 
 TypeShape FidlStructTypeShape(std::vector<FieldShape*>* fields) {
     return CStructTypeShape(fields);
 }
 
-TypeShape ArrayTypeShape(TypeShape element, uint32_t count) {
-    return TypeShape(element.Size() * count, element.Alignment());
+TypeShape PointerTypeShape(TypeShape element) {
+    // Because FIDL supports recursive data structures, we might not have
+    // computed the TypeShape for the element we're pointing to. In that case,
+    // the size will be zero and we'll use |numeric_limits<uint32_t>::max()| as
+    // the depth. We'll never see a zero size for a real TypeShape because empty
+    // structs are banned.
+    //
+    // We're careful to check for saturation before incrementing the depth
+    // because recursive data structures have a depth pegged at the numeric
+    // limit.
+    uint32_t depth = std::numeric_limits<uint32_t>::max();
+    if (element.Size() > 0 && element.Depth() < std::numeric_limits<uint32_t>::max())
+        depth = element.Depth() + 1;
+    return TypeShape(8u, 8u, depth);
 }
 
-TypeShape VectorTypeShape() {
+TypeShape ArrayTypeShape(TypeShape element, uint32_t count) {
+    return TypeShape(element.Size() * count, element.Alignment(), element.Depth());
+}
+
+TypeShape VectorTypeShape(TypeShape element) {
     auto size = FieldShape(kUint64TypeShape);
-    auto data = FieldShape(kPointerTypeShape);
+    auto data = FieldShape(PointerTypeShape(element));
     std::vector<FieldShape*> header{&size, &data};
     return CStructTypeShape(&header);
 }
 
 TypeShape StringTypeShape() {
     auto size = FieldShape(kUint64TypeShape);
-    auto data = FieldShape(kPointerTypeShape);
+    auto data = FieldShape(PointerTypeShape(kUint8TypeShape));
     std::vector<FieldShape*> header{&size, &data};
     return CStructTypeShape(&header);
 }
@@ -134,6 +155,41 @@ TypeShape PrimitiveTypeShape(types::PrimitiveSubtype type) {
 }
 
 } // namespace
+
+bool Decl::HasAttribute(fidl::StringView name) const {
+    if (!attributes)
+        return false;
+    for (const auto& attribute : attributes->attribute_list) {
+        if (attribute->name->location.data() == name)
+            return true;
+    }
+    return false;
+}
+
+fidl::StringView Decl::GetAttribute(fidl::StringView name) const {
+    if (!attributes)
+        return fidl::StringView();
+    for (const auto& attribute : attributes->attribute_list) {
+        if (attribute->name->location.data() == name) {
+            if (attribute->value) {
+                auto value = attribute->value->location.data();
+                if (value.size() >= 2 && value[0] == '"' && value[value.size() - 1] == '"')
+                    return fidl::StringView(value.data() + 1, value.size() - 2);
+            }
+            // Don't search for another attribute with the same name.
+            break;
+        }
+    }
+    return fidl::StringView();
+}
+
+bool Interface::Method::Parameter::IsSimple() const {
+    if (type->kind == Type::Kind::kString) {
+        auto string_type = static_cast<StringType*>(type.get());
+        return string_type->max_size.Value() < Size::Max().Value();
+    }
+    return fieldshape.Depth() == 0u;
+}
 
 // Consuming the AST is primarily concerned with walking the tree and
 // flattening the representation. The AST's declaration nodes are
@@ -900,6 +956,7 @@ bool Library::CompileInterface(Interface* interface_declaration) {
     // TODO(TO-703) Add subinterfaces here.
     Scope<StringView> name_scope;
     Scope<uint32_t> ordinal_scope;
+    bool is_simple = interface_declaration->GetAttribute("Layout") == "Simple";
     for (auto& method : interface_declaration->methods) {
         if (!name_scope.Insert(method.name.data()))
             return Fail(method.name, "Multiple methods with the same name in an interface");
@@ -916,6 +973,8 @@ bool Library::CompileInterface(Interface* interface_declaration) {
                 if (!CompileType(param.type.get(), &param.fieldshape.Typeshape()))
                     return false;
                 message_struct.push_back(&param.fieldshape);
+                if (is_simple && !param.IsSimple())
+                    return Fail(param.name, "Non-simple parameter in interface with [Layout=\"Simple\"]");
             }
             message->typeshape = FidlStructTypeShape(&message_struct);
             return true;
@@ -1047,7 +1106,7 @@ bool Library::CompileVectorType(flat::VectorType* vector_type, TypeShape* out_ty
     TypeShape element_typeshape;
     if (!CompileType(vector_type->element_type.get(), &element_typeshape))
         return false;
-    *out_typeshape = VectorTypeShape();
+    *out_typeshape = VectorTypeShape(element_typeshape);
     return true;
 }
 
@@ -1105,19 +1164,15 @@ bool Library::CompileIdentifierType(flat::IdentifierType* identifier_type,
         break;
     }
     case Decl::Kind::kStruct: {
-        if (identifier_type->nullability == types::Nullability::kNullable) {
-            typeshape = kPointerTypeShape;
-        } else {
-            typeshape = static_cast<const Struct*>(named_decl)->typeshape;
-        }
+        typeshape = static_cast<const Struct*>(named_decl)->typeshape;
+        if (identifier_type->nullability == types::Nullability::kNullable)
+            typeshape = PointerTypeShape(typeshape);
         break;
     }
     case Decl::Kind::kUnion: {
-        if (identifier_type->nullability == types::Nullability::kNullable) {
-            typeshape = kPointerTypeShape;
-        } else {
-            typeshape = static_cast<const Union*>(named_decl)->typeshape;
-        }
+        typeshape = static_cast<const Union*>(named_decl)->typeshape;
+        if (identifier_type->nullability == types::Nullability::kNullable)
+            typeshape = PointerTypeShape(typeshape);
         break;
     }
     default: { abort(); }
