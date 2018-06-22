@@ -18,53 +18,6 @@
 #include "peridot/lib/convert/convert.h"
 
 namespace test {
-namespace {
-
-void RunLoop(async::Loop* loop) {
-  loop->Run();
-  loop->ResetQuit();
-}
-
-void RunLoop(fsl::MessageLoop* loop) { loop->Run(); }
-
-fit::function<void()> QuitLoopClosure(async::Loop* loop) {
-  return [loop] { loop->Quit(); };
-}
-fit::function<void()> QuitLoopClosure(fsl::MessageLoop* loop) {
-  return [loop] { loop->QuitNow(); };
-}
-
-template <typename LOOP>
-ledger::Status GetLedgerInternal(
-    LOOP* loop, fuchsia::sys::StartupContext* context,
-    fidl::InterfaceRequest<fuchsia::sys::ComponentController>
-        controller_request,
-    cloud_provider::CloudProviderPtr cloud_provider, std::string ledger_name,
-    std::string ledger_repository_path, ledger::LedgerPtr* ledger_ptr) {
-  ledger::Status status = ledger::Status::INTERNAL_ERROR;
-  GetLedger(context, std::move(controller_request), std::move(cloud_provider),
-            std::move(ledger_name), std::move(ledger_repository_path),
-            QuitLoopClosure(loop),
-            callback::Capture(QuitLoopClosure(loop), &status, ledger_ptr));
-  RunLoop(loop);
-  return status;
-}
-
-template <typename LOOP>
-ledger::Status GetPageEnsureInitializedInternal(LOOP* loop,
-                                                ledger::LedgerPtr* ledger,
-                                                ledger::PageIdPtr requested_id,
-                                                ledger::PagePtr* page,
-                                                ledger::PageId* page_id) {
-  ledger::Status status = ledger::Status::INTERNAL_ERROR;
-  GetPageEnsureInitialized(
-      ledger, std::move(requested_id), QuitLoopClosure(loop),
-      callback::Capture(QuitLoopClosure(loop), &status, page, page_id));
-  RunLoop(loop);
-  return status;
-}
-}  // namespace
-
 void GetLedger(
     fuchsia::sys::StartupContext* context,
     fidl::InterfaceRequest<fuchsia::sys::ComponentController>
@@ -130,28 +83,6 @@ void GetLedger(
           }));
 }
 
-ledger::Status GetLedger(
-    async::Loop* loop, fuchsia::sys::StartupContext* context,
-    fidl::InterfaceRequest<fuchsia::sys::ComponentController>
-        controller_request,
-    cloud_provider::CloudProviderPtr cloud_provider, std::string ledger_name,
-    std::string ledger_repository_path, ledger::LedgerPtr* ledger_ptr) {
-  return GetLedgerInternal(loop, context, std::move(controller_request),
-                           std::move(cloud_provider), std::move(ledger_name),
-                           std::move(ledger_repository_path), ledger_ptr);
-}
-
-ledger::Status GetLedger(
-    fsl::MessageLoop* loop, fuchsia::sys::StartupContext* context,
-    fidl::InterfaceRequest<fuchsia::sys::ComponentController>
-        controller_request,
-    cloud_provider::CloudProviderPtr cloud_provider, std::string ledger_name,
-    std::string ledger_repository_path, ledger::LedgerPtr* ledger_ptr) {
-  return GetLedgerInternal(loop, context, std::move(controller_request),
-                           std::move(cloud_provider), std::move(ledger_name),
-                           std::move(ledger_repository_path), ledger_ptr);
-}
-
 void GetPageEnsureInitialized(
     ledger::LedgerPtr* ledger, ledger::PageIdPtr requested_id,
     fit::function<void()> error_handler,
@@ -183,24 +114,6 @@ void GetPageEnsureInitialized(
                            std::move(page_id));
                 }));
           }));
-}
-
-ledger::Status GetPageEnsureInitialized(async::Loop* loop,
-                                        ledger::LedgerPtr* ledger,
-                                        ledger::PageIdPtr requested_id,
-                                        ledger::PagePtr* page,
-                                        ledger::PageId* page_id) {
-  return GetPageEnsureInitializedInternal(loop, ledger, std::move(requested_id),
-                                          page, page_id);
-}
-
-ledger::Status GetPageEnsureInitialized(fsl::MessageLoop* loop,
-                                        ledger::LedgerPtr* ledger,
-                                        ledger::PageIdPtr requested_id,
-                                        ledger::PagePtr* page,
-                                        ledger::PageId* page_id) {
-  return GetPageEnsureInitializedInternal(loop, ledger, std::move(requested_id),
-                                          page, page_id);
 }
 
 void KillLedgerProcess(fuchsia::sys::ComponentControllerPtr* controller) {

@@ -239,11 +239,16 @@ class ConvergenceTest
       ledger_instances_.push_back(std::move(ledger_instance));
       pages_.emplace_back();
       ledger::LedgerPtr ledger_ptr = ledger_instances_[i]->GetTestLedger();
-      ledger::Status status = test::GetPageEnsureInitialized(
-          &message_loop_, &ledger_ptr,
+      ledger::Status status = ledger::Status::UNKNOWN_ERROR;
+      test::GetPageEnsureInitialized(
+          &ledger_ptr,
           // The first ledger gets a random page id, the others use the
           // same id for their pages.
-          i == 0 ? nullptr : fidl::MakeOptional(page_id), &pages_[i], &page_id);
+          i == 0 ? nullptr : fidl::MakeOptional(page_id),
+          [this] { message_loop_.QuitNow(); },
+          callback::Capture([this] { message_loop_.QuitNow(); }, &status,
+                            &pages_[i], &page_id));
+      message_loop_.Run();
       ASSERT_EQ(ledger::Status::OK, status);
     }
   }

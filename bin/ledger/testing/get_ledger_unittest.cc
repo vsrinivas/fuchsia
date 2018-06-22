@@ -19,21 +19,6 @@ TEST(GetLedgerTest, CreateAndDeleteLedger) {
 
   auto startup_context = fuchsia::sys::StartupContext::CreateFromStartupInfo();
   fuchsia::sys::ComponentControllerPtr controller;
-  ledger::LedgerPtr ledger;
-
-  EXPECT_EQ(ledger::Status::OK,
-            GetLedger(&loop, startup_context.get(), controller.NewRequest(),
-                      nullptr, "ledger_name", temp_dir.path(), &ledger));
-
-  KillLedgerProcess(&controller);
-}
-
-TEST(GetLedgerTest, CreateAndDeleteLedgerAsynchronous) {
-  async::Loop loop(&kAsyncLoopConfigMakeDefault);
-  files::ScopedTempDir temp_dir;
-
-  auto startup_context = fuchsia::sys::StartupContext::CreateFromStartupInfo();
-  fuchsia::sys::ComponentControllerPtr controller;
 
   ledger::Status status = ledger::Status::UNKNOWN_ERROR;
   ledger::LedgerPtr ledger;
@@ -54,34 +39,19 @@ TEST(GetLedgerTest, GetPageEnsureInitialized) {
 
   auto startup_context = fuchsia::sys::StartupContext::CreateFromStartupInfo();
   fuchsia::sys::ComponentControllerPtr controller;
-  ledger::LedgerPtr ledger;
-
-  ASSERT_EQ(ledger::Status::OK,
-            GetLedger(&loop, startup_context.get(), controller.NewRequest(),
-                      nullptr, "ledger_name", temp_dir.path(), &ledger));
-
-  ledger::PagePtr page;
-  ledger::PageId page_id;
-
-  EXPECT_EQ(ledger::Status::OK,
-            GetPageEnsureInitialized(&loop, &ledger, nullptr, &page, &page_id));
-
-  KillLedgerProcess(&controller);
-}
-
-TEST(GetLedgerTest, GetPageEnsureInitializedAsynchronous) {
-  async::Loop loop(&kAsyncLoopConfigMakeDefault);
-  files::ScopedTempDir temp_dir;
-
-  auto startup_context = fuchsia::sys::StartupContext::CreateFromStartupInfo();
-  fuchsia::sys::ComponentControllerPtr controller;
-  ledger::LedgerPtr ledger;
-
-  ASSERT_EQ(ledger::Status::OK,
-            GetLedger(&loop, startup_context.get(), controller.NewRequest(),
-                      nullptr, "ledger_name", temp_dir.path(), &ledger));
 
   ledger::Status status = ledger::Status::UNKNOWN_ERROR;
+  ledger::LedgerPtr ledger;
+
+  GetLedger(startup_context.get(), controller.NewRequest(), nullptr,
+            "ledger_name", temp_dir.path(), [&] { loop.Quit(); },
+            callback::Capture([&] { loop.Quit(); }, &status, &ledger));
+  loop.Run();
+  loop.ResetQuit();
+
+  ASSERT_EQ(ledger::Status::OK, status);
+
+  status = ledger::Status::UNKNOWN_ERROR;
   ledger::PagePtr page;
   ledger::PageId page_id;
 
