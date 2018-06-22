@@ -112,66 +112,9 @@ static zx_status_t fd_load_abspath(void* ctx, const char* path, zx_handle_t* out
     return ZX_ERR_NOT_FOUND;
 }
 
-// The default publish_data_sink implementation, which publishes into
-// subdirectories given by |ctx|->data_sink_dir_fd, provided that the filesystem
-// there supports such publishing.
 zx_status_t fd_publish_data_sink(void* ctx, const char* sink_name, zx_handle_t vmo) {
-    union {
-        vmo_create_config_t header;
-        struct {
-            alignas(vmo_create_config_t) char h[sizeof(vmo_create_config_t)];
-            char name[ZX_MAX_NAME_LEN];
-        };
-    } config;
-
-    zx_status_t status = zx_object_get_property(
-        vmo, ZX_PROP_NAME, config.name, sizeof(config.name));
-    if (status != ZX_OK)
-        return status;
-    if (config.name[0] == '\0') {
-        zx_info_handle_basic_t info;
-        status = zx_object_get_info(vmo, ZX_INFO_HANDLE_BASIC,
-                                    &info, sizeof(info), NULL, NULL);
-        if (status != ZX_OK)
-            return status;
-        snprintf(config.name, sizeof(config.name), "unnamed.%" PRIu64,
-                 info.koid);
-    }
-
-    int data_sink_dir_fd = ((instance_state_t*)ctx)->data_sink_dir_fd;
-    if (data_sink_dir_fd == -1) {
-        fprintf(stderr, "dlsvc: invalid file descriptor given for data sink.");
-        zx_handle_close(vmo);
-        return ZX_ERR_NOT_SUPPORTED;
-    } else if (mkdirat(data_sink_dir_fd, sink_name, 0777) != 0 && errno != EEXIST) {
-        fprintf(stderr, "dlsvc: cannot mkdir \"%s\" for data-sink: %m\n",
-                sink_name);
-        zx_handle_close(vmo);
-        return ZX_ERR_NOT_FOUND;
-    }
-    int sink_dir_fd = openat(data_sink_dir_fd, sink_name, O_RDONLY | O_DIRECTORY);
-    if (sink_dir_fd < 0) {
-        fprintf(stderr,
-                "dlsvc: cannot open data-sink directory \"%s\": %m\n",
-                sink_name);
-        zx_handle_close(vmo);
-        return ZX_ERR_NOT_FOUND;
-    }
-
-    config.header.vmo = vmo;
-    ssize_t result = ioctl_vfs_vmo_create(
-        sink_dir_fd, &config.header,
-        sizeof(config.header) + strlen(config.name) + 1);
-    close(sink_dir_fd);
-
-    if (result < 0) {
-        fprintf(stderr,
-                "dlsvc: ioctl_vfs_vmo_create failed"
-                " for data-sink \"%s\" item \"%s\": %s\n",
-                sink_name, config.name, zx_status_get_string(result));
-        return result;
-    }
-    return ZX_OK;
+    zx_handle_close(vmo);
+    return ZX_ERR_NOT_SUPPORTED;
 }
 
 void fd_finalizer(void* ctx) {

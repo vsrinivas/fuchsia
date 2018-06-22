@@ -42,7 +42,6 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/test-truncate.cpp \
     $(LOCAL_DIR)/test-unlink.cpp \
     $(LOCAL_DIR)/test-utils.cpp \
-    $(LOCAL_DIR)/test-vmo.cpp \
     $(LOCAL_DIR)/test-watcher.cpp \
 
 MODULE_LDFLAGS := --wrap open --wrap unlink --wrap stat --wrap mkdir

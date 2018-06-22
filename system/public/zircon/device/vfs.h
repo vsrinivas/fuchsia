@@ -59,20 +59,6 @@
     IOCTL(IOCTL_KIND_GET_HANDLE, IOCTL_FAMILY_VFS, 5)
 #define IOCTL_VFS_MOUNT_MKDIR_FS \
     IOCTL(IOCTL_KIND_SET_HANDLE, IOCTL_FAMILY_VFS, 6)
-// Given a VMO and a file name, create a file from the VMO
-// with the provided name.
-//
-// The VMO handle must be the ONLY open handle to the VMO;
-// otherwise, it has the risk of being resized from
-// underneath the filesystem. If there are multiple handles
-// open to the vmo (or the handle is not a VMO) the request
-// will fail. If the provided VMO is mapped into a VMAR, the
-// underlying pages will still be accessible to whoever
-// can access the VMAR.
-//
-// This ioctl is currently only supported by MemFS.
-#define IOCTL_VFS_VMO_CREATE \
-    IOCTL(IOCTL_KIND_SET_HANDLE, IOCTL_FAMILY_VFS, 7)
 
 // Watch a directory for changes
 // in: vfs_watch_dir_t
@@ -172,14 +158,6 @@ IOCTL_WRAPPER_IN(ioctl_vfs_watch_dir, IOCTL_VFS_WATCH_DIR, vfs_watch_dir_t);
 
 // ssize_t ioctl_vfs_get_device_path(int fd, char* out, size_t out_len);
 IOCTL_WRAPPER_VAROUT(ioctl_vfs_get_device_path, IOCTL_VFS_GET_DEVICE_PATH, char);
-
-typedef struct {
-    zx_handle_t vmo;
-    char name[]; // Null-terminator required
-} vmo_create_config_t;
-
-// ssize_t ioctl_vfs_vmo_create(int fd, vmo_create_config_t* in, size_t in_len);
-IOCTL_WRAPPER_VARIN(ioctl_vfs_vmo_create, IOCTL_VFS_VMO_CREATE, vmo_create_config_t);
 
 #define MOUNT_MKDIR_FLAG_REPLACE 1
 

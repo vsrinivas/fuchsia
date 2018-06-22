@@ -36,7 +36,7 @@ public:
     virtual zx_status_t Setattr(const vnattr_t* a) final;
     virtual void Sync(SyncCallback closure) final;
     zx_status_t Ioctl(uint32_t op, const void* in_buf, size_t in_len,
-                      void* out_buf, size_t out_len, size_t* out_actual) override;
+                      void* out_buf, size_t out_len, size_t* out_actual) final;
     zx_status_t AttachRemote(fs::MountChannel h) final;
 
     // To be more specific: Is this vnode connected into the directory hierarchy?
@@ -134,8 +134,6 @@ private:
     zx_status_t Link(fbl::StringPiece name, fbl::RefPtr<fs::Vnode> target) final;
     zx_status_t Getattr(vnattr_t* a) final;
     zx_status_t GetVmo(int flags,  zx_handle_t* out) final;
-    zx_status_t Ioctl(uint32_t op, const void* in_buf, size_t in_len,
-                      void* out_buf, size_t out_len, size_t* out_actual) final;
 
     fs::RemoteContainer remoter_;
     fs::WatcherContainer watcher_;
