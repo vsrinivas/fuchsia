@@ -35,9 +35,6 @@
 #define READ32_VPU_REG(a)                readl(io_buffer_virt(&display->mmio_vpu) + a)
 #define WRITE32_VPU_REG(a, v)            writel(v, io_buffer_virt(&display->mmio_vpu) + a)
 
-#define READ32_DMC_REG(a)                readl(io_buffer_virt(&display->mmio_dmc) + a)
-#define WRITE32_DMC_REG(a, v)            writel(v, io_buffer_virt(&display->mmio_dmc) + a)
-
 #define READ32_HDMITX_SEC_REG(a)         readl(io_buffer_virt(&display->mmio_hdmitx_sec) + a)
 #define WRITE32_HDMITX_SEC_REG(a, v)     writel(v, io_buffer_virt(&display->mmio_hdmitx_sec) + a)
 

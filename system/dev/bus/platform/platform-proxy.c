@@ -360,6 +360,44 @@ static mailbox_protocol_ops_t mailbox_ops = {
     .send_cmd = pdev_mailbox_send_cmd,
 };
 
+static zx_status_t pdev_canvas_config(void* ctx, zx_handle_t vmo,
+                                      size_t offset, canvas_info_t* info,
+                                      uint8_t* canvas_idx) {
+    platform_proxy_t* proxy = ctx;
+    zx_status_t status = ZX_OK;
+    pdev_resp_t resp;
+    pdev_req_t req = {
+        .op = PDEV_CANVAS_CONFIG,
+    };
+
+    memcpy((void*)&req.canvas.info, info, sizeof(canvas_info_t));
+    req.canvas.offset = offset;
+
+    status = platform_dev_rpc(proxy, &req, sizeof(req), &resp, sizeof(resp),
+                              &vmo, 1, NULL, 0, NULL);
+    if (status == ZX_OK) {
+        *canvas_idx = resp.canvas_idx;
+    }
+    return status;
+}
+
+static zx_status_t pdev_canvas_free(void* ctx, uint8_t canvas_idx) {
+    platform_proxy_t* proxy = ctx;
+    pdev_resp_t resp;
+    pdev_req_t req = {
+        .op = PDEV_CANCAS_FREE,
+        .canvas_idx = canvas_idx,
+    };
+
+    return platform_dev_rpc(proxy, &req, sizeof(req), &resp, sizeof(resp),
+                            NULL, 0, NULL, 0, NULL);
+}
+
+static canvas_protocol_ops_t canvas_ops = {
+    .config = pdev_canvas_config,
+    .free = pdev_canvas_free,
+};
+
 static zx_status_t pdev_i2c_get_max_transfer_size(void* ctx, uint32_t index, size_t* out_size) {
     platform_proxy_t* proxy = ctx;
 
@@ -616,6 +654,12 @@ static zx_status_t platform_dev_get_protocol(void* ctx, uint32_t proto_id, void*
         scpi_protocol_t* proto = out;
         proto->ctx = ctx;
         proto->ops = &scpi_ops;
+        return ZX_OK;
+    }
+    case ZX_PROTOCOL_CANVAS: {
+        canvas_protocol_t* proto = out;
+        proto->ctx = ctx;
+        proto->ops = &canvas_ops;
         return ZX_OK;
     }
     default:

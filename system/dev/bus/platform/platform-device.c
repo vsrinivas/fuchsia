@@ -284,6 +284,23 @@ static zx_status_t pdev_rpc_set_gpio_polarity(platform_dev_t* dev,
     return gpio_set_polarity(&bus->gpio, index, flags);
 }
 
+static zx_status_t pdev_rpc_canvas_config(platform_dev_t* dev, zx_handle_t vmo, size_t offset,
+                                          canvas_info_t* info, uint8_t* canvas_idx) {
+    platform_bus_t* bus = dev->bus;
+    if (!bus->canvas.ops) {
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+    return canvas_config(&bus->canvas, vmo, offset, info, canvas_idx);
+}
+
+static zx_status_t pdev_rpc_canvas_free(platform_dev_t* dev, uint8_t canvas_idx) {
+    platform_bus_t* bus = dev->bus;
+    if (!bus->canvas.ops) {
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+    return canvas_free(&bus->canvas, canvas_idx);
+}
+
 static zx_status_t pdev_rpc_mailbox_send_cmd(platform_dev_t* dev,
                                              pdev_mailbox_ctx_t mailbox) {
     platform_bus_t* bus = dev->bus;
@@ -495,6 +512,14 @@ static zx_status_t platform_dev_rxrpc(void* ctx, zx_handle_t channel) {
         break;
     case PDEV_CLK_DISABLE:
         resp.status = pdev_rpc_clk_disable(dev, req->index);
+        break;
+    case PDEV_CANVAS_CONFIG:
+        resp.status = pdev_rpc_canvas_config(dev, in_handle,
+                                             req->canvas.offset, &req->canvas.info,
+                                             &resp.canvas_idx);
+        break;
+    case PDEV_CANCAS_FREE:
+        resp.status = pdev_rpc_canvas_free(dev, req->canvas_idx);
         break;
     default:
         zxlogf(ERROR, "platform_dev_rxrpc: unknown op %u\n", req->op);

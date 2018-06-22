@@ -9,13 +9,9 @@ MODULE := $(LOCAL_DIR)
 MODULE_TYPE := driver
 
 MODULE_SRCS += \
-    $(LOCAL_DIR)/vim-display.c \
-    $(LOCAL_DIR)/hdmitx.c \
-    $(LOCAL_DIR)/hdmitx_clk.c \
-    $(LOCAL_DIR)/osd2.c \
-    $(LOCAL_DIR)/edid.c \
+    $(LOCAL_DIR)/aml-canvas.c \
 
-MODULE_STATIC_LIBS := system/ulib/ddk system/ulib/sync
+MODULE_STATIC_LIBS := system/ulib/ddk
 
 MODULE_LIBS := system/ulib/driver system/ulib/zircon system/ulib/c
 

@@ -8,6 +8,7 @@
 #include <assert.h>
 #include <ddk/io-buffer.h>
 #include <ddk/protocol/gpio.h>
+#include <ddk/protocol/canvas.h>
 #include <ddk/protocol/display-controller.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -36,6 +37,7 @@ typedef struct {
     zx_handle_t                         inth;
 
     gpio_protocol_t                     gpio;
+    canvas_protocol_t                   canvas;
 
     thrd_t                              main_thread;
     thrd_t                              vsync_thread;
@@ -58,7 +60,9 @@ typedef struct {
     io_buffer_t                         mmio_hdmitx_sec;
     io_buffer_t                         mmio_dmc;
     io_buffer_t                         mmio_cbus;
-    io_buffer_t                         fbuffer;
+
+    zx_handle_t                         fb_vmo;
+
     uint8_t                             fb_canvas_idx;
     zx_handle_t                         vsync_interrupt;
 
@@ -85,8 +89,6 @@ typedef struct {
     list_node_t                         imported_images;
 } vim2_display_t;
 
-bool add_canvas_entry(vim2_display_t* display, zx_paddr_t paddr, uint8_t* idx_out);
-void free_canvas_entry(vim2_display_t* display, uint8_t idx);
 zx_status_t configure_osd2(vim2_display_t* display, uint8_t default_idx);
 void flip_osd2(vim2_display_t* display, uint8_t idx);
 void osd_debug_dump_register_all(vim2_display_t* display);

@@ -12,11 +12,6 @@
 #include <ddk/protocol/platform-bus.h>
 #include <ddk/protocol/serial.h>
 
-#define BIG_CLUSTER_POWER_DOMAIN     0
-#define LITTLE_CLUSTER_POWER_DOMAIN  1
-#define BIG_CLUSTER_CPU_FREQ_MAX     1200000000
-#define LITTLE_CLUSTER_CPU_FREQ_MAX  1000000000
-
 // BTI IDs for our devices
 enum {
     BTI_BOARD,
@@ -26,6 +21,7 @@ enum {
     BTI_VIDEO,
     BTI_EMMC,
     BTI_SDIO,
+    BTI_CANVAS,
 };
 
 typedef struct {
@@ -78,3 +74,6 @@ zx_status_t vim_led2472g_init(vim_bus_t* bus);
 
 // vim-rtc.c
 zx_status_t vim_rtc_init(vim_bus_t* bus);
+
+// vim-canvas.c
+zx_status_t vim2_canvas_init(vim_bus_t* bus);

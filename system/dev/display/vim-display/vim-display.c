@@ -42,7 +42,6 @@ enum {
     MMIO_HIU,
     MMIO_VPU,
     MMIO_HDMTX_SEC,
-    MMIO_DMC,
     MMIO_CBUS,
 };
 
@@ -89,28 +88,25 @@ static zx_status_t vim_import_vmo_image(void* ctx, image_t* image, zx_handle_t v
         return ZX_ERR_NO_MEMORY;
     }
 
-    unsigned pixel_size = ZX_PIXEL_FORMAT_BYTES(image->pixel_format);
-    unsigned size = ROUNDUP(image->width * image->height * pixel_size, PAGE_SIZE);
-    unsigned num_pages = size / PAGE_SIZE;
-    zx_paddr_t paddr[num_pages];
-
     vim2_display_t* display = ctx;
     mtx_lock(&display->image_lock);
 
-    zx_status_t status = zx_bti_pin(display->bti, ZX_BTI_PERM_READ, vmo, offset, size,
-                                    paddr, num_pages, &import_info->pmt);
+    canvas_info_t info;
+    info.height         = image->height;
+    info.stride_bytes   = image->width * ZX_PIXEL_FORMAT_BYTES(display->format);
+    info.wrap           = 0;
+    info.blkmode        = 0;
+    info.endianess      = 0;
+
+    zx_handle_t dup_vmo;
+    zx_status_t status = zx_handle_duplicate(vmo, ZX_RIGHT_SAME_RIGHTS, &dup_vmo);
     if (status != ZX_OK) {
         goto fail;
     }
 
-    for (unsigned i = 0; i < num_pages - 1; i++) {
-        if (paddr[i] + PAGE_SIZE != paddr[i + 1]) {
-            status = ZX_ERR_INVALID_ARGS;
-            goto fail;
-        }
-    }
-
-    if (!add_canvas_entry(display, paddr[0], &import_info->canvas_idx)) {
+    status = canvas_config(&display->canvas, dup_vmo, offset,
+                           &info, &import_info->canvas_idx);
+    if (status != ZX_OK) {
         status = ZX_ERR_NO_RESOURCES;
         goto fail;
     }
@@ -123,10 +119,6 @@ static zx_status_t vim_import_vmo_image(void* ctx, image_t* image, zx_handle_t v
     return ZX_OK;
 fail:
     mtx_unlock(&display->image_lock);
-
-    if (import_info->pmt != ZX_HANDLE_INVALID) {
-        zx_handle_close(import_info->pmt);
-    }
     free(import_info);
     return status;
 }
@@ -146,8 +138,7 @@ static void vim_release_image(void* ctx, image_t* image) {
     mtx_unlock(&display->image_lock);
 
     if (info) {
-        free_canvas_entry(display, info->canvas_idx);
-        zx_handle_close(info->pmt);
+        canvas_free(&display->canvas, info->canvas_idx);
         free(info);
     }
 }
@@ -259,9 +250,8 @@ static void display_release(void* ctx) {
         io_buffer_release(&display->mmio_hiu);
         io_buffer_release(&display->mmio_vpu);
         io_buffer_release(&display->mmio_hdmitx_sec);
-        io_buffer_release(&display->mmio_dmc);
         io_buffer_release(&display->mmio_cbus);
-        io_buffer_release(&display->fbuffer);
+        zx_handle_close(display->fb_vmo);
         zx_handle_close(display->bti);
         zx_handle_close(display->vsync_interrupt);
         zx_handle_close(display->inth);
@@ -285,6 +275,7 @@ static zx_protocol_device_t main_device_proto = {
 static zx_status_t setup_hdmi(vim2_display_t* display)
 {
     zx_status_t status;
+    size_t size;
     // initialize HDMI
     status = init_hdmi_hardware(display);
     if (status != ZX_OK) {
@@ -304,20 +295,33 @@ static zx_status_t setup_hdmi(vim2_display_t* display)
     display->width  = display->p->timings.hactive;
     display->height = display->p->timings.vactive;
     display->stride = vim_compute_linear_stride(
-            display, display->p->timings.hactive, display->format);
+                      display, display->p->timings.hactive, display->format);
+    display->input_color_format = _ginput_color_format;
+    display->color_depth = _gcolor_depth;
 
-    status = io_buffer_init(&display->fbuffer, display->bti,
-                            (display->stride * display->height *
-                             ZX_PIXEL_FORMAT_BYTES(display->format)),
-                            IO_BUFFER_RW | IO_BUFFER_CONTIG);
+    size = display->stride * display->height * ZX_PIXEL_FORMAT_BYTES(display->format);
+    status = allocate_vmo(display, size, &display->fb_vmo);
     if (status != ZX_OK) {
         return status;
     }
 
+    // Create a duplicate handle
+    zx_handle_t fb_vmo_dup_handle;
+    status = zx_handle_duplicate(display->fb_vmo, ZX_RIGHT_SAME_RIGHTS, &fb_vmo_dup_handle);
+    if (status != ZX_OK) {
+        DISP_ERROR("Unable to duplicate FB VMO handle\n");
+        zx_handle_close(display->fb_vmo);
+        return status;
+    }
 
-    display->input_color_format = _ginput_color_format;
-    display->color_depth = _gcolor_depth;
-
+    zx_vaddr_t virt;
+    status = zx_vmar_map(zx_vmar_root_self(), 0, display->fb_vmo, 0,
+                         size, ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE, &virt);
+    if (status != ZX_OK) {
+        DISP_ERROR("zx_vmar_map failed %d size: %zu\n", status, size);
+        zx_handle_close(display->fb_vmo);
+        return status;
+    }
 
     status = init_hdmi_interface(display, display->p);
     if (status != ZX_OK) {
@@ -326,13 +330,25 @@ static zx_status_t setup_hdmi(vim2_display_t* display)
     }
 
     /* Configure Canvas memory */
-    add_canvas_entry(display, io_buffer_phys(&display->fbuffer), &display->fb_canvas_idx);
+    canvas_info_t info;
+    info.height         = display->height;
+    info.stride_bytes   = display->stride * ZX_PIXEL_FORMAT_BYTES(display->format);
+    info.wrap           = 0;
+    info.blkmode        = 0;
+    info.endianess      = 0;
+
+    status = canvas_config(&display->canvas, fb_vmo_dup_handle,
+                           0, &info, &display->fb_canvas_idx);
+    if (status != ZX_OK) {
+        DISP_ERROR("Unable to configure canvas %d\n", status);
+        return status;
+    }
 
     /* OSD2 setup */
     configure_osd2(display, display->fb_canvas_idx);
 
-    zx_framebuffer_set_range(get_root_resource(), display->fbuffer.vmo_handle,
-                             display->fbuffer.size, display->format,
+    zx_framebuffer_set_range(get_root_resource(), display->fb_vmo,
+                             size, display->format,
                              display->width, display->height, display->stride);
 
     return ZX_OK;
@@ -370,8 +386,8 @@ static int hdmi_irq_handler(void *arg) {
         } else if (!hpd && display->display_attached) {
             DISP_ERROR("Display Disconnected!\n");
             hdmi_shutdown(display);
-            free_canvas_entry(display, display->fb_canvas_idx);
-            io_buffer_release(&display->fbuffer);
+            canvas_free(&display->canvas, display->fb_canvas_idx);
+            zx_handle_close(display->fb_vmo);
 
             display_removed = display->display_id;
             display->display_id++;
@@ -454,6 +470,12 @@ zx_status_t vim2_display_bind(void* ctx, zx_device_t* parent) {
         goto fail;
     }
 
+    status = device_get_protocol(parent, ZX_PROTOCOL_CANVAS, &display->canvas);
+    if (status != ZX_OK) {
+        DISP_ERROR("Could not get Display CANVAS protocol\n");
+        goto fail;
+    }
+
     // Map all the various MMIOs
     status = pdev_map_mmio_buffer(&display->pdev, MMIO_PRESET, ZX_CACHE_POLICY_UNCACHED_DEVICE,
         &display->mmio_preset);
@@ -487,13 +509,6 @@ zx_status_t vim2_display_bind(void* ctx, zx_device_t* parent) {
         &display->mmio_hdmitx_sec);
     if (status != ZX_OK) {
         DISP_ERROR("Could not map display MMIO HDMITX SEC\n");
-        goto fail;
-    }
-
-    status = pdev_map_mmio_buffer(&display->pdev, MMIO_DMC, ZX_CACHE_POLICY_UNCACHED_DEVICE,
-        &display->mmio_dmc);
-    if (status != ZX_OK) {
-        DISP_ERROR("Could not map display MMIO DMC\n");
         goto fail;
     }
 

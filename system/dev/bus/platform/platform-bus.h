@@ -9,6 +9,7 @@
 #include <ddk/device.h>
 #include <ddk/protocol/clk.h>
 #include <ddk/protocol/gpio.h>
+#include <ddk/protocol/canvas.h>
 #include <ddk/protocol/i2c.h>
 #include <ddk/protocol/iommu.h>
 #include <ddk/protocol/platform-bus.h>
@@ -35,6 +36,7 @@ typedef struct {
     i2c_impl_protocol_t i2c;
     clk_protocol_t clk;
     iommu_protocol_t iommu;
+    canvas_protocol_t canvas;
     zx_handle_t resource;   // root resource for platform bus
     zbi_platform_id_t platform_id;
     uint8_t* metadata;   // metadata extracted from ZBI

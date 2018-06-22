@@ -65,6 +65,9 @@ static zx_status_t platform_bus_set_protocol(void* ctx, uint32_t proto_id, void*
     case ZX_PROTOCOL_SCPI:
         memcpy(&bus->scpi, protocol, sizeof(bus->scpi));
         break;
+    case ZX_PROTOCOL_CANVAS:
+        memcpy(&bus->canvas, protocol, sizeof(bus->canvas));
+        break;
     default:
         // TODO(voydanoff) consider having a registry of arbitrary protocols
         return ZX_ERR_NOT_SUPPORTED;
@@ -190,6 +193,12 @@ zx_status_t platform_bus_get_protocol(void* ctx, uint32_t proto_id, void* protoc
     case ZX_PROTOCOL_SCPI:
         if (bus->scpi.ops) {
             memcpy(protocol, &bus->scpi, sizeof(bus->scpi));
+            return ZX_OK;
+        }
+        break;
+    case ZX_PROTOCOL_CANVAS:
+        if (bus->canvas.ops) {
+            memcpy(protocol, &bus->canvas, sizeof(bus->canvas));
             return ZX_OK;
         }
         break;

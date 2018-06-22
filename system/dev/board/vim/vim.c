@@ -109,6 +109,11 @@ static int vim_start_thread(void* arg) {
         goto fail;
     }
 
+    if ((status = vim2_canvas_init(bus)) != ZX_OK) {
+        zxlogf(ERROR, "vim2_canvas_init failed: %d\n", status);
+        goto fail;
+    }
+
     return ZX_OK;
 fail:
     zxlogf(ERROR, "vim_start_thread failed, not all devices have been initialized\n");

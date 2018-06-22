@@ -11,6 +11,7 @@
 #include <ddk/protocol/scpi.h>
 #include <ddk/protocol/i2c.h>
 #include <ddk/protocol/usb-mode-switch.h>
+#include <ddk/protocol/canvas.h>
 
 // maximum transfer size we can proxy.
 #define PDEV_I2C_MAX_TRANSFER_SIZE 4096
@@ -53,7 +54,17 @@ enum {
     PDEV_SCPI_GET_DVFS_INFO,
     PDEV_SCPI_GET_DVFS_IDX,
     PDEV_SCPI_SET_DVFS_IDX,
+
+    // ZX_PROTOCOL_CANVAS
+    PDEV_CANVAS_CONFIG,
+    PDEV_CANCAS_FREE,
 };
+
+// context for canvas
+typedef struct {
+    canvas_info_t info;
+    size_t offset;
+} pdev_canvas_ctx_t;
 
 // context for mailbox
 typedef struct {
@@ -100,11 +111,13 @@ typedef struct pdev_req {
         uint32_t gpio_flags;
         uint32_t gpio_alt_function;
         uint8_t gpio_value;
+        uint8_t canvas_idx;
         pdev_i2c_txn_ctx_t i2c_txn;
         uint32_t i2c_bitrate;
         uint32_t flags;
         pdev_mailbox_ctx_t mailbox;
         pdev_scpi_ctx_t scpi;
+        pdev_canvas_ctx_t canvas;
     };
 } pdev_req_t;
 
@@ -114,6 +127,7 @@ typedef struct {
     union {
         usb_mode_t usb_mode;
         uint8_t gpio_value;
+        uint8_t canvas_idx;
         pdev_i2c_txn_ctx_t i2c_txn;
         size_t i2c_max_transfer;
         struct {
