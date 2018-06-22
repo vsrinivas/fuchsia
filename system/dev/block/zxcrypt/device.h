@@ -24,6 +24,7 @@
 #include <zircon/device/block.h>
 #include <zircon/syscalls/port.h>
 #include <zircon/types.h>
+#include <zircon/listnode.h>
 
 #include "extra.h"
 #include "worker.h"
@@ -163,8 +164,7 @@ private:
     size_t last_ __TA_GUARDED(mtx_);
 
     // Describes a queue of deferred block requests.
-    extra_op_t* head_ __TA_GUARDED(mtx_);
-    extra_op_t* tail_ __TA_GUARDED(mtx_);
+    list_node_t queue_ __TA_GUARDED(mtx_);
 };
 
 } // namespace zxcrypt

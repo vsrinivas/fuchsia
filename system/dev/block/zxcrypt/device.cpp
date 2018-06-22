@@ -47,7 +47,9 @@ int InitThread(void* arg) {
 
 Device::Device(zx_device_t* parent)
     : DeviceType(parent), info_(nullptr), active_(false), tasks_(0), mapped_(0), base_(nullptr),
-      last_(0), head_(nullptr), tail_(nullptr) {}
+      last_(0) {
+    list_initialize(&queue_);
+}
 
 Device::~Device() {}
 
@@ -62,7 +64,7 @@ zx_status_t Device::Bind() {
         zxlogf(ERROR, "DdkAdd('zxcrypt', DEVICE_ADD_INVISIBLE) failed: %s\n", zx_status_get_string(rc));
         return rc;
     }
-    auto cleanup = fbl::MakeAutoCall([this]{DdkRemove();});
+    auto cleanup = fbl::MakeAutoCall([this] { DdkRemove(); });
 
     // Launch the init thread.
     if (thrd_create(&init_, InitThread, this) != thrd_success) {
@@ -77,7 +79,7 @@ zx_status_t Device::Bind() {
 zx_status_t Device::Init() {
     zx_status_t rc;
 
-    zxlogf(INFO, "zxcrypt device %p initializing\n", this);
+    zxlogf(TRACE, "zxcrypt device %p initializing\n", this);
     fbl::AutoLock lock(&mtx_);
     // We make an extra call to |AddTask| to ensure the counter never goes to zero before the
     // corresponding extra call to |FinishTask| in |DdkUnbind|.
@@ -102,7 +104,7 @@ zx_status_t Device::Init() {
     // the multiplicative factor needed to transform this device's blocks into its parent's.
     // TODO(security): ZX-1130 workaround.  Use null key of a fixed length until fixed
     crypto::Secret root_key;
-    uint8_t *buf;
+    uint8_t* buf;
     if ((rc = root_key.Allocate(kZx1130KeyLen, &buf)) != ZX_OK) {
         return rc;
     }
@@ -156,7 +158,7 @@ zx_status_t Device::Init() {
     // Make the pointer const
     info_ = info.release();
     DdkMakeVisible();
-    zxlogf(INFO, "zxcrypt device %p initialized\n", this);
+    zxlogf(TRACE, "zxcrypt device %p initialized\n", this);
 
     cleanup.cancel();
     return ZX_OK;
@@ -238,7 +240,7 @@ zx_off_t Device::DdkGetSize() {
 // TODO(aarongreen): See ZX-1138.  Currently, there's no good way to trigger
 // this on demand.
 void Device::DdkUnbind() {
-    zxlogf(INFO, "zxcrypt device %p unbinding\n", this);
+    zxlogf(TRACE, "zxcrypt device %p unbinding\n", this);
     fbl::AutoLock lock(&mtx_);
     active_ = false;
     if (port_.is_valid()) {
@@ -260,18 +262,18 @@ void Device::DdkRelease() {
     fbl::AutoLock lock(&mtx_);
     thrd_join(init_, &rc);
     if (rc != ZX_OK) {
-        zxlogf(ERROR, "WARNING: init thread returned %s\n", zx_status_get_string(rc));
+        zxlogf(WARN, "init thread returned %s\n", zx_status_get_string(rc));
     }
     for (size_t i = 0; i < kNumWorkers; ++i) {
         workers_[i].Stop();
     }
     if (mapped_ != 0 && (rc = zx::vmar::root_self().unmap(mapped_, Volume::kBufferSize)) != ZX_OK) {
-        zxlogf(ERROR, "WARNING: failed to unmap %" PRIu32 " bytes at %" PRIuPTR ": %s\n",
+        zxlogf(WARN, "failed to unmap %" PRIu32 " bytes at %" PRIuPTR ": %s\n",
                Volume::kBufferSize, mapped_, zx_status_get_string(rc));
     }
     fbl::unique_ptr<DeviceInfo> info(const_cast<DeviceInfo*>(info_));
     info_ = nullptr;
-    zxlogf(INFO, "zxcrypt device %p released\n", this);
+    zxlogf(TRACE, "zxcrypt device %p released\n", this);
     lock.release();
     delete this;
 }
@@ -305,6 +307,10 @@ void Device::BlockQueue(block_op_t* block) {
         block->completion_cb(block, ZX_OK);
         return;
     }
+
+    // Initialize the extra space
+    extra_op_t *extra = BlockToExtra(block, info_->op_size);
+    extra->Init();
 
     // Reserve space to do cryptographic transformations
     rc = BlockAcquire(block);
@@ -392,16 +398,13 @@ zx_status_t Device::BlockAcquire(block_op_t* block) {
     fbl::AutoLock lock(&mtx_);
 
     extra_op_t* extra = BlockToExtra(block, info_->op_size);
-    extra->next = nullptr;
-    if (tail_) {
-        tail_->next = extra;
-        tail_ = extra;
+    if (!list_is_empty(&queue_)) {
+        list_add_tail(&queue_, &extra->node);
         return ZX_ERR_SHOULD_WAIT;
     }
 
     if ((rc = BlockAcquireLocked(block->rw.length, extra)) == ZX_ERR_SHOULD_WAIT) {
-        head_ = extra;
-        tail_ = extra;
+        list_add_tail(&queue_, &extra->node);
     }
 
     return rc;
@@ -442,18 +445,15 @@ zx_status_t Device::BlockRequeue(block_op_t** out_block) {
     zx_status_t rc;
     fbl::AutoLock lock(&mtx_);
 
-    if (!head_) {
+    if (list_is_empty(&queue_)) {
         return ZX_ERR_STOP;
     }
-    extra_op_t* extra = head_;
+    extra_op_t* extra = list_peek_head_type(&queue_, extra_op_t, node);
     block_op_t* block = ExtraToBlock(extra, info_->op_size);
     if ((rc = BlockAcquireLocked(block->rw.length, extra)) != ZX_OK) {
         return rc;
     }
-    if (!extra->next) {
-        tail_ = nullptr;
-    }
-    head_ = extra->next;
+    list_remove_head(&queue_);
     *out_block = block;
 
     return ZX_ERR_NEXT;

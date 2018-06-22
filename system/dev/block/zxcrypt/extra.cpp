@@ -7,12 +7,23 @@
 
 #include <ddk/protocol/block.h>
 #include <zircon/assert.h>
+#include <zircon/listnode.h>
 
 #include "extra.h"
 
 namespace zxcrypt {
 
-// Translates |block_op_t|s to |extra_op_t|s and vice versa.
+void extra_op_t::Init() {
+    list_initialize(&node);
+    data = nullptr;
+    vmo = ZX_HANDLE_INVALID;
+    length = 0;
+    offset_dev = 0;
+    offset_vmo = 0;
+    completion_cb = nullptr;
+    cookie = nullptr;
+}
+
 extra_op_t* BlockToExtra(block_op_t* block, size_t op_size) {
     ZX_DEBUG_ASSERT(block);
     uint8_t* ptr = reinterpret_cast<uint8_t*>(block);

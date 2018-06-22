@@ -8,6 +8,7 @@
 #include <stdint.h>
 
 #include <ddk/protocol/block.h>
+#include <zircon/listnode.h>
 #include <zircon/types.h>
 
 namespace zxcrypt {
@@ -17,9 +18,11 @@ namespace zxcrypt {
 static_assert(sizeof(uintptr_t) <= sizeof(uint64_t), "uintptr_t > uint64_t");
 struct extra_op_t {
     // Used to link deferred block requests
-    extra_op_t* next;
+    list_node_t node;
+
     // Memory region to use for cryptographic transformations.
     uint8_t* data;
+
     // The remaining are used to save fields of the original block request which may be altered
     zx_handle_t vmo;
     uint32_t length;
@@ -27,6 +30,9 @@ struct extra_op_t {
     uint64_t offset_vmo;
     void (*completion_cb)(block_op_t* block, zx_status_t status);
     void* cookie;
+
+    // Resets this structure to an initial state.
+    void Init();
 };
 
 // Translates |block_op_t|s to |extra_op_t|s and vice versa.
