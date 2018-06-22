@@ -67,20 +67,6 @@ package("codec_runner_sw_omx") {
   ]
 }
 
-package("media_client") {
-  deprecated_system_image = true
-
-  deps = [
-    "//garnet/public/lib/media/c",
-  ]
-
-  libraries = [
-    {
-      name = "libmedia_client.so"
-    },
-  ]
-}
-
 package("tests") {
   testonly = true
   deprecated_system_image = true

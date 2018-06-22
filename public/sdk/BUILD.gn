@@ -36,7 +36,6 @@ sdk("garnet") {
     "//garnet/public/lib/fidl/cpp:cpp_sdk",
     "//garnet/public/lib/fonts/fidl:fidl_sdk($fidl_toolchain)",
     "//garnet/public/lib/images/fidl:fidl_sdk($fidl_toolchain)",
-    "//garnet/public/lib/media/c:c_sdk",
     "//garnet/public/lib/media/fidl:fidl_sdk($fidl_toolchain)",
     "//garnet/public/lib/mem/fidl:fidl_sdk($fidl_toolchain)",
     "//garnet/public/lib/netstack/fidl:fidl_sdk($fidl_toolchain)",
