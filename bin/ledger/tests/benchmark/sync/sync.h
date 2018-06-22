@@ -5,9 +5,10 @@
 #ifndef PERIDOT_BIN_LEDGER_TESTS_BENCHMARK_SYNC_SYNC_H_
 #define PERIDOT_BIN_LEDGER_TESTS_BENCHMARK_SYNC_SYNC_H_
 
-#include <lib/async-loop/cpp/loop.h>
-
 #include <memory>
+
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/fit/function.h>
 
 #include "lib/app/cpp/startup_context.h"
 #include "lib/fxl/files/scoped_temp_dir.h"
@@ -53,6 +54,7 @@ class SyncBenchmark : public ledger::PageWatcher {
   void RunSingleChange(size_t i);
 
   void ShutDown();
+  fit::closure QuitLoopClosure();
 
   async::Loop* const loop_;
   test::DataGenerator generator_;
@@ -69,6 +71,8 @@ class SyncBenchmark : public ledger::PageWatcher {
   files::ScopedTempDir beta_tmp_dir_;
   fuchsia::sys::ComponentControllerPtr alpha_controller_;
   fuchsia::sys::ComponentControllerPtr beta_controller_;
+  ledger::LedgerPtr alpha_;
+  ledger::LedgerPtr beta_;
   ledger::PageId page_id_;
   ledger::PagePtr alpha_page_;
   ledger::PagePtr beta_page_;
