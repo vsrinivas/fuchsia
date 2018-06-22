@@ -28,12 +28,12 @@ Commands
     genkey  - generate a new private key
 
     build   - perform update, sign and seal in order
-      update  - update the merkle roots in meta/contents
-      sign    - sign a package with the given key
-      seal    - seal package metadata into a signed meta.far
-		verify  - verify metadata signature against the embedded public key
+    update  - update the merkle roots in meta/contents
+    sign    - sign a package with the given key
+    seal    - seal package metadata into a signed meta.far
+    verify  - verify metadata signature against the embedded public key
 
-	Dev Only:
+Dev Only:
     archive - construct a single .far representation of the package
     expand  - expand a single .far representation of a package into a repository
     install - install a single .far representation of the package
