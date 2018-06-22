@@ -6586,6 +6586,7 @@ struct wmi_pdev_chan_info_req_cmd {
 
 #define WMI_MSGS \
     MSG(ATH10K_MSG_TYPE_WMI, ATH10K_MSG_TYPE_HTC, sizeof(struct wmi_cmd_hdr)), \
+    WMI_MSG(ECHO_CMD, wmi_echo_cmd),                                           \
     WMI_MSG(INIT_CMD_10_2, wmi_init_cmd_10_2),                                 \
     WMI_MSG(VDEV_CREATE, wmi_vdev_create_cmd),                                 \
     WMI_MSG(VDEV_DELETE, wmi_vdev_delete_cmd),                                 \
