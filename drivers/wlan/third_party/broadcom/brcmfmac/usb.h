@@ -51,11 +51,22 @@ struct brcmf_usbdev {
     int chiprev; /* chip revsion number */
 };
 
+struct brcmf_urb {
+    usb_request_t* zxurb;
+    uint32_t refcount;
+    void* context;
+    struct brcmf_usbdev_info* devinfo;
+    int actual_length;
+    int desired_length;
+    void* recv_buffer; // For control reads
+    uint32_t status;
+};
+
 /* IO Request Block (IRB) */
 struct brcmf_usbreq {
     struct list_node list;
     struct brcmf_usbdev_info* devinfo;
-    struct urb* urb;
+    struct brcmf_urb* urb;
     struct brcmf_netbuf* skb;
 };
 

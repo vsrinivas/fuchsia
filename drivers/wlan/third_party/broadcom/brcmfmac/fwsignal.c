@@ -193,7 +193,7 @@ enum brcmf_fws_skb_state {
 };
 
 /**
- * struct brcmf_skbuff_cb - control buffer associated with skbuff.
+ * struct brcmf_netbuf_workspace - control buffer associated with brcmf_netbuf.
  *
  * @bus_flags: 2 bytes reserved for bus specific parameters
  * @if_flags: holds interface index and packet related flags.
@@ -202,10 +202,10 @@ enum brcmf_fws_skb_state {
  * @state: transmit state of the packet.
  * @mac: descriptor related to destination for this packet.
  *
- * This information is stored in control buffer struct brcmf_netbuf::cb, which
+ * This information is stored in control buffer struct brcmf_netbuf.workspace, which
  * provides 48 bytes of storage so this structure should not exceed that.
  */
-struct brcmf_skbuff_cb {
+struct brcmf_netbuf_workspace {
     uint16_t bus_flags;
     uint16_t if_flags;
     uint32_t htod;
@@ -215,10 +215,13 @@ struct brcmf_skbuff_cb {
     zx_status_t mac_status;
 };
 
+static_assert(sizeof(struct brcmf_netbuf_workspace) <= 48,
+    "Struct brcmf_netbuf_workspace must be <= 48 bytes");
+
 /*
- * macro casting skbuff control buffer to struct brcmf_skbuff_cb.
+ * macro casting skbuff control buffer to struct brcmf_netbuf_workspace.
  */
-#define brcmf_skbcb(skb) ((struct brcmf_skbuff_cb*)((skb)->cb))
+#define brcmf_skbcb(skb) ((struct brcmf_netbuf_workspace*)((skb)->workspace))
 
 // clang-format-off
 
@@ -921,7 +924,7 @@ static uint8_t brcmf_fws_hdrpush(struct brcmf_fws_info* fws, struct brcmf_netbuf
 static bool brcmf_fws_tim_update(struct brcmf_fws_info* fws, struct brcmf_fws_mac_descriptor* entry,
                                  int fifo, bool send_immediately) {
     struct brcmf_netbuf* skb;
-    struct brcmf_skbuff_cb* skcb;
+    struct brcmf_netbuf_workspace* skcb;
     zx_status_t err;
     uint32_t len;
     uint8_t data_offset;
@@ -1429,7 +1432,7 @@ static zx_status_t brcmf_fws_txs_process(struct brcmf_fws_info* fws, uint8_t fla
     zx_status_t ret;
     bool remove_from_hanger = true;
     struct brcmf_netbuf* skb;
-    struct brcmf_skbuff_cb* skcb;
+    struct brcmf_netbuf_workspace* skcb;
     struct brcmf_fws_mac_descriptor* entry = NULL;
     struct brcmf_if* ifp;
 
@@ -1632,7 +1635,7 @@ void brcmf_fws_rxreorder(struct brcmf_if* ifp, struct brcmf_netbuf* pkt) {
     uint8_t flags;
     uint32_t buf_size;
 
-    reorder_data = ((struct brcmf_skb_reorder_data*)pkt->cb)->reorder;
+    reorder_data = ((struct brcmf_skb_reorder_data*)pkt->workspace)->reorder;
     flow_id = reorder_data[BRCMF_RXREORDER_FLOWID_OFFSET];
     flags = reorder_data[BRCMF_RXREORDER_FLAGS_OFFSET];
 
@@ -1848,7 +1851,7 @@ void brcmf_fws_hdrpull(struct brcmf_if* ifp, int16_t siglen, struct brcmf_netbuf
         case BRCMF_FWS_TYPE_COMP_TXSTATUS:
             break;
         case BRCMF_FWS_TYPE_HOST_REORDER_RXPKTS:
-            rd = (struct brcmf_skb_reorder_data*)skb->cb;
+            rd = (struct brcmf_skb_reorder_data*)skb->workspace;
             rd->reorder = data;
             break;
         case BRCMF_FWS_TYPE_MACDESC_ADD:
@@ -1912,7 +1915,7 @@ void brcmf_fws_hdrpull(struct brcmf_if* ifp, int16_t siglen, struct brcmf_netbuf
 
 static uint8_t brcmf_fws_precommit_skb(struct brcmf_fws_info* fws, int fifo,
                                        struct brcmf_netbuf* p) {
-    struct brcmf_skbuff_cb* skcb = brcmf_skbcb(p);
+    struct brcmf_netbuf_workspace* skcb = brcmf_skbcb(p);
     // TODO(cphoenix): skcb->mac and mac_status are often unchecked in this file. Be more paranoid?
     struct brcmf_fws_mac_descriptor* entry = skcb->mac;
     uint8_t flags;
@@ -1992,7 +1995,7 @@ static zx_status_t brcmf_fws_borrow_credit(struct brcmf_fws_info* fws) {
 
 static zx_status_t brcmf_fws_commit_skb(struct brcmf_fws_info* fws, int fifo,
                                         struct brcmf_netbuf* skb) {
-    struct brcmf_skbuff_cb* skcb = brcmf_skbcb(skb);
+    struct brcmf_netbuf_workspace* skcb = brcmf_skbcb(skb);
     struct brcmf_fws_mac_descriptor* entry;
     zx_status_t rc;
     uint8_t ifidx;
@@ -2037,7 +2040,7 @@ rollback:
 
 static zx_status_t brcmf_fws_assign_htod(struct brcmf_fws_info* fws, struct brcmf_netbuf* p,
                                          int fifo) {
-    struct brcmf_skbuff_cb* skcb = brcmf_skbcb(p);
+    struct brcmf_netbuf_workspace* skcb = brcmf_skbcb(p);
     zx_status_t rc;
     int hslot;
 
@@ -2058,7 +2061,7 @@ static zx_status_t brcmf_fws_assign_htod(struct brcmf_fws_info* fws, struct brcm
 
 zx_status_t brcmf_fws_process_skb(struct brcmf_if* ifp, struct brcmf_netbuf* skb) {
     struct brcmf_fws_info* fws = drvr_to_fws(ifp->drvr);
-    struct brcmf_skbuff_cb* skcb = brcmf_skbcb(skb);
+    struct brcmf_netbuf_workspace* skcb = brcmf_skbcb(skb);
     struct ethhdr* eh = (struct ethhdr*)(skb->data);
     int fifo = BRCMF_FWS_FIFO_BCMC;
     bool multicast = address_is_multicast(eh->h_dest);

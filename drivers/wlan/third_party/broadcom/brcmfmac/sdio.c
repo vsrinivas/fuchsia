@@ -1957,10 +1957,10 @@ static zx_status_t brcmf_sdio_txpkt_hdalign(struct brcmf_sdio* bus, struct brcmf
 }
 
 /*
- * struct brcmf_skbuff_cb reserves first two bytes in brcmf_netbuf::cb for
+ * struct brcmf_netbuf_workspace reserves first two bytes in netbuf.workspace for
  * bus layer usage.
  */
-/* flag marking a dummy skb added for DMA alignment requirement */
+/* flag marking a dummy netbuf added for DMA alignment requirement */
 #define ALIGN_SKB_FLAG 0x8000
 /* bit mask of data length chopped from the previous packet */
 #define ALIGN_SKB_CHOP_LEN_MASK 0x7fff
@@ -2003,7 +2003,7 @@ static zx_status_t brcmf_sdio_txpkt_prep_sg(struct brcmf_sdio* bus, struct brcmf
             return ret;
         }
         memcpy(pkt_pad->data, pkt->data + pkt->len - tail_chop, tail_chop);
-        *(uint16_t*)(pkt_pad->cb) = ALIGN_SKB_FLAG + tail_chop;
+        *(uint16_t*)(pkt_pad->workspace) = ALIGN_SKB_FLAG + tail_chop;
         skb_trim(pkt, pkt->len - tail_chop);
         skb_trim(pkt_pad, tail_pad + tail_chop);
         __skb_queue_after(pktq, pkt, pkt_pad);
@@ -2053,7 +2053,7 @@ static zx_status_t brcmf_sdio_txpkt_prep(struct brcmf_sdio* bus, struct brcmf_ne
          * already properly aligned and does not
          * need an sdpcm header.
          */
-        if (*(uint16_t*)(pkt_next->cb) & ALIGN_SKB_FLAG) {
+        if (*(uint16_t*)(pkt_next->workspace) & ALIGN_SKB_FLAG) {
             continue;
         }
 
@@ -2120,7 +2120,7 @@ static void brcmf_sdio_txpkt_postp(struct brcmf_sdio* bus, struct brcmf_netbuf_l
     struct brcmf_netbuf* pkt_prev;
 
     skb_queue_walk_safe(pktq, pkt_next, tmp) {
-        dummy_flags = *(uint16_t*)(pkt_next->cb);
+        dummy_flags = *(uint16_t*)(pkt_next->workspace);
         if (dummy_flags & ALIGN_SKB_FLAG) {
             chop_len = dummy_flags & ALIGN_SKB_CHOP_LEN_MASK;
             if (chop_len) {
@@ -2654,8 +2654,8 @@ static zx_status_t brcmf_sdio_bus_txdata(struct brcmf_device* dev, struct brcmf_
     /* Priority based enq */
     //spin_lock_bh(&bus->txq_lock);
     pthread_mutex_lock(&irq_callback_lock);
-    /* reset bus_flags in packet cb */
-    *(uint16_t*)(pkt->cb) = 0;
+    /* reset bus_flags in packet workspace */
+    *(uint16_t*)(pkt->workspace) = 0;
     if (!brcmf_sdio_prec_enq(&bus->txq, pkt, prec)) {
         brcmf_netbuf_shrink_head(pkt, bus->tx_hdrlen);
         brcmf_err("out of bus->txq !!!\n");

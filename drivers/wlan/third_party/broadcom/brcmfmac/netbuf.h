@@ -26,7 +26,7 @@
 // - Appropriate paranoia on function parameters
 // - Comments once the API and struct fields are finalized
 // - More complete initialization
-// - Implement the rest of the functions to replace all the sk_buff library calls
+// - Implement the rest of the functions to replace all the brcmf_netbuf library calls
 // - Full renaming of "skb" to "netbuf" in the code
 
 struct brcmf_netbuf;
@@ -45,11 +45,16 @@ struct brcmf_netbuf {
     uint8_t* data;
     void* next;
     void* prev;
-    void* cb;
+    // Workspace is a small area for use by the driver, on which a driver-specific struct can
+    // be superimposed. For example, see fwsignal.c for brcmf_netbuf_workspace.
+    // The driver uses it to associate state / information with the packet.
+    // Code above and below the driver, and the netbuf library, should not modify this area.
+    uint8_t workspace[48];
     uint32_t pkt_type;
     uint32_t ip_summed;
     uint8_t* allocated_buffer;
     uint32_t allocated_size;
+    void* eth_header;
 };
 
 struct brcmf_netbuf* brcmf_netbuf_allocate(uint32_t size);
@@ -75,7 +80,7 @@ static inline void brcmf_netbuf_shrink_head(struct brcmf_netbuf* netbuf, uint32_
 }
 
 static inline void brcmf_netbuf_list_init(struct brcmf_netbuf_list* head) {
-    head->next = NULL;
+    memset(head, 0, sizeof(*head));
 }
 
 void brcmf_netbuf_free(struct brcmf_netbuf* netbuf);

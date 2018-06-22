@@ -27,6 +27,8 @@
 #include <stdatomic.h>
 #include <threads.h>
 
+#include <sync/completion.h>
+
 #include "brcmu_utils.h"
 #include "brcmu_wifi.h"
 #include "bus.h"

@@ -169,7 +169,7 @@ struct brcmf_usbdev_info {
     mtx_t dev_init_lock;
 
     int ctl_in_pipe, ctl_out_pipe;
-    struct urb* ctl_urb; /* URB for control endpoint */
+    struct brcmf_urb* ctl_urb; /* URB for control endpoint */
     struct usb_ctrlrequest ctl_write;
     struct usb_ctrlrequest ctl_read;
     uint32_t ctl_urb_actual_length;
@@ -228,7 +228,7 @@ static void brcmf_usb_ctl_complete(struct brcmf_usbdev_info* devinfo, int type, 
     brcmf_usb_ioctl_resp_wake(devinfo);
 }
 
-static void brcmf_usb_ctlread_complete(struct urb* urb) {
+static void brcmf_usb_ctlread_complete(struct brcmf_urb* urb) {
     struct brcmf_usbdev_info* devinfo = (struct brcmf_usbdev_info*)urb->context;
 
     brcmf_dbg(USB, "Enter\n");
@@ -238,7 +238,7 @@ static void brcmf_usb_ctlread_complete(struct urb* urb) {
     pthread_mutex_unlock(&irq_callback_lock);
 }
 
-static void brcmf_usb_ctlwrite_complete(struct urb* urb) {
+static void brcmf_usb_ctlwrite_complete(struct brcmf_urb* urb) {
     struct brcmf_usbdev_info* devinfo = (struct brcmf_usbdev_info*)urb->context;
 
     //brcmf_dbg(USB, "Enter\n");
@@ -258,7 +258,6 @@ static zx_status_t brcmf_usb_send_ctl(struct brcmf_usbdev_info* devinfo, uint8_t
 
     size = len;
     devinfo->ctl_write.wLength = size;
-    devinfo->ctl_urb->transfer_buffer_length = size;
     devinfo->ctl_urb_status = 0;
     devinfo->ctl_urb_actual_length = 0;
 
@@ -285,7 +284,6 @@ static zx_status_t brcmf_usb_recv_ctl(struct brcmf_usbdev_info* devinfo, uint8_t
 
     size = len;
     devinfo->ctl_read.wLength = size;
-    devinfo->ctl_urb->transfer_buffer_length = size;
 
     devinfo->ctl_read.bRequestType = USB_DIR_IN | USB_TYPE_CLASS | USB_RECIP_INTERFACE;
     devinfo->ctl_read.bRequest = 1;
@@ -464,7 +462,7 @@ static void brcmf_usb_del_fromq(struct brcmf_usbdev_info* devinfo, struct brcmf_
     pthread_mutex_unlock(&irq_callback_lock);
 }
 
-static void brcmf_usb_tx_complete(struct urb* urb) {
+static void brcmf_usb_tx_complete(struct brcmf_urb* urb) {
     struct brcmf_usbreq* req = (struct brcmf_usbreq*)urb->context;
     struct brcmf_usbdev_info* devinfo = req->devinfo;
 
@@ -484,7 +482,7 @@ static void brcmf_usb_tx_complete(struct urb* urb) {
     pthread_mutex_unlock(&irq_callback_lock);
 }
 
-static void brcmf_usb_rx_complete(struct urb* urb) {
+static void brcmf_usb_rx_complete(struct brcmf_urb* urb) {
     struct brcmf_usbreq* req = (struct brcmf_usbreq*)urb->context;
     struct brcmf_usbdev_info* devinfo = req->devinfo;
     struct brcmf_netbuf* skb;
@@ -688,7 +686,7 @@ static void brcmf_usb_down(struct brcmf_device* dev) {
     brcmf_cancel_all_urbs(devinfo);
 }
 
-static void brcmf_usb_sync_complete(struct urb* urb) {
+static void brcmf_usb_sync_complete(struct brcmf_urb* urb) {
     struct brcmf_usbdev_info* devinfo = (struct brcmf_usbdev_info*)urb->context;
 
     pthread_mutex_lock(&irq_callback_lock);
@@ -712,7 +710,6 @@ static zx_status_t brcmf_usb_dl_cmd(struct brcmf_usbdev_info* devinfo, uint8_t c
     }
 
     size = buflen;
-    devinfo->ctl_urb->transfer_buffer_length = size;
 
     devinfo->ctl_read.wLength = size;
     devinfo->ctl_read.bRequestType = USB_DIR_IN | USB_TYPE_VENDOR | USB_RECIP_INTERFACE;

@@ -538,8 +538,6 @@ enum {
     WIPHY_FLAG_HAS_REMAIN_ON_CHANNEL,
     WIPHY_FLAG_SUPPORTS_TDLS,
     WIPHY_FLAG_SUPPORTS_FW_ROAM,
-    NL80211_EXT_FEATURE_4WAY_HANDSHAKE_STA_PSK,
-    NL80211_EXT_FEATURE_4WAY_HANDSHAKE_STA_1X,
     WIPHY_FLAG_NETNS_OK,
     WIPHY_FLAG_OFFCHAN_TX,
     REGULATORY_CUSTOM_REG,
@@ -548,11 +546,9 @@ enum {
     NET_SKB_PAD,
     IFF_PROMISC,
     NETDEV_TX_OK,
-    PACKET_MULTICAST,
     IFF_UP,
     NETIF_F_IP_CSUM,
     NETREG_REGISTERED,
-    NET_NAME_UNKNOWN,
     CHECKSUM_PARTIAL,
     CHECKSUM_UNNECESSARY,
     BRCMF_H2D_TXFLOWRING_MAX_ITEM,
@@ -561,6 +557,13 @@ enum {
     WLAN_AUTH_OPEN,
     IRQF_TRIGGER_HIGH,
     SDIO_CCCR_IENx,
+    SSB_IMSTATE_BUSY,
+    SSB_IDLOW_INITIATOR,
+    SSB_TMSHIGH_SERR,
+    SSB_IMSTATE_IBE,
+    SSB_IMSTATE_TO,
+    BCMA_CC_CAP_EXT_AOB_PRESENT,
+    SSB_TMSLOW_FGC,
     MMC_RSP_SPI_R5,
     MMC_RSP_R5,
     MMC_CMD_ADTC,
@@ -767,7 +770,7 @@ struct ieee80211_supported_band {
 };
 
 struct mac_address {
-    uint8_t* addr;
+    uint8_t addr[ETH_ALEN];
 };
 
 struct regulatory_request {
@@ -803,7 +806,7 @@ struct wiphy {
     uint32_t max_remain_on_channel_duration;
     uint32_t n_vendor_commands;
     const struct wiphy_vendor_command* vendor_commands;
-    void* perm_addr;
+    uint8_t perm_addr[ETH_ALEN];
     void (*reg_notifier)(struct wiphy*, struct regulatory_request*);
     uint32_t regulatory_flags;
     uint32_t features;
@@ -813,13 +816,13 @@ struct wiphy {
 };
 
 struct vif_params {
-    void* macaddr;
+    uint8_t macaddr[ETH_ALEN];
 };
 
 struct wireless_dev {
     struct net_device* netdev;
     int iftype;
-    void* address;
+    uint8_t address[ETH_ALEN];
     struct wiphy* wiphy;
     void* priv_info;
 };
@@ -832,8 +835,8 @@ struct cfg80211_ssid {
 struct cfg80211_scan_request {
     int n_ssids;
     int n_channels;
-    void* ie;
-    void* wdev;
+    uint8_t* ie;
+    struct wireless_dev* wdev;
     int ie_len;
     struct ieee80211_channel* channels[555];
     struct cfg80211_ssid* ssids;
@@ -857,9 +860,9 @@ enum nl80211_iftype {
 
 struct ieee80211_mgmt {
     int u;
-    char* bssid;
-    void* da;
-    void* sa;
+    uint8_t bssid[ETH_ALEN];
+    uint8_t da[ETH_ALEN];
+    uint8_t sa[ETH_ALEN];
     uint16_t frame_control;
 };
 
@@ -912,20 +915,25 @@ struct ieee80211_regdomain {
 #define REG_RULE(...) \
     { .flags = 0 }  // Fill up reg_rules
 
+struct cfg80211_match_set {
+    struct cfg80211_ssid ssid;
+    uint8_t bssid[ETH_ALEN];
+};
+
 struct cfg80211_sched_scan_request {
     int n_ssids;
     int n_match_sets;
     uint64_t reqid;
     int flags;
-    void* mac_addr;
+    uint8_t mac_addr[ETH_ALEN];
     struct cfg80211_ssid* ssids;
     int n_channels;
     struct ieee80211_channel* channels[555];
     struct {
         int interval;
     } * scan_plans;
-    void* mac_addr_mask;
-    void* match_sets;
+    uint8_t mac_addr_mask[ETH_ALEN];
+    struct cfg80211_match_set match_sets[123];
 };
 
 struct wiphy_vendor_command {
@@ -934,7 +942,7 @@ struct wiphy_vendor_command {
         int subcmd;
     } unknown_name;
     uint32_t flags;
-    void* doit;
+    zx_status_t (*doit)(struct wiphy* wiphy, struct wireless_dev* wdev, const void* data, int len);
 };
 
 struct cfg80211_chan_def {
@@ -958,10 +966,10 @@ struct cfg80211_ibss_params {
     int privacy;
     int beacon_interval;
     int ssid_len;
-    char* bssid;
+    uint8_t* bssid;
     int channel_fixed;
     struct cfg80211_chan_def chandef;
-    void* ie;
+    uint8_t* ie;
     int ie_len;
     int basic_rates;
 };
@@ -985,10 +993,10 @@ struct cfg80211_connect_params {
         int cipher_group;
         int n_akm_suites;
         int akm_suites[555];
-        void* psk;
+        uint8_t* psk;
     } crypto;
     int auth_type;
-    void* ie;
+    uint8_t* ie;
     int ie_len;
     int privacy;
     uint32_t key_len;
@@ -996,10 +1004,9 @@ struct cfg80211_connect_params {
     void* key;
     int want_1x;
     struct ieee80211_channel* channel;
-    void* ssid;
+    uint8_t* ssid;
     int ssid_len;
-    void* bssid;
-    int bssid_len;
+    uint8_t* bssid;
     struct cfg80211_bss_selection bss_select;
 };
 
@@ -1077,7 +1084,7 @@ struct cfg80211_wowlan_nd_info {
 };
 
 struct cfg80211_pmksa {
-    uint8_t* bssid;
+    uint8_t bssid[ETH_ALEN];
     uint8_t* pmkid;
 };
 
@@ -1103,7 +1110,7 @@ struct cfg80211_ap_settings {
 };
 
 struct station_del_parameters {
-    void* mac;
+    uint8_t* mac;
     int reason_code;
 };
 
@@ -1172,7 +1179,7 @@ struct cfg80211_ops { // Most of these return zx_status_t
 
 struct cfg80211_roam_info {
     struct ieee80211_channel* channel;
-    void* bssid;
+    uint8_t* bssid;
     void* req_ie;
     int req_ie_len;
     void* resp_ie;
@@ -1181,7 +1188,7 @@ struct cfg80211_roam_info {
 
 struct cfg80211_connect_resp_params {
     int status;
-    void* bssid;
+    uint8_t* bssid;
     void* req_ie;
     int req_ie_len;
     void* resp_ie;
@@ -1207,7 +1214,7 @@ struct ieee80211_iface_limit {
 };
 
 struct netdev_hw_addr {
-    void* addr;
+    uint8_t addr[ETH_ALEN];
 };
 
 typedef int netdev_tx_t;
@@ -1248,18 +1255,6 @@ struct usb_ctrlrequest {
     int wValue;
     int wIndex;
     int bRequestType;
-};
-
-struct urb {
-    void* context;
-    int actual_length;
-    uint32_t status;
-    int transfer_buffer_length;
-};
-
-struct cfg80211_match_set {
-    struct cfg80211_ssid ssid;
-    void* bssid;
 };
 
 struct va_format {

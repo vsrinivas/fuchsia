@@ -35,6 +35,7 @@
 //#include <linux/types.h>
 //#include <net/cfg80211.h>
 
+#include <stdatomic.h>
 #include <sync/completion.h>
 
 #include "brcm_hw_ids.h"

@@ -95,7 +95,7 @@ static inline void brcmf_proto_add_tdls_peer(struct brcmf_pub* drvr, int ifidx,
 static inline bool brcmf_proto_is_reorder_skb(struct brcmf_netbuf* skb) {
     struct brcmf_skb_reorder_data* rd;
 
-    rd = (struct brcmf_skb_reorder_data*)skb->cb;
+    rd = (struct brcmf_skb_reorder_data*)skb->workspace;
     return !!rd->reorder;
 }
 
