@@ -532,10 +532,17 @@ void Realm::CreateComponentFromPackage(
     }
   } else {
     RuntimeMetadata runtime;
-    if (!runtime.Parse(runtime_data)) {
-      FXL_LOG(ERROR) << "Failed to parse runtime metadata for "
-                     << launch_info.url;
-      return;
+
+    // If meta/*.cmx exists, read runtime data from it.
+    if (!cmx_data.empty()) {
+      if (!runtime.Parse(cmx_data)) {
+        // If meta/*.cmx has no runtime data, fallback to meta/runtime
+        if (!runtime.Parse(runtime_data)) {
+          FXL_LOG(ERROR) << "Failed to parse runtime metadata for "
+                         << launch_info.url;
+          return;
+        }
+      }
     }
 
     fuchsia::sys::Package inner_package;
