@@ -134,7 +134,7 @@ func (c *ControlSrvr) GetUpdateComplete(name string, version, merkle *string) (z
 func (c *ControlSrvr) PackagesActivated(merkle []string) error {
 	for _, m := range merkle {
 		c.activations <- m
-		lg.Log.Printf("Got package activation for %s\n", m)
+		lg.Log.Printf("control_server: Got package activation for %s\n", m)
 	}
 	return nil
 }

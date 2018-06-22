@@ -12,7 +12,9 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
+	"sync"
 
 	"app/context"
 	"fidl/fuchsia/amber"
@@ -84,12 +86,48 @@ func ParseRequirements(pkgSrc io.ReadCloser, imgSrc io.ReadCloser) ([]*Package, 
 }
 
 func FetchPackages(pkgs []*Package, amber *amber.ControlInterface) error {
+	workerWg := &sync.WaitGroup{}
+	workerCount := runtime.NumCPU()
+	workerWg.Add(workerCount)
+
+	pkgChan := make(chan *Package, len(pkgs))
+	errChan := make(chan error, len(pkgs))
+	errCount := 0
+
+	for i := 0; i < workerCount; i++ {
+		go fetchWorker(pkgChan, amber, workerWg, errChan)
+	}
+
 	for _, pkg := range pkgs {
-		if err := fetchPackage(pkg, amber); err != nil {
-			return err
+		pkgChan <- pkg
+	}
+
+	// stuffed in all the packages, close the channel
+	close(pkgChan)
+
+	// wait for the workers to finish
+	workerWg.Wait()
+	close(errChan)
+
+	for range errChan {
+		errCount++
+	}
+
+	if errCount > 0 {
+		return fmt.Errorf("%d packages had errors", errCount)
+	}
+
+	return nil
+}
+
+func fetchWorker(c <-chan *Package, amber *amber.ControlInterface, done *sync.WaitGroup,
+	e chan<- error) {
+	defer done.Done()
+	for p := range c {
+		if err := fetchPackage(p, amber); err != nil {
+			e <- err
 		}
 	}
-	return nil
 }
 
 func fetchPackage(p *Package, amber *amber.ControlInterface) error {
