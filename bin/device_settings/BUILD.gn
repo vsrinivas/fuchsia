@@ -39,10 +39,6 @@ package("device_settings_manager") {
       path = rebase_path("meta/device_settings_manager.cmx")
       dest = "device_settings_manager.cmx"
     },
-    {
-      path = rebase_path("//garnet/bin/appmgr/legacy_flat_exported_dir")
-      dest = "legacy_flat_exported_dir"
-    },
   ]
 }
 

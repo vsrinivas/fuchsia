@@ -28,9 +28,4 @@ package("xi_core") {
   ]
 
   binary = "xi_core"
-
-  meta = [{
-    path = rebase_path("//garnet/bin/appmgr/legacy_flat_exported_dir")
-    dest = "legacy_flat_exported_dir"
-  }]
 }

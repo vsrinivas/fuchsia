@@ -20,11 +20,4 @@ package("sl4f") {
   ]
 
   binary = "rust_crates/sl4f"
-
-  meta = [
-    {
-      path = rebase_path("//garnet/bin/appmgr/legacy_flat_exported_dir")
-      dest = "legacy_flat_exported_dir"
-    },
-  ]
 }

@@ -35,10 +35,6 @@ package("bt-cli") {
 
   meta = [
     {
-      path = rebase_path("//garnet/bin/appmgr/legacy_flat_exported_dir")
-      dest = "legacy_flat_exported_dir"
-    },
-    {
       path = rebase_path("meta/sandbox")
       dest = "sandbox"
     },

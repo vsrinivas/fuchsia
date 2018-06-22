@@ -37,10 +37,6 @@ package("power_manager") {
       path = rebase_path("meta/power_manager.cmx")
       dest = "power_manager.cmx"
     },
-    {
-      path = rebase_path("//garnet/bin/appmgr/legacy_flat_exported_dir")
-      dest = "legacy_flat_exported_dir"
-    },
   ]
 }
 

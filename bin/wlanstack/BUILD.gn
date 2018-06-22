@@ -44,10 +44,6 @@ package("wlanstack2") {
       path = rebase_path("meta/wlanstack2.cmx")
       dest = "wlanstack2.cmx"
     },
-    {
-      path = rebase_path("//garnet/bin/appmgr/legacy_flat_exported_dir")
-      dest = "legacy_flat_exported_dir"
-    },
   ]
 }
 

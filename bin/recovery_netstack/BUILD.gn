@@ -23,9 +23,4 @@ package("recovery_netstack") {
   ]
 
   binary = "rust_crates/recovery_netstack"
-
-  meta = [{
-    path = rebase_path("//garnet/bin/appmgr/legacy_flat_exported_dir")
-    dest = "legacy_flat_exported_dir"
-  }]
 }

@@ -25,9 +25,4 @@ package("echo2_server_rust") {
   ]
 
   binary = "rust_crates/echo2_server_rust"
-
-  meta = [{
-    path = rebase_path("//garnet/bin/appmgr/legacy_flat_exported_dir")
-    dest = "legacy_flat_exported_dir"
-  }]
 }
