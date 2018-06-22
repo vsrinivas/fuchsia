@@ -80,7 +80,7 @@ interface StoryProvider {
   // Promotes a "kind-of" proto story to a regular story. After calling this,
   // the StoryInfo of |story_id| will be returned in PreviousStories().
   // EXPERIMENTAL
-  14: PromoteKindOfProtoStory(string story_id);
+  14: PromoteKindOfProtoStory(string story_id) -> ();
 };
 
 // Implemented by clients of StoryProvider.

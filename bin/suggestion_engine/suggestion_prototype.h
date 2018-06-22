@@ -20,6 +20,7 @@ struct SuggestionPrototype {
   // to this ID and propagates it here. If this story id was not set, it can be
   // set to the (deprecated) proposal.story_id.
   std::string story_id;
+  std::string preloaded_story_id;
   std::string source_url;
   fxl::TimePoint timestamp;
   fuchsia::modular::Proposal proposal;

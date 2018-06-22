@@ -173,7 +173,9 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider,
       fidl::InterfaceRequest<fuchsia::modular::Link> request) override;
 
   // |fuchsia::modular::StoryProvider|
-  void PromoteKindOfProtoStory(fidl::StringPtr story_id) override;
+  void PromoteKindOfProtoStory(
+      fidl::StringPtr story_id,
+      PromoteKindOfProtoStoryCallback callback) override;
 
   // |fuchsia::modular::FocusWatcher|
   void OnFocusChange(fuchsia::modular::FocusInfoPtr info) override;

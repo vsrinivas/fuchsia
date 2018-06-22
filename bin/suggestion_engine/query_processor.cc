@@ -123,10 +123,10 @@ void QueryProcessor::AddProposal(const std::string& source_url,
                                  fuchsia::modular::Proposal proposal) {
   suggestions_.RemoveProposal(source_url, proposal.id);
 
-  auto suggestion =
+  SuggestionPrototype* suggestion =
       CreateSuggestionPrototype(&query_prototypes_, source_url,
                                 "" /* Emtpy story_id */, std::move(proposal));
-  suggestions_.AddSuggestion(std::move(suggestion));
+  suggestions_.AddSuggestion(suggestion);
 }
 
 void QueryProcessor::NotifySpeechListeners(
