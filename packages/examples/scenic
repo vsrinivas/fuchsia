@@ -5,7 +5,7 @@
     "packages": [
         "//garnet/examples/ui:hello_pose_buffer",
         "//garnet/examples/ui:hello_scenic",
-        "//garnet/examples/ui:hello_spaces",
+        "//garnet/examples/ui:hello_views",
         "//garnet/examples/ui:hello_stereo",
         "//garnet/examples/ui:shadertoy_client",
         "//garnet/examples/ui:shadertoy_service",
