@@ -57,18 +57,20 @@ zx_status_t Device::Bind() {
     zx_status_t rc;
     fbl::AutoLock lock(&mtx_);
 
+    // Add the (invisible) device to devmgr
+    if ((rc = DdkAdd("zxcrypt", DEVICE_ADD_INVISIBLE)) != ZX_OK) {
+        zxlogf(ERROR, "DdkAdd('zxcrypt', DEVICE_ADD_INVISIBLE) failed: %s\n", zx_status_get_string(rc));
+        return rc;
+    }
+    auto cleanup = fbl::MakeAutoCall([this]{DdkRemove();});
+
     // Launch the init thread.
     if (thrd_create(&init_, InitThread, this) != thrd_success) {
         zxlogf(ERROR, "zxcrypt device %p initialization aborted: failed to start thread\n", this);
         return ZX_ERR_INTERNAL;
     }
 
-    // Add the (invisible) device to devmgr
-    if ((rc = DdkAdd("zxcrypt", DEVICE_ADD_INVISIBLE)) != ZX_OK) {
-        zxlogf(ERROR, "DdkAdd('zxcrypt', DEVICE_ADD_INVISIBLE) failed: %s\n", zx_status_get_string(rc));
-        return rc;
-    }
-
+    cleanup.cancel();
     return ZX_OK;
 }
 
