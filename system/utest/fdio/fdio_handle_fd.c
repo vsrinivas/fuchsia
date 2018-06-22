@@ -11,10 +11,11 @@
 #include <threads.h>
 #include <unistd.h>
 
-#include <zircon/syscalls.h>
 #include <lib/fdio/io.h>
 #include <lib/fdio/util.h>
 #include <unittest/unittest.h>
+#include <zircon/processargs.h>
+#include <zircon/syscalls.h>
 
 bool close_test(void) {
     BEGIN_TEST;
@@ -212,6 +213,34 @@ bool transfer_device_test(void) {
     END_TEST;
 }
 
+bool create_fd_from_connected_socket(void) {
+    BEGIN_TEST;
+
+    int fd;
+    uint32_t type = PA_FDIO_SOCKET;
+    zx_handle_t h1, h2;
+    ASSERT_EQ(ZX_OK, zx_socket_create(ZX_SOCKET_STREAM, &h1, &h2),
+              "failed to create socket pair");
+    ASSERT_EQ(ZX_OK, fdio_create_fd(&h1, &type, 1, &fd),
+              "failed to create FD for socket handle");
+
+    int message[2] = {0xab, 0x1234};
+    size_t written;
+    ASSERT_EQ(ZX_OK, zx_socket_write(h2, 0, message, sizeof(message), &written),
+              "failed to write to socket handle");
+    ASSERT_EQ(sizeof(message), written,
+              "failed to write full message to socket handle");
+
+    int read_message[2] = {};
+    ssize_t bytes_read = read(fd, read_message, sizeof(read_message));
+    ASSERT_EQ(sizeof(message), (uint32_t)bytes_read,
+              "failed to read from socket fd");
+    ASSERT_EQ(0, memcmp(message, read_message, sizeof(message)),
+              "incorrect bytes read from socket fd");
+
+    END_TEST;
+}
+
 BEGIN_TEST_CASE(fdio_handle_fd_test)
 RUN_TEST(close_test);
 RUN_TEST(pipe_test);
@@ -221,4 +250,5 @@ RUN_TEST(ppoll_overflow_test);
 RUN_TEST(ppoll_immediate_timeout_test);
 RUN_TEST(transfer_fd_test);
 RUN_TEST(transfer_device_test);
+RUN_TEST(create_fd_from_connected_socket);
 END_TEST_CASE(fdio_handle_fd_test)

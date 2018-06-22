@@ -1215,7 +1215,7 @@ zx_status_t fdio_from_handles(zx_handle_t handle, zxrio_object_info_t* info,
     case FDIO_PROTOCOL_SOCKET_CONNECTED:
     case FDIO_PROTOCOL_SOCKET: {
         int flags = (info->tag == FDIO_PROTOCOL_SOCKET_CONNECTED) ? IOFLAG_SOCKET_CONNECTED : 0;
-        if (handle == ZX_HANDLE_INVALID || info->socket.s == ZX_HANDLE_INVALID) {
+        if (info->socket.s == ZX_HANDLE_INVALID) {
             r = ZX_ERR_INVALID_ARGS;
             break;
         }
