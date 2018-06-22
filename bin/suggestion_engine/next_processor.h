@@ -40,10 +40,30 @@ class NextProcessor {
   void RegisterInterruptionListener(
       fidl::InterfaceHandle<fuchsia::modular::InterruptionListener> listener);
 
-  // Add and remove proposals
+  // Adds a next suggestion created from the provided proposal.
+  //
+  // |component_url| The url of the component that created the proposal.
+  // |story_id| The identifier for the story associated with the proposal.
+  // |proposal| The proposal to create the suggestion from.
   void AddProposal(const std::string& component_url,
                    const std::string& story_id,
                    fuchsia::modular::Proposal proposal);
+
+  // Adds a next suggestion created from the provided proposal. This method
+  // allows the caller to specify a story that can be used to dynamically
+  // preview the created suggestion.
+  //
+  // |component_url| The url of the component that created the proposal.
+  // |story_id| The identifier for the story associated with the proposal.
+  // |preloaded_story_id| The identifier for a story that can be used to
+  //     display a dynamic suggestion for the proposal. If empty, no such
+  //     story exists.
+  // |proposal| The proposal to create the suggestion from.
+  void AddProposal(const std::string& component_url,
+                   const std::string& story_id,
+                   const std::string& preloaded_story_id,
+                   fuchsia::modular::Proposal proposal);
+
   void RemoveProposal(const std::string& component_url,
                       const std::string& proposal_id);
 

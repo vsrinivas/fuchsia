@@ -39,6 +39,10 @@ struct Proposal {
   // other considerations such as performance metrics.
   float32 confidence = 0.0;
 
+  // True iff the proposal would like to make use of a rich suggestion. Only
+  // certain components are allowed to use rich suggestions.
+  bool wants_rich_suggestion = false;
+
   SuggestionDisplay display;
 
   // A listener interface that is notified when the proposal is accepted by

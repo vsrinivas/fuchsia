@@ -59,9 +59,29 @@ fxl::WeakPtr<SuggestionDebugImpl> SuggestionEngineImpl::debug() {
 
 void SuggestionEngineImpl::AddNextProposal(
     ProposalPublisherImpl* source, fuchsia::modular::Proposal proposal) {
-  auto story_id = StoryIdFromName(source->component_url(), proposal.story_name);
-  next_processor_.AddProposal(source->component_url(), story_id,
-                              std::move(proposal));
+  if (proposal.wants_rich_suggestion &&
+      CanComponentUseRichSuggestions(source->component_url())) {
+    AddProposalWithRichSuggestion(source, std::move(proposal));
+  } else {
+    auto story_id = StoryIdFromName(source->component_url(), proposal.story_name);
+    next_processor_.AddProposal(source->component_url(), story_id,
+                                std::move(proposal));
+  }
+}
+
+void SuggestionEngineImpl::AddProposalWithRichSuggestion(
+    ProposalPublisherImpl* source, fuchsia::modular::Proposal proposal) {
+  story_provider_->CreateKindOfProtoStory(
+      fxl::MakeCopyable([this, proposal = std::move(proposal),
+                         source_url = source->component_url()](
+                            fidl::StringPtr preloaded_story_id) mutable {
+        auto story_id = StoryIdFromName(source_url, proposal.story_name);
+        ExecuteActions(std::move(proposal.on_selected),
+                       std::move(proposal.listener), proposal.id,
+                       std::move(proposal.display), story_id);
+        next_processor_.AddProposal(source_url, story_id, preloaded_story_id,
+                                    std::move(proposal));
+      }));
 }
 
 void SuggestionEngineImpl::RemoveNextProposal(const std::string& component_url,
@@ -138,16 +158,26 @@ void SuggestionEngineImpl::NotifyInteraction(
 
     auto& proposal = suggestion->prototype->proposal;
     auto proposal_id = proposal.id;
+    auto preloaded_story_id = suggestion->prototype->preloaded_story_id;
+    auto should_delete_story = true;
     if (interaction.type == fuchsia::modular::InteractionType::SELECTED) {
-      PerformActions(std::move(proposal.on_selected),
-                     std::move(proposal.listener), proposal.id,
-                     proposal.story_name, suggestion->prototype->source_url,
-                     std::move(proposal.display));
+      if (preloaded_story_id.empty()) {
+        PerformActions(std::move(proposal.on_selected),
+                       std::move(proposal.listener), proposal.id,
+                       proposal.story_name, suggestion->prototype->source_url,
+                       std::move(proposal.display));
+      } else {
+        should_delete_story = false;
+        story_provider_->PromoteKindOfProtoStory(preloaded_story_id);
+      }
     }
 
     if (suggestion_in_ask) {
       query_processor_.CleanUpPreviousQuery();
     } else {
+      if (!preloaded_story_id.empty() && should_delete_story) {
+        story_provider_->DeleteStory(preloaded_story_id, []() {});
+      }
       RemoveNextProposal(suggestion->prototype->source_url, proposal_id);
     }
   } else {
@@ -295,12 +325,16 @@ void SuggestionEngineImpl::ExecuteActions(
     const std::string& override_story_id) {
   for (auto& action : *actions) {
     switch (action.Which()) {
+      // TODO(miguelfrde): CreateStory is deprecated, remove.
       case fuchsia::modular::Action::Tag::kCreateStory: {
-        // TODO(miguelfrde): deprecated, remove.
-        fuchsia::modular::SuggestionDisplay cloned_display;
-        suggestion_display.Clone(&cloned_display);
-        PerformCreateStoryAction(action, std::move(listener), proposal_id,
-                                 std::move(cloned_display));
+        // If we are overriding a story, no need to create a new story. Ignore
+        // this action.
+        if (override_story_id.empty()) {
+          fuchsia::modular::SuggestionDisplay cloned_display;
+          suggestion_display.Clone(&cloned_display);
+          PerformCreateStoryAction(action, std::move(listener), proposal_id,
+                                   std::move(cloned_display));
+        }
         break;
       }
       case fuchsia::modular::Action::Tag::kFocusStory: {
@@ -558,6 +592,14 @@ std::string SuggestionEngineImpl::StoryIdFromName(
     return it->second;
   }
   return "";
+}
+
+bool SuggestionEngineImpl::CanComponentUseRichSuggestions(
+    const std::string& component_url) {
+  // Only kronk is allowed to preload stories in suggestions to make
+  // rich suggestions.
+  return component_url.find("kronk") != std::string::npos ||
+         component_url.find("Proposinator") != std::string::npos;
 }
 
 }  // namespace modular
