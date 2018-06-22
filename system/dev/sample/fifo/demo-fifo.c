@@ -77,10 +77,14 @@ static zx_status_t fifo_read(void* ctx, void* buf, size_t len,
         buf += count;
         n += count;
     }
-    if (n == 0) {
-        device_state_clr(fifo->zxdev, DEV_STATE_READABLE);
-    } else {
+
+    if (n) {
+        // read something, device is writable
         device_state_set(fifo->zxdev, DEV_STATE_WRITABLE);
+    }
+    if (len) {
+        // didn't read everything, device is empty
+        device_state_clr(fifo->zxdev, DEV_STATE_READABLE);
     }
     mtx_unlock(&fifo->lock);
     *actual = n;
@@ -101,11 +105,16 @@ static zx_status_t fifo_write(void* ctx, const void* buf, size_t len,
         buf += count;
         n += count;
     }
-    if (n == 0) {
-        device_state_clr(fifo->zxdev, DEV_STATE_WRITABLE);
-    } else {
+
+    if (n) {
+        // wrote something, device is readable
         device_state_set(fifo->zxdev, DEV_STATE_READABLE);
     }
+    if (len) {
+        // didn't write everything, device is full
+        device_state_clr(fifo->zxdev, DEV_STATE_WRITABLE);
+    }
+
     mtx_unlock(&fifo->lock);
     *actual = n;
 
