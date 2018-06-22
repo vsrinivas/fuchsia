@@ -13,7 +13,6 @@ package("media") {
     "audio_player",
     "audio_player_rust",
     "fx",
-    "media_client_sine",
     "simple_sine",
     "simple_sine_sync",
     "tones",
@@ -32,9 +31,6 @@ package("media") {
     },
     {
       name = "fx"
-    },
-    {
-      name = "media_client_sine"
     },
     {
       name = "simple_sine"

@@ -95,7 +95,6 @@ package("tests") {
     "//garnet/bin/media/media_player/player:tests",
     "//garnet/bin/media/media_player/util:tests",
     "//garnet/bin/media/net_media_service:tests",
-    "//garnet/public/lib/media/c:tests",
     "//garnet/public/lib/media/timeline:tests",
     "//garnet/public/lib/media/transport:tests",
   ]
@@ -107,10 +106,6 @@ package("tests") {
 
     {
       name = "audio_server_tests"
-    },
-
-    {
-      name = "media_client_tests"
     },
 
     {

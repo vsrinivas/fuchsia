@@ -4,7 +4,6 @@
 
 import("//build/cpp/prebuilt_shared_library.gni")
 import("//build/package.gni")
-import("//build/test.gni")
 
 prebuilt_shared_library("c") {
   category = "partner"
@@ -25,22 +24,5 @@ prebuilt_shared_library("c") {
     "//garnet/public/lib/fsl:fsl_sdk",
     "//garnet/public/lib/fxl:fxl_sdk",
     "//zircon/public/lib/trace-engine:trace-engine_sdk",
-  ]
-}
-
-test("tests") {
-  output_name = "media_client_tests"
-
-  sources = [
-    "audio.h",
-    "test/audio_test.cc",
-    "test/audio_wrapper.c",
-  ]
-
-  libs = [ "zircon" ]
-
-  deps = [
-    ":c",
-    "//third_party/googletest:gtest_main",
   ]
 }
