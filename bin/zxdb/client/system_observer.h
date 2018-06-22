@@ -9,6 +9,7 @@
 namespace zxdb {
 
 class Breakpoint;
+class Process;
 class Target;
 
 class SystemObserver {
