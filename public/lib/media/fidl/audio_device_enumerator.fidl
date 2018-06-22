@@ -54,7 +54,8 @@ interface AudioDeviceEnumerator {
   110: -> OnDeviceAdded(AudioDeviceInfo device);
   111: -> OnDeviceRemoved(uint64 device_token);
   112: -> OnDeviceGainChanged(uint64 device_token, AudioGainInfo gain_info);
-  113: -> OnDefaultDeviceChanged(uint64 old_default, uint64 new_default);
+  113: -> OnDefaultDeviceChanged(uint64 old_default_token,
+                                 uint64 new_default_token);
 
   // Gain/Mute/AGC control
   //
