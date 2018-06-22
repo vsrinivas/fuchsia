@@ -507,10 +507,14 @@ static const struct net_device_ops brcmf_netdev_ops_pri = {
     .ndo_set_rx_mode = brcmf_netdev_set_multicast_list
 };
 
+static zx_protocol_device_t device_ops = {
+    .version = DEVICE_OPS_VERSION,
+};
+
 zx_status_t brcmf_net_attach(struct brcmf_if* ifp, bool rtnl_locked) {
     struct brcmf_pub* drvr = ifp->drvr;
     struct net_device* ndev;
-    zx_status_t err;
+    zx_status_t result;
 
     brcmf_dbg(TRACE, "Enter, bsscfgidx=%d mac=%pM\n", ifp->bsscfgidx, ifp->mac_addr);
     ndev = ifp->ndev;
@@ -530,13 +534,21 @@ zx_status_t brcmf_net_attach(struct brcmf_if* ifp, bool rtnl_locked) {
     workqueue_init_work(&ifp->multicast_work, _brcmf_set_multicast_list);
     workqueue_init_work(&ifp->ndoffload_work, _brcmf_update_ndtable);
 
-    if (rtnl_locked) {
-        err = register_netdevice(ndev);
-    } else {
-        err = register_netdev(ndev);
-    }
-    if (err != ZX_OK) {
-        brcmf_err("couldn't register the net device\n");
+    ndev->priv_destructor = brcmf_free_net_device_vif;
+
+    device_add_args_t args = {
+        .version = DEVICE_ADD_ARGS_VERSION,
+        .name = "broadcom-wlan",
+        .ctx = NULL,
+        .ops = &device_ops,
+        .proto_id = ZX_PROTOCOL_WLANPHY,
+        .proto_ops = NULL,
+    };
+
+    struct brcmf_device* device = ifp->drvr->bus_if->dev;
+    result = device_add(device->zxdev, &args, &device->child_zxdev);
+    if (result != ZX_OK) {
+        brcmf_err("Failed to device_add");
         goto fail;
     }
 
