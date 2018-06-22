@@ -6282,21 +6282,25 @@ ath10k_wmi_op_gen_stop_scan(struct ath10k* ar,
                arg->req_id, arg->req_type, arg->u.scan_id);
     return skb;
 }
+#endif // NEEDS PORTING
 
-static struct sk_buff*
-ath10k_wmi_op_gen_vdev_create(struct ath10k* ar, uint32_t vdev_id,
+static zx_status_t
+ath10k_wmi_op_gen_vdev_create(struct ath10k* ar,
+                              struct ath10k_msg_buf** msg_buf_ptr,
+                              uint32_t vdev_id,
                               enum wmi_vdev_type type,
                               enum wmi_vdev_subtype subtype,
                               const uint8_t macaddr[ETH_ALEN]) {
     struct wmi_vdev_create_cmd* cmd;
-    struct sk_buff* skb;
+    struct ath10k_msg_buf* msg_buf;
+    zx_status_t status;
 
-    skb = ath10k_wmi_alloc_skb(ar, sizeof(*cmd));
-    if (!skb) {
-        return ERR_PTR(-ENOMEM);
+    status = ath10k_msg_buf_alloc(ar, &msg_buf, ATH10K_MSG_TYPE_WMI_VDEV_CREATE, 0);
+    if (status != ZX_OK) {
+        return status;
     }
 
-    cmd = (struct wmi_vdev_create_cmd*)skb->data;
+    cmd = ath10k_msg_buf_get_header(msg_buf, ATH10K_MSG_TYPE_WMI_VDEV_CREATE);
     cmd->vdev_id      = vdev_id;
     cmd->vdev_type    = type;
     cmd->vdev_subtype = subtype;
@@ -6305,41 +6309,48 @@ ath10k_wmi_op_gen_vdev_create(struct ath10k* ar, uint32_t vdev_id,
     ath10k_dbg(ar, ATH10K_DBG_WMI,
                "WMI vdev create: id %d type %d subtype %d macaddr %pM\n",
                vdev_id, type, subtype, macaddr);
-    return skb;
+    *msg_buf_ptr = msg_buf;
+    return ZX_OK;
 }
 
-static struct sk_buff*
-ath10k_wmi_op_gen_vdev_delete(struct ath10k* ar, uint32_t vdev_id) {
+static zx_status_t
+ath10k_wmi_op_gen_vdev_delete(struct ath10k* ar,
+                              struct ath10k_msg_buf** msg_buf_ptr,
+                              uint32_t vdev_id) {
     struct wmi_vdev_delete_cmd* cmd;
-    struct sk_buff* skb;
+    struct ath10k_msg_buf* msg_buf;
+    zx_status_t status;
 
-    skb = ath10k_wmi_alloc_skb(ar, sizeof(*cmd));
-    if (!skb) {
-        return ERR_PTR(-ENOMEM);
+    status = ath10k_msg_buf_alloc(ar, &msg_buf, ATH10K_MSG_TYPE_WMI_VDEV_DELETE, 0);
+    if (status != ZX_OK) {
+        return status;
     }
 
-    cmd = (struct wmi_vdev_delete_cmd*)skb->data;
+    cmd = ath10k_msg_buf_get_header(msg_buf, ATH10K_MSG_TYPE_WMI_VDEV_DELETE);
     cmd->vdev_id = vdev_id;
 
     ath10k_dbg(ar, ATH10K_DBG_WMI,
                "WMI vdev delete id %d\n", vdev_id);
-    return skb;
+    *msg_buf_ptr = msg_buf;
+    return ZX_OK;
 }
 
-static struct sk_buff*
+static zx_status_t
 ath10k_wmi_op_gen_vdev_start(struct ath10k* ar,
+                             struct ath10k_msg_buf** msg_buf_ptr,
                              const struct wmi_vdev_start_request_arg* arg,
                              bool restart) {
     struct wmi_vdev_start_request_cmd* cmd;
-    struct sk_buff* skb;
+    struct ath10k_msg_buf* msg_buf;
     const char* cmdname;
     uint32_t flags = 0;
+    zx_status_t status;
 
     if (COND_WARN(arg->hidden_ssid && !arg->ssid)) {
-        return ERR_PTR(-EINVAL);
+        return ZX_ERR_INVALID_ARGS;
     }
     if (COND_WARN(arg->ssid_len > sizeof(cmd->ssid.ssid))) {
-        return ERR_PTR(-EINVAL);
+        return ZX_ERR_INVALID_ARGS;
     }
 
     if (restart) {
@@ -6348,9 +6359,9 @@ ath10k_wmi_op_gen_vdev_start(struct ath10k* ar,
         cmdname = "start";
     }
 
-    skb = ath10k_wmi_alloc_skb(ar, sizeof(*cmd));
-    if (!skb) {
-        return ERR_PTR(-ENOMEM);
+    status = ath10k_msg_buf_alloc(ar, &msg_buf, ATH10K_MSG_TYPE_WMI_VDEV_START, 0);
+    if (status != ZX_OK) {
+        return status;
     }
 
     if (arg->hidden_ssid) {
@@ -6360,7 +6371,7 @@ ath10k_wmi_op_gen_vdev_start(struct ath10k* ar,
         flags |= WMI_VDEV_START_PMF_ENABLED;
     }
 
-    cmd = (struct wmi_vdev_start_request_cmd*)skb->data;
+    cmd = ath10k_msg_buf_get_header(msg_buf, ATH10K_MSG_TYPE_WMI_VDEV_START);
     cmd->vdev_id         = arg->vdev_id;
     cmd->disable_hw_ack  = arg->disable_hw_ack;
     cmd->beacon_interval = arg->bcn_intval;
@@ -6381,39 +6392,47 @@ ath10k_wmi_op_gen_vdev_start(struct ath10k* ar,
                cmdname, arg->vdev_id,
                flags, arg->channel.freq, arg->channel.mode,
                cmd->chan.flags, arg->channel.max_power);
-
-    return skb;
+    *msg_buf_ptr = msg_buf;
+    return ZX_OK;
 }
 
-static struct sk_buff*
-ath10k_wmi_op_gen_vdev_stop(struct ath10k* ar, uint32_t vdev_id) {
+static zx_status_t
+ath10k_wmi_op_gen_vdev_stop(struct ath10k* ar,
+                            struct ath10k_msg_buf** msg_buf_ptr,
+                            uint32_t vdev_id) {
     struct wmi_vdev_stop_cmd* cmd;
-    struct sk_buff* skb;
+    struct ath10k_msg_buf* msg_buf;
+    zx_status_t status;
 
-    skb = ath10k_wmi_alloc_skb(ar, sizeof(*cmd));
-    if (!skb) {
-        return ERR_PTR(-ENOMEM);
+    status = ath10k_msg_buf_alloc(ar, &msg_buf, ATH10K_MSG_TYPE_WMI_VDEV_STOP, 0);
+    if (status != ZX_OK) {
+        return status;
     }
 
-    cmd = (struct wmi_vdev_stop_cmd*)skb->data;
+    cmd = ath10k_msg_buf_get_header(msg_buf, ATH10K_MSG_TYPE_WMI_VDEV_STOP);
     cmd->vdev_id = vdev_id;
 
     ath10k_dbg(ar, ATH10K_DBG_WMI, "wmi vdev stop id 0x%x\n", vdev_id);
-    return skb;
+    *msg_buf_ptr = msg_buf;
+    return ZX_OK;
 }
 
-static struct sk_buff*
-ath10k_wmi_op_gen_vdev_up(struct ath10k* ar, uint32_t vdev_id, uint32_t aid,
+static zx_status_t
+ath10k_wmi_op_gen_vdev_up(struct ath10k* ar,
+                          struct ath10k_msg_buf** msg_buf_ptr,
+                          uint32_t vdev_id,
+                          uint32_t aid,
                           const uint8_t* bssid) {
     struct wmi_vdev_up_cmd* cmd;
-    struct sk_buff* skb;
+    struct ath10k_msg_buf* msg_buf;
+    zx_status_t status;
 
-    skb = ath10k_wmi_alloc_skb(ar, sizeof(*cmd));
-    if (!skb) {
-        return ERR_PTR(-ENOMEM);
+    status = ath10k_msg_buf_alloc(ar, &msg_buf, ATH10K_MSG_TYPE_WMI_VDEV_UP, 0);
+    if (status != ZX_OK) {
+        return status;
     }
 
-    cmd = (struct wmi_vdev_up_cmd*)skb->data;
+    cmd = ath10k_msg_buf_get_header(msg_buf, ATH10K_MSG_TYPE_WMI_VDEV_UP);
     cmd->vdev_id       = vdev_id;
     cmd->vdev_assoc_id = aid;
     memcpy(cmd->vdev_bssid.addr, bssid, ETH_ALEN);
@@ -6421,46 +6440,55 @@ ath10k_wmi_op_gen_vdev_up(struct ath10k* ar, uint32_t vdev_id, uint32_t aid,
     ath10k_dbg(ar, ATH10K_DBG_WMI,
                "wmi mgmt vdev up id 0x%x assoc id %d bssid %pM\n",
                vdev_id, aid, bssid);
-    return skb;
+    *msg_buf_ptr = msg_buf;
+    return ZX_OK;
 }
 
-static struct sk_buff*
-ath10k_wmi_op_gen_vdev_down(struct ath10k* ar, uint32_t vdev_id) {
+static zx_status_t
+ath10k_wmi_op_gen_vdev_down(struct ath10k* ar,
+                            struct ath10k_msg_buf** msg_buf_ptr,
+                            uint32_t vdev_id) {
     struct wmi_vdev_down_cmd* cmd;
-    struct sk_buff* skb;
+    struct ath10k_msg_buf* msg_buf;
+    zx_status_t status;
 
-    skb = ath10k_wmi_alloc_skb(ar, sizeof(*cmd));
-    if (!skb) {
-        return ERR_PTR(-ENOMEM);
+    status = ath10k_msg_buf_alloc(ar, &msg_buf, ATH10K_MSG_TYPE_WMI_VDEV_DOWN, 0);
+    if (status != ZX_OK) {
+        return status;
     }
 
-    cmd = (struct wmi_vdev_down_cmd*)skb->data;
+    cmd = ath10k_msg_buf_get_header(msg_buf, ATH10K_MSG_TYPE_WMI_VDEV_DOWN);
     cmd->vdev_id = vdev_id;
 
     ath10k_dbg(ar, ATH10K_DBG_WMI,
                "wmi mgmt vdev down id 0x%x\n", vdev_id);
-    return skb;
+    *msg_buf_ptr = msg_buf;
+    return ZX_OK;
 }
 
-static struct sk_buff*
-ath10k_wmi_op_gen_vdev_set_param(struct ath10k* ar, uint32_t vdev_id,
-                                 uint32_t param_id, uint32_t param_value) {
+static zx_status_t
+ath10k_wmi_op_gen_vdev_set_param(struct ath10k* ar,
+                                 struct ath10k_msg_buf** msg_buf_ptr,
+                                 uint32_t vdev_id,
+                                 uint32_t param_id,
+                                 uint32_t param_value) {
     struct wmi_vdev_set_param_cmd* cmd;
-    struct sk_buff* skb;
+    struct ath10k_msg_buf* msg_buf;
+    zx_status_t status;
 
     if (param_id == WMI_VDEV_PARAM_UNSUPPORTED) {
         ath10k_dbg(ar, ATH10K_DBG_WMI,
                    "vdev param %d not supported by firmware\n",
                    param_id);
-        return ERR_PTR(-EOPNOTSUPP);
+        return ZX_ERR_NOT_SUPPORTED;
     }
 
-    skb = ath10k_wmi_alloc_skb(ar, sizeof(*cmd));
-    if (!skb) {
-        return ERR_PTR(-ENOMEM);
+    status = ath10k_msg_buf_alloc(ar, &msg_buf, ATH10K_MSG_TYPE_WMI_VDEV_SET_PARAM, 0);
+    if (status != ZX_OK) {
+        return status;
     }
 
-    cmd = (struct wmi_vdev_set_param_cmd*)skb->data;
+    cmd = ath10k_msg_buf_get_header(msg_buf, ATH10K_MSG_TYPE_WMI_VDEV_SET_PARAM);
     cmd->vdev_id     = vdev_id;
     cmd->param_id    = param_id;
     cmd->param_value = param_value;
@@ -6468,28 +6496,32 @@ ath10k_wmi_op_gen_vdev_set_param(struct ath10k* ar, uint32_t vdev_id,
     ath10k_dbg(ar, ATH10K_DBG_WMI,
                "wmi vdev id 0x%x set param %d value %d\n",
                vdev_id, param_id, param_value);
-    return skb;
+    *msg_buf_ptr = msg_buf;
+    return ZX_OK;
 }
 
-static struct sk_buff*
+static zx_status_t
 ath10k_wmi_op_gen_vdev_install_key(struct ath10k* ar,
+                                   struct ath10k_msg_buf** msg_buf_ptr,
                                    const struct wmi_vdev_install_key_arg* arg) {
     struct wmi_vdev_install_key_cmd* cmd;
-    struct sk_buff* skb;
+    struct ath10k_msg_buf* msg_buf;
+    zx_status_t status;
 
     if (arg->key_cipher == WMI_CIPHER_NONE && arg->key_data != NULL) {
-        return ERR_PTR(-EINVAL);
+        return ZX_ERR_INVALID_ARGS;
     }
     if (arg->key_cipher != WMI_CIPHER_NONE && arg->key_data == NULL) {
-        return ERR_PTR(-EINVAL);
+        return ZX_ERR_INVALID_ARGS;
     }
 
-    skb = ath10k_wmi_alloc_skb(ar, sizeof(*cmd) + arg->key_len);
-    if (!skb) {
-        return ERR_PTR(-ENOMEM);
+    status = ath10k_msg_buf_alloc(ar, &msg_buf, ATH10K_MSG_TYPE_WMI_VDEV_INSTALL_KEY,
+                                  arg->key_len);
+    if (status != ZX_OK) {
+        return status;
     }
 
-    cmd = (struct wmi_vdev_install_key_cmd*)skb->data;
+    cmd = ath10k_msg_buf_get_header(msg_buf, ATH10K_MSG_TYPE_WMI_VDEV_INSTALL_KEY);
     cmd->vdev_id       = arg->vdev_id;
     cmd->key_idx       = arg->key_idx;
     cmd->key_flags     = arg->key_flags;
@@ -6508,9 +6540,11 @@ ath10k_wmi_op_gen_vdev_install_key(struct ath10k* ar,
     ath10k_dbg(ar, ATH10K_DBG_WMI,
                "wmi vdev install key idx %d cipher %d len %d\n",
                arg->key_idx, arg->key_cipher, arg->key_len);
-    return skb;
+    *msg_buf_ptr = msg_buf;
+    return ZX_OK;
 }
 
+#if 0 // NEEDS PORTING
 static struct sk_buff*
 ath10k_wmi_op_gen_vdev_spectral_conf(struct ath10k* ar,
                                      const struct wmi_vdev_spectral_conf_arg* arg) {
@@ -7994,6 +8028,7 @@ static const struct wmi_ops wmi_ops = {
     .gen_init = ath10k_wmi_op_gen_init,
     .gen_start_scan = ath10k_wmi_op_gen_start_scan,
     .gen_stop_scan = ath10k_wmi_op_gen_stop_scan,
+#endif // NEEDS PORTING
     .gen_vdev_create = ath10k_wmi_op_gen_vdev_create,
     .gen_vdev_delete = ath10k_wmi_op_gen_vdev_delete,
     .gen_vdev_start = ath10k_wmi_op_gen_vdev_start,
@@ -8002,6 +8037,7 @@ static const struct wmi_ops wmi_ops = {
     .gen_vdev_down = ath10k_wmi_op_gen_vdev_down,
     .gen_vdev_set_param = ath10k_wmi_op_gen_vdev_set_param,
     .gen_vdev_install_key = ath10k_wmi_op_gen_vdev_install_key,
+#if 0 // NEEDS PORTING
     .gen_vdev_spectral_conf = ath10k_wmi_op_gen_vdev_spectral_conf,
     .gen_vdev_spectral_enable = ath10k_wmi_op_gen_vdev_spectral_enable,
     /* .gen_vdev_wmm_conf not implemented */
@@ -8070,6 +8106,7 @@ static const struct wmi_ops wmi_10_1_ops = {
     .gen_pdev_resume = ath10k_wmi_op_gen_pdev_resume,
     .gen_pdev_set_param = ath10k_wmi_op_gen_pdev_set_param,
     .gen_stop_scan = ath10k_wmi_op_gen_stop_scan,
+#endif // NEEDS PORTING
     .gen_vdev_create = ath10k_wmi_op_gen_vdev_create,
     .gen_vdev_delete = ath10k_wmi_op_gen_vdev_delete,
     .gen_vdev_start = ath10k_wmi_op_gen_vdev_start,
@@ -8078,6 +8115,7 @@ static const struct wmi_ops wmi_10_1_ops = {
     .gen_vdev_down = ath10k_wmi_op_gen_vdev_down,
     .gen_vdev_set_param = ath10k_wmi_op_gen_vdev_set_param,
     .gen_vdev_install_key = ath10k_wmi_op_gen_vdev_install_key,
+#if 0 // NEEDS PORTING
     .gen_vdev_spectral_conf = ath10k_wmi_op_gen_vdev_spectral_conf,
     .gen_vdev_spectral_enable = ath10k_wmi_op_gen_vdev_spectral_enable,
     /* .gen_vdev_wmm_conf not implemented */
@@ -8146,6 +8184,7 @@ static const struct wmi_ops wmi_10_2_ops = {
     .gen_pdev_resume = ath10k_wmi_op_gen_pdev_resume,
     .gen_pdev_set_param = ath10k_wmi_op_gen_pdev_set_param,
     .gen_stop_scan = ath10k_wmi_op_gen_stop_scan,
+#endif // NEEDS PORTING
     .gen_vdev_create = ath10k_wmi_op_gen_vdev_create,
     .gen_vdev_delete = ath10k_wmi_op_gen_vdev_delete,
     .gen_vdev_start = ath10k_wmi_op_gen_vdev_start,
@@ -8154,6 +8193,7 @@ static const struct wmi_ops wmi_10_2_ops = {
     .gen_vdev_down = ath10k_wmi_op_gen_vdev_down,
     .gen_vdev_set_param = ath10k_wmi_op_gen_vdev_set_param,
     .gen_vdev_install_key = ath10k_wmi_op_gen_vdev_install_key,
+#if 0 // NEEDS PORTING
     .gen_vdev_spectral_conf = ath10k_wmi_op_gen_vdev_spectral_conf,
     .gen_vdev_spectral_enable = ath10k_wmi_op_gen_vdev_spectral_enable,
     /* .gen_vdev_wmm_conf not implemented */
@@ -8222,6 +8262,7 @@ static const struct wmi_ops wmi_10_2_4_ops = {
     .gen_pdev_resume = ath10k_wmi_op_gen_pdev_resume,
     .gen_pdev_set_param = ath10k_wmi_op_gen_pdev_set_param,
     .gen_stop_scan = ath10k_wmi_op_gen_stop_scan,
+#endif // NEEDS PORTING
     .gen_vdev_create = ath10k_wmi_op_gen_vdev_create,
     .gen_vdev_delete = ath10k_wmi_op_gen_vdev_delete,
     .gen_vdev_start = ath10k_wmi_op_gen_vdev_start,
@@ -8230,6 +8271,7 @@ static const struct wmi_ops wmi_10_2_4_ops = {
     .gen_vdev_down = ath10k_wmi_op_gen_vdev_down,
     .gen_vdev_set_param = ath10k_wmi_op_gen_vdev_set_param,
     .gen_vdev_install_key = ath10k_wmi_op_gen_vdev_install_key,
+#if 0 // NEEDS PORTING
     .gen_vdev_spectral_conf = ath10k_wmi_op_gen_vdev_spectral_conf,
     .gen_vdev_spectral_enable = ath10k_wmi_op_gen_vdev_spectral_enable,
     .gen_peer_create = ath10k_wmi_op_gen_peer_create,
@@ -8292,6 +8334,7 @@ static const struct wmi_ops wmi_10_4_ops = {
     .gen_init = ath10k_wmi_10_4_op_gen_init,
     .gen_start_scan = ath10k_wmi_op_gen_start_scan,
     .gen_stop_scan = ath10k_wmi_op_gen_stop_scan,
+#endif // NEEDS PORTING
     .gen_vdev_create = ath10k_wmi_op_gen_vdev_create,
     .gen_vdev_delete = ath10k_wmi_op_gen_vdev_delete,
     .gen_vdev_start = ath10k_wmi_op_gen_vdev_start,
@@ -8300,6 +8343,7 @@ static const struct wmi_ops wmi_10_4_ops = {
     .gen_vdev_down = ath10k_wmi_op_gen_vdev_down,
     .gen_vdev_set_param = ath10k_wmi_op_gen_vdev_set_param,
     .gen_vdev_install_key = ath10k_wmi_op_gen_vdev_install_key,
+#if 0 // NEEDS PORTING
     .gen_vdev_spectral_conf = ath10k_wmi_op_gen_vdev_spectral_conf,
     .gen_vdev_spectral_enable = ath10k_wmi_op_gen_vdev_spectral_enable,
     .gen_peer_create = ath10k_wmi_op_gen_peer_create,
