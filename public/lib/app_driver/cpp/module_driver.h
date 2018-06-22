@@ -76,14 +76,11 @@ class ModuleDriver : LifecycleImpl::Delegate, ModuleHost {
         on_terminated_(std::move(on_terminated)) {
     context_->ConnectToEnvironmentService(module_context_.NewRequest());
 
-    // There is no guarantee that |ViewProvider| will be requested from us
-    // before ModuleHost.set_view_provider_handler() is called from |Impl|, so
-    // we buffer both events until they are both satisfied.
     context_->outgoing().AddPublicService<fuchsia::ui::views_v1::ViewProvider>(
         [this](fidl::InterfaceRequest<fuchsia::ui::views_v1::ViewProvider>
                    request) {
-          view_provider_request_ = std::move(request);
-          InstantiateImpl();
+          impl_ = std::make_unique<Impl>(static_cast<ModuleHost*>(this),
+                                         std::move(request));
         });
   }
 
@@ -117,19 +114,10 @@ class ModuleDriver : LifecycleImpl::Delegate, ModuleHost {
     }
   }
 
-  void InstantiateImpl() {
-    impl_ = std::make_unique<Impl>(static_cast<ModuleHost*>(this),
-                                   std::move(view_provider_request_));
-  }
-
   fuchsia::sys::StartupContext* const context_;
   LifecycleImpl lifecycle_impl_;
   std::function<void()> on_terminated_;
   fuchsia::modular::ModuleContextPtr module_context_;
-
-  // Only valid until |impl_| is instantiated.
-  fidl::InterfaceRequest<fuchsia::ui::views_v1::ViewProvider>
-      view_provider_request_;
 
   std::unique_ptr<Impl> impl_;
 
