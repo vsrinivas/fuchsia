@@ -29,7 +29,6 @@ const char* TestFsRoot() {
         sprintf(test_fs_template, "%s/XXXXXX",
                 getenv("TMPDIR") ? getenv("TMPDIR") : "/tmp");
         TmpDirRoot = new fbl::String(mkdtemp(test_fs_template));
-        printf("Root directory used for testing: %s\n", TmpDirRoot->c_str());
     }
     return TmpDirRoot->c_str();
 }
@@ -44,6 +43,7 @@ int main(int argc, char** argv) {
         // Since all subdirectories created will be scoped, at the end of the
         // test TestFsRoot() should be empty.
         remove(runtests::TestFsRoot());
+        delete runtests::TmpDirRoot;
     });
     return unittest_run_all_tests(argc, argv) ? EXIT_SUCCESS : EXIT_FAILURE;
 }
