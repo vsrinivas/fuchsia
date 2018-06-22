@@ -25,7 +25,9 @@ MODULE_SO_NAME := tee-client-api
 MODULE_EXPORT := so
 
 MODULE_LIBS := \
-    system/ulib/c \
+    system/ulib/zircon \
+    system/ulib/fdio \
+    system/ulib/c
 
 MODULE_PACKAGE := src
 

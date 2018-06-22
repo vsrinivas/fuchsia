@@ -9,6 +9,8 @@
 
 #include <zircon/compiler.h>
 
+#include <tee-client-api/tee-client-impl.h>
+
 __BEGIN_CDECLS
 
 /*
@@ -244,7 +246,7 @@ typedef struct {
  * particular TEE. Its content is entirely implementation-defined.
  */
 typedef struct {
-    void* imp;
+    teec_context_impl_t imp;
 } TEEC_Context;
 
 /* TEEC_Session
@@ -253,7 +255,7 @@ typedef struct {
  * particular Trusted Application. Its content is entirely implementation-defined.
  */
 typedef struct {
-    void* imp;
+    teec_session_impl_t imp;
 } TEEC_Session;
 
 /* TEEC_SharedMemory
@@ -280,7 +282,7 @@ typedef struct {
     void* buffer;
     size_t size;
     uint32_t flags;
-    void* imp;
+    teec_shared_memory_impl_t imp;
 } TEEC_SharedMemory;
 
 /* TEEC_TempMemoryReference
@@ -383,7 +385,7 @@ typedef struct {
     uint32_t started;
     uint32_t paramTypes;
     TEEC_Parameter params[4];
-    void* imp;
+    teec_operation_impl_t imp;
 } TEEC_Operation;
 
 /*************
