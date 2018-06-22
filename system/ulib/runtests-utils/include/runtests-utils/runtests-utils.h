@@ -41,13 +41,12 @@ struct Result {
 
 // Function that invokes a test binary and writes its output to a file.
 //
-// |argv| is the commandline to use to run the test program.
-// |argc| is the number of strings in argv.
+// |argv| is the commandline to use to run the test program; must be
+//   null-terminated.
 // |output_filename| is the name of the file to which the test binary's output
 //   will be written. May be nullptr, in which case the output will not be
 //   redirected.
-typedef Result (*RunTestFn)(const char* argv[], int argc,
-                            const char* output_filename);
+typedef Result (*RunTestFn)(const char* argv[], const char* output_filename);
 
 // A means of measuring how long it takes to run tests.
 class Stopwatch {

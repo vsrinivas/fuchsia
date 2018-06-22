@@ -18,8 +18,12 @@
 namespace runtests {
 namespace {
 
-// Creates a deep copy of |argv|.
-char** CopyArgv(const char* const* argv, int argc) {
+// Creates a deep copy of |argv|, assumed to be null-terminated.
+char** CopyArgv(const char* const* argv) {
+    int argc = 0;
+    while(argv[argc] != nullptr){
+      ++argc;
+    }
     // allocate memory and copy strings
     char** argv_copy = static_cast<char**>(malloc((argc + 1) * sizeof(char*)));
     for (int i = 0; i < argc; ++i) {
@@ -31,16 +35,15 @@ char** CopyArgv(const char* const* argv, int argc) {
 }
 
 } // namespace
-Result PosixRunTest(const char* argv[], int argc, const char* output_filename) {
+Result PosixRunTest(const char* argv[], const char* output_filename) {
     int status;
     const char* path = argv[0];
     FILE* output_file = nullptr;
 
     // Becuase posix_spawn takes arguments for the subprocess of type
     // char* const*, it might mutate the values passed in: accordingly,
-    // we pass in a copy of |argv| instead, ensuring that argv[argc] is null,
-    // which is also required by the function.
-    char** argv_copy = CopyArgv(argv, argc);
+    // we pass in a copy of |argv| instead.
+    char** argv_copy = CopyArgv(argv);
 
     // Initialize |file_actions|, which dictate what I/O will be performed in the
     // launched process, and ensure its destruction on function exit.
@@ -52,7 +55,7 @@ Result PosixRunTest(const char* argv[], int argc, const char* output_filename) {
     }
 
     auto auto_tidy = fbl::MakeAutoCall([&] {
-        for (int i = 0; i < argc; ++i) {
+        for (int i = 0; argv_copy[i] != nullptr; ++i) {
             free(argv_copy[i]);
         }
         free(argv_copy);

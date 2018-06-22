@@ -184,7 +184,6 @@ bool RunTestsInDir(const RunTestFn& RunTest, const fbl::StringPiece dir_path,
     // for terminator.
     char verbosity_arg[6];
     snprintf(verbosity_arg, sizeof(verbosity_arg), "v=%d", verbosity);
-    const int argc = verbosity >= 0 ? 2 : 1;
 
     struct dirent* de;
     struct stat stat_buf;
@@ -231,10 +230,11 @@ bool RunTestsInDir(const RunTestFn& RunTest, const fbl::StringPiece dir_path,
         }
 
         // Execute the test binary.
-        const char* argv[] = {test_path.c_str(), verbosity_arg};
+        const char* argv1 = (verbosity >= 0)? verbosity_arg : nullptr;
+        const char* argv[] = {test_path.c_str(), argv1, nullptr};
         const char* output_filename =
             output_filename_str.empty() ? nullptr : output_filename_str.c_str();
-        results->push_back(RunTest(argv, argc, output_filename));
+        results->push_back(RunTest(argv, output_filename));
         if ((*results)[results->size() - 1].launch_status != runtests::SUCCESS) {
             failed_count++;
         }

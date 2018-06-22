@@ -491,9 +491,9 @@ bool RunTestSuccess() {
 
     ScopedTestDir test_dir;
     fbl::String test_name = JoinPath(test_dir.path(), "succeed.sh");
-    const char* argv[] = {test_name.c_str()};
+    const char* argv[] = {test_name.c_str(), nullptr};
     ScopedScriptFile script(argv[0], "exit 0");
-    const Result result = PlatformRunTest(argv, 1, nullptr);
+    const Result result = PlatformRunTest(argv, nullptr);
     EXPECT_STR_EQ(argv[0], result.name.c_str());
     EXPECT_EQ(SUCCESS, result.launch_status);
     EXPECT_EQ(0, result.return_code);
@@ -506,14 +506,14 @@ bool RunTestSuccessWithStdout() {
 
     ScopedTestDir test_dir;
     fbl::String test_name = JoinPath(test_dir.path(), "succeed.sh");
-    const char* argv[] = {test_name.c_str()};
+    const char* argv[] = {test_name.c_str(), nullptr};
     const char expected_output[] = "Expect this!\n";
     // Produces expected_output, b/c echo adds newline
     const char script_contents[] = "echo Expect this!";
     ScopedScriptFile script(argv[0], script_contents);
 
     fbl::String output_filename = JoinPath(test_dir.path(), "test.out");
-    const Result result = PlatformRunTest(argv, 1, output_filename.c_str());
+    const Result result = PlatformRunTest(argv, output_filename.c_str());
 
     FILE* output_file = fopen(output_filename.c_str(), "r");
     ASSERT_TRUE(output_file);
@@ -534,14 +534,14 @@ bool RunTestFailureWithStderr() {
 
     ScopedTestDir test_dir;
     fbl::String test_name = JoinPath(test_dir.path(), "fail.sh");
-    const char* argv[] = {test_name.c_str()};
+    const char* argv[] = {test_name.c_str(), nullptr};
     const char expected_output[] = "Expect this!\n";
     // Produces expected_output, b/c echo adds newline
     const char script_contents[] = "echo Expect this! 1>&2\nexit 77";
     ScopedScriptFile script(argv[0], script_contents);
 
     fbl::String output_filename = JoinPath(test_dir.path(), "test.out");
-    const Result result = PlatformRunTest(argv, 1, output_filename.c_str());
+    const Result result = PlatformRunTest(argv, output_filename.c_str());
 
     FILE* output_file = fopen(output_filename.c_str(), "r");
     ASSERT_TRUE(output_file);
@@ -562,7 +562,7 @@ bool RunTestFailureToLoadFile() {
 
     const char* argv[] = {"i/do/not/exist/", nullptr};
 
-    const Result result = PlatformRunTest(argv, 1, nullptr);
+    const Result result = PlatformRunTest(argv, nullptr);
     EXPECT_STR_EQ(argv[0], result.name.c_str());
     EXPECT_EQ(FAILED_TO_LAUNCH, result.launch_status);
 

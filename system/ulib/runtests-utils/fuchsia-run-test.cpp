@@ -9,25 +9,39 @@
 #include <unistd.h>
 
 #include <fbl/auto_call.h>
-#include <launchpad/launchpad.h>
+#include <lib/fdio/spawn.h>
 #include <lib/zx/job.h>
 #include <lib/zx/process.h>
-#include <lib/zx/time.h>
-#include <zircon/listnode.h>
-#include <zircon/process.h>
-#include <zircon/syscalls.h>
-#include <zircon/syscalls/object.h>
+#include <zircon/status.h>
 
 namespace runtests {
 
-Result FuchsiaRunTest(const char* argv[], int argc,
-                      const char* output_filename) {
-    int fds[2];
+Result FuchsiaRunTest(const char* argv[], const char* output_filename) {
     const char* path = argv[0];
 
-    launchpad_t* lp = nullptr;
-    zx_status_t status = ZX_OK;
+    // If |output_filename| is provided, prepare the file descriptors that will
+    // be used to tee the stdout/stderr of the test into the associated file.
+    int fds[2] = {-1, -1};
+    size_t fdio_action_count = 1;  // At least one for SET_NAME.
+    if (output_filename != nullptr) {
+        if (pipe(fds)) {
+            printf("FAILURE: Failed to create pipe: %s\n", strerror(errno));
+            return Result(path, FAILED_TO_LAUNCH, 0);
+        }
+        fdio_action_count += 2;  // Plus two for CLONE_FD and TRANSFER_FD.
+    }
 
+    // If |output_filename| is not provided, then we will ignore all but the
+    // first action.
+    const fdio_spawn_action_t fdio_actions[] = {
+        {.action = FDIO_SPAWN_ACTION_SET_NAME, .name = {.data = path}},
+        {.action = FDIO_SPAWN_ACTION_CLONE_FD,
+         .fd = {.local_fd = fds[1], .target_fd = STDOUT_FILENO}},
+        {.action = FDIO_SPAWN_ACTION_TRANSFER_FD,
+         .fd = {.local_fd = fds[1], .target_fd = STDERR_FILENO}},
+    };
+
+    zx_status_t status = ZX_OK;
     zx::job test_job;
     status = zx::job::create(zx_job_default(), 0, &test_job);
     if (status != ZX_OK) {
@@ -36,55 +50,21 @@ Result FuchsiaRunTest(const char* argv[], int argc,
     }
     auto auto_call_kill_job =
         fbl::MakeAutoCall([&test_job]() { test_job.kill(); });
-    auto auto_call_launchpad_destroy = fbl::MakeAutoCall([&lp]() {
-        if (lp) {
-            launchpad_destroy(lp);
-        }
-    });
     status = test_job.set_property(ZX_PROP_NAME, "run-test", sizeof("run-test"));
     if (status != ZX_OK) {
         printf("FAILURE: set_property() returned %d\n", status);
         return Result(path, FAILED_TO_LAUNCH, 0);
     }
-    status = launchpad_create(test_job.get(), path, &lp);
-    if (status != ZX_OK) {
-        printf("FAILURE: launchpad_create() returned %d\n", status);
-        return Result(path, FAILED_TO_LAUNCH, 0);
-    }
-    status = launchpad_load_from_file(lp, path);
-    if (status != ZX_OK) {
-        printf("FAILURE: launchpad_load_from_file() returned %d\n", status);
-        return Result(path, FAILED_TO_LAUNCH, 0);
-    }
-    status = launchpad_clone(lp, LP_CLONE_FDIO_ALL | LP_CLONE_ENVIRON);
-    if (status != ZX_OK) {
-        printf("FAILURE: launchpad_clone() returned %d\n", status);
-        return Result(path, FAILED_TO_LAUNCH, 0);
-    }
-    if (output_filename != nullptr) {
-        if (pipe(fds)) {
-            printf("FAILURE: Failed to create pipe: %s\n", strerror(errno));
-            return Result(path, FAILED_TO_LAUNCH, 0);
-        }
-        status = launchpad_clone_fd(lp, fds[1], STDOUT_FILENO);
-        if (status != ZX_OK) {
-            printf("FAILURE: launchpad_clone_fd() returned %d\n", status);
-            return Result(path, FAILED_TO_LAUNCH, 0);
-        }
-        status = launchpad_transfer_fd(lp, fds[1], STDERR_FILENO);
-        if (status != ZX_OK) {
-            printf("FAILURE: launchpad_transfer_fd() returned %d\n", status);
-            return Result(path, FAILED_TO_LAUNCH, 0);
-        }
-    }
-    launchpad_set_args(lp, argc, argv);
-    const char* errmsg;
+
     zx::process process;
-    status = launchpad_go(lp, process.reset_and_get_address(), &errmsg);
-    lp = nullptr; // launchpad_go destroys lp, null it so we don't try to destroy
-                  // again.
+    char err_msg[FDIO_SPAWN_ERR_MSG_MAX_LENGTH];
+    status = fdio_spawn_etc(test_job.get(), FDIO_SPAWN_CLONE_ALL,
+                            path, argv, nullptr,
+                            fdio_action_count, fdio_actions,
+                            process.reset_and_get_address(), err_msg);
     if (status != ZX_OK) {
-        printf("FAILURE: Failed to launch %s: %d: %s\n", path, status, errmsg);
+        printf("FAILURE: Failed to launch %s: %d (%s): %s\n", path, status,
+               zx_status_get_string(status), err_msg);
         return Result(path, FAILED_TO_LAUNCH, 0);
     }
     // Tee output.
