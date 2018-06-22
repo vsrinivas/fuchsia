@@ -10,8 +10,9 @@
 #include <string.h>
 
 #include <fs-management/mount.h>
-#include <zircon/compiler.h>
 #include <unittest/unittest.h>
+#include <zircon/compiler.h>
+#include <zircon/device/block.h>
 
 __BEGIN_CDECLS;
 
@@ -38,8 +39,12 @@ extern const char* kMountPath;
 
 // Path to the mounted filesystem's backing store (if it exists)
 extern char test_disk_path[];
-// Is the disk path a REAL disk, or is it be a generated ramdisk?
+
+// Identify if a real disk is being tested instead of a ramdisk.
 extern bool use_real_disk;
+// (Only valid if use_real_disk is true) The disk's cached info.
+extern block_info_t real_disk_info;
+
 // A filter of the filesystems; indicates which one should be tested.
 extern const char* filesystem_name_filter;
 
@@ -59,29 +64,55 @@ typedef enum fs_test_type {
     FS_TEST_FVM,
 } fs_test_type_t;
 
-void setup_fs_test(size_t disk_size, fs_test_type_t test_class);
+#define TEST_BLOCK_COUNT_DEFAULT (1LLU << 17)
+#define TEST_BLOCK_SIZE_DEFAULT (1LLU << 9)
+#define TEST_FVM_SLICE_SIZE_DEFAULT (8 * (1 << 20))
+
+typedef struct test_disk {
+    uint64_t block_count;
+    uint64_t block_size;
+    // Only applicable for FVM tests.
+    uint64_t slice_size;
+} test_disk_t;
+
+extern const test_disk_t default_test_disk;
+
+void setup_fs_test(test_disk_t disk, fs_test_type_t test_class);
 void teardown_fs_test(fs_test_type_t test_class);
 
-inline bool can_execute_test(fs_info_t* info, fs_test_type_t t) {
+inline bool can_execute_test(const fs_info_t* info, const test_disk_t* requested_disk,
+                             fs_test_type_t t) {
+
+    uint64_t requested_size = requested_disk->block_count * requested_disk->block_size;
+    uint64_t real_size = real_disk_info.block_count * real_disk_info.block_size;
+
+    if (use_real_disk && (real_size < requested_size)) {
+        printf("Disk too small (is %zu bytes, must be %zu bytes): \n",
+               real_size, requested_size);
+        return false;
+    }
+
     switch (t) {
     case FS_TEST_NORMAL:
         return info->should_test();
     case FS_TEST_FVM:
         return info->should_test() && info->supports_resize;
+    default:
+        printf("Unknown filesystem type: ");
+        return false;
     }
-    return false;
 }
 
 // As a small optimization, avoid even creating a ramdisk
 // for filesystem tests when "utest_test_type" is not at
 // LEAST size "medium". This avoids the overhead of creating
 // a ramdisk when running small tests.
-#define BEGIN_FS_TEST_CASE(case_name, dsize, fs_type, fs_name, info) \
+#define BEGIN_FS_TEST_CASE(case_name, disk, fs_type, fs_name, info)  \
     BEGIN_TEST_CASE(case_name##_##fs_name)                           \
     if (utest_test_type & ~TEST_SMALL) {                             \
         test_info = info;                                            \
-        if (can_execute_test(test_info, fs_type)) {                  \
-            setup_fs_test(dsize, fs_type);
+        if (can_execute_test(test_info, &disk, fs_type)) {           \
+            setup_fs_test(disk, fs_type);
 
 #define END_FS_TEST_CASE(case_name, fs_type, fs_name) \
             teardown_fs_test(fs_type);                \
@@ -91,25 +122,23 @@ inline bool can_execute_test(fs_info_t* info, fs_test_type_t t) {
     }                                                 \
     END_TEST_CASE(case_name##_##fs_name)
 
-#define FS_TEST_CASE(case_name, dsize, CASE_TESTS, test_type, fs_type, index)     \
-    BEGIN_FS_TEST_CASE(case_name, dsize, test_type, fs_type, &FILESYSTEMS[index]) \
-    CASE_TESTS                                                                    \
+#define FS_TEST_CASE(case_name, disk, CASE_TESTS, test_type, fs_type, index)     \
+    BEGIN_FS_TEST_CASE(case_name, disk, test_type, fs_type, &FILESYSTEMS[index]) \
+    CASE_TESTS                                                                   \
     END_FS_TEST_CASE(case_name, test_type, fs_type)
 
-#define DEFAULT_DISK_SIZE (1llu << 32)
+#define RUN_FOR_ALL_FILESYSTEMS_TYPE(case_name, disk, test_type, CASE_TESTS)     \
+    FS_TEST_CASE(case_name, disk, CASE_TESTS, test_type, memfs, 0)  \
+    FS_TEST_CASE(case_name, disk, CASE_TESTS, test_type, minfs, 1)  \
+    FS_TEST_CASE(case_name, disk, CASE_TESTS, test_type, thinfs, 2)
 
-#define RUN_FOR_ALL_FILESYSTEMS_TYPE(case_name, test_type, CASE_TESTS)           \
-    FS_TEST_CASE(case_name, DEFAULT_DISK_SIZE, CASE_TESTS, test_type, memfs, 0)  \
-    FS_TEST_CASE(case_name, DEFAULT_DISK_SIZE, CASE_TESTS, test_type, minfs, 1)  \
-    FS_TEST_CASE(case_name, DEFAULT_DISK_SIZE, CASE_TESTS, test_type, thinfs, 2)
-
-#define RUN_FOR_ALL_FILESYSTEMS_SIZE(case_name, dsize, CASE_TESTS)          \
-    FS_TEST_CASE(case_name, dsize, CASE_TESTS, FS_TEST_NORMAL, memfs, 0)    \
-    FS_TEST_CASE(case_name, dsize, CASE_TESTS, FS_TEST_NORMAL, minfs, 1)    \
-    FS_TEST_CASE(case_name##_fvm, dsize, CASE_TESTS, FS_TEST_FVM, minfs, 1) \
-    FS_TEST_CASE(case_name, dsize, CASE_TESTS, FS_TEST_NORMAL, thinfs, 2)
+#define RUN_FOR_ALL_FILESYSTEMS_SIZE(case_name, disk, CASE_TESTS)          \
+    FS_TEST_CASE(case_name, disk, CASE_TESTS, FS_TEST_NORMAL, memfs, 0)    \
+    FS_TEST_CASE(case_name, disk, CASE_TESTS, FS_TEST_NORMAL, minfs, 1)    \
+    FS_TEST_CASE(case_name##_fvm, disk, CASE_TESTS, FS_TEST_FVM, minfs, 1) \
+    FS_TEST_CASE(case_name, disk, CASE_TESTS, FS_TEST_NORMAL, thinfs, 2)
 
 #define RUN_FOR_ALL_FILESYSTEMS(case_name, CASE_TESTS)                     \
-    RUN_FOR_ALL_FILESYSTEMS_SIZE(case_name, DEFAULT_DISK_SIZE, CASE_TESTS)
+    RUN_FOR_ALL_FILESYSTEMS_SIZE(case_name, default_test_disk, CASE_TESTS)
 
 __END_CDECLS;

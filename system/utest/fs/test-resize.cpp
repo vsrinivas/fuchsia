@@ -20,6 +20,8 @@
 #include "filesystems.h"
 #include "misc.h"
 
+namespace {
+
 bool test_use_all_inodes(void) {
     BEGIN_TEST;
     ASSERT_TRUE(test_info->supports_resize);
@@ -65,13 +67,14 @@ bool test_use_all_inodes(void) {
     END_TEST;
 }
 
+constexpr size_t kBufSize = (1 << 20);
+constexpr size_t kFileBufCount = (1 << 5);
+constexpr size_t kFileCount = (1 << 4);
+constexpr size_t kTotalDataSize = kBufSize * kFileBufCount * kFileCount;
+
 bool test_use_all_data(void) {
     BEGIN_TEST;
     ASSERT_TRUE(test_info->supports_resize);
-
-    constexpr size_t kBufSize = (1 << 20);
-    constexpr size_t kFileBufCount = (1 << 5);
-    constexpr size_t kFileCount = (1 << 4);
 
     fbl::AllocChecker ac;
     fbl::unique_ptr<uint8_t[]> buf(new (&ac) uint8_t[kBufSize]);
@@ -101,7 +104,19 @@ bool test_use_all_data(void) {
     END_TEST;
 }
 
-RUN_FOR_ALL_FILESYSTEMS_TYPE(fs_resize_tests, FS_TEST_FVM,
+const test_disk_t disk = {
+    .block_count = (kTotalDataSize + (1 << 26)) / TEST_BLOCK_SIZE_DEFAULT,
+    .block_size = TEST_BLOCK_SIZE_DEFAULT,
+    .slice_size = (1LLU << 22),
+};
+
+}  // namespace
+
+// Reformat the disk between tests to restore original size.
+RUN_FOR_ALL_FILESYSTEMS_TYPE(fs_resize_tests_inodes, disk, FS_TEST_FVM,
     RUN_TEST_LARGE(test_use_all_inodes)
+)
+
+RUN_FOR_ALL_FILESYSTEMS_TYPE(fs_resize_tests_data, disk, FS_TEST_FVM,
     RUN_TEST_LARGE(test_use_all_data)
 )

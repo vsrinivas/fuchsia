@@ -65,7 +65,7 @@ bool TestQueryInfo(void) {
 }
 
 #define RUN_MINFS_TESTS(name, CASE_TESTS) \
-    FS_TEST_CASE(name, DEFAULT_DISK_SIZE, CASE_TESTS, FS_TEST_FVM, minfs, 1)
+    FS_TEST_CASE(name, default_test_disk, CASE_TESTS, FS_TEST_FVM, minfs, 1)
 
 RUN_MINFS_TESTS(FsMinfsTestsFvm,
     RUN_TEST_MEDIUM(TestQueryInfo)

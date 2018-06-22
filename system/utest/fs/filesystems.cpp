@@ -26,6 +26,7 @@ const char* kTmpfsPath = "/fs-test-tmp";
 const char* kMountPath = "/fs-test-tmp/mount";
 
 bool use_real_disk = false;
+block_info_t real_disk_info;
 char test_disk_path[PATH_MAX];
 fs_info_t* test_info;
 
@@ -45,12 +46,11 @@ const fsck_options_t test_fsck_options = {
 #define FVM_DRIVER_LIB "/boot/driver/fvm.so"
 #define STRLEN(s) sizeof(s) / sizeof((s)[0])
 
-#define TEST_BLOCK_SIZE 512
-// This slice size is intentionally somewhat small, so
-// we can test increasing the size of a "single-slice"
-// inode table. We may want support for tests with configurable
-// slice sizes in the future.
-#define TEST_FVM_SLICE_SIZE (8 * (1 << 20))
+const test_disk_t default_test_disk = {
+    .block_count = TEST_BLOCK_COUNT_DEFAULT,
+    .block_size = TEST_BLOCK_SIZE_DEFAULT,
+    .slice_size = TEST_FVM_SLICE_SIZE_DEFAULT,
+};
 
 constexpr uint8_t kTestUniqueGUID[] = {
     0xFF, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
@@ -62,7 +62,7 @@ constexpr uint8_t kTestPartGUID[] = {
     0xFF, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07
 };
 
-void setup_fs_test(size_t disk_size, fs_test_type_t test_class) {
+void setup_fs_test(test_disk_t disk, fs_test_type_t test_class) {
     int r = mkdir(kMountPath, 0755);
     if ((r < 0) && errno != EEXIST) {
         fprintf(stderr, "Could not create mount point for test filesystem\n");
@@ -70,21 +70,19 @@ void setup_fs_test(size_t disk_size, fs_test_type_t test_class) {
     }
 
     if (!use_real_disk) {
-        size_t block_count = disk_size / TEST_BLOCK_SIZE;
-        if (create_ramdisk(TEST_BLOCK_SIZE, block_count, test_disk_path)) {
+        if (create_ramdisk(disk.block_size, disk.block_count, test_disk_path)) {
             fprintf(stderr, "[FAILED]: Could not create ramdisk for test\n");
             exit(-1);
         }
     }
 
     if (test_class == FS_TEST_FVM) {
-
         int fd = open(test_disk_path, O_RDWR);
         if (fd < 0) {
             fprintf(stderr, "[FAILED]: Could not open test disk\n");
             exit(-1);
         }
-        if (fvm_init(fd, TEST_FVM_SLICE_SIZE) != ZX_OK) {
+        if (fvm_init(fd, disk.slice_size) != ZX_OK) {
             fprintf(stderr, "[FAILED]: Could not format disk with FVM\n");
             exit(-1);
         }

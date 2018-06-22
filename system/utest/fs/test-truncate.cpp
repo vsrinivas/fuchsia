@@ -19,6 +19,8 @@
 #include "filesystems.h"
 #include "misc.h"
 
+namespace {
+
 bool check_file_contains(const char* filename, const void* data, ssize_t len) {
     char buf[4096];
     struct stat st;
@@ -301,7 +303,15 @@ bool test_truncate_errno(void) {
     END_TEST;
 }
 
-RUN_FOR_ALL_FILESYSTEMS(truncate_tests,
+const test_disk_t disk = {
+    .block_count = (1LLU << 21),
+    .block_size = (1LLU << 9),
+    .slice_size = (1LLU << 23),
+};
+
+}  // namespace
+
+RUN_FOR_ALL_FILESYSTEMS_SIZE(truncate_tests, disk,
     RUN_TEST_MEDIUM(test_truncate_small)
     RUN_TEST_MEDIUM((test_truncate_large<1 << 10, 100, KeepOpen>))
     RUN_TEST_MEDIUM((test_truncate_large<1 << 10, 100, Reopen>))

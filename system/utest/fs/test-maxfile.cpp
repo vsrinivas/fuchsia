@@ -19,6 +19,8 @@
 #define MB (1 << 20)
 #define PRINT_SIZE (MB * 100)
 
+namespace {
+
 enum MountType {
     DoRemount,
     DontRemount,
@@ -233,7 +235,15 @@ bool test_zipped_maxfiles(void) {
     END_TEST;
 }
 
-RUN_FOR_ALL_FILESYSTEMS_SIZE(maxfile_tests, (1 << 29),
+const test_disk_t disk = {
+    .block_count = (1LLU << 20),
+    .block_size = (1LLU << 9),
+    .slice_size = (1LLU << 23),
+};
+
+}  // namespace
+
+RUN_FOR_ALL_FILESYSTEMS_SIZE(maxfile_tests, disk,
     RUN_TEST_LARGE((test_maxfile<DontRemount>))
     RUN_TEST_LARGE((test_maxfile<DoRemount>))
     RUN_TEST_LARGE((test_zipped_maxfiles<DontRemount>))
