@@ -16,7 +16,6 @@ namespace zxcrypt {
 void extra_op_t::Init() {
     list_initialize(&node);
     data = nullptr;
-    vmo = ZX_HANDLE_INVALID;
     length = 0;
     offset_dev = 0;
     offset_vmo = 0;
