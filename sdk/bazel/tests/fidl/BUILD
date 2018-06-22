@@ -7,29 +7,29 @@ load("@fuchsia_sdk//build_defs:fidl.bzl", "fidl_library")
 package(default_visibility = ["//visibility:public"])
 
 fidl_library(
-    name = "fidl",
-    library = "bazel.examples.helloworld",
+    name = "simple",
+    library = "bazel.examples.simple",
     srcs = [
-        "library.fidl",
+        "simple.fidl",
     ],
 )
 
 fidl_library(
-    name = "dependencies",
-    library = "bazel.examples.dependencies",
+    name = "local_deps",
+    library = "bazel.examples.localdeps",
     srcs = [
-        "dependencies.fidl",
+        "local_deps.fidl",
     ],
     deps = [
-        ":fidl",
+        ":simple",
     ],
 )
 
 fidl_library(
-    name = "fuchsia",
-    library = "bazel.examples.fuchsia",
+    name = "fuchsia_deps",
+    library = "bazel.examples.fuchsiadeps",
     srcs = [
-        "fuchsia.fidl",
+        "fuchsia_deps.fidl",
     ],
     deps = [
         "@fuchsia_sdk//fidl/fuchsia.sys",

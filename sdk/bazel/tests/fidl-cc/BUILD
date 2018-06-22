@@ -5,8 +5,8 @@
 load("@fuchsia_sdk//build_defs:fidl_cc.bzl", "cc_fidl_library")
 
 cc_fidl_library(
-    name = "cc",
-    library = "//fidl",
+    name = "simple",
+    library = "//fidl:simple",
 )
 
 cc_binary(
@@ -15,6 +15,6 @@ cc_binary(
         "library_user.cc",
     ],
     deps = [
-        ":cc",
+        ":simple",
     ],
 )

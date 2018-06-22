@@ -2,10 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-library bazel.examples.fuchsia;
+library bazel.examples.simple;
 
-using fuchsia.sys;
-
-interface Fuchsia {
-  1: UseThat(request<fuchsia.sys.Loader> loader);
+struct Hello {
+  uint32 world;
 };

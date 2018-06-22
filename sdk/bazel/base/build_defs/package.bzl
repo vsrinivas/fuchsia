@@ -32,6 +32,9 @@ _info_aspect = aspect(
     attr_aspects = [
         "deps",
     ],
+    provides = [
+        PackageAggregateInfo,
+    ],
 )
 
 def _fuchsia_package_impl(context):

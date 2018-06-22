@@ -2,8 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-library bazel.examples.helloworld;
+library bazel.examples.localdeps;
 
-struct Hello {
-  uint32 world;
+using bazel.examples.simple;
+
+interface Foobar {
+  1: DoSomething(bazel.examples.simple.Hello world);
 };

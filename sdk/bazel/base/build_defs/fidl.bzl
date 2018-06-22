@@ -16,11 +16,12 @@
 #     List of labels for FIDL libraries this library depends on.
 
 FidlLibraryInfo = provider(
-    fields = [
-        "info",
-        "name",
-        "ir",
-    ],
+    fields = {
+        # TODO(pylaligand): this should be a depset.
+        "info": "List of structs(name, files) representing the library's dependencies",
+        "name": "Name of the FIDL library",
+        "ir": "Path to the JSON file with the library's intermediate representation",
+    },
 )
 
 def _gather_dependencies(deps):
@@ -28,11 +29,11 @@ def _gather_dependencies(deps):
     libs_added = []
     for dep in deps:
         for lib in dep[FidlLibraryInfo].info:
-            name = lib["name"]
+            name = lib.name
             if name in libs_added:
                 continue
             libs_added.append(name)
-            info += [lib]
+            info.append(lib)
     return info
 
 def _fidl_library_impl(context):
@@ -41,16 +42,16 @@ def _fidl_library_impl(context):
     library_name = context.attr.library
 
     info = _gather_dependencies(context.attr.deps)
-    info += [{
-        "name": library_name,
-        "files": context.files.srcs,
-    }]
+    info.append(struct(
+        name = library_name,
+        files = context.files.srcs,
+    ))
 
     files_argument = []
     inputs = []
     for lib in info:
-        files_argument += ["--files"] + [f.path for f in lib["files"]]
-        inputs.extend(lib["files"])
+        files_argument += ["--files"] + [f.path for f in lib.files]
+        inputs.extend(lib.files)
 
     context.actions.run(
         executable = context.executable._fidlc,

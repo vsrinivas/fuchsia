@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-library bazel.examples.dependencies;
+library bazel.examples.fuchsiadeps;
 
-using bazel.examples.helloworld;
+using fuchsia.sys;
 
-interface Foobar {
-  1: DoSomething(bazel.examples.helloworld.Hello world);
+interface Fuchsia {
+  1: UseThat(request<fuchsia.sys.Loader> loader);
 };
