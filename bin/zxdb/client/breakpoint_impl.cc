@@ -166,17 +166,16 @@ void BreakpointImpl::DidLoadModuleSymbols(Process* process,
 
   // Resolve addresses.
   bool changed = false;
-  if (settings_.location_type == BreakpointSettings::LocationType::kSymbol) {
+  if (settings_.location.type == InputLocation::Type::kSymbol) {
     changed = procs_[process].AddLocations(
-        this, process, module->AddressesForFunction(settings_.location_symbol));
-  } else if (settings_.location_type ==
-             BreakpointSettings::LocationType::kLine) {
+        this, process, module->AddressesForFunction(settings_.location.symbol));
+  } else if (settings_.location.type == InputLocation::Type::kLine) {
     // Need to resolve file names to pass canonical ones to AddressesForLine.
     for (std::string& file : module->GetModuleSymbols()->FindFileMatches(
-             settings_.location_line.file())) {
+             settings_.location.line.file())) {
       changed = procs_[process].AddLocations(
           this, process, module->AddressesForLine(FileLine(
-                             std::move(file), settings_.location_line.line())));
+                             std::move(file), settings_.location.line.line())));
     }
   }
 
@@ -226,7 +225,7 @@ void BreakpointImpl::GlobalWillDestroyProcess(Process* process) {
 
   // When the process exits, disable breakpoints that are address-based since
   // the addresses will normally change when a process is loaded.
-  if (settings_.location_type == BreakpointSettings::LocationType::kAddress) {
+  if (settings_.location.type == InputLocation::Type::kAddress) {
     // Should only have one process for address-based breakpoints.
     FXL_DCHECK(procs_.size() == 1u);
     FXL_DCHECK(process->GetTarget() == settings_.scope_target);
@@ -370,25 +369,23 @@ bool BreakpointImpl::RegisterProcess(Process* process) {
 
   // Resolve addresses.
   ProcessSymbols* symbols = process->GetSymbols();
-  if (settings_.location_type == BreakpointSettings::LocationType::kSymbol) {
+  if (settings_.location.type == InputLocation::Type::kSymbol) {
     std::vector<uint64_t> new_addrs =
-        symbols->AddressesForFunction(settings_.location_symbol);
+        symbols->AddressesForFunction(settings_.location.symbol);
     changed |= record.AddLocations(this, process, new_addrs);
-  } else if (settings_.location_type ==
-             BreakpointSettings::LocationType::kLine) {
+  } else if (settings_.location.type == InputLocation::Type::kLine) {
     // Need to resolve file names to pass canonical ones to AddressesForLine.
     for (std::string& file :
          process->GetTarget()->GetSymbols()->FindFileMatches(
-             settings_.location_line.file())) {
+             settings_.location.line.file())) {
       changed |= record.AddLocations(
           this, process, symbols->AddressesForLine(FileLine(
-                             std::move(file), settings_.location_line.line())));
+                             std::move(file), settings_.location.line.line())));
     }
-  } else if (settings_.location_type ==
-             BreakpointSettings::LocationType::kAddress) {
+  } else if (settings_.location.type == InputLocation::Type::kAddress) {
     changed = true;
     record.AddLocations(this, process,
-                        std::vector<uint64_t>{settings_.location_address});
+                        std::vector<uint64_t>{settings_.location.address});
   } else {
     FXL_NOTREACHED();
   }

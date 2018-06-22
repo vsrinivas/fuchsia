@@ -13,6 +13,7 @@ static_library("client") {
     "breakpoint_settings.h",
     "disassembler.h",
     "frame.h",
+    "input_location.h",
     "memory_dump.h",
     "process.h",
     "process_observer.h",

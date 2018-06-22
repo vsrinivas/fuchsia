@@ -20,6 +20,7 @@ class Command;
 class ConsoleContext;
 class Err;
 class Frame;
+struct InputLocation;
 class Location;
 class Thread;
 
@@ -77,7 +78,7 @@ std::string DescribeFrame(const Frame* frame, int id);
 std::string DescribeBreakpoint(const ConsoleContext* context,
                                const Breakpoint* breakpoint);
 
-std::string DescribeBreakpointLocation(const BreakpointSettings& settings);
+std::string DescribeInputLocation(const InputLocation& location);
 std::string DescribeLocation(const Location& loc, bool always_show_address);
 
 // If show_path is set, the path to the file will be included, otherwise only

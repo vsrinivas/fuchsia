@@ -18,6 +18,8 @@ static_library("console") {
     "format_context.h",
     "format_table.cc",
     "format_table.h",
+    "input_location_parser.cc",
+    "input_location_parser.h",
     "line_input.cc",
     "line_input.h",
     "memory_format.cc",
@@ -60,10 +62,10 @@ source_set("tests") {
     "command_utils_unittest.cc",
     "format_context_unittest.cc",
     "format_table_unittest.cc",
+    "input_location_parser_unittest.cc",
     "line_input_unittest.cc",
     "memory_format_unittest.cc",
     "string_util_unittest.cc",
-    "verbs_breakpoint_unittest.cc",
   ]
 
   deps = [

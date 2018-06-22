@@ -2,8 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/zxdb/console/verbs_breakpoint.h"
-#include "garnet/bin/zxdb/client/breakpoint_settings.h"
+#include "garnet/bin/zxdb/console/input_location_parser.h"
 #include "garnet/bin/zxdb/client/frame.h"
 #include "garnet/bin/zxdb/client/symbols/location.h"
 #include "gtest/gtest.h"
@@ -29,59 +28,59 @@ class DummyFrame : public Frame {
 
 }  // namespace
 
-TEST(VerbsBreakpoint, ParseLocation) {
-  BreakpointSettings settings;
+TEST(InputLocationParser, Parse) {
+  InputLocation location;
 
   // Valid symbol (including colons).
-  Err err = ParseBreakpointLocation(nullptr, "Foo::Bar", &settings);
+  Err err = ParseInputLocation(nullptr, "Foo::Bar", &location);
   EXPECT_FALSE(err.has_error());
-  EXPECT_EQ(BreakpointSettings::LocationType::kSymbol, settings.location_type);
-  EXPECT_EQ("Foo::Bar", settings.location_symbol);
+  EXPECT_EQ(InputLocation::Type::kSymbol, location.type);
+  EXPECT_EQ("Foo::Bar", location.symbol);
 
   // Valid file/line.
-  settings = BreakpointSettings();
-  err = ParseBreakpointLocation(nullptr, "foo/bar.cc:123", &settings);
+  location = InputLocation();
+  err = ParseInputLocation(nullptr, "foo/bar.cc:123", &location);
   EXPECT_FALSE(err.has_error());
-  EXPECT_EQ(BreakpointSettings::LocationType::kLine, settings.location_type);
-  EXPECT_EQ("foo/bar.cc", settings.location_line.file());
-  EXPECT_EQ(123, settings.location_line.line());
+  EXPECT_EQ(InputLocation::Type::kLine, location.type);
+  EXPECT_EQ("foo/bar.cc", location.line.file());
+  EXPECT_EQ(123, location.line.line());
 
   // Invalid file/line.
-  settings = BreakpointSettings();
-  err = ParseBreakpointLocation(nullptr, "foo/bar.cc:123x", &settings);
+  location = InputLocation();
+  err = ParseInputLocation(nullptr, "foo/bar.cc:123x", &location);
   EXPECT_TRUE(err.has_error());
 
   // Valid address.
-  settings = BreakpointSettings();
-  err = ParseBreakpointLocation(nullptr, "*0x12345f", &settings);
+  location = InputLocation();
+  err = ParseInputLocation(nullptr, "*0x12345f", &location);
   EXPECT_FALSE(err.has_error());
-  EXPECT_EQ(BreakpointSettings::LocationType::kAddress, settings.location_type);
-  EXPECT_EQ(0x12345fu, settings.location_address);
+  EXPECT_EQ(InputLocation::Type::kAddress, location.type);
+  EXPECT_EQ(0x12345fu, location.address);
 
   // Invalid address.
-  settings = BreakpointSettings();
-  err = ParseBreakpointLocation(nullptr, "*2134x", &settings);
+  location = InputLocation();
+  err = ParseInputLocation(nullptr, "*2134x", &location);
   EXPECT_TRUE(err.has_error());
 
   // Line number with no Frame for context.
-  settings = BreakpointSettings();
-  err = ParseBreakpointLocation(nullptr, "21", &settings);
+  location = InputLocation();
+  err = ParseInputLocation(nullptr, "21", &location);
   EXPECT_TRUE(err.has_error());
 
   // Implicit file name and valid frame but the location has no file name.
   DummyFrame frame_no_file(Location(0x1234, FileLine(), 0, "Func"));
-  settings = BreakpointSettings();
-  err = ParseBreakpointLocation(&frame_no_file, "21", &settings);
+  location = InputLocation();
+  err = ParseInputLocation(&frame_no_file, "21", &location);
   EXPECT_TRUE(err.has_error());
 
   // Valid implicit file name.
   std::string file = "foo.cc";
   DummyFrame frame_valid(Location(0x1234, FileLine(file, 12), 0, "Func"));
-  settings = BreakpointSettings();
-  err = ParseBreakpointLocation(&frame_valid, "21", &settings);
+  location = InputLocation();
+  err = ParseInputLocation(&frame_valid, "21", &location);
   EXPECT_FALSE(err.has_error()) << err.msg();
-  EXPECT_EQ(file, settings.location_line.file());
-  EXPECT_EQ(21, settings.location_line.line());
+  EXPECT_EQ(file, location.line.file());
+  EXPECT_EQ(21, location.line.line());
 }
 
 }  // namespace zxdb

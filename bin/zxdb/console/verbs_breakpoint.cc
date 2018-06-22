@@ -2,8 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/zxdb/console/verbs_breakpoint.h"
-
+#include "garnet/bin/zxdb/console/verbs.h"
 #include "garnet/bin/zxdb/client/breakpoint.h"
 #include "garnet/bin/zxdb/client/breakpoint_location.h"
 #include "garnet/bin/zxdb/client/breakpoint_settings.h"
@@ -15,8 +14,8 @@
 #include "garnet/bin/zxdb/console/console.h"
 #include "garnet/bin/zxdb/console/console_context.h"
 #include "garnet/bin/zxdb/console/format_context.h"
+#include "garnet/bin/zxdb/console/input_location_parser.h"
 #include "garnet/bin/zxdb/console/output_buffer.h"
-#include "garnet/bin/zxdb/console/verbs.h"
 
 namespace zxdb {
 
@@ -118,10 +117,28 @@ Err CreateOrEditBreakpoint(ConsoleContext* context, const Command& cmd,
 
   // Location.
   if (cmd.args().empty()) {
-    if (!breakpoint)
-      return Err(ErrType::kInput, "New breakpoints must specify a location.");
+    if (!breakpoint) {
+      // Creating a breakpoint with no location implicitly uses the current
+      // frame's current location.
+      if (!cmd.frame()) {
+        return Err(ErrType::kInput,
+                   "There isn't a current frame to take the breakpoint "
+                   "location from.");
+      }
+
+      // Use the file/line of the frame if available. This is what a user will
+      // generally want to see in the breakpoint list, and will persist across
+      // restarts. Fall back to an address otherwise. Sometimes the file/line
+      // might not be what they want, though.
+      const Location& frame_loc = cmd.frame()->GetLocation();
+      if (frame_loc.has_symbols())
+        settings.location = InputLocation(frame_loc.file_line());
+      else
+        settings.location = InputLocation(cmd.frame()->GetAddress());
+    }
   } else if (cmd.args().size() == 1u) {
-    Err err = ParseBreakpointLocation(cmd.frame(), cmd.args()[0], &settings);
+    Err err =
+        ParseInputLocation(cmd.frame(), cmd.args()[0], &settings.location);
     if (err.has_error())
       return err;
   } else {
@@ -135,7 +152,8 @@ Err CreateOrEditBreakpoint(ConsoleContext* context, const Command& cmd,
     settings.scope = BreakpointSettings::Scope::kThread;
     settings.scope_thread = cmd.thread();
     settings.scope_target = cmd.target();
-  } else if (cmd.HasNoun(Noun::kProcess)) {
+  } else if (cmd.HasNoun(Noun::kProcess) ||
+             settings.location.type == InputLocation::Type::kAddress) {
     settings.scope = BreakpointSettings::Scope::kTarget;
     settings.scope_thread = nullptr;
     settings.scope_target = cmd.target();
@@ -176,19 +194,11 @@ const char kBreakHelp[] =
 
 Location arguments
 
-  break <function name>
-    break main
-    break Foo::Bar
+  Current frame's address (no input)
+    break
 
-  break <file name>:<line number>
-    break foo.cc:123
-
-  break <line number>
-    break 123
-
-  break *<code address>
-    break *0x7d12362f0
-
+)" LOCATION_ARG_HELP("break")
+        R"(
 Options
 
   --enable=[ true | false ]
@@ -236,6 +246,14 @@ See also
 
 Examples
 
+  break
+      Set a breakpoint at the current frame's address.
+
+  frame 1 break
+      Set a breakpoint at the specified frame's address. Since frame 1 is
+      always the current function's calling frame, this command will set a
+      breakpoint at the current function's return.
+
   break MyClass::MyFunc
       Breakpoint in all processes that have a function with this name.
 
@@ -255,8 +273,8 @@ Examples
       Break at line 23 of the file referenced by frame 3.
 )";
 Err DoBreak(ConsoleContext* context, const Command& cmd) {
-  Err err =
-      cmd.ValidateNouns({Noun::kProcess, Noun::kThread, Noun::kBreakpoint});
+  Err err = cmd.ValidateNouns(
+      {Noun::kProcess, Noun::kThread, Noun::kFrame, Noun::kBreakpoint});
   if (err.has_error())
     return err;
   return CreateOrEditBreakpoint(context, cmd, nullptr);
@@ -382,70 +400,6 @@ Err DoEdit(ConsoleContext* context, const Command& cmd) {
 }
 
 }  // namespace
-
-// This probably needs to be factored out into a separate location parser
-// so it can be shared with other code that wants to take locations, like
-// "disassemble" or "list". We'll have to translate those generic settings
-// to a BreakpointSettings for the breakpoint case.
-Err ParseBreakpointLocation(const Frame* frame, const std::string& input,
-                            BreakpointSettings* settings) {
-  if (input.empty())
-    return Err("Passed empty breakpoint location.");
-
-  // Check for one colon. Two colons is a C++ member function.
-  size_t colon = input.find(':');
-  if (colon != std::string::npos && colon < input.size() - 1 &&
-      input[colon + 1] != ':') {
-    // <file>:<line> format.
-    std::string file = input.substr(0, colon);
-
-    uint64_t line = 0;
-    Err err = StringToUint64(input.substr(colon + 1), &line);
-    if (err.has_error())
-      return err;
-
-    settings->location_type = BreakpointSettings::LocationType::kLine;
-    settings->location_line = FileLine(std::move(file), static_cast<int>(line));
-    return Err();
-  }
-
-  if (input[0] == '*') {
-    // *<address> format
-    std::string addr_str = input.substr(1);
-    Err err = StringToUint64(addr_str, &settings->location_address);
-    if (err.has_error())
-      return err;
-
-    settings->location_type = BreakpointSettings::LocationType::kAddress;
-    return Err();
-  }
-
-  uint64_t line = 0;
-  Err err = StringToUint64(input, &line);
-  if (err.has_error()) {
-    // Not a number, assume symbol.
-    settings->location_type = BreakpointSettings::LocationType::kSymbol;
-    settings->location_symbol = input;
-    return Err();
-  }
-
-  // Just a number, use the file name from the specified frame.
-  if (!frame) {
-    return Err(
-        "There is no current frame to get a file name, you'll have to "
-        "specify one.");
-  }
-  const Location& location = frame->GetLocation();
-  if (location.file_line().file().empty()) {
-    return Err(
-        "The current frame doesn't have a file name to use, you'll "
-        "have to specify one.");
-  }
-  settings->location_type = BreakpointSettings::LocationType::kLine;
-  settings->location_line =
-      FileLine(location.file_line().file(), static_cast<int>(line));
-  return Err();
-}
 
 void AppendBreakpointVerbs(std::map<Verb, VerbRecord>* verbs) {
   SwitchRecord enable_switch(kEnableSwitch, true, "enable", 'e');

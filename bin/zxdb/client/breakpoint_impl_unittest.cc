@@ -100,8 +100,8 @@ TEST_F(BreakpointImplTest, DynamicLoading) {
   BreakpointSettings in;
   in.enabled = false;
   in.scope = BreakpointSettings::Scope::kSystem;
-  in.location_type = BreakpointSettings::LocationType::kSymbol;
-  in.location_symbol = kFunctionName;
+  in.location.type = InputLocation::Type::kSymbol;
+  in.location.symbol = kFunctionName;
 
   // Setting the disabled settings shouldn't update the backend.
   Err err = SyncSetSettings(bp, in);
@@ -212,8 +212,8 @@ TEST_F(BreakpointImplTest, Address) {
   in.enabled = true;
   in.scope = BreakpointSettings::Scope::kTarget;
   in.scope_target = target;
-  in.location_type = BreakpointSettings::LocationType::kAddress;
-  in.location_address = kAddress;
+  in.location.type = InputLocation::Type::kAddress;
+  in.location.address = kAddress;
 
   Err err = SyncSetSettings(bp, in);
   EXPECT_FALSE(err.has_error());

@@ -267,7 +267,7 @@ void ListBreakpoints(ConsoleContext* context) {
     row.push_back(BreakpointScopeToString(context, settings));
     row.push_back(BreakpointStopToString(settings.stop_mode));
     row.push_back(BreakpointEnabledToString(settings.enabled));
-    row.push_back(DescribeBreakpointLocation(settings));
+    row.push_back(DescribeInputLocation(settings.location));
   }
 
   OutputBuffer out;

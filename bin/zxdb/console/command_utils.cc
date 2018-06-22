@@ -298,23 +298,23 @@ std::string DescribeBreakpoint(const ConsoleContext* context,
   std::string scope = BreakpointScopeToString(context, settings);
   std::string stop = BreakpointStopToString(settings.stop_mode);
   const char* enabled = BreakpointEnabledToString(settings.enabled);
-  std::string location = DescribeBreakpointLocation(settings);
+  std::string location = DescribeInputLocation(settings.location);
 
   return fxl::StringPrintf("Breakpoint %d on %s, %s, stop=%s, @ %s",
                            context->IdForBreakpoint(breakpoint), scope.c_str(),
                            enabled, stop.c_str(), location.c_str());
 }
 
-std::string DescribeBreakpointLocation(const BreakpointSettings& settings) {
-  switch (settings.location_type) {
-    case BreakpointSettings::LocationType::kNone:
+std::string DescribeInputLocation(const InputLocation& location) {
+  switch (location.type) {
+    case InputLocation::Type::kNone:
       return "<no location>";
-    case BreakpointSettings::LocationType::kLine:
-      return DescribeFileLine(settings.location_line);
-    case BreakpointSettings::LocationType::kSymbol:
-      return settings.location_symbol;
-    case BreakpointSettings::LocationType::kAddress:
-      return fxl::StringPrintf("0x%" PRIx64, settings.location_address);
+    case InputLocation::Type::kLine:
+      return DescribeFileLine(location.line);
+    case InputLocation::Type::kSymbol:
+      return location.symbol;
+    case InputLocation::Type::kAddress:
+      return fxl::StringPrintf("0x%" PRIx64, location.address);
   }
   FXL_NOTREACHED();
   return std::string();
