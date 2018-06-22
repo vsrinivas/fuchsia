@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <assert.h>
+#include <errno.h>
 #include <fcntl.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -238,6 +239,15 @@ bool create_fd_from_connected_socket(void) {
     ASSERT_EQ(0, memcmp(message, read_message, sizeof(message)),
               "incorrect bytes read from socket fd");
 
+    // Set O_NONBLOCK
+    int flags = fcntl(fd, F_GETFL);
+    ASSERT_EQ(flags, 0, "fcntl(F_GETFL) failed");
+    flags |= O_NONBLOCK;
+    int ret = fcntl(fd, F_SETFL, flags);
+    ASSERT_EQ(ret, 0, "fcntl(FSETFL, O_NONBLOCK) failed");
+    ASSERT_EQ(-1, read(fd, read_message, sizeof(read_message)),
+              "failed to read from socket with O_NONBLOCK");
+    ASSERT_EQ(EAGAIN, errno, "errno incorrect");
     END_TEST;
 }
 
