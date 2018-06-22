@@ -28,19 +28,24 @@ func FetchBlob(repos []BlobRepo, blob string, muRun *sync.Mutex, outputDir strin
 	muRun.Lock()
 	defer muRun.Unlock()
 
+	var err error
 	for i := range repos {
-		reader, sz, err := FetchBlobFromRepo(repos[i], blob)
-		if err != nil {
-			log.Printf("got error trying to get blob: %s", err)
+		reader, sz, err2 := FetchBlobFromRepo(repos[i], blob)
+		if err2 != nil {
+			log.Printf("got error trying to get blob: %s", err2)
 			continue
 		}
 		err = WriteBlob(filepath.Join(outputDir, blob), sz, reader)
 		reader.Close()
-		if err == nil {
+		// if the blob exists, someone beat us to it
+		if err == nil || os.IsExist(err) {
 			return nil
 		}
 	}
 
+	if err != nil {
+		return fmt.Errorf("attempted write of %q failed: %s", blob, err)
+	}
 	return fmt.Errorf("couldn't fetch blob %q from any repo", blob)
 }
 

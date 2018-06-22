@@ -6,6 +6,7 @@ package ipcserver
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"strings"
 	"sync"
@@ -179,10 +180,14 @@ func (c *ControlSrvr) GetUpdate(name string, version, merkle *string) (*string, 
 
 func (c *ControlSrvr) GetBlob(merkle string) error {
 	if len(strings.TrimSpace(merkle)) == 0 {
-		return fmt.Errorf("Supplied merkle root is empty")
+		return fmt.Errorf("supplied merkle root is empty")
 	}
 
-	return c.daemon.GetBlob(merkle)
+	err := c.daemon.GetBlob(merkle)
+	if err != nil {
+		log.Printf("blob retrieval error %s", err)
+	}
+	return nil
 }
 
 func (c *ControlSrvr) Quit() {
