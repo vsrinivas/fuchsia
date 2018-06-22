@@ -2,21 +2,22 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_LIB_MEDIA_CAMERA_SIMPLE_CAMERA_LIB_FAKE_CAMERA_SOURCE_H_
+#define GARNET_LIB_MEDIA_CAMERA_SIMPLE_CAMERA_LIB_FAKE_CAMERA_SOURCE_H_
 
 #include <stdio.h>
 #include <utility>
 
 #include <fbl/vector.h>
-#include <garnet/examples/ui/video_display/buffer.h>
-#include <garnet/examples/ui/video_display/camera_interface_base.h>
+#include <garnet/lib/media/camera/simple_camera_lib/buffer.h>
+#include <garnet/lib/media/camera/simple_camera_lib/camera_interface_base.h>
 #include <lib/async/cpp/task.h>
 #include <lib/media/timeline/timeline_function.h>
 #include <zircon/device/camera.h>
 #include <zx/vmar.h>
 #include <zx/vmo.h>
 
-namespace video_display {
+namespace simple_camera {
 
 // ColorSource steps through hue at a constant rate in HSV colorspace,
 // with saturation and value remaining constant. An RGB color is written to
@@ -104,4 +105,6 @@ class FakeCameraSource : public CameraInterfaceBase {
   FrameNotifyCallback notify_callback_;
 };
 
-}  // namespace video_display
+}  // namespace simple_camera
+
+#endif  // GARNET_LIB_MEDIA_CAMERA_SIMPLE_CAMERA_LIB_FAKE_CAMERA_SOURCE_H_

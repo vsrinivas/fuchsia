@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <garnet/examples/ui/video_display/fenced_buffer.h>
+#include <garnet/lib/media/camera/simple_camera_lib/fenced_buffer.h>
 
 #include <fcntl.h>
 #include <stdio.h>
@@ -17,7 +17,7 @@
 #include <zx/vmar.h>
 #include <zx/vmo.h>
 
-namespace video_display {
+namespace simple_camera {
 
 std::unique_ptr<FencedBuffer> FencedBuffer::Create(
     uint64_t buffer_size,
@@ -106,4 +106,4 @@ void FencedBuffer::Signal() {
   state_ = BufferState::kReadLocked;
 }
 
-}  // namespace video_display
+}  // namespace simple_camera

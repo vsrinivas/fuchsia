@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <garnet/examples/ui/video_display/buffer.h>
+#include <garnet/lib/media/camera/simple_camera_lib/buffer.h>
 
 #include <fcntl.h>
 #include <lib/fdio/io.h>
@@ -17,7 +17,7 @@
 #include <zx/vmar.h>
 #include <zx/vmo.h>
 
-namespace video_display {
+namespace simple_camera {
 
 zx_status_t Buffer::DuplicateAndMapVmo(uint64_t buffer_size,
                                        const zx::vmo& main_buffer,
@@ -94,4 +94,4 @@ zx_status_t Buffer::SaveToFile(const char* filename) {
   return ZX_OK;
 }
 
-}  // namespace video_display
+}  // namespace simple_camera

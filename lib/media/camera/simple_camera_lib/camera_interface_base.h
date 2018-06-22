@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_LIB_MEDIA_CAMERA_SIMPLE_CAMERA_LIB_CAMERA_INTERFACE_BASE_H_
+#define GARNET_LIB_MEDIA_CAMERA_SIMPLE_CAMERA_LIB_CAMERA_INTERFACE_BASE_H_
 
 #include <vector>
 
@@ -12,7 +13,7 @@
 #include <zircon/types.h>
 #include <zx/vmo.h>
 
-namespace video_display {
+namespace simple_camera {
 
 using SetFormatCallback = fit::function<zx_status_t(uint64_t)>;
 using OnShutdownCallback = fit::function<void()>;
@@ -41,4 +42,6 @@ class CameraInterfaceBase {
   virtual ~CameraInterfaceBase() {}
 };
 
-}  // namespace video_display
+}  // namespace simple_camera
+
+#endif  // GARNET_LIB_MEDIA_CAMERA_SIMPLE_CAMERA_LIB_CAMERA_INTERFACE_BASE_H_

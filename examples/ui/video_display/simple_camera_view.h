@@ -14,7 +14,7 @@
 #include <lib/ui/scenic/client/resources.h>
 #include <lib/ui/view_framework/base_view.h>
 
-#include <garnet/examples/ui/video_display/video_display.h>
+#include <garnet/lib/media/camera/simple_camera_lib/video_display.h>
 
 namespace video_display {
 
@@ -37,7 +37,7 @@ class SimpleCameraView : public mozart::BaseView {
       fuchsia::images::PresentationInfo presentation_info) override;
 
   scenic_lib::ShapeNode node_;
-  VideoDisplay video_display_;
+  simple_camera::VideoDisplay video_display_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(SimpleCameraView);
 };

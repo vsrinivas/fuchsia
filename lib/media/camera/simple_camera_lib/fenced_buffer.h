@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_LIB_MEDIA_CAMERA_SIMPLE_CAMERA_LIB_FENCED_BUFFER_H_
+#define GARNET_LIB_MEDIA_CAMERA_SIMPLE_CAMERA_LIB_FENCED_BUFFER_H_
 
 #include <stdint.h>
 
@@ -16,9 +17,9 @@
 #include <zx/event.h>
 #include <zx/vmo.h>
 
-#include <garnet/examples/ui/video_display/buffer.h>
+#include <garnet/lib/media/camera/simple_camera_lib/buffer.h>
 
-namespace video_display {
+namespace simple_camera {
 
 class FencedBuffer;
 using BufferCallback = fit::function<void(FencedBuffer*)>;
@@ -89,4 +90,6 @@ class FencedBuffer : public Buffer {
   zx::event release_fence_;
 };
 
-}  // namespace video_display
+}  // namespace simple_camera
+
+#endif  // GARNET_LIB_MEDIA_CAMERA_SIMPLE_CAMERA_LIB_FENCED_BUFFER_H_

@@ -2,19 +2,20 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_LIB_MEDIA_CAMERA_SIMPLE_CAMERA_LIB_VIDEO_DISPLAY_H_
+#define GARNET_LIB_MEDIA_CAMERA_SIMPLE_CAMERA_LIB_VIDEO_DISPLAY_H_
 
 #include <deque>
 #include <list>
 
 #include <fbl/vector.h>
 #include <fuchsia/images/cpp/fidl.h>
-#include <garnet/examples/ui/video_display/camera_client.h>
-#include <garnet/examples/ui/video_display/fake_camera_source.h>
-#include <garnet/examples/ui/video_display/fenced_buffer.h>
-#include <garnet/examples/ui/video_display/frame_scheduler.h>
+#include <garnet/lib/media/camera/simple_camera_lib/camera_client.h>
+#include <garnet/lib/media/camera/simple_camera_lib/fake_camera_source.h>
+#include <garnet/lib/media/camera/simple_camera_lib/fenced_buffer.h>
+#include <garnet/lib/media/camera/simple_camera_lib/frame_scheduler.h>
 
-namespace video_display {
+namespace simple_camera {
 
 class VideoDisplay {
  public:
@@ -87,4 +88,6 @@ class VideoDisplay {
   FXL_DISALLOW_COPY_AND_ASSIGN(VideoDisplay);
 };
 
-}  // namespace video_display
+}  // namespace simple_camera
+
+#endif  // GARNET_LIB_MEDIA_CAMERA_SIMPLE_CAMERA_LIB_VIDEO_DISPLAY_H_

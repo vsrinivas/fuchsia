@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <garnet/examples/ui/video_display/fake_camera_source.h>
+#include <garnet/lib/media/camera/simple_camera_lib/fake_camera_source.h>
 #include <zx/time.h>
 
-namespace video_display {
+namespace simple_camera {
 
 void ColorSource::WriteToBuffer(Buffer* buffer) {
   if (!buffer) {
@@ -189,4 +189,4 @@ void FakeCameraSource::ProduceFrame() {
   PostNextCaptureTask();
 }
 
-}  // namespace video_display
+}  // namespace simple_camera

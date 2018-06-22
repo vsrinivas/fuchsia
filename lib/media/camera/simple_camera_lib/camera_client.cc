@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <garnet/examples/ui/video_display/camera_client.h>
+#include <garnet/lib/media/camera/simple_camera_lib/camera_client.h>
 
 #include <fcntl.h>
 #include <inttypes.h>
@@ -23,7 +23,7 @@
 #include <zx/vmar.h>
 #include <zx/vmo.h>
 
-namespace video_display {
+namespace simple_camera {
 
 #define CHECK_RESP_RESULT(_resp, _cmd_name)                                    \
   if (ZX_OK != _resp.result) {                                                 \
@@ -646,4 +646,4 @@ void CameraClient::SetConfigurationState(CameraState current_state,
   state_ = next_state;
 }
 
-}  // namespace video_display
+}  // namespace simple_camera

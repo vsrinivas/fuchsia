@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_LIB_MEDIA_CAMERA_SIMPLE_CAMERA_LIB_FRAME_SCHEDULER_H_
+#define GARNET_LIB_MEDIA_CAMERA_SIMPLE_CAMERA_LIB_FRAME_SCHEDULER_H_
 
 #include <stdint.h>
 #include <deque>
@@ -12,7 +13,7 @@
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
-namespace video_display {
+namespace simple_camera {
 
 // SimpleFrameScheduler determines when your next frame should be presented.
 // This version of the scheduler is pretty dumb; it just schedules the frame
@@ -120,4 +121,6 @@ class SimpleFrameScheduler {
   uint64_t last_capture_time_ns_ __TA_GUARDED(times_lock_) = 0;
 };
 
-}  // namespace video_display
+}  // namespace simple_camera
+
+#endif  // GARNET_LIB_MEDIA_CAMERA_SIMPLE_CAMERA_LIB_FRAME_SCHEDULER_H_

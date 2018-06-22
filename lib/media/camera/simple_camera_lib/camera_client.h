@@ -2,14 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_LIB_MEDIA_CAMERA_SIMPLE_CAMERA_LIB_CAMERA_CLIENT_H_
+#define GARNET_LIB_MEDIA_CAMERA_SIMPLE_CAMERA_LIB_CAMERA_CLIENT_H_
 
 #include <vector>
 
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
 #include <fbl/vector.h>
-#include <garnet/examples/ui/video_display/camera_interface_base.h>
+#include <garnet/lib/media/camera/simple_camera_lib/camera_interface_base.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/fxl/files/unique_fd.h>
 #include <lib/fxl/logging.h>
@@ -19,7 +20,7 @@
 #include <zx/channel.h>
 #include <zx/vmo.h>
 
-namespace video_display {
+namespace simple_camera {
 
 // The method for setting up a camera stream is as follows:
 // 1) client.Open(device_id)
@@ -185,4 +186,6 @@ class CameraClient : public CameraInterfaceBase {
       buff_msg_waiter_{this};
 };
 
-}  // namespace video_display
+}  // namespace simple_camera
+
+#endif  // GARNET_LIB_MEDIA_CAMERA_SIMPLE_CAMERA_LIB_CAMERA_CLIENT_H_

@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <garnet/examples/ui/video_display/frame_scheduler.h>
+#include <garnet/lib/media/camera/simple_camera_lib/frame_scheduler.h>
 #include <lib/fxl/command_line.h>
 #include <zircon/syscalls.h>
 
-namespace video_display {
+namespace simple_camera {
 
 uint64_t SimpleFrameScheduler::GetPresentationTimeNs(uint64_t capture_time_ns) {
   std::lock_guard<std::mutex> lck(times_lock_);
@@ -75,4 +75,4 @@ void SimpleFrameScheduler::OnFramePresented(uint64_t pres_time,
   }
 }
 
-}  // namespace video_display
+}  // namespace simple_camera

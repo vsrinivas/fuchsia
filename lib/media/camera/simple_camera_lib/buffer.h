@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_LIB_MEDIA_CAMERA_SIMPLE_CAMERA_LIB_BUFFER_H_
+#define GARNET_LIB_MEDIA_CAMERA_SIMPLE_CAMERA_LIB_BUFFER_H_
 
 #include <stdint.h>
 
@@ -12,7 +13,7 @@
 #include <zx/event.h>
 #include <zx/vmo.h>
 
-namespace video_display {
+namespace simple_camera {
 
 // Encapsulates a part of a VMO.
 // A Buffer represents one frame, mapping it into memory to allow the process to
@@ -66,4 +67,6 @@ class Buffer : public vmo_utils::VmoMapper {
   BufferState state_ = BufferState::kInvalid;
 };
 
-}  // namespace video_display
+}  // namespace simple_camera
+
+#endif  // GARNET_LIB_MEDIA_CAMERA_SIMPLE_CAMERA_LIB_BUFFER_H_

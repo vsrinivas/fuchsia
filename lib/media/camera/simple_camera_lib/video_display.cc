@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <garnet/examples/ui/video_display/video_display.h>
+#include <garnet/lib/media/camera/simple_camera_lib/video_display.h>
 
 #include <lib/fxl/log_level.h>
 #include <lib/fxl/logging.h>
 
-namespace video_display {
+namespace simple_camera {
 
 // When a buffer is released, signal that it is available to the writer
 // In this case, that means directly write to the buffer then re-present it
@@ -266,4 +266,4 @@ zx_status_t VideoDisplay::OnSetFormat(uint64_t max_frame_size) {
       fit::bind_member(this, &VideoDisplay::IncomingBufferFilled));
 }
 
-}  // namespace video_display
+}  // namespace simple_camera
