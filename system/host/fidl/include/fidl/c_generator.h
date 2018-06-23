@@ -31,7 +31,9 @@ public:
 
     ~CGenerator() = default;
 
-    std::ostringstream Produce();
+    std::ostringstream ProduceHeader();
+    std::ostringstream ProduceClient();
+    std::ostringstream ProduceServer();
 
     struct Member {
         std::string type;
@@ -117,7 +119,7 @@ private:
     void ProduceInterfaceClientDeclaration(const NamedInterface& named_interface);
 
     const flat::Library* library_;
-    std::ostringstream header_file_;
+    std::ostringstream file_;
 };
 
 } // namespace fidl

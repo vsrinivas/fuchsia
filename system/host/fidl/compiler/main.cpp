@@ -30,6 +30,8 @@ namespace {
 void Usage() {
     std::cout
         << "usage: fidlc [--c-header HEADER_PATH]\n"
+           "             [--c-client CLIENT_PATH]\n"
+           "             [--c-server SERVER_PATH]\n"
            "             [--tables TABLES_PATH]\n"
            "             [--json JSON_PATH]\n"
            "             [--name LIBRARY_NAME]\n"
@@ -38,6 +40,12 @@ void Usage() {
            "\n"
            " * `--c-header HEADER_PATH`. If present, this flag instructs `fidlc` to output\n"
            "   a C header at the given path.\n"
+           "\n"
+           " * `--c-client CLIENT_PATH`. If present, this flag instructs `fidlc` to output\n"
+           "   the simple C client implementation at the given path.\n"
+           "\n"
+           " * `--c-server SERVER_PATH`. If present, this flag instructs `fidlc` to output\n"
+           "   the simple C server implementation at the given path.\n"
            "\n"
            " * `--tables TABLES_PATH`. If present, this flag instructs `fidlc` to output\n"
            "   coding tables at the given path. The coding tables are required to encode and\n"
@@ -108,7 +116,6 @@ void MakeParentDirectory(const std::string& filename) {
         if (mkdir(path.data(), 0755) != 0 && errno != EEXIST) {
             Fail("Could not create directory %s for output file %s: error %s\n",
                  path.data(), filename.data(), strerror(errno));
-
         }
     }
 }
@@ -165,7 +172,8 @@ private:
 
 class ResponseFileArguments : public Arguments {
 public:
-    ResponseFileArguments(fidl::StringView filename) : file_(Open(filename, std::ios::in)) {
+    ResponseFileArguments(fidl::StringView filename)
+        : file_(Open(filename, std::ios::in)) {
         ConsumeWhitespace();
     }
 
@@ -204,6 +212,8 @@ private:
 
 enum struct Behavior {
     kCHeader,
+    kCClient,
+    kCServer,
     kTables,
     kJSON,
 };
@@ -222,9 +232,8 @@ bool Parse(const fidl::SourceFile& source_file, fidl::IdentifierTable* identifie
     return true;
 }
 
-template <typename Generator> void Generate(Generator* generator, std::fstream file) {
-    auto generated_output = generator->Produce();
-    file << generated_output.str();
+void Write(std::ostringstream output, std::fstream file) {
+    file << output.str();
     file.flush();
 }
 
@@ -269,6 +278,10 @@ int main(int argc, char* argv[]) {
             exit(0);
         } else if (behavior_argument == "--c-header") {
             outputs.emplace(Behavior::kCHeader, Open(args->Claim(), std::ios::out));
+        } else if (behavior_argument == "--c-client") {
+            outputs.emplace(Behavior::kCClient, Open(args->Claim(), std::ios::out));
+        } else if (behavior_argument == "--c-server") {
+            outputs.emplace(Behavior::kCServer, Open(args->Claim(), std::ios::out));
         } else if (behavior_argument == "--tables") {
             outputs.emplace(Behavior::kTables, Open(args->Claim(), std::ios::out));
         } else if (behavior_argument == "--json") {
@@ -348,17 +361,27 @@ int main(int argc, char* argv[]) {
         switch (behavior) {
         case Behavior::kCHeader: {
             fidl::CGenerator generator(final_library);
-            Generate(&generator, std::move(output_file));
+            Write(generator.ProduceHeader(), std::move(output_file));
+            break;
+        }
+        case Behavior::kCClient: {
+            fidl::CGenerator generator(final_library);
+            Write(generator.ProduceClient(), std::move(output_file));
+            break;
+        }
+        case Behavior::kCServer: {
+            fidl::CGenerator generator(final_library);
+            Write(generator.ProduceServer(), std::move(output_file));
             break;
         }
         case Behavior::kTables: {
             fidl::TablesGenerator generator(final_library);
-            Generate(&generator, std::move(output_file));
+            Write(generator.Produce(), std::move(output_file));
             break;
         }
         case Behavior::kJSON: {
             fidl::JSONGenerator generator(final_library);
-            Generate(&generator, std::move(output_file));
+            Write(generator.Produce(), std::move(output_file));
             break;
         }
         }

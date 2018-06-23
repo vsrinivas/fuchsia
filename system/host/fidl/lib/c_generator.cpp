@@ -196,68 +196,68 @@ GenerateMembers(const flat::Library* library,
 } // namespace
 
 void CGenerator::GeneratePrologues() {
-    EmitFileComment(&header_file_);
-    EmitHeaderGuard(&header_file_);
-    EmitBlank(&header_file_);
-    EmitIncludeHeader(&header_file_, "<stdalign.h>");
-    EmitIncludeHeader(&header_file_, "<stdbool.h>");
-    EmitIncludeHeader(&header_file_, "<stdint.h>");
-    EmitIncludeHeader(&header_file_, "<zircon/fidl.h>");
-    EmitIncludeHeader(&header_file_, "<zircon/syscalls/object.h>");
-    EmitIncludeHeader(&header_file_, "<zircon/types.h>");
+    EmitFileComment(&file_);
+    EmitHeaderGuard(&file_);
+    EmitBlank(&file_);
+    EmitIncludeHeader(&file_, "<stdalign.h>");
+    EmitIncludeHeader(&file_, "<stdbool.h>");
+    EmitIncludeHeader(&file_, "<stdint.h>");
+    EmitIncludeHeader(&file_, "<zircon/fidl.h>");
+    EmitIncludeHeader(&file_, "<zircon/syscalls/object.h>");
+    EmitIncludeHeader(&file_, "<zircon/types.h>");
     for (const auto& pair : *library_->dependencies_) {
         if (pair.second.get() == library_)
             continue;
-        EmitIncludeHeader(&header_file_, "<" + NameLibraryCHeader(pair.first) + ">");
+        EmitIncludeHeader(&file_, "<" + NameLibraryCHeader(pair.first) + ">");
     }
-    EmitBlank(&header_file_);
-    EmitBeginExternC(&header_file_);
-    EmitBlank(&header_file_);
+    EmitBlank(&file_);
+    EmitBeginExternC(&file_);
+    EmitBlank(&file_);
 }
 
 void CGenerator::GenerateEpilogues() {
-    EmitEndExternC(&header_file_);
+    EmitEndExternC(&file_);
 }
 
 void CGenerator::GenerateIntegerDefine(StringView name, types::PrimitiveSubtype subtype,
                                        StringView value) {
     std::string literal_macro = NamePrimitiveIntegerCConstantMacro(subtype);
-    header_file_ << "#define " << name << " " << literal_macro << "(" << value << ")\n";
+    file_ << "#define " << name << " " << literal_macro << "(" << value << ")\n";
 }
 
 void CGenerator::GenerateIntegerTypedef(types::PrimitiveSubtype subtype, StringView name) {
     std::string underlying_type = NamePrimitiveCType(subtype);
-    header_file_ << "typedef " << underlying_type << " " << name << ";\n";
+    file_ << "typedef " << underlying_type << " " << name << ";\n";
 }
 
 void CGenerator::GenerateStructTypedef(StringView name) {
-    header_file_ << "typedef struct " << name << " " << name << ";\n";
+    file_ << "typedef struct " << name << " " << name << ";\n";
 }
 
 void CGenerator::GenerateStructDeclaration(StringView name, const std::vector<Member>& members) {
-    header_file_ << "struct " << name << " {\n";
-    header_file_ << kIndent << "FIDL_ALIGNDECL\n";
+    file_ << "struct " << name << " {\n";
+    file_ << kIndent << "FIDL_ALIGNDECL\n";
     for (const auto& member : members) {
-        header_file_ << kIndent;
-        EmitMemberDecl(&header_file_, member);
-        header_file_ << ";\n";
+        file_ << kIndent;
+        EmitMemberDecl(&file_, member);
+        file_ << ";\n";
     }
-    header_file_ << "};\n";
+    file_ << "};\n";
 }
 
 void CGenerator::GenerateTaggedUnionDeclaration(StringView name,
                                                 const std::vector<Member>& members) {
-    header_file_ << "struct " << name << " {\n";
-    header_file_ << kIndent << "FIDL_ALIGNDECL\n";
-    header_file_ << kIndent << "fidl_union_tag_t tag;\n";
-    header_file_ << kIndent << "union {\n";
+    file_ << "struct " << name << " {\n";
+    file_ << kIndent << "FIDL_ALIGNDECL\n";
+    file_ << kIndent << "fidl_union_tag_t tag;\n";
+    file_ << kIndent << "union {\n";
     for (const auto& member : members) {
-        header_file_ << kIndent << kIndent;
-        EmitMemberDecl(&header_file_, member);
-        header_file_ << ";\n";
+        file_ << kIndent << kIndent;
+        EmitMemberDecl(&file_, member);
+        file_ << ";\n";
     }
-    header_file_ << kIndent << "};\n";
-    header_file_ << "};\n";
+    file_ << kIndent << "};\n";
+    file_ << "};\n";
 }
 
 // TODO(TO-702) These should maybe check for global name
@@ -358,13 +358,13 @@ void CGenerator::ProduceEnumForwardDeclaration(const NamedEnum& named_enum) {
         GenerateIntegerDefine(member_name, subtype, std::move(member_value));
     }
 
-    EmitBlank(&header_file_);
+    EmitBlank(&file_);
 }
 
 void CGenerator::ProduceInterfaceForwardDeclaration(const NamedInterface& named_interface) {
     for (const auto& method_info : named_interface.methods) {
-        header_file_ << "#define " << method_info.ordinal_name << " ((uint32_t)"
-                     << method_info.ordinal << ")\n";
+        file_ << "#define " << method_info.ordinal_name << " ((uint32_t)"
+              << method_info.ordinal << ")\n";
         if (method_info.request)
             GenerateStructTypedef(method_info.request->c_name);
         if (method_info.response)
@@ -383,10 +383,10 @@ void CGenerator::ProduceUnionForwardDeclaration(const NamedUnion& named_union) {
 void CGenerator::ProduceInterfaceExternDeclaration(const NamedInterface& named_interface) {
     for (const auto& method_info : named_interface.methods) {
         if (method_info.request)
-            header_file_ << "extern const fidl_type_t " << method_info.request->coded_name << ";\n";
+            file_ << "extern const fidl_type_t " << method_info.request->coded_name << ";\n";
         if (method_info.response)
-            header_file_ << "extern const fidl_type_t " << method_info.response->coded_name
-                         << ";\n";
+            file_ << "extern const fidl_type_t " << method_info.response->coded_name
+                  << ";\n";
     }
 }
 
@@ -394,7 +394,7 @@ void CGenerator::ProduceConstDeclaration(const NamedConst& named_const) {
     // TODO(TO-702)
     static_cast<void>(named_const);
 
-    EmitBlank(&header_file_);
+    EmitBlank(&file_);
 }
 
 void CGenerator::ProduceMessageDeclaration(const NamedMessage& named_message) {
@@ -407,7 +407,7 @@ void CGenerator::ProduceMessageDeclaration(const NamedMessage& named_message) {
 
     GenerateStructDeclaration(named_message.c_name, members);
 
-    EmitBlank(&header_file_);
+    EmitBlank(&file_);
 }
 
 void CGenerator::ProduceInterfaceDeclaration(const NamedInterface& named_interface) {
@@ -428,7 +428,7 @@ void CGenerator::ProduceStructDeclaration(const NamedStruct& named_struct) {
 
     GenerateStructDeclaration(named_struct.c_name, members);
 
-    EmitBlank(&header_file_);
+    EmitBlank(&file_);
 }
 
 void CGenerator::ProduceUnionDeclaration(const NamedUnion& named_union) {
@@ -446,32 +446,32 @@ void CGenerator::ProduceUnionDeclaration(const NamedUnion& named_union) {
         ++tag;
     }
 
-    EmitBlank(&header_file_);
+    EmitBlank(&file_);
 }
 
 void CGenerator::ProduceInterfaceClientDeclaration(const NamedInterface& named_interface) {
     for (const auto& method_info : named_interface.methods) {
         if (!method_info.request)
             continue;
-        header_file_ << "zx_status_t " << method_info.c_name
-                     << "(zx_handle_t";
+        file_ << "zx_status_t " << method_info.c_name
+              << "(zx_handle_t";
         for (const auto& parameter : method_info.request->parameters) {
-            header_file_ << ", ";
-            EmitMemberDecl(&header_file_, CreateMember(library_, parameter));
+            file_ << ", ";
+            EmitMemberDecl(&file_, CreateMember(library_, parameter));
         }
         if (method_info.response) {
             for (const auto& parameter : method_info.response->parameters) {
-                header_file_ << ", ";
+                file_ << ", ";
                 auto member = CreateMember<flat::Interface::Method::Parameter, NameFlatCOutType>(library_, parameter);
                 member.name = "out_" + member.name;
-                EmitMemberDecl(&header_file_, member);
+                EmitMemberDecl(&file_, member);
             }
         }
-        header_file_ << ");\n";
+        file_ << ");\n";
     }
 }
 
-std::ostringstream CGenerator::Produce() {
+std::ostringstream CGenerator::ProduceHeader() {
     GeneratePrologues();
 
     std::map<const flat::Decl*, NamedConst> named_consts =
@@ -484,7 +484,7 @@ std::ostringstream CGenerator::Produce() {
     std::map<const flat::Decl*, NamedUnion> named_unions =
         NameUnions(library_->union_declarations_);
 
-    header_file_ << "\n// Forward declarations\n\n";
+    file_ << "\n// Forward declarations\n\n";
 
     for (const auto* decl : library_->declaration_order_) {
         switch (decl->kind) {
@@ -528,7 +528,7 @@ std::ostringstream CGenerator::Produce() {
         }
     }
 
-    header_file_ << "\n// Extern declarations\n\n";
+    file_ << "\n// Extern declarations\n\n";
 
     for (const auto* decl : library_->declaration_order_) {
         switch (decl->kind) {
@@ -550,7 +550,7 @@ std::ostringstream CGenerator::Produce() {
         }
     }
 
-    header_file_ << "\n// Declarations\n\n";
+    file_ << "\n// Declarations\n\n";
 
     for (const auto* decl : library_->declaration_order_) {
         switch (decl->kind) {
@@ -591,7 +591,7 @@ std::ostringstream CGenerator::Produce() {
         }
     }
 
-    header_file_ << "\n// Simple clients \n\n";
+    file_ << "\n// Simple clients \n\n";
 
     for (const auto* decl : library_->declaration_order_) {
         switch (decl->kind) {
@@ -615,11 +615,19 @@ std::ostringstream CGenerator::Produce() {
         }
     }
 
-    header_file_ << "\n";
+    file_ << "\n";
 
     GenerateEpilogues();
 
-    return std::move(header_file_);
+    return std::move(file_);
+}
+
+std::ostringstream CGenerator::ProduceClient() {
+    return std::move(file_);
+}
+
+std::ostringstream CGenerator::ProduceServer() {
+    return std::move(file_);
 }
 
 } // namespace fidl
