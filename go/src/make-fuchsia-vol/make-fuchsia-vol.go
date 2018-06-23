@@ -545,9 +545,11 @@ func main() {
 
 	msCopyIn(root, tf.Name(), "EFI/Google/GSetup/Boot")
 	msCopyIn(root, *bootloader, "EFI/BOOT/bootx64.efi")
-	msCopyIn(root, *kernel, "zircon.bin")
-	msCopyIn(root, *ramdisk, "bootdata.bin")
-	msCopyIn(root, *zedboot, "zedboot.bin")
+	if !*abr {
+		msCopyIn(root, *kernel, "zircon.bin")
+		msCopyIn(root, *ramdisk, "bootdata.bin")
+		msCopyIn(root, *zedboot, "zedboot.bin")
+	}
 	if _, err := os.Stat(*cmdline); err == nil {
 		msCopyIn(root, *cmdline, "cmdline")
 	}
