@@ -60,7 +60,17 @@
 
 // NOTE(joshlf):
 // - Since you must assume that the other process might be writing to the
-//   memory, there's no point in having exclusive access. Thus, we implement
+//   memory, there's no technical requirement to have exclusive access. E.g., we
+//   could safely implement Clone, have write and write_at take immutable
+//   references, etc. (see here for a discussion of the soundness of using
+//   copy_nonoverlapping simultaneously in multiple threads:
+//   https://users.rust-lang.org/t/copy-nonoverlapping-concurrently/18353).
+//   However, this would be confusing because it would depart from the Rust
+//   idiom. Instead, we provide SharedBuffer, which has ownership semantics
+//   analogous to Vec, and SharedBufferSlice and SharedBufferSliceMut, which
+//   have reference semantics analogous to immutable and mutable slice
+//   references. Similarly, write, write_at, and release_writes take mutable
+//   references.
 //   Clone and provide slicing methods. There's no point not to.
 // - Since all access to these buffers must go through the methods of
 //   SharedBuffer, correct code may not construct a reference to this memory.
@@ -94,81 +104,21 @@
 #![no_std]
 
 use core::marker::PhantomData;
+use core::ops::{Bound, Range, RangeBounds};
 use core::ptr;
 use core::sync::atomic::{fence, Ordering};
 
-/// A shared region of memory.
-///
-/// A `SharedBuffer` is a view into a region of memory to which another process
-/// has access. It provides methods to access this memory in a way that
-/// preserves memory safety.
-///
-/// Since the buffer is shared by an untrusted process, it is never valid to
-/// assume that a given region of the buffer will not change in between method
-/// calls. Even if no thread in this process wrote anything to the buffer, the
-/// other process might have.
-#[derive(Clone)]
-pub struct SharedBuffer<'a> {
+// A buffer with no ownership or reference semantics. It is the caller's
+// responsibility to wrap this type in a type which provides ownership or
+// reference semantics, and to only call methods when apporpriate.
+struct SharedBufferInner {
     // invariant: '(buf as usize) + len' doesn't overflow usize
     buf: *mut u8,
     len: usize,
-    _marker: PhantomData<&'a ()>,
 }
 
-impl<'a> SharedBuffer<'a> {
-    /// Create a new `SharedBuffer` from a raw buffer.
-    ///
-    /// `new` creates a new `SharedBuffer` from the provided buffer and lenth.
-    /// `SharedBuffer`s have a lifetime parameter which may be used to ensure
-    /// that a `SharedBuffer` does not live beyond the point at which memory is
-    /// either unmapped or semantically returned to another process.
-    ///
-    /// # Safety
-    ///
-    /// Memory in a shared buffer must never be accessed except through the
-    /// methods of `SharedBuffer`. It must not be treated as normal memory, and
-    /// pointers to it must not be passed to unsafe code which is designed to
-    /// operate on normal memory. It must be guaranteed that, for the lifetime
-    /// of the `SharedBuffer`, the memory region is mapped, readable, and
-    /// writable.
-    ///
-    /// If any of these guarantees are violated, it may cause undefined
-    /// behavior.
-    pub unsafe fn new(buf: *mut u8, len: usize) -> SharedBuffer<'a> {
-        // Write the pointer and the length using a volatile write so that LLVM
-        // must assume that the memory has escaped, and that all future writes
-        // to it are observable. See the NOTE above for more details.
-        let mut scratch = (ptr::null_mut(), 0);
-        ptr::write_volatile(&mut scratch, (buf, len));
-        SharedBuffer {
-            buf,
-            len,
-            _marker: PhantomData,
-        }
-    }
-
-    /// Read bytes from the buffer.
-    ///
-    /// Read up to `dst.len()` bytes from the buffer, returning how many bytes
-    /// were read. The only thing that can cause fewer bytes to be read than
-    /// requested is if `dst` is larger than the buffer itself.
-    #[inline]
-    pub fn read(&self, dst: &mut [u8]) -> usize {
-        self.read_at(0, dst)
-    }
-
-    /// Read bytes from the buffer at an offset.
-    ///
-    /// Read up to `dst.len()` bytes starting at `offset` into the buffer,
-    /// returning how many bytes were read. The only thing that can cause fewer
-    /// bytes to be read than requested is if there are fewer than `dst.len()`
-    /// bytes available starting at `offset` within the buffer.
-    ///
-    /// # Panics
-    ///
-    /// `read_at` panics if `offset` is greater than the length of the buffer.
-    #[inline]
-    pub fn read_at(&self, offset: usize, dst: &mut [u8]) -> usize {
+impl SharedBufferInner {
+    fn read_at(&self, offset: usize, dst: &mut [u8]) -> usize {
         if let Some(to_copy) = overlap(offset, dst.len(), self.len) {
             // Since overlap returned Some, we're guaranteed that 'offset +
             // to_copy <= self.len'. That in turn means that, so long as the
@@ -186,48 +136,7 @@ impl<'a> SharedBuffer<'a> {
         }
     }
 
-    /// Write bytes to the buffer.
-    ///
-    /// Write up to `src.len()` bytes into the buffer, returning how many bytes
-    /// were written. The only thing that can cause fewer bytes to be written
-    /// than requested is if `src` is larger than the buffer itself.
-    ///
-    /// A call to `write` is only guaranteed to happen before an operation in
-    /// another thread or process if the mechanism used to signal the other
-    /// process has well-defined memory ordering semantics. Otherwise, the
-    /// `release_writes` method must be called after `write` and before
-    /// signalling the other process in order to provide such ordering
-    /// guarantees. In practice, this means that `release_writes` should be the
-    /// last write operation that happens before signalling another process that
-    /// the memory may be read. See the `release_writes` documentation for more
-    /// details.
-    #[inline]
-    pub fn write(&self, src: &[u8]) -> usize {
-        self.write_at(0, src)
-    }
-
-    /// Write bytes to the buffer at an offset.
-    ///
-    /// Write up to `src.len()` bytes starting at `offset` into the buffer,
-    /// returning how many bytes were written. The only thing that can cause
-    /// fewer bytes to be written than requested is if there are fewer than
-    /// `src.len()` bytes available starting at `offset` within the buffer.
-    ///
-    /// A call to `write_at` is only guaranteed to happen before an operation in
-    /// another thread or process if the mechanism used to signal the other
-    /// process has well-defined memory ordering semantics. Otherwise, the
-    /// `release_writes` method must be called after `write_at` and before
-    /// signalling the other process in order to provide such ordering
-    /// guarantees. In practice, this means that `release_writes` should be the
-    /// last write operation that happens before signalling another process that
-    /// the memory may be read. See the `release_writes` documentation for more
-    /// details.
-    ///
-    /// # Panics
-    ///
-    /// `write_at` panics if `offset` is greater than the length of the buffer.
-    #[inline]
-    pub fn write_at(&self, offset: usize, src: &[u8]) -> usize {
+    fn write_at(&mut self, offset: usize, src: &[u8]) -> usize {
         if let Some(to_copy) = overlap(offset, src.len(), self.len) {
             // Since overlap returned Some, we're guaranteed that 'offset +
             // to_copy <= self.len'. That in turn means that, so long as the
@@ -245,64 +154,12 @@ impl<'a> SharedBuffer<'a> {
         }
     }
 
-    /// Atomically release all writes performed so far.
-    ///
-    /// On some systems (such as Fuchsia, currently), the communication
-    /// mechanism used for signalling the other process that memory is readable
-    /// does not have well-defined synchronization semantics. On those systems,
-    /// this method MUST be called before such signalling, or else writes
-    /// performed before that signal are not guaranteed to be observed by the
-    /// other process.
-    ///
-    /// # Note on Fuchsia
-    ///
-    /// Zircon, the Fuchsia kernel, will likely eventually have well-defined
-    /// semantics around the synchronization behavior of various syscalls. Once
-    /// that happens, calling this method in Fuchsia programs may become
-    /// optional. This work is tracked in [ZX-2239].
-    ///
-    /// [ZX-2239]: #
-    // // TODO(joshlf): Replace with link once issues are public.
-    pub fn release_writes(&self) {
-        fence(Ordering::Release);
-    }
-
-    /// Create a slice of the original `SharedBuffer`.
-    ///
-    /// Just like the slicing operation on array and slice references, `slice`
-    /// constructs a new `SharedBuffer` which points to the same memory as the
-    /// original, but starting and index `from` (inclusive) and ending at index
-    /// `to` (exclusive).
-    ///
-    /// # Panics
-    ///
-    /// `slice` panics if `to` is larger than the size of the `SharedBuffer` or
-    /// if `from > to`.
-    #[inline]
-    pub fn slice(&self, from: usize, to: usize) -> SharedBuffer<'a> {
-        if to > self.len {
-            panic!(
-                "byte index {} out of range for SharedBuffer of length {}",
-                to, self.len
-            );
+    fn slice<'a, R: RangeBounds<usize>>(&self, range: R) -> SharedBufferInner {
+        let range = canonicalize_range_infallible(self.len, range);
+        SharedBufferInner {
+            buf: offset_from(self.buf, range.start),
+            len: range.end - range.start,
         }
-        if from > to {
-            panic!("slice starts at byte {} but ends at byte {}", from, to);
-        }
-
-        let len = to - from;
-        let buf = offset_from(self.buf, from);
-        SharedBuffer {
-            buf,
-            len,
-            _marker: PhantomData,
-        }
-    }
-
-    /// The number of bytes in this `SharedBuffer`.
-    #[inline]
-    pub fn len(&self) -> usize {
-        self.len
     }
 }
 
@@ -341,6 +198,613 @@ fn offset_from(ptr: *mut u8, offset: usize) -> *mut u8 {
     (ptr as usize).checked_add(offset).unwrap() as *mut u8
 }
 
+// Return the inclusive equivalent of the bound.
+fn canonicalize_lower_bound(bound: Bound<&usize>) -> usize {
+    match bound {
+        Bound::Included(x) => *x,
+        Bound::Excluded(x) => *x + 1,
+        Bound::Unbounded => 0,
+    }
+}
+// Return the exclusive equivalent of the bound, verifying that it is in range
+// of len.
+fn canonicalize_upper_bound(len: usize, bound: Bound<&usize>) -> Option<usize> {
+    let bound = match bound {
+        Bound::Included(x) => *x + 1,
+        Bound::Excluded(x) => *x,
+        Bound::Unbounded => len,
+    };
+    if bound > len {
+        return None;
+    }
+    Some(bound)
+}
+// Return the inclusive-exclusive equivalent of the bound, verifying that it is
+// in range of len, and panicking if it is not or if the range is nonsensical.
+fn canonicalize_range_infallible<R: RangeBounds<usize>>(len: usize, range: R) -> Range<usize> {
+    let lower = canonicalize_lower_bound(range.start_bound());
+    let upper = canonicalize_upper_bound(len, range.end_bound()).expect("range out of bounds");
+    assert!(lower <= upper, "invalid range");
+    lower..upper
+}
+
+/// A shared region of memory.
+///
+/// A `SharedBuffer` is a view into a region of memory to which another process
+/// has access. It provides methods to access this memory in a way that
+/// preserves memory safety. From the perspective of the current process, it
+/// owns its memory (analogous to a `Vec`).
+///
+/// Since the buffer is shared by an untrusted process, it is never valid to
+/// assume that a given region of the buffer will not change in between method
+/// calls. Even if no thread in this process wrote anything to the buffer, the
+/// other process might have.
+///
+/// # Unmapping
+///
+/// `SharedBuffer`s do nothing when dropped. In order to avoid leaking memory,
+/// use the `consume` method to consume the `SharedBuffer` and get back the
+/// underlying pointer and length, and unmap the memory manually.
+pub struct SharedBuffer {
+    inner: SharedBufferInner,
+}
+
+impl SharedBuffer {
+    /// Create a new `SharedBuffer` from a raw buffer.
+    ///
+    /// `new` creates a new `SharedBuffer` from the provided buffer and lenth,
+    /// taking ownership of the memory.
+    ///
+    /// # Safety
+    ///
+    /// Memory in a shared buffer must never be accessed except through the
+    /// methods of `SharedBuffer`. It must not be treated as normal memory, and
+    /// pointers to it must not be passed to unsafe code which is designed to
+    /// operate on normal memory. It must be guaranteed that, for the lifetime
+    /// of the `SharedBuffer`, the memory region is mapped, readable, and
+    /// writable.
+    ///
+    /// If any of these guarantees are violated, it may cause undefined
+    /// behavior.
+    #[inline]
+    pub unsafe fn new(buf: *mut u8, len: usize) -> SharedBuffer {
+        // Write the pointer and the length using a volatile write so that LLVM
+        // must assume that the memory has escaped, and that all future writes
+        // to it are observable. See the NOTE above for more details.
+        let mut scratch = (ptr::null_mut(), 0);
+        ptr::write_volatile(&mut scratch, (buf, len));
+        SharedBuffer {
+            inner: SharedBufferInner { buf, len },
+        }
+    }
+
+    /// Read bytes from the buffer.
+    ///
+    /// Read up to `dst.len()` bytes from the buffer, returning how many bytes
+    /// were read. The only thing that can cause fewer bytes to be read than
+    /// requested is if `dst` is larger than the buffer itself.
+    ///
+    /// A call to `read` is only guaranteed to happen after an operation in
+    /// another thread or process if the mechanism used to signal the other
+    /// process has well-defined memory ordering semantics. Otherwise, the
+    /// `acquire_writes` method must be called before `read` and after receiving
+    /// a signal from the other process in order to provide such ordering
+    /// guarantees. In practice, this means that `acquire_writes` should be the
+    /// first read operation that happens after receiving a signal from another
+    /// process that the memory may be read. See the `acquire_writes`
+    /// documentation for more details.
+    #[inline]
+    pub fn read(&self, dst: &mut [u8]) -> usize {
+        self.inner.read_at(0, dst)
+    }
+
+    /// Read bytes from the buffer at an offset.
+    ///
+    /// Read up to `dst.len()` bytes starting at `offset` into the buffer,
+    /// returning how many bytes were read. The only thing that can cause fewer
+    /// bytes to be read than requested is if there are fewer than `dst.len()`
+    /// bytes available starting at `offset` within the buffer.
+    ///
+    /// A call to `read_at` is only guaranteed to happen after an operation in
+    /// another thread or process if the mechanism used to signal the other
+    /// process has well-defined memory ordering semantics. Otherwise, the
+    /// `acquire_writes` method must be called before `read_at` and after
+    /// receiving a signal from the other process in order to provide such
+    /// ordering guarantees. In practice, this means that `acquire_writes`
+    /// should be the first read operation that happens after receiving a signal
+    /// from another process that the memory may be read. See the
+    /// `acquire_writes` documentation for more details.
+    ///
+    /// # Panics
+    ///
+    /// `read_at` panics if `offset` is greater than the length of the buffer.
+    #[inline]
+    pub fn read_at(&self, offset: usize, dst: &mut [u8]) -> usize {
+        self.inner.read_at(offset, dst)
+    }
+
+    /// Write bytes to the buffer.
+    ///
+    /// Write up to `src.len()` bytes into the buffer, returning how many bytes
+    /// were written. The only thing that can cause fewer bytes to be written
+    /// than requested is if `src` is larger than the buffer itself.
+    ///
+    /// A call to `write` is only guaranteed to happen before an operation in
+    /// another thread or process if the mechanism used to signal the other
+    /// process has well-defined memory ordering semantics. Otherwise, the
+    /// `release_writes` method must be called after `write` and before
+    /// signalling the other process in order to provide such ordering
+    /// guarantees. In practice, this means that `release_writes` should be the
+    /// last write operation that happens before signalling another process that
+    /// the memory may be read. See the `release_writes` documentation for more
+    /// details.
+    #[inline]
+    pub fn write(&mut self, src: &[u8]) -> usize {
+        self.inner.write_at(0, src)
+    }
+
+    /// Write bytes to the buffer at an offset.
+    ///
+    /// Write up to `src.len()` bytes starting at `offset` into the buffer,
+    /// returning how many bytes were written. The only thing that can cause
+    /// fewer bytes to be written than requested is if there are fewer than
+    /// `src.len()` bytes available starting at `offset` within the buffer.
+    ///
+    /// A call to `write_at` is only guaranteed to happen before an operation in
+    /// another thread or process if the mechanism used to signal the other
+    /// process has well-defined memory ordering semantics. Otherwise, the
+    /// `release_writes` method must be called after `write_at` and before
+    /// signalling the other process in order to provide such ordering
+    /// guarantees. In practice, this means that `release_writes` should be the
+    /// last write operation that happens before signalling another process that
+    /// the memory may be read. See the `release_writes` documentation for more
+    /// details.
+    ///
+    /// # Panics
+    ///
+    /// `write_at` panics if `offset` is greater than the length of the buffer.
+    #[inline]
+    pub fn write_at(&mut self, offset: usize, src: &[u8]) -> usize {
+        self.inner.write_at(offset, src)
+    }
+
+    /// Acquire all writes performed by the other process.
+    ///
+    /// On some systems (such as Fuchsia, currently), the communication
+    /// mechanism used for signalling a process that memory is readable does not
+    /// have well-defined synchronization semantics. On those systems, this
+    /// method MUST be called after receiving such a signal, or else writes
+    /// performed before that signal are not guaranteed to be observed by this
+    /// process.
+    ///
+    /// `acquire_writes` acquires any writes performed on this buffer or any
+    /// slice within the buffer.
+    ///
+    /// # Note on Fuchsia
+    ///
+    /// Zircon, the Fuchsia kernel, will likely eventually have well-defined
+    /// semantics around the synchronization behavior of various syscalls. Once
+    /// that happens, calling this method in Fuchsia programs may become
+    /// optional. This work is tracked in [ZX-2239].
+    ///
+    /// [ZX-2239]: #
+    // TODO(joshlf): Replace with link once issues are public.
+    #[inline]
+    pub fn acquire_writes(&self) {
+        fence(Ordering::Acquire);
+    }
+
+    /// Release all writes performed so far.
+    ///
+    /// On some systems (such as Fuchsia, currently), the communication
+    /// mechanism used for signalling the other process that memory is readable
+    /// does not have well-defined synchronization semantics. On those systems,
+    /// this method MUST be called before such signalling, or else writes
+    /// performed before that signal are not guaranteed to be observed by the
+    /// other process.
+    ///
+    /// `release_writes` releases any writes performed on this buffer or any
+    /// slice within the buffer.
+    ///
+    /// # Note on Fuchsia
+    ///
+    /// Zircon, the Fuchsia kernel, will likely eventually have well-defined
+    /// semantics around the synchronization behavior of various syscalls. Once
+    /// that happens, calling this method in Fuchsia programs may become
+    /// optional. This work is tracked in [ZX-2239].
+    ///
+    /// [ZX-2239]: #
+    // TODO(joshlf): Replace with link once issues are public.
+    #[inline]
+    pub fn release_writes(&mut self) {
+        fence(Ordering::Release);
+    }
+
+    /// The number of bytes in this `SharedBuffer`.
+    #[inline]
+    pub fn len(&self) -> usize {
+        self.inner.len
+    }
+
+    /// Create a slice of the original `SharedBuffer`.
+    ///
+    /// Just like the slicing operation on array and slice references, `slice`
+    /// constructs a `SharedBufferSlice` which points to the same memory as the
+    /// original `SharedBuffer`, but starting and index `from` (inclusive) and
+    /// ending at index `to` (exclusive).
+    ///
+    /// # Panics
+    ///
+    /// `slice` panics if `to` is larger than the size of the `SharedBuffer` or
+    /// if `from > to`.
+    #[inline]
+    pub fn slice<'a, R: RangeBounds<usize>>(&'a self, range: R) -> SharedBufferSlice<'a> {
+        SharedBufferSlice {
+            inner: self.inner.slice(range),
+            _marker: PhantomData,
+        }
+    }
+
+    /// Create a mutable slice of the original `SharedBuffer`.
+    ///
+    /// Just like the mutable slicing operation on array and slice references,
+    /// `slice_mut` constructs a `SharedBufferSliceMut` which points to the same
+    /// memory as the original `SharedBuffer`, but starting and index `from`
+    /// (inclusive) and ending at index `to` (exclusive).
+    ///
+    /// # Panics
+    ///
+    /// `slice_mut` panics if `to` is larger than the size of the `SharedBuffer`
+    /// or if `from > to`.
+    #[inline]
+    pub fn slice_mut<'a, R: RangeBounds<usize>>(
+        &'a mut self, range: R,
+    ) -> SharedBufferSliceMut<'a> {
+        SharedBufferSliceMut {
+            inner: self.inner.slice(range),
+            _marker: PhantomData,
+        }
+    }
+
+    /// Get the buffer pointer and length so that the memory can be freed.
+    /// 
+    /// This method is an alternative to calling `consume` if relinquishing
+    /// ownership of the object is infeasible (for example, when the object is a
+    /// struct field and thus can't be moved out of the struct). Since it allows
+    /// the object to continue existing, it must be used with care (see the
+    /// "Safety" section below).
+    /// 
+    /// # Safety
+    /// 
+    /// The returned pointer must *only* be used to free the memory. Since the
+    /// memory is shared by another process, using it as a normal raw pointer to
+    /// normal memory owned by this process is unsound.
+    /// 
+    /// If the pointer is used for this purpose, then the caller must ensure
+    /// that no methods will be called on the object after the call to
+    /// `as_ptr_len`. The only scenario in which the object may be used again is
+    /// if the caller does nothing at all with the return value of this method
+    /// (although that would be kind of pointless...).
+    pub fn as_ptr_len(&mut self) -> (*mut u8, usize) {
+        (self.inner.buf, self.inner.len)
+    }
+
+    /// Consume the `SharedBuffer`, returning the underlying buffer pointer and
+    /// length.
+    ///
+    /// Since `SharedBuffer`s do nothing on drop, the only way to ensure that
+    /// resources are not leaked is to `consume` a `SharedBuffer` and then unmap
+    /// the memory manually.
+    #[inline]
+    pub fn consume(self) -> (*mut u8, usize) {
+        (self.inner.buf, self.inner.len)
+    }
+}
+
+/// An immutable slice into a `SharedBuffer`.
+///
+/// A `SharedBufferSlice` is created with `SharedBuffer::slice`,
+/// `SharedBufferSlice::slice`, or `SharedBufferSliceMut::slice`.
+pub struct SharedBufferSlice<'a> {
+    inner: SharedBufferInner,
+    _marker: PhantomData<&'a ()>,
+}
+
+impl<'a> SharedBufferSlice<'a> {
+    /// Read bytes from the buffer.
+    ///
+    /// Read up to `dst.len()` bytes from the buffer, returning how many bytes
+    /// were read. The only thing that can cause fewer bytes to be read than
+    /// requested is if `dst` is larger than the buffer itself.
+    ///
+    /// A call to `read` is only guaranteed to happen after an operation in
+    /// another thread or process if the mechanism used to signal the other
+    /// process has well-defined memory ordering semantics. Otherwise, the
+    /// `acquire_writes` method must be called before `read` and after receiving
+    /// a signal from the other process in order to provide such ordering
+    /// guarantees. In practice, this means that `acquire_writes` should be the
+    /// first read operation that happens after receiving a signal from another
+    /// process that the memory may be read. See the `acquire_writes`
+    /// documentation for more details.
+    #[inline]
+    pub fn read(&self, dst: &mut [u8]) -> usize {
+        self.inner.read_at(0, dst)
+    }
+
+    /// Read bytes from the buffer at an offset.
+    ///
+    /// Read up to `dst.len()` bytes starting at `offset` into the buffer,
+    /// returning how many bytes were read. The only thing that can cause fewer
+    /// bytes to be read than requested is if there are fewer than `dst.len()`
+    /// bytes available starting at `offset` within the buffer.
+    ///
+    /// A call to `read_at` is only guaranteed to happen after an operation in
+    /// another thread or process if the mechanism used to signal the other
+    /// process has well-defined memory ordering semantics. Otherwise, the
+    /// `acquire_writes` method must be called before `read_at` and after
+    /// receiving a signal from the other process in order to provide such
+    /// ordering guarantees. In practice, this means that `acquire_writes`
+    /// should be the first read operation that happens after receiving a signal
+    /// from another process that the memory may be read. See the
+    /// `acquire_writes` documentation for more details.
+    ///
+    /// # Panics
+    ///
+    /// `read_at` panics if `offset` is greater than the length of the buffer.
+    #[inline]
+    pub fn read_at(&self, offset: usize, dst: &mut [u8]) -> usize {
+        self.inner.read_at(offset, dst)
+    }
+
+    /// Acquire all writes performed by the other process.
+    ///
+    /// On some systems (such as Fuchsia, currently), the communication
+    /// mechanism used for signalling a process that memory is readable does not
+    /// have well-defined synchronization semantics. On those systems, this
+    /// method MUST be called after receiving such a signal, or else writes
+    /// performed before that signal are not guaranteed to be observed by this
+    /// process.
+    ///
+    /// `acquire_writes` acquires any writes performed on this buffer or any
+    /// slice within the buffer.
+    ///
+    /// # Note on Fuchsia
+    ///
+    /// Zircon, the Fuchsia kernel, will likely eventually have well-defined
+    /// semantics around the synchronization behavior of various syscalls. Once
+    /// that happens, calling this method in Fuchsia programs may become
+    /// optional. This work is tracked in [ZX-2239].
+    ///
+    /// [ZX-2239]: #
+    // TODO(joshlf): Replace with link once issues are public.
+    #[inline]
+    pub fn acquire_writes(&self) {
+        fence(Ordering::Acquire);
+    }
+
+    /// Create a slice of the original `SharedBuffer`.
+    ///
+    /// Just like the slicing operation on array and slice references, `slice`
+    /// constructs a new `SharedBuffer` which points to the same memory as the
+    /// original, but starting and index `from` (inclusive) and ending at index
+    /// `to` (exclusive).
+    ///
+    /// # Panics
+    ///
+    /// `slice` panics if `to` is larger than the size of the `SharedBuffer` or
+    /// if `from > to`.
+    #[inline]
+    pub fn slice<R: RangeBounds<usize>>(&'a self, range: R) -> SharedBufferSlice<'a> {
+        SharedBufferSlice {
+            inner: self.inner.slice(range),
+            _marker: PhantomData,
+        }
+    }
+
+    /// The number of bytes in this `SharedBufferSlice`.
+    #[inline]
+    pub fn len(&self) -> usize {
+        self.inner.len
+    }
+}
+
+/// A mutable slice into a `SharedBuffer`.
+///
+/// A `SharedBufferSliceMut` is created with `SharedBuffer::slice_mut` or
+/// `SharedBufferSliceMut::slice_mut`.
+pub struct SharedBufferSliceMut<'a> {
+    inner: SharedBufferInner,
+    _marker: PhantomData<&'a ()>,
+}
+
+impl<'a> SharedBufferSliceMut<'a> {
+    /// Read bytes from the buffer.
+    ///
+    /// Read up to `dst.len()` bytes from the buffer, returning how many bytes
+    /// were read. The only thing that can cause fewer bytes to be read than
+    /// requested is if `dst` is larger than the buffer itself.
+    ///
+    /// A call to `read` is only guaranteed to happen after an operation in
+    /// another thread or process if the mechanism used to signal the other
+    /// process has well-defined memory ordering semantics. Otherwise, the
+    /// `acquire_writes` method must be called before `read` and after receiving
+    /// a signal from the other process in order to provide such ordering
+    /// guarantees. In practice, this means that `acquire_writes` should be the
+    /// first read operation that happens after receiving a signal from another
+    /// process that the memory may be read. See the `acquire_writes`
+    /// documentation for more details.
+    #[inline]
+    pub fn read(&self, dst: &mut [u8]) -> usize {
+        self.inner.read_at(0, dst)
+    }
+
+    /// Read bytes from the buffer at an offset.
+    ///
+    /// Read up to `dst.len()` bytes starting at `offset` into the buffer,
+    /// returning how many bytes were read. The only thing that can cause fewer
+    /// bytes to be read than requested is if there are fewer than `dst.len()`
+    /// bytes available starting at `offset` within the buffer.
+    ///
+    /// A call to `read_at` is only guaranteed to happen after an operation in
+    /// another thread or process if the mechanism used to signal the other
+    /// process has well-defined memory ordering semantics. Otherwise, the
+    /// `acquire_writes` method must be called before `read_at` and after
+    /// receiving a signal from the other process in order to provide such
+    /// ordering guarantees. In practice, this means that `acquire_writes`
+    /// should be the first read operation that happens after receiving a signal
+    /// from another process that the memory may be read. See the
+    /// `acquire_writes` documentation for more details.
+    ///
+    /// # Panics
+    ///
+    /// `read_at` panics if `offset` is greater than the length of the buffer.
+    #[inline]
+    pub fn read_at(&self, offset: usize, dst: &mut [u8]) -> usize {
+        self.inner.read_at(offset, dst)
+    }
+
+    /// Write bytes to the buffer.
+    ///
+    /// Write up to `src.len()` bytes into the buffer, returning how many bytes
+    /// were written. The only thing that can cause fewer bytes to be written
+    /// than requested is if `src` is larger than the buffer itself.
+    ///
+    /// A call to `write` is only guaranteed to happen before an operation in
+    /// another thread or process if the mechanism used to signal the other
+    /// process has well-defined memory ordering semantics. Otherwise, the
+    /// `release_writes` method must be called after `write` and before
+    /// signalling the other process in order to provide such ordering
+    /// guarantees. In practice, this means that `release_writes` should be the
+    /// last write operation that happens before signalling another process that
+    /// the memory may be read. See the `release_writes` documentation for more
+    /// details.
+    #[inline]
+    pub fn write(&mut self, src: &[u8]) -> usize {
+        self.inner.write_at(0, src)
+    }
+
+    /// Write bytes to the buffer at an offset.
+    ///
+    /// Write up to `src.len()` bytes starting at `offset` into the buffer,
+    /// returning how many bytes were written. The only thing that can cause
+    /// fewer bytes to be written than requested is if there are fewer than
+    /// `src.len()` bytes available starting at `offset` within the buffer.
+    ///
+    /// A call to `write_at` is only guaranteed to happen before an operation in
+    /// another thread or process if the mechanism used to signal the other
+    /// process has well-defined memory ordering semantics. Otherwise, the
+    /// `release_writes` method must be called after `write_at` and before
+    /// signalling the other process in order to provide such ordering
+    /// guarantees. In practice, this means that `release_writes` should be the
+    /// last write operation that happens before signalling another process that
+    /// the memory may be read. See the `release_writes` documentation for more
+    /// details.
+    ///
+    /// # Panics
+    ///
+    /// `write_at` panics if `offset` is greater than the length of the buffer.
+    #[inline]
+    pub fn write_at(&mut self, offset: usize, src: &[u8]) -> usize {
+        self.inner.write_at(offset, src)
+    }
+
+    /// Acquire all writes performed by the other process.
+    ///
+    /// On some systems (such as Fuchsia, currently), the communication
+    /// mechanism used for signalling a process that memory is readable does not
+    /// have well-defined synchronization semantics. On those systems, this
+    /// method MUST be called after receiving such a signal, or else writes
+    /// performed before that signal are not guaranteed to be observed by this
+    /// process.
+    ///
+    /// `acquire_writes` acquires any writes performed on this buffer or any
+    /// slice within the buffer.
+    ///
+    /// # Note on Fuchsia
+    ///
+    /// Zircon, the Fuchsia kernel, will likely eventually have well-defined
+    /// semantics around the synchronization behavior of various syscalls. Once
+    /// that happens, calling this method in Fuchsia programs may become
+    /// optional. This work is tracked in [ZX-2239].
+    ///
+    /// [ZX-2239]: #
+    // TODO(joshlf): Replace with link once issues are public.
+    #[inline]
+    pub fn acquire_writes(&self) {
+        fence(Ordering::Acquire);
+    }
+
+    /// Atomically release all writes performed so far.
+    ///
+    /// On some systems (such as Fuchsia, currently), the communication
+    /// mechanism used for signalling the other process that memory is readable
+    /// does not have well-defined synchronization semantics. On those systems,
+    /// this method MUST be called before such signalling, or else writes
+    /// performed before that signal are not guaranteed to be observed by the
+    /// other process.
+    ///
+    /// `release_writes` releases any writes performed on this slice or any
+    /// sub-slice of this slice.
+    ///
+    /// # Note on Fuchsia
+    ///
+    /// Zircon, the Fuchsia kernel, will likely eventually have well-defined
+    /// semantics around the synchronization behavior of various syscalls. Once
+    /// that happens, calling this method in Fuchsia programs may become
+    /// optional. This work is tracked in [ZX-2239].
+    ///
+    /// [ZX-2239]: #
+    // TODO(joshlf): Replace with link once issues are public.
+    #[inline]
+    pub fn release_writes(&mut self) {
+        fence(Ordering::Release);
+    }
+
+    /// Create a slice of the original `SharedBufferSliceMut`.
+    ///
+    /// Just like the slicing operation on array and slice references, `slice`
+    /// constructs a new `SharedBufferSlice` which points to the same memory as
+    /// the original, but starting and index `from` (inclusive) and ending at
+    /// index `to` (exclusive).
+    ///
+    /// # Panics
+    ///
+    /// `slice` panics if `to` is larger than the size of the
+    /// `SharedBufferSliceMut` or if `from > to`.
+    #[inline]
+    pub fn slice<R: RangeBounds<usize>>(&'a self, range: R) -> SharedBufferSlice<'a> {
+        SharedBufferSlice {
+            inner: self.inner.slice(range),
+            _marker: PhantomData,
+        }
+    }
+
+    /// Create a mutable slice of the original `SharedBufferSliceMut`.
+    ///
+    /// Just like the mutable slicing operation on array and slice references,
+    /// `slice_mut` constructs a new `SharedBufferSliceMut` which points to the
+    /// same memory as the original, but starting and index `from` (inclusive)
+    /// and ending at index `to` (exclusive).
+    ///
+    /// # Panics
+    ///
+    /// `slice_mut` panics if `to` is larger than the size of the
+    /// `SharedBufferSliceMut` or if `from > to`.
+    #[inline]
+    pub fn slice_mut<R: RangeBounds<usize>>(&'a mut self, range: R) -> SharedBufferSliceMut<'a> {
+        SharedBufferSliceMut {
+            inner: self.inner.slice(range),
+            _marker: PhantomData,
+        }
+    }
+
+    /// The number of bytes in this `SharedBufferSlice`.
+    #[inline]
+    pub fn len(&self) -> usize {
+        self.inner.len
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use core::mem;
@@ -349,7 +813,7 @@ mod tests {
     use {overlap, SharedBuffer};
 
     // use the referent as the backing memory for a SharedBuffer
-    unsafe fn buf_from_ref<'a, T>(x: &'a mut T) -> SharedBuffer<'a> {
+    unsafe fn buf_from_ref<T>(x: &mut T) -> SharedBuffer {
         let size = mem::size_of::<T>();
         SharedBuffer::new(x as *mut _ as *mut u8, size)
     }
@@ -359,7 +823,7 @@ mod tests {
         // initialize some memory and turn it into a SharedBuffer
         const ONE: [u8; 8] = [0, 1, 2, 3, 4, 5, 6, 7];
         let mut buf_memory = ONE;
-        let buf = unsafe { buf_from_ref(&mut buf_memory) };
+        let mut buf = unsafe { buf_from_ref(&mut buf_memory) };
 
         // we read the same initial contents back
         let mut bytes = [0u8; 8];
@@ -384,13 +848,15 @@ mod tests {
     fn test_slice() {
         // various slices give us the lengths we expect
         let buf = unsafe { SharedBuffer::new(ptr::null_mut(), 10) };
-        let tmp = buf.slice(0, 10);
+        let tmp = buf.slice(..);
         assert_eq!(tmp.len(), 10);
-        let tmp = buf.slice(5, 10);
+        let tmp = buf.slice(..10);
+        assert_eq!(tmp.len(), 10);
+        let tmp = buf.slice(5..10);
         assert_eq!(tmp.len(), 5);
-        let tmp = buf.slice(0, 0);
+        let tmp = buf.slice(0..0);
         assert_eq!(tmp.len(), 0);
-        let tmp = buf.slice(10, 10);
+        let tmp = buf.slice(10..10);
         assert_eq!(tmp.len(), 0);
 
         // initialize some memory and turn it into a SharedBuffer
@@ -404,7 +870,7 @@ mod tests {
         assert_eq!(bytes, INIT);
 
         // create a slice to the second half of the SharedBuffer
-        let buf2 = buf.slice(4, 8);
+        let buf2 = buf.slice(4..8);
 
         // now we read back only the second half of the original SharedBuffer
         bytes = [0; 8];
@@ -442,7 +908,7 @@ mod tests {
     #[test]
     #[should_panic]
     fn test_panic_write_at() {
-        let buf = unsafe { SharedBuffer::new(ptr::null_mut(), 10) };
+        let mut buf = unsafe { SharedBuffer::new(ptr::null_mut(), 10) };
         // "byte offset 11 out of range for SharedBuffer of length 10"
         buf.write_at(11, &[][..]);
     }
@@ -452,7 +918,7 @@ mod tests {
     fn test_panic_slice_1() {
         let buf = unsafe { SharedBuffer::new(ptr::null_mut(), 10) };
         // "byte index 11 out of range for SharedBuffer of length 10"
-        buf.slice(0, 11);
+        buf.slice(0..11);
     }
 
     #[test]
@@ -460,6 +926,6 @@ mod tests {
     fn test_panic_slice_2() {
         let buf = unsafe { SharedBuffer::new(ptr::null_mut(), 10) };
         // "slice starts at byte 6 but ends at byte 5"
-        buf.slice(6, 5);
+        buf.slice(6..5);
     }
 }

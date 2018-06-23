@@ -20,8 +20,8 @@ use std::os::unix::io::AsRawFd;
 use std::ptr;
 use std::rc::Rc;
 use zx::sys::{zx_cache_flush, zx_handle_t, ZX_CACHE_FLUSH_DATA};
-use zx::{Handle, Status, Vmar, Vmo};
 use zx::VmarFlags;
+use zx::{Handle, Status, Vmar, Vmo};
 
 #[allow(non_camel_case_types, non_upper_case_globals)]
 const ZX_PIXEL_FORMAT_NONE: u32 = 0;
@@ -115,14 +115,14 @@ impl Config {
     }
 }
 
-pub struct Frame<'a> {
+pub struct Frame {
     config: Config,
     image_id: u64,
     pixel_buffer_addr: usize,
-    pixel_buffer: SharedBuffer<'a>,
+    pixel_buffer: SharedBuffer,
 }
 
-impl<'a> Frame<'a> {
+impl Frame {
     fn allocate_image_vmo(
         framebuffer: &FrameBuffer, executor: &mut async::Executor,
     ) -> Result<Vmo, Error> {
@@ -175,9 +175,7 @@ impl<'a> Frame<'a> {
         }
     }
 
-    pub fn new(
-        framebuffer: &'a FrameBuffer, executor: &mut async::Executor,
-    ) -> Result<Frame<'a>, Error> {
+    pub fn new(framebuffer: &FrameBuffer, executor: &mut async::Executor) -> Result<Frame, Error> {
         let image_vmo = Self::allocate_image_vmo(framebuffer, executor)?;
 
         // map image VMO
@@ -199,18 +197,21 @@ impl<'a> Frame<'a> {
             image_id: image_id,
             pixel_buffer_addr,
             pixel_buffer: unsafe {
-                SharedBuffer::new(frame_buffer_pixel_ptr, framebuffer.byte_size())
+                SharedBuffer::new(
+                    frame_buffer_pixel_ptr,
+                    framebuffer.byte_size(),
+                )
             },
         })
     }
 
-    pub fn write_pixel(&self, x: u32, y: u32, value: &[u8]) {
+    pub fn write_pixel(&mut self, x: u32, y: u32, value: &[u8]) {
         let pixel_size = self.config.pixel_size_bytes as usize;
         let offset = self.linear_stride_bytes() * y as usize + x as usize * pixel_size;
         self.pixel_buffer.write_at(offset, value);
     }
 
-    pub fn fill_rectangle(&self, x: u32, y: u32, width: u32, height: u32, value: &[u8]) {
+    pub fn fill_rectangle(&mut self, x: u32, y: u32, width: u32, height: u32, value: &[u8]) {
         let left = x.min(self.config.width);
         let right = (left + width).min(self.config.width);
         let top = y.min(self.config.height);
@@ -223,6 +224,7 @@ impl<'a> Frame<'a> {
     }
 
     pub fn present(&self, framebuffer: &FrameBuffer) -> Result<(), Error> {
+        // TODO: This explicitly violates the safety constraints of SharedBuffer.
         let frame_buffer_pixel_ptr = self.pixel_buffer_addr as *mut u8;
         let result = unsafe {
             zx_cache_flush(
@@ -250,12 +252,11 @@ impl<'a> Frame<'a> {
     }
 }
 
-impl<'a> Drop for Frame<'a> {
+impl Drop for Frame {
     fn drop(&mut self) {
         unsafe {
-            Vmar::root_self()
-                .unmap(self.pixel_buffer_addr, self.byte_size())
-                .unwrap();
+            let (ptr, len) = self.pixel_buffer.as_ptr_len();
+            Vmar::root_self().unmap(ptr as usize, len).unwrap();
         }
     }
 }
@@ -369,7 +370,7 @@ impl FrameBuffer {
         })
     }
 
-    pub fn new_frame<'a>(&'a self, executor: &mut async::Executor) -> Result<Frame<'a>, Error> {
+    pub fn new_frame(&self, executor: &mut async::Executor) -> Result<Frame, Error> {
         Frame::new(&self, executor)
     }
 

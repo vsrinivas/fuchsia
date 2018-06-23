@@ -29,7 +29,7 @@ fn main() {
     let values565 = &[31, 248];
     let values8888 = &[255, 0, 255, 255];
 
-    let pink_frame = fb.new_frame(&mut executor).unwrap();
+    let mut pink_frame = fb.new_frame(&mut executor).unwrap();
 
     for y in 0..config.height {
         for x in 0..config.width {
