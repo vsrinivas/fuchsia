@@ -21,6 +21,7 @@ class Config {
  public:
   using ServiceMap =
       std::unordered_map<std::string, fuchsia::sys::LaunchInfoPtr>;
+  using StartupServiceVector = std::vector<std::string>;
   using AppVector = std::vector<fuchsia::sys::LaunchInfoPtr>;
 
   Config();
@@ -35,11 +36,15 @@ class Config {
   bool Parse(const std::string& data, const std::string& config_file);
 
   ServiceMap TakeServices() { return std::move(services_); }
+  StartupServiceVector TakeStartupServices() {
+    return std::move(startup_services_);
+  }
   ServiceMap TakeAppLoaders() { return std::move(app_loaders_); }
   AppVector TakeApps() { return std::move(apps_); }
 
  private:
   ServiceMap services_;
+  StartupServiceVector startup_services_;
   ServiceMap app_loaders_;
   AppVector apps_;
 

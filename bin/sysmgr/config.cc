@@ -15,6 +15,7 @@ namespace {
 constexpr char kAppLoaders[] = "loaders";
 constexpr char kApps[] = "apps";
 constexpr char kServices[] = "services";
+constexpr char kStartupServices[] = "startup_services";
 
 fuchsia::sys::LaunchInfoPtr GetLaunchInfo(
     const rapidjson::Document::ValueType& value) {
@@ -93,6 +94,18 @@ bool Config::Parse(const std::string& string, const std::string& config_file) {
       if (!launch_info)
         return false;
       apps_.push_back(std::move(launch_info));
+    }
+  }
+
+  auto startup_services_it = document.FindMember(kStartupServices);
+  if (startup_services_it != document.MemberEnd()) {
+    const auto& value = startup_services_it->value;
+    if (!value.IsArray())
+      return false;
+    for (const auto& service : value.GetArray()) {
+      if (!service.IsString())
+        return false;
+      startup_services_.push_back(service.GetString());
     }
   }
 

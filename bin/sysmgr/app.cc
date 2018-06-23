@@ -41,6 +41,14 @@ App::App(Config config)
   // by then.
   RegisterAppLoaders(config.TakeAppLoaders());
 
+  // Connect to startup services
+  for (auto& startup_service : config.TakeStartupServices()) {
+    FXL_VLOG(1) << "Connecting to startup service " << startup_service;
+    zx::channel h1, h2;
+    zx::channel::create(0, &h1, &h2);
+    ConnectToService(startup_service, std::move(h1));
+  }
+
   // Launch startup applications.
   for (auto& launch_info : config.TakeApps())
     LaunchApplication(std::move(*launch_info));
@@ -65,25 +73,6 @@ void App::ConnectToService(const std::string& service_name,
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Could not serve " << service_name << ": " << status;
   }
-}
-
-// We explicitly launch netstack because netstack registers itself as
-// |/dev/socket|, which needs to happen eagerly, instead of being discovered
-// via |/svc/net.Netstack|, which can happen asynchronously.
-void App::LaunchNetstack() {
-  zx::channel h1, h2;
-  zx::channel::create(0, &h1, &h2);
-  ConnectToService("net.Netstack", std::move(h1));
-}
-
-// We explicitly launch wlanstack because we want it to start scanning if
-// SSID is configured.
-// TODO: Remove this hard-coded logic once we have a more sophisticated
-// system service manager that can do this sort of thing using config files.
-void App::LaunchWlanstack() {
-  zx::channel h1, h2;
-  zx::channel::create(0, &h1, &h2);
-  ConnectToService("fuchsia.wlan.service.Wlan", std::move(h1));
 }
 
 void App::RegisterSingleton(std::string service_name,

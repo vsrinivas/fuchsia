@@ -65,10 +65,6 @@ amber_target_binaries = [
     name = "amber_ctl"
     gopkg = "amber/cmd/ctl"
   },
-  {
-    name = "amber_init"
-    gopkg = "amber/cmd/init"
-  },
 ]
 
 common_extra_dependencies = [
@@ -125,15 +121,11 @@ package("amber_tools") {
 
   deps = [
     ":amber_ctl",
-    ":amber_init",
   ]
 
   binaries = [
     {
       name = "amber_ctl"
-    },
-    {
-      name = "amber_init"
     },
   ]
 }
@@ -185,7 +177,7 @@ test_targets = [
   {
     name = "amber_fidl_test"
     gopkg = "amber/ipcserver"
-  }
+  },
 ]
 foreach(test, test_targets) {
   go_test(test.name) {

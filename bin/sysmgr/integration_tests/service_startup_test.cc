@@ -25,7 +25,6 @@ TEST_F(TestSysmgr, ServiceStartup) {
   sysmgr_args.push_back(
       "--config={\"services\": { \"test.sysmgr.Interface\": "
       "\"test_sysmgr_service_startup\" } }");
-  sysmgr_args.push_back("--test");
   component::AppmgrArgs args{.pa_directory_request = h2.release(),
                              .sysmgr_url = "sysmgr",
                              .sysmgr_args = std::move(sysmgr_args),

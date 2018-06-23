@@ -53,12 +53,6 @@ int main(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigMakeDefault);
   sysmgr::App app(std::move(config));
 
-  // TODO(abarth): Remove this hard-coded mention of netstack once netstack is
-  // // fully converted to using service namespaces.
-  if (!command_line.HasOption("test")) {
-    app.LaunchNetstack();
-    app.LaunchWlanstack();
-  }
   loop.Run();
   return 0;
 }

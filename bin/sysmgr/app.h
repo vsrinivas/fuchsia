@@ -30,9 +30,6 @@ class App {
   explicit App(Config config);
   ~App();
 
-  void LaunchNetstack();
-  void LaunchWlanstack();
-
  private:
   zx::channel OpenAsDirectory();
   void ConnectToService(const std::string& service_name, zx::channel channel);
