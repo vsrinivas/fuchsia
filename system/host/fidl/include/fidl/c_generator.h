@@ -41,17 +41,6 @@ public:
         std::vector<uint32_t> array_counts;
     };
 
-private:
-    struct NamedConst {
-        std::string name;
-        const flat::Const& const_info;
-    };
-
-    struct NamedEnum {
-        std::string name;
-        const flat::Enum& enum_info;
-    };
-
     struct NamedMessage {
         std::string c_name;
         std::string coded_name;
@@ -64,6 +53,17 @@ private:
         std::string c_name;
         std::unique_ptr<NamedMessage> request;
         std::unique_ptr<NamedMessage> response;
+    };
+
+private:
+    struct NamedConst {
+        std::string name;
+        const flat::Const& const_info;
+    };
+
+    struct NamedEnum {
+        std::string name;
+        const flat::Enum& enum_info;
     };
 
     struct NamedInterface {
@@ -117,6 +117,7 @@ private:
     void ProduceUnionDeclaration(const NamedUnion& named_union);
 
     void ProduceInterfaceClientDeclaration(const NamedInterface& named_interface);
+    void ProduceInterfaceClientImplementation(const NamedInterface& named_interface);
 
     const flat::Library* library_;
     std::ostringstream file_;

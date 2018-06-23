@@ -61,6 +61,22 @@ void EmitMemberDecl(std::ostream* file, const CGenerator::Member& member) {
     }
 }
 
+void EmitClientMethodDecl(std::ostream* file, StringView method_name,
+                          const std::vector<CGenerator::Member>& request,
+                          const std::vector<CGenerator::Member>& response) {
+    *file << "zx_status_t " << method_name << "(zx_handle_t _channel";
+    for (const auto& member : request) {
+        *file << ", ";
+        EmitMemberDecl(file, member);
+    }
+    for (auto member : response) {
+        *file << ", ";
+        member.name = "out_" + member.name;
+        EmitMemberDecl(file, member);
+    }
+    *file << ")";
+}
+
 // Various computational helper routines.
 
 void EnumValue(types::PrimitiveSubtype type, const flat::Constant* constant,
@@ -191,6 +207,24 @@ GenerateMembers(const flat::Library* library,
         members.push_back(CreateMember(library, union_member));
     }
     return members;
+}
+
+void GetMethodParameters(const flat::Library* library,
+                         const CGenerator::NamedMethod& method_info,
+                         std::vector<CGenerator::Member>* request,
+                         std::vector<CGenerator::Member>* response) {
+
+    request->reserve(method_info.request->parameters.size());
+    for (const auto& parameter : method_info.request->parameters) {
+        request->push_back(CreateMember(library, parameter));
+    }
+
+    if (method_info.response) {
+        response->reserve(method_info.request->parameters.size());
+        for (const auto& parameter : method_info.response->parameters) {
+            response->push_back(CreateMember<flat::Interface::Method::Parameter, NameFlatCOutType>(library, parameter));
+        }
+    }
 }
 
 } // namespace
@@ -453,21 +487,101 @@ void CGenerator::ProduceInterfaceClientDeclaration(const NamedInterface& named_i
     for (const auto& method_info : named_interface.methods) {
         if (!method_info.request)
             continue;
-        file_ << "zx_status_t " << method_info.c_name
-              << "(zx_handle_t";
-        for (const auto& parameter : method_info.request->parameters) {
-            file_ << ", ";
-            EmitMemberDecl(&file_, CreateMember(library_, parameter));
+        std::vector<Member> request;
+        std::vector<Member> response;
+        GetMethodParameters(library_, method_info, &request, &response);
+        EmitClientMethodDecl(&file_, method_info.c_name, request, response);
+        file_ << ";\n";
+    }
+
+    EmitBlank(&file_);
+}
+
+void CGenerator::ProduceInterfaceClientImplementation(const NamedInterface& named_interface) {
+    for (const auto& method_info : named_interface.methods) {
+        if (!method_info.request)
+            continue;
+        std::vector<Member> request;
+        std::vector<Member> response;
+        GetMethodParameters(library_, method_info, &request, &response);
+        EmitClientMethodDecl(&file_, method_info.c_name, request, response);
+        // TODO(FIDL-162): Compute max_wr_handles.
+        uint32_t max_wr_handles = 0;
+
+        file_ << "{\n";
+        file_ << kIndent << method_info.request->c_name << " _request;\n";
+        // TODO(FIDL-162): Allocate message space for input strings.
+        file_ << kIndent << "uint32_t _wr_num_bytes = sizeof(_request);\n";
+        file_ << kIndent << "memset(&_request, 0, _wr_num_bytes);\n";
+        file_ << kIndent << "_request.hdr.ordinal = " << method_info.ordinal << ";\n";
+        for (const auto& member : request) {
+            const auto& name = member.name;
+            file_ << kIndent << "memcpy(&_request." << name << ", &" << name << ", sizeof(_request." << name << ");\n";
+            // TODO(FIDL-162): Copy string data into the request.
         }
-        if (method_info.response) {
-            for (const auto& parameter : method_info.response->parameters) {
-                file_ << ", ";
-                auto member = CreateMember<flat::Interface::Method::Parameter, NameFlatCOutType>(library_, parameter);
-                member.name = "out_" + member.name;
-                EmitMemberDecl(&file_, member);
+        StringView wr_handles = "NULL";
+        if (max_wr_handles > 0) {
+            wr_handles = "_wr_handles";
+            file_ << kIndent << "zx_handle_t _wr_handles[" << max_wr_handles << "];\n";
+        }
+        file_ << kIndent << "uint32_t _wr_num_handles = 0u;\n";
+        file_ << kIndent << "zx_status_t _status = fidl_encode(&" << method_info.request->coded_name
+              << ", &_request, _wr_num_bytes, " << wr_handles << ", " << max_wr_handles
+              << ", &_wr_num_handles, NULL);\n";
+        // TODO(FIDL-162): Clean up handles on error.
+        file_ << kIndent << "if (_status != ZX_OK)\n";
+        file_ << kIndent << kIndent << "return _status;\n";
+        if (!method_info.response) {
+            file_ << kIndent << "return zx_channel_write(_channel, 0u, &_request, _wr_num_bytes, "
+                  << wr_handles << ", _wr_num_handles);\n";
+        } else {
+            // TODO(FIDL-162): Compute max_rd_handles.
+            uint32_t max_rd_handles = 0;
+
+            file_ << kIndent << method_info.response->c_name << " _response;\n";
+            // TODO(FIDL-162): Allocate message space for output strings.
+            file_ << kIndent << "uint32_t _rd_num_bytes = sizeof(_request);\n";
+
+            StringView rd_handles = "NULL";
+            if (max_rd_handles > 0) {
+                rd_handles = "_rd_handles";
+                file_ << kIndent << "zx_handle_t _rd_handles[" << max_rd_handles << "];\n";
             }
+
+            file_ << kIndent << "zx_channel_call_args_t _args = {\n";
+            file_ << kIndent << kIndent << ".wr_bytes = &_request,\n";
+            file_ << kIndent << kIndent << ".wr_handles = " << wr_handles << ",\n";
+            file_ << kIndent << kIndent << ".rd_bytes = &_response,\n";
+            file_ << kIndent << kIndent << ".rd_handles = " << rd_handles << ",\n";
+            file_ << kIndent << kIndent << ".wr_num_bytes = _wr_num_bytes,\n";
+            file_ << kIndent << kIndent << ".wr_num_handles = _wr_num_handles,\n";
+            file_ << kIndent << kIndent << ".rd_num_bytes = _rd_num_bytes,\n";
+            file_ << kIndent << kIndent << ".rd_num_handles = " << max_rd_handles << ",\n";
+            file_ << kIndent << "};\n";
+
+            file_ << kIndent << "uint32_t _actual_num_bytes = 0u;\n";
+            file_ << kIndent << "uint32_t _actual_num_handles = 0u;\n";
+            file_ << kIndent << "_status = zx_channel_call(_channel, 0u, ZX_TIME_INFINITE, &_args, &_actual_num_bytes, &_actual_num_handles);\n";
+            // TODO(FIDL-162): Clean up handles on error.
+            file_ << kIndent << "if (_status != ZX_OK)\n";
+            file_ << kIndent << kIndent << "return _status;\n";
+
+            // TODO(FIDL-162): Do we need to validate the response ordinal or does fidl_decode do that for us?
+            file_ << kIndent << "_status = fidl_decode(&" << method_info.response->coded_name
+                  << ", &_response, _actual_num_bytes, " << wr_handles << ", _actual_num_handles, NULL);\n";
+            // TODO(FIDL-162): Clean up handles on error.
+            file_ << kIndent << "if (_status != ZX_OK)\n";
+            file_ << kIndent << kIndent << "return _status;\n";
+
+            for (const auto& member : response) {
+                const auto& name = member.name;
+                file_ << kIndent << "memcpy(out_" << name << ", &_response." << name << ", sizeof(*out_" << name << ");\n";
+                // TODO(FIDL-162): Copy string data out of the response.
+            }
+
+            file_ << kIndent << "return ZX_OK;\n";
         }
-        file_ << ");\n";
+        file_ << "}\n\n";
     }
 }
 
@@ -615,14 +729,44 @@ std::ostringstream CGenerator::ProduceHeader() {
         }
     }
 
-    file_ << "\n";
-
     GenerateEpilogues();
 
     return std::move(file_);
 }
 
 std::ostringstream CGenerator::ProduceClient() {
+    EmitFileComment(&file_);
+    EmitIncludeHeader(&file_, "<lib/fidl/coding.h>");
+    EmitIncludeHeader(&file_, "<string.h>");
+    EmitIncludeHeader(&file_, "<zircon/syscalls.h>");
+    EmitIncludeHeader(&file_, "<" + NameLibraryCHeader(library_->name()) + ">");
+    EmitBlank(&file_);
+
+    std::map<const flat::Decl*, NamedInterface> named_interfaces =
+        NameInterfaces(library_->interface_declarations_);
+
+    for (const auto* decl : library_->declaration_order_) {
+        switch (decl->kind) {
+        case flat::Decl::Kind::kConst:
+        case flat::Decl::Kind::kEnum:
+        case flat::Decl::Kind::kStruct:
+        case flat::Decl::Kind::kUnion:
+            // Only interfaces have client implementations.
+            break;
+        case flat::Decl::Kind::kInterface: {
+            if (!HasSimpleLayout(decl))
+                break;
+            auto iter = named_interfaces.find(decl);
+            if (iter != named_interfaces.end()) {
+                ProduceInterfaceClientImplementation(iter->second);
+            }
+            break;
+        }
+        default:
+            abort();
+        }
+    }
+
     return std::move(file_);
 }
 
