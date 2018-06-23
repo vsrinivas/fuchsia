@@ -111,6 +111,11 @@ public:
     DEF_BIT(9, async_address_update_enable);
     DEF_FIELD(7, 6, stereo_surface_vblank_mask);
     DEF_FIELD(5, 4, alpha_mode);
+    static constexpr uint32_t kAlphaDisable = 0;
+    static constexpr uint32_t kAlphaPreMultiply = 2;
+    static constexpr uint32_t kAlphaHwMultiply = 3;
+
+
     DEF_BIT(3, allow_double_buffer_update_disable);
     DEF_FIELD(1, 0, plane_rotation);
     static constexpr uint32_t kIdentity = 0;
@@ -137,6 +142,22 @@ public:
     DEF_BIT(31, enable);
     DEF_FIELD(18, 14, lines);
     DEF_FIELD(9, 0, blocks);
+};
+
+// PLANE_KEYMSK
+class PlaneKeyMask : public hwreg::RegisterBase<PlaneKeyMask, uint32_t> {
+public:
+    static constexpr uint32_t kBaseAddr = 0x70198;
+
+    DEF_BIT(31, plane_alpha_enable);
+};
+
+// PLANE_KEYMAX
+class PlaneKeyMax : public hwreg::RegisterBase<PlaneKeyMax, uint32_t> {
+public:
+    static constexpr uint32_t kBaseAddr = 0x701a0;
+
+    DEF_FIELD(31, 24, plane_alpha_value);
 };
 
 // PS_CTRL
@@ -309,6 +330,13 @@ public:
     hwreg::RegisterAddr<registers::PlaneWm>PlaneWatermark(int plane, int wm_num) {
         return hwreg::RegisterAddr<PlaneWm>(
                 PlaneWm::kBaseAddr + 0x1000 * pipe_ + 0x100 * plane + 4 * wm_num);
+    }
+
+    hwreg::RegisterAddr<registers::PlaneKeyMask> PlaneKeyMask(int32_t plane_num) {
+        return GetPlaneReg<registers::PlaneKeyMask>(plane_num);
+    }
+    hwreg::RegisterAddr<registers::PlaneKeyMax> PlaneKeyMax(int32_t plane_num) {
+        return GetPlaneReg<registers::PlaneKeyMax>(plane_num);
     }
 
     hwreg::RegisterAddr<registers::PipeScalerCtrl> PipeScalerCtrl(int num) {

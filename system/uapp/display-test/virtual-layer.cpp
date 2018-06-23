@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <fbl/algorithm.h>
+#include <math.h>
 #include <zircon/device/display-controller.h>
 
 #include "utils.h"
@@ -98,12 +99,13 @@ PrimaryLayer::PrimaryLayer(const fbl::Vector<Display>& displays) : VirtualLayer(
 
 bool PrimaryLayer::Init(zx_handle_t dc_handle) {
     uint32_t fg_color = get_fg_color();
+    uint32_t bg_color = alpha_enable_ ? 0x3fffffff : 0xffffffff;
 
     images_[0] = Image::Create(
-            dc_handle, image_width_, image_height_, image_format_, fg_color, false);
+            dc_handle, image_width_, image_height_, image_format_, fg_color, bg_color, false);
     if (layer_flipping_) {
         images_[1] = Image::Create(
-                dc_handle, image_width_, image_height_, image_format_, fg_color, false);
+                dc_handle, image_width_, image_height_, image_format_, fg_color, bg_color, false);
     } else {
         images_[0]->Render(-1, -1);
     }
@@ -140,6 +142,19 @@ bool PrimaryLayer::Init(zx_handle_t dc_handle) {
 
         if (zx_channel_write(dc_handle, 0, &config, sizeof(config), nullptr, 0) != ZX_OK) {
             printf("Setting layer config failed\n");
+            return false;
+        }
+
+        fuchsia_display_ControllerSetLayerPrimaryAlphaRequest alpha_config;
+        alpha_config.hdr.ordinal = fuchsia_display_ControllerSetLayerPrimaryAlphaOrdinal;
+        alpha_config.layer_id = layer->id;
+        alpha_config.mode = alpha_enable_ ?
+                fuchsia_display_AlphaMode_HW_MULTIPLY : fuchsia_display_AlphaMode_DISABLE;
+        alpha_config.val = alpha_val_;
+
+        if (zx_channel_write(dc_handle, 0,
+                             &alpha_config, sizeof(alpha_config), nullptr, 0) != ZX_OK) {
+            printf("Setting layer alpha config failed\n");
             return false;
         }
     }
@@ -317,8 +332,9 @@ CursorLayer::CursorLayer(const fbl::Vector<Display>& displays) : VirtualLayer(di
 
 bool CursorLayer::Init(zx_handle_t dc_handle) {
     fuchsia_display_CursorInfo info = displays_[0]->cursor();
+    uint32_t bg_color = 0xffffffff;
     image_ = Image::Create(
-            dc_handle, info.width, info.height, info.pixel_format, get_fg_color(), true);
+            dc_handle, info.width, info.height, info.pixel_format, get_fg_color(), bg_color, true);
     if (!image_) {
         return false;
     }

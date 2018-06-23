@@ -160,6 +160,9 @@ private:
     void HandleSetLayerPrimaryPosition(
             const fuchsia_display_ControllerSetLayerPrimaryPositionRequest* req,
             fidl::Builder* resp_builder, const fidl_type_t** resp_table);
+    void HandleSetLayerPrimaryAlpha(
+            const fuchsia_display_ControllerSetLayerPrimaryAlphaRequest* req,
+            fidl::Builder* resp_builder, const fidl_type_t** resp_table);
     void HandleSetLayerCursorConfig(
             const fuchsia_display_ControllerSetLayerCursorConfigRequest* req,
             fidl::Builder* resp_builder, const fidl_type_t** resp_table);

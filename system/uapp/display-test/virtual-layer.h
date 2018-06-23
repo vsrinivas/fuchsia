@@ -104,6 +104,10 @@ public:
     void SetPanDest(bool pan) { pan_dest_ = pan; }
     void SetLayerToggle(bool toggle) { layer_toggle_ = toggle; }
     void SetRotates(bool rotates) { rotates_ = rotates; }
+    void SetAlpha(bool enable, float val) {
+        alpha_enable_ = enable;
+        alpha_val_ = val;
+    }
 
     bool Init(zx_handle_t channel) override;
     void StepLayout(int32_t frame_num) override;
@@ -128,6 +132,8 @@ private:
     bool pan_dest_ = false;
     bool layer_toggle_ = false;
     bool rotates_ = false;
+    bool alpha_enable_ = false;
+    float alpha_val_ = 0.f;
 
     bool alt_image_ = false;
     Image* images_[2];

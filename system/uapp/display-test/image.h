@@ -41,7 +41,7 @@ class Image {
 public:
     static Image* Create(zx_handle_t dc_handle,
                          uint32_t width, uint32_t height, zx_pixel_format_t format,
-                         uint32_t fg_color, bool cursor);
+                         uint32_t fg_color, uint32_t bg_color, bool cursor);
 
     void Render(int32_t prev_step, int32_t step_num);
 
@@ -56,7 +56,7 @@ public:
 private:
     Image(uint32_t width, uint32_t height, int32_t stride,
           zx_pixel_format_t format, zx_handle_t handle, void* buf,
-          uint32_t fg_color, bool cursor);
+          uint32_t fg_color, uint32_t bg_color, bool cursor);
 
     uint32_t width_;
     uint32_t height_;
@@ -67,5 +67,6 @@ private:
     void* buf_;
 
     uint32_t fg_color_;
+    uint32_t bg_color_;
     bool cursor_;
 };

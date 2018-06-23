@@ -48,7 +48,9 @@
 #define FLAGS_BACKLIGHT 1
 
 namespace {
-static const zx_pixel_format_t supported_formats[1] = { ZX_PIXEL_FORMAT_ARGB_8888 };
+static const zx_pixel_format_t supported_formats[2] = {
+    ZX_PIXEL_FORMAT_ARGB_8888, ZX_PIXEL_FORMAT_RGB_x888
+};
 
 static const cursor_info_t cursor_infos[3] = {
     { .width = 64, .height = 64, .format = ZX_PIXEL_FORMAT_ARGB_8888 },

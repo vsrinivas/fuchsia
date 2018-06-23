@@ -19,13 +19,14 @@
 static constexpr uint32_t kRenderPeriod = 120;
 
 Image::Image(uint32_t width, uint32_t height, int32_t stride,
-             zx_pixel_format_t format, zx_handle_t vmo, void* buf, uint32_t fg_color, bool cursor)
+             zx_pixel_format_t format, zx_handle_t vmo, void* buf,
+             uint32_t fg_color, uint32_t bg_color, bool cursor)
         : width_(width), height_(height), stride_(stride), format_(format),
-          vmo_(vmo), buf_(buf), fg_color_(fg_color), cursor_(cursor) {}
+          vmo_(vmo), buf_(buf), fg_color_(fg_color), bg_color_(bg_color), cursor_(cursor) {}
 
 Image* Image::Create(zx_handle_t dc_handle,
                      uint32_t width, uint32_t height, zx_pixel_format_t format,
-                     uint32_t fg_color, bool cursor) {
+                     uint32_t fg_color, uint32_t bg_color, bool cursor) {
     fuchsia_display_ControllerComputeLinearImageStrideRequest stride_msg;
     stride_msg.hdr.ordinal = fuchsia_display_ControllerComputeLinearImageStrideOrdinal;
     stride_msg.width = width;
@@ -90,7 +91,7 @@ Image* Image::Create(zx_handle_t dc_handle,
     zx_cache_flush(ptr, alloc_msg.size, ZX_CACHE_FLUSH_DATA);
 
     return new Image(width, height, stride_rsp.stride, format,
-                     vmo.release(), ptr, fg_color, cursor);
+                     vmo.release(), ptr, fg_color, bg_color, cursor);
 }
 
 #define STRIPE_SIZE 37 // prime to make movement more interesting
@@ -113,7 +114,7 @@ void Image::Render(int32_t prev_step, int32_t step_num) {
     for (unsigned y = start; y < end; y++) {
         for (unsigned x = 0; x < width_; x++) {
             int32_t in_stripe = draw_stripe && ((x / STRIPE_SIZE % 2) != (y / STRIPE_SIZE % 2));
-            int32_t color = in_stripe ? fg_color_: 0xffffffff;
+            int32_t color = in_stripe ? fg_color_: bg_color_;
 
             uint32_t* ptr = static_cast<uint32_t*>(buf_);
             if (!USE_INTEL_Y_TILING || cursor_) {

@@ -277,7 +277,7 @@ int main(int argc, const char* argv[]) {
     layers.push_back(&layer2);
 
 // Intel only supports 3 layers, so add ifdef for quick toggling of the 3rd layer
-#if 0
+#if 1
     // Layer which is smaller than the display and bigger than its image
     // and which animates back and forth across all displays and also
     // its src image and also rotates.
@@ -296,6 +296,7 @@ int main(int argc, const char* argv[]) {
     layer3.SetPanDest(true);
     layer3.SetPanSrc(true);
     layer3.SetRotates(true);
+    layer3.SetAlpha(true, .5f);
     layers.push_back(&layer3);
 #else
     CursorLayer layer4(displays);

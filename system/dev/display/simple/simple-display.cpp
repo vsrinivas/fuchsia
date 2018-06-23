@@ -93,7 +93,8 @@ void SimpleDisplay::CheckConfiguration(const display_config_t** display_configs,
                 && layer->image.height == height_
                 && memcmp(&layer->dest_frame, &frame, sizeof(frame_t)) == 0
                 && memcmp(&layer->src_frame, &frame, sizeof(frame_t)) == 0
-                && display_configs[0]->cc_flags == 0;
+                && display_configs[0]->cc_flags == 0
+                && layer->alpha_mode == ALPHA_DISABLE;
     }
     if (!success) {
         layer_cfg_results[0][0] = CLIENT_MERGE_BASE;

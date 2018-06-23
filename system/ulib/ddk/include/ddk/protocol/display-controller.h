@@ -101,6 +101,10 @@ typedef struct display_controller_cb {
     void (*on_display_vsync)(void* ctx, uint64_t display_id, void** handle, uint32_t handle_count);
 } display_controller_cb_t;
 
+#define ALPHA_DISABLE 0
+#define ALPHA_PREMULTIPLIED 1
+#define ALPHA_HW_MULTIPLY 2
+
 // Rotations are applied counter-clockwise, and are applied before reflections.
 #define FRAME_TRANSFORM_IDENTITY 0
 #define FRAME_TRANSFORM_REFLECT_X 1
@@ -122,6 +126,22 @@ typedef struct frame {
 
 typedef struct primary_layer {
     image_t image;
+
+    // An ALPHA_* constant.
+    //
+    // If alpha_mode == ALPHA_DISABLED, the layer is opaque and alpha_layer_val is ignored.
+    //
+    // If alpha_mode == PREMULTIPLIED or HW_MULTIPLY and alpha_layer_val is NaN, the alpha
+    // used when blending is determined by the per-pixel alpha channel.
+    //
+    // If alpha_mode == PREMULTIPLIED or HW_MULTIPLY and alpha_layer_val is not NaN, the
+    // alpha used when blending is the product of alpha_layer_val and any per-pixel alpha.
+    // Additionally, if alpha_mode == PREMULTIPLIED, then the hardware must premultiply the color
+    // channel with alpha_layer_val before blending.
+    //
+    // If alpha_layer_val is not NaN, it will be in the range [0, 1].
+    uint32_t alpha_mode;
+    float alpha_layer_val;
 
     uint32_t transform_mode;
 
@@ -229,6 +249,8 @@ typedef struct display_config {
 #define CLIENT_TRANSFORM (1 << 5)
 // The client should apply the color conversion.
 #define CLIENT_COLOR_CONVERSION (1 << 6)
+// The client should apply the alpha transformation itself.
+#define CLIENT_ALPHA (1 << 7)
 
 // The client guarantees that check_configuration and apply_configuration are always
 // made from a single thread. The client makes no other threading guarantees.

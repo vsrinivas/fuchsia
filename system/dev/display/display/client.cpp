@@ -41,6 +41,7 @@ zx_status_t decode_message(fidl::Message* msg) {
     SELECT_TABLE_CASE(fuchsia_display_ControllerSetDisplayLayers);
     SELECT_TABLE_CASE(fuchsia_display_ControllerSetLayerPrimaryConfig);
     SELECT_TABLE_CASE(fuchsia_display_ControllerSetLayerPrimaryPosition);
+    SELECT_TABLE_CASE(fuchsia_display_ControllerSetLayerPrimaryAlpha);
     SELECT_TABLE_CASE(fuchsia_display_ControllerSetLayerCursorConfig);
     SELECT_TABLE_CASE(fuchsia_display_ControllerSetLayerCursorPosition);
     SELECT_TABLE_CASE(fuchsia_display_ControllerSetLayerImage);
@@ -171,6 +172,7 @@ void Client::HandleControllerApi(async_t* async, async::WaitBase* self,
     HANDLE_REQUEST_CASE(SetDisplayLayers);
     HANDLE_REQUEST_CASE(SetLayerPrimaryConfig);
     HANDLE_REQUEST_CASE(SetLayerPrimaryPosition);
+    HANDLE_REQUEST_CASE(SetLayerPrimaryAlpha);
     HANDLE_REQUEST_CASE(SetLayerCursorConfig);
     HANDLE_REQUEST_CASE(SetLayerCursorPosition);
     HANDLE_REQUEST_CASE(SetLayerImage);
@@ -526,6 +528,35 @@ void Client::HandleSetLayerPrimaryPosition(
     memcpy(&primary_layer->src_frame, &req->src_frame, sizeof(frame_t));
     memcpy(&primary_layer->dest_frame, &req->dest_frame, sizeof(frame_t));
     primary_layer->transform_mode = req->transform;
+
+    layer->config_change_ = true;
+    pending_config_valid_ = false;
+}
+
+void Client::HandleSetLayerPrimaryAlpha(
+        const fuchsia_display_ControllerSetLayerPrimaryAlphaRequest* req,
+        fidl::Builder* resp_builder, const fidl_type_t** resp_table) {
+    auto layer = layers_.find(req->layer_id);
+    if (!layer.IsValid() || layer->pending_layer_.type != LAYER_PRIMARY) {
+        zxlogf(ERROR, "SetLayerPrimaryAlpha on invalid layer\n");
+        TearDown();
+        return;
+    }
+
+    if (req->mode > fuchsia_display_AlphaMode_HW_MULTIPLY || req->val < 0 || req->val > 1) {
+        zxlogf(ERROR, "Invalid args %d %f\n", req->mode, req->val);
+        TearDown();
+        return;
+    }
+
+    primary_layer_t* primary_layer = &layer->pending_layer_.cfg.primary;
+
+    static_assert(fuchsia_display_AlphaMode_DISABLE == ALPHA_DISABLE, "Bad constant");
+    static_assert(fuchsia_display_AlphaMode_PREMULTIPLIED == ALPHA_PREMULTIPLIED, "Bad constant");
+    static_assert(fuchsia_display_AlphaMode_HW_MULTIPLY== ALPHA_HW_MULTIPLY, "Bad constant");
+
+    primary_layer->alpha_mode = req->mode;
+    primary_layer->alpha_layer_val = req->val;
 
     layer->config_change_ = true;
     pending_config_valid_ = false;
@@ -915,7 +946,9 @@ bool Client::CheckConfig(fidl::Builder* resp_builder) {
             == CLIENT_TRANSFORM, "Const mismatch");
     static_assert((1 << fuchsia_display_ClientCompositionOp_CLIENT_COLOR_CONVERSION)
             == CLIENT_COLOR_CONVERSION, "Const mismatch");
-    constexpr uint32_t kAllErrors = (CLIENT_COLOR_CONVERSION << 1) - 1;
+    static_assert((1 << fuchsia_display_ClientCompositionOp_CLIENT_ALPHA)
+            == CLIENT_ALPHA, "Const mismatch");
+    constexpr uint32_t kAllErrors = (CLIENT_ALPHA << 1) - 1;
 
     config_idx = 0;
     layer_idx = 0;

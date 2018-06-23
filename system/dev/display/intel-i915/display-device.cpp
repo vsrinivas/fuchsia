@@ -349,6 +349,27 @@ void DisplayDevice::ConfigurePrimaryPlane(uint32_t plane_num,
     stride_reg.set_stride(stride);
     stride_reg.WriteTo(controller_->mmio_space());
 
+    auto plane_key_mask = pipe_regs.PlaneKeyMask(plane_num).FromValue(0);
+    if (primary->alpha_mode != ALPHA_DISABLE && !isnan(primary->alpha_layer_val)) {
+        plane_key_mask.set_plane_alpha_enable(1);
+
+        uint8_t alpha = static_cast<uint8_t>(round(primary->alpha_layer_val * 255));
+
+        auto plane_key_max = pipe_regs.PlaneKeyMax(plane_num).FromValue(0);
+        plane_key_max.set_plane_alpha_value(alpha);
+        plane_key_max.WriteTo(mmio_space());
+    }
+    plane_key_mask.WriteTo(mmio_space());
+    if (primary->alpha_mode == ALPHA_DISABLE
+            || primary->image.pixel_format == ZX_PIXEL_FORMAT_RGB_x888) {
+        plane_ctrl.set_alpha_mode(plane_ctrl.kAlphaDisable);
+    } else if (primary->alpha_mode == ALPHA_PREMULTIPLIED) {
+        plane_ctrl.set_alpha_mode(plane_ctrl.kAlphaPreMultiply);
+    } else {
+        ZX_ASSERT(primary->alpha_mode == ALPHA_HW_MULTIPLY);
+        plane_ctrl.set_alpha_mode(plane_ctrl.kAlphaHwMultiply);
+    }
+
     plane_ctrl.set_plane_enable(1);
     plane_ctrl.set_pipe_csc_enable(enable_csc);
     plane_ctrl.set_source_pixel_format(plane_ctrl.kFormatRgb8888);

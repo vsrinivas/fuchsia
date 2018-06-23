@@ -92,6 +92,15 @@ enum Transform : uint8 {
   ROT_90_REFLECT_Y = 7;
 };
 
+enum AlphaMode : uint8 {
+  // Alpha is disabled for the plane (default).
+  DISABLE = 0;
+  // Plane alpha is premultiplied.
+  PREMULTIPLIED = 1;
+  // Hardware should multiply the alpha and color channels when blending.
+  HW_MULTIPLY = 2;
+};
+
 struct Frame {
   // (x_pos, y_pos) specifies the position of the upper-left corner
   // of the frame.
@@ -124,6 +133,8 @@ enum ClientCompositionOp : uint8 {
   CLIENT_TRANSFORM = 5;
   // The client should apply the color conversion itself.
   CLIENT_COLOR_CONVERSION = 6;
+  // The client should apply the alpha itself.
+  CLIENT_ALPHA = 7;
 };
 
 enum ConfigError : uint8 {
@@ -241,6 +252,21 @@ interface Controller {
   // conditions is violated.
   10: SetLayerPrimaryPosition(uint64 layer_id, Transform transform, Frame src_frame, Frame dest_frame);
 
+  // Sets the alpha mode of the plane.
+  //
+  // If |mode| == DISABLED, the layer is opaque and |val| is ignored.
+  //
+  // If |mode| == PREMULTIPLIED or HW_MULTIPLY and |val| is NaN, the alpha
+  // used when blending is determined by the per-pixel alpha channel.
+  //
+  // If |mode| == PREMULTIPLIED or HW_MULTIPLY and |val| is not NaN, the
+  // alpha used when blending is the product of |val| and any per-pixel
+  // alpha. Additionally, if |mode| == PREMULTIPLIED, then the hardware
+  // premultiplies the color channel with |val| before blending.
+  //
+  // If |val| is not NaN, it must be in the range [0, 1].
+  22: SetLayerPrimaryAlpha(uint64 layer_id, AlphaMode mode, float32 val); 
+
   // Configures the layer as a cursor layer with the given config. The
   // default position is (0, 0).
   19: SetLayerCursorConfig(uint64 layer_id, ImageConfig image_config);
@@ -317,6 +343,7 @@ interface Controller {
   // 19: SetLayerCursorConfig
   // 20: SetLayerCursorPosition
   // 21: SetDisplayColorConversion
+  // 22: SetLayerPrimaryAlpha
 
   // TODO(stevensd): Delete this when nothing uses it anymore
   100: SetDisplayImage(uint64 display, uint64 image_id, uint64 wait_event_id, uint64 present_event_id, uint64 signal_event_id);
