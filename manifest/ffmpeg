@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<manifest>
+  <imports>
+    <localimport file="garnet"/>
+  </imports>
+  <projects>
+    <project name="third_party/ffmpeg"
+             path="third_party/ffmpeg"
+             remote="https://fuchsia.googlesource.com/third_party/ffmpeg"
+             gerrithost="https://fuchsia-review.googlesource.com"
+             revision="53db48544883e468608c5eea2ea2b0c10754270f"/>
+  </projects>
+</manifest>

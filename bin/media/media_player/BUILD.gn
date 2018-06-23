@@ -21,10 +21,6 @@ executable("media_player_bin") {
     "media_player_impl.h",
   ]
 
-  public_deps = [
-    "//garnet/bin/media/media_player/ffmpeg:prebuilt_ffmpeg",
-  ]
-
   deps = [
     "//garnet/bin/media/media_player/decode",
     "//garnet/bin/media/media_player/demux",

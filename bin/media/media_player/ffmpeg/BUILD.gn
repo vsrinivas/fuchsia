@@ -2,6 +2,23 @@
 # Use of this source code is governed by a BSD - style license that can be
 # found in the LICENSE file.
 
+declare_args() {
+  # Use a prebuilt ffmpeg binary rather than building it locally.  See
+  # //garnet/bin/media/media_player/ffmpeg/README.md for details.  This is
+  # ignored when building media_player in variant builds (e.g. sanitizers);
+  # in that case, ffmpeg is always built from source so as to be built with
+  # the selected variant's config.  When this is false (either explicitly
+  # or because media_player is a variant build) then //third_party/ffmpeg
+  # must be in the source tree, which requires:
+  # `jiri import -name garnet manifest/ffmpeg https://fuchsia.googlesource.com/garnet`
+  use_prebuilt_ffmpeg = true
+}
+
+if (toolchain_variant.name != "" && toolchain_variant.name != "debug" &&
+    toolchain_variant.name != "release") {
+  use_prebuilt_ffmpeg = false
+}
+
 source_set("ffmpeg") {
   sources = [
     "av_codec_context.cc",
@@ -31,10 +48,6 @@ source_set("ffmpeg") {
     "lpcm_util.h",
   ]
 
-  public_deps = [
-    ":prebuilt_ffmpeg",
-  ]
-
   deps = [
     "//garnet/bin/media/media_player/decode",
     "//garnet/bin/media/media_player/demux",
@@ -54,42 +67,55 @@ source_set("ffmpeg") {
     "FF_API_GET_BUFFER=0",
     "FF_API_CONVERGENCE_DURATION=0",
   ]
-}
 
-group("prebuilt_ffmpeg") {
-  deps = [
-    ":prebuilt_ffmpeg_copy",
-  ]
-
-  public_configs = [ ":prebuilt_ffmpeg_config" ]
-}
-
-config("prebuilt_ffmpeg_config") {
-  visibility = [ ":prebuilt_ffmpeg" ]
-
-  prebuilt_ffmpeg_base = "prebuilt/${target_cpu}/"
-  if (target_cpu == "x64") {
-    ffmpeg_config = "max"
+  if (use_prebuilt_ffmpeg) {
+    deps += [ ":prebuilt_ffmpeg" ]
   } else {
-    ffmpeg_config = "default"
+    deps += [ "//third_party/ffmpeg" ]
+  }
+}
+
+if (use_prebuilt_ffmpeg) {
+  assert(
+      toolchain_variant.name == "" || toolchain_variant.name == "debug" ||
+          toolchain_variant.name == "release",
+      "Set use_prebuilt_ffmpeg=false when selecting variants for media_player.")
+
+  group("prebuilt_ffmpeg") {
+    deps = [
+      ":prebuilt_ffmpeg_copy",
+    ]
+
+    public_configs = [ ":prebuilt_ffmpeg_config" ]
   }
 
-  include_dirs = [
-    prebuilt_ffmpeg_base,
-    prebuilt_ffmpeg_base + "/fuchsia/config/" + ffmpeg_config + "/" +
-        target_cpu,
-  ]
+  copy("prebuilt_ffmpeg_copy") {
+    visibility = [ ":prebuilt_ffmpeg" ]
 
-  ldflags = [ "${target_cpu}-shared/libffmpeg.so" ]
-}
+    sources = [
+      "prebuilt/${current_cpu}/libffmpeg.so",
+    ]
+    outputs = [
+      "$root_out_dir/${current_cpu}-shared/libffmpeg.so",
+    ]
+  }
 
-copy("prebuilt_ffmpeg_copy") {
-  visibility = [ ":prebuilt_ffmpeg" ]
+  config("prebuilt_ffmpeg_config") {
+    visibility = [ ":prebuilt_ffmpeg" ]
 
-  sources = [
-    "prebuilt/$target_cpu/libffmpeg.so",
-  ]
-  outputs = [
-    "$root_out_dir/${target_cpu}-shared/libffmpeg.so",
-  ]
+    prebuilt_ffmpeg_base = "prebuilt/${current_cpu}/"
+    if (current_cpu == "x64") {
+      ffmpeg_config = "max"
+    } else {
+      ffmpeg_config = "default"
+    }
+
+    include_dirs = [
+      prebuilt_ffmpeg_base,
+      prebuilt_ffmpeg_base + "/fuchsia/config/" + ffmpeg_config + "/" +
+          current_cpu,
+    ]
+
+    libs = get_target_outputs(":prebuilt_ffmpeg_copy")
+  }
 }
