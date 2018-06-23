@@ -219,8 +219,8 @@ zx_status_t Max98927Device::Initialize() {
     // Default monomix input channel 1 is PCM RX channel 1
     WriteReg(PCM_SPK_MONOMIX_B, PCM_SPK_MONOMIX_B_CFG_CH1_SRC(1));
 
-    // Default volume (0dB)
-    WriteReg(AMP_VOL_CTRL, 0x34);
+    // Default volume (+6dB dB)
+    WriteReg(AMP_VOL_CTRL, 0x34 + 24);
     WriteReg(SPK_GAIN, SPK_GAIN_PCM(SPK_GAIN_3DB));
 
     // Enable DC blocking filter
