@@ -8,20 +8,11 @@ namespace fuchsia {
 namespace sys {
 namespace testing {
 
-TestWithContext::TestWithContext() {
+TestWithContext::TestWithContext()
+    : context_(StartupContextForTest::Create()),
+      controller_(&context_->controller()) {
   // Take the real StartupContext to prevent code under test from having it
   fuchsia::sys::StartupContext::CreateFromStartupInfo();
-}
-
-void TestWithContext::SetUp() {
-  gtest::TestLoopFixture::SetUp();
-  context_ = StartupContextForTest::Create();
-  controller_ = &context_->controller();
-}
-
-void TestWithContext::TearDown() {
-  context_.reset();
-  gtest::TestLoopFixture::TearDown();
 }
 
 std::unique_ptr<StartupContext> TestWithContext::TakeContext() {

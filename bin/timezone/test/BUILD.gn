@@ -1,0 +1,42 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+
+executable("timezone_unittests") {
+  testonly = true
+
+  output_name = "timezone_unittests"
+
+  sources = [
+    "timezone_unittest.cc",
+  ]
+
+  deps = [
+    "//garnet/bin/timezone:lib",
+    "//garnet/public/lib/app/cpp/testing",
+    "//garnet/public/lib/fxl/test:gtest_main",
+  ]
+}
+
+package("timezone_tests") {
+  testonly = true
+
+  deps = [
+    ":timezone_unittests",
+  ]
+
+  resources = [
+    {
+      path = rebase_path("//third_party/icu/common/icudtl.dat")
+      dest = "icudtl.dat"
+    },
+  ]
+
+  tests = [
+    {
+      name = "timezone_unittests"
+    },
+  ]
+}

@@ -18,12 +18,8 @@ namespace testing {
 class TestWithContext : public gtest::TestLoopFixture {
   using Controller = StartupContextForTest::Controller;
 
- public:
-  TestWithContext();
-  void SetUp() override;
-  void TearDown() override;
-
  protected:
+  TestWithContext();
   std::unique_ptr<StartupContext> TakeContext();
   const Controller& controller() const { return *controller_; }
 

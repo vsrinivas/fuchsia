@@ -49,6 +49,7 @@
         "garnet/packages/tests/sysmgr",
         "garnet/packages/tests/sysmgr_tests",
         "garnet/packages/tests/syzkaller",
+        "garnet/packages/tests/timezone",
         "garnet/packages/tests/tracing",
         "garnet/packages/tests/url",
         "garnet/packages/tests/vulkan",

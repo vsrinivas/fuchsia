@@ -6,22 +6,21 @@
 
 #include "garnet/bin/timezone/timezone.h"
 #include "lib/app/cpp/startup_context.h"
+#include "lib/fidl/cpp/binding_set.h"
 #include "lib/fxl/logging.h"
 
 namespace time_zone {
 
+constexpr char kIcuDataPath[] = "/pkg/data/icudtl.dat";
+constexpr char kTzIdPath[] = "/data/tz_id";
+
 class MainService {
  public:
   MainService()
-      : app_context_(fuchsia::sys::StartupContext::CreateFromStartupInfo()) {
-    app_context_->outgoing().AddPublicService<fuchsia::timezone::Timezone>(
-        [this](fidl::InterfaceRequest<fuchsia::timezone::Timezone> request) {
-          timezone_.AddBinding(std::move(request));
-        });
-  }
+      : timezone_(fuchsia::sys::StartupContext::CreateFromStartupInfo(),
+                  kIcuDataPath, kTzIdPath) {}
 
  private:
-  std::unique_ptr<fuchsia::sys::StartupContext> app_context_;
   TimezoneImpl timezone_;
 };
 

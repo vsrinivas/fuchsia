@@ -5,13 +5,8 @@
 #include "garnet/bin/timezone/timezone.h"
 
 #include <zircon/syscalls.h>
-#include <algorithm>
 #include <fstream>
-#include <memory>
 
-#include <lib/async-loop/cpp/loop.h>
-
-#include "lib/app/cpp/environment_services.h"
 #include "lib/fsl/vmo/file.h"
 #include "lib/fsl/vmo/sized_vmo.h"
 #include "lib/fxl/logging.h"
@@ -20,20 +15,26 @@
 #include "third_party/icu/source/common/unicode/udata.h"
 #include "third_party/icu/source/i18n/unicode/timezone.h"
 
-constexpr char kTzIdPath[] = "/data/tz_id";
-constexpr char kIcuDataPath[] = "/pkg/data/icudtl.dat";
 constexpr char kDefaultTimezone[] = "UTC";
 constexpr int32_t kMillisecondsInMinute = 60000;
 
 namespace time_zone {
 
-TimezoneImpl::TimezoneImpl() : valid_(Init()) {}
+TimezoneImpl::TimezoneImpl(
+    std::unique_ptr<fuchsia::sys::StartupContext> context,
+    const char icu_data_path[], const char tz_id_path[])
+    : context_(std::move(context)),
+      icu_data_path_(icu_data_path),
+      tz_id_path_(tz_id_path),
+      valid_(Init()) {
+  context_->outgoing().AddPublicService(bindings_.GetHandler(this));
+}
 
 TimezoneImpl::~TimezoneImpl() = default;
 
 bool TimezoneImpl::Init() {
   fsl::SizedVmo icu_data;
-  if (!fsl::VmoFromFilename(kIcuDataPath, &icu_data)) {
+  if (!fsl::VmoFromFilename(icu_data_path_, &icu_data)) {
     FXL_LOG(ERROR) << "Unable to load ICU data. Timezone data unavailable.";
     return false;
   }
@@ -116,9 +117,9 @@ void TimezoneImpl::SetTimezone(fidl::StringPtr timezone_id,
     callback(false);
     return;
   }
-  std::ofstream out_fstream(kTzIdPath, std::ofstream::trunc);
+  std::ofstream out_fstream(tz_id_path_, std::ofstream::trunc);
   if (!out_fstream.is_open()) {
-    FXL_LOG(ERROR) << "Unable to open file for write '" << kTzIdPath << "'";
+    FXL_LOG(ERROR) << "Unable to open file for write '" << tz_id_path_ << "'";
     callback(false);
     return;
   }
@@ -136,7 +137,7 @@ fidl::StringPtr TimezoneImpl::GetTimezoneIdImpl() {
   if (!valid_) {
     return kDefaultTimezone;
   }
-  std::ifstream in_fstream(kTzIdPath);
+  std::ifstream in_fstream(tz_id_path_);
   if (!in_fstream.is_open()) {
     return kDefaultTimezone;
   }
@@ -145,7 +146,7 @@ fidl::StringPtr TimezoneImpl::GetTimezoneIdImpl() {
   in_fstream.close();
 
   if (id_str.empty()) {
-    FXL_LOG(ERROR) << "TZ file empty at '" << kTzIdPath << "'";
+    FXL_LOG(ERROR) << "TZ file empty at '" << tz_id_path_ << "'";
     return kDefaultTimezone;
   }
   if (!IsValidTimezoneId(id_str)) {
@@ -170,10 +171,6 @@ void TimezoneImpl::Watch(
   watcher_proxy.set_error_handler(
       [this, proxy_raw_ptr] { ReleaseWatcher(proxy_raw_ptr); });
   watchers_.push_back(std::move(watcher_proxy));
-}
-
-void TimezoneImpl::AddBinding(fidl::InterfaceRequest<Timezone> request) {
-  bindings_.AddBinding(this, std::move(request));
 }
 
 }  // namespace time_zone
