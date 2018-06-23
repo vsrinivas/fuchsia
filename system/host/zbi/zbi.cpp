@@ -1843,6 +1843,7 @@ int main(int argc, char** argv) {
                 fprintf(stderr, "--depfile or -d must precede inputs\n");
                 exit(1);
             }
+            depfile = optarg;
             opener.Init(outfile, depfile);
             continue;
 
