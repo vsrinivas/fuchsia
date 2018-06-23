@@ -5,14 +5,28 @@
 
 '''A collection of storage classes to use with Mako templates.'''
 
-class CppLibrary(object):
+class _CppLibrary(object):
 
-    def __init__(self, name, target_arch):
+    def __init__(self, name):
         self.name = name
-        self.srcs = []
         self.hdrs = []
         self.deps = []
         self.includes = []
+
+
+class CppSourceLibrary(_CppLibrary):
+
+    def __init__(self, name):
+        super(CppSourceLibrary, self).__init__(name)
+        self.srcs = []
+
+
+class CppPrebuiltLibrary(_CppLibrary):
+
+    def __init__(self, name, target_arch):
+        super(CppPrebuiltLibrary, self).__init__(name)
+        self.prebuilt = ""
+        self.is_static = False
         self.target_arch = target_arch
 
 

@@ -2,18 +2,21 @@
 
 package(default_visibility = ["//visibility:public"])
 
+# Note: the cc_library / cc_import combo serves two purposes:
+#  - it allows the use of a select clause to target the proper architecture;
+#  - it works around an issue with cc_import which does not have an "includes"
+#    nor a "deps" attribute.
 cc_library(
     name = "${data.name}",
-    srcs = select({
-        "//build_defs/target_cpu:arm64": [":arm64_prebuilts"],
-        "//build_defs/target_cpu:x64": [":x64_prebuilts"],
-    }),
     hdrs = [
         % for header in sorted(data.hdrs):
         "${header}",
         % endfor
     ],
-    deps = [
+    deps = select({
+        "//build_defs/target_cpu:arm64": [":arm64_prebuilts"],
+        "//build_defs/target_cpu:x64": [":x64_prebuilts"],
+    }) + [
         % for dep in sorted(data.deps):
         "${dep}",
         % endfor
@@ -25,4 +28,4 @@ cc_library(
     ],
 )
 
-# Target specific dependencies
+# Architecture-specific targets

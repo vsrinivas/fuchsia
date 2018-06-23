@@ -158,23 +158,27 @@ class BazelBuilder(Builder):
             return
 
         name = sanitize(atom.id.name)
-        library = model.CppLibrary(name, self.metadata.target_arch)
+        library = model.CppPrebuiltLibrary(name, self.metadata.target_arch)
         base = self.dest('pkg', name)
 
         for file in atom.files:
             destination = file.destination
             extension = os.path.splitext(destination)[1][1:]
-            if extension == 'so' or extension == 'o':
+            if extension == 'so' or extension == 'a' or extension == 'o':
                 dest = os.path.join(base, 'arch',
                                     self.metadata.target_arch, destination)
                 if os.path.isfile(dest):
                     raise Exception('File already exists: %s.' % dest)
                 self.make_dir(dest)
                 shutil.copy2(file.source, dest)
-                if extension == 'so' and destination.startswith('lib'):
+                if ((extension == 'so' or extension == 'a') and
+                        destination.startswith('lib')):
+                    if library.prebuilt:
+                        raise Exception('Multiple prebuilts for %s.' % dest)
                     src = os.path.join('arch', self.metadata.target_arch,
                                        destination)
-                    library.srcs.append(src)
+                    library.prebuilt = src
+                    library.is_static = extension == 'a'
             elif self.is_overlay:
                 # Only binaries get installed in overlay mode.
                 continue
@@ -188,15 +192,16 @@ class BazelBuilder(Builder):
                 raise Exception('Error: unknow file extension "%s" for %s.' %
                                 (extension, atom.id))
 
-        # Only write the prebuilt library BUILD top when not in overlay.
+        for dep_id in atom.deps:
+            library.deps.append('//pkg/' + sanitize(dep_id.name))
+        library.includes.append('include')
+
+        # Only write the prebuilt library BUILD top when not in overlay mode.
         if not self.is_overlay:
-            for dep_id in atom.deps:
-                library.deps.append('//pkg/' + sanitize(dep_id.name))
-            library.includes.append('include')
             self.write_file(os.path.join(base, 'BUILD'),
                             'cc_prebuilt_library_top', library)
 
-        # Write the arch specific dependencies.
+        # Write the arch-specific target.
         self.write_file(os.path.join(base, 'BUILD'),
                         'cc_prebuilt_library_srcs', library, append=True)
 
@@ -207,7 +212,7 @@ class BazelBuilder(Builder):
             return
 
         name = sanitize(atom.id.name)
-        library = model.CppLibrary(name, self.metadata.target_arch)
+        library = model.CppSourceLibrary(name)
         base = self.dest('pkg', name)
 
         for file in atom.files:

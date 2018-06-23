@@ -1,8 +1,9 @@
-filegroup(
+
+cc_import(
     name = "${data.target_arch}_prebuilts",
-    srcs = [
-        % for source in sorted(data.srcs):
-        "${source}",
-        % endfor
-    ],
+    % if data.is_static:
+    static_library = "${data.prebuilt}",
+    % else:
+    shared_library = "${data.prebuilt}",
+    % endif
 )
