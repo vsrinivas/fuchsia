@@ -5,18 +5,19 @@
 #include <memory>
 
 #include <fuchsia/modular/cpp/fidl.h>
+
 #include "gtest/gtest.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fsl/types/type_converters.h"
+#include "lib/fxl/logging.h"
 #include "lib/fxl/type_converter.h"
-#include "lib/gtest/test_with_message_loop.h"
 #include "peridot/bin/user_runner/story_runner/chain_impl.h"
 #include "peridot/lib/testing/story_controller_mock.h"
 
 namespace modular {
 namespace {
 
-class ChainImplTest : public gtest::TestWithMessageLoop {
+class ChainImplTest : public testing::Test {
  public:
   void Reset(std::vector<fidl::StringPtr> path,
              std::map<std::string, std::vector<std::string>> link_map) {

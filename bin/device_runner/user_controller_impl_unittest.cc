@@ -5,8 +5,8 @@
 #include "peridot/bin/device_runner/user_controller_impl.h"
 
 #include <fuchsia/sys/cpp/fidl.h>
-#include "gtest/gtest.h"
-#include "lib/gtest/test_with_message_loop.h"
+
+#include "lib/gtest/test_with_loop.h"
 #include "peridot/lib/fidl/clone.h"
 #include "peridot/lib/testing/fake_launcher.h"
 
@@ -14,7 +14,7 @@ namespace modular {
 namespace testing {
 namespace {
 
-class UserControllerImplTest : public gtest::TestWithMessageLoop {};
+using UserControllerImplTest = gtest::TestWithLoop;
 
 TEST_F(UserControllerImplTest, StartUserRunner) {
   FakeLauncher launcher;

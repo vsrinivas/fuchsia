@@ -4,10 +4,9 @@
 
 #include "peridot/bin/module_resolver/local_module_resolver.h"
 
-#include "gtest/gtest.h"
 #include "lib/entity/cpp/json.h"
 #include "lib/fxl/files/file.h"
-#include "lib/gtest/test_with_message_loop.h"
+#include "lib/gtest/test_with_loop.h"
 #include "lib/module_resolver/cpp/formatting.h"
 #include "peridot/lib/testing/entity_resolver_fake.h"
 
@@ -173,7 +172,7 @@ class TestManifestSource : public ModuleManifestSource {
   }
 };
 
-class LocalModuleResolverTest : public gtest::TestWithMessageLoop {
+class LocalModuleResolverTest : public gtest::TestWithLoop {
  protected:
   void ResetResolver() {
     fuchsia::modular::EntityResolverPtr entity_resolver_ptr;
@@ -212,8 +211,8 @@ class LocalModuleResolverTest : public gtest::TestWithMessageLoop {
           got_response = true;
           result.Clone(&result_);
         });
-    ASSERT_TRUE(
-        RunLoopUntilWithTimeout([&got_response] { return got_response; }));
+        RunLoopUntilIdle();
+        ASSERT_TRUE(got_response);
   }
 
   const fidl::VectorPtr<fuchsia::modular::ModuleResolverResult>& results()
@@ -299,7 +298,7 @@ TEST_F(LocalModuleResolverTest, Simpleaction) {
   auto query = QueryBuilder("com.google.fuchsia.navigate.v1").build();
   // This is mostly the contents of the FindModules() convenience function
   // above.  It's copied here so that we can call source2->idle() before
-  // RunLoopUntilWithTimeout() for this case only.
+  // RunLoopUntilIdle() for this case only.
   auto scoring_info = fuchsia::modular::ResolverScoringInfo::New();
   bool got_response = false;
   resolver_->FindModules(
@@ -312,8 +311,8 @@ TEST_F(LocalModuleResolverTest, Simpleaction) {
   // effectively delayed until all sources have indicated idle ("module2" is in
   // |source2|).
   source2->idle();
-  ASSERT_TRUE(
-      RunLoopUntilWithTimeout([&got_response] { return got_response; }));
+  RunLoopUntilIdle();
+  ASSERT_TRUE(got_response);
 
   ASSERT_EQ(2lu, results()->size());
   EXPECT_EQ("module1", results()->at(0).module_id);

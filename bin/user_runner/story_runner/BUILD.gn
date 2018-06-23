@@ -98,7 +98,6 @@ executable("chain_impl_unittest") {
     ":story_runner",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
-    "//garnet/public/lib/gtest",
     "//peridot/bin/user_runner/agent_runner",
     "//peridot/lib/testing:story_controller_mock",
     "//third_party/googletest:gtest_main",
