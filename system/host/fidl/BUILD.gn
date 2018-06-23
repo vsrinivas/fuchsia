@@ -10,6 +10,7 @@ config("fidl_config") {
 source_set("compiler") {
   public_configs = [ ":fidl_config" ]
   sources = [
+    "lib/attributes.cpp",
     "lib/c_generator.cpp",
     "lib/error_reporter.cpp",
     "lib/flat_ast.cpp",

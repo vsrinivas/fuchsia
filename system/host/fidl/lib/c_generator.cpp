@@ -4,6 +4,7 @@
 
 #include "fidl/c_generator.h"
 
+#include "fidl/attributes.h"
 #include "fidl/names.h"
 
 namespace fidl {
@@ -51,6 +52,13 @@ void EmitEndExternC(std::ostream* file) {
 
 void EmitBlank(std::ostream* file) {
     *file << "\n";
+}
+
+void EmitMemberDecl(std::ostream* file, const CGenerator::Member& member) {
+    *file << member.type << " " << member.name;
+    for (uint32_t array_count : member.array_counts) {
+        *file << "[" << array_count << "]";
+    }
 }
 
 // Various computational helper routines.
@@ -165,9 +173,11 @@ std::vector<uint32_t> ArrayCounts(const flat::Library* library, const flat::Type
     }
 }
 
-CGenerator::Member CreateMember(const flat::Library* library, const flat::Type* type,
-                                StringView name) {
-    auto type_name = NameFlatCType(type);
+template <typename T, std::string NameType(const flat::Type*) = NameFlatCType>
+CGenerator::Member CreateMember(const flat::Library* library, const T& decl) {
+    std::string name = NameIdentifier(decl.name);
+    const flat::Type* type = decl.type.get();
+    auto type_name = NameType(type);
     std::vector<uint32_t> array_counts = ArrayCounts(library, type);
     return CGenerator::Member{type_name, name, std::move(array_counts)};
 }
@@ -178,9 +188,7 @@ GenerateMembers(const flat::Library* library,
     std::vector<CGenerator::Member> members;
     members.reserve(union_members.size());
     for (const auto& union_member : union_members) {
-        const flat::Type* union_member_type = union_member.type.get();
-        auto union_member_name = NameIdentifier(union_member.name);
-        members.push_back(CreateMember(library, union_member_type, union_member_name));
+        members.push_back(CreateMember(library, union_member));
     }
     return members;
 }
@@ -230,10 +238,8 @@ void CGenerator::GenerateStructDeclaration(StringView name, const std::vector<Me
     header_file_ << "struct " << name << " {\n";
     header_file_ << kIndent << "FIDL_ALIGNDECL\n";
     for (const auto& member : members) {
-        header_file_ << kIndent << member.type << " " << member.name;
-        for (uint32_t array_count : member.array_counts) {
-            header_file_ << "[" << array_count << "]";
-        }
+        header_file_ << kIndent;
+        EmitMemberDecl(&header_file_, member);
         header_file_ << ";\n";
     }
     header_file_ << "};\n";
@@ -246,10 +252,8 @@ void CGenerator::GenerateTaggedUnionDeclaration(StringView name,
     header_file_ << kIndent << "fidl_union_tag_t tag;\n";
     header_file_ << kIndent << "union {\n";
     for (const auto& member : members) {
-        header_file_ << kIndent << kIndent << member.type << " " << member.name;
-        for (uint32_t array_count : member.array_counts) {
-            header_file_ << "[" << array_count << "]";
-        }
+        header_file_ << kIndent << kIndent;
+        EmitMemberDecl(&header_file_, member);
         header_file_ << ";\n";
     }
     header_file_ << kIndent << "};\n";
@@ -288,6 +292,7 @@ CGenerator::NameInterfaces(const std::vector<std::unique_ptr<flat::Interface>>& 
             std::string method_name = NameMethod(interface_name, method);
             named_method.ordinal = method.ordinal.Value();
             named_method.ordinal_name = NameOrdinal(method_name);
+            named_method.c_name = method_name;
             if (method.maybe_request != nullptr) {
                 std::string c_name = NameMessage(method_name, types::MessageKind::kRequest);
                 std::string coded_name = NameTable(c_name);
@@ -397,8 +402,7 @@ void CGenerator::ProduceMessageDeclaration(const NamedMessage& named_message) {
     members.reserve(1 + named_message.parameters.size());
     members.push_back(MessageHeader());
     for (const auto& parameter : named_message.parameters) {
-        auto parameter_name = NameIdentifier(parameter.name);
-        members.push_back(CreateMember(library_, parameter.type.get(), parameter_name));
+        members.push_back(CreateMember(library_, parameter));
     }
 
     GenerateStructDeclaration(named_message.c_name, members);
@@ -419,8 +423,7 @@ void CGenerator::ProduceStructDeclaration(const NamedStruct& named_struct) {
     std::vector<CGenerator::Member> members;
     members.reserve(named_struct.struct_info.members.size());
     for (const auto& struct_member : named_struct.struct_info.members) {
-        auto struct_member_name = NameIdentifier(struct_member.name);
-        members.push_back(CreateMember(library_, struct_member.type.get(), struct_member_name));
+        members.push_back(CreateMember(library_, struct_member));
     }
 
     GenerateStructDeclaration(named_struct.c_name, members);
@@ -444,6 +447,28 @@ void CGenerator::ProduceUnionDeclaration(const NamedUnion& named_union) {
     }
 
     EmitBlank(&header_file_);
+}
+
+void CGenerator::ProduceInterfaceClientDeclaration(const NamedInterface& named_interface) {
+    for (const auto& method_info : named_interface.methods) {
+        if (!method_info.request)
+            continue;
+        header_file_ << "zx_status_t " << method_info.c_name
+                     << "(zx_handle_t";
+        for (const auto& parameter : method_info.request->parameters) {
+            header_file_ << ", ";
+            EmitMemberDecl(&header_file_, CreateMember(library_, parameter));
+        }
+        if (method_info.response) {
+            for (const auto& parameter : method_info.response->parameters) {
+                header_file_ << ", ";
+                auto member = CreateMember<flat::Interface::Method::Parameter, NameFlatCOutType>(library_, parameter);
+                member.name = "out_" + member.name;
+                EmitMemberDecl(&header_file_, member);
+            }
+        }
+        header_file_ << ");\n";
+    }
 }
 
 std::ostringstream CGenerator::Produce() {
@@ -532,7 +557,7 @@ std::ostringstream CGenerator::Produce() {
         case flat::Decl::Kind::kConst: {
             auto iter = named_consts.find(decl);
             if (iter != named_consts.end()) {
-                ProduceConstDeclaration(named_consts.find(decl)->second);
+                ProduceConstDeclaration(iter->second);
             }
             break;
         }
@@ -543,21 +568,21 @@ std::ostringstream CGenerator::Produce() {
         case flat::Decl::Kind::kInterface: {
             auto iter = named_interfaces.find(decl);
             if (iter != named_interfaces.end()) {
-                ProduceInterfaceDeclaration(named_interfaces.find(decl)->second);
+                ProduceInterfaceDeclaration(iter->second);
             }
             break;
         }
         case flat::Decl::Kind::kStruct: {
             auto iter = named_structs.find(decl);
             if (iter != named_structs.end()) {
-                ProduceStructDeclaration(named_structs.find(decl)->second);
+                ProduceStructDeclaration(iter->second);
             }
             break;
         }
         case flat::Decl::Kind::kUnion: {
             auto iter = named_unions.find(decl);
             if (iter != named_unions.end()) {
-                ProduceUnionDeclaration(named_unions.find(decl)->second);
+                ProduceUnionDeclaration(iter->second);
             }
             break;
         }
@@ -565,6 +590,32 @@ std::ostringstream CGenerator::Produce() {
             abort();
         }
     }
+
+    header_file_ << "\n// Simple clients \n\n";
+
+    for (const auto* decl : library_->declaration_order_) {
+        switch (decl->kind) {
+        case flat::Decl::Kind::kConst:
+        case flat::Decl::Kind::kEnum:
+        case flat::Decl::Kind::kStruct:
+        case flat::Decl::Kind::kUnion:
+            // Only interfaces have client declarations.
+            break;
+        case flat::Decl::Kind::kInterface: {
+            if (!HasSimpleLayout(decl))
+                break;
+            auto iter = named_interfaces.find(decl);
+            if (iter != named_interfaces.end()) {
+                ProduceInterfaceClientDeclaration(iter->second);
+            }
+            break;
+        }
+        default:
+            abort();
+        }
+    }
+
+    header_file_ << "\n";
 
     GenerateEpilogues();
 

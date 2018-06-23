@@ -10,6 +10,7 @@
 #include <algorithm>
 #include <sstream>
 
+#include "fidl/attributes.h"
 #include "fidl/lexer.h"
 #include "fidl/names.h"
 #include "fidl/parser.h"
@@ -956,7 +957,7 @@ bool Library::CompileInterface(Interface* interface_declaration) {
     // TODO(TO-703) Add subinterfaces here.
     Scope<StringView> name_scope;
     Scope<uint32_t> ordinal_scope;
-    bool is_simple = interface_declaration->GetAttribute("Layout") == "Simple";
+    bool is_simple = HasSimpleLayout(interface_declaration);
     for (auto& method : interface_declaration->methods) {
         if (!name_scope.Insert(method.name.data()))
             return Fail(method.name, "Multiple methods with the same name in an interface");

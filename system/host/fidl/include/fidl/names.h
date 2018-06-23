@@ -35,6 +35,7 @@ std::string NameFlatConstantKind(flat::Constant::Kind kind);
 std::string NameFlatTypeKind(flat::Type::Kind kind);
 std::string NameUnionTag(StringView union_name, const flat::Union::Member& member);
 std::string NameFlatCType(const flat::Type* type);
+std::string NameFlatCOutType(const flat::Type* type);
 std::string NameInterface(const flat::Interface& interface);
 std::string NameMethod(StringView interface_name, const flat::Interface::Method& method);
 std::string NameOrdinal(StringView method_name);

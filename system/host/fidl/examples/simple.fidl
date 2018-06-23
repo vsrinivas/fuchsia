@@ -1,0 +1,26 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fidl.examples.simple;
+
+struct Point {
+    int32 x;
+    int32 y;
+};
+
+enum Direction : uint32 {
+    Up = 0;
+    Down = 1;
+    Left = 2;
+    Right = 3;
+};
+
+[Layout="Simple"]
+interface Drawing {
+    1: Draw(Point p, Direction d);
+    2: DrawLots(handle<vmo> commands) -> (int32 result, Point p);
+    3: DrawArray(array<Point>:4 points) -> (status rv);
+    4: -> DrawSucceeded(uint32 draws);
+    5: Describe(string:64 one) -> (string:128 two);
+};
