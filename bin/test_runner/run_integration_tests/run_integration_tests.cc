@@ -6,13 +6,13 @@
 // starts a test and exits with success or failure based on the success or
 // failure of the test.
 
+#include <iostream>
+
+#include <lib/async-loop/cpp/loop.h>
 #include <zircon/processargs.h>
 #include <zircon/status.h>
 
-#include <iostream>
-
 #include "garnet/bin/test_runner/run_integration_tests/test_runner_config.h"
-#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/strings/split_string.h"
 #include "lib/fxl/strings/string_printf.h"
@@ -23,7 +23,10 @@ namespace {
 
 class TestRunObserverImpl : public test_runner::TestRunObserver {
  public:
-  TestRunObserverImpl(const std::string& test_id) : test_id_(test_id) {}
+  TestRunObserverImpl(async::Loop* loop, const std::string& test_id)
+    : loop_(loop), test_id_(test_id) {
+      FXL_CHECK(loop);
+    }
 
   void SendMessage(const std::string& test_id, const std::string& operation,
                    const std::string& msg) override {
@@ -33,26 +36,30 @@ class TestRunObserverImpl : public test_runner::TestRunObserver {
   void Teardown(const std::string& test_id, bool success) override {
     FXL_CHECK(test_id == test_id_);
     success_ = success;
-    fsl::MessageLoop::GetCurrent()->PostQuitTask();
+    loop_->Quit();
   }
 
   bool success() { return success_; }
 
  private:
+  async::Loop* const loop_;
   std::string test_id_;
   bool success_;
 };
 
-bool RunTest(std::shared_ptr<fuchsia::sys::StartupContext> app_context,
+bool RunTest(async::Loop* loop,
+             std::shared_ptr<fuchsia::sys::StartupContext> app_context,
              const std::string& url, const std::vector<std::string>& args) {
+  FXL_CHECK(loop);
   uint64_t random_number;
   zx_cprng_draw(&random_number, sizeof random_number);
   std::string test_id = fxl::StringPrintf("test_%lX", random_number);
-  TestRunObserverImpl observer(test_id);
+  TestRunObserverImpl observer(loop, test_id);
   test_runner::TestRunContext context(app_context, &observer, test_id, url,
                                       args);
 
-  fsl::MessageLoop::GetCurrent()->Run();
+  loop->Run();
+  loop->ResetQuit();
 
   return observer.success();
 }
@@ -65,7 +72,7 @@ void PrintKnownTests(const TestRunnerConfig& config) {
 }
 
 int RunIntegrationTestsMain(int argc, char** argv) {
-  fsl::MessageLoop loop;
+  async::Loop loop(&kAsyncLoopConfigMakeDefault);
   fxl::CommandLine settings = fxl::CommandLineFromArgcArgv(argc, argv);
   std::string test_file;
   bool has_test_file = settings.GetOptionValue("test_file", &test_file);
@@ -118,7 +125,7 @@ int RunIntegrationTestsMain(int argc, char** argv) {
     args.erase(args.begin());
 
     std::cerr << test_name << " ...\r";
-    if (RunTest(app_context, url, args)) {
+    if (RunTest(&loop, app_context, url, args)) {
       std::cerr << test_name << " OK" << std::endl;
       succeeded.push_back(test_name);
     } else {
