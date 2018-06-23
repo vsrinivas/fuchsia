@@ -17,7 +17,6 @@ template("fidl_rust") {
       "This template can only be used in $rust_toolchain.")
 
   not_needed(invoker, [
-    "sdk_category",
     "sources"
   ])
 

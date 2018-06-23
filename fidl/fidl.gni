@@ -34,10 +34,12 @@ import("//build/rust/toolchain.gni")
 #     Defaults to true while migration is in progress.
 
 template("fidl") {
-  not_needed(invoker,
-             [
-               "cpp_legacy_callbacks",
-             ])
+  if (defined(invoker.sdk_category)) {
+    not_needed(invoker, [ "sdk_category" ])
+  }
+  if (defined(invoker.cpp_legacy_callbacks)) {
+    not_needed(invoker, [ "cpp_legacy_callbacks" ])
+  }
 
   if (current_toolchain == fidl_toolchain) {
     import("//build/fidl/fidl_library.gni")

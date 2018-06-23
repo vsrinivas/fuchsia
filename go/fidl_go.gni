@@ -18,7 +18,6 @@ template("fidl_go") {
       "This template can only be used in $go_toolchain.")
 
   not_needed(invoker, [
-    "sdk_category",
     "sources"
   ])
 

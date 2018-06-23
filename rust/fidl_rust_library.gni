@@ -11,9 +11,6 @@ import("//build/rust/rustc_library.gni")
 
 template("fidl_rust_library") {
   not_needed(invoker, [
-    "deps",
-    "public_deps",
-    "sdk_category",
     "sources",
   ])
 

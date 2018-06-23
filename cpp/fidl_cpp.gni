@@ -18,7 +18,6 @@ template("fidl_cpp") {
 
   not_needed(invoker,
              [
-               "sdk_category",
                "sources",
              ])
 
