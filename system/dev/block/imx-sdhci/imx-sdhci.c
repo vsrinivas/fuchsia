@@ -510,9 +510,11 @@ static int imx_sdhci_irq_thread(void *args) {
 
 static zx_status_t imx_sdhci_build_dma_desc(imx_sdhci_device_t* dev, sdmmc_req_t* req) {
     SDHCI_FUNC_ENTRY_LOG;
-    block_op_t* bop = &req->txn->bop;
-    uint64_t pagecount = ((bop->rw.offset_vmo & PAGE_MASK) + bop->rw.length + PAGE_MASK) /
-                         PAGE_SIZE;
+    uint64_t req_len = req->blockcount * req->blocksize;
+    bool is_read = req->cmd_flags & SDMMC_CMD_READ;
+
+    uint64_t pagecount = ((req->buf_offset & PAGE_MASK) + req_len + PAGE_MASK) /
+                           PAGE_SIZE;
     if (pagecount > SDMMC_PAGES_COUNT) {
         SDHCI_ERROR("too many pages %lu vs %lu\n", pagecount, SDMMC_PAGES_COUNT);
         return ZX_ERR_INVALID_ARGS;
@@ -522,9 +524,9 @@ static zx_status_t imx_sdhci_build_dma_desc(imx_sdhci_device_t* dev, sdmmc_req_t
     zx_paddr_t phys[SDMMC_PAGES_COUNT];
     zx_handle_t pmt;
     // offset_vmo is converted to bytes by the sdmmc layer
-    uint32_t options = bop->command == BLOCK_OP_READ ? ZX_BTI_PERM_WRITE : ZX_BTI_PERM_READ;
-    zx_status_t st = zx_bti_pin(dev->bti_handle, options, bop->rw.vmo,
-                                bop->rw.offset_vmo & ~PAGE_MASK,
+    uint32_t options = is_read ? ZX_BTI_PERM_WRITE : ZX_BTI_PERM_READ;
+    zx_status_t st = zx_bti_pin(dev->bti_handle, options, req->dma_vmo,
+                                req->buf_offset & ~PAGE_MASK,
                                 pagecount * PAGE_SIZE, phys, pagecount, &pmt);
     if (st != ZX_OK) {
         SDHCI_ERROR("error %d bti_pin\n", st);
@@ -536,8 +538,8 @@ static zx_status_t imx_sdhci_build_dma_desc(imx_sdhci_device_t* dev, sdmmc_req_t
     phys_iter_buffer_t buf = {
         .phys = phys,
         .phys_count = pagecount,
-        .length = bop->rw.length,
-        .vmo_offset = bop->rw.offset_vmo,
+        .length = req_len,
+        .vmo_offset = req->buf_offset,
     };
     phys_iter_t iter;
     phys_iter_init(&iter, &buf, ADMA2_DESC_MAX_LENGTH);
@@ -577,7 +579,7 @@ static zx_status_t imx_sdhci_build_dma_desc(imx_sdhci_device_t* dev, sdmmc_req_t
         desc = dev->descs;
         do {
             SDHCI_TRACE("desc: addr=0x%" PRIx32 " length=0x%04x attr=0x%04x\n",
-                    desc->address, desc->length, desc->attr);
+                         desc->address, desc->length, desc->attr);
         } while (!(desc++)->end);
     }
     return ZX_OK;
@@ -727,6 +729,20 @@ static zx_status_t imx_sdhci_finish_req(imx_sdhci_device_t* dev, sdmmc_req_t* re
     zx_status_t status = ZX_OK;
 
     if (req->use_dma && req->pmt != ZX_HANDLE_INVALID) {
+        /*
+         * Clean the cache one more time after the DMA operation because there
+         * might be a possibility of cpu prefetching while the DMA operation is
+         * going on.
+         */
+        uint64_t req_len = req->blockcount * req->blocksize;
+        if ((req->cmd_flags & SDMMC_CMD_READ) && req->use_dma) {
+            status = zx_vmo_op_range(req->dma_vmo, ZX_VMO_OP_CACHE_CLEAN_INVALIDATE,
+                                             req->buf_offset, req_len, NULL, 0);
+            if (status != ZX_OK) {
+                zxlogf(ERROR, "aml-sd-emmc: cache clean failed with error  %d\n", status);
+            }
+        }
+
         status = zx_pmt_unpin(req->pmt);
         if (status != ZX_OK) {
             SDHCI_ERROR("error %d in pmt_unpin\n", status);

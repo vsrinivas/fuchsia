@@ -304,7 +304,6 @@ static void sdmmc_do_txn(sdmmc_device_t* dev, sdmmc_txn_t* txn) {
     req->cmd_idx = cmd_idx;
     req->cmd_flags = cmd_flags;
     req->arg = txn->bop.rw.offset_dev;
-    req->txn = txn;
     req->blockcount = txn->bop.rw.length;
     req->blocksize = dev->block_info.block_size;
 
@@ -317,6 +316,8 @@ static void sdmmc_do_txn(sdmmc_device_t* dev, sdmmc_txn_t* txn) {
         req->use_dma = true;
         req->virt = NULL;
         req->pmt = ZX_HANDLE_INVALID;
+        req->dma_vmo =  txn->bop.rw.vmo;
+        req->buf_offset = txn->bop.rw.offset_vmo;
     } else {
         req->use_dma = false;
         st = zx_vmar_map(zx_vmar_root_self(), 0, txn->bop.rw.vmo,

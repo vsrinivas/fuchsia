@@ -403,9 +403,11 @@ static int sdhci_irq_thread(void *arg) {
 }
 
 static zx_status_t sdhci_build_dma_desc(sdhci_device_t* dev, sdmmc_req_t* req) {
-    block_op_t* bop = &req->txn->bop;
-    uint64_t pagecount = ((bop->rw.offset_vmo & PAGE_MASK) + bop->rw.length + PAGE_MASK) /
-                         PAGE_SIZE;
+    uint64_t req_len = req->blockcount * req->blocksize;
+    bool is_read = req->cmd_flags & SDMMC_CMD_READ;
+
+    uint64_t pagecount = ((req->buf_offset & PAGE_MASK) + req_len + PAGE_MASK) /
+                           PAGE_SIZE;
     if (pagecount > SDMMC_PAGES_COUNT) {
         zxlogf(ERROR, "sdhci: too many pages %lu vs %lu\n", pagecount, SDMMC_PAGES_COUNT);
         return ZX_ERR_INVALID_ARGS;
@@ -415,20 +417,20 @@ static zx_status_t sdhci_build_dma_desc(sdhci_device_t* dev, sdmmc_req_t* req) {
     zx_paddr_t phys[SDMMC_PAGES_COUNT];
     zx_handle_t pmt;
     // offset_vmo is converted to bytes by the sdmmc layer
-    uint32_t options = bop->command == BLOCK_OP_READ ? ZX_BTI_PERM_WRITE : ZX_BTI_PERM_READ;
-    zx_status_t st = zx_bti_pin(dev->bti_handle, options, bop->rw.vmo,
-                                bop->rw.offset_vmo & ~PAGE_MASK,
+    uint32_t options = is_read ? ZX_BTI_PERM_WRITE : ZX_BTI_PERM_READ;
+    zx_status_t st = zx_bti_pin(dev->bti_handle, options, req->dma_vmo,
+                                req->buf_offset & ~PAGE_MASK,
                                 pagecount * PAGE_SIZE, phys, pagecount, &pmt);
     if (st != ZX_OK) {
         zxlogf(ERROR, "sdhci: error %d bti_pin\n", st);
         return st;
     }
     if (req->cmd_flags & SDMMC_CMD_READ) {
-        st = zx_vmo_op_range(bop->rw.vmo, ZX_VMO_OP_CACHE_CLEAN_INVALIDATE,
-                             bop->rw.offset_vmo, bop->rw.length, NULL, 0);
+        st = zx_vmo_op_range(req->dma_vmo, ZX_VMO_OP_CACHE_CLEAN_INVALIDATE,
+                             req->buf_offset, req_len, NULL, 0);
     } else {
-        st = zx_vmo_op_range(bop->rw.vmo, ZX_VMO_OP_CACHE_CLEAN,
-                             bop->rw.offset_vmo, bop->rw.length, NULL, 0);
+        st = zx_vmo_op_range(req->dma_vmo, ZX_VMO_OP_CACHE_CLEAN,
+                             req->buf_offset, req_len, NULL, 0);
     }
     if (st != ZX_OK) {
         zxlogf(ERROR, "sdhci: cache clean failed with error  %d\n", st);
@@ -440,8 +442,8 @@ static zx_status_t sdhci_build_dma_desc(sdhci_device_t* dev, sdmmc_req_t* req) {
     phys_iter_buffer_t buf = {
         .phys = phys,
         .phys_count = pagecount,
-        .length = bop->rw.length,
-        .vmo_offset = bop->rw.offset_vmo,
+        .length = req_len,
+        .vmo_offset = req->buf_offset,
     };
     phys_iter_t iter;
     phys_iter_init(&iter, &buf, ADMA2_DESC_MAX_LENGTH);
@@ -577,10 +579,10 @@ static zx_status_t sdhci_finish_req(sdhci_device_t* dev, sdmmc_req_t* req) {
          * might be a possibility of cpu prefetching while the DMA operation is
          * going on.
          */
-        block_op_t* bop = &req->txn->bop;
+        uint64_t req_len = req->blockcount * req->blocksize;
         if ((req->cmd_flags & SDMMC_CMD_READ) && req->use_dma) {
-            st = zx_vmo_op_range(bop->rw.vmo, ZX_VMO_OP_CACHE_CLEAN_INVALIDATE,
-                                       bop->rw.offset_vmo, bop->rw.length, NULL, 0);
+            st = zx_vmo_op_range(req->dma_vmo, ZX_VMO_OP_CACHE_CLEAN_INVALIDATE,
+                                 req->buf_offset, req_len, NULL, 0);
             if (st != ZX_OK) {
                 zxlogf(ERROR, "sdhci: cache clean failed with error  %d\n", st);
             }

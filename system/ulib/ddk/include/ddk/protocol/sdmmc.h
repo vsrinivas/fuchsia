@@ -51,16 +51,13 @@ struct sdmmc_req {
     uint32_t cmd_flags;
     uint32_t arg;
 
-    // (optional) related txn
-    sdmmc_txn_t* txn;
-
     // data command parameters
-
     uint16_t blockcount;
     uint16_t blocksize;
-
     bool use_dma;
-    void* virt;
+    zx_handle_t dma_vmo; // Used if use_dma is true
+    void* virt;          // Used if use_dma is false
+    uint64_t buf_offset; // offset into dma_vmo or virt
     zx_handle_t pmt;
 
     // response data
