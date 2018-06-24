@@ -281,6 +281,8 @@ static bool time_test() {
     d /= 19u;
     ASSERT_EQ(d.get(), ZX_MIN(1));
 
+    ASSERT_EQ((zx::sec(19) % zx::sec(7)).get(), ZX_SEC(5));
+
     zx::time t(0u);
     t += zx::msec(19);
     ASSERT_EQ(t.get(), ZX_MSEC(19));

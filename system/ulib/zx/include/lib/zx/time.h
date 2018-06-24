@@ -35,6 +35,10 @@ public:
         return duration(value_ / divisor);
     }
 
+    constexpr duration operator%(duration divisor) const {
+        return duration(value_ % divisor.value_);
+    }
+
     constexpr uint64_t operator/(duration other) const {
         return value_ / other.value_;
     }
