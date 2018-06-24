@@ -71,7 +71,8 @@ zx_status_t bootfs_parse(bootfs_t* bfs,
     return ZX_OK;
 }
 
-zx_status_t bootfs_open(bootfs_t* bfs, const char* name, zx_handle_t* vmo_out) {
+zx_status_t bootfs_open(bootfs_t* bfs, const char* name,
+                        zx_handle_t* vmo_out, uint32_t* size_out) {
     size_t name_len = strlen(name) + 1;
     size_t avail = bfs->dirsize;
     void* p = bfs->dir;
@@ -117,5 +118,8 @@ found:;
     }
 
     *vmo_out = vmo;
+    if (size_out) {
+        *size_out = e->data_len;
+    }
     return ZX_OK;
 }

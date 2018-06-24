@@ -499,32 +499,28 @@ static void start_console_shell(void) {
 }
 
 static void load_cmdline_from_bootfs(void) {
-    int fd = open("/boot/config/devmgr", O_RDONLY);
-    if (fd < 0) {
+    uint32_t file_size;
+    zx_handle_t vmo = devmgr_load_file("/boot/config/devmgr", &file_size);
+    if (vmo == ZX_HANDLE_INVALID) {
         return;
     }
-    off_t sz = lseek(fd, 0, SEEK_END);
-    lseek(fd, 0, SEEK_SET);
-    char* cfg;
-    if ((sz < 0) || ((cfg = malloc(sz + 1)) == NULL)) {
-        close(fd);
-        return;
-    }
-    char* x = cfg;
-    while (sz > 0) {
-        int r = read(fd, x, sz);
-        if (r <= 0) {
-            close(fd);
-            free(cfg);
-            return;
-        }
-        x += r;
-        sz -= r;
-    }
-    *x = 0;
-    close(fd);
 
-    x = cfg;
+    char* cfg = malloc(file_size + 1);
+    if (cfg == NULL) {
+        zx_handle_close(vmo);
+        return;
+    }
+
+    zx_status_t status = zx_vmo_read(vmo, cfg, 0, file_size);
+    if (status != ZX_OK) {
+        printf("zx_vmo_read on /boot/config/devmgr BOOTFS VMO: %d (%s)\n",
+               status, zx_status_get_string(status));
+        free(cfg);
+        return;
+    }
+    cfg[file_size] = '\0';
+
+    char* x = cfg;
     while (*x) {
         // skip any leading whitespace
         while (isspace(*x)) {
@@ -595,15 +591,15 @@ int main(int argc, char** argv) {
     zx_event_create(0, &fshost_event);
 
     bootfs_create_from_startup_handle();
-    devmgr_svc_init();
-    devmgr_vfs_init();
 
     load_cmdline_from_bootfs();
-
     char** e = environ;
     while (*e) {
         printf("cmdline: %s\n", *e++);
     }
+
+    devmgr_svc_init();
+    devmgr_vfs_init();
 
     require_system = getenv_bool("devmgr.require-system", false);
 
@@ -636,7 +632,7 @@ static zx_status_t load_object(void* ctx, const char* name, zx_handle_t* vmo) {
         return ZX_ERR_BAD_PATH;
     }
     bootfs_t* bootfs = ctx;
-    return bootfs_open(bootfs, tmp, vmo);
+    return bootfs_open(bootfs, tmp, vmo, NULL);
 }
 
 static zx_status_t load_abspath(void* ctx, const char* name, zx_handle_t* vmo) {
@@ -775,12 +771,12 @@ void fshost_start(void) {
     zx_handle_close(dl_set_loader_service(ldsvc));
 }
 
-zx_handle_t devmgr_load_file(const char* path) {
+zx_handle_t devmgr_load_file(const char* path, uint32_t* out_size) {
     if (strncmp(path, "/boot/", 6)) {
         return ZX_HANDLE_INVALID;
     }
     zx_handle_t vmo = ZX_HANDLE_INVALID;
-    bootfs_open(&bootfs, path + 6, &vmo);
+    bootfs_open(&bootfs, path + 6, &vmo, out_size);
     return vmo;
 }
 
@@ -874,7 +870,7 @@ zx_status_t svchost_start(void) {
     const char* name = "svchost";
     const char* argv[] = { "/boot/bin/svchost" };
 
-    zx_handle_t svchost_vmo = devmgr_load_file(argv[0]);
+    zx_handle_t svchost_vmo = devmgr_load_file(argv[0], NULL);
     if (svchost_vmo == ZX_HANDLE_INVALID) {
         goto error;
     }

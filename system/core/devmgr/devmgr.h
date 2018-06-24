@@ -21,7 +21,7 @@ void devmgr_svc_init(void);
 void devmgr_vfs_init(void);
 void devmgr_set_bootdata(zx_handle_t vmo);
 
-zx_handle_t devmgr_load_file(const char* path);
+zx_handle_t devmgr_load_file(const char* path, uint32_t* out_size);
 
 #define FS_SVC      0x0001
 #define FS_DEV      0x0002

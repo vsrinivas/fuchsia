@@ -86,7 +86,7 @@ zx_status_t devmgr_launch(zx_handle_t job, const char* name,
     launchpad_create(job_copy, name, &lp);
 
     zx_handle_t file_vmo;
-    if ((file_vmo = devmgr_load_file(argv[0])) != ZX_HANDLE_INVALID) {
+    if ((file_vmo = devmgr_load_file(argv[0], NULL)) != ZX_HANDLE_INVALID) {
         launchpad_load_from_vmo(lp, file_vmo);
     } else {
         launchpad_load_from_file(lp, argv[0]);

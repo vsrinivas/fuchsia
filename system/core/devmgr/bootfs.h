@@ -32,7 +32,8 @@ void bootfs_destroy(bootfs_t* bfs);
 //
 // The contents of the file are returned as a copy-on-write VMO clone. Upon
 // success, the caller owns the returned |vmo|.
-zx_status_t bootfs_open(bootfs_t* bfs, const char* name, zx_handle_t* vmo);
+zx_status_t bootfs_open(bootfs_t* bfs, const char* name,
+                        zx_handle_t* vmo, uint32_t* size);
 
 // Parses the bootfs file system and calls |cb| for each |bootfs_entry_t|.
 zx_status_t bootfs_parse(bootfs_t* bfs,
