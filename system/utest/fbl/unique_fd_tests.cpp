@@ -37,8 +37,8 @@ bool valid_comparison_test() {
     int pipes[2];
     EXPECT_EQ(pipe(pipes), 0);
     {
-        fbl::unique_fd in(pipes[0]);
-        fbl::unique_fd out(pipes[1]);
+        fbl::unique_fd in(pipes[1]);
+        fbl::unique_fd out(pipes[0]);
 
         EXPECT_NE(in.get(), fbl::unique_fd::InvalidValue());
         EXPECT_NE(out.get(), fbl::unique_fd::InvalidValue());
@@ -50,7 +50,7 @@ bool valid_comparison_test() {
         EXPECT_FALSE(in == out);
         EXPECT_TRUE(in == in);
         EXPECT_TRUE(out == out);
-        EXPECT_EQ(pipes[0], in.get());
+        EXPECT_EQ(pipes[1], in.get());
 
         EXPECT_TRUE(in);
         EXPECT_TRUE(out);
@@ -73,7 +73,7 @@ bool verify_pipes_closed(int in, int out) {
     BEGIN_HELPER;
     char c = 'a';
     EXPECT_EQ(write(in, &c, 1), -1);
-    EXPECT_EQ(read(in, &c, 1), -1);
+    EXPECT_EQ(read(out, &c, 1), -1);
     END_HELPER;
 }
 
@@ -81,16 +81,16 @@ bool scoping_test() {
     BEGIN_TEST;
     int pipes[2];
     EXPECT_EQ(pipe(pipes), 0);
-    EXPECT_TRUE(verify_pipes_open(pipes[0], pipes[1]));
+    EXPECT_TRUE(verify_pipes_open(pipes[1], pipes[0]));
     {
-        fbl::unique_fd in(pipes[0]);
-        fbl::unique_fd out(pipes[1]);
+        fbl::unique_fd in(pipes[1]);
+        fbl::unique_fd out(pipes[0]);
 
-        EXPECT_EQ(pipes[0], in.get());
-        EXPECT_EQ(pipes[1], out.get());
+        EXPECT_EQ(pipes[0], out.get());
+        EXPECT_EQ(pipes[1], in.get());
         EXPECT_TRUE(verify_pipes_open(in.get(), out.get()));
     }
-    EXPECT_TRUE(verify_pipes_closed(pipes[0], pipes[1]));
+    EXPECT_TRUE(verify_pipes_closed(pipes[1], pipes[0]));
     END_TEST;
 }
 
@@ -98,16 +98,17 @@ bool swap_test() {
     BEGIN_TEST;
     int pipes[2];
     EXPECT_EQ(pipe(pipes), 0);
-    EXPECT_TRUE(verify_pipes_open(pipes[0], pipes[1]));
+    EXPECT_TRUE(verify_pipes_open(pipes[1], pipes[0]));
     {
-        fbl::unique_fd in(pipes[0]);
-        fbl::unique_fd out(pipes[1]);
+        fbl::unique_fd in(pipes[1]);
+        fbl::unique_fd out(pipes[0]);
 
         in.swap(out);
-        EXPECT_EQ(pipes[1], in.get());
-        EXPECT_EQ(pipes[0], out.get());
+        EXPECT_EQ(pipes[0], in.get());
+        EXPECT_EQ(pipes[1], out.get());
         EXPECT_TRUE(verify_pipes_open(out.get(), in.get()));
     }
+    EXPECT_TRUE(verify_pipes_closed(pipes[1], pipes[0]));
     EXPECT_TRUE(verify_pipes_closed(pipes[0], pipes[1]));
     END_TEST;
 }
@@ -117,10 +118,10 @@ bool move_test() {
     // Move assignment
     int pipes[2];
     EXPECT_EQ(pipe(pipes), 0);
-    EXPECT_TRUE(verify_pipes_open(pipes[0], pipes[1]));
+    EXPECT_TRUE(verify_pipes_open(pipes[1], pipes[0]));
     {
-        fbl::unique_fd in(pipes[0]);
-        fbl::unique_fd out(pipes[1]);
+        fbl::unique_fd in(pipes[1]);
+        fbl::unique_fd out(pipes[0]);
 
         fbl::unique_fd in2, out2;
         EXPECT_TRUE(verify_pipes_open(in.get(), out.get()));
@@ -132,14 +133,14 @@ bool move_test() {
         EXPECT_TRUE(verify_pipes_closed(in.get(), out.get()));
         EXPECT_TRUE(verify_pipes_open(in2.get(), out2.get()));
     }
-    EXPECT_TRUE(verify_pipes_closed(pipes[0], pipes[1]));
+    EXPECT_TRUE(verify_pipes_closed(pipes[1], pipes[0]));
 
     // Move constructor
     EXPECT_EQ(pipe(pipes), 0);
-    EXPECT_TRUE(verify_pipes_open(pipes[0], pipes[1]));
+    EXPECT_TRUE(verify_pipes_open(pipes[1], pipes[0]));
     {
-        fbl::unique_fd in(pipes[0]);
-        fbl::unique_fd out(pipes[1]);
+        fbl::unique_fd in(pipes[1]);
+        fbl::unique_fd out(pipes[0]);
 
         EXPECT_TRUE(verify_pipes_open(in.get(), out.get()));
 
@@ -149,7 +150,7 @@ bool move_test() {
         EXPECT_TRUE(verify_pipes_closed(in.get(), out.get()));
         EXPECT_TRUE(verify_pipes_open(in2.get(), out2.get()));
     }
-    EXPECT_TRUE(verify_pipes_closed(pipes[0], pipes[1]));
+    EXPECT_TRUE(verify_pipes_closed(pipes[1], pipes[0]));
     END_TEST;
 }
 
@@ -159,32 +160,32 @@ bool reset_test() {
     EXPECT_EQ(pipe(pipes), 0);
     int other_pipes[2];
     EXPECT_EQ(pipe(other_pipes), 0);
-    EXPECT_TRUE(verify_pipes_open(pipes[0], pipes[1]));
-    EXPECT_TRUE(verify_pipes_open(other_pipes[0], other_pipes[1]));
+    EXPECT_TRUE(verify_pipes_open(pipes[1], pipes[0]));
+    EXPECT_TRUE(verify_pipes_open(other_pipes[1], other_pipes[0]));
     {
-        fbl::unique_fd in(pipes[0]);
-        fbl::unique_fd out(pipes[1]);
+        fbl::unique_fd in(pipes[1]);
+        fbl::unique_fd out(pipes[0]);
 
         EXPECT_TRUE(verify_pipes_open(in.get(), out.get()));
-        EXPECT_TRUE(verify_pipes_open(pipes[0], pipes[1]));
-        EXPECT_TRUE(verify_pipes_open(other_pipes[0], other_pipes[1]));
+        EXPECT_TRUE(verify_pipes_open(pipes[1], pipes[0]));
+        EXPECT_TRUE(verify_pipes_open(other_pipes[1], other_pipes[0]));
 
-        in.reset(other_pipes[0]);
-        out.reset(other_pipes[1]);
+        in.reset(other_pipes[1]);
+        out.reset(other_pipes[0]);
 
         EXPECT_TRUE(verify_pipes_open(in.get(), out.get()));
-        EXPECT_TRUE(verify_pipes_closed(pipes[0], pipes[1]));
-        EXPECT_TRUE(verify_pipes_open(other_pipes[0], other_pipes[1]));
+        EXPECT_TRUE(verify_pipes_closed(pipes[1], pipes[0]));
+        EXPECT_TRUE(verify_pipes_open(other_pipes[1], other_pipes[0]));
 
         in.reset();
         out.reset();
 
         EXPECT_TRUE(verify_pipes_closed(in.get(), out.get()));
-        EXPECT_TRUE(verify_pipes_closed(pipes[0], pipes[1]));
-        EXPECT_TRUE(verify_pipes_closed(other_pipes[0], other_pipes[1]));
+        EXPECT_TRUE(verify_pipes_closed(pipes[1], pipes[0]));
+        EXPECT_TRUE(verify_pipes_closed(other_pipes[1], other_pipes[0]));
     }
-    EXPECT_TRUE(verify_pipes_closed(pipes[0], pipes[1]));
-    EXPECT_TRUE(verify_pipes_closed(other_pipes[0], other_pipes[1]));
+    EXPECT_TRUE(verify_pipes_closed(pipes[1], pipes[0]));
+    EXPECT_TRUE(verify_pipes_closed(other_pipes[1], other_pipes[0]));
     END_TEST;
 }
 
