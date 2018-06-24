@@ -15,6 +15,7 @@ package("rust-crates-tests") {
     "fuchsia-framebuffer",
     "fuchsia-trace",
     "fuchsia-zircon",
+    "mapped-vmo",
     "shared-buffer",
     "zerocopy",
     "//garnet/public/lib/fidl/rust/fidl",
@@ -27,6 +28,7 @@ package("rust-crates-tests") {
     { name = "fuchsia_trace_lib_test_rustc" },
     { name = "fuchsia_zircon_lib_test_rustc" },
     { name = "fuchsia_syslog_lib_test_rustc" },
+    { name = "mapped_vmo_lib_test_rustc" },
     { name = "shared_buffer_lib_test_rustc" },
     { name = "zerocopy_lib_test_rustc" },
   ]
