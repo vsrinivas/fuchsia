@@ -181,7 +181,7 @@ def main():
     if retcode != 0:
         print(stdout + stderr)
         return retcode
-    fix_depfile(args.depfile, args.root_out_dir, args.output_file)
+    fix_depfile(args.depfile, os.getcwd(), args.output_file)
 
     # Build the desired output
     build_args = call_args + ["-o%s" % args.output_file]
