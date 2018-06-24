@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import os
 import os.path
 import subprocess
 
@@ -11,20 +12,22 @@ def _get_diff_base():
     "HEAD" if there is no upstream branch.
     """
     try:
-        upstream = subprocess.check_output([
-            "git", "rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{u}"
-        ]).strip()
-        # Get local commits not in upstream.
-        local_commits = filter(
-            len,
-            subprocess.check_output(
-                ["git", "rev-list", "HEAD", "^" + upstream, "--"]).split("\n"))
-        if not local_commits:
-            return "HEAD"
+        with open(os.devnull, 'w') as devnull:
+            upstream = subprocess.check_output([
+                "git", "rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{u}"
+            ], stderr = devnull).strip()
+            # Get local commits not in upstream.
+            local_commits = filter(
+                len,
+                subprocess.check_output(
+                    ["git", "rev-list", "HEAD", "^" + upstream, "--"]).split("\n"))
+            if not local_commits:
+                return "HEAD"
 
-        # Return parent of the oldest commit.
-        return subprocess.check_output(
-            ["git", "rev-parse", local_commits[-1] + "^"]).strip()
+            # Return parent of the oldest commit.
+            return subprocess.check_output(
+                ["git", "rev-parse", local_commits[-1] + "^"],
+                stderr = devnull).strip()
 
     except subprocess.CalledProcessError:
         return "HEAD"
