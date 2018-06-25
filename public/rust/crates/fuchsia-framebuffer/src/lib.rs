@@ -19,9 +19,9 @@ use std::mem;
 use std::os::unix::io::AsRawFd;
 use std::ptr;
 use std::rc::Rc;
-use zx::sys::{zx_cache_flush, zx_handle_t, ZX_CACHE_FLUSH_DATA, ZX_VM_FLAG_PERM_READ,
-              ZX_VM_FLAG_PERM_WRITE};
+use zx::sys::{zx_cache_flush, zx_handle_t, ZX_CACHE_FLUSH_DATA};
 use zx::{Handle, Status, Vmar, Vmo};
+use zx::VmarFlags;
 
 #[allow(non_camel_case_types, non_upper_case_globals)]
 const ZX_PIXEL_FORMAT_NONE: u32 = 0;
@@ -186,7 +186,7 @@ impl<'a> Frame<'a> {
             &image_vmo,
             0,
             framebuffer.byte_size(),
-            ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE,
+            VmarFlags::PERM_READ | VmarFlags::PERM_WRITE,
         )?;
 
         // import image VMO
@@ -252,9 +252,11 @@ impl<'a> Frame<'a> {
 
 impl<'a> Drop for Frame<'a> {
     fn drop(&mut self) {
-        Vmar::root_self()
-            .unmap(self.pixel_buffer_addr, self.byte_size())
-            .unwrap();
+        unsafe {
+            Vmar::root_self()
+                .unmap(self.pixel_buffer_addr, self.byte_size())
+                .unwrap();
+        }
     }
 }
 

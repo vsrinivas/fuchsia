@@ -25,7 +25,7 @@ impl Vmar {
     }
 
     pub fn allocate(
-        &self, offset: usize, size: usize, flags: u32,
+        &self, offset: usize, size: usize, flags: VmarFlags,
     ) -> Result<(Vmar, usize), Status> {
         let mut mapped = 0;
         let mut handle = 0;
@@ -34,7 +34,7 @@ impl Vmar {
                 self.raw_handle(),
                 offset,
                 size,
-                flags,
+                flags.bits(),
                 &mut handle,
                 &mut mapped,
             )
@@ -44,43 +44,72 @@ impl Vmar {
     }
 
     pub fn map(
-        &self, vmar_offset: usize, vmo: &Vmo, vmo_offset: u64, len: usize, flags: u32,
+        &self, vmar_offset: usize, vmo: &Vmo, vmo_offset: u64, len: usize, flags: VmarFlags,
     ) -> Result<usize, Status> {
-        let mut mapped = 0;
+        let flags = VmarFlagsExtended::from_bits_truncate(flags.bits());
         unsafe {
-            let status = sys::zx_vmar_map(
-                self.0.raw_handle(),
-                vmar_offset,
-                vmo.raw_handle(),
-                vmo_offset,
-                len,
-                flags,
-                &mut mapped,
-            );
-            ok(status).map(|_| mapped)
+            self.map_unsafe(vmar_offset, vmo, vmo_offset, len, flags)
         }
     }
 
-    pub fn unmap(&self, addr: usize, len: usize) -> Result<(), Status> {
-        let status = unsafe { sys::zx_vmar_unmap(self.0.raw_handle(), addr, len) };
-        ok(status)
+    /// Directly call zx_vmar_map.
+    ///
+    /// # Safety
+    ///
+    /// This function is unsafe because certain flags to `zx_vmar_map` may
+    /// replace an existing mapping which is referenced elsewhere.
+    pub unsafe fn map_unsafe(
+        &self, vmar_offset: usize, vmo: &Vmo, vmo_offset: u64, len: usize,
+        flags: VmarFlagsExtended,
+    ) -> Result<usize, Status> {
+        let mut mapped = 0;
+        let status = sys::zx_vmar_map(
+            self.0.raw_handle(),
+            vmar_offset,
+            vmo.raw_handle(),
+            vmo_offset,
+            len,
+            flags.bits(),
+            &mut mapped,
+        );
+        ok(status).map(|_| mapped)
     }
 
-    pub fn protect(&self, addr: usize, len: usize, flags: u32) -> Result<(), Status> {
-        let status = unsafe { sys::zx_vmar_protect(self.raw_handle(), addr, len, flags) };
-        ok(status)
+    pub unsafe fn unmap(&self, addr: usize, len: usize) -> Result<(), Status> {
+        ok(sys::zx_vmar_unmap(self.0.raw_handle(), addr, len))
     }
 
-    pub fn destroy(&self) -> Result<(), Status> {
-        let status = unsafe { sys::zx_vmar_destroy(self.raw_handle()) };
-        ok(status)
+    pub unsafe fn protect(&self, addr: usize, len: usize, flags: VmarFlags) -> Result<(), Status> {
+        ok(sys::zx_vmar_protect(self.raw_handle(), addr, len, flags.bits()))
+    }
+
+    pub unsafe fn destroy(&self) -> Result<(), Status> {
+        ok(sys::zx_vmar_destroy(self.raw_handle()))
+    }
+}
+
+// TODO(smklein): Ideally we would have two separate sets of bitflags,
+// and a union of both of them.
+bitflags! {
+    /// Flags to VMAR routines which are considered safe.
+    #[repr(transparent)]
+    pub struct VmarFlags: u32 {
+        const PERM_READ          = sys::ZX_VM_FLAG_PERM_READ;
+        const PERM_WRITE         = sys::ZX_VM_FLAG_PERM_WRITE;
+        const PERM_EXECUTE       = sys::ZX_VM_FLAG_PERM_EXECUTE;
+        const COMPACT            = sys::ZX_VM_FLAG_COMPACT;
+        const SPECIFIC           = sys::ZX_VM_FLAG_SPECIFIC;
+        const CAN_MAP_SPECIFIC   = sys::ZX_VM_FLAG_CAN_MAP_SPECIFIC;
+        const CAN_MAP_READ       = sys::ZX_VM_FLAG_CAN_MAP_READ;
+        const CAN_MAP_WRITE      = sys::ZX_VM_FLAG_CAN_MAP_WRITE;
+        const CAN_MAP_EXECUTE    = sys::ZX_VM_FLAG_CAN_MAP_EXECUTE;
     }
 }
 
 bitflags! {
-    /// Flags to VMAR routines
+    /// Flags to all VMAR routines.
     #[repr(transparent)]
-    pub struct VmarFlags: u32 {
+    pub struct VmarFlagsExtended: u32 {
         const PERM_READ          = sys::ZX_VM_FLAG_PERM_READ;
         const PERM_WRITE         = sys::ZX_VM_FLAG_PERM_WRITE;
         const PERM_EXECUTE       = sys::ZX_VM_FLAG_PERM_EXECUTE;
