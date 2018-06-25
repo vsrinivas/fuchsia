@@ -100,13 +100,8 @@ static zx_status_t pcf8563_rtc_ioctl(void* ctx, uint32_t op,
         *out_actual = ret;
         return ZX_OK;
     }
-    case IOCTL_RTC_SET: {
-        ssize_t ret = pcf8563_rtc_set(ctx, in_buf, in_len);
-        if (ret < 0) {
-            return ret;
-        }
-        return ZX_OK;
-    }
+    case IOCTL_RTC_SET:
+        return pcf8563_rtc_set(ctx, in_buf, in_len);
     }
     return ZX_ERR_NOT_SUPPORTED;
 }
