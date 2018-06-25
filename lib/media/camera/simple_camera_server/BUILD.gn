@@ -11,6 +11,7 @@ source_set("lib") {
   ]
 
   public_deps = [
+    "//garnet/lib/media/camera/simple_camera_lib",
     "//garnet/public/lib/media/fidl:simple_camera",
     "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/fidl/cpp",

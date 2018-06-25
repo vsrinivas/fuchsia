@@ -6,6 +6,7 @@
 
 #include <fuchsia/images/cpp/fidl.h>
 #include <fuchsia/simplecamera/cpp/fidl.h>
+#include <garnet/lib/media/camera/simple_camera_lib/video_display.h>
 
 #include "lib/app/cpp/startup_context.h"
 
@@ -24,6 +25,8 @@ class SimpleCameraApp : public fuchsia::simplecamera::SimpleCamera {
 
   std::unique_ptr<fuchsia::sys::StartupContext> context_;
   fidl::BindingSet<SimpleCamera> bindings_;
+
+  simple_camera::VideoDisplay video_display_;
 };
 
 }  // namespace simple_camera

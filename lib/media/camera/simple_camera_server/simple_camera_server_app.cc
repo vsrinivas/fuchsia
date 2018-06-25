@@ -16,7 +16,14 @@ SimpleCameraApp::SimpleCameraApp()
 void SimpleCameraApp::ConnectToCamera(
     uint32_t camera_id,
     ::fidl::InterfaceHandle<::fuchsia::images::ImagePipe> image_pipe) {
-  printf("Not yet implemented: ConnectToCamera: %u\n", camera_id);
+  // If we fail to connect, disconnect from the client.  We only have one
+  // client, so we just call CloseAll.
+  zx_status_t status =
+      video_display_.ConnectToCamera(camera_id, std::move(image_pipe),
+                                     [this]() { this->bindings_.CloseAll(); });
+  if (status != ZX_OK) {
+    bindings_.CloseAll();
+  }
 }
 
 }  // namespace simple_camera
