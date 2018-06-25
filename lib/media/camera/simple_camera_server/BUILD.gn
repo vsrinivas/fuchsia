@@ -36,35 +36,10 @@ package("simple_camera_server_cpp") {
   deps = [
     ":bin",
   ]
+    meta = [ {
+        path = rebase_path("meta/simple_camera_server_cpp.cmx")
+        dest = "simple_camera_server_cpp.cmx"
+      } ]
 
   binary = "simple_camera_server_cpp"
 }
-
-# executable("simple_camera_server_cpp_unittests") {
-#  testonly = true
-#
-#  sources = [
-#    "simple_camera_server_app_unittest.cc",
-#  ]
-#
-#  deps = [
-#    ":lib",
-#    "//garnet/public/lib/fxl/test:gtest_main",
-#    "//garnet/public/lib/gtest",
-#  ]
-#}
-#
-#package("simple_camera_server_cpp_tests") {
-#  testonly = true
-#  deprecated_system_image = true
-#
-#  deps = [
-#    ":simple_camera_server_cpp_unittests",
-#  ]
-#
-#  tests = [
-#    {
-#      name = "simple_camera_server_cpp_unittests"
-#    },
-#  ]
-#}

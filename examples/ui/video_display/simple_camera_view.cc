@@ -31,6 +31,8 @@ constexpr float kInitialWindowXPos = 320;
 constexpr float kInitialWindowYPos = 240;
 }  // namespace
 
+static const std::string kSimpleCameraServiceUrl = "simple_camera_server_cpp";
+
 SimpleCameraView::SimpleCameraView(
     async::Loop* loop, fuchsia::sys::StartupContext* startup_context,
     ::fuchsia::ui::views_v1::ViewManagerPtr view_manager,
@@ -52,13 +54,19 @@ SimpleCameraView::SimpleCameraView(
   material.SetTexture(image_pipe_id);
   session()->ReleaseResource(image_pipe_id);
 
-  // Now pass the other end to the simple camera interface;
-  zx_status_t status = video_display_.ConnectToCamera(
-      0, std::move(image_pipe_handle), [loop]() { loop->Quit(); });
-  if (status != ZX_OK) {
-    loop->Quit();
-    return;
-  }
+  // Connect to the simple camera service:
+  fuchsia::sys::LaunchInfo launch_info;
+  launch_info.url = kSimpleCameraServiceUrl;
+  launch_info.directory_request = simple_camera_provider_.NewRequest();
+  startup_context->launcher()->CreateComponent(std::move(launch_info),
+                                               controller_.NewRequest());
+
+  simple_camera_provider_.ConnectToService(
+      simple_camera_.NewRequest().TakeChannel(),
+      fuchsia::simplecamera::SimpleCamera::Name_);
+
+  // Now pass the other end of the image pipe to the simple camera interface:
+  simple_camera_->ConnectToCamera(0, std::move(image_pipe_handle));
 
   // Create a rounded-rect shape to display the camera image on.
   scenic_lib::RoundedRectangle shape(session(), kShapeWidth, kShapeHeight, 80,

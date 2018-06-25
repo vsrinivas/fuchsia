@@ -8,13 +8,12 @@
 #include <list>
 
 #include <fbl/vector.h>
+#include <fuchsia/simplecamera/cpp/fidl.h>
 #include <lib/app/cpp/startup_context.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fxl/macros.h>
 #include <lib/ui/scenic/client/resources.h>
 #include <lib/ui/view_framework/base_view.h>
-
-#include <garnet/lib/media/camera/simple_camera_lib/video_display.h>
 
 namespace video_display {
 
@@ -37,7 +36,11 @@ class SimpleCameraView : public mozart::BaseView {
       fuchsia::images::PresentationInfo presentation_info) override;
 
   scenic_lib::ShapeNode node_;
-  simple_camera::VideoDisplay video_display_;
+
+  // Client Application:
+  fuchsia::sys::Services simple_camera_provider_;
+  fuchsia::sys::ComponentControllerPtr controller_;
+  fuchsia::simplecamera::SimpleCameraPtr simple_camera_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(SimpleCameraView);
 };

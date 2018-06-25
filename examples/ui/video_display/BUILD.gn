@@ -13,10 +13,10 @@ executable("video_display") {
   ]
 
   deps = [
-    "//garnet/lib/media/camera/simple_camera_lib",
     "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/fidl/cpp",
     "//garnet/public/lib/fsl",
+    "//garnet/public/lib/media/fidl:simple_camera",
     "//garnet/public/lib/media/timeline:timeline",
     "//garnet/public/lib/ui/scenic:client",
     "//garnet/public/lib/ui/scenic:fidl_helpers",
