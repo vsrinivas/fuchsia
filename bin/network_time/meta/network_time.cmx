@@ -3,6 +3,6 @@
         "binary": "bin/app"
     },
     "sandbox": {
-        "dev": [ "sys/acpi/rtc" ]
+        "dev": [ "class/rtc/000" ]
     }
 }
