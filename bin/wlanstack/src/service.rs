@@ -173,12 +173,12 @@ fn create_iface(phys: &Arc<PhyMap>, req: wlan_service::CreateIfaceRequest)
                     eprintln!("Error sending 'CreateIface' request to phy #{}: {}", req.phy_id, e);
                     zx::Status::INTERNAL
                 })
-                .and_then(|r| zx::Status::ok(r.status).map(move |()| r.info))
+                .and_then(|r| zx::Status::ok(r.status).map(move |()| r.iface_id))
         })
         .then(|r| match r {
-            Ok(info) => {
+            Ok(iface_id) => {
                 // TODO(gbonik): this is not the ID that we want to return
-                let resp = wlan_service::CreateIfaceResponse { iface_id: info.id };
+                let resp = wlan_service::CreateIfaceResponse { iface_id };
                 Ok((zx::Status::OK, Some(resp)))
             },
             Err(status) => Ok((status, None)),
@@ -342,7 +342,7 @@ mod tests {
         // Pretend that we created an interface device with id 123 and send a response
         responder.send(&mut wlan::CreateIfaceResponse {
             status: zx::sys::ZX_OK,
-            info: wlan::IfaceInfo{ id: 123 },
+            iface_id: 123,
         }).expect("failed to send CreateIfaceResponse");
 
         // Now, our original future should resolve into a response

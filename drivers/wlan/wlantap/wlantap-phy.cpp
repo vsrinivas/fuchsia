@@ -291,7 +291,7 @@ struct WlantapPhy : wlan_device::Phy, wlantap::WlantapPhy, WlantapMac::Listener 
         zx_status_t status = wlanmac_devices_.TryCreateNew(
             [&] (uint16_t id, WlantapMac** out_dev) {
                 return CreateWlantapMac(device_, req, phy_config_.get(), id, this, out_dev);
-            }, &response.info.id);
+            }, &response.iface_id);
         if (status != ZX_OK) {
             response.status = ZX_ERR_NO_RESOURCES;
             callback(std::move(response));

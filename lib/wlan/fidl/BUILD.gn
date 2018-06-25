@@ -8,7 +8,6 @@ fidl("fidl") {
   name = "fuchsia.wlan.device"
 
   sources = [
-    "iface.fidl",
     "phy.fidl",
   ]
 }

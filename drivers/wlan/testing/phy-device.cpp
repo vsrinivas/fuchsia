@@ -208,7 +208,7 @@ void PhyDevice::CreateIface(wlan_device::CreateIfaceRequest req,
     // Since we successfully used the id, increment the next id counter.
     next_id_ = id + 1;
 
-    resp.info.id = id;
+    resp.iface_id = id;
     resp.status = ZX_OK;
     callback(std::move(resp));
 }

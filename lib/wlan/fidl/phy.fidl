@@ -101,7 +101,7 @@ struct CreateIfaceRequest {
 
 struct CreateIfaceResponse {
   int32 @status;
-  IfaceInfo info;
+  uint16 iface_id;
 };
 
 struct DestroyIfaceRequest {
