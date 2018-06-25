@@ -4,20 +4,20 @@ The Fuchsia package format contains an extensive metadata directory. This
 document describes the metadata extensions that are understood by Fuchsia
 itself.
 
-See [https://fuchsia.googlesource.com/pm#Structure-of-a-Fuchsia-Package] for
+See [https://fuchsia.googlesource.com/garnet/+/master/go/src/pm#Structure-of-a-Fuchsia-Package] for
 more information about where these files appear in a package.
 
 ## metadata
 
-See [https://fuchsia.googlesource.com/pm#metadata]
+See [https://fuchsia.googlesource.com/garnet/+/master/go/src/pm#metadata]
 
 ## contents
 
-See [https://fuchsia.googlesource.com/pm#contents]
+See [https://fuchsia.googlesource.com/garnet/+/master/go/src/pm#contents]
 
 ## signature
 
-See [https://fuchsia.googlesource.com/pm#signature]
+See [https://fuchsia.googlesource.com/garnet/+/master/go/src/pm#signature]
 
 ## runtime
 

@@ -93,7 +93,7 @@ have arbitrary control over the server, this communication layer would be ripe
 for exploitation.
 
 The [RemoteIO protocol
-(RIO)](https://fuchsia.googlesource.com/zircon/+/master/system/ulib/fdio/include/fdio/remoteio.h)
+(RIO)](https://fuchsia.googlesource.com/zircon/+/master/system/ulib/fdio/include/lib/fdio/remoteio.h)
 describes the wire-format of what these bytes and handles should actually mean
 when transmitted between two entities. The protocol describes things like
 “expected number of handles”, “enumerated operation”, and “data”. In our case,

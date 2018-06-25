@@ -80,5 +80,5 @@ Specifically, to create a Fuchsia Archive (FAR) for your package (which will
 trigger sandboxing), set the `archive` flag to `true`. See the documentation for
 the `package()` macro for details about including resources
 
-For examples, see [https://fuchsia.googlesource.com/garnet/+/master/packages/fortune]
+For examples, see [https://fuchsia.googlesource.com/garnet/+/master/packages/prod/fortune]
 and [https://fuchsia.googlesource.com/garnet/+/master/bin/fortune/BUILD.gn].
