@@ -11,18 +11,35 @@
 
 namespace context {
 
+namespace {
+size_t ToFullPages(size_t value) {
+  return (value + PAGE_SIZE - 1) & (~(PAGE_SIZE - 1));
+}
+
+// ASAN doesn't instrument vmo mappings. Use traditional malloc/free when
+// running with ASAN.
+#if __has_feature(address_sanitizer)
+// ASAN doesn't support safe stack.
+static_assert(!__has_feature(safe_stack), "Add support for safe stack under ASAN");
+
+void AllocateASAN(size_t stack_size, uintptr_t* stack) {
+  *stack = reinterpret_cast<uintptr_t>(malloc(stack_size));
+  FXL_DCHECK(*stack);
+}
+
+void ReleaseASAN(uintptr_t stack) {
+  free(reinterpret_cast<void*>(stack));
+}
+
+#else  // __has_feature(address_sanitizer)
+
 constexpr size_t kStackGuardSize = PAGE_SIZE;
 
-namespace {
 #if __has_feature(safe_stack)
 constexpr size_t kVmoSizeMultiplier = 2u;
 #else
 constexpr size_t kVmoSizeMultiplier = 1u;
 #endif
-
-size_t ToFullPages(size_t value) {
-  return (value + PAGE_SIZE - 1) & (~(PAGE_SIZE - 1));
-}
 
 void AllocateStack(const zx::vmo& vmo, size_t vmo_offset, size_t stack_size,
                    zx::vmar* vmar, uintptr_t* addr) {
@@ -39,11 +56,31 @@ void AllocateStack(const zx::vmo& vmo, size_t vmo_offset, size_t stack_size,
       ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE | ZX_VM_FLAG_SPECIFIC, addr);
   FXL_DCHECK(status == ZX_OK);
 }
+
+#endif  // __has_feature(address_sanitizer)
 }  // namespace
+
+#if __has_feature(address_sanitizer)
 
 Stack::Stack(size_t stack_size) : stack_size_(ToFullPages(stack_size)) {
   FXL_DCHECK(stack_size_);
 
+  AllocateASAN(stack_size_, &safe_stack_);
+}
+
+Stack::~Stack() {
+  ReleaseASAN(safe_stack_);
+}
+
+void Stack::Release() {
+  ReleaseASAN(safe_stack_);
+  AllocateASAN(stack_size_, &safe_stack_);
+}
+
+#else  // __has_feature(address_sanitizer)
+
+Stack::Stack(size_t stack_size) : stack_size_(ToFullPages(stack_size)) {
+  FXL_DCHECK(stack_size_);
   zx_status_t status =
       zx::vmo::create(kVmoSizeMultiplier * stack_size_, 0, &vmo_);
   FXL_DCHECK(status == ZX_OK);
@@ -70,5 +107,7 @@ void Stack::Release() {
       ZX_VMO_OP_DECOMMIT, 0, kVmoSizeMultiplier * stack_size_, nullptr, 0);
   FXL_DCHECK(status == ZX_OK);
 }
+
+#endif  // __has_feature(address_sanitizer)
 
 }  // namespace context
