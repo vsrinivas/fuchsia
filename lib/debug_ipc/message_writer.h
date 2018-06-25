@@ -31,6 +31,7 @@ class MessageWriter {
   void WriteInt64(int64_t i);
   void WriteUint64(uint64_t i);
   void WriteString(const std::string& str);
+  void WriteBool(bool b);
 
   void WriteHeader(MsgHeader::Type type, uint32_t transaction_id);
 

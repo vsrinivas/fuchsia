@@ -22,6 +22,11 @@ zx_status_t Breakpoint::SetSettings(
   zx_status_t result = ZX_OK;
   settings_ = settings;
 
+  // The stats needs to reference the current ID. We assume setting the
+  // settings doesn't update the stats (an option to do this may need to be
+  // added in the future).
+  stats_.breakpoint_id = settings_.breakpoint_id;
+
   // The set of new locations.
   std::set<LocationPair> new_set;
   for (const auto& cur : settings.locations)
@@ -45,6 +50,17 @@ zx_status_t Breakpoint::SetSettings(
 
   locations_ = std::move(new_set);
   return result;
+}
+
+// In the future we will want to have breakpoints that trigger on a specific
+// hit count or other conditions and will need a "kContinue" result.
+Breakpoint::HitResult Breakpoint::OnHit() {
+  stats_.hit_count++;
+  if (settings_.one_shot) {
+    stats_.should_delete = true;
+    return HitResult::kOneShotHit;
+  }
+  return HitResult::kHit;
 }
 
 }  // namespace debug_agent

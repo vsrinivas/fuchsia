@@ -257,6 +257,14 @@ struct NotifyException {
 
   // The frame of the top of the stack.
   StackFrame frame;
+
+  // When the stop was caused by hitting a breakpoint, this vector will contain
+  // the post-hit stats of every hit breakpoint (since there can be more than
+  // one breakpoint at any given address).
+  //
+  // Be sure to check should_delete on each of these and update local state as
+  // necessary.
+  std::vector<BreakpointStats> hit_breakpoints;
 };
 
 #pragma pack(pop)

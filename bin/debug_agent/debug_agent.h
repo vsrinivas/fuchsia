@@ -31,6 +31,8 @@ class DebugAgent : public RemoteAPI, public Breakpoint::ProcessDelegate {
 
   void RemoveDebuggedProcess(zx_koid_t process_koid);
 
+  void RemoveBreakpoint(uint32_t breakpoint_id);
+
  private:
   // RemoteAPI implementation.
   void OnHello(const debug_ipc::HelloRequest& request,

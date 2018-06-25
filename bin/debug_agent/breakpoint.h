@@ -23,6 +23,19 @@ class ProcessMemoryAccessor;
 // they have the same process/address.
 class Breakpoint {
  public:
+  enum class HitResult {
+    // Breakpoint was hit and the hit count was incremented.
+    kHit,
+
+    // One-shot breakpoint hit. The caller should delete this breakpoint
+    // when it sees this result.
+    kOneShotHit,
+
+    // This will need to be expanded to include "kContinue" to indicate that
+    // this doesn't count as hitting the breakpoint (for when we implement
+    // "break on hit count == 5" or "multiple of 7").
+  };
+
   // The process delegate should outlive the Breakpoint object. It allows
   // Breakpoint dependencies to be mocked for testing.
   class ProcessDelegate {
@@ -41,8 +54,13 @@ class Breakpoint {
   explicit Breakpoint(ProcessDelegate* process_delegate);
   ~Breakpoint();
 
+  const debug_ipc::BreakpointStats& stats() const { return stats_; }
+
   // Sets the initial settings, or updates settings.
   zx_status_t SetSettings(const debug_ipc::BreakpointSettings& settings);
+
+  // Notification that this breakpoint was just hit.
+  HitResult OnHit();
 
  private:
   // A process koid + address identifies one unique location.
@@ -51,6 +69,8 @@ class Breakpoint {
   ProcessDelegate* process_delegate_;  // Non-owning.
 
   debug_ipc::BreakpointSettings settings_;
+
+  debug_ipc::BreakpointStats stats_;
 
   std::set<LocationPair> locations_;
 

@@ -52,6 +52,15 @@ class ProcessBreakpoint {
   // Otherwise does nothing.
   void FixupMemoryBlock(debug_ipc::MemoryBlock* block);
 
+  // Notification that this breakpoint was just hit. All affected Breakpoints
+  // will have their stats updated and placed in the *stats param.
+  //
+  // IMPORTANT: The caller should check the stats and for any breakpoint
+  // with "should_delete" set, remove the breakpoints. This can't conveniently
+  // be done within this call because it will cause this ProcessBreakpoint
+  // object to be deleted from within itself.
+  void OnHit(std::vector<debug_ipc::BreakpointStats>* hit_breakpoints);
+
   // Call before single-stepping over a breakpoint. This will remove the
   // breakpoint such that it will be put back when the exception is hit and
   // BreakpointStepHasException() is called.

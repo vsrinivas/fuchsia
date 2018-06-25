@@ -67,8 +67,27 @@ class DebuggedThread {
   // Sends a notification to the client about the state of this thread.
   void SendThreadNotification() const;
 
+  // Notification that a ProcessBreakpoint is about to be deleted.
+  void WillDeleteProcessBreakpoint(ProcessBreakpoint* bp);
+
  private:
-  void UpdateForSoftwareBreakpoint(zx_thread_state_general_regs* regs);
+  // Handles a software breakpoint exception, updating the state as necessary.
+  // If the address corresponds to a breakpoint we have set, it will call
+  // UpdateForHitProcessBreakpoint (see below).
+  void UpdateForSoftwareBreakpoint(
+      zx_thread_state_general_regs* regs,
+      std::vector<debug_ipc::BreakpointStats>* hit_breakpoints);
+
+  // Handles a software exception corresponding to a ProcessBreakpoint. All
+  // Breakpoints affected will have their updated stats added to
+  // *hit_breakpoints.
+  //
+  // WARNING: The ProcessBreakpoint argument could be deleted in this call
+  // if it was a one-shot breakpoint.
+  void UpdateForHitProcessBreakpoint(
+      ProcessBreakpoint* process_breakpoint,
+      zx_thread_state_general_regs* regs,
+      std::vector<debug_ipc::BreakpointStats>* hit_breakpoints);
 
   // Resumes the thread according to the current run mode.
   void ResumeForRunMode();

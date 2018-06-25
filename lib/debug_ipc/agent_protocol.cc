@@ -23,11 +23,8 @@ bool Deserialize(MessageReader* reader, ProcessBreakpointSettings* settings) {
 bool Deserialize(MessageReader* reader, BreakpointSettings* settings) {
   if (!reader->ReadUint32(&settings->breakpoint_id))
     return false;
-
-  uint32_t one_shot;
-  if (!reader->ReadUint32(&one_shot) || !(one_shot == 0 || one_shot == 1))
+  if (!reader->ReadBool(&settings->one_shot))
     return false;
-  settings->one_shot = !!one_shot;
 
   uint32_t stop;
   if (!reader->ReadUint32(&stop))
@@ -54,7 +51,7 @@ void Serialize(const ThreadRecord& record, MessageWriter* writer) {
 
 void Serialize(const MemoryBlock& block, MessageWriter* writer) {
   writer->WriteUint64(block.address);
-  writer->WriteUint32(block.valid ? 1 : 0);
+  writer->WriteBool(block.valid);
   writer->WriteUint32(block.size);
   if (block.valid && block.size > 0)
     writer->WriteBytes(&block.data[0], block.size);
@@ -80,6 +77,12 @@ void Serialize(const AddressRegion& region, MessageWriter* writer) {
   writer->WriteUint64(region.base);
   writer->WriteUint64(region.size);
   writer->WriteUint64(region.depth);
+}
+
+void Serialize(const BreakpointStats& stats, MessageWriter* writer) {
+  writer->WriteUint32(stats.breakpoint_id);
+  writer->WriteUint32(stats.hit_count);
+  writer->WriteBool(stats.should_delete);
 }
 
 // Hello -----------------------------------------------------------------------
@@ -398,6 +401,7 @@ void WriteNotifyException(const NotifyException& notify,
   Serialize(notify.thread, writer);
   writer->WriteUint32(static_cast<uint32_t>(notify.type));
   Serialize(notify.frame, writer);
+  Serialize(notify.hit_breakpoints, writer);
 }
 
 }  // namespace debug_ipc

@@ -36,6 +36,12 @@ void DebugAgent::RemoveDebuggedProcess(zx_koid_t process_koid) {
     procs_.erase(found);
 }
 
+void DebugAgent::RemoveBreakpoint(uint32_t breakpoint_id) {
+  auto found = breakpoints_.find(breakpoint_id);
+  if (found != breakpoints_.end())
+    breakpoints_.erase(found);
+}
+
 void DebugAgent::OnHello(const debug_ipc::HelloRequest& request,
                          debug_ipc::HelloReply* reply) {
   // Version and signature are default-initialized to their current values.
@@ -204,9 +210,7 @@ void DebugAgent::OnAddOrChangeBreakpoint(
 void DebugAgent::OnRemoveBreakpoint(
     const debug_ipc::RemoveBreakpointRequest& request,
     debug_ipc::RemoveBreakpointReply* reply) {
-  auto found = breakpoints_.find(request.breakpoint_id);
-  if (found != breakpoints_.end())
-    breakpoints_.erase(found);
+  RemoveBreakpoint(request.breakpoint_id);
 }
 
 void DebugAgent::OnBacktrace(const debug_ipc::BacktraceRequest& request,

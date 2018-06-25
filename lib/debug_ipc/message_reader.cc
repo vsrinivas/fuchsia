@@ -50,6 +50,17 @@ bool MessageReader::ReadString(std::string* output) {
   return true;
 }
 
+bool MessageReader::ReadBool(bool* output) {
+  uint32_t read;
+  if (!ReadUint32(&read))
+    return false;
+  if (read != 0 && read != 1)
+    return false;
+
+  *output = !!read;
+  return true;
+}
+
 bool MessageReader::ReadHeader(MsgHeader* output) {
   if (!ReadUint32(&output->size)) return false;
 

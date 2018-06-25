@@ -44,6 +44,10 @@ void MessageWriter::WriteString(const std::string& str) {
   if (!str.empty()) WriteBytes(&str[0], size);
 }
 
+void MessageWriter::WriteBool(bool b) {
+  WriteUint32(b ? 1u : 0u);
+}
+
 void MessageWriter::WriteHeader(MsgHeader::Type type, uint32_t transaction_id) {
   WriteUint32(0);  // Size to be filled in by GetDataAndWriteSize() later.
   WriteUint32(static_cast<uint32_t>(type));

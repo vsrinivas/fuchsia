@@ -135,4 +135,72 @@ TEST(Breakpoint, Destructor) {
             delegate.unregister_calls());
 }
 
+TEST(Breakpoint, HitCount) {
+  TestProcessDelegate delegate;
+  std::unique_ptr<Breakpoint> bp = std::make_unique<Breakpoint>(&delegate);
+
+  constexpr uint32_t kBreakpointId = 12;
+  debug_ipc::BreakpointSettings settings;
+  settings.breakpoint_id = kBreakpointId;
+  settings.locations.resize(1);
+
+  constexpr zx_koid_t kProcess1 = 1;
+  constexpr uint64_t kAddress1 = 0x1234;
+
+  debug_ipc::ProcessBreakpointSettings& pr_settings = settings.locations.back();
+  pr_settings.process_koid = kProcess1;
+  pr_settings.thread_koid = 0;
+  pr_settings.address = kAddress1;
+
+  // Apply the settings.
+  ASSERT_EQ(ZX_OK, bp->SetSettings(settings));
+  delegate.Clear();
+
+  EXPECT_EQ(kBreakpointId, bp->stats().breakpoint_id);
+  EXPECT_EQ(0u, bp->stats().hit_count);
+
+  EXPECT_EQ(Breakpoint::HitResult::kHit, bp->OnHit());
+  EXPECT_EQ(kBreakpointId, bp->stats().breakpoint_id);
+  EXPECT_EQ(1u, bp->stats().hit_count);
+  EXPECT_FALSE(bp->stats().should_delete);
+
+  EXPECT_EQ(Breakpoint::HitResult::kHit, bp->OnHit());
+  EXPECT_EQ(kBreakpointId, bp->stats().breakpoint_id);
+  EXPECT_EQ(2u, bp->stats().hit_count);
+  EXPECT_FALSE(bp->stats().should_delete);
+}
+
+TEST(Breakpoint, OneShot) {
+  TestProcessDelegate delegate;
+  std::unique_ptr<Breakpoint> bp = std::make_unique<Breakpoint>(&delegate);
+
+  constexpr uint32_t kBreakpointId = 12;
+  debug_ipc::BreakpointSettings settings;
+  settings.breakpoint_id = kBreakpointId;
+  settings.one_shot = true;
+  settings.locations.resize(1);
+
+  constexpr zx_koid_t kProcess = 1;
+  constexpr uint64_t kAddress = 0x1234;
+
+  debug_ipc::ProcessBreakpointSettings& pr_settings = settings.locations.back();
+  pr_settings.process_koid = kProcess;
+  pr_settings.thread_koid = 0;
+  pr_settings.address = kAddress;
+
+  // Apply the settings.
+  ASSERT_EQ(ZX_OK, bp->SetSettings(settings));
+  delegate.Clear();
+
+  EXPECT_EQ(kBreakpointId, bp->stats().breakpoint_id);
+  EXPECT_EQ(0u, bp->stats().hit_count);
+  EXPECT_FALSE(bp->stats().should_delete);
+
+  // The hit cound and "should delete" flag should be set.
+  EXPECT_EQ(Breakpoint::HitResult::kOneShotHit, bp->OnHit());
+  EXPECT_EQ(kBreakpointId, bp->stats().breakpoint_id);
+  EXPECT_EQ(1u, bp->stats().hit_count);
+  EXPECT_TRUE(bp->stats().should_delete);
+}
+
 }  // namespace debug_agent

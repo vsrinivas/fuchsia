@@ -532,6 +532,16 @@ TEST(Protocol, NotifyException) {
   initial.frame.ip = 0x7647342634;
   initial.frame.sp = 0x9861238251;
 
+  initial.hit_breakpoints.emplace_back();
+  initial.hit_breakpoints[0].breakpoint_id = 45;
+  initial.hit_breakpoints[0].hit_count = 15;
+  initial.hit_breakpoints[0].should_delete = true;
+
+  initial.hit_breakpoints.emplace_back();
+  initial.hit_breakpoints[1].breakpoint_id = 46;
+  initial.hit_breakpoints[1].hit_count = 16;
+  initial.hit_breakpoints[1].should_delete = false;
+
   NotifyException second;
   ASSERT_TRUE(SerializeDeserializeNotification(
       initial, &second, &WriteNotifyException, &ReadNotifyException));
@@ -541,6 +551,21 @@ TEST(Protocol, NotifyException) {
   EXPECT_EQ(initial.type, second.type);
   EXPECT_EQ(initial.frame.ip, second.frame.ip);
   EXPECT_EQ(initial.frame.sp, second.frame.sp);
+  ASSERT_EQ(initial.hit_breakpoints.size(), second.hit_breakpoints.size());
+
+  EXPECT_EQ(initial.hit_breakpoints[0].breakpoint_id,
+            second.hit_breakpoints[0].breakpoint_id);
+  EXPECT_EQ(initial.hit_breakpoints[0].hit_count,
+            second.hit_breakpoints[0].hit_count);
+  EXPECT_EQ(initial.hit_breakpoints[0].should_delete,
+            second.hit_breakpoints[0].should_delete);
+
+  EXPECT_EQ(initial.hit_breakpoints[1].breakpoint_id,
+            second.hit_breakpoints[1].breakpoint_id);
+  EXPECT_EQ(initial.hit_breakpoints[1].hit_count,
+            second.hit_breakpoints[1].hit_count);
+  EXPECT_EQ(initial.hit_breakpoints[1].should_delete,
+            second.hit_breakpoints[1].should_delete);
 }
 
 }  // namespace debug_ipc

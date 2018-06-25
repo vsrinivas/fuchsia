@@ -40,12 +40,8 @@ bool Deserialize(MessageReader* reader, ThreadRecord* record) {
 bool Deserialize(MessageReader* reader, MemoryBlock* block) {
   if (!reader->ReadUint64(&block->address))
     return false;
-
-  uint32_t valid_flag;
-  if (!reader->ReadUint32(&valid_flag))
+  if (!reader->ReadBool(&block->valid))
     return false;
-  block->valid = !!valid_flag;
-
   if (!reader->ReadUint32(&block->size))
     return false;
   if (block->valid) {
@@ -81,6 +77,14 @@ bool Deserialize(MessageReader* reader, StackFrame* frame) {
   return reader->ReadBytes(sizeof(StackFrame), frame);
 }
 
+bool Deserialize(MessageReader* reader, BreakpointStats* stats) {
+  if (!reader->ReadUint32(&stats->breakpoint_id))
+    return false;
+  if (!reader->ReadUint32(&stats->hit_count))
+    return false;
+  return reader->ReadBool(&stats->should_delete);
+}
+
 // Record serializers ----------------------------------------------------------
 
 void Serialize(const ProcessBreakpointSettings& settings,
@@ -92,7 +96,7 @@ void Serialize(const ProcessBreakpointSettings& settings,
 
 void Serialize(const BreakpointSettings& settings, MessageWriter* writer) {
   writer->WriteUint32(settings.breakpoint_id);
-  writer->WriteUint32(settings.one_shot ? 1 : 0);
+  writer->WriteBool(settings.one_shot);
   writer->WriteUint32(static_cast<uint32_t>(settings.stop));
   Serialize(settings.locations, writer);
 }
@@ -450,7 +454,9 @@ bool ReadNotifyException(MessageReader* reader, NotifyException* notify) {
     return false;
   notify->type = static_cast<NotifyException::Type>(type);
 
-  return Deserialize(reader, &notify->frame);
+  if (!Deserialize(reader, &notify->frame))
+    return false;
+  return Deserialize(reader, &notify->hit_breakpoints);
 }
 
 }  // namespace debug_ipc

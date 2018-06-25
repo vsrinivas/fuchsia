@@ -149,8 +149,11 @@ void DebuggedProcess::UnregisterBreakpoint(Breakpoint* bp, uint64_t address) {
   }
 
   bool still_used = found->second->UnregisterBreakpoint(bp);
-  if (!still_used)
+  if (!still_used) {
+    for (auto& pair : threads_)
+      pair.second->WillDeleteProcessBreakpoint(found->second.get());
     breakpoints_.erase(found);
+  }
 }
 
 void DebuggedProcess::OnProcessTerminated(zx_koid_t process_koid) {

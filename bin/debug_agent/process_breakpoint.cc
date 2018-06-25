@@ -6,8 +6,10 @@
 
 #include <inttypes.h>
 #include <zircon/syscalls/exception.h>
+
 #include <algorithm>
 
+#include "garnet/bin/debug_agent/breakpoint.h"
 #include "lib/fxl/logging.h"
 
 namespace debug_agent {
@@ -58,6 +60,15 @@ void ProcessBreakpoint::FixupMemoryBlock(debug_ipc::MemoryBlock* block) {
     if (dest_address >= block->address &&
         dest_address < block->address + block->size)
       block->data[dest_address - block->address] = src[i];
+  }
+}
+
+void ProcessBreakpoint::OnHit(
+    std::vector<debug_ipc::BreakpointStats>* hit_breakpoints) {
+  hit_breakpoints->resize(breakpoints_.size());
+  for (size_t i = 0; i < breakpoints_.size(); i++) {
+    breakpoints_[i]->OnHit();
+    (*hit_breakpoints)[i] = breakpoints_[i]->stats();
   }
 }
 

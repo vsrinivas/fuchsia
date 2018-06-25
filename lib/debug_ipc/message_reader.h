@@ -29,6 +29,7 @@ class MessageReader {
   bool ReadInt64(int64_t* output);
   bool ReadUint64(uint64_t* output);
   bool ReadString(std::string* output);
+  bool ReadBool(bool* output);
 
   bool ReadHeader(MsgHeader* output);
 
