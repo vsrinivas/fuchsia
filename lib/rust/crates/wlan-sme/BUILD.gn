@@ -11,8 +11,10 @@ rustc_library("wlan-sme") {
   with_unit_tests = true
 
   deps = [
+    "//garnet/lib/rust/crates/wlan-rsn",
     "//garnet/public/lib/wlan/fidl:mlme-rustc",
     "//garnet/public/rust/crates/fuchsia-zircon",
+    "//third_party/rust-crates/rustc_deps:bytes",
     "//third_party/rust-crates/rustc_deps:failure",
     "//third_party/rust-crates/rustc_deps:futures",
   ]

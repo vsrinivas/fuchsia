@@ -80,7 +80,7 @@ impl Rsne {
         length
     }
 
-    pub fn as_bytes(&self, buf: &mut BytesMut) -> Result<(), Error> {
+    pub fn as_bytes(&self, buf: &mut BufMut) -> Result<(), Error> {
         check_remaining!(4, buf.remaining_mut());
         buf.put_u8(ID);
         buf.put_u8((self.len() - 2) as u8);

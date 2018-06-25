@@ -4,25 +4,22 @@
 #![feature(test)]
 #![feature(drain_filter)]
 
-#[macro_use]
-extern crate bitfield;
+#[macro_use] extern crate bitfield;
 extern crate byteorder;
 extern crate bytes;
 extern crate crypto;
 extern crate eapol;
-#[macro_use]
-extern crate failure;
+#[macro_use] extern crate failure;
 extern crate hex;
-#[macro_use]
-extern crate nom;
+#[macro_use] extern crate nom;
 extern crate num;
 extern crate rand;
 extern crate test;
 extern crate time;
 
-mod akm;
+pub mod akm;
 mod auth;
-mod cipher;
+pub mod cipher;
 mod crypto_utils;
 mod integrity;
 mod key;
@@ -31,7 +28,7 @@ mod keywrap;
 mod pmkid;
 mod rsna;
 pub mod rsne;
-mod suite_selector;
+pub mod suite_selector;
 
 use key::exchange::handshake::fourway::MessageNumber;
 use rsna::Role;

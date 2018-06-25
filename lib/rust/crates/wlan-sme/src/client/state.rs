@@ -2,10 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use bytes::Bytes;
 use fidl_mlme::{self, BssDescription, MlmeEvent};
 use super::{ConnectResult, Tokens};
 use super::internal::{MlmeSink, UserSink};
 use super::super::MlmeRequest;
+use wlan_rsn::akm;
+use wlan_rsn::cipher;
+use wlan_rsn::rsne;
+use wlan_rsn::suite_selector::OUI;
 
 const DEFAULT_JOIN_FAILURE_TIMEOUT: u32 = 20; // beacon intervals
 const DEFAULT_AUTH_FAILURE_TIMEOUT: u32 = 20; // beacon intervals
@@ -202,7 +207,7 @@ fn to_associating_state<T>(cmd: ConnectCommand<T::ConnectToken>, mlme_sink: &Mlm
     mlme_sink.send(MlmeRequest::Associate(
         fidl_mlme::AssociateRequest {
             peer_sta_address: cmd.bss.bssid.clone(),
-            rsn: get_rsn(&cmd.bss),
+            rsn: derive_s_rsne(&cmd.bss.bssid[..], cmd.bss.rsn.as_ref()),
         }
     ));
     State::Associating { cmd }
@@ -241,7 +246,165 @@ fn clone_bss_desc(d: &fidl_mlme::BssDescription) -> fidl_mlme::BssDescription {
     }
 }
 
-fn get_rsn(_bss_desc: &fidl_mlme::BssDescription) -> Option<Vec<u8>> {
-    // TODO(gbonik): Use wlan-rsn/eapol
-    None
+fn derive_s_rsne(bssid: &[u8], rsne: Option<&Vec<u8>>) -> Option<Vec<u8>> {
+    // Supported Ciphers and AKMs:
+    // Group: CCMP-128, TKIP
+    // Pairwise: CCMP-128
+    // AKMS: PSK
+    let a_rsne = match rsne {
+        Some(rsn_data) => match rsne::from_bytes(&rsn_data[..]).to_full_result() {
+            Ok(a_rsne) => a_rsne,
+            _ => {
+                eprintln!("BSS {:?} uses invalid RSNE: {:?}", bssid, &rsn_data[..]);
+                return None
+            },
+        },
+        None => return None,
+    };
+
+    let has_supported_group_data_cipher = match a_rsne.group_data_cipher_suite.as_ref() {
+        Some(c) if c.has_known_usage() => match c.suite_type {
+            // IEEE allows TKIP usage only in GTKSAs for compatibility reasons.
+            // TKIP is considered broken and should never be used in a PTKSA or IGTKSA.
+            cipher::CCMP_128 | cipher::TKIP => true,
+            _ => false,
+        },
+        _ => false,
+    };
+    let has_supported_pairwise_cipher = a_rsne.pairwise_cipher_suites.iter()
+        .any(|c| c.has_known_usage() && c.suite_type == cipher::CCMP_128);
+    let has_supported_akm_suite = a_rsne.akm_suites.iter()
+        .any(|a| a.has_known_algorithm() && a.suite_type == akm::PSK);
+    if !has_supported_group_data_cipher || !has_supported_pairwise_cipher || !has_supported_akm_suite {
+        eprintln!("BSS {:?} uses incompatible RSNE: {:?}", bssid, a_rsne);
+        return None;
+    }
+
+    // If Authenticator's RSNE is supported, construct Supplicant's RSNE.
+    let mut s_rsne = rsne::Rsne::new();
+    s_rsne.group_data_cipher_suite = a_rsne.group_data_cipher_suite;
+    let pairwise_cipher =
+        cipher::Cipher{oui: Bytes::from(&OUI[..]), suite_type: cipher::CCMP_128 };
+    s_rsne.pairwise_cipher_suites.push(pairwise_cipher);
+    let akm = akm::Akm{oui: Bytes::from(&OUI[..]), suite_type: akm::PSK };
+    s_rsne.akm_suites.push(akm);
+
+    let mut buf = Vec::with_capacity(s_rsne.len());
+    match s_rsne.as_bytes(&mut buf) {
+        Ok(_) => Some(buf),
+        _ => None,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const BSSID: [u8; 6] = [0u8; 6];
+
+    fn make_cipher(suite_type: u8) -> cipher::Cipher {
+        cipher::Cipher { oui: Bytes::from(&OUI[..]), suite_type: suite_type }
+    }
+
+    fn make_akm(suite_type: u8) -> akm::Akm {
+        akm::Akm { oui: Bytes::from(&OUI[..]), suite_type: suite_type }
+    }
+
+    fn make_rsne(data: Option<u8>, pairwise: Vec<u8>, akms: Vec<u8>) -> Option<Vec<u8>> {
+        let a_rsne = rsne::Rsne {
+            version: 1,
+            group_data_cipher_suite: data.map(|t| make_cipher(t)),
+            pairwise_cipher_suites: pairwise.into_iter().map(|t| make_cipher(t)).collect(),
+            akm_suites: akms.into_iter().map(|t| make_akm(t)).collect(),
+            ..Default::default()
+        };
+        let mut buf = Vec::with_capacity(a_rsne.len());
+        a_rsne.as_bytes(&mut buf).expect("could not write Authenticator's RSNE to buffer");
+        Some(buf)
+    }
+
+    #[test]
+    fn test_incompatible_group_data_cipher() {
+        let a_rsne = make_rsne(Some(cipher::GCMP_256), vec![cipher::CCMP_128], vec![akm::PSK]);
+        let s_rsne = derive_s_rsne(&BSSID[..], a_rsne.as_ref());
+        assert_eq!(s_rsne, None);
+    }
+
+    #[test]
+    fn test_incompatible_pairwise_cipher() {
+        let a_rsne = make_rsne(Some(cipher::CCMP_128), vec![cipher::BIP_CMAC_256], vec![akm::PSK]);
+        let s_rsne = derive_s_rsne(&BSSID[..], a_rsne.as_ref());
+        assert_eq!(s_rsne, None);
+    }
+
+    #[test]
+    fn test_tkip_pairwise_cipher() {
+        let a_rsne = make_rsne(Some(cipher::CCMP_128), vec![cipher::TKIP], vec![akm::PSK]);
+        let s_rsne = derive_s_rsne(&BSSID[..], a_rsne.as_ref());
+        assert_eq!(s_rsne, None);
+    }
+
+    #[test]
+    fn test_tkip_group_data_cipher() {
+        let a_rsne = make_rsne(Some(cipher::TKIP), vec![cipher::CCMP_128], vec![akm::PSK]);
+        let s_rsne = derive_s_rsne(&BSSID[..], a_rsne.as_ref());
+        let expected_rsne_bytes = vec![48, 18, 1, 0, 0, 15, 172, 2, 1, 0, 0, 15, 172, 4, 1, 0, 0, 15, 172, 2];
+        assert_eq!(s_rsne, Some(expected_rsne_bytes));
+    }
+
+    #[test]
+    fn test_ccmp128_group_data_pairwise_cipher_psk() {
+        let a_rsne = make_rsne(Some(cipher::CCMP_128), vec![cipher::CCMP_128], vec![akm::PSK]);
+        let s_rsne = derive_s_rsne(&BSSID[..], a_rsne.as_ref());
+        let expected_rsne_bytes = vec![48, 18, 1, 0, 0, 15, 172, 4, 1, 0, 0, 15, 172, 4, 1, 0, 0, 15, 172, 2];
+        assert_eq!(s_rsne, Some(expected_rsne_bytes));
+    }
+
+    #[test]
+    fn test_mixed_mode() {
+        let a_rsne = make_rsne(Some(cipher::CCMP_128), vec![cipher::CCMP_128, cipher::TKIP], vec![akm::PSK, akm::FT_PSK]);
+        let s_rsne = derive_s_rsne(&BSSID[..], a_rsne.as_ref());
+        let expected_rsne_bytes = vec![48, 18, 1, 0, 0, 15, 172, 4, 1, 0, 0, 15, 172, 4, 1, 0, 0, 15, 172, 2];
+        assert_eq!(s_rsne, Some(expected_rsne_bytes));
+    }
+
+    #[test]
+    fn test_no_group_data_cipher() {
+        let a_rsne = make_rsne(None, vec![cipher::CCMP_128], vec![akm::PSK]);
+        let s_rsne = derive_s_rsne(&BSSID[..], a_rsne.as_ref());
+        assert_eq!(s_rsne, None);
+    }
+
+    #[test]
+    fn test_no_pairwise_cipher() {
+        let a_rsne = make_rsne(Some(cipher::CCMP_128), vec![], vec![akm::PSK]);
+        let s_rsne = derive_s_rsne(&BSSID[..], a_rsne.as_ref());
+        assert_eq!(s_rsne, None);
+    }
+
+    #[test]
+    fn test_no_akm() {
+        let a_rsne = make_rsne(Some(cipher::CCMP_128), vec![cipher::CCMP_128], vec![]);
+        let s_rsne = derive_s_rsne(&BSSID[..], a_rsne.as_ref());
+        assert_eq!(s_rsne, None);
+    }
+
+    #[test]
+    fn test_incompatible_akm() {
+        let a_rsne = make_rsne(Some(cipher::CCMP_128), vec![cipher::CCMP_128], vec![akm::EAP]);
+        let s_rsne = derive_s_rsne(&BSSID[..], a_rsne.as_ref());
+        assert_eq!(s_rsne, None);
+    }
+
+    #[test]
+    fn test_no_rsne() {
+        let s_rsne = derive_s_rsne(&BSSID[..], None);
+        assert_eq!(s_rsne, None);
+    }
+
+    #[test]
+    fn test_iempty_rsne() {
+        let s_rsne = derive_s_rsne(&BSSID[..], Some(vec![]).as_ref());
+        assert_eq!(s_rsne, None);
+    }
 }

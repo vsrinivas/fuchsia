@@ -4,10 +4,12 @@
 
 #![deny(warnings)]
 
+extern crate bytes;
 extern crate fidl_fuchsia_wlan_mlme as fidl_mlme;
 extern crate fuchsia_zircon as zx;
 #[macro_use] extern crate failure;
 extern crate futures;
+extern crate wlan_rsn;
 
 pub mod client;
 
