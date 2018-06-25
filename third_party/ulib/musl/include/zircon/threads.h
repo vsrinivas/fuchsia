@@ -1,11 +1,14 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
 #pragma once
 
-#include <zircon/types.h>
 #include <threads.h>
+#include <zircon/compiler.h>
+#include <zircon/types.h>
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+__BEGIN_CDECLS
 
 // Get the zx_handle_t corresponding to the thrd_t. This handle is
 // still owned by the C11 thread, and will not persist after the
@@ -31,6 +34,4 @@ static inline zx_status_t __PURE thrd_status_to_zx_status(int thrd_status) {
     }
 }
 
-#ifdef __cplusplus
-}
-#endif
+__END_CDECLS

@@ -1,13 +1,21 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
 #pragma once
 
 #include <dlfcn.h>
+#include <zircon/compiler.h>
 #include <zircon/types.h>
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+__BEGIN_CDECLS
 
-void* dlopen_vmo(zx_handle_t, int);
+// Loads a dynamic shared object stored in |vmo|.
+// Acts identically to dlopen, but acts on a vmo
+// instead of a file path.
+//
+// Does not take ownership of the input vmo.
+void* dlopen_vmo(zx_handle_t vmo, int mode);
 
 // Replace the handle to the "loader service" used to map names
 // to VM objects for dlopen et al.  This takes ownership of the
@@ -21,6 +29,4 @@ zx_handle_t dl_set_loader_service(zx_handle_t new_svc);
 // via out.
 zx_status_t dl_clone_loader_service(zx_handle_t* out);
 
-#ifdef __cplusplus
-}
-#endif
+__END_CDECLS
