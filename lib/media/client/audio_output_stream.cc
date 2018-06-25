@@ -58,16 +58,19 @@ bool AudioOutputStream::Initialize(fuchsia_audio_parameters* params,
 };
 
 bool AudioOutputStream::AcquireRenderer() {
-  fuchsia::media::AudioSyncPtr audio;
+  fuchsia::media::AudioSync2Ptr audio;
   fuchsia::sys::ConnectToEnvironmentService(audio.NewRequest());
 
-  if (!audio->CreateRenderer(audio_renderer_.NewRequest(),
-                             media_renderer_.NewRequest())) {
+  if (audio
+          ->CreateRenderer(audio_renderer_.NewRequest(),
+                           media_renderer_.NewRequest())
+          .statvs != ZX_OK) {
     return false;
   }
 
-  return media_renderer_->GetTimelineControlPoint(
-      timeline_control_point_.NewRequest());
+  return media_renderer_
+             ->GetTimelineControlPoint(timeline_control_point_.NewRequest())
+             .statvs == ZX_OK;
 }
 
 bool AudioOutputStream::SetMediaType(int num_channels, int sample_rate) {
@@ -94,7 +97,7 @@ bool AudioOutputStream::SetMediaType(int num_channels, int sample_rate) {
   media_type.encoding = fuchsia::media::kAudioEncodingLpcm;
   media_type.details.set_audio(std::move(details));
 
-  if (!media_renderer_->SetMediaType(std::move(media_type))) {
+  if (media_renderer_->SetMediaType(std::move(media_type)).statvs == ZX_OK) {
     FXL_LOG(ERROR) << "Could not set media type";
     return false;
   }
@@ -127,14 +130,15 @@ bool AudioOutputStream::CreateMemoryMapping() {
     return false;
   }
 
-  if (!media_renderer_->GetPacketConsumer(packet_consumer_.NewRequest())) {
+  if (media_renderer_->GetPacketConsumer(packet_consumer_.NewRequest())
+          .statvs != ZX_OK) {
     FXL_LOG(ERROR) << "PacketConsumer connection lost. Quitting.";
     return false;
   }
 
   FXL_DCHECK(packet_consumer_);
-  if (!packet_consumer_->AddPayloadBuffer(kBufferId,
-                                          std::move(duplicate_vmo))) {
+  if (packet_consumer_->AddPayloadBuffer(kBufferId, std::move(duplicate_vmo))
+          .statvs != ZX_OK) {
     FXL_LOG(ERROR) << "Could not add payload buffer";
     return false;
   }
@@ -143,7 +147,7 @@ bool AudioOutputStream::CreateMemoryMapping() {
 }
 
 bool AudioOutputStream::GetDelays() {
-  if (!audio_renderer_->GetMinDelay(&delay_nsec_)) {
+  if (audio_renderer_->GetMinDelay(&delay_nsec_).statvs != ZX_OK) {
     Stop();
     FXL_LOG(ERROR) << "GetMinDelay failed";
     return false;
@@ -181,7 +185,8 @@ fuchsia::media::MediaPacket AudioOutputStream::CreateMediaPacket(
 bool AudioOutputStream::SendMediaPacket(fuchsia::media::MediaPacket packet) {
   FXL_DCHECK(packet_consumer_);
 
-  return packet_consumer_->SupplyPacketNoReply(std::move(packet));
+  return packet_consumer_->SupplyPacketNoReply(std::move(packet)).statvs ==
+         ZX_OK;
 }
 
 int AudioOutputStream::GetMinDelay(zx_duration_t* delay_nsec_out) {
@@ -205,7 +210,7 @@ int AudioOutputStream::SetGain(float db_gain) {
   }
 
   if (db_gain != renderer_db_gain_) {
-    if (!audio_renderer_->SetGain(db_gain)) {
+    if (audio_renderer_->SetGain(db_gain).statvs != ZX_OK) {
       Stop();
       FXL_LOG(ERROR) << "SetGain failed";
       return ZX_ERR_CONNECTION_ABORTED;
@@ -277,7 +282,7 @@ int AudioOutputStream::Write(float* client_buffer, int num_samples,
 }
 
 bool AudioOutputStream::Start() {
-  fuchsia::media::TimelineConsumerSyncPtr timeline_consumer;
+  fuchsia::media::TimelineConsumerSync2Ptr timeline_consumer;
   timeline_control_point_->GetTimelineConsumer(timeline_consumer.NewRequest());
 
   fuchsia::media::TimelineTransform transform;
@@ -286,14 +291,15 @@ bool AudioOutputStream::Start() {
   transform.reference_delta = 1;
   transform.subject_delta = 1;
 
-  return timeline_consumer->SetTimelineTransformNoReply(std::move(transform));
+  return timeline_consumer->SetTimelineTransformNoReply(std::move(transform))
+             .statvs == ZX_OK;
 }
 
 void AudioOutputStream::Stop() {
   received_first_frame_ = false;
   active_ = false;
 
-  fuchsia::media::TimelineConsumerSyncPtr timeline_consumer;
+  fuchsia::media::TimelineConsumerSync2Ptr timeline_consumer;
   timeline_control_point_->GetTimelineConsumer(timeline_consumer.NewRequest());
 
   fuchsia::media::TimelineTransform transform;

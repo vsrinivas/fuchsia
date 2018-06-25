@@ -148,7 +148,7 @@ bool MediaApp::SetupPayloadCoefficients() {
 // error handler, in case of channel closure.
 void MediaApp::AcquireRenderer(fuchsia::sys::StartupContext* app_context) {
   // The Audio interface is needed only long enough to create the renderer(s).
-  fuchsia::media::AudioSyncPtr audio;
+  fuchsia::media::AudioSync2Ptr audio;
   fuchsia::sys::ConnectToEnvironmentService(audio.NewRequest());
 
   if (set_system_gain_) {

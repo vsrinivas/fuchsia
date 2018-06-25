@@ -68,7 +68,7 @@ struct SupportedImageProperties {
 };
 
 struct ImagePipeSurface {
-  fuchsia::images::ImagePipeSyncPtr image_pipe;
+  fuchsia::images::ImagePipeSync2Ptr image_pipe;
   SupportedImageProperties supported_properties;
 };
 
@@ -80,7 +80,7 @@ struct PendingImageInfo {
 class ImagePipeSwapchain {
  public:
   ImagePipeSwapchain(SupportedImageProperties supported_properties,
-                     fuchsia::images::ImagePipeSyncPtr image_pipe)
+                     fuchsia::images::ImagePipeSync2Ptr image_pipe)
       : supported_properties_(supported_properties),
         image_pipe_(std::move(image_pipe)),
         image_pipe_closed_(false),
@@ -100,7 +100,7 @@ class ImagePipeSwapchain {
 
  private:
   SupportedImageProperties supported_properties_;
-  fuchsia::images::ImagePipeSyncPtr image_pipe_;
+  fuchsia::images::ImagePipeSync2Ptr image_pipe_;
   std::vector<VkImage> images_;
   std::vector<zx::event> acquire_events_;
   std::vector<VkDeviceMemory> memories_;

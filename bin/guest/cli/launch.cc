@@ -16,9 +16,9 @@ void handle_launch(int argc, const char* argv[]) {
   async::Loop loop(&kAsyncLoopConfigMakeDefault);
 
   // Create environment.
-  fuchsia::guest::GuestManagerSyncPtr guestmgr;
+  fuchsia::guest::GuestManagerSync2Ptr guestmgr;
   fuchsia::sys::ConnectToEnvironmentService(guestmgr.NewRequest());
-  fuchsia::guest::GuestEnvironmentSyncPtr guest_env;
+  fuchsia::guest::GuestEnvironmentSync2Ptr guest_env;
   guestmgr->CreateEnvironment(argv[0], guest_env.NewRequest());
 
   // Launch guest.
@@ -46,7 +46,7 @@ void handle_launch(int argc, const char* argv[]) {
         view_provider_ptr->CreateView(view_owner.NewRequest(), nullptr);
 
         // Ask the presenter to display it.
-        fuchsia::ui::policy::PresenterSyncPtr presenter;
+        fuchsia::ui::policy::PresenterSync2Ptr presenter;
         fuchsia::sys::ConnectToEnvironmentService(presenter.NewRequest());
         presenter->Present(std::move(view_owner), nullptr);
       });

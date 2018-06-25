@@ -41,7 +41,7 @@ NetConnectorImpl::NetConnectorImpl(NetConnectorParams* params,
 
   if (!params->listen()) {
     // Start the listener.
-    fuchsia::netconnector::NetConnectorSyncPtr net_connector;
+    fuchsia::netconnector::NetConnectorSync2Ptr net_connector;
     startup_context_->ConnectToEnvironmentService(net_connector.NewRequest());
     fuchsia::mdns::MdnsServicePtr mdns_service =
         startup_context_

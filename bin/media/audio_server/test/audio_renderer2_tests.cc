@@ -99,12 +99,13 @@ class AudioRenderer2SyncTest : public gtest::TestWithMessageLoop {
     fuchsia::sys::ConnectToEnvironmentService(audio_.NewRequest());
     ASSERT_TRUE(audio_);
 
-    ASSERT_TRUE(audio_->CreateRendererV2(audio_renderer_.NewRequest()));
+    ASSERT_EQ(ZX_OK,
+              audio_->CreateRendererV2(audio_renderer_.NewRequest()).statvs);
     ASSERT_TRUE(audio_renderer_);
   }
 
-  fuchsia::media::AudioSyncPtr audio_;
-  fuchsia::media::AudioRenderer2SyncPtr audio_renderer_;
+  fuchsia::media::AudioSync2Ptr audio_;
+  fuchsia::media::AudioRenderer2Sync2Ptr audio_renderer_;
 };
 
 // Basic validation of SetPcmFormat() for the synchronous AudioRenderer2.
@@ -113,10 +114,10 @@ TEST_F(AudioRenderer2SyncTest, SetPcmFormat) {
   format.sample_format = fuchsia::media::AudioSampleFormat::FLOAT;
   format.channels = 2;
   format.frames_per_second = 48000;
-  EXPECT_TRUE(audio_renderer_->SetPcmFormat(std::move(format)));
+  EXPECT_EQ(ZX_OK, audio_renderer_->SetPcmFormat(std::move(format)).statvs);
 
   int64_t min_lead_time = -1;
-  ASSERT_TRUE(audio_renderer_->GetMinLeadTime(&min_lead_time));
+  ASSERT_EQ(ZX_OK, audio_renderer_->GetMinLeadTime(&min_lead_time).statvs);
   EXPECT_GE(min_lead_time, 0);
 }
 
@@ -126,16 +127,16 @@ TEST_F(AudioRenderer2SyncTest, SetPcmFormat_Double) {
   format.sample_format = fuchsia::media::AudioSampleFormat::FLOAT;
   format.channels = 2;
   format.frames_per_second = 48000;
-  EXPECT_TRUE(audio_renderer_->SetPcmFormat(std::move(format)));
+  EXPECT_EQ(ZX_OK, audio_renderer_->SetPcmFormat(std::move(format)).statvs);
 
   fuchsia::media::AudioPcmFormat format2;
   format2.sample_format = fuchsia::media::AudioSampleFormat::SIGNED_16;
   format2.channels = 1;
   format2.frames_per_second = 44100;
-  EXPECT_TRUE(audio_renderer_->SetPcmFormat(std::move(format2)));
+  EXPECT_EQ(ZX_OK, audio_renderer_->SetPcmFormat(std::move(format2)).statvs);
 
   int64_t min_lead_time = -1;
-  ASSERT_TRUE(audio_renderer_->GetMinLeadTime(&min_lead_time));
+  EXPECT_EQ(ZX_OK, audio_renderer_->GetMinLeadTime(&min_lead_time).statvs);
   EXPECT_GE(min_lead_time, 0);
 }
 

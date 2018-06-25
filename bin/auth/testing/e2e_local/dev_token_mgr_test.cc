@@ -113,8 +113,8 @@ class DevTokenManagerAppTest : public gtest::TestWithMessageLoop,
   fidl::Binding<fuchsia::auth::AuthenticationContextProvider>
       auth_context_provider_binding_;
 
-  fuchsia::auth::TokenManagerSyncPtr token_mgr_;
-  fuchsia::auth::TokenManagerFactorySyncPtr token_mgr_factory_;
+  fuchsia::auth::TokenManagerSync2Ptr token_mgr_;
+  fuchsia::auth::TokenManagerFactorySync2Ptr token_mgr_factory_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(DevTokenManagerAppTest);
 };

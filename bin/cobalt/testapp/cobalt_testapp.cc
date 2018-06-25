@@ -262,8 +262,8 @@ class CobaltTestApp {
   int previous_value_of_num_send_attempts_ = 0;
   std::unique_ptr<fuchsia::sys::StartupContext> context_;
   fuchsia::sys::ComponentControllerPtr controller_;
-  fuchsia::cobalt::CobaltEncoderSyncPtr encoder_;
-  fuchsia::cobalt::CobaltControllerSyncPtr cobalt_controller_;
+  fuchsia::cobalt::CobaltEncoderSync2Ptr encoder_;
+  fuchsia::cobalt::CobaltControllerSync2Ptr cobalt_controller_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(CobaltTestApp);
 };
@@ -314,7 +314,7 @@ void CobaltTestApp::Connect(uint32_t schedule_interval_seconds,
     FXL_LOG(ERROR) << "Connection error from CobaltTestApp to CobaltClient.";
   });
 
-  fuchsia::cobalt::CobaltEncoderFactorySyncPtr factory;
+  fuchsia::cobalt::CobaltEncoderFactorySync2Ptr factory;
   services.ConnectToService(factory.NewRequest());
   factory->GetEncoder(kTestAppProjectId, encoder_.NewRequest());
 
@@ -357,7 +357,7 @@ bool CobaltTestApp::RunTestsWithBlockUntilEmpty() {
 
 bool CobaltTestApp::RunTestsUsingServiceFromEnvironment() {
   // Connect to the Cobalt FIDL service provided by the environment.
-  fuchsia::cobalt::CobaltEncoderFactorySyncPtr factory;
+  fuchsia::cobalt::CobaltEncoderFactorySync2Ptr factory;
   context_->ConnectToEnvironmentService(factory.NewRequest());
 
   factory->GetEncoder(kTestAppProjectId, encoder_.NewRequest());

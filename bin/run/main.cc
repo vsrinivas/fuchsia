@@ -46,14 +46,14 @@ int main(int argc, const char** argv) {
   launch_info.err = CloneFileDescriptor(STDERR_FILENO);
 
   // Connect to the Launcher service through our static environment.
-  fuchsia::sys::LauncherSyncPtr launcher;
+  fuchsia::sys::LauncherSync2Ptr launcher;
   fuchsia::sys::ConnectToEnvironmentService(launcher.NewRequest());
 
-  fuchsia::sys::ComponentControllerSyncPtr controller;
+  fuchsia::sys::ComponentControllerSync2Ptr controller;
   launcher->CreateComponent(std::move(launch_info), controller.NewRequest());
 
   int64_t return_code;
-  if (!controller->Wait(&return_code)) {
+  if (controller->Wait(&return_code).statvs != ZX_OK) {
     fprintf(stderr, "%s exited without a return code\n", argv[1]);
     return 1;
   }

@@ -137,18 +137,20 @@ class AudioServerSyncTest : public gtest::TestWithMessageLoop {
     ASSERT_TRUE(audio_);
   }
 
-  fuchsia::media::AudioSyncPtr audio_;
-  fuchsia::media::AudioRendererSyncPtr audio_renderer_;
-  fuchsia::media::MediaRendererSyncPtr media_renderer_;
-  fuchsia::media::AudioRenderer2SyncPtr audio_renderer2_;
-  fuchsia::media::AudioCapturerSyncPtr audio_capturer_;
+  fuchsia::media::AudioSync2Ptr audio_;
+  fuchsia::media::AudioRendererSync2Ptr audio_renderer_;
+  fuchsia::media::MediaRendererSync2Ptr media_renderer_;
+  fuchsia::media::AudioRenderer2Sync2Ptr audio_renderer2_;
+  fuchsia::media::AudioCapturerSync2Ptr audio_capturer_;
 };
 
 // Test creation and survival of synchronous AudioRenderer and MediaRenderer.
 TEST_F(AudioServerSyncTest, CreateRenderer) {
   // Validate Audio can create AudioRenderer and MediaRenderer interfaces.
-  EXPECT_TRUE(audio_->CreateRenderer(audio_renderer_.NewRequest(),
-                                     media_renderer_.NewRequest()));
+  EXPECT_EQ(ZX_OK, audio_
+                       ->CreateRenderer(audio_renderer_.NewRequest(),
+                                        media_renderer_.NewRequest())
+                       .statvs);
   EXPECT_TRUE(audio_renderer_);
   EXPECT_TRUE(media_renderer_);
 
@@ -161,8 +163,10 @@ TEST_F(AudioServerSyncTest, CreateRenderer) {
   ASSERT_TRUE(audio_);
 
   // Validate that these interfaces persist after Audio is unbound.
-  EXPECT_TRUE(audio_->CreateRenderer(audio_renderer_.NewRequest(),
-                                     media_renderer_.NewRequest()));
+  EXPECT_EQ(ZX_OK, audio_
+                       ->CreateRenderer(audio_renderer_.NewRequest(),
+                                        media_renderer_.NewRequest())
+                       .statvs);
   audio_ = nullptr;
   EXPECT_TRUE(audio_renderer_);
   EXPECT_TRUE(media_renderer_);
@@ -171,7 +175,8 @@ TEST_F(AudioServerSyncTest, CreateRenderer) {
 // Test creation and interface independence of AudioRenderer2.
 TEST_F(AudioServerSyncTest, CreateRenderer2) {
   // Validate Audio can create AudioRenderer2 interface.
-  EXPECT_TRUE(audio_->CreateRendererV2(audio_renderer2_.NewRequest()));
+  EXPECT_EQ(ZX_OK,
+            audio_->CreateRendererV2(audio_renderer2_.NewRequest()).statvs);
   EXPECT_TRUE(audio_renderer2_);
 
   // Validate that Audio persists without AudioRenderer2.
@@ -179,7 +184,8 @@ TEST_F(AudioServerSyncTest, CreateRenderer2) {
   ASSERT_TRUE(audio_);
 
   // Validate AudioRenderer2 persists after Audio is unbound.
-  EXPECT_TRUE(audio_->CreateRendererV2(audio_renderer2_.NewRequest()));
+  EXPECT_EQ(ZX_OK,
+            audio_->CreateRendererV2(audio_renderer2_.NewRequest()).statvs);
   audio_ = nullptr;
   EXPECT_TRUE(audio_renderer2_);
 }
@@ -187,7 +193,8 @@ TEST_F(AudioServerSyncTest, CreateRenderer2) {
 // Test creation and interface independence of AudioCapturer.
 TEST_F(AudioServerSyncTest, CreateCapturer) {
   // Validate Audio can create AudioCapturer interface.
-  EXPECT_TRUE(audio_->CreateCapturer(audio_capturer_.NewRequest(), true));
+  EXPECT_EQ(ZX_OK,
+            audio_->CreateCapturer(audio_capturer_.NewRequest(), true).statvs);
   EXPECT_TRUE(audio_capturer_);
 
   // Validate that Audio persists without AudioCapturer.
@@ -203,16 +210,28 @@ TEST_F(AudioServerSyncTest, CreateCapturer) {
 // Test the setting of audio output routing policy.
 TEST_F(AudioServerSyncTest, SetRoutingPolicy) {
   // Validate Audio can set last-plugged routing policy synchronously.
-  EXPECT_TRUE(audio_->SetRoutingPolicy(
-      fuchsia::media::AudioOutputRoutingPolicy::kLastPluggedOutput));
+  EXPECT_EQ(
+      ZX_OK,
+      audio_
+          ->SetRoutingPolicy(
+              fuchsia::media::AudioOutputRoutingPolicy::kLastPluggedOutput)
+          .statvs);
 
   // Validate Audio can set all-outputs routing policy synchronously.
-  EXPECT_TRUE(audio_->SetRoutingPolicy(
-      fuchsia::media::AudioOutputRoutingPolicy::kAllPluggedOutputs));
+  EXPECT_EQ(
+      ZX_OK,
+      audio_
+          ->SetRoutingPolicy(
+              fuchsia::media::AudioOutputRoutingPolicy::kAllPluggedOutputs)
+          .statvs);
 
   // This is a persistent systemwide setting. Leave system in the default state!
-  EXPECT_TRUE(audio_->SetRoutingPolicy(
-      fuchsia::media::AudioOutputRoutingPolicy::kLastPluggedOutput));
+  EXPECT_EQ(
+      ZX_OK,
+      audio_
+          ->SetRoutingPolicy(
+              fuchsia::media::AudioOutputRoutingPolicy::kLastPluggedOutput)
+          .statvs);
 }
 
 // TODO(mpuryear): If we ever add functionality such as parameter parsing,

@@ -564,13 +564,13 @@ class FidlTest {
 
   void Run() {
     uint32_t result;
-    FXL_CHECK(service_ptr_->RoundTripTest(123, &result));
+    FXL_CHECK(service_ptr_->RoundTripTest(123, &result).statvs == ZX_OK);
     FXL_CHECK(result == 456);
   }
 
  private:
   ThreadOrProcess thread_or_process_;
-  fuchsia::zircon::benchmarks::RoundTripServiceSyncPtr service_ptr_;
+  fuchsia::zircon::benchmarks::RoundTripServiceSync2Ptr service_ptr_;
 };
 
 // Test the round trip time for waking up threads using Zircon futexes.

@@ -41,10 +41,10 @@ class AudioOutputStream {
                                                 size_t payload_size);
   bool SendMediaPacket(fuchsia::media::MediaPacket packet);
 
-  fuchsia::media::AudioRendererSyncPtr audio_renderer_;
-  fuchsia::media::MediaRendererSyncPtr media_renderer_;
-  fuchsia::media::MediaPacketConsumerSyncPtr packet_consumer_;
-  fuchsia::media::MediaTimelineControlPointSyncPtr timeline_control_point_;
+  fuchsia::media::AudioRendererSync2Ptr audio_renderer_;
+  fuchsia::media::MediaRendererSync2Ptr media_renderer_;
+  fuchsia::media::MediaPacketConsumerSync2Ptr packet_consumer_;
+  fuchsia::media::MediaTimelineControlPointSync2Ptr timeline_control_point_;
 
   zx::vmo vmo_;
   int total_mapping_samples_ = 0;

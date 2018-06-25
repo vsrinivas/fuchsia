@@ -36,12 +36,12 @@ static void dump(zx::vmo vmo, zx_vaddr_t addr, size_t len) {
 
 void handle_dump(uint32_t env_id, uint32_t cid, zx_vaddr_t addr, size_t len) {
   // Connect to environment.
-  fuchsia::guest::GuestManagerSyncPtr guestmgr;
+  fuchsia::guest::GuestManagerSync2Ptr guestmgr;
   fuchsia::sys::ConnectToEnvironmentService(guestmgr.NewRequest());
-  fuchsia::guest::GuestEnvironmentSyncPtr env_ptr;
+  fuchsia::guest::GuestEnvironmentSync2Ptr env_ptr;
   guestmgr->ConnectToEnvironment(env_id, env_ptr.NewRequest());
 
-  fuchsia::guest::GuestControllerSyncPtr guest_controller;
+  fuchsia::guest::GuestControllerSync2Ptr guest_controller;
   env_ptr->ConnectToGuest(cid, guest_controller.NewRequest());
 
   // Fetch the VMO and dump.
