@@ -27,7 +27,11 @@ AudioDeviceManager::~AudioDeviceManager() {
 }
 
 zx_status_t AudioDeviceManager::Init() {
-  // Step #1: Instantiate and initialize the default throttle output.
+  // Give the device settings class a chance to make sure it's storage is
+  // happy.
+  AudioDeviceSettings::Initialize();
+
+  // Instantiate and initialize the default throttle output.
   auto throttle_output = ThrottleOutput::Create(this);
   if (throttle_output == nullptr) {
     FXL_LOG(WARNING)
@@ -44,8 +48,8 @@ zx_status_t AudioDeviceManager::Init() {
   }
   throttle_output_ = std::move(throttle_output);
 
-  // Step #2: Being monitoring for plug/unplug events for pluggable audio
-  // output devices.
+  // Being monitoring for plug/unplug events for pluggable audio output
+  // devices.
   res = plug_detector_.Start(this);
   if (res != ZX_OK) {
     FXL_LOG(WARNING) << "AudioDeviceManager failed to start plug detector (res "
@@ -57,9 +61,10 @@ zx_status_t AudioDeviceManager::Init() {
 }
 
 void AudioDeviceManager::Shutdown() {
-  // Step #1: Stop monitoring plug/unplug events.  We are shutting down and
-  // no longer care about devices coming and going.
+  // Step #1: Stop monitoring plug/unplug events and cancel any pending settings
+  // commit task.  We are shutting down and no longer care about these things.
   plug_detector_.Stop();
+  commit_settings_task_.Cancel();
 
   // Step #2: Shutdown all of the active capturers in the system.
   while (!capturers_.is_empty()) {
@@ -84,6 +89,7 @@ void AudioDeviceManager::Shutdown() {
   while (!devices_.is_empty()) {
     auto device = devices_.pop_front();
     device->Shutdown();
+    FinalizeDeviceSettings(*device);
   }
 
   throttle_output_->Shutdown();
@@ -127,16 +133,63 @@ void AudioDeviceManager::ActivateDevice(
   devices_.insert(devices_pending_init_.erase(*device));
   device->SetActivated();
 
-  // TODO(johngro): load and apply persisted settings now
-  //
+  // TODO(johngro): remove this when system gain is fully deprecated.
   // For now, if this is an output device, update its gain to be whatever the
   // current "system" gain is set to.
   if (device->is_output()) {
     UpdateDeviceToSystemGain(device.get());
   }
 
-  // Notify interested users of the new device.  We need to check to see if this
-  // is going to become the new default device so that we can fill out
+  // Determine whether this device's persistent settings are actually unique,
+  // or if they collide with another device's unique ID.
+  //
+  // If these settings are currently unique in the system, attempt to load the
+  // persisted settings from disk, or create a new persisted settings file for
+  // this device if there isn't a file currently, or if the file appears to be
+  // corrupt.
+  //
+  // If these settings are not currently unique, then copy the current state
+  // of the settings for the device we conflict with, and then proceed without
+  // persistence.  Currently, only the first instance of a device settings
+  // conflict will end up persisting its settings.
+  DeviceSettingsSet::iterator collision;
+  fbl::RefPtr<AudioDeviceSettings> settings = device->device_settings();
+  FXL_DCHECK(settings != nullptr);
+  if (persisted_device_settings_.insert_or_find(settings, &collision)) {
+    settings->InitFromDisk();
+  } else {
+    const uint8_t* id = settings->uid().data;
+    char id_buf[33];
+    snprintf(id_buf, sizeof(id_buf),
+             "%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x",
+             id[0], id[1], id[2], id[3], id[4], id[5], id[6], id[7], id[8],
+             id[9], id[10], id[11], id[12], id[13], id[14], id[15]);
+    FXL_LOG(INFO) << "Warning: Device ID (" << device->token()
+                  << ") shares a persistent unique ID (" << id_buf
+                  << ") with another device in the system.  Initial Settings "
+                     "will be cloned from this device, and not persisted";
+    settings->InitFromClone(*collision);
+  }
+
+  // Now that we have our gain settings (restored from disk, cloned from
+  // others, or default), reapply them via the device itself.  We do this in
+  // order to allow the device the chance to apply its own internal limits,
+  // which may not permit the values which had been read from disk.
+  //
+  // TODO(johngro): Clean this pattern up, it is really awkward.  On the one
+  // hand, we would really like the settings to be completely independent from
+  // the devices, but on the other hand, there are limits for various settings
+  // which may be need imposed by the device's capabilities.
+  constexpr uint32_t kAllSetFlags =
+      ::fuchsia::media::SetAudioGainFlag_GainValid |
+      ::fuchsia::media::SetAudioGainFlag_MuteValid |
+      ::fuchsia::media::SetAudioGainFlag_AgcValid;
+  ::fuchsia::media::AudioGainInfo gain_info;
+  settings->GetGainInfo(&gain_info);
+  device->SetGainInfo(gain_info, kAllSetFlags);
+
+  // Notify interested users of the new device.  We need to check to see if
+  // this is going to become the new default device so that we can fill out
   // is_default field of the notification properly.  Right now, we define
   // "default" device to mean simply last-plugged.
   ::fuchsia::media::AudioDeviceInfo info;
@@ -150,15 +203,19 @@ void AudioDeviceManager::ActivateDevice(
     client->events().OnDeviceAdded(info);
   }
 
-  // Reconsider our current routing policy now that we have a new device present
-  // in the system.
+  // Reconsider our current routing policy now that we have a new device
+  // present in the system.
   if (device->plugged()) {
     zx_time_t plug_time = device->plug_time();
     OnDevicePlugged(device, plug_time);
   }
 
-  // Check to see if the default device has changed and update users if it has.
+  // Check to see if the default device has changed and update users if it
+  // has.
   UpdateDefaultDevice(device->is_input());
+
+  // Commit (or schedule a commit for) any dirty settings.
+  CommitDirtySettings();
 }
 
 void AudioDeviceManager::RemoveDevice(const fbl::RefPtr<AudioDevice>& device) {
@@ -179,9 +236,10 @@ void AudioDeviceManager::RemoveDevice(const fbl::RefPtr<AudioDevice>& device) {
     auto& device_set = device->activated() ? devices_ : devices_pending_init_;
     device_set.erase(*device);
 
-    // If the device was active, reconsider what the default device is now, and
-    // let clients know that this device has gone away.
+    // If the device was active, reconsider what the default device is now,
+    // and let clients know that this device has gone away.
     if (device->activated()) {
+      FinalizeDeviceSettings(*device);
       UpdateDefaultDevice(device->is_input());
 
       for (auto& client : bindings_.bindings()) {
@@ -195,8 +253,8 @@ void AudioDeviceManager::HandlePlugStateChange(
     const fbl::RefPtr<AudioDevice>& device, bool plugged, zx_time_t plug_time) {
   FXL_DCHECK(device != nullptr);
 
-  // Update the device's plug state in our bookkeeping.  If there was no change,
-  // then we are done.
+  // Update the device's plug state in our bookkeeping.  If there was no
+  // change, then we are done.
   if (!device->UpdatePlugState(plugged, plug_time)) {
     return;
   }
@@ -263,6 +321,7 @@ void AudioDeviceManager::SetDeviceGain(
   // Change the gain and then report the new settings to our clients.
   dev->SetGainInfo(gain_info, set_flags);
   NotifyDeviceGainChanged(*dev);
+  CommitDirtySettings();
 }
 
 void AudioDeviceManager::GetDefaultInputDevice(
@@ -420,12 +479,14 @@ void AudioDeviceManager::SetRoutingPolicy(
 
   // Iterate thru all of our audio devices -- only a subset are affected.
   for (auto& dev_obj : devices_) {
-    // If device is an input, it is unaffected by this change in output-routing.
+    // If device is an input, it is unaffected by this change in
+    // output-routing.
     if (dev_obj.is_input()) {
       continue;
     }
 
-    // If (output) device is not plugged-in, it is unaffected by output-routing.
+    // If (output) device is not plugged-in, it is unaffected by
+    // output-routing.
     auto output = static_cast<AudioOutput*>(&dev_obj);
     if (!output->plugged()) {
       continue;
@@ -454,7 +515,8 @@ void AudioDeviceManager::SetRoutingPolicy(
     }
   }
 
-  // After changing routing, determine new minimum clock lead time requirements.
+  // After changing routing, determine new minimum clock lead time
+  // requirements.
   for (auto& obj : renderers_) {
     FXL_DCHECK(obj.is_renderer());
     auto renderer = static_cast<AudioRendererImpl*>(&obj);
@@ -615,6 +677,16 @@ void AudioDeviceManager::LinkToCapturers(
   }
 }
 
+void AudioDeviceManager::FinalizeDeviceSettings(const AudioDevice& device) {
+  const auto& settings = device.device_settings();
+  if ((settings == nullptr) || !settings->InContainer()) {
+    return;
+  }
+
+  settings->Commit(true);
+  persisted_device_settings_.erase(*settings);
+}
+
 void AudioDeviceManager::NotifyDeviceGainChanged(const AudioDevice& device) {
   ::fuchsia::media::AudioGainInfo info;
   FXL_DCHECK(device.device_settings() != nullptr);
@@ -648,6 +720,29 @@ void AudioDeviceManager::UpdateDeviceToSystemGain(AudioDevice* device) {
 
   FXL_DCHECK(device != nullptr);
   device->SetGainInfo(set_cmd, set_flags);
+  CommitDirtySettings();
+}
+
+void AudioDeviceManager::CommitDirtySettings() {
+  zx::time next = zx::time::infinite();
+
+  for (auto& settings : persisted_device_settings_) {
+    zx::time tmp = settings.Commit();
+    if (tmp < next) {
+      next = tmp;
+    }
+  }
+
+  // If our commit task is waiting to fire, try to cancel it.
+  if (commit_settings_task_.is_pending()) {
+    commit_settings_task_.Cancel();
+  }
+
+  // If we need to try to update in the future, schedule a our commit task to do
+  // so.
+  if (next != zx::time::infinite()) {
+    commit_settings_task_.PostForTime(server_->async(), next);
+  }
 }
 
 }  // namespace audio

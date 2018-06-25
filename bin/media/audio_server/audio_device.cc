@@ -34,7 +34,10 @@ AudioDevice::AudioDevice(AudioObject::Type type, AudioDeviceManager* manager)
   FXL_DCHECK((type == Type::Input) || (type == Type::Output));
 }
 
-AudioDevice::~AudioDevice() { FXL_DCHECK(is_shutting_down()); }
+AudioDevice::~AudioDevice() {
+  FXL_DCHECK(is_shutting_down());
+  FXL_DCHECK(!device_settings_ || !device_settings_->InContainer());
+}
 
 void AudioDevice::Wakeup() {
   FXL_DCHECK(mix_wakeup_ != nullptr);
@@ -97,7 +100,7 @@ void AudioDevice::ActivateSelf() {
     // activation message.
     FXL_DCHECK(device_settings_ == nullptr);
     FXL_DCHECK(driver() != nullptr);
-    device_settings_ = AudioDeviceSettings::Create(*driver());
+    device_settings_ = AudioDeviceSettings::Create(*driver(), is_input());
 
     // Now poke our manager.
     FXL_DCHECK(manager_);

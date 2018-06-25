@@ -67,6 +67,9 @@ class AudioServerImpl : public fuchsia::media::Audio {
     async::PostTask(async_, std::move(task));
   }
 
+  // Direct access to the server's async_t
+  async_t* async() const { return async_; }
+
   // Accessor for our encapsulated device manager.
   AudioDeviceManager& GetDeviceManager() { return device_manager_; }
 
