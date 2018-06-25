@@ -400,8 +400,11 @@ static zx_status_t platform_dev_rxrpc(void* ctx, zx_handle_t channel) {
     pdev_req_t* req = &req_data.req;
     pdev_resp_t resp;
     uint32_t len = sizeof(req_data);
+    zx_handle_t in_handle;
+    uint32_t in_handle_count = 1;
 
-    zx_status_t status = zx_channel_read(channel, 0, &req_data, NULL, len, 0, &len, NULL);
+    zx_status_t status = zx_channel_read(channel, 0, &req_data, &in_handle, len, in_handle_count,
+                                        &len, &in_handle_count);
     if (status != ZX_OK) {
         zxlogf(ERROR, "platform_dev_rxrpc: zx_channel_read failed %d\n", status);
         return status;
