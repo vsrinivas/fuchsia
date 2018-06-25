@@ -920,7 +920,7 @@ static void multi_txn_completion(block_op_t* txn, zx_status_t status) {
     if (last_txn) {
         delete state;
     }
-    free(txn);
+    delete[] txn;
 }
 
 void VPartition::BlockQueue(block_op_t* txn) {
@@ -995,13 +995,9 @@ void VPartition::BlockQueue(block_op_t* txn) {
     }
 
     // Harder case: Noncontiguous slices
-    constexpr size_t kMaxSlices = 32;
-    block_op_t* txns[kMaxSlices];
     const size_t txn_count = vslice_end - vslice_start + 1;
-    if (kMaxSlices < txn_count) {
-        txn->completion_cb(txn, ZX_ERR_OUT_OF_RANGE);
-        return;
-    }
+    fbl::Vector<block_op_t*> txns;
+    txns.reserve(txn_count);
 
     fbl::AllocChecker ac;
     fbl::unique_ptr<multi_txn_state_t> state(new (&ac) multi_txn_state_t(txn_count, txn));
@@ -1029,10 +1025,10 @@ void VPartition::BlockQueue(block_op_t* txn) {
         ZX_DEBUG_ASSERT(length <= blocks_per_slice);
         ZX_DEBUG_ASSERT(length <= length_remaining);
 
-        txns[i] = static_cast<block_op_t*>(calloc(1, mgr_->BlockOpSize()));
+        txns.push_back(reinterpret_cast<block_op_t*>(new uint8_t[mgr_->BlockOpSize()]));
         if (txns[i] == nullptr) {
             while (i-- > 0) {
-                free(txns[i]);
+                delete[] txns[i];
             }
             txn->completion_cb(txn, ZX_ERR_NO_MEMORY);
             return;
