@@ -67,7 +67,7 @@ zx_status_t await(zx_handle_t object, zx_signals_t trigger, void* data) {
     wait->handler = handler;
     wait->object = object;
     wait->trigger = trigger;
-    return async_begin_wait(async, handle, wait);
+    return async_begin_wait(async, wait);
 }
 ```
 
