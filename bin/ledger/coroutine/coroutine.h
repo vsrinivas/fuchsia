@@ -99,13 +99,11 @@ FXL_WARN_UNUSED_RESULT ContinuationStatus SyncCall(CoroutineHandler* handler,
         }
         handler->Resume(ContinuationStatus::INTERRUPTED);
       });
-  // TODO: wrap callback::Capture behind a termination_sentinel.
   auto capture = callback::Capture(
-      fxl::MakeCopyable([termination_sentinel, &sync_state, &callback_called,
-                         handler, unblocker = std::move(unblocker)]() mutable {
-        if (termination_sentinel->terminated) {
-          return;
-        }
+      fxl::MakeCopyable([&sync_state, &callback_called, handler,
+                         unblocker = std::move(unblocker)]() mutable {
+        // |capture| is already gated by the termination sentinel below. No need
+        // to re-check here.
 
         unblocker.cancel();
         callback_called = true;
