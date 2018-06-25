@@ -217,6 +217,17 @@ static block_protocol_ops_t block_proto = {
     .queue = sdmmc_queue,
 };
 
+// SDIO protocol
+static sdio_protocol_ops_t sdio_proto = {
+    .get_oob_irq = sdio_get_oob_irq_host,
+    .enable_func = sdio_enable_function,
+    .disable_func = sdio_disable_function,
+    .enable_func_intr = sdio_enable_interrupt,
+    .disable_func_intr = sdio_disable_interrupt,
+    .update_block_size = sdio_modify_block_size,
+    .do_rw_txn = sdio_rw_data,
+};
+
 static zx_status_t sdmmc_wait_for_tran(sdmmc_device_t* dev) {
     uint32_t current_state;
     const size_t max_attempts = 10;
@@ -380,51 +391,73 @@ static int sdmmc_worker_thread(void* arg) {
     }
 
     if (dev->type == SDMMC_TYPE_SDIO) {
-        //TODO: Add devices for each function of SDIO
-        goto exit;
-    }
-    // Device must be in TRAN state at this point
-    st = sdmmc_wait_for_tran(dev);
-    if (st != ZX_OK) {
-        zxlogf(ERROR, "sdmmc: waiting for TRAN state failed, retcode = %d\n", st);
+        zx_device_t* hci_zxdev =  device_get_parent(dev->zxdev);
+
+        //Remove block device and add SDIO device
         device_remove(dev->zxdev);
-        return st;
-    }
+        zx_device_prop_t props[] = {
+             { BIND_SDIO_VID, 0, dev->sdio_info.funcs[0].manufacturer_id},
+             { BIND_SDIO_PID, 0, dev->sdio_info.funcs[0].product_id},
+        };
 
-    dev->worker_thread_running = true;
-    device_make_visible(dev->zxdev);
+        device_add_args_t sdio_args = {
+            .version = DEVICE_ADD_ARGS_VERSION,
+            .name = "sdio",
+            .ctx = dev,
+            .ops = &sdmmc_device_proto,
+            .proto_id = ZX_PROTOCOL_SDIO,
+            .proto_ops = &sdio_proto,
+            .props = props,
+            .prop_count = countof(props),
+        };
 
-    for (;;) {
-        // don't loop until txn_list is empty to check for SDMMC_SHUTDOWN
-        // between each txn.
-        SDMMC_LOCK(dev);
-        sdmmc_txn_t* txn = list_remove_head_type(&dev->txn_list, sdmmc_txn_t, node);
-        STAT_DEC_IF(pending, txn != NULL);
-        if (txn) {
-            // Unlock if we execute the transaction
-            SDMMC_UNLOCK(dev);
-            sdmmc_do_txn(dev, txn);
-        } else {
-            // Stay locked if we're clearing the "RECEIVED" flag.
-            zx_object_signal(dev->worker_event, SDMMC_TXN_RECEIVED, 0);
-            SDMMC_UNLOCK(dev);
-        }
-
-        uint32_t pending;
-        zx_status_t st = zx_object_wait_one(dev->worker_event,
-                                            SDMMC_TXN_RECEIVED | SDMMC_SHUTDOWN,
-                                            ZX_TIME_INFINITE, &pending);
+        st = device_add(hci_zxdev, &sdio_args, &dev->zxdev);
         if (st != ZX_OK) {
-            zxlogf(ERROR, "sdmmc: worker thread wait failed, retcode = %d\n", st);
-            break;
+            zxlogf(ERROR, "sdmmc: Failed to add sdio device, retcode = %d\n", st);
+            return st;
         }
-        if (pending & SDMMC_SHUTDOWN) {
-            zx_object_signal(dev->worker_event, pending, SDMMC_SHUTDOWN_DONE);
-            break;
+    } else {
+        // Device must be in TRAN state at this point
+        st = sdmmc_wait_for_tran(dev);
+        if (st != ZX_OK) {
+            zxlogf(ERROR, "sdmmc: waiting for TRAN state failed, retcode = %d\n", st);
+            device_remove(dev->zxdev);
+            return st;
+        }
+
+        dev->worker_thread_running = true;
+        device_make_visible(dev->zxdev);
+
+        for (;;) {
+            // don't loop until txn_list is empty to check for SDMMC_SHUTDOWN
+            // between each txn.
+            SDMMC_LOCK(dev);
+            sdmmc_txn_t* txn = list_remove_head_type(&dev->txn_list, sdmmc_txn_t, node);
+            STAT_DEC_IF(pending, txn != NULL);
+            if (txn) {
+                // Unlock if we execute the transaction
+                SDMMC_UNLOCK(dev);
+                sdmmc_do_txn(dev, txn);
+            } else {
+                // Stay locked if we're clearing the "RECEIVED" flag.
+                zx_object_signal(dev->worker_event, SDMMC_TXN_RECEIVED, 0);
+                SDMMC_UNLOCK(dev);
+            }
+
+            uint32_t pending;
+            zx_status_t st = zx_object_wait_one(dev->worker_event,
+                                                SDMMC_TXN_RECEIVED | SDMMC_SHUTDOWN,
+                                                ZX_TIME_INFINITE, &pending);
+            if (st != ZX_OK) {
+                zxlogf(ERROR, "sdmmc: worker thread wait failed, retcode = %d\n", st);
+                break;
+            }
+            if (pending & SDMMC_SHUTDOWN) {
+                zx_object_signal(dev->worker_event, pending, SDMMC_SHUTDOWN_DONE);
+                break;
+            }
         }
     }
-
-exit:
     zxlogf(TRACE, "sdmmc: worker thread terminated\n");
     return 0;
 }
@@ -453,7 +486,7 @@ static zx_status_t sdmmc_bind(void* ctx, zx_device_t* parent) {
         goto fail;
     }
 
-    device_add_args_t args = {
+    device_add_args_t block_args = {
         .version = DEVICE_ADD_ARGS_VERSION,
         .name = "sdmmc",
         .ctx = dev,
@@ -463,7 +496,7 @@ static zx_status_t sdmmc_bind(void* ctx, zx_device_t* parent) {
         .flags = DEVICE_ADD_INVISIBLE,
     };
 
-    st = device_add(parent, &args, &dev->zxdev);
+    st = device_add(parent, &block_args, &dev->zxdev);
     if (st != ZX_OK) {
         goto fail;
     }
@@ -474,7 +507,6 @@ static zx_status_t sdmmc_bind(void* ctx, zx_device_t* parent) {
         st = thrd_status_to_zx_status(rc);
         goto fail_remove;
     }
-
     return ZX_OK;
 
 fail_remove:

@@ -9,6 +9,7 @@
 #include <ddk/device.h>
 #include <ddk/protocol/block.h>
 #include <ddk/protocol/sdmmc.h>
+#include <ddk/protocol/sdio.h>
 #include <hw/sdmmc.h>
 
 #include "sdio.h"
@@ -102,7 +103,15 @@ zx_status_t sdio_io_rw_direct(sdmmc_device_t* dev, bool write, uint32_t fn_idx,
 zx_status_t sdio_io_rw_extended(sdmmc_device_t *dev, bool write, uint32_t fn_idx,
                                 uint32_t reg_addr, bool incr, uint8_t *buf,
                                 uint32_t blk_count, uint32_t blk_size);
+
 zx_status_t sdio_enable_interrupt(void *ctx, uint8_t fn_idx);
+zx_status_t sdio_disable_interrupt(void *ctx, uint8_t fn_idx);
+zx_status_t sdio_enable_function(void *ctx, uint8_t fn_idx);
+zx_status_t sdio_disable_function(void *ctx, uint8_t fn_idx);
+zx_status_t sdio_modify_block_size(void *ctx, uint8_t fn_idx, uint16_t blk_sz, bool deflt);
+zx_status_t sdio_rw_data(void *ctx, uint8_t fn_idx, sdio_rw_txn_t *txn);
+zx_status_t sdio_get_oob_irq_host(void *ctx, zx_handle_t *oob_irq);
+
 
 // MMC ops
 

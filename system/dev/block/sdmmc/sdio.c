@@ -44,7 +44,7 @@ static zx_status_t sdio_read_after_write_byte(sdmmc_device_t *dev, uint8_t fn_id
     return sdio_io_rw_direct(dev, true, fn_idx, addr, write_byte, read_byte);
 }
 
-static zx_status_t sdio_rw_data(void *ctx, uint8_t fn_idx, sdio_rw_txn_t *txn) {
+zx_status_t sdio_rw_data(void *ctx, uint8_t fn_idx, sdio_rw_txn_t *txn) {
     if (!sdio_fn_idx_valid(fn_idx)) {
         return ZX_ERR_INVALID_ARGS;
     }
@@ -177,7 +177,7 @@ static zx_status_t sdio_write_data_fifo(sdmmc_device_t *dev, uint8_t fn_idx, uin
     return sdio_rw_data(dev, fn_idx, &txn);
 }
 
-static zx_status_t sdio_get_oob_irq_host(void *ctx, zx_handle_t *oob_irq) {
+zx_status_t sdio_get_oob_irq_host(void *ctx, zx_handle_t *oob_irq) {
     return sdmmc_get_sdio_oob_irq(ctx, oob_irq);
 }
 
@@ -479,7 +479,7 @@ static zx_status_t sdio_process_fbr(sdmmc_device_t *dev, uint8_t fn_idx) {
     return ZX_OK;
 }
 
-static zx_status_t sdio_modify_block_size(void *ctx, uint8_t fn_idx, uint16_t blk_size,
+zx_status_t sdio_modify_block_size(void *ctx, uint8_t fn_idx, uint16_t blk_size,
                                          bool set_default) {
     zx_status_t st = ZX_OK;
     sdmmc_device_t *dev = ctx;
@@ -507,7 +507,7 @@ static zx_status_t sdio_modify_block_size(void *ctx, uint8_t fn_idx, uint16_t bl
     return ZX_OK;
 }
 
-static zx_status_t sdio_enable_function(void *ctx, uint8_t fn_idx) {
+zx_status_t sdio_enable_function(void *ctx, uint8_t fn_idx) {
     uint8_t ioex_reg = 0;
     zx_status_t st = ZX_OK;
     sdmmc_device_t *dev = ctx;
@@ -554,7 +554,7 @@ static zx_status_t sdio_enable_function(void *ctx, uint8_t fn_idx) {
     return st;
 }
 
-static zx_status_t sdio_disable_function(void *ctx, uint8_t fn_idx) {
+zx_status_t sdio_disable_function(void *ctx, uint8_t fn_idx) {
     uint8_t ioex_reg = 0;
     zx_status_t st = ZX_OK;
     sdmmc_device_t *dev = ctx;
