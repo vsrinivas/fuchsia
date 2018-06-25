@@ -48,7 +48,19 @@ struct ConnectRequest {
     vector<uint8>:32 ssid;
 };
 
+struct CurrentBss {
+    vector<uint8>:32 ssid;
+    array<uint8>:6 bssid;
+};
+
+struct ClientStatusResponse {
+    CurrentBss? connected_to;
+    // If non-empty, this is the SSID we are currently trying to connect to
+    vector<uint8>:32 connecting_to_ssid;
+};
+
 interface ClientSme {
     1: Scan(ScanRequest req, request<ScanTransaction> txn);
     2: Connect(ConnectRequest req, request<ConnectTransaction>? txn);
+    3: Status() -> (ClientStatusResponse resp);
 };

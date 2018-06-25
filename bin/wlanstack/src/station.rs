@@ -170,7 +170,8 @@ fn new_client_service(client: Arc<Mutex<Client>>, endpoint: ClientSmeEndpoint)
                 ClientSmeRequest::Connect { req, txn, control_handle } => {
                     Ok(connect(&client, req.ssid, txn)
                         .unwrap_or_else(|e| eprintln!("Error starting a connect transaction: {:?}", e)))
-                }
+                },
+                ClientSmeRequest::Status { responder } => responder.send(&mut status(&client)),
             })
             .map(|_| ())
         })
@@ -195,6 +196,19 @@ fn connect(client: &Arc<Mutex<Client>>, ssid: Vec<u8>,
     };
     client.lock().unwrap().on_connect_command(ssid, handle);
     Ok(())
+}
+
+fn status(client: &Arc<Mutex<Client>>) -> fidl_sme::ClientStatusResponse {
+    let status = client.lock().unwrap().status();
+    fidl_sme::ClientStatusResponse {
+        connected_to: status.connected_to.map(|bss| {
+            Box::new(fidl_sme::CurrentBss {
+                ssid: bss.ssid,
+                bssid: bss.bssid
+            })
+        }),
+        connecting_to_ssid: status.connecting_to.unwrap_or(Vec::new()),
+    }
 }
 
 fn serve_user_stream(stream: client::UserStream<ClientTokens>)

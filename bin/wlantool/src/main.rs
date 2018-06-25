@@ -25,6 +25,7 @@ use failure::{Error, Fail, ResultExt};
 use fidl::endpoints2;
 use fidl_sme::{ConnectResultCode, ConnectTransactionEvent, ScanTransactionEvent};
 use futures::prelude::*;
+use std::fmt;
 use structopt::StructOpt;
 use wlan_service::{DeviceServiceMarker, DeviceServiceProxy};
 
@@ -117,8 +118,9 @@ fn do_iface(cmd: opts::IfaceCmd, wlan_svc: WlanSvc) -> impl Future<Item = (), Er
 }
 
 fn do_client(cmd: opts::ClientCmd, wlan_svc: WlanSvc) -> impl Future<Item = (), Error = Error> {
+    many_futures!(ClientFut, [ Scan, Connect, Status ]);
     match cmd {
-        opts::ClientCmd::Scan { iface_id } => get_client_sme(wlan_svc, iface_id)
+        opts::ClientCmd::Scan { iface_id } => ClientFut::Scan(get_client_sme(wlan_svc, iface_id)
             .and_then(|sme| {
                 let (local, remote) = endpoints2::create_endpoints()?;
                 let mut req = fidl_sme::ScanRequest {
@@ -129,9 +131,8 @@ fn do_client(cmd: opts::ClientCmd, wlan_svc: WlanSvc) -> impl Future<Item = (), 
                 Ok(local)
             })
             .and_then(handle_scan_transaction)
-            .map_err(|e| e.into())
-            .left_future(),
-        opts::ClientCmd::Connect { iface_id, ssid } => get_client_sme(wlan_svc, iface_id)
+            .err_into()),
+        opts::ClientCmd::Connect { iface_id, ssid } => ClientFut::Connect(get_client_sme(wlan_svc, iface_id)
             .and_then(move |sme| {
                 let (local, remote) = endpoints2::create_endpoints()?;
                 let mut req = fidl_sme::ConnectRequest {
@@ -142,8 +143,31 @@ fn do_client(cmd: opts::ClientCmd, wlan_svc: WlanSvc) -> impl Future<Item = (), 
                 Ok(local)
             })
             .and_then(handle_connect_transaction)
-            .map_err(|e| e.into())
-            .right_future(),
+            .err_into()),
+        opts::ClientCmd::Status { iface_id } => ClientFut::Status(get_client_sme(wlan_svc, iface_id)
+            .and_then(|sme| sme.status().err_into())
+            .and_then(|st| {
+                match st.connected_to {
+                    Some(bss) => {
+                        println!("Connected to '{}' (bssid {})",
+                                 String::from_utf8_lossy(&bss.ssid), Bssid(bss.bssid));
+                    },
+                    None => println!("Not connected to a network"),
+                }
+                if !st.connecting_to_ssid.is_empty() {
+                    println!("Connecting to '{}'", String::from_utf8_lossy(&st.connecting_to_ssid));
+                }
+                Ok(())
+            }))
+    }
+}
+
+struct Bssid([u8; 6]);
+
+impl fmt::Display for Bssid {
+    fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+        write!(f, "{:02x}:{:02x}:{:02x}:{:02x}:{:02x}:{:02x}",
+               self.0[0], self.0[1], self.0[2], self.0[3], self.0[4], self.0[5])
     }
 }
 
@@ -220,4 +244,15 @@ fn get_client_sme(wlan_svc: WlanSvc, iface_id: u16)
                     }
                 })
         })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn format_bssid() {
+        assert_eq!("01:02:03:ab:cd:ef",
+               format!("{}", Bssid([ 0x01, 0x02, 0x03, 0xab, 0xcd, 0xef])));
+    }
 }

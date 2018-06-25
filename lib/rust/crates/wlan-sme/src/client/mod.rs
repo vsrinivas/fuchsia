@@ -9,7 +9,7 @@ use fidl_mlme::{MlmeEvent, ScanRequest};
 use self::scan::{DiscoveryScan, JoinScan, JoinScanFailure, ScanResult, ScanScheduler};
 use self::state::{ConnectCommand, State};
 use std::sync::Arc;
-use super::{DeviceCapabilities, MlmeRequest};
+use super::{DeviceCapabilities, MlmeRequest, MlmeStream, Ssid};
 use futures::channel::mpsc;
 
 pub use self::scan::{DiscoveryError, DiscoveryResult, DiscoveredEss};
@@ -82,8 +82,20 @@ pub enum UserEvent<T: Tokens> {
     }
 }
 
+#[derive(Clone, Debug, PartialEq)]
+pub struct CurrentBss {
+    pub ssid: Ssid,
+    pub bssid: [u8; 6],
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct Status {
+    pub connected_to: Option<CurrentBss>,
+    pub connecting_to: Option<Ssid>
+}
+
 impl<T: Tokens> ClientSme<T> {
-    pub fn new(caps: DeviceCapabilities) -> (Self, super::MlmeStream, UserStream<T>) {
+    pub fn new(caps: DeviceCapabilities) -> (Self, MlmeStream, UserStream<T>) {
         let caps = Arc::new(caps);
         let (mlme_sink, mlme_stream) = mpsc::unbounded();
         let (user_sink, user_stream) = mpsc::unbounded();
@@ -99,7 +111,7 @@ impl<T: Tokens> ClientSme<T> {
         )
     }
 
-    pub fn on_connect_command(&mut self, ssid: Vec<u8>, token: T::ConnectToken) {
+    pub fn on_connect_command(&mut self, ssid: Ssid, token: T::ConnectToken) {
         let (canceled_token, req) = self.scan_sched.enqueue_scan_to_join(JoinScan { ssid, token });
         // If the new scan replaced an existing pending JoinScan, notify the existing transaction
         if let Some(t) = canceled_token {
@@ -114,6 +126,20 @@ impl<T: Tokens> ClientSme<T> {
     pub fn on_scan_command(&mut self, token: T::ScanToken) {
         let req = self.scan_sched.enqueue_scan_to_discover(DiscoveryScan{ token });
         self.send_scan_request(req);
+    }
+
+    pub fn status(&self) -> Status {
+        let status = self.state.as_ref().expect("expected state to be always present").status();
+        if status.connecting_to.is_some() {
+            status
+        } else {
+            // If the association machine is not connecting to a network, but the scanner
+            // has a queued 'JoinScan', include the SSID we are trying to connect to
+            Status {
+                connecting_to: self.scan_sched.get_join_scan().map(|s| s.ssid.clone()),
+                .. status
+            }
+        }
     }
 
     fn send_scan_request(&mut self, req: Option<ScanRequest>) {
@@ -159,5 +185,86 @@ impl<T: Tokens> super::Station for ClientSme<T> {
                 state.on_mlme_event(other, &self.mlme_sink, &self.user_sink)
             }
         });
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use fidl_mlme;
+    use std::collections::HashSet;
+    use Station;
+
+    #[test]
+    fn status_connecting_to() {
+        let (mut sme, _mlme_stream, _user_stream) = create_sme();
+        assert_eq!(Status{ connected_to: None, connecting_to: None },
+                   sme.status());
+
+        // Issue a connect command and expect the status to change appropriately.
+        // We also check that the association machine state is still disconnected
+        // to make sure that the status comes from the scanner.
+        sme.on_connect_command(b"foo".to_vec(), 10);
+        assert_eq!(None,
+                   sme.state.as_ref().unwrap().status().connecting_to);
+        assert_eq!(Status{ connected_to: None, connecting_to: Some(b"foo".to_vec()) },
+                   sme.status());
+
+        // Push a fake scan result into SME. We should still be connecting to "foo",
+        // but the status should now come from the state machine and not from the scanner.
+        sme.on_mlme_event(MlmeEvent::ScanConf {
+            resp: fidl_mlme::ScanConfirm {
+                bss_description_set: vec![fake_bss_description(b"foo".to_vec())],
+                result_code: fidl_mlme::ScanResultCodes::Success,
+            }
+        });
+        assert_eq!(Some(b"foo".to_vec()),
+                   sme.state.as_ref().unwrap().status().connecting_to);
+        assert_eq!(Status{ connected_to: None, connecting_to: Some(b"foo".to_vec()) },
+                   sme.status());
+
+        // Even if we scheduled a scan to connect to another network "bar", we should
+        // still report that we are connecting to "foo".
+        sme.on_connect_command(b"bar".to_vec(), 10);
+        assert_eq!(Status{ connected_to: None, connecting_to: Some(b"foo".to_vec()) },
+                   sme.status());
+
+        // Simulate that joining "foo" failed. We should now be connecting to "bar".
+        sme.on_mlme_event(MlmeEvent::JoinConf {
+            resp: fidl_mlme::JoinConfirm {
+                result_code: fidl_mlme::JoinResultCodes::JoinFailureTimeout,
+            }
+        });
+        assert_eq!(Status{ connected_to: None, connecting_to: Some(b"bar".to_vec()) },
+                   sme.status());
+    }
+
+    struct FakeTokens;
+    impl Tokens for FakeTokens {
+        type ScanToken = i32;
+        type ConnectToken = i32;
+    }
+
+    fn create_sme() -> (ClientSme<FakeTokens>, MlmeStream, UserStream<FakeTokens>) {
+        ClientSme::new(DeviceCapabilities {
+            supported_channels: HashSet::new(),
+        })
+    }
+
+    fn fake_bss_description(ssid: Ssid) -> fidl_mlme::BssDescription {
+        fidl_mlme::BssDescription {
+            bssid: [0, 0, 0, 0, 0, 0],
+            ssid: String::from_utf8_lossy(&ssid).to_string(),
+            bss_type: fidl_mlme::BssTypes::Infrastructure,
+            beacon_period: 100,
+            dtim_period: 100,
+            timestamp: 0,
+            local_time: 0,
+            rsn: None,
+            chan: fidl_mlme::WlanChan { primary: 1, secondary80: 0, cbw: fidl_mlme::Cbw::Cbw20 },
+            rssi_dbm: -30,
+            rcpi_dbmh: -60,
+            rsni_dbh: 20
+        }
     }
 }

@@ -4,7 +4,7 @@
 
 use bytes::Bytes;
 use fidl_mlme::{self, BssDescription, MlmeEvent};
-use super::{ConnectResult, Tokens};
+use super::{ConnectResult, Status, Tokens};
 use super::internal::{MlmeSink, UserSink};
 use super::super::MlmeRequest;
 use wlan_rsn::akm;
@@ -159,6 +159,36 @@ impl<T: Tokens> State<T> {
                     next_cmd: next_bss_to_join
                 }
             }
+        }
+    }
+
+    pub fn status(&self) -> Status {
+        match self {
+            &State::Idle | &State::Deauthenticating { next_cmd: None } => Status {
+                connected_to: None,
+                connecting_to: None,
+            },
+            &State::Joining { ref cmd }
+                | &State::Authenticating { ref cmd }
+                | &State::Associating { ref cmd }
+                | &State::Deauthenticating { next_cmd: Some(ref cmd) }  =>
+            {
+                Status {
+                    connected_to: None,
+                    connecting_to: Some(cmd.bss.ssid.as_bytes().to_vec()),
+                }
+            },
+            &State::Associated { ref bss, link_state: LinkState::_ShakingHands, .. } => Status {
+                connected_to: None,
+                connecting_to: Some(bss.ssid.as_bytes().to_vec()),
+            },
+            &State::Associated { ref bss, link_state: LinkState::LinkUp, .. } => Status {
+                connected_to: Some(super::CurrentBss {
+                    ssid: bss.ssid.as_bytes().to_vec(),
+                    bssid: bss.bssid.clone(),
+                }),
+                connecting_to: None,
+            },
         }
     }
 }

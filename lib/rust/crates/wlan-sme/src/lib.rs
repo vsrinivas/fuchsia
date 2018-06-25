@@ -16,6 +16,8 @@ pub mod client;
 use futures::channel::mpsc;
 use std::collections::HashSet;
 
+pub type Ssid = Vec<u8>;
+
 pub struct DeviceCapabilities {
     pub supported_channels: HashSet<u8>
 }

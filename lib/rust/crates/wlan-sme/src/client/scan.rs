@@ -8,7 +8,7 @@ use std::collections::hash_map::Entry;
 use std::cmp::Ordering;
 use std::mem;
 use std::sync::Arc;
-use super::super::{DeviceCapabilities};
+use super::super::{DeviceCapabilities, Ssid};
 
 // Scans can be performed for two different purposes:
 //      1) Discover available wireless networks. These scans are initiated by the "user",
@@ -18,12 +18,14 @@ use super::super::{DeviceCapabilities};
 //         itself.
 
 // An SME-initiated scan request for the purpose of joining a network
+#[derive(Debug, PartialEq)]
 pub struct JoinScan<T> {
-    pub ssid: Vec<u8>,
+    pub ssid: Ssid,
     pub token: T,
 }
 
 // A "user"-initiated scan request for the purpose of discovering available networks
+#[derive(Debug, PartialEq)]
 pub struct DiscoveryScan<T> {
     pub token: T,
 }
@@ -41,6 +43,7 @@ pub struct ScanScheduler<D, J> {
     device_caps: Arc<DeviceCapabilities>
 }
 
+#[derive(Debug, PartialEq)]
 enum ScanState<D, J> {
     NotScanning,
     ScanningToJoin(JoinScan<J>),
@@ -85,7 +88,7 @@ pub enum ScanResult<D, J> {
 pub type DiscoveryResult = Result<Vec<DiscoveredEss>, DiscoveryError>;
 
 pub struct DiscoveredEss {
-    pub ssid: Vec<u8>,
+    pub ssid: Ssid,
     pub best_bss: [u8; 6],
 }
 
@@ -178,6 +181,17 @@ impl<D, J> ScanScheduler<D, J> {
         };
         let request = self.start_next_scan();
         (result, request)
+    }
+
+    // Returns the most recent join scan request, if there is one.
+    pub fn get_join_scan(&self) -> Option<&JoinScan<J>> {
+        if let &Some(ref s) = &self.pending_join {
+            Some(s)
+        } else if let &ScanState::ScanningToJoin(ref s) = &self.current {
+            Some(s)
+        } else {
+            None
+        }
     }
 
     fn start_next_scan(&mut self) -> Option<ScanRequest> {
@@ -299,3 +313,47 @@ const SUPPORTED_CHANNELS: &[u8] = &[
     // 2GHz
     1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11,
 ];
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use std::collections::HashSet;
+
+    #[test]
+    fn get_join_scan() {
+        let mut sched = create_sched();
+        assert_eq!(None, sched.get_join_scan());
+
+        sched.enqueue_scan_to_join(JoinScan { ssid: b"foo".to_vec(), token: 10 });
+        // Make sure the scanner is in the state we expect it to be: the request is
+        // 'current', not 'pending'
+        assert_eq!(ScanState::ScanningToJoin(JoinScan{ ssid: b"foo".to_vec(), token: 10 }),
+                   sched.current);
+        assert_eq!(None, sched.pending_join);
+
+        assert_eq!(Some(&JoinScan{ ssid: b"foo".to_vec(), token: 10 }),
+                   sched.get_join_scan());
+
+        sched.enqueue_scan_to_join(JoinScan { ssid: b"bar".to_vec(), token: 20 });
+        // Again, make sure the state is what we expect. "Foo" should still be the current request,
+        // while "bar" should be pending
+        assert_eq!(ScanState::ScanningToJoin(JoinScan{ ssid: b"foo".to_vec(), token: 10 }),
+                   sched.current);
+        assert_eq!(Some(JoinScan{ ssid: b"bar".to_vec(), token: 20 }),
+                   sched.pending_join);
+
+        // Expect the pending request to be returned since the current one will be discarded
+        // once the scan finishes
+        assert_eq!(Some(&JoinScan{ ssid: b"bar".to_vec(), token: 20 }),
+                   sched.get_join_scan());
+    }
+
+    fn create_sched() -> ScanScheduler<i32, i32> {
+        ScanScheduler::new(Arc::new(
+            DeviceCapabilities {
+                supported_channels: HashSet::new(),
+            }
+        ))
+    }
+}
