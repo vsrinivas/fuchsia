@@ -401,8 +401,9 @@ void ConsoleContext::OnSymbolLoadFailure(Process* process, const Err& err) {
 //
 // When stepping, GDB prints out only the 2nd line with source info, and LLDB
 // prints out the whole thing with "step over" for "stop reason".
-void ConsoleContext::OnThreadStopped(Thread* thread,
-                                     debug_ipc::NotifyException::Type type) {
+void ConsoleContext::OnThreadStopped(
+    Thread* thread, debug_ipc::NotifyException::Type type,
+    std::vector<fxl::WeakPtr<Breakpoint>> hit_breakpoints) {
   // Set this process and thread as active.
   Target* target = thread->GetProcess()->GetTarget();
   SetActiveTarget(target);

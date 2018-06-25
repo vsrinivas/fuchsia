@@ -8,6 +8,7 @@ static_library("client") {
   public = [
     "arch_info.h",
     "breakpoint.h",
+    "breakpoint_controller.h",
     "breakpoint_location.h",
     "breakpoint_observer.h",
     "breakpoint_settings.h",
@@ -29,6 +30,7 @@ static_library("client") {
   sources = [
     "arch_info.cc",
     "breakpoint.cc",
+    "breakpoint_action.cc",
     "breakpoint_impl.cc",
     "breakpoint_impl.h",
     "breakpoint_location.cc",
@@ -105,6 +107,9 @@ source_set("tests") {
     "disassembler_unittest.cc",
     "file_util_unittest.cc",
     "memory_dump_unittest.cc",
+    "remote_api_test.cc",
+    "remote_api_test.h",
+    "session_unittest.cc",
     "string_util_unittest.cc",
     "target_impl_unittest.cc",
   ]

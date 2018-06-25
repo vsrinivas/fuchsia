@@ -244,7 +244,13 @@ struct NotifyThread {
 struct NotifyException {
   enum class Type : uint32_t {
     kGeneral = 0,
+
+    // Hardware breakpoints are issues by the CPU. These generally correspond
+    // to a single-step completion.
     kHardware,
+
+    // Software breakpoint. This will be issued when a breakpoint is hit and
+    // when the debugged program manually issues a breakpoint instruction.
     kSoftware,
 
     kLast  // Not an actual exception type, for range checking.

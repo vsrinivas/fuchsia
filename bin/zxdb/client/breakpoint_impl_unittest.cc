@@ -6,12 +6,11 @@
 
 #include "garnet/bin/zxdb/client/breakpoint_impl.h"
 #include "garnet/bin/zxdb/client/process_impl.h"
-#include "garnet/bin/zxdb/client/remote_api.h"
+#include "garnet/bin/zxdb/client/remote_api_test.h"
 #include "garnet/bin/zxdb/client/session.h"
 #include "garnet/bin/zxdb/client/symbols/mock_module_symbols.h"
 #include "garnet/bin/zxdb/client/target_impl.h"
 #include "garnet/lib/debug_ipc/helper/platform_message_loop.h"
-#include "garnet/lib/debug_ipc/helper/test_stream_buffer.h"
 #include "gtest/gtest.h"
 
 namespace zxdb {
@@ -53,17 +52,10 @@ class BreakpointSink : public RemoteAPI {
   std::vector<RemovePair> removes;
 };
 
-class BreakpointImplTest : public testing::Test {
+class BreakpointImplTest : public RemoteAPITest {
  public:
-  BreakpointImplTest() {
-    loop_.Init();
-    sink_ = new BreakpointSink;
-    session_ = std::make_unique<Session>(std::unique_ptr<RemoteAPI>(sink_));
-  }
-  ~BreakpointImplTest() {
-    session_.reset();
-    loop_.Cleanup();
-  }
+  BreakpointImplTest() = default;
+  ~BreakpointImplTest() override = default;
 
   // Emulates a synchronous call to SetSettings on a breakpoint.
   Err SyncSetSettings(Breakpoint& bp, const BreakpointSettings& settings) {
@@ -76,24 +68,23 @@ class BreakpointImplTest : public testing::Test {
     return out_err;
   }
 
-  debug_ipc::PlatformMessageLoop& loop() { return loop_; }
-  debug_ipc::TestStreamBuffer& stream() { return stream_; }
   BreakpointSink& sink() { return *sink_; }
-  Session& session() { return *session_; }
+
+ protected:
+  std::unique_ptr<RemoteAPI> GetRemoteAPIImpl() override {
+    auto sink = std::make_unique<BreakpointSink>();
+    sink_ = sink.get();
+    return std::move(sink);
+  }
 
  private:
-  debug_ipc::PlatformMessageLoop loop_;
-  debug_ipc::TestStreamBuffer stream_;
-
-  BreakpointSink* sink_;  // Owned by the session_.
-
-  std::unique_ptr<Session> session_;
+  BreakpointSink* sink_;  // Owned by the session.
 };
 
 }  // namespace
 
 TEST_F(BreakpointImplTest, DynamicLoading) {
-  BreakpointImpl bp(&session());
+  BreakpointImpl bp(&session(), false);
 
   // Make a disabled symbolic breakpoint.
   const std::string kFunctionName = "DoThings";
@@ -205,7 +196,7 @@ TEST_F(BreakpointImplTest, Address) {
   const uint64_t kProcessKoid = 6789;
   target->CreateProcessForTesting(kProcessKoid, "test");
 
-  BreakpointImpl bp(&session());
+  BreakpointImpl bp(&session(), false);
 
   const uint64_t kAddress = 0x123456780;
   BreakpointSettings in;

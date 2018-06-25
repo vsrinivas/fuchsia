@@ -108,8 +108,9 @@ class ConsoleContext : public ProcessObserver,
   void OnSymbolLoadFailure(Process* process, const Err& err) override;
 
   // ThreadObserver implementation:
-  void OnThreadStopped(Thread* thread,
-                       debug_ipc::NotifyException::Type type) override;
+  void OnThreadStopped(
+      Thread* thread, debug_ipc::NotifyException::Type type,
+      std::vector<fxl::WeakPtr<Breakpoint>> hit_breakpoints) override;
   void OnThreadFramesInvalidated(Thread* thread) override;
 
   // Returns the record for the given target, or null (+ assertion) if not

@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <map>
 
+#include "garnet/bin/zxdb/client/breakpoint_controller.h"
 #include "garnet/bin/zxdb/client/breakpoint_location_impl.h"
 #include "garnet/bin/zxdb/client/err.h"
 #include "garnet/bin/zxdb/client/process.h"
@@ -92,14 +93,18 @@ struct BreakpointImpl::ProcessRecord {
   std::map<uint64_t, BreakpointLocationImpl> locs;
 };
 
-BreakpointImpl::BreakpointImpl(Session* session)
-    : Breakpoint(session), impl_weak_factory_(this) {
+BreakpointImpl::BreakpointImpl(Session* session, bool is_internal,
+                               BreakpointController* controller)
+    : Breakpoint(session),
+      controller_(controller),
+      is_internal_(is_internal),
+      backend_id_(next_breakpoint_id++),
+      impl_weak_factory_(this) {
   session->system().AddObserver(this);
 }
 
 BreakpointImpl::~BreakpointImpl() {
-  if (backend_id_ && settings_.enabled && settings_.scope_target &&
-      settings_.scope_target->GetProcess()) {
+  if (backend_installed_ && settings_.enabled) {
     // Breakpoint was installed and the process still exists.
     settings_.enabled = false;
     SendBackendRemove(std::function<void(const Err&)>());
@@ -143,6 +148,18 @@ std::vector<BreakpointLocation*> BreakpointImpl::GetLocations() {
       result.push_back(&pair.second);
   }
   return result;
+}
+
+void BreakpointImpl::UpdateStats(const debug_ipc::BreakpointStats& stats) {
+  stats_ = stats;
+}
+
+BreakpointAction BreakpointImpl::OnHit(Thread* thread) {
+  if (controller_)
+    return controller_->GetBreakpointHitAction(this, thread);
+
+  // Normal breakpoints always stop.
+  return BreakpointAction::kStop;
 }
 
 void BreakpointImpl::WillDestroyThread(Process* process, Thread* thread) {
@@ -242,7 +259,7 @@ void BreakpointImpl::GlobalWillDestroyProcess(Process* process) {
 void BreakpointImpl::SyncBackend(std::function<void(const Err&)> callback) {
   bool has_locations = HasEnabledLocation();
 
-  if (backend_id_ && !has_locations) {
+  if (backend_installed_ && !has_locations) {
     SendBackendRemove(std::move(callback));
   } else if (has_locations) {
     SendBackendAddOrChange(std::move(callback));
@@ -257,10 +274,7 @@ void BreakpointImpl::SyncBackend(std::function<void(const Err&)> callback) {
 
 void BreakpointImpl::SendBackendAddOrChange(
     std::function<void(const Err&)> callback) {
-  if (!backend_id_) {
-    backend_id_ = next_breakpoint_id;
-    next_breakpoint_id++;
-  }
+  backend_installed_ = true;
 
   debug_ipc::AddOrChangeBreakpointRequest request;
   request.breakpoint.breakpoint_id = backend_id_;
@@ -282,9 +296,6 @@ void BreakpointImpl::SendBackendAddOrChange(
     }
   }
 
-  if (settings_.scope == BreakpointSettings::Scope::kThread)
-    FXL_DCHECK(request.breakpoint.locations.size() == 1u);
-
   session()->remote_api()->AddOrChangeBreakpoint(request, [
     callback, breakpoint = impl_weak_factory_.GetWeakPtr()
   ](const Err& err, debug_ipc::AddOrChangeBreakpointReply reply) {
@@ -295,8 +306,10 @@ void BreakpointImpl::SendBackendAddOrChange(
       // since it never got the message. In general this means things were
       // disconnected and the agent no longer exists, so mark the breakpoint
       // disabled.
-      if (breakpoint)
+      if (breakpoint) {
         breakpoint->settings_.enabled = false;
+        breakpoint->backend_installed_ = false;
+      }
       if (callback)
         callback(err);
     } else if (reply.status != 0) {
@@ -305,8 +318,10 @@ void BreakpointImpl::SendBackendAddOrChange(
       // being removed. So mark the breakpoint disabled but keep the
       // settings to the user can fix the problem from the current state if
       // desired.
-      if (breakpoint)
+      if (breakpoint) {
         breakpoint->settings_.enabled = false;
+        breakpoint->backend_installed_ = false;
+      }
       if (callback)
         callback(Err(ErrType::kGeneral, "Breakpoint set error."));
     } else {
@@ -319,8 +334,6 @@ void BreakpointImpl::SendBackendAddOrChange(
 
 void BreakpointImpl::SendBackendRemove(
     std::function<void(const Err&)> callback) {
-  FXL_DCHECK(backend_id_);
-
   debug_ipc::RemoveBreakpointRequest request;
   request.breakpoint_id = backend_id_;
 
@@ -331,8 +344,7 @@ void BreakpointImpl::SendBackendRemove(
           callback(err);
       });
 
-  // Indicate the backend breakpoint is gone.
-  backend_id_ = 0;
+  backend_installed_ = false;
 }
 
 void BreakpointImpl::DidChangeLocation() { SyncBackend(); }

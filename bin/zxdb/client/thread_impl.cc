@@ -109,8 +109,8 @@ void ThreadImpl::SyncFrames(std::function<void()> callback) {
         if (!thread)
           return;
 
-        thread->HaveFrames(reply.frames, [thread, callback]() {
-          // HaveFrames will only issue the callback if the ThreadImpl is
+        thread->SaveFrames(reply.frames, [thread, callback]() {
+          // SaveFrames will only issue the callback if the ThreadImpl is
           // still in scope so we don't need a weak pointer here.
           thread->has_all_frames_ = true;
           if (callback)
@@ -136,26 +136,28 @@ void ThreadImpl::SetMetadata(const debug_ipc::ThreadRecord& record) {
     ClearFrames();
 }
 
-void ThreadImpl::OnException(const debug_ipc::NotifyException& notify) {
-  // Symbolize the stack frame before broadcasting the state change.
-  std::vector<debug_ipc::StackFrame> frame;
-  frame.push_back(notify.frame);
-  // HaveFrames will only issue the callback if the ThreadImpl is still in
-  // scope so we don't need a weak pointer here.
-  HaveFrames(frame, [notify, thread = this]() {
-    thread->SetMetadata(notify.thread);
+void ThreadImpl::SetMetadataFromException(
+    const debug_ipc::NotifyException& notify) {
+  SetMetadata(notify.thread);
 
-    // After an exception the thread should be blocked.
-    FXL_DCHECK(thread->state_ == debug_ipc::ThreadRecord::State::kBlocked);
+  // After an exception the thread should be blocked.
+  FXL_DCHECK(state_ == debug_ipc::ThreadRecord::State::kBlocked);
 
-    thread->has_all_frames_ = false;
-    ;
-    for (auto& observer : thread->observers())
-      observer.OnThreadStopped(thread, notify.type);
-  });
+  has_all_frames_ = false;
+
+  std::vector<debug_ipc::StackFrame> frames;
+  frames.push_back(notify.frame);
+  SaveFrames(frames, std::function<void()>());
 }
 
-void ThreadImpl::HaveFrames(const std::vector<debug_ipc::StackFrame>& frames,
+void ThreadImpl::DispatchExceptionNotification(
+      debug_ipc::NotifyException::Type type,
+      const std::vector<fxl::WeakPtr<Breakpoint>>& hit_breakpoints) {
+  for (auto& observer : observers())
+    observer.OnThreadStopped(this, type, hit_breakpoints);
+}
+
+void ThreadImpl::SaveFrames(const std::vector<debug_ipc::StackFrame>& frames,
                             std::function<void()> callback) {
   // TODO(brettw) need to preserve stack frames that haven't changed.
   std::vector<uint64_t> addresses;

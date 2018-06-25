@@ -14,6 +14,8 @@
 #include <thread>
 
 #include "garnet/bin/zxdb/client/arch_info.h"
+#include "garnet/bin/zxdb/client/breakpoint_action.h"
+#include "garnet/bin/zxdb/client/breakpoint_impl.h"
 #include "garnet/bin/zxdb/client/process_impl.h"
 #include "garnet/bin/zxdb/client/remote_api_impl.h"
 #include "garnet/bin/zxdb/client/thread_impl.h"
@@ -434,36 +436,99 @@ void Session::DispatchNotification(const debug_ipc::MsgHeader& header,
     case debug_ipc::MsgHeader::Type::kNotifyThreadStarting:
     case debug_ipc::MsgHeader::Type::kNotifyThreadExiting: {
       debug_ipc::NotifyThread thread;
-      if (!debug_ipc::ReadNotifyThread(&reader, &thread))
-        return;
-
-      ProcessImpl* process = system_.ProcessImplFromKoid(thread.process_koid);
-      if (process) {
-        if (header.type == debug_ipc::MsgHeader::Type::kNotifyThreadStarting)
-          process->OnThreadStarting(thread.record);
-        else
-          process->OnThreadExiting(thread.record);
-      } else {
-        fprintf(stderr,
-                "Warning: received thread notification for an "
-                "unexpected process %" PRIu64 ".",
-                thread.process_koid);
-      }
+      if (debug_ipc::ReadNotifyThread(&reader, &thread))
+        DispatchNotifyThread(header.type, thread);
       break;
     }
     case debug_ipc::MsgHeader::Type::kNotifyException: {
       debug_ipc::NotifyException notify;
-      if (!debug_ipc::ReadNotifyException(&reader, &notify))
-        return;
-      ThreadImpl* thread =
-          ThreadImplFromKoid(notify.process_koid, notify.thread.koid);
-      if (thread)
-        thread->OnException(notify);
+      if (debug_ipc::ReadNotifyException(&reader, &notify))
+        DispatchNotifyException(notify);
       break;
     }
     default:
       FXL_NOTREACHED();  // Unexpected notification.
   }
+}
+
+void Session::DispatchNotifyThread(debug_ipc::MsgHeader::Type type,
+                                   const debug_ipc::NotifyThread& notify) {
+  ProcessImpl* process = system_.ProcessImplFromKoid(notify.process_koid);
+  if (process) {
+    if (type == debug_ipc::MsgHeader::Type::kNotifyThreadStarting)
+      process->OnThreadStarting(notify.record);
+    else
+      process->OnThreadExiting(notify.record);
+  } else {
+    fprintf(stderr,
+            "Warning: received thread notification for an "
+            "unexpected process %" PRIu64 ".",
+            notify.process_koid);
+  }
+}
+
+// This is the main entrypoint for all thread stops notifications in the client.
+void Session::DispatchNotifyException(
+    const debug_ipc::NotifyException& notify) {
+  ThreadImpl* thread =
+      ThreadImplFromKoid(notify.process_koid, notify.thread.koid);
+  if (!thread) {
+    fprintf(stderr,
+            "Warning: received thread exception for an unknown thread.\n");
+    return;
+  }
+
+  // First update the thread state so the breakpoint code can query it.
+  // This should not issue any notifications.
+  thread->SetMetadataFromException(notify);
+
+  // The breakpoints that were hit to pass to the thread stop handler.
+  std::vector<fxl::WeakPtr<Breakpoint>> hit_breakpoints;
+
+  if (!notify.hit_breakpoints.empty()) {
+    // Update breakpoints' hit counts and stats. This is done in a separate
+    // phase before notifying the breakpoints of the action so all breakpoints'
+    // state is consistent since it's possible to write a breakpoint handler
+    // that queries other breakpoints statistics.
+    for (const debug_ipc::BreakpointStats& stats : notify.hit_breakpoints) {
+      BreakpointImpl* impl = system_.BreakpointImplForId(stats.breakpoint_id);
+      if (impl)
+        impl->UpdateStats(stats);
+    }
+
+    // Give any hit breakpoints a say in what happens when they're hit. The
+    // initial value of "action" should be the lowest precedence action.
+    //
+    // Watch out: a breakpoint handler could do anything, including deleting
+    // other breakpoints. This re-queries the breakpoints by ID in the loop
+    // in case that happens.
+    BreakpointAction action = BreakpointAction::kContinue;
+    for (const debug_ipc::BreakpointStats& stats : notify.hit_breakpoints) {
+      BreakpointImpl* impl = system_.BreakpointImplForId(stats.breakpoint_id);
+      if (!impl)
+        continue;
+
+      BreakpointAction new_action = impl->OnHit(thread);
+      if (new_action == BreakpointAction::kStop && !impl->is_internal())
+        hit_breakpoints.push_back(impl->GetWeakPtr());
+      action = BreakpointActionHighestPrecedence(action, new_action);
+    }
+
+    switch (action) {
+      case BreakpointAction::kContinue:
+        thread->Continue();
+        return;
+      case BreakpointAction::kSilentStop:
+        // Do nothing when a silent stop is requested.
+        return;
+      case BreakpointAction::kStop:
+        // Fall through to normal thread stop handling.
+        break;
+    }
+    // Fall through to normal thread stop handling.
+  }
+
+  thread->DispatchExceptionNotification(notify.type, hit_breakpoints);
 }
 
 ThreadImpl* Session::ThreadImplFromKoid(uint64_t process_koid,

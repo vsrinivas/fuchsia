@@ -25,6 +25,7 @@ class ArchInfo;
 class ProcessImpl;
 class RemoteAPI;
 class RemoteAPIImpl;
+class RemoteAPITest;
 class ThreadImpl;
 
 // The session object manages the connection with the remote debug agent.
@@ -91,6 +92,7 @@ class Session {
   class PendingConnection;
   friend PendingConnection;
   friend RemoteAPIImpl;
+  friend RemoteAPITest;
 
   // Nonspecific callback type. Implemented by SessionDispatchCallback (with
   // the type-specific parameter pre-bound). The uint32_t is the transaction
@@ -101,6 +103,9 @@ class Session {
   // Dispatches unsolicited notifications sent from the agent.
   void DispatchNotification(const debug_ipc::MsgHeader& header,
                             std::vector<char> data);
+  void DispatchNotifyThread(debug_ipc::MsgHeader::Type type,
+                            const debug_ipc::NotifyThread& notify);
+  void DispatchNotifyException(const debug_ipc::NotifyException& notify);
 
   // Returns the thread object from the given koids, or null.
   ThreadImpl* ThreadImplFromKoid(uint64_t process_koid, uint64_t thread_koid);

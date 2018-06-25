@@ -80,8 +80,10 @@ std::vector<Target*> SystemImpl::GetTargets() const {
 std::vector<Breakpoint*> SystemImpl::GetBreakpoints() const {
   std::vector<Breakpoint*> result;
   result.reserve(breakpoints_.size());
-  for (const auto& t : breakpoints_)
-    result.push_back(t.get());
+  for (const auto& pair : breakpoints_) {
+    if (!pair.second->is_internal())
+      result.push_back(pair.second.get());
+  }
   return result;
 }
 
@@ -103,8 +105,11 @@ Target* SystemImpl::CreateNewTarget(Target* clone) {
 }
 
 Breakpoint* SystemImpl::CreateNewBreakpoint() {
-  breakpoints_.push_back(std::make_unique<BreakpointImpl>(session()));
-  Breakpoint* to_return = breakpoints_.back().get();
+  auto owning = std::make_unique<BreakpointImpl>(session(), false);
+  uint32_t id = owning->backend_id();
+  Breakpoint* to_return = owning.get();
+
+  breakpoints_[id] = std::move(owning);
 
   // Notify observers (may mutate breakpoint list).
   for (auto& observer : observers())
@@ -113,18 +118,31 @@ Breakpoint* SystemImpl::CreateNewBreakpoint() {
   return to_return;
 }
 
-void SystemImpl::DeleteBreakpoint(Breakpoint* breakpoint) {
-  for (size_t i = 0; i < breakpoints_.size(); i++) {
-    if (breakpoints_[i].get() == breakpoint) {
-      // Notify observers.
-      for (auto& observer : observers())
-        observer.WillDestroyBreakpoint(breakpoint);
+Breakpoint* SystemImpl::CreateNewInternalBreakpoint(
+    BreakpointController* controller) {
+  auto owning = std::make_unique<BreakpointImpl>(session(), true, controller);
+  uint32_t id = owning->backend_id();
+  Breakpoint* to_return = owning.get();
 
-      breakpoints_.erase(breakpoints_.begin() + i);
-      return;
-    }
+  breakpoints_[id] = std::move(owning);
+  return to_return;
+}
+
+void SystemImpl::DeleteBreakpoint(Breakpoint* breakpoint) {
+  BreakpointImpl* impl = static_cast<BreakpointImpl*>(breakpoint);
+  auto found = breakpoints_.find(impl->backend_id());
+  if (found == breakpoints_.end()) {
+    // Should always have found the breakpoint.
+    FXL_NOTREACHED();
+    return;
   }
-  FXL_NOTREACHED();
+
+  // Only notify observers for non-internal breakpoints.
+  if (!found->second->is_internal()) {
+    for (auto& observer : observers())
+      observer.WillDestroyBreakpoint(breakpoint);
+  }
+  breakpoints_.erase(found);
 }
 
 void SystemImpl::Pause() {
@@ -142,6 +160,13 @@ void SystemImpl::Continue() {
   request.how = debug_ipc::ResumeRequest::How::kContinue;
   session()->remote_api()->Resume(
       request, std::function<void(const Err&, debug_ipc::ResumeReply)>());
+}
+
+BreakpointImpl* SystemImpl::BreakpointImplForId(uint32_t id) {
+  auto found = breakpoints_.find(id);
+  if (found == breakpoints_.end())
+    return nullptr;
+  return found->second.get();
 }
 
 void SystemImpl::AddNewTarget(std::unique_ptr<TargetImpl> target) {
