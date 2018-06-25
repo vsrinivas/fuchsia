@@ -31,6 +31,7 @@ dart_app(
     deps = [
         ":simple",
     ],
+    # Currently failing as the "meta" third-party package is missing.
     tags = [
         "ignored",
     ],

@@ -9,7 +9,8 @@ import sys
 
 
 def build(targets):
-    job = Popen(['bazel', 'build', '--config=fuchsia'] + targets)
+    job = Popen(['bazel', 'build', '--config=fuchsia', '--keep_going']
+                + targets)
     job.communicate()
     return job.returncode
 

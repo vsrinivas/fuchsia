@@ -96,7 +96,7 @@ _impl_wrapper = rule(
     }
 )
 
-def cc_fidl_library(name, library, deps=[], visibility=None):
+def cc_fidl_library(name, library, deps=[], tags=[], visibility=None):
     gen_name = "%s_codegen" % name
     impl_name = "%s_impl" % name
 
@@ -127,5 +127,6 @@ def cc_fidl_library(name, library, deps=[], visibility=None):
         deps = deps + [
             Label("//pkg/fidl_cpp"),
         ],
+        tags = tags,
         visibility = visibility,
     )

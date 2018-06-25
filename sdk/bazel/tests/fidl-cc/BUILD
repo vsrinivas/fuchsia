@@ -10,11 +10,22 @@ cc_fidl_library(
 )
 
 cc_binary(
-    name = "cc-user",
+    name = "simple-user",
     srcs = [
-        "library_user.cc",
+        "simple_user.cc",
     ],
     deps = [
         ":simple",
+    ],
+)
+
+cc_fidl_library(
+    name = "local_deps",
+    library = "//fidl:local_deps",
+    # Currently failing as C++ bindings do not handle dependencies between FIDL
+    # libraries yet. This is blocked on the availability of C++ compilation
+    # support in Skylark (coming soon).
+    tags = [
+        "ignored",
     ],
 )
