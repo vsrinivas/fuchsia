@@ -1,0 +1,114 @@
+$ /pkgfs/packages/modular_benchmarks/0/bin/run_modular_benchmarks.sh
+Launching device_runner
+Starting trace; will stop in 1200 seconds...
+Application exited with return code 0
+Stopping trace...
+Application terminated
+Trace file written to /data/trace.json
+[WARNING:garnet/lib/measure/duration.cc(75)] Ignoring a trace event: async or flow end not preceded by begin. modular AgentContextImpl::InitializeCall
+[WARNING:garnet/lib/measure/duration.cc(75)] Ignoring a trace event: async or flow end not preceded by begin. modular AgentRunnerStorageImpl::InitializeCall
+[WARNING:garnet/lib/measure/duration.cc(75)] Ignoring a trace event: async or flow end not preceded by begin. modular WriteDataCall
+[WARNING:garnet/lib/measure/duration.cc(75)] Ignoring a trace event: async or flow end not preceded by begin. benchmark link/trans
+[WARNING:garnet/lib/measure/duration.cc(75)] Ignoring a trace event: async or flow end not preceded by begin. benchmark link/trans
+[WARNING:garnet/lib/measure/duration.cc(75)] Ignoring a trace event: async or flow end not preceded by begin. benchmark link/trans
+[WARNING:garnet/lib/measure/duration.cc(75)] Ignoring a trace event: async or flow end not preceded by begin. benchmark link/trans
+[WARNING:garnet/lib/measure/duration.cc(75)] Ignoring a trace event: async or flow end not preceded by begin. benchmark link/trans
+[WARNING:garnet/lib/measure/duration.cc(75)] Ignoring a trace event: async or flow end not preceded by begin. benchmark link/trans
+[WARNING:garnet/lib/measure/duration.cc(75)] Ignoring a trace event: async or flow end not preceded by begin. benchmark link/trans
+[WARNING:garnet/lib/measure/duration.cc(75)] Ignoring a trace event: async or flow end not preceded by begin. benchmark link/trans
+[WARNING:garnet/lib/measure/duration.cc(75)] Ignoring a trace event: async or flow end not preceded by begin. benchmark link/trans
+[WARNING:garnet/lib/measure/duration.cc(75)] Ignoring a trace event: async or flow end not preceded by begin. benchmark link/trans
+[WARNING:garnet/lib/measure/duration.cc(75)] Ignoring a trace event: async or flow end not preceded by begin. benchmark link/trans
+[WARNING:garnet/lib/measure/duration.cc(75)] Ignoring a trace event: async or flow end not preceded by begin. benchmark link/trans
+[WARNING:garnet/lib/measure/duration.cc(75)] Ignoring a trace event: async or flow end not preceded by begin. benchmark link/trans
+[WARNING:garnet/lib/measure/duration.cc(75)] Ignoring a trace event: async or flow end not preceded by begin. benchmark link/trans
+[WARNING:garnet/lib/measure/duration.cc(75)] Ignoring a trace event: async or flow end not preceded by begin. benchmark link/trans
+[WARNING:garnet/lib/measure/duration.cc(75)] Ignoring a trace event: async or flow end not preceded by begin. benchmark link/trans
+[WARNING:garnet/lib/measure/duration.cc(75)] Ignoring a trace event: async or flow end not preceded by begin. benchmark link/trans
+[WARNING:garnet/lib/measure/duration.cc(75)] Ignoring a trace event: async or flow end not preceded by begin. benchmark link/trans
+[WARNING:garnet/lib/measure/duration.cc(75)] Ignoring a trace event: async or flow end not preceded by begin. benchmark link/trans
+[WARNING:garnet/lib/measure/duration.cc(75)] Ignoring a trace event: async or flow end not preceded by begin. benchmark link/trans
+[ERROR:garnet/bin/trace/commands/record.cc(349)] No results for measurement "AgentRunnerStorageImpl::InitializeCall (modular)".
+[ERROR:garnet/bin/trace/commands/record.cc(349)] No results for measurement "AgentRunnerStorageImpl::WriteTaskCall (modular)".
+[ERROR:garnet/bin/trace/commands/record.cc(349)] No results for measurement "AgentRunnerStorageImpl::DeleteTaskCall (modular)".
+[ERROR:garnet/bin/trace/commands/record.cc(349)] No results for measurement "LinkImpl::GetCall (modular)".
+[ERROR:garnet/bin/trace/commands/record.cc(349)] No results for measurement "LinkImpl::EraseCall (modular)".
+[ERROR:garnet/bin/trace/commands/record.cc(349)] No results for measurement "LinkImpl::GetEntityCallCall (modular)".
+[ERROR:garnet/bin/trace/commands/record.cc(349)] No results for measurement "SessionStorage::MutateStoryDataCall (modular)".
+[ERROR:garnet/bin/trace/commands/record.cc(349)] No results for measurement "StoryControllerImpl::KillModuleCall (modular)".
+[ERROR:garnet/bin/trace/commands/record.cc(349)] No results for measurement "StoryControllerImpl::InitializeChainCall (modular)".
+[ERROR:garnet/bin/trace/commands/record.cc(349)] No results for measurement "StoryControllerImpl::StopModuleCall (modular)".
+[ERROR:garnet/bin/trace/commands/record.cc(349)] No results for measurement "StoryControllerImpl::DeleteCall (modular)".
+[ERROR:garnet/bin/trace/commands/record.cc(349)] No results for measurement "StoryControllerImpl::OnModuleDataUpdatedCall (modular)".
+[ERROR:garnet/bin/trace/commands/record.cc(349)] No results for measurement "StoryControllerImpl::FocusCall (modular)".
+[ERROR:garnet/bin/trace/commands/record.cc(349)] No results for measurement "StoryControllerImpl::DefocusCall (modular)".
+[ERROR:garnet/bin/trace/commands/record.cc(349)] No results for measurement "StoryControllerImpl::ResolveParametersCall (modular)".
+[ERROR:garnet/bin/trace/commands/record.cc(349)] No results for measurement "StoryProviderImpl::DeleteStoryCall (modular)".
+[ERROR:garnet/bin/trace/commands/record.cc(349)] No results for measurement "StoryProviderImpl::GetLinkPeerCall (modular)".
+[ERROR:garnet/bin/trace/commands/record.cc(349)] No results for measurement "StoryStorage::ReadLinkDataCall (modular)".
+[ERROR:garnet/bin/trace/commands/record.cc(349)] No results for measurement "StoryStorage::WriteLinkDataCall (modular)".
+[ERROR:garnet/bin/trace/commands/record.cc(349)] No results for measurement "StoryStorage::UpdateLinkCall (modular)".
+link/set (benchmark) -> 
+  samples 0 to 9: avg 3.08537866915423ms out of 10 samples. (std dev 0.327364625011531, min 2.71797388059702, max 3.58024751243781)
+  samples 10 to 2019: avg 3.11997304862503ms out of 2010 samples. (std dev 0.493919138663738, min 2.2520236318408, max 8.04235074626866)
+link/trans (benchmark) -> 
+  samples 0 to 9: avg 3.08896243781095ms out of 10 samples. (std dev 0.370484835949823, min 2.69241542288557, max 3.7780342039801)
+  samples 10 to 2019: avg 3.09267429209673ms out of 2010 samples. (std dev 0.478776309955248, min 2.2346828358209, max 6.18221828358209)
+story/create (benchmark) -> 
+  samples 0 to 0: 378.436559079602ms
+  samples 1 to 19: avg 424.684147911757ms out of 19 samples. (std dev 30.7204249072897, min 368.310649875622, max 469.822699626866)
+story/info (benchmark) -> 
+  samples 0 to 0: 69.3502133084577ms
+  samples 1 to 19: avg 71.2043160513223ms out of 19 samples. (std dev 5.23282503949471, min 61.9065895522388, max 80.4358700248756)
+story/start (benchmark) -> 
+  samples 0 to 0: 2.34076243781095ms
+  samples 1 to 19: avg 1.51073978790259ms out of 19 samples. (std dev 0.273893107650646, min 1.17197450248756, max 2.3538513681592)
+story/stop (benchmark) -> 
+  samples 0 to 0: 4.84000746268657ms
+  samples 1 to 19: avg 4.90821445404556ms out of 19 samples. (std dev 4.03567707901002, min 1.54024502487562, max 11.5805155472637)
+user/logout (benchmark) -> 0.222438432835821ms
+ReadAllDataCall (modular) -> avg 0.760300497512438ms out of 20 samples. (std dev 0.269687537664423, min 0.46442039800995, max 1.73237748756219)
+ReadDataCall (modular) -> avg 43.7541292184909ms out of 60 samples. (std dev 31.8507898913188, min 0.503220771144279, max 79.0309141791045)
+WriteDataCall (modular) -> avg 1.95153236940298ms out of 40 samples. (std dev 0.595833307350367, min 1.56620957711443, max 5.28696206467662)
+SyncCall (modular) -> avg 0.197957195728674ms out of 123 samples. (std dev 1.38766809817586, min 0.00673445273631841, max 13.9288737562189)
+AgentContextImpl::InitializeCall (modular) -> avg 20.0031674662402ms out of 7 samples. (std dev 14.0494825376138, min 1.92740485074627, max 41.6166592039801)
+AgentContextImpl::StopCall (modular) -> avg 1.888375ms out of 2 samples. (std dev 0.0553687810945274, min 1.83300621890547, max 1.94374378109453)
+AgentRunnerStorageImpl::InitializeCall (modular) ->  no results
+AgentRunnerStorageImpl::WriteTaskCall (modular) ->  no results
+AgentRunnerStorageImpl::DeleteTaskCall (modular) ->  no results
+LinkImpl::ReadLinkDataCall (modular) -> avg 0.405560385572139ms out of 20 samples. (std dev 0.142149907386102, min 0.240318407960199, max 0.845122512437811)
+LinkImpl::WriteLinkDataCall (modular) -> avg 1.82188344231811ms out of 2020 samples. (std dev 0.30470151052762, min 1.30627674129353, max 4.91131343283582)
+LinkImpl::FlushWatchersCall (modular) -> avg 1.141020868738ms out of 2020 samples. (std dev 0.179000152151604, min 0.819532960199005, max 2.34427425373134)
+LinkImpl::WriteCall (modular) -> avg 3.00742333998326ms out of 2020 samples. (std dev 0.46839227693992, min 2.16766666666667, max 5.99262873134328)
+LinkImpl::ReadCall (modular) -> avg 0.472000995024876ms out of 20 samples. (std dev 0.138630550437487, min 0.306875, max 0.900149253731343)
+LinkImpl::GetCall (modular) ->  no results
+LinkImpl::SetCall (modular) -> avg 3.02955667577952ms out of 2020 samples. (std dev 0.469719692566121, min 2.18553047263682, max 6.04290422885572)
+LinkImpl::EraseCall (modular) ->  no results
+LinkImpl::GetEntityCallCall (modular) ->  no results
+LinkImpl::WatchCall (modular) -> avg 0.0248887852404643ms out of 60 samples. (std dev 0.0211014577205166, min 0.015410447761194, max 0.184106343283582)
+LinkImpl::ChangeCall (modular) -> avg 0.023023183894882ms out of 2020 samples. (std dev 0.00801060659066399, min 0.0139154228855721, max 0.15521828358209)
+SessionStorage::CreateStoryCall (modular) -> avg 349.324575808458ms out of 20 samples. (std dev 47.4617117678454, min 190.873377487562, max 403.758059079602)
+SessionStorage::MutateStoryDataCall (modular) ->  no results
+StoryControllerImpl::LaunchModuleCall (modular) -> avg 0.531989365671642ms out of 20 samples. (std dev 0.279076421429912, min 0.36103855721393, max 1.57448383084577)
+StoryControllerImpl::KillModuleCall (modular) ->  no results
+StoryControllerImpl::ConnectLinkCall (modular) -> avg 0.230094330431177ms out of 60 samples. (std dev 0.30272192373998, min 0.0132108208955224, max 1.13895584577114)
+StoryControllerImpl::InitializeChainCall (modular) ->  no results
+StoryControllerImpl::LaunchModuleInShellCall (modular) -> avg 0.758289054726368ms out of 20 samples. (std dev 0.626946244651249, min 0.440429726368159, max 3.17082027363184)
+StoryControllerImpl::StopCall (modular) -> avg 4.29517719216418ms out of 40 samples. (std dev 3.27565806994589, min 0.0869558457711443, max 11.5320553482587)
+StoryControllerImpl::StopModuleCall (modular) ->  no results
+StoryControllerImpl::DeleteCall (modular) ->  no results
+StoryControllerImpl::OnModuleDataUpdatedCall (modular) ->  no results
+StoryControllerImpl::FocusCall (modular) ->  no results
+StoryControllerImpl::DefocusCall (modular) ->  no results
+StoryControllerImpl::ResolveParametersCall (modular) ->  no results
+StoryControllerImpl::ResolveModulesCall (modular) -> avg 9.71854449626866ms out of 20 samples. (std dev 39.7811895810035, min 0.136840796019901, max 183.077365049751)
+StoryProviderImpl::CreateStoryCall (modular) -> avg 422.163254415423ms out of 20 samples. (std dev 31.5918493734685, min 368.104149875622, max 469.629546641791)
+StoryProviderImpl::DeleteStoryCall (modular) ->  no results
+StoryProviderImpl::GetControllerCall (modular) -> avg 0.519575668532338ms out of 40 samples. (std dev 0.49759768134132, min 0.050285447761194, max 1.60482587064677)
+StoryProviderImpl::StopAllStoriesCall (modular) -> 8.29005597014925ms
+StoryProviderImpl::StopStoryShellCall (modular) -> 0.0730634328358209ms
+StoryProviderImpl::GetLinkPeerCall (modular) ->  no results
+StoryStorage::ReadLinkDataCall (modular) ->  no results
+StoryStorage::WriteLinkDataCall (modular) ->  no results
+StoryStorage::UpdateLinkCall (modular) ->  no results
+[ERROR:garnet/bin/trace/commands/record.cc(356)] One or more measurements had empty results. Quitting.

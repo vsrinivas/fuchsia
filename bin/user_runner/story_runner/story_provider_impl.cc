@@ -42,10 +42,10 @@ namespace modular {
 class StoryProviderImpl::CreateStoryCall : public Operation<fidl::StringPtr> {
  public:
   CreateStoryCall(
-      SessionStorage* session_storage,
+      SessionStorage* const session_storage,
       StoryProviderImpl* const story_provider_impl, fidl::StringPtr url,
       fidl::VectorPtr<fuchsia::modular::StoryInfoExtraEntry> extra_info,
-      fidl::StringPtr root_json, bool is_kind_of_proto_story,
+      fidl::StringPtr root_json, const bool is_kind_of_proto_story,
       ResultCall result_call)
       : Operation("StoryProviderImpl::CreateStoryCall", std::move(result_call)),
         session_storage_(session_storage),

@@ -78,9 +78,9 @@ interface StoryController {
   // accessed.
   //
   // TODO(thatguy): |module_path| should not be allowed to be null any more,
-  // since all modules now have a non-zero-length module path.
-  11: GetLink(vector<string>? module_path, string? link_name, request<Link> link);
-};
+  // since there are no links outside of modules (with an empty module path)
+  // anymore.
+  11: GetLink(vector<string>? module_path, string? link_name, request<Link> link); };
 
 // Implemented by the client calling StoryController.Watch().
 interface StoryWatcher {

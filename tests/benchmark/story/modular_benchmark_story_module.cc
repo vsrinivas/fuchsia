@@ -25,6 +25,7 @@ class NullModule : fuchsia::modular::LinkWatcher {
              fidl::InterfaceRequest<
                  fuchsia::ui::views_v1::ViewProvider> /*view_provider_request*/)
       : module_host_(module_host), link_watcher_binding_(this) {
+    FXL_LOG(INFO) << "NullModule()";
     module_host_->module_context()->GetLink(nullptr, link_.NewRequest());
 
     // Will call Notify() with current value.
@@ -35,17 +36,10 @@ class NullModule : fuchsia::modular::LinkWatcher {
   void Terminate(const std::function<void()>& done) { done(); }
 
  private:
-  void Set() {
-    TRACE_ASYNC_BEGIN("benchmark", "link/set", 0);
-
-    // Corresponding TRACE_FLOW_BEGIN() is in the user shell.
-    TRACE_FLOW_END("benchmark", "link/trans", count_);
-
-    link_->Set(nullptr, std::to_string(count_));
-  }
-
   // |fuchsia::modular::LinkWatcher|
   void Notify(fidl::StringPtr json) override {
+    FXL_LOG(INFO) << "Notify() " << json;
+
     // First invocation is from WatchAll(); next from Set().
     if (count_ == -1) {
       count_ = 0;
@@ -53,10 +47,25 @@ class NullModule : fuchsia::modular::LinkWatcher {
       return;
     }
 
-    TRACE_ASYNC_END("benchmark", "link/set", 0);
-    if (++count_ <= 100) {
+    // Corresponding TRACE_ASYNC_BEGIN() is in Set().
+    TRACE_ASYNC_END("benchmark", "link/set", count_);
+
+    ++count_;
+    if (count_ <= 100) {
       Set();
     }
+  }
+
+  void Set() {
+    FXL_LOG(INFO) << "Set() " << count_;
+
+    // Corresponding TRACE_ASYNC_END() is in Notify().
+    TRACE_ASYNC_BEGIN("benchmark", "link/set", count_);
+
+    // Corresponding TRACE_FLOW_END() is in the user shell.
+    TRACE_FLOW_BEGIN("benchmark", "link/trans", count_);
+
+    link_->Set(nullptr, std::to_string(count_));
   }
 
   modular::ModuleHost* const module_host_;

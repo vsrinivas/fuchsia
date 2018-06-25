@@ -20,6 +20,7 @@
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/strings/string_number_conversions.h"
+#include "peridot/lib/common/names.h"
 #include "peridot/lib/fidl/single_service_app.h"
 #include "peridot/lib/testing/component_base.h"
 #include "peridot/lib/testing/reporting.h"
@@ -166,6 +167,7 @@ class TestApp : public modular::SingleServiceApp<fuchsia::modular::UserShell> {
   }
 
   void StoryCreate() {
+    FXL_LOG(INFO) << "StoryCreate()";
     TRACE_ASYNC_BEGIN("benchmark", "story/create", 0);
     story_provider_->CreateStory(
         settings_.module_url, [this](fidl::StringPtr story_id) {
@@ -175,6 +177,7 @@ class TestApp : public modular::SingleServiceApp<fuchsia::modular::UserShell> {
   }
 
   void StoryInfo(fidl::StringPtr story_id) {
+    FXL_LOG(INFO) << "StoryInfo()";
     story_provider_->GetController(story_id, story_controller_.NewRequest());
 
     TRACE_ASYNC_BEGIN("benchmark", "story/info", 0);
@@ -186,9 +189,14 @@ class TestApp : public modular::SingleServiceApp<fuchsia::modular::UserShell> {
   }
 
   void Link() {
-    story_controller_->GetLink(nullptr, "root", link_.NewRequest());
+    FXL_LOG(INFO) << "Link()";
+    fidl::VectorPtr<fidl::StringPtr> root_module_path;
+    root_module_path.push_back(modular::kRootModuleName);
+    story_controller_->GetLink(std::move(root_module_path),
+                               nullptr, link_.NewRequest());
     link_watcher_.Watch(&link_);
     link_watcher_.Continue([this](fidl::StringPtr json) {
+      FXL_LOG(INFO) << "Link() Watch: " << json;
       if (json == "") {
         return;
       }
@@ -207,6 +215,7 @@ class TestApp : public modular::SingleServiceApp<fuchsia::modular::UserShell> {
   }
 
   void StoryStart() {
+    FXL_LOG(INFO) << "StoryStart()";
     TRACE_ASYNC_BEGIN("benchmark", "story/start", 0);
     story_watcher_.Continue(fuchsia::modular::StoryState::RUNNING, [this] {
       TRACE_ASYNC_END("benchmark", "story/start", 0);
@@ -219,6 +228,7 @@ class TestApp : public modular::SingleServiceApp<fuchsia::modular::UserShell> {
   }
 
   void StoryStop() {
+    FXL_LOG(INFO) << "StoryStop()";
     TRACE_ASYNC_BEGIN("benchmark", "story/stop", 0);
     story_controller_->Stop([this] {
       TRACE_ASYNC_END("benchmark", "story/stop", 0);
@@ -227,6 +237,7 @@ class TestApp : public modular::SingleServiceApp<fuchsia::modular::UserShell> {
   }
 
   void MaybeRepeat() {
+    FXL_LOG(INFO) << "MaybeRepeat()";
     story_watcher_.Reset();
     story_controller_.Unbind();
 

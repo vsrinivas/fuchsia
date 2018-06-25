@@ -29,6 +29,7 @@ executable_package("modular_benchmark_story_user_shell") {
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/test_runner/fidl",
     "//garnet/public/lib/ui/views/fidl:v1",
+    "//peridot/lib/common:names",
     "//peridot/lib/rapidjson",
     "//peridot/lib/testing",
     "//peridot/lib/testing:component_base",

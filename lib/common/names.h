@@ -8,17 +8,13 @@
 namespace modular {
 
 // A framework-assigned name for the first module of a story (aka root mod)
-// created when using
-// fuchsia::modular::StoryProvider::fuchsia::modular::CreateStory() or
-// fuchsia::modular::StoryProvider::CreateStoryWithInfo() with a non-null
-// |module_url| parameter.
+// created when using StoryProvider.CreateStory() or
+// StoryProvider.CreateStoryWithInfo() with a non-null |module_url| parameter.
 constexpr char kRootModuleName[] = "root";
 
 // The service name of the Presentation service that is routed between
-// fuchsia::modular::DeviceShell and fuchsia::modular::UserShell. The same
-// service exchage between fuchsia::modular::UserShell and
-// fuchsia::modular::StoryShell uses the
-// fuchsia::modular::UserShellPresentationProvider service, which is
+// DeviceShell and UserShell. The same service exchange between UserShell and
+// StoryShell uses the UserShellPresentationProvider service, which is
 // discoverable.
 constexpr char kPresentationService[] = "mozart.Presentation";
 
