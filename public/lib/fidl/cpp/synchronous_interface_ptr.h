@@ -180,6 +180,70 @@ class SynchronousInterfacePtr {
   std::unique_ptr<typename InterfaceSync::Proxy_> proxy_;
 };
 
+// Temporary structure to help migrate the return type for synchronous methods
+// from bool to zx_status_t. Unlike zx_status_t, this type does not implicitly
+// convert to boo.
+struct Sync2Status {
+  explicit Sync2Status(zx_status_t s) : statvs(s) {}
+
+  // Note the creative spelling of status as statvs to make it easier to grep
+  // for clients of this scaffolding and remove them.
+  const zx_status_t statvs;
+};
+
+template <typename Interface>
+class Synchronous2InterfacePtr {
+ public:
+  using InterfaceSync = typename Interface::Sync2_;
+
+  Synchronous2InterfacePtr() {}
+  Synchronous2InterfacePtr(std::nullptr_t) {}
+
+  Synchronous2InterfacePtr(const Synchronous2InterfacePtr& other) = delete;
+  Synchronous2InterfacePtr& operator=(const Synchronous2InterfacePtr& other) =
+      delete;
+
+  Synchronous2InterfacePtr(Synchronous2InterfacePtr&& other) = default;
+  Synchronous2InterfacePtr& operator=(Synchronous2InterfacePtr&& other) =
+      default;
+
+  InterfaceRequest<Interface> NewRequest() {
+    zx::channel h1;
+    zx::channel h2;
+    if (zx::channel::create(0, &h1, &h2) != ZX_OK)
+      return nullptr;
+    Bind(std::move(h1));
+    return InterfaceRequest<Interface>(std::move(h2));
+  }
+
+  void Bind(zx::channel channel) {
+    if (!channel) {
+      proxy_.reset();
+      return;
+    }
+    proxy_.reset(new typename InterfaceSync::Proxy_(std::move(channel)));
+  }
+
+  void Bind(InterfaceHandle<Interface> handle) {
+    return Bind(handle.TakeChannel());
+  }
+
+  InterfaceHandle<Interface> Unbind() {
+    InterfaceHandle<Interface> handle(proxy_->proxy().TakeChannel());
+    proxy_.reset();
+    return handle;
+  }
+
+  bool is_bound() const { return static_cast<bool>(proxy_); }
+  explicit operator bool() const { return is_bound(); }
+  InterfaceSync* get() const { return proxy_.get(); }
+  InterfaceSync* operator->() const { return get(); }
+  InterfaceSync& operator*() const { return *get(); }
+
+ private:
+  std::unique_ptr<typename InterfaceSync::Proxy_> proxy_;
+};
+
 }  // namespace fidl
 
 #endif  // LIB_FIDL_CPP_SYNCHRONOUS_INTERFACE_PTR_H_
