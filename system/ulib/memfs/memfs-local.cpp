@@ -25,11 +25,11 @@ struct memfs_filesystem {
     memfs::Vfs vfs;
 };
 
-zx_status_t memfs_create_filesystem(async_t* async, memfs_filesystem_t** fs_out,
-                                    zx_handle_t* root_out) {
+zx_status_t memfs_create_filesystem(async_t* async, memfs_filesystem_t** out_fs,
+                                    zx_handle_t* out_root) {
     ZX_DEBUG_ASSERT(async != nullptr);
-    ZX_DEBUG_ASSERT(fs_out != nullptr);
-    ZX_DEBUG_ASSERT(root_out != nullptr);
+    ZX_DEBUG_ASSERT(out_fs != nullptr);
+    ZX_DEBUG_ASSERT(out_root != nullptr);
 
     zx::channel client, server;
     zx_status_t status = zx::channel::create(0, &client, &server);
@@ -48,8 +48,8 @@ zx_status_t memfs_create_filesystem(async_t* async, memfs_filesystem_t** fs_out,
         return status;
     }
 
-    *fs_out = fs.release();
-    *root_out = client.release();
+    *out_fs = fs.release();
+    *out_root = client.release();
     return ZX_OK;
 }
 
