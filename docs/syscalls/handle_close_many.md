@@ -2,7 +2,7 @@
 
 ## NAME
 
-handle_clos - close a handle
+handle_close_many - close a number of handles
 
 ## SYNOPSIS
 
