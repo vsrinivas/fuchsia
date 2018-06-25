@@ -221,6 +221,27 @@ bool InputInterpreter::Initialize() {
         fuchsia::ui::input::TouchscreenReport::New();
 
     touch_device_type_ = TouchDeviceType::PARADISEv2;
+   } else if (protocol == HidDecoder::Protocol::ParadiseV3Touch) {
+    FXL_VLOG(2) << "Device " << name() << " has touchscreen";
+    has_touchscreen_ = true;
+    touchscreen_descriptor_ = fuchsia::ui::input::TouchscreenDescriptor::New();
+
+    touchscreen_descriptor_->x.range.min = 0;
+    touchscreen_descriptor_->x.range.max = PARADISE_X_MAX;
+    touchscreen_descriptor_->x.resolution = 1;
+
+    touchscreen_descriptor_->y.range.min = 0;
+    touchscreen_descriptor_->y.range.max = PARADISE_Y_MAX;
+    touchscreen_descriptor_->y.resolution = 1;
+
+    // TODO(cpu) do not hardcode |max_finger_id|.
+    touchscreen_descriptor_->max_finger_id = 255;
+
+    touchscreen_report_ = fuchsia::ui::input::InputReport::New();
+    touchscreen_report_->touchscreen =
+        fuchsia::ui::input::TouchscreenReport::New();
+
+    touch_device_type_ = TouchDeviceType::PARADISEv3;
   } else if (protocol == HidDecoder::Protocol::ParadiseV1TouchPad) {
     FXL_VLOG(2) << "Device " << name() << " has touchpad";
     has_mouse_ = true;
@@ -451,6 +472,16 @@ bool InputInterpreter::Read(bool discard) {
       if (report[0] == PARADISE_RPT_ID_TOUCH) {
         if (ParseParadiseTouchscreenReport<paradise_touch_v2_t>(report.data(),
                                                                 rc)) {
+          if (!discard) {
+            input_device_->DispatchReport(CloneReport(touchscreen_report_));
+          }
+        }
+      }
+      break;
+     case TouchDeviceType::PARADISEv3:
+      if (report[0] == PARADISE_RPT_ID_TOUCH) {
+        if (ParseParadiseTouchscreenReport<paradise_touch_t>(report.data(),
+                                                             rc)) {
           if (!discard) {
             input_device_->DispatchReport(CloneReport(touchscreen_report_));
           }

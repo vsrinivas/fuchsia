@@ -31,6 +31,7 @@ class HidDecoder {
     SamsungTouch,
     ParadiseV1Touch,
     ParadiseV2Touch,
+    ParadiseV3Touch,
     EgalaxTouch,
     ParadiseV1TouchPad,
     ParadiseV2TouchPad,

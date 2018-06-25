@@ -56,6 +56,7 @@ class InputInterpreter {
     ACER12,
     PARADISEv1,
     PARADISEv2,
+    PARADISEv3,
     SAMSUNG,
     EGALAX
   };

@@ -116,6 +116,10 @@ bool HidDecoder::ParseProtocol(Protocol* protocol) {
     *protocol = Protocol::ParadiseV2Touch;
     return true;
   }
+  if (is_paradise_touch_v3_report_desc(desc.data(), desc.size())) {
+    *protocol = Protocol::ParadiseV3Touch;
+    return true;
+  }
   if (is_paradise_touchpad_v1_report_desc(desc.data(), desc.size())) {
     *protocol = Protocol::ParadiseV1TouchPad;
     return true;
