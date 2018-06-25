@@ -162,7 +162,7 @@ App::~App() { ReleaseSessionResources(); }
 void App::ReleaseSessionResources() {
   if (session_ != nullptr) {
     if (view_id_ != 0) {
-      session_->Enqueue(scenic_lib::NewReleaseResourceCmd(view_id_));
+      session_->ReleaseResource(view_id_);
     }
     compositor_.reset();
     camera_.reset();

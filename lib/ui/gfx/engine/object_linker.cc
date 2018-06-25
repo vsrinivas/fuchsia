@@ -72,6 +72,7 @@ void ObjectLinkerBase::UnregisterEntry(uint64_t entry_handle, bool import) {
     FXL_DCHECK(peer_entry_iter != entries_.end());
 
     peer_entry_iter->second.on_peer_destroyed();
+    peer_entry_iter->second.peer_koid = ZX_KOID_INVALID;
   }
 
   // Erase the entries for the object.
@@ -93,7 +94,7 @@ void ObjectLinkerBase::UnregisterEntry(uint64_t entry_handle, bool import) {
 }
 
 void ObjectLinkerBase::WaitForPeerDeath(
-  KoidToPendingEntryMap::iterator& pending_entry, bool import) {
+    KoidToPendingEntryMap::iterator& pending_entry, bool import) {
   // Each entry must be removed from being considered for linking if its
   // partner's handle on the other side is closed before the 2 entries are
   // successfully linked.  This communication happens via the connection_closed
@@ -150,8 +151,8 @@ bool ObjectLinkerBase::AttemptLinking(
   FXL_DCHECK(peer_entry_iter != entries_.end());
   Entry& entry = entry_iter->second;
   Entry& peer_entry = peer_entry_iter->second;
-  entry.peer_koid = peer_koids.first;
-  peer_entry.peer_koid = peer_koids.second;
+  entry.peer_koid = peer_koids.second;
+  peer_entry.peer_koid = peer_koids.first;
 
   // Fire callbacks last, so clients see a consistent view of the Linker.
   entry.on_link_resolved(this, &peer_entry);
