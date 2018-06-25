@@ -38,16 +38,16 @@ void App::Present(
         presentation_request) {
   InitializeServices();
 
-  auto presentation = std::make_unique<Presentation>(
+  auto presentation = std::make_unique<PresentationOld>(
       view_manager_.get(), scenic_.get(), session_.get(), renderer_params_);
-  Presentation::YieldCallback yield_callback = [this](bool yield_to_next) {
+  PresentationOld::YieldCallback yield_callback = [this](bool yield_to_next) {
     if (yield_to_next) {
       SwitchToNextPresentation();
     } else {
       SwitchToPreviousPresentation();
     }
   };
-  Presentation::ShutdownCallback shutdown_callback =
+  PresentationOld::ShutdownCallback shutdown_callback =
       [this, presentation = presentation.get()] {
         size_t idx;
         for (idx = 0; idx < presentations_.size(); ++idx) {

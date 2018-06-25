@@ -42,10 +42,8 @@ void DisplayRotater::SetDisplayRotation(Presentation* p,
     spring_.SetTargetValue(display_rotation_degrees);
     UpdateAnimation(p, animation_start_time);
   } else {
-    p->display_rotation_desired_ = display_rotation_degrees;
-    if (p->ApplyDisplayModelChanges(false)) {
-      p->PresentScene();
-    }
+    p->set_display_rotation_desired(display_rotation_degrees);
+    p->ApplyDisplayModelChanges(false, true);
   }
 }
 
@@ -68,11 +66,9 @@ bool DisplayRotater::UpdateAnimation(Presentation* p,
   last_animation_update_time_ = presentation_time;
 
   spring_.ElapseTime(seconds_since_last_frame);
-  p->display_rotation_desired_ = spring_.GetValue();
+  p->set_display_rotation_desired(spring_.GetValue());
 
-  if (p->ApplyDisplayModelChanges(false)) {
-    p->PresentScene();
-  }
+  p->ApplyDisplayModelChanges(false, true);
   return true;
 }
 
@@ -80,11 +76,11 @@ glm::vec2 DisplayRotater::RotatePointerCoordinates(Presentation* p, float x,
                                                    float y) {
   glm::vec4 pointer_coords(x, y, 0.f, 1.f);
 
-  float width = p->display_model_actual_.display_info().width_in_px;
-  float height = p->display_model_actual_.display_info().height_in_px;
+  float width = p->display_info().width_in_px;
+  float height = p->display_info().height_in_px;
   glm::vec4 rotated_coords =
       glm::translate(glm::vec3(width / 2, height / 2, 0)) *
-      glm::rotate(glm::radians<float>(p->display_rotation_current_),
+      glm::rotate(glm::radians<float>(p->display_rotation_current()),
                   glm::vec3(0, 0, 1)) *
       glm::translate(glm::vec3(-width / 2, -height / 2, 0)) * pointer_coords;
   return glm::vec2(rotated_coords.x, rotated_coords.y);

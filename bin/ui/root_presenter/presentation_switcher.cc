@@ -15,10 +15,10 @@ bool PresentationSwitcher::OnEvent(const fuchsia::ui::input::InputEvent& event,
       kbd.modifiers & fuchsia::ui::input::kModifierAlt &&
       kbd.phase == fuchsia::ui::input::KeyboardEventPhase::PRESSED) {
     if (kbd.code_point == 91 /* [ */) {
-      presentation->yield_callback_(/* yield_to_next= */ false);
+      presentation->yield_callback()(/* yield_to_next= */ false);
       return true;
     } else if (kbd.code_point == 93 /* ] */) {
-      presentation->yield_callback_(/* yield_to_next= */ true);
+      presentation->yield_callback()(/* yield_to_next= */ true);
       return true;
     }
   }

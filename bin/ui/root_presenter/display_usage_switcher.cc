@@ -16,8 +16,10 @@ const uint32_t kGlobalShortcutKeyCodePoint = 61;  // '=' key
 const uint32_t kGlobalShortcutKeyHidUsage = 46;   // '=' key
 
 static const std::array<fuchsia::ui::policy::DisplayUsage, 5> kDisplayUsages = {
-    fuchsia::ui::policy::DisplayUsage::kHandheld, fuchsia::ui::policy::DisplayUsage::kClose,
-    fuchsia::ui::policy::DisplayUsage::kNear, fuchsia::ui::policy::DisplayUsage::kMidrange,
+    fuchsia::ui::policy::DisplayUsage::kHandheld,
+    fuchsia::ui::policy::DisplayUsage::kClose,
+    fuchsia::ui::policy::DisplayUsage::kNear,
+    fuchsia::ui::policy::DisplayUsage::kMidrange,
     fuchsia::ui::policy::DisplayUsage::kFar};
 }  // namespace
 

@@ -39,7 +39,7 @@ bool PerspectiveDemoMode::OnEvent(const fuchsia::ui::input::InputEvent& event,
         // If we're not already panning/rotating the camera, then start, but
         // only if the touch-down is in the bottom 10% of the screen.
         if (!trackball_pointer_down_ &&
-            pointer.y > 0.9f * presenter->display_metrics_.height_in_pp()) {
+            pointer.y > 0.9f * presenter->display_metrics().height_in_pp()) {
           trackball_pointer_down_ = true;
           trackball_device_id_ = pointer.device_id;
           trackball_pointer_id_ = pointer.pointer_id;
@@ -51,7 +51,7 @@ bool PerspectiveDemoMode::OnEvent(const fuchsia::ui::input::InputEvent& event,
         if (trackball_pointer_down_ &&
             trackball_device_id_ == pointer.device_id &&
             trackball_device_id_ == pointer.device_id) {
-          float pan_rate = -2.5f / presenter->display_metrics_.width_in_pp();
+          float pan_rate = -2.5f / presenter->display_metrics().width_in_pp();
           float pan_change = pan_rate * (pointer.x - trackball_previous_x_);
           trackball_previous_x_ = pointer.x;
 
@@ -109,10 +109,8 @@ bool PerspectiveDemoMode::UpdateAnimation(Presentation* presenter,
     return false;
   }
 
-  const float half_width =
-      presenter->display_model_actual_.display_info().width_in_px * 0.5f;
-  const float half_height =
-      presenter->display_model_actual_.display_info().height_in_px * 0.5f;
+  const float half_width = presenter->display_info().width_in_px * 0.5f;
+  const float half_height = presenter->display_info().height_in_px * 0.5f;
 
   // Always look at the middle of the stage.
   float target[3] = {half_width, half_height, 0};
@@ -139,8 +137,8 @@ bool PerspectiveDemoMode::UpdateAnimation(Presentation* presenter,
 
         // Switch back to ortho view, and re-enable clipping.
         float ortho_eye[3] = {half_width, half_height, 1100.f};
-        presenter->camera_.SetTransform(ortho_eye, target, up);
-        presenter->camera_.SetProjection(0.f);
+        presenter->camera()->SetTransform(ortho_eye, target, up);
+        presenter->camera()->SetProjection(0.f);
         return true;
       }
       case kTrackball:
@@ -176,8 +174,8 @@ bool PerspectiveDemoMode::UpdateAnimation(Presentation* presenter,
   glm::vec3 eye = glm::mix(glm::mix(eye_start, eye_mid, param),
                            glm::mix(eye_mid, eye_end, param), param);
 
-  presenter->camera_.SetTransform(glm::value_ptr(eye), target, up);
-  presenter->camera_.SetProjection(fovy);
+  presenter->camera()->SetTransform(glm::value_ptr(eye), target, up);
+  presenter->camera()->SetProjection(fovy);
 
   return true;
 }

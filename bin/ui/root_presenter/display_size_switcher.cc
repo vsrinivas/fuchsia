@@ -49,7 +49,7 @@ bool DisplaySizeSwitcher::OnEvent(const fuchsia::ui::input::InputEvent& event,
           // Found a suitable display size to switch to.
           current_display_size_index_ = display_size_index;
 
-          presenter->ApplyDisplayModelChanges(true);
+          presenter->ApplyDisplayModelChanges(true, false);
           return true;
         }
       }
