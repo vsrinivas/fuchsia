@@ -69,7 +69,7 @@ static const dcfg_arm_gicv2_driver_t gicv2_driver = {
     .gicc_offset = 0x2000,
     .gich_offset = 0x4000,
     .gicv_offset = 0x6000,
-    .ipi_base = 13,
+    .ipi_base = 12,
 };
 
 static const dcfg_arm_psci_driver_t psci_driver = {

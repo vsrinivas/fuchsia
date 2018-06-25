@@ -364,13 +364,15 @@ static void arm_gic_v2_init(const void* driver_data, uint32_t length) {
     }
     pdev_register_interrupts(&gic_ops);
 
-    zx_status_t status = register_int_handler(MP_IPI_GENERIC + ipi_base, (void*)&mp_mbx_generic_irq, 0);
+    zx_status_t status =
+        gic_register_sgi_handler(MP_IPI_GENERIC + ipi_base, (void*)&mp_mbx_generic_irq, 0);
     DEBUG_ASSERT(status == ZX_OK);
-    status = register_int_handler(MP_IPI_RESCHEDULE + ipi_base, (void*)&mp_mbx_reschedule_irq, 0);
+    status =
+        gic_register_sgi_handler(MP_IPI_RESCHEDULE + ipi_base, (void*)&mp_mbx_reschedule_irq, 0);
     DEBUG_ASSERT(status == ZX_OK);
-    status = register_int_handler(MP_IPI_INTERRUPT + ipi_base, (void*)&mp_mbx_interrupt_irq, 0);
+    status = gic_register_sgi_handler(MP_IPI_INTERRUPT + ipi_base, (void*)&mp_mbx_interrupt_irq, 0);
     DEBUG_ASSERT(status == ZX_OK);
-    status = register_int_handler(MP_IPI_HALT + ipi_base, &arm_ipi_halt_handler, 0);
+    status = gic_register_sgi_handler(MP_IPI_HALT + ipi_base, &arm_ipi_halt_handler, 0);
     DEBUG_ASSERT(status == ZX_OK);
 
     gicv2_hw_interface_register();

@@ -6,7 +6,11 @@
 // https://opensource.org/licenses/MIT
 
 #pragma once
+
+#include <dev/interrupt.h>
 #include <sys/types.h>
+
+__BEGIN_CDECLS
 
 #define GIC_BASE_SGI 0
 #define GIC_BASE_PPI 16
@@ -29,3 +33,8 @@ enum {
     /* Only forward the interrupt to CPUs that has the interrupt configured as group 1 (non-secure) */
     ARM_GIC_SGI_FLAG_NS = 0x4,
 };
+
+// Registers a software generated interrupt handler.
+zx_status_t gic_register_sgi_handler(unsigned int vector, int_handler handler, void* arg);
+
+__END_CDECLS

@@ -17,6 +17,7 @@ MODULE_SRCS += \
 
 MODULE_DEPS += \
 	kernel/dev/interrupt \
+	kernel/dev/interrupt/arm_gic/common \
 	kernel/dev/pdev \
 	kernel/dev/pdev/interrupt \
 	kernel/lib/pow2_range_allocator

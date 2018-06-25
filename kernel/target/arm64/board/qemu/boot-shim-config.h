@@ -37,7 +37,7 @@ static const dcfg_arm_gicv3_driver_t gicv3_driver = {
     .gicd_offset = 0x00000,
     .gicr_offset = 0xa0000,
     .gicr_stride = 0x20000,
-    .ipi_base = 13,
+    .ipi_base = 12,
     .optional = true,
 };
 
@@ -46,7 +46,7 @@ static const dcfg_arm_gicv2_driver_t gicv2_driver = {
     .msi_frame_phys = 0x08020000,
     .gicd_offset = 0x00000,
     .gicc_offset = 0x10000,
-    .ipi_base = 13,
+    .ipi_base = 12,
     .optional = true,
     .use_msi = true,
 };
