@@ -42,5 +42,11 @@ uint64_t* SPInRegs(zx_thread_state_general_regs* regs) { return &regs->rsp; }
 
 ::debug_ipc::Arch GetArch() { return ::debug_ipc::Arch::kX64; }
 
+bool GetRegisterStateFromCPU(const zx::thread&,
+                             std::vector<debug_ipc::Register>*) {
+  // TODO(donosoc): Implement the x64 logic
+  return false;
+}
+
 }  // namespace arch
 }  // namespace debug_agent

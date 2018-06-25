@@ -74,6 +74,14 @@ class Thread : public ClientObject {
   virtual bool HasAllFrames() const = 0;
   virtual void SyncFrames(std::function<void()> callback) = 0;
 
+  // Obtains the state of the registers for a particular thread.
+  // The thread must be stopped in order to get the values.
+  //
+  // The returned structures are architecture independent, but the contents
+  // will be dependent on the architecture the target is running on.
+  virtual void GetRegisters(
+      std::function<void(const Err&, std::vector<debug_ipc::Register>)>) = 0;
+
  protected:
   fxl::ObserverList<ThreadObserver>& observers() { return observers_; }
 

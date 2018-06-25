@@ -120,6 +120,12 @@ struct AddressRegion {
   uint64_t depth;
 };
 
+// Value representing a particular register
+struct Register {
+  std::string name;
+  uint64_t value;
+};
+
 #pragma pack(pop)
 
 }  // namespace debug_ipc

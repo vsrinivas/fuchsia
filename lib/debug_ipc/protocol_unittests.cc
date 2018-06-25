@@ -421,7 +421,7 @@ TEST(Protocol, ModulesReply) {
   EXPECT_EQ(initial.modules[1].base, second.modules[1].base);
 }
 
-// Modules ---------------------------------------------------------------------
+// ASpace ----------------------------------------------------------------------
 
 TEST(Protocol, AspaceRequest) {
   AddressSpaceRequest initial;
@@ -448,7 +448,7 @@ TEST(Protocol, AspaceReply) {
   AddressSpaceReply second;
   ASSERT_TRUE(SerializeDeserializeReply(initial, &second));
 
-  EXPECT_EQ(4u, second.map.size());
+  ASSERT_EQ(4u, second.map.size());
   EXPECT_EQ(initial.map[0].name, second.map[0].name);
   EXPECT_EQ(initial.map[0].base, second.map[0].base);
   EXPECT_EQ(initial.map[0].size, second.map[0].size);
@@ -465,6 +465,41 @@ TEST(Protocol, AspaceReply) {
   EXPECT_EQ(initial.map[3].base, second.map[3].base);
   EXPECT_EQ(initial.map[3].size, second.map[3].size);
   EXPECT_EQ(initial.map[3].depth, second.map[3].depth);
+}
+
+// Registers -------------------------------------------------------------------
+
+TEST(Protocol, RegistersRequest) {
+  RegistersRequest initial;
+  initial.process_koid = 0x1234;
+  initial.thread_koid = 0x5678;
+
+  RegistersRequest second;
+  ASSERT_TRUE(SerializeDeserializeRequest(initial, &second));
+
+  EXPECT_EQ(initial.process_koid, second.process_koid);
+  EXPECT_EQ(initial.thread_koid, second.thread_koid);
+}
+
+TEST(Protocol, RegistersReply) {
+  RegistersReply initial;
+  initial.registers.push_back({"W0", 0xF000});
+  initial.registers.push_back({"W1", 0xF001});
+  initial.registers.push_back({"W2", 0xF002});
+  initial.registers.push_back({"W3", 0xF003});
+
+  RegistersReply second;
+  ASSERT_TRUE(SerializeDeserializeReply(initial, &second));
+
+  ASSERT_EQ(4u, second.registers.size());
+  EXPECT_EQ(initial.registers[0].name, second.registers[0].name);
+  EXPECT_EQ(initial.registers[0].value, second.registers[0].value);
+  EXPECT_EQ(initial.registers[1].name, second.registers[1].name);
+  EXPECT_EQ(initial.registers[1].value, second.registers[1].value);
+  EXPECT_EQ(initial.registers[2].name, second.registers[2].name);
+  EXPECT_EQ(initial.registers[2].value, second.registers[2].value);
+  EXPECT_EQ(initial.registers[3].name, second.registers[3].name);
+  EXPECT_EQ(initial.registers[3].value, second.registers[3].value);
 }
 
 // Notifications ---------------------------------------------------------------

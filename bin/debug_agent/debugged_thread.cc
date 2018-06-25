@@ -135,6 +135,11 @@ void DebuggedThread::GetBacktrace(
               *arch::SPInRegs(&regs), kMaxStackDepth, frames);
 }
 
+void DebuggedThread::GetRegisters(
+    std::vector<debug_ipc::Register>* registers) const {
+  arch::GetRegisterStateFromCPU(thread_, registers);
+}
+
 void DebuggedThread::SendThreadNotification() const {
   debug_ipc::ThreadRecord record;
   FillThreadRecord(thread_, &record);

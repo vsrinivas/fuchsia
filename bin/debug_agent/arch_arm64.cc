@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "garnet/bin/debug_agent/arch.h"
+#include "garnet/public/lib/fxl/strings/string_printf.h"
 
 namespace debug_agent {
 namespace arch {
@@ -49,6 +50,32 @@ uint64_t* IPInRegs(zx_thread_state_general_regs* regs) { return &regs->pc; }
 uint64_t* SPInRegs(zx_thread_state_general_regs* regs) { return &regs->sp; }
 
 ::debug_ipc::Arch GetArch() { return ::debug_ipc::Arch::kArm64; }
+
+bool GetRegisterStateFromCPU(const zx::thread& thread,
+                             std::vector<debug_ipc::Register>* registers) {
+  registers->clear();
+
+  // We get the general state registers
+  zx_thread_state_general_regs general_registers;
+  zx_status_t status =
+      thread.read_state(ZX_THREAD_STATE_GENERAL_REGS, &general_registers,
+                        sizeof(general_registers));
+  if (status != ZX_OK)
+    return false;
+
+  // We add the X0-X29 registers
+  for (int i = 0; i < 30; i++) {
+    registers->push_back({fxl::StringPrintf("X%d", i), general_registers.r[i]});
+  }
+
+  // Add the named registers
+  registers->push_back({"LR", general_registers.lr});
+  registers->push_back({"SP", general_registers.sp});
+  registers->push_back({"PC", general_registers.pc});
+  registers->push_back({"CPSR", general_registers.cpsr});
+
+  return true;
+}
 
 }  // namespace arch
 }  // namespace debug_agent

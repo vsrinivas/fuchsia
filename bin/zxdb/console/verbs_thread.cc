@@ -253,6 +253,50 @@ Err DoStepi(ConsoleContext* context, const Command& cmd) {
   return Err();
 }
 
+// regs ------------------------------------------------------------------------
+
+const char kRegsShortHelp[] = "regs / rg: Show the current registers for a thread.";
+const char kRegsHelp[] =
+    R"(regs
+
+  Shows the current registers for  thread.
+  Alias: "rg"
+
+Examples
+
+  regs
+  thread 4 regs
+  process 2 thread 1 regs
+)";
+
+void OnRegsComplete(const Err& err,
+                    std::vector<debug_ipc::Register> registers) {
+  Console* console = Console::get();
+  if (err.has_error()) {
+    console->Output(err);
+    return;
+  }
+
+  OutputBuffer out = OutputBuffer::WithContents("REGISTERS:\n");
+
+  out.Append("General Registers:\n");
+  out.Append("-------------------------------------------------\n");
+  for (auto&& reg : registers) {
+    out.Append(
+        fxl::StringPrintf("%4s: 0x%016lx\n", reg.name.c_str(), reg.value));
+  }
+  console->Output(std::move(out));
+}
+
+Err DoRegs(ConsoleContext* context, const Command& cmd) {
+  Err err = AssertStoppedThreadCommand(context, cmd, "regs");
+  if (err.has_error())
+    return err;
+
+  cmd.thread()->GetRegisters(&OnRegsComplete);
+  return Err();
+}
+
 }  // namespace
 
 void AppendThreadVerbs(std::map<Verb, VerbRecord>* verbs) {
@@ -260,6 +304,8 @@ void AppendThreadVerbs(std::map<Verb, VerbRecord>* verbs) {
                                          kContinueShortHelp, kContinueHelp);
   (*verbs)[Verb::kPause] =
       VerbRecord(&DoPause, {"pause", "pa"}, kPauseShortHelp, kPauseHelp);
+  (*verbs)[Verb::kRegs] =
+      VerbRecord(&DoRegs, {"regs", "rg"}, kRegsShortHelp, kRegsHelp);
   (*verbs)[Verb::kStep] =
       VerbRecord(&DoStep, {"step", "s"}, kStepShortHelp, kStepHelp);
   (*verbs)[Verb::kStepi] =

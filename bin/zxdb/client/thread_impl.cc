@@ -183,4 +183,19 @@ void ThreadImpl::ClearFrames() {
     observer.OnThreadFramesInvalidated(this);
 }
 
+void ThreadImpl::GetRegisters(
+    std::function<void(const Err&, std::vector<debug_ipc::Register>)>
+        callback) {
+  debug_ipc::RegistersRequest request;
+  request.process_koid = process_->GetKoid();
+  request.thread_koid = koid_;
+
+  session()->remote_api()->Registers(
+      request, [process = weak_factory_.GetWeakPtr(), callback](
+                   const Err& err, debug_ipc::RegistersReply reply) {
+        if (callback)
+          callback(err, std::move(reply.registers));
+      });
+}
+
 }  // namespace zxdb

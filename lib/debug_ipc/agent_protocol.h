@@ -95,6 +95,12 @@ bool ReadRequest(MessageReader* reader, ModulesRequest* request,
 void WriteReply(const ModulesReply& reply, uint32_t transaction_id,
                 MessageWriter* writer);
 
+// Registers
+bool ReadRequest(MessageReader* reader, RegistersRequest* request,
+                 uint32_t* transaction_id);
+void WriteReply(const RegistersReply& reply, uint32_t transaction_id,
+                MessageWriter* writer);
+
 // Addres space
 bool ReadRequest(MessageReader* reader, AddressSpaceRequest* request,
                  uint32_t* transaction_id);

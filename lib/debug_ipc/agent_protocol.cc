@@ -66,6 +66,11 @@ void Serialize(const Module& module, MessageWriter* writer) {
   writer->WriteString(module.build_id);
 }
 
+void Serialize(const Register& reg, MessageWriter* writer) {
+  writer->WriteString(reg.name);
+  writer->WriteUint64(reg.value);
+}
+
 void Serialize(const StackFrame& frame, MessageWriter* writer) {
   writer->WriteBytes(&frame, sizeof(StackFrame));
 }
@@ -335,6 +340,23 @@ void WriteReply(const ModulesReply& reply, uint32_t transaction_id,
                 MessageWriter* writer) {
   writer->WriteHeader(MsgHeader::Type::kModules, transaction_id);
   Serialize(reply.modules, writer);
+}
+
+// Registers ---------------------------------------------------------------------
+
+bool ReadRequest(MessageReader* reader, RegistersRequest* request,
+                 uint32_t* transaction_id) {
+  MsgHeader header;
+  if (!reader->ReadHeader(&header))
+    return false;
+  *transaction_id = header.transaction_id;
+  return reader->ReadBytes(sizeof(RegistersRequest), request);
+}
+
+void WriteReply(const RegistersReply& reply, uint32_t transaction_id,
+                MessageWriter* writer) {
+  writer->WriteHeader(MsgHeader::Type::kRegisters, transaction_id);
+  Serialize(reply.registers, writer);
 }
 
 // Address space ---------------------------------------------------------------

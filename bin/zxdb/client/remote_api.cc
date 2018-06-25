@@ -74,6 +74,12 @@ void RemoteAPI::ReadMemory(
   FXL_NOTREACHED();
 }
 
+void RemoteAPI::Registers(
+    const debug_ipc::RegistersRequest& request,
+    std::function<void(const Err&, debug_ipc::RegistersReply)> cb) {
+  FXL_NOTREACHED();
+}
+
 void RemoteAPI::AddOrChangeBreakpoint(
     const debug_ipc::AddOrChangeBreakpointRequest& request,
     std::function<void(const Err&, debug_ipc::AddOrChangeBreakpointReply)> cb) {

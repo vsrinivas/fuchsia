@@ -38,6 +38,10 @@ class ThreadImpl : public Thread {
   // Notification from the agent of an exception.
   void OnException(const debug_ipc::NotifyException& notify);
 
+  virtual void GetRegisters(
+      std::function<void(const Err&, std::vector<debug_ipc::Register>)>)
+      override;
+
  private:
   // Symbolizes the given stack frames, saves them, and issues the callback.
   // The callback will only be issued if the Thread object is still valid.

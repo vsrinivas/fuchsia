@@ -177,6 +177,15 @@ void DebugAgent::OnReadMemory(const debug_ipc::ReadMemoryRequest& request,
     proc->OnReadMemory(request, reply);
 }
 
+void DebugAgent::OnRegisters(
+    const debug_ipc::RegistersRequest& request,
+    debug_ipc::RegistersReply* reply) {
+  DebuggedThread *thread = GetDebuggedThread(request.process_koid,
+                                             request.thread_koid);
+  if (thread)
+    thread->GetRegisters(&reply->registers);
+}
+
 void DebugAgent::OnAddOrChangeBreakpoint(
     const debug_ipc::AddOrChangeBreakpointRequest& request,
     debug_ipc::AddOrChangeBreakpointReply* reply) {

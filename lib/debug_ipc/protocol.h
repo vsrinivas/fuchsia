@@ -32,6 +32,7 @@ struct MsgHeader {
     kProcessTree,
     kThreads,
     kReadMemory,
+    kRegisters,
     kAddOrChangeBreakpoint,
     kRemoveBreakpoint,
     kBacktrace,
@@ -212,6 +213,16 @@ struct ModulesRequest {
 };
 struct ModulesReply {
   std::vector<Module> modules;
+};
+
+// Registers -------------------------------------------------------------------
+
+struct RegistersRequest {
+  uint64_t process_koid = 0;
+  uint32_t thread_koid = 0;
+};
+struct RegistersReply {
+  std::vector<Register> registers;
 };
 
 // Notifications ---------------------------------------------------------------

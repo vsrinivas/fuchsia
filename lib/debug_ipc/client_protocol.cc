@@ -69,6 +69,14 @@ bool Deserialize(MessageReader* reader, Module* module) {
   return true;
 };
 
+bool Deserialize(MessageReader* reader, Register* reg) {
+  if (!reader->ReadString(&reg->name))
+    return false;
+  if (!reader->ReadUint64(&reg->value))
+    return false;
+  return true;
+}
+
 bool Deserialize(MessageReader* reader, StackFrame* frame) {
   return reader->ReadBytes(sizeof(StackFrame), frame);
 }
@@ -293,6 +301,24 @@ bool ReadReply(MessageReader* reader, ReadMemoryReply* reply,
   *transaction_id = header.transaction_id;
 
   return Deserialize(reader, &reply->blocks);
+}
+
+// Registers -------------------------------------------------------------------
+
+void WriteRequest(const RegistersRequest& request, uint32_t transaction_id,
+                  MessageWriter* writer) {
+  writer->WriteHeader(MsgHeader::Type::kRegisters, transaction_id);
+  writer->WriteBytes(&request, sizeof(RegistersRequest));
+}
+
+bool ReadReply(MessageReader* reader, RegistersReply* reply,
+               uint32_t* transaction_id) {
+  MsgHeader header;
+  if (!reader->ReadHeader(&header))
+    return false;
+
+  *transaction_id = header.transaction_id;
+  return Deserialize(reader, &reply->registers);
 }
 
 // AddOrChangeBreakpoint -------------------------------------------------------

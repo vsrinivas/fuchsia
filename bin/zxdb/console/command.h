@@ -60,6 +60,7 @@ enum class Verb {
   kNew,
   kPause,
   kQuit,
+  kRegs,
   kRun,
   kStep,
   kStepi,

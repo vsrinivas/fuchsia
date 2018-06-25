@@ -61,6 +61,9 @@ class DebuggedThread {
   // Fills in the backtrace if available. Otherwise fills in nothing.
   void GetBacktrace(std::vector<debug_ipc::StackFrame>* frames) const;
 
+  // Fills in the information for the registers of the thread
+  void GetRegisters(std::vector<debug_ipc::Register>* registers) const;
+
   // Sends a notification to the client about the state of this thread.
   void SendThreadNotification() const;
 
