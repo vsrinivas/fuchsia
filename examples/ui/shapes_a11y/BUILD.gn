@@ -15,13 +15,13 @@ executable("shapes_a11y") {
   deps = [
     "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/fidl/cpp",
-    "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/ui/a11y/fidl",
     "//garnet/public/lib/ui/gfx/fidl",
     "//garnet/public/lib/ui/scenic:client",
     "//garnet/public/lib/ui/view_framework:view_provider",
     "//garnet/public/lib/ui/views/fidl:v1",
+    "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/trace-provider",
   ]
 }
