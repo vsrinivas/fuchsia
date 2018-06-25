@@ -35,11 +35,11 @@ def _dart_codegen_impl(target, context):
         outputs = [
             package_root,
         ],
+        mnemonic = "FidlGenDart",
     )
 
     package_name = "fidl_" + library_name.replace(".", "_")
-    deps = context.rule.attr.deps if hasattr(context.rule.attr, "deps") else []
-    deps = deps + context.attr._deps
+    deps = context.rule.attr.deps + context.attr._deps
     library_info = produce_package_info(package_name, package_root, deps)
 
     return [

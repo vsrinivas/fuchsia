@@ -5,12 +5,10 @@
 load(":dart.bzl", "DartLibraryInfo", "produce_package_info")
 
 def _dart_library_impl(context):
-    deps = context.attr.deps if hasattr(context.attr, "deps") else []
-    info =  produce_package_info(context.attr.package_name,
-                                 context.files.source_dir[0],
-                                 deps)
     return [
-        info,
+        produce_package_info(context.attr.package_name,
+                             context.files.source_dir[0],
+                             context.attr.deps),
     ]
 
 dart_library = rule(

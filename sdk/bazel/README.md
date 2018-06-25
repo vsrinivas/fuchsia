@@ -15,7 +15,11 @@ The Bazel SDK frontend produces a [Bazel](https://bazel.build/) workspace.
 ```
 $root/
     tools/                                 # host tools
-    pkg/                                   # package contents
+    dart/                                  # Dart packages
+        lorem/
+            BUILD
+            lib/
+    pkg/                                   # C++ package contents
         foo/
             BUILD                          # generated Bazel build file for this package
             include/                       # headers
@@ -48,7 +52,7 @@ $root/
 The `generate-tests.py` script creates a workspace for testing the generated
 SDK. From within that workspace, run:
 ```
-./run.py
+$ ./run.py
 ```
 
 To exclude a target from the suite, mark it as ignored with:

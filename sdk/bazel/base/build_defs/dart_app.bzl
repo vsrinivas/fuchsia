@@ -24,8 +24,7 @@ _DART_JIT_RUNNER_CONTENT = """{
 def _dart_app_impl(context):
     # 1. Create the .packages file.
     packages = context.outputs.packages
-    deps = context.attr.deps if hasattr(context.attr, "deps") else []
-    info = aggregate_packages(deps)
+    info = aggregate_packages(context.attr.deps)
     generate_dot_packages_action(context, packages, info)
     all_sources = [package.root for package in info.package_map.to_list()]
 
