@@ -39,6 +39,6 @@ public:
     }
 };
 
-using unowned_timer = const unowned<timer>;
+using unowned_timer = unowned<timer>;
 
 } // namespace zx

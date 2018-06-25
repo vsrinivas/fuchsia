@@ -38,6 +38,6 @@ public:
     }
 };
 
-using unowned_guest = const unowned<guest>;
+using unowned_guest = unowned<guest>;
 
 } // namespace zx

@@ -9,6 +9,6 @@
 namespace zx {
 
 using handle = object<void>;
-using unowned_handle = const unowned<handle>;
+using unowned_handle = unowned<handle>;
 
 } // namespace zx

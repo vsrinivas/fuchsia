@@ -61,6 +61,6 @@ public:
     }
 };
 
-using unowned_vmo = const unowned<vmo>;
+using unowned_vmo = unowned<vmo>;
 
 } // namespace zx

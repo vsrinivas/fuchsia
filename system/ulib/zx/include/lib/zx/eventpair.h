@@ -30,6 +30,6 @@ public:
                               eventpair* endpoint1);
 };
 
-using unowned_eventpair = const unowned<eventpair>;
+using unowned_eventpair = unowned<eventpair>;
 
 } // namespace zx

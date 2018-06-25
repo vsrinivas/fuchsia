@@ -35,6 +35,6 @@ public:
     }
 };
 
-using unowned_bti = const unowned<bti>;
+using unowned_bti = unowned<bti>;
 
 } // namespace zx

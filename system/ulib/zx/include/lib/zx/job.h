@@ -34,11 +34,11 @@ public:
 
     // Ideally this would be called zx::job::default(), but default is a
     // C++ keyword and cannot be used as a function name.
-    static inline const unowned<job> default_job() {
-        return unowned<job>(zx_job_default());
+    static inline const legacy_unowned<job> default_job() {
+        return legacy_unowned<job>(zx_job_default());
     }
 };
 
-using unowned_job = const unowned<job>;
+using unowned_job = unowned<job>;
 
 } // namespace zx

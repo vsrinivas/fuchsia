@@ -264,36 +264,74 @@ template <typename T> bool operator>=(const object<T>& a, zx_handle_t b) {
 // but does not take ownership of it.  The handle is not closed when the
 // wrapper is destroyed.
 //
-// All instances of unowned<T> must be const.  They cannot be stored, copied,
-// or moved but can be passed by reference in the form of a const T& or used
-// as a temporary.
+// All use of unowned<object<T>> as an object<T> is via a dereference operator,
+// as illustrated below:
 //
 // void do_something(const zx::event& event);
 //
 // void example(zx_handle_t event_handle) {
-//     do_something(zx::unowned<event>::wrap(event_handle));
+//     do_something(*zx::unowned<event>(event_handle));
 // }
 //
 // Convenience aliases are provided for all object types, for example:
 //
-// zx::unowned_event::wrap(handle).signal(..)
+// zx::unowned_event::wrap(handle)->signal(..)
 
+// TODO(ZX-2283): Remove this once callers have migrated to unowned<T>.
+template <typename T> class unowned;
 template <typename T>
-class unowned final : public T {
+class legacy_unowned final : public T {
 public:
-    unowned(unowned&& other) : T(other.release()) {}
+    legacy_unowned(legacy_unowned&& other) : T(other.release()) {}
 
-    ~unowned() {
+    ~legacy_unowned() {
         zx_handle_t h = this->release();
         static_cast<void>(h);
     }
 
-    static const unowned wrap(zx_handle_t h) { return unowned(h); }
-
 private:
     friend T;
+    friend unowned<T>;
 
-    explicit unowned(zx_handle_t h) : T(h) {}
+    explicit legacy_unowned(zx_handle_t h) : T(h) {}
+};
+
+template <typename T>
+class unowned final {
+public:
+    explicit unowned(zx_handle_t h) : value_(h) {}
+    explicit unowned(const T& owner) : unowned(owner.get()) {}
+    explicit unowned(unowned& other) : unowned(*other) {}
+    constexpr unowned() = default;
+    unowned(unowned&& other) = default;
+
+    ~unowned() { release_value(); }
+
+    unowned& operator=(unowned& other) {
+        *this = unowned(other);
+        return *this;
+    }
+    unowned& operator=(unowned&& other) {
+        release_value();
+        value_ = static_cast<T&&>(other.value_);
+        return *this;
+    }
+
+    const T& operator*() const { return value_; }
+    const T* operator->() const { return &value_; }
+
+    // TODO(ZX-2283): Remove this once callers are updated to unowned<T>.
+    static const legacy_unowned<T> wrap(zx_handle_t h) {
+        return legacy_unowned<T>(h);
+    }
+
+private:
+    void release_value() {
+        zx_handle_t h = value_.release();
+        static_cast<void>(h);
+    }
+
+    T value_;
 };
 
 } // namespace zx

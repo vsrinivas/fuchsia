@@ -59,11 +59,11 @@ public:
         return zx_thread_write_state(get(), kind, buffer, len);
     }
 
-    static inline const unowned<thread> self() {
-        return unowned<thread>(zx_thread_self());
+    static inline const legacy_unowned<thread> self() {
+        return legacy_unowned<thread>(zx_thread_self());
     }
 };
 
-using unowned_thread = const unowned<thread>;
+using unowned_thread = unowned<thread>;
 
 } // namespace zx

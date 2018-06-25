@@ -40,6 +40,6 @@ public:
     }
 };
 
-using unowned_socket = const unowned<socket>;
+using unowned_socket = unowned<socket>;
 
 } // namespace zx

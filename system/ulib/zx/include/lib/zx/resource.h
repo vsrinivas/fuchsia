@@ -30,6 +30,6 @@ public:
                               uint64_t high, resource* result);
 };
 
-using unowned_resource = const unowned<resource>;
+using unowned_resource = unowned<resource>;
 
 } // namespace zx

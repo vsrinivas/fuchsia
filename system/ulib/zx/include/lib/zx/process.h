@@ -49,11 +49,11 @@ public:
         return zx_process_write_memory(get(), vaddr, buffer, len, actual);
     }
 
-    static inline const unowned<process> self() {
-        return unowned<process>(zx_process_self());
+    static inline const legacy_unowned<process> self() {
+        return legacy_unowned<process>(zx_process_self());
     }
 };
 
-using unowned_process = const unowned<process>;
+using unowned_process = unowned<process>;
 
 } // namespace zx

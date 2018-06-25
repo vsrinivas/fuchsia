@@ -29,6 +29,6 @@ public:
     zx_status_t unpin() { return zx_pmt_unpin(release()); }
 };
 
-using unowned_pmt = const unowned<pmt>;
+using unowned_pmt = unowned<pmt>;
 
 } // namespace zx

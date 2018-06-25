@@ -37,6 +37,6 @@ public:
     }
 };
 
-using unowned_log = const unowned<log>;
+using unowned_log = unowned<log>;
 
 } // namespace zx

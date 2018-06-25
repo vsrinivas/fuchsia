@@ -29,6 +29,6 @@ public:
     static zx_status_t create(uint32_t options, event* result);
 };
 
-using unowned_event = const unowned<event>;
+using unowned_event = unowned<event>;
 
 } // namespace zx

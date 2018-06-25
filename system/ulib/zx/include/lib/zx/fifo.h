@@ -39,6 +39,6 @@ public:
 
 };
 
-using unowned_fifo = const unowned<fifo>;
+using unowned_fifo = unowned<fifo>;
 
 } // namespace zx

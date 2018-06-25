@@ -58,6 +58,6 @@ public:
     }
 };
 
-using unowned_channel = const unowned<channel>;
+using unowned_channel = unowned<channel>;
 
 } // namespace zx

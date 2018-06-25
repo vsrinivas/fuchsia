@@ -42,6 +42,6 @@ public:
     }
 };
 
-using unowned_port = const unowned<port>;
+using unowned_port = unowned<port>;
 
 } // namespace zx

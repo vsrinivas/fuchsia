@@ -44,6 +44,6 @@ public:
     }
 };
 
-using unowned_interrupt = const unowned<interrupt>;
+using unowned_interrupt = unowned<interrupt>;
 
 } // namespace zx
