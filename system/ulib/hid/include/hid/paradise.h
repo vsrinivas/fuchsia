@@ -95,6 +95,7 @@ typedef struct paradise_stylus {
 
 bool is_paradise_touch_report_desc(const uint8_t* data, size_t len);
 bool is_paradise_touch_v2_report_desc(const uint8_t* data, size_t len);
+bool is_paradise_touch_v3_report_desc(const uint8_t* data, size_t len);
 zx_status_t setup_paradise_touch(int fd);
 
 typedef struct paradise_touchpad_finger_v1 {

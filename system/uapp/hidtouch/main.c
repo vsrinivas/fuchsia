@@ -34,6 +34,7 @@ enum touch_panel_type {
     TOUCH_PANEL_ACER12,
     TOUCH_PANEL_PARADISE,
     TOUCH_PANEL_PARADISEv2,
+    TOUCH_PANEL_PARADISEv3,
     TOUCH_PANEL_EGALAX,
     TOUCH_PANEL_FT3X27,
 };
@@ -509,6 +510,13 @@ int main(int argc, char* argv[]) {
             break;
         }
 
+        if (is_paradise_touch_v3_report_desc(rpt_desc, rpt_desc_len)) {
+            panel = TOUCH_PANEL_PARADISEv3;
+            // Found the touchscreen
+            printf("touchscreen: %s\n", devname);
+            break;
+        }
+
         if (is_egalax_touchscreen_report_desc(rpt_desc, rpt_desc_len)) {
             panel = TOUCH_PANEL_EGALAX;
             printf("touchscreen: %s is egalax\n", devname);
@@ -576,6 +584,10 @@ next_node:
         } else if (panel == TOUCH_PANEL_PARADISEv2) {
             if (*(uint8_t*)buf == PARADISE_RPT_ID_TOUCH) {
                 process_paradise_touchscreen_v2_input(buf, r, pixels32, &info);
+            }
+        } else if (panel == TOUCH_PANEL_PARADISEv3) {
+            if (*(uint8_t*)buf == PARADISE_RPT_ID_TOUCH) {
+                process_paradise_touchscreen_input(buf, r, pixels32, &info);
             }
         } else if (panel == TOUCH_PANEL_EGALAX) {
             if (*(uint8_t*)buf == EGALAX_RPT_ID_TOUCH) {
