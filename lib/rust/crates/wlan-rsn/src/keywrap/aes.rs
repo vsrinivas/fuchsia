@@ -3,16 +3,17 @@
 // found in the LICENSE file.
 
 use byteorder::{BigEndian, ByteOrder};
-use crypto::aes::KeySize;
-use crypto::aesni::{AesNiDecryptor, AesNiEncryptor};
+use crypto::aes::{self, KeySize};
+use crypto::blockmodes;
+use crypto::buffer::{self, WriteBuffer, ReadBuffer};
 use crypto::symmetriccipher::{BlockDecryptor, BlockEncryptor};
 use keywrap::Algorithm;
 use {Error, Result};
 
 // Implementation of RFC 3394 - Advanced Encryption Standard (AES) Key Wrap Algorithm
-
 // RFC 3394, 2.2.3
 static DEFAULT_IV: &[u8] = &[0xa6; 8];
+const BLOCK_SIZE: usize = 16;
 
 pub struct NistAes;
 
@@ -34,14 +35,14 @@ impl Algorithm for NistAes {
         if p.len() % 8 != 0 || n < 2 {
             return Err(Error::InvalidAesKeywrapDataLength(p.len()));
         }
+
         let keysize = NistAes::keysize(key.len())?;
-        let cipher = AesNiEncryptor::new(keysize, key);
-        let mut b = vec![0u8; cipher.block_size()];
+        let mut b = vec![0u8; BLOCK_SIZE];
 
         // 1) Initialize variables
         // aes_block[:8] = A
         // aes_block[:] = A | R[i]
-        let mut aes_block = vec![0u8; cipher.block_size()];
+        let mut aes_block = vec![0u8; BLOCK_SIZE];
         &aes_block[..8].copy_from_slice(&DEFAULT_IV[..]);
         let mut c = vec![0u8; (n + 1) * 8];
         {
@@ -53,12 +54,19 @@ impl Algorithm for NistAes {
                 for i in 1..(n + 1) {
                     let ri = &mut r[(i - 1) * 8..(i * 8)];
                     &aes_block[8..16].copy_from_slice(ri);
-                    cipher.encrypt_block(&mut aes_block[..], &mut b[..]);
-
+                    {
+                        let mut read_buf = buffer::RefReadBuffer::new(&aes_block[..]);
+                        let mut write_buf = buffer::RefWriteBuffer::new(&mut b[..]);
+                        let mut cipher = aes::ecb_encryptor(
+                            keysize,
+                            key,
+                            blockmodes::NoPadding);
+                        cipher.encrypt(&mut read_buf, &mut write_buf, true);
+                    }
                     let t = (n * j + i) as u64;
                     BigEndian::write_u64(&mut aes_block, BigEndian::read_u64(&b[..8]) ^ t);
 
-                    ri.copy_from_slice(&b[8..16]);
+                    ri.copy_from_slice(&b[8..]);
                 }
             }
         }
@@ -77,13 +85,12 @@ impl Algorithm for NistAes {
         }
 
         let keysize = NistAes::keysize(key.len())?;
-        let cipher = AesNiDecryptor::new(keysize, key);
-        let mut b = vec![0u8; cipher.block_size()];
+        let mut b = vec![0u8; BLOCK_SIZE];
 
         // 1) Initialize variables
         // aes_block[:8] = A
         // aes_block[:] = (A ^ t) | R[i]
-        let mut aes_block = vec![0u8; cipher.block_size()];
+        let mut aes_block = vec![0u8; BLOCK_SIZE];
         &aes_block[..8].copy_from_slice(&c[..8]);
         let mut r = vec![0u8; n * 8];
         r.copy_from_slice(&c[8..]);
@@ -97,7 +104,15 @@ impl Algorithm for NistAes {
 
                 let ri = &mut r[(i - 1) * 8..i * 8];
                 &aes_block[8..16].copy_from_slice(ri);
-                cipher.decrypt_block(&aes_block[..], &mut b[..]);
+                {
+                    let mut read_buf = buffer::RefReadBuffer::new(&aes_block[..]);
+                    let mut write_buf = buffer::RefWriteBuffer::new(&mut b[..]);
+                    let mut cipher = aes::ecb_decryptor(
+                        keysize,
+                        key,
+                        blockmodes::NoPadding);
+                    cipher.decrypt(&mut read_buf, &mut write_buf, true);
+                }
 
                 &aes_block[..8].copy_from_slice(&b[..8]);
                 ri.copy_from_slice(&b[8..16]);
@@ -120,14 +135,11 @@ mod tests {
     fn test_wrap_unwrap<T: AsRef<[u8]>>(kek_hex: T, data_hex: T, expected_hex: T) {
         let kek = Vec::from_hex(kek_hex).unwrap();
         let data = Vec::from_hex(data_hex).unwrap();
-
         let keywrap = NistAes;
         let result = keywrap.wrap(&kek[..], &data[..]);
         assert_eq!(result.is_ok(), true);
-
         let expected = Vec::from_hex(expected_hex).unwrap();
         assert_eq!(result.unwrap(), expected);
-
         let plain = keywrap.unwrap(&kek[..], &expected[..]);
         assert_eq!(plain.is_ok(), true);
         assert_eq!(data, plain.unwrap());
@@ -162,7 +174,6 @@ mod tests {
             "64E8C3F9CE0F5BA263E9777905818A2A93C8191E7D6E8AE7",
         );
     }
-
     // RFC 3394, 4.4 Wrap 192 bits of Key Data with a 192-bit KEK
     #[test]
     fn test_192_data_192_kek() {
@@ -197,11 +208,9 @@ mod tests {
     fn test_invalid_key_length() {
         let kek = Vec::from_hex("0102030405060708090A0B0C0D0E0F").unwrap(); // 240bit
         let data = Vec::from_hex("00112233445566778899AABBCCDDEEFF").unwrap();
-
         let keywrap = NistAes;
         let result = keywrap.wrap(&kek[..], &data[..]);
         assert_eq!(result.is_err(), true);
-
         let plain = keywrap.unwrap(&kek[..], &data[..]);
         assert_eq!(plain.is_err(), true);
     }
@@ -212,11 +221,9 @@ mod tests {
         let data = Vec::from_hex(
             "012345678912345601234567891234560123456789123456012345678912345614",
         ).unwrap();
-
         let keywrap = NistAes;
         let result = keywrap.wrap(&kek[..], &data[..]);
         assert_eq!(result.is_err(), true);
-
         let plain = keywrap.unwrap(&kek[..], &data[..]);
         assert_eq!(plain.is_err(), true);
     }
@@ -225,11 +232,9 @@ mod tests {
     fn test_unwrap_wrong_key() {
         let mut kek = Vec::from_hex("000102030405060708090A0B0C0D0E0F").unwrap();
         let data = Vec::from_hex("00112233445566778899AABBCCDDEEFF").unwrap();
-
         let keywrap = NistAes;
         let result = keywrap.wrap(&kek[..], &data[..]);
         assert_eq!(result.is_ok(), true);
-
         kek[0] = 0xFF;
         let plain = keywrap.unwrap(&kek[..], &data[..]);
         assert_eq!(plain.is_err(), true);
@@ -239,11 +244,9 @@ mod tests {
     fn test_too_short_data() {
         let kek = Vec::from_hex("000102030405060708090A0B0C0D0E0F").unwrap();
         let data = Vec::from_hex("0011223344556677").unwrap();
-
         let keywrap = NistAes;
         let result = keywrap.wrap(&kek[..], &data[..]);
         assert_eq!(result.is_err(), true);
-
         let plain = keywrap.unwrap(&kek[..], &data[..]);
         assert_eq!(plain.is_err(), true);
     }
