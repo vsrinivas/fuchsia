@@ -8,6 +8,7 @@ import("//build/package.gni")
 rustc_binary("bin") {
   name = "wlantool2"
   with_lto = "fat"
+  with_unit_tests = true
 
   deps = [
     "//garnet/lib/wlan/fidl:fidl-rustc",
@@ -35,4 +36,15 @@ package("wlantool2") {
     name = "rust_crates/wlantool2"
     dest = "wlantool2"
     } ]
+}
+
+package("wlantool2-tests") {
+  deprecated_system_image = true
+  testonly = true
+
+  deps = [
+    ":bin"
+  ]
+
+  tests = [ { name = "wlantool2_bin_test_rustc" } ]
 }
