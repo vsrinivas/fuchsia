@@ -222,8 +222,9 @@ declare -r cmd_and_args="$@"
 shift # Removes the command name.
 
 "${command_path}" "$@"
+declare -r retval=$?
 if [ -z "${iterative}" ]; then
-  exit $?
+  exit ${retval}
 elif which inotifywait >/dev/null; then
   # Watch everything except out/ and files/directories beginning with "."
   # such as lock files, swap files, .git, etc'.
