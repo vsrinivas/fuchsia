@@ -215,35 +215,19 @@ There are some typical objects which a component namespace might contain:
 
 ### Typical Directory Structure
 
-- `pkg/`: binaries and assets (read-only, except perhaps for development)
-  - `bin/`
-  - `lib/`
-  - `assets/`
+- `pkg/`: the contents of the current program's package
+  - `bin/`: executable binaries within the package
+  - `lib/`: shared libraries within the package
+  - `data/`: data, such as assets, within the package
 - `data/`: local persistent storage (read-write, private to the package)
 - `tmp/`: temporary storage (read-write, private to the package)
 - `svc/`: services offered to the component
-  - `fuchsia.com/`: services defined by the Fuchsia SDK
-    - `compositor/`: create graphical objects
-    - `log/`: logging service
-    - ... and many many more things...
-  - `vendor.com/`: services defined by some _vendor_
-    - `vendor-product/`
+  - `fuchsia.process.Launcher`: launch processes
+  - `fuchsia.logger.Log`: log messages
+  - `vendor.topic.Interface`: service defined by a _vendor_
 - `dev/`: device tree (relevant portions visible to privileged components as needed)
   - `class/`, ...
-- `env/`: introspect the structure of the environment (privileged components only)
-    - `boot/`: information about the "boot" environment
-      - `components/`: information about components within the boot environment
-        - `1234/`: information about component instance #1234
-          - `name`: component name
-          - `origin`: component origin url
-          - `local/`: component's own namespace as defined by its environment
-            - `pkg/`, `data/`, `tmp/`, `svc/`, ...
-            - `pub/`: objects published by the component
-            - `svc/`, ...
-        - `2345/`: information about component instance #2345
-      - `children/`: information about sub-environments of the boot environment
-        - `device/`: information about the "device" sub-environment
-          - `3456/`: information about component instance #3456
+- `hub/`: introspect the system, see [hub.md] (privileged components only)
 
 ## Namespace Participants
 
@@ -268,7 +252,8 @@ A service name corresponds to a path within the `svc` branch of the namespace
 from which a component can access an implementation of the service.
 
 For example, the name of the default Fuchsia logging service is
-`fuchsia.com/log` and its location in the namespace is `svc/fuchsia.com/log`.
+`fuchsia.logger.Log` and its location in the namespace is
+`svc/fuchsia.logger.Log`.
 
 ### Components
 
