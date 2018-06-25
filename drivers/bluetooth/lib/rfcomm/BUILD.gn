@@ -4,13 +4,19 @@
 
 static_library("rfcomm") {
   sources = [
+    "channel.cc",
+    "channel.h",
     "frame.cc",
     "frame.h",
     "rfcomm.h",
+    "session.h",
   ]
 
   public_deps = [
     "//garnet/drivers/bluetooth/lib/common",
+    "//garnet/drivers/bluetooth/lib/l2cap",
+    "//garnet/public/lib/fxl",
+    "//zircon/public/lib/fit",
   ]
 }
 

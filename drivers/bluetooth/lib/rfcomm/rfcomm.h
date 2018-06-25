@@ -36,6 +36,16 @@ inline constexpr Role OppositeRole(Role role) {
 // least significant 6 bits.
 using DLCI = uint8_t;
 
+// Server Channels are 5 bits wide; they are the 5 most significant bits of the
+// DLCI. Server Channels are exposed to the outside world; a user who is
+// requesting to open a channel will know the Server Channel. DLCIs, on the
+// other hand, are internal to RFCOMM.
+using ServerChannel = uint8_t;
+constexpr ServerChannel kMinServerChannel = 1;
+constexpr ServerChannel kMaxServerChannel = 30;
+// Used to indicate error.
+constexpr ServerChannel kInvalidServerChannel = 0;
+
 // The length field encodes the length of the information (payload) field. The
 // length field can be one or two octets, and can encode at most a 15-bit value.
 using InformationLength = uint16_t;
