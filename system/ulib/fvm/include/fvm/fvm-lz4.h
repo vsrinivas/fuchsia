@@ -76,7 +76,7 @@ private:
         }
 
         // Data buffer
-        fbl::unique_ptr<uint8_t> data;
+        fbl::unique_ptr<uint8_t[]> data;
         // Actual size of data contained within buffer
         size_t size;
         // Offset into buffer where valid data begins

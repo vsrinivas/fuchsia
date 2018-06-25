@@ -301,8 +301,6 @@ zx_status_t FvmContainer::Extend(size_t disk_size) {
         return ZX_ERR_IO;
     }
 
-    fvm::fvm_t* sb = SuperBlock();
-
     // Since the size and location of both metadata in an FVM is dependent on the size of
     // the FVM partition, we must relocate any data that already exists within the volume
     // manager.
@@ -312,7 +310,8 @@ zx_status_t FvmContainer::Extend(size_t disk_size) {
     //
     // Then, we update the on-disk metadata to reflect the new size of the disk.
     // To avoid collision between relocated slices, this is done on a temporary file.
-    for (uint32_t index = 1; index <= sb->pslice_count; index++) {
+    uint64_t pslice_count = SuperBlock()->pslice_count;
+    for (uint32_t index = 1; index <= pslice_count; index++) {
         zx_status_t status;
         fvm::slice_entry_t* slice = nullptr;
         if ((status = GetSlice(index, &slice)) != ZX_OK) {
@@ -360,6 +359,7 @@ zx_status_t FvmContainer::Extend(size_t disk_size) {
         return status;
     }
 
+    fvm::fvm_t* sb = SuperBlock();
     sb->pslice_count = fvm::UsableSlicesCount(disk_size, slice_size_);
     sb->fvm_partition_size = disk_size;
     sb->allocation_table_size = fvm::AllocTableLength(disk_size, slice_size_);
@@ -592,7 +592,7 @@ zx_status_t FvmContainer::GrowMetadata(size_t new_size) {
     memcpy(new_metadata.get(), metadata_.get(), metadata_size_);
     memset(new_metadata.get() + metadata_size_, 0, new_size - metadata_size_);
 
-    metadata_ = fbl::move(new_metadata);
+    metadata_.reset(new_metadata.release());
     metadata_size_ = new_size;
     return ZX_OK;
 }
