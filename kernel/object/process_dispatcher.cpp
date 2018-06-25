@@ -454,6 +454,8 @@ zx_status_t ProcessDispatcher::RemoveHandles(user_in_ptr<const zx_handle_t> user
         {
             AutoLock lock(handle_table_lock());
             for (size_t ix = 0; ix != chunk_size; ++ix) {
+                if (handles[ix] == ZX_HANDLE_INVALID)
+                    continue;
                 auto handle = RemoveHandleLocked(handles[ix]);
                 if (!handle)
                     status = ZX_ERR_BAD_HANDLE;

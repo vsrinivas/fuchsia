@@ -13,6 +13,7 @@
 static bool handle_close_many_test(void) {
     BEGIN_TEST;
 
+    // Layout: 0 1 2 3 : 0 1 2 3
     zx_handle_t eventpairs[kNumEventpairs * 2];
 
     for (size_t idx = 0u; idx < kNumEventpairs; ++idx) {
@@ -21,6 +22,8 @@ static bool handle_close_many_test(void) {
 
     ASSERT_EQ(zx_handle_close_many(&eventpairs[0u], kNumEventpairs), ZX_OK, "");
 
+    // Assert that every handle in the preceeding close call was in
+    // fact closed, by waiting on the PEER_CLOSED signal.
     for (size_t idx = kNumEventpairs; idx < 8u; ++idx) {
         zx_signals_t signals;
         ASSERT_EQ(zx_object_wait_one(eventpairs[idx], ZX_EVENTPAIR_PEER_CLOSED,
@@ -36,6 +39,7 @@ static bool handle_close_many_test(void) {
 static bool handle_close_many_invalid_test(void) {
     BEGIN_TEST;
 
+    // Layout: 0 1 2 3 : invalid invalid : 0 1 2 3
     zx_handle_t eventpairs[kNumEventpairs * 2 + kGap];
 
     for (size_t idx = 0u; idx < kNumEventpairs; ++idx) {
@@ -45,8 +49,10 @@ static bool handle_close_many_invalid_test(void) {
     eventpairs[kNumEventpairs] = ZX_HANDLE_INVALID;
     eventpairs[kNumEventpairs + 1] = ZX_HANDLE_INVALID;
 
-    ASSERT_EQ(zx_handle_close_many(&eventpairs[0u], kNumEventpairs + kGap), ZX_ERR_BAD_HANDLE, "");
+    ASSERT_EQ(zx_handle_close_many(&eventpairs[0u], kNumEventpairs + kGap), ZX_OK, "");
 
+    // Assert that every handle in the preceeding close call was in
+    // fact closed, by waiting on the PEER_CLOSED signal.
     for (size_t idx = kNumEventpairs + kGap; idx < 10u; ++idx) {
         zx_signals_t signals;
         ASSERT_EQ(zx_object_wait_one(eventpairs[idx], ZX_EVENTPAIR_PEER_CLOSED,
@@ -62,17 +68,23 @@ static bool handle_close_many_invalid_test(void) {
 static bool handle_close_many_duplicate_test(void) {
     BEGIN_TEST;
 
+    // Layout: 0 1 0 1 2 3 : 0 1 2 3
     zx_handle_t eventpairs[kNumEventpairs * 2 + kGap];
 
-    for (size_t idx = 0u; idx < kNumEventpairs; ++idx) {
+    for (size_t idx = kGap; idx < kGap + kNumEventpairs; ++idx) {
         ASSERT_EQ(zx_eventpair_create(0u, &eventpairs[idx],
-                                      &eventpairs[idx + kNumEventpairs + kGap]), ZX_OK, "");
+                                      &eventpairs[idx + kNumEventpairs]), ZX_OK, "");
     }
-    eventpairs[kNumEventpairs] = eventpairs[0u];
-    eventpairs[kNumEventpairs + 1] = eventpairs[1u];
+    // Duplicate the values at the start.
+    eventpairs[0u] = eventpairs[kGap];
+    eventpairs[1u] = eventpairs[kGap + 1u];
 
+    // Note that this returns an error value: the duplicated handles
+    // can't be closed twice. Despite this, all handles were closed.
     ASSERT_EQ(zx_handle_close_many(&eventpairs[0u], kNumEventpairs + kGap), ZX_ERR_BAD_HANDLE, "");
 
+    // Assert that every handle in the preceeding close call was in
+    // fact closed, by waiting on the PEER_CLOSED signal.
     for (size_t idx = kNumEventpairs + kGap; idx < 10u; ++idx) {
         zx_signals_t signals;
         ASSERT_EQ(zx_object_wait_one(eventpairs[idx], ZX_EVENTPAIR_PEER_CLOSED,

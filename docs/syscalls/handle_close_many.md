@@ -21,6 +21,9 @@ it exist.
 If a *handle* was used in a pending [object_wait_one](syscalls/object_wait_one.md) or a
 [object_wait_many](syscalls/object_wait_many.md) call, the wait will be aborted.
 
+This operation closes all handles presented to it, even if one or more
+of the handles is duplicate or invalid.
+
 It is not an error to close the special "never a valid handle" **ZX_HANDLE_INVALID**,
 similar to free(NULL) being a valid call.
 
