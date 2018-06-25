@@ -76,12 +76,6 @@ non-zero when neither **ZX_VM_FLAG_SPECIFIC** nor
 
 **ZX_ERR_NO_MEMORY**  (Temporary) Failure due to lack of memory.
 
-## NOTES
-
-A virtual memory object can be larger than the address space, which means you
-should check for overflow before converting the **uint64_t** size of the VMO to
-**vmar_map**'s **size_t** *len* parameter.
-
 ## SEE ALSO
 
 [vmar_allocate](vmar_allocate.md),
