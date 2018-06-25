@@ -685,7 +685,7 @@ zx_status_t PartitionPave(fbl::unique_ptr<DevicePartitioner> partitioner,
         return status;
     }
 
-    if ((status = partitioner->FinalizePartition(Partition::kFuchsiaVolumeManager)) != ZX_OK) {
+    if ((status = partitioner->FinalizePartition(partition_type)) != ZX_OK) {
         ERROR("Failed to finalize partition\n");
         return status;
     }
