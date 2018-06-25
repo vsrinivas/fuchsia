@@ -9,6 +9,7 @@
       "type": "duration",
       "event_name": "Fetch",
       "event_category": "benchmark",
+      "expected_sample_count": 20,
       "split_samples_at": [1]
     }
   ]

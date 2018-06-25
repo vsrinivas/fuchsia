@@ -9,6 +9,7 @@
       "type": "duration",
       "event_name": "put",
       "event_category": "benchmark",
+      "expected_sample_count": 100,
       "split_samples_at": [1]
     }
   ]

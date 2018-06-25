@@ -9,6 +9,7 @@
       "type": "duration",
       "event_name": "get page",
       "event_category": "benchmark",
+      "expected_sample_count": 500,
       "split_samples_at": [1]
     }
   ]

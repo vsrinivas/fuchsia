@@ -10,6 +10,7 @@
       "type": "duration",
       "event_name": "sync latency",
       "event_category": "benchmark",
+      "expected_sample_count": 10,
       "split_samples_at": [1]
     }
   ]

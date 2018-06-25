@@ -10,6 +10,7 @@
       "type": "duration",
       "event_name": "delete_entry",
       "event_category": "benchmark",
+      "expected_sample_count": 100,
       "split_samples_at": [1]
     }
   ]

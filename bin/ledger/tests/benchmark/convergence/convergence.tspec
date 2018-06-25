@@ -8,7 +8,8 @@
     {
       "type": "duration",
       "event_name": "convergence",
-      "event_category": "benchmark"
+      "event_category": "benchmark",
+      "expected_sample_count": 10
     }
   ]
 }
