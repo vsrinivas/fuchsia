@@ -56,6 +56,30 @@ static void aml_gpu_set_clk_freq_source(aml_gpu_t* gpu, int32_t clk_source) {
     current_clk_source = clk_source;
 }
 
+static void aml_gpu_set_initial_clk_freq_source(aml_gpu_t* gpu, int32_t clk_source) {
+    aml_gpu_block_t* gpu_block = gpu->gpu_block;
+    uint32_t current_clk_cntl = READ32_HIU_REG(gpu_block->hhi_clock_cntl_offset);
+    uint32_t enabled_mux = (current_clk_cntl & (1 << FINAL_MUX_BIT_SHIFT)) != 0;
+    uint32_t mux_shift = enabled_mux ? 16 : 0;
+
+    if (current_clk_cntl & (1 << (mux_shift + CLK_ENABLED_BIT_SHIFT))) {
+         aml_gpu_set_clk_freq_source(gpu, clk_source);
+    } else {
+        // Switching the final dynamic mux from a disabled source to an enabled
+        // source doesn't work. If the current clock source is disabled, then
+        // enable it instead of switching.
+        current_clk_cntl &= ~(CLOCK_MUX_MASK << mux_shift);
+        current_clk_cntl |= CALCULATE_CLOCK_MUX(true,
+                            gpu_block->gpu_clk_freq[clk_source], 1) << mux_shift;
+
+        // Write the new values to the existing mux.
+        WRITE32_HIU_REG(gpu_block->hhi_clock_cntl_offset, current_clk_cntl);
+        zx_nanosleep(zx_deadline_after(ZX_USEC(10)));
+        current_clk_source = clk_source;
+    }
+}
+
+
 static void aml_gpu_init(aml_gpu_t* gpu) {
     uint32_t temp;
     aml_gpu_block_t* gpu_block = gpu->gpu_block;
@@ -80,7 +104,7 @@ static void aml_gpu_init(aml_gpu_t* gpu) {
     // value of GPU clock freq which is 500Mhz.
     // In future, the GPU driver in garnet
     // can make an IOCTL to set the default freq
-    aml_gpu_set_clk_freq_source(gpu, 2);
+    aml_gpu_set_initial_clk_freq_source(gpu, 2);
 
     temp = READ32_PRESET_REG(gpu_block->reset0_level_offset);
     temp |= 1 << 20;

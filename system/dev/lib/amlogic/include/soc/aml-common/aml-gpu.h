@@ -34,8 +34,9 @@
 #define WRITE32_PRESET_REG(offset, value)  writel(value, io_buffer_virt(&gpu->preset_buffer) \
                                            + offset*4)
 
+#define CLK_ENABLED_BIT_SHIFT             8
 #define CALCULATE_CLOCK_MUX(enabled, base, divisor) \
-        ((!!(enabled) << 8) | (base << 9) | (divisor - 1))
+        ((!!(enabled) << CLK_ENABLED_BIT_SHIFT) | (base << 9) | (divisor - 1))
 
 #define CLOCK_MUX_MASK                  0xFFF
 
