@@ -25,9 +25,8 @@ void WaitUntilIdle(fidl::InterfacePtr<Interface>* debug_interface_ptr,
                   << " disconnected (check app logs for crash)";
   });
 
-  // We can't just use a synchronous ptr or
-  // |fidl::InterfacePtr::WaitForResponse| because those don't run the message
-  // loop while they wait.
+  // We can't just use a synchronous ptr because t doesn't run the message loop
+  // while it waits.
   (*debug_interface_ptr)->WaitUntilIdle([message_loop] {
     message_loop->PostQuitTask();
   });
