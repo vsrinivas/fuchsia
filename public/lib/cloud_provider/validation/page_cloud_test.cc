@@ -156,9 +156,9 @@ TEST_F(PageCloudTest, AddAndGetCommits) {
             page_cloud->GetCommits(nullptr, &status, &commits, &token).statvs);
   EXPECT_EQ(Status::OK, status);
   EXPECT_EQ(2u, commits->size());
-  EXPECT_FALSE(token);
   EXPECT_TRUE(CheckThatCommitsContain(commits, "id0", "data0"));
   EXPECT_TRUE(CheckThatCommitsContain(commits, "id1", "data1"));
+  EXPECT_TRUE(token);
 }
 
 TEST_F(PageCloudTest, GetCommitsByPositionToken) {
