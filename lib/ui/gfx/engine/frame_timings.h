@@ -35,13 +35,31 @@ class FrameTimings : public escher::Reffable {
 
   void OnFrameRendered(size_t swapchain_index, zx_time_t time);
   void OnFramePresented(size_t swapchain_index, zx_time_t time);
+  void OnFrameDropped(size_t swapchain_index) {
+    OnFramePresented(swapchain_index, ZX_TIME_INFINITE);
+  }
+
+  // Returns true when the frame timing has been passed to the scheduler
+  // and can be discarded.
+  //
+  // Although the actual frame presentation depends on the actual frame
+  // rendering, there is currently no guaranteed ordering between when the
+  // two events are received by the the engine (due to the redispatch
+  // in EventTimestamper).
+  bool finalized() const { return finalized_; }
 
   uint64_t frame_number() const { return frame_number_; }
   zx_time_t target_presentation_time() const {
     return target_presentation_time_;
   }
 
+  bool frame_was_dropped() const {
+    return actual_presentation_time_ == ZX_TIME_INFINITE;
+  }
+  // Should only be called if frame_was_dropped returns false.
   zx_time_t actual_presentation_time() const {
+    FXL_DCHECK(actual_presentation_time_ > 0 &&
+               actual_presentation_time_ != ZX_TIME_INFINITE);
     return actual_presentation_time_;
   }
 
@@ -49,6 +67,11 @@ class FrameTimings : public escher::Reffable {
   // Called once all swapchains have reported back with their render-finished
   // and presentation times.
   void Finalize();
+
+  bool received_all_callbacks() {
+    return frame_rendered_count_ == swapchain_records_.size() &&
+           frame_presented_count_ == swapchain_records_.size();
+  }
 
   struct Record {
     zx_time_t frame_rendered_time = 0;
@@ -61,6 +84,7 @@ class FrameTimings : public escher::Reffable {
   zx_time_t actual_presentation_time_ = 0;
   size_t frame_rendered_count_ = 0;
   size_t frame_presented_count_ = 0;
+  bool finalized_ = false;
 };
 
 }  // namespace gfx

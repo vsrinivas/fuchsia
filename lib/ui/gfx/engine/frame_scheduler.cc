@@ -211,27 +211,32 @@ void FrameScheduler::OnFramePresented(FrameTimings* timings) {
   // receiving signals out-of-order and is therefore generating bogus data.
   FXL_DCHECK(outstanding_frames_[0].get() == timings) << "out-of-order.";
 
-  // TODO(MZ-400): This needs to be generalized for multi-display support.
-  display_->set_last_vsync_time(timings->actual_presentation_time());
+  if (timings->frame_was_dropped()) {
+    TRACE_INSTANT("gfx", "FrameDropped", TRACE_SCOPE_PROCESS, "frame_number",
+                  timings->frame_number());
+  } else {
+    // TODO(MZ-400): This needs to be generalized for multi-display support.
+    display_->set_last_vsync_time(timings->actual_presentation_time());
 
-  // Log trace data.
-  // TODO(MZ-400): just pass the whole Frame to a listener.
-  int64_t target_vs_actual_usecs =
-      static_cast<int64_t>(timings->actual_presentation_time() -
-                           timings->target_presentation_time()) /
-      1000;
+    // Log trace data.
+    // TODO(MZ-400): just pass the whole Frame to a listener.
+    int64_t target_vs_actual_usecs =
+        static_cast<int64_t>(timings->actual_presentation_time() -
+                             timings->target_presentation_time()) /
+        1000;
 
-  zx_time_t now = zx_clock_get(ZX_CLOCK_MONOTONIC);
-  FXL_DCHECK(now >= timings->actual_presentation_time());
-  uint64_t elapsed_since_presentation_usecs =
-      static_cast<int64_t>(now - timings->actual_presentation_time()) / 1000;
+    zx_time_t now = zx_clock_get(ZX_CLOCK_MONOTONIC);
+    FXL_DCHECK(now >= timings->actual_presentation_time());
+    uint64_t elapsed_since_presentation_usecs =
+        static_cast<int64_t>(now - timings->actual_presentation_time()) / 1000;
 
-  TRACE_INSTANT("gfx", "FramePresented", TRACE_SCOPE_PROCESS, "frame_number",
-                timings->frame_number(), "presentation time (usecs)",
-                timings->actual_presentation_time() / 1000,
-                "target time missed by (usecs)", target_vs_actual_usecs,
-                "elapsed time since presentation (usecs)",
-                elapsed_since_presentation_usecs);
+    TRACE_INSTANT("gfx", "FramePresented", TRACE_SCOPE_PROCESS, "frame_number",
+                  timings->frame_number(), "presentation time (usecs)",
+                  timings->actual_presentation_time() / 1000,
+                  "target time missed by (usecs)", target_vs_actual_usecs,
+                  "elapsed time since presentation (usecs)",
+                  elapsed_since_presentation_usecs);
+  }
 
   // Pop the front Frame off the queue.
   for (size_t i = 1; i < outstanding_frames_.size(); ++i) {

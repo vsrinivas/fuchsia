@@ -31,13 +31,24 @@ size_t FrameTimings::AddSwapchain(Swapchain* swapchain) {
 void FrameTimings::OnFrameRendered(size_t swapchain_index, zx_time_t time) {
   FXL_DCHECK(swapchain_index < swapchain_records_.size());
   FXL_DCHECK(frame_rendered_count_ < swapchain_records_.size());
-  FXL_DCHECK(swapchain_records_[swapchain_index].frame_rendered_time == 0);
   FXL_DCHECK(time > 0);
+
+  auto& record = swapchain_records_[swapchain_index];
+  FXL_DCHECK(swapchain_records_[swapchain_index].frame_rendered_time == 0);
+
+  if (record.frame_presented_time > 0 && record.frame_presented_time < time) {
+    // NOTE: Because there is a delay between when rendering is actually
+    // completed and when EventTimestamper generates the timestamp, it's
+    // possible that this timestamp is later than the present timestamp. Since
+    // we know that's actually impossible, adjust the render timestamp to
+    // make it a bit more accurate.
+    time = record.frame_presented_time;
+  }
+
   swapchain_records_[swapchain_index].frame_rendered_time = time;
 
   ++frame_rendered_count_;
-  if (frame_rendered_count_ == swapchain_records_.size() &&
-      frame_presented_count_ == swapchain_records_.size()) {
+  if (received_all_callbacks()) {
     Finalize();
   }
 }
@@ -54,13 +65,15 @@ void FrameTimings::OnFramePresented(size_t swapchain_index, zx_time_t time) {
   }
 
   ++frame_presented_count_;
-  if (frame_rendered_count_ == swapchain_records_.size() &&
-      frame_presented_count_ == swapchain_records_.size()) {
+  if (received_all_callbacks()) {
     Finalize();
   }
 }
 
 void FrameTimings::Finalize() {
+  FXL_DCHECK(!finalized());
+  finalized_ = true;
+
   if (frame_scheduler_) {
     frame_scheduler_->OnFramePresented(this);
   }

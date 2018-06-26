@@ -53,6 +53,12 @@ void DisplayManager::WaitForDefaultDisplay(fit::closure callback) {
         dispatcher->ClientOwnershipChange = [this](auto change) {
           ClientOwnershipChange(change);
         };
+        dispatcher->Vsync = [this](uint64_t display_id, uint64_t timestamp,
+                                   ::fidl::VectorPtr<uint64_t> images) {
+          if (display_id == default_display_->display_id() && vsync_cb_) {
+            vsync_cb_(timestamp, images.get());
+          }
+        };
 
         wait_.set_object(dc_channel_);
         wait_.set_trigger(ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED);
@@ -95,6 +101,23 @@ void DisplayManager::DisplaysChanged(
 
     auto& display = added.get()[0];
     auto& mode = display.modes.get()[0];
+
+    zx_status_t status;
+    bool res = display_controller_->CreateLayer(&status, &layer_id_);
+    if (!res || status != ZX_OK) {
+      FXL_LOG(ERROR) << "Failed to create layer";
+      return;
+    }
+
+    std::vector<uint64_t> layers;
+    layers.push_back(layer_id_);
+    ::fidl::VectorPtr<uint64_t> fidl_layers(std::move(layers));
+    if (!display_controller_->SetDisplayLayers(display.id,
+                                               std::move(fidl_layers))) {
+      FXL_LOG(ERROR) << "Failed to configure display layers";
+      return;
+    }
+
     default_display_ = std::make_unique<Display>(
         display.id, mode.horizontal_resolution, mode.vertical_resolution);
     ClientOwnershipChange(owns_display_controller_);
@@ -158,25 +181,28 @@ uint32_t DisplayManager::FetchLinearStride(uint32_t width,
   return stride;
 }
 
-uint64_t DisplayManager::ImportImage(const zx::vmo& vmo, int32_t width,
-                                     int32_t height, zx_pixel_format_t format) {
-  fuchsia::display::ImageConfig config;
-  config.height = height;
-  config.width = width;
-  config.pixel_format = format;
+void DisplayManager::SetImageConfig(int32_t width, int32_t height,
+                                    zx_pixel_format_t format) {
+  image_config_.height = height;
+  image_config_.width = width;
+  image_config_.pixel_format = format;
 
 #if defined(__x86_64__)
   // IMAGE_TYPE_X_TILED from ddk/protocol/intel-gpu-core.h
-  config.type = 1;
+  image_config_.type = 1;
 #else
   FXL_DCHECK(false) << "Display swapchain only supported on intel";
 #endif
 
+  display_controller_->SetLayerPrimaryConfig(layer_id_, image_config_);
+}
+
+uint64_t DisplayManager::ImportImage(const zx::vmo& vmo) {
   zx::vmo vmo_dup;
   uint64_t id;
   zx_status_t status;
   if (vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &vmo_dup) == ZX_OK &&
-      display_controller_->ImportVmoImage(config, std::move(vmo_dup), 0,
+      display_controller_->ImportVmoImage(image_config_, std::move(vmo_dup), 0,
                                           &status, &id) &&
       status == ZX_OK) {
     return id;
@@ -190,15 +216,18 @@ void DisplayManager::ReleaseImage(uint64_t id) {
 
 void DisplayManager::Flip(Display* display, uint64_t buffer,
                           uint64_t render_finished_event_id,
-                          uint64_t frame_presented_event_id,
                           uint64_t signal_event_id) {
-  bool res = display_controller_->SetDisplayImage(
-      display->display_id(), buffer, render_finished_event_id,
-      frame_presented_event_id, signal_event_id);
+  bool res = display_controller_->SetLayerImage(
+      layer_id_, buffer, render_finished_event_id, signal_event_id);
   res |= display_controller_->ApplyConfig();
 
   // TODO(SCN-244): handle this more robustly.
   FXL_DCHECK(res) << "DisplayManager::Flip failed";
+}
+
+bool DisplayManager::EnableVsync(VsyncCallback vsync_cb) {
+  vsync_cb_ = std::move(vsync_cb);
+  return display_controller_->EnableVsync(true);
 }
 
 }  // namespace gfx
