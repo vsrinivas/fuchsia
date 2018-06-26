@@ -30,7 +30,23 @@ impl Server {
         }
     }
 
-    fn dispatch(&mut self, msg: Message) -> Option<Message> {
+    /// This is a placeholder method intended only for testing.
+    pub fn add_addrs(&mut self, addrs: Vec<Ipv4Addr>) {
+        self.pool.load_pool(addrs);
+    }
+
+    /// This is a placeholder method intended only for testing.
+    pub fn set_config(&mut self, config: ServerConfig) {
+        self.config = config
+    }
+
+    /// Dispatches an incoming DHCP message to the appropriate handler for processing.
+    ///
+    /// If the incoming message is a valid client DHCP message, then the server will attempt to
+    /// take appropriate action to serve the client's request, update the internal server state,
+    /// and return a response message. If the incoming message is invalid, or the server is
+    /// unable to serve the request, then `dispatch()` will return `None`.
+    pub fn dispatch(&mut self, msg: Message) -> Option<Message> {
         match msg.get_dhcp_type() {
             Some(MessageType::DHCPDISCOVER) => self.handle_discover(msg),
             Some(MessageType::DHCPREQUEST) => self.handle_request(msg),
@@ -91,7 +107,7 @@ impl Server {
     }
 
     fn handle_request_selecting(&mut self, req: Message) -> Option<Message> {
-        let requested_ip = get_requested_ip_addr(&req)?;
+        let requested_ip = req.ciaddr;
         if !is_recipient(self.config.server_ip, &req)
             || !is_assigned(&req, requested_ip, &self.cache, &self.pool)
         {
@@ -172,6 +188,14 @@ impl AddressPool {
         }
     }
 
+    fn load_pool(&mut self, addrs: Vec<Ipv4Addr>) {
+        for addr in addrs {
+            if !self.allocated_addrs.contains(&addr) {
+                self.available_addrs.insert(addr);
+            }
+        }
+    }
+
     fn get_next_available_addr(&self) -> Option<Ipv4Addr> {
         let mut iter = self.available_addrs.iter();
         match iter.next() {
@@ -194,11 +218,15 @@ impl AddressPool {
     }
 }
 
+/// A collection of the basic configuration parameters needed by the server. 
 #[derive(Debug)]
-struct ServerConfig {
-    server_ip: Ipv4Addr,
-    default_lease_time: u32,
-    subnet_mask: u8,
+pub struct ServerConfig {
+    /// The IPv4 address of the host running the server.
+    pub server_ip: Ipv4Addr,
+    /// The default time (in seconds) assigned to IP address leases assigned by the server.
+    pub default_lease_time: u32,
+    /// The number of bits to mask the subnet address from the host address in an IPv4Addr.
+    pub subnet_mask: u8,
 }
 
 impl ServerConfig {
@@ -327,7 +355,9 @@ fn get_client_state(msg: &Message) -> ClientState {
     let maybe_requested_ip = get_requested_ip_addr(&msg);
     let zero_ciaddr = Ipv4Addr::new(0, 0, 0, 0);
 
-    if maybe_server_id.is_some() && maybe_requested_ip.is_some() && msg.ciaddr == zero_ciaddr {
+    if maybe_server_id.is_some()
+        && maybe_requested_ip.is_none()
+        && msg.ciaddr != zero_ciaddr {
         return ClientState::Selecting;
     } else if maybe_requested_ip.is_some() && msg.ciaddr == zero_ciaddr {
         return ClientState::InitReboot;
@@ -609,10 +639,12 @@ mod tests {
 
     #[test]
     fn test_dispatch_with_selecting_request_valid_selecting_request_returns_ack() {
-        let req = new_test_request();
+        let mut req = new_test_request();
+        let requested_ip_addr = Ipv4Addr::new(192, 168, 1, 2);
+        req.ciaddr = requested_ip_addr;
+        req.options.remove(0);
 
         let mut server = new_test_server();
-        let requested_ip_addr = Ipv4Addr::new(192, 168, 1, 2);
         server.cache.insert(
             req.chaddr,
             CachedConfig {
@@ -625,12 +657,15 @@ mod tests {
         let got = server.dispatch(req).unwrap();
 
         let mut want = new_test_ack();
+        want.ciaddr = requested_ip_addr;
         assert_eq!(got, want);
     }
 
     #[test]
     fn test_dispatch_with_selecting_request_no_address_allocation_to_client_returns_none() {
-        let req = new_test_request();
+        let mut req = new_test_request();
+        req.ciaddr = Ipv4Addr::new(192, 168, 1, 2);
+        req.options.remove(0);
 
         let mut server = new_test_server();
         let got = server.dispatch(req);
@@ -640,10 +675,12 @@ mod tests {
 
     #[test]
     fn test_dispatch_with_selecting_request_wrong_server_id_returns_none() {
-        let req = new_test_request();
+        let mut req = new_test_request();
+        let requested_ip_addr = Ipv4Addr::new(192, 168, 1, 2);
+        req.ciaddr = requested_ip_addr;
+        req.options.remove(0);
 
         let mut server = new_test_server();
-        let requested_ip_addr = Ipv4Addr::new(192, 168, 1, 2);
         server.cache.insert(
             req.chaddr,
             CachedConfig {
@@ -661,10 +698,12 @@ mod tests {
 
     #[test]
     fn test_dispatch_with_selecting_request_valid_selecting_request_maintains_server_invariants() {
-        let req = new_test_request();
+        let requested_ip_addr = Ipv4Addr::new(192, 168, 1, 2);
+        let mut req = new_test_request();
+        req.ciaddr = requested_ip_addr;
+        req.options.remove(0);
 
         let mut server = new_test_server();
-        let requested_ip_addr = Ipv4Addr::new(192, 168, 1, 2);
         server.cache.insert(
             req.chaddr,
             CachedConfig {
@@ -682,7 +721,10 @@ mod tests {
 
     #[test]
     fn test_dispatch_with_selecting_request_no_address_allocation_maintains_server_invariants() {
-        let req = new_test_request();
+        let requested_ip_addr = Ipv4Addr::new(192, 168, 1, 2);
+        let mut req = new_test_request();
+        req.ciaddr = requested_ip_addr;
+        req.options.remove(0);
 
         let mut server = new_test_server();
         let _ = server.dispatch(req.clone());
@@ -809,7 +851,9 @@ mod tests {
 
     #[test]
     fn test_get_client_state_with_selecting_returns_selecting() {
-        let msg = new_test_request();
+        let mut msg = new_test_request();
+        msg.ciaddr = Ipv4Addr::new(192, 168, 1, 2);
+        msg.options.remove(0);
 
         let got = get_client_state(&msg);
 

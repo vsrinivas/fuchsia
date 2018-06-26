@@ -1,8 +1,0 @@
-{
-    "imports": [
-        "garnet/packages/prod/dhcpd"
-    ],
-    "packages": [
-        "//garnet/bin/dhcpd:dhcpd-tests"
-    ]
-}

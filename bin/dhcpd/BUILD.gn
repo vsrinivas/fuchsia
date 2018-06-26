@@ -3,35 +3,61 @@
 # found in the LICENSE file.
 
 import("//build/rust/rustc_binary.gni")
+import("//build/rust/rustc_library.gni")
 import("//build/package.gni")
 
-rustc_binary("bin") {
-  name = "dhcpd"
+rustc_library("dhcp") {
   with_unit_tests = true
   deps = [
     "//third_party/rust-crates/rustc_deps:byteorder",
+    "//third_party/rust-crates/rustc_deps:bytes",
+  ]
+}
+
+rustc_binary("dhcpd_bin") {
+  source_root = "src/bin/dhcpd.rs"
+  deps = [
+    ":dhcp",
+    "//garnet/public/rust/crates/fuchsia-async",
+    "//third_party/rust-crates/rustc_deps:failure",
+    "//third_party/rust-crates/rustc_deps:futures",
+  ]
+}
+
+rustc_binary("fake_client_bin") {
+  source_root = "src/bin/fake_client.rs"
+  deps = [
+    ":dhcp",
+    "//garnet/public/rust/crates/fuchsia-async",
+    "//third_party/rust-crates/rustc_deps:failure",
+    "//third_party/rust-crates/rustc_deps:futures",
   ]
 }
 
 package("dhcpd") {
   deps = [
-    ":bin",
+    ":dhcpd_bin",
+    ":fake_client_bin",
   ]
-
-  binary = "rust_crates/dhcpd"
+  binaries = [
+    {
+      name = "dhcpd"
+      source = "rust_crates/dhcpd_bin"
+    },
+    {
+      name = "fake_client"
+      source = "rust_crates/fake_client_bin"
+    }
+  ]
+  binary = "rust_crates/dhcpd_bin"
 }
 
-package("dhcpd-tests") {
+package("dhcp_tests") {
   testonly = true
-
   deps = [
-    ":bin"
+    ":dhcp",
   ]
-
   tests = [
-    {
-      name = "dhcpd_bin_test_rustc"
-      dest = "dhcpd_bin_test_rustc"
-    }
+    { name = "dhcp_lib_test_rustc" }
   ]
 }

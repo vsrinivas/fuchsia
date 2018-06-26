@@ -6,6 +6,9 @@
 
 use std::net::Ipv4Addr;
 
+pub const SERVER_PORT: u16 = 67;
+pub const CLIENT_PORT: u16 = 68;
+
 const MAC_ADDR_LEN: usize = 6;
 
 const OP_IDX: usize = 0;

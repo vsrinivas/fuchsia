@@ -13,7 +13,7 @@
         "garnet/packages/tests/debug_agent",
         "garnet/packages/tests/debugserver",
         "garnet/packages/tests/device_settings",
-        "garnet/packages/tests/dhcpd",
+        "garnet/packages/tests/dhcp_tests",
         "garnet/packages/tests/escher",
         "garnet/packages/tests/fidl",
         "garnet/packages/tests/fidl_compatibility_test",
