@@ -17,6 +17,7 @@
 #include <zircon/types.h>
 #include <zxcrypt/volume.h>
 
+#include "debug.h"
 #include "device.h"
 #include "extra.h"
 #include "worker.h"
@@ -30,11 +31,16 @@ int WorkerRun(void* arg) {
 
 } // namespace
 
-Worker::Worker() : device_(nullptr) {}
+Worker::Worker() : device_(nullptr) {
+    LOG_ENTRY();
+}
 
-Worker::~Worker() {}
+Worker::~Worker() {
+    LOG_ENTRY();
+}
 
 zx_status_t Worker::Start(Device* device, const Volume& volume, zx::port&& port) {
+    LOG_ENTRY_ARGS("device=%p, volume=%p, port=%p", device, &volume, &port);
     zx_status_t rc;
 
     if (!device) {
@@ -60,10 +66,10 @@ zx_status_t Worker::Start(Device* device, const Volume& volume, zx::port&& port)
 }
 
 zx_status_t Worker::Loop() {
-    zx_status_t rc;
+    LOG_ENTRY();
     ZX_DEBUG_ASSERT(device_);
+    zx_status_t rc;
 
-    zxlogf(TRACE, "worker %p starting...\n", this);
     zx_port_packet_t packet;
     while (true) {
         // Read request
@@ -78,7 +84,6 @@ zx_status_t Worker::Loop() {
 
         // Dispatch request
         block_op_t* block = reinterpret_cast<block_op_t*>(packet.user.u64[0]);
-        zxlogf(TRACE, "worker %p processing I/O request %p\n", this, block);
         switch (block->command & BLOCK_OP_MASK) {
         case BLOCK_OP_WRITE:
             device_->BlockForward(block, EncryptWrite(block));
@@ -95,10 +100,11 @@ zx_status_t Worker::Loop() {
 }
 
 zx_status_t Worker::EncryptWrite(block_op_t* block) {
+    LOG_ENTRY_ARGS("block=%p", block);
     zx_status_t rc;
-    extra_op_t* extra = BlockToExtra(block, device_->op_size());
 
     // Convert blocks to bytes
+    extra_op_t* extra = BlockToExtra(block, device_->op_size());
     uint32_t length;
     uint64_t offset_dev, offset_vmo;
     if (mul_overflow(block->rw.length, device_->block_size(), &length) ||
@@ -124,6 +130,7 @@ zx_status_t Worker::EncryptWrite(block_op_t* block) {
 }
 
 zx_status_t Worker::DecryptRead(block_op_t* block) {
+    LOG_ENTRY_ARGS("block=%p", block);
     zx_status_t rc;
 
     // Convert blocks to bytes
@@ -160,9 +167,17 @@ zx_status_t Worker::DecryptRead(block_op_t* block) {
 }
 
 zx_status_t Worker::Stop() {
+    LOG_ENTRY();
     zx_status_t rc;
+
     thrd_join(thrd_, &rc);
-    return rc;
+
+    if (rc != ZX_OK) {
+        zxlogf(WARN, "worker exited with error: %s\n", zx_status_get_string(rc));
+        return rc;
+    }
+
+    return ZX_OK;
 }
 
 } // namespace zxcrypt

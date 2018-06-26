@@ -13,11 +13,14 @@
 #include <zircon/listnode.h>
 #include <zircon/types.h>
 
+#include "debug.h"
 #include "extra.h"
 
 namespace zxcrypt {
 
 zx_status_t extra_op_t::Init(block_op_t* block, size_t reserved_blocks) {
+    LOG_ENTRY_ARGS("block=%p, reserved_blocks=%zu", block, reserved_blocks);
+
     list_initialize(&node);
     data = nullptr;
     completion_cb = block->completion_cb;
@@ -47,14 +50,20 @@ zx_status_t extra_op_t::Init(block_op_t* block, size_t reserved_blocks) {
 }
 
 extra_op_t* BlockToExtra(block_op_t* block, size_t op_size) {
+    LOG_ENTRY_ARGS("block=%p, op_size=%zu\n", block, op_size);
     ZX_DEBUG_ASSERT(block);
+
     uint8_t* ptr = reinterpret_cast<uint8_t*>(block);
+
     return reinterpret_cast<extra_op_t*>(ptr + op_size) - 1;
 }
 
 block_op_t* ExtraToBlock(extra_op_t* extra, size_t op_size) {
+    LOG_ENTRY_ARGS("extra=%p, op_size=%zu\n", extra, op_size);
     ZX_DEBUG_ASSERT(extra);
+
     uint8_t* ptr = reinterpret_cast<uint8_t*>(extra + 1);
+
     return reinterpret_cast<block_op_t*>(ptr - op_size);
 }
 
