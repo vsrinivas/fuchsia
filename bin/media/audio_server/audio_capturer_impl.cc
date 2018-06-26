@@ -214,7 +214,8 @@ void AudioCapturerImpl::SetMediaType(fuchsia::media::MediaType media_type) {
 }
 
 void AudioCapturerImpl::SetGain(float gain) {
-  if ((gain < Gain::kMinGain) || (gain > Gain::kMaxGain)) {
+  if ((gain < fuchsia::media::kMutedGain) ||
+      (gain > fuchsia::media::kMaxGain)) {
     FXL_LOG(ERROR) << "Invalid Gain " << gain;
     Shutdown();
     return;
@@ -825,7 +826,7 @@ bool AudioCapturerImpl::MixToIntermediate(uint32_t mix_frames) {
   // If our current capturer gain is muted, we have nothing to do after filling
   // with silence.
   float capture_gain = db_gain_.load();
-  if (capture_gain <= Gain::kMinGain) {
+  if (capture_gain <= fuchsia::media::kMutedGain) {
     return true;
   }
 

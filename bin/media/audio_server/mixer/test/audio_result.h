@@ -7,6 +7,7 @@
 
 #include <cmath>
 #include "garnet/bin/media/audio_server/constants.h"
+#include "garnet/bin/media/audio_server/gain.h"
 #include "garnet/bin/media/audio_server/mixer/test/frequency_set.h"
 
 namespace media {
@@ -226,15 +227,49 @@ class AudioResult {
   //
   // Scale
   //
-  // The nearest-unity scale at which we observe effects on signals.
-  static uint32_t ScaleEpsilon;
-  static constexpr uint32_t kPrevScaleEpsilon =
-      0x0FFFFFFF - (1 << (28 - kAudioPipelineWidth));
+  // The lowest (furthest-from-Unity) AScale with no observable attenuation on
+  // full-scale data (i.e. the smallest AScale indistinguishable from Unity).
+  //
+  // For 24-bit scalar precision, this scalar multiplied by full-scale 1.0
+  // should produce 0.FFFFC0, which (in 18-bit pipeline) exactly rounds up to 1.
+  // With current precision values, this scalar is (0x1000000-0x40)/0x1000000.
+  static constexpr Gain::AScale kMinUnityScale =
+      ((1 << (Gain::kFractionalScaleBits)) -
+       (1 << (Gain::kFractionalScaleBits - kAudioPipelineWidth))) /
+      static_cast<Gain::AScale>(1 << (Gain::kFractionalScaleBits));
 
-  // The lowest scale at which full-scale signals are not reduced to zero.
-  static uint32_t MinScaleNonZero;
-  static constexpr uint32_t kPrevMinScaleNonZero =
-      0x10000000 >> kAudioPipelineWidth;
+  // The highest (closest-to-Unity) AScale with an observable effect on
+  // full-scale (i.e. the largest sub-Unity AScale distinguishable from Unity).
+  //
+  // This const is the smallest discernable decrement below kMinUnityScale.
+  // For 18-bit data and float scale, this equals (0x1000000-0x40-1)/0x1000000.
+  static constexpr Gain::AScale kPrevScaleEpsilon =
+      ((1 << (Gain::kFractionalScaleBits)) -
+       (1 << (Gain::kFractionalScaleBits - kAudioPipelineWidth)) - 1) /
+      static_cast<Gain::AScale>(1 << (Gain::kFractionalScaleBits));
+
+  // The lowest (closest-to-zero) AScale at which full-scale data are not
+  // silenced (i.e. the smallest AScale that is distinguishable from Mute).
+  //
+  // This scalar mirrors kMinUnityScale above. This scalar multiplied by full-
+  // scale should produce 0.000040. For 18-bit pipeline, this exactly rounds up
+  // to the last non-zero value. Given our current precision (18-bit data, float
+  // scale), this scalar is 0x40/0x1000000.
+  static constexpr Gain::AScale kPrevMinScaleNonZero =
+      (1 << (Gain::kFractionalScaleBits - kAudioPipelineWidth)) /
+      static_cast<Gain::AScale>(1 << (Gain::kFractionalScaleBits));
+
+  // The highest (furthest-from-Mute) AScale at which full-scale data are
+  // silenced (i.e. the largest AScale that is indistinguishable from Mute).
+  //
+  // This is kPrevMinScaleNonZero, minus the smallest discernable decrement.
+  // For 18-bit data and float scale, this val is (0x40-1)/0x1000000.
+  static constexpr Gain::AScale kMaxScaleZero =
+      ((1 << (Gain::kFractionalScaleBits - kAudioPipelineWidth)) - 1) /
+      static_cast<Gain::AScale>(1 << (Gain::kFractionalScaleBits));
+
+  static Gain::AScale ScaleEpsilon;
+  static Gain::AScale MinScaleNonZero;
 
   // Dynamic Range
   // (gain integrity and system response at low volume levels)

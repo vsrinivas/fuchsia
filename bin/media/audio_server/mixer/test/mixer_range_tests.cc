@@ -60,17 +60,15 @@ TEST(DynamicRange, Epsilon) {
   AudioResult::LevelToleranceSourceFloat =
       fmax(AudioResult::LevelToleranceSourceFloat, abs(unity_level_db));
 
-  // Accumulator has <28 precision bits: kPrevScaleEpsilon must < 0x0FFFFFFF.
-  static_assert(AudioResult::kPrevScaleEpsilon < Gain::kUnityScale - 1,
-                "kPrevScaleEpsilon should be less than kUnityScale - 1");
-
+  // kMinUnityScale is the lowest (furthest-from-Unity) with no observable
+  // attenuation on float32 (i.e. the smallest indistinguishable from Unity).
   // Just above the 'first detectable reduction' scale; should be same as unity.
-  MeasureSummaryDynamicRange(AudioResult::kPrevScaleEpsilon + 1, &level_db,
-                             &sinad_db);
+  MeasureSummaryDynamicRange(AudioResult::kMinUnityScale, &level_db, &sinad_db);
   EXPECT_EQ(level_db, unity_level_db);
   EXPECT_EQ(sinad_db, unity_sinad_db);
 
-  // kPrevScaleEpsilon: nearest-unity scale at which we see effects on inputs.
+  // kPrevScaleEpsilon is the highest (closest-to-Unity) with observable effect
+  // on full-scale (i.e. largest sub-Unity AScale distinguishable from Unity).
   // At this 'detectable reduction' scale, level and noise floor are reduced.
   MeasureSummaryDynamicRange(AudioResult::kPrevScaleEpsilon,
                              &AudioResult::LevelEpsilonDown,
@@ -260,7 +258,7 @@ void MeasureMixFloor(double* level_mix_db, double* sinad_mix_db) {
   EXPECT_TRUE(mixer->Mix(accum.data(), kFreqTestBufSize, &dst_offset,
                          source.data(), kFreqTestBufSize << kPtsFractionalBits,
                          &frac_src_offset, Mixer::FRAC_ONE,
-                         Gain::kUnityScale >> 1, false));
+                         Gain::kUnityScale * 0.5f, false));
 
   // Accumulate the same (reference-frequency) wave.
   dst_offset = 0;
@@ -268,7 +266,7 @@ void MeasureMixFloor(double* level_mix_db, double* sinad_mix_db) {
   EXPECT_TRUE(mixer->Mix(accum.data(), kFreqTestBufSize, &dst_offset,
                          source.data(), kFreqTestBufSize << kPtsFractionalBits,
                          &frac_src_offset, Mixer::FRAC_ONE,
-                         Gain::kUnityScale >> 1, true));
+                         Gain::kUnityScale * 0.5f, true));
   EXPECT_EQ(kFreqTestBufSize, dst_offset);
   EXPECT_EQ(dst_offset << kPtsFractionalBits,
             static_cast<uint32_t>(frac_src_offset));

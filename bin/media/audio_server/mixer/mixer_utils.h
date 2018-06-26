@@ -26,9 +26,9 @@ namespace mixer {
 
 // Enum used to differentiate between different scaling optimization types.
 enum class ScalerType {
-  MUTED,     // Massive attenuation.  Just skip data.
-  NE_UNITY,  // Non-unity non-zero gain.  Scaling is needed, clipping is not.
-  EQ_UNITY,  // Unity gain.  Neither scaling nor clipping is needed.
+  MUTED,     // Massive attenuation. Just skip data.
+  NE_UNITY,  // Non-unity non-zero gain. Scaling is needed.
+  EQ_UNITY,  // Unity gain. Scaling is not needed.
 };
 
 // Template to read samples and normalize them into signed 18-bit integers
@@ -94,12 +94,7 @@ class SampleScaler<ScaleType, typename std::enable_if<(
                                   ScaleType == ScalerType::NE_UNITY)>::type> {
  public:
   static inline int32_t Scale(int32_t val, Gain::AScale scale) {
-    // Called extremely frequently: 1 COMPARE, 1 MUL, 1 ADD, 1 SHIFT
-    int64_t rounding_val = (val >= 0 ? Gain::kFractionalRoundValue
-                                     : Gain::kFractionalRoundValue - 1);
-    return static_cast<int32_t>(
-        (static_cast<int64_t>(val) * scale + rounding_val) >>
-        Gain::kFractionalScaleBits);
+    return round(scale * val);
   }
 };
 

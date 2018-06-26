@@ -381,9 +381,13 @@ const std::array<double, FrequencySet::kNumReferenceFreqs>
 //
 // Scale
 //
-Gain::AScale AudioResult::ScaleEpsilon = 0x0FFFFFFF;
+// The highest (closest-to-Unity) AScale with an observable effect on
+// full-scale (i.e. the largest sub-Unity AScale distinguishable from Unity).
+Gain::AScale AudioResult::ScaleEpsilon = 0;
 constexpr Gain::AScale AudioResult::kPrevScaleEpsilon;
 
+// The lowest (closest-to-zero) AScale at which full-scale data are not
+// silenced (i.e. the smallest AScale that is distinguishable from Mute).
 Gain::AScale AudioResult::MinScaleNonZero = 0;
 constexpr Gain::AScale AudioResult::kPrevMinScaleNonZero;
 
@@ -573,7 +577,7 @@ void AudioResult::DumpNoiseFloorValues() {
 
 void AudioResult::DumpDynamicRangeValues() {
   printf("\n\n Dynamic Range");
-  printf("\n       Epsilon:  %8x  (%13.6le dB)", AudioResult::ScaleEpsilon,
+  printf("\n       Epsilon:  %10.8f  (%13.6le dB)", AudioResult::ScaleEpsilon,
          GainScaleToDb(AudioResult::ScaleEpsilon));
   printf("  Level: %12.8lf dB  Sinad: %10.6lf dB",
          AudioResult::LevelEpsilonDown, AudioResult::SinadEpsilonDown);
@@ -585,7 +589,7 @@ void AudioResult::DumpDynamicRangeValues() {
   printf("\n       Gain Accuracy:     +/- %12.6le dB",
          AudioResult::DynRangeTolerance);
 
-  printf("\n       MinScale: %8x  (%11.8f dB)", AudioResult::MinScaleNonZero,
+  printf("\n       MinScale: %10.8f  (%11.8f dB)", AudioResult::MinScaleNonZero,
          GainScaleToDb(AudioResult::MinScaleNonZero));
 }
 

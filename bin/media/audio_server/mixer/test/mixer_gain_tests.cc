@@ -22,21 +22,20 @@ using Resampler = media::audio::Mixer::Resampler;
 //
 // Gain tests using the Gain and AScale objects only
 //
-// Test the internally-used inline func that converts fixed-point gain to dB.
+// Test the internally-used inline func that converts AScale gain to dB.
 TEST(Gain, GainScaleToDb) {
   // Unity scale is 0.0dB (no change).
   EXPECT_EQ(GainScaleToDb(Gain::kUnityScale), 0.0f);
 
   // 10x scale-up in amplitude (by definition) is exactly +20.0dB.
-  EXPECT_EQ(GainScaleToDb(Gain::kUnityScale * 10), 20.0f);
+  EXPECT_EQ(GainScaleToDb(Gain::kUnityScale * 10.0f), 20.0f);
 
-  float gain_db = GainScaleToDb(Gain::kUnityScale / 100);
   // 1/100x scale-down in amplitude (by definition) is exactly -40.0dB.
-  EXPECT_EQ(gain_db, -40.0f);
+  EXPECT_EQ(static_cast<float>(GainScaleToDb(Gain::kUnityScale * 0.01f)),
+            -40.0f);
 
-  gain_db = GainScaleToDb(Gain::kUnityScale >> 1);
-  // 1/2x scale-down in amplitude (by calculation) is -6.02059991327962...dB.
-  EXPECT_EQ(gain_db, -6.020600f);  // that val, precise to float32 limitations.
+  EXPECT_EQ(static_cast<float>(GainScaleToDb(Gain::kUnityScale * 0.5f)),
+            -6.020600f);  // 1/2x scale-down by calculation: -6.02059991328..dB.
 }
 
 // Do renderer and output gains correctly combine to produce unity scaling?
@@ -49,13 +48,13 @@ TEST(Gain, Unity) {
   EXPECT_EQ(Gain::kUnityScale, amplitude_scale);
 
   // These positive/negative values should sum to 0.0: UNITY
-  gain.SetRendererGain(Gain::kMaxGain / 2);
-  amplitude_scale = gain.GetGainScale(-Gain::kMaxGain / 2);
+  gain.SetRendererGain(Gain::kMaxGainDb / 2);
+  amplitude_scale = gain.GetGainScale(-Gain::kMaxGainDb / 2);
   EXPECT_EQ(Gain::kUnityScale, amplitude_scale);
 
   // These positive/negative values should sum to 0.0: UNITY
-  gain.SetRendererGain(Gain::kMaxGain);
-  amplitude_scale = gain.GetGainScale(-Gain::kMaxGain);
+  gain.SetRendererGain(Gain::kMaxGainDb);
+  amplitude_scale = gain.GetGainScale(-Gain::kMaxGainDb);
   EXPECT_EQ(Gain::kUnityScale, amplitude_scale);
 }
 
@@ -87,80 +86,59 @@ TEST(Gain, Caching) {
   EXPECT_EQ(expect_amplitude_scale, amplitude_scale);
 }
 
-// System independently limits RendererGain to kMaxGain (24 dB) and OutputGain
+// System independently limits RendererGain to kMaxGainDb (24 dB) and OutputGain
 // to 0, intending for their sum to fit into a fixed-point (4.28) container.
 // MTWN-70 relates to Gain's statefulness. Does it need this complexity?
 TEST(Gain, MaxClamp) {
   Gain gain, expect_gain;
   Gain::AScale amplitude_scale;
 
-  // RendererGain of 2 * kMaxGain is clamped to kMaxGain (+24 dB).
-  gain.SetRendererGain(Gain::kMaxGain * 2);
+  // RendererGain of 2 * kMaxGainDb is clamped to kMaxGainDb (+24 dB).
+  gain.SetRendererGain(Gain::kMaxGainDb * 2);
   amplitude_scale = gain.GetGainScale(0.0f);
   EXPECT_EQ(Gain::kMaxScale, amplitude_scale);
 
-  // System limits RendererGain to kMaxGain, even when the sum is less than 0.
+  constexpr float kScale24DbDown = 0.0630957344f;
+  // System limits RendererGain to kMaxGainDb, even when the sum is less than 0.
   // RenderGain +36dB (clamped to +24dB) plus OutputGain -48dB becomes -24dB.
-  gain.SetRendererGain(Gain::kMaxGain * 1.5f);
-  amplitude_scale = gain.GetGainScale(-2 * Gain::kMaxGain);
-  // A gain_scale value of 0x10270AC represents -24.0dB.
-  EXPECT_EQ(0x10270ACu, amplitude_scale);
+  gain.SetRendererGain(Gain::kMaxGainDb * 1.5f);
+  amplitude_scale = gain.GetGainScale(-2 * Gain::kMaxGainDb);
+  EXPECT_EQ(kScale24DbDown, amplitude_scale);
 
   // This combination (24.05 dB) would even fit into 4.24, but clamps to 24.0dB.
-  gain.SetRendererGain(Gain::kMaxGain);
+  gain.SetRendererGain(Gain::kMaxGainDb);
   amplitude_scale = gain.GetGainScale(0.05f);
   EXPECT_EQ(Gain::kMaxScale, amplitude_scale);
 
   // System limits OutputGain to 0, independent of renderer gain.
-  // RendGain = -kMaxGain, OutGain = 1.0 (limited to 0). Expect -kMaxGain.
-  gain.SetRendererGain(-Gain::kMaxGain);
+  // RendGain = -kMaxGainDb, OutGain = 1.0 (limited to 0). Expect -kMaxGainDb.
+  gain.SetRendererGain(-Gain::kMaxGainDb);
   amplitude_scale = gain.GetGainScale(1.0);
-  EXPECT_EQ(0x10270ACu, amplitude_scale);
+  EXPECT_EQ(kScale24DbDown, amplitude_scale);
 }
 
-// System independently limits RendererGain and OutputGain to kMinGain (-160dB).
-// Is scale set to zero, if either (or the combo) is at or below kMinGain?
+// System independently limits RendererGain and OutputGain to kMinGainDb
+// (-160dB). Is scale set to zero, if either (or the combo) is at or below
+// kMinGainDb?
 TEST(Gain, MinMute) {
   Gain gain;
   Gain::AScale amplitude_scale;
 
-  // if OutputGain <= kMinGain, scale must be 0, regardless of RendererGain
-  gain.SetRendererGain(-2 * Gain::kMinGain);
-  amplitude_scale = gain.GetGainScale(Gain::kMinGain);
-  EXPECT_EQ(0u, amplitude_scale);
+  // if OutputGain <= kMinGainDb, scale must be 0, regardless of RendererGain
+  gain.SetRendererGain(-2 * Gain::kMinGainDb);
+  amplitude_scale = gain.GetGainScale(Gain::kMinGainDb);
+  EXPECT_EQ(0, amplitude_scale);
 
-  // if RendererGain <= kMinGain, scale must be 0, regardless of OutputGain
-  gain.SetRendererGain(Gain::kMinGain);
-  amplitude_scale = gain.GetGainScale(Gain::kMaxGain * 1.2);
-  EXPECT_EQ(0u, amplitude_scale);
+  // if RendererGain <= kMinGainDb, scale must be 0, regardless of OutputGain
+  gain.SetRendererGain(Gain::kMinGainDb);
+  amplitude_scale = gain.GetGainScale(Gain::kMaxGainDb * 1.2);
+  EXPECT_EQ(0, amplitude_scale);
 
-  // if sum of RendererGain and OutputGain <= kMinGain, scale should be 0
+  // if sum of RendererGain and OutputGain <= kMinGainDb, scale should be 0
   // Output gain is just slightly above MinGain, and Render takes us below it
   gain.SetRendererGain(-2.0f);
-  amplitude_scale = gain.GetGainScale(Gain::kMinGain + 1.0f);
-  EXPECT_EQ(0u, amplitude_scale);
-}
-
-// Does GetGainScale round appropriately when converting dB into AScale?
-// SetRendererGain just saves the given float; GetGainScale produces a
-// fixed-point uint32 (4.28 format), truncating (not rounding) in the process.
-TEST(Gain, Precision) {
-  Gain gain;
-  gain.SetRendererGain(-159.99f);
-  Gain::AScale amplitude_scale = gain.GetGainScale(0.0f);
-  EXPECT_EQ(0x00000003u, amplitude_scale);  // ...2.68 rounds up to ...3
-
-  gain.SetRendererGain(-157.696f);
-  amplitude_scale = gain.GetGainScale(0.0f);
-  EXPECT_EQ(0x00000003u, amplitude_scale);  // ...3.499 rounds down to ...3
-
-  gain.SetRendererGain(-0.50f);
-  amplitude_scale = gain.GetGainScale(0.0f);
-  EXPECT_EQ(0x0F1ADF94u, amplitude_scale);  // ...F93.8 rounds to ...F94
-
-  gain.SetRendererGain(Gain::kMaxGain);
-  amplitude_scale = gain.GetGainScale(0.0f);
-  EXPECT_EQ(0xFD9539A4u, amplitude_scale);  // ...A4.4 rounds down to ...A4
+  amplitude_scale = gain.GetGainScale(Gain::kMinGainDb + 1.0f);
+  EXPECT_EQ(0, amplitude_scale);
 }
 
 //
@@ -219,9 +197,10 @@ TEST(Gain, Scaling_Precision) {
   int16_t source[] = {0x7FFF, -0x8000, -1, 1};  // max/min values
   int32_t accum[4];
 
-  // Before, even slightly below unity reduced all positive vals. Now we round.
-  // For this reason, at this gain_scale, resulting audio should be unchanged.
-  Gain::AScale gain_scale = AudioResult::kPrevScaleEpsilon + 1;
+  // kMinUnityScale is the lowest (furthest-from-Unity) with no observable
+  // attenuation on (i.e. the smallest indistinguishable from Unity).
+  // At this gain_scale, audio should be unchanged.
+  Gain::AScale gain_scale = AudioResult::kMinUnityScale;
   MixerPtr mixer = SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_16, 1,
                                48000, 1, 48000, Resampler::SampleAndHold);
   DoMix(std::move(mixer), source, accum, false, fbl::count_of(accum),
@@ -231,7 +210,8 @@ TEST(Gain, Scaling_Precision) {
   NormalizeInt28ToPipelineBitwidth(expect, fbl::count_of(expect));
   EXPECT_TRUE(CompareBuffers(accum, expect, fbl::count_of(accum)));
 
-  // This gain is the first (closest-to-unity) to change a full-scale signal.
+  // The highest (closest-to-Unity) AScale with an observable effect on
+  // full-scale (i.e. the largest sub-Unity AScale distinguishable from Unity).
   gain_scale = AudioResult::kPrevScaleEpsilon;
   mixer = SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_16, 1, 48000, 1,
                       48000, Resampler::SampleAndHold);
@@ -242,17 +222,8 @@ TEST(Gain, Scaling_Precision) {
   expect[1]++;
   EXPECT_TRUE(CompareBuffers(accum, expect, fbl::count_of(accum)));
 
-  // This is lowest gain_scale that produces non-zero from full-scale.
-  // Why "+1"? Differences in negative and positive range; see subsequent check.
-  gain_scale = AudioResult::kPrevMinScaleNonZero + 1;
-  mixer = SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_16, 1, 48000, 1,
-                      48000, Resampler::SampleAndHold);
-  DoMix(std::move(mixer), source, accum, false, fbl::count_of(accum),
-        gain_scale);
-
-  int32_t expect2[] = {1, -1, 0, 0};
-  EXPECT_TRUE(CompareBuffers(accum, expect2, fbl::count_of(accum)));
-
+  // kPrevMinScaleNonZero is the lowest (closest-to-zero) at which full-scale
+  // are not silenced (i.e. the smallest that is distinguishable from Mute).
   // This 'special' scale straddles boundaries: 32767 is reduced to _just_ less
   // than .5 (and rounds in) while -32768 becomes -.50000 (rounding out to -1).
   gain_scale = AudioResult::kPrevMinScaleNonZero;
@@ -261,12 +232,14 @@ TEST(Gain, Scaling_Precision) {
   DoMix(std::move(mixer), source, accum, false, fbl::count_of(accum),
         gain_scale);
 
-  expect2[0] = 0;
+  int32_t expect2[] = {0, -1, 0, 0};
   EXPECT_TRUE(CompareBuffers(accum, expect2, fbl::count_of(accum)));
 
-  // At this gain, even -32768 is reduced to -.49... thus rounds in to 0.
-  // Therefore, nothing should change in the accumulator buffer.
-  gain_scale = AudioResult::kPrevMinScaleNonZero - 1;
+  // kMaxScaleZero is the highest (furthest-from-Mute) AScale that silences
+  // full-scale data (i.e. the largest AScale that is indistinguishable from
+  // Mute). At this gain, even -32768 is reduced to -.49 (rounding to 0). This
+  // mix includes accumulation, thus nothing should change in the accum buffer.
+  gain_scale = AudioResult::kMaxScaleZero;
   mixer = SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_16, 1, 48000, 1,
                       48000, Resampler::SampleAndHold);
   DoMix(std::move(mixer), source, accum, true, fbl::count_of(accum),

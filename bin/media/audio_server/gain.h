@@ -19,9 +19,8 @@ namespace audio {
 // scaling of audio in the mixer pipeline.
 class Gain {
  public:
-  // Amplitude scale factors are currently expressed as 4.28 fixed point
-  // integers stores in unsigned 32 bit integers.
-  using AScale = uint32_t;
+  // Amplitude scale factors are expressed as 32-bit IEEE-754 floating point.
+  using AScale = float;
 
   // constructor
   Gain() : db_target_rend_gain_(0.0f) {}
@@ -29,20 +28,17 @@ class Gain {
   // Audio gains for renderers/capturers and output devices are expressed as
   // floating-point values, in decibels. For each signal path, two gain values
   // are combined and then stored in the API-to-device link (usually
-  // renderer-to-output), as a 4.28 fixed-point amplitude scale factor.
+  // renderer-to-output), as a 32-bit floating-point amplitude multiplier.
   //
   // Examples: Renderer gain + Output gain = combined gain for a playback path.
   // Input device gain + Capturer gain = combined gain for an audio input path.
-  static constexpr unsigned int kFractionalScaleBits = 28;
-  // Used to add 'rounding' to 4.28 samples, before shift-down (truncation).
-  static constexpr unsigned int kFractionalRoundValue =
-      (1u) << (kFractionalScaleBits - 1);
-  static constexpr AScale kUnityScale =
-      (static_cast<AScale>(1u) << kFractionalScaleBits);
-  static constexpr AScale kMaxScale = 0xFD9539A4;  // +24.0 dB: kMaxGain
+  static constexpr unsigned int kFractionalScaleBits = 24;
+  static constexpr float kMinGainDb = fuchsia::media::kMutedGain;
+  static constexpr float kMaxGainDb = fuchsia::media::kMaxGain;
 
-  static constexpr float kMinGain = fuchsia::media::kMutedGain;
-  static constexpr float kMaxGain = fuchsia::media::kMaxGain;
+  static constexpr AScale kUnityScale = 1.0f;
+  static constexpr AScale kMaxScale = 15.8489319f;  // kMaxGainDb is +24.0 dB
+  static constexpr AScale kMinScale = 0.00000001f;  // kMinGainDb is -160.0 dB
 
   // TODO(mpuryear): MTWN-70 Clarify/document/test audio::Gain's thread-safety
   //
@@ -61,7 +57,7 @@ class Gain {
   // capturer API). This will only ever be called by the mixer or the single
   // capturer for this audio path. For performance reasons, values are cached
   // and the scalar recomputed only when needed.
-  Gain::AScale GetGainScale(float output_db_gain);
+  AScale GetGainScale(float output_db_gain);
 
   // Helper function which gives the value of the mute threshold for an
   // amplitude scale value, for any incoming sample format.
@@ -71,17 +67,13 @@ class Gain {
   // actually scale anything). Note: because we normalize all input formats to
   // the same full-scale bounds, this value is identical for all input types.
   // This gain_scale value takes rounding into effect in its calculation.
-  static constexpr AScale MuteThreshold() {
-    return (static_cast<AScale>(1u)
-            << (kFractionalScaleBits - kAudioPipelineWidth)) -
-           1;
-  }
+  static constexpr AScale MuteThreshold() { return kMinScale; }
 
  private:
   std::atomic<float> db_target_rend_gain_;
-  float db_current_rend_gain_ = kMinGain;
-  float db_current_output_gain_ = kMinGain;
-  AScale amplitude_scale_ = 0u;
+  float db_current_rend_gain_ = kMinGainDb;
+  float db_current_output_gain_ = kMinGainDb;
+  AScale combined_gain_scalar_ = 0.0f;
 };
 
 }  // namespace audio
