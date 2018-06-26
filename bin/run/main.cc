@@ -31,24 +31,43 @@ static fuchsia::sys::FileDescriptorPtr CloneFileDescriptor(int fd) {
   return result;
 }
 
+static void consume_arg(int* argc, const char*** argv) {
+  --(*argc);
+  ++(*argv);
+}
+
 int main(int argc, const char** argv) {
   if (argc < 2) {
-    fprintf(stderr, "Usage: run <program> <args>*\n");
+    fprintf(stderr, "Usage: run [-d] <program> <args>*\n");
     return 1;
   }
-  fuchsia::sys::LaunchInfo launch_info;
-  launch_info.url = argv[1];
-  for (int i = 0; i < argc - 2; ++i) {
-    launch_info.arguments.push_back(argv[2 + i]);
-  }
+  // argv[0] is the program name;
+  consume_arg(&argc, &argv);
 
-  launch_info.out = CloneFileDescriptor(STDOUT_FILENO);
-  launch_info.err = CloneFileDescriptor(STDERR_FILENO);
+  bool daemonize = false;
+  if (std::string(argv[0]) == "-d") {
+    daemonize = true;
+    consume_arg(&argc, &argv);
+  }
+  fuchsia::sys::LaunchInfo launch_info;
+  launch_info.url = argv[0];
+  consume_arg(&argc, &argv);
+  while (argc) {
+    launch_info.arguments.push_back(*argv);
+    consume_arg(&argc, &argv);
+  }
 
   // Connect to the Launcher service through our static environment.
   fuchsia::sys::LauncherSync2Ptr launcher;
   fuchsia::sys::ConnectToEnvironmentService(launcher.NewRequest());
 
+  if (daemonize) {
+    launcher->CreateComponent(std::move(launch_info), {});
+    return 0;
+  }
+
+  launch_info.out = CloneFileDescriptor(STDOUT_FILENO);
+  launch_info.err = CloneFileDescriptor(STDERR_FILENO);
   fuchsia::sys::ComponentControllerSync2Ptr controller;
   launcher->CreateComponent(std::move(launch_info), controller.NewRequest());
 

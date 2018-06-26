@@ -4,7 +4,29 @@
 
 import("//build/package.gni")
 
-# Test `run` from the platform's perspective
+# Test `run` with a stubbed launcher implementation
+executable("bin") {
+  testonly = true
+  output_name = "run_tests"
+
+  sources = [
+    "run_tests.cc",
+  ]
+
+  deps = [
+    "//garnet/public/lib/app/cpp",
+    "//garnet/public/lib/app/cpp/testing:fake_launcher",
+    "//garnet/public/lib/app/fidl",
+    "//garnet/public/lib/fidl/cpp",
+    "//garnet/public/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gtest",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/fs",
+  ]
+}
+
+# Test `run` from the platform's perspective, using a real launcher
 executable("run_return_value_test") {
   testonly = true
 
@@ -57,6 +79,7 @@ package("run_tests") {
   testonly = true
 
   deps = [
+    ":bin",
     ":run_return_value_shell_test",
     ":run_return_value_test",
   ]
@@ -67,6 +90,9 @@ package("run_tests") {
     },
     {
       name = "run_return_value_shell_test"
+    },
+    {
+      name = "run_tests"
     },
   ]
 }
