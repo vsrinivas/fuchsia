@@ -21,6 +21,8 @@ executable("root_presenter") {
     "perspective_demo_mode.cc",
     "perspective_demo_mode.h",
     "presentation.h",
+    "presentation_new.cc",
+    "presentation_new.h",
     "presentation_old.cc",
     "presentation_old.h",
     "presentation_switcher.cc",
