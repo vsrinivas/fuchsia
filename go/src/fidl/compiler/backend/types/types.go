@@ -37,6 +37,33 @@ type EncodedLibraryIdentifier string
 
 type EncodedCompoundIdentifier string
 
+func (eli EncodedLibraryIdentifier) Parts() LibraryIdentifier {
+	return ParseLibraryName(eli)
+}
+
+func (eli EncodedLibraryIdentifier) PartsReversed() []string {
+	parts := eli.Parts()
+	partsReversed := make([]string, len(parts))
+	for i, part := range parts {
+		partsReversed[len(parts)-i-1] = string(part)
+	}
+
+	return partsReversed
+}
+
+func (eci EncodedCompoundIdentifier) Parts() CompoundIdentifier {
+	return ParseCompoundIdentifier(eci)
+}
+
+func (eci EncodedCompoundIdentifier) LibraryName() EncodedLibraryIdentifier {
+	parts := strings.SplitN(string(eci), "/", 2)
+	raw_library := ""
+	if len(parts) == 2 {
+		raw_library = parts[0]
+	}
+	return EncodedLibraryIdentifier(raw_library)
+}
+
 func ParseLibraryName(eli EncodedLibraryIdentifier) LibraryIdentifier {
 	raw_parts := strings.Split(string(eli), ".")
 	parts := make([]Identifier, len(raw_parts))

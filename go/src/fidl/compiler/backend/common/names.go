@@ -74,17 +74,32 @@ func ToLowerCamelCase(name string) string {
 	return strings.Join(parts, "")
 }
 
+// Convert text to friendly case style (like snake case, but with spaces)
+func ToFriendlyCase(name string) string {
+	parts := nameParts(name)
+	for i := range parts {
+		parts[i] = strings.ToLower(parts[i])
+	}
+	return strings.Join(parts, " ")
+}
+
 // Convert a const name from kCamelCase to ALL_CAPS_SNAKE style
 func ConstNameToAllCapsSnake(name string) string {
+	parts := nameParts(RemoveLeadingK(name))
+	for i := range parts {
+		parts[i] = strings.ToUpper(parts[i])
+	}
+	return strings.Join(parts, "_")
+}
+
+// Removes a leading 'k' if the second character is upper-case, otherwise
+// returns the argument
+func RemoveLeadingK(name string) string {
 	if len(name) >= 2 && name[0] == 'k' {
 		secondRune, _ := utf8.DecodeRuneInString(name[1:])
 		if unicode.IsUpper(secondRune) {
 			name = name[1:]
 		}
 	}
-	parts := nameParts(name)
-	for i := range parts {
-		parts[i] = strings.ToUpper(parts[i])
-	}
-	return strings.Join(parts, "_")
+	return name
 }

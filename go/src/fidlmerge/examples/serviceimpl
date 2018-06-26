@@ -1,0 +1,415 @@
+{{/*
+
+This is an example fidlmerge template. It generates boilerplate .h and .cc for
+the implementation of a specific interface. Also, there are lots of useful
+templates here that can be copied into new C++-related templates.
+
+Example usage:
+
+fidlmerge -template serviceimpl \
+    -json out/x64/fidling/gen/garnet/public/lib/media/fidl/fidl.fidl.json \
+    -output-base audio_renderer2_impl \
+    -options interface=fuchsia.media/AudioRenderer2
+
+*/}}
+
+
+{{/* Produces a C++ expression for a types.Literal. */}}
+{{- define "Literal" }}
+    {{- if eq .Kind "string" -}}
+        "{{- .Value }}"
+    {{- else if eq .Kind "numeric" }}
+        {{- .Value }}
+    {{- else if eq .Kind "true" -}}
+        true
+    {{- else if eq .Kind "false" -}}
+        false
+    {{- else -}}
+        default
+    {{- end }}
+{{- end }}
+
+
+{{/* Produces a C++ expression for a types.Constant. */}}
+{{- define "Constant" }}
+    {{- if eq .Kind "identifier" }}
+        {{- .Identifier.Parts.Name }}
+    {{- else }}
+        {{- template "Literal" .Literal }}
+    {{- end }}
+{{- end }}
+
+
+{{/* Produces a C++ expression for a types.PrimitiveSubtype. */}}
+{{- define "PrimitiveType" }}
+    {{- if eq . "bool" -}}
+        bool
+    {{- else if eq . "status" -}}
+        zx_status_t
+    {{- else if eq . "float32" -}}
+        float
+    {{- else if eq . "float64" -}}
+        double
+    {{- else }}
+        {{- . }}_t
+    {{- end }}
+{{- end }}
+
+
+{{/* Produces a C++ expression for a types.EncodedCompoundIdentifier. */}}
+{{/* The expression is fully qualified. */}}
+{{- define "QualifiedId" }}
+    {{- range .Parts.Library -}}
+        ::{{ . }}
+    {{- end -}}
+    ::
+    {{- .Parts.Name }}
+{{- end }}
+
+
+{{/* Produces a C++ expression for a types.EncodedCompoundIdentifier. */}}
+{{/* The expression is qualified for use in the subject namespace. */}}
+{{- define "Id" }}
+    {{- if isLocal . }}
+        {{- .Parts.Name }}
+    {{- else }}
+        {{- template "QualifiedId" . }}
+    {{- end }}
+{{- end }}
+
+
+{{/* Produces e.g. "fuchsia/foo/" for a types.EncodedCompoundIdentifier. */}}
+{{- define "IdPrefixDot" }}
+    {{- range .Parts.Library }}
+        {{- . }}.
+    {{- end }}
+{{- end }}
+
+
+{{/* Produces e.g. "fuchsia/foo/" for a types.EncodedCompoundIdentifier. */}}
+{{- define "IdPrefixSlash" }}
+    {{- range .Parts.Library }}
+        {{- . }}/
+    {{- end }}
+{{- end }}
+
+
+{{/* Produces e.g. "fuchsia_foo_" for a types.EncodedCompoundIdentifier. */}}
+{{- define "IdPrefixUnderscore" }}
+    {{- range .Parts.Library }}
+        {{- . }}_
+    {{- end }}
+{{- end }}
+
+
+{{/* Produces a C++ expression for a types.EncodedCompoundIdentifier. */}}
+{{/* The expression is qualified using an underscore-separated namespace prefix. */}}
+{{- define "IdWithUnderscorePrefix" }}
+    {{- template "IdPrefixUnderscore" . }}{{ template "Id" . }}
+{{- end }}
+
+
+{{/* Produces a C++ expression for a types.Type. */}}
+{{- define "Type" }}
+    {{- if eq .Kind "array" -}}
+        ::fidl::Array<{{ template "Type" .ElementType }}, {{ .ElementCount }}>
+    {{- else if eq .Kind "vector" -}}
+        ::fidl::VectorPtr<{{ template "Type" .ElementType }}>
+    {{- else if eq .Kind "string" -}}
+        ::fidl::StringPtr
+    {{- else if eq .Kind "handle" -}}
+        ::zx::{{ .HandleSubtype }}
+    {{- else if eq .Kind "request" -}}
+        ::fidl::InterfaceRequest<{{ template "Id" .RequestSubtype }}>
+    {{- else if eq .Kind "primitive" }}
+        {{- template "PrimitiveType" .PrimitiveSubtype }}
+    {{- else }}
+        {{- $decl_type := declType .Identifier }}
+        {{- if eq $decl_type "const" -}}
+            TODO: Type template, identifier subtype with decl type const
+        {{- else if eq $decl_type "enum" }}
+            {{- template "Id" .Identifier }}
+        {{- else if eq $decl_type "interface" -}}
+            ::fidl::InterfaceHandle<{{ template "Id" .Identifier }}>
+        {{- else if eq $decl_type "struct" }}
+            {{- if .Nullable -}}
+                ::std::unique_ptr<{{ template "Id" .Identifier }}>
+            {{- else }}
+                {{- template "Id" .Identifier }}
+            {{- end }}
+        {{- else -}}
+            {{- template "Id" .Identifier }}
+        {{- end }}
+    {{- end }}
+{{- end }}
+
+
+{{/* Produces a C++ expression for a []types.Parameter. */}}
+{{/* Parameters are comma-separated and unnamed. */}}
+{{- define "ParamTypes" }}
+    {{- if . }}
+        {{- range $index, $parameter := . }}
+            {{- if ne $index 0 }}, {{ end }}{{ template "Type" $parameter.Type }}
+        {{- end }}
+    {{- end }}
+{{- end }}
+
+
+{{/* Produces a C++ expression for a []types.Parameter. */}}
+{{/* Parameters are comma-separated and named. */}}
+{{- define "Params" }}
+    {{- if . }}
+        {{- range $index, $parameter := . }}
+            {{- if ne $index 0 }}, {{ end }}{{- template "Type" $parameter.Type}} {{ $parameter.Name }}
+        {{- end }}
+    {{- end }}
+{{- end }}
+
+
+{{/* Produces a C++ expression for a []types.Parameter. */}}
+{{/* This is used for the response parameters of a sync method. Parameters */}}
+{{/* are comma-separated and named, the names being prefixed with "out_". */}}
+{{/* Parameter types are pointers to the nominal types. */}}
+{{- define "SyncResponseParams" }}
+    {{- if . }}
+        {{- range $index, $parameter := .}}
+            {{- if ne $index 0 }}, {{ end }}{{ template "Type" $parameter.Type }}* out_{{ $parameter.Name }}
+        {{- end }}
+    {{- end }}
+{{- end }}
+
+
+{{/* Produces a C++ parameter list for a types.Method, including the callback. */}}
+{{- define "AsyncMethodParams" }}
+    {{- if .HasRequest }}
+        {{- template "Params" .Request }}
+        {{- if .HasResponse -}}
+            {{ if .Request }}, {{ end }}{{ .Name }}Callback callback
+        {{- end }}
+    {{- end }}
+{{- end }}
+
+
+{{/* Produces a C++ expression for a types.Method. This is used to declare */}}
+{{/* overrides. */}}
+{{- define "OverrideMethodDecl" }}
+    {{- if .HasRequest }}
+  void {{ .Name }}({{ template "AsyncMethodParams" . }}) override;
+    {{- else }}
+  {{ .Name }}Callback {{ .Name }};
+    {{- end }}
+{{- end }}
+
+
+{{/* Produces a C++ expression for a types.Method. This is used to declare */}}
+{{/* abstract methods. */}}
+{{- define "AbstractMethodDecl" }}
+    {{- if .HasResponse }}
+  using {{ .Name }}Callback =
+      fit::function<void({{ template "ParamTypes" .Response }})>;
+    {{- end }}
+    {{- if .HasRequest }}
+  virtual void {{ .Name }}({{ template "AsyncMethodParams" . }}) = 0;
+    {{- end }}
+{{- end }}
+
+
+{{/* Produces a sync C++ parameter list for a types.Method, including the out parameters. */}}
+{{- define "SyncMethodParams" }}
+    {{- template "Params" .Request }}
+    {{- if .HasResponse -}}
+        {{ if and .Request .Response }}, {{ end }}{{ template "SyncResponseParams" .Response }}
+    {{- end -}}
+{{- end }}
+
+
+{{/* Produces a C++ expression for a types.Method. This is used to declare */}}
+{{/* overrides for a sync proxy. */}}
+{{- define "OverrideSyncMethodDecl" }}
+    {{- if .HasRequest }}
+  zx_status_t {{ .Name }}({{ template "SyncMethodParams" . }}) override;
+    {{- end }}
+{{- end }}
+
+
+{{/* Produces a C++ expression for a types.Method. This is used to declare */}}
+{{/* abstract methods for events on a stub. */}}
+{{- define "OverrideEventDecl" }}
+    {{- if not .HasRequest }}
+  void {{ .Name }}({{ template "Params" .Response }}) override;
+    {{- end }}
+{{- end }}
+
+
+{{/* Produces a C++ expression for a types.Method. This is used to declare */}}
+{{/* abstract sync proxy methods. */}}
+{{- define "AbstractSyncMethodDecl" -}}
+    {{- if .HasRequest }}
+  virtual zx_status_t {{ .Name }}({{ template "SyncMethodParams" . }}) = 0;
+    {{- end }}
+{{- end }}
+
+
+{{/* Produces a C++ expression for a types.Method. This is used to declare */}}
+{{/* abstract methods on an event sender. */}}
+{{- define "AbstractEventDecl" }}
+    {{- if not .HasRequest }}
+  virtual void {{ .Name }}({{ template "Params" .Response }}) = 0;
+    {{- end }}
+{{- end }}
+
+
+{{/* Produces the copyright messages for a file header. */}}
+{{/* TODO: variable copyright year. */}}
+{{- define "FileHeader" -}}
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+//
+// WARNING: This file is machine generated by fidlgen.
+{{- end }}
+
+
+{{/* Produces a C++ include statement for a types.EncodedLibraryIdentifier. */}}
+{{- define "FidlInclude" -}}
+    #include <{{ range .Parts }}{{ . }}/{{ end }}cpp/fidl.h>
+{{- end }}
+
+
+{{/* Produces a header for a C++ include file from a template.Root. */}}
+{{- define "IncludeHeader" }}
+    {{- template "FileHeader" }}
+
+#pragma once
+
+{{ template "FidlInclude" .Name }}
+    {{- $this_name := .Name }}
+    {{- range .Libraries }}
+        {{- if ne .Name $this_name }}
+{{ template "FidlInclude" .Name }}
+        {{- end }}
+    {{- end }}
+
+#include "lib/app/cpp/startup_context.h"
+#include "lib/fidl/cpp/binding.h"
+{{/* keep the newline */}}
+    {{- range .Name.Parts }}
+namespace {{ . }} {
+    {{- end }}
+
+{{ end }}
+
+
+{{/* Produces interface declarations for a C++ binding include file from a types.Interface. */}}
+{{- define "InterfaceIncludeDecls" }}
+    {{- $name := .Name.Parts.Name -}}
+class {{ $name }}Impl {
+ public:
+  {{ $name }}Impl(fuchsia::sys::StartupContext* startup_context);
+
+  virtual ~{{ $name }}Impl();
+
+  // {{ $name }} implementation.
+    {{- range .Methods }}
+        {{- if .HasRequest }}
+            {{- template "OverrideMethodDecl" . }}
+{{/* keep the newline */}}
+        {{- end }}
+    {{- end }}
+ private:
+  {{ $name }}Impl(const {{ $name }}&) = delete;
+  {{ $name }}Impl& operator=(const {{ $name }}Impl&) = delete
+
+  fuchsia::sys::StartupContext* startup_context_;
+  fidl::BindingSet<{{ $name }}f> bindings_;
+};
+{{ end }}
+
+
+{{/* Produces declarations for a C++ binding include file from a template.Root. */}}
+{{- define "IncludeDecls" }}
+    {{- $interface := .GetInterface (.GetOptionAsEncodedCompoundIdentifier "interface") }}
+    {{- template "InterfaceIncludeDecls" $interface }}
+{{- end }}
+
+
+{{/* Produces the namespace closing brackets for a C++ binding include file from */}}
+{{/* a template.Root. */}}
+{{- define "IncludeFooter" }}
+    {{- range .Name.PartsReversed -}}
+}  // namespace {{ . }}
+{{/* keep the newline */}}
+    {{- end }}
+{{- end }}
+
+
+{{/* Produces a header for a C++ implementation file from a template.Root. */}}
+{{- define "ImplementationHeader" }}
+    {{- template "FileHeader"}}
+
+#include <{{ range .Name.Parts }}{{ . }}/{{ end }}cpp/fidl.h>
+
+#include "lib/fidl/cpp/internal/implementation.h"
+{{/* keep the newline */}}
+    {{- range .Name.Parts }}
+namespace {{ . }} {
+    {{- end }}
+{{ end }}
+
+
+{{/* Produces interface definitions for a C++ implementation file from a types.Interface. */}}
+{{- define "InterfaceImplementationDefs" }}
+    {{- $interface := . }}
+{{ template "Id" .Name }}Impl::{{ template "Id" .Name }}Impl(fuchsia::sys::StartupContext* startup_context)
+    : startup_context_(startup_context) {}
+
+{{ template "Id" .Name }}Impl::~{{ template "Id" .Name }}Impl() {}
+{{/* keep the newline */}}
+    {{- range .Methods }}
+        {{- if .HasRequest }}
+void {{ template "Id" $interface.Name }}Impl::{{ .Name }}({{ template "AsyncMethodParams" . }}) {}
+{{/* keep the newline */}}
+        {{- end }}
+    {{- end }}
+{{- end }}
+
+
+{{/* Produces definitions for a C++ implementation file from a template.Root. */}}
+{{- define "ImplementationDefs" }}
+    {{- $interface := .GetInterface (.GetOptionAsEncodedCompoundIdentifier "interface") }}
+    {{- template "InterfaceImplementationDefs" $interface }}
+{{- end }}
+
+
+{{/* Produces a footer for a C++ implementation file from a template.Root. */}}
+{{- define "ImplementationFooter" }}
+    {{- range .Name.PartsReversed }}
+}  // namespace {{ . }}
+    {{- end }}
+{{- end }}
+
+
+{{/* Produces a C++ binding include file from a template.Root. */}}
+{{- define "IncludeFile" }}
+    {{- template "IncludeHeader" . }}
+    {{- template "IncludeDecls" . }}
+    {{- template "IncludeFooter" . }}
+{{/* keep the newline */}}
+{{- end }}
+
+
+{{/* Produces a C++ binding implementation file from a template.Root. */}}
+{{- define "ImplementationFile" }}
+    {{- template "ImplementationHeader" . }}
+    {{- template "ImplementationDefs" . }}
+    {{- template "ImplementationFooter" . }}
+{{/* keep the newline */}}
+{{- end }}
+
+
+{{- define "Main" }}
+    {{- $include_path := .Output ".h" }}
+    {{- $implementation_path := .Output ".cc" }}
+    {{ .Generate $include_path "IncludeFile" . }}
+    {{ .Generate $implementation_path "ImplementationFile" . }}
+{{ end }}
