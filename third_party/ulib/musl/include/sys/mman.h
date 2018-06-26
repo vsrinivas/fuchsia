@@ -76,8 +76,6 @@ extern "C" {
 #define MADV_SOFT_OFFLINE 101
 #endif
 
-#include <bits/mman.h>
-
 void* mmap(void*, size_t, int, int, int, off_t);
 int munmap(void*, size_t);
 
