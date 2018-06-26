@@ -1,4 +1,8 @@
 {
+    "imports": [
+        "garnet/packages/benchmarks/run",
+        "peridot/packages/benchmarks/ledger"
+    ],
     "packages": [
         "//peridot/tests/benchmark:peridot_benchmarks"
     ]

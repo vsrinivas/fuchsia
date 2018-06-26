@@ -1,6 +1,6 @@
 {
   "test_suite_name": "fuchsia.ledger",
-  "app": "ledger_benchmark_get_page",
+  "app": "/pkgfs/packages/ledger_benchmarks/0/bin/ledger_benchmark_get_page",
   "args": ["--requests-count=500"],
   "categories": ["benchmark", "ledger"],
   "duration": 120,

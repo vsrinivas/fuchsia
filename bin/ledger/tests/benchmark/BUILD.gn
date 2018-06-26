@@ -2,13 +2,14 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/package.gni")
+
 visibility = [ "//peridot/bin/ledger/*" ]
 
-group("benchmark") {
+package("ledger_benchmarks") {
   testonly = true
 
-  public_deps = [
-    "//peridot/bin/ledger/testing:lib",
+  deps = [
     "//peridot/bin/ledger/tests/benchmark/backlog",
     "//peridot/bin/ledger/tests/benchmark/convergence",
     "//peridot/bin/ledger/tests/benchmark/delete_entry",
@@ -18,5 +19,205 @@ group("benchmark") {
     "//peridot/bin/ledger/tests/benchmark/put",
     "//peridot/bin/ledger/tests/benchmark/sync",
     "//peridot/bin/ledger/tests/benchmark/update_entry",
+  ]
+
+  binaries = [
+    {
+      name = "ledger_benchmark_backlog"
+    },
+
+    {
+      name = "ledger_benchmark_get_page"
+    },
+
+    {
+      name = "ledger_benchmark_delete_entry"
+    },
+
+    {
+      name = "ledger_benchmark_disk_space"
+    },
+
+    {
+      name = "ledger_benchmark_convergence"
+    },
+
+    {
+      name = "ledger_benchmark_fetch"
+    },
+
+    {
+      name = "ledger_benchmark_put"
+    },
+
+    {
+      name = "ledger_benchmark_sync"
+    },
+
+    {
+      name = "ledger_benchmark_update_entry"
+    },
+  ]
+
+  resources = [
+    {
+      path = rebase_path("get_page/add_new_page.tspec")
+      dest = "add_new_page.tspec"
+    },
+
+    {
+      path = rebase_path("backlog/backlog.tspec")
+      dest = "backlog.tspec"
+    },
+
+    {
+      path = rebase_path("backlog/backlog_big_entry.tspec")
+      dest = "backlog_big_entry.tspec"
+    },
+
+    {
+      path = rebase_path("backlog/backlog_big_entry_updates.tspec")
+      dest = "backlog_big_entry_updates.tspec"
+    },
+
+    {
+      path = rebase_path("backlog/backlog_many_big_entries.tspec")
+      dest = "backlog_many_big_entries.tspec"
+    },
+
+    {
+      path = rebase_path("backlog/backlog_many_small_entries.tspec")
+      dest = "backlog_many_small_entries.tspec"
+    },
+
+    {
+      path = rebase_path("backlog/backlog_small_entry_updates.tspec")
+      dest = "backlog_small_entry_updates.tspec"
+    },
+
+    {
+      path = rebase_path("delete_entry/disk_space_cleared_page.tspec")
+      dest = "disk_space_cleared_page.tspec"
+    },
+
+    {
+      path = rebase_path("disk_space/entries.tspec")
+      dest = "disk_space_entries.tspec"
+    },
+
+    {
+      path = rebase_path("disk_space/empty_ledger.tspec")
+      dest = "disk_space_empty_ledger.tspec"
+    },
+
+    {
+      path = rebase_path("disk_space/empty_pages.tspec")
+      dest = "disk_space_empty_pages.tspec"
+    },
+
+    {
+      path = rebase_path("disk_space/one_commit_per_entry.tspec")
+      dest = "disk_space_one_commit_per_entry.tspec"
+    },
+
+    {
+      path = rebase_path("backlog/disk_space_synced_updates.tspec")
+      dest = "disk_space_synced_updates.tspec"
+    },
+
+    {
+      path = rebase_path("backlog/disk_space_synced_entries.tspec")
+      dest = "disk_space_synced_entries.tspec"
+    },
+
+    {
+      path = rebase_path("disk_space/updates.tspec")
+      dest = "disk_space_updates.tspec"
+    },
+
+    {
+      path = rebase_path("get_page/get_same_page.tspec")
+      dest = "get_same_page.tspec"
+    },
+
+    {
+      path = rebase_path("convergence/convergence.tspec")
+      dest = "convergence.tspec"
+    },
+
+    {
+      path = rebase_path("convergence/multidevice_convergence.tspec")
+      dest = "multidevice_convergence.tspec"
+    },
+
+    {
+      path = rebase_path("put/transaction.tspec")
+      dest = "transaction.tspec"
+    },
+
+    {
+      path = rebase_path("put/put.tspec")
+      dest = "put.tspec"
+    },
+
+    {
+      path = rebase_path("put/put_big_entry.tspec")
+      dest = "put_big_entry.tspec"
+    },
+
+    {
+      path = rebase_path("put/put_as_reference.tspec")
+      dest = "put_as_reference.tspec"
+    },
+
+    {
+      path = rebase_path("sync/sync.tspec")
+      dest = "sync.tspec"
+    },
+
+    {
+      path = rebase_path("sync/sync_big_change.tspec")
+      dest = "sync_big_change.tspec"
+    },
+
+    {
+      path = rebase_path("update_entry/update_entry.tspec")
+      dest = "update_entry.tspec"
+    },
+
+    {
+      path = rebase_path("update_entry/update_big_entry.tspec")
+      dest = "update_big_entry.tspec"
+    },
+
+    {
+      path = rebase_path("update_entry/update_entry_transactions.tspec")
+      dest = "update_entry_transactions.tspec"
+    },
+
+    {
+      path = rebase_path("fetch/fetch.tspec")
+      dest = "fetch.tspec"
+    },
+
+    {
+      path = rebase_path("fetch/fetch_partial_big_entry.tspec")
+      dest = "fetch_partial_big_entry.tspec"
+    },
+
+    {
+      path = rebase_path("delete_entry/delete_entry.tspec")
+      dest = "delete_entry.tspec"
+    },
+
+    {
+      path = rebase_path("delete_entry/delete_entry_transactions.tspec")
+      dest = "delete_entry_transactions.tspec"
+    },
+
+    {
+      path = rebase_path("delete_entry/delete_big_entry.tspec")
+      dest = "delete_big_entry.tspec"
+    },
   ]
 }

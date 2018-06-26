@@ -1,5 +1,6 @@
 {
     "imports": [
+        "garnet/packages/benchmarks/run",
         "peridot/packages/prod/modular"
     ],
     "packages": [

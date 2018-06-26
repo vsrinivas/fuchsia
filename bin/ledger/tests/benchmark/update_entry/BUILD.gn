@@ -20,7 +20,6 @@ executable("ledger_benchmark_update_entry") {
     "//garnet/public/lib/fidl/cpp",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
-    "//peridot/bin/ledger/fidl",
     "//peridot/bin/ledger/testing:lib",
     "//peridot/lib/convert",
     "//peridot/public/lib/ledger/fidl",

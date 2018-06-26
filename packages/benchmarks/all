@@ -1,5 +1,6 @@
 {
     "imports": [
+        "peridot/packages/benchmarks/ledger",
         "peridot/packages/benchmarks/modular",
         "peridot/packages/benchmarks/peridot"
     ]

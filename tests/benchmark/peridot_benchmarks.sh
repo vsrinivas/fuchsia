@@ -25,27 +25,27 @@ OUT_DIR="$1"
 
 runbench_exec "${OUT_DIR}/ledger.add_new_page.json" \
     trace record \
-    --spec-file=/system/data/ledger/benchmark/add_new_page.tspec \
+    --spec-file=/pkgfs/packages/ledger_benchmarks/0/data/add_new_page.tspec \
     --benchmark-results-file="${OUT_DIR}/ledger.add_new_page.json"
 
 runbench_exec "${OUT_DIR}/ledger.get_same_page.json" \
     trace record \
-    --spec-file=/system/data/ledger/benchmark/get_same_page.tspec \
+    --spec-file=/pkgfs/packages/ledger_benchmarks/0/data/get_same_page.tspec \
     --benchmark-results-file="${OUT_DIR}/ledger.get_same_page.json"
 
 runbench_exec "${OUT_DIR}/ledger.put.json" \
     trace record \
-    --spec-file=/system/data/ledger/benchmark/put.tspec \
+    --spec-file=/pkgfs/packages/ledger_benchmarks/0/data/put.tspec \
     --benchmark-results-file="${OUT_DIR}/ledger.put.json"
 
 runbench_exec "${OUT_DIR}/ledger.put_as_reference.json" \
     trace record \
-    --spec-file=/system/data/ledger/benchmark/put_as_reference.tspec \
+    --spec-file=/pkgfs/packages/ledger_benchmarks/0/data/put_as_reference.tspec \
     --benchmark-results-file="${OUT_DIR}/ledger.put_as_reference.json"
 
 runbench_exec "${OUT_DIR}/ledger.transaction.json" \
     trace record \
-    --spec-file=/system/data/ledger/benchmark/transaction.tspec \
+    --spec-file=/pkgfs/packages/ledger_benchmarks/0/data/transaction.tspec \
     --benchmark-results-file="${OUT_DIR}/ledger.transaction.json"
 
 # Exit with a code indicating whether any errors occurred.

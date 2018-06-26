@@ -1,6 +1,6 @@
 {
   "test_suite_name": "fuchsia.ledger",
-  "app": "ledger_benchmark_sync",
+  "app": "/pkgfs/packages/ledger_benchmarks/0/bin/ledger_benchmark_sync",
   "args": ["--change-count=10", "--entries-per-change=1", "--value-size=100",
            "--refs=off"],
   "categories": ["benchmark", "ledger"],

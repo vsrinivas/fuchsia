@@ -11,7 +11,8 @@ namespace cloud_provider {
 
 namespace {
 constexpr char kValidationTestsUrl[] =
-    "/system/test/disabled/cloud_provider_validation_tests";
+    "/pkgfs/packages/ledger_tests/0/test/disabled/"
+    "cloud_provider_validation_tests";
 }  // namespace
 
 ValidationTestsLauncher::ValidationTestsLauncher(

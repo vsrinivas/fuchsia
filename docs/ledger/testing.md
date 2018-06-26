@@ -14,7 +14,7 @@ timeout, ensuring that a failing test does not hang forever.
 
 All unit tests in the Ledger tree are built into a single `ledger_unittests`
 binary, that by default can be executed on Fuchsia by running
-`/system/test/ledger_unittests`.
+`/pkgfs/packages/ledger_tests/0/test/ledger_unittests`.
 
 ## Integration tests
 
@@ -26,9 +26,9 @@ Integration tests inherit from [IntegrationTest] and are placed under
 
 All integration tests in the Ledger tree are built into a single
 `ledger_integration_tests` binary, that by default can be executed on Fuchsia by
-running `/system/test/ledger_integration_tests`. Some end-to-end tests
-(synchronization tests, see below) are also run as integration tests using fake
-implementations of cloud services.
+running `/pkgfs/packages/ledger_tests/0/test/ledger_integration_tests`. Some
+end-to-end tests (synchronization tests, see below) are also run as integration
+tests using fake implementations of cloud services.
 
 ## End-to-end tests
 
@@ -45,9 +45,10 @@ tests using fake services.
 
 All local application tests in the Ledger tree are built into a single
 `ledger_e2e_local` binary, that by default can be executed on Fuchsia by running
-`/system/test/ledger_e2e_local`. Synchronization tests are built into a single
-`ledger_e2e_sync` binary, that by default can be executed on Fuchsia by running
-`/system/test/disabled/ledger_e2e_sync`.
+`/pkgfs/packages/ledger_tests/0/test/ledger_e2e_local`. Synchronization tests
+are built into a single `ledger_e2e_sync` binary, that by default can be
+executed on Fuchsia by running
+`/pkgfs/packages/ledger_tests/0/test/disabled/ledger_e2e_sync`.
 
 [Google Test]: https://github.com/google/googletest
 [TestLoopFixture]: /lib/gtest/test_loop_fixture.h

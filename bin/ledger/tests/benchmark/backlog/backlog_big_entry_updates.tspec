@@ -1,6 +1,6 @@
 {
   "test_suite_name": "fuchsia.ledger",
-  "app": "ledger_benchmark_backlog",
+  "app": "/pkgfs/packages/ledger_benchmarks/0/bin/ledger_benchmark_backlog",
   "args": ["--unique-key-count=1", "--value-size=100000", "--commit-count=100",
            "--refs=on"],
   "categories": ["benchmark", "ledger"],

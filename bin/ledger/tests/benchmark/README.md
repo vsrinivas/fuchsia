@@ -12,7 +12,7 @@ The easiest way to run a benchmark is using the associated trace spec file,
 for example:
 
 ```
-trace record --spec-file=/system/data/ledger/benchmark/put.tspec
+trace record --spec-file=/pkgfs/packages/ledger_benchmarks/0/data/put.tspec
 ```
 
 You can read more on the trace spec file format in the [trace-based benchmarking
@@ -22,7 +22,8 @@ guide](https://fuchsia.googlesource.com/garnet/+/master/docs/benchmarking.md#Spe
 You can also trace the app directly:
 
 ```
-trace record --categories=benchmark,ledger ledger_benchmark_put \
+trace record --categories=benchmark,ledger \
+  /pkgfs/packages/ledger_benchmarks/0/bin/ledger_benchmark_put \
   --entry-count=10 --transaction-size=1 --key-size=100 --value-size=100 \
   --refs=off
 ```
@@ -63,7 +64,7 @@ Some benchmarks exercise sync. To run these, pass the ID of a correctly
 [configured] Firebase instance to the benchmark binary. For example:
 
 ```
-trace record --spec-file=/system/data/ledger/benchmark/sync.tspec \
+trace record --spec-file=/pkgfs/packages/ledger_benchmarks/0/data/sync.tspec
   --append-args=--server-id=<my instance>
 ```
 
