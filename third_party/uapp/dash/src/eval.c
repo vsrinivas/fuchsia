@@ -491,13 +491,13 @@ evalsubshell(union node *n, int flags)
 	if (backgnd)
 		n->type = NSUBSHELL;
 
-	char err_msg[FDIO_SPAWN_ERR_MSG_MAX_LENGTH];
-	zx_status_t exec_result = process_subshell(n, envp, &process, jp->zx_job_hndl, NULL, err_msg);
+	const char* errmsg = NULL;
+	zx_status_t exec_result = process_subshell(n, envp, &process, jp->zx_job_hndl, NULL, &errmsg);
         if (exec_result == ZX_OK) {
 		/* Process-tracking management */
 		forkparent(jp, n, backgnd, process);
         } else {
-		sh_error("Failed to create subshell: %d (%s): %s", exec_result, zx_status_get_string(exec_result), err_msg);
+		sh_error("Failed to create subshell (%s): %s", zx_status_get_string(exec_result), errmsg);
 		return exec_result;
 	}
 	status = 0;
@@ -581,9 +581,9 @@ evalpipe(union node *n, int flags)
 			fds[1] = STDOUT_FILENO;
 		}
 		zx_handle_t process;
-		char err_msg[FDIO_SPAWN_ERR_MSG_MAX_LENGTH];
+		const char* errmsg = NULL;
 		const char* const* envp = (const char* const*)environment();
-		zx_status_t status = process_subshell(lp->n, envp, &process, jp->zx_job_hndl, fds, err_msg);
+		zx_status_t status = process_subshell (lp->n, envp, &process, jp->zx_job_hndl, fds, &errmsg);
 		if (fds[0] != STDIN_FILENO)
 			close(fds[0]);
 		if (fds[1] != STDOUT_FILENO)
@@ -593,13 +593,13 @@ evalpipe(union node *n, int flags)
 			forkparent(jp, lp->n, FORK_NOJOB, process);
 		} else {
 			freejob(jp);
-			sh_error("Failed to create shell: %d (%s): %s", status, zx_status_get_string(status), err_msg);
+			sh_error("Failed to create shell: %s: %s", zx_status_get_string(status), errmsg);
 		}
 	}
 
 	if (n->npipe.backgnd == 0) {
 		status = waitforjob(jp);
-		TRACE(("evalpipe:  job done exit status: %d (%s)\n", status, zx_status_get_string(status)));
+		TRACE(("evalpipe:  job done exit status: %s\n", zx_status_get_string(status)));
 	}
 	INTON;
 
@@ -633,14 +633,14 @@ evalbackcmd(union node *n, struct backcmd *result)
 		sh_error("Pipe call failed");
 	jp = makejob(n, 1);
 	zx_handle_t process;
-	char err_msg[FDIO_SPAWN_ERR_MSG_MAX_LENGTH];
+	const char* errmsg = NULL;
 	const char* const* envp = (const char* const*)environment();
 	int fds[3] = { STDIN_FILENO, pip[1], STDERR_FILENO };
-	zx_status_t status = process_subshell(n, envp, &process, jp->zx_job_hndl, &fds[0], err_msg);
+	zx_status_t status = process_subshell(n, envp, &process, jp->zx_job_hndl, &fds[0], &errmsg);
         close(pip[1]);
 	if (status != ZX_OK) {
 		freejob(jp);
-		sh_error("Failed to create subshell: %d (%s): %s", status, zx_status_get_string(status), err_msg);
+		sh_error("Failed to create subshell: %s: %s", zx_status_get_string(status), errmsg);
 	} else {
                 /* Process-tracking management */
 		forkparent(jp, n, FORK_NOJOB, process);
@@ -859,13 +859,16 @@ bail:
 		zx_handle_t zx_job_hndl;
 		zx_status_t zx_status = zx_job_create(zx_job_default(), 0, &zx_job_hndl);
 		if (zx_status != ZX_OK) {
-			sh_error("Cannot create child process: %d (%s)", zx_status, zx_status_get_string(zx_status));
+			sh_error("Cannot create child process: %d: %s: %s", zx_status,
+		                 zx_status_get_string(zx_status), errmsg);
 			break;
 		}
-		char err_msg[FDIO_SPAWN_ERR_MSG_MAX_LENGTH];
-		status = process_launch((const char* const*)argv, path, cmdentry.u.index, &process, zx_job_hndl, &zx_status, err_msg);
+		const char* errmsg = NULL;
+		status = process_launch(argc, (const char* const*)argv, path,
+		                        cmdentry.u.index, &process, zx_job_hndl, &zx_status, &errmsg);
 		if (status) {
-			sh_error("Cannot create child process: %d (%s): %s", zx_status, zx_status_get_string(zx_status), err_msg);
+			sh_error("Cannot create child process: %d: %s: %s", zx_status,
+		                 zx_status_get_string(zx_status), errmsg);
 			break;
 		}
 		settitle(argv[0]);
