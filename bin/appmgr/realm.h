@@ -81,7 +81,7 @@ class Realm : public ComponentContainer<ComponentControllerImpl> {
       fidl::InterfaceRequest<fuchsia::sys::Environment> environment);
 
   zx_status_t BindSvc(zx::channel channel);
-  void CreateShell(const std::string& path);
+  void CreateShell(const std::string& path, zx::channel svc);
 
  private:
   static uint32_t next_numbered_label_;
@@ -103,7 +103,7 @@ class Realm : public ComponentContainer<ComponentControllerImpl> {
       fidl::InterfaceRequest<fuchsia::sys::ComponentController> controller,
       fxl::RefPtr<Namespace> ns, ComponentObjectCreatedCallback callback);
 
-  zx::channel OpenRootInfoDir();
+  zx::channel OpenInfoDir();
 
   Realm* const parent_;
   fuchsia::sys::LoaderPtr loader_;

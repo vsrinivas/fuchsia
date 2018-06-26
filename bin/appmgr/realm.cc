@@ -206,13 +206,8 @@ Realm::Realm(RealmArgs args)
 
 Realm::~Realm() { job_.kill(); }
 
-zx::channel Realm::OpenRootInfoDir() {
-  // TODO: define /hub access policy: CP-26
-  Realm* root_realm = this;
-  while (root_realm->parent() != nullptr) {
-    root_realm = root_realm->parent();
-  }
-  return Util::OpenAsDirectory(&info_vfs_, root_realm->hub_dir());
+zx::channel Realm::OpenInfoDir() {
+  return Util::OpenAsDirectory(&info_vfs_, hub_dir());
 }
 
 HubInfo Realm::HubInfo() {
@@ -244,9 +239,14 @@ void Realm::CreateNestedJob(
       std::move(root_realm->svc_channel_server_));
 
   if (run_virtual_console_) {
-    child->CreateShell("/boot/bin/run-vc");
-    child->CreateShell("/boot/bin/run-vc");
-    child->CreateShell("/boot/bin/run-vc");
+    // TODO(anmittal): remove svc hardcoding once we no longer need to launch
+    // shell with sysmgr services, i.e once we have chrealm.
+    CreateShell("/boot/bin/run-vc",
+                child->default_namespace_->OpenServicesAsDirectory());
+    CreateShell("/boot/bin/run-vc",
+                child->default_namespace_->OpenServicesAsDirectory());
+    CreateShell("/boot/bin/run-vc",
+                child->default_namespace_->OpenServicesAsDirectory());
   }
 }
 
@@ -303,8 +303,7 @@ void Realm::CreateComponent(
       }));
 }
 
-void Realm::CreateShell(const std::string& path) {
-  zx::channel svc = default_namespace_->OpenServicesAsDirectory();
+void Realm::CreateShell(const std::string& path, zx::channel svc) {
   if (!svc)
     return;
 
@@ -313,7 +312,7 @@ void Realm::CreateShell(const std::string& path) {
 
   NamespaceBuilder builder;
   builder.AddServices(std::move(svc));
-  builder.AddSandbox(sandbox, [this] { return OpenRootInfoDir(); });
+  builder.AddSandbox(sandbox, [this] { return OpenInfoDir(); });
 
   fsl::SizedVmo executable;
   if (!fsl::VmoFromFilename(path, &executable))
@@ -500,7 +499,7 @@ void Realm::CreateComponentFromPackage(
     if (sandbox.HasFeature("shell"))
       loader_service.reset();
 
-    builder.AddSandbox(sandbox, [this] { return OpenRootInfoDir(); });
+    builder.AddSandbox(sandbox, [this] { return OpenInfoDir(); });
   }
 
   // Add the custom namespace.

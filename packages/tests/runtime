@@ -4,6 +4,7 @@
     ],
     "packages": [
         "//garnet/bin/appmgr:appmgr_unittests",
-        "//garnet/bin/appmgr:appmgr_integrationtests"
+        "//garnet/bin/appmgr:appmgr_integrationtests",
+        "//garnet/bin/glob"
     ]
 }
