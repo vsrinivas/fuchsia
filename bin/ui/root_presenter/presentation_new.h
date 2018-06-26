@@ -44,38 +44,26 @@
 
 namespace root_presenter {
 
-// This class creates a view tree and sets up rendering of a new scene to
+// This class creates a root ViewHolder and sets up rendering of a new scene to
 // display the graphical content of the view passed to |PresentScene()|.  It
 // also wires up input dispatch and manages the mouse cursor.
 //
-// The view tree consists of a root view which is implemented by this class
-// and which has the presented (content) view as its child.
+// The root ViewHolder has the presented (content) view as its child.
 //
 // The scene's node tree has the following structure:
 // + Scene
-//   + RootViewHost
-//     + link: root_view_host_import_token
-//       + RootView's view manager stub
-//         + link: root_view_parent_export_token
-//           + RootView
-//             + link: content_view_host_import_token
-//               + child: ContentViewHost
+//   + RootNode
+//     + ViewHolderNode
+//       + ViewHolder
 //           + link: Content view's actual content
 //   + child: cursor 1
 //   + child: cursor N
-class PresentationNew : private ::fuchsia::ui::views_v1::ViewTreeListener,
-                        private ::fuchsia::ui::views_v1::ViewListener,
-                        private ::fuchsia::ui::views_v1::ViewContainerListener,
-                        public Presentation {
+//
+class PresentationNew : public Presentation {
  public:
-  // Callback when the presentation yields to the next/previous one.
-  using YieldCallback = fit::function<void(bool yield_to_next)>;
-  // Callback when the presentation is shut down.
-  using ShutdownCallback = fit::closure;
-
-  PresentationNew(::fuchsia::ui::views_v1::ViewManager* view_manager,
-                  fuchsia::ui::scenic::Scenic* scenic,
-                  scenic_lib::Session* session, RendererParams renderer_params);
+  PresentationNew(fuchsia::ui::scenic::Scenic* scenic,
+                  scenic_lib::Session* session, zx::eventpair view_holder_token,
+                  RendererParams renderer_params);
 
   ~PresentationNew() override;
 
@@ -83,11 +71,10 @@ class PresentationNew : private ::fuchsia::ui::views_v1::ViewTreeListener,
   // Invokes the callback if an error occurs.
   // This method must be called at most once for the lifetime of the
   // presentation.
-  void Present(::fuchsia::ui::views_v1_token::ViewOwnerPtr view_owner,
-               fidl::InterfaceRequest<fuchsia::ui::policy::Presentation>
-                   presentation_request,
-               YieldCallback yield_callback,
-               ShutdownCallback shutdown_callback);
+  void PresentView(::fidl::InterfaceRequest<fuchsia::ui::policy::Presentation>
+                       presentation_request,
+                   YieldCallback yield_callback,
+                   ShutdownCallback shutdown_callback);
 
   void OnReport(uint32_t device_id,
                 fuchsia::ui::input::InputReport report) override;
@@ -130,23 +117,21 @@ class PresentationNew : private ::fuchsia::ui::views_v1::ViewTreeListener,
   friend class DisplaySizeSwitcher;
   friend class PresentationSwitcher;
 
+  // Used to receive a ViewDisconnected event, which causes root_presenter to
+  // shut down; can handle other Scenic events in the future.
+  void HandleScenicEvent(const fuchsia::ui::scenic::Event& event);
+
+  // Dispatches events to HandleScenicEvent(). Expected to be called on the same
+  // thread the Session was created on (which also creates a SessionListener),
+  // which is our main thread.
+  void HandleScenicEvents(fidl::VectorPtr<fuchsia::ui::scenic::Event>);
+
   // Sets |display_metrics_| and updates view_manager and Scenic.
   // Returns false if the updates were skipped (if display initialization hasn't
   // happened yet).
   bool ApplyDisplayModelChanges(bool print_log, bool present_changes) override;
 
   bool ApplyDisplayModelChangesHelper(bool print_log);
-
-  // |ViewContainerListener|:
-  void OnChildAttached(uint32_t child_key,
-                       ::fuchsia::ui::views_v1::ViewInfo child_view_info,
-                       OnChildAttachedCallback callback) override;
-  void OnChildUnavailable(uint32_t child_key,
-                          OnChildUnavailableCallback callback) override;
-
-  // |ViewListener|:
-  void OnPropertiesChanged(::fuchsia::ui::views_v1::ViewProperties properties,
-                           OnPropertiesChangedCallback callback) override;
 
   // |Presentation|
   void EnableClipping(bool enabled) override;
@@ -201,11 +186,6 @@ class PresentationNew : private ::fuchsia::ui::views_v1::ViewTreeListener,
       fidl::InterfaceHandle<fuchsia::ui::policy::PresentationModeListener>
           listener) override;
 
-  void CreateViewTree(::fuchsia::ui::views_v1_token::ViewOwnerPtr view_owner,
-                      fidl::InterfaceRequest<fuchsia::ui::policy::Presentation>
-                          presentation_request,
-                      fuchsia::ui::gfx::DisplayInfo display_info);
-
   // Returns true if the event was consumed and the scene is to be invalidated.
   bool GlobalHooksHandleEvent(const fuchsia::ui::input::InputEvent& event);
 
@@ -215,7 +195,6 @@ class PresentationNew : private ::fuchsia::ui::views_v1::ViewTreeListener,
   void PresentScene();
   void Shutdown();
 
-  ::fuchsia::ui::views_v1::ViewManager* const view_manager_;
   fuchsia::ui::scenic::Scenic* const scenic_;
   scenic_lib::Session* const session_;
 
@@ -227,12 +206,10 @@ class PresentationNew : private ::fuchsia::ui::views_v1::ViewTreeListener,
   scenic_lib::AmbientLight ambient_light_;
   glm::vec3 light_direction_;
   scenic_lib::DirectionalLight directional_light_;
-  scenic_lib::EntityNode root_view_host_node_;
-  zx::eventpair root_view_host_import_token_;
-  scenic_lib::ImportNode root_view_parent_node_;
-  zx::eventpair root_view_parent_export_token_;
-  scenic_lib::EntityNode content_view_host_node_;
-  zx::eventpair content_view_host_import_token_;
+  scenic_lib::EntityNode view_holder_node_;
+  scenic_lib::EntityNode root_node_;
+  scenic::ViewHolder view_holder_;
+
   scenic_lib::RoundedRectangle cursor_shape_;
   scenic_lib::Material cursor_material_;
 
@@ -264,17 +241,7 @@ class PresentationNew : private ::fuchsia::ui::views_v1::ViewTreeListener,
   fuchsia::math::PointF mouse_coordinates_;
 
   fidl::Binding<fuchsia::ui::policy::Presentation> presentation_binding_;
-  fidl::Binding<::fuchsia::ui::views_v1::ViewTreeListener>
-      tree_listener_binding_;
-  fidl::Binding<::fuchsia::ui::views_v1::ViewContainerListener>
-      tree_container_listener_binding_;
-  fidl::Binding<::fuchsia::ui::views_v1::ViewContainerListener>
-      view_container_listener_binding_;
-  fidl::Binding<::fuchsia::ui::views_v1::ViewListener> view_listener_binding_;
 
-  ::fuchsia::ui::views_v1::ViewTreePtr tree_;
-  ::fuchsia::ui::views_v1::ViewContainerPtr tree_container_;
-  ::fuchsia::ui::views_v1::ViewContainerPtr root_container_;
   fuchsia::ui::input::InputDispatcherPtr input_dispatcher_;
 
   // Rotates the display 180 degrees in response to events.

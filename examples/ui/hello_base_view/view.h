@@ -16,9 +16,10 @@ namespace hello_base_view {
 // of shadertoy_client.
 class ShadertoyEmbedderView : public scenic::BaseView {
  public:
-  ShadertoyEmbedderView(fuchsia::sys::StartupContext* startup_context,
-                        fuchsia::ui::scenic::Scenic* scenic,
-                        zx::eventpair view_token);
+  ShadertoyEmbedderView(
+      fuchsia::sys::StartupContext* startup_context,
+      scenic::SessionPtrAndListenerRequest session_and_listener_request,
+      zx::eventpair view_token);
   ~ShadertoyEmbedderView();
 
   void LaunchShadertoyClient();

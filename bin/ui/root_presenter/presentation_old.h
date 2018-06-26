@@ -68,11 +68,6 @@ class PresentationOld : private ::fuchsia::ui::views_v1::ViewTreeListener,
                         private ::fuchsia::ui::views_v1::ViewContainerListener,
                         public Presentation {
  public:
-  // Callback when the presentation yields to the next/previous one.
-  using YieldCallback = fit::function<void(bool yield_to_next)>;
-  // Callback when the presentation is shut down.
-  using ShutdownCallback = fit::closure;
-
   PresentationOld(::fuchsia::ui::views_v1::ViewManager* view_manager,
                   fuchsia::ui::scenic::Scenic* scenic,
                   scenic_lib::Session* session, RendererParams renderer_params);

@@ -10,6 +10,7 @@
 #include "lib/app/cpp/startup_context.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/log_settings_command_line.h"
+#include "lib/ui/scenic/cpp/view_provider_service.h"
 
 using namespace hello_base_view;
 
@@ -20,6 +21,15 @@ int main(int argc, const char** argv) {
   if (!fxl::SetLogSettingsFromCommandLine(command_line))
     return 1;
 
+  const bool kUseRootPresenter = command_line.HasOption("use_root_presenter");
+  const bool kUseExamplePresenter =
+      command_line.HasOption("use_example_presenter");
+
+  if (kUseRootPresenter && kUseExamplePresenter) {
+    FXL_LOG(ERROR)
+        << "Cannot set both --use_root_presenter and --use_example_presenter";
+    exit(0);
+  }
   async::Loop loop(&kAsyncLoopConfigMakeDefault);
   auto startup_context = fuchsia::sys::StartupContext::CreateFromStartupInfo();
 
@@ -30,16 +40,6 @@ int main(int argc, const char** argv) {
     FXL_LOG(INFO) << "Lost connection to Scenic.";
     loop.Quit();
   });
-
-  // TODO(SCN-805): We run an implementation of Presenter in-process, which
-  // talks directly to Scenic (not RootPresenter).  This means that
-  // hello_base_view cannot be run as a normal embedded app.  The purpose of
-  // this is to illustrate something analogous to how, at the Peridot layer of
-  // Fuchsia, the device_runner hooks up the device_shell to the root presenter.
-  //
-  // NOTE: although the presenter and the view share the same Scenic, each of
-  // them creates their own Scenic Session.
-  ExamplePresenter presenter(scenic.get());
 
   // We need to attach ourselves to a Presenter. To do this, we create a pair of
   // tokens, and use one to create a View locally (which we attach the rest of
@@ -62,24 +62,61 @@ int main(int argc, const char** argv) {
     return 1;
   }
 
-  // This would typically be done by the root Presenter.
-  scenic->GetDisplayInfo(
-      [&presenter, token{std::move(view_holder_token)}](
-          fuchsia::ui::gfx::DisplayInfo display_info) mutable {
-        presenter.Init(static_cast<float>(display_info.width_in_px),
-                       static_cast<float>(display_info.height_in_px));
-        presenter.PresentView(std::move(token), nullptr);
-      });
+  fuchsia::ui::policy::Presenter2Ptr root_presenter;
+  std::unique_ptr<ExamplePresenter> example_presenter;
+  std::unique_ptr<scenic::ViewProviderService> view_provider_service;
+  std::unique_ptr<ShadertoyEmbedderView> view;
 
-  // As described above, instead of launching the view in another app we create
-  // it here and pass it the view token (which will be used to create a Scenic
-  // View resource that corresponds to the presenter's ViewHolder).
-  ShadertoyEmbedderView view(startup_context.get(), scenic.get(),
-                             std::move(view_token));
+  if (kUseRootPresenter || kUseExamplePresenter) {
+    // Instead of launching the view in another app we create it here and pass
+    // it the view token (which will be used to create a Scenic View resource
+    // that corresponds to the presenter's ViewHolder).
+    view = std::make_unique<ShadertoyEmbedderView>(
+        startup_context.get(),
+        scenic::CreateScenicSessionPtrAndListenerRequest(scenic.get()),
+        std::move(view_token));
 
-  // ShadertoyEmbedderView inherits from scenic::BaseView, which makes it easy
-  // to launch and embed child apps.
-  view.LaunchShadertoyClient();
+    if (kUseRootPresenter) {
+      FXL_LOG(INFO) << "Using root presenter.";
+      root_presenter =
+          startup_context
+              ->ConnectToEnvironmentService<fuchsia::ui::policy::Presenter2>();
+      root_presenter->PresentView(std::move(view_holder_token), nullptr);
+    } else if (kUseExamplePresenter) {
+      FXL_LOG(INFO) << "Using example presenter.";
+      // NOTE: although the presenter and the view share the same Scenic, each
+      // of them creates their own Scenic Session.
+      example_presenter = std::make_unique<ExamplePresenter>(scenic.get());
+      // This would typically be done by the root Presenter.
+      scenic->GetDisplayInfo(
+          [&example_presenter,
+           view_holder_token = std::move(view_holder_token)](
+              fuchsia::ui::gfx::DisplayInfo display_info) mutable {
+            example_presenter->Init(
+                static_cast<float>(display_info.width_in_px),
+                static_cast<float>(display_info.height_in_px));
+            example_presenter->PresentView(std::move(view_holder_token),
+                                           nullptr);
+          });
+    }
+
+    // ShadertoyEmbedderView inherits from scenic::BaseView, which makes it easy
+    // to launch and embed child apps.
+    view->LaunchShadertoyClient();
+  } else {
+    // Expose a view provider service that will create a ShadertoyEmbedderView
+    // when asked.
+    FXL_LOG(INFO) << "Launching view provider service.";
+    view_provider_service = std::make_unique<scenic::ViewProviderService>(
+        startup_context.get(), scenic.get(), [](scenic::ViewFactoryArgs args) {
+          auto view = std::make_unique<ShadertoyEmbedderView>(
+              args.startup_context,
+              std::move(args.session_and_listener_request),
+              std::move(args.view_token));
+          view->LaunchShadertoyClient();
+          return view;
+        });
+  }
 
   loop.Run();
   return 0;

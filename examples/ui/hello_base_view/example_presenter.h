@@ -28,10 +28,6 @@ class ExamplePresenter : private fuchsia::ui::policy::Presenter2 {
                    ::fidl::InterfaceRequest<fuchsia::ui::policy::Presentation>
                        ignored) override;
 
-  void PresentLayer(zx::eventpair layer_import_token) override {
-    FXL_CHECK(false) << "Not implemented, not called.";
-  }
-
   void Init(float width, float height);
 
  private:

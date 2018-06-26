@@ -13,6 +13,7 @@
 #include <fuchsia/ui/policy/cpp/fidl.h>
 #include <fuchsia/ui/views_v1/cpp/fidl.h>
 #include "garnet/bin/ui/input_reader/input_reader.h"
+#include "garnet/bin/ui/root_presenter/presentation_new.h"
 #include "garnet/bin/ui/root_presenter/presentation_old.h"
 #include "lib/app/cpp/startup_context.h"
 #include "lib/fidl/cpp/binding_set.h"
@@ -32,6 +33,7 @@ class PresentationOld;
 // Any number of view trees can be created, although multi-display support
 // and input routing is not fully supported (TODO).
 class App : public fuchsia::ui::policy::Presenter,
+            public fuchsia::ui::policy::Presenter2,
             public fuchsia::ui::input::InputDeviceRegistry,
             public mozart::InputDeviceImpl::Listener {
  public:
@@ -44,17 +46,23 @@ class App : public fuchsia::ui::policy::Presenter,
                 fuchsia::ui::input::InputReport report) override;
 
  private:
-  // |Presenter|:
+  // |Presenter|
   void Present(fidl::InterfaceHandle<::fuchsia::ui::views_v1_token::ViewOwner>
                    view_owner,
                fidl::InterfaceRequest<fuchsia::ui::policy::Presentation>
                    presentation_request) override;
 
+  // |Presenter|
   void HACK_SetRendererParams(
       bool enable_clipping,
       ::fidl::VectorPtr<fuchsia::ui::gfx::RendererParam> params) override;
 
-  // |InputDeviceRegistry|:
+  // |Presenter2|
+  void PresentView(zx::eventpair view_holder_token,
+                   ::fidl::InterfaceRequest<fuchsia::ui::policy::Presentation>
+                       presentation_request) override;
+
+  // |InputDeviceRegistry|
   void RegisterDevice(fuchsia::ui::input::DeviceDescriptor descriptor,
                       fidl::InterfaceRequest<fuchsia::ui::input::InputDevice>
                           input_device_request) override;
@@ -62,12 +70,18 @@ class App : public fuchsia::ui::policy::Presenter,
   void InitializeServices();
   void Reset();
 
+  void AddPresentation(std::unique_ptr<Presentation> presentation);
   void SwitchToPresentation(size_t presentation_idx);
   void SwitchToNextPresentation();
   void SwitchToPreviousPresentation();
 
+  Presentation::YieldCallback GetYieldCallback();
+  Presentation::ShutdownCallback GetShutdownCallback(
+      Presentation* presentation);
+
   std::unique_ptr<fuchsia::sys::StartupContext> startup_context_;
   fidl::BindingSet<fuchsia::ui::policy::Presenter> presenter_bindings_;
+  fidl::BindingSet<fuchsia::ui::policy::Presenter2> presenter2_bindings_;
   fidl::BindingSet<fuchsia::ui::input::InputDeviceRegistry>
       input_receiver_bindings_;
   mozart::InputReader input_reader_;

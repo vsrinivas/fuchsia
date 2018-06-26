@@ -8,9 +8,9 @@ namespace hello_base_view {
 
 ShadertoyEmbedderView::ShadertoyEmbedderView(
     fuchsia::sys::StartupContext* startup_context,
-    fuchsia::ui::scenic::Scenic* scenic, zx::eventpair view_token)
-    : scenic::BaseView(startup_context,
-                       scenic::CreateScenicSessionPtrAndListenerRequest(scenic),
+    scenic::SessionPtrAndListenerRequest session_and_listener_request,
+    zx::eventpair view_token)
+    : scenic::BaseView(startup_context, std::move(session_and_listener_request),
                        std::move(view_token),
                        "hello_base_view ShadertoyEmbedderView"),
       node_(session()),
@@ -55,7 +55,7 @@ void ShadertoyEmbedderView::OnSceneInvalidated(
   scenic::RoundedRectangle background_shape(session(), width, height, 20, 20,
                                             80, 10);
   background_.SetShape(background_shape);
-  background_.SetTranslation(width / 2.f, height / 2.f, 0.f);
+  background_.SetTranslation(width / 2.f, height / 2.f, 10.f);
 }
 
 }  // namespace hello_base_view

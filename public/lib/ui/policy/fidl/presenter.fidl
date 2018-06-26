@@ -35,5 +35,4 @@ interface Presenter2 {
   // create a ViewHolder which is embedded within an appropriate Scenic scene,
   // such that the client View it will receive input events, etc.
   1: PresentView(handle<eventpair> view_holder_token, request<Presentation>? presentation_request);
-  2: PresentLayer(handle<eventpair> layer_import_token);
 };

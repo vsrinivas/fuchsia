@@ -24,12 +24,54 @@ App::App(const fxl::CommandLine& command_line)
 
   startup_context_->outgoing().AddPublicService(
       presenter_bindings_.GetHandler(this));
-
+  startup_context_->outgoing().AddPublicService(
+      presenter2_bindings_.GetHandler(this));
   startup_context_->outgoing().AddPublicService(
       input_receiver_bindings_.GetHandler(this));
 }
 
 App::~App() {}
+
+Presentation::YieldCallback App::GetYieldCallback() {
+  return fxl::MakeCopyable([this](bool yield_to_next) {
+    if (yield_to_next) {
+      SwitchToNextPresentation();
+    } else {
+      SwitchToPreviousPresentation();
+    }
+  });
+}
+
+Presentation::ShutdownCallback App::GetShutdownCallback(
+    Presentation* presentation) {
+  return fxl::MakeCopyable([this, presentation] {
+    size_t idx;
+    for (idx = 0; idx < presentations_.size(); ++idx) {
+      if (presentations_[idx].get() == presentation) {
+        break;
+      }
+    }
+    FXL_DCHECK(idx != presentations_.size());
+
+    if (idx == active_presentation_idx_) {
+      // This works fine when idx == 0, because the previous idx chosen will
+      // also be 0, and it will be an no-op within SwitchToPreviousPresentation.
+      // Finally, at the end of the callback, everything will be cleaned up.
+      SwitchToPreviousPresentation();
+    }
+
+    presentations_.erase(presentations_.begin() + idx);
+    if (idx < active_presentation_idx_) {
+      // Adjust index into presentations_.
+      active_presentation_idx_--;
+    }
+
+    if (presentations_.empty()) {
+      layer_stack_->RemoveAllLayers();
+      active_presentation_idx_ = std::numeric_limits<size_t>::max();
+    }
+  });
+}
 
 void App::Present(
     fidl::InterfaceHandle<::fuchsia::ui::views_v1_token::ViewOwner>
@@ -40,48 +82,28 @@ void App::Present(
 
   auto presentation = std::make_unique<PresentationOld>(
       view_manager_.get(), scenic_.get(), session_.get(), renderer_params_);
-  PresentationOld::YieldCallback yield_callback = [this](bool yield_to_next) {
-    if (yield_to_next) {
-      SwitchToNextPresentation();
-    } else {
-      SwitchToPreviousPresentation();
-    }
-  };
-  PresentationOld::ShutdownCallback shutdown_callback =
-      [this, presentation = presentation.get()] {
-        size_t idx;
-        for (idx = 0; idx < presentations_.size(); ++idx) {
-          if (presentations_[idx].get() == presentation) {
-            break;
-          }
-        }
-        FXL_DCHECK(idx != presentations_.size());
-
-        if (idx == active_presentation_idx_) {
-          // This works fine when idx == 0, because the previous idx chosen will
-          // also be 0, and it will be an no-op within
-          // SwitchToPreviousPresentation. Finally, at the end of the callback,
-          // everything will be cleaned up.
-          SwitchToPreviousPresentation();
-        }
-
-        presentations_.erase(presentations_.begin() + idx);
-        if (idx < active_presentation_idx_) {
-          // Adjust index into presentations_.
-          active_presentation_idx_--;
-        }
-
-        if (presentations_.empty()) {
-          layer_stack_->RemoveAllLayers();
-          active_presentation_idx_ = std::numeric_limits<size_t>::max();
-        }
-      };
-
   presentation->Present(view_owner_handle.Bind(),
-                        std::move(presentation_request),
-                        fxl::MakeCopyable(std::move(yield_callback)),
-                        fxl::MakeCopyable(std::move(shutdown_callback)));
+                        std::move(presentation_request), GetYieldCallback(),
+                        GetShutdownCallback(presentation.get()));
 
+  AddPresentation(std::move(presentation));
+}
+
+void App::PresentView(
+    zx::eventpair view_holder_token,
+    ::fidl::InterfaceRequest<fuchsia::ui::policy::Presentation>
+        presentation_request) {
+  InitializeServices();
+
+  auto presentation = std::make_unique<PresentationNew>(
+      scenic_.get(), session_.get(), std::move(view_holder_token),
+      renderer_params_);
+  presentation->PresentView(std::move(presentation_request), GetYieldCallback(),
+                            GetShutdownCallback(presentation.get()));
+  AddPresentation(std::move(presentation));
+}
+
+void App::AddPresentation(std::unique_ptr<Presentation> presentation) {
   for (auto& it : devices_by_id_) {
     presentation->OnDeviceAdded(it.second.get());
   }

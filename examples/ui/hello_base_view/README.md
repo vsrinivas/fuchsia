@@ -10,4 +10,11 @@ how Peridot's ``device_runner`` connects the ``device_shell`` to
 will not work if there is already a ``Compositor`` attached to the default
 display.
 
-To run:``run hello_base_view``
+Usage:
+
+Using the root presenter: ``run hello_base_view --use_root_presenter``
+Using the example presenter: ``run hello_base_view --use_example_presenter``
+Using the view provider service, ``set_root_view hello_base_view`` (not supported yet)
+
+If using example_presenter, it will be necessary to kill any instances of scenic
+and root_presenter (use ``killall``).

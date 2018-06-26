@@ -32,12 +32,6 @@
 namespace root_presenter {
 namespace {
 
-// View Key: The presentation's own root view.
-constexpr uint32_t kRootViewKey = 1u;
-
-// View Key: The presented content view.
-constexpr uint32_t kContentViewKey = 2u;
-
 // The shape and elevation of the cursor.
 constexpr float kCursorWidth = 20;
 constexpr float kCursorHeight = 20;
@@ -46,12 +40,11 @@ constexpr float kCursorElevation = 800;
 
 }  // namespace
 
-PresentationNew::PresentationNew(
-    ::fuchsia::ui::views_v1::ViewManager* view_manager,
-    fuchsia::ui::scenic::Scenic* scenic, scenic_lib::Session* session,
-    RendererParams renderer_params)
-    : view_manager_(view_manager),
-      scenic_(scenic),
+PresentationNew::PresentationNew(fuchsia::ui::scenic::Scenic* scenic,
+                                 scenic_lib::Session* session,
+                                 zx::eventpair view_holder_token,
+                                 RendererParams renderer_params)
+    : scenic_(scenic),
       session_(session),
       layer_(session_),
       renderer_(session_),
@@ -59,22 +52,20 @@ PresentationNew::PresentationNew(
       camera_(scene_),
       ambient_light_(session_),
       directional_light_(session_),
-      root_view_host_node_(session_),
-      root_view_parent_node_(session_),
-      content_view_host_node_(session_),
+      view_holder_node_(session),
+      root_node_(session_),
+      view_holder_(session, std::move(view_holder_token), "root_presenter"),
       cursor_shape_(session_, kCursorWidth, kCursorHeight, 0u, kCursorRadius,
                     kCursorRadius, kCursorRadius),
       cursor_material_(session_),
       presentation_binding_(this),
-      tree_listener_binding_(this),
-      tree_container_listener_binding_(this),
-      view_container_listener_binding_(this),
-      view_listener_binding_(this),
       renderer_params_override_(renderer_params),
       weak_factory_(this) {
   renderer_.SetCamera(camera_);
   layer_.SetRenderer(renderer_);
-  scene_.AddChild(root_view_host_node_);
+  scene_.AddChild(root_node_);
+  root_node_.AddChild(view_holder_node_);
+  view_holder_node_.Attach(view_holder_);
 
   scene_.AddLight(ambient_light_);
   scene_.AddLight(directional_light_);
@@ -84,11 +75,10 @@ PresentationNew::PresentationNew(
   directional_light_.SetDirection(light_direction_.x, light_direction_.y,
                                   light_direction_.z);
 
-  root_view_host_node_.ExportAsRequest(&root_view_host_import_token_);
-  root_view_parent_node_.BindAsRequest(&root_view_parent_export_token_);
-  root_view_parent_node_.AddChild(content_view_host_node_);
-  content_view_host_node_.ExportAsRequest(&content_view_host_import_token_);
   cursor_material_.SetColor(0xff, 0x00, 0xff, 0xff);
+
+  session_->set_event_handler(
+      fit::bind_member(this, &PresentationNew::HandleScenicEvents));
 
   if (renderer_params_override_.clipping_enabled.has_value()) {
     presentation_clipping_enabled_ =
@@ -110,100 +100,30 @@ PresentationNew::PresentationNew(
 
 PresentationNew::~PresentationNew() {}
 
-void PresentationNew::Present(
-    ::fuchsia::ui::views_v1_token::ViewOwnerPtr view_owner,
-    fidl::InterfaceRequest<fuchsia::ui::policy::Presentation>
+void PresentationNew::PresentView(
+    ::fidl::InterfaceRequest<fuchsia::ui::policy::Presentation>
         presentation_request,
     YieldCallback yield_callback, ShutdownCallback shutdown_callback) {
-  FXL_DCHECK(view_owner);
   FXL_DCHECK(!display_model_initialized_);
 
   yield_callback_ = std::move(yield_callback);
   shutdown_callback_ = std::move(shutdown_callback);
 
   scenic_->GetDisplayInfo(fxl::MakeCopyable(
-      [weak = weak_factory_.GetWeakPtr(), view_owner = std::move(view_owner),
+      [weak = weak_factory_.GetWeakPtr(),
        presentation_request = std::move(presentation_request)](
           fuchsia::ui::gfx::DisplayInfo display_info) mutable {
-        if (weak)
-          weak->CreateViewTree(std::move(view_owner),
-                               std::move(presentation_request),
-                               std::move(display_info));
+        if (weak) {
+          if (presentation_request) {
+            weak->presentation_binding_.Bind(std::move(presentation_request));
+          }
+
+          // Get display parameters and propagate values appropriately.
+          weak->InitializeDisplayModel(std::move(display_info));
+
+          weak->PresentScene();
+        }
       }));
-}
-
-void PresentationNew::CreateViewTree(
-    ::fuchsia::ui::views_v1_token::ViewOwnerPtr view_owner,
-    fidl::InterfaceRequest<fuchsia::ui::policy::Presentation>
-        presentation_request,
-    fuchsia::ui::gfx::DisplayInfo display_info) {
-  if (presentation_request) {
-    presentation_binding_.Bind(std::move(presentation_request));
-  }
-
-  // Register the view tree.
-  ::fuchsia::ui::views_v1::ViewTreeListenerPtr tree_listener;
-  tree_listener_binding_.Bind(tree_listener.NewRequest());
-  view_manager_->CreateViewTree(tree_.NewRequest(), std::move(tree_listener),
-                                "Presentation");
-  tree_.set_error_handler([this] {
-    FXL_LOG(ERROR) << "Root presenter: View tree connection error.";
-    Shutdown();
-  });
-
-  // Prepare the view container for the root.
-  tree_->GetContainer(tree_container_.NewRequest());
-  tree_container_.set_error_handler([this] {
-    FXL_LOG(ERROR) << "Root presenter: Tree view container connection error.";
-    Shutdown();
-  });
-  ::fuchsia::ui::views_v1::ViewContainerListenerPtr tree_container_listener;
-  tree_container_listener_binding_.Bind(tree_container_listener.NewRequest());
-  tree_container_->SetListener(std::move(tree_container_listener));
-
-  // Get view tree services.
-  fuchsia::sys::ServiceProviderPtr tree_service_provider;
-  tree_->GetServiceProvider(tree_service_provider.NewRequest());
-  input_dispatcher_ =
-      fuchsia::sys::ConnectToService<fuchsia::ui::input::InputDispatcher>(
-          tree_service_provider.get());
-  input_dispatcher_.set_error_handler([this] {
-    // This isn't considered a fatal error right now since it is still useful
-    // to be able to test a view system that has graphics but no input.
-    FXL_LOG(WARNING)
-        << "Input dispatcher connection error, input will not work.";
-    input_dispatcher_.Unbind();
-  });
-
-  // Create root view.
-  fidl::InterfaceHandle<::fuchsia::ui::views_v1_token::ViewOwner>
-      root_view_owner;
-  auto root_view_owner_request = root_view_owner.NewRequest();
-  ::fuchsia::ui::views_v1::ViewListenerPtr root_view_listener;
-  view_listener_binding_.Bind(root_view_listener.NewRequest());
-  view_manager_->CreateView(
-      root_view_.NewRequest(), std::move(root_view_owner_request),
-      std::move(root_view_listener), std::move(root_view_parent_export_token_),
-      "RootView");
-  root_view_->GetContainer(root_container_.NewRequest());
-
-  // Attach root view to view tree.
-  tree_container_->AddChild(kRootViewKey, std::move(root_view_owner),
-                            std::move(root_view_host_import_token_));
-
-  // Get display parameters and propagate values appropriately.
-  InitializeDisplayModel(std::move(display_info));
-
-  // Add content view to root view.
-  ::fuchsia::ui::views_v1::ViewContainerListenerPtr view_container_listener;
-  view_container_listener_binding_.Bind(view_container_listener.NewRequest());
-  root_container_->SetListener(std::move(view_container_listener));
-  root_container_->AddChild(kContentViewKey, std::move(view_owner),
-                            std::move(content_view_host_import_token_));
-  root_container_->SetChildProperties(
-      kContentViewKey, ::fuchsia::ui::views_v1::ViewProperties::New());
-
-  PresentScene();
 }
 
 void PresentationNew::InitializeDisplayModel(
@@ -236,6 +156,32 @@ void PresentationNew::InitializeDisplayModel(
                                            previous_display_height_in_mm, true);
 
   ApplyDisplayModelChanges(true, false);
+}
+
+void PresentationNew::HandleScenicEvent(
+    const fuchsia::ui::scenic::Event& event) {
+  switch (event.Which()) {
+    case fuchsia::ui::scenic::Event::Tag::kGfx:
+      switch (event.gfx().Which()) {
+        case fuchsia::ui::gfx::Event::Tag::kViewDisconnected: {
+          auto& evt = event.gfx().view_disconnected();
+          FXL_DCHECK(view_holder_.id() == evt.view_holder_id);
+          FXL_LOG(ERROR)
+              << "Root presenter: Content view terminated unexpectedly.";
+          Shutdown();
+          break;
+        }
+        default: { break; }
+      }
+    default: { break; }
+  }
+}
+
+void PresentationNew::HandleScenicEvents(
+    fidl::VectorPtr<fuchsia::ui::scenic::Event> events) {
+  for (auto& event : *events) {
+    HandleScenicEvent(event);
+  }
 }
 
 void PresentationNew::SetDisplaySizeInMm(float width_in_mm,
@@ -371,27 +317,24 @@ bool PresentationNew::ApplyDisplayModelChangesHelper(bool print_log) {
   display_metrics_ = metrics;
   display_rotation_current_ = display_rotation_desired_;
 
-  auto root_properties = ::fuchsia::ui::views_v1::ViewProperties::New();
-
-  root_properties->view_layout = ::fuchsia::ui::views_v1::ViewLayout::New();
-  root_properties->view_layout->size.width = display_metrics_.width_in_pp();
-  root_properties->view_layout->size.height = display_metrics_.height_in_pp();
-  tree_container_->SetChildProperties(kRootViewKey, std::move(root_properties));
+  view_holder_.SetViewProperties(0.f, 0.f, 0.f, display_metrics_.width_in_pp(),
+                                 display_metrics_.height_in_pp(), 1000.f, 0.f,
+                                 0.f, 0.f, 0.f, 0.f, 0.f);
 
   // Apply device pixel ratio.
   scene_.SetScale(display_metrics_.x_scale_in_px_per_pp(),
                   display_metrics_.y_scale_in_px_per_pp(), 1.f);
 
+  // Apply rotation.
   float anchor_x = display_metrics_.width_in_pp() / 2;
   float anchor_y = display_metrics_.height_in_pp() / 2;
 
-  root_view_host_node_.SetAnchor(anchor_x, anchor_y, 0);
+  view_holder_node_.SetAnchor(anchor_x, anchor_y, 0);
 
-  // float display_rotation_degrees = 180.f;
   glm::quat display_rotation = glm::quat(
       glm::vec3(0, 0, glm::radians<float>(display_rotation_current_)));
-  root_view_host_node_.SetRotation(display_rotation.x, display_rotation.y,
-                                   display_rotation.z, display_rotation.w);
+  view_holder_node_.SetRotation(display_rotation.x, display_rotation.y,
+                                display_rotation.z, display_rotation.w);
 
   // Center everything.
   float left_offset = (display_model_actual_.display_info().width_in_px -
@@ -400,7 +343,7 @@ bool PresentationNew::ApplyDisplayModelChangesHelper(bool print_log) {
   float top_offset = (display_model_actual_.display_info().height_in_px -
                       display_metrics_.height_in_px()) /
                      2;
-  root_view_host_node_.SetTranslation(
+  view_holder_node_.SetTranslation(
       left_offset / display_metrics_.x_scale_in_px_per_pp(),
       top_offset / display_metrics_.y_scale_in_px_per_pp(), 0.f);
 
@@ -569,9 +512,9 @@ void PresentationNew::OnEvent(fuchsia::ui::input::InputEvent event) {
         cursors_[pointer.device_id].position.x = pointer.x;
         cursors_[pointer.device_id].position.y = pointer.y;
 
-        // TODO(jpoichet) for now don't show cursor when mouse is added until we
-        // have a timer to hide it. Acer12 sleeve reports 2 mice but only one
-        // will generate events for now.
+        // TODO(SCN-823) for now don't show cursor when mouse is added until
+        // we have a timer to hide it. Acer12 sleeve reports 2 mice but only
+        // one will generate events for now.
         if (pointer.phase != fuchsia::ui::input::PointerEventPhase::ADD &&
             pointer.phase != fuchsia::ui::input::PointerEventPhase::REMOVE) {
           cursors_[pointer.device_id].visible = true;
@@ -653,35 +596,6 @@ void PresentationNew::OnSensorEvent(uint32_t device_id,
       presentation_mode_listener_->OnModeChanged();
     }
   }
-}
-
-void PresentationNew::OnChildAttached(
-    uint32_t child_key, ::fuchsia::ui::views_v1::ViewInfo child_view_info,
-    OnChildAttachedCallback callback) {
-  if (kContentViewKey == child_key) {
-    FXL_VLOG(1) << "OnChildAttached(content): child_view_info="
-                << child_view_info;
-  }
-  callback();
-}
-
-void PresentationNew::OnChildUnavailable(uint32_t child_key,
-                                         OnChildUnavailableCallback callback) {
-  if (kRootViewKey == child_key) {
-    FXL_LOG(ERROR) << "Root presenter: Root view terminated unexpectedly.";
-    Shutdown();
-  } else if (kContentViewKey == child_key) {
-    FXL_LOG(ERROR) << "Root presenter: Content view terminated unexpectedly.";
-    Shutdown();
-  }
-  callback();
-}
-
-void PresentationNew::OnPropertiesChanged(
-    ::fuchsia::ui::views_v1::ViewProperties properties,
-    OnPropertiesChangedCallback callback) {
-  // Nothing to do right now.
-  callback();
 }
 
 // |Presentation|
