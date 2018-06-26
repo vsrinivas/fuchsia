@@ -75,6 +75,13 @@ TEST_F(SessionTest, AddAndRemoveResource) {
   EXPECT_EQ(0U, session_->GetMappedResourceCount());
 }
 
+TEST_F(SessionTest, CreateViewWithBadTokenDies) {
+  EXPECT_DEATH_IF_SUPPORTED(
+      Apply(scenic_lib::NewCreateViewCmd(1, zx::eventpair(), "")), "");
+  EXPECT_DEATH_IF_SUPPORTED(
+      Apply(scenic_lib::NewCreateViewHolderCmd(2, zx::eventpair(), "")), "");
+}
+
 TEST_F(SessionTest, Labeling) {
   const scenic::ResourceId kNodeId = 1;
   const std::string kShortLabel = "test!";

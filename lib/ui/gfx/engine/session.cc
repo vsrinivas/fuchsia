@@ -960,11 +960,8 @@ bool Session::ApplyCreateMaterial(scenic::ResourceId id,
 
 bool Session::ApplyCreateView(scenic::ResourceId id,
                               ::fuchsia::ui::gfx::ViewArgs args) {
-  if (!args.token) {
-    error_reporter_->ERROR() << "scenic::gfx::Session::ApplyCreateView(): "
-                                "no token provided.";
-    return false;
-  }
+  FXL_DCHECK(args.token)
+      << "scenic::gfx::Session::ApplyCreateView(): no token provided.";
 
   auto view = CreateView(id, std::move(args));
   return view ? resources_.AddResource(id, std::move(view)) : false;
@@ -972,12 +969,8 @@ bool Session::ApplyCreateView(scenic::ResourceId id,
 
 bool Session::ApplyCreateViewHolder(scenic::ResourceId id,
                                     ::fuchsia::ui::gfx::ViewHolderArgs args) {
-  if (!args.token) {
-    error_reporter_->ERROR()
-        << "scenic::gfx::Session::ApplyCreateViewHolder(): "
-           "no token provided.";
-    return false;
-  }
+  FXL_DCHECK(args.token)
+      << "scenic::gfx::Session::ApplyCreateViewHolder(): no token provided.";
 
   auto view_holder = CreateViewHolder(id, std::move(args));
   return view_holder ? resources_.AddResource(id, std::move(view_holder))
