@@ -190,15 +190,15 @@ TEST(Gain, Scaling_Linearity) {
   DoMix(std::move(mixer), source, accum, false, fbl::count_of(accum),
         stream_scale);
 
-  int32_t expect[] = {0x80E800, 0x7FF800, 0x15E00,   0x2800,
-                      -0x8C00,  -0xFA00,  -0x7FF800, -0x808E00};
-  NormalizeInt24ToPipelineBitwidth(expect, fbl::count_of(expect));
+  int32_t expect[] = {0x080E8000,  0x07FF8000,  0x015E000,   0x00028000,
+                      -0x0008C000, -0x000FA000, -0x07FF8000, -0x0808E000};
+  NormalizeInt28ToPipelineBitwidth(expect, fbl::count_of(expect));
   EXPECT_TRUE(CompareBuffers(accum, expect, fbl::count_of(accum)));
 
   //
   // How precisely linear are our gain stages, mathematically?
-  // Validate that -20.00 dB leads to exactly 0.10x in value
-  gain.SetRendererGain(-20.0f);
+  // Validate that -12.0411998 dB leads to exactly 0.25x in value
+  gain.SetRendererGain(-12.0411998f);
   stream_scale = gain.GetGainScale(0.0f);
 
   mixer = SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_16, 1, 44100, 1,
@@ -206,9 +206,9 @@ TEST(Gain, Scaling_Linearity) {
   DoMix(std::move(mixer), source, accum, false, fbl::count_of(accum),
         stream_scale);
 
-  int32_t expect2[] = {0x14A00, 0x14799, 0x380,    0x66,
-                       -0x166,  -0x280,  -0x14799, -0x14919};
-  NormalizeInt24ToPipelineBitwidth(expect2, fbl::count_of(expect2));
+  int32_t expect2[] = {0x00339000,  0x00333000,  0x00008C00,  0x00001000,
+                       -0x00003800, -0x00006400, -0x00333000, -0x00336C00};
+  NormalizeInt28ToPipelineBitwidth(expect2, fbl::count_of(expect2));
   EXPECT_TRUE(CompareBuffers(accum, expect2, fbl::count_of(accum)));
 }
 
@@ -227,8 +227,8 @@ TEST(Gain, Scaling_Precision) {
   DoMix(std::move(mixer), source, accum, false, fbl::count_of(accum),
         gain_scale);
 
-  int32_t expect[] = {0x7FFF00, -0x800000, -0x100, 0x100};
-  NormalizeInt24ToPipelineBitwidth(expect, fbl::count_of(expect));
+  int32_t expect[] = {0x07FFF000, -0x08000000, -0x00001000, 0x00001000};
+  NormalizeInt28ToPipelineBitwidth(expect, fbl::count_of(expect));
   EXPECT_TRUE(CompareBuffers(accum, expect, fbl::count_of(accum)));
 
   // This gain is the first (closest-to-unity) to change a full-scale signal.
@@ -283,14 +283,14 @@ TEST(Gain, Scaling_Precision) {
 // Can accumulator result exceed the max range of individual streams?
 TEST(Gain, Accumulator) {
   int16_t source[] = {0x7FFF, -0x8000};
-  int32_t accum[] = {0x7FFF00, -0x800000};
-  int32_t expect[] = {0xFFFE00, -0x1000000};
-  int32_t expect2[] = {0x17FFD00, -0x1800000};
+  int32_t accum[] = {0x07FFF000, -0x08000000};
+  int32_t expect[] = {0x0FFFE000, -0x10000000};
+  int32_t expect2[] = {0x17FFD000, -0x18000000};
 
   // When mixed, these far exceed any int16 range
-  NormalizeInt24ToPipelineBitwidth(accum, fbl::count_of(accum));
-  NormalizeInt24ToPipelineBitwidth(expect, fbl::count_of(expect));
-  NormalizeInt24ToPipelineBitwidth(expect2, fbl::count_of(expect2));
+  NormalizeInt28ToPipelineBitwidth(accum, fbl::count_of(accum));
+  NormalizeInt28ToPipelineBitwidth(expect, fbl::count_of(expect));
+  NormalizeInt28ToPipelineBitwidth(expect2, fbl::count_of(expect2));
 
   // These values exceed the per-stream range of int16
   MixerPtr mixer = SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_16, 1,

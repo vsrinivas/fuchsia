@@ -42,13 +42,15 @@ OutputFormatterPtr SelectOutputFormatter(
 // to be deposited into the accumulator, would now expect that value to be
 // left-shifted by some number of bits. With this in mind, and to remain
 // flexible in the midst of changes in our pipeline width, our tests now specify
-// any expected values at the higher-than-needed precision of 24-bit. (They also
+// any expected values at the higher-than-needed precision of 28-bit. (They also
 // specify values in hexadecimal format in almost all cases, to make bit-shifted
-// values slightly more clear.)
+// values slightly more clear.)  This precision of __28__bit__ test data was
+// specifically chosen to accomodate a future transition to a float32 pipeline,
+// which has 25 effective bits of [precision+sign].
 //
-// This shared function, then, is used to normalize them down to the actual
-// pipeline width depending on the width of our processing pipeline.
-void NormalizeInt24ToPipelineBitwidth(int32_t* source, uint32_t source_len);
+// This shared function, then, is used to normalize data arrays down to the
+// actual pipeline width, depending on the details of our processing pipeline.
+void NormalizeInt28ToPipelineBitwidth(int32_t* source, uint32_t source_len);
 
 // Use supplied mixer to mix (w/out rate conversion) from source to accumulator.
 // TODO(mpuryear): refactor this so that tests just call mixer->Mix directly.

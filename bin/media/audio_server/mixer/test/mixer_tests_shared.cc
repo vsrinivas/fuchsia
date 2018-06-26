@@ -57,20 +57,21 @@ OutputFormatterPtr SelectOutputFormatter(
   return output_formatter;
 }
 
-// This converts a higher-resolution-than-needed "int24" data into our internal
+// This converts a higher-resolution-than-needed "int28" data into our internal
 // (accum) representation, depending on the width of our processing pipeline.
-void NormalizeInt24ToPipelineBitwidth(int32_t* source, uint32_t source_len) {
-  static_assert(kAudioPipelineWidth <= 24, "kAudioPipelineWidth too wide");
+// The test-data-width of 28 bits was chosen to accomodate float32 precision.
+void NormalizeInt28ToPipelineBitwidth(int32_t* source, uint32_t source_len) {
+  static_assert(kAudioPipelineWidth <= 28, "kAudioPipelineWidth too wide");
 
-  if (kAudioPipelineWidth < 24) {
+  if (kAudioPipelineWidth < 28) {
     for (uint32_t idx = 0; idx < source_len; ++idx) {
       // Before right-shift, add "0.5" to convert truncation into rounding.
-      // 1<<(24-kAudioPipelineWidth) is the LSB. 1<<(23-k..Width) is LSB/2.
+      // 1<<(28-kAudioPipelineWidth) is the LSB. 1<<(27-k..Width) is LSB/2.
       // -0.5 rounds *away from* zero; if negative make round_val slightly less.
       int32_t rounding_val =
-          (1 << (23 - kAudioPipelineWidth)) - (source[idx] < 0 ? 1 : 0);
+          (1 << (27 - kAudioPipelineWidth)) - (source[idx] < 0 ? 1 : 0);
       source[idx] += rounding_val;
-      source[idx] >>= (24 - kAudioPipelineWidth);
+      source[idx] >>= (28 - kAudioPipelineWidth);
     }
   }
 }

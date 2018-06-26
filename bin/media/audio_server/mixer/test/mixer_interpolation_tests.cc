@@ -51,10 +51,12 @@ TEST(Resampling, Position_Basic_Point) {
   int16_t source[] = {1, 0x17, 0x7B, 0x4D2, 0x3039};
 
   // Mix will accumulate src[2,3] into accum[1,2]
-  int32_t accum[] = {-0x200, -0x1700, -0xEA00, -0x92900, -0x5BA000};
-  int32_t expect[] = {-0x200, 0x6400, 0x3E800, -0x92900, -0x5BA000};
-  NormalizeInt24ToPipelineBitwidth(accum, fbl::count_of(accum));
-  NormalizeInt24ToPipelineBitwidth(expect, fbl::count_of(expect));
+  int32_t accum[] = {-0x00002000, -0x00017000, -0x000EA000, -0x00929000,
+                     -0x05BA0000};
+  int32_t expect[] = {-0x00002000, 0x00064000, 0x003E8000, -0x00929000,
+                      -0x05BA0000};
+  NormalizeInt28ToPipelineBitwidth(accum, fbl::count_of(accum));
+  NormalizeInt28ToPipelineBitwidth(expect, fbl::count_of(expect));
 
   mix_result =
       mixer->Mix(accum, 3, &dst_offset, source, 5 << kPtsFractionalBits,
@@ -71,8 +73,8 @@ TEST(Resampling, Position_Basic_Point) {
   frac_src_offset = 3 << kPtsFractionalBits;
   dst_offset = 1;
   // Mix will move source[3] into accum[1] (accum==false)
-  expect[1] = 0x4D200;
-  NormalizeInt24ToPipelineBitwidth(&expect[1], 1);
+  expect[1] = 0x004D2000;
+  NormalizeInt28ToPipelineBitwidth(&expect[1], 1);
 
   mix_result =
       mixer->Mix(accum, 4, &dst_offset, source, 4 << kPtsFractionalBits,
@@ -102,10 +104,12 @@ TEST(Resampling, Position_Basic_Linear) {
   uint32_t dst_offset = 1;
   int16_t source[] = {1, 0xC, 0x7B, 0x4D2, 0x3039};
   // Mix will add source[2,3,4] to accum[1,2,3]
-  int32_t accum[] = {-0x200, -0x1700, -0xEA00, -0x92900, -0x5BA000};
-  int32_t expect[] = {-0x200, 0x6400, 0x3E800, 0x271000, -0x5BA000};
-  NormalizeInt24ToPipelineBitwidth(accum, fbl::count_of(accum));
-  NormalizeInt24ToPipelineBitwidth(expect, fbl::count_of(expect));
+  int32_t accum[] = {-0x00002000, -0x00017000, -0x000EA000, -0x00929000,
+                     -0x05BA0000};
+  int32_t expect[] = {-0x00002000, 0x00064000, 0x003E8000, 0x02710000,
+                      -0x05BA0000};
+  NormalizeInt28ToPipelineBitwidth(accum, fbl::count_of(accum));
+  NormalizeInt28ToPipelineBitwidth(expect, fbl::count_of(expect));
 
   mix_result =
       mixer->Mix(accum, 4, &dst_offset, source, 5 << kPtsFractionalBits,
@@ -122,10 +126,12 @@ TEST(Resampling, Position_Basic_Linear) {
   frac_src_offset = 0;
   dst_offset = 2;
   // Mix will add source[0,1] to accum2[2,3]
-  int32_t accum2[] = {-0x200, -0x1700, -0xEA00, -0x92900, -0x5BA000};
-  int32_t expect2[] = {-0x200, -0x1700, -0xE900, -0x91D00, -0x5BA000};
-  NormalizeInt24ToPipelineBitwidth(accum2, fbl::count_of(accum2));
-  NormalizeInt24ToPipelineBitwidth(expect2, fbl::count_of(expect2));
+  int32_t accum2[] = {-0x00002000, -0x00017000, -0x000EA000, -0x00929000,
+                      -0x05BA0000};
+  int32_t expect2[] = {-0x00002000, -0x00017000, -0x000E9000, -0x0091D000,
+                       -0x05BA0000};
+  NormalizeInt28ToPipelineBitwidth(accum2, fbl::count_of(accum2));
+  NormalizeInt28ToPipelineBitwidth(expect2, fbl::count_of(expect2));
 
   mix_result =
       mixer->Mix(accum2, 4, &dst_offset, source, 4 << kPtsFractionalBits,
@@ -142,8 +148,9 @@ TEST(Resampling, Position_Basic_Linear) {
   frac_src_offset = 2 << kPtsFractionalBits;
   dst_offset = 0;
   // Mix will move source[2] to accum[0]
-  int32_t expect3[] = {0x7B00, -0x1700, -0xE900, -0x91D00, -0x5BA000};
-  NormalizeInt24ToPipelineBitwidth(expect3, fbl::count_of(expect3));
+  int32_t expect3[] = {0x0007B000, -0x00017000, -0x000E9000, -0x0091D000,
+                       -0x05BA0000};
+  NormalizeInt28ToPipelineBitwidth(expect3, fbl::count_of(expect3));
 
   mix_result =
       mixer->Mix(accum2, 4, &dst_offset, source, 3 << kPtsFractionalBits,
@@ -174,10 +181,12 @@ TEST(Resampling, Position_Fractional_Point) {
   uint32_t dst_offset = 1;
   int16_t source[] = {1, 0xC, 0x7B, 0x4D2, 0x3039};
   // Mix will accumulate source[1:2,2:3] into accum[1,2]
-  int32_t accum[] = {-0x200, -0x1700, -0xEA00, -0x92900, -0x5BA000};
-  int32_t expect[] = {-0x200, -0xB00, -0x6F00, -0x92900, -0x5BA000};
-  NormalizeInt24ToPipelineBitwidth(accum, fbl::count_of(accum));
-  NormalizeInt24ToPipelineBitwidth(expect, fbl::count_of(expect));
+  int32_t accum[] = {-0x00002000, -0x00017000, -0x000EA000, -0x00929000,
+                     -0x05BA0000};
+  int32_t expect[] = {-0x00002000, -0x0000B000, -0x0006F000, -0x00929000,
+                      -0x05BA0000};
+  NormalizeInt28ToPipelineBitwidth(accum, fbl::count_of(accum));
+  NormalizeInt28ToPipelineBitwidth(expect, fbl::count_of(expect));
 
   mix_result =
       mixer->Mix(accum, 3, &dst_offset, source, 5 << kPtsFractionalBits,
@@ -194,8 +203,9 @@ TEST(Resampling, Position_Fractional_Point) {
   frac_src_offset = 5 << (kPtsFractionalBits - 1);
   dst_offset = 1;
   // Mix will move source[2:3,3:4] to accum[1,2]
-  int32_t expect2[] = {-0x200, 0x7B00, 0x4D200, -0x92900, -0x5BA000};
-  NormalizeInt24ToPipelineBitwidth(expect2, fbl::count_of(expect2));
+  int32_t expect2[] = {-0x00002000, 0x0007B000, 0x004D2000, -0x00929000,
+                       -0x05BA0000};
+  NormalizeInt28ToPipelineBitwidth(expect2, fbl::count_of(expect2));
 
   mix_result =
       mixer->Mix(accum, 4, &dst_offset, source, 4 << kPtsFractionalBits,
@@ -226,10 +236,12 @@ TEST(Resampling, Position_Fractional_Linear) {
   int16_t source[] = {-1, -0xB, -0x7C, 0x4D2, 0x3039};
 
   // Mix (accumulate) source[0:1,1:2] into accum[2,3].
-  int32_t accum[] = {-0xDEFA, -0x14D84, -0x1792, 0x7BFF, -0x22BB0};
-  int32_t expect[] = {-0xDEFA, -0x14D84, -0x1D92, 0x387F, -0x22BB0};
-  NormalizeInt24ToPipelineBitwidth(accum, fbl::count_of(accum));
-  NormalizeInt24ToPipelineBitwidth(expect, fbl::count_of(expect));
+  int32_t accum[] = {-0x000DEFA0, -0x0014D840, -0x00017920, 0x0007BFF0,
+                     -0x0022BB00};
+  int32_t expect[] = {-0x000DEFA0, -0x0014D840, -0x0001D920, 0x000387F0,
+                      -0x0022BB00};
+  NormalizeInt28ToPipelineBitwidth(accum, fbl::count_of(accum));
+  NormalizeInt28ToPipelineBitwidth(expect, fbl::count_of(expect));
   // TODO(mpuryear): round correctly if accumulating fractional result with
   // previous opposite-polarity result. Ideally round -67.5+123 (55.5) to 56.
 
@@ -251,8 +263,9 @@ TEST(Resampling, Position_Fractional_Linear) {
   frac_src_offset = -(1 << (kPtsFractionalBits - 1));
   dst_offset = 1;
   // Mix src[2:0,0:1] into accum[1,2].  [1] = (-124:-1), [2] = (-1:-11)
-  int32_t expect2[] = {-0xDEFA, -0x3E80, -0x600, 0x387F, -0x22BB0};
-  NormalizeInt24ToPipelineBitwidth(expect2, fbl::count_of(expect2));
+  int32_t expect2[] = {-0x000DEFA0, -0x0003E800, -0x00006000, 0x000387F0,
+                       -0x0022BB00};
+  NormalizeInt28ToPipelineBitwidth(expect2, fbl::count_of(expect2));
 
   mix_result =
       mixer->Mix(accum, 4, &dst_offset, source, 2 << kPtsFractionalBits,
@@ -495,10 +508,11 @@ TEST(Resampling, Reset_Linear) {
   uint32_t dst_offset = 2;
   uint32_t frac_step_size = Mixer::FRAC_ONE;
   // Mix (accumulate) source[0:1,1:2] into accum[2,3].
-  int32_t accum[] = {-0x6F00, -0xDE00, -0x14D00, -0x1BC00, -0x22B00};
-  int32_t expect[] = {-0x6F00, -0xDE00, 0, 0, -0x22B00};
-  NormalizeInt24ToPipelineBitwidth(accum, fbl::count_of(accum));
-  NormalizeInt24ToPipelineBitwidth(expect, fbl::count_of(expect));
+  int32_t accum[] = {-0x0006F000, -0x000DE000, -0x0014D000, -0x001BC000,
+                     -0x0022B000};
+  int32_t expect[] = {-0x0006F000, -0x000DE000, 0, 0, -0x0022B000};
+  NormalizeInt28ToPipelineBitwidth(accum, fbl::count_of(accum));
+  NormalizeInt28ToPipelineBitwidth(expect, fbl::count_of(expect));
 
   bool mix_result =
       mixer->Mix(accum, 4, &dst_offset, source, 3 << kPtsFractionalBits,
@@ -516,8 +530,8 @@ TEST(Resampling, Reset_Linear) {
   frac_src_offset = -(1 << (kPtsFractionalBits - 1));
   // Dst wants only one sample, at dst[0].
   dst_offset = 0;
-  expect[0] = 0xD800;  // Mix( :1B0)=D8 to [0]. Without Reset, = (28E:1B0)=21F.
-  NormalizeInt24ToPipelineBitwidth(&expect[0], 1);
+  expect[0] = 0x000D8000;  // Mix(:1B0)=D8 to [0]. W/out Reset, = (28E:1B0)=21F.
+  NormalizeInt28ToPipelineBitwidth(&expect[0], 1);
 
   mix_result =
       mixer->Mix(accum, 1, &dst_offset, source, 2 << kPtsFractionalBits,

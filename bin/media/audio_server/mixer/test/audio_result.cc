@@ -111,8 +111,8 @@ const std::array<double, FrequencySet::kNumReferenceFreqs>
          0.0000000e+00, -1.5661948e-06, -2.1304830e-06, -4.1508399e-06, -1.0573127e-05, -3.1327856e-06,
         -3.7360669e-06, -1.3521252e-05, -8.9959366e-06, -1.4731346e-05, -2.0321179e-05, -3.1731982e-05,
         -5.2764227e-05, -8.4389531e-05, -1.5833520e-04, -1.8590343e-04, -3.2025470e-04, -4.6360090e-04,
-        -7.3919056e-04, -2.6341508e-03, -2.0523154e-03, -2.8748317e-03, -5.3773101e-03, -7.9726975e-03,
-        -1.1529201e-02, -1.8280644e-02, -2.9759909e-02, -4.5993385e-02, -7.3353496e-02, -1.1946812e-01,
+        -7.3919056e-04, -2.6341508e-03, -2.0523154e-03, -2.8753928e-03, -5.3773101e-03, -7.9726975e-03,
+        -1.1529201e-02, -1.8281240e-02, -2.9759909e-02, -4.5993385e-02, -7.3353496e-02, -1.1946812e-01,
         -1.8829853e-01, -2.6824053e-01, -4.7926478e-01, -7.1041615e-01, -7.5146118e-01, -8.0028563e-01,
         -8.3189558e-01, -9.1923047e-01, -1.0450937e+00, -5.6153011e+00, -1.1874883e+00, -1.9197369e+00,
         -3.2716331e+00, -3.9317734e+00, -3.9530068e+00, -INFINITY,      -INFINITY        };
@@ -122,8 +122,8 @@ const std::array<double, FrequencySet::kNumReferenceFreqs>
          0.0000000e+00, -2.3075525e-06, -3.2001429e-06, -6.4414709e-06, -1.3938824e-05, -8.2058602e-06,
         -1.2004771e-05, -2.6854693e-05, -2.9915955e-05, -4.9498439e-05, -7.5621557e-05, -1.1651375e-04,
         -1.9729576e-04, -3.0063578e-04, -5.0162881e-04, -7.3492998e-04, -1.1847081e-03, -1.8418967e-03,
-        -2.9203791e-03, -6.1792698e-03, -7.4153809e-03, -1.1448793e-02, -1.9475496e-02, -2.9997351e-02,
-        -4.6002219e-02, -7.3063268e-02, -1.1804769e-01, -1.8448649e-01, -2.9385422e-01, -4.7618537e-01,
+        -2.9203791e-03, -6.1792698e-03, -7.4153809e-03, -1.1449341e-02, -1.9475496e-02, -2.9997351e-02,
+        -4.6002219e-02, -7.3063787e-02, -1.1804769e-01, -1.8448649e-01, -2.9385422e-01, -4.7618537e-01,
         -7.5031773e-01, -1.0864645e+00, -1.9729293e+00, -3.0035901e+00, -3.1751831e+00, -3.3423374e+00,
         -3.5326071e+00, -3.9292783e+00, -INFINITY,      -INFINITY,      -INFINITY,      -INFINITY,
         -INFINITY,      -INFINITY,      -INFINITY,      -INFINITY,      -INFINITY        };
@@ -196,19 +196,19 @@ const std::array<double, FrequencySet::kNumReferenceFreqs>
 
 const std::array<double, FrequencySet::kNumReferenceFreqs>
     AudioResult::kPrevFreqRespLinearUp2 = {
-         0.0000000e+00, -8.7311165e-07, -4.9519936e-06, -8.9110096e-06, -1.7573716e-05, -2.7910958e-05,
-        -5.0481225e-05, -8.4058937e-05, -1.3865244e-04, -2.3144475e-04, -3.6899251e-04, -5.6457206e-04,
-        -9.6912705e-04, -1.4603634e-03, -2.3153749e-03, -3.7024434e-03, -5.8369291e-03, -9.3069629e-03,
-        -1.4726474e-02, -2.3762847e-02, -3.7101303e-02, -5.7946089e-02, -9.5286206e-02, -1.4906893e-01,
-        -2.3354088e-01, -3.7186675e-01, -6.0216865e-01, -9.4737056e-01, -1.5211202e+00, -2.4979661e+00,
-        -4.0198343e+00, -6.0180912e+00, -INFINITY,      -INFINITY,      -INFINITY,      -INFINITY,
+         0.0000000e+00, -6.4749325e-06, -1.0563305e-05, -1.4552500e-05, -2.3077789e-05, -3.3551619e-05,
+        -5.6066745e-05, -8.9601458e-05, -1.4421078e-04, -2.3714242e-04, -3.7462855e-04, -5.7008073e-04,
+        -9.7487178e-04, -1.4659017e-03, -2.3210368e-03, -3.7080022e-03, -5.8424840e-03, -9.3126509e-03,
+        -1.4732055e-02, -2.3768503e-02, -3.7106945e-02, -5.7951740e-02, -9.5291884e-02, -1.4907470e-01,
+        -2.3354677e-01, -3.7187263e-01, -6.0217451e-01, -9.4737683e-01, -1.5211269e+00, -2.4979735e+00,
+        -4.0198431e+00, -6.0181021e+00, -INFINITY,      -INFINITY,      -INFINITY,      -INFINITY,
         -INFINITY,      -INFINITY,      -INFINITY,      -INFINITY,      -INFINITY,      -INFINITY,
         -INFINITY,      -INFINITY,      -INFINITY,      -INFINITY,      -INFINITY        };
 
 const std::array<double, FrequencySet::kNumReferenceFreqs>
     AudioResult::kPrevFreqRespLinearMicro = {
          0.0000000e+00, -2.3466227e-06, -3.7789807e-06, -5.1051663e-06, -7.7213105e-06, -1.1397148e-05,
-        -1.8925543e-05, -3.0434620e-05, -4.7744450e-05, -8.1041148e-05, -1.2769346e-04, -1.9481191e-04,
+        -1.8925543e-05, -3.0434620e-05, -4.8053872e-05, -8.1041148e-05, -1.2769346e-04, -1.9481191e-04,
         -3.3341719e-04, -5.0162696e-04, -7.9464478e-04, -1.2698768e-03, -2.0004111e-03, -3.1887139e-03,
         -5.0442906e-03, -8.1376035e-03, -1.2701520e-02, -1.9830443e-02, -3.2589023e-02, -5.0940216e-02,
         -7.9700349e-02, -1.2663432e-01, -2.0432751e-01, -3.1973653e-01, -5.0878121e-01, -8.2272839e-01,
@@ -356,12 +356,12 @@ const std::array<double, FrequencySet::kNumReferenceFreqs>
 
 const std::array<double, FrequencySet::kNumReferenceFreqs>
     AudioResult::kPrevSinadLinearUp2 = {
-         98.104753, 96.792502,     97.064182, 97.076402, 97.101973, 97.277858,
-         97.222941, 96.662384,     94.903830, 91.456542, 87.420809, 83.733385,
-         79.044123, 75.483861,     71.481244, 67.403795, 63.449142, 59.395142,
-         55.406740, 51.246306,     47.369864, 43.486762, 39.147967, 35.233882,
-         31.291983, 27.181934,     22.879094, 18.767894, 14.361357,  9.5456587,
-         4.6048270,  0.0050176275, -INFINITY, -INFINITY, -INFINITY, -INFINITY,
+        98.104753,  96.792502,     97.064182, 97.076402, 97.101973, 97.277858,
+        97.222941,  96.662384,     94.903830, 91.276051, 87.304125, 83.657303,
+        78.996866,  75.453467,     71.461492, 67.391637, 63.441417, 59.390164,
+        55.403653,  51.244363,     47.368622, 43.485964, 39.147478, 35.233563,
+        31.291773,  27.181802,     22.879012, 18.767837, 14.361317,  9.5456304,
+         4.6048044,  0.0049964955, -INFINITY, -INFINITY, -INFINITY, -INFINITY,
         -INFINITY,  -INFINITY,     -INFINITY, -INFINITY, -INFINITY, -INFINITY,
         -INFINITY,  -INFINITY,     -INFINITY, -INFINITY, -INFINITY   };
 
@@ -381,11 +381,11 @@ const std::array<double, FrequencySet::kNumReferenceFreqs>
 //
 // Scale
 //
-uint32_t AudioResult::ScaleEpsilon = 0x0FFFFFFF;
-constexpr uint32_t AudioResult::kPrevScaleEpsilon;
+Gain::AScale AudioResult::ScaleEpsilon = 0x0FFFFFFF;
+constexpr Gain::AScale AudioResult::kPrevScaleEpsilon;
 
-uint32_t AudioResult::MinScaleNonZero = 0x00000000;
-constexpr uint32_t AudioResult::kPrevMinScaleNonZero;
+Gain::AScale AudioResult::MinScaleNonZero = 0;
+constexpr Gain::AScale AudioResult::kPrevMinScaleNonZero;
 
 double AudioResult::DynRangeTolerance = 0.0;
 constexpr double AudioResult::kPrevDynRangeTolerance;
@@ -573,19 +573,19 @@ void AudioResult::DumpNoiseFloorValues() {
 
 void AudioResult::DumpDynamicRangeValues() {
   printf("\n\n Dynamic Range");
-  printf("\n       Epsilon:  %8x  (%15.8le dB)", AudioResult::ScaleEpsilon,
+  printf("\n       Epsilon:  %8x  (%13.6le dB)", AudioResult::ScaleEpsilon,
          GainScaleToDb(AudioResult::ScaleEpsilon));
-  printf("  Level: %15.8le dB  Sinad: %10.7lf dB",
+  printf("  Level: %12.8lf dB  Sinad: %10.6lf dB",
          AudioResult::LevelEpsilonDown, AudioResult::SinadEpsilonDown);
 
   printf("\n       -60 dB down:                            ");
-  printf("  Level: %15.8le dB  Sinad: %10.7lf dB", AudioResult::Level60Down,
+  printf("  Level: %12.8lf dB  Sinad: %10.6lf dB", AudioResult::Level60Down,
          AudioResult::Sinad60Down);
 
-  printf("\n       Gain Accuracy:   +/- %15.8le dB",
+  printf("\n       Gain Accuracy:     +/- %12.6le dB",
          AudioResult::DynRangeTolerance);
 
-  printf("\n       MinScale: %8x  (%15.8le dB)", AudioResult::MinScaleNonZero,
+  printf("\n       MinScale: %8x  (%11.8f dB)", AudioResult::MinScaleNonZero,
          GainScaleToDb(AudioResult::MinScaleNonZero));
 }
 
