@@ -8,13 +8,13 @@
 
 #include <lib/zx/channel.h>
 
-#include "garnet/public/lib/gtest/test_with_loop.h"
+#include "garnet/public/lib/gtest/test_loop_fixture.h"
 #include "gtest/gtest.h"
 
 namespace netconnector {
 namespace {
 
-using MessageRelayTest = gtest::TestWithLoop;
+using MessageRelayTest = gtest::TestLoopFixture;
 
 TEST_F(MessageRelayTest, DestructionInCallback) {
   auto message_relay = std::make_unique<MessageRelay>();

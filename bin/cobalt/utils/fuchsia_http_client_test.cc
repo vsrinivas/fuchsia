@@ -6,7 +6,7 @@
 
 #include "garnet/bin/cobalt/utils/fuchsia_http_client.h"
 #include "gtest/gtest.h"
-#include "lib/gtest/test_with_loop.h"
+#include "lib/gtest/test_loop_fixture.h"
 #include "lib/network_wrapper/fake_network_wrapper.h"
 
 namespace cobalt {
@@ -75,10 +75,10 @@ class TestFuchsiaHTTPClient : public FuchsiaHTTPClient {
   CVBool deadline_triggered_;
 };
 
-class FuchsiaHTTPClientTest : public ::gtest::TestWithLoop {
+class FuchsiaHTTPClientTest : public ::gtest::TestLoopFixture {
  public:
   FuchsiaHTTPClientTest()
-      : ::gtest::TestWithLoop(),
+      : ::gtest::TestLoopFixture(),
         network_wrapper_(dispatcher()),
         delete_after_post_(false),
         http_client(

@@ -4,7 +4,7 @@
 
 #include "garnet/bin/cobalt/app/timer_manager.h"
 
-#include "lib/gtest/test_with_loop.h"
+#include "lib/gtest/test_loop_fixture.h"
 #include "third_party/googletest/googletest/include/gtest/gtest.h"
 
 namespace cobalt {
@@ -16,7 +16,7 @@ const uint64_t kStartTimestamp = 10;
 const uint64_t kEndTimestamp = 20;
 const std::string kTimerId = "test_timer";
 
-class TimerManagerTests : public ::gtest::TestWithLoop {
+class TimerManagerTests : public ::gtest::TestLoopFixture {
  protected:
   void SetUp() override {
     timer_manager_.reset(new TimerManager(dispatcher()));

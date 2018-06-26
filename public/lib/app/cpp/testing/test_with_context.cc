@@ -14,14 +14,14 @@ TestWithContext::TestWithContext() {
 }
 
 void TestWithContext::SetUp() {
-  gtest::TestWithLoop::SetUp();
+  gtest::TestLoopFixture::SetUp();
   context_ = StartupContextForTest::Create();
   controller_ = &context_->controller();
 }
 
 void TestWithContext::TearDown() {
   context_.reset();
-  gtest::TestWithLoop::TearDown();
+  gtest::TestLoopFixture::TearDown();
 }
 
 std::unique_ptr<StartupContext> TestWithContext::TakeContext() {

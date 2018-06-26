@@ -7,14 +7,14 @@
 
 #include "gtest/gtest.h"
 #include "lib/fxl/time/time_point.h"
-#include "lib/gtest/test_with_loop.h"
+#include "lib/gtest/test_loop_fixture.h"
 #include "lib/ui/tests/mocks/mock_input_device.h"
 #include "lib/ui/tests/mocks/mock_input_device_registry.h"
 
 namespace input {
 namespace test {
 
-using InputTest = ::gtest::TestWithLoop;
+using InputTest = ::gtest::TestLoopFixture;
 
 fuchsia::ui::input::DeviceDescriptor GenerateKeyboardDescriptor() {
   fuchsia::ui::input::KeyboardDescriptorPtr keyboard =

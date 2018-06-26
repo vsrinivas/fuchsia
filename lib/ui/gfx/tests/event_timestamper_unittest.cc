@@ -9,13 +9,13 @@
 #include "garnet/lib/ui/gfx/tests/util.h"
 #include "garnet/lib/ui/gfx/util/event_timestamper.h"
 #include "gtest/gtest.h"
-#include "lib/gtest/test_with_loop.h"
+#include "lib/gtest/test_loop_fixture.h"
 
 namespace scenic {
 namespace gfx {
 namespace test {
 
-using EventTimestamperTest = ::gtest::TestWithLoop;
+using EventTimestamperTest = ::gtest::TestLoopFixture;
 
 TEST_F(EventTimestamperTest, DISABLED_SmokeTest) {
   constexpr size_t kEventCount = 3;

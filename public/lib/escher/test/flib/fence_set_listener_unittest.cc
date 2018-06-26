@@ -8,12 +8,12 @@
 #include "lib/escher/flib/fence_set_listener.h"
 #include "lib/escher/impl/command_buffer_sequencer.h"
 #include "lib/escher/test/flib/util.h"
-#include "lib/gtest/test_with_loop.h"
+#include "lib/gtest/test_loop_fixture.h"
 
 namespace escher {
 namespace test {
 
-class FenceSetListenerTest : public gtest::TestWithLoop {};
+class FenceSetListenerTest : public gtest::TestLoopFixture {};
 
 TEST_F(FenceSetListenerTest, EmptySet) {
   // Create an empty FenceSetListener.
