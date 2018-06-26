@@ -16,7 +16,7 @@
 #include "lib/fidl/cpp/clone.h"
 #include "lib/fsl/vmo/strings.h"
 #include "lib/fxl/macros.h"
-#include "lib/gtest/test_with_loop.h"
+#include "lib/gtest/test_loop_fixture.h"
 #include "peridot/bin/ledger/app/constants.h"
 #include "peridot/bin/ledger/app/merging/merge_resolver.h"
 #include "peridot/bin/ledger/coroutine/coroutine_impl.h"
@@ -68,7 +68,7 @@ class FakePageSync : public sync_coordinator::PageSyncEmptyImpl {
   fxl::Closure on_idle;
 };
 
-class PageManagerTest : public gtest::TestWithLoop {
+class PageManagerTest : public gtest::TestLoopFixture {
  public:
   PageManagerTest()
       : environment_(EnvironmentBuilder().SetAsync(dispatcher()).Build()) {}

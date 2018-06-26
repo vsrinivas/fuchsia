@@ -12,12 +12,12 @@
 
 #include "lib/fsl/socket/strings.h"
 #include "lib/fxl/macros.h"
-#include "lib/gtest/test_with_loop.h"
+#include "lib/gtest/test_loop_fixture.h"
 #include "peridot/lib/socket/socket_pair.h"
 
 namespace firebase {
 
-class EventStreamTest : public ::gtest::TestWithLoop {
+class EventStreamTest : public ::gtest::TestLoopFixture {
  public:
   EventStreamTest() {}
   ~EventStreamTest() override {}

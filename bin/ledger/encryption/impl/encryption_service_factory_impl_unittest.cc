@@ -5,12 +5,12 @@
 #include "peridot/bin/ledger/encryption/impl/encryption_service_factory_impl.h"
 
 #include "gtest/gtest.h"
-#include "lib/gtest/test_with_loop.h"
+#include "lib/gtest/test_loop_fixture.h"
 
 namespace encryption {
 namespace {
 
-using EncryptionServiceFactoryTest = gtest::TestWithLoop;
+using EncryptionServiceFactoryTest = gtest::TestLoopFixture;
 
 TEST_F(EncryptionServiceFactoryTest, MakeEncryptionService) {
   EncryptionServiceFactoryImpl factory(dispatcher());

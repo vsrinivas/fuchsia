@@ -10,7 +10,7 @@
 
 #include "gtest/gtest.h"
 #include "lib/backoff/backoff.h"
-#include "lib/gtest/test_with_loop.h"
+#include "lib/gtest/test_loop_fixture.h"
 #include "peridot/bin/ledger/coroutine/coroutine_impl.h"
 #include "peridot/bin/ledger/encryption/fake/fake_encryption_service.h"
 #include "peridot/bin/ledger/storage/public/journal.h"
@@ -34,7 +34,7 @@ class TestBackoff : public backoff::Backoff {
   int* get_next_count_;
 };
 
-class TestWithPageStorage : public gtest::TestWithLoop {
+class TestWithPageStorage : public gtest::TestLoopFixture {
  public:
   TestWithPageStorage();
   ~TestWithPageStorage() override;

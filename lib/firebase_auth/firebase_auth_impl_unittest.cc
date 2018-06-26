@@ -13,7 +13,7 @@
 #include "lib/callback/set_when_called.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fxl/functional/make_copyable.h"
-#include "lib/gtest/test_with_loop.h"
+#include "lib/gtest/test_loop_fixture.h"
 #include "peridot/lib/firebase_auth/testing/test_token_provider.h"
 
 namespace firebase_auth {
@@ -38,7 +38,7 @@ class MockCobaltContext : public cobalt::CobaltContext {
   int* called_;
 };
 
-class FirebaseAuthImplTest : public gtest::TestWithLoop {
+class FirebaseAuthImplTest : public gtest::TestLoopFixture {
  public:
   FirebaseAuthImplTest()
       : token_provider_(dispatcher()),

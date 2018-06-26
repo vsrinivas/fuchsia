@@ -7,7 +7,7 @@
 #include <algorithm>
 #include <string>
 
-#include "lib/gtest/test_with_loop.h"
+#include "lib/gtest/test_loop_fixture.h"
 
 // gtest matchers are in gmock and we cannot include the specific header file
 // directly as it is private to the library.
@@ -58,7 +58,7 @@ class FakeUserIdProvider : public p2p_provider::UserIdProvider {
   std::string user_id_;
 };
 
-class UserCommunicatorImplTest : public gtest::TestWithLoop {
+class UserCommunicatorImplTest : public gtest::TestLoopFixture {
  public:
   UserCommunicatorImplTest() {}
   ~UserCommunicatorImplTest() override {}

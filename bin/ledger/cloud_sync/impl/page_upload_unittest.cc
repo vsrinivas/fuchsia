@@ -14,7 +14,7 @@
 #include "lib/fsl/socket/strings.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/macros.h"
-#include "lib/gtest/test_with_loop.h"
+#include "lib/gtest/test_loop_fixture.h"
 #include "peridot/bin/ledger/cloud_sync/impl/constants.h"
 #include "peridot/bin/ledger/cloud_sync/impl/testing/test_page_cloud.h"
 #include "peridot/bin/ledger/cloud_sync/impl/testing/test_page_storage.h"
@@ -35,7 +35,7 @@ std::unique_ptr<cloud_provider::Token> MakeToken(
   return token;
 }
 
-class PageUploadTest : public gtest::TestWithLoop, public PageUpload::Delegate {
+class PageUploadTest : public gtest::TestLoopFixture, public PageUpload::Delegate {
  public:
   PageUploadTest()
       : storage_(dispatcher()),

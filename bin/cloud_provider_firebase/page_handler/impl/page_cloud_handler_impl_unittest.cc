@@ -22,7 +22,7 @@
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/ref_ptr.h"
-#include "lib/gtest/test_with_loop.h"
+#include "lib/gtest/test_loop_fixture.h"
 #include "peridot/bin/cloud_provider_firebase/gcs/cloud_storage.h"
 #include "peridot/bin/cloud_provider_firebase/page_handler/impl/timestamp_conversions.h"
 #include "peridot/lib/firebase/encoding.h"
@@ -32,7 +32,7 @@
 namespace cloud_provider_firebase {
 namespace {
 
-class PageCloudHandlerImplTest : public gtest::TestWithLoop,
+class PageCloudHandlerImplTest : public gtest::TestLoopFixture,
                                  public gcs::CloudStorage,
                                  public firebase::Firebase,
                                  public CommitWatcher {

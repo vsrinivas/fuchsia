@@ -10,7 +10,7 @@
 #include "lib/callback/set_when_called.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fxl/macros.h"
-#include "lib/gtest/test_with_loop.h"
+#include "lib/gtest/test_loop_fixture.h"
 #include "peridot/bin/cloud_provider_firestore/app/testing/test_credentials_provider.h"
 #include "peridot/bin/cloud_provider_firestore/firestore/testing/test_firestore_service.h"
 #include "peridot/lib/convert/convert.h"
@@ -18,7 +18,7 @@
 namespace cloud_provider_firestore {
 namespace {
 
-class DeviceSetImplTest : public gtest::TestWithLoop,
+class DeviceSetImplTest : public gtest::TestLoopFixture,
                           public cloud_provider::DeviceSetWatcher {
  public:
   DeviceSetImplTest()

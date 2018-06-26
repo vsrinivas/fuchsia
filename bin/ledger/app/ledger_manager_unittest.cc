@@ -17,7 +17,7 @@
 #include "lib/fidl/cpp/optional.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/random/rand.h"
-#include "lib/gtest/test_with_loop.h"
+#include "lib/gtest/test_loop_fixture.h"
 #include "peridot/bin/ledger/app/constants.h"
 #include "peridot/bin/ledger/app/page_eviction_manager_impl.h"
 #include "peridot/bin/ledger/coroutine/coroutine_impl.h"
@@ -108,14 +108,14 @@ class FakeLedgerSync : public sync_coordinator::LedgerSync {
   FXL_DISALLOW_COPY_AND_ASSIGN(FakeLedgerSync);
 };
 
-class LedgerManagerTest : public gtest::TestWithLoop {
+class LedgerManagerTest : public gtest::TestLoopFixture {
  public:
   LedgerManagerTest()
       : environment_(EnvironmentBuilder().SetAsync(dispatcher()).Build()) {}
 
-  // gtest::TestWithLoop:
+  // gtest::TestLoopFixture:
   void SetUp() override {
-    gtest::TestWithLoop::SetUp();
+    gtest::TestLoopFixture::SetUp();
     std::unique_ptr<FakeLedgerStorage> storage =
         std::make_unique<FakeLedgerStorage>(dispatcher());
     storage_ptr = storage.get();

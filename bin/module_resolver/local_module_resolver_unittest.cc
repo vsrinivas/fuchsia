@@ -6,7 +6,7 @@
 
 #include "lib/entity/cpp/json.h"
 #include "lib/fxl/files/file.h"
-#include "lib/gtest/test_with_loop.h"
+#include "lib/gtest/test_loop_fixture.h"
 #include "lib/module_resolver/cpp/formatting.h"
 #include "peridot/lib/testing/entity_resolver_fake.h"
 
@@ -172,7 +172,7 @@ class TestManifestSource : public ModuleManifestSource {
   }
 };
 
-class LocalModuleResolverTest : public gtest::TestWithLoop {
+class LocalModuleResolverTest : public gtest::TestLoopFixture {
  protected:
   void ResetResolver() {
     fuchsia::modular::EntityResolverPtr entity_resolver_ptr;

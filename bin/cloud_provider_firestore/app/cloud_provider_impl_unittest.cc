@@ -8,13 +8,13 @@
 
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fxl/macros.h"
-#include "lib/gtest/test_with_loop.h"
+#include "lib/gtest/test_loop_fixture.h"
 #include "peridot/bin/cloud_provider_firestore/firestore/testing/test_firestore_service.h"
 #include "peridot/lib/firebase_auth/testing/test_firebase_auth.h"
 
 namespace cloud_provider_firestore {
 
-class CloudProviderImplTest : public gtest::TestWithLoop {
+class CloudProviderImplTest : public gtest::TestLoopFixture {
  public:
   CloudProviderImplTest() {
     auto firebase_auth =

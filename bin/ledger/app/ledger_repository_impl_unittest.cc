@@ -10,7 +10,7 @@
 #include "lib/fsl/vmo/strings.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/strings/string_view.h"
-#include "lib/gtest/test_with_loop.h"
+#include "lib/gtest/test_loop_fixture.h"
 #include "lib/gtest/test_with_message_loop.h"
 #include "peridot/bin/ledger/app/ledger_repository_factory_impl.h"
 #include "peridot/bin/ledger/storage/public/types.h"
@@ -41,7 +41,7 @@ class FakePageEvictionManager : public PageEvictionManager {
   FXL_DISALLOW_COPY_AND_ASSIGN(FakePageEvictionManager);
 };
 
-class LedgerRepositoryImplTest : public gtest::TestWithLoop {
+class LedgerRepositoryImplTest : public gtest::TestLoopFixture {
  public:
   LedgerRepositoryImplTest()
       : environment_(EnvironmentBuilder().SetAsync(dispatcher()).Build()) {

@@ -19,7 +19,7 @@
 #include "lib/fxl/files/scoped_temp_dir.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/strings/string_number_conversions.h"
-#include "lib/gtest/test_with_loop.h"
+#include "lib/gtest/test_loop_fixture.h"
 #include "lib/network_wrapper/fake_network_wrapper.h"
 
 namespace gcs {
@@ -40,7 +40,7 @@ http::HttpHeaderPtr GetHeader(const fidl::VectorPtr<http::HttpHeader>& headers,
   return nullptr;
 }
 
-class CloudStorageImplTest : public gtest::TestWithLoop {
+class CloudStorageImplTest : public gtest::TestLoopFixture {
  public:
   CloudStorageImplTest()
       : fake_network_wrapper_(dispatcher()),

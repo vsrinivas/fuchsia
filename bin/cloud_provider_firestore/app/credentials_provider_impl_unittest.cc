@@ -8,14 +8,14 @@
 
 #include "lib/callback/capture.h"
 #include "lib/callback/set_when_called.h"
-#include "lib/gtest/test_with_loop.h"
+#include "lib/gtest/test_loop_fixture.h"
 #include "peridot/lib/firebase_auth/testing/test_firebase_auth.h"
 
 namespace cloud_provider_firestore {
 
 namespace {
 
-class CredentialsProviderImplTest : public gtest::TestWithLoop {
+class CredentialsProviderImplTest : public gtest::TestLoopFixture {
  public:
   CredentialsProviderImplTest() {
     auto firebase_auth =

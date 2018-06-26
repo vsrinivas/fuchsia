@@ -71,7 +71,7 @@ EntryChange NewEntryChange(std::string key, std::string object_digest,
 // Creates and returns a new EntryChange removing the entry with the given key.
 EntryChange NewRemoveEntryChange(std::string key);
 
-// A TestWithLoop providing some additional utility functions on PageStorage.
+// A TestLoopFixture providing some additional utility functions on PageStorage.
 //
 // All utility functions in this class return an |AssertionResult| meaning that
 // they can be used in an EXPECT/ASSERT_TRUE: E.g.

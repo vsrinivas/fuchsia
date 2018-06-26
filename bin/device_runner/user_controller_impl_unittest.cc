@@ -6,7 +6,7 @@
 
 #include <fuchsia/sys/cpp/fidl.h>
 
-#include "lib/gtest/test_with_loop.h"
+#include "lib/gtest/test_loop_fixture.h"
 #include "peridot/lib/fidl/clone.h"
 #include "peridot/lib/testing/fake_launcher.h"
 
@@ -14,7 +14,7 @@ namespace modular {
 namespace testing {
 namespace {
 
-using UserControllerImplTest = gtest::TestWithLoop;
+using UserControllerImplTest = gtest::TestLoopFixture;
 
 TEST_F(UserControllerImplTest, StartUserRunner) {
   FakeLauncher launcher;

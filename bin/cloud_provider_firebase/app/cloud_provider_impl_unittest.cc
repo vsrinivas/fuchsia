@@ -9,7 +9,7 @@
 #include "lib/callback/set_when_called.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fxl/macros.h"
-#include "lib/gtest/test_with_loop.h"
+#include "lib/gtest/test_loop_fixture.h"
 #include "lib/network_wrapper/fake_network_wrapper.h"
 #include "peridot/lib/firebase_auth/testing/fake_token_provider.h"
 #include "peridot/lib/firebase_auth/testing/test_firebase_auth.h"
@@ -34,7 +34,7 @@ std::unique_ptr<firebase_auth::FirebaseAuth> InitFirebaseAuth(
 
 }  // namespace
 
-class CloudProviderImplTest : public gtest::TestWithLoop {
+class CloudProviderImplTest : public gtest::TestLoopFixture {
  public:
   CloudProviderImplTest()
       : network_wrapper_(dispatcher()),

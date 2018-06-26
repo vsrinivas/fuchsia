@@ -13,7 +13,7 @@
 #include "lib/fsl/socket/strings.h"
 #include "lib/fsl/vmo/sized_vmo.h"
 #include "lib/fsl/vmo/strings.h"
-#include "lib/gtest/test_with_loop.h"
+#include "lib/gtest/test_loop_fixture.h"
 #include "peridot/bin/cloud_provider_firestore/app/testing/test_credentials_provider.h"
 #include "peridot/bin/cloud_provider_firestore/firestore/encoding.h"
 #include "peridot/bin/cloud_provider_firestore/firestore/testing/test_firestore_service.h"
@@ -30,7 +30,7 @@ void SetTimestamp(google::firestore::v1beta1::Document* document,
   timestamp.set_nanos(nanos);
 }
 
-class PageCloudImplTest : public gtest::TestWithLoop {
+class PageCloudImplTest : public gtest::TestLoopFixture {
  public:
   PageCloudImplTest()
       : test_credentials_provider_(dispatcher()),

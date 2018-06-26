@@ -11,7 +11,7 @@
 #include "lib/callback/capture.h"
 #include "lib/callback/set_when_called.h"
 #include "lib/fxl/macros.h"
-#include "lib/gtest/test_with_loop.h"
+#include "lib/gtest/test_loop_fixture.h"
 #include "lib/netconnector/cpp/message_relay.h"
 #include "peridot/bin/ledger/environment/environment.h"
 #include "peridot/lib/convert/convert.h"
@@ -20,7 +20,7 @@ namespace ledger {
 
 namespace {
 
-class NetConnectorFactoryTest : public gtest::TestWithLoop {
+class NetConnectorFactoryTest : public gtest::TestLoopFixture {
  public:
   NetConnectorFactoryTest()
       : environment_(EnvironmentBuilder().SetAsync(dispatcher()).Build()) {}

@@ -8,12 +8,12 @@
 
 #include "lib/callback/capture.h"
 #include "lib/fidl/cpp/binding.h"
-#include "lib/gtest/test_with_loop.h"
+#include "lib/gtest/test_loop_fixture.h"
 #include "peridot/lib/firebase_auth/testing/test_token_provider.h"
 
 namespace cloud_provider_firestore {
 
-class FactoryImplTest : public gtest::TestWithLoop {
+class FactoryImplTest : public gtest::TestLoopFixture {
  public:
   FactoryImplTest()
       : factory_impl_(dispatcher(), /*startup_context=*/nullptr,

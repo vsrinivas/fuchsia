@@ -8,7 +8,7 @@
 #include "lib/callback/capture.h"
 #include "lib/callback/scoped_task_runner.h"
 #include "lib/callback/set_when_called.h"
-#include "lib/gtest/test_with_loop.h"
+#include "lib/gtest/test_loop_fixture.h"
 
 namespace storage {
 namespace {
@@ -42,7 +42,7 @@ class SplittingDataSource : public DataSource {
   callback::ScopedTaskRunner task_runner_;
 };
 
-using ReadDataSourceTest = gtest::TestWithLoop;
+using ReadDataSourceTest = gtest::TestLoopFixture;
 
 TEST_F(ReadDataSourceTest, ReadDataSource) {
   std::string expected_content = "Hello World";

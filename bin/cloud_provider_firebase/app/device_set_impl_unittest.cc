@@ -10,7 +10,7 @@
 #include "lib/callback/set_when_called.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fxl/macros.h"
-#include "lib/gtest/test_with_loop.h"
+#include "lib/gtest/test_loop_fixture.h"
 #include "peridot/bin/cloud_provider_firebase/device_set/testing/test_cloud_device_set.h"
 #include "peridot/lib/convert/convert.h"
 #include "peridot/lib/firebase_auth/testing/test_firebase_auth.h"
@@ -24,7 +24,7 @@ std::unique_ptr<TestCloudDeviceSet> InitCloudDeviceSet(TestCloudDeviceSet** ptr,
   return ret;
 }
 
-class DeviceSetImplTest : public gtest::TestWithLoop,
+class DeviceSetImplTest : public gtest::TestLoopFixture,
                           cloud_provider::DeviceSetWatcher {
  public:
   DeviceSetImplTest()

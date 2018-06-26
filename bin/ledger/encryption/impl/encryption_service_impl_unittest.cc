@@ -7,13 +7,13 @@
 #include "gtest/gtest.h"
 #include "lib/callback/capture.h"
 #include "lib/callback/set_when_called.h"
-#include "lib/gtest/test_with_loop.h"
+#include "lib/gtest/test_loop_fixture.h"
 #include "peridot/bin/ledger/storage/fake/fake_object.h"
 
 namespace encryption {
 namespace {
 
-class EncryptionServiceTest : public gtest::TestWithLoop {
+class EncryptionServiceTest : public gtest::TestLoopFixture {
  public:
   EncryptionServiceTest() : encryption_service_(dispatcher(), "namespace_id") {}
 

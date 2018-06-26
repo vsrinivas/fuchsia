@@ -13,7 +13,7 @@
 #include "gtest/gtest.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fxl/macros.h"
-#include "lib/gtest/test_with_loop.h"
+#include "lib/gtest/test_loop_fixture.h"
 #include "peridot/bin/ledger/p2p_provider/public/user_id_provider.h"
 #include "peridot/bin/ledger/testing/netconnector/netconnector_factory.h"
 
@@ -75,7 +75,7 @@ std::ostream& operator<<(std::ostream& os, const RecordingClient::Message& m) {
   return os << "Message{" << m.source << ", " << m.data << "}";
 }
 
-class P2PProviderImplTest : public gtest::TestWithLoop {
+class P2PProviderImplTest : public gtest::TestLoopFixture {
  public:
   P2PProviderImplTest() {}
   ~P2PProviderImplTest() override {}

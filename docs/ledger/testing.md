@@ -9,7 +9,7 @@ the code. Tests for `some_class.{h,cc}` are placed side-by-side the code being
 tested, in a `some_class_unittest.cc` file.
 
 Unit tests are regular [Google Test] tests, although most of them use our own
-[TestWithLoop] base class to conveniently run delayed tasks with a
+[TestLoopFixture] base class to conveniently run delayed tasks with a
 timeout, ensuring that a failing test does not hang forever.
 
 All unit tests in the Ledger tree are built into a single `ledger_unittests`
@@ -50,7 +50,7 @@ All local application tests in the Ledger tree are built into a single
 `/system/test/disabled/ledger_e2e_sync`.
 
 [Google Test]: https://github.com/google/googletest
-[TestWithLoop]: /lib/gtest/test_with_loop.h
+[TestLoopFixture]: /lib/gtest/test_loop_fixture.h
 [IntegrationTest]: /bin/ledger/tests/integration/integration_test.h
 [/bin/ledger/tests/integration]: /bin/ledger/tests/integration
 [Synchronization end-to-end tests]: /bin/ledger/tests/e2e_sync/README.md

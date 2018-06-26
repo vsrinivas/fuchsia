@@ -11,7 +11,7 @@
 #include "gmock/gmock.h"
 #include "lib/callback/capture.h"
 #include "lib/callback/set_when_called.h"
-#include "lib/gtest/test_with_loop.h"
+#include "lib/gtest/test_loop_fixture.h"
 #include "peridot/bin/ledger/p2p_sync/impl/device_mesh.h"
 #include "peridot/bin/ledger/storage/fake/fake_object.h"
 #include "peridot/bin/ledger/storage/testing/commit_empty_impl.h"
@@ -202,7 +202,7 @@ void BuildObjectResponseBuffer(
   buffer->Finish(message);
 }
 
-class PageCommunicatorImplTest : public gtest::TestWithLoop {
+class PageCommunicatorImplTest : public gtest::TestLoopFixture {
  public:
   PageCommunicatorImplTest() {}
   ~PageCommunicatorImplTest() override {}

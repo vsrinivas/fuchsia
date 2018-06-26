@@ -14,7 +14,7 @@
 #include "lib/fsl/vmo/strings.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
-#include "lib/gtest/test_with_loop.h"
+#include "lib/gtest/test_loop_fixture.h"
 #include "peridot/bin/cloud_provider_firebase/page_handler/testing/test_page_cloud_handler.h"
 #include "peridot/lib/convert/convert.h"
 #include "peridot/lib/firebase_auth/testing/test_firebase_auth.h"
@@ -30,7 +30,7 @@ std::unique_ptr<cloud_provider::Token> MakeToken(
   return token;
 }
 
-class PageCloudImplTest : public gtest::TestWithLoop,
+class PageCloudImplTest : public gtest::TestLoopFixture,
                           cloud_provider::PageCloudWatcher {
  public:
   PageCloudImplTest() : firebase_auth_(dispatcher()), watcher_binding_(this) {

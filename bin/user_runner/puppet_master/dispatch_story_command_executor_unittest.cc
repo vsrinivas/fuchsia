@@ -13,7 +13,7 @@
 #include "lib/async/cpp/task.h"
 #include "lib/async/default.h"
 #include "lib/fidl/cpp/string.h"
-#include "lib/gtest/test_with_loop.h"
+#include "lib/gtest/test_loop_fixture.h"
 #include "peridot/public/lib/async/cpp/operation.h"
 
 namespace modular {
@@ -52,7 +52,7 @@ class TestCommandRunner : public CommandRunner {
   bool delay_done_;
 };
 
-class DispatchStoryCommandExecutorTest : public gtest::TestWithLoop {
+class DispatchStoryCommandExecutorTest : public gtest::TestLoopFixture {
  protected:
   void Reset(DispatchStoryCommandExecutor::OperationContainerAccessor
                  container_accessor) {

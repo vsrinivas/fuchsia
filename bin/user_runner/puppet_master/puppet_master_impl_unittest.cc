@@ -7,7 +7,7 @@
 #include <fuchsia/modular/cpp/fidl.h>
 
 #include "gtest/gtest.h"
-#include "lib/gtest/test_with_loop.h"
+#include "lib/gtest/test_loop_fixture.h"
 #include "peridot/bin/user_runner/puppet_master/story_command_executor.h"
 
 namespace modular {
@@ -52,7 +52,7 @@ fuchsia::modular::StoryCommand MakeRemoveModCommand(std::string mod_name) {
   return command;
 }
 
-class PuppetMasterTest : public gtest::TestWithLoop {
+class PuppetMasterTest : public gtest::TestLoopFixture {
  public:
   PuppetMasterTest() : impl_(&executor_) { impl_.Connect(ptr_.NewRequest()); }
 

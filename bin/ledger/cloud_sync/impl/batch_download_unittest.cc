@@ -12,7 +12,7 @@
 #include "lib/callback/capture.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/macros.h"
-#include "lib/gtest/test_with_loop.h"
+#include "lib/gtest/test_loop_fixture.h"
 #include "peridot/bin/ledger/cloud_sync/impl/constants.h"
 #include "peridot/bin/ledger/cloud_sync/impl/testing/test_page_cloud.h"
 #include "peridot/bin/ledger/encryption/fake/fake_encryption_service.h"
@@ -73,7 +73,7 @@ class TestPageStorage : public storage::PageStorageEmptyImpl {
   async_t* const async_;
 };
 
-class BatchDownloadTest : public gtest::TestWithLoop {
+class BatchDownloadTest : public gtest::TestLoopFixture {
  public:
   BatchDownloadTest()
       : storage_(dispatcher()), encryption_service_(dispatcher()) {}

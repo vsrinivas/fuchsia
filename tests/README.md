@@ -9,7 +9,7 @@ the code. Tests for `some_class.{h,cc}` are placed side-by-side the code being
 tested, in a `some_class_unittest.cc` file.
 
 Unit tests are regular [Google Test] tests, although most of them use our own
-[TestWithLoop] base class to conveniently run delayed tasks with a
+[TestLoopFixture] base class to conveniently run delayed tasks with a
 timeout, ensuring that a failing test does not hang forever.
 
 All Modular unit tests in the peridot tree are built into a single
@@ -73,4 +73,4 @@ $ /system/test/run_modular_tests.sh
 
 [Test Runner]: https://fuchsia.googlesource.com/test_runner/ "Test Runner"
 [Google Test]: https://github.com/google/googletest "Google Test"
-[TestWithLoop]: ../lib/gtest/test_with_loop.h
+[TestLoopFixture]: ../lib/gtest/test_loop_fixture.h

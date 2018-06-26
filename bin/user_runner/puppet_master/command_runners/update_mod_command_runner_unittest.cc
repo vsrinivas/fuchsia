@@ -5,12 +5,12 @@
 #include "peridot/bin/user_runner/puppet_master/command_runners/update_mod_command_runner.h"
 
 #include "gtest/gtest.h"
-#include "lib/gtest/test_with_loop.h"
+#include "lib/gtest/test_loop_fixture.h"
 
 namespace modular {
 namespace {
 
-class UpdateModCommandRunnerTest : public gtest::TestWithLoop {
+class UpdateModCommandRunnerTest : public gtest::TestLoopFixture {
  protected:
   std::unique_ptr<UpdateModCommandRunner> runner_;
 };

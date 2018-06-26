@@ -8,7 +8,7 @@
 #include <test/peridot/lib/fidl/appclient/cpp/fidl.h>
 
 #include "gtest/gtest.h"
-#include "lib/gtest/test_with_loop.h"
+#include "lib/gtest/test_loop_fixture.h"
 #include "peridot/lib/testing/fake_launcher.h"
 
 namespace modular {
@@ -52,7 +52,7 @@ class TestComponentController : fuchsia::sys::ComponentController {
   FXL_DISALLOW_COPY_AND_ASSIGN(TestComponentController);
 };
 
-class AppClientTest : public gtest::TestWithLoop {};
+class AppClientTest : public gtest::TestLoopFixture {};
 
 TEST_F(AppClientTest, BaseRun_Success) {
   bool callback_called = false;

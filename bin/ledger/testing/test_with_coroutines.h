@@ -7,12 +7,12 @@
 
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
-#include "lib/gtest/test_with_loop.h"
+#include "lib/gtest/test_loop_fixture.h"
 #include "peridot/bin/ledger/coroutine/coroutine_impl.h"
 
 namespace test {
 
-class TestWithCoroutines : public gtest::TestWithLoop {
+class TestWithCoroutines : public gtest::TestLoopFixture {
  public:
   TestWithCoroutines();
 

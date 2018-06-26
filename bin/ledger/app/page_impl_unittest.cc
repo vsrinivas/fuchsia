@@ -18,7 +18,7 @@
 #include "lib/fsl/vmo/strings.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/strings/string_printf.h"
-#include "lib/gtest/test_with_loop.h"
+#include "lib/gtest/test_loop_fixture.h"
 #include "peridot/bin/ledger/app/constants.h"
 #include "peridot/bin/ledger/app/fidl/serialization_size.h"
 #include "peridot/bin/ledger/app/merging/merge_resolver.h"
@@ -39,7 +39,7 @@ std::string ToString(const fuchsia::mem::BufferPtr& vmo) {
   return value;
 }
 
-class PageImplTest : public gtest::TestWithLoop {
+class PageImplTest : public gtest::TestLoopFixture {
  public:
   PageImplTest()
       : environment_(EnvironmentBuilder().SetAsync(dispatcher()).Build()) {}

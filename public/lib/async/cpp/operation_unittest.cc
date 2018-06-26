@@ -9,7 +9,7 @@
 
 #include "gtest/gtest.h"
 #include "lib/fxl/memory/weak_ptr.h"
-#include "lib/gtest/test_with_loop.h"
+#include "lib/gtest/test_loop_fixture.h"
 #include "peridot/public/lib/async/cpp/future.h"
 
 namespace modular {
@@ -65,7 +65,7 @@ class TestOperation : public Operation<Args...> {
   std::function<void()> task_;
 };
 
-class OperationTest : public gtest::TestWithLoop {};
+class OperationTest : public gtest::TestLoopFixture {};
 
 // Test the lifecycle of a single Operation:
 // 1) Creating a new operation and adding it to a container

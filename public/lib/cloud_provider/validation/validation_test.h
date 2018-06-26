@@ -10,12 +10,12 @@
 #include "gtest/gtest.h"
 #include "lib/app/cpp/startup_context.h"
 #include "lib/fxl/macros.h"
-#include "lib/gtest/test_with_loop.h"
+#include "lib/gtest/test_loop_fixture.h"
 #include "peridot/public/lib/cloud_provider/validation/types.h"
 
 namespace cloud_provider {
 
-class ValidationTest : public ::gtest::TestWithLoop {
+class ValidationTest : public ::gtest::TestLoopFixture {
  public:
   ValidationTest();
   ~ValidationTest() override;

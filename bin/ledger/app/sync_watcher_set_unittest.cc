@@ -10,12 +10,12 @@
 #include "gtest/gtest.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fxl/macros.h"
-#include "lib/gtest/test_with_loop.h"
+#include "lib/gtest/test_loop_fixture.h"
 
 namespace ledger {
 namespace {
 
-class SyncWatcherSetTest : public gtest::TestWithLoop {
+class SyncWatcherSetTest : public gtest::TestLoopFixture {
  public:
   SyncWatcherSetTest() {}
   ~SyncWatcherSetTest() override {}

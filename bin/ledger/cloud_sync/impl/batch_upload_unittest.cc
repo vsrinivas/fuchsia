@@ -14,7 +14,7 @@
 #include "lib/fsl/vmo/strings.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/strings/string_view.h"
-#include "lib/gtest/test_with_loop.h"
+#include "lib/gtest/test_loop_fixture.h"
 #include "peridot/bin/ledger/cloud_sync/impl/testing/test_page_cloud.h"
 #include "peridot/bin/ledger/encryption/fake/fake_encryption_service.h"
 #include "peridot/bin/ledger/storage/public/commit.h"
@@ -162,7 +162,7 @@ class TestPageStorageFailingToMarkPieces : public TestPageStorage {
 };
 
 template <typename E>
-class BaseBatchUploadTest : public gtest::TestWithLoop {
+class BaseBatchUploadTest : public gtest::TestLoopFixture {
  public:
   BaseBatchUploadTest()
       : encryption_service_(dispatcher()),

@@ -14,7 +14,7 @@
 #include "lib/fxl/files/scoped_temp_dir.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/string_number_conversions.h"
-#include "lib/gtest/test_with_loop.h"
+#include "lib/gtest/test_loop_fixture.h"
 #include "lib/network_wrapper/fake_network_wrapper.h"
 
 namespace service_account {
@@ -56,7 +56,7 @@ constexpr fxl::StringView kWrongKeyTestConfig =
     "\"client_id\": \"fake_id\""
     "}";
 
-class ServiceAccountTokenProviderTest : public gtest::TestWithLoop {
+class ServiceAccountTokenProviderTest : public gtest::TestLoopFixture {
  public:
   ServiceAccountTokenProviderTest()
       : network_wrapper_(dispatcher()),

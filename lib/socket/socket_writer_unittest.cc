@@ -7,14 +7,14 @@
 #include <utility>
 
 #include "lib/fxl/macros.h"
-#include "lib/gtest/test_with_loop.h"
+#include "lib/gtest/test_loop_fixture.h"
 #include "peridot/lib/socket/socket_drainer_client.h"
 #include "peridot/lib/socket/socket_pair.h"
 
 namespace socket {
 namespace {
 
-using SocketWriterTest = gtest::TestWithLoop;
+using SocketWriterTest = gtest::TestLoopFixture;
 
 class StringClient : public SocketWriter::Client {
  public:
