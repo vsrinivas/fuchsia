@@ -26,12 +26,10 @@ using ::fuchsia::maxwell::internal::ModulePackageIndexerPtr;
 // module_resolver runs.
 std::string FindModulePackageIndexerService() {
   // The ModulePackageIndexer service is run by the module_resolver component
-  // under the "user-*" realm. The structured path of to this service is:
-  // /hub/r/sys/<koid>/r/user-<userid>/<koid>/c/module_resolver/<koid>/out/debug
+  // under current sys realm. The structured path of to this service is:
+  // /hub//r/user-<userid>/<koid>/c/module_resolver/<koid>/out/debug
   auto glob_str = fxl::StringPrintf(
-      "/hub/r/sys/*/r/user-*/*/c/module_resolver/*/out/"
-      "debug/%s",
-      ModulePackageIndexer::Name_);
+      "/hub/r/user-*/*/c/module_resolver/*/out/debug/%s", ModulePackageIndexer::Name_);
 
   glob_t globbuf;
   std::string service_path;
