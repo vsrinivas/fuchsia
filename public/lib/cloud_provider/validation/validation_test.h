@@ -23,7 +23,7 @@ class ValidationTest : public ::gtest::TestWithLoop {
   void SetUp() override;
 
  protected:
-  CloudProviderSyncPtr cloud_provider_;
+  CloudProviderSync2Ptr cloud_provider_;
 
  private:
   std::unique_ptr<fuchsia::sys::StartupContext> startup_context_;
