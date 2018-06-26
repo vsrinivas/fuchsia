@@ -40,15 +40,16 @@ import sys
 
 BASE_COLORS = [
     #'\033[40m', # black
-    '\033[41m', # red
-    '\033[42m', # green
-    '\033[43m', # yellow
-    '\033[44m', # blue
-    '\033[45m', # magenta
-    '\033[46m', # cyan
+    '\033[91m', # red
+    '\033[92m', # green
+    '\033[93m', # yellow
+    '\033[94m', # blue
+    '\033[95m', # magenta
+    '\033[66m', # cyan
     #'\033[47m', # white
 ]
 RESET_BG = '\033[49m'
+RESET_FG = '\033[39m'
 
 class ColorAssigner(object):
   def __init__(self, colors):
@@ -120,7 +121,7 @@ def main():
 
         # Use join to avoid python putting a space between each value being
         # printed.
-        print ''.join([color, line, RESET_BG])
+        print ''.join([color, line, RESET_BG, RESET_FG])
         sys.stdout.flush()
         break
 
