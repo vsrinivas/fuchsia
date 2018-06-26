@@ -23,6 +23,14 @@
 #include "linuxisms.h"
 #include "netbuf.h"
 
+// ZX USB transfer requests use a pre-allocated buffer. This requires a copy for each transfer,
+// and the max transfer size must be known in advance. 4K is bigger than any frame or
+// firmware transfer this driver does.
+// TODO(cphoenix): Double-check on control transfer sizes.
+// TODO(cphoenix): When/if the USB driver gets more sophisticated, rework this for greater
+//  efficiency.
+#define USB_MAX_TRANSFER_SIZE (4096)
+
 enum brcmf_usb_state {
     BRCMFMAC_USB_STATE_DOWN,
     BRCMFMAC_USB_STATE_DL_FAIL,
@@ -53,13 +61,12 @@ struct brcmf_usbdev {
 
 struct brcmf_urb {
     usb_request_t* zxurb;
-    uint32_t refcount;
     void* context;
     struct brcmf_usbdev_info* devinfo;
     int actual_length;
     int desired_length;
     void* recv_buffer; // For control reads
-    uint32_t status;
+    zx_status_t status;
 };
 
 /* IO Request Block (IRB) */

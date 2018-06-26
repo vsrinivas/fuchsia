@@ -176,20 +176,8 @@ typedef uint32_t gfp_t;
 #define LINUX_FUNCVU(name) LINUX_FUNC(name, void*, uint16_t)
 #define LINUX_FUNCUU(name) LINUX_FUNC(name, uint32_t, uint32_t)
 
- // These are mostly wrong or unnecessary, but going away very soon
-#define net_ratelimit() (true)
-#define max_t(a, b, c) (b)
-static inline const char* dev_name(void* dev) {
-    return device_get_name(dev);
-}
-LINUX_FUNCVV(interface_to_usbdev)
-LINUX_FUNCVV(eth_zero_addr)
-LINUX_FUNCII(trace_brcmf_sdpcm_hdr)
-LINUX_FUNCVV(netdev_priv)
-LINUX_FUNCVI(trace_brcmf_bcdchdr)
-LINUX_FUNCVV(wiphy_priv)
-#define USB_DEVICE(a,b) .idVendor=a, .idProduct=b
-
+LINUX_FUNCVI(netif_carrier_on)
+LINUX_FUNCVI(netif_carrier_ok)
 LINUX_FUNCVI(ether_addr_equal) // Trivial
 LINUX_FUNCVI(is_valid_ether_addr)
 LINUX_FUNCVI(eth_type_trans)
@@ -208,23 +196,6 @@ static inline uint32_t get_unaligned_le32(void* addr) {
     memcpy(&value, addr, sizeof(uint32_t));
     return value;
 }
-LINUX_FUNCVV(netbuf_mac_header)
-LINUX_FUNCVI(usb_kill_urb)
-LINUX_FUNCVI(usb_free_urb)
-LINUX_FUNCIV(usb_alloc_urb)
-LINUX_FUNCVI(usb_fill_bulk_urb)
-LINUX_FUNCVI(usb_fill_control_urb)
-LINUX_FUNCVS(usb_submit_urb)
-LINUX_FUNCVI(usb_rcvctrlpipe)
-LINUX_FUNCVI(usb_sndctrlpipe)
-LINUX_FUNCVI(usb_rcvbulkpipe)
-LINUX_FUNCVI(usb_sndbulkpipe)
-LINUX_FUNCVI(usb_endpoint_xfer_bulk)
-LINUX_FUNCVI(usb_endpoint_dir_in)
-LINUX_FUNCVI(usb_endpoint_num)
-LINUX_FUNCVV(usb_get_intfdata)
-LINUX_FUNCVI(usb_register)
-
 
 LINUX_FUNCVI(brcmf_netbuf_realloc_head) // Realloc if necessary
 LINUX_FUNCVV(brcmf_netbuf_list_peek_tail) // netbuf list
@@ -273,7 +244,6 @@ LINUX_FUNCVI(driver_for_each_device) // In usb.c only
 
 LINUX_FUNCII(send_sig) // SDIO only
 LINUX_FUNCVI(kthread_stop) // SDIO only
-LINUX_FUNCVI(wake_up_interruptible) // SDIO only
 LINUX_FUNCVI(pr_warn) // SDIO only
 LINUX_FUNCII(enable_irq) // SDIO only
 // Last parameter of this returns an error code. Must be a zx_status_t (0 or negative).
@@ -361,18 +331,10 @@ LINUX_FUNCII(ieee80211_is_mgmt)
 LINUX_FUNCII(ieee80211_is_action)
 LINUX_FUNCII(ieee80211_is_probe_resp)
 LINUX_FUNCVS(wiphy_register)
-LINUX_FUNCVI(wiphy_free)
-LINUX_FUNCVV(wdev_priv)
-LINUX_FUNCVI(set_wiphy_dev)
 LINUX_FUNCVI(netif_rx)
 LINUX_FUNCVI(netif_rx_ni)
 LINUX_FUNCVI(netif_carrier_off)
-LINUX_FUNCVI(dev_net_set)
-LINUX_FUNCVI(register_netdevice)
-LINUX_FUNCVI(register_netdev)
-LINUX_FUNCVV(wiphy_net)
-LINUX_FUNCVI(netif_carrier_ok)
-LINUX_FUNCVI(netif_carrier_on)
+
 LINUX_FUNCVI(seq_printf)
 LINUX_FUNCVS(seq_write)
 LINUX_FUNCVI(seq_puts)
@@ -386,10 +348,6 @@ LINUX_FUNCVI(dev_coredumpv)
     pci_config_read32(&pdev->pci_proto, offset, value)
 LINUX_FUNCcVI(pci_enable_msi)
 LINUX_FUNCcVI(pci_disable_msi)
-LINUX_FUNCcVI(pci_resource_start)
-LINUX_FUNCcVI(pci_resource_len)
-LINUX_FUNCcVS(pci_register_driver)
-LINUX_FUNCcVI(pci_unregister_driver)
 //LINUX_FUNCII(free_irq) // PCI & SDIO only
 LINUX_FUNCII(request_threaded_irq) // PCI only
 LINUX_FUNCVV(dma_alloc_coherent) // PCI only
@@ -407,7 +365,6 @@ LINUX_FUNCVI(dma_unmap_single) // PCI only
 
 typedef uint64_t phys_addr_t;
 typedef uint64_t pm_message_t;
-typedef void* usb_complete_t;
 #define DEBUG                         // Turns on struct members that debug.c needs
 #define CONFIG_OF                     // Turns on functions that of.c needs
 #define CONFIG_BRCMFMAC_PROTO_MSGBUF  // turns on msgbuf.h
@@ -437,7 +394,7 @@ enum {
     TASK_RUNNING = (1),
     GFP_ATOMIC = (1),
     GFP_KERNEL = (2),
-    IFNAMSIZ = (32),
+    IFNAMSIZ = (16),
     WLAN_PMKID_LEN = (16),
     WLAN_MAX_KEY_LEN = (128),
     IEEE80211_MAX_SSID_LEN = (32),
@@ -669,12 +626,6 @@ struct sg_table {
     int orig_nents;
 };
 
-struct current_with_pid {
-    int pid;
-};
-
-extern struct current_with_pid* current;
-
 struct brcmfmac_pd_cc_entry {
     uint8_t* iso3166;
     uint32_t rev;
@@ -696,32 +647,6 @@ struct net_device_ops { // Probably all return zx_status_t
 
 struct ethtool_ops {
     void* get_drvinfo;
-};
-
-struct net_device {
-    struct wireless_dev* ieee80211_ptr;
-    const struct net_device_ops* netdev_ops;
-    const struct ethtool_ops* ethtool_ops;
-    void* dev_addr;
-    void* name;
-    void* priv;
-    uint8_t name_assign_type;
-    uint32_t flags;
-    struct {
-        int tx_dropped;
-        int tx_packets;
-        int tx_bytes;
-        int rx_packets;
-        int rx_bytes;
-        int multicast;
-        int rx_errors;
-        int tx_errors;
-    } stats;
-    uint32_t features;
-    uint32_t needed_headroom;
-    void* priv_destructor;
-    int reg_state;
-    int needs_free_net_device;
 };
 
 void ether_setup(void);
@@ -754,7 +679,7 @@ struct ieee80211_supported_band {
         int ampdu_factor;
         int ampdu_density;
         struct {
-            void* rx_mask;
+            uint8_t rx_mask[32]; // At most 32 bytes are set; it's never read in this driver.
             uint32_t tx_params;
         } mcs;
     } ht_cap;
@@ -788,7 +713,7 @@ struct wiphy {
     uint32_t retry_long;
     uint32_t retry_short;
     uint32_t interface_modes;
-    struct ieee80211_supported_band* bands[555];
+    struct ieee80211_supported_band* bands[5];
     int n_iface_combinations;
     struct ieee80211_iface_combination* iface_combinations;
     uint32_t max_scan_ssids;
@@ -1282,24 +1207,6 @@ struct sdio_driver {
     struct {
         void* pm;
     } drv;
-};
-
-struct device_driver {
-    int foo;
-};
-
-struct usb_driver {
-    char* name;
-    void* probe;
-    void* disconnect;
-    void* suspend;
-    void* resume;
-    void* reset_resume;
-    int disable_hub_initiated_lpm;
-    const struct brcmf_usb_device_id* id_table;
-    struct {
-        struct device_driver driver;
-    } drvwrap;
 };
 
 struct dentry {

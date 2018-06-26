@@ -354,7 +354,7 @@ static inline void brcmf_fweh_process_netbuf(struct brcmf_pub* drvr, struct brcm
     }
 
     /* check for BRCM oui match */
-    event_packet = (struct brcmf_event*)netbuf_mac_header(netbuf);
+    event_packet = (struct brcmf_event*)(netbuf->eth_header);
     if (memcmp(BRCM_OUI, &event_packet->hdr.oui[0], sizeof(event_packet->hdr.oui))) {
         return;
     }

@@ -422,4 +422,10 @@ void brcmf_set_mpc(struct brcmf_if* ndev, int mpc);
 void brcmf_abort_scanning(struct brcmf_cfg80211_info* cfg);
 void brcmf_free_net_device_vif(struct net_device* ndev);
 
+// TODO(cphoenix): These three are temporary, for hard-coded testing in usb.c
+zx_status_t brcmf_cfg80211_scan(struct wiphy* wiphy, struct cfg80211_scan_request* request);
+zx_status_t brcmf_cfg80211_connect(struct wiphy* wiphy, struct net_device* ndev,
+                                   struct cfg80211_connect_params* sme);
+zx_status_t brcmf_netdev_open(struct net_device* ndev);
+
 #endif /* BRCMFMAC_CFG80211_H */

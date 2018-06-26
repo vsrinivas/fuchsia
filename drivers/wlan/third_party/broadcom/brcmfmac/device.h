@@ -160,6 +160,31 @@ struct brcmf_firmware {
     void* data;
 };
 
+struct net_device {
+    struct wireless_dev* ieee80211_ptr;
+    const struct net_device_ops* netdev_ops;
+    const struct ethtool_ops* ethtool_ops;
+    uint8_t dev_addr[ETH_ALEN];
+    char name[123];
+    void* priv;
+    uint32_t flags;
+    struct {
+        int tx_dropped;
+        int tx_packets;
+        int tx_bytes;
+        int rx_packets;
+        int rx_bytes;
+        int multicast;
+        int rx_errors;
+        int tx_errors;
+    } stats;
+    uint32_t features;
+    uint32_t needed_headroom;
+    void* priv_destructor;
+    int reg_state;
+    int needs_free_net_device;
+};
+
 struct brcmf_bus* dev_get_drvdata(struct brcmf_device* dev);
 
 void dev_set_drvdata(struct brcmf_device* dev, struct brcmf_bus* bus);

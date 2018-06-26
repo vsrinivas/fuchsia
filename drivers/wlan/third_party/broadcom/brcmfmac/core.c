@@ -28,6 +28,8 @@
 #include <ddk/device.h>
 #include <ddk/protocol/pci.h>
 #include <ddk/protocol/usb.h>
+#include <netinet/if_ether.h>
+
 #include <endian.h>
 #include <pthread.h>
 #include <stdatomic.h>
@@ -205,7 +207,7 @@ static void _brcmf_update_ndtable(struct work_struct* work) {
         ret = brcmf_fil_iovar_data_set(ifp, "nd_hostip", &ifp->ipv6_addr_tbl[i],
                                        sizeof(struct in6_addr));
         if (ret != ZX_OK) {
-            brcmf_err("add nd ip err %d\n", ret);
+            brcmf_err("add nd ip err %s\n", zx_status_get_string(ret));
         }
     }
 }
@@ -370,7 +372,36 @@ static zx_status_t brcmf_rx_hdrpull(struct brcmf_pub* drvr, struct brcmf_netbuf*
         return ZX_ERR_IO;
     }
 
-    netbuf->protocol = eth_type_trans(netbuf, (*ifp)->ndev);
+    // TODO(cphoenix): Double-check (be paranoid) that these side effects of eth_type_trans()
+    // are not used in this code.
+    // - netbuf->dev
+    // Also double-check that we're not using DSA in our net device (whatever that is)
+    // and that we don't worry about "older Novell" IPX.
+    // TODO(cphoenix): This is an ugly hack, probably buggy, to replace some of eth_type_trans.
+    // See https://elixir.bootlin.com/linux/v4.17-rc7/source/net/ethernet/eth.c#L156
+    brcmf_dbg(TEMP, "Packet header:");
+    brcmf_hexdump(netbuf->data, min(netbuf->len, 32));
+    brcmf_alphadump(netbuf->data, netbuf->len);
+    if (address_is_multicast(netbuf->data)) {
+        if (address_is_broadcast(netbuf->data)) {
+            netbuf->pkt_type = ADDRESSED_TO_BROADCAST;
+        } else {
+            netbuf->pkt_type = ADDRESSED_TO_MULTICAST;
+        }
+    } else if (memcmp(netbuf->data, (*ifp)->ndev->dev_addr, 6)) {
+        netbuf->pkt_type = ADDRESSED_TO_OTHER_HOST;
+    }
+    struct ethhdr* header = (struct ethhdr*)netbuf->data;
+    if (header->h_proto >= ETH_P_802_3_MIN) {
+        netbuf->protocol = header->h_proto;
+    } else {
+        netbuf->protocol = htobe16(ETH_P_802_2);
+    }
+    netbuf->eth_header = netbuf->data;
+    if (netbuf->len >= 14) {
+        brcmf_netbuf_shrink_head(netbuf, 14);
+    }
+    //netbuf->protocol = eth_type_trans(netbuf, (*ifp)->ndev);
     return ZX_OK;
 }
 
@@ -844,7 +875,7 @@ static int brcmf_inetaddr_changed(struct notifier_block* nb, unsigned long actio
             ret = brcmf_fil_iovar_data_set(ifp, "arp_hostip", &ifa->ifa_address,
                                            sizeof(ifa->ifa_address));
             if (ret != ZX_OK) {
-                brcmf_err("add arp ip err %d\n", ret);
+                brcmf_err("add arp ip err %s\n", zx_status_get_string(ret));
             }
         }
         break;
@@ -865,7 +896,7 @@ static int brcmf_inetaddr_changed(struct notifier_block* nb, unsigned long actio
                 ret = brcmf_fil_iovar_data_set(ifp, "arp_hostip", &addr_table[i],
                                                sizeof(addr_table[i]));
                 if (ret != ZX_OK) {
-                    brcmf_err("add arp ip err %d\n", ret);
+                    brcmf_err("add arp ip err %s\n", zx_status_get_string(ret));
                 }
             }
         }

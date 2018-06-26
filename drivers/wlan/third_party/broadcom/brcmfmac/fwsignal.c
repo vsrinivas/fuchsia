@@ -215,8 +215,9 @@ struct brcmf_netbuf_workspace {
     zx_status_t mac_status;
 };
 
-static_assert(sizeof(struct brcmf_netbuf_workspace) <= 48,
-    "Struct brcmf_netbuf_workspace must be <= 48 bytes");
+static_assert(sizeof(struct brcmf_netbuf_workspace) <=
+              sizeof(((struct brcmf_netbuf*)0)->workspace),
+              "Struct brcmf_netbuf_workspace must be <= 48 bytes");
 
 /*
  * macro casting netbuf control buffer to struct brcmf_netbuf_workspace.

@@ -37,6 +37,8 @@
 
 #include "sdio.h"
 
+#include <zircon/status.h>
+
 #include <stdatomic.h>
 #include <sync/completion.h>
 #include <threads.h>
@@ -1958,7 +1960,7 @@ static zx_status_t brcmf_sdio_txpkt_hdalign(struct brcmf_sdio* bus, struct brcmf
 }
 
 /*
- * struct brcmf_netbuf_workspace reserves first two bytes in brcmf_netbuf.workspace for
+ * struct brcmf_netbuf_workspace reserves the first two bytes in brcmf_netbuf.workspace for
  * bus layer usage.
  */
 /* flag marking a dummy netbuf added for DMA alignment requirement */
@@ -2342,7 +2344,7 @@ static void brcmf_sdio_bus_stop(struct brcmf_device* dev) {
             brcmf_sdiod_writeb(sdiodev, SBSDIO_FUNC1_CHIPCLKCSR, (saveclk | SBSDIO_FORCE_HT), &err);
         }
         if (err != ZX_OK) {
-            brcmf_err("Failed to force clock for F2: err %d\n", err);
+            brcmf_err("Failed to force clock for F2: err %s\n", zx_status_get_string(err));
         }
 
         /* Turn off the bus (F2), free any pending packets */
@@ -3436,7 +3438,7 @@ static void brcmf_sdio_bus_watchdog(struct brcmf_sdio* bus) {
             }
 
             /* If there is something, make like the ISR and
-                     schedule the DPC */
+                     schedule the DPC. */
             if (intstatus) {
                 bus->sdcnt.pollcnt++;
                 atomic_store(&bus->ipend, 1);
@@ -3693,8 +3695,8 @@ static bool brcmf_sdio_probe_attach(struct brcmf_sdio* bus) {
     }
 
     if (err != ZX_OK || ((clkctl & ~SBSDIO_AVBITS) != BRCMF_INIT_CLKCTL1)) {
-        brcmf_err("ChipClkCSR access: err %d wrote 0x%02x read 0x%02x\n", err, BRCMF_INIT_CLKCTL1,
-                  clkctl);
+        brcmf_err("ChipClkCSR access: err %s wrote 0x%02x read 0x%02x\n", zx_status_get_string(err),
+                  BRCMF_INIT_CLKCTL1, clkctl);
         goto fail;
     }
 
@@ -3931,7 +3933,7 @@ static void brcmf_sdio_firmware_callback(struct brcmf_device* dev, zx_status_t e
         brcmf_sdiod_writeb(sdiodev, SBSDIO_FUNC1_CHIPCLKCSR, (saveclk | SBSDIO_FORCE_HT), &err);
     }
     if (err != ZX_OK) {
-        brcmf_err("Failed to force clock for F2: err %d\n", err);
+        brcmf_err("Failed to force clock for F2: err %s\n", zx_status_get_string(err));
         goto release;
     }
 

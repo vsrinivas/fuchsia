@@ -24,6 +24,8 @@
 //#include <net/netlink.h>
 #include "cfg80211.h"
 
+#include <zircon/status.h>
+
 #include <threads.h>
 
 #include "brcmu_utils.h"
@@ -2036,7 +2038,7 @@ done:
     if (err != ZX_OK) {
         brcmf_clear_bit_in_array(BRCMF_VIF_STATUS_CONNECTING, &ifp->vif->sme_state);
     }
-    brcmf_dbg(TRACE, "Exit, err %d\n", err);
+    brcmf_dbg(TRACE, "Exit, err %s\n", zx_status_get_string(err));
     return err;
 }
 
@@ -2704,11 +2706,37 @@ done:
     return err;
 }
 
+static void brcmf_iedump(uint8_t* ie, size_t length) {
+    size_t offset = 0;
+    char ieinfo[500] = "";
+    char* ieinfoptr = ieinfo;
+    while (offset < length) {
+        uint8_t type = ie[offset];
+        uint8_t length = ie[offset + 1];
+        if (type == 0) {
+            brcmf_dbg(TEMP, " * * ie 0 (name), len %d", length);
+            brcmf_alphadump(ie + offset + 2, length);
+        } else {
+            //brcmf_dbg(TEMP, "ie %d, len %d", type, length);
+            //brcmf_hexdump(ie + offset + 2, length);
+            if (ieinfoptr < ieinfo + sizeof(ieinfo)) {
+                ieinfoptr += snprintf(ieinfoptr, sizeof(ieinfo) - (ieinfoptr - ieinfo),
+                    "ie %d, len %d. ", ie[offset], length);
+            }
+        }
+        offset += length + 2;
+    }
+    brcmf_dbg(TEMP, "IEs: %s", ieinfo);
+    if (offset != length) {
+        brcmf_dbg(TEMP, " * * Offset %ld didn't match length %ld", offset, length);
+    }
+}
+
 static zx_status_t brcmf_inform_single_bss(struct brcmf_cfg80211_info* cfg,
                                            struct brcmf_bss_info_le* bi) {
     struct wiphy* wiphy = cfg_to_wiphy(cfg);
-    struct ieee80211_channel* notify_channel;
-    struct cfg80211_bss* bss;
+    //struct ieee80211_channel* notify_channel;
+    //struct cfg80211_bss* bss;
     struct ieee80211_supported_band* band;
     struct brcmu_chan ch;
     uint16_t channel;
@@ -2737,8 +2765,10 @@ static zx_status_t brcmf_inform_single_bss(struct brcmf_cfg80211_info* cfg,
         band = wiphy->bands[NL80211_BAND_5GHZ];
     }
 
-    freq = ieee80211_channel_to_frequency(channel, band->band);
-    notify_channel = ieee80211_get_channel(wiphy, freq);
+    brcmf_dbg(TEMP, " * * Setting freq to channel - fix this soon!");
+    freq = channel;
+    /*freq = ieee80211_channel_to_frequency(channel, band->band);
+    notify_channel = ieee80211_get_channel(wiphy, freq);*/
 
     notify_capability = bi->capability;
     notify_interval = bi->beacon_period;
@@ -2752,15 +2782,17 @@ static zx_status_t brcmf_inform_single_bss(struct brcmf_cfg80211_info* cfg,
     brcmf_dbg(CONN, "Beacon interval: %d\n", notify_interval);
     brcmf_dbg(CONN, "Signal: %d\n", notify_signal);
 
-    bss = cfg80211_inform_bss(wiphy, notify_channel, CFG80211_BSS_FTYPE_UNKNOWN,
+    brcmf_dbg(TEMP, " * * Got a scan result:");
+    brcmf_iedump(notify_ie, notify_ielen);
+    brcmf_dbg(TEMP, " * * Would have called cfg80211_inform_bss() and cfg80211_put_bss()");
+/*    bss = cfg80211_inform_bss(wiphy, notify_channel, CFG80211_BSS_FTYPE_UNKNOWN,
                               (const uint8_t*)bi->BSSID, 0, notify_capability, notify_interval,
                               notify_ie, notify_ielen, notify_signal, GFP_KERNEL);
-
     if (!bss) {
         return ZX_ERR_NO_MEMORY;
     }
 
-    cfg80211_put_bss(wiphy, bss);
+    cfg80211_put_bss(wiphy, bss);*/
 
     return ZX_OK;
 }
@@ -3103,6 +3135,7 @@ static void brcmf_init_escan(struct brcmf_cfg80211_info* cfg) {
     brcmf_fweh_register(cfg->pub, BRCMF_E_ESCAN_RESULT, brcmf_cfg80211_escan_handler);
     cfg->escan_info.escan_state = WL_ESCAN_STATE_IDLE;
     /* Init scan_timeout timer */
+    cfg->escan_timeout.data = cfg;
     brcmf_timer_init(&cfg->escan_timeout, brcmf_escan_timeout);
     workqueue_init_work(&cfg->escan_timeout_work, brcmf_cfg80211_escan_timeout_worker);
 }

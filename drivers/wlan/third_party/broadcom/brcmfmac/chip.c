@@ -22,6 +22,7 @@
 //#include <linux/ssb/ssb_regs.h>
 
 #include <zircon/listnode.h>
+#include <zircon/status.h>
 
 #include "brcm_hw_ids.h"
 #include "brcmu_utils.h"
@@ -1098,13 +1099,13 @@ zx_status_t brcmf_chip_attach(void* ctx, const struct brcmf_buscore_ops* ops,
     }
 
     err = brcmf_chip_recognition(chip);
-    brcmf_dbg(TEMP, "survived chip_recognition, err %d", err);
+    brcmf_dbg(TEMP, "survived chip_recognition, err %s", zx_status_get_string(err));
     if (err != ZX_OK) {
         goto fail;
     }
 
     err = brcmf_chip_setup(chip);
-    brcmf_dbg(TEMP, "survived chip_setup, err %d", err);
+    brcmf_dbg(TEMP, "survived chip_setup, err %s", zx_status_get_string(err));
     if (err != ZX_OK) {
         goto fail;
     }

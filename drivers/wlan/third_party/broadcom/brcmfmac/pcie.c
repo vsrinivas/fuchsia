@@ -242,7 +242,6 @@ struct brcmf_pci_device {
     int irq;
     int bus_number;
     int domain;
-    zx_handle_t bti;
     pci_protocol_t pci_proto;
 };
 
