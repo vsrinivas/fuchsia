@@ -10,20 +10,22 @@
 #include <string.h>
 #include <unistd.h>
 
-#include <lib/fdio/io.h>
-#include <lib/fdio/spawn.h>
-#include <lib/fdio/util.h>
-#include <lib/fdio/watcher.h>
-#include <port/port.h>
+#include <launchpad/launchpad.h>
+
 #include <zircon/device/pty.h>
 #include <zircon/device/vfs.h>
 #include <zircon/listnode.h>
 #include <zircon/process.h>
 #include <zircon/processargs.h>
-#include <zircon/status.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/log.h>
 #include <zircon/syscalls/object.h>
+
+#include <lib/fdio/io.h>
+#include <lib/fdio/util.h>
+#include <lib/fdio/watcher.h>
+
+#include <port/port.h>
 
 #include "vc.h"
 
@@ -76,30 +78,21 @@ static zx_status_t log_reader_cb(port_handler_t* ph, zx_signals_t signals, uint3
 }
 
 static zx_status_t launch_shell(vc_t* vc, int fd, const char* cmd) {
-    const char* argv[] = { "/boot/bin/sh", nullptr, nullptr, nullptr };
+    const char* args[] = { "/boot/bin/sh", "-c", cmd };
 
-    if (cmd) {
-        argv[1] = "-c";
-        argv[2] = cmd;
+    launchpad_t* lp;
+    launchpad_create(zx_job_default(), "vc:sh", &lp);
+    launchpad_load_from_file(lp, args[0]);
+    launchpad_set_args(lp, cmd ? 3 : 1, args);
+    launchpad_transfer_fd(lp, fd, FDIO_FLAG_USE_FOR_STDIO | 0);
+    launchpad_clone(lp, LP_CLONE_FDIO_NAMESPACE | LP_CLONE_ENVIRON | LP_CLONE_DEFAULT_JOB);
+
+    const char* errmsg;
+    zx_status_t r;
+    if ((r = launchpad_go(lp, &vc->proc, &errmsg)) < 0) {
+        printf("vc: cannot spawn shell: %s: %d\n", errmsg, r);
     }
-
-    fdio_spawn_action_t actions[2] = {};
-    actions[0].action = FDIO_SPAWN_ACTION_SET_NAME;
-    actions[0].name.data = "vc:sh";
-    actions[1].action = FDIO_SPAWN_ACTION_TRANSFER_FD;
-    actions[1].fd = {.local_fd = fd, .target_fd = FDIO_FLAG_USE_FOR_STDIO};
-
-    uint32_t flags = FDIO_SPAWN_CLONE_ALL & ~FDIO_SPAWN_CLONE_STDIO;
-
-    char err_msg[FDIO_SPAWN_ERR_MSG_MAX_LENGTH];
-    zx_status_t status = fdio_spawn_etc(ZX_HANDLE_INVALID, flags, argv[0], argv,
-                                        nullptr, countof(actions), actions,
-                                        &vc->proc, err_msg);
-    if (status != ZX_OK) {
-        printf("vc: cannot spawn shell: %s: %d (%s)\n", err_msg, status,
-               zx_status_get_string(status));
-    }
-    return status;
+    return r;
 }
 
 static void session_destroy(vc_t* vc) {
