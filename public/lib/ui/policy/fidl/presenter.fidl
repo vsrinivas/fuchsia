@@ -9,6 +9,8 @@ using fuchsia.ui.gfx;
 // The Presenter service provides a way for applications to ask that a
 // specified view be added to a view tree, leaving any window management
 // concerns up to the discretion of the presenter implementation.
+//
+// TODO(SCN-599): this will be replaced by Presenter2
 [Discoverable]
 interface Presenter {
   1: Present(fuchsia.ui.views_v1_token.ViewOwner view_owner, request<Presentation>? presentation_request);
@@ -17,4 +19,21 @@ interface Presenter {
   // presenter's lifetime. Only applies to any subsequent calls to Present().
   // Used for testing.
   2: HACK_SetRendererParams(bool enable_clipping, vector<fuchsia.ui.gfx.RendererParam> params);
+};
+
+// The Presenter service provides a way for applications to ask that a
+// specified view be added to a view tree, leaving any window management
+// concerns up to the discretion of the presenter implementation.
+//
+// TODO(SCN-595): this is the new presenter interface, which will be renamed
+// to Presenter after the original is deleted.
+[Discoverable]
+interface Presenter2 {
+  // Usage: the client creates a pair of eventpairs and uses one to create a
+  // View in their Scenic session.  The other eventpair is passed to this
+  // method as |view_holder_token|; the Presenter2 service will use this to
+  // create a ViewHolder which is embedded within an appropriate Scenic scene,
+  // such that the client View it will receive input events, etc.
+  1: PresentView(handle<eventpair> view_holder_token, request<Presentation>? presentation_request);
+  2: PresentLayer(handle<eventpair> layer_import_token);
 };
