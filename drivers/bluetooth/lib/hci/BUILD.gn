@@ -42,6 +42,8 @@ static_library("hci") {
     "legacy_low_energy_advertiser.h",
     "legacy_low_energy_scanner.cc",
     "legacy_low_energy_scanner.h",
+    "link_key.cc",
+    "link_key.h",
     "low_energy_advertiser.h",
     "low_energy_connector.cc",
     "low_energy_connector.h",
@@ -64,6 +66,20 @@ static_library("hci") {
   ]
 }
 
+source_set("testing") {
+  testonly = true
+
+  sources = [
+    "fake_connection.cc",
+    "fake_connection.h",
+    "//garnet/public/lib/fxl",
+  ]
+
+  public_deps = [
+    ":hci",
+  ]
+}
+
 source_set("tests") {
   testonly = true
 
@@ -82,7 +98,7 @@ source_set("tests") {
   ]
 
   deps = [
-    ":hci",
+    ":testing",
     "//garnet/drivers/bluetooth/lib/testing",
     "//third_party/googletest:gtest",
   ]

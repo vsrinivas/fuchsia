@@ -57,7 +57,7 @@ class LowEnergyConnectionManagerTest : public TestingBase {
 
     // TODO(armansito): Pass a fake connector here.
     connector_ = std::make_unique<hci::LowEnergyConnector>(
-        transport(), dispatcher(),
+        transport(), kAddress0, dispatcher(),
         [this](auto link) { OnIncomingConnection(std::move(link)); });
 
     conn_mgr_ = std::make_unique<LowEnergyConnectionManager>(

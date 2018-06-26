@@ -42,6 +42,9 @@ class LowEnergyConnector {
   // The constructor expects the following arguments:
   //   - |hci|: The HCI transport this should operate on.
   //
+  //   - |local_address|: The public device address that is used for locally
+  //     initiated connections.
+  //
   //   - |dispatcher|: The dispatcher that will be used to run all
   //     asynchronous operations. This must be bound to the thread on which the
   //     LowEnergyConnector is created.
@@ -51,8 +54,8 @@ class LowEnergyConnector {
   using IncomingConnectionDelegate =
       fit::function<void(ConnectionPtr connection)>;
   LowEnergyConnector(fxl::RefPtr<Transport> hci,
-                     async_t* dispatcher,
-                     IncomingConnectionDelegate delegate);
+                     const common::DeviceAddress& local_address,
+                     async_t* dispatcher, IncomingConnectionDelegate delegate);
 
   // Deleting an instance cancels any pending connection request.
   ~LowEnergyConnector();
@@ -124,6 +127,12 @@ class LowEnergyConnector {
 
   // The HCI transport.
   fxl::RefPtr<Transport> hci_;
+
+  // Local address used during locally initiated connections.
+  // TODO(armansito): This is currently incorrectly being assigned to remote
+  // initiated connections because the advertised random device address is not
+  // available (NET-1045).
+  common::DeviceAddress local_address_;
 
   // The delegate that gets notified when a new link layer connection gets
   // created.

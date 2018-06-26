@@ -78,8 +78,9 @@ void LowEnergyAdvertisingManager::StartAdvertising(
     return;
   }
   // Generate the DeviceAddress and id
-  // TODO(jamuraa): Generate resolvable private addresses instead if they're
-  // connectable.
+  // TODO(armansito): Extract private address generation to a centrally
+  // accessible location and persist the address so that it can be used for
+  // pairing.
   auto address = RandomAddressGenerator::PrivateAddress();
   auto ad_ptr = std::make_unique<ActiveAdvertisement>(address);
   auto self = weak_ptr_factory_.GetWeakPtr();

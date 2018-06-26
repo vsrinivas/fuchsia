@@ -482,7 +482,10 @@ void Adapter::InitializeStep4(InitializeCallback callback) {
 
   hci_le_advertiser_ = std::make_unique<hci::LegacyLowEnergyAdvertiser>(hci_);
   hci_le_connector_ = std::make_unique<hci::LowEnergyConnector>(
-      hci_, dispatcher_, std::move(incoming_conn_cb));
+      hci_,
+      common::DeviceAddress(common::DeviceAddress::Type::kLEPublic,
+                            state_.controller_address()),
+      dispatcher_, std::move(incoming_conn_cb));
 
   le_discovery_manager_ = std::make_unique<LowEnergyDiscoveryManager>(
       Mode::kLegacy, hci_, &device_cache_);
@@ -515,28 +518,28 @@ void Adapter::InitializeStep4(InitializeCallback callback) {
 uint64_t Adapter::BuildEventMask() {
   uint64_t event_mask = 0;
 
+#define ENABLE_EVT(event) \
+  event_mask |= static_cast<uint64_t>(hci::EventMask::event)
+
   // Enable events that are needed for basic functionality.
-  event_mask |= static_cast<uint64_t>(hci::EventMask::kConnectionCompleteEvent);
-  event_mask |= static_cast<uint64_t>(hci::EventMask::kConnectionRequestEvent);
-  event_mask |=
-      static_cast<uint64_t>(hci::EventMask::kDisconnectionCompleteEvent);
-  event_mask |= static_cast<uint64_t>(hci::EventMask::kHardwareErrorEvent);
-  event_mask |= static_cast<uint64_t>(hci::EventMask::kLEMetaEvent);
-  event_mask |= static_cast<uint64_t>(hci::EventMask::kInquiryCompleteEvent);
-  event_mask |= static_cast<uint64_t>(hci::EventMask::kInquiryResultEvent);
-  event_mask |=
-      static_cast<uint64_t>(hci::EventMask::kInquiryResultWithRSSIEvent);
-  event_mask |=
-      static_cast<uint64_t>(hci::EventMask::kExtendedInquiryResultEvent);
-  event_mask |=
-      static_cast<uint64_t>(hci::EventMask::kIOCapabilityRequestEvent);
-  event_mask |=
-      static_cast<uint64_t>(hci::EventMask::kIOCapabilityResponseEvent);
-  event_mask |=
-      static_cast<uint64_t>(hci::EventMask::kUserConfirmationRequestEvent);
-  event_mask |= static_cast<uint64_t>(hci::EventMask::kUserPasskeyRequestEvent);
-  event_mask |=
-      static_cast<uint64_t>(hci::EventMask::kRemoteOOBDataRequestEvent);
+  ENABLE_EVT(kConnectionCompleteEvent);
+  ENABLE_EVT(kConnectionRequestEvent);
+  ENABLE_EVT(kDisconnectionCompleteEvent);
+  ENABLE_EVT(kEncryptionChangeEvent);
+  ENABLE_EVT(kEncryptionKeyRefreshCompleteEvent);
+  ENABLE_EVT(kExtendedInquiryResultEvent);
+  ENABLE_EVT(kHardwareErrorEvent);
+  ENABLE_EVT(kInquiryCompleteEvent);
+  ENABLE_EVT(kInquiryResultEvent);
+  ENABLE_EVT(kInquiryResultWithRSSIEvent);
+  ENABLE_EVT(kIOCapabilityRequestEvent);
+  ENABLE_EVT(kIOCapabilityResponseEvent);
+  ENABLE_EVT(kLEMetaEvent);
+  ENABLE_EVT(kUserConfirmationRequestEvent);
+  ENABLE_EVT(kUserPasskeyRequestEvent);
+  ENABLE_EVT(kRemoteOOBDataRequestEvent);
+
+#undef ENABLE_EVT
 
   return event_mask;
 }
@@ -544,10 +547,15 @@ uint64_t Adapter::BuildEventMask() {
 uint64_t Adapter::BuildLEEventMask() {
   uint64_t event_mask = 0;
 
-  event_mask |= static_cast<uint64_t>(hci::LEEventMask::kLEConnectionComplete);
-  event_mask |= static_cast<uint64_t>(hci::LEEventMask::kLEAdvertisingReport);
-  event_mask |=
-      static_cast<uint64_t>(hci::LEEventMask::kLEConnectionUpdateComplete);
+#define ENABLE_EVT(event) \
+  event_mask |= static_cast<uint64_t>(hci::LEEventMask::event)
+
+  ENABLE_EVT(kLEAdvertisingReport);
+  ENABLE_EVT(kLEConnectionComplete);
+  ENABLE_EVT(kLEConnectionUpdateComplete);
+  ENABLE_EVT(kLELongTermKeyRequest);
+
+#undef ENABLE_EVT
 
   return event_mask;
 }

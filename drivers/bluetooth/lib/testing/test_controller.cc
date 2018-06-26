@@ -37,6 +37,12 @@ void TestController::QueueCommandTransaction(CommandTransaction transaction) {
   cmd_transactions_.push(std::move(transaction));
 }
 
+void TestController::QueueCommandTransaction(
+    const common::ByteBuffer& expected,
+    const std::vector<const common::ByteBuffer*>& replies) {
+  QueueCommandTransaction(CommandTransaction(expected, replies));
+}
+
 void TestController::SetDataCallback(DataCallback callback,
                                      async_t* dispatcher) {
   FXL_DCHECK(callback);

@@ -263,8 +263,10 @@ void BrEdrConnectionManager::OnConnectionComplete(
                              params.bd_addr);
 
   // TODO(jamuraa): support non-master connections.
-  auto conn_ptr = std::make_unique<hci::Connection>(
-      params.connection_handle, hci::Connection::Role::kMaster, addr, hci_);
+  auto conn_ptr = hci::Connection::CreateACL(
+      params.connection_handle, hci::Connection::Role::kMaster,
+      common::DeviceAddress(),  // TODO(armansito): Pass local BD_ADDR here.
+      addr, hci_);
 
   if (params.link_type != hci::LinkType::kACL) {
     // Drop the connection if we don't support it.

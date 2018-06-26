@@ -16,26 +16,29 @@
 namespace btlib {
 namespace hci {
 
+using common::DeviceAddress;
 using common::HostError;
 
 LowEnergyConnector::PendingRequest::PendingRequest(
-    const common::DeviceAddress& peer_address,
-    StatusCallback status_callback)
+    const DeviceAddress& peer_address, StatusCallback status_callback)
     : canceled(false),
       timed_out(false),
       peer_address(peer_address),
       status_callback(std::move(status_callback)) {}
 
 LowEnergyConnector::LowEnergyConnector(fxl::RefPtr<Transport> hci,
+                                       const DeviceAddress& local_address,
                                        async_t* dispatcher,
                                        IncomingConnectionDelegate delegate)
     : dispatcher_(dispatcher),
       hci_(hci),
+      local_address_(local_address),
       delegate_(std::move(delegate)),
       weak_ptr_factory_(this) {
   FXL_DCHECK(dispatcher_);
   FXL_DCHECK(hci_);
   FXL_DCHECK(delegate_);
+  FXL_DCHECK(local_address_.type() == DeviceAddress::Type::kLEPublic);
 
   auto self = weak_ptr_factory_.GetWeakPtr();
   event_handler_id_ = hci_->command_channel()->AddLEMetaEventHandler(
@@ -54,17 +57,14 @@ LowEnergyConnector::~LowEnergyConnector() {
 }
 
 bool LowEnergyConnector::CreateConnection(
-    LEOwnAddressType own_address_type,
-    bool use_whitelist,
-    const common::DeviceAddress& peer_address,
-    uint16_t scan_interval,
+    LEOwnAddressType own_address_type, bool use_whitelist,
+    const DeviceAddress& peer_address, uint16_t scan_interval,
     uint16_t scan_window,
     const LEPreferredConnectionParameters& initial_parameters,
-    StatusCallback status_callback,
-    int64_t timeout_ms) {
+    StatusCallback status_callback, int64_t timeout_ms) {
   FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
   FXL_DCHECK(status_callback);
-  FXL_DCHECK(peer_address.type() != common::DeviceAddress::Type::kBREDR);
+  FXL_DCHECK(peer_address.type() != DeviceAddress::Type::kBREDR);
   FXL_DCHECK(timeout_ms > 0);
 
   if (request_pending())
@@ -85,7 +85,7 @@ bool LowEnergyConnector::CreateConnection(
 
   // TODO(armansito): Use the resolved address types for <5.0 LE Privacy.
   params->peer_address_type =
-      (peer_address.type() == common::DeviceAddress::Type::kLEPublic)
+      (peer_address.type() == DeviceAddress::Type::kLEPublic)
           ? LEAddressType::kPublic
           : LEAddressType::kRandom;
 
@@ -177,7 +177,7 @@ void LowEnergyConnector::OnConnectionCompleteEvent(const EventPacket& event) {
   FXL_CHECK(params);
 
   // First check if this event is related to the currently pending request.
-  const common::DeviceAddress peer_address(
+  const DeviceAddress peer_address(
       AddressTypeFromHCI(params->peer_address_type), params->peer_address);
   bool matches_pending_request =
       pending_request_ && (pending_request_->peer_address == peer_address);
@@ -208,11 +208,14 @@ void LowEnergyConnector::OnConnectionCompleteEvent(const EventPacket& event) {
       le16toh(params->conn_interval), le16toh(params->conn_latency),
       le16toh(params->supervision_timeout));
 
-  auto connection = std::make_unique<Connection>(
+  // TODO(armansito): If the connection is incoming, then obtain the advertised
+  // address and use that as the local address. We currently use the wrong
+  // address, so pairing as slave will fail! (NET-1045)
+  auto connection = Connection::CreateLE(
       le16toh(params->connection_handle),
       (params->role == ConnectionRole::kMaster) ? Connection::Role::kMaster
                                                 : Connection::Role::kSlave,
-      peer_address, connection_params, hci_);
+      local_address_, peer_address, connection_params, hci_);
 
   if (matches_pending_request) {
     Status status;

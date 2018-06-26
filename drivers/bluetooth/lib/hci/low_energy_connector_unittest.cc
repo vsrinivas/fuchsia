@@ -23,6 +23,8 @@ using testing::FakeController;
 using testing::FakeDevice;
 using TestingBase = testing::FakeControllerTest<FakeController>;
 
+const common::DeviceAddress kLocalAddress(
+    common::DeviceAddress::Type::kLEPublic, "00:00:00:00:00:FF");
 const common::DeviceAddress kTestAddress(common::DeviceAddress::Type::kLEPublic,
                                          "00:00:00:00:00:01");
 const LEPreferredConnectionParameters kTestParams(1, 1, 1, 1);
@@ -43,7 +45,7 @@ class LowEnergyConnectorTest : public TestingBase {
     test_device()->set_settings(settings);
 
     connector_ = std::make_unique<LowEnergyConnector>(
-        transport(), dispatcher(),
+        transport(), kLocalAddress, dispatcher(),
         std::bind(&LowEnergyConnectorTest::OnIncomingConnectionCreated, this,
                   std::placeholders::_1));
 
@@ -129,6 +131,7 @@ TEST_F(HCI_LowEnergyConnectorTest, CreateConnection) {
 
   ASSERT_TRUE(conn);
   EXPECT_EQ(1u, conn->handle());
+  EXPECT_EQ(kLocalAddress, conn->local_address());
   EXPECT_EQ(kTestAddress, conn->peer_address());
   EXPECT_TRUE(conn->is_open());
   conn->set_closed();
@@ -270,6 +273,7 @@ TEST_F(HCI_LowEnergyConnectorTest, IncomingConnect) {
 
   auto conn = in_connections()[0].get();
   EXPECT_EQ(1u, conn->handle());
+  EXPECT_EQ(kLocalAddress, conn->local_address());
   EXPECT_EQ(kTestAddress, conn->peer_address());
   EXPECT_TRUE(conn->is_open());
   conn->set_closed();

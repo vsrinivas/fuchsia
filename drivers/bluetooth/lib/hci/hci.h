@@ -1269,7 +1269,7 @@ struct LEReadRemoteFeaturesCompleteSubeventParams {
 } __PACKED;
 
 // LE Long Term Key Request Event (v4.0) (LE)
-constexpr EventCode LELongTermKeyRequestSubeventCode = 0x05;
+constexpr EventCode kLELongTermKeyRequestSubeventCode = 0x05;
 
 struct LELongTermKeyRequestSubeventParams {
   // Connection Handle (only the lower 12-bits are meaningful).

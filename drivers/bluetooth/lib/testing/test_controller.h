@@ -53,6 +53,9 @@ class TestController : public FakeControllerBase {
   // fatal assertion. On a match, TestController will send back the replies
   // provided in the transaction.
   void QueueCommandTransaction(CommandTransaction transaction);
+  void QueueCommandTransaction(
+      const common::ByteBuffer& expected,
+      const std::vector<const common::ByteBuffer*>& replies);
 
   // Callback to invoke when a packet is received over the data channel.
   using DataCallback = fit::function<void(const common::ByteBuffer& packet)>;

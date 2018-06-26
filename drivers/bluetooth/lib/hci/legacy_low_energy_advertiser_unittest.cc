@@ -7,8 +7,8 @@
 #include "garnet/drivers/bluetooth/lib/common/device_address.h"
 #include "garnet/drivers/bluetooth/lib/common/test_helpers.h"
 #include "garnet/drivers/bluetooth/lib/common/uuid.h"
-#include "garnet/drivers/bluetooth/lib/hci/connection.h"
 #include "garnet/drivers/bluetooth/lib/hci/defaults.h"
+#include "garnet/drivers/bluetooth/lib/hci/fake_connection.h"
 #include "garnet/drivers/bluetooth/lib/testing/fake_controller.h"
 #include "garnet/drivers/bluetooth/lib/testing/fake_controller_test.h"
 #include "garnet/drivers/bluetooth/lib/testing/fake_device.h"
@@ -145,9 +145,9 @@ TEST_F(HCI_LegacyLowEnergyAdvertiserTest, ConnectionTest) {
   EXPECT_TRUE(MoveLastStatus());
 
   // The connection manager will hand us a connection when one gets created.
-  LEConnectionParameters params;
-  advertiser()->OnIncomingConnection(std::make_unique<Connection>(
-      kHandle, Connection::Role::kSlave, kPeerAddress, params, transport()));
+  advertiser()->OnIncomingConnection(std::make_unique<testing::FakeConnection>(
+      kHandle, Connection::LinkType::kLE, Connection::Role::kSlave,
+      kPublicAddress, kPeerAddress));
 
   ASSERT_TRUE(link);
   EXPECT_EQ(kHandle, link->handle());
@@ -197,9 +197,9 @@ TEST_F(HCI_LegacyLowEnergyAdvertiserTest, RestartInConnectionCallback) {
       },
       dispatcher());
 
-  LEConnectionParameters params;
-  advertiser()->OnIncomingConnection(std::make_unique<Connection>(
-      kHandle, Connection::Role::kSlave, kPeerAddress, params, transport()));
+  advertiser()->OnIncomingConnection(std::make_unique<testing::FakeConnection>(
+      kHandle, Connection::LinkType::kLE, Connection::Role::kSlave,
+      kPublicAddress, kPeerAddress));
 
   // Advertising should get disabled and re-enabled.
   RunLoopUntilIdle();
