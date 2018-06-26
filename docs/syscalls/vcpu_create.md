@@ -59,7 +59,9 @@ returned.
 **ZX_ERR_INVALID_ARGS** *args* contains an invalid argument, or *out* is an
 invalid pointer, or *options* is nonzero.
 
-**ZX_ERR_NO_MEMORY** Temporary failure due to lack of memory.
+**ZX_ERR_NO_MEMORY**  Failure due to lack of memory.
+There is no good way for userspace to handle this (unlikely) error.
+In a future build this error will no longer occur.
 
 **ZX_ERR_WRONG_TYPE** *guest* is not a handle to a guest.
 

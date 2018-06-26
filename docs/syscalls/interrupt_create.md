@@ -59,7 +59,9 @@ of failure, a negative error value is returned.
 **ZX_ERR_INVALID_ARGS** *options* contains invalid flags or the *out_handle*
 parameter is an invalid pointer.
 
-**ZX_ERR_NO_MEMORY**  (Temporary) Failure due to lack of memory.
+**ZX_ERR_NO_MEMORY**  Failure due to lack of memory.
+There is no good way for userspace to handle this (unlikely) error.
+In a future build this error will no longer occur.
 
 ## SEE ALSO
 

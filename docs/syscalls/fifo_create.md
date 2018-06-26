@@ -45,7 +45,9 @@ failure, one of the following values is returned.
 **ZX_ERR_OUT_OF_RANGE**  *elem_count* or *elem_size* is zero, or *elem_count*
 is not a power of two, or *elem_count* * *elem_size* is greater than 4096.
 
-**ZX_ERR_NO_MEMORY**  (Temporary) Failure due to lack of memory.
+**ZX_ERR_NO_MEMORY**  Failure due to lack of memory.
+There is no good way for userspace to handle this (unlikely) error.
+In a future build this error will no longer occur.
 
 
 ## SEE ALSO

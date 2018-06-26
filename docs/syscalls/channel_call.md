@@ -86,7 +86,9 @@ closed while waiting for the reply.
 
 **ZX_ERR_CANCELED**  *handle* was closed while waiting for a reply.
 
-**ZX_ERR_NO_MEMORY**  (Temporary) Failure due to lack of memory.
+**ZX_ERR_NO_MEMORY**  Failure due to lack of memory.
+There is no good way for userspace to handle this (unlikely) error.
+In a future build this error will no longer occur.
 
 **ZX_ERR_OUT_OF_RANGE**  *wr_num_bytes* or *wr_num_handles* are larger than the
 largest allowable size for channel messages.

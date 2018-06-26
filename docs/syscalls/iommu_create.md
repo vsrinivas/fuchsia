@@ -54,7 +54,9 @@ supported on this system.
 *desc* is an invalid pointer, *out* is an invalid pointer, or the contents of
 *desc* are not valid for the given *type*.
 
-**ZX_ERR_NO_MEMORY**  (Temporary) Failure due to lack of memory.
+**ZX_ERR_NO_MEMORY**  Failure due to lack of memory.
+There is no good way for userspace to handle this (unlikely) error.
+In a future build this error will no longer occur.
 
 ## SEE ALSO
 

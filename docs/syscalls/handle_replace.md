@@ -35,7 +35,9 @@ on success.
 **ZX_ERR_INVALID_ARGS**  The *rights* requested are not a subset of
 *handle*'s rights or *out* is an invalid pointer.
 
-**ZX_ERR_NO_MEMORY**  (Temporary) out of memory situation.
+**ZX_ERR_NO_MEMORY**  Failure due to lack of memory.
+There is no good way for userspace to handle this (unlikely) error.
+In a future build this error will no longer occur.
 
 ## SEE ALSO
 

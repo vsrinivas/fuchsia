@@ -61,7 +61,9 @@ any element in *handles* does not have **ZX_RIGHT_TRANSFER**.
 
 **ZX_ERR_PEER_CLOSED**  The other side of the channel is closed.
 
-**ZX_ERR_NO_MEMORY**  (Temporary) Failure due to lack of memory.
+**ZX_ERR_NO_MEMORY**  Failure due to lack of memory.
+There is no good way for userspace to handle this (unlikely) error.
+In a future build this error will no longer occur.
 
 **ZX_ERR_OUT_OF_RANGE**  *num_bytes* or *num_handles* are larger than the
 largest allowable size for channel messages.

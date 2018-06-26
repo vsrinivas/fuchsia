@@ -35,7 +35,9 @@ success. In the event of failure, an error value is returned.
 **ZX_ERR_INVALID_ARGS** *options* has an invalid value, or *out* is an
 invalid pointer or NULL.
 
-**ZX_ERR_NO_MEMORY**  (Temporary) Failure due to lack of memory.
+**ZX_ERR_NO_MEMORY**  Failure due to lack of memory.
+There is no good way for userspace to handle this (unlikely) error.
+In a future build this error will no longer occur.
 
 ## SEE ALSO
 

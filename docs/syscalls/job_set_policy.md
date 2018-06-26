@@ -114,7 +114,9 @@ bigger than ZX_POL_MAX.
 
 **ZX_ERR_NOT_SUPPORTED** an entry in *policy* has an invalid value.
 
-**ZX_ERR_NO_MEMORY**  (Temporary) Out of memory condition.
+**ZX_ERR_NO_MEMORY**  Failure due to lack of memory.
+There is no good way for userspace to handle this (unlikely) error.
+In a future build this error will no longer occur.
 
 ## SEE ALSO
 

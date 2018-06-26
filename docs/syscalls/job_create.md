@@ -45,7 +45,9 @@ is returned.
 
 **ZX_ERR_OUT_OF_RANGE**  The height of *job* is too large to create a child job.
 
-**ZX_ERR_NO_MEMORY**  (Temporary) Failure due to lack of memory.
+**ZX_ERR_NO_MEMORY**  Failure due to lack of memory.
+There is no good way for userspace to handle this (unlikely) error.
+In a future build this error will no longer occur.
 
 **ZX_ERR_BAD_STATE**  The parent job object is in the dead state.
 

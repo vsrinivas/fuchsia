@@ -578,7 +578,9 @@ operation.
 
 **ZX_ERR_INVALID_ARGS** *buffer*, *actual*, or *avail* are invalid pointers.
 
-**ZX_ERR_NO_MEMORY** Temporary out of memory failure.
+**ZX_ERR_NO_MEMORY**  Failure due to lack of memory.
+There is no good way for userspace to handle this (unlikely) error.
+In a future build this error will no longer occur.
 
 **ZX_ERR_BUFFER_TOO_SMALL** The *topic* returns a fixed number of records, but the
 provided buffer is not large enough for these records.

@@ -65,7 +65,9 @@ does not have **ZX_RIGHT_WRITE**.
 
 **ZX_ERR_NOT_SUPPORTED**  *handle* is a handle that cannot be waited on.
 
-**ZX_ERR_NO_MEMORY**  Temporary out of memory condition.
+**ZX_ERR_NO_MEMORY**  Failure due to lack of memory.
+There is no good way for userspace to handle this (unlikely) error.
+In a future build this error will no longer occur.
 
 ## NOTES
 

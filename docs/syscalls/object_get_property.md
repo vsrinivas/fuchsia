@@ -172,7 +172,9 @@ operation
 
 **ZX_ERR_INVALID_ARGS**: *value* is an invalid pointer
 
-**ZX_ERR_NO_MEMORY**: Temporary out of memory failure
+**ZX_ERR_NO_MEMORY**  Failure due to lack of memory.
+There is no good way for userspace to handle this (unlikely) error.
+In a future build this error will no longer occur.
 
 **ZX_ERR_BUFFER_TOO_SMALL**: *value_size* is too small for *property*
 

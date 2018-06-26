@@ -58,7 +58,9 @@ non-zero when *ZX_VM_FLAG_SPECIFIC* is not given, *offset* and *size* describe
 an unsatisfiable allocation due to exceeding the region bounds, *offset*
 or *size* is not page-aligned, or *size* is 0.
 
-**ZX_ERR_NO_MEMORY**  (Temporary) Failure due to lack of memory.
+**ZX_ERR_NO_MEMORY**  Failure due to lack of memory.
+There is no good way for userspace to handle this (unlikely) error.
+In a future build this error will no longer occur.
 
 **ZX_ERR_ACCESS_DENIED**  Insufficient privileges to make the requested allocation.
 

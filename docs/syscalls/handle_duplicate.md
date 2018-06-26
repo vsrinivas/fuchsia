@@ -34,7 +34,9 @@ to specify no rights by using 0.
 
 **ZX_ERR_ACCESS_DENIED**  *handle* does not have **ZX_RIGHT_DUPLICATE** and may not be duplicated.
 
-**ZX_ERR_NO_MEMORY**  (Temporary) out of memory situation.
+**ZX_ERR_NO_MEMORY**  Failure due to lack of memory.
+There is no good way for userspace to handle this (unlikely) error.
+In a future build this error will no longer occur.
 
 ## SEE ALSO
 

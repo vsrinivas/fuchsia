@@ -41,7 +41,9 @@ failure, one of the following values is returned.
 **ZX_ERR_INVALID_ARGS**  *out0* or *out1* is an invalid pointer or NULL or
 *options* is any value other than **ZX_SOCKET_STREAM** or **ZX_SOCKET_DATAGRAM**.
 
-**ZX_ERR_NO_MEMORY**  (Temporary) Failure due to lack of memory.
+**ZX_ERR_NO_MEMORY**  Failure due to lack of memory.
+There is no good way for userspace to handle this (unlikely) error.
+In a future build this error will no longer occur.
 
 ## LIMITATIONS
 

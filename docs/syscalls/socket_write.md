@@ -82,7 +82,9 @@ larger than the remaining space in the socket.
 
 **ZX_ERR_PEER_CLOSED**  The other side of the socket is closed.
 
-**ZX_ERR_NO_MEMORY**  (Temporary) Failure due to lack of memory.
+**ZX_ERR_NO_MEMORY**  Failure due to lack of memory.
+There is no good way for userspace to handle this (unlikely) error.
+In a future build this error will no longer occur.
 
 ## SEE ALSO
 

@@ -69,7 +69,9 @@ right.
 do not meet the requirements of *kind*, *len* is 0, or *ZX_GUEST_TRAP_MEM* was
 specified with a *port*.
 
-**ZX_ERR_NO_MEMORY** Temporary failure due to lack of memory.
+**ZX_ERR_NO_MEMORY**  Failure due to lack of memory.
+There is no good way for userspace to handle this (unlikely) error.
+In a future build this error will no longer occur.
 
 **ZX_ERR_OUT_OF_RANGE** The region specified by *addr* and *len* is outside of
 of the valid bounds of the address space *kind*.

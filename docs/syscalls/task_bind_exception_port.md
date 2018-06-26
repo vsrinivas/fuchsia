@@ -68,7 +68,9 @@ or *eport* is not that of a port and is not **ZX_HANDLE_INVALID**.
 
 **ZX_ERR_INVALID_ARGS** A bad value has been passed in *options*.
 
-**ZX_ERR_NO_MEMORY**  (temporary) out of memory failure.
+**ZX_ERR_NO_MEMORY**  Failure due to lack of memory.
+There is no good way for userspace to handle this (unlikely) error.
+In a future build this error will no longer occur.
 
 ## SEE ALSO
 

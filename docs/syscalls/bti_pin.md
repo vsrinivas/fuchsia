@@ -84,7 +84,9 @@ returned, or *offset* or *size* is not page-aligned.
 **ZX_ERR_UNAVAILABLE** (Temporary) At least one page in the requested range could
 not be pinned at this time.
 
-**ZX_ERR_NO_MEMORY**  (Temporary) Failure due to lack of memory.
+**ZX_ERR_NO_MEMORY**  Failure due to lack of memory.
+There is no good way for userspace to handle this (unlikely) error.
+In a future build this error will no longer occur.
 
 ## SEE ALSO
 

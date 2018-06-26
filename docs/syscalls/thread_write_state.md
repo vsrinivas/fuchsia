@@ -47,7 +47,9 @@ In the event of failure, a negative error value is returned.
 **ZX_ERR_INVALID_ARGS**  *kind* is not valid, *buffer* is an invalid pointer,
 or *len* doesn't match the size of the structure expected for *kind*.
 
-**ZX_ERR_NO_MEMORY**  Temporary out of memory failure.
+**ZX_ERR_NO_MEMORY**  Failure due to lack of memory.
+There is no good way for userspace to handle this (unlikely) error.
+In a future build this error will no longer occur.
 
 **ZX_ERR_BAD_STATE**  The thread is not stopped at a point where state
 is available. The thread state may only be read when the thread is stopped due

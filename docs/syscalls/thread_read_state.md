@@ -73,7 +73,9 @@ In the event of failure, a negative error value is returned.
 
 **ZX_ERR_INVALID_ARGS**  *kind* is not valid or *buffer* is an invalid pointer.
 
-**ZX_ERR_NO_MEMORY**  Temporary out of memory failure.
+**ZX_ERR_NO_MEMORY**  Failure due to lack of memory.
+There is no good way for userspace to handle this (unlikely) error.
+In a future build this error will no longer occur.
 
 **ZX_ERR_BUFFER_TOO_SMALL**  The buffer length *len* is too small to hold
 the data required by *kind*.

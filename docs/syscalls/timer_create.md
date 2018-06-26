@@ -48,7 +48,9 @@ of failure, a negative error value is returned.
 *options* is not one of the ZX_TIMER_SLACK values or *clock_id* is
 any value other than ZX_CLOCK_MONOTONIC.
 
-**ZX_ERR_NO_MEMORY**  (Temporary) Failure due to lack of memory.
+**ZX_ERR_NO_MEMORY**  Failure due to lack of memory.
+There is no good way for userspace to handle this (unlikely) error.
+In a future build this error will no longer occur.
 
 ## SEE ALSO
 
