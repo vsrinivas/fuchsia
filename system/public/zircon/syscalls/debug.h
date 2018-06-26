@@ -4,8 +4,8 @@
 
 #pragma once
 
-#include <zircon/compiler.h>
 #include <stdint.h>
+#include <zircon/compiler.h>
 
 __BEGIN_CDECLS
 
@@ -35,17 +35,18 @@ typedef struct zx_thread_state_general_regs {
 
 // Value for ZX_THREAD_STATE_FP_REGS on x64. Holds x87 and MMX state.
 typedef struct zx_thread_state_fp_regs {
-    uint16_t fcw;  // Control word.
-    uint16_t fsw;  // Status word.
-    uint8_t ftw;   // Tag word.
+    uint16_t fcw; // Control word.
+    uint16_t fsw; // Status word.
+    uint8_t ftw;  // Tag word.
     uint8_t reserved;
-    uint16_t fop;  // Opcode.
-    uint64_t fip;  // Instruction pointer.
-    uint64_t fdp;  // Data pointer.
+    uint16_t fop; // Opcode.
+    uint64_t fip; // Instruction pointer.
+    uint64_t fdp; // Data pointer.
 
     // The x87/MMX state. For x87 the each "st" entry has the low 80 bits used for the register
     // contents. For MMX, the low 64 bits are used. The higher bits are unused.
-    __ALIGNED(16) struct {
+    __ALIGNED(16)
+    struct {
         uint64_t low;
         uint64_t high;
     } st[8];
@@ -59,7 +60,7 @@ typedef struct zx_thread_state_vector_regs {
     // When only 16 registers are supported (pre-AVX-512), zmm[16-31] will be 0. YMM registers (256
     // bits) are v[0-4], XMM registers (128 bits) are v[0-2].
     struct {
-          uint64_t v[8];
+        uint64_t v[8];
     } zmm[32];
 
     // AVX-512 opmask registers. Will be 0 unless AVX-512 is supported.
@@ -119,9 +120,9 @@ typedef uint32_t zx_thread_state_single_step_t;
 // Possible values for "kind" in zx_thread_read_state and zx_thread_write_state.
 typedef enum {
     ZX_THREAD_STATE_GENERAL_REGS = 0, // zx_thread_state_general_regs_t value.
-    ZX_THREAD_STATE_FP_REGS = 1,  // zx_thread_state_fp_regs_t value.
-    ZX_THREAD_STATE_VECTOR_REGS = 2,      // zx_thread_state_vector_regs_t value.
-    ZX_THREAD_STATE_EXTRA_REGS = 3,  // zx_thread_state_extra_regs_t value.
+    ZX_THREAD_STATE_FP_REGS = 1,      // zx_thread_state_fp_regs_t value.
+    ZX_THREAD_STATE_VECTOR_REGS = 2,  // zx_thread_state_vector_regs_t value.
+    ZX_THREAD_STATE_EXTRA_REGS = 3,   // zx_thread_state_extra_regs_t value.
     ZX_THREAD_STATE_SINGLE_STEP = 4   // zx_thread_state_single_step_t value.
 } zx_thread_state_topic_t;
 

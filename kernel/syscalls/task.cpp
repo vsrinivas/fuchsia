@@ -25,12 +25,12 @@
 #include <object/thread_dispatcher.h>
 #include <object/vm_address_region_dispatcher.h>
 
-#include <zircon/syscalls/debug.h>
-#include <zircon/syscalls/policy.h>
 #include <fbl/auto_lock.h>
 #include <fbl/inline_array.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/string_piece.h>
+#include <zircon/syscalls/debug.h>
+#include <zircon/syscalls/policy.h>
 
 #include "priv.h"
 
@@ -98,11 +98,11 @@ zx_status_t get_process(ProcessDispatcher* up,
 // This represents the local storage for thread_read/write_state. It should be large enough to
 // handle all structures passed over these APIs.
 union thread_state_local_buffer_t {
-    zx_thread_state_general_regs_t general_regs;  // ZX_THREAD_STATE_GENERAL_REGS
-    zx_thread_state_fp_regs_t fp_regs;  // ZX_THREAD_STATE_FP_REGS
-    zx_thread_state_vector_regs_t vector_regs;  // ZX_THREAD_STATE_VECTOR_REGS
-    zx_thread_state_extra_regs_t extra_regs;  // ZX_THREAD_STATE_EXTRA_REGS
-    uint32_t single_step;  // ZX_THREAD_STATE_SINGLE_STEP
+    zx_thread_state_general_regs_t general_regs; // ZX_THREAD_STATE_GENERAL_REGS
+    zx_thread_state_fp_regs_t fp_regs;           // ZX_THREAD_STATE_FP_REGS
+    zx_thread_state_vector_regs_t vector_regs;   // ZX_THREAD_STATE_VECTOR_REGS
+    zx_thread_state_extra_regs_t extra_regs;     // ZX_THREAD_STATE_EXTRA_REGS
+    uint32_t single_step;                        // ZX_THREAD_STATE_SINGLE_STEP
 };
 
 // Validates the input topic to thread_read_state and thread_write_state is a valid value, and
@@ -134,7 +134,7 @@ zx_status_t validate_thread_state_input(uint32_t in_topic, size_t in_len, size_t
     return ZX_OK;
 }
 
-}  // namespace
+} // namespace
 
 zx_status_t sys_thread_create(zx_handle_t process_handle,
                               user_in_ptr<const char> _name, size_t name_len,
@@ -610,14 +610,14 @@ zx_status_t sys_task_kill(zx_handle_t task_handle) {
 
     // see if it's a process or thread and dispatch accordingly
     switch (dispatcher->get_type()) {
-        case ZX_OBJ_TYPE_PROCESS:
-            return kill_task<ProcessDispatcher>(fbl::move(dispatcher));
-        case ZX_OBJ_TYPE_THREAD:
-            return kill_task<ThreadDispatcher>(fbl::move(dispatcher));
-        case ZX_OBJ_TYPE_JOB:
-            return kill_task<JobDispatcher>(fbl::move(dispatcher));
-        default:
-            return ZX_ERR_WRONG_TYPE;
+    case ZX_OBJ_TYPE_PROCESS:
+        return kill_task<ProcessDispatcher>(fbl::move(dispatcher));
+    case ZX_OBJ_TYPE_THREAD:
+        return kill_task<ThreadDispatcher>(fbl::move(dispatcher));
+    case ZX_OBJ_TYPE_JOB:
+        return kill_task<JobDispatcher>(fbl::move(dispatcher));
+    default:
+        return ZX_ERR_WRONG_TYPE;
     }
 }
 
@@ -663,7 +663,8 @@ zx_status_t sys_job_set_policy(zx_handle_t job_handle, uint32_t options,
 
     fbl::AllocChecker ac;
     fbl::InlineArray<
-        zx_policy_basic, kPolicyBasicInlineCount> policy(&ac, count);
+        zx_policy_basic, kPolicyBasicInlineCount>
+        policy(&ac, count);
     if (!ac.check())
         return ZX_ERR_NO_MEMORY;
 

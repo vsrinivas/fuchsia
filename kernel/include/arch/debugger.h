@@ -6,8 +6,8 @@
 
 #pragma once
 
-#include <sys/types.h>
 #include <stdbool.h>
+#include <sys/types.h>
 #include <zircon/compiler.h>
 #include <zircon/syscalls/debug.h>
 #include <zircon/types.h>

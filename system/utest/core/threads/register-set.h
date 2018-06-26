@@ -17,7 +17,7 @@
 #define REG_PC pc
 #define REG_STACK_PTR sp
 #else
-# error Unsupported architecture
+#error Unsupported architecture
 #endif
 
 // Initializes the register set with known test data.

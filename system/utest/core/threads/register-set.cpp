@@ -18,13 +18,13 @@ void WriteNaNDouble(uint64_t* output) {
     memcpy(output, &nan_value, sizeof(double));
 }
 
-}  // namespace
+} // namespace
 
 void general_regs_fill_test_values(zx_thread_state_general_regs_t* regs) {
     for (uint32_t index = 0; index < sizeof(*regs); ++index) {
         ((uint8_t*)regs)[index] = static_cast<uint8_t>(index + 1);
     }
-    // Set various flags bits that will read back the same.
+// Set various flags bits that will read back the same.
 #if defined(__x86_64__)
     // Here we set all flag bits that are modifiable from user space or
     // that are not modifiable but are expected to read back as 1, with the
@@ -35,13 +35,13 @@ void general_regs_fill_test_values(zx_thread_state_general_regs_t* regs) {
     // kernel correctly handles taking an interrupt when that flag is set
     // (see ZX-998).
     regs->rflags =
-        (1 << 0) | // CF: carry flag
-        (1 << 1) | // Reserved, always 1
-        (1 << 2) | // PF: parity flag
-        (1 << 4) | // AF: adjust flag
-        (1 << 6) | // ZF: zero flag
-        (1 << 7) | // SF: sign flag
-        (1 << 9) | // IF: interrupt enable flag (set by kernel)
+        (1 << 0) |  // CF: carry flag
+        (1 << 1) |  // Reserved, always 1
+        (1 << 2) |  // PF: parity flag
+        (1 << 4) |  // AF: adjust flag
+        (1 << 6) |  // ZF: zero flag
+        (1 << 7) |  // SF: sign flag
+        (1 << 9) |  // IF: interrupt enable flag (set by kernel)
         (1 << 10) | // DF: direction flag
         (1 << 11) | // OF: overflow flag
         (1 << 14) | // NT: nested task flag
@@ -63,9 +63,9 @@ void fp_regs_fill_test_values(zx_thread_state_fp_regs* regs) {
     // Write NaN to the last value.
     WriteNaNDouble(&regs->st[7].low);
 #elif defined(__aarch64__)
-    // No FP struct on ARM (vector only).
+// No FP struct on ARM (vector only).
 #else
-# error Unsupported architecture
+#error Unsupported architecture
 #endif
 }
 
@@ -91,7 +91,7 @@ void vector_regs_fill_test_values(zx_thread_state_vector_regs* regs) {
     // Write NaN to the last value.
     WriteNaNDouble(&regs->v[31].low);
 #else
-# error Unsupported architecture
+#error Unsupported architecture
 #endif
 }
 
@@ -129,7 +129,7 @@ bool general_regs_expect_eq(const zx_thread_state_general_regs_t& regs1,
     CHECK_REG(pc);
     CHECK_REG(cpsr);
 #else
-# error Unsupported architecture
+#error Unsupported architecture
 #endif
 #undef CHECK_REG
     END_HELPER;
@@ -157,7 +157,7 @@ bool fp_regs_expect_eq(const zx_thread_state_fp_regs_t& regs1,
     (void)regs2;
     return true;
 #else
-# error Unsupported architecture
+#error Unsupported architecture
 #endif
 }
 
@@ -177,32 +177,32 @@ bool vector_regs_expect_eq(const zx_thread_state_vector_regs_t& regs1,
         EXPECT_EQ(regs1.v[i].low, regs2.v[i].low);
     }
 #else
-# error Unsupported architecture
+#error Unsupported architecture
 #endif
     END_HELPER;
 }
 
 // spin_with_general_regs() function.
 #if defined(__x86_64__)
-static_assert(offsetof(zx_thread_state_general_regs_t, rax) == 8*0, "");
-static_assert(offsetof(zx_thread_state_general_regs_t, rbx) == 8*1, "");
-static_assert(offsetof(zx_thread_state_general_regs_t, rcx) == 8*2, "");
-static_assert(offsetof(zx_thread_state_general_regs_t, rdx) == 8*3, "");
-static_assert(offsetof(zx_thread_state_general_regs_t, rsi) == 8*4, "");
-static_assert(offsetof(zx_thread_state_general_regs_t, rdi) == 8*5, "");
-static_assert(offsetof(zx_thread_state_general_regs_t, rbp) == 8*6, "");
-static_assert(offsetof(zx_thread_state_general_regs_t, rsp) == 8*7, "");
-static_assert(offsetof(zx_thread_state_general_regs_t, r8) == 8*8, "");
-static_assert(offsetof(zx_thread_state_general_regs_t, r9) == 8*9, "");
-static_assert(offsetof(zx_thread_state_general_regs_t, r10) == 8*10, "");
-static_assert(offsetof(zx_thread_state_general_regs_t, r11) == 8*11, "");
-static_assert(offsetof(zx_thread_state_general_regs_t, r12) == 8*12, "");
-static_assert(offsetof(zx_thread_state_general_regs_t, r13) == 8*13, "");
-static_assert(offsetof(zx_thread_state_general_regs_t, r14) == 8*14, "");
-static_assert(offsetof(zx_thread_state_general_regs_t, r15) == 8*15, "");
-static_assert(offsetof(zx_thread_state_general_regs_t, rip) == 8*16, "");
-static_assert(offsetof(zx_thread_state_general_regs_t, rflags) == 8*17, "");
-static_assert(sizeof(zx_thread_state_general_regs_t) == 8*18, "");
+static_assert(offsetof(zx_thread_state_general_regs_t, rax) == 8 * 0, "");
+static_assert(offsetof(zx_thread_state_general_regs_t, rbx) == 8 * 1, "");
+static_assert(offsetof(zx_thread_state_general_regs_t, rcx) == 8 * 2, "");
+static_assert(offsetof(zx_thread_state_general_regs_t, rdx) == 8 * 3, "");
+static_assert(offsetof(zx_thread_state_general_regs_t, rsi) == 8 * 4, "");
+static_assert(offsetof(zx_thread_state_general_regs_t, rdi) == 8 * 5, "");
+static_assert(offsetof(zx_thread_state_general_regs_t, rbp) == 8 * 6, "");
+static_assert(offsetof(zx_thread_state_general_regs_t, rsp) == 8 * 7, "");
+static_assert(offsetof(zx_thread_state_general_regs_t, r8) == 8 * 8, "");
+static_assert(offsetof(zx_thread_state_general_regs_t, r9) == 8 * 9, "");
+static_assert(offsetof(zx_thread_state_general_regs_t, r10) == 8 * 10, "");
+static_assert(offsetof(zx_thread_state_general_regs_t, r11) == 8 * 11, "");
+static_assert(offsetof(zx_thread_state_general_regs_t, r12) == 8 * 12, "");
+static_assert(offsetof(zx_thread_state_general_regs_t, r13) == 8 * 13, "");
+static_assert(offsetof(zx_thread_state_general_regs_t, r14) == 8 * 14, "");
+static_assert(offsetof(zx_thread_state_general_regs_t, r15) == 8 * 15, "");
+static_assert(offsetof(zx_thread_state_general_regs_t, rip) == 8 * 16, "");
+static_assert(offsetof(zx_thread_state_general_regs_t, rflags) == 8 * 17, "");
+static_assert(sizeof(zx_thread_state_general_regs_t) == 8 * 18, "");
 __asm__(".pushsection .text, \"ax\", @progbits\n"
         ".global spin_with_general_regs\n"
         "spin_with_general_regs:\n"
@@ -233,13 +233,13 @@ __asm__(".pushsection .text, \"ax\", @progbits\n"
         "jmp spin_with_general_regs_spin_address\n"
         ".popsection\n");
 #elif defined(__aarch64__)
-static_assert(offsetof(zx_thread_state_general_regs_t, r[0]) == 8*0, "");
-static_assert(offsetof(zx_thread_state_general_regs_t, r[1]) == 8*1, "");
-static_assert(offsetof(zx_thread_state_general_regs_t, lr) == 8*30, "");
-static_assert(offsetof(zx_thread_state_general_regs_t, sp) == 8*31, "");
-static_assert(offsetof(zx_thread_state_general_regs_t, pc) == 8*32, "");
-static_assert(offsetof(zx_thread_state_general_regs_t, cpsr) == 8*33, "");
-static_assert(sizeof(zx_thread_state_general_regs_t) == 8*34, "");
+static_assert(offsetof(zx_thread_state_general_regs_t, r[0]) == 8 * 0, "");
+static_assert(offsetof(zx_thread_state_general_regs_t, r[1]) == 8 * 1, "");
+static_assert(offsetof(zx_thread_state_general_regs_t, lr) == 8 * 30, "");
+static_assert(offsetof(zx_thread_state_general_regs_t, sp) == 8 * 31, "");
+static_assert(offsetof(zx_thread_state_general_regs_t, pc) == 8 * 32, "");
+static_assert(offsetof(zx_thread_state_general_regs_t, cpsr) == 8 * 33, "");
+static_assert(sizeof(zx_thread_state_general_regs_t) == 8 * 34, "");
 __asm__(".pushsection .text, \"ax\", %progbits\n"
         ".global spin_with_general_regs\n"
         "spin_with_general_regs:\n"
@@ -272,7 +272,7 @@ __asm__(".pushsection .text, \"ax\", %progbits\n"
         "b spin_with_general_regs_spin_address\n"
         ".popsection\n");
 #else
-# error Unsupported architecture
+#error Unsupported architecture
 #endif
 
 // spin_with_fp_regs() function.
@@ -319,7 +319,7 @@ __asm__(".pushsection .text, \"ax\", %progbits\n"
         "b spin_with_fp_regs_spin_address\n"
         ".popsection\n");
 #else
-# error Unsupported architecture
+#error Unsupported architecture
 #endif
 
 // spin_with_vector_regs() function.
@@ -388,7 +388,7 @@ __asm__(".pushsection .text, \"ax\", %progbits\n"
         "b spin_with_vector_regs_spin_address\n"
         ".popsection\n");
 #else
-# error Unsupported architecture
+#error Unsupported architecture
 #endif
 
 // save_general_regs_and_exit_thread() function.
@@ -455,7 +455,7 @@ __asm__(".pushsection .text, \"ax\", %progbits\n"
         "brk 0\n"
         ".popsection\n");
 #else
-# error Unsupported architecture
+#error Unsupported architecture
 #endif
 
 // save_fp_regs_and_exit_thread() function.
@@ -491,7 +491,7 @@ __asm__(".pushsection .text, \"ax\", %progbits\n"
         "brk 0\n"
         ".popsection\n");
 #else
-# error Unsupported architecture
+#error Unsupported architecture
 #endif
 
 // save_vector_regs_and_exit_thread() function.
@@ -556,10 +556,9 @@ __asm__(".pushsection .text, \"ax\", %progbits\n"
         "stp q28, q29, [x0, #(14* 32)]\n"
         "stp q30, q31, [x0, #(15 * 32)]\n"
 
-
         "bl zx_thread_exit\n"
         "brk 0\n"
         ".popsection\n");
 #else
-# error Unsupported architecture
+#error Unsupported architecture
 #endif

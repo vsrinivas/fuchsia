@@ -23,7 +23,7 @@
 
 namespace {
 
-#define SYSCALL_OFFSETS_EQUAL(reg)                \
+#define SYSCALL_OFFSETS_EQUAL(reg)                      \
     (__offsetof(zx_thread_state_general_regs_t, reg) == \
      __offsetof(x86_syscall_general_regs_t, reg))
 
@@ -100,7 +100,8 @@ void x86_fill_in_iframe_from_gregs(x86_iframe_t* out,
 }
 
 // Whether an operation gets thread state or sets it.
-enum class RegAccess { kGet, kSet };
+enum class RegAccess { kGet,
+                       kSet };
 
 // Backend for arch_get_vector_regs and arch_set_vector_regs. This does a read or write of the
 // thread to or from the regs structure.
@@ -108,9 +109,8 @@ zx_status_t x86_get_set_vector_regs(struct thread* thread, zx_thread_state_vecto
                                     RegAccess access) {
     // Function to copy memory in the correct direction. Write the code using this function as if it
     // was "memcpy" in "get" mode, and it will be reversed in "set" mode.
-    auto get_set_memcpy = (access == RegAccess::kGet) ?
-        [](void* regs, void* thread, size_t size) { memcpy(regs, thread, size); } :  // Get mode.
-        [](void* regs, void* thread, size_t size) { memcpy(thread, regs, size); };   // Set mode.
+    auto get_set_memcpy = (access == RegAccess::kGet) ? [](void* regs, void* thread, size_t size) { memcpy(regs, thread, size); } : // Get mode.
+                              [](void* regs, void* thread, size_t size) { memcpy(thread, regs, size); };                            // Set mode.
 
     if (access == RegAccess::kGet) {
         // Not all parts will be filled in in all cases so zero out first.
@@ -128,13 +128,13 @@ zx_status_t x86_get_set_vector_regs(struct thread* thread, zx_thread_state_vecto
     constexpr int kNumSSERegs = 16;
 
     // The low 128 bits of registers 0-15 come from the legacy area and are always present.
-    constexpr int kXmmRegSize = 16;  // Each XMM register is 128 bits / 16 bytes.
+    constexpr int kXmmRegSize = 16; // Each XMM register is 128 bits / 16 bytes.
     uint32_t comp_size = 0;
     x86_xsave_legacy_area* save = static_cast<x86_xsave_legacy_area*>(
         x86_get_extended_register_state_component(thread->arch.extended_register_state,
                                                   X86_XSAVE_STATE_INDEX_SSE, mark_present,
                                                   &comp_size));
-    DEBUG_ASSERT(save);  // Legacy getter should always succeed.
+    DEBUG_ASSERT(save); // Legacy getter should always succeed.
     for (int i = 0; i < kNumSSERegs; i++) {
         get_set_memcpy(&regs->zmm[i].v[0], &save->xmm[i], kXmmRegSize);
     }
@@ -143,7 +143,7 @@ zx_status_t x86_get_set_vector_regs(struct thread* thread, zx_thread_state_vecto
     get_set_memcpy(&regs->mxcsr, &save->mxcsr, 4);
 
     // AVX grows the registers to 256 bits each. Optional.
-    constexpr int kYmmHighSize = 16;  // Additional bytes in each register.
+    constexpr int kYmmHighSize = 16; // Additional bytes in each register.
     uint8_t* ymm_highbits = static_cast<uint8_t*>(
         x86_get_extended_register_state_component(thread->arch.extended_register_state,
                                                   X86_XSAVE_STATE_INDEX_AVX, mark_present,
@@ -169,7 +169,7 @@ zx_status_t x86_get_set_vector_regs(struct thread* thread, zx_thread_state_vecto
     }
 
     // AVX-512 high bits (256 bits extra each) for ZMM0-15.
-    constexpr int kZmmHighSize = 32;  // Additional bytes in each register.
+    constexpr int kZmmHighSize = 32; // Additional bytes in each register.
     uint8_t* zmm_highbits = static_cast<uint8_t*>(
         x86_get_extended_register_state_component(thread->arch.extended_register_state,
                                                   X86_XSAVE_STATE_INDEX_AVX512_LOWERZMM_HIGH,
@@ -182,8 +182,8 @@ zx_status_t x86_get_set_vector_regs(struct thread* thread, zx_thread_state_vecto
     }
 
     // AVX-512 registers 16-31 (512 bits each) are in component 7.
-    constexpr int kNumZmmHighRegs = 16;  // Extra registers added over xmm/ymm.
-    constexpr int kZmmRegSize = 64;  // Total register size.
+    constexpr int kNumZmmHighRegs = 16; // Extra registers added over xmm/ymm.
+    constexpr int kZmmRegSize = 64;     // Total register size.
     uint8_t* zmm_highregs = static_cast<uint8_t*>(
         x86_get_extended_register_state_component(thread->arch.extended_register_state,
                                                   X86_XSAVE_STATE_INDEX_AVX512_HIGHERZMM,
@@ -199,7 +199,7 @@ zx_status_t x86_get_set_vector_regs(struct thread* thread, zx_thread_state_vecto
     return ZX_OK;
 }
 
-}  // namespace
+} // namespace
 
 zx_status_t arch_get_general_regs(struct thread* thread, zx_thread_state_general_regs_t* out) {
     AutoThreadLock lock;
@@ -326,7 +326,7 @@ zx_status_t arch_get_fp_regs(struct thread* thread, zx_thread_state_fp_regs* out
     x86_xsave_legacy_area* save = static_cast<x86_xsave_legacy_area*>(
         x86_get_extended_register_state_component(thread->arch.extended_register_state,
                                                   X86_XSAVE_STATE_INDEX_X87, false, &comp_size));
-    DEBUG_ASSERT(save);  // Legacy getter should always succeed.
+    DEBUG_ASSERT(save); // Legacy getter should always succeed.
 
     out->fcw = save->fcw;
     out->fsw = save->fsw;
@@ -349,7 +349,7 @@ zx_status_t arch_set_fp_regs(struct thread* thread, const zx_thread_state_fp_reg
     x86_xsave_legacy_area* save = static_cast<x86_xsave_legacy_area*>(
         x86_get_extended_register_state_component(thread->arch.extended_register_state,
                                                   X86_XSAVE_STATE_INDEX_X87, true, &comp_size));
-    DEBUG_ASSERT(save);  // Legacy getter should always succeed.
+    DEBUG_ASSERT(save); // Legacy getter should always succeed.
 
     save->fcw = in->fcw;
     save->fsw = in->fsw;
@@ -393,4 +393,3 @@ zx_status_t arch_set_extra_regs(struct thread* thread, const zx_thread_state_ext
     thread->arch.gs_base = in->gs;
     return ZX_OK;
 }
-

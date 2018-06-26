@@ -9,15 +9,15 @@
 #include <string.h>
 #include <threads.h>
 
+#include <lib/fdio/util.h>
+#include <test-utils/test-utils.h>
+#include <unittest/unittest.h>
 #include <zircon/compiler.h>
 #include <zircon/process.h>
 #include <zircon/processargs.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/object.h>
 #include <zircon/threads.h>
-#include <lib/fdio/util.h>
-#include <test-utils/test-utils.h>
-#include <unittest/unittest.h>
 
 static bool get_rights(zx_handle_t handle, zx_rights_t* rights) {
     zx_info_handle_basic_t info;

@@ -35,15 +35,15 @@ __NO_SAFESTACK static inline void zxr_tp_set(zx_handle_t self, void* tp) {
 #elif defined(__x86_64__)
 
 __NO_SAFESTACK static inline void* zxr_tp_get(void) {
-    // This fetches %fs:0, but the compiler knows what it's doing.
-    // LLVM knows that in the Fuchsia ABI %fs:0 always stores the
-    // %fs.base address, and its optimizer will see through this
-    // to integrate *(zxr_tp_get() + N) as a direct "mov %fs:N, ...".
-    // Note that these special pointer types can be used to access
-    // memory, but they cannot be cast to a normal pointer type
-    // (which in the abstract should add in the base address,
-    // but the compiler doesn't know how to do that).
-# ifdef __clang__
+// This fetches %fs:0, but the compiler knows what it's doing.
+// LLVM knows that in the Fuchsia ABI %fs:0 always stores the
+// %fs.base address, and its optimizer will see through this
+// to integrate *(zxr_tp_get() + N) as a direct "mov %fs:N, ...".
+// Note that these special pointer types can be used to access
+// memory, but they cannot be cast to a normal pointer type
+// (which in the abstract should add in the base address,
+// but the compiler doesn't know how to do that).
+#ifdef __clang__
     // Clang does it via magic address_space numbers (256 is %gs).
     void* __attribute__((address_space(257)))* fs = 0;
     // TODO(mcgrathr): GCC 6 supports this syntax instead (and __seg_gs):
@@ -54,12 +54,12 @@ __NO_SAFESTACK static inline void* zxr_tp_get(void) {
     // It's also buggy for the special case of 0, see:
     //     https://gcc.gnu.org/bugzilla/show_bug.cgi?id=79619
     return *fs;
-# else
+#else
     void* tp;
     __asm__ __volatile__("mov %%fs:0,%0"
                          : "=r"(tp));
     return tp;
-# endif
+#endif
 }
 
 __NO_SAFESTACK static inline void zxr_tp_set(zx_handle_t self, void* tp) {
