@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#define FIDL_ENABLE_LEGACY_WAIT_FOR_RESPONSE
-
 #include <utility>
 #include <vector>
 
@@ -48,11 +46,12 @@ TEST_P(PageIntegrationTest, LedgerRepositoryDuplicate) {
   ledger_internal::LedgerRepositoryPtr repository =
       instance->GetTestLedgerRepository();
 
-  ledger::Status status;
   ledger_internal::LedgerRepositoryPtr duplicated_repository;
+  auto waiter = NewWaiter();
+  ledger::Status status;
   repository->Duplicate(duplicated_repository.NewRequest(),
-                        [&status](ledger::Status s) { status = s; });
-  EXPECT_EQ(ZX_OK, repository.WaitForResponse());
+                        callback::Capture(waiter->GetCallback(), &status));
+  waiter->RunUntilCalled();
   EXPECT_EQ(ledger::Status::OK, status);
 }
 
@@ -132,18 +131,21 @@ TEST_P(PageIntegrationTest, MultipleLedgerConnections) {
 
   // Create a page on the first connection.
   ledger::PagePtr page;
+  auto waiter = NewWaiter();
   ledger::Status status;
-  ledger_connection_1->GetPage(nullptr, page.NewRequest(),
-                               [&status](ledger::Status s) { status = s; });
-  EXPECT_EQ(ZX_OK, ledger_connection_1.WaitForResponse());
+  ledger_connection_1->GetPage(
+      nullptr, page.NewRequest(),
+      callback::Capture(waiter->GetCallback(), &status));
+  waiter->RunUntilCalled();
   EXPECT_EQ(ledger::Status::OK, status);
 
   // Delete this page on the second connection and verify that the operation
   // succeeds.
   ledger::PageId id = PageGetId(&page);
-  ledger_connection_2->DeletePage(std::move(id),
-                                  [&status](ledger::Status s) { status = s; });
-  EXPECT_EQ(ZX_OK, ledger_connection_2.WaitForResponse());
+  waiter = NewWaiter();
+  ledger_connection_2->DeletePage(
+      std::move(id), callback::Capture(waiter->GetCallback(), &status));
+  waiter->RunUntilCalled();
   EXPECT_EQ(ledger::Status::OK, status);
 }
 
