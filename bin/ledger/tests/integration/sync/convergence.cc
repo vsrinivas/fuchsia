@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#define FIDL_ENABLE_LEGACY_WAIT_FOR_RESPONSE
-
 #include <lib/zx/time.h>
 #include <trace/event.h>
 
@@ -169,16 +167,19 @@ class NonAssociativeConflictResolverImpl : public ledger::ConflictResolver {
               merged_value.new_value->set_bytes(DoubleToArray(new_value));
               fidl::VectorPtr<ledger::MergedValue> merged_values;
               merged_values.push_back(std::move(merged_value));
-              ledger::Status merge_status;
               (*merge_result_provider)
                   ->Merge(std::move(merged_values),
-                          callback::Capture([] {}, &merge_status));
-              ASSERT_EQ(ZX_OK, merge_result_provider->WaitForResponse());
-              ASSERT_EQ(ledger::Status::OK, merge_status);
-              (*merge_result_provider)
-                  ->Done(callback::Capture([] {}, &merge_status));
-              ASSERT_EQ(ZX_OK, merge_result_provider->WaitForResponse());
-              ASSERT_EQ(ledger::Status::OK, merge_status);
+                          fxl::MakeCopyable(
+                              [merge_result_provider =
+                                   std::move(merge_result_provider)](
+                                  ledger::Status merge_status) mutable {
+                                ASSERT_EQ(ledger::Status::OK, merge_status);
+                                (*merge_result_provider)
+                                    ->Done([](ledger::Status merge_status) {
+                                      ASSERT_EQ(ledger::Status::OK,
+                                                merge_status);
+                                    });
+                              }));
             }));
   }
 
