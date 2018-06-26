@@ -35,6 +35,7 @@ function HELP {
     echo "-x <bootdata>        : use specified bootdata"
     echo "--audio[=<host_drv>] : use Intel HD Audio"
     echo "                     : <host_drv> should be one of (alsa, pa, wav, none)"
+    echo "--ahci=<disk image>  : run with disk image file as raw ahci drive"
     echo "--build-debug        : build an image for use with gdb (equivalent to -d to build-zircon)"
     echo "--debugger           : Enable gdb stub and wait for connection"
     echo "--no-serial          : Disable writing out to the guest's serial port"
@@ -47,6 +48,7 @@ function HELP {
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
+AHCI=()
 ARCH=
 ASAN=0
 AUDIO=
@@ -116,6 +118,7 @@ while getopts "Aa:bc:CdD:gG:I:kLlm:nNo:q:rs:u:Vx:h-:" FLAG; do
             ;;
         -)
             case $OPTARG in
+            ahci=*) AHCI+=(${OPTARG#*=});;
             audio) AUDIO=none;;
             audio=*) AUDIO=${OPTARG#*=};;
             wavfile=*) AUDIO_WAVFILE=${OPTARG#*=};;
@@ -238,6 +241,14 @@ if (( $DISK )); then
         exit
     fi
 fi
+
+ahcinum=1
+for ahcifile in ${AHCI[@]}; do
+    ARGS+=" -drive file=${ahcifile},format=raw,if=none,id=ahcidisk${ahcinum}"
+    ARGS+=" -device ich9-ahci,id=ahci${ahcinum}"
+    ARGS+=" -device ide-drive,drive=ahcidisk${ahcinum},bus=ahci.${ahcinum}"
+    ahcinum=$((ahcinum + 1))
+done
 
 if (( !$NET )); then
   ARGS+=" -net none"
