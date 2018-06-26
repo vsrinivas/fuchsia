@@ -2331,7 +2331,7 @@ static void brcmf_sdio_bus_stop(struct brcmf_device* dev) {
 
         /* Turn off the bus (F2), free any pending packets */
         brcmf_dbg(INTR, "disable SDIO interrupts\n");
-        sdio_disable_func(sdiodev->func2);
+        sdio_disable_fn(sdiodev->zx_dev, 2);
 
         /* Clear any pending interrupts now that F2 is disabled */
         brcmf_sdiod_writel(sdiodev, core->base + SD_REG(intstatus), local_hostintmask, NULL);
@@ -3904,7 +3904,7 @@ static void brcmf_sdio_firmware_callback(struct brcmf_device* dev, zx_status_t e
     brcmf_sdiod_writel(sdiod, core->base + SD_REG(tosbmailboxdata),
                        SDPCM_PROT_VERSION << SMB_DATA_VERSION_SHIFT, NULL);
 
-    err = sdio_enable_func(sdiodev->func2);
+    err = sdio_enable_fn(sdiodev->zx_dev, 2);
 
     brcmf_dbg(INFO, "enable F2: err=%d\n", err);
 
@@ -3917,7 +3917,7 @@ static void brcmf_sdio_firmware_callback(struct brcmf_device* dev, zx_status_t e
         brcmf_sdiod_writeb(sdiodev, SBSDIO_WATERMARK, 8, &err);
     } else {
         /* Disable F2 again */
-        sdio_disable_func(sdiodev->func2);
+        sdio_disable_fn(sdiodev->zx_dev, 2);
         goto release;
     }
 
@@ -4060,7 +4060,7 @@ struct brcmf_sdio* brcmf_sdio_probe(struct brcmf_sdio_dev* sdiodev) {
     sdio_claim_host(bus->sdiodev->func1);
 
     /* Disable F2 to clear any intermediate frame state on the dongle */
-    sdio_disable_func(bus->sdiodev->func2);
+    sdio_disable_fn(bus->sdiodev->zx_dev, 2);
 
     bus->rxflow = false;
 

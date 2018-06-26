@@ -620,14 +620,14 @@ static zx_status_t brcmf_sdiod_remove(struct brcmf_sdio_dev* sdiodev) {
     brcmf_sdiod_freezer_detach(sdiodev);
 
     /* Disable Function 2 */
-    sdio_claim_host(sdiodev->func2);
-    sdio_disable_func(sdiodev->func2);
-    sdio_release_host(sdiodev->func2);
+    sdio_claim_host(sdiodev->zx_dev, SDIO_FN_2);
+    sdio_disable_fn(sdiodev->zx_dev, SDIO_FN_2);
+    sdio_release_host(sdiodev->zx_dev, SDIO_FN_2);
 
     /* Disable Function 1 */
-    sdio_claim_host(sdiodev->func1);
-    sdio_disable_func(sdiodev->func1);
-    sdio_release_host(sdiodev->func1);
+    sdio_claim_host(sdiodev->zx_dev, SDIO_FN_1);
+    sdio_disable_fn(sdiodev->zx_dev, SDIO_FN_1);
+    sdio_release_host(sdiodev->zx_dev, SDIO_FN_1);
 
     sdiodev->sbwad = 0;
 
@@ -664,7 +664,7 @@ static zx_status_t brcmf_sdiod_probe(struct brcmf_sdio_dev* sdiodev) {
     sdiodev->func2->enable_timeout = SDIO_WAIT_F2RDY;
 
     /* Enable Function 1 */
-    ret = sdio_enable_func(sdiodev->func1);
+    ret = sdio_enable_fn(sdiodev->zx_dev, 1);
     sdio_release_host(sdiodev->func1);
     if (ret != ZX_OK) {
         brcmf_err("Failed to enable F1: err=%d\n", ret);
@@ -727,13 +727,16 @@ static void brcmf_sdiod_acpi_set_power_manageable(struct brcmf_device* dev, int 
 #endif
 }
 
-static zx_status_t brcmf_ops_sdio_probe(struct sdio_func* func, const struct sdio_device_id* id) {
+static zx_status_t brcmf_ops_sdio_probe(struct sdio_func* func, sdio_protocol_t* sdio_proto) {
     zx_status_t err;
     struct brcmf_sdio_dev* sdiodev;
     struct brcmf_bus* bus_if;
     struct brcmf_device* dev;
 
     brcmf_dbg(SDIO, "Enter\n");
+    if (func == NULL) {
+        return ZX_ERR_NOT_SUPPORTED;
+    }
     brcmf_dbg(SDIO, "Class=%x\n", func->class);
     brcmf_dbg(SDIO, "sdio vendor ID: 0x%04x\n", func->vendor);
     brcmf_dbg(SDIO, "sdio device ID: 0x%04x\n", func->device);
@@ -906,13 +909,17 @@ static struct sdio_driver brcmf_sdmmc_driver = {
     },
 };
 
-void brcmf_sdio_register(void) {
+zx_status_t brcmf_sdio_register(zx_device_t* zxdev, sdio_protocol_t* sdio_proto) {
     zx_status_t ret;
 
-    ret = sdio_register_driver(&brcmf_sdmmc_driver);
+    brcmf_dbg(TEMP, "SDIO Register called!");
+    (void)brcmf_sdmmc_driver; // TODO(cphoenix): Temp to avoid "unused" error
+    ret = brcmf_ops_sdio_probe(NULL, sdio_proto);
     if (ret != ZX_OK) {
         brcmf_err("sdio_register_driver failed: %d\n", ret);
+        return ret;
     }
+    return ZX_OK;
 }
 
 void brcmf_sdio_exit(void) {

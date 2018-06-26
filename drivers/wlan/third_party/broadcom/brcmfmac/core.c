@@ -18,6 +18,7 @@
 
 #include <ddk/device.h>
 #include <ddk/protocol/pci.h>
+#include <ddk/protocol/sdio.h>
 #include <ddk/protocol/usb.h>
 #include <netinet/if_ether.h>
 
@@ -1278,7 +1279,18 @@ zx_status_t brcmf_core_init(zx_device_t* device) {
         return result;
     }
 #endif // CONFIG_BRCMFMAC_USB
-    // TODO(cphoenix): Add SDIO when it's avaialble
+
+#ifdef CONFIG_BRCMFMAC_SDIO
+    sdio_protocol_t sdev;
+    result = device_get_protocol(device, ZX_PROTOCOL_SDIO, &sdev);
+    if (result == ZX_OK) {
+        result = brcmf_sdio_register(device, &sdev);
+        if (result != ZX_OK) {
+            brcmf_err("USB driver registration failed, err=%d\n", result);
+        }
+        return result;
+    }
+#endif // CONFIG_BRCMFMAC_SDIO
     return ZX_ERR_INTERNAL;
 }
 

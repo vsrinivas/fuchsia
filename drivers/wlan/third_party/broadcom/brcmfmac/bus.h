@@ -17,6 +17,7 @@
 #ifndef BRCMFMAC_BUS_H
 #define BRCMFMAC_BUS_H
 
+#include <ddk/protocol/sdio.h>
 #include <ddk/protocol/usb.h>
 
 #include "debug.h"
@@ -255,7 +256,7 @@ void brcmf_bus_add_txhdrlen(struct brcmf_device* dev, uint len);
 
 #ifdef CONFIG_BRCMFMAC_SDIO
 void brcmf_sdio_exit(void);
-void brcmf_sdio_register(void);
+zx_status_t brcmf_sdio_register(zx_device_t* zxdev, sdio_protocol_t* sdio_proto);
 #endif
 #ifdef CONFIG_BRCMFMAC_USB
 void brcmf_usb_exit(void);

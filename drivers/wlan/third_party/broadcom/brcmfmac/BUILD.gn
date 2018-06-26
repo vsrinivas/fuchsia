@@ -23,7 +23,8 @@ driver_module("brcmfmac_driver") {
 
   defines = [
     "CONFIG_BRCMFMAC_USB",
-    "CONFIG_BRCMFMAC_SDIO",
+    # DNS if CONFIG_BRCMFMAC_SDIO is defined!
+    # "CONFIG_BRCMFMAC_SDIO",
     "CONFIG_BRCMFMAC_PCIE",
   ]
 

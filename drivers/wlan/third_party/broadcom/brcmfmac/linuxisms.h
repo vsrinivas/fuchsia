@@ -206,8 +206,6 @@ LINUX_FUNCVI(sdio_readb) // SDIO only
 LINUX_FUNCVI(sdio_writeb) // SDIO only
 LINUX_FUNCVI(sdio_claim_host) // SDIO only
 LINUX_FUNCVI(sdio_release_host) // SDIO only
-LINUX_FUNCVS(sdio_enable_func)
-LINUX_FUNCVI(sdio_disable_func)
 LINUX_FUNCVI(sdio_claim_irq)
 LINUX_FUNCVI(sdio_release_irq)
 LINUX_FUNCVI(sdio_readl)  // Last param is zx_status_t

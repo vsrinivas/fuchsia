@@ -17,6 +17,8 @@
 #ifndef BRCMFMAC_SDIO_H
 #define BRCMFMAC_SDIO_H
 
+#include <ddk/protocol/sdio.h>
+
 #include "defs.h"
 #include "device.h"
 #include "firmware.h"
@@ -185,6 +187,7 @@ struct sdio_func {
 struct brcmf_sdio_dev {
     struct sdio_func* func1;
     struct sdio_func* func2;
+    sdio_protocol_t* zx_dev;
     uint32_t sbwad;             /* Save backplane window address */
     struct brcmf_core* cc_core; /* chipcommon core info struct */
     struct brcmf_sdio* bus;
