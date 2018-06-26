@@ -22,7 +22,6 @@ package("ledger") {
 
 package("ledger_tests") {
   testonly = true
-  deprecated_system_image = true
 
   deps = [
     ":ledger_unittests",
