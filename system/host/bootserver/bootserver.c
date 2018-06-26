@@ -238,9 +238,11 @@ int send_boot_command(struct sockaddr_in6* ra) {
     ssize_t send_result = sendto(s, &msg, sizeof(msg), 0, (struct sockaddr*)&target_addr,
                                  sizeof(target_addr));
     if (send_result == sizeof(msg)) {
+        close(s);
         log("Issued boot command to %s\n\n", sockaddr_str(ra));
         return 0;
     }
+    close(s);
     log("failure sending boot command to %s", sockaddr_str(ra));
     return -1;
 }
@@ -266,9 +268,11 @@ int send_reboot_command(struct sockaddr_in6* ra) {
     ssize_t send_result = sendto(s, &msg, sizeof(msg), 0, (struct sockaddr*)&target_addr,
                                  sizeof(target_addr));
     if (send_result == sizeof(msg)) {
+        close(s);
         log("Issued reboot command to %s\n\n", sockaddr_str(ra));
         return 0;
     }
+    close(s);
     log("failure sending reboot command to %s", sockaddr_str(ra));
     return -1;
 }
@@ -479,6 +483,7 @@ int main(int argc, char** argv) {
         log("cannot bind to %s %d: %s\nthere may be another bootserver running\n",
             sockaddr_str(&addr),
             errno, strerror(errno));
+        close(s);
         return -1;
     }
 
@@ -493,6 +498,7 @@ int main(int argc, char** argv) {
         r = recvfrom(s, buf, sizeof(buf) - 1, 0, (void*)&ra, &rlen);
         if (r < 0) {
             log("socket read error %d", r);
+            close(s);
             return -1;
         }
         if (r < sizeof(nbmsg))
@@ -517,6 +523,7 @@ int main(int argc, char** argv) {
                 "detected from %s, please upgrade your bootloader%s",
                 ANSI(RED), msg->arg, sockaddr_str(&ra), ANSI(RESET));
             if (once) {
+                close(s);
                 return -1;
             }
             continue;
@@ -554,6 +561,7 @@ int main(int argc, char** argv) {
         if (strcmp(BOOTLOADER_VERSION, adv_version)) {
             log("%sWARNING: Bootserver version '%s' != remote bootloader '%s'. Please Upgrade%s",
                 ANSI(RED), BOOTLOADER_VERSION, adv_version, ANSI(RESET));
+            close(s);
             return -1;
         }
 
@@ -598,10 +606,12 @@ int main(int argc, char** argv) {
             }
         }
         if (once) {
+            close(s);
             return status == 0 ? 0 : -1;
         }
         drain(s);
     }
 
+    close(s);
     return 0;
 }
