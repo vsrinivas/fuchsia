@@ -208,7 +208,7 @@ static inline uint32_t get_unaligned_le32(void* addr) {
     memcpy(&value, addr, sizeof(uint32_t));
     return value;
 }
-LINUX_FUNCVV(skb_mac_header)
+LINUX_FUNCVV(netbuf_mac_header)
 LINUX_FUNCVI(usb_kill_urb)
 LINUX_FUNCVI(usb_free_urb)
 LINUX_FUNCIV(usb_alloc_urb)
@@ -238,11 +238,11 @@ LINUX_FUNCVI(brcmf_netbuf_set_length_to) // May either grow or shrink.
 LINUX_FUNCVI(brcmf_netbuf_list_remove) // netbuf list
 LINUX_FUNCVI(brcmf_netbuf_grow_head) // onion
 //LINUX_FUNCVU(brcmf_netbuf_head_space) // Already implemented
-//LINUX_FUNCVI(skb_cow_head) // Replaced using brcmf_netbuf_realloc_head()
+//LINUX_FUNCVI(netbuf_cow_head) // Replaced using brcmf_netbuf_realloc_head()
 LINUX_FUNCVI(brcmf_netbuf_list_add_tail) // netbuf list
-LINUX_FUNCVI(skb_queue_is_last) // Replaced using brcmf_netbuf_list_peek_tail()
+//LINUX_FUNCVI(netbuf_queue_is_last) // Replaced using brcmf_netbuf_list_peek_tail()
 LINUX_FUNCVI(brcmf_netbuf_reduce_length_to) // If length is already shorter, NOP.
-LINUX_FUNCVI(skb_linearize) // Not needed / used in this driver architecture
+//LINUX_FUNCVI(netbuf_linearize) // Not needed / used in this driver architecture
 LINUX_FUNCVI(brcmf_netbuf_add_after_locked) // netbuf list
 LINUX_FUNCVI(brcmf_netbuf_list_remove_locked) // netbuf list
 //LINUX_FUNCVI(brcmf_netbuf_grow_tail) // Already implemented
@@ -250,9 +250,9 @@ LINUX_FUNCVI(brcmf_netbuf_list_init_nonlocked) // netbuf list
 LINUX_FUNCVI(brcmf_netbuf_add_tail_locked) // netbuf list
 LINUX_FUNCVV(brcmf_netbuf_remove_tail) // netbuf list
 LINUX_FUNCVV(brcmf_netbuf_list_prev) // netbuf list
-// LINUX_FUNCVV(skb_header_cloned) // Not needed / used in this driver architecture
-// LINUX_FUNCVI(__skb_insert) // Replaced by brcmf_netbuf_add_after_locked() - see fwsignal.c:1291
-// LINUX_FUNCVI(skb_orphan) // Not needed in this driver architecture
+// LINUX_FUNCVV(netbuf_header_cloned) // Not needed / used in this driver architecture
+// LINUX_FUNCVI(__netbuf_insert) // Replaced by brcmf_netbuf_add_after_locked(): see fwsignal.c:1291
+// LINUX_FUNCVI(netbuf_orphan) // Not needed in this driver architecture
 #define brcmf_netbuf_list_for_every_safe(a, b, c)  \
     for(({brcmf_err("Calling brcmf_netbuf_list_for_every_safe"); \
                                         (void)c;}), b=(a)->next;true;)
@@ -335,7 +335,7 @@ LINUX_FUNCVI(device_release_driver)
 LINUX_FUNCVI(netif_stop_queue)
 LINUX_FUNCVI(cfg80211_classify8021d)
 LINUX_FUNCVI(cfg80211_crit_proto_stopped)
-LINUX_FUNCVV(cfg80211_vendor_cmd_alloc_reply_skb)
+LINUX_FUNCVV(cfg80211_vendor_cmd_alloc_reply_netbuf)
 LINUX_FUNCVI(cfg80211_vendor_cmd_reply)
 LINUX_FUNCVI(cfg80211_ready_on_channel)
 LINUX_FUNCcVS(cfg80211_get_p2p_attr) // TODO(cphoenix): Can this return >0? If so, adjust usage.
@@ -542,7 +542,7 @@ enum {
     REGULATORY_CUSTOM_REG,
     NL80211_FEATURE_SCHED_SCAN_RANDOM_MAC_ADDR,
     IFF_ALLMULTI = 0,
-    NET_SKB_PAD,
+    NET_NETBUF_PAD,
     IFF_PROMISC,
     NETDEV_TX_OK,
     IFF_UP,

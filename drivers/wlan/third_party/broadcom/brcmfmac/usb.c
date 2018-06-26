@@ -495,7 +495,7 @@ static void brcmf_usb_rx_complete(struct brcmf_urb* urb) {
 
     /* zero length packets indicate usb "failure". Do not refill */
     if (urb->status != 0 || !urb->actual_length) {
-        brcmu_pkt_buf_free_skb(netbuf);
+        brcmu_pkt_buf_free_netbuf(netbuf);
         brcmf_usb_enq(devinfo, &devinfo->rx_freeq, req, NULL);
         pthread_mutex_unlock(&irq_callback_lock);
         return;
@@ -506,7 +506,7 @@ static void brcmf_usb_rx_complete(struct brcmf_urb* urb) {
         brcmf_rx_frame(devinfo->dev, netbuf, true);
         brcmf_usb_rx_refill(devinfo, req);
     } else {
-        brcmu_pkt_buf_free_skb(netbuf);
+        brcmu_pkt_buf_free_netbuf(netbuf);
         brcmf_usb_enq(devinfo, &devinfo->rx_freeq, req, NULL);
     }
     pthread_mutex_unlock(&irq_callback_lock);
@@ -536,7 +536,7 @@ static void brcmf_usb_rx_refill(struct brcmf_usbdev_info* devinfo, struct brcmf_
     ret = usb_submit_urb(req->urb, GFP_ATOMIC);
     if (ret != ZX_OK) {
         brcmf_usb_del_fromq(devinfo, req);
-        brcmu_pkt_buf_free_skb(req->netbuf);
+        brcmu_pkt_buf_free_netbuf(req->netbuf);
         req->netbuf = NULL;
         brcmf_usb_enq(devinfo, &devinfo->rx_freeq, req, NULL);
     }

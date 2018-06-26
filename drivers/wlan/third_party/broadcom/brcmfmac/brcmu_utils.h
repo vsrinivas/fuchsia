@@ -71,7 +71,7 @@
 #define ETHER_ADDR_STR_LEN 18
 
 struct pktq_prec {
-    struct brcmf_netbuf_list skblist;
+    struct brcmf_netbuf_list netbuf_list;
     uint16_t max; /* maximum number of queued packets */
 };
 
@@ -91,27 +91,27 @@ struct pktq {
 /* operations on a specific precedence in packet queue */
 
 static inline int pktq_plen(struct pktq* pq, int prec) {
-    return pq->q[prec].skblist.qlen;
+    return pq->q[prec].netbuf_list.qlen;
 }
 
 static inline int pktq_pavail(struct pktq* pq, int prec) {
-    return pq->q[prec].max - pq->q[prec].skblist.qlen;
+    return pq->q[prec].max - pq->q[prec].netbuf_list.qlen;
 }
 
 static inline bool pktq_pfull(struct pktq* pq, int prec) {
-    return pq->q[prec].skblist.qlen >= pq->q[prec].max;
+    return pq->q[prec].netbuf_list.qlen >= pq->q[prec].max;
 }
 
 static inline bool pktq_pempty(struct pktq* pq, int prec) {
-    return brcmf_netbuf_list_is_empty(&pq->q[prec].skblist);
+    return brcmf_netbuf_list_is_empty(&pq->q[prec].netbuf_list);
 }
 
 static inline struct brcmf_netbuf* pktq_ppeek(struct pktq* pq, int prec) {
-    return brcmf_netbuf_list_peek_head(&pq->q[prec].skblist);
+    return brcmf_netbuf_list_peek_head(&pq->q[prec].netbuf_list);
 }
 
 static inline struct brcmf_netbuf* pktq_ppeek_tail(struct pktq* pq, int prec) {
-    return brcmf_netbuf_list_peek_tail(&pq->q[prec].skblist);
+    return brcmf_netbuf_list_peek_tail(&pq->q[prec].netbuf_list);
 }
 
 struct brcmf_netbuf* brcmu_pktq_penq(struct pktq* pq, int prec, struct brcmf_netbuf* p);
@@ -123,8 +123,8 @@ struct brcmf_netbuf* brcmu_pktq_pdeq_match(struct pktq* pq, int prec,
                                            void* arg);
 
 /* packet primitives */
-struct brcmf_netbuf* brcmu_pkt_buf_get_skb(uint len);
-void brcmu_pkt_buf_free_skb(struct brcmf_netbuf* netbuf);
+struct brcmf_netbuf* brcmu_pkt_buf_get_netbuf(uint len);
+void brcmu_pkt_buf_free_netbuf(struct brcmf_netbuf* netbuf);
 
 /* Empty the queue at particular precedence level */
 /* callback function fn(pkt, arg) returns true if pkt belongs to if */

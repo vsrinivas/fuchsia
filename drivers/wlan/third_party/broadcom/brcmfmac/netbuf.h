@@ -26,8 +26,7 @@
 // - Appropriate paranoia on function parameters
 // - Comments once the API and struct fields are finalized
 // - More complete initialization
-// - Implement the rest of the functions to replace all the brcmf_netbuf library calls
-// - Full renaming of "skb" to "netbuf" in the code
+// - Implement the rest of the brcmf_netbuf library calls
 // - Test the implementation
 
 struct brcmf_netbuf;

@@ -21,7 +21,7 @@
 
 enum proto_addr_mode { ADDR_INDIRECT = 0, ADDR_DIRECT };
 
-struct brcmf_skb_reorder_data {
+struct brcmf_netbuf_reorder_data {
     uint8_t* reorder;
 };
 
@@ -48,8 +48,8 @@ struct brcmf_proto {
 zx_status_t brcmf_proto_attach(struct brcmf_pub* drvr);
 void brcmf_proto_detach(struct brcmf_pub* drvr);
 
-static inline int brcmf_proto_hdrpull(struct brcmf_pub* drvr, bool do_fws, struct brcmf_netbuf* netbuf,
-                                      struct brcmf_if** ifp) {
+static inline int brcmf_proto_hdrpull(struct brcmf_pub* drvr, bool do_fws,
+                                      struct brcmf_netbuf* netbuf, struct brcmf_if** ifp) {
     struct brcmf_if* tmp = NULL;
 
     /* assure protocol is always called with
@@ -92,10 +92,10 @@ static inline void brcmf_proto_add_tdls_peer(struct brcmf_pub* drvr, int ifidx,
                                              uint8_t peer[ETH_ALEN]) {
     drvr->proto->add_tdls_peer(drvr, ifidx, peer);
 }
-static inline bool brcmf_proto_is_reorder_skb(struct brcmf_netbuf* netbuf) {
-    struct brcmf_skb_reorder_data* rd;
+static inline bool brcmf_proto_is_reorder_netbuf(struct brcmf_netbuf* netbuf) {
+    struct brcmf_netbuf_reorder_data* rd;
 
-    rd = (struct brcmf_skb_reorder_data*)netbuf->workspace;
+    rd = (struct brcmf_netbuf_reorder_data*)netbuf->workspace;
     return !!rd->reorder;
 }
 

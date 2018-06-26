@@ -25,10 +25,10 @@
 
 zx_status_t brcmf_fws_attach(struct brcmf_pub* drvr, struct brcmf_fws_info** fws_out);
 void brcmf_fws_detach(struct brcmf_fws_info* fws);
-bool brcmf_fws_queue_skbs(struct brcmf_fws_info* fws);
+bool brcmf_fws_queue_netbufs(struct brcmf_fws_info* fws);
 bool brcmf_fws_fc_active(struct brcmf_fws_info* fws);
 void brcmf_fws_hdrpull(struct brcmf_if* ifp, int16_t siglen, struct brcmf_netbuf* netbuf);
-zx_status_t brcmf_fws_process_skb(struct brcmf_if* ifp, struct brcmf_netbuf* netbuf);
+zx_status_t brcmf_fws_process_netbuf(struct brcmf_if* ifp, struct brcmf_netbuf* netbuf);
 
 void brcmf_fws_reset_interface(struct brcmf_if* ifp);
 void brcmf_fws_add_interface(struct brcmf_if* ifp);

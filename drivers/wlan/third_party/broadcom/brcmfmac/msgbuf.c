@@ -318,7 +318,8 @@ static zx_status_t brcmf_msgbuf_alloc_pktid(struct brcmf_device* dev,
     array = pktids->array;
 
     *physaddr =
-        dma_map_single(dev, netbuf->data + data_offset, netbuf->len - data_offset, pktids->direction);
+        dma_map_single(dev, netbuf->data + data_offset, netbuf->len - data_offset,
+                       pktids->direction);
 
     if (dma_mapping_error(dev, *physaddr)) {
         brcmf_err("dma_map_single failed !!\n");
@@ -392,7 +393,7 @@ static void brcmf_msgbuf_release_array(struct brcmf_device* dev,
             pktid = &array[count];
             dma_unmap_single(dev, pktid->physaddr, pktid->netbuf->len - pktid->data_offset,
                              pktids->direction);
-            brcmu_pkt_buf_free_skb(pktid->netbuf);
+            brcmu_pkt_buf_free_netbuf(pktid->netbuf);
         }
         count++;
     } while (count < pktids->array_size);
@@ -493,7 +494,7 @@ static zx_status_t brcmf_msgbuf_query_dcmd(struct brcmf_pub* drvr, int ifidx, ui
         memcpy(buf, netbuf->data,
                (len < msgbuf->ioctl_resp_ret_len) ? len : msgbuf->ioctl_resp_ret_len);
     }
-    brcmu_pkt_buf_free_skb(netbuf);
+    brcmu_pkt_buf_free_netbuf(netbuf);
 
     *fwerr = msgbuf->ioctl_resp_status;
     return ZX_OK;
@@ -668,7 +669,7 @@ static void brcmf_msgbuf_txflow(struct brcmf_msgbuf* msgbuf, uint16_t flowid) {
     while (brcmf_flowring_qlen(flow, flowid)) {
         netbuf = brcmf_flowring_dequeue(flow, flowid);
         if (netbuf == NULL) {
-            brcmf_err("No SKB, but qlen %d\n", brcmf_flowring_qlen(flow, flowid));
+            brcmf_err("No netbuf, but qlen %d\n", brcmf_flowring_qlen(flow, flowid));
             break;
         }
         if (brcmf_msgbuf_alloc_pktid(msgbuf->drvr->bus_if->dev, msgbuf->tx_pktids, netbuf, ETH_HLEN,
@@ -842,10 +843,10 @@ static uint32_t brcmf_msgbuf_rxbuf_data_post(struct brcmf_msgbuf* msgbuf, uint32
         rx_bufpost = (struct msgbuf_rx_bufpost*)ret_ptr;
         memset(rx_bufpost, 0, sizeof(*rx_bufpost));
 
-        netbuf = brcmu_pkt_buf_get_skb(BRCMF_MSGBUF_MAX_PKT_SIZE);
+        netbuf = brcmu_pkt_buf_get_netbuf(BRCMF_MSGBUF_MAX_PKT_SIZE);
 
         if (netbuf == NULL) {
-            brcmf_err("Failed to alloc SKB\n");
+            brcmf_err("Failed to alloc netbuf\n");
             brcmf_commonring_write_cancel(commonring, alloced - i);
             break;
         }
@@ -936,10 +937,10 @@ static uint32_t brcmf_msgbuf_rxbuf_ctrl_post(struct brcmf_msgbuf* msgbuf, bool e
         rx_bufpost = (struct msgbuf_rx_ioctl_resp_or_event*)ret_ptr;
         memset(rx_bufpost, 0, sizeof(*rx_bufpost));
 
-        netbuf = brcmu_pkt_buf_get_skb(BRCMF_MSGBUF_MAX_PKT_SIZE);
+        netbuf = brcmu_pkt_buf_get_netbuf(BRCMF_MSGBUF_MAX_PKT_SIZE);
 
         if (netbuf == NULL) {
-            brcmf_err("Failed to alloc SKB\n");
+            brcmf_err("Failed to alloc netbuf\n");
             brcmf_commonring_write_cancel(commonring, alloced - i);
             break;
         }
@@ -1027,10 +1028,10 @@ static void brcmf_msgbuf_process_event(struct brcmf_msgbuf* msgbuf, void* buf) {
 
     netbuf->protocol = eth_type_trans(netbuf, ifp->ndev);
 
-    brcmf_fweh_process_skb(ifp->drvr, netbuf);
+    brcmf_fweh_process_netbuf(ifp->drvr, netbuf);
 
 exit:
-    brcmu_pkt_buf_free_skb(netbuf);
+    brcmu_pkt_buf_free_netbuf(netbuf);
 }
 
 static void brcmf_msgbuf_process_rx_complete(struct brcmf_msgbuf* msgbuf, void* buf) {
@@ -1064,7 +1065,7 @@ static void brcmf_msgbuf_process_rx_complete(struct brcmf_msgbuf* msgbuf, void* 
     ifp = brcmf_get_ifp(msgbuf->drvr, rx_complete->msg.ifidx);
     if (!ifp || !ifp->ndev) {
         brcmf_err("Received pkt for invalid ifidx %d\n", rx_complete->msg.ifidx);
-        brcmu_pkt_buf_free_skb(netbuf);
+        brcmu_pkt_buf_free_netbuf(netbuf);
         return;
     }
 
@@ -1298,7 +1299,7 @@ static zx_status_t brcmf_msgbuf_stats_read(struct seq_file* seq, void* data) {
                    "id %3u: rp %4u, wp %4u, qlen %4u, blocked %u\n"
                    "        ifidx %u, fifo %u, da %pM\n",
                    i, commonring->r_ptr, commonring->w_ptr,
-                   brcmf_netbuf_list_length(&ring->skblist), ring->blocked, hash->ifidx,
+                   brcmf_netbuf_list_length(&ring->netbuf_list), ring->blocked, hash->ifidx,
                    hash->fifo, hash->mac);
     }
 

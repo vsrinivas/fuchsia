@@ -35,7 +35,7 @@ struct brcmf_flowring_ring {
     uint16_t hash_id;
     bool blocked;
     enum ring_status status;
-    struct brcmf_netbuf_list skblist;
+    struct brcmf_netbuf_list netbuf_list;
 };
 
 struct brcmf_flowring_tdls_entry {

@@ -261,7 +261,7 @@ static netdev_tx_t brcmf_netdev_start_xmit(struct brcmf_netbuf* netbuf, struct n
 
         brcmf_dbg(INFO, "%s: insufficient headroom (%d)\n", brcmf_ifname(ifp), head_delta);
         atomic_fetch_add(&drvr->bus_if->stats.pktcowed, 1);
-        ret = brcmf_netbuf_realloc_head(netbuf, ALIGN(head_delta, NET_SKB_PAD), 0, GFP_ATOMIC);
+        ret = brcmf_netbuf_realloc_head(netbuf, ALIGN(head_delta, NET_NETBUF_PAD), 0, GFP_ATOMIC);
         if (ret != ZX_OK) {
             brcmf_err("%s: failed to expand headroom\n", brcmf_ifname(ifp));
             atomic_fetch_add(&drvr->bus_if->stats.pktcow_failed, 1);
@@ -336,7 +336,7 @@ void brcmf_netif_rx(struct brcmf_if* ifp, struct brcmf_netbuf* netbuf) {
     }
 
     if (!(ifp->ndev->flags & IFF_UP)) {
-        brcmu_pkt_buf_free_skb(netbuf);
+        brcmu_pkt_buf_free_netbuf(netbuf);
         return;
     }
 
@@ -366,7 +366,7 @@ static zx_status_t brcmf_rx_hdrpull(struct brcmf_pub* drvr, struct brcmf_netbuf*
         if (ret != ZX_ERR_BUFFER_TOO_SMALL && *ifp) {
             (*ifp)->ndev->stats.rx_errors++;
         }
-        brcmu_pkt_buf_free_skb(netbuf);
+        brcmu_pkt_buf_free_netbuf(netbuf);
         return ZX_ERR_IO;
     }
 
@@ -386,12 +386,12 @@ void brcmf_rx_frame(struct brcmf_device* dev, struct brcmf_netbuf* netbuf, bool 
         return;
     }
 
-    if (brcmf_proto_is_reorder_skb(netbuf)) {
+    if (brcmf_proto_is_reorder_netbuf(netbuf)) {
         brcmf_proto_rxreorder(ifp, netbuf);
     } else {
         /* Process special event packets */
         if (handle_event) {
-            brcmf_fweh_process_skb(ifp->drvr, netbuf);
+            brcmf_fweh_process_netbuf(ifp->drvr, netbuf);
         }
 
         brcmf_netif_rx(ifp, netbuf);
@@ -409,8 +409,8 @@ void brcmf_rx_event(struct brcmf_device* dev, struct brcmf_netbuf* netbuf) {
         return;
     }
 
-    brcmf_fweh_process_skb(ifp->drvr, netbuf);
-    brcmu_pkt_buf_free_skb(netbuf);
+    brcmf_fweh_process_netbuf(ifp->drvr, netbuf);
+    brcmu_pkt_buf_free_netbuf(netbuf);
 }
 
 void brcmf_txfinalize(struct brcmf_if* ifp, struct brcmf_netbuf* txp, bool success) {
@@ -430,7 +430,7 @@ void brcmf_txfinalize(struct brcmf_if* ifp, struct brcmf_netbuf* txp, bool succe
         ifp->ndev->stats.tx_errors++;
     }
 
-    brcmu_pkt_buf_free_skb(txp);
+    brcmu_pkt_buf_free_netbuf(txp);
 }
 
 static void brcmf_ethtool_get_drvinfo(struct net_device* ndev, struct ethtool_drvinfo* info) {

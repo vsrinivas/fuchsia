@@ -31,7 +31,7 @@ MODULE_DESCRIPTION("Broadcom 802.11n wireless LAN driver utilities.");
 MODULE_SUPPORTED_DEVICE("Broadcom 802.11n WLAN cards");
 MODULE_LICENSE("Dual BSD/GPL");
 
-struct brcmf_netbuf* brcmu_pkt_buf_get_skb(uint len) {
+struct brcmf_netbuf* brcmu_pkt_buf_get_netbuf(uint len) {
     struct brcmf_netbuf* netbuf;
 
     netbuf = brcmf_netbuf_allocate(len);
@@ -42,10 +42,10 @@ struct brcmf_netbuf* brcmu_pkt_buf_get_skb(uint len) {
 
     return netbuf;
 }
-EXPORT_SYMBOL(brcmu_pkt_buf_get_skb);
+EXPORT_SYMBOL(brcmu_pkt_buf_get_netbuf);
 
 /* Free the driver packet. Free the tag if present */
-void brcmu_pkt_buf_free_skb(struct brcmf_netbuf* netbuf) {
+void brcmu_pkt_buf_free_netbuf(struct brcmf_netbuf* netbuf) {
     if (!netbuf) {
         return;
     }
@@ -53,7 +53,7 @@ void brcmu_pkt_buf_free_skb(struct brcmf_netbuf* netbuf) {
     WARN_ON(netbuf->next);
     brcmf_netbuf_free(netbuf);
 }
-EXPORT_SYMBOL(brcmu_pkt_buf_free_skb);
+EXPORT_SYMBOL(brcmu_pkt_buf_free_netbuf);
 
 /*
  * osl multiple-precedence packet queue
@@ -66,7 +66,7 @@ struct brcmf_netbuf* brcmu_pktq_penq(struct pktq* pq, int prec, struct brcmf_net
         return NULL;
     }
 
-    q = &pq->q[prec].skblist;
+    q = &pq->q[prec].netbuf_list;
     brcmf_netbuf_list_add_tail(q, p);
     pq->len++;
 
@@ -85,7 +85,7 @@ struct brcmf_netbuf* brcmu_pktq_penq_head(struct pktq* pq, int prec, struct brcm
         return NULL;
     }
 
-    q = &pq->q[prec].skblist;
+    q = &pq->q[prec].netbuf_list;
     brcmf_netbuf_list_add_head(q, p);
     pq->len++;
 
@@ -101,7 +101,7 @@ struct brcmf_netbuf* brcmu_pktq_pdeq(struct pktq* pq, int prec) {
     struct brcmf_netbuf_list* q;
     struct brcmf_netbuf* p;
 
-    q = &pq->q[prec].skblist;
+    q = &pq->q[prec].netbuf_list;
     p = brcmf_netbuf_list_remove_head(q);
     if (p == NULL) {
         return NULL;
@@ -125,7 +125,7 @@ struct brcmf_netbuf* brcmu_pktq_pdeq_match(struct pktq* pq, int prec,
     struct brcmf_netbuf* p;
     struct brcmf_netbuf* next;
 
-    q = &pq->q[prec].skblist;
+    q = &pq->q[prec].netbuf_list;
     brcmf_netbuf_list_for_every_safe(q, p, next) {
         if (match_fn == NULL || match_fn(p, arg)) {
             brcmf_netbuf_list_remove(p, q);
@@ -141,7 +141,7 @@ struct brcmf_netbuf* brcmu_pktq_pdeq_tail(struct pktq* pq, int prec) {
     struct brcmf_netbuf_list* q;
     struct brcmf_netbuf* p;
 
-    q = &pq->q[prec].skblist;
+    q = &pq->q[prec].netbuf_list;
     p = brcmf_netbuf_remove_tail(q);
     if (p == NULL) {
         return NULL;
@@ -158,11 +158,11 @@ void brcmu_pktq_pflush(struct pktq* pq, int prec, bool dir, bool (*fn)(struct br
     struct brcmf_netbuf* p;
     struct brcmf_netbuf* next;
 
-    q = &pq->q[prec].skblist;
+    q = &pq->q[prec].netbuf_list;
     brcmf_netbuf_list_for_every_safe(q, p, next) {
         if (fn == NULL || (*fn)(p, arg)) {
             brcmf_netbuf_list_remove(p, q);
-            brcmu_pkt_buf_free_skb(p);
+            brcmu_pkt_buf_free_netbuf(p);
             pq->len--;
         }
     }
@@ -190,7 +190,7 @@ void brcmu_pktq_init(struct pktq* pq, int num_prec, int max_len) {
 
     for (prec = 0; prec < num_prec; prec++) {
         pq->q[prec].max = pq->max;
-        brcmf_netbuf_list_init(&pq->q[prec].skblist);
+        brcmf_netbuf_list_init(&pq->q[prec].netbuf_list);
     }
 }
 EXPORT_SYMBOL(brcmu_pktq_init);
@@ -203,7 +203,7 @@ struct brcmf_netbuf* brcmu_pktq_peek_tail(struct pktq* pq, int* prec_out) {
     }
 
     for (prec = 0; prec < pq->hi_prec; prec++)
-        if (!brcmf_netbuf_list_is_empty(&pq->q[prec].skblist)) {
+        if (!brcmf_netbuf_list_is_empty(&pq->q[prec].netbuf_list)) {
             break;
         }
 
@@ -211,7 +211,7 @@ struct brcmf_netbuf* brcmu_pktq_peek_tail(struct pktq* pq, int* prec_out) {
         *prec_out = prec;
     }
 
-    return brcmf_netbuf_list_peek_tail(&pq->q[prec].skblist);
+    return brcmf_netbuf_list_peek_tail(&pq->q[prec].netbuf_list);
 }
 EXPORT_SYMBOL(brcmu_pktq_peek_tail);
 
@@ -223,7 +223,7 @@ int brcmu_pktq_mlen(struct pktq* pq, uint prec_bmp) {
 
     for (prec = 0; prec <= pq->hi_prec; prec++)
         if (prec_bmp & (1 << prec)) {
-            len += pq->q[prec].skblist.qlen;
+            len += pq->q[prec].netbuf_list.qlen;
         }
 
     return len;
@@ -240,16 +240,16 @@ struct brcmf_netbuf* brcmu_pktq_mdeq(struct pktq* pq, uint prec_bmp, int* prec_o
         return NULL;
     }
 
-    while ((prec = pq->hi_prec) > 0 && brcmf_netbuf_list_is_empty(&pq->q[prec].skblist)) {
+    while ((prec = pq->hi_prec) > 0 && brcmf_netbuf_list_is_empty(&pq->q[prec].netbuf_list)) {
         pq->hi_prec--;
     }
 
-    while ((prec_bmp & (1 << prec)) == 0 || brcmf_netbuf_list_is_empty(&pq->q[prec].skblist))
+    while ((prec_bmp & (1 << prec)) == 0 || brcmf_netbuf_list_is_empty(&pq->q[prec].netbuf_list))
         if (prec-- == 0) {
             return NULL;
         }
 
-    q = &pq->q[prec].skblist;
+    q = &pq->q[prec].netbuf_list;
     p = brcmf_netbuf_list_remove_head(q);
     if (p == NULL) {
         return NULL;

@@ -348,11 +348,11 @@ static zx_status_t brcmf_proto_bcdc_tx_queue_data(struct brcmf_pub* drvr, int if
     struct brcmf_if* ifp = brcmf_get_ifp(drvr, ifidx);
     struct brcmf_bcdc* bcdc = drvr->proto->pd;
 
-    if (!brcmf_fws_queue_skbs(bcdc->fws)) {
+    if (!brcmf_fws_queue_netbufs(bcdc->fws)) {
         return brcmf_proto_txdata(drvr, ifidx, 0, netbuf);
     }
 
-    return brcmf_fws_process_skb(ifp, netbuf);
+    return brcmf_fws_process_netbuf(ifp, netbuf);
 }
 
 static int brcmf_proto_bcdc_txdata(struct brcmf_pub* drvr, int ifidx, uint8_t offset,
@@ -382,7 +382,7 @@ void brcmf_proto_bcdc_txcomplete(struct brcmf_device* dev, struct brcmf_netbuf* 
         }
     } else {
         if (brcmf_proto_bcdc_hdrpull(bus_if->drvr, false, txp, &ifp)) {
-            brcmu_pkt_buf_free_skb(txp);
+            brcmu_pkt_buf_free_netbuf(txp);
         } else {
             brcmf_txfinalize(ifp, txp, success);
         }

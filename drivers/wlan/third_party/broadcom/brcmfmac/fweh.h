@@ -340,7 +340,7 @@ void brcmf_fweh_process_event(struct brcmf_pub* drvr, struct brcmf_event* event_
                               uint32_t packet_len);
 void brcmf_fweh_p2pdev_setup(struct brcmf_if* ifp, bool ongoing);
 
-static inline void brcmf_fweh_process_skb(struct brcmf_pub* drvr, struct brcmf_netbuf* netbuf) {
+static inline void brcmf_fweh_process_netbuf(struct brcmf_pub* drvr, struct brcmf_netbuf* netbuf) {
     struct brcmf_event* event_packet;
     uint16_t usr_stype;
 
@@ -354,7 +354,7 @@ static inline void brcmf_fweh_process_skb(struct brcmf_pub* drvr, struct brcmf_n
     }
 
     /* check for BRCM oui match */
-    event_packet = (struct brcmf_event*)skb_mac_header(netbuf);
+    event_packet = (struct brcmf_event*)netbuf_mac_header(netbuf);
     if (memcmp(BRCM_OUI, &event_packet->hdr.oui[0], sizeof(event_packet->hdr.oui))) {
         return;
     }

@@ -96,7 +96,7 @@ static zx_status_t brcmf_cfg80211_vndr_cmds_dcmd_handler(struct wiphy* wiphy,
         msglen = ret_len > maxmsglen ? maxmsglen : ret_len;
         ret_len -= msglen;
         payload = msglen + sizeof(msglen);
-        reply = cfg80211_vendor_cmd_alloc_reply_skb(wiphy, payload);
+        reply = cfg80211_vendor_cmd_alloc_reply_netbuf(wiphy, payload);
         if (NULL == reply) {
             ret = ZX_ERR_NO_MEMORY;
             break;
