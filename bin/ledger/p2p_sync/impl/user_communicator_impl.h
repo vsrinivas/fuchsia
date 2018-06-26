@@ -14,6 +14,7 @@
 #include "lib/app/cpp/service_provider_impl.h"
 #include "lib/callback/auto_cleanable.h"
 #include "lib/netconnector/cpp/message_relay.h"
+#include "peridot/bin/ledger/coroutine/coroutine.h"
 #include "peridot/bin/ledger/p2p_provider/public/p2p_provider.h"
 #include "peridot/bin/ledger/p2p_provider/public/types.h"
 #include "peridot/bin/ledger/p2p_provider/public/user_id_provider.h"

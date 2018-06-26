@@ -13,6 +13,7 @@ source_set("impl") {
     "flatbuffer_message_factory.h",
     "ledger_communicator_impl.cc",
     "ledger_communicator_impl.h",
+    "message_holder.h",
     "page_communicator_impl.cc",
     "page_communicator_impl.h",
     "user_communicator_factory_impl.cc",

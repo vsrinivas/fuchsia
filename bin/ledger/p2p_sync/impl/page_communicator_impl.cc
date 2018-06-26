@@ -158,7 +158,7 @@ void PageCommunicatorImpl::OnDeviceChange(
 }
 
 void PageCommunicatorImpl::OnNewRequest(fxl::StringView source,
-                                        const Request* message) {
+                                        MessageHolder<Request> message) {
   FXL_DCHECK(!in_destructor_);
   switch (message->request_type()) {
     case RequestMessage_WatchStartRequest: {
@@ -203,13 +203,13 @@ void PageCommunicatorImpl::OnNewRequest(fxl::StringView source,
           source, static_cast<const ObjectRequest*>(message->request()));
       break;
     case RequestMessage_NONE:
-      FXL_LOG(ERROR) << "The message received is malformed: " << message;
+      FXL_LOG(ERROR) << "The message received is malformed";
       break;
   }
 }
 
 void PageCommunicatorImpl::OnNewResponse(fxl::StringView source,
-                                         const Response* message) {
+                                         MessageHolder<Response> message) {
   FXL_DCHECK(!in_destructor_);
   if (message->status() != ResponseStatus_OK) {
     // The namespace or page was unknown on the other side. We can probably do
@@ -257,7 +257,7 @@ void PageCommunicatorImpl::OnNewResponse(fxl::StringView source,
     }
 
     case ResponseMessage_NONE:
-      FXL_LOG(ERROR) << "The message received is malformed: " << message;
+      FXL_LOG(ERROR) << "The message received is malformed";
       return;
   }
 }

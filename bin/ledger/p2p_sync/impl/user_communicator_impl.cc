@@ -9,6 +9,7 @@
 #include "peridot/bin/ledger/p2p_sync/impl/flatbuffer_message_factory.h"
 #include "peridot/bin/ledger/p2p_sync/impl/ledger_communicator_impl.h"
 #include "peridot/bin/ledger/p2p_sync/impl/message_generated.h"
+#include "peridot/bin/ledger/p2p_sync/impl/message_holder.h"
 #include "peridot/lib/ledger_client/constants.h"
 
 namespace p2p_sync {
@@ -51,7 +52,7 @@ void UserCommunicatorImpl::OnNewMessage(fxl::StringView source,
     FXL_LOG(ERROR) << "The message received is malformed.";
     return;
   };
-  const Message* message = GetMessage(data.data());
+  MessageHolder<Message> message(data, &GetMessage);
   const NamespacePageId* namespace_page_id;
   switch (message->message_type()) {
     case MessageUnion_NONE:
@@ -60,7 +61,10 @@ void UserCommunicatorImpl::OnNewMessage(fxl::StringView source,
       break;
 
     case MessageUnion_Request: {
-      const Request* request = static_cast<const Request*>(message->message());
+      MessageHolder<Request> request =
+          message.TakeAndMap<Request>([](const Message* message) {
+            return static_cast<const Request*>(message->message());
+          });
       namespace_page_id = request->namespace_page();
 
       std::string namespace_id(namespace_page_id->namespace_id()->begin(),
@@ -76,13 +80,15 @@ void UserCommunicatorImpl::OnNewMessage(fxl::StringView source,
         p2p_provider_->SendMessage(source, convert::ExtendedStringView(buffer));
         return;
       }
-      it->second->OnNewRequest(source, page_id, request);
+      it->second->OnNewRequest(source, page_id, std::move(request));
       break;
     }
 
     case MessageUnion_Response: {
-      const Response* response =
-          static_cast<const Response*>(message->message());
+      MessageHolder<Response> response =
+          message.TakeAndMap<Response>([](const Message* message) {
+            return static_cast<const Response*>(message->message());
+          });
       namespace_page_id = response->namespace_page();
       std::string namespace_id(namespace_page_id->namespace_id()->begin(),
                                namespace_page_id->namespace_id()->end());
@@ -97,7 +103,7 @@ void UserCommunicatorImpl::OnNewMessage(fxl::StringView source,
         // responses. So we just drop it here.
         return;
       }
-      it->second->OnNewResponse(source, page_id, response);
+      it->second->OnNewResponse(source, page_id, std::move(response));
       break;
     }
   }

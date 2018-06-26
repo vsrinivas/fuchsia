@@ -34,7 +34,7 @@ void LedgerCommunicatorImpl::OnDeviceChange(
 
 void LedgerCommunicatorImpl::OnNewRequest(fxl::StringView source,
                                           fxl::StringView page_id,
-                                          const Request* message) {
+                                          MessageHolder<Request> message) {
   const auto& it = pages_.find(page_id);
   if (it == pages_.end()) {
     // Send unknown page response.
@@ -45,19 +45,19 @@ void LedgerCommunicatorImpl::OnNewRequest(fxl::StringView source,
     return;
   }
 
-  it->second->OnNewRequest(source, message);
+  it->second->OnNewRequest(source, std::move(message));
 }
 
 void LedgerCommunicatorImpl::OnNewResponse(fxl::StringView source,
                                            fxl::StringView page_id,
-                                           const Response* message) {
+                                           MessageHolder<Response> message) {
   const auto& it = pages_.find(page_id);
   if (it == pages_.end()) {
     // Page has been deleted between request and response, just discard.
     return;
   }
 
-  it->second->OnNewResponse(source, message);
+  it->second->OnNewResponse(source, std::move(message));
 }
 
 std::unique_ptr<PageCommunicator> LedgerCommunicatorImpl::GetPageCommunicator(

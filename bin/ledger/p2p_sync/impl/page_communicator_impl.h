@@ -15,6 +15,7 @@
 #include "peridot/bin/ledger/p2p_provider/public/types.h"
 #include "peridot/bin/ledger/p2p_sync/impl/device_mesh.h"
 #include "peridot/bin/ledger/p2p_sync/impl/message_generated.h"
+#include "peridot/bin/ledger/p2p_sync/impl/message_holder.h"
 #include "peridot/bin/ledger/p2p_sync/public/page_communicator.h"
 #include "peridot/bin/ledger/storage/public/commit_watcher.h"
 #include "peridot/bin/ledger/storage/public/page_storage.h"
@@ -42,10 +43,10 @@ class PageCommunicatorImpl : public PageCommunicator,
                       p2p_provider::DeviceChangeType change_type);
 
   // Called when a new request arrived for this page from device |source|.
-  void OnNewRequest(fxl::StringView source, const Request* message);
+  void OnNewRequest(fxl::StringView source, MessageHolder<Request> message);
 
   // Called when a new response arrived for this page from device |source|.
-  void OnNewResponse(fxl::StringView source, const Response* message);
+  void OnNewResponse(fxl::StringView source, MessageHolder<Response> message);
 
   // PageCommunicator:
   void Start() override;

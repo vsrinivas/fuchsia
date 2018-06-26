@@ -11,6 +11,7 @@
 #include "peridot/bin/ledger/p2p_provider/public/types.h"
 #include "peridot/bin/ledger/p2p_sync/impl/device_mesh.h"
 #include "peridot/bin/ledger/p2p_sync/impl/message_generated.h"
+#include "peridot/bin/ledger/p2p_sync/impl/message_holder.h"
 #include "peridot/bin/ledger/p2p_sync/public/ledger_communicator.h"
 #include "peridot/bin/ledger/p2p_sync/public/page_communicator.h"
 #include "peridot/lib/convert/convert.h"
@@ -32,11 +33,11 @@ class LedgerCommunicatorImpl : public LedgerCommunicator {
 
   // Called when a new request arrived for this ledger from device |source|.
   void OnNewRequest(fxl::StringView source, fxl::StringView page_id,
-                    const Request* message);
+                    MessageHolder<Request> message);
 
   // Called when a new response arrived for this ledger from device |source|.
   void OnNewResponse(fxl::StringView source, fxl::StringView page_id,
-                     const Response* message);
+                     MessageHolder<Response> message);
 
   // LedgerCommunicator:
   std::unique_ptr<PageCommunicator> GetPageCommunicator(
