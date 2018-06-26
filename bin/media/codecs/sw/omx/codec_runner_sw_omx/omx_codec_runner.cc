@@ -294,8 +294,12 @@ bool OmxCodecRunner::Load() {
   //
   // The StreamControl thread is allowed to block.
   stream_control_ = std::make_unique<async::Loop>();
-  stream_control_->StartThread("StreamControl_ordering_domain",
-                               &stream_control_thread_);
+  zx_status_t start_thread_result = stream_control_->StartThread(
+      "StreamControl_ordering_domain", &stream_control_thread_);
+  if (start_thread_result != ZX_OK) {
+    printf("stream_control_->StartThread() failed\n");
+    return false;
+  }
   stream_control_async_ = stream_control_->async();
   PostSerial(stream_control_async_, [this] {
     {  // scope lock
