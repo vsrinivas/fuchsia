@@ -10,15 +10,6 @@
 
 namespace scenic {
 
-// TODO(mikejurka): this should be in an images util file
-bool ImageInfoEquals(const fuchsia::images::ImageInfo& a,
-                     const fuchsia::images::ImageInfo& b) {
-  return a.transform == b.transform && a.width == b.width &&
-         a.height == b.height && a.stride == b.stride &&
-         a.pixel_format == b.pixel_format && a.color_space == b.color_space &&
-         a.tiling == b.tiling && a.alpha_format == b.alpha_format;
-}
-
 fuchsia::ui::scenic::Command NewCommand(fuchsia::ui::gfx::Command command) {
   fuchsia::ui::scenic::Command scenic_command;
   scenic_command.set_gfx(std::move(command));
@@ -378,7 +369,7 @@ fuchsia::ui::gfx::Command NewCreateShapeNodeCmd(uint32_t id) {
 }
 
 fuchsia::ui::gfx::Command NewCreateViewCmd(uint32_t id, zx::eventpair token,
-                                            const std::string& debug_name) {
+                                           const std::string& debug_name) {
   FXL_DCHECK(token);
   fuchsia::ui::gfx::ViewArgs view;
   view.token = std::move(token);
@@ -526,6 +517,18 @@ fuchsia::ui::gfx::Command NewSetViewPropertiesCmd(
   props.extents.max = NewVector3(bounding_box_max);
   props.inset_from_min = NewVector3(inset_from_min);
   props.inset_from_max = NewVector3(inset_from_max);
+
+  fuchsia::ui::gfx::Command command;
+  command.set_set_view_properties(std::move(set_view_properties));
+
+  return command;
+}
+
+fuchsia::ui::gfx::Command NewSetViewPropertiesCmd(
+    uint32_t view_holder_id, const fuchsia::ui::gfx::ViewProperties& props) {
+  fuchsia::ui::gfx::SetViewPropertiesCmd set_view_properties;
+  set_view_properties.view_holder_id = view_holder_id;
+  set_view_properties.properties = props;
 
   fuchsia::ui::gfx::Command command;
   command.set_set_view_properties(std::move(set_view_properties));
@@ -1239,6 +1242,15 @@ fuchsia::ui::gfx::ColorRgbaValue NewColorRgbaValue(uint32_t variable_id) {
   val.variable_id = variable_id;
 
   return val;
+}
+
+// TODO(mikejurka): this should be in an images util file
+bool ImageInfoEquals(const fuchsia::images::ImageInfo& a,
+                     const fuchsia::images::ImageInfo& b) {
+  return a.transform == b.transform && a.width == b.width &&
+         a.height == b.height && a.stride == b.stride &&
+         a.pixel_format == b.pixel_format && a.color_space == b.color_space &&
+         a.tiling == b.tiling && a.alpha_format == b.alpha_format;
 }
 
 }  // namespace scenic

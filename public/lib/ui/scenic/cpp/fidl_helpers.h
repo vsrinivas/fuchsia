@@ -18,9 +18,6 @@ constexpr float kOnesFloat3[3] = {1.f, 1.f, 1.f};
 // A quaterion that has no rotation.
 constexpr float kQuaternionDefault[4] = {0.f, 0.f, 0.f, 1.f};
 
-bool ImageInfoEquals(const fuchsia::images::ImageInfo& a,
-                     const fuchsia::images::ImageInfo& b);
-
 // Helper function for wrapping Scenic ops as Mozart commands.
 fuchsia::ui::scenic::Command NewCommand(fuchsia::ui::gfx::Command command);
 
@@ -84,9 +81,10 @@ fuchsia::ui::gfx::Command NewCreateEntityNodeCmd(uint32_t id);
 fuchsia::ui::gfx::Command NewCreateOpacityNodeCmd(uint32_t id);
 fuchsia::ui::gfx::Command NewCreateShapeNodeCmd(uint32_t id);
 fuchsia::ui::gfx::Command NewCreateViewCmd(uint32_t id, zx::eventpair token,
-                                            const std::string& debug_name);
-fuchsia::ui::gfx::Command NewCreateViewHolderCmd(
-    uint32_t id, zx::eventpair token, const std::string& debug_name);
+                                           const std::string& debug_name);
+fuchsia::ui::gfx::Command NewCreateViewHolderCmd(uint32_t id,
+                                                 zx::eventpair token,
+                                                 const std::string& debug_name);
 fuchsia::ui::gfx::Command NewCreateVariableCmd(uint32_t id,
                                                fuchsia::ui::gfx::Value value);
 
@@ -112,9 +110,11 @@ fuchsia::ui::gfx::Command NewImportResourceCmdAsRequest(
 
 // View/ViewHolder commands.
 fuchsia::ui::gfx::Command NewSetViewPropertiesCmd(
-    uint32_t space_holder_id, const float bounding_box_min[3],
+    uint32_t view_holder_id, const float bounding_box_min[3],
     const float bounding_box_max[3], const float inset_from_min[3],
     const float inset_from_max[3]);
+fuchsia::ui::gfx::Command NewSetViewPropertiesCmd(
+    uint32_t view_holder_id, const fuchsia::ui::gfx::ViewProperties& props);
 
 // Node operations.
 fuchsia::ui::gfx::Command NewAddChildCmd(uint32_t node_id, uint32_t child_id);
@@ -249,6 +249,10 @@ fuchsia::ui::gfx::vec2 NewVector2(const float value[2]);
 fuchsia::ui::gfx::vec3 NewVector3(const float value[3]);
 fuchsia::ui::gfx::vec4 NewVector4(const float value[4]);
 
+// Utilities.
+
+bool ImageInfoEquals(const fuchsia::images::ImageInfo& a,
+                     const fuchsia::images::ImageInfo& b);
 }  // namespace scenic
 
 #endif  // LIB_UI_SCENIC_CPP_FIDL_HELPERS_H_

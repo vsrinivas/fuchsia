@@ -9,12 +9,36 @@ source_set("fidl_helpers") {
   ]
 
   public_deps = [
+    ":fidl_math",
     "//garnet/public/lib/ui/gfx/fidl",
     "//garnet/public/lib/ui/scenic/fidl",
   ]
 
   deps = [
     "//garnet/public/lib/fxl",
+  ]
+}
+
+source_set("fidl_math") {
+  sources = [
+    "fidl_math.cc",
+    "fidl_math.h",
+  ]
+
+  public_deps = [
+    "//garnet/public/lib/ui/gfx/fidl",
+  ]
+}
+
+source_set("fidl_print") {
+  sources = [
+    "fidl_print.cc",
+    "fidl_print.h",
+  ]
+
+  public_deps = [
+    "//garnet/public/lib/ui/gfx/fidl",
+    "//garnet/public/lib/ui/scenic/fidl",
   ]
 }
 
