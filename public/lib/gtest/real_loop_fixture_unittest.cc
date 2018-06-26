@@ -13,7 +13,9 @@ using RealLoopFixtureTest = RealLoopFixture;
 
 TEST_F(RealLoopFixtureTest, Timeout) {
   bool called = false;
-  async::PostDelayedTask([&called] { called = true; }, zx::msec(100));
+  async::PostDelayedTask(dispatcher(),
+                         [&called] { called = true; },
+                         zx::msec(100));
   RunLoopWithTimeout(zx::msec(10));
   EXPECT_FALSE(called);
   RunLoopWithTimeout(zx::msec(100));

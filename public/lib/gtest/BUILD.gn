@@ -8,8 +8,10 @@ source_set("gtest") {
   sources = [
     "real_loop_fixture.h",
     "real_loop_fixture.cc",
+    "test_loop_fixture.h",
+    "test_loop_fixture.cc",
+    "test_loop_fixture.h",
     "test_with_loop.h",
-    "test_with_loop.cc",
     "test_with_message_loop.cc",
     "test_with_message_loop.h",
   ]
@@ -33,7 +35,8 @@ source_set("unittests") {
   testonly = true
 
   sources = [
-    "test_with_loop_unittest.cc",
+    "real_loop_fixture_unittest.cc",
+    "test_loop_fixture_unittest.cc",
     "test_with_message_loop_unittest.cc",
   ]
 

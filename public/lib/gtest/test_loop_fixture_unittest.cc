@@ -10,13 +10,13 @@
 namespace gtest {
 namespace {
 
-class TestWithLoopTest : public TestWithLoop {};
+using TestLoopFixtureTest = TestLoopFixture;
 
-TEST_F(TestWithLoopTest, DefaultDispatcherIsSet) {
+TEST_F(TestLoopFixtureTest, DefaultDispatcherIsSet) {
   EXPECT_EQ(async_get_default(), dispatcher());
 }
 
-TEST_F(TestWithLoopTest, TimeIsAdvanced) {
+TEST_F(TestLoopFixtureTest, TimeIsAdvanced) {
   EXPECT_EQ(Now(), zx::time(0));
 
   AdvanceTimeTo(zx::time(0) + zx::sec(5));
@@ -36,7 +36,7 @@ TEST_F(TestWithLoopTest, TimeIsAdvanced) {
   EXPECT_EQ(Now(), zx::time(0) + zx::sec(20));
 }
 
-TEST_F(TestWithLoopTest, WorkBeingDoneIsReported) {
+TEST_F(TestLoopFixtureTest, WorkBeingDoneIsReported) {
   EXPECT_FALSE(RunLoopUntilIdle());
   EXPECT_FALSE(RunLoopUntil(zx::time(0) + zx::sec(5)));
   EXPECT_FALSE(RunLoopFor(zx::sec(5)));
@@ -51,7 +51,7 @@ TEST_F(TestWithLoopTest, WorkBeingDoneIsReported) {
   EXPECT_TRUE(RunLoopFor(zx::sec(5)));
 }
 
-TEST_F(TestWithLoopTest, LoopCanQuitAndReset) {
+TEST_F(TestLoopFixtureTest, LoopCanQuitAndReset) {
   async::PostDelayedTask(dispatcher(), [] {}, zx::sec(1));
   QuitLoop();
 
@@ -74,7 +74,7 @@ TEST_F(TestWithLoopTest, LoopCanQuitAndReset) {
   EXPECT_TRUE(RunLoopUntilIdle());
 }
 
-TEST_F(TestWithLoopTest, LoopRunsRepeatedly) {
+TEST_F(TestLoopFixtureTest, LoopRunsRepeatedly) {
   for (int i = 0; i <= 60; ++i) {
     async::PostDelayedTask(dispatcher(), [] {}, zx::sec(i));
   }
