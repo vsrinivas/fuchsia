@@ -48,6 +48,7 @@ source_set("unittests") {
     "//garnet/public/lib/fidl/cpp",
     "//garnet/public/lib/fxl:fxl_printers",
     "//garnet/public/lib/gtest",
+    "//peridot/bin/cloud_provider_firestore/firestore/testing",
     "//peridot/lib/convert",
   ]
 }

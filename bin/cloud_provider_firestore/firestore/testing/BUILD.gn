@@ -8,12 +8,20 @@ source_set("testing") {
   testonly = true
 
   sources = [
+    "encoding.cc",
+    "encoding.h",
     "test_firestore_service.cc",
     "test_firestore_service.h",
   ]
 
-  deps = [
+  public_deps = [
+    "//garnet/public/lib/fidl/cpp",
     "//peridot/bin/cloud_provider_firestore/firestore",
+    "//peridot/bin/cloud_provider_firestore/include",
+    "//peridot/public/lib/cloud_provider/fidl",
+  ]
+
+  deps = [
     "//third_party/googleapis/google/firestore/v1beta1",
     "//third_party/googleapis/google/firestore/v1beta1:service",
     "//third_party/grpc:grpc++",

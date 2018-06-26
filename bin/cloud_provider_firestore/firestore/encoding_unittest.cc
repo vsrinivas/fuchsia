@@ -6,8 +6,10 @@
 
 #include <string>
 
+#include <google/protobuf/util/time_util.h>
 #include <gtest/gtest.h>
 
+#include "peridot/bin/cloud_provider_firestore/firestore/testing/encoding.h"
 #include "peridot/lib/convert/convert.h"
 
 namespace cloud_provider_firestore {
@@ -74,6 +76,26 @@ TEST(BatchEncodingTest, TwoCommits) {
   EXPECT_EQ("data0", convert::ToString(result.get()[0].data));
   EXPECT_EQ("id1", convert::ToString(result.get()[1].id));
   EXPECT_EQ("data1", convert::ToString(result.get()[1].data));
+}
+
+TEST(BatchEncodingTest, Timestamp) {
+  fidl::VectorPtr<cloud_provider::Commit> commits;
+  cloud_provider::Commit commit;
+  commit.id = convert::ToArray("id0");
+  commit.data = convert::ToArray("data0");
+  commits.push_back(std::move(commit));
+  google::firestore::v1beta1::Document document;
+  google::protobuf::Timestamp protobuf_timestamp;
+  ASSERT_TRUE(google::protobuf::util::TimeUtil::FromString(
+      "2018-06-26T14:39:22+00:00", &protobuf_timestamp));
+  std::string original_timestamp;
+  ASSERT_TRUE(protobuf_timestamp.SerializeToString(&original_timestamp));
+  EncodeCommitBatchWithTimestamp(commits, original_timestamp, &document);
+
+  fidl::VectorPtr<cloud_provider::Commit> result;
+  std::string decoded_timestamp;
+  EXPECT_TRUE(DecodeCommitBatch(document, &result, &decoded_timestamp));
+  EXPECT_EQ(original_timestamp, decoded_timestamp);
 }
 
 TEST(BatchEncodingTest, DecodingErrors) {
