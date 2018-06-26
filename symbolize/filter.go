@@ -24,6 +24,13 @@ type logHeader struct {
 	thread  uint64
 }
 
+type sysLogHeader struct {
+	time    float64
+	process uint64
+	thread  uint64
+	tags    string
+}
+
 type LogLine struct {
 	lineno uint64
 	header lineHeader

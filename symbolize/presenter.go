@@ -34,6 +34,9 @@ func (b *BasicPresenter) WriteLine(res OutputLine) {
 	if hdr, ok := res.header.(logHeader); ok {
 		fmt.Fprintf(b.output, "[%.3f] %05d.%05d> ", hdr.time, hdr.process, hdr.thread)
 	}
+	if hdr, ok := res.header.(sysLogHeader); ok {
+		fmt.Fprintf(b.output, "[%012.6f][%d][%d][%s] ", hdr.time, hdr.process, hdr.thread, hdr.tags)
+	}
 	for _, token := range res.line {
 		token.Accept(b)
 	}

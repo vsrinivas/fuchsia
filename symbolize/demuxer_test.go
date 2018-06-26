@@ -12,6 +12,24 @@ import (
 	"testing"
 )
 
+func TestSyslog(t *testing.T) {
+	msg := "[123.456][1234][5678][klog] Blarg\n"
+	symbo := newMockSymbolizer([]mockModule{})
+	repo := NewRepo()
+	demuxer := NewDemuxer(repo, symbo)
+	ctx := context.Background()
+	in := StartParsing(ctx, strings.NewReader(msg))
+	out := demuxer.Start(ctx, in)
+	buf := new(bytes.Buffer)
+	presenter := NewBasicPresenter(buf, true)
+	presenter.Start(out)
+	expected := "[00123.456000][1234][5678][klog] Blarg\n"
+	actual := buf.String()
+	if actual != expected {
+		t.Error("expected", expected, "got", actual)
+	}
+}
+
 func TestColor(t *testing.T) {
 	// TODO(jakehehrlich): Change presenter so that redundent resets are not used when user input already contains them.
 	msg := "[0.0] 1234.5678> \033[1mThis is bold \033[31mThis is red and bold \033[37mThis is bold white\n" +
