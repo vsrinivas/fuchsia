@@ -1,0 +1,5 @@
+{
+    "packages": [
+        "//garnet/bin/a11y:a11y_manager"
+    ]
+}
