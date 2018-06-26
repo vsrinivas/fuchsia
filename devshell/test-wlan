@@ -53,15 +53,13 @@ function run {
 
 function wait_for_result {
   local timeout="$1"
-  if [ -z "$timeout" ]; then
-    timeout="${TEST_TIMEOUT_SEC}"
-  fi
+  local target_iface="$2"
   echo "Wait ${timeout} seconds for wlan-smoke to complete"
   for i in $( seq 1 "$timeout" ); do
     if [ "$i" -lt 3 ]; then
       sleep 1
     else
-      local ssh_output=$(${SHELL_CMD} -o ConnectTimeout=1 ifconfig en2 2>&1)
+      local ssh_output=$(${SHELL_CMD} -o ConnectTimeout=1 ifconfig "${target_iface}" 2>&1)
       if echo "${ssh_output}" | grep -q UP ; then
         printf "\nDone in %d seconds" "$i"
         break
@@ -99,7 +97,12 @@ function display_cleanup {
 
 setup
 eth_iface_list=$(get_eth_iface_list)
+if [ -z "$eth_iface_list" ]; then
+  echo "No ethernet interface found on target. Please try again."
+  exit 1
+fi
+
 run
-wait_for_result "${TEST_TIMEOUT_SEC}"
+wait_for_result "${TEST_TIMEOUT_SEC}" "${eth_iface_list[0]}"
 recover_eth "${eth_iface_list[@]}"
 display_cleanup
