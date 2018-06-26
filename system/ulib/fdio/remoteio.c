@@ -761,6 +761,75 @@ ssize_t zxrio_ioctl(fdio_t* io, uint32_t op, const void* in_buf,
 
 #endif // ZXRIO_FIDL
 
+// Takes ownership of the optional |extra_handle|.
+//
+// Decodes the handle into |info|, if it exists and should
+// be decoded.
+static zx_status_t zxrio_decode_describe_handle(zxrio_describe_t* info,
+                                                zx_handle_t extra_handle) {
+    bool have_handle = (extra_handle != ZX_HANDLE_INVALID);
+    bool want_handle = false;
+    zx_handle_t* handle_target = NULL;
+
+    switch (info->extra.tag) {
+    // Case: No extra handles expected
+    case FDIO_PROTOCOL_SERVICE:
+    case FDIO_PROTOCOL_DIRECTORY:
+        break;
+    // Case: Extra handles optional
+    case FDIO_PROTOCOL_FILE:
+        handle_target = &info->extra.file.e;
+        goto handle_optional;
+    case FDIO_PROTOCOL_DEVICE:
+        handle_target = &info->extra.device.e;
+        goto handle_optional;
+    case FDIO_PROTOCOL_SOCKET:
+        handle_target = &info->extra.socket.s;
+        goto handle_optional;
+handle_optional:
+#ifdef ZXRIO_FIDL
+        want_handle = *handle_target == FIDL_HANDLE_PRESENT;
+#else
+        want_handle = have_handle;
+#endif
+        break;
+    // Case: Extra handles required
+    case FDIO_PROTOCOL_PIPE:
+        handle_target = &info->extra.pipe.s;
+        goto handle_required;
+    case FDIO_PROTOCOL_VMOFILE:
+        handle_target = &info->extra.vmofile.v;
+        goto handle_required;
+handle_required:
+#ifdef ZXRIO_FIDL
+        want_handle = *handle_target == FIDL_HANDLE_PRESENT;
+#else
+        want_handle = have_handle;
+#endif
+        if (!want_handle) {
+            goto fail;
+        }
+        break;
+    default:
+        printf("Unexpected protocol type opening connection\n");
+        goto fail;
+    }
+
+    if (have_handle != want_handle) {
+        goto fail;
+    }
+    if (have_handle) {
+        *handle_target = extra_handle;
+    }
+    return ZX_OK;
+
+fail:
+    if (have_handle) {
+        zx_handle_close(extra_handle);
+    }
+    return ZX_ERR_IO;
+}
+
 zx_status_t zxrio_process_open_response(zx_handle_t h, zxrio_describe_t* info) {
     zx_object_wait_one(h, ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED,
                        ZX_TIME_INFINITE, NULL);
@@ -811,47 +880,7 @@ zx_status_t zxrio_process_open_response(zx_handle_t h, zxrio_describe_t* info) {
     static_assert(__builtin_offsetof(zxrio_object_info_t, device.e) ==
                   __builtin_offsetof(fuchsia_io_ObjectInfo, device.event), "Unaligned Device");
 
-    switch (info->extra.tag) {
-    // Case: No extra handles expected
-    case FDIO_PROTOCOL_SERVICE:
-    case FDIO_PROTOCOL_DIRECTORY:
-        if (extra_handle != ZX_HANDLE_INVALID) {
-            zx_handle_close(extra_handle);
-            return ZX_ERR_IO;
-        }
-        break;
-    // Case: Extra handles optional
-    case FDIO_PROTOCOL_FILE:
-        info->extra.file.e = extra_handle;
-        break;
-    case FDIO_PROTOCOL_DEVICE:
-        info->extra.device.e = extra_handle;
-        break;
-    case FDIO_PROTOCOL_SOCKET:
-        info->extra.socket.s = extra_handle;
-        break;
-    // Case: Extra handles required
-    case FDIO_PROTOCOL_PIPE:
-        if (extra_handle == ZX_HANDLE_INVALID) {
-            return ZX_ERR_IO;
-        }
-        info->extra.pipe.s = extra_handle;
-        break;
-    case FDIO_PROTOCOL_VMOFILE:
-        if (extra_handle == ZX_HANDLE_INVALID) {
-            return ZX_ERR_IO;
-        }
-        info->extra.vmofile.v = extra_handle;
-        break;
-    default:
-        printf("Unexpected protocol type opening connection\n");
-        if (extra_handle != ZX_HANDLE_INVALID) {
-            zx_handle_close(extra_handle);
-        }
-        return ZX_ERR_IO;
-    }
-
-    return r;
+    return zxrio_decode_describe_handle(info, extra_handle);
 }
 
 zx_status_t fdio_service_connect(const char* svcpath, zx_handle_t h) {
@@ -954,7 +983,7 @@ zx_status_t zxrio_misc(fdio_t* io, uint32_t op, int64_t off,
             if ((r = fidl_rewind(rio)) != ZX_OK) {
                 return r;
             }
-            // Fall-through to CMD_NONE
+            __FALLTHROUGH;
         case READDIR_CMD_NONE: {
             size_t out_sz;
             if ((r = fidl_readdirents(rio, ptr, maxreply, &out_sz)) != ZX_OK) {

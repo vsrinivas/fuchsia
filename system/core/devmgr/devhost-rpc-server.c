@@ -58,7 +58,11 @@ static zx_status_t create_description(zx_device_t* dev, zxrio_describe_t* msg,
             msg->status = r;
             return r;
         }
+        msg->extra.device.e = FIDL_HANDLE_PRESENT;
+    } else {
+        msg->extra.device.e = FIDL_HANDLE_ABSENT;
     }
+
     return ZX_OK;
 }
 

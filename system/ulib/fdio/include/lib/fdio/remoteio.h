@@ -186,6 +186,7 @@ typedef struct {
     uint32_t tag;
     uint32_t reserved;
     union {
+        zx_handle_t handle;
         struct {
             zx_handle_t e;
         } file;

@@ -44,6 +44,15 @@ void Describe(const fbl::RefPtr<Vnode>& vn, uint32_t flags,
     } else {
         r = vn->GetHandles(flags, handle, &response->extra.tag, &response->extra);
     }
+
+    // If a handle was returned, encode it.
+    if (*handle != ZX_HANDLE_INVALID) {
+        response->extra.handle = FIDL_HANDLE_PRESENT;
+    } else {
+        response->extra.handle = FIDL_HANDLE_ABSENT;
+    }
+
+    // If a valid response was returned, encode it.
     response->status = r;
     response->extra_ptr = reinterpret_cast<zxrio_object_info_t*>(r == ZX_OK ?
                                                                  FIDL_ALLOC_PRESENT :
