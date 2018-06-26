@@ -4,6 +4,7 @@
 
 #include "peridot/bin/ledger/sync_coordinator/impl/ledger_sync_impl.h"
 
+#include "lib/fxl/functional/closure.h"
 #include "peridot/bin/ledger/sync_coordinator/impl/page_sync_impl.h"
 
 namespace sync_coordinator {

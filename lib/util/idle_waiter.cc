@@ -6,6 +6,8 @@
 
 #include <lib/async/default.h>
 
+#include "lib/fxl/functional/closure.h"
+
 namespace util {
 
 IdleWaiter::Activity::Activity(fxl::WeakPtr<IdleWaiter> tracker)

@@ -4,6 +4,7 @@
 
 #include "peridot/bin/ledger/cobalt/cobalt.h"
 
+#include "lib/fxl/functional/closure.h"
 #include "peridot/lib/cobalt/cobalt.h"
 
 namespace ledger {

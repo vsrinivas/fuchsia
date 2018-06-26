@@ -15,6 +15,7 @@
 #include "lib/callback/set_when_called.h"
 #include "lib/callback/waiter.h"
 #include "lib/fidl/cpp/optional.h"
+#include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/random/rand.h"
 #include "lib/gtest/test_loop_fixture.h"

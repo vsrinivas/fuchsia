@@ -12,6 +12,7 @@
 #include "lib/backoff/testing/test_backoff.h"
 #include "lib/callback/capture.h"
 #include "lib/fsl/socket/strings.h"
+#include "lib/fxl/functional/closure.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/macros.h"
 #include "lib/gtest/test_loop_fixture.h"

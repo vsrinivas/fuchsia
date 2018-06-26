@@ -7,6 +7,7 @@
 #include <utility>
 
 #include "lib/fxl/files/file.h"
+#include "lib/fxl/functional/closure.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/random/rand.h"
 #include "lib/fxl/strings/concatenate.h"

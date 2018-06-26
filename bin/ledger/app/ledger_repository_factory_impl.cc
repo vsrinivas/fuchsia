@@ -16,6 +16,7 @@
 #include "lib/fxl/files/file.h"
 #include "lib/fxl/files/path.h"
 #include "lib/fxl/files/scoped_temp_dir.h"
+#include "lib/fxl/functional/closure.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/random/rand.h"
 #include "lib/fxl/strings/concatenate.h"

@@ -4,6 +4,8 @@
 
 #include "peridot/bin/cloud_provider_firestore/firestore/testing/test_firestore_service.h"
 
+#include "lib/fxl/functional/closure.h"
+
 namespace cloud_provider_firestore {
 
 namespace {

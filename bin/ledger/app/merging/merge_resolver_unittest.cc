@@ -14,6 +14,7 @@
 #include "lib/callback/capture.h"
 #include "lib/callback/set_when_called.h"
 #include "lib/fxl/files/scoped_temp_dir.h"
+#include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
 #include "lib/gtest/test_with_message_loop.h"
 #include "peridot/bin/ledger/app/constants.h"

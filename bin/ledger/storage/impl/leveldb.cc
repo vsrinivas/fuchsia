@@ -11,6 +11,7 @@
 
 #include "lib/fxl/files/directory.h"
 #include "lib/fxl/files/path.h"
+#include "lib/fxl/functional/closure.h"
 #include "lib/fxl/logging.h"
 #include "peridot/bin/ledger/cobalt/cobalt.h"
 #include "peridot/bin/ledger/coroutine/coroutine.h"

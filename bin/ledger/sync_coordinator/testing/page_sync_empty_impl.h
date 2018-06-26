@@ -5,6 +5,7 @@
 #ifndef PERIDOT_BIN_LEDGER_SYNC_COORDINATOR_TESTING_PAGE_SYNC_EMPTY_IMPL_H_
 #define PERIDOT_BIN_LEDGER_SYNC_COORDINATOR_TESTING_PAGE_SYNC_EMPTY_IMPL_H_
 
+#include "lib/fxl/functional/closure.h"
 #include "peridot/bin/ledger/sync_coordinator/public/page_sync.h"
 
 namespace sync_coordinator {

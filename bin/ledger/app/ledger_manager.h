@@ -14,6 +14,7 @@
 
 #include "lib/callback/auto_cleanable.h"
 #include "lib/fidl/cpp/binding_set.h"
+#include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/strings/string_view.h"
 #include "peridot/bin/ledger/app/ledger_impl.h"

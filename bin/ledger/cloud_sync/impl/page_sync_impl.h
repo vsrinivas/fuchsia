@@ -13,6 +13,7 @@
 
 #include "lib/backoff/backoff.h"
 #include "lib/callback/scoped_task_runner.h"
+#include "lib/fxl/functional/closure.h"
 #include "lib/fxl/memory/ref_ptr.h"
 #include "lib/fxl/time/time_delta.h"
 #include "peridot/bin/ledger/cloud_sync/impl/batch_download.h"

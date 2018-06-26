@@ -6,6 +6,7 @@
 
 #include <fuchsia/cobalt/cpp/fidl.h>
 
+#include "lib/fxl/functional/closure.h"
 #include "peridot/lib/cobalt/cobalt.h"
 
 namespace modular {

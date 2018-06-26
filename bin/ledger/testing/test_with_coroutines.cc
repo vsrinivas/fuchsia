@@ -4,6 +4,8 @@
 
 #include "peridot/bin/ledger/testing/test_with_coroutines.h"
 
+#include "lib/fxl/functional/closure.h"
+
 namespace test {
 
 namespace {

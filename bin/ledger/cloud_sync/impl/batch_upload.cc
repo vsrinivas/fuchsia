@@ -14,6 +14,7 @@
 #include "lib/callback/trace_callback.h"
 #include "lib/callback/waiter.h"
 #include "lib/fsl/vmo/strings.h"
+#include "lib/fxl/functional/closure.h"
 #include "lib/fxl/logging.h"
 
 namespace cloud_sync {

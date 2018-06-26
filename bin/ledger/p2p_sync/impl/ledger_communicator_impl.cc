@@ -4,6 +4,7 @@
 
 #include "peridot/bin/ledger/p2p_sync/impl/ledger_communicator_impl.h"
 
+#include "lib/fxl/functional/closure.h"
 #include "peridot/bin/ledger/p2p_sync/impl/flatbuffer_message_factory.h"
 #include "peridot/bin/ledger/p2p_sync/impl/message_generated.h"
 #include "peridot/bin/ledger/p2p_sync/impl/page_communicator_impl.h"

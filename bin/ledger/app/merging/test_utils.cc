@@ -9,6 +9,7 @@
 #include "gtest/gtest.h"
 #include "lib/callback/capture.h"
 #include "lib/callback/set_when_called.h"
+#include "lib/fxl/functional/closure.h"
 #include "peridot/bin/ledger/app/constants.h"
 #include "peridot/bin/ledger/encryption/primitives/hash.h"
 #include "peridot/bin/ledger/storage/impl/page_storage_impl.h"

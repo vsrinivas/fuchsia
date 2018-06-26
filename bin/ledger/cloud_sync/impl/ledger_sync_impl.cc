@@ -7,6 +7,7 @@
 #include <fuchsia/ledger/cloud/cpp/fidl.h>
 
 #include "lib/backoff/exponential_backoff.h"
+#include "lib/fxl/functional/closure.h"
 #include "peridot/bin/ledger/cloud_sync/impl/page_sync_impl.h"
 #include "peridot/bin/ledger/encryption/impl/encryption_service_impl.h"
 

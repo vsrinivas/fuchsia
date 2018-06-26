@@ -12,6 +12,7 @@
 
 #include "lib/callback/auto_cleanable.h"
 #include "lib/callback/cancellable.h"
+#include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/ref_ptr.h"
 #include "peridot/bin/cloud_provider_firestore/app/cloud_provider_impl.h"

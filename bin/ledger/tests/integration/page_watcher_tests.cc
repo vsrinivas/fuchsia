@@ -13,6 +13,7 @@
 #include "lib/callback/capture.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fidl/cpp/optional.h"
+#include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/strings/string_printf.h"
 #include "lib/fxl/time/time_delta.h"

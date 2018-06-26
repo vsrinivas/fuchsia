@@ -6,6 +6,7 @@
 
 #include <grpc++/grpc++.h>
 
+#include "lib/fxl/functional/closure.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
 #include "peridot/bin/cloud_provider_firestore/firestore/firestore_service_impl.h"

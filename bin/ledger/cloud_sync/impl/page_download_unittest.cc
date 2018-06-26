@@ -16,6 +16,7 @@
 #include "lib/callback/capture.h"
 #include "lib/callback/set_when_called.h"
 #include "lib/fsl/socket/strings.h"
+#include "lib/fxl/functional/closure.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/macros.h"
 #include "lib/gtest/test_loop_fixture.h"

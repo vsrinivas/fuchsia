@@ -10,6 +10,7 @@
 
 #include "lib/callback/scoped_callback.h"
 #include "lib/callback/waiter.h"
+#include "lib/fxl/functional/closure.h"
 #include "peridot/bin/ledger/cloud_sync/impl/constants.h"
 
 namespace cloud_sync {

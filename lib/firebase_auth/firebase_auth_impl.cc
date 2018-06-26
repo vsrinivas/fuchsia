@@ -8,6 +8,7 @@
 
 #include "lib/backoff/exponential_backoff.h"
 #include "lib/callback/cancellable_helper.h"
+#include "lib/fxl/functional/closure.h"
 #include "lib/fxl/functional/make_copyable.h"
 
 namespace firebase_auth {

@@ -7,6 +7,7 @@
 
 #include <lib/async/dispatcher.h>
 
+#include "lib/fxl/functional/closure.h"
 #include "peridot/lib/firebase_auth/firebase_auth.h"
 
 namespace firebase_auth {

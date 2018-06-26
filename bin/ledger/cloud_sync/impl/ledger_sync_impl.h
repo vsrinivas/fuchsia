@@ -8,6 +8,7 @@
 #include <memory>
 #include <set>
 
+#include "lib/fxl/functional/closure.h"
 #include "peridot/bin/ledger/cloud_sync/impl/aggregator.h"
 #include "peridot/bin/ledger/cloud_sync/impl/page_sync_impl.h"
 #include "peridot/bin/ledger/cloud_sync/public/ledger_sync.h"

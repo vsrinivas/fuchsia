@@ -4,6 +4,7 @@
 
 #include "peridot/bin/ledger/cloud_sync/impl/page_download.h"
 
+#include "lib/fxl/functional/closure.h"
 #include "lib/fxl/strings/concatenate.h"
 #include "peridot/bin/ledger/cloud_sync/impl/constants.h"
 #include "peridot/bin/ledger/storage/public/data_source.h"

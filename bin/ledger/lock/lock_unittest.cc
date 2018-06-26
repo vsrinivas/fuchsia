@@ -5,6 +5,7 @@
 #include "peridot/bin/ledger/lock/lock.h"
 
 #include "gtest/gtest.h"
+#include "lib/fxl/functional/closure.h"
 #include "peridot/bin/ledger/coroutine/coroutine_impl.h"
 
 namespace lock {

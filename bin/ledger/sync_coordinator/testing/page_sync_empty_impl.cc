@@ -4,6 +4,7 @@
 
 #include "peridot/bin/ledger/sync_coordinator/testing/page_sync_empty_impl.h"
 
+#include "lib/fxl/functional/closure.h"
 #include "lib/fxl/logging.h"
 
 namespace sync_coordinator {

@@ -10,6 +10,7 @@
 #include "lib/app/cpp/startup_context.h"
 #include "lib/app_driver/cpp/app_driver.h"
 #include "lib/fxl/command_line.h"
+#include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
 #include "peridot/bin/device_runner/cobalt/cobalt.h"
 #include "peridot/bin/user_runner/user_runner_impl.h"

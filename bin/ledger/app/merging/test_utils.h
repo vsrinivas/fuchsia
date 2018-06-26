@@ -10,6 +10,7 @@
 
 #include "gtest/gtest.h"
 #include "lib/backoff/backoff.h"
+#include "lib/fxl/functional/closure.h"
 #include "lib/gtest/test_loop_fixture.h"
 #include "peridot/bin/ledger/coroutine/coroutine_impl.h"
 #include "peridot/bin/ledger/encryption/fake/fake_encryption_service.h"

@@ -11,6 +11,7 @@
 
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fidl/cpp/vector.h"
+#include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/weak_ptr.h"
 #include "peridot/bin/cloud_provider_firestore/app/credentials_provider.h"

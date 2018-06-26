@@ -11,6 +11,7 @@
 #include <trace/event.h>
 
 #include "lib/fidl/cpp/interface_request.h"
+#include "lib/fxl/functional/closure.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
 #include "peridot/bin/ledger/app/constants.h"

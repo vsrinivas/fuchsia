@@ -14,6 +14,7 @@
 #include "lib/callback/trace_callback.h"
 #include "lib/callback/waiter.h"
 #include "lib/fxl/functional/auto_call.h"
+#include "lib/fxl/functional/closure.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/memory/weak_ptr.h"
 #include "peridot/bin/ledger/app/merging/common_ancestor.h"

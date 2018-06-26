@@ -10,6 +10,7 @@
 #include <google/firestore/v1beta1/document.pb.h>
 #include <google/firestore/v1beta1/firestore.grpc.pb.h>
 
+#include "lib/fxl/functional/closure.h"
 #include "peridot/bin/cloud_provider_firestore/firestore/firestore_service.h"
 
 namespace cloud_provider_firestore {

@@ -10,6 +10,7 @@
 
 #include "lib/fsl/socket/strings.h"
 #include "lib/fsl/vmo/strings.h"
+#include "lib/fxl/functional/closure.h"
 #include "peridot/lib/convert/convert.h"
 #include "third_party/murmurhash/murmurhash.h"
 

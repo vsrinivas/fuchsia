@@ -11,6 +11,7 @@
 
 #include "lib/backoff/exponential_backoff.h"
 #include "lib/fsl/tasks/message_loop.h"
+#include "lib/fxl/functional/closure.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/random/uuid.h"
 #include "lib/svc/cpp/services.h"

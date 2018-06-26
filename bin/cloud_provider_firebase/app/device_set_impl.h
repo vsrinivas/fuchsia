@@ -12,6 +12,7 @@
 #include "lib/callback/cancellable.h"
 #include "lib/fidl/cpp/array.h"
 #include "lib/fidl/cpp/binding.h"
+#include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
 #include "peridot/bin/cloud_provider_firebase/device_set/cloud_device_set.h"
 #include "peridot/bin/cloud_provider_firebase/include/types.h"

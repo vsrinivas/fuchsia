@@ -17,6 +17,7 @@
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/files/unique_fd.h"
+#include "lib/fxl/functional/closure.h"
 #include "lib/fxl/log_settings_command_line.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"

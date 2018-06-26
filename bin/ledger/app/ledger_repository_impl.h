@@ -12,6 +12,7 @@
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fidl/cpp/interface_ptr_set.h"
 #include "lib/fxl/files/unique_fd.h"
+#include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
 #include "peridot/bin/ledger/app/ledger_manager.h"
 #include "peridot/bin/ledger/app/page_eviction_manager.h"

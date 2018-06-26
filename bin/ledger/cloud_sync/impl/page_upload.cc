@@ -5,6 +5,7 @@
 #include "peridot/bin/ledger/cloud_sync/impl/page_upload.h"
 
 #include "lib/callback/scoped_callback.h"
+#include "lib/fxl/functional/closure.h"
 #include "lib/fxl/functional/make_copyable.h"
 
 namespace cloud_sync {

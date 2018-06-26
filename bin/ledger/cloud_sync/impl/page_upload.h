@@ -12,6 +12,7 @@
 
 #include "lib/backoff/backoff.h"
 #include "lib/callback/scoped_task_runner.h"
+#include "lib/fxl/functional/closure.h"
 #include "lib/fxl/memory/weak_ptr.h"
 #include "peridot/bin/ledger/cloud_sync/impl/batch_upload.h"
 #include "peridot/bin/ledger/cloud_sync/public/sync_state_watcher.h"

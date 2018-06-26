@@ -9,6 +9,7 @@
 #include <memory>
 #include <string>
 
+#include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
 #include "peridot/bin/ledger/cloud_sync/public/page_sync.h"
 #include "peridot/bin/ledger/encryption/public/encryption_service.h"

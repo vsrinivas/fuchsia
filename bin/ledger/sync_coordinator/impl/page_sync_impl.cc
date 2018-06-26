@@ -5,6 +5,7 @@
 #include "peridot/bin/ledger/sync_coordinator/impl/page_sync_impl.h"
 
 #include "lib/callback/waiter.h"
+#include "lib/fxl/functional/closure.h"
 
 namespace sync_coordinator {
 namespace {
