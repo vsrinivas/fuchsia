@@ -237,6 +237,7 @@ elif which inotifywait >/dev/null; then
     # and cause a storm.
     echo "---------------------------------- fx -i ${cmd_and_args} ---------------------------------------"
     "${command_path}" "$@"
+    echo "--- Done!"
   done
 elif which apt-get >/dev/null; then
   echo "Missing inotifywait"
@@ -245,6 +246,7 @@ elif which fswatch >/dev/null; then
   fswatch --one-per-batch --event=Updated -e "${fuchsia_dir}"/out/ -e "/\." . | while read; do
     echo "---------------------------------- fx -i ${cmd_and_args} ---------------------------------------"
     "${command_path}" "$@"
+    echo "--- Done!"
   done
 else
   echo "Missing fswatch"
