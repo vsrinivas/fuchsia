@@ -178,7 +178,7 @@ enum brcmf_fws_should_schedule {BRCMF_FWS_NOSCHEDULE, BRCMF_FWS_SCHEDULE};
 #define BRCMF_FWS_MODE_GET_REUSESEQ(x) (((x) >> BRCMF_FWS_MODE_REUSESEQ_SHIFT) & 1)
 
 /**
- * enum brcmf_fws_skb_state - indicates processing state of skb.
+ * enum brcmf_fws_skb_state - indicates processing state of netbuf.
  *
  * @BRCMF_FWS_SKBSTATE_NEW: brcmf_netbuf is newly arrived in the driver.
  * @BRCMF_FWS_SKBSTATE_DELAYED: brcmf_netbuf had to wait on queue.
@@ -221,7 +221,7 @@ static_assert(sizeof(struct brcmf_netbuf_workspace) <= 48,
 /*
  * macro casting skbuff control buffer to struct brcmf_netbuf_workspace.
  */
-#define brcmf_workspace(skb) ((struct brcmf_netbuf_workspace*)((skb)->workspace))
+#define brcmf_workspace(netbuf) ((struct brcmf_netbuf_workspace*)((netbuf)->workspace))
 
 // clang-format-off
 
@@ -248,11 +248,11 @@ static_assert(sizeof(struct brcmf_netbuf_workspace) <= 48,
 #define BRCMF_SKB_IF_FLAGS_INDEX_MASK        0x000f
 #define BRCMF_SKB_IF_FLAGS_INDEX_SHIFT       0
 
-#define brcmf_skb_if_flags_set_field(skb, field, value)                               \
-    brcmu_maskset16(&(brcmf_workspace(skb)->if_flags), BRCMF_SKB_IF_FLAGS_##field##_MASK, \
+#define brcmf_skb_if_flags_set_field(netbuf, field, value)                               \
+    brcmu_maskset16(&(brcmf_workspace(netbuf)->if_flags), BRCMF_SKB_IF_FLAGS_##field##_MASK, \
                     BRCMF_SKB_IF_FLAGS_##field##_SHIFT, (value))
-#define brcmf_skb_if_flags_get_field(skb, field)                                   \
-    brcmu_maskget16(brcmf_workspace(skb)->if_flags, BRCMF_SKB_IF_FLAGS_##field##_MASK, \
+#define brcmf_skb_if_flags_get_field(netbuf, field)                                   \
+    brcmu_maskget16(brcmf_workspace(netbuf)->if_flags, BRCMF_SKB_IF_FLAGS_##field##_MASK, \
                     BRCMF_SKB_IF_FLAGS_##field##_SHIFT)
 
 /*
@@ -281,11 +281,11 @@ static_assert(sizeof(struct brcmf_netbuf_workspace) <= 48,
 #define BRCMF_SKB_HTOD_TAG_FREERUN_MASK     0x000000ff
 #define BRCMF_SKB_HTOD_TAG_FREERUN_SHIFT    0
 
-#define brcmf_skb_htod_tag_set_field(skb, field, value)                           \
-    brcmu_maskset32(&(brcmf_workspace(skb)->htod), BRCMF_SKB_HTOD_TAG_##field##_MASK, \
+#define brcmf_skb_htod_tag_set_field(netbuf, field, value)                           \
+    brcmu_maskset32(&(brcmf_workspace(netbuf)->htod), BRCMF_SKB_HTOD_TAG_##field##_MASK, \
                     BRCMF_SKB_HTOD_TAG_##field##_SHIFT, (value))
-#define brcmf_skb_htod_tag_get_field(skb, field)                               \
-    brcmu_maskget32(brcmf_workspace(skb)->htod, BRCMF_SKB_HTOD_TAG_##field##_MASK, \
+#define brcmf_skb_htod_tag_get_field(netbuf, field)                               \
+    brcmu_maskget32(brcmf_workspace(netbuf)->htod, BRCMF_SKB_HTOD_TAG_##field##_MASK, \
                     BRCMF_SKB_HTOD_TAG_##field##_SHIFT)
 
 #define BRCMF_SKB_HTOD_SEQ_FROMFW_MASK   0x2000
@@ -295,11 +295,11 @@ static_assert(sizeof(struct brcmf_netbuf_workspace) <= 48,
 #define BRCMF_SKB_HTOD_SEQ_NR_MASK       0x0fff
 #define BRCMF_SKB_HTOD_SEQ_NR_SHIFT      0
 
-#define brcmf_skb_htod_seq_set_field(skb, field, value)                               \
-    brcmu_maskset16(&(brcmf_workspace(skb)->htod_seq), BRCMF_SKB_HTOD_SEQ_##field##_MASK, \
+#define brcmf_skb_htod_seq_set_field(netbuf, field, value)                               \
+    brcmu_maskset16(&(brcmf_workspace(netbuf)->htod_seq), BRCMF_SKB_HTOD_SEQ_##field##_MASK, \
                     BRCMF_SKB_HTOD_SEQ_##field##_SHIFT, (value))
-#define brcmf_skb_htod_seq_get_field(skb, field)                                   \
-    brcmu_maskget16(brcmf_workspace(skb)->htod_seq, BRCMF_SKB_HTOD_SEQ_##field##_MASK, \
+#define brcmf_skb_htod_seq_get_field(netbuf, field)                                   \
+    brcmu_maskget16(brcmf_workspace(netbuf)->htod_seq, BRCMF_SKB_HTOD_SEQ_##field##_MASK, \
                     BRCMF_SKB_HTOD_SEQ_##field##_SHIFT)
 
 #define BRCMF_FWS_TXSTAT_GENERATION_MASK  0x80000000
@@ -564,24 +564,24 @@ static void brcmf_fws_unlock(struct brcmf_fws_info* fws) { // __TA_RELEASE(&fws-
     pthread_mutex_unlock(&irq_callback_lock);
 }
 
-static bool brcmf_fws_ifidx_match(struct brcmf_netbuf* skb, void* arg) {
-    uint32_t ifidx = brcmf_skb_if_flags_get_field(skb, INDEX);
+static bool brcmf_fws_ifidx_match(struct brcmf_netbuf* netbuf, void* arg) {
+    uint32_t ifidx = brcmf_skb_if_flags_get_field(netbuf, INDEX);
     return ifidx == *(uint32_t*)arg;
 }
 
 static void brcmf_fws_psq_flush(struct brcmf_fws_info* fws, struct pktq* q, int ifidx) {
     bool (*matchfn)(struct brcmf_netbuf*, void*) = NULL;
-    struct brcmf_netbuf* skb;
+    struct brcmf_netbuf* netbuf;
     int prec;
 
     if (ifidx != -1) {
         matchfn = brcmf_fws_ifidx_match;
     }
     for (prec = 0; prec < q->num_prec; prec++) {
-        skb = brcmu_pktq_pdeq_match(q, prec, matchfn, &ifidx);
-        while (skb) {
-            brcmu_pkt_buf_free_skb(skb);
-            skb = brcmu_pktq_pdeq_match(q, prec, matchfn, &ifidx);
+        netbuf = brcmu_pktq_pdeq_match(q, prec, matchfn, &ifidx);
+        while (netbuf) {
+            brcmu_pkt_buf_free_skb(netbuf);
+            netbuf = brcmu_pktq_pdeq_match(q, prec, matchfn, &ifidx);
         }
     }
 }
@@ -673,7 +673,7 @@ static zx_status_t brcmf_fws_hanger_mark_suppressed(struct brcmf_fws_hanger* h, 
 static void brcmf_fws_hanger_cleanup(struct brcmf_fws_info* fws,
                                      bool (*fn)(struct brcmf_netbuf*, void*), int ifidx) {
     struct brcmf_fws_hanger* h = &fws->hanger;
-    struct brcmf_netbuf* skb;
+    struct brcmf_netbuf* netbuf;
     int i;
     enum brcmf_fws_hanger_item_state s;
 
@@ -681,11 +681,11 @@ static void brcmf_fws_hanger_cleanup(struct brcmf_fws_info* fws,
         s = h->items[i].state;
         if (s == BRCMF_FWS_HANGER_ITEM_STATE_INUSE ||
                 s == BRCMF_FWS_HANGER_ITEM_STATE_INUSE_SUPPRESSED) {
-            skb = h->items[i].pkt;
-            if (fn == NULL || fn(skb, &ifidx)) {
+            netbuf = h->items[i].pkt;
+            if (fn == NULL || fn(netbuf, &ifidx)) {
                 /* suppress packets freed from psq */
                 if (s == BRCMF_FWS_HANGER_ITEM_STATE_INUSE) {
-                    brcmu_pkt_buf_free_skb(skb);
+                    brcmu_pkt_buf_free_skb(netbuf);
                 }
                 h->items[i].state = BRCMF_FWS_HANGER_ITEM_STATE_FREE;
             }
@@ -821,7 +821,7 @@ static void brcmf_fws_bus_txq_cleanup(struct brcmf_fws_info* fws,
                                       bool (*fn)(struct brcmf_netbuf*, void*), int ifidx) {
     struct brcmf_fws_hanger_item* hi;
     struct pktq* txq;
-    struct brcmf_netbuf* skb;
+    struct brcmf_netbuf* netbuf;
     int prec;
     uint32_t hslot;
     zx_status_t err;
@@ -833,14 +833,14 @@ static void brcmf_fws_bus_txq_cleanup(struct brcmf_fws_info* fws,
     }
 
     for (prec = 0; prec < txq->num_prec; prec++) {
-        skb = brcmu_pktq_pdeq_match(txq, prec, fn, &ifidx);
-        while (skb) {
-            hslot = brcmf_skb_htod_tag_get_field(skb, HSLOT);
+        netbuf = brcmu_pktq_pdeq_match(txq, prec, fn, &ifidx);
+        while (netbuf) {
+            hslot = brcmf_skb_htod_tag_get_field(netbuf, HSLOT);
             hi = &fws->hanger.items[hslot];
-            WARN_ON(skb != hi->pkt);
+            WARN_ON(netbuf != hi->pkt);
             hi->state = BRCMF_FWS_HANGER_ITEM_STATE_FREE;
-            brcmu_pkt_buf_free_skb(skb);
-            skb = brcmu_pktq_pdeq_match(txq, prec, fn, &ifidx);
+            brcmu_pkt_buf_free_skb(netbuf);
+            netbuf = brcmu_pktq_pdeq_match(txq, prec, fn, &ifidx);
         }
     }
 }
@@ -869,17 +869,17 @@ static void brcmf_fws_cleanup(struct brcmf_fws_info* fws, int ifidx) {
     brcmf_fws_hanger_cleanup(fws, matchfn, ifidx);
 }
 
-static uint8_t brcmf_fws_hdrpush(struct brcmf_fws_info* fws, struct brcmf_netbuf* skb) {
-    struct brcmf_fws_mac_descriptor* entry = brcmf_workspace(skb)->mac;
+static uint8_t brcmf_fws_hdrpush(struct brcmf_fws_info* fws, struct brcmf_netbuf* netbuf) {
+    struct brcmf_fws_mac_descriptor* entry = brcmf_workspace(netbuf)->mac;
     uint8_t* wlh;
     uint16_t data_offset = 0;
     uint8_t fillers;
-    uint32_t pkttag = brcmf_workspace(skb)->htod;
-    uint16_t pktseq = brcmf_workspace(skb)->htod_seq;
+    uint32_t pkttag = brcmf_workspace(netbuf)->htod;
+    uint16_t pktseq = brcmf_workspace(netbuf)->htod_seq;
 
     brcmf_dbg(TRACE, "enter: %s, idx=%d hslot=%d htod %X seq %X\n", entry->name,
-              brcmf_skb_if_flags_get_field(skb, INDEX), (pkttag) >> 8 & 0xffff,
-              brcmf_workspace(skb)->htod, brcmf_workspace(skb)->htod_seq);
+              brcmf_skb_if_flags_get_field(netbuf, INDEX), (pkttag) >> 8 & 0xffff,
+              brcmf_workspace(netbuf)->htod, brcmf_workspace(netbuf)->htod_seq);
     if (entry->send_tim_signal) {
         data_offset += 2 + BRCMF_FWS_TYPE_PENDING_TRAFFIC_BMP_LEN;
     }
@@ -891,8 +891,8 @@ static uint8_t brcmf_fws_hdrpush(struct brcmf_fws_info* fws, struct brcmf_netbuf
     fillers = round_up(data_offset, 4) - data_offset;
     data_offset += fillers;
 
-    brcmf_netbuf_grow_head(skb, data_offset);
-    wlh = skb->data;
+    brcmf_netbuf_grow_head(netbuf, data_offset);
+    wlh = netbuf->data;
 
     wlh[0] = BRCMF_FWS_TYPE_PKTTAG;
     wlh[1] = BRCMF_FWS_TYPE_PKTTAG_LEN;
@@ -923,7 +923,7 @@ static uint8_t brcmf_fws_hdrpush(struct brcmf_fws_info* fws, struct brcmf_netbuf
 
 static bool brcmf_fws_tim_update(struct brcmf_fws_info* fws, struct brcmf_fws_mac_descriptor* entry,
                                  int fifo, bool send_immediately) {
-    struct brcmf_netbuf* skb;
+    struct brcmf_netbuf* netbuf;
     struct brcmf_netbuf_workspace* workspace;
     zx_status_t err;
     uint32_t len;
@@ -946,24 +946,24 @@ static bool brcmf_fws_tim_update(struct brcmf_fws_info* fws, struct brcmf_fws_ma
         /* bitmap info will automatically be attached to that packet */
         len = BRCMF_FWS_TYPE_PKTTAG_LEN + 2 + BRCMF_FWS_TYPE_SEQ_LEN +
               BRCMF_FWS_TYPE_PENDING_TRAFFIC_BMP_LEN + 2 + 4 + fws->drvr->hdrlen;
-        skb = brcmu_pkt_buf_get_skb(len);
-        if (skb == NULL) {
+        netbuf = brcmu_pkt_buf_get_skb(len);
+        if (netbuf == NULL) {
             return false;
         }
-        brcmf_netbuf_shrink_head(skb, len);
-        workspace = brcmf_workspace(skb);
+        brcmf_netbuf_shrink_head(netbuf, len);
+        workspace = brcmf_workspace(netbuf);
         workspace->mac = entry;
         workspace->mac_status = ZX_OK;
         workspace->state = BRCMF_FWS_SKBSTATE_TIM;
         workspace->htod = 0;
         workspace->htod_seq = 0;
-        data_offset = brcmf_fws_hdrpush(fws, skb);
-        ifidx = brcmf_skb_if_flags_get_field(skb, INDEX);
+        data_offset = brcmf_fws_hdrpush(fws, netbuf);
+        ifidx = brcmf_skb_if_flags_get_field(netbuf, INDEX);
         brcmf_fws_unlock(fws);
-        err = brcmf_proto_txdata(fws->drvr, ifidx, data_offset, skb);
+        err = brcmf_proto_txdata(fws->drvr, ifidx, data_offset, netbuf);
         brcmf_fws_lock(fws);
         if (err != ZX_OK) {
-            brcmu_pkt_buf_free_skb(skb);
+            brcmu_pkt_buf_free_skb(netbuf);
         }
         return true;
     }
@@ -1163,31 +1163,31 @@ static enum brcmf_fws_should_schedule brcmf_fws_request_indicate(struct brcmf_fw
 }
 
 static void brcmf_fws_macdesc_use_req_credit(struct brcmf_fws_mac_descriptor* entry,
-                                             struct brcmf_netbuf* skb) {
+                                             struct brcmf_netbuf* netbuf) {
     if (entry->requested_credit > 0) {
         entry->requested_credit--;
-        brcmf_skb_if_flags_set_field(skb, REQUESTED, 1);
-        brcmf_skb_if_flags_set_field(skb, REQ_CREDIT, 1);
+        brcmf_skb_if_flags_set_field(netbuf, REQUESTED, 1);
+        brcmf_skb_if_flags_set_field(netbuf, REQ_CREDIT, 1);
         if (entry->state != BRCMF_FWS_STATE_CLOSE) {
             brcmf_err("requested credit set while mac not closed!\n");
         }
     } else if (entry->requested_packet > 0) {
         entry->requested_packet--;
-        brcmf_skb_if_flags_set_field(skb, REQUESTED, 1);
-        brcmf_skb_if_flags_set_field(skb, REQ_CREDIT, 0);
+        brcmf_skb_if_flags_set_field(netbuf, REQUESTED, 1);
+        brcmf_skb_if_flags_set_field(netbuf, REQ_CREDIT, 0);
         if (entry->state != BRCMF_FWS_STATE_CLOSE) {
             brcmf_err("requested packet set while mac not closed!\n");
         }
     } else {
-        brcmf_skb_if_flags_set_field(skb, REQUESTED, 0);
-        brcmf_skb_if_flags_set_field(skb, REQ_CREDIT, 0);
+        brcmf_skb_if_flags_set_field(netbuf, REQUESTED, 0);
+        brcmf_skb_if_flags_set_field(netbuf, REQ_CREDIT, 0);
     }
 }
 
-static void brcmf_fws_macdesc_return_req_credit(struct brcmf_netbuf* skb) {
-    struct brcmf_fws_mac_descriptor* entry = brcmf_workspace(skb)->mac;
+static void brcmf_fws_macdesc_return_req_credit(struct brcmf_netbuf* netbuf) {
+    struct brcmf_fws_mac_descriptor* entry = brcmf_workspace(netbuf)->mac;
 
-    if ((brcmf_skb_if_flags_get_field(skb, REQ_CREDIT)) &&
+    if ((brcmf_skb_if_flags_get_field(netbuf, REQ_CREDIT)) &&
             (entry->state == BRCMF_FWS_STATE_CLOSE)) {
         entry->requested_credit++;
     }
@@ -1248,11 +1248,11 @@ static zx_status_t brcmf_fws_enq(struct brcmf_fws_info* fws, enum brcmf_fws_skb_
 
     entry = brcmf_workspace(p)->mac;
     if (entry == NULL) {
-        brcmf_err("no mac descriptor found for skb %p\n", p);
+        brcmf_err("no mac descriptor found for netbuf %p\n", p);
         return ZX_ERR_NOT_FOUND;
     }
 
-    brcmf_dbg(DATA, "enter: fifo %d skb %p\n", fifo, p);
+    brcmf_dbg(DATA, "enter: fifo %d netbuf %p\n", fifo, p);
     if (state == BRCMF_FWS_SKBSTATE_SUPPRESSED) {
         prec += 1;
         qfull_stat = &fws->stats.supprq_full_error;
@@ -1383,18 +1383,18 @@ static struct brcmf_netbuf* brcmf_fws_deq(struct brcmf_fws_info* fws, int fifo) 
     }
     p = NULL;
 done:
-    brcmf_dbg(DATA, "exit: fifo %d skb %p\n", fifo, p);
+    brcmf_dbg(DATA, "exit: fifo %d netbuf %p\n", fifo, p);
     return p;
 }
 
 static zx_status_t brcmf_fws_txstatus_suppressed(struct brcmf_fws_info* fws, int fifo,
-                                                 struct brcmf_netbuf* skb, uint32_t genbit,
+                                                 struct brcmf_netbuf* netbuf, uint32_t genbit,
                                                  uint16_t seq) {
-    struct brcmf_fws_mac_descriptor* entry = brcmf_workspace(skb)->mac;
+    struct brcmf_fws_mac_descriptor* entry = brcmf_workspace(netbuf)->mac;
     uint32_t hslot;
     zx_status_t ret;
 
-    hslot = brcmf_skb_htod_tag_get_field(skb, HSLOT);
+    hslot = brcmf_skb_htod_tag_get_field(netbuf, HSLOT);
 
     /* this packet was suppressed */
     if (!entry->suppressed) {
@@ -1405,19 +1405,19 @@ static zx_status_t brcmf_fws_txstatus_suppressed(struct brcmf_fws_info* fws, int
 
     entry->generation = genbit;
 
-    brcmf_skb_htod_tag_set_field(skb, GENERATION, genbit);
-    brcmf_workspace(skb)->htod_seq = seq;
-    if (brcmf_skb_htod_seq_get_field(skb, FROMFW)) {
-        brcmf_skb_htod_seq_set_field(skb, FROMDRV, 1);
-        brcmf_skb_htod_seq_set_field(skb, FROMFW, 0);
+    brcmf_skb_htod_tag_set_field(netbuf, GENERATION, genbit);
+    brcmf_workspace(netbuf)->htod_seq = seq;
+    if (brcmf_skb_htod_seq_get_field(netbuf, FROMFW)) {
+        brcmf_skb_htod_seq_set_field(netbuf, FROMDRV, 1);
+        brcmf_skb_htod_seq_set_field(netbuf, FROMFW, 0);
     } else {
-        brcmf_skb_htod_seq_set_field(skb, FROMDRV, 0);
+        brcmf_skb_htod_seq_set_field(netbuf, FROMDRV, 0);
     }
-    ret = brcmf_fws_enq(fws, BRCMF_FWS_SKBSTATE_SUPPRESSED, fifo, skb);
+    ret = brcmf_fws_enq(fws, BRCMF_FWS_SKBSTATE_SUPPRESSED, fifo, netbuf);
 
     if (ret != ZX_OK) {
         /* suppress q is full drop this packet */
-        brcmf_fws_hanger_poppkt(&fws->hanger, hslot, &skb, true);
+        brcmf_fws_hanger_poppkt(&fws->hanger, hslot, &netbuf, true);
     } else {
         /* Mark suppressed to avoid a double free during wlfc cleanup */
         brcmf_fws_hanger_mark_suppressed(&fws->hanger, hslot);
@@ -1431,7 +1431,7 @@ static zx_status_t brcmf_fws_txs_process(struct brcmf_fws_info* fws, uint8_t fla
     uint32_t fifo;
     zx_status_t ret;
     bool remove_from_hanger = true;
-    struct brcmf_netbuf* skb;
+    struct brcmf_netbuf* netbuf;
     struct brcmf_netbuf_workspace* workspace;
     struct brcmf_fws_mac_descriptor* entry = NULL;
     struct brcmf_if* ifp;
@@ -1454,20 +1454,20 @@ static zx_status_t brcmf_fws_txs_process(struct brcmf_fws_info* fws, uint8_t fla
         brcmf_err("unexpected txstatus\n");
     }
 
-    ret = brcmf_fws_hanger_poppkt(&fws->hanger, hslot, &skb, remove_from_hanger);
+    ret = brcmf_fws_hanger_poppkt(&fws->hanger, hslot, &netbuf, remove_from_hanger);
     if (ret != ZX_OK) {
         brcmf_err("no packet in hanger slot: hslot=%d\n", hslot);
         return ret;
     }
 
-    workspace = brcmf_workspace(skb);
+    workspace = brcmf_workspace(netbuf);
     // TODO(cphoenix): Used to be WARN_ON(!entry) which wouldn't have picked up entry==error
     // anyway. Revisit logic here.
     if (workspace->mac_status == ZX_OK) {
         entry = workspace->mac;
     } else {
         WARN_ON(true/*bad entry*/);
-        brcmu_pkt_buf_free_skb(skb);
+        brcmu_pkt_buf_free_skb(netbuf);
         return ZX_ERR_INTERNAL;
     }
     entry->transit_count--;
@@ -1478,25 +1478,25 @@ static zx_status_t brcmf_fws_txs_process(struct brcmf_fws_info* fws, uint8_t fla
     brcmf_dbg(DATA, "%s flags %d htod %X seq %X\n", entry->name, flags, workspace->htod, seq);
 
     /* pick up the implicit credit from this packet */
-    fifo = brcmf_skb_htod_tag_get_field(skb, FIFO);
+    fifo = brcmf_skb_htod_tag_get_field(netbuf, FIFO);
     if ((fws->fcmode == BRCMF_FWS_FCMODE_IMPLIED_CREDIT) ||
-            (brcmf_skb_if_flags_get_field(skb, REQ_CREDIT)) ||
+            (brcmf_skb_if_flags_get_field(netbuf, REQ_CREDIT)) ||
             (flags == BRCMF_FWS_TXSTATUS_HOST_TOSSED)) {
         brcmf_fws_return_credits(fws, fifo, 1);
         brcmf_fws_schedule_deq(fws);
     }
-    brcmf_fws_macdesc_return_req_credit(skb);
+    brcmf_fws_macdesc_return_req_credit(netbuf);
 
-    ret = brcmf_proto_hdrpull(fws->drvr, false, skb, &ifp);
+    ret = brcmf_proto_hdrpull(fws->drvr, false, netbuf, &ifp);
     if (ret != ZX_OK) {
-        brcmu_pkt_buf_free_skb(skb);
+        brcmu_pkt_buf_free_skb(netbuf);
         return ZX_ERR_INTERNAL;
     }
     if (!remove_from_hanger) {
-        ret = brcmf_fws_txstatus_suppressed(fws, fifo, skb, genbit, seq);
+        ret = brcmf_fws_txstatus_suppressed(fws, fifo, netbuf, genbit, seq);
     }
     if (remove_from_hanger || ret != ZX_OK) {
-        brcmf_txfinalize(ifp, skb, true);
+        brcmf_txfinalize(ifp, netbuf, true);
     }
 
     return ZX_OK;
@@ -1788,7 +1788,7 @@ netif_rx:
     }
 }
 
-void brcmf_fws_hdrpull(struct brcmf_if* ifp, int16_t siglen, struct brcmf_netbuf* skb) {
+void brcmf_fws_hdrpull(struct brcmf_if* ifp, int16_t siglen, struct brcmf_netbuf* netbuf) {
     struct brcmf_skb_reorder_data* rd;
     struct brcmf_fws_info* fws = drvr_to_fws(ifp->drvr);
     uint8_t* signal_data;
@@ -1800,22 +1800,22 @@ void brcmf_fws_hdrpull(struct brcmf_if* ifp, int16_t siglen, struct brcmf_netbuf
     zx_status_t err;
     enum brcmf_fws_should_schedule schedule_status;
 
-    brcmf_dbg(HDRS, "enter: ifidx %d, skblen %u, siglen %d\n", ifp->ifidx, skb->len, siglen);
+    brcmf_dbg(HDRS, "enter: ifidx %d, skblen %u, siglen %d\n", ifp->ifidx, netbuf->len, siglen);
 
-    WARN_ON(siglen > skb->len);
+    WARN_ON(siglen > netbuf->len);
 
     if (!siglen) {
         return;
     }
     /* if flow control disabled, skip to packet data and leave */
     if ((!fws) || (!fws->fw_signals)) {
-        brcmf_netbuf_shrink_head(skb, siglen);
+        brcmf_netbuf_shrink_head(netbuf, siglen);
         return;
     }
 
     fws->stats.header_pulls++;
     data_len = siglen;
-    signal_data = skb->data;
+    signal_data = netbuf->data;
 
     schedule_status = BRCMF_FWS_NOSCHEDULE;
     while (data_len > 0) {
@@ -1851,7 +1851,7 @@ void brcmf_fws_hdrpull(struct brcmf_if* ifp, int16_t siglen, struct brcmf_netbuf
         case BRCMF_FWS_TYPE_COMP_TXSTATUS:
             break;
         case BRCMF_FWS_TYPE_HOST_REORDER_RXPKTS:
-            rd = (struct brcmf_skb_reorder_data*)skb->workspace;
+            rd = (struct brcmf_skb_reorder_data*)netbuf->workspace;
             rd->reorder = data;
             break;
         case BRCMF_FWS_TYPE_MACDESC_ADD:
@@ -1904,11 +1904,11 @@ void brcmf_fws_hdrpull(struct brcmf_if* ifp, int16_t siglen, struct brcmf_netbuf
     /* signalling processing result does
      * not affect the actual ethernet packet.
      */
-    brcmf_netbuf_shrink_head(skb, siglen);
+    brcmf_netbuf_shrink_head(netbuf, siglen);
 
     /* this may be a signal-only packet
      */
-    if (skb->len == 0) {
+    if (netbuf->len == 0) {
         fws->stats.header_only_pkt++;
     }
 }
@@ -1936,20 +1936,20 @@ static uint8_t brcmf_fws_precommit_skb(struct brcmf_fws_info* fws, int fifo,
     return brcmf_fws_hdrpush(fws, p);
 }
 
-static void brcmf_fws_rollback_toq(struct brcmf_fws_info* fws, struct brcmf_netbuf* skb, int fifo) {
+static void brcmf_fws_rollback_toq(struct brcmf_fws_info* fws, struct brcmf_netbuf* netbuf, int fifo) {
     struct brcmf_fws_mac_descriptor* entry;
     struct brcmf_netbuf* pktout;
     int qidx, hslot;
     zx_status_t rc = ZX_OK;
 
-    entry = brcmf_workspace(skb)->mac;
+    entry = brcmf_workspace(netbuf)->mac;
     if (entry->occupied) {
         qidx = 2 * fifo;
-        if (brcmf_workspace(skb)->state == BRCMF_FWS_SKBSTATE_SUPPRESSED) {
+        if (brcmf_workspace(netbuf)->state == BRCMF_FWS_SKBSTATE_SUPPRESSED) {
             qidx++;
         }
 
-        pktout = brcmu_pktq_penq_head(&entry->psq, qidx, skb);
+        pktout = brcmu_pktq_penq_head(&entry->psq, qidx, netbuf);
         if (pktout == NULL) {
             brcmf_err("%s queue %d full\n", entry->name, qidx);
             rc = ZX_ERR_NO_RESOURCES;
@@ -1961,12 +1961,12 @@ static void brcmf_fws_rollback_toq(struct brcmf_fws_info* fws, struct brcmf_netb
 
     if (rc != ZX_OK) {
         fws->stats.rollback_failed++;
-        hslot = brcmf_skb_htod_tag_get_field(skb, HSLOT);
+        hslot = brcmf_skb_htod_tag_get_field(netbuf, HSLOT);
         brcmf_fws_txs_process(fws, BRCMF_FWS_TXSTATUS_HOST_TOSSED, hslot, 0, 0);
     } else {
         fws->stats.rollback_success++;
         brcmf_fws_return_credits(fws, fifo, 1);
-        brcmf_fws_macdesc_return_req_credit(skb);
+        brcmf_fws_macdesc_return_req_credit(netbuf);
     }
 }
 
@@ -1995,8 +1995,8 @@ static zx_status_t brcmf_fws_borrow_credit(struct brcmf_fws_info* fws) {
 }
 
 static zx_status_t brcmf_fws_commit_skb(struct brcmf_fws_info* fws, int fifo,
-                                        struct brcmf_netbuf* skb) {
-    struct brcmf_netbuf_workspace* workspace = brcmf_workspace(skb);
+                                        struct brcmf_netbuf* netbuf) {
+    struct brcmf_netbuf_workspace* workspace = brcmf_workspace(netbuf);
     struct brcmf_fws_mac_descriptor* entry;
     zx_status_t rc;
     uint8_t ifidx;
@@ -2007,14 +2007,14 @@ static zx_status_t brcmf_fws_commit_skb(struct brcmf_fws_info* fws, int fifo,
     }
     entry = workspace->mac;
 
-    data_offset = brcmf_fws_precommit_skb(fws, fifo, skb);
+    data_offset = brcmf_fws_precommit_skb(fws, fifo, netbuf);
     entry->transit_count++;
     if (entry->suppressed) {
         entry->suppr_transit_count++;
     }
-    ifidx = brcmf_skb_if_flags_get_field(skb, INDEX);
+    ifidx = brcmf_skb_if_flags_get_field(netbuf, INDEX);
     brcmf_fws_unlock(fws);
-    rc = brcmf_proto_txdata(fws->drvr, ifidx, data_offset, skb);
+    rc = brcmf_proto_txdata(fws->drvr, ifidx, data_offset, netbuf);
     brcmf_fws_lock(fws);
     brcmf_dbg(DATA, "%s flags %X htod %X bus_tx %d\n", entry->name, workspace->if_flags,
               workspace->htod, rc);
@@ -2023,20 +2023,20 @@ static zx_status_t brcmf_fws_commit_skb(struct brcmf_fws_info* fws, int fifo,
         if (entry->suppressed) {
             entry->suppr_transit_count--;
         }
-        (void)brcmf_proto_hdrpull(fws->drvr, false, skb, NULL);
+        (void)brcmf_proto_hdrpull(fws->drvr, false, netbuf, NULL);
         goto rollback;
     }
 
     fws->stats.pkt2bus++;
     fws->stats.send_pkts[fifo]++;
-    if (brcmf_skb_if_flags_get_field(skb, REQUESTED)) {
+    if (brcmf_skb_if_flags_get_field(netbuf, REQUESTED)) {
         fws->stats.requested_sent[fifo]++;
     }
 
     return rc;
 
 rollback:
-    brcmf_fws_rollback_toq(fws, skb, fifo);
+    brcmf_fws_rollback_toq(fws, netbuf, fifo);
     return rc;
 }
 
@@ -2061,10 +2061,10 @@ static zx_status_t brcmf_fws_assign_htod(struct brcmf_fws_info* fws, struct brcm
     return rc;
 }
 
-zx_status_t brcmf_fws_process_skb(struct brcmf_if* ifp, struct brcmf_netbuf* skb) {
+zx_status_t brcmf_fws_process_skb(struct brcmf_if* ifp, struct brcmf_netbuf* netbuf) {
     struct brcmf_fws_info* fws = drvr_to_fws(ifp->drvr);
-    struct brcmf_netbuf_workspace* workspace = brcmf_workspace(skb);
-    struct ethhdr* eh = (struct ethhdr*)(skb->data);
+    struct brcmf_netbuf_workspace* workspace = brcmf_workspace(netbuf);
+    struct ethhdr* eh = (struct ethhdr*)(netbuf->data);
     int fifo = BRCMF_FWS_FIFO_BCMC;
     bool multicast = address_is_multicast(eh->h_dest);
     zx_status_t rc = ZX_OK;
@@ -2074,9 +2074,9 @@ zx_status_t brcmf_fws_process_skb(struct brcmf_if* ifp, struct brcmf_netbuf* skb
     /* set control buffer information */
     workspace->if_flags = 0;
     workspace->state = BRCMF_FWS_SKBSTATE_NEW;
-    brcmf_skb_if_flags_set_field(skb, INDEX, ifp->ifidx);
+    brcmf_skb_if_flags_set_field(netbuf, INDEX, ifp->ifidx);
     if (!multicast) {
-        fifo = brcmf_fws_prio2fifo[skb->priority];
+        fifo = brcmf_fws_prio2fifo[netbuf->priority];
     }
 
     brcmf_fws_lock(fws);
@@ -2088,12 +2088,12 @@ zx_status_t brcmf_fws_process_skb(struct brcmf_if* ifp, struct brcmf_netbuf* skb
     workspace->mac_status = brcmf_fws_macdesc_find(fws, ifp, eh->h_dest, &workspace->mac);
     brcmf_dbg(DATA, "%s mac %pM multi %d fifo %d\n", workspace->mac->name, eh->h_dest, multicast,
               fifo);
-    if (brcmf_fws_assign_htod(fws, skb, fifo) == ZX_OK) {
-        brcmf_fws_enq(fws, BRCMF_FWS_SKBSTATE_DELAYED, fifo, skb);
+    if (brcmf_fws_assign_htod(fws, netbuf, fifo) == ZX_OK) {
+        brcmf_fws_enq(fws, BRCMF_FWS_SKBSTATE_DELAYED, fifo, netbuf);
         brcmf_fws_schedule_deq(fws);
     } else {
-        brcmf_err("drop skb: no hanger slot\n");
-        brcmf_txfinalize(ifp, skb, false);
+        brcmf_err("drop netbuf: no hanger slot\n");
+        brcmf_txfinalize(ifp, netbuf, false);
         rc = ZX_ERR_NO_MEMORY;
     }
     brcmf_fws_unlock(fws);
@@ -2147,7 +2147,7 @@ void brcmf_fws_del_interface(struct brcmf_if* ifp) {
 static void brcmf_fws_dequeue_worker(struct work_struct* worker) {
     struct brcmf_fws_info* fws;
     struct brcmf_pub* drvr;
-    struct brcmf_netbuf* skb;
+    struct brcmf_netbuf* netbuf;
     int fifo;
     uint32_t hslot;
     uint32_t ifidx;
@@ -2159,16 +2159,16 @@ static void brcmf_fws_dequeue_worker(struct work_struct* worker) {
     brcmf_fws_lock(fws);
     for (fifo = BRCMF_FWS_FIFO_BCMC; fifo >= 0 && !fws->bus_flow_blocked; fifo--) {
         if (!brcmf_fws_fc_active(fws)) {
-            while ((skb = brcmf_fws_deq(fws, fifo)) != NULL) {
-                hslot = brcmf_skb_htod_tag_get_field(skb, HSLOT);
-                brcmf_fws_hanger_poppkt(&fws->hanger, hslot, &skb, true);
-                ifidx = brcmf_skb_if_flags_get_field(skb, INDEX);
+            while ((netbuf = brcmf_fws_deq(fws, fifo)) != NULL) {
+                hslot = brcmf_skb_htod_tag_get_field(netbuf, HSLOT);
+                brcmf_fws_hanger_poppkt(&fws->hanger, hslot, &netbuf, true);
+                ifidx = brcmf_skb_if_flags_get_field(netbuf, INDEX);
                 /* Use proto layer to send data frame */
                 brcmf_fws_unlock(fws);
-                ret = brcmf_proto_txdata(drvr, ifidx, 0, skb);
+                ret = brcmf_proto_txdata(drvr, ifidx, 0, netbuf);
                 brcmf_fws_lock(fws);
                 if (ret != ZX_OK) {
-                    brcmf_txfinalize(brcmf_get_ifp(drvr, ifidx), skb, false);
+                    brcmf_txfinalize(brcmf_get_ifp(drvr, ifidx), netbuf, false);
                 }
                 if (fws->bus_flow_blocked) {
                     break;
@@ -2178,12 +2178,12 @@ static void brcmf_fws_dequeue_worker(struct work_struct* worker) {
         }
         while ((fws->fifo_credit[fifo]) ||
                 ((!fws->bcmc_credit_check) && (fifo == BRCMF_FWS_FIFO_BCMC))) {
-            skb = brcmf_fws_deq(fws, fifo);
-            if (!skb) {
+            netbuf = brcmf_fws_deq(fws, fifo);
+            if (!netbuf) {
                 break;
             }
             fws->fifo_credit[fifo]--;
-            if (brcmf_fws_commit_skb(fws, fifo, skb) != ZX_OK) {
+            if (brcmf_fws_commit_skb(fws, fifo, netbuf) != ZX_OK) {
                 break;
             }
             if (fws->bus_flow_blocked) {
@@ -2193,12 +2193,12 @@ static void brcmf_fws_dequeue_worker(struct work_struct* worker) {
         if ((fifo == BRCMF_FWS_FIFO_AC_BE) && (fws->fifo_credit[fifo] == 0) &&
                 (!fws->bus_flow_blocked)) {
             while (brcmf_fws_borrow_credit(fws) == ZX_OK) {
-                skb = brcmf_fws_deq(fws, fifo);
-                if (!skb) {
+                netbuf = brcmf_fws_deq(fws, fifo);
+                if (!netbuf) {
                     brcmf_fws_return_credits(fws, fifo, 1);
                     break;
                 }
-                if (brcmf_fws_commit_skb(fws, fifo, skb) != ZX_OK) {
+                if (brcmf_fws_commit_skb(fws, fifo, netbuf) != ZX_OK) {
                     break;
                 }
                 if (fws->bus_flow_blocked) {
@@ -2394,15 +2394,15 @@ bool brcmf_fws_fc_active(struct brcmf_fws_info* fws) {
     return fws->fcmode != BRCMF_FWS_FCMODE_NONE;
 }
 
-void brcmf_fws_bustxfail(struct brcmf_fws_info* fws, struct brcmf_netbuf* skb) {
+void brcmf_fws_bustxfail(struct brcmf_fws_info* fws, struct brcmf_netbuf* netbuf) {
     uint32_t hslot;
 
-    if (brcmf_workspace(skb)->state == BRCMF_FWS_SKBSTATE_TIM) {
-        brcmu_pkt_buf_free_skb(skb);
+    if (brcmf_workspace(netbuf)->state == BRCMF_FWS_SKBSTATE_TIM) {
+        brcmu_pkt_buf_free_skb(netbuf);
         return;
     }
     brcmf_fws_lock(fws);
-    hslot = brcmf_skb_htod_tag_get_field(skb, HSLOT);
+    hslot = brcmf_skb_htod_tag_get_field(netbuf, HSLOT);
     brcmf_fws_txs_process(fws, BRCMF_FWS_TXSTATUS_HOST_TOSSED, hslot, 0, 0);
     brcmf_fws_unlock(fws);
 }

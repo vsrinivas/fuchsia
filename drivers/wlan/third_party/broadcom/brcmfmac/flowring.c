@@ -224,7 +224,7 @@ void brcmf_flowring_delete(struct brcmf_flowring* flow, uint16_t flowid) {
     struct brcmf_if* ifp;
     uint16_t hash_idx;
     uint8_t ifidx;
-    struct brcmf_netbuf* skb;
+    struct brcmf_netbuf* netbuf;
 
     ring = flow->rings[flowid];
     if (!ring) {
@@ -240,22 +240,22 @@ void brcmf_flowring_delete(struct brcmf_flowring* flow, uint16_t flowid) {
     fill_with_zero_addr(flow->hash[hash_idx].mac);
     flow->rings[flowid] = NULL;
 
-    skb = brcmf_netbuf_list_remove_head(&ring->skblist);
-    while (skb) {
-        brcmf_txfinalize(ifp, skb, false);
-        skb = brcmf_netbuf_list_remove_head(&ring->skblist);
+    netbuf = brcmf_netbuf_list_remove_head(&ring->skblist);
+    while (netbuf) {
+        brcmf_txfinalize(ifp, netbuf, false);
+        netbuf = brcmf_netbuf_list_remove_head(&ring->skblist);
     }
 
     free(ring);
 }
 
 uint32_t brcmf_flowring_enqueue(struct brcmf_flowring* flow, uint16_t flowid,
-                                struct brcmf_netbuf* skb) {
+                                struct brcmf_netbuf* netbuf) {
     struct brcmf_flowring_ring* ring;
 
     ring = flow->rings[flowid];
 
-    brcmf_netbuf_list_add_tail(&ring->skblist, skb);
+    brcmf_netbuf_list_add_tail(&ring->skblist, netbuf);
 
     if (!ring->blocked && (brcmf_netbuf_list_length(&ring->skblist) > BRCMF_FLOWRING_HIGH)) {
         brcmf_flowring_block(flow, flowid, true);
@@ -275,30 +275,30 @@ uint32_t brcmf_flowring_enqueue(struct brcmf_flowring* flow, uint16_t flowid,
 
 struct brcmf_netbuf* brcmf_flowring_dequeue(struct brcmf_flowring* flow, uint16_t flowid) {
     struct brcmf_flowring_ring* ring;
-    struct brcmf_netbuf* skb;
+    struct brcmf_netbuf* netbuf;
 
     ring = flow->rings[flowid];
     if (ring->status != RING_OPEN) {
         return NULL;
     }
 
-    skb = brcmf_netbuf_list_remove_head(&ring->skblist);
+    netbuf = brcmf_netbuf_list_remove_head(&ring->skblist);
 
     if (ring->blocked && (brcmf_netbuf_list_length(&ring->skblist) < BRCMF_FLOWRING_LOW)) {
         brcmf_flowring_block(flow, flowid, false);
         brcmf_dbg(MSGBUF, "Flowcontrol: OPEN for ring %d\n", flowid);
     }
 
-    return skb;
+    return netbuf;
 }
 
 void brcmf_flowring_reinsert(struct brcmf_flowring* flow, uint16_t flowid,
-                             struct brcmf_netbuf* skb) {
+                             struct brcmf_netbuf* netbuf) {
     struct brcmf_flowring_ring* ring;
 
     ring = flow->rings[flowid];
 
-    brcmf_netbuf_list_add_head(&ring->skblist, skb);
+    brcmf_netbuf_list_add_head(&ring->skblist, netbuf);
 }
 
 uint32_t brcmf_flowring_qlen(struct brcmf_flowring* flow, uint16_t flowid) {

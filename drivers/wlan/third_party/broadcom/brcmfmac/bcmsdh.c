@@ -290,20 +290,20 @@ out:
 }
 
 static zx_status_t brcmf_sdiod_skbuff_read(struct brcmf_sdio_dev* sdiodev, struct sdio_func* func,
-                                           uint32_t addr, struct brcmf_netbuf* skb) {
+                                           uint32_t addr, struct brcmf_netbuf* netbuf) {
     unsigned int req_sz;
     zx_status_t err;
 
-    /* Single skb use the standard mmc interface */
-    req_sz = skb->len + 3;
+    /* Single netbuf use the standard mmc interface */
+    req_sz = netbuf->len + 3;
     req_sz &= (uint)~3;
 
     switch (func->num) {
     case 1:
-        err = sdio_memcpy_fromio(func, ((uint8_t*)(skb->data)), addr, req_sz);
+        err = sdio_memcpy_fromio(func, ((uint8_t*)(netbuf->data)), addr, req_sz);
         break;
     case 2:
-        err = sdio_readsb(func, ((uint8_t*)(skb->data)), addr, req_sz);
+        err = sdio_readsb(func, ((uint8_t*)(netbuf->data)), addr, req_sz);
         break;
     default:
         /* bail out as things are really fishy here */
@@ -319,15 +319,15 @@ static zx_status_t brcmf_sdiod_skbuff_read(struct brcmf_sdio_dev* sdiodev, struc
 }
 
 static zx_status_t brcmf_sdiod_skbuff_write(struct brcmf_sdio_dev* sdiodev, struct sdio_func* func,
-                                            uint32_t addr, struct brcmf_netbuf* skb) {
+                                            uint32_t addr, struct brcmf_netbuf* netbuf) {
     unsigned int req_sz;
     zx_status_t err;
 
-    /* Single skb use the standard mmc interface */
-    req_sz = skb->len + 3;
+    /* Single netbuf use the standard mmc interface */
+    req_sz = netbuf->len + 3;
     req_sz &= (uint)~3;
 
-    err = sdio_memcpy_toio(func, addr, ((uint8_t*)(skb->data)), req_sz);
+    err = sdio_memcpy_toio(func, addr, ((uint8_t*)(netbuf->data)), req_sz);
 
     if (err == ZX_ERR_IO_REFUSED) {
         brcmf_sdiod_change_state(sdiodev, BRCMF_SDIOD_NOMEDIUM);
@@ -342,10 +342,10 @@ static zx_status_t brcmf_sdiod_skbuff_write(struct brcmf_sdio_dev* sdiodev, stru
  * @func: SDIO function
  * @write: direction flag
  * @addr: dongle memory address as source/destination
- * @pkt: skb pointer
+ * @pkt: netbuf pointer
  *
  * This function takes the responsibility as the interface function to MMC
- * stack for block data access. It assumes that the skb passed down by the
+ * stack for block data access. It assumes that the netbuf passed down by the
  * caller has already been padded and aligned.
  */
 static zx_status_t brcmf_sdiod_sglist_rw(struct brcmf_sdio_dev* sdiodev, struct sdio_func* func,
@@ -556,7 +556,7 @@ done:
 zx_status_t brcmf_sdiod_recv_chain(struct brcmf_sdio_dev* sdiodev, struct brcmf_netbuf_list* pktq,
                                    uint totlen) {
     struct brcmf_netbuf* glom_skb = NULL;
-    struct brcmf_netbuf* skb;
+    struct brcmf_netbuf* netbuf;
     uint32_t addr = sdiodev->cc_core->base;
     zx_status_t err = ZX_OK;
 
@@ -582,9 +582,9 @@ zx_status_t brcmf_sdiod_recv_chain(struct brcmf_sdio_dev* sdiodev, struct brcmf_
             goto done;
         }
 
-        brcmf_netbuf_list_for_every(pktq, skb) {
-            memcpy(skb->data, glom_skb->data, skb->len);
-            brcmf_netbuf_shrink_head(glom_skb, skb->len);
+        brcmf_netbuf_list_for_every(pktq, netbuf) {
+            memcpy(netbuf->data, glom_skb->data, netbuf->len);
+            brcmf_netbuf_shrink_head(glom_skb, netbuf->len);
         }
     } else {
         err = brcmf_sdiod_sglist_rw(sdiodev, sdiodev->func2, false, addr, pktq);
@@ -627,7 +627,7 @@ zx_status_t brcmf_sdiod_send_buf(struct brcmf_sdio_dev* sdiodev, uint8_t* buf, u
 }
 
 zx_status_t brcmf_sdiod_send_pkt(struct brcmf_sdio_dev* sdiodev, struct brcmf_netbuf_list* pktq) {
-    struct brcmf_netbuf* skb;
+    struct brcmf_netbuf* netbuf;
     uint32_t addr = sdiodev->cc_core->base;
     zx_status_t err;
 
@@ -642,8 +642,8 @@ zx_status_t brcmf_sdiod_send_pkt(struct brcmf_sdio_dev* sdiodev, struct brcmf_ne
     addr |= SBSDIO_SB_ACCESS_2_4B_FLAG;
 
     if (pktq->qlen == 1 || !sdiodev->sg_support) {
-        brcmf_netbuf_list_for_every(pktq, skb) {
-            err = brcmf_sdiod_skbuff_write(sdiodev, sdiodev->func2, addr, skb);
+        brcmf_netbuf_list_for_every(pktq, netbuf) {
+            err = brcmf_sdiod_skbuff_write(sdiodev, sdiodev->func2, addr, netbuf);
             if (err != ZX_OK) {
                 break;
             }

@@ -27,14 +27,14 @@ zx_status_t brcmf_fws_attach(struct brcmf_pub* drvr, struct brcmf_fws_info** fws
 void brcmf_fws_detach(struct brcmf_fws_info* fws);
 bool brcmf_fws_queue_skbs(struct brcmf_fws_info* fws);
 bool brcmf_fws_fc_active(struct brcmf_fws_info* fws);
-void brcmf_fws_hdrpull(struct brcmf_if* ifp, int16_t siglen, struct brcmf_netbuf* skb);
-zx_status_t brcmf_fws_process_skb(struct brcmf_if* ifp, struct brcmf_netbuf* skb);
+void brcmf_fws_hdrpull(struct brcmf_if* ifp, int16_t siglen, struct brcmf_netbuf* netbuf);
+zx_status_t brcmf_fws_process_skb(struct brcmf_if* ifp, struct brcmf_netbuf* netbuf);
 
 void brcmf_fws_reset_interface(struct brcmf_if* ifp);
 void brcmf_fws_add_interface(struct brcmf_if* ifp);
 void brcmf_fws_del_interface(struct brcmf_if* ifp);
-void brcmf_fws_bustxfail(struct brcmf_fws_info* fws, struct brcmf_netbuf* skb);
+void brcmf_fws_bustxfail(struct brcmf_fws_info* fws, struct brcmf_netbuf* netbuf);
 void brcmf_fws_bus_blocked(struct brcmf_pub* drvr, bool flow_blocked);
-void brcmf_fws_rxreorder(struct brcmf_if* ifp, struct brcmf_netbuf* skb);
+void brcmf_fws_rxreorder(struct brcmf_if* ifp, struct brcmf_netbuf* netbuf);
 
 #endif /* GARNET_DRIVERS_WLAN_THIRD_PARTY_BROADCOM_BRCMFMAC_FWSIGNAL_H_ */

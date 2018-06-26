@@ -67,7 +67,7 @@ struct brcmf_usbreq {
     struct list_node list;
     struct brcmf_usbdev_info* devinfo;
     struct brcmf_urb* urb;
-    struct brcmf_netbuf* skb;
+    struct brcmf_netbuf* netbuf;
 };
 
 #endif /* BRCMFMAC_USB_H */

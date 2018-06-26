@@ -237,7 +237,7 @@ static void brcmf_netdev_set_multicast_list(struct net_device* ndev) {
     workqueue_schedule_default(&ifp->multicast_work);
 }
 
-static netdev_tx_t brcmf_netdev_start_xmit(struct brcmf_netbuf* skb, struct net_device* ndev) {
+static netdev_tx_t brcmf_netdev_start_xmit(struct brcmf_netbuf* netbuf, struct net_device* ndev) {
     zx_status_t ret;
     struct brcmf_if* ifp = ndev_to_if(ndev);
     struct brcmf_pub* drvr = ifp->drvr;
@@ -250,18 +250,18 @@ static netdev_tx_t brcmf_netdev_start_xmit(struct brcmf_netbuf* skb, struct net_
     if (drvr->bus_if->state != BRCMF_BUS_UP) {
         brcmf_err("xmit rejected state=%d\n", drvr->bus_if->state);
         netif_stop_queue(ndev);
-        brcmf_netbuf_free(skb);
+        brcmf_netbuf_free(netbuf);
         ret = ZX_ERR_UNAVAILABLE;
         goto done;
     }
 
     /* Make sure there's enough writeable headroom */
-    if (brcmf_netbuf_head_space(skb) < drvr->hdrlen) {
-        head_delta = max((int)(drvr->hdrlen - brcmf_netbuf_head_space(skb)), 0);
+    if (brcmf_netbuf_head_space(netbuf) < drvr->hdrlen) {
+        head_delta = max((int)(drvr->hdrlen - brcmf_netbuf_head_space(netbuf)), 0);
 
         brcmf_dbg(INFO, "%s: insufficient headroom (%d)\n", brcmf_ifname(ifp), head_delta);
         atomic_fetch_add(&drvr->bus_if->stats.pktcowed, 1);
-        ret = brcmf_netbuf_realloc_head(skb, ALIGN(head_delta, NET_SKB_PAD), 0, GFP_ATOMIC);
+        ret = brcmf_netbuf_realloc_head(netbuf, ALIGN(head_delta, NET_SKB_PAD), 0, GFP_ATOMIC);
         if (ret != ZX_OK) {
             brcmf_err("%s: failed to expand headroom\n", brcmf_ifname(ifp));
             atomic_fetch_add(&drvr->bus_if->stats.pktcow_failed, 1);
@@ -270,26 +270,26 @@ static netdev_tx_t brcmf_netdev_start_xmit(struct brcmf_netbuf* skb, struct net_
     }
 
     /* validate length for ether packet */
-    if (skb->len < sizeof(*eh)) {
+    if (netbuf->len < sizeof(*eh)) {
         ret = ZX_ERR_INVALID_ARGS;
-        brcmf_netbuf_free(skb);
+        brcmf_netbuf_free(netbuf);
         goto done;
     }
 
-    eh = (struct ethhdr*)(skb->data);
+    eh = (struct ethhdr*)(netbuf->data);
 
     if (eh->h_proto == htobe16(ETH_P_PAE)) {
         atomic_fetch_add(&ifp->pend_8021x_cnt, 1);
     }
 
     /* determine the priority */
-    if ((skb->priority == 0) || (skb->priority > 7)) {
-        skb->priority = cfg80211_classify8021d(skb, NULL);
+    if ((netbuf->priority == 0) || (netbuf->priority > 7)) {
+        netbuf->priority = cfg80211_classify8021d(netbuf, NULL);
     }
 
-    ret = brcmf_proto_tx_queue_data(drvr, ifp->ifidx, skb);
+    ret = brcmf_proto_tx_queue_data(drvr, ifp->ifidx, netbuf);
     if (ret != ZX_OK) {
-        brcmf_txfinalize(ifp, skb, false);
+        brcmf_txfinalize(ifp, netbuf, false);
     }
 
 done:
@@ -297,7 +297,7 @@ done:
         ndev->stats.tx_dropped++;
     } else {
         ndev->stats.tx_packets++;
-        ndev->stats.tx_bytes += skb->len;
+        ndev->stats.tx_bytes += netbuf->len;
     }
 
     /* Return ok: we always eat the packet */
@@ -330,87 +330,87 @@ void brcmf_txflowblock_if(struct brcmf_if* ifp, enum brcmf_netif_stop_reason rea
     pthread_mutex_unlock(&irq_callback_lock);
 }
 
-void brcmf_netif_rx(struct brcmf_if* ifp, struct brcmf_netbuf* skb) {
-    if (skb->pkt_type == ADDRESSED_TO_MULTICAST) {
+void brcmf_netif_rx(struct brcmf_if* ifp, struct brcmf_netbuf* netbuf) {
+    if (netbuf->pkt_type == ADDRESSED_TO_MULTICAST) {
         ifp->ndev->stats.multicast++;
     }
 
     if (!(ifp->ndev->flags & IFF_UP)) {
-        brcmu_pkt_buf_free_skb(skb);
+        brcmu_pkt_buf_free_skb(netbuf);
         return;
     }
 
-    ifp->ndev->stats.rx_bytes += skb->len;
+    ifp->ndev->stats.rx_bytes += netbuf->len;
     ifp->ndev->stats.rx_packets++;
 
-    brcmf_dbg(DATA, "rx proto=0x%X\n", be16toh(skb->protocol));
+    brcmf_dbg(DATA, "rx proto=0x%X\n", be16toh(netbuf->protocol));
     if (in_interrupt()) {
-        netif_rx(skb);
+        netif_rx(netbuf);
     } else {
         /* If the receive is not processed inside an ISR,
          * the softirqd must be woken explicitly to service
          * the NET_RX_SOFTIRQ.  This is handled by netif_rx_ni().
          */
-        netif_rx_ni(skb);
+        netif_rx_ni(netbuf);
     }
 }
 
-static zx_status_t brcmf_rx_hdrpull(struct brcmf_pub* drvr, struct brcmf_netbuf* skb,
+static zx_status_t brcmf_rx_hdrpull(struct brcmf_pub* drvr, struct brcmf_netbuf* netbuf,
                                     struct brcmf_if** ifp) {
     zx_status_t ret;
 
     /* process and remove protocol-specific header */
-    ret = brcmf_proto_hdrpull(drvr, true, skb, ifp);
+    ret = brcmf_proto_hdrpull(drvr, true, netbuf, ifp);
 
     if (ret != ZX_OK || !(*ifp) || !(*ifp)->ndev) {
         if (ret != ZX_ERR_BUFFER_TOO_SMALL && *ifp) {
             (*ifp)->ndev->stats.rx_errors++;
         }
-        brcmu_pkt_buf_free_skb(skb);
+        brcmu_pkt_buf_free_skb(netbuf);
         return ZX_ERR_IO;
     }
 
-    skb->protocol = eth_type_trans(skb, (*ifp)->ndev);
+    netbuf->protocol = eth_type_trans(netbuf, (*ifp)->ndev);
     return ZX_OK;
 }
 
-void brcmf_rx_frame(struct brcmf_device* dev, struct brcmf_netbuf* skb, bool handle_event) {
+void brcmf_rx_frame(struct brcmf_device* dev, struct brcmf_netbuf* netbuf, bool handle_event) {
     struct brcmf_if* ifp;
     struct brcmf_bus* bus_if = dev_get_drvdata(dev);
     struct brcmf_pub* drvr = bus_if->drvr;
 
-    brcmf_dbg(DATA, "Enter: %s: rxp=%p\n", device_get_name(dev->zxdev), skb);
+    brcmf_dbg(DATA, "Enter: %s: rxp=%p\n", device_get_name(dev->zxdev), netbuf);
 
-    if (brcmf_rx_hdrpull(drvr, skb, &ifp)) {
+    if (brcmf_rx_hdrpull(drvr, netbuf, &ifp)) {
         brcmf_dbg(TEMP, "hdrpull returned nonzero");
         return;
     }
 
-    if (brcmf_proto_is_reorder_skb(skb)) {
-        brcmf_proto_rxreorder(ifp, skb);
+    if (brcmf_proto_is_reorder_skb(netbuf)) {
+        brcmf_proto_rxreorder(ifp, netbuf);
     } else {
         /* Process special event packets */
         if (handle_event) {
-            brcmf_fweh_process_skb(ifp->drvr, skb);
+            brcmf_fweh_process_skb(ifp->drvr, netbuf);
         }
 
-        brcmf_netif_rx(ifp, skb);
+        brcmf_netif_rx(ifp, netbuf);
     }
 }
 
-void brcmf_rx_event(struct brcmf_device* dev, struct brcmf_netbuf* skb) {
+void brcmf_rx_event(struct brcmf_device* dev, struct brcmf_netbuf* netbuf) {
     struct brcmf_if* ifp;
     struct brcmf_bus* bus_if = dev_get_drvdata(dev);
     struct brcmf_pub* drvr = bus_if->drvr;
 
-    brcmf_dbg(EVENT, "Enter: %s: rxp=%p\n", device_get_name(dev->zxdev), skb);
+    brcmf_dbg(EVENT, "Enter: %s: rxp=%p\n", device_get_name(dev->zxdev), netbuf);
 
-    if (brcmf_rx_hdrpull(drvr, skb, &ifp)) {
+    if (brcmf_rx_hdrpull(drvr, netbuf, &ifp)) {
         return;
     }
 
-    brcmf_fweh_process_skb(ifp->drvr, skb);
-    brcmu_pkt_buf_free_skb(skb);
+    brcmf_fweh_process_skb(ifp->drvr, netbuf);
+    brcmu_pkt_buf_free_skb(netbuf);
 }
 
 void brcmf_txfinalize(struct brcmf_if* ifp, struct brcmf_netbuf* txp, bool success) {
@@ -608,9 +608,9 @@ static zx_status_t brcmf_net_p2p_stop(struct net_device* ndev) {
     return brcmf_cfg80211_down(ndev);
 }
 
-static netdev_tx_t brcmf_net_p2p_start_xmit(struct brcmf_netbuf* skb, struct net_device* ndev) {
-    if (skb) {
-        brcmf_netbuf_free(skb);
+static netdev_tx_t brcmf_net_p2p_start_xmit(struct brcmf_netbuf* netbuf, struct net_device* ndev) {
+    if (netbuf) {
+        brcmf_netbuf_free(netbuf);
     }
 
     return NETDEV_TX_OK;

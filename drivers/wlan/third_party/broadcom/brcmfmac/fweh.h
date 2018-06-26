@@ -340,21 +340,21 @@ void brcmf_fweh_process_event(struct brcmf_pub* drvr, struct brcmf_event* event_
                               uint32_t packet_len);
 void brcmf_fweh_p2pdev_setup(struct brcmf_if* ifp, bool ongoing);
 
-static inline void brcmf_fweh_process_skb(struct brcmf_pub* drvr, struct brcmf_netbuf* skb) {
+static inline void brcmf_fweh_process_skb(struct brcmf_pub* drvr, struct brcmf_netbuf* netbuf) {
     struct brcmf_event* event_packet;
     uint16_t usr_stype;
 
     /* only process events when protocol matches */
-    if (skb->protocol != htobe16(ETH_P_LINK_CTL)) {
+    if (netbuf->protocol != htobe16(ETH_P_LINK_CTL)) {
         return;
     }
 
-    if ((skb->len + ETH_HLEN) < sizeof(*event_packet)) {
+    if ((netbuf->len + ETH_HLEN) < sizeof(*event_packet)) {
        return;
     }
 
     /* check for BRCM oui match */
-    event_packet = (struct brcmf_event*)skb_mac_header(skb);
+    event_packet = (struct brcmf_event*)skb_mac_header(netbuf);
     if (memcmp(BRCM_OUI, &event_packet->hdr.oui[0], sizeof(event_packet->hdr.oui))) {
         return;
     }
@@ -364,7 +364,7 @@ static inline void brcmf_fweh_process_skb(struct brcmf_pub* drvr, struct brcmf_n
     if (usr_stype != BCMILCP_BCM_SUBTYPE_EVENT) {
         return;
     }
-    brcmf_fweh_process_event(drvr, event_packet, skb->len + ETH_HLEN);
+    brcmf_fweh_process_event(drvr, event_packet, netbuf->len + ETH_HLEN);
 }
 
 #endif /* GARNET_DRIVERS_WLAN_THIRD_PARTY_BROADCOM_BRCMFMAC_FWEH_H_ */

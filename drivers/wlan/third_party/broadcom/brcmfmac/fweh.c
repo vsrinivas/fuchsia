@@ -376,7 +376,7 @@ zx_status_t brcmf_fweh_activate_events(struct brcmf_if* ifp) {
 }
 
 /**
- * brcmf_fweh_process_event() - process skb as firmware event.
+ * brcmf_fweh_process_event() - process netbuf as firmware event.
  *
  * @drvr: driver information object.
  * @event_packet: event packet to process.

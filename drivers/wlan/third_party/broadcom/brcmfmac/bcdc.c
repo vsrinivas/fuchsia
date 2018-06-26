@@ -344,15 +344,15 @@ static zx_status_t brcmf_proto_bcdc_hdrpull(struct brcmf_pub* drvr, bool do_fws,
 }
 
 static zx_status_t brcmf_proto_bcdc_tx_queue_data(struct brcmf_pub* drvr, int ifidx,
-                                                  struct brcmf_netbuf* skb) {
+                                                  struct brcmf_netbuf* netbuf) {
     struct brcmf_if* ifp = brcmf_get_ifp(drvr, ifidx);
     struct brcmf_bcdc* bcdc = drvr->proto->pd;
 
     if (!brcmf_fws_queue_skbs(bcdc->fws)) {
-        return brcmf_proto_txdata(drvr, ifidx, 0, skb);
+        return brcmf_proto_txdata(drvr, ifidx, 0, netbuf);
     }
 
-    return brcmf_fws_process_skb(ifp, skb);
+    return brcmf_fws_process_skb(ifp, netbuf);
 }
 
 static int brcmf_proto_bcdc_txdata(struct brcmf_pub* drvr, int ifidx, uint8_t offset,
@@ -398,8 +398,8 @@ static void brcmf_proto_bcdc_delete_peer(struct brcmf_pub* drvr, int ifidx,
 static void brcmf_proto_bcdc_add_tdls_peer(struct brcmf_pub* drvr, int ifidx,
                                            uint8_t peer[ETH_ALEN]) {}
 
-static void brcmf_proto_bcdc_rxreorder(struct brcmf_if* ifp, struct brcmf_netbuf* skb) {
-    brcmf_fws_rxreorder(ifp, skb);
+static void brcmf_proto_bcdc_rxreorder(struct brcmf_if* ifp, struct brcmf_netbuf* netbuf) {
+    brcmf_fws_rxreorder(ifp, netbuf);
 }
 
 static void brcmf_proto_bcdc_add_if(struct brcmf_if* ifp) {

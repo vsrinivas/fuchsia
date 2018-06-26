@@ -62,10 +62,10 @@ void brcmf_flowring_delete(struct brcmf_flowring* flow, uint16_t flowid);
 void brcmf_flowring_open(struct brcmf_flowring* flow, uint16_t flowid);
 uint8_t brcmf_flowring_tid(struct brcmf_flowring* flow, uint16_t flowid);
 uint32_t brcmf_flowring_enqueue(struct brcmf_flowring* flow, uint16_t flowid,
-                                struct brcmf_netbuf* skb);
+                                struct brcmf_netbuf* netbuf);
 struct brcmf_netbuf* brcmf_flowring_dequeue(struct brcmf_flowring* flow, uint16_t flowid);
 void brcmf_flowring_reinsert(struct brcmf_flowring* flow, uint16_t flowid,
-                             struct brcmf_netbuf* skb);
+                             struct brcmf_netbuf* netbuf);
 uint32_t brcmf_flowring_qlen(struct brcmf_flowring* flow, uint16_t flowid);
 uint8_t brcmf_flowring_ifidx_get(struct brcmf_flowring* flow, uint16_t flowid);
 struct brcmf_flowring* brcmf_flowring_attach(struct brcmf_device* dev, uint16_t nrofrings);

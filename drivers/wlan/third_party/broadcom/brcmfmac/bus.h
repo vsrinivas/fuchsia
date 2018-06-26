@@ -84,7 +84,7 @@ struct brcmf_bus_dcmd {
 struct brcmf_bus_ops {
     zx_status_t (*preinit)(struct brcmf_device* dev);
     void (*stop)(struct brcmf_device* dev);
-    zx_status_t (*txdata)(struct brcmf_device* dev, struct brcmf_netbuf* skb);
+    zx_status_t (*txdata)(struct brcmf_device* dev, struct brcmf_netbuf* netbuf);
     zx_status_t (*txctl)(struct brcmf_device* dev, unsigned char* msg, uint len);
     zx_status_t (*rxctl)(struct brcmf_device* dev, unsigned char* msg, uint len, int* rxlen_out);
     struct pktq* (*gettxq)(struct brcmf_device* dev);
@@ -177,8 +177,8 @@ static inline void brcmf_bus_stop(struct brcmf_bus* bus) {
     bus->ops->stop(bus->dev);
 }
 
-static inline int brcmf_bus_txdata(struct brcmf_bus* bus, struct brcmf_netbuf* skb) {
-    return bus->ops->txdata(bus->dev, skb);
+static inline int brcmf_bus_txdata(struct brcmf_bus* bus, struct brcmf_netbuf* netbuf) {
+    return bus->ops->txdata(bus->dev, netbuf);
 }
 
 static inline int brcmf_bus_txctl(struct brcmf_bus* bus, unsigned char* msg, uint len) {

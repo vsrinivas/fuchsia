@@ -124,7 +124,7 @@ struct brcmf_netbuf* brcmu_pktq_pdeq_match(struct pktq* pq, int prec,
 
 /* packet primitives */
 struct brcmf_netbuf* brcmu_pkt_buf_get_skb(uint len);
-void brcmu_pkt_buf_free_skb(struct brcmf_netbuf* skb);
+void brcmu_pkt_buf_free_skb(struct brcmf_netbuf* netbuf);
 
 /* Empty the queue at particular precedence level */
 /* callback function fn(pkt, arg) returns true if pkt belongs to if */

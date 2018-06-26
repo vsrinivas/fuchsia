@@ -32,26 +32,26 @@ MODULE_SUPPORTED_DEVICE("Broadcom 802.11n WLAN cards");
 MODULE_LICENSE("Dual BSD/GPL");
 
 struct brcmf_netbuf* brcmu_pkt_buf_get_skb(uint len) {
-    struct brcmf_netbuf* skb;
+    struct brcmf_netbuf* netbuf;
 
-    skb = brcmf_netbuf_allocate(len);
-    if (skb) {
-        brcmf_netbuf_grow_tail(skb, len);
-        skb->priority = 0;
+    netbuf = brcmf_netbuf_allocate(len);
+    if (netbuf) {
+        brcmf_netbuf_grow_tail(netbuf, len);
+        netbuf->priority = 0;
     }
 
-    return skb;
+    return netbuf;
 }
 EXPORT_SYMBOL(brcmu_pkt_buf_get_skb);
 
 /* Free the driver packet. Free the tag if present */
-void brcmu_pkt_buf_free_skb(struct brcmf_netbuf* skb) {
-    if (!skb) {
+void brcmu_pkt_buf_free_skb(struct brcmf_netbuf* netbuf) {
+    if (!netbuf) {
         return;
     }
 
-    WARN_ON(skb->next);
-    brcmf_netbuf_free(skb);
+    WARN_ON(netbuf->next);
+    brcmf_netbuf_free(netbuf);
 }
 EXPORT_SYMBOL(brcmu_pkt_buf_free_skb);
 
@@ -119,7 +119,7 @@ EXPORT_SYMBOL(brcmu_pktq_pdeq);
  * from brcmu_pktq_pdeq() above.
  */
 struct brcmf_netbuf* brcmu_pktq_pdeq_match(struct pktq* pq, int prec,
-                                           bool (*match_fn)(struct brcmf_netbuf* skb, void* arg),
+                                           bool (*match_fn)(struct brcmf_netbuf* netbuf, void* arg),
                                            void* arg) {
     struct brcmf_netbuf_list* q;
     struct brcmf_netbuf* p;

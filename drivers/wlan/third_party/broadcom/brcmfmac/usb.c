@@ -467,11 +467,11 @@ static void brcmf_usb_tx_complete(struct brcmf_urb* urb) {
     struct brcmf_usbdev_info* devinfo = req->devinfo;
 
     pthread_mutex_lock(&irq_callback_lock);
-    brcmf_dbg(USB, "Enter, urb->status=%d, skb=%p\n", urb->status, req->skb);
+    brcmf_dbg(USB, "Enter, urb->status=%d, netbuf=%p\n", urb->status, req->netbuf);
     brcmf_usb_del_fromq(devinfo, req);
 
-    brcmf_proto_bcdc_txcomplete(devinfo->dev, req->skb, urb->status == 0);
-    req->skb = NULL;
+    brcmf_proto_bcdc_txcomplete(devinfo->dev, req->netbuf, urb->status == 0);
+    req->netbuf = NULL;
     brcmf_usb_enq(devinfo, &devinfo->tx_freeq, req, &devinfo->tx_freecount);
     //spin_lock_irqsave(&devinfo->tx_flowblock_lock, flags);
     if (devinfo->tx_freecount > devinfo->tx_high_watermark && devinfo->tx_flowblock) {
@@ -485,28 +485,28 @@ static void brcmf_usb_tx_complete(struct brcmf_urb* urb) {
 static void brcmf_usb_rx_complete(struct brcmf_urb* urb) {
     struct brcmf_usbreq* req = (struct brcmf_usbreq*)urb->context;
     struct brcmf_usbdev_info* devinfo = req->devinfo;
-    struct brcmf_netbuf* skb;
+    struct brcmf_netbuf* netbuf;
 
     pthread_mutex_lock(&irq_callback_lock);
     brcmf_dbg(USB, "Enter, urb->status=%d\n", urb->status);
     brcmf_usb_del_fromq(devinfo, req);
-    skb = req->skb;
-    req->skb = NULL;
+    netbuf = req->netbuf;
+    req->netbuf = NULL;
 
     /* zero length packets indicate usb "failure". Do not refill */
     if (urb->status != 0 || !urb->actual_length) {
-        brcmu_pkt_buf_free_skb(skb);
+        brcmu_pkt_buf_free_skb(netbuf);
         brcmf_usb_enq(devinfo, &devinfo->rx_freeq, req, NULL);
         pthread_mutex_unlock(&irq_callback_lock);
         return;
     }
 
     if (devinfo->bus_pub.state == BRCMFMAC_USB_STATE_UP) {
-        brcmf_netbuf_grow_tail(skb, urb->actual_length);
-        brcmf_rx_frame(devinfo->dev, skb, true);
+        brcmf_netbuf_grow_tail(netbuf, urb->actual_length);
+        brcmf_rx_frame(devinfo->dev, netbuf, true);
         brcmf_usb_rx_refill(devinfo, req);
     } else {
-        brcmu_pkt_buf_free_skb(skb);
+        brcmu_pkt_buf_free_skb(netbuf);
         brcmf_usb_enq(devinfo, &devinfo->rx_freeq, req, NULL);
     }
     pthread_mutex_unlock(&irq_callback_lock);
@@ -514,30 +514,30 @@ static void brcmf_usb_rx_complete(struct brcmf_urb* urb) {
 }
 
 static void brcmf_usb_rx_refill(struct brcmf_usbdev_info* devinfo, struct brcmf_usbreq* req) {
-    struct brcmf_netbuf* skb;
+    struct brcmf_netbuf* netbuf;
     zx_status_t ret;
 
     if (!req || !devinfo) {
         return;
     }
 
-    skb = brcmf_netbuf_allocate(devinfo->bus_pub.bus_mtu);
-    if (!skb) {
+    netbuf = brcmf_netbuf_allocate(devinfo->bus_pub.bus_mtu);
+    if (!netbuf) {
         brcmf_usb_enq(devinfo, &devinfo->rx_freeq, req, NULL);
         return;
     }
-    req->skb = skb;
+    req->netbuf = netbuf;
 
-    usb_fill_bulk_urb(req->urb, devinfo->usbdev, devinfo->rx_endpoint, skb->data,
-                      brcmf_netbuf_tail_space(skb), brcmf_usb_rx_complete, req);
+    usb_fill_bulk_urb(req->urb, devinfo->usbdev, devinfo->rx_endpoint, netbuf->data,
+                      brcmf_netbuf_tail_space(netbuf), brcmf_usb_rx_complete, req);
     req->devinfo = devinfo;
     brcmf_usb_enq(devinfo, &devinfo->rx_postq, req, NULL);
 
     ret = usb_submit_urb(req->urb, GFP_ATOMIC);
     if (ret != ZX_OK) {
         brcmf_usb_del_fromq(devinfo, req);
-        brcmu_pkt_buf_free_skb(req->skb);
-        req->skb = NULL;
+        brcmu_pkt_buf_free_skb(req->netbuf);
+        req->netbuf = NULL;
         brcmf_usb_enq(devinfo, &devinfo->rx_freeq, req, NULL);
     }
     return;
@@ -581,12 +581,12 @@ static void brcmf_usb_state_change(struct brcmf_usbdev_info* devinfo, int state)
     brcmf_dbg(TEMP, "Exit");
 }
 
-static zx_status_t brcmf_usb_tx(struct brcmf_device* dev, struct brcmf_netbuf* skb) {
+static zx_status_t brcmf_usb_tx(struct brcmf_device* dev, struct brcmf_netbuf* netbuf) {
     struct brcmf_usbdev_info* devinfo = brcmf_usb_get_businfo(dev);
     struct brcmf_usbreq* req;
     zx_status_t ret;
 
-    brcmf_dbg(USB, "Enter, skb=%p\n", skb);
+    brcmf_dbg(USB, "Enter, netbuf=%p\n", netbuf);
     if (devinfo->bus_pub.state != BRCMFMAC_USB_STATE_UP) {
         ret = ZX_ERR_IO;
         goto fail;
@@ -599,16 +599,16 @@ static zx_status_t brcmf_usb_tx(struct brcmf_device* dev, struct brcmf_netbuf* s
         goto fail;
     }
 
-    req->skb = skb;
+    req->netbuf = netbuf;
     req->devinfo = devinfo;
-    usb_fill_bulk_urb(req->urb, devinfo->usbdev, devinfo->tx_endpoint, skb->data, skb->len,
+    usb_fill_bulk_urb(req->urb, devinfo->usbdev, devinfo->tx_endpoint, netbuf->data, netbuf->len,
                       brcmf_usb_tx_complete, req);
     brcmf_usb_enq(devinfo, &devinfo->tx_postq, req, NULL);
     ret = usb_submit_urb(req->urb, GFP_ATOMIC);
     if (ret != ZX_OK) {
         brcmf_err("brcmf_usb_tx usb_submit_urb FAILED\n");
         brcmf_usb_del_fromq(devinfo, req);
-        req->skb = NULL;
+        req->netbuf = NULL;
         brcmf_usb_enq(devinfo, &devinfo->tx_freeq, req, &devinfo->tx_freecount);
         goto fail;
     }

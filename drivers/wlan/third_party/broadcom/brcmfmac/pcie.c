@@ -1157,7 +1157,7 @@ fail:
 
 static void brcmf_pcie_down(struct brcmf_device* dev) {}
 
-static zx_status_t brcmf_pcie_tx(struct brcmf_device* dev, struct brcmf_netbuf* skb) {
+static zx_status_t brcmf_pcie_tx(struct brcmf_device* dev, struct brcmf_netbuf* netbuf) {
     return ZX_OK;
 }
 
