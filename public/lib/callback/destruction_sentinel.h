@@ -5,7 +5,8 @@
 #ifndef LIB_CALLBACK_DESTRUCTION_SENTINEL_H_
 #define LIB_CALLBACK_DESTRUCTION_SENTINEL_H_
 
-#include "lib/fxl/functional/closure.h"
+#include <lib/fit/function.h>
+
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
 
@@ -26,7 +27,7 @@ class DestructionSentinel {
 
   // Executes |closure| and returns |true| if the sentinel has been destroyed
   // while executing it.
-  inline bool DestructedWhile(const fxl::Closure& closure) {
+  inline bool DestructedWhile(const fit::closure& closure) {
     FXL_DCHECK(!is_destructed_ptr_) << "DestructionSentinel is not reentrant. "
                                        "Please fix if reentrance is needed.";
     bool is_destructed = false;

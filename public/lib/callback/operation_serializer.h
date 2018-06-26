@@ -8,7 +8,8 @@
 #include <functional>
 #include <queue>
 
-#include "lib/fxl/functional/closure.h"
+#include <lib/fit/function.h>
+#include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/weak_ptr.h"
@@ -50,25 +51,25 @@ class OperationSerializer {
   // |callback| is called with the result returned by |operation|.
   //
   // The resolved type of this method is
-  //   void Serialize(std::function<void(C...)> callback,
-  //                  std::function<void(std::function<void(C...)>)> operation)
+  //   void Serialize(fit::function<void(C...)> callback,
+  //                  fit::function<void(std::function<void(C...)>)> operation)
   template <class... C>
   void Serialize(
-      std::function<typename internal::Signature<C...>::CallbackType> callback,
-      std::function<
+      fit::function<typename internal::Signature<C...>::CallbackType> callback,
+      fit::function<
           void(std::function<typename internal::Signature<C...>::CallbackType>)>
           operation) {
     auto closure = [this, callback = std::move(callback),
-                    operation = std::move(operation)] {
-      operation([weak_ptr_ = weak_factory_.GetWeakPtr(),
-                 callback = std::move(callback)](C... args) {
+                    operation = std::move(operation)]() mutable {
+      operation(fxl::MakeCopyable([weak_ptr_ = weak_factory_.GetWeakPtr(),
+                                   callback = std::move(callback)](C... args) {
         // First run the callback and then, make sure this has not been deleted.
         callback(std::forward<C>(args)...);
         if (!weak_ptr_) {
           return;
         }
         weak_ptr_->UpdateOperationsAndCallNext();
-      });
+      }));
     };
     queued_operations_.emplace(std::move(closure));
     if (queued_operations_.size() == 1) {
@@ -80,7 +81,7 @@ class OperationSerializer {
   // otherwise.
   bool empty() { return queued_operations_.empty(); }
 
-  void set_on_empty(fxl::Closure on_empty) { on_empty_ = on_empty; }
+  void set_on_empty(fit::closure on_empty) { on_empty_ = std::move(on_empty); }
 
  private:
   void UpdateOperationsAndCallNext() {
@@ -92,8 +93,8 @@ class OperationSerializer {
     }
   }
 
-  std::queue<fxl::Closure> queued_operations_;
-  fxl::Closure on_empty_;
+  std::queue<fit::closure> queued_operations_;
+  fit::closure on_empty_;
 
   // This must be the last member of the class.
   fxl::WeakPtrFactory<OperationSerializer> weak_factory_;

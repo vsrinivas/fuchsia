@@ -3,6 +3,8 @@
 // found in the LICENSE file.
 
 #include "lib/callback/auto_cleanable.h"
+
+#include <lib/fit/function.h>
 #include "gtest/gtest.h"
 
 namespace callback {
@@ -11,8 +13,8 @@ namespace {
 class Cleanable {
  public:
   explicit Cleanable(int id = 0) : id(id) {}
-  void set_on_empty(const fxl::Closure& on_empty_callback) {
-    on_empty_callback_ = on_empty_callback;
+  void set_on_empty(fit::closure on_empty_callback) {
+    on_empty_callback_ = std::move(on_empty_callback);
   }
 
   void Clean() const {
@@ -23,7 +25,7 @@ class Cleanable {
   int id;
 
  private:
-  fxl::Closure on_empty_callback_;
+  fit::closure on_empty_callback_;
 };
 
 TEST(AutoCleanableSet, ClearsOnEmpty) {

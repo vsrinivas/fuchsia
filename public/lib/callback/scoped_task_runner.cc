@@ -8,6 +8,7 @@
 
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
+#include <lib/fit/function.h>
 
 namespace callback {
 
@@ -16,16 +17,16 @@ ScopedTaskRunner::ScopedTaskRunner(async_t* async)
 
 ScopedTaskRunner::~ScopedTaskRunner() {}
 
-void ScopedTaskRunner::PostTask(fxl::Closure task) {
+void ScopedTaskRunner::PostTask(fit::closure task) {
   async::PostTask(async_, MakeScoped(std::move(task)));
 }
 
-void ScopedTaskRunner::PostTaskForTime(fxl::Closure task,
+void ScopedTaskRunner::PostTaskForTime(fit::closure task,
                                        zx::time target_time) {
   async::PostTaskForTime(async_, MakeScoped(std::move(task)), target_time);
 }
 
-void ScopedTaskRunner::PostDelayedTask(fxl::Closure task, zx::duration delay) {
+void ScopedTaskRunner::PostDelayedTask(fit::closure task, zx::duration delay) {
   async::PostDelayedTask(async_, MakeScoped(std::move(task)), delay);
 }
 

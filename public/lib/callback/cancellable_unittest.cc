@@ -3,6 +3,9 @@
 // found in the LICENSE file.
 
 #include "lib/callback/cancellable.h"
+
+#include <lib/fit/function.h>
+
 #include "gtest/gtest.h"
 
 namespace callback {
@@ -27,9 +30,9 @@ class FakeCancellable : public Cancellable {
     return is_done_;
   }
 
-  void SetOnDone(fxl::Closure callback) override {
+  void SetOnDone(fit::closure callback) override {
     ++nb_set_on_done;
-    this->callback = callback;
+    this->callback = std::move(callback);
   }
 
   void Do() {
@@ -41,7 +44,7 @@ class FakeCancellable : public Cancellable {
   int nb_is_done = 0;
   int nb_set_on_done = 0;
 
-  fxl::Closure callback;
+  fit::closure callback;
 
  private:
   ~FakeCancellable() override {

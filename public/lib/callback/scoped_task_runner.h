@@ -6,10 +6,10 @@
 #define LIB_CALLBACK_SCOPED_TASK_RUNNER_H_
 
 #include <lib/async/dispatcher.h>
+#include <lib/fit/function.h>
 #include <zx/time.h>
 
 #include "lib/callback/scoped_callback.h"
-#include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/ref_ptr.h"
 #include "lib/fxl/memory/weak_ptr.h"
@@ -28,13 +28,13 @@ class ScopedTaskRunner {
   ~ScopedTaskRunner();
 
   // Posts a task to run as soon as possible.
-  void PostTask(fxl::Closure task);
+  void PostTask(fit::closure task);
 
   // Posts a task to run as soon as possible after the specified |target_time|.
-  void PostTaskForTime(fxl::Closure task, zx::time target_time);
+  void PostTaskForTime(fit::closure task, zx::time target_time);
 
   // Posts a task to run as soon as possible after the specified |delay|.
-  void PostDelayedTask(fxl::Closure task, zx::duration delay);
+  void PostDelayedTask(fit::closure task, zx::duration delay);
 
   // Scope the given callback to the current task runner. This means that the
   // given callback will be called when the returned callback is called if and

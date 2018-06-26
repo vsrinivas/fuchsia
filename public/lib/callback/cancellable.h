@@ -7,8 +7,8 @@
 
 #include <set>
 
+#include <lib/fit/function.h>
 #include "lib/callback/auto_cleanable.h"
-#include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/ref_counted.h"
 #include "lib/fxl/memory/ref_ptr.h"
@@ -37,7 +37,7 @@ class Cancellable : public fxl::RefCountedThreadSafe<Cancellable> {
   // done. If the |OnDone| method has been called, the service must call the
   // |callback| after having called any completion callbacks. It must not call
   // the callback if the |Cancel| method has been called.
-  virtual void SetOnDone(fxl::Closure callback) = 0;
+  virtual void SetOnDone(fit::closure callback) = 0;
 
  private:
   friend AutoCancel;
@@ -57,13 +57,13 @@ class AutoCancel {
 
   // The client can call the |set_on_empty| method once. |callback| will then be
   // executed when the underlying |Cancellable| finishes.
-  void set_on_empty(fxl::Closure callback);
+  void set_on_empty(fit::closure callback);
 
  private:
   void OnDone();
 
   fxl::RefPtr<Cancellable> cancellable_;
-  fxl::Closure on_empty_;
+  fit::closure on_empty_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(AutoCancel);
 };

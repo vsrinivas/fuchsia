@@ -4,8 +4,9 @@
 
 #include "lib/callback/operation_serializer.h"
 
+#include <lib/fit/function.h>
+
 #include "gtest/gtest.h"
-#include "lib/fxl/functional/closure.h"
 
 namespace callback {
 namespace {
@@ -16,11 +17,11 @@ TEST(OperationSerializer, ExecutionIsInOrder) {
   OperationSerializer operation_serializer;
   // Add in serializer the N callbacks: each of them stores the operation to be
   // executed later.
-  fxl::Closure execute_later[N];
+  fit::closure execute_later[N];
   bool called[N] = {false};
   for (int i = 0; i < N; ++i) {
     operation_serializer.Serialize<>([] {},
-                                     [&, i](std::function<void()> operation) {
+                                     [&, i](fit::closure operation) {
                                        called[i] = true;
                                        execute_later[i] = std::move(operation);
                                      });
@@ -58,17 +59,17 @@ TEST(OperationSerializer, DontContinueAfterDestruction) {
   bool called_2 = false;
   auto op_2 = [&called_2] { called_2 = true; };
 
-  std::function<void()> execute_later;
+  fit::closure execute_later;
   {
     OperationSerializer operation_serializer;
+    operation_serializer.Serialize<>(std::move(op_1),
+                                     [&execute_later](fit::closure operation) {
+                                       // Store the operation to execute it
+                                       // later.
+                                       execute_later = std::move(operation);
+                                     });
     operation_serializer.Serialize<>(
-        std::move(op_1), [&execute_later](std::function<void()> operation) {
-          // Store the operation to execute it
-          // later.
-          execute_later = std::move(operation);
-        });
-    operation_serializer.Serialize<>(
-        std::move(op_2), [](std::function<void()> operation) { operation(); });
+        std::move(op_2), [](fit::closure operation) { operation(); });
 
     // Since the first operation is not yet executed, the second one is also
     // blocked.

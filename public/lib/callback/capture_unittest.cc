@@ -6,6 +6,7 @@
 
 #include <memory>
 
+#include <lib/fit/function.h>
 #include "gtest/gtest.h"
 
 namespace callback {
@@ -32,7 +33,7 @@ TEST(Capture, CaptureConstReference) {
   int a2 = 0;
   bool called = false;
 
-  std::function<void(int, const int&)> capture =
+  fit::function<void(int, const int&)> capture =
       Capture([&called] { called = true; }, &a1, &a2);
 
   capture(1, 2);

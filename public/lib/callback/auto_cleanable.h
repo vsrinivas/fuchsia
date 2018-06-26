@@ -10,14 +10,14 @@
 #include <unordered_set>
 #include <utility>
 
-#include "lib/fxl/functional/closure.h"
+#include <lib/fit/function.h>
 #include "lib/fxl/logging.h"
 
 namespace callback {
 
 // List that will delete its elements when they call their on_empty_callback.
 // The elements must have a setter method:
-// |void set_on_empty(fxl::Closure on_empty)|.
+// |void set_on_empty(fit::closure on_empty)|.
 template <typename V>
 class AutoCleanableSet {
  public:
@@ -91,8 +91,8 @@ class AutoCleanableSet {
 
   iterator end() { return iterator(set_.end()); }
 
-  void set_on_empty(const fxl::Closure& on_empty_callback) {
-    on_empty_callback_ = on_empty_callback;
+  void set_on_empty(fit::closure on_empty_callback) {
+    on_empty_callback_ = std::move(on_empty_callback);
   }
 
  private:
@@ -106,12 +106,12 @@ class AutoCleanableSet {
   }
 
   Set_ set_;
-  fxl::Closure on_empty_callback_;
+  fit::closure on_empty_callback_;
 };
 
 // Map that will delete its elements when they call their on_empty_callback.
 // The elements must have a setter method:
-// |void set_on_empty(const // fxl::Closure&)|.
+// |void set_on_empty(fit::closure)|.
 template <typename K, typename V, typename Compare = std::less<K>>
 class AutoCleanableMap {
  public:
@@ -164,8 +164,8 @@ class AutoCleanableMap {
     return map_.end();
   }
 
-  void set_on_empty(const fxl::Closure& on_empty_callback) {
-    on_empty_callback_ = on_empty_callback;
+  void set_on_empty(fit::closure on_empty_callback) {
+    on_empty_callback_ = std::move(on_empty_callback);
   }
 
   size_t size() const { return map_.size(); }
@@ -177,7 +177,7 @@ class AutoCleanableMap {
   }
 
   Map_ map_;
-  fxl::Closure on_empty_callback_;
+  fit::closure on_empty_callback_;
 };
 
 }  // namespace callback

@@ -9,8 +9,9 @@
 #include <utility>
 #include <vector>
 
+#include <lib/fit/function.h>
+
 #include "lib/fxl/functional/auto_call.h"
-#include "lib/fxl/functional/closure.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/weak_ptr.h"
@@ -41,7 +42,7 @@ class ManagedContainer {
   template <typename E>
   class ManagedElement {
    public:
-    ManagedElement(E* element, fxl::Closure cleanup)
+    ManagedElement(E* element, fit::closure cleanup)
         : element_(element), auto_cleanup_(std::move(cleanup)) {}
     ManagedElement(ManagedElement<E>&& other) noexcept = default;
     ManagedElement& operator=(ManagedElement<E>&& other) noexcept = default;
@@ -56,7 +57,7 @@ class ManagedContainer {
 
    private:
     E* element_;
-    fxl::AutoCall<fxl::Closure> auto_cleanup_;
+    fxl::AutoCall<fit::closure> auto_cleanup_;
   };
 
   // Manage() takes an object |element| as input, and returns a ManagedElement.
@@ -68,7 +69,7 @@ class ManagedContainer {
   ManagedElement<E> Manage(E element) {
     auto typed_element = std::make_unique<TypedElement<E>>(std::move(element));
     E* result = typed_element->element();
-    fxl::Closure cleanup = ManageElement(std::move(typed_element));
+    fit::closure cleanup = ManageElement(std::move(typed_element));
     return ManagedElement<E>(result, std::move(cleanup));
   }
 
@@ -95,7 +96,7 @@ class ManagedContainer {
     A element_;
   };
 
-  fxl::Closure ManageElement(std::unique_ptr<Element> element);
+  fit::closure ManageElement(std::unique_ptr<Element> element);
 
   std::vector<std::unique_ptr<Element>> managed_elements_;
   fxl::WeakPtrFactory<ManagedContainer> weak_ptr_factory_;

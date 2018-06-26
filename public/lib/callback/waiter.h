@@ -9,6 +9,8 @@
 #include <utility>
 #include <vector>
 
+#include <lib/fit/function.h>
+
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/ref_counted.h"
 
@@ -160,7 +162,7 @@ class BaseWaiter : public fxl::RefCountedThreadSafe<BaseWaiter<A, R, Args...>> {
     };
   }
 
-  void Finalize(std::function<void(R)> callback) {
+  void Finalize(fit::function<void(R)> callback) {
     FXL_DCHECK(!finalized_) << "Waiter already finalized, can't finalize more!";
     FXL_DCHECK(!cancelled_) << "Waiter has been cancelled.";
     result_callback_ = std::move(callback);
@@ -214,7 +216,7 @@ class BaseWaiter : public fxl::RefCountedThreadSafe<BaseWaiter<A, R, Args...>> {
   bool cancelled_ = false;
   size_t pending_callbacks_ = 0;
 
-  std::function<void(R)> result_callback_;
+  fit::function<void(R)> result_callback_;
 };
 
 // Waiter can be used to collate the results of many asynchronous calls into one
@@ -234,7 +236,7 @@ class Waiter : public BaseWaiter<internal::ResultAccumulator<S, T>,
                                  S,
                                  T> {
  public:
-  void Finalize(std::function<void(S, std::vector<T>)> callback) {
+  void Finalize(fit::function<void(S, std::vector<T>)> callback) {
     BaseWaiter<internal::ResultAccumulator<S, T>, std::pair<S, std::vector<T>>,
                S, T>::Finalize([callback =
                                     std::move(callback)](
@@ -277,7 +279,7 @@ template <class S, class V>
 class AnyWaiter
     : public BaseWaiter<internal::AnyAccumulator<S, V>, std::pair<S, V>, S, V> {
  public:
-  void Finalize(std::function<void(S, V)> callback) {
+  void Finalize(fit::function<void(S, V)> callback) {
     BaseWaiter<internal::AnyAccumulator<S, V>, std::pair<S, V>, S, V>::Finalize(
         [callback = std::move(callback)](std::pair<S, V> result) {
           callback(result.first, std::move(result.second));
@@ -314,7 +316,7 @@ class Promise : public BaseWaiter<internal::PromiseAccumulator<S, V>,
                                   S,
                                   V> {
  public:
-  void Finalize(std::function<void(S, V)> callback) {
+  void Finalize(fit::function<void(S, V)> callback) {
     BaseWaiter<internal::PromiseAccumulator<S, V>, std::pair<S, V>, S,
                V>::Finalize([callback =
                                  std::move(callback)](std::pair<S, V> result) {
@@ -339,7 +341,7 @@ class Promise : public BaseWaiter<internal::PromiseAccumulator<S, V>,
 class CompletionWaiter
     : public BaseWaiter<internal::CompletionAccumulator, bool> {
  public:
-  void Finalize(std::function<void()> callback) {
+  void Finalize(fit::function<void()> callback) {
     BaseWaiter<internal::CompletionAccumulator, bool>::Finalize(
         [callback = std::move(callback)](bool result) { callback(); });
   }

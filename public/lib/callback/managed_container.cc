@@ -6,6 +6,8 @@
 
 #include <algorithm>
 
+#include <lib/fit/function.h>
+
 #include "lib/callback/scoped_callback.h"
 
 namespace callback {
@@ -14,7 +16,7 @@ ManagedContainer::ManagedContainer() : weak_ptr_factory_(this) {}
 
 ManagedContainer::~ManagedContainer() {}
 
-fxl::Closure ManagedContainer::ManageElement(std::unique_ptr<Element> element) {
+fit::closure ManagedContainer::ManageElement(std::unique_ptr<Element> element) {
   Element* ptr = element.get();
   managed_elements_.push_back(std::move(element));
 

@@ -3,6 +3,9 @@
 // found in the LICENSE file.
 
 #include "lib/callback/cancellable_helper.h"
+
+#include <lib/fit/function.h>
+
 #include "gtest/gtest.h"
 
 namespace callback {
@@ -71,8 +74,8 @@ TEST(CancellableImpl, Wrap) {
 
 TEST(CancellableImpl, DeleteWrappingCallbackInWrappedCallback) {
   fxl::RefPtr<CancellableImpl> cancellable = CancellableImpl::Create([] {});
-  std::unique_ptr<fxl::Closure> callback;
-  callback = std::make_unique<fxl::Closure>(
+  std::unique_ptr<fit::closure> callback;
+  callback = std::make_unique<fit::closure>(
       cancellable->WrapCallback([&callback] { callback.reset(); }));
   cancellable = nullptr;
   (*callback)();
