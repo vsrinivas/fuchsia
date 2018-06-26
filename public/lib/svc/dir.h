@@ -18,7 +18,7 @@ typedef struct svc_dir svc_dir_t;
 
 __EXPORT zx_status_t svc_dir_create(async_dispatcher_t* dispatcher,
                                     zx_handle_t directory_request,
-                                    svc_dir_t** result);
+                                    svc_dir_t** out_result);
 
 // Adds a service named |service_name| to the given |dir|.
 //
@@ -35,14 +35,25 @@ __EXPORT zx_status_t svc_dir_create(async_dispatcher_t* dispatcher,
 // When a client requests the service, |handler| will be called on the async_t
 // passed to |svc_dir_create|. The |context| will be passed to |handler| as its
 // first argument.
+//
+// This may fail in two ways. If an entry with the given
+// |service_name| already exists, this returns
+// ZX_ERR_ALREADY_EXISTS. If the provided |service_name| is invalid,
+// ZX_ERR_INVALID_ARGS is returned. Otherwise, this returns ZX_OK.
 __EXPORT zx_status_t svc_dir_add_service(svc_dir_t* dir, const char* type,
                                          const char* service_name,
                                          void* context,
-                                         svc_connector_t handler);
+                                         svc_connector_t* handler);
 
+// Removes the service named |service_name| of type |type| from the
+// given |dir|. This reports a failure if the entry does not exist, by
+// returning ZX_ERR_NOT_FOUND. Otherwise, the service entry is
+// removed, and ZX_OK is returned.
 __EXPORT zx_status_t svc_dir_remove_service(svc_dir_t* dir, const char* type,
                                             const char* service_name);
 
+// Destroy the provided directory. This currently cannot fail, and
+// returns ZX_OK.
 __EXPORT zx_status_t svc_dir_destroy(svc_dir_t* dir);
 
 __END_CDECLS
