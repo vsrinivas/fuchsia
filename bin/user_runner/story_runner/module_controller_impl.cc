@@ -75,7 +75,7 @@ void ModuleControllerImpl::SetState(
   }
 
   state_ = new_state;
-  NotifyStateChange(state_);
+  NotifyStateChange();
 }
 
 void ModuleControllerImpl::Teardown(std::function<void()> done) {
@@ -143,10 +143,9 @@ void ModuleControllerImpl::Stop(StopCallback done) {
   story_controller_impl_->StopModule(module_data_->module_path, done);
 }
 
-void ModuleControllerImpl::NotifyStateChange(
-    const fuchsia::modular::ModuleState state) {
+void ModuleControllerImpl::NotifyStateChange() {
   for (auto& binding : module_controller_bindings_.bindings()) {
-    binding->events().OnStateChange(state);
+    binding->events().OnStateChange(state_);
   }
   // TODO(miguelfrde): remove.
   for (const auto& i : watchers_.ptrs()) {

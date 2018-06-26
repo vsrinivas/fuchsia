@@ -70,8 +70,8 @@ class ModuleControllerImpl : fuchsia::modular::ModuleController {
   // |fuchsia::modular::ModuleController|
   void Stop(StopCallback done) override;
 
-  // Call to dispatch fuchsia::modular::ModuleController OnStateChange event.
-  void NotifyStateChange(const fuchsia::modular::ModuleState state);
+  // Call to dispatch |ModuleController|'s OnStateChange event.
+  void NotifyStateChange();
 
   // Used as application error handler on the Module app client.
   void OnAppConnectionError();
