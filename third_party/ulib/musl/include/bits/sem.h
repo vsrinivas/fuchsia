@@ -1,7 +1,14 @@
-#if defined(__x86_64__)
-#include "generic/sem.h"
-#elif defined(__aarch64__)
-#include "aarch64/sem.h"
+struct semid_ds {
+    struct ipc_perm sem_perm;
+    time_t sem_otime;
+    time_t sem_ctime;
+#if __BYTE_ORDER == __LITTLE_ENDIAN
+    unsigned short sem_nsems;
+    char __sem_nsems_pad[sizeof(time_t) - sizeof(short)];
 #else
-#error Unsupported architecture!
+    char __sem_nsems_pad[sizeof(time_t) - sizeof(short)];
+    unsigned short sem_nsems;
 #endif
+    time_t __unused3;
+    time_t __unused4;
+};
