@@ -21,5 +21,17 @@ TEST(RuntimeMetadata, Parse) {
   EXPECT_EQ("dart_runner", runtime.runner());
 }
 
+TEST(RuntimeMetadata, ParseRapidJson) {
+  rapidjson::Document document;
+  document.SetObject();
+  rapidjson::Document::AllocatorType& allocator = document.GetAllocator();
+  rapidjson::Value s;
+  s = "dart_runner";
+  document.AddMember("runner", s, allocator);
+  RuntimeMetadata runtime;
+  EXPECT_TRUE(runtime.Parse(document));
+  EXPECT_EQ("dart_runner", runtime.runner());
+}
+
 }  // namespace
 }  // namespace component
