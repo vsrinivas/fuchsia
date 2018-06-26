@@ -425,7 +425,8 @@ static int vsync_thread(void *arg)
 
     for (;;) {
         zx_status_t status;
-        status = zx_interrupt_wait(display->vsync_interrupt, NULL);
+        zx_time_t timestamp;
+        status = zx_interrupt_wait(display->vsync_interrupt, &timestamp);
         if (status != ZX_OK) {
             DISP_INFO("Vsync wait failed");
             break;
@@ -441,7 +442,7 @@ static int vsync_thread(void *arg)
         mtx_unlock(&display->display_lock);
 
         if (display->dc_cb && attached) {
-            display->dc_cb->on_display_vsync(display->dc_cb_ctx, display_id,
+            display->dc_cb->on_display_vsync(display->dc_cb_ctx, display_id, timestamp,
                                              &live, is_client_handle);
         }
 

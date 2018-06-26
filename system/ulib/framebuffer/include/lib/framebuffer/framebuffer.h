@@ -49,16 +49,18 @@ void fb_release_image(uint64_t id);
 zx_status_t fb_import_event(zx_handle_t handle, uint64_t id);
 void fb_release_event(uint64_t id);
 
-// Presents the image identified by |image_id|.
-//
-// If |wait_event_id| corresponds to an imported event, then driver will wait
-// for ZX_EVENT_SIGNALED before using the buffer. If |present_event_id|
-// corresponds to an imported event, then driver will signal ZX_EVENT_SIGNALED
-// when the buffer is presented, and if |signal_event_id| corresponds to an
-// imported event, then the driver will signal ZX_EVENT_SIGNALED when it is
-// done with the image.
+// TODO(stevensd): Migrate clients to fb_present_image2 and delete this
 zx_status_t fb_present_image(uint64_t image_id, uint64_t wait_event_id,
                              uint64_t present_event_id, uint64_t signal_event_id);
+
+// Presents the image identified by |image_id|.
+//
+// If |wait_event_id| corresponds to an imported event, then driver will wait for
+// for ZX_EVENT_SIGNALED before using the buffer. If |signal_event_id| corresponds
+// to an imported event, then the driver will signal ZX_EVENT_SIGNALED when it is
+// done with the image.
+zx_status_t fb_present_image2(uint64_t image_id,
+                             uint64_t wait_event_id, uint64_t signal_event_id);
 
 #ifdef __cplusplus
 }  // extern "C"

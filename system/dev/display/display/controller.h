@@ -47,6 +47,9 @@ public:
     // Flag indicating that a new configuration was delayed during a layer change
     // and should be reapplied after the layer change completes.
     bool delayed_apply;
+
+    // True when we're in the process of switching between display clients.
+    bool switching_client = false;
 };
 
 using ControllerParent = ddk::Device<Controller, ddk::Unbindable, ddk::Openable, ddk::OpenAtable>;
@@ -63,7 +66,8 @@ public:
 
     void OnDisplaysChanged(uint64_t* displays_added, uint32_t added_count,
                            uint64_t* displays_removed, uint32_t removed_count);
-    void OnDisplayVsync(uint64_t display_id, void** handles, uint32_t handle_count);
+    void OnDisplayVsync(uint64_t display_id, zx_time_t timestamp,
+                        void** handles, uint32_t handle_count);
     void OnClientDead(ClientProxy* client);
     void SetVcMode(uint8_t mode);
     void ShowActiveDisplay();

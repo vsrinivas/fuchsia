@@ -109,7 +109,8 @@ void SimpleDisplay::ApplyConfiguration(const display_config_t** display_config,
     bool has_image = display_count != 0 && display_config[0]->layer_count != 0;
     void* handles[] = { kImageHandle };
     if (cb_) {
-        cb_->on_display_vsync(cb_ctx_, kDisplayId, handles, has_image);
+        cb_->on_display_vsync(cb_ctx_, kDisplayId, zx_clock_get(ZX_CLOCK_MONOTONIC),
+                              handles, has_image);
     }
 }
 

@@ -33,7 +33,7 @@ public:
     int IrqLoop();
 private:
     void EnableHotplugInterrupts();
-    void HandlePipeInterrupt(registers::Pipe pipe);
+    void HandlePipeInterrupt(registers::Pipe pipe, zx_time_t timestamp);
 
     Controller* controller_; // Assume that controller callbacks are threadsafe
 

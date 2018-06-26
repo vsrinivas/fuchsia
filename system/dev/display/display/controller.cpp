@@ -19,8 +19,10 @@ void on_displays_changed(void* ctx, uint64_t* displays_added, uint32_t added_cou
             displays_added, added_count, displays_removed, removed_count);
 }
 
-void on_display_vsync(void* ctx, uint64_t display, void** handles, uint32_t handle_count) {
-    static_cast<display::Controller*>(ctx)->OnDisplayVsync(display, handles, handle_count);
+void on_display_vsync(void* ctx, uint64_t display, zx_time_t timestamp,
+                      void** handles, uint32_t handle_count) {
+    static_cast<display::Controller*>(ctx)->OnDisplayVsync(display, timestamp,
+                                                           handles, handle_count);
 }
 
 display_controller_cb_t dc_cb = {
@@ -109,7 +111,8 @@ void Controller::OnDisplaysChanged(uint64_t* displays_added, uint32_t added_coun
     }
 }
 
-void Controller::OnDisplayVsync(uint64_t display_id, void** handles, uint32_t handle_count) {
+void Controller::OnDisplayVsync(uint64_t display_id, zx_time_t timestamp,
+                                void** handles, uint32_t handle_count) {
     fbl::AutoLock lock(&mtx_);
     DisplayInfo* info = nullptr;
     for (auto& display_config : displays_) {
@@ -128,16 +131,15 @@ void Controller::OnDisplayVsync(uint64_t display_id, void** handles, uint32_t ha
     // If there's a pending layer change, don't process any present/retire actions
     // until the change is complete.
     if (info->pending_layer_change) {
+        bool done;
         if (handle_count != info->layer_count) {
             // There's an unexpected number of layers, so wait until the next vsync.
-            return;
+            done = false;
         } else if (list_is_empty(&info->images)) {
             // If the images list is empty, then we can't have any pending layers and
             // the change is done when there are no handles being displayed.
             ZX_ASSERT(info->layer_count == 0);
-            if (handle_count != 0) {
-                return;
-            }
+            done = handle_count == 0;
         } else {
             // Otherwise the change is done when the last handle_count==info->layer_count
             // images match the handles in the correct order.
@@ -150,16 +152,47 @@ void Controller::OnDisplayVsync(uint64_t display_id, void** handles, uint32_t ha
                 node = list_prev_type(&info->images, &node->link, image_node_t, link);
                 handle_idx--;
             }
-            if (handle_idx != -1) {
-                return;
+            done = handle_idx == -1;
+        }
+
+        if (done) {
+            info->pending_layer_change = false;
+            info->switching_client = false;
+
+            if (active_client_ && info->delayed_apply) {
+                active_client_->ReapplyConfig();
+            }
+        }
+    }
+
+    // Drop the vsync event if we're in the middle of switching clients, since we don't want to
+    // send garbage image ids. Switching clients is rare enough that any minor timing issues that
+    // this could cause aren't worth worrying about.
+    if (!info->switching_client) {
+        uint64_t images[handle_count];
+        image_node_t* cur;
+        list_for_every_entry(&info->images, cur, image_node_t, link) {
+            for (unsigned i = 0; i < handle_count; i++) {
+                if (handles[i] == cur->self->info().handle) {
+                    images[i] = cur->self->id;
+                    break;
+                }
             }
         }
 
-        info->pending_layer_change = false;
-
-        if (active_client_ && info->delayed_apply) {
-            active_client_->ReapplyConfig();
+        if (vc_applied_ && vc_client_) {
+            vc_client_->OnDisplayVsync(display_id, timestamp, images, handle_count);
+        } else if (!vc_applied_ && primary_client_) {
+            primary_client_->OnDisplayVsync(display_id, timestamp, images, handle_count);
+        } else {
+            zxlogf(INFO, "Vsync with no client\n");
         }
+    } else {
+        zxlogf(TRACE, "Dropping vsync\n");
+    }
+
+    if (info->pending_layer_change) {
+        return;
     }
 
     // Since we know there are no pending layer changes, we know that every layer (i.e z_index)
@@ -242,7 +275,9 @@ void Controller::ApplyConfig(DisplayConfig* configs[], int32_t count,
                 continue;
             }
 
-            display->pending_layer_change = config->apply_layer_change() || is_vc != vc_applied_;
+            display->switching_client = is_vc != vc_applied_;
+            display->pending_layer_change =
+                    config->apply_layer_change() || display->switching_client;
             display->layer_count = config->current_layer_count();
             display->delayed_apply = false;
 
@@ -281,9 +316,10 @@ void Controller::ApplyConfig(DisplayConfig* configs[], int32_t count,
                 list_add_tail(&display->images, &image->node.link);
             }
         }
+
+        vc_applied_ = is_vc;
+        applied_stamp_ = client_stamp;
     }
-    vc_applied_ = is_vc;
-    applied_stamp_ = client_stamp;
 
     ops_.ops->apply_configuration(ops_.ctx, display_configs, display_count);
 }

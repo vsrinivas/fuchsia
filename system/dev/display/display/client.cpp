@@ -47,6 +47,7 @@ zx_status_t decode_message(fidl::Message* msg) {
     SELECT_TABLE_CASE(fuchsia_display_ControllerSetLayerImage);
     SELECT_TABLE_CASE(fuchsia_display_ControllerCheckConfig);
     SELECT_TABLE_CASE(fuchsia_display_ControllerApplyConfig);
+    SELECT_TABLE_CASE(fuchsia_display_ControllerEnableVsync);
     SELECT_TABLE_CASE(fuchsia_display_ControllerSetVirtconMode);
     SELECT_TABLE_CASE(fuchsia_display_ControllerComputeLinearImageStride);
     SELECT_TABLE_CASE(fuchsia_display_ControllerAllocateVmo);
@@ -143,7 +144,7 @@ void Client::HandleControllerApi(async_t* async, async::WaitBase* self,
     uint8_t in_byte_buffer[ZX_CHANNEL_MAX_MSG_BYTES];
     fidl::Message msg(fidl::BytePart(in_byte_buffer, ZX_CHANNEL_MAX_MSG_BYTES),
                       fidl::HandlePart(&in_handle, 1));
-    status = msg.Read(server_handle_.get(), 0);
+    status = msg.Read(server_handle_, 0);
     api_wait_.Begin(controller_->loop().async());
 
     if (status != ZX_OK) {
@@ -178,6 +179,7 @@ void Client::HandleControllerApi(async_t* async, async::WaitBase* self,
     HANDLE_REQUEST_CASE(SetLayerImage);
     HANDLE_REQUEST_CASE(CheckConfig);
     HANDLE_REQUEST_CASE(ApplyConfig);
+    HANDLE_REQUEST_CASE(EnableVsync);
     HANDLE_REQUEST_CASE(SetVirtconMode);
     HANDLE_REQUEST_CASE(ComputeLinearImageStride);
     case fuchsia_display_ControllerAllocateVmoOrdinal: {
@@ -200,7 +202,7 @@ void Client::HandleControllerApi(async_t* async, async::WaitBase* self,
         const char* err_msg;
         ZX_DEBUG_ASSERT_MSG(resp.Validate(out_type, &err_msg) == ZX_OK,
                             "Error validating fidl response \"%s\"\n", err_msg);
-        if ((status = resp.Write(server_handle_.get(), 0)) != ZX_OK) {
+        if ((status = resp.Write(server_handle_, 0)) != ZX_OK) {
             zxlogf(ERROR, "Error writing response message %d\n", status);
         }
     }
@@ -317,14 +319,8 @@ void Client::HandleSetDisplayImage(const fuchsia_display_ControllerSetDisplayIma
         config->pending_.layer_count = 1;
     }
 
-    fuchsia_display_ControllerSetLayerImageRequest fake_req;
-    fake_req.layer_id = display_image_layer_;
-    fake_req.image_id = req->image_id;
-    fake_req.wait_event_id = req->wait_event_id;
-    fake_req.present_event_id = req->present_event_id;
-    fake_req.signal_event_id = req->signal_event_id;
-
-    HandleSetLayerImage(&fake_req, resp_builder, resp_table);
+    HandleSetLayerImageLegacy(display_image_layer_, req->image_id,
+                              req->wait_event_id, req->present_event_id, req->signal_event_id);
 }
 
 void Client::HandleCreateLayer(const fuchsia_display_ControllerCreateLayerRequest* req,
@@ -572,10 +568,10 @@ void Client::HandleSetLayerCursorConfig(
     }
 
     layer->pending_layer_.type = LAYER_CURSOR;
-    cursor_layer_t* cursor_layer = &layer->pending_layer_.cfg.cursor;
+    layer->pending_cursor_x_ = layer->pending_cursor_y_ = 0;
 
-    cursor_layer->x_pos = 0;
-    cursor_layer->y_pos = 0;
+
+    cursor_layer_t* cursor_layer = &layer->pending_layer_.cfg.cursor;
     populate_image(req->image_config, &cursor_layer->image);
 
     layer->pending_image_ = nullptr;
@@ -593,22 +589,22 @@ void Client::HandleSetLayerCursorPosition(
         return;
     }
 
-    cursor_layer_t* cursor_layer = &layer->pending_layer_.cfg.cursor;
-    cursor_layer->x_pos = req->x;
-    cursor_layer->y_pos = req->y;
+    layer->pending_cursor_x_ = req->x;
+    layer->pending_cursor_y_ = req->y;
 
     layer->config_change_ = true;
 }
 
-void Client::HandleSetLayerImage(const fuchsia_display_ControllerSetLayerImageRequest* req,
-                                   fidl::Builder* resp_builder, const fidl_type_t** resp_table) {
-    auto layer = layers_.find(req->layer_id);
+void Client::HandleSetLayerImageLegacy(uint64_t layer_id, uint64_t image_id,
+                                       uint64_t wait_event_id, uint64_t present_event_id,
+                                       uint64_t signal_event_id) {
+    auto layer = layers_.find(layer_id);
     if (!layer.IsValid()) {
         zxlogf(ERROR, "SetLayerImage ordinal with invalid layer\n");
         TearDown();
         return;
     }
-    auto image = images_.find(req->image_id);
+    auto image = images_.find(image_id);
     if (!image.IsValid() || !image->Acquire()) {
         zxlogf(ERROR, "SetLayerImage ordinal with %s image\n", image.IsValid() ? "invl" : "busy");
         TearDown();
@@ -629,9 +625,15 @@ void Client::HandleSetLayerImage(const fuchsia_display_ControllerSetLayerImageRe
     }
 
     layer->pending_image_ = image.CopyPointer();
-    layer->pending_wait_event_id_ = req->wait_event_id;
-    layer->pending_present_event_id_ = req->present_event_id;
-    layer->pending_signal_event_id_ = req->signal_event_id;
+    layer->pending_wait_event_id_ = wait_event_id;
+    layer->pending_present_event_id_ = present_event_id;
+    layer->pending_signal_event_id_ = signal_event_id;
+}
+
+void Client::HandleSetLayerImage(const fuchsia_display_ControllerSetLayerImageRequest* req,
+                                 fidl::Builder* resp_builder, const fidl_type_t** resp_table) {
+    HandleSetLayerImageLegacy(req->layer_id, req->image_id,
+                              req->wait_event_id, INVALID_ID, req->signal_event_id);
 }
 
 void Client::HandleCheckConfig(const fuchsia_display_ControllerCheckConfigRequest* req,
@@ -650,6 +652,9 @@ void Client::HandleCheckConfig(const fuchsia_display_ControllerCheckConfigReques
             if (layer.config_change_) {
                 layer.pending_layer_ = layer.current_layer_;
                 layer.config_change_ = false;
+
+                layer.pending_cursor_x_ = layer.current_cursor_x_;
+                layer.pending_cursor_y_ = layer.current_cursor_y_;
             }
         }
         // Reset each config's pending layers to their current layers. Clear
@@ -761,6 +766,19 @@ void Client::HandleApplyConfig(const fuchsia_display_ControllerApplyConfigReques
                     new_config = &layer->current_layer_.cfg.primary.image;
                 } else if (layer->current_layer_.type == LAYER_CURSOR) {
                     new_config = &layer->current_layer_.cfg.cursor.image;
+
+                    layer->current_cursor_x_ = layer->pending_cursor_x_;
+                    layer->current_cursor_y_ = layer->pending_cursor_y_;
+
+                    display_mode_t* mode = &display_config.current_.mode;
+                    layer->current_layer_.cfg.cursor.x_pos =
+                            fbl::clamp(layer->current_cursor_x_,
+                                       -static_cast<int32_t>(new_config->width) + 1,
+                                       static_cast<int32_t>(mode->h_addressable) - 1);
+                    layer->current_layer_.cfg.cursor.y_pos =
+                            fbl::clamp(layer->current_cursor_y_,
+                                       -static_cast<int32_t>(new_config->height) + 1,
+                                       static_cast<int32_t>(mode->v_addressable) - 1);
                 } else {
                     // type is validated in ::CheckConfig, so something must be very wrong.
                     ZX_ASSERT(false);
@@ -794,6 +812,12 @@ void Client::HandleApplyConfig(const fuchsia_display_ControllerApplyConfigReques
     client_apply_count_++;
 
     ApplyConfig();
+}
+
+void Client::HandleEnableVsync(const fuchsia_display_ControllerEnableVsyncRequest* req,
+                               fidl::Builder* resp_builder, const fidl_type_t** resp_table) {
+    fbl::AutoLock lock(controller_->mtx());
+    proxy_->EnableVsync(req->enable);
 }
 
 void Client::HandleSetVirtconMode(const fuchsia_display_ControllerSetVirtconModeRequest* req,
@@ -1086,18 +1110,6 @@ void Client::ApplyConfig() {
 
             // If the layer has no image, skip it
             layer->is_skipped_ = layer->displayed_image_ == nullptr;
-            if (!layer->is_skipped_ && layer->current_layer_.type == LAYER_CURSOR) {
-                // If the cursor is completely off the display, skip it. It's possible that
-                // the hardware can position the cursor offscreen, but it's not clear how
-                // that would interact with our vsync tracking.
-                const cursor_layer_t* cursor = &layer->current_layer_.cfg.cursor;
-                const display_mode_t* mode = &display_config.current_.mode;
-                layer->is_skipped_ =
-                        cursor->x_pos + static_cast<int32_t>(cursor->image.width) <= 0 ||
-                        cursor->x_pos >= static_cast<int32_t>(mode->h_addressable) ||
-                        cursor->y_pos + static_cast<int32_t>(cursor->image.height) <= 0 ||
-                        cursor->y_pos >= static_cast<int32_t>(mode->v_addressable);
-            }
 
             if (!layer->is_skipped_) {
                 display_config.current_.layer_count++;
@@ -1125,7 +1137,7 @@ void Client::SetOwnership(bool is_owner) {
     msg.hdr.ordinal = fuchsia_display_ControllerClientOwnershipChangeOrdinal;
     msg.has_ownership = is_owner;
 
-    zx_status_t status = server_handle_.write(0, &msg, sizeof(msg), nullptr, 0);
+    zx_status_t status = zx_channel_write(server_handle_, 0, &msg, sizeof(msg), nullptr, 0);
     if (status != ZX_OK) {
         zxlogf(ERROR, "Error writing remove message %d\n", status);
     }
@@ -1287,7 +1299,7 @@ void Client::OnDisplaysChanged(uint64_t* displays_added,
             msg.Validate(&fuchsia_display_ControllerDisplaysChangedEventTable, &err) == ZX_OK,
             "Failed to validate \"%s\"", err);
 
-    if ((status = msg.Write(server_handle_.get(), 0)) != ZX_OK) {
+    if ((status = msg.Write(server_handle_, 0)) != ZX_OK) {
         zxlogf(ERROR, "Error writing remove message %d\n", status);
     }
 }
@@ -1327,7 +1339,7 @@ void Client::TearDown() {
         api_wait_.Cancel();
         api_wait_.set_object(ZX_HANDLE_INVALID);
     }
-    server_handle_.reset();
+    server_handle_ = ZX_HANDLE_INVALID;
 
     // Use a temporary list to prevent double locking when resetting
     fbl::SinglyLinkedList<fbl::RefPtr<Fence>> fences;
@@ -1393,15 +1405,10 @@ bool Client::CleanUpImageLayerState(uint64_t id) {
     return current_config_change;
 }
 
-zx_status_t Client::Init(zx::channel* client_handle) {
+zx_status_t Client::Init(zx_handle_t server_handle) {
     zx_status_t status;
-    if ((status = zx_channel_create(0, server_handle_.reset_and_get_address(),
-                                    client_handle->reset_and_get_address())) != ZX_OK) {
-        zxlogf(ERROR, "Failed to create channels %d\n", status);
-        return status;
-    }
 
-    api_wait_.set_object(server_handle_.get());
+    api_wait_.set_object(server_handle);
     api_wait_.set_trigger(ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED);
     if ((status = api_wait_.Begin(controller_->loop().async())) != ZX_OK) {
         // Clear the object, since that's used to detect whether or not api_wait_ is inited.
@@ -1410,6 +1417,7 @@ zx_status_t Client::Init(zx::channel* client_handle) {
         return status;
     }
 
+    server_handle_ = server_handle;
     mtx_init(&fence_mtx_, mtx_plain);
 
     return ZX_OK;
@@ -1496,6 +1504,33 @@ void ClientProxy::ReapplyConfig() {
     task->Post(controller_->loop().async());
 }
 
+void ClientProxy::OnDisplayVsync(uint64_t display_id, zx_time_t timestamp,
+                                 uint64_t* image_ids, uint32_t count) {
+    ZX_DEBUG_ASSERT(mtx_trylock(controller_->mtx()) == thrd_busy);
+
+    if (!enable_vsync_) {
+        return;
+    }
+    uint32_t size = static_cast<uint32_t>(
+            sizeof(fuchsia_display_ControllerVsyncEvent) + sizeof(uint64_t) * count);
+    uint8_t data[size];
+
+    fuchsia_display_ControllerVsyncEvent* msg =
+            reinterpret_cast<fuchsia_display_ControllerVsyncEvent*>(data);
+    msg->hdr.ordinal = fuchsia_display_ControllerVsyncOrdinal;
+    msg->display_id = display_id;
+    msg->timestamp = timestamp;
+    msg->images.count = count;
+    msg->images.data = reinterpret_cast<void*>(FIDL_ALLOC_PRESENT);
+
+    memcpy(msg + 1, image_ids, sizeof(uint64_t) * count);
+
+    zx_status_t status = server_handle_.write(0, data, size, nullptr, 0);
+    if (status != ZX_OK) {
+        zxlogf(WARN, "Failed to send vsync event %d\n", status);
+    }
+}
+
 void ClientProxy::OnClientDead() {
     controller_->OnClientDead(this);
 }
@@ -1570,7 +1605,14 @@ void ClientProxy::DdkRelease() {
 }
 
 zx_status_t ClientProxy::Init() {
-    return handler_.Init(&client_handle_);
+    zx_status_t status;
+    if ((status = zx_channel_create(0, server_handle_.reset_and_get_address(),
+                                    client_handle_.reset_and_get_address())) != ZX_OK) {
+        zxlogf(ERROR, "Failed to create channels %d\n", status);
+        return status;
+    }
+
+    return handler_.Init(server_handle_.get());
 }
 
 ClientProxy::ClientProxy(Controller* controller, bool is_vc)

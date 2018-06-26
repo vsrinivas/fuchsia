@@ -207,7 +207,7 @@ void Controller::HandleHotplug(registers::Ddi ddi, bool long_pulse) {
     release_dc_cb_lock();
 }
 
-void Controller::HandlePipeVsync(registers::Pipe pipe) {
+void Controller::HandlePipeVsync(registers::Pipe pipe, zx_time_t timestamp) {
     acquire_dc_cb_lock();
 
     if (!dc_cb()) {
@@ -247,7 +247,7 @@ void Controller::HandlePipeVsync(registers::Pipe pipe) {
     }
 
     if (id != INVALID_DISPLAY_ID && handle_count) {
-        dc_cb()->on_display_vsync(dc_cb_ctx_, id, handles, handle_count);
+        dc_cb()->on_display_vsync(dc_cb_ctx_, id, timestamp, handles, handle_count);
     }
     release_dc_cb_lock();
 }
@@ -1266,8 +1266,9 @@ void Controller::ApplyConfiguration(const display_config_t** display_config,
 
     acquire_dc_cb_lock();
     if (dc_cb()) {
+        zx_time_t now = fake_vsync_count ? zx_clock_get(ZX_CLOCK_MONOTONIC) : 0;
         for (unsigned i = 0; i < fake_vsync_count; i++) {
-            dc_cb()->on_display_vsync(dc_cb_ctx_, fake_vsyncs[i], nullptr, 0);
+            dc_cb()->on_display_vsync(dc_cb_ctx_, fake_vsyncs[i], now, nullptr, 0);
         }
     }
     release_dc_cb_lock();

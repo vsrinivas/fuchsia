@@ -30,6 +30,20 @@
 
 static zx_handle_t dc_handle;
 
+static bool wait_for_driver_event() {
+    zx_handle_t observed;
+    uint32_t signals = ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED;
+    if (zx_object_wait_one(dc_handle, signals, ZX_TIME_INFINITE, &observed) != ZX_OK) {
+        printf("Wait failed\n");
+        return false;
+    }
+    if (observed & ZX_CHANNEL_PEER_CLOSED) {
+        printf("Display controller died\n");
+        return false;
+    }
+    return true;
+}
+
 static bool bind_display(fbl::Vector<Display>* displays) {
     printf("Opening controller\n");
     int vfd = open("/dev/class/display-controller/000", O_RDWR);
@@ -43,15 +57,16 @@ static bool bind_display(fbl::Vector<Display>* displays) {
         return false;
     }
 
-    printf("Wating for display\n");
-    zx_handle_t observed;
-    uint32_t signals = ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED;
-    if (zx_object_wait_one(dc_handle, signals, ZX_TIME_INFINITE, &observed) != ZX_OK) {
-        printf("Wait failed\n");
+    fuchsia_display_ControllerEnableVsyncRequest enable_vsync;
+    enable_vsync.hdr.ordinal = fuchsia_display_ControllerEnableVsyncOrdinal;
+    enable_vsync.enable = true;
+    if (zx_channel_write(dc_handle, 0, &enable_vsync, sizeof(enable_vsync), nullptr, 0) != ZX_OK) {
+        printf("Failed to enable vsync\n");
         return false;
     }
-    if (observed & ZX_CHANNEL_PEER_CLOSED) {
-        printf("Display controller died\n");
+
+    printf("Wating for display\n");
+    if (!wait_for_driver_event()) {
         return false;
     }
 
@@ -197,6 +212,64 @@ bool apply_config() {
     return true;
 }
 
+zx_status_t wait_for_vsync(const fbl::Vector<VirtualLayer*>& layers, zx_time_t* timestamp) {
+    *timestamp = 0;
+
+    if (!wait_for_driver_event()) {
+        return ZX_ERR_STOP;
+    }
+
+    uint8_t byte_buffer[ZX_CHANNEL_MAX_MSG_BYTES];
+    fidl::Message msg(fidl::BytePart(byte_buffer, ZX_CHANNEL_MAX_MSG_BYTES), fidl::HandlePart());
+    if (msg.Read(dc_handle, 0) != ZX_OK) {
+        printf("Read failed\n");
+        return ZX_ERR_STOP;
+    }
+
+    switch (msg.ordinal()) {
+    case fuchsia_display_ControllerDisplaysChangedOrdinal:
+        printf("Display disconnected\n");
+        return ZX_ERR_STOP;
+    case fuchsia_display_ControllerClientOwnershipChangeOrdinal:
+        printf("Ownership change\n");
+        return ZX_ERR_NEXT;
+    case fuchsia_display_ControllerVsyncOrdinal:
+        break;
+    default:
+        printf("Unknown ordinal %d\n", msg.ordinal());
+        return ZX_ERR_STOP;
+    }
+
+    const char* err_msg;
+    if (msg.Decode(&fuchsia_display_ControllerVsyncEventTable, &err_msg) != ZX_OK) {
+        printf("Fidl decode error %s\n", err_msg);
+        return ZX_ERR_STOP;
+    }
+
+    auto vsync = reinterpret_cast<fuchsia_display_ControllerVsyncEvent*>(msg.bytes().data());
+    *timestamp = vsync->timestamp;
+    uint64_t* image_ids = reinterpret_cast<uint64_t*>(vsync->images.data);
+
+    for (auto& layer : layers) {
+        uint64_t id = layer->image_id(vsync->display_id);
+        if (id == 0) {
+            continue;
+        }
+        for (unsigned i = 0; i < vsync->images.count; i++) {
+            if (image_ids[i] == layer->image_id(vsync->display_id)) {
+                layer->set_frame_done(vsync->display_id);
+            }
+        }
+    }
+
+    for (auto& layer : layers) {
+        if (!layer->is_done()) {
+            return ZX_ERR_NEXT;
+        }
+    }
+    return ZX_OK;
+}
+
 int main(int argc, const char* argv[]) {
     printf("Running display test\n");
 
@@ -317,6 +390,7 @@ int main(int argc, const char* argv[]) {
 
     printf("Starting rendering\n");
     for (int i = 0; i < num_frames; i++) {
+        zx_time_t now = zx_clock_get(ZX_CLOCK_MONOTONIC);
         for (auto& layer : layers) {
             // Step before waiting, since not every layer is used every frame
             // so we won't necessarily need to wait.
@@ -327,6 +401,7 @@ int main(int argc, const char* argv[]) {
                 return -1;
             }
 
+            layer->clear_done();
             layer->SendLayout(dc_handle);
         }
 
@@ -344,9 +419,14 @@ int main(int argc, const char* argv[]) {
             layer->Render(i);
         }
 
-        for (auto& layer : layers) {
-            ZX_ASSERT(layer->WaitForPresent());
+        zx_status_t status;
+        zx_time_t deadline = now + ZX_MSEC(100);
+        zx_time_t timestamp;
+        while (((status = wait_for_vsync(layers, &timestamp)) == ZX_ERR_NEXT)
+                && timestamp < deadline) {
+            // wait again
         }
+        ZX_ASSERT(status == ZX_OK);
     }
 
     printf("Done rendering\n");

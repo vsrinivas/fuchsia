@@ -63,6 +63,11 @@ private:
     // The image which has most recently been sent to the display controller impl
     fbl::RefPtr<Image> displayed_image_;
 
+    int32_t pending_cursor_x_;
+    int32_t pending_cursor_y_;
+    int32_t current_cursor_x_;
+    int32_t current_cursor_y_;
+
     layer_node_t pending_node_;
     layer_node_t current_node_;
 
@@ -117,7 +122,7 @@ class Client : private FenceCallback {
 public:
     Client(Controller* controller, ClientProxy* proxy, bool is_vc);
     ~Client();
-    zx_status_t Init(zx::channel* client_handle);
+    zx_status_t Init(zx_handle_t server_handle);
 
     void OnDisplaysChanged(uint64_t* displays_added,
                            uint32_t added_count,
@@ -131,7 +136,7 @@ public:
 
     void TearDown();
 
-    bool IsValid() { return server_handle_.get() != ZX_HANDLE_INVALID; }
+    bool IsValid() { return server_handle_ != ZX_HANDLE_INVALID; }
 private:
     void HandleImportVmoImage(const fuchsia_display_ControllerImportVmoImageRequest* req,
                               fidl::Builder* resp_builder, const fidl_type_t** resp_table);
@@ -169,11 +174,16 @@ private:
     void HandleSetLayerCursorPosition(
             const fuchsia_display_ControllerSetLayerCursorPositionRequest* req,
             fidl::Builder* resp_builder, const fidl_type_t** resp_table);
+    void HandleSetLayerImageLegacy(uint64_t layer_id, uint64_t image_id,
+                                   uint64_t wait_event_id, uint64_t present_event_id,
+                                   uint64_t signal_event_id);
     void HandleSetLayerImage(const fuchsia_display_ControllerSetLayerImageRequest* req,
                              fidl::Builder* resp_builder, const fidl_type_t** resp_table);
     void HandleCheckConfig(const fuchsia_display_ControllerCheckConfigRequest* req,
                            fidl::Builder* resp_builder, const fidl_type_t** resp_table);
     void HandleApplyConfig(const fuchsia_display_ControllerApplyConfigRequest* req,
+                           fidl::Builder* resp_builder, const fidl_type_t** resp_table);
+    void HandleEnableVsync(const fuchsia_display_ControllerEnableVsyncRequest* req,
                            fidl::Builder* resp_builder, const fidl_type_t** resp_table);
     void HandleSetVirtconMode(const fuchsia_display_ControllerSetVirtconModeRequest* req,
                               fidl::Builder* resp_builder, const fidl_type_t** resp_table);
@@ -196,7 +206,7 @@ private:
     bool is_vc_;
     uint64_t console_fb_display_id_ = -1;
 
-    zx::channel server_handle_;
+    zx_handle_t server_handle_;
     uint64_t next_image_id_ = 1; // Only INVALID_ID == 0 is invalid
 
     Image::Map images_;
@@ -242,18 +252,29 @@ public:
                          void* out_buf, size_t out_len, size_t* actual);
     void DdkRelease();
 
+    // Requires holding controller_->mtx() lock
+    void OnDisplayVsync(uint64_t display_id, zx_time_t timestamp,
+                        uint64_t* image_ids, uint32_t count);
     zx_status_t OnDisplaysChanged(const uint64_t* displays_added, uint32_t added_count,
                                   const uint64_t* displays_removed, uint32_t removed_count);
     void SetOwnership(bool is_owner);
     void ReapplyConfig();
 
+    // Requires holding controller_->mtx() lock
+    void EnableVsync(bool enable) {
+        ZX_DEBUG_ASSERT(mtx_trylock(controller_->mtx()) == thrd_busy);
+
+        enable_vsync_ = enable;
+    }
     void OnClientDead();
     void Close();
 private:
     Controller* controller_;
     bool is_vc_;
     Client handler_;
+    bool enable_vsync_ = false;
 
+    zx::channel server_handle_;
     zx::channel client_handle_;
 };
 

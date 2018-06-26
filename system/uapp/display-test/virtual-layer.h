@@ -23,6 +23,8 @@ typedef struct layer {
     uint64_t id;
     bool active;
 
+    bool done;
+
     frame_t src;
     frame_t dest;
 
@@ -50,19 +52,39 @@ public:
     // Renders the current frame (and signals the fence if necessary).
     virtual void Render(int32_t frame_num) = 0;
 
-    // Waits for the current layer configuration to be presented.
-    virtual bool WaitForPresent() = 0;
-
     // Gets the display controller layer ID for usage on the given display.
     uint64_t id(uint64_t display_id) const {
         for (unsigned i = 0; i < displays_.size(); i++) {
-            if (displays_[i]->id() == display_id) {
-                if (layers_[i].active) {
-                    return layers_[i].id;
-                }
+            if (displays_[i]->id() == display_id && layers_[i].active) {
+                return layers_[i].id;
             }
         }
         return INVALID_ID;
+    }
+
+    // Gets the ID of the image on the given display.
+    virtual uint64_t image_id(uint64_t display_id) const = 0;
+
+    void set_frame_done(uint64_t display_id) {
+        for (unsigned i = 0; i < displays_.size(); i++) {
+            if (displays_[i]->id() == display_id) {
+                layers_[i].done = true;
+            }
+        }
+    }
+
+    bool is_done() const {
+        bool done = true;
+        for (unsigned i = 0; i < displays_.size(); i++) {
+            done &= !layers_[i].active || layers_[i].done;
+        }
+        return done;
+    }
+
+    void clear_done() {
+        for (unsigned i = 0; i < displays_.size(); i++) {
+            layers_[i].done = false;
+        }
     }
 
 protected:
@@ -114,7 +136,15 @@ public:
     bool WaitForReady() override;
     void SendLayout(zx_handle_t channel) override;
     void Render(int32_t frame_num) override;
-    bool WaitForPresent() override;
+
+    uint64_t image_id(uint64_t display_id) const override {
+        for (unsigned i = 0; i < displays_.size(); i++) {
+            if (displays_[i]->id() == display_id && layers_[i].active) {
+                return layers_[i].import_info[alt_image_].id;
+            }
+        }
+        return INVALID_ID;
+    }
 
 private:
     void SetLayerPositions(zx_handle_t handle);
@@ -150,7 +180,16 @@ public:
 
     bool WaitForReady() override { return true; }
     void Render(int32_t frame_num) override {}
-    bool WaitForPresent() override { return true; }
+
+    uint64_t image_id(uint64_t display_id) const override {
+        for (unsigned i = 0; i < displays_.size(); i++) {
+            if (displays_[i]->id() == display_id && layers_[i].active) {
+                return layers_[i].import_info[0].id;
+            }
+        }
+        return INVALID_ID;
+    }
+
 
 private:
     uint32_t x_pos_ = 0;

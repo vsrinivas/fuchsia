@@ -34,7 +34,8 @@ void Interrupts::Destroy() {
 
 int Interrupts::IrqLoop() {
     for (;;) {
-        if (zx_interrupt_wait(irq_.get(), nullptr) != ZX_OK) {
+        zx_time_t timestamp;
+        if (zx_interrupt_wait(irq_.get(), &timestamp) != ZX_OK) {
             LOG_INFO("interrupt wait failed\n");
             break;
         }
@@ -66,11 +67,11 @@ int Interrupts::IrqLoop() {
         }
 
         if (interrupt_ctrl.de_pipe_c_int_pending()) {
-            HandlePipeInterrupt(registers::PIPE_C);
+            HandlePipeInterrupt(registers::PIPE_C, timestamp);
         } else if (interrupt_ctrl.de_pipe_b_int_pending()) {
-            HandlePipeInterrupt(registers::PIPE_B);
+            HandlePipeInterrupt(registers::PIPE_B, timestamp);
         } else if (interrupt_ctrl.de_pipe_a_int_pending()) {
-            HandlePipeInterrupt(registers::PIPE_A);
+            HandlePipeInterrupt(registers::PIPE_A, timestamp);
         }
 
         {
@@ -86,13 +87,13 @@ int Interrupts::IrqLoop() {
     return 0;
 }
 
-void Interrupts::HandlePipeInterrupt(registers::Pipe pipe) {
+void Interrupts::HandlePipeInterrupt(registers::Pipe pipe, zx_time_t timestamp) {
     registers::PipeRegs regs(pipe);
     auto identity = regs.PipeDeInterrupt(regs.kIdentityReg).ReadFrom(controller_->mmio_space());
     identity.WriteTo(controller_->mmio_space());
 
     if (identity.vsync()) {
-        controller_->HandlePipeVsync(pipe);
+        controller_->HandlePipeVsync(pipe, timestamp);
     }
 }
 

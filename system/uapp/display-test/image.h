@@ -28,13 +28,12 @@
 
 // Indicies into event and event_ids
 #define WAIT_EVENT 0
-#define PRESENT_EVENT 1
-#define SIGNAL_EVENT 2
+#define SIGNAL_EVENT 1
 
 typedef struct image_import {
     uint64_t id;
-    zx_handle_t events[3];
-    uint64_t event_ids[3];
+    zx_handle_t events[2];
+    uint64_t event_ids[2];
 } image_import_t;
 
 class Image {

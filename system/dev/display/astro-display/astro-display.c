@@ -332,7 +332,8 @@ static zx_status_t vsync_thread(void *arg) {
     astro_display_t* display = arg;
 
     while(1) {
-        status = zx_interrupt_wait(display->vsync_interrupt, NULL);
+        zx_time_t timestamp;
+        status = zx_interrupt_wait(display->vsync_interrupt, &timestamp);
         if (status != ZX_OK) {
             DISP_ERROR("VSync Interrupt Wait failed\n");
             break;
@@ -346,8 +347,8 @@ static zx_status_t vsync_thread(void *arg) {
         mtx_unlock(&display->display_lock);
 
         if (display->dc_cb) {
-            display->dc_cb->on_display_vsync(display->dc_cb_ctx, PANEL_DISPLAY_ID, &live,
-                                                is_client_handle);
+            display->dc_cb->on_display_vsync(display->dc_cb_ctx, PANEL_DISPLAY_ID, timestamp,
+                                             &live, is_client_handle);
         }
         mtx_unlock(&display->cb_lock);
     }

@@ -376,8 +376,13 @@ void fb_release_event(uint64_t id) {
     zx_channel_write(dc_handle, 0, &release_evt_msg, sizeof(release_evt_msg), NULL, 0);
 }
 
+zx_status_t fb_present_image2(uint64_t image_id, uint64_t wait_event_id, uint64_t signal_event_id) {
+    return fb_present_image(image_id, wait_event_id, INVALID_ID, signal_event_id);
+}
+
 zx_status_t fb_present_image(uint64_t image_id, uint64_t wait_event_id,
                              uint64_t present_event_id, uint64_t signal_event_id) {
+    ZX_ASSERT(present_event_id == INVALID_ID);
     ZX_ASSERT(inited && !in_single_buffer_mode);
     zx_status_t status;
 
@@ -387,7 +392,6 @@ zx_status_t fb_present_image(uint64_t image_id, uint64_t wait_event_id,
     set_msg.layer_id = layer_id;
     set_msg.image_id = image_id;
     set_msg.wait_event_id = wait_event_id;
-    set_msg.present_event_id = present_event_id;
     set_msg.signal_event_id = signal_event_id;
     if ((status = zx_channel_write(dc_handle, 0, &set_msg, sizeof(set_msg), NULL, 0)) != ZX_OK) {
         return status;

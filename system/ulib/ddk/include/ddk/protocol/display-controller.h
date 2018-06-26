@@ -96,9 +96,11 @@ typedef struct display_controller_cb {
                                 uint64_t* displays_added, uint32_t added_count,
                                 uint64_t* displays_removed, uint32_t removed_count);
 
+    // |timestamp| is the ZX_CLOCK_MONOTONIC timestamp at which the vsync occurred.
     // |handles| points to an array of image handles of each framebuffer being
     // displayed, in increasing z-order.
-    void (*on_display_vsync)(void* ctx, uint64_t display_id, void** handle, uint32_t handle_count);
+    void (*on_display_vsync)(void* ctx, uint64_t display_id, zx_time_t timestamp,
+                             void** handles, uint32_t handle_count);
 } display_controller_cb_t;
 
 #define ALPHA_DISABLE 0

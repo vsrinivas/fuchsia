@@ -251,10 +251,6 @@ bool PrimaryLayer::WaitForReady() {
     return Wait(SIGNAL_EVENT);
 }
 
-bool PrimaryLayer::WaitForPresent() {
-    return Wait(PRESENT_EVENT);
-}
-
 void PrimaryLayer::Render(int32_t frame_num) {
     if (!layer_flipping_) {
         return;
@@ -297,7 +293,6 @@ void VirtualLayer::SetLayerImages(zx_handle_t dc_handle, bool alt_image) {
         msg.layer_id = layer.id;
         msg.image_id = layer.import_info[alt_image].id;
         msg.wait_event_id = layer.import_info[alt_image].event_ids[WAIT_EVENT];
-        msg.present_event_id = layer.import_info[alt_image].event_ids[PRESENT_EVENT];
         msg.signal_event_id = layer.import_info[alt_image].event_ids[SIGNAL_EVENT];
 
         if (zx_channel_write(dc_handle, 0, &msg, sizeof(msg), nullptr, 0) != ZX_OK) {

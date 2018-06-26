@@ -155,7 +155,7 @@ void Image::Render(int32_t prev_step, int32_t step_num) {
 }
 
 bool Image::Import(zx_handle_t dc_handle, image_import_t* info_out) {
-    for (int i = 0; i < 3; i++) {
+    for (int i = 0; i < 2; i++) {
         static int event_id = INVALID_ID + 1;
         zx_handle_t e1, e2;
         if (zx_event_create(0, &e1) != ZX_OK

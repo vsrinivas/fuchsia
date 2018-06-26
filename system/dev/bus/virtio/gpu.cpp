@@ -391,7 +391,6 @@ void GpuDevice::virtio_gpu_flusher() {
     zx_time_t period = ZX_SEC(1) / kRefreshRateHz;
     for (;;) {
         zx_nanosleep(next_deadline);
-        next_deadline += period;
 
         bool fb_change;
         {
@@ -430,9 +429,11 @@ void GpuDevice::virtio_gpu_flusher() {
             fbl::AutoLock al(&flush_lock_);
             if (dc_cb_) {
                 void* handles[] = { static_cast<void*>(displayed_fb_) };
-                dc_cb_->on_display_vsync(dc_cb_ctx_, kDisplayId, handles, displayed_fb_ != nullptr);
+                dc_cb_->on_display_vsync(dc_cb_ctx_, kDisplayId,
+                                         next_deadline, handles, displayed_fb_ != nullptr);
             }
         }
+        next_deadline += period;
     }
 }
 

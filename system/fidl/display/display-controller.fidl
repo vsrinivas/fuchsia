@@ -271,8 +271,10 @@ interface Controller {
   // default position is (0, 0).
   19: SetLayerCursorConfig(uint64 layer_id, ImageConfig image_config);
 
-  // Updates the cursor position. Illegal if called on a non-cursor layer. The
-  // cursor does not have to overlap the display.
+  // Updates the cursor position. Illegal if called on a non-cursor layer.
+  //
+  // The driver will clamp x to [-cursor_width + 1, display_width - 1] and
+  // will clamp y to [-cursor_height + 1, display_height - 1].
   20: SetLayerCursorPosition(uint64 layer_id, int32 x, int32 y);
 
   // Sets the image for the layer. It is illegal to call this with an
@@ -281,9 +283,8 @@ interface Controller {
   // If wait_event_id corresponds to an imported event, the driver will
   // wait for ZX_EVENT_SIGNALED on the object before presenting the image.
   //
-  // If present_event_id is valid, then the driver will signal the event when
-  // the image is presented. If signal_event_id is valid, then the driver will
-  // signal the event when the image is no longer being presented.
+  // If signal_event_id is valid, then the driver will signal the event when
+  // the image is no longer being presented.
   //
   // The driver will queue the images that are not yet ready. When an image is
   // ready, any older images which are not yet ready will be dropped and their
@@ -297,7 +298,7 @@ interface Controller {
   // An image is considered used when it is part of a pending configuration or
   // from when its configuration is applied until its signal_event_id is
   // signaled.
-  11: SetLayerImage(uint64 layer_id, uint64 image_id, uint64 wait_event_id, uint64 present_event_id, uint64 signal_event_id);
+  11: SetLayerImage(uint64 layer_id, uint64 image_id, uint64 wait_event_id, uint64 signal_event_id);
 
   // Attempts to validate the current configuration.
   //
@@ -319,6 +320,17 @@ interface Controller {
   // fail, so the client should ensure its configuration is valid with
   // CheckConfig.
   13: ApplyConfig();
+
+  // Sets whether or not vsync events will be given to this client. Defaults
+  // to false.
+  23: EnableVsync(bool enable);
+
+  // Event sent for every vsync.
+  //
+  // display_id is the identifies the display on which the vsync occurred, and
+  // timestamp indicates the time the vsync occurred. images is a (possibly
+  // empty) vector of all images where were actively being displayed.
+  24: -> Vsync(uint64 display_id, uint64 timestamp, vector<uint64> images);
 
   // Sets the visibility behavior of the virtcon. It is illegal to call this
   // from the primary client.
@@ -344,6 +356,8 @@ interface Controller {
   // 20: SetLayerCursorPosition
   // 21: SetDisplayColorConversion
   // 22: SetLayerPrimaryAlpha
+  // 23: EnableVsync
+  // 24: Vsync
 
   // TODO(stevensd): Delete this when nothing uses it anymore
   100: SetDisplayImage(uint64 display, uint64 image_id, uint64 wait_event_id, uint64 present_event_id, uint64 signal_event_id);

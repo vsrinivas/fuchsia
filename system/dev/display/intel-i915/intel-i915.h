@@ -85,7 +85,7 @@ public:
     Power* power() { return &power_; }
 
     void HandleHotplug(registers::Ddi ddi, bool long_pulse);
-    void HandlePipeVsync(registers::Pipe pipe);
+    void HandlePipeVsync(registers::Pipe pipe, zx_time_t timestamp);
 
     void ResetPipe(registers::Pipe pipe) __TA_NO_THREAD_SAFETY_ANALYSIS;
     bool ResetTrans(registers::Trans trans);
