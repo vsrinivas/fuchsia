@@ -5,9 +5,9 @@
 #ifndef PERIDOT_BIN_CLOUD_PROVIDER_FIRESTORE_GRPC_STREAM_READER_H_
 #define PERIDOT_BIN_CLOUD_PROVIDER_FIRESTORE_GRPC_STREAM_READER_H_
 
-#include <grpc++/grpc++.h>
-
 #include <functional>
+
+#include <grpc++/grpc++.h>
 
 #include "lib/fxl/logging.h"
 

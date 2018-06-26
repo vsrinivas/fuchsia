@@ -8,8 +8,9 @@
 #include <map>
 #include <set>
 
-#include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/maxwell/internal/cpp/fidl.h>
+#include <fuchsia/modular/cpp/fidl.h>
+
 #include "lib/app_driver/cpp/agent_driver.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fxl/macros.h"

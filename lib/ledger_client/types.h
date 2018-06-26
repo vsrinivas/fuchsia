@@ -5,10 +5,11 @@
 #ifndef PERIDOT_LIB_LEDGER_CLIENT_TYPES_H_
 #define PERIDOT_LIB_LEDGER_CLIENT_TYPES_H_
 
+#include <algorithm>
+
 #include <fuchsia/ledger/cpp/fidl.h>
 #include <lib/fidl/cpp/array.h>
 #include <lib/fidl/cpp/vector.h>
-#include <algorithm>
 
 namespace modular {
 

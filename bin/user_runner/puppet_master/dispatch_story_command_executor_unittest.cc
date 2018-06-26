@@ -2,16 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/modular/cpp/fidl.h>
+#include "peridot/bin/user_runner/puppet_master/dispatch_story_command_executor.h"
+
 #include <map>
 #include <memory>
+
+#include <fuchsia/modular/cpp/fidl.h>
 
 #include "gtest/gtest.h"
 #include "lib/async/cpp/task.h"
 #include "lib/async/default.h"
 #include "lib/fidl/cpp/string.h"
 #include "lib/gtest/test_with_loop.h"
-#include "peridot/bin/user_runner/puppet_master/dispatch_story_command_executor.h"
 #include "peridot/public/lib/async/cpp/operation.h"
 
 namespace modular {

@@ -5,10 +5,10 @@
 #ifndef PERIDOT_BIN_CLOUD_PROVIDER_FIREBASE_GCS_CLOUD_STORAGE_H_
 #define PERIDOT_BIN_CLOUD_PROVIDER_FIREBASE_GCS_CLOUD_STORAGE_H_
 
-#include <lib/zx/socket.h>
-
 #include <functional>
 #include <string>
+
+#include <lib/zx/socket.h>
 
 #include "lib/fsl/vmo/sized_vmo.h"
 #include "lib/fxl/macros.h"

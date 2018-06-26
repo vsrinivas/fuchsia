@@ -4,11 +4,11 @@
 
 #include "peridot/bin/ledger/app/ledger_impl.h"
 
-#include <trace/event.h>
-
 #include <memory>
 #include <string>
 #include <utility>
+
+#include <trace/event.h>
 
 #include "lib/callback/trace_callback.h"
 #include "lib/fidl/cpp/optional.h"

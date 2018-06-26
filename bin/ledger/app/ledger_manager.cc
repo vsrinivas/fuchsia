@@ -4,11 +4,11 @@
 
 #include "peridot/bin/ledger/app/ledger_manager.h"
 
-#include <trace/event.h>
-
 #include <string>
 #include <utility>
 #include <vector>
+
+#include <trace/event.h>
 
 #include "lib/fidl/cpp/interface_request.h"
 #include "lib/fxl/functional/make_copyable.h"

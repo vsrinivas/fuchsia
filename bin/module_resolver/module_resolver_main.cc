@@ -4,8 +4,8 @@
 
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/net/oldhttp/cpp/fidl.h>
-#include <lib/async/default.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async/default.h>
 
 #include "lib/app/cpp/connect.h"
 #include "lib/app/cpp/startup_context.h"

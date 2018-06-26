@@ -5,11 +5,11 @@
 #ifndef PERIDOT_BIN_LEDGER_P2P_SYNC_IMPL_USER_COMMUNICATOR_IMPL_H_
 #define PERIDOT_BIN_LEDGER_P2P_SYNC_IMPL_USER_COMMUNICATOR_IMPL_H_
 
-#include <fuchsia/netconnector/cpp/fidl.h>
-
 #include <memory>
 #include <set>
 #include <string>
+
+#include <fuchsia/netconnector/cpp/fidl.h>
 
 #include "lib/app/cpp/service_provider_impl.h"
 #include "lib/callback/auto_cleanable.h"

@@ -5,11 +5,11 @@
 #ifndef PERIDOT_BIN_LEDGER_TESTING_LEDGER_APP_INSTANCE_FACTORY_H_
 #define PERIDOT_BIN_LEDGER_TESTING_LEDGER_APP_INSTANCE_FACTORY_H_
 
-#include <fuchsia/ledger/cloud/cpp/fidl.h>
-#include <fuchsia/ledger/internal/cpp/fidl.h>
-
 #include <functional>
 #include <memory>
+
+#include <fuchsia/ledger/cloud/cpp/fidl.h>
+#include <fuchsia/ledger/internal/cpp/fidl.h>
 
 #include "lib/fxl/files/scoped_temp_dir.h"
 #include "lib/fxl/macros.h"

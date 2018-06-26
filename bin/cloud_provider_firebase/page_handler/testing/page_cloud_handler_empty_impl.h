@@ -5,12 +5,12 @@
 #ifndef PERIDOT_BIN_CLOUD_PROVIDER_FIREBASE_PAGE_HANDLER_TESTING_PAGE_CLOUD_HANDLER_EMPTY_IMPL_H_
 #define PERIDOT_BIN_CLOUD_PROVIDER_FIREBASE_PAGE_HANDLER_TESTING_PAGE_CLOUD_HANDLER_EMPTY_IMPL_H_
 
-#include <lib/zx/socket.h>
-#include <lib/zx/vmo.h>
-
 #include <functional>
 #include <string>
 #include <vector>
+
+#include <lib/zx/socket.h>
+#include <lib/zx/vmo.h>
 
 #include "peridot/bin/cloud_provider_firebase/page_handler/public/page_cloud_handler.h"
 

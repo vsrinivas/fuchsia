@@ -3,8 +3,9 @@
 // found in the LICENSE file.
 
 #include "peridot/bin/suggestion_engine/filters/conjugate_ranked_passive_filter.h"
-#include "peridot/bin/suggestion_engine/ranking_features/ranking_feature.h"
+
 #include "gtest/gtest.h"
+#include "peridot/bin/suggestion_engine/ranking_features/ranking_feature.h"
 
 namespace modular {
 namespace {

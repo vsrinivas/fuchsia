@@ -5,11 +5,11 @@
 #ifndef PERIDOT_BIN_CLOUD_PROVIDER_FIREBASE_PAGE_HANDLER_TESTING_TEST_PAGE_CLOUD_HANDLER_H_
 #define PERIDOT_BIN_CLOUD_PROVIDER_FIREBASE_PAGE_HANDLER_TESTING_TEST_PAGE_CLOUD_HANDLER_H_
 
-#include <lib/async/dispatcher.h>
-
 #include <map>
 #include <string>
 #include <vector>
+
+#include <lib/async/dispatcher.h>
 
 #include "lib/fxl/macros.h"
 #include "peridot/bin/cloud_provider_firebase/page_handler/public/page_cloud_handler.h"

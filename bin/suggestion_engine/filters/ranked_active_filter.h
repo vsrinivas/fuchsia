@@ -7,8 +7,8 @@
 
 #include <fuchsia/modular/cpp/fidl.h>
 
-#include "peridot/bin/suggestion_engine/ranking_features/ranking_feature.h"
 #include "peridot/bin/suggestion_engine/filters/suggestion_active_filter.h"
+#include "peridot/bin/suggestion_engine/ranking_features/ranking_feature.h"
 
 namespace modular {
 

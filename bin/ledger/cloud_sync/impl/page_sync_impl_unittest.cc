@@ -4,11 +4,11 @@
 
 #include "peridot/bin/ledger/cloud_sync/impl/page_sync_impl.h"
 
-#include <lib/async/cpp/task.h>
-
 #include <memory>
 #include <utility>
 #include <vector>
+
+#include <lib/async/cpp/task.h>
 
 #include "gtest/gtest.h"
 #include "lib/backoff/backoff.h"

@@ -4,10 +4,10 @@
 
 #include "peridot/bin/ledger/tests/benchmark/get_page/get_page.h"
 
+#include <iostream>
+
 #include <lib/zx/time.h>
 #include <trace/event.h>
-
-#include <iostream>
 
 #include "lib/fidl/cpp/clone.h"
 #include "lib/fidl/cpp/optional.h"

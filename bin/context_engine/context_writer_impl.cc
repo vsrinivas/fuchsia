@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "peridot/bin/context_engine/context_writer_impl.h"
+
 #include <memory>
 
 #include <fuchsia/modular/cpp/fidl.h>
@@ -11,7 +13,6 @@
 #include "lib/fidl/cpp/clone.h"
 #include "lib/fxl/functional/auto_call.h"
 #include "lib/fxl/functional/make_copyable.h"
-#include "peridot/bin/context_engine/context_writer_impl.h"
 #include "peridot/bin/context_engine/debug.h"
 #include "rapidjson/document.h"
 

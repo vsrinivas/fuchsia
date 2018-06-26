@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "peridot/bin/suggestion_engine/ranking_features/kronk_ranking_feature.h"
+
 #include "gtest/gtest.h"
 
 namespace modular {

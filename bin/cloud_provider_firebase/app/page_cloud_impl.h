@@ -5,10 +5,10 @@
 #ifndef PERIDOT_BIN_CLOUD_PROVIDER_FIREBASE_APP_PAGE_CLOUD_IMPL_H_
 #define PERIDOT_BIN_CLOUD_PROVIDER_FIREBASE_APP_PAGE_CLOUD_IMPL_H_
 
-#include <fuchsia/ledger/cloud/cpp/fidl.h>
-
 #include <memory>
 #include <utility>
+
+#include <fuchsia/ledger/cloud/cpp/fidl.h>
 
 #include "lib/callback/cancellable.h"
 #include "lib/fidl/cpp/array.h"

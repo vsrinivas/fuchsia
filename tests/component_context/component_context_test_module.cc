@@ -5,9 +5,9 @@
 #include <utility>
 
 #include <fuchsia/modular/cpp/fidl.h>
+#include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
-#include <lib/async-loop/cpp/loop.h>
 #include <test/peridot/tests/componentcontext/cpp/fidl.h>
 
 #include "lib/app/cpp/connect.h"

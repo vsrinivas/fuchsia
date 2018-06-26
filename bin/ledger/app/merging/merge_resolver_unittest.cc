@@ -4,10 +4,10 @@
 
 #include "peridot/bin/ledger/app/merging/merge_resolver.h"
 
-#include <lib/async/cpp/task.h>
-
 #include <string>
 #include <utility>
+
+#include <lib/async/cpp/task.h>
 
 #include "gtest/gtest.h"
 #include "lib/callback/cancellable_helper.h"

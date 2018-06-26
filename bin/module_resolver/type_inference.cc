@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "peridot/bin/module_resolver/type_inference.h"
+
 #include <string>
 #include <vector>
 
@@ -9,7 +11,6 @@
 #include "lib/fsl/types/type_converters.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/type_converter.h"
-#include "peridot/bin/module_resolver/type_inference.h"
 #include "peridot/public/lib/entity/cpp/json.h"
 
 namespace modular {

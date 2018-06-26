@@ -4,13 +4,13 @@
 
 #include <string>
 
+#include <fuchsia/modular/cpp/fidl.h>
+#include <fuchsia/ui/views_v1/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <trace-provider/provider.h>
 #include <trace/event.h>
 #include <trace/observer.h>
 
-#include <fuchsia/modular/cpp/fidl.h>
-#include <fuchsia/ui/views_v1/cpp/fidl.h>
 #include "lib/app_driver/cpp/module_driver.h"
 #include "lib/fidl/cpp/binding.h"
 #include "peridot/tests/benchmark/story/tracing_waiter.h"

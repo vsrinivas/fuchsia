@@ -5,9 +5,9 @@
 #ifndef PERIDOT_BIN_CLOUD_PROVIDER_FIREBASE_PAGE_HANDLER_IMPL_WATCH_CLIENT_IMPL_H_
 #define PERIDOT_BIN_CLOUD_PROVIDER_FIREBASE_PAGE_HANDLER_IMPL_WATCH_CLIENT_IMPL_H_
 
-#include <rapidjson/document.h>
-
 #include <vector>
+
+#include <rapidjson/document.h>
 
 #include "peridot/bin/cloud_provider_firebase/page_handler/public/commit_watcher.h"
 #include "peridot/bin/cloud_provider_firebase/page_handler/public/record.h"

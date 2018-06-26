@@ -5,10 +5,10 @@
 #ifndef PERIDOT_BIN_LEDGER_ENCRYPTION_FAKE_FAKE_ENCRYPTION_SERVICE_H_
 #define PERIDOT_BIN_LEDGER_ENCRYPTION_FAKE_FAKE_ENCRYPTION_SERVICE_H_
 
-#include <lib/async/dispatcher.h>
-
 #include <functional>
 #include <string>
+
+#include <lib/async/dispatcher.h>
 
 #include "peridot/bin/ledger/encryption/public/encryption_service.h"
 #include "peridot/lib/convert/convert.h"

@@ -5,12 +5,12 @@
 #ifndef PERIDOT_BIN_LEDGER_APP_LEDGER_MANAGER_H_
 #define PERIDOT_BIN_LEDGER_APP_LEDGER_MANAGER_H_
 
-#include <fuchsia/ledger/internal/cpp/fidl.h>
-
 #include <functional>
 #include <map>
 #include <memory>
 #include <type_traits>
+
+#include <fuchsia/ledger/internal/cpp/fidl.h>
 
 #include "lib/callback/auto_cleanable.h"
 #include "lib/fidl/cpp/binding_set.h"

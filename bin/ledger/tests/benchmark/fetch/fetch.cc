@@ -4,11 +4,11 @@
 
 #include "peridot/bin/ledger/tests/benchmark/fetch/fetch.h"
 
+#include <iostream>
+
 #include <fuchsia/ledger/cloud/cpp/fidl.h>
 #include <lib/zx/time.h>
 #include <trace/event.h>
-
-#include <iostream>
 
 #include "lib/fidl/cpp/optional.h"
 #include "lib/fsl/vmo/strings.h"

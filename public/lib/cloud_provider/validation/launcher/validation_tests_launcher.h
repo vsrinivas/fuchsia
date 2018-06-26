@@ -5,11 +5,11 @@
 #ifndef LIB_CLOUD_PROVIDER_VALIDATION_LAUNCHER_VALIDATION_TESTS_LAUNCHER_H_
 #define LIB_CLOUD_PROVIDER_VALIDATION_LAUNCHER_VALIDATION_TESTS_LAUNCHER_H_
 
-#include <fuchsia/ledger/cloud/cpp/fidl.h>
-#include <fuchsia/sys/cpp/fidl.h>
-
 #include <functional>
 #include <string>
+
+#include <fuchsia/ledger/cloud/cpp/fidl.h>
+#include <fuchsia/sys/cpp/fidl.h>
 
 #include "lib/app/cpp/service_provider_impl.h"
 #include "lib/app/cpp/startup_context.h"

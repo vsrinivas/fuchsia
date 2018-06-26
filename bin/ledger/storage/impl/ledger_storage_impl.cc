@@ -5,7 +5,6 @@
 #include "peridot/bin/ledger/storage/impl/ledger_storage_impl.h"
 
 #include <dirent.h>
-
 #include <algorithm>
 #include <iterator>
 

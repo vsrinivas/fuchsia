@@ -4,14 +4,14 @@
 
 #include "peridot/bin/ledger/storage/impl/page_db.h"
 
-#include <lib/async/cpp/task.h>
-
 #include <algorithm>
 #include <memory>
 #include <random>
 #include <string>
 #include <utility>
 #include <vector>
+
+#include <lib/async/cpp/task.h>
 
 #include "gtest/gtest.h"
 #include "lib/callback/set_when_called.h"

@@ -5,11 +5,11 @@
 #ifndef PERIDOT_BIN_CLOUD_PROVIDER_FIREBASE_TESTING_SERVER_FIREBASE_SERVER_H_
 #define PERIDOT_BIN_CLOUD_PROVIDER_FIREBASE_TESTING_SERVER_FIREBASE_SERVER_H_
 
-#include <fuchsia/net/oldhttp/cpp/fidl.h>
-#include <rapidjson/document.h>
-
 #include <functional>
 #include <memory>
+
+#include <fuchsia/net/oldhttp/cpp/fidl.h>
+#include <rapidjson/document.h>
 
 #include "lib/url/gurl.h"
 #include "peridot/bin/cloud_provider_firebase/testing/server/server.h"

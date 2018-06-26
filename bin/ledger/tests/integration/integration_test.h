@@ -5,11 +5,11 @@
 #ifndef PERIDOT_BIN_LEDGER_TESTS_INTEGRATION_INTEGRATION_TEST_H_
 #define PERIDOT_BIN_LEDGER_TESTS_INTEGRATION_INTEGRATION_TEST_H_
 
+#include <functional>
+
 #include <fuchsia/ledger/internal/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <trace-provider/provider.h>
-
-#include <functional>
 
 #include "gtest/gtest.h"
 #include "lib/fxl/macros.h"

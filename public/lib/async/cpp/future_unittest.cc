@@ -1,10 +1,10 @@
 #include "lib/async/cpp/future.h"
 
+#include <string>
+
 #include "gtest/gtest-spi.h"
 #include "gtest/gtest.h"
 #include "lib/fxl/logging.h"
-
-#include <string>
 
 namespace modular {
 

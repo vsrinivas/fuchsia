@@ -5,10 +5,10 @@
 #ifndef PERIDOT_BIN_LEDGER_CLOUD_SYNC_PUBLIC_USER_CONFIG_H_
 #define PERIDOT_BIN_LEDGER_CLOUD_SYNC_PUBLIC_USER_CONFIG_H_
 
-#include <fuchsia/ledger/cloud/cpp/fidl.h>
-
 #include <memory>
 #include <string>
+
+#include <fuchsia/ledger/cloud/cpp/fidl.h>
 
 #include "peridot/bin/ledger/fidl/include/types.h"
 #include "peridot/bin/ledger/filesystem/detached_path.h"

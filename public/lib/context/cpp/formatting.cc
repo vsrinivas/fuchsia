@@ -5,6 +5,7 @@
 #include "lib/context/cpp/formatting.h"
 
 #include <fuchsia/modular/cpp/fidl.h>
+
 #include "lib/fidl/cpp/vector.h"
 
 namespace fuchsia {

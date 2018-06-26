@@ -6,6 +6,7 @@
 
 #include <fuchsia/sys/cpp/fidl.h>
 #include <test/peridot/lib/fidl/appclient/cpp/fidl.h>
+
 #include "gtest/gtest.h"
 #include "lib/gtest/test_with_loop.h"
 #include "peridot/lib/testing/fake_launcher.h"

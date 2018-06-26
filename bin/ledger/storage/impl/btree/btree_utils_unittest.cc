@@ -4,7 +4,6 @@
 
 #include <inttypes.h>
 #include <stdio.h>
-
 #include <algorithm>
 
 #include "gtest/gtest.h"

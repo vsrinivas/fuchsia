@@ -5,9 +5,10 @@
 #ifndef PERIDOT_BIN_USER_RUNNER_PUPPET_MASTER_STORY_COMMAND_EXECUTOR_H_
 #define PERIDOT_BIN_USER_RUNNER_PUPPET_MASTER_STORY_COMMAND_EXECUTOR_H_
 
-#include <fuchsia/modular/cpp/fidl.h>
 #include <functional>
 #include <vector>
+
+#include <fuchsia/modular/cpp/fidl.h>
 
 namespace modular {
 

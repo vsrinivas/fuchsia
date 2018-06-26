@@ -5,7 +5,6 @@
 #include "peridot/bin/cloud_provider_firebase/gcs/cloud_storage_impl.h"
 
 #include <fcntl.h>
-
 #include <string>
 
 #include "lib/fidl/cpp/array.h"

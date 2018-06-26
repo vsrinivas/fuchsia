@@ -5,10 +5,10 @@
 #ifndef PERIDOT_BIN_LEDGER_ENCRYPTION_IMPL_ENCRYPTION_SERVICE_IMPL_H_
 #define PERIDOT_BIN_LEDGER_ENCRYPTION_IMPL_ENCRYPTION_SERVICE_IMPL_H_
 
-#include <lib/async/dispatcher.h>
-
 #include <functional>
 #include <string>
+
+#include <lib/async/dispatcher.h>
 
 #include "peridot/bin/ledger/cache/lazy_value.h"
 #include "peridot/bin/ledger/cache/lru_cache.h"

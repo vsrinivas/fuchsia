@@ -6,18 +6,18 @@
 
 #include <errno.h>
 #include <fcntl.h>
-#include <lib/zx/vmar.h>
-#include <lib/zx/vmo.h>
 #include <stdio.h>
 #include <string.h>
 #include <sys/stat.h>
 #include <sys/types.h>
-#include <trace/event.h>
-
 #include <algorithm>
 #include <iterator>
 #include <map>
 #include <utility>
+
+#include <lib/zx/vmar.h>
+#include <lib/zx/vmo.h>
+#include <trace/event.h>
 
 #include "lib/callback/trace_callback.h"
 #include "lib/callback/waiter.h"

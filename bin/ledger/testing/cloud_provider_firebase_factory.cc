@@ -4,9 +4,9 @@
 
 #include "peridot/bin/ledger/testing/cloud_provider_firebase_factory.h"
 
-#include <lib/async/cpp/task.h>
-
 #include <utility>
+
+#include <lib/async/cpp/task.h>
 
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/svc/cpp/services.h"

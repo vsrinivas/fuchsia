@@ -4,14 +4,14 @@
 
 #include "peridot/bin/cloud_provider_firebase/testing/server/firebase_server.h"
 
+#include <algorithm>
+#include <deque>
+#include <sstream>
+
 #include <rapidjson/document.h>
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>
 #include <zircon/syscalls.h>
-
-#include <algorithm>
-#include <deque>
-#include <sstream>
 
 #include "lib/callback/auto_cleanable.h"
 #include "lib/fsl/vmo/strings.h"

@@ -4,8 +4,9 @@
 
 #include "peridot/bin/ledger/coroutine/context/stack.h"
 
-#include <lib/zx/vmar.h>
 #include <stdlib.h>
+
+#include <lib/zx/vmar.h>
 
 #include "lib/fxl/logging.h"
 

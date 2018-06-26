@@ -5,9 +5,9 @@
 #ifndef PERIDOT_BIN_CLOUD_PROVIDER_FIREBASE_TESTING_SERVER_SERVER_H_
 #define PERIDOT_BIN_CLOUD_PROVIDER_FIREBASE_TESTING_SERVER_SERVER_H_
 
-#include <fuchsia/net/oldhttp/cpp/fidl.h>
-
 #include <map>
+
+#include <fuchsia/net/oldhttp/cpp/fidl.h>
 
 #include "lib/fxl/macros.h"
 

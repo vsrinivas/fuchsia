@@ -6,12 +6,12 @@
 
 #include <errno.h>
 #include <fcntl.h>
-#include <lib/fdio/watcher.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <thread>
 
 #include <lib/async/cpp/task.h>
+#include <lib/fdio/watcher.h>
 
 #include "lib/backoff/exponential_backoff.h"
 #include "lib/fxl/logging.h"

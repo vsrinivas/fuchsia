@@ -4,11 +4,11 @@
 
 #include "peridot/bin/ledger/tests/benchmark/disk_space/disk_space.h"
 
+#include <iostream>
+
 #include <lib/async/cpp/task.h>
 #include <lib/zx/time.h>
 #include <trace/event.h>
-
-#include <iostream>
 
 #include "garnet/public/lib/callback/waiter.h"
 #include "lib/callback/waiter.h"

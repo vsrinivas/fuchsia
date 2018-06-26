@@ -4,12 +4,12 @@
 
 #include "peridot/bin/ledger/cloud_sync/impl/page_download.h"
 
-#include <lib/async/dispatcher.h>
-
 #include <memory>
 #include <sstream>
 #include <utility>
 #include <vector>
+
+#include <lib/async/dispatcher.h>
 
 #include "gtest/gtest.h"
 #include "lib/backoff/testing/test_backoff.h"

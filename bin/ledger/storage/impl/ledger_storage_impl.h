@@ -5,9 +5,9 @@
 #ifndef PERIDOT_BIN_LEDGER_STORAGE_IMPL_LEDGER_STORAGE_IMPL_H_
 #define PERIDOT_BIN_LEDGER_STORAGE_IMPL_LEDGER_STORAGE_IMPL_H_
 
-#include <lib/async/dispatcher.h>
-
 #include <string>
+
+#include <lib/async/dispatcher.h>
 
 #include "peridot/bin/ledger/coroutine/coroutine.h"
 #include "peridot/bin/ledger/encryption/public/encryption_service.h"

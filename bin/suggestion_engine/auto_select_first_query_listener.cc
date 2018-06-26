@@ -3,7 +3,9 @@
 // found in the LICENSE file.
 
 #include "peridot/bin/suggestion_engine/auto_select_first_query_listener.h"
+
 #include <fuchsia/modular/cpp/fidl.h>
+
 #include "peridot/bin/suggestion_engine/suggestion_engine_impl.h"
 
 namespace modular {

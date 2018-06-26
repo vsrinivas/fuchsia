@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "peridot/bin/suggestion_engine/ranking_features/mod_pair_ranking_feature.h"
+
 #include "gtest/gtest.h"
 #include "lib/fxl/files/file.h"
 #include "lib/fxl/files/path.h"

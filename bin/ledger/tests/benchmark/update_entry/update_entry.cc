@@ -4,10 +4,10 @@
 
 #include "peridot/bin/ledger/tests/benchmark/update_entry/update_entry.h"
 
+#include <iostream>
+
 #include <lib/zx/time.h>
 #include <trace/event.h>
-
-#include <iostream>
 
 #include "lib/fidl/cpp/clone.h"
 #include "lib/fsl/vmo/strings.h"

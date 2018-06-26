@@ -5,10 +5,10 @@
 #ifndef PERIDOT_BIN_CLOUD_PROVIDER_FIRESTORE_FIRESTORE_FIRESTORE_SERVICE_H_
 #define PERIDOT_BIN_CLOUD_PROVIDER_FIRESTORE_FIRESTORE_FIRESTORE_SERVICE_H_
 
+#include <functional>
+
 #include <google/firestore/v1beta1/document.pb.h>
 #include <google/firestore/v1beta1/firestore.grpc.pb.h>
-
-#include <functional>
 
 #include "lib/fxl/macros.h"
 #include "peridot/bin/cloud_provider_firestore/firestore/listen_call_client.h"

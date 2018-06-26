@@ -5,7 +5,6 @@
 #include <dirent.h>
 #include <glob.h>
 #include <sys/types.h>
-
 #include <iostream>
 #include <string>
 #include <vector>

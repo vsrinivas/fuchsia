@@ -7,16 +7,15 @@
 #include <string>
 
 #include <fs/pseudo-file.h>
-#include <lib/async-loop/cpp/loop.h>
-#include <trace-provider/provider.h>
-
+#include <fuchsia/modular/auth/cpp/fidl.h>
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/ui/policy/cpp/fidl.h>
 #include <fuchsia/ui/views_v1/cpp/fidl.h>
 #include <fuchsia/ui/views_v1_token/cpp/fidl.h>
-#include <fuchsia/modular/auth/cpp/fidl.h>
-#include <fuchsia/ui/policy/cpp/fidl.h>
+#include <lib/async-loop/cpp/loop.h>
+#include <trace-provider/provider.h>
+
 #include "lib/app/cpp/startup_context.h"
 #include "lib/fidl/cpp/array.h"
 #include "lib/fidl/cpp/binding.h"

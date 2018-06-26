@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/modular/examples/simple/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
-#include <fuchsia/modular/examples/simple/cpp/fidl.h>
 
 #include "lib/app/cpp/connect.h"
 #include "lib/app/cpp/startup_context.h"

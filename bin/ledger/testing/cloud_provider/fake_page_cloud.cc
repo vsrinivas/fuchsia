@@ -4,9 +4,9 @@
 
 #include "peridot/bin/ledger/testing/cloud_provider/fake_page_cloud.h"
 
-#include <lib/fidl/cpp/clone.h>
-
 #include <functional>
+
+#include <lib/fidl/cpp/clone.h>
 
 #include "lib/fsl/socket/strings.h"
 #include "lib/fsl/vmo/strings.h"

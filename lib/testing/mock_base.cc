@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "peridot/lib/testing/mock_base.h"
+
 #include "gtest/gtest.h"
 #include "lib/fxl/logging.h"
 

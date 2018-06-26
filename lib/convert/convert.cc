@@ -4,8 +4,9 @@
 
 #include "peridot/lib/convert/convert.h"
 
-#include <leveldb/slice.h>
 #include <string.h>
+
+#include <leveldb/slice.h>
 
 namespace convert {
 

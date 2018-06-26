@@ -4,9 +4,9 @@
 
 #include "peridot/bin/ledger/encryption/primitives/encrypt.h"
 
-#include <gtest/gtest.h>
-
 #include <algorithm>
+
+#include <gtest/gtest.h>
 
 #include "lib/fxl/random/rand.h"
 

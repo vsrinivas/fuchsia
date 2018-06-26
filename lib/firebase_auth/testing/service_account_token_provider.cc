@@ -4,6 +4,8 @@
 
 #include "peridot/lib/firebase_auth/testing/service_account_token_provider.h"
 
+#include <time.h>
+
 #include <openssl/bio.h>
 #include <openssl/digest.h>
 #include <openssl/hmac.h>
@@ -12,7 +14,6 @@
 #include <rapidjson/schema.h>
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>
-#include <time.h>
 
 #include "lib/fidl/cpp/clone.h"
 #include "lib/fidl/cpp/optional.h"

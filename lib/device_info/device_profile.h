@@ -5,11 +5,10 @@
 #ifndef PERIDOT_LIB_DEVICE_INFO_DEVICE_PROFILE_H_
 #define PERIDOT_LIB_DEVICE_INFO_DEVICE_PROFILE_H_
 
-#include "peridot/lib/device_info/device_info.h"
+#include <string>
 
 #include "lib/fxl/macros.h"
-
-#include <string>
+#include "peridot/lib/device_info/device_info.h"
 
 namespace modular {
 

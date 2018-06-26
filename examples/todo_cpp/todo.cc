@@ -7,14 +7,13 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
-
 #include <algorithm>
 #include <iostream>
 
+#include <fuchsia/ledger/internal/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/fit/function.h>
 
-#include <fuchsia/ledger/internal/cpp/fidl.h>
 #include "lib/app/cpp/connect.h"
 #include "lib/fsl/vmo/strings.h"
 #include "lib/fxl/functional/make_copyable.h"

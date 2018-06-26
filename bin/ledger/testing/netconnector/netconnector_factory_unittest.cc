@@ -4,9 +4,9 @@
 
 #include "peridot/bin/ledger/testing/netconnector/netconnector_factory.h"
 
-#include <fuchsia/netconnector/cpp/fidl.h>
-
 #include <memory>
+
+#include <fuchsia/netconnector/cpp/fidl.h>
 
 #include "lib/callback/capture.h"
 #include "lib/callback/set_when_called.h"

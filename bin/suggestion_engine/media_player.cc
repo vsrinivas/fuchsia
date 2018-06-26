@@ -2,13 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/modular/cpp/fidl.h>
+#include "peridot/bin/suggestion_engine/media_player.h"
+
 #include <string>
+
+#include <fuchsia/modular/cpp/fidl.h>
 
 #include "lib/fidl/cpp/optional.h"
 #include "lib/media/timeline/timeline.h"
 #include "lib/media/timeline/timeline_rate.h"
-#include "peridot/bin/suggestion_engine/media_player.h"
 
 namespace modular {
 

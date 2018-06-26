@@ -5,8 +5,9 @@
 #ifndef PERIDOT_BIN_DEVICE_RUNNER_USER_PROVIDER_IMPL_H_
 #define PERIDOT_BIN_DEVICE_RUNNER_USER_PROVIDER_IMPL_H_
 
-#include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/modular/auth/cpp/fidl.h>
+#include <fuchsia/modular/cpp/fidl.h>
+
 #include "lib/app/cpp/startup_context.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fidl/cpp/interface_request.h"

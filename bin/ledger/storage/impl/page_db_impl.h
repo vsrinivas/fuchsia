@@ -5,11 +5,11 @@
 #ifndef PERIDOT_BIN_LEDGER_STORAGE_IMPL_PAGE_DB_IMPL_H_
 #define PERIDOT_BIN_LEDGER_STORAGE_IMPL_PAGE_DB_IMPL_H_
 
-#include <lib/async/dispatcher.h>
-
 #include <memory>
 #include <string>
 #include <vector>
+
+#include <lib/async/dispatcher.h>
 
 #include "lib/fxl/functional/auto_call.h"
 #include "peridot/bin/ledger/coroutine/coroutine.h"

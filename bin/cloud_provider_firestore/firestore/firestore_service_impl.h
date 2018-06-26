@@ -5,10 +5,10 @@
 #ifndef PERIDOT_BIN_CLOUD_PROVIDER_FIRESTORE_FIRESTORE_FIRESTORE_SERVICE_IMPL_H_
 #define PERIDOT_BIN_CLOUD_PROVIDER_FIRESTORE_FIRESTORE_FIRESTORE_SERVICE_IMPL_H_
 
-#include <lib/async/dispatcher.h>
-
 #include <memory>
 #include <thread>
+
+#include <lib/async/dispatcher.h>
 
 #include "lib/callback/auto_cleanable.h"
 #include "lib/fxl/functional/closure.h"

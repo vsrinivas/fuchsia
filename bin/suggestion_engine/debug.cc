@@ -2,10 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "peridot/bin/suggestion_engine/debug.h"
+
 #include <functional>
 
 #include "lib/fidl/cpp/optional.h"
-#include "peridot/bin/suggestion_engine/debug.h"
 
 namespace modular {
 

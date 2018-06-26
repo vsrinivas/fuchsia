@@ -4,11 +4,11 @@
 
 #include "peridot/bin/ledger/tests/benchmark/delete_entry/delete_entry.h"
 
+#include <iostream>
+
 #include <lib/async/cpp/task.h>
 #include <lib/zx/time.h>
 #include <trace/event.h>
-
-#include <iostream>
 
 #include "lib/callback/waiter.h"
 #include "lib/fsl/vmo/strings.h"

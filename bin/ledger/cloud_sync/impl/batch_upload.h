@@ -5,11 +5,11 @@
 #ifndef PERIDOT_BIN_LEDGER_CLOUD_SYNC_IMPL_BATCH_UPLOAD_H_
 #define PERIDOT_BIN_LEDGER_CLOUD_SYNC_IMPL_BATCH_UPLOAD_H_
 
-#include <fuchsia/ledger/cloud/cpp/fidl.h>
-
 #include <functional>
 #include <memory>
 #include <vector>
+
+#include <fuchsia/ledger/cloud/cpp/fidl.h>
 
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"

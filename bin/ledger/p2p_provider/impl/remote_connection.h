@@ -5,10 +5,10 @@
 #ifndef PERIDOT_BIN_LEDGER_P2P_PROVIDER_IMPL_REMOTE_CONNECTION_H_
 #define PERIDOT_BIN_LEDGER_P2P_PROVIDER_IMPL_REMOTE_CONNECTION_H_
 
+#include <string>
+
 #include <flatbuffers/flatbuffers.h>
 #include <lib/zx/channel.h>
-
-#include <string>
 
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/strings/string_view.h"

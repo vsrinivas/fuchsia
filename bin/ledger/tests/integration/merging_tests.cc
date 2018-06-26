@@ -4,12 +4,12 @@
 
 #define FIDL_ENABLE_LEGACY_WAIT_FOR_RESPONSE
 
-#include <lib/async/cpp/task.h>
-#include <lib/async/default.h>
-
 #include <map>
 #include <utility>
 #include <vector>
+
+#include <lib/async/cpp/task.h>
+#include <lib/async/default.h>
 
 #include "gtest/gtest.h"
 #include "lib/callback/capture.h"

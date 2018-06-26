@@ -5,12 +5,12 @@
 #ifndef PERIDOT_BIN_LEDGER_CLOUD_SYNC_IMPL_TESTING_TEST_PAGE_STORAGE_H_
 #define PERIDOT_BIN_LEDGER_CLOUD_SYNC_IMPL_TESTING_TEST_PAGE_STORAGE_H_
 
-#include <lib/async/dispatcher.h>
-
 #include <map>
 #include <memory>
 #include <set>
 #include <vector>
+
+#include <lib/async/dispatcher.h>
 
 #include "lib/callback/capture.h"
 #include "lib/fsl/socket/strings.h"

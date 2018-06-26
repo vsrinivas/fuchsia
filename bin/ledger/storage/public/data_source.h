@@ -5,11 +5,11 @@
 #ifndef PERIDOT_BIN_LEDGER_STORAGE_PUBLIC_DATA_SOURCE_H_
 #define PERIDOT_BIN_LEDGER_STORAGE_PUBLIC_DATA_SOURCE_H_
 
-#include <lib/zx/socket.h>
 #include <stdint.h>
-
 #include <functional>
 #include <memory>
+
+#include <lib/zx/socket.h>
 
 #include "lib/fidl/cpp/array.h"
 #include "lib/fsl/vmo/sized_vmo.h"

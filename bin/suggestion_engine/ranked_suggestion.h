@@ -6,6 +6,7 @@
 #define PERIDOT_BIN_SUGGESTION_ENGINE_RANKED_SUGGESTION_H_
 
 #include <fuchsia/modular/cpp/fidl.h>
+
 #include "peridot/bin/suggestion_engine/suggestion_prototype.h"
 
 namespace modular {

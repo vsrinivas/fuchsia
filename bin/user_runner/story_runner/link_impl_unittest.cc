@@ -3,7 +3,9 @@
 // found in the LICENSE file.
 
 #include "peridot/bin/user_runner/story_runner/link_impl.h"
+
 #include <fuchsia/modular/cpp/fidl.h>
+
 #include "gtest/gtest.h"
 #include "lib/async/cpp/operation.h"
 #include "lib/fidl/cpp/array.h"

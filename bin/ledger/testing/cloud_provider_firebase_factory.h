@@ -5,11 +5,11 @@
 #ifndef PERIDOT_BIN_LEDGER_TESTING_CLOUD_PROVIDER_FIREBASE_FACTORY_H_
 #define PERIDOT_BIN_LEDGER_TESTING_CLOUD_PROVIDER_FIREBASE_FACTORY_H_
 
+#include <thread>
+
 #include <fuchsia/ledger/cloud/cpp/fidl.h>
 #include <fuchsia/ledger/cloud/firebase/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
-
-#include <thread>
 
 #include "lib/app/cpp/startup_context.h"
 #include "lib/fxl/memory/ref_ptr.h"

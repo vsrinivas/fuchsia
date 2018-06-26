@@ -5,12 +5,12 @@
 #ifndef PERIDOT_BIN_LEDGER_TESTING_GET_LEDGER_H_
 #define PERIDOT_BIN_LEDGER_TESTING_GET_LEDGER_H_
 
+#include <functional>
+#include <string>
+
 #include <fuchsia/ledger/cloud/cpp/fidl.h>
 #include <fuchsia/modular/auth/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
-
-#include <functional>
-#include <string>
 
 #include "lib/app/cpp/startup_context.h"
 #include "lib/fit/function.h"

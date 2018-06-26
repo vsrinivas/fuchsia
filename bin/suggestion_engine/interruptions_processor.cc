@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "peridot/bin/suggestion_engine/interruptions_processor.h"
+
 #include "peridot/bin/suggestion_engine/ranking_features/ranking_feature.h"
 
 namespace modular {

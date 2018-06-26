@@ -6,6 +6,7 @@
 #define PERIDOT_BIN_USER_RUNNER_PUPPET_MASTER_COMMAND_RUNNERS_SET_LINK_VALUE_COMMAND_RUNNER_H_
 
 #include <fuchsia/modular/cpp/fidl.h>
+
 #include "peridot/bin/user_runner/puppet_master/command_runners/command_runner.h"
 
 namespace modular {

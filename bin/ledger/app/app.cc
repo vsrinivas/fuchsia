@@ -3,14 +3,14 @@
 // found in the LICENSE file.
 
 #include <fcntl.h>
+#include <unistd.h>
+#include <memory>
+#include <utility>
+
 #include <fuchsia/ledger/internal/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <trace-provider/provider.h>
-#include <unistd.h>
 #include <zircon/device/vfs.h>
-
-#include <memory>
-#include <utility>
 
 #include "lib/app/cpp/startup_context.h"
 #include "lib/backoff/exponential_backoff.h"

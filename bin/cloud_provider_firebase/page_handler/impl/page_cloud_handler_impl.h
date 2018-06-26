@@ -5,11 +5,11 @@
 #ifndef PERIDOT_BIN_CLOUD_PROVIDER_FIREBASE_PAGE_HANDLER_IMPL_PAGE_CLOUD_HANDLER_IMPL_H_
 #define PERIDOT_BIN_CLOUD_PROVIDER_FIREBASE_PAGE_HANDLER_IMPL_PAGE_CLOUD_HANDLER_IMPL_H_
 
-#include <lib/zx/socket.h>
-
 #include <map>
 #include <memory>
 #include <string>
+
+#include <lib/zx/socket.h>
 
 #include "lib/fsl/vmo/sized_vmo.h"
 #include "peridot/bin/cloud_provider_firebase/gcs/cloud_storage.h"

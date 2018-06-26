@@ -6,8 +6,9 @@
 
 #include <fcntl.h>
 #include <stdio.h>
-#include <trace/event.h>
 #include <unistd.h>
+
+#include <trace/event.h>
 
 #include "lib/backoff/exponential_backoff.h"
 #include "lib/fxl/files/directory.h"

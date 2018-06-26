@@ -5,11 +5,11 @@
 #ifndef PERIDOT_BIN_CLOUD_PROVIDER_FIRESTORE_GRPC_READ_STREAM_DRAINER_H_
 #define PERIDOT_BIN_CLOUD_PROVIDER_FIRESTORE_GRPC_READ_STREAM_DRAINER_H_
 
-#include <grpc++/grpc++.h>
-
 #include <functional>
 #include <memory>
 #include <vector>
+
+#include <grpc++/grpc++.h>
 
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"

@@ -5,11 +5,11 @@
 #ifndef PERIDOT_BIN_CLOUD_PROVIDER_FIREBASE_PAGE_HANDLER_PUBLIC_PAGE_CLOUD_HANDLER_H_
 #define PERIDOT_BIN_CLOUD_PROVIDER_FIREBASE_PAGE_HANDLER_PUBLIC_PAGE_CLOUD_HANDLER_H_
 
-#include <lib/zx/socket.h>
-
 #include <functional>
 #include <string>
 #include <vector>
+
+#include <lib/zx/socket.h>
 
 #include "lib/fsl/vmo/sized_vmo.h"
 #include "lib/fxl/macros.h"

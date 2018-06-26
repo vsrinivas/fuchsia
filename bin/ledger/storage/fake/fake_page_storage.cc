@@ -4,13 +4,13 @@
 
 #include "peridot/bin/ledger/storage/fake/fake_page_storage.h"
 
-#include <lib/async/cpp/task.h>
-#include <lib/async/default.h>
-#include <lib/zx/time.h>
-
 #include <string>
 #include <utility>
 #include <vector>
+
+#include <lib/async/cpp/task.h>
+#include <lib/async/default.h>
+#include <lib/zx/time.h>
 
 #include "lib/fsl/socket/strings.h"
 #include "lib/fxl/functional/make_copyable.h"

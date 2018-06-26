@@ -12,12 +12,13 @@
 #include <fuchsia/ledger/cloud/cpp/fidl.h>
 #include <fuchsia/ledger/cloud/firebase/cpp/fidl.h>
 #include <fuchsia/ledger/cpp/fidl.h>
+#include <fuchsia/modular/auth/cpp/fidl.h>
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/modular/internal/cpp/fidl.h>
+#include <fuchsia/speech/cpp/fidl.h>
 #include <fuchsia/ui/policy/cpp/fidl.h>
 #include <fuchsia/ui/views_v1_token/cpp/fidl.h>
-#include <fuchsia/modular/auth/cpp/fidl.h>
-#include <fuchsia/speech/cpp/fidl.h>
+
 #include "lib/app/cpp/service_provider_impl.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fidl/cpp/interface_ptr.h"

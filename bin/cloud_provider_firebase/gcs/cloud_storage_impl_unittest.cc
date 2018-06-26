@@ -4,11 +4,11 @@
 
 #include "peridot/bin/cloud_provider_firebase/gcs/cloud_storage_impl.h"
 
-#include <fuchsia/net/oldhttp/cpp/fidl.h>
-
 #include <memory>
 #include <string>
 #include <utility>
+
+#include <fuchsia/net/oldhttp/cpp/fidl.h>
 
 #include "gtest/gtest.h"
 #include "lib/callback/capture.h"

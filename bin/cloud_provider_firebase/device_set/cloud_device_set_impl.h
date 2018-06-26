@@ -5,10 +5,10 @@
 #ifndef PERIDOT_BIN_CLOUD_PROVIDER_FIREBASE_DEVICE_SET_CLOUD_DEVICE_SET_IMPL_H_
 #define PERIDOT_BIN_CLOUD_PROVIDER_FIREBASE_DEVICE_SET_CLOUD_DEVICE_SET_IMPL_H_
 
-#include <rapidjson/document.h>
-
 #include <functional>
 #include <string>
+
+#include <rapidjson/document.h>
 
 #include "lib/callback/destruction_sentinel.h"
 #include "peridot/bin/cloud_provider_firebase/device_set/cloud_device_set.h"

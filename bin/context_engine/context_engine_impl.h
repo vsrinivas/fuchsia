@@ -6,6 +6,7 @@
 #define PERIDOT_BIN_CONTEXT_ENGINE_CONTEXT_ENGINE_IMPL_H_
 
 #include <fuchsia/modular/cpp/fidl.h>
+
 #include "lib/fidl/cpp/binding_set.h"
 #include "peridot/bin/context_engine/context_repository.h"
 #include "peridot/bin/context_engine/debug.h"

@@ -6,9 +6,10 @@
 
 #include <fcntl.h>
 #include <unistd.h>
+#include <memory>
+
 #include <zircon/device/vfs.h>
 #include <zircon/syscalls.h>
-#include <memory>
 
 #include "lib/fxl/files/file.h"
 #include "lib/fxl/files/unique_fd.h"

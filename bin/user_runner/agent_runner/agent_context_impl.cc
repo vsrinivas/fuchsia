@@ -7,6 +7,7 @@
 #include <memory>
 
 #include <fuchsia/modular/cpp/fidl.h>
+
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "peridot/bin/user_runner/agent_runner/agent_runner.h"

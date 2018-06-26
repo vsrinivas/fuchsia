@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/ledger/cloud/firebase/cpp/fidl.h>
-
 #include <utility>
+
+#include <fuchsia/ledger/cloud/firebase/cpp/fidl.h>
 
 #include "gtest/gtest.h"
 #include "lib/app/cpp/startup_context.h"

@@ -5,10 +5,10 @@
 #ifndef PERIDOT_BIN_CLOUD_PROVIDER_FIRESTORE_FIRESTORE_ENCODING_H_
 #define PERIDOT_BIN_CLOUD_PROVIDER_FIRESTORE_FIRESTORE_ENCODING_H_
 
+#include <string>
+
 #include <fuchsia/ledger/cloud/cpp/fidl.h>
 #include <google/firestore/v1beta1/document.pb.h>
-
-#include <string>
 
 #include "lib/fidl/cpp/vector.h"
 #include "lib/fxl/strings/string_view.h"

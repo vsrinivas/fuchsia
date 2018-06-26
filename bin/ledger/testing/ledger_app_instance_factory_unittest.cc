@@ -4,9 +4,9 @@
 
 #include "peridot/bin/ledger/testing/ledger_app_instance_factory.h"
 
-#include <lib/fit/function.h>
-
 #include <memory>
+
+#include <lib/fit/function.h>
 
 #include "gtest/gtest.h"
 

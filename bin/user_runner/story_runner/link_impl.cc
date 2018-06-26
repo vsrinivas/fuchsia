@@ -7,6 +7,7 @@
 #include <functional>
 
 #include <fuchsia/modular/cpp/fidl.h>
+
 #include "lib/fidl/cpp/interface_handle.h"
 #include "lib/fidl/cpp/interface_request.h"
 #include "lib/fidl/cpp/optional.h"

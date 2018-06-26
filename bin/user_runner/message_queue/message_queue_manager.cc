@@ -9,6 +9,7 @@
 #include <utility>
 
 #include <fuchsia/modular/cpp/fidl.h>
+
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fsl/vmo/strings.h"
 #include "lib/fxl/strings/string_printf.h"

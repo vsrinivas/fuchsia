@@ -4,10 +4,10 @@
 
 #include "peridot/bin/ledger/tests/benchmark/backlog/backlog.h"
 
+#include <iostream>
+
 #include <fuchsia/ledger/cloud/cpp/fidl.h>
 #include <trace/event.h>
-
-#include <iostream>
 
 #include "lib/callback/waiter.h"
 #include "lib/fidl/cpp/optional.h"

@@ -4,13 +4,13 @@
 
 #include "peridot/lib/fidl/app_client.h"
 
+#include <fcntl.h>
+
+#include <fuchsia/sys/cpp/fidl.h>
 #include <lib/fdio/limits.h>
 #include <lib/fdio/util.h>
 #include <zircon/processargs.h>
 
-#include <fcntl.h>
-
-#include <fuchsia/sys/cpp/fidl.h>
 #include "lib/fxl/files/directory.h"
 #include "lib/fxl/files/unique_fd.h"
 

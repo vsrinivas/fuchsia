@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "peridot/lib/util/string_escape.h"
+
 #include "gtest/gtest.h"
 
 using fxl::StringView;

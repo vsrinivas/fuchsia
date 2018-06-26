@@ -2,14 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "gtest/gtest.h"
+#include "peridot/public/lib/async/cpp/operation.h"
 
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
+
+#include "gtest/gtest.h"
 #include "lib/fxl/memory/weak_ptr.h"
 #include "lib/gtest/test_with_loop.h"
 #include "peridot/public/lib/async/cpp/future.h"
-#include "peridot/public/lib/async/cpp/operation.h"
 
 namespace modular {
 namespace {

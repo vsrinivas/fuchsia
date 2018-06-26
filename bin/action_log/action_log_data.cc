@@ -5,7 +5,6 @@
 #include "peridot/bin/action_log/action_log_data.h"
 
 #include "lib/fxl/logging.h"
-
 #include "third_party/rapidjson/rapidjson/document.h"
 #include "third_party/rapidjson/rapidjson/stringbuffer.h"
 #include "third_party/rapidjson/rapidjson/writer.h"

@@ -5,7 +5,6 @@
 #include "peridot/bin/ledger/storage/impl/storage_test_utils.h"
 
 #include <inttypes.h>
-
 #include <numeric>
 
 #include "lib/callback/capture.h"

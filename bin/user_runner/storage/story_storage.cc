@@ -5,6 +5,7 @@
 #include "peridot/bin/user_runner/storage/story_storage.h"
 
 #include <fuchsia/modular/internal/cpp/fidl.h>
+
 #include "lib/fidl/cpp/clone.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "peridot/bin/user_runner/storage/constants_and_utils.h"

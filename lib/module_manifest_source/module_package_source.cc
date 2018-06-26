@@ -5,9 +5,9 @@
 #include "peridot/lib/module_manifest_source/module_package_source.h"
 
 #include <dirent.h>
-#include <fs/service.h>
 #include <sys/types.h>
 
+#include <fs/service.h>
 #include <lib/async/cpp/task.h>
 
 #include "lib/fxl/files/directory.h"

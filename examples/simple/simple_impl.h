@@ -8,6 +8,7 @@
 #include <string>
 
 #include <fuchsia/modular/examples/simple/cpp/fidl.h>
+
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fxl/macros.h"
 

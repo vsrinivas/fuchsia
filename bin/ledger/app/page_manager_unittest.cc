@@ -4,10 +4,10 @@
 
 #include "peridot/bin/ledger/app/page_manager.h"
 
+#include <memory>
+
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
-
-#include <memory>
 
 #include "gtest/gtest.h"
 #include "lib/backoff/exponential_backoff.h"

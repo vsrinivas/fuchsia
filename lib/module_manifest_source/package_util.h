@@ -6,6 +6,7 @@
 #define PERIDOT_LIB_MODULE_MANIFEST_SOURCE_PACKAGE_UTIL_H_
 
 #include <string>
+
 #include "lib/fxl/strings/string_view.h"
 
 namespace modular {

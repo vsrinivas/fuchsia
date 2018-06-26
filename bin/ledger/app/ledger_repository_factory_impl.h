@@ -5,13 +5,13 @@
 #ifndef PERIDOT_BIN_LEDGER_APP_LEDGER_REPOSITORY_FACTORY_IMPL_H_
 #define PERIDOT_BIN_LEDGER_APP_LEDGER_REPOSITORY_FACTORY_IMPL_H_
 
+#include <memory>
+#include <string>
+
 #include <fuchsia/ledger/cloud/cpp/fidl.h>
 #include <fuchsia/ledger/internal/cpp/fidl.h>
 #include <fuchsia/modular/auth/cpp/fidl.h>
 #include <fuchsia/netconnector/cpp/fidl.h>
-
-#include <memory>
-#include <string>
 
 #include "lib/callback/auto_cleanable.h"
 #include "lib/callback/cancellable.h"

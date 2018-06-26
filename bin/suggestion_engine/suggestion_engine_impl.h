@@ -5,14 +5,14 @@
 #ifndef PERIDOT_BIN_SUGGESTION_ENGINE_SUGGESTION_ENGINE_IMPL_H_
 #define PERIDOT_BIN_SUGGESTION_ENGINE_SUGGESTION_ENGINE_IMPL_H_
 
-#include <fuchsia/modular/cpp/fidl.h>
 #include <map>
 #include <string>
 #include <vector>
 
+#include <fuchsia/modular/cpp/fidl.h>
+
 #include "lib/fidl/cpp/interface_ptr_set.h"
 #include "lib/fxl/memory/weak_ptr.h"
-
 #include "peridot/bin/suggestion_engine/auto_select_first_query_listener.h"
 #include "peridot/bin/suggestion_engine/debug.h"
 #include "peridot/bin/suggestion_engine/interruptions_processor.h"

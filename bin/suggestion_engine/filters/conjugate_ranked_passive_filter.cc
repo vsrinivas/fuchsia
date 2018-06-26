@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <list>
-
 #include "peridot/bin/suggestion_engine/filters/conjugate_ranked_passive_filter.h"
+
+#include <list>
 
 namespace modular {
 

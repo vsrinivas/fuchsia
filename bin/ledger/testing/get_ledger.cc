@@ -4,11 +4,11 @@
 
 #include "peridot/bin/ledger/testing/get_ledger.h"
 
+#include <utility>
+
 #include <fuchsia/ledger/cloud/firebase/cpp/fidl.h>
 #include <fuchsia/ledger/internal/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
-
-#include <utility>
 
 #include "lib/callback/capture.h"
 #include "lib/fxl/functional/make_copyable.h"

@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <algorithm>
-
 #include "peridot/bin/module_resolver/local_module_resolver.h"
+
+#include <algorithm>
 
 #include <fuchsia/modular/cpp/fidl.h>
 #include <lib/async/cpp/task.h>

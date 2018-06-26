@@ -6,7 +6,6 @@
 #define PERIDOT_BIN_LEDGER_FILESYSTEM_DETACHED_PATH_H_
 
 #include <fcntl.h>
-
 #include <string>
 
 #include "lib/fxl/strings/string_view.h"

@@ -5,11 +5,11 @@
 #ifndef PERIDOT_BIN_LEDGER_STORAGE_IMPL_PAGE_STORAGE_IMPL_H_
 #define PERIDOT_BIN_LEDGER_STORAGE_IMPL_PAGE_STORAGE_IMPL_H_
 
-#include <lib/async/dispatcher.h>
-
 #include <queue>
 #include <set>
 #include <vector>
+
+#include <lib/async/dispatcher.h>
 
 #include "lib/callback/managed_container.h"
 #include "lib/callback/operation_serializer.h"

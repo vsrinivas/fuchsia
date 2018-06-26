@@ -2,12 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "peridot/bin/user_runner/puppet_master/make_production_impl.h"
+
 #include <memory>
 
 #include "peridot/bin/user_runner/puppet_master/command_runners/set_link_value_command_runner.h"
 #include "peridot/bin/user_runner/puppet_master/command_runners/update_mod_command_runner.h"
 #include "peridot/bin/user_runner/puppet_master/dispatch_story_command_executor.h"
-#include "peridot/bin/user_runner/puppet_master/make_production_impl.h"
 
 namespace modular {
 

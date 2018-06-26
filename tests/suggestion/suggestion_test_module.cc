@@ -3,9 +3,9 @@
 // found in the LICENSE file.
 
 #include <fuchsia/modular/cpp/fidl.h>
+#include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
-#include <lib/async-loop/cpp/loop.h>
 
 #include "lib/app/cpp/connect.h"
 #include "lib/app_driver/cpp/module_driver.h"

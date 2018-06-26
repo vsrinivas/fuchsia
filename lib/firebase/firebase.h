@@ -9,11 +9,11 @@
 #include <string>
 #include <vector>
 
+#include <rapidjson/document.h>
+
 #include "lib/fxl/macros.h"
 #include "peridot/lib/firebase/status.h"
 #include "peridot/lib/firebase/watch_client.h"
-
-#include <rapidjson/document.h>
 
 namespace firebase {
 

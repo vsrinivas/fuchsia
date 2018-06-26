@@ -7,6 +7,7 @@
 #include <string>
 
 #include <fuchsia/ledger/cpp/fidl.h>
+
 #include "lib/fxl/logging.h"
 
 namespace modular {

@@ -4,11 +4,11 @@
 
 #include "peridot/bin/ledger/storage/impl/commit_impl.h"
 
-#include <flatbuffers/flatbuffers.h>
 #include <sys/time.h>
-
 #include <algorithm>
 #include <utility>
+
+#include <flatbuffers/flatbuffers.h>
 
 #include "lib/fxl/build_config.h"
 #include "lib/fxl/logging.h"

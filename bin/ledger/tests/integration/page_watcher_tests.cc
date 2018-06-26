@@ -4,11 +4,11 @@
 
 #define FIDL_ENABLE_LEGACY_WAIT_FOR_RESPONSE
 
-#include <lib/async/cpp/task.h>
-#include <lib/async/default.h>
-
 #include <utility>
 #include <vector>
+
+#include <lib/async/cpp/task.h>
+#include <lib/async/default.h>
 
 #include "garnet/public/lib/callback/capture.h"
 #include "gtest/gtest.h"

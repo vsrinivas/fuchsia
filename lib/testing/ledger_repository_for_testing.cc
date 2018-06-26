@@ -7,6 +7,7 @@
 #include <utility>
 
 #include <fuchsia/modular/cpp/fidl.h>
+
 #include "peridot/lib/common/teardown.h"
 #include "peridot/lib/fidl/app_client.h"
 #include "peridot/lib/ledger_client/constants.h"

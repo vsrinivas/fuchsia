@@ -3,11 +3,12 @@
 // found in the LICENSE file.
 
 #include "peridot/lib/firebase/encoding.h"
+
+#include <string>
+
 #include "gtest/gtest.h"
 #include "lib/fxl/random/rand.h"
 #include "lib/fxl/strings/utf_codecs.h"
-
-#include <string>
 
 namespace firebase {
 namespace {

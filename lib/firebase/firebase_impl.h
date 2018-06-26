@@ -10,6 +10,8 @@
 #include <string>
 #include <vector>
 
+#include <rapidjson/document.h>
+
 #include "lib/callback/auto_cleanable.h"
 #include "lib/callback/cancellable.h"
 #include "lib/network_wrapper/network_wrapper.h"
@@ -18,8 +20,6 @@
 #include "peridot/lib/firebase/status.h"
 #include "peridot/lib/firebase/watch_client.h"
 #include "peridot/lib/socket/socket_drainer_client.h"
-
-#include <rapidjson/document.h>
 
 namespace firebase {
 

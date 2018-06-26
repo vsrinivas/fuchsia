@@ -9,6 +9,7 @@
 #include <vector>
 
 #include <fuchsia/modular/cpp/fidl.h>
+
 #include "lib/async/cpp/operation.h"
 
 namespace modular {

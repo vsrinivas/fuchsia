@@ -5,9 +5,9 @@
 #ifndef PERIDOT_BIN_LEDGER_CLOUD_SYNC_IMPL_TESTING_TEST_CLOUD_PROVIDER_H_
 #define PERIDOT_BIN_LEDGER_CLOUD_SYNC_IMPL_TESTING_TEST_CLOUD_PROVIDER_H_
 
-#include <fuchsia/ledger/cloud/cpp/fidl.h>
-
 #include <memory>
+
+#include <fuchsia/ledger/cloud/cpp/fidl.h>
 
 #include "lib/fidl/cpp/array.h"
 #include "lib/fidl/cpp/binding.h"

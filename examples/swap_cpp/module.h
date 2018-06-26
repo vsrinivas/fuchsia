@@ -6,6 +6,7 @@
 #define PERIDOT_EXAMPLES_SWAP_CPP_MODULE_H_
 
 #include <fuchsia/modular/cpp/fidl.h>
+
 #include "lib/ui/view_framework/base_view.h"
 #include "peridot/lib/fidl/single_service_app.h"
 

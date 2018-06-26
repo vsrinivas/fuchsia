@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "peridot/bin/user_runner/story_runner/chain_impl.h"
+
 #include <memory>
 
 #include <fuchsia/modular/cpp/fidl.h>
@@ -11,7 +13,6 @@
 #include "lib/fsl/types/type_converters.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/type_converter.h"
-#include "peridot/bin/user_runner/story_runner/chain_impl.h"
 #include "peridot/lib/testing/story_controller_mock.h"
 
 namespace modular {

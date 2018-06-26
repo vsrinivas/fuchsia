@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <map>
-
 #include "peridot/bin/user_runner/puppet_master/dispatch_story_command_executor.h"
+
+#include <map>
 
 #include "lib/async/cpp/future.h"
 #include "lib/async/cpp/operation.h"

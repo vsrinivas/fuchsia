@@ -2,9 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "peridot/bin/user_runner/puppet_master/command_runners/update_mod_command_runner.h"
+
 #include "gtest/gtest.h"
 #include "lib/gtest/test_with_loop.h"
-#include "peridot/bin/user_runner/puppet_master/command_runners/update_mod_command_runner.h"
 
 namespace modular {
 namespace {

@@ -5,10 +5,10 @@
 #ifndef PERIDOT_BIN_LEDGER_TESTING_CLOUD_PROVIDER_FAKE_DEVICE_SET_H_
 #define PERIDOT_BIN_LEDGER_TESTING_CLOUD_PROVIDER_FAKE_DEVICE_SET_H_
 
-#include <fuchsia/ledger/cloud/cpp/fidl.h>
-
 #include <set>
 #include <string>
+
+#include <fuchsia/ledger/cloud/cpp/fidl.h>
 
 #include "lib/fidl/cpp/array.h"
 #include "lib/fxl/functional/closure.h"

@@ -5,11 +5,11 @@
 #ifndef PERIDOT_BIN_CLOUD_PROVIDER_FIREBASE_GCS_CLOUD_STORAGE_IMPL_H_
 #define PERIDOT_BIN_CLOUD_PROVIDER_FIREBASE_GCS_CLOUD_STORAGE_IMPL_H_
 
-#include <lib/zx/socket.h>
-#include <lib/zx/vmo.h>
-
 #include <functional>
 #include <vector>
+
+#include <lib/zx/socket.h>
+#include <lib/zx/vmo.h>
 
 #include "lib/callback/cancellable.h"
 #include "lib/network_wrapper/network_wrapper.h"

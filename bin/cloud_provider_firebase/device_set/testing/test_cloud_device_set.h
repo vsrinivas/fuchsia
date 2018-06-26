@@ -5,10 +5,10 @@
 #ifndef PERIDOT_BIN_CLOUD_PROVIDER_FIREBASE_DEVICE_SET_TESTING_TEST_CLOUD_DEVICE_SET_H_
 #define PERIDOT_BIN_CLOUD_PROVIDER_FIREBASE_DEVICE_SET_TESTING_TEST_CLOUD_DEVICE_SET_H_
 
-#include <lib/async/dispatcher.h>
-
 #include <functional>
 #include <string>
+
+#include <lib/async/dispatcher.h>
 
 #include "peridot/bin/cloud_provider_firebase/device_set/cloud_device_set.h"
 

@@ -5,9 +5,9 @@
 #ifndef PERIDOT_BIN_LEDGER_STORAGE_IMPL_LEVELDB_H_
 #define PERIDOT_BIN_LEDGER_STORAGE_IMPL_LEVELDB_H_
 
-#include <lib/async/dispatcher.h>
-
 #include <utility>
+
+#include <lib/async/dispatcher.h>
 
 #include "leveldb/db.h"
 #include "leveldb/write_batch.h"

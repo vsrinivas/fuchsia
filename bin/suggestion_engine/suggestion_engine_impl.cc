@@ -4,8 +4,9 @@
 
 #include "peridot/bin/suggestion_engine/suggestion_engine_impl.h"
 
-#include <fuchsia/modular/cpp/fidl.h>
 #include <string>
+
+#include <fuchsia/modular/cpp/fidl.h>
 
 #include "lib/context/cpp/context_helper.h"
 #include "lib/fidl/cpp/optional.h"
@@ -13,7 +14,6 @@
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/time/time_delta.h"
 #include "lib/fxl/time/time_point.h"
-
 #include "peridot/bin/suggestion_engine/auto_select_first_query_listener.h"
 #include "peridot/bin/suggestion_engine/decision_policies/rank_over_threshold_decision_policy.h"
 #include "peridot/bin/suggestion_engine/filters/conjugate_ranked_passive_filter.h"

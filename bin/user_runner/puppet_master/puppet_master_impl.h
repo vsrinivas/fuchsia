@@ -5,8 +5,9 @@
 #ifndef PERIDOT_BIN_USER_RUNNER_PUPPET_MASTER_PUPPET_MASTER_IMPL_H_
 #define PERIDOT_BIN_USER_RUNNER_PUPPET_MASTER_PUPPET_MASTER_IMPL_H_
 
-#include <fuchsia/modular/cpp/fidl.h>
 #include <memory>
+
+#include <fuchsia/modular/cpp/fidl.h>
 
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fxl/memory/weak_ptr.h"

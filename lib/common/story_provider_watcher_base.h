@@ -6,6 +6,7 @@
 #define PERIDOT_LIB_COMMON_STORY_PROVIDER_WATCHER_BASE_H_
 
 #include <fuchsia/modular/cpp/fidl.h>
+
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fxl/macros.h"
 

@@ -5,10 +5,10 @@
 #ifndef PERIDOT_BIN_CLOUD_PROVIDER_FIRESTORE_FIRESTORE_TESTING_TEST_FIRESTORE_SERVICE_H_
 #define PERIDOT_BIN_CLOUD_PROVIDER_FIRESTORE_FIRESTORE_TESTING_TEST_FIRESTORE_SERVICE_H_
 
+#include <string>
+
 #include <google/firestore/v1beta1/document.pb.h>
 #include <google/firestore/v1beta1/firestore.grpc.pb.h>
-
-#include <string>
 
 #include "peridot/bin/cloud_provider_firestore/firestore/firestore_service.h"
 

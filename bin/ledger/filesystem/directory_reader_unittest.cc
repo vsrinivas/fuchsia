@@ -5,7 +5,6 @@
 #include "peridot/bin/ledger/filesystem/directory_reader.h"
 
 #include <fcntl.h>
-
 #include <set>
 
 #include "gtest/gtest.h"

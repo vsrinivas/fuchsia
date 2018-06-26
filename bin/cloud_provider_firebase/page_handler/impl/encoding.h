@@ -5,10 +5,10 @@
 #ifndef PERIDOT_BIN_CLOUD_PROVIDER_FIREBASE_PAGE_HANDLER_IMPL_ENCODING_H_
 #define PERIDOT_BIN_CLOUD_PROVIDER_FIREBASE_PAGE_HANDLER_IMPL_ENCODING_H_
 
-#include <rapidjson/document.h>
-
 #include <memory>
 #include <vector>
+
+#include <rapidjson/document.h>
 
 #include "peridot/bin/cloud_provider_firebase/page_handler/public/commit.h"
 #include "peridot/bin/cloud_provider_firebase/page_handler/public/record.h"

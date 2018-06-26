@@ -5,7 +5,6 @@
 #include "peridot/third_party/bup/bupsplit.h"
 
 #include <stdlib.h>
-
 #include <limits>
 
 #include "gtest/gtest.h"

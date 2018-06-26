@@ -5,7 +5,6 @@
 #include "peridot/lib/socket/socket_writer.h"
 
 #include <string.h>
-
 #include <algorithm>
 #include <utility>
 

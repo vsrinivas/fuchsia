@@ -5,10 +5,10 @@
 #ifndef PERIDOT_BIN_CLOUD_PROVIDER_FIRESTORE_APP_CREDENTIALS_PROVIDER_IMPL_H_
 #define PERIDOT_BIN_CLOUD_PROVIDER_FIRESTORE_APP_CREDENTIALS_PROVIDER_IMPL_H_
 
-#include <grpc++/grpc++.h>
-
 #include <functional>
 #include <memory>
+
+#include <grpc++/grpc++.h>
 
 #include "lib/callback/cancellable.h"
 #include "peridot/bin/cloud_provider_firestore/app/credentials_provider.h"

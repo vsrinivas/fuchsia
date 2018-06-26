@@ -5,9 +5,9 @@
 #ifndef PERIDOT_BIN_LEDGER_STORAGE_IMPL_OBJECT_IMPL_H_
 #define PERIDOT_BIN_LEDGER_STORAGE_IMPL_OBJECT_IMPL_H_
 
-#include <lib/zx/vmar.h>
-
 #include <memory>
+
+#include <lib/zx/vmar.h>
 
 #include "peridot/bin/ledger/storage/public/object.h"
 #include "peridot/bin/ledger/storage/public/page_storage.h"

@@ -5,6 +5,7 @@
 #include "peridot/lib/environment_host/maxwell_service_provider_bridge.h"
 
 #include <fuchsia/sys/cpp/fidl.h>
+
 #include "lib/app/cpp/connect.h"
 
 namespace maxwell {

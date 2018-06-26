@@ -4,11 +4,11 @@
 
 #include "peridot/bin/ledger/app/ledger_manager.h"
 
-#include <lib/async/cpp/task.h>
-
 #include <memory>
 #include <utility>
 #include <vector>
+
+#include <lib/async/cpp/task.h>
 
 #include "gtest/gtest.h"
 #include "lib/callback/capture.h"

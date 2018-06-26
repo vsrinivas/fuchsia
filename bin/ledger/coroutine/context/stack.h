@@ -5,9 +5,10 @@
 #ifndef PERIDOT_BIN_LEDGER_COROUTINE_CONTEXT_STACK_H_
 #define PERIDOT_BIN_LEDGER_COROUTINE_CONTEXT_STACK_H_
 
+#include <stddef.h>
+
 #include <lib/zx/vmar.h>
 #include <lib/zx/vmo.h>
-#include <stddef.h>
 
 namespace context {
 

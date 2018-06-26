@@ -10,6 +10,7 @@
 
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
+
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fidl/cpp/interface_request.h"
 #include "lib/fsl/tasks/message_loop.h"

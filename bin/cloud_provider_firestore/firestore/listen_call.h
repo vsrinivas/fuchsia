@@ -5,11 +5,11 @@
 #ifndef PERIDOT_BIN_CLOUD_PROVIDER_FIRESTORE_FIRESTORE_LISTEN_CALL_H_
 #define PERIDOT_BIN_CLOUD_PROVIDER_FIRESTORE_FIRESTORE_LISTEN_CALL_H_
 
-#include <google/firestore/v1beta1/firestore.grpc.pb.h>
-#include <grpc++/grpc++.h>
-
 #include <functional>
 #include <memory>
+
+#include <google/firestore/v1beta1/firestore.grpc.pb.h>
+#include <grpc++/grpc++.h>
 
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/logging.h"

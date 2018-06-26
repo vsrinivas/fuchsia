@@ -4,10 +4,10 @@
 
 #include "peridot/bin/ledger/storage/impl/leveldb.h"
 
+#include <utility>
+
 #include <lib/async/cpp/task.h>
 #include <trace/event.h>
-
-#include <utility>
 
 #include "lib/fxl/files/directory.h"
 #include "lib/fxl/files/path.h"

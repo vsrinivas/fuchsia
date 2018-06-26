@@ -7,6 +7,7 @@
 #include <utility>
 
 #include <fuchsia/modular/auth/cpp/fidl.h>
+
 #include "lib/backoff/testing/test_backoff.h"
 #include "lib/callback/capture.h"
 #include "lib/callback/set_when_called.h"

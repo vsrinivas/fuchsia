@@ -8,8 +8,8 @@
 #include <vector>
 
 #include <fuchsia/modular/cpp/fidl.h>
-#include "lib/fidl/cpp/binding.h"
 
+#include "lib/fidl/cpp/binding.h"
 #include "peridot/bin/suggestion_engine/debug.h"
 #include "peridot/bin/suggestion_engine/decision_policies/decision_policy.h"
 #include "peridot/bin/suggestion_engine/filters/suggestion_active_filter.h"

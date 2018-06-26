@@ -5,9 +5,9 @@
 #ifndef PERIDOT_BIN_LEDGER_TESTING_RUN_WITH_TRACING_H_
 #define PERIDOT_BIN_LEDGER_TESTING_RUN_WITH_TRACING_H_
 
-#include <lib/async-loop/cpp/loop.h>
-
 #include <functional>
+
+#include <lib/async-loop/cpp/loop.h>
 
 namespace test {
 namespace benchmark {

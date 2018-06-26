@@ -4,11 +4,11 @@
 
 #include "peridot/bin/ledger/cloud_sync/impl/batch_upload.h"
 
-#include <trace/event.h>
-
 #include <algorithm>
 #include <set>
 #include <utility>
+
+#include <trace/event.h>
 
 #include "lib/callback/scoped_callback.h"
 #include "lib/callback/trace_callback.h"

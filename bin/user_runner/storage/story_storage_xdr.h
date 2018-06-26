@@ -6,6 +6,7 @@
 #define PERIDOT_BIN_USER_RUNNER_STORAGE_STORY_STORAGE_XDR_H_
 
 #include <fuchsia/modular/internal/cpp/fidl.h>
+
 #include "peridot/lib/fidl/json_xdr.h"
 
 namespace modular {

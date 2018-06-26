@@ -5,6 +5,7 @@
 #include "peridot/bin/device_runner/cobalt/cobalt.h"
 
 #include <fuchsia/cobalt/cpp/fidl.h>
+
 #include "peridot/lib/cobalt/cobalt.h"
 
 namespace modular {

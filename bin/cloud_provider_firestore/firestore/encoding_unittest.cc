@@ -4,9 +4,9 @@
 
 #include "peridot/bin/cloud_provider_firestore/firestore/encoding.h"
 
-#include <gtest/gtest.h>
-
 #include <string>
+
+#include <gtest/gtest.h>
 
 #include "peridot/lib/convert/convert.h"
 

@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <fuchsia/modular/cpp/fidl.h>
+
 #include "lib/app/cpp/connect.h"
 #include "lib/app/cpp/startup_context.h"
 #include "lib/fidl/cpp/binding.h"

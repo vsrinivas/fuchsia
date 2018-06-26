@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "peridot/bin/context_engine/context_repository.h"
+
 #include <fuchsia/modular/cpp/fidl.h>
 
 #include "gtest/gtest.h"
@@ -10,7 +12,6 @@
 #include "lib/context/cpp/formatting.h"
 #include "lib/fidl/cpp/clone.h"
 #include "lib/fidl/cpp/optional.h"
-#include "peridot/bin/context_engine/context_repository.h"
 
 using maxwell::ContextMetadataBuilder;
 

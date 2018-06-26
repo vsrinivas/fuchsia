@@ -4,11 +4,11 @@
 
 #include "lib/async/cpp/operation.h"
 
-#include <trace/event.h>
 #include <utility>
 
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
+#include <trace/event.h>
 
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/logging.h"

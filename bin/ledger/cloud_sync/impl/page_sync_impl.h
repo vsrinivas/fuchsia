@@ -5,11 +5,11 @@
 #ifndef PERIDOT_BIN_LEDGER_CLOUD_SYNC_IMPL_PAGE_SYNC_IMPL_H_
 #define PERIDOT_BIN_LEDGER_CLOUD_SYNC_IMPL_PAGE_SYNC_IMPL_H_
 
-#include <fuchsia/ledger/cloud/cpp/fidl.h>
-#include <lib/async/dispatcher.h>
-
 #include <functional>
 #include <queue>
+
+#include <fuchsia/ledger/cloud/cpp/fidl.h>
+#include <lib/async/dispatcher.h>
 
 #include "lib/backoff/backoff.h"
 #include "lib/callback/scoped_task_runner.h"

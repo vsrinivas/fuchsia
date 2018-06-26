@@ -4,10 +4,10 @@
 
 #define FIDL_ENABLE_LEGACY_WAIT_FOR_RESPONSE
 
-#include <fuchsia/ledger/internal/cpp/fidl.h>
-
 #include <utility>
 #include <vector>
+
+#include <fuchsia/ledger/internal/cpp/fidl.h>
 
 #include "gtest/gtest.h"
 #include "lib/callback/capture.h"

@@ -5,9 +5,9 @@
 #ifndef PERIDOT_LIB_FIREBASE_AUTH_TESTING_TEST_FIREBASE_AUTH_H_
 #define PERIDOT_LIB_FIREBASE_AUTH_TESTING_TEST_FIREBASE_AUTH_H_
 
-#include "peridot/lib/firebase_auth/firebase_auth.h"
-
 #include <lib/async/dispatcher.h>
+
+#include "peridot/lib/firebase_auth/firebase_auth.h"
 
 namespace firebase_auth {
 

@@ -5,6 +5,7 @@
 #include "peridot/lib/module_manifest_source/xdr.h"
 
 #include <fuchsia/modular/cpp/fidl.h>
+
 #include "peridot/lib/fidl/json_xdr.h"
 
 namespace modular {

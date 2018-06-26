@@ -2,13 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "peridot/bin/context_engine/index.h"
+
 #include <algorithm>
 #include <sstream>
 
 #include "lib/fidl/cpp/clone.h"
 #include "lib/fidl/cpp/optional.h"
 #include "lib/fxl/logging.h"
-#include "peridot/bin/context_engine/index.h"
 
 namespace modular {
 

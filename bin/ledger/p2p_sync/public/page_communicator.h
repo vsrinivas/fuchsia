@@ -5,11 +5,12 @@
 #ifndef PERIDOT_BIN_LEDGER_P2P_SYNC_PUBLIC_PAGE_COMMUNICATOR_H_
 #define PERIDOT_BIN_LEDGER_P2P_SYNC_PUBLIC_PAGE_COMMUNICATOR_H_
 
+#include "peridot/bin/ledger/p2p_sync/public/page_communicator.h"
+
 #include <memory>
 
 #include "lib/fxl/macros.h"
 #include "lib/fxl/strings/string_view.h"
-#include "peridot/bin/ledger/p2p_sync/public/page_communicator.h"
 
 namespace p2p_sync {
 // PageCommunicator handles page-level data transfer between peers.

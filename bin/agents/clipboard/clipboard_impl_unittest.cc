@@ -3,9 +3,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "peridot/bin/agents/clipboard/clipboard_impl.h"
+
 #include <string>
 
-#include "peridot/bin/agents/clipboard/clipboard_impl.h"
 #include "peridot/lib/testing/test_with_ledger.h"
 
 namespace modular {

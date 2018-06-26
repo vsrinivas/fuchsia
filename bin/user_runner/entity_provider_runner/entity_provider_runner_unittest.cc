@@ -2,14 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "peridot/bin/user_runner/entity_provider_runner/entity_provider_runner.h"
+
 #include <memory>
 
 #include <fs/service.h>
 #include <fs/synchronous-vfs.h>
-
+#include <fuchsia/modular/auth/cpp/fidl.h>
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
-#include <fuchsia/modular/auth/cpp/fidl.h>
+
 #include "gtest/gtest.h"
 #include "lib/agent/cpp/agent_impl.h"
 #include "lib/app/cpp/connect.h"
@@ -20,7 +22,6 @@
 #include "lib/fxl/macros.h"
 #include "peridot/bin/user_runner/agent_runner/agent_runner.h"
 #include "peridot/bin/user_runner/entity_provider_runner/entity_provider_launcher.h"
-#include "peridot/bin/user_runner/entity_provider_runner/entity_provider_runner.h"
 #include "peridot/bin/user_runner/message_queue/message_queue_manager.h"
 #include "peridot/lib/fidl/array_to_string.h"
 #include "peridot/lib/ledger_client/page_id.h"

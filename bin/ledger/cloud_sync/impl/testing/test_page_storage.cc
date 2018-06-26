@@ -4,12 +4,12 @@
 
 #include "peridot/bin/ledger/cloud_sync/impl/testing/test_page_storage.h"
 
-#include <lib/async/cpp/task.h>
-
 #include <memory>
 #include <set>
 #include <utility>
 #include <vector>
+
+#include <lib/async/cpp/task.h>
 
 #include "lib/callback/capture.h"
 #include "lib/fsl/socket/strings.h"
