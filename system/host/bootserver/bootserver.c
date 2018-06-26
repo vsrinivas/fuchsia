@@ -559,10 +559,10 @@ int main(int argc, char** argv) {
         }
 
         if (strcmp(BOOTLOADER_VERSION, adv_version)) {
-            log("%sWARNING: Bootserver version '%s' != remote bootloader '%s'. Please Upgrade%s",
+            log("%sWARNING: Bootserver version '%s' != remote bootloader '%s'."
+                " Device will not be serviced. Please Upgrade%s",
                 ANSI(RED), BOOTLOADER_VERSION, adv_version, ANSI(RESET));
-            close(s);
-            return -1;
+            continue;
         }
 
         if (cmdline[0]) {
