@@ -149,11 +149,10 @@ static int aml_start_thread(void* arg) {
         goto fail;
     }
 
-    //TODO: Enable when wifi-sdio works completely
-    /*if ((status = aml_sdio_init(bus)) != ZX_OK) {
+    if ((status = aml_sdio_init(bus)) != ZX_OK) {
         zxlogf(ERROR, "aml_sdio_init failed: %d\n", status);
         goto fail;
-    }*/
+    }
     return ZX_OK;
 fail:
     zxlogf(ERROR, "aml_start_thread failed, not all devices have been initialized\n");

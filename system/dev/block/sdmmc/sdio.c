@@ -691,7 +691,8 @@ zx_status_t sdmmc_probe_sdio(sdmmc_device_t* dev) {
         st = sdio_init_func(dev, i);
     }
 
-    zxlogf(INFO, "sdmmc_probe_sdio: Manufacturer: 0x%x\n", dev->sdio_info.funcs[0].manufacturer_id);
+    zxlogf(INFO, "sdmmc_probe_sdio: sdio device initialized succesfully\n");
+    zxlogf(INFO, "                  Manufacturer: 0x%x\n", dev->sdio_info.funcs[0].manufacturer_id);
     zxlogf(INFO, "                  Product: 0x%x\n", dev->sdio_info.funcs[0].product_id);
     zxlogf(INFO, "                  cccr vsn: 0x%x\n", dev->sdio_info.cccr_vsn);
     zxlogf(INFO, "                  SDIO vsn: 0x%x\n", dev->sdio_info.sdio_vsn);
