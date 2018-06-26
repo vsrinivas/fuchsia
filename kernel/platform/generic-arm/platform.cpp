@@ -37,8 +37,8 @@
 #include <arch/arm64/periphmap.h>
 #include <arch/mp.h>
 
-#include <vm/vm_aspace.h>
 #include <vm/bootreserve.h>
+#include <vm/vm_aspace.h>
 
 #include <lib/console.h>
 #include <lib/memory_limit.h>
@@ -211,7 +211,6 @@ static void platform_cpu_init(void) {
                 void* sp;
                 zx_status_t err = vm_allocate_kstack(false, &sp, &kstack_mapping, &kstack_vmar);
                 ASSERT(err == ZX_OK);
-
 
                 void* unsafe_sp = nullptr;
 #if __has_feature(safe_stack)
@@ -465,7 +464,7 @@ void platform_dputs_irq(const char* str, size_t len) {
 
 int platform_dgetc(char* c, bool wait) {
     if (uart_disabled) {
-        return ZX_ERR_NOT_SUPPORTED;;
+        return ZX_ERR_NOT_SUPPORTED;
     }
     int ret = uart_getc(wait);
     if (ret < 0)
@@ -625,7 +624,8 @@ zx_status_t platform_mexec_patch_zbi(uint8_t* zbi, const size_t len) {
                                      item->flags,
                                      reinterpret_cast<uint8_t*>(item + 1));
 
-        if (status != ZBI_RESULT_OK) return ZX_ERR_INTERNAL;
+        if (status != ZBI_RESULT_OK)
+            return ZX_ERR_INTERNAL;
 
         offset += ZBI_ALIGN(sizeof(zbi_header_t) + item->length);
     }
@@ -640,16 +640,16 @@ void platform_mexec(mexec_asm_func mexec_assembly, memmov_ops_t* ops,
     paddr_t kernel_dst_phys = (paddr_t)ops[0].dst;
 
     // check to see if the kernel is packaged as a zbi container
-    zbi_header_t* header = (zbi_header_t *)paddr_to_physmap(kernel_src_phys);
+    zbi_header_t* header = (zbi_header_t*)paddr_to_physmap(kernel_src_phys);
     if (header[0].type == ZBI_TYPE_CONTAINER && header[1].type == ZBI_TYPE_KERNEL_ARM64) {
-        zbi_kernel_t* kernel_header = (zbi_kernel_t *)&header[2];
+        zbi_kernel_t* kernel_header = (zbi_kernel_t*)&header[2];
         // add offset from kernel header to entry point
         kernel_dst_phys += kernel_header->entry;
     }
     // else just jump to beginning of kernel image
 
     mexec_assembly((uintptr_t)new_bootimage_addr, 0, 0, arm64_get_boot_el(), ops,
-                  (void *)kernel_dst_phys);
+                   (void*)kernel_dst_phys);
 }
 
 bool platform_serial_enabled(void) {

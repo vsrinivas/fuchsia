@@ -5,9 +5,9 @@
 // https://opensource.org/licenses/MIT
 //
 
-#include <arch/x86/apic.h>
 #include <arch/mp.h>
 #include <arch/x86.h>
+#include <arch/x86/apic.h>
 #include <arch/x86/mp.h>
 #include <fbl/atomic.h>
 #include <stdio.h>
