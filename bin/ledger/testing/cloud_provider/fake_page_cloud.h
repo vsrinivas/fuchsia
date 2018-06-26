@@ -10,6 +10,7 @@
 #include "lib/callback/auto_cleanable.h"
 #include "lib/fidl/cpp/array.h"
 #include "lib/fidl/cpp/binding_set.h"
+#include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
 #include "peridot/bin/ledger/fidl/include/types.h"
 #include "peridot/bin/ledger/testing/cloud_provider/types.h"

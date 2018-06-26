@@ -16,6 +16,7 @@
 #include "lib/callback/auto_cleanable.h"
 #include "lib/fsl/vmo/strings.h"
 #include "lib/fxl/arraysize.h"
+#include "lib/fxl/functional/closure.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/concatenate.h"
 #include "lib/fxl/strings/split_string.h"

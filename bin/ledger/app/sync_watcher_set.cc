@@ -4,6 +4,8 @@
 
 #include "peridot/bin/ledger/app/sync_watcher_set.h"
 
+#include "lib/fxl/functional/closure.h"
+
 namespace ledger {
 namespace {
 SyncState ConvertToSyncState(sync_coordinator::DownloadSyncState download) {
