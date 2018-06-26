@@ -23,8 +23,9 @@ by first creating directories `fuchsia`, then downloading repositories for
 curl -s "https://fuchsia.googlesource.com/scripts/+/master/bootstrap?format=TEXT" | base64 --decode | bash -s <layer>
 ```
 
-If you change your mind later, you can use `fx set-layer <layer>` to [pick
-another layer](/development/workflows/multilayer_changes.md#switching-between-layers).
+If you change your mind later, you can use `scripts/fx set-layer <layer>` to
+[pick another layer](
+/development/workflows/multilayer_changes.md#switching-between-layers).
 
 
 ### Setting up environment variables
