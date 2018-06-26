@@ -6,7 +6,7 @@
 
 // See: PCI/PCI-X Family of Gigabit Ethernet Controllers
 //      Software Developer's Manual
-//      317553006EN.PDF
+//      317453006EN.PDF
 //      Revision 4.0
 
 #define IE_CTRL      0x0000 // Device Control
