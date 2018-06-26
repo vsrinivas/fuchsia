@@ -27,6 +27,7 @@ if (is_mac) {
       "pose_buffer_latching_test.cc",
       "run_all_unittests.cc",
       "scene/directional_light_unittest.cc",
+      "shape/rounded_rect_factory_unittest.cc",
       "shape/rounded_rect_unittest.cc",
       "transform_unittest.cc",
       "util/align_unittest.cc",
