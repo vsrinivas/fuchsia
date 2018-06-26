@@ -52,7 +52,9 @@ First, start QEMU with `fx run`.
 
 In the QEMU shell, run `/system/test/scenic_unittests`. The filename is taken
 from the value of "output_name" from the executable's build rule. All test
-binaries live in the `/system/test` directory.
+binaries live either in the `/system/test` directory if they are built with
+`deprecated_system_image = true`, or in `/pkgfs/packages/<package_name>/0/test`
+if they are defined in a [package](package_update.md).
 
 Note Well! The files are loaded into the QEMU instance at startup. So after
 rebuilding a test, you'll need to shutdown and re-start the QEMU instance to see
@@ -99,6 +101,14 @@ following flags to find out which test is disabled:
 
 To force-run disabled tests:
 `/system/test/scenic_unittests --gtest_also_run_disabled_tests`.
+
+Alternatively, you may also want to disable a full test *binary* within a
+package containing several test binaries. To do this, edit the `BUILD.gn` as
+follows:
+`tests = [ { name = "scenic_unittests", disabled = true } ]`.
+As a result, `scenic_unittests` will be put in a `disabled` sub-directory of
+`/system/test` or `/pkgfs/packages/<package_name>/0/test`, and will not be run
+by the CQ system.
 
 ## Q: How do I run a bunch of tests automatically? How do I ensure all dependencies are tested?
 

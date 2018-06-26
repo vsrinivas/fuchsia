@@ -31,7 +31,7 @@ To build a package containing the required code, a package type build rule is
 used. If one of these needs to be created for the target package, consult the
 reference [page][pkg-doc] for this. Some build rule types are actually
 extensions of the package rule type, for example [`flutter_app`][flutter-gni]
-extends the package type. The rule must also not set `system_image` to true,
+extends the package type. The rule must also not set `deprecated_system_image` to true,
 things in the system image can only be updated by [paving][paver].
 
 Once an appropriate build rule is available the target package can be
@@ -104,7 +104,7 @@ case 'fuchsia' can be restarted. More accurately, `sysmgr` can be restarted.
 ### Updating things in the system package
 
 If a package is part of the system image (because its package rule sets
-`system_image = "true"`) then it can not be updated with the package update flow.
+`deprecated_system_image = "true"`) then it can not be updated with the package update flow.
 It is a goal of the update flow to include updating the system package, but even
 when this is supported the target will probably need a reboot.
 
