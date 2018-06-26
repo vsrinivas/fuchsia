@@ -17,6 +17,9 @@ extern crate net2;
 extern crate parking_lot;
 extern crate slab;
 
+// Set the system allocator for anything using this crate
+extern crate fuchsia_system_alloc;
+
 /// A future which can be used by multiple threads at once.
 pub mod atomic_future;
 

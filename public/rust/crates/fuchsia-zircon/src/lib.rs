@@ -12,17 +12,6 @@ extern crate bitflags;
 extern crate failure;
 pub extern crate fuchsia_zircon_sys as sys;
 
-// Set the global allocator.
-//
-// This will conflict with any other libraries that set the global allocator,
-// and should be used uniquely on Fuchsia.
-// In the future, it might be good to break this declaration out into its own
-// crate, but for now it's convenient to add it here so that Fuchsia apps
-// depending on fuchsia_zircon will use the system allocator.
-use std::alloc::System;
-#[global_allocator]
-static ALLOC: System = System;
-
 #[deprecated(note="use fuchsia_zircon::sys::ZX_CPRNG_DRAW_MAX_LEN instead")]
 #[doc(hidden)]
 pub use sys::ZX_CPRNG_DRAW_MAX_LEN;
