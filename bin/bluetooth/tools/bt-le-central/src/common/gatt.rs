@@ -228,6 +228,19 @@ fn write_characteristic(
         })
 }
 
+fn write_without_response(client: GattClientPtr, id: u64, value: Vec<u8>)
+    -> impl Future<Item = (), Error = Error> {
+    future::result(
+        client
+            .read()
+            .active_proxy
+            .as_ref()
+            .unwrap()
+            .write_characteristic_without_response(id, &mut value.into_iter())
+            .map_err(|_| BTError::new("Failed to send message").into())
+    )
+}
+
 // ===== REPL =====
 
 fn do_help() -> FutureResult<(), Error> {
@@ -317,15 +330,20 @@ fn do_read_chr(args: Vec<&str>, client: GattClientPtr) -> impl Future<Item = (),
     Right(read_characteristic(client, id))
 }
 
-fn do_write_chr(args: Vec<&str>, client: GattClientPtr) -> impl Future<Item = (), Error = Error> {
+fn do_write_chr(mut args: Vec<&str>, client: GattClientPtr) -> impl Future<Item = (), Error = Error> {
     if args.len() < 1 {
-        println!("usage: write-chr <id> <value>");
+        println!("usage: write-chr [-w] <id> <value>");
         return left_ok!();
     }
 
     if client.read().active_proxy.is_none() {
         println!("no service connected");
         return left_ok!();
+    }
+
+    let without_response: bool = args[0] == "-w";
+    if without_response {
+        args.remove(0);
     }
 
     let id: u64 = match args[0].parse() {
@@ -343,7 +361,13 @@ fn do_write_chr(args: Vec<&str>, client: GattClientPtr) -> impl Future<Item = ()
             println!("invalid value");
             left_ok!()
         }
-        Ok(v) => Right(write_characteristic(client, id, v)),
+        Ok(v) => Right(
+            if without_response {
+                Left(write_without_response(client, id, v))
+            } else {
+                Right(write_characteristic(client, id, v))
+            }
+        )
     }
 }
 

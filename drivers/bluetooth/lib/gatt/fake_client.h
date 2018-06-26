@@ -80,6 +80,13 @@ class FakeClient final : public Client {
     write_request_callback_ = std::move(callback);
   }
 
+  // Sets a callback which will run when WriteWithoutResponse gets called.
+  using WriteWithoutResponseCallback =
+      fit::function<void(att::Handle, const common::ByteBuffer&)>;
+  void set_write_without_rsp_callback(WriteWithoutResponseCallback callback) {
+    write_without_rsp_callback_ = std::move(callback);
+  }
+
   // Emulates the receipt of a notification or indication PDU.
   void SendNotification(bool indicate, att::Handle handle,
                         const common::ByteBuffer& value);
@@ -102,6 +109,8 @@ class FakeClient final : public Client {
   void WriteRequest(att::Handle handle,
                     const common::ByteBuffer& value,
                     att::StatusCallback callback) override;
+  void WriteWithoutResponse(att::Handle handle,
+                            const common::ByteBuffer& value) override;
   void SetNotificationHandler(NotificationCallback callback) override;
 
   // All callbacks will be posted on this dispatcher to emulate asynchronous
@@ -136,6 +145,7 @@ class FakeClient final : public Client {
 
   ReadRequestCallback read_request_callback_;
   WriteRequestCallback write_request_callback_;
+  WriteWithoutResponseCallback write_without_rsp_callback_;
   NotificationCallback notification_callback_;
 
   fxl::WeakPtrFactory<FakeClient> weak_ptr_factory_;

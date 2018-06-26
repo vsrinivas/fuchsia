@@ -102,6 +102,12 @@ class Client {
                             const common::ByteBuffer& value,
                             att::StatusCallback callback) = 0;
 
+  // Sends an ATT Write Command with the requested |handle| and |value|. This
+  // should only be used with characteristics that support the "Write Without
+  // Response" property.
+  virtual void WriteWithoutResponse(att::Handle handle,
+                                    const common::ByteBuffer& value) = 0;
+
   // Assigns a callback that will be called when a notification or indication
   // PDU is received.
   using NotificationCallback =

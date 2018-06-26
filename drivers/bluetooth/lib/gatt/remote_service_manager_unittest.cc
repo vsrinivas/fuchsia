@@ -852,6 +852,49 @@ TEST_F(GATT_RemoteServiceManagerTest, WriteCharSendsWriteRequest) {
   EXPECT_EQ(kStatus, status);
 }
 
+TEST_F(GATT_RemoteServiceManagerTest, WriteWithoutResponseNotSupported) {
+  ServiceData data(1, 3, kTestServiceUuid1);
+  auto service = SetUpFakeService(data);
+
+  // No "write without response" property.
+  CharacteristicData chr(0, 2, 3, kTestUuid3);
+  SetupCharacteristics(service, {{chr}});
+
+  bool called = false;
+  fake_client()->set_write_without_rsp_callback(
+      [&](auto, const auto&) { called = true; });
+
+  service->WriteCharacteristicWithoutResponse(0, std::vector<uint8_t>());
+  RunLoopUntilIdle();
+  EXPECT_FALSE(called);
+}
+
+TEST_F(GATT_RemoteServiceManagerTest, WriteWithoutResponseSuccess) {
+  constexpr att::Handle kValueHandle = 3;
+  const std::vector<uint8_t> kValue{{'t', 'e', 's', 't'}};
+
+  ServiceData data(1, kValueHandle, kTestServiceUuid1);
+  auto service = SetUpFakeService(data);
+
+  CharacteristicData chr(Property::kWriteWithoutResponse, 2, kValueHandle,
+                         kTestUuid3);
+  SetupCharacteristics(service, {{chr}});
+
+  bool called = false;
+  fake_client()->set_write_without_rsp_callback(
+      [&](att::Handle handle, const auto& value) {
+        EXPECT_EQ(kValueHandle, handle);
+        EXPECT_TRUE(std::equal(kValue.begin(), kValue.end(), value.begin(),
+                               value.end()));
+        called = true;
+      });
+
+  service->WriteCharacteristicWithoutResponse(0, kValue);
+  RunLoopUntilIdle();
+
+  EXPECT_TRUE(called);
+}
+
 TEST_F(GATT_RemoteServiceManagerTest, EnableNotificationsAfterShutDown) {
   ServiceData data(1, 2, kTestServiceUuid1);
   auto service = SetUpFakeService(data);

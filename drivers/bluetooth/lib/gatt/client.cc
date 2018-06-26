@@ -630,6 +630,30 @@ class Impl final : public Client {
     }
   }
 
+  void WriteWithoutResponse(att::Handle handle,
+                            const common::ByteBuffer& value) override {
+    const size_t payload_size = sizeof(att::WriteRequestParams) + value.size();
+    if (sizeof(att::OpCode) + payload_size > att_->mtu()) {
+      FXL_VLOG(2) << "gatt: write request payload exceeds MTU";
+      return;
+    }
+
+    auto pdu = NewPDU(payload_size);
+    if (!pdu) {
+      return;
+    }
+
+    att::PacketWriter writer(att::kWriteCommand, pdu.get());
+    auto params = writer.mutable_payload<att::WriteRequestParams>();
+    params->handle = htole16(handle);
+
+    auto value_view =
+        writer.mutable_payload_data().mutable_view(sizeof(att::Handle));
+    value.Copy(&value_view);
+
+    att_->SendWithoutResponse(std::move(pdu));
+  }
+
   void SetNotificationHandler(NotificationCallback handler) override {
     notification_handler_ = std::move(handler);
   }

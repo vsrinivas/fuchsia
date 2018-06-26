@@ -95,6 +95,11 @@ class RemoteService : public fbl::RefCounted<RemoteService> {
                            att::StatusCallback callback,
                            async_t* dispatcher = nullptr);
 
+  // Sends a "Write Without Response" to the characteristic with the given
+  // identifier. Fails if characteristics have not been discovered.
+  void WriteCharacteristicWithoutResponse(IdType id,
+                                          std::vector<uint8_t> value);
+
   // Subscribe to characteristic handle/value notifications or indications
   // from the characteristic with the given identifier. Either notifications or
   // indications will be enabled depending on the characteristic properties.

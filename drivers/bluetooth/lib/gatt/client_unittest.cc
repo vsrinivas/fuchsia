@@ -1681,6 +1681,45 @@ TEST_F(GATT_ClientTest, WriteRequestSuccess) {
   EXPECT_FALSE(fake_chan()->link_error());
 }
 
+TEST_F(GATT_ClientTest, WriteWithoutResponseExceedsMtu) {
+  const auto kValue = common::CreateStaticByteBuffer('f', 'o', 'o');
+  constexpr att::Handle kHandle = 0x0001;
+  constexpr size_t kMtu = 5;
+  const auto kExpectedRequest =
+      common::CreateStaticByteBuffer(0x52,          // opcode: write command
+                                     0x01, 0x00,    // handle: 0x0001
+                                     'f', 'o', 'o'  // value: "foo"
+      );
+  ASSERT_EQ(kMtu + 1, kExpectedRequest.size());
+
+  att()->set_mtu(kMtu);
+
+  bool called = false;
+  fake_chan()->SetSendCallback([&](auto) { called = true; }, dispatcher());
+
+  client()->WriteWithoutResponse(kHandle, kValue);
+  RunLoopUntilIdle();
+
+  // No packet should be sent.
+  EXPECT_FALSE(called);
+}
+
+TEST_F(GATT_ClientTest, WriteWithoutResponseSuccess) {
+  const auto kValue = common::CreateStaticByteBuffer('f', 'o', 'o');
+  const auto kHandle = 0x0001;
+  const auto kExpectedRequest =
+      common::CreateStaticByteBuffer(0x52,          // opcode: write request
+                                     0x01, 0x00,    // handle: 0x0001
+                                     'f', 'o', 'o'  // value: "foo"
+      );
+
+  // Initiate the request in a loop task, as Expect() below blocks
+  async::PostTask(dispatcher(),
+                  [&] { client()->WriteWithoutResponse(kHandle, kValue); });
+
+  ASSERT_TRUE(Expect(kExpectedRequest));
+}
+
 TEST_F(GATT_ClientTest, ReadRequestEmptyResponse) {
   constexpr att::Handle kHandle = 0x0001;
   const auto kExpectedRequest = common::CreateStaticByteBuffer(

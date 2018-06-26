@@ -98,6 +98,13 @@ void FakeClient::WriteRequest(att::Handle handle,
   }
 }
 
+void FakeClient::WriteWithoutResponse(att::Handle handle,
+                                      const common::ByteBuffer& value) {
+  if (write_without_rsp_callback_) {
+    write_without_rsp_callback_(handle, value);
+  }
+}
+
 void FakeClient::SendNotification(bool indicate, att::Handle handle,
                                   const common::ByteBuffer& value) {
   if (notification_callback_) {

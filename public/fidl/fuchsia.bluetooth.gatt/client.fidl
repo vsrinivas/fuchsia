@@ -29,6 +29,11 @@ interface RemoteService {
   //      procedure, the request will fail with ErrorCode.NotSupported.
   3: WriteCharacteristic(uint64 id, uint16 offset, vector<uint8> value) -> (fuchsia.bluetooth.Status @status);
 
+  // Writes |value| to the characteristic with |id| without soliciting an
+  // acknowledgement from the peer. This method has no response and its delivery
+  // cannot be confirmed.
+  4: WriteCharacteristicWithoutResponse(uint64 id, vector<uint8> value);
+
   // Subscribe or unsubscribe to notifications/indications from the characteristic with
   // the given |id|. Notifications or indications will be enabled if |enable| is
   // true or disabled if |enable| is false and they have been enabled for this
@@ -45,7 +50,7 @@ interface RemoteService {
   // On success, the OnCharacteristicValueUpdated event will be sent whenever
   // the peer sends a notification or indication. The local host will
   // automically confirm indications.
-  4: NotifyCharacteristic(uint64 id, bool enable) -> (fuchsia.bluetooth.Status @status);
+  5: NotifyCharacteristic(uint64 id, bool enable) -> (fuchsia.bluetooth.Status @status);
 
   // Events:
   // Called when a characteristic value notification or indication is received.

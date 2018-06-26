@@ -215,6 +215,8 @@ void RemoteService::WriteCharacteristic(IdType id,
       return;
     }
 
+    FXL_DCHECK(chrc);
+
     // TODO(armansito): Use the "long write" procedure when supported.
     if (!(chrc->info().properties & Property::kWrite)) {
       FXL_VLOG(1) << "gatt: Characteristic does not support \"write\"";
@@ -222,15 +224,35 @@ void RemoteService::WriteCharacteristic(IdType id,
       return;
     }
 
-    FXL_DCHECK(chrc);
-
     auto res_cb = [cb = std::move(cb), dispatcher](Status status) mutable {
       ReportStatus(status, std::move(cb), dispatcher);
     };
 
     client_->WriteRequest(chrc->info().value_handle,
-                          common::BufferView(value.data(), value.size()),
+                          BufferView(value.data(), value.size()),
                           std::move(res_cb));
+  });
+}
+
+void RemoteService::WriteCharacteristicWithoutResponse(
+    IdType id, std::vector<uint8_t> value) {
+  RunGattTask([this, id, value = std::move(value)]() mutable {
+    RemoteCharacteristic* chrc;
+    Status status = Status(GetCharacteristic(id, &chrc));
+    if (!status) {
+      return;
+    }
+
+    FXL_DCHECK(chrc);
+
+    if (!(chrc->info().properties & Property::kWriteWithoutResponse)) {
+      FXL_VLOG(1)
+          << "gatt: Characteristic does not support \"write without response\"";
+      return;
+    }
+
+    client_->WriteWithoutResponse(chrc->info().value_handle,
+                                  BufferView(value.data(), value.size()));
   });
 }
 
