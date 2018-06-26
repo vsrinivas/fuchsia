@@ -229,15 +229,15 @@ struct InlinedEntry {
 // provided by this interface are limited to the prefix provided to the
 // Page.GetSnapshot() call.
 interface PageSnapshot {
-  // Returns the entries in the page with keys starting from the provided key.
-  // If |key_start| is empty, all entries are returned. If the result fits in a
-  // single fidl message, |status| will be |OK| and |next_token| equal to NULL.
-  // Otherwise, |status| will be |PARTIAL_RESULT| and |next_token| will have a
-  // non-NULL value. To retrieve the remaining results, another call to
-  // |GetEntries| should be made, initializing the optional |token| argument
-  // with the value of |next_token| returned in the previous call. |status|
-  // will be |PARTIAL_RESULT| as long as there are more results and |OK| once
-  // finished.
+  // Returns the entries in the page with keys greater or equal to |key_start|
+  // using the lexicographic order. If |key_start| is empty, all entries are
+  // returned. If the result fits in a single fidl message, |status| will be
+  // |OK| and |next_token| equal to NULL. Otherwise, |status| will be
+  // |PARTIAL_RESULT| and |next_token| will have a non-NULL value. To retrieve
+  // the remaining results, another call to |GetEntries| should be made,
+  // initializing the optional |token| argument with the value of |next_token|
+  // returned in the previous call. |status| will be |PARTIAL_RESULT| as long
+  // as there are more results and |OK| once finished.
   // Only |EAGER| values are guaranteed to be returned inside |entries|.
   // Missing |LAZY| values can be retrieved over the network using Fetch().
   // The returned |entries| are sorted by |key|.
@@ -250,13 +250,14 @@ interface PageSnapshot {
       -> (Status @status, vector<InlinedEntry> entries,
           Token? next_token);
 
-  // Returns the keys of all entries in the page starting from the provided
-  // key. If |key_start| is empty, all entries are returned. If the result fits
-  // in a single FIDL message, |status| will be |OK| and |next_token| equal to
-  // NULL. Otherwise, |status| will be |PARTIAL_RESULT| and |next_token| will
-  // have a non-NULL value. To retrieve the remaining results, another call to
-  // |GetKeys| should be made, initializing the optional |token| argument with
-  // the value of |next_token| returned in the previous call.
+  // Returns the keys of all entries in the page which are greater or equal to
+  // |key_start| using the lexicographic order. If |key_start| is empty, all
+  // keys are returned. If the result fits in a single FIDL message, |status|
+  // will be |OK| and |next_token| equal to NULL. Otherwise, |status| will be
+  // |PARTIAL_RESULT| and |next_token| will have a non-NULL value. To retrieve
+  // the remaining results, another call to |GetKeys| should be made,
+  // initializing the optional |token| argument with the value of |next_token|
+  // returned in the previous call.
   // The returned |keys| are sorted. |status| will be |PARTIAL_RESULT| as long
   // as there are more results and |OK| once finished.
   3: GetKeys(vector<uint8>:256 key_start, Token? token)
