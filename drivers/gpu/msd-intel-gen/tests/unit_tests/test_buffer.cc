@@ -65,6 +65,14 @@ public:
         EXPECT_TRUE(address_space->is_clear(gpu_addr));
     }
 
+    static std::shared_ptr<GpuMapping>
+    GetSharedGpuMapping(std::shared_ptr<AddressSpace> address_space,
+                        std::shared_ptr<MsdIntelBuffer> buffer, uint32_t alignment)
+    {
+        return AddressSpace::GetSharedGpuMapping(address_space, buffer, 0,
+                                                 buffer->platform_buffer()->size(), alignment);
+    }
+
     static void CachedMapping()
     {
         const uint64_t kBufferSize = 4 * PAGE_SIZE;
@@ -79,13 +87,12 @@ public:
         {
             std::shared_ptr<MsdIntelBuffer> buffer(MsdIntelBuffer::Create(kBufferSize, "test"));
             EXPECT_EQ(buffer->shared_mapping_count(), 0u);
-            auto shared_mapping =
-                AddressSpace::GetSharedGpuMapping(address_space, buffer, PAGE_SIZE);
+            auto shared_mapping = GetSharedGpuMapping(address_space, buffer, PAGE_SIZE);
             EXPECT_EQ(buffer->shared_mapping_count(), 1u);
             EXPECT_EQ(shared_mapping.use_count(), 1u);
             shared_mapping = nullptr;
             EXPECT_EQ(buffer->shared_mapping_count(), 0u);
-            shared_mapping = AddressSpace::GetSharedGpuMapping(address_space, buffer, PAGE_SIZE);
+            shared_mapping = GetSharedGpuMapping(address_space, buffer, PAGE_SIZE);
             EXPECT_EQ(buffer->shared_mapping_count(), 1u);
             EXPECT_EQ(shared_mapping.use_count(), 1u);
         }
@@ -96,13 +103,12 @@ public:
         {
             std::shared_ptr<MsdIntelBuffer> buffer(MsdIntelBuffer::Create(kBufferSize, "test"));
             EXPECT_EQ(buffer->shared_mapping_count(), 0u);
-            auto shared_mapping =
-                AddressSpace::GetSharedGpuMapping(address_space, buffer, PAGE_SIZE);
+            auto shared_mapping = GetSharedGpuMapping(address_space, buffer, PAGE_SIZE);
             EXPECT_EQ(buffer->shared_mapping_count(), 1u);
             EXPECT_EQ(shared_mapping.use_count(), 2u);
             shared_mapping = nullptr;
             EXPECT_EQ(buffer->shared_mapping_count(), 1u);
-            shared_mapping = AddressSpace::GetSharedGpuMapping(address_space, buffer, PAGE_SIZE);
+            shared_mapping = GetSharedGpuMapping(address_space, buffer, PAGE_SIZE);
             EXPECT_EQ(buffer->shared_mapping_count(), 1u);
             EXPECT_EQ(shared_mapping.use_count(), 2u);
         }
@@ -117,11 +123,11 @@ public:
             EXPECT_EQ(buffer0->shared_mapping_count(), 0u);
             EXPECT_EQ(buffer1->shared_mapping_count(), 0u);
 
-            AddressSpace::GetSharedGpuMapping(address_space, buffer0, PAGE_SIZE);
+            GetSharedGpuMapping(address_space, buffer0, PAGE_SIZE);
             EXPECT_EQ(buffer0->shared_mapping_count(), 1u);
             EXPECT_EQ(buffer1->shared_mapping_count(), 0u);
 
-            AddressSpace::GetSharedGpuMapping(address_space, buffer1, PAGE_SIZE);
+            GetSharedGpuMapping(address_space, buffer1, PAGE_SIZE);
             EXPECT_EQ(buffer0->shared_mapping_count(), 1u);
             EXPECT_EQ(buffer1->shared_mapping_count(), 1u);
 
@@ -172,7 +178,7 @@ public:
 
         {
             std::shared_ptr<GpuMapping> copy =
-                AddressSpace::GetSharedGpuMapping(address_space, buffer, alignment);
+                GetSharedGpuMapping(address_space, buffer, alignment);
             ASSERT_NE(copy, nullptr);
             EXPECT_EQ(copy.get(), shared_mapping.get());
         }
@@ -187,7 +193,7 @@ public:
             EXPECT_EQ(copy, nullptr);
         }
 
-        shared_mapping = AddressSpace::GetSharedGpuMapping(address_space, buffer, alignment);
+        shared_mapping = GetSharedGpuMapping(address_space, buffer, alignment);
         ASSERT_NE(shared_mapping, nullptr);
 
         EXPECT_EQ(buffer->shared_mapping_count(), 1u);
@@ -203,7 +209,7 @@ public:
 
         {
             std::shared_ptr<GpuMapping> copy =
-                AddressSpace::GetSharedGpuMapping(address_space, buffer, alignment);
+                GetSharedGpuMapping(address_space, buffer, alignment);
             ASSERT_NE(copy, nullptr);
             EXPECT_EQ(copy.get(), shared_mapping.get());
         }

@@ -61,14 +61,6 @@ public:
                         std::shared_ptr<MsdIntelBuffer> buffer, uint64_t offset, uint64_t length,
                         uint32_t alignment);
 
-    static std::shared_ptr<GpuMapping>
-    GetSharedGpuMapping(std::shared_ptr<AddressSpace> address_space,
-                        std::shared_ptr<MsdIntelBuffer> buffer, uint32_t alignment)
-    {
-        return GetSharedGpuMapping(address_space, buffer, 0, buffer->platform_buffer()->size(),
-                                   alignment);
-    }
-
     static uint64_t GetMappedSize(uint64_t buffer_size)
     {
         return magma::round_up(buffer_size, PAGE_SIZE);
