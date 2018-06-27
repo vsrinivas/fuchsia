@@ -25,7 +25,6 @@ prebuilt_shared_library("fsl_lib") {
     "//garnet/public/lib/fsl/socket",
     "//garnet/public/lib/fsl/syslogger",
     "//garnet/public/lib/fsl/tasks",
-    "//garnet/public/lib/fsl/threading",
     "//garnet/public/lib/fsl/types",
     "//garnet/public/lib/fsl/vmo",
   ]
@@ -51,7 +50,6 @@ executable("fsl_unittests") {
     "syslogger/init_unittest.cc",
     "tasks/fd_waiter_unittest.cc",
     "tasks/message_loop_unittest.cc",
-    "threading/thread_unittest.cc",
     "types/type_converters_unittest.cc",
     "vmo/file_unittest.cc",
     "vmo/shared_vmo_unittest.cc",
