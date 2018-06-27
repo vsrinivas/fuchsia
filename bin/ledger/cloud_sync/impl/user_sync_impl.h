@@ -9,11 +9,11 @@
 #include <set>
 
 #include <fuchsia/ledger/cloud/cpp/fidl.h>
+#include <lib/fit/function.h>
 
 #include "lib/backoff/backoff.h"
 #include "lib/callback/scoped_task_runner.h"
 #include "lib/fidl/cpp/binding.h"
-#include "lib/fxl/functional/closure.h"
 #include "peridot/bin/ledger/cloud_sync/impl/aggregator.h"
 #include "peridot/bin/ledger/cloud_sync/impl/ledger_sync_impl.h"
 #include "peridot/bin/ledger/cloud_sync/public/user_sync.h"
@@ -28,7 +28,7 @@ class UserSyncImpl : public UserSync, cloud_provider::DeviceSetWatcher {
   //     incompatible with the state in the cloud and has to be erased.
   UserSyncImpl(ledger::Environment* environment, UserConfig user_config,
                std::unique_ptr<backoff::Backoff> backoff,
-               fxl::Closure on_version_mismatch);
+               fit::closure on_version_mismatch);
   ~UserSyncImpl() override;
 
   // UserSync:
@@ -62,7 +62,7 @@ class UserSyncImpl : public UserSync, cloud_provider::DeviceSetWatcher {
   ledger::Environment* environment_;
   const UserConfig user_config_;
   std::unique_ptr<backoff::Backoff> backoff_;
-  fxl::Closure on_version_mismatch_;
+  fit::closure on_version_mismatch_;
 
   // UserSyncImpl must be started before it can be used.
   bool started_ = false;

@@ -7,7 +7,8 @@
 
 #import <map>
 
-#include "lib/fxl/functional/closure.h"
+#include <lib/fit/function.h>
+
 #include "peridot/bin/ledger/p2p_provider/public/types.h"
 #include "peridot/bin/ledger/p2p_sync/impl/device_mesh.h"
 #include "peridot/bin/ledger/p2p_sync/impl/message_generated.h"
@@ -25,7 +26,7 @@ class LedgerCommunicatorImpl : public LedgerCommunicator {
   LedgerCommunicatorImpl(std::string namespace_id, DeviceMesh* mesh);
   ~LedgerCommunicatorImpl() override;
 
-  void set_on_delete(fxl::Closure on_delete);
+  void set_on_delete(fit::closure on_delete);
 
   // OnDeviceChange is called each time a device connects or unconnects.
   void OnDeviceChange(fxl::StringView remote_device,
@@ -48,7 +49,7 @@ class LedgerCommunicatorImpl : public LedgerCommunicator {
   std::map<std::string, PageCommunicatorImpl*, convert::StringViewComparator>
       pages_;
 
-  fxl::Closure on_delete_;
+  fit::closure on_delete_;
   const std::string namespace_id_;
   DeviceMesh* const mesh_;
 };

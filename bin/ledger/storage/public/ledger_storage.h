@@ -7,6 +7,8 @@
 
 #include <memory>
 
+#include <lib/fit/function.h>
+
 #include "lib/fxl/macros.h"
 #include "peridot/bin/ledger/storage/public/page_storage.h"
 #include "peridot/bin/ledger/storage/public/types.h"
@@ -22,14 +24,14 @@ class LedgerStorage {
   // Creates a new |PageStorage| for the Page with the given |page_id|.
   virtual void CreatePageStorage(
       PageId page_id,
-      std::function<void(Status, std::unique_ptr<PageStorage>)> callback) = 0;
+      fit::function<void(Status, std::unique_ptr<PageStorage>)> callback) = 0;
 
   // Finds the |PageStorage| corresponding to the page with the given |page_id|.
   // The result will be returned through the given |callback|. If the storage
   // for the given page isn't found locally, nullptr will be returned instead.
   virtual void GetPageStorage(
       PageId page_id,
-      std::function<void(Status, std::unique_ptr<PageStorage>)> callback) = 0;
+      fit::function<void(Status, std::unique_ptr<PageStorage>)> callback) = 0;
 
   // Deletes the storage related to the page with |page_id|. This includes the
   // local copy of the page storage with all commits, tree nodes and values.

@@ -9,6 +9,8 @@
 
 #include <utility>
 
+#include <lib/fit/function.h>
+
 #include "peridot/bin/ledger/app/page_state_reader.h"
 #include "peridot/bin/ledger/coroutine/coroutine.h"
 
@@ -26,7 +28,7 @@ class PageEvictionManagerImpl : public PageEvictionManager {
   void SetPageStateReader(PageStateReader* state_reader);
 
   // PageEvictionManager:
-  void TryCleanUp(std::function<void(Status)> callback) override;
+  void TryCleanUp(fit::function<void(Status)> callback) override;
 
   void OnPageOpened(fxl::StringView ledger_name,
                     storage::PageIdView page_id) override;

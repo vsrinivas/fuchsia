@@ -5,13 +5,12 @@
 #ifndef PERIDOT_BIN_CLOUD_PROVIDER_FIRESTORE_FIRESTORE_LISTEN_CALL_H_
 #define PERIDOT_BIN_CLOUD_PROVIDER_FIRESTORE_FIRESTORE_LISTEN_CALL_H_
 
-#include <functional>
 #include <memory>
 
 #include <google/firestore/v1beta1/firestore.grpc.pb.h>
 #include <grpc++/grpc++.h>
+#include <lib/fit/function.h>
 
-#include "lib/fxl/functional/closure.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
 #include "peridot/bin/cloud_provider_firestore/firestore/listen_call_client.h"
@@ -33,7 +32,7 @@ class ListenCall {
              std::unique_ptr<ListenStream> stream);
   ~ListenCall();
 
-  void set_on_empty(fxl::Closure on_empty) { on_empty_ = std::move(on_empty); }
+  void set_on_empty(fit::closure on_empty) { on_empty_ = std::move(on_empty); }
 
   void Write(google::firestore::v1beta1::ListenRequest request);
 
@@ -66,7 +65,7 @@ class ListenCall {
   StreamWriter<ListenStream, google::firestore::v1beta1::ListenRequest>
       stream_writer_;
 
-  fxl::Closure on_empty_;
+  fit::closure on_empty_;
 
   bool connected_ = false;
   bool finish_requested_ = false;

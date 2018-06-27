@@ -5,6 +5,7 @@
 #include "peridot/bin/cloud_provider_firebase/page_handler/testing/test_page_cloud_handler.h"
 
 #include <lib/async/cpp/task.h>
+#include <lib/fit/function.h>
 
 #include "lib/fsl/socket/strings.h"
 #include "lib/fsl/vmo/strings.h"
@@ -28,16 +29,18 @@ void TestPageCloudHandler::DeliverRemoteCommits() {
           }));
 }
 
-void TestPageCloudHandler::AddCommits(
-    const std::string& /*auth_token*/, std::vector<Commit> commits,
-    const std::function<void(Status)>& callback) {
+void TestPageCloudHandler::AddCommits(const std::string& /*auth_token*/,
+                                      std::vector<Commit> commits,
+                                      fit::function<void(Status)> callback) {
   ++add_commits_calls;
   if (status_to_return == Status::OK) {
     std::move(commits.begin(), commits.end(),
               std::back_inserter(received_commits));
   }
   async::PostTask(async_,
-                  [status = status_to_return, callback] { callback(status); });
+                  [status = status_to_return, callback = std::move(callback)] {
+                    callback(status);
+                  });
 }
 
 void TestPageCloudHandler::WatchCommits(const std::string& auth_token,
@@ -56,21 +59,21 @@ void TestPageCloudHandler::UnwatchCommits(CommitWatcher* /*watcher*/) {
 
 void TestPageCloudHandler::GetCommits(
     const std::string& auth_token, const std::string& /*min_timestamp*/,
-    std::function<void(Status, std::vector<Record>)> callback) {
+    fit::function<void(Status, std::vector<Record>)> callback) {
   get_commits_calls++;
   get_commits_auth_tokens.push_back(auth_token);
   async::PostTask(
-      async_,
-      fxl::MakeCopyable([callback, status = status_to_return,
-                         records = std::move(records_to_return)]() mutable {
-        callback(status, std::move(records));
-      }));
+      async_, fxl::MakeCopyable(
+                  [callback = std::move(callback), status = status_to_return,
+                   records = std::move(records_to_return)]() mutable {
+                    callback(status, std::move(records));
+                  }));
 }
 
 void TestPageCloudHandler::AddObject(const std::string& auth_token,
                                      ObjectDigestView object_digest,
                                      fsl::SizedVmo data,
-                                     std::function<void(Status)> callback) {
+                                     fit::function<void(Status)> callback) {
   std::string data_str;
   if (!fsl::StringFromVmo(data, &data_str)) {
     async::PostTask(async_, [callback = std::move(callback)] {
@@ -87,21 +90,22 @@ void TestPageCloudHandler::AddObject(const std::string& auth_token,
 
 void TestPageCloudHandler::GetObject(
     const std::string& auth_token, ObjectDigestView object_digest,
-    std::function<void(Status status, uint64_t size, zx::socket data)>
+    fit::function<void(Status status, uint64_t size, zx::socket data)>
         callback) {
   get_object_calls++;
   get_object_auth_tokens.push_back(auth_token);
   if (status_to_return != Status::OK) {
-    async::PostTask(async_, [status = status_to_return, callback] {
-      callback(status, 0, zx::socket());
-    });
+    async::PostTask(
+        async_, [status = status_to_return, callback = std::move(callback)] {
+          callback(status, 0, zx::socket());
+        });
     return;
   }
 
-  async::PostTask(
-      async_, [this, object_digest = object_digest.ToString(), callback]() {
-        callback(Status::OK, objects_to_return[object_digest].size(),
-                 fsl::WriteStringToSocket(objects_to_return[object_digest]));
-      });
+  async::PostTask(async_, [this, object_digest = object_digest.ToString(),
+                           callback = std::move(callback)]() {
+    callback(Status::OK, objects_to_return[object_digest].size(),
+             fsl::WriteStringToSocket(objects_to_return[object_digest]));
+  });
 }
 }  // namespace cloud_provider_firebase

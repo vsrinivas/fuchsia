@@ -7,6 +7,8 @@
 
 #include <functional>
 
+#include <lib/fit/function.h>
+
 #include "lib/fxl/macros.h"
 #include "peridot/bin/ledger/storage/public/data_source.h"
 #include "peridot/bin/ledger/storage/public/types.h"
@@ -23,7 +25,7 @@ class PageSyncDelegate {
   // Retrieves the object of the given id from the cloud.
   virtual void GetObject(
       ObjectIdentifier object_identifier,
-      std::function<void(Status status, ChangeSource source,
+      fit::function<void(Status status, ChangeSource source,
                          std::unique_ptr<DataSource::DataChunk>)>
           callback) = 0;
 

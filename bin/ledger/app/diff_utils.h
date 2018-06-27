@@ -7,6 +7,8 @@
 
 #include <functional>
 
+#include <lib/fit/function.h>
+
 #include "lib/fxl/macros.h"
 #include "peridot/bin/ledger/fidl/include/types.h"
 #include "peridot/bin/ledger/storage/public/page_storage.h"
@@ -40,7 +42,7 @@ void ComputePageChange(
     storage::PageStorage* storage, const storage::Commit& base,
     const storage::Commit& other, std::string prefix_key, std::string min_key,
     PaginationBehavior pagination_behavior,
-    std::function<void(Status, std::pair<PageChangePtr, std::string>)>
+    fit::function<void(Status, std::pair<PageChangePtr, std::string>)>
         callback);
 
 // Asynchronously computes the three-way diff between a base commit and two
@@ -49,7 +51,7 @@ void ComputeThreeWayDiff(
     storage::PageStorage* storage, const storage::Commit& base,
     const storage::Commit& left, const storage::Commit& right,
     std::string prefix_key, std::string min_key, DiffType diff_type,
-    std::function<void(Status,
+    fit::function<void(Status,
                        std::pair<fidl::VectorPtr<DiffEntry>, std::string>)>
         callback);
 

@@ -4,6 +4,8 @@
 
 #include "peridot/bin/ledger/storage/impl/btree/encoding.h"
 
+#include <lib/fit/function.h>
+
 #include "gtest/gtest.h"
 #include "lib/fxl/strings/string_printf.h"
 #include "peridot/bin/ledger/encryption/fake/fake_encryption_service.h"

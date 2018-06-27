@@ -7,6 +7,7 @@
 #include <iostream>
 
 #include <lib/async/cpp/task.h>
+#include <lib/fit/function.h>
 #include <lib/zx/time.h>
 #include <trace/event.h>
 

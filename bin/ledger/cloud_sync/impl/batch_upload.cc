@@ -8,13 +8,13 @@
 #include <set>
 #include <utility>
 
+#include <lib/fit/function.h>
 #include <trace/event.h>
 
 #include "lib/callback/scoped_callback.h"
 #include "lib/callback/trace_callback.h"
 #include "lib/callback/waiter.h"
 #include "lib/fsl/vmo/strings.h"
-#include "lib/fxl/functional/closure.h"
 #include "lib/fxl/logging.h"
 
 namespace cloud_sync {
@@ -24,7 +24,7 @@ BatchUpload::BatchUpload(
     encryption::EncryptionService* encryption_service,
     cloud_provider::PageCloudPtr* page_cloud,
     std::vector<std::unique_ptr<const storage::Commit>> commits,
-    fxl::Closure on_done, std::function<void(ErrorType)> on_error,
+    fit::closure on_done, fit::function<void(ErrorType)> on_error,
     unsigned int max_concurrent_uploads)
     : storage_(storage),
       encryption_service_(encryption_service),

@@ -8,6 +8,7 @@
 #include <functional>
 
 #include <grpc++/grpc++.h>
+#include <lib/fit/function.h>
 
 #include "lib/fxl/logging.h"
 
@@ -33,7 +34,7 @@ class StreamController {
   bool IsEmpty() const { return pending_cq_operations_ == 0; }
 
   // Attempts to start the stream.
-  void StartCall(std::function<void(bool)> callback) {
+  void StartCall(fit::function<void(bool)> callback) {
     on_connected_ = [this, callback = std::move(callback)](bool ok) {
       pending_cq_operations_--;
       callback(ok);
@@ -48,7 +49,7 @@ class StreamController {
   // Note that calling Finish() by itself does *not* make any pending read/write
   // operations fail early. For that, call TryCancel() on the associated client
   // context.
-  void Finish(std::function<void(bool, grpc::Status)> callback) {
+  void Finish(fit::function<void(bool, grpc::Status)> callback) {
     on_finish_ = [this, callback = std::move(callback)](bool ok) {
       pending_cq_operations_--;
       callback(ok, status_);
@@ -66,8 +67,8 @@ class StreamController {
   int pending_cq_operations_ = 0;
 
   // Callables posted as CompletionQueue tags:
-  std::function<void(bool)> on_connected_;
-  std::function<void(bool)> on_finish_;
+  fit::function<void(bool)> on_connected_;
+  fit::function<void(bool)> on_finish_;
 
   // Final status of the stream set by the server.
   grpc::Status status_;

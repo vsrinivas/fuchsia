@@ -8,6 +8,7 @@
 #include <functional>
 
 #include <grpc++/grpc++.h>
+#include <lib/fit/function.h>
 
 #include "lib/fxl/logging.h"
 
@@ -41,13 +42,13 @@ class StreamReader {
   //
   // This error is unrecoverable and means that there is no more messages to
   // read or that the connection is broken.
-  void SetOnError(std::function<void()> on_error) {
+  void SetOnError(fit::function<void()> on_error) {
     FXL_DCHECK(on_error);
     on_error_ = std::move(on_error);
   }
 
   // Sets a callback which is called each time a message is read.
-  void SetOnMessage(std::function<void(Message)> on_message) {
+  void SetOnMessage(fit::function<void(Message)> on_message) {
     FXL_DCHECK(on_message);
     on_message_ = std::move(on_message);
   }
@@ -85,11 +86,11 @@ class StreamReader {
   bool read_is_pending_ = false;
 
   // Callables posted as CompletionQueue tags:
-  std::function<void(bool)> on_read_;
+  fit::function<void(bool)> on_read_;
 
   // Internal callables not posted on CompletionQueue:
-  std::function<void()> on_error_;
-  std::function<void(Message)> on_message_;
+  fit::function<void()> on_error_;
+  fit::function<void(Message)> on_message_;
 
   Message message_;
 };

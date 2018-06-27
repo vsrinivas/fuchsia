@@ -4,8 +4,9 @@
 
 #include "peridot/bin/ledger/lock/lock.h"
 
+#include <lib/fit/function.h>
+
 #include "gtest/gtest.h"
-#include "lib/fxl/functional/closure.h"
 #include "peridot/bin/ledger/coroutine/coroutine_impl.h"
 
 namespace lock {
@@ -23,8 +24,8 @@ TEST(Lock, OneLock) {
   coroutine::CoroutineServiceImpl coroutine_service;
   callback::OperationSerializer serializer;
 
-  std::function<void(size_t)> callback;
-  auto callable = [&callback](std::function<void(size_t)> called_callback) {
+  fit::function<void(size_t)> callback;
+  auto callable = [&callback](fit::function<void(size_t)> called_callback) {
     callback = std::move(called_callback);
   };
 
@@ -48,7 +49,7 @@ TEST(Lock, OneLock) {
   EXPECT_EQ(0u, other_value);
 
   serializer.Serialize<>([&other_value] { other_value = 1u; },
-                         [](fxl::Closure closure) { closure(); });
+                         [](fit::closure closure) { closure(); });
 
   EXPECT_EQ(0u, other_value);
   callback(1);
@@ -62,11 +63,11 @@ TEST(Lock, ManyLocks) {
   coroutine::CoroutineServiceImpl coroutine_service;
   callback::OperationSerializer serializer;
 
-  std::queue<std::function<void(size_t)>> callbacks;
+  std::queue<fit::function<void(size_t)>> callbacks;
 
   std::vector<size_t> received_values;
   for (size_t i = 0; i < nb_routines; i++) {
-    auto callable = [&callbacks](std::function<void(size_t)> called_callback) {
+    auto callable = [&callbacks](fit::function<void(size_t)> called_callback) {
       callbacks.push(std::move(called_callback));
     };
     coroutine_service.StartCoroutine([&serializer, callable, &received_values](
@@ -97,8 +98,8 @@ TEST(Lock, Interrupted) {
   callback::OperationSerializer serializer;
   coroutine::CoroutineHandler* handler_ptr = nullptr;
 
-  std::function<void()> callback;
-  auto callable = [&callback](std::function<void()> called_callback) {
+  fit::function<void()> callback;
+  auto callable = [&callback](fit::function<void()> called_callback) {
     callback = std::move(called_callback);
   };
 

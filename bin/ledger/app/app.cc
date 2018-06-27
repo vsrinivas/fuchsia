@@ -9,6 +9,7 @@
 
 #include <fuchsia/ledger/internal/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/fit/function.h>
 #include <trace-provider/provider.h>
 #include <zircon/device/vfs.h>
 
@@ -17,7 +18,6 @@
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/files/unique_fd.h"
-#include "lib/fxl/functional/closure.h"
 #include "lib/fxl/log_settings_command_line.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"

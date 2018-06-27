@@ -7,6 +7,8 @@
 
 #include <functional>
 
+#include <lib/fit/function.h>
+
 #include "peridot/bin/ledger/coroutine/coroutine.h"
 #include "peridot/bin/ledger/storage/impl/btree/tree_node.h"
 #include "peridot/bin/ledger/storage/public/types.h"
@@ -23,8 +25,8 @@ void ForEachDiff(coroutine::CoroutineService* coroutine_service,
                  PageStorage* page_storage,
                  ObjectIdentifier base_root_identifier,
                  ObjectIdentifier other_root_identifier, std::string min_key,
-                 std::function<bool(EntryChange)> on_next,
-                 std::function<void(Status)> on_done);
+                 fit::function<bool(EntryChange)> on_next,
+                 fit::function<void(Status)> on_done);
 
 // Iterates through the differences between three trees given their root ids and
 // calls |on_next| if any difference is found between any pair.
@@ -37,8 +39,8 @@ void ForEachThreeWayDiff(coroutine::CoroutineService* coroutine_service,
                          ObjectIdentifier left_root_identifier,
                          ObjectIdentifier right_root_identifier,
                          std::string min_key,
-                         std::function<bool(ThreeWayChange)> on_next,
-                         std::function<void(Status)> on_done);
+                         fit::function<bool(ThreeWayChange)> on_next,
+                         fit::function<void(Status)> on_done);
 
 }  // namespace btree
 }  // namespace storage

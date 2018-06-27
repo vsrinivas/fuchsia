@@ -10,13 +10,13 @@
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
+#include <lib/fit/function.h>
 
 #include "lib/app/cpp/connect.h"
 #include "lib/backoff/exponential_backoff.h"
 #include "lib/callback/waiter.h"
 #include "lib/fidl/cpp/clone.h"
 #include "lib/fxl/functional/auto_call.h"
-#include "lib/fxl/functional/closure.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"

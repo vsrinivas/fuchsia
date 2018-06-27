@@ -8,6 +8,7 @@
 #include <string>
 
 #include <lib/async/dispatcher.h>
+#include <lib/fit/function.h>
 
 #include "peridot/bin/ledger/coroutine/coroutine.h"
 #include "peridot/bin/ledger/encryption/public/encryption_service.h"
@@ -27,11 +28,11 @@ class LedgerStorageImpl : public LedgerStorage {
 
   void CreatePageStorage(
       PageId page_id,
-      std::function<void(Status, std::unique_ptr<PageStorage>)> callback)
+      fit::function<void(Status, std::unique_ptr<PageStorage>)> callback)
       override;
 
   void GetPageStorage(PageId page_id,
-                      std::function<void(Status, std::unique_ptr<PageStorage>)>
+                      fit::function<void(Status, std::unique_ptr<PageStorage>)>
                           callback) override;
 
   bool DeletePageStorage(PageIdView page_id) override;

@@ -7,6 +7,8 @@
 
 #include <memory>
 
+#include <lib/fit/function.h>
+
 #include "lib/fxl/macros.h"
 #include "lib/fxl/strings/string_view.h"
 #include "peridot/bin/ledger/app/page_manager.h"
@@ -38,7 +40,7 @@ class LedgerImpl : public Ledger {
     virtual void GetPage(convert::ExtendedStringView page_id,
                          PageState page_state,
                          fidl::InterfaceRequest<Page> page_request,
-                         std::function<void(Status)> callback) = 0;
+                         fit::function<void(Status)> callback) = 0;
 
     virtual Status DeletePage(convert::ExtendedStringView page_id) = 0;
 

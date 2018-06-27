@@ -7,12 +7,12 @@
 
 #include <fuchsia/ledger/internal/cpp/fidl.h>
 #include <fuchsia/modular/auth/cpp/fidl.h>
+#include <lib/fit/function.h>
 
 #include "lib/callback/auto_cleanable.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fidl/cpp/interface_ptr_set.h"
 #include "lib/fxl/files/unique_fd.h"
-#include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
 #include "peridot/bin/ledger/app/ledger_manager.h"
 #include "peridot/bin/ledger/app/page_eviction_manager.h"
@@ -40,8 +40,8 @@ class LedgerRepositoryImpl : public ledger_internal::LedgerRepository,
       std::unique_ptr<PageEvictionManager> page_eviction_manager);
   ~LedgerRepositoryImpl() override;
 
-  void set_on_empty(const fxl::Closure& on_empty_callback) {
-    on_empty_callback_ = on_empty_callback;
+  void set_on_empty(fit::closure on_empty_callback) {
+    on_empty_callback_ = std::move(on_empty_callback);
   }
 
   void BindRepository(fidl::InterfaceRequest<ledger_internal::LedgerRepository>
@@ -53,7 +53,7 @@ class LedgerRepositoryImpl : public ledger_internal::LedgerRepository,
   // PageStateReader:
   void PageIsClosedAndSynced(
       fxl::StringView ledger_name, storage::PageIdView page_id,
-      std::function<void(Status, PageClosedAndSynced)> callback) override;
+      fit::function<void(Status, PageClosedAndSynced)> callback) override;
 
   // LedgerRepository:
   void GetLedger(fidl::VectorPtr<uint8_t> ledger_name,
@@ -98,7 +98,7 @@ class LedgerRepositoryImpl : public ledger_internal::LedgerRepository,
                              convert::StringViewComparator>
       ledger_managers_;
   fidl::BindingSet<ledger_internal::LedgerRepository> bindings_;
-  fxl::Closure on_empty_callback_;
+  fit::closure on_empty_callback_;
 
   fidl::BindingSet<ledger_internal::LedgerRepositoryDebug>
       ledger_repository_debug_bindings_;

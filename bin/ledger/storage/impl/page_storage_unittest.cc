@@ -9,6 +9,7 @@
 #include <set>
 
 #include <lib/async/cpp/task.h>
+#include <lib/fit/function.h>
 
 #include "gtest/gtest.h"
 #include "lib/callback/capture.h"
@@ -18,7 +19,6 @@
 #include "lib/fxl/files/directory.h"
 #include "lib/fxl/files/file.h"
 #include "lib/fxl/files/path.h"
-#include "lib/fxl/functional/closure.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/ref_ptr.h"
@@ -50,7 +50,7 @@ class PageStorageImplAccessorForTest {
                        ObjectIdentifier object_identifier,
                        std::unique_ptr<DataSource::DataChunk> chunk,
                        ChangeSource source,
-                       std::function<void(Status)> callback) {
+                       fit::function<void(Status)> callback) {
     storage->AddPiece(std::move(object_identifier), std::move(chunk), source,
                       std::move(callback));
   }
@@ -78,10 +78,11 @@ class FakeErrorDataSource : public DataSource {
 
   uint64_t GetSize() override { return 1; }
 
-  void Get(std::function<void(std::unique_ptr<DataChunk>, Status)> callback)
+  void Get(fit::function<void(std::unique_ptr<DataChunk>, Status)> callback)
       override {
-    async::PostTask(
-        async_, [callback] { callback(nullptr, DataSource::Status::ERROR); });
+    async::PostTask(async_, [callback = std::move(callback)] {
+      callback(nullptr, DataSource::Status::ERROR);
+    });
   }
 
   async_t* const async_;
@@ -106,7 +107,7 @@ class FakeCommitWatcher : public CommitWatcher {
 class DelayingFakeSyncDelegate : public PageSyncDelegate {
  public:
   explicit DelayingFakeSyncDelegate(
-      std::function<void(fxl::Closure)> on_get_object)
+      fit::function<void(fit::closure)> on_get_object)
       : on_get_object_(std::move(on_get_object)) {}
 
   void AddObject(ObjectIdentifier object_identifier, const std::string& value) {
@@ -114,7 +115,7 @@ class DelayingFakeSyncDelegate : public PageSyncDelegate {
   }
 
   void GetObject(ObjectIdentifier object_identifier,
-                 std::function<void(Status, ChangeSource,
+                 fit::function<void(Status, ChangeSource,
                                     std::unique_ptr<DataSource::DataChunk>)>
                      callback) override {
     std::string& value = digest_to_value_[object_identifier];
@@ -128,14 +129,14 @@ class DelayingFakeSyncDelegate : public PageSyncDelegate {
   std::set<ObjectIdentifier> object_requests;
 
  private:
-  std::function<void(fxl::Closure)> on_get_object_;
+  fit::function<void(fit::closure)> on_get_object_;
   std::map<ObjectIdentifier, std::string> digest_to_value_;
 };
 
 class FakeSyncDelegate : public DelayingFakeSyncDelegate {
  public:
   FakeSyncDelegate()
-      : DelayingFakeSyncDelegate([](fxl::Closure callback) { callback(); }) {}
+      : DelayingFakeSyncDelegate([](fit::closure callback) { callback(); }) {}
 };
 
 // Implements |Init()|, |CreateJournalId() and |StartBatch()| and fails with a
@@ -940,7 +941,7 @@ TEST_F(PageStorageTest, CreateJournalHugeNode) {
       CollectPieces(
           identifier,
           [this](ObjectIdentifier identifier,
-                 std::function<void(Status, fxl::StringView)> callback) {
+                 fit::function<void(Status, fxl::StringView)> callback) {
             storage_->GetPiece(
                 std::move(identifier),
                 [callback = std::move(callback)](
@@ -1801,7 +1802,7 @@ TEST_F(PageStorageTest, NoOpCommit) {
 // do not prevent the commit to be marked as unsynced.
 TEST_F(PageStorageTest, MarkRemoteCommitSyncedRace) {
   bool sync_delegate_called;
-  fxl::Closure sync_delegate_call;
+  fit::closure sync_delegate_call;
   DelayingFakeSyncDelegate sync(callback::Capture(
       callback::SetWhenCalled(&sync_delegate_called), &sync_delegate_call));
   storage_->SetSyncDelegate(&sync);

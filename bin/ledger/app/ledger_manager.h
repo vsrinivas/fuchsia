@@ -11,10 +11,10 @@
 #include <type_traits>
 
 #include <fuchsia/ledger/internal/cpp/fidl.h>
+#include <lib/fit/function.h>
 
 #include "lib/callback/auto_cleanable.h"
 #include "lib/fidl/cpp/binding_set.h"
-#include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/strings/string_view.h"
 #include "peridot/bin/ledger/app/ledger_impl.h"
@@ -56,18 +56,18 @@ class LedgerManager : public LedgerImpl::Delegate,
   // will be |YES| or |NO| depending on whether the page is synced or not.
   void PageIsClosedAndSynced(
       storage::PageIdView page_id,
-      std::function<void(Status, PageClosedAndSynced)> callback);
+      fit::function<void(Status, PageClosedAndSynced)> callback);
 
   // LedgerImpl::Delegate:
   void GetPage(convert::ExtendedStringView page_id, PageState page_state,
                fidl::InterfaceRequest<Page> page_request,
-               std::function<void(Status)> callback) override;
+               fit::function<void(Status)> callback) override;
   Status DeletePage(convert::ExtendedStringView page_id) override;
   void SetConflictResolverFactory(
       fidl::InterfaceHandle<ConflictResolverFactory> factory) override;
 
-  void set_on_empty(const fxl::Closure& on_empty_callback) {
-    on_empty_callback_ = on_empty_callback;
+  void set_on_empty(fit::closure on_empty_callback) {
+    on_empty_callback_ = std::move(on_empty_callback);
   }
 
   // Creates a new proxy for the LedgerDebug implemented by this LedgerManager.
@@ -80,7 +80,7 @@ class LedgerManager : public LedgerImpl::Delegate,
   // locally available, the |callback| is called with |PAGE_NOT_FOUND|.
   void InitPageManagerContainer(PageManagerContainer* container,
                                 convert::ExtendedStringView page_id,
-                                std::function<void(Status)> callback);
+                                fit::function<void(Status)> callback);
 
   // Creates a page storage for the given |page_id| and completes the
   // PageManagerContainer.
@@ -127,7 +127,7 @@ class LedgerManager : public LedgerImpl::Delegate,
                              convert::StringViewComparator>
       page_managers_;
   PageUsageListener* page_usage_listener_;
-  fxl::Closure on_empty_callback_;
+  fit::closure on_empty_callback_;
 
   fidl::BindingSet<LedgerDebug> ledger_debug_bindings_;
 

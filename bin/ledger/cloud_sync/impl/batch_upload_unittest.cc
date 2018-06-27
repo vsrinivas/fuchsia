@@ -9,6 +9,7 @@
 #include <utility>
 
 #include <lib/async/dispatcher.h>
+#include <lib/fit/function.h>
 
 #include "lib/callback/capture.h"
 #include "lib/fsl/vmo/strings.h"
@@ -77,7 +78,7 @@ class TestPageStorage : public storage::PageStorageEmptyImpl {
   ~TestPageStorage() override = default;
 
   void GetUnsyncedCommits(
-      std::function<void(storage::Status,
+      fit::function<void(storage::Status,
                          std::vector<std::unique_ptr<const storage::Commit>>)>
           callback) override {
     std::vector<std::unique_ptr<const storage::Commit>> results;
@@ -90,7 +91,7 @@ class TestPageStorage : public storage::PageStorageEmptyImpl {
   }
 
   void GetUnsyncedPieces(
-      std::function<void(storage::Status,
+      fit::function<void(storage::Status,
                          std::vector<storage::ObjectIdentifier>)>
           callback) override {
     std::vector<storage::ObjectIdentifier> object_identifiers;
@@ -102,14 +103,14 @@ class TestPageStorage : public storage::PageStorageEmptyImpl {
 
   void GetObject(storage::ObjectIdentifier object_identifier,
                  Location /*location*/,
-                 std::function<void(storage::Status,
+                 fit::function<void(storage::Status,
                                     std::unique_ptr<const storage::Object>)>
                      callback) override {
-    GetPiece(std::move(object_identifier), callback);
+    GetPiece(std::move(object_identifier), std::move(callback));
   }
 
   void GetPiece(storage::ObjectIdentifier object_identifier,
-                std::function<void(storage::Status,
+                fit::function<void(storage::Status,
                                    std::unique_ptr<const storage::Object>)>
                     callback) override {
     callback(
@@ -118,14 +119,14 @@ class TestPageStorage : public storage::PageStorageEmptyImpl {
   }
 
   void MarkPieceSynced(storage::ObjectIdentifier object_identifier,
-                       std::function<void(storage::Status)> callback) override {
+                       fit::function<void(storage::Status)> callback) override {
     objects_marked_as_synced.insert(object_identifier);
     callback(storage::Status::OK);
   }
 
   void MarkCommitSynced(
       const storage::CommitId& commit_id,
-      std::function<void(storage::Status)> callback) override {
+      fit::function<void(storage::Status)> callback) override {
     commits_marked_as_synced.insert(commit_id);
     unsynced_commits.erase(
         std::remove_if(
@@ -157,7 +158,7 @@ class TestPageStorage : public storage::PageStorageEmptyImpl {
 class TestPageStorageFailingToMarkPieces : public TestPageStorage {
  public:
   void MarkPieceSynced(storage::ObjectIdentifier /*object_identifier*/,
-                       std::function<void(storage::Status)> callback) override {
+                       fit::function<void(storage::Status)> callback) override {
     callback(storage::Status::NOT_IMPLEMENTED);
   }
 };
@@ -670,7 +671,7 @@ class FailingEncryptCommitEncryptionService
 
   void EncryptCommit(
       std::string /*commit_storage*/,
-      std::function<void(encryption::Status, std::string)> callback) override {
+      fit::function<void(encryption::Status, std::string)> callback) override {
     callback(encryption::Status::INVALID_ARGUMENT, "");
   }
 };
@@ -683,7 +684,7 @@ class FailingGetNameEncryptionService
 
   void GetObjectName(
       storage::ObjectIdentifier /*object_identifier*/,
-      std::function<void(encryption::Status, std::string)> callback) override {
+      fit::function<void(encryption::Status, std::string)> callback) override {
     callback(encryption::Status::INVALID_ARGUMENT, "");
   }
 };
@@ -697,7 +698,7 @@ class FailingEncryptObjectEncryptionService
   void EncryptObject(
       storage::ObjectIdentifier /*object_identifier*/,
       fsl::SizedVmo /*content*/,
-      std::function<void(encryption::Status, std::string)> callback) override {
+      fit::function<void(encryption::Status, std::string)> callback) override {
     callback(encryption::Status::INVALID_ARGUMENT, "");
   }
 };

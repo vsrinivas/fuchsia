@@ -7,6 +7,8 @@
 
 #include <memory>
 
+#include <lib/fit/function.h>
+
 #include "lib/callback/auto_cleanable.h"
 #include "lib/fxl/macros.h"
 #include "peridot/bin/ledger/app/merging/merge_strategy.h"
@@ -22,13 +24,13 @@ class LastOneWinsMergeStrategy : public MergeStrategy {
   LastOneWinsMergeStrategy();
   ~LastOneWinsMergeStrategy() override;
 
-  void SetOnError(std::function<void()> on_error) override;
+  void SetOnError(fit::function<void()> on_error) override;
 
   void Merge(storage::PageStorage* storage, PageManager* page_manager,
              std::unique_ptr<const storage::Commit> head_1,
              std::unique_ptr<const storage::Commit> head_2,
              std::unique_ptr<const storage::Commit> ancestor,
-             std::function<void(Status)> callback) override;
+             fit::function<void(Status)> callback) override;
 
   void Cancel() override;
 

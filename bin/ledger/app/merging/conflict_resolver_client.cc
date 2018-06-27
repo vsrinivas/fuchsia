@@ -9,9 +9,10 @@
 #include <string>
 #include <vector>
 
+#include <lib/fit/function.h>
+
 #include "lib/callback/waiter.h"
 #include "lib/fsl/socket/strings.h"
-#include "lib/fxl/functional/closure.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/memory/weak_ptr.h"
 #include "peridot/bin/ledger/app/diff_utils.h"
@@ -28,7 +29,7 @@ ConflictResolverClient::ConflictResolverClient(
     std::unique_ptr<const storage::Commit> left,
     std::unique_ptr<const storage::Commit> right,
     std::unique_ptr<const storage::Commit> ancestor,
-    std::function<void(Status)> callback)
+    fit::function<void(Status)> callback)
     : storage_(storage),
       manager_(page_manager),
       conflict_resolver_(conflict_resolver),
@@ -159,24 +160,26 @@ void ConflictResolverClient::Finalize(Status status) {
 
 void ConflictResolverClient::GetFullDiff(std::unique_ptr<Token> token,
                                          GetFullDiffCallback callback) {
-  GetDiff(diff_utils::DiffType::FULL, std::move(token), callback);
+  GetDiff(diff_utils::DiffType::FULL, std::move(token), std::move(callback));
 }
 
 void ConflictResolverClient::GetConflictingDiff(
     std::unique_ptr<Token> token, GetConflictingDiffCallback callback) {
-  GetDiff(diff_utils::DiffType::CONFLICTING, std::move(token), callback);
+  GetDiff(diff_utils::DiffType::CONFLICTING, std::move(token),
+          std::move(callback));
 }
 
 void ConflictResolverClient::GetDiff(
     diff_utils::DiffType type, std::unique_ptr<Token> token,
-    const std::function<void(Status, fidl::VectorPtr<DiffEntry>,
-                             std::unique_ptr<Token>)>& callback) {
+    fit::function<void(Status, fidl::VectorPtr<DiffEntry>,
+                       std::unique_ptr<Token>)>
+        callback) {
   diff_utils::ComputeThreeWayDiff(
       storage_, *ancestor_, *left_, *right_, "",
       token ? convert::ToString(token->opaque_id) : "", type,
       callback::MakeScoped(
           weak_factory_.GetWeakPtr(),
-          [this, callback](
+          [this, callback = std::move(callback)](
               Status status,
               std::pair<fidl::VectorPtr<DiffEntry>, std::string> page_change) {
             if (cancelled_) {
@@ -208,9 +211,10 @@ void ConflictResolverClient::Merge(fidl::VectorPtr<MergedValue> merged_values,
                                    MergeCallback callback) {
   has_merged_values_ = true;
   operation_serializer_.Serialize<Status>(
-      callback, fxl::MakeCopyable([weak_this = weak_factory_.GetWeakPtr(),
-                                   merged_values = std::move(merged_values)](
-                                      MergeCallback callback) mutable {
+      std::move(callback),
+      fxl::MakeCopyable([weak_this = weak_factory_.GetWeakPtr(),
+                         merged_values = std::move(merged_values)](
+                            MergeCallback callback) mutable {
         if (!weak_this) {
           callback(Status::INTERNAL_ERROR);
           return;
@@ -224,11 +228,11 @@ void ConflictResolverClient::Merge(fidl::VectorPtr<MergedValue> merged_values,
         for (const MergedValue& merged_value : *merged_values) {
           weak_this->OnNextMergeResult(merged_value, waiter);
         }
-        waiter->Finalize(fxl::MakeCopyable(fxl::MakeCopyable(
+        waiter->Finalize(
             [weak_this, merged_values = std::move(merged_values),
              callback = std::move(callback)](
-                storage::Status status,
-                std::vector<storage::ObjectIdentifier> object_identifiers) {
+                storage::Status status, std::vector<storage::ObjectIdentifier>
+                                            object_identifiers) mutable {
               if (!weak_this) {
                 callback(Status::INTERNAL_ERROR);
                 return;
@@ -251,10 +255,11 @@ void ConflictResolverClient::Merge(fidl::VectorPtr<MergedValue> merged_values,
                         : storage::KeyPriority::LAZY,
                     waiter->NewCallback());
               }
-              waiter->Finalize([callback](storage::Status status) {
-                callback(PageUtils::ConvertStatus(status));
-              });
-            })));
+              waiter->Finalize(
+                  [callback = std::move(callback)](storage::Status status) {
+                    callback(PageUtils::ConvertStatus(status));
+                  });
+            });
       }));
 }
 
@@ -287,12 +292,13 @@ void ConflictResolverClient::MergeNonConflictingEntries(
     }
     return true;
   };
-  auto on_done = [waiter, callback](storage::Status status) {
+  auto on_done = [waiter, callback = std::move(callback)](
+                     storage::Status status) mutable {
     if (status != storage::Status::OK) {
       callback(PageUtils::ConvertStatus(status));
       return;
     }
-    waiter->Finalize([callback](storage::Status status) {
+    waiter->Finalize([callback = std::move(callback)](storage::Status status) {
       callback(PageUtils::ConvertStatus(status));
     });
   };
@@ -309,8 +315,8 @@ void ConflictResolverClient::Done(DoneCallback callback) {
       std::move(journal_),
       callback::MakeScoped(
           weak_factory_.GetWeakPtr(),
-          [this, callback](storage::Status status,
-                           std::unique_ptr<const storage::Commit>) {
+          [this, callback = std::move(callback)](
+              storage::Status status, std::unique_ptr<const storage::Commit>) {
             if (!IsInValidStateAndNotify(callback, status)) {
               return;
             }
@@ -319,8 +325,8 @@ void ConflictResolverClient::Done(DoneCallback callback) {
           }));
 }
 
-bool ConflictResolverClient::IsInValidStateAndNotify(MergeCallback callback,
-                                                     storage::Status status) {
+bool ConflictResolverClient::IsInValidStateAndNotify(
+    const MergeCallback& callback, storage::Status status) {
   if (!cancelled_ && status == storage::Status::OK) {
     return true;
   }

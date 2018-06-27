@@ -7,6 +7,8 @@
 
 #include <memory>
 
+#include <lib/fit/function.h>
+
 #include "lib/callback/managed_container.h"
 #include "peridot/bin/ledger/storage/public/data_source.h"
 #include "peridot/bin/ledger/storage/public/types.h"
@@ -19,7 +21,7 @@ namespace storage {
 void ReadDataSource(
     callback::ManagedContainer* managed_container,
     std::unique_ptr<DataSource> data_source,
-    std::function<void(Status, std::unique_ptr<DataSource::DataChunk>)>
+    fit::function<void(Status, std::unique_ptr<DataSource::DataChunk>)>
         callback);
 }  // namespace storage
 

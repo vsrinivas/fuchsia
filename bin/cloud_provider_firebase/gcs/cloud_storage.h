@@ -8,6 +8,7 @@
 #include <functional>
 #include <string>
 
+#include <lib/fit/function.h>
 #include <lib/zx/socket.h>
 
 #include "lib/fsl/vmo/sized_vmo.h"
@@ -23,11 +24,11 @@ class CloudStorage {
 
   virtual void UploadObject(std::string auth_token, const std::string& key,
                             fsl::SizedVmo data,
-                            std::function<void(Status)> callback) = 0;
+                            fit::function<void(Status)> callback) = 0;
 
   virtual void DownloadObject(
       std::string auth_token, const std::string& key,
-      std::function<void(Status status, uint64_t size, zx::socket data)>
+      fit::function<void(Status status, uint64_t size, zx::socket data)>
           callback) = 0;
 
  private:

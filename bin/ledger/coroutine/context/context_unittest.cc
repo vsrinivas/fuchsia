@@ -6,6 +6,8 @@
 
 #include <string.h>
 
+#include <lib/fit/function.h>
+
 #include "gtest/gtest.h"
 #include "lib/fxl/compiler_specific.h"
 #include "lib/fxl/logging.h"
@@ -38,7 +40,7 @@ size_t Fact(size_t n) {
 }
 
 void RunInContext(void* data) {
-  auto runnable = reinterpret_cast<std::function<void()>*>(data);
+  auto runnable = reinterpret_cast<fit::function<void()>*>(data);
   (*runnable)();
 }
 
@@ -68,7 +70,7 @@ TEST(Context, MakeContext) {
 
   size_t f = 0u;
   int va_args_result = 0;
-  std::function<void()> runnable = [&]() {
+  fit::function<void()> runnable = [&]() {
     f = Fact(5);
     va_args_result = UseMMX("Hello %d %d\n", 1, 2);
     SetContext(&old_context);

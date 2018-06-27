@@ -9,11 +9,11 @@
 #include <utility>
 
 #include <fuchsia/ledger/cloud/cpp/fidl.h>
+#include <lib/fit/function.h>
 
 #include "lib/callback/cancellable.h"
 #include "lib/fidl/cpp/array.h"
 #include "lib/fidl/cpp/binding.h"
-#include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
 #include "peridot/bin/cloud_provider_firebase/gcs/cloud_storage.h"
 #include "peridot/bin/cloud_provider_firebase/include/types.h"
@@ -33,7 +33,7 @@ class PageCloudImpl : public cloud_provider::PageCloud, CommitWatcher {
                 fidl::InterfaceRequest<cloud_provider::PageCloud> request);
   ~PageCloudImpl() override;
 
-  void set_on_empty(const fxl::Closure& on_empty) { on_empty_ = on_empty; }
+  void set_on_empty(fit::closure on_empty) { on_empty_ = std::move(on_empty); }
 
   // CommitWatcher:
   void OnRemoteCommits(std::vector<Record> records) override;
@@ -67,7 +67,7 @@ class PageCloudImpl : public cloud_provider::PageCloud, CommitWatcher {
   std::unique_ptr<gcs::CloudStorage> cloud_storage_;
   std::unique_ptr<PageCloudHandler> handler_;
   fidl::Binding<cloud_provider::PageCloud> binding_;
-  fxl::Closure on_empty_;
+  fit::closure on_empty_;
 
   // Remote commits accumulated until the client confirms receiving the previous
   // notifiation.

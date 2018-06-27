@@ -9,7 +9,8 @@
 #include <memory>
 #include <string>
 
-#include "lib/fxl/functional/closure.h"
+#include <lib/fit/function.h>
+
 #include "lib/fxl/macros.h"
 #include "peridot/bin/ledger/cloud_sync/public/page_sync.h"
 #include "peridot/bin/ledger/encryption/public/encryption_service.h"
@@ -31,7 +32,7 @@ class LedgerSync {
   virtual std::unique_ptr<PageSync> CreatePageSync(
       storage::PageStorage* page_storage,
       storage::PageSyncClient* page_sync_client,
-      fxl::Closure error_callback) = 0;
+      fit::closure error_callback) = 0;
 
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(LedgerSync);

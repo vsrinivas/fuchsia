@@ -8,6 +8,7 @@
 #include <deque>
 #include <sstream>
 
+#include <lib/fit/function.h>
 #include <rapidjson/document.h>
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>
@@ -16,7 +17,6 @@
 #include "lib/callback/auto_cleanable.h"
 #include "lib/fsl/vmo/strings.h"
 #include "lib/fxl/arraysize.h"
-#include "lib/fxl/functional/closure.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/concatenate.h"
 #include "lib/fxl/strings/split_string.h"
@@ -63,7 +63,7 @@ class ListenerContainer : public socket::SocketWriter::Client {
     CallWriterBack();
   }
 
-  void set_on_empty(fxl::Closure on_done) { on_done_ = std::move(on_done); }
+  void set_on_empty(fit::closure on_done) { on_done_ = std::move(on_done); }
 
  private:
   void CallWriterBack() {
@@ -84,7 +84,7 @@ class ListenerContainer : public socket::SocketWriter::Client {
 
   // socket::SocketWriter::Client
   void GetNext(size_t offset, size_t max_size,
-               std::function<void(fxl::StringView)> callback) override {
+               fit::function<void(fxl::StringView)> callback) override {
     size_t to_remove = offset - current_offset_;
     while (to_remove > 0) {
       FXL_DCHECK(!content_.empty());
@@ -109,8 +109,8 @@ class ListenerContainer : public socket::SocketWriter::Client {
   socket::SocketWriter writer_;
   const std::unique_ptr<Filter> filter_;
   std::deque<std::string> content_;
-  fxl::Closure on_done_;
-  std::function<void(fxl::StringView)> writer_callback_;
+  fit::closure on_done_;
+  fit::function<void(fxl::StringView)> writer_callback_;
   size_t current_offset_ = 0u;
   size_t max_size_ = 0u;
 };
@@ -362,16 +362,14 @@ FirebaseServer::FirebaseServer() : listeners_(std::make_unique<Listeners>()) {
 FirebaseServer::~FirebaseServer() {}
 
 void FirebaseServer::HandleGet(
-    http::URLRequest request,
-    const std::function<void(http::URLResponse)> callback) {
+    http::URLRequest request, fit::function<void(http::URLResponse)> callback) {
   url::GURL url(request.url);
   callback(BuildResponse(request.url, Server::ResponseCode::kOk,
                          GetSerializedValueForURL(url)));
 }
 
 void FirebaseServer::HandleGetStream(
-    http::URLRequest request,
-    const std::function<void(http::URLResponse)> callback) {
+    http::URLRequest request, fit::function<void(http::URLResponse)> callback) {
   url::GURL url(request.url);
   auto path = GetPath(url);
   socket::SocketPair sockets;
@@ -382,8 +380,7 @@ void FirebaseServer::HandleGetStream(
 }
 
 void FirebaseServer::HandlePatch(
-    http::URLRequest request,
-    const std::function<void(http::URLResponse)> callback) {
+    http::URLRequest request, fit::function<void(http::URLResponse)> callback) {
   std::string body;
   if (!fsl::StringFromVmo(request.body->sized_buffer(), &body)) {
     FXL_NOTREACHED();
@@ -421,8 +418,7 @@ void FirebaseServer::HandlePatch(
 }
 
 void FirebaseServer::HandlePut(
-    http::URLRequest request,
-    const std::function<void(http::URLResponse)> callback) {
+    http::URLRequest request, fit::function<void(http::URLResponse)> callback) {
   std::string body;
   if (!fsl::StringFromVmo(request.body->sized_buffer(), &body)) {
     FXL_NOTREACHED();

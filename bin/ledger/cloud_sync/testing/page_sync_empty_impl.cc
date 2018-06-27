@@ -4,14 +4,15 @@
 
 #include "peridot/bin/ledger/cloud_sync/testing/page_sync_empty_impl.h"
 
-#include "lib/fxl/functional/closure.h"
+#include <lib/fit/function.h>
+
 #include "lib/fxl/logging.h"
 
 namespace cloud_sync {
 
 void PageSyncEmptyImpl::Start() { FXL_NOTIMPLEMENTED(); }
 
-void PageSyncEmptyImpl::SetOnIdle(fxl::Closure /*on_idle_callback*/) {
+void PageSyncEmptyImpl::SetOnIdle(fit::closure /*on_idle_callback*/) {
   FXL_NOTIMPLEMENTED();
 }
 
@@ -21,7 +22,7 @@ bool PageSyncEmptyImpl::IsIdle() {
 }
 
 void PageSyncEmptyImpl::SetOnBacklogDownloaded(
-    fxl::Closure /*on_backlog_downloaded_callback*/) {
+    fit::closure /*on_backlog_downloaded_callback*/) {
   FXL_NOTIMPLEMENTED();
 }
 

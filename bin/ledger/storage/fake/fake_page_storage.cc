@@ -10,6 +10,7 @@
 
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
+#include <lib/fit/function.h>
 #include <lib/zx/time.h>
 
 #include "lib/fsl/socket/strings.h"
@@ -49,7 +50,7 @@ FakePageStorage::~FakePageStorage() {}
 PageId FakePageStorage::GetId() { return page_id_; }
 
 void FakePageStorage::GetHeadCommitIds(
-    std::function<void(Status, std::vector<CommitId>)> callback) {
+    fit::function<void(Status, std::vector<CommitId>)> callback) {
   std::vector<CommitId> commit_ids(heads_.begin(), heads_.end());
   if (commit_ids.empty()) {
     commit_ids.emplace_back();
@@ -59,7 +60,7 @@ void FakePageStorage::GetHeadCommitIds(
 
 void FakePageStorage::GetCommit(
     CommitIdView commit_id,
-    std::function<void(Status, std::unique_ptr<const Commit>)> callback) {
+    fit::function<void(Status, std::unique_ptr<const Commit>)> callback) {
   auto it = journals_.find(commit_id.ToString());
   if (it == journals_.end()) {
     callback(Status::NOT_FOUND, nullptr);
@@ -77,7 +78,7 @@ void FakePageStorage::GetCommit(
 
 void FakePageStorage::StartCommit(
     const CommitId& commit_id, JournalType /*journal_type*/,
-    std::function<void(Status, std::unique_ptr<Journal>)> callback) {
+    fit::function<void(Status, std::unique_ptr<Journal>)> callback) {
   uint64_t next_generation = 0;
   if (journals_.find(commit_id) != journals_.end()) {
     next_generation = journals_[commit_id].get()->GetGeneration() + 1;
@@ -91,7 +92,7 @@ void FakePageStorage::StartCommit(
 
 void FakePageStorage::StartMergeCommit(
     const CommitId& left, const CommitId& right,
-    std::function<void(Status, std::unique_ptr<Journal>)> callback) {
+    fit::function<void(Status, std::unique_ptr<Journal>)> callback) {
   auto delegate = std::make_unique<FakeJournalDelegate>(
       left, right, autocommit_,
       std::max(journals_[left].get()->GetGeneration(),
@@ -103,7 +104,7 @@ void FakePageStorage::StartMergeCommit(
 
 void FakePageStorage::CommitJournal(
     std::unique_ptr<Journal> journal,
-    std::function<void(Status, std::unique_ptr<const storage::Commit>)>
+    fit::function<void(Status, std::unique_ptr<const storage::Commit>)>
         callback) {
   static_cast<FakeJournal*>(journal.get())
       ->Commit([this, callback = std::move(callback)](
@@ -132,7 +133,7 @@ void FakePageStorage::CommitJournal(
 }
 
 void FakePageStorage::RollbackJournal(std::unique_ptr<Journal> journal,
-                                      std::function<void(Status)> callback) {
+                                      fit::function<void(Status)> callback) {
   callback(static_cast<FakeJournal*>(journal.get())->Rollback());
 }
 
@@ -149,13 +150,13 @@ Status FakePageStorage::RemoveCommitWatcher(CommitWatcher* watcher) {
   return Status::OK;
 }
 
-void FakePageStorage::IsSynced(std::function<void(Status, bool)> callback) {
+void FakePageStorage::IsSynced(fit::function<void(Status, bool)> callback) {
   callback(Status::OK, is_synced_);
 }
 
 void FakePageStorage::AddObjectFromLocal(
     std::unique_ptr<DataSource> data_source,
-    std::function<void(Status, ObjectIdentifier)> callback) {
+    fit::function<void(Status, ObjectIdentifier)> callback) {
   auto value = std::make_unique<std::string>();
   auto data_source_ptr = data_source.get();
   data_source_ptr->Get(fxl::MakeCopyable(
@@ -180,13 +181,13 @@ void FakePageStorage::AddObjectFromLocal(
 
 void FakePageStorage::GetObject(
     ObjectIdentifier object_identifier, Location /*location*/,
-    std::function<void(Status, std::unique_ptr<const Object>)> callback) {
+    fit::function<void(Status, std::unique_ptr<const Object>)> callback) {
   GetPiece(object_identifier, std::move(callback));
 }
 
 void FakePageStorage::GetPiece(
     ObjectIdentifier object_identifier,
-    std::function<void(Status, std::unique_ptr<const Object>)> callback) {
+    fit::function<void(Status, std::unique_ptr<const Object>)> callback) {
   object_requests_.emplace_back(
       [this, object_identifier = std::move(object_identifier),
        callback = std::move(callback)] {
@@ -205,8 +206,8 @@ void FakePageStorage::GetPiece(
 
 void FakePageStorage::GetCommitContents(const Commit& commit,
                                         std::string min_key,
-                                        std::function<bool(Entry)> on_next,
-                                        std::function<void(Status)> on_done) {
+                                        fit::function<bool(Entry)> on_next,
+                                        fit::function<void(Status)> on_done) {
   FakeJournalDelegate* journal = journals_[commit.GetId()].get();
   if (!journal) {
     on_done(Status::NOT_FOUND);
@@ -240,7 +241,7 @@ void FakePageStorage::GetCommitContents(const Commit& commit,
 
 void FakePageStorage::GetEntryFromCommit(
     const Commit& commit, std::string key,
-    std::function<void(Status, Entry)> callback) {
+    fit::function<void(Status, Entry)> callback) {
   FakeJournalDelegate* journal = journals_[commit.GetId()].get();
   if (!journal) {
     callback(Status::NOT_FOUND, Entry());

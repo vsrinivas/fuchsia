@@ -8,6 +8,7 @@
 #include <map>
 
 #include <fuchsia/net/oldhttp/cpp/fidl.h>
+#include <lib/fit/function.h>
 
 #include "lib/fxl/macros.h"
 
@@ -22,26 +23,26 @@ class Server {
   // Serves the given request.
   void Serve(
       ::fuchsia::net::oldhttp::URLRequest request,
-      std::function<void(::fuchsia::net::oldhttp::URLResponse)> callback);
+      fit::function<void(::fuchsia::net::oldhttp::URLResponse)> callback);
 
  protected:
   enum class ResponseCode { kOk = 200, kUnauthorized = 401, kNotFound = 404 };
 
   virtual void HandleGet(
       ::fuchsia::net::oldhttp::URLRequest request,
-      std::function<void(::fuchsia::net::oldhttp::URLResponse)> callback);
+      fit::function<void(::fuchsia::net::oldhttp::URLResponse)> callback);
   virtual void HandleGetStream(
       ::fuchsia::net::oldhttp::URLRequest request,
-      std::function<void(::fuchsia::net::oldhttp::URLResponse)> callback);
+      fit::function<void(::fuchsia::net::oldhttp::URLResponse)> callback);
   virtual void HandlePatch(
       ::fuchsia::net::oldhttp::URLRequest request,
-      std::function<void(::fuchsia::net::oldhttp::URLResponse)> callback);
+      fit::function<void(::fuchsia::net::oldhttp::URLResponse)> callback);
   virtual void HandlePost(
       ::fuchsia::net::oldhttp::URLRequest request,
-      std::function<void(::fuchsia::net::oldhttp::URLResponse)> callback);
+      fit::function<void(::fuchsia::net::oldhttp::URLResponse)> callback);
   virtual void HandlePut(
       ::fuchsia::net::oldhttp::URLRequest request,
-      std::function<void(::fuchsia::net::oldhttp::URLResponse)> callback);
+      fit::function<void(::fuchsia::net::oldhttp::URLResponse)> callback);
 
   ::fuchsia::net::oldhttp::URLResponse BuildResponse(
       const std::string& url, ResponseCode code, zx::socket body,

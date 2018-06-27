@@ -7,13 +7,13 @@
 
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
+#include <lib/fit/function.h>
 
 #include "garnet/public/lib/callback/capture.h"
 #include "gtest/gtest.h"
 #include "lib/callback/capture.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fidl/cpp/optional.h"
-#include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/strings/string_printf.h"
 #include "peridot/bin/ledger/app/constants.h"
@@ -39,7 +39,7 @@ class PageWatcherIntegrationTest : public IntegrationTest {
 class Watcher : public ledger::PageWatcher {
  public:
   Watcher(fidl::InterfaceRequest<PageWatcher> request,
-          fxl::Closure change_callback = [] {})
+          fit::closure change_callback = [] {})
       : binding_(this, std::move(request)),
         change_callback_(std::move(change_callback)) {}
 
@@ -62,7 +62,7 @@ class Watcher : public ledger::PageWatcher {
   }
 
   fidl::Binding<PageWatcher> binding_;
-  fxl::Closure change_callback_;
+  fit::closure change_callback_;
 };
 
 TEST_P(PageWatcherIntegrationTest, PageWatcherSimple) {
@@ -604,7 +604,7 @@ TEST_P(PageWatcherIntegrationTest, PageWatcher1Change2Pages) {
 class WaitingWatcher : public ledger::PageWatcher {
  public:
   WaitingWatcher(fidl::InterfaceRequest<ledger::PageWatcher> request,
-                 fxl::Closure change_callback)
+                 fit::closure change_callback)
       : binding_(this, std::move(request)),
         change_callback_(std::move(change_callback)) {}
 
@@ -625,12 +625,12 @@ class WaitingWatcher : public ledger::PageWatcher {
                 OnChangeCallback callback) override {
     FXL_DCHECK(result_state == ledger::ResultState::COMPLETED)
         << "Handling OnChange pagination not implemented yet";
-    changes.emplace_back(std::move(page_change), callback);
+    changes.emplace_back(std::move(page_change), std::move(callback));
     change_callback_();
   }
 
   fidl::Binding<ledger::PageWatcher> binding_;
-  fxl::Closure change_callback_;
+  fit::closure change_callback_;
 };
 
 TEST_P(PageWatcherIntegrationTest, PageWatcherConcurrentTransaction) {

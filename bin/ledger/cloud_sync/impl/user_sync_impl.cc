@@ -6,8 +6,9 @@
 
 #include <utility>
 
+#include <lib/fit/function.h>
+
 #include "lib/fxl/files/file.h"
-#include "lib/fxl/functional/closure.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/random/rand.h"
 #include "lib/fxl/strings/concatenate.h"
@@ -24,7 +25,7 @@ constexpr size_t kFingerprintSize = 16;
 UserSyncImpl::UserSyncImpl(ledger::Environment* environment,
                            UserConfig user_config,
                            std::unique_ptr<backoff::Backoff> backoff,
-                           fxl::Closure on_version_mismatch)
+                           fit::closure on_version_mismatch)
     : environment_(environment),
       user_config_(std::move(user_config)),
       backoff_(std::move(backoff)),

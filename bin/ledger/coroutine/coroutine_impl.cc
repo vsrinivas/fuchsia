@@ -4,6 +4,8 @@
 
 #include "peridot/bin/ledger/coroutine/coroutine_impl.h"
 
+#include <lib/fit/function.h>
+
 #if __has_feature(address_sanitizer)
 #include <sanitizer/common_interface_defs.h>
 #endif
@@ -28,7 +30,7 @@ class CoroutineServiceImpl::CoroutineHandlerImpl : public CoroutineHandler {
 
   void Start();
   void set_cleanup(
-      std::function<void(std::unique_ptr<context::Stack>)> cleanup) {
+      fit::function<void(std::unique_ptr<context::Stack>)> cleanup) {
     cleanup_ = std::move(cleanup);
   }
 
@@ -39,7 +41,7 @@ class CoroutineServiceImpl::CoroutineHandlerImpl : public CoroutineHandler {
 
   std::unique_ptr<context::Stack> stack_;
   fit::function<void(CoroutineHandler*)> runnable_;
-  std::function<void(std::unique_ptr<context::Stack>)> cleanup_;
+  fit::function<void(std::unique_ptr<context::Stack>)> cleanup_;
   context::Context main_context_;
   context::Context routine_context_;
   bool interrupted_ = false;

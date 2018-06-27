@@ -11,6 +11,7 @@
 
 #include <lib/async/cpp/wait.h>
 #include <lib/async/default.h>
+#include <lib/fit/function.h>
 #include <lib/zx/socket.h>
 
 #include "lib/fxl/macros.h"
@@ -25,7 +26,7 @@ class SocketWriter {
   class Client {
    public:
     virtual void GetNext(size_t offset, size_t max_size,
-                         std::function<void(fxl::StringView)> callback) = 0;
+                         fit::function<void(fxl::StringView)> callback) = 0;
     virtual void OnDataComplete() = 0;
 
    protected:
@@ -65,7 +66,7 @@ class StringSocketWriter : public SocketWriter::Client {
 
  private:
   void GetNext(size_t offset, size_t max_size,
-               std::function<void(fxl::StringView)> callback) override;
+               fit::function<void(fxl::StringView)> callback) override;
   void OnDataComplete() override;
 
   SocketWriter socket_writer_;

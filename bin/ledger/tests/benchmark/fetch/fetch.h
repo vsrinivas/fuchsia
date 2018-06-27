@@ -73,7 +73,7 @@ class FetchBenchmark : public ledger::SyncWatcher {
   ledger::PagePtr writer_page_;
   ledger::PagePtr reader_page_;
   std::vector<fidl::VectorPtr<uint8_t>> keys_;
-  std::function<void(ledger::SyncState, ledger::SyncState)>
+  fit::function<void(ledger::SyncState, ledger::SyncState)>
       on_sync_state_changed_;
   ledger::SyncState previous_state_;
 

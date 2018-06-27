@@ -4,6 +4,7 @@
 
 #include "peridot/bin/ledger/tests/benchmark/put/put.h"
 
+#include <lib/fit/function.h>
 #include <lib/zx/time.h>
 #include <trace/event.h>
 
@@ -113,7 +114,7 @@ void PutBenchmark::OnChange(ledger::PageChange page_change,
 }
 
 void PutBenchmark::InitializeKeys(
-    std::function<void(std::vector<fidl::VectorPtr<uint8_t>>)> on_done) {
+    fit::function<void(std::vector<fidl::VectorPtr<uint8_t>>)> on_done) {
   std::vector<fidl::VectorPtr<uint8_t>> keys =
       generator_.MakeKeys(entry_count_, key_size_, entry_count_);
   std::vector<fidl::VectorPtr<uint8_t>> keys_cloned;
@@ -186,7 +187,7 @@ void PutBenchmark::RunSingle(int i,
 
 void PutBenchmark::PutEntry(fidl::VectorPtr<uint8_t> key,
                             fidl::VectorPtr<uint8_t> value,
-                            std::function<void()> on_done) {
+                            fit::function<void()> on_done) {
   auto trace_event_id = TRACE_NONCE();
   TRACE_ASYNC_BEGIN("benchmark", "put", trace_event_id);
   if (reference_strategy_ == PageDataGenerator::ReferenceStrategy::INLINE) {

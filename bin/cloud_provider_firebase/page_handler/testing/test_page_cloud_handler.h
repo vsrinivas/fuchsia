@@ -10,6 +10,7 @@
 #include <vector>
 
 #include <lib/async/dispatcher.h>
+#include <lib/fit/function.h>
 
 #include "lib/fxl/macros.h"
 #include "peridot/bin/cloud_provider_firebase/page_handler/public/page_cloud_handler.h"
@@ -31,7 +32,7 @@ class TestPageCloudHandler : public PageCloudHandlerEmptyImpl {
 
   // PageCloudHandler:
   void AddCommits(const std::string& auth_token, std::vector<Commit> commits,
-                  const std::function<void(Status)>& callback) override;
+                  fit::function<void(Status)> callback) override;
 
   void WatchCommits(const std::string& auth_token,
                     const std::string& min_timestamp,
@@ -41,15 +42,15 @@ class TestPageCloudHandler : public PageCloudHandlerEmptyImpl {
 
   void GetCommits(
       const std::string& auth_token, const std::string& min_timestamp,
-      std::function<void(Status, std::vector<Record>)> callback) override;
+      fit::function<void(Status, std::vector<Record>)> callback) override;
 
   void AddObject(const std::string& auth_token, ObjectDigestView object_digest,
                  fsl::SizedVmo data,
-                 std::function<void(Status)> callback) override;
+                 fit::function<void(Status)> callback) override;
 
   void GetObject(
       const std::string& auth_token, ObjectDigestView object_digest,
-      std::function<void(Status status, uint64_t size, zx::socket data)>
+      fit::function<void(Status status, uint64_t size, zx::socket data)>
           callback) override;
 
   std::vector<Record> records_to_return;

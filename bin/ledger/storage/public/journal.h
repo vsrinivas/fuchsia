@@ -5,6 +5,8 @@
 #ifndef PERIDOT_BIN_LEDGER_STORAGE_PUBLIC_JOURNAL_H_
 #define PERIDOT_BIN_LEDGER_STORAGE_PUBLIC_JOURNAL_H_
 
+#include <lib/fit/function.h>
+
 #include "lib/fxl/macros.h"
 #include "peridot/bin/ledger/storage/public/commit.h"
 #include "peridot/bin/ledger/storage/public/types.h"
@@ -25,12 +27,12 @@ class Journal {
   // |Journal|. Returns |OK| on success or the error code otherwise.
   virtual void Put(convert::ExtendedStringView key,
                    ObjectIdentifier object_identifier, KeyPriority priority,
-                   std::function<void(Status)> callback) = 0;
+                   fit::function<void(Status)> callback) = 0;
 
   // Deletes the entry with the given |key| from this |Journal|. Returns |OK|
   // on success or the error code otherwise.
   virtual void Delete(convert::ExtendedStringView key,
-                      std::function<void(Status)> callback) = 0;
+                      fit::function<void(Status)> callback) = 0;
 
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(Journal);

@@ -7,11 +7,11 @@
 #include <utility>
 
 #include <lib/async/cpp/task.h>
+#include <lib/fit/function.h>
 #include <trace/event.h>
 
 #include "lib/fxl/files/directory.h"
 #include "lib/fxl/files/path.h"
-#include "lib/fxl/functional/closure.h"
 #include "lib/fxl/logging.h"
 #include "peridot/bin/ledger/cobalt/cobalt.h"
 #include "peridot/bin/ledger/coroutine/coroutine.h"
@@ -26,7 +26,7 @@ namespace {
 
 Status MakeEmptySyncCallAndCheck(async_t* async,
                                  coroutine::CoroutineHandler* handler) {
-  if (coroutine::SyncCall(handler, [&async](fxl::Closure on_done) {
+  if (coroutine::SyncCall(handler, [&async](fit::closure on_done) {
         async::PostTask(async, std::move(on_done));
       }) == coroutine::ContinuationStatus::INTERRUPTED) {
     return Status::INTERRUPTED;
@@ -54,7 +54,7 @@ class BatchImpl : public Db::Batch {
   BatchImpl(
       async_t* async, std::unique_ptr<leveldb::WriteBatch> batch,
       leveldb::DB* db,
-      std::function<Status(std::unique_ptr<leveldb::WriteBatch>)> callback)
+      fit::function<Status(std::unique_ptr<leveldb::WriteBatch>)> callback)
       : async_(async),
         batch_(std::move(batch)),
         db_(db),
@@ -111,7 +111,7 @@ class BatchImpl : public Db::Batch {
   const leveldb::ReadOptions read_options_;
   leveldb::DB* db_;
 
-  std::function<Status(std::unique_ptr<leveldb::WriteBatch>)> callback_;
+  fit::function<Status(std::unique_ptr<leveldb::WriteBatch>)> callback_;
 };
 
 class RowIterator

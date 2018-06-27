@@ -8,6 +8,7 @@
 
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
+#include <lib/fit/function.h>
 
 #include "gtest/gtest.h"
 #include "lib/backoff/exponential_backoff.h"
@@ -15,7 +16,6 @@
 #include "lib/callback/set_when_called.h"
 #include "lib/fidl/cpp/clone.h"
 #include "lib/fsl/vmo/strings.h"
-#include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
 #include "lib/gtest/test_loop_fixture.h"
 #include "peridot/bin/ledger/app/constants.h"
@@ -52,12 +52,14 @@ class FakePageSync : public sync_coordinator::PageSyncEmptyImpl {
   void Start() override { start_called = true; }
 
   void SetOnBacklogDownloaded(
-      fxl::Closure on_backlog_downloaded_callback) override {
+      fit::closure on_backlog_downloaded_callback) override {
     this->on_backlog_downloaded_callback =
         std::move(on_backlog_downloaded_callback);
   }
 
-  void SetOnIdle(fxl::Closure on_idle) override { this->on_idle = on_idle; }
+  void SetOnIdle(fit::closure on_idle) override {
+    this->on_idle = std::move(on_idle);
+  }
 
   void SetSyncWatcher(sync_coordinator::SyncStateWatcher* watcher) override {
     this->watcher = watcher;
@@ -65,8 +67,8 @@ class FakePageSync : public sync_coordinator::PageSyncEmptyImpl {
 
   bool start_called = false;
   sync_coordinator::SyncStateWatcher* watcher = nullptr;
-  fxl::Closure on_backlog_downloaded_callback;
-  fxl::Closure on_idle;
+  fit::closure on_backlog_downloaded_callback;
+  fit::closure on_idle;
 };
 
 class PageManagerTest : public gtest::TestLoopFixture {

@@ -4,6 +4,8 @@
 
 #include "peridot/bin/ledger/storage/public/read_data_source.h"
 
+#include <lib/fit/function.h>
+
 #include "lib/fxl/functional/make_copyable.h"
 
 namespace storage {
@@ -11,7 +13,7 @@ namespace storage {
 void ReadDataSource(
     callback::ManagedContainer* managed_container,
     std::unique_ptr<DataSource> data_source,
-    std::function<void(Status, std::unique_ptr<DataSource::DataChunk>)>
+    fit::function<void(Status, std::unique_ptr<DataSource::DataChunk>)>
         callback) {
   auto managed_data_source = managed_container->Manage(std::move(data_source));
   auto chunks = std::vector<std::unique_ptr<DataSource::DataChunk>>();

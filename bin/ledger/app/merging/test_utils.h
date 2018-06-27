@@ -8,9 +8,10 @@
 #include <functional>
 #include <memory>
 
+#include <lib/fit/function.h>
+
 #include "gtest/gtest.h"
 #include "lib/backoff/backoff.h"
-#include "lib/fxl/functional/closure.h"
 #include "lib/gtest/test_loop_fixture.h"
 #include "peridot/bin/ledger/coroutine/coroutine_impl.h"
 #include "peridot/bin/ledger/encryption/fake/fake_encryption_service.h"
@@ -45,12 +46,12 @@ class TestWithPageStorage : public gtest::TestLoopFixture {
 
   // Returns a function that, when executed, adds the provided key and object to
   // a journal.
-  std::function<void(storage::Journal*)> AddKeyValueToJournal(
+  fit::function<void(storage::Journal*)> AddKeyValueToJournal(
       const std::string& key, std::string value);
 
   // Returns a function that, when executed, deleted the provided key from a
   // journal.
-  std::function<void(storage::Journal*)> DeleteKeyFromJournal(
+  fit::function<void(storage::Journal*)> DeleteKeyFromJournal(
       const std::string& key);
 
   ::testing::AssertionResult GetValue(
@@ -59,7 +60,7 @@ class TestWithPageStorage : public gtest::TestLoopFixture {
   ::testing::AssertionResult CreatePageStorage(
       std::unique_ptr<storage::PageStorage>* page_storage);
 
-  fxl::Closure MakeQuitTaskOnce();
+  fit::closure MakeQuitTaskOnce();
 
  private:
   ScopedTmpFS tmpfs_;

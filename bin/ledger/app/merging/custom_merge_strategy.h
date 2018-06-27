@@ -7,7 +7,8 @@
 
 #include <memory>
 
-#include "lib/fxl/functional/closure.h"
+#include <lib/fit/function.h>
+
 #include "lib/fxl/macros.h"
 #include "peridot/bin/ledger/app/merging/conflict_resolver_client.h"
 #include "peridot/bin/ledger/app/merging/merge_strategy.h"
@@ -23,18 +24,18 @@ class CustomMergeStrategy : public MergeStrategy {
   ~CustomMergeStrategy() override;
 
   // MergeStrategy:
-  void SetOnError(fxl::Closure on_error) override;
+  void SetOnError(fit::closure on_error) override;
 
   void Merge(storage::PageStorage* storage, PageManager* page_manager,
              std::unique_ptr<const storage::Commit> head_1,
              std::unique_ptr<const storage::Commit> head_2,
              std::unique_ptr<const storage::Commit> ancestor,
-             std::function<void(Status)> callback) override;
+             fit::function<void(Status)> callback) override;
 
   void Cancel() override;
 
  private:
-  fxl::Closure on_error_;
+  fit::closure on_error_;
 
   ConflictResolverPtr conflict_resolver_;
 

@@ -6,12 +6,12 @@
 #define PERIDOT_BIN_LEDGER_CLOUD_SYNC_IMPL_PAGE_DOWNLOAD_H_
 
 #include <fuchsia/ledger/cloud/cpp/fidl.h>
+#include <lib/fit/function.h>
 
 #include "lib/backoff/backoff.h"
 #include "lib/callback/managed_container.h"
 #include "lib/callback/scoped_task_runner.h"
 #include "lib/fidl/cpp/binding.h"
-#include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/ref_ptr.h"
 #include "peridot/bin/ledger/cloud_sync/impl/batch_download.h"
@@ -69,26 +69,26 @@ class PageDownload : public cloud_provider::PageCloudWatcher,
   // Downloads the given batch of commits.
   void DownloadBatch(fidl::VectorPtr<cloud_provider::Commit> commits,
                      std::unique_ptr<cloud_provider::Token> position_token,
-                     fxl::Closure on_done);
+                     fit::closure on_done);
 
   // storage::PageSyncDelegate:
   void GetObject(
       storage::ObjectIdentifier object_identifier,
-      std::function<void(storage::Status, storage::ChangeSource,
+      fit::function<void(storage::Status, storage::ChangeSource,
                          std::unique_ptr<storage::DataSource::DataChunk>)>
           callback) override;
 
   void DecryptObject(
       storage::ObjectIdentifier object_identifier,
       std::unique_ptr<storage::DataSource> content,
-      std::function<void(storage::Status, storage::ChangeSource,
+      fit::function<void(storage::Status, storage::ChangeSource,
                          std::unique_ptr<storage::DataSource::DataChunk>)>
           callback);
 
   void HandleGetObjectError(
       storage::ObjectIdentifier object_identifier, bool is_permanent,
       const char error_name[],
-      std::function<void(storage::Status, storage::ChangeSource,
+      fit::function<void(storage::Status, storage::ChangeSource,
                          std::unique_ptr<storage::DataSource::DataChunk>)>
           callback);
 
@@ -98,7 +98,7 @@ class PageDownload : public cloud_provider::PageCloudWatcher,
   void SetCommitState(DownloadSyncState new_state);
   void UpdateDownloadState();
 
-  void RetryWithBackoff(fxl::Closure callable);
+  void RetryWithBackoff(fit::closure callable);
 
   // Owned by whoever owns this class.
   callback::ScopedTaskRunner* const task_runner_;

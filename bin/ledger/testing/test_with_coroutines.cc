@@ -4,8 +4,7 @@
 
 #include "peridot/bin/ledger/testing/test_with_coroutines.h"
 
-#include "lib/fxl/functional/closure.h"
-#include "lib/fxl/functional/make_copyable.h"
+#include <lib/fit/function.h>
 
 namespace test {
 
@@ -19,7 +18,7 @@ namespace {
 class TestCoroutineHandler : public coroutine::CoroutineHandler {
  public:
   explicit TestCoroutineHandler(coroutine::CoroutineHandler* delegate,
-                                fxl::Closure quit_callback)
+                                fit::closure quit_callback)
       : delegate_(delegate), quit_callback_(std::move(quit_callback)) {}
 
   coroutine::ContinuationStatus Yield() override { return delegate_->Yield(); }
@@ -45,7 +44,7 @@ class TestCoroutineHandler : public coroutine::CoroutineHandler {
 
  private:
   coroutine::CoroutineHandler* delegate_;
-  fxl::Closure quit_callback_;
+  fit::closure quit_callback_;
   bool need_to_continue_ = false;
 };
 
@@ -54,13 +53,12 @@ class TestCoroutineHandler : public coroutine::CoroutineHandler {
 TestWithCoroutines::TestWithCoroutines() {}
 
 void TestWithCoroutines::RunInCoroutine(
-    std::function<void(coroutine::CoroutineHandler*)> run_test) {
+    fit::function<void(coroutine::CoroutineHandler*)> run_test) {
   std::unique_ptr<TestCoroutineHandler> test_handler;
   volatile bool ended = false;
   coroutine_service_.StartCoroutine([&](coroutine::CoroutineHandler* handler) {
     test_handler =
-        std::make_unique<TestCoroutineHandler>(
-            handler, fxl::MakeCopyable(QuitLoopClosure()));
+        std::make_unique<TestCoroutineHandler>(handler, [this] { QuitLoop(); });
     run_test(test_handler.get());
     ended = true;
   });

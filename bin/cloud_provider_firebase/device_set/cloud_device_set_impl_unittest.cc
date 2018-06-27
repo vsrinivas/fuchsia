@@ -6,6 +6,8 @@
 
 #include <map>
 
+#include <lib/fit/function.h>
+
 #include "lib/callback/capture.h"
 #include "lib/callback/set_when_called.h"
 #include "lib/fxl/logging.h"
@@ -20,7 +22,7 @@ class FakeFirebase : public firebase::Firebase {
 
   void Get(const std::string& /*key*/,
            const std::vector<std::string>& query_params,
-           std::function<void(firebase::Status status,
+           fit::function<void(firebase::Status status,
                               std::unique_ptr<rapidjson::Value> value)>
                callback) override {
     get_query_params.push_back(query_params);
@@ -32,7 +34,7 @@ class FakeFirebase : public firebase::Firebase {
   void Put(const std::string& /*key*/,
            const std::vector<std::string>& query_params,
            const std::string& data,
-           std::function<void(firebase::Status status)> callback) override {
+           fit::function<void(firebase::Status status)> callback) override {
     put_query_params.push_back(query_params);
     put_data.push_back(data);
     callback(returned_status);
@@ -42,13 +44,13 @@ class FakeFirebase : public firebase::Firebase {
       const std::string& /*key*/,
       const std::vector<std::string>& /*query_params*/,
       const std::string& /*data*/,
-      std::function<void(firebase::Status status)> /*callback*/) override {
+      fit::function<void(firebase::Status status)> /*callback*/) override {
     FXL_NOTREACHED();
   }
 
   void Delete(const std::string& key,
               const std::vector<std::string>& query_params,
-              std::function<void(firebase::Status status)> callback) override {
+              fit::function<void(firebase::Status status)> callback) override {
     delete_keys.push_back(key);
     delete_query_params.push_back(query_params);
     callback(returned_status);

@@ -4,7 +4,8 @@
 
 #include "peridot/bin/ledger/sync_coordinator/impl/ledger_sync_impl.h"
 
-#include "lib/fxl/functional/closure.h"
+#include <lib/fit/function.h>
+
 #include "peridot/bin/ledger/sync_coordinator/impl/page_sync_impl.h"
 
 namespace sync_coordinator {
@@ -18,13 +19,14 @@ LedgerSyncImpl::~LedgerSyncImpl() {}
 
 std::unique_ptr<PageSync> LedgerSyncImpl::CreatePageSync(
     storage::PageStorage* page_storage,
-    storage::PageSyncClient* page_sync_client, fxl::Closure error_callback) {
+    storage::PageSyncClient* page_sync_client, fit::closure error_callback) {
   auto combined_sync =
       std::make_unique<PageSyncImpl>(page_storage, page_sync_client);
 
   if (cloud_sync_) {
     auto cloud_page_sync = cloud_sync_->CreatePageSync(
-        page_storage, combined_sync->CreateCloudSyncClient(), error_callback);
+        page_storage, combined_sync->CreateCloudSyncClient(),
+        std::move(error_callback));
     combined_sync->SetCloudSync(std::move(cloud_page_sync));
   }
 

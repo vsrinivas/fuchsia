@@ -5,8 +5,9 @@
 #ifndef PERIDOT_BIN_LEDGER_FIDL_HELPERS_BOUND_INTERFACE_SET_H_
 #define PERIDOT_BIN_LEDGER_FIDL_HELPERS_BOUND_INTERFACE_SET_H_
 
+#include <lib/fit/function.h>
+
 #include "lib/fidl/cpp/binding_set.h"
-#include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
 
 namespace ledger {
@@ -24,7 +25,7 @@ class BoundInterfaceSet {
 
   void CloseAll() { binding_.CloseAll(); }
 
-  void set_on_empty(fxl::Closure on_empty) {
+  void set_on_empty(fit::closure on_empty) {
     binding_.set_empty_set_handler(std::move(on_empty));
   }
 

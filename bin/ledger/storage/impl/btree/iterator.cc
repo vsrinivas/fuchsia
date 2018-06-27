@@ -4,6 +4,8 @@
 
 #include "peridot/bin/ledger/storage/impl/btree/iterator.h"
 
+#include <lib/fit/function.h>
+
 #include "lib/callback/waiter.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "peridot/bin/ledger/storage/impl/btree/internal_helper.h"
@@ -16,7 +18,7 @@ namespace {
 Status ForEachEntryInternal(
     SynchronousStorage* storage, ObjectIdentifier root_identifier,
     fxl::StringView min_key,
-    const std::function<bool(EntryAndNodeIdentifier)>& on_next) {
+    fit::function<bool(EntryAndNodeIdentifier)> on_next) {
   BTreeIterator iterator(storage);
   RETURN_ON_ERROR(iterator.Init(root_identifier));
   RETURN_ON_ERROR(iterator.SkipTo(min_key));
@@ -154,7 +156,7 @@ Status BTreeIterator::Descend(const ObjectIdentifier& node_identifier) {
 void GetObjectIdentifiers(
     coroutine::CoroutineService* coroutine_service, PageStorage* page_storage,
     ObjectIdentifier root_identifier,
-    std::function<void(Status, std::set<ObjectIdentifier>)> callback) {
+    fit::function<void(Status, std::set<ObjectIdentifier>)> callback) {
   FXL_DCHECK(!root_identifier.object_digest.empty());
   auto object_digests = std::make_unique<std::set<ObjectIdentifier>>();
   object_digests->insert(root_identifier);
@@ -181,7 +183,7 @@ void GetObjectIdentifiers(
 void GetObjectsFromSync(coroutine::CoroutineService* coroutine_service,
                         PageStorage* page_storage,
                         ObjectIdentifier root_identifier,
-                        std::function<void(Status)> callback) {
+                        fit::function<void(Status)> callback) {
   auto waiter = fxl::MakeRefCounted<
       callback::Waiter<Status, std::unique_ptr<const Object>>>(Status::OK);
   auto on_next = [page_storage, waiter](EntryAndNodeIdentifier e) {
@@ -211,17 +213,18 @@ void GetObjectsFromSync(coroutine::CoroutineService* coroutine_service,
 void ForEachEntry(coroutine::CoroutineService* coroutine_service,
                   PageStorage* page_storage, ObjectIdentifier root_identifier,
                   std::string min_key,
-                  std::function<bool(EntryAndNodeIdentifier)> on_next,
-                  std::function<void(Status)> on_done) {
+                  fit::function<bool(EntryAndNodeIdentifier)> on_next,
+                  fit::function<void(Status)> on_done) {
   FXL_DCHECK(!root_identifier.object_digest.empty());
   coroutine_service->StartCoroutine(
       [page_storage, root_identifier = std::move(root_identifier),
        min_key = std::move(min_key), on_next = std::move(on_next),
-       on_done = std::move(on_done)](coroutine::CoroutineHandler* handler) {
+       on_done =
+           std::move(on_done)](coroutine::CoroutineHandler* handler) mutable {
         SynchronousStorage storage(page_storage, handler);
 
-        on_done(
-            ForEachEntryInternal(&storage, root_identifier, min_key, on_next));
+        on_done(ForEachEntryInternal(&storage, root_identifier, min_key,
+                                     std::move(on_next)));
       });
 }
 

@@ -8,6 +8,7 @@
 #include <utility>
 #include <vector>
 
+#include <lib/fit/function.h>
 #include <trace/event.h>
 
 #include "lib/callback/scoped_callback.h"
@@ -39,7 +40,7 @@ PageDelegate::PageDelegate(coroutine::CoroutineService* coroutine_service,
   interface_.set_on_empty([this] {
     operation_serializer_.Serialize<Status>(
         [](Status status) {},
-        [this](std::function<void(Status)> callback) {
+        [this](fit::function<void(Status)> callback) {
           branch_tracker_.StopTransaction(nullptr);
           callback(Status::OK);
         });
@@ -50,7 +51,7 @@ PageDelegate::PageDelegate(coroutine::CoroutineService* coroutine_service,
 
 PageDelegate::~PageDelegate() {}
 
-void PageDelegate::Init(std::function<void(Status)> on_done) {
+void PageDelegate::Init(fit::function<void(Status)> on_done) {
   branch_tracker_.Init([this, on_done = std::move(on_done)](Status status) {
     if (status != Status::OK) {
       on_done(status);
@@ -75,7 +76,7 @@ void PageDelegate::GetSnapshot(
   // TODO(qsr): Update this so that only |GetCurrentCommitId| is done in a the
   // operation serializer.
   operation_serializer_.Serialize<Status>(
-      callback,
+      std::move(callback),
       fxl::MakeCopyable([this, snapshot_request = std::move(snapshot_request),
                          key_prefix = std::move(key_prefix),
                          watcher = std::move(watcher)](
@@ -110,7 +111,8 @@ void PageDelegate::GetSnapshot(
 void PageDelegate::Put(fidl::VectorPtr<uint8_t> key,
                        fidl::VectorPtr<uint8_t> value,
                        Page::PutCallback callback) {
-  PutWithPriority(std::move(key), std::move(value), Priority::EAGER, callback);
+  PutWithPriority(std::move(key), std::move(value), Priority::EAGER,
+                  std::move(callback));
 }
 
 void PageDelegate::PutWithPriority(fidl::VectorPtr<uint8_t> key,
@@ -125,7 +127,7 @@ void PageDelegate::PutWithPriority(fidl::VectorPtr<uint8_t> key,
                                promise->NewCallback());
 
   operation_serializer_.Serialize<Status>(
-      callback,
+      std::move(callback),
       fxl::MakeCopyable(
           [this, promise = std::move(promise), key = std::move(key),
            priority](Page::PutWithPriorityCallback callback) mutable {
@@ -169,7 +171,7 @@ void PageDelegate::PutReference(fidl::VectorPtr<uint8_t> key,
                       promise->NewCallback());
 
   operation_serializer_.Serialize<Status>(
-      callback,
+      std::move(callback),
       fxl::MakeCopyable(
           [this, promise = std::move(promise), key = std::move(key),
            object_identifier = std::move(object_identifier),
@@ -198,25 +200,26 @@ void PageDelegate::PutReference(fidl::VectorPtr<uint8_t> key,
 void PageDelegate::Delete(fidl::VectorPtr<uint8_t> key,
                           Page::DeleteCallback callback) {
   operation_serializer_.Serialize<Status>(
-      callback, fxl::MakeCopyable([this, key = std::move(key)](
-                                      Page::DeleteCallback callback) mutable {
-        RunInTransaction(
-            fxl::MakeCopyable(
-                [key = std::move(key)](storage::Journal* journal,
-                                       std::function<void(Status)> callback) {
+      std::move(callback),
+      fxl::MakeCopyable(
+          [this, key = std::move(key)](Page::DeleteCallback callback) mutable {
+            RunInTransaction(
+                fxl::MakeCopyable([key = std::move(key)](
+                                      storage::Journal* journal,
+                                      fit::function<void(Status)> callback) {
                   journal->Delete(key, [callback = std::move(callback)](
                                            storage::Status status) {
                     callback(PageUtils::ConvertStatus(status,
                                                       Status::KEY_NOT_FOUND));
                   });
                 }),
-            std::move(callback));
-      }));
+                std::move(callback));
+          }));
 }
 
 void PageDelegate::CreateReference(
     std::unique_ptr<storage::DataSource> data,
-    std::function<void(Status, ReferencePtr)> callback) {
+    fit::function<void(Status, ReferencePtr)> callback) {
   storage_->AddObjectFromLocal(
       std::move(data),
       callback::MakeScoped(
@@ -236,7 +239,7 @@ void PageDelegate::CreateReference(
 
 void PageDelegate::StartTransaction(Page::StartTransactionCallback callback) {
   operation_serializer_.Serialize<Status>(
-      callback, [this](StatusCallback callback) {
+      std::move(callback), [this](StatusCallback callback) {
         if (journal_) {
           callback(Status::TRANSACTION_ALREADY_IN_PROGRESS);
           return;
@@ -248,7 +251,7 @@ void PageDelegate::StartTransaction(Page::StartTransactionCallback callback) {
                 weak_factory_.GetWeakPtr(),
                 [this, commit_id, callback = std::move(callback)](
                     storage::Status status,
-                    std::unique_ptr<storage::Journal> journal) {
+                    std::unique_ptr<storage::Journal> journal) mutable {
                   journal_ = std::move(journal);
                   if (status != storage::Status::OK) {
                     callback(PageUtils::ConvertStatus(status));
@@ -257,14 +260,16 @@ void PageDelegate::StartTransaction(Page::StartTransactionCallback callback) {
                   journal_parent_commit_ = commit_id;
 
                   branch_tracker_.StartTransaction(
-                      [callback]() { callback(Status::OK); });
+                      [callback = std::move(callback)]() {
+                        callback(Status::OK);
+                      });
                 }));
       });
 }
 
 void PageDelegate::Commit(Page::CommitCallback callback) {
   operation_serializer_.Serialize<Status>(
-      callback, [this](StatusCallback callback) {
+      std::move(callback), [this](StatusCallback callback) {
         if (!journal_) {
           callback(Status::NO_TRANSACTION_IN_PROGRESS);
           return;
@@ -284,7 +289,7 @@ void PageDelegate::Commit(Page::CommitCallback callback) {
 
 void PageDelegate::Rollback(Page::RollbackCallback callback) {
   operation_serializer_.Serialize<Status>(
-      callback, [this](StatusCallback callback) {
+      std::move(callback), [this](StatusCallback callback) {
         if (!journal_) {
           callback(Status::NO_TRANSACTION_IN_PROGRESS);
           return;
@@ -316,7 +321,7 @@ void PageDelegate::WaitForConflictResolution(
     callback(ConflictResolutionWaitStatus::NO_CONFLICTS);
     return;
   }
-  merge_resolver_->RegisterNoConflictCallback(callback);
+  merge_resolver_->RegisterNoConflictCallback(std::move(callback));
 }
 
 const storage::CommitId& PageDelegate::GetCurrentCommitId() {
@@ -330,13 +335,13 @@ const storage::CommitId& PageDelegate::GetCurrentCommitId() {
 void PageDelegate::PutInCommit(fidl::VectorPtr<uint8_t> key,
                                storage::ObjectIdentifier object_identifier,
                                storage::KeyPriority priority,
-                               std::function<void(Status)> callback) {
+                               fit::function<void(Status)> callback) {
   RunInTransaction(
       fxl::MakeCopyable(
           [key = std::move(key),
            object_identifier = std::move(object_identifier),
            priority](storage::Journal* journal,
-                     std::function<void(Status status)> callback) mutable {
+                     fit::function<void(Status status)> callback) mutable {
             journal->Put(
                 key, std::move(object_identifier), priority,
                 [callback = std::move(callback)](storage::Status status) {
@@ -347,9 +352,9 @@ void PageDelegate::PutInCommit(fidl::VectorPtr<uint8_t> key,
 }
 
 void PageDelegate::RunInTransaction(
-    std::function<void(storage::Journal*, std::function<void(Status)>)>
+    fit::function<void(storage::Journal*, fit::function<void(Status)>)>
         runnable,
-    std::function<void(Status)> callback) {
+    fit::function<void(Status)> callback) {
   if (journal_) {
     // A transaction is in progress; add this change to it.
     runnable(journal_.get(), std::move(callback));
@@ -370,7 +375,7 @@ void PageDelegate::RunInTransaction(
           [this, runnable = std::move(runnable),
            callback = std::move(callback)](
               storage::Status status,
-              std::unique_ptr<storage::Journal> journal) {
+              std::unique_ptr<storage::Journal> journal) mutable {
             if (status != storage::Status::OK) {
               callback(PageUtils::ConvertStatus(status));
               branch_tracker_.StopTransaction(nullptr);
@@ -380,7 +385,8 @@ void PageDelegate::RunInTransaction(
                      fxl::MakeCopyable(callback::MakeScoped(
                          weak_factory_.GetWeakPtr(),
                          [this, journal = std::move(journal),
-                          callback](Status ledger_status) mutable {
+                          callback = std::move(callback)](
+                             Status ledger_status) mutable {
                            if (ledger_status != Status::OK) {
                              callback(ledger_status);
                              storage_->RollbackJournal(
@@ -394,7 +400,7 @@ void PageDelegate::RunInTransaction(
                                std::move(journal),
                                callback::MakeScoped(
                                    weak_factory_.GetWeakPtr(),
-                                   [this, callback](
+                                   [this, callback = std::move(callback)](
                                        Status status,
                                        std::unique_ptr<const storage::Commit>
                                            commit) {
@@ -410,12 +416,12 @@ void PageDelegate::RunInTransaction(
 
 void PageDelegate::CommitJournal(
     std::unique_ptr<storage::Journal> journal,
-    std::function<void(Status, std::unique_ptr<const storage::Commit>)>
+    fit::function<void(Status, std::unique_ptr<const storage::Commit>)>
         callback) {
   storage_->CommitJournal(
-      std::move(journal),
-      [callback](storage::Status status,
-                 std::unique_ptr<const storage::Commit> commit) {
+      std::move(journal), [callback = std::move(callback)](
+                              storage::Status status,
+                              std::unique_ptr<const storage::Commit> commit) {
         callback(PageUtils::ConvertStatus(status), std::move(commit));
       });
 }

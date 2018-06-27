@@ -9,12 +9,12 @@
 #include <vector>
 
 #include <fuchsia/ledger/internal/cpp/fidl.h>
+#include <lib/fit/function.h>
 
 #include "lib/callback/auto_cleanable.h"
 #include "lib/callback/scoped_task_runner.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fidl/cpp/interface_request.h"
-#include "lib/fxl/functional/closure.h"
 #include "lib/fxl/time/time_delta.h"
 #include "peridot/bin/ledger/app/merging/merge_resolver.h"
 #include "peridot/bin/ledger/app/page_delegate.h"
@@ -60,11 +60,11 @@ class PageManager : public ledger_internal::PageDebug {
   // Creates a new PageImpl managed by this PageManager, and binds it to the
   // request.
   void BindPage(fidl::InterfaceRequest<Page> page_request,
-                std::function<void(Status)> on_done);
+                fit::function<void(Status)> on_done);
 
   // Binds |page_debug| request and fires |callback| with Status::OK.
   void BindPageDebug(fidl::InterfaceRequest<PageDebug> page_debug,
-                     std::function<void(Status)> callback);
+                     fit::function<void(Status)> callback);
 
   // Creates a new PageSnapshotImpl managed by this PageManager, and binds it to
   // the request.
@@ -80,14 +80,14 @@ class PageManager : public ledger_internal::PageDebug {
                           storage::ObjectIdentifier* object_identifier);
 
   // Checks whether there are any unsynced commits or pieces in this page.
-  void IsSynced(std::function<void(Status, bool)> callback);
+  void IsSynced(fit::function<void(Status, bool)> callback);
 
   // Returns true if this PageManager can be deleted without interrupting
   // syncing, merging, or requests related to this page.
   bool IsEmpty();
 
-  void set_on_empty(const fxl::Closure& on_empty_callback) {
-    on_empty_callback_ = on_empty_callback;
+  void set_on_empty(fit::closure on_empty_callback) {
+    on_empty_callback_ = std::move(on_empty_callback);
   }
 
  private:
@@ -112,11 +112,11 @@ class PageManager : public ledger_internal::PageDebug {
       fidl_helpers::BoundInterface<PageSnapshot, PageSnapshotImpl>>
       snapshots_;
   callback::AutoCleanableSet<PageDelegate> pages_;
-  fxl::Closure on_empty_callback_;
+  fit::closure on_empty_callback_;
 
   bool sync_backlog_downloaded_ = false;
   std::vector<
-      std::pair<fidl::InterfaceRequest<Page>, std::function<void(Status)>>>
+      std::pair<fidl::InterfaceRequest<Page>, fit::function<void(Status)>>>
       page_requests_;
 
   SyncWatcherSet watchers_;

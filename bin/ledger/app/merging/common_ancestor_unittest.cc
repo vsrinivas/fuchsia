@@ -7,6 +7,8 @@
 #include <algorithm>
 #include <string>
 
+#include <lib/fit/function.h>
+
 #include "gtest/gtest.h"
 #include "lib/callback/cancellable_helper.h"
 #include "lib/callback/capture.h"
@@ -36,7 +38,7 @@ class CommonAncestorTest : public test::TestWithPageStorage {
 
   std::unique_ptr<const storage::Commit> CreateCommit(
       storage::CommitIdView parent_id,
-      std::function<void(storage::Journal*)> contents) {
+      fit::function<void(storage::Journal*)> contents) {
     bool called;
     storage::Status status;
     std::unique_ptr<storage::Journal> journal;
@@ -60,7 +62,7 @@ class CommonAncestorTest : public test::TestWithPageStorage {
 
   std::unique_ptr<const storage::Commit> CreateMergeCommit(
       storage::CommitIdView left, storage::CommitIdView right,
-      std::function<void(storage::Journal*)> contents) {
+      fit::function<void(storage::Journal*)> contents) {
     bool called;
     storage::Status status;
     std::unique_ptr<storage::Journal> journal;

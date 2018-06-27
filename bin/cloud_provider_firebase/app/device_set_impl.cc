@@ -31,9 +31,9 @@ DeviceSetImpl::~DeviceSetImpl() {}
 void DeviceSetImpl::CheckFingerprint(fidl::VectorPtr<uint8_t> fingerprint,
                                      CheckFingerprintCallback callback) {
   auto request = firebase_auth_->GetFirebaseToken(
-      [this, fingerprint = convert::ToString(fingerprint), callback](
-          firebase_auth::AuthStatus auth_status,
-          std::string auth_token) mutable {
+      [this, fingerprint = convert::ToString(fingerprint),
+       callback = std::move(callback)](firebase_auth::AuthStatus auth_status,
+                                       std::string auth_token) mutable {
         if (auth_status != firebase_auth::AuthStatus::OK) {
           callback(cloud_provider::Status::AUTH_ERROR);
           return;
@@ -62,9 +62,9 @@ void DeviceSetImpl::CheckFingerprint(fidl::VectorPtr<uint8_t> fingerprint,
 void DeviceSetImpl::SetFingerprint(fidl::VectorPtr<uint8_t> fingerprint,
                                    SetFingerprintCallback callback) {
   auto request = firebase_auth_->GetFirebaseToken(
-      [this, fingerprint = convert::ToString(fingerprint), callback](
-          firebase_auth::AuthStatus auth_status,
-          std::string auth_token) mutable {
+      [this, fingerprint = convert::ToString(fingerprint),
+       callback = std::move(callback)](firebase_auth::AuthStatus auth_status,
+                                       std::string auth_token) mutable {
         if (auth_status != firebase_auth::AuthStatus::OK) {
           callback(cloud_provider::Status::AUTH_ERROR);
           return;
@@ -100,9 +100,9 @@ void DeviceSetImpl::SetWatcher(
   timestamp_update_request_sent_ = false;
 
   auto request = firebase_auth_->GetFirebaseToken(
-      [this, fingerprint = convert::ToString(fingerprint), callback](
-          firebase_auth::AuthStatus auth_status,
-          std::string auth_token) mutable {
+      [this, fingerprint = convert::ToString(fingerprint),
+       callback = std::move(callback)](firebase_auth::AuthStatus auth_status,
+                                       std::string auth_token) mutable {
         if (auth_status != firebase_auth::AuthStatus::OK) {
           callback(cloud_provider::Status::AUTH_ERROR);
           set_watcher_callback_called_ = true;
@@ -160,8 +160,9 @@ void DeviceSetImpl::SetWatcher(
 
 void DeviceSetImpl::Erase(EraseCallback callback) {
   auto request = firebase_auth_->GetFirebaseToken(
-      [this, callback](firebase_auth::AuthStatus auth_status,
-                       std::string auth_token) mutable {
+      [this, callback = std::move(callback)](
+          firebase_auth::AuthStatus auth_status,
+          std::string auth_token) mutable {
         if (auth_status != firebase_auth::AuthStatus::OK) {
           callback(cloud_provider::Status::AUTH_ERROR);
           return;

@@ -10,8 +10,8 @@
 #include <vector>
 
 #include <grpc++/grpc++.h>
+#include <lib/fit/function.h>
 
-#include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
 #include "peridot/bin/cloud_provider_firestore/grpc/stream_controller.h"
 #include "peridot/bin/cloud_provider_firestore/grpc/stream_reader.h"
@@ -34,13 +34,13 @@ class ReadStreamDrainer {
         stream_reader_(stream_.get()) {}
   ~ReadStreamDrainer() {}
 
-  void set_on_empty(fxl::Closure on_empty) { on_empty_ = std::move(on_empty); }
+  void set_on_empty(fit::closure on_empty) { on_empty_ = std::move(on_empty); }
 
   // Reads messages from the stream until there is no more messages to read and
   // returns all the messages to the caller.
   //
   // Can be called at most once.
-  void Drain(std::function<void(grpc::Status, std::vector<Message>)> callback) {
+  void Drain(fit::function<void(grpc::Status, std::vector<Message>)> callback) {
     FXL_DCHECK(!callback_);
     callback_ = std::move(callback);
     stream_controller_.StartCall([this](bool ok) {
@@ -89,9 +89,9 @@ class ReadStreamDrainer {
   StreamController<GrpcStream> stream_controller_;
   StreamReader<GrpcStream, Message> stream_reader_;
 
-  fxl::Closure on_empty_;
+  fit::closure on_empty_;
   std::vector<Message> messages_;
-  std::function<void(grpc::Status, std::vector<Message>)> callback_;
+  fit::function<void(grpc::Status, std::vector<Message>)> callback_;
   FXL_DISALLOW_COPY_AND_ASSIGN(ReadStreamDrainer);
 };
 

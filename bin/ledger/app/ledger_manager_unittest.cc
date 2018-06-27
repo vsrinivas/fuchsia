@@ -9,13 +9,13 @@
 #include <vector>
 
 #include <lib/async/cpp/task.h>
+#include <lib/fit/function.h>
 
 #include "gtest/gtest.h"
 #include "lib/callback/capture.h"
 #include "lib/callback/set_when_called.h"
 #include "lib/callback/waiter.h"
 #include "lib/fidl/cpp/optional.h"
-#include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/random/rand.h"
 #include "lib/gtest/test_loop_fixture.h"
@@ -45,7 +45,7 @@ class DelayIsSyncedCallbackFakePageStorage
       : storage::fake::FakePageStorage(id) {}
   ~DelayIsSyncedCallbackFakePageStorage() override {}
 
-  void IsSynced(std::function<void(storage::Status, bool)> callback) override {
+  void IsSynced(fit::function<void(storage::Status, bool)> callback) override {
     is_synced_callback_ = std::move(callback);
     if (!delay_callback_) {
       CallIsSyncedCallback();
@@ -61,7 +61,7 @@ class DelayIsSyncedCallbackFakePageStorage
   }
 
  private:
-  std::function<void(storage::Status, bool)> is_synced_callback_;
+  fit::function<void(storage::Status, bool)> is_synced_callback_;
   bool delay_callback_ = false;
 };
 
@@ -72,7 +72,7 @@ class FakeLedgerStorage : public storage::LedgerStorage {
 
   void CreatePageStorage(
       storage::PageId page_id,
-      std::function<void(storage::Status,
+      fit::function<void(storage::Status,
                          std::unique_ptr<storage::PageStorage>)>
           callback) override {
     create_page_calls.push_back(std::move(page_id));
@@ -80,11 +80,12 @@ class FakeLedgerStorage : public storage::LedgerStorage {
   }
 
   void GetPageStorage(storage::PageId page_id,
-                      std::function<void(storage::Status,
+                      fit::function<void(storage::Status,
                                          std::unique_ptr<storage::PageStorage>)>
                           callback) override {
     get_page_calls.push_back(page_id);
-    async::PostTask(async_, [this, callback, page_id]() mutable {
+    async::PostTask(async_, [this, callback = std::move(callback),
+                             page_id]() mutable {
       if (should_get_page_fail) {
         callback(storage::Status::NOT_FOUND, nullptr);
       } else {
@@ -167,7 +168,7 @@ class FakeLedgerSync : public sync_coordinator::LedgerSync {
   std::unique_ptr<sync_coordinator::PageSync> CreatePageSync(
       storage::PageStorage* /*page_storage*/,
       storage::PageSyncClient* /*page_sync_client*/,
-      fxl::Closure /*error_callback*/) override {
+      fit::closure /*error_callback*/) override {
     called = true;
     return nullptr;
   }

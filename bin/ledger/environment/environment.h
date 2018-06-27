@@ -6,6 +6,7 @@
 #define PERIDOT_BIN_LEDGER_ENVIRONMENT_ENVIRONMENT_H_
 
 #include <lib/async/dispatcher.h>
+#include <lib/fit/function.h>
 
 #include "lib/backoff/backoff.h"
 #include "peridot/bin/ledger/coroutine/coroutine.h"
@@ -15,7 +16,7 @@ namespace ledger {
 // Environment for the ledger application.
 class Environment {
  public:
-  using BackoffFactory = std::function<std::unique_ptr<backoff::Backoff>()>;
+  using BackoffFactory = fit::function<std::unique_ptr<backoff::Backoff>()>;
   Environment(async_t* async,
               std::unique_ptr<coroutine::CoroutineService> coroutine_service,
               BackoffFactory backoff_factory);

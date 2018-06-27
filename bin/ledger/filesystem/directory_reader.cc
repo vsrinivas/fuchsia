@@ -9,6 +9,8 @@
 #include <functional>
 #include <memory>
 
+#include <lib/fit/function.h>
+
 #include "lib/fxl/strings/string_view.h"
 
 namespace ledger {
@@ -23,13 +25,14 @@ void SafeCloseDir(DIR* dir) {
 
 bool DirectoryReader::GetDirectoryEntries(
     const std::string& directory,
-    const std::function<bool(fxl::StringView)>& callback) {
-  return GetDirectoryEntriesAt(DetachedPath(AT_FDCWD, directory), callback);
+    fit::function<bool(fxl::StringView)> callback) {
+  return GetDirectoryEntriesAt(DetachedPath(AT_FDCWD, directory),
+                               std::move(callback));
 }
 
 bool DirectoryReader::GetDirectoryEntriesAt(
     const DetachedPath& directory,
-    const std::function<bool(fxl::StringView)>& callback) {
+    fit::function<bool(fxl::StringView)> callback) {
   int dir_fd = openat(directory.root_fd(), directory.path().c_str(), O_RDONLY);
   if (dir_fd == -1) {
     return false;

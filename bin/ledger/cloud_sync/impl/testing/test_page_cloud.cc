@@ -4,9 +4,10 @@
 
 #include "peridot/bin/ledger/cloud_sync/impl/testing/test_page_cloud.h"
 
+#include <lib/fit/function.h>
+
 #include "lib/fsl/socket/strings.h"
 #include "lib/fsl/vmo/strings.h"
-#include "lib/fxl/functional/closure.h"
 #include "peridot/lib/convert/convert.h"
 
 namespace cloud_sync {
@@ -64,7 +65,8 @@ void TestPageCloud::AddObject(fidl::VectorPtr<uint8_t> id,
     return;
   }
   received_objects[convert::ToString(id)] = received_data;
-  fxl::Closure report_result = [callback, status = object_status_to_return] {
+  fit::closure report_result = [callback = std::move(callback),
+                                status = object_status_to_return] {
     callback(status);
   };
   if (delay_add_object_callbacks) {

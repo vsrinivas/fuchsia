@@ -9,6 +9,8 @@
 #include <memory>
 #include <string>
 
+#include <lib/fit/function.h>
+
 #include "lib/callback/operation_serializer.h"
 #include "lib/fxl/macros.h"
 #include "peridot/bin/ledger/coroutine/coroutine.h"
@@ -47,19 +49,19 @@ class JournalImpl : public Journal {
   // returned status and the new commit. This Journal object should not be
   // deleted before |callback| is called.
   void Commit(
-      std::function<void(Status, std::unique_ptr<const storage::Commit>)>
+      fit::function<void(Status, std::unique_ptr<const storage::Commit>)>
           callback);
 
   // Rolls back all changes to this |Journal|. Trying to update entries or
   // commit will fail with an |ILLEGAL_STATE| after a successful rollback. This
   // Journal object should not be deleted before |callback| is called.
-  void Rollback(std::function<void(Status)> callback);
+  void Rollback(fit::function<void(Status)> callback);
 
   // Journal:
   void Put(convert::ExtendedStringView key, ObjectIdentifier object_identifier,
-           KeyPriority priority, std::function<void(Status)> callback) override;
+           KeyPriority priority, fit::function<void(Status)> callback) override;
   void Delete(convert::ExtendedStringView key,
-              std::function<void(Status)> callback) override;
+              fit::function<void(Status)> callback) override;
   const JournalId& GetId() const override;
 
  private:
@@ -70,22 +72,22 @@ class JournalImpl : public Journal {
   };
 
   void GetParents(
-      std::function<void(Status,
+      fit::function<void(Status,
                          std::vector<std::unique_ptr<const storage::Commit>>)>
           callback);
 
   void CreateCommitFromChanges(
       std::vector<std::unique_ptr<const storage::Commit>> parents,
       std::unique_ptr<Iterator<const EntryChange>> changes,
-      std::function<void(Status, std::unique_ptr<const storage::Commit>)>
+      fit::function<void(Status, std::unique_ptr<const storage::Commit>)>
           callback);
 
   void GetObjectsToSync(
-      std::function<void(Status status,
+      fit::function<void(Status status,
                          std::vector<ObjectIdentifier> objects_to_sync)>
           callback);
 
-  void RollbackInternal(std::function<void(Status)> callback);
+  void RollbackInternal(fit::function<void(Status)> callback);
 
   const JournalType type_;
   coroutine::CoroutineService* const coroutine_service_;

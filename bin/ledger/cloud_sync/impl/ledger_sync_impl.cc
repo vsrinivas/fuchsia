@@ -5,9 +5,9 @@
 #include "peridot/bin/ledger/cloud_sync/impl/ledger_sync_impl.h"
 
 #include <fuchsia/ledger/cloud/cpp/fidl.h>
+#include <lib/fit/function.h>
 
 #include "lib/backoff/exponential_backoff.h"
-#include "lib/fxl/functional/closure.h"
 #include "peridot/bin/ledger/cloud_sync/impl/page_sync_impl.h"
 #include "peridot/bin/ledger/encryption/impl/encryption_service_impl.h"
 
@@ -36,7 +36,7 @@ LedgerSyncImpl::~LedgerSyncImpl() {
 
 std::unique_ptr<PageSync> LedgerSyncImpl::CreatePageSync(
     storage::PageStorage* page_storage,
-    storage::PageSyncClient* page_sync_client, fxl::Closure error_callback) {
+    storage::PageSyncClient* page_sync_client, fit::closure error_callback) {
   FXL_DCHECK(page_storage);
 
   cloud_provider::PageCloudPtr page_cloud;
@@ -52,7 +52,7 @@ std::unique_ptr<PageSync> LedgerSyncImpl::CreatePageSync(
   auto page_sync = std::make_unique<PageSyncImpl>(
       environment_->async(), page_storage, page_sync_client,
       encryption_service_, std::move(page_cloud), environment_->MakeBackoff(),
-      environment_->MakeBackoff(), error_callback,
+      environment_->MakeBackoff(), std::move(error_callback),
       aggregator_.GetNewStateWatcher());
   if (upload_enabled_) {
     page_sync->EnableUpload();

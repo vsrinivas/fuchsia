@@ -4,6 +4,8 @@
 
 #include "peridot/bin/ledger/storage/public/read_data_source.h"
 
+#include <lib/fit/function.h>
+
 #include "gtest/gtest.h"
 #include "lib/callback/capture.h"
 #include "lib/callback/scoped_task_runner.h"
@@ -21,7 +23,7 @@ class SplittingDataSource : public DataSource {
 
   uint64_t GetSize() override { return content_.size(); };
 
-  void Get(std::function<void(std::unique_ptr<DataChunk>, Status)> callback)
+  void Get(fit::function<void(std::unique_ptr<DataChunk>, Status)> callback)
       override {
     if (index_ >= content_.size()) {
       callback(nullptr, Status::DONE);

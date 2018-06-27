@@ -112,10 +112,10 @@ void PageCloudImpl::SendRemoteCommits() {
 
 void PageCloudImpl::AddCommits(fidl::VectorPtr<cloud_provider::Commit> commits,
                                AddCommitsCallback callback) {
-  auto request = firebase_auth_->GetFirebaseToken(
-      fxl::MakeCopyable([this, commits = std::move(commits), callback](
-                            firebase_auth::AuthStatus auth_status,
-                            std::string auth_token) mutable {
+  auto request = firebase_auth_->GetFirebaseToken(fxl::MakeCopyable(
+      [this, commits = std::move(commits), callback = std::move(callback)](
+          firebase_auth::AuthStatus auth_status,
+          std::string auth_token) mutable {
         if (auth_status != firebase_auth::AuthStatus::OK) {
           callback(cloud_provider::Status::AUTH_ERROR);
           return;
@@ -138,10 +138,10 @@ void PageCloudImpl::AddCommits(fidl::VectorPtr<cloud_provider::Commit> commits,
 void PageCloudImpl::GetCommits(
     std::unique_ptr<cloud_provider::Token> min_position_token,
     GetCommitsCallback callback) {
-  auto request = firebase_auth_->GetFirebaseToken(
-      fxl::MakeCopyable([this, min_timestamp = ToTimestamp(min_position_token),
-                         callback](firebase_auth::AuthStatus auth_status,
-                                   std::string auth_token) mutable {
+  auto request = firebase_auth_->GetFirebaseToken(fxl::MakeCopyable(
+      [this, min_timestamp = ToTimestamp(min_position_token),
+       callback = std::move(callback)](firebase_auth::AuthStatus auth_status,
+                                       std::string auth_token) mutable {
         if (auth_status != firebase_auth::AuthStatus::OK) {
           callback(cloud_provider::Status::AUTH_ERROR,
                    fidl::VectorPtr<cloud_provider::Commit>::New(0), nullptr);
@@ -184,10 +184,10 @@ void PageCloudImpl::AddObject(fidl::VectorPtr<uint8_t> id,
     callback(cloud_provider::Status::ARGUMENT_ERROR);
     return;
   }
-  auto request = firebase_auth_->GetFirebaseToken(
-      fxl::MakeCopyable([this, id = convert::ToString(id), vmo = std::move(vmo),
-                         callback](firebase_auth::AuthStatus auth_status,
-                                   std::string auth_token) mutable {
+  auto request = firebase_auth_->GetFirebaseToken(fxl::MakeCopyable(
+      [this, id = convert::ToString(id), vmo = std::move(vmo),
+       callback = std::move(callback)](firebase_auth::AuthStatus auth_status,
+                                       std::string auth_token) mutable {
         if (auth_status != firebase_auth::AuthStatus::OK) {
           callback(cloud_provider::Status::AUTH_ERROR);
           return;
@@ -205,7 +205,7 @@ void PageCloudImpl::AddObject(fidl::VectorPtr<uint8_t> id,
 void PageCloudImpl::GetObject(fidl::VectorPtr<uint8_t> id,
                               GetObjectCallback callback) {
   auto request = firebase_auth_->GetFirebaseToken(
-      [this, id = convert::ToString(id), callback](
+      [this, id = convert::ToString(id), callback = std::move(callback)](
           firebase_auth::AuthStatus auth_status,
           std::string auth_token) mutable {
         if (auth_status != firebase_auth::AuthStatus::OK) {
@@ -235,9 +235,9 @@ void PageCloudImpl::SetWatcher(
     waiting_for_remote_commits_ack_ = false;
   });
   auto request = firebase_auth_->GetFirebaseToken(
-      [this, min_timestamp = ToTimestamp(min_position_token), callback](
-          firebase_auth::AuthStatus auth_status,
-          std::string auth_token) mutable {
+      [this, min_timestamp = ToTimestamp(min_position_token),
+       callback = std::move(callback)](firebase_auth::AuthStatus auth_status,
+                                       std::string auth_token) mutable {
         if (auth_status != firebase_auth::AuthStatus::OK) {
           watcher_->OnError(cloud_provider::Status::AUTH_ERROR);
           callback(cloud_provider::Status::AUTH_ERROR);

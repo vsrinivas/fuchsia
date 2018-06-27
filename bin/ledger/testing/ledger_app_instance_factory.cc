@@ -5,6 +5,7 @@
 #include "peridot/bin/ledger/testing/ledger_app_instance_factory.h"
 
 #include <lib/fidl/cpp/clone.h>
+#include <lib/fit/function.h>
 #include <lib/zx/time.h>
 
 #include "garnet/public/lib/callback/capture.h"
@@ -23,7 +24,7 @@ class CallbackWaiterImpl : public LedgerAppInstanceFactory::CallbackWaiter {
   CallbackWaiterImpl& operator=(const CallbackWaiterImpl&) = delete;
   virtual ~CallbackWaiterImpl() = default;
 
-  std::function<void()> GetCallback() override {
+  fit::function<void()> GetCallback() override {
     return [this] {
       ++callback_called_;
       if (waiting_) {

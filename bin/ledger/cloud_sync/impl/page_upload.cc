@@ -4,8 +4,9 @@
 
 #include "peridot/bin/ledger/cloud_sync/impl/page_upload.h"
 
+#include <lib/fit/function.h>
+
 #include "lib/callback/scoped_callback.h"
-#include "lib/fxl/functional/closure.h"
 #include "lib/fxl/functional/make_copyable.h"
 
 namespace cloud_sync {
@@ -170,7 +171,7 @@ void PageUpload::HandleError(const char error_description[]) {
   SetState(UPLOAD_PERMANENT_ERROR);
 }
 
-void PageUpload::RetryWithBackoff(fxl::Closure callable) {
+void PageUpload::RetryWithBackoff(fit::closure callable) {
   task_runner_->PostDelayedTask(
       [this, callable = std::move(callable)]() {
         if (this->external_state_ != UPLOAD_PERMANENT_ERROR) {

@@ -9,6 +9,7 @@
 #include <memory>
 
 #include <fuchsia/net/oldhttp/cpp/fidl.h>
+#include <lib/fit/function.h>
 #include <rapidjson/document.h>
 
 #include "lib/url/gurl.h"
@@ -39,16 +40,16 @@ class FirebaseServer : public Server {
 
   // Server implementation.
   void HandleGet(::fuchsia::net::oldhttp::URLRequest request,
-                 std::function<void(::fuchsia::net::oldhttp::URLResponse)>
+                 fit::function<void(::fuchsia::net::oldhttp::URLResponse)>
                      callback) override;
   void HandlePatch(::fuchsia::net::oldhttp::URLRequest request,
-                   std::function<void(::fuchsia::net::oldhttp::URLResponse)>
+                   fit::function<void(::fuchsia::net::oldhttp::URLResponse)>
                        callback) override;
   void HandlePut(::fuchsia::net::oldhttp::URLRequest request,
-                 std::function<void(::fuchsia::net::oldhttp::URLResponse)>
+                 fit::function<void(::fuchsia::net::oldhttp::URLResponse)>
                      callback) override;
   void HandleGetStream(::fuchsia::net::oldhttp::URLRequest request,
-                       std::function<void(::fuchsia::net::oldhttp::URLResponse)>
+                       fit::function<void(::fuchsia::net::oldhttp::URLResponse)>
                            callback) override;
 
   // Returns the serialized json string pointed by |url|.

@@ -10,7 +10,8 @@
 #include <utility>
 #include <vector>
 
-#include "lib/fxl/functional/closure.h"
+#include <lib/fit/function.h>
+
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
 #include "peridot/bin/ledger/cloud_sync/impl/constants.h"
@@ -24,7 +25,7 @@ PageSyncImpl::PageSyncImpl(async_t* async, storage::PageStorage* storage,
                            cloud_provider::PageCloudPtr page_cloud,
                            std::unique_ptr<backoff::Backoff> download_backoff,
                            std::unique_ptr<backoff::Backoff> upload_backoff,
-                           fxl::Closure on_error,
+                           fit::closure on_error,
                            std::unique_ptr<SyncStateWatcher> ledger_watcher)
     : storage_(storage),
       sync_client_(sync_client),
@@ -79,7 +80,7 @@ void PageSyncImpl::Start() {
   }
 }
 
-void PageSyncImpl::SetOnIdle(fxl::Closure on_idle) {
+void PageSyncImpl::SetOnIdle(fit::closure on_idle) {
   FXL_DCHECK(!on_idle_);
   FXL_DCHECK(!started_);
   on_idle_ = std::move(on_idle);
@@ -89,10 +90,10 @@ bool PageSyncImpl::IsIdle() {
   return page_upload_->IsIdle() && page_download_->IsIdle();
 }
 
-void PageSyncImpl::SetOnBacklogDownloaded(fxl::Closure on_backlog_downloaded) {
+void PageSyncImpl::SetOnBacklogDownloaded(fit::closure on_backlog_downloaded) {
   FXL_DCHECK(!on_backlog_downloaded_);
   FXL_DCHECK(!started_);
-  on_backlog_downloaded_ = on_backlog_downloaded;
+  on_backlog_downloaded_ = std::move(on_backlog_downloaded);
 }
 
 void PageSyncImpl::SetSyncWatcher(SyncStateWatcher* watcher) {

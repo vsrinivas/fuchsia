@@ -4,7 +4,8 @@
 
 #include "peridot/bin/ledger/cloud_sync/impl/page_download.h"
 
-#include "lib/fxl/functional/closure.h"
+#include <lib/fit/function.h>
+
 #include "lib/fxl/strings/concatenate.h"
 #include "peridot/bin/ledger/cloud_sync/impl/constants.h"
 #include "peridot/bin/ledger/storage/public/data_source.h"
@@ -214,7 +215,8 @@ void PageDownload::OnNewCommits(
     return;
   }
   SetCommitState(DOWNLOAD_IN_PROGRESS);
-  DownloadBatch(std::move(commits), std::move(position_token), callback);
+  DownloadBatch(std::move(commits), std::move(position_token),
+                std::move(callback));
 }
 
 void PageDownload::OnNewObject(fidl::VectorPtr<uint8_t> /*id*/,
@@ -256,7 +258,7 @@ void PageDownload::OnError(cloud_provider::Status status) {
 void PageDownload::DownloadBatch(
     fidl::VectorPtr<cloud_provider::Commit> commits,
     std::unique_ptr<cloud_provider::Token> position_token,
-    fxl::Closure on_done) {
+    fit::closure on_done) {
   FXL_DCHECK(!batch_download_);
   batch_download_ = std::make_unique<BatchDownload>(
       storage_, encryption_service_, std::move(commits),
@@ -288,7 +290,7 @@ void PageDownload::DownloadBatch(
 
 void PageDownload::GetObject(
     storage::ObjectIdentifier object_identifier,
-    std::function<void(storage::Status, storage::ChangeSource,
+    fit::function<void(storage::Status, storage::ChangeSource,
                        std::unique_ptr<storage::DataSource::DataChunk>)>
         callback) {
   current_get_object_calls_++;
@@ -330,7 +332,7 @@ void PageDownload::GetObject(
 void PageDownload::DecryptObject(
     storage::ObjectIdentifier object_identifier,
     std::unique_ptr<storage::DataSource> content,
-    std::function<void(storage::Status, storage::ChangeSource,
+    fit::function<void(storage::Status, storage::ChangeSource,
                        std::unique_ptr<storage::DataSource::DataChunk>)>
         callback) {
   storage::ReadDataSource(
@@ -351,7 +353,7 @@ void PageDownload::DecryptObject(
               if (status != encryption::Status::OK) {
                 HandleGetObjectError(object_identifier,
                                      encryption::IsPermanentError(status),
-                                     "encryption", callback);
+                                     "encryption", std::move(callback));
                 return;
               }
               backoff_->Reset();
@@ -367,7 +369,7 @@ void PageDownload::DecryptObject(
 void PageDownload::HandleGetObjectError(
     storage::ObjectIdentifier object_identifier, bool is_permanent,
     const char error_name[],
-    std::function<void(storage::Status, storage::ChangeSource,
+    fit::function<void(storage::Status, storage::ChangeSource,
                        std::unique_ptr<storage::DataSource::DataChunk>)>
         callback) {
   if (is_permanent) {
@@ -384,8 +386,8 @@ void PageDownload::HandleGetObjectError(
   current_get_object_calls_--;
   UpdateDownloadState();
   RetryWithBackoff([this, object_identifier = std::move(object_identifier),
-                    callback = std::move(callback)] {
-    GetObject(object_identifier, callback);
+                    callback = std::move(callback)]() mutable {
+    GetObject(object_identifier, std::move(callback));
   });
 }
 
@@ -419,7 +421,7 @@ void PageDownload::UpdateDownloadState() {
   }
 }
 
-void PageDownload::RetryWithBackoff(fxl::Closure callable) {
+void PageDownload::RetryWithBackoff(fit::closure callable) {
   task_runner_->PostDelayedTask(
       [this, callable = std::move(callable)]() {
         if (this->commit_state_ != DOWNLOAD_PERMANENT_ERROR) {

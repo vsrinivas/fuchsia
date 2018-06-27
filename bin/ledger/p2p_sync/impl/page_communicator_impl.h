@@ -6,11 +6,11 @@
 #define PERIDOT_BIN_LEDGER_P2P_SYNC_IMPL_PAGE_COMMUNICATOR_IMPL_H_
 
 #include <flatbuffers/flatbuffers.h>
+#include <lib/fit/function.h>
 
 #include "lib/callback/auto_cleanable.h"
 #include "lib/callback/cancellable.h"
 #include "lib/callback/waiter.h"
-#include "lib/fxl/functional/closure.h"
 #include "lib/fxl/memory/weak_ptr.h"
 #include "peridot/bin/ledger/p2p_provider/public/types.h"
 #include "peridot/bin/ledger/p2p_sync/impl/device_mesh.h"
@@ -36,7 +36,7 @@ class PageCommunicatorImpl : public PageCommunicator,
                        DeviceMesh* mesh);
   ~PageCommunicatorImpl() override;
 
-  void set_on_delete(fxl::Closure on_delete);
+  void set_on_delete(fit::closure on_delete);
 
   // OnDeviceChange is called each time a device connects or unconnects.
   void OnDeviceChange(fxl::StringView remote_device,
@@ -54,7 +54,7 @@ class PageCommunicatorImpl : public PageCommunicator,
   // storage::PageSyncDelegate:
   void GetObject(
       storage::ObjectIdentifier object_identifier,
-      std::function<void(storage::Status, storage::ChangeSource,
+      fit::function<void(storage::Status, storage::ChangeSource,
                          std::unique_ptr<storage::DataSource::DataChunk>)>
           callback) override;
 
@@ -93,7 +93,7 @@ class PageCommunicatorImpl : public PageCommunicator,
   std::set<std::string, convert::StringViewComparator> interested_devices_;
   // List of devices we know are not interested in this page.
   std::set<std::string, convert::StringViewComparator> not_interested_devices_;
-  fxl::Closure on_delete_;
+  fit::closure on_delete_;
   bool started_ = false;
   bool in_destructor_ = false;
 

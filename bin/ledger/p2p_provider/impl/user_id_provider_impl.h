@@ -8,6 +8,7 @@
 #include <string>
 
 #include <fuchsia/modular/auth/cpp/fidl.h>
+#include <lib/fit/function.h>
 
 #include "lib/app/cpp/startup_context.h"
 #include "peridot/bin/ledger/environment/environment.h"
@@ -26,7 +27,7 @@ class UserIdProviderImpl : public UserIdProvider {
       fuchsia::modular::auth::TokenProviderPtr token_provider_ptr,
       std::string cobalt_client_name);
 
-  void GetUserId(std::function<void(Status, std::string)> callback) override;
+  void GetUserId(fit::function<void(Status, std::string)> callback) override;
 
  private:
   bool LoadUserIdFromFile(std::string* id);

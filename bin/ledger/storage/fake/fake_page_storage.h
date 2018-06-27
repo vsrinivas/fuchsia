@@ -12,8 +12,8 @@
 #include <vector>
 
 #include <lib/async/dispatcher.h>
+#include <lib/fit/function.h>
 
-#include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/strings/string_view.h"
 #include "peridot/bin/ledger/encryption/fake/fake_encryption_service.h"
@@ -37,39 +37,39 @@ class FakePageStorage : public PageStorageEmptyImpl {
   // PageStorage:
   PageId GetId() override;
   void GetHeadCommitIds(
-      std::function<void(Status, std::vector<CommitId>)> callback) override;
+      fit::function<void(Status, std::vector<CommitId>)> callback) override;
   void GetCommit(CommitIdView commit_id,
-                 std::function<void(Status, std::unique_ptr<const Commit>)>
+                 fit::function<void(Status, std::unique_ptr<const Commit>)>
                      callback) override;
   void StartCommit(
       const CommitId& commit_id, JournalType journal_type,
-      std::function<void(Status, std::unique_ptr<Journal>)> callback) override;
+      fit::function<void(Status, std::unique_ptr<Journal>)> callback) override;
   void StartMergeCommit(
       const CommitId& left, const CommitId& right,
-      std::function<void(Status, std::unique_ptr<Journal>)> callback) override;
+      fit::function<void(Status, std::unique_ptr<Journal>)> callback) override;
   void CommitJournal(
       std::unique_ptr<Journal> journal,
-      std::function<void(Status, std::unique_ptr<const storage::Commit>)>
+      fit::function<void(Status, std::unique_ptr<const storage::Commit>)>
           callback) override;
   void RollbackJournal(std::unique_ptr<Journal> journal,
-                       std::function<void(Status)> callback) override;
+                       fit::function<void(Status)> callback) override;
   Status AddCommitWatcher(CommitWatcher* watcher) override;
   Status RemoveCommitWatcher(CommitWatcher* watcher) override;
-  void IsSynced(std::function<void(Status, bool)> callback) override;
+  void IsSynced(fit::function<void(Status, bool)> callback) override;
   void AddObjectFromLocal(
       std::unique_ptr<DataSource> data_source,
-      std::function<void(Status, ObjectIdentifier)> callback) override;
+      fit::function<void(Status, ObjectIdentifier)> callback) override;
   void GetObject(ObjectIdentifier object_identifier, Location location,
-                 std::function<void(Status, std::unique_ptr<const Object>)>
+                 fit::function<void(Status, std::unique_ptr<const Object>)>
                      callback) override;
   void GetPiece(ObjectIdentifier object_identifier,
-                std::function<void(Status, std::unique_ptr<const Object>)>
+                fit::function<void(Status, std::unique_ptr<const Object>)>
                     callback) override;
   void GetCommitContents(const Commit& commit, std::string min_key,
-                         std::function<bool(Entry)> on_next,
-                         std::function<void(Status)> on_done) override;
+                         fit::function<bool(Entry)> on_next,
+                         fit::function<void(Status)> on_done) override;
   void GetEntryFromCommit(const Commit& commit, std::string key,
-                          std::function<void(Status, Entry)> callback) override;
+                          fit::function<void(Status, Entry)> callback) override;
 
   // For testing:
   void set_autocommit(bool autocommit) { autocommit_ = autocommit; }
@@ -95,7 +95,7 @@ class FakePageStorage : public PageStorageEmptyImpl {
   std::map<ObjectIdentifier, std::string> objects_;
   std::set<CommitId> heads_;
   std::set<CommitWatcher*> watchers_;
-  std::vector<fxl::Closure> object_requests_;
+  std::vector<fit::closure> object_requests_;
   async_t* const async_;
   PageId page_id_;
   encryption::FakeEncryptionService encryption_service_;

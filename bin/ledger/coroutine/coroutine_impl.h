@@ -8,6 +8,8 @@
 #include <memory>
 #include <vector>
 
+#include <lib/fit/function.h>
+
 #include "lib/fxl/macros.h"
 #include "peridot/bin/ledger/coroutine/coroutine.h"
 

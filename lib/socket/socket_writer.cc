@@ -8,6 +8,8 @@
 #include <algorithm>
 #include <utility>
 
+#include <lib/fit/function.h>
+
 #include "lib/fxl/logging.h"
 
 namespace socket {
@@ -102,7 +104,7 @@ void StringSocketWriter::Start(std::string data, zx::socket destination) {
 
 void StringSocketWriter::GetNext(
     size_t offset, size_t max_size,
-    std::function<void(fxl::StringView)> callback) {
+    fit::function<void(fxl::StringView)> callback) {
   fxl::StringView data = data_;
   callback(data.substr(offset, max_size));
 }

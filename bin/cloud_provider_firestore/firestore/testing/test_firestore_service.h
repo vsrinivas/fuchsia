@@ -9,45 +9,45 @@
 
 #include <google/firestore/v1beta1/document.pb.h>
 #include <google/firestore/v1beta1/firestore.grpc.pb.h>
+#include <lib/fit/function.h>
 
-#include "lib/fxl/functional/closure.h"
 #include "peridot/bin/cloud_provider_firestore/firestore/firestore_service.h"
 
 namespace cloud_provider_firestore {
 
 struct GetDocumentRecord {
   google::firestore::v1beta1::GetDocumentRequest request;
-  std::function<void(grpc::Status, google::firestore::v1beta1::Document)>
+  fit::function<void(grpc::Status, google::firestore::v1beta1::Document)>
       callback;
 };
 
 struct ListDocumentsRecord {
   google::firestore::v1beta1::ListDocumentsRequest request;
-  std::function<void(grpc::Status,
+  fit::function<void(grpc::Status,
                      google::firestore::v1beta1::ListDocumentsResponse)>
       callback;
 };
 
 struct CreateDocumentRecord {
   google::firestore::v1beta1::CreateDocumentRequest request;
-  std::function<void(grpc::Status, google::firestore::v1beta1::Document)>
+  fit::function<void(grpc::Status, google::firestore::v1beta1::Document)>
       callback;
 };
 
 struct DeleteDocumentRecord {
   google::firestore::v1beta1::DeleteDocumentRequest request;
-  std::function<void(grpc::Status)> callback;
+  fit::function<void(grpc::Status)> callback;
 };
 
 struct CommitRecord {
   google::firestore::v1beta1::CommitRequest request;
-  std::function<void(grpc::Status, google::firestore::v1beta1::CommitResponse)>
+  fit::function<void(grpc::Status, google::firestore::v1beta1::CommitResponse)>
       callback;
 };
 
 struct RunQueryRecord {
   google::firestore::v1beta1::RunQueryRequest request;
-  std::function<void(grpc::Status,
+  fit::function<void(grpc::Status,
                      std::vector<google::firestore::v1beta1::RunQueryResponse>)>
       callback;
 };
@@ -65,36 +65,36 @@ class TestFirestoreService : public FirestoreService {
   void GetDocument(
       google::firestore::v1beta1::GetDocumentRequest request,
       std::shared_ptr<grpc::CallCredentials> call_credentials,
-      std::function<void(grpc::Status, google::firestore::v1beta1::Document)>
+      fit::function<void(grpc::Status, google::firestore::v1beta1::Document)>
           callback) override;
 
   void ListDocuments(
       google::firestore::v1beta1::ListDocumentsRequest request,
       std::shared_ptr<grpc::CallCredentials> call_credentials,
-      std::function<void(grpc::Status,
+      fit::function<void(grpc::Status,
                          google::firestore::v1beta1::ListDocumentsResponse)>
           callback) override;
 
   void CreateDocument(
       google::firestore::v1beta1::CreateDocumentRequest request,
       std::shared_ptr<grpc::CallCredentials> call_credentials,
-      std::function<void(grpc::Status, google::firestore::v1beta1::Document)>
+      fit::function<void(grpc::Status, google::firestore::v1beta1::Document)>
           callback) override;
 
   void DeleteDocument(google::firestore::v1beta1::DeleteDocumentRequest request,
                       std::shared_ptr<grpc::CallCredentials> call_credentials,
-                      std::function<void(grpc::Status)> callback) override;
+                      fit::function<void(grpc::Status)> callback) override;
 
   void RunQuery(google::firestore::v1beta1::RunQueryRequest request,
                 std::shared_ptr<grpc::CallCredentials> call_credentials,
-                std::function<void(
+                fit::function<void(
                     grpc::Status,
                     std::vector<google::firestore::v1beta1::RunQueryResponse>)>
                     callback) override;
 
   void Commit(google::firestore::v1beta1::CommitRequest request,
               std::shared_ptr<grpc::CallCredentials> call_credentials,
-              std::function<void(grpc::Status,
+              fit::function<void(grpc::Status,
                                  google::firestore::v1beta1::CommitResponse)>
                   callback) override;
 
@@ -102,7 +102,7 @@ class TestFirestoreService : public FirestoreService {
       std::shared_ptr<grpc::CallCredentials> call_credentials,
       ListenCallClient* client) override;
 
-  void ShutDown(fxl::Closure callback) override;
+  void ShutDown(fit::closure callback) override;
 
   std::vector<GetDocumentRecord> get_document_records;
   std::vector<ListDocumentsRecord> list_documents_records;
@@ -112,7 +112,7 @@ class TestFirestoreService : public FirestoreService {
   std::vector<RunQueryRecord> run_query_records;
   std::vector<ListenCallClient*> listen_clients;
 
-  fxl::Closure shutdown_callback;
+  fit::closure shutdown_callback;
 
  private:
   const std::string db_path_;

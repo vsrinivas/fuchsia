@@ -4,8 +4,9 @@
 
 #include "peridot/bin/ledger/lock/lock.h"
 
+#include <lib/fit/function.h>
+
 #include "lib/callback/capture.h"
-#include "lib/fxl/functional/closure.h"
 #include "lib/fxl/memory/weak_ptr.h"
 
 namespace lock {
@@ -24,11 +25,11 @@ class LockImpl : public Lock {
       coroutine::CoroutineHandler* const handler,
       callback::OperationSerializer* const serializer) {
     return SyncCall(handler, [weak_this = weak_ptr_factory_.GetWeakPtr(),
-                              serializer](std::function<void()> sync_callback) {
+                              serializer](fit::function<void()> sync_callback) {
       serializer->Serialize<>(
           [] {},
           [weak_this, sync_callback = std::move(sync_callback)](
-              fxl::Closure serialization_callback) mutable {
+              fit::closure serialization_callback) mutable {
             // Moving sync_callback to the stack as the serialization_callback
             // might delete this closure.
             auto sync_callback_local = std::move(sync_callback);
@@ -44,7 +45,7 @@ class LockImpl : public Lock {
   }
 
  private:
-  fxl::Closure serialization_callback_;
+  fit::closure serialization_callback_;
 
   fxl::WeakPtrFactory<LockImpl> weak_ptr_factory_;
   FXL_DISALLOW_COPY_AND_ASSIGN(LockImpl);

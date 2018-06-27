@@ -9,6 +9,7 @@
 #include <string>
 #include <vector>
 
+#include <lib/fit/function.h>
 #include <lib/zx/socket.h>
 
 #include "lib/fsl/vmo/sized_vmo.h"
@@ -44,7 +45,7 @@ class PageCloudHandler {
   // they were passed in the AddCommits() call.
   virtual void AddCommits(const std::string& auth_token,
                           std::vector<Commit> commits,
-                          const std::function<void(Status)>& callback) = 0;
+                          fit::function<void(Status)> callback) = 0;
 
   // Registers the given watcher to be notified about commits already present
   // and these being added to the cloud later. This includes commits added by
@@ -75,19 +76,19 @@ class PageCloudHandler {
   // corresponding server timestamps.
   virtual void GetCommits(
       const std::string& auth_token, const std::string& min_timestamp,
-      std::function<void(Status, std::vector<Record>)> callback) = 0;
+      fit::function<void(Status, std::vector<Record>)> callback) = 0;
 
   // Uploads the given object to the cloud under the given id.
   virtual void AddObject(const std::string& auth_token,
                          ObjectDigestView object_digest, fsl::SizedVmo data,
-                         std::function<void(Status)> callback) = 0;
+                         fit::function<void(Status)> callback) = 0;
 
   // Retrieves the object of the given id from the cloud. The size of the object
   // is passed to the callback along with the socket handle, so that the client
   // can verify that all data was streamed when draining the socket.
   virtual void GetObject(
       const std::string& auth_token, ObjectDigestView object_digest,
-      std::function<void(Status status, uint64_t size, zx::socket data)>
+      fit::function<void(Status status, uint64_t size, zx::socket data)>
           callback) = 0;
 
  private:

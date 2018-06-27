@@ -8,6 +8,7 @@
 #include <functional>
 #include <string>
 
+#include <lib/fit/function.h>
 #include <rapidjson/document.h>
 
 #include "lib/callback/destruction_sentinel.h"
@@ -28,16 +29,16 @@ class CloudDeviceSetImpl : public CloudDeviceSet, public firebase::WatchClient {
   ~CloudDeviceSetImpl() override;
 
   void CheckFingerprint(std::string auth_token, std::string fingerprint,
-                        std::function<void(Status)> callback) override;
+                        fit::function<void(Status)> callback) override;
 
   void SetFingerprint(std::string auth_token, std::string fingerprint,
-                      std::function<void(Status)> callback) override;
+                      fit::function<void(Status)> callback) override;
 
   void WatchFingerprint(std::string auth_token, std::string fingerprint,
-                        std::function<void(Status)> callback) override;
+                        fit::function<void(Status)> callback) override;
 
   void EraseAllFingerprints(std::string auth_token,
-                            std::function<void(Status)> callback) override;
+                            fit::function<void(Status)> callback) override;
 
   void UpdateTimestampAssociatedWithFingerprint(
       std::string auth_token, std::string fingerprint) override;
@@ -54,7 +55,7 @@ class CloudDeviceSetImpl : public CloudDeviceSet, public firebase::WatchClient {
   void ResetWatcher();
   std::unique_ptr<firebase::Firebase> user_firebase_;
   bool firebase_watcher_set_ = false;
-  std::function<void(Status)> watch_callback_;
+  fit::function<void(Status)> watch_callback_;
 
   callback::DestructionSentinel destruction_sentinel_;
 };

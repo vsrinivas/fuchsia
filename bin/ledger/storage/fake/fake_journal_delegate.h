@@ -8,6 +8,8 @@
 #include <map>
 #include <string>
 
+#include <lib/fit/function.h>
+
 #include "lib/fxl/macros.h"
 #include "peridot/bin/ledger/storage/public/commit.h"
 #include "peridot/bin/ledger/storage/public/types.h"
@@ -40,7 +42,7 @@ class FakeJournalDelegate {
   Status Delete(convert::ExtendedStringView key);
 
   void Commit(
-      std::function<void(Status, std::unique_ptr<const storage::Commit>)>
+      fit::function<void(Status, std::unique_ptr<const storage::Commit>)>
           callback);
   bool IsCommitted() const;
 
@@ -70,7 +72,7 @@ class FakeJournalDelegate {
 
   bool is_committed_ = false;
   bool is_rolled_back_ = false;
-  std::function<void(Status, std::unique_ptr<const storage::Commit>)>
+  fit::function<void(Status, std::unique_ptr<const storage::Commit>)>
       commit_callback_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(FakeJournalDelegate);

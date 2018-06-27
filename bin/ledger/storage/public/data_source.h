@@ -9,6 +9,7 @@
 #include <functional>
 #include <memory>
 
+#include <lib/fit/function.h>
 #include <lib/zx/socket.h>
 
 #include "lib/fidl/cpp/array.h"
@@ -63,7 +64,7 @@ class DataSource {
   // data. If |Status| is |DONE|, all the data has been received. In case of
   // error, |callback| will be called with an |ERROR| status and a null |Data|.
   virtual void Get(
-      std::function<void(std::unique_ptr<DataChunk>, Status)> callback) = 0;
+      fit::function<void(std::unique_ptr<DataChunk>, Status)> callback) = 0;
 
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(DataSource);

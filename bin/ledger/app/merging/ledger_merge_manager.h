@@ -8,6 +8,8 @@
 #include <map>
 #include <memory>
 
+#include <lib/fit/function.h>
+
 #include "lib/callback/auto_cleanable.h"
 #include "lib/fxl/macros.h"
 #include "peridot/bin/ledger/app/merging/merge_resolver.h"
@@ -34,7 +36,7 @@ class LedgerMergeManager {
   void RemoveResolver(const storage::PageId& page_id);
   void GetResolverStrategyForPage(
       const storage::PageId& page_id,
-      std::function<void(std::unique_ptr<MergeStrategy>)> strategy_callback);
+      fit::function<void(std::unique_ptr<MergeStrategy>)> strategy_callback);
   void ResetStrategyForPage(storage::PageId page_id);
 
   Environment* const environment_;

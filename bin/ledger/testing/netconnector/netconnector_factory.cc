@@ -4,8 +4,9 @@
 
 #include "peridot/bin/ledger/testing/netconnector/netconnector_factory.h"
 
+#include <lib/fit/function.h>
+
 #include "lib/fidl/cpp/clone.h"
-#include "lib/fxl/functional/closure.h"
 #include "peridot/lib/convert/convert.h"
 
 namespace ledger {
@@ -13,9 +14,9 @@ class NetConnectorFactory::Holder {
  public:
   Holder(FakeNetConnector::Delegate* delegate,
          fidl::InterfaceRequest<fuchsia::netconnector::NetConnector> request,
-         std::string device_name, fxl::Closure on_disconnect);
+         std::string device_name, fit::closure on_disconnect);
 
-  void set_on_empty(fxl::Closure on_empty);
+  void set_on_empty(fit::closure on_empty);
 
   FakeNetConnector* impl();
 
@@ -26,21 +27,21 @@ class NetConnectorFactory::Holder {
   ledger::fidl_helpers::BoundInterface<fuchsia::netconnector::NetConnector,
                                        FakeNetConnector>
       interface_;
-  fxl::Closure on_empty_;
-  fxl::Closure on_disconnect_;
+  fit::closure on_empty_;
+  fit::closure on_disconnect_;
 };
 
 NetConnectorFactory::Holder::Holder(
     FakeNetConnector::Delegate* delegate,
     fidl::InterfaceRequest<fuchsia::netconnector::NetConnector> request,
-    std::string device_name, fxl::Closure on_disconnect)
+    std::string device_name, fit::closure on_disconnect)
     : device_name_(std::move(device_name)),
       interface_(std::move(request), delegate),
       on_disconnect_(std::move(on_disconnect)) {
   interface_.set_on_empty([this] { OnEmpty(); });
 }
 
-void NetConnectorFactory::Holder::set_on_empty(fxl::Closure on_empty) {
+void NetConnectorFactory::Holder::set_on_empty(fit::closure on_empty) {
   on_empty_ = std::move(on_empty);
 }
 
@@ -93,7 +94,7 @@ void NetConnectorFactory::UpdatedHostList() {
 
 void NetConnectorFactory::GetDevicesNames(
     uint64_t last_version,
-    std::function<void(uint64_t, fidl::VectorPtr<fidl::StringPtr>)> callback) {
+    fit::function<void(uint64_t, fidl::VectorPtr<fidl::StringPtr>)> callback) {
   FXL_CHECK(last_version <= current_version_)
       << "Last seen version (" << last_version
       << ") is more recent than current version (" << current_version_

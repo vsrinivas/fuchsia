@@ -6,6 +6,8 @@
 
 #include <utility>
 
+#include <lib/fit/function.h>
+
 #include "lib/fxl/macros.h"
 #include "lib/gtest/test_loop_fixture.h"
 #include "peridot/lib/socket/socket_drainer_client.h"
@@ -21,7 +23,7 @@ class StringClient : public SocketWriter::Client {
   explicit StringClient(std::string value) : value_(std::move(value)) {}
 
   void GetNext(size_t offset, size_t max_size,
-               std::function<void(fxl::StringView)> callback) override {
+               fit::function<void(fxl::StringView)> callback) override {
     fxl::StringView data = value_;
     callback(data.substr(offset, max_size));
   }

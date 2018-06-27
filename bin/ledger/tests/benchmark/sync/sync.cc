@@ -7,6 +7,7 @@
 #include <iostream>
 
 #include <fuchsia/ledger/cloud/cpp/fidl.h>
+#include <lib/fit/function.h>
 #include <lib/zx/time.h>
 #include <trace/event.h>
 

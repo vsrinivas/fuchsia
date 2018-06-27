@@ -12,7 +12,6 @@
 #include <trace/event.h>
 
 #include "lib/fidl/cpp/interface_request.h"
-#include "lib/fxl/functional/closure.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/memory/weak_ptr.h"
@@ -51,8 +50,8 @@ class LedgerManager::PageManagerContainer {
     page_usage_listener_->OnPageClosed(ledger_name_, page_id_);
   }
 
-  void set_on_empty(const fxl::Closure& on_empty_callback) {
-    on_empty_callback_ = on_empty_callback;
+  void set_on_empty(fit::closure on_empty_callback) {
+    on_empty_callback_ = std::move(on_empty_callback);
     if (page_manager_) {
       page_manager_->set_on_empty([this] { CheckEmpty(); });
     }
@@ -61,7 +60,7 @@ class LedgerManager::PageManagerContainer {
   // Keeps track of |page| and |callback|. Binds |page| and fires |callback|
   // when a PageManager is available or an error occurs.
   void BindPage(fidl::InterfaceRequest<Page> page_request,
-                std::function<void(Status)> callback) {
+                fit::function<void(Status)> callback) {
     MaybeNotifyUsageListener();
 
     if (status_ != Status::OK) {
@@ -79,7 +78,7 @@ class LedgerManager::PageManagerContainer {
   // |callback| when a PageManager is available or an error occurs.
   void BindPageDebug(
       fidl::InterfaceRequest<ledger_internal::PageDebug> page_debug,
-      std::function<void(Status)> callback) {
+      fit::function<void(Status)> callback) {
     MaybeNotifyUsageListener();
 
     if (status_ != Status::OK) {
@@ -95,7 +94,7 @@ class LedgerManager::PageManagerContainer {
 
   // Registers a new internal request for PageStorage.
   void NewInternalRequest(
-      std::function<void(Status, ExpiringToken, PageManager*)> callback) {
+      fit::function<void(Status, ExpiringToken, PageManager*)> callback) {
     if (status_ != Status::OK) {
       callback(status_, fxl::MakeAutoCall<fit::closure>([] {}), nullptr);
       return;
@@ -194,18 +193,18 @@ class LedgerManager::PageManagerContainer {
   PageUsageListener* page_usage_listener_;
   Status status_ = Status::OK;
   std::vector<
-      std::pair<fidl::InterfaceRequest<Page>, std::function<void(Status)>>>
+      std::pair<fidl::InterfaceRequest<Page>, fit::function<void(Status)>>>
       requests_;
   std::vector<std::pair<fidl::InterfaceRequest<ledger_internal::PageDebug>,
-                        std::function<void(Status)>>>
+                        fit::function<void(Status)>>>
       debug_requests_;
   ssize_t internal_request_count_ = 0;
-  std::vector<std::function<void(Status, ExpiringToken, PageManager*)>>
+  std::vector<fit::function<void(Status, ExpiringToken, PageManager*)>>
       internal_request_callbacks_;
   // Stores whether PageUsageListener was notified about the page being opened.
   bool page_opened_notification_sent_ = false;
   bool page_manager_is_set_ = false;
-  fxl::Closure on_empty_callback_;
+  fit::closure on_empty_callback_;
 
   // Must be the last member.
   fxl::WeakPtrFactory<PageManagerContainer> weak_factory_;
@@ -240,7 +239,7 @@ void LedgerManager::BindLedger(fidl::InterfaceRequest<Ledger> ledger_request) {
 
 void LedgerManager::PageIsClosedAndSynced(
     storage::PageIdView page_id,
-    std::function<void(Status, PageClosedAndSynced)> callback) {
+    fit::function<void(Status, PageClosedAndSynced)> callback) {
   // Check if there was a previous call to this function for the same page that
   // hasn't terminated.
   // TODO(nellyv): Add support for two concurrent calls for the same page. See
@@ -305,7 +304,7 @@ void LedgerManager::PageIsClosedAndSynced(
 
 void LedgerManager::GetPage(storage::PageIdView page_id, PageState page_state,
                             fidl::InterfaceRequest<Page> page_request,
-                            std::function<void(Status)> callback) {
+                            fit::function<void(Status)> callback) {
   MaybeMarkPageOpened(page_id);
 
   // If we have the page manager ready, just bind the request and return.
@@ -336,7 +335,7 @@ Status LedgerManager::DeletePage(convert::ExtendedStringView page_id) {
 
 void LedgerManager::InitPageManagerContainer(
     PageManagerContainer* container, convert::ExtendedStringView page_id,
-    std::function<void(Status)> callback) {
+    fit::function<void(Status)> callback) {
   storage_->GetPageStorage(
       page_id.ToString(),
       [this, container, page_id = page_id.ToString(),
@@ -452,7 +451,7 @@ void LedgerManager::GetPageDebug(
   MaybeMarkPageOpened(page_id.id);
   auto it = page_managers_.find(convert::ExtendedStringView(page_id.id));
   if (it != page_managers_.end()) {
-    it->second.BindPageDebug(std::move(page_debug), callback);
+    it->second.BindPageDebug(std::move(page_debug), std::move(callback));
   } else {
     callback(Status::PAGE_NOT_FOUND);
   }

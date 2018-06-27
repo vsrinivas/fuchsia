@@ -9,6 +9,8 @@
 #include <string>
 #include <utility>
 
+#include <lib/fit/function.h>
+
 #include "lib/callback/waiter.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "peridot/bin/ledger/storage/impl/btree/builder.h"
@@ -57,11 +59,11 @@ std::unique_ptr<Journal> JournalImpl::Merge(
 const JournalId& JournalImpl::GetId() const { return id_; }
 
 void JournalImpl::Commit(
-    std::function<void(Status, std::unique_ptr<const storage::Commit>)>
+    fit::function<void(Status, std::unique_ptr<const storage::Commit>)>
         callback) {
   serializer_.Serialize<Status, std::unique_ptr<const storage::Commit>>(
       std::move(callback),
-      [this](std::function<void(Status, std::unique_ptr<const storage::Commit>)>
+      [this](fit::function<void(Status, std::unique_ptr<const storage::Commit>)>
                  callback) {
         if (!valid_ || (type_ == JournalType::EXPLICIT && failed_operation_)) {
           callback(Status::ILLEGAL_STATE, nullptr);
@@ -94,21 +96,21 @@ void JournalImpl::Commit(
       });
 }
 
-void JournalImpl::Rollback(std::function<void(Status)> callback) {
+void JournalImpl::Rollback(fit::function<void(Status)> callback) {
   serializer_.Serialize<Status>(std::move(callback),
-                                [this](std::function<void(Status)> callback) {
+                                [this](fit::function<void(Status)> callback) {
                                   RollbackInternal(std::move(callback));
                                 });
 }
 
 void JournalImpl::Put(convert::ExtendedStringView key,
                       ObjectIdentifier object_identifier, KeyPriority priority,
-                      std::function<void(Status)> callback) {
+                      fit::function<void(Status)> callback) {
   serializer_.Serialize<Status>(
       std::move(callback),
       [this, key = key.ToString(),
        object_identifier = std::move(object_identifier),
-       priority](std::function<void(Status)> callback) mutable {
+       priority](fit::function<void(Status)> callback) mutable {
         if (!valid_ || (type_ == JournalType::EXPLICIT && failed_operation_)) {
           callback(Status::ILLEGAL_STATE);
           return;
@@ -125,10 +127,10 @@ void JournalImpl::Put(convert::ExtendedStringView key,
 }
 
 void JournalImpl::Delete(convert::ExtendedStringView key,
-                         std::function<void(Status)> callback) {
+                         fit::function<void(Status)> callback) {
   serializer_.Serialize<Status>(
       std::move(callback),
-      [this, key = key.ToString()](std::function<void(Status)> callback) {
+      [this, key = key.ToString()](fit::function<void(Status)> callback) {
         if (!valid_ || (type_ == JournalType::EXPLICIT && failed_operation_)) {
           callback(Status::ILLEGAL_STATE);
           return;
@@ -145,7 +147,7 @@ void JournalImpl::Delete(convert::ExtendedStringView key,
 }
 
 void JournalImpl::GetParents(
-    std::function<void(Status,
+    fit::function<void(Status,
                        std::vector<std::unique_ptr<const storage::Commit>>)>
         callback) {
   auto waiter = fxl::MakeRefCounted<
@@ -161,7 +163,7 @@ void JournalImpl::GetParents(
 void JournalImpl::CreateCommitFromChanges(
     std::vector<std::unique_ptr<const storage::Commit>> parents,
     std::unique_ptr<Iterator<const EntryChange>> changes,
-    std::function<void(Status, std::unique_ptr<const storage::Commit>)>
+    fit::function<void(Status, std::unique_ptr<const storage::Commit>)>
         callback) {
   btree::ApplyChanges(
       coroutine_service_, page_storage_, parents[0]->GetRootIdentifier(),
@@ -234,7 +236,7 @@ void JournalImpl::CreateCommitFromChanges(
 }
 
 void JournalImpl::GetObjectsToSync(
-    std::function<void(Status status,
+    fit::function<void(Status status,
                        std::vector<ObjectIdentifier> objects_to_sync)>
         callback) {
   page_storage_->GetJournalEntries(
@@ -288,7 +290,7 @@ void JournalImpl::GetObjectsToSync(
           }));
 }
 
-void JournalImpl::RollbackInternal(std::function<void(Status)> callback) {
+void JournalImpl::RollbackInternal(fit::function<void(Status)> callback) {
   if (!valid_) {
     callback(Status::ILLEGAL_STATE);
     return;

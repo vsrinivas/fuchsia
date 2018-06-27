@@ -6,6 +6,8 @@
 
 #include <memory>
 
+#include <lib/fit/function.h>
+
 #include "lib/callback/waiter.h"
 #include "lib/fsl/vmo/strings.h"
 #include "lib/fxl/functional/make_copyable.h"
@@ -37,7 +39,7 @@ void PageDataGenerator::PutEntry(ledger::PagePtr* page,
                                  fidl::VectorPtr<uint8_t> value,
                                  ReferenceStrategy ref_strategy,
                                  ledger::Priority priority,
-                                 std::function<void(ledger::Status)> callback) {
+                                 fit::function<void(ledger::Status)> callback) {
   if (ref_strategy == ReferenceStrategy::INLINE) {
     if (value->size() >= kMaxInlineDataSize) {
       FXL_LOG(ERROR)
@@ -84,21 +86,21 @@ void PageDataGenerator::Populate(ledger::PagePtr* page,
                                  size_t value_size, size_t transaction_size,
                                  ReferenceStrategy ref_strategy,
                                  ledger::Priority priority,
-                                 std::function<void(ledger::Status)> callback) {
+                                 fit::function<void(ledger::Status)> callback) {
   if (transaction_size == 0) {
     PutMultipleEntries(page, std::move(keys), value_size, ref_strategy,
-                       priority, callback);
+                       priority, std::move(callback));
     return;
   }
   PutInTransaction(page, std::move(keys), 0, value_size, transaction_size,
-                   ref_strategy, priority, callback);
+                   ref_strategy, priority, std::move(callback));
 }
 
 void PageDataGenerator::PutInTransaction(
     ledger::PagePtr* page, std::vector<fidl::VectorPtr<uint8_t>> keys,
     size_t current_key_index, size_t value_size, size_t transaction_size,
     ReferenceStrategy ref_strategy, ledger::Priority priority,
-    std::function<void(ledger::Status)> callback) {
+    fit::function<void(ledger::Status)> callback) {
   if (current_key_index >= keys.size()) {
     callback(ledger::Status::OK);
     return;
@@ -142,7 +144,8 @@ void PageDataGenerator::PutInTransaction(
                         PutInTransaction(page, std::move(keys),
                                          current_key_index + transaction_size,
                                          value_size, transaction_size,
-                                         ref_strategy, priority, callback);
+                                         ref_strategy, priority,
+                                         std::move(callback));
                       }));
                 }));
       }));
@@ -151,7 +154,7 @@ void PageDataGenerator::PutInTransaction(
 void PageDataGenerator::PutMultipleEntries(
     ledger::PagePtr* page, std::vector<fidl::VectorPtr<uint8_t>> keys,
     size_t value_size, ReferenceStrategy ref_strategy,
-    ledger::Priority priority, std::function<void(ledger::Status)> callback) {
+    ledger::Priority priority, fit::function<void(ledger::Status)> callback) {
   auto waiter = fxl::MakeRefCounted<callback::StatusWaiter<ledger::Status>>(
       ledger::Status::OK);
   for (size_t i = 0; i < keys.size(); i++) {
@@ -159,7 +162,7 @@ void PageDataGenerator::PutMultipleEntries(
     PutEntry(page, std::move(keys[i]), std::move(value), ref_strategy, priority,
              waiter->NewCallback());
   }
-  waiter->Finalize(callback);
+  waiter->Finalize(std::move(callback));
 }
 
 }  // namespace benchmark

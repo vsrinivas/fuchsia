@@ -9,6 +9,7 @@
 #include <utility>
 
 #include <flatbuffers/flatbuffers.h>
+#include <lib/fit/function.h>
 
 #include "lib/fxl/build_config.h"
 #include "lib/fxl/logging.h"
@@ -184,7 +185,7 @@ std::unique_ptr<const Commit> CommitImpl::FromContentAndParents(
 
 void CommitImpl::Empty(
     PageStorage* page_storage,
-    std::function<void(Status, std::unique_ptr<const Commit>)> callback) {
+    fit::function<void(Status, std::unique_ptr<const Commit>)> callback) {
   btree::TreeNode::Empty(
       page_storage, [page_storage, callback = std::move(callback)](
                         Status s, ObjectIdentifier root_identifier) {

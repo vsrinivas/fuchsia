@@ -8,6 +8,8 @@
 #include <memory>
 #include <vector>
 
+#include <lib/fit/function.h>
+
 #include "lib/callback/waiter.h"
 #include "lib/fidl/cpp/optional.h"
 #include "lib/fsl/vmo/strings.h"
@@ -37,7 +39,7 @@ const std::string& GetKey(const storage::ThreeWayChange& change) {
 ValuePtr GetValueFromEntry(
     storage::PageStorage* const storage,
     const std::unique_ptr<storage::Entry>& entry,
-    std::function<void(Status, fsl::SizedVmo)> callback) {
+    fit::function<void(Status, fsl::SizedVmo)> callback) {
   if (!entry) {
     callback(Status::OK, fsl::SizedVmo());
     return nullptr;
@@ -71,7 +73,7 @@ void ComputePageChange(
     storage::PageStorage* storage, const storage::Commit& base,
     const storage::Commit& other, std::string prefix_key, std::string min_key,
     PaginationBehavior pagination_behavior,
-    std::function<void(Status, std::pair<PageChangePtr, std::string>)>
+    fit::function<void(Status, std::pair<PageChangePtr, std::string>)>
         callback) {
   struct Context {
     // The PageChangePtr to be returned through the callback.
@@ -195,7 +197,7 @@ void ComputeThreeWayDiff(
     storage::PageStorage* storage, const storage::Commit& base,
     const storage::Commit& left, const storage::Commit& right,
     std::string prefix_key, std::string min_key, DiffType diff_type,
-    std::function<void(Status,
+    fit::function<void(Status,
                        std::pair<fidl::VectorPtr<DiffEntry>, std::string>)>
         callback) {
   struct Context {

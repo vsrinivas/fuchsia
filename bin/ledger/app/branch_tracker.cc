@@ -6,10 +6,11 @@
 
 #include <vector>
 
+#include <lib/fit/function.h>
+
 #include "lib/callback/scoped_callback.h"
 #include "lib/callback/waiter.h"
 #include "lib/fxl/functional/auto_call.h"
-#include "lib/fxl/functional/closure.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "peridot/bin/ledger/app/diff_utils.h"
 #include "peridot/bin/ledger/app/fidl/serialization_size.h"
@@ -53,7 +54,7 @@ class BranchTracker::PageWatcherContainer {
     FXL_DCHECK(!handler_);
   }
 
-  void set_on_empty(fxl::Closure on_empty_callback) {
+  void set_on_empty(fit::closure on_empty_callback) {
     on_empty_callback_ = std::move(on_empty_callback);
   }
 
@@ -68,7 +69,7 @@ class BranchTracker::PageWatcherContainer {
   // again to set a new callback after the first one is called. Setting a
   // callback while a previous one is still active will execute the previous
   // callback.
-  void SetOnDrainedCallback(fxl::Closure on_drained) {
+  void SetOnDrainedCallback(fit::closure on_drained) {
     // If a transaction is committed or rolled back before all watchers have
     // been drained, we do not want to continue blocking until they drain. Thus,
     // we declare them drained right away and proceed.
@@ -76,9 +77,9 @@ class BranchTracker::PageWatcherContainer {
       on_drained_();
       on_drained_ = nullptr;
     }
-    on_drained_ = on_drained;
+    on_drained_ = std::move(on_drained);
     if (Drained() && on_drained_) {
-      on_drained();
+      on_drained_();
       on_drained_ = nullptr;
     }
   }
@@ -138,7 +139,7 @@ class BranchTracker::PageWatcherContainer {
 
   void SendChange(PageChange page_change, ResultState state,
                   std::unique_ptr<const storage::Commit> new_commit,
-                  fxl::Closure on_done) {
+                  fit::closure on_done) {
     interface_->OnChange(
         std::move(page_change), state,
         fxl::MakeCopyable(
@@ -237,7 +238,7 @@ class BranchTracker::PageWatcherContainer {
                                   [this,
                                    change = std::move(paginated_changes[i]),
                                    state, new_commit = new_commit->Clone()](
-                                      fxl::Closure on_done) mutable {
+                                      fit::closure on_done) mutable {
                                     SendChange(std::move(change), state,
                                                std::move(new_commit),
                                                std::move(on_done));
@@ -250,8 +251,8 @@ class BranchTracker::PageWatcherContainer {
             })));
   }
 
-  fxl::Closure on_drained_ = nullptr;
-  fxl::Closure on_empty_callback_ = nullptr;
+  fit::closure on_drained_ = nullptr;
+  fit::closure on_empty_callback_ = nullptr;
   bool change_in_flight_;
   std::unique_ptr<const storage::Commit> last_commit_;
   std::unique_ptr<const storage::Commit> current_commit_;
@@ -282,7 +283,7 @@ BranchTracker::BranchTracker(coroutine::CoroutineService* coroutine_service,
 
 BranchTracker::~BranchTracker() { storage_->RemoveCommitWatcher(this); }
 
-void BranchTracker::Init(std::function<void(Status)> on_done) {
+void BranchTracker::Init(fit::function<void(Status)> on_done) {
   storage_->GetHeadCommitIds(callback::MakeScoped(
       weak_factory_.GetWeakPtr(),
       [this, on_done = std::move(on_done)](
@@ -299,8 +300,8 @@ void BranchTracker::Init(std::function<void(Status)> on_done) {
       }));
 }
 
-void BranchTracker::set_on_empty(fxl::Closure on_empty_callback) {
-  on_empty_callback_ = on_empty_callback;
+void BranchTracker::set_on_empty(fit::closure on_empty_callback) {
+  on_empty_callback_ = std::move(on_empty_callback);
 }
 
 const storage::CommitId& BranchTracker::GetBranchHeadId() {
@@ -340,7 +341,7 @@ void BranchTracker::OnNewCommits(
   }
 }
 
-void BranchTracker::StartTransaction(fxl::Closure watchers_drained_callback) {
+void BranchTracker::StartTransaction(fit::closure watchers_drained_callback) {
   FXL_DCHECK(!transaction_in_progress_);
   transaction_in_progress_ = true;
   auto waiter = fxl::MakeRefCounted<callback::CompletionWaiter>();

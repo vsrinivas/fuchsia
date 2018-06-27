@@ -9,6 +9,8 @@
 #include <utility>
 #include <vector>
 
+#include <lib/fit/function.h>
+
 #include "lib/fxl/strings/string_view.h"
 
 namespace p2p_sync {
@@ -19,12 +21,12 @@ class MessageHolder {
  public:
   // Create a new MessageHolder from the provided data and a parser.
   MessageHolder(fxl::StringView data,
-                std::function<const M*(const uint8_t*)> get_message)
+                fit::function<const M*(const uint8_t*)> get_message)
       : data_(data.begin(), data.end()), message_(get_message(data_.data())) {}
 
   // Create a new MessageHolder from the provided data and a parser.
   MessageHolder(std::vector<uint8_t> data,
-                std::function<const M*(const uint8_t*)> get_message)
+                fit::function<const M*(const uint8_t*)> get_message)
       : data_(std::move(data)), message_(get_message(data_.data())) {}
 
   // Create a new MessageHolder from the current object and a function to
@@ -36,7 +38,7 @@ class MessageHolder {
   //             return static_cast<const Request*>(message->message());
   //         });
   template <class T>
-  MessageHolder<T> TakeAndMap(std::function<const T*(const M*)> get_message) {
+  MessageHolder<T> TakeAndMap(fit::function<const T*(const M*)> get_message) {
     return MessageHolder<T>(std::move(*this), std::move(get_message));
   }
 
@@ -63,7 +65,7 @@ class MessageHolder {
   // directly.
   template <class T>
   MessageHolder(MessageHolder<T>&& other,
-                std::function<const M*(const T*)> get_message)
+                fit::function<const M*(const T*)> get_message)
       : data_(std::move(other.data_)), message_(get_message(other.message_)) {
     other.message_ = nullptr;
   }

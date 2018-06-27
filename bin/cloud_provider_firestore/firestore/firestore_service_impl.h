@@ -9,9 +9,9 @@
 #include <thread>
 
 #include <lib/async/dispatcher.h>
+#include <lib/fit/function.h>
 
 #include "lib/callback/auto_cleanable.h"
-#include "lib/fxl/functional/closure.h"
 #include "peridot/bin/cloud_provider_firestore/firestore/firestore_service.h"
 #include "peridot/bin/cloud_provider_firestore/firestore/listen_call.h"
 #include "peridot/bin/cloud_provider_firestore/grpc/read_stream_drainer.h"
@@ -23,7 +23,9 @@ using SingleResponseReader = grpc::ClientAsyncResponseReader<ResponseType>;
 
 template <typename ResponseType>
 struct SingleResponseCall {
-  void set_on_empty(fxl::Closure on_empty) { this->on_empty = on_empty; }
+  void set_on_empty(fit::closure on_empty) {
+    this->on_empty = std::move(on_empty);
+  }
 
   // Context used to make the remote call.
   grpc::ClientContext context;
@@ -38,10 +40,10 @@ struct SingleResponseCall {
   grpc::Status status;
 
   // Callback to be called upon completing the remote call.
-  std::function<void(bool)> on_complete;
+  fit::function<void(bool)> on_complete;
 
   // Callback to be called when the call object can be deleted.
-  fxl::Closure on_empty;
+  fit::closure on_empty;
 };
 
 using DocumentResponseCall =
@@ -80,35 +82,35 @@ class FirestoreServiceImpl : public FirestoreService {
   void GetDocument(
       google::firestore::v1beta1::GetDocumentRequest request,
       std::shared_ptr<grpc::CallCredentials> call_credentials,
-      std::function<void(grpc::Status, google::firestore::v1beta1::Document)>
+      fit::function<void(grpc::Status, google::firestore::v1beta1::Document)>
           callback) override;
 
   void ListDocuments(
       google::firestore::v1beta1::ListDocumentsRequest request,
       std::shared_ptr<grpc::CallCredentials> call_credentials,
-      std::function<void(grpc::Status,
+      fit::function<void(grpc::Status,
                          google::firestore::v1beta1::ListDocumentsResponse)>
           callback) override;
 
   void CreateDocument(
       google::firestore::v1beta1::CreateDocumentRequest request,
       std::shared_ptr<grpc::CallCredentials> call_credentials,
-      std::function<void(grpc::Status, google::firestore::v1beta1::Document)>
+      fit::function<void(grpc::Status, google::firestore::v1beta1::Document)>
           callback) override;
 
   void DeleteDocument(google::firestore::v1beta1::DeleteDocumentRequest request,
                       std::shared_ptr<grpc::CallCredentials> call_credentials,
-                      std::function<void(grpc::Status)> callback) override;
+                      fit::function<void(grpc::Status)> callback) override;
 
   void Commit(google::firestore::v1beta1::CommitRequest request,
               std::shared_ptr<grpc::CallCredentials> call_credentials,
-              std::function<void(grpc::Status,
+              fit::function<void(grpc::Status,
                                  google::firestore::v1beta1::CommitResponse)>
                   callback) override;
 
   void RunQuery(google::firestore::v1beta1::RunQueryRequest request,
                 std::shared_ptr<grpc::CallCredentials> call_credentials,
-                std::function<void(
+                fit::function<void(
                     grpc::Status,
                     std::vector<google::firestore::v1beta1::RunQueryResponse>)>
                     callback) override;
@@ -117,7 +119,7 @@ class FirestoreServiceImpl : public FirestoreService {
       std::shared_ptr<grpc::CallCredentials> call_credentials,
       ListenCallClient* client) override;
 
-  void ShutDown(fxl::Closure callback) override;
+  void ShutDown(fit::closure callback) override;
 
  private:
   void Poll();

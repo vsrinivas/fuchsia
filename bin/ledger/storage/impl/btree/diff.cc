@@ -6,6 +6,8 @@
 
 #include <utility>
 
+#include <lib/fit/function.h>
+
 #include "peridot/bin/ledger/storage/impl/btree/internal_helper.h"
 #include "peridot/bin/ledger/storage/impl/btree/iterator.h"
 #include "peridot/bin/ledger/storage/impl/btree/synchronous_storage.h"
@@ -20,7 +22,7 @@ class IteratorPair {
  public:
   IteratorPair(
       SynchronousStorage* storage,
-      std::function<bool(std::unique_ptr<Entry>, std::unique_ptr<Entry>)>
+      fit::function<bool(std::unique_ptr<Entry>, std::unique_ptr<Entry>)>
           on_next)
       : on_next_(std::move(on_next)), left_(storage), right_(storage) {}
 
@@ -284,7 +286,7 @@ class IteratorPair {
     return on_next_(std::move(it2_entry), std::move(it1_entry));
   }
 
-  std::function<bool(std::unique_ptr<Entry>, std::unique_ptr<Entry>)> on_next_;
+  fit::function<bool(std::unique_ptr<Entry>, std::unique_ptr<Entry>)> on_next_;
   BTreeIterator left_;
   BTreeIterator right_;
   // Keep track whether the change is from left to right, or right to left.
@@ -489,7 +491,7 @@ Status ForEachDiffInternal(SynchronousStorage* storage,
                            ObjectIdentifier left_node_identifier,
                            ObjectIdentifier right_node_identifier,
                            std::string min_key,
-                           const std::function<bool(EntryChange)>& on_next) {
+                           fit::function<bool(EntryChange)> on_next) {
   FXL_DCHECK(storage::IsDigestValid(left_node_identifier.object_digest));
   FXL_DCHECK(storage::IsDigestValid(right_node_identifier.object_digest));
 
@@ -497,15 +499,16 @@ Status ForEachDiffInternal(SynchronousStorage* storage,
     return Status::OK;
   }
 
-  auto wrapped_next = [on_next](std::unique_ptr<Entry> base,
-                                std::unique_ptr<Entry> other) {
+  auto wrapped_next = [on_next = std::move(on_next)](
+                          std::unique_ptr<Entry> base,
+                          std::unique_ptr<Entry> other) {
     if (other) {
       return on_next({std::move(*other), false});
     }
     return on_next({std::move(*base), true});
   };
 
-  IteratorPair iterators(storage, wrapped_next);
+  IteratorPair iterators(storage, std::move(wrapped_next));
   RETURN_ON_ERROR(
       iterators.Init(left_node_identifier, right_node_identifier, min_key));
 
@@ -523,7 +526,7 @@ Status ForEachThreeWayDiffInternal(
     SynchronousStorage* storage, ObjectIdentifier base_node_identifier,
     ObjectIdentifier left_node_identifier,
     ObjectIdentifier right_node_identifier, std::string min_key,
-    const std::function<bool(ThreeWayChange)>& on_next) {
+    fit::function<bool(ThreeWayChange)> on_next) {
   FXL_DCHECK(IsDigestValid(base_node_identifier.object_digest));
   FXL_DCHECK(IsDigestValid(left_node_identifier.object_digest));
   FXL_DCHECK(IsDigestValid(right_node_identifier.object_digest));
@@ -552,8 +555,8 @@ void ForEachDiff(coroutine::CoroutineService* coroutine_service,
                  PageStorage* page_storage,
                  ObjectIdentifier base_root_identifier,
                  ObjectIdentifier other_root_identifier, std::string min_key,
-                 std::function<bool(EntryChange)> on_next,
-                 std::function<void(Status)> on_done) {
+                 fit::function<bool(EntryChange)> on_next,
+                 fit::function<void(Status)> on_done) {
   FXL_DCHECK(storage::IsDigestValid(base_root_identifier.object_digest));
   FXL_DCHECK(storage::IsDigestValid(other_root_identifier.object_digest));
   coroutine_service->StartCoroutine(
@@ -566,7 +569,7 @@ void ForEachDiff(coroutine::CoroutineService* coroutine_service,
 
         on_done(ForEachDiffInternal(&storage, base_root_identifier,
                                     other_root_identifier, std::move(min_key),
-                                    on_next));
+                                    std::move(on_next)));
       });
 }
 
@@ -576,8 +579,8 @@ void ForEachThreeWayDiff(coroutine::CoroutineService* coroutine_service,
                          ObjectIdentifier left_root_identifier,
                          ObjectIdentifier right_root_identifier,
                          std::string min_key,
-                         std::function<bool(ThreeWayChange)> on_next,
-                         std::function<void(Status)> on_done) {
+                         fit::function<bool(ThreeWayChange)> on_next,
+                         fit::function<void(Status)> on_done) {
   FXL_DCHECK(storage::IsDigestValid(base_root_identifier.object_digest));
   FXL_DCHECK(storage::IsDigestValid(left_root_identifier.object_digest));
   FXL_DCHECK(storage::IsDigestValid(right_root_identifier.object_digest));
@@ -592,7 +595,7 @@ void ForEachThreeWayDiff(coroutine::CoroutineService* coroutine_service,
 
         on_done(ForEachThreeWayDiffInternal(
             &storage, base_root_identifier, left_root_identifier,
-            right_root_identifier, std::move(min_key), on_next));
+            right_root_identifier, std::move(min_key), std::move(on_next)));
       });
 }
 

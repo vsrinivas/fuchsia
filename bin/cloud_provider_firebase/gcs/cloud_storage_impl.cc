@@ -7,6 +7,8 @@
 #include <fcntl.h>
 #include <string>
 
+#include <lib/fit/function.h>
+
 #include "lib/fidl/cpp/array.h"
 #include "lib/fsl/socket/files.h"
 #include "lib/fsl/vmo/file.h"
@@ -56,7 +58,7 @@ http::HttpHeader MakeAuthorizationHeader(const std::string& auth_token) {
   return authorization_header;
 }
 
-void RunUploadObjectCallback(std::function<void(Status)> callback,
+void RunUploadObjectCallback(fit::function<void(Status)> callback,
                              Status status, http::URLResponse response) {
   // A precondition failure means the object already exist.
   if (response.status_code == 412) {
@@ -84,7 +86,7 @@ CloudStorageImpl::~CloudStorageImpl() {}
 
 void CloudStorageImpl::UploadObject(std::string auth_token,
                                     const std::string& key, fsl::SizedVmo data,
-                                    std::function<void(Status)> callback) {
+                                    fit::function<void(Status)> callback) {
   std::string url = GetUploadUrl(key);
 
   auto request_factory = fxl::MakeCopyable([auth_token = std::move(auth_token),
@@ -127,7 +129,7 @@ void CloudStorageImpl::UploadObject(std::string auth_token,
 
 void CloudStorageImpl::DownloadObject(
     std::string auth_token, const std::string& key,
-    std::function<void(Status status, uint64_t size, zx::socket data)>
+    fit::function<void(Status status, uint64_t size, zx::socket data)>
         callback) {
   std::string url = GetDownloadUrl(key);
 
@@ -160,8 +162,8 @@ std::string CloudStorageImpl::GetUploadUrl(fxl::StringView key) {
 }
 
 void CloudStorageImpl::Request(
-    std::function<http::URLRequest()> request_factory,
-    std::function<void(Status status, http::URLResponse response)> callback) {
+    fit::function<http::URLRequest()> request_factory,
+    fit::function<void(Status status, http::URLResponse response)> callback) {
   requests_.emplace(network_wrapper_->Request(
       std::move(request_factory), [this, callback = std::move(callback)](
                                       http::URLResponse response) mutable {
@@ -170,7 +172,7 @@ void CloudStorageImpl::Request(
 }
 
 void CloudStorageImpl::OnResponse(
-    std::function<void(Status status, http::URLResponse response)> callback,
+    fit::function<void(Status status, http::URLResponse response)> callback,
     http::URLResponse response) {
   if (response.error) {
     FXL_LOG(ERROR) << response.url << " error " << response.error->description;
@@ -193,8 +195,7 @@ void CloudStorageImpl::OnResponse(
 }
 
 void CloudStorageImpl::OnDownloadResponseReceived(
-    const std::function<void(Status status, uint64_t size, zx::socket data)>
-        callback,
+    fit::function<void(Status status, uint64_t size, zx::socket data)> callback,
     Status status, http::URLResponse response) {
   if (status != Status::OK) {
     callback(status, 0u, zx::socket());

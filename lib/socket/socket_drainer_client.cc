@@ -6,15 +6,17 @@
 
 #include <utility>
 
+#include <lib/fit/function.h>
+
 namespace socket {
 
 SocketDrainerClient::SocketDrainerClient() : drainer_(this) {}
 
 SocketDrainerClient::~SocketDrainerClient() {}
 
-void SocketDrainerClient::Start(
-    zx::socket source, const std::function<void(std::string)>& callback) {
-  callback_ = callback;
+void SocketDrainerClient::Start(zx::socket source,
+                                fit::function<void(std::string)> callback) {
+  callback_ = std::move(callback);
   drainer_.Start(std::move(source));
 }
 

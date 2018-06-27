@@ -10,11 +10,12 @@
 #include <set>
 #include <utility>
 
+#include <lib/fit/function.h>
+
 #include "lib/callback/scoped_callback.h"
 #include "lib/callback/trace_callback.h"
 #include "lib/callback/waiter.h"
 #include "lib/fxl/functional/auto_call.h"
-#include "lib/fxl/functional/closure.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/memory/weak_ptr.h"
 #include "peridot/bin/ledger/app/merging/common_ancestor.h"
@@ -26,7 +27,7 @@
 
 namespace ledger {
 
-MergeResolver::MergeResolver(fxl::Closure on_destroyed,
+MergeResolver::MergeResolver(fit::closure on_destroyed,
                              Environment* environment,
                              storage::PageStorage* storage,
                              std::unique_ptr<backoff::Backoff> backoff)
@@ -44,7 +45,7 @@ MergeResolver::~MergeResolver() {
   on_destroyed_();
 }
 
-void MergeResolver::set_on_empty(fxl::Closure on_empty_callback) {
+void MergeResolver::set_on_empty(fit::closure on_empty_callback) {
   on_empty_callback_ = std::move(on_empty_callback);
 }
 
@@ -77,7 +78,7 @@ void MergeResolver::SetPageManager(PageManager* page_manager) {
 }
 
 void MergeResolver::RegisterNoConflictCallback(
-    std::function<void(ConflictResolutionWaitStatus)> callback) {
+    fit::function<void(ConflictResolutionWaitStatus)> callback) {
   no_conflict_callbacks_.push_back(std::move(callback));
 }
 

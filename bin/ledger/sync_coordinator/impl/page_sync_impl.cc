@@ -4,8 +4,9 @@
 
 #include "peridot/bin/ledger/sync_coordinator/impl/page_sync_impl.h"
 
+#include <lib/fit/function.h>
+
 #include "lib/callback/waiter.h"
-#include "lib/fxl/functional/closure.h"
 
 namespace sync_coordinator {
 namespace {
@@ -24,7 +25,7 @@ class SyncProviderHolderBase : public storage::PageSyncClient,
   // PageSyncDelegate:
   void GetObject(
       storage::ObjectIdentifier object_identifier,
-      std::function<void(storage::Status status,
+      fit::function<void(storage::Status status,
                          storage::ChangeSource change_source,
                          std::unique_ptr<storage::DataSource::DataChunk>)>
           callback) override;
@@ -44,7 +45,7 @@ void SyncProviderHolderBase::SetSyncDelegate(
 
 void SyncProviderHolderBase::GetObject(
     storage::ObjectIdentifier object_identifier,
-    std::function<void(storage::Status status,
+    fit::function<void(storage::Status status,
                        storage::ChangeSource change_source,
                        std::unique_ptr<storage::DataSource::DataChunk>)>
         callback) {
@@ -150,7 +151,7 @@ void PageSyncImpl::Start() {
   }
 }
 
-void PageSyncImpl::SetOnIdle(fxl::Closure on_idle) {
+void PageSyncImpl::SetOnIdle(fit::closure on_idle) {
   // Only handle cloud sync for now.
   if (cloud_sync_) {
     cloud_sync_->GetCloudSync()->SetOnIdle(std::move(on_idle));
@@ -164,7 +165,7 @@ bool PageSyncImpl::IsIdle() {
   return true;
 }
 
-void PageSyncImpl::SetOnBacklogDownloaded(fxl::Closure on_backlog_downloaded) {
+void PageSyncImpl::SetOnBacklogDownloaded(fit::closure on_backlog_downloaded) {
   if (cloud_sync_) {
     cloud_sync_->GetCloudSync()->SetOnBacklogDownloaded(
         std::move(on_backlog_downloaded));
@@ -180,7 +181,7 @@ void PageSyncImpl::SetSyncWatcher(SyncStateWatcher* watcher) {
 
 void PageSyncImpl::GetObject(
     storage::ObjectIdentifier object_identifier,
-    std::function<void(storage::Status, storage::ChangeSource,
+    fit::function<void(storage::Status, storage::ChangeSource,
                        std::unique_ptr<storage::DataSource::DataChunk>)>
         callback) {
   // AnyWaiter returns the first successful value to its Finalize callback. For

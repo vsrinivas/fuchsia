@@ -22,7 +22,7 @@ class PageStateReader {
   // will be |YES| or |NO| depending on whether the page is synced.
   virtual void PageIsClosedAndSynced(
       fxl::StringView ledger_name, storage::PageIdView page_id,
-      std::function<void(Status, PageClosedAndSynced)> callback) = 0;
+      fit::function<void(Status, PageClosedAndSynced)> callback) = 0;
 };
 
 }  // namespace ledger

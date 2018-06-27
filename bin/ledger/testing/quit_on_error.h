@@ -10,7 +10,6 @@
 
 #include <lib/fit/function.h>
 
-#include "lib/fxl/functional/closure.h"
 #include "lib/fxl/strings/string_view.h"
 #include "peridot/bin/ledger/fidl/include/types.h"
 
@@ -23,7 +22,7 @@ namespace benchmark {
 bool QuitOnError(fit::closure quit_callback, ledger::Status status,
                  fxl::StringView description);
 
-std::function<void(ledger::Status)> QuitOnErrorCallback(
+fit::function<void(ledger::Status)> QuitOnErrorCallback(
     fit::closure quit_callback, std::string description);
 
 }  // namespace benchmark

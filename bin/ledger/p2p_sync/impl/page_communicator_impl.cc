@@ -4,9 +4,10 @@
 
 #include "peridot/bin/ledger/p2p_sync/impl/page_communicator_impl.h"
 
+#include <lib/fit/function.h>
+
 #include "lib/callback/scoped_callback.h"
 #include "lib/callback/waiter.h"
-#include "lib/fxl/functional/closure.h"
 #include "peridot/bin/ledger/p2p_sync/impl/message_generated.h"
 #include "peridot/bin/ledger/storage/public/read_data_source.h"
 #include "peridot/lib/convert/convert.h"
@@ -26,12 +27,12 @@ storage::ObjectIdentifier ToObjectIdentifier(const ObjectId* fb_object_id) {
 class PageCommunicatorImpl::PendingObjectRequestHolder {
  public:
   explicit PendingObjectRequestHolder(
-      std::function<void(storage::Status, storage::ChangeSource,
+      fit::function<void(storage::Status, storage::ChangeSource,
                          std::unique_ptr<storage::DataSource::DataChunk>)>
           callback)
       : callback_(std::move(callback)) {}
 
-  void set_on_empty(fxl::Closure on_empty) { on_empty_ = std::move(on_empty); }
+  void set_on_empty(fit::closure on_empty) { on_empty_ = std::move(on_empty); }
 
   // Registers a new pending request to device |destination|.
   void AddNewPendingRequest(std::string destination) {
@@ -69,14 +70,14 @@ class PageCommunicatorImpl::PendingObjectRequestHolder {
   }
 
  private:
-  std::function<void(storage::Status, storage::ChangeSource,
+  fit::function<void(storage::Status, storage::ChangeSource,
                      std::unique_ptr<storage::DataSource::DataChunk>)> const
       callback_;
   // Set of devices for which we are waiting an answer.
   // We might be able to get rid of this list and just use a counter (or even
   // nothing at all) once we have a timeout on requests.
   std::set<std::string, convert::StringViewComparator> requests_;
-  fxl::Closure on_empty_;
+  fit::closure on_empty_;
 };
 
 PageCommunicatorImpl::PageCommunicatorImpl(storage::PageStorage* storage,
@@ -130,7 +131,7 @@ void PageCommunicatorImpl::Start() {
   }
 }
 
-void PageCommunicatorImpl::set_on_delete(fxl::Closure on_delete) {
+void PageCommunicatorImpl::set_on_delete(fit::closure on_delete) {
   FXL_DCHECK(!on_delete_) << "set_on_delete() can only be called once.";
   on_delete_ = std::move(on_delete);
 }
@@ -265,7 +266,7 @@ void PageCommunicatorImpl::OnNewResponse(fxl::StringView source,
 
 void PageCommunicatorImpl::GetObject(
     storage::ObjectIdentifier object_identifier,
-    std::function<void(storage::Status, storage::ChangeSource,
+    fit::function<void(storage::Status, storage::ChangeSource,
                        std::unique_ptr<storage::DataSource::DataChunk>)>
         callback) {
   flatbuffers::FlatBufferBuilder buffer;

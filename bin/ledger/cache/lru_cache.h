@@ -11,6 +11,8 @@
 #include <set>
 #include <vector>
 
+#include <lib/fit/function.h>
+
 #include "lib/fxl/logging.h"
 
 namespace cache {
@@ -35,7 +37,7 @@ class LRUCache {
   //   when the request is successful. Any other return value is considered a
   //   failure.
   LRUCache(size_t size, S ok_status,
-           std::function<void(K, std::function<void(S, V)>)> generator)
+           fit::function<void(K, fit::function<void(S, V)>)> generator)
       : size_(size), ok_status_(ok_status), generator_(std::move(generator)) {}
 
   // Retrieves the value for |key| and returns it to |callback|.
@@ -43,7 +45,7 @@ class LRUCache {
   // If the value is cached, |callback| will be called synchronously. Otherwise,
   // |generator| will be called, and depending on its implementation, |callback|
   // might be called synchronously or not.
-  void Get(const K& key, const std::function<void(S, const V&)>& callback) {
+  void Get(const K& key, fit::function<void(S, const V&)> callback) {
     auto iterator = map_.find(key);
     if (iterator != map_.end()) {
       // Move the list iterator to the front.
@@ -56,10 +58,10 @@ class LRUCache {
     }
     auto request_iterator = requests_.find(key);
     if (request_iterator != requests_.end()) {
-      request_iterator->second.push_back(callback);
+      request_iterator->second.push_back(std::move(callback));
       return;
     }
-    requests_[key].push_back(callback);
+    requests_[key].push_back(std::move(callback));
     generator_(key, [this, key](S status, V value) {
       auto request_iterator = requests_.find(key);
       FXL_DCHECK(request_iterator != requests_.end());
@@ -89,10 +91,10 @@ class LRUCache {
   using ValueList = std::list<std::pair<K, V>>;
   ValueList values_;
   std::map<K, typename ValueList::iterator> map_;
-  std::map<K, std::vector<std::function<void(S, const V&)>>> requests_;
+  std::map<K, std::vector<fit::function<void(S, const V&)>>> requests_;
   size_t size_;
   S ok_status_;
-  std::function<void(K, std::function<void(S, V)>)> generator_;
+  fit::function<void(K, fit::function<void(S, V)>)> generator_;
 };
 
 }  // namespace cache

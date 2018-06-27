@@ -10,6 +10,8 @@
 #include <queue>
 #include <vector>
 
+#include <lib/fit/function.h>
+
 #include "lib/callback/trace_callback.h"
 #include "lib/callback/waiter.h"
 #include "lib/fidl/cpp/optional.h"
@@ -102,8 +104,9 @@ void FillEntries(storage::PageStorage* page_storage,
                  const std::string& key_prefix, const storage::Commit* commit,
                  fidl::VectorPtr<uint8_t> key_start,
                  std::unique_ptr<Token> token,
-                 const std::function<void(Status, fidl::VectorPtr<EntryType>,
-                                          std::unique_ptr<Token>)>& callback) {
+                 fit::function<void(Status, fidl::VectorPtr<EntryType>,
+                                    std::unique_ptr<Token>)>
+                     callback) {
   // |token| represents the first key to be returned in the list of entries.
   // Initially, all entries starting from |token| are requested from storage.
   // Iteration stops if either all entries were found, or if the estimated
@@ -178,7 +181,7 @@ void FillEntries(storage::PageStorage* page_storage,
       callback(Status::IO_ERROR, fidl::VectorPtr<EntryType>::New(0), nullptr);
       return;
     }
-    std::function<void(storage::Status,
+    fit::function<void(storage::Status,
                        std::vector<std::unique_ptr<const storage::Object>>)>
         result_callback = fxl::MakeCopyable(
             [callback = std::move(callback), context = std::move(context)](
@@ -250,7 +253,7 @@ void FillEntries(storage::PageStorage* page_storage,
               }
               callback(Status::OK, std::move(context->entries), nullptr);
             });
-    waiter->Finalize(result_callback);
+    waiter->Finalize(std::move(result_callback));
   });
   page_storage->GetCommitContents(*commit, std::move(start), std::move(on_next),
                                   std::move(on_done));
@@ -270,14 +273,16 @@ void PageSnapshotImpl::GetEntries(fidl::VectorPtr<uint8_t> key_start,
                                   std::unique_ptr<Token> token,
                                   GetEntriesCallback callback) {
   FillEntries<Entry>(page_storage_, key_prefix_, commit_.get(),
-                     std::move(key_start), std::move(token), callback);
+                     std::move(key_start), std::move(token),
+                     std::move(callback));
 }
 
 void PageSnapshotImpl::GetEntriesInline(fidl::VectorPtr<uint8_t> key_start,
                                         std::unique_ptr<Token> token,
                                         GetEntriesInlineCallback callback) {
   FillEntries<InlinedEntry>(page_storage_, key_prefix_, commit_.get(),
-                            std::move(key_start), std::move(token), callback);
+                            std::move(key_start), std::move(token),
+                            std::move(callback));
 }
 
 void PageSnapshotImpl::GetKeys(fidl::VectorPtr<uint8_t> key_start,
@@ -297,7 +302,8 @@ void PageSnapshotImpl::GetKeys(fidl::VectorPtr<uint8_t> key_start,
     std::unique_ptr<Token> next_token;
   };
 
-  auto timed_callback = TRACE_CALLBACK(callback, "ledger", "snapshot_get_keys");
+  auto timed_callback =
+      TRACE_CALLBACK(std::move(callback), "ledger", "snapshot_get_keys");
 
   auto context = std::make_unique<Context>();
   auto on_next =
@@ -343,7 +349,8 @@ void PageSnapshotImpl::GetKeys(fidl::VectorPtr<uint8_t> key_start,
 }
 
 void PageSnapshotImpl::Get(fidl::VectorPtr<uint8_t> key, GetCallback callback) {
-  auto timed_callback = TRACE_CALLBACK(callback, "ledger", "snapshot_get");
+  auto timed_callback =
+      TRACE_CALLBACK(std::move(callback), "ledger", "snapshot_get");
 
   page_storage_->GetEntryFromCommit(
       *commit_, convert::ToString(key),
@@ -368,7 +375,7 @@ void PageSnapshotImpl::Get(fidl::VectorPtr<uint8_t> key, GetCallback callback) {
 void PageSnapshotImpl::GetInline(fidl::VectorPtr<uint8_t> key,
                                  GetInlineCallback callback) {
   auto timed_callback =
-      TRACE_CALLBACK(callback, "ledger", "snapshot_get_inline");
+      TRACE_CALLBACK(std::move(callback), "ledger", "snapshot_get_inline");
 
   page_storage_->GetEntryFromCommit(
       *commit_, convert::ToString(key),
@@ -403,7 +410,8 @@ void PageSnapshotImpl::GetInline(fidl::VectorPtr<uint8_t> key,
 
 void PageSnapshotImpl::Fetch(fidl::VectorPtr<uint8_t> key,
                              FetchCallback callback) {
-  auto timed_callback = TRACE_CALLBACK(callback, "ledger", "snapshot_fetch");
+  auto timed_callback =
+      TRACE_CALLBACK(std::move(callback), "ledger", "snapshot_fetch");
 
   page_storage_->GetEntryFromCommit(
       *commit_, convert::ToString(key),
@@ -429,7 +437,7 @@ void PageSnapshotImpl::FetchPartial(fidl::VectorPtr<uint8_t> key,
                                     int64_t offset, int64_t max_size,
                                     FetchPartialCallback callback) {
   auto timed_callback =
-      TRACE_CALLBACK(callback, "ledger", "snapshot_fetch_partial");
+      TRACE_CALLBACK(std::move(callback), "ledger", "snapshot_fetch_partial");
 
   page_storage_->GetEntryFromCommit(
       *commit_, convert::ToString(key),

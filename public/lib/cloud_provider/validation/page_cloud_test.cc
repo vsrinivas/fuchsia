@@ -118,7 +118,7 @@ class PageCloudTest : public ValidationTest, public PageCloudWatcher {
       on_new_commits_commits_.push_back(std::move(commits->at(i)));
     }
     on_new_commits_position_token_ = std::move(position_token);
-    on_new_commits_commits_callback_ = callback;
+    on_new_commits_commits_callback_ = std::move(callback);
   }
 
   void OnNewObject(fidl::VectorPtr<uint8_t> /*id*/,

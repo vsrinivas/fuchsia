@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/fit/function.h>
 #include <lib/zx/time.h>
 #include <trace/event.h>
 
@@ -384,7 +385,7 @@ TEST_P(ConvergenceTest, DISABLED_NLedgersConverge) {
 
   // Function to verify if the visible Ledger state has not changed since last
   // call and all values are identical.
-  std::function<bool()> has_state_converged = [this, &watchers,
+  fit::function<bool()> has_state_converged = [this, &watchers,
                                                &sync_watchers]() {
     // Counts the number of visible changes. Used to verify that the minimal
     // number of changes for all Ledgers to have communicated is accounted for
@@ -426,7 +427,7 @@ TEST_P(ConvergenceTest, DISABLED_NLedgersConverge) {
   // In addition of verifying that the external states of the ledgers have
   // converged, we also verify we are not currently performing a merge in the
   // background, indicating that the convergence did not finish.
-  std::function<bool()> is_sync_and_merge_complete =
+  auto is_sync_and_merge_complete =
       [this, &has_state_converged, &merge_done, &wait_status, &waiter] {
         TRACE_DURATION("ledger", "ledger_test_is_sync_and_merge_complete");
 
@@ -463,7 +464,7 @@ TEST_P(ConvergenceTest, DISABLED_NLedgersConverge) {
 
   // If |RunLoopUntil| returns, the condition is met, thus the ledgers have
   // converged.
-  RunLoopUntil(is_sync_and_merge_complete);
+  RunLoopUntil(std::move(is_sync_and_merge_complete));
   int num_changes = 0;
   for (int i = 0; i < num_ledgers_; i++) {
     num_changes += watchers[i]->changes;

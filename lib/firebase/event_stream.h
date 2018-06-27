@@ -9,6 +9,8 @@
 #include <memory>
 #include <string>
 
+#include <lib/fit/function.h>
+
 #include "lib/callback/destruction_sentinel.h"
 #include "lib/fsl/socket/socket_drainer.h"
 #include "lib/fxl/macros.h"
@@ -29,9 +31,8 @@ class EventStream : public fsl::SocketDrainer::Client {
   EventStream();
   ~EventStream() override;
 
-  void Start(zx::socket source,
-             const std::function<EventCallback>& event_callback,
-             const std::function<CompletionCallback>& completion_callback);
+  void Start(zx::socket source, fit::function<EventCallback> event_callback,
+             fit::function<CompletionCallback> completion_callback);
 
  private:
   friend class EventStreamTest;
@@ -45,8 +46,8 @@ class EventStream : public fsl::SocketDrainer::Client {
 
   void ProcessField(fxl::StringView field, fxl::StringView value);
 
-  std::function<EventCallback> event_callback_;
-  std::function<CompletionCallback> completion_callback_;
+  fit::function<EventCallback> event_callback_;
+  fit::function<CompletionCallback> completion_callback_;
 
   // Unprocessed part of the current line.
   std::string pending_line_;

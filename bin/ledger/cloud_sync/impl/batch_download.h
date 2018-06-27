@@ -6,9 +6,9 @@
 #define PERIDOT_BIN_LEDGER_CLOUD_SYNC_IMPL_BATCH_DOWNLOAD_H_
 
 #include <fuchsia/ledger/cloud/cpp/fidl.h>
+#include <lib/fit/function.h>
 
 #include "lib/fidl/cpp/array.h"
-#include "lib/fxl/functional/closure.h"
 #include "lib/fxl/memory/weak_ptr.h"
 #include "peridot/bin/ledger/encryption/public/encryption_service.h"
 #include "peridot/bin/ledger/fidl/include/types.h"
@@ -30,7 +30,7 @@ class BatchDownload {
                 encryption::EncryptionService* encryption_service,
                 fidl::VectorPtr<cloud_provider::Commit> commits,
                 std::unique_ptr<cloud_provider::Token> position_token,
-                fxl::Closure on_done, fxl::Closure on_error);
+                fit::closure on_done, fit::closure on_error);
   ~BatchDownload();
 
   // Can be called only once.
@@ -43,8 +43,8 @@ class BatchDownload {
   encryption::EncryptionService* const encryption_service_;
   fidl::VectorPtr<cloud_provider::Commit> commits_;
   std::unique_ptr<cloud_provider::Token> position_token_;
-  fxl::Closure on_done_;
-  fxl::Closure on_error_;
+  fit::closure on_done_;
+  fit::closure on_error_;
   bool started_ = false;
 
   // Must be the last member.

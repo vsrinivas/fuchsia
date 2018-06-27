@@ -7,6 +7,8 @@
 
 #include <vector>
 
+#include <lib/fit/function.h>
+
 #include "lib/fxl/strings/string_view.h"
 #include "peridot/bin/ledger/fidl/include/types.h"
 #include "peridot/bin/ledger/testing/data_generator.h"
@@ -33,7 +35,7 @@ class PageDataGenerator {
   void PutEntry(ledger::PagePtr* page, fidl::VectorPtr<uint8_t> key,
                 fidl::VectorPtr<uint8_t> value, ReferenceStrategy ref_strategy,
                 ledger::Priority priority,
-                std::function<void(ledger::Status)> callback);
+                fit::function<void(ledger::Status)> callback);
 
   // Fill the page |page| with entries with keys |keys| and random values of
   // size |value_size|, performing at maximum
@@ -41,7 +43,7 @@ class PageDataGenerator {
   void Populate(ledger::PagePtr* page,
                 std::vector<fidl::VectorPtr<uint8_t>> keys, size_t value_size,
                 size_t transaction_size, ReferenceStrategy ref_strategy,
-                ledger::Priority priority, std::function<void(ledger::Status)>);
+                ledger::Priority priority, fit::function<void(ledger::Status)>);
 
  private:
   // Run PutEntry |transaction_size| times on provided keys |keys| with random
@@ -54,7 +56,7 @@ class PageDataGenerator {
                         size_t current_key_index, size_t value_size,
                         size_t transaction_size, ReferenceStrategy ref_strategy,
                         ledger::Priority priority,
-                        std::function<void(ledger::Status)> callback);
+                        fit::function<void(ledger::Status)> callback);
 
   // Run PutEntry on all the provided keys in |keys| with random value of size
   // |value_size|.
@@ -62,7 +64,7 @@ class PageDataGenerator {
                           std::vector<fidl::VectorPtr<uint8_t>> keys,
                           size_t value_size, ReferenceStrategy ref_strategy,
                           ledger::Priority priority,
-                          std::function<void(ledger::Status)>);
+                          fit::function<void(ledger::Status)>);
 
   DataGenerator generator_;
 };

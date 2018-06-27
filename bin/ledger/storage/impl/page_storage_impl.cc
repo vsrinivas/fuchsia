@@ -15,6 +15,7 @@
 #include <map>
 #include <utility>
 
+#include <lib/fit/function.h>
 #include <lib/zx/vmar.h>
 #include <lib/zx/vmo.h>
 #include <trace/event.h>
@@ -95,10 +96,10 @@ PageStorageImpl::PageStorageImpl(
 
 PageStorageImpl::~PageStorageImpl() {}
 
-void PageStorageImpl::Init(std::function<void(Status)> callback) {
+void PageStorageImpl::Init(fit::function<void(Status)> callback) {
   coroutine_manager_.StartCoroutine(
       std::move(callback),
-      [this](CoroutineHandler* handler, std::function<void(Status)> callback) {
+      [this](CoroutineHandler* handler, fit::function<void(Status)> callback) {
         callback(SynchronousInit(handler));
       });
 }
@@ -110,11 +111,11 @@ void PageStorageImpl::SetSyncDelegate(PageSyncDelegate* page_sync) {
 }
 
 void PageStorageImpl::GetHeadCommitIds(
-    std::function<void(Status, std::vector<CommitId>)> callback) {
+    fit::function<void(Status, std::vector<CommitId>)> callback) {
   coroutine_manager_.StartCoroutine(
       std::move(callback),
       [this](CoroutineHandler* handler,
-             std::function<void(Status, std::vector<CommitId>)> callback) {
+             fit::function<void(Status, std::vector<CommitId>)> callback) {
         std::vector<CommitId> commit_ids;
         Status status = db_->GetHeads(handler, &commit_ids);
         callback(status, std::move(commit_ids));
@@ -123,13 +124,13 @@ void PageStorageImpl::GetHeadCommitIds(
 
 void PageStorageImpl::GetCommit(
     CommitIdView commit_id,
-    std::function<void(Status, std::unique_ptr<const Commit>)> callback) {
+    fit::function<void(Status, std::unique_ptr<const Commit>)> callback) {
   FXL_DCHECK(commit_id.size());
   coroutine_manager_.StartCoroutine(
       std::move(callback),
       [this, commit_id = commit_id.ToString()](
           CoroutineHandler* handler,
-          std::function<void(Status, std::unique_ptr<const Commit>)> callback) {
+          fit::function<void(Status, std::unique_ptr<const Commit>)> callback) {
         std::unique_ptr<const Commit> commit;
         Status status = SynchronousGetCommit(handler, commit_id, &commit);
         callback(status, std::move(commit));
@@ -139,13 +140,13 @@ void PageStorageImpl::GetCommit(
 void PageStorageImpl::AddCommitFromLocal(
     std::unique_ptr<const Commit> commit,
     std::vector<ObjectIdentifier> new_objects,
-    std::function<void(Status)> callback) {
+    fit::function<void(Status)> callback) {
   FXL_DCHECK(IsDigestValid(commit->GetRootIdentifier().object_digest));
   coroutine_manager_.StartCoroutine(
       std::move(callback),
       [this, commit = std::move(commit), new_objects = std::move(new_objects)](
           CoroutineHandler* handler,
-          std::function<void(Status)> callback) mutable {
+          fit::function<void(Status)> callback) mutable {
         callback(SynchronousAddCommitFromLocal(handler, std::move(commit),
                                                std::move(new_objects)));
       });
@@ -153,12 +154,12 @@ void PageStorageImpl::AddCommitFromLocal(
 
 void PageStorageImpl::AddCommitsFromSync(
     std::vector<CommitIdAndBytes> ids_and_bytes, storage::ChangeSource source,
-    std::function<void(Status)> callback) {
+    fit::function<void(Status)> callback) {
   coroutine_manager_.StartCoroutine(
       std::move(callback),
       [this, ids_and_bytes = std::move(ids_and_bytes), source](
           CoroutineHandler* handler,
-          std::function<void(Status)> callback) mutable {
+          fit::function<void(Status)> callback) mutable {
         callback(SynchronousAddCommitsFromSync(
             handler, std::move(ids_and_bytes), source));
       });
@@ -166,12 +167,12 @@ void PageStorageImpl::AddCommitsFromSync(
 
 void PageStorageImpl::StartCommit(
     const CommitId& commit_id, JournalType journal_type,
-    std::function<void(Status, std::unique_ptr<Journal>)> callback) {
+    fit::function<void(Status, std::unique_ptr<Journal>)> callback) {
   coroutine_manager_.StartCoroutine(
       std::move(callback),
       [this, commit_id, journal_type](
           CoroutineHandler* handler,
-          std::function<void(Status, std::unique_ptr<Journal>)> callback) {
+          fit::function<void(Status, std::unique_ptr<Journal>)> callback) {
         JournalId journal_id;
         Status status =
             db_->CreateJournalId(handler, journal_type, commit_id, &journal_id);
@@ -188,12 +189,12 @@ void PageStorageImpl::StartCommit(
 
 void PageStorageImpl::StartMergeCommit(
     const CommitId& left, const CommitId& right,
-    std::function<void(Status, std::unique_ptr<Journal>)> callback) {
+    fit::function<void(Status, std::unique_ptr<Journal>)> callback) {
   coroutine_manager_.StartCoroutine(
       std::move(callback),
       [this, left, right](
           CoroutineHandler* handler,
-          std::function<void(Status, std::unique_ptr<Journal>)> callback) {
+          fit::function<void(Status, std::unique_ptr<Journal>)> callback) {
         JournalId journal_id;
         Status status = db_->CreateJournalId(handler, JournalType::EXPLICIT,
                                              left, &journal_id);
@@ -210,7 +211,7 @@ void PageStorageImpl::StartMergeCommit(
 
 void PageStorageImpl::CommitJournal(
     std::unique_ptr<Journal> journal,
-    std::function<void(Status, std::unique_ptr<const Commit>)> callback) {
+    fit::function<void(Status, std::unique_ptr<const Commit>)> callback) {
   FXL_DCHECK(journal);
 
   auto managed_journal = managed_container_.Manage(std::move(journal));
@@ -234,7 +235,7 @@ void PageStorageImpl::CommitJournal(
 }
 
 void PageStorageImpl::RollbackJournal(std::unique_ptr<Journal> journal,
-                                      std::function<void(Status)> callback) {
+                                      fit::function<void(Status)> callback) {
   FXL_DCHECK(journal);
 
   auto managed_journal = managed_container_.Manage(std::move(journal));
@@ -261,13 +262,13 @@ Status PageStorageImpl::RemoveCommitWatcher(CommitWatcher* watcher) {
   return Status::OK;
 }
 
-void PageStorageImpl::IsSynced(std::function<void(Status, bool)> callback) {
+void PageStorageImpl::IsSynced(fit::function<void(Status, bool)> callback) {
   auto waiter = fxl::MakeRefCounted<callback::Waiter<Status, bool>>(Status::OK);
   // Check for unsynced commits.
   coroutine_manager_.StartCoroutine(
       waiter->NewCallback(),
       [this](CoroutineHandler* handler,
-             std::function<void(Status, bool)> callback) {
+             fit::function<void(Status, bool)> callback) {
         std::vector<CommitId> commit_ids;
         Status status = db_->GetUnsyncedCommitIds(handler, &commit_ids);
         if (status != Status::OK) {
@@ -299,12 +300,12 @@ void PageStorageImpl::IsSynced(std::function<void(Status, bool)> callback) {
 }
 
 void PageStorageImpl::GetUnsyncedCommits(
-    std::function<void(Status, std::vector<std::unique_ptr<const Commit>>)>
+    fit::function<void(Status, std::vector<std::unique_ptr<const Commit>>)>
         callback) {
   coroutine_manager_.StartCoroutine(
       std::move(callback),
       [this](CoroutineHandler* handler,
-             std::function<void(Status,
+             fit::function<void(Status,
                                 std::vector<std::unique_ptr<const Commit>>)>
                  callback) {
         std::vector<std::unique_ptr<const Commit>> unsynced_commits;
@@ -314,22 +315,22 @@ void PageStorageImpl::GetUnsyncedCommits(
 }
 
 void PageStorageImpl::MarkCommitSynced(const CommitId& commit_id,
-                                       std::function<void(Status)> callback) {
+                                       fit::function<void(Status)> callback) {
   coroutine_manager_.StartCoroutine(
       std::move(callback),
       [this, commit_id](CoroutineHandler* handler,
-                        std::function<void(Status)> callback) {
+                        fit::function<void(Status)> callback) {
         callback(db_->MarkCommitIdSynced(handler, commit_id));
       });
 }
 
 void PageStorageImpl::GetUnsyncedPieces(
-    std::function<void(Status, std::vector<ObjectIdentifier>)> callback) {
+    fit::function<void(Status, std::vector<ObjectIdentifier>)> callback) {
   coroutine_manager_.StartCoroutine(
       std::move(callback),
       [this](
           CoroutineHandler* handler,
-          std::function<void(Status, std::vector<ObjectIdentifier>)> callback) {
+          fit::function<void(Status, std::vector<ObjectIdentifier>)> callback) {
         std::vector<ObjectIdentifier> unsynced_object_identifiers;
         Status s =
             db_->GetUnsyncedPieces(handler, &unsynced_object_identifiers);
@@ -338,11 +339,11 @@ void PageStorageImpl::GetUnsyncedPieces(
 }
 
 void PageStorageImpl::MarkPieceSynced(ObjectIdentifier object_identifier,
-                                      std::function<void(Status)> callback) {
+                                      fit::function<void(Status)> callback) {
   coroutine_manager_.StartCoroutine(
       std::move(callback),
       [this, object_identifier = std::move(object_identifier)](
-          CoroutineHandler* handler, std::function<void(Status)> callback) {
+          CoroutineHandler* handler, fit::function<void(Status)> callback) {
         callback(db_->SetObjectStatus(handler, object_identifier,
                                       PageDbObjectStatus::SYNCED));
       });
@@ -350,12 +351,12 @@ void PageStorageImpl::MarkPieceSynced(ObjectIdentifier object_identifier,
 
 void PageStorageImpl::IsPieceSynced(
     ObjectIdentifier object_identifier,
-    std::function<void(Status, bool)> callback) {
+    fit::function<void(Status, bool)> callback) {
   coroutine_manager_.StartCoroutine(
       std::move(callback),
       [this, object_identifier = std::move(object_identifier)](
           CoroutineHandler* handler,
-          std::function<void(Status, bool)> callback) {
+          fit::function<void(Status, bool)> callback) {
         PageDbObjectStatus object_status;
         Status status =
             db_->GetObjectStatus(handler, object_identifier, &object_status);
@@ -365,7 +366,7 @@ void PageStorageImpl::IsPieceSynced(
 
 void PageStorageImpl::AddObjectFromLocal(
     std::unique_ptr<DataSource> data_source,
-    std::function<void(Status, ObjectIdentifier)> callback) {
+    fit::function<void(Status, ObjectIdentifier)> callback) {
   auto traced_callback =
       TRACE_CALLBACK(std::move(callback), "ledger", "page_storage_add_object");
 
@@ -411,7 +412,7 @@ void PageStorageImpl::AddObjectFromLocal(
 
 void PageStorageImpl::GetObject(
     ObjectIdentifier object_identifier, Location location,
-    std::function<void(Status, std::unique_ptr<const Object>)> callback) {
+    fit::function<void(Status, std::unique_ptr<const Object>)> callback) {
   FXL_DCHECK(IsDigestValid(object_identifier.object_digest));
   GetPiece(
       object_identifier,
@@ -506,7 +507,7 @@ void PageStorageImpl::GetObject(
 
 void PageStorageImpl::GetPiece(
     ObjectIdentifier object_identifier,
-    std::function<void(Status, std::unique_ptr<const Object>)> callback) {
+    fit::function<void(Status, std::unique_ptr<const Object>)> callback) {
   ObjectDigestType digest_type =
       GetObjectDigestType(object_identifier.object_digest);
   if (digest_type == ObjectDigestType::INLINE) {
@@ -519,7 +520,7 @@ void PageStorageImpl::GetPiece(
       std::move(callback),
       [this, object_identifier = std::move(object_identifier)](
           CoroutineHandler* handler,
-          std::function<void(Status, std::unique_ptr<const Object>)>
+          fit::function<void(Status, std::unique_ptr<const Object>)>
               callback) mutable {
         std::unique_ptr<const Object> object;
         Status status =
@@ -530,22 +531,22 @@ void PageStorageImpl::GetPiece(
 
 void PageStorageImpl::SetSyncMetadata(fxl::StringView key,
                                       fxl::StringView value,
-                                      std::function<void(Status)> callback) {
+                                      fit::function<void(Status)> callback) {
   coroutine_manager_.StartCoroutine(
       std::move(callback),
       [this, key = key.ToString(), value = value.ToString()](
-          CoroutineHandler* handler, std::function<void(Status)> callback) {
+          CoroutineHandler* handler, fit::function<void(Status)> callback) {
         callback(db_->SetSyncMetadata(handler, key, value));
       });
 }
 
 void PageStorageImpl::GetSyncMetadata(
-    fxl::StringView key, std::function<void(Status, std::string)> callback) {
+    fxl::StringView key, fit::function<void(Status, std::string)> callback) {
   coroutine_manager_.StartCoroutine(
       std::move(callback),
       [this, key = key.ToString()](
           CoroutineHandler* handler,
-          std::function<void(Status, std::string)> callback) {
+          fit::function<void(Status, std::string)> callback) {
         std::string value;
         Status status = db_->GetSyncMetadata(handler, key, &value);
         callback(status, std::move(value));
@@ -554,8 +555,8 @@ void PageStorageImpl::GetSyncMetadata(
 
 void PageStorageImpl::GetCommitContents(const Commit& commit,
                                         std::string min_key,
-                                        std::function<bool(Entry)> on_next,
-                                        std::function<void(Status)> on_done) {
+                                        fit::function<bool(Entry)> on_next,
+                                        fit::function<void(Status)> on_done) {
   btree::ForEachEntry(
       coroutine_service_, this, commit.GetRootIdentifier(), min_key,
       [on_next = std::move(on_next)](btree::EntryAndNodeIdentifier next) {
@@ -566,10 +567,11 @@ void PageStorageImpl::GetCommitContents(const Commit& commit,
 
 void PageStorageImpl::GetEntryFromCommit(
     const Commit& commit, std::string key,
-    std::function<void(Status, Entry)> callback) {
+    fit::function<void(Status, Entry)> callback) {
   std::unique_ptr<bool> key_found = std::make_unique<bool>(false);
   auto on_next = [key, key_found = key_found.get(),
-                  callback](btree::EntryAndNodeIdentifier next) {
+                  callback =
+                      callback.share()](btree::EntryAndNodeIdentifier next) {
     if (next.entry.key == key) {
       *key_found = true;
       callback(Status::OK, next.entry);
@@ -595,8 +597,8 @@ void PageStorageImpl::GetEntryFromCommit(
 
 void PageStorageImpl::GetCommitContentsDiff(
     const Commit& base_commit, const Commit& other_commit, std::string min_key,
-    std::function<bool(EntryChange)> on_next_diff,
-    std::function<void(Status)> on_done) {
+    fit::function<bool(EntryChange)> on_next_diff,
+    fit::function<void(Status)> on_done) {
   btree::ForEachDiff(coroutine_service_, this, base_commit.GetRootIdentifier(),
                      other_commit.GetRootIdentifier(), std::move(min_key),
                      std::move(on_next_diff), std::move(on_done));
@@ -605,8 +607,8 @@ void PageStorageImpl::GetCommitContentsDiff(
 void PageStorageImpl::GetThreeWayContentsDiff(
     const Commit& base_commit, const Commit& left_commit,
     const Commit& right_commit, std::string min_key,
-    std::function<bool(ThreeWayChange)> on_next_diff,
-    std::function<void(Status)> on_done) {
+    fit::function<bool(ThreeWayChange)> on_next_diff,
+    fit::function<void(Status)> on_done) {
   btree::ForEachThreeWayDiff(
       coroutine_service_, this, base_commit.GetRootIdentifier(),
       left_commit.GetRootIdentifier(), right_commit.GetRootIdentifier(),
@@ -615,13 +617,13 @@ void PageStorageImpl::GetThreeWayContentsDiff(
 
 void PageStorageImpl::GetJournalEntries(
     const JournalId& journal_id,
-    std::function<void(Status, std::unique_ptr<Iterator<const EntryChange>>)>
+    fit::function<void(Status, std::unique_ptr<Iterator<const EntryChange>>)>
         callback) {
   coroutine_manager_.StartCoroutine(
       std::move(callback),
       [this, journal_id](
           CoroutineHandler* handler,
-          std::function<void(Status,
+          fit::function<void(Status,
                              std::unique_ptr<Iterator<const EntryChange>>)>
               callback) {
         std::unique_ptr<Iterator<const EntryChange>> entries;
@@ -634,12 +636,12 @@ void PageStorageImpl::AddJournalEntry(const JournalId& journal_id,
                                       fxl::StringView key,
                                       ObjectIdentifier object_identifier,
                                       KeyPriority priority,
-                                      std::function<void(Status)> callback) {
+                                      fit::function<void(Status)> callback) {
   coroutine_manager_.StartCoroutine(
       std::move(callback),
       [this, journal_id, key = key.ToString(),
        object_identifier = std::move(object_identifier), priority](
-          CoroutineHandler* handler, std::function<void(Status)> callback) {
+          CoroutineHandler* handler, fit::function<void(Status)> callback) {
         callback(db_->AddJournalEntry(handler, journal_id, key,
                                       object_identifier, priority));
       });
@@ -647,21 +649,21 @@ void PageStorageImpl::AddJournalEntry(const JournalId& journal_id,
 
 void PageStorageImpl::RemoveJournalEntry(const JournalId& journal_id,
                                          convert::ExtendedStringView key,
-                                         std::function<void(Status)> callback) {
+                                         fit::function<void(Status)> callback) {
   coroutine_manager_.StartCoroutine(
       std::move(callback),
       [this, journal_id, key = key.ToString()](
-          CoroutineHandler* handler, std::function<void(Status)> callback) {
+          CoroutineHandler* handler, fit::function<void(Status)> callback) {
         callback(db_->RemoveJournalEntry(handler, journal_id, key));
       });
 }
 
 void PageStorageImpl::RemoveJournal(const JournalId& journal_id,
-                                    std::function<void(Status)> callback) {
+                                    fit::function<void(Status)> callback) {
   coroutine_manager_.StartCoroutine(
       std::move(callback),
       [this, journal_id](CoroutineHandler* handler,
-                         std::function<void(Status)> callback) {
+                         fit::function<void(Status)> callback) {
         callback(db_->RemoveJournal(handler, journal_id));
       });
 }
@@ -744,20 +746,20 @@ bool PageStorageImpl::IsFirstCommit(CommitIdView id) {
 void PageStorageImpl::AddPiece(ObjectIdentifier object_identifier,
                                std::unique_ptr<DataSource::DataChunk> data,
                                ChangeSource source,
-                               std::function<void(Status)> callback) {
+                               fit::function<void(Status)> callback) {
   coroutine_manager_.StartCoroutine(
       std::move(callback),
       [this, object_identifier = std::move(object_identifier),
        data = std::move(data),
        source](CoroutineHandler* handler,
-               std::function<void(Status)> callback) mutable {
+               fit::function<void(Status)> callback) mutable {
         callback(SynchronousAddPiece(handler, std::move(object_identifier),
                                      std::move(data), source));
       });
 }
 
 void PageStorageImpl::DownloadFullObject(ObjectIdentifier object_identifier,
-                                         std::function<void(Status)> callback) {
+                                         fit::function<void(Status)> callback) {
   FXL_DCHECK(page_sync_);
   FXL_DCHECK(GetObjectDigestType(object_identifier.object_digest) !=
              ObjectDigestType::INLINE);
@@ -766,7 +768,7 @@ void PageStorageImpl::DownloadFullObject(ObjectIdentifier object_identifier,
       std::move(callback),
       [this, object_identifier = std::move(object_identifier)](
           CoroutineHandler* handler,
-          std::function<void(Status)> callback) mutable {
+          fit::function<void(Status)> callback) mutable {
         Status status;
         ChangeSource source;
         std::unique_ptr<DataSource::DataChunk> chunk;
@@ -774,7 +776,7 @@ void PageStorageImpl::DownloadFullObject(ObjectIdentifier object_identifier,
         if (coroutine::SyncCall(
                 handler,
                 [this, object_identifier](
-                    std::function<void(Status, ChangeSource,
+                    fit::function<void(Status, ChangeSource,
                                        std::unique_ptr<DataSource::DataChunk>)>
                         callback) {
                   page_sync_->GetObject(std::move(object_identifier),
@@ -835,7 +837,7 @@ void PageStorageImpl::DownloadFullObject(ObjectIdentifier object_identifier,
         if (coroutine::SyncCall(
                 handler,
                 [waiter =
-                     std::move(waiter)](std::function<void(Status)> callback) {
+                     std::move(waiter)](fit::function<void(Status)> callback) {
                   waiter->Finalize(std::move(callback));
                 },
                 &status) == coroutine::ContinuationStatus::INTERRUPTED) {
@@ -855,7 +857,7 @@ void PageStorageImpl::DownloadFullObject(ObjectIdentifier object_identifier,
 
 void PageStorageImpl::GetObjectFromSync(
     ObjectIdentifier object_identifier,
-    std::function<void(Status, std::unique_ptr<const Object>)> callback) {
+    fit::function<void(Status, std::unique_ptr<const Object>)> callback) {
   if (!page_sync_) {
     callback(Status::NOT_CONNECTED_ERROR, nullptr);
     return;
@@ -875,12 +877,12 @@ void PageStorageImpl::GetObjectFromSync(
 
 void PageStorageImpl::ObjectIsUntracked(
     ObjectIdentifier object_identifier,
-    std::function<void(Status, bool)> callback) {
+    fit::function<void(Status, bool)> callback) {
   coroutine_manager_.StartCoroutine(
       std::move(callback),
       [this, object_identifier = std::move(object_identifier)](
           CoroutineHandler* handler,
-          std::function<void(Status, bool)> callback) mutable {
+          fit::function<void(Status, bool)> callback) mutable {
         if (GetObjectDigestType(object_identifier.object_digest) ==
             ObjectDigestType::INLINE) {
           callback(Status::OK, false);
@@ -896,7 +898,7 @@ void PageStorageImpl::ObjectIsUntracked(
 
 void PageStorageImpl::FillBufferWithObjectContent(
     ObjectIdentifier object_identifier, fsl::SizedVmo vmo, size_t offset,
-    size_t size, std::function<void(Status)> callback) {
+    size_t size, fit::function<void(Status)> callback) {
   GetPiece(
       object_identifier,
       fxl::MakeCopyable([this, vmo = std::move(vmo), offset, size,
@@ -1038,7 +1040,7 @@ Status PageStorageImpl::SynchronousInit(CoroutineHandler* handler) {
 
   if (coroutine::SyncCall(
           handler,
-          [waiter = std::move(waiter)](std::function<void(Status)> callback) {
+          [waiter = std::move(waiter)](fit::function<void(Status)> callback) {
             waiter->Finalize(std::move(callback));
           },
           &s) == coroutine::ContinuationStatus::INTERRUPTED) {
@@ -1054,7 +1056,7 @@ Status PageStorageImpl::SynchronousGetCommit(
     Status s;
     if (coroutine::SyncCall(
             handler,
-            [this](std::function<void(Status, std::unique_ptr<const Commit>)>
+            [this](fit::function<void(Status, std::unique_ptr<const Commit>)>
                        callback) {
               CommitImpl::Empty(this, std::move(callback));
             },
@@ -1157,7 +1159,7 @@ Status PageStorageImpl::SynchronousAddCommitsFromSync(
   Status waiter_status;
   if (coroutine::SyncCall(
           handler,
-          [waiter = std::move(waiter)](std::function<void(Status)> callback) {
+          [waiter = std::move(waiter)](fit::function<void(Status)> callback) {
             waiter->Finalize(std::move(callback));
           },
           &waiter_status) == coroutine::ContinuationStatus::INTERRUPTED) {
@@ -1190,7 +1192,7 @@ Status PageStorageImpl::SynchronousGetUnsyncedCommits(
   if (coroutine::SyncCall(
           handler,
           [waiter = std::move(waiter)](
-              std::function<void(Status,
+              fit::function<void(Status,
                                  std::vector<std::unique_ptr<const Commit>>)>
                   callback) { waiter->Finalize(std::move(callback)); },
           &s, &result) == coroutine::ContinuationStatus::INTERRUPTED) {

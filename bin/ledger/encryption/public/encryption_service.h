@@ -8,6 +8,8 @@
 #include <functional>
 #include <string>
 
+#include <lib/fit/function.h>
+
 #include "lib/fxl/macros.h"
 #include "peridot/bin/ledger/storage/public/object.h"
 #include "peridot/bin/ledger/storage/public/types.h"
@@ -44,12 +46,12 @@ class EncryptionService {
   // Encrypts the given commit storage bytes for storing in the cloud.
   virtual void EncryptCommit(
       std::string commit_storage,
-      std::function<void(Status, std::string)> callback) = 0;
+      fit::function<void(Status, std::string)> callback) = 0;
 
   // Decrypts the given encrypted commit storage bytes from the cloud.
   virtual void DecryptCommit(
       convert::ExtendedStringView storage_bytes,
-      std::function<void(Status, std::string)> callback) = 0;
+      fit::function<void(Status, std::string)> callback) = 0;
 
   // Returns the obfuscated object name for the given identifier.
   //
@@ -57,17 +59,17 @@ class EncryptionService {
   // is used to refer the object in the cloud provider.
   virtual void GetObjectName(
       storage::ObjectIdentifier object_identifier,
-      std::function<void(Status, std::string)> callback) = 0;
+      fit::function<void(Status, std::string)> callback) = 0;
 
   // Encrypts the given object.
   virtual void EncryptObject(
       storage::ObjectIdentifier object_identifier, fsl::SizedVmo content,
-      std::function<void(Status, std::string)> callback) = 0;
+      fit::function<void(Status, std::string)> callback) = 0;
 
   // Decrypts the given object.
   virtual void DecryptObject(
       storage::ObjectIdentifier object_identifier, std::string encrypted_data,
-      std::function<void(Status, std::string)> callback) = 0;
+      fit::function<void(Status, std::string)> callback) = 0;
 
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(EncryptionService);

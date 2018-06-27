@@ -21,7 +21,7 @@ TEST(CoroutineManager, CallbackIsCalled) {
   CoroutineHandler* handler;
   manager.StartCoroutine(callback::SetWhenCalled(&called),
                          [&handler](CoroutineHandler* current_handler,
-                                    std::function<void()> callback) {
+                                    fit::function<void()> callback) {
                            handler = current_handler;
                            EXPECT_EQ(ContinuationStatus::OK, handler->Yield());
                            callback();
@@ -42,7 +42,7 @@ TEST(CoroutineManager, InterruptCoroutineOnDestruction) {
   CoroutineHandler* handler;
   manager->StartCoroutine(callback::SetWhenCalled(&called),
                           [&handler](CoroutineHandler* current_handler,
-                                     std::function<void()> callback) {
+                                     fit::function<void()> callback) {
                             handler = current_handler;
                             EXPECT_EQ(ContinuationStatus::INTERRUPTED,
                                       handler->Yield());

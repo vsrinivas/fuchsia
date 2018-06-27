@@ -4,6 +4,8 @@
 
 #include "peridot/bin/ledger/cache/lru_cache.h"
 
+#include <lib/fit/function.h>
+
 #include "gtest/gtest.h"
 #include "lib/callback/capture.h"
 #include "lib/callback/set_when_called.h"
@@ -11,7 +13,7 @@
 namespace cache {
 namespace {
 TEST(LRUCacheTest, SimpleGet) {
-  auto generator = [](size_t i, std::function<void(size_t, size_t)> callback) {
+  auto generator = [](size_t i, fit::function<void(size_t, size_t)> callback) {
     callback(0, 2 * i);
   };
 
@@ -36,7 +38,7 @@ TEST(LRUCacheTest, SimpleGet) {
 TEST(LRUCacheTest, FailingGenerator) {
   size_t nb_called = 0;
   auto generator = [&nb_called](size_t i,
-                                std::function<void(size_t, size_t)> callback) {
+                                fit::function<void(size_t, size_t)> callback) {
     ++nb_called;
     callback(1, 0);
   };
@@ -62,11 +64,11 @@ TEST(LRUCacheTest, FailingGenerator) {
 
 TEST(LRUCacheTest, CacheCallback) {
   size_t nb_called = 0;
-  std::function<void(size_t, size_t)> generator_callback;
+  fit::function<void(size_t, size_t)> generator_callback;
   auto generator = [&nb_called, &generator_callback](
-                       size_t i, std::function<void(size_t, size_t)> callback) {
+                       size_t i, fit::function<void(size_t, size_t)> callback) {
     ++nb_called;
-    generator_callback = callback;
+    generator_callback = std::move(callback);
   };
 
   LRUCache<size_t, size_t, size_t> cache(200, 0, generator);
@@ -100,9 +102,9 @@ TEST(LRUCacheTest, CacheCallback) {
 
 TEST(LRUCacheTest, LRUPolicy) {
   size_t nb_called = 0;
-  std::function<void(size_t, size_t)> generator_callback;
+  fit::function<void(size_t, size_t)> generator_callback;
   auto generator = [&nb_called](size_t i,
-                                std::function<void(size_t, size_t)> callback) {
+                                fit::function<void(size_t, size_t)> callback) {
     ++nb_called;
     callback(0u, 0u);
   };

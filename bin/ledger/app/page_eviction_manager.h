@@ -8,6 +8,8 @@
 #include <map>
 #include <string>
 
+#include <lib/fit/function.h>
+
 #include "lib/fxl/macros.h"
 #include "lib/fxl/strings/string_view.h"
 #include "peridot/bin/ledger/fidl/include/types.h"
@@ -48,7 +50,7 @@ class PageEvictionManager : public PageUsageListener {
   // Returns |IO_ERROR| through the callback in case of failure to retrieve data
   // on page usage, or when trying to evict a given page; |OK| otherwise. It is
   // not an error if there is no page fulfilling the requirements.
-  virtual void TryCleanUp(std::function<void(Status)> callback) = 0;
+  virtual void TryCleanUp(fit::function<void(Status)> callback) = 0;
 
   // PageUsageListener:
   void OnPageOpened(fxl::StringView ledger_name,

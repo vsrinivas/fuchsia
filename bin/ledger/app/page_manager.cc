@@ -6,6 +6,8 @@
 
 #include <algorithm>
 
+#include <lib/fit/function.h>
+
 #include "lib/callback/trace_callback.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/random/rand.h"
@@ -67,7 +69,7 @@ PageManager::~PageManager() {
 }
 
 void PageManager::BindPage(fidl::InterfaceRequest<Page> page_request,
-                           std::function<void(Status)> on_done) {
+                           fit::function<void(Status)> on_done) {
   auto traced_on_done =
       TRACE_CALLBACK(std::move(on_done), "ledger", "page_manager_bind_page");
   if (sync_backlog_downloaded_) {
@@ -82,7 +84,7 @@ void PageManager::BindPage(fidl::InterfaceRequest<Page> page_request,
 }
 
 void PageManager::BindPageDebug(fidl::InterfaceRequest<PageDebug> page_debug,
-                                std::function<void(Status)> callback) {
+                                fit::function<void(Status)> callback) {
   page_debug_bindings_.AddBinding(this, std::move(page_debug));
   callback(Status::OK);
 }
@@ -121,7 +123,7 @@ Status PageManager::ResolveReference(
   return Status::OK;
 }
 
-void PageManager::IsSynced(std::function<void(Status, bool)> callback) {
+void PageManager::IsSynced(fit::function<void(Status, bool)> callback) {
   page_storage_->IsSynced(
       [callback = std::move(callback)](storage::Status status, bool is_synced) {
         callback(PageUtils::ConvertStatus(status), is_synced);
@@ -154,7 +156,8 @@ void PageManager::OnSyncBacklogDownloaded() {
 
 void PageManager::GetHeadCommitsIds(GetHeadCommitsIdsCallback callback) {
   page_storage_->GetHeadCommitIds(
-      [callback](storage::Status status, std::vector<storage::CommitId> heads) {
+      [callback = std::move(callback)](storage::Status status,
+                                       std::vector<storage::CommitId> heads) {
         fidl::VectorPtr<ledger_internal::CommitId> result;
         result.resize(0);
         for (const auto& head : heads) {
@@ -175,7 +178,8 @@ void PageManager::GetSnapshot(
   page_storage_->GetCommit(
       convert::ToStringView(commit_id.id),
       fxl::MakeCopyable(
-          [this, snapshot_request = std::move(snapshot_request), callback](
+          [this, snapshot_request = std::move(snapshot_request),
+           callback = std::move(callback)](
               storage::Status status,
               std::unique_ptr<const storage::Commit> commit) mutable {
             if (status == storage::Status::OK) {

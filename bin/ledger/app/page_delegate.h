@@ -10,9 +10,10 @@
 #include <string>
 #include <vector>
 
+#include <lib/fit/function.h>
+
 #include "lib/callback/operation_serializer.h"
 #include "lib/fidl/cpp/interface_ptr_set.h"
-#include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/weak_ptr.h"
 #include "peridot/bin/ledger/app/branch_tracker.h"
@@ -43,10 +44,10 @@ class PageDelegate {
                fidl::InterfaceRequest<Page> request, SyncWatcherSet* watchers);
   ~PageDelegate();
 
-  void Init(std::function<void(Status)> on_done);
+  void Init(fit::function<void(Status)> on_done);
 
-  void set_on_empty(fxl::Closure on_empty_callback) {
-    on_empty_callback_ = on_empty_callback;
+  void set_on_empty(fit::closure on_empty_callback) {
+    on_empty_callback_ = std::move(on_empty_callback);
   }
 
   // From Page interface, called by PageImpl:
@@ -70,7 +71,7 @@ class PageDelegate {
   void Delete(fidl::VectorPtr<uint8_t> key, Page::DeleteCallback callback);
 
   void CreateReference(std::unique_ptr<storage::DataSource> data,
-                       std::function<void(Status, ReferencePtr)> callback);
+                       fit::function<void(Status, ReferencePtr)> callback);
 
   void StartTransaction(Page::StartTransactionCallback callback);
 
@@ -85,7 +86,7 @@ class PageDelegate {
       Page::WaitForConflictResolutionCallback callback);
 
  private:
-  using StatusCallback = std::function<void(Status)>;
+  using StatusCallback = fit::function<void(Status)>;
 
   const storage::CommitId& GetCurrentCommitId();
 
@@ -98,13 +99,13 @@ class PageDelegate {
   // new one and commits it before calling |callback|. This method is not
   // serialized, and should only be called from a callsite that is serialized.
   void RunInTransaction(
-      std::function<void(storage::Journal*, std::function<void(Status)>)>
+      fit::function<void(storage::Journal*, fit::function<void(Status)>)>
           runnable,
       StatusCallback callback);
 
   void CommitJournal(
       std::unique_ptr<storage::Journal> journal,
-      std::function<void(Status, std::unique_ptr<const storage::Commit>)>
+      fit::function<void(Status, std::unique_ptr<const storage::Commit>)>
           callback);
 
   void CheckEmpty();
@@ -117,7 +118,7 @@ class PageDelegate {
   fidl_helpers::BoundInterface<Page, PageImpl> interface_;
   BranchTracker branch_tracker_;
 
-  fxl::Closure on_empty_callback_;
+  fit::closure on_empty_callback_;
 
   storage::CommitId journal_parent_commit_;
   std::unique_ptr<storage::Journal> journal_;

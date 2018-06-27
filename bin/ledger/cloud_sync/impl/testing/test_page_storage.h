@@ -11,10 +11,10 @@
 #include <vector>
 
 #include <lib/async/dispatcher.h>
+#include <lib/fit/function.h>
 
 #include "lib/callback/capture.h"
 #include "lib/fsl/socket/strings.h"
-#include "lib/fxl/functional/closure.h"
 #include "peridot/bin/ledger/cloud_sync/impl/testing/test_commit.h"
 #include "peridot/bin/ledger/storage/public/page_storage.h"
 #include "peridot/bin/ledger/storage/testing/page_storage_empty_impl.h"
@@ -36,21 +36,21 @@ class TestPageStorage : public storage::PageStorageEmptyImpl {
   void SetSyncDelegate(storage::PageSyncDelegate* page_sync_delegate) override;
 
   void GetHeadCommitIds(
-      std::function<void(storage::Status, std::vector<storage::CommitId>)>
+      fit::function<void(storage::Status, std::vector<storage::CommitId>)>
           callback) override;
 
   void GetCommit(storage::CommitIdView commit_id,
-                 std::function<void(storage::Status,
+                 fit::function<void(storage::Status,
                                     std::unique_ptr<const storage::Commit>)>
                      callback) override;
 
   void AddCommitsFromSync(
       std::vector<PageStorage::CommitIdAndBytes> ids_and_bytes,
       storage::ChangeSource source,
-      std::function<void(storage::Status status)> callback) override;
+      fit::function<void(storage::Status status)> callback) override;
 
   void GetUnsyncedPieces(
-      std::function<void(storage::Status,
+      fit::function<void(storage::Status,
                          std::vector<storage::ObjectIdentifier>)>
           callback) override;
 
@@ -59,19 +59,19 @@ class TestPageStorage : public storage::PageStorageEmptyImpl {
   storage::Status RemoveCommitWatcher(storage::CommitWatcher* watcher) override;
 
   void GetUnsyncedCommits(
-      std::function<void(storage::Status,
+      fit::function<void(storage::Status,
                          std::vector<std::unique_ptr<const storage::Commit>>)>
           callback) override;
 
   void MarkCommitSynced(const storage::CommitId& commit_id,
-                        std::function<void(storage::Status)> callback) override;
+                        fit::function<void(storage::Status)> callback) override;
 
   void SetSyncMetadata(fxl::StringView key, fxl::StringView value,
-                       std::function<void(storage::Status)> callback) override;
+                       fit::function<void(storage::Status)> callback) override;
 
   void GetSyncMetadata(
       fxl::StringView key,
-      std::function<void(storage::Status, std::string)> callback) override;
+      fit::function<void(storage::Status, std::string)> callback) override;
 
   storage::PageId page_id_to_return;
   // Commits to be returned from GetUnsyncedCommits calls.
@@ -85,9 +85,9 @@ class TestPageStorage : public storage::PageStorageEmptyImpl {
   bool should_fail_get_commit = false;
   bool should_fail_add_commit_from_sync = false;
   bool should_delay_add_commit_confirmation = false;
-  std::vector<fxl::Closure> delayed_add_commit_confirmations;
+  std::vector<fit::closure> delayed_add_commit_confirmations;
   bool should_delay_get_head_commit_ids = false;
-  std::vector<fxl::Closure> delayed_get_head_commit_ids;
+  std::vector<fit::closure> delayed_get_head_commit_ids;
 
   unsigned int add_commits_from_sync_calls = 0u;
 

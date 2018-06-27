@@ -34,7 +34,7 @@ class CoroutineManager {
   //
   // |callback| must be a callable object
   // |runnable| must be a callable object with the following signature:
-  //   void(CoroutineHandler*, std::function<void(Args...)>)
+  //   void(CoroutineHandler*, fit::function<void(Args...)>)
   // When the second argument of |runnable| is called, the coroutine is
   // unregistered from the manager object and |callback| is called with the same
   // arguments. It is an error to exit the coroutine without calling

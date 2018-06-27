@@ -7,6 +7,7 @@
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/task.h>
+#include <lib/fit/function.h>
 
 #include "gtest/gtest.h"
 #include "lib/backoff/exponential_backoff.h"
@@ -49,7 +50,7 @@ class FakeUserIdProvider : public p2p_provider::UserIdProvider {
  public:
   FakeUserIdProvider() {}
 
-  void GetUserId(std::function<void(Status, std::string)> callback) override {
+  void GetUserId(fit::function<void(Status, std::string)> callback) override {
     callback(Status::OK, kUserId);
   };
 };

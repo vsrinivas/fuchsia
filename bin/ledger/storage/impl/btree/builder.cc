@@ -4,8 +4,9 @@
 
 #include "peridot/bin/ledger/storage/impl/btree/builder.h"
 
+#include <lib/fit/function.h>
+
 #include "lib/callback/waiter.h"
-#include "lib/fxl/functional/closure.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "peridot/bin/ledger/storage/impl/btree/internal_helper.h"
 #include "peridot/bin/ledger/storage/impl/btree/synchronous_storage.h"
@@ -328,7 +329,7 @@ Status NodeBuilder::Build(SynchronousStorage* page_storage,
     }
     Status status;
     if (coroutine::SyncCall(page_storage->handler(),
-                            [&waiter](std::function<void(Status)> callback) {
+                            [&waiter](fit::function<void(Status)> callback) {
                               waiter->Finalize(std::move(callback));
                             },
                             &status) ==
@@ -625,7 +626,7 @@ void ApplyChanges(
     coroutine::CoroutineService* coroutine_service, PageStorage* page_storage,
     ObjectIdentifier root_identifier,
     std::unique_ptr<Iterator<const EntryChange>> changes,
-    std::function<void(Status, ObjectIdentifier, std::set<ObjectIdentifier>)>
+    fit::function<void(Status, ObjectIdentifier, std::set<ObjectIdentifier>)>
         callback,
     const NodeLevelCalculator* node_level_calculator) {
   FXL_DCHECK(storage::IsDigestValid(root_identifier.object_digest));

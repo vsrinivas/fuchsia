@@ -8,11 +8,12 @@
 #include <utility>
 #include <vector>
 
+#include <lib/fit/function.h>
+
 #include "lib/backoff/backoff.h"
 #include "lib/backoff/testing/test_backoff.h"
 #include "lib/callback/capture.h"
 #include "lib/fsl/socket/strings.h"
-#include "lib/fxl/functional/closure.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/macros.h"
 #include "lib/gtest/test_loop_fixture.h"
@@ -53,7 +54,7 @@ class PageUploadTest : public gtest::TestLoopFixture,
   ~PageUploadTest() override {}
 
  protected:
-  void SetOnNewStateCallback(fxl::Closure callback) {
+  void SetOnNewStateCallback(fit::closure callback) {
     new_state_callback_ = std::move(callback);
   }
 
@@ -76,7 +77,7 @@ class PageUploadTest : public gtest::TestLoopFixture,
   bool is_download_idle_ = true;
 
  private:
-  fxl::Closure new_state_callback_;
+  fit::closure new_state_callback_;
   callback::ScopedTaskRunner task_runner_;
   FXL_DISALLOW_COPY_AND_ASSIGN(PageUploadTest);
 };

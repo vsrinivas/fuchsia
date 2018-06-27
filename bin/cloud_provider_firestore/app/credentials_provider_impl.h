@@ -9,6 +9,7 @@
 #include <memory>
 
 #include <grpc++/grpc++.h>
+#include <lib/fit/function.h>
 
 #include "lib/callback/cancellable.h"
 #include "peridot/bin/cloud_provider_firestore/app/credentials_provider.h"
@@ -23,7 +24,7 @@ class CredentialsProviderImpl : public CredentialsProvider {
   ~CredentialsProviderImpl() override;
 
   void GetCredentials(
-      std::function<void(std::shared_ptr<grpc::CallCredentials>)> callback)
+      fit::function<void(std::shared_ptr<grpc::CallCredentials>)> callback)
       override;
 
  private:

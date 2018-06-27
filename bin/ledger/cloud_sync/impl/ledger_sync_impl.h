@@ -8,7 +8,8 @@
 #include <memory>
 #include <set>
 
-#include "lib/fxl/functional/closure.h"
+#include <lib/fit/function.h>
+
 #include "peridot/bin/ledger/cloud_sync/impl/aggregator.h"
 #include "peridot/bin/ledger/cloud_sync/impl/page_sync_impl.h"
 #include "peridot/bin/ledger/cloud_sync/public/ledger_sync.h"
@@ -31,7 +32,7 @@ class LedgerSyncImpl : public LedgerSync {
   std::unique_ptr<PageSync> CreatePageSync(
       storage::PageStorage* page_storage,
       storage::PageSyncClient* page_sync_client,
-      fxl::Closure error_callback) override;
+      fit::closure error_callback) override;
 
   // Enables upload. Has no effect if this method has already been called.
   void EnableUpload();
@@ -39,9 +40,9 @@ class LedgerSyncImpl : public LedgerSync {
   bool IsUploadEnabled() const { return upload_enabled_; }
 
   // |on_delete| will be called when this class is deleted.
-  void set_on_delete(std::function<void()> on_delete) {
+  void set_on_delete(fit::function<void()> on_delete) {
     FXL_DCHECK(!on_delete_);
-    on_delete_ = on_delete;
+    on_delete_ = std::move(on_delete);
   }
 
  private:
@@ -52,7 +53,7 @@ class LedgerSyncImpl : public LedgerSync {
   bool upload_enabled_ = false;
   std::set<PageSyncImpl*> active_page_syncs_;
   // Called on destruction.
-  std::function<void()> on_delete_;
+  fit::function<void()> on_delete_;
   std::unique_ptr<SyncStateWatcher> user_watcher_;
   Aggregator aggregator_;
 };

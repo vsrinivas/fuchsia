@@ -6,9 +6,9 @@
 #define PERIDOT_BIN_LEDGER_TESTING_NETCONNECTOR_NETCONNECTOR_FACTORY_H_
 
 #include <fuchsia/netconnector/cpp/fidl.h>
+#include <lib/fit/function.h>
 
 #include "lib/callback/auto_cleanable.h"
-#include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
 #include "peridot/bin/ledger/fidl_helpers/bound_interface.h"
 #include "peridot/bin/ledger/testing/data_generator.h"
@@ -41,7 +41,7 @@ class NetConnectorFactory : public FakeNetConnector::Delegate {
   // FakeNetConnector::Delegate:
   void GetDevicesNames(
       uint64_t last_version,
-      std::function<void(uint64_t, fidl::VectorPtr<fidl::StringPtr>)> callback)
+      fit::function<void(uint64_t, fidl::VectorPtr<fidl::StringPtr>)> callback)
       override;
   void ConnectToServiceProvider(
       std::string device_name,
@@ -50,7 +50,7 @@ class NetConnectorFactory : public FakeNetConnector::Delegate {
   // Counter incremented each time a NetConnector is added or removed; denotes
   // the version of the current device list.
   uint64_t current_version_ = 0;
-  std::vector<std::function<void(uint64_t, fidl::VectorPtr<fidl::StringPtr>)>>
+  std::vector<fit::function<void(uint64_t, fidl::VectorPtr<fidl::StringPtr>)>>
       pending_device_list_callbacks_;
   callback::AutoCleanableMap<std::string, Holder> net_connectors_;
 

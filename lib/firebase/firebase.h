@@ -9,6 +9,7 @@
 #include <string>
 #include <vector>
 
+#include <lib/fit/function.h>
 #include <rapidjson/document.h>
 
 #include "lib/fxl/macros.h"
@@ -32,7 +33,7 @@ class Firebase {
   // TODO(ppi): support response Content-Length header, see LE-210.
   virtual void Get(const std::string& key,
                    const std::vector<std::string>& query_params,
-                   std::function<void(Status status,
+                   fit::function<void(Status status,
                                       std::unique_ptr<rapidjson::Value> value)>
                        callback) = 0;
 
@@ -42,7 +43,7 @@ class Firebase {
   virtual void Put(const std::string& key,
                    const std::vector<std::string>& query_params,
                    const std::string& data,
-                   std::function<void(Status status)> callback) = 0;
+                   fit::function<void(Status status)> callback) = 0;
 
   // Adds or updates multiple keys under the given path. Data needs to be a
   // JSON dictionary.
@@ -50,12 +51,12 @@ class Firebase {
   virtual void Patch(const std::string& key,
                      const std::vector<std::string>& query_params,
                      const std::string& data,
-                     std::function<void(Status status)> callback) = 0;
+                     fit::function<void(Status status)> callback) = 0;
 
   // Deletes the data under the given path.
   virtual void Delete(const std::string& key,
                       const std::vector<std::string>& query_params,
-                      std::function<void(Status status)> callback) = 0;
+                      fit::function<void(Status status)> callback) = 0;
 
   // Registers the given |watch_client| to receive notifications about changes
   // under the given |key|. See

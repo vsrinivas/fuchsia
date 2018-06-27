@@ -6,6 +6,8 @@
 #include <stdio.h>
 #include <algorithm>
 
+#include <lib/fit/function.h>
+
 #include "gtest/gtest.h"
 #include "lib/callback/capture.h"
 #include "lib/callback/set_when_called.h"
@@ -50,11 +52,11 @@ class TrackGetObjectFakePageStorage : public fake::FakePageStorage {
   ~TrackGetObjectFakePageStorage() override {}
 
   void GetObject(ObjectIdentifier object_identifier, Location location,
-                 std::function<void(Status, std::unique_ptr<const Object>)>
+                 fit::function<void(Status, std::unique_ptr<const Object>)>
                      callback) override {
     object_requests.insert(object_identifier);
     fake::FakePageStorage::GetObject(std::move(object_identifier), location,
-                                     callback);
+                                     std::move(callback));
   }
 
   std::set<ObjectIdentifier> object_requests;

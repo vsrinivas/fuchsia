@@ -8,6 +8,7 @@
 #include <functional>
 #include <vector>
 
+#include <lib/fit/function.h>
 #include <lib/zx/socket.h>
 #include <lib/zx/vmo.h>
 
@@ -29,11 +30,11 @@ class CloudStorageImpl : public CloudStorage {
   // CloudStorage implementation.
   void UploadObject(std::string auth_token, const std::string& key,
                     fsl::SizedVmo data,
-                    std::function<void(Status)> callback) override;
+                    fit::function<void(Status)> callback) override;
 
   void DownloadObject(
       std::string auth_token, const std::string& key,
-      std::function<void(Status status, uint64_t size, zx::socket data)>
+      fit::function<void(Status status, uint64_t size, zx::socket data)>
           callback) override;
 
  private:
@@ -42,18 +43,18 @@ class CloudStorageImpl : public CloudStorage {
   std::string GetUploadUrl(fxl::StringView key);
 
   void Request(
-      std::function<::fuchsia::net::oldhttp::URLRequest()> request_factory,
-      std::function<void(Status status,
+      fit::function<::fuchsia::net::oldhttp::URLRequest()> request_factory,
+      fit::function<void(Status status,
                          ::fuchsia::net::oldhttp::URLResponse response)>
           callback);
   void OnResponse(
-      std::function<void(Status status,
+      fit::function<void(Status status,
                          ::fuchsia::net::oldhttp::URLResponse response)>
           callback,
       ::fuchsia::net::oldhttp::URLResponse response);
 
   void OnDownloadResponseReceived(
-      std::function<void(Status status, uint64_t size, zx::socket data)>
+      fit::function<void(Status status, uint64_t size, zx::socket data)>
           callback,
       Status status, ::fuchsia::net::oldhttp::URLResponse response);
 

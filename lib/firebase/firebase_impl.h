@@ -10,6 +10,7 @@
 #include <string>
 #include <vector>
 
+#include <lib/fit/function.h>
 #include <rapidjson/document.h>
 
 #include "lib/callback/auto_cleanable.h"
@@ -38,19 +39,19 @@ class FirebaseImpl : public Firebase {
 
   // Firebase:
   void Get(const std::string& key, const std::vector<std::string>& query_params,
-           std::function<void(Status status,
+           fit::function<void(Status status,
                               std::unique_ptr<rapidjson::Value> value)>
                callback) override;
   void Put(const std::string& key, const std::vector<std::string>& query_params,
            const std::string& data,
-           std::function<void(Status status)> callback) override;
+           fit::function<void(Status status)> callback) override;
   void Patch(const std::string& key,
              const std::vector<std::string>& query_params,
              const std::string& data,
-             std::function<void(Status status)> callback) override;
+             fit::function<void(Status status)> callback) override;
   void Delete(const std::string& key,
               const std::vector<std::string>& query_params,
-              std::function<void(Status status)> callback) override;
+              fit::function<void(Status status)> callback) override;
   void Watch(const std::string& key,
              const std::vector<std::string>& query_params,
              WatchClient* watch_client) override;
@@ -68,10 +69,10 @@ class FirebaseImpl : public Firebase {
   void Request(
       const std::string& url, const std::string& method,
       const std::string& message,
-      const std::function<void(Status status, std::string response)>& callback);
+      fit::function<void(Status status, std::string response)> callback);
 
   void OnResponse(
-      const std::function<void(Status status, std::string response)>& callback,
+      fit::function<void(Status status, std::string response)> callback,
       ::fuchsia::net::oldhttp::URLResponse response);
 
   void OnStream(WatchClient* watch_client,

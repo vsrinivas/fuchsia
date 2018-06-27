@@ -6,6 +6,7 @@
 #define PERIDOT_BIN_LEDGER_TESTING_NETCONNECTOR_FAKE_NETCONNECTOR_H_
 
 #include <fuchsia/netconnector/cpp/fidl.h>
+#include <lib/fit/function.h>
 
 #include "lib/app/cpp/service_provider_impl.h"
 #include "lib/fxl/macros.h"
@@ -24,7 +25,7 @@ class FakeNetConnector : public fuchsia::netconnector::NetConnector {
     // for more details.
     virtual void GetDevicesNames(
         uint64_t last_version,
-        std::function<void(uint64_t, fidl::VectorPtr<fidl::StringPtr>)>
+        fit::function<void(uint64_t, fidl::VectorPtr<fidl::StringPtr>)>
             callback) = 0;
 
     // Connects to the ServiceProvider from host |device_name|.

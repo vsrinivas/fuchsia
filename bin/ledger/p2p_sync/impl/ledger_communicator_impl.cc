@@ -4,7 +4,8 @@
 
 #include "peridot/bin/ledger/p2p_sync/impl/ledger_communicator_impl.h"
 
-#include "lib/fxl/functional/closure.h"
+#include <lib/fit/function.h>
+
 #include "peridot/bin/ledger/p2p_sync/impl/flatbuffer_message_factory.h"
 #include "peridot/bin/ledger/p2p_sync/impl/message_generated.h"
 #include "peridot/bin/ledger/p2p_sync/impl/page_communicator_impl.h"
@@ -21,7 +22,7 @@ LedgerCommunicatorImpl::~LedgerCommunicatorImpl() {
   }
 }
 
-void LedgerCommunicatorImpl::set_on_delete(fxl::Closure on_delete) {
+void LedgerCommunicatorImpl::set_on_delete(fit::closure on_delete) {
   FXL_DCHECK(!on_delete_) << "on_delete() can only be called once.";
   on_delete_ = std::move(on_delete);
 }

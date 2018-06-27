@@ -5,6 +5,8 @@
 #ifndef PERIDOT_BIN_LEDGER_STORAGE_IMPL_COMMIT_IMPL_H_
 #define PERIDOT_BIN_LEDGER_STORAGE_IMPL_COMMIT_IMPL_H_
 
+#include <lib/fit/function.h>
+
 #include "lib/fxl/memory/ref_ptr.h"
 #include "peridot/bin/ledger/storage/public/commit.h"
 #include "peridot/bin/ledger/storage/public/page_storage.h"
@@ -42,7 +44,7 @@ class CommitImpl : public Commit {
   // parents and with empty contents.
   static void Empty(
       PageStorage* page_storage,
-      std::function<void(Status, std::unique_ptr<const Commit>)> callback);
+      fit::function<void(Status, std::unique_ptr<const Commit>)> callback);
 
   // Commit:
   std::unique_ptr<Commit> Clone() const override;

@@ -7,8 +7,9 @@
 #include <limits>
 #include <sstream>
 
+#include <lib/fit/function.h>
+
 #include "lib/callback/waiter.h"
-#include "lib/fxl/functional/closure.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/macros.h"
 #include "peridot/bin/ledger/storage/impl/constants.h"
@@ -60,7 +61,7 @@ struct ChunkAndSize {
 class SplitContext {
  public:
   explicit SplitContext(
-      std::function<ObjectIdentifier(IterationStatus, ObjectDigest,
+      fit::function<ObjectIdentifier(IterationStatus, ObjectDigest,
                                      std::unique_ptr<DataSource::DataChunk>)>
           callback)
       : callback_(std::move(callback)),
@@ -269,7 +270,7 @@ class SplitContext {
     return DataSource::DataChunk::Create(std::move(data));
   }
 
-  std::function<ObjectIdentifier(IterationStatus, ObjectDigest,
+  fit::function<ObjectIdentifier(IterationStatus, ObjectDigest,
                                  std::unique_ptr<DataSource::DataChunk>)>
       callback_;
   bup::RollSumSplit roll_sum_split_;
@@ -289,16 +290,16 @@ class SplitContext {
 class CollectPiecesState
     : public fxl::RefCountedThreadSafe<CollectPiecesState> {
  public:
-  std::function<void(ObjectIdentifier,
-                     std::function<void(Status, fxl::StringView)>)>
+  fit::function<void(ObjectIdentifier,
+                     fit::function<void(Status, fxl::StringView)>)>
       data_accessor;
-  std::function<bool(IterationStatus, ObjectIdentifier)> callback;
+  fit::function<bool(IterationStatus, ObjectIdentifier)> callback;
   bool running = true;
 };
 
 void CollectPiecesInternal(ObjectIdentifier root,
                            fxl::RefPtr<CollectPiecesState> state,
-                           fxl::Closure on_done) {
+                           fit::closure on_done) {
   if (!state->callback(IterationStatus::IN_PROGRESS, root)) {
     on_done();
     return;
@@ -343,7 +344,7 @@ void CollectPiecesInternal(ObjectIdentifier root,
 
 void SplitDataSource(
     DataSource* source,
-    std::function<ObjectIdentifier(IterationStatus, ObjectDigest,
+    fit::function<ObjectIdentifier(IterationStatus, ObjectDigest,
                                    std::unique_ptr<DataSource::DataChunk>)>
         callback) {
   SplitContext context(std::move(callback));
@@ -356,7 +357,7 @@ void SplitDataSource(
 }
 
 Status ForEachPiece(fxl::StringView index_content,
-                    std::function<Status(ObjectIdentifier)> callback) {
+                    fit::function<Status(ObjectIdentifier)> callback) {
   const FileIndex* file_index;
   Status status =
       FileIndexSerialization::ParseFileIndex(index_content, &file_index);
@@ -376,10 +377,10 @@ Status ForEachPiece(fxl::StringView index_content,
 
 void CollectPieces(
     ObjectIdentifier root,
-    std::function<void(ObjectIdentifier,
-                       std::function<void(Status, fxl::StringView)>)>
+    fit::function<void(ObjectIdentifier,
+                       fit::function<void(Status, fxl::StringView)>)>
         data_accessor,
-    std::function<bool(IterationStatus, ObjectIdentifier)> callback) {
+    fit::function<bool(IterationStatus, ObjectIdentifier)> callback) {
   auto state = fxl::MakeRefCounted<CollectPiecesState>();
   state->data_accessor = std::move(data_accessor);
   state->callback = std::move(callback);

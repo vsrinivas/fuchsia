@@ -9,6 +9,7 @@
 #include <string>
 
 #include <lib/async/dispatcher.h>
+#include <lib/fit/function.h>
 
 #include "peridot/bin/ledger/encryption/public/encryption_service.h"
 #include "peridot/lib/convert/convert.h"
@@ -32,19 +33,19 @@ class FakeEncryptionService : public EncryptionService {
       storage::ObjectDigest digest) override;
   void EncryptCommit(
       std::string commit_storage,
-      std::function<void(Status, std::string)> callback) override;
+      fit::function<void(Status, std::string)> callback) override;
   void DecryptCommit(
       convert::ExtendedStringView storage_bytes,
-      std::function<void(Status, std::string)> callback) override;
+      fit::function<void(Status, std::string)> callback) override;
   void GetObjectName(
       storage::ObjectIdentifier object_identifier,
-      std::function<void(Status, std::string)> callback) override;
+      fit::function<void(Status, std::string)> callback) override;
   void EncryptObject(
       storage::ObjectIdentifier object_identifier, fsl::SizedVmo content,
-      std::function<void(Status, std::string)> callback) override;
+      fit::function<void(Status, std::string)> callback) override;
   void DecryptObject(
       storage::ObjectIdentifier object_identifier, std::string encrypted_data,
-      std::function<void(Status, std::string)> callback) override;
+      fit::function<void(Status, std::string)> callback) override;
 
   // Synchronously encrypts the given commit.
   std::string EncryptCommitSynchronous(

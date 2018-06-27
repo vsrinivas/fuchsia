@@ -4,6 +4,8 @@
 
 #include "peridot/bin/cloud_provider_firestore/app/testing/test_credentials_provider.h"
 
+#include <lib/fit/function.h>
+
 namespace cloud_provider_firestore {
 
 TestCredentialsProvider::TestCredentialsProvider(async_t* async)
@@ -12,7 +14,7 @@ TestCredentialsProvider::TestCredentialsProvider(async_t* async)
 TestCredentialsProvider::~TestCredentialsProvider() {}
 
 void TestCredentialsProvider::GetCredentials(
-    std::function<void(std::shared_ptr<grpc::CallCredentials>)> callback) {
+    fit::function<void(std::shared_ptr<grpc::CallCredentials>)> callback) {
   task_runner_.PostTask(
       [callback = std::move(callback)] { callback(nullptr); });
 }

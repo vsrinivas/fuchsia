@@ -8,6 +8,8 @@
 #include <memory>
 #include <set>
 
+#include <lib/fit/function.h>
+
 #include "peridot/bin/ledger/coroutine/coroutine.h"
 #include "peridot/bin/ledger/storage/public/iterator.h"
 #include "peridot/bin/ledger/storage/public/page_storage.h"
@@ -33,7 +35,7 @@ void ApplyChanges(
     coroutine::CoroutineService* coroutine_service, PageStorage* page_storage,
     ObjectIdentifier root_identifier,
     std::unique_ptr<Iterator<const EntryChange>> changes,
-    std::function<void(Status, ObjectIdentifier, std::set<ObjectIdentifier>)>
+    fit::function<void(Status, ObjectIdentifier, std::set<ObjectIdentifier>)>
         callback,
     const NodeLevelCalculator* node_level_calculator =
         GetDefaultNodeLevelCalculator());

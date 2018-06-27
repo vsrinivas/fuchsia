@@ -8,11 +8,11 @@
 #include <memory>
 
 #include <fuchsia/ledger/cloud/cpp/fidl.h>
+#include <lib/fit/function.h>
 
 #include "lib/callback/cancellable.h"
 #include "lib/fidl/cpp/array.h"
 #include "lib/fidl/cpp/binding.h"
-#include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
 #include "peridot/bin/cloud_provider_firebase/device_set/cloud_device_set.h"
 #include "peridot/bin/cloud_provider_firebase/include/types.h"
@@ -31,7 +31,7 @@ class DeviceSetImpl : public cloud_provider::DeviceSet {
                 fidl::InterfaceRequest<cloud_provider::DeviceSet> request);
   ~DeviceSetImpl() override;
 
-  void set_on_empty(const fxl::Closure& on_empty) { on_empty_ = on_empty; }
+  void set_on_empty(fit::closure on_empty) { on_empty_ = std::move(on_empty); }
 
  private:
   void CheckFingerprint(fidl::VectorPtr<uint8_t> fingerprint,
@@ -50,7 +50,7 @@ class DeviceSetImpl : public cloud_provider::DeviceSet {
   firebase_auth::FirebaseAuth* const firebase_auth_;
   std::unique_ptr<CloudDeviceSet> cloud_device_set_;
   fidl::Binding<cloud_provider::DeviceSet> binding_;
-  fxl::Closure on_empty_;
+  fit::closure on_empty_;
 
   // Watcher set by the client.
   cloud_provider::DeviceSetWatcherPtr watcher_;

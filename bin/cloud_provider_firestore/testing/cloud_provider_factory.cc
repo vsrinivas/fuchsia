@@ -8,9 +8,9 @@
 
 #include <fuchsia/net/oldhttp/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
+#include <lib/fit/function.h>
 
 #include "lib/backoff/exponential_backoff.h"
-#include "lib/fxl/functional/closure.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/random/uuid.h"
 #include "lib/svc/cpp/services.h"
@@ -44,7 +44,7 @@ class CloudProviderFactory::TokenProviderContainer {
     }
   }
 
-  void set_on_empty(fxl::Closure on_empty) {
+  void set_on_empty(fit::closure on_empty) {
     binding_.set_error_handler(std::move(on_empty));
   }
 

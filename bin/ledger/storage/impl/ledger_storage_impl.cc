@@ -8,6 +8,8 @@
 #include <algorithm>
 #include <iterator>
 
+#include <lib/fit/function.h>
+
 #include "lib/callback/trace_callback.h"
 #include "lib/fxl/files/directory.h"
 #include "lib/fxl/files/path.h"
@@ -53,7 +55,7 @@ LedgerStorageImpl::~LedgerStorageImpl() {}
 
 void LedgerStorageImpl::CreatePageStorage(
     PageId page_id,
-    std::function<void(Status, std::unique_ptr<PageStorage>)> callback) {
+    fit::function<void(Status, std::unique_ptr<PageStorage>)> callback) {
   auto timed_callback = TRACE_CALLBACK(std::move(callback), "ledger",
                                        "ledger_storage_create_page_storage");
   ledger::DetachedPath path = GetPathFor(page_id);
@@ -81,7 +83,7 @@ void LedgerStorageImpl::CreatePageStorage(
 
 void LedgerStorageImpl::GetPageStorage(
     PageId page_id,
-    std::function<void(Status, std::unique_ptr<PageStorage>)> callback) {
+    fit::function<void(Status, std::unique_ptr<PageStorage>)> callback) {
   auto timed_callback = TRACE_CALLBACK(std::move(callback), "ledger",
                                        "ledger_storage_get_page_storage");
   ledger::DetachedPath path = GetPathFor(page_id);

@@ -7,6 +7,8 @@
 #include <algorithm>
 #include <utility>
 
+#include <lib/fit/function.h>
+
 #include "lib/callback/waiter.h"
 #include "lib/fsl/socket/strings.h"
 #include "lib/fxl/logging.h"
@@ -36,7 +38,7 @@ TreeNode::~TreeNode() {}
 
 void TreeNode::FromIdentifier(
     PageStorage* page_storage, ObjectIdentifier identifier,
-    std::function<void(Status, std::unique_ptr<const TreeNode>)> callback) {
+    fit::function<void(Status, std::unique_ptr<const TreeNode>)> callback) {
   page_storage->GetObject(
       identifier, PageStorage::Location::NETWORK,
       [page_storage, identifier, callback = std::move(callback)](
@@ -53,7 +55,7 @@ void TreeNode::FromIdentifier(
 }
 
 void TreeNode::Empty(PageStorage* page_storage,
-                     std::function<void(Status, ObjectIdentifier)> callback) {
+                     fit::function<void(Status, ObjectIdentifier)> callback) {
   FromEntries(page_storage, 0u, std::vector<Entry>(),
               std::map<size_t, ObjectIdentifier>(), std::move(callback));
 }
@@ -61,7 +63,7 @@ void TreeNode::Empty(PageStorage* page_storage,
 void TreeNode::FromEntries(
     PageStorage* page_storage, uint8_t level, const std::vector<Entry>& entries,
     const std::map<size_t, ObjectIdentifier>& children,
-    std::function<void(Status, ObjectIdentifier)> callback) {
+    fit::function<void(Status, ObjectIdentifier)> callback) {
   FXL_DCHECK(children.begin() == children.end() ||
              children.cbegin()->first <= entries.size());
 #ifndef NDEBUG
@@ -84,7 +86,7 @@ Status TreeNode::GetEntry(int index, Entry* entry) const {
 
 void TreeNode::GetChild(
     int index,
-    std::function<void(Status, std::unique_ptr<const TreeNode>)> callback)
+    fit::function<void(Status, std::unique_ptr<const TreeNode>)> callback)
     const {
   FXL_DCHECK(index >= 0 && index <= GetKeyCount());
   const auto it = children_.find(index);

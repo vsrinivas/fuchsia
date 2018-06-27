@@ -7,6 +7,8 @@
 #include <memory>
 #include <string>
 
+#include <lib/fit/function.h>
+
 #include "lib/backoff/exponential_backoff.h"
 #include "lib/fidl/cpp/clone.h"
 #include "lib/fxl/random/rand.h"
@@ -60,7 +62,7 @@ std::unique_ptr<MergeResolver> LedgerMergeManager::GetMergeResolver(
 
 void LedgerMergeManager::GetResolverStrategyForPage(
     const storage::PageId& page_id,
-    std::function<void(std::unique_ptr<MergeStrategy>)> strategy_callback) {
+    fit::function<void(std::unique_ptr<MergeStrategy>)> strategy_callback) {
   if (!conflict_resolver_factory_) {
     strategy_callback(std::make_unique<LastOneWinsMergeStrategy>());
   } else if (!conflict_resolver_factory_.is_bound()) {
@@ -69,8 +71,9 @@ void LedgerMergeManager::GetResolverStrategyForPage(
     ledger::PageId converted_page_id;
     convert::ToArray(page_id, &converted_page_id.id);
     conflict_resolver_factory_->GetPolicy(
-        converted_page_id, [this, page_id, converted_page_id,
-                            strategy_callback](MergePolicy policy) {
+        converted_page_id,
+        [this, page_id, converted_page_id,
+         strategy_callback = std::move(strategy_callback)](MergePolicy policy) {
           switch (policy) {
             case MergePolicy::LAST_ONE_WINS:
               strategy_callback(std::make_unique<LastOneWinsMergeStrategy>());

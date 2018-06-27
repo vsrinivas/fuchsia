@@ -7,10 +7,10 @@
 #include <functional>
 
 #include <lib/fidl/cpp/clone.h>
+#include <lib/fit/function.h>
 
 #include "lib/fsl/socket/strings.h"
 #include "lib/fsl/vmo/strings.h"
-#include "lib/fxl/functional/closure.h"
 #include "peridot/lib/convert/convert.h"
 #include "third_party/murmurhash/murmurhash.h"
 
@@ -74,13 +74,13 @@ class FakePageCloud::WatcherContainer {
                    size_t next_commit_index);
 
   void SendCommits(fidl::VectorPtr<cloud_provider::Commit> commits,
-                   size_t next_commit_index, fxl::Closure on_ack);
+                   size_t next_commit_index, fit::closure on_ack);
 
   size_t NextCommitIndex() { return next_commit_index_; }
 
   bool WaitingForWatcherAck() { return waiting_for_watcher_ack_; }
 
-  void set_on_empty(fxl::Closure on_empty) {
+  void set_on_empty(fit::closure on_empty) {
     watcher_.set_error_handler(std::move(on_empty));
   }
 
@@ -102,7 +102,7 @@ FakePageCloud::WatcherContainer::WatcherContainer(
 
 void FakePageCloud::WatcherContainer::SendCommits(
     fidl::VectorPtr<cloud_provider::Commit> commits, size_t next_commit_index,
-    fxl::Closure on_ack) {
+    fit::closure on_ack) {
   FXL_DCHECK(watcher_.is_bound());
   FXL_DCHECK(!waiting_for_watcher_ack_);
   FXL_DCHECK(!commits->empty());

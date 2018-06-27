@@ -7,8 +7,9 @@
 
 #include <memory>
 
+#include <lib/fit/function.h>
+
 #include "lib/callback/auto_cleanable.h"
-#include "lib/fxl/functional/closure.h"
 #include "lib/fxl/memory/weak_ptr.h"
 #include "peridot/bin/ledger/app/page_snapshot_impl.h"
 #include "peridot/bin/ledger/coroutine/coroutine.h"
@@ -29,9 +30,9 @@ class BranchTracker : public storage::CommitWatcher {
                 PageManager* manager, storage::PageStorage* storage);
   ~BranchTracker() override;
 
-  void Init(std::function<void(Status)> on_done);
+  void Init(fit::function<void(Status)> on_done);
 
-  void set_on_empty(fxl::Closure on_empty_callback);
+  void set_on_empty(fit::closure on_empty_callback);
 
   // Returns the head commit of the currently tracked branch.
   const storage::CommitId& GetBranchHeadId();
@@ -46,7 +47,7 @@ class BranchTracker : public storage::CommitWatcher {
   // |StopTransaction| is called. |watchers_drained_callback| is called when all
   // watcher updates have been processed by the clients. This should be used by
   // |PageDelegate| when a transaction is in progress.
-  void StartTransaction(fxl::Closure watchers_drained_callback);
+  void StartTransaction(fit::closure watchers_drained_callback);
 
   // Informs the BranchTracker that a transaction is no longer in progress.
   // Resumes sending updates to registered watchers. This should be used by
@@ -74,7 +75,7 @@ class BranchTracker : public storage::CommitWatcher {
   PageManager* manager_;
   storage::PageStorage* storage_;
   callback::AutoCleanableSet<PageWatcherContainer> watchers_;
-  fxl::Closure on_empty_callback_;
+  fit::closure on_empty_callback_;
 
   bool transaction_in_progress_;
   // The following two variables hold the commit object and id correspondingly

@@ -6,6 +6,7 @@
 
 #include <fuchsia/ledger/internal/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
+#include <lib/fit/function.h>
 
 #include "gtest/gtest.h"
 #include "lib/app/cpp/startup_context.h"
@@ -72,7 +73,7 @@ class LedgerEndToEndTest : public gtest::RealLoopFixture {
     child_services.ConnectToService(controller_.NewRequest());
   }
 
-  void RegisterShutdownCallback(std::function<void()> callback) {
+  void RegisterShutdownCallback(fit::function<void()> callback) {
     ledger_shutdown_callbacks_.push_back(std::move(callback));
   }
 
@@ -135,7 +136,7 @@ class LedgerEndToEndTest : public gtest::RealLoopFixture {
 
  private:
   fuchsia::sys::ComponentControllerPtr ledger_controller_;
-  std::vector<std::function<void()>> ledger_shutdown_callbacks_;
+  std::vector<fit::function<void()>> ledger_shutdown_callbacks_;
   std::unique_ptr<fuchsia::sys::StartupContext> startup_context_;
 
  protected:

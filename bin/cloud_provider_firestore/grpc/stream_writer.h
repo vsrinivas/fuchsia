@@ -8,6 +8,7 @@
 #include <functional>
 
 #include <grpc++/grpc++.h>
+#include <lib/fit/function.h>
 
 #include "lib/fxl/logging.h"
 
@@ -41,12 +42,12 @@ class StreamWriter {
   //
   // This error is unrecoverable and means that the write call cannot be made
   // because the connection is broken.
-  void SetOnError(std::function<void()> on_error) {
+  void SetOnError(fit::function<void()> on_error) {
     on_error_ = std::move(on_error);
   }
 
   // Sets a callback which is called when a write operation succeeds.
-  void SetOnSuccess(std::function<void()> on_success) {
+  void SetOnSuccess(fit::function<void()> on_success) {
     on_success_ = std::move(on_success);
   }
 
@@ -83,11 +84,11 @@ class StreamWriter {
   bool write_is_pending_ = false;
 
   // Callables posted as CompletionQueue tags:
-  std::function<void(bool)> on_write_;
+  fit::function<void(bool)> on_write_;
 
   // Internal callables not posted on CompletionQueue:
-  std::function<void()> on_error_;
-  std::function<void()> on_success_;
+  fit::function<void()> on_error_;
+  fit::function<void()> on_success_;
 
   // Final status of the stream set by the server.
   grpc::Status status_;

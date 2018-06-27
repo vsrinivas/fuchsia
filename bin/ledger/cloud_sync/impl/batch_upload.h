@@ -10,8 +10,8 @@
 #include <vector>
 
 #include <fuchsia/ledger/cloud/cpp/fidl.h>
+#include <lib/fit/function.h>
 
-#include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/weak_ptr.h"
 #include "peridot/bin/ledger/encryption/public/encryption_service.h"
@@ -55,7 +55,7 @@ class BatchUpload {
               encryption::EncryptionService* encryption_service,
               cloud_provider::PageCloudPtr* page_cloud,
               std::vector<std::unique_ptr<const storage::Commit>> commits,
-              fxl::Closure on_done, std::function<void(ErrorType)> on_error,
+              fit::closure on_done, fit::function<void(ErrorType)> on_error,
               unsigned int max_concurrent_uploads = 10);
   ~BatchUpload();
 
@@ -99,8 +99,8 @@ class BatchUpload {
   encryption::EncryptionService* const encryption_service_;
   cloud_provider::PageCloudPtr* const page_cloud_;
   std::vector<std::unique_ptr<const storage::Commit>> commits_;
-  fxl::Closure on_done_;
-  std::function<void(ErrorType)> on_error_;
+  fit::closure on_done_;
+  fit::function<void(ErrorType)> on_error_;
   const unsigned int max_concurrent_uploads_;
 
   // All remaining object ids to be uploaded along with this batch of commits.

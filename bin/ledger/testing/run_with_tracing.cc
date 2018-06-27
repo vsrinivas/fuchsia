@@ -5,6 +5,7 @@
 #include "peridot/bin/ledger/testing/run_with_tracing.h"
 
 #include <lib/async/cpp/task.h>
+#include <lib/fit/function.h>
 #include <trace-provider/provider.h>
 #include <trace/event.h>
 #include <trace/observer.h>
@@ -14,12 +15,12 @@
 namespace test {
 namespace benchmark {
 
-int RunWithTracing(async::Loop* loop, std::function<void()> runnable) {
+int RunWithTracing(async::Loop* loop, fit::function<void()> runnable) {
   trace::TraceProvider trace_provider(loop->async());
   trace::TraceObserver trace_observer;
 
   bool started = false;
-  std::function<void()> on_trace_state_changed = [&runnable, &started]() {
+  auto on_trace_state_changed = [runnable = std::move(runnable), &started]() {
     if (TRACE_CATEGORY_ENABLED("benchmark") && !started) {
       started = true;
       runnable();
@@ -29,7 +30,7 @@ int RunWithTracing(async::Loop* loop, std::function<void()> runnable) {
   on_trace_state_changed();
 
   if (!started) {
-    trace_observer.Start(loop->async(), on_trace_state_changed);
+    trace_observer.Start(loop->async(), std::move(on_trace_state_changed));
   }
 
   int err = 0;

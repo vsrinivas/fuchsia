@@ -9,6 +9,7 @@
 
 #include <grpc++/grpc++.h>
 #include <grpc++/support/async_stream.h>
+#include <lib/fit/function.h>
 
 #include "gtest/gtest.h"
 #include "lib/callback/capture.h"
@@ -26,21 +27,21 @@ class TestIntegerStream : public IntegerStream {
 
   // IntegerStream:
   void StartCall(void* tag) override {
-    connect_tag = static_cast<std::function<void(bool)>*>(tag);
+    connect_tag = static_cast<fit::function<void(bool)>*>(tag);
   }
   void ReadInitialMetadata(void* /*tag*/) override {}
   void Read(int* message, void* tag) override {
     message_ptr = message;
-    read_tag = static_cast<std::function<void(bool)>*>(tag);
+    read_tag = static_cast<fit::function<void(bool)>*>(tag);
   }
   void Finish(grpc::Status* status, void* tag) override {
     status_ptr = status;
-    finish_tag = static_cast<std::function<void(bool)>*>(tag);
+    finish_tag = static_cast<fit::function<void(bool)>*>(tag);
   }
 
-  std::function<void(bool)>* connect_tag = nullptr;
-  std::function<void(bool)>* read_tag = nullptr;
-  std::function<void(bool)>* finish_tag = nullptr;
+  fit::function<void(bool)>* connect_tag = nullptr;
+  fit::function<void(bool)>* read_tag = nullptr;
+  fit::function<void(bool)>* finish_tag = nullptr;
 
   int* message_ptr = nullptr;
   grpc::Status* status_ptr = nullptr;

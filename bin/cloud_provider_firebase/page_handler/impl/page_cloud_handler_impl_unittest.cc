@@ -10,6 +10,7 @@
 #include <vector>
 
 #include <lib/async/cpp/task.h>
+#include <lib/fit/function.h>
 #include <lib/zx/socket.h>
 #include <lib/zx/vmo.h>
 #include <rapidjson/document.h>
@@ -44,7 +45,7 @@ class PageCloudHandlerImplTest : public gtest::TestLoopFixture,
   // gcs::CloudStorage:
   void UploadObject(std::string auth_token, const std::string& key,
                     fsl::SizedVmo data,
-                    std::function<void(gcs::Status)> callback) override {
+                    fit::function<void(gcs::Status)> callback) override {
     upload_auth_tokens_.push_back(std::move(auth_token));
     upload_keys_.push_back(key);
     upload_data_.push_back(std::move(data));
@@ -55,7 +56,7 @@ class PageCloudHandlerImplTest : public gtest::TestLoopFixture,
 
   void DownloadObject(
       std::string auth_token, const std::string& key,
-      std::function<void(gcs::Status status, uint64_t size, zx::socket data)>
+      fit::function<void(gcs::Status status, uint64_t size, zx::socket data)>
           callback) override {
     download_auth_tokens_.push_back(std::move(auth_token));
     download_keys_.push_back(key);
@@ -67,7 +68,7 @@ class PageCloudHandlerImplTest : public gtest::TestLoopFixture,
 
   // firebase::Firebase:
   void Get(const std::string& key, const std::vector<std::string>& query_params,
-           std::function<void(firebase::Status status,
+           fit::function<void(firebase::Status status,
                               std::unique_ptr<rapidjson::Value> value)>
                callback) override {
     get_keys_.push_back(key);
@@ -80,7 +81,7 @@ class PageCloudHandlerImplTest : public gtest::TestLoopFixture,
   void Put(const std::string& key,
            const std::vector<std::string>& /*query_params*/,
            const std::string& data,
-           std::function<void(firebase::Status status)> callback) override {
+           fit::function<void(firebase::Status status)> callback) override {
     put_keys_.push_back(key);
     put_data_.push_back(data);
     async::PostTask(dispatcher(), [callback = std::move(callback)] {
@@ -91,7 +92,7 @@ class PageCloudHandlerImplTest : public gtest::TestLoopFixture,
   void Patch(const std::string& key,
              const std::vector<std::string>& query_params,
              const std::string& data,
-             std::function<void(firebase::Status status)> callback) override {
+             fit::function<void(firebase::Status status)> callback) override {
     patch_keys_.push_back(key);
     patch_queries_.push_back(query_params);
     patch_data_.push_back(data);
@@ -103,7 +104,7 @@ class PageCloudHandlerImplTest : public gtest::TestLoopFixture,
   void Delete(
       const std::string& /*key*/,
       const std::vector<std::string>& /*query_params*/,
-      std::function<void(firebase::Status status)> /*callback*/) override {
+      fit::function<void(firebase::Status status)> /*callback*/) override {
     // Should never be called.
     FAIL();
   }

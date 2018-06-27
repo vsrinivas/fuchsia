@@ -4,6 +4,8 @@
 
 #include "peridot/bin/cloud_provider_firestore/firestore/listen_call.h"
 
+#include <lib/fit/function.h>
+
 #include "gtest/gtest.h"
 
 namespace cloud_provider_firestore {
@@ -15,28 +17,28 @@ class TestListenStream : public ListenStream {
 
   // ListenStream:
   void StartCall(void* tag) override {
-    connect_tag = static_cast<std::function<void(bool)>*>(tag);
+    connect_tag = static_cast<fit::function<void(bool)>*>(tag);
   }
   void ReadInitialMetadata(void* /*tag*/) override {}
   void Read(google::firestore::v1beta1::ListenResponse* /*response*/,
             void* tag) override {
-    read_tag = static_cast<std::function<void(bool)>*>(tag);
+    read_tag = static_cast<fit::function<void(bool)>*>(tag);
   }
   void Write(const google::firestore::v1beta1::ListenRequest& /*request*/,
              void* tag) override {
-    write_tag = static_cast<std::function<void(bool)>*>(tag);
+    write_tag = static_cast<fit::function<void(bool)>*>(tag);
   }
   void Write(const google::firestore::v1beta1::ListenRequest& /*request*/,
              grpc::WriteOptions /*options*/, void* /*tag*/) override {}
   void WritesDone(void* /*tag*/) override {}
   void Finish(grpc::Status* /*status*/, void* tag) override {
-    finish_tag = static_cast<std::function<void(bool)>*>(tag);
+    finish_tag = static_cast<fit::function<void(bool)>*>(tag);
   }
 
-  std::function<void(bool)>* connect_tag = nullptr;
-  std::function<void(bool)>* read_tag = nullptr;
-  std::function<void(bool)>* write_tag = nullptr;
-  std::function<void(bool)>* finish_tag = nullptr;
+  fit::function<void(bool)>* connect_tag = nullptr;
+  fit::function<void(bool)>* read_tag = nullptr;
+  fit::function<void(bool)>* write_tag = nullptr;
+  fit::function<void(bool)>* finish_tag = nullptr;
 
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(TestListenStream);

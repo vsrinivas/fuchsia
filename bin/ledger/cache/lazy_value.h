@@ -8,6 +8,8 @@
 #include <functional>
 #include <vector>
 
+#include <lib/fit/function.h>
+
 namespace cache {
 // Implements a self-populating lazy value.
 //
@@ -27,7 +29,7 @@ class LazyValue {
   //   It must return |ok_status| as a status when the request is successful.
   //   Any other return value is considered a failure.
   LazyValue(S ok_status,
-            std::function<void(std::function<void(S, V)>)> generator)
+            fit::function<void(fit::function<void(S, V)>)> generator)
       : ok_status_(ok_status),
         generator_(std::move(generator)),
         value_set_(false) {}
@@ -37,12 +39,12 @@ class LazyValue {
   // If the value is cached, |callback| will be called synchronously. Otherwise,
   // |generator| will be called, and depending on its implementation, |callback|
   // might be called synchronously or not.
-  void Get(const std::function<void(S, const V&)>& callback) {
+  void Get(fit::function<void(S, const V&)> callback) {
     if (value_set_) {
       callback(ok_status_, value_);
       return;
     }
-    requests_.push_back(callback);
+    requests_.push_back(std::move(callback));
     if (requests_.size() == 1) {
       generator_([this](S status, V value) {
         auto callbacks = std::move(requests_);
@@ -61,10 +63,10 @@ class LazyValue {
 
  private:
   S ok_status_;
-  std::function<void(std::function<void(S, V)>)> generator_;
+  fit::function<void(fit::function<void(S, V)>)> generator_;
   V value_;
   bool value_set_;
-  std::vector<std::function<void(S, const V&)>> requests_;
+  std::vector<fit::function<void(S, const V&)>> requests_;
 };
 
 }  // namespace cache

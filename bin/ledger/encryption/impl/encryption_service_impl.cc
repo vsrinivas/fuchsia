@@ -6,6 +6,7 @@
 
 #include <flatbuffers/flatbuffers.h>
 #include <lib/async/cpp/task.h>
+#include <lib/fit/function.h>
 
 #include "lib/callback/scoped_callback.h"
 #include "lib/fsl/vmo/strings.h"
@@ -68,7 +69,7 @@ class EncryptionServiceImpl::KeyService {
 
   // Retrieves the master key.
   void GetMasterKey(uint32_t key_index,
-                    std::function<void(std::string)> callback) {
+                    fit::function<void(std::string)> callback) {
     async::PostTask(async_, callback::MakeScoped(
                                 weak_factory_.GetWeakPtr(),
                                 [key_index, callback = std::move(callback)]() {
@@ -84,7 +85,7 @@ class EncryptionServiceImpl::KeyService {
   // one and associates it with the id before returning.
   void GetReferenceKey(const std::string& namespace_id,
                        const std::string& reference_key_id,
-                       std::function<void(const std::string&)> callback) {
+                       fit::function<void(const std::string&)> callback) {
     std::string result =
         HMAC256KDF(fxl::Concatenate({namespace_id, reference_key_id}),
                    kRandomlyGeneratedKeySize);
@@ -127,7 +128,7 @@ storage::ObjectIdentifier EncryptionServiceImpl::MakeObjectIdentifier(
 
 void EncryptionServiceImpl::EncryptCommit(
     std::string commit_storage,
-    std::function<void(Status, std::string)> callback) {
+    fit::function<void(Status, std::string)> callback) {
   size_t key_index = GetCurrentKeyIndex();
 
   Encrypt(key_index, std::move(commit_storage),
@@ -152,7 +153,7 @@ void EncryptionServiceImpl::EncryptCommit(
 
 void EncryptionServiceImpl::DecryptCommit(
     convert::ExtendedStringView storage_bytes,
-    std::function<void(Status, std::string)> callback) {
+    fit::function<void(Status, std::string)> callback) {
   if (!CheckValidSerialization(storage_bytes)) {
     FXL_LOG(WARNING) << "Received invalid data. Cannot decrypt commit.";
     callback(Status::INVALID_ARGUMENT, "");
@@ -170,7 +171,7 @@ void EncryptionServiceImpl::DecryptCommit(
 
 void EncryptionServiceImpl::GetObjectName(
     storage::ObjectIdentifier object_identifier,
-    std::function<void(Status, std::string)> callback) {
+    fit::function<void(Status, std::string)> callback) {
   GetReferenceKey(
       object_identifier, [object_identifier, callback = std::move(callback)](
                              const std::string& reference_key) {
@@ -183,7 +184,7 @@ void EncryptionServiceImpl::GetObjectName(
 
 void EncryptionServiceImpl::EncryptObject(
     storage::ObjectIdentifier object_identifier, fsl::SizedVmo content,
-    std::function<void(Status, std::string)> callback) {
+    fit::function<void(Status, std::string)> callback) {
   std::string data;
   if (!fsl::StringFromVmo(content, &data)) {
     callback(Status::IO_ERROR, "");
@@ -194,7 +195,7 @@ void EncryptionServiceImpl::EncryptObject(
 
 void EncryptionServiceImpl::DecryptObject(
     storage::ObjectIdentifier object_identifier, std::string encrypted_data,
-    std::function<void(Status, std::string)> callback) {
+    fit::function<void(Status, std::string)> callback) {
   Decrypt(object_identifier.key_index, std::move(encrypted_data),
           std::move(callback));
 }
@@ -205,7 +206,7 @@ uint32_t EncryptionServiceImpl::GetCurrentKeyIndex() {
 
 void EncryptionServiceImpl::GetReferenceKey(
     storage::ObjectIdentifier object_identifier,
-    const std::function<void(const std::string&)>& callback) {
+    fit::function<void(const std::string&)> callback) {
   std::string deletion_scope_seed;
   if (object_identifier.deletion_scope_id == kPerObjectDeletionScopedId) {
     deletion_scope_seed = object_identifier.object_digest;
@@ -224,7 +225,7 @@ void EncryptionServiceImpl::GetReferenceKey(
 
 void EncryptionServiceImpl::Encrypt(
     size_t key_index, std::string data,
-    std::function<void(Status, std::string)> callback) {
+    fit::function<void(Status, std::string)> callback) {
   master_keys_.Get(key_index,
                    [data = std::move(data), callback = std::move(callback)](
                        Status status, const std::string& key) {
@@ -243,7 +244,7 @@ void EncryptionServiceImpl::Encrypt(
 
 void EncryptionServiceImpl::Decrypt(
     size_t key_index, std::string encrypted_data,
-    std::function<void(Status, std::string)> callback) {
+    fit::function<void(Status, std::string)> callback) {
   master_keys_.Get(key_index, [encrypted_data = std::move(encrypted_data),
                                callback = std::move(callback)](
                                   Status status, const std::string& key) {
@@ -261,7 +262,7 @@ void EncryptionServiceImpl::Decrypt(
 }
 
 void EncryptionServiceImpl::FetchMasterKey(
-    size_t key_index, std::function<void(Status, std::string)> callback) {
+    size_t key_index, fit::function<void(Status, std::string)> callback) {
   key_service_->GetMasterKey(
       key_index, [callback = std::move(callback)](std::string master_key) {
         callback(Status::OK, std::move(master_key));
@@ -269,7 +270,7 @@ void EncryptionServiceImpl::FetchMasterKey(
 }
 
 void EncryptionServiceImpl::FetchNamespaceKey(
-    size_t key_index, std::function<void(Status, std::string)> callback) {
+    size_t key_index, fit::function<void(Status, std::string)> callback) {
   master_keys_.Get(
       key_index, [this, callback = std::move(callback)](
                      Status status, const std::string& master_key) {
@@ -285,12 +286,12 @@ void EncryptionServiceImpl::FetchNamespaceKey(
 
 void EncryptionServiceImpl::FetchReferenceKey(
     DeletionScopeSeed deletion_scope_seed,
-    std::function<void(Status, std::string)> callback) {
+    fit::function<void(Status, std::string)> callback) {
   namespace_keys_.Get(
       deletion_scope_seed.first,
       [this, deletion_scope_seed = std::move(deletion_scope_seed),
-       callback = std::move(callback)](Status status,
-                                       const std::string& namespace_key) {
+       callback = std::move(callback)](
+          Status status, const std::string& namespace_key) mutable {
         if (status != Status::OK) {
           callback(status, "");
           return;

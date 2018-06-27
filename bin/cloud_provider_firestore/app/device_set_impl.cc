@@ -5,6 +5,7 @@
 #include "peridot/bin/cloud_provider_firestore/app/device_set_impl.h"
 
 #include <google/firestore/v1beta1/firestore.pb.h>
+#include <lib/fit/function.h>
 
 #include "lib/callback/scoped_callback.h"
 #include "lib/callback/waiter.h"
@@ -80,7 +81,7 @@ DeviceSetImpl::DeviceSetImpl(
 DeviceSetImpl::~DeviceSetImpl() {}
 
 void DeviceSetImpl::ScopedGetCredentials(
-    std::function<void(std::shared_ptr<grpc::CallCredentials>)> callback) {
+    fit::function<void(std::shared_ptr<grpc::CallCredentials>)> callback) {
   credentials_provider_->GetCredentials(callback::MakeScoped(
       weak_ptr_factory_.GetWeakPtr(), std::move(callback)));
 }
@@ -91,19 +92,20 @@ void DeviceSetImpl::CheckFingerprint(fidl::VectorPtr<uint8_t> fingerprint,
   request.set_name(
       GetDevicePath(user_path_, convert::ToStringView(fingerprint)));
 
-  ScopedGetCredentials([this, request = std::move(request),
-                        callback](auto call_credentials) mutable {
-    firestore_service_->GetDocument(
-        std::move(request), std::move(call_credentials),
-        [callback](auto status, auto result) {
-          if (LogGrpcRequestError(status)) {
-            callback(ConvertGrpcStatus(status.error_code()));
-            return;
-          }
+  ScopedGetCredentials(
+      [this, request = std::move(request),
+       callback = std::move(callback)](auto call_credentials) mutable {
+        firestore_service_->GetDocument(
+            std::move(request), std::move(call_credentials),
+            [callback = std::move(callback)](auto status, auto result) {
+              if (LogGrpcRequestError(status)) {
+                callback(ConvertGrpcStatus(status.error_code()));
+                return;
+              }
 
-          callback(cloud_provider::Status::OK);
-        });
-  });
+              callback(cloud_provider::Status::OK);
+            });
+      });
 }
 
 void DeviceSetImpl::SetFingerprint(fidl::VectorPtr<uint8_t> fingerprint,
@@ -118,18 +120,19 @@ void DeviceSetImpl::SetFingerprint(fidl::VectorPtr<uint8_t> fingerprint,
   exists.set_boolean_value(true);
   (*(request.mutable_document()->mutable_fields()))[kExistsKey] = exists;
 
-  ScopedGetCredentials([this, request = std::move(request),
-                        callback](auto call_credentials) mutable {
-    firestore_service_->CreateDocument(
-        std::move(request), std::move(call_credentials),
-        [callback](auto status, auto result) {
-          if (LogGrpcRequestError(status)) {
-            callback(ConvertGrpcStatus(status.error_code()));
-            return;
-          }
-          callback(cloud_provider::Status::OK);
-        });
-  });
+  ScopedGetCredentials(
+      [this, request = std::move(request),
+       callback = std::move(callback)](auto call_credentials) mutable {
+        firestore_service_->CreateDocument(
+            std::move(request), std::move(call_credentials),
+            [callback = std::move(callback)](auto status, auto result) {
+              if (LogGrpcRequestError(status)) {
+                callback(ConvertGrpcStatus(status.error_code()));
+                return;
+              }
+              callback(cloud_provider::Status::OK);
+            });
+      });
 }
 
 void DeviceSetImpl::SetWatcher(
@@ -138,7 +141,7 @@ void DeviceSetImpl::SetWatcher(
     SetWatcherCallback callback) {
   watcher_ = watcher.Bind();
   watched_fingerprint_ = convert::ToString(fingerprint);
-  set_watcher_callback_ = callback;
+  set_watcher_callback_ = std::move(callback);
 
   ScopedGetCredentials([this](auto call_credentials) mutable {
     // Initiate the listen RPC. We will receive a call on OnConnected() when the
@@ -154,7 +157,8 @@ void DeviceSetImpl::Erase(EraseCallback callback) {
   request.set_collection_id(kDeviceCollection);
 
   ScopedGetCredentials([this, request = std::move(request),
-                        callback = callback](auto call_credentials) mutable {
+                        callback = std::move(callback)](
+                           auto call_credentials) mutable {
     firestore_service_->ListDocuments(
         std::move(request), call_credentials,
         [this, call_credentials, callback = std::move(callback)](

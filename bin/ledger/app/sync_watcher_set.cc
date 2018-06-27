@@ -4,7 +4,7 @@
 
 #include "peridot/bin/ledger/app/sync_watcher_set.h"
 
-#include "lib/fxl/functional/closure.h"
+#include <lib/fit/function.h>
 
 namespace ledger {
 namespace {
@@ -64,7 +64,7 @@ class SyncWatcherSet::SyncWatcherContainer
     SendIfPending();
   }
 
-  void set_on_empty(fxl::Closure on_empty_callback) {
+  void set_on_empty(fit::closure on_empty_callback) {
     if (on_empty_callback) {
       watcher_.set_error_handler(std::move(on_empty_callback));
     }

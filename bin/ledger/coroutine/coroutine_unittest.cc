@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/fit/function.h>
+
 #include "gtest/gtest.h"
 #include "lib/fxl/functional/auto_call.h"
 #include "lib/fxl/functional/make_copyable.h"
@@ -87,8 +89,8 @@ TEST(Coroutine, ManyRoutines) {
 TEST(Coroutine, AsyncCall) {
   CoroutineServiceImpl coroutine_service;
 
-  std::function<void(size_t)> callback;
-  auto callable = [&callback](std::function<void(size_t)> called_callback) {
+  fit::function<void(size_t)> callback;
+  auto callable = [&callback](fit::function<void(size_t)> called_callback) {
     callback = std::move(called_callback);
   };
 
@@ -120,7 +122,7 @@ TEST(Coroutine, SynchronousAsyncCall) {
         EXPECT_EQ(
             ContinuationStatus::OK,
             SyncCall(handler,
-                     [](std::function<void(size_t)> callback) { callback(1); },
+                     [](fit::function<void(size_t)> callback) { callback(1); },
                      &received_value));
         UseStack();
       });
@@ -133,7 +135,7 @@ TEST(Coroutine, DroppedAsyncCall) {
   bool ended = false;
   coroutine_service.StartCoroutine([&ended](CoroutineHandler* handler) {
     EXPECT_EQ(ContinuationStatus::INTERRUPTED,
-              SyncCall(handler, [](std::function<void()> callback) {
+              SyncCall(handler, [](fit::function<void()> callback) {
                 // |callback| is dropped here.
               }));
     ended = true;
@@ -145,14 +147,14 @@ TEST(Coroutine, DroppedAsyncCallAsynchronously) {
   CoroutineServiceImpl coroutine_service;
 
   bool ended = false;
-  std::function<void()> callback;
+  fit::function<void()> callback;
 
   coroutine_service.StartCoroutine([&ended,
                                     &callback](CoroutineHandler* handler) {
     EXPECT_EQ(
         ContinuationStatus::INTERRUPTED,
-        SyncCall(handler, [&callback](std::function<void()> received_callback) {
-          callback = received_callback;
+        SyncCall(handler, [&callback](fit::function<void()> received_callback) {
+          callback = std::move(received_callback);
         }));
     ended = true;
   });
@@ -166,7 +168,7 @@ TEST(Coroutine, DroppedAsyncCallAsynchronously) {
 
 TEST(Coroutine, RunAndDroppedAsyncCallAfterCoroutineDeletion) {
   bool ended = false;
-  std::function<void()> callback;
+  fit::function<void()> callback;
   {
     CoroutineServiceImpl coroutine_service;
 
@@ -174,8 +176,8 @@ TEST(Coroutine, RunAndDroppedAsyncCallAfterCoroutineDeletion) {
                                       &callback](CoroutineHandler* handler) {
       EXPECT_EQ(ContinuationStatus::INTERRUPTED,
                 SyncCall(handler,
-                         [&callback](std::function<void()> received_callback) {
-                           callback = received_callback;
+                         [&callback](fit::function<void()> received_callback) {
+                           callback = std::move(received_callback);
                          }));
       ended = true;
     });
@@ -266,8 +268,8 @@ TEST(Coroutine, ResumeCoroutineInOtherCoroutineDestructor) {
 TEST(Coroutine, AsyncCallCapture) {
   CoroutineServiceImpl coroutine_service;
 
-  std::function<void(size_t)> callback;
-  auto callable = [&callback](std::function<void(size_t)> called_callback) {
+  fit::function<void(size_t)> callback;
+  auto callable = [&callback](fit::function<void(size_t)> called_callback) {
     callback = std::move(called_callback);
   };
 

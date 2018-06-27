@@ -9,9 +9,10 @@
 #include <memory>
 #include <string>
 
+#include <lib/fit/function.h>
+
 #include "lib/callback/destruction_sentinel.h"
 #include "lib/fsl/socket/socket_drainer.h"
-#include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
 
 namespace socket {
@@ -22,10 +23,9 @@ class SocketDrainerClient : public fsl::SocketDrainer::Client {
 
   ~SocketDrainerClient() override;
 
-  void Start(zx::socket source,
-             const std::function<void(std::string)>& callback);
+  void Start(zx::socket source, fit::function<void(std::string)> callback);
 
-  void set_on_empty(fxl::Closure on_empty_callback) {
+  void set_on_empty(fit::closure on_empty_callback) {
     on_empty_callback_ = std::move(on_empty_callback);
   }
 
@@ -34,10 +34,10 @@ class SocketDrainerClient : public fsl::SocketDrainer::Client {
 
   void OnDataComplete() override;
 
-  std::function<void(std::string)> callback_;
+  fit::function<void(std::string)> callback_;
   std::string data_;
   fsl::SocketDrainer drainer_;
-  fxl::Closure on_empty_callback_;
+  fit::closure on_empty_callback_;
   callback::DestructionSentinel destruction_sentinel_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(SocketDrainerClient);

@@ -7,6 +7,7 @@
 #include <map>
 
 #include <lib/async/cpp/task.h>
+#include <lib/fit/function.h>
 
 #include "gtest/gtest.h"
 #include "lib/callback/capture.h"
@@ -41,17 +42,18 @@ class TestPageStorage : public storage::PageStorageEmptyImpl {
   void AddCommitsFromSync(
       std::vector<storage::PageStorage::CommitIdAndBytes> ids_and_bytes,
       storage::ChangeSource source,
-      std::function<void(storage::Status status)> callback) override {
+      fit::function<void(storage::Status status)> callback) override {
     ASSERT_EQ(storage::ChangeSource::CLOUD, source);
     if (should_fail_add_commit_from_sync) {
-      async::PostTask(async_,
-                      [callback]() { callback(storage::Status::IO_ERROR); });
+      async::PostTask(async_, [callback = std::move(callback)]() {
+        callback(storage::Status::IO_ERROR);
+      });
       return;
     }
     async::PostTask(
         async_,
         fxl::MakeCopyable([this, ids_and_bytes = std::move(ids_and_bytes),
-                           callback]() mutable {
+                           callback = std::move(callback)]() mutable {
           for (auto& commit : ids_and_bytes) {
             received_commits[std::move(commit.id)] = std::move(commit.bytes);
           }
@@ -60,9 +62,11 @@ class TestPageStorage : public storage::PageStorageEmptyImpl {
   }
 
   void SetSyncMetadata(fxl::StringView key, fxl::StringView value,
-                       std::function<void(storage::Status)> callback) override {
+                       fit::function<void(storage::Status)> callback) override {
     sync_metadata[key.ToString()] = value.ToString();
-    async::PostTask(async_, [callback]() { callback(storage::Status::OK); });
+    async::PostTask(async_, [callback = std::move(callback)]() {
+      callback(storage::Status::OK);
+    });
   }
 
   bool should_fail_add_commit_from_sync = false;

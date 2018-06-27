@@ -4,6 +4,8 @@
 
 #include "peridot/lib/testing/test_with_ledger.h"
 
+#include <lib/fit/function.h>
+
 #include "gtest/gtest.h"
 #include "peridot/lib/ledger_client/ledger_client.h"
 

@@ -6,6 +6,8 @@
 
 #include <utility>
 
+#include <lib/fit/function.h>
+
 #include "lib/fxl/random/rand.h"
 #include "peridot/bin/ledger/storage/fake/fake_commit.h"
 #include "peridot/bin/ledger/storage/public/constants.h"
@@ -61,7 +63,7 @@ Status FakeJournalDelegate::Delete(convert::ExtendedStringView key) {
 }
 
 void FakeJournalDelegate::Commit(
-    std::function<void(Status, std::unique_ptr<const storage::Commit>)>
+    fit::function<void(Status, std::unique_ptr<const storage::Commit>)>
         callback) {
   if (is_committed_ || is_rolled_back_) {
     callback(Status::ILLEGAL_STATE, nullptr);

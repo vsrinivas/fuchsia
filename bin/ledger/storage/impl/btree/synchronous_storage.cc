@@ -4,6 +4,8 @@
 
 #include "peridot/bin/ledger/storage/impl/btree/synchronous_storage.h"
 
+#include <lib/fit/function.h>
+
 namespace storage {
 namespace btree {
 
@@ -18,7 +20,7 @@ Status SynchronousStorage::TreeNodeFromIdentifier(
   if (coroutine::SyncCall(
           handler_,
           [this, &object_identifier](
-              std::function<void(Status, std::unique_ptr<const TreeNode>)>
+              fit::function<void(Status, std::unique_ptr<const TreeNode>)>
                   callback) {
             TreeNode::FromIdentifier(page_storage_, object_identifier,
                                      std::move(callback));
@@ -41,7 +43,7 @@ Status SynchronousStorage::TreeNodesFromIdentifiers(
   Status status;
   if (coroutine::SyncCall(
           handler_,
-          [waiter](std::function<void(
+          [waiter](fit::function<void(
                        Status, std::vector<std::unique_ptr<const TreeNode>>)>
                        callback) { waiter->Finalize(std::move(callback)); },
           &status, result) == coroutine::ContinuationStatus::INTERRUPTED) {
@@ -58,7 +60,7 @@ Status SynchronousStorage::TreeNodeFromEntries(
   if (coroutine::SyncCall(
           handler_,
           [this, level, &entries,
-           &children](std::function<void(Status, ObjectIdentifier)> callback) {
+           &children](fit::function<void(Status, ObjectIdentifier)> callback) {
             TreeNode::FromEntries(page_storage_, level, entries, children,
                                   std::move(callback));
           },

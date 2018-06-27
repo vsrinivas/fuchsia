@@ -4,12 +4,14 @@
 
 #include "peridot/bin/cloud_provider_firebase/page_handler/testing/page_cloud_handler_empty_impl.h"
 
+#include <lib/fit/function.h>
+
 #include "lib/fxl/logging.h"
 
 namespace cloud_provider_firebase {
 void PageCloudHandlerEmptyImpl::AddCommits(
     const std::string& /*auth_token*/, std::vector<Commit> /*commits*/,
-    const std::function<void(Status)>& /*callback*/) {
+    fit::function<void(Status)> /*callback*/) {
   FXL_NOTIMPLEMENTED();
 }
 
@@ -25,19 +27,19 @@ void PageCloudHandlerEmptyImpl::UnwatchCommits(CommitWatcher* /*watcher*/) {
 
 void PageCloudHandlerEmptyImpl::GetCommits(
     const std::string& /*auth_token*/, const std::string& /*min_timestamp*/,
-    std::function<void(Status, std::vector<Record>)> /*callback*/) {
+    fit::function<void(Status, std::vector<Record>)> /*callback*/) {
   FXL_NOTIMPLEMENTED();
 }
 
 void PageCloudHandlerEmptyImpl::AddObject(
     const std::string& /*auth_token*/, ObjectDigestView /*object_digest*/,
-    fsl::SizedVmo /*data*/, std::function<void(Status)> /*callback*/) {
+    fsl::SizedVmo /*data*/, fit::function<void(Status)> /*callback*/) {
   FXL_NOTIMPLEMENTED();
 }
 
 void PageCloudHandlerEmptyImpl::GetObject(
     const std::string& /*auth_token*/, ObjectDigestView /*object_digest*/,
-    std::function<void(Status status, uint64_t size, zx::socket data)>
+    fit::function<void(Status status, uint64_t size, zx::socket data)>
     /*callback*/) {
   FXL_NOTIMPLEMENTED();
 }

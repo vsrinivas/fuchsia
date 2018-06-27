@@ -4,6 +4,8 @@
 
 #include "peridot/bin/cloud_provider_firebase/device_set/cloud_device_set_impl.h"
 
+#include <lib/fit/function.h>
+
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/concatenate.h"
 
@@ -41,7 +43,7 @@ CloudDeviceSetImpl::~CloudDeviceSetImpl() {
 
 void CloudDeviceSetImpl::CheckFingerprint(
     std::string auth_token, std::string fingerprint,
-    std::function<void(Status)> callback) {
+    fit::function<void(Status)> callback) {
   auto query_params = QueryParamsFromAuthToken(auth_token);
 
   user_firebase_->Get(
@@ -66,7 +68,7 @@ void CloudDeviceSetImpl::CheckFingerprint(
 
 void CloudDeviceSetImpl::SetFingerprint(std::string auth_token,
                                         std::string fingerprint,
-                                        std::function<void(Status)> callback) {
+                                        fit::function<void(Status)> callback) {
   auto query_params = QueryParamsFromAuthToken(auth_token);
 
   user_firebase_->Put(
@@ -84,7 +86,7 @@ void CloudDeviceSetImpl::SetFingerprint(std::string auth_token,
 
 void CloudDeviceSetImpl::WatchFingerprint(
     std::string auth_token, std::string fingerprint,
-    std::function<void(Status)> callback) {
+    fit::function<void(Status)> callback) {
   if (firebase_watcher_set_) {
     ResetWatcher();
   }
@@ -93,11 +95,11 @@ void CloudDeviceSetImpl::WatchFingerprint(
 
   user_firebase_->Watch(GetDeviceMapKey(fingerprint), query_params, this);
   firebase_watcher_set_ = true;
-  watch_callback_ = callback;
+  watch_callback_ = std::move(callback);
 }
 
 void CloudDeviceSetImpl::EraseAllFingerprints(
-    std::string auth_token, std::function<void(Status)> callback) {
+    std::string auth_token, fit::function<void(Status)> callback) {
   auto query_params = QueryParamsFromAuthToken(auth_token);
 
   user_firebase_->Delete(

@@ -8,6 +8,8 @@
 #include <functional>
 #include <memory>
 
+#include <lib/fit/function.h>
+
 #include "lib/fxl/memory/ref_counted.h"
 #include "peridot/bin/ledger/coroutine/coroutine.h"
 #include "peridot/bin/ledger/fidl/include/types.h"
@@ -19,7 +21,7 @@ void FindCommonAncestor(
     coroutine::CoroutineService* coroutine_service,
     storage::PageStorage* storage, std::unique_ptr<const storage::Commit> head1,
     std::unique_ptr<const storage::Commit> head2,
-    std::function<void(Status, std::unique_ptr<const storage::Commit>)>
+    fit::function<void(Status, std::unique_ptr<const storage::Commit>)>
         callback);
 
 }  // namespace ledger

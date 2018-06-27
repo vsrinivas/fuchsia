@@ -5,8 +5,8 @@
 #include "peridot/bin/cloud_provider_firestore/app/factory_impl.h"
 
 #include <grpc++/grpc++.h>
+#include <lib/fit/function.h>
 
-#include "lib/fxl/functional/closure.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
 #include "peridot/bin/cloud_provider_firestore/firestore/firestore_service_impl.h"
@@ -30,13 +30,13 @@ FactoryImpl::FactoryImpl(async_t* async,
 
 FactoryImpl::~FactoryImpl() {}
 
-void FactoryImpl::ShutDown(fxl::Closure callback) {
+void FactoryImpl::ShutDown(fit::closure callback) {
   if (providers_.empty()) {
     callback();
     return;
   }
 
-  providers_.set_on_empty(callback);
+  providers_.set_on_empty(std::move(callback));
   for (auto& cloud_provider : providers_) {
     cloud_provider.ShutDownAndReportEmpty();
   }

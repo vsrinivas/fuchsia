@@ -8,13 +8,13 @@
 #include <utility>
 
 #include <lib/async/cpp/task.h>
+#include <lib/fit/function.h>
 
 #include "gtest/gtest.h"
 #include "lib/callback/cancellable_helper.h"
 #include "lib/callback/capture.h"
 #include "lib/callback/set_when_called.h"
 #include "lib/fxl/files/scoped_temp_dir.h"
-#include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
 #include "peridot/bin/ledger/app/constants.h"
 #include "peridot/bin/ledger/app/merging/last_one_wins_merge_strategy.h"
@@ -33,17 +33,17 @@ class RecordingTestStrategy : public MergeStrategy {
  public:
   RecordingTestStrategy() {}
   ~RecordingTestStrategy() override {}
-  void SetOnError(fxl::Closure on_error) override {
+  void SetOnError(fit::closure on_error) override {
     this->on_error = std::move(on_error);
   }
 
-  void SetOnMerge(fxl::Closure on_merge) { on_merge_ = on_merge; }
+  void SetOnMerge(fit::closure on_merge) { on_merge_ = std::move(on_merge); }
 
   void Merge(storage::PageStorage* /*storage*/, PageManager* /*page_manager*/,
              std::unique_ptr<const storage::Commit> /*head_1*/,
              std::unique_ptr<const storage::Commit> /*head_2*/,
              std::unique_ptr<const storage::Commit> /*ancestor*/,
-             std::function<void(Status)> callback) override {
+             fit::function<void(Status)> callback) override {
     this->callback = std::move(callback);
     merge_calls++;
     if (on_merge_) {
@@ -53,14 +53,14 @@ class RecordingTestStrategy : public MergeStrategy {
 
   void Cancel() override { cancel_calls++; }
 
-  fxl::Closure on_error;
+  fit::closure on_error;
 
-  std::function<void(Status)> callback;
+  fit::function<void(Status)> callback;
   uint32_t merge_calls = 0;
   uint32_t cancel_calls = 0;
 
  private:
-  fxl::Closure on_merge_;
+  fit::closure on_merge_;
 };
 
 class MergeResolverTest : public test::TestWithPageStorage {
@@ -79,13 +79,13 @@ class MergeResolverTest : public test::TestWithPageStorage {
 
   storage::CommitId CreateCommit(
       storage::CommitIdView parent_id,
-      std::function<void(storage::Journal*)> contents) {
+      fit::function<void(storage::Journal*)> contents) {
     return CreateCommit(page_storage_.get(), parent_id, std::move(contents));
   }
 
   storage::CommitId CreateCommit(
       storage::PageStorage* storage, storage::CommitIdView parent_id,
-      std::function<void(storage::Journal*)> contents) {
+      fit::function<void(storage::Journal*)> contents) {
     bool called;
     storage::Status status;
     std::unique_ptr<storage::Journal> journal;
@@ -109,7 +109,7 @@ class MergeResolverTest : public test::TestWithPageStorage {
 
   storage::CommitId CreateMergeCommit(
       storage::CommitIdView parent_id1, storage::CommitIdView parent_id2,
-      std::function<void(storage::Journal*)> contents) {
+      fit::function<void(storage::Journal*)> contents) {
     return CreateMergeCommit(page_storage_.get(), parent_id1, parent_id2,
                              std::move(contents));
   }
@@ -117,7 +117,7 @@ class MergeResolverTest : public test::TestWithPageStorage {
   storage::CommitId CreateMergeCommit(
       storage::PageStorage* storage, storage::CommitIdView parent_id1,
       storage::CommitIdView parent_id2,
-      std::function<void(storage::Journal*)> contents) {
+      fit::function<void(storage::Journal*)> contents) {
     bool called;
     storage::Status status;
     std::unique_ptr<storage::Journal> journal;
@@ -207,13 +207,13 @@ class VerifyingMergeStrategy : public MergeStrategy {
         ancestor_(std::move(ancestor)) {}
   ~VerifyingMergeStrategy() override {}
 
-  void SetOnError(std::function<void()> /*on_error*/) override {}
+  void SetOnError(fit::function<void()> /*on_error*/) override {}
 
   void Merge(storage::PageStorage* /*storage*/, PageManager* /*page_manager*/,
              std::unique_ptr<const storage::Commit> head_1,
              std::unique_ptr<const storage::Commit> head_2,
              std::unique_ptr<const storage::Commit> ancestor,
-             std::function<void(Status)> callback) override {
+             fit::function<void(Status)> callback) override {
     EXPECT_EQ(ancestor_, ancestor->GetId());
     storage::CommitId actual_head1_id = head_1->GetId();
     if (actual_head1_id != head1_ && actual_head1_id != head2_) {

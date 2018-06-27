@@ -6,6 +6,7 @@
 
 #include <iostream>
 
+#include <lib/fit/function.h>
 #include <lib/zx/time.h>
 #include <trace/event.h>
 

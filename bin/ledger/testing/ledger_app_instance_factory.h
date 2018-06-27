@@ -10,6 +10,7 @@
 
 #include <fuchsia/ledger/cloud/cpp/fidl.h>
 #include <fuchsia/ledger/internal/cpp/fidl.h>
+#include <lib/fit/function.h>
 
 #include "lib/fxl/files/scoped_temp_dir.h"
 #include "lib/fxl/macros.h"
@@ -39,7 +40,7 @@ class LedgerAppInstanceFactory {
    public:
     CallbackWaiter() {}
     virtual ~CallbackWaiter() {}
-    virtual std::function<void()> GetCallback() = 0;
+    virtual fit::function<void()> GetCallback() = 0;
     virtual void RunUntilCalled() = 0;
     // Returns whether the next expected calback has not already been called. If
     // |false|, |RunUntilCalled| will return immediately.

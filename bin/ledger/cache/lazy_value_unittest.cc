@@ -4,6 +4,8 @@
 
 #include "peridot/bin/ledger/cache/lazy_value.h"
 
+#include <lib/fit/function.h>
+
 #include "gtest/gtest.h"
 #include "lib/callback/capture.h"
 #include "lib/callback/set_when_called.h"
@@ -11,7 +13,7 @@
 namespace cache {
 namespace {
 TEST(LazyValueTest, SimpleGet) {
-  auto generator = [](std::function<void(size_t, size_t)> callback) {
+  auto generator = [](fit::function<void(size_t, size_t)> callback) {
     callback(0, 1);
   };
 
@@ -29,7 +31,7 @@ TEST(LazyValueTest, SimpleGet) {
 
 TEST(LazyValueTest, FailingGenerator) {
   size_t nb_called = 0;
-  auto generator = [&nb_called](std::function<void(size_t, size_t)> callback) {
+  auto generator = [&nb_called](fit::function<void(size_t, size_t)> callback) {
     ++nb_called;
     callback(1, 0);
   };
@@ -55,11 +57,11 @@ TEST(LazyValueTest, FailingGenerator) {
 
 TEST(LazyValueTest, CacheCallback) {
   size_t nb_called = 0;
-  std::function<void(size_t, size_t)> generator_callback;
+  fit::function<void(size_t, size_t)> generator_callback;
   auto generator = [&nb_called, &generator_callback](
-                       std::function<void(size_t, size_t)> callback) {
+                       fit::function<void(size_t, size_t)> callback) {
     ++nb_called;
-    generator_callback = callback;
+    generator_callback = std::move(callback);
   };
 
   LazyValue<size_t, size_t> cache(0, generator);

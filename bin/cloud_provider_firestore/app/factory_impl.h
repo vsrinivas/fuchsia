@@ -9,10 +9,10 @@
 #include <fuchsia/ledger/cloud/firestore/cpp/fidl.h>
 #include <fuchsia/modular/auth/cpp/fidl.h>
 #include <lib/async/dispatcher.h>
+#include <lib/fit/function.h>
 
 #include "lib/callback/auto_cleanable.h"
 #include "lib/callback/cancellable.h"
-#include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/ref_ptr.h"
 #include "peridot/bin/cloud_provider_firestore/app/cloud_provider_impl.h"
@@ -31,7 +31,7 @@ class FactoryImpl : public Factory {
   //
   // It is only valid to delete the factory after the completion callback is
   // called.
-  void ShutDown(fxl::Closure callback);
+  void ShutDown(fit::closure callback);
 
  private:
   // Factory:

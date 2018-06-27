@@ -35,6 +35,7 @@ source_set("unittests") {
     ":context",
     "//garnet/public/lib/fxl",
     "//third_party/googletest:gtest",
+    "//zircon/public/lib/fit",
   ]
 
   configs += [ "//peridot/bin/ledger:ledger_config" ]

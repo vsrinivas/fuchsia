@@ -8,6 +8,8 @@
 #include <ostream>
 #include <string>
 
+#include <lib/fit/function.h>
+
 // gtest matchers are in gmock.
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -25,7 +27,7 @@ class FakeUserIdProvider : public p2p_provider::UserIdProvider {
   explicit FakeUserIdProvider(std::string user_id)
       : user_id_(std::move(user_id)) {}
 
-  void GetUserId(std::function<void(Status, std::string)> callback) override {
+  void GetUserId(fit::function<void(Status, std::string)> callback) override {
     callback(Status::OK, user_id_);
   };
 

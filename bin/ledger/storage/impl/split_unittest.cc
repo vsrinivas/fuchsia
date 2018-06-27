@@ -6,6 +6,8 @@
 
 #include <string.h>
 
+#include <lib/fit/function.h>
+
 #include "gtest/gtest.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "peridot/bin/ledger/encryption/fake/fake_encryption_service.h"
@@ -28,7 +30,7 @@ class PathologicalDataSource : public DataSource {
   explicit PathologicalDataSource(size_t size) : size_(size) {}
 
   uint64_t GetSize() override { return size_; }
-  void Get(std::function<void(std::unique_ptr<DataChunk>, Status)> callback)
+  void Get(fit::function<void(std::unique_ptr<DataChunk>, Status)> callback)
       override {
     size_t remaining = size_;
     while (remaining) {
@@ -50,7 +52,7 @@ class ErrorDataSource : public DataSource {
   ErrorDataSource() {}
 
   uint64_t GetSize() override { return 1; }
-  void Get(std::function<void(std::unique_ptr<DataChunk>, Status)> callback)
+  void Get(fit::function<void(std::unique_ptr<DataChunk>, Status)> callback)
       override {
     callback(nullptr, Status::ERROR);
   }
@@ -77,7 +79,7 @@ struct SplitResult {
   std::map<ObjectDigest, std::unique_ptr<DataSource::DataChunk>> data;
 };
 
-void DoSplit(DataSource* source, std::function<void(SplitResult)> callback) {
+void DoSplit(DataSource* source, fit::function<void(SplitResult)> callback) {
   auto result = std::make_unique<SplitResult>();
   SplitDataSource(
       source,
@@ -296,7 +298,7 @@ TEST(SplitTest, CollectPieces) {
   CollectPieces(
       MakeIndexId(0),
       [&objects](ObjectIdentifier object_identifier,
-                 std::function<void(Status, fxl::StringView)> callback) {
+                 fit::function<void(Status, fxl::StringView)> callback) {
         callback(Status::OK, objects[object_identifier]->Get());
       },
       [&status, &identifiers](IterationStatus received_status,
@@ -324,7 +326,7 @@ TEST(SplitTest, CollectPiecesError) {
   CollectPieces(
       MakeIndexId(0),
       [&called](ObjectIdentifier identifier,
-                std::function<void(Status, fxl::StringView)> callback) {
+                fit::function<void(Status, fxl::StringView)> callback) {
         if (called >= nb_successfull_called) {
           callback(Status::INTERNAL_IO_ERROR, "");
           return;

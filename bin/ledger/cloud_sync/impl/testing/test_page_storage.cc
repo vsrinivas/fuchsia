@@ -10,10 +10,10 @@
 #include <vector>
 
 #include <lib/async/cpp/task.h>
+#include <lib/fit/function.h>
 
 #include "lib/callback/capture.h"
 #include "lib/fsl/socket/strings.h"
-#include "lib/fxl/functional/closure.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "peridot/bin/ledger/cloud_sync/impl/testing/test_commit.h"
 #include "peridot/bin/ledger/storage/public/page_storage.h"
@@ -40,7 +40,7 @@ void TestPageStorage::SetSyncDelegate(
 }
 
 void TestPageStorage::GetHeadCommitIds(
-    std::function<void(storage::Status, std::vector<storage::CommitId>)>
+    fit::function<void(storage::Status, std::vector<storage::CommitId>)>
         callback) {
   size_t returned_head_count = head_count;
   auto confirm = [returned_head_count, callback = std::move(callback)] {
@@ -59,7 +59,7 @@ void TestPageStorage::GetHeadCommitIds(
 
 void TestPageStorage::GetCommit(
     storage::CommitIdView commit_id,
-    std::function<void(storage::Status, std::unique_ptr<const storage::Commit>)>
+    fit::function<void(storage::Status, std::unique_ptr<const storage::Commit>)>
         callback) {
   if (should_fail_get_commit) {
     async::PostTask(async_, [callback = std::move(callback)] {
@@ -78,17 +78,19 @@ void TestPageStorage::GetCommit(
 void TestPageStorage::AddCommitsFromSync(
     std::vector<PageStorage::CommitIdAndBytes> ids_and_bytes,
     storage::ChangeSource source,
-    std::function<void(storage::Status status)> callback) {
+    fit::function<void(storage::Status status)> callback) {
   add_commits_from_sync_calls++;
 
   if (should_fail_add_commit_from_sync) {
-    async::PostTask(async_,
-                    [callback]() { callback(storage::Status::IO_ERROR); });
+    async::PostTask(async_, [callback = std::move(callback)]() {
+      callback(storage::Status::IO_ERROR);
+    });
     return;
   }
 
-  fxl::Closure confirm = fxl::MakeCopyable(
-      [this, ids_and_bytes = std::move(ids_and_bytes), callback]() mutable {
+  fit::closure confirm =
+      fxl::MakeCopyable([this, ids_and_bytes = std::move(ids_and_bytes),
+                         callback = std::move(callback)]() mutable {
         for (auto& commit : ids_and_bytes) {
           received_commits[commit.id] = std::move(commit.bytes);
           unsynced_commits_to_return.erase(
@@ -106,14 +108,14 @@ void TestPageStorage::AddCommitsFromSync(
         });
       });
   if (should_delay_add_commit_confirmation) {
-    delayed_add_commit_confirmations.push_back(move(confirm));
+    delayed_add_commit_confirmations.push_back(std::move(confirm));
     return;
   }
-  async::PostTask(async_, confirm);
+  async::PostTask(async_, std::move(confirm));
 }
 
 void TestPageStorage::GetUnsyncedPieces(
-    std::function<void(storage::Status, std::vector<storage::ObjectIdentifier>)>
+    fit::function<void(storage::Status, std::vector<storage::ObjectIdentifier>)>
         callback) {
   async::PostTask(async_, [callback = std::move(callback)] {
     callback(storage::Status::OK, std::vector<storage::ObjectIdentifier>());
@@ -134,7 +136,7 @@ storage::Status TestPageStorage::RemoveCommitWatcher(
 }
 
 void TestPageStorage::GetUnsyncedCommits(
-    std::function<void(storage::Status,
+    fit::function<void(storage::Status,
                        std::vector<std::unique_ptr<const storage::Commit>>)>
         callback) {
   if (should_fail_get_unsynced_commits) {
@@ -159,7 +161,7 @@ void TestPageStorage::GetUnsyncedCommits(
 
 void TestPageStorage::MarkCommitSynced(
     const storage::CommitId& commit_id,
-    std::function<void(storage::Status)> callback) {
+    fit::function<void(storage::Status)> callback) {
   unsynced_commits_to_return.erase(
       std::remove_if(
           unsynced_commits_to_return.begin(), unsynced_commits_to_return.end(),
@@ -175,7 +177,7 @@ void TestPageStorage::MarkCommitSynced(
 
 void TestPageStorage::SetSyncMetadata(
     fxl::StringView key, fxl::StringView value,
-    std::function<void(storage::Status)> callback) {
+    fit::function<void(storage::Status)> callback) {
   sync_metadata[key.ToString()] = value.ToString();
   async::PostTask(async_, [callback = std::move(callback)] {
     callback(storage::Status::OK);
@@ -184,7 +186,7 @@ void TestPageStorage::SetSyncMetadata(
 
 void TestPageStorage::GetSyncMetadata(
     fxl::StringView key,
-    std::function<void(storage::Status, std::string)> callback) {
+    fit::function<void(storage::Status, std::string)> callback) {
   auto it = sync_metadata.find(key.ToString());
   if (it == sync_metadata.end()) {
     async::PostTask(async_, [callback = std::move(callback)] {

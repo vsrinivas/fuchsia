@@ -5,11 +5,11 @@
 #include "peridot/bin/ledger/app/merging/test_utils.h"
 
 #include <lib/async/dispatcher.h>
+#include <lib/fit/function.h>
 
 #include "gtest/gtest.h"
 #include "lib/callback/capture.h"
 #include "lib/callback/set_when_called.h"
-#include "lib/fxl/functional/closure.h"
 #include "peridot/bin/ledger/app/constants.h"
 #include "peridot/bin/ledger/encryption/primitives/hash.h"
 #include "peridot/bin/ledger/storage/impl/page_storage_impl.h"
@@ -34,7 +34,7 @@ TestWithPageStorage::TestWithPageStorage()
 
 TestWithPageStorage::~TestWithPageStorage() {}
 
-std::function<void(storage::Journal*)>
+fit::function<void(storage::Journal*)>
 TestWithPageStorage::AddKeyValueToJournal(const std::string& key,
                                           std::string value) {
   return [this, key,
@@ -58,7 +58,7 @@ TestWithPageStorage::AddKeyValueToJournal(const std::string& key,
   };
 }
 
-std::function<void(storage::Journal*)>
+fit::function<void(storage::Journal*)>
 TestWithPageStorage::DeleteKeyFromJournal(const std::string& key) {
   return [this, key](storage::Journal* journal) {
     storage::Status status;
@@ -124,7 +124,7 @@ TestWithPageStorage::DeleteKeyFromJournal(const std::string& key) {
   return ::testing::AssertionSuccess();
 }
 
-fxl::Closure TestWithPageStorage::MakeQuitTaskOnce() {
+fit::closure TestWithPageStorage::MakeQuitTaskOnce() {
   return fxl::MakeCopyable([this, called = false]() mutable {
     if (!called) {
       called = true;

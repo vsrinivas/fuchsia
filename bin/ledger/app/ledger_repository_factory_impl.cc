@@ -8,6 +8,7 @@
 #include <stdio.h>
 #include <unistd.h>
 
+#include <lib/fit/function.h>
 #include <trace/event.h>
 
 #include "lib/backoff/exponential_backoff.h"
@@ -16,7 +17,6 @@
 #include "lib/fxl/files/file.h"
 #include "lib/fxl/files/path.h"
 #include "lib/fxl/files/scoped_temp_dir.h"
-#include "lib/fxl/functional/closure.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/random/rand.h"
 #include "lib/fxl/strings/concatenate.h"
@@ -76,10 +76,11 @@ class LedgerRepositoryFactoryImpl::LedgerRepositoryContainer {
     }
   }
 
-  void set_on_empty(const fxl::Closure& on_empty_callback) {
-    on_empty_callback_ = on_empty_callback;
+  void set_on_empty(fit::closure on_empty_callback) {
     if (ledger_repository_) {
-      ledger_repository_->set_on_empty(on_empty_callback);
+      ledger_repository_->set_on_empty(std::move(on_empty_callback));
+    } else {
+      on_empty_callback_ = std::move(on_empty_callback);
     }
   };
 
@@ -87,7 +88,7 @@ class LedgerRepositoryFactoryImpl::LedgerRepositoryContainer {
   // |callback| when the repository is available or an error occurs.
   void BindRepository(
       fidl::InterfaceRequest<ledger_internal::LedgerRepository> request,
-      std::function<void(Status)> callback) {
+      fit::function<void(Status)> callback) {
     if (status_ != Status::OK) {
       callback(status_);
       return;
@@ -117,7 +118,7 @@ class LedgerRepositoryFactoryImpl::LedgerRepositoryContainer {
     requests_.clear();
     if (on_empty_callback_) {
       if (ledger_repository_) {
-        ledger_repository_->set_on_empty(on_empty_callback_);
+        ledger_repository_->set_on_empty(std::move(on_empty_callback_));
       } else {
         on_empty_callback_();
       }
@@ -146,9 +147,9 @@ class LedgerRepositoryFactoryImpl::LedgerRepositoryContainer {
   Status status_ = Status::OK;
   std::vector<
       std::pair<fidl::InterfaceRequest<ledger_internal::LedgerRepository>,
-                std::function<void(Status)>>>
+                fit::function<void(Status)>>>
       requests_;
-  fxl::Closure on_empty_callback_;
+  fit::closure on_empty_callback_;
   std::vector<fidl::InterfaceRequest<ledger_internal::LedgerRepository>>
       detached_handles_;
 
@@ -209,7 +210,8 @@ void LedgerRepositoryFactoryImpl::GetRepository(
 
   auto it = repositories_.find(repository_information.name);
   if (it != repositories_.end()) {
-    it->second.BindRepository(std::move(repository_request), callback);
+    it->second.BindRepository(std::move(repository_request),
+                              std::move(callback));
     return;
   }
 
@@ -222,7 +224,8 @@ void LedgerRepositoryFactoryImpl::GetRepository(
         std::forward_as_tuple(repository_information.name),
         std::forward_as_tuple(std::move(root_fd)));
     LedgerRepositoryContainer* container = &ret.first->second;
-    container->BindRepository(std::move(repository_request), callback);
+    container->BindRepository(std::move(repository_request),
+                              std::move(callback));
     std::unique_ptr<SyncWatcherSet> watchers =
         std::make_unique<SyncWatcherSet>();
     PageEvictionManagerImpl* page_eviction_manager_ptr =
@@ -250,7 +253,7 @@ void LedgerRepositoryFactoryImpl::GetRepository(
                             std::forward_as_tuple(repository_information.name),
                             std::forward_as_tuple(std::move(root_fd)));
   LedgerRepositoryContainer* container = &ret.first->second;
-  container->BindRepository(std::move(repository_request), callback);
+  container->BindRepository(std::move(repository_request), std::move(callback));
 
   cloud_sync::UserConfig user_config;
   user_config.user_directory = repository_information.content_path;
@@ -265,7 +268,7 @@ void LedgerRepositoryFactoryImpl::CreateRepository(
     cloud_sync::UserConfig user_config,
     std::unique_ptr<PageEvictionManagerImpl> page_eviction_manager) {
   std::unique_ptr<SyncWatcherSet> watchers = std::make_unique<SyncWatcherSet>();
-  fxl::Closure on_version_mismatch = [this, repository_information]() mutable {
+  fit::closure on_version_mismatch = [this, repository_information]() mutable {
     OnVersionMismatch(repository_information);
   };
   auto cloud_sync = std::make_unique<cloud_sync::UserSyncImpl>(

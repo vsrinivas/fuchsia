@@ -8,11 +8,11 @@
 #include <fuchsia/ledger/cloud/cpp/fidl.h>
 #include <fuchsia/ledger/cloud/firebase/cpp/fidl.h>
 #include <fuchsia/modular/auth/cpp/fidl.h>
+#include <lib/fit/function.h>
 
 #include "lib/callback/auto_cleanable.h"
 #include "lib/callback/cancellable.h"
 #include "lib/fidl/cpp/binding.h"
-#include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
 #include "lib/network_wrapper/network_wrapper.h"
 #include "peridot/bin/cloud_provider_firebase/app/device_set_impl.h"
@@ -34,7 +34,7 @@ class CloudProviderImpl : public cloud_provider::CloudProvider {
       fidl::InterfaceRequest<cloud_provider::CloudProvider> request);
   ~CloudProviderImpl() override;
 
-  void set_on_empty(const fxl::Closure& on_empty) { on_empty_ = on_empty; }
+  void set_on_empty(fit::closure on_empty) { on_empty_ = std::move(on_empty); }
 
  private:
   void GetDeviceSet(
@@ -51,7 +51,7 @@ class CloudProviderImpl : public cloud_provider::CloudProvider {
   const std::string server_id_;
   std::unique_ptr<firebase_auth::FirebaseAuth> firebase_auth_;
   fidl::Binding<cloud_provider::CloudProvider> binding_;
-  fxl::Closure on_empty_;
+  fit::closure on_empty_;
 
   callback::AutoCleanableSet<DeviceSetImpl> device_sets_;
 

@@ -9,9 +9,9 @@
 #include <string>
 
 #include <fuchsia/ledger/cloud/cpp/fidl.h>
+#include <lib/fit/function.h>
 
 #include "lib/fidl/cpp/array.h"
-#include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
 #include "peridot/bin/ledger/fidl/include/types.h"
 #include "peridot/bin/ledger/testing/cloud_provider/types.h"
@@ -24,7 +24,7 @@ class FakeDeviceSet : public cloud_provider::DeviceSet {
                 CloudEraseFromWatcher cloud_erase_from_watcher);
   ~FakeDeviceSet() override;
 
-  void set_on_empty(const fxl::Closure& on_empty) { on_empty_ = on_empty; }
+  void set_on_empty(fit::closure on_empty) { on_empty_ = std::move(on_empty); }
 
  private:
   void CheckFingerprint(fidl::VectorPtr<uint8_t> fingerprint,
@@ -45,7 +45,7 @@ class FakeDeviceSet : public cloud_provider::DeviceSet {
   const CloudEraseFromWatcher cloud_erase_from_watcher_ =
       CloudEraseFromWatcher::NO;
 
-  fxl::Closure on_empty_;
+  fit::closure on_empty_;
 
   std::set<std::string> fingerprints_;
 

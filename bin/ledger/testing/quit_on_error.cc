@@ -4,6 +4,8 @@
 
 #include "peridot/bin/ledger/testing/quit_on_error.h"
 
+#include <lib/fit/function.h>
+
 #include "lib/fxl/functional/make_copyable.h"
 
 namespace test {
@@ -19,7 +21,7 @@ bool QuitOnError(fit::closure quit_callback, ledger::Status status,
   return false;
 }
 
-std::function<void(ledger::Status)> QuitOnErrorCallback(
+fit::function<void(ledger::Status)> QuitOnErrorCallback(
     fit::closure quit_callback, std::string description) {
   return fxl::MakeCopyable(
       [quit_callback = std::move(quit_callback),

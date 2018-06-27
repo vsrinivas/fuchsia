@@ -9,6 +9,7 @@
 #include <memory>
 
 #include <grpc++/grpc++.h>
+#include <lib/fit/function.h>
 
 #include "lib/fxl/macros.h"
 
@@ -23,7 +24,7 @@ class CredentialsProvider {
 
   // Retrieves call credentials.
   virtual void GetCredentials(
-      std::function<void(std::shared_ptr<grpc::CallCredentials>)> callback) = 0;
+      fit::function<void(std::shared_ptr<grpc::CallCredentials>)> callback) = 0;
 
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(CredentialsProvider);

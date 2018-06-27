@@ -4,6 +4,8 @@
 
 #include "peridot/bin/ledger/p2p_provider/impl/user_id_provider_impl.h"
 
+#include <lib/fit/function.h>
+
 #include "lib/backoff/exponential_backoff.h"
 #include "lib/fxl/files/file.h"
 #include "lib/fxl/logging.h"
@@ -28,7 +30,7 @@ UserIdProviderImpl::UserIdProviderImpl(
           startup_context)) {}
 
 void UserIdProviderImpl::GetUserId(
-    std::function<void(Status, std::string)> callback) {
+    fit::function<void(Status, std::string)> callback) {
   FXL_DCHECK(callback);
   std::string stored_id;
   if (LoadUserIdFromFile(&stored_id)) {

@@ -53,14 +53,14 @@ class PutBenchmark : public ledger::PageWatcher {
   // on updating entries, it also adds these keys in the ledger with some
   // initial values.
   void InitializeKeys(
-      std::function<void(std::vector<fidl::VectorPtr<uint8_t>>)> on_done);
+      fit::function<void(std::vector<fidl::VectorPtr<uint8_t>>)> on_done);
 
   void BindWatcher(std::vector<fidl::VectorPtr<uint8_t>> keys);
   void RunSingle(int i, std::vector<fidl::VectorPtr<uint8_t>> keys);
   void CommitAndRunNext(int i, size_t key_number,
                         std::vector<fidl::VectorPtr<uint8_t>> keys);
   void PutEntry(fidl::VectorPtr<uint8_t> key, fidl::VectorPtr<uint8_t> value,
-                std::function<void()> on_done);
+                fit::function<void()> on_done);
 
   void ShutDown();
   fit::closure QuitLoopClosure();

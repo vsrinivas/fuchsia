@@ -9,6 +9,7 @@
 #include <string>
 
 #include <lib/async/dispatcher.h>
+#include <lib/fit/function.h>
 
 #include "peridot/bin/ledger/cache/lazy_value.h"
 #include "peridot/bin/ledger/cache/lru_cache.h"
@@ -27,19 +28,19 @@ class EncryptionServiceImpl : public EncryptionService {
       storage::ObjectDigest digest) override;
   void EncryptCommit(
       std::string commit_storage,
-      std::function<void(Status, std::string)> callback) override;
+      fit::function<void(Status, std::string)> callback) override;
   void DecryptCommit(
       convert::ExtendedStringView storage_bytes,
-      std::function<void(Status, std::string)> callback) override;
+      fit::function<void(Status, std::string)> callback) override;
   void GetObjectName(
       storage::ObjectIdentifier object_identifier,
-      std::function<void(Status, std::string)> callback) override;
+      fit::function<void(Status, std::string)> callback) override;
   void EncryptObject(
       storage::ObjectIdentifier object_identifier, fsl::SizedVmo content,
-      std::function<void(Status, std::string)> callback) override;
+      fit::function<void(Status, std::string)> callback) override;
   void DecryptObject(
       storage::ObjectIdentifier object_identifier, std::string encrypted_data,
-      std::function<void(Status, std::string)> callback) override;
+      fit::function<void(Status, std::string)> callback) override;
 
  private:
   class KeyService;
@@ -47,19 +48,19 @@ class EncryptionServiceImpl : public EncryptionService {
 
   uint32_t GetCurrentKeyIndex();
   void GetReferenceKey(storage::ObjectIdentifier object_identifier,
-                       const std::function<void(const std::string&)>& callback);
+                       fit::function<void(const std::string&)> callback);
 
   void Encrypt(size_t key_index, std::string data,
-               std::function<void(Status, std::string)> callback);
+               fit::function<void(Status, std::string)> callback);
   void Decrypt(size_t key_index, std::string encrypted_data,
-               std::function<void(Status, std::string)> callback);
+               fit::function<void(Status, std::string)> callback);
 
   void FetchMasterKey(size_t key_index,
-                      std::function<void(Status, std::string)> callback);
+                      fit::function<void(Status, std::string)> callback);
   void FetchNamespaceKey(size_t key_index,
-                         std::function<void(Status, std::string)> callback);
+                         fit::function<void(Status, std::string)> callback);
   void FetchReferenceKey(DeletionScopeSeed deletion_scope_seed,
-                         std::function<void(Status, std::string)> callback);
+                         fit::function<void(Status, std::string)> callback);
 
   const std::string namespace_id_;
   std::unique_ptr<KeyService> key_service_;

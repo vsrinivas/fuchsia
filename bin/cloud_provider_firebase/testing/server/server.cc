@@ -4,6 +4,8 @@
 
 #include "peridot/bin/cloud_provider_firebase/testing/server/server.h"
 
+#include <lib/fit/function.h>
+
 #include "lib/fxl/strings/string_number_conversions.h"
 #include "peridot/lib/socket/socket_pair.h"
 #include "peridot/lib/socket/socket_writer.h"
@@ -17,13 +19,13 @@ Server::Server() {}
 Server::~Server() {}
 
 void Server::Serve(http::URLRequest request,
-                   const std::function<void(http::URLResponse)> callback) {
+                   fit::function<void(http::URLResponse)> callback) {
   FXL_DCHECK(!request.body || request.body->is_sized_buffer());
 
   if (request.method == "GET") {
     for (const auto& header : *request.headers) {
       if (header.name == "Accept" && header.value == "text/event-stream") {
-        HandleGetStream(std::move(request), callback);
+        HandleGetStream(std::move(request), std::move(callback));
         return;
       }
       if (header.name == "authorization") {
@@ -32,22 +34,22 @@ void Server::Serve(http::URLRequest request,
       FXL_LOG(WARNING) << "Unknown header: " << header.name << " -> "
                        << header.value;
     }
-    HandleGet(std::move(request), callback);
+    HandleGet(std::move(request), std::move(callback));
     return;
   }
 
   if (request.method == "PATCH") {
-    HandlePatch(std::move(request), callback);
+    HandlePatch(std::move(request), std::move(callback));
     return;
   }
 
   if (request.method == "POST") {
-    HandlePost(std::move(request), callback);
+    HandlePost(std::move(request), std::move(callback));
     return;
   }
 
   if (request.method == "PUT") {
-    HandlePut(std::move(request), callback);
+    HandlePut(std::move(request), std::move(callback));
     return;
   }
 
@@ -55,33 +57,31 @@ void Server::Serve(http::URLRequest request,
 }
 
 void Server::HandleGet(http::URLRequest request,
-                       const std::function<void(http::URLResponse)> callback) {
+                       fit::function<void(http::URLResponse)> callback) {
   callback(BuildResponse(request.url, ResponseCode::kUnauthorized,
                          "Unauthorized method"));
 }
 
-void Server::HandleGetStream(
-    http::URLRequest request,
-    const std::function<void(http::URLResponse)> callback) {
+void Server::HandleGetStream(http::URLRequest request,
+                             fit::function<void(http::URLResponse)> callback) {
   callback(BuildResponse(request.url, ResponseCode::kUnauthorized,
                          "Unauthorized method"));
 }
 
-void Server::HandlePatch(
-    http::URLRequest request,
-    const std::function<void(http::URLResponse)> callback) {
+void Server::HandlePatch(http::URLRequest request,
+                         fit::function<void(http::URLResponse)> callback) {
   callback(BuildResponse(request.url, ResponseCode::kUnauthorized,
                          "Unauthorized method"));
 }
 
 void Server::HandlePost(http::URLRequest request,
-                        const std::function<void(http::URLResponse)> callback) {
+                        fit::function<void(http::URLResponse)> callback) {
   callback(BuildResponse(request.url, ResponseCode::kUnauthorized,
                          "Unauthorized method"));
 }
 
 void Server::HandlePut(http::URLRequest request,
-                       const std::function<void(http::URLResponse)> callback) {
+                       fit::function<void(http::URLResponse)> callback) {
   callback(BuildResponse(request.url, ResponseCode::kUnauthorized,
                          "Unauthorized method"));
 }

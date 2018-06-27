@@ -6,6 +6,8 @@
 
 #include <utility>
 
+#include <lib/fit/function.h>
+
 #include "lib/callback/waiter.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "peridot/bin/ledger/app/page_utils.h"
@@ -94,7 +96,7 @@ void FindCommonAncestor(
     storage::PageStorage* const storage,
     std::unique_ptr<const storage::Commit> head1,
     std::unique_ptr<const storage::Commit> head2,
-    std::function<void(Status, std::unique_ptr<const storage::Commit>)>
+    fit::function<void(Status, std::unique_ptr<const storage::Commit>)>
         callback) {
   coroutine_service->StartCoroutine(fxl::MakeCopyable(
       [storage, head1 = std::move(head1), head2 = std::move(head2),

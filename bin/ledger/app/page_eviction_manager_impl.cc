@@ -4,6 +4,7 @@
 
 #include "peridot/bin/ledger/app/page_eviction_manager_impl.h"
 
+#include <lib/fit/function.h>
 #include <zx/time.h>
 
 #include "lib/fxl/strings/concatenate.h"
@@ -41,7 +42,7 @@ void PageEvictionManagerImpl::SetPageStateReader(
   state_reader_ = state_reader;
 }
 
-void PageEvictionManagerImpl::TryCleanUp(std::function<void(Status)> callback) {
+void PageEvictionManagerImpl::TryCleanUp(fit::function<void(Status)> callback) {
   if (last_used_map_.empty()) {
     callback(Status::OK);
     return;

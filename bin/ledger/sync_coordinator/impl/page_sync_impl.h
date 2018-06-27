@@ -7,7 +7,8 @@
 
 #include <functional>
 
-#include "lib/fxl/functional/closure.h"
+#include <lib/fit/function.h>
+
 #include "lib/fxl/macros.h"
 #include "peridot/bin/ledger/cloud_sync/public/page_sync.h"
 #include "peridot/bin/ledger/p2p_sync/public/page_communicator.h"
@@ -41,15 +42,15 @@ class PageSyncImpl : public PageSync, public storage::PageSyncDelegate {
 
   // PageSync:
   void Start() override;
-  void SetOnIdle(fxl::Closure on_idle) override;
+  void SetOnIdle(fit::closure on_idle) override;
   bool IsIdle() override;
-  void SetOnBacklogDownloaded(fxl::Closure on_backlog_downloaded) override;
+  void SetOnBacklogDownloaded(fit::closure on_backlog_downloaded) override;
   void SetSyncWatcher(SyncStateWatcher* watcher) override;
 
   // PageSyncDelegate:
   void GetObject(
       storage::ObjectIdentifier object_identifier,
-      std::function<void(storage::Status status,
+      fit::function<void(storage::Status status,
                          storage::ChangeSource change_source,
                          std::unique_ptr<storage::DataSource::DataChunk>)>
           callback) override;

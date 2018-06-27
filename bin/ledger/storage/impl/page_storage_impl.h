@@ -10,6 +10,7 @@
 #include <vector>
 
 #include <lib/async/dispatcher.h>
+#include <lib/fit/function.h>
 
 #include "lib/callback/managed_container.h"
 #include "lib/callback/operation_serializer.h"
@@ -42,104 +43,104 @@ class PageStorageImpl : public PageStorage {
   // Initializes this PageStorageImpl. This includes initializing the underlying
   // database, adding the default page head if the page is empty, removing
   // uncommitted explicit and committing implicit journals.
-  void Init(std::function<void(Status)> callback);
+  void Init(fit::function<void(Status)> callback);
 
   // Adds the given locally created |commit| in this |PageStorage|.
   void AddCommitFromLocal(std::unique_ptr<const Commit> commit,
                           std::vector<ObjectIdentifier> new_objects,
-                          std::function<void(Status)> callback);
+                          fit::function<void(Status)> callback);
 
   // Checks whether the given |object_identifier| is untracked, i.e. has been
   // created using |AddObjectFromLocal()|, but is not yet part of any commit.
   // Untracked objects are invalid after the PageStorageImpl object is
   // destroyed.
   void ObjectIsUntracked(ObjectIdentifier object_identifier,
-                         std::function<void(Status, bool)> callback);
+                         fit::function<void(Status, bool)> callback);
 
   // PageStorage:
   PageId GetId() override;
   void SetSyncDelegate(PageSyncDelegate* page_sync) override;
   void GetHeadCommitIds(
-      std::function<void(Status, std::vector<CommitId>)> callback) override;
+      fit::function<void(Status, std::vector<CommitId>)> callback) override;
   void GetCommit(CommitIdView commit_id,
-                 std::function<void(Status, std::unique_ptr<const Commit>)>
+                 fit::function<void(Status, std::unique_ptr<const Commit>)>
                      callback) override;
   void AddCommitsFromSync(std::vector<CommitIdAndBytes> ids_and_bytes,
                           ChangeSource source,
-                          std::function<void(Status)> callback) override;
+                          fit::function<void(Status)> callback) override;
   void StartCommit(
       const CommitId& commit_id, JournalType journal_type,
-      std::function<void(Status, std::unique_ptr<Journal>)> callback) override;
+      fit::function<void(Status, std::unique_ptr<Journal>)> callback) override;
   void StartMergeCommit(
       const CommitId& left, const CommitId& right,
-      std::function<void(Status, std::unique_ptr<Journal>)> callback) override;
+      fit::function<void(Status, std::unique_ptr<Journal>)> callback) override;
   void CommitJournal(std::unique_ptr<Journal> journal,
-                     std::function<void(Status, std::unique_ptr<const Commit>)>
+                     fit::function<void(Status, std::unique_ptr<const Commit>)>
                          callback) override;
   void RollbackJournal(std::unique_ptr<Journal> journal,
-                       std::function<void(Status)> callback) override;
+                       fit::function<void(Status)> callback) override;
   Status AddCommitWatcher(CommitWatcher* watcher) override;
   Status RemoveCommitWatcher(CommitWatcher* watcher) override;
-  void IsSynced(std::function<void(Status, bool)> callback) override;
+  void IsSynced(fit::function<void(Status, bool)> callback) override;
   void GetUnsyncedCommits(
-      std::function<void(Status, std::vector<std::unique_ptr<const Commit>>)>
+      fit::function<void(Status, std::vector<std::unique_ptr<const Commit>>)>
           callback) override;
   void MarkCommitSynced(const CommitId& commit_id,
-                        std::function<void(Status)> callback) override;
+                        fit::function<void(Status)> callback) override;
   void GetUnsyncedPieces(
-      std::function<void(Status, std::vector<ObjectIdentifier>)> callback)
+      fit::function<void(Status, std::vector<ObjectIdentifier>)> callback)
       override;
   void MarkPieceSynced(ObjectIdentifier object_identifier,
-                       std::function<void(Status)> callback) override;
+                       fit::function<void(Status)> callback) override;
   void IsPieceSynced(ObjectIdentifier object_identifier,
-                     std::function<void(Status, bool)> callback) override;
+                     fit::function<void(Status, bool)> callback) override;
   void AddObjectFromLocal(
       std::unique_ptr<DataSource> data_source,
-      std::function<void(Status, ObjectIdentifier)> callback) override;
+      fit::function<void(Status, ObjectIdentifier)> callback) override;
   void GetObject(ObjectIdentifier object_identifier, Location location,
-                 std::function<void(Status, std::unique_ptr<const Object>)>
+                 fit::function<void(Status, std::unique_ptr<const Object>)>
                      callback) override;
   void GetPiece(ObjectIdentifier object_identifier,
-                std::function<void(Status, std::unique_ptr<const Object>)>
+                fit::function<void(Status, std::unique_ptr<const Object>)>
                     callback) override;
   void SetSyncMetadata(fxl::StringView key, fxl::StringView value,
-                       std::function<void(Status)> callback) override;
+                       fit::function<void(Status)> callback) override;
   void GetSyncMetadata(
       fxl::StringView key,
-      std::function<void(Status, std::string)> callback) override;
+      fit::function<void(Status, std::string)> callback) override;
 
   // Methods to be used by JournalImpl.
   void GetJournalEntries(
       const JournalId& journal_id,
-      std::function<void(Status, std::unique_ptr<Iterator<const EntryChange>>)>
+      fit::function<void(Status, std::unique_ptr<Iterator<const EntryChange>>)>
           callback);
 
   void AddJournalEntry(const JournalId& journal_id, fxl::StringView key,
                        ObjectIdentifier object_identifier, KeyPriority priority,
-                       std::function<void(Status)> callback);
+                       fit::function<void(Status)> callback);
 
   void RemoveJournalEntry(const JournalId& journal_id,
                           convert::ExtendedStringView key,
-                          std::function<void(Status)> callback);
+                          fit::function<void(Status)> callback);
 
   void RemoveJournal(const JournalId& journal_id,
-                     std::function<void(Status)> callback);
+                     fit::function<void(Status)> callback);
 
   // Commit contents.
   void GetCommitContents(const Commit& commit, std::string min_key,
-                         std::function<bool(Entry)> on_next,
-                         std::function<void(Status)> on_done) override;
+                         fit::function<bool(Entry)> on_next,
+                         fit::function<void(Status)> on_done) override;
   void GetEntryFromCommit(const Commit& commit, std::string key,
-                          std::function<void(Status, Entry)> callback) override;
+                          fit::function<void(Status, Entry)> callback) override;
   void GetCommitContentsDiff(const Commit& base_commit,
                              const Commit& other_commit, std::string min_key,
-                             std::function<bool(EntryChange)> on_next_diff,
-                             std::function<void(Status)> on_done) override;
+                             fit::function<bool(EntryChange)> on_next_diff,
+                             fit::function<void(Status)> on_done) override;
   void GetThreeWayContentsDiff(const Commit& base_commit,
                                const Commit& left_commit,
                                const Commit& right_commit, std::string min_key,
-                               std::function<bool(ThreeWayChange)> on_next_diff,
-                               std::function<void(Status)> on_done) override;
+                               fit::function<bool(ThreeWayChange)> on_next_diff,
+                               fit::function<void(Status)> on_done) override;
 
  private:
   friend class PageStorageImplAccessorForTest;
@@ -159,20 +160,20 @@ class PageStorageImpl : public PageStorage {
   // will be returned in case of missmatch.
   void AddPiece(ObjectIdentifier object_identifier,
                 std::unique_ptr<DataSource::DataChunk> data,
-                ChangeSource source, std::function<void(Status)> callback);
+                ChangeSource source, fit::function<void(Status)> callback);
 
   // Download all the chunks of the object with the given id.
   void DownloadFullObject(ObjectIdentifier object_identifier,
-                          std::function<void(Status)> callback);
+                          fit::function<void(Status)> callback);
 
   void GetObjectFromSync(
       ObjectIdentifier object_identifier,
-      std::function<void(Status, std::unique_ptr<const Object>)> callback);
+      fit::function<void(Status, std::unique_ptr<const Object>)> callback);
 
   void FillBufferWithObjectContent(ObjectIdentifier object_identifier,
                                    fsl::SizedVmo vmo, size_t offset,
                                    size_t size,
-                                   std::function<void(Status)> callback);
+                                   fit::function<void(Status)> callback);
 
   // Notifies the registered watchers with the |commits| in commit_to_send_.
   void NotifyWatchers();

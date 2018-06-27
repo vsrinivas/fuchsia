@@ -5,12 +5,13 @@
 #include <memory>
 #include <string>
 
+#include <lib/fit/function.h>
+
 #include "gtest/gtest.h"
 #include "lib/callback/cancellable_helper.h"
 #include "lib/callback/capture.h"
 #include "lib/callback/set_when_called.h"
 #include "lib/fxl/files/scoped_temp_dir.h"
-#include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
 #include "peridot/bin/ledger/app/constants.h"
 #include "peridot/bin/ledger/app/merging/custom_merge_strategy.h"
@@ -53,7 +54,7 @@ class ConflictResolverClientTest : public test::TestWithPageStorage {
 
   storage::CommitId CreateCommit(
       storage::CommitIdView parent_id,
-      std::function<void(storage::Journal*)> contents) {
+      fit::function<void(storage::Journal*)> contents) {
     storage::Status status;
     bool called;
     std::unique_ptr<storage::Journal> journal;
@@ -89,7 +90,7 @@ class ConflictResolverImpl : public ConflictResolver {
  public:
   explicit ConflictResolverImpl(
       fidl::InterfaceRequest<ConflictResolver> request,
-      fxl::Closure quit_callback)
+      fit::closure quit_callback)
       : binding_(this, std::move(request)),
         quit_callback_(std::move(quit_callback)) {
     binding_.set_error_handler([this] { this->disconnected = true; });
@@ -133,7 +134,7 @@ class ConflictResolverImpl : public ConflictResolver {
   }
 
   fidl::Binding<ConflictResolver> binding_;
-  fxl::Closure quit_callback_;
+  fit::closure quit_callback_;
 };
 
 TEST_F(ConflictResolverClientTest, Error) {

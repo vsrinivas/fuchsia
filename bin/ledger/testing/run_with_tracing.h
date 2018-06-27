@@ -8,6 +8,7 @@
 #include <functional>
 
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/fit/function.h>
 
 namespace test {
 namespace benchmark {
@@ -15,7 +16,7 @@ namespace benchmark {
 // Adds a TraceObserver to start running |runnable| as soon as the tracing is
 // enabled; then runs the message loop |loop|.
 // If tracing is still not enabled after 5 seconds, posts a quit task.
-int RunWithTracing(async::Loop* loop, std::function<void()> runnable);
+int RunWithTracing(async::Loop* loop, fit::function<void()> runnable);
 
 }  // namespace benchmark
 }  // namespace test

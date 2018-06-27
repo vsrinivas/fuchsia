@@ -9,10 +9,10 @@
 #include <utility>
 
 #include <fuchsia/ledger/cloud/cpp/fidl.h>
+#include <lib/fit/function.h>
 
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fidl/cpp/vector.h"
-#include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/weak_ptr.h"
 #include "peridot/bin/cloud_provider_firestore/app/credentials_provider.h"
@@ -31,11 +31,11 @@ class PageCloudImpl : public cloud_provider::PageCloud,
       fidl::InterfaceRequest<cloud_provider::PageCloud> request);
   ~PageCloudImpl() override;
 
-  void set_on_empty(const fxl::Closure& on_empty) { on_empty_ = on_empty; }
+  void set_on_empty(fit::closure on_empty) { on_empty_ = std::move(on_empty); }
 
  private:
   void ScopedGetCredentials(
-      std::function<void(std::shared_ptr<grpc::CallCredentials>)> callback);
+      fit::function<void(std::shared_ptr<grpc::CallCredentials>)> callback);
 
   // cloud_provider::PageCloud:
   void AddCommits(fidl::VectorPtr<cloud_provider::Commit> commits,
@@ -78,7 +78,7 @@ class PageCloudImpl : public cloud_provider::PageCloud,
   FirestoreService* const firestore_service_;
 
   fidl::Binding<cloud_provider::PageCloud> binding_;
-  fxl::Closure on_empty_;
+  fit::closure on_empty_;
 
   // Watcher set by the client.
   cloud_provider::PageCloudWatcherPtr watcher_;

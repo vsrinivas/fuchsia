@@ -8,6 +8,7 @@
 
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
+#include <lib/fit/function.h>
 
 #include "gtest/gtest.h"
 #include "lib/callback/capture.h"
@@ -15,7 +16,6 @@
 #include "lib/fidl/cpp/optional.h"
 #include "lib/fsl/vmo/sized_vmo.h"
 #include "lib/fsl/vmo/strings.h"
-#include "lib/fxl/functional/closure.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/strings/string_printf.h"
@@ -40,7 +40,7 @@ class MergingIntegrationTest : public IntegrationTest {
 class Watcher : public ledger::PageWatcher {
  public:
   Watcher(fidl::InterfaceRequest<ledger::PageWatcher> request,
-          fxl::Closure change_callback)
+          fit::closure change_callback)
       : binding_(this, std::move(request)),
         change_callback_(std::move(change_callback)) {}
 
@@ -63,7 +63,7 @@ class Watcher : public ledger::PageWatcher {
   }
 
   fidl::Binding<PageWatcher> binding_;
-  fxl::Closure change_callback_;
+  fit::closure change_callback_;
 };
 
 enum class MergeType {
@@ -113,11 +113,11 @@ class ConflictResolverImpl : public ledger::ConflictResolver {
         std::vector<ledger::DiffEntry>* entries, size_t min_queries = 0) {
       return GetDiff(
           [this](std::unique_ptr<ledger::Token> token,
-                 std::function<void(ledger::Status,
+                 fit::function<void(ledger::Status,
                                     fidl::VectorPtr<ledger::DiffEntry>,
                                     std::unique_ptr<ledger::Token>)>
                      callback) mutable {
-            result_provider->GetFullDiff(std::move(token), callback);
+            result_provider->GetFullDiff(std::move(token), std::move(callback));
           },
           entries, min_queries);
     }
@@ -126,11 +126,12 @@ class ConflictResolverImpl : public ledger::ConflictResolver {
         std::vector<ledger::DiffEntry>* entries, size_t min_queries = 0) {
       return GetDiff(
           [this](std::unique_ptr<ledger::Token> token,
-                 std::function<void(ledger::Status,
+                 fit::function<void(ledger::Status,
                                     fidl::VectorPtr<ledger::DiffEntry>,
                                     std::unique_ptr<ledger::Token>)>
                      callback) mutable {
-            result_provider->GetConflictingDiff(std::move(token), callback);
+            result_provider->GetConflictingDiff(std::move(token),
+                                                std::move(callback));
           },
           entries, min_queries);
     }
@@ -204,9 +205,9 @@ class ConflictResolverImpl : public ledger::ConflictResolver {
 
    private:
     ::testing::AssertionResult GetDiff(
-        std::function<
+        fit::function<
             void(std::unique_ptr<ledger::Token>,
-                 std::function<void(ledger::Status,
+                 fit::function<void(ledger::Status,
                                     fidl::VectorPtr<ledger::DiffEntry>,
                                     std::unique_ptr<ledger::Token>)>)>
             get_diff,
@@ -323,7 +324,7 @@ class TestConflictResolverFactory : public ledger::ConflictResolverFactory {
       LedgerAppInstanceFactory::LoopController* loop_controller,
       ledger::MergePolicy policy,
       fidl::InterfaceRequest<ledger::ConflictResolverFactory> request,
-      fxl::Closure on_get_policy_called_callback,
+      fit::closure on_get_policy_called_callback,
       zx::duration response_delay = zx::msec(0))
       : loop_controller_(loop_controller),
         new_conflict_resolver_waiter_(loop_controller->NewWaiter()),
@@ -349,7 +350,7 @@ class TestConflictResolverFactory : public ledger::ConflictResolverFactory {
                  GetPolicyCallback callback) override {
     get_policy_calls++;
     async::PostDelayedTask(async_get_default(),
-                           [this, callback] {
+                           [this, callback = std::move(callback)] {
                              callback(policy_);
                              if (callback_) {
                                callback_();
@@ -383,7 +384,7 @@ class TestConflictResolverFactory : public ledger::ConflictResolverFactory {
   bool use_dummy_resolver_ = false;
   std::map<storage::PageId, DummyConflictResolver> dummy_resolvers_;
   fidl::Binding<ConflictResolverFactory> binding_;
-  fxl::Closure callback_;
+  fit::closure callback_;
   zx::duration response_delay_;
 };
 

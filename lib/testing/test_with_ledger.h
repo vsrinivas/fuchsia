@@ -7,6 +7,8 @@
 
 #include <memory>
 
+#include <lib/fit/function.h>
+
 #include "lib/gtest/real_loop_fixture.h"
 #include "peridot/lib/testing/ledger_repository_for_testing.h"
 

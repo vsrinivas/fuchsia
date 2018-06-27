@@ -14,6 +14,7 @@
 #include <fuchsia/ui/views_v1/cpp/fidl.h>
 #include <fuchsia/ui/views_v1_token/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/fit/function.h>
 #include <trace-provider/provider.h>
 
 #include "lib/app/cpp/startup_context.h"
@@ -23,7 +24,6 @@
 #include "lib/fidl/cpp/interface_request.h"
 #include "lib/fidl/cpp/string.h"
 #include "lib/fxl/command_line.h"
-#include "lib/fxl/functional/closure.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
 #include "peridot/bin/device_runner/cobalt/cobalt.h"

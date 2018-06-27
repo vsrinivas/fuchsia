@@ -4,6 +4,7 @@
 
 #include "peridot/bin/ledger/storage/public/data_source.h"
 
+#include <lib/fit/function.h>
 #include <lib/zx/vmar.h>
 
 #include "lib/fsl/socket/socket_drainer.h"
@@ -33,7 +34,7 @@ class StringLikeDataSource : public DataSource {
  private:
   uint64_t GetSize() override { return size_; }
 
-  void Get(std::function<void(std::unique_ptr<DataChunk>, Status)> callback)
+  void Get(fit::function<void(std::unique_ptr<DataChunk>, Status)> callback)
       override {
 #ifndef NDEBUG
     FXL_DCHECK(!called_);
@@ -91,7 +92,7 @@ class VmoDataSource : public DataSource {
  private:
   uint64_t GetSize() override { return vmo_.size(); }
 
-  void Get(std::function<void(std::unique_ptr<DataChunk>, Status)> callback)
+  void Get(fit::function<void(std::unique_ptr<DataChunk>, Status)> callback)
       override {
 #ifndef NDEBUG
     FXL_DCHECK(!called_);
@@ -127,7 +128,7 @@ class SocketDataSource : public DataSource, public fsl::SocketDrainer::Client {
  private:
   uint64_t GetSize() override { return expected_size_; }
 
-  void Get(std::function<void(std::unique_ptr<DataChunk>, Status)> callback)
+  void Get(fit::function<void(std::unique_ptr<DataChunk>, Status)> callback)
       override {
     FXL_DCHECK(socket_);
     callback_ = std::move(callback);
@@ -170,7 +171,7 @@ class SocketDataSource : public DataSource, public fsl::SocketDrainer::Client {
   uint64_t expected_size_;
   uint64_t remaining_bytes_;
   std::unique_ptr<fsl::SocketDrainer> socket_drainer_;
-  std::function<void(std::unique_ptr<DataChunk>, Status)> callback_;
+  fit::function<void(std::unique_ptr<DataChunk>, Status)> callback_;
 };
 
 class FlatBufferDataChunk : public DataSource::DataChunk {

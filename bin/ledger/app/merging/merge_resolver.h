@@ -7,9 +7,10 @@
 
 #include <vector>
 
+#include <lib/fit/function.h>
+
 #include "lib/backoff/backoff.h"
 #include "lib/callback/scoped_task_runner.h"
-#include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/weak_ptr.h"
 #include "peridot/bin/ledger/coroutine/coroutine.h"
@@ -25,12 +26,12 @@ class MergeStrategy;
 // provided merge strategy.
 class MergeResolver : public storage::CommitWatcher {
  public:
-  MergeResolver(fxl::Closure on_destroyed, Environment* environment,
+  MergeResolver(fit::closure on_destroyed, Environment* environment,
                 storage::PageStorage* storage,
                 std::unique_ptr<backoff::Backoff> backoff);
   ~MergeResolver() override;
 
-  void set_on_empty(fxl::Closure on_empty_callback);
+  void set_on_empty(fit::closure on_empty_callback);
 
   // Returns true if no merge is currently in progress. Note that returning
   // true, does not mean that there are no pending conflicts.
@@ -49,7 +50,7 @@ class MergeResolver : public storage::CommitWatcher {
   // Adds an action to perform when all the pending conflicts are resolved
   // (once).
   void RegisterNoConflictCallback(
-      std::function<void(ConflictResolutionWaitStatus)> callback);
+      fit::function<void(ConflictResolutionWaitStatus)> callback);
 
  private:
   // DelayedStatus allows us to avoid merge storms (several devices battling
@@ -105,9 +106,9 @@ class MergeResolver : public storage::CommitWatcher {
   int check_conflicts_task_count_ = 0;
   bool check_conflicts_in_progress_ = false;
   bool in_delay_ = false;
-  fxl::Closure on_empty_callback_;
-  fxl::Closure on_destroyed_;
-  std::vector<std::function<void(ConflictResolutionWaitStatus)>>
+  fit::closure on_empty_callback_;
+  fit::closure on_destroyed_;
+  std::vector<fit::function<void(ConflictResolutionWaitStatus)>>
       no_conflict_callbacks_;
 
   // ScopedTaskRunner must be the last member of the class.

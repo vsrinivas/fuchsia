@@ -14,8 +14,9 @@ source_set("filesystem") {
     "get_directory_content_size.h",
   ]
 
-  deps = [
+  public_deps = [
     "//garnet/public/lib/fxl",
+    "//zircon/public/lib/fit",
   ]
 }
 

@@ -9,8 +9,8 @@
 
 #include <google/firestore/v1beta1/document.pb.h>
 #include <google/firestore/v1beta1/firestore.grpc.pb.h>
+#include <lib/fit/function.h>
 
-#include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
 #include "peridot/bin/cloud_provider_firestore/firestore/listen_call_client.h"
 
@@ -44,14 +44,14 @@ class FirestoreService {
   virtual void GetDocument(
       google::firestore::v1beta1::GetDocumentRequest request,
       std::shared_ptr<grpc::CallCredentials> call_credentials,
-      std::function<void(grpc::Status, google::firestore::v1beta1::Document)>
+      fit::function<void(grpc::Status, google::firestore::v1beta1::Document)>
           callback) = 0;
 
   // Lists documents.
   virtual void ListDocuments(
       google::firestore::v1beta1::ListDocumentsRequest request,
       std::shared_ptr<grpc::CallCredentials> call_credentials,
-      std::function<void(grpc::Status,
+      fit::function<void(grpc::Status,
                          google::firestore::v1beta1::ListDocumentsResponse)>
           callback) = 0;
 
@@ -59,20 +59,20 @@ class FirestoreService {
   virtual void CreateDocument(
       google::firestore::v1beta1::CreateDocumentRequest request,
       std::shared_ptr<grpc::CallCredentials> call_credentials,
-      std::function<void(grpc::Status, google::firestore::v1beta1::Document)>
+      fit::function<void(grpc::Status, google::firestore::v1beta1::Document)>
           callback) = 0;
 
   // Deletes a document.
   virtual void DeleteDocument(
       google::firestore::v1beta1::DeleteDocumentRequest request,
       std::shared_ptr<grpc::CallCredentials> call_credentials,
-      std::function<void(grpc::Status)> callback) = 0;
+      fit::function<void(grpc::Status)> callback) = 0;
 
   // Commits a transaction, while optionally updating documents.
   virtual void Commit(
       google::firestore::v1beta1::CommitRequest request,
       std::shared_ptr<grpc::CallCredentials> call_credentials,
-      std::function<void(grpc::Status,
+      fit::function<void(grpc::Status,
                          google::firestore::v1beta1::CommitResponse)>
           callback) = 0;
 
@@ -80,7 +80,7 @@ class FirestoreService {
   virtual void RunQuery(
       google::firestore::v1beta1::RunQueryRequest request,
       std::shared_ptr<grpc::CallCredentials> call_credentials,
-      std::function<
+      fit::function<
           void(grpc::Status,
                std::vector<google::firestore::v1beta1::RunQueryResponse>)>
           callback) = 0;
@@ -93,7 +93,7 @@ class FirestoreService {
   // Shuts the client down.
   //
   // It is only safe to delete the class after the callback is called.
-  virtual void ShutDown(fxl::Closure callback) = 0;
+  virtual void ShutDown(fit::closure callback) = 0;
 
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(FirestoreService);

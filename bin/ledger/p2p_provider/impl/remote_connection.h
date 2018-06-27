@@ -8,9 +8,9 @@
 #include <string>
 
 #include <flatbuffers/flatbuffers.h>
+#include <lib/fit/function.h>
 #include <lib/zx/channel.h>
 
-#include "lib/fxl/functional/closure.h"
 #include "lib/fxl/strings/string_view.h"
 #include "lib/netconnector/cpp/message_relay.h"
 
@@ -33,13 +33,13 @@ class RemoteConnection {
 
   // |on_empty| will be called when this connection is no longer valid, either
   // because we disconnected or because the other side disconnected.
-  void set_on_empty(fxl::Closure on_empty);
+  void set_on_empty(fit::closure on_empty);
 
   // |on_close| will be called when the other side closes the connection.
-  void set_on_close(fxl::Closure on_close);
+  void set_on_close(fit::closure on_close);
 
   // |on_message| will be called for every new message received.
-  void set_on_message(std::function<void(std::vector<uint8_t>)> on_message);
+  void set_on_message(fit::function<void(std::vector<uint8_t>)> on_message);
 
  private:
   void OnChannelClosed();
@@ -50,9 +50,9 @@ class RemoteConnection {
   const std::string local_name_;
   netconnector::MessageRelay message_relay_;
 
-  fxl::Closure on_empty_;
-  fxl::Closure on_close_;
-  std::function<void(std::vector<uint8_t>)> on_message_;
+  fit::closure on_empty_;
+  fit::closure on_close_;
+  fit::function<void(std::vector<uint8_t>)> on_message_;
 };
 
 }  // namespace p2p_provider

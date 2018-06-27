@@ -10,10 +10,10 @@
 
 #include <fuchsia/ledger/cloud/cpp/fidl.h>
 #include <lib/async/dispatcher.h>
+#include <lib/fit/function.h>
 
 #include "lib/backoff/backoff.h"
 #include "lib/callback/scoped_task_runner.h"
-#include "lib/fxl/functional/closure.h"
 #include "lib/fxl/memory/ref_ptr.h"
 #include "lib/fxl/time/time_delta.h"
 #include "peridot/bin/ledger/cloud_sync/impl/batch_download.h"
@@ -63,14 +63,14 @@ class PageSyncImpl : public PageSync,
                cloud_provider::PageCloudPtr page_cloud,
                std::unique_ptr<backoff::Backoff> download_backoff,
                std::unique_ptr<backoff::Backoff> upload_backoff,
-               fxl::Closure on_error,
+               fit::closure on_error,
                std::unique_ptr<SyncStateWatcher> ledger_watcher = nullptr);
   ~PageSyncImpl() override;
 
   // |on_delete| will be called when this class is deleted.
-  void set_on_delete(std::function<void()> on_delete) {
+  void set_on_delete(fit::function<void()> on_delete) {
     FXL_DCHECK(!on_delete_);
-    on_delete_ = on_delete;
+    on_delete_ = std::move(on_delete);
   }
 
   // Enables upload. Has no effect if this method has already been called.
@@ -79,11 +79,11 @@ class PageSyncImpl : public PageSync,
   // PageSync:
   void Start() override;
 
-  void SetOnIdle(fxl::Closure on_idle) override;
+  void SetOnIdle(fit::closure on_idle) override;
 
   bool IsIdle() override;
 
-  void SetOnBacklogDownloaded(fxl::Closure on_backlog_downloaded) override;
+  void SetOnBacklogDownloaded(fit::closure on_backlog_downloaded) override;
 
   void SetSyncWatcher(SyncStateWatcher* watcher) override;
 
@@ -103,14 +103,14 @@ class PageSyncImpl : public PageSync,
   storage::PageSyncClient* const sync_client_;
   encryption::EncryptionService* const encryption_service_;
   cloud_provider::PageCloudPtr page_cloud_;
-  const fxl::Closure on_error_;
+  const fit::closure on_error_;
   const std::string log_prefix_;
 
   std::unique_ptr<PageDownload> page_download_;
   std::unique_ptr<PageUpload> page_upload_;
 
-  fxl::Closure on_idle_;
-  fxl::Closure on_backlog_downloaded_;
+  fit::closure on_idle_;
+  fit::closure on_backlog_downloaded_;
   // Ensures that each instance is started only once.
   bool started_ = false;
   // Set to true on unrecoverable error. This indicates that PageSyncImpl is in
@@ -120,7 +120,7 @@ class PageSyncImpl : public PageSync,
   bool enable_upload_ = false;
 
   // Called on destruction.
-  std::function<void()> on_delete_;
+  fit::function<void()> on_delete_;
 
   // Watcher of the synchronization state that reports to the LedgerSync object.
   std::unique_ptr<SyncStateWatcher> ledger_watcher_;

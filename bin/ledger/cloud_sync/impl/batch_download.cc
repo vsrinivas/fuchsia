@@ -6,11 +6,11 @@
 
 #include <utility>
 
+#include <lib/fit/function.h>
 #include <trace/event.h>
 
 #include "lib/callback/scoped_callback.h"
 #include "lib/callback/waiter.h"
-#include "lib/fxl/functional/closure.h"
 #include "peridot/bin/ledger/cloud_sync/impl/constants.h"
 
 namespace cloud_sync {
@@ -19,8 +19,8 @@ BatchDownload::BatchDownload(
     storage::PageStorage* storage,
     encryption::EncryptionService* encryption_service,
     fidl::VectorPtr<cloud_provider::Commit> commits,
-    std::unique_ptr<cloud_provider::Token> position_token, fxl::Closure on_done,
-    fxl::Closure on_error)
+    std::unique_ptr<cloud_provider::Token> position_token, fit::closure on_done,
+    fit::closure on_error)
     : storage_(storage),
       encryption_service_(encryption_service),
       commits_(std::move(commits)),

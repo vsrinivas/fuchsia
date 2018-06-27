@@ -6,11 +6,11 @@
 #define PERIDOT_BIN_LEDGER_TESTING_CLOUD_PROVIDER_FAKE_PAGE_CLOUD_H_
 
 #include <fuchsia/ledger/cloud/cpp/fidl.h>
+#include <lib/fit/function.h>
 
 #include "lib/callback/auto_cleanable.h"
 #include "lib/fidl/cpp/array.h"
 #include "lib/fidl/cpp/binding_set.h"
-#include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
 #include "peridot/bin/ledger/fidl/include/types.h"
 #include "peridot/bin/ledger/testing/cloud_provider/types.h"
@@ -22,7 +22,7 @@ class FakePageCloud : public cloud_provider::PageCloud {
   FakePageCloud(InjectNetworkError inject_network_error);
   ~FakePageCloud() override;
 
-  void set_on_empty(fxl::Closure on_empty) { on_empty_ = std::move(on_empty); }
+  void set_on_empty(fit::closure on_empty) { on_empty_ = std::move(on_empty); }
 
   void Bind(fidl::InterfaceRequest<cloud_provider::PageCloud> request);
 
@@ -48,7 +48,7 @@ class FakePageCloud : public cloud_provider::PageCloud {
   std::map<uint64_t, size_t> remaining_errors_to_inject_;
 
   fidl::BindingSet<cloud_provider::PageCloud> bindings_;
-  fxl::Closure on_empty_;
+  fit::closure on_empty_;
 
   fidl::VectorPtr<cloud_provider::Commit> commits_;
   std::map<std::string, std::string> objects_;

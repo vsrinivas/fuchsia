@@ -9,6 +9,7 @@
 #include <map>
 
 #include <fuchsia/net/oldhttp/cpp/fidl.h>
+#include <lib/fit/function.h>
 
 #include "peridot/bin/cloud_provider_firebase/testing/server/server.h"
 
@@ -24,10 +25,10 @@ class GcsServer : public Server {
 
  private:
   void HandleGet(::fuchsia::net::oldhttp::URLRequest request,
-                 std::function<void(::fuchsia::net::oldhttp::URLResponse)>
+                 fit::function<void(::fuchsia::net::oldhttp::URLResponse)>
                      callback) override;
   void HandlePost(::fuchsia::net::oldhttp::URLRequest request,
-                  std::function<void(::fuchsia::net::oldhttp::URLResponse)>
+                  fit::function<void(::fuchsia::net::oldhttp::URLResponse)>
                       callback) override;
 
   std::map<std::string, std::string> data_;

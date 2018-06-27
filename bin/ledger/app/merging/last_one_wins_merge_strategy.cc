@@ -7,8 +7,9 @@
 #include <memory>
 #include <string>
 
+#include <lib/fit/function.h>
+
 #include "lib/callback/waiter.h"
-#include "lib/fxl/functional/closure.h"
 #include "lib/fxl/memory/weak_ptr.h"
 #include "peridot/bin/ledger/app/page_manager.h"
 #include "peridot/bin/ledger/app/page_utils.h"
@@ -21,7 +22,7 @@ class LastOneWinsMergeStrategy::LastOneWinsMerger {
                     std::unique_ptr<const storage::Commit> left,
                     std::unique_ptr<const storage::Commit> right,
                     std::unique_ptr<const storage::Commit> ancestor,
-                    std::function<void(Status)> callback);
+                    fit::function<void(Status)> callback);
   ~LastOneWinsMerger();
 
   void Start();
@@ -37,7 +38,7 @@ class LastOneWinsMergeStrategy::LastOneWinsMerger {
   std::unique_ptr<const storage::Commit> const right_;
   std::unique_ptr<const storage::Commit> const ancestor_;
 
-  std::function<void(Status)> callback_;
+  fit::function<void(Status)> callback_;
 
   std::unique_ptr<storage::Journal> journal_;
   bool cancelled_ = false;
@@ -50,7 +51,7 @@ LastOneWinsMergeStrategy::LastOneWinsMerger::LastOneWinsMerger(
     storage::PageStorage* storage, std::unique_ptr<const storage::Commit> left,
     std::unique_ptr<const storage::Commit> right,
     std::unique_ptr<const storage::Commit> ancestor,
-    std::function<void(Status)> callback)
+    fit::function<void(Status)> callback)
     : storage_(storage),
       left_(std::move(left)),
       right_(std::move(right)),
@@ -166,14 +167,14 @@ LastOneWinsMergeStrategy::LastOneWinsMergeStrategy() {}
 
 LastOneWinsMergeStrategy::~LastOneWinsMergeStrategy() {}
 
-void LastOneWinsMergeStrategy::SetOnError(std::function<void()> /*on_error*/) {}
+void LastOneWinsMergeStrategy::SetOnError(fit::function<void()> /*on_error*/) {}
 
 void LastOneWinsMergeStrategy::Merge(
     storage::PageStorage* storage, PageManager* /*page_manager*/,
     std::unique_ptr<const storage::Commit> head_1,
     std::unique_ptr<const storage::Commit> head_2,
     std::unique_ptr<const storage::Commit> ancestor,
-    std::function<void(Status)> callback) {
+    fit::function<void(Status)> callback) {
   FXL_DCHECK(!in_progress_merge_);
   FXL_DCHECK(head_1->GetTimestamp() <= head_2->GetTimestamp());
 

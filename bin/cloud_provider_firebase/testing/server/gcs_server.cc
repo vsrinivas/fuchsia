@@ -4,6 +4,8 @@
 
 #include "peridot/bin/cloud_provider_firebase/testing/server/gcs_server.h"
 
+#include <lib/fit/function.h>
+
 #include "lib/fsl/vmo/strings.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/string_number_conversions.h"
@@ -19,9 +21,8 @@ GcsServer::GcsServer() {}
 
 GcsServer::~GcsServer() {}
 
-void GcsServer::HandleGet(
-    http::URLRequest request,
-    const std::function<void(http::URLResponse)> callback) {
+void GcsServer::HandleGet(http::URLRequest request,
+                          fit::function<void(http::URLResponse)> callback) {
   url::GURL url(request.url);
 
   auto path = url.path();
@@ -34,9 +35,8 @@ void GcsServer::HandleGet(
   callback(BuildResponse(request.url, Server::ResponseCode::kOk, data_[path]));
 }
 
-void GcsServer::HandlePost(
-    http::URLRequest request,
-    const std::function<void(http::URLResponse)> callback) {
+void GcsServer::HandlePost(http::URLRequest request,
+                           fit::function<void(http::URLResponse)> callback) {
   url::GURL url(request.url);
 
   auto path = url.path();

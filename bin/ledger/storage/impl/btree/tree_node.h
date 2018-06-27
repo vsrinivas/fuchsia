@@ -8,6 +8,8 @@
 #include <memory>
 #include <vector>
 
+#include <lib/fit/function.h>
+
 #include "peridot/bin/ledger/storage/public/object.h"
 #include "peridot/bin/ledger/storage/public/page_storage.h"
 #include "peridot/bin/ledger/storage/public/types.h"
@@ -25,7 +27,7 @@ class TreeNode {
   // |callback| with the returned status and node.
   static void FromIdentifier(
       PageStorage* page_storage, ObjectIdentifier identifier,
-      std::function<void(Status, std::unique_ptr<const TreeNode>)> callback);
+      fit::function<void(Status, std::unique_ptr<const TreeNode>)> callback);
 
   // Creates a |TreeNode| object with the given entries and children. |children|
   // is a map from the index of the child to the identfiier of the child. It
@@ -36,12 +38,12 @@ class TreeNode {
       PageStorage* page_storage, uint8_t level,
       const std::vector<Entry>& entries,
       const std::map<size_t, ObjectIdentifier>& children,
-      std::function<void(Status, ObjectIdentifier)> callback);
+      fit::function<void(Status, ObjectIdentifier)> callback);
 
   // Creates an empty node, i.e. a TreeNode with no entries and an empty child
   // at index 0 and calls the callback with the result.
   static void Empty(PageStorage* page_storage,
-                    std::function<void(Status, ObjectIdentifier)> callback);
+                    fit::function<void(Status, ObjectIdentifier)> callback);
 
   // Returns the number of entries stored in this tree node.
   int GetKeyCount() const;
@@ -55,7 +57,7 @@ class TreeNode {
   // index is empty |NO_SUCH_CHILD| is returned and the value of |child| is not
   // updated.
   void GetChild(int index,
-                std::function<void(Status, std::unique_ptr<const TreeNode>)>
+                fit::function<void(Status, std::unique_ptr<const TreeNode>)>
                     callback) const;
 
   // Searches for the given |key| in this node. If it is found, |OK| is

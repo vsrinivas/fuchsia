@@ -5,8 +5,8 @@
 #include "peridot/bin/ledger/p2p_provider/impl/remote_connection.h"
 
 #include <flatbuffers/flatbuffers.h>
+#include <lib/fit/function.h>
 
-#include "lib/fxl/functional/closure.h"
 #include "lib/fxl/logging.h"
 #include "peridot/bin/ledger/p2p_provider/impl/envelope_generated.h"
 #include "peridot/lib/convert/convert.h"
@@ -39,16 +39,16 @@ void RemoteConnection::Disconnect() {
   }
 }
 
-void RemoteConnection::set_on_empty(fxl::Closure on_empty) {
+void RemoteConnection::set_on_empty(fit::closure on_empty) {
   on_empty_ = std::move(on_empty);
 }
 
-void RemoteConnection::set_on_close(fxl::Closure on_close) {
+void RemoteConnection::set_on_close(fit::closure on_close) {
   on_close_ = std::move(on_close);
 }
 
 void RemoteConnection::set_on_message(
-    std::function<void(std::vector<uint8_t>)> on_message) {
+    fit::function<void(std::vector<uint8_t>)> on_message) {
   on_message_ = std::move(on_message);
 }
 

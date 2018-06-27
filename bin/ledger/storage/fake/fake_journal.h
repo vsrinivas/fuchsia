@@ -8,6 +8,8 @@
 #include <memory>
 #include <string>
 
+#include <lib/fit/function.h>
+
 #include "lib/fxl/macros.h"
 #include "peridot/bin/ledger/storage/fake/fake_journal_delegate.h"
 #include "peridot/bin/ledger/storage/public/journal.h"
@@ -23,16 +25,16 @@ class FakeJournal : public Journal {
   ~FakeJournal() override;
 
   void Commit(
-      std::function<void(Status, std::unique_ptr<const storage::Commit>)>
+      fit::function<void(Status, std::unique_ptr<const storage::Commit>)>
           callback);
 
   Status Rollback();
 
   // Journal:
   void Put(convert::ExtendedStringView key, ObjectIdentifier object_identifier,
-           KeyPriority priority, std::function<void(Status)> callback) override;
+           KeyPriority priority, fit::function<void(Status)> callback) override;
   void Delete(convert::ExtendedStringView key,
-              std::function<void(Status)> callback) override;
+              fit::function<void(Status)> callback) override;
   const JournalId& GetId() const override;
 
  private:

@@ -5,7 +5,8 @@
 #ifndef PERIDOT_BIN_LEDGER_TESTING_TEST_WITH_COROUTINES_H_
 #define PERIDOT_BIN_LEDGER_TESTING_TEST_WITH_COROUTINES_H_
 
-#include "lib/fxl/functional/closure.h"
+#include <lib/fit/function.h>
+
 #include "lib/fxl/macros.h"
 #include "lib/gtest/test_loop_fixture.h"
 #include "peridot/bin/ledger/coroutine/coroutine_impl.h"
@@ -19,7 +20,7 @@ class TestWithCoroutines : public gtest::TestLoopFixture {
  protected:
   // Runs the given the given test code in a coroutine.
   void RunInCoroutine(
-      std::function<void(coroutine::CoroutineHandler*)> run_test);
+      fit::function<void(coroutine::CoroutineHandler*)> run_test);
 
   coroutine::CoroutineServiceImpl coroutine_service_;
 

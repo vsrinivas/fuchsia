@@ -8,6 +8,8 @@
 #include <memory>
 #include <vector>
 
+#include <lib/fit/function.h>
+
 #include "lib/callback/operation_serializer.h"
 #include "lib/callback/waiter.h"
 #include "lib/fxl/macros.h"
@@ -30,7 +32,7 @@ class ConflictResolverClient : public MergeResultProvider {
       std::unique_ptr<const storage::Commit> left,
       std::unique_ptr<const storage::Commit> right,
       std::unique_ptr<const storage::Commit> ancestor,
-      std::function<void(Status)> callback);
+      fit::function<void(Status)> callback);
   ~ConflictResolverClient() override;
 
   void Start();
@@ -45,8 +47,9 @@ class ConflictResolverClient : public MergeResultProvider {
 
   // Performs a diff of the given type on the conflict.
   void GetDiff(diff_utils::DiffType type, std::unique_ptr<Token> token,
-               const std::function<void(Status, fidl::VectorPtr<DiffEntry>,
-                                        std::unique_ptr<Token>)>& callback);
+               fit::function<void(Status, fidl::VectorPtr<DiffEntry>,
+                                  std::unique_ptr<Token>)>
+                   callback);
 
   // MergeResultProvider:
   void GetFullDiff(std::unique_ptr<Token> token,
@@ -62,7 +65,7 @@ class ConflictResolverClient : public MergeResultProvider {
   // Checks whether this ConflictResolverClient is not cancelled and the storage
   // returned status is ok. If not, calls the given |callback| and |Finalize|
   // with an error status.
-  bool IsInValidStateAndNotify(MergeCallback callback,
+  bool IsInValidStateAndNotify(const MergeCallback& callback,
                                storage::Status status = storage::Status::OK);
 
   storage::PageStorage* const storage_;
@@ -73,7 +76,7 @@ class ConflictResolverClient : public MergeResultProvider {
   std::unique_ptr<const storage::Commit> const right_;
   std::unique_ptr<const storage::Commit> const ancestor_;
 
-  std::function<void(Status)> callback_;
+  fit::function<void(Status)> callback_;
 
   // |has_merged_values_| is true when |Merge| has been called to set some
   // values. It is used as an optimization in |MergeNonConflictingEntries|.

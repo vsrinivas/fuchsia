@@ -8,6 +8,8 @@
 #include <functional>
 #include <string>
 
+#include <lib/fit/function.h>
+
 #include "peridot/lib/firebase/firebase.h"
 
 namespace cloud_provider_firebase {
@@ -40,12 +42,12 @@ class CloudDeviceSet {
   // devices, ensuring that the cloud was not erased since the last sync.
   // This makes at most one network request using the given |auth_token|.
   virtual void CheckFingerprint(std::string auth_token, std::string fingerprint,
-                                std::function<void(Status)> callback) = 0;
+                                fit::function<void(Status)> callback) = 0;
 
   // Adds the device fingerprint to the list of devices in the cloud.
   // This makes at most one network request using the given |auth_token|.
   virtual void SetFingerprint(std::string auth_token, std::string fingerprint,
-                              std::function<void(Status)> callback) = 0;
+                              fit::function<void(Status)> callback) = 0;
 
   // Watches the fingerprint in the cloud. The given |callback| is called with
   // status OK when the watcher is correctly set. Upon an error it is called
@@ -54,12 +56,12 @@ class CloudDeviceSet {
   //
   // This makes at most one network request using the given |auth_token|.
   virtual void WatchFingerprint(std::string auth_token, std::string fingerprint,
-                                std::function<void(Status)> callback) = 0;
+                                fit::function<void(Status)> callback) = 0;
 
   // Erases the entire device set. The resulting status is OK if the erase
   // succeeded and NETWORK_ERROR if not.
   virtual void EraseAllFingerprints(std::string auth_token,
-                                    std::function<void(Status)> callback) = 0;
+                                    fit::function<void(Status)> callback) = 0;
 
   // Sends a request to update the server-side timestamp associated with the
   // |fingerprint|.

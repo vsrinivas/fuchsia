@@ -8,7 +8,8 @@
 #include <functional>
 #include <memory>
 
-#include "lib/fxl/functional/closure.h"
+#include <lib/fit/function.h>
+
 #include "peridot/bin/ledger/cloud_sync/public/ledger_sync.h"
 #include "peridot/bin/ledger/p2p_sync/public/ledger_communicator.h"
 #include "peridot/bin/ledger/storage/public/page_storage.h"
@@ -27,7 +28,7 @@ class LedgerSyncImpl : public LedgerSync {
   std::unique_ptr<PageSync> CreatePageSync(
       storage::PageStorage* page_storage,
       storage::PageSyncClient* page_sync_client,
-      fxl::Closure error_callback) override;
+      fit::closure error_callback) override;
 
  private:
   std::unique_ptr<cloud_sync::LedgerSync> const cloud_sync_;

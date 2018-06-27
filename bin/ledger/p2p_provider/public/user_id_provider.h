@@ -5,6 +5,8 @@
 #ifndef PERIDOT_BIN_LEDGER_P2P_PROVIDER_PUBLIC_USER_ID_PROVIDER_H_
 #define PERIDOT_BIN_LEDGER_P2P_PROVIDER_PUBLIC_USER_ID_PROVIDER_H_
 
+#include <lib/fit/function.h>
+
 #include "lib/fxl/macros.h"
 
 namespace p2p_provider {
@@ -21,7 +23,7 @@ class UserIdProvider {
   virtual ~UserIdProvider() {}
 
   // GetUserId calls its callback with the user id.
-  virtual void GetUserId(std::function<void(Status, std::string)> callback) = 0;
+  virtual void GetUserId(fit::function<void(Status, std::string)> callback) = 0;
 
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(UserIdProvider);

@@ -8,6 +8,8 @@
 #include <sstream>
 #include <utility>
 
+#include <lib/fit/function.h>
+
 #include "lib/fsl/vmo/strings.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
@@ -21,7 +23,7 @@ namespace http = ::fuchsia::net::oldhttp;
 
 namespace {
 
-std::function<http::URLRequest()> MakeRequest(const std::string& url,
+fit::function<http::URLRequest()> MakeRequest(const std::string& url,
                                               const std::string& method,
                                               const std::string& message,
                                               bool stream_request = false) {
@@ -84,7 +86,7 @@ FirebaseImpl::~FirebaseImpl() {}
 
 void FirebaseImpl::Get(
     const std::string& key, const std::vector<std::string>& query_params,
-    std::function<void(Status status, std::unique_ptr<rapidjson::Value> value)>
+    fit::function<void(Status status, std::unique_ptr<rapidjson::Value> value)>
         callback) {
   auto request_callback = [callback = std::move(callback)](
                               Status status, const std::string& response) {
@@ -103,13 +105,14 @@ void FirebaseImpl::Get(
     callback(Status::OK, std::move(document));
   };
 
-  Request(BuildRequestUrl(key, query_params), "GET", "", request_callback);
+  Request(BuildRequestUrl(key, query_params), "GET", "",
+          std::move(request_callback));
 }
 
 void FirebaseImpl::Put(const std::string& key,
                        const std::vector<std::string>& query_params,
                        const std::string& data,
-                       std::function<void(Status status)> callback) {
+                       fit::function<void(Status status)> callback) {
   Request(BuildRequestUrl(key, query_params), "PUT", data,
           [callback = std::move(callback)](Status status,
                                            const std::string& response) {
@@ -122,7 +125,7 @@ void FirebaseImpl::Put(const std::string& key,
 void FirebaseImpl::Patch(const std::string& key,
                          const std::vector<std::string>& query_params,
                          const std::string& data,
-                         std::function<void(Status status)> callback) {
+                         fit::function<void(Status status)> callback) {
   Request(BuildRequestUrl(key, query_params), "PATCH", data,
           [callback = std::move(callback)](Status status,
                                            const std::string& response) {
@@ -134,7 +137,7 @@ void FirebaseImpl::Patch(const std::string& key,
 
 void FirebaseImpl::Delete(const std::string& key,
                           const std::vector<std::string>& query_params,
-                          std::function<void(Status status)> callback) {
+                          fit::function<void(Status status)> callback) {
   Request(
       BuildRequestUrl(key, query_params), "DELETE", "",
       [callback = std::move(callback)](
@@ -187,16 +190,17 @@ std::string FirebaseImpl::BuildRequestUrl(
 void FirebaseImpl::Request(
     const std::string& url, const std::string& method,
     const std::string& message,
-    const std::function<void(Status status, std::string response)>& callback) {
-  requests_.emplace(
-      network_wrapper_->Request(MakeRequest(url, method, message),
-                                [this, callback](http::URLResponse response) {
-                                  OnResponse(callback, std::move(response));
-                                }));
+    fit::function<void(Status status, std::string response)> callback) {
+  requests_.emplace(network_wrapper_->Request(
+      MakeRequest(url, method, message),
+      [this,
+       callback = std::move(callback)](http::URLResponse response) mutable {
+        OnResponse(std::move(callback), std::move(response));
+      }));
 }
 
 void FirebaseImpl::OnResponse(
-    const std::function<void(Status status, std::string response)>& callback,
+    fit::function<void(Status status, std::string response)> callback,
     http::URLResponse response) {
   if (response.error) {
     FXL_LOG(ERROR) << response.url << " error " << response.error->description;
@@ -210,7 +214,8 @@ void FirebaseImpl::OnResponse(
     FXL_DCHECK(response.body->is_stream());
     auto& drainer = drainers_.emplace();
     drainer.Start(std::move(response.body->stream()),
-                  [callback, url, status_line](const std::string& body) {
+                  [callback = std::move(callback), url,
+                   status_line](const std::string& body) {
                     FXL_LOG(ERROR)
                         << url << " error " << status_line << ":" << std::endl
                         << body;
@@ -221,9 +226,10 @@ void FirebaseImpl::OnResponse(
 
   FXL_DCHECK(response.body->is_stream());
   auto& drainer = drainers_.emplace();
-  drainer.Start(
-      std::move(response.body->stream()),
-      [callback](const std::string& body) { callback(Status::OK, body); });
+  drainer.Start(std::move(response.body->stream()),
+                [callback = std::move(callback)](const std::string& body) {
+                  callback(Status::OK, body);
+                });
 }
 
 void FirebaseImpl::OnStream(WatchClient* watch_client,

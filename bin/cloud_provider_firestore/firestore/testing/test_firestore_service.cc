@@ -4,7 +4,7 @@
 
 #include "peridot/bin/cloud_provider_firestore/firestore/testing/test_firestore_service.h"
 
-#include "lib/fxl/functional/closure.h"
+#include <lib/fit/function.h>
 
 namespace cloud_provider_firestore {
 
@@ -35,7 +35,7 @@ const std::string& TestFirestoreService::GetRootPath() { return root_path_; }
 void TestFirestoreService::GetDocument(
     google::firestore::v1beta1::GetDocumentRequest request,
     std::shared_ptr<grpc::CallCredentials> /*call_credentials*/,
-    std::function<void(grpc::Status, google::firestore::v1beta1::Document)>
+    fit::function<void(grpc::Status, google::firestore::v1beta1::Document)>
         callback) {
   get_document_records.push_back({std::move(request), std::move(callback)});
 }
@@ -43,7 +43,7 @@ void TestFirestoreService::GetDocument(
 void TestFirestoreService::ListDocuments(
     google::firestore::v1beta1::ListDocumentsRequest request,
     std::shared_ptr<grpc::CallCredentials> /*call_credentials*/,
-    std::function<void(grpc::Status,
+    fit::function<void(grpc::Status,
                        google::firestore::v1beta1::ListDocumentsResponse)>
         callback) {
   list_documents_records.push_back({std::move(request), std::move(callback)});
@@ -52,7 +52,7 @@ void TestFirestoreService::ListDocuments(
 void TestFirestoreService::CreateDocument(
     google::firestore::v1beta1::CreateDocumentRequest request,
     std::shared_ptr<grpc::CallCredentials> /*call_credentials*/,
-    std::function<void(grpc::Status, google::firestore::v1beta1::Document)>
+    fit::function<void(grpc::Status, google::firestore::v1beta1::Document)>
         callback) {
   create_document_records.push_back({std::move(request), std::move(callback)});
 }
@@ -60,14 +60,14 @@ void TestFirestoreService::CreateDocument(
 void TestFirestoreService::DeleteDocument(
     google::firestore::v1beta1::DeleteDocumentRequest request,
     std::shared_ptr<grpc::CallCredentials> /*call_credentials*/,
-    std::function<void(grpc::Status)> callback) {
+    fit::function<void(grpc::Status)> callback) {
   delete_document_records.push_back({std::move(request), std::move(callback)});
 }
 
 void TestFirestoreService::RunQuery(
     google::firestore::v1beta1::RunQueryRequest request,
     std::shared_ptr<grpc::CallCredentials> call_credentials,
-    std::function<
+    fit::function<
         void(grpc::Status,
              std::vector<google::firestore::v1beta1::RunQueryResponse>)>
         callback) {
@@ -77,7 +77,7 @@ void TestFirestoreService::RunQuery(
 void TestFirestoreService::Commit(
     google::firestore::v1beta1::CommitRequest request,
     std::shared_ptr<grpc::CallCredentials> /*call_credentials*/,
-    std::function<void(grpc::Status,
+    fit::function<void(grpc::Status,
                        google::firestore::v1beta1::CommitResponse)>
         callback) {
   commit_records.push_back({std::move(request), std::move(callback)});
@@ -90,7 +90,7 @@ std::unique_ptr<ListenCallHandler> TestFirestoreService::Listen(
   return std::make_unique<TestListenCallHandler>();
 }
 
-void TestFirestoreService::ShutDown(fxl::Closure callback) {
+void TestFirestoreService::ShutDown(fit::closure callback) {
   shutdown_callback = std::move(callback);
 }
 

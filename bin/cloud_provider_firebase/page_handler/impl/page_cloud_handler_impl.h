@@ -9,6 +9,7 @@
 #include <memory>
 #include <string>
 
+#include <lib/fit/function.h>
 #include <lib/zx/socket.h>
 
 #include "lib/fsl/vmo/sized_vmo.h"
@@ -29,7 +30,7 @@ class PageCloudHandlerImpl : public PageCloudHandler {
 
   // PageCloudHandler:
   void AddCommits(const std::string& auth_token, std::vector<Commit> commits,
-                  const std::function<void(Status)>& callback) override;
+                  fit::function<void(Status)> callback) override;
 
   void WatchCommits(const std::string& auth_token,
                     const std::string& min_timestamp,
@@ -39,15 +40,15 @@ class PageCloudHandlerImpl : public PageCloudHandler {
 
   void GetCommits(
       const std::string& auth_token, const std::string& min_timestamp,
-      std::function<void(Status, std::vector<Record>)> callback) override;
+      fit::function<void(Status, std::vector<Record>)> callback) override;
 
   void AddObject(const std::string& auth_token, ObjectDigestView object_digest,
                  fsl::SizedVmo data,
-                 std::function<void(Status)> callback) override;
+                 fit::function<void(Status)> callback) override;
 
   void GetObject(
       const std::string& auth_token, ObjectDigestView object_digest,
-      std::function<void(Status status, uint64_t size, zx::socket data)>
+      fit::function<void(Status status, uint64_t size, zx::socket data)>
           callback) override;
 
  private:

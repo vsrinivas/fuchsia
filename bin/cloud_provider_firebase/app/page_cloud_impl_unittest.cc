@@ -48,7 +48,7 @@ class PageCloudImplTest : public gtest::TestLoopFixture,
     on_new_commits_calls_++;
     on_new_commits_commits_ = std::move(commits);
     on_new_commits_position_token_ = std::move(position_token);
-    on_new_commits_commits_callback_ = callback;
+    on_new_commits_commits_callback_ = std::move(callback);
   }
 
   void OnNewObject(fidl::VectorPtr<uint8_t> id, fuchsia::mem::Buffer data,

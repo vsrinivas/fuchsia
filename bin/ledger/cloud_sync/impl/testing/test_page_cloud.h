@@ -6,10 +6,10 @@
 #define PERIDOT_BIN_LEDGER_CLOUD_SYNC_IMPL_TESTING_TEST_PAGE_CLOUD_H_
 
 #include <fuchsia/ledger/cloud/cpp/fidl.h>
+#include <lib/fit/function.h>
 
 #include "lib/fidl/cpp/array.h"
 #include "lib/fidl/cpp/binding.h"
-#include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
 #include "peridot/bin/ledger/encryption/fake/fake_encryption_service.h"
 #include "peridot/bin/ledger/fidl/include/types.h"
@@ -51,7 +51,7 @@ class TestPageCloud : public cloud_provider::PageCloud {
   unsigned int add_object_calls = 0u;
   std::map<std::string, std::string> received_objects;
   bool delay_add_object_callbacks = false;
-  std::vector<fxl::Closure> pending_add_object_callbacks;
+  std::vector<fit::closure> pending_add_object_callbacks;
   bool reset_object_status_after_call = false;
 
   // GetObject().

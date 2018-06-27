@@ -9,6 +9,7 @@
 #include <string>
 
 #include <lib/async/dispatcher.h>
+#include <lib/fit/function.h>
 
 #include "peridot/bin/cloud_provider_firebase/device_set/cloud_device_set.h"
 
@@ -21,16 +22,16 @@ class TestCloudDeviceSet : public cloud_provider_firebase::CloudDeviceSet {
   ~TestCloudDeviceSet() override;
 
   void CheckFingerprint(std::string auth_token, std::string fingerprint,
-                        std::function<void(Status)> callback) override;
+                        fit::function<void(Status)> callback) override;
 
   void SetFingerprint(std::string auth_token, std::string fingerprint,
-                      std::function<void(Status)> callback) override;
+                      fit::function<void(Status)> callback) override;
 
   void WatchFingerprint(std::string auth_token, std::string fingerprint,
-                        std::function<void(Status)> callback) override;
+                        fit::function<void(Status)> callback) override;
 
   void EraseAllFingerprints(std::string auth_token,
-                            std::function<void(Status)> callback) override;
+                            fit::function<void(Status)> callback) override;
 
   void UpdateTimestampAssociatedWithFingerprint(
       std::string auth_token, std::string fingerprint) override;
@@ -40,7 +41,7 @@ class TestCloudDeviceSet : public cloud_provider_firebase::CloudDeviceSet {
   std::string checked_fingerprint;
   std::string set_fingerprint;
   std::string watched_fingerprint;
-  std::function<void(Status)> watch_callback;
+  fit::function<void(Status)> watch_callback;
   int timestamp_update_requests_ = 0;
 
  private:

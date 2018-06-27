@@ -5,6 +5,7 @@
 #include "peridot/bin/ledger/p2p_sync/impl/page_communicator_impl.h"
 
 #include <lib/async/cpp/task.h>
+#include <lib/fit/function.h>
 
 // gtest matchers are in gmock and we cannot include the specific header file
 // directly as it is private to the library.
@@ -30,16 +31,17 @@ class FakePageStorage : public storage::PageStorageEmptyImpl {
   storage::PageId GetId() override { return page_id_; }
 
   void GetHeadCommitIds(
-      std::function<void(storage::Status, std::vector<storage::CommitId>)>
+      fit::function<void(storage::Status, std::vector<storage::CommitId>)>
           callback) override {
     callback(storage::Status::OK, {"commit_id"});
   }
 
   void GetPiece(storage::ObjectIdentifier object_identifier,
-                std::function<void(storage::Status,
+                fit::function<void(storage::Status,
                                    std::unique_ptr<const storage::Object>)>
                     callback) override {
-    async::PostTask(async_, [this, object_identifier, callback]() {
+    async::PostTask(async_, [this, object_identifier,
+                             callback = std::move(callback)]() {
       const auto& it = objects_.find(object_identifier);
       if (it == objects_.end()) {
         callback(storage::Status::NOT_FOUND, nullptr);
@@ -58,7 +60,7 @@ class FakePageStorage : public storage::PageStorageEmptyImpl {
   void AddCommitsFromSync(
       std::vector<storage::PageStorage::CommitIdAndBytes> ids_and_bytes,
       const storage::ChangeSource /*source*/,
-      std::function<void(storage::Status)> callback) override {
+      fit::function<void(storage::Status)> callback) override {
     commits_from_sync_.emplace_back(
         std::piecewise_construct,
         std::forward_as_tuple(std::move(ids_and_bytes)),
@@ -73,7 +75,7 @@ class FakePageStorage : public storage::PageStorageEmptyImpl {
 
   storage::CommitWatcher* watcher_ = nullptr;
   std::vector<std::pair<std::vector<storage::PageStorage::CommitIdAndBytes>,
-                        std::function<void(storage::Status)>>>
+                        fit::function<void(storage::Status)>>>
       commits_from_sync_;
 
  private:

@@ -7,6 +7,8 @@
 
 #include <functional>
 
+#include <lib/fit/function.h>
+
 #include "lib/fxl/strings/string_view.h"
 #include "peridot/bin/ledger/filesystem/detached_path.h"
 
@@ -17,12 +19,12 @@ class DirectoryReader {
   // Returns the list of directories and files inside the provided directory.
   static bool GetDirectoryEntries(
       const std::string& directory,
-      const std::function<bool(fxl::StringView)>& callback);
+      fit::function<bool(fxl::StringView)> callback);
 
   // Returns the list of directories and files inside the provided directory.
   static bool GetDirectoryEntriesAt(
       const DetachedPath& directory,
-      const std::function<bool(fxl::StringView)>& callback);
+      fit::function<bool(fxl::StringView)> callback);
 };
 
 }  // namespace ledger

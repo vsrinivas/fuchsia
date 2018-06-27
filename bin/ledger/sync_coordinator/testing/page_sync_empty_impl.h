@@ -5,7 +5,8 @@
 #ifndef PERIDOT_BIN_LEDGER_SYNC_COORDINATOR_TESTING_PAGE_SYNC_EMPTY_IMPL_H_
 #define PERIDOT_BIN_LEDGER_SYNC_COORDINATOR_TESTING_PAGE_SYNC_EMPTY_IMPL_H_
 
-#include "lib/fxl/functional/closure.h"
+#include <lib/fit/function.h>
+
 #include "peridot/bin/ledger/sync_coordinator/public/page_sync.h"
 
 namespace sync_coordinator {
@@ -14,10 +15,10 @@ class PageSyncEmptyImpl : public PageSync {
  public:
   // PageSync:
   void Start() override;
-  void SetOnIdle(fxl::Closure on_idle_callback) override;
+  void SetOnIdle(fit::closure on_idle_callback) override;
   bool IsIdle() override;
   void SetOnBacklogDownloaded(
-      fxl::Closure on_backlog_downloaded_callback) override;
+      fit::closure on_backlog_downloaded_callback) override;
   void SetSyncWatcher(SyncStateWatcher* watcher) override;
 };
 

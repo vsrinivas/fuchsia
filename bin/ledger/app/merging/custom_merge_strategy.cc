@@ -6,7 +6,8 @@
 
 #include <memory>
 
-#include "lib/fxl/functional/closure.h"
+#include <lib/fit/function.h>
+
 #include "peridot/bin/ledger/app/page_manager.h"
 
 namespace ledger {
@@ -29,8 +30,8 @@ CustomMergeStrategy::CustomMergeStrategy(ConflictResolverPtr conflict_resolver)
 
 CustomMergeStrategy::~CustomMergeStrategy() {}
 
-void CustomMergeStrategy::SetOnError(fxl::Closure on_error) {
-  on_error_ = on_error;
+void CustomMergeStrategy::SetOnError(fit::closure on_error) {
+  on_error_ = std::move(on_error);
 }
 
 void CustomMergeStrategy::Merge(storage::PageStorage* storage,
@@ -38,7 +39,7 @@ void CustomMergeStrategy::Merge(storage::PageStorage* storage,
                                 std::unique_ptr<const storage::Commit> head_1,
                                 std::unique_ptr<const storage::Commit> head_2,
                                 std::unique_ptr<const storage::Commit> ancestor,
-                                std::function<void(Status)> callback) {
+                                fit::function<void(Status)> callback) {
   FXL_DCHECK(head_1->GetTimestamp() <= head_2->GetTimestamp());
   FXL_DCHECK(!in_progress_merge_);
 

@@ -7,6 +7,8 @@
 
 #include <memory>
 
+#include <lib/fit/function.h>
+
 #include "peridot/bin/ledger/app/merging/merge_resolver.h"
 #include "peridot/bin/ledger/fidl/include/types.h"
 #include "peridot/bin/ledger/storage/public/commit.h"
@@ -25,7 +27,7 @@ class MergeStrategy {
   // anymore, for instance when the underlying merge mechanism is no longer
   // available. This callback should not delete the strategy if there are merges
   // in progress.
-  virtual void SetOnError(std::function<void()> on_error) = 0;
+  virtual void SetOnError(fit::function<void()> on_error) = 0;
 
   // Merge the given commits. head_1.timesteamp must be less or equals to
   // head_2.timestamp. MergeStrategy should not be deleted while merges are in
@@ -34,7 +36,7 @@ class MergeStrategy {
                      std::unique_ptr<const storage::Commit> head_1,
                      std::unique_ptr<const storage::Commit> head_2,
                      std::unique_ptr<const storage::Commit> ancestor,
-                     std::function<void(Status)> callback) = 0;
+                     fit::function<void(Status)> callback) = 0;
 
   // Cancel an in-progress merge. This must be called after |Merge| has been
   // called, and before the |on_done| callback.
