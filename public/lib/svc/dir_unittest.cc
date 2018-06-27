@@ -4,14 +4,12 @@
 
 #include "lib/svc/dir.h"
 
-#include <lib/async-loop/cpp/loop.h>
-#include <lib/async-loop/loop.h>
 #include <lib/fdio/util.h>
 #include <lib/zx/channel.h>
 
 #include <thread>
 
-#include "gtest/gtest.h"
+#include "lib/gtest/real_loop_fixture.h"
 
 namespace svc {
 namespace {
@@ -28,18 +26,15 @@ static void connect(void* context, const char* service_name,
   EXPECT_EQ(ZX_OK, binding.write(0, "ok", 2, 0, 0));
 }
 
-TEST(Service, Control) {
+using ServiceTest = ::gtest::RealLoopFixture;
+
+TEST_F(ServiceTest, Control) {
   zx::channel dir, dir_request;
   EXPECT_EQ(ZX_OK, zx::channel::create(0, &dir, &dir_request));
 
-  async::Loop* thread_loop;
-  std::thread child([dir_request = std::move(dir_request),
-                     &thread_loop]() mutable {
-    async::Loop loop(&kAsyncLoopConfigMakeDefault);
-    thread_loop = &loop;
-
+  std::thread child([this, dir_request = std::move(dir_request)]() mutable {
     svc_dir_t* dir = nullptr;
-    EXPECT_EQ(ZX_OK, svc_dir_create(loop.async(), dir_request.release(), &dir));
+    EXPECT_EQ(ZX_OK, svc_dir_create(dispatcher(), dir_request.release(), &dir));
     EXPECT_EQ(ZX_OK,
               svc_dir_add_service(dir, "public", "foobar", nullptr, connect));
     EXPECT_EQ(ZX_OK,
@@ -50,7 +45,7 @@ TEST(Service, Control) {
     EXPECT_EQ(ZX_OK,
               svc_dir_add_service(dir, "another", "qux", nullptr, nullptr));
 
-    loop.Run();
+    RunLoop();
 
     svc_dir_destroy(dir);
   });
@@ -73,7 +68,7 @@ TEST(Service, Control) {
                                 &observed));
 
   // Shutdown the service thread.
-  thread_loop->Quit();
+  QuitLoop();
   child.join();
 
   // Verify that connection fails after svc_dir_destroy().
@@ -83,25 +78,20 @@ TEST(Service, Control) {
                                 &observed));
 }
 
-TEST(Service, PublishLegacyService) {
+TEST_F(ServiceTest, PublishLegacyService) {
   zx::channel dir, dir_request;
   EXPECT_EQ(ZX_OK, zx::channel::create(0, &dir, &dir_request));
 
-  async::Loop* thread_loop;
-  std::thread child([dir_request = std::move(dir_request),
-                     &thread_loop]() mutable {
-    async::Loop loop(&kAsyncLoopConfigMakeDefault);
-    thread_loop = &loop;
-
+  std::thread child([this, dir_request = std::move(dir_request)]() mutable {
     svc_dir_t* dir = nullptr;
-    EXPECT_EQ(ZX_OK, svc_dir_create(loop.async(), dir_request.release(), &dir));
+    EXPECT_EQ(ZX_OK, svc_dir_create(dispatcher(), dir_request.release(), &dir));
     EXPECT_EQ(ZX_OK,
               svc_dir_add_service(dir, nullptr, "foobar", nullptr, connect));
     EXPECT_EQ(ZX_OK,
               svc_dir_add_service(dir, nullptr, "baz", nullptr, connect));
     EXPECT_EQ(ZX_OK, svc_dir_remove_service(dir, nullptr, "baz"));
 
-    loop.Run();
+    RunLoop();
 
     svc_dir_destroy(dir);
   });
@@ -124,7 +114,7 @@ TEST(Service, PublishLegacyService) {
                                 &observed));
 
   // Shutdown the service thread.
-  thread_loop->Quit();
+  QuitLoop();
   child.join();
 
   // Verify that connection fails after svc_dir_destroy().

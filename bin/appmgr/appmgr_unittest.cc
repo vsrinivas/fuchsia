@@ -6,23 +6,27 @@
 
 #include <fbl/ref_ptr.h>
 #include <fs/pseudo-dir.h>
-#include <lib/async-loop/cpp/loop.h>
+#include <lib/async/cpp/task.h>
 #include <zx/channel.h>
 
-#include "gtest/gtest.h"
+#include "lib/gtest/real_loop_fixture.h"
 
 namespace component {
 namespace {
 
-TEST(Appmgr, RunUntilIdle) {
-  async::Loop loop(&kAsyncLoopConfigMakeDefault);
+using AppmgrTest = ::gtest::RealLoopFixture;
+
+TEST_F(AppmgrTest, RunUntilIdle) {
   AppmgrArgs args{.pa_directory_request = ZX_HANDLE_INVALID,
                   .sysmgr_url = "sysmgr",
                   .sysmgr_args = {},
                   .run_virtual_console = false,
                   .retry_sysmgr_crash = false};
-  Appmgr appmgr(loop.async(), std::move(args));
-  EXPECT_FALSE(loop.RunUntilIdle());
+  Appmgr appmgr(dispatcher(), std::move(args));
+  bool called;
+  async::PostTask(dispatcher(), [&called] { called = true; });
+  RunLoopUntilIdle();
+  EXPECT_TRUE(called);
 }
 
 }  // namespace

@@ -6,7 +6,7 @@
 
 #include <fbl/ref_counted.h>
 
-#include "gtest/gtest.h"
+#include "lib/gtest/real_loop_fixture.h"
 
 namespace btlib {
 namespace common {
@@ -37,16 +37,16 @@ class TestObject : public fbl::RefCounted<TestObject>,
   bool cleaned_up = false;
 };
 
-TEST(TaskDomainTest, PostMessageAndCleanUp) {
-  async::Loop loop(&kAsyncLoopConfigMakeDefault);
+using TaskDomainTest = ::gtest::RealLoopFixture;
 
-  auto obj = fbl::AdoptRef(new TestObject(loop.async()));
+TEST_F(TaskDomainTest, PostMessageAndCleanUp) {
+  auto obj = fbl::AdoptRef(new TestObject(dispatcher()));
 
   // Schedule a task. This is expected to run on the |thrd_runner|.
   obj->ScheduleTask();
 
   // Wait for the scheduled task to run.
-  loop.RunUntilIdle();
+  RunLoopUntilIdle();
 
   ASSERT_TRUE(obj->task_done);
   obj->task_done = false;
@@ -61,7 +61,7 @@ TEST(TaskDomainTest, PostMessageAndCleanUp) {
   // #2: This should not run due to #1.
   obj->ScheduleTask();
 
-  loop.RunUntilIdle();
+  RunLoopUntilIdle();
 
   EXPECT_TRUE(obj->cleaned_up);
   EXPECT_FALSE(obj->task_done);

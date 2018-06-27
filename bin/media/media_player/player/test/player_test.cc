@@ -4,8 +4,6 @@
 
 #include "garnet/bin/media/media_player/player/player.h"
 
-#include <lib/async-loop/cpp/loop.h>
-
 #include "garnet/bin/media/media_player/framework/formatting.h"
 #include "garnet/bin/media/media_player/player/demux_source_segment.h"
 #include "garnet/bin/media/media_player/player/renderer_sink_segment.h"
@@ -14,7 +12,7 @@
 #include "garnet/bin/media/media_player/player/test/fake_sink_segment.h"
 #include "garnet/bin/media/media_player/player/test/fake_source_segment.h"
 #include "garnet/bin/media/media_player/player/test/fake_video_renderer.h"
-#include "gtest/gtest.h"
+#include "lib/gtest/test_loop_fixture.h"
 
 namespace media_player {
 namespace test {
@@ -98,10 +96,11 @@ void ExpectNoStreams(const Player& player) {
   ExpectNoStreams(player, StreamType::Medium::kSubpicture);
 }
 
+using PlayerTest = ::gtest::TestLoopFixture;
+
 // Tests that a fresh player responds to simple queries as expected.
-TEST(PlayerTest, FreshPlayer) {
-  async::Loop loop(&kAsyncLoopConfigMakeDefault);
-  Player player(loop.async());
+TEST_F(PlayerTest, FreshPlayer) {
+  Player player(dispatcher());
 
   EXPECT_FALSE(player.has_source_segment());
 
@@ -116,9 +115,8 @@ TEST(PlayerTest, FreshPlayer) {
 
 // Tests that SetSourceSegment calls back immediately if a null source segment
 // is set.
-TEST(PlayerTest, NullSourceSegment) {
-  async::Loop loop(&kAsyncLoopConfigMakeDefault);
-  Player player(loop.async());
+TEST_F(PlayerTest, NullSourceSegment) {
+  Player player(dispatcher());
 
   bool set_source_segment_callback_called = false;
 
@@ -126,7 +124,7 @@ TEST(PlayerTest, NullSourceSegment) {
     set_source_segment_callback_called = true;
   });
 
-  loop.RunUntilIdle();
+  RunLoopUntilIdle();
   EXPECT_TRUE(set_source_segment_callback_called);
   EXPECT_FALSE(player.has_source_segment());
   ExpectNoStreams(player);
@@ -134,9 +132,8 @@ TEST(PlayerTest, NullSourceSegment) {
 
 // Tests the player by setting up a fake source segment and two fake sink
 // segments, exercising the player and then removing the segments.
-TEST(PlayerTest, FakeSegments) {
-  async::Loop loop(&kAsyncLoopConfigMakeDefault);
-  Player player(loop.async());
+TEST_F(PlayerTest, FakeSegments) {
+  Player player(dispatcher());
 
   bool update_callback_called = false;
   player.SetUpdateCallback(
@@ -384,7 +381,7 @@ TEST(PlayerTest, FakeSegments) {
   EXPECT_FALSE(prime_callback_called);
 
   video_sink_segment_raw->prime_call_param_callback_();
-  loop.RunUntilIdle();
+  RunLoopUntilIdle();
   EXPECT_TRUE(prime_callback_called);
 
   // Test Flush.
@@ -392,7 +389,7 @@ TEST(PlayerTest, FakeSegments) {
   bool flush_callback_called = false;
   player.Flush(true,
                [&flush_callback_called]() { flush_callback_called = true; });
-  loop.RunUntilIdle();
+  RunLoopUntilIdle();
   EXPECT_TRUE(flush_callback_called);
   EXPECT_TRUE(source_segment_raw->flush_called_);
   source_segment_raw->flush_called_ = false;
@@ -427,7 +424,7 @@ TEST(PlayerTest, FakeSegments) {
   EXPECT_FALSE(set_timeline_function_callback_called);
 
   video_sink_segment_raw->set_timeline_function_call_param_callback_();
-  loop.RunUntilIdle();
+  RunLoopUntilIdle();
   EXPECT_TRUE(set_timeline_function_callback_called);
   EXPECT_EQ(timeline_function, player.timeline_function());
 
@@ -457,7 +454,7 @@ TEST(PlayerTest, FakeSegments) {
   EXPECT_NE(nullptr, source_segment_raw->seek_call_param_callback_);
 
   source_segment_raw->seek_call_param_callback_();
-  loop.RunUntilIdle();
+  RunLoopUntilIdle();
   EXPECT_TRUE(seek_callback_called);
 
   // Test end_of_stream.
@@ -519,7 +516,7 @@ TEST(PlayerTest, FakeSegments) {
   player.SetSourceSegment(nullptr, [&set_source_segment_callback_called]() {
     set_source_segment_callback_called = true;
   });
-  loop.RunUntilIdle();
+  RunLoopUntilIdle();
   EXPECT_TRUE(set_source_segment_callback_called);
   EXPECT_TRUE(source_segment_destroyed);
   source_segment_raw = nullptr;
@@ -590,9 +587,8 @@ void ExpectRealSegmentsGraph(const Player& player) {
 }
 
 // Tests a player with real segments constructed source-first.
-TEST(PlayerTest, BuildGraphWithRealSegmentsSourceFirst) {
-  async::Loop loop(&kAsyncLoopConfigMakeDefault);
-  Player player(loop.async());
+TEST_F(PlayerTest, BuildGraphWithRealSegmentsSourceFirst) {
+  Player player(dispatcher());
 
   player.SetSourceSegment(DemuxSourceSegment::Create(FakeDemux::Create()),
                           nullptr);
@@ -600,22 +596,21 @@ TEST(PlayerTest, BuildGraphWithRealSegmentsSourceFirst) {
   player.SetSinkSegment(
       RendererSinkSegment::Create(FakeAudioRenderer::Create()),
       StreamType::Medium::kAudio);
-  loop.RunUntilIdle();
+  RunLoopUntilIdle();
   EXPECT_TRUE(player.medium_connected(StreamType::Medium::kAudio));
 
   player.SetSinkSegment(
       RendererSinkSegment::Create(FakeVideoRenderer::Create()),
       StreamType::Medium::kVideo);
-  loop.RunUntilIdle();
+  RunLoopUntilIdle();
   EXPECT_TRUE(player.medium_connected(StreamType::Medium::kVideo));
 
   ExpectRealSegmentsGraph(player);
 }
 
 // Tests a player with real segments constructed sinks-first.
-TEST(PlayerTest, BuildGraphWithRealSegmentsSinksFirst) {
-  async::Loop loop(&kAsyncLoopConfigMakeDefault);
-  Player player(loop.async());
+TEST_F(PlayerTest, BuildGraphWithRealSegmentsSinksFirst) {
+  Player player(dispatcher());
 
   player.SetSinkSegment(
       RendererSinkSegment::Create(FakeAudioRenderer::Create()),
@@ -629,7 +624,7 @@ TEST(PlayerTest, BuildGraphWithRealSegmentsSinksFirst) {
 
   player.SetSourceSegment(DemuxSourceSegment::Create(FakeDemux::Create()),
                           nullptr);
-  loop.RunUntilIdle();
+  RunLoopUntilIdle();
   EXPECT_TRUE(player.medium_connected(StreamType::Medium::kAudio));
   EXPECT_TRUE(player.medium_connected(StreamType::Medium::kVideo));
 

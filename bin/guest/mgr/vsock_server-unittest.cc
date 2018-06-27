@@ -10,16 +10,15 @@
 
 #include "garnet/bin/guest/mgr/host_vsock_endpoint.h"
 #include "garnet/bin/guest/mgr/remote_vsock_endpoint.h"
-#include "gtest/gtest.h"
 #include "lib/fxl/logging.h"
+#include "lib/gtest/test_loop_fixture.h"
 
 namespace guestmgr {
 namespace {
 
-class VsockServerTest : public testing::Test {
+class VsockServerTest : public ::gtest::TestLoopFixture {
  protected:
   VsockServer server;
-  async::Loop loop{&kAsyncLoopConfigMakeDefault};
 };
 
 struct TestConnection {
@@ -112,12 +111,12 @@ TEST_F(VsockServerTest, Connect) {
   ASSERT_EQ(ZX_OK, zx::socket::create(ZX_SOCKET_STREAM, &h1, &h2));
   TestSocketAcceptor endpoint;
   cid3.SetSocketAcceptor(endpoint.NewBinding());
-  loop.RunUntilIdle();
+  RunLoopUntilIdle();
 
   // Request a connection on an arbitrary port.
   TestConnection connection;
   cid2.Connect(12345, 3, 1111, connection.callback());
-  loop.RunUntilIdle();
+  RunLoopUntilIdle();
 
   auto requests = endpoint.TakeRequests();
   ASSERT_EQ(1u, requests.size());
@@ -127,7 +126,7 @@ TEST_F(VsockServerTest, Connect) {
   ASSERT_EQ(1111u, request.port);
 
   request.callback(ZX_OK, std::move(h2));
-  loop.RunUntilIdle();
+  RunLoopUntilIdle();
 
   // Expect |h2| to have been transferred during the connect.
   ASSERT_EQ(ZX_OK, connection.status);
@@ -230,7 +229,7 @@ TEST_F(VsockServerTest, HostConnectFreeEphemeralPort) {
 
   // Close |h2|.
   h2.reset();
-  loop.RunUntilIdle();
+  RunLoopUntilIdle();
 
   // Attempt a final connection. Expect |src_port| from the first request to
   // be recycled.
@@ -263,7 +262,7 @@ TEST_F(VsockServerTest, HostListenOnConnectPort) {
   zx_status_t status = ZX_ERR_BAD_STATE;
   host_endpoint.Listen(request.src_port, acceptor.NewBinding(),
                        [&](zx_status_t _status) { status = _status; });
-  loop.RunUntilIdle();
+  RunLoopUntilIdle();
   ASSERT_EQ(ZX_ERR_ALREADY_BOUND, status);
 }
 
@@ -278,14 +277,14 @@ TEST_F(VsockServerTest, HostListenTwice) {
   TestSocketAcceptor acceptor1;
   host_endpoint.Listen(22, acceptor1.NewBinding(),
                        [&](zx_status_t _status) { status = _status; });
-  loop.RunUntilIdle();
+  RunLoopUntilIdle();
   ASSERT_EQ(ZX_OK, status);
 
   // Listen 2 -- Fail
   TestSocketAcceptor acceptor2;
   host_endpoint.Listen(22, acceptor2.NewBinding(),
                        [&](zx_status_t _status) { status = _status; });
-  loop.RunUntilIdle();
+  RunLoopUntilIdle();
   ASSERT_EQ(ZX_ERR_ALREADY_BOUND, status);
 }
 
@@ -300,13 +299,13 @@ TEST_F(VsockServerTest, HostListenClose) {
   TestSocketAcceptor acceptor;
   host_endpoint.Listen(22, acceptor.NewBinding(),
                        [&](zx_status_t _status) { status = _status; });
-  loop.RunUntilIdle();
+  RunLoopUntilIdle();
   ASSERT_EQ(ZX_OK, status);
 
   // Verify listener is receiving connection requests.
   TestConnection connection;
   test_endpoint.Connect(12345, 2, 22, connection.callback());
-  loop.RunUntilIdle();
+  RunLoopUntilIdle();
   auto requests = acceptor.TakeRequests();
   ASSERT_EQ(1u, requests.size());
   const auto& request = requests[0];
@@ -316,7 +315,7 @@ TEST_F(VsockServerTest, HostListenClose) {
 
   // Now close the acceptor interface.
   acceptor.NewBinding();
-  loop.RunUntilIdle();
+  RunLoopUntilIdle();
 
   // Verify the endpoint responded to the channel close message by freeing up
   // the port.
@@ -324,7 +323,7 @@ TEST_F(VsockServerTest, HostListenClose) {
   status = ZX_ERR_BAD_STATE;
   host_endpoint.Listen(22, new_acceptor.NewBinding(),
                        [&](zx_status_t _status) { status = _status; });
-  loop.RunUntilIdle();
+  RunLoopUntilIdle();
   ASSERT_EQ(ZX_OK, status);
 }
 

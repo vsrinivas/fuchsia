@@ -7,16 +7,16 @@
 #include "garnet/lib/machina/phys_mem_fake.h"
 #include "garnet/lib/machina/virtio_net.h"
 #include "garnet/lib/machina/virtio_queue_fake.h"
-#include "gtest/gtest.h"
+#include "lib/gtest/test_loop_fixture.h"
 
 namespace machina {
 namespace {
 
 static constexpr uint16_t kVirtioNetQueueSize = 8;
 
-class VirtioNetTest : public testing::Test {
+class VirtioNetTest : public ::gtest::TestLoopFixture {
  public:
-  VirtioNetTest() : net_(phys_mem_, loop_.async()), queue_(net_.rx_queue()) {}
+  VirtioNetTest() : net_(phys_mem_, dispatcher()), queue_(net_.rx_queue()) {}
 
   void SetUp() override {
     ASSERT_EQ(queue_.Init(kVirtioNetQueueSize), ZX_OK);
@@ -32,7 +32,6 @@ class VirtioNetTest : public testing::Test {
   }
 
  protected:
-  async::Loop loop_;
   PhysMemFake phys_mem_;
   VirtioNet net_;
   VirtioQueueFake queue_;
@@ -54,7 +53,7 @@ TEST_F(VirtioNetTest, DrainQueue) {
 
   // We should have no work at this point as all the buffers will be owned by
   // the ethernet device.
-  loop_.RunUntilIdle();
+  RunLoopUntilIdle();
   ASSERT_EQ(0u, net_.rx_queue()->ring()->used->idx);
 
   // Return a descriptor to the queue, this should trigger it to be returned.
@@ -65,7 +64,7 @@ TEST_F(VirtioNetTest, DrainQueue) {
             zx_fifo_write(fifo_[0], sizeof(entry[0]), &entry[0], 1, nullptr));
 
   // Run the async tasks, verify buffers are returned.
-  loop_.RunUntilIdle();
+  RunLoopUntilIdle();
   ASSERT_EQ(1u, net_.rx_queue()->ring()->used->idx);
 }
 
@@ -81,7 +80,7 @@ TEST_F(VirtioNetTest, HeaderOnDifferentBuffer) {
                 .AppendReadable(packet_ptr, packet_len)
                 .Build(),
             ZX_OK);
-  loop_.RunUntilIdle();
+  RunLoopUntilIdle();
 
   size_t count;
   eth_fifo_entry_t entry[fifos_.rx_depth];
@@ -105,7 +104,7 @@ TEST_F(VirtioNetTest, InvalidDesc) {
             ZX_OK);
 
   // Expect nothing is written to the FIFO.
-  loop_.RunUntilIdle();
+  RunLoopUntilIdle();
   eth_fifo_entry_t entry[fifos_.rx_depth];
   ASSERT_EQ(
       zx_fifo_read(fifo_[0], sizeof(entry[0]), entry, countof(entry), nullptr),
@@ -118,7 +117,7 @@ TEST_F(VirtioNetTest, PeerClosed) {
             ZX_OK);
   ASSERT_EQ(zx_handle_close(fifo_[0]), ZX_OK);
   ASSERT_EQ(zx_handle_close(fifo_[1]), ZX_OK);
-  loop_.RunUntilIdle();
+  RunLoopUntilIdle();
 }
 
 }  // namespace

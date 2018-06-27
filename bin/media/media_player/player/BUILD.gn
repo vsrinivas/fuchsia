@@ -61,6 +61,7 @@ test("tests") {
     "//garnet/bin/media/media_player/render",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
+    "//garnet/public/lib/gtest",
     "//third_party/googletest:gtest_main",
   ]
 }
