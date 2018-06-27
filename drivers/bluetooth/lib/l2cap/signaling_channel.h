@@ -26,14 +26,79 @@ namespace internal {
 using SignalingPacket = common::PacketView<CommandHeader>;
 using MutableSignalingPacket = common::MutablePacketView<CommandHeader>;
 
+using DataCallback = fit::function<void(const common::ByteBuffer& data)>;
+using SignalingPacketHandler =
+    fit::function<void(const SignalingPacket& packet)>;
+
+// SignalingChannelInterface contains the procedures that command flows use to
+// send and receive signaling channel transactions.
+class SignalingChannelInterface {
+ public:
+  // Action in response to a request-type packet.
+  enum class Status {
+    kSuccess,  // Remote response received
+    kReject,   // Remote rejection received
+    kTimeOut,  // Timed out waiting for matching remote command
+  };
+
+  // Callback invoked to handle a response received from the remote. If |status|
+  // is kSuccess or kReject, then |rsp_payload| will contain any payload
+  // received. Return true if an additional response is expected.
+  using ResponseHandler =
+      fit::function<bool(Status status, const common::ByteBuffer& rsp_payload)>;
+
+  // Initiate an outbound transaction. The signaling channel will send a request
+  // then expect reception of one or more responses with a code one greater than
+  // the request. Each response or rejection received invokes |cb|. When |cb|
+  // returns false, it will be removed. Returns false if the request failed to
+  // send.
+  virtual bool SendRequest(CommandCode req_code,
+                           const common::ByteBuffer& payload,
+                           ResponseHandler cb) = 0;
+
+  // Send a command packet in response to an incoming request.
+  class Responder {
+   public:
+    // Send a response that corresponds to the request received
+    virtual void Send(const common::ByteBuffer& rsp_payload) = 0;
+
+    // Reject invalid, malformed, or unhandled request
+    virtual void RejectNotUnderstood() = 0;
+
+    // Reject request non-existent or otherwise invalid channel ID(s)
+    virtual void RejectInvalidChannelId(ChannelId local_cid,
+                                        ChannelId remote_cid) = 0;
+
+   protected:
+    virtual ~Responder() = default;
+  };
+
+  // Callback invoked to handle a request received from the remote.
+  // |req_payload| contains any payload received, without the command header.
+  // The callee can use |responder| to respond or reject. Parameters passed to
+  // this handler are only guaranteed to be valid while the handler is running.
+  using RequestDelegate = fit::function<void(
+      const common::ByteBuffer& req_payload, Responder* responder)>;
+
+  // Register a handler for all inbound transactions matching |req_code|, which
+  // should be the code of a request. |cb| will be called with request payloads
+  // received, and is expected to respond to, reject, or ignore the requests.
+  // Calls to this function with a previously registered |req_code| will replace
+  // the current delegate.
+  virtual void ServeRequest(CommandCode req_code, RequestDelegate cb) = 0;
+
+ protected:
+  virtual ~SignalingChannelInterface() = default;
+};
+
 // SignalingChannel is an abstract class that handles the common operations
 // involved in LE and BR/EDR signaling channels.
 //
 // TODO(armansito): Implement flow control (RTX/ERTX timers).
-class SignalingChannel {
+class SignalingChannel : public SignalingChannelInterface {
  public:
   SignalingChannel(fbl::RefPtr<Channel> chan, hci::Connection::Role role);
-  virtual ~SignalingChannel();
+  ~SignalingChannel() override;
 
   bool is_open() const { return is_open_; }
 
@@ -42,8 +107,24 @@ class SignalingChannel {
   void set_mtu(uint16_t mtu) { mtu_ = mtu; }
 
  protected:
-  using PacketDispatchCallback =
-      fit::function<void(const SignalingPacket& packet)>;
+  // Implementation for responding to a request that binds the request's
+  // identifier and the response's code so that the client's |Send| invocation
+  // does not need to supply them nor even know them.
+  class ResponderImpl : public Responder {
+   public:
+    ResponderImpl(SignalingChannel* sig, CommandCode code, CommandId id);
+    void Send(const common::ByteBuffer& rsp_payload) override;
+    void RejectNotUnderstood() override;
+    void RejectInvalidChannelId(ChannelId local_cid,
+                                ChannelId remote_cid) override;
+
+   private:
+    SignalingChannel* sig() const { return sig_; }
+
+    SignalingChannel* const sig_;
+    const CommandCode code_;
+    const CommandId id_;
+  };
 
   // Sends out a single signaling packet using the given parameters.
   bool SendPacket(CommandCode code, uint8_t identifier,
@@ -55,7 +136,7 @@ class SignalingChannel {
   // an intact ID in its header but invalid payload length, and drop any other
   // incoming data.
   virtual void DecodeRxUnit(const SDU& sdu,
-                            const PacketDispatchCallback& cb) = 0;
+                            const SignalingPacketHandler& cb) = 0;
 
   // Called when a new signaling packet has been received. Returns false if
   // |packet| is rejected. Otherwise returns true and sends a response packet.

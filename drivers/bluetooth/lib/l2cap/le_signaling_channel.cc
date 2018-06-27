@@ -19,6 +19,19 @@ LESignalingChannel::LESignalingChannel(fbl::RefPtr<Channel> chan,
   set_mtu(kMinLEMTU);
 }
 
+bool LESignalingChannel::SendRequest(CommandCode req_code,
+                                     const common::ByteBuffer& payload,
+                                     ResponseHandler cb) {
+  // TODO(NET-1093): Reuse BrEdrSignalingChannel's implementation.
+  FXL_LOG(WARNING) << "l2cap: LE sig: SendRequest not implemented yet";
+  return false;
+}
+
+void LESignalingChannel::ServeRequest(CommandCode req_code,
+                                      RequestDelegate cb) {
+  FXL_LOG(WARNING) << "l2cap: LE sig: ServeRequest not implemented yet";
+}
+
 void LESignalingChannel::OnConnParamUpdateReceived(
     const SignalingPacket& packet) {
   // Only a LE slave can send this command. "If an LE slave Host receives a
@@ -95,7 +108,7 @@ void LESignalingChannel::OnConnParamUpdateReceived(
 }
 
 void LESignalingChannel::DecodeRxUnit(const SDU& sdu,
-                                      const PacketDispatchCallback& cb) {
+                                      const SignalingPacketHandler& cb) {
   // "[O]nly one command per C-frame shall be sent over [the LE] Fixed Channel"
   // (v5.0, Vol 3, Part A, Section 4).
   if (sdu.length() < sizeof(CommandHeader)) {

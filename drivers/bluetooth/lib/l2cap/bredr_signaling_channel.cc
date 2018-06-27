@@ -16,31 +16,52 @@ BrEdrSignalingChannel::BrEdrSignalingChannel(fbl::RefPtr<Channel> chan,
                                              hci::Connection::Role role)
     : SignalingChannel(std::move(chan), role) {
   set_mtu(kDefaultMTU);
+
+  // Add default handler for incoming Echo Request commands.
+  ServeRequest(kEchoRequest,
+               [](const common::ByteBuffer& req_payload, Responder* responder) {
+                 responder->Send(req_payload);
+               });
+}
+
+bool BrEdrSignalingChannel::SendRequest(CommandCode req_code,
+                                        const common::ByteBuffer& payload,
+                                        ResponseHandler cb) {
+  FXL_DCHECK(cb);
+  const CommandId id = EnqueueResponse(req_code + 1, std::move(cb));
+  if (id == kInvalidCommandId) {
+    return false;
+  }
+
+  return SendPacket(req_code, id, payload);
+}
+
+void BrEdrSignalingChannel::ServeRequest(CommandCode req_code,
+                                         RequestDelegate cb) {
+  FXL_DCHECK(!IsSupportedResponse(req_code));
+  FXL_DCHECK(cb);
+  inbound_handlers_[req_code] = std::move(cb);
 }
 
 // This is implemented as v5.0 Vol 3, Part A Section 4.8: "These requests may be
 // used for testing the link or for passing vendor specific information using
 // the optional data field."
 bool BrEdrSignalingChannel::TestLink(const common::ByteBuffer& data,
-                                     BrEdrSignalingChannel::DataCallback cb) {
-  const CommandId id = EnqueueResponse(
-      kEchoResponse, [cb = std::move(cb)](const SignalingPacket& packet) {
-        if (packet.header().code == kCommandRejectCode) {
-          cb(common::BufferView());
-        } else {
-          cb(packet.payload_data());
-        }
-      });
-
-  if (id == kInvalidCommandId) {
-    return false;
-  }
-
-  return SendPacket(kEchoRequest, id, data);
+                                     DataCallback cb) {
+  return SendRequest(kEchoRequest, data,
+                     [cb = std::move(cb)](
+                         Status status, const common::ByteBuffer& rsp_payload) {
+                       if (status == Status::kSuccess) {
+                         cb(rsp_payload);
+                       } else {
+                         cb(common::BufferView());
+                       }
+                       return false;
+                     });
 }
 
 void BrEdrSignalingChannel::DecodeRxUnit(const SDU& sdu,
-                                         const PacketDispatchCallback& cb) {
+                                         const SignalingPacketHandler& cb) {
   // "Multiple commands may be sent in a single C-frame over Fixed Channel CID
   // 0x0001 (ACL-U) (v5.0, Vol 3, Part A, Section 4)"
   if (sdu.length() < sizeof(CommandHeader)) {
@@ -98,22 +119,22 @@ bool BrEdrSignalingChannel::HandlePacket(const SignalingPacket& packet) {
   }
 
   // Handle request commands from remote.
-  switch (packet.header().code) {
-    case kEchoRequest:
-      SendPacket(kEchoResponse, packet.header().id, packet.payload_data());
-      return true;
-
-    default:
-      FXL_VLOG(1) << fxl::StringPrintf(
-          "l2cap: BR/EDR sig: Unsupported code %#04x", packet.header().code);
-      break;
+  const auto iter = inbound_handlers_.find(packet.header().code);
+  if (iter != inbound_handlers_.end()) {
+    ResponderImpl responder(this, packet.header().code + 1, packet.header().id);
+    iter->second(packet.payload_data(), &responder);
+    return true;
   }
+
+  FXL_VLOG(1) << fxl::StringPrintf(
+      "l2cap: BR/EDR sig: Ignoring unsupported code %#04x",
+      packet.header().code);
 
   return false;
 }
 
-CommandId BrEdrSignalingChannel::EnqueueResponse(
-    CommandCode expected_code, BrEdrSignalingChannel::ResponseHandler handler) {
+CommandId BrEdrSignalingChannel::EnqueueResponse(CommandCode expected_code,
+                                                 ResponseHandler cb) {
   FXL_DCHECK(IsSupportedResponse(expected_code));
 
   // Command identifiers for pending requests are assumed to be unique across
@@ -138,7 +159,7 @@ CommandId BrEdrSignalingChannel::EnqueueResponse(
     }
   }
 
-  pending_commands_[id] = std::make_pair(expected_code, std::move(handler));
+  pending_commands_[id] = std::make_pair(expected_code, std::move(cb));
   return id;
 }
 
@@ -173,8 +194,12 @@ void BrEdrSignalingChannel::OnRxResponse(const SignalingPacket& packet) {
     return;
   }
 
-  if (packet.header().code != iter->second.first &&
-      packet.header().code != kCommandRejectCode) {
+  Status status;
+  if (packet.header().code == iter->second.first) {
+    status = Status::kSuccess;
+  } else if (packet.header().code == kCommandRejectCode) {
+    status = Status::kReject;
+  } else {
     FXL_LOG(ERROR) << fxl::StringPrintf(
         "l2cap: BR/EDR sig: Response (id %#04x) has unexpected code %#04x",
         packet.header().id, packet.header().code);
@@ -184,9 +209,10 @@ void BrEdrSignalingChannel::OnRxResponse(const SignalingPacket& packet) {
     return;
   }
 
-  auto handler = std::move(iter->second.second);
-  pending_commands_.erase(iter);
-  handler(packet);
+  ResponseHandler& handler = iter->second.second;
+  if (!handler(status, packet.payload_data())) {
+    pending_commands_.erase(iter);
+  }
 }
 
 }  // namespace internal

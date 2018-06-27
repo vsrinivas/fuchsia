@@ -44,6 +44,31 @@ SignalingChannel::SignalingChannel(fbl::RefPtr<Channel> chan,
 
 SignalingChannel::~SignalingChannel() { FXL_DCHECK(IsCreationThreadCurrent()); }
 
+SignalingChannel::ResponderImpl::ResponderImpl(SignalingChannel* sig,
+                                               CommandCode code, CommandId id)
+    : sig_(sig), code_(code), id_(id) {
+  FXL_DCHECK(sig_);
+}
+
+void SignalingChannel::ResponderImpl::Send(
+    const common::ByteBuffer& rsp_payload) {
+  sig()->SendPacket(code_, id_, rsp_payload);
+}
+
+void SignalingChannel::ResponderImpl::RejectNotUnderstood() {
+  sig()->SendCommandReject(id_, RejectReason::kNotUnderstood,
+                           common::BufferView());
+}
+
+void SignalingChannel::ResponderImpl::RejectInvalidChannelId(
+    ChannelId local_cid, ChannelId remote_cid) {
+  uint16_t ids[2];
+  ids[0] = htole16(local_cid);
+  ids[1] = htole16(remote_cid);
+  sig()->SendCommandReject(id_, RejectReason::kInvalidCID,
+                           common::BufferView(ids, sizeof(ids)));
+}
+
 bool SignalingChannel::SendPacket(CommandCode code, uint8_t identifier,
                                   const common::ByteBuffer& data) {
   FXL_DCHECK(IsCreationThreadCurrent());

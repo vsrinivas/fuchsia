@@ -13,6 +13,9 @@ namespace l2cap {
 namespace internal {
 namespace {
 
+using common::LowerBits;
+using common::UpperBits;
+
 constexpr CommandCode kUnknownCommandCode = 0x00;
 constexpr CommandCode kCommandCode = 0xFF;
 constexpr hci::ConnectionHandle kTestHandle = 0x0001;
@@ -32,9 +35,20 @@ class TestSignalingChannel : public SignalingChannel {
   // Expose GetNextCommandId() as public so it can be called by tests below.
   using SignalingChannel::GetNextCommandId;
 
+  // Expose ResponderImpl as public so it can be directly tested (rather than
+  // passed to RequestDelegate).
+  using SignalingChannel::ResponderImpl;
+
  private:
+  // SignalingChannelInterface overrides
+  bool SendRequest(CommandCode req_code, const common::ByteBuffer& payload,
+                   ResponseHandler cb) override {
+    return false;
+  }
+  void ServeRequest(CommandCode req_code, RequestDelegate cb) override {}
+
   // SignalingChannel overrides
-  void DecodeRxUnit(const SDU& sdu, const PacketDispatchCallback& cb) override {
+  void DecodeRxUnit(const SDU& sdu, const SignalingPacketHandler& cb) override {
     SDU::Reader sdu_reader(&sdu);
 
     // Callback dumbly re-casts read data as a command packet and forwards it to
@@ -144,6 +158,60 @@ TEST_F(L2CAP_SignalingChannelTest, RejectCommandCodeZero) {
       'L', 'O', 'L', 'Z');
 
   EXPECT_TRUE(ReceiveAndExpect(cmd, expected));
+}
+
+TEST_F(L2CAP_SignalingChannelTest, RejectNotUnderstoodWithResponder) {
+  constexpr uint8_t kTestId = 14;
+
+  auto expected = common::CreateStaticByteBuffer(
+      // Command header (Command Reject, ID, length)
+      0x01, kTestId, 0x02, 0x00,
+
+      // Reason (Command not understood)
+      0x00, 0x00);
+
+  bool cb_called = false;
+  auto send_cb = [&expected, &cb_called](auto packet) {
+    cb_called = true;
+    EXPECT_TRUE(common::ContainersEqual(expected, *packet));
+  };
+  fake_chan()->SetSendCallback(std::move(send_cb), dispatcher());
+
+  TestSignalingChannel::ResponderImpl responder(sig(), kCommandCode, kTestId);
+  responder.RejectNotUnderstood();
+
+  RunLoopUntilIdle();
+  EXPECT_TRUE(cb_called);
+}
+
+TEST_F(L2CAP_SignalingChannelTest, RejectInvalidCIdWithResponder) {
+  constexpr uint8_t kTestId = 14;
+  constexpr uint16_t kLocalCId = 0xf00d;
+  constexpr uint16_t kRemoteCId = 0xcafe;
+
+  auto expected = common::CreateStaticByteBuffer(
+      // Command header (Command Reject, ID, length)
+      0x01, kTestId, 0x06, 0x00,
+
+      // Reason (Invalid channel ID)
+      0x02, 0x00,
+
+      // Data (Channel IDs),
+      LowerBits(kLocalCId), UpperBits(kLocalCId), LowerBits(kRemoteCId),
+      UpperBits(kRemoteCId));
+
+  bool cb_called = false;
+  auto send_cb = [&expected, &cb_called](auto packet) {
+    cb_called = true;
+    EXPECT_TRUE(common::ContainersEqual(expected, *packet));
+  };
+  fake_chan()->SetSendCallback(std::move(send_cb), dispatcher());
+
+  TestSignalingChannel::ResponderImpl responder(sig(), kCommandCode, kTestId);
+  responder.RejectInvalidChannelId(kLocalCId, kRemoteCId);
+
+  RunLoopUntilIdle();
+  EXPECT_TRUE(cb_called);
 }
 
 TEST_F(L2CAP_SignalingChannelTest, InvalidMTU) {

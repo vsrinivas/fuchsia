@@ -18,11 +18,15 @@ namespace internal {
 // the L2CAP thread in production.
 class BrEdrSignalingChannel final : public SignalingChannel {
  public:
-  // Called to indicate reception of some data payload.
-  using DataCallback = fit::function<void(const common::ByteBuffer& data)>;
-
   BrEdrSignalingChannel(fbl::RefPtr<Channel> chan, hci::Connection::Role role);
   ~BrEdrSignalingChannel() override = default;
+
+  // SignalingChannelInterface overrides
+  // TODO(NET-1093): Refactor implementation into SignalingChannel so it's
+  // shared with LESignalingChannel.
+  bool SendRequest(CommandCode req_code, const common::ByteBuffer& payload,
+                   ResponseHandler cb) override;
+  void ServeRequest(CommandCode req_code, RequestDelegate cb) override;
 
   // Test the link using an Echo Request command that can have an arbitrary
   // payload. The callback will be invoked with the remote's Echo Response
@@ -32,11 +36,8 @@ class BrEdrSignalingChannel final : public SignalingChannel {
   bool TestLink(const common::ByteBuffer& data, DataCallback cb);
 
  private:
-  // Invoked upon response command reception that matches an outgoing request.
-  using ResponseHandler = fit::function<void(const SignalingPacket& packet)>;
-
   // SignalingChannel overrides
-  void DecodeRxUnit(const SDU& sdu, const PacketDispatchCallback& cb) override;
+  void DecodeRxUnit(const SDU& sdu, const SignalingPacketHandler& cb) override;
   bool HandlePacket(const SignalingPacket& packet) override;
 
   // Register a callback that will be invoked when a response-type command
@@ -48,7 +49,7 @@ class BrEdrSignalingChannel final : public SignalingChannel {
   // |handler| will be run on the L2CAP thread.
   //
   // TODO(xow): Add function to cancel a queued response.
-  CommandId EnqueueResponse(CommandCode expected_code, ResponseHandler handler);
+  CommandId EnqueueResponse(CommandCode expected_code, ResponseHandler cb);
 
   // True if the code is for a supported ACL-U response-type signaling command.
   bool IsSupportedResponse(CommandCode code) const;
@@ -65,6 +66,9 @@ class BrEdrSignalingChannel final : public SignalingChannel {
   // Stores response handlers for requests that have been sent.
   std::unordered_map<CommandId, std::pair<CommandCode, ResponseHandler>>
       pending_commands_;
+
+  // Stores handlers for incoming request packets.
+  std::unordered_map<CommandCode, RequestDelegate> inbound_handlers_;
 };
 
 }  // namespace internal
