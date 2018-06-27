@@ -9,12 +9,10 @@
 #include <string.h>
 #include <unistd.h>
 #include <zircon/device/usb-device.h>
-#include <zircon/device/usb-virt-bus.h>
 #include <zircon/hw/usb-cdc.h>
 
 #include <zircon/types.h>
 
-#define DEV_VIRTUAL_USB "/dev/misc/usb-virtual-bus"
 #define DEV_USB_DEVICE_DIR  "/dev/class/usb-device"
 
 #define GOOGLE_VID      0x18D1
@@ -239,45 +237,6 @@ static int mode_command(int argc, const char** argv) {
     return status;
 }
 
-
-static int virtual_command(int argc, const char** argv) {
-    int fd = open(DEV_VIRTUAL_USB, O_RDWR);
-    if (fd < 0) {
-        fprintf(stderr, "could not open %s\n", DEV_VIRTUAL_USB);
-        return fd;
-    }
-
-    if (argc != 2) {
-        goto usage;
-    }
-
-    zx_status_t status = ZX_OK;
-    const char* command = argv[1];
-    if (!strcmp(command, "enable")) {
-        int enabled = 1;
-        status = ioctl_usb_virt_bus_enable(fd, &enabled);
-    } else if (!strcmp(command, "disable")) {
-        int enabled = 0;
-        status = ioctl_usb_virt_bus_enable(fd, &enabled);
-    } else if (!strcmp(command, "connect")) {
-        int connected = 1;
-        status = ioctl_usb_virt_bus_set_connected(fd, &connected);
-    } else if (!strcmp(command, "disconnect")) {
-        int connected = 0;
-        status = ioctl_usb_virt_bus_set_connected(fd, &connected);
-    } else {
-        goto usage;
-    }
-
-    close(fd);
-    return status == ZX_OK ? 0 : -1;
-
-usage:
-    close(fd);
-    fprintf(stderr, "usage: usbctl virtual [enable|disable|connect|disconnect]\n");
-    return -1;
-}
-
 typedef struct {
     const char* name;
     int (*command)(int argc, const char* argv[]);
@@ -296,11 +255,6 @@ static usbctl_command_t commands[] = {
         mode_command,
         "mode [none|host|device|otg] sets the current USB mode. "
         "Returns the current mode if no additional arugment is provided."
-    },
-    {
-        "virtual",
-        virtual_command,
-        "virtual [enable|disable|connect|disconnect] - controls USB virtual bus"
     },
     { NULL, NULL, NULL },
 };
