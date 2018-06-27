@@ -11,12 +11,12 @@
 
 #include <fuchsia/modular/auth/cpp/fidl.h>
 #include <lib/async/dispatcher.h>
+#include <lib/fit/function.h>
 
 #include "lib/app/cpp/startup_context.h"
 #include "lib/backoff/backoff.h"
 #include "lib/callback/cancellable.h"
 #include "lib/callback/scoped_task_runner.h"
-#include "lib/fxl/functional/closure.h"
 #include "peridot/lib/cobalt/cobalt.h"
 #include "peridot/lib/firebase_auth/firebase_auth.h"
 
@@ -56,14 +56,14 @@ class FirebaseAuthImpl : public FirebaseAuth {
                    std::unique_ptr<cobalt::CobaltContext> cobalt_context);
 
   // FirebaseAuth:
-  void set_error_handler(fxl::Closure on_error) override;
+  void set_error_handler(fit::closure on_error) override;
 
   fxl::RefPtr<callback::Cancellable> GetFirebaseToken(
-      std::function<void(firebase_auth::AuthStatus, std::string)> callback)
+      fit::function<void(firebase_auth::AuthStatus, std::string)> callback)
       override;
 
   fxl::RefPtr<callback::Cancellable> GetFirebaseUserId(
-      std::function<void(firebase_auth::AuthStatus, std::string)> callback)
+      fit::function<void(firebase_auth::AuthStatus, std::string)> callback)
       override;
 
  private:
@@ -71,7 +71,7 @@ class FirebaseAuthImpl : public FirebaseAuth {
   // retrying the request up to |max_retries| times in case of non-fatal
   // errors.
   void GetToken(int max_retries,
-                std::function<void(firebase_auth::AuthStatus,
+                fit::function<void(firebase_auth::AuthStatus,
                                    fuchsia::modular::auth::FirebaseTokenPtr)>
                     callback);
 

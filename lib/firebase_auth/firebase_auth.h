@@ -8,6 +8,8 @@
 #include <functional>
 #include <string>
 
+#include <lib/fit/function.h>
+
 #include "lib/callback/cancellable.h"
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
@@ -29,16 +31,16 @@ class FirebaseAuth {
   FirebaseAuth() {}
   virtual ~FirebaseAuth() {}
 
-  virtual void set_error_handler(fxl::Closure /*on_error*/) {}
+  virtual void set_error_handler(fit::closure /*on_error*/) {}
 
   // Retrieves the Firebase ID token suitable to use with Firebase Real-time
   // Database and Firebase Storage.
   virtual fxl::RefPtr<callback::Cancellable> GetFirebaseToken(
-      std::function<void(AuthStatus, std::string)> callback) = 0;
+      fit::function<void(AuthStatus, std::string)> callback) = 0;
 
   // Retrieves the Firebase user ID of the user.
   virtual fxl::RefPtr<callback::Cancellable> GetFirebaseUserId(
-      std::function<void(AuthStatus, std::string)> callback) = 0;
+      fit::function<void(AuthStatus, std::string)> callback) = 0;
 
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(FirebaseAuth);

@@ -7,6 +7,7 @@
 #include <utility>
 
 #include <lib/async/cpp/task.h>
+#include <lib/fit/function.h>
 
 #include "lib/callback/cancellable_helper.h"
 #include "lib/fxl/functional/closure.h"
@@ -16,29 +17,29 @@ namespace firebase_auth {
 
 TestFirebaseAuth::TestFirebaseAuth(async_t* async) : async_(async) {}
 
-void TestFirebaseAuth::set_error_handler(fxl::Closure on_error) {
-  error_handler_ = on_error;
+void TestFirebaseAuth::set_error_handler(fit::closure on_error) {
+  error_handler_ = std::move(on_error);
 }
 
 fxl::RefPtr<callback::Cancellable> TestFirebaseAuth::GetFirebaseToken(
-    std::function<void(AuthStatus, std::string)> callback) {
+    fit::function<void(AuthStatus, std::string)> callback) {
   auto cancellable = callback::CancellableImpl::Create([] {});
 
-  async::PostTask(async_,
-                  [this, callback = cancellable->WrapCallback(callback)] {
-                    callback(status_to_return, token_to_return);
-                  });
+  async::PostTask(async_, [this, callback = cancellable->WrapCallback(
+                                     std::move(callback))]() mutable {
+    callback(status_to_return, token_to_return);
+  });
   return cancellable;
 }
 
 fxl::RefPtr<callback::Cancellable> TestFirebaseAuth::GetFirebaseUserId(
-    std::function<void(AuthStatus, std::string)> callback) {
+    fit::function<void(AuthStatus, std::string)> callback) {
   auto cancellable = callback::CancellableImpl::Create([] {});
 
-  async::PostTask(async_,
-                  [this, callback = cancellable->WrapCallback(callback)] {
-                    callback(status_to_return, user_id_to_return);
-                  });
+  async::PostTask(async_, [this, callback = cancellable->WrapCallback(
+                                     std::move(callback))]() mutable {
+    callback(status_to_return, user_id_to_return);
+  });
   return cancellable;
 }
 

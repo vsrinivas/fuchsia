@@ -6,6 +6,7 @@
 #define PERIDOT_LIB_FIREBASE_AUTH_TESTING_TEST_FIREBASE_AUTH_H_
 
 #include <lib/async/dispatcher.h>
+#include <lib/fit/function.h>
 
 #include "lib/fxl/functional/closure.h"
 #include "peridot/lib/firebase_auth/firebase_auth.h"
@@ -17,13 +18,13 @@ class TestFirebaseAuth : public FirebaseAuth {
   explicit TestFirebaseAuth(async_t* async);
 
   // FirebaseAuth:
-  void set_error_handler(fxl::Closure on_error) override;
+  void set_error_handler(fit::closure on_error) override;
 
   fxl::RefPtr<callback::Cancellable> GetFirebaseToken(
-      std::function<void(AuthStatus, std::string)> callback) override;
+      fit::function<void(AuthStatus, std::string)> callback) override;
 
   fxl::RefPtr<callback::Cancellable> GetFirebaseUserId(
-      std::function<void(AuthStatus, std::string)> callback) override;
+      fit::function<void(AuthStatus, std::string)> callback) override;
 
   void TriggerConnectionErrorHandler();
 
@@ -36,7 +37,7 @@ class TestFirebaseAuth : public FirebaseAuth {
  private:
   async_t* const async_;
 
-  fxl::Closure error_handler_;
+  fit::closure error_handler_;
 };
 
 }  // namespace firebase_auth

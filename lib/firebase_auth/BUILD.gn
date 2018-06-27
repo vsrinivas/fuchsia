@@ -20,6 +20,7 @@ source_set("firebase_auth") {
     "//garnet/public/lib/fxl",
     "//peridot/lib/cobalt",
     "//peridot/public/lib/auth/fidl",
+    "//zircon/public/lib/fit",
   ]
 }
 

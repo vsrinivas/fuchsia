@@ -6,6 +6,8 @@
 
 #include <utility>
 
+#include <lib/fit/function.h>
+
 #include "lib/backoff/exponential_backoff.h"
 #include "lib/callback/cancellable_helper.h"
 #include "lib/fxl/functional/closure.h"
@@ -55,29 +57,29 @@ FirebaseAuthImpl::FirebaseAuthImpl(
       cobalt_context_(std::move(cobalt_context)),
       task_runner_(async) {}
 
-void FirebaseAuthImpl::set_error_handler(fxl::Closure on_error) {
+void FirebaseAuthImpl::set_error_handler(fit::closure on_error) {
   token_provider_.set_error_handler(std::move(on_error));
 }
 
 fxl::RefPtr<callback::Cancellable> FirebaseAuthImpl::GetFirebaseToken(
-    std::function<void(AuthStatus, std::string)> callback) {
+    fit::function<void(AuthStatus, std::string)> callback) {
   if (api_key_.empty()) {
     FXL_LOG(WARNING) << "No Firebase API key provided. Connection to Firebase "
                         "may be unauthenticated.";
   }
   auto cancellable = callback::CancellableImpl::Create([] {});
-  GetToken(max_retries_, [callback = cancellable->WrapCallback(callback)](
-                             auto status, auto token) {
+  GetToken(max_retries_, [callback = cancellable->WrapCallback(
+                              std::move(callback))](auto status, auto token) {
     callback(status, token ? token->id_token : "");
   });
   return cancellable;
 }
 
 fxl::RefPtr<callback::Cancellable> FirebaseAuthImpl::GetFirebaseUserId(
-    std::function<void(AuthStatus, std::string)> callback) {
+    fit::function<void(AuthStatus, std::string)> callback) {
   auto cancellable = callback::CancellableImpl::Create([] {});
-  GetToken(max_retries_, [callback = cancellable->WrapCallback(callback)](
-                             auto status, auto token) {
+  GetToken(max_retries_, [callback = cancellable->WrapCallback(
+                              std::move(callback))](auto status, auto token) {
     callback(status, token ? token->local_id : "");
   });
   return cancellable;
@@ -85,12 +87,13 @@ fxl::RefPtr<callback::Cancellable> FirebaseAuthImpl::GetFirebaseUserId(
 
 void FirebaseAuthImpl::GetToken(
     int max_retries,
-    std::function<void(AuthStatus, fuchsia::modular::auth::FirebaseTokenPtr)>
+    fit::function<void(AuthStatus, fuchsia::modular::auth::FirebaseTokenPtr)>
         callback) {
   token_provider_->GetFirebaseAuthToken(
-      api_key_, [this, max_retries, callback = std::move(callback)](
-                    fuchsia::modular::auth::FirebaseTokenPtr token,
-                    fuchsia::modular::auth::AuthErr error) mutable {
+      api_key_,
+      fxl::MakeCopyable([this, max_retries, callback = std::move(callback)](
+                            fuchsia::modular::auth::FirebaseTokenPtr token,
+                            fuchsia::modular::auth::AuthErr error) mutable {
         if (!token || error.status != fuchsia::modular::auth::Status::OK) {
           if (!token && error.status == fuchsia::modular::auth::Status::OK) {
             FXL_LOG(ERROR)
@@ -119,7 +122,7 @@ void FirebaseAuthImpl::GetToken(
           ReportError(error.status);
           callback(AuthStatus::ERROR, std::move(token));
         }
-      });
+      }));
 }
 
 void FirebaseAuthImpl::ReportError(fuchsia::modular::auth::Status status) {
