@@ -100,6 +100,10 @@ config("compiler_cpu") {
   }
   ldflags = cflags
   asmflags = cflags
+
+  if (current_cpu == "arm64") {
+    ldflags += [ "-Wl,--fix-cortex-a53-843419" ]
+  }
 }
 
 config("shared_library_config") {
