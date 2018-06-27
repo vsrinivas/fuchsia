@@ -89,6 +89,9 @@ GLOBAL_MODULE_LDFLAGS += -m aarch64elf
 endif
 GLOBAL_LDFLAGS += -z max-page-size=4096
 
+# The linker writes instructions to work around a CPU bug.
+GLOBAL_LDFLAGS += --fix-cortex-a53-843419
+
 # kernel hard disables floating point
 KERNEL_COMPILEFLAGS += -mgeneral-regs-only
 
